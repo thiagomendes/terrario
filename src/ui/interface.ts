@@ -1,3 +1,5 @@
+import { criarBarra } from './barra';
+
 const CSS = `
 .entrada {
   position: fixed;
@@ -111,6 +113,7 @@ export function criarInterface(app: HTMLElement): void {
   fps.textContent = '0 FPS';
   hud.append(mira, fps);
   app.appendChild(hud);
+  criarBarra(app);
 
   const entrada = document.createElement('div');
   entrada.className = 'entrada';
