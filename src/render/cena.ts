@@ -38,7 +38,10 @@ import type { Buffers } from '../mesh/malha';
 import type { RespostaChunk, PedidoChunk } from '../workers/chunk.worker';
 import { criarEdicoes } from '../world/edicoes';
 import { ALTURA, gerarChunk, indice } from '../world/chunk';
-import { raycastVoxel, type Vec3 } from '../player/alvo';
+import { posicaoColocacao, raycastVoxel, type Vec3 } from '../player/alvo';
+import { criarBarramento, type Barramento } from '../player/eventos';
+import { criarMinerador } from '../player/minerador';
+import { colocacaoPermitida, type AlvoMineracao } from '../player/mineracao';
 import { criarHotbar, type Hotbar } from '../player/hotbar';
 import {
   acaoParaBotao,
@@ -104,6 +107,12 @@ export interface EstadoDepuracao {
   remalhaMs?: number;
   aplicadasNoUltimoQuadro?: number;
   alvo?: { x: number; y: number; z: number; normal: Vec3 } | null;
+  barramento?: Barramento;
+  minerar?: (
+    segundos: number,
+    segurando?: boolean,
+  ) => { quebrou: boolean; progresso: number; estagio: number };
+  mineracao?: { segurando: boolean; progresso: number; estagio: number };
 }
 
 declare global {
@@ -360,16 +369,97 @@ export function criarCena(canvas: HTMLCanvasElement, hotbar: Hotbar = criarHotba
     });
   }
 
+  const barramento = criarBarramento();
+  estado.barramento = barramento;
+
+  function alvoMineracao(): AlvoMineracao | null {
+    const a = calcularAlvo();
+    return a ? { x: a.x, y: a.y, z: a.z, bloco: blocoEm(a.x, a.y, a.z) } : null;
+  }
+
+  function interagirComEventos(acao: AcaoInteracao): boolean {
+    const a = calcularAlvo();
+    if (!a) return false;
+    const bloco = acao === 'quebrar' ? blocoEm(a.x, a.y, a.z) : hotbar.blocoAtivo();
+    const pos = acao === 'quebrar' ? a : posicaoColocacao(a);
+    const ok = interagir(acao);
+    if (ok) {
+      barramento.emitir(acao === 'quebrar' ? 'quebra' : 'colocacao', {
+        x: pos.x,
+        y: pos.y,
+        z: pos.z,
+        bloco,
+      });
+    } else {
+      barramento.emitir('recusa', { motivo: acao });
+    }
+    return ok;
+  }
+
+  const minerador = criarMinerador({
+    barramento,
+    quebrar: (a) =>
+      executarInteracao('quebrar', {
+        alvo: { x: a.x, y: a.y, z: a.z, normal: { x: 0, y: 1, z: 0 } },
+        edicoes,
+        blocoAtivo: hotbar.blocoAtivo(),
+        jogador: controle.jogador,
+        editar: editarBloco,
+      }),
+  });
+
+  let ultimaColocacao: number | null = null;
   canvas.addEventListener('mousedown', (e) => {
     const acao = acaoParaBotao(e.button, document.pointerLockElement === canvas);
-    if (acao) interagir(acao);
+    if (acao === 'quebrar') {
+      minerador.pressionar();
+    } else if (acao === 'colocar') {
+      const agora = performance.now() / 1000;
+      if (!colocacaoPermitida(agora, ultimaColocacao)) return;
+      ultimaColocacao = agora;
+      interagirComEventos('colocar');
+    }
   });
+  window.addEventListener('mouseup', (e) => {
+    if (e.button === 0) minerador.soltar();
+  });
+  document.addEventListener('pointerlockchange', () => {
+    if (document.pointerLockElement !== canvas) minerador.perderBloqueio();
+  });
+  let slotConhecido = hotbar.ativo;
+  function verificarSlot(): void {
+    if (hotbar.ativo === slotConhecido) return;
+    slotConhecido = hotbar.ativo;
+    minerador.trocarSlot(slotConhecido);
+  }
   canvas.addEventListener('contextmenu', tratarMenuContexto);
 
-  estado.interagir = interagir;
+  estado.minerar = (segundos, segurando = true) => {
+    verificarSlot();
+    const estavaSegurando = minerador.segurando;
+    if (segurando) minerador.pressionar();
+    else minerador.soltar();
+    let quebrou = false;
+    const quadros = Math.round(segundos * 60);
+    for (let i = 0; i < quadros; i++) {
+      if (minerador.atualizar(1 / 60, alvoMineracao()).quebrou) quebrou = true;
+    }
+    if (!estavaSegurando && segurando) minerador.soltar();
+    return { quebrou, progresso: minerador.progresso, estagio: minerador.estagio };
+  };
+  Object.defineProperty(estado, 'mineracao', {
+    get: () => ({
+      segurando: minerador.segurando,
+      progresso: minerador.progresso,
+      estagio: minerador.estagio,
+    }),
+    enumerable: true,
+  });
+
+  estado.interagir = interagirComEventos;
   estado.selecionarSlot = (i: number) => {
     hotbar.selecionar(i);
-    window.dispatchEvent(new Event('brumaluz:slot'));
+    verificarSlot();
   };
   estado.apontar = (yaw, pitch) => controle.apontar(yaw, pitch);
   estado.bloco = blocoEm;
@@ -448,7 +538,10 @@ export function criarCena(canvas: HTMLCanvasElement, hotbar: Hotbar = criarHotba
   }
 
   engine.runRenderLoop(() => {
-    controle.atualizar(engine.getDeltaTime() / 1000);
+    const dtQuadro = engine.getDeltaTime() / 1000;
+    controle.atualizar(dtQuadro);
+    verificarSlot();
+    minerador.atualizar(dtQuadro, alvoMineracao());
     atualizarChunks();
     atualizarDestaque();
     estado.fps = engine.getFps();
