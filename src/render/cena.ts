@@ -18,6 +18,7 @@ import { GlowLayer } from '@babylonjs/core/Layers/glowLayer';
 import '@babylonjs/core/Layers/effectLayerSceneComponent';
 import { DynamicTexture } from '@babylonjs/core/Materials/Textures/dynamicTexture';
 import { MeshBuilder } from '@babylonjs/core/Meshes/meshBuilder';
+import { criarControle } from '../player/controle';
 import { gerarAtlas } from '../art/atlas';
 import { Bloco } from '../world/blocks';
 import { DENSIDADE_NEVOA, DIRECAO_SOL, PALETA } from './atmosfera';
@@ -88,10 +89,10 @@ export function criarCena(canvas: HTMLCanvasElement) {
   scene.ambientColor = new Color3(...PALETA.sombra);
 
   const camera = new UniversalCamera('camera', new Vector3(8, 45, 8), scene);
-  camera.setTarget(new Vector3(24, 30, 24));
   camera.minZ = 0.1;
   camera.maxZ = 300;
-  camera.attachControl(canvas, true);
+  const controle = criarControle(canvas, camera);
+  controle.atualizar(0);
 
   const luz = new HemisphericLight('luz', new Vector3(0.3, 1, 0.2), scene);
   luz.diffuse = new Color3(0.75, 0.65, 0.7);
@@ -267,6 +268,7 @@ export function criarCena(canvas: HTMLCanvasElement) {
   }
 
   engine.runRenderLoop(() => {
+    controle.atualizar(engine.getDeltaTime() / 1000);
     atualizarChunks();
     estado.fps = engine.getFps();
     balanco.atualizar(performance.now() / 1000);
