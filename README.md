@@ -38,6 +38,8 @@ Dentro do container, o comando completo é `npx vitest run && npx playwright tes
 
 Resultado esperado: todos os testes do Vitest passam e os testes e2e do Playwright (desktop, tablet e celular) passam, sem erros de página. As capturas ficam em `test-results/screens`.
 
+O teste `e2e/cristal.spec.ts` coloca um cristal-luz diante da câmera e confere, em cada viewport, que no máximo 1% dos pixels são brancos estourados (R, G e B maiores ou iguais a 245). Também falha com `pageerror` ou `console.error`.
+
 ## Relatório
 
 Veja `docs/validacao-visual.md` para a direção visual, os compromissos de desempenho e as capturas.

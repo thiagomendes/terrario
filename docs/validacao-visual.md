@@ -49,6 +49,28 @@ Desempenho: a remalha é limitada a 2 malhas por quadro, com uma malha sólida e
 
 Identidade: a arte continua procedural, sem recursos de Minecraft e sem dependência nova.
 
+## Etapa 003: cristal sem estouro
+
+Causa: o cristal-luz era quase branco no atlas, o mapa emissivo copiava a cor cheia (emissivo mais difuso passava de 1.0) e o glow forte somava um halo, com dois cristais empilhados por ponto do gerador. Resultado: blocos e halos brancos chapados.
+
+Correção, na arte e no mapa emissivo, sem esconder o glow:
+
+- Cristal e haste do cogumelo com cores saturadas e mais escuras no atlas.
+- `construirMapaEmissivo` (`src/render/emissivo.ts`) limita a luminância a 0.45, preservando o matiz.
+- `INTENSIDADE_GLOW` em 0.5, só nos emissivos; um cristal por ponto.
+
+Validação: `e2e/cristal.spec.ts` coloca cristais diante da câmera e exige no máximo 1% de pixels com R, G e B maiores ou iguais a 245, nos três viewports. Capturas em `test-results/screens/cristal-diante-da-camera-desktop.png`, `-tablet.png` e `-celular.png`: o cristal aparece azul, com facetas e halo suave.
+
+Métricas medidas (também anexadas ao relatório do Playwright como `cristal-*`):
+
+| Viewport | FPS | Chunks carregados | Escala de resolução | Pixels estourados |
+| -------- | --- | ----------------- | ------------------- | ----------------- |
+| desktop  | 3,9 | 29                | 2,25                | 0,03%             |
+| tablet   | 5,0 | 29                | 1,75                | 0,09%             |
+| celular  | 9,5 | 29                | 1,5                 | 0,11%             |
+
+Não há FPS mínimo: o WebGL por software é informativo.
+
 ## Ressalva do WebGL por software
 
 As capturas rodam em Chromium sem GPU, com WebGL por software (SwiftShader). O FPS medido com SwiftShader é apenas informativo, não uma meta. Para avaliar o desempenho real, abra o jogo num navegador com aceleração por hardware.
