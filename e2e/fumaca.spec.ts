@@ -10,6 +10,11 @@ test('abre a pagina sem erros', async ({ page }) => {
   });
   await page.goto('/');
   await expect(page.locator('#app')).toContainText('Brumaluz');
+  await page.waitForFunction(() => (window as any).__brumaluz?.ready === true, undefined, {
+    timeout: 60000,
+  });
+  const n = await page.evaluate(() => (window as any).__brumaluz.chunksCarregados);
+  expect(n).toBeGreaterThan(0);
   await page.screenshot({ path: `${PASTA_CAPTURAS}/fumaca.png` });
   expect(erros).toEqual([]);
 });
