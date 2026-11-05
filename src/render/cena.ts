@@ -18,6 +18,8 @@ import { GlowLayer } from '@babylonjs/core/Layers/glowLayer';
 import '@babylonjs/core/Layers/effectLayerSceneComponent';
 import { DynamicTexture } from '@babylonjs/core/Materials/Textures/dynamicTexture';
 import { MeshBuilder } from '@babylonjs/core/Meshes/meshBuilder';
+import type { LinesMesh } from '@babylonjs/core/Meshes/linesMesh';
+import { COR_DESTAQUE, estadoDestaque } from './destaque';
 import { criarControle } from '../player/controle';
 import { gerarAtlas } from '../art/atlas';
 import { Bloco } from '../world/blocks';
@@ -94,6 +96,7 @@ export interface EstadoDepuracao {
   apontar?: (yaw: number, pitch: number) => void;
   bloco?: (x: number, y: number, z: number) => number;
   slotAtivo?: number;
+  destaqueVisivel?: boolean;
   alvo?: { x: number; y: number; z: number; normal: Vec3 } | null;
 }
 
@@ -104,7 +107,13 @@ declare global {
 }
 
 export function criarCena(canvas: HTMLCanvasElement, hotbar: Hotbar = criarHotbar()) {
-  const estado: EstadoDepuracao = { ready: false, chunksCarregados: 0, fps: 0, escalaResolucao: 1 };
+  const estado: EstadoDepuracao = {
+    ready: false,
+    chunksCarregados: 0,
+    fps: 0,
+    escalaResolucao: 1,
+    destaqueVisivel: false,
+  };
   window.__brumaluz = estado;
 
   const engine = new Engine(canvas, false, { preserveDrawingBuffer: true });
@@ -404,9 +413,33 @@ export function criarCena(canvas: HTMLCanvasElement, hotbar: Hotbar = criarHotba
     }
   }
 
+  let contorno: LinesMesh | null = null;
+  let chaveContorno = '';
+  function atualizarDestaque(): void {
+    const alvo = calcularAlvo();
+    const d = estadoDestaque(alvo);
+    if (d.chave !== chaveContorno) {
+      contorno?.dispose();
+      contorno = null;
+      chaveContorno = d.chave;
+      if (d.visivel) {
+        const linhas = d.arestas.map(([a, b]) => [new Vector3(...a), new Vector3(...b)]);
+        const l = MeshBuilder.CreateLineSystem('destaque', { lines: linhas }, scene);
+        l.color = new Color3(...COR_DESTAQUE);
+        l.isPickable = false;
+        l.receiveShadows = false;
+        l.renderingGroupId = 1;
+        glow.addExcludedMesh(l);
+        contorno = l;
+      }
+    }
+    estado.destaqueVisivel = contorno !== null;
+  }
+
   engine.runRenderLoop(() => {
     controle.atualizar(engine.getDeltaTime() / 1000);
     atualizarChunks();
+    atualizarDestaque();
     estado.fps = engine.getFps();
     estado.posicao = [camera.position.x, camera.position.y, camera.position.z];
     estado.rotacao = [camera.rotation.x, camera.rotation.y];

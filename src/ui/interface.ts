@@ -71,6 +71,7 @@ const CSS = `
   width: 18px;
   height: 18px;
   transform: translate(-50%, -50%);
+  pointer-events: none;
 }
 .hud .mira::before,
 .hud .mira::after {
