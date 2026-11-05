@@ -63,20 +63,30 @@ describe('atlas', () => {
     }
   });
 
-  it('plantas têm áreas vazias, cristal é o mais claro e padding repete vizinhos', () => {
+  it('cristal é azul saturado e a haste do cogumelo não é quase branca', () => {
+    const cristal = atlas.tiles.find((t) => t.bloco === Bloco.CRISTAL_LUZ)!;
+    const ps = interior(cristal.indice);
+    expect(ps.some((p) => p[0] > 230 && p[1] > 230 && p[2] > 230)).toBe(false);
+    const med = (k: number) => ps.reduce((a, p) => a + p[k], 0) / ps.length;
+    expect(med(2) - med(0)).toBeGreaterThanOrEqual(40);
+    const cog = atlas.tiles.find((t) => t.bloco === Bloco.COGUMELO_BRILHANTE)!;
+    const todos = interior(cog.indice);
+    const haste: number[][] = [];
+    for (let y = 15; y < 30; y++) {
+      for (let x = 0; x < TAM_TILE; x++) {
+        if (Math.abs(x - 15.5) < 2.5 && todos[y * TAM_TILE + x][3] === 255) {
+          haste.push(todos[y * TAM_TILE + x]);
+        }
+      }
+    }
+    expect(haste.length).toBeGreaterThan(20);
+    expect(haste.some((p) => p[0] > 170 && p[1] > 170 && p[2] > 170)).toBe(false);
+  });
+
+  it('plantas têm áreas vazias e padding repete vizinhos', () => {
     for (const id of [Bloco.GRAMA_ALTA, Bloco.FLOR, Bloco.COGUMELO_BRILHANTE]) {
       const t = atlas.tiles.find((x) => x.bloco === id)!;
       expect(interior(t.indice).some((p) => p[3] === 0)).toBe(true);
-    }
-    const media = (indice: number) => {
-      const v = interior(indice)
-        .filter((p) => p[3] > 0)
-        .map(lum);
-      return v.reduce((a, b) => a + b, 0) / v.length;
-    };
-    const cristal = atlas.tiles.find((t) => t.bloco === Bloco.CRISTAL_LUZ)!;
-    for (const t of atlas.tiles) {
-      if (t !== cristal) expect(media(cristal.indice)).toBeGreaterThan(media(t.indice));
     }
     for (const t of atlas.tiles) {
       const [ox, oy] = origem(t.indice);

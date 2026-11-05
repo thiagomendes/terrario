@@ -110,7 +110,7 @@ function pintorPorBloco(bloco: number): Pintor {
       return (x, y, s) => {
         const t = fbm2(x / 4, y / 4, s + 9);
         const facetas = ((x + y) % 11 < 2 ? 0.25 : 0) + t * 0.6;
-        const c = mistura([150, 210, 255], [235, 250, 255], Math.min(1, facetas));
+        const c = mistura([20, 110, 190], [120, 215, 250], Math.min(1, facetas));
         return [c[0], c[1], c[2], 255];
       };
     case Bloco.TABUAS:
@@ -155,7 +155,7 @@ function pintorPlanta(bloco: number): Pintor {
       const c = sombreia(mistura([60, 200, 190], [170, 255, 220], hash2(x, y, s)), 1 + ruidoCor);
       return [c[0], c[1], c[2], 255];
     }
-    if (Math.abs(dx) < 2.5 && y >= 15 && y < 30) return [200, 210, 190 + ruidoCor * 40, 255];
+    if (Math.abs(dx) < 2.5 && y >= 15 && y < 30) return [120, 150, 110 + ruidoCor * 40, 255];
     return vazio;
   };
 }
