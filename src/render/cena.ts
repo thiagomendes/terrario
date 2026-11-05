@@ -27,6 +27,15 @@ import { SEMENTE_PADRAO, TAM_X, TAM_Z } from '../world/chunk';
 import type { Buffers } from '../mesh/malha';
 import type { RespostaChunk, PedidoChunk } from '../workers/chunk.worker';
 import { criarEdicoes } from '../world/edicoes';
+import { ALTURA, gerarChunk, indice } from '../world/chunk';
+import { raycastVoxel, type Vec3 } from '../player/alvo';
+import { criarHotbar, type Hotbar } from '../player/hotbar';
+import {
+  acaoParaBotao,
+  executarInteracao,
+  tratarMenuContexto,
+  type AcaoInteracao,
+} from '../player/interacao';
 import type { EdicoesExportadas } from '../world/edicoes';
 import { chunksAfetados } from './remalha';
 import { ajustarEscala, escalaBase } from './resolucao';
@@ -40,6 +49,7 @@ import {
 
 const RAIO_INICIAL = 3;
 const RAIO_SOMBRA = 1;
+const ALCANCE = 5;
 
 function criarCeu(scene: Scene): void {
   const textura = new DynamicTexture('ceu-grad', { width: 4, height: 256 }, scene, false);
@@ -79,6 +89,12 @@ export interface EstadoDepuracao {
   escalaResolucao: number;
   posicao?: number[];
   rotacao?: number[];
+  interagir?: (acao: AcaoInteracao) => boolean;
+  selecionarSlot?: (i: number) => void;
+  apontar?: (yaw: number, pitch: number) => void;
+  bloco?: (x: number, y: number, z: number) => number;
+  slotAtivo?: number;
+  alvo?: { x: number; y: number; z: number; normal: Vec3 } | null;
 }
 
 declare global {
@@ -87,7 +103,7 @@ declare global {
   }
 }
 
-export function criarCena(canvas: HTMLCanvasElement) {
+export function criarCena(canvas: HTMLCanvasElement, hotbar: Hotbar = criarHotbar()) {
   const estado: EstadoDepuracao = { ready: false, chunksCarregados: 0, fps: 0, escalaResolucao: 1 };
   window.__brumaluz = estado;
 
@@ -288,6 +304,65 @@ export function criarCena(canvas: HTMLCanvasElement) {
     }
     return true;
   }
+
+  const cacheBlocos = new Map<string, { versao: number; blocos: Uint8Array }>();
+  function blocoEm(x: number, y: number, z: number): number {
+    if (y < 0 || y >= ALTURA) return Bloco.AR;
+    const editado = edicoes.obter(x, y, z);
+    if (editado !== undefined) return editado;
+    const cx = Math.floor(x / TAM_X);
+    const cz = Math.floor(z / TAM_Z);
+    const k = chave(cx, cz);
+    let entrada = cacheBlocos.get(k);
+    if (!entrada) {
+      entrada = { versao: 0, blocos: gerarChunk(cx, cz, SEMENTE_PADRAO) };
+      cacheBlocos.set(k, entrada);
+    }
+    return entrada.blocos[indice(x - cx * TAM_X, y, z - cz * TAM_Z)];
+  }
+
+  function calcularAlvo() {
+    const yaw = camera.rotation.y;
+    const pitch = camera.rotation.x;
+    const direcao = {
+      x: Math.sin(yaw) * Math.cos(pitch),
+      y: -Math.sin(pitch),
+      z: Math.cos(yaw) * Math.cos(pitch),
+    };
+    const a = raycastVoxel(
+      { x: camera.position.x, y: camera.position.y, z: camera.position.z },
+      direcao,
+      ALCANCE,
+      (x, y, z) => blocoEm(x, y, z) !== Bloco.AR,
+    );
+    return a ? { x: a.x, y: a.y, z: a.z, normal: a.normal } : null;
+  }
+
+  function interagir(acao: AcaoInteracao): boolean {
+    return executarInteracao(acao, {
+      alvo: calcularAlvo(),
+      edicoes,
+      blocoAtivo: hotbar.blocoAtivo(),
+      jogador: controle.jogador,
+      editar: editarBloco,
+    });
+  }
+
+  canvas.addEventListener('mousedown', (e) => {
+    const acao = acaoParaBotao(e.button, document.pointerLockElement === canvas);
+    if (acao) interagir(acao);
+  });
+  canvas.addEventListener('contextmenu', tratarMenuContexto);
+
+  estado.interagir = interagir;
+  estado.selecionarSlot = (i: number) => {
+    hotbar.selecionar(i);
+    window.dispatchEvent(new Event('brumaluz:slot'));
+  };
+  estado.apontar = (yaw, pitch) => controle.apontar(yaw, pitch);
+  estado.bloco = blocoEm;
+  Object.defineProperty(estado, 'slotAtivo', { get: () => hotbar.ativo, enumerable: true });
+  Object.defineProperty(estado, 'alvo', { get: calcularAlvo, enumerable: true });
 
   function atualizarChunks(): void {
     const cx = Math.floor(camera.position.x / TAM_X);

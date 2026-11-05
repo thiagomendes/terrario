@@ -1,4 +1,5 @@
 import { criarCena } from './render/cena';
+import { criarHotbar } from './player/hotbar';
 import { criarInterface } from './ui/interface';
 
 const app = document.getElementById('app');
@@ -11,6 +12,7 @@ if (app) {
   canvas.style.display = 'block';
   canvas.style.outline = 'none';
   app.appendChild(canvas);
-  criarInterface(app);
-  criarCena(canvas);
+  const hotbar = criarHotbar();
+  criarInterface(app, hotbar);
+  criarCena(canvas, hotbar);
 }

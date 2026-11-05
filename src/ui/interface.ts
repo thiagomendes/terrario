@@ -1,3 +1,4 @@
+import type { Hotbar } from '../player/hotbar';
 import { criarBarra } from './barra';
 
 const CSS = `
@@ -99,7 +100,7 @@ const TECLAS: ReadonlyArray<readonly [string, string]> = [
   ['Mouse', 'olhar'],
 ];
 
-export function criarInterface(app: HTMLElement): void {
+export function criarInterface(app: HTMLElement, hotbar?: Hotbar): void {
   const estilo = document.createElement('style');
   estilo.textContent = CSS;
   document.head.appendChild(estilo);
@@ -113,7 +114,7 @@ export function criarInterface(app: HTMLElement): void {
   fps.textContent = '0 FPS';
   hud.append(mira, fps);
   app.appendChild(hud);
-  criarBarra(app);
+  criarBarra(app, hotbar);
 
   const entrada = document.createElement('div');
   entrada.className = 'entrada';

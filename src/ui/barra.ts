@@ -131,6 +131,7 @@ export function criarBarra(app: HTMLElement, hotbar: Hotbar = criarHotbar()): Ho
     { passive: true },
   );
 
+  window.addEventListener('brumaluz:slot', atualizar);
   atualizar();
   app.appendChild(barra);
   return hotbar;

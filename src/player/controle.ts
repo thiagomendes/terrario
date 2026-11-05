@@ -87,5 +87,10 @@ export function criarControle(
     camera.rotation.y = yaw;
   }
 
-  return { atualizar, jogador };
+  function apontar(novoYaw: number, novoPitch: number): void {
+    yaw = novoYaw;
+    pitch = novoPitch;
+  }
+
+  return { atualizar, jogador, apontar, solido };
 }
