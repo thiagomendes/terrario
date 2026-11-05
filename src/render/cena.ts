@@ -26,6 +26,7 @@ import { PluginBalanco } from './balanco';
 import { SEMENTE_PADRAO, TAM_X, TAM_Z } from '../world/chunk';
 import type { Buffers } from '../mesh/malha';
 import type { RespostaChunk } from '../workers/chunk.worker';
+import { ajustarEscala, escalaBase } from './resolucao';
 import { aplicarPorQuadro, chave, chunksDesejados, planejar } from './gerenciador';
 
 const RAIO_INICIAL = 3;
@@ -274,7 +275,24 @@ export function criarCena(canvas: HTMLCanvasElement) {
     balanco.atualizar(performance.now() / 1000);
     scene.render();
   });
-  window.addEventListener('resize', () => engine.resize());
+  let base = escalaBase(window.innerWidth);
+  function aplicarEscala(valor: number): void {
+    estado.escalaResolucao = valor;
+    engine.setHardwareScalingLevel(valor);
+    engine.resize();
+  }
+  aplicarEscala(base);
+  setInterval(() => {
+    if (!estado.ready) return;
+    const nova = ajustarEscala(estado.escalaResolucao, estado.fps, base);
+    if (nova !== estado.escalaResolucao) aplicarEscala(nova);
+  }, 2000);
+  window.addEventListener('resize', () => {
+    const anterior = base;
+    base = escalaBase(window.innerWidth);
+    if (base !== anterior) aplicarEscala(Math.max(base, estado.escalaResolucao));
+    else engine.resize();
+  });
 
   return { engine, scene, camera };
 }
