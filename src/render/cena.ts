@@ -68,6 +68,8 @@ export interface EstadoDepuracao {
   chunksCarregados: number;
   fps: number;
   escalaResolucao: number;
+  posicao?: number[];
+  rotacao?: number[];
 }
 
 declare global {
@@ -168,6 +170,7 @@ export function criarCena(canvas: HTMLCanvasElement) {
   matSolido.emissiveTexture = texEmissiva;
   matSolido.emissiveColor = Color3.White();
   matSolido.specularColor = Color3.Black();
+  matSolido.ambientColor = Color3.White();
   matSolido.backFaceCulling = false;
 
   const matPlanta = new StandardMaterial('atlas-plantas', scene);
@@ -176,8 +179,10 @@ export function criarCena(canvas: HTMLCanvasElement) {
   matPlanta.emissiveColor = Color3.White();
   const balanco = new PluginBalanco(matPlanta);
   matPlanta.specularColor = Color3.Black();
+  matPlanta.ambientColor = Color3.White();
   matPlanta.backFaceCulling = false;
-  matPlanta.transparencyMode = Material.MATERIAL_ALPHATEST;
+  matPlanta.useAlphaFromDiffuseTexture = true;
+  matPlanta.transparencyMode = Material.MATERIAL_ALPHATESTANDBLEND;
   matPlanta.alphaCutOff = 0.5;
 
   const malhas = new Map<string, Mesh[]>();
@@ -272,6 +277,8 @@ export function criarCena(canvas: HTMLCanvasElement) {
     controle.atualizar(engine.getDeltaTime() / 1000);
     atualizarChunks();
     estado.fps = engine.getFps();
+    estado.posicao = [camera.position.x, camera.position.y, camera.position.z];
+    estado.rotacao = [camera.rotation.x, camera.rotation.y];
     balanco.atualizar(performance.now() / 1000);
     scene.render();
   });
