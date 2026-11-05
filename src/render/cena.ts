@@ -47,14 +47,9 @@ import {
 } from '../player/interacao';
 import type { EdicoesExportadas } from '../world/edicoes';
 import { chunksAfetados } from './remalha';
+import { criarFilaRemalha, MAX_REMALHAS_POR_QUADRO } from './fila';
 import { ajustarEscala, escalaBase } from './resolucao';
-import {
-  aplicarPorQuadro,
-  chave,
-  chunksDesejados,
-  planejar,
-  respostaObsoleta,
-} from './gerenciador';
+import { chave, chunksDesejados, planejar, respostaObsoleta } from './gerenciador';
 
 const RAIO_INICIAL = 3;
 const RAIO_SOMBRA = 1;
@@ -89,7 +84,6 @@ function criarCeu(scene: Scene): void {
   domo.isPickable = false;
   domo.applyFog = false;
 }
-const MAX_POR_QUADRO = 2;
 
 export interface EstadoDepuracao {
   ready: boolean;
@@ -104,6 +98,10 @@ export interface EstadoDepuracao {
   bloco?: (x: number, y: number, z: number) => number;
   slotAtivo?: number;
   destaqueVisivel?: boolean;
+  malhasAtivas?: number;
+  remalhasConcluidas?: number;
+  remalhaMs?: number;
+  aplicadasNoUltimoQuadro?: number;
   alvo?: { x: number; y: number; z: number; normal: Vec3 } | null;
 }
 
@@ -120,6 +118,10 @@ export function criarCena(canvas: HTMLCanvasElement, hotbar: Hotbar = criarHotba
     fps: 0,
     escalaResolucao: 1,
     destaqueVisivel: false,
+    malhasAtivas: 0,
+    remalhasConcluidas: 0,
+    remalhaMs: 0,
+    aplicadasNoUltimoQuadro: 0,
   };
   window.__brumaluz = estado;
 
@@ -228,14 +230,22 @@ export function criarCena(canvas: HTMLCanvasElement, hotbar: Hotbar = criarHotba
   matPlanta.alphaCutOff = 0.5;
 
   const malhas = new Map<string, Mesh[]>();
-  const fila: RespostaChunk[] = [];
+  const fila = criarFilaRemalha<RespostaChunk>();
   const pedidos = new Set<string>();
   const prioritarios = new Set<string>();
   const versoesPedidas = new Map<string, number>();
   const worker = new Worker(new URL('../workers/chunk.worker.ts', import.meta.url), {
     type: 'module',
   });
-  worker.onmessage = (ev: MessageEvent<RespostaChunk>) => fila.push(ev.data);
+  worker.onmessage = (ev: MessageEvent<RespostaChunk>) => {
+    const r = ev.data;
+    fila.adicionar({
+      cx: r.cx,
+      cz: r.cz,
+      editado: prioritarios.has(chave(r.cx, r.cz)),
+      dados: r,
+    });
+  };
 
   function criarMalha(nome: string, b: Buffers, mat: StandardMaterial, cx: number, cz: number) {
     if (b.indices.length === 0) return null;
@@ -398,24 +408,32 @@ export function criarCena(canvas: HTMLCanvasElement, hotbar: Hotbar = criarHotba
       pedidos.add(chave(c.cx, c.cz));
       solicitar(c.cx, c.cz);
     }
-    fila.sort(
-      (a, b) =>
-        Number(prioritarios.has(chave(b.cx, b.cz))) - Number(prioritarios.has(chave(a.cx, a.cz))),
-    );
     const queridos = new Set(desejados.map((c) => chave(c.cx, c.cz)));
-    for (const r of aplicarPorQuadro(fila, MAX_POR_QUADRO)) {
+    let aplicadas = 0;
+    for (const item of fila.retirar(MAX_REMALHAS_POR_QUADRO)) {
+      const r = item.dados;
       const k = chave(r.cx, r.cz);
       const atual = versoesPedidas.get(k) ?? 0;
       if (respostaObsoleta(r.versao, atual, !queridos.has(k))) {
         if (!queridos.has(k)) pedidos.delete(k);
         continue;
       }
-      prioritarios.delete(k);
+      const foiEditado = prioritarios.delete(k);
+      const inicio = performance.now();
       aplicar(r);
+      aplicadas++;
+      if (foiEditado) {
+        estado.remalhasConcluidas = (estado.remalhasConcluidas ?? 0) + 1;
+        estado.remalhaMs = performance.now() - inicio;
+      }
     }
+    estado.aplicadasNoUltimoQuadro = aplicadas;
+    let ativas = 0;
+    for (const lista of malhas.values()) ativas += lista.length;
+    estado.malhasAtivas = ativas;
     atualizarSombras();
     estado.chunksCarregados = malhas.size;
-    if (!estado.ready && pedidos.size === 0 && fila.length === 0 && malhas.size > 0) {
+    if (!estado.ready && pedidos.size === 0 && fila.tamanho === 0 && malhas.size > 0) {
       estado.ready = true;
     }
   }
