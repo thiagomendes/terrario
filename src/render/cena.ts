@@ -23,7 +23,14 @@ import { COR_DESTAQUE, estadoDestaque } from './destaque';
 import { criarControle } from '../player/controle';
 import { gerarAtlas } from '../art/atlas';
 import { Bloco } from '../world/blocks';
-import { DENSIDADE_NEVOA, DIRECAO_SOL, PALETA } from './atmosfera';
+import {
+  DENSIDADE_NEVOA,
+  DIRECAO_SOL,
+  INTENSIDADE_GLOW,
+  LUZ_PREENCHIMENTO,
+  NUM_CASCATAS,
+  PALETA,
+} from './atmosfera';
 import { PluginBalanco } from './balanco';
 import { SEMENTE_PADRAO, TAM_X, TAM_Z } from '../world/chunk';
 import type { Buffers } from '../mesh/malha';
@@ -133,9 +140,9 @@ export function criarCena(canvas: HTMLCanvasElement, hotbar: Hotbar = criarHotba
   controle.atualizar(0);
 
   const luz = new HemisphericLight('luz', new Vector3(0.3, 1, 0.2), scene);
-  luz.diffuse = new Color3(0.75, 0.65, 0.7);
+  luz.diffuse = new Color3(...LUZ_PREENCHIMENTO.cor);
   luz.groundColor = new Color3(...PALETA.sombra);
-  luz.intensity = 0.8;
+  luz.intensity = LUZ_PREENCHIMENTO.intensidade;
 
   const sol = new DirectionalLight('sol', new Vector3(...DIRECAO_SOL), scene);
   sol.diffuse = new Color3(...PALETA.sol);
@@ -145,7 +152,7 @@ export function criarCena(canvas: HTMLCanvasElement, hotbar: Hotbar = criarHotba
   sol.autoUpdateExtends = true;
 
   const sombras = new CascadedShadowGenerator(1024, sol);
-  sombras.numCascades = 2;
+  sombras.numCascades = NUM_CASCATAS;
   sombras.lambda = 0.7;
   sombras.shadowMaxZ = 80;
   sombras.bias = 0.01;
@@ -155,7 +162,7 @@ export function criarCena(canvas: HTMLCanvasElement, hotbar: Hotbar = criarHotba
   sombras.usePercentageCloserFiltering = true;
 
   const glow = new GlowLayer('glow', scene, { blurKernelSize: 24 });
-  glow.intensity = 0.9;
+  glow.intensity = INTENSIDADE_GLOW;
 
   criarCeu(scene);
 

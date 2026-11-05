@@ -22,4 +22,23 @@ export const PALETA: PaletaAtmosfera = {
 /** Direção em que a luz do sol viaja (baixa, perto do horizonte). */
 export const DIRECAO_SOL: Cor = [-0.55, -0.45, -0.7];
 
-export const DENSIDADE_NEVOA = 0.014;
+export const DENSIDADE_NEVOA = 0.011;
+
+export const NUM_CASCATAS = 2;
+
+export const INTENSIDADE_GLOW = 0.85;
+
+/** Luz hemisférica de preenchimento azul-petróleo (sem luz dinâmica extra). */
+export const LUZ_PREENCHIMENTO = {
+  cor: [0.2, 0.42, 0.5] as Cor,
+  intensidade: 0.4,
+};
+
+function luminancia(c: Cor): number {
+  return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
+}
+
+/** Razão de contraste entre a cor do sol e a da sombra. */
+export function razaoContraste(sol: Cor, sombra: Cor): number {
+  return (luminancia(sol) + 0.05) / (luminancia(sombra) + 0.05);
+}
