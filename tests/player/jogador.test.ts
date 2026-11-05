@@ -13,6 +13,7 @@ import {
 import { acaoDaTecla, aplicarMouse, eixos, LIMITE_PITCH } from '../../src/player/entrada';
 import { ALTURA, TAM_X, TAM_Z, alturaTerreno, gerarChunk, indice } from '../../src/world/chunk';
 import { Bloco } from '../../src/world/blocks';
+import { criarEdicoes } from '../../src/world/edicoes';
 import { criarMundoSolido } from '../../src/player/controle';
 
 const chao: Solido = (_x, y) => y < 0;
@@ -118,6 +119,35 @@ describe('criarMundoSolido com blocos reais', () => {
           const b = real[indice(x, y, z)];
           if (b >= Bloco.GRAMA_ALTA) expect(m(x, y, z)).toBe(false);
         }
+  });
+});
+
+describe('criarMundoSolido com edições no mundo real', () => {
+  const SEMENTE = 1337;
+
+  it('quebrar o bloco sob o jogador o faz cair e y=0 é recusado', () => {
+    const edicoes = criarEdicoes();
+    const mundo = criarMundoSolido(SEMENTE, gerarChunk, edicoes);
+    const topo = alturaTerreno(8, 8, SEMENTE);
+    expect(mundo(8, topo, 8)).toBe(true);
+    const j = criarJogador(8.5, topo + 1, 8.5);
+    passoFisica(j, parado, 0.016, mundo);
+    expect(j.noChao).toBe(true);
+    expect(edicoes.definir(8, topo, 8, Bloco.AR)).toBe(true);
+    expect(mundo(8, topo, 8)).toBe(false);
+    for (let i = 0; i < 20; i++) passoFisica(j, parado, 0.016, mundo);
+    expect(j.y).toBeLessThan(topo + 1);
+    expect(edicoes.definir(8, 0, 8, Bloco.AR)).toBe(false);
+    expect(mundo(8, 0, 8)).toBe(true);
+  });
+
+  it('colocar um bloco em posição de ar torna a posição sólida', () => {
+    const edicoes = criarEdicoes();
+    const mundo = criarMundoSolido(SEMENTE, gerarChunk, edicoes);
+    const y = alturaTerreno(20, -5, SEMENTE) + 10;
+    expect(mundo(20, y, -5)).toBe(false);
+    expect(edicoes.definir(20, y, -5, Bloco.TABUAS)).toBe(true);
+    expect(mundo(20, y, -5)).toBe(true);
   });
 });
 

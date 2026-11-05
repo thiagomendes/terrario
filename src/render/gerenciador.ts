@@ -34,6 +34,15 @@ export function planejar(presentes: Iterable<string>, desejados: ChaveChunk[]): 
   return { carregar, descartar };
 }
 
+/** Uma resposta é obsoleta se a versão ficou para trás ou o chunk já foi descartado. */
+export function respostaObsoleta(
+  versaoPedido: number,
+  versaoAtual: number,
+  descartado: boolean,
+): boolean {
+  return descartado || versaoPedido < versaoAtual;
+}
+
 /** Retira da fila no máximo `limite` itens para aplicar neste quadro. */
 export function aplicarPorQuadro<T>(fila: T[], limite: number): T[] {
   return fila.splice(0, Math.max(0, limite));

@@ -8,6 +8,7 @@ import {
   SEMENTE_PADRAO,
 } from '../world/chunk';
 import { obterBloco } from '../world/blocks';
+import type { Edicoes } from '../world/edicoes';
 import { ALTURA_OLHOS, passoFisica, posicaoInicial, type Solido } from './fisica';
 import { acaoDaTecla, aplicarMouse, eixos, type TeclasAtivas } from './entrada';
 
@@ -19,26 +20,36 @@ export interface AlvoCamera {
 export function criarMundoSolido(
   semente: number = SEMENTE_PADRAO,
   gerar: (cx: number, cz: number, semente: number) => Uint8Array = gerarChunk,
+  edicoes?: Edicoes,
 ): Solido {
-  const cache = new Map<string, Uint8Array>();
+  const cache = new Map<string, { versao: number; blocos: Uint8Array }>();
   return (x, y, z) => {
     if (y < 0) return true;
     if (y >= ALTURA) return false;
     const cx = Math.floor(x / TAM_X);
     const cz = Math.floor(z / TAM_Z);
     const k = `${cx},${cz}`;
-    let c = cache.get(k);
-    if (!c) {
-      c = gerar(cx, cz, semente);
-      cache.set(k, c);
+    const versao = edicoes ? edicoes.versaoDoChunk(cx, cz) : 0;
+    let entrada = cache.get(k);
+    if (!entrada || entrada.versao !== versao) {
+      const blocos = gerar(cx, cz, semente);
+      if (edicoes) for (const [i, b] of edicoes.doChunk(cx, cz)) blocos[i] = b;
+      entrada = { versao, blocos };
+      cache.set(k, entrada);
     }
+    const c = entrada.blocos;
     const b = c[indice(x - cx * TAM_X, y, z - cz * TAM_Z)];
     return obterBloco(b)?.solido ?? false;
   };
 }
 
-export function criarControle(canvas: HTMLElement, camera: AlvoCamera, semente = SEMENTE_PADRAO) {
-  const solido = criarMundoSolido(semente);
+export function criarControle(
+  canvas: HTMLElement,
+  camera: AlvoCamera,
+  semente = SEMENTE_PADRAO,
+  edicoes?: Edicoes,
+) {
+  const solido = criarMundoSolido(semente, gerarChunk, edicoes);
   const jogador = posicaoInicial(8.5, 8.5, (x, z) => alturaTerreno(x, z, semente));
   const teclas: TeclasAtivas = {};
   let yaw = 0.8;

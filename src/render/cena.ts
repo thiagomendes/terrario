@@ -25,9 +25,18 @@ import { DENSIDADE_NEVOA, DIRECAO_SOL, PALETA } from './atmosfera';
 import { PluginBalanco } from './balanco';
 import { SEMENTE_PADRAO, TAM_X, TAM_Z } from '../world/chunk';
 import type { Buffers } from '../mesh/malha';
-import type { RespostaChunk } from '../workers/chunk.worker';
+import type { RespostaChunk, PedidoChunk } from '../workers/chunk.worker';
+import { criarEdicoes } from '../world/edicoes';
+import type { EdicoesExportadas } from '../world/edicoes';
+import { chunksAfetados } from './remalha';
 import { ajustarEscala, escalaBase } from './resolucao';
-import { aplicarPorQuadro, chave, chunksDesejados, planejar } from './gerenciador';
+import {
+  aplicarPorQuadro,
+  chave,
+  chunksDesejados,
+  planejar,
+  respostaObsoleta,
+} from './gerenciador';
 
 const RAIO_INICIAL = 3;
 const RAIO_SOMBRA = 1;
@@ -94,7 +103,8 @@ export function criarCena(canvas: HTMLCanvasElement) {
   const camera = new UniversalCamera('camera', new Vector3(8, 45, 8), scene);
   camera.minZ = 0.1;
   camera.maxZ = 300;
-  const controle = criarControle(canvas, camera);
+  const edicoes = criarEdicoes();
+  const controle = criarControle(canvas, camera, SEMENTE_PADRAO, edicoes);
   controle.atualizar(0);
 
   const luz = new HemisphericLight('luz', new Vector3(0.3, 1, 0.2), scene);
@@ -188,7 +198,8 @@ export function criarCena(canvas: HTMLCanvasElement) {
   const malhas = new Map<string, Mesh[]>();
   const fila: RespostaChunk[] = [];
   const pedidos = new Set<string>();
-
+  const prioritarios = new Set<string>();
+  const versoesPedidas = new Map<string, number>();
   const worker = new Worker(new URL('../workers/chunk.worker.ts', import.meta.url), {
     type: 'module',
   });
@@ -234,12 +245,48 @@ export function criarCena(canvas: HTMLCanvasElement) {
   function aplicar(r: RespostaChunk): void {
     const k = chave(r.cx, r.cz);
     pedidos.delete(k);
+    malhas.get(k)?.forEach((m) => {
+      if (comSombra.has(m)) sombras.removeShadowCaster(m);
+      comSombra.delete(m);
+      m.dispose();
+    });
     const lista: Mesh[] = [];
     const s = criarMalha(`chunk-${k}`, r.solido, matSolido, r.cx, r.cz);
     if (s) lista.push(s);
     const p = criarMalha(`plantas-${k}`, r.plantas, matPlanta, r.cx, r.cz);
     if (p) lista.push(p);
     malhas.set(k, lista);
+  }
+
+  function solicitar(cx: number, cz: number): void {
+    const k = chave(cx, cz);
+    const versao = (versoesPedidas.get(k) ?? 0) + 1;
+    versoesPedidas.set(k, versao);
+    const edicoesPedido: EdicoesExportadas = {};
+    for (const [dx, dz] of [
+      [0, 0],
+      [-1, 0],
+      [1, 0],
+      [0, -1],
+      [0, 1],
+    ]) {
+      const lista = edicoes.doChunk(cx + dx, cz + dz);
+      if (lista.length > 0) edicoesPedido[chave(cx + dx, cz + dz)] = lista;
+    }
+    const pedido: PedidoChunk = { cx, cz, semente: SEMENTE_PADRAO, versao, edicoes: edicoesPedido };
+    worker.postMessage(pedido);
+  }
+
+  function editarBloco(x: number, y: number, z: number, bloco: number): boolean {
+    if (!edicoes.definir(x, y, z, bloco)) return false;
+    for (const c of chunksAfetados(x, z)) {
+      const k = chave(c.cx, c.cz);
+      if (!malhas.has(k) && !pedidos.has(k)) continue;
+      prioritarios.add(k);
+      pedidos.add(k);
+      solicitar(c.cx, c.cz);
+    }
+    return true;
   }
 
   function atualizarChunks(): void {
@@ -254,17 +301,26 @@ export function criarCena(canvas: HTMLCanvasElement) {
       });
       malhas.delete(k);
       pedidos.delete(k);
+      prioritarios.delete(k);
     }
     for (const c of plano.carregar) {
       pedidos.add(chave(c.cx, c.cz));
-      worker.postMessage({ cx: c.cx, cz: c.cz, semente: SEMENTE_PADRAO });
+      solicitar(c.cx, c.cz);
     }
+    fila.sort(
+      (a, b) =>
+        Number(prioritarios.has(chave(b.cx, b.cz))) - Number(prioritarios.has(chave(a.cx, a.cz))),
+    );
+    const queridos = new Set(desejados.map((c) => chave(c.cx, c.cz)));
     for (const r of aplicarPorQuadro(fila, MAX_POR_QUADRO)) {
-      if (planejar([], desejados).carregar.some((c) => c.cx === r.cx && c.cz === r.cz)) {
-        aplicar(r);
-      } else {
-        pedidos.delete(chave(r.cx, r.cz));
+      const k = chave(r.cx, r.cz);
+      const atual = versoesPedidas.get(k) ?? 0;
+      if (respostaObsoleta(r.versao, atual, !queridos.has(k))) {
+        if (!queridos.has(k)) pedidos.delete(k);
+        continue;
       }
+      prioritarios.delete(k);
+      aplicar(r);
     }
     atualizarSombras();
     estado.chunksCarregados = malhas.size;
@@ -301,5 +357,5 @@ export function criarCena(canvas: HTMLCanvasElement) {
     else engine.resize();
   });
 
-  return { engine, scene, camera };
+  return { engine, scene, camera, editarBloco, edicoes };
 }
