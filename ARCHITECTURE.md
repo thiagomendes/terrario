@@ -7,6 +7,8 @@ A spec 001-cena-validacao entregou uma cena jogável de validação visual: terr
 
 A spec 002-edicao-e-refino-visual (concluída) acrescentou seleção do bloco apontado com contorno e mira, quebra e colocação de blocos, barra de 6 tipos, fila de remalha com métricas e o refino de iluminação, materiais com tiles por face e vegetação. O README e o relatório de validação foram atualizados.
 
+A spec 003-cristal-sem-estouro (em planejamento) corrige os blocos e halos brancos chapados: eram o cristal-luz estourado pelo emissivo somado ao glow.
+
 ## Stack
 - TypeScript 5.6.3, Vite 5.4.10, Babylon.js (`@babylonjs/core` 7.31.0, imports por módulo para tree-shaking).
 - Vitest 2.1.4 para a lógica pura (ambiente node, sem jsdom); Playwright 1.48.2 (Chromium) para e2e e capturas; Prettier 3.3.3.
@@ -18,10 +20,10 @@ A spec 002-edicao-e-refino-visual (concluída) acrescentou seleção do bloco ap
 - `src/mesh/malha.ts`: malha de chunk (faces visíveis, AO por vértice, tiles por face, vegetação em quads cruzados).
 - `src/art/atlas.ts`: atlas de texturas procedural (buffer RGBA puro, envolvido por canvas no navegador).
 - `src/workers/chunk.worker.ts`: geração, aplicação de edições e malha de chunks em Web Worker.
-- `src/render/`: `cena.ts`, `gerenciador.ts` (streaming), `atmosfera.ts`, `balanco.ts`, `resolucao.ts`, `remalha.ts`, `fila.ts` (fila de remalha), `destaque.ts` (contorno do bloco apontado).
+- `src/render/`: `cena.ts`, `gerenciador.ts` (streaming), `atmosfera.ts`, `balanco.ts`, `resolucao.ts`, `remalha.ts`, `fila.ts` (fila de remalha), `destaque.ts` (contorno do bloco apontado) e `emissivo.ts` (mapa emissivo com teto de luminância, spec 003).
 - `src/player/`: `fisica.ts`, `controle.ts`, `entrada.ts`, `alvo.ts` (raycast de voxel e regra de colocação), `hotbar.ts` (estado da barra), `interacao.ts` (quebrar, colocar, trocar de bloco).
 - `src/ui/`: `interface.ts` (HUD e tela de entrada) e `barra.ts` (barra de blocos).
-- `tests/` (Vitest, por área: `mesh`, `player`, `render`, `world`) e `e2e/` (Playwright: `fumaca.spec.ts`, `interacao.spec.ts`, `barra.spec.ts`, `visual.spec.ts`).
+- `tests/` (Vitest, por área: `mesh`, `player`, `render`, `world`, `art`) e `e2e/` (Playwright: `fumaca.spec.ts`, `interacao.spec.ts`, `barra.spec.ts`, `visual.spec.ts`, `cristal.spec.ts`).
 - `docs/validacao-visual.md`: relatório de validação visual e desempenho.
 - Configs na raiz: `vite.config.ts`, `vitest.config.ts`, `playwright.config.ts`, `tsconfig.json`.
 
@@ -34,13 +36,14 @@ A spec 002-edicao-e-refino-visual (concluída) acrescentou seleção do bloco ap
 - O Playwright sobe sozinho `npm run build` e o preview em `127.0.0.1:4173`. Capturas em `test-results/screens`.
 
 ## Padrões e convenções
-- Lógica de mundo, malha, edição, raycast, hotbar e fila é pura e determinística (semente), testável sem GPU. Decisões de render que valem teste (ex.: mostrar e posicionar o contorno) ficam em funções puras separadas do Babylon.
+- Lógica de mundo, malha, edição, raycast, hotbar e fila é pura e determinística (semente), testável sem GPU. Decisões de render que valem teste (ex.: mostrar e posicionar o contorno, limitar o emissivo) ficam em funções puras separadas do Babylon.
 - Um material de atlas único e uma malha por chunk (16x16x64).
 - Sombras só do sol, 2 cascatas, perto do jogador; emissivos via glow, nunca luz dinâmica (só o preenchimento hemisférico).
 - Versões exatas nos manifestos.
 - A página expõe `window.__brumaluz` (inclui `ready`) para os testes e2e, com ganchos de interação (`interagir`, `selecionarSlot`, `apontar`, `bloco`, `alvo` e métricas de desempenho).
 - Testes de colisão, física e edição usam o mundo real (`criarMundoSolido`) e a tabela de blocos, não sólidos sintéticos.
 - Testes de escala e variação da vegetação verificam os valores gerados, não só a altura ou a igualdade entre gerações.
+- Tiles emissivos têm cor saturada e o mapa emissivo respeita um teto de luminância, para o glow não estourar em branco.
 
 ## Decisões
 - Babylon.js escolhido por sombras em cascata, névoa, céu procedural, glow e DynamicTexture integrados (spec 001-cena-validacao).
@@ -54,6 +57,7 @@ A spec 002-edicao-e-refino-visual (concluída) acrescentou seleção do bloco ap
 - 2026-11-05: contorno do bloco apontado com linhas Babylon, sem pós-processamento (spec 002-edicao-e-refino-visual).
 - 2026-11-05: materiais com tiles por face no atlas único e refino de iluminação e vegetação, mantendo um material e uma malha por chunk (spec 002-edicao-e-refino-visual).
 - 2026-11-05: capturas e métricas de desempenho nos três viewports em `e2e/visual.spec.ts`, registradas em `docs/validacao-visual.md` (spec 002-edicao-e-refino-visual).
+- 2026-11-05: brancos estourados vinham do cristal-luz quase branco, emissivo sem teto e glow forte; correção na arte, num mapa emissivo com teto de luminância 0.45, glow 0.5 e um cristal por ponto, sem esconder o glow (spec 003-cristal-sem-estouro).
 
 ## Restrições
 - Sem recursos protegidos de Minecraft.
