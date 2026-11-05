@@ -1,3 +1,4 @@
+import { construirMapaEmissivo } from './emissivo';
 import { Engine } from '@babylonjs/core/Engines/engine';
 import { Scene } from '@babylonjs/core/scene';
 import { UniversalCamera } from '@babylonjs/core/Cameras/universalCamera';
@@ -181,24 +182,9 @@ export function criarCena(canvas: HTMLCanvasElement, hotbar: Hotbar = criarHotba
   textura.hasAlpha = true;
 
   // Mapa emissivo: só os tiles de cristal e cogumelo mantêm cor, o resto fica preto.
-  const emissivos = new Set<number>([Bloco.CRISTAL_LUZ, Bloco.COGUMELO_BRILHANTE]);
-  const pxEmissivo = new Uint8Array(atlas.largura * atlas.altura * 4);
-  for (const t of atlas.tiles) {
-    if (!emissivos.has(t.bloco)) continue;
-    const x0 = Math.round(t.uv.u0 * atlas.largura);
-    const x1 = Math.round(t.uv.u1 * atlas.largura);
-    const y0 = Math.round(t.uv.v0 * atlas.altura);
-    const y1 = Math.round(t.uv.v1 * atlas.altura);
-    for (let y = y0; y < y1; y++) {
-      for (let x = x0; x < x1; x++) {
-        const i = (y * atlas.largura + x) * 4;
-        pxEmissivo[i] = atlas.pixels[i];
-        pxEmissivo[i + 1] = atlas.pixels[i + 1];
-        pxEmissivo[i + 2] = atlas.pixels[i + 2];
-        pxEmissivo[i + 3] = 255;
-      }
-    }
-  }
+  const pxEmissivo = new Uint8Array(
+    construirMapaEmissivo(atlas, [Bloco.CRISTAL_LUZ, Bloco.COGUMELO_BRILHANTE]),
+  );
   const texEmissiva = RawTexture.CreateRGBATexture(
     pxEmissivo,
     atlas.largura,

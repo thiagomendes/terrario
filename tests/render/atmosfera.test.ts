@@ -31,8 +31,8 @@ describe('refino de iluminação', () => {
   });
 
   it('glow na faixa e 2 cascatas', () => {
-    expect(INTENSIDADE_GLOW).toBeGreaterThanOrEqual(0.6);
-    expect(INTENSIDADE_GLOW).toBeLessThanOrEqual(1);
+    expect(INTENSIDADE_GLOW).toBeGreaterThanOrEqual(0.4);
+    expect(INTENSIDADE_GLOW).toBeLessThanOrEqual(0.6);
     expect(NUM_CASCATAS).toBe(2);
   });
 

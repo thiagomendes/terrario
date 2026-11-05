@@ -26,7 +26,7 @@ export const DENSIDADE_NEVOA = 0.011;
 
 export const NUM_CASCATAS = 2;
 
-export const INTENSIDADE_GLOW = 0.85;
+export const INTENSIDADE_GLOW = 0.5;
 
 /** Luz hemisférica de preenchimento azul-petróleo (sem luz dinâmica extra). */
 export const LUZ_PREENCHIMENTO = {
