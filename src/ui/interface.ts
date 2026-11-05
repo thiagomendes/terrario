@@ -1,5 +1,7 @@
 import type { Hotbar } from '../player/hotbar';
 import { criarBarra } from './barra';
+import { textoIndicador } from '../audio/ligador';
+import type { EstadoAudio } from '../audio/motor';
 
 const CSS = `
 .entrada {
@@ -92,6 +94,16 @@ const CSS = `
   color: #ffd98f;
   font: 600 0.9rem system-ui, sans-serif;
 }
+.hud .som {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  padding: 4px 10px;
+  border-radius: 8px;
+  background: rgba(18, 10, 36, 0.65);
+  color: #e6d6f7;
+  font: 600 0.8rem system-ui, sans-serif;
+}
 `;
 
 const TECLAS: ReadonlyArray<readonly [string, string]> = [
@@ -113,7 +125,11 @@ export function criarInterface(app: HTMLElement, hotbar?: Hotbar): void {
   const fps = document.createElement('div');
   fps.className = 'fps';
   fps.textContent = '0 FPS';
-  hud.append(mira, fps);
+  const somInd = document.createElement('div');
+  somInd.className = 'som';
+  somInd.setAttribute('data-audio-indicador', '');
+  somInd.textContent = textoIndicador('inativo', false);
+  hud.append(mira, fps, somInd);
   app.appendChild(hud);
   criarBarra(app, hotbar);
 
@@ -150,4 +166,8 @@ export function criarInterface(app: HTMLElement, hotbar?: Hotbar): void {
     const valor = window.__brumaluz?.fps ?? 0;
     fps.textContent = `${Math.round(valor)} FPS`;
   }, 500);
+  setInterval(() => {
+    const a = window.__brumaluz?.audio;
+    somInd.textContent = textoIndicador((a?.estado ?? 'inativo') as EstadoAudio, a?.mudo ?? false);
+  }, 200);
 }

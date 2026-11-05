@@ -64,6 +64,12 @@ import {
   planejarEfeito,
 } from './efeitos';
 import { criarGerador } from '../audio/variacao';
+import { criarMotorAudio, type ContextoAudio } from '../audio/motor';
+import { ativarNoPrimeiroGesto, ligarAudio, teclaParaMudo } from '../audio/ligador';
+import { grupoDoBloco } from '../audio/materiais';
+import { iniciarAmbiente, tocarSom, type Ambiente } from '../audio/sons';
+import { blocoSobPes, criarDetectorMovimento } from '../player/movimento';
+import { VEL_ANDAR, VEL_CORRER } from '../player/fisica';
 import { chave, chunksDesejados, planejar, respostaObsoleta } from './gerenciador';
 
 const RAIO_INICIAL = 3;
@@ -126,6 +132,7 @@ export interface EstadoDepuracao {
   mineracao?: { segurando: boolean; progresso: number; estagio: number };
   rachadura?: { visivel: boolean; estagio: number };
   fx?: { particulas: number };
+  audio?: { estado: string; vozes: number; mudo: boolean; ambiente?: boolean };
 }
 
 declare global {
@@ -675,9 +682,54 @@ export function criarCena(canvas: HTMLCanvasElement, hotbar: Hotbar = criarHotba
     estado.destaqueVisivel = contorno !== null;
   }
 
+  // Áudio: o contexto só nasce no primeiro gesto do jogador.
+  const motorAudio = criarMotorAudio(() => new AudioContext() as unknown as ContextoAudio);
+  ligarAudio(barramento, motorAudio);
+  const detector = criarDetectorMovimento();
+  let ambiente: Ambiente | null = null;
+  ativarNoPrimeiroGesto(document, {
+    ativar: async () => {
+      await motorAudio.ativar();
+      if (motorAudio.estado !== 'ativo') return;
+      tocarSom(motorAudio, 'entrada');
+      ambiente = iniciarAmbiente(motorAudio);
+    },
+  });
+  window.addEventListener('keydown', (e) => {
+    if (teclaParaMudo(e.code) && !e.repeat) motorAudio.alternarMudo();
+  });
+  Object.defineProperty(estado, 'audio', {
+    get: () => ({
+      estado: motorAudio.estado,
+      vozes: motorAudio.vozes,
+      mudo: motorAudio.mudo,
+      ambiente: ambiente !== null,
+    }),
+    enumerable: true,
+  });
+  let ultimoX = controle.jogador.x;
+  let ultimoZ = controle.jogador.z;
+  function atualizarSomMovimento(dt: number): void {
+    const j = controle.jogador;
+    const vel = dt > 0 ? Math.hypot(j.x - ultimoX, j.z - ultimoZ) / dt : 0;
+    ultimoX = j.x;
+    ultimoZ = j.z;
+    const eventos = detector.atualizar(dt, {
+      noChao: j.noChao,
+      velocidadeHoriz: vel,
+      correndo: vel > (VEL_ANDAR + VEL_CORRER) / 2,
+    });
+    if (eventos.length === 0) return;
+    const grupo = grupoDoBloco(blocoSobPes(j, blocoEm)) ?? 'terra';
+    for (const ev of eventos) {
+      tocarSom(motorAudio, ev, grupo);
+    }
+  }
+
   engine.runRenderLoop(() => {
     const dtQuadro = engine.getDeltaTime() / 1000;
     controle.atualizar(dtQuadro);
+    atualizarSomMovimento(Math.min(dtQuadro, 0.05));
     verificarSlot();
     minerador.atualizar(dtQuadro, alvoMineracao());
     atualizarChunks();
