@@ -10,13 +10,55 @@ import { Mesh } from '@babylonjs/core/Meshes/mesh';
 import { VertexData } from '@babylonjs/core/Meshes/mesh.vertexData';
 import { Color3, Color4 } from '@babylonjs/core/Maths/math.color';
 import { Vector3 } from '@babylonjs/core/Maths/math.vector';
+import { DirectionalLight } from '@babylonjs/core/Lights/directionalLight';
+import { CascadedShadowGenerator } from '@babylonjs/core/Lights/Shadows/cascadedShadowGenerator';
+import { ShadowGenerator } from '@babylonjs/core/Lights/Shadows/shadowGenerator';
+import '@babylonjs/core/Lights/Shadows/shadowGeneratorSceneComponent';
+import { GlowLayer } from '@babylonjs/core/Layers/glowLayer';
+import '@babylonjs/core/Layers/effectLayerSceneComponent';
+import { DynamicTexture } from '@babylonjs/core/Materials/Textures/dynamicTexture';
+import { MeshBuilder } from '@babylonjs/core/Meshes/meshBuilder';
 import { gerarAtlas } from '../art/atlas';
+import { Bloco } from '../world/blocks';
+import { DENSIDADE_NEVOA, DIRECAO_SOL, PALETA } from './atmosfera';
+import { PluginBalanco } from './balanco';
 import { SEMENTE_PADRAO, TAM_X, TAM_Z } from '../world/chunk';
 import type { Buffers } from '../mesh/malha';
 import type { RespostaChunk } from '../workers/chunk.worker';
 import { aplicarPorQuadro, chave, chunksDesejados, planejar } from './gerenciador';
 
 const RAIO_INICIAL = 3;
+const RAIO_SOMBRA = 1;
+
+function criarCeu(scene: Scene): void {
+  const textura = new DynamicTexture('ceu-grad', { width: 4, height: 256 }, scene, false);
+  const ctx = textura.getContext();
+  const grad = ctx.createLinearGradient(0, 0, 0, 256);
+  const css = (c: readonly number[]) => `rgb(${c.map((v) => Math.round(v * 255)).join(',')})`;
+  grad.addColorStop(0, css(PALETA.ceuZenite));
+  grad.addColorStop(0.45, css(PALETA.ceuMeio));
+  grad.addColorStop(0.5, css(PALETA.ceuHorizonte));
+  grad.addColorStop(1, css(PALETA.ceuHorizonte));
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, 4, 256);
+  textura.update();
+
+  const mat = new StandardMaterial('ceu', scene);
+  mat.backFaceCulling = false;
+  mat.disableLighting = true;
+  mat.fogEnabled = false;
+  mat.diffuseColor = Color3.Black();
+  mat.specularColor = Color3.Black();
+  mat.emissiveTexture = textura;
+  textura.wrapU = Texture.CLAMP_ADDRESSMODE;
+  textura.wrapV = Texture.CLAMP_ADDRESSMODE;
+
+  const domo = MeshBuilder.CreateSphere('ceu', { diameter: 500, segments: 16 }, scene);
+  domo.material = mat;
+  domo.infiniteDistance = true;
+  domo.isPickable = false;
+  domo.applyFog = false;
+}
 const MAX_POR_QUADRO = 2;
 
 export interface EstadoDepuracao {
@@ -38,11 +80,12 @@ export function criarCena(canvas: HTMLCanvasElement) {
 
   const engine = new Engine(canvas, false, { preserveDrawingBuffer: true });
   const scene = new Scene(engine);
-  const cor = new Color3(0.42, 0.3, 0.45);
+  const cor = new Color3(...PALETA.nevoa);
   scene.clearColor = new Color4(cor.r, cor.g, cor.b, 1);
   scene.fogMode = Scene.FOGMODE_EXP2;
   scene.fogColor = cor;
-  scene.fogDensity = 0.012;
+  scene.fogDensity = DENSIDADE_NEVOA;
+  scene.ambientColor = new Color3(...PALETA.sombra);
 
   const camera = new UniversalCamera('camera', new Vector3(8, 45, 8), scene);
   camera.setTarget(new Vector3(24, 30, 24));
@@ -51,8 +94,31 @@ export function criarCena(canvas: HTMLCanvasElement) {
   camera.attachControl(canvas, true);
 
   const luz = new HemisphericLight('luz', new Vector3(0.3, 1, 0.2), scene);
-  luz.diffuse = new Color3(1, 0.85, 0.7);
-  luz.groundColor = new Color3(0.25, 0.3, 0.4);
+  luz.diffuse = new Color3(0.75, 0.65, 0.7);
+  luz.groundColor = new Color3(...PALETA.sombra);
+  luz.intensity = 0.8;
+
+  const sol = new DirectionalLight('sol', new Vector3(...DIRECAO_SOL), scene);
+  sol.diffuse = new Color3(...PALETA.sol);
+  sol.specular = Color3.Black();
+  sol.intensity = 1.1;
+  sol.position = new Vector3(60, 90, 60);
+  sol.autoUpdateExtends = true;
+
+  const sombras = new CascadedShadowGenerator(1024, sol);
+  sombras.numCascades = 2;
+  sombras.lambda = 0.7;
+  sombras.shadowMaxZ = 80;
+  sombras.bias = 0.01;
+  sombras.normalBias = 0.02;
+  sombras.setDarkness(0.35);
+  sombras.filteringQuality = ShadowGenerator.QUALITY_LOW;
+  sombras.usePercentageCloserFiltering = true;
+
+  const glow = new GlowLayer('glow', scene, { blurKernelSize: 24 });
+  glow.intensity = 0.9;
+
+  criarCeu(scene);
 
   const atlas = gerarAtlas(SEMENTE_PADRAO);
   const textura = RawTexture.CreateRGBATexture(
@@ -66,13 +132,47 @@ export function criarCena(canvas: HTMLCanvasElement) {
   );
   textura.hasAlpha = true;
 
+  // Mapa emissivo: só os tiles de cristal e cogumelo mantêm cor, o resto fica preto.
+  const emissivos = new Set<number>([Bloco.CRISTAL_LUZ, Bloco.COGUMELO_BRILHANTE]);
+  const pxEmissivo = new Uint8Array(atlas.largura * atlas.altura * 4);
+  for (const t of atlas.tiles) {
+    if (!emissivos.has(t.bloco)) continue;
+    const x0 = Math.round(t.uv.u0 * atlas.largura);
+    const x1 = Math.round(t.uv.u1 * atlas.largura);
+    const y0 = Math.round(t.uv.v0 * atlas.altura);
+    const y1 = Math.round(t.uv.v1 * atlas.altura);
+    for (let y = y0; y < y1; y++) {
+      for (let x = x0; x < x1; x++) {
+        const i = (y * atlas.largura + x) * 4;
+        pxEmissivo[i] = atlas.pixels[i];
+        pxEmissivo[i + 1] = atlas.pixels[i + 1];
+        pxEmissivo[i + 2] = atlas.pixels[i + 2];
+        pxEmissivo[i + 3] = 255;
+      }
+    }
+  }
+  const texEmissiva = RawTexture.CreateRGBATexture(
+    pxEmissivo,
+    atlas.largura,
+    atlas.altura,
+    scene,
+    false,
+    false,
+    Texture.NEAREST_SAMPLINGMODE,
+  );
+
   const matSolido = new StandardMaterial('atlas', scene);
   matSolido.diffuseTexture = textura;
+  matSolido.emissiveTexture = texEmissiva;
+  matSolido.emissiveColor = Color3.White();
   matSolido.specularColor = Color3.Black();
   matSolido.backFaceCulling = false;
 
   const matPlanta = new StandardMaterial('atlas-plantas', scene);
   matPlanta.diffuseTexture = textura;
+  matPlanta.emissiveTexture = texEmissiva;
+  matPlanta.emissiveColor = Color3.White();
+  const balanco = new PluginBalanco(matPlanta);
   matPlanta.specularColor = Color3.Black();
   matPlanta.backFaceCulling = false;
   matPlanta.transparencyMode = Material.MATERIAL_ALPHATEST;
@@ -103,6 +203,27 @@ export function criarCena(canvas: HTMLCanvasElement) {
     return m;
   }
 
+  const comSombra = new Set<Mesh>();
+  function atualizarSombras(): void {
+    const ccx = Math.floor(camera.position.x / TAM_X);
+    const ccz = Math.floor(camera.position.z / TAM_Z);
+    for (const [k, lista] of malhas) {
+      const [cx, cz] = k.split(',').map(Number);
+      const perto = Math.abs(cx - ccx) <= RAIO_SOMBRA && Math.abs(cz - ccz) <= RAIO_SOMBRA;
+      for (const m of lista) {
+        if (perto && !comSombra.has(m)) {
+          sombras.addShadowCaster(m);
+          m.receiveShadows = true;
+          comSombra.add(m);
+        } else if (!perto && comSombra.has(m)) {
+          sombras.removeShadowCaster(m);
+          m.receiveShadows = false;
+          comSombra.delete(m);
+        }
+      }
+    }
+  }
+
   function aplicar(r: RespostaChunk): void {
     const k = chave(r.cx, r.cz);
     pedidos.delete(k);
@@ -120,7 +241,10 @@ export function criarCena(canvas: HTMLCanvasElement) {
     const desejados = chunksDesejados(cx, cz, RAIO_INICIAL);
     const plano = planejar([...malhas.keys(), ...pedidos], desejados);
     for (const k of plano.descartar) {
-      malhas.get(k)?.forEach((m) => m.dispose());
+      malhas.get(k)?.forEach((m) => {
+        comSombra.delete(m);
+        m.dispose();
+      });
       malhas.delete(k);
       pedidos.delete(k);
     }
@@ -135,6 +259,7 @@ export function criarCena(canvas: HTMLCanvasElement) {
         pedidos.delete(chave(r.cx, r.cz));
       }
     }
+    atualizarSombras();
     estado.chunksCarregados = malhas.size;
     if (!estado.ready && pedidos.size === 0 && fila.length === 0 && malhas.size > 0) {
       estado.ready = true;
@@ -144,6 +269,7 @@ export function criarCena(canvas: HTMLCanvasElement) {
   engine.runRenderLoop(() => {
     atualizarChunks();
     estado.fps = engine.getFps();
+    balanco.atualizar(performance.now() / 1000);
     scene.render();
   });
   window.addEventListener('resize', () => engine.resize());
