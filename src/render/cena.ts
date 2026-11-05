@@ -53,6 +53,9 @@ import type { EdicoesExportadas } from '../world/edicoes';
 import { chunksAfetados } from './remalha';
 import { criarFilaRemalha, MAX_REMALHAS_POR_QUADRO } from './fila';
 import { ajustarEscala, escalaBase } from './resolucao';
+
+/** Limite do dt (s) que alimenta minerador e efeitos: quadros lentos não os atropelam. */
+const DT_MAXIMO_QUADRO = 1 / 30;
 import { criarPoolParticulas, LIMITE_PARTICULAS } from '../fx/particulas';
 import { ESTAGIOS_RACHADURA, gerarTexturaRachadura, TAM_RACHADURA } from '../fx/rachadura';
 import {
@@ -727,9 +730,10 @@ export function criarCena(canvas: HTMLCanvasElement, hotbar: Hotbar = criarHotba
   }
 
   engine.runRenderLoop(() => {
-    const dtQuadro = engine.getDeltaTime() / 1000;
-    controle.atualizar(dtQuadro);
-    atualizarSomMovimento(Math.min(dtQuadro, 0.05));
+    const dtBruto = engine.getDeltaTime() / 1000;
+    const dtQuadro = Math.min(dtBruto, DT_MAXIMO_QUADRO);
+    controle.atualizar(dtBruto);
+    atualizarSomMovimento(Math.min(dtBruto, 0.05));
     verificarSlot();
     minerador.atualizar(dtQuadro, alvoMineracao());
     atualizarChunks();
