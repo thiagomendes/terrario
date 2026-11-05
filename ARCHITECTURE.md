@@ -7,7 +7,7 @@ A spec 001-cena-validacao entregou uma cena jogável de validação visual: terr
 
 A spec 002-edicao-e-refino-visual (concluída) acrescentou seleção do bloco apontado com contorno e mira, quebra e colocação de blocos, barra de 6 tipos, fila de remalha com métricas e o refino de iluminação, materiais com tiles por face e vegetação. O README e o relatório de validação foram atualizados.
 
-A spec 003-cristal-sem-estouro (em planejamento) corrige os blocos e halos brancos chapados: eram o cristal-luz estourado pelo emissivo somado ao glow.
+A spec 003-cristal-sem-estouro (concluída) corrigiu os blocos e halos brancos chapados: eram o cristal-luz estourado pelo emissivo somado ao glow. A correção foi na arte (atlas saturado), num mapa emissivo com teto de luminância, num glow mais suave e em um cristal por ponto na geração do mundo. Há e2e dedicado (`e2e/cristal.spec.ts`), e README e relatório de validação foram atualizados.
 
 ## Stack
 - TypeScript 5.6.3, Vite 5.4.10, Babylon.js (`@babylonjs/core` 7.31.0, imports por módulo para tree-shaking).
@@ -16,7 +16,7 @@ A spec 003-cristal-sem-estouro (em planejamento) corrige os blocos e halos branc
 
 ## Estrutura
 - `src/main.ts`: ponto de entrada; `index.html` na raiz.
-- `src/world/`: `blocks.ts`, `noise.ts`, `chunk.ts` (blocos, ruído, geração de chunks; lógica pura, sem Babylon) e `edicoes.ts` (registro puro de edições).
+- `src/world/`: `blocks.ts`, `noise.ts`, `chunk.ts` (blocos, ruído, geração de chunks, um cristal por ponto; lógica pura, sem Babylon) e `edicoes.ts` (registro puro de edições).
 - `src/mesh/malha.ts`: malha de chunk (faces visíveis, AO por vértice, tiles por face, vegetação em quads cruzados).
 - `src/art/atlas.ts`: atlas de texturas procedural (buffer RGBA puro, envolvido por canvas no navegador).
 - `src/workers/chunk.worker.ts`: geração, aplicação de edições e malha de chunks em Web Worker.
@@ -43,7 +43,8 @@ A spec 003-cristal-sem-estouro (em planejamento) corrige os blocos e halos branc
 - A página expõe `window.__brumaluz` (inclui `ready`) para os testes e2e, com ganchos de interação (`interagir`, `selecionarSlot`, `apontar`, `bloco`, `alvo` e métricas de desempenho).
 - Testes de colisão, física e edição usam o mundo real (`criarMundoSolido`) e a tabela de blocos, não sólidos sintéticos.
 - Testes de escala e variação da vegetação verificam os valores gerados, não só a altura ou a igualdade entre gerações.
-- Tiles emissivos têm cor saturada e o mapa emissivo respeita um teto de luminância, para o glow não estourar em branco.
+- Tiles emissivos têm cor saturada e o mapa emissivo (`construirMapaEmissivo` em `src/render/emissivo.ts`) limita a luminância a `TETO_LUMINANCIA_EMISSIVA` (0.45) preservando o matiz, para o glow não estourar em branco.
+- Testes de arte e de emissivo devem usar tiles reais e asserções que possam falhar (a revisão da T01 da spec 003 apontou testes tautológicos).
 
 ## Decisões
 - Babylon.js escolhido por sombras em cascata, névoa, céu procedural, glow e DynamicTexture integrados (spec 001-cena-validacao).
@@ -57,7 +58,7 @@ A spec 003-cristal-sem-estouro (em planejamento) corrige os blocos e halos branc
 - 2026-11-05: contorno do bloco apontado com linhas Babylon, sem pós-processamento (spec 002-edicao-e-refino-visual).
 - 2026-11-05: materiais com tiles por face no atlas único e refino de iluminação e vegetação, mantendo um material e uma malha por chunk (spec 002-edicao-e-refino-visual).
 - 2026-11-05: capturas e métricas de desempenho nos três viewports em `e2e/visual.spec.ts`, registradas em `docs/validacao-visual.md` (spec 002-edicao-e-refino-visual).
-- 2026-11-05: brancos estourados vinham do cristal-luz quase branco, emissivo sem teto e glow forte; correção na arte, num mapa emissivo com teto de luminância 0.45, glow 0.5 e um cristal por ponto, sem esconder o glow (spec 003-cristal-sem-estouro).
+- 2026-11-05: brancos estourados vinham do cristal-luz quase branco, emissivo sem teto e glow forte; correção na arte, num mapa emissivo com teto de luminância 0.45, glow mais suave (intensidade 0.5, `INTENSIDADE_GLOW` em `src/render/cena.ts`) e um cristal por ponto, sem esconder o glow (spec 003-cristal-sem-estouro).
 
 ## Restrições
 - Sem recursos protegidos de Minecraft.
