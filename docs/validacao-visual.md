@@ -47,7 +47,7 @@ Capturas novas em `test-results/screens` (sufixos `-desktop`, `-tablet` e `-celu
 
 Desempenho: a remalha é limitada a 2 malhas por quadro, com uma malha sólida e uma de plantas por chunk. As métricas de cada viewport são anexadas ao relatório do Playwright (`desempenho-*`).
 
-Identidade: a arte continua procedural, sem recursos de Minecraft e sem dependência nova.
+Identidade: a arte continua procedural, sem recursos externos e sem dependência nova.
 
 ## Etapa 003: cristal sem estouro
 
@@ -70,6 +70,47 @@ Métricas medidas (também anexadas ao relatório do Playwright como `cristal-*`
 | celular  | 9,5 | 29                | 1,5                 | 0,11%             |
 
 Não há FPS mínimo: o WebGL por software é informativo.
+
+## Etapa 004: mineração, efeitos e áudio
+
+Mineração por segurar o botão esquerdo. Durações de mineração contínua (constantes nomeadas em `src/player/mineracao.ts`):
+
+| Material                             | Duração (s)     |
+| ------------------------------------ | --------------- |
+| Plantas (grama alta, flor, cogumelo) | 0 (instantânea) |
+| Folhagem                             | 0,3             |
+| Terra musgosa                        | 0,5             |
+| Areia-bruma                          | 0,5             |
+| Tábuas                               | 0,9             |
+| Madeira retorcida                    | 1,1             |
+| Cristal-luz                          | 1,4             |
+| Pedra rachada                        | 1,6             |
+
+O dano parcial decai linearmente: progresso 1 some em 1 s sem golpes. Colocar tem intervalo mínimo de 0,15 s. Os ganchos `interagir('quebrar')` e `interagir('colocar')` seguem instantâneos.
+
+Limites:
+
+- Partículas vivas: 64, com pool reaproveitado (10 por quebra, 2 por golpe, 4 de poeira ao colocar).
+- Vozes de áudio simultâneas: 12, descartando a mais antiga.
+- Ambiente de crepúsculo: ganho máximo 0,08.
+
+Efeitos: rachadura de 5 estágios, fragmentos com a cor média do tile e pulso no contorno ao colocar. Nenhum é emissivo nem entra no glow.
+
+Métricas por viewport. O FPS vem da execução real de `e2e/cristal.spec.ts` (tabela da etapa 003, mesma cena e mesmo build). Partículas vivas não foram medidas nesta rodada, pois os e2e de mineração não as anexam; vale o limite de 64. Para consultá-las, leia `window.__brumaluz.fx` no navegador.
+
+| Viewport | FPS (cristal.spec) | Partículas vivas        | Limite |
+| -------- | ------------------ | ----------------------- | ------ |
+| desktop  | 3,9                | não medido nesta rodada | 64     |
+| tablet   | 5,0                | não medido nesta rodada | 64     |
+| celular  | 9,5                | não medido nesta rodada | 64     |
+
+Ressalva: em SwiftShader (WebGL por software) o FPS é só informativo e não é meta.
+
+Capturas em `test-results/screens`: rachadura, fragmentos e colocação, nos três viewports.
+
+Não há dependência nova nem arquivo de áudio ou textura externo: som, rachaduras e partículas são gerados por código.
+
+Conferência auditiva: (manual) abra o jogo, clique para jogar e confirme golpes, quebra, colocação, passos, pulo, aterrissagem, troca de slot e ambiente, com variação entre repetições. A tecla M deve alternar "Som: ligado" e "Som: mudo". O áudio real não é verificável no sandbox.
 
 ## Ressalva do WebGL por software
 
