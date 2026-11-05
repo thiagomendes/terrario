@@ -42,8 +42,9 @@ export class PluginBalanco extends MaterialPluginBase {
     return {
       CUSTOM_VERTEX_UPDATE_POSITION: `
         float fase = tempoBalanco * 1.6 + position.x * 0.8 + position.z * 0.6;
-        positionUpdated.x += sin(fase) * 0.06;
-        positionUpdated.z += cos(fase * 0.9) * 0.05;
+        float pesoBalanco = color.a;
+        positionUpdated.x += sin(fase) * 0.06 * pesoBalanco;
+        positionUpdated.z += cos(fase * 0.9) * 0.05 * pesoBalanco;
       `,
     };
   }

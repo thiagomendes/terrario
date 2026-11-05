@@ -48,6 +48,15 @@ export function tileDoBloco(id: number): number {
   return id - 1;
 }
 
+/** Hash determinístico da posição, em [0, 1). */
+export function hashPosicao(x: number, y: number, z: number, sal: number): number {
+  let h = Math.imul(x + 101, 374761393) ^ Math.imul(y + 211, 668265263);
+  h ^= Math.imul(z + 307, 2147483647) ^ Math.imul(sal + 1, 1274126177);
+  h = Math.imul(h ^ (h >>> 13), 1274126177);
+  h ^= h >>> 16;
+  return (h >>> 0) / 4294967296;
+}
+
 class Acumulador {
   posicoes: number[] = [];
   normais: number[] = [];
@@ -161,14 +170,19 @@ export function gerarMalha(blocos: Uint8Array, vizinhos: Vizinhos = {}): MalhaCh
 
   function adicionarPlanta(id: number, x: number, y: number, z: number): void {
     const tile = tileDoBloco(id);
+    const altura = 0.8 + 0.4 * hashPosicao(x, y, z, 1);
+    const escala = 0.8 + 0.4 * hashPosicao(x, y, z, 2);
+    const tom = 0.75 + 0.25 * hashPosicao(x, y, z, 3);
+    const a = 0.5 - 0.5 * escala;
+    const b = 0.5 + 0.5 * escala;
     const planos: [Vec, Vec][] = [
       [
-        [x, y, z],
-        [x + 1, y, z + 1],
+        [x + a, y, z + a],
+        [x + b, y, z + b],
       ],
       [
-        [x + 1, y, z],
-        [x, y, z + 1],
+        [x + b, y, z + a],
+        [x + a, y, z + b],
       ],
     ];
     for (const [p, q] of planos) {
@@ -181,14 +195,16 @@ export function gerarMalha(blocos: Uint8Array, vizinhos: Vizinhos = {}): MalhaCh
       const pts: Vec[] = [
         [p[0], y, p[2]],
         [q[0], y, q[2]],
-        [q[0], y + 1, q[2]],
-        [p[0], y + 1, p[2]],
+        [q[0], y + altura, q[2]],
+        [p[0], y + altura, p[2]],
       ];
       CANTOS.forEach(([s1, s2], i) => {
         plantas.posicoes.push(...pts[i]);
         plantas.normais.push(nx, 0, nz);
         plantas.uvs.push(...uvDoCanto(tile, s1, s2));
-        plantas.cores.push(1, 1, 1, 1);
+        const topo = s2 ? 1 : 0;
+        const t = tom * (0.9 + 0.1 * topo);
+        plantas.cores.push(t, t * (0.95 + 0.05 * topo), tom, topo);
       });
       plantas.indices.push(base, base + 1, base + 2, base, base + 2, base + 3);
     }
