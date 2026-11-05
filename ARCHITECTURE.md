@@ -5,13 +5,16 @@ Jogo 3D de exploração, construção e sobrevivência em mundo voxel, que roda 
 
 A spec 001-cena-validacao entregou uma cena jogável de validação visual: terreno em streaming de chunks, ambiente completo, jogador com física e controles, HUD, resolução adaptativa, testes e2e com capturas em três viewports e relatório em `docs/validacao-visual.md`.
 
-A spec 002-edicao-e-refino-visual (concluída) acrescentou seleção do bloco apontado com contorno e mira, quebra e colocação de blocos, barra de 6 tipos, fila de remalha com métricas e o refino de iluminação, materiais com tiles por face e vegetação. O README e o relatório de validação foram atualizados.
+A spec 002-edicao-e-refino-visual (concluída) acrescentou seleção do bloco apontado com contorno e mira, quebra e colocação de blocos, barra de 6 tipos, fila de remalha com métricas e o refino de iluminação, materiais com tiles por face e vegetação.
 
-A spec 003-cristal-sem-estouro (concluída) corrigiu os blocos e halos brancos chapados: eram o cristal-luz estourado pelo emissivo somado ao glow. A correção foi na arte (atlas saturado), num mapa emissivo com teto de luminância, num glow mais suave e em um cristal por ponto na geração do mundo. Há e2e dedicado (`e2e/cristal.spec.ts`), e README e relatório de validação foram atualizados.
+A spec 003-cristal-sem-estouro (concluída) corrigiu os blocos e halos brancos chapados do cristal-luz (arte saturada, mapa emissivo com teto de luminância, glow mais suave e um cristal por ponto).
+
+A spec 004-feedback-mineracao-audio (planejada) troca a quebra instantânea por mineração com resistência por material (segurar o botão), adiciona rachaduras, fragmentos e efeito de colocação, e áudio procedural por material e evento.
 
 ## Stack
 - TypeScript 5.6.3, Vite 5.4.10, Babylon.js (`@babylonjs/core` 7.31.0, imports por módulo para tree-shaking).
 - Vitest 2.1.4 para a lógica pura (ambiente node, sem jsdom); Playwright 1.48.2 (Chromium) para e2e e capturas; Prettier 3.3.3.
+- Áudio: Web Audio API do navegador, sintetizado por código, sem biblioteca e sem arquivos.
 - Docker: imagem base `mcr.microsoft.com/playwright:v1.48.2-noble` (traz Node e navegadores), via `.nants/Dockerfile` e `.nants/compose.yaml` (serviço `workspace`, porta 5174).
 
 ## Estrutura
@@ -20,10 +23,12 @@ A spec 003-cristal-sem-estouro (concluída) corrigiu os blocos e halos brancos c
 - `src/mesh/malha.ts`: malha de chunk (faces visíveis, AO por vértice, tiles por face, vegetação em quads cruzados).
 - `src/art/atlas.ts`: atlas de texturas procedural (buffer RGBA puro, envolvido por canvas no navegador).
 - `src/workers/chunk.worker.ts`: geração, aplicação de edições e malha de chunks em Web Worker.
-- `src/render/`: `cena.ts`, `gerenciador.ts` (streaming), `atmosfera.ts`, `balanco.ts`, `resolucao.ts`, `remalha.ts`, `fila.ts` (fila de remalha), `destaque.ts` (contorno do bloco apontado) e `emissivo.ts` (mapa emissivo com teto de luminância, spec 003).
-- `src/player/`: `fisica.ts`, `controle.ts`, `entrada.ts`, `alvo.ts` (raycast de voxel e regra de colocação), `hotbar.ts` (estado da barra), `interacao.ts` (quebrar, colocar, trocar de bloco).
+- `src/render/`: `cena.ts`, `gerenciador.ts` (streaming), `atmosfera.ts`, `balanco.ts`, `resolucao.ts`, `remalha.ts`, `fila.ts`, `destaque.ts`, `emissivo.ts` e, na spec 004, `efeitos.ts` (rachadura, fragmentos e pulso de colocação).
+- `src/player/`: `fisica.ts`, `controle.ts`, `entrada.ts`, `alvo.ts`, `hotbar.ts`, `interacao.ts` e, na spec 004, `mineracao.ts` (dureza e estado de danos), `minerador.ts` (controlador), `eventos.ts` (barramento puro) e `movimento.ts` (passos, pulo, aterrissagem).
+- `src/fx/` (spec 004): pool de partículas com limite, cor média por bloco e texturas de rachadura; lógica pura.
+- `src/audio/` (spec 004): `motor.ts` (contexto injetável, vozes, mudo), `sons.ts` (síntese), `materiais.ts`, `variacao.ts` e o ligador de eventos.
 - `src/ui/`: `interface.ts` (HUD e tela de entrada) e `barra.ts` (barra de blocos).
-- `tests/` (Vitest, por área: `mesh`, `player`, `render`, `world`, `art`) e `e2e/` (Playwright: `fumaca.spec.ts`, `interacao.spec.ts`, `barra.spec.ts`, `visual.spec.ts`, `cristal.spec.ts`).
+- `tests/` (Vitest, por área: `mesh`, `player`, `render`, `world`, `art`, `fx`, `audio`) e `e2e/` (Playwright).
 - `docs/validacao-visual.md`: relatório de validação visual e desempenho.
 - Configs na raiz: `vite.config.ts`, `vitest.config.ts`, `playwright.config.ts`, `tsconfig.json`.
 
@@ -36,15 +41,15 @@ A spec 003-cristal-sem-estouro (concluída) corrigiu os blocos e halos brancos c
 - O Playwright sobe sozinho `npm run build` e o preview em `127.0.0.1:4173`. Capturas em `test-results/screens`.
 
 ## Padrões e convenções
-- Lógica de mundo, malha, edição, raycast, hotbar e fila é pura e determinística (semente), testável sem GPU. Decisões de render que valem teste (ex.: mostrar e posicionar o contorno, limitar o emissivo) ficam em funções puras separadas do Babylon.
+- Lógica de mundo, malha, edição, raycast, hotbar, fila, mineração, pool de partículas, detector de movimento e ligador de áudio é pura e determinística (semente), testável sem GPU e sem Web Audio. Decisões de render que valem teste ficam em funções puras separadas do Babylon.
 - Um material de atlas único e uma malha por chunk (16x16x64).
-- Sombras só do sol, 2 cascatas, perto do jogador; emissivos via glow, nunca luz dinâmica (só o preenchimento hemisférico).
+- Sombras só do sol, 2 cascatas, perto do jogador; emissivos via glow, nunca luz dinâmica.
 - Versões exatas nos manifestos.
-- A página expõe `window.__brumaluz` (inclui `ready`) para os testes e2e, com ganchos de interação (`interagir`, `selecionarSlot`, `apontar`, `bloco`, `alvo` e métricas de desempenho).
-- Testes de colisão, física e edição usam o mundo real (`criarMundoSolido`) e a tabela de blocos, não sólidos sintéticos.
-- Testes de escala e variação da vegetação verificam os valores gerados, não só a altura ou a igualdade entre gerações.
-- Tiles emissivos têm cor saturada e o mapa emissivo (`construirMapaEmissivo` em `src/render/emissivo.ts`) limita a luminância a `TETO_LUMINANCIA_EMISSIVA` (0.45) preservando o matiz, para o glow não estourar em branco.
-- Testes de arte e de emissivo devem usar tiles reais e asserções que possam falhar (a revisão da T01 da spec 003 apontou testes tautológicos).
+- A página expõe `window.__brumaluz` (inclui `ready`) para os e2e, com ganchos `interagir`, `selecionarSlot`, `apontar`, `bloco`, `alvo`, métricas e, na spec 004, `minerar`, `mineracao`, `rachadura`, `fx` e `audio`. `interagir` segue instantâneo.
+- Tiles emissivos têm cor saturada e o mapa emissivo limita a luminância a `TETO_LUMINANCIA_EMISSIVA` (0.45). Efeitos novos (partículas, rachadura) não são emissivos nem entram no glow.
+- Áudio: o `AudioContext` só nasce no primeiro gesto do jogador, vem de uma fábrica injetada, e falha vira estado `bloqueado` sem exceção. Limites: 12 vozes e 64 partículas.
+- Sem `Math.random` em efeitos e áudio: gerador com semente injetado.
+- Testes devem usar dados reais (mundo, atlas, tabela de blocos) e asserções que possam falhar.
 
 ## Decisões
 - Babylon.js escolhido por sombras em cascata, névoa, céu procedural, glow e DynamicTexture integrados (spec 001-cena-validacao).
@@ -52,18 +57,18 @@ A spec 003-cristal-sem-estouro (concluída) corrigiu os blocos e halos brancos c
 - Entrada só teclado e mouse nesta fase (spec 001-cena-validacao).
 - Geração e malha de chunks em Web Worker (spec 001-cena-validacao).
 - 2026-11-05: e2e roda sobre build de produção servido por `vite preview` (porta 4173), com WebGL por SwiftShader (spec 001-cena-validacao).
-- 2026-11-05: capturas em três viewports gravadas em `test-results/screens` (spec 001-cena-validacao).
-- 2026-11-05: edições de blocos num registro puro e serializável, aplicadas por cima do terreno determinístico e também no worker e na colisão, com remalha limitada por quadro por uma fila; salvamento fica para depois (spec 002-edicao-e-refino-visual).
+- 2026-11-05: edições de blocos num registro puro e serializável, com remalha limitada por quadro por uma fila; salvamento fica para depois (spec 002-edicao-e-refino-visual).
 - 2026-11-05: barra de 6 blocos ilimitados, sem inventário nem coleta (spec 002-edicao-e-refino-visual).
 - 2026-11-05: contorno do bloco apontado com linhas Babylon, sem pós-processamento (spec 002-edicao-e-refino-visual).
-- 2026-11-05: materiais com tiles por face no atlas único e refino de iluminação e vegetação, mantendo um material e uma malha por chunk (spec 002-edicao-e-refino-visual).
-- 2026-11-05: capturas e métricas de desempenho nos três viewports em `e2e/visual.spec.ts`, registradas em `docs/validacao-visual.md` (spec 002-edicao-e-refino-visual).
-- 2026-11-05: brancos estourados vinham do cristal-luz quase branco, emissivo sem teto e glow forte; correção na arte, num mapa emissivo com teto de luminância 0.45, glow mais suave (intensidade 0.5, `INTENSIDADE_GLOW` em `src/render/cena.ts`) e um cristal por ponto, sem esconder o glow (spec 003-cristal-sem-estouro).
+- 2026-11-05: brancos estourados vinham do cristal-luz emissivo sem teto e glow forte; correção na arte, no mapa emissivo com teto 0.45 e no glow (intensidade 0.5) (spec 003-cristal-sem-estouro).
+- 2026-11-05: áudio sintetizado por código (Web Audio), sem arquivos e sem licença externa; motor com contexto injetável para testar em Vitest (spec 004-feedback-mineracao-audio).
+- 2026-11-05: mineração por segurar, com dureza por material (0 a 1,6 s, plantas instantâneas), dano guardado por bloco com decaimento linear de 1 s e colocação com intervalo de 0,15 s (spec 004-feedback-mineracao-audio).
+- 2026-11-05: barramento de eventos puro entre jogabilidade, efeitos e áudio; tecla M para mudo (spec 004-feedback-mineracao-audio).
 
 ## Restrições
 - Sem recursos protegidos de Minecraft.
 - Capturas e2e rodam com WebGL por software (SwiftShader): o FPS medido ali é informativo, não meta.
 - Edições não são salvas: somem ao recarregar a página.
-- Pendência conhecida: o spawn do jogador (`src/player/controle.ts`) pode cair dentro de árvore ou cristal sólido, pois usa só a altura do terreno. Confirme antes de agir, pois a busca por "spawn" não achou o termo literal no arquivo.
-- A pendência do chunk descartado aplicado duas vezes foi tratada na spec 002 (T03).
+- O áudio real não é verificável no sandbox: testes usam `AudioContext` falso e o estado exposto; a escuta é conferência manual.
+- Pendência conhecida: o spawn do jogador (`src/player/controle.ts`) pode cair dentro de árvore ou cristal sólido, pois usa só a altura do terreno. Confirme antes de agir.
 - Ponto de atenção: o material de plantas pode usar o alfa de vértice como transparência (`src/render/cena.ts`); revisar se surgir artefato visual.
