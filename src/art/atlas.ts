@@ -29,7 +29,14 @@ export interface Atlas {
   pixels: Uint8ClampedArray;
   tiles: TileAtlas[];
   uvDoBloco(bloco: number): RetanguloUV | undefined;
+  uvDaFace(bloco: number, face: FaceBloco): RetanguloUV | undefined;
 }
+
+/** Tile de topo (célula do atlas) para blocos com variação por face. */
+export const TILE_TOPO: Record<number, number> = {
+  [Bloco.TERRA_MUSGOSA]: 10,
+  [Bloco.MADEIRA_RETORCIDA]: 11,
+};
 
 type Cor = [number, number, number];
 
@@ -72,7 +79,8 @@ function pintorPorBloco(bloco: number): Pintor {
       const base = pintorBase([70, 52, 48], [52, 96, 78], 5, 0.25);
       return (x, y, s) => {
         const p = base(x, y, s);
-        const musgo = fbm2(x / 3, y / 3, s + 31) > 0.55 && y < 14;
+        const borda = 4 + fbm2(x / 3, 0, s + 31) * 10;
+        const musgo = y < borda;
         return musgo ? [40 + p[0] * 0.2, 110 + hash2(x, y, s) * 30, 90, 255] : p;
       };
     }
@@ -156,13 +164,65 @@ function limita(v: number): number {
   return Math.max(0, Math.min(255, Math.round(v)));
 }
 
+export type FaceBloco = 'topo' | 'lado' | 'base';
+
+/** Células extras (10 e 11) para o topo de blocos com variação por face. */
+const TOPOS: [number, number][] = [
+  [Bloco.TERRA_MUSGOSA, 10],
+  [Bloco.MADEIRA_RETORCIDA, 11],
+];
+
+function pintorTopo(bloco: number): Pintor {
+  if (bloco === Bloco.TERRA_MUSGOSA) {
+    return (x, y, s) => {
+      const t = fbm2(x / 4, y / 4, s + 41);
+      const c = sombreia(
+        mistura([40, 104, 84], [88, 168, 120], t),
+        1 + (hash2(x, y, s) - 0.5) * 0.3,
+      );
+      return [c[0], c[1], c[2], 255];
+    };
+  }
+  return (x, y, s) => {
+    const r = Math.hypot(x - 15.5, y - 15.5);
+    const anel = (Math.sin(r * 1.3 + fbm2(x / 8, y / 8, s) * 3) + 1) / 2;
+    const c = sombreia(
+      mistura([84, 52, 54], [150, 104, 88], anel),
+      1 + (hash2(x, y, s) - 0.5) * 0.1,
+    );
+    return [c[0], c[1], c[2], 255];
+  };
+}
+
+function celulaDe(indice: number): { ox: number; oy: number } {
+  return { ox: (indice % COLUNAS) * CELULA, oy: Math.floor(indice / COLUNAS) * CELULA };
+}
+
+function uvDaCelula(indice: number): RetanguloUV {
+  const { ox, oy } = celulaDe(indice);
+  return {
+    u0: (ox + PADDING) / LARGURA_ATLAS,
+    v0: (oy + PADDING) / ALTURA_ATLAS,
+    u1: (ox + PADDING + TAM_TILE) / LARGURA_ATLAS,
+    v1: (oy + PADDING + TAM_TILE) / ALTURA_ATLAS,
+  };
+}
+
 export function gerarAtlas(semente = 1337): Atlas {
   const pixels = new Uint8ClampedArray(LARGURA_ATLAS * ALTURA_ATLAS * 4);
   const tiles: TileAtlas[] = [];
-  NOMES.forEach(([bloco, nome], indice) => {
+  const itens: [number, string, number, Pintor][] = NOMES.map(([b, n], i) => [
+    b,
+    n,
+    i,
+    pintorPorBloco(b),
+  ]);
+  const extras = TOPOS.map(
+    ([b, i]) => [b, '', i, pintorTopo(b)] as [number, string, number, Pintor],
+  );
+  [...itens, ...extras].forEach(([bloco, nome, indice, pinta]) => {
     const ox = (indice % COLUNAS) * CELULA;
     const oy = Math.floor(indice / COLUNAS) * CELULA;
-    const pinta = pintorPorBloco(bloco);
     const s = semente + bloco * 977;
     for (let py = 0; py < CELULA; py++) {
       for (let px = 0; px < CELULA; px++) {
@@ -176,24 +236,22 @@ export function gerarAtlas(semente = 1337): Atlas {
         pixels[i + 3] = limita(p[3]);
       }
     }
-    tiles.push({
-      bloco,
-      nome,
-      indice,
-      uv: {
-        u0: (ox + PADDING) / LARGURA_ATLAS,
-        v0: (oy + PADDING) / ALTURA_ATLAS,
-        u1: (ox + PADDING + TAM_TILE) / LARGURA_ATLAS,
-        v1: (oy + PADDING + TAM_TILE) / ALTURA_ATLAS,
-      },
-    });
+    if (indice < NOMES.length) {
+      tiles.push({ bloco, nome, indice, uv: uvDaCelula(indice) });
+    }
   });
+  const uvDoBloco = (bloco: number) => tiles.find((t) => t.bloco === bloco)?.uv;
   return {
     largura: LARGURA_ATLAS,
     altura: ALTURA_ATLAS,
     pixels,
     tiles,
-    uvDoBloco: (bloco) => tiles.find((t) => t.bloco === bloco)?.uv,
+    uvDoBloco,
+    uvDaFace: (bloco, face) => {
+      const topo = TOPOS.find(([b]) => b === bloco);
+      if (topo && face === 'topo') return uvDaCelula(topo[1]);
+      return uvDoBloco(bloco);
+    },
   };
 }
 

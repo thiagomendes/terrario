@@ -1,4 +1,5 @@
 import { obterBloco } from '../world/blocks';
+import { TILE_TOPO } from '../art/atlas';
 import { ALTURA, TAM_X, TAM_Z, indice } from '../world/chunk';
 
 export const COLUNAS_ATLAS = 4;
@@ -122,7 +123,7 @@ export function gerarMalha(blocos: Uint8Array, vizinhos: Vizinhos = {}): MalhaCh
   }
 
   function adicionarFace(id: number, x: number, y: number, z: number, f: Face): void {
-    const tile = tileDoBloco(id);
+    const tile = f.n[1] > 0 && TILE_TOPO[id] !== undefined ? TILE_TOPO[id] : tileDoBloco(id);
     const base = solido.vertices;
     const ao: number[] = [];
     const fx = x + f.n[0];
