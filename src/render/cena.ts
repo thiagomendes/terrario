@@ -53,6 +53,17 @@ import type { EdicoesExportadas } from '../world/edicoes';
 import { chunksAfetados } from './remalha';
 import { criarFilaRemalha, MAX_REMALHAS_POR_QUADRO } from './fila';
 import { ajustarEscala, escalaBase } from './resolucao';
+import { criarPoolParticulas, LIMITE_PARTICULAS } from '../fx/particulas';
+import { ESTAGIOS_RACHADURA, gerarTexturaRachadura, TAM_RACHADURA } from '../fx/rachadura';
+import {
+  DURACAO_PULSO,
+  escalaPulso,
+  estadoRachadura,
+  FOLGA_RACHADURA,
+  opacidadePulso,
+  planejarEfeito,
+} from './efeitos';
+import { criarGerador } from '../audio/variacao';
 import { chave, chunksDesejados, planejar, respostaObsoleta } from './gerenciador';
 
 const RAIO_INICIAL = 3;
@@ -113,6 +124,8 @@ export interface EstadoDepuracao {
     segurando?: boolean,
   ) => { quebrou: boolean; progresso: number; estagio: number };
   mineracao?: { segurando: boolean; progresso: number; estagio: number };
+  rachadura?: { visivel: boolean; estagio: number };
+  fx?: { particulas: number };
 }
 
 declare global {
@@ -514,6 +527,131 @@ export function criarCena(canvas: HTMLCanvasElement, hotbar: Hotbar = criarHotba
     }
   }
 
+  // Efeitos: nunca emissivos, fora do glow e não selecionáveis.
+  function prepararEfeito(m: Mesh): void {
+    m.isPickable = false;
+    m.receiveShadows = false;
+    glow.addExcludedMesh(m);
+  }
+
+  const rngFx = criarGerador(7);
+  const pool = criarPoolParticulas(LIMITE_PARTICULAS);
+  const cubosParticulas: Mesh[] = [];
+  const matsParticulas: StandardMaterial[] = [];
+  for (let i = 0; i < pool.capacidade; i++) {
+    const cubo = MeshBuilder.CreateBox(`particula-${i}`, { size: 0.12 }, scene);
+    const mat = new StandardMaterial(`particula-mat-${i}`, scene);
+    mat.specularColor = Color3.Black();
+    mat.emissiveColor = Color3.Black();
+    cubo.material = mat;
+    cubo.setEnabled(false);
+    prepararEfeito(cubo);
+    cubosParticulas.push(cubo);
+    matsParticulas.push(mat);
+  }
+
+  const texRachaduras: StandardMaterial[] = [];
+  for (let e = 1; e <= ESTAGIOS_RACHADURA; e++) {
+    const pixels = new Uint8Array(gerarTexturaRachadura(e, SEMENTE_PADRAO).buffer);
+    const tex = RawTexture.CreateRGBATexture(
+      pixels,
+      TAM_RACHADURA,
+      TAM_RACHADURA,
+      scene,
+      false,
+      false,
+      Texture.NEAREST_SAMPLINGMODE,
+    );
+    tex.hasAlpha = true;
+    const mat = new StandardMaterial(`rachadura-${e}`, scene);
+    mat.diffuseTexture = tex;
+    mat.useAlphaFromDiffuseTexture = true;
+    mat.emissiveColor = Color3.Black();
+    mat.specularColor = Color3.Black();
+    mat.backFaceCulling = true;
+    texRachaduras.push(mat);
+  }
+  const caixaRachadura = MeshBuilder.CreateBox(
+    'rachadura',
+    { size: 1 + FOLGA_RACHADURA * 2 },
+    scene,
+  );
+  caixaRachadura.setEnabled(false);
+  prepararEfeito(caixaRachadura);
+  let estagioRachaduraAtual = 0;
+
+  const matPulso = new StandardMaterial('pulso', scene);
+  matPulso.diffuseColor = new Color3(0.8, 0.8, 0.85);
+  matPulso.emissiveColor = Color3.Black();
+  matPulso.specularColor = Color3.Black();
+  const caixaPulso = MeshBuilder.CreateBox('pulso', { size: 1 }, scene);
+  caixaPulso.material = matPulso;
+  caixaPulso.setEnabled(false);
+  prepararEfeito(caixaPulso);
+  let tempoPulso = DURACAO_PULSO;
+
+  function aplicarPlano<K extends 'golpe' | 'quebra' | 'colocacao'>(
+    nome: K,
+    dados: { x: number; y: number; z: number; bloco: number },
+  ): void {
+    const plano = planejarEfeito(nome, dados as never, rngFx);
+    const lista = plano.particulas.map((p) => ({
+      ...p,
+      cor: p.cor.map((c) => c / 255) as [number, number, number],
+    }));
+    pool.emitir(lista);
+    if (plano.pulso) {
+      caixaPulso.position.set(dados.x + 0.5, dados.y + 0.5, dados.z + 0.5);
+      tempoPulso = 0;
+    }
+  }
+  barramento.ouvir('golpe', (d) => aplicarPlano('golpe', d));
+  barramento.ouvir('quebra', (d) => aplicarPlano('quebra', d));
+  barramento.ouvir('colocacao', (d) => aplicarPlano('colocacao', d));
+
+  function atualizarEfeitos(dt: number): void {
+    pool.atualizar(dt);
+    const vivas = pool.vivas();
+    for (let i = 0; i < cubosParticulas.length; i++) {
+      const cubo = cubosParticulas[i];
+      if (i >= vivas) {
+        cubo.setEnabled(false);
+        continue;
+      }
+      cubo.setEnabled(true);
+      cubo.position.set(pool.posicoes[i * 3], pool.posicoes[i * 3 + 1], pool.posicoes[i * 3 + 2]);
+      matsParticulas[i].diffuseColor.set(
+        pool.cores[i * 3],
+        pool.cores[i * 3 + 1],
+        pool.cores[i * 3 + 2],
+      );
+    }
+    estado.fx = { particulas: vivas };
+
+    const est = minerador.estado;
+    const r = estadoRachadura(est.chaveAtual, minerador.progresso);
+    if (r.visivel && est.chaveAtual) {
+      const [x, y, z] = est.chaveAtual.split(',').map(Number);
+      caixaRachadura.position.set(x + 0.5, y + 0.5, z + 0.5);
+      if (r.estagio !== estagioRachaduraAtual) {
+        caixaRachadura.material = texRachaduras[r.estagio - 1];
+      }
+    }
+    estagioRachaduraAtual = r.estagio;
+    caixaRachadura.setEnabled(r.visivel);
+    estado.rachadura = r;
+
+    tempoPulso += dt;
+    const ativo = tempoPulso < DURACAO_PULSO;
+    caixaPulso.setEnabled(ativo);
+    if (ativo) {
+      caixaPulso.scaling.setAll(escalaPulso(tempoPulso));
+      matPulso.alpha = opacidadePulso(tempoPulso) * 0.35;
+    }
+  }
+  estado.fx = { particulas: 0 };
+  estado.rachadura = { visivel: false, estagio: 0 };
+
   let contorno: LinesMesh | null = null;
   let chaveContorno = '';
   function atualizarDestaque(): void {
@@ -544,6 +682,7 @@ export function criarCena(canvas: HTMLCanvasElement, hotbar: Hotbar = criarHotba
     minerador.atualizar(dtQuadro, alvoMineracao());
     atualizarChunks();
     atualizarDestaque();
+    atualizarEfeitos(dtQuadro);
     estado.fps = engine.getFps();
     estado.posicao = [camera.position.x, camera.position.y, camera.position.z];
     estado.rotacao = [camera.rotation.x, camera.rotation.y];
