@@ -40,4 +40,20 @@ describe('gerarChunk', () => {
       expect(contagem.get(id) ?? 0).toBeGreaterThan(0);
     }
   });
+
+  it('nunca empilha dois cristais', () => {
+    let cristais = 0;
+    for (let cz = -3; cz <= 3; cz++) {
+      for (let cx = -3; cx <= 3; cx++) {
+        const c = gerarChunk(cx, cz, 7);
+        for (let i = 0; i < c.length; i++) {
+          if (c[i] !== Bloco.CRISTAL_LUZ) continue;
+          cristais++;
+          expect(c[i + TAM_X * TAM_Z]).not.toBe(Bloco.CRISTAL_LUZ);
+          expect(c[i - TAM_X * TAM_Z]).not.toBe(Bloco.CRISTAL_LUZ);
+        }
+      }
+    }
+    expect(cristais).toBeGreaterThan(0);
+  });
 });

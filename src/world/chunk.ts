@@ -61,7 +61,6 @@ export function gerarChunk(cx: number, cz: number, semente: number = SEMENTE_PAD
         blocos[indice(x, topo, z)] = Bloco.COGUMELO_BRILHANTE;
       } else if (r > 0.9975) {
         blocos[indice(x, topo, z)] = Bloco.CRISTAL_LUZ;
-        if (x > 0) blocos[indice(x, topo + 1, z)] = Bloco.CRISTAL_LUZ;
       }
     }
   }
