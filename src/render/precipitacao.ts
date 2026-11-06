@@ -57,7 +57,55 @@ export function criarPrecipitacao(scene: Scene) {
   chuva.billboardMode = ParticleSystem.BILLBOARDMODE_STRETCHED;
   chuva.blendMode = ParticleSystem.BLENDMODE_STANDARD;
   chuva.emitRate = 0;
+  const modoChuva = tema().climaVisual.chuva;
+  /** Chuvas extras do granulado (cada uma com um par de cores de confeito). */
+  const extras: ParticleSystem[] = [];
+  let taxaChuva = 2200;
+  if (modoChuva === 'poeira') {
+    // poeira fina que desce devagar, quase parada no ar
+    chuva.particleTexture = floco;
+    chuva.billboardMode = ParticleSystem.BILLBOARDMODE_ALL;
+    chuva.direction1 = new Vector3(-0.3, -1, -0.2);
+    chuva.direction2 = new Vector3(0.3, -1, 0.2);
+    chuva.minEmitPower = 0.5;
+    chuva.maxEmitPower = 1.1;
+    chuva.minLifeTime = 7;
+    chuva.maxLifeTime = 10;
+    chuva.minSize = 0.035;
+    chuva.maxSize = 0.08;
+    chuva.minScaleY = 1;
+    chuva.maxScaleY = 1;
+    taxaChuva = 240;
+  } else if (modoChuva === 'granulado') {
+    // granulado colorido: palitinhos curtos, caindo mais devagar que a chuva
+    chuva.minEmitPower = 7;
+    chuva.maxEmitPower = 9;
+    chuva.minLifeTime = 1.8;
+    chuva.maxLifeTime = 2.4;
+    chuva.minSize = 0.08;
+    chuva.maxSize = 0.11;
+    chuva.minScaleY = 1.8;
+    chuva.maxScaleY = 2.4;
+    chuva.color1 = new Color4(1, 0.45, 0.7, 0.95);
+    chuva.color2 = new Color4(1, 0.95, 0.98, 0.9);
+    chuva.colorDead = new Color4(1, 0.8, 0.9, 0);
+    for (const [c1, c2] of [
+      [new Color4(1, 0.86, 0.25, 0.95), new Color4(1, 0.55, 0.2, 0.9)],
+      [new Color4(0.35, 0.85, 1, 0.95), new Color4(0.45, 0.95, 0.5, 0.9)],
+    ]) {
+      const e = chuva.clone(`granulado-${extras.length}`, new Vector3());
+      e.color1 = c1;
+      e.color2 = c2;
+      e.colorDead = new Color4(c2.r, c2.g, c2.b, 0);
+      e.emitRate = 0;
+      extras.push(e);
+    }
+    taxaChuva = 600;
+  }
   chuva.start();
+  for (const e of extras) e.start();
+  const basesExtras = extras.map((e) => [e.color1.clone(), e.color2.clone()] as const);
+  const neveVisivel = tema().climaVisual.neve;
 
   const neve = new ParticleSystem('neve', 1800, scene);
   neve.particleTexture = floco;
@@ -139,7 +187,7 @@ export function criarPrecipitacao(scene: Scene) {
       }
     },
     ativas: () => ({
-      chuva: chuva.getActiveCount(),
+      chuva: chuva.getActiveCount() + extras.reduce((n, e) => n + e.getActiveCount(), 0),
       neve: neve.getActiveCount(),
       taxa: chuva.emitRate,
     }),
@@ -156,13 +204,24 @@ export function criarPrecipitacao(scene: Scene) {
       neve.color1.a = baseNeve1.a;
       neve.color2 = baseNeve2.scale(q);
       neve.color2.a = baseNeve2.a;
+      extras.forEach((e, i) => {
+        e.color1 = basesExtras[i][0].scale(q);
+        e.color1.a = basesExtras[i][0].a;
+        e.color2 = basesExtras[i][1].scale(q);
+        e.color2.a = basesExtras[i][1].a;
+      });
     },
     atualizar(posicao: Vector3, intensidade: number, nevando: boolean, coberto: boolean) {
       (chuva.emitter as Vector3).copyFrom(posicao);
       (neve.emitter as Vector3).copyFrom(posicao);
-      const i = coberto ? 0 : intensidade;
-      chuva.emitRate = nevando ? 0 : i * 2200;
-      neve.emitRate = nevando ? i * 260 : 0;
+      const i = coberto || modoChuva === 'nenhuma' ? 0 : intensidade;
+      // neve desligada no tema: o frio só fica no chão pintado, nada cai
+      chuva.emitRate = nevando ? 0 : i * taxaChuva;
+      neve.emitRate = nevando && neveVisivel ? i * 260 : 0;
+      for (const e of extras) {
+        (e.emitter as Vector3).copyFrom(posicao);
+        e.emitRate = chuva.emitRate;
+      }
     },
   };
 }

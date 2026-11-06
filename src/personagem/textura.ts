@@ -434,6 +434,79 @@ function pintorAcessorio(a: Aparencia, c: Cores): Pintor {
         return grao(couro, x, y, 71, 0.1);
       };
     }
+    case 'capacete': {
+      const casca: Rgb = [236, 238, 242];
+      const aro: Rgb = [150, 160, 176];
+      const visor: Rgb = [120, 190, 235];
+      return (face, x, y, w, h) => {
+        if (face === 'base') return null;
+        // visor aberto: o rosto aparece, com moldura azulada
+        if (face === 'frente') {
+          const dentro = x >= 2 && x <= w - 3 && y >= 3 && y <= h - 4;
+          const borda = dentro && (x === 2 || x === w - 3 || y === 3 || y === h - 4);
+          if (borda) return mistura(visor, [255, 255, 255], y === 3 ? 0.4 : 0);
+          if (dentro) return null;
+        }
+        // anel do pescoço e uma faixa colorida da roupa no lado
+        if (face !== 'topo' && y >= h - 2) return tom(aro, y === h - 1 ? 0.8 : 1);
+        if (face !== 'topo' && face !== 'frente' && y === Math.floor(h * 0.45))
+          return tom(c.roupa, 1.1);
+        // quinas mais escuras: a casca parece arredondada
+        const quina =
+          x === 0 || x === w - 1 || (face === 'topo' ? y === 0 || y === h - 1 : y === 0);
+        return grao(tom(casca, quina ? 0.84 : 1), x, y, 73, 0.03);
+      };
+    }
+    case 'chapeu-explorador': {
+      const caqui: Rgb = [196, 170, 116];
+      return (face, x, y, _w, h) => {
+        if (h <= 2) return grao(tom(caqui, face === 'base' ? 0.65 : 0.92), x, y, 79, 0.05);
+        if (face === 'base') return null;
+        if (face === 'topo') return grao(tom(caqui, 1.05), x, y, 79, 0.06);
+        if (y >= h - 3) return y === h - 3 ? [92, 64, 40] : [110, 78, 48];
+        return grao(caqui, x, y, 79, 0.06);
+      };
+    }
+    case 'touca-chef': {
+      const branco: Rgb = [246, 244, 240];
+      return (face, x, y, _w, h) => {
+        if (face === 'base') return null;
+        if (face === 'topo') return grao(branco, x, y, 83, 0.04);
+        // pregas verticais no gomo de cima e faixa lisa embaixo
+        if (y >= h - 4) return tom(branco, y === h - 4 ? 0.85 : 0.97);
+        return x % 3 === 0 ? tom(branco, 0.86) : grao(branco, x, y, 83, 0.03);
+      };
+    }
+    case 'coroa-flores': {
+      const folha: Rgb = [84, 150, 70];
+      const petalas: Rgb[] = [
+        [255, 170, 200],
+        [255, 230, 120],
+        [190, 160, 255],
+        [255, 255, 255],
+      ];
+      return (face, x, y, w) => {
+        if (face === 'base') return null;
+        // por cima só o anel (o cabelo aparece no meio)
+        if (face === 'topo' && x > 0 && x < w - 1 && y > 0 && y < w - 1) return null;
+        if ((x + y * 3) % 4 === 1) return petalas[(x * 7 + y) % petalas.length];
+        return grao(folha, x, y, 89, 0.12);
+      };
+    }
+    case 'avental': {
+      const pano: Rgb = [250, 246, 240];
+      const debrum = mistura(c.roupa, [240, 120, 150], 0.5);
+      return (face, x, y, w, h) => {
+        if (face !== 'frente') return tom(debrum, 0.9);
+        if (x === 0 || x === w - 1 || y === 0) return debrum;
+        // bolso na barriga: um retângulo um pouco mais escuro com costura em cima
+        const y0 = Math.round(h * 0.56);
+        const bolso =
+          y >= y0 && y < Math.round(h * 0.8) && x >= Math.round(w * 0.3) && x < Math.round(w * 0.7);
+        if (bolso) return y === y0 ? debrum : grao(tom(pano, 0.9), x, y, 97, 0.03);
+        return grao(pano, x, y, 97, 0.03);
+      };
+    }
     default: {
       // capuz: abertura do rosto transparente
       const capuz = hex(COR_CAPUZ_SOMBRA);

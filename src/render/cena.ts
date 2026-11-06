@@ -566,14 +566,22 @@ export function criarCena(
     const estacao = estacaoDoDia(dia);
     const baseHora = atmosferaNaHora(hora);
     const raio = clima.atualizar(dt, estacao, baseHora.noite < 0.5);
-    if (raio) {
+    if (raio && temaAtual.climaVisual.relampago) {
       flash = 1;
       setTimeout(() => {
         tocarSom(motorAudio, 'trovao');
         legenda(temaAtual.textos.legendas.trovao);
       }, raio.atrasoTrovao * 1000);
     }
-    const a = ajustarPorClima(baseHora, clima.estado);
+    // nuvens do tema (a Lua não tem nenhuma): o clima continua o mesmo, só o céu muda
+    const fatorNuvens = temaAtual.ceu.fatorNuvens;
+    const a = ajustarPorClima(
+      baseHora,
+      fatorNuvens === 1
+        ? clima.estado
+        : { ...clima.estado, nuvens: clima.estado.nuvens * fatorNuvens },
+    );
+    if (!temaAtual.climaVisual.arcoIris) a.arco = 0;
     const k = 1 - Math.exp(-dt / 20);
     outonoAtual += ((estacao === 'outono' ? 1 : 0) - outonoAtual) * k;
     invernoAtual += ((estacao === 'inverno' ? 1 : 0) - invernoAtual) * k;
@@ -583,7 +591,7 @@ export function criarCena(
     mundoSolido.tempoMundo = tempo;
     for (const m of [mundoSolido, mundoPlanta]) {
       m.outono = outonoAtual;
-      m.inverno = invernoAtual * 0.9;
+      m.inverno = temaAtual.climaVisual.neve ? invernoAtual * 0.9 : 0;
       m.molhado = molhadoSuave;
     }
     const pj = controle.jogador;
@@ -1962,7 +1970,8 @@ export function criarCena(
         tocarSom(motorAudio, 'golpe', c.tipo === 'espectro' ? 'cristal' : 'terra');
         tocarVoz(motorAudio, c.tipo, 'susto', volumeDaDistancia(c));
       } else if (ev.tipo === 'morte') {
-        if (c.tipo === 'espectro' && temaAtual.id === 'bruma-e-luz') tocarSom(motorAudio, 'espectro');
+        if (c.tipo === 'espectro' && temaAtual.id === 'bruma-e-luz')
+          tocarSom(motorAudio, 'espectro');
         else if (c.tipo === 'espectro') tocarVoz(motorAudio, 'espectro', 'susto', 1);
         else tocarSom(motorAudio, 'quebra', 'folhagem');
         for (const d of ev.drops ?? [])

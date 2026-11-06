@@ -8,8 +8,8 @@
  * ceu.png (cores do céu hora a hora), mapa.png (vista de cima de 384x384 blocos) e
  * chunks.png (pedaços do mundo em 3D isométrico: árvores de cada bioma e a estrutura).
  */
-import { deflateSync } from 'node:zlib';
 import { mkdirSync, writeFileSync } from 'node:fs';
+import { novaImg, ponto, retangulo, poligono, salvarPngEm, iso, type Img, type V3 } from './iso';
 import { join } from 'node:path';
 import '../src/temas/todos';
 import { obterTema, temaExiste } from '../src/temas';
@@ -40,119 +40,6 @@ if (!idTema || !temaExiste(idTema)) {
 const tema = obterTema(idTema);
 ativarTemaPuro(tema);
 mkdirSync(saida, { recursive: true });
-
-// --- imagem e PNG ------------------------------------------------------------
-interface Img {
-  w: number;
-  h: number;
-  px: Uint8ClampedArray;
-}
-function novaImg(w: number, h: number, fundo: [number, number, number] = [24, 22, 30]): Img {
-  const px = new Uint8ClampedArray(w * h * 4);
-  for (let i = 0; i < w * h; i++) {
-    px[i * 4] = fundo[0];
-    px[i * 4 + 1] = fundo[1];
-    px[i * 4 + 2] = fundo[2];
-    px[i * 4 + 3] = 255;
-  }
-  return { w, h, px };
-}
-function ponto(img: Img, x: number, y: number, c: readonly number[]): void {
-  x = Math.floor(x);
-  y = Math.floor(y);
-  if (x < 0 || y < 0 || x >= img.w || y >= img.h) return;
-  const a = (c[3] ?? 255) / 255;
-  if (a <= 0) return;
-  const i = (y * img.w + x) * 4;
-  img.px[i] = img.px[i] * (1 - a) + c[0] * a;
-  img.px[i + 1] = img.px[i + 1] * (1 - a) + c[1] * a;
-  img.px[i + 2] = img.px[i + 2] * (1 - a) + c[2] * a;
-}
-function retangulo(img: Img, x: number, y: number, w: number, h: number, c: readonly number[]) {
-  for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) ponto(img, x + i, y + j, c);
-}
-/** Preenche um polígono convexo (pontos em ordem). */
-function poligono(img: Img, pts: [number, number][], c: readonly number[]): void {
-  let x0 = Infinity;
-  let y0 = Infinity;
-  let x1 = -Infinity;
-  let y1 = -Infinity;
-  for (const [x, y] of pts) {
-    x0 = Math.min(x0, x);
-    y0 = Math.min(y0, y);
-    x1 = Math.max(x1, x);
-    y1 = Math.max(y1, y);
-  }
-  for (let y = Math.floor(y0); y <= Math.ceil(y1); y++)
-    for (let x = Math.floor(x0); x <= Math.ceil(x1); x++) {
-      const px = x + 0.5;
-      const py = y + 0.5;
-      let dentro = true;
-      let sinal = 0;
-      for (let k = 0; k < pts.length; k++) {
-        const [ax, ay] = pts[k];
-        const [bx, by] = pts[(k + 1) % pts.length];
-        const cr = (bx - ax) * (py - ay) - (by - ay) * (px - ax);
-        if (Math.abs(cr) < 1e-9) continue;
-        const s = Math.sign(cr);
-        if (sinal === 0) sinal = s;
-        else if (s !== sinal) {
-          dentro = false;
-          break;
-        }
-      }
-      if (dentro) ponto(img, x, y, c);
-    }
-}
-const TABELA_CRC = (() => {
-  const t = new Uint32Array(256);
-  for (let n = 0; n < 256; n++) {
-    let c = n;
-    for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
-    t[n] = c >>> 0;
-  }
-  return t;
-})();
-function crc(b: Uint8Array): number {
-  let c = 0xffffffff;
-  for (const v of b) c = TABELA_CRC[(c ^ v) & 255] ^ (c >>> 8);
-  return (c ^ 0xffffffff) >>> 0;
-}
-function salvarPng(img: Img, nome: string): void {
-  const linhas = new Uint8Array(img.h * (img.w * 4 + 1));
-  for (let y = 0; y < img.h; y++) {
-    linhas[y * (img.w * 4 + 1)] = 0;
-    linhas.set(img.px.subarray(y * img.w * 4, (y + 1) * img.w * 4), y * (img.w * 4 + 1) + 1);
-  }
-  const pedaco = (tipo: string, dados: Uint8Array) => {
-    const b = new Uint8Array(12 + dados.length);
-    const v = new DataView(b.buffer);
-    v.setUint32(0, dados.length);
-    for (let i = 0; i < 4; i++) b[4 + i] = tipo.charCodeAt(i);
-    b.set(dados, 8);
-    v.setUint32(8 + dados.length, crc(b.subarray(4, 8 + dados.length)));
-    return b;
-  };
-  const ihdr = new Uint8Array(13);
-  const v = new DataView(ihdr.buffer);
-  v.setUint32(0, img.w);
-  v.setUint32(4, img.h);
-  ihdr.set([8, 6, 0, 0, 0], 8);
-  const partes = [
-    new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10]),
-    pedaco('IHDR', ihdr),
-    pedaco('IDAT', new Uint8Array(deflateSync(linhas))),
-    pedaco('IEND', new Uint8Array()),
-  ];
-  const total = new Uint8Array(partes.reduce((n, p) => n + p.length, 0));
-  let o = 0;
-  for (const p of partes) {
-    total.set(p, o);
-    o += p.length;
-  }
-  writeFileSync(join(saida, nome), total);
-  console.log('gravado', join(saida, nome));
-}
 
 // --- atlas e tiles -----------------------------------------------------------
 const atlas = gerarAtlas(1337);
@@ -206,11 +93,6 @@ function corMedia(nome: string): [number, number, number] {
   writeFileSync(join(saida, 'tiles.txt'), lista.join('\n') + '\n');
 }
 
-// --- projeção isométrica -------------------------------------------------------
-type V3 = [number, number, number];
-function iso(p: V3, w: number, cx: number, cy: number): [number, number] {
-  return [cx + (p[0] - p[2]) * w * 0.5, cy + (p[0] + p[2]) * w * 0.25 - p[1] * w * 0.5];
-}
 const SOMBRA = { topo: 1, x: 0.72, z: 0.86 };
 
 /** Face texturizada (topo, +x ou +z) de um cubo unitário em (bx, by, bz). */
@@ -543,3 +425,7 @@ function procurarChunks(): { cx: number; cz: number; rotulo: string }[] {
 }
 
 console.log(`vitrine de ${tema.nome} pronta em ${saida}`);
+
+function salvarPng(img: Img, nome: string): void {
+  salvarPngEm(img, join(saida, nome));
+}

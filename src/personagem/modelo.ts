@@ -178,6 +178,36 @@ export function montarPartes(aparencia: Aparencia): Parte[] {
         ),
       );
       break;
+    case 'capacete':
+      // capacete de astronauta: casca maior que a cabeça, visor aberto na frente
+      partes.push(
+        naCabeca(
+          [LADO_CABECA + 0.1, ALTURA_CABECA + 0.08, LADO_CABECA + 0.1],
+          ALTURA_CABECA / 2 + 0.02,
+        ),
+      );
+      break;
+    case 'chapeu-explorador':
+      // copa alta e aba larga
+      partes.push(naCabeca([LADO_CABECA + 0.05, 0.18, LADO_CABECA + 0.05], ALTURA_CABECA + 0.07));
+      partes.push(naCabeca([LADO_CABECA + 0.34, 0.04, LADO_CABECA + 0.34], ALTURA_CABECA - 0.01));
+      break;
+    case 'touca-chef':
+      partes.push(naCabeca([LADO_CABECA + 0.06, 0.3, LADO_CABECA + 0.06], ALTURA_CABECA + 0.13));
+      break;
+    case 'coroa-flores':
+      partes.push(naCabeca([LADO_CABECA + 0.06, 0.08, LADO_CABECA + 0.06], ALTURA_CABECA - 0.02));
+      break;
+    case 'avental':
+      // na frente do tronco, do peito até um pouco abaixo da cintura
+      partes.push(
+        noCorpo(
+          [larguraTronco - 0.06, alturaTronco * 0.8 + 0.12, 0.03],
+          pernas + alturaTronco * 0.4 - 0.06,
+          PROFUNDIDADE_TRONCO / 2 + 0.02,
+        ),
+      );
+      break;
     case 'lanterna':
       partes.push({
         nome: 'acessorio',
@@ -189,5 +219,8 @@ export function montarPartes(aparencia: Aparencia): Parte[] {
     default:
       break;
   }
+  // capacete fechado: o cabelo fica todo dentro (nada vaza pela casca)
+  if (aparencia.acessorio === 'capacete')
+    return partes.filter((p) => p.nome !== 'cabelo' && p.nome !== 'penteado');
   return partes;
 }

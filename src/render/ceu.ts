@@ -177,7 +177,7 @@ void main() {
     vec2 uv = d.xz / (h + 0.12) * 1.6 + vec2(tempo * 0.006, tempo * 0.0025);
     vec2 bloco = floor(uv * 6.0) / 6.0;
     float n = fbm(bloco * 1.3);
-    float nuvem = smoothstep(0.52 - cobertura * 0.3, 0.62 - cobertura * 0.25, n) * smoothstep(0.02, 0.2, h) * fatorNuvens;
+    float nuvem = smoothstep(0.52 - cobertura * 0.3, 0.62 - cobertura * 0.25, n) * smoothstep(0.02, 0.2, h);
     float lado = pow(max(dot(d, paraSol), 0.0), 3.0);
     vec3 dia = mix(vec3(1.0, 0.98, 0.96) * corNuvens, corSol * 1.05, crepusculo * 0.75 + lado * 0.3);
     vec3 cn = mix(dia, ceuMeio * 0.35 + vec3(0.03), noite);
