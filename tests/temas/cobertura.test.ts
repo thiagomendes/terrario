@@ -319,3 +319,22 @@ describe('cada tema é ele mesmo', () => {
       }
   });
 });
+
+describe('robustez do registro', () => {
+  it('tema desconhecido ou ausente cai no Bruma e Luz', () => {
+    expect(obterTema('nao-existe').id).toBe(TEMA_PADRAO);
+    expect(obterTema(undefined).id).toBe(TEMA_PADRAO);
+    expect(obterTema(null).id).toBe(TEMA_PADRAO);
+  });
+
+  it('gerar o atlas de cada tema leva menos de 150 ms', () => {
+    for (const t of temas) {
+      ativarTemaPuro(t);
+      gerarAtlas(1337); // aquece
+      const t0 = performance.now();
+      gerarAtlas(1337);
+      expect(performance.now() - t0, t.id).toBeLessThan(150);
+    }
+    ativarTemaPuro(base);
+  });
+});

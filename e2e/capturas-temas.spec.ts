@@ -1,0 +1,200 @@
+import { test, type Page } from '@playwright/test';
+
+import { PASTA_CAPTURAS } from '../playwright.config';
+
+/**
+ * Matriz de capturas por tema (spec 007, critério 5) e prévias dos cartões de tema
+ * (public/temas/<id>.jpg). Pesado: só roda com CAPTURAS_TEMAS=1.
+ *   CAPTURAS_TEMAS=1 npx playwright test e2e/capturas-temas.spec.ts
+ * CAPTURAS_TEMAS=<id> roda só um tema.
+ */
+const TODOS = [
+  'bruma-e-luz',
+  'planeta-vivo',
+  'mata-encantada',
+  'doce-reino',
+  'era-dos-dinos',
+  'exploracao-lunar',
+];
+declare const process: { env: Record<string, string | undefined> };
+const pedido = process.env.CAPTURAS_TEMAS;
+const TEMAS = pedido && pedido !== '1' ? pedido.split(',') : TODOS;
+const PASTA = `${PASTA_CAPTURAS}/temas`;
+const AGUA = 67;
+const TOCHA = 37;
+
+test.skip(!pedido, 'capturas de tema só com CAPTURAS_TEMAS');
+
+async function abrir(page: Page, id: string) {
+  await page.goto(`/?tema=${id}`);
+  await page.waitForFunction(() => window.__brumaluz?.ready === true, undefined, {
+    timeout: 180_000,
+  });
+}
+
+async function entrarNoJogo(page: Page) {
+  await page.evaluate(() => {
+    document.querySelector<HTMLElement>('.entrada')?.setAttribute('hidden', '');
+    window.__brumaluz!.pausarDia = true;
+  });
+}
+
+async function cena(page: Page, hora: number, clima = 'limpo', espera = 2500) {
+  await page.evaluate(
+    ({ hora, clima }) => {
+      window.__brumaluz!.hora = hora;
+      window.__brumaluz!.definirClima!(clima as never);
+    },
+    { hora, clima },
+  );
+  await page.waitForTimeout(espera);
+}
+
+async function semHud(page: Page, sim: boolean) {
+  await page.evaluate((sim) => {
+    const f = window.__brumaluz!.modoFoto!;
+    if (f.ativo() !== sim) f.alternar();
+  }, sim);
+  await page.waitForTimeout(300);
+}
+
+async function foto(page: Page, nome: string) {
+  await page.screenshot({ path: `${PASTA}/${nome}.png` });
+}
+
+for (const id of TEMAS) {
+  test(`matriz de capturas: ${id}`, async ({ page }) => {
+    test.setTimeout(900_000);
+    const erros: string[] = [];
+    page.on('pageerror', (e) => erros.push(String(e)));
+    await page.setViewportSize({ width: 1280, height: 720 });
+    await abrir(page, id);
+    await page.waitForTimeout(1500);
+    await foto(page, `${id}-titulo`);
+    await entrarNoJogo(page);
+    await page.evaluate(() => window.__brumaluz!.apontar!(0.6, -0.12));
+
+    // prévia do cartão do tema: manhã clara, sem interface
+    await semHud(page, true);
+    await cena(page, 0.36, 'limpo', 4000);
+    await page.setViewportSize({ width: 960, height: 540 });
+    await page.waitForTimeout(1200);
+    await page.screenshot({ path: `public/temas/${id}.jpg`, type: 'jpeg', quality: 80 });
+    await page.setViewportSize({ width: 1280, height: 720 });
+    await page.waitForTimeout(800);
+
+    // dia, crepúsculo e noite olhando o horizonte e o céu
+    for (const [nome, hora] of [
+      ['dia', 0.45],
+      ['crepusculo', 0.76],
+      ['noite', 0.02],
+    ] as const) {
+      await cena(page, hora);
+      await foto(page, `${id}-${nome}`);
+    }
+    await page.evaluate(() => window.__brumaluz!.apontar!(0.6, 0.35));
+    await cena(page, 0.45);
+    await foto(page, `${id}-ceu`);
+    await page.evaluate(() => window.__brumaluz!.apontar!(0.6, -0.12));
+
+    // chuva e inverno
+    await cena(page, 0.42, 'chuva', 4000);
+    await foto(page, `${id}-chuva`);
+    await page.evaluate(() => window.__brumaluz!.definirDia!(9));
+    await cena(page, 0.45, 'limpo', 3000);
+    await foto(page, `${id}-inverno`);
+    await page.evaluate(() => window.__brumaluz!.definirDia!(0));
+
+    // as cinco criaturas lado a lado na frente da câmera, de dia
+    await cena(page, 0.4);
+    await page.evaluate(() => {
+      const e = window.__brumaluz!;
+      const [x, y, z] = e.posicao!;
+      const tipos = ['cervo', 'coelho', 'raposa', 'espectro'] as const;
+      tipos.forEach((t, i) => {
+        const gx = Math.floor(x + 4 + i * 0.2);
+        const gz = Math.floor(z - 3 + i * 2);
+        let gy = Math.floor(y) + 3;
+        while (gy > 2 && e.bloco!(gx, gy - 1, gz) === 0) gy--;
+        e.invocar!(t as never, gx + 0.5, gy, gz + 0.5);
+      });
+      e.apontar!(-Math.PI / 2, -0.15);
+    });
+    await page.waitForTimeout(1500);
+    await foto(page, `${id}-criaturas`);
+
+    // inventário (interface do tema)
+    await semHud(page, false);
+    await page.keyboard.press('KeyE');
+    await page.waitForTimeout(900);
+    await foto(page, `${id}-inventario`);
+    await page.keyboard.press('Escape');
+    await page.waitForTimeout(500);
+    await semHud(page, true);
+
+    // caverna com tocha: uma salinha escavada embaixo do nascimento
+    await page.evaluate(
+      ({ TOCHA }) => {
+        const e = window.__brumaluz!;
+        const [x0, y0, z0] = e.posicao!.map(Math.floor);
+        const y = y0 - 14;
+        for (let dx = -3; dx <= 3; dx++)
+          for (let dz = -3; dz <= 3; dz++)
+            for (let dy = 0; dy <= 3; dy++) e.definirBloco!(x0 + dx, y + dy, z0 + dz, 0);
+        e.definirBloco!(x0 + 3, y, z0 + 1, TOCHA);
+        e.teleportar!(x0 + 0.5, z0 + 0.5, y);
+        e.apontar!(1.2, -0.1);
+      },
+      { TOCHA },
+    );
+    await cena(page, 0.02, 'limpo', 3500);
+    await foto(page, `${id}-caverna`);
+
+    // debaixo d'água: procura um mar perto do nascimento
+    const achou = await page.evaluate(
+      ({ AGUA }) => {
+        const e = window.__brumaluz!;
+        const [x0, , z0] = e.posicao!.map(Math.floor);
+        for (let r = 8; r < 400; r += 6)
+          for (let a = 0; a < 24; a++) {
+            const x = Math.round(x0 + Math.cos((a / 24) * Math.PI * 2) * r);
+            const z = Math.round(z0 + Math.sin((a / 24) * Math.PI * 2) * r);
+            if (e.blocoGerado!(x, 61, z) === AGUA && e.blocoGerado!(x, 55, z) === AGUA) {
+              e.teleportar!(x + 0.5, z + 0.5, 57);
+              e.apontar!(0.3, -0.05);
+              // um peixe para conferir a pele
+              e.invocar!('peixe' as never, x + 0.5, 57.5, z + 2.5);
+              return true;
+            }
+          }
+        return false;
+      },
+      { AGUA },
+    );
+    if (achou) {
+      await cena(page, 0.42, 'limpo', 6000);
+      await foto(page, `${id}-agua`);
+    }
+    if (erros.length) throw new Error(erros.join('\n'));
+  });
+}
+
+test.describe('celular', () => {
+  test.use({ isMobile: true, hasTouch: true });
+  for (const id of TEMAS) {
+    test(`celular: ${id}`, async ({ page }) => {
+      test.setTimeout(600_000);
+      await page.setViewportSize({ width: 390, height: 844 });
+      await abrir(page, id);
+      await page.waitForTimeout(1200);
+      await foto(page, `${id}-celular-titulo`);
+      await entrarNoJogo(page);
+      await page.evaluate(() => window.__brumaluz!.apontar!(0.6, -0.1));
+      await cena(page, 0.45, 'limpo', 3000);
+      await foto(page, `${id}-celular-dia`);
+      await page.setViewportSize({ width: 844, height: 390 });
+      await page.waitForTimeout(2000);
+      await foto(page, `${id}-celular-paisagem`);
+    });
+  }
+});

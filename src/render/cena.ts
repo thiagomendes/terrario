@@ -195,6 +195,8 @@ const ALCANCE = 5;
 
 export interface EstadoDepuracao {
   ready: boolean;
+  /** Tema visual ativo nesta página. */
+  tema?: string;
   chunksCarregados: number;
   fps: number;
   escalaResolucao: number;
@@ -349,6 +351,7 @@ export function criarCena(
     aplicadasNoUltimoQuadro: 0,
   };
   window.__brumaluz = estado;
+  estado.tema = temaAtual.id;
 
   // Sem preserveDrawingBuffer: GPUs de celular descartam o buffer a cada quadro (menos banda).
   // Capturas e miniaturas renderizam um quadro e leem o canvas na mesma tarefa.
@@ -2308,7 +2311,7 @@ export function criarCena(
       const url = canvas.toDataURL('image/png');
       const a = document.createElement('a');
       const agora = new Date();
-      a.download = `brumaluz-${agora.toISOString().slice(0, 19).replace(/[:T]/g, '-')}.png`;
+      a.download = `terrario-${agora.toISOString().slice(0, 19).replace(/[:T]/g, '-')}.png`;
       a.href = url;
       a.click();
       return url;
