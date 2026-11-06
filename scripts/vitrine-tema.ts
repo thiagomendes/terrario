@@ -28,7 +28,9 @@ import {
   biomaEm,
   NOMES_BIOMA,
   type Bioma,
+  TERRENO_NATURAL,
 } from '../src/world/chunk';
+import { planoDaRegiao } from '../src/world/povoado';
 import { hash2 } from '../src/world/noise';
 import type { TipoCriatura } from '../src/jogo/criaturas';
 
@@ -435,6 +437,75 @@ function procurarChunks(): { cx: number; cz: number; rotulo: string }[] {
   });
   salvarPng(img, 'chunks.png');
   writeFileSync(join(saida, 'chunks.txt'), rotulos.join('\n') + '\n');
+}
+
+// --- povoado ---------------------------------------------------------------------
+{
+  let plano: ReturnType<typeof planoDaRegiao> = null;
+  for (let r = 0; r < 6 && !plano; r++)
+    for (let rz = -r; rz <= r && !plano; rz++)
+      for (let rx = -r; rx <= r && !plano; rx++)
+        plano = planoDaRegiao(rx, rz, SEMENTE, TERRENO_NATURAL);
+  if (plano) {
+    const lado = 64;
+    const w = 12;
+    const img = novaImg(lado * w + 60, Math.round(lado * w * 0.75) + 160, [110, 140, 180]);
+    const ox = img.w / 2;
+    const oy = 140;
+    const x0 = plano.cx - lado / 2;
+    const z0 = plano.cz - lado / 2;
+    const yMin = plano.h - 6;
+    const yMax = plano.h + 12;
+    for (let s2 = 0; s2 < lado * 2; s2++)
+      for (let y = yMin; y <= yMax; y++)
+        for (let x = 0; x < lado; x++) {
+          const z = s2 - x;
+          if (z < 0 || z >= lado) continue;
+          const id = blocoEm(x0 + x, y, z0 + z);
+          if (id === Bloco.AR) continue;
+          const c = cores(id);
+          const P = (a: number, b: number, d: number): [number, number] =>
+            iso([x + a - lado / 2, y - plano.h + b, z + d - lado / 2], w, ox, oy + lado * w * 0.25);
+          if (transparente(id)) {
+            const t = c.lado;
+            poligono(
+              img,
+              [P(0.2, 0.8, 0.5), P(0.8, 0.8, 0.5), P(0.8, 0, 0.5), P(0.2, 0, 0.5)],
+              [...t, 255],
+            );
+            continue;
+          }
+          const vis = (dx: number, dy: number, dz: number) => {
+            const v = blocoEm(x0 + x + dx, y + dy, z0 + z + dz);
+            return (
+              transparente(v) ||
+              (v === Bloco.AGUA && id !== Bloco.AGUA) ||
+              x + dx >= lado ||
+              z + dz >= lado ||
+              y + dy > yMax
+            );
+          };
+          const sombra = (k: number, base: readonly number[]) => [
+            base[0] * k,
+            base[1] * k,
+            base[2] * k,
+            255,
+          ];
+          if (vis(0, 1, 0))
+            poligono(img, [P(0, 1, 0), P(1, 1, 0), P(1, 1, 1), P(0, 1, 1)], sombra(1, c.topo));
+          if (vis(1, 0, 0))
+            poligono(img, [P(1, 1, 0), P(1, 1, 1), P(1, 0, 1), P(1, 0, 0)], sombra(0.72, c.lado));
+          if (vis(0, 0, 1))
+            poligono(img, [P(0, 1, 1), P(1, 1, 1), P(1, 0, 1), P(0, 0, 1)], sombra(0.86, c.lado));
+        }
+    salvarPng(img, 'povoado.png');
+    writeFileSync(
+      join(saida, 'povoado.txt'),
+      `povoado ${plano.id}: centro ${plano.cx},${plano.cz} (altura ${plano.h}), ${plano.lotes.length} lotes: ` +
+        plano.lotes.map((l) => `${l.tipo}${l.profissao ? '/' + l.profissao : ''}`).join(', ') +
+        `\nformas: ${JSON.stringify(tema.mundo.povoado ?? 'padrão')}\n`,
+    );
+  } else console.log('nenhum povoado perto da origem');
 }
 
 console.log(`vitrine de ${tema.nome} pronta em ${saida}`);

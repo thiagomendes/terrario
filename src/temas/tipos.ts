@@ -9,6 +9,7 @@ import type { TipoCriatura } from '../jogo/criaturas';
 import type { GrupoMaterial } from '../audio/materiais';
 import type { Aparencia } from '../personagem/aparencia';
 import type { Estacao, TipoClima } from '../jogo/clima';
+import type { FormasPovoado } from '../world/povoado';
 
 export type IdTema =
   | 'bruma-e-luz'
@@ -199,6 +200,8 @@ export interface EstiloMundo {
   crateras: number;
   /** 0..1: fração de flores e grama alta mantida (1 = todas). */
   flora: number;
+  /** Forma das construções dos povoados (só o desenho; blocos e regras são os mesmos). */
+  povoado?: FormasPovoado;
 }
 
 export interface TimbreMusica {

@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { gerarAtlas } from '../../src/art/atlas';
-import { gerarChunk, definirEstiloMundo, ESTILO_PADRAO } from '../../src/world/chunk';
+import {
+  gerarChunk,
+  definirEstiloMundo,
+  definirPovoados,
+  ESTILO_PADRAO,
+} from '../../src/world/chunk';
 import { CRIATURAS_BRUMA } from '../../src/temas/bruma-e-luz/criaturas';
 import { definirTemaAtivo } from '../../src/temas/ativo';
 import { obterTema } from '../../src/temas';
@@ -38,9 +43,12 @@ describe('Bruma e Luz é idêntico ao jogo antes dos temas', () => {
 
   it('terreno: os mesmos blocos em 169 chunks', async () => {
     definirEstiloMundo(ESTILO_PADRAO);
+    // o jogo antigo não tinha povoados: a paridade é do terreno sem eles
+    definirPovoados(false);
     const chunks: Uint8Array[] = [];
     for (let cx = -6; cx <= 6; cx++)
       for (let cz = -6; cz <= 6; cz++) chunks.push(gerarChunk(cx, cz, 1337));
+    definirPovoados(true);
     expect(await sha(...chunks)).toBe(
       '90735f31ef35ab9c4ea948e80b75cdf4d38a57a2ce60ccfa50af0c0e8c51eff4',
     );

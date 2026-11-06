@@ -1,4 +1,13 @@
 import type { EstiloMundo, FormaArvore } from '../temas/tipos';
+import {
+  ajusteDaColuna,
+  FORMAS_PADRAO,
+  planoDaRegiao,
+  REGIAO_POVOADO,
+  type PlanoPovoado,
+  type TerrenoNatural,
+} from './povoado';
+import { construirPovoado } from './construcoes';
 import { Bloco } from './blocks';
 import { crista2, fbm2, hash2, hash3, ruido3 } from './noise';
 
@@ -74,7 +83,44 @@ function clima(wx: number, wz: number, semente: number): Clima {
 }
 
 /** Altura do terreno (y do bloco de superfície). */
+/** Altura do terreno com os povoados aplainados (o que o jogo de fato gera). */
 export function alturaTerreno(wx: number, wz: number, semente: number): number {
+  const natural = alturaNatural(wx, wz, semente);
+  const p = povoadosLigados ? povoadoNaColuna(wx, wz, semente) : null;
+  if (!p) return natural;
+  return ajusteDaColuna(p, wx, wz, natural)?.h ?? natural;
+}
+
+/** Terreno natural, sem povoados (é o que o planejamento do povoado consulta). */
+export const TERRENO_NATURAL: TerrenoNatural = {
+  altura: (wx, wz, s) => alturaNatural(wx, wz, s),
+  bioma: (wx, wz, s, h) => biomaEm(wx, wz, s, h),
+  nivelMar: NIVEL_MAR,
+};
+
+let povoadosLigados = true;
+/** Liga ou desliga os povoados (o teste de paridade com o jogo antigo desliga). */
+export function definirPovoados(ligado: boolean): void {
+  povoadosLigados = ligado;
+}
+
+/** Povoado que alcança a coluna, com memória da última região consultada (rápido por coluna). */
+let ultimaRegiao = '';
+let ultimoPlano: PlanoPovoado | null = null;
+export function povoadoNaColuna(wx: number, wz: number, semente: number): PlanoPovoado | null {
+  const rx = Math.floor(wx / REGIAO_POVOADO);
+  const rz = Math.floor(wz / REGIAO_POVOADO);
+  const k = `${rx},${rz},${semente}`;
+  if (k !== ultimaRegiao) {
+    ultimaRegiao = k;
+    ultimoPlano = planoDaRegiao(rx, rz, semente, TERRENO_NATURAL);
+  }
+  const p = ultimoPlano;
+  if (!p || wx < p.minX || wx > p.maxX || wz < p.minZ || wz > p.maxZ) return null;
+  return p;
+}
+
+function alturaNatural(wx: number, wz: number, semente: number): number {
   const c = clima(wx, wz, semente);
   const colinas = fbm2(wx / 48, wz / 48, semente, 4);
   const detalhe = fbm2(wx / 11, wz / 11, semente + 7, 2);
@@ -219,6 +265,8 @@ function minerioEm(wx: number, y: number, wz: number, s: number): number {
 export function gerarChunk(cx: number, cz: number, semente: number = SEMENTE_PADRAO): Uint8Array {
   const blocos = new Uint8Array(TAM_X * ALTURA * TAM_Z);
   const alturas = new Int32Array(TAM_X * TAM_Z);
+  /** 1 = piso do povoado (sem plantas), 2 = dentro da área do povoado (sem árvores). */
+  const ocupadas = new Uint8Array(TAM_X * TAM_Z);
   const biomas: Bioma[] = [];
   const tuneis = grade3(cx, cz, semente, (x, y, z) =>
     ruido3(x / 22, y / 13, z / 22, semente + 1001),
@@ -234,19 +282,25 @@ export function gerarChunk(cx: number, cz: number, semente: number = SEMENTE_PAD
     for (let x = 0; x < TAM_X; x++) {
       const wx = cx * TAM_X + x;
       const wz = cz * TAM_Z + z;
-      const h = alturaTerreno(wx, wz, semente);
+      const natural = alturaNatural(wx, wz, semente);
+      const plano = povoadosLigados ? povoadoNaColuna(wx, wz, semente) : null;
+      const ajuste = plano ? ajusteDaColuna(plano, wx, wz, natural) : null;
+      const h = ajuste?.h ?? natural;
       alturas[z * TAM_X + x] = h;
+      ocupadas[z * TAM_X + x] = ajuste?.ocupada ? 1 : plano ? 2 : 0;
       const b = biomaEm(wx, wz, semente, h);
       biomas.push(b);
       const solo = b === 'deserto' ? 6 : 4;
       for (let y = 0; y <= h; y++) {
         let id: number;
         if (y === 0 || (y <= 2 && hash3(wx, y, wz, semente + 5) < 0.5)) id = Bloco.ROCHA_MATRIZ;
+        else if (y === h && ajuste?.piso) id = ajuste.piso;
         else if (y > h - solo) id = superficie(b, y, h);
         else id = minerioEm(wx, y, wz, semente);
         // cavernas: túneis (cruzamento de duas superfícies) e salões no fundo
         if (id !== Bloco.ROCHA_MATRIZ && y > 3) {
-          const proteger = h <= NIVEL_MAR + 3 ? y > h - 8 : y > h - 1;
+          // embaixo do povoado o chão é firme (nenhum buraco abre sob as casas)
+          const proteger = plano ? y > h - 10 : h <= NIVEL_MAR + 3 ? y > h - 8 : y > h - 1;
           if (!proteger) {
             const a = Math.abs(tuneis(x, y, z) - 0.5);
             const c = Math.abs(tuneis2(x, y, z) - 0.5);
@@ -295,9 +349,12 @@ export function gerarChunk(cx: number, cz: number, semente: number = SEMENTE_PAD
       if (h < NIVEL_MAR || topo >= ALTURA - 12) continue;
       const chao = blocos[indice(x, h, z)];
       if (chao === Bloco.AR || chao === Bloco.AGUA || chao === Bloco.GELO) continue;
+      // piso do povoado: nada nasce; na área dele (rampas), plantas sim, árvores não
+      const oc = ocupadas[z * TAM_X + x];
+      if (oc === 1) continue;
       const r = hash2(wx, wz, semente + 5);
       const r2 = hash2(wx, wz, semente + 9);
-      const margem = x >= 2 && x < TAM_X - 2 && z >= 2 && z < TAM_Z - 2;
+      const margem = oc === 0 && x >= 2 && x < TAM_X - 2 && z >= 2 && z < TAM_Z - 2;
       // flora do tema: parte das plantas some (Lua: quase nada); árvores e cactos ficam
       const pos = (id: number) => {
         // só plantas de enfeite somem; comida e luz (frutinhas, abóbora, cogumelo,
@@ -373,7 +430,31 @@ export function gerarChunk(cx: number, cz: number, semente: number = SEMENTE_PAD
       }
     }
   }
-  construirRuina(blocos, cx, cz, semente, alturas, biomas);
+  // povoado da região, se alcançar este chunk (e então sem ruína)
+  const plano = povoadosLigados
+    ? planoDaRegiao(
+        Math.floor((cx * TAM_X) / REGIAO_POVOADO),
+        Math.floor((cz * TAM_Z) / REGIAO_POVOADO),
+        semente,
+        TERRENO_NATURAL,
+      )
+    : null;
+  const x0 = cx * TAM_X;
+  const z0 = cz * TAM_Z;
+  const tocaPlano =
+    !!plano &&
+    plano.maxX >= x0 &&
+    plano.minX < x0 + TAM_X &&
+    plano.maxZ >= z0 &&
+    plano.minZ < z0 + TAM_Z;
+  if (plano && tocaPlano) {
+    construirPovoado(plano, estilo.povoado ?? FORMAS_PADRAO, (wx, y, wz, id) => {
+      const x = wx - x0;
+      const z = wz - z0;
+      if (x < 0 || x >= TAM_X || z < 0 || z >= TAM_Z || y < 1 || y >= ALTURA) return;
+      blocos[indice(x, y, z)] = id;
+    });
+  } else construirRuina(blocos, cx, cz, semente, alturas, biomas);
   return blocos;
 }
 
