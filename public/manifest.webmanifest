@@ -1,7 +1,7 @@
 {
-  "name": "Brumaluz",
-  "short_name": "Brumaluz",
-  "description": "Explore, construa e sobreviva num mundo de bruma e luz",
+  "name": "Terrário",
+  "short_name": "Terrário",
+  "description": "Explore, construa e descubra mundos",
   "start_url": "/",
   "scope": "/",
   "display": "fullscreen",
@@ -9,5 +9,12 @@
   "background_color": "#1b1230",
   "theme_color": "#1b1230",
   "lang": "pt-BR",
-  "icons": [{ "src": "/icone.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }]
+  "icons": [
+    {
+      "src": "/icone.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
 }

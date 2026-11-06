@@ -1,3 +1,7 @@
+import { criarSeletorTemas } from './temasUi';
+import { obterTema } from '../temas';
+import type { IdTema } from '../temas/tipos';
+import { carregarAparencia, salvarAparencia } from '../personagem/persistencia';
 import { botaoFechar } from './pixicones';
 import {
   SEMENTE_PADRAO_MUNDO,
@@ -92,6 +96,7 @@ export const CSS_MODAL = `
   border: 1px solid rgba(255,255,255,0.14); background: rgba(0,0,0,0.25); color: #ece6da; font: 500 0.95rem system-ui, sans-serif;
 }
 .campo input:focus { outline: 2px solid #ffd98f; outline-offset: 1px; }
+.chip.tema { color: #120e16; background: var(--acento, #ffd98f); }
 .segmentado { display: inline-flex; padding: 3px; border-radius: 12px; background: rgba(0,0,0,0.3); gap: 3px; }
 .segmentado button {
   min-height: 36px; padding: 6px 14px; border: 0; border-radius: 9px; background: transparent; color: #b9b2a6;
@@ -254,8 +259,10 @@ export function criarPainelMundos(raiz: HTMLElement, op: OpcoesPainelMundos) {
   form.className = 'form-novo';
   form.innerHTML = `
     <h3>Novo mundo</h3>
+    <div class="campo">Tema<div data-seletor-temas></div></div>
+    <label class="visual-tema"><input type="checkbox" data-visual-tema> <span data-visual-tema-texto></span></label>
     <div class="linha">
-      <label class="campo">Nome<input name="nome" maxlength="${TAMANHO_MAXIMO_NOME_MUNDO}" placeholder="Vale da Bruma" data-novo-nome></label>
+      <label class="campo">Nome<input name="nome" maxlength="${TAMANHO_MAXIMO_NOME_MUNDO}" placeholder="Meu mundo" data-novo-nome></label>
       <label class="campo">Semente (opcional)<input name="semente" placeholder="aleatória" data-novo-semente></label>
     </div>
     <div class="linha">
@@ -267,6 +274,17 @@ export function criarPainelMundos(raiz: HTMLElement, op: OpcoesPainelMundos) {
       </div>
       <button type="submit" class="btn primario" data-criar-mundo>Criar e jogar</button>
     </div>`;
+  // tema: cartões com prévia; a aparência sugerida do tema é opcional (não troca sozinha)
+  const textoVisual = form.querySelector('[data-visual-tema-texto]') as HTMLElement;
+  const caixaVisual = form.querySelector('[data-visual-tema]') as HTMLInputElement;
+  const seletor = criarSeletorTemas((id) => {
+    const t = obterTema(id);
+    const temVisual = Object.keys(t.personagem).length > 0;
+    caixaVisual.closest('label')!.hidden = !temVisual;
+    caixaVisual.checked = false;
+    textoVisual.textContent = `Vestir meu personagem com o visual de ${t.nome}`;
+  });
+  form.querySelector('[data-seletor-temas]')!.replaceWith(seletor.elemento);
   let modo: ModoJogo = 'criativo';
   form.querySelectorAll<HTMLButtonElement>('[data-modo]').forEach((b) => {
     b.addEventListener('click', () => {
@@ -281,7 +299,16 @@ export function criarPainelMundos(raiz: HTMLElement, op: OpcoesPainelMundos) {
     const nome = (form.querySelector('[data-novo-nome]') as HTMLInputElement).value;
     const txt = (form.querySelector('[data-novo-semente]') as HTMLInputElement).value;
     const semente = sementeDeTexto(txt, Math.random);
-    const meta = await op.repo.criar(nome || 'Novo mundo', semente, modo);
+    const tema = seletor.valor;
+    if (caixaVisual.checked) {
+      try {
+        const loja = window.localStorage;
+        salvarAparencia(loja, { ...carregarAparencia(loja), ...obterTema(tema).personagem });
+      } catch {
+        // sem armazenamento: o mundo abre com o personagem de sempre
+      }
+    }
+    const meta = await op.repo.criar(nome || 'Novo mundo', semente, modo, tema);
     op.abrir(meta.id);
   });
 
@@ -306,7 +333,12 @@ export function criarPainelMundos(raiz: HTMLElement, op: OpcoesPainelMundos) {
       const chip = document.createElement('span');
       chip.className = `chip ${m.modo}`;
       chip.textContent = rotuloModo(m.modo);
-      det.append(chip, ` · semente ${m.semente} · ${formatarData(m.jogadoEm)}`);
+      const chipTema = document.createElement('span');
+      chipTema.className = 'chip tema';
+      const tm = obterTema(m.tema);
+      chipTema.textContent = tm.nome;
+      chipTema.style.setProperty('--acento', tm.cores.acento);
+      det.append(chip, ' ', chipTema, ` · semente ${m.semente} · ${formatarData(m.jogadoEm)}`);
       info.append(nome, det);
       const acoes = document.createElement('div');
       acoes.className = 'acoes';
@@ -351,6 +383,15 @@ export function criarPainelMundos(raiz: HTMLElement, op: OpcoesPainelMundos) {
       await render();
       modal.abrir();
       (form.querySelector('[data-novo-nome]') as HTMLInputElement).value = '';
+    },
+    /** Abre já no formulário de mundo novo, com o tema escolhido. */
+    async criarComTema(id: IdTema) {
+      await render();
+      modal.abrir();
+      seletor.definir(id);
+      (form.querySelector('[data-novo-nome]') as HTMLInputElement).value = '';
+      form.scrollIntoView({ block: 'start' });
+      (form.querySelector(`[data-tema="${id}"]`) as HTMLElement | null)?.focus();
     },
     elemento: fundo,
   };

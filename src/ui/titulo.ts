@@ -2,6 +2,8 @@ import { montarPartes, type NomeParte } from '../personagem/modelo';
 import { PX_POR_BLOCO, gerarTexturaParte } from '../personagem/textura';
 import type { Aparencia } from '../personagem/aparencia';
 import { hash2 } from '../world/noise';
+import { tema } from '../temas/ativo';
+import type { Tema } from '../temas/tipos';
 
 /** Letras 5x7 do logo, desenhadas como pequenos blocos. */
 export const GLIFOS: Record<string, readonly string[]> = {
@@ -12,13 +14,30 @@ export const GLIFOS: Record<string, readonly string[]> = {
   A: ['.###.', '#...#', '#...#', '#####', '#...#', '#...#', '#...#'],
   L: ['#....', '#....', '#....', '#....', '#....', '#....', '#####'],
   Z: ['#####', '....#', '...#.', '..#..', '.#...', '#....', '#####'],
+  T: ['#####', '..#..', '..#..', '..#..', '..#..', '..#..', '..#..'],
+  E: ['#####', '#....', '#....', '####.', '#....', '#....', '#####'],
+  I: ['.###.', '..#..', '..#..', '..#..', '..#..', '..#..', '.###.'],
+  O: ['.###.', '#...#', '#...#', '#...#', '#...#', '#...#', '.###.'],
+};
+
+/** Letras acentuadas: a letra de base e os pixels do acento (linhas acima da letra). */
+const ACENTOS: Record<string, { base: string; pixels: { x: number; y: number }[] }> = {
+  Á: {
+    base: 'A',
+    pixels: [
+      { x: 3, y: -2 },
+      { x: 2, y: -1 },
+    ],
+  },
 };
 
 /** Pixels acesos do texto em grade (coluna, linha), com 1 coluna entre letras. */
 export function pixelsDoTexto(texto: string): { x: number; y: number }[] {
   const pts: { x: number; y: number }[] = [];
   [...texto].forEach((ch, i) => {
-    const g = GLIFOS[ch];
+    const acento = ACENTOS[ch];
+    if (acento) for (const p of acento.pixels) pts.push({ x: i * 6 + p.x, y: p.y });
+    const g = GLIFOS[acento?.base ?? ch];
     if (!g) return;
     g.forEach((linha, y) => {
       [...linha].forEach((c, x) => {
@@ -35,6 +54,9 @@ const mix = (a: Rgb, b: Rgb, t: number): Rgb => [
   a[1] + (b[1] - a[1]) * t,
   a[2] + (b[2] - a[2]) * t,
 ];
+/** A extrusão escurece para o fundo (o Bruma e Luz vai de 122,58,18 a 70,30,10). */
+const escuro = (c: Rgb): Rgb => [c[0] * 0.574, c[1] * 0.517, c[2] * 0.556];
+type CoresLogo = Tema['cores']['logo'];
 const css = (c: Rgb, f = 1) =>
   `rgb(${Math.round(Math.min(255, c[0] * f))}, ${Math.round(Math.min(255, c[1] * f))}, ${Math.round(Math.min(255, c[2] * f))})`;
 
@@ -42,20 +64,26 @@ const css = (c: Rgb, f = 1) =>
  * Logo em pixel-art: cada pixel da letra é um bloquinho com chanfro, cor de luz
  * (dourado no topo, âmbar embaixo), bruma lilás na base e extrusão 3D escura.
  */
-export function desenharLogo(canvas: HTMLCanvasElement, texto = 'BRUMALUZ'): void {
+export function desenharLogo(
+  canvas: HTMLCanvasElement,
+  texto = 'TERRÁRIO',
+  cores: CoresLogo = tema().cores.logo,
+): void {
   const c = 12;
   const prof = 5;
   const borda = 3;
   const pts = pixelsDoTexto(texto);
-  const colunas = texto.length * 6 - 1;
+  // acentos sobem acima da linha das letras: o canvas cresce para cima
+  const yMin = Math.min(0, ...pts.map((p) => p.y));
+  const colunas = [...texto].length * 6 - 1;
   const pad = 8;
   canvas.width = colunas * c + pad * 2 + prof * 2 + borda * 2;
-  canvas.height = 7 * c + pad * 2 + prof * 2 + borda * 2;
+  canvas.height = (7 - yMin) * c + pad * 2 + prof * 2 + borda * 2;
   const ctx = canvas.getContext('2d');
   if (!ctx) return;
   ctx.imageSmoothingEnabled = false;
   const ox = pad + borda;
-  const oy = pad + borda;
+  const oy = pad + borda - yMin * c;
   // contorno escuro
   ctx.fillStyle = '#160b06';
   for (const p of pts) {
@@ -71,18 +99,18 @@ export function desenharLogo(canvas: HTMLCanvasElement, texto = 'BRUMALUZ'): voi
   // extrusão (lado de baixo/direita das letras)
   for (let d = prof; d >= 1; d--) {
     const t = d / prof;
-    ctx.fillStyle = css(mix([122, 58, 18], [70, 30, 10], t));
+    ctx.fillStyle = css(mix(cores.extrusao as Rgb, escuro(cores.extrusao as Rgb), t));
     for (const p of pts) ctx.fillRect(ox + p.x * c + d, oy + p.y * c + d, c, c);
   }
   // face
-  const topo: Rgb = [255, 243, 196];
-  const meio: Rgb = [255, 204, 110];
-  const base: Rgb = [232, 132, 44];
+  const topo = cores.topo as Rgb;
+  const meio = cores.meio as Rgb;
+  const base = cores.base as Rgb;
   for (const p of pts) {
-    const t = p.y / 6;
+    const t = Math.max(0, p.y) / 6;
     let cor = t < 0.5 ? mix(topo, meio, t * 2) : mix(meio, base, (t - 0.5) * 2);
-    // bruma na base das letras
-    if (p.y >= 5) cor = mix(cor, [214, 190, 255], p.y === 6 ? 0.32 : 0.14);
+    // névoa do tema na base das letras
+    if (p.y >= 5) cor = mix(cor, cores.bruma as Rgb, p.y === 6 ? 0.32 : 0.14);
     const ruido = 0.94 + hash2(p.x, p.y, 77) * 0.12;
     const x = ox + p.x * c;
     const y = oy + p.y * c;
@@ -177,14 +205,14 @@ body.tela-titulo #app > :not(.entrada):not(canvas):not(.modal-fundo):not(.pausa-
 .entrada .bruma-titulo { position: fixed; inset: auto 0 0 0; height: 40vh; pointer-events: none; overflow: hidden; }
 .entrada .bruma-titulo i {
   position: absolute; bottom: -8vh; width: 60vw; height: 26vh; border-radius: 50%;
-  background: radial-gradient(closest-side, rgba(214, 196, 255, 0.22), rgba(214, 196, 255, 0));
+  background: radial-gradient(closest-side, var(--bruma-tema, rgba(214, 196, 255, 0.22)), transparent);
   animation: bruma-deriva 26s linear infinite;
 }
 .entrada .bruma-titulo i:nth-child(2) { left: 30vw; bottom: -4vh; animation-duration: 34s; animation-delay: -12s; opacity: 0.8; }
 .entrada .bruma-titulo i:nth-child(3) { left: -20vw; bottom: 2vh; animation-duration: 40s; animation-delay: -25s; opacity: 0.6; }
 @keyframes bruma-deriva { from { transform: translateX(-30vw); } to { transform: translateX(110vw); } }
 .entrada .faisca {
-  position: fixed; width: 4px; height: 4px; background: #ffe7a0; box-shadow: 0 0 8px 2px rgba(255, 210, 120, 0.7);
+  position: fixed; width: 4px; height: 4px; background: var(--faisca-tema, #ffe7a0); box-shadow: 0 0 8px 2px var(--faisca-brilho, rgba(255, 210, 120, 0.7));
   pointer-events: none; animation: faisca-sobe linear infinite; opacity: 0;
 }
 @keyframes faisca-sobe { 0% { transform: translateY(0); opacity: 0; } 15% { opacity: 0.9; } 100% { transform: translateY(-46vh); opacity: 0; } }
@@ -197,7 +225,7 @@ body.tela-titulo #app > :not(.entrada):not(canvas):not(.modal-fundo):not(.pausa-
 .titulo-menu[hidden] { display: none; }
 .logo-titulo {
   display: block; width: min(680px, 88vw); height: auto; image-rendering: pixelated;
-  filter: drop-shadow(0 0 28px rgba(255, 186, 90, 0.42)) drop-shadow(0 10px 18px rgba(0, 0, 0, 0.5));
+  filter: drop-shadow(0 0 28px var(--brilho-logo, rgba(255, 186, 90, 0.42))) drop-shadow(0 10px 18px rgba(0, 0, 0, 0.5));
   animation: logo-flutua 6s ease-in-out infinite;
 }
 @keyframes logo-flutua { 50% { transform: translateY(-6px); } }

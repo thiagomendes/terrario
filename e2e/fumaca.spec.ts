@@ -30,7 +30,7 @@ for (const vp of VIEWPORTS) {
     const ler = () => page.evaluate(() => (window as unknown as { __brumaluz: Estado }).__brumaluz);
 
     await page.goto('/');
-    await expect(page.locator('#app')).toContainText('Brumaluz');
+    await expect(page.locator('#app')).toContainText('Terrário');
     await expect(page.locator('#app')).toContainText('Jogar');
     await page.waitForFunction(
       () => (window as unknown as { __brumaluz?: Estado }).__brumaluz?.ready === true,

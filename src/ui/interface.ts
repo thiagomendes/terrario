@@ -1,3 +1,6 @@
+import { CSS_TEMAS_UI, criarVitrineTitulo } from './temasUi';
+import { obterTema } from '../temas';
+import { tema } from '../temas/ativo';
 import { CSS_ATALHOS, criarBarraAtalhos } from './atalhos';
 import type { Hotbar } from '../player/hotbar';
 import { criarBarra } from './barra';
@@ -189,12 +192,21 @@ export function criarInterface(
   criarBarra(app, hotbar);
 
   const estiloTitulo = document.createElement('style');
-  estiloTitulo.textContent = CSS_TITULO;
+  estiloTitulo.textContent = CSS_TITULO + CSS_TEMAS_UI;
   document.head.appendChild(estiloTitulo);
 
   // Tela de título: logo em pixel-art sobre o panorama do mundo, menu de botões de jogo.
   const entrada = document.createElement('div');
   entrada.className = 'entrada';
+  // faíscas e bruma do título na cor do tema do mundo aberto
+  {
+    const t = tema();
+    const n = t.cores.logo.bruma.join(', ');
+    entrada.style.setProperty('--faisca-tema', `rgb(${t.cores.logo.topo.join(', ')})`);
+    entrada.style.setProperty('--faisca-brilho', `rgba(${t.cores.logo.meio.join(', ')}, 0.7)`);
+    entrada.style.setProperty('--bruma-tema', `rgba(${n}, 0.22)`);
+    entrada.style.setProperty('--brilho-logo', `rgba(${t.cores.logo.meio.join(', ')}, 0.42)`);
+  }
   const bruma = document.createElement('div');
   bruma.className = 'bruma-titulo';
   bruma.append(...Array.from({ length: 3 }, () => document.createElement('i')));
@@ -212,15 +224,15 @@ export function criarInterface(
   menu.className = 'titulo-menu';
   const titulo = document.createElement('h1');
   titulo.className = 'titulo-oculto';
-  titulo.textContent = 'Brumaluz';
+  titulo.textContent = 'Terrário';
   const logo = document.createElement('canvas');
   logo.className = 'logo-titulo';
   logo.setAttribute('role', 'img');
-  logo.setAttribute('aria-label', 'Brumaluz');
-  desenharLogo(logo);
+  logo.setAttribute('aria-label', 'Terrário');
+  desenharLogo(logo, 'TERRÁRIO');
   const sub = document.createElement('p');
   sub.className = 'lema';
-  sub.textContent = 'Explore, construa e sobreviva num mundo de bruma e luz';
+  sub.textContent = 'Explore, construa e descubra mundos';
   const pedra = `url(${texturaDoBloco(Bloco.PEDRA_LISA)})`;
   const botaoJogo = (rotulo: string, nomeIcone: NomeIcone, attr: string, classe = '') => {
     const b = document.createElement('button');
@@ -243,7 +255,9 @@ export function criarInterface(
   jogar.appendChild(subJogar);
   const atualizarCartao = (m: MetaMundo | null | undefined) => {
     const modo = m ? (m.modo === 'criativo' ? 'Criativo' : 'Sobrevivência') : '';
-    subJogar.textContent = m ? `${m.nome} · ${modo}` : 'Mundo de passagem';
+    subJogar.textContent = m
+      ? `${m.nome} · ${modo} · ${obterTema(m.tema).nome}`
+      : 'Mundo de passagem';
   };
   atualizarCartao(opMundo.mundo);
   const menuBotoes = document.createElement('div');
@@ -260,6 +274,7 @@ export function criarInterface(
   estiloModal.textContent = CSS_MODAL + CSS_CONFIG + CSS_PAUSA;
   document.head.appendChild(estiloModal);
   let abrirMundos: (() => void) | null = null;
+  let vitrine: ReturnType<typeof criarVitrineTitulo> | null = null;
   if (opMundo.repo) {
     const painelMundos = criarPainelMundos(app, {
       repo: opMundo.repo,
@@ -270,6 +285,7 @@ export function criarInterface(
     abrirMundos = () => void painelMundos.abrir();
     bMundos.addEventListener('click', abrirMundos);
     dupla.appendChild(bMundos);
+    vitrine = criarVitrineTitulo((id) => void painelMundos.criarComTema(id));
     window.addEventListener('brumaluz:salvo', async () => {
       if (opMundo.mundo) atualizarCartao(await opMundo.repo!.obter(opMundo.mundo.id));
     });
@@ -283,10 +299,11 @@ export function criarInterface(
     menuBotoes.appendChild(bConfig);
   }
   menu.append(titulo, logo, sub, menuBotoes);
+  if (vitrine) menu.appendChild(vitrine.elemento);
   const rodape = document.createElement('div');
   rodape.className = 'rodape-titulo';
   const versao = document.createElement('span');
-  versao.textContent = 'Brumaluz · arte, música e sons gerados por código';
+  versao.textContent = 'Terrário · arte, música e sons gerados por código';
   const lista = document.createElement('ul');
   for (const [tecla, acao] of TECLAS) {
     const item = document.createElement('li');
