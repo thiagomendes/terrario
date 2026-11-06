@@ -66,6 +66,7 @@ export const Bloco = {
   TABUAS_PINHO: 64,
   ABOBORA: 65,
   LAMPIAO_ABOBORA: 66,
+  AGUA: 67,
 } as const;
 
 export type Ferramenta = 'picareta' | 'machado' | 'pa' | 'espada';
@@ -107,6 +108,8 @@ export interface DefinicaoBloco {
   tiles: TilesBloco;
   /** Plantas que balançam ao vento. */
   balanca?: boolean;
+  /** Líquido: não é alvo de mira, não colide, vai para a malha de água. */
+  liquido?: boolean;
 }
 
 type Opcoes = Partial<Omit<DefinicaoBloco, 'id' | 'nome' | 'tiles'>> & {
@@ -389,6 +392,13 @@ export const REGISTRO_BLOCOS: readonly DefinicaoBloco[] = [
     emissivo: true,
     tiles: { topo: 'abobora_topo', lado: 'abobora_lado', frente: 'abobora_rosto' },
   }),
+  def(Bloco.AGUA, 'água', 'vazio', {
+    solido: false,
+    opaco: false,
+    liquido: true,
+    semItem: true,
+    dureza: undefined,
+  }),
 ];
 
 export function obterBloco(id: number): DefinicaoBloco | undefined {
@@ -398,6 +408,11 @@ export function obterBloco(id: number): DefinicaoBloco | undefined {
 /** Luz emitida pelo bloco (0 a 15). */
 export function luzDoBloco(id: number): number {
   return REGISTRO_BLOCOS[id]?.luz ?? 0;
+}
+
+/** Bloco que a mira e as ações enxergam (não é ar nem líquido). */
+export function ehAlvo(id: number): boolean {
+  return id !== Bloco.AR && !REGISTRO_BLOCOS[id]?.liquido;
 }
 
 /** Bloco que entra na malha de plantas (quads cruzados). */

@@ -494,7 +494,7 @@ const PINTORES: Record<string, Pintor> = {
     ],
   ),
   folhas_lanterna: folhasDe(
-    ['#1f7a6a', '#25907c', '#2ca68e', '#36baa0', '#46cdb2'],
+    ['#174a46', '#1c5a52', '#226a5f', '#2a7a6c', '#338a78'],
     0.18,
     '#ffd36a',
   ),

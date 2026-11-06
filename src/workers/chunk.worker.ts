@@ -18,6 +18,7 @@ export interface RespostaChunk {
   versao: number;
   solido: Buffers;
   plantas: Buffers;
+  agua: Buffers;
 }
 
 function buffersTransferiveis(b: Buffers): ArrayBuffer[] {
@@ -47,9 +48,11 @@ self.onmessage = (ev: MessageEvent<PedidoChunk>) => {
     versao,
     solido: malha.solido,
     plantas: malha.plantas,
+    agua: malha.agua,
   };
   (self as unknown as Worker).postMessage(resposta, [
     ...buffersTransferiveis(malha.solido),
     ...buffersTransferiveis(malha.plantas),
+    ...buffersTransferiveis(malha.agua),
   ]);
 };

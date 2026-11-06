@@ -26,7 +26,7 @@ import type { LinesMesh } from '@babylonjs/core/Meshes/linesMesh';
 import { COR_DESTAQUE, estadoDestaque } from './destaque';
 import { criarControle } from '../player/controle';
 import { gerarAtlas } from '../art/atlas';
-import { Bloco, obterBloco as obterBlocoDef } from '../world/blocks';
+import { Bloco, ehAlvo, obterBloco as obterBlocoDef } from '../world/blocks';
 import {
   DENSIDADE_NEVOA,
   DIRECAO_SOL,
@@ -40,7 +40,7 @@ import {
   normalizarHora,
 } from './atmosfera';
 import { criarCeu } from './ceu';
-import { ALTURA_AGUA, criarAgua } from './agua';
+import { criarAgua } from './agua';
 import { criarSobrevivencia } from '../jogo/sobrevivencia';
 import { criarVagalumes } from './vagalumes';
 import { PluginMundo } from './materialMundo';
@@ -299,7 +299,6 @@ export function criarCena(
   const ceu = criarCeu(scene);
   const agua = criarAgua(scene);
   glow.addExcludedMesh(ceu.malha);
-  glow.addExcludedMesh(agua.malha);
   const vagalumes = criarVagalumes(scene);
 
   // Pós-processamento: HDR, tonemapping ACES, bloom suave, vinheta e FXAA.
@@ -488,6 +487,18 @@ export function criarCena(
     if (s) lista.push(s);
     const p = criarMalha(`plantas-${k}`, r.plantas, matPlanta, r.cx, r.cz);
     if (p) lista.push(p);
+    const w = criarMalha(
+      `agua-${k}`,
+      r.agua,
+      agua.material as unknown as StandardMaterial,
+      r.cx,
+      r.cz,
+    );
+    if (w) {
+      w.isPickable = false;
+      glow.addExcludedMesh(w);
+      lista.push(w);
+    }
     malhas.set(k, lista);
   }
 
@@ -550,7 +561,7 @@ export function criarCena(
       { x: camera.position.x, y: camera.position.y, z: camera.position.z },
       direcao,
       ALCANCE,
-      (x, y, z) => blocoEm(x, y, z) !== Bloco.AR,
+      (x, y, z) => ehAlvo(blocoEm(x, y, z)),
     );
     return a ? { x: a.x, y: a.y, z: a.z, normal: a.normal } : null;
   }
@@ -692,7 +703,7 @@ export function criarCena(
       { x: camera.position.x, y: camera.position.y, z: camera.position.z },
       camera.rotation.y,
       camera.rotation.x,
-      (x, y, z) => blocoEm(x, y, z) !== Bloco.AR,
+      (x, y, z) => obterBlocoDef(blocoEm(x, y, z))?.solido === true,
     );
     cameraVisao.position.set(p.x, p.y, p.z);
   }
@@ -1202,8 +1213,7 @@ export function criarCena(
     if (r.aterrissou && r.queda > 0) sobrevivencia.queda(r.queda);
     const olhos = camera.position;
     const submerso =
-      olhos.y < ALTURA_AGUA - 0.05 &&
-      blocoEm(Math.floor(olhos.x), Math.floor(olhos.y), Math.floor(olhos.z)) === Bloco.AR;
+      blocoEm(Math.floor(olhos.x), Math.floor(olhos.y), Math.floor(olhos.z)) === Bloco.AGUA;
     sobrevivencia.atualizar(dt, {
       correndo: corrida,
       andando: velocidadeHoriz > 0.5,

@@ -55,7 +55,7 @@ describe('atlas', () => {
       }
     }
     for (const b of REGISTRO_BLOCOS) {
-      if (b.id === Bloco.AR) continue;
+      if (b.id === Bloco.AR || b.liquido) continue;
       for (const f of ['topo', 'lado', 'base', 'frente'] as const) {
         expect(atlas.uvDaFace(b.id, f), `${b.nome} ${f}`).toBeDefined();
       }

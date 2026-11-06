@@ -1,3 +1,4 @@
+import { ALTURA } from '../../src/world/chunk';
 import { describe, expect, it } from 'vitest';
 import { Bloco } from '../../src/world/blocks';
 import { gerarChunk, indice } from '../../src/world/chunk';
@@ -14,7 +15,7 @@ describe('edicoes', () => {
   it('recusa y fora da faixa e ar em y=0', () => {
     const e = criarEdicoes();
     expect(e.definir(0, -1, 0, Bloco.PEDRA_RACHADA)).toBe(false);
-    expect(e.definir(0, 64, 0, Bloco.PEDRA_RACHADA)).toBe(false);
+    expect(e.definir(0, ALTURA, 0, Bloco.PEDRA_RACHADA)).toBe(false);
     expect(e.definir(0, 0, 0, Bloco.AR)).toBe(false);
     expect(e.obter(0, 0, 0)).toBeUndefined();
     expect(e.versaoDoChunk(0, 0)).toBe(0);

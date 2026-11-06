@@ -7,6 +7,7 @@ import {
   gerarChunk,
   indice,
   SEMENTE_PADRAO,
+  encontrarNascimento,
 } from '../world/chunk';
 import { obterBloco } from '../world/blocks';
 import type { Edicoes } from '../world/edicoes';
@@ -51,7 +52,8 @@ export function criarControle(
   edicoes?: Edicoes,
 ) {
   const solido = criarMundoSolido(semente, gerarChunk, edicoes);
-  const jogador = posicaoInicial(8.5, 8.5, (x, z) => alturaTerreno(x, z, semente));
+  const nasc = encontrarNascimento(semente);
+  const jogador = posicaoInicial(nasc.x, nasc.z, (x, z) => alturaTerreno(x, z, semente));
   const teclas: TeclasAtivas = {};
   let yaw = 0.8;
   let pitch = 0.2;

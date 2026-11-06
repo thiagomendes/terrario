@@ -1,15 +1,14 @@
 import { Effect } from '@babylonjs/core/Materials/effect';
 import { ShaderMaterial } from '@babylonjs/core/Materials/shaderMaterial';
-import { MeshBuilder } from '@babylonjs/core/Meshes/meshBuilder';
 import { Color3 } from '@babylonjs/core/Maths/math.color';
 import type { Scene } from '@babylonjs/core/scene';
 import type { Vector3 } from '@babylonjs/core/Maths/math.vector';
 import type { EstadoAtmosfera } from './atmosfera';
 import { GLSL_CEU, UNIFORMES_CEU, aplicarUniformesCeu } from './ceu';
-import { NIVEL_LAGO } from '../world/chunk';
+import { NIVEL_MAR } from '../world/chunk';
 
-/** Superfície da água: cobre blocos de areia abaixo do nível do lago. */
-export const ALTURA_AGUA = NIVEL_LAGO + 0.82;
+/** Superfície do mar (topo da água no nível do mar). */
+export const ALTURA_AGUA = NIVEL_MAR + 0.875;
 
 const VERTICE = /* glsl */ `
 precision highp float;
@@ -75,10 +74,11 @@ void main() {
 let registrado = false;
 
 export interface Agua {
-  malha: import('@babylonjs/core/Meshes/mesh').Mesh;
+  material: ShaderMaterial;
   atualizar(a: EstadoAtmosfera, tempo: number, cam: Vector3): void;
 }
 
+/** Material da água (aplicado às malhas de água dos chunks). */
 export function criarAgua(scene: Scene): Agua {
   if (!registrado) {
     Effect.ShadersStore['aguaVertexShader'] = VERTICE;
@@ -105,20 +105,15 @@ export function criarAgua(scene: Scene): Agua {
     },
   );
   mat.backFaceCulling = false;
-  const plano = MeshBuilder.CreateGround('agua', { width: 600, height: 600 }, scene);
-  plano.material = mat;
-  plano.isPickable = false;
-  plano.position.y = ALTURA_AGUA;
-  plano.alwaysSelectAsActiveMesh = true;
+  const cor = new Color3();
   return {
-    malha: plano,
+    material: mat,
     atualizar(a, tempo, cam) {
       aplicarUniformesCeu(mat, a);
-      plano.position.x = Math.round(cam.x / 16) * 16;
-      plano.position.z = Math.round(cam.z / 16) * 16;
       mat.setFloat('tempo', tempo);
       mat.setVector3('camPos', cam);
-      mat.setColor3('corNevoa', new Color3(...a.nevoa));
+      cor.set(...a.nevoa);
+      mat.setColor3('corNevoa', cor);
       mat.setFloat('densNevoa', a.densidadeNevoa);
       mat.setFloat('luzDia', 1 - a.noite);
     },

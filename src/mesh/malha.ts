@@ -18,6 +18,7 @@ export interface Buffers {
 export interface MalhaChunk {
   solido: Buffers;
   plantas: Buffers;
+  agua: Buffers;
 }
 
 export interface Vizinhos {
@@ -116,6 +117,32 @@ function uvLocal(n: Vec, px: number, py: number, pz: number): [number, number] {
 export function gerarMalha(blocos: Uint8Array, vizinhos: Vizinhos = {}): MalhaChunk {
   const solido = new Acumulador();
   const plantas = new Acumulador();
+  const agua = new Acumulador();
+
+  /** Faces da água viradas para o ar; o topo fica um pouco abaixo da borda do bloco. */
+  function adicionarAgua(x: number, y: number, z: number): void {
+    const acima = ler(x, y + 1, z);
+    const topoBaixo = acima !== Bloco.AGUA ? 0.875 : 1;
+    for (const f of FACES) {
+      const viz = ler(x + f.n[0], y + f.n[1], z + f.n[2]);
+      if (viz === Bloco.AGUA) continue;
+      const dv = obterBloco(viz);
+      if (dv?.opaco || viz === Bloco.GELO) continue;
+      const base = agua.vertices;
+      const deslocar = f.n[0] + f.n[1] + f.n[2] > 0 ? 1 : 0;
+      for (const [s1, s2] of CANTOS) {
+        const lx = deslocar * Math.abs(f.n[0]) + s1 * f.t1[0] + s2 * f.t2[0];
+        let ly = deslocar * Math.abs(f.n[1]) + s1 * f.t1[1] + s2 * f.t2[1];
+        if (ly > 0.5) ly = topoBaixo;
+        const lz = deslocar * Math.abs(f.n[2]) + s1 * f.t1[2] + s2 * f.t2[2];
+        agua.posicoes.push(x + lx, y + ly, z + lz);
+        agua.normais.push(f.n[0], f.n[1], f.n[2]);
+        agua.uvs.push(lx, lz);
+        agua.cores.push(1, 1, 1, 1);
+      }
+      agua.indices.push(base, base + 1, base + 2, base, base + 2, base + 3);
+    }
+  }
 
   function ler(x: number, y: number, z: number): number {
     if (y < 0 || y >= ALTURA) return 0;
@@ -240,6 +267,10 @@ export function gerarMalha(blocos: Uint8Array, vizinhos: Vizinhos = {}): MalhaCh
         if (id === 0) continue;
         const def = obterBloco(id);
         if (!def) continue;
+        if (def.liquido) {
+          adicionarAgua(x, y, z);
+          continue;
+        }
         if (def.planta || ehCruz(id)) {
           adicionarPlanta(id, x, y, z);
           continue;
@@ -255,5 +286,5 @@ export function gerarMalha(blocos: Uint8Array, vizinhos: Vizinhos = {}): MalhaCh
     }
   }
 
-  return { solido: solido.finalizar(), plantas: plantas.finalizar() };
+  return { solido: solido.finalizar(), plantas: plantas.finalizar(), agua: agua.finalizar() };
 }
