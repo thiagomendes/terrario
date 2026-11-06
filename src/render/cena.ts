@@ -51,15 +51,13 @@ import {
 } from './atmosfera';
 import { criarCeu } from './ceu';
 import { criarAgua } from './agua';
-import { criarSobrevivencia } from '../jogo/sobrevivencia';
 import { criarVagalumes } from './vagalumes';
 import { PluginMundo } from './materialMundo';
 import { PluginBalanco } from './balanco';
 import { SEMENTE_PADRAO, TAM_X, TAM_Z } from '../world/chunk';
 import type { DadosMundo, MetaMundo, ModoJogo, RepositorioMundos } from '../jogo/mundos';
-import { criarMundoDeItens, dropsDoBloco } from '../jogo/drops';
 import { caixasDoBloco, cercaConecta, direcaoDoYaw, vetorDirecao } from '../world/formas';
-import { podeColetar, velocidadeMineracao } from '../jogo/ferramentas';
+import { velocidadeMineracao } from '../jogo/ferramentas';
 import { obterItem } from '../jogo/itens';
 import { criarRenderItens } from './itensSoltos';
 import {
@@ -86,18 +84,16 @@ import {
   type Ponto,
 } from '../jogo/construcao';
 import { empacotar } from '../world/edicoes';
-import { criarPopulacao } from '../jogo/populacao';
-import { criaturaNaMira, type TipoCriatura } from '../jogo/criaturas';
+import { criaturaNaMira, type Criatura, type TipoCriatura } from '../jogo/criaturas';
 import { criarRenderCriaturas } from './criaturas';
-import { biomaEm, estiloMundo, NIVEL_MAR } from '../world/chunk';
-import { luzDoBloco } from '../world/blocks';
+import { biomaEm, estiloMundo } from '../world/chunk';
 import { perfilDaQualidade, type Config, type GerenciadorConfig } from '../jogo/config';
 import { iconeDoItem } from '../ui/icones';
 import type { Buffers } from '../mesh/malha';
 import type { RespostaChunk, PedidoChunk } from '../workers/chunk.worker';
 import { criarProvedorBlocos } from '../world/provedor';
 import { criarEdicoes } from '../world/edicoes';
-import { ALTURA, alturaTerreno, gerarChunk, indice } from '../world/chunk';
+import { ALTURA, alturaTerreno, indice } from '../world/chunk';
 import { posicaoColocacao, raycastVoxel, type Vec3 } from '../player/alvo';
 import { criarBarramento, type Barramento } from '../player/eventos';
 import { criarMinerador } from '../player/minerador';
@@ -179,6 +175,25 @@ import { carregarAparencia, type Armazenamento } from '../personagem/persistenci
 import type { Pose } from '../personagem/poses';
 import { criarBraco } from './braco';
 import { criarPersonagem } from './personagem';
+import { conexaoLocal, type Conexao } from '../cliente/conexao';
+import {
+  criarReplicaCriaturas,
+  criarReplicaItens,
+  criarSincronizadorItens,
+  type ConteinerReplica,
+} from '../cliente/replica';
+import {
+  PASSO,
+  VERSAO_PROTOCOLO,
+  type Comando,
+  type EventoNucleo,
+  type Mensagem,
+  type Quadro,
+  type SalvoNucleo,
+} from '../nucleo/protocolo';
+import type { EstadoClima } from '../jogo/clima';
+import type { Profissao } from '../world/povoado';
+import { estadoInicial, type EstadoSobrevivencia, type CausaDano } from '../jogo/sobrevivencia';
 
 const RAIO_INICIAL = 3;
 /** Blocos que o clique direito usa em vez de colocar algo. */
@@ -280,7 +295,7 @@ export interface EstadoDepuracao {
     vida: number;
   }[];
   invocar?: (tipo: TipoCriatura, x: number, y: number, z: number) => void;
-  sobrevivencia?: import('../jogo/sobrevivencia').Sobrevivencia;
+  sobrevivencia?: SobrevivenciaCliente;
   renascer?: () => void;
   definirSpawn?: (x: number, z: number) => void;
   inventario?: import('../jogo/inventario').Inventario;
@@ -317,11 +332,19 @@ declare global {
   }
 }
 
+/** O que a tela sabe da sobrevivência (o núcleo é o dono): estado e atalhos de teste. */
+export interface SobrevivenciaCliente {
+  readonly estado: EstadoSobrevivencia;
+  dano(qtd: number, causa?: CausaDano): void;
+}
+
 export interface OpcoesCena {
   config?: GerenciadorConfig;
   mundo?: MetaMundo;
   dados?: DadosMundo;
   repo?: RepositorioMundos;
+  /** Conexão com o núcleo (padrão: servidor local num Web Worker). */
+  conexao?: Conexao;
 }
 
 /** Sistema que guarda estado próprio no salvamento do mundo (inventário, vida, mapa...). */
@@ -422,7 +445,6 @@ export function criarCena(
           return [...r];
         })()
       : [];
-  salvaveis.set('povoados', { salvar: () => ({ semPovoado }) });
   definirRegioesSemPovoado(semPovoado);
   // blocos-base compartilhados (chegam do worker junto com a malha)
   const provedor = criarProvedorBlocos(semente);
@@ -437,6 +459,28 @@ export function criarCena(
     controle.apontar(dadosIniciais.jogador.yaw, dadosIniciais.jogador.pitch);
   }
   controle.atualizar(0);
+
+  // Núcleo: o mundo e as regras rodam no servidor local (Web Worker); a cena manda
+  // comandos e aplica o que ele devolve a cada passo.
+  const conexao =
+    opcoes.conexao ??
+    conexaoLocal({
+      t: 'inicio',
+      versao: VERSAO_PROTOCOLO,
+      semente,
+      modo,
+      versaoMundo: opcoes.mundo?.versao ?? 1,
+      estilo: estiloMundo(),
+      dados: dadosIniciais,
+    });
+  let idComando = 0;
+  const proximoId = () => ++idComando;
+  /** Células com previsão local ainda não confirmada (chave → id do comando). */
+  const pendentesBloco = new Map<string, number>();
+  const celula = (x: number, y: number, z: number) => `${x},${y},${z}`;
+  function enviar(c: Comando): void {
+    conexao.enviar(c);
+  }
 
   function armazenamentoLocal(): Armazenamento | null {
     try {
@@ -529,14 +573,23 @@ export function criarCena(
   ip.colorCurves = curvas;
 
   let hora = dadosIniciais && dadosIniciais.hora >= 0 ? dadosIniciais.hora : HORA_INICIAL;
+  // a hora é do núcleo: mudar aqui (testes, modo foto, sono) também muda lá
   Object.defineProperty(estado, 'hora', {
     get: () => hora,
     set: (v: number) => {
       hora = normalizarHora(v);
+      enviar({ t: 'depurar', d: { f: 'hora', hora } });
     },
     enumerable: true,
   });
-  estado.pausarDia = false;
+  Object.defineProperty(estado, 'pausarDia', {
+    get: () => diaPausado,
+    set: (v: boolean) => {
+      diaPausado = !!v;
+      enviar({ t: 'depurar', d: { f: 'pausarDia', pausar: diaPausado } });
+    },
+    enumerable: true,
+  });
 
   const atlas = gerarAtlas(SEMENTE_PADRAO);
   const textura = RawTexture.CreateRGBATexture(
@@ -591,9 +644,13 @@ export function criarCena(
   const mundoPlanta = new PluginMundo(matPlanta);
 
   // Clima e estações
-  const clima = criarClima(criarGerador(semente + 31), dadosIniciais?.extras?.['clima']);
+  // dia e clima vêm do núcleo; até o primeiro quadro, vale o que estava salvo
+  let estadoClima: EstadoClima = criarClima(
+    criarGerador(semente + 31),
+    dadosIniciais?.extras?.['clima'],
+  ).estado;
   let dia = Number(dadosIniciais?.extras?.['dia']) || 0;
-  let horaAnterior = hora;
+  let diaPausado = false;
   let outonoAtual = 0;
   let invernoAtual = 0;
   let jogadorCoberto = false;
@@ -610,18 +667,9 @@ export function criarCena(
   let biomaZ = NaN;
   let biomaCache = biomaEm(0, 0, semente);
   function aplicarAtmosfera(tempo: number, dt = 0): void {
-    if (horaAnterior > 0.9 && hora < 0.1) dia++;
-    horaAnterior = hora;
     const estacao = estacaoDoDia(dia);
     const baseHora = atmosferaNaHora(hora);
-    const raio = clima.atualizar(dt, estacao, baseHora.noite < 0.5);
-    if (raio && temaAtual.climaVisual.relampago) {
-      flash = 1;
-      setTimeout(() => {
-        tocarSom(motorAudio, 'trovao');
-        legenda(temaAtual.textos.legendas.trovao);
-      }, raio.atrasoTrovao * 1000);
-    }
+    const clima = { estado: estadoClima };
     // nuvens do tema (a Lua não tem nenhuma): o clima continua o mesmo, só o céu muda
     const fatorNuvens = temaAtual.ceu.fatorNuvens;
     const a = ajustarPorClima(
@@ -912,6 +960,19 @@ export function criarCena(
   function valorEm(x: number, y: number, z: number): number {
     return empacotar(blocoEm(x, y, z), edicoes.obterMeta(x, y, z));
   }
+  /** Prevê na hora um bloco que o núcleo ainda vai confirmar. */
+  function prever(id: number, x: number, y: number, z: number, b: number, meta = 0): boolean {
+    pendentesBloco.set(celula(x, y, z), id);
+    return editarBloco(x, y, z, b, meta);
+  }
+  /** Vários blocos de uma vez (construção, desfazer, espelho, testes): só no criativo. */
+  function editarLote(lote: { x: number; y: number; z: number; v: number }[]): void {
+    if (!lote.length) return;
+    const id = proximoId();
+    for (const e of lote) prever(id, e.x, e.y, e.z, e.v & 255, (e.v >> 8) & 255);
+    enviarTelemetria(true);
+    enviar({ t: 'editar', id, lote });
+  }
   function editarRegistrando(
     x: number,
     y: number,
@@ -921,22 +982,35 @@ export function criarCena(
     extras: { x: number; y: number; z: number }[] = [],
   ): boolean {
     const lote: Edicao[] = [];
-    const um = (px: number, py: number, pz: number) => {
-      const antes = valorEm(px, py, pz);
-      if (editarBloco(px, py, pz, b, meta))
-        lote.push({ x: px, y: py, z: pz, antes, depois: empacotar(b, meta) });
-    };
-    um(x, y, z);
-    if (lote.length) for (const e of extras) um(e.x, e.y, e.z);
+    const id = proximoId();
+    const antes = valorEm(x, y, z);
+    if (!prever(id, x, y, z, b, meta)) return false;
+    lote.push({ x, y, z, antes, depois: empacotar(b, meta) });
+    const extrasFeitos: { x: number; y: number; z: number }[] = [];
+    for (const e of extras) {
+      const a = valorEm(e.x, e.y, e.z);
+      if (prever(id, e.x, e.y, e.z, b, meta)) {
+        lote.push({ ...e, antes: a, depois: empacotar(b, meta) });
+        extrasFeitos.push(e);
+      }
+    }
+    enviarTelemetria(true);
+    const slot = hotbar.ativo;
+    if (b === Bloco.AR) enviar({ t: 'quebrar', id, x, y, z, slot });
+    else enviar({ t: 'colocar', id, x, y, z, bloco: b, meta, slot, extras: extrasFeitos });
     if (espelho !== null && modo === 'criativo') {
       const m = espelharX({ x, y, z }, espelho);
-      if (m.x !== x) um(m.x, m.y, m.z);
+      if (m.x !== x) {
+        const a = valorEm(m.x, m.y, m.z);
+        lote.push({ ...m, antes: a, depois: empacotar(b, meta) });
+        editarLote([{ ...m, v: empacotar(b, meta) }]);
+      }
     }
     historico.registrar(lote);
-    return lote.length > 0;
+    return true;
   }
   function aplicarLote(lote: Edicao[], usar: 'antes' | 'depois'): void {
-    for (const e of lote) editarBloco(e.x, e.y, e.z, e[usar] & 255, (e[usar] >> 8) & 255);
+    editarLote(lote.map((e) => ({ x: e.x, y: e.y, z: e.z, v: e[usar] })));
   }
 
   function editarBloco(x: number, y: number, z: number, bloco: number, meta = 0): boolean {
@@ -1086,7 +1160,6 @@ export function criarCena(
     const bloco = acao === 'quebrar' ? blocoEm(a.x, a.y, a.z) : hotbar.blocoAtivo();
     const pos = acao === 'quebrar' ? a : posicaoDeColocar(a);
     const ok = interagir(acao);
-    if (ok && acao === 'colocar' && modo === 'sobrevivencia') inventario.remover(hotbar.ativo, 1);
     if (ok) {
       barramento.emitir(acao === 'quebrar' ? 'quebra' : 'colocacao', {
         x: pos.x,
@@ -1132,16 +1205,24 @@ export function criarCena(
         alternarPorta(a.x, a.y, a.z);
         return;
       }
-      window.dispatchEvent(
-        new CustomEvent('brumaluz:usar', { detail: { bloco: alvoBloco, x: a.x, y: a.y, z: a.z } }),
-      );
+      if (alvoBloco === Bloco.MESA_TRABALHO) {
+        window.dispatchEvent(
+          new CustomEvent('brumaluz:usar', {
+            detail: { bloco: alvoBloco, x: a.x, y: a.y, z: a.z },
+          }),
+        );
+        return;
+      }
+      // baú e fornalha abrem quando o núcleo manda o conteúdo; a cama decide o sono lá
+      enviarTelemetria(true);
+      enviar({ t: 'usar', x: a.x, y: a.y, z: a.z });
       return;
     }
     const p = hotbar.pilhaAtiva();
     const def = p ? obterItem(p.item) : undefined;
     const naMira = criaturaApontada();
     if (naMira?.morador) {
-      // morador: abre as trocas da profissão dele
+      // morador: abre as trocas da profissão dele (e ele vira para o jogador)
       const m = naMira.morador;
       window.dispatchEvent(
         new CustomEvent('brumaluz:trocar', {
@@ -1149,33 +1230,24 @@ export function criarCena(
             profissao: m.profissao,
             nome: nomeDoMorador(m.povoado, m.n),
             povoado: m.povoado,
+            criatura: naMira.id,
           },
         }),
       );
-      naMira.yawAlvo = Math.atan2(camera.position.x - naMira.x, camera.position.z - naMira.z);
+      enviarTelemetria(true);
+      enviar({ t: 'falar', criatura: naMira.id });
       tocarVoz(motorAudio, 'morador', 'contente', 1);
       return;
     }
     if (naMira && naMira.tipo === 'raposa' && p?.item === 'frutinhas' && !naMira.domada) {
-      if (modo === 'sobrevivencia') inventario.remover(hotbar.ativo, 1);
       tocarSom(motorAudio, 'comer');
-      if (populacao.domar(naMira)) {
-        tocarSom(motorAudio, 'entrada');
-        window.dispatchEvent(
-          new CustomEvent('brumaluz:toast', { detail: `${CRIATURAS.raposa.nome} confia em você!` }),
-        );
-        window.dispatchEvent(new CustomEvent('brumaluz:domou'));
-        tocarVoz(motorAudio, naMira.tipo, 'contente', 1);
-      }
+      enviarTelemetria(true);
+      enviar({ t: 'domar', criatura: naMira.id, slot: hotbar.ativo });
       return;
     }
     if (def?.comida && modo === 'sobrevivencia') {
-      if (estado.sobrevivencia?.comer(def.comida.fome, def.comida.saturacao)) {
-        inventario.remover(hotbar.ativo, 1);
-        tocarSom(motorAudio, 'comer');
-        animador.evento('colocacao');
-        window.dispatchEvent(new CustomEvent('brumaluz:comeu'));
-      }
+      // fome cheia: nem tenta (o núcleo confere de novo)
+      if (estadoSobrevivencia.fome < 20) enviar({ t: 'comer', slot: hotbar.ativo });
       return;
     }
     interagirComEventos('colocar');
@@ -1183,15 +1255,18 @@ export function criarCena(
 
   /** Abre ou fecha a porta (e a metade de cima/baixo, se houver). */
   function alternarPorta(x: number, y: number, z: number): void {
+    // prevê as duas metades na hora; o som vem com a confirmação do núcleo
     const b = blocoEm(x, y, z);
     const novo = b === Bloco.PORTA ? Bloco.PORTA_ABERTA : Bloco.PORTA;
-    editarBloco(x, y, z, novo, edicoes.obterMeta(x, y, z));
+    const id = proximoId();
+    prever(id, x, y, z, novo, edicoes.obterMeta(x, y, z));
     for (const dy of [-1, 1]) {
       const v = blocoEm(x, y + dy, z);
       if (v === Bloco.PORTA || v === Bloco.PORTA_ABERTA)
-        editarBloco(x, y + dy, z, novo, edicoes.obterMeta(x, y + dy, z));
+        prever(id, x, y + dy, z, novo, edicoes.obterMeta(x, y + dy, z));
     }
-    tocarSom(motorAudio, 'colocar', 'madeira');
+    enviarTelemetria(true);
+    enviar({ t: 'usar', x, y, z });
   }
 
   let ultimaColocacao: number | null = null;
@@ -1263,7 +1338,11 @@ export function criarCena(
   };
   estado.bloco = blocoEm;
   estado.meta = (x, y, z) => edicoes.obterMeta(x, y, z);
-  estado.definirBloco = (x, y, z, b, meta) => editarBloco(x, y, z, b, meta);
+  estado.definirBloco = (x, y, z, b, meta) => {
+    if (valorEm(x, y, z) === empacotar(b, meta ?? 0)) return false;
+    editarLote([{ x, y, z, v: empacotar(b, meta ?? 0) }]);
+    return true;
+  };
   /** Bloco original do terreno gerado (sem edições): distingue baú de ruína de baú posto. */
   estado.blocoGerado = (x, y, z) => {
     if (y < 0 || y >= ALTURA) return Bloco.AR;
@@ -1530,68 +1609,33 @@ export function criarCena(
       if (v === Bloco.PORTA || v === Bloco.PORTA_ABERTA) editarBloco(d.x, d.y + dy, d.z, Bloco.AR);
     }
   });
-  // Sobrevivência: o bloco quebrado vira item no chão.
-  const rngDrops = criarGerador(911);
-  const mundoItens = criarMundoDeItens((x, y, z) => {
-    const b = blocoEm(x, y, z);
-    return b !== Bloco.AR && !!obterBlocoDef(b)?.solido;
-  });
-  barramento.ouvir('quebra', (d) => {
-    if (modo !== 'sobrevivencia') return;
-    const ferramenta = ferramentaNaMao();
-    // desgaste da ferramenta
-    const p = hotbar.pilhaAtiva();
-    if (ferramenta && p && p.dur !== undefined && (obterBlocoDef(d.bloco)?.dureza ?? 0) > 0) {
-      const dur = p.dur - 1;
-      if (dur <= 0) {
-        inventario.definir(hotbar.ativo, null);
-        tocarSom(motorAudio, 'recusa');
-        window.dispatchEvent(
-          new CustomEvent('brumaluz:toast', {
-            detail: `${obterItem(p.item)?.nome ?? 'Ferramenta'} quebrou!`,
-          }),
-        );
-      } else {
-        inventario.definir(hotbar.ativo, { ...p, dur });
-      }
-    }
-    for (const drop of dropsDoBloco(d.bloco, rngDrops, podeColetar(d.bloco, ferramenta))) {
-      mundoItens.soltar(drop.item, drop.qtd, d.x + 0.5, d.y + 0.4, d.z + 0.5, rngDrops);
-    }
-  });
+  const replicaItens = criarReplicaItens();
   const renderItens = criarRenderItens(scene, atlas, textura, iconeDoItem, (m) =>
     glow.addExcludedMesh(m),
   );
   let coletaAcumulada = new Map<string, number>();
   let timerColeta: ReturnType<typeof setTimeout> | null = null;
-  function atualizarItens(dt: number, tempo: number): void {
-    const j = controle.jogador;
-    const coletados = mundoItens.atualizar(dt, j, (item, qtd, dur) =>
-      inventario.adicionar(item, qtd, dur),
-    );
-    for (const c of coletados) {
-      coletaAcumulada.set(c.item, (coletaAcumulada.get(c.item) ?? 0) + c.qtd);
-      tocarSom(motorAudio, 'coleta');
-      window.dispatchEvent(new CustomEvent('brumaluz:coletou', { detail: c }));
-      if (timerColeta) clearTimeout(timerColeta);
-      timerColeta = setTimeout(() => {
-        for (const [item, qtd] of coletaAcumulada) {
-          window.dispatchEvent(
-            new CustomEvent('brumaluz:toast', {
-              detail: `+${qtd} ${obterItem(item)?.nome ?? item}`,
-            }),
-          );
-        }
-        coletaAcumulada = new Map();
-      }, 350);
-    }
-    renderItens.atualizar(mundoItens.itens, tempo);
-    estado.itensSoltos = mundoItens.itens.length;
+  function coletou(item: string, qtd: number): void {
+    coletaAcumulada.set(item, (coletaAcumulada.get(item) ?? 0) + qtd);
+    tocarSom(motorAudio, 'coleta');
+    window.dispatchEvent(new CustomEvent('brumaluz:coletou', { detail: { item, qtd } }));
+    if (timerColeta) clearTimeout(timerColeta);
+    timerColeta = setTimeout(() => {
+      for (const [it, q] of coletaAcumulada) {
+        window.dispatchEvent(
+          new CustomEvent('brumaluz:toast', { detail: `+${q} ${obterItem(it)?.nome ?? it}` }),
+        );
+      }
+      coletaAcumulada = new Map();
+    }, 350);
   }
-  mundoItens.carregar(dadosIniciais?.extras?.['itensSoltos']);
-  salvaveis.set('itensSoltos', { salvar: () => mundoItens.salvar() });
+  function atualizarItens(dt: number, tempo: number): void {
+    replicaItens.atualizar(dt);
+    renderItens.atualizar(replicaItens.lista, tempo);
+    estado.itensSoltos = replicaItens.lista.length;
+  }
   estado.soltarItem = (item, qtd, x, y, z, dur) =>
-    mundoItens.soltar(item, qtd, x, y, z, rngDrops, dur);
+    enviar({ t: 'soltar', itens: [{ item, qtd, dur }], x, y, z });
   barramento.ouvir('colocacao', (d) => aplicarPlano('colocacao', d));
 
   /**
@@ -1807,7 +1851,7 @@ export function criarCena(
     if (eventos.length === 0) return;
     for (const ev of eventos) {
       if (ev === 'pulo' || ev === 'aterrissagem') animador.evento(ev);
-      if (ev === 'pulo' && modo === 'sobrevivencia') estado.sobrevivencia?.pulo(corrida);
+      if (ev === 'pulo') pulos++;
     }
     const grupo = grupoDoBloco(blocoSobPes(j, blocoEm)) ?? 'terra';
     for (const ev of eventos) {
@@ -1827,6 +1871,8 @@ export function criarCena(
     quadroSobrevivencia?.(Math.min(dtBruto, 0.1));
     atualizarSomMovimento(Math.min(dtBruto, 0.05));
     verificarSlot();
+    // o que as telas mexeram nos itens vira transação para o núcleo
+    sincronia.verificar();
     minerador.atualizar(dtQuadro, alvoMineracao());
     atualizarChunks();
     atualizarDestaque();
@@ -1913,35 +1959,10 @@ export function criarCena(
   }
   opcoes.config?.ouvir(aplicarConfig);
 
-  // Criaturas: animais, peixes, espectros e a raposa-lume companheira.
-  const populacao = criarPopulacao(
-    criarGerador(semente + 55),
-    dadosIniciais?.extras?.['criaturas'],
-  );
-  salvaveis.set('criaturas', { salvar: () => populacao.salvar() });
-  const cacheLuz = new Map<string, { v: number; t: number }>();
+  // Criaturas: o núcleo simula; a cena desenha a cópia suavizada.
+  const replicaCriaturas = criarReplicaCriaturas();
   const cacheCeu = new Map<string, { topo: number; t: number }>();
   let relogioCache = 0;
-  /** Luz aproximada de fontes num raio de 7 blocos (com cache de 2 s). */
-  function luzAprox(xr: number, yr: number, zr: number): number {
-    // cache por célula de 2x2x2: criaturas andando não forçam uma nova varredura a cada bloco
-    const x = xr & ~1;
-    const y = yr & ~1;
-    const z = zr & ~1;
-    const k = `${x},${y},${z}`;
-    const c = cacheLuz.get(k);
-    if (c && relogioCache - c.t < 2) return c.v;
-    let melhor = 0;
-    for (let dy = -4; dy <= 4; dy++)
-      for (let dz = -7; dz <= 7; dz++)
-        for (let dx = -7; dx <= 7; dx++) {
-          const l = luzDoBloco(blocoEm(x + dx, y + dy, z + dz));
-          if (l > 0) melhor = Math.max(melhor, l - Math.abs(dx) - Math.abs(dy) - Math.abs(dz));
-        }
-    cacheLuz.set(k, { v: melhor, t: relogioCache });
-    if (cacheLuz.size > 4000) cacheLuz.clear();
-    return melhor;
-  }
   /**
    * Céu aberto acima de (x, y, z)? O cache guarda o bloco opaco mais alto da coluna,
    * então serve a qualquer altura (um espectro na caverna sob uma coluna já medida
@@ -1961,30 +1982,11 @@ export function criarCena(
     if (cacheCeu.size > 4000) cacheCeu.clear();
     return y > topo;
   }
-  const mundoCriaturas = {
-    solido: controle.solido,
-    agua: (x: number, y: number, z: number) => blocoEm(x, y, z) === Bloco.AGUA,
-    luzBloco: luzAprox,
-    ceuAberto,
-    bioma: (x: number, z: number) => biomaEm(x, z, semente),
-    // chão de verdade: ignora copas e plantas; só em chunks já carregados (não gera terreno)
-    superficie: (x: number, z: number) => {
-      if (!provedor.tem(Math.floor(x / TAM_X), Math.floor(z / TAM_Z))) return null;
-      for (let y = ALTURA - 2; y > 0; y--) {
-        const d = obterBlocoDef(blocoEm(x, y, z));
-        if (d?.solido && !d.folhas && !d.planta) return y + 1;
-      }
-      return null;
-    },
-    nivelMar: NIVEL_MAR,
-    povoados: (x: number, z: number, raio: number) => povoadosPerto(x, z, raio, semente),
-  };
   const renderCriaturas = criarRenderCriaturas(
     scene,
     (m) => glow.addExcludedMesh(m),
     () => undefined,
   );
-  const rngCombate = criarGerador(semente + 77);
   function direcaoOlhar() {
     if (raioToque) return raioToque.direcao;
     const yaw = camera.rotation.y;
@@ -1998,7 +2000,7 @@ export function criarCena(
   function criaturaApontada() {
     const o = raioToque?.origem ?? camera.position;
     const r = criaturaNaMira(
-      populacao.lista,
+      replicaCriaturas.lista,
       { x: o.x, y: o.y, z: o.z },
       direcaoOlhar(),
       3.6 + (raioToque?.extra ?? 0),
@@ -2015,56 +2017,10 @@ export function criarCena(
   function atacarNaMira(): boolean {
     const c = criaturaApontada();
     if (!c) return false;
-    const f = ferramentaNaMao();
-    const dano = f ? (f.tipo === 'espada' ? f.dano : Math.max(2, f.dano)) : 1;
-    const ev = populacao.ferir(c, dano, camera.position.x, camera.position.z);
     animador.evento('golpe');
-    tratarEventosCriaturas(ev);
-    const p = hotbar.pilhaAtiva();
-    if (modo === 'sobrevivencia' && f && p?.dur !== undefined) {
-      const dur = p.dur - (f.tipo === 'espada' ? 1 : 2);
-      inventario.definir(hotbar.ativo, dur > 0 ? { ...p, dur } : null);
-    }
+    enviarTelemetria(true);
+    enviar({ t: 'atacar', criatura: c.id, slot: hotbar.ativo });
     return true;
-  }
-  function tratarEventosCriaturas(eventos: ReturnType<typeof populacao.atualizar>): void {
-    for (const ev of eventos) {
-      const c = ev.criatura;
-      if (ev.tipo === 'ataque' && modo === 'sobrevivencia') {
-        sobrevivencia.dano(ev.dano ?? 2, 'criatura');
-        controle.jogador.vy = 4.5;
-      } else if (ev.tipo === 'ferida') {
-        tocarSom(motorAudio, 'golpe', c.tipo === 'espectro' ? 'cristal' : 'terra');
-        tocarVoz(motorAudio, c.tipo, 'susto', volumeDaDistancia(c));
-      } else if (ev.tipo === 'morte') {
-        if (c.tipo === 'espectro' && temaAtual.id === 'bruma-e-luz')
-          tocarSom(motorAudio, 'espectro');
-        else if (c.tipo === 'espectro') tocarVoz(motorAudio, 'espectro', 'susto', 1);
-        else tocarSom(motorAudio, 'quebra', 'folhagem');
-        for (const d of ev.drops ?? [])
-          mundoItens.soltar(d.item, d.qtd, c.x, c.y + 0.5, c.z, rngDrops);
-        if (ev.drops)
-          window.dispatchEvent(new CustomEvent('brumaluz:derrotou', { detail: c.tipo }));
-      } else if (
-        ev.tipo === 'som' &&
-        Math.hypot(c.x - camera.position.x, c.z - camera.position.z) < 20
-      ) {
-        // o gemido de sempre no Bruma e Luz; nos outros temas, a voz da noturna do tema
-        if (temaAtual.id === 'bruma-e-luz') tocarSom(motorAudio, 'espectro');
-        else tocarVoz(motorAudio, 'espectro', 'chamado', Math.max(0.4, volumeDaDistancia(c)));
-        const a = Math.atan2(c.x - camera.position.x, c.z - camera.position.z) - camera.rotation.y;
-        const rel = Math.atan2(Math.sin(a), Math.cos(a));
-        const lado =
-          Math.abs(rel) < 0.6
-            ? 'à frente'
-            : Math.abs(rel) > 2.4
-              ? 'atrás'
-              : rel > 0
-                ? 'à direita'
-                : 'à esquerda';
-        legenda(`${temaAtual.textos.legendas.criaturaNoturna} ${lado}`);
-      }
-    }
   }
   /** Volume da voz pela distância (some a 24 blocos). */
   const volumeDaDistancia = (c: { x: number; y: number; z: number }) => {
@@ -2096,7 +2052,7 @@ export function criarCena(
     esperaChamado -= dt;
     if (esperaChamado > 0) return;
     esperaChamado = 5 + rngVozes() * 9;
-    const perto = populacao.lista.filter(
+    const perto = replicaCriaturas.lista.filter(
       (c) => c.estado !== 'morrendo' && c.tipo !== 'espectro' && volumeDaDistancia(c) > 0.25,
     );
     if (perto.length === 0) return;
@@ -2106,30 +2062,23 @@ export function criarCena(
   quadroCriaturas = (dt: number, tempo: number) => {
     relogioCache += dt;
     const j = controle.jogador;
-    const noite = estado.atmosfera?.noite ?? 0;
-    const ev = populacao.atualizar(
-      dt,
-      mundoCriaturas,
-      { x: j.x, y: j.y, z: j.z, vivo: !sobrevivencia.estado.morto, criativo: modo === 'criativo' },
-      noite,
-    );
-    tratarEventosCriaturas(ev);
+    replicaCriaturas.atualizar(dt);
     chamadosCriaturas(dt);
     avisarPovoado(dt);
     perigoPerto =
       modo === 'sobrevivencia' &&
-      populacao.lista.some(
+      replicaCriaturas.lista.some(
         (c) =>
           c.tipo === 'espectro' &&
           c.estado === 'perseguir' &&
           Math.hypot(c.x - j.x, c.z - j.z) < 14,
       );
-    renderCriaturas.atualizar(populacao.lista, dt, tempo, () =>
+    renderCriaturas.atualizar(replicaCriaturas.lista as unknown as Criatura[], dt, tempo, () =>
       Math.max(0.2, luzJogador * (0.45 + 0.55 * luzDia)),
     );
   };
   estado.criaturas = () =>
-    populacao.lista.map((c) => ({
+    replicaCriaturas.vistas.map((c) => ({
       tipo: c.tipo,
       x: c.x,
       y: c.y,
@@ -2137,9 +2086,7 @@ export function criarCena(
       domada: c.domada,
       vida: c.vida,
     }));
-  estado.invocar = (tipo, x, y, z) => {
-    populacao.adicionar(tipo, x, y, z);
-  };
+  estado.invocar = (tipo, x, y, z) => enviar({ t: 'depurar', d: { f: 'invocar', tipo, x, y, z } });
 
   // Modo construção (criativo): ferramentas de forma, copiar/colar e espelho.
   const visualConstrucao = criarVisualConstrucao(scene, atlas, textura, (m) =>
@@ -2203,9 +2150,9 @@ export function criarCena(
       const lote: Edicao[] = [];
       for (const e of colar(blueprintAtual, p, giro)) {
         const antes = valorEm(e.p.x, e.p.y, e.p.z);
-        if (editarBloco(e.p.x, e.p.y, e.p.z, e.v & 255, (e.v >> 8) & 255))
-          lote.push({ ...e.p, antes, depois: e.v });
+        if (antes !== e.v) lote.push({ ...e.p, antes, depois: e.v });
       }
+      aplicarLote(lote, 'depois');
       historico.registrar(lote);
       toast(`Construção colada (${lote.length} blocos)`);
       return;
@@ -2242,9 +2189,10 @@ export function criarCena(
         const lote: Edicao[] = [];
         for (const q of pts) {
           const antes = valorEm(q.x, q.y, q.z);
-          if ((antes & 255) === bloco) continue;
-          if (editarBloco(q.x, q.y, q.z, bloco)) lote.push({ ...q, antes, depois: bloco });
+          if ((antes & 255) === bloco || antes === bloco) continue;
+          lote.push({ ...q, antes, depois: bloco });
         }
+        aplicarLote(lote, 'depois');
         historico.registrar(lote);
         if (lote.length) toast(`${ROTULOS[f]}: ${lote.length} blocos`);
       }
@@ -2488,16 +2436,33 @@ export function criarCena(
   // Nascimento: sem posição salva, garante que o jogador comece em ar livre.
   if (!dadosIniciais?.jogador) estado.teleportar?.(controle.jogador.x, controle.jogador.z);
 
-  // Salvamento: edições, jogador, hora e o estado dos sistemas registrados.
-  function coletarDados(): DadosMundo {
+  // Salvamento: o núcleo devolve o mundo (blocos, baús, criaturas, inventário, vida,
+  // dia, clima); a cena junta a câmera e o que é só do jogador (diário, mapa, barra).
+  let pedidoSalvar = 0;
+  const esperandoSalvo = new Map<number, (d: SalvoNucleo) => void>();
+  function pedirNucleo(): Promise<SalvoNucleo> {
+    const pedido = ++pedidoSalvar;
+    return new Promise((resolve) => {
+      esperandoSalvo.set(pedido, resolve);
+      enviarTelemetria(true);
+      enviar({ t: 'salvar', pedido });
+    });
+  }
+  async function coletarDados(): Promise<DadosMundo> {
     const j = controle.jogador;
+    const nucleo = await pedirNucleo();
     const extras: Record<string, unknown> = { ...(dadosIniciais?.extras ?? {}) };
-    for (const [k, s] of salvaveis) extras[k] = s.salvar();
+    for (const [k, sv] of salvaveis) extras[k] = sv.salvar();
+    Object.assign(extras, nucleo.extras);
+    extras['inventario'] = {
+      ...((nucleo.extras['inventario'] as object | undefined) ?? {}),
+      ativo: hotbar.ativo,
+    };
     return {
       versao: 1,
-      edicoes: edicoes.exportar(),
+      edicoes: nucleo.edicoes,
       jogador: { x: j.x, y: j.y, z: j.z, yaw: camera.rotation.y, pitch: camera.rotation.x },
-      hora,
+      hora: nucleo.hora,
       extras,
     };
   }
@@ -2524,7 +2489,9 @@ export function criarCena(
     const mundo = opcoes.mundo;
     if (!repo || !mundo || !estado.ready) return false;
     if (salvando) await salvando;
-    salvando = repo.salvar(mundo.id, coletarDados(), comMiniatura ? miniatura() : undefined);
+    // a miniatura sai do quadro de agora; os dados chegam do núcleo logo depois
+    const foto = comMiniatura ? miniatura() : undefined;
+    salvando = coletarDados().then((d) => repo.salvar(mundo.id, d, foto));
     try {
       await salvando;
       estado.ultimoSalvamento = Date.now();
@@ -2536,62 +2503,242 @@ export function criarCena(
       salvando = null;
     }
   }
-  // Modos: criativo voa; sobrevivência tem vida, fome, ar, queda e morte.
-  const sobrevivencia = criarSobrevivencia(dadosIniciais?.extras?.['sobrevivencia']);
-  controle.definirVoo(modo === 'criativo');
-  const spawnSalvo = dadosIniciais?.extras?.['spawn'] as { x: number; z: number } | undefined;
-  let spawn = spawnSalvo ?? { x: controle.jogador.x, z: controle.jogador.z };
-  salvaveis.set('sobrevivencia', { salvar: () => sobrevivencia.salvar() });
-  salvaveis.set('spawn', { salvar: () => spawn });
-  estado.sobrevivencia = sobrevivencia;
-  estado.definirSpawn = (x, z) => {
-    spawn = { x, z };
-  };
-  sobrevivencia.ouvir((ev) => {
-    if (ev.tipo === 'dano') {
-      tocarSom(motorAudio, 'dano');
-      legenda(ev.causa === 'queda' ? 'Queda' : ev.causa === 'afogamento' ? 'Sem ar' : 'Dano');
-      window.dispatchEvent(new CustomEvent('brumaluz:dano', { detail: ev }));
-    } else if (ev.tipo === 'morte') {
-      // espalha o inventário no lugar da morte
-      const j = controle.jogador;
-      for (let i = 0; i < inventario.slots.length; i++) {
-        const p = inventario.obter(i);
-        if (!p) continue;
-        mundoItens.soltar(p.item, p.qtd, j.x, j.y + 1, j.z, rngDrops, p.dur);
-        inventario.definir(i, null);
-      }
-      window.dispatchEvent(new CustomEvent('brumaluz:morte', { detail: ev.causa }));
-    }
-  });
-  barramento.ouvir('golpe', () => sobrevivencia.acao());
-  estado.renascer = () => {
-    sobrevivencia.renascer();
-    estado.teleportar?.(spawn.x, spawn.z);
-    controle.jogador.topoQueda = undefined;
-  };
-  function atualizarSobrevivencia(dt: number): void {
-    if (modo !== 'sobrevivencia') return;
-    const r = controle.resultado;
-    if (r.aterrissou && r.queda > 0) sobrevivencia.queda(r.queda);
-    const olhos = camera.position;
-    const submerso =
-      blocoEm(Math.floor(olhos.x), Math.floor(olhos.y), Math.floor(olhos.z)) === Bloco.AGUA;
-    sobrevivencia.atualizar(dt, {
-      correndo: corrida,
-      andando: velocidadeHoriz > 0.5,
-      submerso,
-    });
-    if (controle.jogador.y < -20) sobrevivencia.dano(100, 'queda', true);
-  }
-  quadroSobrevivencia = atualizarSobrevivencia;
 
-  salvaveis.set('clima', { salvar: () => clima.salvar() });
-  salvaveis.set('dia', { salvar: () => dia });
-  estado.definirClima = (t) => clima.definir(t);
+  // Modos: criativo voa; sobrevivência tem vida, fome, ar, queda e morte (no núcleo).
+  controle.definirVoo(modo === 'criativo');
+  let estadoSobrevivencia: EstadoSobrevivencia = {
+    ...estadoInicial(),
+    ...((dadosIniciais?.extras?.['sobrevivencia'] as Partial<EstadoSobrevivencia>) ?? {}),
+  };
+  const sobrevivenciaCliente: SobrevivenciaCliente = {
+    get estado() {
+      return estadoSobrevivencia;
+    },
+    dano: (qtd, causa = 'outro') => enviar({ t: 'depurar', d: { f: 'dano', qtd, causa } }),
+  };
+  estado.sobrevivencia = sobrevivenciaCliente;
+  estado.definirSpawn = (x, z) => enviar({ t: 'depurar', d: { f: 'spawn', x, z } });
+  estado.renascer = () => enviar({ t: 'renascer' });
+
+  // Telemetria: o corpo do jogador anda aqui (resposta imediata); o núcleo recebe
+  // a posição e o que pesa na sobrevivência (quedas, pulos, golpes, água).
+  let quedas: number[] = [];
+  let pulos = 0;
+  let golpes = 0;
+  let ultimaTelemetria = -1;
+  barramento.ouvir('golpe', () => golpes++);
+  function enviarTelemetria(forcar = false): void {
+    const agora = performance.now() / 1000;
+    if (!forcar && agora - ultimaTelemetria < PASSO) return;
+    ultimaTelemetria = agora;
+    const j = controle.jogador;
+    const olhos = camera.position;
+    enviar({
+      t: 'jogador',
+      x: j.x,
+      y: j.y,
+      z: j.z,
+      yaw: camera.rotation.y,
+      pitch: camera.rotation.x,
+      olhos: olhos.y,
+      noChao: j.noChao,
+      voando: !!j.voando,
+      vel: velocidadeHoriz,
+      correndo: corrida,
+      submerso:
+        blocoEm(Math.floor(olhos.x), Math.floor(olhos.y), Math.floor(olhos.z)) === Bloco.AGUA,
+      quedas,
+      pulos,
+      golpes,
+      slot: hotbar.ativo,
+    });
+    quedas = [];
+    pulos = 0;
+    golpes = 0;
+  }
+  quadroSobrevivencia = () => {
+    const r = controle.resultado;
+    if (r.aterrissou && r.queda > 0) quedas.push(r.queda);
+    enviarTelemetria();
+  };
+
+  // Itens nas telas (inventário, baú, fornalha): mudanças viram transações
+  const sincronia = criarSincronizadorItens(inventario, enviar, proximoId);
+  let conteinerAberto: ConteinerReplica | null = null;
+  let ultimoAckTransacao = 0;
+
+  function aplicarQuadro(q: Quadro): void {
+    // tempo e clima
+    const a = q.ambiente;
+    if (a.dia !== dia) dia = a.dia;
+    hora = a.hora;
+    diaPausado = a.pausado;
+    estadoClima = a.clima;
+    // previsões confirmadas deixam de valer: o que o núcleo diz passa a mandar
+    for (const [k, id] of pendentesBloco) if (id <= q.ack) pendentesBloco.delete(k);
+    for (const b of q.blocos ?? []) {
+      if (pendentesBloco.has(celula(b.x, b.y, b.z))) continue;
+      editarBloco(b.x, b.y, b.z, b.v & 255, (b.v >> 8) & 255);
+    }
+    if (q.criaturas) replicaCriaturas.receber(q.criaturas);
+    if (q.itens) replicaItens.receber(q.itens);
+    if (q.inventario) {
+      ultimoAckTransacao = q.inventario.ackTransacao;
+      sincronia.inventario(q.inventario.slots, q.inventario.ackTransacao);
+    }
+    if (q.conteiner !== undefined) {
+      const antes = conteinerAberto;
+      conteinerAberto = sincronia.conteiner(q.conteiner, ultimoAckTransacao);
+      window.dispatchEvent(
+        new CustomEvent('brumaluz:conteiner', {
+          detail: {
+            conteiner: conteinerAberto,
+            novo: !!conteinerAberto && conteinerAberto !== antes,
+          },
+        }),
+      );
+    }
+    if (q.sobrevivencia) estadoSobrevivencia = q.sobrevivencia;
+    for (const e of q.eventos ?? []) tratarEvento(e);
+  }
+
+  const criaturaPorId = (id: number) => replicaCriaturas.lista.find((c) => c.id === id);
+  function tratarEvento(e: EventoNucleo): void {
+    switch (e.e) {
+      case 'quebra':
+      case 'colocacao':
+        // o que os outros fazem (o próprio jogador já viu e ouviu na previsão)
+        if (!e.meu) {
+          aplicarPlano(e.e, e);
+          tocarSom(
+            motorAudio,
+            e.e === 'quebra' ? 'quebra' : 'colocar',
+            grupoDoBloco(e.bloco) ?? 'terra',
+          );
+        }
+        break;
+      case 'porta':
+        tocarSom(motorAudio, 'colocar', 'madeira');
+        break;
+      case 'coletou':
+        coletou(e.item, e.qtd);
+        break;
+      case 'ferramentaQuebrou':
+        tocarSom(motorAudio, 'recusa');
+        toast(`${obterItem(e.item)?.nome ?? 'Ferramenta'} quebrou!`);
+        break;
+      case 'criaturaFerida': {
+        const c = criaturaPorId(e.id);
+        tocarSom(motorAudio, 'golpe', e.tipo === 'espectro' ? 'cristal' : 'terra');
+        if (c) tocarVoz(motorAudio, e.tipo, 'susto', volumeDaDistancia(c));
+        break;
+      }
+      case 'criaturaMorreu':
+        if (e.tipo === 'espectro' && temaAtual.id === 'bruma-e-luz')
+          tocarSom(motorAudio, 'espectro');
+        else if (e.tipo === 'espectro') tocarVoz(motorAudio, 'espectro', 'susto', 1);
+        else tocarSom(motorAudio, 'quebra', 'folhagem');
+        if (e.drops) window.dispatchEvent(new CustomEvent('brumaluz:derrotou', { detail: e.tipo }));
+        break;
+      case 'criaturaSom': {
+        const c = criaturaPorId(e.id);
+        if (!c || Math.hypot(c.x - camera.position.x, c.z - camera.position.z) >= 20) break;
+        // o gemido de sempre no Bruma e Luz; nos outros temas, a voz da noturna do tema
+        if (temaAtual.id === 'bruma-e-luz') tocarSom(motorAudio, 'espectro');
+        else tocarVoz(motorAudio, 'espectro', 'chamado', Math.max(0.4, volumeDaDistancia(c)));
+        const ang =
+          Math.atan2(c.x - camera.position.x, c.z - camera.position.z) - camera.rotation.y;
+        const rel = Math.atan2(Math.sin(ang), Math.cos(ang));
+        const lado =
+          Math.abs(rel) < 0.6
+            ? 'à frente'
+            : Math.abs(rel) > 2.4
+              ? 'atrás'
+              : rel > 0
+                ? 'à direita'
+                : 'à esquerda';
+        legenda(`${temaAtual.textos.legendas.criaturaNoturna} ${lado}`);
+        break;
+      }
+      case 'ataque':
+        // o empurrão do golpe (o dano já veio no estado da sobrevivência)
+        controle.jogador.vy = 4.5;
+        break;
+      case 'domou':
+        tocarSom(motorAudio, 'entrada');
+        toast(`${CRIATURAS.raposa.nome} confia em você!`);
+        window.dispatchEvent(new CustomEvent('brumaluz:domou'));
+        tocarVoz(motorAudio, e.tipo, 'contente', 1);
+        break;
+      case 'comeu':
+        tocarSom(motorAudio, 'comer');
+        animador.evento('colocacao');
+        window.dispatchEvent(new CustomEvent('brumaluz:comeu'));
+        break;
+      case 'dano':
+        tocarSom(motorAudio, 'dano');
+        legenda(e.causa === 'queda' ? 'Queda' : e.causa === 'afogamento' ? 'Sem ar' : 'Dano');
+        window.dispatchEvent(
+          new CustomEvent('brumaluz:dano', {
+            detail: { tipo: 'dano', causa: e.causa, qtd: e.qtd },
+          }),
+        );
+        break;
+      case 'morte':
+        window.dispatchEvent(new CustomEvent('brumaluz:morte', { detail: e.causa }));
+        break;
+      case 'teleporte':
+        estado.teleportar?.(e.x, e.z, e.y);
+        controle.jogador.topoQueda = undefined;
+        break;
+      case 'relampago':
+        if (!temaAtual.climaVisual.relampago) break;
+        flash = 1;
+        setTimeout(() => {
+          tocarSom(motorAudio, 'trovao');
+          legenda(temaAtual.textos.legendas.trovao);
+        }, e.atrasoTrovao * 1000);
+        break;
+      case 'sono':
+        window.dispatchEvent(new CustomEvent('brumaluz:sono', { detail: { dormiu: e.dormiu } }));
+        break;
+      case 'acordou': {
+        // as estações não esperam a transição: o dia novo já amanhece com elas
+        const est = estacaoDoDia(dia);
+        outonoAtual = est === 'outono' ? 1 : 0;
+        invernoAtual = est === 'inverno' ? 1 : 0;
+        window.dispatchEvent(new CustomEvent('brumaluz:acordou'));
+        break;
+      }
+      case 'trocou':
+        window.dispatchEvent(
+          new CustomEvent('brumaluz:trocou', {
+            detail: { profissao: e.profissao, troca: e.troca },
+          }),
+        );
+        break;
+      case 'trocaRecusada':
+        window.dispatchEvent(new CustomEvent('brumaluz:trocaRecusada', { detail: e.motivo }));
+        break;
+      case 'recusa':
+        barramento.emitir('recusa', { motivo: e.motivo === 'quebrar' ? 'quebrar' : 'colocar' });
+        break;
+    }
+  }
+
+  conexao.aoReceber((m: Mensagem) => {
+    if (m.t === 'quadro') aplicarQuadro(m);
+    else if (m.t === 'salvo') {
+      esperandoSalvo.get(m.pedido)?.(m.dados);
+      esperandoSalvo.delete(m.pedido);
+    } else if (m.t === 'erro') console.error('núcleo:', m.mensagem);
+  });
+
+  estado.definirClima = (t) => enviar({ t: 'depurar', d: { f: 'clima', tipo: t } });
   estado.dia = () => dia;
   estado.definirDia = (d) => {
     dia = Math.max(0, Math.floor(d));
+    enviar({ t: 'depurar', d: { f: 'dia', dia } });
     const e = estacaoDoDia(dia);
     outonoAtual = e === 'outono' ? 1 : 0;
     invernoAtual = e === 'inverno' ? 1 : 0;
@@ -2600,7 +2747,6 @@ export function criarCena(
   estado.salvar = salvar;
   estado.modo = modo;
   estado.inventario = inventario;
-  salvaveis.set('inventario', { salvar: () => ({ ...inventario.salvar(), ativo: hotbar.ativo }) });
   estado.mundo = opcoes.mundo ? { ...opcoes.mundo } : undefined;
   setInterval(() => void salvar(false), 30_000);
   document.addEventListener('visibilitychange', () => {
@@ -2624,6 +2770,17 @@ export function criarCena(
     blocoEm,
     semente,
     salvar,
+    /** Fecha o baú ou a fornalha aberta (manda antes o que a tela mudou). */
+    fecharConteiner() {
+      sincronia.verificar();
+      if (conteinerAberto) enviar({ t: 'fecharConteiner' });
+    },
+    /** Pede uma troca ao morador (o inventário novo chega do núcleo). */
+    trocar(criatura: number, profissao: Profissao, troca: string) {
+      sincronia.verificar();
+      enviarTelemetria(true);
+      enviar({ t: 'trocar', criatura, profissao, troca });
+    },
     registrarSalvavel(chave: string, s: Salvavel) {
       salvaveis.set(chave, s);
     },

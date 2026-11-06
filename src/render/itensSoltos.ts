@@ -7,7 +7,10 @@ import type { Mesh } from '@babylonjs/core/Meshes/mesh';
 import type { BaseTexture } from '@babylonjs/core/Materials/Textures/baseTexture';
 import type { Scene } from '@babylonjs/core/scene';
 import type { Atlas, FaceBloco } from '../art/atlas';
-import type { ItemSolto } from '../jogo/drops';
+import type { ItemSolto as ItemCompleto } from '../jogo/drops';
+
+/** O que o desenho precisa de um item no chão. */
+type ItemSolto = Pick<ItemCompleto, 'id' | 'item' | 'qtd' | 'x' | 'y' | 'z'>;
 import { obterItem } from '../jogo/itens';
 import { obterBloco } from '../world/blocks';
 

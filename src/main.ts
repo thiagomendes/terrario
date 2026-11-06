@@ -9,7 +9,7 @@ import { CSS_CRIACAO, criarCriacao } from './ui/criacao';
 import { CSS_CONTEINER, criarPainelBau, criarPainelFornalha } from './ui/conteiner';
 import { CSS_TROCAS, criarPainelTrocas } from './ui/trocas';
 import type { Profissao } from './world/povoado';
-import { criarConteineres } from './jogo/conteineres';
+import type { ConteinerReplica } from './cliente/replica';
 import { registrarCatalogo } from './jogo/catalogo';
 import { Bloco } from './world/blocks';
 import { criarGerenciadorConfig } from './jogo/config';
@@ -27,7 +27,7 @@ import {
 } from './ui/toque';
 import { criarDiario } from './jogo/diario';
 import { ativarTema } from './temas/ativar';
-import { tema } from './temas/ativo';
+import { povoadoDoTema, tema } from './temas/ativo';
 import { temaExiste } from './temas';
 import { CORES_MARCADOR, type Marcador } from './jogo/mapa';
 
@@ -165,29 +165,27 @@ function ligarInventario(
   });
   const painelBau = criarPainelBau(ui, hotbar.inventario);
   const painelFornalha = criarPainelFornalha(ui);
+  // trocas: o núcleo confere e faz; a tela mostra o pedido e o inventário novo
+  let moradorAtual = 0;
   const painelTrocas = criarPainelTrocas(ui, hotbar.inventario, {
-    soltar: (item, qtd) => {
-      const p = cena.estado.posicao;
-      if (p) cena.estado.soltarItem?.(item, qtd, p[0], p[1] - 1, p[2]);
-    },
     aviso: (t) => notificar(t),
-    trocou: (profissao, t) =>
-      window.dispatchEvent(
-        new CustomEvent('brumaluz:trocou', { detail: { profissao, troca: t.id } }),
-      ),
+    fazer: (profissao, t) => cena.trocar(moradorAtual, profissao, t.id),
   });
   window.addEventListener('brumaluz:trocar', (e) => {
-    const d = (e as CustomEvent<{ profissao: Profissao; nome: string }>).detail;
+    const d = (e as CustomEvent<{ profissao: Profissao; nome: string; criatura: number }>).detail;
+    moradorAtual = d.criatura;
     abrirConteiner(() => painelTrocas.abrir(d.profissao, d.nome));
   });
-  const conteineres = criarConteineres(cena.extrasSalvos('conteineres'), cena.semente);
-  cena.registrarSalvavel('conteineres', { salvar: () => conteineres.salvar() });
+  window.addEventListener('brumaluz:trocaRecusada', (e) => {
+    if ((e as CustomEvent<string>).detail === 'faltam') notificar(povoadoDoTema().textos.faltam);
+  });
   const fecharOriginal = ui.fechar;
   ui.fechar = () => {
     criacao.devolver();
     painelBau.fechar();
     painelFornalha.fechar();
     painelTrocas.fechar();
+    cena.fecharConteiner();
     fecharOriginal();
   };
   const abrir = (lado: 2 | 3) => {
@@ -214,43 +212,32 @@ function ligarInventario(
   window.addEventListener('brumaluz:usar', (e) => {
     const d = (e as CustomEvent<{ bloco: number; x: number; y: number; z: number }>).detail;
     if (d.bloco === Bloco.MESA_TRABALHO) abrir(3);
-    else if (d.bloco === Bloco.BAU) {
-      // baú sem edição no lugar foi gerado pelo mundo (ruína): vem com tesouro
-      const gerado = cena.edicoes.obter(d.x, d.y, d.z) === undefined;
-      abrirConteiner(() => painelBau.abrir(conteineres.bau(d.x, d.y, d.z, gerado)));
-    } else if (d.bloco === Bloco.FORNALHA || d.bloco === Bloco.FORNALHA_ACESA) {
-      abrirConteiner(() => painelFornalha.abrir(conteineres.fornalha(d.x, d.y, d.z)));
-    } else if (d.bloco === Bloco.CAMA) {
-      dormir(cena, d.x, d.z);
-    }
   });
-  // fornalhas trabalham mesmo com o painel fechado
-  let ultimo = performance.now();
-  setInterval(() => {
-    const agora = performance.now();
-    const dt = Math.min(1, (agora - ultimo) / 1000);
-    ultimo = agora;
-    conteineres.atualizar(
-      dt,
-      (x, y, z) => cena.blocoEm(x, y, z) === Bloco.FORNALHA_ACESA,
-      (x, y, z, acesa) => {
-        const meta = cena.estado.meta?.(x, y, z) ?? 0;
-        const atual = cena.blocoEm(x, y, z);
-        if (atual !== Bloco.FORNALHA && atual !== Bloco.FORNALHA_ACESA) return;
-        cena.editarBloco(x, y, z, acesa ? Bloco.FORNALHA_ACESA : Bloco.FORNALHA, meta);
-      },
-    );
-    if (painelFornalha.aberta) painelFornalha.render();
-  }, 250);
-  // quebrar baú ou fornalha espalha o conteúdo
-  cena.barramento.ouvir('quebra', (d) => {
-    if (![Bloco.BAU, Bloco.FORNALHA, Bloco.FORNALHA_ACESA].includes(d.bloco as never)) return;
-    // baú de ruína quebrado sem nunca ter sido aberto também solta o tesouro
-    const gerado = d.bloco === Bloco.BAU && cena.estado.blocoGerado?.(d.x, d.y, d.z) === Bloco.BAU;
-    for (const p of conteineres.remover(d.x, d.y, d.z, gerado)) {
-      if (p) cena.estado.soltarItem?.(p.item, p.qtd, d.x + 0.5, d.y + 0.5, d.z + 0.5, p.dur);
+  // baú e fornalha: o núcleo manda o conteúdo (e as mudanças, como a fornalha fundindo)
+  window.addEventListener('brumaluz:conteiner', (e) => {
+    const { conteiner: c, novo } = (
+      e as CustomEvent<{ conteiner: ConteinerReplica | null; novo: boolean }>
+    ).detail;
+    if (!c) {
+      // quebraram o contêiner aberto
+      if (painelBau.aberto || painelFornalha.aberta) ui.fechar();
+      return;
     }
+    if (novo) {
+      if (c.tipo === 'bau' && c.slots) {
+        const slots = c.slots;
+        abrirConteiner(() => painelBau.abrir(slots));
+      } else if (c.fornalha) {
+        const f = c.fornalha;
+        abrirConteiner(() => painelFornalha.abrir(f));
+      }
+      return;
+    }
+    if (c.tipo === 'bau') painelBau.render();
+    else if (painelFornalha.aberta) painelFornalha.render();
   });
+  // cama: o núcleo põe o ponto de renascer e decide se dá para dormir
+  ligarSono();
   (window as unknown as { __inventarioUI?: unknown }).__inventarioUI = {
     abrir: (lado: 2 | 3 = 2) => abrir(lado),
     fechar: () => ui.fechar(),
@@ -321,42 +308,33 @@ function ligarStatus(
   }
 }
 
-function dormir(cena: ReturnType<typeof criarCena>, x: number, z: number): void {
-  cena.estado.definirSpawn?.(x + 0.5, z + 0.5);
-  const noite = cena.estado.atmosfera?.noite ?? 0;
-  if (noite < 0.4) {
-    notificar('Ponto de renascer definido. Só dá para dormir à noite.');
-    return;
-  }
-  const veu = document.createElement('div');
-  veu.style.cssText =
-    'position:fixed;inset:0;z-index:45;background:#05060c;opacity:0;transition:opacity 1.2s ease;pointer-events:none;display:flex;align-items:center;justify-content:center;color:#d9d2c4;font:600 1.4rem system-ui,sans-serif';
-  veu.textContent = 'Zzz…';
-  document.body.appendChild(veu);
-  requestAnimationFrame(() => (veu.style.opacity = '1'));
-  setTimeout(() => {
-    if (cena.estado.hora !== undefined) {
-      // dormir à noite (antes da meia-noite) já conta como o dia seguinte
-      if (cena.estado.hora > 0.5) {
-        const dia = diaAtual(cena);
-        if (dia !== null) cena.estado.definirDia?.(dia + 1);
-      }
-      cena.estado.hora = 0.265;
+/** Dormir: véu escuro enquanto o núcleo passa a noite. */
+function ligarSono(): void {
+  let veu: HTMLDivElement | null = null;
+  window.addEventListener('brumaluz:sono', (e) => {
+    if (!(e as CustomEvent<{ dormiu: boolean }>).detail.dormiu) {
+      notificar('Ponto de renascer definido. Só dá para dormir à noite.');
+      return;
     }
-    veu.style.opacity = '0';
+    veu?.remove();
+    const v = document.createElement('div');
+    v.style.cssText =
+      'position:fixed;inset:0;z-index:45;background:#05060c;opacity:0;transition:opacity 1.2s ease;pointer-events:none;display:flex;align-items:center;justify-content:center;color:#d9d2c4;font:600 1.4rem system-ui,sans-serif';
+    v.textContent = 'Zzz…';
+    document.body.appendChild(v);
+    requestAnimationFrame(() => (v.style.opacity = '1'));
+    veu = v;
+  });
+  window.addEventListener('brumaluz:acordou', () => {
+    const v = veu;
+    veu = null;
+    if (v) {
+      v.style.opacity = '0';
+      setTimeout(() => v.remove(), 1300);
+    }
     notificar('Você dormiu até o amanhecer');
     window.dispatchEvent(new CustomEvent('brumaluz:dormiu'));
-    setTimeout(() => veu.remove(), 1300);
-  }, 1500);
-}
-
-/** Dia atual (0 = primeiro). Sem getter na cena, lê de infoMundo ("Dia N · ..."). */
-function diaAtual(cena: ReturnType<typeof criarCena>): number | null {
-  const e = cena.estado as { dia?: number | (() => number); infoMundo?: string };
-  if (typeof e.dia === 'function') return e.dia();
-  if (typeof e.dia === 'number') return e.dia;
-  const m = /Dia (\d+)/.exec(e.infoMundo ?? '');
-  return m ? Number(m[1]) - 1 : null;
+  });
 }
 
 function ligarFoto(app: HTMLElement, cena: ReturnType<typeof criarCena>): void {

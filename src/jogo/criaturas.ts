@@ -982,13 +982,13 @@ export function ferir(
 }
 
 /** Raio contra caixas de criaturas: a mais próxima até `alcance`. */
-export function criaturaNaMira(
-  lista: readonly Criatura[],
+export function criaturaNaMira<C extends Pick<Criatura, 'x' | 'y' | 'z' | 'tipo' | 'estado'>>(
+  lista: readonly C[],
   o: { x: number; y: number; z: number },
   d: { x: number; y: number; z: number },
   alcance: number,
-): { criatura: Criatura; distancia: number } | null {
-  let melhor: { criatura: Criatura; distancia: number } | null = null;
+): { criatura: C; distancia: number } | null {
+  let melhor: { criatura: C; distancia: number } | null = null;
   for (const c of lista) {
     if (c.estado === 'morrendo') continue;
     const def = CRIATURAS[c.tipo];

@@ -1,6 +1,6 @@
 import type { Inventario } from '../jogo/inventario';
 import { obterItem } from '../jogo/itens';
-import { fazerTroca, podeTrocar, TROCAS, type Troca } from '../jogo/trocas';
+import { podeTrocar, TROCAS, type Troca } from '../jogo/trocas';
 import { povoadoDoTema } from '../temas/ativo';
 import type { Profissao } from '../world/povoado';
 import type { InventarioUI } from './inventario';
@@ -31,11 +31,10 @@ export const CSS_TROCAS = `
 `;
 
 export interface OpcoesTrocas {
-  /** Solta no chão o que não couber no inventário. */
-  soltar(item: string, qtd: number): void;
-  /** Avisos (faltam itens) e eventos de troca feita (diário, voz). */
+  /** Avisos (faltam itens). */
   aviso(texto: string): void;
-  trocou(profissao: Profissao, t: Troca): void;
+  /** Pede a troca ao núcleo (ele confere, faz e manda o inventário novo). */
+  fazer(profissao: Profissao, t: Troca): void;
 }
 
 /** Descrição falada da troca (leitores de tela e dica do botão). */
@@ -106,16 +105,14 @@ export function criarPainelTrocas(ui: InventarioUI, inv: Inventario, op: OpcoesT
       botao.addEventListener('click', (e) => {
         e.stopPropagation();
         if (!profissao) return;
-        if (!fazerTroca(inv, t, op.soltar)) {
+        if (!podeTrocar(inv, t)) {
           op.aviso(tp.textos.faltam);
           return;
         }
         el.classList.remove('feita');
         void el.offsetWidth;
         el.classList.add('feita');
-        op.trocou(profissao, t);
-        ui.render();
-        atualizar();
+        op.fazer(profissao, t);
       });
       el.append(dar, seta, recebe, botao);
       lista.appendChild(el);

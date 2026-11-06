@@ -117,6 +117,11 @@ export function criarPainelBau(ui: InventarioUI, inv: Inventario) {
       conteudo = null;
       raiz.hidden = true;
     },
+    /** Redesenha (o conteúdo mudou fora da tela: outro jogador, o núcleo). */
+    render,
+    get aberto() {
+      return conteudo !== null;
+    },
   };
 }
 
