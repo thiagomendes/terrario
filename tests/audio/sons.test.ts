@@ -170,3 +170,29 @@ describe('iniciarAmbiente', () => {
     expect(() => amb.parar()).not.toThrow();
   });
 });
+
+describe('trilha adaptativa', () => {
+  it('troca de paleta por contexto e agenda pulso no perigo e gotas na caverna', async () => {
+    const { ctx, motor } = await motorAtivo();
+    let agendar: (() => void) | null = null;
+    const amb = iniciarAmbiente(motor, {
+      setInterval: (f: () => void) => {
+        agendar = f;
+        return 1;
+      },
+      clearInterval: () => undefined,
+    });
+    expect(amb.contexto).toBe('dia');
+    amb.definirContexto('perigo');
+    expect(amb.contexto).toBe('perigo');
+    const antes = ctx.fontes.length;
+    ctx.currentTime = 5;
+    agendar!();
+    expect(ctx.fontes.length).toBeGreaterThan(antes);
+    amb.definirContexto('caverna');
+    ctx.currentTime = 9;
+    agendar!();
+    amb.parar();
+    expect(ctx.fontes.every((f) => f.parada)).toBe(true);
+  });
+});

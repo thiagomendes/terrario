@@ -188,6 +188,7 @@ export interface EstadoDepuracao {
   itensSoltos?: number;
   soltarItem?: (item: string, qtd: number, x: number, y: number, z: number) => void;
   modo?: ModoJogo;
+  musica?: string;
   precipitacao?: { chuva: number; neve: number; taxa: number };
   biomaAtual?: string;
   mapaChunk?: (cx: number, cz: number) => Uint8ClampedArray;
@@ -491,6 +492,18 @@ export function criarCena(
     const b = biomaEm(Math.floor(pj.x), Math.floor(pj.z), semente);
     const nevando = invernoAtual > 0.5 || b === 'taiga' || b === 'montanhas';
     estado.biomaAtual = b;
+    // trilha adaptativa: perigo > caverna > bioma especial > noite > dia
+    const contextoMusica = perigoPerto
+      ? 'perigo'
+      : jogadorCoberto
+        ? 'caverna'
+        : b === 'deserto' || b === 'taiga' || b === 'pantano'
+          ? b
+          : baseHora.noite > 0.6
+            ? 'noite'
+            : 'dia';
+    ambiente?.definirContexto(contextoMusica);
+    estado.musica = contextoMusica;
     estado.precipitacao = precipitacao.ativas();
     precipitacao.atualizar(cameraVisao.position, clima.estado.chuva, nevando, jogadorCoberto);
     ambiente?.definirChuva(nevando ? clima.estado.chuva * 0.25 : clima.estado.chuva);
@@ -1304,6 +1317,7 @@ export function criarCena(
   ligarAudio(barramento, motorAudio);
   const detector = criarDetectorMovimento();
   let ambiente: Ambiente | null = null;
+  let perigoPerto = false;
   let fotoPosRef: () => Vector3 = () => camera.position;
   let quadroFotoRef: ((dt: number) => void) | null = null;
   let quadroConstrucao: ((tempo: number) => void) | null = null;
@@ -1565,6 +1579,14 @@ export function criarCena(
       noite,
     );
     tratarEventosCriaturas(ev);
+    perigoPerto =
+      modo === 'sobrevivencia' &&
+      populacao.lista.some(
+        (c) =>
+          c.tipo === 'espectro' &&
+          c.estado === 'perseguir' &&
+          Math.hypot(c.x - j.x, c.z - j.z) < 14,
+      );
     renderCriaturas.atualizar(populacao.lista, dt, tempo, () => Math.max(0.25, luzJogador));
   };
   estado.criaturas = () =>

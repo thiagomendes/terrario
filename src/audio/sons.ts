@@ -534,6 +534,9 @@ export interface Ambiente {
   definirVolumes(musica: number, natureza: number): void;
   /** Intensidade da chuva (0 a 1): chiado contínuo e menos pássaros. */
   definirChuva(i: number): void;
+  /** Troca a paleta da trilha (bioma, noite, caverna, perigo). */
+  definirContexto(c: ContextoMusical): void;
+  readonly contexto: ContextoMusical;
 }
 
 interface RelogioAgenda {
@@ -549,14 +552,104 @@ const relogioPadrao: RelogioAgenda | null =
       }
     : null;
 
-/** Acordes da trilha (frequências), num modo maior suave. */
-const ACORDES: number[][] = [
-  [146.83, 220, 329.63, 369.99],
-  [123.47, 185, 293.66, 440],
-  [98, 146.83, 246.94, 329.63],
-  [110, 164.81, 277.18, 329.63],
-];
-const MELODIA = [587.33, 659.25, 739.99, 880, 987.77, 1174.66];
+/** Nota pelo número MIDI. */
+const nota = (m: number) => 440 * Math.pow(2, (m - 69) / 12);
+const acorde = (...ms: number[]) => ms.map(nota);
+
+export type ContextoMusical =
+  | 'dia'
+  | 'noite'
+  | 'deserto'
+  | 'taiga'
+  | 'pantano'
+  | 'caverna'
+  | 'perigo';
+
+interface PaletaMusical {
+  acordes: number[][];
+  melodia: number[];
+  /** Segundos entre acordes. */
+  intervalo: number;
+  /** Chance de tocar uma nota da melodia a cada oportunidade. */
+  chanceNota: number;
+  /** Pulso grave (perigo). */
+  pulso?: number[];
+  /** Gotas d'água (cavernas). */
+  gotas?: boolean;
+}
+
+/** Paletas da trilha generativa por contexto (bioma, noite, caverna, perigo). */
+export const PALETAS_MUSICAIS: Record<ContextoMusical, PaletaMusical> = {
+  dia: {
+    acordes: [
+      acorde(50, 57, 64, 66),
+      acorde(47, 54, 62, 69),
+      acorde(43, 50, 59, 64),
+      acorde(45, 52, 61, 64),
+    ],
+    melodia: [74, 76, 78, 81, 83, 86].map(nota),
+    intervalo: 8,
+    chanceNota: 0.55,
+  },
+  noite: {
+    acordes: [
+      acorde(45, 52, 60, 64, 71),
+      acorde(41, 48, 57, 64),
+      acorde(43, 50, 59, 62),
+      acorde(40, 47, 55, 62),
+    ],
+    melodia: [69, 72, 74, 76, 79].map(nota),
+    intervalo: 11,
+    chanceNota: 0.35,
+  },
+  deserto: {
+    acordes: [
+      acorde(50, 57, 62, 66),
+      acorde(51, 55, 58, 63),
+      acorde(50, 54, 57, 62),
+      acorde(48, 55, 60, 63),
+    ],
+    melodia: [74, 75, 78, 79, 81, 82, 84].map(nota),
+    intervalo: 9,
+    chanceNota: 0.5,
+  },
+  taiga: {
+    acordes: [
+      acorde(40, 47, 55, 62),
+      acorde(36, 43, 52, 59),
+      acorde(38, 45, 54, 62),
+      acorde(43, 50, 59, 66),
+    ],
+    melodia: [83, 86, 88, 91, 95].map(nota),
+    intervalo: 12,
+    chanceNota: 0.3,
+  },
+  pantano: {
+    acordes: [
+      acorde(48, 52, 56, 62),
+      acorde(50, 54, 58, 64),
+      acorde(46, 50, 54, 60),
+      acorde(44, 48, 54, 58),
+    ],
+    melodia: [72, 74, 76, 78, 80, 82].map(nota),
+    intervalo: 10,
+    chanceNota: 0.45,
+  },
+  caverna: {
+    acordes: [acorde(33, 40), acorde(31, 38), acorde(34, 41), acorde(29, 36)],
+    melodia: [64, 67, 69, 71, 74].map(nota),
+    intervalo: 14,
+    chanceNota: 0.2,
+    gotas: true,
+  },
+  perigo: {
+    acordes: [acorde(45, 48, 51, 57), acorde(44, 47, 50, 56)],
+    melodia: [69, 70, 72, 75].map(nota),
+    intervalo: 6,
+    chanceNota: 0.25,
+    pulso: acorde(33, 33, 36, 33, 31, 33),
+  },
+};
 
 function respostaReverb(ctx: ContextoSintese, segundos: number): BufferSom {
   const taxa = ctx.sampleRate || 44100;
@@ -584,6 +677,10 @@ export function iniciarAmbiente(
   let noite = 0;
   let volMusica = 1;
   let chuva = 0;
+  let contexto: ContextoMusical = 'dia';
+  let proximoPulso = 0;
+  let proximaGota = 0;
+  let passoPulso = 0;
   let gChuva: GanhoSom | null = null;
   let volNatureza = 1;
   let ctxA: ContextoSintese | null = null;
@@ -592,7 +689,7 @@ export function iniciarAmbiente(
   let proximoAcorde = 0;
   let proximaNota = 0;
   let proximoBicho = 0;
-  let acorde = 0;
+  let indiceAcorde = 0;
   const rng = criarGerador(2026);
 
   function registrar(p: Peca): void {
@@ -607,7 +704,7 @@ export function iniciarAmbiente(
     };
   }
 
-  function nota(t: number, f: number, ganho: number, ataque: number, dur: number): void {
+  function tocarNota(t: number, f: number, ganho: number, ataque: number, dur: number): void {
     const ctx = ctxA!;
     for (const desvio of [-5, 5]) {
       const o = ctx.createOscillator();
@@ -671,21 +768,40 @@ export function iniciarAmbiente(
     if (!ctxA || !busMusica) return;
     const agora = ctxA.currentTime;
     const ate = agora + 0.6;
+    const p = PALETAS_MUSICAIS[contexto];
     while (proximoAcorde < ate) {
       const t = Math.max(proximoAcorde, agora + 0.05);
-      for (const f of ACORDES[acorde % ACORDES.length]) nota(t, f, 0.05, 2.5, 9);
-      acorde++;
-      proximoAcorde = t + 8;
+      const ac = p.acordes[indiceAcorde % p.acordes.length];
+      for (const f of ac)
+        tocarNota(t, f, contexto === 'caverna' ? 0.07 : 0.05, 2.5, p.intervalo + 1);
+      indiceAcorde++;
+      proximoAcorde = t + p.intervalo;
     }
     while (proximaNota < ate) {
       const t = Math.max(proximaNota, agora + 0.05);
-      if (rng() < 0.55) {
-        const f = MELODIA[Math.floor(rng() * MELODIA.length)];
+      if (rng() < p.chanceNota) {
+        const f = p.melodia[Math.floor(rng() * p.melodia.length)];
         sino(t, f, 0.06);
         sino(t + 0.375, f, 0.025);
       }
       proximaNota = t + 1.5 + rng() * 2.5;
     }
+    if (p.pulso) {
+      while (proximoPulso < ate) {
+        const t = Math.max(proximoPulso, agora + 0.05);
+        const f = p.pulso[passoPulso++ % p.pulso.length];
+        registrar(tom(ctxA, busMusica, t, 'triangle', f, f * 0.98, 0.1, 0.22, 0.01));
+        proximoPulso = t + 0.3;
+      }
+    } else proximoPulso = agora;
+    if (p.gotas) {
+      while (proximaGota < ate) {
+        const t = Math.max(proximaGota, agora + 0.05);
+        const f = 1400 + rng() * 1600;
+        registrar(tom(ctxA, busNatureza!, t, 'sine', f, f * 0.55, 0.05, 0.12, 0.002));
+        proximaGota = t + 0.8 + rng() * 3;
+      }
+    } else proximaGota = agora;
     while (proximoBicho < ate) {
       const t = Math.max(proximoBicho, agora + 0.05);
       if (rng() < noite) {
@@ -775,6 +891,15 @@ export function iniciarAmbiente(
   return {
     definirNoite(n) {
       noite = Math.max(0, Math.min(1, n));
+    },
+    get contexto() {
+      return contexto;
+    },
+    definirContexto(c) {
+      if (c === contexto) return;
+      contexto = c;
+      // o próximo acorde entra logo para a mudança ser sentida
+      if (ctxA) proximoAcorde = Math.min(proximoAcorde, ctxA.currentTime + 1.5);
     },
     definirChuva(i) {
       chuva = Math.max(0, Math.min(1, i));
