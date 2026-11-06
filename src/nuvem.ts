@@ -17,6 +17,7 @@ import {
   criarPainelAmigos,
 } from './ui/amigos';
 import type { MotivoRecusa } from './rede/protocolo';
+import { CSS_SETAS, criarSetasAmigos } from './ui/setasAmigos';
 import type { criarCena } from './render/cena';
 
 type Cena = ReturnType<typeof criarCena>;
@@ -28,6 +29,7 @@ function estilo(): void {
   const e = document.createElement('style');
   e.textContent =
     CSS_AMIGOS +
+    CSS_SETAS +
     `
 .carregando-nuvem {
   position: fixed; inset: 0; z-index: 80; display: grid; place-items: center; padding: 24px;
@@ -257,6 +259,15 @@ export function ligarAmigos(raiz: HTMLElement, cena: Cena, op: OpcoesAmigos): vo
     }
   });
   const aviso = criarAvisoConexao(raiz);
+  // achar os amigos: seta na borda da tela para quem está longe
+  criarSetasAmigos(raiz, {
+    posicao: () => {
+      const p = cena.estado.posicao;
+      const r = cena.estado.rotacao;
+      return p && r ? { x: p[0], z: p[2], yaw: r[1] } : null;
+    },
+    amigos: () => cena.estado.outrosJogadores?.() ?? [],
+  });
   let caiu = false;
   nv.conexao.aoEstado((e, motivo) => {
     aviso.mostrar(e);

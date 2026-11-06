@@ -68,6 +68,15 @@ export interface FonteMapa {
   removerMarcador(id: number): void;
   /** Marca a posição atual (mesma ação da tecla K). */
   marcarAqui?(): void;
+  /** Amigos no mundo (com amigos): uma bolinha com a inicial de cada um. */
+  amigos?(): { id: string; apelido: string; x: number; z: number }[];
+}
+
+/** Cor estável de cada amigo (pelo id). */
+export function corDoAmigo(id: string): string {
+  let h = 0;
+  for (const ch of id) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+  return `hsl(${h % 360}, 80%, 62%)`;
 }
 
 export const ZOOM_MIN = 0.5;
@@ -243,6 +252,22 @@ export function criarMapas(raiz: HTMLElement, fonte: FonteMapa) {
       ctx.fillRect(-4, -4, 8, 8);
       ctx.strokeRect(-4, -4, 8, 8);
       ctx.restore();
+    }
+    // amigos: bolinha da cor de cada um com a inicial do apelido
+    for (const a of fonte.amigos?.() ?? []) {
+      const [px, py] = para(a.x, a.z);
+      ctx.beginPath();
+      ctx.arc(px, py, 6, 0, Math.PI * 2);
+      ctx.fillStyle = corDoAmigo(a.id);
+      ctx.fill();
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = 'rgba(0,0,0,0.75)';
+      ctx.stroke();
+      ctx.fillStyle = '#14101c';
+      ctx.font = '800 8px system-ui, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText((a.apelido[0] ?? '?').toUpperCase(), px, py + 0.5);
     }
   }
   function desenharJogador(

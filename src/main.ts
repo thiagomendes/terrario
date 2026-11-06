@@ -460,6 +460,7 @@ function ligarMapas(app: HTMLElement, cena: ReturnType<typeof criarCena>): void 
       marcadores = marcadores.filter((m) => m.id !== id);
     },
     marcarAqui: () => marcarAqui(),
+    amigos: () => cena.estado.outrosJogadores?.() ?? [],
   });
   /** Marca a posição atual (tecla K ou botão "Marcar aqui" do mapa). */
   function marcarAqui(): void {
