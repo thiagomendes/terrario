@@ -28,6 +28,8 @@ export interface Config {
   mostrarAtalhos: boolean;
   /** Andando contra um degrau de um bloco, o personagem pula sozinho. */
   puloAutomatico: boolean;
+  /** Mostra o bloco transparente onde o bloco da mão vai ser colocado. */
+  previaColocar: boolean;
 }
 
 export const CHAVE_CONFIG = 'terrario:config';
@@ -51,6 +53,7 @@ export const CONFIG_PADRAO: Config = {
   telaCheia: true,
   mostrarAtalhos: true,
   puloAutomatico: true,
+  previaColocar: false,
 };
 
 export const LIMITES = {
@@ -91,6 +94,7 @@ export function normalizarConfig(entrada: unknown): Config {
     telaCheia: bool(o.telaCheia, p.telaCheia),
     mostrarAtalhos: bool(o.mostrarAtalhos, p.mostrarAtalhos),
     puloAutomatico: bool(o.puloAutomatico, p.puloAutomatico),
+    previaColocar: bool(o.previaColocar, p.previaColocar),
   };
 }
 

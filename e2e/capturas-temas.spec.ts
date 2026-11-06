@@ -1,6 +1,5 @@
 import { test, type Page } from '@playwright/test';
 
-import { PASTA_CAPTURAS } from '../playwright.config';
 
 /**
  * Matriz de capturas por tema (spec 007, critério 5) e prévias dos cartões de tema
@@ -19,7 +18,8 @@ const TODOS = [
 declare const process: { env: Record<string, string | undefined> };
 const pedido = process.env.CAPTURAS_TEMAS;
 const TEMAS = pedido && pedido !== '1' ? pedido.split(',') : TODOS;
-const PASTA = `${PASTA_CAPTURAS}/temas`;
+// fora de test-results: o Playwright limpa aquela pasta a cada rodada
+const PASTA = 'capturas-temas';
 const AGUA = 67;
 const TOCHA = 37;
 
@@ -39,6 +39,7 @@ async function entrarNoJogo(page: Page) {
   });
 }
 
+// convenção da câmera: yaw 0 olha para +z, pitch positivo olha para baixo
 async function cena(page: Page, hora: number, clima = 'limpo', espera = 2500) {
   await page.evaluate(
     ({ hora, clima }) => {
@@ -59,7 +60,8 @@ async function semHud(page: Page, sim: boolean) {
 }
 
 async function foto(page: Page, nome: string) {
-  await page.screenshot({ path: `${PASTA}/${nome}.png` });
+  // JPEG: a matriz inteira cabe numa página de revisão
+  await page.screenshot({ path: `${PASTA}/${nome}.jpg`, type: 'jpeg', quality: 78 });
 }
 
 for (const id of TEMAS) {
@@ -92,7 +94,7 @@ for (const id of TEMAS) {
       await cena(page, hora);
       await foto(page, `${id}-${nome}`);
     }
-    await page.evaluate(() => window.__brumaluz!.apontar!(0.6, 0.35));
+    await page.evaluate(() => window.__brumaluz!.apontar!(0.6, -0.55));
     await cena(page, 0.45);
     await foto(page, `${id}-ceu`);
     await page.evaluate(() => window.__brumaluz!.apontar!(0.6, -0.12));
@@ -118,7 +120,8 @@ for (const id of TEMAS) {
         while (gy > 2 && e.bloco!(gx, gy - 1, gz) === 0) gy--;
         e.invocar!(t as never, gx + 0.5, gy, gz + 0.5);
       });
-      e.apontar!(-Math.PI / 2, -0.15);
+      // yaw pi/2 olha para +x (onde estão as criaturas); pitch positivo olha para baixo
+      e.apontar!(Math.PI / 2, 0.12);
     });
     await page.waitForTimeout(1500);
     await foto(page, `${id}-criaturas`);

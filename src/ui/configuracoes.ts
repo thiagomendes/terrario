@@ -179,6 +179,12 @@ const ABAS: Record<Aba, { titulo: string; itens: Def[] }> = {
         nome: 'Pulo automático',
         dica: 'Andando contra um degrau de um bloco, o personagem sobe sozinho',
       },
+      {
+        tipo: 'bool',
+        chave: 'previaColocar',
+        nome: 'Prévia do bloco a colocar',
+        dica: 'Mostra um bloco transparente onde o bloco da mão vai ficar',
+      },
     ],
   },
   acessibilidade: {

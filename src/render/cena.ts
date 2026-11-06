@@ -2213,8 +2213,12 @@ export function criarCena(
     const bloco = hotbar.blocoAtivo();
     const def = obterBlocoDef(bloco);
     const colocar = a ? posicaoDeColocar(a) : null;
+    // fantasma só nas ferramentas que constroem várias peças (ou se a pessoa ligar a
+    // prévia): no jogo normal basta o contorno no bloco mirado, como no Minecraft
+    const ferramentaComFantasma =
+      f === 'preencher' || f === 'parede' || f === 'linha' || f === 'esfera';
     visualConstrucao.fantasma(
-      f && f !== 'preencher' && f !== 'parede' && f !== 'linha' && f !== 'esfera' ? null : colocar,
+      ferramentaComFantasma || (!f && configAtual?.previaColocar) ? colocar : null,
       bloco && def && !def.planta ? bloco : null,
       tempo,
     );
