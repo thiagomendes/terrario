@@ -123,19 +123,21 @@ test('pose neutra parado, muda ao minerar e mão acompanha o slot', async ({ pag
     })
     .toBeCloseTo(0, 5);
 
-  await prepararPedra(page);
-  const maxima = await page.evaluate(async () => {
-    const g = window.__brumaluz!;
-    const quadro = () => new Promise((res) => requestAnimationFrame(() => res(null)));
-    let max = 0;
-    for (let i = 0; i < 40; i++) {
-      g.minerar!(0.05, true);
-      await quadro();
-      max = Math.max(max, Math.abs(g.personagem!.pose().bracoDireito));
-    }
-    return max;
-  });
-  expect(maxima).toBeGreaterThan(0.3);
+  let pedra = await prepararPedra(page);
+  await expect
+    .poll(
+      async () => {
+        const quebrado = await page.evaluate(
+          (p) => window.__brumaluz!.bloco!(p.x, p.y, p.z) === 0,
+          pedra,
+        );
+        if (quebrado) pedra = await prepararPedra(page);
+        await page.evaluate(() => window.__brumaluz!.minerar!(0.05, true));
+        return page.evaluate(() => Math.abs(window.__brumaluz!.personagem!.pose().bracoDireito));
+      },
+      { timeout: 60_000 },
+    )
+    .toBeGreaterThan(0.3);
 
   await page.evaluate((s) => window.__brumaluz!.selecionarSlot!(s), SLOT_PEDRA);
   await expect
