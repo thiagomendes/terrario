@@ -1,7 +1,7 @@
 ---
 id: 010-multiplayer
 title: 'Multiplayer: mundos na nuvem com código, servidor no Brasil e jogadores sincronizados'
-status: DRAFT
+status: IN_PROGRESS
 base_branch: feat/servidor-local
 branch: feat/multiplayer
 created_at: 2026-11-06T21:30:00Z

@@ -128,6 +128,36 @@ export type Depuracao =
   | { f: 'spawn'; x: number; z: number }
   | { f: 'dano'; qtd: number; causa: CausaDano };
 
+/** O que é de cada jogador num mundo de vários (salvo à parte do mundo). */
+export interface DadosJogador {
+  inventario: unknown;
+  sobrevivencia: EstadoSobrevivencia;
+  spawn: { x: number; z: number };
+  pos?: { x: number; y: number; z: number; yaw: number; pitch: number };
+}
+
+/** Como os outros veem um jogador: apelido e aparência (o personagem). */
+export interface PerfilJogador {
+  apelido: string;
+  aparencia: Record<string, unknown>;
+}
+
+/** Outro jogador no mundo, como o cliente o desenha. */
+export interface JogadorVisto {
+  id: string;
+  x: number;
+  y: number;
+  z: number;
+  yaw: number;
+  pitch: number;
+  vel: number;
+  voando: boolean;
+  noChao: boolean;
+  correndo: boolean;
+  /** Item na mão (o que ele segura e mostra). */
+  mao: string | null;
+}
+
 /** Criatura como o cliente a desenha. */
 export interface CriaturaVista {
   id: number;
@@ -197,6 +227,10 @@ export type EventoNucleo =
   | { e: 'sono'; dormiu: boolean }
   | { e: 'acordou' }
   | { e: 'trocou'; profissao: Profissao; troca: string }
+  | { e: 'entrou'; id: string; apelido: string }
+  | { e: 'saiu'; id: string; apelido: string }
+  /** Deitou, mas a noite só passa quando todos deitarem. */
+  | { e: 'sonoEspera'; faltam: number }
   | { e: 'trocaRecusada'; motivo: string };
 
 /** O que o núcleo manda a cada passo (só os campos que mudaram, menos o ambiente). */
@@ -220,6 +254,10 @@ export interface Quadro {
   conteiner?: ConteinerVisto | null;
   sobrevivencia?: EstadoSobrevivencia;
   eventos?: EventoNucleo[];
+  /** Os outros jogadores (posição e item na mão), em todo quadro. */
+  jogadores?: JogadorVisto[];
+  /** Apelido e aparência de todos, quando alguém entra ou muda. */
+  perfis?: Record<string, PerfilJogador>;
 }
 
 /** Parte do salvamento que pertence ao núcleo (o cliente junta a câmera, o diário e o mapa). */

@@ -192,6 +192,8 @@ export interface Jogador {
 export interface EventoCriatura {
   tipo: 'ataque' | 'morte' | 'ferida' | 'domada' | 'som';
   criatura: Criatura;
+  /** Ataque: em quem (o jogador mais perto da criatura). */
+  jogador?: Jogador;
   dano?: number;
   drops?: Drop[];
 }

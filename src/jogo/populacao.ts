@@ -57,6 +57,8 @@ export function criarPopulacao(rng: Gerador, salvo?: unknown) {
   const hostis: Criatura[] = [];
 
   let tempoPovoado = 0;
+  /** De quem é a vez de ganhar uma tentativa de nascer criatura por perto. */
+  let vezSpawn = -1;
   /**
    * Chama os moradores dos povoados perto (a até 50 blocos do centro, para nenhum nascer
    * já fora do alcance da simulação). Quem faltar (porque ficou longe e saiu da lista) é
@@ -205,37 +207,65 @@ export function criarPopulacao(rng: Gerador, salvo?: unknown) {
     get lista(): readonly Criatura[] {
       return lista;
     },
-    atualizar(dt: number, m: MundoPopulacao, j: Jogador, noite: number): EventoCriatura[] {
+    /**
+     * Avança as criaturas. Com vários jogadores, cada criatura reage ao mais perto, as
+     * que nascem se revezam em volta de cada um e só somem longe de todos. Com um só, é
+     * exatamente o que era (mesmos sorteios na mesma ordem).
+     */
+    atualizar(
+      dt: number,
+      m: MundoPopulacao,
+      jogadores: Jogador | readonly Jogador[],
+      noite: number,
+    ): EventoCriatura[] {
+      const js = Array.isArray(jogadores) ? jogadores : [jogadores as Jogador];
       const ev: EventoCriatura[] = [];
+      if (js.length === 0) return ev;
       tempoSpawn -= dt;
       if (tempoSpawn <= 0) {
         tempoSpawn = 0.7;
-        tentarSpawn(m, j, noite);
+        vezSpawn = (vezSpawn + 1) % js.length;
+        tentarSpawn(m, js[vezSpawn], noite);
       }
       tempoPovoado -= dt;
       if (tempoPovoado <= 0) {
         tempoPovoado = 1;
-        chamarMoradores(m, j);
+        for (const j of js) chamarMoradores(m, j);
       }
       // reaproveita o vetor de hostis: nada de filter por quadro
       hostis.length = 0;
       for (const c of lista) if (CRIATURAS[c.tipo].comportamento === 'hostil') hostis.push(c);
+      const maisPerto = (c: Criatura): [Jogador, number] => {
+        let melhor = js[0];
+        let d = Math.hypot(c.x - melhor.x, c.z - melhor.z);
+        for (let i = 1; i < js.length; i++) {
+          const di = Math.hypot(c.x - js[i].x, c.z - js[i].z);
+          if (di < d) {
+            d = di;
+            melhor = js[i];
+          }
+        }
+        return [melhor, d];
+      };
       for (const c of lista) {
-        const dist = Math.hypot(c.x - j.x, c.z - j.z);
+        const [j, dist] = maisPerto(c);
         // longe demais: sem IA, só assenta no chão (não fica congelada no ar)
         if (dist > 56 && !c.domada) {
           assentarCriatura(c, dt, m);
           continue;
         }
         const evc = passoCriatura(c, dt, m, j, rng, hostis, noite);
-        for (const e of evc) ev.push(e);
+        for (const e of evc) {
+          if (e.tipo === 'ataque') e.jogador = j;
+          ev.push(e);
+        }
       }
       separar(m, dt);
-      // remove as dissolvidas e as que ficaram longe, compactando no lugar
+      // remove as dissolvidas e as que ficaram longe de todos, compactando no lugar
       let n = 0;
       for (const c of lista) {
         if (c.estado === 'morrendo' && c.dissolver >= 1) continue;
-        if (!c.domada && Math.hypot(c.x - j.x, c.z - j.z) > 80) continue;
+        if (!c.domada && maisPerto(c)[1] > 80) continue;
         lista[n++] = c;
       }
       lista.length = n;

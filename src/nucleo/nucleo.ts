@@ -28,12 +28,16 @@ import { criarGerador } from '../audio/variacao';
 import { colocacaoBloqueada } from '../player/alvo';
 import { preencherKit, SLOTS, KIT_EXTRA } from '../player/hotbar';
 import { criarAcessoMundo } from './mundo';
+import { contaFecha } from './conta';
 import {
   PASSO,
   type Ambiente,
   type BlocoMudado,
   type Comando,
   type ConteinerVisto,
+  type DadosJogador,
+  type JogadorVisto,
+  type PerfilJogador,
   type CriaturaVista,
   type Depuracao,
   type EventoNucleo,
@@ -50,6 +54,8 @@ const ALCANCE_REGRAS = 8;
 const ALCANCE_CRIATURA = 7;
 /** Espera entre deitar na cama e acordar (o véu escurece a tela). */
 const ESPERA_SONO = 1.5;
+/** Quanto tempo quem deitou espera os outros deitarem. */
+const ESPERA_TODOS = 10;
 
 export interface OpcoesNucleo {
   semente: number;
@@ -62,6 +68,16 @@ export interface OpcoesNucleo {
    * O servidor da nuvem desliga isto e confere a conta dos itens em cada transação.
    */
   confiarNoCliente?: boolean;
+  /** Aceita os atalhos de teste (`depurar`). Padrão: só quando confia no cliente. */
+  depuracao?: boolean;
+}
+
+export interface OpcoesConexao {
+  /** O que o jogador tinha neste mundo (inventário, vida, renascer, posição). */
+  salvo?: DadosJogador;
+  perfil?: PerfilJogador;
+  /** Pode construir (visitantes só passeiam, se o dono quiser). */
+  constroi?: boolean;
 }
 
 interface Jogador {
@@ -86,6 +102,12 @@ interface Jogador {
   correcoes: BlocoMudado[];
   /** Acorda quando chega a zero (dormindo). */
   sono: number;
+  /** Deitado esperando os outros deitarem (segundos que ainda vale). */
+  querDormir: number;
+  perfil: PerfilJogador;
+  constroi: boolean;
+  /** Para as criaturas (o mesmo objeto a cada passo: os ataques dizem em quem foi). */
+  corpo: { x: number; y: number; z: number; vivo: boolean; criativo: boolean };
 }
 
 export type Nucleo = ReturnType<typeof criarNucleo>;
@@ -96,6 +118,7 @@ export function criarNucleo(op: OpcoesNucleo) {
   const dados = op.dados;
   const extras = dados?.extras ?? {};
   const confiar = op.confiarNoCliente ?? false;
+  const depuracao = op.depuracao ?? confiar;
 
   const edicoes = criarEdicoes();
   if (dados) edicoes.importar(dados.edicoes);
@@ -166,30 +189,36 @@ export function criarNucleo(op: OpcoesNucleo) {
   const posSalva = dados?.jogador;
   const spawnSalvo = extras['spawn'] as { x: number; z: number } | undefined;
 
-  function novoInventario(): Inventario {
+  function novoInventario(salvo: unknown): Inventario {
     const inv = criarInventario();
     preencherKit(inv, [...SLOTS.map((s) => s.bloco), ...KIT_EXTRA]);
-    const salvo = extras['inventario'];
     if (salvo) inv.carregar(salvo);
     else if (modo === 'sobrevivencia')
       for (let i = 0; i < inv.slots.length; i++) inv.definir(i, null);
     return inv;
   }
+  let perfisSujos = false;
 
-  function conectar(id: string): void {
+  /**
+   * Põe um jogador no mundo. Sem opções (servidor local): o jogador do mundo salvo.
+   * Com opções (nuvem): os dados dele neste mundo, ou um jogador novo no nascimento.
+   */
+  function conectar(id: string, oc?: OpcoesConexao): void {
     if (jogadores.has(id)) return;
+    const legado = !oc;
+    const pos = legado ? posSalva : oc.salvo?.pos;
     // o nascimento já é o centro de um bloco
-    const x = posSalva?.x ?? nascimento.x;
-    const z = posSalva?.z ?? nascimento.z;
+    const x = pos?.x ?? nascimento.x;
+    const z = pos?.z ?? nascimento.z;
     const j: Jogador = {
       id,
       tel: {
         x,
-        y: posSalva?.y ?? 80,
+        y: pos?.y ?? 80,
         z,
-        yaw: posSalva?.yaw ?? 0,
-        pitch: posSalva?.pitch ?? 0,
-        olhos: (posSalva?.y ?? 80) + 1.62,
+        yaw: pos?.yaw ?? 0,
+        pitch: pos?.pitch ?? 0,
+        olhos: (pos?.y ?? 80) + 1.62,
         noChao: false,
         voando: false,
         vel: 0,
@@ -200,9 +229,9 @@ export function criarNucleo(op: OpcoesNucleo) {
         golpes: 0,
         slot: 0,
       },
-      inventario: novoInventario(),
-      sobrevivencia: criarSobrevivencia(extras['sobrevivencia']),
-      spawn: spawnSalvo ?? { x, z },
+      inventario: novoInventario(legado ? extras['inventario'] : oc.salvo?.inventario),
+      sobrevivencia: criarSobrevivencia(legado ? extras['sobrevivencia'] : oc.salvo?.sobrevivencia),
+      spawn: (legado ? spawnSalvo : oc.salvo?.spawn) ?? { x, z },
       transito: Array.from({ length: 10 }, () => null),
       conteiner: null,
       ack: 0,
@@ -215,6 +244,10 @@ export function criarNucleo(op: OpcoesNucleo) {
       eventos: [],
       correcoes: [],
       sono: 0,
+      querDormir: 0,
+      perfil: oc?.perfil ?? { apelido: 'Jogador', aparencia: {} },
+      constroi: oc?.constroi ?? true,
+      corpo: { x, y: pos?.y ?? 80, z, vivo: true, criativo: modo === 'criativo' },
     };
     j.inventario.ouvir(() => {
       j.inventarioSujo = true;
@@ -232,7 +265,37 @@ export function criarNucleo(op: OpcoesNucleo) {
         j.eventos.push({ e: 'morte', causa: ev.causa });
       }
     });
+    for (const o of jogadores.values())
+      o.eventos.push({ e: 'entrou', id, apelido: j.perfil.apelido });
     jogadores.set(id, j);
+    perfisSujos = true;
+  }
+
+  /** O que é do jogador neste mundo (o que estava nas mãos volta à mochila). */
+  function dadosJogador(id: string): DadosJogador | null {
+    const j = jogadores.get(id);
+    if (!j) return null;
+    const inv = criarInventario();
+    inv.carregar(j.inventario.salvar());
+    for (const p of j.transito) if (p) inv.adicionar(p.item, p.qtd, p.dur);
+    return {
+      inventario: inv.salvar(),
+      sobrevivencia: { ...j.sobrevivencia.estado },
+      spawn: { ...j.spawn },
+      pos: { x: j.tel.x, y: j.tel.y, z: j.tel.z, yaw: j.tel.yaw, pitch: j.tel.pitch },
+    };
+  }
+
+  /** Tira o jogador do mundo e devolve os dados dele para salvar. */
+  function desconectar(id: string): DadosJogador | null {
+    const d = dadosJogador(id);
+    const j = jogadores.get(id);
+    if (!j) return d;
+    jogadores.delete(id);
+    perfisSujos = true;
+    for (const o of jogadores.values())
+      o.eventos.push({ e: 'saiu', id, apelido: j.perfil.apelido });
+    return d;
   }
 
   function editar(x: number, y: number, z: number, bloco: number, meta = 0): boolean {
@@ -264,7 +327,12 @@ export function criarNucleo(op: OpcoesNucleo) {
   function quebrar(j: Jogador, c: Extract<Comando, { t: 'quebrar' }>): void {
     const { x, y, z } = c;
     const b = mundo.bloco(x, y, z);
-    if (!ehAlvo(b) || !perto(j, x, y, z, ALCANCE_REGRAS) || j.sobrevivencia.estado.morto) {
+    if (
+      !ehAlvo(b) ||
+      !j.constroi ||
+      !perto(j, x, y, z, ALCANCE_REGRAS) ||
+      j.sobrevivencia.estado.morto
+    ) {
       recusar(j, c.id, 'quebrar', [c, { x, y: y - 1, z }, { x, y: y + 1, z }]);
       return;
     }
@@ -322,6 +390,7 @@ export function criarNucleo(op: OpcoesNucleo) {
       );
     if (
       !def ||
+      !j.constroi ||
       bloco === Bloco.AR ||
       !livre ||
       !temItem ||
@@ -341,8 +410,8 @@ export function criarNucleo(op: OpcoesNucleo) {
   }
 
   function editarLote(j: Jogador, c: Extract<Comando, { t: 'editar' }>): void {
-    if (modo !== 'criativo' && !confiar) {
-      recusar(j, c.id, 'editar', c.lote);
+    if ((modo !== 'criativo' && !confiar) || !j.constroi || c.lote.length > 20000) {
+      recusar(j, c.id, 'editar', c.lote.slice(0, 20000));
       return;
     }
     for (const e of c.lote) editar(e.x, e.y, e.z, e.v & 255, (e.v >> 8) & 255);
@@ -372,6 +441,12 @@ export function criarNucleo(op: OpcoesNucleo) {
     if (b === Bloco.PORTA || b === Bloco.PORTA_ABERTA) {
       alternarPorta(x, y, z);
       for (const o of jogadores.values()) o.eventos.push({ e: 'porta', x, y, z });
+    } else if (
+      (b === Bloco.BAU || b === Bloco.FORNALHA || b === Bloco.FORNALHA_ACESA) &&
+      !j.constroi
+    ) {
+      // quem só passeia não mexe nos baús e fornalhas dos outros
+      j.eventos.push({ e: 'recusa', comando: c.id ?? 0, motivo: 'visitante' });
     } else if (b === Bloco.BAU) {
       // baú sem edição no lugar foi gerado pelo mundo (ruína): vem com tesouro
       conteineres.bau(x, y, z, edicoes.obter(x, y, z) === undefined);
@@ -387,17 +462,32 @@ export function criarNucleo(op: OpcoesNucleo) {
         j.eventos.push({ e: 'sono', dormiu: false });
         return;
       }
-      j.sono = ESPERA_SONO;
-      j.eventos.push({ e: 'sono', dormiu: true });
+      // a noite só passa quando todos estão deitados (com um jogador só, na hora)
+      j.querDormir = ESPERA_TODOS;
+      const faltam = [...jogadores.values()].filter((o) => o.querDormir <= 0).length;
+      if (faltam > 0) {
+        j.eventos.push({ e: 'sonoEspera', faltam });
+        return;
+      }
+      for (const o of jogadores.values()) {
+        o.querDormir = 0;
+        o.sono = ESPERA_SONO;
+        o.eventos.push({ e: 'sono', dormiu: true });
+      }
     }
   }
 
-  function acordar(j: Jogador): void {
+  /** A noite passa (uma vez) e quem dormia acorda. */
+  function acordar(): void {
     // dormir à noite (antes da meia-noite) já conta como o dia seguinte
     if (hora > 0.5) dia++;
     hora = 0.265;
     horaAnterior = hora;
-    j.eventos.push({ e: 'acordou' });
+    for (const o of jogadores.values())
+      if (o.sono !== 0) {
+        o.sono = 0;
+        o.eventos.push({ e: 'acordou' });
+      }
   }
 
   /** Slots que um lugar da transação alcança. */
@@ -455,8 +545,10 @@ export function criarNucleo(op: OpcoesNucleo) {
     const valida = alvos.every(
       ({ m, s }) => !!s && m.i >= 0 && m.i < s.tamanho && igual(s.ler(m.i), m.antes),
     );
-    if (!valida || !confiar) {
-      // sem confiança (nuvem) a conta dos itens é conferida na spec 010; até lá, recusa.
+    // na nuvem a conta dos itens tem que fechar (no criativo o catálogo dá de tudo)
+    const contaOk = confiar || modo === 'criativo' || contaFecha(c.mudancas, c.fabricou ?? []);
+    const conteinerOk = j.constroi || c.mudancas.every((m) => m.onde === 'inv' || m.onde === 'tr');
+    if (!valida || !contaOk || !conteinerOk) {
       // Tudo volta ao oficial, inclusive o que estava nas mãos (nada duplica nem some).
       j.inventarioSujo = true;
       j.transitoSujo = true;
@@ -487,9 +579,14 @@ export function criarNucleo(op: OpcoesNucleo) {
   function tratarCriaturas(eventos: EventoCriatura[], alvo: Jogador | undefined): void {
     for (const ev of eventos) {
       const c = ev.criatura;
-      if (ev.tipo === 'ataque' && alvo && modo === 'sobrevivencia') {
-        alvo.sobrevivencia.dano(ev.dano ?? 2, 'criatura');
-        alvo.eventos.push({ e: 'ataque', dano: ev.dano ?? 2 });
+      const atacado = ev.jogador
+        ? [...jogadores.values()].find((o) => o.corpo === ev.jogador)
+        : alvo;
+      if (ev.tipo === 'ataque' && atacado && modo === 'sobrevivencia') {
+        atacado.sobrevivencia.dano(ev.dano ?? 2, 'criatura');
+        atacado.eventos.push({ e: 'ataque', dano: ev.dano ?? 2 });
+      } else if (ev.tipo === 'ataque') {
+        // criativo: as criaturas não machucam
       } else if (ev.tipo === 'ferida') {
         eventosGerais.push({ e: 'criaturaFerida', id: c.id, tipo: c.tipo });
       } else if (ev.tipo === 'morte') {
@@ -594,6 +691,25 @@ export function criarNucleo(op: OpcoesNucleo) {
     }
   }
 
+  /** Tira do que o jogador tem (primeiro das mãos, depois da mochila); devolve quanto tirou. */
+  function retirar(j: Jogador, item: string, qtd: number): number {
+    let falta = Math.max(0, Math.floor(qtd));
+    for (let i = 0; i < j.transito.length && falta > 0; i++) {
+      const p = j.transito[i];
+      if (!p || p.item !== item) continue;
+      const t = Math.min(falta, p.qtd);
+      j.transito[i] = p.qtd - t > 0 ? { ...p, qtd: p.qtd - t } : null;
+      falta -= t;
+    }
+    if (falta > 0) {
+      const t = Math.min(falta, j.inventario.contar(item));
+      if (t > 0 && j.inventario.consumir(item, t)) falta -= t;
+    }
+    j.transitoSujo = true;
+    j.inventarioSujo = true;
+    return Math.max(0, Math.floor(qtd)) - Math.max(0, falta);
+  }
+
   function comando(id: string, c: Comando): void {
     const j = jogadores.get(id);
     if (!j) return;
@@ -622,7 +738,11 @@ export function criarNucleo(op: OpcoesNucleo) {
         transacao(j, c);
         break;
       case 'soltar':
-        for (const p of c.itens) mundoItens.soltar(p.item, p.qtd, c.x, c.y, c.z, rngDrops, p.dur);
+        for (const p of c.itens) {
+          const qtd = confiar ? p.qtd : retirar(j, p.item, p.qtd);
+          if (qtd > 0)
+            mundoItens.soltar(p.item, qtd, j.tel.x, j.tel.olhos - 0.4, j.tel.z, rngDrops, p.dur);
+        }
         break;
       case 'atacar':
         atacar(j, c);
@@ -646,7 +766,7 @@ export function criarNucleo(op: OpcoesNucleo) {
         j.eventos.push({ e: 'teleporte', x: j.spawn.x, z: j.spawn.z });
         break;
       case 'depurar':
-        depurar(j, c.d);
+        if (depuracao) depurar(j, c.d);
         break;
       case 'salvar':
         // o anfitrião responde (precisa do pedido)
@@ -664,11 +784,19 @@ export function criarNucleo(op: OpcoesNucleo) {
     const raio = clima.atualizar(dt, estacaoDoDia(dia), noite < 0.5);
     if (raio) eventosGerais.push({ e: 'relampago', atrasoTrovao: raio.atrasoTrovao });
 
+    let amanhece = false;
     for (const j of jogadores.values()) {
+      if (j.querDormir > 0) j.querDormir = Math.max(0, j.querDormir - dt);
       if (j.sono > 0) {
         j.sono -= dt;
-        if (j.sono <= 0) acordar(j);
+        if (j.sono <= 0) {
+          j.sono = -1;
+          amanhece = true;
+        }
       }
+    }
+    if (amanhece) acordar();
+    for (const j of jogadores.values()) {
       if (modo !== 'sobrevivencia') continue;
       j.sobrevivencia.atualizar(dt, {
         correndo: j.tel.correndo,
@@ -678,26 +806,29 @@ export function criarNucleo(op: OpcoesNucleo) {
       if (j.tel.y < -20) j.sobrevivencia.dano(100, 'queda', true);
     }
 
-    // criaturas e itens seguem o jogador (o servidor local tem um só)
-    const j = jogadores.values().next().value as Jogador | undefined;
-    if (j) {
+    // criaturas e itens: cada um reage ao jogador mais perto (com um só, é ele)
+    const lista = [...jogadores.values()];
+    if (lista.length) {
+      for (const o of lista) {
+        o.corpo.x = o.tel.x;
+        o.corpo.y = o.tel.y;
+        o.corpo.z = o.tel.z;
+        o.corpo.vivo = !o.sobrevivencia.estado.morto;
+      }
       const ev = populacao.atualizar(
         dt,
         mundo.criaturas,
-        {
-          x: j.tel.x,
-          y: j.tel.y,
-          z: j.tel.z,
-          vivo: !j.sobrevivencia.estado.morto,
-          criativo: modo === 'criativo',
-        },
+        lista.map((o) => o.corpo),
         noite,
       );
-      tratarCriaturas(ev, j);
-      const coletados = mundoItens.atualizar(dt, j.tel, (item, qtd, dur) =>
-        j.inventario.adicionar(item, qtd, dur),
+      tratarCriaturas(ev, lista[0]);
+      const coletados = mundoItens.atualizar(
+        dt,
+        lista.map((o) => o.tel),
+        (item, qtd, dur, quem) => lista[quem].inventario.adicionar(item, qtd, dur),
       );
-      for (const c of coletados) j.eventos.push({ e: 'coletou', item: c.item, qtd: c.qtd });
+      for (const c of coletados)
+        lista[c.quem].eventos.push({ e: 'coletou', item: c.item, qtd: c.qtd });
     }
 
     // fornalhas trabalham mesmo com o painel fechado
@@ -766,8 +897,27 @@ export function criarNucleo(op: OpcoesNucleo) {
     const criaturas = vistaCriaturas();
     const itens = vistaItens();
     const amb = ambiente();
+    const todos: JogadorVisto[] = [...jogadores.values()].map((o) => ({
+      id: o.id,
+      x: o.tel.x,
+      y: o.tel.y,
+      z: o.tel.z,
+      yaw: o.tel.yaw,
+      pitch: o.tel.pitch,
+      vel: o.tel.vel,
+      voando: o.tel.voando,
+      noChao: o.tel.noChao,
+      correndo: o.tel.correndo,
+      mao: o.inventario.obter(o.tel.slot)?.item ?? null,
+    }));
+    const perfis = perfisSujos
+      ? Object.fromEntries([...jogadores.values()].map((o) => [o.id, o.perfil]))
+      : undefined;
+    perfisSujos = false;
     for (const j of jogadores.values()) {
       const q: Quadro = { t: 'quadro', n, ack: j.ack, ambiente: amb, criaturas, itens };
+      if (todos.length > 1) q.jogadores = todos.filter((o) => o.id !== j.id);
+      if (perfis) q.perfis = perfis;
       if (!j.iniciado) {
         q.primeiro = true;
         j.iniciado = true;
@@ -815,7 +965,8 @@ export function criarNucleo(op: OpcoesNucleo) {
       dia,
       conteineres: conteineres.salvar(),
     };
-    if (j) {
+    // na nuvem cada jogador é salvo à parte (dadosJogador); localmente vai junto do mundo
+    if (j && confiar) {
       out['sobrevivencia'] = j.sobrevivencia.salvar();
       out['spawn'] = j.spawn;
       const inv = criarInventario();
@@ -830,6 +981,22 @@ export function criarNucleo(op: OpcoesNucleo) {
     semente,
     modo,
     conectar,
+    desconectar,
+    dadosJogador,
+    /** Visitantes podem construir? (o dono decide) */
+    definirConstrucao(id: string, pode: boolean) {
+      const j = jogadores.get(id);
+      if (j) j.constroi = pode;
+    },
+    definirPerfil(id: string, perfil: PerfilJogador) {
+      const j = jogadores.get(id);
+      if (!j) return;
+      j.perfil = perfil;
+      perfisSujos = true;
+    },
+    get quantos() {
+      return jogadores.size;
+    },
     comando,
     passo,
     quadros,

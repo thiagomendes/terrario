@@ -95,12 +95,15 @@ export interface MundoDeItens {
   /** Itens no chão para o salvamento. */
   salvar(): { item: string; qtd: number; dur?: number; x: number; y: number; z: number }[];
   carregar(dados: unknown): void;
-  /** Avança a física; `coletar` devolve quanto não coube. Devolve os itens coletados neste passo. */
+  /**
+   * Avança a física; `coletar` devolve quanto não coube. Com vários jogadores, cada item
+   * vai para o mais perto (`quem` é o índice dele). Devolve os itens coletados no passo.
+   */
   atualizar(
     dt: number,
-    jogador: { x: number; y: number; z: number },
-    coletar: (item: string, qtd: number, dur?: number) => number,
-  ): Drop[];
+    jogador: { x: number; y: number; z: number } | readonly { x: number; y: number; z: number }[],
+    coletar: (item: string, qtd: number, dur: number | undefined, quem: number) => number,
+  ): (Drop & { quem: number })[];
 }
 
 export function criarMundoDeItens(
@@ -167,20 +170,34 @@ export function criarMundoDeItens(
         });
       }
     },
-    atualizar(dt, j, coletar) {
-      const coletados: Drop[] = [];
+    atualizar(jogadoresDt, jj, coletar) {
+      const dt = jogadoresDt;
+      const coletados: (Drop & { quem: number })[] = [];
       if (!(dt > 0)) return coletados;
-      const alvoY = j.y + 0.7;
+      const js = Array.isArray(jj) ? jj : [jj as { x: number; y: number; z: number }];
+      if (js.length === 0) return coletados;
       for (const it of itens) {
         it.idade += dt;
+        // o jogador mais perto (com um só, é ele)
+        let quem = 0;
+        let melhor = Infinity;
+        for (let q = 0; q < js.length; q++) {
+          const dq = Math.hypot(js[q].x - it.x, js[q].y + 0.7 - it.y, js[q].z - it.z);
+          if (dq < melhor) {
+            melhor = dq;
+            quem = q;
+          }
+        }
+        const j = js[quem];
+        const alvoY = j.y + 0.7;
         const dx = j.x - it.x;
         const dy = alvoY - it.y;
         const dz = j.z - it.z;
         const d = Math.hypot(dx, dy, dz);
         const pronto = it.idade > TEMPO_ANTES_DE_COLETAR;
         if (pronto && d < RAIO_COLETA) {
-          const resto = coletar(it.item, it.qtd, it.dur);
-          if (resto < it.qtd) coletados.push({ item: it.item, qtd: it.qtd - resto });
+          const resto = coletar(it.item, it.qtd, it.dur, quem);
+          if (resto < it.qtd) coletados.push({ item: it.item, qtd: it.qtd - resto, quem });
           it.qtd = resto;
           if (resto > 0) it.idade = 0;
           continue;
