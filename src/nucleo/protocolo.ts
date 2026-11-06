@@ -58,6 +58,8 @@ export interface Telemetria {
   golpes: number;
   /** Slot da barra na mão. */
   slot: number;
+  /** Raio de chunks que o cliente tem carregados (criaturas só nascem onde ele vê). */
+  raio?: number;
 }
 
 /** Lugar de um slot numa transação. */
@@ -91,8 +93,8 @@ type ComandoSemSeq =
     }
   /** Vários blocos de uma vez (ferramentas de construção, desfazer, espelho): só no criativo. */
   | { t: 'editar'; id: number; lote: BlocoMudado[] }
-  /** Usar um bloco: porta, baú, fornalha, cama. */
-  | { t: 'usar'; x: number; y: number; z: number }
+  /** Usar um bloco: porta, baú, fornalha, cama (id: a porta é prevista na tela). */
+  | { t: 'usar'; id?: number; x: number; y: number; z: number }
   | { t: 'fecharConteiner' }
   | {
       t: 'transacao';
@@ -111,6 +113,8 @@ type ComandoSemSeq =
   | { t: 'comer'; slot: number }
   | { t: 'renascer' }
   | { t: 'salvar'; pedido: number }
+  /** Servidor local: a aba sumiu (ou voltou); o mundo para junto, como antes. */
+  | { t: 'pausar'; pausar: boolean }
   | { t: 'depurar'; d: Depuracao };
 
 /** Atalhos de teste e captura (o servidor da nuvem só aceita em ambiente de testes). */
@@ -158,9 +162,17 @@ export interface Ambiente {
   pausado: boolean;
 }
 
+/** Contêiner aberto; `abertura` é o id do comando que abriu (reabrir é outra abertura). */
 export type ConteinerVisto =
-  | { tipo: 'bau'; x: number; y: number; z: number; slots: Slot[] }
-  | { tipo: 'fornalha'; x: number; y: number; z: number; fornalha: EstadoFornalha };
+  | { tipo: 'bau'; abertura: number; x: number; y: number; z: number; slots: Slot[] }
+  | {
+      tipo: 'fornalha';
+      abertura: number;
+      x: number;
+      y: number;
+      z: number;
+      fornalha: EstadoFornalha;
+    };
 
 /** Fatos do mundo para som, efeitos, avisos e diário. */
 export type EventoNucleo =
@@ -191,14 +203,19 @@ export type EventoNucleo =
 export interface Quadro {
   t: 'quadro';
   n: number;
+  /** Primeiro quadro deste jogador: a sequência começa aqui. */
+  primeiro?: boolean;
   /** Último comando com id que o núcleo já processou (confirma as previsões do cliente). */
   ack: number;
   ambiente: Ambiente;
   blocos?: BlocoMudado[];
   criaturas?: CriaturaVista[];
   itens?: ItemVisto[];
-  /** Inventário inteiro quando muda (36 slots), com a última transação já aplicada. */
-  inventario?: { slots: Slot[]; ackTransacao: number };
+  /**
+   * Inventário inteiro quando muda (36 slots), com a última transação já aplicada; se
+   * uma transação foi recusada, vem também o que está nas mãos (cursor e grade).
+   */
+  inventario?: { slots: Slot[]; ackTransacao: number; transito?: Slot[] };
   /** Contêiner aberto (null: fechou). */
   conteiner?: ConteinerVisto | null;
   sobrevivencia?: EstadoSobrevivencia;

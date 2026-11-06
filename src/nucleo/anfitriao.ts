@@ -43,12 +43,18 @@ export function criarAnfitriao(
   }
 
   let timer: ReturnType<typeof setInterval> | null = null;
+  // aba escondida: o mundo para junto (fome, ar, criaturas e relógio), como antes
+  let pausado = false;
+  let ultimo = performance.now();
+  let acumulado = 0;
   if (opcoes.relogio !== false) {
-    let ultimo = performance.now();
-    let acumulado = 0;
     timer = setInterval(
       () => {
         const agora = performance.now();
+        if (pausado) {
+          ultimo = agora;
+          return;
+        }
         acumulado += (agora - ultimo) / 1000;
         ultimo = agora;
         let k = 0;
@@ -70,6 +76,12 @@ export function criarAnfitriao(
     try {
       if (c.t === 'salvar') {
         enviar({ t: 'salvo', pedido: c.pedido, dados: nucleo.salvar() });
+        return;
+      }
+      if (c.t === 'pausar') {
+        pausado = c.pausar;
+        ultimo = performance.now();
+        acumulado = 0;
         return;
       }
       nucleo.comando(JOGADOR_LOCAL, c);

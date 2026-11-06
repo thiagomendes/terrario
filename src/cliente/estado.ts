@@ -87,7 +87,7 @@ export function criarEstadoCliente(op: OpcoesEstadoCliente) {
     if (q.itens) itens.receber(q.itens);
     if (q.inventario) {
       ultimoAckTransacao = q.inventario.ackTransacao;
-      sincronia.inventario(q.inventario.slots, q.inventario.ackTransacao);
+      sincronia.inventario(q.inventario.slots, q.inventario.ackTransacao, q.inventario.transito);
     }
     if (q.conteiner !== undefined) {
       const antes = conteiner;
@@ -99,12 +99,13 @@ export function criarEstadoCliente(op: OpcoesEstadoCliente) {
     op.aoQuadro?.(q);
   }
 
-  // quadros em ordem (n): guarda os adiantados até chegar o que falta
+  // quadros em ordem (n): a sequência começa no primeiro quadro deste jogador; os
+  // adiantados esperam o que falta
   let proximoQuadro = -1;
   const adiantados = new Map<number, Quadro>();
   function receberQuadro(q: Quadro): void {
-    if (proximoQuadro < 0) proximoQuadro = q.n;
-    if (q.n < proximoQuadro) return;
+    if (q.primeiro) proximoQuadro = q.n;
+    if (proximoQuadro >= 0 && q.n < proximoQuadro) return;
     adiantados.set(q.n, q);
     while (adiantados.has(proximoQuadro)) {
       const atual = adiantados.get(proximoQuadro)!;
@@ -138,11 +139,18 @@ export function criarEstadoCliente(op: OpcoesEstadoCliente) {
     get conteiner() {
       return conteiner;
     },
-    /** Pede ao núcleo a parte dele do salvamento. */
+    /** Pede ao núcleo a parte dele do salvamento (desiste em 5 s: nada fica travado). */
     pedirSalvamento(): Promise<SalvoNucleo> {
       const p = ++pedido;
-      return new Promise((resolve) => {
-        esperando.set(p, resolve);
+      return new Promise((resolve, reject) => {
+        const prazo = setTimeout(() => {
+          esperando.delete(p);
+          reject(new Error('o núcleo não respondeu ao salvamento'));
+        }, 5000);
+        esperando.set(p, (d) => {
+          clearTimeout(prazo);
+          resolve(d);
+        });
         enviar({ t: 'salvar', pedido: p });
       });
     },

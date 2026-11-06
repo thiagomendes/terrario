@@ -56,6 +56,9 @@ export interface Criacao {
   definirLado(lado: 2 | 3): void;
   /** Devolve à mochila o que ficou na grade (ao fechar). */
   devolver(): void;
+  /** Grade de criação (até 9 casas), para as transações de itens. */
+  lerGrade(i: number): Slot;
+  gravarGrade(i: number, p: Slot): void;
   render(): void;
 }
 
@@ -278,6 +281,11 @@ export function criarCriacao(
 
   montar();
   return {
+    lerGrade: (i) => grade[i] ?? null,
+    gravarGrade(i, p) {
+      if (i < grade.length) grade[i] = p;
+      render();
+    },
     mostrar(v) {
       raiz.hidden = !v;
       if (!v) livro.hidden = true;

@@ -163,6 +163,15 @@ function ligarInventario(
     criativo: () => cena.estado.modo === 'criativo',
     aoFabricar: (r) => window.dispatchEvent(new CustomEvent('brumaluz:fabricou', { detail: r.id })),
   });
+  // cursor (0) e grade (1..9) entram nas transações: nada duplica nem some numa recusa
+  cena.definirTransito({
+    tamanho: 10,
+    ler: (i) => (i === 0 ? ui.cursor : criacao.lerGrade(i - 1)),
+    gravar: (i, p) => {
+      if (i === 0) ui.cursor = p;
+      else criacao.gravarGrade(i - 1, p);
+    },
+  });
   const painelBau = criarPainelBau(ui, hotbar.inventario);
   const painelFornalha = criarPainelFornalha(ui);
   // trocas: o núcleo confere e faz; a tela mostra o pedido e o inventário novo

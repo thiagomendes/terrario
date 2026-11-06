@@ -27,7 +27,12 @@ export interface AcessoMundo {
   avancar(dt: number): void;
 }
 
-export function criarAcessoMundo(semente: number, edicoes: Edicoes): AcessoMundo {
+export function criarAcessoMundo(
+  semente: number,
+  edicoes: Edicoes,
+  /** Chunk carregado por algum cliente? (superfície para nascer criaturas) */
+  carregado: (cx: number, cz: number) => boolean = () => true,
+): AcessoMundo {
   const terreno = new Map<string, Uint8Array>();
   function base(cx: number, cz: number): Uint8Array {
     const k = `${cx},${cz}`;
@@ -101,6 +106,7 @@ export function criarAcessoMundo(semente: number, edicoes: Edicoes): AcessoMundo
     bioma: (x, z) => biomaEm(x, z, semente),
     // chão de verdade: ignora copas e plantas
     superficie: (x, z) => {
+      if (!carregado(Math.floor(x / TAM_X), Math.floor(z / TAM_Z))) return null;
       for (let y = ALTURA - 2; y > 0; y--) {
         const d = obterBloco(bloco(x, y, z));
         if (d?.solido && !d.folhas && !d.planta) return y + 1;

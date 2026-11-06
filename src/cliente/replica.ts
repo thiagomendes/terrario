@@ -33,6 +33,8 @@ interface Fonte {
 
 export interface ConteinerReplica {
   tipo: 'bau' | 'fornalha';
+  /** Id do comando que abriu (reabrir é outra abertura). */
+  abertura: number;
   x: number;
   y: number;
   z: number;
@@ -51,6 +53,10 @@ export function criarSincronizadorItens(
   const base = new Map<LocalSlot, Slot[]>();
   let pendentes: { id: number; mudancas: MudancaSlot[] }[] = [];
   let aplicando = false;
+  /** O que está nas mãos durante a tela de inventário: cursor (0) e grade de criação (1..9). */
+  let transito: Omit<Fonte, 'onde'> | null = null;
+  /** Aberturas que o jogador já fechou (chegam atrasadas: não abrem de novo). */
+  let fechadasAte = 0;
 
   const fontes = (): Fonte[] => {
     const lista: Fonte[] = [
@@ -84,8 +90,10 @@ export function criarSincronizadorItens(
         tamanho: 3,
       });
     }
+    if (transito) lista.push({ onde: 'tr', ...transito });
     return lista;
   };
+  const fonte = (onde: LocalSlot) => fontes().find((f) => f.onde === onde);
 
   const fotografar = (f: Fonte) => Array.from({ length: f.tamanho }, (_, i) => copia(f.ler(i)));
   base.set('inv', fotografar(fontes()[0]));
@@ -137,38 +145,63 @@ export function criarSincronizadorItens(
 
   return {
     verificar,
-    /** Inventário oficial chegou do núcleo. */
-    inventario(slots: Slot[], ackTransacao: number): void {
+    /** Liga o cursor e a grade da tela de inventário (entram nas transações). */
+    definirTransito(f: Omit<Fonte, 'onde'>): void {
+      transito = f;
+      base.set('tr', fotografar({ onde: 'tr', ...f }));
+    },
+    /** Inventário oficial chegou do núcleo (com o trânsito, se uma transação foi recusada). */
+    inventario(slots: Slot[], ackTransacao: number, tr?: Slot[]): void {
       verificar();
       gravarTudo(fontes()[0], oficial('inv', slots, ackTransacao));
+      const t = fonte('tr');
+      if (tr && t) gravarTudo(t, oficial('tr', tr, ackTransacao));
+    },
+    /** O jogador fechou a tela: aberturas até esta não abrem mais. */
+    fechar(ate: number): void {
+      verificar();
+      fechadasAte = Math.max(fechadasAte, ate);
+      conteiner = null;
+      base.delete('bau');
+      base.delete('forn');
     },
     /** Contêiner aberto mudou (null: fechou). Devolve a cópia que os painéis usam. */
     conteiner(v: ConteinerVisto | null, ackTransacao: number): ConteinerReplica | null {
       verificar();
+      if (v && v.abertura <= fechadasAte) v = null;
       if (!v) {
         conteiner = null;
         base.delete('bau');
         base.delete('forn');
         return null;
       }
-      const mesmo =
-        conteiner &&
-        conteiner.tipo === v.tipo &&
-        conteiner.x === v.x &&
-        conteiner.y === v.y &&
-        conteiner.z === v.z;
+      const mesmo = conteiner?.abertura === v.abertura;
       if (!mesmo) {
         base.delete('bau');
         base.delete('forn');
         conteiner =
           v.tipo === 'bau'
-            ? { tipo: 'bau', x: v.x, y: v.y, z: v.z, slots: v.slots.map(copia) }
-            : { tipo: 'fornalha', x: v.x, y: v.y, z: v.z, fornalha: { ...v.fornalha } };
-        const f = fontes()[1];
+            ? {
+                tipo: 'bau',
+                abertura: v.abertura,
+                x: v.x,
+                y: v.y,
+                z: v.z,
+                slots: v.slots.map(copia),
+              }
+            : {
+                tipo: 'fornalha',
+                abertura: v.abertura,
+                x: v.x,
+                y: v.y,
+                z: v.z,
+                fornalha: { ...v.fornalha },
+              };
+        const f = fonte(v.tipo === 'bau' ? 'bau' : 'forn');
         if (f) base.set(f.onde, fotografar(f));
         return conteiner;
       }
-      const f = fontes()[1];
+      const f = fonte(v.tipo === 'bau' ? 'bau' : 'forn');
       if (!f) return conteiner;
       if (v.tipo === 'bau') gravarTudo(f, oficial('bau', v.slots, ackTransacao));
       else {

@@ -104,6 +104,8 @@ export interface InventarioUI {
   ): void;
   /** Redesenha os slots (após mudança externa). */
   render(): void;
+  /** Item preso ao cursor (entra nas transações de itens). */
+  cursor: Slot;
   criarSlot(): HTMLButtonElement;
   desenharSlot(el: HTMLElement, p: Slot): void;
 }
@@ -503,6 +505,13 @@ export function criarInventarioUI(raiz: HTMLElement, op: OpcoesInventarioUI): In
   }
 
   return {
+    get cursor() {
+      return cursor;
+    },
+    set cursor(p: Slot) {
+      cursor = p;
+      render();
+    },
     get aberto() {
       return aberto;
     },

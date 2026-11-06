@@ -72,10 +72,14 @@ interface Jogador {
   spawn: { x: number; z: number };
   /** Itens nas mãos durante a tela de inventário (cursor e grade de criação). */
   transito: Slot[];
-  conteiner: { tipo: 'bau' | 'fornalha'; x: number; y: number; z: number } | null;
+  conteiner: { tipo: 'bau' | 'fornalha'; abertura: number; x: number; y: number; z: number } | null;
   ack: number;
   ackTransacao: number;
   inventarioSujo: boolean;
+  /** Uma transação foi recusada: o cursor e a grade voltam junto com o inventário. */
+  transitoSujo: boolean;
+  /** O primeiro quadro já foi (a sequência do cliente começa nele). */
+  iniciado: boolean;
   conteinerSujo: boolean;
   ultimaSobrevivencia: string;
   eventos: EventoNucleo[];
@@ -124,7 +128,18 @@ export function criarNucleo(op: OpcoesNucleo) {
       : [];
   definirRegioesSemPovoado(semPovoado);
 
-  const mundo = criarAcessoMundo(semente, edicoes);
+  // criaturas só nascem e pisam onde algum jogador tem o terreno carregado (como antes)
+  const mundo = criarAcessoMundo(semente, edicoes, (cx, cz) => {
+    for (const o of jogadores.values()) {
+      const r = o.tel.raio ?? 3;
+      if (
+        Math.abs(cx - Math.floor(o.tel.x / 16)) <= r &&
+        Math.abs(cz - Math.floor(o.tel.z / 16)) <= r
+      )
+        return true;
+    }
+    return false;
+  });
   const conteineres = criarConteineres(extras['conteineres'], semente);
   const rngDrops = criarGerador(911);
   const mundoItens = criarMundoDeItens((x, y, z) => {
@@ -193,6 +208,8 @@ export function criarNucleo(op: OpcoesNucleo) {
       ack: 0,
       ackTransacao: 0,
       inventarioSujo: true,
+      transitoSujo: false,
+      iniciado: false,
       conteinerSujo: false,
       ultimaSobrevivencia: '',
       eventos: [],
@@ -248,7 +265,7 @@ export function criarNucleo(op: OpcoesNucleo) {
     const { x, y, z } = c;
     const b = mundo.bloco(x, y, z);
     if (!ehAlvo(b) || !perto(j, x, y, z, ALCANCE_REGRAS) || j.sobrevivencia.estado.morto) {
-      recusar(j, c.id, 'quebrar', [c]);
+      recusar(j, c.id, 'quebrar', [c, { x, y: y - 1, z }, { x, y: y + 1, z }]);
       return;
     }
     editar(x, y, z, Bloco.AR);
@@ -342,9 +359,15 @@ export function criarNucleo(op: OpcoesNucleo) {
     }
   }
 
+  let aberturas = 0;
   function usar(j: Jogador, c: Extract<Comando, { t: 'usar' }>): void {
     const { x, y, z } = c;
-    if (!perto(j, x, y, z, ALCANCE_REGRAS) || j.sobrevivencia.estado.morto) return;
+    if (!perto(j, x, y, z, ALCANCE_REGRAS) || j.sobrevivencia.estado.morto) {
+      // a porta foi prevista na tela: volta as duas metades
+      if (c.id !== undefined) recusar(j, c.id, 'usar', [c, { x, y: y - 1, z }, { x, y: y + 1, z }]);
+      return;
+    }
+    const abertura = c.id ?? 1_000_000 + ++aberturas;
     const b = mundo.bloco(x, y, z);
     if (b === Bloco.PORTA || b === Bloco.PORTA_ABERTA) {
       alternarPorta(x, y, z);
@@ -352,11 +375,11 @@ export function criarNucleo(op: OpcoesNucleo) {
     } else if (b === Bloco.BAU) {
       // baú sem edição no lugar foi gerado pelo mundo (ruína): vem com tesouro
       conteineres.bau(x, y, z, edicoes.obter(x, y, z) === undefined);
-      j.conteiner = { tipo: 'bau', x, y, z };
+      j.conteiner = { tipo: 'bau', abertura, x, y, z };
       j.conteinerSujo = true;
     } else if (b === Bloco.FORNALHA || b === Bloco.FORNALHA_ACESA) {
       conteineres.fornalha(x, y, z);
-      j.conteiner = { tipo: 'fornalha', x, y, z };
+      j.conteiner = { tipo: 'fornalha', abertura, x, y, z };
       j.conteinerSujo = true;
     } else if (b === Bloco.CAMA) {
       j.spawn = { x: x + 0.5, z: z + 0.5 };
@@ -433,8 +456,10 @@ export function criarNucleo(op: OpcoesNucleo) {
       ({ m, s }) => !!s && m.i >= 0 && m.i < s.tamanho && igual(s.ler(m.i), m.antes),
     );
     if (!valida || !confiar) {
-      // sem confiança (nuvem) a conta dos itens é conferida na spec 010; até lá, recusa
+      // sem confiança (nuvem) a conta dos itens é conferida na spec 010; até lá, recusa.
+      // Tudo volta ao oficial, inclusive o que estava nas mãos (nada duplica nem some).
       j.inventarioSujo = true;
+      j.transitoSujo = true;
       j.conteinerSujo = true;
       return;
     }
@@ -511,7 +536,7 @@ export function criarNucleo(op: OpcoesNucleo) {
       return;
     }
     const ok = fazerTroca(j.inventario, t, (item, qtd) =>
-      mundoItens.soltar(item, qtd, j.tel.x, j.tel.y, j.tel.z, rngDrops),
+      mundoItens.soltar(item, qtd, j.tel.x, j.tel.olhos - 1, j.tel.z, rngDrops),
     );
     j.eventos.push(
       ok
@@ -743,6 +768,10 @@ export function criarNucleo(op: OpcoesNucleo) {
     const amb = ambiente();
     for (const j of jogadores.values()) {
       const q: Quadro = { t: 'quadro', n, ack: j.ack, ambiente: amb, criaturas, itens };
+      if (!j.iniciado) {
+        q.primeiro = true;
+        j.iniciado = true;
+      }
       const blocos = [...blocosMudados, ...j.correcoes];
       if (blocos.length) q.blocos = blocos;
       if (j.inventarioSujo) {
@@ -750,7 +779,9 @@ export function criarNucleo(op: OpcoesNucleo) {
           slots: j.inventario.slots.map((p) => (p ? { ...p } : null)),
           ackTransacao: j.ackTransacao,
         };
+        if (j.transitoSujo) q.inventario.transito = j.transito.map((p) => (p ? { ...p } : null));
         j.inventarioSujo = false;
+        j.transitoSujo = false;
       }
       // a fornalha aberta anda sozinha: vai em todo quadro
       if (j.conteinerSujo || j.conteiner?.tipo === 'fornalha') {
@@ -787,7 +818,10 @@ export function criarNucleo(op: OpcoesNucleo) {
     if (j) {
       out['sobrevivencia'] = j.sobrevivencia.salvar();
       out['spawn'] = j.spawn;
-      out['inventario'] = j.inventario.salvar();
+      const inv = criarInventario();
+      inv.carregar(j.inventario.salvar());
+      for (const p of j.transito) if (p) inv.adicionar(p.item, p.qtd, p.dur);
+      out['inventario'] = inv.salvar();
     }
     return { edicoes: edicoes.exportar(), hora, extras: out };
   }

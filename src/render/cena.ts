@@ -186,6 +186,7 @@ import {
 } from '../nucleo/protocolo';
 import type { EstadoClima } from '../jogo/clima';
 import type { Profissao } from '../world/povoado';
+import type { Slot } from '../jogo/inventario';
 import { estadoInicial, type EstadoSobrevivencia, type CausaDano } from '../jogo/sobrevivencia';
 
 const RAIO_INICIAL = 3;
@@ -493,7 +494,18 @@ export function criarCena(
       ...((dadosIniciais?.extras?.['sobrevivencia'] as Partial<EstadoSobrevivencia>) ?? {}),
     },
   });
-  const enviar = (c: Comando) => cliente.enviar(c);
+  const enviar = (c: Comando) => {
+    // o que as telas (ou os testes) mudaram nos itens vai antes da ação que depende disso
+    if (c.t !== 'jogador' && c.t !== 'transacao') cliente.sincronia.verificar();
+    cliente.enviar(c);
+  };
+  /** Última abertura de baú ou fornalha pedida (fechar antes de chegar cancela). */
+  let ultimaAbertura = 0;
+  function pedirUso(x: number, y: number, z: number, id = proximoId()): void {
+    ultimaAbertura = id;
+    enviarTelemetria(true);
+    enviar({ t: 'usar', id, x, y, z });
+  }
   const proximoId = () => cliente.proximoId();
 
   function armazenamentoLocal(): Armazenamento | null {
@@ -991,10 +1003,23 @@ export function criarCena(
     extras: { x: number; y: number; z: number }[] = [],
   ): boolean {
     const lote: Edicao[] = [];
-    const id = proximoId();
     const antes = valorEm(x, y, z);
-    if (!prever(id, x, y, z, b, meta)) return false;
+    // nada muda: nada a prever nem a pedir
+    if (antes === empacotar(b, meta)) return false;
+    const id = proximoId();
+    prever(id, x, y, z, b, meta);
     lote.push({ x, y, z, antes, depois: empacotar(b, meta) });
+    // quebrar meia porta leva a outra metade (o núcleo faz o mesmo)
+    if (b === Bloco.AR && ((antes & 255) === Bloco.PORTA || (antes & 255) === Bloco.PORTA_ABERTA)) {
+      for (const dy of [-1, 1]) {
+        const v = blocoEm(x, y + dy, z);
+        if (v === Bloco.PORTA || v === Bloco.PORTA_ABERTA) {
+          const a = valorEm(x, y + dy, z);
+          prever(id, x, y + dy, z, Bloco.AR);
+          lote.push({ x, y: y + dy, z, antes: a, depois: Bloco.AR });
+        }
+      }
+    }
     const extrasFeitos: { x: number; y: number; z: number }[] = [];
     for (const e of extras) {
       const a = valorEm(e.x, e.y, e.z);
@@ -1223,8 +1248,7 @@ export function criarCena(
         return;
       }
       // baú e fornalha abrem quando o núcleo manda o conteúdo; a cama decide o sono lá
-      enviarTelemetria(true);
-      enviar({ t: 'usar', x: a.x, y: a.y, z: a.z });
+      pedirUso(a.x, a.y, a.z);
       return;
     }
     const p = hotbar.pilhaAtiva();
@@ -1275,7 +1299,7 @@ export function criarCena(
         prever(id, x, y + dy, z, novo, edicoes.obterMeta(x, y + dy, z));
     }
     enviarTelemetria(true);
-    enviar({ t: 'usar', x, y, z });
+    enviar({ t: 'usar', id, x, y, z });
   }
 
   let ultimaColocacao: number | null = null;
@@ -1611,13 +1635,6 @@ export function criarCena(
   barramento.ouvir('golpe', (d) => aplicarPlano('golpe', d));
   barramento.ouvir('quebra', (d) => aplicarPlano('quebra', d));
   // quebrar meia porta leva a outra metade
-  barramento.ouvir('quebra', (d) => {
-    if (d.bloco !== Bloco.PORTA && d.bloco !== Bloco.PORTA_ABERTA) return;
-    for (const dy of [-1, 1]) {
-      const v = blocoEm(d.x, d.y + dy, d.z);
-      if (v === Bloco.PORTA || v === Bloco.PORTA_ABERTA) editarBloco(d.x, d.y + dy, d.z, Bloco.AR);
-    }
-  });
   const replicaItens = cliente.itens;
   const renderItens = criarRenderItens(scene, atlas, textura, iconeDoItem, (m) =>
     glow.addExcludedMesh(m),
@@ -2451,6 +2468,7 @@ export function criarCena(
       pulos,
       golpes,
       slot: hotbar.ativo,
+      raio: raioChunks,
     });
     quedas = [];
     pulos = 0;
@@ -2567,7 +2585,7 @@ export function criarCena(
         break;
       case 'acordou': {
         // as estações não esperam a transição: o dia novo já amanhece com elas
-        const est = estacaoDoDia(dia);
+        const est = estacaoDoDia(cliente.ambiente.dia);
         outonoAtual = est === 'outono' ? 1 : 0;
         invernoAtual = est === 'inverno' ? 1 : 0;
         window.dispatchEvent(new CustomEvent('brumaluz:acordou'));
@@ -2604,10 +2622,47 @@ export function criarCena(
   estado.inventario = inventario;
   estado.mundo = opcoes.mundo ? { ...opcoes.mundo } : undefined;
   setInterval(() => void salvar(false), 30_000);
+  // cópia recente do núcleo: ao fechar a aba não dá tempo de perguntar ao worker
+  let copiaNucleo: SalvoNucleo | null = null;
+  setInterval(() => {
+    if (!estado.ready || !opcoes.repo) return;
+    cliente
+      .pedirSalvamento()
+      .then((d) => {
+        copiaNucleo = d;
+      })
+      .catch(() => undefined);
+  }, 5_000);
+  /** Salva já, sem esperar o worker: a cópia do núcleo mais o que o cliente sabe agora. */
+  function salvarJa(): void {
+    const repo = opcoes.repo;
+    const mundo = opcoes.mundo;
+    if (!repo || !mundo || !estado.ready || !copiaNucleo) return;
+    const j = controle.jogador;
+    const extras: Record<string, unknown> = { ...(dadosIniciais?.extras ?? {}) };
+    for (const [k, sv] of salvaveis) extras[k] = sv.salvar();
+    Object.assign(extras, copiaNucleo.extras);
+    extras['inventario'] = { ...inventario.salvar(), ativo: hotbar.ativo };
+    extras['sobrevivencia'] = cliente.sobrevivencia;
+    extras['dia'] = cliente.ambiente.dia;
+    void repo
+      .salvar(mundo.id, {
+        versao: 1,
+        // as edições do cliente já têm tudo o que o núcleo confirmou (e as previsões)
+        edicoes: edicoes.exportar(),
+        jogador: { x: j.x, y: j.y, z: j.z, yaw: camera.rotation.y, pitch: camera.rotation.x },
+        hora: cliente.ambiente.hora,
+        extras,
+      })
+      .catch(() => undefined);
+  }
   document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'hidden') void salvar();
+    const escondida = document.visibilityState === 'hidden';
+    // a aba sumiu: o mundo para junto (como antes, quando tudo rodava no quadro)
+    enviar({ t: 'pausar', pausar: escondida });
+    if (escondida) void salvar();
   });
-  window.addEventListener('pagehide', () => void salvar(false));
+  window.addEventListener('pagehide', () => salvarJa());
   document.addEventListener('pointerlockchange', () => {
     if (document.pointerLockElement !== canvas) void salvar();
   });
@@ -2627,13 +2682,23 @@ export function criarCena(
     salvar,
     /** Usa um bloco pelo núcleo (porta, baú, fornalha, cama). */
     usarBloco(x: number, y: number, z: number) {
-      enviarTelemetria(true);
-      enviar({ t: 'usar', x, y, z });
+      pedirUso(x, y, z);
     },
     /** Fecha o baú ou a fornalha aberta (manda antes o que a tela mudou). */
     fecharConteiner() {
-      sincronia.verificar();
-      if (conteinerAberto()) enviar({ t: 'fecharConteiner' });
+      // fecha o aberto e cancela o que ainda está chegando
+      const havia = !!conteinerAberto() || ultimaAbertura > 0;
+      sincronia.fechar(ultimaAbertura);
+      ultimaAbertura = 0;
+      if (havia) enviar({ t: 'fecharConteiner' });
+    },
+    /** Liga o cursor e a grade de criação às transações de itens. */
+    definirTransito(f: {
+      ler(i: number): Slot;
+      gravar(i: number, p: Slot): void;
+      tamanho: number;
+    }) {
+      sincronia.definirTransito(f);
     },
     /** Pede uma troca ao morador (o inventário novo chega do núcleo). */
     trocar(criatura: number, profissao: Profissao, troca: string) {
