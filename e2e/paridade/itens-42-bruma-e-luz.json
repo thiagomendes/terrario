@@ -177,12 +177,11 @@
     }
   },
   "notas": {
-    "terreno": [{"bloco":31,"sobrou":0},{"bloco":32,"sobrou":0}],
+    "terreno": [{"bloco":31},{"bloco":32}],
     "quebras": [
-      {"bloco":2,"picareta":2,"sobrou":0}, {"bloco":2,"picareta":1,"sobrou":0},
-      {"bloco":2,"picareta":0,"sobrou":0}, {"bloco":2,"picareta":0,"sobrou":0},
-      {"bloco":3,"picareta":0,"sobrou":0}, {"bloco":7,"picareta":0,"sobrou":0},
-      {"bloco":15,"picareta":0,"sobrou":0}, {"bloco":5,"picareta":0,"sobrou":0}
+      {"bloco":2,"picareta":2}, {"bloco":2,"picareta":1}, {"bloco":2,"picareta":0},
+      {"bloco":2,"picareta":0}, {"bloco":3,"picareta":0}, {"bloco":7,"picareta":0},
+      {"bloco":15,"picareta":0}, {"bloco":5,"picareta":0}
     ]
   }
 }

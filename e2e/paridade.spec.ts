@@ -553,7 +553,8 @@ const SESSOES: Record<string, Sessao> = {
       // cava dois blocos do terreno no nascimento, olhando para baixo
       const terreno = await page.evaluate(async () => {
         const e = window.__brumaluz!;
-        const out: { bloco: number; sobrou: number }[] = [];
+        // (quantos itens ainda estavam no chão ao fim da espera não entra: depende dos quadros)
+        const out: { bloco: number }[] = [];
         for (let i = 0; i < 2; i++) {
           await window.__par.assentar();
           e.apontar!(0, 1.55);
@@ -561,7 +562,8 @@ const SESSOES: Record<string, Sessao> = {
           const a = e.alvo;
           if (!a) break;
           const bloco = await window.__par.quebrar(a.x, a.y, a.z);
-          out.push({ bloco, sobrou: await window.__par.coletar() });
+          await window.__par.coletar();
+          out.push({ bloco });
         }
         return out;
       });
@@ -591,7 +593,7 @@ const SESSOES: Record<string, Sessao> = {
           for (const [x, yy, z, b] of blocos) e.definirBloco!(x, yy, z, b);
           await window.__par.quadros(2);
           e.selecionarSlot!(window.__par.slotDe('picareta_madeira'));
-          const out: { bloco: number; picareta: number; sobrou: number }[] = [];
+          const out: { bloco: number; picareta: number }[] = [];
           for (const [x, yy, z] of blocos) {
             const bloco = await window.__par.quebrar(x, yy, z, [
               Math.sign(cx - x),
@@ -599,11 +601,8 @@ const SESSOES: Record<string, Sessao> = {
               Math.sign(cz - z),
             ]);
             const p = inv.slots[e.slotAtivo ?? 0] as { item: string; dur?: number } | null;
-            out.push({
-              bloco,
-              picareta: p?.item === 'picareta_madeira' ? (p.dur ?? -1) : 0,
-              sobrou: await window.__par.coletar(),
-            });
+            out.push({ bloco, picareta: p?.item === 'picareta_madeira' ? (p.dur ?? -1) : 0 });
+            await window.__par.coletar();
           }
           return out;
         },
