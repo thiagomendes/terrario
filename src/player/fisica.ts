@@ -56,6 +56,8 @@ export interface ComandoMovimento {
   yaw: number;
   /** Descer no voo. */
   descer?: boolean;
+  /** Pulo automático: andando contra um degrau de um bloco, pula sozinho. */
+  puloAutomatico?: boolean;
 }
 
 export function criarJogador(x: number, y: number, z: number): EstadoJogador {
@@ -183,6 +185,22 @@ function moverHorizontal(e: EstadoJogador, eixo: 'x' | 'z', d: number, s: Solido
   return true;
 }
 
+/**
+ * Há um degrau de um bloco na direção do movimento? O pé bate logo à frente, mas o
+ * corpo cabe um bloco acima, e sobre o jogador também há espaço para o pulo.
+ * Paredes de dois blocos e cercas (1,5) não contam.
+ */
+function temDegrau(e: EstadoJogador, mx: number, mz: number, s: Solido): boolean {
+  const n = Math.hypot(mx, mz);
+  if (n < 0.1) return false;
+  const passo = MEIA_LARGURA + 0.25;
+  const ax = e.x + (mx / n) * passo;
+  const az = e.z + (mz / n) * passo;
+  if (!colide(s, ax, e.y + 0.05, az)) return false;
+  const cima = Math.floor(e.y) + 1 + FOLGA;
+  return !colide(s, ax, cima, az) && !colide(s, e.x, cima, e.z);
+}
+
 /** Maior fração em [0,1] sem colisão (bisseção; 0 é livre por hipótese). */
 function avancoLivre(colideEm: (f: number) => boolean): number {
   let livre = 0;
@@ -223,6 +241,10 @@ export function passoFisica(
   const bateuZ = moverHorizontal(e, 'z', mz * vel * dt, s);
   /** Encostado numa parede tentando andar (para sair da água pela borda). */
   const encostado = (bateuX && Math.abs(mx) > 0.1) || (bateuZ && Math.abs(mz) > 0.1);
+  // pulo automático: no chão, empurrando contra um degrau de UM bloco com espaço em
+  // cima (o corpo inteiro cabe sobre ele e a cabeça não bate), pula sozinho
+  const degrauAFrente =
+    !!cmd.puloAutomatico && !e.voando && !agua && e.noChao && encostado && temDegrau(e, mx, mz, s);
 
   if (e.voando) {
     const sobe = (cmd.pular ? 1 : 0) - (cmd.descer ? 1 : 0);
@@ -241,7 +263,7 @@ export function passoFisica(
     }
     e.topoQueda = undefined;
   } else {
-    if (cmd.pular && e.noChao) {
+    if ((cmd.pular || degrauAFrente) && e.noChao) {
       e.vy = VEL_PULO;
       e.noChao = false;
     }

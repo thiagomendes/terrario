@@ -102,6 +102,7 @@ export function criarControle(
   let pitch = 0.2;
   let sensibilidade = 1;
   let inverterY = false;
+  let puloAutomatico = true;
 
   let podeVoar = false;
   let ultimoEspaco = -1;
@@ -169,6 +170,7 @@ export function criarControle(
         pular: !!teclas.pular,
         correr: voando ? !!teclas.rapido : !!teclas.correr || !!teclas.rapido,
         descer: voando && !!teclas.correr,
+        puloAutomatico,
         yaw,
       },
       dt,
@@ -189,6 +191,10 @@ export function criarControle(
   function definirMouse(sens: number, inverter: boolean): void {
     sensibilidade = sens;
     inverterY = inverter;
+  }
+
+  function definirPuloAutomatico(ligado: boolean): void {
+    puloAutomatico = ligado;
   }
 
   /** Olhar por deltas (toque e controle), na mesma escala do mouse. */
@@ -212,6 +218,7 @@ export function criarControle(
     apontar,
     solido,
     definirMouse,
+    definirPuloAutomatico,
     definirVoo,
     girar,
     pular,

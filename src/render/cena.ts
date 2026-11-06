@@ -1846,6 +1846,7 @@ export function criarCena(
     configAtual = c;
     ambiente?.definirVolumes(c.volumeMusica, c.volumeAmbiente);
     controle.definirMouse(c.sensibilidade, c.inverterY);
+    controle.definirPuloAutomatico(c.puloAutomatico);
     braco.definirBalanco(c.balanco);
   }
   opcoes.config?.ouvir(aplicarConfig);

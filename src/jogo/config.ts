@@ -26,6 +26,8 @@ export interface Config {
   telaCheia: boolean;
   /** Barra de atalhos com ícones e teclas no canto da tela (desktop). */
   mostrarAtalhos: boolean;
+  /** Andando contra um degrau de um bloco, o personagem pula sozinho. */
+  puloAutomatico: boolean;
 }
 
 export const CHAVE_CONFIG = 'terrario:config';
@@ -48,6 +50,7 @@ export const CONFIG_PADRAO: Config = {
   legendas: false,
   telaCheia: true,
   mostrarAtalhos: true,
+  puloAutomatico: true,
 };
 
 export const LIMITES = {
@@ -87,6 +90,7 @@ export function normalizarConfig(entrada: unknown): Config {
     legendas: bool(o.legendas, p.legendas),
     telaCheia: bool(o.telaCheia, p.telaCheia),
     mostrarAtalhos: bool(o.mostrarAtalhos, p.mostrarAtalhos),
+    puloAutomatico: bool(o.puloAutomatico, p.puloAutomatico),
   };
 }
 

@@ -173,6 +173,12 @@ const ABAS: Record<Aba, { titulo: string; itens: Def[] }> = {
         formato: (v) => `${v.toFixed(2)}x`,
       },
       { tipo: 'bool', chave: 'inverterY', nome: 'Inverter eixo vertical' },
+      {
+        tipo: 'bool',
+        chave: 'puloAutomatico',
+        nome: 'Pulo automático',
+        dica: 'Andando contra um degrau de um bloco, o personagem sobe sozinho',
+      },
     ],
   },
   acessibilidade: {
