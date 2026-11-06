@@ -7,6 +7,8 @@ import { Constants } from '@babylonjs/core/Engines/constants';
 import { MeshBuilder } from '@babylonjs/core/Meshes/meshBuilder';
 import type { Mesh } from '@babylonjs/core/Meshes/mesh';
 import { TransformNode } from '@babylonjs/core/Meshes/transformNode';
+import { Material } from '@babylonjs/core/Materials/material';
+import { criarItemNaMao } from './itemNaMao';
 import type { Scene } from '@babylonjs/core/scene';
 import type { Aparencia } from '../personagem/aparencia';
 import { montarPartes, type NomeParte } from '../personagem/modelo';
@@ -31,6 +33,8 @@ export interface Personagem {
   posicionar(x: number, y: number, z: number, yaw: number): void;
   definirVisivel(visivel: boolean): void;
   definirLuz(f: number): void;
+  /** O que a mão direita segura (visível em terceira pessoa e no modo foto). */
+  definirNaMao(bloco: number | null, item: string | null): void;
   contarMalhas(): number;
   descartar(): void;
 }
@@ -50,8 +54,24 @@ export function criarPersonagem(scene: Scene, aparencia: Aparencia): Personagem 
 
   let partes: ParteViva[] = [];
   let visivel = true;
+  // mão direita: nó na ponta do braço, com o bloco ou item segurado
+  const mao = new TransformNode('personagem-mao', scene);
+  mao.parent = corpo;
+  const naMao = criarItemNaMao(scene, mao, {
+    nome: 'personagem-mao',
+    tamanhoBloco: 0.3,
+    pixel: 0.042,
+    iluminado: true,
+    grupo: 0,
+    posBloco: [0, -0.02, 0.15],
+    rotBloco: [0.15, Math.PI / 4, 0],
+    // cabo no punho, cabeça da ferramenta para a frente e para cima
+    posItem: [0, -0.02, 0.04],
+    rotItem: [-0.35, -Math.PI / 2, 0],
+  });
 
   function limparPartes(): void {
+    mao.parent = corpo;
     for (const p of partes) {
       p.malha.dispose();
       p.no.dispose();
@@ -81,6 +101,13 @@ export function criarPersonagem(scene: Scene, aparencia: Aparencia): Personagem 
       material.emissiveColor = Color3.Black();
       material.specularColor = Color3.Black();
       material.ambientColor = Color3.White();
+      if (parte.nome === 'cabelo' || parte.nome === 'acessorio') {
+        // recortes (franja, abertura do capuz, lentes, aba do chapéu)
+        textura.hasAlpha = true;
+        material.useAlphaFromDiffuseTexture = true;
+        material.transparencyMode = Material.MATERIAL_ALPHATEST;
+        material.alphaCutOff = 0.5;
+      }
       const faceUV = tex.faces.map(
         (f) =>
           new Vector4(
@@ -116,6 +143,12 @@ export function criarPersonagem(scene: Scene, aparencia: Aparencia): Personagem 
       malha.renderingGroupId = 0;
       malha.setEnabled(visivel);
       partes.push({ nome: parte.nome, no, malha, material, textura });
+      if (parte.nome === 'bracoDireito') {
+        mao.parent = no;
+        // ponta do braço (o braço pende do ombro para baixo)
+        const ponta = parte.posicao[1] - parte.tamanho[1] / 2 - parte.pivo[1];
+        mao.position.set(parte.posicao[0] - parte.pivo[0], ponta + 0.08, 0);
+      }
     }
   }
 
@@ -143,7 +176,8 @@ export function criarPersonagem(scene: Scene, aparencia: Aparencia): Personagem 
       let alvo = 0;
       switch (p.nome) {
         case 'bracoDireito':
-          alvo = pose.bracoDireito;
+          // segurando algo, o antebraço fica um pouco à frente
+          alvo = pose.bracoDireito - (naMao.segurando() ? 0.32 : 0);
           break;
         case 'bracoEsquerdo':
           alvo = pose.bracoEsquerdo + (v ? Math.sin(v.tempo * 1.1) * 0.04 : 0);
@@ -156,11 +190,15 @@ export function criarPersonagem(scene: Scene, aparencia: Aparencia): Personagem 
           break;
         case 'cabeca':
         case 'cabelo':
+        case 'penteado':
         case 'acessorio':
+          // lanterna segue o braço; mochila e cachecol (abaixo do pescoço) ficam no corpo
           alvo =
             p.nome === 'acessorio' && isLanterna(p)
               ? pose.bracoEsquerdo
-              : pose.cabeca + olhar * 0.75 - inclinacao;
+              : p.nome === 'acessorio' && p.malha.position.y < -0.01
+                ? 0
+                : pose.cabeca + olhar * 0.75 - inclinacao;
           break;
         default:
           alvo = 0;
@@ -191,14 +229,20 @@ export function criarPersonagem(scene: Scene, aparencia: Aparencia): Personagem 
     },
     definirLuz(f) {
       for (const p of partes) p.material.diffuseColor.set(f, f, f);
+      naMao.definirLuz(f);
+    },
+    definirNaMao(bloco, item) {
+      naMao.definir(bloco, item);
     },
     definirVisivel(v) {
       visivel = v;
       for (const p of partes) p.malha.setEnabled(v);
+      naMao.definirVisivel(v);
     },
     contarMalhas: () => partes.length,
     descartar() {
       limparPartes();
+      naMao.descartar();
       corpo.dispose();
       raiz.dispose();
     },

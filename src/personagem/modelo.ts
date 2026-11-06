@@ -1,4 +1,4 @@
-import { MODELOS, type Aparencia } from './aparencia';
+import { CABELOS_LONGOS, MODELOS, SAIAS, type Aparencia } from './aparencia';
 
 export type NomeParte =
   | 'cabeca'
@@ -8,6 +8,10 @@ export type NomeParte =
   | 'pernaEsquerda'
   | 'pernaDireita'
   | 'cabelo'
+  /** Rabo de cavalo ou coque. */
+  | 'penteado'
+  /** Saia de vestido ou de blusa e saia. */
+  | 'saia'
   | 'acessorio';
 
 export interface Parte {
@@ -32,10 +36,13 @@ export function montarPartes(aparencia: Aparencia): Parte[] {
   const def = MODELOS[aparencia.modelo];
   const pernas = def.comprimentoPernas;
   const alturaTronco = ALTURA_CORPO - ALTURA_CABECA - pernas;
-  const larguraTronco = def.larguraTronco;
+  const feminino = aparencia.corpo === 'feminino';
+  // corpo feminino: ombros e braços mais finos
+  const larguraTronco = feminino ? Math.min(def.larguraTronco, 0.44) : def.larguraTronco;
+  const larguraBraco = feminino ? 0.16 : LARGURA_BRACO;
   const topoTronco = pernas + alturaTronco;
   const larguraPerna = larguraTronco / 2;
-  const xBraco = larguraTronco / 2 + LARGURA_BRACO / 2;
+  const xBraco = larguraTronco / 2 + larguraBraco / 2;
   const xPerna = larguraPerna / 2;
   const yCabeca = topoTronco + ALTURA_CABECA / 2;
 
@@ -54,13 +61,13 @@ export function montarPartes(aparencia: Aparencia): Parte[] {
     },
     {
       nome: 'bracoEsquerdo',
-      tamanho: [LARGURA_BRACO, centro(alturaTronco), LARGURA_BRACO],
+      tamanho: [larguraBraco, centro(alturaTronco), larguraBraco],
       posicao: [-centro(xBraco), centro(pernas + alturaTronco / 2), 0],
       pivo: [-centro(xBraco), centro(topoTronco), 0],
     },
     {
       nome: 'bracoDireito',
-      tamanho: [LARGURA_BRACO, centro(alturaTronco), LARGURA_BRACO],
+      tamanho: [larguraBraco, centro(alturaTronco), larguraBraco],
       posicao: [centro(xBraco), centro(pernas + alturaTronco / 2), 0],
       pivo: [centro(xBraco), centro(topoTronco), 0],
     },
@@ -78,28 +85,109 @@ export function montarPartes(aparencia: Aparencia): Parte[] {
     },
   ];
 
-  const alturaCabelo = [0.1, 0.16, 0.22][aparencia.cabeloEstilo] ?? 0.1;
-  partes.push({
-    nome: 'cabelo',
-    tamanho: [LADO_CABECA + 0.04, alturaCabelo, LADO_CABECA + 0.04],
-    posicao: [0, centro(topoTronco + ALTURA_CABECA - alturaCabelo / 2), 0],
-    pivo: [0, centro(topoTronco), 0],
-  });
-
-  if (aparencia.acessorio === 'capuz') {
+  // cabelo: casca sobre a cabeça; nos cortes longos ela desce pelos ombros e costas
+  // (a frente tem abertura para o rosto, ver textura)
+  const longo = CABELOS_LONGOS[aparencia.cabeloEstilo];
+  if (longo !== undefined) {
+    const lado = LADO_CABECA + (aparencia.cabeloEstilo === 4 ? 0.1 : 0.06);
+    const altura = ALTURA_CABECA + 0.04 + longo;
     partes.push({
-      nome: 'acessorio',
-      tamanho: [LADO_CABECA + 0.1, 0.3, LADO_CABECA + 0.1],
-      posicao: [0, centro(topoTronco + ALTURA_CABECA - 0.15), -0.02],
+      nome: 'cabelo',
+      tamanho: [lado, centro(altura), lado],
+      posicao: [0, centro(topoTronco + ALTURA_CABECA + 0.04 - altura / 2), -0.01],
       pivo: [0, centro(topoTronco), 0],
     });
-  } else if (aparencia.acessorio === 'lanterna') {
+  } else {
+    const alturaCabelo = [0.1, 0.16, 0.22, 0.05, 0.2, 0.08, 0.08][aparencia.cabeloEstilo] ?? 0.1;
+    const folga = aparencia.cabeloEstilo === 3 ? 0.02 : 0.04;
     partes.push({
-      nome: 'acessorio',
-      tamanho: [0.14, 0.2, 0.14],
-      posicao: [-centro(xBraco), centro(pernas + 0.05), 0.2],
-      pivo: [-centro(xBraco), centro(topoTronco), 0],
+      nome: 'cabelo',
+      tamanho: [LADO_CABECA + folga, alturaCabelo, LADO_CABECA + folga],
+      posicao: [0, centro(topoTronco + ALTURA_CABECA - alturaCabelo / 2), 0],
+      pivo: [0, centro(topoTronco), 0],
     });
+  }
+  if (aparencia.cabeloEstilo === 5) {
+    // rabo de cavalo alto, preso atrás da cabeça
+    partes.push({
+      nome: 'penteado',
+      tamanho: [0.12, 0.4, 0.12],
+      posicao: [0, centro(topoTronco + ALTURA_CABECA - 0.2), -(LADO_CABECA / 2 + 0.07)],
+      pivo: [0, centro(topoTronco), 0],
+    });
+  } else if (aparencia.cabeloEstilo === 6) {
+    // coque no alto da cabeça
+    partes.push({
+      nome: 'penteado',
+      tamanho: [0.18, 0.12, 0.16],
+      posicao: [0, centro(topoTronco + ALTURA_CABECA + 0.02), -0.17],
+      pivo: [0, centro(topoTronco), 0],
+    });
+  }
+
+  // saia: dos quadris para baixo, um pouco mais larga que o tronco
+  const saia = SAIAS[aparencia.roupaEstilo];
+  if (saia !== undefined) {
+    const alturaSaia = centro(pernas * saia + 0.06);
+    partes.push({
+      nome: 'saia',
+      tamanho: [larguraTronco + 0.08, alturaSaia, PROFUNDIDADE_TRONCO + 0.1],
+      posicao: [0, centro(pernas + 0.06 - alturaSaia / 2), 0],
+      pivo: [0, centro(pernas), 0],
+    });
+  }
+
+  const naCabeca = (tamanho: [number, number, number], y: number, z = 0): Parte => ({
+    nome: 'acessorio',
+    tamanho,
+    posicao: [0, centro(topoTronco + y), z],
+    pivo: [0, centro(topoTronco), 0],
+  });
+  const noCorpo = (tamanho: [number, number, number], y: number, z: number): Parte => ({
+    nome: 'acessorio',
+    tamanho,
+    posicao: [0, centro(y), z],
+    pivo: [0, centro(topoTronco), 0],
+  });
+  switch (aparencia.acessorio) {
+    case 'capuz':
+      partes.push(
+        naCabeca([LADO_CABECA + 0.1, 0.3, LADO_CABECA + 0.1], ALTURA_CABECA - 0.15, -0.02),
+      );
+      break;
+    case 'chapeu':
+      // copa e aba (duas caixas)
+      partes.push(naCabeca([LADO_CABECA + 0.04, 0.16, LADO_CABECA + 0.04], ALTURA_CABECA + 0.06));
+      partes.push(naCabeca([LADO_CABECA + 0.28, 0.04, LADO_CABECA + 0.28], ALTURA_CABECA - 0.01));
+      break;
+    case 'oculos':
+      // na altura dos olhos, um pouco à frente do rosto
+      partes.push(naCabeca([LADO_CABECA + 0.03, 0.08, LADO_CABECA + 0.03], ALTURA_CABECA * 0.47));
+      break;
+    case 'cachecol':
+      partes.push(
+        noCorpo([larguraTronco - 0.04, 0.1, PROFUNDIDADE_TRONCO + 0.06], topoTronco - 0.03, 0),
+      );
+      break;
+    case 'mochila':
+      partes.push(
+        noCorpo(
+          [larguraTronco - 0.1, alturaTronco * 0.62, 0.16],
+          pernas + alturaTronco * 0.55,
+          -(PROFUNDIDADE_TRONCO / 2 + 0.08),
+        ),
+      );
+      break;
+    case 'lanterna':
+      partes.push({
+        nome: 'acessorio',
+        tamanho: [0.14, 0.2, 0.14],
+        posicao: [-centro(xBraco), centro(pernas + 0.05), 0.2],
+        pivo: [-centro(xBraco), centro(topoTronco), 0],
+      });
+      break;
+    default:
+      break;
   }
   return partes;
 }

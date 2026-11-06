@@ -1,6 +1,11 @@
 import {
   ACESSORIOS,
+  CABELOS_LONGOS,
+  CORPOS,
+  SAIAS,
+  aplicarCorpo,
   ESTILOS_CABELO,
+  ESTILOS_ROSTO,
   ESTILOS_ROUPA,
   IDS_MODELOS,
   MODELOS,
@@ -8,9 +13,11 @@ import {
   TAMANHO_MAXIMO_NOME,
   aplicarModelo,
   normalizarAparencia,
+  type Acessorio,
   type Aparencia,
 } from '../personagem/aparencia';
 import { carregarAparencia, salvarAparencia, type Armazenamento } from '../personagem/persistencia';
+import { desenharPrevia, type RecortePrevia } from './titulo';
 
 export function teclaParaPainel(codigo: string): boolean {
   return codigo === 'KeyC';
@@ -23,126 +30,311 @@ export const CSS_PAINEL = `
   overflow-y: auto;
   overflow-x: hidden;
   box-sizing: border-box;
-  padding: 16px 18px;
+  padding: 14px 16px;
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 16px;
   background: linear-gradient(180deg, rgba(30, 32, 46, 0.9), rgba(18, 19, 28, 0.92));
   box-shadow: 0 18px 48px rgba(0, 0, 0, 0.45);
-  backdrop-filter: blur(8px);
   text-align: left;
   cursor: default;
   justify-self: center;
+  display: grid;
+  align-content: start;
+  gap: 12px;
 }
-@media (min-width: 1000px) { .painel-personagem { max-height: 78vh; } }
-.painel-personagem h2 { margin: 0 0 10px; font-size: 1.15rem; color: #ffd98f; }
-.painel-personagem .grupo { margin: 10px 0; }
-.painel-personagem .rotulo {
-  display: block; margin-bottom: 6px; font-size: 0.74rem; color: #b9b2a6;
-  text-transform: uppercase; letter-spacing: 0.08em;
-}
-.painel-personagem .opcoes { display: flex; flex-wrap: wrap; gap: 6px; }
+.painel-personagem .topo-painel { display: grid; grid-template-columns: 1fr auto; gap: 8px; }
 .painel-personagem button,
 .painel-personagem input {
-  font: 600 0.86rem system-ui, sans-serif;
+  font: 600 0.9rem system-ui, sans-serif;
   color: #ece6da;
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 9px;
   background: rgba(255, 255, 255, 0.05);
 }
-.painel-personagem button { min-height: 34px; padding: 6px 12px; cursor: pointer; transition: background 0.12s ease; }
+.painel-personagem button { cursor: pointer; transition: background 0.12s ease, transform 0.08s ease; }
 .painel-personagem button:hover { background: rgba(255, 255, 255, 0.12); }
-.painel-personagem button[aria-pressed='true'] {
-  border-color: #ffc46b;
-  background: rgba(255, 196, 107, 0.2);
-  color: #fff;
-}
+.painel-personagem button:active { transform: translateY(1px); }
 .painel-personagem button:focus-visible,
 .painel-personagem input:focus-visible { outline: 2px solid #ffd98f; outline-offset: 2px; }
-.painel-personagem input { width: 100%; box-sizing: border-box; min-height: 40px; padding: 8px 12px; background: rgba(0, 0, 0, 0.25); }
+.painel-personagem input { width: 100%; box-sizing: border-box; min-height: 44px; padding: 8px 12px; background: rgba(0, 0, 0, 0.25); font-size: 1rem; }
+.painel-personagem .dado { width: 48px; min-height: 44px; font-size: 1.4rem; padding: 0; }
+.painel-personagem .abas { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
+.painel-personagem .abas button { min-height: 48px; font-size: 1.45rem; padding: 0; }
+.painel-personagem .abas button[aria-selected='true'] { background: rgba(255, 196, 107, 0.22); border-color: #ffc46b; }
+.painel-personagem [data-aba-painel] { display: grid; gap: 12px; }
+.painel-personagem [data-aba-painel][hidden] { display: none; }
+.painel-personagem .miniaturas { display: grid; grid-template-columns: repeat(auto-fill, minmax(78px, 1fr)); gap: 8px; }
+.painel-personagem .miniaturas.largas { grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); }
+.painel-personagem button.miniatura {
+  display: grid; place-items: end center; padding: 6px 4px 4px; aspect-ratio: 1; min-height: 0;
+  background-image: radial-gradient(ellipse at 50% 90%, rgba(255, 210, 130, 0.18), rgba(0, 0, 0, 0) 70%);
+}
+.painel-personagem .largas button.miniatura { aspect-ratio: 3 / 4; }
+.painel-personagem button.miniatura canvas { width: auto; height: 100%; max-width: 100%; object-fit: contain; image-rendering: pixelated; }
+.painel-personagem .amostras { display: flex; flex-wrap: wrap; gap: 8px; padding-top: 10px; border-top: 1px dashed rgba(255, 255, 255, 0.14); }
+.painel-personagem button.amostra {
+  width: 38px; min-height: 38px; height: 38px; padding: 0;
+  background: var(--cor) !important;
+  box-shadow: inset 2px 2px 0 rgba(255, 255, 255, 0.28), inset -2px -3px 0 rgba(0, 0, 0, 0.35);
+}
+.painel-personagem button.amostra[aria-pressed='true'] {
+  outline: 3px solid #ffd98f; outline-offset: 2px;
+  box-shadow: inset 2px 2px 0 rgba(255, 255, 255, 0.28), inset -2px -3px 0 rgba(0, 0, 0, 0.35);
+}
 .painel-personagem .jogar {
-  margin-top: 12px;
+  position: sticky;
+  bottom: 0;
+  z-index: 1;
+  box-shadow: 0 -10px 18px rgba(18, 16, 26, 0.9);
   width: 100%;
-  min-height: 44px;
+  min-height: 48px;
   border-color: #ffc46b;
   background: linear-gradient(180deg, #ffcf7a, #f0a94a);
   color: #2a1a08;
-  font-size: 1.02rem;
+  font-size: 1.05rem;
   font-weight: 800;
 }
 .painel-personagem .jogar:hover { background: linear-gradient(180deg, #ffd98f, #f5b45a); }
 `;
 
-const NOMES_PELE = ['Clara', 'Dourada', 'Morena', 'Escura', 'Profunda'];
-const NOMES_CABELO = ['Preto', 'Castanho', 'Ruivo', 'Louro', 'Cinza azulado', 'Rosado'];
-const NOMES_ROUPA = ['Azul', 'Roxo', 'Verde', 'Ferrugem', 'Vinho', 'Cinza'];
-const NOMES_CALCA = ['Noite', 'Terra', 'Musgo', 'Grafite'];
-const NOMES_ACESSORIO: Record<string, string> = {
+const NOMES_ROSTO = [
+  'Clássico',
+  'Cílios e lábios',
+  'Sardas',
+  'Cílios, lábios e sardas',
+  'Barba',
+  'Bigode',
+];
+const NOMES_CABELO = [
+  'Curto',
+  'Franja de lado',
+  'Longo liso',
+  'Raspado',
+  'Cacheado volumoso',
+  'Rabo de cavalo',
+  'Coque',
+  'Tranças',
+  'Chanel',
+];
+const NOMES_ROUPA = [
+  'Túnica',
+  'Avental',
+  'Jaqueta',
+  'Listrada',
+  'Colete',
+  'Bandoleira',
+  'Vestido',
+  'Blusa e saia',
+  'Vestido longo',
+];
+const NOMES_ACESSORIO: Record<Acessorio, string> = {
   nenhum: 'Nenhum',
   capuz: 'Capuz',
   lanterna: 'Lanterna',
+  chapeu: 'Chapéu',
+  mochila: 'Mochila',
+  cachecol: 'Cachecol',
+  oculos: 'Óculos',
 };
 
-function estilos(total: number): string[] {
-  return Array.from({ length: total }, (_, i) => `Estilo ${i + 1}`);
-}
+type Campo = Exclude<keyof Aparencia, 'nome'>;
+type Valor = string | number;
 
-interface Grupo {
-  campo: keyof Aparencia;
+/** Opções em miniatura (mostram o resultado) ou em amostras de cor. */
+interface GrupoVisual {
+  campo: Campo;
   titulo: string;
-  valores: Array<string | number>;
-  nomes: string[];
+  tipo: 'miniatura' | 'amostra';
+  valores: Valor[];
+  /** Rótulo acessível de cada valor (não aparece na tela). */
+  rotulos: string[];
+  recorte?: RecortePrevia;
+  cores?: readonly string[];
+  largas?: boolean;
 }
 
-const GRUPOS: Grupo[] = [
+interface Aba {
+  id: string;
+  icone: string;
+  titulo: string;
+  grupos: GrupoVisual[];
+}
+
+function claridade(hex: string): number {
+  const n = parseInt(hex.slice(1), 16);
+  return 0.2126 * ((n >> 16) & 255) + 0.7152 * ((n >> 8) & 255) + 0.0722 * (n & 255);
+}
+
+const indices = (n: number) => Array.from({ length: n }, (_, i) => i);
+/** Pele: amostras da mais clara para a mais escura, sem nomes de cor. */
+const ORDEM_PELE = indices(PALETAS.pele.length).sort(
+  (a, b) => claridade(PALETAS.pele[b]) - claridade(PALETAS.pele[a]),
+);
+
+export const ABAS: Aba[] = [
   {
-    campo: 'modelo',
-    titulo: 'Modelo',
-    valores: [...IDS_MODELOS],
-    nomes: IDS_MODELOS.map((id) => MODELOS[id].rotulo),
+    id: 'corpo',
+    icone: '🧍',
+    titulo: 'Corpo',
+    grupos: [
+      {
+        campo: 'corpo',
+        titulo: 'Corpo',
+        tipo: 'miniatura',
+        valores: [...CORPOS],
+        rotulos: ['Feminino', 'Masculino'],
+        recorte: 'corpo',
+        largas: true,
+      },
+      {
+        campo: 'modelo',
+        titulo: 'Modelo',
+        tipo: 'miniatura',
+        valores: [...IDS_MODELOS],
+        rotulos: IDS_MODELOS.map((id) => MODELOS[id].rotulo),
+        recorte: 'corpo',
+        largas: true,
+      },
+      {
+        campo: 'rosto',
+        titulo: 'Rosto',
+        tipo: 'miniatura',
+        valores: indices(ESTILOS_ROSTO),
+        rotulos: NOMES_ROSTO,
+        recorte: 'cabeca',
+      },
+      {
+        campo: 'pele',
+        titulo: 'Pele',
+        tipo: 'amostra',
+        valores: ORDEM_PELE,
+        rotulos: ORDEM_PELE.map((_, i) => `Tom ${i + 1}`),
+        cores: PALETAS.pele,
+      },
+    ],
   },
   {
-    campo: 'pele',
-    titulo: 'Pele',
-    valores: PALETAS.pele.map((_, i) => i),
-    nomes: NOMES_PELE,
+    id: 'cabelo',
+    icone: '💇',
+    titulo: 'Cabelo',
+    grupos: [
+      {
+        campo: 'cabeloEstilo',
+        titulo: 'Corte',
+        tipo: 'miniatura',
+        valores: indices(ESTILOS_CABELO),
+        rotulos: NOMES_CABELO,
+        recorte: 'busto',
+      },
+      {
+        campo: 'cabeloCor',
+        titulo: 'Cor do cabelo',
+        tipo: 'amostra',
+        valores: indices(PALETAS.cabelo.length),
+        rotulos: indices(PALETAS.cabelo.length).map((i) => `Cor ${i + 1}`),
+        cores: PALETAS.cabelo,
+      },
+    ],
   },
   {
-    campo: 'cabeloEstilo',
-    titulo: 'Estilo do cabelo',
-    valores: estilos(ESTILOS_CABELO).map((_, i) => i),
-    nomes: estilos(ESTILOS_CABELO),
+    id: 'roupa',
+    icone: '👕',
+    titulo: 'Roupa',
+    grupos: [
+      {
+        campo: 'roupaEstilo',
+        titulo: 'Estilo da roupa',
+        tipo: 'miniatura',
+        valores: indices(ESTILOS_ROUPA),
+        rotulos: NOMES_ROUPA,
+        recorte: 'tronco',
+      },
+      {
+        campo: 'roupaCor',
+        titulo: 'Cor da roupa',
+        tipo: 'amostra',
+        valores: indices(PALETAS.roupa.length),
+        rotulos: indices(PALETAS.roupa.length).map((i) => `Cor ${i + 1}`),
+        cores: PALETAS.roupa,
+      },
+    ],
   },
   {
-    campo: 'cabeloCor',
-    titulo: 'Cor do cabelo',
-    valores: PALETAS.cabelo.map((_, i) => i),
-    nomes: NOMES_CABELO,
+    id: 'calca',
+    icone: '👖',
+    titulo: 'Calça',
+    grupos: [
+      {
+        campo: 'calcaCor',
+        titulo: 'Calça',
+        tipo: 'miniatura',
+        valores: indices(PALETAS.calca.length),
+        rotulos: indices(PALETAS.calca.length).map((i) => `Calça ${i + 1}`),
+        recorte: 'pernas',
+      },
+    ],
   },
   {
-    campo: 'roupaEstilo',
-    titulo: 'Estilo da roupa',
-    valores: estilos(ESTILOS_ROUPA).map((_, i) => i),
-    nomes: estilos(ESTILOS_ROUPA),
-  },
-  {
-    campo: 'roupaCor',
-    titulo: 'Cor da roupa',
-    valores: PALETAS.roupa.map((_, i) => i),
-    nomes: NOMES_ROUPA,
-  },
-  {
-    campo: 'calcaCor',
-    titulo: 'Cor da calça',
-    valores: PALETAS.calca.map((_, i) => i),
-    nomes: NOMES_CALCA,
-  },
-  {
-    campo: 'acessorio',
-    titulo: 'Acessório',
-    valores: [...ACESSORIOS],
-    nomes: ACESSORIOS.map((a) => NOMES_ACESSORIO[a]),
+    id: 'extra',
+    icone: '🎒',
+    titulo: 'Acessórios',
+    grupos: [
+      {
+        campo: 'acessorio',
+        titulo: 'Acessório',
+        tipo: 'miniatura',
+        valores: [...ACESSORIOS],
+        rotulos: ACESSORIOS.map((a) => NOMES_ACESSORIO[a]),
+        recorte: 'busto',
+        largas: true,
+      },
+    ],
   },
 ];
+
+/** Em qual aba fica cada campo (útil para testes e atalhos). */
+export const ABA_DO_CAMPO = Object.fromEntries(
+  ABAS.flatMap((a) => a.grupos.map((g) => [g.campo, a.id])),
+) as Record<Campo, string>;
+
+function variante(base: Aparencia, campo: Campo, valor: Valor): Aparencia {
+  if (campo === 'modelo') return aplicarModelo(base, valor as Aparencia['modelo']);
+  if (campo === 'corpo') return aplicarCorpo(base, valor as Aparencia['corpo']);
+  return { ...base, [campo]: valor };
+}
+
+/** Cortes e roupas que combinam com cada corpo (o dado sorteia dentro deles). */
+const CABELOS_DO_CORPO = {
+  feminino: [2, 4, 5, 6, 7, 8],
+  masculino: [0, 1, 3, 4, 5],
+};
+
+/** Aparência aleatória e coerente com o corpo sorteado (o nome é mantido). */
+export function sortearAparencia(
+  base: Aparencia,
+  aleatorio: () => number = Math.random,
+): Aparencia {
+  const escolher = <T>(lista: readonly T[]): T => lista[Math.floor(aleatorio() * lista.length)];
+  const corpo = escolher(CORPOS);
+  const feminino = corpo === 'feminino';
+  const roupas = indices(ESTILOS_ROUPA).filter((i) => feminino || SAIAS[i] === undefined);
+  return normalizarAparencia({
+    nome: base.nome,
+    modelo: escolher(IDS_MODELOS),
+    corpo,
+    pele: escolher(indices(PALETAS.pele.length)),
+    rosto: escolher(feminino ? [0, 1, 2, 3] : indices(ESTILOS_ROSTO)),
+    cabeloEstilo: escolher(CABELOS_DO_CORPO[corpo].filter((i) => i < ESTILOS_CABELO)),
+    cabeloCor: escolher(indices(PALETAS.cabelo.length)),
+    roupaEstilo: escolher(roupas),
+    roupaCor: escolher(indices(PALETAS.roupa.length)),
+    calcaCor: escolher(indices(PALETAS.calca.length)),
+    acessorio: escolher(ACESSORIOS),
+  });
+}
+
+/** Cortes longos (útil para testes). */
+export const CORTES_LONGOS = Object.keys(CABELOS_LONGOS).map(Number);
 
 export interface OpcoesPainel {
   armazenamento: Armazenamento | null;
@@ -155,75 +347,116 @@ export function criarPainelPersonagem(pai: HTMLElement, opcoes: OpcoesPainel) {
   const raiz = document.createElement('section');
   raiz.className = 'painel-personagem';
   raiz.setAttribute('data-painel-personagem', '');
-  const titulo = document.createElement('h2');
-  titulo.textContent = 'Seu personagem';
-  raiz.appendChild(titulo);
+  raiz.setAttribute('aria-label', 'Seu personagem');
 
-  const grupoNome = document.createElement('div');
-  grupoNome.className = 'grupo';
-  const rotuloNome = document.createElement('label');
-  rotuloNome.className = 'rotulo';
-  rotuloNome.textContent = 'Nome';
+  // nome e dado
+  const topo = document.createElement('div');
+  topo.className = 'topo-painel';
   const campoNome = document.createElement('input');
   campoNome.type = 'text';
   campoNome.maxLength = TAMANHO_MAXIMO_NOME;
-  campoNome.placeholder = 'Como você quer ser chamado';
+  campoNome.placeholder = '✏️ Nome';
+  campoNome.setAttribute('aria-label', 'Nome');
   campoNome.setAttribute('data-campo', 'nome');
   campoNome.value = aparencia.nome;
-  rotuloNome.appendChild(campoNome);
-  grupoNome.appendChild(rotuloNome);
-  raiz.appendChild(grupoNome);
+  const dado = document.createElement('button');
+  dado.type = 'button';
+  dado.className = 'dado';
+  dado.textContent = '🎲';
+  dado.title = 'Sortear visual';
+  dado.setAttribute('aria-label', 'Sortear visual');
+  dado.setAttribute('data-sortear', '');
+  topo.append(campoNome, dado);
 
+  // abas com ícones
+  const abas = document.createElement('div');
+  abas.className = 'abas';
+  abas.setAttribute('role', 'tablist');
+  const botoesAba: HTMLButtonElement[] = [];
+  const paineis: HTMLElement[] = [];
   const botoes: HTMLButtonElement[] = [];
+  const miniaturas: Array<{ canvas: HTMLCanvasElement; grupo: GrupoVisual; valor: Valor }> = [];
+
+  function mostrarAba(id: string): void {
+    for (const b of botoesAba) b.setAttribute('aria-selected', String(b.dataset.aba === id));
+    for (const p of paineis) p.hidden = p.dataset.abaPainel !== id;
+  }
+
+  for (const aba of ABAS) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.setAttribute('role', 'tab');
+    b.setAttribute('data-aba', aba.id);
+    b.setAttribute('aria-label', aba.titulo);
+    b.title = aba.titulo;
+    b.textContent = aba.icone;
+    b.addEventListener('click', () => mostrarAba(aba.id));
+    botoesAba.push(b);
+    abas.appendChild(b);
+
+    const painel = document.createElement('div');
+    painel.setAttribute('data-aba-painel', aba.id);
+    painel.setAttribute('role', 'tabpanel');
+    painel.setAttribute('aria-label', aba.titulo);
+    for (const g of aba.grupos) {
+      const lista = document.createElement('div');
+      lista.className =
+        g.tipo === 'miniatura' ? `miniaturas${g.largas ? ' largas' : ''}` : 'amostras';
+      lista.setAttribute('role', 'group');
+      lista.setAttribute('aria-label', g.titulo);
+      g.valores.forEach((valor, i) => {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.setAttribute('data-campo', g.campo);
+        b.setAttribute('data-valor', String(valor));
+        b.setAttribute('aria-label', `${g.titulo}: ${g.rotulos[i]}`);
+        if (g.tipo === 'amostra') {
+          b.className = 'amostra';
+          b.style.setProperty('--cor', g.cores![valor as number]);
+        } else {
+          b.className = 'miniatura';
+          if (g.campo === 'modelo' || g.campo === 'acessorio') b.title = g.rotulos[i];
+          const c = document.createElement('canvas');
+          b.appendChild(c);
+          miniaturas.push({ canvas: c, grupo: g, valor });
+        }
+        b.addEventListener('click', () => mudou(variante(aparencia, g.campo, valor)));
+        botoes.push(b);
+        lista.appendChild(b);
+      });
+      painel.appendChild(lista);
+    }
+    paineis.push(painel);
+  }
+  raiz.append(topo, abas, ...paineis);
+
   function marcar(): void {
     for (const b of botoes) {
-      const atual = String(aparencia[b.dataset.campo as keyof Aparencia]);
+      const atual = String(aparencia[b.dataset.campo as Campo]);
       b.setAttribute('aria-pressed', String(atual === b.dataset.valor));
+    }
+  }
+  /** Cada miniatura mostra a aparência atual com aquela opção aplicada. */
+  function desenharMiniaturas(): void {
+    for (const m of miniaturas) {
+      desenharPrevia(m.canvas, variante(aparencia, m.grupo.campo, m.valor), m.grupo.recorte);
     }
   }
   function mudou(proxima: Aparencia): void {
     aparencia = normalizarAparencia(proxima);
     marcar();
+    desenharMiniaturas();
     salvarAparencia(opcoes.armazenamento, aparencia);
     opcoes.aoMudar(aparencia);
   }
 
-  for (const g of GRUPOS) {
-    const bloco = document.createElement('div');
-    bloco.className = 'grupo';
-    const rotulo = document.createElement('span');
-    rotulo.className = 'rotulo';
-    rotulo.textContent = g.titulo;
-    const lista = document.createElement('div');
-    lista.className = 'opcoes';
-    lista.setAttribute('role', 'group');
-    lista.setAttribute('aria-label', g.titulo);
-    g.valores.forEach((valor, i) => {
-      const b = document.createElement('button');
-      b.type = 'button';
-      b.textContent = g.nomes[i];
-      b.setAttribute('data-campo', g.campo);
-      b.setAttribute('data-valor', String(valor));
-      b.addEventListener('click', () => {
-        mudou(
-          g.campo === 'modelo'
-            ? aplicarModelo(aparencia, valor as Aparencia['modelo'])
-            : { ...aparencia, [g.campo]: valor },
-        );
-      });
-      botoes.push(b);
-      lista.appendChild(b);
-    });
-    bloco.append(rotulo, lista);
-    raiz.appendChild(bloco);
-  }
-
   campoNome.addEventListener('input', () => mudou({ ...aparencia, nome: campoNome.value }));
+  dado.addEventListener('click', () => mudou(sortearAparencia(aparencia)));
 
   const jogar = document.createElement('button');
   jogar.type = 'button';
   jogar.className = 'jogar';
-  jogar.textContent = 'Jogar';
+  jogar.textContent = '▶ Jogar';
   jogar.setAttribute('data-jogar', '');
   jogar.addEventListener('click', (e) => {
     e.stopPropagation();
@@ -235,7 +468,9 @@ export function criarPainelPersonagem(pai: HTMLElement, opcoes: OpcoesPainel) {
     raiz.addEventListener(tipo, (e) => e.stopPropagation());
   }
 
+  mostrarAba('corpo');
   marcar();
+  desenharMiniaturas();
   pai.appendChild(raiz);
   return { raiz, aparencia: () => aparencia };
 }

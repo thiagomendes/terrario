@@ -30,7 +30,9 @@ const lancador: Armazenamento = {
 const custom: Aparencia = {
   nome: 'Ana',
   modelo: 'lanterneiro',
+  corpo: 'masculino',
   pele: 4,
+  rosto: 1,
   cabeloEstilo: 1,
   cabeloCor: 5,
   roupaEstilo: 2,

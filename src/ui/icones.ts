@@ -82,3 +82,33 @@ export function iconeDoItem(item: string): string {
   cache.set(item, url);
   return url;
 }
+
+const cacheTextura = new Map<string, string>();
+/** Tile do bloco (16x16) como data URL, para fundos pixelados da interface. */
+export function texturaDoBloco(bloco: number, face: 'lado' | 'topo' = 'lado'): string {
+  const chave = `${bloco}:${face}`;
+  const pronto = cacheTextura.get(chave);
+  if (pronto) return pronto;
+  const { atlas, fonte } = base();
+  const uv = atlas.uvDaFace(bloco, face);
+  const c = document.createElement('canvas');
+  c.width = TAM_TILE;
+  c.height = TAM_TILE;
+  const ctx = c.getContext('2d');
+  if (ctx && uv) {
+    ctx.drawImage(
+      fonte,
+      Math.round(uv.u0 * atlas.largura),
+      Math.round(uv.v0 * atlas.altura),
+      TAM_TILE,
+      TAM_TILE,
+      0,
+      0,
+      TAM_TILE,
+      TAM_TILE,
+    );
+  }
+  const url = c.toDataURL();
+  cacheTextura.set(chave, url);
+  return url;
+}

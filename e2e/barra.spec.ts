@@ -15,6 +15,9 @@ for (const vp of VIEWPORTS) {
       if (m.type() === 'error') erros.push(`console.error: ${m.text()}`);
     });
     await page.goto('/');
+    // a barra fica escondida na tela de título; o teste joga com o título fechado
+    await page.locator('.entrada').waitFor();
+    await page.evaluate(() => document.querySelector('.entrada')?.setAttribute('hidden', ''));
 
     const barra = page.locator('[role="toolbar"]');
     await expect(barra).toHaveAttribute('aria-label', 'Barra de itens');

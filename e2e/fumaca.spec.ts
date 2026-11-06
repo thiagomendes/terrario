@@ -31,7 +31,7 @@ for (const vp of VIEWPORTS) {
 
     await page.goto('/');
     await expect(page.locator('#app')).toContainText('Brumaluz');
-    await expect(page.locator('#app')).toContainText('Clique para jogar');
+    await expect(page.locator('#app')).toContainText('Jogar');
     await page.waitForFunction(
       () => (window as unknown as { __brumaluz?: Estado }).__brumaluz?.ready === true,
       undefined,

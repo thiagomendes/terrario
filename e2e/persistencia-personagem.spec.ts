@@ -1,8 +1,10 @@
 import { expect, test, type Page } from '@playwright/test';
 
 const CAMPOS = [
+  'corpo',
   'modelo',
   'pele',
+  'rosto',
   'cabeloEstilo',
   'cabeloCor',
   'roupaEstilo',
@@ -27,11 +29,30 @@ async function abrir(page: Page): Promise<void> {
   await page.waitForFunction(() => window.__brumaluz?.ready === true, undefined, {
     timeout: 120_000,
   });
+  // a personalização fica na tela "Personagem" do menu de título
+  await page.locator('[data-abrir-personagem]').click();
 }
 
 const aparencia = (page: Page) => page.evaluate(() => window.__brumaluz!.personagem!.aparencia());
 const botao = (page: Page, campo: string, valor: string) =>
   page.locator(`[data-painel-personagem] button[data-campo="${campo}"][data-valor="${valor}"]`);
+const ABA: Record<string, string> = {
+  corpo: 'corpo',
+  modelo: 'corpo',
+  pele: 'corpo',
+  rosto: 'corpo',
+  cabeloEstilo: 'cabelo',
+  cabeloCor: 'cabelo',
+  roupaEstilo: 'roupa',
+  roupaCor: 'roupa',
+  calcaCor: 'calca',
+  acessorio: 'extra',
+};
+/** Abre a aba do campo (opções em miniatura/amostra) e escolhe o valor. */
+async function escolher(page: Page, campo: string, valor: string): Promise<void> {
+  await page.locator(`[data-painel-personagem] [data-aba="${ABA[campo]}"]`).click();
+  await botao(page, campo, valor).click();
+}
 
 test('painel tem todos os campos na tela de entrada', async ({ page }) => {
   test.setTimeout(240_000);
@@ -54,12 +75,12 @@ test('escolhas no painel mudam a aparência e persistem após recarregar', async
   await abrir(page);
   const antes = await aparencia(page);
 
-  await botao(page, 'modelo', 'musgueira').click();
-  await botao(page, 'pele', '3').click();
-  await botao(page, 'cabeloCor', '2').click();
-  await botao(page, 'roupaCor', '2').click();
-  await botao(page, 'calcaCor', '1').click();
-  await botao(page, 'acessorio', 'capuz').click();
+  await escolher(page, 'modelo', 'musgueira');
+  await escolher(page, 'pele', '3');
+  await escolher(page, 'cabeloCor', '2');
+  await escolher(page, 'roupaCor', '2');
+  await escolher(page, 'calcaCor', '1');
+  await escolher(page, 'acessorio', 'capuz');
   await page.locator('[data-campo="nome"]').fill('Luzia');
 
   await expect(botao(page, 'pele', '3')).toHaveAttribute('aria-pressed', 'true');
@@ -116,7 +137,7 @@ test('dado corrompido ou localStorage indisponível usa a aparência padrão', a
   });
   await abrir(indisponivel);
   expect(await aparencia(indisponivel)).toEqual(padrao);
-  await botao(indisponivel, 'pele', '3').click();
+  await escolher(indisponivel, 'pele', '3');
   expect((await aparencia(indisponivel)).pele).toBe(3);
   expect(errosB, errosB.join('\n')).toEqual([]);
   await indisponivel.close();

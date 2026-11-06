@@ -11,11 +11,13 @@ import {
 import { TETO_LUMINANCIA_EMISSIVA, luminancia } from '../../src/render/emissivo';
 
 describe('montarPartes', () => {
-  it('altura total é 1,8 nos 4 modelos', () => {
+  it('o corpo mede 1,8 em todos os modelos (cabelo e acessórios podem passar)', () => {
     for (const id of IDS_MODELOS) {
       for (const acessorio of ['nenhum', 'capuz', 'lanterna'] as const) {
         for (const cabeloEstilo of [0, 1, 2]) {
-          const partes = montarPartes({ ...aparenciaPadrao(id), acessorio, cabeloEstilo });
+          const partes = montarPartes({ ...aparenciaPadrao(id), acessorio, cabeloEstilo }).filter(
+            (p) => !['cabelo', 'penteado', 'acessorio', 'saia'].includes(p.nome),
+          );
           const topo = Math.max(...partes.map((p) => p.posicao[1] + p.tamanho[1] / 2));
           const base = Math.min(...partes.map((p) => p.posicao[1] - p.tamanho[1] / 2));
           expect(base).toBeCloseTo(0, 5);
@@ -37,7 +39,7 @@ describe('montarPartes', () => {
         expect(p.pivo).toHaveLength(3);
       }
     }
-    expect(chaves.size).toBe(4);
+    expect(chaves.size).toBe(IDS_MODELOS.length);
   });
 
   it('acessório nenhum não gera parte; capuz e lanterna geram', () => {

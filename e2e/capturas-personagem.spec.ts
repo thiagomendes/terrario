@@ -39,7 +39,8 @@ for (const vp of VIEWPORTS) {
       timeout: 120_000,
     });
 
-    // Painel de personalização na tela de entrada.
+    // Painel de personalização na tela "Personagem" do título.
+    await page.locator('[data-abrir-personagem]').click();
     const painel = page.locator('[data-painel-personagem]');
     await expect(painel).toBeVisible();
     await foto('painel-personagem');

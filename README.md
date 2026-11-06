@@ -13,7 +13,7 @@ Jogo sandbox de exploração, construção e sobrevivência em mundo voxel, que 
 docker compose -f .nants/compose.yaml run --rm --service-ports workspace sh -lc 'npm ci --no-audit --no-fund && npm run dev -- --host 0.0.0.0 --port 5174 --strictPort'
 ```
 
-Abra `http://127.0.0.1:5174/` no navegador e clique em "Clique para jogar".
+Abra `http://127.0.0.1:5174/` no navegador e clique em "Jogar". O menu de título também tem Mundos, Personagem (aparência com prévia) e Configurações.
 
 Comando de desenvolvimento: `npm run dev -- --host 0.0.0.0 --port 5174 --strictPort`.
 

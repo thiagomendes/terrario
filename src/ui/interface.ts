@@ -7,117 +7,15 @@ import { MODELOS, type Aparencia } from '../personagem/aparencia';
 import type { Armazenamento } from '../personagem/persistencia';
 import { CSS_PAINEL, criarPainelPersonagem, teclaParaPainel } from './personagem';
 import { CSS_MODAL, criarPainelMundos } from './mundos';
+import { CSS_TITULO, desenharLogo, desenharPrevia } from './titulo';
+import { texturaDoBloco } from './icones';
+import { Bloco } from '../world/blocks';
 import { CSS_CONFIG, criarPainelConfig } from './configuracoes';
 import { CSS_PAUSA, criarMenuPausa } from './pausa';
 import type { GerenciadorConfig } from '../jogo/config';
 import type { MetaMundo, RepositorioMundos } from '../jogo/mundos';
 
 const CSS = `
-.entrada {
-  position: fixed;
-  inset: 0;
-  z-index: 5;
-  overflow-y: auto;
-  box-sizing: border-box;
-  padding: clamp(16px, 4vh, 48px) 16px 96px;
-  cursor: pointer;
-  color: #ece6da;
-  font-family: system-ui, 'Segoe UI', sans-serif;
-  background:
-    radial-gradient(ellipse at 30% 40%, rgba(10, 12, 24, 0.15), rgba(8, 10, 18, 0.72) 70%),
-    linear-gradient(180deg, rgba(8, 10, 18, 0.1), rgba(8, 10, 18, 0.55));
-}
-.entrada[hidden] { display: none; }
-.entrada-grade {
-  min-height: 100%;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  align-items: center;
-  justify-items: center;
-  gap: clamp(16px, 3vh, 32px);
-  max-width: 1280px;
-  margin: 0 auto;
-}
-@media (min-width: 1000px) {
-  .entrada-grade { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); justify-items: stretch; }
-}
-.coluna-titulo {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: clamp(8px, 2vh, 16px);
-  text-align: center;
-}
-.entrada h1 {
-  margin: 0;
-  font-size: clamp(2.8rem, 11vw, 6.2rem);
-  font-weight: 900;
-  letter-spacing: 0.06em;
-  color: #ffe2a8;
-  text-shadow: 0 0 32px rgba(255, 186, 96, 0.55), 0 4px 0 #6b3d14, 0 8px 22px rgba(0, 0, 0, 0.6);
-}
-.entrada .subtitulo {
-  margin: 0;
-  font-size: clamp(1rem, 3.2vw, 1.35rem);
-  color: #e8e1f4;
-  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
-}
-.cartao-atual {
-  width: min(420px, 100%);
-  aspect-ratio: 16 / 7;
-  position: relative;
-  border-radius: 14px;
-  overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
-  background: linear-gradient(160deg, #5a8fd6, #f5c28a 70%, #3d7a2c 71%) center / cover;
-  text-align: left;
-}
-.cartao-atual::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(180deg, transparent 35%, rgba(0, 0, 0, 0.72));
-}
-.cartao-atual .info { position: absolute; left: 14px; right: 14px; bottom: 10px; z-index: 1; }
-.cartao-atual .rotulo { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.12em; color: #cfc8bb; }
-.cartao-atual .nome { font-size: 1.25rem; font-weight: 800; color: #fff; }
-.entrada .instrucao {
-  margin: 0;
-  padding: 14px clamp(28px, 7vw, 56px);
-  border: 1px solid #ffc46b;
-  border-radius: 999px;
-  background: linear-gradient(180deg, #ffcf7a, #f0a94a);
-  color: #2a1a08;
-  font-size: clamp(1.1rem, 4vw, 1.4rem);
-  font-weight: 800;
-  box-shadow: 0 8px 24px rgba(240, 169, 74, 0.35);
-  animation: pulsar 2.4s ease-in-out infinite;
-}
-@keyframes pulsar { 50% { box-shadow: 0 8px 36px rgba(255, 196, 107, 0.65); } }
-.acoes-entrada { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
-.entrada ul {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 8px 14px;
-  margin: 4px 0 0;
-  padding: 0;
-  max-width: 100%;
-  list-style: none;
-  font-size: clamp(0.8rem, 2.6vw, 0.92rem);
-  color: #d8d2c6;
-}
-.entrada kbd {
-  padding: 2px 8px;
-  border: 1px solid rgba(255, 255, 255, 0.25);
-  border-bottom-width: 3px;
-  border-radius: 6px;
-  background: rgba(0, 0, 0, 0.35);
-  color: #ffe2a8;
-  font-family: inherit;
-  font-weight: 700;
-}
 .hud, .barra, .nome-item { --escala-ui: 1; }
 .hud > * { transform: scale(var(--escala-ui)); transform-origin: top left; }
 .hud .fps { transform-origin: top right; }
@@ -258,50 +156,76 @@ export function criarInterface(
   app.appendChild(hud);
   criarBarra(app, hotbar);
 
+  const estiloTitulo = document.createElement('style');
+  estiloTitulo.textContent = CSS_TITULO;
+  document.head.appendChild(estiloTitulo);
+
+  // Tela de título: logo em pixel-art sobre o panorama do mundo, menu de botões de jogo.
   const entrada = document.createElement('div');
   entrada.className = 'entrada';
-  const titulo = document.createElement('h1');
-  titulo.textContent = 'Brumaluz';
-  const sub = document.createElement('p');
-  sub.className = 'subtitulo';
-  sub.textContent = 'Explore, construa e sobreviva num mundo de bruma e luz';
-  const instrucao = document.createElement('p');
-  instrucao.className = 'instrucao';
-  instrucao.textContent = 'Clique para jogar';
-  const lista = document.createElement('ul');
-  for (const [tecla, acao] of TECLAS) {
-    const item = document.createElement('li');
-    const k = document.createElement('kbd');
-    k.textContent = tecla;
-    item.append(k, ` ${acao}`);
-    lista.appendChild(item);
+  const bruma = document.createElement('div');
+  bruma.className = 'bruma-titulo';
+  bruma.append(...Array.from({ length: 3 }, () => document.createElement('i')));
+  entrada.appendChild(bruma);
+  for (let i = 0; i < 14; i++) {
+    const f = document.createElement('span');
+    f.className = 'faisca';
+    f.style.left = `${(i * 37 + 11) % 100}vw`;
+    f.style.bottom = `${(i * 23) % 30}vh`;
+    f.style.animationDuration = `${7 + ((i * 13) % 9)}s`;
+    f.style.animationDelay = `${-((i * 1.7) % 9)}s`;
+    entrada.appendChild(f);
   }
-  const grade = document.createElement('div');
-  grade.className = 'entrada-grade';
-  const coluna = document.createElement('div');
-  coluna.className = 'coluna-titulo';
-  const cartao = document.createElement('div');
-  cartao.className = 'cartao-atual';
-  cartao.setAttribute('data-mundo-atual', '');
-  const info = document.createElement('div');
-  info.className = 'info';
-  const rot = document.createElement('div');
-  rot.className = 'rotulo';
-  const nomeMundo = document.createElement('div');
-  nomeMundo.className = 'nome';
-  info.append(rot, nomeMundo);
-  cartao.appendChild(info);
+  const menu = document.createElement('div');
+  menu.className = 'titulo-menu';
+  const titulo = document.createElement('h1');
+  titulo.className = 'titulo-oculto';
+  titulo.textContent = 'Brumaluz';
+  const logo = document.createElement('canvas');
+  logo.className = 'logo-titulo';
+  logo.setAttribute('role', 'img');
+  logo.setAttribute('aria-label', 'Brumaluz');
+  desenharLogo(logo);
+  const sub = document.createElement('p');
+  sub.className = 'lema';
+  sub.textContent = 'Explore, construa e sobreviva num mundo de bruma e luz';
+  const pedra = `url(${texturaDoBloco(Bloco.PEDRA_LISA)})`;
+  const botaoJogo = (rotulo: string, icone: string, attr: string, classe = '') => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = `botao-jogo ${classe}`.trim();
+    b.style.setProperty('--textura', pedra);
+    b.setAttribute(attr, '');
+    const linha = document.createElement('span');
+    linha.className = 'linha';
+    const ic = document.createElement('span');
+    ic.className = 'icone';
+    ic.setAttribute('aria-hidden', 'true');
+    ic.textContent = icone;
+    linha.append(ic, rotulo);
+    b.appendChild(linha);
+    return b;
+  };
+  const jogar = botaoJogo('Jogar', '▶', 'data-jogar-titulo', 'primario');
+  const subJogar = document.createElement('span');
+  subJogar.className = 'sub';
+  subJogar.setAttribute('data-mundo-atual', '');
+  jogar.appendChild(subJogar);
   const atualizarCartao = (m: MetaMundo | null | undefined) => {
-    rot.textContent = m
-      ? `${m.modo === 'criativo' ? 'Criativo' : 'Sobrevivência'} · semente ${m.semente}`
-      : 'Mundo';
-    nomeMundo.textContent = m?.nome ?? 'Mundo de passagem';
-    if (m?.miniatura) cartao.style.backgroundImage = `url(${m.miniatura})`;
+    const modo = m ? (m.modo === 'criativo' ? 'Criativo' : 'Sobrevivência') : '';
+    subJogar.textContent = m ? `${m.nome} · ${modo}` : 'Mundo de passagem';
   };
   atualizarCartao(opMundo.mundo);
-  const acoes = document.createElement('div');
-  acoes.className = 'acoes-entrada';
-  acoes.addEventListener('click', (e) => e.stopPropagation());
+  const menuBotoes = document.createElement('div');
+  menuBotoes.className = 'menu-titulo';
+  const dupla = document.createElement('div');
+  dupla.className = 'dupla';
+  menuBotoes.append(jogar, dupla);
+  const acoes = menuBotoes;
+  acoes.addEventListener('click', (e) => {
+    if (e.target instanceof Element && e.target.closest('[data-jogar-titulo]')) return;
+    e.stopPropagation();
+  });
   const estiloModal = document.createElement('style');
   estiloModal.textContent = CSS_MODAL + CSS_CONFIG + CSS_PAUSA;
   document.head.appendChild(estiloModal);
@@ -312,32 +236,76 @@ export function criarInterface(
       atual: opMundo.mundo ?? null,
       abrir: (id) => opMundo.abrirMundo?.(id),
     });
-    const bMundos = document.createElement('button');
-    bMundos.type = 'button';
-    bMundos.className = 'btn';
-    bMundos.setAttribute('data-abrir-mundos', '');
-    bMundos.textContent = '🌍 Mundos';
+    const bMundos = botaoJogo('Mundos', '🌍', 'data-abrir-mundos');
     abrirMundos = () => void painelMundos.abrir();
     bMundos.addEventListener('click', abrirMundos);
-    acoes.appendChild(bMundos);
+    dupla.appendChild(bMundos);
     window.addEventListener('brumaluz:salvo', async () => {
       if (opMundo.mundo) atualizarCartao(await opMundo.repo!.obter(opMundo.mundo.id));
     });
   }
+  const bPersonagem = botaoJogo('Personagem', '🧍', 'data-abrir-personagem');
+  dupla.appendChild(bPersonagem);
   const painelConfig = opMundo.config ? criarPainelConfig(app, opMundo.config) : null;
   if (painelConfig) {
-    const bConfig = document.createElement('button');
-    bConfig.type = 'button';
-    bConfig.className = 'btn';
-    bConfig.setAttribute('data-abrir-config', '');
-    bConfig.textContent = '⚙ Configurações';
+    const bConfig = botaoJogo('Configurações', '⚙', 'data-abrir-config');
     bConfig.addEventListener('click', () => painelConfig.abrir());
-    acoes.appendChild(bConfig);
+    menuBotoes.appendChild(bConfig);
   }
-  coluna.append(titulo, sub, cartao, instrucao, acoes, lista);
-  grade.appendChild(coluna);
-  entrada.appendChild(grade);
+  menu.append(titulo, logo, sub, menuBotoes);
+  const rodape = document.createElement('div');
+  rodape.className = 'rodape-titulo';
+  const versao = document.createElement('span');
+  versao.textContent = 'Brumaluz · arte, música e sons gerados por código';
+  const lista = document.createElement('ul');
+  for (const [tecla, acao] of TECLAS) {
+    const item = document.createElement('li');
+    const k = document.createElement('kbd');
+    k.textContent = tecla;
+    item.append(k, ` ${acao}`);
+    lista.appendChild(item);
+  }
+  rodape.append(versao, lista);
+  menu.appendChild(rodape);
+
+  // Tela do personagem: prévia em pixel-art à esquerda, opções à direita.
+  const telaPersonagem = document.createElement('div');
+  telaPersonagem.className = 'tela-personagem';
+  telaPersonagem.hidden = true;
+  const palco = document.createElement('div');
+  palco.className = 'palco-personagem';
+  const voltar = botaoJogo('Voltar', '←', 'data-voltar-titulo', 'voltar-titulo');
+  const pedestal = document.createElement('div');
+  pedestal.className = 'pedestal';
+  const previa = document.createElement('canvas');
+  previa.setAttribute('data-previa-personagem', '');
+  previa.setAttribute('role', 'img');
+  previa.setAttribute('aria-label', 'Prévia do personagem');
+  pedestal.appendChild(previa);
+  const nomePrevia = document.createElement('div');
+  nomePrevia.className = 'nome-previa';
+  palco.append(voltar, pedestal, nomePrevia);
+  telaPersonagem.appendChild(palco);
+  telaPersonagem.addEventListener('click', (e) => e.stopPropagation());
+  entrada.append(menu, telaPersonagem);
   app.appendChild(entrada);
+
+  function mostrarTela(qual: 'menu' | 'personagem'): void {
+    menu.hidden = qual !== 'menu';
+    telaPersonagem.hidden = qual !== 'personagem';
+  }
+  bPersonagem.addEventListener('click', () => mostrarTela('personagem'));
+  voltar.addEventListener('click', () => mostrarTela('menu'));
+  // Sem HUD por cima do título; volta ao menu quando o título fecha.
+  const sincronizarTitulo = () => {
+    document.body.classList.toggle('tela-titulo', !entrada.hidden);
+    if (entrada.hidden) mostrarTela('menu');
+  };
+  new MutationObserver(sincronizarTitulo).observe(entrada, {
+    attributes: true,
+    attributeFilter: ['hidden'],
+  });
+  sincronizarTitulo();
 
   function entrarNoJogo(): void {
     entrada.hidden = true;
@@ -370,20 +338,28 @@ export function criarInterface(
     infoMundo.textContent = window.__brumaluz?.infoMundo ?? '';
     infoMundo.hidden = !infoMundo.textContent;
   }, 1000);
-  const painel = criarPainelPersonagem(grade, {
+  const painel = criarPainelPersonagem(telaPersonagem, {
     armazenamento: armazenamento(),
     aoMudar: (a) => {
       nomeHud.textContent = rotuloNome(a);
+      nomePrevia.textContent = rotuloNome(a);
+      desenharPrevia(previa, a);
       window.__brumaluz?.personagem?.definir(a);
     },
     aoJogar: entrarNoJogo,
   });
   nomeHud.textContent = rotuloNome(painel.aparencia());
+  nomePrevia.textContent = rotuloNome(painel.aparencia());
+  desenharPrevia(previa, painel.aparencia());
 
-  entrada.addEventListener('click', entrarNoJogo);
+  entrada.addEventListener('click', () => {
+    if (telaPersonagem.hidden) entrarNoJogo();
+  });
   window.addEventListener('keydown', (e) => {
     if (!teclaParaPainel(e.code) || e.repeat) return;
+    if (e.target instanceof HTMLInputElement) return;
     entrada.hidden = false;
+    mostrarTela('personagem');
     document.exitPointerLock?.();
   });
   // Pausa: perder o ponteiro durante o jogo abre o menu de pausa (não a tela de título).

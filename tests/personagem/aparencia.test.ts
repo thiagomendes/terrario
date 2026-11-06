@@ -8,14 +8,22 @@ import {
 } from '../../src/personagem/aparencia';
 
 describe('aparência', () => {
-  it('tem 4 modelos distintos em opções e proporções', () => {
-    expect(IDS_MODELOS).toEqual(['andarilho', 'herbolaria', 'lanterneiro', 'musgueira']);
+  it('tem 7 modelos distintos em opções e proporções', () => {
+    expect(IDS_MODELOS).toEqual([
+      'andarilho',
+      'herbolaria',
+      'lanterneiro',
+      'musgueira',
+      'exploradora',
+      'tecela',
+      'ferreiro',
+    ]);
     const opcoes = new Set(IDS_MODELOS.map((m) => JSON.stringify(MODELOS[m].opcoes)));
     const prop = new Set(
       IDS_MODELOS.map((m) => `${MODELOS[m].larguraTronco}/${MODELOS[m].comprimentoPernas}`),
     );
-    expect(opcoes.size).toBe(4);
-    expect(prop.size).toBe(4);
+    expect(opcoes.size).toBe(7);
+    expect(prop.size).toBe(7);
   });
 
   it('aplicarModelo troca opções e mantém o nome', () => {
@@ -35,7 +43,7 @@ describe('aparência', () => {
   it('índice ou id inválido volta ao padrão do modelo', () => {
     const r = normalizarAparencia({
       modelo: 'musgueira',
-      pele: 9,
+      pele: 99,
       roupaCor: -1,
       calcaCor: 1.5,
       acessorio: 'x',
