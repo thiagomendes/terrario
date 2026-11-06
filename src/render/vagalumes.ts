@@ -7,6 +7,7 @@ import type { Scene } from '@babylonjs/core/scene';
 
 export interface Vagalumes {
   atualizar(posicao: Vector3, noite: number): void;
+  definirDensidade(f: number): void;
   readonly particulas: ParticleSystem;
 }
 
@@ -59,12 +60,17 @@ export function criarVagalumes(scene: Scene): Vagalumes {
     ps.addColorGradient(0.45, c.scale(a * 0.25));
     ps.addColorGradient(0.65, c.scale(a));
     ps.addColorGradient(1, new Color4(0, 0, 0, 0));
-    ps.emitRate = 12 + 30 * noite;
+    ps.emitRate = (12 + 30 * noite) * densidade;
   }
 
   let ultimaNoite = -1;
+  let densidade = 1;
   return {
     particulas: ps,
+    definirDensidade(f) {
+      densidade = f;
+      ultimaNoite = -1;
+    },
     atualizar(posicao, noite) {
       (ps.emitter as Vector3).copyFrom(posicao);
       const q = Math.round(noite * 20) / 20;

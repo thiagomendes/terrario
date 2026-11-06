@@ -48,6 +48,8 @@ export interface MotorAudio {
   ativar(): Promise<void>;
   tocar(desenho: Desenho, opcoes?: OpcoesTocar): boolean;
   alternarMudo(): boolean;
+  /** Volume de 0 a 1 do mestre ou de um grupo. */
+  definirVolume(alvo: GrupoAudio | 'geral', v: number): void;
 }
 
 const GANHOS_PADRAO: Record<GrupoAudio, number> = {
@@ -69,7 +71,9 @@ export function criarMotorAudio(fabrica: FabricaContexto, opcoes: OpcoesMotor = 
   let ctx: ContextoAudio | null = null;
   let ativando: Promise<void> | null = null;
   let mestre: (NoAudio & { gain: ParametroAudio }) | null = null;
-  let grupos: Record<GrupoAudio, NoAudio> | null = null;
+  let grupos: Record<GrupoAudio, NoAudio & { gain: ParametroAudio }> | null = null;
+  let volumeGeral = 1;
+  const volumes: Record<GrupoAudio, number> = { efeitos: 1, passos: 1, ambiente: 1 };
   const vozes: Voz[] = [];
 
   function montarBus(c: ContextoAudio) {
@@ -79,10 +83,11 @@ export function criarMotorAudio(fabrica: FabricaContexto, opcoes: OpcoesMotor = 
     compressor.connect(c.destination);
     const criar = (g: GrupoAudio) => {
       const no = c.createGain();
-      no.gain.value = ganhosGrupo[g];
+      no.gain.value = ganhosGrupo[g] * volumes[g];
       no.connect(m);
       return no;
     };
+    m.gain.value = volumeGeral;
     mestre = m;
     grupos = { efeitos: criar('efeitos'), passos: criar('passos'), ambiente: criar('ambiente') };
   }
@@ -148,8 +153,18 @@ export function criarMotorAudio(fabrica: FabricaContexto, opcoes: OpcoesMotor = 
     },
     alternarMudo() {
       mudo = !mudo;
-      if (mestre) mestre.gain.value = mudo ? 0 : 1;
+      if (mestre) mestre.gain.value = mudo ? 0 : volumeGeral;
       return mudo;
+    },
+    definirVolume(alvo, v) {
+      const x = Math.max(0, Math.min(1, Number.isFinite(v) ? v : 1));
+      if (alvo === 'geral') {
+        volumeGeral = x;
+        if (mestre) mestre.gain.value = mudo ? 0 : x;
+        return;
+      }
+      volumes[alvo] = x;
+      if (grupos) grupos[alvo].gain.value = ganhosGrupo[alvo] * x;
     },
   };
 }

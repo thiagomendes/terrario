@@ -7,6 +7,9 @@ import { MODELOS, type Aparencia } from '../personagem/aparencia';
 import type { Armazenamento } from '../personagem/persistencia';
 import { CSS_PAINEL, criarPainelPersonagem, teclaParaPainel } from './personagem';
 import { CSS_MODAL, criarPainelMundos } from './mundos';
+import { CSS_CONFIG, criarPainelConfig } from './configuracoes';
+import { CSS_PAUSA, criarMenuPausa } from './pausa';
+import type { GerenciadorConfig } from '../jogo/config';
 import type { MetaMundo, RepositorioMundos } from '../jogo/mundos';
 
 const CSS = `
@@ -115,6 +118,11 @@ const CSS = `
   font-family: inherit;
   font-weight: 700;
 }
+.hud, .barra, .nome-item { --escala-ui: 1; }
+.hud > * { transform: scale(var(--escala-ui)); transform-origin: top left; }
+.hud .fps { transform-origin: top right; }
+.hud .mira { transform: translate(-50%, -50%) scale(var(--escala-ui)); }
+.barra { transform: translateX(-50%) scale(var(--escala-ui)) !important; transform-origin: bottom center; }
 .toast-area {
   position: fixed; top: 12px; left: 50%; transform: translateX(-50%); z-index: 50;
   display: grid; gap: 6px; justify-items: center; pointer-events: none;
@@ -206,6 +214,8 @@ export interface OpcoesInterface {
   repo?: RepositorioMundos;
   mundo?: MetaMundo | null;
   abrirMundo?: (id: string) => void;
+  config?: GerenciadorConfig;
+  salvar?: () => Promise<boolean>;
 }
 
 export function criarInterface(
@@ -280,10 +290,11 @@ export function criarInterface(
   const acoes = document.createElement('div');
   acoes.className = 'acoes-entrada';
   acoes.addEventListener('click', (e) => e.stopPropagation());
+  const estiloModal = document.createElement('style');
+  estiloModal.textContent = CSS_MODAL + CSS_CONFIG + CSS_PAUSA;
+  document.head.appendChild(estiloModal);
+  let abrirMundos: (() => void) | null = null;
   if (opMundo.repo) {
-    const estiloModal = document.createElement('style');
-    estiloModal.textContent = CSS_MODAL;
-    document.head.appendChild(estiloModal);
     const painelMundos = criarPainelMundos(app, {
       repo: opMundo.repo,
       atual: opMundo.mundo ?? null,
@@ -294,11 +305,22 @@ export function criarInterface(
     bMundos.className = 'btn';
     bMundos.setAttribute('data-abrir-mundos', '');
     bMundos.textContent = '🌍 Mundos';
-    bMundos.addEventListener('click', () => void painelMundos.abrir());
+    abrirMundos = () => void painelMundos.abrir();
+    bMundos.addEventListener('click', abrirMundos);
     acoes.appendChild(bMundos);
     window.addEventListener('brumaluz:salvo', async () => {
       if (opMundo.mundo) atualizarCartao(await opMundo.repo!.obter(opMundo.mundo.id));
     });
+  }
+  const painelConfig = opMundo.config ? criarPainelConfig(app, opMundo.config) : null;
+  if (painelConfig) {
+    const bConfig = document.createElement('button');
+    bConfig.type = 'button';
+    bConfig.className = 'btn';
+    bConfig.setAttribute('data-abrir-config', '');
+    bConfig.textContent = '⚙ Configurações';
+    bConfig.addEventListener('click', () => painelConfig.abrir());
+    acoes.appendChild(bConfig);
   }
   coluna.append(titulo, sub, cartao, instrucao, acoes, lista);
   grade.appendChild(coluna);
@@ -343,9 +365,48 @@ export function criarInterface(
     entrada.hidden = false;
     document.exitPointerLock?.();
   });
+  // Pausa: perder o ponteiro durante o jogo abre o menu de pausa (não a tela de título).
+  let jogoIniciado = false;
+  const canvasJogo = () => document.getElementById('cena');
+  const pausa = criarMenuPausa(app, opMundo.mundo?.nome ?? 'Mundo', {
+    continuar: () => {
+      pausa.fechar();
+      canvasJogo()?.requestPointerLock?.();
+    },
+    configuracoes: () => painelConfig?.abrir(),
+    mundos: () => abrirMundos?.(),
+    salvar: async () => {
+      const ok = await opMundo.salvar?.();
+      notificar(ok ? 'Mundo salvo ✓' : 'Não foi possível salvar agora');
+    },
+    telaInicial: () => {
+      pausa.fechar();
+      void opMundo.salvar?.();
+      entrada.hidden = false;
+    },
+  });
   document.addEventListener('pointerlockchange', () => {
-    if (document.pointerLockElement !== null) entrada.hidden = true;
-    else if (!document.body.dataset.overlay) entrada.hidden = false;
+    if (document.pointerLockElement !== null) {
+      jogoIniciado = true;
+      entrada.hidden = true;
+      pausa.fechar();
+    } else if (!document.body.dataset.overlay) {
+      if (jogoIniciado && entrada.hidden) pausa.abrir();
+      else entrada.hidden = false;
+    }
+  });
+  window.addEventListener('keydown', (e) => {
+    if (e.code !== 'Escape' || !pausa.aberto) return;
+    if (document.querySelector('.modal-fundo:not([hidden])')) return;
+    pausa.fechar();
+    canvasJogo()?.requestPointerLock?.();
+  });
+  opMundo.config?.ouvir((c) => {
+    fps.hidden = !c.mostrarFps;
+    document.documentElement.style.setProperty('--escala-ui', String(c.escalaInterface));
+    for (const el of document.querySelectorAll<HTMLElement>('.hud, .barra, .nome-item')) {
+      el.style.setProperty('--escala-ui', String(c.escalaInterface));
+    }
   });
   window.addEventListener('brumaluz:toast', (e) => notificar((e as CustomEvent<string>).detail));
 

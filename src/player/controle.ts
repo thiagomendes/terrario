@@ -54,6 +54,8 @@ export function criarControle(
   const teclas: TeclasAtivas = {};
   let yaw = 0.8;
   let pitch = 0.2;
+  let sensibilidade = 1;
+  let inverterY = false;
 
   window.addEventListener('keydown', (e) => {
     const a = acaoDaTecla(e.code);
@@ -68,7 +70,12 @@ export function criarControle(
   });
   document.addEventListener('mousemove', (e) => {
     if (document.pointerLockElement !== canvas) return;
-    ({ yaw, pitch } = aplicarMouse(yaw, pitch, e.movementX, e.movementY));
+    ({ yaw, pitch } = aplicarMouse(
+      yaw,
+      pitch,
+      e.movementX * sensibilidade,
+      e.movementY * sensibilidade * (inverterY ? -1 : 1),
+    ));
   });
 
   function atualizar(dtSeg: number): void {
@@ -92,5 +99,10 @@ export function criarControle(
     pitch = novoPitch;
   }
 
-  return { atualizar, jogador, apontar, solido };
+  function definirMouse(sens: number, inverter: boolean): void {
+    sensibilidade = sens;
+    inverterY = inverter;
+  }
+
+  return { atualizar, jogador, apontar, solido, definirMouse, teclas };
 }

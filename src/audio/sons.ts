@@ -469,6 +469,8 @@ export interface Ambiente {
   parar(): void;
   /** 0 de dia (pássaros), 1 de noite (grilos); muda a mistura. */
   definirNoite(noite: number): void;
+  /** Volumes relativos (0 a 1) da trilha e da natureza. */
+  definirVolumes(musica: number, natureza: number): void;
 }
 
 interface RelogioAgenda {
@@ -517,6 +519,8 @@ export function iniciarAmbiente(
   const vivas = new Set<FonteAudio>();
   let timer: unknown = null;
   let noite = 0;
+  let volMusica = 1;
+  let volNatureza = 1;
   let ctxA: ContextoSintese | null = null;
   let busNatureza: GanhoSom | null = null;
   let busMusica: GanhoSom | null = null;
@@ -639,10 +643,10 @@ export function iniciarAmbiente(
         mestre.gain.value = GANHO_MAXIMO_AMBIENTE;
         mestre.connect(destino);
         busNatureza = ctx.createGain() as GanhoSom;
-        busNatureza.gain.value = 0.8;
+        busNatureza.gain.value = 0.8 * volNatureza;
         busNatureza.connect(mestre);
         busMusica = ctx.createGain() as GanhoSom;
-        busMusica.gain.value = 0.6;
+        busMusica.gain.value = 0.6 * volMusica;
         busMusica.connect(mestre);
         if (ctx.createConvolver) {
           const rev = ctx.createConvolver();
@@ -691,6 +695,12 @@ export function iniciarAmbiente(
   return {
     definirNoite(n) {
       noite = Math.max(0, Math.min(1, n));
+    },
+    definirVolumes(musica, natureza) {
+      volMusica = musica;
+      volNatureza = natureza;
+      if (busMusica) busMusica.gain.value = 0.6 * musica;
+      if (busNatureza) busNatureza.gain.value = 0.8 * natureza;
     },
     parar() {
       if (timer !== null && relogio) relogio.clearInterval(timer);

@@ -4,6 +4,7 @@ import { criarInterface } from './ui/interface';
 import { armazemIndexedDB } from './jogo/indexeddb';
 import { SEMENTE_PADRAO_MUNDO, criarRepositorioMundos, type MetaMundo } from './jogo/mundos';
 import { CSS_INVENTARIO, criarInventarioUI } from './ui/inventario';
+import { criarGerenciadorConfig } from './jogo/config';
 
 async function iniciar(app: HTMLElement): Promise<void> {
   const repo = criarRepositorioMundos(armazemIndexedDB());
@@ -23,9 +24,18 @@ async function iniciar(app: HTMLElement): Promise<void> {
   const hotbar = criarHotbar();
   const atual = mundo;
   let cena: ReturnType<typeof criarCena> | null = null;
+  let armazenamento: Storage | null = null;
+  try {
+    armazenamento = window.localStorage;
+  } catch {
+    armazenamento = null;
+  }
+  const config = criarGerenciadorConfig(armazenamento);
   criarInterface(app, hotbar, {
     repo,
     mundo: atual,
+    config,
+    salvar: () => cena?.salvar() ?? Promise.resolve(false),
     abrirMundo: async (id) => {
       await cena?.salvar();
       const url = new URL(location.href);
@@ -33,7 +43,7 @@ async function iniciar(app: HTMLElement): Promise<void> {
       location.href = url.toString();
     },
   });
-  cena = criarCena(canvas, hotbar, { mundo: atual, dados, repo });
+  cena = criarCena(canvas, hotbar, { mundo: atual, dados, repo, config });
   panorama(cena);
   ligarInventario(app, canvas, cena, hotbar);
 }
@@ -103,7 +113,9 @@ function ligarInventario(
   (window as unknown as { __inventarioUI?: typeof ui }).__inventarioUI = ui;
   window.addEventListener('keydown', (e) => {
     if ((e.target as HTMLElement)?.closest?.('input, textarea')) return;
-    const naEntrada = !!document.querySelector('.entrada:not([hidden])');
+    const naEntrada =
+      !!document.querySelector('.entrada:not([hidden])') ||
+      document.body.dataset.overlay === 'pausa';
     if (e.code === 'KeyE' && !e.repeat && !naEntrada) {
       if (ui.aberto) ui.fechar();
       else {

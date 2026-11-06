@@ -49,6 +49,7 @@ import type { DadosMundo, MetaMundo, ModoJogo, RepositorioMundos } from '../jogo
 import { criarMundoDeItens, dropsDoBloco } from '../jogo/drops';
 import { obterItem } from '../jogo/itens';
 import { criarRenderItens } from './itensSoltos';
+import { perfilDaQualidade, type Config, type GerenciadorConfig } from '../jogo/config';
 import { iconeDoItem } from '../ui/icones';
 import type { Buffers } from '../mesh/malha';
 import type { RespostaChunk, PedidoChunk } from '../workers/chunk.worker';
@@ -107,6 +108,8 @@ import { criarBraco } from './braco';
 import { criarPersonagem } from './personagem';
 
 const RAIO_INICIAL = 3;
+let raioChunks = RAIO_INICIAL;
+let fatorNevoa = 1;
 const RAIO_SOMBRA = 1;
 const ALCANCE = 5;
 
@@ -175,6 +178,7 @@ declare global {
 }
 
 export interface OpcoesCena {
+  config?: GerenciadorConfig;
   mundo?: MetaMundo;
   dados?: DadosMundo;
   repo?: RepositorioMundos;
@@ -388,7 +392,7 @@ export function criarCena(
     const a = atmosferaNaHora(hora);
     estado.atmosfera = { noite: a.noite, crepusculo: a.crepusculo };
     scene.fogColor.set(...a.nevoa);
-    scene.fogDensity = a.densidadeNevoa;
+    scene.fogDensity = a.densidadeNevoa * fatorNevoa;
     scene.clearColor.set(a.nevoa[0], a.nevoa[1], a.nevoa[2], 1);
     scene.ambientColor.set(...a.ambiente);
     luz.diffuse.set(...a.ceuLuz);
@@ -739,7 +743,7 @@ export function criarCena(
   function atualizarChunks(): void {
     const cx = Math.floor(camera.position.x / TAM_X);
     const cz = Math.floor(camera.position.z / TAM_Z);
-    const desejados = chunksDesejados(cx, cz, RAIO_INICIAL);
+    const desejados = chunksDesejados(cx, cz, raioChunks);
     const plano = planejar([...malhas.keys(), ...pedidos], desejados);
     for (const k of plano.descartar) {
       malhas.get(k)?.forEach((m) => {
@@ -979,12 +983,15 @@ export function criarCena(
   ligarAudio(barramento, motorAudio);
   const detector = criarDetectorMovimento();
   let ambiente: Ambiente | null = null;
+  let configAtual: Config | null = null;
   ativarNoPrimeiroGesto(document, {
     ativar: async () => {
       await motorAudio.ativar();
       if (motorAudio.estado !== 'ativo') return;
       tocarSom(motorAudio, 'entrada');
       ambiente = iniciarAmbiente(motorAudio);
+      if (configAtual)
+        ambiente.definirVolumes(configAtual.volumeMusica, configAtual.volumeAmbiente);
     },
   });
   window.addEventListener('keydown', (e) => {
@@ -1045,7 +1052,8 @@ export function criarCena(
     balanco.atualizar(tempo);
     scene.render();
   });
-  let base = escalaBase(window.innerWidth);
+  let escalaMinima = 1;
+  let base = Math.max(escalaBase(window.innerWidth), escalaMinima);
   function aplicarEscala(valor: number): void {
     estado.escalaResolucao = valor;
     engine.setHardwareScalingLevel(valor);
@@ -1059,10 +1067,41 @@ export function criarCena(
   }, 2000);
   window.addEventListener('resize', () => {
     const anterior = base;
-    base = escalaBase(window.innerWidth);
+    base = Math.max(escalaBase(window.innerWidth), escalaMinima);
     if (base !== anterior) aplicarEscala(Math.max(base, estado.escalaResolucao));
     else engine.resize();
   });
+
+  // Configurações do jogador (vídeo, áudio, controles).
+  function aplicarConfig(c: Config): void {
+    const fov = (c.fov * Math.PI) / 180;
+    camera.fov = fov;
+    cameraVisao.fov = fov;
+    raioChunks = c.distancia;
+    fatorNevoa = Math.sqrt(RAIO_INICIAL / Math.max(2, c.distancia - 1));
+    const alcance = Math.max(300, (c.distancia + 2) * 16 * 1.6);
+    camera.maxZ = alcance;
+    cameraVisao.maxZ = alcance;
+    const q = perfilDaQualidade(c.qualidade);
+    sol.shadowEnabled = q.sombras;
+    pipeline.bloomEnabled = q.bloom;
+    pipeline.fxaaEnabled = q.fxaa;
+    glow.isEnabled = q.glow;
+    vagalumes.definirDensidade(q.vagalumes / 260);
+    if (q.escalaMinima !== escalaMinima) {
+      escalaMinima = q.escalaMinima;
+      base = Math.max(escalaBase(window.innerWidth), escalaMinima);
+      aplicarEscala(base);
+    }
+    motorAudio.definirVolume('geral', c.volumeGeral);
+    motorAudio.definirVolume('efeitos', c.volumeEfeitos);
+    motorAudio.definirVolume('passos', c.volumeEfeitos);
+    configAtual = c;
+    ambiente?.definirVolumes(c.volumeMusica, c.volumeAmbiente);
+    controle.definirMouse(c.sensibilidade, c.inverterY);
+    braco.definirBalanco(c.balanco);
+  }
+  opcoes.config?.ouvir(aplicarConfig);
 
   // Nascimento: sem posição salva, garante que o jogador comece em ar livre.
   if (!dadosIniciais?.jogador) estado.teleportar?.(controle.jogador.x, controle.jogador.z);

@@ -25,6 +25,7 @@ export interface Braco {
   aplicarPose(pose: Pose): void;
   /** Anima o braço (viewmodel): repouso discreto, golpe, colocação, balanço e troca. */
   atualizarVista(dt: number, vista: Vista): void;
+  definirBalanco(ativo: boolean): void;
   aplicarAparencia(aparencia: Aparencia): void;
   definirVisivel(visivel: boolean): void;
   contarMalhas(): number;
@@ -148,6 +149,7 @@ export function criarBraco(scene: Scene, camera: TargetCamera, aparencia: Aparen
   let balX = 0;
   let balY = 0;
   let troca = 1;
+  let balancoAtivo = true;
 
   function ombro() {
     const { largura, altura } = tamanhoTela();
@@ -189,7 +191,7 @@ export function criarBraco(scene: Scene, camera: TargetCamera, aparencia: Aparen
     troca = Math.min(1, troca + passo / 0.25);
 
     const fase = v.tempo * (v.passada > 1.2 ? 2.4 : 1.6) * Math.PI;
-    const amp = Math.min(v.passada, 1.5);
+    const amp = Math.min(v.passada, 1.5) * (balancoAtivo ? 1 : 0.15);
     let px = Math.sin(fase) * 0.012 * amp + balX;
     let py = -Math.abs(Math.cos(fase)) * 0.018 * amp + balY;
     let pz = 0;
@@ -250,6 +252,9 @@ export function criarBraco(scene: Scene, camera: TargetCamera, aparencia: Aparen
     definirBloco,
     aplicarPose,
     atualizarVista,
+    definirBalanco(a) {
+      balancoAtivo = a;
+    },
     aplicarAparencia,
     definirVisivel(v) {
       visivel = v;
