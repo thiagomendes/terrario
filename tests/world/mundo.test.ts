@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { Bloco, REGISTRO_BLOCOS } from '../../src/world/blocks';
-import { ALTURA, TAM_X, TAM_Z, gerarChunk } from '../../src/world/chunk';
+import {
+  ALTURA,
+  SEMENTE_PADRAO,
+  TAM_X,
+  TAM_Z,
+  encontrarNascimento,
+  gerarChunk,
+} from '../../src/world/chunk';
 
 describe('registro', () => {
   it('índice igual ao id, plantas em cruz e emissivos com luz', () => {
@@ -28,10 +35,13 @@ describe('gerarChunk', () => {
     expect(c.every((b) => b < REGISTRO_BLOCOS.length)).toBe(true);
   });
 
-  it('5x5 chunks têm areia, árvores, vegetação e cristal', () => {
+  it('chunks em volta do nascimento têm areia, árvores, vegetação e cristal', () => {
     const contagem = new Map<number, number>();
-    for (let cz = -2; cz <= 2; cz++) {
-      for (let cx = -2; cx <= 2; cx++) {
+    const n = encontrarNascimento(SEMENTE_PADRAO);
+    const ncx = Math.floor(n.x / TAM_X);
+    const ncz = Math.floor(n.z / TAM_Z);
+    for (let cz = ncz - 3; cz <= ncz + 3; cz++) {
+      for (let cx = ncx - 3; cx <= ncx + 3; cx++) {
         for (const b of gerarChunk(cx, cz)) contagem.set(b, (contagem.get(b) ?? 0) + 1);
       }
     }

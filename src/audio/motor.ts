@@ -50,6 +50,8 @@ export interface MotorAudio {
   alternarMudo(): boolean;
   /** Volume de 0 a 1 do mestre ou de um grupo. */
   definirVolume(alvo: GrupoAudio | 'geral', v: number): void;
+  /** Som abafado (debaixo d'água). */
+  definirAbafado(abafado: boolean): void;
 }
 
 const GANHOS_PADRAO: Record<GrupoAudio, number> = {
@@ -73,13 +75,26 @@ export function criarMotorAudio(fabrica: FabricaContexto, opcoes: OpcoesMotor = 
   let mestre: (NoAudio & { gain: ParametroAudio }) | null = null;
   let grupos: Record<GrupoAudio, NoAudio & { gain: ParametroAudio }> | null = null;
   let volumeGeral = 1;
+  let filtroAbafado: { frequency: ParametroAudio } | null = null;
   const volumes: Record<GrupoAudio, number> = { efeitos: 1, passos: 1, ambiente: 1 };
   const vozes: Voz[] = [];
 
   function montarBus(c: ContextoAudio) {
     const m = c.createGain();
     const compressor = c.createDynamicsCompressor();
-    m.connect(compressor);
+    const cf = c as unknown as {
+      createBiquadFilter?: () => NoAudio & { type: string; frequency: ParametroAudio };
+    };
+    if (cf.createBiquadFilter) {
+      const f = cf.createBiquadFilter();
+      f.type = 'lowpass';
+      f.frequency.value = 20000;
+      m.connect(f);
+      f.connect(compressor);
+      filtroAbafado = f;
+    } else {
+      m.connect(compressor);
+    }
     compressor.connect(c.destination);
     const criar = (g: GrupoAudio) => {
       const no = c.createGain();
@@ -155,6 +170,9 @@ export function criarMotorAudio(fabrica: FabricaContexto, opcoes: OpcoesMotor = 
       mudo = !mudo;
       if (mestre) mestre.gain.value = mudo ? 0 : volumeGeral;
       return mudo;
+    },
+    definirAbafado(abafado) {
+      if (filtroAbafado) filtroAbafado.frequency.value = abafado ? 600 : 20000;
     },
     definirVolume(alvo, v) {
       const x = Math.max(0, Math.min(1, Number.isFinite(v) ? v : 1));

@@ -9,7 +9,7 @@ import {
   SEMENTE_PADRAO,
   encontrarNascimento,
 } from '../world/chunk';
-import { obterBloco } from '../world/blocks';
+import { Bloco, obterBloco } from '../world/blocks';
 import { caixasDoBloco, cercaConecta, temFormaParcial, vetorDirecao } from '../world/formas';
 import type { Edicoes } from '../world/edicoes';
 import { ALTURA_OLHOS, passoFisica, posicaoInicial, type Solido } from './fisica';
@@ -60,6 +60,7 @@ export function criarMundoSolido(
     return obterBloco(b)?.solido ?? false;
   };
   const solido = ler as Solido;
+  solido.liquido = (x, y, z) => bloco(x, y, z) === Bloco.AGUA;
   // caixas de blocos parciais (lajes, escadas, cercas, portas)
   solido.caixas = (x, y, z) => {
     const b = bloco(x, y, z);

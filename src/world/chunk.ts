@@ -46,7 +46,10 @@ function clima(wx: number, wz: number, semente: number): Clima {
   return {
     temperatura: fbm2(wx / 300 + 40, wz / 300, semente + 101, 3),
     umidade: fbm2(wx / 260, wz / 260 + 70, semente + 202, 3),
-    continente: fbm2(wx / 420, wz / 420, semente + 303, 4),
+    continente: Math.min(
+      1,
+      Math.max(0, (fbm2(wx / 420, wz / 420, semente + 303, 4) - 0.5) * 1.7 + 0.56),
+    ),
     montanha: crista2(wx / 160, wz / 160, semente + 404, 4),
   };
 }
@@ -57,7 +60,7 @@ export function alturaTerreno(wx: number, wz: number, semente: number): number {
   const colinas = fbm2(wx / 48, wz / 48, semente, 4);
   const detalhe = fbm2(wx / 11, wz / 11, semente + 7, 2);
   // continente: abaixo de ~0.36 vira mar
-  const base = 48 + Math.min(1, Math.max(0, (c.continente - 0.25) / 0.35)) * 20;
+  const base = 36 + Math.min(1, Math.max(0, (c.continente - 0.12) / 0.42)) * 32;
   let h = base + colinas * 12 + detalhe * 3;
   const m = Math.max(0, c.montanha - 0.55) / 0.45;
   h += m * m * 52 * Math.min(1, Math.max(0, (c.continente - 0.38) / 0.15));

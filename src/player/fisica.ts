@@ -13,6 +13,8 @@ const FOLGA = 1e-4;
 const DEGRAU = 0.51;
 
 export type Solido = ((x: number, y: number, z: number) => boolean) & {
+  /** Célula com líquido (água). */
+  liquido?: (x: number, y: number, z: number) => boolean;
   /** Caixas de blocos parciais (null = cubo inteiro). */
   caixas?: (
     x: number,
@@ -31,6 +33,8 @@ export interface EstadoJogador {
   voando?: boolean;
   /** Altura em que a queda atual começou (para dano de queda). */
   topoQueda?: number;
+  /** Corpo dentro da água (nadando). */
+  naAgua?: boolean;
 }
 
 export interface ResultadoFisica {
@@ -158,13 +162,16 @@ export function passoFisica(
   s: Solido,
 ): ResultadoFisica {
   const estavaNoChao = e.noChao;
-  const vel = e.voando
+  const agua = !e.voando && !!s.liquido?.(Math.floor(e.x), Math.floor(e.y + 0.4), Math.floor(e.z));
+  e.naAgua = agua;
+  let vel = e.voando
     ? cmd.correr
       ? VEL_VOO_RAPIDO
       : VEL_VOO
     : cmd.correr
       ? VEL_CORRER
       : VEL_ANDAR;
+  if (agua) vel *= 0.55;
   let mx = cmd.direita * Math.cos(cmd.yaw) + cmd.frente * Math.sin(cmd.yaw);
   let mz = -cmd.direita * Math.sin(cmd.yaw) + cmd.frente * Math.cos(cmd.yaw);
   const norma = Math.hypot(mx, mz);
@@ -179,6 +186,10 @@ export function passoFisica(
     const sobe = (cmd.pular ? 1 : 0) - (cmd.descer ? 1 : 0);
     e.vy = sobe * VEL_VOO_VERTICAL;
     e.topoQueda = undefined;
+  } else if (agua) {
+    // empuxo: afunda devagar; espaço nada para cima
+    e.vy = cmd.pular ? Math.min(e.vy + 22 * dt, 3.4) : Math.max(e.vy - 7 * dt, -2.2);
+    e.topoQueda = undefined;
   } else {
     if (cmd.pular && e.noChao) {
       e.vy = VEL_PULO;
@@ -191,7 +202,7 @@ export function passoFisica(
   if (!colide(s, e.x, alvo, e.z)) {
     e.y = alvo;
     e.noChao = false;
-    if (!e.voando) e.topoQueda = Math.max(e.topoQueda ?? e.y, e.y);
+    if (!e.voando && !agua) e.topoQueda = Math.max(e.topoQueda ?? e.y, e.y);
     return { aterrissou: false, queda: 0 };
   }
   let resultado: ResultadoFisica = { aterrissou: false, queda: 0 };

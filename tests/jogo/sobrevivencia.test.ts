@@ -111,3 +111,20 @@ describe('física: voo e queda', () => {
     expect(j.y).toBeGreaterThan(20);
   });
 });
+
+describe('física: água', () => {
+  const s = ((_x: number, y: number) => y < 5) as import('../../src/player/fisica').Solido;
+  s.liquido = (_x, y) => y >= 5 && y < 12;
+  it('afunda devagar, nada para cima com espaço e não leva dano de queda', () => {
+    const j = criarJogador(0.5, 11, 0.5);
+    for (let i = 0; i < 30; i++)
+      passoFisica(j, { frente: 0, direita: 0, pular: false, correr: false, yaw: 0 }, 1 / 60, s);
+    expect(j.naAgua).toBe(true);
+    expect(j.vy).toBeGreaterThanOrEqual(-2.2);
+    const y0 = j.y;
+    for (let i = 0; i < 30; i++)
+      passoFisica(j, { frente: 0, direita: 0, pular: true, correr: false, yaw: 0 }, 1 / 60, s);
+    expect(j.y).toBeGreaterThan(y0);
+    expect(j.topoQueda).toBeUndefined();
+  });
+});

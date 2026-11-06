@@ -123,6 +123,10 @@ const CSS = `
 .hud .fps { transform-origin: top right; }
 .hud .mira { transform: translate(-50%, -50%) scale(var(--escala-ui)); }
 .barra { transform: translateX(-50%) scale(var(--escala-ui)) !important; transform-origin: bottom center; }
+body.submerso::after {
+  content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 3;
+  background: radial-gradient(ellipse at center, rgba(40, 120, 190, 0.18), rgba(5, 30, 60, 0.55));
+}
 .toast-area {
   position: fixed; top: 12px; left: 50%; transform: translateX(-50%); z-index: 50;
   display: grid; gap: 6px; justify-items: center; pointer-events: none;

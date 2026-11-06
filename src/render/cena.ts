@@ -408,8 +408,22 @@ export function criarCena(
   function aplicarAtmosfera(tempo: number): void {
     const a = atmosferaNaHora(hora);
     estado.atmosfera = { noite: a.noite, crepusculo: a.crepusculo };
-    scene.fogColor.set(...a.nevoa);
-    scene.fogDensity = a.densidadeNevoa * fatorNevoa;
+    const olho = camera.position;
+    const submersa =
+      blocoEm(Math.floor(olho.x), Math.floor(olho.y), Math.floor(olho.z)) === Bloco.AGUA;
+    if (submersa !== cameraSubmersa) {
+      cameraSubmersa = submersa;
+      motorAudio.definirAbafado(submersa);
+      document.body.classList.toggle('submerso', submersa);
+    }
+    if (submersa) {
+      const l = 0.25 + 0.75 * (1 - a.noite);
+      scene.fogColor.set(0.04 * l, 0.2 * l, 0.32 * l);
+      scene.fogDensity = 0.09;
+    } else {
+      scene.fogColor.set(...a.nevoa);
+      scene.fogDensity = a.densidadeNevoa * fatorNevoa;
+    }
     scene.clearColor.set(a.nevoa[0], a.nevoa[1], a.nevoa[2], 1);
     scene.ambientColor.set(...a.ambiente);
     luz.diffuse.set(...a.ceuLuz);
@@ -1145,6 +1159,7 @@ export function criarCena(
   ligarAudio(barramento, motorAudio);
   const detector = criarDetectorMovimento();
   let ambiente: Ambiente | null = null;
+  let cameraSubmersa = false;
   let quadroSobrevivencia: ((dt: number) => void) | null = null;
   const sobrevivenciaMorto = () => !!estado.sobrevivencia?.estado.morto;
   let configAtual: Config | null = null;
