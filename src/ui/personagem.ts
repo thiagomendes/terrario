@@ -18,47 +18,58 @@ export function teclaParaPainel(codigo: string): boolean {
 
 export const CSS_PAINEL = `
 .painel-personagem {
-  width: min(720px, 100%);
+  width: min(620px, 100%);
   max-height: 46vh;
   overflow-y: auto;
   overflow-x: hidden;
   box-sizing: border-box;
-  padding: 14px 16px;
-  border: 1px solid #8a6fb5;
-  border-radius: 14px;
-  background: rgba(27, 18, 48, 0.85);
+  padding: 16px 18px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 16px;
+  background: linear-gradient(180deg, rgba(30, 32, 46, 0.9), rgba(18, 19, 28, 0.92));
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(8px);
   text-align: left;
   cursor: default;
+  justify-self: center;
 }
-.painel-personagem h2 { margin: 0 0 8px; font-size: 1.1rem; color: #ffd98f; }
-.painel-personagem .grupo { margin: 8px 0; }
-.painel-personagem .rotulo { display: block; margin-bottom: 4px; font-size: 0.85rem; color: #d9c4f2; }
+@media (min-width: 1000px) { .painel-personagem { max-height: 78vh; } }
+.painel-personagem h2 { margin: 0 0 10px; font-size: 1.15rem; color: #ffd98f; }
+.painel-personagem .grupo { margin: 10px 0; }
+.painel-personagem .rotulo {
+  display: block; margin-bottom: 6px; font-size: 0.74rem; color: #b9b2a6;
+  text-transform: uppercase; letter-spacing: 0.08em;
+}
 .painel-personagem .opcoes { display: flex; flex-wrap: wrap; gap: 6px; }
 .painel-personagem button,
 .painel-personagem input {
-  font: 600 0.85rem system-ui, sans-serif;
-  color: #f4d9a8;
-  border: 1px solid #8a6fb5;
-  border-radius: 8px;
-  background: #2b1b4d;
+  font: 600 0.86rem system-ui, sans-serif;
+  color: #ece6da;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.05);
 }
-.painel-personagem button { padding: 6px 12px; cursor: pointer; }
+.painel-personagem button { min-height: 34px; padding: 6px 12px; cursor: pointer; transition: background 0.12s ease; }
+.painel-personagem button:hover { background: rgba(255, 255, 255, 0.12); }
 .painel-personagem button[aria-pressed='true'] {
-  border-color: #ffb35c;
-  background: rgba(255, 179, 92, 0.25);
-  color: #fff1d6;
+  border-color: #ffc46b;
+  background: rgba(255, 196, 107, 0.2);
+  color: #fff;
 }
 .painel-personagem button:focus-visible,
 .painel-personagem input:focus-visible { outline: 2px solid #ffd98f; outline-offset: 2px; }
-.painel-personagem input { width: 100%; box-sizing: border-box; padding: 8px 10px; }
+.painel-personagem input { width: 100%; box-sizing: border-box; min-height: 40px; padding: 8px 12px; background: rgba(0, 0, 0, 0.25); }
 .painel-personagem .jogar {
-  margin-top: 10px;
+  margin-top: 12px;
   width: 100%;
-  border-color: #ffb35c;
-  background: rgba(255, 179, 92, 0.2);
-  color: #fff1d6;
-  font-size: 1.05rem;
+  min-height: 44px;
+  border-color: #ffc46b;
+  background: linear-gradient(180deg, #ffcf7a, #f0a94a);
+  color: #2a1a08;
+  font-size: 1.02rem;
+  font-weight: 800;
 }
+.painel-personagem .jogar:hover { background: linear-gradient(180deg, #ffd98f, #f5b45a); }
 `;
 
 const NOMES_PELE = ['Clara', 'Dourada', 'Morena', 'Escura', 'Profunda'];

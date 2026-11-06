@@ -45,6 +45,7 @@ import { criarVagalumes } from './vagalumes';
 import { PluginMundo } from './materialMundo';
 import { PluginBalanco } from './balanco';
 import { SEMENTE_PADRAO, TAM_X, TAM_Z } from '../world/chunk';
+import type { DadosMundo, MetaMundo, RepositorioMundos } from '../jogo/mundos';
 import type { Buffers } from '../mesh/malha';
 import type { RespostaChunk, PedidoChunk } from '../workers/chunk.worker';
 import { criarEdicoes } from '../world/edicoes';
@@ -116,6 +117,9 @@ export interface EstadoDepuracao {
   /** Leva o jogador para o topo do terreno em (x, z) (testes e capturas). */
   teleportar?: (x: number, z: number) => void;
   /** Pausa o relógio do dia (testes e capturas). */
+  salvar?: (comMiniatura?: boolean) => Promise<boolean>;
+  ultimoSalvamento?: number;
+  mundo?: MetaMundo;
   pausarDia?: boolean;
   posicao?: number[];
   rotacao?: number[];
@@ -163,7 +167,25 @@ declare global {
   }
 }
 
-export function criarCena(canvas: HTMLCanvasElement, hotbar: Hotbar = criarHotbar()) {
+export interface OpcoesCena {
+  mundo?: MetaMundo;
+  dados?: DadosMundo;
+  repo?: RepositorioMundos;
+}
+
+/** Sistema que guarda estado próprio no salvamento do mundo (inventário, vida, mapa...). */
+export interface Salvavel {
+  salvar(): unknown;
+}
+
+export function criarCena(
+  canvas: HTMLCanvasElement,
+  hotbar: Hotbar = criarHotbar(),
+  opcoes: OpcoesCena = {},
+) {
+  const semente = opcoes.mundo?.semente ?? SEMENTE_PADRAO;
+  const dadosIniciais = opcoes.dados;
+  const salvaveis = new Map<string, Salvavel>();
   const estado: EstadoDepuracao = {
     ready: false,
     chunksCarregados: 0,
@@ -197,7 +219,15 @@ export function criarCena(canvas: HTMLCanvasElement, hotbar: Hotbar = criarHotba
   scene.activeCamera = cameraVisao;
   let estadoCamera = criarEstadoCamera();
   const edicoes = criarEdicoes();
-  const controle = criarControle(canvas, camera, SEMENTE_PADRAO, edicoes);
+  if (dadosIniciais) edicoes.importar(dadosIniciais.edicoes);
+  const controle = criarControle(canvas, camera, semente, edicoes);
+  if (dadosIniciais?.jogador) {
+    const j = controle.jogador;
+    j.x = dadosIniciais.jogador.x;
+    j.y = dadosIniciais.jogador.y;
+    j.z = dadosIniciais.jogador.z;
+    controle.apontar(dadosIniciais.jogador.yaw, dadosIniciais.jogador.pitch);
+  }
   controle.atualizar(0);
 
   function armazenamentoLocal(): Armazenamento | null {
@@ -275,7 +305,7 @@ export function criarCena(canvas: HTMLCanvasElement, hotbar: Hotbar = criarHotba
   curvas.shadowsSaturation = 30;
   ip.colorCurves = curvas;
 
-  let hora = HORA_INICIAL;
+  let hora = dadosIniciais && dadosIniciais.hora >= 0 ? dadosIniciais.hora : HORA_INICIAL;
   Object.defineProperty(estado, 'hora', {
     get: () => hora,
     set: (v: number) => {
@@ -450,7 +480,7 @@ export function criarCena(canvas: HTMLCanvasElement, hotbar: Hotbar = criarHotba
       const lista = edicoes.doChunk(cx + dx, cz + dz);
       if (lista.length > 0) edicoesPedido[chave(cx + dx, cz + dz)] = lista;
     }
-    const pedido: PedidoChunk = { cx, cz, semente: SEMENTE_PADRAO, versao, edicoes: edicoesPedido };
+    const pedido: PedidoChunk = { cx, cz, semente, versao, edicoes: edicoesPedido };
     worker.postMessage(pedido);
   }
 
@@ -476,7 +506,7 @@ export function criarCena(canvas: HTMLCanvasElement, hotbar: Hotbar = criarHotba
     const k = chave(cx, cz);
     let entrada = cacheBlocos.get(k);
     if (!entrada) {
-      entrada = { versao: 0, blocos: gerarChunk(cx, cz, SEMENTE_PADRAO) };
+      entrada = { versao: 0, blocos: gerarChunk(cx, cz, semente) };
       cacheBlocos.set(k, entrada);
     }
     return entrada.blocos[indice(x - cx * TAM_X, y, z - cz * TAM_Z)];
@@ -604,7 +634,7 @@ export function criarCena(canvas: HTMLCanvasElement, hotbar: Hotbar = criarHotba
   estado.apontar = (yaw, pitch) => controle.apontar(yaw, pitch);
   estado.teleportar = (x, z) => {
     const j = controle.jogador;
-    let y = alturaTerreno(Math.floor(x), Math.floor(z), SEMENTE_PADRAO) + 1;
+    let y = alturaTerreno(Math.floor(x), Math.floor(z), semente) + 1;
     while (y < ALTURA - 2 && blocoEm(Math.floor(x), y, Math.floor(z)) !== Bloco.AR) y++;
     j.x = x;
     j.y = y;
@@ -971,5 +1001,83 @@ export function criarCena(canvas: HTMLCanvasElement, hotbar: Hotbar = criarHotba
     else engine.resize();
   });
 
-  return { engine, scene, camera, cameraVisao, editarBloco, edicoes };
+  // Nascimento: sem posição salva, garante que o jogador comece em ar livre.
+  if (!dadosIniciais?.jogador) estado.teleportar?.(controle.jogador.x, controle.jogador.z);
+
+  // Salvamento: edições, jogador, hora e o estado dos sistemas registrados.
+  function coletarDados(): DadosMundo {
+    const j = controle.jogador;
+    const extras: Record<string, unknown> = { ...(dadosIniciais?.extras ?? {}) };
+    for (const [k, s] of salvaveis) extras[k] = s.salvar();
+    return {
+      versao: 1,
+      edicoes: edicoes.exportar(),
+      jogador: { x: j.x, y: j.y, z: j.z, yaw: camera.rotation.y, pitch: camera.rotation.x },
+      hora,
+      extras,
+    };
+  }
+  function miniatura(): string | undefined {
+    try {
+      const c = document.createElement('canvas');
+      c.width = 320;
+      c.height = 180;
+      const ctx = c.getContext('2d');
+      if (!ctx) return undefined;
+      const escala = Math.max(320 / canvas.width, 180 / canvas.height);
+      const w = canvas.width * escala;
+      const h = canvas.height * escala;
+      ctx.drawImage(canvas, (320 - w) / 2, (180 - h) / 2, w, h);
+      return c.toDataURL('image/jpeg', 0.7);
+    } catch {
+      return undefined;
+    }
+  }
+  let salvando: Promise<void> | null = null;
+  async function salvar(comMiniatura = true): Promise<boolean> {
+    const repo = opcoes.repo;
+    const mundo = opcoes.mundo;
+    if (!repo || !mundo || !estado.ready) return false;
+    if (salvando) await salvando;
+    salvando = repo.salvar(mundo.id, coletarDados(), comMiniatura ? miniatura() : undefined);
+    try {
+      await salvando;
+      estado.ultimoSalvamento = Date.now();
+      window.dispatchEvent(new CustomEvent('brumaluz:salvo'));
+      return true;
+    } catch {
+      return false;
+    } finally {
+      salvando = null;
+    }
+  }
+  estado.salvar = salvar;
+  estado.mundo = opcoes.mundo ? { ...opcoes.mundo } : undefined;
+  setInterval(() => void salvar(false), 30_000);
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') void salvar();
+  });
+  window.addEventListener('pagehide', () => void salvar(false));
+  document.addEventListener('pointerlockchange', () => {
+    if (document.pointerLockElement !== canvas) void salvar();
+  });
+
+  return {
+    engine,
+    scene,
+    camera,
+    cameraVisao,
+    editarBloco,
+    edicoes,
+    estado,
+    controle,
+    barramento,
+    blocoEm,
+    semente,
+    salvar,
+    registrarSalvavel(chave: string, s: Salvavel) {
+      salvaveis.set(chave, s);
+    },
+    extrasSalvos: (chave: string): unknown => dadosIniciais?.extras?.[chave],
+  };
 }
