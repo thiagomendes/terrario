@@ -79,9 +79,17 @@ import {
   definir as definirCamera,
   posicaoTerceiraPessoa,
   teclaParaCamera,
+  visibilidadePorModo,
   type ModoCamera,
 } from '../player/camera';
 import { chave, chunksDesejados, planejar, respostaObsoleta } from './gerenciador';
+import { criarAnimador } from '../player/animacao';
+import { MODELOS, normalizarAparencia, type Aparencia } from '../personagem/aparencia';
+import { carregarAparencia, type Armazenamento } from '../personagem/persistencia';
+import { blocoNaMao } from '../personagem/mao';
+import type { Pose } from '../personagem/poses';
+import { criarBraco } from './braco';
+import { criarPersonagem } from './personagem';
 
 const RAIO_INICIAL = 3;
 const RAIO_SOMBRA = 1;
@@ -149,6 +157,15 @@ export interface EstadoDepuracao {
     alternar: () => void;
     definir: (modo: ModoCamera) => void;
   };
+  personagem?: {
+    aparencia: () => Aparencia;
+    definir: (parcial: Partial<Aparencia>) => void;
+    visivel: () => { braco: boolean; corpo: boolean };
+    malhas: () => number;
+    pose: () => Pose;
+    maoBloco: () => number | null;
+    nomeExibido: () => string;
+  };
 }
 
 declare global {
@@ -193,6 +210,20 @@ export function criarCena(canvas: HTMLCanvasElement, hotbar: Hotbar = criarHotba
   const edicoes = criarEdicoes();
   const controle = criarControle(canvas, camera, SEMENTE_PADRAO, edicoes);
   controle.atualizar(0);
+
+  function armazenamentoLocal(): Armazenamento | null {
+    try {
+      return window.localStorage;
+    } catch {
+      return null;
+    }
+  }
+  let aparencia: Aparencia = carregarAparencia(armazenamentoLocal());
+  const braco = criarBraco(scene, cameraVisao, aparencia);
+  const personagem = criarPersonagem(scene, aparencia);
+  const animador = criarAnimador();
+  let velocidadeHoriz = 0;
+  let corrida = false;
 
   const luz = new HemisphericLight('luz', new Vector3(0.3, 1, 0.2), scene);
   luz.diffuse = new Color3(...LUZ_PREENCHIMENTO.cor);
@@ -533,6 +564,41 @@ export function criarCena(canvas: HTMLCanvasElement, hotbar: Hotbar = criarHotba
     cameraVisao.position.set(p.x, p.y, p.z);
   }
   Object.defineProperty(estado, 'slotAtivo', { get: () => hotbar.ativo, enumerable: true });
+  barramento.ouvir('golpe', () => animador.evento('golpe'));
+  barramento.ouvir('colocacao', () => animador.evento('colocacao'));
+  let slotNaMao = -1;
+  function atualizarPersonagem(dt: number): void {
+    const j = controle.jogador;
+    const pose = animador.atualizar(dt, {
+      velocidadeHoriz,
+      correndo: corrida,
+      noChao: j.noChao,
+    });
+    const vis = visibilidadePorModo(estadoCamera.modo);
+    braco.definirVisivel(vis.braco);
+    personagem.definirVisivel(vis.corpo);
+    if (hotbar.ativo !== slotNaMao) {
+      slotNaMao = hotbar.ativo;
+      braco.definirSlot(slotNaMao);
+    }
+    braco.aplicarPose(pose);
+    personagem.aplicarPose(pose);
+    personagem.posicionar(j.x, j.y, j.z, camera.rotation.y);
+  }
+  estado.personagem = {
+    aparencia: () => ({ ...aparencia }),
+    definir: (parcial) => {
+      aparencia = normalizarAparencia({ ...aparencia, ...parcial });
+      braco.aplicarAparencia(aparencia);
+      personagem.aplicarAparencia(aparencia);
+    },
+    visivel: () => visibilidadePorModo(estadoCamera.modo),
+    malhas: () => braco.contarMalhas() + personagem.contarMalhas(),
+    pose: () => animador.pose(),
+    maoBloco: () =>
+      visibilidadePorModo(estadoCamera.modo).braco ? blocoNaMao(hotbar.ativo) : null,
+    nomeExibido: () => aparencia.nome || MODELOS[aparencia.modelo].rotulo,
+  };
   Object.defineProperty(estado, 'alvo', { get: calcularAlvo, enumerable: true });
 
   function atualizarChunks(): void {
@@ -761,6 +827,8 @@ export function criarCena(canvas: HTMLCanvasElement, hotbar: Hotbar = criarHotba
   function atualizarSomMovimento(dt: number): void {
     const j = controle.jogador;
     const vel = dt > 0 ? Math.hypot(j.x - ultimoX, j.z - ultimoZ) / dt : 0;
+    velocidadeHoriz = vel;
+    corrida = vel > (VEL_ANDAR + VEL_CORRER) / 2;
     ultimoX = j.x;
     ultimoZ = j.z;
     const eventos = detector.atualizar(dt, {
@@ -769,6 +837,9 @@ export function criarCena(canvas: HTMLCanvasElement, hotbar: Hotbar = criarHotba
       correndo: vel > (VEL_ANDAR + VEL_CORRER) / 2,
     });
     if (eventos.length === 0) return;
+    for (const ev of eventos) {
+      if (ev === 'pulo' || ev === 'aterrissagem') animador.evento(ev);
+    }
     const grupo = grupoDoBloco(blocoSobPes(j, blocoEm)) ?? 'terra';
     for (const ev of eventos) {
       tocarSom(motorAudio, ev, grupo);
@@ -786,6 +857,7 @@ export function criarCena(canvas: HTMLCanvasElement, hotbar: Hotbar = criarHotba
     atualizarDestaque();
     atualizarEfeitos(dtQuadro);
     atualizarCameraVisao();
+    atualizarPersonagem(dtQuadro);
     estado.fps = engine.getFps();
     estado.posicao = [camera.position.x, camera.position.y, camera.position.z];
     estado.rotacao = [camera.rotation.x, camera.rotation.y];
