@@ -76,6 +76,10 @@ export interface EstadoAtmosfera {
   noite: number;
   /** Força do brilho alaranjado de nascer/pôr (0 a 1). */
   crepusculo: number;
+  /** Cobertura de nuvens (clima), 0 a 1. */
+  cobertura: number;
+  /** Arco-íris (clima), 0 a 1. */
+  arco: number;
 }
 
 interface Quadro {
@@ -274,5 +278,36 @@ export function atmosferaNaHora(horaBruta: number): EstadoAtmosfera {
     densidadeNevoa: lerp(a.dens, b.dens, t),
     noite,
     crepusculo,
+    cobertura: 0.15,
+    arco: 0,
+  };
+}
+
+function mixC(a: Cor, b: Cor, t: number): Cor {
+  return [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
+}
+
+/** Aplica o clima (nuvens, chuva, neblina) sobre a atmosfera da hora. */
+export function ajustarPorClima(
+  a: EstadoAtmosfera,
+  c: { nuvens: number; chuva: number; neblina: number; arco: number },
+): EstadoAtmosfera {
+  const n = Math.min(1, Math.max(0, c.nuvens));
+  const cinza = (k: number): Cor => [0.5 * k, 0.53 * k, 0.58 * k];
+  const brilhoDia = 1 - a.noite * 0.85;
+  const t = Math.max(0, n - 0.2) * 0.85;
+  const horizonte = mixC(a.ceuHorizonte, cinza(1.15 * brilhoDia), t);
+  return {
+    ...a,
+    ceuZenite: mixC(a.ceuZenite, cinza(0.75 * brilhoDia), t),
+    ceuMeio: mixC(a.ceuMeio, cinza(0.95 * brilhoDia), t),
+    ceuHorizonte: horizonte,
+    nevoa: horizonte,
+    intensidadeLuz: a.intensidadeLuz * (1 - 0.6 * Math.max(0, n - 0.2)),
+    intensidadeCeu: a.intensidadeCeu * (1 - 0.15 * n),
+    densidadeNevoa: a.densidadeNevoa + c.neblina * 0.028 + c.chuva * 0.008,
+    crepusculo: a.crepusculo * (1 - n * 0.7),
+    cobertura: n,
+    arco: c.arco * (1 - a.noite),
   };
 }

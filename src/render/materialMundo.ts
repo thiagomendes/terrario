@@ -11,6 +11,11 @@ export class PluginMundo extends MaterialPluginBase {
   private forcaBruma = 0.5;
   /** Intensidade da luz de blocos (mais forte à noite, para contrastar). */
   luzBlocos = 1;
+  /** Estações: 0..1 de outono (folhas alaranjadas) e de inverno (neve nos topos). */
+  outono = 0;
+  inverno = 0;
+  /** Superfícies molhadas pela chuva (mais escuras e brilhantes). */
+  molhado = 0;
 
   constructor(material: Material) {
     super(material, 'Mundo', 210, { MUNDO: false });
@@ -44,8 +49,12 @@ export class PluginMundo extends MaterialPluginBase {
         { name: 'corBruma', size: 3, type: 'vec3' },
         { name: 'forcaBruma', size: 1, type: 'float' },
         { name: 'luzBlocos', size: 1, type: 'float' },
+        { name: 'outono', size: 1, type: 'float' },
+        { name: 'inverno', size: 1, type: 'float' },
+        { name: 'molhado', size: 1, type: 'float' },
       ],
-      fragment: 'uniform vec3 corBruma;\nuniform float forcaBruma;\nuniform float luzBlocos;',
+      fragment:
+        'uniform vec3 corBruma;\nuniform float forcaBruma;\nuniform float luzBlocos;\nuniform float outono;\nuniform float inverno;\nuniform float molhado;',
     };
   }
 
@@ -56,6 +65,9 @@ export class PluginMundo extends MaterialPluginBase {
     uniformBuffer.updateFloat3('corBruma', ...this.corBruma);
     uniformBuffer.updateFloat('forcaBruma', this.forcaBruma);
     uniformBuffer.updateFloat('luzBlocos', this.luzBlocos);
+    uniformBuffer.updateFloat('outono', this.outono);
+    uniformBuffer.updateFloat('inverno', this.inverno);
+    uniformBuffer.updateFloat('molhado', this.molhado);
   }
 
   override getCustomCode(shaderType: string): Record<string, string> | null {
@@ -80,6 +92,19 @@ export class PluginMundo extends MaterialPluginBase {
           baseColor.rgb *= 0.94 + 0.1 * hM;
           float bioma = sin(vPositionW.x * 0.031 + sin(vPositionW.z * 0.017) * 2.0) * 0.5 + 0.5;
           baseColor.rgb *= mix(vec3(0.97, 1.0, 1.02), vec3(1.05, 1.02, 0.92), bioma);
+          // estacoes: o verde vira ocre no outono; neve cobre os topos no inverno
+          float verdeM = baseColor.g - max(baseColor.r, baseColor.b);
+          if (verdeM > 0.03 && outono > 0.0) {
+            float lumM = dot(baseColor.rgb, vec3(0.3, 0.59, 0.11));
+            vec3 ocre = mix(vec3(0.85, 0.42, 0.12), vec3(0.95, 0.7, 0.2), hM) * (lumM * 1.6);
+            baseColor.rgb = mix(baseColor.rgb, ocre, outono * smoothstep(0.03, 0.12, verdeM) * (0.4 + 0.45 * hM));
+          }
+          float topoM = step(0.6, normalize(vNormalW).y);
+          if (inverno > 0.0 && topoM > 0.0) {
+            float salpico = step(0.25, fract(sin(dot(floor(vPositionW.xz * 16.0), vec2(12.99, 78.23))) * 437.5));
+            baseColor.rgb = mix(baseColor.rgb, vec3(0.92, 0.95, 1.0), inverno * mix(0.75, 1.0, salpico));
+          }
+          baseColor.rgb *= 1.0 - molhado * 0.18;
         }
       `,
       CUSTOM_FRAGMENT_BEFORE_FOG: `

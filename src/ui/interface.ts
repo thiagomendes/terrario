@@ -127,6 +127,14 @@ body.submerso::after {
   content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 3;
   background: radial-gradient(ellipse at center, rgba(40, 120, 190, 0.18), rgba(5, 30, 60, 0.55));
 }
+.painel-construcao {
+  position: fixed; top: 10px; left: 50%; transform: translateX(-50%); z-index: 8; pointer-events: none;
+  display: grid; justify-items: center; gap: 2px; padding: 8px 16px; border-radius: 12px;
+  background: rgba(10, 12, 20, 0.62); border: 1px solid rgba(255, 217, 143, 0.35);
+  color: #fff; font: 700 0.9rem system-ui, sans-serif; text-align: center;
+}
+.painel-construcao[hidden] { display: none; }
+.painel-construcao small { font-weight: 500; color: #cfc8bb; }
 .toast-area {
   position: fixed; top: 12px; left: 50%; transform: translateX(-50%); z-index: 50;
   display: grid; gap: 6px; justify-items: center; pointer-events: none;
@@ -207,7 +215,7 @@ export function notificar(texto: string): void {
     document.body.appendChild(area);
   }
   const t = document.createElement('div');
-  t.className = 'toast';
+  t.className = texto.startsWith('🏆') ? 'toast conquista' : 'toast';
   t.textContent = texto;
   area.appendChild(t);
   setTimeout(() => t.remove(), 2700);
@@ -353,6 +361,15 @@ export function criarInterface(
   nomeHud.style.top = '72px';
   nomeHud.setAttribute('data-nome-jogador', '');
   hud.appendChild(nomeHud);
+  const infoMundo = document.createElement('div');
+  infoMundo.className = 'camera-indicador';
+  infoMundo.style.top = '104px';
+  infoMundo.setAttribute('data-info-mundo', '');
+  hud.appendChild(infoMundo);
+  setInterval(() => {
+    infoMundo.textContent = window.__brumaluz?.infoMundo ?? '';
+    infoMundo.hidden = !infoMundo.textContent;
+  }, 1000);
   const painel = criarPainelPersonagem(grade, {
     armazenamento: armazenamento(),
     aoMudar: (a) => {
@@ -413,6 +430,23 @@ export function criarInterface(
     }
   });
   window.addEventListener('brumaluz:toast', (e) => notificar((e as CustomEvent<string>).detail));
+  const painelConstrucao = document.createElement('div');
+  painelConstrucao.className = 'painel-construcao';
+  painelConstrucao.hidden = true;
+  painelConstrucao.setAttribute('data-painel-construcao', '');
+  app.appendChild(painelConstrucao);
+  window.addEventListener('brumaluz:construcao', (e) => {
+    const d = (e as CustomEvent<{ ferramenta: string | null; detalhe: string; espelho: boolean }>)
+      .detail;
+    painelConstrucao.hidden = !d.ferramenta && !d.espelho;
+    painelConstrucao.replaceChildren();
+    painelConstrucao.append(
+      `🔨 ${d.ferramenta ?? 'Construção livre'}${d.espelho ? ' · espelho' : ''}`,
+    );
+    const s = document.createElement('small');
+    s.textContent = d.ferramenta ? `${d.detalhe} · B troca · Ctrl+Z desfaz` : 'N desliga o espelho';
+    painelConstrucao.appendChild(s);
+  });
 
   setInterval(() => {
     const valor = window.__brumaluz?.fps ?? 0;

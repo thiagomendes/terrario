@@ -16,6 +16,8 @@ uniform vec3 paraLua;
 uniform vec3 corSol;
 uniform float noite;
 uniform float crepusculo;
+uniform float cobertura;
+uniform float arcoIris;
 
 vec3 corDoCeu(vec3 d) {
   float h = d.y;
@@ -31,6 +33,15 @@ vec3 corDoCeu(vec3 d) {
   float ladoSol = dot(normalize(vec3(d.x, 0.001, d.z)), normalize(vec3(paraSol.x, 0.001, paraSol.z)));
   float faixa = exp(-abs(h) * 9.0) * pow(max(ladoSol * 0.5 + 0.5, 0.0), 3.0);
   c += vec3(1.0, 0.45, 0.2) * faixa * crepusculo * 0.45;
+  // arco-iris a 42 graus do ponto oposto ao sol
+  if (arcoIris > 0.001 && h > 0.0) {
+    float ang = acos(clamp(dot(d, -paraSol), -1.0, 1.0));
+    float r = (ang - 0.68) / 0.06;
+    if (abs(r) < 1.0) {
+      vec3 arco = clamp(vec3(1.5 - abs(r * 3.0 - 2.0), 1.5 - abs(r * 3.0), 1.5 - abs(r * 3.0 + 2.0)), 0.0, 1.0);
+      c += arco * 0.22 * arcoIris * (1.0 - abs(r)) * smoothstep(0.0, 0.15, h);
+    }
+  }
   return c;
 }
 `;
@@ -104,10 +115,11 @@ void main() {
     vec2 uv = d.xz / (h + 0.12) * 1.6 + vec2(tempo * 0.006, tempo * 0.0025);
     vec2 bloco = floor(uv * 6.0) / 6.0;
     float n = fbm(bloco * 1.3);
-    float nuvem = smoothstep(0.52, 0.62, n) * smoothstep(0.02, 0.2, h);
+    float nuvem = smoothstep(0.52 - cobertura * 0.3, 0.62 - cobertura * 0.25, n) * smoothstep(0.02, 0.2, h);
     float lado = pow(max(dot(d, paraSol), 0.0), 3.0);
     vec3 dia = mix(vec3(1.0, 0.98, 0.96), corSol * 1.05, crepusculo * 0.75 + lado * 0.3);
     vec3 cn = mix(dia, ceuMeio * 0.35 + vec3(0.03), noite);
+    cn = mix(cn, cn * vec3(0.55, 0.57, 0.62), smoothstep(0.4, 1.0, cobertura));
     c = mix(c, cn, nuvem * 0.85);
   }
 
@@ -132,6 +144,8 @@ export const UNIFORMES_CEU = [
   'corSol',
   'noite',
   'crepusculo',
+  'cobertura',
+  'arcoIris',
 ];
 
 /** Passa o estado da atmosfera aos uniformes de céu de um ShaderMaterial. */
@@ -144,6 +158,8 @@ export function aplicarUniformesCeu(mat: ShaderMaterial, a: EstadoAtmosfera): vo
   mat.setColor3('corSol', new Color3(...a.luz));
   mat.setFloat('noite', a.noite);
   mat.setFloat('crepusculo', a.crepusculo);
+  mat.setFloat('cobertura', a.cobertura);
+  mat.setFloat('arcoIris', a.arco);
 }
 
 export interface Ceu {

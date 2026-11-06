@@ -36,6 +36,7 @@ import {
   LUZ_PREENCHIMENTO,
   NUM_CASCATAS,
   PALETA,
+  ajustarPorClima,
   atmosferaNaHora,
   normalizarHora,
 } from './atmosfera';
@@ -52,6 +53,30 @@ import { direcaoDoYaw } from '../world/formas';
 import { podeColetar, velocidadeMineracao } from '../jogo/ferramentas';
 import { obterItem } from '../jogo/itens';
 import { criarRenderItens } from './itensSoltos';
+import {
+  criarClima,
+  estacaoDoDia,
+  NOMES_CLIMA,
+  NOMES_ESTACAO,
+  type TipoClima,
+} from '../jogo/clima';
+import { criarPrecipitacao } from './precipitacao';
+import { criarVisualConstrucao } from './construcao';
+import { corDaColuna, topoDaColuna, type Rgb } from '../jogo/mapa';
+import { corMediaDoBloco } from '../fx/cores';
+import {
+  NOMES_FERRAMENTA,
+  colar,
+  copiar,
+  criarHistorico,
+  espelharX,
+  pontosDaForma,
+  type Blueprint,
+  type Edicao,
+  type Ferramenta,
+  type Ponto,
+} from '../jogo/construcao';
+import { empacotar } from '../world/edicoes';
 import { criarPopulacao } from '../jogo/populacao';
 import { criaturaNaMira, type TipoCriatura } from '../jogo/criaturas';
 import { criarRenderCriaturas } from './criaturas';
@@ -163,6 +188,20 @@ export interface EstadoDepuracao {
   itensSoltos?: number;
   soltarItem?: (item: string, qtd: number, x: number, y: number, z: number) => void;
   modo?: ModoJogo;
+  precipitacao?: { chuva: number; neve: number; taxa: number };
+  biomaAtual?: string;
+  mapaChunk?: (cx: number, cz: number) => Uint8ClampedArray;
+  modoFoto?: {
+    ativo: () => boolean;
+    alternar: () => boolean;
+    filtro: (f: string) => void;
+    desfoque: (v: number) => void;
+    fov: (g: number) => void;
+    capturar: () => string;
+  };
+  infoMundo?: string;
+  definirClima?: (t: TipoClima) => void;
+  definirDia?: (d: number) => void;
   criaturas?: () => {
     tipo: string;
     x: number;
@@ -418,9 +457,46 @@ export function criarCena(
   matPlanta.alphaCutOff = 0.5;
   const mundoPlanta = new PluginMundo(matPlanta);
 
-  /** Aplica a atmosfera da hora a luzes, névoa, céu e água. */
-  function aplicarAtmosfera(tempo: number): void {
-    const a = atmosferaNaHora(hora);
+  // Clima e estações
+  const clima = criarClima(criarGerador(semente + 31), dadosIniciais?.extras?.['clima']);
+  let dia = Number(dadosIniciais?.extras?.['dia']) || 0;
+  let horaAnterior = hora;
+  let outonoAtual = 0;
+  let invernoAtual = 0;
+  let jogadorCoberto = false;
+  let flash = 0;
+  const precipitacao = criarPrecipitacao(scene);
+
+  /** Aplica a atmosfera da hora e do clima a luzes, névoa, céu e água. */
+  function aplicarAtmosfera(tempo: number, dt = 0): void {
+    if (horaAnterior > 0.9 && hora < 0.1) dia++;
+    horaAnterior = hora;
+    const estacao = estacaoDoDia(dia);
+    const baseHora = atmosferaNaHora(hora);
+    const raio = clima.atualizar(dt, estacao, baseHora.noite < 0.5);
+    if (raio) {
+      flash = 1;
+      setTimeout(() => tocarSom(motorAudio, 'trovao'), raio.atrasoTrovao * 1000);
+    }
+    const a = ajustarPorClima(baseHora, clima.estado);
+    const k = 1 - Math.exp(-dt / 20);
+    outonoAtual += ((estacao === 'outono' ? 1 : 0) - outonoAtual) * k;
+    invernoAtual += ((estacao === 'inverno' ? 1 : 0) - invernoAtual) * k;
+    for (const m of [mundoSolido, mundoPlanta]) {
+      m.outono = outonoAtual;
+      m.inverno = invernoAtual * 0.9;
+      m.molhado = clima.estado.chuva;
+    }
+    const pj = controle.jogador;
+    const b = biomaEm(Math.floor(pj.x), Math.floor(pj.z), semente);
+    const nevando = invernoAtual > 0.5 || b === 'taiga' || b === 'montanhas';
+    estado.biomaAtual = b;
+    estado.precipitacao = precipitacao.ativas();
+    precipitacao.atualizar(cameraVisao.position, clima.estado.chuva, nevando, jogadorCoberto);
+    ambiente?.definirChuva(nevando ? clima.estado.chuva * 0.25 : clima.estado.chuva);
+    flash = Math.max(0, flash - dt * 6);
+    pipeline.imageProcessing.exposure = 1.1 + flash * 2.2;
+    estado.infoMundo = `Dia ${dia + 1} · ${NOMES_ESTACAO[estacao]} · ${NOMES_CLIMA[clima.estado.tipo]}`;
     estado.atmosfera = { noite: a.noite, crepusculo: a.crepusculo };
     const olho = camera.position;
     const submersa =
@@ -429,6 +505,7 @@ export function criarCena(
       cameraSubmersa = submersa;
       motorAudio.definirAbafado(submersa);
       document.body.classList.toggle('submerso', submersa);
+      if (submersa) window.dispatchEvent(new CustomEvent('brumaluz:mergulhou'));
     }
     if (submersa) {
       const l = 0.25 + 0.75 * (1 - a.noite);
@@ -573,6 +650,31 @@ export function criarCena(
     remalhaPendente.clear();
   }
 
+  /** Construção assistida: histórico, espelho e lotes. */
+  const historico = criarHistorico();
+  let espelho: number | null = null;
+  function valorEm(x: number, y: number, z: number): number {
+    return empacotar(blocoEm(x, y, z), edicoes.obterMeta(x, y, z));
+  }
+  function editarRegistrando(x: number, y: number, z: number, b: number, meta = 0): boolean {
+    const lote: Edicao[] = [];
+    const um = (px: number, py: number, pz: number) => {
+      const antes = valorEm(px, py, pz);
+      if (editarBloco(px, py, pz, b, meta))
+        lote.push({ x: px, y: py, z: pz, antes, depois: empacotar(b, meta) });
+    };
+    um(x, y, z);
+    if (espelho !== null && modo === 'criativo') {
+      const m = espelharX({ x, y, z }, espelho);
+      if (m.x !== x) um(m.x, m.y, m.z);
+    }
+    historico.registrar(lote);
+    return lote.length > 0;
+  }
+  function aplicarLote(lote: Edicao[], usar: 'antes' | 'depois'): void {
+    for (const e of lote) editarBloco(e.x, e.y, e.z, e[usar] & 255, (e[usar] >> 8) & 255);
+  }
+
   function editarBloco(x: number, y: number, z: number, bloco: number, meta = 0): boolean {
     if (!edicoes.definir(x, y, z, bloco, meta)) return false;
     const cxE = Math.floor(x / TAM_X);
@@ -647,7 +749,7 @@ export function criarCena(
       jogador: controle.jogador,
       editar: (x, y, z, b) => {
         const meta = metaColocacao(b);
-        const ok = editarBloco(x, y, z, b, meta);
+        const ok = editarRegistrando(x, y, z, b, meta);
         // porta ocupa dois blocos
         if (ok && b === Bloco.PORTA && blocoEm(x, y + 1, z) === Bloco.AR)
           editarBloco(x, y + 1, z, b, meta);
@@ -692,7 +794,7 @@ export function criarCena(
         edicoes,
         blocoAtivo: hotbar.blocoAtivo(),
         jogador: controle.jogador,
-        editar: editarBloco,
+        editar: (x, y, z, b) => editarRegistrando(x, y, z, b, 0),
       }),
     velocidade: (bloco) => velocidadeMineracao(bloco, ferramentaNaMao(), modo === 'criativo'),
   });
@@ -705,6 +807,10 @@ export function criarCena(
 
   /** Clique direito: usa blocos interativos, come comida ou coloca bloco. */
   function usarOuColocar(shift: boolean): void {
+    if (modoConstrucao >= 0 && modo === 'criativo') {
+      usarConstrucao();
+      return;
+    }
     const a = calcularAlvo();
     const alvoBloco = a ? blocoEm(a.x, a.y, a.z) : Bloco.AR;
     if (a && !shift && INTERATIVOS.has(alvoBloco)) {
@@ -737,6 +843,7 @@ export function criarCena(
         inventario.remover(hotbar.ativo, 1);
         tocarSom(motorAudio, 'comer');
         animador.evento('colocacao');
+        window.dispatchEvent(new CustomEvent('brumaluz:comeu'));
       }
       return;
     }
@@ -838,6 +945,11 @@ export function criarCena(
   });
   function atualizarCameraVisao(): void {
     cameraVisao.rotation.copyFrom(camera.rotation);
+    if (estado.modoFoto?.ativo()) {
+      cameraVisao.position.copyFrom(fotoPosRef());
+      braco.definirVisivel(false);
+      return;
+    }
     if (estadoCamera.modo === 'primeira') {
       cameraVisao.position.copyFrom(camera.position);
       return;
@@ -866,9 +978,12 @@ export function criarCena(
       correndo: corrida,
       noChao: j.noChao,
     });
+    const foto = !!estado.modoFoto?.ativo();
+    // no modo foto o corpo aparece quando a câmera livre se afasta dos olhos
+    const longeDosOlhos = foto && Vector3.Distance(fotoPosRef(), camera.position) > 1.2;
     const vis = visibilidadePorModo(estadoCamera.modo);
-    braco.definirVisivel(vis.braco);
-    personagem.definirVisivel(vis.corpo);
+    braco.definirVisivel(vis.braco && !foto);
+    personagem.definirVisivel(foto ? longeDosOlhos : vis.corpo);
     const blocoMao = hotbar.blocoAtivo();
     const itemMao = hotbar.pilhaAtiva()?.item ?? '';
     if (hotbar.ativo !== slotNaMao || blocoMao !== blocoNaMaoAtual || itemMao !== itemNaMaoAtual) {
@@ -894,6 +1009,7 @@ export function criarCena(
     for (let y = ey + 1; y < Math.min(ALTURA, ey + 48) && !coberto; y++) {
       if (obterBlocoDef(blocoEm(ex, y, ez))?.opaco) coberto = true;
     }
+    jogadorCoberto = coberto && ey < 55;
     const alvoLuz = coberto ? (ey < 55 ? 0.22 : 0.55) : 1;
     luzJogador += (alvoLuz - luzJogador) * Math.min(1, dt * 3);
     braco.definirLuz(luzJogador);
@@ -1098,6 +1214,7 @@ export function criarCena(
     for (const c of coletados) {
       coletaAcumulada.set(c.item, (coletaAcumulada.get(c.item) ?? 0) + c.qtd);
       tocarSom(motorAudio, 'coleta');
+      window.dispatchEvent(new CustomEvent('brumaluz:coletou', { detail: c }));
       if (timerColeta) clearTimeout(timerColeta);
       timerColeta = setTimeout(() => {
         for (const [item, qtd] of coletaAcumulada) {
@@ -1187,6 +1304,9 @@ export function criarCena(
   ligarAudio(barramento, motorAudio);
   const detector = criarDetectorMovimento();
   let ambiente: Ambiente | null = null;
+  let fotoPosRef: () => Vector3 = () => camera.position;
+  let quadroFotoRef: ((dt: number) => void) | null = null;
+  let quadroConstrucao: ((tempo: number) => void) | null = null;
   let quadroCriaturas: ((dt: number, tempo: number) => void) | null = null;
   let cameraSubmersa = false;
   let quadroSobrevivencia: ((dt: number) => void) | null = null;
@@ -1242,7 +1362,10 @@ export function criarCena(
   engine.runRenderLoop(() => {
     const dtBruto = engine.getDeltaTime() / 1000;
     const dtQuadro = Math.min(dtBruto, DT_MAXIMO_QUADRO);
-    if (!(modo === 'sobrevivencia' && sobrevivenciaMorto())) controle.atualizar(dtBruto);
+    const fotoAtiva = !!estado.modoFoto?.ativo();
+    if (!(modo === 'sobrevivencia' && sobrevivenciaMorto()))
+      controle.atualizar(fotoAtiva ? 0 : dtBruto);
+    quadroFotoRef?.(Math.min(dtBruto, 0.1));
     quadroSobrevivencia?.(Math.min(dtBruto, 0.1));
     atualizarSomMovimento(Math.min(dtBruto, 0.05));
     verificarSlot();
@@ -1257,9 +1380,10 @@ export function criarCena(
     estado.rotacao = [camera.rotation.x, camera.rotation.y];
     const tempo = performance.now() / 1000;
     if (!estado.pausarDia) hora = normalizarHora(hora + dtBruto / DURACAO_DIA);
-    aplicarAtmosfera(tempo);
+    aplicarAtmosfera(tempo, dtBruto);
     atualizarItens(dtQuadro, tempo);
     quadroCriaturas?.(dtQuadro, tempo);
+    quadroConstrucao?.(tempo);
     balanco.atualizar(tempo);
     scene.render();
   });
@@ -1456,6 +1580,306 @@ export function criarCena(
     populacao.adicionar(tipo, x, y, z);
   };
 
+  // Modo construção (criativo): ferramentas de forma, copiar/colar e espelho.
+  const visualConstrucao = criarVisualConstrucao(scene, atlas, textura, (m) =>
+    glow.addExcludedMesh(m),
+  );
+  const FERRAMENTAS: (Ferramenta | 'copiar' | 'colar')[] = [
+    'preencher',
+    'parede',
+    'linha',
+    'esfera',
+    'esvaziar',
+    'copiar',
+    'colar',
+  ];
+  const ROTULOS: Record<string, string> = {
+    ...NOMES_FERRAMENTA,
+    copiar: 'Copiar região',
+    colar: 'Colar construção',
+  };
+  let modoConstrucao = -1;
+  let pontoA: Ponto | null = null;
+  let giro = 0;
+  function blueprints(): Blueprint[] {
+    try {
+      return JSON.parse(localStorage.getItem('brumaluz:blueprints') ?? '[]') as Blueprint[];
+    } catch {
+      return [];
+    }
+  }
+  let blueprintAtual: Blueprint | null = blueprints().at(-1) ?? null;
+  function avisarConstrucao(): void {
+    const f = modoConstrucao >= 0 ? FERRAMENTAS[modoConstrucao] : null;
+    const detalhe = !f
+      ? ''
+      : f === 'colar'
+        ? blueprintAtual
+          ? `“${blueprintAtual.nome}” ${blueprintAtual.w}×${blueprintAtual.h}×${blueprintAtual.d} · R gira · clique direito cola`
+          : 'Nenhuma construção copiada ainda'
+        : pontoA
+          ? 'Clique direito no ponto B'
+          : 'Clique direito no ponto A';
+    window.dispatchEvent(
+      new CustomEvent('brumaluz:construcao', {
+        detail: { ferramenta: f ? ROTULOS[f] : null, detalhe, espelho: espelho !== null },
+      }),
+    );
+  }
+  const toast = (t: string) =>
+    window.dispatchEvent(new CustomEvent('brumaluz:toast', { detail: t }));
+  function usarConstrucao(): void {
+    const a = calcularAlvo();
+    if (!a) return;
+    const f = FERRAMENTAS[modoConstrucao];
+    const noBloco = f === 'copiar' || f === 'esvaziar';
+    const p = noBloco ? { x: a.x, y: a.y, z: a.z } : posicaoColocacao(a);
+    if (f === 'colar') {
+      if (!blueprintAtual) {
+        toast('Copie uma região primeiro');
+        return;
+      }
+      const lote: Edicao[] = [];
+      for (const e of colar(blueprintAtual, p, giro)) {
+        const antes = valorEm(e.p.x, e.p.y, e.p.z);
+        if (editarBloco(e.p.x, e.p.y, e.p.z, e.v & 255, (e.v >> 8) & 255))
+          lote.push({ ...e.p, antes, depois: e.v });
+      }
+      historico.registrar(lote);
+      toast(`Construção colada (${lote.length} blocos)`);
+      return;
+    }
+    if (!pontoA) {
+      pontoA = p;
+      avisarConstrucao();
+      return;
+    }
+    const b = p;
+    if (f === 'copiar') {
+      const nome = `Construção ${blueprints().length + 1}`;
+      const bp = copiar(nome, pontoA, b, valorEm);
+      if (!bp) toast('Região grande demais');
+      else {
+        blueprintAtual = bp;
+        try {
+          localStorage.setItem(
+            'brumaluz:blueprints',
+            JSON.stringify([...blueprints(), bp].slice(-20)),
+          );
+        } catch {
+          // sem armazenamento: fica só nesta sessão
+        }
+        toast(`“${nome}” copiada (${bp.w}×${bp.h}×${bp.d})`);
+      }
+    } else {
+      const bloco = f === 'esvaziar' ? Bloco.AR : hotbar.blocoAtivo();
+      if (!bloco && f !== 'esvaziar') {
+        toast('Segure um bloco na mão');
+      } else {
+        const pts = pontosDaForma(f, pontoA, b);
+        if (pts.length === 0) toast('Região grande demais');
+        const lote: Edicao[] = [];
+        for (const q of pts) {
+          const antes = valorEm(q.x, q.y, q.z);
+          if ((antes & 255) === bloco) continue;
+          if (editarBloco(q.x, q.y, q.z, bloco)) lote.push({ ...q, antes, depois: bloco });
+        }
+        historico.registrar(lote);
+        if (lote.length) toast(`${ROTULOS[f]}: ${lote.length} blocos`);
+      }
+    }
+    pontoA = null;
+    avisarConstrucao();
+  }
+  window.addEventListener('keydown', (e) => {
+    if ((e.target as HTMLElement)?.closest?.('input, textarea') || e.repeat) return;
+    if (document.querySelector('.entrada:not([hidden])')) return;
+    if ((e.ctrlKey || e.metaKey) && e.code === 'KeyZ' && modo === 'criativo') {
+      e.preventDefault();
+      const l = e.shiftKey ? historico.refazer() : historico.desfazer();
+      if (l) {
+        aplicarLote(l, e.shiftKey ? 'depois' : 'antes');
+        toast(`${e.shiftKey ? 'Refeito' : 'Desfeito'} (${l.length} blocos)`);
+      }
+      return;
+    }
+    if ((e.ctrlKey || e.metaKey) && e.code === 'KeyY' && modo === 'criativo') {
+      e.preventDefault();
+      const l = historico.refazer();
+      if (l) {
+        aplicarLote(l, 'depois');
+        toast(`Refeito (${l.length} blocos)`);
+      }
+      return;
+    }
+    if (modo !== 'criativo') return;
+    if (e.code === 'KeyB') {
+      modoConstrucao = modoConstrucao + 1 >= FERRAMENTAS.length ? -1 : modoConstrucao + 1;
+      pontoA = null;
+      avisarConstrucao();
+    } else if (e.code === 'KeyN') {
+      espelho = espelho === null ? Math.floor(camera.position.x) : null;
+      toast(espelho === null ? 'Espelho desligado' : `Espelho no x = ${espelho}`);
+      avisarConstrucao();
+    } else if (e.code === 'KeyR' && modoConstrucao >= 0) {
+      giro = (giro + 1) % 4;
+      toast(`Giro: ${giro * 90}°`);
+    }
+  });
+  quadroConstrucao = (tempo: number) => {
+    const a = calcularAlvo();
+    const f = modoConstrucao >= 0 ? FERRAMENTAS[modoConstrucao] : null;
+    const bloco = hotbar.blocoAtivo();
+    const def = obterBlocoDef(bloco);
+    const colocar = a ? posicaoColocacao(a) : null;
+    visualConstrucao.fantasma(
+      f && f !== 'preencher' && f !== 'parede' && f !== 'linha' && f !== 'esfera' ? null : colocar,
+      bloco && def && !def.planta ? bloco : null,
+      tempo,
+    );
+    if (!f || !a) {
+      visualConstrucao.caixa(null, null, Color3.White());
+    } else if (f === 'colar' && blueprintAtual) {
+      const p = colocar!;
+      const w = giro % 2 ? blueprintAtual.d : blueprintAtual.w;
+      const d = giro % 2 ? blueprintAtual.w : blueprintAtual.d;
+      visualConstrucao.caixa(
+        p,
+        { x: p.x + w - 1, y: p.y + blueprintAtual.h - 1, z: p.z + d - 1 },
+        new Color3(0.5, 0.9, 1),
+      );
+    } else {
+      const atual = f === 'copiar' || f === 'esvaziar' ? { x: a.x, y: a.y, z: a.z } : colocar!;
+      const cor =
+        f === 'esvaziar'
+          ? new Color3(1, 0.4, 0.35)
+          : f === 'copiar'
+            ? new Color3(0.5, 0.9, 1)
+            : new Color3(1, 0.85, 0.4);
+      visualConstrucao.caixa(pontoA ?? atual, atual, cor);
+    }
+  };
+
+  // Modo foto: câmera livre, filtros, desfoque e captura.
+  let modoFoto = false;
+  const fotoPos = new Vector3();
+  const curvasBase = ip.colorCurves;
+  function definirFiltro(f: string): void {
+    const c = new ColorCurves();
+    c.globalSaturation = 0;
+    switch (f) {
+      case 'quente':
+        c.globalHue = 30;
+        c.globalDensity = 35;
+        c.globalSaturation = 15;
+        break;
+      case 'frio':
+        c.globalHue = 210;
+        c.globalDensity = 35;
+        break;
+      case 'pb':
+        c.globalSaturation = -100;
+        break;
+      case 'sepia':
+        c.globalSaturation = -100;
+        c.globalHue = 35;
+        c.globalDensity = 55;
+        break;
+      case 'sonho':
+        c.globalSaturation = 35;
+        c.highlightsHue = 300;
+        c.highlightsDensity = 30;
+        break;
+      default:
+        ip.colorCurves = curvasBase;
+        pipeline.bloomWeight = 0.22;
+        return;
+    }
+    ip.colorCurves = c;
+    pipeline.bloomWeight = f === 'sonho' ? 0.6 : 0.22;
+  }
+  estado.modoFoto = {
+    ativo: () => modoFoto,
+    alternar: () => {
+      modoFoto = !modoFoto;
+      if (modoFoto) {
+        fotoPos.copyFrom(cameraVisao.position);
+        estado.pausarDia = true;
+      } else {
+        estado.pausarDia = false;
+        pipeline.depthOfFieldEnabled = false;
+        definirFiltro('natural');
+        cameraVisao.fov = camera.fov;
+      }
+      return modoFoto;
+    },
+    filtro: definirFiltro,
+    desfoque: (v: number) => {
+      pipeline.depthOfFieldEnabled = v > 0.01;
+      if (v > 0.01) {
+        const a = calcularAlvo();
+        const dist = a
+          ? Math.hypot(a.x + 0.5 - fotoPos.x, a.y + 0.5 - fotoPos.y, a.z + 0.5 - fotoPos.z)
+          : 8;
+        pipeline.depthOfField.focusDistance = dist * 1000;
+        pipeline.depthOfField.fStop = 1.4 + (1 - v) * 8;
+        pipeline.depthOfField.focalLength = 50 + v * 100;
+      }
+    },
+    fov: (g: number) => {
+      cameraVisao.fov = (g * Math.PI) / 180;
+    },
+    capturar: () => {
+      scene.render();
+      const url = canvas.toDataURL('image/png');
+      const a = document.createElement('a');
+      const agora = new Date();
+      a.download = `brumaluz-${agora.toISOString().slice(0, 19).replace(/[:T]/g, '-')}.png`;
+      a.href = url;
+      a.click();
+      return url;
+    },
+  };
+  function quadroFoto(dt: number): void {
+    if (!modoFoto) return;
+    const t = controle.teclas;
+    const yaw = camera.rotation.y;
+    const pitch = camera.rotation.x;
+    const v = (t.correr ? 14 : 5) * dt;
+    const f = (t.frente ? 1 : 0) - (t.tras ? 1 : 0);
+    const d = (t.direita ? 1 : 0) - (t.esquerda ? 1 : 0);
+    fotoPos.x += (Math.sin(yaw) * Math.cos(pitch) * f + Math.cos(yaw) * d) * v;
+    fotoPos.z += (Math.cos(yaw) * Math.cos(pitch) * f - Math.sin(yaw) * d) * v;
+    fotoPos.y += (-Math.sin(pitch) * f + (t.pular ? 1 : 0)) * v;
+  }
+  quadroFotoRef = quadroFoto;
+  fotoPosRef = () => fotoPos;
+
+  // Mapa: cores de um chunk visto de cima (relevo e água)
+  estado.mapaChunk = (cx: number, cz: number) => {
+    const out = new Uint8ClampedArray(TAM_X * TAM_Z * 4);
+    const alturas = new Int32Array((TAM_X + 1) * (TAM_Z + 1));
+    const topos: { bloco: number; y: number; agua: number }[] = [];
+    for (let z = -1; z < TAM_Z; z++)
+      for (let x = -1; x < TAM_X; x++) {
+        const wx = cx * TAM_X + x;
+        const wz = cz * TAM_Z + z;
+        const t = topoDaColuna((y) => blocoEm(wx, y, wz));
+        alturas[(z + 1) * (TAM_X + 1) + (x + 1)] = t.y;
+        if (x >= 0 && z >= 0) topos.push(t);
+      }
+    let k = 0;
+    for (let z = 0; z < TAM_Z; z++)
+      for (let x = 0; x < TAM_X; x++, k++) {
+        const t = topos[k];
+        const base = (corMediaDoBloco(t.bloco) ?? [20, 22, 30]) as Rgb;
+        const no = alturas[z * (TAM_X + 1) + x];
+        const c = corDaColuna(base, t.y, no, t.agua);
+        out.set([c[0], c[1], c[2], 255], k * 4);
+      }
+    return out;
+  };
+
   // Nascimento: sem posição salva, garante que o jogador comece em ar livre.
   if (!dadosIniciais?.jogador) estado.teleportar?.(controle.jogador.x, controle.jogador.z);
 
@@ -1554,6 +1978,16 @@ export function criarCena(
     if (controle.jogador.y < -20) sobrevivencia.dano(100, 'queda', true);
   }
   quadroSobrevivencia = atualizarSobrevivencia;
+
+  salvaveis.set('clima', { salvar: () => clima.salvar() });
+  salvaveis.set('dia', { salvar: () => dia });
+  estado.definirClima = (t) => clima.definir(t);
+  estado.definirDia = (d) => {
+    dia = Math.max(0, Math.floor(d));
+    const e = estacaoDoDia(dia);
+    outonoAtual = e === 'outono' ? 1 : 0;
+    invernoAtual = e === 'inverno' ? 1 : 0;
+  };
 
   estado.salvar = salvar;
   estado.modo = modo;

@@ -147,6 +147,7 @@ export function criarPainelFornalha(ui: InventarioUI) {
       if (!f.saida) return cursor;
       if (cursor && cursor.item !== f.saida.item) return cursor;
       const novo = cursor ? { ...cursor, qtd: cursor.qtd + f.saida.qtd } : { ...f.saida };
+      window.dispatchEvent(new CustomEvent('brumaluz:fundiu', { detail: { ...f.saida } }));
       f.saida = null;
       render();
       return novo;

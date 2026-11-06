@@ -11,6 +11,9 @@ import { LUZ_MAXIMA, calcularLuz } from '../world/luz';
 import { FACES_TILE, indiceDoTile } from '../art/tiles';
 
 const TILE_TERRA = indiceDoTile('terra');
+/** Tabela de opacidade por id (laço quente da malha). */
+const OPACO_T = new Uint8Array(256);
+for (let i = 0; i < 256; i++) OPACO_T[i] = obterBloco(i)?.opaco ? 1 : 0;
 import { ALTURA, TAM_X, TAM_Z, indice } from '../world/chunk';
 
 const INSET_UV = 0.001;
@@ -208,7 +211,7 @@ export function gerarMalha(
   }
 
   function opaco(x: number, y: number, z: number): number {
-    return obterBloco(ler(x, y, z))?.opaco ? 1 : 0;
+    return OPACO_T[ler(x, y, z)];
   }
 
   function adicionarFace(id: number, x: number, y: number, z: number, f: Face): void {

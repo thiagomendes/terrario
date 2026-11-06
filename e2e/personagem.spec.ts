@@ -94,19 +94,26 @@ test('alvo e quebra iguais nos dois modos', async ({ page }) => {
   test.setTimeout(300_000);
   const erros = coletarErros(page);
   await abrir(page);
+  // o alvo vem dos olhos: é o mesmo nos dois modos (medido antes de editar o mundo)
   const alvos: { x: number; y: number; z: number }[] = [];
+  await apontar(page, 0, 0.6);
+  for (const m of ['primeira', 'terceira'] as const) {
+    await page.evaluate((v) => window.__brumaluz!.camera!.definir(v), m);
+    await expect.poll(() => modo(page)).toBe(m);
+    const a = await page.evaluate(() => window.__brumaluz!.alvo!);
+    alvos.push({ x: a.x, y: a.y, z: a.z });
+  }
+  expect(alvos[1]).toEqual(alvos[0]);
   for (const m of ['primeira', 'terceira'] as const) {
     await page.evaluate((v) => window.__brumaluz!.camera!.definir(v), m);
     await expect.poll(() => modo(page)).toBe(m);
     const pos = await prepararPedra(page);
-    alvos.push(pos);
     const r = await page.evaluate(() => window.__brumaluz!.minerar!(2, true));
     expect(r.quebrou, `modo ${m}`).toBe(true);
     await expect
       .poll(() => page.evaluate((p) => window.__brumaluz!.bloco!(p.x, p.y, p.z), pos))
       .toBe(0);
   }
-  expect(alvos[1]).toEqual(alvos[0]);
   expect(erros, erros.join('\n')).toEqual([]);
 });
 

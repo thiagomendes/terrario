@@ -23,17 +23,17 @@ const CSS = `
 .barra button {
   position: relative;
   flex: 0 0 auto;
-  width: 52px;
-  height: 52px;
-  min-width: 44px;
-  min-height: 44px;
+  width: clamp(36px, 9.4vw, 52px);
+  height: clamp(36px, 9.4vw, 52px);
+  min-width: 36px;
+  min-height: 36px;
   padding: 4px;
   box-sizing: border-box;
   border: 2px solid rgba(255, 255, 255, 0.08);
   border-radius: 6px;
   background: rgba(255, 255, 255, 0.06);
   cursor: pointer;
-  transition: transform 0.12s ease, border-color 0.12s ease, background 0.12s ease;
+  transition: transform 0.12s ease, background 0.12s ease;
 }
 .barra button:hover { background: rgba(255, 255, 255, 0.12); }
 .barra button[aria-pressed='true'] {

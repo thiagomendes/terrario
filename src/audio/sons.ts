@@ -15,7 +15,8 @@ export type EventoSom =
   | 'coleta'
   | 'dano'
   | 'comer'
-  | 'espectro';
+  | 'espectro'
+  | 'trovao';
 
 export const EVENTOS_SOM: readonly EventoSom[] = [
   'golpe',
@@ -31,6 +32,7 @@ export const EVENTOS_SOM: readonly EventoSom[] = [
   'dano',
   'comer',
   'espectro',
+  'trovao',
 ];
 
 export const VARIACOES_POR_EVENTO = 4;
@@ -88,6 +90,7 @@ const BASE_EVENTO: Record<EventoSom, BaseEvento> = {
   troca: { ganho: 0.3, duracao: 0.08, ruido: 0.1, escalaTom: 1, grupoAudio: 'efeitos' },
   recusa: { ganho: 0.35, duracao: 0.2, ruido: 0.1, escalaTom: 1, grupoAudio: 'efeitos' },
   entrada: { ganho: 0.4, duracao: 0.5, ruido: 0.05, escalaTom: 1, grupoAudio: 'efeitos' },
+  trovao: { ganho: 0.9, duracao: 1.9, ruido: 1, escalaTom: 1, grupoAudio: 'efeitos' },
   espectro: { ganho: 0.35, duracao: 1.2, ruido: 0.5, escalaTom: 1, grupoAudio: 'efeitos' },
   comer: { ganho: 0.4, duracao: 0.3, ruido: 0.8, escalaTom: 1, grupoAudio: 'efeitos' },
   dano: { ganho: 0.6, duracao: 0.25, ruido: 0.6, escalaTom: 1, grupoAudio: 'efeitos' },
@@ -102,6 +105,7 @@ const FIXOS: Partial<Record<EventoSom, BaseMaterial>> = {
   dano: { frequencia: 190, filtroHz: 900 },
   comer: { frequencia: 300, filtroHz: 1800 },
   espectro: { frequencia: 210, filtroHz: 700 },
+  trovao: { frequencia: 45, filtroHz: 160 },
 };
 
 export const AMPLITUDE_TOM = 0.12;
@@ -414,6 +418,11 @@ function desenharSom(par: ParametrosSom, evento: EventoSom, grupo: GrupoMaterial
           ),
         );
         break;
+      case 'trovao':
+        pecas.push(ruido(ctx, out, t0, 'lowpass', par.filtroHz, 0.7, 1, 1.8, 0.08));
+        pecas.push(ruido(ctx, out, t0 + 0.25, 'lowpass', par.filtroHz * 0.7, 0.7, 0.8, 1.5, 0.2));
+        pecas.push(tom(ctx, out, t0, 'sine', par.frequencia, par.frequencia * 0.6, 0.6, 1.4, 0.05));
+        break;
       case 'espectro':
         pecas.push(
           tom(ctx, out, t0, 'sine', par.frequencia * 1.2, par.frequencia * 0.6, 0.35, 1.1, 0.25),
@@ -523,6 +532,8 @@ export interface Ambiente {
   definirNoite(noite: number): void;
   /** Volumes relativos (0 a 1) da trilha e da natureza. */
   definirVolumes(musica: number, natureza: number): void;
+  /** Intensidade da chuva (0 a 1): chiado contínuo e menos pássaros. */
+  definirChuva(i: number): void;
 }
 
 interface RelogioAgenda {
@@ -572,6 +583,8 @@ export function iniciarAmbiente(
   let timer: unknown = null;
   let noite = 0;
   let volMusica = 1;
+  let chuva = 0;
+  let gChuva: GanhoSom | null = null;
   let volNatureza = 1;
   let ctxA: ContextoSintese | null = null;
   let busNatureza: GanhoSom | null = null;
@@ -679,7 +692,7 @@ export function iniciarAmbiente(
         grilo(t);
         proximoBicho = t + 0.35 + rng() * 0.5;
       } else {
-        if (rng() < 0.6) passaro(t);
+        if (rng() < 0.6 * (1 - chuva)) passaro(t);
         proximoBicho = t + 1.2 + rng() * 3;
       }
     }
@@ -730,7 +743,22 @@ export function iniciarAmbiente(
         vento.connect(filtro);
         filtro.connect(gVento);
         gVento.connect(busNatureza);
+        // chuva: ruído chiado, começa em silêncio
+        const fChuva = ctx.createBufferSource();
+        fChuva.buffer = bufferDeRuido(ctx);
+        fChuva.loop = true;
+        const passaAlta = ctx.createBiquadFilter();
+        passaAlta.type = 'highpass';
+        passaAlta.frequency.value = 900;
+        passaAlta.Q.value = 0.4;
+        gChuva = ctx.createGain() as GanhoSom;
+        gChuva.gain.value = chuva * 0.55;
+        fChuva.connect(passaAlta);
+        passaAlta.connect(gChuva);
+        gChuva.connect(busNatureza);
         const t = ctx.currentTime;
+        fChuva.start(t);
+        vivas.add(fChuva);
         vento.start(t);
         lfo.start(t);
         vivas.add(lfo);
@@ -747,6 +775,10 @@ export function iniciarAmbiente(
   return {
     definirNoite(n) {
       noite = Math.max(0, Math.min(1, n));
+    },
+    definirChuva(i) {
+      chuva = Math.max(0, Math.min(1, i));
+      if (gChuva) gChuva.gain.value = chuva * 0.55;
     },
     definirVolumes(musica, natureza) {
       volMusica = musica;

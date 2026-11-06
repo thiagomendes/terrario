@@ -26,7 +26,7 @@ export interface VizinhosLuz {
   zPos?: Uint8Array;
 }
 
-const M = 16; // margem em volta do chunk
+const M = 14; // margem em volta do chunk (luz máxima 15)
 const RX = TAM_X + 2 * M;
 const RZ = TAM_Z + 2 * M;
 const TAM = RX * RZ * ALTURA;
@@ -38,6 +38,11 @@ export interface MapaLuz {
   bloco(x: number, y: number, z: number): number;
 }
 
+const REG = new Uint8Array(TAM);
+const CEU = new Uint8Array(TAM);
+const LUZ = new Uint8Array(TAM);
+const FILA = new Int32Array(TAM * 2);
+
 const ri = (x: number, y: number, z: number) => (y * RZ + (z + M)) * RX + (x + M);
 
 /**
@@ -45,9 +50,10 @@ const ri = (x: number, y: number, z: number) => (y * RZ + (z + M)) * RX + (x + M
  * usando os 4 vizinhos diretos; regiões sem dados (cantos) contam como ar aberto.
  */
 export function calcularLuz(blocos: Uint8Array, viz: VizinhosLuz = {}): MapaLuz {
-  const reg = new Uint8Array(TAM);
-  const ceu = new Uint8Array(TAM);
-  const luz = new Uint8Array(TAM);
+  // buffers reaproveitados entre chamadas (o resultado vale até a próxima chamada)
+  const reg = REG.fill(0);
+  const ceu = CEU.fill(0);
+  const luz = LUZ.fill(0);
   // 1) monta a região
   const fontes: [Uint8Array | undefined, number, number][] = [
     [blocos, 0, 0],
@@ -70,15 +76,18 @@ export function calcularLuz(blocos: Uint8Array, viz: VizinhosLuz = {}): MapaLuz 
       }
   }
   // 2) luz do céu descendo pelas colunas
-  const fila = new Int32Array(TAM * 2);
+  const fila = FILA;
   let ini = 0;
   let fim = 0;
+  // acima do terreno mais alto da região tudo é 15: a semeadura só precisa ir até lá
+  let topoMax = 0;
   for (let z = -M; z < TAM_Z + M; z++)
     for (let x = -M; x < TAM_X + M; x++) {
       let l = LUZ_MAXIMA;
       for (let y = ALTURA - 1; y >= 0; y--) {
         const i = ri(x, y, z);
         const id = reg[i];
+        if (OPACO[id] || ATENUA[id]) topoMax = Math.max(topoMax, y + 1);
         if (OPACO[id]) break;
         l = Math.max(0, l - ATENUA[id]);
         if (l === 0) break;
@@ -87,7 +96,7 @@ export function calcularLuz(blocos: Uint8Array, viz: VizinhosLuz = {}): MapaLuz 
     }
   // semeia a propagação nas bordas entre claro e escuro
   const passoY = RX * RZ;
-  for (let y = 0; y < ALTURA; y++)
+  for (let y = 0; y <= Math.min(ALTURA - 1, topoMax + 1); y++)
     for (let z = -M; z < TAM_Z + M; z++)
       for (let x = -M; x < TAM_X + M; x++) {
         const i = ri(x, y, z);
@@ -106,7 +115,8 @@ export function calcularLuz(blocos: Uint8Array, viz: VizinhosLuz = {}): MapaLuz 
   // 3) luz de blocos (tochas, cristais, lanternas...)
   ini = 0;
   fim = 0;
-  for (let i = 0; i < TAM; i++) {
+  const fimEmissores = Math.min(ALTURA, topoMax + 2) * RX * RZ;
+  for (let i = 0; i < fimEmissores; i++) {
     const e = EMITE[reg[i]];
     if (e > 0) {
       luz[i] = e;

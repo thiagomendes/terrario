@@ -12,6 +12,11 @@ import { Bloco } from './world/blocks';
 import { criarGerenciadorConfig } from './jogo/config';
 import { CSS_STATUS, criarStatus, criarTelaMorte } from './ui/status';
 import { notificar } from './ui/interface';
+import { CSS_FOTO, criarPainelFoto } from './ui/foto';
+import { CSS_MAPA, criarMapas } from './ui/mapa';
+import { CSS_DIARIO, criarUiDiario } from './ui/diario';
+import { criarDiario } from './jogo/diario';
+import { CORES_MARCADOR, type Marcador } from './jogo/mapa';
 
 async function iniciar(app: HTMLElement): Promise<void> {
   registrarCatalogo();
@@ -55,6 +60,9 @@ async function iniciar(app: HTMLElement): Promise<void> {
   panorama(cena);
   ligarInventario(app, canvas, cena, hotbar);
   ligarStatus(app, canvas, cena);
+  ligarFoto(app, cena);
+  ligarMapas(app, cena);
+  ligarDiario(app, cena);
 }
 
 /** Na tela de título, a câmera gira devagar mostrando o mundo; ao jogar, volta à mira salva. */
@@ -259,6 +267,165 @@ function dormir(cena: ReturnType<typeof criarCena>, x: number, z: number): void 
     if (cena.estado.hora !== undefined) cena.estado.hora = 0.265;
     veu.style.opacity = '0';
     notificar('Você dormiu até o amanhecer');
+    window.dispatchEvent(new CustomEvent('brumaluz:dormiu'));
     setTimeout(() => veu.remove(), 1300);
   }, 1500);
+}
+
+function ligarFoto(app: HTMLElement, cena: ReturnType<typeof criarCena>): void {
+  const estilo = document.createElement('style');
+  estilo.textContent = CSS_FOTO;
+  document.head.appendChild(estilo);
+  const foto = cena.estado.modoFoto!;
+  const painel = criarPainelFoto(app, {
+    filtro: (f) => foto.filtro(f),
+    desfoque: (v) => foto.desfoque(v),
+    fov: (g) => foto.fov(g),
+    hora: (h) => {
+      cena.estado.hora = h;
+    },
+    capturar: () => {
+      foto.capturar();
+      notificar('Foto salva 📸');
+      window.dispatchEvent(new CustomEvent('brumaluz:foto'));
+    },
+    sair: () => alternar(),
+  });
+  function alternar(): void {
+    const ativo = foto.alternar();
+    painel.mostrar(ativo, cena.estado.hora);
+    if (ativo) document.body.dataset.overlay = 'foto';
+    else if (document.body.dataset.overlay === 'foto') delete document.body.dataset.overlay;
+  }
+  window.addEventListener('keydown', (e) => {
+    if ((e.target as HTMLElement)?.closest?.('input, textarea') || e.repeat) return;
+    if (document.querySelector('.entrada:not([hidden])')) return;
+    if (e.code === 'KeyP') alternar();
+    else if (foto.ativo() && e.code === 'Enter') {
+      foto.capturar();
+      notificar('Foto salva 📸');
+    }
+  });
+}
+
+function ligarMapas(app: HTMLElement, cena: ReturnType<typeof criarCena>): void {
+  const estilo = document.createElement('style');
+  estilo.textContent = CSS_MAPA;
+  document.head.appendChild(estilo);
+  let marcadores: Marcador[] = (cena.extrasSalvos('marcadores') as Marcador[] | undefined) ?? [];
+  cena.registrarSalvavel('marcadores', { salvar: () => marcadores });
+  let proximo = marcadores.reduce((m, x) => Math.max(m, x.id), 0) + 1;
+  const adicionar = (nome: string, x: number, z: number, cor?: string) => {
+    marcadores = [
+      ...marcadores,
+      {
+        id: proximo++,
+        nome,
+        x,
+        z,
+        cor: cor ?? CORES_MARCADOR[(proximo - 2) % CORES_MARCADOR.length],
+      },
+    ].slice(-24);
+  };
+  const mapas = criarMapas(app, {
+    posicao: () => {
+      const p = cena.estado.posicao ?? [0, 0, 0];
+      const r = cena.estado.rotacao ?? [0, 0];
+      return { x: p[0], z: p[2], yaw: r[1] };
+    },
+    amostrar: (cx, cz) => cena.estado.mapaChunk!(cx, cz),
+    marcadores: () => marcadores,
+    adicionarMarcador: (nome) => {
+      const p = cena.estado.posicao ?? [0, 0, 0];
+      adicionar(nome, p[0], p[2]);
+    },
+    removerMarcador: (id) => {
+      marcadores = marcadores.filter((m) => m.id !== id);
+    },
+  });
+  window.addEventListener('brumaluz:morte', () => {
+    const p = cena.estado.posicao ?? [0, 0, 0];
+    marcadores = marcadores.filter((m) => m.nome !== 'Onde desmaiei');
+    adicionar('Onde desmaiei', p[0], p[2], '#ff7a8a');
+  });
+  window.addEventListener('keydown', (e) => {
+    if ((e.target as HTMLElement)?.closest?.('input, textarea') || e.repeat) return;
+    if (document.querySelector('.entrada:not([hidden])')) return;
+    if (e.code === 'KeyM') {
+      const aberto = mapas.alternarGrande();
+      if (aberto) document.exitPointerLock?.();
+    } else if (e.code === 'KeyK') {
+      const p = cena.estado.posicao ?? [0, 0, 0];
+      adicionar(`Marco ${proximo}`, p[0], p[2]);
+      mapas.atualizarLista();
+      window.dispatchEvent(new CustomEvent('brumaluz:marcou'));
+      notificar(`Marcador “Marco ${proximo - 1}” criado`);
+    } else if (e.code === 'Escape' && mapas.grandeAberto) {
+      mapas.alternarGrande();
+    }
+  });
+}
+
+const TRONCOS = new Set<number>([
+  Bloco.MADEIRA_RETORCIDA,
+  Bloco.TRONCO_BETULA,
+  Bloco.TRONCO_PINHO,
+  Bloco.TRONCO_LANTERNA,
+]);
+
+function ligarDiario(app: HTMLElement, cena: ReturnType<typeof criarCena>): void {
+  const estilo = document.createElement('style');
+  estilo.textContent = CSS_DIARIO;
+  document.head.appendChild(estilo);
+  const diario = criarDiario(cena.extrasSalvos('diario'));
+  cena.registrarSalvavel('diario', { salvar: () => diario.salvar() });
+  const hud = document.querySelector<HTMLElement>('.hud') ?? app;
+  const ui = criarUiDiario(app, hud, diario);
+  const reg = (chave: string, qtd = 1) => {
+    for (const m of diario.registrar(chave, qtd)) {
+      notificar(`🏆 Conquista: ${m.titulo}`);
+    }
+    ui.renderHud();
+  };
+  (window as unknown as { __diario?: unknown }).__diario = {
+    registrar: reg,
+    alternar: () => ui.alternar(),
+  };
+  cena.barramento.ouvir('quebra', (d) => {
+    if (TRONCOS.has(d.bloco)) reg('quebrou:tronco');
+    else if (d.bloco === Bloco.PEDRA_RACHADA) reg('quebrou:pedra');
+  });
+  cena.barramento.ouvir('colocacao', (d) => {
+    reg('colocou');
+    if (d.bloco === Bloco.TOCHA) reg('colocou:tocha');
+  });
+  const ouvir = (nome: string, f: (d: unknown) => void) =>
+    window.addEventListener(`brumaluz:${nome}`, (e) => f((e as CustomEvent).detail));
+  ouvir('fabricou', (id) => reg(`fabricou:${id}`));
+  ouvir('fundiu', (p) => reg(`fundiu:${(p as { item: string }).item}`, (p as { qtd: number }).qtd));
+  ouvir('coletou', (p) =>
+    reg(`coletou:${(p as { item: string }).item}`, (p as { qtd: number }).qtd),
+  );
+  ouvir('comeu', () => reg('comeu'));
+  ouvir('derrotou', (t) => reg(`derrotou:${t}`));
+  ouvir('domou', () => reg('domou'));
+  ouvir('mergulhou', () => reg('mergulhou'));
+  ouvir('dormiu', () => reg('dormiu'));
+  ouvir('marcou', () => reg('marcou'));
+  ouvir('foto', () => reg('foto'));
+  let ultimoBioma = '';
+  setInterval(() => {
+    const b = cena.estado.biomaAtual;
+    if (b && b !== ultimoBioma) {
+      ultimoBioma = b;
+      reg(`bioma:${b}`);
+    }
+  }, 2000);
+  window.addEventListener('keydown', (e) => {
+    if ((e.target as HTMLElement)?.closest?.('input, textarea') || e.repeat) return;
+    if (document.querySelector('.entrada:not([hidden])')) return;
+    if (e.code === 'KeyJ') {
+      if (ui.alternar()) document.exitPointerLock?.();
+    }
+  });
 }

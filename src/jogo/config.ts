@@ -35,7 +35,7 @@ export const CONFIG_PADRAO: Config = {
   inverterY: false,
   fov: 70,
   qualidade: 'alta',
-  distancia: 4,
+  distancia: 3,
   mostrarFps: true,
   balanco: true,
   escalaInterface: 1,
