@@ -353,7 +353,8 @@ function ligarMapas(app: HTMLElement, cena: ReturnType<typeof criarCena>): void 
   window.addEventListener('keydown', (e) => {
     if ((e.target as HTMLElement)?.closest?.('input, textarea') || e.repeat) return;
     if (document.querySelector('.entrada:not([hidden])')) return;
-    if (e.code === 'KeyM') {
+    if (e.code === 'Tab') {
+      e.preventDefault();
       const aberto = mapas.alternarGrande();
       if (aberto) document.exitPointerLock?.();
     } else if (e.code === 'KeyK') {

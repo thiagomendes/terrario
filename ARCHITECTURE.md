@@ -1,6 +1,7 @@
 # Brumaluz
 
 ## Visão geral
+
 Jogo 3D de exploração, construção e sobrevivência em mundo voxel, que roda no navegador. Identidade própria: crepúsculo eterno e brumoso, blocos pintados por código e flora bioluminescente. Interface em português do Brasil. Não usa nenhum recurso, nome ou marca de Minecraft.
 
 A spec 001-cena-validacao entregou uma cena jogável de validação visual: terreno em streaming de chunks, ambiente completo, jogador com física e controles, HUD, resolução adaptativa, testes e2e com capturas em três viewports e relatório em `docs/validacao-visual.md`.
@@ -15,29 +16,35 @@ A spec 005-camera-personagem (concluída) acrescentou braço e mão em primeira 
 
 A revisão visual e sonora (sem spec numerada, 2026-11-06) trocou a direção de arte para pixel-art natural de 16x16 com iluminação moderna: ciclo de dia e noite puro (`atmosfera.ts`), céu em shader (`ceu.ts`), água em plano com reflexo (`agua.ts`), bruma de vale e variação de tom por bloco (`materialMundo.ts`), vagalumes (`vagalumes.ts`), pós-processamento, personagem com textura por face e braço em primeira pessoa como viewmodel, e áudio com receitas por material e paisagem sonora.
 
+A spec 006-expansao (branch `feat/expansao`, 2026-11-06) transformou a cena em jogo completo: mundos salvos, inventário, crafting, ferramentas, modos criativo e sobrevivência, mundo de 128 de altura com biomas, cavernas e minérios, iluminação por blocos, água como bloco, blocos utilitários (fornalha, baú, porta, cama, escada, laje, cerca), criaturas (passivas, hostis e companheira), clima e estações, construção assistida, modo foto, mapas, diário de missões, música adaptativa, toque, gamepad e legendas. Detalhes em `.sdd/specs/006-expansao/report.md`.
+
 ## Stack
+
 - TypeScript 5.6.3, Vite 5.4.10, Babylon.js (`@babylonjs/core` 7.31.0, imports por módulo para tree-shaking).
 - Vitest 2.1.4 para a lógica pura (ambiente node, sem jsdom); Playwright 1.48.2 (Chromium) para e2e e capturas; Prettier 3.3.3.
 - Áudio: Web Audio API do navegador, sintetizado por código, sem biblioteca e sem arquivos.
 - Docker: imagem base `mcr.microsoft.com/playwright:v1.48.2-noble` (traz Node e navegadores), via `.nants/Dockerfile` e `.nants/compose.yaml` (serviço `workspace`, porta 5174).
 
 ## Estrutura
-- `src/main.ts`: ponto de entrada; `index.html` na raiz.
-- `src/world/`: `blocks.ts`, `noise.ts`, `chunk.ts` (blocos, ruído, geração de chunks, um cristal por ponto; lógica pura, sem Babylon) e `edicoes.ts` (registro puro de edições).
+
+- `src/main.ts`: ponto de entrada (carrega o mundo do IndexedDB, cria interface e cena e liga inventário, pausa, mapas, diário, foto, toque e gamepad); `index.html` na raiz.
+- `src/jogo/` (lógica pura, Vitest): `mundos.ts` (repositório de mundos sobre armazém chave-valor) e `indexeddb.ts`; `itens.ts`, `catalogo.ts` (materiais, ferramentas, comidas), `inventario.ts`, `drops.ts` (itens soltos com física e coleta), `receitas.ts` (receitas com tags, fundição e combustíveis), `ferramentas.ts` (velocidade e coleta por nível), `fornalha.ts`, `conteineres.ts` (baús, fornalhas e tesouro), `sobrevivencia.ts`, `config.ts`, `criaturas.ts` e `populacao.ts`, `clima.ts` (clima e estações), `construcao.ts` (histórico, formas, blueprints, espelho), `mapa.ts` e `diario.ts`.
+- `src/world/`: `blocks.ts` (67 blocos com luz, forma, ferramenta, tiles por face), `noise.ts` (2D, 3D, cristas), `chunk.ts` (altura 128, biomas, cavernas, minérios, água, árvores, ruínas, nascimento), `luz.ts` (luz do céu e de blocos), `formas.ts` (caixas de blocos parciais e direções) (blocos, ruído, geração de chunks, um cristal por ponto; lógica pura, sem Babylon) e `edicoes.ts` (registro puro de edições).
 - `src/mesh/malha.ts`: malha de chunk (faces visíveis, AO por vértice, tiles por face, vegetação em quads cruzados).
-- `src/art/atlas.ts`: atlas de texturas procedural (buffer RGBA puro, envolvido por canvas no navegador).
+- `src/art/atlas.ts` e `tiles.ts`: atlas 16x8 de tiles 16x16 nomeados (buffer RGBA puro); `itens.ts`: ícones pixel-art de itens.
 - `src/workers/chunk.worker.ts`: geração, aplicação de edições e malha de chunks em Web Worker.
 - `src/render/`: `atmosfera.ts` (paleta de referência e ciclo de dia puro, `atmosferaNaHora`), `ceu.ts` (shader do céu: gradiente, sol, lua, nuvens, estrelas; GLSL compartilhado com a água), `agua.ts` (plano de água em `ALTURA_AGUA`, segue a câmera), `materialMundo.ts` (plugin: tom por bloco, bioma e bruma de vale), `vagalumes.ts` (partículas), `cena.ts`, `gerenciador.ts` (streaming), `atmosfera.ts`, `balanco.ts`, `resolucao.ts`, `remalha.ts`, `fila.ts`, `destaque.ts`, `emissivo.ts` e `efeitos.ts` (rachadura, fragmentos e pulso de colocação), `personagem.ts` (corpo em terceira pessoa em Babylon) e `braco.ts` (braço e bloco na mão).
 - `src/player/`: `fisica.ts`, `controle.ts`, `entrada.ts`, `alvo.ts`, `hotbar.ts`, `interacao.ts`, `mineracao.ts` (dureza por material e estado puro de danos), `minerador.ts` (controlador de segurar/soltar/trocar slot), `eventos.ts` (barramento puro), `movimento.ts` (detector de passos, pulo e aterrissagem), `camera.ts` (modo de câmera, tecla V, colisão da terceira pessoa) e `animacao.ts` (estado de animação puro que produz poses).
 - `src/personagem/` (lógica pura): `aparencia.ts` (4 modelos, paletas, validador), `persistencia.ts` (armazenamento injetado), `modelo.ts` e `textura.ts` (partes em caixas e textura procedural), `poses.ts` e `mao.ts` (bloco na mão).
 - `src/fx/`: `particulas.ts` (pool com limite), `cores.ts` (cor média por bloco) e `rachadura.ts` (texturas de rachadura); lógica pura.
 - `src/audio/`: `motor.ts` (contexto injetável, estados, vozes, mudo), `sons.ts` (banco de sons procedurais por material e evento), `materiais.ts` (grupos de material), `variacao.ts` (variação com semente) e `ligador.ts` (liga eventos ao áudio e ativa no primeiro gesto).
-- `src/ui/`: `interface.ts` (HUD, tela de entrada, indicador de áudio e de câmera), `barra.ts` (barra de blocos) e `personagem.ts` (painel de personalização).
+- `src/ui/`: `interface.ts` (HUD, tela de título, pausa, toasts), `barra.ts` (9 slots), `personagem.ts`, `mundos.ts` (painel de mundos e modal genérico), `configuracoes.ts`, `pausa.ts`, `inventario.ts`, `criacao.ts` (grade e livro de receitas), `conteiner.ts` (baú e fornalha), `icones.ts`, `status.ts` (vida, fome, ar, desmaio), `foto.ts`, `mapa.ts` (minimapa, bússola, mapa), `diario.ts`, `toque.ts` (toque, gamepad, legendas).
 - `tests/` (Vitest, por área: `mesh`, `player`, `render`, `world`, `art`, `fx`, `audio`, `personagem`, `ui`; `tests/audio/falso.ts` traz o `AudioContext` falso) e `e2e/` (Playwright: `visual`, `interacao`, `barra`, `cristal`, `fumaca`, `mineracao`, `audio`, `personagem`, `persistencia-personagem`, `capturas-personagem`).
 - `docs/validacao-visual.md`: relatório de validação visual e desempenho (inclui as seções das specs 004 e 005).
 - Configs na raiz: `vite.config.ts`, `vitest.config.ts`, `playwright.config.ts`, `tsconfig.json`.
 
 ## Comandos (instalar, testar, executar)
+
 - Instalar: `npm ci --no-audit --no-fund`
 - Testes rápidos: `npx vitest run` (ou `npm test`); completos: `npx vitest run && npx playwright test`
 - Build: `npm run build`; preview: `npm run preview`
@@ -46,6 +53,7 @@ A revisão visual e sonora (sem spec numerada, 2026-11-06) trocou a direção de
 - O Playwright sobe sozinho `npm run build` e o preview em `127.0.0.1:4173`. Capturas em `test-results/screens`.
 
 ## Padrões e convenções
+
 - Lógica de mundo, malha, edição, raycast, hotbar, fila, mineração, pool de partículas, detector de movimento, ligador de áudio, câmera, poses, animação e aparência é pura e determinística (semente), testável sem GPU e sem Web Audio. Decisões de render que valem teste ficam em funções puras separadas do Babylon.
 - Um material de atlas único e uma malha por chunk (16x16x64).
 - Sombras só do sol, 2 cascatas, perto do jogador; emissivos via glow, nunca luz dinâmica.
@@ -63,6 +71,7 @@ A revisão visual e sonora (sem spec numerada, 2026-11-06) trocou a direção de
 - Textos de docs e relatório não citam Minecraft.
 
 ## Decisões
+
 - Babylon.js escolhido por sombras em cascata, névoa, céu procedural, glow e DynamicTexture integrados (spec 001-cena-validacao).
 - Arte 100% procedural por código, sem arquivos de textura externos (spec 001-cena-validacao).
 - Entrada só teclado e mouse nesta fase (spec 001-cena-validacao).
@@ -92,7 +101,16 @@ A revisão visual e sonora (sem spec numerada, 2026-11-06) trocou a direção de
 - 2026-11-06: braço em primeira pessoa como viewmodel com pivô no ombro (`Animador.vista()`): repouso discreto, golpe e colocação avançam, balanço, respiração, atraso de câmera e troca de slot.
 - 2026-11-06: áudio com receitas por material, paisagem sonora numa única voz de prioridade alta (agendador injetável) e ganho do grupo `ambiente` em 0.7 (antes 0.08 x 0.08, inaudível).
 
+- 2026-11-06 (006): salvamento em IndexedDB por mundo (edições com metadado, jogador, hora e `extras` de cada sistema registrado via `registrarSalvavel`); a URL `?mundo=<id>` abre um mundo; sem parâmetro abre o último.
+- 2026-11-06 (006): edições guardam `bloco | meta << 8` (direção nos bits 0-1); `metasDoChunk` leva o metadado ao worker.
+- 2026-11-06 (006): água é bloco (`Bloco.AGUA`, líquido) com malha própria e o shader de água; a mira e a colisão a ignoram.
+- 2026-11-06 (006): luz calculada no worker numa região com margem de 14 blocos e os 4 vizinhos, em buffers reaproveitados; vai por vértice num atributo `luz` lido pelo `PluginMundo`.
+- 2026-11-06 (006): edição remalha o chunk e os 4 vizinhos (luz), agrupando os pedidos por quadro; o worker guarda em cache os chunks gerados.
+- 2026-11-06 (006): modo padrão criativo; distância padrão 3 chunks (ajustável de 2 a 8). Mapa do mundo no Tab porque M continua sendo o mudo.
+- 2026-11-06 (006): criaturas são lógica pura com IA por comportamento; o render monta modelos voxel por peças; luz aproximada para hostis por varredura de fontes com cache.
+
 ## Restrições
+
 - Sem recursos protegidos de Minecraft.
 - Capturas e2e rodam com WebGL por software (SwiftShader): o FPS medido ali é informativo, não meta.
 - Edições do mundo não são salvas: somem ao recarregar a página. Só a aparência do personagem é salva (spec 005).

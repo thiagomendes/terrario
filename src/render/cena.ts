@@ -1406,7 +1406,8 @@ export function criarCena(
     minerador.atualizar(dtQuadro, alvoMineracao());
     atualizarChunks();
     atualizarDestaque();
-    atualizarEfeitos(dtQuadro);
+    // partículas e pulsos seguem o tempo real (com teto), mesmo com poucos FPS
+    atualizarEfeitos(Math.min(dtBruto, 0.25));
     atualizarCameraVisao();
     atualizarPersonagem(dtQuadro);
     estado.fps = engine.getFps();

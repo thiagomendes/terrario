@@ -97,7 +97,7 @@ export function criarMapas(raiz: HTMLElement, fonte: FonteMapa) {
   h.textContent = '🗺 Mapa do mundo';
   const dica = document.createElement('span');
   dica.className = 'dica';
-  dica.textContent = 'Arraste para mover · roda para zoom · K marca um lugar · M fecha';
+  dica.textContent = 'Arraste para mover · roda para zoom · K marca um lugar · Tab fecha';
   const lista = document.createElement('div');
   lista.className = 'lista-marcadores';
   cab.append(h, dica, lista);

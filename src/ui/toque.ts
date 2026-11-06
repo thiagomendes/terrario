@@ -109,7 +109,7 @@ export function criarToque(raiz: HTMLElement, c: ControleToque) {
     segurar(
       '🗺',
       'Mapa',
-      () => c.teclaDom('KeyM'),
+      () => c.teclaDom('Tab'),
       () => undefined,
     ),
     segurar(
@@ -192,7 +192,7 @@ export function ligarGamepad(c: ControleToque, slot: (passo: number) => void) {
       if (apertou(5)) slot(1);
       if (apertou(2)) c.teclaDom('KeyE');
       if (apertou(3)) c.teclaDom('KeyV');
-      if (apertou(8)) c.teclaDom('KeyM');
+      if (apertou(8)) c.teclaDom('Tab');
       if (apertou(9)) c.teclaDom('Pausa');
       for (let i = 0; i < g.buttons.length; i++) antes[i] = b(i);
     }
