@@ -3,6 +3,9 @@ import { criarBarra } from './barra';
 import { textoIndicador } from '../audio/ligador';
 import type { EstadoAudio } from '../audio/motor';
 import { textoIndicador as textoIndicadorCamera } from '../player/camera';
+import { MODELOS, type Aparencia } from '../personagem/aparencia';
+import type { Armazenamento } from '../personagem/persistencia';
+import { CSS_PAINEL, criarPainelPersonagem, teclaParaPainel } from './personagem';
 
 const CSS = `
 .entrada {
@@ -169,9 +172,43 @@ export function criarInterface(app: HTMLElement, hotbar?: Hotbar): void {
   entrada.append(titulo, sub, instrucao, lista);
   app.appendChild(entrada);
 
-  entrada.addEventListener('click', () => {
+  function entrarNoJogo(): void {
     entrada.hidden = true;
     document.getElementById('cena')?.requestPointerLock?.();
+  }
+  function rotuloNome(a: Aparencia): string {
+    return a.nome || MODELOS[a.modelo].rotulo;
+  }
+  function armazenamento(): Armazenamento | null {
+    try {
+      return window.localStorage;
+    } catch {
+      return null;
+    }
+  }
+  const estiloPainel = document.createElement('style');
+  estiloPainel.textContent = CSS_PAINEL;
+  document.head.appendChild(estiloPainel);
+  const nomeHud = document.createElement('div');
+  nomeHud.className = 'camera-indicador';
+  nomeHud.style.top = '72px';
+  nomeHud.setAttribute('data-nome-jogador', '');
+  hud.appendChild(nomeHud);
+  const painel = criarPainelPersonagem(entrada, {
+    armazenamento: armazenamento(),
+    aoMudar: (a) => {
+      nomeHud.textContent = rotuloNome(a);
+      window.__brumaluz?.personagem?.definir(a);
+    },
+    aoJogar: entrarNoJogo,
+  });
+  nomeHud.textContent = rotuloNome(painel.aparencia());
+
+  entrada.addEventListener('click', entrarNoJogo);
+  window.addEventListener('keydown', (e) => {
+    if (!teclaParaPainel(e.code) || e.repeat) return;
+    entrada.hidden = false;
+    document.exitPointerLock?.();
   });
   document.addEventListener('pointerlockchange', () => {
     entrada.hidden = document.pointerLockElement !== null;
