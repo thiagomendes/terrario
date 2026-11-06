@@ -47,8 +47,8 @@ beforeEach(() => reiniciarVariacao(42));
 
 describe('tocarSom', () => {
   it('cria ao menos uma voz para cada evento', async () => {
-    const { motor } = await motorAtivo();
     for (const ev of EVENTOS_SOM) {
+      const { motor } = await motorAtivo();
       const antes = motor.vozes;
       const par = tocarSom(motor, ev, 'madeira');
       expect(par, ev).not.toBeNull();

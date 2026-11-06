@@ -14,7 +14,8 @@ export type EventoSom =
   | 'entrada'
   | 'coleta'
   | 'dano'
-  | 'comer';
+  | 'comer'
+  | 'espectro';
 
 export const EVENTOS_SOM: readonly EventoSom[] = [
   'golpe',
@@ -29,6 +30,7 @@ export const EVENTOS_SOM: readonly EventoSom[] = [
   'coleta',
   'dano',
   'comer',
+  'espectro',
 ];
 
 export const VARIACOES_POR_EVENTO = 4;
@@ -86,6 +88,7 @@ const BASE_EVENTO: Record<EventoSom, BaseEvento> = {
   troca: { ganho: 0.3, duracao: 0.08, ruido: 0.1, escalaTom: 1, grupoAudio: 'efeitos' },
   recusa: { ganho: 0.35, duracao: 0.2, ruido: 0.1, escalaTom: 1, grupoAudio: 'efeitos' },
   entrada: { ganho: 0.4, duracao: 0.5, ruido: 0.05, escalaTom: 1, grupoAudio: 'efeitos' },
+  espectro: { ganho: 0.35, duracao: 1.2, ruido: 0.5, escalaTom: 1, grupoAudio: 'efeitos' },
   comer: { ganho: 0.4, duracao: 0.3, ruido: 0.8, escalaTom: 1, grupoAudio: 'efeitos' },
   dano: { ganho: 0.6, duracao: 0.25, ruido: 0.6, escalaTom: 1, grupoAudio: 'efeitos' },
   coleta: { ganho: 0.28, duracao: 0.09, ruido: 0, escalaTom: 1, grupoAudio: 'efeitos' },
@@ -98,6 +101,7 @@ const FIXOS: Partial<Record<EventoSom, BaseMaterial>> = {
   coleta: { frequencia: 740, filtroHz: 3000 },
   dano: { frequencia: 190, filtroHz: 900 },
   comer: { frequencia: 300, filtroHz: 1800 },
+  espectro: { frequencia: 210, filtroHz: 700 },
 };
 
 export const AMPLITUDE_TOM = 0.12;
@@ -409,6 +413,25 @@ function desenharSom(par: ParametrosSom, evento: EventoSom, grupo: GrupoMaterial
             0.12,
           ),
         );
+        break;
+      case 'espectro':
+        pecas.push(
+          tom(ctx, out, t0, 'sine', par.frequencia * 1.2, par.frequencia * 0.6, 0.35, 1.1, 0.25),
+        );
+        pecas.push(
+          tom(
+            ctx,
+            out,
+            t0 + 0.05,
+            'triangle',
+            par.frequencia * 1.5,
+            par.frequencia * 0.75,
+            0.12,
+            1.0,
+            0.3,
+          ),
+        );
+        pecas.push(ruido(ctx, out, t0, 'bandpass', par.filtroHz, 3, 0.3, 1.0, 0.4));
         break;
       case 'comer':
         for (let i = 0; i < 3; i++) {

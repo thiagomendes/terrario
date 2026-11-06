@@ -68,13 +68,21 @@ export function posicaoInicial(
   return criarJogador(x, h + 1, z);
 }
 
-function colide(s: Solido, x: number, y: number, z: number): boolean {
-  const x0 = Math.floor(x - MEIA_LARGURA);
-  const x1 = Math.floor(x + MEIA_LARGURA);
-  const z0 = Math.floor(z - MEIA_LARGURA);
-  const z1 = Math.floor(z + MEIA_LARGURA);
+/** Colisão de uma caixa (meia largura mw, altura alt) com o mundo. */
+export function colideCorpo(
+  s: Solido,
+  x: number,
+  y: number,
+  z: number,
+  mw: number,
+  alt: number,
+): boolean {
+  const x0 = Math.floor(x - mw);
+  const x1 = Math.floor(x + mw);
+  const z0 = Math.floor(z - mw);
+  const z1 = Math.floor(z + mw);
   const y0 = Math.floor(y);
-  const y1 = Math.floor(y + ALTURA_JOGADOR);
+  const y1 = Math.floor(y + alt);
   for (let iy = y0; iy <= y1; iy++) {
     for (let iz = z0; iz <= z1; iz++) {
       for (let ix = x0; ix <= x1; ix++) {
@@ -83,12 +91,12 @@ function colide(s: Solido, x: number, y: number, z: number): boolean {
         if (!cx) return true;
         for (const c of cx) {
           if (
-            x + MEIA_LARGURA > ix + c[0] &&
-            x - MEIA_LARGURA < ix + c[3] &&
-            y + ALTURA_JOGADOR > iy + c[1] &&
+            x + mw > ix + c[0] &&
+            x - mw < ix + c[3] &&
+            y + alt > iy + c[1] &&
             y < iy + c[4] &&
-            z + MEIA_LARGURA > iz + c[2] &&
-            z - MEIA_LARGURA < iz + c[5]
+            z + mw > iz + c[2] &&
+            z - mw < iz + c[5]
           )
             return true;
         }
@@ -96,6 +104,10 @@ function colide(s: Solido, x: number, y: number, z: number): boolean {
     }
   }
   return false;
+}
+
+function colide(s: Solido, x: number, y: number, z: number): boolean {
+  return colideCorpo(s, x, y, z, MEIA_LARGURA, ALTURA_JOGADOR);
 }
 
 /** Altura do chão sob o jogador ao cair (considera blocos parciais). */

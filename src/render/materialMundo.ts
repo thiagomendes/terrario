@@ -88,7 +88,7 @@ export class PluginMundo extends MaterialPluginBase {
           float ceuL = clamp(vLuzMundo.x, 0.0, 1.0);
           float blocoL = clamp(vLuzMundo.y, 0.0, 1.0);
           float fCeu = pow(0.8, (1.0 - ceuL) * 15.0);
-          float fBloco = blocoL > 0.001 ? pow(0.86, (1.0 - blocoL) * 15.0) : 0.0;
+          float fBloco = blocoL > 0.001 ? pow(0.86, (1.0 - blocoL) * 15.0) * smoothstep(0.15, 0.55, blocoL) : 0.0;
           vec3 corTocha = vec3(1.0, 0.72, 0.42) * fBloco * 2.4 * luzBlocos;
           color.rgb = color.rgb * fCeu + baseColor.rgb * corTocha * (1.0 - fCeu * 0.6) + baseColor.rgb * 0.03;
           // bruma rente ao chao nos vales, so onde ha ceu

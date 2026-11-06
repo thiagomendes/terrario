@@ -52,6 +52,11 @@ import { direcaoDoYaw } from '../world/formas';
 import { podeColetar, velocidadeMineracao } from '../jogo/ferramentas';
 import { obterItem } from '../jogo/itens';
 import { criarRenderItens } from './itensSoltos';
+import { criarPopulacao } from '../jogo/populacao';
+import { criaturaNaMira, type TipoCriatura } from '../jogo/criaturas';
+import { criarRenderCriaturas } from './criaturas';
+import { biomaEm, NIVEL_MAR } from '../world/chunk';
+import { luzDoBloco } from '../world/blocks';
 import { perfilDaQualidade, type Config, type GerenciadorConfig } from '../jogo/config';
 import { iconeDoItem } from '../ui/icones';
 import type { Buffers } from '../mesh/malha';
@@ -158,6 +163,15 @@ export interface EstadoDepuracao {
   itensSoltos?: number;
   soltarItem?: (item: string, qtd: number, x: number, y: number, z: number) => void;
   modo?: ModoJogo;
+  criaturas?: () => {
+    tipo: string;
+    x: number;
+    y: number;
+    z: number;
+    domada: boolean;
+    vida: number;
+  }[];
+  invocar?: (tipo: TipoCriatura, x: number, y: number, z: number) => void;
   sobrevivencia?: import('../jogo/sobrevivencia').Sobrevivencia;
   renascer?: () => void;
   definirSpawn?: (x: number, z: number) => void;
@@ -705,6 +719,19 @@ export function criarCena(
     }
     const p = hotbar.pilhaAtiva();
     const def = p ? obterItem(p.item) : undefined;
+    const naMira = criaturaApontada();
+    if (naMira && naMira.tipo === 'raposa' && p?.item === 'frutinhas' && !naMira.domada) {
+      if (modo === 'sobrevivencia') inventario.remover(hotbar.ativo, 1);
+      tocarSom(motorAudio, 'comer');
+      if (populacao.domar(naMira)) {
+        tocarSom(motorAudio, 'entrada');
+        window.dispatchEvent(
+          new CustomEvent('brumaluz:toast', { detail: 'A raposa-lume confia em você! 🦊' }),
+        );
+        window.dispatchEvent(new CustomEvent('brumaluz:domou'));
+      }
+      return;
+    }
     if (def?.comida && modo === 'sobrevivencia') {
       if (estado.sobrevivencia?.comer(def.comida.fome, def.comida.saturacao)) {
         inventario.remover(hotbar.ativo, 1);
@@ -733,6 +760,7 @@ export function criarCena(
   canvas.addEventListener('mousedown', (e) => {
     const acao = acaoParaBotao(e.button, document.pointerLockElement === canvas);
     if (acao === 'quebrar') {
+      if (atacarNaMira()) return;
       minerador.pressionar();
     } else if (acao === 'colocar') {
       const agora = performance.now() / 1000;
@@ -1159,6 +1187,7 @@ export function criarCena(
   ligarAudio(barramento, motorAudio);
   const detector = criarDetectorMovimento();
   let ambiente: Ambiente | null = null;
+  let quadroCriaturas: ((dt: number, tempo: number) => void) | null = null;
   let cameraSubmersa = false;
   let quadroSobrevivencia: ((dt: number) => void) | null = null;
   const sobrevivenciaMorto = () => !!estado.sobrevivencia?.estado.morto;
@@ -1230,6 +1259,7 @@ export function criarCena(
     if (!estado.pausarDia) hora = normalizarHora(hora + dtBruto / DURACAO_DIA);
     aplicarAtmosfera(tempo);
     atualizarItens(dtQuadro, tempo);
+    quadroCriaturas?.(dtQuadro, tempo);
     balanco.atualizar(tempo);
     scene.render();
   });
@@ -1283,6 +1313,148 @@ export function criarCena(
     braco.definirBalanco(c.balanco);
   }
   opcoes.config?.ouvir(aplicarConfig);
+
+  // Criaturas: animais, peixes, espectros e a raposa-lume companheira.
+  const populacao = criarPopulacao(
+    criarGerador(semente + 55),
+    dadosIniciais?.extras?.['criaturas'],
+  );
+  salvaveis.set('criaturas', { salvar: () => populacao.salvar() });
+  const cacheLuz = new Map<string, { v: number; t: number }>();
+  const cacheCeu = new Map<string, { v: boolean; t: number }>();
+  let relogioCache = 0;
+  /** Luz aproximada de fontes num raio de 7 blocos (com cache de 2 s). */
+  function luzAprox(x: number, y: number, z: number): number {
+    const k = `${x},${y},${z}`;
+    const c = cacheLuz.get(k);
+    if (c && relogioCache - c.t < 2) return c.v;
+    let melhor = 0;
+    for (let dy = -4; dy <= 4; dy++)
+      for (let dz = -7; dz <= 7; dz++)
+        for (let dx = -7; dx <= 7; dx++) {
+          const l = luzDoBloco(blocoEm(x + dx, y + dy, z + dz));
+          if (l > 0) melhor = Math.max(melhor, l - Math.abs(dx) - Math.abs(dy) - Math.abs(dz));
+        }
+    cacheLuz.set(k, { v: melhor, t: relogioCache });
+    if (cacheLuz.size > 4000) cacheLuz.clear();
+    return melhor;
+  }
+  function ceuAberto(x: number, y: number, z: number): boolean {
+    const k = `${x},${z}`;
+    const c = cacheCeu.get(k);
+    if (c && relogioCache - c.t < 3) return c.v && y >= 0;
+    let livre = true;
+    for (let yy = y; yy < ALTURA && livre; yy++)
+      if (obterBlocoDef(blocoEm(x, yy, z))?.opaco) livre = false;
+    cacheCeu.set(k, { v: livre, t: relogioCache });
+    if (cacheCeu.size > 4000) cacheCeu.clear();
+    return livre;
+  }
+  const mundoCriaturas = {
+    solido: controle.solido,
+    agua: (x: number, y: number, z: number) => blocoEm(x, y, z) === Bloco.AGUA,
+    luzBloco: luzAprox,
+    ceuAberto,
+    bioma: (x: number, z: number) => biomaEm(x, z, semente),
+    superficie: (x: number, z: number) => {
+      for (let y = ALTURA - 2; y > 0; y--) {
+        const d = obterBlocoDef(blocoEm(x, y, z));
+        if (d?.solido) return y + 1;
+      }
+      return null;
+    },
+    nivelMar: NIVEL_MAR,
+  };
+  const renderCriaturas = criarRenderCriaturas(
+    scene,
+    (m) => glow.addExcludedMesh(m),
+    () => undefined,
+  );
+  const rngCombate = criarGerador(semente + 77);
+  function direcaoOlhar() {
+    const yaw = camera.rotation.y;
+    const pitch = camera.rotation.x;
+    return {
+      x: Math.sin(yaw) * Math.cos(pitch),
+      y: -Math.sin(pitch),
+      z: Math.cos(yaw) * Math.cos(pitch),
+    };
+  }
+  function criaturaApontada() {
+    const o = camera.position;
+    const r = criaturaNaMira(populacao.lista, { x: o.x, y: o.y, z: o.z }, direcaoOlhar(), 3.6);
+    if (!r) return null;
+    const a = calcularAlvo();
+    if (a) {
+      const db = Math.hypot(a.x + 0.5 - o.x, a.y + 0.5 - o.y, a.z + 0.5 - o.z);
+      if (db + 0.4 < r.distancia) return null;
+    }
+    return r.criatura;
+  }
+  /** Clique esquerdo numa criatura: ataca com a arma da mão. */
+  function atacarNaMira(): boolean {
+    const c = criaturaApontada();
+    if (!c) return false;
+    const f = ferramentaNaMao();
+    const dano = f ? (f.tipo === 'espada' ? f.dano : Math.max(2, f.dano)) : 1;
+    const ev = populacao.ferir(c, dano, camera.position.x, camera.position.z);
+    animador.evento('golpe');
+    tratarEventosCriaturas(ev);
+    const p = hotbar.pilhaAtiva();
+    if (modo === 'sobrevivencia' && f && p?.dur !== undefined) {
+      const dur = p.dur - (f.tipo === 'espada' ? 1 : 2);
+      inventario.definir(hotbar.ativo, dur > 0 ? { ...p, dur } : null);
+    }
+    return true;
+  }
+  function tratarEventosCriaturas(eventos: ReturnType<typeof populacao.atualizar>): void {
+    for (const ev of eventos) {
+      const c = ev.criatura;
+      if (ev.tipo === 'ataque' && modo === 'sobrevivencia') {
+        sobrevivencia.dano(ev.dano ?? 2, 'criatura');
+        controle.jogador.vy = 4.5;
+      } else if (ev.tipo === 'ferida') {
+        tocarSom(motorAudio, 'golpe', c.tipo === 'espectro' ? 'cristal' : 'terra');
+      } else if (ev.tipo === 'morte') {
+        if (c.tipo === 'espectro') tocarSom(motorAudio, 'espectro');
+        else tocarSom(motorAudio, 'quebra', 'folhagem');
+        for (const d of ev.drops ?? [])
+          mundoItens.soltar(d.item, d.qtd, c.x, c.y + 0.5, c.z, rngDrops);
+        if (ev.drops)
+          window.dispatchEvent(new CustomEvent('brumaluz:derrotou', { detail: c.tipo }));
+      } else if (
+        ev.tipo === 'som' &&
+        Math.hypot(c.x - camera.position.x, c.z - camera.position.z) < 20
+      ) {
+        tocarSom(motorAudio, 'espectro');
+      }
+    }
+  }
+  quadroCriaturas = (dt: number, tempo: number) => {
+    relogioCache += dt;
+    const j = controle.jogador;
+    const noite = estado.atmosfera?.noite ?? 0;
+    const ev = populacao.atualizar(
+      dt,
+      mundoCriaturas,
+      { x: j.x, y: j.y, z: j.z, vivo: !sobrevivencia.estado.morto, criativo: modo === 'criativo' },
+      noite,
+    );
+    tratarEventosCriaturas(ev);
+    renderCriaturas.atualizar(populacao.lista, dt, tempo, () => Math.max(0.25, luzJogador));
+  };
+  estado.criaturas = () =>
+    populacao.lista.map((c) => ({
+      tipo: c.tipo,
+      x: c.x,
+      y: c.y,
+      z: c.z,
+      domada: c.domada,
+      vida: c.vida,
+    }));
+  estado.invocar = (tipo, x, y, z) => {
+    populacao.adicionar(tipo, x, y, z);
+  };
 
   // Nascimento: sem posição salva, garante que o jogador comece em ar livre.
   if (!dadosIniciais?.jogador) estado.teleportar?.(controle.jogador.x, controle.jogador.z);
