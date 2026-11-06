@@ -2,6 +2,7 @@ import type { Hotbar } from '../player/hotbar';
 import { criarBarra } from './barra';
 import { textoIndicador } from '../audio/ligador';
 import type { EstadoAudio } from '../audio/motor';
+import { textoIndicador as textoIndicadorCamera } from '../player/camera';
 
 const CSS = `
 .entrada {
@@ -104,6 +105,16 @@ const CSS = `
   color: #e6d6f7;
   font: 600 0.8rem system-ui, sans-serif;
 }
+.hud .camera-indicador {
+  position: absolute;
+  top: 40px;
+  left: 8px;
+  padding: 4px 10px;
+  border-radius: 8px;
+  background: rgba(18, 10, 36, 0.65);
+  color: #e6d6f7;
+  font: 600 0.8rem system-ui, sans-serif;
+}
 `;
 
 const TECLAS: ReadonlyArray<readonly [string, string]> = [
@@ -129,7 +140,11 @@ export function criarInterface(app: HTMLElement, hotbar?: Hotbar): void {
   somInd.className = 'som';
   somInd.setAttribute('data-audio-indicador', '');
   somInd.textContent = textoIndicador('inativo', false);
-  hud.append(mira, fps, somInd);
+  const camInd = document.createElement('div');
+  camInd.className = 'camera-indicador';
+  camInd.setAttribute('data-camera-indicador', '');
+  camInd.textContent = textoIndicadorCamera('primeira');
+  hud.append(mira, fps, somInd, camInd);
   app.appendChild(hud);
   criarBarra(app, hotbar);
 
@@ -169,5 +184,6 @@ export function criarInterface(app: HTMLElement, hotbar?: Hotbar): void {
   setInterval(() => {
     const a = window.__brumaluz?.audio;
     somInd.textContent = textoIndicador((a?.estado ?? 'inativo') as EstadoAudio, a?.mudo ?? false);
+    camInd.textContent = textoIndicadorCamera(window.__brumaluz?.camera?.modo() ?? 'primeira');
   }, 200);
 }

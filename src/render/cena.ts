@@ -73,6 +73,14 @@ import { grupoDoBloco } from '../audio/materiais';
 import { iniciarAmbiente, tocarSom, type Ambiente } from '../audio/sons';
 import { blocoSobPes, criarDetectorMovimento } from '../player/movimento';
 import { VEL_ANDAR, VEL_CORRER } from '../player/fisica';
+import {
+  alternar as alternarCamera,
+  criarEstadoCamera,
+  definir as definirCamera,
+  posicaoTerceiraPessoa,
+  teclaParaCamera,
+  type ModoCamera,
+} from '../player/camera';
 import { chave, chunksDesejados, planejar, respostaObsoleta } from './gerenciador';
 
 const RAIO_INICIAL = 3;
@@ -136,6 +144,11 @@ export interface EstadoDepuracao {
   rachadura?: { visivel: boolean; estagio: number };
   fx?: { particulas: number };
   audio?: { estado: string; vozes: number; mudo: boolean; ambiente?: boolean };
+  camera?: {
+    modo: () => ModoCamera;
+    alternar: () => void;
+    definir: (modo: ModoCamera) => void;
+  };
 }
 
 declare global {
@@ -170,6 +183,13 @@ export function criarCena(canvas: HTMLCanvasElement, hotbar: Hotbar = criarHotba
   const camera = new UniversalCamera('camera', new Vector3(8, 45, 8), scene);
   camera.minZ = 0.1;
   camera.maxZ = 300;
+  const cameraVisao = new UniversalCamera('camera-visao', camera.position.clone(), scene);
+  cameraVisao.minZ = camera.minZ;
+  cameraVisao.maxZ = camera.maxZ;
+  cameraVisao.fov = camera.fov;
+  cameraVisao.inputs.clear();
+  scene.activeCamera = cameraVisao;
+  let estadoCamera = criarEstadoCamera();
   const edicoes = criarEdicoes();
   const controle = criarControle(canvas, camera, SEMENTE_PADRAO, edicoes);
   controle.atualizar(0);
@@ -486,6 +506,32 @@ export function criarCena(canvas: HTMLCanvasElement, hotbar: Hotbar = criarHotba
   };
   estado.apontar = (yaw, pitch) => controle.apontar(yaw, pitch);
   estado.bloco = blocoEm;
+  estado.camera = {
+    modo: () => estadoCamera.modo,
+    alternar: () => {
+      estadoCamera = alternarCamera(estadoCamera);
+    },
+    definir: (modo) => {
+      estadoCamera = definirCamera(estadoCamera, modo);
+    },
+  };
+  window.addEventListener('keydown', (e) => {
+    if (teclaParaCamera(e.code) && !e.repeat) estado.camera?.alternar();
+  });
+  function atualizarCameraVisao(): void {
+    cameraVisao.rotation.copyFrom(camera.rotation);
+    if (estadoCamera.modo === 'primeira') {
+      cameraVisao.position.copyFrom(camera.position);
+      return;
+    }
+    const p = posicaoTerceiraPessoa(
+      { x: camera.position.x, y: camera.position.y, z: camera.position.z },
+      camera.rotation.y,
+      camera.rotation.x,
+      (x, y, z) => blocoEm(x, y, z) !== Bloco.AR,
+    );
+    cameraVisao.position.set(p.x, p.y, p.z);
+  }
   Object.defineProperty(estado, 'slotAtivo', { get: () => hotbar.ativo, enumerable: true });
   Object.defineProperty(estado, 'alvo', { get: calcularAlvo, enumerable: true });
 
@@ -739,6 +785,7 @@ export function criarCena(canvas: HTMLCanvasElement, hotbar: Hotbar = criarHotba
     atualizarChunks();
     atualizarDestaque();
     atualizarEfeitos(dtQuadro);
+    atualizarCameraVisao();
     estado.fps = engine.getFps();
     estado.posicao = [camera.position.x, camera.position.y, camera.position.z];
     estado.rotacao = [camera.rotation.x, camera.rotation.y];
@@ -764,5 +811,5 @@ export function criarCena(canvas: HTMLCanvasElement, hotbar: Hotbar = criarHotba
     else engine.resize();
   });
 
-  return { engine, scene, camera, editarBloco, edicoes };
+  return { engine, scene, camera, cameraVisao, editarBloco, edicoes };
 }
