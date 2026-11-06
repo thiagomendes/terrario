@@ -27,6 +27,7 @@ function buffersTransferiveis(b: Buffers): ArrayBuffer[] {
     b.normais.buffer,
     b.uvs.buffer,
     b.cores.buffer,
+    b.luz.buffer,
     b.indices.buffer,
   ] as ArrayBuffer[];
 }

@@ -122,7 +122,7 @@ export interface EstadoDepuracao {
   /** Hora do dia em [0, 1): 0 meia-noite, 0.5 meio-dia. Gravável nos testes. */
   hora?: number;
   /** Leva o jogador para o topo do terreno em (x, z) (testes e capturas). */
-  teleportar?: (x: number, z: number) => void;
+  teleportar?: (x: number, z: number, y?: number) => void;
   /** Pausa o relógio do dia (testes e capturas). */
   salvar?: (comMiniatura?: boolean) => Promise<boolean>;
   ultimoSalvamento?: number;
@@ -412,6 +412,8 @@ export function criarCena(
     ];
     const forca = 0.35 + 0.35 * Math.max(a.crepusculo, a.noite);
     mundoSolido.definirBruma(bruma, forca);
+    mundoSolido.luzBlocos = 0.8 + 0.4 * a.noite;
+    mundoPlanta.luzBlocos = mundoSolido.luzBlocos;
     mundoPlanta.definirBruma(bruma, forca);
     ceu.atualizar(a, tempo);
     agua.atualizar(a, tempo, cameraVisao.position);
@@ -447,6 +449,7 @@ export function criarCena(
     dados.colors = b.cores;
     dados.indices = b.indices;
     dados.applyToMesh(m);
+    if (b.luz.length > 0) m.setVerticesData('luz', b.luz, false, 2);
     m.material = mat;
     m.position.set(cx * TAM_X, 0, cz * TAM_Z);
     m.freezeWorldMatrix();
@@ -523,7 +526,20 @@ export function criarCena(
 
   function editarBloco(x: number, y: number, z: number, bloco: number): boolean {
     if (!edicoes.definir(x, y, z, bloco)) return false;
-    for (const c of chunksAfetados(x, z)) {
+    const cxE = Math.floor(x / TAM_X);
+    const czE = Math.floor(z / TAM_Z);
+    // a luz muda até 15 blocos em volta: remalha o chunk e os 4 vizinhos
+    const afetados = [
+      { cx: cxE, cz: czE },
+      ...chunksAfetados(x, z).filter((c) => c.cx !== cxE || c.cz !== czE),
+      ...[
+        [1, 0],
+        [-1, 0],
+        [0, 1],
+        [0, -1],
+      ].map(([dx, dz]) => ({ cx: cxE + dx, cz: czE + dz })),
+    ].filter((c, i, arr) => arr.findIndex((o) => o.cx === c.cx && o.cz === c.cz) === i);
+    for (const c of afetados) {
       const k = chave(c.cx, c.cz);
       if (!malhas.has(k) && !pedidos.has(k)) continue;
       prioritarios.add(k);
@@ -670,10 +686,15 @@ export function criarCena(
     verificarSlot();
   };
   estado.apontar = (yaw, pitch) => controle.apontar(yaw, pitch);
-  estado.teleportar = (x, z) => {
+  estado.teleportar = (x, z, yFixo) => {
     const j = controle.jogador;
-    let y = alturaTerreno(Math.floor(x), Math.floor(z), semente) + 1;
-    while (y < ALTURA - 2 && blocoEm(Math.floor(x), y, Math.floor(z)) !== Bloco.AR) y++;
+    let y = yFixo ?? alturaTerreno(Math.floor(x), Math.floor(z), semente) + 1;
+    while (
+      yFixo === undefined &&
+      y < ALTURA - 2 &&
+      blocoEm(Math.floor(x), y, Math.floor(z)) !== Bloco.AR
+    )
+      y++;
     j.x = x;
     j.y = y;
     j.z = z;
@@ -714,6 +735,7 @@ export function criarCena(
   let blocoNaMaoAtual = -1;
   /** Giro extra do corpo em relação à câmera (só para capturas). */
   let giroCorpo = 0;
+  let luzJogador = 1;
   function atualizarPersonagem(dt: number): void {
     const j = controle.jogador;
     const pose = animador.atualizar(dt, {
@@ -737,6 +759,18 @@ export function criarCena(
       vista: animador.vista(),
     });
     personagem.posicionar(j.x, j.y, j.z, camera.rotation.y + giroCorpo);
+    // estimativa de luz no jogador: teto opaco acima = caverna (escurece braço e corpo)
+    const ex = Math.floor(camera.position.x);
+    const ey = Math.floor(camera.position.y);
+    const ez = Math.floor(camera.position.z);
+    let coberto = false;
+    for (let y = ey + 1; y < Math.min(ALTURA, ey + 48) && !coberto; y++) {
+      if (obterBlocoDef(blocoEm(ex, y, ez))?.opaco) coberto = true;
+    }
+    const alvoLuz = coberto ? (ey < 55 ? 0.22 : 0.55) : 1;
+    luzJogador += (alvoLuz - luzJogador) * Math.min(1, dt * 3);
+    braco.definirLuz(luzJogador);
+    personagem.definirLuz(luzJogador);
   }
   estado.personagem = {
     aparencia: () => ({ ...aparencia }),

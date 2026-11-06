@@ -26,6 +26,8 @@ export interface Braco {
   /** Anima o braço (viewmodel): repouso discreto, golpe, colocação, balanço e troca. */
   atualizarVista(dt: number, vista: Vista): void;
   definirBalanco(ativo: boolean): void;
+  /** Fator de luz do ambiente (1 ao ar livre, baixo em cavernas). */
+  definirLuz(f: number): void;
   aplicarAparencia(aparencia: Aparencia): void;
   definirVisivel(visivel: boolean): void;
   contarMalhas(): number;
@@ -254,6 +256,13 @@ export function criarBraco(scene: Scene, camera: TargetCamera, aparencia: Aparen
     atualizarVista,
     definirBalanco(a) {
       balancoAtivo = a;
+    },
+    definirLuz(f) {
+      matBraco.diffuseColor.set(f, f, f);
+      matBloco.diffuseColor.set(f, f, f);
+      const e = 0.12 * f;
+      matBraco.emissiveColor.set(e, e * 0.92, e * 1.08);
+      matBloco.emissiveColor.set(e, e * 0.92, e * 1.08);
     },
     aplicarAparencia,
     definirVisivel(v) {

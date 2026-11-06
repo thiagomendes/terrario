@@ -30,6 +30,7 @@ export interface Personagem {
   aplicarPose(pose: Pose, extras?: ExtrasPose): void;
   posicionar(x: number, y: number, z: number, yaw: number): void;
   definirVisivel(visivel: boolean): void;
+  definirLuz(f: number): void;
   contarMalhas(): number;
   descartar(): void;
 }
@@ -187,6 +188,9 @@ export function criarPersonagem(scene: Scene, aparencia: Aparencia): Personagem 
     posicionar(x, y, z, yaw) {
       raiz.position.set(x, y, z);
       raiz.rotation.y = yaw;
+    },
+    definirLuz(f) {
+      for (const p of partes) p.material.diffuseColor.set(f, f, f);
     },
     definirVisivel(v) {
       visivel = v;

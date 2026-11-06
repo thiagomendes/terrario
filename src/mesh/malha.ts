@@ -1,5 +1,6 @@
 import { Bloco, ehCruz, obterBloco } from '../world/blocks';
 import { uvDaCelula } from '../art/atlas';
+import { LUZ_MAXIMA, calcularLuz } from '../world/luz';
 import { FACES_TILE, indiceDoTile } from '../art/tiles';
 
 const TILE_TERRA = indiceDoTile('terra');
@@ -12,6 +13,8 @@ export interface Buffers {
   normais: Float32Array;
   uvs: Float32Array;
   cores: Float32Array;
+  /** Luz por vértice: (céu, bloco) em 0..1. */
+  luz: Float32Array;
   indices: Uint32Array;
 }
 
@@ -72,6 +75,7 @@ class Acumulador {
   normais: number[] = [];
   uvs: number[] = [];
   cores: number[] = [];
+  luz: number[] = [];
   indices: number[] = [];
 
   get vertices(): number {
@@ -84,6 +88,7 @@ class Acumulador {
       normais: new Float32Array(this.normais),
       uvs: new Float32Array(this.uvs),
       cores: new Float32Array(this.cores),
+      luz: new Float32Array(this.luz),
       indices: new Uint32Array(this.indices),
     };
   }
@@ -115,6 +120,20 @@ function uvLocal(n: Vec, px: number, py: number, pz: number): [number, number] {
 }
 
 export function gerarMalha(blocos: Uint8Array, vizinhos: Vizinhos = {}): MalhaChunk {
+  const mapaLuz = calcularLuz(blocos, vizinhos);
+  /** Luz suavizada num canto de face: média das células claras em volta. */
+  function luzCanto(cs: [number, number, number][], saida: number[]): void {
+    let c = 0;
+    let b = 0;
+    let n = 0;
+    for (const [x, y, z] of cs) {
+      if (n > 0 && opaco(x, y, z)) continue;
+      c += mapaLuz.ceu(x, y, z);
+      b += mapaLuz.bloco(x, y, z);
+      n++;
+    }
+    saida.push(c / (n * LUZ_MAXIMA), b / (n * LUZ_MAXIMA));
+  }
   const solido = new Acumulador();
   const plantas = new Acumulador();
   const agua = new Acumulador();
@@ -139,6 +158,7 @@ export function gerarMalha(blocos: Uint8Array, vizinhos: Vizinhos = {}): MalhaCh
         agua.normais.push(f.n[0], f.n[1], f.n[2]);
         agua.uvs.push(lx, lz);
         agua.cores.push(1, 1, 1, 1);
+        agua.luz.push(1, 0);
       }
       agua.indices.push(base, base + 1, base + 2, base, base + 2, base + 3);
     }
@@ -203,6 +223,19 @@ export function gerarMalha(blocos: Uint8Array, vizinhos: Vizinhos = {}): MalhaCh
       solido.normais.push(f.n[0], f.n[1], f.n[2]);
       solido.uvs.push(...uvDoCanto(tile, ...uvLocal(f.n, lx, ly, lz)));
       solido.cores.push(valor, valor, valor, 1);
+      luzCanto(
+        [
+          [fx, fy, fz],
+          [fx + a * f.t1[0], fy + a * f.t1[1], fz + a * f.t1[2]],
+          [fx + b * f.t2[0], fy + b * f.t2[1], fz + b * f.t2[2]],
+          [
+            fx + a * f.t1[0] + b * f.t2[0],
+            fy + a * f.t1[1] + b * f.t2[1],
+            fz + a * f.t1[2] + b * f.t2[2],
+          ],
+        ],
+        solido.luz,
+      );
     }
     if (ao[0] + ao[2] > ao[1] + ao[3]) {
       solido.indices.push(base, base + 1, base + 2, base, base + 2, base + 3);
@@ -255,6 +288,7 @@ export function gerarMalha(blocos: Uint8Array, vizinhos: Vizinhos = {}): MalhaCh
         const topo = s2 ? 1 : 0;
         const t = tom * (0.9 + 0.1 * topo);
         plantas.cores.push(t, t * (0.95 + 0.05 * topo), tom, topo * peso);
+        plantas.luz.push(mapaLuz.ceu(x, y, z) / LUZ_MAXIMA, mapaLuz.bloco(x, y, z) / LUZ_MAXIMA);
       });
       plantas.indices.push(base, base + 1, base + 2, base, base + 2, base + 3);
     }
