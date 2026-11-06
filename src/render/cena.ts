@@ -198,6 +198,8 @@ export interface EstadoDepuracao {
   ready: boolean;
   /** Tema visual ativo nesta página. */
   tema?: string;
+  /** Direção do astro fixo do tema (Terra, gigante gasoso), se houver. */
+  astro?: number[];
   chunksCarregados: number;
   fps: number;
   escalaResolucao: number;
@@ -353,6 +355,7 @@ export function criarCena(
   };
   window.__brumaluz = estado;
   estado.tema = temaAtual.id;
+  if (temaAtual.ceu.planeta) estado.astro = [...temaAtual.ceu.planeta.direcao];
 
   // Sem preserveDrawingBuffer: GPUs de celular descartam o buffer a cada quadro (menos banda).
   // Capturas e miniaturas renderizam um quadro e leem o canvas na mesma tarefa.

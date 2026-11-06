@@ -1,6 +1,5 @@
 import { test, type Page } from '@playwright/test';
 
-
 /**
  * Matriz de capturas por tema (spec 007, critério 5) e prévias dos cartões de tema
  * (public/temas/<id>.jpg). Pesado: só roda com CAPTURAS_TEMAS=1.
@@ -74,7 +73,16 @@ for (const id of TEMAS) {
     await page.waitForTimeout(1500);
     await foto(page, `${id}-titulo`);
     await entrarNoJogo(page);
-    await page.evaluate(() => window.__brumaluz!.apontar!(0.6, -0.12));
+    // com astro fixo no céu (Terra, gigante com anéis), a câmera olha para ele
+    const vista = await page.evaluate(() => {
+      const a = window.__brumaluz!.astro;
+      if (!a) return { yaw: 0.6, pitch: -0.12, ceu: -0.55 };
+      const n = Math.hypot(a[0], a[1], a[2]);
+      const yaw = Math.atan2(a[0], a[2]);
+      const pitch = -Math.asin(a[1] / n);
+      return { yaw, pitch: Math.min(-0.12, pitch * 0.6), ceu: pitch };
+    });
+    await page.evaluate((v) => window.__brumaluz!.apontar!(v.yaw, v.pitch), vista);
 
     // prévia do cartão do tema: manhã clara, sem interface
     await semHud(page, true);
@@ -83,6 +91,8 @@ for (const id of TEMAS) {
     await page.waitForTimeout(1200);
     await page.screenshot({ path: `public/temas/${id}.jpg`, type: 'jpeg', quality: 80 });
     await page.setViewportSize({ width: 1280, height: 720 });
+    // o modo foto tem câmera própria (não segue teleportes): a matriz usa a câmera do jogo
+    await semHud(page, false);
     await page.waitForTimeout(800);
 
     // dia, crepúsculo e noite olhando o horizonte e o céu
@@ -94,10 +104,10 @@ for (const id of TEMAS) {
       await cena(page, hora);
       await foto(page, `${id}-${nome}`);
     }
-    await page.evaluate(() => window.__brumaluz!.apontar!(0.6, -0.55));
+    await page.evaluate((v) => window.__brumaluz!.apontar!(v.yaw, v.ceu), vista);
     await cena(page, 0.45);
     await foto(page, `${id}-ceu`);
-    await page.evaluate(() => window.__brumaluz!.apontar!(0.6, -0.12));
+    await page.evaluate((v) => window.__brumaluz!.apontar!(v.yaw, v.pitch), vista);
 
     // chuva e inverno
     await cena(page, 0.42, 'chuva', 4000);
@@ -127,13 +137,11 @@ for (const id of TEMAS) {
     await foto(page, `${id}-criaturas`);
 
     // inventário (interface do tema)
-    await semHud(page, false);
     await page.keyboard.press('KeyE');
     await page.waitForTimeout(900);
     await foto(page, `${id}-inventario`);
     await page.keyboard.press('Escape');
     await page.waitForTimeout(500);
-    await semHud(page, true);
 
     // caverna com tocha: uma salinha escavada embaixo do nascimento
     await page.evaluate(
