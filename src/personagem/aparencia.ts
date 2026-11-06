@@ -13,7 +13,12 @@ export type Acessorio =
   | 'chapeu'
   | 'mochila'
   | 'cachecol'
-  | 'oculos';
+  | 'oculos'
+  | 'capacete'
+  | 'chapeu-explorador'
+  | 'avental'
+  | 'touca-chef'
+  | 'coroa-flores';
 
 /** Base do corpo: muda proporções, rosto e caimento de cabelo e roupa. */
 export type Corpo = 'feminino' | 'masculino';
@@ -92,6 +97,11 @@ export const ACESSORIOS: readonly Acessorio[] = [
   'mochila',
   'cachecol',
   'oculos',
+  'capacete',
+  'chapeu-explorador',
+  'avental',
+  'touca-chef',
+  'coroa-flores',
 ];
 
 /**

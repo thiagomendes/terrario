@@ -137,6 +137,11 @@ const NOMES_ACESSORIO: Record<Acessorio, string> = {
   mochila: 'Mochila',
   cachecol: 'Cachecol',
   oculos: 'Óculos',
+  capacete: 'Capacete',
+  'chapeu-explorador': 'Chapéu de explorador',
+  avental: 'Avental',
+  'touca-chef': 'Touca de chef',
+  'coroa-flores': 'Coroa de flores',
 };
 
 type Campo = Exclude<keyof Aparencia, 'nome'>;

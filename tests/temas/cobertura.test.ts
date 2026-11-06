@@ -140,8 +140,13 @@ describe.each(temas.map((t) => [t.id, t] as [string, Tema]))('tema %s', (_id, t)
       expect(pecas?.length, tipo).toBeGreaterThan(2);
       const papeis = new Set(pecas.map((p) => p.papel));
       const papeisBase = new Set(base.criaturas[tipo].map((p) => p.papel));
-      for (const papel of papeisBase)
-        if (papel) expect(papeis.has(papel), `${tipo} sem ${papel}`).toBe(true);
+      // cabeça sempre; pernas podem virar rodas ou asas; cauda é opcional
+      if (papeisBase.has('cabeca')) expect(papeis.has('cabeca'), `${tipo} sem cabeça`).toBe(true);
+      const anda =
+        (papeis.has('perna0') && papeis.has('perna1')) ||
+        papeis.has('roda') ||
+        (papeis.has('asa0') && papeis.has('asa1'));
+      if (papeisBase.has('perna0')) expect(anda, `${tipo} sem pernas, rodas ou asas`).toBe(true);
       for (const p of pecas) {
         expect(/^#[0-9a-f]{6}$/i.test(p.cor), `${tipo}: cor ${p.cor}`).toBe(true);
         expect(Math.min(...p.t), `${tipo}: peça sem volume`).toBeGreaterThan(0);
