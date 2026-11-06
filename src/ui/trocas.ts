@@ -19,7 +19,7 @@ export const CSS_TROCAS = `
 .troca .seta { color: #cfc6dc; font-weight: 800; }
 .troca .slot { pointer-events: none; }
 .troca button.fazer {
-  justify-self: end; min-height: 44px; min-width: 88px; padding: 4px 12px; cursor: pointer;
+  justify-self: end; min-height: 48px; min-width: 92px; padding: 4px 12px; cursor: pointer;
   border: 2px solid #120e16; background: #4c7a3e; color: #f6f2ea; font: 800 0.9rem system-ui, sans-serif;
   box-shadow: inset 2px 2px 0 rgba(255, 255, 255, 0.2), inset -2px -3px 0 rgba(0, 0, 0, 0.35);
 }

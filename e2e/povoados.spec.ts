@@ -42,6 +42,14 @@ test('povoado: moradores, tela de trocas com mouse e teclado', async ({ page }) 
   });
   const p = await page.evaluate(() => window.__brumaluz!.povoados!()[0]);
   expect(p, 'nenhum povoado perto do nascimento').toBeTruthy();
+  // o aviso de chegada é rápido: guarda o evento antes de chegar
+  await page.evaluate(() => {
+    const w = window as unknown as { __chegou?: string };
+    window.addEventListener(
+      'brumaluz:povoado',
+      (e) => (w.__chegou = (e as CustomEvent<string>).detail),
+    );
+  });
   // vai para um canto da praça (o marco fica no meio)
   await page.evaluate((p) => window.__brumaluz!.teleportar!(p.cx + 2.5, p.cz + 2.5), p);
   // moradores aparecem um por casa quando o chão do povoado carrega
@@ -51,8 +59,12 @@ test('povoado: moradores, tela de trocas com mouse e teclado', async ({ page }) 
     p.moradores,
     { timeout: 120_000 },
   );
-  // o aviso de chegada aparece
-  await expect(page.locator('#app')).toContainText(/encontrou|chegou/i, { timeout: 15_000 });
+  // chegou ao povoado: o aviso (e a missão do diário) disparam
+  await page.waitForFunction(
+    (id) => (window as unknown as { __chegou?: string }).__chegou === id,
+    p.id,
+    { timeout: 20_000 },
+  );
   // dá os itens e mira no morador mais perto, chegando bem perto dele
   await page.evaluate((itens) => {
     for (const [i, q] of itens) window.__brumaluz!.inventario!.adicionar(i, q);

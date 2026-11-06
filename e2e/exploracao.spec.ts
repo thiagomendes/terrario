@@ -164,6 +164,58 @@ for (const id of TEMAS) {
     }
     await checarEstado(page, 'materiais');
 
+    // povoado: chega, encontra os moradores, troca uma vez
+    const pv = await page.evaluate(() => window.__brumaluz!.povoados?.()[0] ?? null);
+    expect(pv, 'nenhum povoado perto').toBeTruthy();
+    await page.evaluate((p) => window.__brumaluz!.teleportar!(p!.cx + 2.5, p!.cz + 2.5), pv);
+    await page.waitForFunction(
+      (n) =>
+        (window.__brumaluz!.criaturas?.() ?? []).filter((c) => c.tipo === 'morador').length === n,
+      pv!.moradores,
+      { timeout: 120_000 },
+    );
+    await page.evaluate(() => {
+      const inv = window.__brumaluz!.inventario!;
+      for (const [i, q] of [
+        ['bloco:12', 30],
+        ['peixe_cru', 6],
+        ['bloco:4', 8],
+      ] as const)
+        inv.adicionar(i, q);
+    });
+    const trocou = await page.evaluate(async () => {
+      const e = window.__brumaluz!;
+      for (let t = 0; t < 15; t++) {
+        const [ex, , ez] = e.posicao!;
+        const m = (e.criaturas?.() ?? [])
+          .filter((c) => c.tipo === 'morador')
+          .sort((a, b) => Math.hypot(a.x - ex, a.z - ez) - Math.hypot(b.x - ex, b.z - ez))[0];
+        if (!m) return false;
+        const d = Math.hypot(m.x - ex, m.z - ez) || 1;
+        e.teleportar!(m.x - ((m.x - ex) / d) * 2, m.z - ((m.z - ez) / d) * 2, m.y);
+        await new Promise((r) => setTimeout(r, 400));
+        const [px, py, pz] = e.posicao!;
+        e.apontar!(
+          Math.atan2(m.x - px, m.z - pz),
+          -Math.atan2(m.y + 1.1 - py, Math.hypot(m.x - px, m.z - pz)),
+        );
+        await new Promise((r) => setTimeout(r, 400));
+        e.controleDireto!.usar();
+        await new Promise((r) => setTimeout(r, 300));
+        const painel = document.querySelector<HTMLElement>('[data-painel-trocas]');
+        if (!painel || painel.hidden) continue;
+        const b = painel.querySelector<HTMLButtonElement>('button.fazer:not(:disabled)');
+        if (!b) return false;
+        b.click();
+        return true;
+      }
+      return false;
+    });
+    expect(trocou, 'não conseguiu trocar com um morador').toBe(true);
+    await page.keyboard.press('Escape');
+    await esperar(page, 3000);
+    await checarEstado(page, 'povoado');
+
     // nadar: procura água e mergulha
     const agua = await page.evaluate(() => {
       const e = window.__brumaluz!;
