@@ -5,6 +5,8 @@ import { armazemIndexedDB } from './jogo/indexeddb';
 import { SEMENTE_PADRAO_MUNDO, criarRepositorioMundos, type MetaMundo } from './jogo/mundos';
 import { CSS_INVENTARIO, criarInventarioUI } from './ui/inventario';
 import { CSS_CRIACAO, criarCriacao } from './ui/criacao';
+import { CSS_CONTEINER, criarPainelBau, criarPainelFornalha } from './ui/conteiner';
+import { criarConteineres } from './jogo/conteineres';
 import { registrarCatalogo } from './jogo/catalogo';
 import { Bloco } from './world/blocks';
 import { criarGerenciadorConfig } from './jogo/config';
@@ -102,7 +104,7 @@ function ligarInventario(
   hotbar: ReturnType<typeof criarHotbar>,
 ): void {
   const estilo = document.createElement('style');
-  estilo.textContent = CSS_INVENTARIO + CSS_CRIACAO;
+  estilo.textContent = CSS_INVENTARIO + CSS_CRIACAO + CSS_CONTEINER;
   document.head.appendChild(estilo);
   const ui = criarInventarioUI(app, {
     inventario: hotbar.inventario,
@@ -121,20 +123,70 @@ function ligarInventario(
     criativo: () => cena.estado.modo === 'criativo',
     aoFabricar: (r) => window.dispatchEvent(new CustomEvent('brumaluz:fabricou', { detail: r.id })),
   });
+  const painelBau = criarPainelBau(ui, hotbar.inventario);
+  const painelFornalha = criarPainelFornalha(ui);
+  const conteineres = criarConteineres(cena.extrasSalvos('conteineres'), cena.semente);
+  cena.registrarSalvavel('conteineres', { salvar: () => conteineres.salvar() });
   const fecharOriginal = ui.fechar;
   ui.fechar = () => {
     criacao.devolver();
+    painelBau.fechar();
+    painelFornalha.fechar();
     fecharOriginal();
   };
   const abrir = (lado: 2 | 3) => {
+    painelBau.fechar();
+    painelFornalha.fechar();
+    criacao.mostrar(true);
     criacao.definirLado(lado);
     ui.abrir();
     criacao.render();
     document.exitPointerLock?.();
   };
+  const abrirConteiner = (f: () => void) => {
+    criacao.devolver();
+    criacao.mostrar(false);
+    f();
+    ui.abrir();
+    document.exitPointerLock?.();
+  };
   window.addEventListener('brumaluz:usar', (e) => {
-    const d = (e as CustomEvent<{ bloco: number }>).detail;
+    const d = (e as CustomEvent<{ bloco: number; x: number; y: number; z: number }>).detail;
     if (d.bloco === Bloco.MESA_TRABALHO) abrir(3);
+    else if (d.bloco === Bloco.BAU) {
+      // baú sem edição no lugar foi gerado pelo mundo (ruína): vem com tesouro
+      const gerado = cena.edicoes.obter(d.x, d.y, d.z) === undefined;
+      abrirConteiner(() => painelBau.abrir(conteineres.bau(d.x, d.y, d.z, gerado)));
+    } else if (d.bloco === Bloco.FORNALHA || d.bloco === Bloco.FORNALHA_ACESA) {
+      abrirConteiner(() => painelFornalha.abrir(conteineres.fornalha(d.x, d.y, d.z)));
+    } else if (d.bloco === Bloco.CAMA) {
+      dormir(cena, d.x, d.z);
+    }
+  });
+  // fornalhas trabalham mesmo com o painel fechado
+  let ultimo = performance.now();
+  setInterval(() => {
+    const agora = performance.now();
+    const dt = Math.min(1, (agora - ultimo) / 1000);
+    ultimo = agora;
+    conteineres.atualizar(
+      dt,
+      (x, y, z) => cena.blocoEm(x, y, z) === Bloco.FORNALHA_ACESA,
+      (x, y, z, acesa) => {
+        const meta = cena.estado.meta?.(x, y, z) ?? 0;
+        const atual = cena.blocoEm(x, y, z);
+        if (atual !== Bloco.FORNALHA && atual !== Bloco.FORNALHA_ACESA) return;
+        cena.editarBloco(x, y, z, acesa ? Bloco.FORNALHA_ACESA : Bloco.FORNALHA, meta);
+      },
+    );
+    if (painelFornalha.aberta) painelFornalha.render();
+  }, 250);
+  // quebrar baú ou fornalha espalha o conteúdo
+  cena.barramento.ouvir('quebra', (d) => {
+    if (![Bloco.BAU, Bloco.FORNALHA, Bloco.FORNALHA_ACESA].includes(d.bloco as never)) return;
+    for (const p of conteineres.remover(d.x, d.y, d.z)) {
+      if (p) cena.estado.soltarItem?.(p.item, p.qtd, d.x + 0.5, d.y + 0.5, d.z + 0.5);
+    }
   });
   (window as unknown as { __inventarioUI?: unknown }).__inventarioUI = {
     abrir: (lado: 2 | 3 = 2) => abrir(lado),
@@ -188,4 +240,25 @@ function ligarStatus(
         : 'Criativo: toque duas vezes no espaço para voar · E abre o catálogo',
     );
   });
+}
+
+function dormir(cena: ReturnType<typeof criarCena>, x: number, z: number): void {
+  cena.estado.definirSpawn?.(x + 0.5, z + 0.5);
+  const noite = cena.estado.atmosfera?.noite ?? 0;
+  if (noite < 0.4) {
+    notificar('Ponto de renascer definido. Só dá para dormir à noite.');
+    return;
+  }
+  const veu = document.createElement('div');
+  veu.style.cssText =
+    'position:fixed;inset:0;z-index:45;background:#05060c;opacity:0;transition:opacity 1.2s ease;pointer-events:none;display:flex;align-items:center;justify-content:center;color:#d9d2c4;font:600 1.4rem system-ui,sans-serif';
+  veu.textContent = 'Zzz…';
+  document.body.appendChild(veu);
+  requestAnimationFrame(() => (veu.style.opacity = '1'));
+  setTimeout(() => {
+    if (cena.estado.hora !== undefined) cena.estado.hora = 0.265;
+    veu.style.opacity = '0';
+    notificar('Você dormiu até o amanhecer');
+    setTimeout(() => veu.remove(), 1300);
+  }, 1500);
 }

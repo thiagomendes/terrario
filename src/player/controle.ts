@@ -10,6 +10,7 @@ import {
   encontrarNascimento,
 } from '../world/chunk';
 import { obterBloco } from '../world/blocks';
+import { caixasDoBloco, cercaConecta, temFormaParcial, vetorDirecao } from '../world/formas';
 import type { Edicoes } from '../world/edicoes';
 import { ALTURA_OLHOS, passoFisica, posicaoInicial, type Solido } from './fisica';
 import { acaoDaTecla, aplicarMouse, eixos, type TeclasAtivas } from './entrada';
@@ -25,7 +26,22 @@ export function criarMundoSolido(
   edicoes?: Edicoes,
 ): Solido {
   const cache = new Map<string, { versao: number; blocos: Uint8Array }>();
-  return (x, y, z) => {
+  function bloco(x: number, y: number, z: number): number {
+    if (y < 0 || y >= ALTURA) return 0;
+    const cx = Math.floor(x / TAM_X);
+    const cz = Math.floor(z / TAM_Z);
+    const k = `${cx},${cz}`;
+    const versao = edicoes ? edicoes.versaoDoChunk(cx, cz) : 0;
+    let entrada = cache.get(k);
+    if (!entrada || entrada.versao !== versao) {
+      const blocos = gerar(cx, cz, semente);
+      if (edicoes) for (const [i, v] of edicoes.doChunk(cx, cz)) blocos[i] = v & 255;
+      entrada = { versao, blocos };
+      cache.set(k, entrada);
+    }
+    return entrada.blocos[indice(x - cx * TAM_X, y, z - cz * TAM_Z)];
+  }
+  const ler = (x: number, y: number, z: number): boolean => {
     if (y < 0) return true;
     if (y >= ALTURA) return false;
     const cx = Math.floor(x / TAM_X);
@@ -35,7 +51,7 @@ export function criarMundoSolido(
     let entrada = cache.get(k);
     if (!entrada || entrada.versao !== versao) {
       const blocos = gerar(cx, cz, semente);
-      if (edicoes) for (const [i, b] of edicoes.doChunk(cx, cz)) blocos[i] = b;
+      if (edicoes) for (const [i, v] of edicoes.doChunk(cx, cz)) blocos[i] = v & 255;
       entrada = { versao, blocos };
       cache.set(k, entrada);
     }
@@ -43,6 +59,18 @@ export function criarMundoSolido(
     const b = c[indice(x - cx * TAM_X, y, z - cz * TAM_Z)];
     return obterBloco(b)?.solido ?? false;
   };
+  const solido = ler as Solido;
+  // caixas de blocos parciais (lajes, escadas, cercas, portas)
+  solido.caixas = (x, y, z) => {
+    const b = bloco(x, y, z);
+    if (!temFormaParcial(b)) return null;
+    const meta = edicoes?.obterMeta(x, y, z) ?? 0;
+    return caixasDoBloco(b, meta, (d) => {
+      const [dx, dz] = vetorDirecao(d);
+      return cercaConecta(bloco(x + dx, y, z + dz));
+    });
+  };
+  return solido;
 }
 
 export function criarControle(

@@ -286,7 +286,44 @@ export function gerarChunk(cx: number, cz: number, semente: number = SEMENTE_PAD
       }
     }
   }
+  construirRuina(blocos, cx, cz, semente, alturas, biomas);
   return blocos;
+}
+
+/** Ruína rara: paredes quebradas, piso e um baú com tesouro no centro. */
+function construirRuina(
+  blocos: Uint8Array,
+  cx: number,
+  cz: number,
+  semente: number,
+  alturas: Int32Array,
+  biomas: Bioma[],
+): void {
+  if (hash2(cx, cz, semente + 6060) > 0.035) return;
+  const c = 8 * TAM_X + 8;
+  const b = biomas[c];
+  if (b === 'oceano' || b === 'praia' || b === 'pantano' || b === 'montanhas') return;
+  const h = alturas[c];
+  if (h <= NIVEL_MAR + 1 || h > ALTURA - 20) return;
+  const parede = b === 'deserto' ? Bloco.ARENITO : Bloco.TIJOLOS_PEDRA;
+  const resto = b === 'deserto' ? Bloco.AREIA_DESERTO : Bloco.PEDREGULHO;
+  for (let dz = -3; dz <= 3; dz++)
+    for (let dx = -3; dx <= 3; dx++) {
+      const x = 8 + dx;
+      const z = 8 + dz;
+      // piso nivelado
+      blocos[indice(x, h, z)] = hash2(x, z, semente + 61) < 0.3 ? resto : Bloco.PEDRA_LISA;
+      for (let y = h + 1; y < h + 5; y++) blocos[indice(x, y, z)] = Bloco.AR;
+      const borda = Math.abs(dx) === 3 || Math.abs(dz) === 3;
+      if (!borda) continue;
+      const alt = Math.floor(hash2(x, z, semente + 62) * 4);
+      for (let y = 1; y <= alt; y++) {
+        const r = hash2(x * 7 + y, z, semente + 63);
+        blocos[indice(x, h + y, z)] = r < 0.25 ? resto : r < 0.3 ? Bloco.FOLHAGEM : parede;
+      }
+    }
+  blocos[indice(8, h + 1, 8)] = Bloco.BAU;
+  blocos[indice(6, h + 1, 6)] = Bloco.COGUMELO_BRILHANTE;
 }
 
 function por(

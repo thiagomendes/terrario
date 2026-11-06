@@ -417,6 +417,5 @@ export function ehAlvo(id: number): boolean {
 
 /** Bloco que entra na malha de plantas (quads cruzados). */
 export function ehCruz(id: number): boolean {
-  const f = REGISTRO_BLOCOS[id]?.forma;
-  return f === 'cruz' || f === 'tocha';
+  return REGISTRO_BLOCOS[id]?.forma === 'cruz';
 }

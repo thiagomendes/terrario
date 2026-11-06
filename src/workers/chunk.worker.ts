@@ -1,6 +1,32 @@
 import { gerarMalha } from '../mesh/malha';
 import type { Buffers } from '../mesh/malha';
-import { criarEdicoes, gerarChunkEditado } from '../world/edicoes';
+import { blocoDe, criarEdicoes, metasDoChunk, type Edicoes } from '../world/edicoes';
+import { gerarChunk } from '../world/chunk';
+
+/** Cache dos chunks gerados (antes das edições): evita regerar vizinhos. */
+const cache = new Map<string, Uint8Array>();
+const LIMITE_CACHE = 400;
+function base(cx: number, cz: number, semente: number): Uint8Array {
+  const k = `${cx},${cz},${semente}`;
+  let b = cache.get(k);
+  if (b) {
+    cache.delete(k);
+    cache.set(k, b);
+    return b;
+  }
+  b = gerarChunk(cx, cz, semente);
+  cache.set(k, b);
+  if (cache.size > LIMITE_CACHE) cache.delete(cache.keys().next().value as string);
+  return b;
+}
+function gerarChunkEditado(cx: number, cz: number, semente: number, edicoes: Edicoes): Uint8Array {
+  const lista = edicoes.doChunk(cx, cz);
+  const b = base(cx, cz, semente);
+  if (lista.length === 0) return b;
+  const copia = b.slice();
+  for (const [i, v] of lista) copia[i] = blocoDe(v);
+  return copia;
+}
 import type { EdicoesExportadas } from '../world/edicoes';
 
 export interface PedidoChunk {
@@ -37,12 +63,16 @@ self.onmessage = (ev: MessageEvent<PedidoChunk>) => {
   const edicoes = criarEdicoes();
   edicoes.importar(dados ?? {});
   const blocos = gerarChunkEditado(cx, cz, semente, edicoes);
-  const malha = gerarMalha(blocos, {
-    xNeg: gerarChunkEditado(cx - 1, cz, semente, edicoes),
-    xPos: gerarChunkEditado(cx + 1, cz, semente, edicoes),
-    zNeg: gerarChunkEditado(cx, cz - 1, semente, edicoes),
-    zPos: gerarChunkEditado(cx, cz + 1, semente, edicoes),
-  });
+  const malha = gerarMalha(
+    blocos,
+    {
+      xNeg: gerarChunkEditado(cx - 1, cz, semente, edicoes),
+      xPos: gerarChunkEditado(cx + 1, cz, semente, edicoes),
+      zNeg: gerarChunkEditado(cx, cz - 1, semente, edicoes),
+      zPos: gerarChunkEditado(cx, cz + 1, semente, edicoes),
+    },
+    metasDoChunk(cx, cz, edicoes),
+  );
   const resposta: RespostaChunk = {
     cx,
     cz,

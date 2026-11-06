@@ -15,6 +15,7 @@ import type { InventarioUI } from './inventario';
 
 export const CSS_CRIACAO = `
 .criacao { display: grid; gap: 8px; }
+.criacao[hidden] { display: none; }
 .criacao .linha-criacao { display: flex; align-items: center; gap: 10px; }
 .criacao .grade-criacao { display: grid; gap: 4px; }
 .criacao .seta { font-size: 1.6rem; color: #a59f93; }
@@ -50,6 +51,7 @@ const NOMES_TAG: Record<string, string> = {
 };
 
 export interface Criacao {
+  mostrar(v: boolean): void;
   definirLado(lado: 2 | 3): void;
   /** Devolve à mochila o que ficou na grade (ao fechar). */
   devolver(): void;
@@ -273,6 +275,10 @@ export function criarCriacao(
 
   montar();
   return {
+    mostrar(v) {
+      raiz.hidden = !v;
+      if (!v) livro.hidden = true;
+    },
     definirLado(n) {
       if (n === lado) return;
       devolver();

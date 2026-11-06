@@ -48,6 +48,7 @@ import { PluginBalanco } from './balanco';
 import { SEMENTE_PADRAO, TAM_X, TAM_Z } from '../world/chunk';
 import type { DadosMundo, MetaMundo, ModoJogo, RepositorioMundos } from '../jogo/mundos';
 import { criarMundoDeItens, dropsDoBloco } from '../jogo/drops';
+import { direcaoDoYaw } from '../world/formas';
 import { podeColetar, velocidadeMineracao } from '../jogo/ferramentas';
 import { obterItem } from '../jogo/itens';
 import { criarRenderItens } from './itensSoltos';
@@ -131,7 +132,6 @@ export interface EstadoDepuracao {
   fps: number;
   escalaResolucao: number;
   /** Hora do dia em [0, 1): 0 meia-noite, 0.5 meio-dia. Gravável nos testes. */
-  hora?: number;
   /** Leva o jogador para o topo do terreno em (x, z) (testes e capturas). */
   teleportar?: (x: number, z: number, y?: number) => void;
   /** Pausa o relógio do dia (testes e capturas). */
@@ -145,7 +145,9 @@ export interface EstadoDepuracao {
   selecionarSlot?: (i: number) => void;
   apontar?: (yaw: number, pitch: number) => void;
   bloco?: (x: number, y: number, z: number) => number;
-  definirBloco?: (x: number, y: number, z: number, b: number) => boolean;
+  meta?: (x: number, y: number, z: number) => number;
+  hora?: number;
+  definirBloco?: (x: number, y: number, z: number, b: number, meta?: number) => boolean;
   slotAtivo?: number;
   destaqueVisivel?: boolean;
   malhasAtivas?: number;
@@ -535,8 +537,16 @@ export function criarCena(
     worker.postMessage(pedido);
   }
 
-  function editarBloco(x: number, y: number, z: number, bloco: number): boolean {
-    if (!edicoes.definir(x, y, z, bloco)) return false;
+  /** Remalhas agrupadas: várias edições no mesmo quadro viram um pedido por chunk. */
+  const remalhaPendente = new Map<string, { cx: number; cz: number }>();
+  function enviarRemalhas(): void {
+    if (remalhaPendente.size === 0) return;
+    for (const c of remalhaPendente.values()) solicitar(c.cx, c.cz);
+    remalhaPendente.clear();
+  }
+
+  function editarBloco(x: number, y: number, z: number, bloco: number, meta = 0): boolean {
+    if (!edicoes.definir(x, y, z, bloco, meta)) return false;
     const cxE = Math.floor(x / TAM_X);
     const czE = Math.floor(z / TAM_Z);
     // a luz muda até 15 blocos em volta: remalha o chunk e os 4 vizinhos
@@ -555,7 +565,7 @@ export function criarCena(
       if (!malhas.has(k) && !pedidos.has(k)) continue;
       prioritarios.add(k);
       pedidos.add(k);
-      solicitar(c.cx, c.cz);
+      remalhaPendente.set(k, c);
     }
     return true;
   }
@@ -593,13 +603,28 @@ export function criarCena(
     return a ? { x: a.x, y: a.y, z: a.z, normal: a.normal } : null;
   }
 
+  /** Metadado ao colocar: a frente olha para o jogador; escadas e portas seguem o olhar. */
+  function metaColocacao(bloco: number): number {
+    const d = direcaoDoYaw(camera.rotation.y);
+    const forma = obterBlocoDef(bloco)?.forma;
+    if (forma === 'escada' || forma === 'porta' || forma === 'cama') return d;
+    return obterBlocoDef(bloco)?.tiles.frente ? (d + 2) & 3 : 0;
+  }
+
   function interagir(acao: AcaoInteracao): boolean {
     return executarInteracao(acao, {
       alvo: calcularAlvo(),
       edicoes,
       blocoAtivo: hotbar.blocoAtivo(),
       jogador: controle.jogador,
-      editar: editarBloco,
+      editar: (x, y, z, b) => {
+        const meta = metaColocacao(b);
+        const ok = editarBloco(x, y, z, b, meta);
+        // porta ocupa dois blocos
+        if (ok && b === Bloco.PORTA && blocoEm(x, y + 1, z) === Bloco.AR)
+          editarBloco(x, y + 1, z, b, meta);
+        return ok;
+      },
     });
   }
 
@@ -681,10 +706,11 @@ export function criarCena(
   function alternarPorta(x: number, y: number, z: number): void {
     const b = blocoEm(x, y, z);
     const novo = b === Bloco.PORTA ? Bloco.PORTA_ABERTA : Bloco.PORTA;
-    editarBloco(x, y, z, novo);
+    editarBloco(x, y, z, novo, edicoes.obterMeta(x, y, z));
     for (const dy of [-1, 1]) {
       const v = blocoEm(x, y + dy, z);
-      if (v === Bloco.PORTA || v === Bloco.PORTA_ABERTA) editarBloco(x, y + dy, z, novo);
+      if (v === Bloco.PORTA || v === Bloco.PORTA_ABERTA)
+        editarBloco(x, y + dy, z, novo, edicoes.obterMeta(x, y + dy, z));
     }
     tocarSom(motorAudio, 'colocar', 'madeira');
   }
@@ -747,19 +773,15 @@ export function criarCena(
     const j = controle.jogador;
     const livre = (yy: number) => !obterBlocoDef(blocoEm(Math.floor(x), yy, Math.floor(z)))?.solido;
     let y = yFixo ?? alturaTerreno(Math.floor(x), Math.floor(z), semente) + 1;
-    while (
-      yFixo === undefined &&
-      y < ALTURA - 2 &&
-      !(livre(y) && livre(y + 1))
-    )
-      y++;
+    while (yFixo === undefined && y < ALTURA - 2 && !(livre(y) && livre(y + 1))) y++;
     j.x = x;
     j.y = y;
     j.z = z;
     j.vy = 0;
   };
   estado.bloco = blocoEm;
-  estado.definirBloco = (x, y, z, b) => editarBloco(x, y, z, b);
+  estado.meta = (x, y, z) => edicoes.obterMeta(x, y, z);
+  estado.definirBloco = (x, y, z, b, meta) => editarBloco(x, y, z, b, meta);
   estado.camera = {
     modo: () => estadoCamera.modo,
     alternar: () => {
@@ -855,6 +877,7 @@ export function criarCena(
   Object.defineProperty(estado, 'alvo', { get: calcularAlvo, enumerable: true });
 
   function atualizarChunks(): void {
+    enviarRemalhas();
     const cx = Math.floor(camera.position.x / TAM_X);
     const cz = Math.floor(camera.position.z / TAM_Z);
     const desejados = chunksDesejados(cx, cz, raioChunks);
@@ -983,6 +1006,14 @@ export function criarCena(
   }
   barramento.ouvir('golpe', (d) => aplicarPlano('golpe', d));
   barramento.ouvir('quebra', (d) => aplicarPlano('quebra', d));
+  // quebrar meia porta leva a outra metade
+  barramento.ouvir('quebra', (d) => {
+    if (d.bloco !== Bloco.PORTA && d.bloco !== Bloco.PORTA_ABERTA) return;
+    for (const dy of [-1, 1]) {
+      const v = blocoEm(d.x, d.y + dy, d.z);
+      if (v === Bloco.PORTA || v === Bloco.PORTA_ABERTA) editarBloco(d.x, d.y + dy, d.z, Bloco.AR);
+    }
+  });
   // Sobrevivência: o bloco quebrado vira item no chão.
   const rngDrops = criarGerador(911);
   const mundoItens = criarMundoDeItens((x, y, z) => {

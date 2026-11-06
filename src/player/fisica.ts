@@ -10,8 +10,16 @@ export const VEL_VOO = 11;
 export const VEL_VOO_RAPIDO = 20;
 export const VEL_VOO_VERTICAL = 8;
 const FOLGA = 1e-4;
+const DEGRAU = 0.51;
 
-export type Solido = (x: number, y: number, z: number) => boolean;
+export type Solido = ((x: number, y: number, z: number) => boolean) & {
+  /** Caixas de blocos parciais (null = cubo inteiro). */
+  caixas?: (
+    x: number,
+    y: number,
+    z: number,
+  ) => [number, number, number, number, number, number][] | null;
+};
 
 export interface EstadoJogador {
   x: number;
@@ -66,11 +74,59 @@ function colide(s: Solido, x: number, y: number, z: number): boolean {
   for (let iy = y0; iy <= y1; iy++) {
     for (let iz = z0; iz <= z1; iz++) {
       for (let ix = x0; ix <= x1; ix++) {
-        if (s(ix, iy, iz)) return true;
+        if (!s(ix, iy, iz)) continue;
+        const cx = s.caixas?.(ix, iy, iz);
+        if (!cx) return true;
+        for (const c of cx) {
+          if (
+            x + MEIA_LARGURA > ix + c[0] &&
+            x - MEIA_LARGURA < ix + c[3] &&
+            y + ALTURA_JOGADOR > iy + c[1] &&
+            y < iy + c[4] &&
+            z + MEIA_LARGURA > iz + c[2] &&
+            z - MEIA_LARGURA < iz + c[5]
+          )
+            return true;
+        }
       }
     }
   }
   return false;
+}
+
+/** Altura do chão sob o jogador ao cair (considera blocos parciais). */
+function topoAbaixo(s: Solido, x: number, alvo: number, z: number, atual: number): number {
+  let topo = Math.floor(alvo) + 1;
+  const iy = Math.floor(alvo);
+  const x0 = Math.floor(x - MEIA_LARGURA);
+  const x1 = Math.floor(x + MEIA_LARGURA);
+  const z0 = Math.floor(z - MEIA_LARGURA);
+  const z1 = Math.floor(z + MEIA_LARGURA);
+  let achou = false;
+  let maior = -Infinity;
+  for (let iz = z0; iz <= z1; iz++)
+    for (let ix = x0; ix <= x1; ix++) {
+      if (!s(ix, iy, iz)) continue;
+      const cx = s.caixas?.(ix, iy, iz);
+      if (!cx) {
+        maior = Math.max(maior, iy + 1);
+        achou = true;
+        continue;
+      }
+      for (const c of cx) {
+        if (
+          x + MEIA_LARGURA > ix + c[0] &&
+          x - MEIA_LARGURA < ix + c[3] &&
+          z + MEIA_LARGURA > iz + c[2] &&
+          z - MEIA_LARGURA < iz + c[5]
+        ) {
+          maior = Math.max(maior, iy + c[4]);
+          achou = true;
+        }
+      }
+    }
+  if (achou && maior <= atual + FOLGA) topo = maior;
+  return topo;
 }
 
 function moverHorizontal(e: EstadoJogador, eixo: 'x' | 'z', d: number, s: Solido): void {
@@ -79,6 +135,12 @@ function moverHorizontal(e: EstadoJogador, eixo: 'x' | 'z', d: number, s: Solido
   const nx = eixo === 'x' ? alvo : e.x;
   const nz = eixo === 'z' ? alvo : e.z;
   if (!colide(s, nx, e.y, nz)) {
+    e[eixo] = alvo;
+    return;
+  }
+  // sobe sozinho degraus de até meio bloco (lajes e escadas)
+  if (e.noChao && !colide(s, nx, e.y + DEGRAU, nz) && !colide(s, e.x, e.y + DEGRAU, e.z)) {
+    e.y += DEGRAU;
     e[eixo] = alvo;
     return;
   }
@@ -134,7 +196,7 @@ export function passoFisica(
   }
   let resultado: ResultadoFisica = { aterrissou: false, queda: 0 };
   if (dy < 0) {
-    e.y = Math.floor(alvo) + 1;
+    e.y = topoAbaixo(s, e.x, alvo, e.z, e.y);
     e.noChao = true;
     if (!estavaNoChao) {
       resultado = { aterrissou: true, queda: Math.max(0, (e.topoQueda ?? e.y) - e.y) };

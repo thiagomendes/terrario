@@ -1,5 +1,12 @@
 import { Bloco, ehCruz, obterBloco } from '../world/blocks';
 import { uvDaCelula } from '../art/atlas';
+import {
+  caixasDoBloco,
+  cercaConecta,
+  temFormaParcial,
+  vetorDirecao,
+  type Caixa,
+} from '../world/formas';
 import { LUZ_MAXIMA, calcularLuz } from '../world/luz';
 import { FACES_TILE, indiceDoTile } from '../art/tiles';
 
@@ -53,11 +60,19 @@ export function tileDoBloco(id: number): number {
   return FACES_TILE[id * 4 + 1];
 }
 
-/** Tile da face: topo (+y), base (-y), frente (+z) ou lado. */
-function tileDaFace(id: number, n: Vec): number {
+const NORMAL_DA_DIRECAO: [number, number][] = [
+  [0, 1],
+  [1, 0],
+  [0, -1],
+  [-1, 0],
+];
+
+/** Tile da face: topo (+y), base (-y), frente (na direção do metadado) ou lado. */
+function tileDaFace(id: number, n: Vec, meta = 0): number {
   if (n[1] > 0) return FACES_TILE[id * 4];
   if (n[1] < 0) return FACES_TILE[id * 4 + 2];
-  if (n[2] > 0) return FACES_TILE[id * 4 + 3];
+  const [fx, fz] = NORMAL_DA_DIRECAO[meta & 3];
+  if (n[0] === fx && n[2] === fz) return FACES_TILE[id * 4 + 3];
   return FACES_TILE[id * 4 + 1];
 }
 
@@ -119,7 +134,11 @@ function uvLocal(n: Vec, px: number, py: number, pz: number): [number, number] {
   return [n[2] > 0 ? px : 1 - px, 1 - py];
 }
 
-export function gerarMalha(blocos: Uint8Array, vizinhos: Vizinhos = {}): MalhaChunk {
+export function gerarMalha(
+  blocos: Uint8Array,
+  vizinhos: Vizinhos = {},
+  metas: Map<number, number> = new Map(),
+): MalhaChunk {
   const mapaLuz = calcularLuz(blocos, vizinhos);
   /** Luz suavizada num canto de face: média das células claras em volta. */
   function luzCanto(cs: [number, number, number][], saida: number[]): void {
@@ -193,7 +212,7 @@ export function gerarMalha(blocos: Uint8Array, vizinhos: Vizinhos = {}): MalhaCh
   }
 
   function adicionarFace(id: number, x: number, y: number, z: number, f: Face): void {
-    let tile = tileDaFace(id, f.n);
+    let tile = tileDaFace(id, f.n, metas.get(indice(x, y, z)) ?? 0);
     const coberto = f.n[1] <= 0 && (f.n[1] < 0 || opaco(x, y + 1, z));
     if (coberto && (id === Bloco.TERRA_MUSGOSA || id === Bloco.TERRA_NEVADA)) tile = TILE_TERRA;
     if (coberto && id === Bloco.MUSGO_PANTANO) tile = FACES_TILE[Bloco.LAMA * 4 + 1];
@@ -241,6 +260,48 @@ export function gerarMalha(blocos: Uint8Array, vizinhos: Vizinhos = {}): MalhaCh
       solido.indices.push(base, base + 1, base + 2, base, base + 2, base + 3);
     } else {
       solido.indices.push(base + 1, base + 2, base + 3, base + 1, base + 3, base);
+    }
+  }
+
+  /** Blocos parciais: cada caixa vira 6 faces, cortando as que encostam em opacos. */
+  function adicionarCaixas(id: number, x: number, y: number, z: number, caixas: Caixa[]): void {
+    for (const c of caixas) {
+      for (const f of FACES) {
+        const naBorda =
+          (f.n[0] > 0 && c[3] >= 1) ||
+          (f.n[0] < 0 && c[0] <= 0) ||
+          (f.n[1] > 0 && c[4] >= 1) ||
+          (f.n[1] < 0 && c[1] <= 0) ||
+          (f.n[2] > 0 && c[5] >= 1) ||
+          (f.n[2] < 0 && c[2] <= 0);
+        if (naBorda && opaco(x + f.n[0], y + f.n[1], z + f.n[2])) continue;
+        const tile = tileDaFace(id, f.n, metas.get(indice(x, y, z)) ?? 0);
+        const base = solido.vertices;
+        const lc = naBorda ? [x + f.n[0], y + f.n[1], z + f.n[2]] : [x, y, z];
+        const lc2: [number, number, number] = [lc[0], lc[1], lc[2]];
+        const luzC = mapaLuz.ceu(...lc2) / LUZ_MAXIMA;
+        const luzB = Math.max(mapaLuz.bloco(...lc2), mapaLuz.bloco(x, y, z)) / LUZ_MAXIMA;
+        const sombra = f.n[1] < 0 ? 0.6 : f.n[1] > 0 ? 1 : 0.85;
+        for (const [s1, s2] of CANTOS) {
+          // canto da face dentro da caixa
+          const p: number[] = [0, 0, 0];
+          for (let k = 0; k < 3; k++) {
+            const lo = c[k];
+            const hi = c[k + 3];
+            if (f.n[k] !== 0) p[k] = f.n[k] > 0 ? hi : lo;
+            else {
+              const s = f.t1[k] ? s1 : s2;
+              p[k] = s ? hi : lo;
+            }
+          }
+          solido.posicoes.push(x + p[0], y + p[1], z + p[2]);
+          solido.normais.push(f.n[0], f.n[1], f.n[2]);
+          solido.uvs.push(...uvDoCanto(tile, ...uvLocal(f.n, p[0], p[1], p[2])));
+          solido.cores.push(sombra, sombra, sombra, 1);
+          solido.luz.push(luzC, luzB);
+        }
+        solido.indices.push(base, base + 1, base + 2, base, base + 2, base + 3);
+      }
     }
   }
 
@@ -304,6 +365,17 @@ export function gerarMalha(blocos: Uint8Array, vizinhos: Vizinhos = {}): MalhaCh
         if (def.liquido) {
           adicionarAgua(x, y, z);
           continue;
+        }
+        if (temFormaParcial(id)) {
+          const meta = metas.get(indice(x, y, z)) ?? 0;
+          const caixas = caixasDoBloco(id, meta, (d) => {
+            const [dx, dz] = vetorDirecao(d);
+            return cercaConecta(ler(x + dx, y, z + dz));
+          });
+          if (caixas) {
+            adicionarCaixas(id, x, y, z, caixas);
+            continue;
+          }
         }
         if (def.planta || ehCruz(id)) {
           adicionarPlanta(id, x, y, z);
