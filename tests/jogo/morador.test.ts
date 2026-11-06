@@ -183,3 +183,76 @@ describe('moradores em povoados de várias sementes', () => {
     },
   );
 });
+
+describe('moradores andam de verdade (sem tremer no lugar)', () => {
+  // o defeito: perto de um ponto do caminho o alvo alternava entre ele e o anterior;
+  // o morador ficava indo e voltando sem sair do lugar, mas "progredia" o bastante
+  // para o anti-trava nunca agir (o teste de 10 dias não via)
+  it.each([
+    [1337, 1 / 60, 'praca'],
+    [1337, 0.05, 'longe'],
+    [42, 1 / 60, 'praca'],
+    [7, 0.05, 'praca'],
+  ] as const)('semente %i, passo %f, jogador %s', (semente, dt, onde) => {
+    let p: PlanoPovoado | null = null;
+    for (let r = 0; r < 6 && !p; r++)
+      for (let rz = -r; rz <= r && !p; rz++)
+        for (let rx = -r; rx <= r && !p; rx++) p = planoDaRegiao(rx, rz, semente, TERRENO_NATURAL);
+    const cache = new Map<string, Uint8Array>();
+    const bloco = (x: number, y: number, z: number) => {
+      if (y < 0 || y >= ALTURA) return 0;
+      const cx = Math.floor(x / TAM_X);
+      const cz = Math.floor(z / TAM_Z);
+      const k = `${cx},${cz}`;
+      let c = cache.get(k);
+      if (!c) {
+        c = gerarChunk(cx, cz, semente);
+        cache.set(k, c);
+      }
+      return c[indice(x - cx * TAM_X, y, z - cz * TAM_Z)];
+    };
+    const solido = ((x: number, y: number, z: number) =>
+      !!obterBloco(bloco(x, y, z))?.solido) as Solido;
+    const m: MundoPopulacao = {
+      solido,
+      agua: () => false,
+      luzBloco: () => 12,
+      ceuAberto: () => true,
+      bioma: (x, z) => biomaEm(x, z, semente),
+      superficie: (x, z) => {
+        for (let y = ALTURA - 2; y > 0; y--) if (solido(x, y, z)) return y + 1;
+        return null;
+      },
+      nivelMar: NIVEL_MAR,
+      povoados: () => [p!],
+    };
+    const pop = criarPopulacao(criarGerador(5));
+    const j =
+      onde === 'praca'
+        ? { x: p!.cx + 2.5, y: p!.h + 1, z: p!.cz + 2.5, vivo: true, criativo: true }
+        : { x: p!.cx + 34.5, y: p!.h + 1, z: p!.cz + 0.5, vivo: true, criativo: true };
+    const porSegundo = Math.round(1 / dt);
+    const ultimo = new Map<number, { x: number; z: number }>();
+    const seguindo = new Map<number, number>();
+    const parado = new Map<number, number>();
+    // 2 minutos de dia
+    for (let i = 0; i < porSegundo * 120; i++) {
+      pop.atualizar(dt, m, j, 0);
+      if (i % porSegundo !== 0) continue;
+      for (const c of pop.lista) {
+        if (c.tipo !== 'morador') continue;
+        const a = ultimo.get(c.id);
+        ultimo.set(c.id, { x: c.x, z: c.z });
+        if (!a || c.estado !== 'seguir') continue;
+        seguindo.set(c.id, (seguindo.get(c.id) ?? 0) + 1);
+        if (Math.hypot(c.x - a.x, c.z - a.z) < 0.25) parado.set(c.id, (parado.get(c.id) ?? 0) + 1);
+      }
+    }
+    for (const [id, s] of seguindo) {
+      const presos = parado.get(id) ?? 0;
+      expect(presos, `morador ${id}: ${presos} de ${s} s sem sair do lugar`).toBeLessThanOrEqual(
+        Math.max(3, s * 0.1),
+      );
+    }
+  });
+});
