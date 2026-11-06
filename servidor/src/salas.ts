@@ -459,8 +459,20 @@ export function criarGerenciador(op: OpcoesGerenciador) {
     s.ultimaGravacao = agora();
   }
 
+  // ritmo: quanto tempo cada passo leva (médio e o pior do último minuto)
+  let passoMedioMs = 0;
+  let passoMaxMs = 0;
+  let passos = 0;
   /** Um passo de todas as salas (chamado a cada 50 ms). */
   function passo(): void {
+    const t0 = performance.now();
+    passo2();
+    const ms = performance.now() - t0;
+    passoMedioMs += (ms - passoMedioMs) * 0.02;
+    passoMaxMs = Math.max(passoMaxMs, ms);
+    passos++;
+  }
+  function passo2(): void {
     for (const s of ativas.values()) {
       if (s.presentes.size === 0) continue;
       contexto(s);
@@ -530,7 +542,17 @@ export function criarGerenciador(op: OpcoesGerenciador) {
     get resumo() {
       let jogadores = 0;
       for (const s of ativas.values()) jogadores += s.presentes.size;
-      return { salas: ativas.size, jogadores };
+      return {
+        salas: ativas.size,
+        jogadores,
+        passoMs: Math.round(passoMedioMs * 100) / 100,
+        passoMaxMs: Math.round(passoMaxMs * 10) / 10,
+        passos,
+      };
+    },
+    /** Zera o pior passo (a cada minuto, junto com a linha de métricas). */
+    zerarPior() {
+      passoMaxMs = 0;
     },
     /** Para testes. */
     ativas,

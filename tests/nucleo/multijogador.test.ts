@@ -193,3 +193,26 @@ describe('núcleo com vários jogadores', () => {
     expect(n.estado.populacao.lista.length).toBeGreaterThan(0);
   });
 });
+
+describe('posição plausível na nuvem', () => {
+  it('teletransporte de um cliente adulterado é recusado e o jogador volta', () => {
+    const n = criarNucleo({
+      semente: SEMENTE,
+      modo: 'sobrevivencia',
+      versaoMundo: 2,
+      confiarNoCliente: false,
+    });
+    n.conectar('ana', { perfil: { apelido: 'Ana', aparencia: {} } });
+    n.comando('ana', tel(X + 0.5, Z + 0.5));
+    n.passo();
+    n.quadros();
+    // anda um pouco: vale
+    n.comando('ana', tel(X + 1.0, Z + 0.5));
+    expect(n.estado.jogadores.get('ana')!.tel.x).toBeCloseTo(X + 1, 5);
+    // 200 blocos num passo: não
+    n.comando('ana', tel(X + 200.5, Z + 0.5));
+    expect(n.estado.jogadores.get('ana')!.tel.x).toBeCloseTo(X + 1, 5);
+    const ev = n.quadros().get('ana')!.eventos ?? [];
+    expect(ev.some((e) => e.e === 'teleporte')).toBe(true);
+  });
+});

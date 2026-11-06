@@ -106,6 +106,10 @@ interface Jogador {
   querDormir: number;
   perfil: PerfilJogador;
   constroi: boolean;
+  /** Passo da última telemetria aceita (para conferir se a posição nova é possível). */
+  passoTelemetria: number;
+  /** O núcleo mandou o jogador para longe (renascer): a próxima posição pode saltar. */
+  saltoPermitido: boolean;
   /** Para as criaturas (o mesmo objeto a cada passo: os ataques dizem em quem foi). */
   corpo: { x: number; y: number; z: number; vivo: boolean; criativo: boolean };
 }
@@ -247,6 +251,8 @@ export function criarNucleo(op: OpcoesNucleo) {
       correcoes: [],
       sono: 0,
       querDormir: 0,
+      passoTelemetria: n,
+      saltoPermitido: true,
       perfil: oc?.perfil ?? { apelido: 'Jogador', aparencia: {} },
       constroi: oc?.constroi ?? true,
       corpo: { x, y: y0, z, vivo: true, criativo: modo === 'criativo' },
@@ -655,8 +661,26 @@ export function criarNucleo(op: OpcoesNucleo) {
     }
   }
 
+  /** Mais rápido que isto é teletransporte (blocos por segundo, com folga). */
+  const VEL_MAX = modo === 'criativo' ? 40 : 14;
   function telemetria(j: Jogador, c: Telemetria): void {
     const { quedas, pulos, golpes } = c;
+    // na nuvem a posição tem que ser possível: andar, correr, voar e cair, não saltar
+    if (!confiar && !depuracao && !j.saltoPermitido) {
+      const dt = (n - j.passoTelemetria) * PASSO + 0.3;
+      const horiz = Math.hypot(c.x - j.tel.x, c.z - j.tel.z);
+      const sobe = c.y - j.tel.y;
+      if (
+        !Number.isFinite(c.x + c.y + c.z) ||
+        horiz > VEL_MAX * dt + 2 ||
+        sobe > VEL_MAX * dt + 2
+      ) {
+        j.eventos.push({ e: 'teleporte', x: j.tel.x, z: j.tel.z, y: j.tel.y });
+        return;
+      }
+    }
+    j.saltoPermitido = false;
+    j.passoTelemetria = n;
     j.tel = { ...c, quedas: [], pulos: 0, golpes: 0 };
     for (let i = 0; i < golpes; i++) j.sobrevivencia.acao();
     if (modo !== 'sobrevivencia' || j.sobrevivencia.estado.morto) return;
@@ -764,6 +788,7 @@ export function criarNucleo(op: OpcoesNucleo) {
         comer(j, c);
         break;
       case 'renascer':
+        j.saltoPermitido = true;
         j.sobrevivencia.renascer();
         j.eventos.push({ e: 'teleporte', x: j.spawn.x, z: j.spawn.z });
         break;

@@ -102,6 +102,16 @@ setInterval(
 // gravação e salas que dormem
 setInterval(() => void salas.manutencao().catch((e) => log(`manutenção: ${String(e)}`)), 1000);
 
+// uma linha de métricas por minuto (vai para o Log Analytics): salas, jogadores e ritmo
+setInterval(() => {
+  const r = salas.resumo;
+  const mem = Math.round(process.memoryUsage().rss / 1e6);
+  log(
+    `metricas salas=${r.salas} jogadores=${r.jogadores} passoMs=${r.passoMs} passoMaxMs=${r.passoMaxMs} memMB=${mem}`,
+  );
+  salas.zerarPior();
+}, 60_000);
+
 http.listen(PORTA, () => log(`Terrário no ar na porta ${PORTA} (${conta ? 'Azure' : 'memória'})`));
 
 // nova versão sendo publicada: grava tudo antes de sair
