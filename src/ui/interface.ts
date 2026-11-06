@@ -406,6 +406,11 @@ export function criarInterface(
       entrada.hidden = false;
     },
   });
+  window.addEventListener('brumaluz:pausar', () => {
+    if (!entrada.hidden || pausa.aberto) return;
+    jogoIniciado = true;
+    pausa.abrir();
+  });
   document.addEventListener('pointerlockchange', () => {
     if (document.pointerLockElement !== null) {
       jogoIniciado = true;

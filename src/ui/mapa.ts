@@ -20,6 +20,10 @@ export const CSS_MAPA = `
 .bussola .marcador { top: 8px; width: 9px; height: 9px; transform: translateX(-50%) rotate(45deg); border: 1px solid rgba(0,0,0,0.5); }
 .bussola::after { content: ''; position: absolute; left: 50%; top: 0; bottom: 0; width: 2px; background: #ffd98f; transform: translateX(-50%); opacity: 0.8; }
 body.modo-foto .bussola { display: none; }
+@media (max-width: 560px) {
+  .bussola { display: none; }
+  .minimapa { width: 104px; height: 104px; top: 40px; }
+}
 body:has(.entrada:not([hidden])) .minimapa, body:has(.entrada:not([hidden])) .bussola { display: none; }
 .mapa-mundo { position: fixed; inset: 0; z-index: 32; background: rgba(6,8,14,0.9); display: grid; grid-template-rows: auto 1fr; font-family: system-ui, sans-serif; color: #ece6da; }
 .mapa-mundo[hidden] { display: none; }

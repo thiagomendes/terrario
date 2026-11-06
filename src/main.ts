@@ -15,6 +15,7 @@ import { notificar } from './ui/interface';
 import { CSS_FOTO, criarPainelFoto } from './ui/foto';
 import { CSS_MAPA, criarMapas } from './ui/mapa';
 import { CSS_DIARIO, criarUiDiario } from './ui/diario';
+import { CSS_TOQUE, criarLegendas, criarToque, ligarGamepad } from './ui/toque';
 import { criarDiario } from './jogo/diario';
 import { CORES_MARCADOR, type Marcador } from './jogo/mapa';
 
@@ -63,6 +64,7 @@ async function iniciar(app: HTMLElement): Promise<void> {
   ligarFoto(app, cena);
   ligarMapas(app, cena);
   ligarDiario(app, cena);
+  ligarControles(app, cena, hotbar, config);
 }
 
 /** Na tela de título, a câmera gira devagar mostrando o mundo; ao jogar, volta à mira salva. */
@@ -428,4 +430,48 @@ function ligarDiario(app: HTMLElement, cena: ReturnType<typeof criarCena>): void
       if (ui.alternar()) document.exitPointerLock?.();
     }
   });
+}
+
+function ligarControles(
+  app: HTMLElement,
+  cena: ReturnType<typeof criarCena>,
+  hotbar: ReturnType<typeof criarHotbar>,
+  config: ReturnType<typeof criarGerenciadorConfig>,
+): void {
+  const estilo = document.createElement('style');
+  estilo.textContent = CSS_TOQUE;
+  document.head.appendChild(estilo);
+  const d = cena.estado.controleDireto!;
+  const teclaDom = (code: string) => {
+    if (code === 'Pausa') window.dispatchEvent(new CustomEvent('brumaluz:pausar'));
+    else window.dispatchEvent(new KeyboardEvent('keydown', { code }));
+  };
+  const c = { ...d, teclaDom };
+  const toque = criarToque(app, c);
+  const ehToque = window.matchMedia?.('(pointer: coarse)').matches ?? false;
+  let usouToque = false;
+  const atualizarToque = () => {
+    const naEntrada = !!document.querySelector('.entrada:not([hidden])');
+    toque.mostrar((ehToque || usouToque) && !naEntrada && !document.body.dataset.overlay);
+  };
+  window.addEventListener(
+    'touchstart',
+    () => {
+      usouToque = true;
+      atualizarToque();
+    },
+    { passive: true },
+  );
+  setInterval(atualizarToque, 400);
+  ligarGamepad(c, (passo) => {
+    if (passo > 0) hotbar.proximo();
+    else hotbar.anterior();
+    window.dispatchEvent(new CustomEvent('brumaluz:slot'));
+  });
+  window.addEventListener('gamepadconnected', () => notificar('🎮 Controle conectado'));
+  const legendas = criarLegendas(app);
+  config.ouvir((cfg) => legendas.definir(cfg.legendas));
+  window.addEventListener('brumaluz:legenda', (e) =>
+    legendas.mostrar((e as CustomEvent<string>).detail),
+  );
 }

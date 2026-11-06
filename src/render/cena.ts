@@ -188,6 +188,13 @@ export interface EstadoDepuracao {
   itensSoltos?: number;
   soltarItem?: (item: string, qtd: number, x: number, y: number, z: number) => void;
   modo?: ModoJogo;
+  controleDireto?: {
+    olhar: (dx: number, dy: number) => void;
+    mover: (frente: number, direita: number) => void;
+    tecla: (acao: 'pular' | 'correr' | 'rapido', ativo: boolean) => void;
+    quebrar: (ativo: boolean) => void;
+    usar: () => void;
+  };
   musica?: string;
   precipitacao?: { chuva: number; neve: number; taxa: number };
   biomaAtual?: string;
@@ -477,7 +484,10 @@ export function criarCena(
     const raio = clima.atualizar(dt, estacao, baseHora.noite < 0.5);
     if (raio) {
       flash = 1;
-      setTimeout(() => tocarSom(motorAudio, 'trovao'), raio.atrasoTrovao * 1000);
+      setTimeout(() => {
+        tocarSom(motorAudio, 'trovao');
+        legenda('⚡ Trovão');
+      }, raio.atrasoTrovao * 1000);
     }
     const a = ajustarPorClima(baseHora, clima.estado);
     const k = 1 - Math.exp(-dt / 20);
@@ -653,6 +663,10 @@ export function criarCena(
     }
     const pedido: PedidoChunk = { cx, cz, semente, versao, edicoes: edicoesPedido };
     worker.postMessage(pedido);
+  }
+
+  function legenda(texto: string): void {
+    window.dispatchEvent(new CustomEvent('brumaluz:legenda', { detail: texto }));
   }
 
   /** Remalhas agrupadas: várias edições no mesmo quadro viram um pedido por chunk. */
@@ -1565,6 +1579,17 @@ export function criarCena(
         Math.hypot(c.x - camera.position.x, c.z - camera.position.z) < 20
       ) {
         tocarSom(motorAudio, 'espectro');
+        const a = Math.atan2(c.x - camera.position.x, c.z - camera.position.z) - camera.rotation.y;
+        const rel = Math.atan2(Math.sin(a), Math.cos(a));
+        const lado =
+          Math.abs(rel) < 0.6
+            ? 'à frente'
+            : Math.abs(rel) > 2.4
+              ? 'atrás'
+              : rel > 0
+                ? 'à direita'
+                : 'à esquerda';
+        legenda(`👻 Gemido de espectro ${lado}`);
       }
     }
   }
@@ -1902,6 +1927,27 @@ export function criarCena(
     return out;
   };
 
+  // Controle direto (toque e gamepad): sem pointer lock
+  estado.controleDireto = {
+    olhar: (dx, dy) => controle.girar(dx, dy),
+    mover: (frente, direita) => {
+      const t = controle.teclas;
+      t.frente = frente > 0.25;
+      t.tras = frente < -0.25;
+      t.direita = direita > 0.25;
+      t.esquerda = direita < -0.25;
+    },
+    tecla: (acao, ativo) => {
+      controle.teclas[acao] = ativo;
+    },
+    quebrar: (ativo) => {
+      if (ativo) {
+        if (!atacarNaMira()) minerador.pressionar();
+      } else minerador.soltar();
+    },
+    usar: () => usarOuColocar(false),
+  };
+
   // Nascimento: sem posição salva, garante que o jogador comece em ar livre.
   if (!dadosIniciais?.jogador) estado.teleportar?.(controle.jogador.x, controle.jogador.z);
 
@@ -1966,6 +2012,9 @@ export function criarCena(
   sobrevivencia.ouvir((ev) => {
     if (ev.tipo === 'dano') {
       tocarSom(motorAudio, 'dano');
+      legenda(
+        ev.causa === 'queda' ? '💥 Queda' : ev.causa === 'afogamento' ? '🫧 Sem ar' : '💢 Dano',
+      );
       window.dispatchEvent(new CustomEvent('brumaluz:dano', { detail: ev }));
     } else if (ev.tipo === 'morte') {
       // espalha o inventário no lugar da morte

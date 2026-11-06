@@ -159,6 +159,16 @@ export function criarControle(
     inverterY = inverter;
   }
 
+  /** Olhar por deltas (toque e controle), na mesma escala do mouse. */
+  function girar(dx: number, dy: number): void {
+    ({ yaw, pitch } = aplicarMouse(
+      yaw,
+      pitch,
+      dx * sensibilidade,
+      dy * sensibilidade * (inverterY ? -1 : 1),
+    ));
+  }
+
   function definirVoo(permitido: boolean): void {
     podeVoar = permitido;
     if (!permitido) jogador.voando = false;
@@ -171,6 +181,7 @@ export function criarControle(
     solido,
     definirMouse,
     definirVoo,
+    girar,
     teclas,
     get resultado() {
       return ultimoResultado;
