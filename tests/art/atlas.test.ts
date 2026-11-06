@@ -72,14 +72,14 @@ describe('atlas', () => {
     const cog = atlas.tiles.find((t) => t.bloco === Bloco.COGUMELO_BRILHANTE)!;
     const todos = interior(cog.indice);
     const haste: number[][] = [];
-    for (let y = 15; y < 30; y++) {
+    for (let y = 8; y < TAM_TILE; y++) {
       for (let x = 0; x < TAM_TILE; x++) {
-        if (Math.abs(x - 15.5) < 2.5 && todos[y * TAM_TILE + x][3] === 255) {
+        if (Math.abs(x - 7.5) < 2.5 && todos[y * TAM_TILE + x][3] === 255) {
           haste.push(todos[y * TAM_TILE + x]);
         }
       }
     }
-    expect(haste.length).toBeGreaterThan(20);
+    expect(haste.length).toBeGreaterThan(12);
     expect(haste.some((p) => p[0] > 170 && p[1] > 170 && p[2] > 170)).toBe(false);
   });
 

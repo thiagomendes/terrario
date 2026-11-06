@@ -1,10 +1,9 @@
 import { obterBloco } from '../world/blocks';
-import { TILE_TOPO } from '../art/atlas';
+import { Bloco } from '../world/blocks';
+import { TILE_TERRA, TILE_TOPO, uvDaCelula } from '../art/atlas';
 import { ALTURA, TAM_X, TAM_Z, indice } from '../world/chunk';
 
-export const COLUNAS_ATLAS = 4;
-export const LINHAS_ATLAS = 3;
-const INSET_UV = 0.002;
+const INSET_UV = 0.001;
 
 export interface Buffers {
   posicoes: Float32Array;
@@ -86,17 +85,22 @@ const CANTOS: [number, number][] = [
   [0, 1],
 ];
 
-function uvDoCanto(tile: number, s1: number, s2: number): [number, number] {
-  const col = tile % COLUNAS_ATLAS;
-  const lin = Math.floor(tile / COLUNAS_ATLAS);
-  const u0 = col / COLUNAS_ATLAS;
-  const v0 = lin / LINHAS_ATLAS;
-  const du = 1 / COLUNAS_ATLAS;
-  const dv = 1 / LINHAS_ATLAS;
+/** UV do canto de um tile; (u, v) locais em [0, 1], v = 0 no topo da imagem. */
+function uvDoCanto(tile: number, u: number, v: number): [number, number] {
+  const r = uvDaCelula(tile);
+  const du = r.u1 - r.u0;
+  const dv = r.v1 - r.v0;
   return [
-    u0 + du * (INSET_UV + s1 * (1 - 2 * INSET_UV)),
-    v0 + dv * (INSET_UV + s2 * (1 - 2 * INSET_UV)),
+    r.u0 + du * (INSET_UV + u * (1 - 2 * INSET_UV)),
+    r.v0 + dv * (INSET_UV + v * (1 - 2 * INSET_UV)),
   ];
+}
+
+/** Coordenadas locais da textura para um ponto (px, py, pz) em [0, 1] numa face. */
+function uvLocal(n: Vec, px: number, py: number, pz: number): [number, number] {
+  if (n[1] !== 0) return [px, n[1] > 0 ? pz : 1 - pz];
+  if (n[0] !== 0) return [n[0] > 0 ? 1 - pz : pz, 1 - py];
+  return [n[2] > 0 ? px : 1 - px, 1 - py];
 }
 
 export function gerarMalha(blocos: Uint8Array, vizinhos: Vizinhos = {}): MalhaChunk {
@@ -132,7 +136,10 @@ export function gerarMalha(blocos: Uint8Array, vizinhos: Vizinhos = {}): MalhaCh
   }
 
   function adicionarFace(id: number, x: number, y: number, z: number, f: Face): void {
-    const tile = f.n[1] > 0 && TILE_TOPO[id] !== undefined ? TILE_TOPO[id] : tileDoBloco(id);
+    let tile = f.n[1] > 0 && TILE_TOPO[id] !== undefined ? TILE_TOPO[id] : tileDoBloco(id);
+    if (id === Bloco.TERRA_MUSGOSA && f.n[1] <= 0 && (f.n[1] < 0 || opaco(x, y + 1, z))) {
+      tile = TILE_TERRA;
+    }
     const base = solido.vertices;
     const ao: number[] = [];
     const fx = x + f.n[0];
@@ -152,13 +159,12 @@ export function gerarMalha(blocos: Uint8Array, vizinhos: Vizinhos = {}): MalhaCh
       const valor = 1 - 0.25 * oclusao;
       ao.push(valor);
       const deslocar = f.n[0] + f.n[1] + f.n[2] > 0 ? 1 : 0;
-      solido.posicoes.push(
-        x + deslocar * Math.abs(f.n[0]) + s1 * f.t1[0] + s2 * f.t2[0],
-        y + deslocar * Math.abs(f.n[1]) + s1 * f.t1[1] + s2 * f.t2[1],
-        z + deslocar * Math.abs(f.n[2]) + s1 * f.t1[2] + s2 * f.t2[2],
-      );
+      const lx = deslocar * Math.abs(f.n[0]) + s1 * f.t1[0] + s2 * f.t2[0];
+      const ly = deslocar * Math.abs(f.n[1]) + s1 * f.t1[1] + s2 * f.t2[1];
+      const lz = deslocar * Math.abs(f.n[2]) + s1 * f.t1[2] + s2 * f.t2[2];
+      solido.posicoes.push(x + lx, y + ly, z + lz);
       solido.normais.push(f.n[0], f.n[1], f.n[2]);
-      solido.uvs.push(...uvDoCanto(tile, s1, s2));
+      solido.uvs.push(...uvDoCanto(tile, ...uvLocal(f.n, lx, ly, lz)));
       solido.cores.push(valor, valor, valor, 1);
     }
     if (ao[0] + ao[2] > ao[1] + ao[3]) {
@@ -170,7 +176,10 @@ export function gerarMalha(blocos: Uint8Array, vizinhos: Vizinhos = {}): MalhaCh
 
   function adicionarPlanta(id: number, x: number, y: number, z: number): void {
     const tile = tileDoBloco(id);
-    const altura = 0.8 + 0.4 * hashPosicao(x, y, z, 1);
+    const altura =
+      id === Bloco.GRAMA_ALTA
+        ? 0.5 + 0.35 * hashPosicao(x, y, z, 1)
+        : 0.75 + 0.3 * hashPosicao(x, y, z, 1);
     const escala = 0.8 + 0.4 * hashPosicao(x, y, z, 2);
     const tom = 0.75 + 0.25 * hashPosicao(x, y, z, 3);
     const a = 0.5 - 0.5 * escala;
@@ -201,7 +210,7 @@ export function gerarMalha(blocos: Uint8Array, vizinhos: Vizinhos = {}): MalhaCh
       CANTOS.forEach(([s1, s2], i) => {
         plantas.posicoes.push(...pts[i]);
         plantas.normais.push(nx, 0, nz);
-        plantas.uvs.push(...uvDoCanto(tile, s1, s2));
+        plantas.uvs.push(...uvDoCanto(tile, s1, 1 - s2));
         const topo = s2 ? 1 : 0;
         const t = tom * (0.9 + 0.1 * topo);
         plantas.cores.push(t, t * (0.95 + 0.05 * topo), tom, topo);
@@ -225,7 +234,7 @@ export function gerarMalha(blocos: Uint8Array, vizinhos: Vizinhos = {}): MalhaCh
           const viz = ler(x + f.n[0], y + f.n[1], z + f.n[2]);
           const dv = obterBloco(viz);
           if (dv?.opaco) continue;
-          if (viz === id && !def.opaco) continue;
+          if (viz === id && !def.opaco && id !== Bloco.FOLHAGEM) continue;
           adicionarFace(id, x, y, z, f);
         }
       }

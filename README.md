@@ -1,6 +1,6 @@
 # Brumaluz
 
-Jogo 3D de exploração em mundo voxel, que roda no navegador. Esta fase entrega uma cena jogável para validar o visual e o desempenho: crepúsculo âmbar e violeta, névoa, flora bioluminescente. Interface em português do Brasil.
+Jogo 3D de exploração em mundo voxel, que roda no navegador. Visual pixel-art (tiles de 16x16 pintados por código) com iluminação moderna: ciclo de dia e noite, céu com sol, lua, nuvens e estrelas, lagos com reflexo, sombras, bruma nos vales, vagalumes à noite e pós-processamento (tonemapping ACES, bloom, vinheta). Interface em português do Brasil.
 
 ## Pré-requisitos
 
@@ -33,7 +33,9 @@ Personagem: há 4 modelos voxel originais, com opções de aparência por paleta
 
 Salvamento da aparência: só a aparência é salva, em `localStorage` (chave `brumaluz:aparencia`), a cada mudança confirmada no painel, e carregada ao abrir a página. Se o armazenamento estiver indisponível ou o dado for inválido, vale a aparência padrão. O mundo continua sem salvamento.
 
-Áudio: sintetizado por código, sem arquivos. Ele só ativa após o primeiro clique (a tela de entrada), por regra dos navegadores. O indicador no HUD mostra "Som: ativa ao clicar", "Som: ligado", "Som: mudo" ou "Som: indisponível".
+Áudio: sintetizado por código, sem arquivos. Cada material tem seu timbre (terra fofa, pedra estalada, areia chiada, madeira oca, folhas farfalhando, cristal de vidro) e há uma paisagem sonora com vento, pássaros de dia, grilos à noite e uma trilha generativa suave com reverb. Ele só ativa após o primeiro clique (a tela de entrada), por regra dos navegadores. O indicador no HUD mostra "Som: ativa ao clicar", "Som: ligado", "Som: mudo" ou "Som: indisponível".
+
+Ciclo de dia: um dia completo dura 20 minutos e começa de manhã. O braço em primeira pessoa fica em repouso no canto e só avança nos golpes e colocações, com balanço ao andar.
 
 O bloco apontado ganha contorno âmbar e há uma mira central. Os blocos são ilimitados. O mundo não é salvo: as edições se perdem ao recarregar a página.
 

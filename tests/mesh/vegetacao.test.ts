@@ -22,13 +22,13 @@ describe('vegetação refinada', () => {
   const blocos = chunkComPlantas();
   const a = gerarMalha(blocos).plantas;
 
-  it('altura varia entre 0.8 e 1.2 e a malha é determinística', () => {
+  it('altura varia entre 0.5 e 1.2 e a malha é determinística', () => {
     const b = gerarMalha(blocos).plantas;
     expect(Array.from(b.posicoes)).toEqual(Array.from(a.posicoes));
     const alturas = new Set<number>();
     for (let v = 0; v < a.posicoes.length / 3; v += 4) {
       const h = a.posicoes[(v + 3) * 3 + 1] - a.posicoes[v * 3 + 1];
-      expect(h).toBeGreaterThanOrEqual(0.8 - 1e-6);
+      expect(h).toBeGreaterThanOrEqual(0.5 - 1e-6);
       expect(h).toBeLessThanOrEqual(1.2 + 1e-6);
       alturas.add(Math.round(h * 1000));
     }

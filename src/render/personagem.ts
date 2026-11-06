@@ -11,14 +11,23 @@ import type { Scene } from '@babylonjs/core/scene';
 import type { Aparencia } from '../personagem/aparencia';
 import { montarPartes, type NomeParte } from '../personagem/modelo';
 import type { Pose } from '../personagem/poses';
-import { ALTURA_TEXTURA, LARGURA_TEXTURA, REGIOES, gerarTextura } from '../personagem/textura';
+import type { Vista } from '../player/animacao';
+
+/** Dados extras para suavizar a pose do corpo em terceira pessoa. */
+export interface ExtrasPose {
+  dt: number;
+  /** Pitch da câmera: a cabeça acompanha o olhar. */
+  olhar: number;
+  vista: Vista;
+}
+import { gerarTexturaParte } from '../personagem/textura';
 
 export const MAXIMO_MALHAS_PERSONAGEM = 12;
 
 export interface Personagem {
   raiz: TransformNode;
   aplicarAparencia(aparencia: Aparencia): void;
-  aplicarPose(pose: Pose): void;
+  aplicarPose(pose: Pose, extras?: ExtrasPose): void;
   posicionar(x: number, y: number, z: number, yaw: number): void;
   definirVisivel(visivel: boolean): void;
   contarMalhas(): number;
@@ -29,29 +38,14 @@ interface ParteViva {
   nome: NomeParte;
   no: TransformNode;
   malha: Mesh;
+  material: StandardMaterial;
+  textura: RawTexture;
 }
 
 export function criarPersonagem(scene: Scene, aparencia: Aparencia): Personagem {
   const raiz = new TransformNode('personagem', scene);
   const corpo = new TransformNode('personagem-corpo', scene);
   corpo.parent = raiz;
-
-  const textura = RawTexture.CreateRGBATexture(
-    new Uint8Array(LARGURA_TEXTURA * ALTURA_TEXTURA * 4),
-    LARGURA_TEXTURA,
-    ALTURA_TEXTURA,
-    scene,
-    false,
-    false,
-    Constants.TEXTURE_NEAREST_SAMPLINGMODE,
-  );
-  textura.wrapU = Texture.CLAMP_ADDRESSMODE;
-  textura.wrapV = Texture.CLAMP_ADDRESSMODE;
-
-  const material = new StandardMaterial('personagem-material', scene);
-  material.diffuseTexture = textura;
-  material.emissiveColor = Color3.Black();
-  material.specularColor = Color3.Black();
 
   let partes: ParteViva[] = [];
   let visivel = true;
@@ -60,23 +54,50 @@ export function criarPersonagem(scene: Scene, aparencia: Aparencia): Personagem 
     for (const p of partes) {
       p.malha.dispose();
       p.no.dispose();
+      p.material.dispose();
+      p.textura.dispose();
     }
     partes = [];
   }
 
   function aplicarAparencia(nova: Aparencia): void {
     limparPartes();
-    textura.update(new Uint8Array(gerarTextura(nova)));
     for (const parte of montarPartes(nova)) {
-      const r = REGIOES[parte.nome];
-      const u0 = r.x / LARGURA_TEXTURA;
-      const u1 = (r.x + r.w) / LARGURA_TEXTURA;
-      const v0 = 1 - (r.y + r.h) / ALTURA_TEXTURA;
-      const v1 = 1 - r.y / ALTURA_TEXTURA;
-      const faceUV = Array.from({ length: 6 }, () => new Vector4(u0, v0, u1, v1));
+      const tex = gerarTexturaParte(nova, parte);
+      const textura = RawTexture.CreateRGBATexture(
+        new Uint8Array(tex.pixels.buffer),
+        tex.largura,
+        tex.altura,
+        scene,
+        false,
+        false,
+        Constants.TEXTURE_NEAREST_SAMPLINGMODE,
+      );
+      textura.wrapU = Texture.CLAMP_ADDRESSMODE;
+      textura.wrapV = Texture.CLAMP_ADDRESSMODE;
+      const material = new StandardMaterial(`personagem-material-${parte.nome}`, scene);
+      material.diffuseTexture = textura;
+      material.emissiveColor = Color3.Black();
+      material.specularColor = Color3.Black();
+      material.ambientColor = Color3.White();
+      const faceUV = tex.faces.map(
+        (f) =>
+          new Vector4(
+            f.x / tex.largura,
+            (f.y + f.h) / tex.altura,
+            (f.x + f.w) / tex.largura,
+            f.y / tex.altura,
+          ),
+      );
       const malha = MeshBuilder.CreateBox(
         `personagem-${parte.nome}`,
-        { width: parte.tamanho[0], height: parte.tamanho[1], depth: parte.tamanho[2], faceUV },
+        {
+          width: parte.tamanho[0],
+          height: parte.tamanho[1],
+          depth: parte.tamanho[2],
+          faceUV,
+          wrap: true,
+        },
         scene,
       );
       const no = new TransformNode(`personagem-pivo-${parte.nome}`, scene);
@@ -93,36 +114,63 @@ export function criarPersonagem(scene: Scene, aparencia: Aparencia): Personagem 
       malha.receiveShadows = false;
       malha.renderingGroupId = 0;
       malha.setEnabled(visivel);
-      partes.push({ nome: parte.nome, no, malha });
+      partes.push({ nome: parte.nome, no, malha, material, textura });
     }
   }
 
-  function aplicarPose(pose: Pose): void {
-    corpo.position.y = pose.tronco;
+  /** Ângulos atuais por parte, suavizados para não haver saltos entre poses. */
+  const angulos = new Map<NomeParte, number>();
+  let inclinacao = 0;
+
+  function aplicarPose(pose: Pose, extras?: ExtrasPose): void {
+    const dt = extras ? Math.min(Math.max(extras.dt, 0), 0.1) : 1;
+    const k = extras ? 1 - Math.exp(-dt * 14) : 1;
+    const v = extras?.vista;
+    const respira = v ? Math.sin(v.tempo * 1.6) * 0.012 * (1 - Math.min(1, v.passada)) : 0;
+    const bob = v
+      ? -Math.abs(Math.sin(v.tempo * (v.passada > 1.2 ? 2.4 : 1.6) * Math.PI)) *
+        0.04 *
+        Math.min(1, v.passada)
+      : 0;
+    corpo.position.y = pose.tronco + respira + bob;
+    // inclina o tronco para a frente ao correr
+    const alvoInc = v ? Math.max(0, v.passada - 1) * 0.28 : 0;
+    inclinacao += (alvoInc - inclinacao) * k;
+    corpo.rotation.x = inclinacao;
+    const olhar = extras ? Math.max(-0.9, Math.min(0.9, extras.olhar)) : 0;
     for (const p of partes) {
-      let angulo = 0;
+      let alvo = 0;
       switch (p.nome) {
         case 'bracoDireito':
-          angulo = pose.bracoDireito;
+          alvo = pose.bracoDireito;
           break;
         case 'bracoEsquerdo':
-          angulo = pose.bracoEsquerdo;
+          alvo = pose.bracoEsquerdo + (v ? Math.sin(v.tempo * 1.1) * 0.04 : 0);
           break;
         case 'pernaDireita':
-          angulo = pose.pernaDireita;
+          alvo = pose.pernaDireita;
           break;
         case 'pernaEsquerda':
-          angulo = pose.pernaEsquerda;
+          alvo = pose.pernaEsquerda;
           break;
         case 'cabeca':
         case 'cabelo':
         case 'acessorio':
-          angulo = p.nome === 'acessorio' && isLanterna(p) ? pose.bracoEsquerdo : pose.cabeca;
+          alvo =
+            p.nome === 'acessorio' && isLanterna(p)
+              ? pose.bracoEsquerdo
+              : pose.cabeca + olhar * 0.75 - inclinacao;
           break;
         default:
-          angulo = 0;
+          alvo = 0;
       }
-      p.no.rotation.x = angulo;
+      const atual = angulos.get(p.nome) ?? alvo;
+      const novo = atual + (alvo - atual) * k;
+      angulos.set(p.nome, novo);
+      p.no.rotation.x = novo;
+      // braços abrem levemente para não atravessar o tronco
+      if (p.nome === 'bracoDireito') p.no.rotation.z = -0.06;
+      if (p.nome === 'bracoEsquerdo') p.no.rotation.z = 0.06;
     }
   }
 
@@ -147,8 +195,6 @@ export function criarPersonagem(scene: Scene, aparencia: Aparencia): Personagem 
     contarMalhas: () => partes.length,
     descartar() {
       limparPartes();
-      material.dispose();
-      textura.dispose();
       corpo.dispose();
       raiz.dispose();
     },

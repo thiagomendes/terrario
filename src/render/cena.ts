@@ -17,7 +17,10 @@ import { ShadowGenerator } from '@babylonjs/core/Lights/Shadows/shadowGenerator'
 import '@babylonjs/core/Lights/Shadows/shadowGeneratorSceneComponent';
 import { GlowLayer } from '@babylonjs/core/Layers/glowLayer';
 import '@babylonjs/core/Layers/effectLayerSceneComponent';
-import { DynamicTexture } from '@babylonjs/core/Materials/Textures/dynamicTexture';
+import { DefaultRenderingPipeline } from '@babylonjs/core/PostProcesses/RenderPipeline/Pipelines/defaultRenderingPipeline';
+import '@babylonjs/core/PostProcesses/RenderPipeline/postProcessRenderPipelineManagerSceneComponent';
+import { ImageProcessingConfiguration } from '@babylonjs/core/Materials/imageProcessingConfiguration';
+import { ColorCurves } from '@babylonjs/core/Materials/colorCurves';
 import { MeshBuilder } from '@babylonjs/core/Meshes/meshBuilder';
 import type { LinesMesh } from '@babylonjs/core/Meshes/linesMesh';
 import { COR_DESTAQUE, estadoDestaque } from './destaque';
@@ -27,17 +30,25 @@ import { Bloco } from '../world/blocks';
 import {
   DENSIDADE_NEVOA,
   DIRECAO_SOL,
+  DURACAO_DIA,
+  HORA_INICIAL,
   INTENSIDADE_GLOW,
   LUZ_PREENCHIMENTO,
   NUM_CASCATAS,
   PALETA,
+  atmosferaNaHora,
+  normalizarHora,
 } from './atmosfera';
+import { criarCeu } from './ceu';
+import { criarAgua } from './agua';
+import { criarVagalumes } from './vagalumes';
+import { PluginMundo } from './materialMundo';
 import { PluginBalanco } from './balanco';
 import { SEMENTE_PADRAO, TAM_X, TAM_Z } from '../world/chunk';
 import type { Buffers } from '../mesh/malha';
 import type { RespostaChunk, PedidoChunk } from '../workers/chunk.worker';
 import { criarEdicoes } from '../world/edicoes';
-import { ALTURA, gerarChunk, indice } from '../world/chunk';
+import { ALTURA, alturaTerreno, gerarChunk, indice } from '../world/chunk';
 import { posicaoColocacao, raycastVoxel, type Vec3 } from '../player/alvo';
 import { criarBarramento, type Barramento } from '../player/eventos';
 import { criarMinerador } from '../player/minerador';
@@ -95,41 +106,17 @@ const RAIO_INICIAL = 3;
 const RAIO_SOMBRA = 1;
 const ALCANCE = 5;
 
-function criarCeu(scene: Scene): void {
-  const textura = new DynamicTexture('ceu-grad', { width: 4, height: 256 }, scene, false);
-  const ctx = textura.getContext();
-  const grad = ctx.createLinearGradient(0, 0, 0, 256);
-  const css = (c: readonly number[]) => `rgb(${c.map((v) => Math.round(v * 255)).join(',')})`;
-  grad.addColorStop(0, css(PALETA.ceuZenite));
-  grad.addColorStop(0.45, css(PALETA.ceuMeio));
-  grad.addColorStop(0.5, css(PALETA.ceuHorizonte));
-  grad.addColorStop(1, css(PALETA.ceuHorizonte));
-  ctx.fillStyle = grad;
-  ctx.fillRect(0, 0, 4, 256);
-  textura.update();
-
-  const mat = new StandardMaterial('ceu', scene);
-  mat.backFaceCulling = false;
-  mat.disableLighting = true;
-  mat.fogEnabled = false;
-  mat.diffuseColor = Color3.Black();
-  mat.specularColor = Color3.Black();
-  mat.emissiveTexture = textura;
-  textura.wrapU = Texture.CLAMP_ADDRESSMODE;
-  textura.wrapV = Texture.CLAMP_ADDRESSMODE;
-
-  const domo = MeshBuilder.CreateSphere('ceu', { diameter: 500, segments: 16 }, scene);
-  domo.material = mat;
-  domo.infiniteDistance = true;
-  domo.isPickable = false;
-  domo.applyFog = false;
-}
-
 export interface EstadoDepuracao {
   ready: boolean;
   chunksCarregados: number;
   fps: number;
   escalaResolucao: number;
+  /** Hora do dia em [0, 1): 0 meia-noite, 0.5 meio-dia. Gravável nos testes. */
+  hora?: number;
+  /** Leva o jogador para o topo do terreno em (x, z) (testes e capturas). */
+  teleportar?: (x: number, z: number) => void;
+  /** Pausa o relógio do dia (testes e capturas). */
+  pausarDia?: boolean;
   posicao?: number[];
   rotacao?: number[];
   interagir?: (acao: AcaoInteracao) => boolean;
@@ -142,6 +129,7 @@ export interface EstadoDepuracao {
   remalhasConcluidas?: number;
   remalhaMs?: number;
   aplicadasNoUltimoQuadro?: number;
+  atmosfera?: { noite: number; crepusculo: number };
   alvo?: { x: number; y: number; z: number; normal: Vec3 } | null;
   barramento?: Barramento;
   minerar?: (
@@ -165,6 +153,7 @@ export interface EstadoDepuracao {
     pose: () => Pose;
     maoBloco: () => number | null;
     nomeExibido: () => string;
+    girarCorpo?: (rad: number) => void;
   };
 }
 
@@ -237,20 +226,64 @@ export function criarCena(canvas: HTMLCanvasElement, hotbar: Hotbar = criarHotba
   sol.position = new Vector3(60, 90, 60);
   sol.autoUpdateExtends = true;
 
-  const sombras = new CascadedShadowGenerator(1024, sol);
+  const sombras = new CascadedShadowGenerator(2048, sol);
   sombras.numCascades = NUM_CASCATAS;
-  sombras.lambda = 0.7;
-  sombras.shadowMaxZ = 80;
-  sombras.bias = 0.01;
+  sombras.lambda = 0.75;
+  sombras.shadowMaxZ = 90;
+  sombras.bias = 0.006;
   sombras.normalBias = 0.02;
-  sombras.setDarkness(0.35);
-  sombras.filteringQuality = ShadowGenerator.QUALITY_LOW;
+  sombras.setDarkness(0.15);
+  sombras.filteringQuality = ShadowGenerator.QUALITY_MEDIUM;
   sombras.usePercentageCloserFiltering = true;
+  sombras.stabilizeCascades = true;
 
-  const glow = new GlowLayer('glow', scene, { blurKernelSize: 24 });
+  const glow = new GlowLayer('glow', scene, { blurKernelSize: 32 });
   glow.intensity = INTENSIDADE_GLOW;
 
-  criarCeu(scene);
+  const ceu = criarCeu(scene);
+  const agua = criarAgua(scene);
+  glow.addExcludedMesh(ceu.malha);
+  glow.addExcludedMesh(agua.malha);
+  const vagalumes = criarVagalumes(scene);
+
+  // Pós-processamento: HDR, tonemapping ACES, bloom suave, vinheta e FXAA.
+  const pipeline = new DefaultRenderingPipeline('pos', true, scene, [cameraVisao]);
+  pipeline.fxaaEnabled = true;
+  pipeline.bloomEnabled = true;
+  pipeline.bloomThreshold = 0.85;
+  pipeline.bloomWeight = 0.22;
+  pipeline.bloomKernel = 48;
+  pipeline.bloomScale = 0.5;
+  pipeline.imageProcessingEnabled = true;
+  const ip = pipeline.imageProcessing;
+  ip.toneMappingEnabled = true;
+  ip.toneMappingType = ImageProcessingConfiguration.TONEMAPPING_ACES;
+  ip.exposure = 1.1;
+  ip.contrast = 1.12;
+  ip.vignetteEnabled = true;
+  ip.vignetteWeight = 1.6;
+  ip.vignetteStretch = 0.4;
+  ip.vignetteColor = new Color4(0.05, 0.03, 0.08, 0);
+  ip.colorCurvesEnabled = true;
+  const curvas = new ColorCurves();
+  curvas.globalSaturation = 0;
+  curvas.highlightsHue = 40;
+  curvas.highlightsDensity = 12;
+  curvas.highlightsSaturation = 20;
+  curvas.shadowsHue = 230;
+  curvas.shadowsDensity = 25;
+  curvas.shadowsSaturation = 30;
+  ip.colorCurves = curvas;
+
+  let hora = HORA_INICIAL;
+  Object.defineProperty(estado, 'hora', {
+    get: () => hora,
+    set: (v: number) => {
+      hora = normalizarHora(v);
+    },
+    enumerable: true,
+  });
+  estado.pausarDia = false;
 
   const atlas = gerarAtlas(SEMENTE_PADRAO);
   const textura = RawTexture.CreateRGBATexture(
@@ -258,11 +291,12 @@ export function criarCena(canvas: HTMLCanvasElement, hotbar: Hotbar = criarHotba
     atlas.largura,
     atlas.altura,
     scene,
+    true,
     false,
-    false,
-    Texture.NEAREST_SAMPLINGMODE,
+    Texture.NEAREST_NEAREST_MIPLINEAR,
   );
   textura.hasAlpha = true;
+  textura.anisotropicFilteringLevel = 8;
 
   // Mapa emissivo: só os tiles de cristal e cogumelo mantêm cor, o resto fica preto.
   const pxEmissivo = new Uint8Array(
@@ -285,6 +319,9 @@ export function criarCena(canvas: HTMLCanvasElement, hotbar: Hotbar = criarHotba
   matSolido.specularColor = Color3.Black();
   matSolido.ambientColor = Color3.White();
   matSolido.backFaceCulling = false;
+  matSolido.transparencyMode = Material.MATERIAL_ALPHATEST;
+  matSolido.alphaCutOff = 0.5;
+  const mundoSolido = new PluginMundo(matSolido);
 
   const matPlanta = new StandardMaterial('atlas-plantas', scene);
   matPlanta.diffuseTexture = textura;
@@ -297,6 +334,35 @@ export function criarCena(canvas: HTMLCanvasElement, hotbar: Hotbar = criarHotba
   matPlanta.useAlphaFromDiffuseTexture = true;
   matPlanta.transparencyMode = Material.MATERIAL_ALPHATESTANDBLEND;
   matPlanta.alphaCutOff = 0.5;
+  const mundoPlanta = new PluginMundo(matPlanta);
+
+  /** Aplica a atmosfera da hora a luzes, névoa, céu e água. */
+  function aplicarAtmosfera(tempo: number): void {
+    const a = atmosferaNaHora(hora);
+    estado.atmosfera = { noite: a.noite, crepusculo: a.crepusculo };
+    scene.fogColor.set(...a.nevoa);
+    scene.fogDensity = a.densidadeNevoa;
+    scene.clearColor.set(a.nevoa[0], a.nevoa[1], a.nevoa[2], 1);
+    scene.ambientColor.set(...a.ambiente);
+    luz.diffuse.set(...a.ceuLuz);
+    luz.groundColor.set(...a.chaoLuz);
+    luz.intensity = a.intensidadeCeu;
+    sol.diffuse.set(...a.luz);
+    sol.direction.set(...a.direcaoLuz);
+    sol.intensity = a.intensidadeLuz;
+    const bruma: [number, number, number] = [
+      a.nevoa[0] * 0.85 + 0.12,
+      a.nevoa[1] * 0.85 + 0.12,
+      a.nevoa[2] * 0.85 + 0.14,
+    ];
+    const forca = 0.35 + 0.35 * Math.max(a.crepusculo, a.noite);
+    mundoSolido.definirBruma(bruma, forca);
+    mundoPlanta.definirBruma(bruma, forca);
+    ceu.atualizar(a, tempo);
+    agua.atualizar(a, tempo, cameraVisao.position);
+    vagalumes.atualizar(camera.position, a.noite);
+    ambiente?.definirNoite(a.noite);
+  }
 
   const malhas = new Map<string, Mesh[]>();
   const fila = criarFilaRemalha<RespostaChunk>();
@@ -536,6 +602,15 @@ export function criarCena(canvas: HTMLCanvasElement, hotbar: Hotbar = criarHotba
     verificarSlot();
   };
   estado.apontar = (yaw, pitch) => controle.apontar(yaw, pitch);
+  estado.teleportar = (x, z) => {
+    const j = controle.jogador;
+    let y = alturaTerreno(Math.floor(x), Math.floor(z), SEMENTE_PADRAO) + 1;
+    while (y < ALTURA - 2 && blocoEm(Math.floor(x), y, Math.floor(z)) !== Bloco.AR) y++;
+    j.x = x;
+    j.y = y;
+    j.z = z;
+    j.vy = 0;
+  };
   estado.bloco = blocoEm;
   estado.camera = {
     modo: () => estadoCamera.modo,
@@ -567,6 +642,8 @@ export function criarCena(canvas: HTMLCanvasElement, hotbar: Hotbar = criarHotba
   barramento.ouvir('golpe', () => animador.evento('golpe'));
   barramento.ouvir('colocacao', () => animador.evento('colocacao'));
   let slotNaMao = -1;
+  /** Giro extra do corpo em relação à câmera (só para capturas). */
+  let giroCorpo = 0;
   function atualizarPersonagem(dt: number): void {
     const j = controle.jogador;
     const pose = animador.atualizar(dt, {
@@ -581,9 +658,13 @@ export function criarCena(canvas: HTMLCanvasElement, hotbar: Hotbar = criarHotba
       slotNaMao = hotbar.ativo;
       braco.definirSlot(slotNaMao);
     }
-    braco.aplicarPose(pose);
-    personagem.aplicarPose(pose);
-    personagem.posicionar(j.x, j.y, j.z, camera.rotation.y);
+    braco.atualizarVista(dt, animador.vista());
+    personagem.aplicarPose(pose, {
+      dt,
+      olhar: camera.rotation.x,
+      vista: animador.vista(),
+    });
+    personagem.posicionar(j.x, j.y, j.z, camera.rotation.y + giroCorpo);
   }
   estado.personagem = {
     aparencia: () => ({ ...aparencia }),
@@ -598,6 +679,9 @@ export function criarCena(canvas: HTMLCanvasElement, hotbar: Hotbar = criarHotba
     maoBloco: () =>
       visibilidadePorModo(estadoCamera.modo).braco ? blocoNaMao(hotbar.ativo) : null,
     nomeExibido: () => aparencia.nome || MODELOS[aparencia.modelo].rotulo,
+    girarCorpo: (rad: number) => {
+      giroCorpo = rad;
+    },
   };
   Object.defineProperty(estado, 'alvo', { get: calcularAlvo, enumerable: true });
 
@@ -665,6 +749,7 @@ export function criarCena(canvas: HTMLCanvasElement, hotbar: Hotbar = criarHotba
     const mat = new StandardMaterial(`particula-mat-${i}`, scene);
     mat.specularColor = Color3.Black();
     mat.emissiveColor = Color3.Black();
+    mat.ambientColor = Color3.White();
     cubo.material = mat;
     cubo.setEnabled(false);
     prepararEfeito(cubo);
@@ -861,7 +946,10 @@ export function criarCena(canvas: HTMLCanvasElement, hotbar: Hotbar = criarHotba
     estado.fps = engine.getFps();
     estado.posicao = [camera.position.x, camera.position.y, camera.position.z];
     estado.rotacao = [camera.rotation.x, camera.rotation.y];
-    balanco.atualizar(performance.now() / 1000);
+    const tempo = performance.now() / 1000;
+    if (!estado.pausarDia) hora = normalizarHora(hora + dtBruto / DURACAO_DIA);
+    aplicarAtmosfera(tempo);
+    balanco.atualizar(tempo);
     scene.render();
   });
   let base = escalaBase(window.innerWidth);

@@ -94,7 +94,7 @@ const CSS = `
   right: 8px;
   padding: 4px 10px;
   border-radius: 8px;
-  background: rgba(18, 10, 36, 0.65);
+  background: rgba(10, 12, 20, 0.5);
   color: #ffd98f;
   font: 600 0.9rem system-ui, sans-serif;
 }
@@ -104,7 +104,7 @@ const CSS = `
   left: 8px;
   padding: 4px 10px;
   border-radius: 8px;
-  background: rgba(18, 10, 36, 0.65);
+  background: rgba(10, 12, 20, 0.5);
   color: #e6d6f7;
   font: 600 0.8rem system-ui, sans-serif;
 }
@@ -114,7 +114,7 @@ const CSS = `
   left: 8px;
   padding: 4px 10px;
   border-radius: 8px;
-  background: rgba(18, 10, 36, 0.65);
+  background: rgba(10, 12, 20, 0.5);
   color: #e6d6f7;
   font: 600 0.8rem system-ui, sans-serif;
 }

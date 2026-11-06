@@ -13,6 +13,8 @@ A spec 004-feedback-mineracao-audio (concluída) trocou a quebra instantânea po
 
 A spec 005-camera-personagem (concluída) acrescentou braço e mão em primeira pessoa segurando o bloco selecionado, câmera de terceira pessoa (tecla V, com indicador no HUD e colisão da câmera) e um personagem voxel original com 4 modelos e personalização (painel na tela de entrada, tecla C), salvando só a aparência em `localStorage`. Entregou também e2e de câmeras, alvo, mão, personagem e persistência, e capturas do painel e das câmeras nos 3 viewports.
 
+A revisão visual e sonora (sem spec numerada, 2026-11-06) trocou a direção de arte para pixel-art natural de 16x16 com iluminação moderna: ciclo de dia e noite puro (`atmosfera.ts`), céu em shader (`ceu.ts`), água em plano com reflexo (`agua.ts`), bruma de vale e variação de tom por bloco (`materialMundo.ts`), vagalumes (`vagalumes.ts`), pós-processamento, personagem com textura por face e braço em primeira pessoa como viewmodel, e áudio com receitas por material e paisagem sonora.
+
 ## Stack
 - TypeScript 5.6.3, Vite 5.4.10, Babylon.js (`@babylonjs/core` 7.31.0, imports por módulo para tree-shaking).
 - Vitest 2.1.4 para a lógica pura (ambiente node, sem jsdom); Playwright 1.48.2 (Chromium) para e2e e capturas; Prettier 3.3.3.
@@ -25,7 +27,7 @@ A spec 005-camera-personagem (concluída) acrescentou braço e mão em primeira 
 - `src/mesh/malha.ts`: malha de chunk (faces visíveis, AO por vértice, tiles por face, vegetação em quads cruzados).
 - `src/art/atlas.ts`: atlas de texturas procedural (buffer RGBA puro, envolvido por canvas no navegador).
 - `src/workers/chunk.worker.ts`: geração, aplicação de edições e malha de chunks em Web Worker.
-- `src/render/`: `cena.ts`, `gerenciador.ts` (streaming), `atmosfera.ts`, `balanco.ts`, `resolucao.ts`, `remalha.ts`, `fila.ts`, `destaque.ts`, `emissivo.ts` e `efeitos.ts` (rachadura, fragmentos e pulso de colocação), `personagem.ts` (corpo em terceira pessoa em Babylon) e `braco.ts` (braço e bloco na mão).
+- `src/render/`: `atmosfera.ts` (paleta de referência e ciclo de dia puro, `atmosferaNaHora`), `ceu.ts` (shader do céu: gradiente, sol, lua, nuvens, estrelas; GLSL compartilhado com a água), `agua.ts` (plano de água em `ALTURA_AGUA`, segue a câmera), `materialMundo.ts` (plugin: tom por bloco, bioma e bruma de vale), `vagalumes.ts` (partículas), `cena.ts`, `gerenciador.ts` (streaming), `atmosfera.ts`, `balanco.ts`, `resolucao.ts`, `remalha.ts`, `fila.ts`, `destaque.ts`, `emissivo.ts` e `efeitos.ts` (rachadura, fragmentos e pulso de colocação), `personagem.ts` (corpo em terceira pessoa em Babylon) e `braco.ts` (braço e bloco na mão).
 - `src/player/`: `fisica.ts`, `controle.ts`, `entrada.ts`, `alvo.ts`, `hotbar.ts`, `interacao.ts`, `mineracao.ts` (dureza por material e estado puro de danos), `minerador.ts` (controlador de segurar/soltar/trocar slot), `eventos.ts` (barramento puro), `movimento.ts` (detector de passos, pulo e aterrissagem), `camera.ts` (modo de câmera, tecla V, colisão da terceira pessoa) e `animacao.ts` (estado de animação puro que produz poses).
 - `src/personagem/` (lógica pura): `aparencia.ts` (4 modelos, paletas, validador), `persistencia.ts` (armazenamento injetado), `modelo.ts` e `textura.ts` (partes em caixas e textura procedural), `poses.ts` e `mao.ts` (bloco na mão).
 - `src/fx/`: `particulas.ts` (pool com limite), `cores.ts` (cor média por bloco) e `rachadura.ts` (texturas de rachadura); lógica pura.
@@ -81,6 +83,14 @@ A spec 005-camera-personagem (concluída) acrescentou braço e mão em primeira 
 - 2026-11-06: distância da câmera de terceira pessoa com colisão, nunca abaixo do mínimo de 0,6 e sem terminar em ponto sólido; corrigido na revisão da T03 (spec 005-camera-personagem).
 - 2026-11-06: altura total do corpo do personagem em 1,8 incluindo cabelo e capuz, conferida em teste (spec 005-camera-personagem).
 - 2026-11-06: persistência da aparência com armazenamento injetado, para testar em Vitest sem `localStorage` real (spec 005-camera-personagem).
+
+- 2026-11-06: atlas 4x4 de tiles 16x16 com borda de 8 px, mipmaps (`NEAREST_NEAREST_MIPLINEAR`) e anisotropia; ruído periódico por tile (sem costura). Terra musgosa coberta usa o tile `TILE_TERRA`; folhas usam alpha test e mostram faces internas.
+- 2026-11-06: UV da malha por orientação da face (topo da textura no topo do bloco); antes os lados saíam girados.
+- 2026-11-06: ciclo de dia de 20 min (`DURACAO_DIA`), luz direcional alterna sol e lua e nunca fica rasante (elevação mínima 0.22). `__brumaluz.hora`, `pausarDia` e `teleportar` existem para testes e capturas.
+- 2026-11-06: pós-processamento por `DefaultRenderingPipeline` (HDR, ACES, bloom 0.22, vinheta, FXAA, curvas de cor), mantendo o glow só para emissivos. Shaders GLSL só com ASCII (acentos quebram a compilação).
+- 2026-11-06: personagem com uma textura por parte e 6 faces (`gerarTexturaParte`, 40 px por bloco); o UV antigo era espelhado na vertical. Corpo suavizado no render, cabeça segue o pitch da câmera, tronco inclina ao correr.
+- 2026-11-06: braço em primeira pessoa como viewmodel com pivô no ombro (`Animador.vista()`): repouso discreto, golpe e colocação avançam, balanço, respiração, atraso de câmera e troca de slot.
+- 2026-11-06: áudio com receitas por material, paisagem sonora numa única voz de prioridade alta (agendador injetável) e ganho do grupo `ambiente` em 0.7 (antes 0.08 x 0.08, inaudível).
 
 ## Restrições
 - Sem recursos protegidos de Minecraft.

@@ -6,6 +6,7 @@ import {
   AMPLITUDE_TOM,
   AMPLITUDE_VOLUME,
   DURACAO_MAXIMA_SOM,
+  GANHO_MAXIMO_AMBIENTE,
   iniciarAmbiente,
   perfilDoSom,
   reiniciarVariacao,
@@ -119,16 +120,33 @@ describe('variação e mistura', () => {
 });
 
 describe('iniciarAmbiente', () => {
-  it('cria uma voz persistente de ganho até 0,08 e para', async () => {
+  it('cria uma voz persistente com ganho mestre limitado e para tudo', async () => {
     const { ctx, motor } = await motorAtivo();
     const antes = ctx.gains.length;
-    const amb = iniciarAmbiente(motor);
+    let agendar: (() => void) | null = null;
+    const relogio = {
+      setInterval: (f: () => void) => {
+        agendar = f;
+        return 1;
+      },
+      clearInterval: () => {
+        agendar = null;
+      },
+    };
+    const amb = iniciarAmbiente(motor, relogio);
     expect(motor.vozes).toBe(1);
-    const novos = ctx.gains.slice(antes);
-    expect(novos.length).toBe(1);
-    expect(novos[0].gain.value).toBeLessThanOrEqual(0.08);
-    expect(novos[0].gain.value).toBeGreaterThan(0);
+    const mestre = ctx.gains[antes];
+    expect(mestre.gain.value).toBeLessThanOrEqual(GANHO_MAXIMO_AMBIENTE);
+    expect(mestre.gain.value).toBeGreaterThan(0);
+    // o agendador cria notas e bichos sem novas vozes no motor
+    ctx.currentTime = 10;
+    agendar!();
+    expect(motor.vozes).toBe(1);
+    amb.definirNoite(1);
+    ctx.currentTime = 20;
+    agendar!();
     amb.parar();
+    expect(agendar).toBeNull();
     expect(motor.vozes).toBe(0);
     expect(ctx.fontes.every((f) => f.parada)).toBe(true);
   });

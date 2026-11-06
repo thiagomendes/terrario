@@ -79,12 +79,14 @@ describe('ligarAudio', () => {
     barramento.emitir('golpe', { ...pos, bloco: Bloco.TERRA_MUSGOSA });
     expect(ctx.oscs).toHaveLength(1);
     expect(perto(ctx.oscs[0].frequency.value, perfilDoSom('golpe', 'terra').frequencia)).toBe(true);
+    let n = ctx.oscs.length;
     barramento.emitir('recusa', { motivo: 'x' });
-    expect(perto(ctx.oscs[1].frequency.value, perfilDoSom('recusa', 'pedra').frequencia)).toBe(
+    expect(perto(ctx.oscs[n].frequency.value, perfilDoSom('recusa', 'pedra').frequencia)).toBe(
       true,
     );
+    n = ctx.oscs.length;
     barramento.emitir('slot', { indice: 2 });
-    expect(perto(ctx.oscs[2].frequency.value, perfilDoSom('troca', 'pedra').frequencia)).toBe(true);
+    expect(perto(ctx.oscs[n].frequency.value, perfilDoSom('troca', 'pedra').frequencia)).toBe(true);
   });
 
   it('com o áudio inativo não toca nem lança', () => {

@@ -1,3 +1,4 @@
+import { TAM_TILE } from '../../src/art/atlas';
 import { describe, expect, it } from 'vitest';
 import { gerarAtlas } from '../../src/art/atlas';
 import {
@@ -33,8 +34,8 @@ describe('emissivo', () => {
     const ox = Math.round(c.uv.u0 * w);
     const oy = Math.round(c.uv.v0 * atlas.altura);
     let reduzidos = 0;
-    for (let y = 0; y < 32; y++) {
-      for (let x = 0; x < 32; x++) {
+    for (let y = 0; y < TAM_TILE; y++) {
+      for (let x = 0; x < TAM_TILE; x++) {
         const i = ((oy + y) * w + ox + x) * 4;
         const [r, g, b] = [atlas.pixels[i], atlas.pixels[i + 1], atlas.pixels[i + 2]];
         const [mr, mg, mb] = [mapa[i], mapa[i + 1], mapa[i + 2]];
@@ -56,8 +57,8 @@ describe('emissivo', () => {
       const w = atlas.largura;
       const ox = Math.round(t.uv.u0 * w);
       const oy = Math.round(t.uv.v0 * atlas.altura);
-      for (let y = 0; y < 32; y++) {
-        for (let x = 0; x < 32; x++) {
+      for (let y = 0; y < TAM_TILE; y++) {
+        for (let x = 0; x < TAM_TILE; x++) {
           const i = ((oy + y) * w + ox + x) * 4;
           expect([mapa[i], mapa[i + 1], mapa[i + 2]]).toEqual([0, 0, 0]);
         }
@@ -69,8 +70,8 @@ describe('emissivo', () => {
     const oy = Math.round(c.uv.v0 * atlas.altura);
     let r = 0;
     let b = 0;
-    for (let y = 0; y < 32; y++) {
-      for (let x = 0; x < 32; x++) {
+    for (let y = 0; y < TAM_TILE; y++) {
+      for (let x = 0; x < TAM_TILE; x++) {
         const i = ((oy + y) * w + ox + x) * 4;
         r += mapa[i];
         b += mapa[i + 2];

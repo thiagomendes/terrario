@@ -53,7 +53,7 @@ export interface MotorAudio {
 const GANHOS_PADRAO: Record<GrupoAudio, number> = {
   efeitos: 1,
   passos: 0.6,
-  ambiente: 0.08,
+  ambiente: 0.7,
 };
 
 interface Voz {

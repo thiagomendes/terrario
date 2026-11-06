@@ -58,7 +58,8 @@ describe('motor de áudio', () => {
     expect(ctx.compressores[0].conectados).toContain(ctx.destination);
     expect(ctx.gains).toHaveLength(4);
     const ganhos = ctx.gains.slice(1).map((g) => g.gain.value);
-    expect(ganhos[2]).toBeLessThanOrEqual(0.08);
+    expect(ganhos[2]).toBeLessThanOrEqual(1);
+    expect(ganhos[2]).toBeGreaterThan(0);
     expect(ganhos[0]).toBeGreaterThan(ganhos[1]);
     const mestre = ctx.gains[0];
     expect(motor.alternarMudo()).toBe(true);

@@ -27,7 +27,8 @@ export const EVENTOS_SOM: readonly EventoSom[] = [
 
 export const VARIACOES_POR_EVENTO = 4;
 export const DURACAO_MAXIMA_SOM = 2;
-export const GANHO_MAXIMO_AMBIENTE = 0.08;
+/** Ganho mestre da paisagem sonora (vento, bichos e trilha). */
+export const GANHO_MAXIMO_AMBIENTE = 0.5;
 
 export interface PerfilSom {
   frequencia: number;
@@ -131,6 +132,7 @@ interface ParamEnvelope {
   value: number;
   setValueAtTime?(v: number, t: number): void;
   linearRampToValueAtTime?(v: number, t: number): void;
+  exponentialRampToValueAtTime?(v: number, t: number): void;
 }
 
 interface GanhoSom extends NoAudio {
@@ -140,6 +142,7 @@ interface GanhoSom extends NoAudio {
 interface OscilatorSom extends FonteAudio {
   type: string;
   frequency: ParamEnvelope;
+  detune?: ParamEnvelope;
 }
 
 interface FiltroSom extends NoAudio {
@@ -155,6 +158,11 @@ interface BufferSom {
 interface FonteBufferSom extends FonteAudio {
   buffer: unknown;
   loop: boolean;
+  playbackRate?: ParamEnvelope;
+}
+
+interface ConvolverSom extends NoAudio {
+  buffer: unknown;
 }
 
 export interface ContextoSintese extends ContextoAudio {
@@ -163,6 +171,7 @@ export interface ContextoSintese extends ContextoAudio {
   createBiquadFilter(): FiltroSom;
   createBuffer(canais: number, tamanho: number, taxa: number): BufferSom;
   createBufferSource(): FonteBufferSom;
+  createConvolver?(): ConvolverSom;
 }
 
 const bufferesRuido = new WeakMap<object, BufferSom>();
@@ -171,7 +180,7 @@ function bufferDeRuido(ctx: ContextoSintese): BufferSom {
   let buf = bufferesRuido.get(ctx);
   if (!buf) {
     const taxa = ctx.sampleRate || 44100;
-    buf = ctx.createBuffer(1, Math.floor(taxa * 0.5), taxa);
+    buf = ctx.createBuffer(1, Math.floor(taxa * 2), taxa);
     const dados = buf.getChannelData(0);
     const rng = criarGerador(7919);
     for (let i = 0; i < dados.length; i++) dados[i] = rng() * 2 - 1;
@@ -180,60 +189,234 @@ function bufferDeRuido(ctx: ContextoSintese): BufferSom {
   return buf;
 }
 
-function envelope(ganho: GanhoSom, t0: number, pico: number, duracao: number) {
-  const p = ganho.gain;
-  p.value = 0;
-  if (p.setValueAtTime && p.linearRampToValueAtTime) {
-    p.setValueAtTime(0, t0);
-    p.linearRampToValueAtTime(pico, t0 + 0.005);
-    p.linearRampToValueAtTime(0, t0 + duracao);
-  } else {
-    p.value = pico;
+// --- utilitários de envelope (toleram contextos falsos sem automação) ---
+
+function definir(p: ParamEnvelope, v: number, t: number): void {
+  if (p.setValueAtTime) p.setValueAtTime(v, t);
+  else p.value = v;
+}
+
+function rampa(p: ParamEnvelope, v: number, t: number): void {
+  if (p.linearRampToValueAtTime) p.linearRampToValueAtTime(v, t);
+  else p.value = v;
+}
+
+function rampaExp(p: ParamEnvelope, v: number, t: number): void {
+  if (p.exponentialRampToValueAtTime) p.exponentialRampToValueAtTime(Math.max(v, 0.0001), t);
+  else rampa(p, v, t);
+}
+
+/** Envelope percussivo: ataque curto e queda exponencial. */
+function golpeEnv(g: GanhoSom, t0: number, pico: number, ataque: number, queda: number): void {
+  g.gain.value = 0;
+  definir(g.gain, 0.0001, t0);
+  rampa(g.gain, pico, t0 + ataque);
+  rampaExp(g.gain, 0.0001, t0 + ataque + queda);
+}
+
+interface Peca {
+  fonte: FonteAudio;
+  fim: number;
+}
+
+function ruido(
+  ctx: ContextoSintese,
+  destino: NoAudio,
+  t0: number,
+  tipo: string,
+  freq: number,
+  q: number,
+  pico: number,
+  queda: number,
+  ataque = 0.003,
+  taxa = 1,
+): Peca {
+  const f = ctx.createBufferSource();
+  f.buffer = bufferDeRuido(ctx);
+  f.loop = true;
+  if (f.playbackRate) f.playbackRate.value = taxa;
+  const filtro = ctx.createBiquadFilter();
+  filtro.type = tipo;
+  filtro.frequency.value = freq;
+  filtro.Q.value = q;
+  const g = ctx.createGain() as GanhoSom;
+  golpeEnv(g, t0, pico, ataque, queda);
+  f.connect(filtro);
+  filtro.connect(g);
+  g.connect(destino);
+  const fim = t0 + ataque + queda + 0.02;
+  f.start(t0);
+  f.stop(fim);
+  return { fonte: f, fim };
+}
+
+function tom(
+  ctx: ContextoSintese,
+  destino: NoAudio,
+  t0: number,
+  tipo: string,
+  f0: number,
+  f1: number,
+  pico: number,
+  queda: number,
+  ataque = 0.002,
+): Peca {
+  const o = ctx.createOscillator();
+  o.type = tipo;
+  o.frequency.value = f0;
+  definir(o.frequency, f0, t0);
+  if (f1 !== f0 && o.frequency.exponentialRampToValueAtTime) {
+    rampaExp(o.frequency, f1, t0 + ataque + queda * 0.6);
+  }
+  const g = ctx.createGain() as GanhoSom;
+  golpeEnv(g, t0, pico, ataque, queda);
+  o.connect(g);
+  g.connect(destino);
+  const fim = t0 + ataque + queda + 0.02;
+  o.start(t0);
+  o.stop(fim);
+  return { fonte: o, fim };
+}
+
+/** Uma "batida" de material: a base de passos, golpes, quebras e colocações. */
+function batidaMaterial(
+  ctx: ContextoSintese,
+  out: NoAudio,
+  t0: number,
+  grupo: GrupoMaterial,
+  par: ParametrosSom,
+  forca: number,
+  pecas: Peca[],
+): void {
+  const f = par.frequencia;
+  const fc = par.filtroHz;
+  const d = par.duracao;
+  switch (grupo) {
+    case 'terra':
+      pecas.push(ruido(ctx, out, t0, 'lowpass', fc * 1.3, 0.7, 0.9 * forca, d * 0.9));
+      pecas.push(tom(ctx, out, t0, 'sine', f, f * 0.5, 0.55 * forca, d * 0.7));
+      break;
+    case 'pedra':
+      pecas.push(ruido(ctx, out, t0, 'bandpass', fc, 2.2, 1.1 * forca, d * 0.45, 0.001));
+      pecas.push(ruido(ctx, out, t0, 'highpass', fc * 1.8, 0.8, 0.35 * forca, d * 0.25, 0.001));
+      pecas.push(tom(ctx, out, t0, 'triangle', f, f * 0.65, 0.35 * forca, d * 0.5));
+      break;
+    case 'areia':
+      pecas.push(ruido(ctx, out, t0, 'bandpass', fc, 0.9, 0.55 * forca, d * 1.3, 0.02));
+      pecas.push(ruido(ctx, out, t0 + d * 0.35, 'highpass', fc * 0.8, 0.7, 0.35 * forca, d));
+      break;
+    case 'madeira':
+      pecas.push(tom(ctx, out, t0, 'triangle', f, f * 0.75, 0.7 * forca, d * 0.8, 0.001));
+      pecas.push(tom(ctx, out, t0, 'sine', f * 2.7, f * 2.3, 0.3 * forca, d * 0.45, 0.001));
+      pecas.push(ruido(ctx, out, t0, 'bandpass', fc, 1.5, 0.45 * forca, d * 0.35, 0.001));
+      break;
+    case 'folhagem':
+      for (let i = 0; i < 3; i++) {
+        pecas.push(
+          ruido(
+            ctx,
+            out,
+            t0 + i * d * 0.22,
+            'highpass',
+            fc * (0.8 + i * 0.15),
+            0.6,
+            0.4 * forca,
+            d * 0.5,
+            0.01,
+          ),
+        );
+      }
+      break;
+    case 'cristal': {
+      const parciais = [1, 2.76, 5.4];
+      parciais.forEach((m, i) => {
+        pecas.push(
+          tom(ctx, out, t0, 'sine', f * m, f * m, (0.45 / (i + 1)) * forca, d * (3 - i), 0.001),
+        );
+      });
+      pecas.push(ruido(ctx, out, t0, 'highpass', fc, 0.7, 0.25 * forca, d * 0.3, 0.001));
+      break;
+    }
   }
 }
 
-function desenharSom(par: ParametrosSom) {
+const PENTATONICA = [293.66, 329.63, 369.99, 440, 493.88]; // ré, mi, fá#, lá, si
+
+function desenharSom(par: ParametrosSom, evento: EventoSom, grupo: GrupoMaterial) {
   return (ctxBase: ContextoAudio, destino: NoAudio): FonteAudio => {
     const ctx = ctxBase as ContextoSintese;
     const t0 = ctx.currentTime;
-    const fim = t0 + par.duracao;
-    const filtro = ctx.createBiquadFilter();
-    filtro.type = 'bandpass';
-    filtro.frequency.value = par.filtroHz;
-    filtro.Q.value = 1.2;
-    const amp = ctx.createGain() as GanhoSom;
-    envelope(amp, t0, par.ganho, par.duracao);
-    filtro.connect(amp);
-    amp.connect(destino);
-
-    const ruido = ctx.createBufferSource();
-    ruido.buffer = bufferDeRuido(ctx);
-    ruido.loop = true;
-    const gRuido = ctx.createGain() as GanhoSom;
-    gRuido.gain.value = par.ruido;
-    ruido.connect(gRuido);
-    gRuido.connect(filtro);
-
-    const osc = ctx.createOscillator();
-    osc.type = 'sine';
-    osc.frequency.value = par.frequencia;
-    const gOsc = ctx.createGain() as GanhoSom;
-    gOsc.gain.value = 1 - par.ruido * 0.7;
-    osc.connect(gOsc);
-    gOsc.connect(filtro);
-
-    osc.onended = () => {
-      try {
-        osc.disconnect();
-      } catch {
-        // já desconectado
-      }
-    };
-    ruido.start(t0);
-    osc.start(t0);
-    ruido.stop(fim);
-    osc.stop(fim);
-    return ruido;
+    const out = ctx.createGain() as GanhoSom;
+    out.gain.value = par.ganho;
+    out.connect(destino);
+    const pecas: Peca[] = [];
+    switch (evento) {
+      case 'passo':
+        batidaMaterial(ctx, out, t0, grupo, par, 0.8, pecas);
+        break;
+      case 'golpe':
+        batidaMaterial(ctx, out, t0, grupo, par, 1, pecas);
+        break;
+      case 'aterrissagem':
+        batidaMaterial(ctx, out, t0, grupo, par, 1.1, pecas);
+        pecas.push(tom(ctx, out, t0, 'sine', 90, 45, 0.6, 0.18));
+        break;
+      case 'pulo':
+        pecas.push(
+          ruido(ctx, out, t0, 'bandpass', par.filtroHz * 0.8, 1.2, 0.35, par.duracao, 0.03),
+        );
+        batidaMaterial(ctx, out, t0, grupo, par, 0.5, pecas);
+        break;
+      case 'quebra':
+        for (let i = 0; i < 4; i++) {
+          batidaMaterial(ctx, out, t0 + i * 0.045, grupo, par, 1 - i * 0.18, pecas);
+        }
+        pecas.push(tom(ctx, out, t0, 'sine', 120, 50, 0.5, 0.22));
+        break;
+      case 'colocar':
+        batidaMaterial(ctx, out, t0, grupo, par, 0.9, pecas);
+        pecas.push(tom(ctx, out, t0, 'sine', 160, 80, 0.55, 0.12));
+        break;
+      case 'troca':
+        pecas.push(tom(ctx, out, t0, 'sine', par.frequencia, par.frequencia * 1.25, 0.35, 0.05));
+        pecas.push(
+          tom(ctx, out, t0 + 0.035, 'sine', par.frequencia * 1.5, par.frequencia * 1.5, 0.2, 0.06),
+        );
+        break;
+      case 'recusa':
+        pecas.push(tom(ctx, out, t0, 'triangle', par.frequencia, par.frequencia * 0.97, 0.5, 0.09));
+        pecas.push(
+          tom(
+            ctx,
+            out,
+            t0 + 0.1,
+            'triangle',
+            par.frequencia * 0.75,
+            par.frequencia * 0.7,
+            0.5,
+            0.12,
+          ),
+        );
+        break;
+      case 'entrada':
+        PENTATONICA.forEach((f, i) => {
+          pecas.push(tom(ctx, out, t0 + i * 0.09, 'sine', f * 2, f * 2, 0.4, 0.9));
+          pecas.push(tom(ctx, out, t0 + i * 0.09, 'triangle', f, f, 0.12, 0.6));
+        });
+        break;
+    }
+    const ultima = pecas.reduce((a, b) => (b.fim > a.fim ? b : a));
+    for (const p of pecas) {
+      if (p === ultima) continue;
+      p.fonte.onended = () => {
+        try {
+          p.fonte.disconnect();
+        } catch {
+          // já desconectado
+        }
+      };
+    }
+    return ultima.fonte;
   };
 }
 
@@ -268,44 +451,251 @@ export function tocarSom(
   if (motor.estado !== 'ativo') return null;
   const perfil = perfilDoSom(evento, grupo);
   const par = parametrosVariados(perfil, variadorDe(evento, grupo)(), rngSom);
-  const ok = motor.tocar(desenharSom(par), { grupo: perfil.grupoAudio });
+  const ok = motor.tocar(desenharSom(par, evento, grupo), { grupo: perfil.grupoAudio });
   return ok ? par : null;
 }
 
 export interface Ambiente {
   parar(): void;
+  /** 0 de dia (pássaros), 1 de noite (grilos); muda a mistura. */
+  definirNoite(noite: number): void;
 }
 
-export function iniciarAmbiente(motor: MotorAudio): Ambiente {
-  let fonte: FonteAudio | null = null;
+interface RelogioAgenda {
+  setInterval(f: () => void, ms: number): unknown;
+  clearInterval(id: unknown): void;
+}
+
+const relogioPadrao: RelogioAgenda | null =
+  typeof setInterval === 'function'
+    ? {
+        setInterval: (f, ms) => setInterval(f, ms),
+        clearInterval: (id) => clearInterval(id as ReturnType<typeof setInterval>),
+      }
+    : null;
+
+/** Acordes da trilha (frequências), num modo maior suave. */
+const ACORDES: number[][] = [
+  [146.83, 220, 329.63, 369.99],
+  [123.47, 185, 293.66, 440],
+  [98, 146.83, 246.94, 329.63],
+  [110, 164.81, 277.18, 329.63],
+];
+const MELODIA = [587.33, 659.25, 739.99, 880, 987.77, 1174.66];
+
+function respostaReverb(ctx: ContextoSintese, segundos: number): BufferSom {
+  const taxa = ctx.sampleRate || 44100;
+  const n = Math.floor(taxa * segundos);
+  const buf = ctx.createBuffer(2, n, taxa);
+  const rng = criarGerador(4242);
+  for (let c = 0; c < 2; c++) {
+    const d = buf.getChannelData(c);
+    for (let i = 0; i < n; i++) d[i] = (rng() * 2 - 1) * Math.pow(1 - i / n, 3);
+  }
+  return buf;
+}
+
+/**
+ * Paisagem sonora: vento contínuo, pássaros de dia, grilos de noite e uma
+ * trilha generativa suave com reverb. Ocupa uma única voz de prioridade alta.
+ */
+export function iniciarAmbiente(
+  motor: MotorAudio,
+  relogio: RelogioAgenda | null = relogioPadrao,
+): Ambiente {
+  let principal: FonteAudio | null = null;
+  const vivas = new Set<FonteAudio>();
+  let timer: unknown = null;
+  let noite = 0;
+  let ctxA: ContextoSintese | null = null;
+  let busNatureza: GanhoSom | null = null;
+  let busMusica: GanhoSom | null = null;
+  let proximoAcorde = 0;
+  let proximaNota = 0;
+  let proximoBicho = 0;
+  let acorde = 0;
+  const rng = criarGerador(2026);
+
+  function registrar(p: Peca): void {
+    vivas.add(p.fonte);
+    p.fonte.onended = () => {
+      vivas.delete(p.fonte);
+      try {
+        p.fonte.disconnect();
+      } catch {
+        // já desconectado
+      }
+    };
+  }
+
+  function nota(t: number, f: number, ganho: number, ataque: number, dur: number): void {
+    const ctx = ctxA!;
+    for (const desvio of [-5, 5]) {
+      const o = ctx.createOscillator();
+      o.type = 'triangle';
+      o.frequency.value = f;
+      if (o.detune) o.detune.value = desvio;
+      const filtro = ctx.createBiquadFilter();
+      filtro.type = 'lowpass';
+      filtro.frequency.value = 1400;
+      filtro.Q.value = 0.3;
+      const g = ctx.createGain() as GanhoSom;
+      g.gain.value = 0;
+      definir(g.gain, 0, t);
+      rampa(g.gain, ganho, t + ataque);
+      rampa(g.gain, ganho * 0.7, t + dur * 0.6);
+      rampa(g.gain, 0, t + dur);
+      o.connect(filtro);
+      filtro.connect(g);
+      g.connect(busMusica!);
+      o.start(t);
+      o.stop(t + dur + 0.05);
+      registrar({ fonte: o, fim: t + dur });
+    }
+  }
+
+  function sino(t: number, f: number, ganho: number): void {
+    registrar(tom(ctxA!, busMusica!, t, 'sine', f, f, ganho, 2.2, 0.004));
+    registrar(tom(ctxA!, busMusica!, t, 'sine', f * 3, f * 3, ganho * 0.12, 0.8, 0.004));
+  }
+
+  function passaro(t: number): void {
+    const base = 2200 + rng() * 1800;
+    const n = 2 + Math.floor(rng() * 4);
+    for (let i = 0; i < n; i++) {
+      const ti = t + i * (0.09 + rng() * 0.06);
+      const sobe = rng() > 0.5;
+      registrar(
+        tom(
+          ctxA!,
+          busNatureza!,
+          ti,
+          'sine',
+          base * (sobe ? 0.8 : 1.25),
+          base * (sobe ? 1.3 : 0.85),
+          0.11,
+          0.07,
+          0.006,
+        ),
+      );
+    }
+  }
+
+  function grilo(t: number): void {
+    const f = 4300 + rng() * 600;
+    for (let i = 0; i < 4; i++) {
+      registrar(tom(ctxA!, busNatureza!, t + i * 0.055, 'sine', f, f, 0.035, 0.03, 0.004));
+    }
+  }
+
+  function agendar(): void {
+    if (!ctxA || !busMusica) return;
+    const agora = ctxA.currentTime;
+    const ate = agora + 0.6;
+    while (proximoAcorde < ate) {
+      const t = Math.max(proximoAcorde, agora + 0.05);
+      for (const f of ACORDES[acorde % ACORDES.length]) nota(t, f, 0.05, 2.5, 9);
+      acorde++;
+      proximoAcorde = t + 8;
+    }
+    while (proximaNota < ate) {
+      const t = Math.max(proximaNota, agora + 0.05);
+      if (rng() < 0.55) {
+        const f = MELODIA[Math.floor(rng() * MELODIA.length)];
+        sino(t, f, 0.06);
+        sino(t + 0.375, f, 0.025);
+      }
+      proximaNota = t + 1.5 + rng() * 2.5;
+    }
+    while (proximoBicho < ate) {
+      const t = Math.max(proximoBicho, agora + 0.05);
+      if (rng() < noite) {
+        grilo(t);
+        proximoBicho = t + 0.35 + rng() * 0.5;
+      } else {
+        if (rng() < 0.6) passaro(t);
+        proximoBicho = t + 1.2 + rng() * 3;
+      }
+    }
+  }
+
   const ok = motor.estado === 'ativo' && !motor.mudo;
   if (ok) {
     motor.tocar(
       (ctxBase, destino) => {
         const ctx = ctxBase as ContextoSintese;
+        ctxA = ctx;
+        const mestre = ctx.createGain() as GanhoSom;
+        mestre.gain.value = GANHO_MAXIMO_AMBIENTE;
+        mestre.connect(destino);
+        busNatureza = ctx.createGain() as GanhoSom;
+        busNatureza.gain.value = 0.8;
+        busNatureza.connect(mestre);
+        busMusica = ctx.createGain() as GanhoSom;
+        busMusica.gain.value = 0.6;
+        busMusica.connect(mestre);
+        if (ctx.createConvolver) {
+          const rev = ctx.createConvolver();
+          rev.buffer = respostaReverb(ctx, 3.2);
+          const envio = ctx.createGain();
+          envio.gain.value = 0.55;
+          busMusica.connect(envio);
+          busNatureza.connect(envio);
+          envio.connect(rev);
+          rev.connect(mestre);
+        }
+        // vento: ruído grave com filtro que respira devagar
+        const vento = ctx.createBufferSource();
+        vento.buffer = bufferDeRuido(ctx);
+        vento.loop = true;
         const filtro = ctx.createBiquadFilter();
-        filtro.type = 'lowpass';
-        filtro.frequency.value = 400;
-        const amp = ctx.createGain();
-        amp.gain.value = GANHO_MAXIMO_AMBIENTE;
-        const f = ctx.createBufferSource();
-        f.buffer = bufferDeRuido(ctx);
-        f.loop = true;
-        f.connect(filtro);
-        filtro.connect(amp);
-        amp.connect(destino);
-        f.start(ctx.currentTime);
-        fonte = f;
-        return f;
+        filtro.type = 'bandpass';
+        filtro.frequency.value = 380;
+        filtro.Q.value = 0.7;
+        const lfo = ctx.createOscillator();
+        lfo.type = 'sine';
+        lfo.frequency.value = 0.07;
+        const prof = ctx.createGain();
+        prof.gain.value = 220;
+        lfo.connect(prof);
+        prof.connect(filtro.frequency);
+        const gVento = ctx.createGain();
+        gVento.gain.value = 0.35;
+        vento.connect(filtro);
+        filtro.connect(gVento);
+        gVento.connect(busNatureza);
+        const t = ctx.currentTime;
+        vento.start(t);
+        lfo.start(t);
+        vivas.add(lfo);
+        proximoAcorde = t + 0.5;
+        proximaNota = t + 3;
+        proximoBicho = t + 1;
+        principal = vento;
+        return vento;
       },
       { grupo: 'ambiente', prioridade: 'alta' },
     );
+    if (relogio) timer = relogio.setInterval(agendar, 200);
   }
   return {
+    definirNoite(n) {
+      noite = Math.max(0, Math.min(1, n));
+    },
     parar() {
-      if (!fonte) return;
-      const f = fonte;
-      fonte = null;
+      if (timer !== null && relogio) relogio.clearInterval(timer);
+      timer = null;
+      for (const f of vivas) {
+        try {
+          f.stop();
+        } catch {
+          // já parada
+        }
+      }
+      vivas.clear();
+      if (!principal) return;
+      const f = principal;
+      principal = null;
       try {
         f.stop();
       } catch {
