@@ -44,18 +44,24 @@ function mobilia(l: Lote, em: Pincel): void {
   em(tx, y, tz, Bloco.TOCHA);
 }
 
-/** Abre a porta (dois blocos de ar) no meio do lado voltado para a praça. */
+/**
+ * Abre a porta: uma passagem de dois blocos de altura do miolo da casa até a borda do
+ * lote, no meio do lado voltado para a praça (vale para toda forma, até a cúpula, cuja
+ * parede fica mais para fora).
+ */
 function abrirPorta(l: Lote, em: Pincel): void {
-  const [x, z] =
-    l.porta === 'n'
-      ? [l.x0 + 3, l.z0 + 1]
-      : l.porta === 's'
-        ? [l.x0 + 3, l.z0 + 5]
-        : l.porta === 'l'
-          ? [l.x0 + 5, l.z0 + 3]
-          : [l.x0 + 1, l.z0 + 3];
-  em(x, l.h + 1, z, Bloco.AR);
-  em(x, l.h + 2, z, Bloco.AR);
+  for (let k = 0; k <= 2; k++) {
+    const [x, z] =
+      l.porta === 'n'
+        ? [l.x0 + 3, l.z0 + k]
+        : l.porta === 's'
+          ? [l.x0 + 3, l.z0 + 6 - k]
+          : l.porta === 'l'
+            ? [l.x0 + 6 - k, l.z0 + 3]
+            : [l.x0 + k, l.z0 + 3];
+    em(x, l.h + 1, z, Bloco.AR);
+    em(x, l.h + 2, z, Bloco.AR);
+  }
 }
 
 /** O telhado de duas águas corre ao longo do eixo da porta. */
@@ -87,7 +93,7 @@ function casaDuasAguas(l: Lote, em: Pincel): void {
     for (let a = 0; a <= 6; a++)
       for (let b = k; b <= 6 - k; b++) {
         const [dx, dz] = ao ? [a, b] : [b, a];
-        const empena = k > 0 && (a === 1 || a === 5) && b > k && b < 6 - k;
+        const empena = (a === 1 || a === 5) && b > k && b < 6 - k;
         em(
           l.x0 + dx,
           h + 4 + k,
@@ -134,8 +140,8 @@ function casaTenda(l: Lote, em: Pincel): void {
         const [dx, dz] = ao ? [a, b] : [b, a];
         em(l.x0 + dx, h + 1 + k, l.z0 + dz, Bloco.LA_BRANCA);
       }
-  // mastros na frente e atrás
-  for (const a of [0, 6]) {
+  // mastro só no fundo (o da frente ficaria na passagem da porta)
+  for (const a of [l.porta === 'n' || l.porta === 'o' ? 6 : 0]) {
     const [dx, dz] = ao ? [a, 3] : [3, a];
     for (let y = h + 1; y <= h + 4; y++) em(l.x0 + dx, y, l.z0 + dz, Bloco.MADEIRA_RETORCIDA);
   }
@@ -267,10 +273,10 @@ export function construirPovoado(p: PlanoPovoado, formas: FormasPovoado, em: Pin
   // praça: marco no centro e um poste de lanterna em cada canto
   marco(p, formas.marco, em);
   for (const [dx, dz] of [
-    [-3, -3],
-    [3, -3],
-    [-3, 3],
-    [3, 3],
+    [-4, -4],
+    [4, -4],
+    [-4, 4],
+    [4, 4],
   ]) {
     em(p.cx + dx, p.h + 1, p.cz + dz, Bloco.MADEIRA_RETORCIDA);
     em(p.cx + dx, p.h + 2, p.cz + dz, Bloco.MADEIRA_RETORCIDA);

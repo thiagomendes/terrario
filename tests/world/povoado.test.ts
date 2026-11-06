@@ -125,8 +125,11 @@ describe('povoados: planejamento', () => {
 });
 
 describe('povoados: terreno e construções', () => {
-  it('nenhum degrau maior que um bloco em volta dos lotes e da praça', () => {
-    for (const p of povoados(3)) {
+  it('nenhum degrau maior que um bloco em volta dos lotes e da praça (6 sementes)', () => {
+    const todos: [PlanoPovoado, number][] = [];
+    for (const s of [1, 2, 3, 7, 42, SEMENTE]) for (const p of povoados(4, s)) todos.push([p, s]);
+    expect(todos.length).toBeGreaterThan(10);
+    for (const [p, SEMENTE] of todos) {
       const degraus: string[] = [];
       for (let x = p.minX; x < p.maxX; x++)
         for (let z = p.minZ; z < p.maxZ; z++) {
@@ -147,6 +150,33 @@ describe('povoados: terreno e construções', () => {
         }
       expect(degraus, p.id).toEqual([]);
     }
+  });
+
+  it('em toda forma, a porta tem passagem livre do miolo da casa até a frente', () => {
+    const [p] = povoados(1);
+    for (const casa of ['duas-aguas', 'cupula', 'tenda', 'redonda', 'modulo'] as FormaCasa[]) {
+      definirEstiloMundo({
+        ...ESTILO_PADRAO,
+        povoado: { casa, oficina: casa, deposito: casa, marco: 'poco' },
+      });
+      const bloco = mundo();
+      for (const l of p.lotes) {
+        const [fx, fz] = frenteDaPorta(l);
+        const cx = l.x0 + 3;
+        const cz = l.z0 + 3;
+        // do centro do lote até a frente da porta, em linha reta no eixo da porta
+        const passos = Math.max(Math.abs(fx - cx), Math.abs(fz - cz));
+        for (let k = 0; k <= passos; k++) {
+          const x = cx + Math.sign(fx - cx) * k;
+          const z = cz + Math.sign(fz - cz) * k;
+          expect(bloco(x, l.h + 1, z), `${casa} ${l.tipo} ${l.porta} passo ${k}`).toBe(Bloco.AR);
+          expect(bloco(x, l.h + 2, z), `${casa} ${l.tipo} ${l.porta} passo ${k} alto`).toBe(
+            Bloco.AR,
+          );
+        }
+      }
+    }
+    definirEstiloMundo(ESTILO_PADRAO);
   });
 
   it('toda porta tem passagem livre de dois blocos e chão na frente', () => {

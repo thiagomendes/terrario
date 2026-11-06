@@ -128,7 +128,10 @@ test('povoado: moradores, tela de trocas com mouse e teclado', async ({ page }) 
     for (let i = 0; i < inv.slots.length; i++) inv.definir(i, null);
   });
   await page.waitForTimeout(200);
-  for (let i = 0; i < n; i++) await expect(botoes.nth(i)).toBeDisabled();
+  for (let i = 0; i < n; i++) await expect(botoes.nth(i)).toHaveAttribute('aria-disabled', 'true');
+  // acionar uma troca sem itens mostra o aviso
+  await botoes.first().click();
+  await expect(page.locator('#app')).toContainText(/falta/i);
   await page.keyboard.press('Escape');
   await expect(painel).toBeHidden();
   expect(erros).toEqual([]);

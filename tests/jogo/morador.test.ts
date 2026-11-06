@@ -11,6 +11,8 @@ import {
   NIVEL_MAR,
   TERRENO_NATURAL,
   biomaEm,
+  definirEstiloMundo,
+  ESTILO_PADRAO,
 } from '../../src/world/chunk';
 import { planoDaRegiao, type PlanoPovoado } from '../../src/world/povoado';
 import { obterBloco } from '../../src/world/blocks';
@@ -61,11 +63,22 @@ function mundoReal(): MundoPopulacao {
 }
 
 describe('moradores', () => {
-  it('aparecem um por casa quando o jogador chega perto, e nunca ficam presos em 10 dias', () => {
+  it.each([
+    ['duas-aguas', 'poco'],
+    ['cupula', 'antena'],
+    ['tenda', 'esqueleto'],
+    ['redonda', 'fonte'],
+    ['modulo', 'totem'],
+  ] as const)('casas %s e marco %s: um por casa e nunca presos em 10 dias', (casa, marco) => {
+    definirEstiloMundo({
+      ...ESTILO_PADRAO,
+      povoado: { casa, oficina: casa, deposito: casa, marco },
+    });
     const p = primeiroPovoado();
     const m = mundoReal();
     const pop = criarPopulacao(criarGerador(5));
-    const j = { x: p.cx + 0.5, y: p.h + 1, z: p.cz + 0.5, vivo: true, criativo: true };
+    // jogador fora do povoado (os moradores não param para olhar para ele)
+    const j = { x: p.cx + 34.5, y: p.h + 1, z: p.cz + 0.5, vivo: true, criativo: true };
     const dt = 0.1;
     // um dia de 20 min no jogo, acelerado: 10 dias com noite e dia alternando
     const DIA = 600;
@@ -97,6 +110,13 @@ describe('moradores', () => {
         }
       }
     }
+    // anda de verdade: o anti-trava é exceção (no máximo 2 vezes em 10 dias)
+    for (const c of pop.lista.filter((x) => x.tipo === 'morador'))
+      expect(
+        c.teleportes ?? 0,
+        `morador ${c.morador!.n} teleportado demais (${casa})`,
+      ).toBeLessThanOrEqual(2);
+    definirEstiloMundo(ESTILO_PADRAO);
     expect(problemas.slice(0, 10)).toEqual([]);
   });
 

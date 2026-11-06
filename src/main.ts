@@ -201,6 +201,10 @@ function ligarInventario(
     document.exitPointerLock?.();
   };
   const abrirConteiner = (f: () => void) => {
+    // um contêiner por vez: baú, fornalha ou trocas
+    painelBau.fechar();
+    painelFornalha.fechar();
+    painelTrocas.fechar();
     criacao.devolver();
     criacao.mostrar(false);
     f();

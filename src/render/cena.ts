@@ -1,6 +1,7 @@
 import { CRIATURAS } from '../jogo/criaturas';
 import { nomeDoMorador, povoadosPerto } from '../jogo/povoados';
 import { definirRegioesSemPovoado, regiaoDoChunk } from '../world/povoado';
+import { encontrarNascimento } from '../world/chunk';
 import { povoadoDoTema, tema } from '../temas/ativo';
 import { tocarVoz } from '../audio/sons';
 import { construirMapaEmissivo } from './emissivo';
@@ -392,18 +393,35 @@ export function criarCena(
   let estadoCamera = criarEstadoCamera();
   const edicoes = criarEdicoes();
   if (dadosIniciais) edicoes.importar(dadosIniciais.edicoes);
-  // mundo de antes dos povoados: nenhum povoado nasce onde o jogador já mexeu
-  const semPovoado =
-    (opcoes.mundo?.versao ?? 1) < 2 && dadosIniciais
-      ? [
-          ...new Set(
-            Object.keys(dadosIniciais.edicoes).map((k) => {
-              const [cx, cz] = k.split(',').map(Number);
-              return regiaoDoChunk(cx, cz);
-            }),
-          ),
-        ]
+  // mundo de antes dos povoados: na primeira carga depois deles, congela a lista de
+  // regiões sem povoado (as editadas e as em volta de onde o jogador está) e salva
+  // com o mundo; nas cargas seguintes vale a lista salva, então nada some nem aparece
+  const salvoPovoados = dadosIniciais?.extras?.['povoados'] as
+    | { semPovoado?: string[] }
+    | undefined;
+  const semPovoado: string[] = salvoPovoados?.semPovoado
+    ? [...salvoPovoados.semPovoado]
+    : (opcoes.mundo?.versao ?? 1) < 2 && dadosIniciais
+      ? (() => {
+          const r = new Set<string>();
+          for (const k of Object.keys(dadosIniciais.edicoes)) {
+            const [cx, cz] = k.split(',').map(Number);
+            r.add(regiaoDoChunk(cx, cz));
+          }
+          const j = dadosIniciais.jogador;
+          const pontos = j ? [[j.x, j.z]] : [];
+          const n = encontrarNascimento(semente);
+          pontos.push([n.x, n.z]);
+          for (const [x, z] of pontos) {
+            const rx = Math.floor(x / 128);
+            const rz = Math.floor(z / 128);
+            for (let dx = -1; dx <= 1; dx++)
+              for (let dz = -1; dz <= 1; dz++) r.add(`${rx + dx},${rz + dz}`);
+          }
+          return [...r];
+        })()
       : [];
+  salvaveis.set('povoados', { salvar: () => ({ semPovoado }) });
   definirRegioesSemPovoado(semPovoado);
   // blocos-base compartilhados (chegam do worker junto com a malha)
   const provedor = criarProvedorBlocos(semente);

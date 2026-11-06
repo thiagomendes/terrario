@@ -24,7 +24,7 @@ export const CSS_TROCAS = `
   box-shadow: inset 2px 2px 0 rgba(255, 255, 255, 0.2), inset -2px -3px 0 rgba(0, 0, 0, 0.35);
 }
 .troca button.fazer:hover, .troca button.fazer:focus-visible { filter: brightness(1.15); outline: 3px solid #ffd98f; outline-offset: 1px; }
-.troca button.fazer:disabled { background: #3a3542; color: #9a93a6; cursor: not-allowed; filter: none; }
+.troca button.fazer[aria-disabled='true'] { background: #3a3542; color: #9a93a6; cursor: not-allowed; }
 .troca.feita { animation: troca-feita 0.5s ease; }
 @keyframes troca-feita { 40% { background: rgba(140, 220, 120, 0.3); } }
 @media (prefers-reduced-motion: reduce) { .troca.feita { animation: none; } }
@@ -62,7 +62,9 @@ export function criarPainelTrocas(ui: InventarioUI, inv: Inventario, op: OpcoesT
   const linhas: { troca: Troca; el: HTMLElement; botao: HTMLButtonElement }[] = [];
 
   const atualizar = () => {
-    for (const l of linhas) l.botao.disabled = !podeTrocar(inv, l.troca);
+    // indisponível continua focável (o leitor de tela lê a troca e o aviso de itens faltando)
+    for (const l of linhas)
+      l.botao.setAttribute('aria-disabled', String(!podeTrocar(inv, l.troca)));
   };
   inv.ouvir(() => {
     if (!raiz.hidden) atualizar();
@@ -133,6 +135,8 @@ export function criarPainelTrocas(ui: InventarioUI, inv: Inventario, op: OpcoesT
       montar(p);
       atualizar();
       raiz.hidden = false;
+      // o foco vai para a primeira troca (teclado e leitor de tela começam por ela)
+      requestAnimationFrame(() => linhas[0]?.botao.focus());
     },
     fechar() {
       profissao = null;

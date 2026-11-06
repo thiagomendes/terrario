@@ -14,7 +14,8 @@ export const REGIAO_POVOADO = 128;
 /** Raio máximo ocupado (lotes, caminhos e rampas) a partir do centro. */
 export const RAIO_POVOADO = 30;
 const TAM_LOTE = 7;
-const PRACA = 7;
+/** Lado da praça: o marco ocupa o miolo (até 2 do centro), os postes os cantos. */
+export const PRACA = 9;
 /** Alcance máximo da rampa entre o piso do povoado e o terreno natural. */
 const RAMPA = 8;
 const MAX_DESNIVEL = 4;
@@ -51,6 +52,8 @@ export interface Lote {
   /** Altura do chão do lote (y do bloco de piso). */
   h: number;
   porta: Lado;
+  /** Caminho a pé da borda da praça até a frente da porta (com a quina do L). */
+  rota: [number, number][];
 }
 
 export interface Morador {
@@ -212,7 +215,7 @@ function planejar(rx: number, rz: number, semente: number, t: TerrenoNatural): P
       const dx = cx - mx;
       const dz = cz - mz;
       const porta: Lado = Math.abs(dx) > Math.abs(dz) ? (dx > 0 ? 'l' : 'o') : dz > 0 ? 's' : 'n';
-      lotes.push({ tipo: tp.tipo, profissao: tp.profissao, x0, z0, h: piso, porta });
+      lotes.push({ tipo: tp.tipo, profissao: tp.profissao, x0, z0, h: piso, porta, rota: [] });
       return;
     }
   });
@@ -238,8 +241,15 @@ function planejar(rx: number, rz: number, semente: number, t: TerrenoNatural): P
   const caminho = new Map<number, number>();
   for (const l of lotes) {
     const [px, pz] = frenteDaPorta(l);
-    const alvoX = cx + Math.sign(px - cx) * Math.min(Math.abs(px - cx), (PRACA - 1) / 2);
-    const alvoZ = cz + Math.sign(pz - cz) * Math.min(Math.abs(pz - cz), (PRACA - 1) / 2);
+    // chega na borda da praça (anel livre a 3 do centro), nunca no canto (poste)
+    const borda = (PRACA - 1) / 2;
+    let ax = Math.sign(px - cx) * Math.min(Math.abs(px - cx), borda);
+    let az = Math.sign(pz - cz) * Math.min(Math.abs(pz - cz), borda);
+    // fora dos cantos (postes): o outro eixo fica a no máximo borda - 1
+    if (l.porta === 'l' || l.porta === 'o') az = Math.sign(az) * Math.min(Math.abs(az), borda - 1);
+    else ax = Math.sign(ax) * Math.min(Math.abs(ax), borda - 1);
+    const alvoX = cx + ax;
+    const alvoZ = cz + az;
     const pts: [number, number][] = [];
     let x = px;
     let z = pz;
@@ -251,6 +261,11 @@ function planejar(rx: number, rz: number, semente: number, t: TerrenoNatural): P
       else z += Math.sign(alvoZ - z);
       pts.push([x, z]);
     }
+    // rota a pé: borda da praça, quina do L e frente da porta
+    const quina: [number, number] = primeiroX ? [alvoX, pz] : [px, alvoZ];
+    l.rota = [[alvoX, alvoZ], quina, [px, pz]].filter(
+      (q, i, a) => i === 0 || q[0] !== a[i - 1][0] || q[1] !== a[i - 1][1],
+    ) as [number, number][];
     pts.forEach(([x, z], k) => {
       const f = pts.length > 1 ? k / (pts.length - 1) : 1;
       const y = Math.round(l.h + (h - l.h) * f);
@@ -322,6 +337,14 @@ function planejar(rx: number, rz: number, semente: number, t: TerrenoNatural): P
       viz(i, x, z, 0, 1);
       viz(i, x, z, 1, 1);
       viz(i, x, z, -1, 1);
+    }
+  // a rampa precisa alcançar o terreno natural: na borda dela, o desnível tem que caber
+  // nos RAMPA blocos (senão sobraria um penhasco no fim)
+  for (let z = 0; z < d; z++)
+    for (let x = 0; x < w; x++) {
+      const i = z * w + x;
+      if (dist[i] !== RAMPA) continue;
+      if (Math.abs(t.altura(minX + x, minZ + z, semente) - h) > RAMPA) return null;
     }
   // o jogador nunca nasce dentro de um povoado
   const nasc = t.nascimento?.(semente);

@@ -26,6 +26,11 @@ export interface DadosMorador {
   dentro: [number, number, number];
   oficina: [number, number, number];
   praca: [number, number, number];
+  /** Caminhos a pé da borda da praça até a porta de casa e até a oficina. */
+  rotaCasa: [number, number][];
+  rotaOficina: [number, number][];
+  /** Centro da praça (o marco fica nele: os caminhos o contornam). */
+  centro: [number, number];
 }
 
 export interface DefCriatura {
@@ -121,6 +126,10 @@ export interface Criatura {
   /** Tempo andando para um destino sem chegar mais perto (anti-trava do morador). */
   semProgresso?: number;
   menorDistancia?: number;
+  /** Quantas vezes o anti-trava precisou pôr o morador no destino (teste de caminho). */
+  teleportes?: number;
+  /** Destino atual da rotina do morador (depuração). */
+  destino?: [number, number, number];
   x: number;
   y: number;
   z: number;
@@ -432,6 +441,130 @@ export function assentarCriatura(c: Criatura, dt: number, m: Mundo): void {
 }
 
 /**
+ * Próximo ponto de uma rota a pé (borda da praça → quina → porta). Indo para a porta,
+ * avança pelos pontos; voltando para a praça, recua. No fim da rota, o destino final.
+ */
+function pelaRota(
+  c: Criatura,
+  rota: [number, number][],
+  paraPorta: boolean,
+  final: [number, number, number],
+): [number, number, number] {
+  if (rota.length === 0) return final;
+  const ponto = (q: [number, number]): [number, number, number] => [q[0], final[1], q[1]];
+  if (rota.length === 1)
+    return Math.hypot(c.x - rota[0][0], c.z - rota[0][1]) < 0.5 ? final : ponto(rota[0]);
+  // trecho da rota mais perto do morador (distância ao segmento, não ao ponto)
+  let melhor = Infinity;
+  let k = 0;
+  for (let i = 0; i < rota.length - 1; i++) {
+    const [ax, az] = rota[i];
+    const [bx, bz] = rota[i + 1];
+    const vx = bx - ax;
+    const vz = bz - az;
+    const t = Math.max(
+      0,
+      Math.min(1, ((c.x - ax) * vx + (c.z - az) * vz) / (vx * vx + vz * vz || 1)),
+    );
+    const d = Math.hypot(c.x - (ax + vx * t), c.z - (az + vz * t));
+    if (d < melhor - 1e-6) {
+      melhor = d;
+      k = i;
+    }
+  }
+  // longe da rota e indo para a porta: entra nela pelo começo (a borda da praça)
+  if (paraPorta && melhor > 3) return ponto(rota[0]);
+  // mira o fim do trecho no sentido da viagem; chegando nele, o próximo (ou o destino)
+  let alvo = paraPorta ? k + 1 : k;
+  while (
+    alvo >= 0 &&
+    alvo < rota.length &&
+    Math.hypot(c.x - rota[alvo][0], c.z - rota[alvo][1]) < 0.5
+  )
+    alvo += paraPorta ? 1 : -1;
+  return alvo < 0 || alvo >= rota.length ? final : ponto(rota[alvo]);
+}
+
+/** Distância do morador até a rota (o trecho mais perto). */
+function distRota(c: Criatura, rota: [number, number][]): number {
+  if (rota.length === 0) return Infinity;
+  if (rota.length === 1) return Math.hypot(c.x - rota[0][0], c.z - rota[0][1]);
+  let d = Infinity;
+  for (let i = 0; i < rota.length - 1; i++)
+    d = Math.min(d, distSegmento(c.x, c.z, rota[i][0], rota[i][1], rota[i + 1][0], rota[i + 1][1]));
+  return d;
+}
+
+/**
+ * Pela rede de caminhos: estando numa rota que não é a do destino, volta por ela até a
+ * praça; na praça, entra na rota do destino (ou vai ao ponto final, se for na praça).
+ */
+function navegar(
+  c: Criatura,
+  m: DadosMorador,
+  rotaDestino: [number, number][] | null,
+  final: [number, number, number],
+): [number, number, number] {
+  if (rotaDestino && distRota(c, rotaDestino) <= 2) return pelaRota(c, rotaDestino, true, final);
+  const entrada: [number, number, number] =
+    rotaDestino && rotaDestino.length ? [rotaDestino[0][0], final[1], rotaDestino[0][1]] : final;
+  for (const outra of [m.rotaCasa, m.rotaOficina]) {
+    if (outra === rotaDestino) continue;
+    if (distRota(c, outra) < 2) return pelaRota(c, outra, false, entrada);
+  }
+  return rotaDestino ? pelaRota(c, rotaDestino, true, final) : final;
+}
+
+/** Distância do ponto (px, pz) ao segmento a-b. */
+function distSegmento(
+  px: number,
+  pz: number,
+  ax: number,
+  az: number,
+  bx: number,
+  bz: number,
+): number {
+  const vx = bx - ax;
+  const vz = bz - az;
+  const t = Math.max(0, Math.min(1, ((px - ax) * vx + (pz - az) * vz) / (vx * vx + vz * vz || 1)));
+  return Math.hypot(px - (ax + vx * t), pz - (az + vz * t));
+}
+
+/** Se a reta até o destino passa pelo marco da praça, vai antes por um canto livre dela. */
+function contornarMarco(
+  c: Criatura,
+  alvo: [number, number, number],
+  centro: [number, number],
+): [number, number, number] {
+  const R = 2.7;
+  if (distSegmento(centro[0], centro[1], c.x, c.z, alvo[0], alvo[2]) >= R) return alvo;
+  if (
+    Math.hypot(c.x - centro[0], c.z - centro[1]) < R ||
+    Math.hypot(alvo[0] - centro[0], alvo[2] - centro[1]) < R
+  )
+    return alvo;
+  let melhor: [number, number, number] = alvo;
+  let custo = Infinity;
+  for (const [dx, dz] of [
+    [3, 3],
+    [-3, 3],
+    [3, -3],
+    [-3, -3],
+  ]) {
+    const qx = centro[0] + dx;
+    const qz = centro[1] + dz;
+    if (distSegmento(centro[0], centro[1], c.x, c.z, qx, qz) < R) continue;
+    if (distSegmento(centro[0], centro[1], qx, qz, alvo[0], alvo[2]) < R) continue;
+    const k = Math.hypot(c.x - qx, c.z - qz) + Math.hypot(alvo[0] - qx, alvo[2] - qz);
+    if (k < custo) {
+      custo = k;
+      melhor = [qx, alvo[1], qz];
+    }
+  }
+  return melhor;
+}
+
+/**
  * Rotina do morador: de dia passeia entre a praça e a oficina e para um pouco em cada
  * lugar; ao entardecer vai para a frente da porta e entra; à noite fica em casa. Se
  * passar muito tempo sem chegar mais perto do destino, aparece nele (nunca fica preso).
@@ -445,6 +578,7 @@ function rotinaMorador(
   distJ: number,
   dxj: number,
   dzj: number,
+  mundo: Mundo,
 ): void {
   const m = c.morador;
   if (!m) return;
@@ -455,23 +589,40 @@ function rotinaMorador(
   const emCasa = noite > 0.35;
   let alvo: [number, number, number];
   let parar = false;
+  const dDentro = Math.hypot(c.x - m.dentro[0], c.z - m.dentro[2]);
+  const dFora = Math.hypot(c.x - m.fora[0], c.z - m.fora[2]);
+  // a porta tem um bloco de largura: atravessa pelo eixo dela, da frente (t = 0) ao
+  // miolo da casa (t = 1); estando no eixo e entre os dois, segue até o fim
+  const ax = m.dentro[0] - m.fora[0];
+  const az = m.dentro[2] - m.fora[2];
+  const comp2 = ax * ax + az * az || 1;
+  const t = ((c.x - m.fora[0]) * ax + (c.z - m.fora[2]) * az) / comp2;
+  const lado = Math.abs((c.x - m.fora[0]) * az - (c.z - m.fora[2]) * ax) / Math.sqrt(comp2);
+  const noEixo = lado < 0.3;
+  const naPassagem = noEixo && t > -0.12 && t < 1.12;
+  const emCasaJa = dDentro < 2.6 && t > 0.4;
   if (emCasa) {
-    const dDentro = Math.hypot(c.x - m.dentro[0], c.z - m.dentro[2]);
-    const dFora = Math.hypot(c.x - m.fora[0], c.z - m.fora[2]);
-    // passa pela porta: primeiro a frente dela, depois o miolo da casa
-    alvo = dDentro < 2.6 || dFora < 1 ? m.dentro : m.fora;
+    if (naPassagem || emCasaJa) alvo = m.dentro;
+    else alvo = dFora < 2 ? m.fora : navegar(c, m, m.rotaCasa, m.fora);
     parar = dDentro < 0.6;
+  } else if (naPassagem || emCasaJa) {
+    // de manhã: volta ao eixo da porta (miolo da casa) e sai por ela até a frente
+    // no eixo, mira um pouco além da frente da porta (assim sai da passagem e segue o dia)
+    alvo = noEixo ? [m.fora[0] - ax * 0.4, m.fora[1], m.fora[2] - az * 0.4] : m.dentro;
   } else {
     if (c.tempoEstado <= 0) {
       // escolhe o próximo lugar: praça ou oficina, com uma pausa em cada
-      const praca = rng() < 0.55;
-      const base = praca ? m.praca : m.oficina;
-      c.alvoX = base[0] + (praca ? (rng() - 0.5) * 1.5 : 0);
-      c.alvoZ = base[2] + (praca ? (rng() - 0.5) * 1.5 : 0);
+      const base = rng() < 0.55 ? m.praca : m.oficina;
+      // destino no centro exato de uma célula livre (o corpo cabe sem raspar em nada)
+      c.alvoX = base[0];
+      c.alvoZ = base[2];
       c.tempoEstado = 12 + rng() * 14;
       c.menorDistancia = undefined;
     }
-    alvo = [c.alvoX, m.praca[1], c.alvoZ];
+    const final: [number, number, number] = [c.alvoX, m.praca[1], c.alvoZ];
+    const vaiOficina = Math.hypot(c.alvoX - m.oficina[0], c.alvoZ - m.oficina[2]) < 0.5;
+    // pelos caminhos: até a oficina segue a rota dela; até a praça, volta pela rota em que estiver
+    alvo = navegar(c, m, vaiOficina ? m.rotaOficina : null, final);
     parar = Math.hypot(c.x - c.alvoX, c.z - c.alvoZ) < 0.8;
   }
   // perto do jogador: para e olha para ele (ele pode querer trocar)
@@ -487,7 +638,15 @@ function rotinaMorador(
     c.semProgresso = 0;
     return;
   }
+  // o marco no meio da praça: quem passaria por cima dele contorna por um canto
+  alvo = contornarMarco(c, alvo, m.centro);
   c.estado = 'seguir';
+  // destino novo: o anti-trava recomeça a contar (o novo pode estar mais longe)
+  if (!c.destino || Math.hypot(c.destino[0] - alvo[0], c.destino[2] - alvo[2]) > 0.5) {
+    c.menorDistancia = undefined;
+    c.semProgresso = 0;
+  }
+  c.destino = alvo;
   const d = andarPara(c, def, alvo[0], alvo[2], emCasa ? 0.8 : 0.5);
   // anti-trava: se em 10 s não chegou mais perto, aparece no destino
   if (c.menorDistancia === undefined || d < c.menorDistancia - 0.3) {
@@ -495,14 +654,23 @@ function rotinaMorador(
     c.semProgresso = 0;
   } else c.semProgresso = (c.semProgresso ?? 0) + dt;
   if ((c.semProgresso ?? 0) > 10) {
-    c.x = alvo[0];
-    c.y = alvo[1];
-    c.z = alvo[2];
-    c.vx = 0;
-    c.vy = 0;
-    c.vz = 0;
     c.semProgresso = 0;
     c.menorDistancia = undefined;
+    // só aparece onde o corpo cabe (o destino ou um vizinho livre); senão troca o destino
+    for (const [ox, oz] of [[0, 0], ...VIZINHOS]) {
+      const x = alvo[0] + ox;
+      const z = alvo[2] + oz;
+      if (colideCorpo(mundo.solido, x, alvo[1], z, def.mw, def.alt)) continue;
+      c.x = x;
+      c.y = alvo[1];
+      c.z = z;
+      c.vx = 0;
+      c.vy = 0;
+      c.vz = 0;
+      c.teleportes = (c.teleportes ?? 0) + 1;
+      return;
+    }
+    c.tempoEstado = 0;
   }
 }
 
@@ -650,7 +818,7 @@ export function passoCriatura(
         break;
       }
       case 'morador':
-        rotinaMorador(c, def, dt, rng, noite, distJ, dxj, dzj);
+        rotinaMorador(c, def, dt, rng, noite, distJ, dxj, dzj, m);
         break;
       case 'companheiro': {
         if (!c.domada) {

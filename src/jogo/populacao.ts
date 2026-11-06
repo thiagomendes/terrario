@@ -56,29 +56,40 @@ export function criarPopulacao(rng: Gerador, salvo?: unknown) {
 
   const hostis: Criatura[] = [];
 
-  /** Povoados que já têm seus moradores no mundo. */
-  const povoadosPresentes = new Set<string>();
   let tempoPovoado = 0;
+  /**
+   * Chama os moradores dos povoados perto (a até 50 blocos do centro, para nenhum nascer
+   * já fora do alcance da simulação). Quem faltar (porque ficou longe e saiu da lista) é
+   * recriado; nenhum morador é duplicado.
+   */
   function chamarMoradores(m: MundoPopulacao, j: Jogador): void {
     if (!m.povoados) return;
-    for (const p of m.povoados(j.x, j.z, 64)) {
-      if (povoadosPresentes.has(p.id)) continue;
+    for (const p of m.povoados(j.x, j.z, 50)) {
       // só com o chão do povoado já carregado
       if (m.superficie(p.cx, p.cz) === null) continue;
+      const vivos = new Set<number>();
+      for (const c of lista) if (c.morador?.povoado === p.id) vivos.add(c.morador.n);
+      if (vivos.size === p.moradores.length) continue;
       const y = p.h + 1;
       const centro = (x: number, z: number): [number, number, number] => [x + 0.5, y, z + 0.5];
-      // cantos livres da praça (o marco fica no meio)
-      const lados: [number, number][] = [
-        [3, 0],
-        [-3, 0],
-        [0, 3],
-        [0, -3],
-      ];
+      // pontos livres no anel interno da praça (a 3 do centro: fora do marco, longe da
+      // beirada e dos postes), conferidos no mundo
+      const livres: [number, number][] = [];
+      for (let dx = -3; dx <= 3; dx++)
+        for (let dz = -3; dz <= 3; dz++) {
+          if (Math.max(Math.abs(dx), Math.abs(dz)) !== 3) continue;
+          const x = p.cx + dx;
+          const z = p.cz + dz;
+          if (!m.solido(x, y, z) && !m.solido(x, y + 1, z) && m.solido(x, y - 1, z))
+            livres.push([x, z]);
+        }
+      if (livres.length === 0) livres.push([p.cx + 3, p.cz]);
       for (const mo of p.moradores) {
+        if (vivos.has(mo.n)) continue;
         const casa = p.lotes[mo.casa];
         const oficina = p.lotes[mo.oficina];
         const fora = centro(...frenteDaPorta(casa));
-        const [lx, lz] = lados[mo.n % lados.length];
+        const [lx, lz] = livres[(mo.n * 5) % livres.length];
         const c = novaCriatura(proximo++, 'morador', fora[0], fora[1], fora[2]);
         c.morador = {
           povoado: p.id,
@@ -87,11 +98,13 @@ export function criarPopulacao(rng: Gerador, salvo?: unknown) {
           fora,
           dentro: centro(...dentroDaCasa(casa)),
           oficina: centro(...frenteDaPorta(oficina)),
-          praca: centro(p.cx + lx, p.cz + lz),
+          praca: centro(lx, lz),
+          rotaCasa: casa.rota.map(([x, z]) => [x + 0.5, z + 0.5] as [number, number]),
+          rotaOficina: oficina.rota.map(([x, z]) => [x + 0.5, z + 0.5] as [number, number]),
+          centro: [p.cx + 0.5, p.cz + 0.5],
         };
         lista.push(c);
       }
-      povoadosPresentes.add(p.id);
     }
   }
 
@@ -226,12 +239,6 @@ export function criarPopulacao(rng: Gerador, salvo?: unknown) {
         lista[n++] = c;
       }
       lista.length = n;
-      // povoado sem nenhum morador por perto volta a poder chamá-los
-      if (povoadosPresentes.size) {
-        const vivos = new Set<string>();
-        for (const c of lista) if (c.morador) vivos.add(c.morador.povoado);
-        for (const id of povoadosPresentes) if (!vivos.has(id)) povoadosPresentes.delete(id);
-      }
       return ev;
     },
     ferir(c: Criatura, dano: number, deX: number, deZ: number): EventoCriatura[] {
