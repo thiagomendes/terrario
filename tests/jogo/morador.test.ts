@@ -1,0 +1,116 @@
+import { describe, expect, it } from 'vitest';
+import { criarPopulacao, type MundoPopulacao } from '../../src/jogo/populacao';
+import { criarGerador } from '../../src/audio/variacao';
+import { colideCorpo, type Solido } from '../../src/player/fisica';
+import {
+  gerarChunk,
+  indice,
+  TAM_X,
+  TAM_Z,
+  ALTURA,
+  NIVEL_MAR,
+  TERRENO_NATURAL,
+  biomaEm,
+} from '../../src/world/chunk';
+import { planoDaRegiao, type PlanoPovoado } from '../../src/world/povoado';
+import { obterBloco } from '../../src/world/blocks';
+import { CRIATURAS } from '../../src/jogo/criaturas';
+
+const SEMENTE = 1337;
+
+function primeiroPovoado(): PlanoPovoado {
+  for (let r = 0; r < 6; r++)
+    for (let rz = -r; rz <= r; rz++)
+      for (let rx = -r; rx <= r; rx++) {
+        const p = planoDaRegiao(rx, rz, SEMENTE, TERRENO_NATURAL);
+        if (p) return p;
+      }
+  throw new Error('sem povoado');
+}
+
+/** Mundo de verdade (chunks gerados) para a IA dos moradores. */
+function mundoReal(): MundoPopulacao {
+  const cache = new Map<string, Uint8Array>();
+  const bloco = (x: number, y: number, z: number) => {
+    if (y < 0 || y >= ALTURA) return 0;
+    const cx = Math.floor(x / TAM_X);
+    const cz = Math.floor(z / TAM_Z);
+    const k = `${cx},${cz}`;
+    let c = cache.get(k);
+    if (!c) {
+      c = gerarChunk(cx, cz, SEMENTE);
+      cache.set(k, c);
+    }
+    return c[indice(x - cx * TAM_X, y, z - cz * TAM_Z)];
+  };
+  const solido = ((x: number, y: number, z: number) =>
+    !!obterBloco(bloco(x, y, z))?.solido) as Solido;
+  return {
+    solido,
+    agua: (x, y, z) => bloco(x, y, z) === 67,
+    luzBloco: () => 12,
+    ceuAberto: () => true,
+    bioma: (x, z) => biomaEm(x, z, SEMENTE),
+    superficie: (x, z) => {
+      for (let y = ALTURA - 2; y > 0; y--) if (solido(x, y, z)) return y + 1;
+      return null;
+    },
+    nivelMar: NIVEL_MAR,
+    povoados: () => [primeiroPovoado()],
+  };
+}
+
+describe('moradores', () => {
+  it('aparecem um por casa quando o jogador chega perto, e nunca ficam presos em 10 dias', () => {
+    const p = primeiroPovoado();
+    const m = mundoReal();
+    const pop = criarPopulacao(criarGerador(5));
+    const j = { x: p.cx + 0.5, y: p.h + 1, z: p.cz + 0.5, vivo: true, criativo: true };
+    const dt = 0.1;
+    // um dia de 20 min no jogo, acelerado: 10 dias com noite e dia alternando
+    const DIA = 600;
+    const problemas: string[] = [];
+    for (let i = 0; i < DIA * 10; i++) {
+      const fase = (i % DIA) / DIA;
+      const noite = fase > 0.6 ? 1 : 0;
+      pop.atualizar(dt, m, j, noite);
+      if (i % 50 !== 0) continue;
+      const moradores = pop.lista.filter((c) => c.tipo === 'morador');
+      if (i > 20) expect(moradores.length).toBe(p.moradores.length);
+      for (const c of moradores) {
+        const def = CRIATURAS.morador;
+        if (colideCorpo(m.solido, c.x, c.y + 0.05, c.z, def.mw, def.alt * 0.9))
+          problemas.push(
+            `dia ${Math.floor(i / DIA)} ${c.morador!.n} dentro de bloco em ${c.x.toFixed(1)},${c.y.toFixed(1)},${c.z.toFixed(1)}`,
+          );
+        if (Math.hypot(c.x - p.cx, c.z - p.cz) > 40)
+          problemas.push(`${c.morador!.n} longe do povoado`);
+      }
+      // fim da noite: todos em casa
+      if (noite && (i % DIA) / DIA > 0.97) {
+        for (const c of moradores) {
+          const d = Math.hypot(c.x - c.morador!.dentro[0], c.z - c.morador!.dentro[2]);
+          if (d > 1.5)
+            problemas.push(
+              `dia ${Math.floor(i / DIA)}: ${c.morador!.n} fora de casa à noite (${d.toFixed(1)})`,
+            );
+        }
+      }
+    }
+    expect(problemas.slice(0, 10)).toEqual([]);
+  });
+
+  it('golpe não machuca o morador: ele se assusta e se afasta', () => {
+    const p = primeiroPovoado();
+    const m = mundoReal();
+    const pop = criarPopulacao(criarGerador(5));
+    const j = { x: p.cx + 0.5, y: p.h + 1, z: p.cz + 0.5, vivo: true, criativo: true };
+    for (let i = 0; i < 30; i++) pop.atualizar(0.1, m, j, 0);
+    const c = pop.lista.find((x) => x.tipo === 'morador')!;
+    const vida = c.vida;
+    const ev = pop.ferir(c, 5, j.x, j.z);
+    expect(c.vida).toBe(vida);
+    expect(ev[0]?.tipo).toBe('ferida');
+    expect(c.estado).toBe('fugir');
+  });
+});

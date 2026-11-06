@@ -30,7 +30,8 @@ import {
   type Bioma,
   TERRENO_NATURAL,
 } from '../src/world/chunk';
-import { planoDaRegiao } from '../src/world/povoado';
+import { planoDaRegiao, PROFISSOES } from '../src/world/povoado';
+import type { PecaCriatura } from '../src/temas/tipos';
 import { hash2 } from '../src/world/noise';
 import type { TipoCriatura } from '../src/jogo/criaturas';
 
@@ -180,14 +181,12 @@ function hexCor(c: string): [number, number, number] {
   const n = parseInt(c.slice(1), 16);
   return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
 }
-{
-  const tipos = Object.keys(tema.criaturas) as TipoCriatura[];
+function desenharModelos(modelos: PecaCriatura[][], nome: string): void {
   const w = 150;
-  const img = novaImg(tipos.length * 300, 360, [120, 150, 190]);
-  tipos.forEach((tipo, i) => {
+  const img = novaImg(modelos.length * 300, 420, [120, 150, 190]);
+  modelos.forEach((pecasModelo, i) => {
     const cx = 150 + i * 300;
-    const cy = 300;
-    // sombra no chão
+    const cy = 360;
     poligono(
       img,
       [
@@ -198,10 +197,7 @@ function hexCor(c: string): [number, number, number] {
       ],
       [90, 120, 150, 255],
     );
-    const pecas = [...tema.criaturas[tipo]].sort(
-      (a, b) => a.p[0] + a.p[2] - (b.p[0] + b.p[2]) || a.p[1] - b.p[1],
-    );
-    for (const p of pecas) {
+    for (const p of pecasModelo) {
       const [sx, sy, sz] = p.t;
       const b: V3 = [p.p[0] - sx / 2, p.p[1] - sy / 2, p.p[2] - sz / 2];
       const base = hexCor(p.cor);
@@ -215,7 +211,6 @@ function hexCor(c: string): [number, number, number] {
       ];
       const P = (x: number, y: number, z: number) =>
         iso([b[0] + x * sx, b[1] + y * sy, b[2] + z * sz], w, cx, cy);
-      // profundidade pelo centro de cada face (observador em +x, +z e acima)
       const prof = (x: number, y: number, z: number) =>
         b[0] + x * sx + (b[2] + z * sz) + (b[1] + y * sy) * 0.8;
       poligono(img, [P(0, 1, 0), P(1, 1, 0), P(1, 1, 1), P(0, 1, 1)], tinta(1), prof(0.5, 1, 0.5));
@@ -233,12 +228,31 @@ function hexCor(c: string): [number, number, number] {
       );
     }
   });
-  salvarPng(img, 'criaturas.png');
+  salvarPng(img, nome);
+}
+{
+  const tipos = Object.keys(tema.criaturas) as TipoCriatura[];
+  desenharModelos(
+    tipos.map((t) => tema.criaturas[t]),
+    'criaturas.png',
+  );
   writeFileSync(
     join(saida, 'criaturas.txt'),
     tipos.map((t, i) => `${i + 1}: ${t} = ${tema.textos.criaturas[t]}`).join('\n') +
       '\n(vista de 3/4: frente da criatura para baixo-direita)\n',
   );
+  const pv = tema.povoado;
+  if (pv) {
+    desenharModelos(
+      PROFISSOES.map((p) => pv.moradores[p]),
+      'moradores.png',
+    );
+    writeFileSync(
+      join(saida, 'moradores.txt'),
+      PROFISSOES.map((p, i) => `${i + 1}: ${p} = ${pv.profissoes[p]}`).join('\n') +
+        `\npovoado: ${pv.nome}\n`,
+    );
+  }
 }
 
 // --- céu -----------------------------------------------------------------------

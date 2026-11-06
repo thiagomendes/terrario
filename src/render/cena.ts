@@ -1,5 +1,6 @@
 import { CRIATURAS } from '../jogo/criaturas';
-import { tema } from '../temas/ativo';
+import { nomeDoMorador, povoadosPerto } from '../jogo/povoados';
+import { povoadoDoTema, tema } from '../temas/ativo';
 import { tocarVoz } from '../audio/sons';
 import { construirMapaEmissivo } from './emissivo';
 import { Engine } from '@babylonjs/core/Engines/engine';
@@ -1098,6 +1099,22 @@ export function criarCena(
     const p = hotbar.pilhaAtiva();
     const def = p ? obterItem(p.item) : undefined;
     const naMira = criaturaApontada();
+    if (naMira?.morador) {
+      // morador: abre as trocas da profissão dele
+      const m = naMira.morador;
+      window.dispatchEvent(
+        new CustomEvent('brumaluz:trocar', {
+          detail: {
+            profissao: m.profissao,
+            nome: nomeDoMorador(m.povoado, m.n),
+            povoado: m.povoado,
+          },
+        }),
+      );
+      naMira.yawAlvo = Math.atan2(camera.position.x - naMira.x, camera.position.z - naMira.z);
+      tocarVoz(motorAudio, 'morador', 'contente', 1);
+      return;
+    }
     if (naMira && naMira.tipo === 'raposa' && p?.item === 'frutinhas' && !naMira.domada) {
       if (modo === 'sobrevivencia') inventario.remover(hotbar.ativo, 1);
       tocarSom(motorAudio, 'comer');
@@ -1919,6 +1936,7 @@ export function criarCena(
       return null;
     },
     nivelMar: NIVEL_MAR,
+    povoados: (x: number, z: number, raio: number) => povoadosPerto(x, z, raio, semente),
   };
   const renderCriaturas = criarRenderCriaturas(
     scene,
@@ -2013,6 +2031,23 @@ export function criarCena(
     return Math.max(0, 1 - d / 24);
   };
   // chamados de vez em quando: no máximo um a cada poucos segundos, de um bicho por perto
+  // obrigado do morador depois de uma troca
+  window.addEventListener('brumaluz:trocou', () => tocarVoz(motorAudio, 'morador', 'obrigado', 1));
+  // chegar perto de um povoado pela primeira vez nesta visita: aviso e diário
+  const povoadosAvisados = new Set<string>();
+  let esperaAvisoPovoado = 2;
+  const avisarPovoado = (dt: number) => {
+    esperaAvisoPovoado -= dt;
+    if (esperaAvisoPovoado > 0) return;
+    esperaAvisoPovoado = 2;
+    const j = controle.jogador;
+    for (const p of povoadosPerto(j.x, j.z, 26, semente)) {
+      if (povoadosAvisados.has(p.id)) continue;
+      povoadosAvisados.add(p.id);
+      toast(povoadoDoTema().textos.chegou);
+      window.dispatchEvent(new CustomEvent('brumaluz:povoado', { detail: p.id }));
+    }
+  };
   // gerador próprio: os chamados não mexem na sequência dos drops
   const rngVozes = criarGerador(4242);
   let esperaChamado = 4;
@@ -2039,6 +2074,7 @@ export function criarCena(
     );
     tratarEventosCriaturas(ev);
     chamadosCriaturas(dt);
+    avisarPovoado(dt);
     perigoPerto =
       modo === 'sobrevivencia' &&
       populacao.lista.some(

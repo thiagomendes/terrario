@@ -1,6 +1,6 @@
 import { REGISTRO_BLOCOS } from '../world/blocks';
 import { NOMES_BIOMA, type Bioma } from '../world/chunk';
-import { CRIATURAS, type TipoCriatura } from '../jogo/criaturas';
+import { CRIATURAS, TIPOS_ANIMAIS, type TipoCriatura } from '../jogo/criaturas';
 import { NOMES_CLIMA, NOMES_ESTACAO } from '../jogo/clima';
 import { MISSOES, type Missao } from '../jogo/diario';
 import { registrarCatalogo } from '../jogo/catalogo';
@@ -22,7 +22,7 @@ export function textosOriginais(): TextosTema {
   const itens: Record<string, string> = {};
   for (const i of todosItens()) if (i.bloco === undefined) itens[i.id] = i.nome;
   const criaturas = {} as Record<TipoCriatura, string>;
-  for (const [t, d] of Object.entries(CRIATURAS)) criaturas[t as TipoCriatura] = d.nome;
+  for (const t of TIPOS_ANIMAIS) criaturas[t] = CRIATURAS[t].nome;
   const missoes: Record<string, { titulo: string; descricao: string }> = {};
   const capitulos: Record<string, string> = {};
   for (const m of MISSOES) {

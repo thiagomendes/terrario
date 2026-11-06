@@ -1,4 +1,4 @@
-import type { Tema } from './tipos';
+import type { PovoadoTema, Tema } from './tipos';
 import { temaBase } from './bruma-e-luz';
 
 /**
@@ -13,4 +13,9 @@ export function tema(): Tema {
 
 export function definirTemaAtivo(t: Tema): void {
   atual = t;
+}
+
+/** Povoado do tema ativo (sem a seção no tema, vale a do Bruma e Luz). */
+export function povoadoDoTema(): PovoadoTema {
+  return tema().povoado ?? temaBase().povoado!;
 }

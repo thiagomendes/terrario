@@ -6,13 +6,14 @@ import { textosOriginais } from '../../src/temas/originais';
 import { gerarAtlas, PINTORES } from '../../src/art/atlas';
 import { NOMES_TILES } from '../../src/art/tiles';
 import { REGISTRO_BLOCOS } from '../../src/world/blocks';
-import { CRIATURAS, type TipoCriatura } from '../../src/jogo/criaturas';
+import { CRIATURAS, TIPOS_ANIMAIS, type TipoCriatura } from '../../src/jogo/criaturas';
 import { todosItens } from '../../src/jogo/itens';
 import { MISSOES } from '../../src/jogo/diario';
 import { RECEITAS } from '../../src/jogo/receitas';
 import { gerarChunk, ESTILO_PADRAO, definirEstiloMundo } from '../../src/world/chunk';
 import { normalizarAparencia, aparenciaPadrao } from '../../src/personagem/aparencia';
 import type { Tema } from '../../src/temas/tipos';
+import { PROFISSOES } from '../../src/world/povoado';
 
 /**
  * Regras que todo tema cumpre (spec 007): cobertura completa de nomes e tiles,
@@ -135,7 +136,7 @@ describe.each(temas.map((t) => [t.id, t] as [string, Tema]))('tema %s', (_id, t)
   });
 
   it('modelos de criatura: as cinco, com cabeça e pernas que animam', () => {
-    for (const tipo of Object.keys(CRIATURAS) as TipoCriatura[]) {
+    for (const tipo of TIPOS_ANIMAIS) {
       const pecas = t.criaturas[tipo];
       expect(pecas?.length, tipo).toBeGreaterThan(2);
       const papeis = new Set(pecas.map((p) => p.papel));
@@ -166,7 +167,7 @@ describe.each(temas.map((t) => [t.id, t] as [string, Tema]))('tema %s', (_id, t)
   });
 
   it('cada criatura tem jeito de andar e vozes audíveis e curtas', () => {
-    for (const tipo of Object.keys(CRIATURAS) as TipoCriatura[]) {
+    for (const tipo of TIPOS_ANIMAIS) {
       const m = t.movimento[tipo];
       expect(m, tipo).toBeTruthy();
       expect(m.saltita >= 0 && m.saltita <= 0.4).toBe(true);
@@ -182,6 +183,45 @@ describe.each(temas.map((t) => [t.id, t] as [string, Tema]))('tema %s', (_id, t)
         const total = v.repeticoes * v.dur + (v.repeticoes - 1) * v.intervalo;
         expect(total, `${tipo} ${momento} longo demais`).toBeLessThanOrEqual(2);
       }
+    }
+  });
+
+  it('povoado do tema: nomes, profissões, moradores, vozes, textos e formas', () => {
+    const pv = t.povoado;
+    expect(pv, 'sem seção povoado').toBeTruthy();
+    if (!pv) return;
+    if (t.id !== TEMA_PADRAO) expect(pv, 'usa o povoado do Bruma e Luz').not.toBe(base.povoado);
+    expect(pv.nome).toBeTruthy();
+    for (const p of PROFISSOES) expect(pv.profissoes[p], `profissão ${p}`).toBeTruthy();
+    expect(new Set(pv.nomes).size, 'nomes de moradores').toBeGreaterThanOrEqual(8);
+    for (const n of pv.nomes) expect(n.length).toBeLessThanOrEqual(16);
+    for (const p of PROFISSOES) {
+      const pecas = pv.moradores[p];
+      expect(pecas?.length, `morador ${p}`).toBeGreaterThan(4);
+      const papeis = new Set(pecas.map((q) => q.papel));
+      expect(
+        papeis.has('cabeca') && papeis.has('perna0') && papeis.has('perna1'),
+        `morador ${p} anima`,
+      ).toBe(true);
+      const topo = Math.max(...pecas.map((q) => q.p[1] + q.t[1] / 2));
+      expect(topo, `morador ${p} alto demais`).toBeLessThanOrEqual(2.3);
+      const pe = Math.min(...pecas.map((q) => q.p[1] - q.t[1] / 2));
+      expect(Math.abs(pe), `morador ${p} sem pé no chão`).toBeLessThanOrEqual(0.06);
+      for (const q of pecas) expect(/^#[0-9a-f]{6}$/i.test(q.cor)).toBe(true);
+    }
+    for (const momento of ['chamado', 'susto', 'contente', 'obrigado'] as const) {
+      const v = pv.vozes[momento];
+      expect(v, momento).toBeTruthy();
+      for (const f of [v.de, v.ate]) expect(f >= 60 && f <= 6000).toBe(true);
+    }
+    for (const k of ['trocas', 'trocar', 'faltam', 'chegou'] as const)
+      expect(pv.textos[k], k).toBeTruthy();
+    const f = t.mundo.povoado;
+    if (t.id !== TEMA_PADRAO) expect(f, 'formas das construções').toBeTruthy();
+    if (f) {
+      for (const k of ['casa', 'oficina', 'deposito'] as const)
+        expect(['duas-aguas', 'cupula', 'tenda', 'redonda', 'modulo']).toContain(f[k]);
+      expect(['poco', 'fonte', 'antena', 'totem', 'esqueleto']).toContain(f.marco);
     }
   });
 
@@ -304,6 +344,14 @@ describe('cada tema é ele mesmo', () => {
         t.textos.legendas.criaturaNoturna,
         t.lema,
         t.convite,
+        ...(t.povoado
+          ? [
+              t.povoado.nome,
+              ...Object.values(t.povoado.profissoes),
+              ...t.povoado.nomes,
+              ...Object.values(t.povoado.textos),
+            ]
+          : []),
       ].map((s) => s.toLowerCase());
       for (const p of ASSINATURA_BRUMA)
         for (const s of textos)

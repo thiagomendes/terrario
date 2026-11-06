@@ -192,6 +192,33 @@ export const MISSOES: readonly Missao[] = [
     meta: 1,
     icone: 'foto',
   },
+  {
+    id: 'povoado',
+    capitulo: 'Explorar',
+    titulo: 'Vizinhos',
+    descricao: 'Encontre um povoado',
+    contador: 'visitou:povoado',
+    meta: 1,
+    icone: 'pessoa',
+  },
+  {
+    id: 'trocas',
+    capitulo: 'Explorar',
+    titulo: 'Bom negócio',
+    descricao: 'Faça 3 trocas com moradores',
+    contador: 'trocou',
+    meta: 3,
+    icone: 'item:bloco:42',
+  },
+  {
+    id: 'ferreiro',
+    capitulo: 'Explorar',
+    titulo: 'Ferramenta nova',
+    descricao: 'Faça uma troca com quem faz ferramentas',
+    contador: 'trocou:ferreiro',
+    meta: 1,
+    icone: 'item:picareta_pedra',
+  },
 ];
 
 export type Contadores = Record<string, number>;

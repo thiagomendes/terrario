@@ -7,6 +7,8 @@ import { SEMENTE_PADRAO_MUNDO, criarRepositorioMundos, type MetaMundo } from './
 import { CSS_INVENTARIO, criarInventarioUI } from './ui/inventario';
 import { CSS_CRIACAO, criarCriacao } from './ui/criacao';
 import { CSS_CONTEINER, criarPainelBau, criarPainelFornalha } from './ui/conteiner';
+import { CSS_TROCAS, criarPainelTrocas } from './ui/trocas';
+import type { Profissao } from './world/povoado';
 import { criarConteineres } from './jogo/conteineres';
 import { registrarCatalogo } from './jogo/catalogo';
 import { Bloco } from './world/blocks';
@@ -142,7 +144,7 @@ function ligarInventario(
   hotbar: ReturnType<typeof criarHotbar>,
 ): void {
   const estilo = document.createElement('style');
-  estilo.textContent = CSS_INVENTARIO + CSS_CRIACAO + CSS_CONTEINER;
+  estilo.textContent = CSS_INVENTARIO + CSS_CRIACAO + CSS_CONTEINER + CSS_TROCAS;
   document.head.appendChild(estilo);
   const ui = criarInventarioUI(app, {
     inventario: hotbar.inventario,
@@ -163,6 +165,21 @@ function ligarInventario(
   });
   const painelBau = criarPainelBau(ui, hotbar.inventario);
   const painelFornalha = criarPainelFornalha(ui);
+  const painelTrocas = criarPainelTrocas(ui, hotbar.inventario, {
+    soltar: (item, qtd) => {
+      const p = cena.estado.posicao;
+      if (p) cena.estado.soltarItem?.(item, qtd, p[0], p[1] - 1, p[2]);
+    },
+    aviso: (t) => notificar(t),
+    trocou: (profissao, t) =>
+      window.dispatchEvent(
+        new CustomEvent('brumaluz:trocou', { detail: { profissao, troca: t.id } }),
+      ),
+  });
+  window.addEventListener('brumaluz:trocar', (e) => {
+    const d = (e as CustomEvent<{ profissao: Profissao; nome: string }>).detail;
+    abrirConteiner(() => painelTrocas.abrir(d.profissao, d.nome));
+  });
   const conteineres = criarConteineres(cena.extrasSalvos('conteineres'), cena.semente);
   cena.registrarSalvavel('conteineres', { salvar: () => conteineres.salvar() });
   const fecharOriginal = ui.fechar;
@@ -170,11 +187,13 @@ function ligarInventario(
     criacao.devolver();
     painelBau.fechar();
     painelFornalha.fechar();
+    painelTrocas.fechar();
     fecharOriginal();
   };
   const abrir = (lado: 2 | 3) => {
     painelBau.fechar();
     painelFornalha.fechar();
+    painelTrocas.fechar();
     criacao.mostrar(true);
     criacao.definirLado(lado);
     ui.abrir();
@@ -488,6 +507,11 @@ function ligarDiario(app: HTMLElement, cena: ReturnType<typeof criarCena>): void
   ouvir('dormiu', () => reg('dormiu'));
   ouvir('marcou', () => reg('marcou'));
   ouvir('foto', () => reg('foto'));
+  ouvir('trocou', (d) => {
+    reg('trocou');
+    reg(`trocou:${(d as { profissao: string }).profissao}`);
+  });
+  ouvir('povoado', () => reg('visitou:povoado'));
   let ultimoBioma = '';
   setInterval(() => {
     const b = cena.estado.biomaAtual;

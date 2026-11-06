@@ -1,12 +1,35 @@
 import { colideCorpo, type Solido } from '../player/fisica';
 import type { Gerador } from '../audio/variacao';
 import type { Drop } from './drops';
+import type { Profissao } from '../world/povoado';
 
+/** Os cinco animais (cada tema dá pele, nome e voz a eles). */
 export type TipoCriatura = 'cervo' | 'coelho' | 'peixe' | 'espectro' | 'raposa';
-export type Comportamento = 'passivo' | 'peixe' | 'hostil' | 'companheiro';
+export const TIPOS_ANIMAIS: readonly TipoCriatura[] = [
+  'cervo',
+  'coelho',
+  'peixe',
+  'espectro',
+  'raposa',
+];
+/** Todo ser que anda pelo mundo: os animais e os moradores dos povoados. */
+export type TipoSer = TipoCriatura | 'morador';
+export type Comportamento = 'passivo' | 'peixe' | 'hostil' | 'companheiro' | 'morador';
+
+/** Dados de um morador: povoado, profissão e os pontos da rotina (casa, oficina, praça). */
+export interface DadosMorador {
+  povoado: string;
+  n: number;
+  profissao: Profissao;
+  /** Na frente da porta de casa, dentro de casa, na frente da oficina e na praça. */
+  fora: [number, number, number];
+  dentro: [number, number, number];
+  oficina: [number, number, number];
+  praca: [number, number, number];
+}
 
 export interface DefCriatura {
-  tipo: TipoCriatura;
+  tipo: TipoSer;
   nome: string;
   comportamento: Comportamento;
   vida: number;
@@ -19,7 +42,7 @@ export interface DefCriatura {
   drops: [string, number, number][];
 }
 
-export const CRIATURAS: Record<TipoCriatura, DefCriatura> = {
+export const CRIATURAS: Record<TipoSer, DefCriatura> = {
   cervo: {
     tipo: 'cervo',
     nome: 'Cervo-musgo',
@@ -78,11 +101,26 @@ export const CRIATURAS: Record<TipoCriatura, DefCriatura> = {
     dano: 3,
     drops: [],
   },
+  morador: {
+    tipo: 'morador',
+    nome: 'Morador',
+    comportamento: 'morador',
+    vida: 20,
+    mw: 0.3,
+    alt: 1.8,
+    velocidade: 1.6,
+    drops: [],
+  },
 };
 
 export interface Criatura {
   id: number;
-  tipo: TipoCriatura;
+  tipo: TipoSer;
+  /** Só moradores: povoado, profissão e rotina. */
+  morador?: DadosMorador;
+  /** Tempo andando para um destino sem chegar mais perto (anti-trava do morador). */
+  semProgresso?: number;
+  menorDistancia?: number;
   x: number;
   y: number;
   z: number;
@@ -155,13 +193,7 @@ const VY_NADO_MAX = 2.5;
 const TEMPO_PRESO = 0.5;
 const ATORDOAMENTO = 0.3;
 
-export function novaCriatura(
-  id: number,
-  tipo: TipoCriatura,
-  x: number,
-  y: number,
-  z: number,
-): Criatura {
+export function novaCriatura(id: number, tipo: TipoSer, x: number, y: number, z: number): Criatura {
   return {
     id,
     tipo,
@@ -400,6 +432,81 @@ export function assentarCriatura(c: Criatura, dt: number, m: Mundo): void {
 }
 
 /**
+ * Rotina do morador: de dia passeia entre a praça e a oficina e para um pouco em cada
+ * lugar; ao entardecer vai para a frente da porta e entra; à noite fica em casa. Se
+ * passar muito tempo sem chegar mais perto do destino, aparece nele (nunca fica preso).
+ */
+function rotinaMorador(
+  c: Criatura,
+  def: DefCriatura,
+  dt: number,
+  rng: Gerador,
+  noite: number,
+  distJ: number,
+  dxj: number,
+  dzj: number,
+): void {
+  const m = c.morador;
+  if (!m) return;
+  if (c.estado === 'fugir' && c.tempoEstado > 0) {
+    andarPara(c, def, c.alvoX, c.alvoZ, 1.6);
+    return;
+  }
+  const emCasa = noite > 0.35;
+  let alvo: [number, number, number];
+  let parar = false;
+  if (emCasa) {
+    const dDentro = Math.hypot(c.x - m.dentro[0], c.z - m.dentro[2]);
+    const dFora = Math.hypot(c.x - m.fora[0], c.z - m.fora[2]);
+    // passa pela porta: primeiro a frente dela, depois o miolo da casa
+    alvo = dDentro < 2.6 || dFora < 1 ? m.dentro : m.fora;
+    parar = dDentro < 0.6;
+  } else {
+    if (c.tempoEstado <= 0) {
+      // escolhe o próximo lugar: praça ou oficina, com uma pausa em cada
+      const praca = rng() < 0.55;
+      const base = praca ? m.praca : m.oficina;
+      c.alvoX = base[0] + (praca ? (rng() - 0.5) * 1.5 : 0);
+      c.alvoZ = base[2] + (praca ? (rng() - 0.5) * 1.5 : 0);
+      c.tempoEstado = 12 + rng() * 14;
+      c.menorDistancia = undefined;
+    }
+    alvo = [c.alvoX, m.praca[1], c.alvoZ];
+    parar = Math.hypot(c.x - c.alvoX, c.z - c.alvoZ) < 0.8;
+  }
+  // perto do jogador: para e olha para ele (ele pode querer trocar)
+  if (distJ < 3) {
+    frear(c, 0.5);
+    c.estado = 'parado';
+    c.yawAlvo = Math.atan2(dxj, dzj);
+    return;
+  }
+  if (parar) {
+    c.estado = 'parado';
+    frear(c, 0.6);
+    c.semProgresso = 0;
+    return;
+  }
+  c.estado = 'seguir';
+  const d = andarPara(c, def, alvo[0], alvo[2], emCasa ? 0.8 : 0.5);
+  // anti-trava: se em 10 s não chegou mais perto, aparece no destino
+  if (c.menorDistancia === undefined || d < c.menorDistancia - 0.3) {
+    c.menorDistancia = d;
+    c.semProgresso = 0;
+  } else c.semProgresso = (c.semProgresso ?? 0) + dt;
+  if ((c.semProgresso ?? 0) > 10) {
+    c.x = alvo[0];
+    c.y = alvo[1];
+    c.z = alvo[2];
+    c.vx = 0;
+    c.vy = 0;
+    c.vz = 0;
+    c.semProgresso = 0;
+    c.menorDistancia = undefined;
+  }
+}
+
+/**
  * Avança uma criatura. Devolve eventos (ataque ao jogador, morte com drops).
  */
 export function passoCriatura(
@@ -542,6 +649,9 @@ export function passoCriatura(
         if (rng() < dt * 0.15) ev.push({ tipo: 'som', criatura: c });
         break;
       }
+      case 'morador':
+        rotinaMorador(c, def, dt, rng, noite, distJ, dxj, dzj);
+        break;
       case 'companheiro': {
         if (!c.domada) {
           // curiosa: chega perto mas mantém distância (com histerese para não oscilar)
@@ -653,6 +763,17 @@ export function ferir(
 ): EventoCriatura[] {
   if (c.estado === 'morrendo' || c.ferida > 0.25) return [];
   const def = CRIATURAS[c.tipo];
+  if (def.comportamento === 'morador') {
+    // morador não se machuca: leva um susto e se afasta um pouco
+    c.ferida = 0.3;
+    c.estado = 'fugir';
+    c.tempoEstado = 1.6;
+    if (deX !== undefined && deZ !== undefined) {
+      c.alvoX = c.x + (c.x - deX) * 3;
+      c.alvoZ = c.z + (c.z - deZ) * 3;
+    }
+    return [{ tipo: 'ferida', criatura: c, dano: 0 }];
+  }
   c.vida -= dano;
   c.ferida = 0.4;
   if (deX !== undefined && deZ !== undefined) {

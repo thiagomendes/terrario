@@ -7,9 +7,9 @@ import {
 import { criarGerador, criarVariador, jitter, type Gerador } from './variacao';
 import type { ContextoAudio, Desenho, FonteAudio, GrupoAudio, MotorAudio, NoAudio } from './motor';
 import type { GrupoMaterial } from './materiais';
-import { tema } from '../temas/ativo';
+import { povoadoDoTema, tema } from '../temas/ativo';
 import type { PioCriatura, VozCriatura } from '../temas/tipos';
-import type { TipoCriatura } from '../jogo/criaturas';
+import type { TipoSer } from '../jogo/criaturas';
 
 export type EventoSom =
   | 'golpe'
@@ -691,12 +691,17 @@ export function desenharVoz(pio: PioCriatura, volume: number, variacao: number):
 /** Toca a voz de uma criatura do tema ativo (chamado, susto ou contente). */
 export function tocarVoz(
   motor: MotorAudio,
-  tipo: TipoCriatura,
-  momento: keyof VozCriatura,
+  tipo: TipoSer,
+  momento: keyof VozCriatura | 'obrigado',
   volume = 1,
 ): boolean {
   if (motor.estado !== 'ativo' || volume <= 0.02) return false;
-  const pio = tema().vozes[tipo]?.[momento];
+  const pio =
+    tipo === 'morador'
+      ? povoadoDoTema().vozes[momento]
+      : momento === 'obrigado'
+        ? undefined
+        : tema().vozes[tipo]?.[momento];
   if (!pio) return false;
   return motor.tocar(desenharVoz(pio, Math.min(1, volume), rngSom()), { grupo: 'efeitos' });
 }

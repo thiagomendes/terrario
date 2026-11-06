@@ -12,21 +12,27 @@ import {
   type Jogador,
   type Mundo,
   type TipoCriatura,
+  type TipoSer,
 } from './criaturas';
+import { dentroDaCasa, frenteDaPorta, type PlanoPovoado } from '../world/povoado';
 
 export interface MundoPopulacao extends Mundo {
   bioma(x: number, z: number): Bioma;
   /** y do primeiro bloco livre acima do chão na coluna (ou null). */
   superficie(x: number, z: number): number | null;
   nivelMar: number;
+  /** Povoados a até `raio` blocos (para os moradores aparecerem). */
+  povoados?(x: number, z: number, raio: number): readonly PlanoPovoado[];
 }
 
-export const LIMITES: Record<TipoCriatura, number> = {
+export const LIMITES: Record<TipoSer, number> = {
   cervo: 6,
   coelho: 6,
   peixe: 8,
   espectro: 6,
   raposa: 1,
+  // moradores não nascem ao acaso: um por casa, quando o povoado está perto
+  morador: 0,
 };
 
 const BIOMAS: Partial<Record<TipoCriatura, Bioma[]>> = {
@@ -49,6 +55,45 @@ export function criarPopulacao(rng: Gerador, salvo?: unknown) {
   }
 
   const hostis: Criatura[] = [];
+
+  /** Povoados que já têm seus moradores no mundo. */
+  const povoadosPresentes = new Set<string>();
+  let tempoPovoado = 0;
+  function chamarMoradores(m: MundoPopulacao, j: Jogador): void {
+    if (!m.povoados) return;
+    for (const p of m.povoados(j.x, j.z, 64)) {
+      if (povoadosPresentes.has(p.id)) continue;
+      // só com o chão do povoado já carregado
+      if (m.superficie(p.cx, p.cz) === null) continue;
+      const y = p.h + 1;
+      const centro = (x: number, z: number): [number, number, number] => [x + 0.5, y, z + 0.5];
+      // cantos livres da praça (o marco fica no meio)
+      const lados: [number, number][] = [
+        [3, 0],
+        [-3, 0],
+        [0, 3],
+        [0, -3],
+      ];
+      for (const mo of p.moradores) {
+        const casa = p.lotes[mo.casa];
+        const oficina = p.lotes[mo.oficina];
+        const fora = centro(...frenteDaPorta(casa));
+        const [lx, lz] = lados[mo.n % lados.length];
+        const c = novaCriatura(proximo++, 'morador', fora[0], fora[1], fora[2]);
+        c.morador = {
+          povoado: p.id,
+          n: mo.n,
+          profissao: mo.profissao,
+          fora,
+          dentro: centro(...dentroDaCasa(casa)),
+          oficina: centro(...frenteDaPorta(oficina)),
+          praca: centro(p.cx + lx, p.cz + lz),
+        };
+        lista.push(c);
+      }
+      povoadosPresentes.add(p.id);
+    }
+  }
 
   /** Repulsão simples entre criaturas sobrepostas: não se atravessam nem se empilham. */
   function separar(m: MundoPopulacao, dt: number): void {
@@ -154,6 +199,11 @@ export function criarPopulacao(rng: Gerador, salvo?: unknown) {
         tempoSpawn = 0.7;
         tentarSpawn(m, j, noite);
       }
+      tempoPovoado -= dt;
+      if (tempoPovoado <= 0) {
+        tempoPovoado = 1;
+        chamarMoradores(m, j);
+      }
       // reaproveita o vetor de hostis: nada de filter por quadro
       hostis.length = 0;
       for (const c of lista) if (CRIATURAS[c.tipo].comportamento === 'hostil') hostis.push(c);
@@ -176,6 +226,12 @@ export function criarPopulacao(rng: Gerador, salvo?: unknown) {
         lista[n++] = c;
       }
       lista.length = n;
+      // povoado sem nenhum morador por perto volta a poder chamá-los
+      if (povoadosPresentes.size) {
+        const vivos = new Set<string>();
+        for (const c of lista) if (c.morador) vivos.add(c.morador.povoado);
+        for (const id of povoadosPresentes) if (!vivos.has(id)) povoadosPresentes.delete(id);
+      }
       return ev;
     },
     ferir(c: Criatura, dano: number, deX: number, deZ: number): EventoCriatura[] {
@@ -190,7 +246,7 @@ export function criarPopulacao(rng: Gerador, salvo?: unknown) {
       }
       return false;
     },
-    adicionar(t: TipoCriatura, x: number, y: number, z: number): Criatura {
+    adicionar(t: TipoSer, x: number, y: number, z: number): Criatura {
       const c = novaCriatura(proximo++, t, x, y, z);
       lista.push(c);
       return c;

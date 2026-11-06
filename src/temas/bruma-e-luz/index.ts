@@ -5,6 +5,7 @@ import type { Tema } from '../tipos';
 import { CRIATURAS_BRUMA } from './criaturas';
 import { MUNDO_BRUMA } from './mundo';
 import { MOVIMENTO_BRUMA, VOZES_BRUMA } from './vozes';
+import { POVOADO_BRUMA } from './povoado';
 
 let base: Tema | null = null;
 
@@ -74,6 +75,7 @@ export function temaBase(): Tema {
     },
     materiais: {},
     natureza: { passaros: 1, grilos: 1, tom: 1 },
+    povoado: POVOADO_BRUMA,
     personagem: {},
   };
   return base;

@@ -7,7 +7,7 @@ import type { Mesh } from '@babylonjs/core/Meshes/mesh';
 import type { Scene } from '@babylonjs/core/scene';
 import type { Criatura } from '../jogo/criaturas';
 import type { PecaCriatura } from '../temas/tipos';
-import { tema } from '../temas/ativo';
+import { povoadoDoTema, tema } from '../temas/ativo';
 
 type Peca = PecaCriatura;
 
@@ -64,7 +64,11 @@ export function criarRenderCriaturas(
 
   function montar(c: Criatura): Modelo {
     const raiz = new TransformNode(`criatura-${c.id}`, scene);
-    const partes = tema().criaturas[c.tipo].map((peca, i) => {
+    const pecas =
+      c.tipo === 'morador'
+        ? povoadoDoTema().moradores[c.morador?.profissao ?? 'construtor']
+        : tema().criaturas[c.tipo];
+    const partes = pecas.map((peca, i) => {
       const no = new TransformNode(`criatura-${c.id}-${i}`, scene);
       no.parent = raiz;
       // pivô: pernas no topo, antenas na base, asas na borda de dentro, o resto no centro
@@ -121,7 +125,7 @@ export function criarRenderCriaturas(
         const ampAlvo = c.noChao ? Math.min(0.7, m.vel * 0.25) : 0;
         m.amp += (ampAlvo - m.amp) * Math.min(1, dt * 10);
         const balanco = Math.sin(m.fase) * m.amp;
-        const mov = tema().movimento[c.tipo];
+        const mov = c.tipo === 'morador' ? povoadoDoTema().movimento : tema().movimento[c.tipo];
         const andando = Math.min(1, m.amp * 2);
         const flutua =
           mov.flutua > 0 ? mov.flutua * 1.5 + Math.sin(tempo * 2 + c.id) * mov.flutua : 0;

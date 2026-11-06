@@ -9,7 +9,7 @@ import type { TipoCriatura } from '../jogo/criaturas';
 import type { GrupoMaterial } from '../audio/materiais';
 import type { Aparencia } from '../personagem/aparencia';
 import type { Estacao, TipoClima } from '../jogo/clima';
-import type { FormasPovoado } from '../world/povoado';
+import type { FormasPovoado, Profissao } from '../world/povoado';
 
 export type IdTema =
   | 'bruma-e-luz'
@@ -258,6 +258,29 @@ export interface PaletaMusicalTema {
   gotas?: boolean;
 }
 
+/** Povoados no tema: só nomes, pele, jeito de andar e vozes (a mecânica é a mesma). */
+export interface PovoadoTema {
+  /** Nome do tipo de povoado ("Aldeia das lanternas"). */
+  nome: string;
+  profissoes: Record<Profissao, string>;
+  /** Nomes dos moradores (sorteados por povoado; pelo menos 8). */
+  nomes: readonly string[];
+  /** Pele do morador de cada profissão: pernas e braços com perna0/perna1, cabeça. */
+  moradores: Record<Profissao, PecaCriatura[]>;
+  movimento: MovimentoCriatura;
+  vozes: VozCriatura & { obrigado: PioCriatura };
+  textos: {
+    /** Título da tela de trocas ("Trocas"). */
+    trocas: string;
+    /** Botão de cada troca ("Trocar"). */
+    trocar: string;
+    /** Aviso quando faltam itens. */
+    faltam: string;
+    /** Aviso ao chegar perto de um povoado pela primeira vez. */
+    chegou: string;
+  };
+}
+
 export interface TextosTema {
   /** Nome do bloco por id (todos os blocos com nome). */
   blocos: Record<number, string>;
@@ -330,6 +353,8 @@ export interface Tema {
   };
   materiais: Partial<Record<GrupoMaterial, AjusteMaterial>>;
   natureza: NaturezaTema;
+  /** Povoados (spec 008). Sem esta seção, o tema usa a do Bruma e Luz. */
+  povoado?: PovoadoTema;
   /** Aparência sugerida ao criar o mundo (a personalização continua livre). */
   personagem: Partial<Aparencia>;
 }
