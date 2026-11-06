@@ -98,6 +98,8 @@ test('vitrine do título abre a criação já com o tema mostrado', async ({ pag
   await pronto(page);
   const vitrine = page.locator('[data-vitrine-temas]');
   await expect(vitrine).toBeVisible();
+  // mouse em cima pausa o revezamento: o tema lido é o que vai ser clicado
+  await vitrine.hover();
   const tema = await vitrine.getAttribute('data-tema');
   await vitrine.click();
   await expect(page.locator('[data-painel-mundos]')).toBeVisible();

@@ -1,7 +1,7 @@
 ---
 id: 007-terrario-temas
 title: 'Terrário: novo nome do jogo e temas de mundo (Bruma e Luz e mais 5)'
-status: IN_PROGRESS
+status: DONE
 base_branch: feat/expansao
 branch: feat/terrario
 created_at: 2026-11-06T13:00:00Z
