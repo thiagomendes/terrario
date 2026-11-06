@@ -1,7 +1,7 @@
 ---
 id: 008-povoados
 title: 'Povoados: vilas com moradores, profissões e trocas, na cara de cada tema'
-status: IN_PROGRESS
+status: DONE
 base_branch: feat/terrario
 branch: feat/povoados
 created_at: 2026-11-06T18:00:00Z
