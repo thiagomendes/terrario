@@ -138,6 +138,7 @@ export function criarPersonagem(scene: Scene, aparencia: Aparencia): Personagem 
         parte.posicao[2] - parte.pivo[2],
       );
       malha.material = material;
+      aplicarLuz(material);
       malha.isPickable = false;
       malha.receiveShadows = false;
       malha.renderingGroupId = 0;
@@ -150,6 +151,14 @@ export function criarPersonagem(scene: Scene, aparencia: Aparencia): Personagem 
         mao.position.set(parte.posicao[0] - parte.pivo[0], ponta + 0.08, 0);
       }
     }
+  }
+
+  let luzAtual = 1;
+  function aplicarLuz(m: StandardMaterial): void {
+    const d = 0.78 * luzAtual;
+    const e = 0.36 * luzAtual;
+    m.diffuseColor.set(d, d, d);
+    m.emissiveColor.set(e, e * 0.97, e * 0.95);
   }
 
   /** Ângulos atuais por parte, suavizados para não haver saltos entre poses. */
@@ -228,7 +237,10 @@ export function criarPersonagem(scene: Scene, aparencia: Aparencia): Personagem 
       raiz.rotation.y = yaw;
     },
     definirLuz(f) {
-      for (const p of partes) p.material.diffuseColor.set(f, f, f);
+      // Piso de luz própria (como o mundo, que tem luz por vértice): o sol e o céu
+      // dão volume, mas o lado contra a luz ou o crepúsculo nunca deixam o corpo preto.
+      luzAtual = f;
+      for (const p of partes) aplicarLuz(p.material);
       naMao.definirLuz(f);
     },
     definirNaMao(bloco, item) {

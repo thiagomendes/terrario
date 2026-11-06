@@ -1,3 +1,4 @@
+import { rotuloComIcone, type NomeIcone } from './pixicones';
 export const CSS_FOTO = `
 body.modo-foto .hud, body.modo-foto .barra, body.modo-foto .nome-item, body.modo-foto .status,
 body.modo-foto .painel-construcao, body.modo-foto .toast-area, body.modo-foto .minimapa { display: none !important; }
@@ -50,11 +51,12 @@ export function criarPainelFoto(raiz: HTMLElement, acoes: AcoesFoto) {
   grade.hidden = true;
   const flash = document.createElement('div');
   flash.className = 'flash-foto';
-  const botao = (t: string, f: () => void, classe = 'btn') => {
+  const botao = (t: string, f: () => void, classe = 'btn', ic?: NomeIcone) => {
     const b = document.createElement('button');
     b.type = 'button';
     b.className = classe;
-    b.textContent = t;
+    if (ic) rotuloComIcone(b, ic, t);
+    else b.textContent = t;
     b.addEventListener('click', (e) => {
       e.stopPropagation();
       f();
@@ -83,19 +85,24 @@ export function criarPainelFoto(raiz: HTMLElement, acoes: AcoesFoto) {
     return l;
   };
   let filtro = 0;
-  const bFiltro = botao(`🎨 ${NOMES[FILTROS[0]]}`, () => {
-    filtro = (filtro + 1) % FILTROS.length;
-    bFiltro.textContent = `🎨 ${NOMES[FILTROS[filtro]]}`;
-    acoes.filtro(FILTROS[filtro]);
-  });
+  const bFiltro = botao(
+    NOMES[FILTROS[0]],
+    () => {
+      filtro = (filtro + 1) % FILTROS.length;
+      rotuloComIcone(bFiltro, 'paleta', NOMES[FILTROS[filtro]]);
+      acoes.filtro(FILTROS[filtro]);
+    },
+    'btn',
+    'paleta',
+  );
   painel.append(
     bFiltro,
     faixa('Desfoque', 0, 1, 0.05, 0, acoes.desfoque),
     faixa('Campo de visão', 30, 110, 1, 70, acoes.fov),
     faixa('Hora', 0, 1, 0.005, 0.35, acoes.hora),
-    botao('▦ Grade', () => (grade.hidden = !grade.hidden)),
+    botao('Grade', () => (grade.hidden = !grade.hidden), 'btn', 'grade'),
     botao(
-      '📸 Capturar',
+      'Capturar',
       () => {
         flash.style.transition = 'none';
         flash.style.opacity = '0.85';
@@ -106,8 +113,9 @@ export function criarPainelFoto(raiz: HTMLElement, acoes: AcoesFoto) {
         acoes.capturar();
       },
       'btn primario',
+      'foto',
     ),
-    botao('Sair (P)', acoes.sair),
+    botao('Sair', acoes.sair, 'btn', 'fechar'),
   );
   painel.addEventListener('click', (e) => e.stopPropagation());
   raiz.append(painel, grade, flash);

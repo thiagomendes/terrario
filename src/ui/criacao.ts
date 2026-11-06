@@ -1,3 +1,4 @@
+import { icone, rotuloComIcone } from './pixicones';
 import type { Inventario, Pilha, Slot } from '../jogo/inventario';
 import { obterItem } from '../jogo/itens';
 import {
@@ -75,7 +76,7 @@ export function criarCriacao(
   gradeEl.className = 'grade-criacao';
   const seta = document.createElement('span');
   seta.className = 'seta';
-  seta.textContent = '➜';
+  seta.appendChild(icone('seta'));
   const resultado = ui.criarSlot();
   resultado.classList.add('resultado');
   resultado.dataset.externo = 'resultado';
@@ -84,7 +85,7 @@ export function criarCriacao(
   const botaoLivro = document.createElement('button');
   botaoLivro.type = 'button';
   botaoLivro.className = 'btn';
-  botaoLivro.textContent = '📖 Livro de receitas';
+  rotuloComIcone(botaoLivro, 'livro', 'Livro de receitas');
   botaoLivro.setAttribute('data-livro', '');
   raiz.append(rot, linha, botaoLivro);
 

@@ -21,7 +21,11 @@ export interface ParametroAudio {
 export interface ContextoAudio {
   readonly destination: unknown;
   readonly currentTime: number;
+  /** 'running', 'suspended' ou 'interrupted' (iOS). */
+  readonly state?: string;
   resume(): Promise<void>;
+  createBuffer?(canais: number, tamanho: number, taxa: number): unknown;
+  createBufferSource?(): FonteAudio & { buffer: unknown };
   createGain(): NoAudio & { gain: ParametroAudio };
   createDynamicsCompressor(): NoAudio;
 }
@@ -46,6 +50,8 @@ export interface MotorAudio {
   readonly vozes: number;
   readonly contexto: ContextoAudio | null;
   ativar(): Promise<void>;
+  /** Retoma o contexto suspenso (celular): chamar dentro de um gesto do usuário. */
+  retomar(): void;
   tocar(desenho: Desenho, opcoes?: OpcoesTocar): boolean;
   alternarMudo(): boolean;
   /** Volume de 0 a 1 do mestre ou de um grupo. */
@@ -117,18 +123,40 @@ export function criarMotorAudio(fabrica: FabricaContexto, opcoes: OpcoesMotor = 
     }
   }
 
+  /** Safari só libera o som depois de tocar algo dentro do gesto: um buffer mudo basta. */
+  function destravar(c: ContextoAudio) {
+    try {
+      const b = c.createBuffer?.(1, 1, 22050);
+      const f = c.createBufferSource?.();
+      if (b && f) {
+        f.buffer = b;
+        f.connect(c.destination);
+        f.start(0);
+        f.stop(c.currentTime + 0.02);
+      }
+    } catch {
+      // sem suporte: segue
+    }
+  }
+
   async function iniciar() {
     try {
+      // iOS: som de mídia (não segue a chave de silencioso)
+      const sessao = (globalThis.navigator as { audioSession?: { type: string } } | undefined)
+        ?.audioSession;
+      if (sessao) sessao.type = 'playback';
       ctx = fabrica();
       montarBus(ctx);
-      await ctx.resume();
+      const pronto = ctx.resume();
+      destravar(ctx);
+      await pronto;
       estado = 'ativo';
     } catch {
       estado = 'bloqueado';
     }
   }
 
-  return {
+  const motor: MotorAudio = {
     get estado() {
       return estado;
     },
@@ -140,6 +168,11 @@ export function criarMotorAudio(fabrica: FabricaContexto, opcoes: OpcoesMotor = 
     },
     get contexto() {
       return ctx;
+    },
+    retomar() {
+      if (!ctx) return;
+      if (ctx.state && ctx.state !== 'running') void ctx.resume().catch(() => undefined);
+      destravar(ctx);
     },
     ativar() {
       if (estado !== 'inativo') return ativando ?? Promise.resolve();
@@ -185,4 +218,5 @@ export function criarMotorAudio(fabrica: FabricaContexto, opcoes: OpcoesMotor = 
       if (grupos) grupos[alvo].gain.value = ganhosGrupo[alvo] * x;
     },
   };
+  return motor;
 }

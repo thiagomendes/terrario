@@ -1,3 +1,4 @@
+import { icone, rotuloComIcone, type NomeIcone } from './pixicones';
 import {
   ACESSORIOS,
   CABELOS_LONGOS,
@@ -155,7 +156,7 @@ interface GrupoVisual {
 
 interface Aba {
   id: string;
-  icone: string;
+  icone: NomeIcone;
   titulo: string;
   grupos: GrupoVisual[];
 }
@@ -174,7 +175,7 @@ const ORDEM_PELE = indices(PALETAS.pele.length).sort(
 export const ABAS: Aba[] = [
   {
     id: 'corpo',
-    icone: '🧍',
+    icone: 'pessoa',
     titulo: 'Corpo',
     grupos: [
       {
@@ -215,7 +216,7 @@ export const ABAS: Aba[] = [
   },
   {
     id: 'cabelo',
-    icone: '💇',
+    icone: 'cabelo',
     titulo: 'Cabelo',
     grupos: [
       {
@@ -238,7 +239,7 @@ export const ABAS: Aba[] = [
   },
   {
     id: 'roupa',
-    icone: '👕',
+    icone: 'camisa',
     titulo: 'Roupa',
     grupos: [
       {
@@ -261,7 +262,7 @@ export const ABAS: Aba[] = [
   },
   {
     id: 'calca',
-    icone: '👖',
+    icone: 'calca',
     titulo: 'Calça',
     grupos: [
       {
@@ -276,7 +277,7 @@ export const ABAS: Aba[] = [
   },
   {
     id: 'extra',
-    icone: '🎒',
+    icone: 'mochila',
     titulo: 'Acessórios',
     grupos: [
       {
@@ -355,14 +356,14 @@ export function criarPainelPersonagem(pai: HTMLElement, opcoes: OpcoesPainel) {
   const campoNome = document.createElement('input');
   campoNome.type = 'text';
   campoNome.maxLength = TAMANHO_MAXIMO_NOME;
-  campoNome.placeholder = '✏️ Nome';
+  campoNome.placeholder = 'Nome';
   campoNome.setAttribute('aria-label', 'Nome');
   campoNome.setAttribute('data-campo', 'nome');
   campoNome.value = aparencia.nome;
   const dado = document.createElement('button');
   dado.type = 'button';
   dado.className = 'dado';
-  dado.textContent = '🎲';
+  dado.appendChild(icone('dado'));
   dado.title = 'Sortear visual';
   dado.setAttribute('aria-label', 'Sortear visual');
   dado.setAttribute('data-sortear', '');
@@ -389,7 +390,7 @@ export function criarPainelPersonagem(pai: HTMLElement, opcoes: OpcoesPainel) {
     b.setAttribute('data-aba', aba.id);
     b.setAttribute('aria-label', aba.titulo);
     b.title = aba.titulo;
-    b.textContent = aba.icone;
+    b.appendChild(icone(aba.icone));
     b.addEventListener('click', () => mostrarAba(aba.id));
     botoesAba.push(b);
     abas.appendChild(b);
@@ -456,7 +457,7 @@ export function criarPainelPersonagem(pai: HTMLElement, opcoes: OpcoesPainel) {
   const jogar = document.createElement('button');
   jogar.type = 'button';
   jogar.className = 'jogar';
-  jogar.textContent = '▶ Jogar';
+  rotuloComIcone(jogar, 'jogar', 'Jogar');
   jogar.setAttribute('data-jogar', '');
   jogar.addEventListener('click', (e) => {
     e.stopPropagation();

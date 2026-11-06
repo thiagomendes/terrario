@@ -116,6 +116,18 @@ interface Modelo {
   fase: number;
 }
 
+/** Cores reutilizadas: nada de alocar Color3 por parte a cada quadro. */
+const COR_FERIDA = new Color3(1, 0.15, 0.1);
+const coresBase = new Map<string, Color3>();
+function corBase(hex: string): Color3 {
+  let c = coresBase.get(hex);
+  if (!c) {
+    c = Color3.FromHexString(hex);
+    coresBase.set(hex, c);
+  }
+  return c;
+}
+
 export function criarRenderCriaturas(
   scene: Scene,
   excluirDoGlow: (m: Mesh) => void,
@@ -212,12 +224,17 @@ export function criarRenderCriaturas(
               break;
           }
           p.malha.renderOverlay = c.ferida > 0;
-          p.malha.overlayColor = new Color3(1, 0.15, 0.1);
-          p.malha.overlayAlpha = 0.55;
+          if (p.malha.renderOverlay) {
+            p.malha.overlayColor = COR_FERIDA;
+            p.malha.overlayAlpha = 0.55;
+          }
           p.malha.visibility = c.tipo === 'espectro' ? 1 - morrer : 1;
           // escurece nas cavernas (luz aproximada)
           const mat = p.malha.material as StandardMaterial;
-          if (!p.peca.brilho) mat.diffuseColor = Color3.FromHexString(p.peca.cor).scale(l);
+          if (!p.peca.brilho) {
+            const base = corBase(p.peca.cor);
+            mat.diffuseColor.set(base.r * l, base.g * l, base.b * l);
+          }
         }
       }
       for (const [id, m] of modelos) {

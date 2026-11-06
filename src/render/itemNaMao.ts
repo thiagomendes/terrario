@@ -164,8 +164,11 @@ export function criarItemNaMao(scene: Scene, mao: TransformNode, o: OpcoesItemNa
     },
     definirLuz(f) {
       if (o.iluminado) {
-        matBloco.diffuseColor.set(f, f, f);
-        matItem.diffuseColor.set(f, f, f);
+        // mesmo piso de luz do corpo que o segura
+        for (const m of [matBloco, matItem]) {
+          m.diffuseColor.set(0.78 * f, 0.78 * f, 0.78 * f);
+          m.emissiveColor.set(0.36 * f, 0.35 * f, 0.34 * f);
+        }
       } else {
         const v = Math.max(0.08, Math.min(1.1, f));
         for (const m of [matBloco, matItem]) m.emissiveColor.set(v, v * 0.97, v * 0.95);

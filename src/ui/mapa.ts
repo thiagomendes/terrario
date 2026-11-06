@@ -1,3 +1,4 @@
+import { botaoFechar, icone } from './pixicones';
 import { CORES_MARCADOR, anguloRelativo, type Marcador } from '../jogo/mapa';
 import { TAM_X } from '../world/chunk';
 
@@ -38,7 +39,8 @@ body:has(.entrada:not([hidden])) .minimapa, body:has(.entrada:not([hidden])) .bu
 export interface FonteMapa {
   posicao(): { x: number; z: number; yaw: number };
   /** Cores 16x16 (RGBA) de um chunk. */
-  amostrar(cx: number, cz: number): Uint8ClampedArray;
+  /** null: chunk ainda não carregado (tenta de novo mais tarde). */
+  amostrar(cx: number, cz: number): Uint8ClampedArray | null;
   marcadores(): Marcador[];
   adicionarMarcador(nome: string): void;
   removerMarcador(id: number): void;
@@ -50,26 +52,31 @@ export function criarMapas(raiz: HTMLElement, fonte: FonteMapa) {
   function imagem(cx: number, cz: number): HTMLCanvasElement | undefined {
     return cache.get(`${cx},${cz}`);
   }
+  const naFila = new Set<string>();
   function pedir(cx: number, cz: number, forcar = false): void {
     const k = `${cx},${cz}`;
-    if ((!forcar && cache.has(k)) || fila.includes(k)) return;
+    if ((!forcar && cache.has(k)) || naFila.has(k)) return;
+    naFila.add(k);
     fila.push(k);
   }
-  function processar(n: number): void {
+  /** Gera a imagem de até n chunks da fila; devolve se algo mudou. */
+  function processar(n: number): boolean {
+    let mudou = false;
     for (let i = 0; i < n && fila.length; i++) {
       const k = fila.shift()!;
+      naFila.delete(k);
       const [cx, cz] = k.split(',').map(Number);
+      const cores = fonte.amostrar(cx, cz);
+      if (!cores) continue; // ainda não carregado: o minimapa pede de novo depois
       const c = cache.get(k) ?? document.createElement('canvas');
       c.width = TAM_X;
       c.height = TAM_X;
       const ctx = c.getContext('2d')!;
-      ctx.putImageData(
-        new ImageData(new Uint8ClampedArray(fonte.amostrar(cx, cz)), TAM_X, TAM_X),
-        0,
-        0,
-      );
+      ctx.putImageData(new ImageData(new Uint8ClampedArray(cores), TAM_X, TAM_X), 0, 0);
       cache.set(k, c);
+      mudou = true;
     }
+    return mudou;
   }
 
   // minimapa
@@ -94,7 +101,7 @@ export function criarMapas(raiz: HTMLElement, fonte: FonteMapa) {
   grande.setAttribute('data-mapa-mundo', '');
   const cab = document.createElement('header');
   const h = document.createElement('h2');
-  h.textContent = '🗺 Mapa do mundo';
+  h.append(icone('mapa'), ' Mapa do mundo');
   const dica = document.createElement('span');
   dica.className = 'dica';
   dica.textContent = 'Arraste para mover · roda para zoom · K marca um lugar · Tab fecha';
@@ -102,16 +109,25 @@ export function criarMapas(raiz: HTMLElement, fonte: FonteMapa) {
   lista.className = 'lista-marcadores';
   cab.append(h, dica, lista);
   const cvG = document.createElement('canvas');
-  grande.append(cab, cvG);
+  grande.append(
+    cab,
+    cvG,
+    botaoFechar(() => fecharGrande?.()),
+  );
   grande.addEventListener('click', (e) => e.stopPropagation());
   raiz.append(mini, bussola, grande);
 
+  let fecharGrande: (() => void) | null = null;
   let centro = { x: 0, z: 0 };
   let zoom = 3;
   let arrastando: { x: number; y: number } | null = null;
-  cvG.addEventListener('mousedown', (e) => (arrastando = { x: e.clientX, y: e.clientY }));
-  window.addEventListener('mouseup', () => (arrastando = null));
-  cvG.addEventListener('mousemove', (e) => {
+  cvG.style.touchAction = 'none';
+  cvG.addEventListener('pointerdown', (e) => {
+    arrastando = { x: e.clientX, y: e.clientY };
+    cvG.setPointerCapture(e.pointerId);
+  });
+  window.addEventListener('pointerup', () => (arrastando = null));
+  cvG.addEventListener('pointermove', (e) => {
     if (!arrastando) return;
     centro.x -= (e.clientX - arrastando.x) / zoom;
     centro.z -= (e.clientY - arrastando.y) / zoom;
@@ -193,6 +209,8 @@ export function criarMapas(raiz: HTMLElement, fonte: FonteMapa) {
     desenharJogador(ctx, meia, meia, Math.PI - yaw);
   }
 
+  const rotulosBussola: HTMLSpanElement[] = [];
+  const marcasBussola: HTMLSpanElement[] = [];
   function desenharBussola(): void {
     const { x, z, yaw } = fonte.posicao();
     const w = bussola.clientWidth || 360;
@@ -206,37 +224,52 @@ export function criarMapas(raiz: HTMLElement, fonte: FonteMapa) {
       ['O', -Math.PI / 2],
       ['NO', (-3 * Math.PI) / 4],
     ];
-    bussola.replaceChildren();
+    // os rótulos são criados uma vez; a cada atualização só mudam de posição
+    if (!rotulosBussola.length) {
+      for (const [rot] of pontos) {
+        const s = document.createElement('span');
+        s.textContent = rot;
+        s.style.left = '0';
+        if (rot.length === 1) s.style.color = rot === 'N' ? '#ff8a7a' : '#ffd98f';
+        bussola.appendChild(s);
+        rotulosBussola.push(s);
+      }
+    }
     const posicionar = (ang: number) => {
       const rel = Math.atan2(Math.sin(ang - yaw), Math.cos(ang - yaw));
       if (Math.abs(rel) > Math.PI / 2) return null;
       return w / 2 + (rel / (Math.PI / 2)) * (w / 2);
     };
-    for (const [rot, ang] of pontos) {
+    pontos.forEach(([, ang], i) => {
       const px = posicionar(ang);
-      if (px === null) continue;
-      const s = document.createElement('span');
-      s.textContent = rot;
-      s.style.left = `${px}px`;
-      if (rot.length === 1) s.style.color = rot === 'N' ? '#ff8a7a' : '#ffd98f';
-      bussola.appendChild(s);
-    }
-    for (const m of fonte.marcadores()) {
-      const rel = anguloRelativo(x, z, yaw, m.x, m.z);
-      if (Math.abs(rel) > Math.PI / 2) continue;
+      const s = rotulosBussola[i];
+      s.hidden = px === null;
+      if (px !== null) s.style.transform = `translateX(${px}px) translateX(-50%)`;
+    });
+    const marcadores = fonte.marcadores();
+    while (marcasBussola.length < marcadores.length) {
       const s = document.createElement('span');
       s.className = 'marcador';
+      bussola.appendChild(s);
+      marcasBussola.push(s);
+    }
+    marcasBussola.forEach((s, i) => {
+      const m = marcadores[i];
+      const rel = m ? anguloRelativo(x, z, yaw, m.x, m.z) : 9;
+      s.hidden = Math.abs(rel) > Math.PI / 2;
+      if (!m || s.hidden) return;
       s.style.left = `${w / 2 + (rel / (Math.PI / 2)) * (w / 2)}px`;
       s.style.background = m.cor;
       s.title = m.nome;
-      bussola.appendChild(s);
-    }
+    });
   }
 
   function desenharGrande(): void {
     const r = cvG.getBoundingClientRect();
-    cvG.width = Math.max(1, Math.floor(r.width));
-    cvG.height = Math.max(1, Math.floor(r.height));
+    const lw = Math.max(1, Math.floor(r.width));
+    const lh = Math.max(1, Math.floor(r.height));
+    if (cvG.width !== lw) cvG.width = lw;
+    if (cvG.height !== lh) cvG.height = lh;
     const ctx = cvG.getContext('2d')!;
     ctx.imageSmoothingEnabled = false;
     ctx.fillStyle = '#080a12';
@@ -263,7 +296,8 @@ export function criarMapas(raiz: HTMLElement, fonte: FonteMapa) {
       const b = document.createElement('button');
       b.type = 'button';
       b.className = 'btn';
-      b.textContent = `◆ ${m.nome} ✕`;
+      b.append(icone('marcador'), ` ${m.nome} `, icone('fechar'));
+      b.style.color = '#ece6da';
       b.style.borderColor = m.cor;
       b.title = 'Remover marcador';
       b.addEventListener('click', () => {
@@ -274,28 +308,50 @@ export function criarMapas(raiz: HTMLElement, fonte: FonteMapa) {
     }
   }
 
-  let contador = 0;
-  function quadro(): void {
-    contador++;
-    processar(grande.hidden ? 2 : 6);
-    if (!document.body.classList.contains('modo-foto')) {
-      desenharMini();
-      if (contador % 3 === 0) desenharBussola();
-    }
-    if (!grande.hidden) desenharGrande();
-    // reamostra o chunk do jogador de tempos em tempos (edições)
-    if (contador % 120 === 0) {
-      const { x, z } = fonte.posicao();
-      pedir(Math.floor(x / TAM_X), Math.floor(z / TAM_X), true);
-    }
+  // Atualização a ~12 Hz e só quando algo mudou (posição, direção, chunks novos ou
+  // mapa grande sendo arrastado): o minimapa não disputa o quadro com o jogo.
+  let ultimaVez = 0;
+  let ultimaReamostra = 0;
+  let ultimo = { x: NaN, z: NaN, yaw: NaN };
+  let grandeSujo = true;
+  cvG.addEventListener('pointermove', () => (grandeSujo = true));
+  cvG.addEventListener('wheel', () => (grandeSujo = true));
+  function quadro(agora: number): void {
     requestAnimationFrame(quadro);
+    if (agora - ultimaVez < 80) return;
+    ultimaVez = agora;
+    const chegaram = processar(grande.hidden ? 1 : 4);
+    const p = fonte.posicao();
+    const andou =
+      Math.abs(p.x - ultimo.x) > 0.25 ||
+      Math.abs(p.z - ultimo.z) > 0.25 ||
+      Math.abs(p.yaw - ultimo.yaw) > 0.01;
+    const foto = document.body.classList.contains('modo-foto');
+    if (!foto && (andou || chegaram)) {
+      desenharMini();
+      desenharBussola();
+      ultimo = { x: p.x, z: p.z, yaw: p.yaw };
+    }
+    if (!grande.hidden && (grandeSujo || chegaram || andou)) {
+      desenharGrande();
+      grandeSujo = false;
+    }
+    // reamostra o chunk do jogador de tempos em tempos (edições)
+    if (agora - ultimaReamostra > 2000) {
+      ultimaReamostra = agora;
+      pedir(Math.floor(p.x / TAM_X), Math.floor(p.z / TAM_X), true);
+    }
   }
   requestAnimationFrame(quadro);
 
-  return {
+  fecharGrande = () => {
+    if (!grande.hidden) api.alternarGrande();
+  };
+  const api = {
     alternarGrande(): boolean {
       grande.hidden = !grande.hidden;
       if (!grande.hidden) {
+        grandeSujo = true;
         const p = fonte.posicao();
         centro = { x: p.x, z: p.z };
         atualizarLista();
@@ -311,6 +367,7 @@ export function criarMapas(raiz: HTMLElement, fonte: FonteMapa) {
       pedir(cx, cz);
     },
   };
+  return api;
 }
 
 export { CORES_MARCADOR };

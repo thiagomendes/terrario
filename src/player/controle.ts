@@ -26,6 +26,24 @@ export function criarMundoSolido(
   edicoes?: Edicoes,
 ): Solido {
   const cache = new Map<string, { versao: number; blocos: Uint8Array }>();
+  /**
+   * Blocos do chunk com as edições. A base vem pronta (provedor/worker); editar um
+   * bloco só copia a base e reaplica as edições, sem regerar o terreno.
+   */
+  function carregar(k: string, cx: number, cz: number, versao: number) {
+    const base = gerar(cx, cz, semente);
+    const lista = edicoes ? edicoes.doChunk(cx, cz) : [];
+    let blocos = base;
+    if (lista.length) {
+      blocos = base.slice();
+      for (const [i, v] of lista) blocos[i] = v & 255;
+    }
+    const entrada = { versao, blocos };
+    cache.delete(k);
+    cache.set(k, entrada);
+    if (cache.size > 300) cache.delete(cache.keys().next().value as string);
+    return entrada;
+  }
   function bloco(x: number, y: number, z: number): number {
     if (y < 0 || y >= ALTURA) return 0;
     const cx = Math.floor(x / TAM_X);
@@ -33,12 +51,7 @@ export function criarMundoSolido(
     const k = `${cx},${cz}`;
     const versao = edicoes ? edicoes.versaoDoChunk(cx, cz) : 0;
     let entrada = cache.get(k);
-    if (!entrada || entrada.versao !== versao) {
-      const blocos = gerar(cx, cz, semente);
-      if (edicoes) for (const [i, v] of edicoes.doChunk(cx, cz)) blocos[i] = v & 255;
-      entrada = { versao, blocos };
-      cache.set(k, entrada);
-    }
+    if (!entrada || entrada.versao !== versao) entrada = carregar(k, cx, cz, versao);
     return entrada.blocos[indice(x - cx * TAM_X, y, z - cz * TAM_Z)];
   }
   const ler = (x: number, y: number, z: number): boolean => {
@@ -49,12 +62,7 @@ export function criarMundoSolido(
     const k = `${cx},${cz}`;
     const versao = edicoes ? edicoes.versaoDoChunk(cx, cz) : 0;
     let entrada = cache.get(k);
-    if (!entrada || entrada.versao !== versao) {
-      const blocos = gerar(cx, cz, semente);
-      if (edicoes) for (const [i, v] of edicoes.doChunk(cx, cz)) blocos[i] = v & 255;
-      entrada = { versao, blocos };
-      cache.set(k, entrada);
-    }
+    if (!entrada || entrada.versao !== versao) entrada = carregar(k, cx, cz, versao);
     const c = entrada.blocos;
     const b = c[indice(x - cx * TAM_X, y, z - cz * TAM_Z)];
     return obterBloco(b)?.solido ?? false;
@@ -79,8 +87,9 @@ export function criarControle(
   camera: AlvoCamera,
   semente = SEMENTE_PADRAO,
   edicoes?: Edicoes,
+  gerar: (cx: number, cz: number, semente: number) => Uint8Array = gerarChunk,
 ) {
-  const solido = criarMundoSolido(semente, gerarChunk, edicoes);
+  const solido = criarMundoSolido(semente, gerar, edicoes);
   const nasc = encontrarNascimento(semente);
   const jogador = posicaoInicial(nasc.x, nasc.z, (x, z) => alturaTerreno(x, z, semente));
   const teclas: TeclasAtivas = {};
@@ -96,18 +105,25 @@ export function criarControle(
     if ((e.target as HTMLElement | null)?.closest?.('input, textarea')) return;
     const a = acaoDaTecla(e.code);
     if (a) teclas[a] = true;
-    // dois toques no espaço alternam o voo (só no criativo)
-    if (e.code === 'Space' && !e.repeat && podeVoar) {
-      const agora = performance.now();
-      if (agora - ultimoEspaco < 300) {
-        jogador.voando = !jogador.voando;
-        jogador.vy = 0;
-        ultimoEspaco = -1;
-      } else {
-        ultimoEspaco = agora;
-      }
-    }
+    if (e.code === 'Space' && !e.repeat) toquePulo();
   });
+  /** Dois toques no pulo alternam o voo (só no criativo). */
+  function toquePulo(): void {
+    if (!podeVoar) return;
+    const agora = performance.now();
+    if (agora - ultimoEspaco < 300) {
+      jogador.voando = !jogador.voando;
+      jogador.vy = 0;
+      ultimoEspaco = -1;
+    } else {
+      ultimoEspaco = agora;
+    }
+  }
+  /** Pulo por botão (toque e controle): mesma regra do espaço. */
+  function pular(ativo: boolean): void {
+    if (ativo && !teclas.pular) toquePulo();
+    teclas.pular = ativo;
+  }
   window.addEventListener('keyup', (e) => {
     const a = acaoDaTecla(e.code);
     if (a) teclas[a] = false;
@@ -182,6 +198,7 @@ export function criarControle(
     definirMouse,
     definirVoo,
     girar,
+    pular,
     teclas,
     get resultado() {
       return ultimoResultado;

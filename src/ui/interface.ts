@@ -7,6 +7,7 @@ import { MODELOS, type Aparencia } from '../personagem/aparencia';
 import type { Armazenamento } from '../personagem/persistencia';
 import { CSS_PAINEL, criarPainelPersonagem, teclaParaPainel } from './personagem';
 import { CSS_MODAL, criarPainelMundos } from './mundos';
+import { CSS_PIXICONES, icone, type NomeIcone } from './pixicones';
 import { CSS_TITULO, desenharLogo, desenharPrevia } from './titulo';
 import { texturaDoBloco } from './icones';
 import { Bloco } from '../world/blocks';
@@ -104,7 +105,7 @@ const TECLAS: ReadonlyArray<readonly [string, string]> = [
 ];
 
 /** Mostra uma notificação curta no topo da tela. */
-export function notificar(texto: string): void {
+export function notificar(texto: string, nomeIcone?: NomeIcone): void {
   let area = document.querySelector<HTMLElement>('.toast-area');
   if (!area) {
     area = document.createElement('div');
@@ -113,8 +114,9 @@ export function notificar(texto: string): void {
     document.body.appendChild(area);
   }
   const t = document.createElement('div');
-  t.className = texto.startsWith('🏆') ? 'toast conquista' : 'toast';
-  t.textContent = texto;
+  t.className = nomeIcone === 'trofeu' ? 'toast conquista' : 'toast';
+  if (nomeIcone) t.append(icone(nomeIcone), ' ');
+  t.append(texto);
   area.appendChild(t);
   setTimeout(() => t.remove(), 2700);
   while (area.children.length > 4) area.firstElementChild?.remove();
@@ -134,7 +136,7 @@ export function criarInterface(
   opMundo: OpcoesInterface = {},
 ): { entrada: HTMLElement; acoes: HTMLElement } {
   const estilo = document.createElement('style');
-  estilo.textContent = CSS;
+  estilo.textContent = CSS + CSS_PIXICONES;
   document.head.appendChild(estilo);
 
   const hud = document.createElement('div');
@@ -190,7 +192,7 @@ export function criarInterface(
   sub.className = 'lema';
   sub.textContent = 'Explore, construa e sobreviva num mundo de bruma e luz';
   const pedra = `url(${texturaDoBloco(Bloco.PEDRA_LISA)})`;
-  const botaoJogo = (rotulo: string, icone: string, attr: string, classe = '') => {
+  const botaoJogo = (rotulo: string, nomeIcone: NomeIcone, attr: string, classe = '') => {
     const b = document.createElement('button');
     b.type = 'button';
     b.className = `botao-jogo ${classe}`.trim();
@@ -198,15 +200,13 @@ export function criarInterface(
     b.setAttribute(attr, '');
     const linha = document.createElement('span');
     linha.className = 'linha';
-    const ic = document.createElement('span');
-    ic.className = 'icone';
-    ic.setAttribute('aria-hidden', 'true');
-    ic.textContent = icone;
+    const ic = icone(nomeIcone);
+    ic.classList.add('icone');
     linha.append(ic, rotulo);
     b.appendChild(linha);
     return b;
   };
-  const jogar = botaoJogo('Jogar', '▶', 'data-jogar-titulo', 'primario');
+  const jogar = botaoJogo('Jogar', 'jogar', 'data-jogar-titulo', 'primario');
   const subJogar = document.createElement('span');
   subJogar.className = 'sub';
   subJogar.setAttribute('data-mundo-atual', '');
@@ -236,7 +236,7 @@ export function criarInterface(
       atual: opMundo.mundo ?? null,
       abrir: (id) => opMundo.abrirMundo?.(id),
     });
-    const bMundos = botaoJogo('Mundos', '🌍', 'data-abrir-mundos');
+    const bMundos = botaoJogo('Mundos', 'globo', 'data-abrir-mundos');
     abrirMundos = () => void painelMundos.abrir();
     bMundos.addEventListener('click', abrirMundos);
     dupla.appendChild(bMundos);
@@ -244,11 +244,11 @@ export function criarInterface(
       if (opMundo.mundo) atualizarCartao(await opMundo.repo!.obter(opMundo.mundo.id));
     });
   }
-  const bPersonagem = botaoJogo('Personagem', '🧍', 'data-abrir-personagem');
+  const bPersonagem = botaoJogo('Personagem', 'pessoa', 'data-abrir-personagem');
   dupla.appendChild(bPersonagem);
   const painelConfig = opMundo.config ? criarPainelConfig(app, opMundo.config) : null;
   if (painelConfig) {
-    const bConfig = botaoJogo('Configurações', '⚙', 'data-abrir-config');
+    const bConfig = botaoJogo('Configurações', 'engrenagem', 'data-abrir-config');
     bConfig.addEventListener('click', () => painelConfig.abrir());
     menuBotoes.appendChild(bConfig);
   }
@@ -274,7 +274,7 @@ export function criarInterface(
   telaPersonagem.hidden = true;
   const palco = document.createElement('div');
   palco.className = 'palco-personagem';
-  const voltar = botaoJogo('Voltar', '←', 'data-voltar-titulo', 'voltar-titulo');
+  const voltar = botaoJogo('Voltar', 'voltar', 'data-voltar-titulo', 'voltar-titulo');
   const pedestal = document.createElement('div');
   pedestal.className = 'pedestal';
   const previa = document.createElement('canvas');
@@ -374,7 +374,7 @@ export function criarInterface(
     mundos: () => abrirMundos?.(),
     salvar: async () => {
       const ok = await opMundo.salvar?.();
-      notificar(ok ? 'Mundo salvo ✓' : 'Não foi possível salvar agora');
+      notificar(ok ? 'Mundo salvo' : 'Não foi possível salvar agora', ok ? 'ok' : undefined);
     },
     telaInicial: () => {
       pausa.fechar();
@@ -422,7 +422,8 @@ export function criarInterface(
     painelConstrucao.hidden = !d.ferramenta && !d.espelho;
     painelConstrucao.replaceChildren();
     painelConstrucao.append(
-      `🔨 ${d.ferramenta ?? 'Construção livre'}${d.espelho ? ' · espelho' : ''}`,
+      icone('martelo'),
+      ` ${d.ferramenta ?? 'Construção livre'}${d.espelho ? ' · espelho' : ''}`,
     );
     const s = document.createElement('small');
     s.textContent = d.ferramenta ? `${d.detalhe} · B troca · Ctrl+Z desfaz` : 'N desliga o espelho';

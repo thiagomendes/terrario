@@ -148,14 +148,32 @@ export const UNIFORMES_CEU = [
   'arcoIris',
 ];
 
-/** Passa o estado da atmosfera aos uniformes de céu de um ShaderMaterial. */
+/** Cores e vetores reaproveitados por material (o uniforme guarda a referência). */
+const temporarios = new WeakMap<
+  ShaderMaterial,
+  { z: Color3; m: Color3; h: Color3; sol: Vector3; lua: Vector3; luz: Color3 }
+>();
+
+/** Passa o estado da atmosfera aos uniformes de céu de um ShaderMaterial (sem alocar por quadro). */
 export function aplicarUniformesCeu(mat: ShaderMaterial, a: EstadoAtmosfera): void {
-  mat.setColor3('ceuZenite', new Color3(...a.ceuZenite));
-  mat.setColor3('ceuMeio', new Color3(...a.ceuMeio));
-  mat.setColor3('ceuHorizonte', new Color3(...a.ceuHorizonte));
-  mat.setVector3('paraSol', new Vector3(...a.paraSol));
-  mat.setVector3('paraLua', new Vector3(...a.paraLua));
-  mat.setColor3('corSol', new Color3(...a.luz));
+  let t = temporarios.get(mat);
+  if (!t) {
+    t = {
+      z: new Color3(),
+      m: new Color3(),
+      h: new Color3(),
+      sol: new Vector3(),
+      lua: new Vector3(),
+      luz: new Color3(),
+    };
+    temporarios.set(mat, t);
+  }
+  mat.setColor3('ceuZenite', t.z.set(...a.ceuZenite));
+  mat.setColor3('ceuMeio', t.m.set(...a.ceuMeio));
+  mat.setColor3('ceuHorizonte', t.h.set(...a.ceuHorizonte));
+  mat.setVector3('paraSol', t.sol.set(...a.paraSol));
+  mat.setVector3('paraLua', t.lua.set(...a.paraLua));
+  mat.setColor3('corSol', t.luz.set(...a.luz));
   mat.setFloat('noite', a.noite);
   mat.setFloat('crepusculo', a.crepusculo);
   mat.setFloat('cobertura', a.cobertura);

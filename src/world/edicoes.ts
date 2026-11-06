@@ -14,6 +14,8 @@ export interface Edicoes {
   /** Metadado da posição (0 se não houver). */
   obterMeta(x: number, y: number, z: number): number;
   versaoDoChunk(cx: number, cz: number): number;
+  /** Sobe a cada edição em qualquer chunk (invalida caches de leitura). */
+  readonly versaoGeral: number;
   doChunk(cx: number, cz: number): Array<[number, number]>;
   exportar(): EdicoesExportadas;
   importar(dados: EdicoesExportadas): void;
@@ -41,6 +43,7 @@ export function criarEdicoes(): Edicoes {
     );
   }
 
+  let geral = 0;
   return {
     definir(x, y, z, bloco, meta = 0) {
       if (!valido(x, y, z)) return false;
@@ -53,6 +56,7 @@ export function criarEdicoes(): Edicoes {
       }
       mapa.set(p.i, empacotar(bloco, meta));
       versoes.set(p.chave, (versoes.get(p.chave) ?? 0) + 1);
+      geral++;
       return true;
     },
     obter(x, y, z) {
@@ -65,6 +69,9 @@ export function criarEdicoes(): Edicoes {
       if (!valido(x, y, z)) return 0;
       const p = localizar(x, y, z);
       return metaDe(chunks.get(p.chave)?.get(p.i) ?? 0);
+    },
+    get versaoGeral() {
+      return geral;
     },
     versaoDoChunk(cx, cz) {
       return versoes.get(chave(cx, cz)) ?? 0;
@@ -84,6 +91,7 @@ export function criarEdicoes(): Edicoes {
         chunks.set(k, new Map(dados[k]));
         versoes.set(k, (versoes.get(k) ?? 0) + 1);
       }
+      geral++;
     },
   };
 }

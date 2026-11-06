@@ -36,6 +36,8 @@ export interface PedidoChunk {
   versao: number;
   /** Edições do chunk e dos 4 vizinhos, por chave "cx,cz". */
   edicoes: EdicoesExportadas;
+  /** Blocos-base já conhecidos (chave "cx,cz"): evita regerar terreno no worker. */
+  bases?: Record<string, Uint8Array>;
 }
 
 export interface RespostaChunk {
@@ -45,6 +47,8 @@ export interface RespostaChunk {
   solido: Buffers;
   plantas: Buffers;
   agua: Buffers;
+  /** Blocos-base do chunk (sem edições), para a thread principal não regerar. */
+  base: Uint8Array;
 }
 
 function buffersTransferiveis(b: Buffers): ArrayBuffer[] {
@@ -59,7 +63,17 @@ function buffersTransferiveis(b: Buffers): ArrayBuffer[] {
 }
 
 self.onmessage = (ev: MessageEvent<PedidoChunk>) => {
-  const { cx, cz, semente, versao, edicoes: dados } = ev.data;
+  const { cx, cz, semente, versao, edicoes: dados, bases } = ev.data;
+  if (bases) {
+    for (const [k, b] of Object.entries(bases)) {
+      const [bx, bz] = k.split(',').map(Number);
+      const ck = `${bx},${bz},${semente}`;
+      if (!cache.has(ck)) {
+        cache.set(ck, b);
+        if (cache.size > LIMITE_CACHE) cache.delete(cache.keys().next().value as string);
+      }
+    }
+  }
   const edicoes = criarEdicoes();
   edicoes.importar(dados ?? {});
   const blocos = gerarChunkEditado(cx, cz, semente, edicoes);
@@ -80,10 +94,12 @@ self.onmessage = (ev: MessageEvent<PedidoChunk>) => {
     solido: malha.solido,
     plantas: malha.plantas,
     agua: malha.agua,
+    base: base(cx, cz, semente).slice(),
   };
   (self as unknown as Worker).postMessage(resposta, [
     ...buffersTransferiveis(malha.solido),
     ...buffersTransferiveis(malha.plantas),
     ...buffersTransferiveis(malha.agua),
+    resposta.base.buffer as ArrayBuffer,
   ]);
 };

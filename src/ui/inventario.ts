@@ -1,3 +1,4 @@
+import { botaoFechar } from './pixicones';
 import { TAMANHO_BARRA, TAMANHO_INVENTARIO, type Inventario, type Slot } from '../jogo/inventario';
 import { obterItem, todosItens, type DefItem } from '../jogo/itens';
 import { iconeDoItem } from './icones';
@@ -132,7 +133,16 @@ export function criarInventarioUI(raiz: HTMLElement, op: OpcoesInventarioUI): In
     'Clique: pegar e soltar · Botão direito: metade ou um · Shift+clique: mover rápido · E ou Esc: fechar';
   const sep = document.createElement('div');
   sep.className = 'separador';
-  painel.append(titulo, topo, mochilaRot, mochila, sep, barra, ajuda);
+  painel.append(
+    titulo,
+    topo,
+    mochilaRot,
+    mochila,
+    sep,
+    barra,
+    ajuda,
+    botaoFechar(() => fechar()),
+  );
 
   const cursorEl = document.createElement('div');
   cursorEl.className = 'cursor-item';

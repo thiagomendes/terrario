@@ -1,5 +1,19 @@
 import { MISSOES, type Diario } from '../jogo/diario';
 import { criarModal } from './mundos';
+import { iconeDoItem } from './icones';
+import { icone, type NomeIcone, PIXICONES } from './pixicones';
+
+/** Ícone da missão: item do jogo ou pixícone. */
+function iconeMissao(nome: string): HTMLElement {
+  if (nome.startsWith('item:')) {
+    const img = document.createElement('img');
+    img.src = iconeDoItem(nome.slice(5));
+    img.alt = '';
+    img.className = 'icone-item';
+    return img;
+  }
+  return icone((nome in PIXICONES ? nome : 'ok') as NomeIcone);
+}
 
 export const CSS_DIARIO = `
 .missao-hud {
@@ -13,7 +27,9 @@ export const CSS_DIARIO = `
 .diario .capitulo { margin: 14px 0 6px; font-size: 0.74rem; text-transform: uppercase; letter-spacing: 0.1em; color: #a59f93; }
 .diario .missao { display: grid; grid-template-columns: 36px 1fr auto; gap: 10px; align-items: center; padding: 8px 10px; border-radius: 10px; background: rgba(255,255,255,0.03); margin-bottom: 4px; }
 .diario .missao.feita { background: rgba(255, 217, 143, 0.08); }
-.diario .missao .icone { font-size: 1.4rem; text-align: center; filter: grayscale(0.6); }
+.diario .missao .icone { font-size: 1.4rem; display: grid; place-items: center; filter: grayscale(0.6); }
+.diario .icone-item, .missao-hud .icone-item { width: 28px; height: 28px; image-rendering: pixelated; vertical-align: middle; }
+.missao-hud .icone-item { width: 18px; height: 18px; }
 .diario .missao.feita .icone { filter: none; }
 .diario .missao .nome { font-weight: 700; }
 .diario .missao small { color: #a59f93; }
@@ -36,7 +52,7 @@ export function criarUiDiario(raiz: HTMLElement, hud: HTMLElement, d: Diario) {
     cartao.hidden = !m;
     if (!m) return;
     cartao.replaceChildren();
-    cartao.append(`${m.icone} ${m.titulo}`);
+    cartao.append(iconeMissao(m.icone), ` ${m.titulo}`);
     const s = document.createElement('small');
     s.textContent = m.descricao;
     const b = document.createElement('div');
@@ -67,7 +83,7 @@ export function criarUiDiario(raiz: HTMLElement, hud: HTMLElement, d: Diario) {
       el.className = `missao${feita ? ' feita' : ''}`;
       const ic = document.createElement('div');
       ic.className = 'icone';
-      ic.textContent = m.icone;
+      ic.appendChild(iconeMissao(m.icone));
       const t = document.createElement('div');
       const n = document.createElement('div');
       n.className = 'nome';
@@ -77,7 +93,8 @@ export function criarUiDiario(raiz: HTMLElement, hud: HTMLElement, d: Diario) {
       t.append(n, s);
       const e = document.createElement('div');
       e.className = 'estado';
-      e.textContent = feita ? '✓' : `${Math.round(d.progresso(m) * 100)}%`;
+      if (feita) e.appendChild(icone('ok'));
+      else e.textContent = `${Math.round(d.progresso(m) * 100)}%`;
       el.append(ic, t, e);
       corpo.appendChild(el);
     }

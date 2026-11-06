@@ -15,7 +15,13 @@ import { notificar } from './ui/interface';
 import { CSS_FOTO, criarPainelFoto } from './ui/foto';
 import { CSS_MAPA, criarMapas } from './ui/mapa';
 import { CSS_DIARIO, criarUiDiario } from './ui/diario';
-import { CSS_TOQUE, criarLegendas, criarToque, ligarGamepad } from './ui/toque';
+import {
+  CSS_TOQUE,
+  criarLegendas,
+  criarToque,
+  ligarGamepad,
+  bloquearZoomDoNavegador,
+} from './ui/toque';
 import { criarDiario } from './jogo/diario';
 import { CORES_MARCADOR, type Marcador } from './jogo/mapa';
 
@@ -288,7 +294,7 @@ function ligarFoto(app: HTMLElement, cena: ReturnType<typeof criarCena>): void {
     },
     capturar: () => {
       foto.capturar();
-      notificar('Foto salva 📸');
+      notificar('Foto salva', 'foto');
       window.dispatchEvent(new CustomEvent('brumaluz:foto'));
     },
     sair: () => alternar(),
@@ -305,7 +311,7 @@ function ligarFoto(app: HTMLElement, cena: ReturnType<typeof criarCena>): void {
     if (e.code === 'KeyP') alternar();
     else if (foto.ativo() && e.code === 'Enter') {
       foto.capturar();
-      notificar('Foto salva 📸');
+      notificar('Foto salva', 'foto');
     }
   });
 }
@@ -386,7 +392,7 @@ function ligarDiario(app: HTMLElement, cena: ReturnType<typeof criarCena>): void
   const ui = criarUiDiario(app, hud, diario);
   const reg = (chave: string, qtd = 1) => {
     for (const m of diario.registrar(chave, qtd)) {
-      notificar(`🏆 Conquista: ${m.titulo}`);
+      notificar(`Conquista: ${m.titulo}`, 'trofeu');
     }
     ui.renderHud();
   };
@@ -448,6 +454,7 @@ function ligarControles(
     else window.dispatchEvent(new KeyboardEvent('keydown', { code }));
   };
   const c = { ...d, teclaDom };
+  bloquearZoomDoNavegador();
   const toque = criarToque(app, c);
   const ehToque = window.matchMedia?.('(pointer: coarse)').matches ?? false;
   let usouToque = false;
@@ -469,7 +476,7 @@ function ligarControles(
     else hotbar.anterior();
     window.dispatchEvent(new CustomEvent('brumaluz:slot'));
   });
-  window.addEventListener('gamepadconnected', () => notificar('🎮 Controle conectado'));
+  window.addEventListener('gamepadconnected', () => notificar('Controle conectado', 'controle'));
   const legendas = criarLegendas(app);
   config.ouvir((cfg) => legendas.definir(cfg.legendas));
   window.addEventListener('brumaluz:legenda', (e) =>

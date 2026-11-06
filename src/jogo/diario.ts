@@ -7,6 +7,7 @@ export interface Missao {
   /** Contador observado e meta. */
   contador: string;
   meta: number;
+  /** 'item:<id>' usa o ícone do item; senão, nome de um pixícone da interface. */
   icone: string;
 }
 
@@ -18,7 +19,7 @@ export const MISSOES: readonly Missao[] = [
     descricao: 'Quebre 4 troncos de árvore',
     contador: 'quebrou:tronco',
     meta: 4,
-    icone: '🪵',
+    icone: 'item:bloco:4',
   },
   {
     id: 'tabuas',
@@ -27,7 +28,7 @@ export const MISSOES: readonly Missao[] = [
     descricao: 'Transforme troncos em tábuas',
     contador: 'fabricou:tabuas',
     meta: 1,
-    icone: '🪚',
+    icone: 'item:bloco:7',
   },
   {
     id: 'mesa',
@@ -36,7 +37,7 @@ export const MISSOES: readonly Missao[] = [
     descricao: 'Fabrique uma mesa de trabalho',
     contador: 'fabricou:mesa',
     meta: 1,
-    icone: '🧰',
+    icone: 'item:bloco:40',
   },
   {
     id: 'picareta',
@@ -45,7 +46,7 @@ export const MISSOES: readonly Missao[] = [
     descricao: 'Faça uma picareta de madeira',
     contador: 'fabricou:picareta_madeira',
     meta: 1,
-    icone: '⛏',
+    icone: 'item:picareta_madeira',
   },
   {
     id: 'pedra',
@@ -54,7 +55,7 @@ export const MISSOES: readonly Missao[] = [
     descricao: 'Minere 10 blocos de pedra',
     contador: 'quebrou:pedra',
     meta: 10,
-    icone: '🪨',
+    icone: 'item:bloco:2',
   },
   {
     id: 'fornalha',
@@ -63,7 +64,7 @@ export const MISSOES: readonly Missao[] = [
     descricao: 'Fabrique uma fornalha',
     contador: 'fabricou:fornalha',
     meta: 1,
-    icone: '🔥',
+    icone: 'item:bloco:41',
   },
   {
     id: 'tochas',
@@ -72,7 +73,7 @@ export const MISSOES: readonly Missao[] = [
     descricao: 'Coloque 5 tochas',
     contador: 'colocou:tocha',
     meta: 5,
-    icone: '🕯',
+    icone: 'item:bloco:37',
   },
   {
     id: 'ferro',
@@ -81,7 +82,7 @@ export const MISSOES: readonly Missao[] = [
     descricao: 'Retire um lingote de ferro da fornalha',
     contador: 'fundiu:lingote_ferro',
     meta: 1,
-    icone: '⚙',
+    icone: 'item:lingote_ferro',
   },
   {
     id: 'luzita',
@@ -90,7 +91,7 @@ export const MISSOES: readonly Missao[] = [
     descricao: 'Encontre um pedaço de luzita',
     contador: 'coletou:luzita',
     meta: 1,
-    icone: '💎',
+    icone: 'item:luzita',
   },
   {
     id: 'comer',
@@ -99,7 +100,7 @@ export const MISSOES: readonly Missao[] = [
     descricao: 'Coma alguma coisa',
     contador: 'comeu',
     meta: 1,
-    icone: '🍎',
+    icone: 'item:maca',
   },
   {
     id: 'dormir',
@@ -108,7 +109,7 @@ export const MISSOES: readonly Missao[] = [
     descricao: 'Durma numa cama durante a noite',
     contador: 'dormiu',
     meta: 1,
-    icone: '🛏',
+    icone: 'item:bloco:56',
   },
   {
     id: 'espectro',
@@ -117,7 +118,7 @@ export const MISSOES: readonly Missao[] = [
     descricao: 'Derrote um espectro da bruma',
     contador: 'derrotou:espectro',
     meta: 1,
-    icone: '👻',
+    icone: 'espectro',
   },
   {
     id: 'raposa',
@@ -126,7 +127,7 @@ export const MISSOES: readonly Missao[] = [
     descricao: 'Dome uma raposa-lume com frutinhas',
     contador: 'domou',
     meta: 1,
-    icone: '🦊',
+    icone: 'raposa',
   },
   {
     id: 'pantano',
@@ -135,7 +136,7 @@ export const MISSOES: readonly Missao[] = [
     descricao: 'Encontre o pântano bioluminescente',
     contador: 'bioma:pantano',
     meta: 1,
-    icone: '🍄',
+    icone: 'item:bloco:31',
   },
   {
     id: 'deserto',
@@ -144,7 +145,7 @@ export const MISSOES: readonly Missao[] = [
     descricao: 'Chegue a um deserto',
     contador: 'bioma:deserto',
     meta: 1,
-    icone: '🌵',
+    icone: 'item:bloco:25',
   },
   {
     id: 'taiga',
@@ -153,7 +154,7 @@ export const MISSOES: readonly Missao[] = [
     descricao: 'Chegue à taiga nevada',
     contador: 'bioma:taiga',
     meta: 1,
-    icone: '❄',
+    icone: 'item:bloco:21',
   },
   {
     id: 'mergulho',
@@ -162,7 +163,7 @@ export const MISSOES: readonly Missao[] = [
     descricao: 'Mergulhe debaixo d’água',
     contador: 'mergulhou',
     meta: 1,
-    icone: '🌊',
+    icone: 'onda',
   },
   {
     id: 'marcador',
@@ -171,7 +172,7 @@ export const MISSOES: readonly Missao[] = [
     descricao: 'Crie um marcador no mapa (tecla K)',
     contador: 'marcou',
     meta: 1,
-    icone: '🗺',
+    icone: 'marcador',
   },
   {
     id: 'construtor',
@@ -180,7 +181,7 @@ export const MISSOES: readonly Missao[] = [
     descricao: 'Coloque 100 blocos',
     contador: 'colocou',
     meta: 100,
-    icone: '🏗',
+    icone: 'martelo',
   },
   {
     id: 'foto',
@@ -189,7 +190,7 @@ export const MISSOES: readonly Missao[] = [
     descricao: 'Tire uma foto no modo foto (tecla P)',
     contador: 'foto',
     meta: 1,
-    icone: '📸',
+    icone: 'foto',
   },
 ];
 

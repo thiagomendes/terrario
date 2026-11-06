@@ -5,6 +5,7 @@ import {
   estadoRachadura,
   opacidadePulso,
   planejarEfeito,
+  COR_POEIRA,
 } from '../../src/render/efeitos';
 import { corMediaDoBloco } from '../../src/fx/cores';
 import { criarPoolParticulas, LIMITE_PARTICULAS } from '../../src/fx/particulas';
@@ -28,10 +29,15 @@ describe('planejarEfeito', () => {
     );
   });
 
-  it('colocação solta 4 de poeira e pulso', () => {
+  it('colocação solta poeira baixa na base, sem lascas subindo', () => {
     const p = planejarEfeito('colocacao', { ...pos, bloco: Bloco.TABUAS });
     expect(p.particulas).toHaveLength(4);
-    expect(p.pulso).toBe(true);
+    expect(p.pulso).toBe(false);
+    for (const q of p.particulas) {
+      expect(q.y).toBeLessThan(pos.y + 0.2);
+      expect(q.vy).toBeLessThan(0.6);
+      expect(q.cor).toEqual(COR_POEIRA);
+    }
   });
 
   it('recusa e slot não soltam nada', () => {

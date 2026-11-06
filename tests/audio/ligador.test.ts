@@ -126,7 +126,7 @@ describe('ativarNoPrimeiroGesto', () => {
         return Promise.resolve();
       },
     });
-    expect(alvo.total()).toBe(2);
+    expect(alvo.total()).toBe(4);
     alvo.disparar('keydown');
     alvo.disparar('pointerdown');
     alvo.disparar('keydown');

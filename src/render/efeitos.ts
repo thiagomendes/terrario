@@ -56,8 +56,22 @@ export function planejarEfeito<K extends NomeEvento>(
     return { particulas: emitirParticulas(d, cor, n, rng, quebra ? 2.5 : 1.5), pulso: false };
   }
   if (nome === 'colocacao') {
+    // assentar: poeira baixa que escorre pelo chão em volta da base (nada de lascas voando)
     const d = dados as EventosJogo['colocacao'];
-    return { particulas: emitirParticulas(d, COR_POEIRA, PARTICULAS_POEIRA, rng, 1), pulso: true };
+    const lista: ParametrosParticula[] = [];
+    for (let i = 0; i < PARTICULAS_POEIRA; i++) {
+      const ang = (i / PARTICULAS_POEIRA) * Math.PI * 2 + jitter(rng, 0, 0.4);
+      lista.push({
+        x: d.x + 0.5 + Math.cos(ang) * 0.55,
+        y: d.y + 0.06,
+        z: d.z + 0.5 + Math.sin(ang) * 0.55,
+        vx: Math.cos(ang) * (0.7 + jitter(rng, 0, 0.2)),
+        vy: 0.35 + jitter(rng, 0, 0.1),
+        vz: Math.sin(ang) * (0.7 + jitter(rng, 0, 0.2)),
+        cor: COR_POEIRA,
+      });
+    }
+    return { particulas: lista, pulso: false };
   }
   return vazio;
 }

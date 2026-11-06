@@ -2,6 +2,10 @@ export const VEL_ANDAR = 4.3;
 export const VEL_CORRER = 7;
 export const GRAVIDADE = 25;
 export const VEL_PULO = 8.5;
+/** Velocidade máxima nadando para cima. */
+export const VEL_NADO_MAX = 3.4;
+/** Impulso ao sair da água pela borda: da superfície (pés ~0,4 abaixo do nível) até o topo do bloco de cima. */
+export const VEL_SAIDA_AGUA = 9.2;
 export const VEL_QUEDA_MAX = 40;
 export const MEIA_LARGURA = 0.3;
 export const ALTURA_JOGADOR = 1.8;
@@ -145,26 +149,27 @@ function topoAbaixo(s: Solido, x: number, alvo: number, z: number, atual: number
   return topo;
 }
 
-function moverHorizontal(e: EstadoJogador, eixo: 'x' | 'z', d: number, s: Solido): void {
-  if (d === 0) return;
+function moverHorizontal(e: EstadoJogador, eixo: 'x' | 'z', d: number, s: Solido): boolean {
+  if (d === 0) return false;
   const alvo = e[eixo] + d;
   const nx = eixo === 'x' ? alvo : e.x;
   const nz = eixo === 'z' ? alvo : e.z;
   if (!colide(s, nx, e.y, nz)) {
     e[eixo] = alvo;
-    return;
+    return false;
   }
   // sobe sozinho degraus de até meio bloco (lajes e escadas)
   if (e.noChao && !colide(s, nx, e.y + DEGRAU, nz) && !colide(s, e.x, e.y + DEGRAU, e.z)) {
     e.y += DEGRAU;
     e[eixo] = alvo;
-    return;
+    return false;
   }
   const borda =
     d > 0
       ? Math.floor(alvo + MEIA_LARGURA) - MEIA_LARGURA - FOLGA
       : Math.floor(alvo - MEIA_LARGURA) + 1 + MEIA_LARGURA + FOLGA;
   e[eixo] = borda;
+  return true;
 }
 
 export function passoFisica(
@@ -191,8 +196,10 @@ export function passoFisica(
     mx /= norma;
     mz /= norma;
   }
-  moverHorizontal(e, 'x', mx * vel * dt, s);
-  moverHorizontal(e, 'z', mz * vel * dt, s);
+  const bateuX = moverHorizontal(e, 'x', mx * vel * dt, s);
+  const bateuZ = moverHorizontal(e, 'z', mz * vel * dt, s);
+  /** Encostado numa parede tentando andar (para sair da água pela borda). */
+  const encostado = (bateuX && Math.abs(mx) > 0.1) || (bateuZ && Math.abs(mz) > 0.1);
 
   if (e.voando) {
     const sobe = (cmd.pular ? 1 : 0) - (cmd.descer ? 1 : 0);
@@ -200,7 +207,15 @@ export function passoFisica(
     e.topoQueda = undefined;
   } else if (agua) {
     // empuxo: afunda devagar; espaço nada para cima
-    e.vy = cmd.pular ? Math.min(e.vy + 22 * dt, 3.4) : Math.max(e.vy - 7 * dt, -2.2);
+    if (cmd.pular && encostado && e.vy < VEL_SAIDA_AGUA) {
+      // na borda: impulso para subir no bloco de cima, como um pulo
+      e.vy = VEL_SAIDA_AGUA;
+    } else if (e.vy > VEL_NADO_MAX) {
+      // impulso em andamento: a gravidade freia em vez do limite de nado
+      e.vy -= GRAVIDADE * dt;
+    } else {
+      e.vy = cmd.pular ? Math.min(e.vy + 22 * dt, VEL_NADO_MAX) : Math.max(e.vy - 7 * dt, -2.2);
+    }
     e.topoQueda = undefined;
   } else {
     if (cmd.pular && e.noChao) {

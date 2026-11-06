@@ -10,7 +10,9 @@ import { RawTexture } from '@babylonjs/core/Materials/Textures/rawTexture';
 import { Mesh } from '@babylonjs/core/Meshes/mesh';
 import { VertexData } from '@babylonjs/core/Meshes/mesh.vertexData';
 import { Color3, Color4 } from '@babylonjs/core/Maths/math.color';
-import { Vector3 } from '@babylonjs/core/Maths/math.vector';
+import { Matrix, Vector3, Vector4 } from '@babylonjs/core/Maths/math.vector';
+// necessário para scene.createPickingRay (mira pelo toque)
+import '@babylonjs/core/Culling/ray';
 import { DirectionalLight } from '@babylonjs/core/Lights/directionalLight';
 import { CascadedShadowGenerator } from '@babylonjs/core/Lights/Shadows/cascadedShadowGenerator';
 import { ShadowGenerator } from '@babylonjs/core/Lights/Shadows/shadowGenerator';
@@ -25,7 +27,7 @@ import { MeshBuilder } from '@babylonjs/core/Meshes/meshBuilder';
 import type { LinesMesh } from '@babylonjs/core/Meshes/linesMesh';
 import { COR_DESTAQUE, estadoDestaque } from './destaque';
 import { criarControle } from '../player/controle';
-import { gerarAtlas } from '../art/atlas';
+import { gerarAtlas, type FaceBloco } from '../art/atlas';
 import { Bloco, ehAlvo, obterBloco as obterBlocoDef } from '../world/blocks';
 import {
   DENSIDADE_NEVOA,
@@ -86,6 +88,7 @@ import { perfilDaQualidade, type Config, type GerenciadorConfig } from '../jogo/
 import { iconeDoItem } from '../ui/icones';
 import type { Buffers } from '../mesh/malha';
 import type { RespostaChunk, PedidoChunk } from '../workers/chunk.worker';
+import { criarProvedorBlocos } from '../world/provedor';
 import { criarEdicoes } from '../world/edicoes';
 import { ALTURA, alturaTerreno, gerarChunk, indice } from '../world/chunk';
 import { posicaoColocacao, raycastVoxel, type Vec3 } from '../player/alvo';
@@ -106,6 +109,8 @@ import { ajustarEscala, escalaBase } from './resolucao';
 
 /** Limite do dt (s) que alimenta minerador e efeitos: quadros lentos não os atropelam. */
 const DT_MAXIMO_QUADRO = 1 / 30;
+/** Cor reutilizada (evita alocar Color3 por quadro). */
+const BRANCO = new Color3(1, 1, 1);
 import { criarPoolParticulas, LIMITE_PARTICULAS } from '../fx/particulas';
 import { ESTAGIOS_RACHADURA, gerarTexturaRachadura, TAM_RACHADURA } from '../fx/rachadura';
 import {
@@ -118,7 +123,12 @@ import {
 } from './efeitos';
 import { criarGerador } from '../audio/variacao';
 import { criarMotorAudio, type ContextoAudio } from '../audio/motor';
-import { ativarNoPrimeiroGesto, ligarAudio, teclaParaMudo } from '../audio/ligador';
+import {
+  ativarNoPrimeiroGesto,
+  ligarAudio,
+  manterAudioDesbloqueado,
+  teclaParaMudo,
+} from '../audio/ligador';
 import { grupoDoBloco } from '../audio/materiais';
 import { iniciarAmbiente, tocarSom, type Ambiente } from '../audio/sons';
 import { blocoSobPes, criarDetectorMovimento } from '../player/movimento';
@@ -182,6 +192,8 @@ export interface EstadoDepuracao {
   destaqueVisivel?: boolean;
   malhasAtivas?: number;
   remalhasConcluidas?: number;
+  /** Tempo da última edição até a malha do chunk aparecer (ms). */
+  latenciaEdicaoMs?: number;
   remalhaMs?: number;
   aplicadasNoUltimoQuadro?: number;
   atmosfera?: { noite: number; crepusculo: number };
@@ -194,11 +206,18 @@ export interface EstadoDepuracao {
     tecla: (acao: 'pular' | 'correr' | 'rapido', ativo: boolean) => void;
     quebrar: (ativo: boolean) => void;
     usar: () => void;
+    /** Toque: aponta para o ponto tocado (coordenadas CSS do canvas); null volta à mira central. */
+    mirar: (x: number, y: number) => void;
+    soltarMira: () => void;
+    /** Toque rápido na tela: ataca a criatura tocada ou usa/coloca no ponto. */
+    tocar: () => void;
+    voando: () => boolean;
   };
   musica?: string;
   precipitacao?: { chuva: number; neve: number; taxa: number };
   biomaAtual?: string;
-  mapaChunk?: (cx: number, cz: number) => Uint8ClampedArray;
+  /** Cores do chunk para o mapa; null se o chunk ainda não chegou do worker. */
+  mapaChunk?: (cx: number, cz: number) => Uint8ClampedArray | null;
   modoFoto?: {
     ativo: () => boolean;
     alternar: () => boolean;
@@ -299,7 +318,9 @@ export function criarCena(
   };
   window.__brumaluz = estado;
 
-  const engine = new Engine(canvas, false, { preserveDrawingBuffer: true });
+  // Sem preserveDrawingBuffer: GPUs de celular descartam o buffer a cada quadro (menos banda).
+  // Capturas e miniaturas renderizam um quadro e leem o canvas na mesma tarefa.
+  const engine = new Engine(canvas, false, { preserveDrawingBuffer: false, stencil: true });
   const scene = new Scene(engine);
   const cor = new Color3(...PALETA.nevoa);
   scene.clearColor = new Color4(cor.r, cor.g, cor.b, 1);
@@ -317,10 +338,16 @@ export function criarCena(
   cameraVisao.fov = camera.fov;
   cameraVisao.inputs.clear();
   scene.activeCamera = cameraVisao;
+  // o jogo não usa picking do Babylon no movimento do ponteiro
+  scene.skipPointerMovePicking = true;
   let estadoCamera = criarEstadoCamera();
   const edicoes = criarEdicoes();
   if (dadosIniciais) edicoes.importar(dadosIniciais.edicoes);
-  const controle = criarControle(canvas, camera, semente, edicoes);
+  // blocos-base compartilhados (chegam do worker junto com a malha)
+  const provedor = criarProvedorBlocos(semente);
+  const controle = criarControle(canvas, camera, semente, edicoes, (cx, cz) =>
+    provedor.obter(cx, cz),
+  );
   if (dadosIniciais?.jogador) {
     const j = controle.jogador;
     j.x = dadosIniciais.jogador.x;
@@ -369,15 +396,19 @@ export function criarCena(
 
   /** Claridade do dia para o viewmodel (1 ao meio-dia, ~0.4 à noite). */
   let luzDia = 1;
-  const glow = new GlowLayer('glow', scene, { blurKernelSize: 32 });
+  // celular: desfoque menor (halo mais justo e mais barato) na mesma meia resolução
+  const toqueGrosso = typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches;
+  const glow = new GlowLayer('glow', scene, {
+    blurKernelSize: toqueGrosso ? 16 : 32,
+    mainTextureRatio: 0.5,
+  });
   glow.intensity = INTENSIDADE_GLOW;
-  // o braço e o item na mão nunca brilham (inclui malhas de itens criadas depois)
-  for (const m of scene.meshes)
-    if (m.name.startsWith('braco-') || m.name.startsWith('personagem-mao'))
-      glow.addExcludedMesh(m as Mesh);
+  // braço, personagem e item na mão nunca brilham: o piso de luz deles é emissivo,
+  // mas não é fonte de luz (inclui malhas criadas depois, como ao trocar a aparência)
+  const semBrilho = (nome: string) => nome.startsWith('braco-') || nome.startsWith('personagem');
+  for (const m of scene.meshes) if (semBrilho(m.name)) glow.addExcludedMesh(m as Mesh);
   scene.onNewMeshAddedObservable.add((m) => {
-    if (m.name.startsWith('braco-') || m.name.startsWith('personagem-mao'))
-      glow.addExcludedMesh(m as Mesh);
+    if (semBrilho(m.name)) glow.addExcludedMesh(m as Mesh);
   });
 
   const ceu = criarCeu(scene);
@@ -391,7 +422,7 @@ export function criarCena(
   pipeline.bloomEnabled = true;
   pipeline.bloomThreshold = 0.85;
   pipeline.bloomWeight = 0.22;
-  pipeline.bloomKernel = 48;
+  pipeline.bloomKernel = toqueGrosso ? 32 : 48;
   pipeline.bloomScale = 0.5;
   pipeline.imageProcessingEnabled = true;
   const ip = pipeline.imageProcessing;
@@ -486,6 +517,9 @@ export function criarCena(
   const precipitacao = criarPrecipitacao(scene);
 
   /** Aplica a atmosfera da hora e do clima a luzes, névoa, céu e água. */
+  let biomaX = NaN;
+  let biomaZ = NaN;
+  let biomaCache = biomaEm(0, 0, semente);
   function aplicarAtmosfera(tempo: number, dt = 0): void {
     if (horaAnterior > 0.9 && hora < 0.1) dia++;
     horaAnterior = hora;
@@ -496,7 +530,7 @@ export function criarCena(
       flash = 1;
       setTimeout(() => {
         tocarSom(motorAudio, 'trovao');
-        legenda('⚡ Trovão');
+        legenda('Trovão');
       }, raio.atrasoTrovao * 1000);
     }
     const a = ajustarPorClima(baseHora, clima.estado);
@@ -511,7 +545,15 @@ export function criarCena(
       m.molhado = clima.estado.chuva;
     }
     const pj = controle.jogador;
-    const b = biomaEm(Math.floor(pj.x), Math.floor(pj.z), semente);
+    // bioma (ruído) só quando o jogador muda de coluna
+    const bx = Math.floor(pj.x);
+    const bz = Math.floor(pj.z);
+    if (bx !== biomaX || bz !== biomaZ) {
+      biomaX = bx;
+      biomaZ = bz;
+      biomaCache = biomaEm(bx, bz, semente);
+    }
+    const b = biomaCache;
     const nevando = invernoAtual > 0.5 || b === 'taiga' || b === 'montanhas';
     estado.biomaAtual = b;
     // trilha adaptativa: perigo > caverna > bioma especial > noite > dia
@@ -558,7 +600,15 @@ export function criarCena(
     luz.groundColor.set(...a.chaoLuz);
     luz.intensity = a.intensidadeCeu;
     sol.diffuse.set(...a.luz);
-    sol.direction.set(...a.direcaoLuz);
+    // o sol anda devagar: só move a luz (e refaz as sombras) quando o ângulo muda de fato
+    const [dlx, dly, dlz] = a.direcaoLuz;
+    if (
+      Math.abs(dlx - sol.direction.x) +
+        Math.abs(dly - sol.direction.y) +
+        Math.abs(dlz - sol.direction.z) >
+      0.004
+    )
+      sol.direction.set(dlx, dly, dlz);
     sol.intensity = a.intensidadeLuz;
     const bruma: [number, number, number] = [
       a.nevoa[0] * 0.85 + 0.12,
@@ -568,6 +618,9 @@ export function criarCena(
     const forca = 0.35 + 0.35 * Math.max(a.crepusculo, a.noite);
     mundoSolido.definirBruma(bruma, forca);
     mundoSolido.luzBlocos = 0.8 + 0.4 * a.noite;
+    // flores, cogumelos e lanternas brilham de verdade ao entardecer e à noite; sob o sol, quase nada
+    const escuro = jogadorCoberto ? 1 : Math.max(a.noite, a.crepusculo * 0.7);
+    glow.intensity = INTENSIDADE_GLOW * (0.15 + 0.85 * escuro);
     luzDia = 0.38 + 0.62 * (1 - a.noite) * Math.min(1, a.intensidadeCeu + 0.4);
     mundoPlanta.luzBlocos = mundoSolido.luzBlocos;
     mundoPlanta.definirBruma(bruma, forca);
@@ -585,15 +638,33 @@ export function criarCena(
   const worker = new Worker(new URL('../workers/chunk.worker.ts', import.meta.url), {
     type: 'module',
   });
-  worker.onmessage = (ev: MessageEvent<RespostaChunk>) => {
+  // Edições têm um worker só delas: nunca esperam atrás do terreno que está carregando.
+  const workerEdicao = new Worker(new URL('../workers/chunk.worker.ts', import.meta.url), {
+    type: 'module',
+  });
+  /** Momento da edição por chunk (para medir quanto o bloco demora a aparecer). */
+  const inicioEdicao = new Map<string, number>();
+  const receber = (ev: MessageEvent<RespostaChunk>) => {
     const r = ev.data;
-    fila.adicionar({
-      cx: r.cx,
-      cz: r.cz,
-      editado: prioritarios.has(chave(r.cx, r.cz)),
-      dados: r,
-    });
+    if (r.base) provedor.registrar(r.cx, r.cz, r.base);
+    const k = chave(r.cx, r.cz);
+    // chunk editado: aplica na hora, sem esperar a fila do quadro
+    if (prioritarios.has(k) && malhas.has(k)) {
+      if (r.versao < (versoesPedidas.get(k) ?? 0)) return; // já há uma versão mais nova a caminho
+      prioritarios.delete(k);
+      aplicar(r);
+      const t0 = inicioEdicao.get(k);
+      if (t0 !== undefined) {
+        estado.latenciaEdicaoMs = performance.now() - t0;
+        inicioEdicao.delete(k);
+      }
+      estado.remalhasConcluidas = (estado.remalhasConcluidas ?? 0) + 1;
+      return;
+    }
+    fila.adicionar({ cx: r.cx, cz: r.cz, editado: prioritarios.has(k), dados: r });
   };
+  worker.onmessage = receber;
+  workerEdicao.onmessage = receber;
 
   function criarMalha(nome: string, b: Buffers, mat: StandardMaterial, cx: number, cz: number) {
     if (b.indices.length === 0) return null;
@@ -611,6 +682,9 @@ export function criarCena(
     m.material = mat;
     m.position.set(cx * TAM_X, 0, cz * TAM_Z);
     m.freezeWorldMatrix();
+    // o alvo usa DDA própria: o picking do Babylon nunca precisa olhar os chunks
+    m.isPickable = false;
+    m.doNotSyncBoundingInfo = true;
     return m;
   }
 
@@ -622,6 +696,8 @@ export function criarCena(
       const [cx, cz] = k.split(',').map(Number);
       const perto = Math.abs(cx - ccx) <= RAIO_SOMBRA && Math.abs(cz - ccz) <= RAIO_SOMBRA;
       for (const m of lista) {
+        // água transparente não projeta sombra (economiza a passada de sombra)
+        if (m.name.startsWith('agua')) continue;
         if (perto && !comSombra.has(m)) {
           sombras.addShadowCaster(m);
           m.receiveShadows = true;
@@ -637,6 +713,7 @@ export function criarCena(
 
   function aplicar(r: RespostaChunk): void {
     const k = chave(r.cx, r.cz);
+    for (const p of provisorios) if (p.k === k) p.pronto = true;
     pedidos.delete(k);
     malhas.get(k)?.forEach((m) => {
       if (comSombra.has(m)) sombras.removeShadowCaster(m);
@@ -663,7 +740,7 @@ export function criarCena(
     malhas.set(k, lista);
   }
 
-  function solicitar(cx: number, cz: number): void {
+  function solicitar(cx: number, cz: number, urgente = false): void {
     const k = chave(cx, cz);
     const versao = (versoesPedidas.get(k) ?? 0) + 1;
     versoesPedidas.set(k, versao);
@@ -679,7 +756,22 @@ export function criarCena(
       if (lista.length > 0) edicoesPedido[chave(cx + dx, cz + dz)] = lista;
     }
     const pedido: PedidoChunk = { cx, cz, semente, versao, edicoes: edicoesPedido };
-    worker.postMessage(pedido);
+    if (urgente) {
+      // leva o terreno que a thread principal já tem (o worker de edição não regera nada)
+      const bases: Record<string, Uint8Array> = {};
+      for (const [dx, dz] of [
+        [0, 0],
+        [-1, 0],
+        [1, 0],
+        [0, -1],
+        [0, 1],
+      ]) {
+        if (provedor.tem(cx + dx, cz + dz))
+          bases[chave(cx + dx, cz + dz)] = provedor.obter(cx + dx, cz + dz);
+      }
+      pedido.bases = bases;
+    }
+    (urgente ? workerEdicao : worker).postMessage(pedido);
   }
 
   function legenda(texto: string): void {
@@ -688,9 +780,12 @@ export function criarCena(
 
   /** Remalhas agrupadas: várias edições no mesmo quadro viram um pedido por chunk. */
   const remalhaPendente = new Map<string, { cx: number; cz: number }>();
+  let envioAgendado = false;
   function enviarRemalhas(): void {
+    envioAgendado = false;
     if (remalhaPendente.size === 0) return;
-    for (const c of remalhaPendente.values()) solicitar(c.cx, c.cz);
+    // ordem de inserção: o chunk editado primeiro, os vizinhos (só luz) depois
+    for (const c of remalhaPendente.values()) solicitar(c.cx, c.cz, true);
     remalhaPendente.clear();
   }
 
@@ -741,40 +836,78 @@ export function criarCena(
       pedidos.add(k);
       remalhaPendente.set(k, c);
     }
+    if (!inicioEdicao.has(chave(cxE, czE))) inicioEdicao.set(chave(cxE, czE), performance.now());
+    // envia ao fim desta tarefa (junta as edições do mesmo clique) sem esperar o próximo quadro
+    if (!envioAgendado) {
+      envioAgendado = true;
+      queueMicrotask(enviarRemalhas);
+    }
     return true;
   }
 
-  const cacheBlocos = new Map<string, { versao: number; blocos: Uint8Array }>();
   function blocoEm(x: number, y: number, z: number): number {
     if (y < 0 || y >= ALTURA) return Bloco.AR;
     const editado = edicoes.obter(x, y, z);
     if (editado !== undefined) return editado;
     const cx = Math.floor(x / TAM_X);
     const cz = Math.floor(z / TAM_Z);
-    const k = chave(cx, cz);
-    let entrada = cacheBlocos.get(k);
-    if (!entrada) {
-      entrada = { versao: 0, blocos: gerarChunk(cx, cz, semente) };
-      cacheBlocos.set(k, entrada);
-    }
-    return entrada.blocos[indice(x - cx * TAM_X, y, z - cz * TAM_Z)];
+    return provedor.obter(cx, cz)[indice(x - cx * TAM_X, y, z - cz * TAM_Z)];
+  }
+
+  /**
+   * Mira pelo toque: no celular o jogador aponta com o dedo (toque coloca, segurar
+   * quebra) em vez da mira do centro. Raio saindo da câmera de visão pelo ponto tocado;
+   * o alcance ganha a distância da câmera em 3ª pessoa.
+   */
+  let raioToque: { origem: Vec3; direcao: Vec3; extra: number } | null = null;
+  /** Ponto tocado (o raio é refeito a cada quadro: o jogador pode andar segurando). */
+  let pontoToque: { x: number; y: number } | null = null;
+  function mirarToque(xCss: number, yCss: number): void {
+    const r = scene.createPickingRay(xCss, yCss, Matrix.Identity(), cameraVisao);
+    const extra = Vector3.Distance(cameraVisao.position, camera.position);
+    raioToque = {
+      origem: { x: r.origin.x, y: r.origin.y, z: r.origin.z },
+      direcao: { x: r.direction.x, y: r.direction.y, z: r.direction.z },
+      extra,
+    };
+    alvoMemoQuadro = -1;
   }
 
   function calcularAlvo() {
     const yaw = camera.rotation.y;
     const pitch = camera.rotation.x;
-    const direcao = {
+    const direcao = raioToque?.direcao ?? {
       x: Math.sin(yaw) * Math.cos(pitch),
       y: -Math.sin(pitch),
       z: Math.cos(yaw) * Math.cos(pitch),
     };
-    const a = raycastVoxel(
-      { x: camera.position.x, y: camera.position.y, z: camera.position.z },
-      direcao,
-      ALCANCE,
-      (x, y, z) => ehAlvo(blocoEm(x, y, z)),
+    const origem = raioToque?.origem ?? {
+      x: camera.position.x,
+      y: camera.position.y,
+      z: camera.position.z,
+    };
+    const a = raycastVoxel(origem, direcao, ALCANCE + (raioToque?.extra ?? 0), (x, y, z) =>
+      ehAlvo(blocoEm(x, y, z)),
     );
     return a ? { x: a.x, y: a.y, z: a.z, normal: a.normal } : null;
+  }
+
+  /**
+   * Alvo da mira calculado uma vez por quadro para quem só lê (destaque, mineração,
+   * prévia de construção). Ações (quebrar, colocar) usam calcularAlvo() direto.
+   */
+  let quadroAtual = 0;
+  let alvoMemoQuadro = -1;
+  let alvoMemo: ReturnType<typeof calcularAlvo> = null;
+  let alvoMemoEdicoes = -1;
+  function alvoDoQuadro(): ReturnType<typeof calcularAlvo> {
+    // recalcula num quadro novo ou se o mundo mudou (bloco colocado/quebrado no meio do quadro)
+    if (alvoMemoQuadro !== quadroAtual || alvoMemoEdicoes !== edicoes.versaoGeral) {
+      alvoMemo = calcularAlvo();
+      alvoMemoQuadro = quadroAtual;
+      alvoMemoEdicoes = edicoes.versaoGeral;
+    }
+    return alvoMemo;
   }
 
   /** Metadado ao colocar: a frente olha para o jogador; escadas e portas seguem o olhar. */
@@ -806,7 +939,7 @@ export function criarCena(
   estado.barramento = barramento;
 
   function alvoMineracao(): AlvoMineracao | null {
-    const a = calcularAlvo();
+    const a = alvoDoQuadro();
     return a ? { x: a.x, y: a.y, z: a.z, bloco: blocoEm(a.x, a.y, a.z) } : null;
   }
 
@@ -876,7 +1009,7 @@ export function criarCena(
       if (populacao.domar(naMira)) {
         tocarSom(motorAudio, 'entrada');
         window.dispatchEvent(
-          new CustomEvent('brumaluz:toast', { detail: 'A raposa-lume confia em você! 🦊' }),
+          new CustomEvent('brumaluz:toast', { detail: 'A raposa-lume confia em você!' }),
         );
         window.dispatchEvent(new CustomEvent('brumaluz:domou'));
       }
@@ -1052,16 +1185,30 @@ export function criarCena(
     const ex = Math.floor(camera.position.x);
     const ey = Math.floor(camera.position.y);
     const ez = Math.floor(camera.position.z);
-    let coberto = false;
-    for (let y = ey + 1; y < Math.min(ALTURA, ey + 48) && !coberto; y++) {
-      if (obterBlocoDef(blocoEm(ex, y, ez))?.opaco) coberto = true;
+    // varre o teto só quando o jogador muda de bloco (ou a cada ~0,5 s, por edições)
+    tetoContador++;
+    if (ex !== tetoX || ey !== tetoY || ez !== tetoZ || tetoContador > 30) {
+      tetoX = ex;
+      tetoY = ey;
+      tetoZ = ez;
+      tetoContador = 0;
+      tetoCoberto = false;
+      for (let y = ey + 1; y < Math.min(ALTURA, ey + 48) && !tetoCoberto; y++) {
+        if (obterBlocoDef(blocoEm(ex, y, ez))?.opaco) tetoCoberto = true;
+      }
     }
+    const coberto = tetoCoberto;
     jogadorCoberto = coberto && ey < 55;
     const alvoLuz = coberto ? (ey < 55 ? 0.22 : 0.55) : 1;
     luzJogador += (alvoLuz - luzJogador) * Math.min(1, dt * 3);
     braco.definirLuz(luzJogador * luzDia);
-    personagem.definirLuz(luzJogador);
+    personagem.definirLuz(luzJogador * (0.45 + 0.55 * luzDia));
   }
+  let tetoX = NaN;
+  let tetoY = NaN;
+  let tetoZ = NaN;
+  let tetoContador = 0;
+  let tetoCoberto = false;
   estado.personagem = {
     aparencia: () => ({ ...aparencia }),
     definir: (parcial) => {
@@ -1280,6 +1427,66 @@ export function criarCena(
   estado.soltarItem = (item, qtd, x, y, z) => mundoItens.soltar(item, qtd, x, y, z, rngDrops);
   barramento.ouvir('colocacao', (d) => aplicarPlano('colocacao', d));
 
+  /**
+   * Bloco provisório: aparece no mesmo quadro do clique (o worker leva alguns quadros
+   * para refazer a malha). Usa o material do mundo, assenta de 85% a 100% e some quando
+   * a malha definitiva do chunk chega.
+   */
+  const DURACAO_ASSENTAR = 0.14;
+  const provisorios: { malha: Mesh; k: string; t: number; pronto: boolean }[] = [];
+  const FACES_PROVISORIO: FaceBloco[] = ['frente', 'lado', 'lado', 'lado', 'topo', 'base'];
+  const TONS_PROVISORIO = [0.85, 0.85, 0.85, 0.85, 1, 0.6];
+  function blocoProvisorio(x: number, y: number, z: number, bloco: number): void {
+    const def = obterBlocoDef(bloco);
+    if (!def || def.planta || def.forma || def.liquido) return; // só cubos inteiros
+    const faceUV = FACES_PROVISORIO.map((f) => {
+      const uv = atlas.uvDaFace(bloco, f) ?? atlas.uvDoBloco(bloco);
+      return uv ? new Vector4(uv.u0, uv.v1, uv.u1, uv.v0) : new Vector4(0, 0, 1, 1);
+    });
+    const m = MeshBuilder.CreateBox(
+      'provisorio',
+      {
+        size: 1.002,
+        faceUV,
+        faceColors: TONS_PROVISORIO.map((t) => new Color4(t, t, t, 1)),
+      },
+      scene,
+    );
+    // luz estimada: céu aberto acima = dia pleno; coberto = penumbra (dura poucos quadros)
+    const ceu = ceuAberto(x, y + 1, z) ? 1 : jogadorCoberto ? 0.15 : 0.55;
+    const n = m.getTotalVertices();
+    const luz = new Float32Array(n * 2);
+    for (let i = 0; i < n; i++) luz[i * 2] = ceu;
+    m.setVerticesData('luz', luz, false, 2);
+    m.hasVertexAlpha = false;
+    m.material = matSolido;
+    m.position.set(x + 0.5, y + 0.5, z + 0.5);
+    m.scaling.setAll(0.85);
+    m.isPickable = false;
+    glow.addExcludedMesh(m);
+    provisorios.push({
+      malha: m,
+      k: chave(Math.floor(x / TAM_X), Math.floor(z / TAM_Z)),
+      t: 0,
+      pronto: false,
+    });
+  }
+  barramento.ouvir('colocacao', (d) => blocoProvisorio(d.x, d.y, d.z, d.bloco));
+  function atualizarProvisorios(dt: number): void {
+    for (let i = provisorios.length - 1; i >= 0; i--) {
+      const p = provisorios[i];
+      p.t += dt;
+      const f = Math.min(1, p.t / DURACAO_ASSENTAR);
+      // ease-out com leve passada do tamanho final
+      const e = 1 - (1 - f) * (1 - f);
+      p.malha.scaling.setAll(0.85 + 0.15 * e + Math.sin(f * Math.PI) * 0.03);
+      if ((p.pronto && f >= 1) || p.t > 3) {
+        p.malha.dispose();
+        provisorios.splice(i, 1);
+      }
+    }
+  }
+
   function atualizarEfeitos(dt: number): void {
     pool.atualizar(dt);
     const vivas = pool.vivas();
@@ -1326,7 +1533,7 @@ export function criarCena(
   let contorno: LinesMesh | null = null;
   let chaveContorno = '';
   function atualizarDestaque(): void {
-    const alvo = calcularAlvo();
+    const alvo = alvoDoQuadro();
     const d = estadoDestaque(alvo);
     if (d.chave !== chaveContorno) {
       contorno?.dispose();
@@ -1360,6 +1567,7 @@ export function criarCena(
   let quadroSobrevivencia: ((dt: number) => void) | null = null;
   const sobrevivenciaMorto = () => !!estado.sobrevivencia?.estado.morto;
   let configAtual: Config | null = null;
+  manterAudioDesbloqueado(document, motorAudio);
   ativarNoPrimeiroGesto(document, {
     ativar: async () => {
       await motorAudio.ativar();
@@ -1408,6 +1616,8 @@ export function criarCena(
   }
 
   engine.runRenderLoop(() => {
+    quadroAtual++;
+    if (pontoToque) mirarToque(pontoToque.x, pontoToque.y);
     const dtBruto = engine.getDeltaTime() / 1000;
     const dtQuadro = Math.min(dtBruto, DT_MAXIMO_QUADRO);
     const fotoAtiva = !!estado.modoFoto?.ativo();
@@ -1422,6 +1632,7 @@ export function criarCena(
     atualizarDestaque();
     // partículas e pulsos seguem o tempo real (com teto), mesmo com poucos FPS
     atualizarEfeitos(Math.min(dtBruto, 0.25));
+    atualizarProvisorios(Math.min(dtBruto, 0.25));
     atualizarCameraVisao();
     atualizarPersonagem(dtQuadro);
     estado.fps = engine.getFps();
@@ -1444,10 +1655,21 @@ export function criarCena(
     engine.resize();
   }
   aplicarEscala(base);
+  // Cada troca de escala recria os render targets (pós e glow) e dá uma travada:
+  // só troca depois de duas leituras seguidas pedindo a mesma direção.
+  let pedidoEscala = 0;
   setInterval(() => {
     if (!estado.ready) return;
     const nova = ajustarEscala(estado.escalaResolucao, estado.fps, base);
-    if (nova !== estado.escalaResolucao) aplicarEscala(nova);
+    const direcao = Math.sign(nova - estado.escalaResolucao);
+    if (direcao === 0) {
+      pedidoEscala = 0;
+      return;
+    }
+    if (pedidoEscala === direcao) {
+      pedidoEscala = 0;
+      aplicarEscala(nova);
+    } else pedidoEscala = direcao;
   }, 2000);
   window.addEventListener('resize', () => {
     const anterior = base;
@@ -1468,6 +1690,9 @@ export function criarCena(
     cameraVisao.maxZ = alcance;
     const q = perfilDaQualidade(c.qualidade);
     sol.shadowEnabled = q.sombras;
+    // tamanho do mapa de sombras do perfil (celular usa no máximo 1024)
+    const tamSombra = toqueGrosso ? Math.min(1024, q.tamanhoSombra) : q.tamanhoSombra;
+    if (sombras.getShadowMap()?.getSize().width !== tamSombra) sombras.mapSize = tamSombra;
     pipeline.bloomEnabled = q.bloom;
     pipeline.fxaaEnabled = q.fxaa;
     glow.isEnabled = q.glow;
@@ -1497,7 +1722,11 @@ export function criarCena(
   const cacheCeu = new Map<string, { v: boolean; t: number }>();
   let relogioCache = 0;
   /** Luz aproximada de fontes num raio de 7 blocos (com cache de 2 s). */
-  function luzAprox(x: number, y: number, z: number): number {
+  function luzAprox(xr: number, yr: number, zr: number): number {
+    // cache por célula de 2x2x2: criaturas andando não forçam uma nova varredura a cada bloco
+    const x = xr & ~1;
+    const y = yr & ~1;
+    const z = zr & ~1;
     const k = `${x},${y},${z}`;
     const c = cacheLuz.get(k);
     if (c && relogioCache - c.t < 2) return c.v;
@@ -1545,6 +1774,7 @@ export function criarCena(
   );
   const rngCombate = criarGerador(semente + 77);
   function direcaoOlhar() {
+    if (raioToque) return raioToque.direcao;
     const yaw = camera.rotation.y;
     const pitch = camera.rotation.x;
     return {
@@ -1554,8 +1784,13 @@ export function criarCena(
     };
   }
   function criaturaApontada() {
-    const o = camera.position;
-    const r = criaturaNaMira(populacao.lista, { x: o.x, y: o.y, z: o.z }, direcaoOlhar(), 3.6);
+    const o = raioToque?.origem ?? camera.position;
+    const r = criaturaNaMira(
+      populacao.lista,
+      { x: o.x, y: o.y, z: o.z },
+      direcaoOlhar(),
+      3.6 + (raioToque?.extra ?? 0),
+    );
     if (!r) return null;
     const a = calcularAlvo();
     if (a) {
@@ -1610,7 +1845,7 @@ export function criarCena(
               : rel > 0
                 ? 'à direita'
                 : 'à esquerda';
-        legenda(`👻 Gemido de espectro ${lado}`);
+        legenda(`Gemido de espectro ${lado}`);
       }
     }
   }
@@ -1795,7 +2030,7 @@ export function criarCena(
     }
   });
   quadroConstrucao = (tempo: number) => {
-    const a = calcularAlvo();
+    const a = alvoDoQuadro();
     const f = modoConstrucao >= 0 ? FERRAMENTAS[modoConstrucao] : null;
     const bloco = hotbar.blocoAtivo();
     const def = obterBlocoDef(bloco);
@@ -1806,7 +2041,7 @@ export function criarCena(
       tempo,
     );
     if (!f || !a) {
-      visualConstrucao.caixa(null, null, Color3.White());
+      visualConstrucao.caixa(null, null, BRANCO);
     } else if (f === 'colar' && blueprintAtual) {
       const p = colocar!;
       const w = giro % 2 ? blueprintAtual.d : blueprintAtual.w;
@@ -1925,13 +2160,17 @@ export function criarCena(
 
   // Mapa: cores de um chunk visto de cima (relevo e água)
   estado.mapaChunk = (cx: number, cz: number) => {
+    // só chunks já entregues pelo worker: o mapa nunca gera terreno na thread principal
+    if (!provedor.tem(cx, cz)) return null;
+    const vizX = provedor.tem(cx - 1, cz);
+    const vizZ = provedor.tem(cx, cz - 1);
     const out = new Uint8ClampedArray(TAM_X * TAM_Z * 4);
     const alturas = new Int32Array((TAM_X + 1) * (TAM_Z + 1));
     const topos: { bloco: number; y: number; agua: number }[] = [];
     for (let z = -1; z < TAM_Z; z++)
       for (let x = -1; x < TAM_X; x++) {
-        const wx = cx * TAM_X + x;
-        const wz = cz * TAM_Z + z;
+        const wx = cx * TAM_X + (x < 0 && !vizX ? 0 : x);
+        const wz = cz * TAM_Z + (z < 0 && !vizZ ? 0 : z);
         const t = topoDaColuna((y) => blocoEm(wx, y, wz));
         alturas[(z + 1) * (TAM_X + 1) + (x + 1)] = t.y;
         if (x >= 0 && z >= 0) topos.push(t);
@@ -1959,7 +2198,9 @@ export function criarCena(
       t.esquerda = direita < -0.25;
     },
     tecla: (acao, ativo) => {
-      controle.teclas[acao] = ativo;
+      // pular passa pela detecção de toque duplo (voo no criativo)
+      if (acao === 'pular') controle.pular(ativo);
+      else controle.teclas[acao] = ativo;
     },
     quebrar: (ativo) => {
       if (ativo) {
@@ -1967,6 +2208,19 @@ export function criarCena(
       } else minerador.soltar();
     },
     usar: () => usarOuColocar(false),
+    mirar: (x, y) => {
+      pontoToque = { x, y };
+      mirarToque(x, y);
+    },
+    soltarMira: () => {
+      pontoToque = null;
+      raioToque = null;
+      alvoMemoQuadro = -1;
+    },
+    tocar: () => {
+      if (!atacarNaMira()) usarOuColocar(false);
+    },
+    voando: () => !!controle.jogador.voando,
   };
 
   // Nascimento: sem posição salva, garante que o jogador comece em ar livre.
@@ -1992,6 +2246,7 @@ export function criarCena(
       c.height = 180;
       const ctx = c.getContext('2d');
       if (!ctx) return undefined;
+      scene.render();
       const escala = Math.max(320 / canvas.width, 180 / canvas.height);
       const w = canvas.width * escala;
       const h = canvas.height * escala;
@@ -2033,9 +2288,7 @@ export function criarCena(
   sobrevivencia.ouvir((ev) => {
     if (ev.tipo === 'dano') {
       tocarSom(motorAudio, 'dano');
-      legenda(
-        ev.causa === 'queda' ? '💥 Queda' : ev.causa === 'afogamento' ? '🫧 Sem ar' : '💢 Dano',
-      );
+      legenda(ev.causa === 'queda' ? 'Queda' : ev.causa === 'afogamento' ? 'Sem ar' : 'Dano');
       window.dispatchEvent(new CustomEvent('brumaluz:dano', { detail: ev }));
     } else if (ev.tipo === 'morte') {
       // espalha o inventário no lugar da morte

@@ -1,3 +1,4 @@
+import { rotuloComIcone, type NomeIcone } from './pixicones';
 export const CSS_PAUSA = `
 .pausa-fundo {
   position: fixed; inset: 0; z-index: 25; display: flex; align-items: center; justify-content: center;
@@ -39,11 +40,12 @@ export function criarMenuPausa(raiz: HTMLElement, nomeMundo: string, acoes: Acoe
   const m = document.createElement('div');
   m.className = 'mundo';
   m.textContent = nomeMundo;
-  const botao = (rot: string, classe: string, f: () => void, attr: string) => {
+  const botao = (rot: string, classe: string, f: () => void, attr: string, ic?: NomeIcone) => {
     const b = document.createElement('button');
     b.type = 'button';
     b.className = `btn ${classe}`;
-    b.textContent = rot;
+    if (ic) rotuloComIcone(b, ic, rot);
+    else b.textContent = rot;
     b.setAttribute(attr, '');
     b.addEventListener('click', (e) => {
       e.stopPropagation();
@@ -54,15 +56,15 @@ export function criarMenuPausa(raiz: HTMLElement, nomeMundo: string, acoes: Acoe
   const dupla = document.createElement('div');
   dupla.className = 'dupla';
   dupla.append(
-    botao('⚙ Configurações', '', acoes.configuracoes, 'data-pausa-config'),
-    botao('🌍 Mundos', '', acoes.mundos, 'data-pausa-mundos'),
+    botao('Configurações', '', acoes.configuracoes, 'data-pausa-config', 'engrenagem'),
+    botao('Mundos', '', acoes.mundos, 'data-pausa-mundos', 'globo'),
   );
   card.append(
     h,
     m,
-    botao('Continuar', 'primario', acoes.continuar, 'data-pausa-continuar'),
+    botao('Continuar', 'primario', acoes.continuar, 'data-pausa-continuar', 'jogar'),
     dupla,
-    botao('💾 Salvar agora', '', acoes.salvar, 'data-pausa-salvar'),
+    botao('Salvar agora', '', acoes.salvar, 'data-pausa-salvar', 'salvar'),
     botao('Tela inicial', '', acoes.telaInicial, 'data-pausa-inicio'),
   );
   fundo.appendChild(card);

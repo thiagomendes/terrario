@@ -1,3 +1,4 @@
+import { icone } from './pixicones';
 import {
   SEMENTE_PADRAO_MUNDO,
   TAMANHO_MAXIMO_NOME_MUNDO,
@@ -136,7 +137,7 @@ export function criarModal(titulo: string, atributo: string) {
   fechar.type = 'button';
   fechar.className = 'fechar';
   fechar.setAttribute('aria-label', 'Fechar');
-  fechar.textContent = '✕';
+  fechar.appendChild(icone('fechar'));
   cab.append(h, fechar);
   const corpo = document.createElement('div');
   corpo.className = 'corpo';

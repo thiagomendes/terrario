@@ -2,7 +2,10 @@
 <html lang="pt-BR">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no, viewport-fit=cover"
+    />
     <title>Brumaluz</title>
     <style>
       html,
@@ -13,6 +16,13 @@
         overflow-x: hidden;
         max-width: 100%;
         background: #1b1230;
+        /* sem zoom por toque duplo no celular */
+        touch-action: manipulation;
+        -webkit-text-size-adjust: 100%;
+        overscroll-behavior: none;
+      }
+      button {
+        touch-action: manipulation;
       }
     </style>
   </head>
