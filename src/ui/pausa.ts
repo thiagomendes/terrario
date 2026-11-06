@@ -1,4 +1,12 @@
 import { rotuloComIcone, type NomeIcone } from './pixicones';
+import {
+  alternarTelaCheia,
+  emTelaCheia,
+  ouvirTelaCheia,
+  podeAlternarTelaCheia,
+  rodandoComoApp,
+  suportaTelaCheia,
+} from './telaCheia';
 export const CSS_PAUSA = `
 .pausa-fundo {
   position: fixed; inset: 0; z-index: 25; display: flex; align-items: center; justify-content: center;
@@ -16,6 +24,32 @@ export const CSS_PAUSA = `
 .pausa .mundo { margin: -4px 0 8px; font-size: 0.85rem; color: #a59f93; }
 .pausa .btn { width: 100%; min-height: 46px; font-size: 1rem; }
 .pausa .dupla { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.pausa .dica-app { margin: 2px 0 0; font-size: 0.78rem; color: #a59f93; }
+.pausa .dica-app[hidden] { display: none; }
+/* botões pixelados, no mesmo estilo dos botões do título (pausa e tela de morte) */
+.pausa .btn, .morte-fundo .btn {
+  border: 3px solid #120e16; border-radius: 0; color: #f6f2ea;
+  font: 800 1rem/1.1 system-ui, 'Segoe UI', sans-serif; letter-spacing: 0.04em;
+  text-shadow: 2px 2px 0 #2a2630;
+  background: linear-gradient(#5a5464, #3e3946);
+  box-shadow: inset 3px 3px 0 rgba(255, 255, 255, 0.22), inset -3px -4px 0 rgba(0, 0, 0, 0.38), 0 4px 0 #0b080e;
+  transition: transform 0.08s ease, filter 0.12s ease, color 0.12s ease;
+}
+.pausa .btn:hover, .pausa .btn:focus-visible, .morte-fundo .btn:hover, .morte-fundo .btn:focus-visible {
+  transform: none; filter: brightness(1.16); color: #ffe7a3; background: linear-gradient(#5a5464, #3e3946);
+}
+.pausa .btn:focus-visible, .morte-fundo .btn:focus-visible { outline: 3px solid #ffd98f; outline-offset: 2px; }
+.pausa .btn:active, .morte-fundo .btn:active {
+  transform: translateY(3px);
+  box-shadow: inset 3px 3px 0 rgba(255, 255, 255, 0.18), inset -3px -4px 0 rgba(0, 0, 0, 0.4), 0 1px 0 #0b080e;
+}
+.pausa .btn.primario, .morte-fundo .btn.primario {
+  color: #fff8e4; text-shadow: 2px 2px 0 #6a3208;
+  background: linear-gradient(#f2b45c, #c9701e);
+  box-shadow: inset 3px 3px 0 rgba(255, 246, 210, 0.5), inset -3px -4px 0 rgba(110, 46, 6, 0.55), 0 4px 0 #0b080e;
+}
+.pausa .btn.primario:hover, .morte-fundo .btn.primario:hover { background: linear-gradient(#f2b45c, #c9701e); color: #fff; }
+.pausa { border-radius: 0; border: 3px solid #120e16; box-shadow: inset 3px 3px 0 rgba(255,255,255,0.08), 0 24px 64px rgba(0,0,0,0.55); }
 `;
 
 export interface AcoesPausa {
@@ -59,13 +93,43 @@ export function criarMenuPausa(raiz: HTMLElement, nomeMundo: string, acoes: Acoe
     botao('Configurações', '', acoes.configuracoes, 'data-pausa-config', 'engrenagem'),
     botao('Mundos', '', acoes.mundos, 'data-pausa-mundos', 'globo'),
   );
+  // Tela cheia: alterna onde o navegador permite; no iPhone, dica para instalar como app.
+  const bTela = botao('Tela cheia', '', alternarTelaCheia, 'data-pausa-tela-cheia', 'telaCheia');
+  const dicaApp = document.createElement('p');
+  dicaApp.className = 'dica-app';
+  dicaApp.setAttribute('data-dica-app', '');
+  dicaApp.textContent =
+    'No iPhone: Compartilhar › Adicionar à Tela de Início para jogar em tela cheia';
+  const atualizarTela = () => {
+    bTela.hidden = !podeAlternarTelaCheia();
+    dicaApp.hidden = suportaTelaCheia() || rodandoComoApp();
+    if (!bTela.hidden) {
+      const dentro = emTelaCheia();
+      rotuloComIcone(
+        bTela,
+        dentro ? 'janela' : 'telaCheia',
+        dentro ? 'Sair da tela cheia' : 'Tela cheia',
+      );
+    }
+  };
+  ouvirTelaCheia(atualizarTela);
+  atualizarTela();
+  const continuar = botao(
+    'Continuar',
+    'primario',
+    acoes.continuar,
+    'data-pausa-continuar',
+    'jogar',
+  );
   card.append(
     h,
     m,
-    botao('Continuar', 'primario', acoes.continuar, 'data-pausa-continuar', 'jogar'),
+    continuar,
     dupla,
     botao('Salvar agora', '', acoes.salvar, 'data-pausa-salvar', 'salvar'),
+    bTela,
     botao('Tela inicial', '', acoes.telaInicial, 'data-pausa-inicio'),
+    dicaApp,
   );
   fundo.appendChild(card);
   fundo.addEventListener('click', (e) => e.stopPropagation());
@@ -77,6 +141,8 @@ export function criarMenuPausa(raiz: HTMLElement, nomeMundo: string, acoes: Acoe
     abrir() {
       fundo.hidden = false;
       document.body.dataset.overlay = 'pausa';
+      atualizarTela();
+      continuar.focus({ preventScroll: true });
     },
     fechar() {
       fundo.hidden = true;

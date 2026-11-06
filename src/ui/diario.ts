@@ -35,11 +35,24 @@ export const CSS_DIARIO = `
 .diario .missao small { color: #a59f93; }
 .diario .missao .estado { font: 700 0.8rem ui-monospace, monospace; color: #ffd98f; }
 .diario .resumo { color: #cfc8bb; margin: 0 0 6px; }
+/* paisagem baixa: cartão da missão compacto (não desce até o joystick) */
+@media (orientation: landscape) and (max-height: 500px) {
+  .missao-hud { max-width: 200px; padding: 4px 8px; }
+  .missao-hud small { display: none; }
+}
 .toast.conquista { border-color: rgba(255, 217, 143, 0.6); background: linear-gradient(90deg, rgba(60, 44, 12, 0.92), rgba(18, 16, 24, 0.92)); }
 `;
 
-export function criarUiDiario(raiz: HTMLElement, hud: HTMLElement, d: Diario) {
-  const { fundo, corpo } = criarModal('Diário', 'data-diario');
+export function criarUiDiario(
+  raiz: HTMLElement,
+  hud: HTMLElement,
+  d: Diario,
+  op: { aoFechar?: () => void } = {},
+) {
+  // overlay 'diario': perder o ponteiro ao abrir não abre a pausa por baixo
+  const modal = criarModal('Diário', 'data-diario', 'diario');
+  const { fundo, corpo } = modal;
+  if (op.aoFechar) modal.aoFechar(op.aoFechar);
   corpo.classList.add('diario');
   raiz.appendChild(fundo);
   const cartao = document.createElement('div');
@@ -103,11 +116,11 @@ export function criarUiDiario(raiz: HTMLElement, hud: HTMLElement, d: Diario) {
   renderHud();
   return {
     alternar() {
-      if (fundo.hidden) {
+      if (!modal.aberto) {
         render();
-        fundo.hidden = false;
-      } else fundo.hidden = true;
-      return !fundo.hidden;
+        modal.abrir();
+      } else modal.fechar();
+      return modal.aberto;
     },
     renderHud,
   };

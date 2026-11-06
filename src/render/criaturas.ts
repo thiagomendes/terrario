@@ -114,6 +114,14 @@ interface Modelo {
   raiz: TransformNode;
   partes: { no: TransformNode; malha: Mesh; peca: Peca }[];
   fase: number;
+  /** Posição no quadro anterior: as pernas seguem o deslocamento real, não o desejado. */
+  ultX: number;
+  ultZ: number;
+  /** Rapidez real suavizada e amplitude atual do balanço das pernas. */
+  vel: number;
+  amp: number;
+  /** Último quadro em que a criatura estava na lista (para descartar os modelos órfãos). */
+  quadro: number;
 }
 
 /** Cores reutilizadas: nada de alocar Color3 por parte a cada quadro. */
@@ -135,6 +143,7 @@ export function criarRenderCriaturas(
 ) {
   const materiais = new Map<string, StandardMaterial>();
   const modelos = new Map<number, Modelo>();
+  let quadro = 0;
 
   function material(p: Peca): StandardMaterial {
     const k = `${p.cor}|${p.brilho ?? 0}|${p.alfa ?? 1}`;
@@ -173,7 +182,7 @@ export function criarRenderCriaturas(
       else excluirDoGlow(malha);
       return { no, malha, peca };
     });
-    return { raiz, partes, fase: 0 };
+    return { raiz, partes, fase: 0, ultX: c.x, ultZ: c.z, vel: 0, amp: 0, quadro: 0 };
   }
 
   return {
@@ -183,17 +192,25 @@ export function criarRenderCriaturas(
       tempo: number,
       luz: (c: Criatura) => number,
     ): void {
-      const vivos = new Set<number>();
+      quadro++;
       for (const c of lista) {
-        vivos.add(c.id);
         let m = modelos.get(c.id);
         if (!m) {
           m = montar(c);
           modelos.set(c.id, m);
         }
-        const vel = Math.hypot(c.vx, c.vz);
-        m.fase += dt * vel * 3.2;
-        const balanco = Math.sin(m.fase) * Math.min(0.7, vel * 0.25);
+        m.quadro = quadro;
+        // rapidez pelo deslocamento real (parada contra a parede não "anda" no lugar)
+        const desloc = Math.hypot(c.x - m.ultX, c.z - m.ultZ);
+        m.ultX = c.x;
+        m.ultZ = c.z;
+        const velReal = dt > 0 && desloc < 2 ? desloc / dt : 0;
+        m.vel += (velReal - m.vel) * Math.min(1, dt * 12);
+        m.fase += dt * m.vel * 3.2;
+        // no ar as pernas param de balançar
+        const ampAlvo = c.noChao ? Math.min(0.7, m.vel * 0.25) : 0;
+        m.amp += (ampAlvo - m.amp) * Math.min(1, dt * 10);
+        const balanco = Math.sin(m.fase) * m.amp;
         const flutua = c.tipo === 'espectro' ? 0.12 + Math.sin(tempo * 2 + c.id) * 0.08 : 0;
         m.raiz.position.set(c.x, c.y + flutua, c.z);
         m.raiz.rotation.y = c.yaw;
@@ -238,7 +255,7 @@ export function criarRenderCriaturas(
         }
       }
       for (const [id, m] of modelos) {
-        if (vivos.has(id)) continue;
+        if (m.quadro === quadro) continue;
         for (const p of m.partes) {
           p.malha.dispose();
           p.no.dispose();

@@ -87,11 +87,13 @@ export function colideCorpo(
   const z1 = Math.floor(z + mw);
   const y0 = Math.floor(y);
   const y1 = Math.floor(y + alt);
-  for (let iy = y0; iy <= y1; iy++) {
+  // a linha de baixo entra só por caixas mais altas que 1 bloco (cerca)
+  for (let iy = y0 - 1; iy <= y1; iy++) {
     for (let iz = z0; iz <= z1; iz++) {
       for (let ix = x0; ix <= x1; ix++) {
         if (!s(ix, iy, iz)) continue;
         const cx = s.caixas?.(ix, iy, iz);
+        if (iy < y0 && !cx) continue;
         if (!cx) return true;
         for (const c of cx) {
           if (
@@ -164,12 +166,33 @@ function moverHorizontal(e: EstadoJogador, eixo: 'x' | 'z', d: number, s: Solido
     e[eixo] = alvo;
     return false;
   }
+  // encosta na borda da célula (blocos cheios); se a borda não serve (blocos parciais
+  // como cerca e porta), procura o maior avanço livre — sem trancos para trás
   const borda =
     d > 0
       ? Math.floor(alvo + MEIA_LARGURA) - MEIA_LARGURA - FOLGA
       : Math.floor(alvo - MEIA_LARGURA) + 1 + MEIA_LARGURA + FOLGA;
-  e[eixo] = borda;
+  const naDirecao = d > 0 ? borda >= e[eixo] && borda <= alvo : borda <= e[eixo] && borda >= alvo;
+  const em = (v: number) => colide(s, eixo === 'x' ? v : e.x, e.y, eixo === 'z' ? v : e.z);
+  if (naDirecao && !em(borda)) e[eixo] = borda;
+  else {
+    const inicio = e[eixo];
+    const t = avancoLivre((f) => em(inicio + d * f));
+    e[eixo] = inicio + d * t;
+  }
   return true;
+}
+
+/** Maior fração em [0,1] sem colisão (bisseção; 0 é livre por hipótese). */
+function avancoLivre(colideEm: (f: number) => boolean): number {
+  let livre = 0;
+  let bate = 1;
+  for (let i = 0; i < 12; i++) {
+    const m = (livre + bate) / 2;
+    if (colideEm(m)) bate = m;
+    else livre = m;
+  }
+  return livre;
 }
 
 export function passoFisica(
@@ -225,16 +248,35 @@ export function passoFisica(
     e.vy = Math.max(e.vy - GRAVIDADE * dt, -VEL_QUEDA_MAX);
   }
   const dy = e.vy * dt;
-  const alvo = e.y + dy;
-  if (!colide(s, e.x, alvo, e.z)) {
+  // passos verticais curtos: com FPS baixo a queda não atravessa nem entra no bloco
+  let alvo = e.y;
+  let restante = dy;
+  let bateu = false;
+  while (restante !== 0) {
+    const passo = Math.max(-0.45, Math.min(0.45, restante));
+    restante -= passo;
+    if (Math.abs(restante) < 1e-9) restante = 0;
+    alvo = e.y + passo;
+    if (colide(s, e.x, alvo, e.z)) {
+      bateu = true;
+      break;
+    }
     e.y = alvo;
+  }
+  if (!bateu) {
     e.noChao = false;
     if (!e.voando && !agua) e.topoQueda = Math.max(e.topoQueda ?? e.y, e.y);
     return { aterrissou: false, queda: 0 };
   }
   let resultado: ResultadoFisica = { aterrissou: false, queda: 0 };
   if (dy < 0) {
-    e.y = topoAbaixo(s, e.x, alvo, e.z, e.y);
+    const inicio = e.y;
+    const topo = topoAbaixo(s, e.x, alvo, e.z, e.y);
+    e.y =
+      topo <= inicio + FOLGA && !colide(s, e.x, topo, e.z)
+        ? topo
+        : inicio +
+          (alvo - inicio) * avancoLivre((f) => colide(s, e.x, inicio + (alvo - inicio) * f, e.z));
     e.noChao = true;
     if (!estavaNoChao) {
       resultado = { aterrissou: true, queda: Math.max(0, (e.topoQueda ?? e.y) - e.y) };
@@ -243,7 +285,13 @@ export function passoFisica(
     // pousar no chão encerra o voo
     if (e.voando && cmd.descer) e.voando = false;
   } else {
-    e.y = Math.floor(alvo + ALTURA_JOGADOR) - ALTURA_JOGADOR - FOLGA;
+    const inicio = e.y;
+    const teto = Math.floor(alvo + ALTURA_JOGADOR) - ALTURA_JOGADOR - FOLGA;
+    e.y =
+      teto >= inicio && !colide(s, e.x, teto, e.z)
+        ? teto
+        : inicio +
+          (alvo - inicio) * avancoLivre((f) => colide(s, e.x, inicio + (alvo - inicio) * f, e.z));
     e.noChao = false;
   }
   e.vy = 0;

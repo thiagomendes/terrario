@@ -202,13 +202,6 @@ export const RECEITAS: readonly Receita[] = [
     categoria: 'blocos',
   },
   {
-    id: 'neve',
-    forma: ['NN', 'NN'],
-    chaves: { N: b(Bloco.NEVE) },
-    resultado: { item: b(Bloco.NEVE), qtd: 4 },
-    categoria: 'blocos',
-  },
-  {
     id: 'la_branca',
     forma: ['FF', 'FF'],
     chaves: { F: 'fibra' },
@@ -408,6 +401,7 @@ export const FUNDICAO: Record<string, string> = {
   [b(Bloco.MADEIRA_RETORCIDA)]: 'carvao',
   [b(Bloco.TRONCO_PINHO)]: 'carvao',
   [b(Bloco.TRONCO_BETULA)]: 'carvao',
+  [b(Bloco.TRONCO_LANTERNA)]: 'carvao',
   carne_crua: 'carne_assada',
   peixe_cru: 'peixe_assado',
 };
@@ -423,6 +417,7 @@ export const COMBUSTIVEL: Record<string, number> = {
   [b(Bloco.MADEIRA_RETORCIDA)]: 15,
   [b(Bloco.TRONCO_BETULA)]: 15,
   [b(Bloco.TRONCO_PINHO)]: 15,
+  [b(Bloco.TRONCO_LANTERNA)]: 15,
 };
 
 export const TEMPO_FUNDIR = 8;

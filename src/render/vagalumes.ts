@@ -6,7 +6,8 @@ import { Vector3 } from '@babylonjs/core/Maths/math.vector';
 import type { Scene } from '@babylonjs/core/scene';
 
 export interface Vagalumes {
-  atualizar(posicao: Vector3, noite: number): void;
+  /** `ar`: 1 ao ar livre, 0 em caverna ou debaixo d'água (sem vaga-lumes nem pólen). */
+  atualizar(posicao: Vector3, noite: number, ar?: number): void;
   definirDensidade(f: number): void;
   readonly particulas: ParticleSystem;
 }
@@ -60,19 +61,25 @@ export function criarVagalumes(scene: Scene): Vagalumes {
     ps.addColorGradient(0.45, c.scale(a * 0.25));
     ps.addColorGradient(0.65, c.scale(a));
     ps.addColorGradient(1, new Color4(0, 0, 0, 0));
-    ps.emitRate = (12 + 30 * noite) * densidade;
+    ps.emitRate = (12 + 30 * noite) * densidade * arLivre;
   }
 
   let ultimaNoite = -1;
   let densidade = 1;
+  let arLivre = 1;
   return {
     particulas: ps,
     definirDensidade(f) {
       densidade = f;
       ultimaNoite = -1;
     },
-    atualizar(posicao, noite) {
+    atualizar(posicao, noite, ar = 1) {
       (ps.emitter as Vector3).copyFrom(posicao);
+      const qa = Math.round(ar * 10) / 10;
+      if (qa !== arLivre) {
+        arLivre = qa;
+        ultimaNoite = -1;
+      }
       const q = Math.round(noite * 20) / 20;
       if (q !== ultimaNoite) {
         ultimaNoite = q;

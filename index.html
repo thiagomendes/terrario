@@ -7,6 +7,14 @@
       content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no, viewport-fit=cover"
     />
     <title>Brumaluz</title>
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="icon" href="/icone.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="/icone.svg" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Brumaluz" />
+    <meta name="theme-color" content="#1b1230" />
     <style>
       html,
       body {
@@ -20,6 +28,41 @@
         touch-action: manipulation;
         -webkit-text-size-adjust: 100%;
         overscroll-behavior: none;
+        overscroll-behavior-x: none;
+        -webkit-tap-highlight-color: transparent;
+      }
+      /* o jogo nunca rola a página: sem "puxar para recarregar" nem elástico */
+      body {
+        position: fixed;
+        inset: 0;
+        -webkit-touch-callout: none;
+        -webkit-user-select: none;
+        user-select: none;
+      }
+      * {
+        -webkit-tap-highlight-color: transparent;
+      }
+      input,
+      textarea,
+      [contenteditable] {
+        -webkit-touch-callout: default;
+        -webkit-user-select: text;
+        user-select: text;
+      }
+      /* o canvas recebe toques mesmo com os controles escondidos */
+      #cena {
+        touch-action: none;
+        -webkit-touch-callout: none;
+      }
+      /* painéis roláveis: rolam na vertical sem arrastar a página junto */
+      .entrada,
+      .modal .corpo,
+      .painel-personagem,
+      .inventario,
+      .catalogo .grade-slots,
+      .livro .lista {
+        touch-action: pan-y;
+        overscroll-behavior: contain;
       }
       button {
         touch-action: manipulation;

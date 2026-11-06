@@ -74,10 +74,15 @@ export function criarMundoSolido(
     const b = bloco(x, y, z);
     if (!temFormaParcial(b)) return null;
     const meta = edicoes?.obterMeta(x, y, z) ?? 0;
-    return caixasDoBloco(b, meta, (d) => {
+    const caixas = caixasDoBloco(b, meta, (d) => {
       const [dx, dz] = vetorDirecao(d);
       return cercaConecta(bloco(x + dx, y, z + dz));
     });
+    // cerca segura de verdade: 1,5 bloco de altura na colisão (o desenho continua com 1)
+    if (caixas && obterBloco(b)?.forma === 'cerca') {
+      return caixas.map((c) => [c[0], c[1], c[2], c[3], 1.5, c[5]] as typeof c);
+    }
+    return caixas;
   };
   return solido;
 }

@@ -240,6 +240,11 @@ export function direcaoParaSol(hora: number): Cor {
   return normalizar([Math.cos(a), Math.sin(a), -0.38]);
 }
 
+/** Curva suave 0→1 (smoothstep). */
+function suave(t: number): number {
+  return t * t * (3 - 2 * t);
+}
+
 export function atmosferaNaHora(horaBruta: number): EstadoAtmosfera {
   const hora = normalizarHora(horaBruta);
   let i = 0;
@@ -267,7 +272,9 @@ export function atmosferaNaHora(horaBruta: number): EstadoAtmosfera {
     ceuHorizonte: hor,
     nevoa: hor,
     luz: mix(a.luz, b.luz, t),
-    intensidadeLuz: lerp(a.il, b.il, t),
+    // na troca sol↔lua a direção da luz vira 180°: a intensidade passa por zero ali
+    // (some suave no pôr do sol e volta com a lua), sem as sombras pularem de lado
+    intensidadeLuz: lerp(a.il, b.il, t) * suave(Math.min(1, Math.abs(paraSol[1] + 0.02) / 0.1)),
     direcaoLuz: dirLuz,
     paraSol,
     paraLua,

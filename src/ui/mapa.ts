@@ -28,12 +28,34 @@ body.modo-foto .bussola { display: none; }
 body:has(.entrada:not([hidden])) .minimapa, body:has(.entrada:not([hidden])) .bussola { display: none; }
 .mapa-mundo { position: fixed; inset: 0; z-index: 32; background: rgba(6,8,14,0.9); display: grid; grid-template-rows: auto 1fr; font-family: system-ui, sans-serif; color: #ece6da; }
 .mapa-mundo[hidden] { display: none; }
-.mapa-mundo header { display: flex; align-items: center; gap: 12px; padding: 12px 16px; flex-wrap: wrap; }
+.mapa-mundo { padding-top: env(safe-area-inset-top, 0px); }
+/* o X fica no canto: o cabeçalho reserva o espaço dele */
+.mapa-mundo header { display: flex; align-items: center; gap: 12px; padding: 12px 64px 12px 16px; flex-wrap: wrap; }
+.mapa-mundo .area-mapa { position: relative; min-height: 0; }
+.mapa-mundo .zoom-mapa {
+  position: absolute; right: max(12px, env(safe-area-inset-right)); bottom: max(12px, env(safe-area-inset-bottom));
+  display: grid; gap: 8px;
+}
+.mapa-mundo .zoom-mapa button, .mapa-mundo .marcar-aqui {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-width: 44px; min-height: 44px;
+  padding: 0 10px; border: 2px solid #120e16; border-radius: 0; color: #f6f2ea; cursor: pointer;
+  background: #3a3542; box-shadow: inset 2px 2px 0 rgba(255, 255, 255, 0.18), inset -2px -3px 0 rgba(0, 0, 0, 0.4);
+  font: 700 0.85rem system-ui, sans-serif; touch-action: manipulation;
+}
+.mapa-mundo .zoom-mapa button:hover, .mapa-mundo .marcar-aqui:hover { background: #4a4454; color: #ffe7a3; }
+.mapa-mundo .zoom-mapa button:active, .mapa-mundo .marcar-aqui:active { transform: translateY(2px); }
 .mapa-mundo h2 { margin: 0; font-size: 1.1rem; color: #ffd98f; }
 .mapa-mundo .dica { color: #a59f93; font-size: 0.82rem; }
-.mapa-mundo canvas { width: 100%; height: 100%; cursor: grab; image-rendering: pixelated; }
+.mapa-mundo canvas { display: block; width: 100%; height: 100%; cursor: grab; image-rendering: pixelated; }
 .mapa-mundo .lista-marcadores { display: flex; gap: 6px; flex-wrap: wrap; }
 .mapa-mundo .lista-marcadores button { font-size: 0.78rem; min-height: 30px; padding: 4px 10px; }
+@media (pointer: coarse) { .mapa-mundo .lista-marcadores button { min-height: 44px; } }
+/* paisagem baixa no toque: a linha de ícones ocupa o alto à direita; minimapa menor abaixo dela */
+@media (orientation: landscape) and (max-height: 500px) {
+  .minimapa { width: 96px; height: 96px; top: 40px; }
+  body.toque-ativo .minimapa { width: 84px; height: 84px; top: calc(env(safe-area-inset-top, 0px) + 58px); right: max(10px, env(safe-area-inset-right)); }
+  .bussola { width: min(300px, 36vw); }
+}
 `;
 
 export interface FonteMapa {
@@ -44,6 +66,17 @@ export interface FonteMapa {
   marcadores(): Marcador[];
   adicionarMarcador(nome: string): void;
   removerMarcador(id: number): void;
+  /** Marca a posição atual (mesma ação da tecla K). */
+  marcarAqui?(): void;
+}
+
+export const ZOOM_MIN = 0.5;
+export const ZOOM_MAX = 10;
+export const limitarZoom = (z: number) => Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, z));
+/** Zoom por pinça: escala o zoom do início do gesto pela razão entre as distâncias dos dedos. */
+export function zoomPorPinca(zoomInicial: number, dist0: number, dist: number): number {
+  if (dist0 <= 0 || dist <= 0) return limitarZoom(zoomInicial);
+  return limitarZoom(zoomInicial * (dist / dist0));
 }
 
 export function criarMapas(raiz: HTMLElement, fonte: FonteMapa) {
@@ -107,11 +140,39 @@ export function criarMapas(raiz: HTMLElement, fonte: FonteMapa) {
   dica.textContent = 'Arraste para mover · roda para zoom · K marca um lugar · Tab fecha';
   const lista = document.createElement('div');
   lista.className = 'lista-marcadores';
-  cab.append(h, dica, lista);
+  const marcar = document.createElement('button');
+  marcar.type = 'button';
+  marcar.className = 'marcar-aqui';
+  marcar.setAttribute('data-marcar-aqui', '');
+  marcar.append(icone('marcador'), ' Marcar aqui');
+  marcar.hidden = !fonte.marcarAqui;
+  marcar.addEventListener('click', () => {
+    fonte.marcarAqui?.();
+    grandeSujo = true;
+  });
+  cab.append(h, marcar, dica, lista);
   const cvG = document.createElement('canvas');
+  const area = document.createElement('div');
+  area.className = 'area-mapa';
+  const zoomEl = document.createElement('div');
+  zoomEl.className = 'zoom-mapa';
+  const botaoZoom = (nome: 'mais' | 'menos', rotulo: string, fator: number) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.appendChild(icone(nome));
+    b.setAttribute('aria-label', rotulo);
+    b.title = rotulo;
+    b.addEventListener('click', () => {
+      zoom = limitarZoom(zoom * fator);
+      grandeSujo = true;
+    });
+    return b;
+  };
+  zoomEl.append(botaoZoom('mais', 'Aproximar', 1.3), botaoZoom('menos', 'Afastar', 1 / 1.3));
+  area.append(cvG, zoomEl);
   grande.append(
     cab,
-    cvG,
+    area,
     botaoFechar(() => fecharGrande?.()),
   );
   grande.addEventListener('click', (e) => e.stopPropagation());
@@ -120,14 +181,44 @@ export function criarMapas(raiz: HTMLElement, fonte: FonteMapa) {
   let fecharGrande: (() => void) | null = null;
   let centro = { x: 0, z: 0 };
   let zoom = 3;
+  let grandeSujo = true;
+  // um dedo (ou o mouse) arrasta; dois dedos dão zoom por pinça
   let arrastando: { x: number; y: number } | null = null;
+  const ponteiros = new Map<number, { x: number; y: number }>();
+  let pinca: { d0: number; z0: number } | null = null;
+  const distancia = () => {
+    const [a, b] = [...ponteiros.values()];
+    return a && b ? Math.hypot(a.x - b.x, a.y - b.y) : 0;
+  };
   cvG.style.touchAction = 'none';
   cvG.addEventListener('pointerdown', (e) => {
-    arrastando = { x: e.clientX, y: e.clientY };
-    cvG.setPointerCapture(e.pointerId);
+    ponteiros.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    try {
+      cvG.setPointerCapture(e.pointerId);
+    } catch {
+      // ponteiro já liberado
+    }
+    if (ponteiros.size >= 2) {
+      pinca = { d0: distancia(), z0: zoom };
+      arrastando = null;
+    } else arrastando = { x: e.clientX, y: e.clientY };
   });
-  window.addEventListener('pointerup', () => (arrastando = null));
+  const soltarPonteiro = (e: PointerEvent) => {
+    if (!ponteiros.delete(e.pointerId)) return;
+    if (ponteiros.size < 2) pinca = null;
+    const resta = [...ponteiros.values()][0];
+    arrastando = ponteiros.size === 1 && resta ? { ...resta } : null;
+  };
+  cvG.addEventListener('pointerup', soltarPonteiro);
+  cvG.addEventListener('pointercancel', soltarPonteiro);
+  cvG.addEventListener('lostpointercapture', soltarPonteiro);
   cvG.addEventListener('pointermove', (e) => {
+    if (!ponteiros.has(e.pointerId)) return;
+    ponteiros.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (pinca) {
+      zoom = zoomPorPinca(pinca.z0, pinca.d0, distancia());
+      return;
+    }
     if (!arrastando) return;
     centro.x -= (e.clientX - arrastando.x) / zoom;
     centro.z -= (e.clientY - arrastando.y) / zoom;
@@ -135,7 +226,7 @@ export function criarMapas(raiz: HTMLElement, fonte: FonteMapa) {
   });
   cvG.addEventListener('wheel', (e) => {
     e.preventDefault();
-    zoom = Math.max(0.5, Math.min(10, zoom * (e.deltaY > 0 ? 0.85 : 1.18)));
+    zoom = limitarZoom(zoom * (e.deltaY > 0 ? 0.85 : 1.18));
   });
 
   function desenharMarcadores(
@@ -313,7 +404,6 @@ export function criarMapas(raiz: HTMLElement, fonte: FonteMapa) {
   let ultimaVez = 0;
   let ultimaReamostra = 0;
   let ultimo = { x: NaN, z: NaN, yaw: NaN };
-  let grandeSujo = true;
   cvG.addEventListener('pointermove', () => (grandeSujo = true));
   cvG.addEventListener('wheel', () => (grandeSujo = true));
   function quadro(agora: number): void {

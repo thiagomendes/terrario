@@ -7,12 +7,13 @@ import { MODELOS, type Aparencia } from '../personagem/aparencia';
 import type { Armazenamento } from '../personagem/persistencia';
 import { CSS_PAINEL, criarPainelPersonagem, teclaParaPainel } from './personagem';
 import { CSS_MODAL, criarPainelMundos } from './mundos';
-import { CSS_PIXICONES, icone, type NomeIcone } from './pixicones';
+import { CSS_PIXICONES, icone, modoToque, type NomeIcone } from './pixicones';
 import { CSS_TITULO, desenharLogo, desenharPrevia } from './titulo';
 import { texturaDoBloco } from './icones';
 import { Bloco } from '../world/blocks';
 import { CSS_CONFIG, criarPainelConfig } from './configuracoes';
 import { CSS_PAUSA, criarMenuPausa } from './pausa';
+import { entrarTelaCheia } from './telaCheia';
 import type { GerenciadorConfig } from '../jogo/config';
 import type { MetaMundo, RepositorioMundos } from '../jogo/mundos';
 
@@ -27,7 +28,7 @@ body.submerso::after {
   background: radial-gradient(ellipse at center, rgba(40, 120, 190, 0.18), rgba(5, 30, 60, 0.55));
 }
 .painel-construcao {
-  position: fixed; top: 10px; left: 50%; transform: translateX(-50%); z-index: 8; pointer-events: none;
+  position: fixed; top: 42px; left: 50%; transform: translateX(-50%); z-index: 8; pointer-events: none;
   display: grid; justify-items: center; gap: 2px; padding: 8px 16px; border-radius: 12px;
   background: rgba(10, 12, 20, 0.62); border: 1px solid rgba(255, 217, 143, 0.35);
   color: #fff; font: 700 0.9rem system-ui, sans-serif; text-align: center;
@@ -35,8 +36,22 @@ body.submerso::after {
 .painel-construcao[hidden] { display: none; }
 .painel-construcao small { font-weight: 500; color: #cfc8bb; }
 .toast-area {
-  position: fixed; top: 12px; left: 50%; transform: translateX(-50%); z-index: 50;
+  position: fixed; top: 96px; left: 50%; transform: translateX(-50%); z-index: 50;
   display: grid; gap: 6px; justify-items: center; pointer-events: none;
+  width: max-content; max-width: calc(100vw - 24px); text-align: center;
+}
+/* sem HUD de jogo (título, pausa): os avisos voltam ao alto */
+body.tela-titulo .toast-area, body[data-overlay] .toast-area { top: 12px; }
+/* bússola no alto ao centro; construção logo abaixo; avisos abaixo dela */
+@media (max-width: 560px) {
+  /* retrato: coluna da esquerda (HUD) e do minimapa ocupam o alto; construção acima dos controles */
+  .painel-construcao { top: auto; bottom: calc(env(safe-area-inset-bottom, 0px) + 280px); max-width: calc(100vw - 32px); }
+  .toast-area { top: 216px; max-width: calc(100vw - 132px); }
+}
+@media (orientation: landscape) and (max-height: 500px) {
+  .painel-construcao { top: 56px; padding: 4px 12px; font-size: 0.8rem; }
+  .toast-area { top: 104px; max-width: 46vw; }
+  body.toque-ativo .hud .fps { top: 58px; right: 104px; }
 }
 .toast {
   padding: 8px 14px; border-radius: 10px; background: rgba(12, 14, 22, 0.82);
@@ -103,6 +118,20 @@ const TECLAS: ReadonlyArray<readonly [string, string]> = [
   ['E', 'inventário'],
   ['Esc', 'pausa'],
 ];
+
+/**
+ * Pede o pointer lock do canvas do jogo. No toque (celular/tablet) não faz nada:
+ * lá não existe pointer lock e a promessa rejeitada só gera erro no console.
+ */
+export function travarPonteiro(el: Element | null = document.getElementById('cena')): void {
+  if (!el || modoToque()) return;
+  try {
+    const r = (el as HTMLElement).requestPointerLock?.() as unknown;
+    if (r && typeof (r as Promise<void>).catch === 'function') (r as Promise<void>).catch(() => {});
+  } catch {
+    // navegador recusou (sem gesto do usuário): segue sem travar
+  }
+}
 
 /** Mostra uma notificação curta no topo da tela. */
 export function notificar(texto: string, nomeIcone?: NomeIcone): void {
@@ -307,9 +336,14 @@ export function criarInterface(
   });
   sincronizarTitulo();
 
+  /** Tela cheia (se ligada nas configurações). Chamar dentro do clique: precisa do gesto. */
+  const telaCheiaAoJogar = () => {
+    if (opMundo.config?.atual.telaCheia ?? true) entrarTelaCheia();
+  };
   function entrarNoJogo(): void {
+    telaCheiaAoJogar();
     entrada.hidden = true;
-    document.getElementById('cena')?.requestPointerLock?.();
+    travarPonteiro();
   }
   function rotuloNome(a: Aparencia): string {
     return a.nome || MODELOS[a.modelo].rotulo;
@@ -335,8 +369,9 @@ export function criarInterface(
   infoMundo.setAttribute('data-info-mundo', '');
   hud.appendChild(infoMundo);
   setInterval(() => {
-    infoMundo.textContent = window.__brumaluz?.infoMundo ?? '';
-    infoMundo.hidden = !infoMundo.textContent;
+    const t = window.__brumaluz?.infoMundo ?? '';
+    if (infoMundo.textContent !== t) infoMundo.textContent = t;
+    if (infoMundo.hidden !== !t) infoMundo.hidden = !t;
   }, 1000);
   const painel = criarPainelPersonagem(telaPersonagem, {
     armazenamento: armazenamento(),
@@ -352,8 +387,12 @@ export function criarInterface(
   nomePrevia.textContent = rotuloNome(painel.aparencia());
   desenharPrevia(previa, painel.aparencia());
 
-  entrada.addEventListener('click', () => {
-    if (telaPersonagem.hidden) entrarNoJogo();
+  entrada.addEventListener('click', (e) => {
+    if (!telaPersonagem.hidden) return;
+    // no toque, rolar o título ou tocar no fundo não entra no jogo: só o botão Jogar
+    if (modoToque() && !(e.target instanceof Element && e.target.closest('[data-jogar-titulo]')))
+      return;
+    entrarNoJogo();
   });
   window.addEventListener('keydown', (e) => {
     if (!teclaParaPainel(e.code) || e.repeat) return;
@@ -367,8 +406,9 @@ export function criarInterface(
   const canvasJogo = () => document.getElementById('cena');
   const pausa = criarMenuPausa(app, opMundo.mundo?.nome ?? 'Mundo', {
     continuar: () => {
+      telaCheiaAoJogar();
       pausa.fechar();
-      canvasJogo()?.requestPointerLock?.();
+      travarPonteiro(canvasJogo());
     },
     configuracoes: () => painelConfig?.abrir(),
     mundos: () => abrirMundos?.(),
@@ -401,7 +441,7 @@ export function criarInterface(
     if (e.code !== 'Escape' || !pausa.aberto) return;
     if (document.querySelector('.modal-fundo:not([hidden])')) return;
     pausa.fechar();
-    canvasJogo()?.requestPointerLock?.();
+    travarPonteiro(canvasJogo());
   });
   opMundo.config?.ouvir((c) => {
     fps.hidden = !c.mostrarFps;
@@ -426,18 +466,27 @@ export function criarInterface(
       ` ${d.ferramenta ?? 'Construção livre'}${d.espelho ? ' · espelho' : ''}`,
     );
     const s = document.createElement('small');
-    s.textContent = d.ferramenta ? `${d.detalhe} · B troca · Ctrl+Z desfaz` : 'N desliga o espelho';
+    // no toque não há teclado: só o detalhe da ferramenta
+    if (modoToque()) s.textContent = d.ferramenta ? d.detalhe : 'Espelho ligado';
+    else
+      s.textContent = d.ferramenta
+        ? `${d.detalhe} · B troca · Ctrl+Z desfaz`
+        : 'N desliga o espelho';
     painelConstrucao.appendChild(s);
   });
 
+  // só escreve no DOM quando o texto muda (evita layout a cada tique)
+  const escrever = (el: HTMLElement, t: string) => {
+    if (el.textContent !== t) el.textContent = t;
+  };
   setInterval(() => {
-    const valor = window.__brumaluz?.fps ?? 0;
-    fps.textContent = `${Math.round(valor)} FPS`;
+    if (fps.hidden) return;
+    escrever(fps, `${Math.round(window.__brumaluz?.fps ?? 0)} FPS`);
   }, 500);
   setInterval(() => {
     const a = window.__brumaluz?.audio;
-    somInd.textContent = textoIndicador((a?.estado ?? 'inativo') as EstadoAudio, a?.mudo ?? false);
-    camInd.textContent = textoIndicadorCamera(window.__brumaluz?.camera?.modo() ?? 'primeira');
+    escrever(somInd, textoIndicador((a?.estado ?? 'inativo') as EstadoAudio, a?.mudo ?? false));
+    escrever(camInd, textoIndicadorCamera(window.__brumaluz?.camera?.modo() ?? 'primeira'));
   }, 200);
   return { entrada, acoes };
 }

@@ -53,11 +53,14 @@ async function prepararPedra(page: Page): Promise<{ x: number; y: number; z: num
   const alvo = await page.evaluate(() => window.__brumaluz!.alvo!);
   const ok = await page.evaluate(() => window.__brumaluz!.interagir!('colocar'));
   expect(ok).toBe(true);
-  const pos = {
-    x: alvo.x + alvo.normal.x,
-    y: alvo.y + alvo.normal.y,
-    z: alvo.z + alvo.normal.z,
-  };
+  // mirando planta (grama alta, flor) o bloco a substitui no próprio lugar
+  const noLugar = await page.evaluate(([a, b]) => window.__brumaluz!.bloco!(a.x, a.y, a.z) === b, [
+    alvo,
+    PEDRA,
+  ] as const);
+  const pos = noLugar
+    ? { x: alvo.x, y: alvo.y, z: alvo.z }
+    : { x: alvo.x + alvo.normal.x, y: alvo.y + alvo.normal.y, z: alvo.z + alvo.normal.z };
   await expect
     .poll(() => page.evaluate((p) => window.__brumaluz!.bloco!(p.x, p.y, p.z), pos))
     .toBe(PEDRA);

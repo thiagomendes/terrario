@@ -13,12 +13,15 @@ export const ALTURA_AGUA = NIVEL_MAR + 0.875;
 const VERTICE = /* glsl */ `
 precision highp float;
 attribute vec3 position;
+attribute vec2 luz;
 uniform mat4 world;
 uniform mat4 viewProjection;
 varying vec3 vPos;
+varying vec2 vLuz;
 void main() {
   vec4 p = world * vec4(position, 1.0);
   vPos = p.xyz;
+  vLuz = luz;
   gl_Position = viewProjection * p;
 }
 `;
@@ -26,6 +29,7 @@ void main() {
 const FRAGMENTO = /* glsl */ `
 precision highp float;
 varying vec3 vPos;
+varying vec2 vLuz;
 uniform vec3 camPos;
 uniform float tempo;
 uniform vec3 corNevoa;
@@ -57,12 +61,17 @@ void main() {
   float fres = 0.04 + 0.96 * pow(1.0 - max(dot(n, v), 0.0), 5.0);
   vec3 r = reflect(-v, n);
   r.y = abs(r.y);
-  vec3 ceu = corDoCeu(r);
-  vec3 fundo = mix(vec3(0.015, 0.04, 0.09), vec3(0.03, 0.22, 0.45), luzDia);
+  // luz do ceu no lugar (mesma curva do mundo): lagos de caverna nao refletem o sol
+  float fCeu = pow(0.8, (1.0 - clamp(vLuz.x, 0.0, 1.0)) * 15.0);
+  float fBloco = pow(0.86, (1.0 - clamp(vLuz.y, 0.0, 1.0)) * 15.0) * step(0.001, vLuz.y);
+  vec3 ceu = corDoCeu(r) * fCeu;
+  vec3 fundo = mix(vec3(0.015, 0.04, 0.09), vec3(0.03, 0.22, 0.45), luzDia * fCeu);
   vec3 c = mix(fundo, ceu * vec3(0.7, 0.88, 1.0), clamp(fres * 0.8 + 0.08, 0.0, 0.85));
-  float brilho = pow(max(dot(r, paraSol), 0.0), 350.0) * 3.0 * (1.0 - noite);
-  brilho += pow(max(dot(r, paraLua), 0.0), 600.0) * 1.2 * noite;
+  float brilho = pow(max(dot(r, paraSol), 0.0), 350.0) * 3.0 * (1.0 - noite) * fCeu;
+  brilho += pow(max(dot(r, paraLua), 0.0), 600.0) * 1.2 * noite * fCeu;
   c += corSol * brilho;
+  // tochas perto aquecem a agua
+  c += vec3(1.0, 0.72, 0.42) * fBloco * 0.35;
   float alfa = clamp(0.74 + fres * 0.25 + brilho, 0.0, 1.0);
   float dist = length(camPos - vPos);
   float nev = exp(-pow(dist * densNevoa, 2.0));
@@ -75,7 +84,13 @@ let registrado = false;
 
 export interface Agua {
   material: ShaderMaterial;
-  atualizar(a: EstadoAtmosfera, tempo: number, cam: Vector3): void;
+  /** `nevoa`: a mesma névoa do terreno (cor e densidade da cena), para mar e terra sumirem juntos. */
+  atualizar(
+    a: EstadoAtmosfera,
+    tempo: number,
+    cam: Vector3,
+    nevoa?: { cor: Color3; densidade: number },
+  ): void;
 }
 
 /** Material da água (aplicado às malhas de água dos chunks). */
@@ -90,7 +105,7 @@ export function criarAgua(scene: Scene): Agua {
     scene,
     { vertex: 'agua', fragment: 'agua' },
     {
-      attributes: ['position'],
+      attributes: ['position', 'luz'],
       uniforms: [
         'world',
         'viewProjection',
@@ -108,13 +123,14 @@ export function criarAgua(scene: Scene): Agua {
   const cor = new Color3();
   return {
     material: mat,
-    atualizar(a, tempo, cam) {
+    atualizar(a, tempo, cam, nevoa) {
       aplicarUniformesCeu(mat, a);
       mat.setFloat('tempo', tempo);
       mat.setVector3('camPos', cam);
-      cor.set(...a.nevoa);
+      if (nevoa) cor.copyFrom(nevoa.cor);
+      else cor.set(...a.nevoa);
       mat.setColor3('corNevoa', cor);
-      mat.setFloat('densNevoa', a.densidadeNevoa);
+      mat.setFloat('densNevoa', nevoa ? nevoa.densidade : a.densidadeNevoa);
       mat.setFloat('luzDia', 1 - a.noite);
     },
   };

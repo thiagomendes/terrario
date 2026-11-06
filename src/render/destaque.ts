@@ -8,19 +8,27 @@ export const COR_DESTAQUE: Cor = [1, 0.8, 0.35];
 
 export const MARGEM_DESTAQUE = 0.004;
 
-/** As 12 arestas do cubo do bloco (x, y, z), expandido por `margem` para evitar z-fighting. */
+/** Caixa local do bloco (x0, y0, z0, x1, y1, z1) em 0..1; padrão: o cubo inteiro. */
+export type CaixaLocal = readonly [number, number, number, number, number, number];
+export const CUBO: CaixaLocal = [0, 0, 0, 1, 1, 1];
+
+/**
+ * As 12 arestas da caixa do bloco (x, y, z) — o cubo ou a forma real (laje, tocha,
+ * planta) — expandida por `margem` para evitar z-fighting.
+ */
 export function arestasDoBloco(
   x: number,
   y: number,
   z: number,
   margem = MARGEM_DESTAQUE,
+  caixa: CaixaLocal = CUBO,
 ): Aresta[] {
-  const x0 = x - margem;
-  const x1 = x + 1 + margem;
-  const y0 = y - margem;
-  const y1 = y + 1 + margem;
-  const z0 = z - margem;
-  const z1 = z + 1 + margem;
+  const x0 = x + caixa[0] - margem;
+  const x1 = x + caixa[3] + margem;
+  const y0 = y + caixa[1] - margem;
+  const y1 = y + caixa[4] + margem;
+  const z0 = z + caixa[2] - margem;
+  const z1 = z + caixa[5] + margem;
   return [
     [
       [x0, y0, z0],
@@ -80,12 +88,15 @@ export interface EstadoDestaque {
 }
 
 /** Decide se o contorno aparece e onde, a partir do alvo (ou null). */
-export function estadoDestaque(alvo: { x: number; y: number; z: number } | null): EstadoDestaque {
+export function estadoDestaque(
+  alvo: { x: number; y: number; z: number } | null,
+  caixa: CaixaLocal = CUBO,
+): EstadoDestaque {
   if (!alvo) return { visivel: false, chave: '', arestas: [] };
   return {
     visivel: true,
-    chave: `${alvo.x},${alvo.y},${alvo.z}`,
-    arestas: arestasDoBloco(alvo.x, alvo.y, alvo.z),
+    chave: `${alvo.x},${alvo.y},${alvo.z}:${caixa.join(',')}`,
+    arestas: arestasDoBloco(alvo.x, alvo.y, alvo.z, MARGEM_DESTAQUE, caixa),
   };
 }
 

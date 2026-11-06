@@ -1,3 +1,4 @@
+import { obterItem } from './itens';
 import type { Pilha, Slot } from './inventario';
 import { COMBUSTIVEL, FUNDICAO, TEMPO_FUNDIR } from './receitas';
 
@@ -19,7 +20,8 @@ export function novaFornalha(): EstadoFornalha {
 function podeFundir(f: EstadoFornalha): string | null {
   const alvo = f.entrada ? FUNDICAO[f.entrada.item] : undefined;
   if (!alvo) return null;
-  if (f.saida && (f.saida.item !== alvo || f.saida.qtd >= 64)) return null;
+  const max = obterItem(alvo)?.pilha ?? 64;
+  if (f.saida && (f.saida.item !== alvo || f.saida.qtd >= max)) return null;
   return alvo;
 }
 

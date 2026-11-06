@@ -89,7 +89,9 @@ export interface Criatura {
   vx: number;
   vy: number;
   vz: number;
+  /** Direção para onde o corpo aponta (gira suavemente até `yawAlvo`). */
   yaw: number;
+  yawAlvo: number;
   vida: number;
   noChao: boolean;
   estado: 'vagar' | 'parado' | 'fugir' | 'perseguir' | 'seguir' | 'morrendo';
@@ -103,6 +105,15 @@ export interface Criatura {
   /** 0..1 enquanto morre ou se dissolve. */
   dissolver: number;
   idade: number;
+  /** Tempo restante atordoada pelo golpe: o empurrão decai sem a IA sobrescrever. */
+  atordoada: number;
+  /** Tempo tentando andar sem sair do lugar (para desistir do alvo). */
+  preso: number;
+  /** Tempo restante desviando de um obstáculo na direção `desvioYaw`. */
+  desvio: number;
+  desvioYaw: number;
+  /** Espera até o próximo pulo (coelho). */
+  recargaPulo: number;
 }
 
 export interface Mundo {
@@ -132,6 +143,17 @@ export interface EventoCriatura {
 }
 
 const GRAVIDADE = 22;
+const FOLGA = 1e-4;
+/** Degrau que a criatura sobe andando (lajes e escadas), como o jogador. */
+const DEGRAU = 0.51;
+const VEL_PULO = 7.2;
+/** Impulso ao sair da água pela margem. */
+const VEL_SAIDA_AGUA = 8;
+/** Acima disso, na água, o impulso de saída está em andamento (vale a gravidade). */
+const VY_NADO_MAX = 2.5;
+/** Tempo sem sair do lugar até desistir do caminho. */
+const TEMPO_PRESO = 0.5;
+const ATORDOAMENTO = 0.3;
 
 export function novaCriatura(
   id: number,
@@ -150,6 +172,7 @@ export function novaCriatura(
     vy: 0,
     vz: 0,
     yaw: 0,
+    yawAlvo: 0,
     vida: CRIATURAS[tipo].vida,
     noChao: false,
     estado: 'parado',
@@ -161,44 +184,135 @@ export function novaCriatura(
     domada: false,
     dissolver: 0,
     idade: 0,
+    atordoada: 0,
+    preso: 0,
+    desvio: 0,
+    desvioYaw: 0,
+    recargaPulo: 0,
   };
 }
 
-function mover(c: Criatura, def: DefCriatura, dt: number, m: Mundo, nadando: boolean): void {
+/** Ângulo equivalente em [-π, π]. */
+function embrulhar(a: number): number {
+  return Math.atan2(Math.sin(a), Math.cos(a));
+}
+
+/**
+ * Topo do chão sob a criatura ao cair de `atual` para `alvo` (considera lajes, escadas e
+ * cercas). Devolve null se não achar um apoio abaixo de `atual`.
+ */
+function topoChao(
+  s: Solido,
+  x: number,
+  z: number,
+  mw: number,
+  alvo: number,
+  atual: number,
+): number | null {
+  const x0 = Math.floor(x - mw);
+  const x1 = Math.floor(x + mw);
+  const z0 = Math.floor(z - mw);
+  const z1 = Math.floor(z + mw);
+  let maior = -Infinity;
+  for (let iy = Math.floor(alvo); iy <= Math.floor(atual); iy++) {
+    for (let iz = z0; iz <= z1; iz++) {
+      for (let ix = x0; ix <= x1; ix++) {
+        if (!s(ix, iy, iz)) continue;
+        const cx = s.caixas?.(ix, iy, iz);
+        if (!cx) {
+          if (iy + 1 <= atual + FOLGA && iy + 1 > maior) maior = iy + 1;
+          continue;
+        }
+        for (const c of cx) {
+          const topo = iy + c[4];
+          if (
+            topo <= atual + FOLGA &&
+            topo > maior &&
+            x + mw > ix + c[0] &&
+            x - mw < ix + c[3] &&
+            z + mw > iz + c[2] &&
+            z - mw < iz + c[5]
+          )
+            maior = topo;
+        }
+      }
+    }
+  }
+  return maior === -Infinity ? null : maior;
+}
+
+/**
+ * Altura da superfície da água na coluna da criatura (topo da coluna d'água), ou null se o
+ * corpo não estiver na água.
+ */
+function nivelAgua(m: Mundo, c: Criatura): number | null {
+  const bx = Math.floor(c.x);
+  const bz = Math.floor(c.z);
+  let by = Math.floor(c.y + 0.1);
+  if (!m.agua(bx, by, bz)) return null;
+  for (let n = 0; n < 4 && m.agua(bx, by + 1, bz); n++) by++;
+  return by + 1;
+}
+
+function mover(c: Criatura, def: DefCriatura, dt: number, m: Mundo, agua: number | null): void {
+  const s = m.solido;
+  const peixe = def.comportamento === 'peixe';
+  const livre = (x: number, y: number, z: number) => !colideCorpo(s, x, y, z, def.mw, def.alt);
   const tentar = (eixo: 'x' | 'z', d: number) => {
     if (d === 0) return;
     const nx = eixo === 'x' ? c.x + d : c.x;
     const nz = eixo === 'z' ? c.z + d : c.z;
-    if (!colideCorpo(m.solido, nx, c.y, nz, def.mw, def.alt)) {
+    if (livre(nx, c.y, nz)) {
       c[eixo] += d;
-    } else if (c.noChao && !colideCorpo(m.solido, nx, c.y + 1.05, nz, def.mw, def.alt)) {
-      c.vy = 7.2; // pula um bloco
-    } else {
-      c[eixo === 'x' ? 'vx' : 'vz'] = 0;
+      return;
     }
+    if (!peixe) {
+      // sobe sozinha degraus de meio bloco (lajes e escadas)
+      if (c.noChao && livre(nx, c.y + DEGRAU, nz) && livre(c.x, c.y + DEGRAU, c.z)) {
+        c.y += DEGRAU;
+        c[eixo] += d;
+        return;
+      }
+      // pula um bloco: precisa de espaço no destino e acima de onde está (copa, caverna)
+      const podePular = livre(nx, c.y + 1.05, nz) && livre(c.x, c.y + 1.05, c.z);
+      if (agua !== null) {
+        // nadando, encostada na margem: impulso para subir no bloco de cima
+        if (podePular && c.vy < VEL_SAIDA_AGUA * 0.5) c.vy = VEL_SAIDA_AGUA;
+      } else if (c.noChao && podePular) {
+        c.vy = VEL_PULO;
+        c.noChao = false;
+      }
+    }
+    c[eixo === 'x' ? 'vx' : 'vz'] = 0;
   };
   tentar('x', c.vx * dt);
   tentar('z', c.vz * dt);
-  if (def.comportamento === 'peixe') {
+  if (peixe) {
     c.vy *= 0.9;
-  } else if (nadando) {
-    c.vy = Math.min(c.vy + 14 * dt, 1.8);
+  } else if (agua !== null && c.vy <= VY_NADO_MAX) {
+    // empuxo proporcional à profundidade, com amortecimento: boia sem serrilhar na superfície
+    const alvoY = agua - Math.max(0.35, def.alt * 0.5);
+    const acel = (alvoY - c.y) * 30 - c.vy * 7;
+    c.vy = Math.min(VY_NADO_MAX, Math.max(-3, c.vy + acel * dt));
   } else {
     c.vy = Math.max(c.vy - GRAVIDADE * dt, -30);
   }
   const ny = c.y + c.vy * dt;
-  if (!colideCorpo(m.solido, c.x, ny, c.z, def.mw, def.alt)) {
+  if (livre(c.x, ny, c.z)) {
     c.y = ny;
     c.noChao = false;
-  } else {
-    if (c.vy < 0) {
-      c.y = Math.floor(ny) + 1;
-      c.noChao = true;
-    }
-    c.vy = 0;
+    return;
   }
+  if (c.vy < 0) {
+    // pousa no topo real do apoio (laje, escada, cerca); sem apoio claro, fica onde está
+    const topo = topoChao(s, c.x, c.z, def.mw, ny, c.y);
+    if (topo !== null && livre(c.x, topo, c.z)) c.y = topo;
+    c.noChao = true;
+  }
+  c.vy = 0;
 }
 
+/** Ajusta a velocidade rumo ao ponto; devolve a distância horizontal até ele. */
 function andarPara(c: Criatura, def: DefCriatura, tx: number, tz: number, fator = 1): number {
   const dx = tx - c.x;
   const dz = tz - c.z;
@@ -211,8 +325,78 @@ function andarPara(c: Criatura, def: DefCriatura, tx: number, tz: number, fator 
   const v = def.velocidade * fator;
   c.vx = (dx / d) * v;
   c.vz = (dz / d) * v;
-  c.yaw = Math.atan2(dx, dz);
+  c.yawAlvo = Math.atan2(dx, dz);
   return d;
+}
+
+function frear(c: Criatura, k: number): void {
+  c.vx *= k;
+  c.vz *= k;
+}
+
+/** Sorteia um destino de passeio; o peixe só escolhe pontos dentro d'água. */
+function sortearAlvo(c: Criatura, m: Mundo, rng: Gerador, raio: number): void {
+  const peixe = CRIATURAS[c.tipo].comportamento === 'peixe';
+  for (let i = 0; i < 4; i++) {
+    const ax = c.x + (rng() - 0.5) * raio;
+    const az = c.z + (rng() - 0.5) * raio;
+    if (peixe && !m.agua(Math.floor(ax), Math.floor(c.y + 0.15), Math.floor(az))) continue;
+    c.alvoX = ax;
+    c.alvoZ = az;
+    return;
+  }
+  c.alvoX = c.x;
+  c.alvoZ = c.z;
+}
+
+/** Sem sair do lugar: vira 90° (ou volta, se já desviava) por um tempo e troca o destino. */
+function desistir(c: Criatura, rng: Gerador, direcao: number): void {
+  c.desvioYaw = embrulhar(
+    c.desvio > 0 ? c.desvioYaw + Math.PI : direcao + (rng() < 0.5 ? 1 : -1) * (Math.PI / 2),
+  );
+  c.desvio = 0.7 + rng() * 0.6;
+  if (c.estado === 'vagar' || c.estado === 'parado' || c.tipo === 'peixe') {
+    c.alvoX = c.x + Math.sin(c.desvioYaw) * 6;
+    c.alvoZ = c.z + Math.cos(c.desvioYaw) * 6;
+    c.tempoEstado = Math.max(c.tempoEstado, 2);
+  }
+}
+
+/** Posição livre perto do jogador para a raposa domada reaparecer (ou null). */
+const VIZINHOS: [number, number][] = [
+  [1, 1],
+  [-1, 1],
+  [1, -1],
+  [-1, -1],
+  [1.5, 0],
+  [-1.5, 0],
+  [0, 1.5],
+  [0, -1.5],
+];
+function lugarLivrePerto(m: Mundo, def: DefCriatura, j: Jogador): [number, number, number] | null {
+  for (const [ox, oz] of VIZINHOS) {
+    for (const oy of [0, 0.5, 1]) {
+      const x = j.x + ox;
+      const y = j.y + oy;
+      const z = j.z + oz;
+      if (!colideCorpo(m.solido, x, y, z, def.mw, def.alt)) return [x, y, z];
+    }
+  }
+  return null;
+}
+
+/**
+ * Fora do raio de simulação: só assenta (cai até o chão ou boia), sem IA. Evita a criatura
+ * congelada no ar.
+ */
+export function assentarCriatura(c: Criatura, dt: number, m: Mundo): void {
+  const def = CRIATURAS[c.tipo];
+  c.vx = 0;
+  c.vz = 0;
+  if (def.comportamento === 'peixe' || c.estado === 'morrendo') return;
+  const agua = nivelAgua(m, c);
+  if (c.noChao && agua === null) return;
+  mover(c, def, dt, m, agua);
 }
 
 /**
@@ -224,7 +408,7 @@ export function passoCriatura(
   m: Mundo,
   j: Jogador,
   rng: Gerador,
-  hostisPerto: Criatura[],
+  hostisPerto: readonly Criatura[],
   noite: number,
 ): EventoCriatura[] {
   const def = CRIATURAS[c.tipo];
@@ -233,6 +417,7 @@ export function passoCriatura(
   c.tempoEstado -= dt;
   c.recarga = Math.max(0, c.recarga - dt);
   c.ferida = Math.max(0, c.ferida - dt);
+  c.recargaPulo = Math.max(0, c.recargaPulo - dt);
   if (c.estado === 'morrendo') {
     c.dissolver = Math.min(1, c.dissolver + dt * 1.5);
     c.vx *= 0.9;
@@ -243,142 +428,214 @@ export function passoCriatura(
   const by = Math.floor(c.y + 0.3);
   const bz = Math.floor(c.z);
   const nadando = m.agua(bx, by, bz);
+  const agua = def.comportamento === 'peixe' ? null : nivelAgua(m, c);
   const dxj = j.x - c.x;
   const dzj = j.z - c.z;
   const distJ = Math.hypot(dxj, dzj, j.y - c.y);
 
-  switch (def.comportamento) {
-    case 'peixe': {
-      if (!nadando) {
-        // fora d'água: se debate e perde vida
-        c.vy = Math.max(c.vy - GRAVIDADE * dt, -20);
-        if (c.tempoEstado <= 0) {
-          c.tempoEstado = 0.6;
-          ev.push(...ferir(c, 1, rng));
+  if (c.atordoada > 0) {
+    // golpeada: o empurrão decai sozinho antes de a IA voltar a mandar
+    c.atordoada -= dt;
+    frear(c, Math.exp(-dt * 5));
+  } else
+    switch (def.comportamento) {
+      case 'peixe': {
+        if (!nadando) {
+          // fora d'água: se debate e perde vida
+          c.vy = Math.max(c.vy - GRAVIDADE * dt, -20);
+          if (c.tempoEstado <= 0) {
+            c.tempoEstado = 0.6;
+            ev.push(...ferir(c, 1, rng));
+          }
+          break;
         }
+        if (c.tempoEstado <= 0) {
+          c.tempoEstado = 2 + rng() * 3;
+          sortearAlvo(c, m, rng, 10);
+          c.vy = (rng() - 0.5) * 1.2;
+        }
+        if (distJ < 3) andarPara(c, def, c.x - dxj, c.z - dzj, 1.6);
+        else andarPara(c, def, c.alvoX, c.alvoZ);
+        if (!m.agua(bx, Math.floor(c.y + c.vy * 0.3 + 0.15), bz)) c.vy = -Math.abs(c.vy) * 0.5;
         break;
       }
-      if (c.tempoEstado <= 0) {
-        c.tempoEstado = 2 + rng() * 3;
-        c.alvoX = c.x + (rng() - 0.5) * 10;
-        c.alvoZ = c.z + (rng() - 0.5) * 10;
-        c.vy = (rng() - 0.5) * 1.2;
-      }
-      if (distJ < 3) andarPara(c, def, c.x - dxj, c.z - dzj, 1.6);
-      else andarPara(c, def, c.alvoX, c.alvoZ);
-      if (!m.agua(bx, Math.floor(c.y + c.vy * 0.3 + 0.15), bz)) c.vy = -Math.abs(c.vy) * 0.5;
-      break;
-    }
-    case 'passivo': {
-      if (c.estado === 'fugir' && c.tempoEstado > 0) {
-        andarPara(c, def, c.x - dxj * 4, c.z - dzj * 4, 1.7);
-        if (c.tipo === 'coelho' && c.noChao) c.vy = 5;
-        break;
-      }
-      if (c.tempoEstado <= 0) {
-        if (rng() < 0.4) {
-          c.estado = 'parado';
-          c.tempoEstado = 2 + rng() * 4;
+      case 'passivo': {
+        if (c.estado === 'fugir' && c.tempoEstado > 0) {
+          andarPara(c, def, c.x - dxj * 4, c.z - dzj * 4, 1.7);
+          if (c.tipo === 'coelho' && c.noChao && c.recargaPulo <= 0) {
+            c.vy = 5;
+            c.noChao = false;
+            c.recargaPulo = 0.35 + rng() * 0.25;
+          }
+          break;
+        }
+        if (c.tempoEstado <= 0) {
+          if (rng() < 0.4) {
+            c.estado = 'parado';
+            c.tempoEstado = 2 + rng() * 4;
+          } else {
+            c.estado = 'vagar';
+            c.tempoEstado = 3 + rng() * 4;
+            sortearAlvo(c, m, rng, 14);
+          }
+        }
+        if (c.estado === 'vagar') {
+          if (andarPara(c, def, c.alvoX, c.alvoZ, 0.6) < 0.4) c.tempoEstado = 0;
+          if (c.tipo === 'coelho' && c.noChao && c.recargaPulo <= 0 && rng() < dt * 2) {
+            c.vy = 4.5;
+            c.noChao = false;
+            c.recargaPulo = 0.4;
+          }
         } else {
-          c.estado = 'vagar';
-          c.tempoEstado = 3 + rng() * 4;
-          c.alvoX = c.x + (rng() - 0.5) * 14;
-          c.alvoZ = c.z + (rng() - 0.5) * 14;
+          c.estado = 'parado';
+          frear(c, 0.7);
         }
-      }
-      if (c.estado === 'vagar') {
-        if (andarPara(c, def, c.alvoX, c.alvoZ, 0.6) < 0.4) c.tempoEstado = 0;
-        if (c.tipo === 'coelho' && c.noChao && rng() < dt * 2) c.vy = 4.5;
-      } else {
-        c.vx *= 0.7;
-        c.vz *= 0.7;
-      }
-      break;
-    }
-    case 'hostil': {
-      const luz = m.luzBloco(bx, by, bz);
-      const sol = m.ceuAberto(bx, by + 1, bz) && noite < 0.3;
-      if (sol || c.idade > 600) {
-        // a luz do dia dissolve o espectro
-        c.dissolver = Math.min(1, c.dissolver + dt * 0.5);
-        if (c.dissolver >= 1) {
-          c.estado = 'morrendo';
-          ev.push({ tipo: 'morte', criatura: c, drops: [] });
-        }
-      }
-      if (luz >= 9) {
-        c.estado = 'fugir';
-        c.tempoEstado = 2;
-      }
-      if (c.estado === 'fugir' && c.tempoEstado > 0) {
-        andarPara(c, def, c.x - dxj * 4, c.z - dzj * 4, 1.2);
         break;
       }
-      if (j.vivo && !j.criativo && distJ < 18) {
-        c.estado = 'perseguir';
-        // não entra em áreas iluminadas
-        const proxX = Math.floor(c.x + Math.sign(dxj));
-        const proxZ = Math.floor(c.z + Math.sign(dzj));
-        if (m.luzBloco(proxX, by, proxZ) >= 9) {
-          c.vx *= 0.5;
-          c.vz *= 0.5;
-        } else andarPara(c, def, j.x, j.z, 1);
-        if (distJ < 1.4 && c.recarga <= 0) {
-          c.recarga = 1.1;
-          ev.push({ tipo: 'ataque', criatura: c, dano: def.dano });
+      case 'hostil': {
+        const luz = m.luzBloco(bx, by, bz);
+        const sol = m.ceuAberto(bx, by + 1, bz) && noite < 0.3;
+        if (sol || c.idade > 600) {
+          // a luz do dia dissolve o espectro
+          c.dissolver = Math.min(1, c.dissolver + dt * 0.5);
+          if (c.dissolver >= 1) {
+            c.estado = 'morrendo';
+            ev.push({ tipo: 'morte', criatura: c, drops: [] });
+          }
         }
-      } else {
-        if (c.tempoEstado <= 0) {
-          c.tempoEstado = 3 + rng() * 3;
-          c.alvoX = c.x + (rng() - 0.5) * 12;
-          c.alvoZ = c.z + (rng() - 0.5) * 12;
+        if (luz >= 9) {
+          c.estado = 'fugir';
+          c.tempoEstado = 2;
         }
-        andarPara(c, def, c.alvoX, c.alvoZ, 0.5);
-      }
-      if (rng() < dt * 0.15) ev.push({ tipo: 'som', criatura: c });
-      break;
-    }
-    case 'companheiro': {
-      if (!c.domada) {
-        if (c.tempoEstado <= 0) {
-          c.tempoEstado = 2 + rng() * 4;
-          c.alvoX = c.x + (rng() - 0.5) * 10;
-          c.alvoZ = c.z + (rng() - 0.5) * 10;
+        if (c.estado === 'fugir' && c.tempoEstado > 0) {
+          andarPara(c, def, c.x - dxj * 4, c.z - dzj * 4, 1.2);
+          break;
         }
-        // curiosa: chega perto mas mantém distância
-        if (distJ < 6 && distJ > 2.5) andarPara(c, def, j.x, j.z, 0.5);
-        else andarPara(c, def, c.alvoX, c.alvoZ, 0.4);
+        if (j.vivo && !j.criativo && distJ < 18) {
+          c.estado = 'perseguir';
+          // não entra em áreas iluminadas
+          const proxX = Math.floor(c.x + Math.sign(dxj));
+          const proxZ = Math.floor(c.z + Math.sign(dzj));
+          if (m.luzBloco(proxX, by, proxZ) >= 9) frear(c, 0.5);
+          else if (Math.hypot(dxj, dzj) > 1) andarPara(c, def, j.x, j.z, 1);
+          else {
+            // colado no jogador: para a ~1 bloco em vez de empurrá-lo
+            frear(c, 0.5);
+            c.yawAlvo = Math.atan2(dxj, dzj);
+          }
+          if (distJ < 1.4 && c.recarga <= 0) {
+            c.recarga = 1.1;
+            ev.push({ tipo: 'ataque', criatura: c, dano: def.dano });
+          }
+        } else {
+          if (c.estado !== 'vagar') {
+            // a perseguição (ou a fuga) acabou: volta a vagar
+            c.estado = 'vagar';
+            c.tempoEstado = 0;
+          }
+          if (c.tempoEstado <= 0) {
+            c.tempoEstado = 3 + rng() * 3;
+            sortearAlvo(c, m, rng, 12);
+          }
+          andarPara(c, def, c.alvoX, c.alvoZ, 0.5);
+        }
+        if (rng() < dt * 0.15) ev.push({ tipo: 'som', criatura: c });
         break;
       }
-      const inimigo = hostisPerto
-        .filter((h) => h.estado !== 'morrendo')
-        .map((h) => ({ h, d: Math.hypot(h.x - c.x, h.z - c.z) }))
-        .filter((o) => o.d < 10)
-        .sort((a, b) => a.d - b.d)[0];
-      if (inimigo) {
-        andarPara(c, def, inimigo.h.x, inimigo.h.z, 1.1);
-        if (inimigo.d < 1.3 && c.recarga <= 0) {
-          c.recarga = 0.8;
-          ev.push(...ferir(inimigo.h, def.dano ?? 2, rng, c.x, c.z));
+      case 'companheiro': {
+        if (!c.domada) {
+          // curiosa: chega perto mas mantém distância (com histerese para não oscilar)
+          const curiosa = c.estado === 'seguir' ? distJ < 7 : distJ < 5.5;
+          if (curiosa) {
+            c.estado = 'seguir';
+            const dh = Math.hypot(dxj, dzj) || 1;
+            // vai até ~2,75 blocos do jogador; a folga de andarPara evita o vaivém
+            if (andarPara(c, def, j.x - (dxj / dh) * 2.75, j.z - (dzj / dh) * 2.75, 0.5) < 0.3)
+              c.yawAlvo = Math.atan2(dxj, dzj);
+            break;
+          }
+          if (c.estado !== 'vagar') {
+            c.estado = 'vagar';
+            c.tempoEstado = 0;
+          }
+          if (c.tempoEstado <= 0) {
+            c.tempoEstado = 2 + rng() * 4;
+            sortearAlvo(c, m, rng, 10);
+          }
+          andarPara(c, def, c.alvoX, c.alvoZ, 0.4);
+          break;
         }
-      } else if (distJ > 3.5) {
-        c.estado = 'seguir';
-        andarPara(c, def, j.x, j.z, distJ > 8 ? 1.3 : 0.9);
-        if (distJ > 24) {
-          c.x = j.x + 1;
-          c.y = j.y + 0.5;
-          c.z = j.z + 1;
+        let inimigo: Criatura | null = null;
+        let dInimigo = 10;
+        for (const h of hostisPerto) {
+          if (h.estado === 'morrendo') continue;
+          const d = Math.hypot(h.x - c.x, h.z - c.z);
+          if (d < dInimigo) {
+            dInimigo = d;
+            inimigo = h;
+          }
         }
-      } else {
-        c.estado = 'parado';
-        c.vx *= 0.6;
-        c.vz *= 0.6;
-        c.yaw = Math.atan2(dxj, dzj);
+        if (inimigo) {
+          c.estado = 'perseguir';
+          andarPara(c, def, inimigo.x, inimigo.z, 1.1);
+          if (dInimigo < 1.3 && c.recarga <= 0) {
+            c.recarga = 0.8;
+            ev.push(...ferir(inimigo, def.dano ?? 2, rng, c.x, c.z));
+          }
+        } else if (c.estado === 'seguir' ? distJ > 2.5 : distJ > 4) {
+          // histerese: começa a seguir acima de 4 e só para abaixo de 2,5
+          c.estado = 'seguir';
+          andarPara(c, def, j.x, j.z, distJ > 8 ? 1.3 : 0.9);
+          if (distJ > 24) {
+            const p = lugarLivrePerto(m, def, j);
+            if (p) {
+              [c.x, c.y, c.z] = p;
+              c.vy = 0;
+              c.preso = 0;
+              c.desvio = 0;
+            }
+          }
+        } else {
+          c.estado = 'parado';
+          frear(c, 0.6);
+          c.yawAlvo = Math.atan2(dxj, dzj);
+        }
+        break;
       }
-      break;
+    }
+
+  // desviando de um obstáculo: mantém a rapidez, troca a direção
+  if (c.desvio > 0 && c.atordoada <= 0) {
+    c.desvio -= dt;
+    const v = Math.hypot(c.vx, c.vz);
+    if (v > 0.1) {
+      c.vx = Math.sin(c.desvioYaw) * v;
+      c.vz = Math.cos(c.desvioYaw) * v;
+      c.yawAlvo = c.desvioYaw;
     }
   }
-  mover(c, def, dt, m, nadando && def.comportamento !== 'peixe');
+
+  const x0 = c.x;
+  const z0 = c.z;
+  const vxDesejado = c.vx;
+  const vzDesejado = c.vz;
+  const desejada = Math.hypot(vxDesejado, vzDesejado);
+  mover(c, def, dt, m, agua);
+
+  // alvo inalcançável: mede o deslocamento real e desiste se não sai do lugar
+  if (dt > 0 && c.atordoada <= 0 && desejada > 0.4) {
+    const real = Math.hypot(c.x - x0, c.z - z0) / dt;
+    if (real < desejada * 0.2) c.preso += dt;
+    else if (real > desejada * 0.5) c.preso = 0;
+    if (c.preso > TEMPO_PRESO) {
+      c.preso = 0;
+      desistir(c, rng, Math.atan2(vxDesejado, vzDesejado));
+    }
+  } else c.preso = Math.max(0, c.preso - dt);
+
+  // gira o corpo aos poucos (pelo menor arco)
+  c.yaw = embrulhar(c.yaw + embrulhar(c.yawAlvo - c.yaw) * Math.min(1, dt * 8));
+
   if (c.y < -10) {
     c.estado = 'morrendo';
     ev.push({ tipo: 'morte', criatura: c, drops: [] });
@@ -405,6 +662,9 @@ export function ferir(
     c.vx = (dx / d) * 6;
     c.vz = (dz / d) * 6;
     c.vy = 4.5;
+    c.noChao = false;
+    // o empurrão vale por um instante antes de a IA retomar
+    c.atordoada = ATORDOAMENTO;
   }
   if (def.comportamento === 'passivo') {
     c.estado = 'fugir';

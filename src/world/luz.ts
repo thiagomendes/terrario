@@ -24,6 +24,11 @@ export interface VizinhosLuz {
   xPos?: Uint8Array;
   zNeg?: Uint8Array;
   zPos?: Uint8Array;
+  /** Diagonais (cantos): sem eles, a luz e a sombra de canto vazam na divisa. */
+  xNegZNeg?: Uint8Array;
+  xPosZNeg?: Uint8Array;
+  xNegZPos?: Uint8Array;
+  xPosZPos?: Uint8Array;
 }
 
 const M = 14; // margem em volta do chunk (luz máxima 15)
@@ -47,7 +52,7 @@ const ri = (x: number, y: number, z: number) => (y * RZ + (z + M)) * RX + (x + M
 
 /**
  * Calcula a luz do céu e dos blocos para o chunk e uma margem de 16 blocos,
- * usando os 4 vizinhos diretos; regiões sem dados (cantos) contam como ar aberto.
+ * usando os 8 vizinhos (diretos e diagonais); regiões sem dados contam como ar aberto.
  */
 export function calcularLuz(blocos: Uint8Array, viz: VizinhosLuz = {}): MapaLuz {
   // buffers reaproveitados entre chamadas (o resultado vale até a próxima chamada)
@@ -61,6 +66,10 @@ export function calcularLuz(blocos: Uint8Array, viz: VizinhosLuz = {}): MapaLuz 
     [viz.xPos, TAM_X, 0],
     [viz.zNeg, 0, -TAM_Z],
     [viz.zPos, 0, TAM_Z],
+    [viz.xNegZNeg, -TAM_X, -TAM_Z],
+    [viz.xPosZNeg, TAM_X, -TAM_Z],
+    [viz.xNegZPos, -TAM_X, TAM_Z],
+    [viz.xPosZPos, TAM_X, TAM_Z],
   ];
   for (const [b, ox, oz] of fontes) {
     if (!b) continue;

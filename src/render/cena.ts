@@ -25,7 +25,7 @@ import { ImageProcessingConfiguration } from '@babylonjs/core/Materials/imagePro
 import { ColorCurves } from '@babylonjs/core/Materials/colorCurves';
 import { MeshBuilder } from '@babylonjs/core/Meshes/meshBuilder';
 import type { LinesMesh } from '@babylonjs/core/Meshes/linesMesh';
-import { COR_DESTAQUE, estadoDestaque } from './destaque';
+import { COR_DESTAQUE, CUBO, estadoDestaque, type CaixaLocal } from './destaque';
 import { criarControle } from '../player/controle';
 import { gerarAtlas, type FaceBloco } from '../art/atlas';
 import { Bloco, ehAlvo, obterBloco as obterBlocoDef } from '../world/blocks';
@@ -51,7 +51,7 @@ import { PluginBalanco } from './balanco';
 import { SEMENTE_PADRAO, TAM_X, TAM_Z } from '../world/chunk';
 import type { DadosMundo, MetaMundo, ModoJogo, RepositorioMundos } from '../jogo/mundos';
 import { criarMundoDeItens, dropsDoBloco } from '../jogo/drops';
-import { direcaoDoYaw } from '../world/formas';
+import { caixasDoBloco, cercaConecta, direcaoDoYaw, vetorDirecao } from '../world/formas';
 import { podeColetar, velocidadeMineracao } from '../jogo/ferramentas';
 import { obterItem } from '../jogo/itens';
 import { criarRenderItens } from './itensSoltos';
@@ -111,7 +111,30 @@ import { ajustarEscala, escalaBase } from './resolucao';
 const DT_MAXIMO_QUADRO = 1 / 30;
 /** Cor reutilizada (evita alocar Color3 por quadro). */
 const BRANCO = new Color3(1, 1, 1);
-import { criarPoolParticulas, LIMITE_PARTICULAS } from '../fx/particulas';
+/** Cantos diagonais que a luz de uma edição em (lx, lz) do chunk alcança. */
+function diagonaisAlcancadas(lx: number, lz: number): [number, number][] {
+  const out: [number, number][] = [];
+  for (const dx of [-1, 1])
+    for (const dz of [-1, 1]) {
+      const ax = dx < 0 ? lx + 1 : TAM_X - lx;
+      const az = dz < 0 ? lz + 1 : TAM_Z - lz;
+      if (ax + az < 15) out.push([dx, dz]);
+    }
+  return out;
+}
+/** O chunk e seus 8 vizinhos (luz e sombra de canto atravessam as divisas). */
+const VIZINHANCA: readonly [number, number][] = [
+  [0, 0],
+  [-1, 0],
+  [1, 0],
+  [0, -1],
+  [0, 1],
+  [-1, -1],
+  [1, -1],
+  [-1, 1],
+  [1, 1],
+];
+import { criarPoolParticulas, LIMITE_PARTICULAS, VIDA_PARTICULA } from '../fx/particulas';
 import { ESTAGIOS_RACHADURA, gerarTexturaRachadura, TAM_RACHADURA } from '../fx/rachadura';
 import {
   DURACAO_PULSO,
@@ -163,7 +186,9 @@ const INTERATIVOS = new Set<number>([
 ]);
 let raioChunks = RAIO_INICIAL;
 let fatorNevoa = 1;
-const RAIO_SOMBRA = 1;
+/** Chunks em volta da câmera que projetam sombra (celular usa 1: menos geometria na passada). */
+const RAIO_SOMBRA_DESKTOP = 2;
+const RAIO_SOMBRA_CELULAR = 1;
 const ALCANCE = 5;
 
 export interface EstadoDepuracao {
@@ -198,7 +223,9 @@ export interface EstadoDepuracao {
   aplicadasNoUltimoQuadro?: number;
   atmosfera?: { noite: number; crepusculo: number };
   itensSoltos?: number;
-  soltarItem?: (item: string, qtd: number, x: number, y: number, z: number) => void;
+  blocoGerado?: (x: number, y: number, z: number) => number;
+  /** Solta um item no chão (dur: durabilidade restante de ferramentas). */
+  soltarItem?: (item: string, qtd: number, x: number, y: number, z: number, dur?: number) => void;
   modo?: ModoJogo;
   controleDireto?: {
     olhar: (dx: number, dy: number) => void;
@@ -229,6 +256,8 @@ export interface EstadoDepuracao {
   infoMundo?: string;
   definirClima?: (t: TipoClima) => void;
   definirDia?: (d: number) => void;
+  /** Dia atual (contado desde o início do mundo). */
+  dia?: () => number;
   criaturas?: () => {
     tipo: string;
     x: number;
@@ -386,7 +415,10 @@ export function criarCena(
   const sombras = new CascadedShadowGenerator(2048, sol);
   sombras.numCascades = NUM_CASCATAS;
   sombras.lambda = 0.75;
-  sombras.shadowMaxZ = 90;
+  const toqueGrosso = typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches;
+  // o alcance da sombra acompanha o raio de quem a projeta (sem corte reto no meio do chão)
+  const raioSombra = toqueGrosso ? RAIO_SOMBRA_CELULAR : RAIO_SOMBRA_DESKTOP;
+  sombras.shadowMaxZ = (raioSombra + 0.5) * TAM_X;
   sombras.bias = 0.006;
   sombras.normalBias = 0.02;
   sombras.setDarkness(0.15);
@@ -397,7 +429,6 @@ export function criarCena(
   /** Claridade do dia para o viewmodel (1 ao meio-dia, ~0.4 à noite). */
   let luzDia = 1;
   // celular: desfoque menor (halo mais justo e mais barato) na mesma meia resolução
-  const toqueGrosso = typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches;
   const glow = new GlowLayer('glow', scene, {
     blurKernelSize: toqueGrosso ? 16 : 32,
     mainTextureRatio: 0.5,
@@ -502,7 +533,8 @@ export function criarCena(
   matPlanta.ambientColor = Color3.White();
   matPlanta.backFaceCulling = false;
   matPlanta.useAlphaFromDiffuseTexture = true;
-  matPlanta.transparencyMode = Material.MATERIAL_ALPHATESTANDBLEND;
+  // arte com alfa 0 ou 1: recorte puro (sem disputar ordenação com a água)
+  matPlanta.transparencyMode = Material.MATERIAL_ALPHATEST;
   matPlanta.alphaCutOff = 0.5;
   const mundoPlanta = new PluginMundo(matPlanta);
 
@@ -513,6 +545,11 @@ export function criarCena(
   let outonoAtual = 0;
   let invernoAtual = 0;
   let jogadorCoberto = false;
+  /** 0 sob teto, 1 a céu aberto (suavizado; controla chuva, neve e folhas). */
+  let ceuAbertoSuave = 1;
+  let escuroSuave = 0;
+  let submersoSuave = 0;
+  let molhadoSuave = 0;
   let flash = 0;
   const precipitacao = criarPrecipitacao(scene);
 
@@ -537,12 +574,14 @@ export function criarCena(
     const k = 1 - Math.exp(-dt / 20);
     outonoAtual += ((estacao === 'outono' ? 1 : 0) - outonoAtual) * k;
     invernoAtual += ((estacao === 'inverno' ? 1 : 0) - invernoAtual) * k;
+    // o chão molha e seca aos poucos
+    molhadoSuave += (clima.estado.chuva - molhadoSuave) * Math.min(1, dt / 4);
     mundoSolido.ventoFolhas = 1 + clima.estado.chuva * 1.5 + clima.estado.raios;
     mundoSolido.tempoMundo = tempo;
     for (const m of [mundoSolido, mundoPlanta]) {
       m.outono = outonoAtual;
       m.inverno = invernoAtual * 0.9;
-      m.molhado = clima.estado.chuva;
+      m.molhado = molhadoSuave;
     }
     const pj = controle.jogador;
     // bioma (ruído) só quando o jogador muda de coluna
@@ -569,31 +608,45 @@ export function criarCena(
     ambiente?.definirContexto(contextoMusica);
     estado.musica = contextoMusica;
     estado.precipitacao = precipitacao.ativas();
-    precipitacao.atualizar(cameraVisao.position, clima.estado.chuva, nevando, jogadorCoberto);
+    // qualquer teto acima (casa, caverna, marquise) tira a chuva, com transição suave
+    const alvoAberto = tetoCoberto || cameraSubmersa ? 0 : 1;
+    ceuAbertoSuave += (alvoAberto - ceuAbertoSuave) * Math.min(1, dt / 0.35);
+    const aberto = Math.round(ceuAbertoSuave * 50) / 50;
+    precipitacao.atualizar(cameraVisao.position, clima.estado.chuva * aberto, nevando, false);
+    precipitacao.definirLuz(0.25 + 0.75 * (1 - a.noite));
     const arborizado = b === 'floresta' || b === 'pantano' || b === 'taiga' || b === 'campos';
-    precipitacao.folhas(cameraVisao.position, arborizado && !jogadorCoberto ? 1 : 0, outonoAtual);
+    precipitacao.folhas(cameraVisao.position, arborizado ? aberto : 0, outonoAtual);
     ambiente?.definirChuva(nevando ? clima.estado.chuva * 0.25 : clima.estado.chuva);
     flash = Math.max(0, flash - dt * 6);
     pipeline.imageProcessing.exposure = 1.1 + flash * 2.2;
     estado.infoMundo = `Dia ${dia + 1} · ${NOMES_ESTACAO[estacao]} · ${NOMES_CLIMA[clima.estado.tipo]}`;
     estado.atmosfera = { noite: a.noite, crepusculo: a.crepusculo };
-    const olho = camera.position;
-    const submersa =
-      blocoEm(Math.floor(olho.x), Math.floor(olho.y), Math.floor(olho.z)) === Bloco.AGUA;
+    // a câmera que de fato desenha (em 3ª pessoa fica atrás do personagem); a superfície
+    // visível da água fica em 0,875 do bloco quando não há água em cima
+    const olho = cameraVisao.position;
+    const ox = Math.floor(olho.x);
+    const oy = Math.floor(olho.y);
+    const oz = Math.floor(olho.z);
+    const naAgua = blocoEm(ox, oy, oz) === Bloco.AGUA;
+    const superficie = blocoEm(ox, oy + 1, oz) === Bloco.AGUA ? 1 : 0.875;
+    const submersa = naAgua && olho.y - oy < superficie;
     if (submersa !== cameraSubmersa) {
       cameraSubmersa = submersa;
       motorAudio.definirAbafado(submersa);
       document.body.classList.toggle('submerso', submersa);
       if (submersa) window.dispatchEvent(new CustomEvent('brumaluz:mergulhou'));
     }
-    if (submersa) {
-      const l = 0.25 + 0.75 * (1 - a.noite);
-      scene.fogColor.set(0.04 * l, 0.2 * l, 0.32 * l);
-      scene.fogDensity = 0.09;
-    } else {
-      scene.fogColor.set(...a.nevoa);
-      scene.fogDensity = a.densidadeNevoa * fatorNevoa;
-    }
+    // entrar e sair da água em ~0,25 s, sem salto de cor e densidade
+    submersoSuave += ((submersa ? 1 : 0) - submersoSuave) * Math.min(1, dt / 0.25);
+    const l = 0.25 + 0.75 * (1 - a.noite);
+    const ns = submersoSuave;
+    scene.fogColor.set(
+      a.nevoa[0] + (0.04 * l - a.nevoa[0]) * ns,
+      a.nevoa[1] + (0.2 * l - a.nevoa[1]) * ns,
+      a.nevoa[2] + (0.32 * l - a.nevoa[2]) * ns,
+    );
+    const densAr = a.densidadeNevoa * fatorNevoa;
+    scene.fogDensity = densAr + (0.09 - densAr) * ns;
     scene.clearColor.set(a.nevoa[0], a.nevoa[1], a.nevoa[2], 1);
     scene.ambientColor.set(...a.ambiente);
     luz.diffuse.set(...a.ceuLuz);
@@ -619,14 +672,18 @@ export function criarCena(
     mundoSolido.definirBruma(bruma, forca);
     mundoSolido.luzBlocos = 0.8 + 0.4 * a.noite;
     // flores, cogumelos e lanternas brilham de verdade ao entardecer e à noite; sob o sol, quase nada
-    const escuro = jogadorCoberto ? 1 : Math.max(a.noite, a.crepusculo * 0.7);
-    glow.intensity = INTENSIDADE_GLOW * (0.15 + 0.85 * escuro);
+    const escuroAlvo = jogadorCoberto ? 1 : Math.max(a.noite, a.crepusculo * 0.7);
+    escuroSuave += (escuroAlvo - escuroSuave) * Math.min(1, dt / 0.5);
+    glow.intensity = INTENSIDADE_GLOW * (0.15 + 0.85 * escuroSuave);
     luzDia = 0.38 + 0.62 * (1 - a.noite) * Math.min(1, a.intensidadeCeu + 0.4);
     mundoPlanta.luzBlocos = mundoSolido.luzBlocos;
     mundoPlanta.definirBruma(bruma, forca);
     ceu.atualizar(a, tempo);
-    agua.atualizar(a, tempo, cameraVisao.position);
-    vagalumes.atualizar(camera.position, a.noite);
+    agua.atualizar(a, tempo, cameraVisao.position, {
+      cor: scene.fogColor,
+      densidade: scene.fogDensity,
+    });
+    vagalumes.atualizar(camera.position, a.noite, jogadorCoberto || cameraSubmersa ? 0 : 1);
     ambiente?.definirNoite(a.noite);
   }
 
@@ -689,22 +746,29 @@ export function criarCena(
   }
 
   const comSombra = new Set<Mesh>();
+  let sombraChunk = '';
+  let sombrasSujas = true;
   function atualizarSombras(): void {
     const ccx = Math.floor(camera.position.x / TAM_X);
     const ccz = Math.floor(camera.position.z / TAM_Z);
+    // só refaz a lista quando a câmera troca de chunk ou chega malha nova
+    const kc = chave(ccx, ccz);
+    if (kc === sombraChunk && !sombrasSujas) return;
+    sombraChunk = kc;
+    sombrasSujas = false;
     for (const [k, lista] of malhas) {
       const [cx, cz] = k.split(',').map(Number);
-      const perto = Math.abs(cx - ccx) <= RAIO_SOMBRA && Math.abs(cz - ccz) <= RAIO_SOMBRA;
+      const perto = Math.abs(cx - ccx) <= raioSombra && Math.abs(cz - ccz) <= raioSombra;
       for (const m of lista) {
         // água transparente não projeta sombra (economiza a passada de sombra)
         if (m.name.startsWith('agua')) continue;
+        // todos recebem; só os próximos projetam
+        m.receiveShadows = true;
         if (perto && !comSombra.has(m)) {
           sombras.addShadowCaster(m);
-          m.receiveShadows = true;
           comSombra.add(m);
         } else if (!perto && comSombra.has(m)) {
           sombras.removeShadowCaster(m);
-          m.receiveShadows = false;
           comSombra.delete(m);
         }
       }
@@ -714,6 +778,7 @@ export function criarCena(
   function aplicar(r: RespostaChunk): void {
     const k = chave(r.cx, r.cz);
     for (const p of provisorios) if (p.k === k) p.pronto = true;
+    sombrasSujas = true;
     pedidos.delete(k);
     malhas.get(k)?.forEach((m) => {
       if (comSombra.has(m)) sombras.removeShadowCaster(m);
@@ -745,13 +810,7 @@ export function criarCena(
     const versao = (versoesPedidas.get(k) ?? 0) + 1;
     versoesPedidas.set(k, versao);
     const edicoesPedido: EdicoesExportadas = {};
-    for (const [dx, dz] of [
-      [0, 0],
-      [-1, 0],
-      [1, 0],
-      [0, -1],
-      [0, 1],
-    ]) {
+    for (const [dx, dz] of VIZINHANCA) {
       const lista = edicoes.doChunk(cx + dx, cz + dz);
       if (lista.length > 0) edicoesPedido[chave(cx + dx, cz + dz)] = lista;
     }
@@ -759,13 +818,7 @@ export function criarCena(
     if (urgente) {
       // leva o terreno que a thread principal já tem (o worker de edição não regera nada)
       const bases: Record<string, Uint8Array> = {};
-      for (const [dx, dz] of [
-        [0, 0],
-        [-1, 0],
-        [1, 0],
-        [0, -1],
-        [0, 1],
-      ]) {
+      for (const [dx, dz] of VIZINHANCA) {
         if (provedor.tem(cx + dx, cz + dz))
           bases[chave(cx + dx, cz + dz)] = provedor.obter(cx + dx, cz + dz);
       }
@@ -795,7 +848,14 @@ export function criarCena(
   function valorEm(x: number, y: number, z: number): number {
     return empacotar(blocoEm(x, y, z), edicoes.obterMeta(x, y, z));
   }
-  function editarRegistrando(x: number, y: number, z: number, b: number, meta = 0): boolean {
+  function editarRegistrando(
+    x: number,
+    y: number,
+    z: number,
+    b: number,
+    meta = 0,
+    extras: { x: number; y: number; z: number }[] = [],
+  ): boolean {
     const lote: Edicao[] = [];
     const um = (px: number, py: number, pz: number) => {
       const antes = valorEm(px, py, pz);
@@ -803,6 +863,7 @@ export function criarCena(
         lote.push({ x: px, y: py, z: pz, antes, depois: empacotar(b, meta) });
     };
     um(x, y, z);
+    if (lote.length) for (const e of extras) um(e.x, e.y, e.z);
     if (espelho !== null && modo === 'criativo') {
       const m = espelharX({ x, y, z }, espelho);
       if (m.x !== x) um(m.x, m.y, m.z);
@@ -828,6 +889,11 @@ export function criarCena(
         [0, 1],
         [0, -1],
       ].map(([dx, dz]) => ({ cx: cxE + dx, cz: czE + dz })),
+      // diagonais: só se a luz (até 15 blocos, em distância de Manhattan) alcança o canto
+      ...diagonaisAlcancadas(x - cxE * TAM_X, z - czE * TAM_Z).map(([dx, dz]) => ({
+        cx: cxE + dx,
+        cz: czE + dz,
+      })),
     ].filter((c, i, arr) => arr.findIndex((o) => o.cx === c.cx && o.cz === c.cz) === i);
     for (const c of afetados) {
       const k = chave(c.cx, c.cz);
@@ -926,17 +992,24 @@ export function criarCena(
       jogador: controle.jogador,
       editar: (x, y, z, b) => {
         const meta = metaColocacao(b);
-        const ok = editarRegistrando(x, y, z, b, meta);
-        // porta ocupa dois blocos
-        if (ok && b === Bloco.PORTA && blocoEm(x, y + 1, z) === Bloco.AR)
-          editarBloco(x, y + 1, z, b, meta);
-        return ok;
+        // porta ocupa dois blocos: as duas metades entram no mesmo passo do desfazer
+        const porta = b === Bloco.PORTA && blocoEm(x, y + 1, z) === Bloco.AR;
+        return editarRegistrando(x, y, z, b, meta, porta ? [{ x, y: y + 1, z }] : []);
       },
+      posicao: posicaoDeColocar,
+      ocupa: (b) => !!obterBlocoDef(b)?.solido,
     });
   }
 
   const barramento = criarBarramento();
   estado.barramento = barramento;
+
+  /** Onde um bloco vai parar: plantas (grama alta, flores) são substituídas no lugar. */
+  function posicaoDeColocar(a: { x: number; y: number; z: number; normal: Vec3 }): Vec3 {
+    return obterBlocoDef(blocoEm(a.x, a.y, a.z))?.planta
+      ? { x: a.x, y: a.y, z: a.z }
+      : posicaoColocacao(a);
+  }
 
   function alvoMineracao(): AlvoMineracao | null {
     const a = alvoDoQuadro();
@@ -947,7 +1020,7 @@ export function criarCena(
     const a = calcularAlvo();
     if (!a) return false;
     const bloco = acao === 'quebrar' ? blocoEm(a.x, a.y, a.z) : hotbar.blocoAtivo();
-    const pos = acao === 'quebrar' ? a : posicaoColocacao(a);
+    const pos = acao === 'quebrar' ? a : posicaoDeColocar(a);
     const ok = interagir(acao);
     if (ok && acao === 'colocar' && modo === 'sobrevivencia') inventario.remover(hotbar.ativo, 1);
     if (ok) {
@@ -1104,10 +1177,19 @@ export function criarCena(
     j.y = y;
     j.z = z;
     j.vy = 0;
+    // sem dano de queda herdado do lugar de onde veio
+    j.topoQueda = undefined;
   };
   estado.bloco = blocoEm;
   estado.meta = (x, y, z) => edicoes.obterMeta(x, y, z);
   estado.definirBloco = (x, y, z, b, meta) => editarBloco(x, y, z, b, meta);
+  /** Bloco original do terreno gerado (sem edições): distingue baú de ruína de baú posto. */
+  estado.blocoGerado = (x, y, z) => {
+    if (y < 0 || y >= ALTURA) return Bloco.AR;
+    const cx = Math.floor(x / TAM_X);
+    const cz = Math.floor(z / TAM_Z);
+    return provedor.obter(cx, cz)[indice(x - cx * TAM_X, y, z - cz * TAM_Z)];
+  };
   estado.camera = {
     modo: () => estadoCamera.modo,
     alternar: () => {
@@ -1424,7 +1506,10 @@ export function criarCena(
     renderItens.atualizar(mundoItens.itens, tempo);
     estado.itensSoltos = mundoItens.itens.length;
   }
-  estado.soltarItem = (item, qtd, x, y, z) => mundoItens.soltar(item, qtd, x, y, z, rngDrops);
+  mundoItens.carregar(dadosIniciais?.extras?.['itensSoltos']);
+  salvaveis.set('itensSoltos', { salvar: () => mundoItens.salvar() });
+  estado.soltarItem = (item, qtd, x, y, z, dur) =>
+    mundoItens.soltar(item, qtd, x, y, z, rngDrops, dur);
   barramento.ouvir('colocacao', (d) => aplicarPlano('colocacao', d));
 
   /**
@@ -1488,7 +1573,7 @@ export function criarCena(
   }
 
   function atualizarEfeitos(dt: number): void {
-    pool.atualizar(dt);
+    pool.atualizar(dt, (x, y, z) => !!obterBlocoDef(blocoEm(x, y, z))?.solido);
     const vivas = pool.vivas();
     for (let i = 0; i < cubosParticulas.length; i++) {
       const cubo = cubosParticulas[i];
@@ -1498,10 +1583,15 @@ export function criarCena(
       }
       cubo.setEnabled(true);
       cubo.position.set(pool.posicoes[i * 3], pool.posicoes[i * 3 + 1], pool.posicoes[i * 3 + 2]);
+      // encolhe no fim da vida em vez de sumir de repente
+      const vida = pool.idades[i] / VIDA_PARTICULA;
+      cubo.scaling.setAll(vida < 0.6 ? 1 : Math.max(0.05, 1 - (vida - 0.6) / 0.4));
+      // escurecem com o lugar (caverna, noite), como o braço e o personagem
+      const lp = luzJogador * (0.45 + 0.55 * luzDia);
       matsParticulas[i].diffuseColor.set(
-        pool.cores[i * 3],
-        pool.cores[i * 3 + 1],
-        pool.cores[i * 3 + 2],
+        pool.cores[i * 3] * lp,
+        pool.cores[i * 3 + 1] * lp,
+        pool.cores[i * 3 + 2] * lp,
       );
     }
     estado.fx = { particulas: vivas };
@@ -1510,7 +1600,14 @@ export function criarCena(
     const r = estadoRachadura(est.chaveAtual, minerador.progresso);
     if (r.visivel && est.chaveAtual) {
       const [x, y, z] = est.chaveAtual.split(',').map(Number);
-      caixaRachadura.position.set(x + 0.5, y + 0.5, z + 0.5);
+      // a rachadura veste a forma real do bloco (laje, tocha, planta), não um cubo flutuando
+      const c = caixaVisual(x, y, z);
+      caixaRachadura.position.set(
+        x + (c[0] + c[3]) / 2,
+        y + (c[1] + c[4]) / 2,
+        z + (c[2] + c[5]) / 2,
+      );
+      caixaRachadura.scaling.set(c[3] - c[0], c[4] - c[1], c[5] - c[2]);
       if (r.estagio !== estagioRachaduraAtual) {
         caixaRachadura.material = texRachaduras[r.estagio - 1];
       }
@@ -1532,9 +1629,28 @@ export function criarCena(
 
   let contorno: LinesMesh | null = null;
   let chaveContorno = '';
+  /** Caixa visível do bloco (união das caixas de laje, escada, tocha; planta mais estreita). */
+  function caixaVisual(x: number, y: number, z: number): CaixaLocal {
+    const b = blocoEm(x, y, z);
+    const def = obterBlocoDef(b);
+    if (!def) return CUBO;
+    if (def.planta) return [0.18, 0, 0.18, 0.82, 0.85, 0.82];
+    const caixas = caixasDoBloco(b, edicoes.obterMeta(x, y, z), (dd) => {
+      const [dx, dz] = vetorDirecao(dd);
+      return cercaConecta(blocoEm(x + dx, y, z + dz));
+    });
+    if (!caixas || caixas.length === 0) return CUBO;
+    const u = [1, 1, 1, 0, 0, 0];
+    for (const c of caixas) {
+      for (let i = 0; i < 3; i++) u[i] = Math.min(u[i], c[i]);
+      for (let i = 3; i < 6; i++) u[i] = Math.max(u[i], c[i]);
+    }
+    return u as unknown as CaixaLocal;
+  }
+
   function atualizarDestaque(): void {
     const alvo = alvoDoQuadro();
-    const d = estadoDestaque(alvo);
+    const d = estadoDestaque(alvo, alvo ? caixaVisual(alvo.x, alvo.y, alvo.z) : CUBO);
     if (d.chave !== chaveContorno) {
       contorno?.dispose();
       contorno = null;
@@ -1545,7 +1661,8 @@ export function criarCena(
         l.color = new Color3(...COR_DESTAQUE);
         l.isPickable = false;
         l.receiveShadows = false;
-        l.renderingGroupId = 1;
+        // mesmo grupo do mundo: o contorno respeita paredes e o lado de trás do bloco
+        l.renderingGroupId = 0;
         glow.addExcludedMesh(l);
         contorno = l;
       }
@@ -1719,7 +1836,7 @@ export function criarCena(
   );
   salvaveis.set('criaturas', { salvar: () => populacao.salvar() });
   const cacheLuz = new Map<string, { v: number; t: number }>();
-  const cacheCeu = new Map<string, { v: boolean; t: number }>();
+  const cacheCeu = new Map<string, { topo: number; t: number }>();
   let relogioCache = 0;
   /** Luz aproximada de fontes num raio de 7 blocos (com cache de 2 s). */
   function luzAprox(xr: number, yr: number, zr: number): number {
@@ -1741,16 +1858,24 @@ export function criarCena(
     if (cacheLuz.size > 4000) cacheLuz.clear();
     return melhor;
   }
+  /**
+   * Céu aberto acima de (x, y, z)? O cache guarda o bloco opaco mais alto da coluna,
+   * então serve a qualquer altura (um espectro na caverna sob uma coluna já medida
+   * na superfície não "vê o sol").
+   */
   function ceuAberto(x: number, y: number, z: number): boolean {
     const k = `${x},${z}`;
     const c = cacheCeu.get(k);
-    if (c && relogioCache - c.t < 3) return c.v && y >= 0;
-    let livre = true;
-    for (let yy = y; yy < ALTURA && livre; yy++)
-      if (obterBlocoDef(blocoEm(x, yy, z))?.opaco) livre = false;
-    cacheCeu.set(k, { v: livre, t: relogioCache });
+    if (c && relogioCache - c.t < 3) return y > c.topo;
+    let topo = -1;
+    for (let yy = ALTURA - 1; yy >= 0; yy--)
+      if (obterBlocoDef(blocoEm(x, yy, z))?.opaco) {
+        topo = yy;
+        break;
+      }
+    cacheCeu.set(k, { topo, t: relogioCache });
     if (cacheCeu.size > 4000) cacheCeu.clear();
-    return livre;
+    return y > topo;
   }
   const mundoCriaturas = {
     solido: controle.solido,
@@ -1758,10 +1883,12 @@ export function criarCena(
     luzBloco: luzAprox,
     ceuAberto,
     bioma: (x: number, z: number) => biomaEm(x, z, semente),
+    // chão de verdade: ignora copas e plantas; só em chunks já carregados (não gera terreno)
     superficie: (x: number, z: number) => {
+      if (!provedor.tem(Math.floor(x / TAM_X), Math.floor(z / TAM_Z))) return null;
       for (let y = ALTURA - 2; y > 0; y--) {
         const d = obterBlocoDef(blocoEm(x, y, z));
-        if (d?.solido) return y + 1;
+        if (d?.solido && !d.folhas && !d.planta) return y + 1;
       }
       return null;
     },
@@ -1868,7 +1995,9 @@ export function criarCena(
           c.estado === 'perseguir' &&
           Math.hypot(c.x - j.x, c.z - j.z) < 14,
       );
-    renderCriaturas.atualizar(populacao.lista, dt, tempo, () => Math.max(0.25, luzJogador));
+    renderCriaturas.atualizar(populacao.lista, dt, tempo, () =>
+      Math.max(0.2, luzJogador * (0.45 + 0.55 * luzDia)),
+    );
   };
   estado.criaturas = () =>
     populacao.lista.map((c) => ({
@@ -2034,7 +2163,7 @@ export function criarCena(
     const f = modoConstrucao >= 0 ? FERRAMENTAS[modoConstrucao] : null;
     const bloco = hotbar.blocoAtivo();
     const def = obterBlocoDef(bloco);
-    const colocar = a ? posicaoColocacao(a) : null;
+    const colocar = a ? posicaoDeColocar(a) : null;
     visualConstrucao.fantasma(
       f && f !== 'preencher' && f !== 'parede' && f !== 'linha' && f !== 'esfera' ? null : colocar,
       bloco && def && !def.planta ? bloco : null,
@@ -2327,6 +2456,7 @@ export function criarCena(
   salvaveis.set('clima', { salvar: () => clima.salvar() });
   salvaveis.set('dia', { salvar: () => dia });
   estado.definirClima = (t) => clima.definir(t);
+  estado.dia = () => dia;
   estado.definirDia = (d) => {
     dia = Math.max(0, Math.floor(d));
     const e = estacaoDoDia(dia);

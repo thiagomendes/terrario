@@ -22,6 +22,8 @@ export interface Config {
   escalaInterface: number;
   /** Legendas de sons importantes (acessibilidade). */
   legendas: boolean;
+  /** Entrar em tela cheia ao clicar em Jogar (onde o navegador permite). */
+  telaCheia: boolean;
 }
 
 export const CHAVE_CONFIG = 'brumaluz:config';
@@ -40,6 +42,7 @@ export const CONFIG_PADRAO: Config = {
   balanco: true,
   escalaInterface: 1,
   legendas: false,
+  telaCheia: true,
 };
 
 export const LIMITES = {
@@ -77,6 +80,7 @@ export function normalizarConfig(entrada: unknown): Config {
     balanco: bool(o.balanco, p.balanco),
     escalaInterface: faixa(o.escalaInterface, ...LIMITES.escalaInterface, p.escalaInterface),
     legendas: bool(o.legendas, p.legendas),
+    telaCheia: bool(o.telaCheia, p.telaCheia),
   };
 }
 

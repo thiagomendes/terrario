@@ -25,6 +25,8 @@ export const CSS_CONFIG = `
   background: #fff; transition: transform 0.15s ease;
 }
 .interruptor[aria-checked='true'] { background: #f0a94a; }
+/* área de toque maior que o desenho do interruptor */
+.interruptor::before { content: ''; position: absolute; inset: -9px -4px; }
 .interruptor[aria-checked='true']::after { transform: translateX(20px); }
 .rodape-config { display: flex; justify-content: space-between; gap: 8px; margin-top: 16px; flex-wrap: wrap; }
 @media (max-width: 560px) { .opcao-config { grid-template-columns: 1fr 56px; } .opcao-config .controle { grid-column: 1 / -1; grid-row: 2; } }
@@ -101,6 +103,12 @@ const ABAS: Record<Aba, { titulo: string; itens: Def[] }> = {
         dica: 'Movimento do braço e da câmera',
       },
       { tipo: 'bool', chave: 'mostrarFps', nome: 'Mostrar FPS' },
+      {
+        tipo: 'bool',
+        chave: 'telaCheia',
+        nome: 'Tela cheia ao jogar',
+        dica: 'Ao clicar em Jogar, onde o navegador permite',
+      },
     ],
   },
   audio: {
@@ -184,7 +192,8 @@ const ABAS: Record<Aba, { titulo: string; itens: Def[] }> = {
 };
 
 export function criarPainelConfig(raiz: HTMLElement, g: GerenciadorConfig) {
-  const { fundo, corpo } = criarModal('Configurações', 'data-painel-config');
+  const modal = criarModal('Configurações', 'data-painel-config', 'config');
+  const { fundo, corpo } = modal;
   raiz.appendChild(fundo);
   const abas = document.createElement('div');
   abas.className = 'abas';
@@ -295,25 +304,21 @@ export function criarPainelConfig(raiz: HTMLElement, g: GerenciadorConfig) {
     render();
   });
   let aoFechar: (() => void) | null = null;
-  const observar = new MutationObserver(() => {
-    if (fundo.hidden && aoFechar) {
-      const f = aoFechar;
-      aoFechar = null;
-      f();
-    }
+  modal.aoFechar(() => {
+    const f = aoFechar;
+    aoFechar = null;
+    f?.();
   });
-  observar.observe(fundo, { attributes: true, attributeFilter: ['hidden'] });
-  pronto.addEventListener('click', () => {
-    fundo.hidden = true;
-  });
+  pronto.addEventListener('click', () => modal.fechar());
   return {
     abrir(depois?: () => void) {
       aoFechar = depois ?? null;
       render();
-      fundo.hidden = false;
+      modal.abrir();
     },
+    fechar: () => modal.fechar(),
     get aberto() {
-      return !fundo.hidden;
+      return modal.aberto;
     },
   };
 }

@@ -1,6 +1,8 @@
 import type { Gerador } from '../audio/variacao';
 import type { Bioma } from '../world/chunk';
+import { colideCorpo } from '../player/fisica';
 import {
+  assentarCriatura,
   CRIATURAS,
   ferir,
   novaCriatura,
@@ -34,7 +36,7 @@ const BIOMAS: Partial<Record<TipoCriatura, Bioma[]>> = {
 };
 
 export function criarPopulacao(rng: Gerador, salvo?: unknown) {
-  let lista: Criatura[] = [];
+  const lista: Criatura[] = [];
   let proximo = 1;
   let tempoSpawn = 0;
   // raposas domadas persistem
@@ -46,8 +48,54 @@ export function criarPopulacao(rng: Gerador, salvo?: unknown) {
     lista.push(c);
   }
 
+  const hostis: Criatura[] = [];
+
+  /** Repulsão simples entre criaturas sobrepostas: não se atravessam nem se empilham. */
+  function separar(m: MundoPopulacao, dt: number): void {
+    const k = Math.min(1, dt * 10);
+    for (let i = 0; i < lista.length; i++) {
+      const a = lista[i];
+      if (a.estado === 'morrendo') continue;
+      const da = CRIATURAS[a.tipo];
+      for (let q = i + 1; q < lista.length; q++) {
+        const b = lista[q];
+        if (b.estado === 'morrendo') continue;
+        const db = CRIATURAS[b.tipo];
+        const min = da.mw + db.mw;
+        let dx = b.x - a.x;
+        let dz = b.z - a.z;
+        if (Math.abs(dx) >= min || Math.abs(dz) >= min) continue;
+        if (a.y + da.alt <= b.y || b.y + db.alt <= a.y) continue;
+        let d = Math.hypot(dx, dz);
+        if (d >= min) continue;
+        if (d < 1e-4) {
+          // no mesmo ponto: separa numa direção fixa pelo id
+          const ang = (a.id * 2.399 + b.id) % (Math.PI * 2);
+          dx = Math.sin(ang);
+          dz = Math.cos(ang);
+          d = 1;
+        }
+        const empurra = (min - d) * 0.5 * k;
+        const ux = (dx / d) * empurra;
+        const uz = (dz / d) * empurra;
+        if (!colideCorpo(m.solido, a.x - ux, a.y, a.z - uz, da.mw, da.alt)) {
+          a.x -= ux;
+          a.z -= uz;
+        }
+        if (!colideCorpo(m.solido, b.x + ux, b.y, b.z + uz, db.mw, db.alt)) {
+          b.x += ux;
+          b.z += uz;
+        }
+      }
+    }
+  }
+
   function tentarSpawn(m: MundoPopulacao, j: Jogador, noite: number): void {
-    const contar = (t: TipoCriatura) => lista.filter((c) => c.tipo === t && !c.domada).length;
+    const contar = (t: TipoCriatura) => {
+      let n = 0;
+      for (const c of lista) if (c.tipo === t && !c.domada) n++;
+      return n;
+    };
     const a = rng() * Math.PI * 2;
     const r = 18 + rng() * 22;
     const x = Math.floor(j.x + Math.cos(a) * r);
@@ -106,18 +154,28 @@ export function criarPopulacao(rng: Gerador, salvo?: unknown) {
         tempoSpawn = 0.7;
         tentarSpawn(m, j, noite);
       }
-      const hostis = lista.filter((c) => CRIATURAS[c.tipo].comportamento === 'hostil');
+      // reaproveita o vetor de hostis: nada de filter por quadro
+      hostis.length = 0;
+      for (const c of lista) if (CRIATURAS[c.tipo].comportamento === 'hostil') hostis.push(c);
       for (const c of lista) {
         const dist = Math.hypot(c.x - j.x, c.z - j.z);
-        // longe demais: só atualiza as próximas (as outras ficam paradas)
-        if (dist > 56 && !c.domada) continue;
-        ev.push(...passoCriatura(c, dt, m, j, rng, hostis, noite));
+        // longe demais: sem IA, só assenta no chão (não fica congelada no ar)
+        if (dist > 56 && !c.domada) {
+          assentarCriatura(c, dt, m);
+          continue;
+        }
+        const evc = passoCriatura(c, dt, m, j, rng, hostis, noite);
+        for (const e of evc) ev.push(e);
       }
-      lista = lista.filter((c) => {
-        if (c.estado === 'morrendo' && c.dissolver >= 1) return false;
-        if (!c.domada && Math.hypot(c.x - j.x, c.z - j.z) > 80) return false;
-        return true;
-      });
+      separar(m, dt);
+      // remove as dissolvidas e as que ficaram longe, compactando no lugar
+      let n = 0;
+      for (const c of lista) {
+        if (c.estado === 'morrendo' && c.dissolver >= 1) continue;
+        if (!c.domada && Math.hypot(c.x - j.x, c.z - j.z) > 80) continue;
+        lista[n++] = c;
+      }
+      lista.length = n;
       return ev;
     },
     ferir(c: Criatura, dano: number, deX: number, deZ: number): EventoCriatura[] {

@@ -1,27 +1,41 @@
-import { icone, type NomeIcone } from './pixicones';
+import { icone, rotuloComIcone, type NomeIcone } from './pixicones';
+import { alternarTelaCheia, emTelaCheia, ouvirTelaCheia, podeAlternarTelaCheia } from './telaCheia';
 export const CSS_TOQUE = `
 .toque { position: fixed; inset: 0; z-index: 6; pointer-events: none; touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
 .toque[hidden] { display: none; }
 /* a tela toda: arrastar olha, tocar coloca/usa, segurar quebra */
 .toque .olhar { position: absolute; inset: 0; pointer-events: auto; }
 .toque .joystick {
-  position: absolute; left: max(18px, env(safe-area-inset-left)); bottom: 110px; width: 128px; height: 128px; border-radius: 50%;
+  position: absolute; left: max(18px, env(safe-area-inset-left)); bottom: calc(env(safe-area-inset-bottom, 0px) + 132px); width: 128px; height: 128px; border-radius: 50%;
   background: rgba(10, 12, 20, 0.35); border: 2px solid rgba(255,255,255,0.25); pointer-events: auto; touch-action: none;
 }
 .toque .pino { position: absolute; left: 50%; top: 50%; width: 54px; height: 54px; margin: -27px; border-radius: 50%; background: rgba(255,255,255,0.4); box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
-.toque .botoes { position: absolute; right: max(14px, env(safe-area-inset-right)); bottom: 100px; display: grid; grid-template-columns: repeat(2, 68px); grid-template-rows: 68px 68px; gap: 10px; pointer-events: none; }
+.toque .botoes { position: absolute; right: max(14px, env(safe-area-inset-right)); bottom: calc(env(safe-area-inset-bottom, 0px) + 124px); display: grid; grid-template-columns: repeat(2, 68px); grid-template-rows: 68px 68px; gap: 10px; pointer-events: none; }
 .toque .botoes button { pointer-events: auto; }
 .toque .botoes .descer { grid-column: 2; grid-row: 1; }
 .toque .botoes .correr { grid-column: 1; grid-row: 2; }
 .toque .botoes .pular { grid-column: 2; grid-row: 2; }
 .toque .botoes .descer[hidden] { display: none; }
-.toque .topo { position: absolute; top: 156px; right: 10px; display: grid; gap: 8px; pointer-events: auto; }
+.toque .topo { position: absolute; top: calc(env(safe-area-inset-top, 0px) + 156px); right: max(10px, env(safe-area-inset-right)); display: grid; gap: 8px; pointer-events: auto; }
+.toque .mais { position: relative; }
+.toque .extras { position: absolute; top: 0; right: calc(100% + 8px); display: flex; flex-direction: row-reverse; gap: 8px; }
+.toque .extras[hidden] { display: none; }
 .toque button {
   width: 68px; height: 68px; border-radius: 50%; border: 2px solid rgba(255,255,255,0.3);
   background: rgba(10, 12, 20, 0.45); color: #fff; font-size: 1.7rem; touch-action: none;
   display: grid; place-items: center; padding: 0;
 }
 .toque .topo button { width: 46px; height: 46px; font-size: 1.1rem; }
+/* paisagem baixa (ex.: 844x390): ícones em linha no alto, joystick e botões nos cantos de baixo */
+@media (orientation: landscape) and (max-height: 500px) {
+  .toque .joystick { bottom: max(10px, env(safe-area-inset-bottom)); left: max(14px, env(safe-area-inset-left)); width: 112px; height: 112px; }
+  .toque .pino { width: 46px; height: 46px; margin: -23px; }
+  .toque .botoes { bottom: max(10px, env(safe-area-inset-bottom)); right: max(10px, env(safe-area-inset-right)); grid-template-columns: repeat(2, 56px); grid-template-rows: 56px 56px; gap: 8px; }
+  .toque .botoes button { width: 56px; height: 56px; font-size: 1.4rem; }
+  .toque .topo { top: max(6px, env(safe-area-inset-top)); grid-auto-flow: column; gap: 6px; }
+  .toque .topo button { width: 44px; height: 44px; }
+  .toque .extras { top: calc(100% + 6px); right: 0; flex-direction: column; gap: 6px; }
+}
 .toque button.ativo { background: rgba(255, 217, 143, 0.45); border-color: #ffd98f; color: #fff7dc; }
 /* anel de progresso ao segurar para quebrar */
 .toque .anel {
@@ -31,19 +45,61 @@ export const CSS_TOQUE = `
 }
 .toque .anel.visivel { opacity: 1; transform: scale(1); }
 .legendas { position: fixed; left: 12px; bottom: 120px; z-index: 9; display: grid; gap: 4px; pointer-events: none; }
+/* no toque o canto de baixo é do joystick: legendas no centro, acima da mira */
+body.toque-ativo .legendas { left: 50%; bottom: auto; top: 30%; transform: translateX(-50%); justify-items: center; }
 .legendas div { padding: 4px 10px; border-radius: 6px; background: rgba(0,0,0,0.72); color: #fff; font: 600 0.9rem system-ui, sans-serif; animation: toast 3.2s ease forwards; }
 /* no toque a mira some: aponta-se com o dedo */
 body.toque-ativo .hud .mira { display: none; }
 `;
 
 let semZoom = false;
-/** iOS ignora user-scalable=no: bloqueia o zoom por pinça (o toque duplo sai via touch-action). */
+/** Margem das bordas laterais onde o deslize vira "voltar/avançar" no Android (px). */
+export const MARGEM_BORDA = 24;
+
+/** Alvo onde o usuário digita/seleciona texto (gestos do navegador continuam valendo). */
+export function ehEditavel(alvo: EventTarget | null): boolean {
+  return (
+    alvo instanceof Element &&
+    !!alvo.closest('input, textarea, select, [contenteditable]:not([contenteditable="false"])')
+  );
+}
+
+/** Toque perto da borda lateral (deslize de voltar/avançar do navegador). */
+export function tocouNaBorda(x: number, largura: number, margem = MARGEM_BORDA): boolean {
+  return x < margem || x > largura - margem;
+}
+
+/**
+ * Desliga gestos do navegador que atrapalham o jogo no toque:
+ * zoom por pinça (iOS), menu de contexto/callout do toque longo (segurar para quebrar),
+ * seleção de texto/lupa e o deslize de voltar pela borda (Android, só sem painel aberto).
+ * Rolagem dentro dos painéis e digitação em campos continuam funcionando.
+ */
 export function bloquearZoomDoNavegador(): void {
   if (semZoom) return;
   semZoom = true;
   for (const g of ['gesturestart', 'gesturechange', 'gestureend']) {
     document.addEventListener(g, (e) => e.preventDefault(), { passive: false });
   }
+  // toque longo: sem "salvar imagem/recarregar" (vale também em tablet com pointer: fine)
+  document.addEventListener('contextmenu', (e) => {
+    if (!ehEditavel(e.target)) e.preventDefault();
+  });
+  document.addEventListener('selectstart', (e) => {
+    if (!ehEditavel(e.target)) e.preventDefault();
+  });
+  window.addEventListener(
+    'touchstart',
+    (e) => {
+      if (!e.cancelable || document.body.dataset.overlay) return;
+      if (document.querySelector('.entrada:not([hidden])')) return;
+      const t = e.touches[0];
+      if (t && tocouNaBorda(t.clientX, window.innerWidth) && !ehEditavel(e.target)) {
+        e.preventDefault();
+      }
+    },
+    { passive: false },
+  );
 }
 
 export interface ControleToque {
@@ -131,6 +187,14 @@ export function criarToque(raiz: HTMLElement, c: ControleToque) {
     bCorrer.setAttribute('aria-pressed', String(correndo));
     c.tecla('rapido', correndo);
   });
+  // teclado (Enter/Espaço no botão focado): o click vem com detail 0
+  bCorrer.addEventListener('click', (e) => {
+    if (e.detail !== 0) return;
+    correndo = !correndo;
+    bCorrer.classList.toggle('ativo', correndo);
+    bCorrer.setAttribute('aria-pressed', String(correndo));
+    c.tecla('rapido', correndo);
+  });
   // pular: segurar; dois toques no criativo ligam/desligam o voo
   const bPular = segurar(
     'pular',
@@ -149,41 +213,88 @@ export function criarToque(raiz: HTMLElement, c: ControleToque) {
   bDescer.classList.add('descer');
   bDescer.hidden = true;
   botoes.append(bDescer, bCorrer, bPular);
+  // o botão descer acompanha o voo; o laço só roda com os controles visíveis
+  let vooRodando = false;
   const atualizarVoo = () => {
+    if (el.hidden) {
+      vooRodando = false;
+      return;
+    }
     const voando = !!c.voando?.();
     if (bDescer.hidden === voando) bDescer.hidden = !voando;
     requestAnimationFrame(atualizarVoo);
   };
-  requestAnimationFrame(atualizarVoo);
+  const ligarVoo = () => {
+    if (vooRodando) return;
+    vooRodando = true;
+    requestAnimationFrame(atualizarVoo);
+  };
   const anel = document.createElement('div');
   anel.className = 'anel';
   el.appendChild(anel);
 
+  const atalho = (nome: NomeIcone, titulo: string, code: string) =>
+    segurar(
+      nome,
+      titulo,
+      () => {
+        extras.hidden = true;
+        bMais.classList.remove('ativo');
+        bMais.setAttribute('aria-expanded', 'false');
+        c.teclaDom(code);
+      },
+      () => undefined,
+    );
+  // "mais": câmera, diário, modo foto e tela cheia num leque ao lado
+  const mais = document.createElement('div');
+  mais.className = 'mais';
+  const bMais = document.createElement('button');
+  bMais.type = 'button';
+  bMais.appendChild(icone('mais'));
+  bMais.setAttribute('aria-label', 'Mais ações');
+  bMais.setAttribute('aria-expanded', 'false');
+  const extras = document.createElement('div');
+  extras.className = 'extras';
+  extras.hidden = true;
+  const alternarExtras = (e: Event) => {
+    e.preventDefault();
+    extras.hidden = !extras.hidden;
+    bMais.classList.toggle('ativo', !extras.hidden);
+    bMais.setAttribute('aria-expanded', String(!extras.hidden));
+  };
+  bMais.addEventListener('pointerdown', alternarExtras);
+  bMais.addEventListener('click', (e) => e.detail === 0 && alternarExtras(e));
+  extras.append(
+    atalho('olho', 'Câmera', 'KeyV'),
+    atalho('livro', 'Diário', 'KeyJ'),
+    atalho('foto', 'Modo foto', 'KeyP'),
+  );
+  if (podeAlternarTelaCheia()) {
+    // tela cheia exige ativação do usuário: no toque ela vem no pointerup, não no pointerdown
+    const bTela = document.createElement('button');
+    bTela.type = 'button';
+    bTela.setAttribute('data-toque-tela-cheia', '');
+    const rotular = () => {
+      const dentro = emTelaCheia();
+      rotuloComIcone(bTela, dentro ? 'janela' : 'telaCheia');
+      bTela.setAttribute('aria-label', dentro ? 'Sair da tela cheia' : 'Tela cheia');
+    };
+    bTela.addEventListener('pointerup', () => {
+      extras.hidden = true;
+      bMais.classList.remove('ativo');
+      alternarTelaCheia();
+    });
+    bTela.addEventListener('click', (e) => e.detail === 0 && alternarTelaCheia());
+    ouvirTelaCheia(rotular);
+    rotular();
+    extras.appendChild(bTela);
+  }
+  mais.append(bMais, extras);
   topo.append(
-    segurar(
-      'mochila',
-      'Inventário',
-      () => c.teclaDom('KeyE'),
-      () => undefined,
-    ),
-    segurar(
-      'olho',
-      'Câmera',
-      () => c.teclaDom('KeyV'),
-      () => undefined,
-    ),
-    segurar(
-      'mapa',
-      'Mapa',
-      () => c.teclaDom('Tab'),
-      () => undefined,
-    ),
-    segurar(
-      'pausa',
-      'Pausa',
-      () => c.teclaDom('Pausa'),
-      () => undefined,
-    ),
+    atalho('mochila', 'Inventário', 'KeyE'),
+    atalho('mapa', 'Mapa', 'Tab'),
+    atalho('pausa', 'Pausa', 'Pausa'),
+    mais,
   );
 
   // joystick
@@ -213,6 +324,7 @@ export function criarToque(raiz: HTMLElement, c: ControleToque) {
   };
   joy.addEventListener('pointerup', soltarJoy);
   joy.addEventListener('pointercancel', soltarJoy);
+  joy.addEventListener('lostpointercapture', (e) => e.pointerId === joyId && soltarJoy());
 
   // Tela: arrastar olha; tocar coloca/usa no ponto; segurar parado quebra no ponto.
   let gesto: {
@@ -309,12 +421,46 @@ export function criarToque(raiz: HTMLElement, c: ControleToque) {
   };
   olhar.addEventListener('pointerup', terminar);
   olhar.addEventListener('pointercancel', terminar);
+  // perdeu o dedo sem pointerup (sistema tomou o gesto, aba trocou): solta o que estava preso
+  olhar.addEventListener('lostpointercapture', (e) => {
+    if (gesto && e.pointerId === gesto.id) soltarGesto();
+  });
+
+  /** Encerra o gesto da tela sem agir (sem colocar nem usar). */
+  function soltarGesto(): void {
+    const g = gesto;
+    gesto = null;
+    if (g) clearTimeout(g.timer);
+    c.quebrar(false);
+    c.soltarMira?.();
+    mostrarAnel(0, 0, false);
+  }
+  /** Solta tudo o que pode estar segurado: joystick, quebrar, pular e descer. */
+  function soltarTudo(): void {
+    soltarGesto();
+    if (joyId !== null || pino.style.transform) soltarJoy();
+    for (const b of [bPular, bDescer]) b.classList.remove('ativo');
+    c.tecla('pular', false);
+    c.tecla('correr', false);
+    extras.hidden = true;
+    bMais.classList.remove('ativo');
+    bMais.setAttribute('aria-expanded', 'false');
+  }
+  window.addEventListener('blur', () => !el.hidden && soltarTudo());
 
   return {
-    mostrar(v: boolean) {
+    /**
+     * Mostra/esconde os controles. `modo` marca o corpo com .toque-ativo (jogando por toque),
+     * mesmo com os controles escondidos por um painel aberto.
+     */
+    mostrar(v: boolean, modo = v) {
+      document.body.classList.toggle('toque-ativo', modo);
+      if (el.hidden === !v) return;
       el.hidden = !v;
-      document.body.classList.toggle('toque-ativo', v);
+      if (v) ligarVoo();
+      else soltarTudo();
     },
+    soltarTudo,
   };
 }
 

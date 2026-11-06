@@ -1,5 +1,6 @@
 import { criarHotbar, deltaRodaParaPasso, teclaParaSlot, type Hotbar } from '../player/hotbar';
 import { iconeDoItem } from './icones';
+import { modoToque } from './pixicones';
 
 const CSS = `
 .barra {
@@ -77,6 +78,7 @@ body[data-modo='criativo'] .barra .qtd { display: none; }
   z-index: 10;
 }
 .nome-item.visivel { opacity: 1; }
+body.toque-ativo .barra .numero { display: none; }
 .barra .numero {
   position: absolute;
   top: 1px;
@@ -123,12 +125,16 @@ export function criarBarra(app: HTMLElement, hotbar: Hotbar = criarHotbar()): Ho
   let timerNome: ReturnType<typeof setTimeout> | null = null;
   const atualizar = () => {
     const slots = hotbar.slots;
+    const toque = modoToque();
     botoes.forEach(({ botao, icone, qtd }, i) => {
       const s = slots[i];
       const p = s.pilha;
       botao.setAttribute('aria-pressed', String(i === hotbar.ativo));
       botao.title = p ? s.nome : '';
-      botao.setAttribute('aria-label', `${p ? s.nome : 'vazio'} (tecla ${i + 1})`);
+      const nome = p ? (p.qtd > 1 ? `${s.nome}, ${p.qtd}` : s.nome) : 'vazio';
+      // no toque não há teclas numéricas
+      const rotulo = toque ? nome : `${nome} (tecla ${i + 1})`;
+      if (botao.getAttribute('aria-label') !== rotulo) botao.setAttribute('aria-label', rotulo);
       const src = p ? iconeDoItem(p.item) : '';
       if (icone.getAttribute('src') !== src) icone.setAttribute('src', src);
       qtd.textContent = p && p.qtd > 1 ? String(p.qtd) : '';

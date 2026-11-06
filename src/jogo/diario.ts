@@ -205,6 +205,10 @@ export function criarDiario(salvo?: unknown) {
     /** Registra um evento; devolve as missões concluídas agora. */
     registrar(chave: string, qtd = 1): Missao[] {
       contadores[chave] = (contadores[chave] ?? 0) + qtd;
+      // tábuas de bétula, pinho e lanterna contam como tábuas
+      if (chave.startsWith('fabricou:tabuas_')) {
+        contadores['fabricou:tabuas'] = (contadores['fabricou:tabuas'] ?? 0) + qtd;
+      }
       const novas: Missao[] = [];
       for (const m of MISSOES) {
         if (concluidas.has(m.id)) continue;

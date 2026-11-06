@@ -92,6 +92,9 @@ export interface MundoDeItens {
     rng: Gerador,
     dur?: number,
   ): void;
+  /** Itens no chão para o salvamento. */
+  salvar(): { item: string; qtd: number; dur?: number; x: number; y: number; z: number }[];
+  carregar(dados: unknown): void;
   /** Avança a física; `coletar` devolve quanto não coube. Devolve os itens coletados neste passo. */
   atualizar(
     dt: number,
@@ -111,6 +114,17 @@ export function criarMundoDeItens(
     },
     soltar(item, qtd, x, y, z, rng, dur) {
       if (!(qtd > 0)) return;
+      // perto de um igual (sem durabilidade): junta na mesma pilha em vez de lotar o chão
+      if (dur === undefined) {
+        const igual = itens.find(
+          (o) =>
+            o.item === item && o.dur === undefined && Math.hypot(o.x - x, o.y - y, o.z - z) < 1.5,
+        );
+        if (igual) {
+          igual.qtd += qtd;
+          return;
+        }
+      }
       const a = rng() * Math.PI * 2;
       itens.push({
         id: proximo++,
@@ -126,6 +140,32 @@ export function criarMundoDeItens(
         idade: 0,
       });
       if (itens.length > MAX_ITENS_SOLTOS) itens.splice(0, itens.length - MAX_ITENS_SOLTOS);
+    },
+    salvar() {
+      return itens.map((i) => ({ item: i.item, qtd: i.qtd, dur: i.dur, x: i.x, y: i.y, z: i.z }));
+    },
+    carregar(dados) {
+      if (!Array.isArray(dados)) return;
+      itens = [];
+      for (const d of dados.slice(0, MAX_ITENS_SOLTOS)) {
+        const o = d as Partial<ItemSolto>;
+        if (typeof o.item !== 'string' || !(Number(o.qtd) > 0)) continue;
+        if (![o.x, o.y, o.z].every((v) => Number.isFinite(v))) continue;
+        itens.push({
+          id: proximo++,
+          item: o.item,
+          qtd: Number(o.qtd),
+          dur: typeof o.dur === 'number' ? o.dur : undefined,
+          x: o.x!,
+          y: o.y!,
+          z: o.z!,
+          vx: 0,
+          vy: 0,
+          vz: 0,
+          // já assentado: pode ser coletado assim que o jogador chegar
+          idade: TEMPO_ANTES_DE_COLETAR + 1,
+        });
+      }
     },
     atualizar(dt, j, coletar) {
       const coletados: Drop[] = [];

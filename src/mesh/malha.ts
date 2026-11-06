@@ -41,6 +41,11 @@ export interface Vizinhos {
   xPos?: Uint8Array;
   zNeg?: Uint8Array;
   zPos?: Uint8Array;
+  /** Diagonais (cantos): sem eles, a luz e a sombra de canto vazam na divisa. */
+  xNegZNeg?: Uint8Array;
+  xPosZNeg?: Uint8Array;
+  xNegZPos?: Uint8Array;
+  xPosZPos?: Uint8Array;
 }
 
 type Vec = [number, number, number];
@@ -166,11 +171,14 @@ export function gerarMalha(
   function adicionarAgua(x: number, y: number, z: number): void {
     const acima = ler(x, y + 1, z);
     const topoBaixo = acima !== Bloco.AGUA ? 0.875 : 1;
+    const luzAguaCeu = mapaLuz.ceu(x, y + 1, z) / LUZ_MAXIMA;
+    const luzAguaBloco = Math.max(mapaLuz.bloco(x, y + 1, z), mapaLuz.bloco(x, y, z)) / LUZ_MAXIMA;
     for (const f of FACES) {
       const viz = ler(x + f.n[0], y + f.n[1], z + f.n[2]);
       if (viz === Bloco.AGUA) continue;
       const dv = obterBloco(viz);
-      if (dv?.opaco || viz === Bloco.GELO) continue;
+      // nada de "parede" de água dentro de cercas, portas, vidro e lajes vizinhas
+      if (dv?.opaco || dv?.solido || viz === Bloco.GELO) continue;
       const base = agua.vertices;
       const deslocar = f.n[0] + f.n[1] + f.n[2] > 0 ? 1 : 0;
       for (const [s1, s2] of CANTOS) {
@@ -182,7 +190,8 @@ export function gerarMalha(
         agua.normais.push(f.n[0], f.n[1], f.n[2]);
         agua.uvs.push(lx, lz);
         agua.cores.push(1, 1, 1, 1);
-        agua.luz.push(1, 0);
+        // luz do lugar (célula acima da superfície): água de caverna fica escura
+        agua.luz.push(luzAguaCeu, luzAguaBloco);
       }
       agua.indices.push(base, base + 1, base + 2, base, base + 2, base + 3);
     }
@@ -194,7 +203,21 @@ export function gerarMalha(
     let viz: Uint8Array | undefined;
     let lx = x;
     let lz = z;
-    if (x < 0) {
+    const foraX = x < 0 || x >= TAM_X;
+    const foraZ = z < 0 || z >= TAM_Z;
+    if (foraX && foraZ) {
+      // canto: vizinho diagonal
+      viz =
+        x < 0
+          ? z < 0
+            ? vizinhos.xNegZNeg
+            : vizinhos.xNegZPos
+          : z < 0
+            ? vizinhos.xPosZNeg
+            : vizinhos.xPosZPos;
+      lx = x < 0 ? x + TAM_X : x - TAM_X;
+      lz = z < 0 ? z + TAM_Z : z - TAM_Z;
+    } else if (x < 0) {
       viz = vizinhos.xNeg;
       lx = x + TAM_X;
     } else if (x >= TAM_X) {

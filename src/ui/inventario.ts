@@ -2,6 +2,13 @@ import { botaoFechar } from './pixicones';
 import { TAMANHO_BARRA, TAMANHO_INVENTARIO, type Inventario, type Slot } from '../jogo/inventario';
 import { obterItem, todosItens, type DefItem } from '../jogo/itens';
 import { iconeDoItem } from './icones';
+import {
+  FOLGA_TOQUE_INV,
+  TEMPO_TOQUE_LONGO,
+  acoesDeArrastar,
+  acoesDoGesto,
+  classificarToqueInventario,
+} from './gestosInventario';
 
 export const CSS_INVENTARIO = `
 .inventario-fundo {
@@ -11,17 +18,23 @@ export const CSS_INVENTARIO = `
   background: rgba(6, 8, 14, 0.55); backdrop-filter: blur(4px);
   font-family: system-ui, 'Segoe UI', sans-serif; color: #ece6da;
   animation: modal-entra 0.15s ease-out;
-  --slot: clamp(34px, 8.6vw, 54px);
+  /* cabe 9 slots na largura (390px) e não estica demais na altura (paisagem) */
+  --slot: clamp(28px, min(calc((100vw - 96px) / 9), 9vh), 54px);
 }
 .inventario-fundo[hidden] { display: none; }
 .inventario {
-  display: grid; gap: 14px; max-height: 94vh; overflow-y: auto; box-sizing: border-box;
+  position: relative;
+  display: grid; gap: 14px; max-height: 94vh; max-height: calc(100dvh - 24px); overflow-y: auto; box-sizing: border-box;
+  max-width: 100%; overscroll-behavior: contain; touch-action: pan-y;
   padding: 16px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.12);
   background: linear-gradient(180deg, rgba(34, 36, 50, 0.96), rgba(20, 21, 30, 0.97));
   box-shadow: 0 24px 64px rgba(0,0,0,0.55);
   animation: cartao-entra 0.18s ease-out;
 }
-.inventario h2 { margin: 0; font-size: 1.05rem; color: #ffd98f; }
+.inventario h2 { margin: 0; padding-right: 52px; font-size: 1.05rem; color: #ffd98f; }
+/* slots: arrastar e soltar no toque (o catálogo continua rolando) */
+.inventario .slot-inv { touch-action: none; -webkit-touch-callout: none; user-select: none; -webkit-user-select: none; }
+.inventario .catalogo .slot-inv { touch-action: pan-y; }
 .inventario .topo { display: flex; gap: 16px; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; }
 .inventario .secao { display: grid; gap: 8px; }
 .inventario .rotulo-secao { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.1em; color: #a59f93; }
@@ -46,7 +59,7 @@ export const CSS_INVENTARIO = `
   min-height: 38px; padding: 6px 12px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.14);
   background: rgba(0,0,0,0.3); color: #ece6da; font: 500 0.92rem system-ui, sans-serif;
 }
-.catalogo .grade-slots { max-height: calc(var(--slot) * 3 + 8px); overflow-y: auto; padding-right: 4px; }
+.catalogo .grade-slots { max-height: calc(var(--slot) * 3 + 8px); overflow-y: auto; padding-right: 4px; overscroll-behavior: contain; }
 .cursor-item { position: fixed; z-index: 60; width: 44px; height: 44px; pointer-events: none; transform: translate(-50%, -50%); }
 .cursor-item img { width: 100%; height: 100%; image-rendering: pixelated; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.6)); }
 .cursor-item .qtd { position: absolute; right: -2px; bottom: -4px; font: 800 0.85rem system-ui, sans-serif; color: #fff; text-shadow: 1px 1px 0 #000; }
@@ -57,8 +70,15 @@ export const CSS_INVENTARIO = `
 }
 .dica-item small { display: block; color: #b3a8d6; font-weight: 500; }
 body[data-modo='criativo'] .slot-inv .qtd { display: none; }
-.ajuda-inv { font-size: 0.75rem; color: #8f897e; }
+.ajuda-inv, .ajuda-inv-toque { font-size: 0.75rem; color: #8f897e; }
 `;
+
+/** Teclado virtual (iOS): ao focar, o campo rola para a área visível. */
+export function rolarAoFocar(campo: HTMLElement): void {
+  campo.addEventListener('focus', () => {
+    setTimeout(() => campo.scrollIntoView({ block: 'nearest', behavior: 'smooth' }), 300);
+  });
+}
 
 export interface OpcoesInventarioUI {
   inventario: Inventario;
@@ -131,6 +151,11 @@ export function criarInventarioUI(raiz: HTMLElement, op: OpcoesInventarioUI): In
   ajuda.className = 'ajuda-inv';
   ajuda.textContent =
     'Clique: pegar e soltar · Botão direito: metade ou um · Shift+clique: mover rápido · E ou Esc: fechar';
+  // no toque (sem teclas): a linha própria aparece no lugar da de mouse/teclado
+  const ajudaToque = document.createElement('div');
+  ajudaToque.className = 'ajuda-inv-toque ajuda-toque';
+  ajudaToque.textContent =
+    'Toque: pegar e soltar · Segure: metade ou um · Dois toques: mover rápido · Arraste até outro espaço para soltar';
   const sep = document.createElement('div');
   sep.className = 'separador';
   painel.append(
@@ -141,6 +166,7 @@ export function criarInventarioUI(raiz: HTMLElement, op: OpcoesInventarioUI): In
     sep,
     barra,
     ajuda,
+    ajudaToque,
     botaoFechar(() => fechar()),
   );
 
@@ -199,6 +225,10 @@ export function criarInventarioUI(raiz: HTMLElement, op: OpcoesInventarioUI): In
       dur.hidden = true;
     }
     el.dataset.item = p?.item ?? '';
+    // leitor de tela: nome e quantidade
+    const nome = def?.nome ?? p?.item;
+    const rotulo = p ? (p.qtd > 1 ? `${nome}, ${p.qtd} unidades` : `${nome}`) : 'Espaço vazio';
+    if (el.getAttribute('aria-label') !== rotulo) el.setAttribute('aria-label', rotulo);
   }
 
   const slotsEl: HTMLButtonElement[] = [];
@@ -247,9 +277,12 @@ export function criarInventarioUI(raiz: HTMLElement, op: OpcoesInventarioUI): In
     dica.style.top = `${y + 14}px`;
   }
 
+  const posicionarCursor = (x: number, y: number) => {
+    cursorEl.style.left = `${x}px`;
+    cursorEl.style.top = `${y}px`;
+  };
   fundo.addEventListener('pointermove', (e) => {
-    cursorEl.style.left = `${e.clientX}px`;
-    cursorEl.style.top = `${e.clientY}px`;
+    posicionarCursor(e.clientX, e.clientY);
     const alvo = (e.target as HTMLElement).closest<HTMLElement>('.slot-inv');
     const id = alvo?.dataset.item;
     if (!id) {
@@ -272,14 +305,141 @@ export function criarInventarioUI(raiz: HTMLElement, op: OpcoesInventarioUI): In
     }
     render();
   }
-  const tratar = (e: MouseEvent) => {
-    const el = (e.target as HTMLElement).closest<HTMLElement>('.slot-inv[data-indice]');
+
+  type Externo = (
+    el: HTMLElement,
+    cursor: Slot,
+    botao: 'esquerdo' | 'direito',
+    shift: boolean,
+  ) => Slot;
+  const externos: Externo[] = [];
+  const SELETOR_SLOT = '.slot-inv[data-indice], [data-catalogo], [data-externo]';
+  const alvoSlot = (el: EventTarget | Element | null): HTMLElement | null =>
+    el instanceof Element ? el.closest<HTMLElement>(SELETOR_SLOT) : null;
+  /** Um "clique" num slot qualquer (mochila, barra, catálogo, criação, baú, fornalha). */
+  function acionar(el: HTMLElement, botao: 'esquerdo' | 'direito', shift: boolean): void {
+    if (el.dataset.catalogo) {
+      clicarCatalogo(el.dataset.catalogo, botao, shift);
+    } else if (el.dataset.externo !== undefined) {
+      for (const f of externos) cursor = f(el, cursor, botao, shift);
+      render();
+    } else if (el.dataset.indice !== undefined) {
+      clicarSlot(Number(el.dataset.indice), botao, shift);
+    }
+  }
+
+  // Mouse: age no pointerdown (como antes) e, se arrastou até outro slot, solta lá no pointerup.
+  // Toque: tocar = clique; segurar = botão direito; dois toques = Shift; arrastar = soltar no destino.
+  let arrasteMouse: HTMLElement | null = null;
+  let toque: {
+    id: number;
+    el: HTMLElement;
+    x0: number;
+    y0: number;
+    t0: number;
+    timer: number;
+    longo: boolean;
+    moveu: boolean;
+    cursorVazio: boolean;
+  } | null = null;
+  let ultimoToque: { el: HTMLElement; t: number } | null = null;
+  let fundoPressionado = false;
+  fundo.addEventListener('pointerdown', (e) => {
+    posicionarCursor(e.clientX, e.clientY);
+    fundoPressionado = e.target === fundo;
+    const el = alvoSlot(e.target);
     if (!el) return;
-    e.preventDefault();
-    clicarSlot(Number(el.dataset.indice), e.button === 2 ? 'direito' : 'esquerdo', e.shiftKey);
-  };
-  mochila.addEventListener('mousedown', tratar);
-  barra.addEventListener('mousedown', tratar);
+    if (e.pointerType === 'mouse') {
+      e.preventDefault();
+      acionar(el, e.button === 2 ? 'direito' : 'esquerdo', e.shiftKey);
+      arrasteMouse = e.button === 0 ? el : null;
+      return;
+    }
+    if (toque) return; // um dedo por vez
+    dica.hidden = true;
+    const t = {
+      id: e.pointerId,
+      el,
+      x0: e.clientX,
+      y0: e.clientY,
+      t0: performance.now(),
+      timer: 0,
+      longo: false,
+      moveu: false,
+      cursorVazio: !cursor,
+    };
+    t.timer = window.setTimeout(() => {
+      if (toque !== t || t.moveu) return;
+      t.longo = true;
+      acionar(el, 'direito', false);
+      navigator.vibrate?.(12);
+    }, TEMPO_TOQUE_LONGO);
+    toque = t;
+  });
+  fundo.addEventListener('pointermove', (e) => {
+    const t = toque;
+    if (!t || e.pointerId !== t.id || t.moveu) return;
+    if (Math.hypot(e.clientX - t.x0, e.clientY - t.y0) > FOLGA_TOQUE_INV) {
+      t.moveu = true;
+      clearTimeout(t.timer);
+    }
+  });
+  fundo.addEventListener('pointerup', (e) => {
+    const noFundo = e.target === fundo && fundoPressionado;
+    fundoPressionado = false;
+    if (e.pointerType === 'mouse') {
+      const origem = arrasteMouse;
+      arrasteMouse = null;
+      if (noFundo) {
+        fechar();
+        return;
+      }
+      if (!origem || e.button !== 0 || !cursor) return;
+      const destino = alvoSlot(document.elementFromPoint(e.clientX, e.clientY));
+      if (destino && destino !== origem) acionar(destino, 'esquerdo', false);
+      return;
+    }
+    const t = toque;
+    if (!t || e.pointerId !== t.id) {
+      if (noFundo) fechar();
+      return;
+    }
+    clearTimeout(t.timer);
+    toque = null;
+    const agora = performance.now();
+    const desloc = Math.hypot(e.clientX - t.x0, e.clientY - t.y0);
+    if (t.moveu || desloc > FOLGA_TOQUE_INV) {
+      ultimoToque = null;
+      const destino = alvoSlot(document.elementFromPoint(e.clientX, e.clientY));
+      if (!destino || destino === t.el || destino.dataset.catalogo) return;
+      for (const qual of acoesDeArrastar(t.cursorVazio, t.longo)) {
+        acionar(qual === 'origem' ? t.el : destino, 'esquerdo', false);
+      }
+      return;
+    }
+    if (t.longo) {
+      ultimoToque = null;
+      return;
+    }
+    const g = classificarToqueInventario({
+      duracaoMs: agora - t.t0,
+      deslocamentoPx: desloc,
+      desdeUltimoMs: ultimoToque ? agora - ultimoToque.t : Infinity,
+      mesmoSlot: ultimoToque?.el === t.el,
+    });
+    for (const a of acoesDoGesto(g, t.el.dataset.externo === 'resultado')) {
+      acionar(t.el, a.botao, a.shift);
+    }
+    ultimoToque = g === 'simples' ? { el: t.el, t: agora } : null;
+  });
+  fundo.addEventListener('pointercancel', (e) => {
+    if (toque && e.pointerId === toque.id) {
+      clearTimeout(toque.timer);
+      toque = null;
+    }
+    arrasteMouse = null;
+    fundoPressionado = false;
+  });
 
   // Catálogo criativo
   function renderCatalogo(): void {
@@ -295,29 +455,23 @@ export function criarInventarioUI(raiz: HTMLElement, op: OpcoesInventarioUI): In
   }
   busca.addEventListener('input', renderCatalogo);
   busca.addEventListener('keydown', (e) => e.stopPropagation());
-  gradeCat.addEventListener('mousedown', (e) => {
-    const el = (e.target as HTMLElement).closest<HTMLElement>('[data-catalogo]');
-    if (!el) return;
-    e.preventDefault();
-    const def = obterItem(el.dataset.catalogo!);
+  rolarAoFocar(busca);
+  function clicarCatalogo(id: string, botao: 'esquerdo' | 'direito', shift: boolean): void {
+    const def = obterItem(id);
     if (!def) return;
     if (cursor) {
       cursor = null;
-    } else if (e.shiftKey) {
+    } else if (shift) {
       inv.adicionar(def.id, def.pilha, def.durabilidade);
     } else {
       cursor = {
         item: def.id,
-        qtd: e.button === 2 ? 1 : def.pilha,
+        qtd: botao === 'direito' ? 1 : def.pilha,
         ...(def.durabilidade ? { dur: def.durabilidade } : {}),
       };
     }
     render();
-  });
-
-  fundo.addEventListener('mousedown', (e) => {
-    if (e.target === fundo) fechar();
-  });
+  }
   fundo.addEventListener('contextmenu', (e) => e.preventDefault());
   inv.ouvir(render);
 
@@ -341,6 +495,9 @@ export function criarInventarioUI(raiz: HTMLElement, op: OpcoesInventarioUI): In
     aberto = false;
     fundo.hidden = true;
     dica.hidden = true;
+    if (toque) clearTimeout(toque.timer);
+    toque = null;
+    arrasteMouse = null;
     delete document.body.dataset.overlay;
     op.aoFechar?.();
   }
@@ -354,13 +511,7 @@ export function criarInventarioUI(raiz: HTMLElement, op: OpcoesInventarioUI): In
     alternar: () => (aberto ? fechar() : abrir()),
     areaExtra,
     clicarExterno(f) {
-      areaExtra.addEventListener('mousedown', (e) => {
-        const el = (e.target as HTMLElement).closest<HTMLElement>('[data-externo]');
-        if (!el) return;
-        e.preventDefault();
-        cursor = f(el, cursor, e.button === 2 ? 'direito' : 'esquerdo', e.shiftKey);
-        render();
-      });
+      externos.push(f);
     },
     criarSlot,
     desenharSlot,

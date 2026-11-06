@@ -1,3 +1,4 @@
+import { obterItem } from './itens';
 import type { Slot } from './inventario';
 import { novaFornalha, normalizarFornalha, passoFornalha, type EstadoFornalha } from './fornalha';
 import { hash3 } from '../world/noise';
@@ -31,7 +32,8 @@ export function tesouro(x: number, y: number, z: number, semente: number): Slot[
     const qtd = min + Math.floor(hash3(x, y + k, z, semente + 4041) * (max - min + 1));
     const pos = Math.floor(hash3(x, y, z + k, semente + 4042) * TAMANHO_BAU);
     if (!slots[pos]) {
-      slots[pos] = item.startsWith('picareta') ? { item, qtd: 1, dur: 100 } : { item, qtd };
+      const durabilidade = obterItem(item)?.durabilidade;
+      slots[pos] = durabilidade ? { item, qtd: 1, dur: durabilidade } : { item, qtd };
       n++;
     }
   }
@@ -69,10 +71,14 @@ export function criarConteineres(salvo: unknown, semente: number) {
       }
       return f;
     },
-    /** Remove e devolve o conteúdo (ao quebrar o bloco). */
-    remover(x: number, y: number, z: number): Slot[] {
+    /**
+     * Remove e devolve o conteúdo (ao quebrar o bloco). `gerado`: o baú veio do mundo
+     * (ruína); se nunca foi aberto, o tesouro ainda não existe e é criado agora.
+     */
+    remover(x: number, y: number, z: number, gerado = false): Slot[] {
       const k = chavePos(x, y, z);
-      const out: Slot[] = [...(baus.get(k) ?? [])];
+      const salvo = baus.get(k) ?? (gerado ? tesouro(x, y, z, semente) : []);
+      const out: Slot[] = [...salvo];
       const f = fornalhas.get(k);
       if (f) out.push(f.entrada, f.combustivel, f.saida);
       baus.delete(k);

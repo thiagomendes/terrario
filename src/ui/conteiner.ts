@@ -24,26 +24,50 @@ export const CSS_CONTEINER = `
 
 export const TAMANHO_BAU = 27;
 
-function trocar(alvo: Slot, cursor: Slot, botao: 'esquerdo' | 'direito'): [Slot, Slot] {
+const maxPilha = (item: string) => obterItem(item)?.pilha ?? 64;
+
+/** Troca entre um slot do contêiner e o cursor, respeitando o máximo da pilha. */
+export function trocar(alvo: Slot, cursor: Slot, botao: 'esquerdo' | 'direito'): [Slot, Slot] {
   if (botao === 'direito') {
     if (!cursor && alvo) {
       const metade = Math.ceil(alvo.qtd / 2);
       const resto = alvo.qtd - metade;
       return [resto > 0 ? { ...alvo, qtd: resto } : null, { ...alvo, qtd: metade }];
     }
-    if (cursor && (!alvo || (alvo.item === cursor.item && alvo.dur === undefined))) {
+    if (
+      cursor &&
+      (!alvo ||
+        (alvo.item === cursor.item && alvo.dur === undefined && alvo.qtd < maxPilha(alvo.item)))
+    ) {
       const novo = alvo ? { ...alvo, qtd: alvo.qtd + 1 } : { ...cursor, qtd: 1 };
       return [novo, cursor.qtd > 1 ? { ...cursor, qtd: cursor.qtd - 1 } : null];
     }
     return [alvo, cursor];
   }
   if (cursor && alvo && alvo.item === cursor.item && alvo.dur === undefined) {
-    const max = obterItem(alvo.item)?.pilha ?? 64;
+    const max = maxPilha(alvo.item);
     const n = Math.min(max - alvo.qtd, cursor.qtd);
     const resto = cursor.qtd - n;
     return [{ ...alvo, qtd: alvo.qtd + n }, resto > 0 ? { ...cursor, qtd: resto } : null];
   }
   return [cursor ? { ...cursor } : null, alvo];
+}
+
+/**
+ * Pega a saída da fornalha para o cursor sem passar do máximo da pilha.
+ * Devolve o novo cursor, o que fica na saída e quanto foi pego (0 = nada).
+ */
+export function pegarSaida(cursor: Slot, saida: Slot): { cursor: Slot; saida: Slot; pego: number } {
+  if (!saida || (cursor && cursor.item !== saida.item)) return { cursor, saida, pego: 0 };
+  const atual = cursor?.qtd ?? 0;
+  const n = Math.max(0, Math.min(maxPilha(saida.item) - atual, saida.qtd));
+  if (n === 0) return { cursor, saida, pego: 0 };
+  const resto = saida.qtd - n;
+  return {
+    cursor: cursor ? { ...cursor, qtd: atual + n } : { ...saida, qtd: n },
+    saida: resto > 0 ? { ...saida, qtd: resto } : null,
+    pego: n,
+  };
 }
 
 export function criarPainelBau(ui: InventarioUI, inv: Inventario) {
@@ -144,13 +168,14 @@ export function criarPainelFornalha(ui: InventarioUI) {
     const a = el.dataset.externo ?? '';
     if (!a.startsWith('forn:') || !f) return cursor;
     if (a === 'forn:saida') {
-      if (!f.saida) return cursor;
-      if (cursor && cursor.item !== f.saida.item) return cursor;
-      const novo = cursor ? { ...cursor, qtd: cursor.qtd + f.saida.qtd } : { ...f.saida };
-      window.dispatchEvent(new CustomEvent('brumaluz:fundiu', { detail: { ...f.saida } }));
-      f.saida = null;
+      const r = pegarSaida(cursor, f.saida);
+      if (r.pego === 0) return cursor;
+      window.dispatchEvent(
+        new CustomEvent('brumaluz:fundiu', { detail: { ...f.saida!, qtd: r.pego } }),
+      );
+      f.saida = r.saida;
       render();
-      return novo;
+      return r.cursor;
     }
     const campo = a === 'forn:entrada' ? 'entrada' : 'combustivel';
     // só aceita o que serve para aquele slot

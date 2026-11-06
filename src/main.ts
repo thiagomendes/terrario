@@ -1,6 +1,7 @@
 import { criarCena } from './render/cena';
 import { criarHotbar } from './player/hotbar';
-import { criarInterface } from './ui/interface';
+import { criarInterface, travarPonteiro } from './ui/interface';
+import { modoToque } from './ui/pixicones';
 import { armazemIndexedDB } from './jogo/indexeddb';
 import { SEMENTE_PADRAO_MUNDO, criarRepositorioMundos, type MetaMundo } from './jogo/mundos';
 import { CSS_INVENTARIO, criarInventarioUI } from './ui/inventario';
@@ -128,11 +129,11 @@ function ligarInventario(
     ativo: () => hotbar.ativo,
     aoSobrar: (p) => {
       const j = cena.controle.jogador;
-      cena.estado.soltarItem?.(p.item, p.qtd, j.x, j.y + 1.2, j.z);
+      cena.estado.soltarItem?.(p.item, p.qtd, j.x, j.y + 1.2, j.z, p.dur);
     },
     aoFechar: () => {
       if (document.querySelector('.entrada:not([hidden])')) return;
-      canvas.requestPointerLock?.();
+      travarPonteiro(canvas);
     },
   });
   const criacao = criarCriacao(ui, hotbar.inventario, {
@@ -200,8 +201,10 @@ function ligarInventario(
   // quebrar baú ou fornalha espalha o conteúdo
   cena.barramento.ouvir('quebra', (d) => {
     if (![Bloco.BAU, Bloco.FORNALHA, Bloco.FORNALHA_ACESA].includes(d.bloco as never)) return;
-    for (const p of conteineres.remover(d.x, d.y, d.z)) {
-      if (p) cena.estado.soltarItem?.(p.item, p.qtd, d.x + 0.5, d.y + 0.5, d.z + 0.5);
+    // baú de ruína quebrado sem nunca ter sido aberto também solta o tesouro
+    const gerado = d.bloco === Bloco.BAU && cena.estado.blocoGerado?.(d.x, d.y, d.z) === Bloco.BAU;
+    for (const p of conteineres.remover(d.x, d.y, d.z, gerado)) {
+      if (p) cena.estado.soltarItem?.(p.item, p.qtd, d.x + 0.5, d.y + 0.5, d.z + 0.5, p.dur);
     }
   });
   (window as unknown as { __inventarioUI?: unknown }).__inventarioUI = {
@@ -235,7 +238,7 @@ function ligarStatus(
   status.mostrar(sobrevivencia);
   const morte = criarTelaMorte(app, () => {
     cena.estado.renascer?.();
-    canvas.requestPointerLock?.();
+    travarPonteiro(canvas);
   });
   window.addEventListener('brumaluz:dano', () => status.piscarDano());
   window.addEventListener('brumaluz:morte', (e) => {
@@ -246,16 +249,31 @@ function ligarStatus(
     const s = cena.estado.sobrevivencia;
     if (sobrevivencia && s) status.atualizar(s.estado);
   }, 100);
+  // Dica de início: ao travar o ponteiro (desktop) ou ao sair do título (toque, sem pointer lock).
   let avisou = false;
-  document.addEventListener('pointerlockchange', () => {
-    if (!document.pointerLockElement || avisou) return;
+  const avisar = () => {
+    if (avisou) return;
     avisou = true;
+    const toque = modoToque();
     notificar(
       sobrevivencia
-        ? 'Sobrevivência: cuide da vida e da fome. Quebre blocos para coletar.'
-        : 'Criativo: toque duas vezes no espaço para voar · E abre o catálogo',
+        ? toque
+          ? 'Sobrevivência: cuide da vida e da fome. Segure na tela para quebrar e coletar.'
+          : 'Sobrevivência: cuide da vida e da fome. Quebre blocos para coletar.'
+        : toque
+          ? 'Criativo: toque duas vezes em pular para voar · mochila abre o catálogo'
+          : 'Criativo: aperte Espaço duas vezes para voar · E abre o catálogo',
     );
+  };
+  document.addEventListener('pointerlockchange', () => {
+    if (document.pointerLockElement) avisar();
   });
+  const entrada = document.querySelector<HTMLElement>('.entrada');
+  if (entrada) {
+    new MutationObserver(() => {
+      if (entrada.hidden) avisar();
+    }).observe(entrada, { attributes: true, attributeFilter: ['hidden'] });
+  }
 }
 
 function dormir(cena: ReturnType<typeof criarCena>, x: number, z: number): void {
@@ -272,12 +290,28 @@ function dormir(cena: ReturnType<typeof criarCena>, x: number, z: number): void 
   document.body.appendChild(veu);
   requestAnimationFrame(() => (veu.style.opacity = '1'));
   setTimeout(() => {
-    if (cena.estado.hora !== undefined) cena.estado.hora = 0.265;
+    if (cena.estado.hora !== undefined) {
+      // dormir à noite (antes da meia-noite) já conta como o dia seguinte
+      if (cena.estado.hora > 0.5) {
+        const dia = diaAtual(cena);
+        if (dia !== null) cena.estado.definirDia?.(dia + 1);
+      }
+      cena.estado.hora = 0.265;
+    }
     veu.style.opacity = '0';
     notificar('Você dormiu até o amanhecer');
     window.dispatchEvent(new CustomEvent('brumaluz:dormiu'));
     setTimeout(() => veu.remove(), 1300);
   }, 1500);
+}
+
+/** Dia atual (0 = primeiro). Sem getter na cena, lê de infoMundo ("Dia N · ..."). */
+function diaAtual(cena: ReturnType<typeof criarCena>): number | null {
+  const e = cena.estado as { dia?: number | (() => number); infoMundo?: string };
+  if (typeof e.dia === 'function') return e.dia();
+  if (typeof e.dia === 'number') return e.dia;
+  const m = /Dia (\d+)/.exec(e.infoMundo ?? '');
+  return m ? Number(m[1]) - 1 : null;
 }
 
 function ligarFoto(app: HTMLElement, cena: ReturnType<typeof criarCena>): void {
@@ -350,7 +384,16 @@ function ligarMapas(app: HTMLElement, cena: ReturnType<typeof criarCena>): void 
     removerMarcador: (id) => {
       marcadores = marcadores.filter((m) => m.id !== id);
     },
+    marcarAqui: () => marcarAqui(),
   });
+  /** Marca a posição atual (tecla K ou botão "Marcar aqui" do mapa). */
+  function marcarAqui(): void {
+    const p = cena.estado.posicao ?? [0, 0, 0];
+    adicionar(`Marco ${proximo}`, p[0], p[2]);
+    mapas.atualizarLista();
+    window.dispatchEvent(new CustomEvent('brumaluz:marcou'));
+    notificar(`Marcador “Marco ${proximo - 1}” criado`);
+  }
   window.addEventListener('brumaluz:morte', () => {
     const p = cena.estado.posicao ?? [0, 0, 0];
     marcadores = marcadores.filter((m) => m.nome !== 'Onde desmaiei');
@@ -364,11 +407,7 @@ function ligarMapas(app: HTMLElement, cena: ReturnType<typeof criarCena>): void 
       const aberto = mapas.alternarGrande();
       if (aberto) document.exitPointerLock?.();
     } else if (e.code === 'KeyK') {
-      const p = cena.estado.posicao ?? [0, 0, 0];
-      adicionar(`Marco ${proximo}`, p[0], p[2]);
-      mapas.atualizarLista();
-      window.dispatchEvent(new CustomEvent('brumaluz:marcou'));
-      notificar(`Marcador “Marco ${proximo - 1}” criado`);
+      marcarAqui();
     } else if (e.code === 'Escape' && mapas.grandeAberto) {
       mapas.alternarGrande();
     }
@@ -389,7 +428,12 @@ function ligarDiario(app: HTMLElement, cena: ReturnType<typeof criarCena>): void
   const diario = criarDiario(cena.extrasSalvos('diario'));
   cena.registrarSalvavel('diario', { salvar: () => diario.salvar() });
   const hud = document.querySelector<HTMLElement>('.hud') ?? app;
-  const ui = criarUiDiario(app, hud, diario);
+  const ui = criarUiDiario(app, hud, diario, {
+    aoFechar: () => {
+      if (document.querySelector('.entrada:not([hidden])') || document.body.dataset.overlay) return;
+      travarPonteiro();
+    },
+  });
   const reg = (chave: string, qtd = 1) => {
     for (const m of diario.registrar(chave, qtd)) {
       notificar(`Conquista: ${m.titulo}`, 'trofeu');
@@ -460,7 +504,8 @@ function ligarControles(
   let usouToque = false;
   const atualizarToque = () => {
     const naEntrada = !!document.querySelector('.entrada:not([hidden])');
-    toque.mostrar((ehToque || usouToque) && !naEntrada && !document.body.dataset.overlay);
+    const modo = ehToque || usouToque;
+    toque.mostrar(modo && !naEntrada && !document.body.dataset.overlay, modo);
   };
   window.addEventListener(
     'touchstart',
@@ -470,7 +515,19 @@ function ligarControles(
     },
     { passive: true },
   );
-  setInterval(atualizarToque, 400);
+  // reage a painéis (data-overlay) e à tela de título, sem polling
+  new MutationObserver(atualizarToque).observe(document.body, {
+    attributes: true,
+    attributeFilter: ['data-overlay'],
+  });
+  const entrada = document.querySelector('.entrada');
+  if (entrada) {
+    new MutationObserver(atualizarToque).observe(entrada, {
+      attributes: true,
+      attributeFilter: ['hidden'],
+    });
+  }
+  atualizarToque();
   ligarGamepad(c, (passo) => {
     if (passo > 0) hotbar.proximo();
     else hotbar.anterior();

@@ -12,7 +12,7 @@ import {
   type Receita,
 } from '../jogo/receitas';
 import { iconeDoItem } from './icones';
-import type { InventarioUI } from './inventario';
+import { rolarAoFocar, type InventarioUI } from './inventario';
 
 export const CSS_CRIACAO = `
 .criacao { display: grid; gap: 8px; }
@@ -27,7 +27,7 @@ export const CSS_CRIACAO = `
   min-height: 36px; padding: 6px 12px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.14);
   background: rgba(0,0,0,0.3); color: #ece6da; font: 500 0.9rem system-ui, sans-serif;
 }
-.livro .lista { display: grid; gap: 4px; max-height: calc(var(--slot) * 4.6); overflow-y: auto; padding-right: 4px; }
+.livro .lista { display: grid; gap: 4px; max-height: calc(var(--slot) * 4.6); overflow-y: auto; padding-right: 4px; overscroll-behavior: contain; touch-action: pan-y; }
 .receita {
   display: grid; grid-template-columns: 36px 1fr; gap: 8px; align-items: center; text-align: left;
   padding: 4px 8px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.06);
@@ -97,10 +97,11 @@ export function criarCriacao(
   busca.type = 'search';
   busca.placeholder = 'Buscar receita…';
   busca.addEventListener('keydown', (e) => e.stopPropagation());
+  rolarAoFocar(busca);
   const lista = document.createElement('div');
   lista.className = 'lista';
   livro.append(busca, lista);
-  botaoLivro.addEventListener('mousedown', (e) => {
+  botaoLivro.addEventListener('click', (e) => {
     e.preventDefault();
     livro.hidden = !livro.hidden;
     renderLivro();
@@ -171,7 +172,8 @@ export function criarCriacao(
       }
       txt.appendChild(ingr);
       el.append(img, txt);
-      el.addEventListener('mousedown', (e) => {
+      // click (e não pointerdown): no toque a lista rola sem escolher receita por engano
+      el.addEventListener('click', (e) => {
         e.preventDefault();
         preencher(r);
       });

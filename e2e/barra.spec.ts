@@ -26,7 +26,8 @@ for (const vp of VIEWPORTS) {
 
     for (let i = 0; i < 9; i++) {
       const nome = await botoes.nth(i).getAttribute('aria-label');
-      expect(nome).toMatch(/^[^\d]+\(tecla \d\)$/);
+      // nome, quantidade opcional e a tecla do slot
+      expect(nome).toMatch(/^[^\d,]+(, \d+)? \(tecla \d\)$/);
       const render = await botoes
         .nth(i)
         .locator('.icone')

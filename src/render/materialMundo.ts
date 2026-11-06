@@ -81,12 +81,17 @@ export class PluginMundo extends MaterialPluginBase {
   override getCustomCode(shaderType: string): Record<string, string> | null {
     if (shaderType === 'vertex') {
       return {
-        CUSTOM_VERTEX_DEFINITIONS: 'attribute vec2 luz;\nvarying vec2 vLuzMundo;',
-        CUSTOM_VERTEX_MAIN_END: 'vLuzMundo = luz;',
+        CUSTOM_VERTEX_DEFINITIONS:
+          'attribute vec2 luz;\nvarying vec2 vLuzMundo;\nvarying vec3 vBlocoMundo;',
+        // posição sem o balanço do vento: tom por bloco e neve não "nadam" com as folhas
+        CUSTOM_VERTEX_MAIN_END:
+          'vLuzMundo = luz;\nvBlocoMundo = (finalWorld * vec4(position, 1.0)).xyz;',
         CUSTOM_VERTEX_UPDATE_POSITION: `
           #ifdef VERTEXCOLOR
           if (ventoFolhas > 0.0 && color.a < 0.99) {
-            float fase = tempoMundo * 1.3 + position.x * 0.45 + position.y * 0.3 + position.z * 0.37;
+            // fase pela posicao no mundo: folhas de chunks vizinhos balancam juntas
+            vec3 pmV = (world * vec4(position, 1.0)).xyz;
+            float fase = tempoMundo * 1.3 + pmV.x * 0.45 + pmV.y * 0.3 + pmV.z * 0.37;
             positionUpdated.x += sin(fase) * 0.045 * ventoFolhas;
             positionUpdated.z += cos(fase * 1.21) * 0.04 * ventoFolhas;
             positionUpdated.y += sin(fase * 0.7) * 0.015 * ventoFolhas;
@@ -99,13 +104,14 @@ export class PluginMundo extends MaterialPluginBase {
     return {
       CUSTOM_FRAGMENT_DEFINITIONS: `
         varying vec2 vLuzMundo;
+        varying vec3 vBlocoMundo;
         float hashMundo(vec3 p) {
           return fract(sin(dot(p, vec3(12.9898, 78.233, 37.719))) * 43758.5453);
         }
       `,
       CUSTOM_FRAGMENT_UPDATE_DIFFUSE: `
         {
-          vec3 blocoM = floor(vPositionW - normalize(vNormalW) * 0.02);
+          vec3 blocoM = floor(vBlocoMundo - normalize(vNormalW) * 0.02);
           float hM = hashMundo(blocoM);
           baseColor.rgb *= 0.94 + 0.1 * hM;
           float bioma = sin(vPositionW.x * 0.031 + sin(vPositionW.z * 0.017) * 2.0) * 0.5 + 0.5;
@@ -118,11 +124,13 @@ export class PluginMundo extends MaterialPluginBase {
             baseColor.rgb = mix(baseColor.rgb, ocre, outono * smoothstep(0.03, 0.12, verdeM) * (0.4 + 0.45 * hM));
           }
           float topoM = step(0.6, normalize(vNormalW).y);
-          if (inverno > 0.0 && topoM > 0.0) {
-            float salpico = step(0.25, fract(sin(dot(floor(vPositionW.xz * 16.0), vec2(12.99, 78.23))) * 437.5));
-            baseColor.rgb = mix(baseColor.rgb, vec3(0.92, 0.95, 1.0), inverno * mix(0.75, 1.0, salpico));
+          // neve e chao molhado so a ceu aberto (nao sob teto nem em caverna)
+          float aberto = smoothstep(0.9, 1.0, clamp(vLuzMundo.x, 0.0, 1.0));
+          if (inverno > 0.0 && topoM > 0.0 && aberto > 0.0) {
+            float salpico = step(0.25, fract(sin(dot(floor(vBlocoMundo.xz * 16.0), vec2(12.99, 78.23))) * 437.5));
+            baseColor.rgb = mix(baseColor.rgb, vec3(0.92, 0.95, 1.0), inverno * aberto * mix(0.75, 1.0, salpico));
           }
-          baseColor.rgb *= 1.0 - molhado * 0.18;
+          baseColor.rgb *= 1.0 - molhado * 0.18 * aberto;
         }
       `,
       CUSTOM_FRAGMENT_BEFORE_FOG: `

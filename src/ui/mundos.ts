@@ -1,4 +1,4 @@
-import { icone } from './pixicones';
+import { botaoFechar } from './pixicones';
 import {
   SEMENTE_PADRAO_MUNDO,
   TAMANHO_MAXIMO_NOME_MUNDO,
@@ -29,6 +29,7 @@ export const CSS_MODAL = `
 .modal {
   width: min(760px, 100%);
   max-height: min(86vh, 900px);
+  max-height: min(86dvh, 900px);
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
@@ -51,11 +52,7 @@ export const CSS_MODAL = `
 }
 .modal h2 { margin: 0; font-size: 1.2rem; color: #ffd98f; letter-spacing: 0.02em; }
 .modal .corpo { padding: 16px 20px; overflow-y: auto; }
-.modal .fechar {
-  width: 36px; height: 36px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.12);
-  background: rgba(255,255,255,0.05); color: #ece6da; font-size: 1.1rem; cursor: pointer;
-}
-.modal .fechar:hover { background: rgba(255,255,255,0.12); }
+.modal header .botao-fechar { position: static; flex: 0 0 auto; }
 .btn {
   display: inline-flex; align-items: center; justify-content: center; gap: 6px;
   min-height: 40px; padding: 8px 16px; box-sizing: border-box;
@@ -119,8 +116,25 @@ export function rotuloModo(m: ModoJogo): string {
   return m === 'criativo' ? 'Criativo' : 'Sobrevivência';
 }
 
-/** Cria um modal genérico com título e corpo; devolve o fundo e o corpo. */
-export function criarModal(titulo: string, atributo: string) {
+/** Modais abertos, do mais antigo ao do topo (só o do topo responde ao Esc). */
+const pilhaModais: { fechar(): void }[] = [];
+
+/** Valor de body.dataset.overlay a devolver ao fechar (só se ainda fizer sentido). */
+export function overlayAoFechar(
+  anterior: string | undefined,
+  pausaAberta: boolean,
+): string | undefined {
+  if (anterior === 'pausa' && !pausaAberta) return undefined;
+  return anterior;
+}
+
+/**
+ * Cria um modal genérico com título e corpo.
+ * Com `overlay`, grava document.body.dataset.overlay enquanto aberto (o jogo não pausa por
+ * baixo) e devolve o valor anterior ao fechar (ex.: configurações abertas pela pausa).
+ * Ao abrir, foca o botão fechar; Esc fecha; ao fechar, o foco volta para onde estava.
+ */
+export function criarModal(titulo: string, atributo: string, overlay?: string) {
   const fundo = document.createElement('div');
   fundo.className = 'modal-fundo';
   fundo.hidden = true;
@@ -133,20 +147,63 @@ export function criarModal(titulo: string, atributo: string) {
   const cab = document.createElement('header');
   const h = document.createElement('h2');
   h.textContent = titulo;
-  const fechar = document.createElement('button');
-  fechar.type = 'button';
-  fechar.className = 'fechar';
-  fechar.setAttribute('aria-label', 'Fechar');
-  fechar.appendChild(icone('fechar'));
-  cab.append(h, fechar);
+  const botaoX = botaoFechar(() => fecharModal());
+  botaoX.classList.add('fechar');
+  cab.append(h, botaoX);
   const corpo = document.createElement('div');
   corpo.className = 'corpo';
   modal.append(cab, corpo);
   fundo.appendChild(modal);
-  const fecharModal = () => {
-    fundo.hidden = true;
+
+  let aberto = false;
+  let anterior: string | undefined;
+  let focoAntes: HTMLElement | null = null;
+  const aoFecharLista: (() => void)[] = [];
+  const api = { fechar: () => fecharModal() };
+  const aoTecla = (e: KeyboardEvent) => {
+    if (e.key !== 'Escape' || !aberto || pilhaModais[pilhaModais.length - 1] !== api) return;
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    fecharModal();
   };
-  fechar.addEventListener('click', fecharModal);
+  function abrirModal(): void {
+    if (aberto) return;
+    aberto = true;
+    anterior = document.body.dataset.overlay;
+    if (overlay) document.body.dataset.overlay = overlay;
+    const ativo = document.activeElement;
+    focoAntes = ativo instanceof HTMLElement && ativo !== document.body ? ativo : null;
+    fundo.hidden = false;
+    pilhaModais.push(api);
+    window.addEventListener('keydown', aoTecla, true);
+    botaoX.focus({ preventScroll: true });
+  }
+  function fecharModal(): void {
+    if (!aberto) return;
+    aberto = false;
+    fundo.hidden = true;
+    const i = pilhaModais.indexOf(api);
+    if (i >= 0) pilhaModais.splice(i, 1);
+    window.removeEventListener('keydown', aoTecla, true);
+    if (overlay && document.body.dataset.overlay === overlay) {
+      const volta = overlayAoFechar(
+        anterior,
+        !!document.querySelector('.pausa-fundo:not([hidden])'),
+      );
+      if (volta) document.body.dataset.overlay = volta;
+      else delete document.body.dataset.overlay;
+    }
+    if (focoAntes?.isConnected && !focoAntes.closest('[hidden]')) {
+      focoAntes.focus({ preventScroll: true });
+    }
+    focoAntes = null;
+    for (const f of aoFecharLista) f();
+  }
+  // quem esconder o fundo direto (fundo.hidden = true) também passa pelo fechamento
+  new MutationObserver(() => {
+    if (fundo.hidden && aberto) fecharModal();
+    else if (!fundo.hidden && !aberto) abrirModal();
+  }).observe(fundo, { attributes: true, attributeFilter: ['hidden'] });
   fundo.addEventListener('click', (e) => {
     e.stopPropagation();
     if (e.target === fundo) fecharModal();
@@ -155,7 +212,27 @@ export function criarModal(titulo: string, atributo: string) {
     e.stopPropagation();
     if (e.key === 'Escape') fecharModal();
   });
-  return { fundo, corpo, titulo: h, fechar: fecharModal };
+  // teclado virtual (iOS): o campo focado rola para a área visível
+  fundo.addEventListener('focusin', (e) => {
+    const alvo = e.target as HTMLElement;
+    if (alvo.matches?.('input, textarea')) {
+      setTimeout(() => alvo.scrollIntoView({ block: 'center', behavior: 'smooth' }), 300);
+    }
+  });
+  return {
+    fundo,
+    corpo,
+    titulo: h,
+    abrir: abrirModal,
+    fechar: fecharModal,
+    get aberto() {
+      return aberto;
+    },
+    /** Chamado sempre que o modal fecha (X, fundo, Esc ou código). */
+    aoFechar(f: () => void) {
+      aoFecharLista.push(f);
+    },
+  };
 }
 
 export interface OpcoesPainelMundos {
@@ -165,7 +242,8 @@ export interface OpcoesPainelMundos {
 }
 
 export function criarPainelMundos(raiz: HTMLElement, op: OpcoesPainelMundos) {
-  const { fundo, corpo } = criarModal('Mundos', 'data-painel-mundos');
+  const modal = criarModal('Mundos', 'data-painel-mundos', 'mundos');
+  const { fundo, corpo } = modal;
   raiz.appendChild(fundo);
 
   const lista = document.createElement('div');
@@ -237,7 +315,7 @@ export function criarPainelMundos(raiz: HTMLElement, op: OpcoesPainelMundos) {
       jogar.className = 'btn primario';
       jogar.textContent = op.atual?.id === m.id ? 'Continuar' : 'Jogar';
       jogar.addEventListener('click', () => {
-        if (op.atual?.id === m.id) fundo.hidden = true;
+        if (op.atual?.id === m.id) modal.fechar();
         else op.abrir(m.id);
       });
       const renomear = document.createElement('button');
@@ -271,7 +349,7 @@ export function criarPainelMundos(raiz: HTMLElement, op: OpcoesPainelMundos) {
   return {
     async abrir() {
       await render();
-      fundo.hidden = false;
+      modal.abrir();
       (form.querySelector('[data-novo-nome]') as HTMLInputElement).value = '';
     },
     elemento: fundo,

@@ -1,0 +1,13 @@
+{
+  "name": "Brumaluz",
+  "short_name": "Brumaluz",
+  "description": "Explore, construa e sobreviva num mundo de bruma e luz",
+  "start_url": "/",
+  "scope": "/",
+  "display": "fullscreen",
+  "orientation": "any",
+  "background_color": "#1b1230",
+  "theme_color": "#1b1230",
+  "lang": "pt-BR",
+  "icons": [{ "src": "/icone.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }]
+}

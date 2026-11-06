@@ -78,6 +78,7 @@ export const CSS_PAINEL = `
   background: var(--cor) !important;
   box-shadow: inset 2px 2px 0 rgba(255, 255, 255, 0.28), inset -2px -3px 0 rgba(0, 0, 0, 0.35);
 }
+@media (pointer: coarse) { .painel-personagem button.amostra { width: 44px; height: 44px; min-height: 44px; } }
 .painel-personagem button.amostra[aria-pressed='true'] {
   outline: 3px solid #ffd98f; outline-offset: 2px;
   box-shadow: inset 2px 2px 0 rgba(255, 255, 255, 0.28), inset -2px -3px 0 rgba(0, 0, 0, 0.35);

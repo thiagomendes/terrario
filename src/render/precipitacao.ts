@@ -74,6 +74,11 @@ export function criarPrecipitacao(scene: Scene) {
   neve.blendMode = ParticleSystem.BLENDMODE_STANDARD;
   neve.emitRate = 0;
   neve.start();
+  const baseChuva1 = chuva.color1.clone();
+  const baseChuva2 = chuva.color2.clone();
+  const baseNeve1 = neve.color1.clone();
+  const baseNeve2 = neve.color2.clone();
+  let luzAtual = 1;
 
   // folhas caindo das árvores (mais no outono)
   const folhaTex = textura(scene, 'folha', (ctx) => {
@@ -126,6 +131,20 @@ export function criarPrecipitacao(scene: Scene) {
       neve: neve.getActiveCount(),
       taxa: chuva.emitRate,
     }),
+    /** Claridade (0..1): chuva e neve escurecem à noite em vez de brilhar no escuro. */
+    definirLuz(f: number) {
+      const q = Math.round(Math.max(0.15, Math.min(1, f)) * 20) / 20;
+      if (q === luzAtual) return;
+      luzAtual = q;
+      chuva.color1 = baseChuva1.scale(q);
+      chuva.color1.a = baseChuva1.a;
+      chuva.color2 = baseChuva2.scale(q);
+      chuva.color2.a = baseChuva2.a;
+      neve.color1 = baseNeve1.scale(q);
+      neve.color1.a = baseNeve1.a;
+      neve.color2 = baseNeve2.scale(q);
+      neve.color2.a = baseNeve2.a;
+    },
     atualizar(posicao: Vector3, intensidade: number, nevando: boolean, coberto: boolean) {
       (chuva.emitter as Vector3).copyFrom(posicao);
       (neve.emitter as Vector3).copyFrom(posicao);

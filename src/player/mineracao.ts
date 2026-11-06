@@ -61,7 +61,8 @@ export function criarEstadoMineracao(): EstadoMineracao {
 
 export function mineravel(id: number): boolean {
   const def = REGISTRO_BLOCOS[id];
-  return def !== undefined && (def.solido || def.planta) && DUREZA[id] !== undefined;
+  // tochas e portas abertas não são sólidas, mas se quebram (só líquido e ar não)
+  return def !== undefined && !def.liquido && id !== 0 && DUREZA[id] !== undefined;
 }
 
 export function atualizarMineracao(

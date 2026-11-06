@@ -16,7 +16,8 @@ export interface PoolParticulas {
   readonly capacidade: number;
   /** Emite até caber; devolve quantas foram emitidas. */
   emitir(lista: ParametrosParticula[]): number;
-  atualizar(dt: number): void;
+  /** `solido`: se informado, as partículas quicam no chão e não atravessam paredes. */
+  atualizar(dt: number, solido?: (x: number, y: number, z: number) => boolean): void;
   vivas(): number;
   /** Posições (x, y, z) das vivas, compactadas no início do buffer. */
   readonly posicoes: Float32Array;
@@ -59,7 +60,7 @@ export function criarPoolParticulas(capacidade: number = LIMITE_PARTICULAS): Poo
       }
       return n;
     },
-    atualizar(dt) {
+    atualizar(dt, solido) {
       let i = 0;
       while (i < vivas) {
         idades[i] += dt;
@@ -69,7 +70,36 @@ export function criarPoolParticulas(capacidade: number = LIMITE_PARTICULAS): Poo
           continue;
         }
         velocidades[i * 3 + 1] += GRAVIDADE_PARTICULA * dt;
-        for (let k = 0; k < 3; k++) posicoes[i * 3 + k] += velocidades[i * 3 + k] * dt;
+        // quem nasce dentro do bloco (lascas do golpe) sai livre; colisão só do lado de fora
+        const dentro =
+          !!solido &&
+          solido(
+            Math.floor(posicoes[i * 3]),
+            Math.floor(posicoes[i * 3 + 1]),
+            Math.floor(posicoes[i * 3 + 2]),
+          );
+        for (let k = 0; k < 3; k++) {
+          const antes = posicoes[i * 3 + k];
+          const depois = antes + velocidades[i * 3 + k] * dt;
+          posicoes[i * 3 + k] = depois;
+          if (
+            solido &&
+            !dentro &&
+            solido(
+              Math.floor(posicoes[i * 3]),
+              Math.floor(posicoes[i * 3 + 1]),
+              Math.floor(posicoes[i * 3 + 2]),
+            )
+          ) {
+            // bateu: volta e para nesse eixo; no chão, arrasta um pouco e assenta
+            posicoes[i * 3 + k] = antes;
+            if (k === 1 && velocidades[i * 3 + 1] < 0) {
+              velocidades[i * 3] *= 0.5;
+              velocidades[i * 3 + 2] *= 0.5;
+            }
+            velocidades[i * 3 + k] = 0;
+          }
+        }
         i++;
       }
     },

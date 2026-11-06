@@ -34,7 +34,7 @@ export interface PedidoChunk {
   cz: number;
   semente: number;
   versao: number;
-  /** Edições do chunk e dos 4 vizinhos, por chave "cx,cz". */
+  /** Edições do chunk e dos 8 vizinhos, por chave "cx,cz". */
   edicoes: EdicoesExportadas;
   /** Blocos-base já conhecidos (chave "cx,cz"): evita regerar terreno no worker. */
   bases?: Record<string, Uint8Array>;
@@ -84,6 +84,10 @@ self.onmessage = (ev: MessageEvent<PedidoChunk>) => {
       xPos: gerarChunkEditado(cx + 1, cz, semente, edicoes),
       zNeg: gerarChunkEditado(cx, cz - 1, semente, edicoes),
       zPos: gerarChunkEditado(cx, cz + 1, semente, edicoes),
+      xNegZNeg: gerarChunkEditado(cx - 1, cz - 1, semente, edicoes),
+      xPosZNeg: gerarChunkEditado(cx + 1, cz - 1, semente, edicoes),
+      xNegZPos: gerarChunkEditado(cx - 1, cz + 1, semente, edicoes),
+      xPosZPos: gerarChunkEditado(cx + 1, cz + 1, semente, edicoes),
     },
     metasDoChunk(cx, cz, edicoes),
   );

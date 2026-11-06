@@ -522,6 +522,62 @@ export const PIXICONES = {
     '.........##.',
     '............',
   ],
+  mais: [
+    '............',
+    '....####....',
+    '....####....',
+    '....####....',
+    '############',
+    '############',
+    '############',
+    '############',
+    '....####....',
+    '....####....',
+    '....####....',
+    '............',
+  ],
+  menos: [
+    '............',
+    '............',
+    '............',
+    '............',
+    '############',
+    '############',
+    '############',
+    '############',
+    '............',
+    '............',
+    '............',
+    '............',
+  ],
+  telaCheia: [
+    '####....####',
+    '###......###',
+    '##........##',
+    '#..........#',
+    '............',
+    '............',
+    '............',
+    '............',
+    '#..........#',
+    '##........##',
+    '###......###',
+    '####....####',
+  ],
+  janela: [
+    '...#....#...',
+    '...#....#...',
+    '...#....#...',
+    '####....####',
+    '............',
+    '............',
+    '............',
+    '............',
+    '####....####',
+    '...#....#...',
+    '...#....#...',
+    '...#....#...',
+  ],
 } as const;
 
 export type NomeIcone = keyof typeof PIXICONES;
@@ -570,8 +626,22 @@ export const CSS_PIXICONES = `
 /* telas de toque: sem dicas de teclado e mouse */
 @media (pointer: coarse) {
   .ajuda-inv, .mapa-mundo .dica, .rodape-titulo ul { display: none !important; }
+  .ajuda-toque { display: block !important; }
+  /* alvos de toque com pelo menos 44px */
+  .botao-fechar { min-width: 44px; min-height: 44px; }
+  .btn, .abas button, .segmentado button { min-height: 44px; }
 }
+body.toque-ativo .ajuda-inv, body.toque-ativo .mapa-mundo .dica { display: none !important; }
+body.toque-ativo .ajuda-toque { display: block !important; }
+.ajuda-toque { display: none; }
 `;
+
+/** Jogando por toque (celular/tablet): ponteiro grosso ou controles de toque ligados. */
+export function modoToque(): boolean {
+  if (typeof document === 'undefined') return false;
+  if (document.body?.classList.contains('toque-ativo')) return true;
+  return typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches;
+}
 
 /** Botão de fechar padrão (canto superior direito do painel). */
 export function botaoFechar(aoFechar: () => void, rotulo = 'Fechar'): HTMLButtonElement {
