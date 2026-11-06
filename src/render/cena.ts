@@ -367,8 +367,18 @@ export function criarCena(
   sombras.usePercentageCloserFiltering = true;
   sombras.stabilizeCascades = true;
 
+  /** Claridade do dia para o viewmodel (1 ao meio-dia, ~0.4 à noite). */
+  let luzDia = 1;
   const glow = new GlowLayer('glow', scene, { blurKernelSize: 32 });
   glow.intensity = INTENSIDADE_GLOW;
+  // o braço e o item na mão nunca brilham (inclui malhas de itens criadas depois)
+  for (const m of scene.meshes)
+    if (m.name.startsWith('braco-') || m.name.startsWith('personagem-mao'))
+      glow.addExcludedMesh(m as Mesh);
+  scene.onNewMeshAddedObservable.add((m) => {
+    if (m.name.startsWith('braco-') || m.name.startsWith('personagem-mao'))
+      glow.addExcludedMesh(m as Mesh);
+  });
 
   const ceu = criarCeu(scene);
   const agua = criarAgua(scene);
@@ -558,6 +568,7 @@ export function criarCena(
     const forca = 0.35 + 0.35 * Math.max(a.crepusculo, a.noite);
     mundoSolido.definirBruma(bruma, forca);
     mundoSolido.luzBlocos = 0.8 + 0.4 * a.noite;
+    luzDia = 0.38 + 0.62 * (1 - a.noite) * Math.min(1, a.intensidadeCeu + 0.4);
     mundoPlanta.luzBlocos = mundoSolido.luzBlocos;
     mundoPlanta.definirBruma(bruma, forca);
     ceu.atualizar(a, tempo);
@@ -1015,7 +1026,9 @@ export function criarCena(
     // no modo foto o corpo aparece quando a câmera livre se afasta dos olhos
     const longeDosOlhos = foto && Vector3.Distance(fotoPosRef(), camera.position) > 1.2;
     const vis = visibilidadePorModo(estadoCamera.modo);
-    braco.definirVisivel(vis.braco && !foto);
+    // no título o panorama mostra só o mundo (sem braço)
+    const naTela = document.body.classList.contains('tela-titulo');
+    braco.definirVisivel(vis.braco && !foto && !naTela);
     personagem.definirVisivel(foto ? longeDosOlhos : vis.corpo);
     const blocoMao = hotbar.blocoAtivo();
     const itemMao = hotbar.pilhaAtiva()?.item ?? '';
@@ -1025,7 +1038,8 @@ export function criarCena(
       blocoNaMaoAtual = blocoMao;
       braco.definirBloco(blocoMao || null);
       const pilhaMao = hotbar.pilhaAtiva();
-      braco.definirItem(!blocoMao && pilhaMao ? iconeDoItem(pilhaMao.item) : null);
+      braco.definirItem(!blocoMao && pilhaMao ? pilhaMao.item : null);
+      personagem.definirNaMao(blocoMao || null, !blocoMao && pilhaMao ? pilhaMao.item : null);
     }
     braco.atualizarVista(dt, animador.vista());
     personagem.aplicarPose(pose, {
@@ -1045,7 +1059,7 @@ export function criarCena(
     jogadorCoberto = coberto && ey < 55;
     const alvoLuz = coberto ? (ey < 55 ? 0.22 : 0.55) : 1;
     luzJogador += (alvoLuz - luzJogador) * Math.min(1, dt * 3);
-    braco.definirLuz(luzJogador);
+    braco.definirLuz(luzJogador * luzDia);
     personagem.definirLuz(luzJogador);
   }
   estado.personagem = {
