@@ -1,5 +1,5 @@
 import { criarSeletorTemas } from './temasUi';
-import { obterTema } from '../temas';
+import { obterTema, TEMA_PADRAO } from '../temas';
 import type { IdTema } from '../temas/tipos';
 import { carregarAparencia, salvarAparencia } from '../personagem/persistencia';
 import { botaoFechar } from './pixicones';
@@ -383,6 +383,8 @@ export function criarPainelMundos(raiz: HTMLElement, op: OpcoesPainelMundos) {
       await render();
       modal.abrir();
       (form.querySelector('[data-novo-nome]') as HTMLInputElement).value = '';
+      // cada abertura começa do jeito padrão (tema base, sem trocar o visual)
+      seletor.definir(TEMA_PADRAO);
     },
     /** Abre já no formulário de mundo novo, com o tema escolhido. */
     async criarComTema(id: IdTema) {

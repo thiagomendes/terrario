@@ -130,7 +130,8 @@ void main() {
     vec3 pb = cross(pt, planetaDir);
     vec2 pq = vec2(dot(d, pt), dot(d, pb)) / sin(planetaRaio);
     // aneis: elipse achatada em volta, atras na metade de cima
-    if (aneisInc > 0.0) {
+    // só do lado do planeta (sem anel fantasma no ponto oposto do céu)
+    if (aneisInc > 0.0 && pd > 0.0) {
       vec2 rq = vec2(pq.x, pq.y / aneisInc);
       float rr = length(rq);
       float anel = smoothstep(1.35, 1.42, rr) * (1.0 - smoothstep(2.05, 2.15, rr));
@@ -168,7 +169,8 @@ void main() {
   float disco = smoothstep(luaLimiar.x, luaLimiar.y, l);
   vec3 lt = normalize(cross(paraLua, vec3(0.0, 1.0, 0.0)));
   vec3 lb = cross(lt, paraLua);
-  vec2 lp = vec2(dot(d, lt), dot(d, lb)) * 400.0 / luaEscala;
+  // sem lua no tema (luaEscala 0): evita dividir por zero (o céu inteiro viraria NaN)
+  vec2 lp = vec2(dot(d, lt), dot(d, lb)) * 400.0 / max(luaEscala, 0.001);
   float cratera = fbm(lp * 0.6) * 0.5 + 0.6;
   c = mix(c, vec3(0.86, 0.88, 0.95) * corLuaTema * cratera, disco);
   c += vec3(0.5, 0.6, 0.9) * corLuaTema * pow(max(l, 0.0), 300.0) * 0.35 * noite * step(0.001, luaEscala);

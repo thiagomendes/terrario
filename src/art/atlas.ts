@@ -243,7 +243,10 @@ export function laDe(cor: string): Pintor {
 }
 
 /** Moldura de madeira com miolo próprio (mesa, baú). */
-export function moldura(miolo: Pintor, madeira: string[] = ['#7a5432', '#86603a', '#93693f']): Pintor {
+export function moldura(
+  miolo: Pintor,
+  madeira: string[] = ['#7a5432', '#86603a', '#93693f'],
+): Pintor {
   return (x, y, s) => {
     if (x <= 1 || y <= 1 || x >= T - 2 || y >= T - 2) {
       const p = rampa(madeira, hash2(x, y, s), x, y, s);

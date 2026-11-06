@@ -1034,7 +1034,8 @@ export function iniciarAmbiente(
       const t = Math.max(proximoBicho, agora + 0.05);
       const nat = tema().natureza;
       if (rng() < noite) {
-        if (rng() < nat.grilos) grilo(t);
+        // grilos = 1 não sorteia nada a mais (o ambiente do tema base fica igual)
+        if (nat.grilos >= 1 || rng() < nat.grilos) grilo(t);
         else if (nat.bipes && rng() < 0.08) bipe(t);
         proximoBicho = t + 0.35 + rng() * 0.5;
       } else {

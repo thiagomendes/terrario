@@ -14,11 +14,56 @@ async function pronto(page: Page) {
   });
 }
 
-test('mundo antigo (sem tema) abre como Bruma e Luz', async ({ page }) => {
-  test.setTimeout(200_000);
+test('mundo antigo (gravado sem tema, como antes do Terrário) abre como Bruma e Luz', async ({
+  page,
+}) => {
+  test.setTimeout(300_000);
   await page.goto('/');
   await pronto(page);
+  // cria um mundo Lunar e depois apaga o campo de tema no índice gravado no banco,
+  // deixando o registro igual ao de um mundo salvo antes dos temas
+  await page.locator('[data-abrir-mundos]').click();
+  await page.locator('.cartao-tema[data-tema="exploracao-lunar"]').click();
+  await page.locator('[data-novo-nome]').fill('Mundo de antes');
+  await page.locator('[data-criar-mundo]').click();
+  await page.waitForURL(/mundo=/);
+  await pronto(page);
+  expect(await page.evaluate(() => window.__brumaluz!.tema)).toBe('exploracao-lunar');
+  const mexeu = await page.evaluate(
+    () =>
+      new Promise<number>((resolve) => {
+        const req = indexedDB.open('brumaluz', 1);
+        req.onsuccess = () => {
+          const db = req.result;
+          const tx = db.transaction('kv', 'readwrite');
+          const kv = tx.objectStore('kv');
+          let n = 0;
+          const cur = kv.openCursor();
+          cur.onsuccess = () => {
+            const c = cur.result;
+            if (!c) return;
+            const v = c.value;
+            const lista = Array.isArray(v)
+              ? v
+              : typeof v === 'string' && v.startsWith('[')
+                ? JSON.parse(v)
+                : null;
+            if (lista && lista.some((m: { tema?: string }) => m && m.tema)) {
+              for (const m of lista) delete m.tema;
+              c.update(typeof v === 'string' ? JSON.stringify(lista) : lista);
+              n++;
+            }
+            c.continue();
+          };
+          tx.oncomplete = () => resolve(n);
+        };
+      }),
+  );
+  expect(mexeu, 'índice de mundos não encontrado no banco').toBe(1);
+  await page.reload();
+  await pronto(page);
   expect(await page.evaluate(() => window.__brumaluz!.tema)).toBe('bruma-e-luz');
+  await expect(page.locator('[data-mundo-atual]')).toContainText('Mundo de antes');
   await expect(page.locator('[data-mundo-atual]')).toContainText('Bruma e Luz');
 });
 
@@ -101,6 +146,14 @@ for (const [id, nome] of TEMAS) {
         ' ' +
         (window.__brumaluz!.infoMundo ?? ''),
     );
+    // e nos textos visíveis (avisos, barra, informações do mundo)
+    // (a tela de título fica de fora: a vitrine mostra todos os temas de propósito)
+    const visivel = await page.evaluate(() => {
+      document.querySelector('.entrada')?.setAttribute('hidden', '');
+      return document.body.innerText;
+    });
+    for (const p of ['bruma', 'luzita', 'musgo', 'retorcid', 'espectro'])
+      expect(visivel.toLowerCase(), `vazou "${p}" na tela`).not.toContain(p);
     for (const p of ['bruma', 'luzita', 'musgo', 'retorcid', 'espectro'])
       expect(textoHud.toLowerCase(), `vazou "${p}"`).not.toContain(p);
     expect(erros.filter((e) => !/favicon|AudioContext/i.test(e))).toEqual([]);

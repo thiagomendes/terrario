@@ -192,16 +192,34 @@ export function criarVitrineTitulo(aoEscolher: (id: IdTema) => void) {
   b.addEventListener('pointerleave', () => (parado = false));
   b.addEventListener('focus', () => (parado = true));
   b.addEventListener('blur', () => (parado = false));
-  const relogio = setInterval(() => {
-    if (!parado && !document.hidden && b.isConnected && b.offsetParent !== null) mostrar(i + 1);
-  }, 4200);
+  // revezamento só enquanto a vitrine está na tela (o relógio para quando ela some)
+  let relogio: ReturnType<typeof setInterval> | null = null;
+  const ligar = () => {
+    if (relogio) return;
+    relogio = setInterval(() => {
+      if (!b.isConnected || b.offsetParent === null) {
+        clearInterval(relogio!);
+        relogio = null;
+        return;
+      }
+      if (!parado && !document.hidden) mostrar(i + 1);
+    }, 4200);
+  };
+  ligar();
+  // ao voltar ao título a vitrine reaparece: religa
+  new IntersectionObserver((e) => {
+    if (e.some((x) => x.isIntersecting)) ligar();
+  }).observe(b);
   b.addEventListener('click', (e) => {
     e.stopPropagation();
     aoEscolher(temas[i].id);
   });
   return {
     elemento: b,
-    parar: () => clearInterval(relogio),
+    parar: () => {
+      if (relogio) clearInterval(relogio);
+      relogio = null;
+    },
     mostrar,
   };
 }

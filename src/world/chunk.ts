@@ -85,10 +85,21 @@ export function alturaTerreno(wx: number, wz: number, semente: number): number {
   h += m * m * 52 * Math.min(1, Math.max(0, (c.continente - 0.38) / 0.15));
   // pântanos são baixos e planos
   if (c.umidade > 0.62 && c.temperatura > 0.38) h = Math.min(h, NIVEL_MAR + 2 + detalhe * 2);
-  if (estilo.crateras > 0 && h > NIVEL_MAR + 2)
-    h += relevoCrateras(wx, wz, semente, estilo.crateras);
+  // crateras somem aos poucos perto do mar (sem degrau na curva de nível nem fundo alagado)
+  if (estilo.crateras > 0) {
+    const perto = Math.min(1, Math.max(0, (h - (NIVEL_MAR + 1)) / 6));
+    if (perto > 0) h += relevoCrateras(wx, wz, semente, estilo.crateras) * perto;
+  }
   return Math.floor(Math.min(ALTURA - 14, h));
 }
+
+/** Plantas só de enfeite, que o estilo `flora` do tema pode rarear. */
+const DECORATIVAS: ReadonlySet<number> = new Set([
+  Bloco.GRAMA_ALTA,
+  Bloco.FLOR,
+  Bloco.JUNCO,
+  Bloco.ARBUSTO_SECO,
+]);
 
 /** Tamanho da célula de crateras (uma cratera no máximo por célula). */
 const CELULA_CRATERA = 56;
@@ -289,7 +300,10 @@ export function gerarChunk(cx: number, cz: number, semente: number = SEMENTE_PAD
       const margem = x >= 2 && x < TAM_X - 2 && z >= 2 && z < TAM_Z - 2;
       // flora do tema: parte das plantas some (Lua: quase nada); árvores e cactos ficam
       const pos = (id: number) => {
-        if (estilo.flora < 1 && hash2(wx, wz, semente + 13) > estilo.flora) return;
+        // só plantas de enfeite somem; comida e luz (frutinhas, abóbora, cogumelo,
+        // cristal) ficam em todo tema: a mecânica é a mesma
+        if (estilo.flora < 1 && DECORATIVAS.has(id) && hash2(wx, wz, semente + 13) > estilo.flora)
+          return;
         blocos[indice(x, topo, z)] = id;
       };
       const arv = (tronco: number, folha: number, padrao: () => void) =>

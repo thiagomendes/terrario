@@ -1,3 +1,4 @@
+import { CRIATURAS } from '../jogo/criaturas';
 import { tema } from '../temas/ativo';
 import { tocarVoz } from '../audio/sons';
 import { construirMapaEmissivo } from './emissivo';
@@ -1100,7 +1101,7 @@ export function criarCena(
       if (populacao.domar(naMira)) {
         tocarSom(motorAudio, 'entrada');
         window.dispatchEvent(
-          new CustomEvent('brumaluz:toast', { detail: 'A raposa-lume confia em você!' }),
+          new CustomEvent('brumaluz:toast', { detail: `${CRIATURAS.raposa.nome} confia em você!` }),
         );
         window.dispatchEvent(new CustomEvent('brumaluz:domou'));
         tocarVoz(motorAudio, naMira.tipo, 'contente', 1);
@@ -2009,16 +2010,18 @@ export function criarCena(
     return Math.max(0, 1 - d / 24);
   };
   // chamados de vez em quando: no máximo um a cada poucos segundos, de um bicho por perto
+  // gerador próprio: os chamados não mexem na sequência dos drops
+  const rngVozes = criarGerador(4242);
   let esperaChamado = 4;
   const chamadosCriaturas = (dt: number) => {
     esperaChamado -= dt;
     if (esperaChamado > 0) return;
-    esperaChamado = 5 + rngDrops() * 9;
+    esperaChamado = 5 + rngVozes() * 9;
     const perto = populacao.lista.filter(
       (c) => c.estado !== 'morrendo' && c.tipo !== 'espectro' && volumeDaDistancia(c) > 0.25,
     );
     if (perto.length === 0) return;
-    const c = perto[Math.floor(rngDrops() * perto.length)];
+    const c = perto[Math.floor(rngVozes() * perto.length)];
     tocarVoz(motorAudio, c.tipo, c.domada ? 'contente' : 'chamado', volumeDaDistancia(c));
   };
   quadroCriaturas = (dt: number, tempo: number) => {

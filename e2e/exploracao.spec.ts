@@ -104,24 +104,33 @@ for (const id of TEMAS) {
     await fazer(`${c}.mover(0, 0)`);
     await checarEstado(page, 'voar');
 
-    // quebrar e colocar cada material na frente do jogador
-    const resultado = await page.evaluate((materiais) => {
+    // quebrar cada material: põe o bloco à frente, mira nele e confere que sumiu
+    await page.evaluate(() => {
       const e = window.__brumaluz!;
-      const [x0, y0, z0] = e.posicao!.map(Math.floor);
+      const [x0, , z0] = e.posicao!.map(Math.floor);
       e.teleportar!(x0 + 0.5, z0 + 0.5);
-      const [x, y, z] = e.posicao!.map(Math.floor);
-      let quebrados = 0;
-      for (const m of materiais) {
-        e.definirBloco!(x, y, z - 2, m);
-        e.apontar!(0, -0.2);
-        const alvo = e.alvo;
-        if (alvo && e.interagir!('quebrar')) quebrados++;
-      }
-      return { quebrados, total: materiais.length };
-    }, MATERIAIS);
-    expect(resultado.quebrados, 'blocos que não quebraram').toBeGreaterThanOrEqual(
-      resultado.total - 1,
-    );
+    });
+    await esperar(page, 600);
+    let quebrados = 0;
+    for (const m of MATERIAIS) {
+      const pos = await page.evaluate((m) => {
+        const e = window.__brumaluz!;
+        const [x, y, z] = e.posicao!.map(Math.floor);
+        // yaw 0 olha para +z; pitch positivo olha para baixo: mira o bloco no chão à frente
+        e.definirBloco!(x, y, z + 2, m);
+        e.apontar!(0, 0.45);
+        return { x, y, z: z + 2 };
+      }, m);
+      await esperar(page, 250);
+      const ok = await page.evaluate((p) => {
+        const e = window.__brumaluz!;
+        const a = e.alvo;
+        if (!a || a.x !== p.x || a.y !== p.y || a.z !== p.z) return false;
+        return e.interagir!('quebrar') && e.bloco!(p.x, p.y, p.z) === 0;
+      }, pos);
+      if (ok) quebrados++;
+    }
+    expect(quebrados, 'materiais que não quebraram').toBe(MATERIAIS.length);
     await esperar(page, 1200);
     for (let i = 0; i < 5; i++) {
       await page.evaluate((i) => window.__brumaluz!.selecionarSlot!(i), i);

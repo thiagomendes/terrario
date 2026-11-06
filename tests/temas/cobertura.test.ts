@@ -237,13 +237,15 @@ describe('temas não mudam a mecânica', () => {
 
   it('baús e minérios no mesmo lugar (mesma exploração em todo tema)', () => {
     const contar = () => {
-      const r = { bau: 0, minerios: 0 };
+      const r = { bau: 0, minerios: 0, comida: 0 };
       for (let cx = -8; cx <= 8; cx++)
         for (let cz = -8; cz <= 8; cz++) {
           const c = gerarChunk(cx, cz, 1337);
           for (let i = 0; i < c.length; i++) {
             if (c[i] === 42) r.bau++;
             else if (c[i] >= 15 && c[i] <= 19) r.minerios++;
+            // frutinhas, abóbora, cogumelo e cristal de luz: comida e luz iguais em todo tema
+            else if (c[i] === 54 || c[i] === 65 || c[i] === 10 || c[i] === 6) r.comida++;
           }
         }
       return r;
@@ -254,6 +256,10 @@ describe('temas não mudam a mecânica', () => {
       definirEstiloMundo(t.mundo);
       const r = contar();
       expect(r.bau, t.id).toBe(ref.bau);
+      expect(
+        Math.abs(r.comida - ref.comida) / ref.comida,
+        `${t.id}: comida e luz no mundo`,
+      ).toBeLessThan(0.1);
       // crateras mudam a superfície: os minérios variam pouco
       expect(Math.abs(r.minerios - ref.minerios) / ref.minerios, t.id).toBeLessThan(0.1);
     }

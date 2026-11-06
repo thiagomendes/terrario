@@ -3,7 +3,7 @@ import type { MovimentoCriatura, VozCriatura } from '../tipos';
 
 export const MOVIMENTO_BRUMA: Record<TipoCriatura, MovimentoCriatura> = {
   cervo: { saltita: 0, flutua: 0, ginga: 0 },
-  coelho: { saltita: 0.12, flutua: 0, ginga: 0 },
+  coelho: { saltita: 0, flutua: 0, ginga: 0 },
   peixe: { saltita: 0, flutua: 0, ginga: 0 },
   espectro: { saltita: 0, flutua: 0.08, ginga: 0 },
   raposa: { saltita: 0, flutua: 0, ginga: 0 },

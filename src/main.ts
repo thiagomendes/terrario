@@ -40,7 +40,9 @@ async function iniciar(app: HTMLElement): Promise<void> {
   // o tema do mundo vale para a página inteira: aparência, nomes e terreno
   // ?tema=<id> mostra o mundo em outro tema sem salvar a troca (prévia e capturas)
   const temaPrevia = new URLSearchParams(location.search).get('tema');
-  const temaMundo = ativarTema(temaPrevia && temaExiste(temaPrevia) ? temaPrevia : mundo.tema);
+  const emPrevia =
+    !!temaPrevia && temaExiste(temaPrevia) && temaPrevia !== (mundo.tema ?? 'bruma-e-luz');
+  const temaMundo = ativarTema(emPrevia ? temaPrevia : mundo.tema);
   if (mundo.tema && !temaExiste(mundo.tema))
     setTimeout(() => notificar(`Tema desconhecido: este mundo abriu como ${temaMundo.nome}`), 1500);
 
@@ -70,10 +72,20 @@ async function iniciar(app: HTMLElement): Promise<void> {
       await cena?.salvar();
       const url = new URL(location.href);
       url.searchParams.set('mundo', id);
+      // a prévia de tema vale só para esta página
+      url.searchParams.delete('tema');
       location.href = url.toString();
     },
   });
-  cena = criarCena(canvas, hotbar, { mundo: atual, dados, repo, config });
+  // em prévia de outro tema nada é salvo: o mundo continua sendo do tema dele
+  cena = criarCena(canvas, hotbar, {
+    mundo: atual,
+    dados,
+    repo: emPrevia ? undefined : repo,
+    config,
+  });
+  if (emPrevia)
+    setTimeout(() => notificar(`Prévia de ${temaMundo.nome}: nada deste passeio é salvo`), 1800);
   panorama(cena);
   ligarInventario(app, canvas, cena, hotbar);
   ligarStatus(app, canvas, cena);

@@ -198,7 +198,7 @@ const CAUSAS: Record<string, string> = {
   queda: 'Você caiu de muito alto.',
   afogamento: 'Faltou ar debaixo d’água.',
   fome: 'A fome venceu.',
-  criatura: 'Uma criatura da bruma te pegou.',
+  criatura: 'Uma criatura te pegou de surpresa.',
   outro: 'Algo deu errado.',
 };
 
