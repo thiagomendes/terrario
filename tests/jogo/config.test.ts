@@ -18,7 +18,13 @@ function memoria() {
 
 describe('config', () => {
   it('normaliza limites, tipos e valores desconhecidos', () => {
-    const c = normalizarConfig({ fov: 500, sensibilidade: -3, qualidade: 'insana', inverterY: 'sim', distancia: 5.6 });
+    const c = normalizarConfig({
+      fov: 500,
+      sensibilidade: -3,
+      qualidade: 'insana',
+      inverterY: 'sim',
+      distancia: 5.6,
+    });
     expect(c.fov).toBe(100);
     expect(c.sensibilidade).toBe(0.2);
     expect(c.qualidade).toBe(CONFIG_PADRAO.qualidade);

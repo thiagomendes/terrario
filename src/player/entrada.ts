@@ -1,7 +1,7 @@
 export const LIMITE_PITCH = (89 * Math.PI) / 180;
 export const SENSIBILIDADE = 0.0022;
 
-export type Acao = 'frente' | 'tras' | 'esquerda' | 'direita' | 'pular' | 'correr';
+export type Acao = 'frente' | 'tras' | 'esquerda' | 'direita' | 'pular' | 'correr' | 'rapido';
 
 const TECLAS: Record<string, Acao> = {
   KeyW: 'frente',
@@ -11,6 +11,7 @@ const TECLAS: Record<string, Acao> = {
   Space: 'pular',
   ShiftLeft: 'correr',
   ShiftRight: 'correr',
+  ControlLeft: 'rapido',
 };
 
 export function acaoDaTecla(code: string): Acao | null {

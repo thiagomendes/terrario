@@ -1,3 +1,4 @@
+import type { ResultadoFisica } from './fisica';
 import {
   ALTURA,
   TAM_X,
@@ -57,9 +58,24 @@ export function criarControle(
   let sensibilidade = 1;
   let inverterY = false;
 
+  let podeVoar = false;
+  let ultimoEspaco = -1;
+  let ultimoResultado: ResultadoFisica = { aterrissou: false, queda: 0 };
   window.addEventListener('keydown', (e) => {
+    if ((e.target as HTMLElement | null)?.closest?.('input, textarea')) return;
     const a = acaoDaTecla(e.code);
     if (a) teclas[a] = true;
+    // dois toques no espaço alternam o voo (só no criativo)
+    if (e.code === 'Space' && !e.repeat && podeVoar) {
+      const agora = performance.now();
+      if (agora - ultimoEspaco < 300) {
+        jogador.voando = !jogador.voando;
+        jogador.vy = 0;
+        ultimoEspaco = -1;
+      } else {
+        ultimoEspaco = agora;
+      }
+    }
   });
   window.addEventListener('keyup', (e) => {
     const a = acaoDaTecla(e.code);
@@ -81,9 +97,17 @@ export function criarControle(
   function atualizar(dtSeg: number): void {
     const dt = Math.min(dtSeg, 0.05);
     const { frente, direita } = eixos(teclas);
-    passoFisica(
+    const voando = !!jogador.voando;
+    ultimoResultado = passoFisica(
       jogador,
-      { frente, direita, pular: !!teclas.pular, correr: !!teclas.correr, yaw },
+      {
+        frente,
+        direita,
+        pular: !!teclas.pular,
+        correr: voando ? !!teclas.rapido : !!teclas.correr || !!teclas.rapido,
+        descer: voando && !!teclas.correr,
+        yaw,
+      },
       dt,
       solido,
     );
@@ -104,5 +128,21 @@ export function criarControle(
     inverterY = inverter;
   }
 
-  return { atualizar, jogador, apontar, solido, definirMouse, teclas };
+  function definirVoo(permitido: boolean): void {
+    podeVoar = permitido;
+    if (!permitido) jogador.voando = false;
+  }
+
+  return {
+    atualizar,
+    jogador,
+    apontar,
+    solido,
+    definirMouse,
+    definirVoo,
+    teclas,
+    get resultado() {
+      return ultimoResultado;
+    },
+  };
 }

@@ -5,6 +5,8 @@ import { armazemIndexedDB } from './jogo/indexeddb';
 import { SEMENTE_PADRAO_MUNDO, criarRepositorioMundos, type MetaMundo } from './jogo/mundos';
 import { CSS_INVENTARIO, criarInventarioUI } from './ui/inventario';
 import { criarGerenciadorConfig } from './jogo/config';
+import { CSS_STATUS, criarStatus, criarTelaMorte } from './ui/status';
+import { notificar } from './ui/interface';
 
 async function iniciar(app: HTMLElement): Promise<void> {
   const repo = criarRepositorioMundos(armazemIndexedDB());
@@ -46,6 +48,7 @@ async function iniciar(app: HTMLElement): Promise<void> {
   cena = criarCena(canvas, hotbar, { mundo: atual, dados, repo, config });
   panorama(cena);
   ligarInventario(app, canvas, cena, hotbar);
+  ligarStatus(app, canvas, cena);
 }
 
 /** Na tela de título, a câmera gira devagar mostrando o mundo; ao jogar, volta à mira salva. */
@@ -125,5 +128,41 @@ function ligarInventario(
     } else if (e.code === 'Escape' && ui.aberto) {
       ui.fechar();
     }
+  });
+}
+
+function ligarStatus(
+  app: HTMLElement,
+  canvas: HTMLCanvasElement,
+  cena: ReturnType<typeof criarCena>,
+): void {
+  const estilo = document.createElement('style');
+  estilo.textContent = CSS_STATUS;
+  document.head.appendChild(estilo);
+  const status = criarStatus(app);
+  const sobrevivencia = cena.estado.modo === 'sobrevivencia';
+  status.mostrar(sobrevivencia);
+  const morte = criarTelaMorte(app, () => {
+    cena.estado.renascer?.();
+    canvas.requestPointerLock?.();
+  });
+  window.addEventListener('brumaluz:dano', () => status.piscarDano());
+  window.addEventListener('brumaluz:morte', (e) => {
+    document.exitPointerLock?.();
+    morte.mostrar((e as CustomEvent<string>).detail);
+  });
+  setInterval(() => {
+    const s = cena.estado.sobrevivencia;
+    if (sobrevivencia && s) status.atualizar(s.estado);
+  }, 100);
+  let avisou = false;
+  document.addEventListener('pointerlockchange', () => {
+    if (!document.pointerLockElement || avisou) return;
+    avisou = true;
+    notificar(
+      sobrevivencia
+        ? 'Sobrevivência: cuide da vida e da fome. Quebre blocos para coletar.'
+        : 'Criativo: toque duas vezes no espaço para voar · E abre o catálogo',
+    );
   });
 }

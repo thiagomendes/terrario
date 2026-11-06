@@ -40,7 +40,8 @@ import {
   normalizarHora,
 } from './atmosfera';
 import { criarCeu } from './ceu';
-import { criarAgua } from './agua';
+import { ALTURA_AGUA, criarAgua } from './agua';
+import { criarSobrevivencia } from '../jogo/sobrevivencia';
 import { criarVagalumes } from './vagalumes';
 import { PluginMundo } from './materialMundo';
 import { PluginBalanco } from './balanco';
@@ -143,6 +144,9 @@ export interface EstadoDepuracao {
   itensSoltos?: number;
   soltarItem?: (item: string, qtd: number, x: number, y: number, z: number) => void;
   modo?: ModoJogo;
+  sobrevivencia?: import('../jogo/sobrevivencia').Sobrevivencia;
+  renascer?: () => void;
+  definirSpawn?: (x: number, z: number) => void;
   inventario?: import('../jogo/inventario').Inventario;
   alvo?: { x: number; y: number; z: number; normal: Vec3 } | null;
   barramento?: Barramento;
@@ -983,6 +987,8 @@ export function criarCena(
   ligarAudio(barramento, motorAudio);
   const detector = criarDetectorMovimento();
   let ambiente: Ambiente | null = null;
+  let quadroSobrevivencia: ((dt: number) => void) | null = null;
+  const sobrevivenciaMorto = () => !!estado.sobrevivencia?.estado.morto;
   let configAtual: Config | null = null;
   ativarNoPrimeiroGesto(document, {
     ativar: async () => {
@@ -1023,6 +1029,7 @@ export function criarCena(
     if (eventos.length === 0) return;
     for (const ev of eventos) {
       if (ev === 'pulo' || ev === 'aterrissagem') animador.evento(ev);
+      if (ev === 'pulo' && modo === 'sobrevivencia') estado.sobrevivencia?.pulo(corrida);
     }
     const grupo = grupoDoBloco(blocoSobPes(j, blocoEm)) ?? 'terra';
     for (const ev of eventos) {
@@ -1033,7 +1040,8 @@ export function criarCena(
   engine.runRenderLoop(() => {
     const dtBruto = engine.getDeltaTime() / 1000;
     const dtQuadro = Math.min(dtBruto, DT_MAXIMO_QUADRO);
-    controle.atualizar(dtBruto);
+    if (!(modo === 'sobrevivencia' && sobrevivenciaMorto())) controle.atualizar(dtBruto);
+    quadroSobrevivencia?.(Math.min(dtBruto, 0.1));
     atualizarSomMovimento(Math.min(dtBruto, 0.05));
     verificarSlot();
     minerador.atualizar(dtQuadro, alvoMineracao());
@@ -1153,6 +1161,56 @@ export function criarCena(
       salvando = null;
     }
   }
+  // Modos: criativo voa; sobrevivência tem vida, fome, ar, queda e morte.
+  const sobrevivencia = criarSobrevivencia(dadosIniciais?.extras?.['sobrevivencia']);
+  controle.definirVoo(modo === 'criativo');
+  const spawnSalvo = dadosIniciais?.extras?.['spawn'] as { x: number; z: number } | undefined;
+  let spawn = spawnSalvo ?? { x: controle.jogador.x, z: controle.jogador.z };
+  salvaveis.set('sobrevivencia', { salvar: () => sobrevivencia.salvar() });
+  salvaveis.set('spawn', { salvar: () => spawn });
+  estado.sobrevivencia = sobrevivencia;
+  estado.definirSpawn = (x, z) => {
+    spawn = { x, z };
+  };
+  sobrevivencia.ouvir((ev) => {
+    if (ev.tipo === 'dano') {
+      tocarSom(motorAudio, 'dano');
+      window.dispatchEvent(new CustomEvent('brumaluz:dano', { detail: ev }));
+    } else if (ev.tipo === 'morte') {
+      // espalha o inventário no lugar da morte
+      const j = controle.jogador;
+      for (let i = 0; i < inventario.slots.length; i++) {
+        const p = inventario.obter(i);
+        if (!p) continue;
+        mundoItens.soltar(p.item, p.qtd, j.x, j.y + 1, j.z, rngDrops, p.dur);
+        inventario.definir(i, null);
+      }
+      window.dispatchEvent(new CustomEvent('brumaluz:morte', { detail: ev.causa }));
+    }
+  });
+  barramento.ouvir('golpe', () => sobrevivencia.acao());
+  estado.renascer = () => {
+    sobrevivencia.renascer();
+    estado.teleportar?.(spawn.x, spawn.z);
+    controle.jogador.topoQueda = undefined;
+  };
+  function atualizarSobrevivencia(dt: number): void {
+    if (modo !== 'sobrevivencia') return;
+    const r = controle.resultado;
+    if (r.aterrissou && r.queda > 0) sobrevivencia.queda(r.queda);
+    const olhos = camera.position;
+    const submerso =
+      olhos.y < ALTURA_AGUA - 0.05 &&
+      blocoEm(Math.floor(olhos.x), Math.floor(olhos.y), Math.floor(olhos.z)) === Bloco.AR;
+    sobrevivencia.atualizar(dt, {
+      correndo: corrida,
+      andando: velocidadeHoriz > 0.5,
+      submerso,
+    });
+    if (controle.jogador.y < -20) sobrevivencia.dano(100, 'queda', true);
+  }
+  quadroSobrevivencia = atualizarSobrevivencia;
+
   estado.salvar = salvar;
   estado.modo = modo;
   estado.inventario = inventario;
