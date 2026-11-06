@@ -1,6 +1,6 @@
-# Brumaluz
+# Terrário
 
-Jogo sandbox de exploração, construção e sobrevivência em mundo voxel, que roda no navegador. Visual pixel-art (tiles de 16x16 pintados por código) com iluminação moderna: ciclo de dia e noite, céu com sol, lua, nuvens e estrelas, água com reflexo, luz de tochas, sombras, clima, estações, bruma nos vales e pós-processamento. Arte, música e sons são 100% gerados por código. Interface em português do Brasil.
+Jogo sandbox de exploração, construção e sobrevivência em mundo voxel, que roda no navegador. Cada mundo é criado com um **tema** que muda toda a aparência, os nomes e os sons, sem mudar as regras. Visual pixel-art (tiles de 16x16 pintados por código) com iluminação moderna: ciclo de dia e noite, céu com sol, lua, nuvens e estrelas, água com reflexo, luz de tochas, sombras, clima, estações, bruma nos vales e pós-processamento. Arte, música e sons são 100% gerados por código. Interface em português do Brasil.
 
 ## Pré-requisitos
 
@@ -16,6 +16,25 @@ docker compose -f .nants/compose.yaml run --rm --service-ports workspace sh -lc 
 Abra `http://127.0.0.1:5174/` no navegador e clique em "Jogar". O menu de título também tem Mundos, Personagem (aparência com prévia) e Configurações.
 
 Comando de desenvolvimento: `npm run dev -- --host 0.0.0.0 --port 5174 --strictPort`.
+
+## Temas
+
+Ao criar um mundo, escolha o tema no cartão com a prévia. O tema muda blocos, plantas, árvores, água, céu, astros, clima visual, criaturas (pele, jeito de andar e vozes), música, sons de material e todos os textos; blocos, receitas, criaturas e biomas são os mesmos em todos (mesmos ids e regras).
+
+- **Bruma e Luz**: o mundo original, com bruma nos vales, pântanos que brilham e cristais de luz.
+- **Planeta Vivo**: planeta alienígena amigável, com dois sóis e um gigante com anéis no céu.
+- **Mata Encantada**: mata atlântica com folclore leve, ipês, bromélias e pedras preciosas.
+- **Doce Reino**: um mundo de bolo, glacê, biscoito e pirulitos, com chuva de granulado.
+- **Era dos Dinos**: samambaias gigantes, âmbar, fósseis e vulcões ao longe.
+- **Exploração Lunar**: regolito, crateras, céu negro com estrelas e a Terra no horizonte.
+
+Mundos criados antes dos temas abrem como Bruma e Luz. Para ver o mundo aberto em outro tema sem salvar a troca, use `?tema=<id>` na URL. Os temas ficam em `src/temas/<id>/`; o formato está em `src/temas/tipos.ts`. Ferramentas para autores de tema, sem abrir o jogo:
+
+```sh
+npx vite-node scripts/vitrine-tema.ts <id> <pasta>       # tiles, blocos, criaturas, céu, mapa e chunks em PNG
+npx vite-node scripts/vitrine-personagem.ts <pasta>      # personagem com cada acessório e o visual de cada tema
+npx vite-node scripts/escuta-temas.ts <pasta>            # vozes, música e sons de material em WAV
+```
 
 ## O que há no jogo
 
@@ -51,13 +70,15 @@ Comando de desenvolvimento: `npm run dev -- --host 0.0.0.0 --port 5174 --strictP
 
 No celular aparecem joystick, arrastar para olhar e botões de ação. No gamepad: analógicos andam e olham, RT quebra, LT usa, LB/RB trocam o slot, X inventário, Y câmera, Select mapa, Start pausa.
 
-Configurações (vídeo, áudio, controles e acessibilidade) ficam salvas em `localStorage` (`brumaluz:config`). A aparência do personagem fica em `brumaluz:aparencia`. Os mundos ficam no IndexedDB `brumaluz`.
+Configurações (vídeo, áudio, controles e acessibilidade) ficam salvas em `localStorage` (`terrario:config`). A aparência do personagem fica em `terrario:aparencia`. As chaves antigas (`brumaluz:*`) são lidas automaticamente na primeira vez. Os mundos ficam no IndexedDB `brumaluz` (nome mantido para não perder mundos salvos).
 
 ## Testar
 
 ```sh
 docker compose -f .nants/compose.yaml run --rm --service-ports workspace sh -lc 'npm ci --no-audit --no-fund && npx vitest run && npx playwright test'
 ```
+
+Roteiros pesados, fora da bateria normal: `CAPTURAS_TEMAS=1 npx playwright test e2e/capturas-temas.spec.ts` (matriz de capturas por tema e prévias dos cartões em `public/temas/`) e `EXPLORACAO=1 npx playwright test e2e/exploracao.spec.ts` (robô que joga uns minutos em cada tema). Os dois aceitam uma lista de ids no lugar de `1`.
 
 Dentro do container, o comando completo é `npx vitest run && npx playwright test`. As capturas dos e2e ficam em `test-results/screens`.
 
