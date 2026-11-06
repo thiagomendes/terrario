@@ -1,7 +1,7 @@
 ---
 id: 009-servidor-local
 title: 'Servidor local: separar a simulação do mundo do desenho, rodando em segundo plano no navegador'
-status: DRAFT
+status: IN_PROGRESS
 base_branch: main
 branch: feat/servidor-local
 created_at: 2026-11-06T21:30:00Z

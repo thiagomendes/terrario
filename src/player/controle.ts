@@ -1,90 +1,14 @@
 import type { ResultadoFisica } from './fisica';
-import {
-  ALTURA,
-  TAM_X,
-  TAM_Z,
-  alturaTerreno,
-  gerarChunk,
-  indice,
-  SEMENTE_PADRAO,
-  encontrarNascimento,
-} from '../world/chunk';
-import { Bloco, obterBloco } from '../world/blocks';
-import { caixasDoBloco, cercaConecta, temFormaParcial, vetorDirecao } from '../world/formas';
+import { alturaTerreno, gerarChunk, SEMENTE_PADRAO, encontrarNascimento } from '../world/chunk';
 import type { Edicoes } from '../world/edicoes';
-import { ALTURA_OLHOS, passoFisica, posicaoInicial, type Solido } from './fisica';
+import { ALTURA_OLHOS, passoFisica, posicaoInicial } from './fisica';
+import { criarMundoSolido } from '../world/solido';
+export { criarMundoSolido };
 import { acaoDaTecla, aplicarMouse, eixos, type TeclasAtivas } from './entrada';
 
 export interface AlvoCamera {
   position: { x: number; y: number; z: number };
   rotation: { x: number; y: number };
-}
-
-export function criarMundoSolido(
-  semente: number = SEMENTE_PADRAO,
-  gerar: (cx: number, cz: number, semente: number) => Uint8Array = gerarChunk,
-  edicoes?: Edicoes,
-): Solido {
-  const cache = new Map<string, { versao: number; blocos: Uint8Array }>();
-  /**
-   * Blocos do chunk com as edições. A base vem pronta (provedor/worker); editar um
-   * bloco só copia a base e reaplica as edições, sem regerar o terreno.
-   */
-  function carregar(k: string, cx: number, cz: number, versao: number) {
-    const base = gerar(cx, cz, semente);
-    const lista = edicoes ? edicoes.doChunk(cx, cz) : [];
-    let blocos = base;
-    if (lista.length) {
-      blocos = base.slice();
-      for (const [i, v] of lista) blocos[i] = v & 255;
-    }
-    const entrada = { versao, blocos };
-    cache.delete(k);
-    cache.set(k, entrada);
-    if (cache.size > 300) cache.delete(cache.keys().next().value as string);
-    return entrada;
-  }
-  function bloco(x: number, y: number, z: number): number {
-    if (y < 0 || y >= ALTURA) return 0;
-    const cx = Math.floor(x / TAM_X);
-    const cz = Math.floor(z / TAM_Z);
-    const k = `${cx},${cz}`;
-    const versao = edicoes ? edicoes.versaoDoChunk(cx, cz) : 0;
-    let entrada = cache.get(k);
-    if (!entrada || entrada.versao !== versao) entrada = carregar(k, cx, cz, versao);
-    return entrada.blocos[indice(x - cx * TAM_X, y, z - cz * TAM_Z)];
-  }
-  const ler = (x: number, y: number, z: number): boolean => {
-    if (y < 0) return true;
-    if (y >= ALTURA) return false;
-    const cx = Math.floor(x / TAM_X);
-    const cz = Math.floor(z / TAM_Z);
-    const k = `${cx},${cz}`;
-    const versao = edicoes ? edicoes.versaoDoChunk(cx, cz) : 0;
-    let entrada = cache.get(k);
-    if (!entrada || entrada.versao !== versao) entrada = carregar(k, cx, cz, versao);
-    const c = entrada.blocos;
-    const b = c[indice(x - cx * TAM_X, y, z - cz * TAM_Z)];
-    return obterBloco(b)?.solido ?? false;
-  };
-  const solido = ler as Solido;
-  solido.liquido = (x, y, z) => bloco(x, y, z) === Bloco.AGUA;
-  // caixas de blocos parciais (lajes, escadas, cercas, portas)
-  solido.caixas = (x, y, z) => {
-    const b = bloco(x, y, z);
-    if (!temFormaParcial(b)) return null;
-    const meta = edicoes?.obterMeta(x, y, z) ?? 0;
-    const caixas = caixasDoBloco(b, meta, (d) => {
-      const [dx, dz] = vetorDirecao(d);
-      return cercaConecta(bloco(x + dx, y, z + dz));
-    });
-    // cerca segura de verdade: 1,5 bloco de altura na colisão (o desenho continua com 1)
-    if (caixas && obterBloco(b)?.forma === 'cerca') {
-      return caixas.map((c) => [c[0], c[1], c[2], c[3], 1.5, c[5]] as typeof c);
-    }
-    return caixas;
-  };
-  return solido;
 }
 
 export function criarControle(

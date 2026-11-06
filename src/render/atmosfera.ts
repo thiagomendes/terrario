@@ -1,4 +1,5 @@
 import { tema } from '../temas/ativo';
+import { direcaoParaSol, normalizarHora, noiteNaHora } from '../jogo/tempo';
 export type Cor = readonly [number, number, number];
 
 export interface PaletaAtmosfera {
@@ -48,10 +49,7 @@ export function razaoContraste(sol: Cor, sombra: Cor): number {
 // Ciclo de dia e noite (lógica pura).
 // hora: fração do dia em [0, 1): 0 meia-noite, 0.25 nascer, 0.5 meio-dia, 0.75 pôr.
 
-/** Duração de um dia completo, em segundos. */
-export const DURACAO_DIA = 20 * 60;
-/** Começa numa manhã dourada. */
-export const HORA_INICIAL = 0.32;
+export { DURACAO_DIA, HORA_INICIAL, normalizarHora, direcaoParaSol } from '../jogo/tempo';
 
 export interface EstadoAtmosfera {
   hora: number;
@@ -231,17 +229,6 @@ function normalizar(v: Cor): Cor {
   return [v[0] / n, v[1] / n, v[2] / n];
 }
 
-/** Normaliza qualquer número para [0, 1). */
-export function normalizarHora(hora: number): number {
-  return ((hora % 1) + 1) % 1;
-}
-
-/** Direção para o sol na hora dada (arco inclinado, nasce em +x e se põe em -x). */
-export function direcaoParaSol(hora: number): Cor {
-  const a = (normalizarHora(hora) - 0.25) * Math.PI * 2;
-  return normalizar([Math.cos(a), Math.sin(a), -0.38]);
-}
-
 /** Curva suave 0→1 (smoothstep). */
 function suave(t: number): number {
   return t * t * (3 - 2 * t);
@@ -267,7 +254,7 @@ export function atmosferaNaHora(horaBruta: number): EstadoAtmosfera {
   const dirLuz = normalizar([-fonte[0], -elev, -fonte[2]]);
 
   const hor = mix(a.hor, b.hor, t);
-  const noite = Math.min(1, Math.max(0, (-paraSol[1] - 0.02) / 0.2));
+  const noite = noiteNaHora(hora);
   const crepusculo = Math.max(0, 1 - Math.abs(paraSol[1]) / 0.3);
   return {
     hora,

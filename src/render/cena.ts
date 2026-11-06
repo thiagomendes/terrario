@@ -1,5 +1,6 @@
 import { CRIATURAS } from '../jogo/criaturas';
-import { nomeDoMorador, povoadosPerto } from '../jogo/povoados';
+import { povoadosPerto } from '../jogo/povoados';
+import { nomeDoMorador } from '../temas/nomes';
 import { definirRegioesSemPovoado, regiaoDoChunk } from '../world/povoado';
 import { encontrarNascimento } from '../world/chunk';
 import { povoadoDoTema, tema } from '../temas/ativo';
