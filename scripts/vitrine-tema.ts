@@ -304,7 +304,7 @@ const transparente = (id: number) => {
       for (let y = ALTURA - 1; y > 0; y--) {
         const id = blocoEm(wx, y, wz);
         if (id === Bloco.AR) continue;
-        const c = id === Bloco.AGUA ? [40, 90, 170] : cores(id).topo;
+        const c = id === Bloco.AGUA ? tema.agua.fundoDia.map((v) => v * 255 + 40) : cores(id).topo;
         const k = 0.6 + (y - 50) / 80;
         ponto(img, x, z, [c[0] * k, c[1] * k, c[2] * k, 255]);
         break;
@@ -406,7 +406,7 @@ function procurarChunks(): { cx: number; cz: number; rotulo: string }[] {
             base[2] * k,
             alfa,
           ];
-          const corAgua = [50, 110, 190];
+          const corAgua = tema.agua.fundoDia.map((v) => v * 255 + 40);
           const ct = id === Bloco.AGUA ? corAgua : c.topo;
           const cl = id === Bloco.AGUA ? corAgua : c.lado;
           if (vis(0, 1, 0))

@@ -747,8 +747,9 @@ interface PaletaMusical {
   intervalo: number;
   /** Chance de tocar uma nota da melodia a cada oportunidade. */
   chanceNota: number;
-  /** Pulso grave (perigo). */
+  /** Pulso grave (perigo); 0 = pausa. */
   pulso?: number[];
+  ganhoPulso?: number;
   /** Gotas d'água (cavernas). */
   gotas?: boolean;
 }
@@ -846,7 +847,8 @@ function paletaDoTema(c: ContextoMusical): PaletaMusical {
         melodia: doTema.melodia.map((m) => nota(m) * k),
         intervalo: doTema.intervalo,
         chanceNota: doTema.chanceNota,
-        pulso: doTema.pulso?.map((m) => nota(m) * k),
+        pulso: doTema.pulso?.map((m) => (m > 0 ? nota(m) * k : 0)),
+        ganhoPulso: doTema.ganhoPulso,
         gotas: doTema.gotas,
       }
     : {
@@ -1012,7 +1014,11 @@ export function iniciarAmbiente(
       while (proximoPulso < ate) {
         const t = Math.max(proximoPulso, agora + 0.05);
         const f = p.pulso[passoPulso++ % p.pulso.length];
-        registrar(tom(ctxA, busMusica, t, 'triangle', f, f * 0.98, 0.1, 0.22, 0.01));
+        // 0 é pausa: o tambor respira
+        if (f > 0)
+          registrar(
+            tom(ctxA, busMusica, t, 'triangle', f, f * 0.98, 0.1 * (p.ganhoPulso ?? 1), 0.22, 0.01),
+          );
         proximoPulso = t + 0.3;
       }
     } else proximoPulso = agora;
@@ -1029,6 +1035,7 @@ export function iniciarAmbiente(
       const nat = tema().natureza;
       if (rng() < noite) {
         if (rng() < nat.grilos) grilo(t);
+        else if (nat.bipes && rng() < 0.08) bipe(t);
         proximoBicho = t + 0.35 + rng() * 0.5;
       } else {
         if (rng() < 0.6 * (1 - chuva) * nat.passaros) passaro(t);
@@ -1079,7 +1086,8 @@ export function iniciarAmbiente(
         lfo.connect(prof);
         prof.connect(filtro.frequency);
         const gVento = ctx.createGain();
-        gVento.gain.value = 0.35;
+        // o vento do tema (a Lua não tem ar: 0)
+        gVento.gain.value = 0.35 * (tema().natureza.vento ?? 1);
         vento.connect(filtro);
         filtro.connect(gVento);
         gVento.connect(busNatureza);

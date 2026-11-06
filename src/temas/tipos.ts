@@ -76,6 +76,8 @@ export interface CeuTema {
   fatorNuvens: number;
   /** Faixa colorida do horizonte no nascer/pôr (0 = nenhuma). */
   faixaCrepusculo: number;
+  /** Cor da faixa do crepúsculo (padrão: laranja). */
+  corCrepusculo?: Rgb;
 }
 
 export interface AguaTema {
@@ -175,10 +177,18 @@ export type FormaArvore =
   | 'fungo'
   | 'pirulito'
   | 'samambaia'
-  | 'cristal';
+  | 'cristal'
+  | 'araucaria';
 
 /** Forma da estrutura rara (sempre os mesmos blocos e o mesmo baú; só o desenho muda). */
-export type FormaEstrutura = 'ruina' | 'cupula' | 'circulo' | 'arcos' | 'casinha' | 'torre';
+export type FormaEstrutura =
+  | 'ruina'
+  | 'cupula'
+  | 'circulo'
+  | 'arcos'
+  | 'casinha'
+  | 'torre'
+  | 'ninho';
 
 /** Como o mundo é montado (só forma; os blocos e as regras são os mesmos). */
 export interface EstiloMundo {
@@ -209,8 +219,10 @@ export interface NaturezaTema {
   grilos: number;
   /** Multiplica o tom de pássaros e grilos (dinossauros: mais grave). */
   tom: number;
-  /** Bipes de rádio distantes no lugar dos pássaros (Lua). */
+  /** Bipes de rádio distantes no lugar dos pássaros (Lua), de dia e à noite. */
   bipes?: boolean;
+  /** Volume do vento contínuo (padrão 1; 0 no vácuo). */
+  vento?: number;
 }
 
 /** Ajuste do som de um material no tema (mesmo motor de amostras). */
@@ -236,7 +248,10 @@ export interface PaletaMusicalTema {
   melodia: number[];
   intervalo: number;
   chanceNota: number;
+  /** Batida grave (notas MIDI); 0 é pausa (dá ritmo ao tambor). */
   pulso?: number[];
+  /** Volume da batida (padrão 1). */
+  ganhoPulso?: number;
   gotas?: boolean;
 }
 
@@ -284,6 +299,11 @@ export interface Tema {
   pintores: Record<string, Pintor>;
   /** Tiles que brilham (glow) neste tema. */
   emissivos: readonly string[];
+  /**
+   * Opcional: por tile brilhante, quais pixels (x, y de 0 a 15) podem brilhar. Sem
+   * máscara, brilha todo pixel saturado do tile.
+   */
+  mascarasBrilho?: Record<string, (x: number, y: number) => boolean>;
   /** Tiles marcados de propósito como iguais ao tema base. */
   mesmoQueBase?: readonly string[];
   /** Ciclo do dia (8 quadros, h de 0 a 1). */

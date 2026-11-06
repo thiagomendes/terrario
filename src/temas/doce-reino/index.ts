@@ -1,7 +1,295 @@
-import { temaBase } from '../bruma-e-luz';
-import type { Tema } from '../tipos';
+import type { QuadroCeu, Tema } from '../tipos';
+import { CRIATURAS_DOCE, MOVIMENTO_DOCE } from './criaturas';
+import { PINTORES_DOCE } from './pintores';
+import { TEXTOS_DOCE } from './textos';
+import { VOZES_DOCE } from './vozes';
 
-/** Doce Reino: ESBOÇO — o pacote completo substitui este arquivo. */
+/** Céu rosa e pêssego de dia, lavanda no alto; noite de amora com estrelas de açúcar. */
+const NOITE: Omit<QuadroCeu, 'h'> = {
+  zen: [0.05, 0.02, 0.09],
+  meio: [0.1, 0.04, 0.15],
+  hor: [0.2, 0.08, 0.22],
+  luz: [0.75, 0.62, 1],
+  il: 0.22,
+  ceu: [0.4, 0.26, 0.55],
+  chao: [0.08, 0.04, 0.08],
+  ic: 0.18,
+  amb: [0.09, 0.05, 0.12],
+  dens: 0.011,
+};
+const QUADROS_DOCE: QuadroCeu[] = [
+  { h: 0, ...NOITE },
+  {
+    h: 0.21,
+    zen: [0.07, 0.03, 0.12],
+    meio: [0.16, 0.07, 0.22],
+    hor: [0.4, 0.18, 0.32],
+    luz: [0.78, 0.62, 0.98],
+    il: 0.24,
+    ceu: [0.42, 0.28, 0.52],
+    chao: [0.09, 0.05, 0.08],
+    ic: 0.22,
+    amb: [0.1, 0.06, 0.12],
+    dens: 0.011,
+  },
+  {
+    h: 0.26,
+    zen: [0.42, 0.3, 0.64],
+    meio: [0.86, 0.55, 0.72],
+    hor: [1, 0.66, 0.55],
+    luz: [1, 0.7, 0.6],
+    il: 0.9,
+    ceu: [0.75, 0.55, 0.75],
+    chao: [0.28, 0.16, 0.18],
+    ic: 0.4,
+    amb: [0.18, 0.12, 0.18],
+    dens: 0.009,
+  },
+  {
+    h: 0.32,
+    zen: [0.6, 0.5, 0.88],
+    meio: [0.92, 0.7, 0.88],
+    hor: [1, 0.84, 0.76],
+    luz: [1, 0.88, 0.8],
+    il: 1.6,
+    ceu: [0.85, 0.7, 0.88],
+    chao: [0.36, 0.26, 0.26],
+    ic: 0.45,
+    amb: [0.22, 0.18, 0.24],
+    dens: 0.0075,
+  },
+  {
+    h: 0.5,
+    zen: [0.6, 0.56, 0.95],
+    meio: [0.9, 0.74, 0.93],
+    hor: [1, 0.88, 0.84],
+    luz: [1, 0.96, 0.92],
+    il: 2,
+    ceu: [0.85, 0.76, 0.93],
+    chao: [0.38, 0.3, 0.3],
+    ic: 0.5,
+    amb: [0.24, 0.2, 0.26],
+    dens: 0.006,
+  },
+  {
+    h: 0.68,
+    zen: [0.62, 0.5, 0.88],
+    meio: [0.95, 0.68, 0.8],
+    hor: [1, 0.8, 0.66],
+    luz: [1, 0.86, 0.72],
+    il: 1.6,
+    ceu: [0.86, 0.68, 0.82],
+    chao: [0.36, 0.26, 0.24],
+    ic: 0.45,
+    amb: [0.22, 0.17, 0.22],
+    dens: 0.0075,
+  },
+  {
+    h: 0.74,
+    zen: [0.4, 0.24, 0.56],
+    meio: [0.9, 0.48, 0.62],
+    hor: [1, 0.56, 0.42],
+    luz: [1, 0.6, 0.46],
+    il: 0.9,
+    ceu: [0.72, 0.48, 0.66],
+    chao: [0.26, 0.14, 0.16],
+    ic: 0.4,
+    amb: [0.17, 0.1, 0.15],
+    dens: 0.009,
+  },
+  {
+    h: 0.79,
+    zen: [0.07, 0.03, 0.12],
+    meio: [0.17, 0.07, 0.22],
+    hor: [0.42, 0.16, 0.3],
+    luz: [0.78, 0.62, 0.98],
+    il: 0.24,
+    ceu: [0.42, 0.28, 0.52],
+    chao: [0.09, 0.05, 0.08],
+    ic: 0.22,
+    amb: [0.1, 0.06, 0.12],
+    dens: 0.011,
+  },
+  { h: 1, ...NOITE },
+];
+
+/**
+ * Doce Reino: um reino feito de doces. Chão de bolo com glacê e granulado, morros de
+ * caramelo, árvores-pirulito de algodão-doce, mar de refresco de menta, chuva de
+ * granulado colorido e uma casinha de pão de mel escondida com uma lata de biscoitos.
+ */
 export function construirDoceReino(): Tema {
-  return { ...temaBase(), id: 'doce-reino', nome: 'Doce Reino' };
+  return {
+    id: 'doce-reino',
+    nome: 'Doce Reino',
+    lema: 'Explore, construa e prove um reino feito de doces',
+    convite: 'Árvores de pirulito, morros de caramelo e chuva de granulado colorido!',
+    cores: {
+      acento: '#ff8ac0',
+      fundoTitulo: ['#3a1838', '#1e0c22'],
+      lema: '#ffe4f0',
+      logo: {
+        topo: [255, 242, 248],
+        meio: [255, 150, 200],
+        base: [230, 80, 140],
+        extrusao: [120, 40, 72],
+        bruma: [255, 214, 236],
+      },
+    },
+    textos: TEXTOS_DOCE,
+    pintores: PINTORES_DOCE,
+    emissivos: [
+      'cristal',
+      'flor',
+      'cogumelo',
+      'min_luzita',
+      'folhas_lanterna',
+      'tocha',
+      'lanterna',
+      'bloco_luzita',
+      'fornalha_acesa',
+      'abobora_rosto',
+    ],
+    quadrosCeu: QUADROS_DOCE,
+    ceu: {
+      estrelasDia: 0,
+      corEstrelas: [1, 0.88, 0.96],
+      densidadeEstrelas: 0.7,
+      corSol: [1, 0.92, 0.78],
+      tamanhoSol: 1.25,
+      haloSol: 1.3,
+      corLua: [1, 0.94, 0.86],
+      tamanhoLua: 1.3,
+      corNuvens: [1, 0.84, 0.92],
+      fatorNuvens: 1.15,
+      faixaCrepusculo: 1.25,
+    },
+    // refresco de menta: verde-água vivo, bem diferente do glacê rosa e do caramelo
+    agua: {
+      fundoDia: [0.1, 0.62, 0.56],
+      fundoNoite: [0.03, 0.12, 0.14],
+      tinta: [0.82, 1, 0.95],
+      opacidade: 0.78,
+    },
+    bruma: { cor: [1, 0.86, 0.93], forca: 0.8 },
+    particulas: {
+      vagalumeNoite: [1, 0.72, 0.95],
+      vagalumeDia: [1, 1, 0.88],
+      chuva: [1, 0.6, 0.8],
+      neve: [1, 0.98, 0.95],
+      folhas: [1, 0.66, 0.86],
+      poeira: [0.95, 0.84, 0.68],
+    },
+    climaVisual: { chuva: 'granulado', neve: true, relampago: true, arcoIris: true },
+    criaturas: CRIATURAS_DOCE,
+    movimento: MOVIMENTO_DOCE,
+    vozes: VOZES_DOCE,
+    mundo: {
+      arvores: {
+        floresta: ['pirulito', 'pirulito', 'carvalho'],
+        campos: ['pirulito'],
+        taiga: ['pinho'],
+        montanhas: ['pinho'],
+        pantano: ['fungo', 'fungo', 'lanterna'],
+      },
+      estrutura: 'casinha',
+      crateras: 0,
+      flora: 1,
+    },
+    // caixinha de música: acordes suaves e sininho brilhante, escalas pentatônicas maiores
+    musica: {
+      timbre: { onda: 'sine', brilho: 1.6, sustentacao: 0.8, coro: 3, sino: 'triangle' },
+      transporte: 2,
+      paletas: {
+        dia: {
+          acordes: [
+            [48, 55, 64, 67],
+            [45, 52, 60, 64],
+            [41, 53, 60, 69],
+            [43, 55, 62, 67],
+          ],
+          melodia: [72, 74, 76, 79, 81, 84, 86, 88],
+          intervalo: 7,
+          chanceNota: 0.6,
+        },
+        noite: {
+          acordes: [
+            [41, 48, 57, 60],
+            [40, 48, 55, 60],
+            [38, 45, 53, 57],
+            [36, 43, 52, 55],
+          ],
+          melodia: [65, 67, 69, 72, 74, 77],
+          intervalo: 10,
+          chanceNota: 0.4,
+        },
+        deserto: {
+          acordes: [
+            [50, 57, 62, 66],
+            [43, 50, 59, 62],
+            [45, 52, 57, 61],
+            [50, 57, 62, 69],
+          ],
+          melodia: [74, 76, 78, 81, 83, 86],
+          intervalo: 8,
+          chanceNota: 0.5,
+        },
+        taiga: {
+          acordes: [
+            [48, 55, 64, 72],
+            [43, 55, 62, 71],
+            [45, 52, 60, 69],
+            [41, 53, 60, 69],
+          ],
+          melodia: [84, 86, 88, 91, 93, 96],
+          intervalo: 11,
+          chanceNota: 0.35,
+        },
+        pantano: {
+          acordes: [
+            [46, 53, 58, 62],
+            [51, 58, 63, 67],
+            [41, 53, 57, 60],
+            [43, 50, 58, 62],
+          ],
+          melodia: [70, 72, 74, 77, 79, 82],
+          intervalo: 9,
+          chanceNota: 0.45,
+        },
+        caverna: {
+          acordes: [
+            [36, 43],
+            [41, 48],
+            [38, 45],
+            [43, 50],
+          ],
+          melodia: [67, 69, 72, 74, 76],
+          intervalo: 13,
+          chanceNota: 0.25,
+          gotas: true,
+        },
+        perigo: {
+          acordes: [
+            [45, 48, 52, 57],
+            [44, 47, 52, 56],
+          ],
+          melodia: [69, 71, 72, 76],
+          intervalo: 6,
+          chanceNota: 0.3,
+          pulso: [33, 33, 40, 33, 36, 33],
+        },
+      },
+    },
+    // biscoito crocante, caramelo que estala, açúcar fininho, algodão-doce fofo
+    materiais: {
+      madeira: { base: 'madeira', tom: 1.25 },
+      pedra: { base: 'cristal', tom: 0.8 },
+      areia: { base: 'areia', tom: 1.3 },
+      terra: { base: 'terra', tom: 0.9 },
+      folhagem: { base: 'folhagem', tom: 1.35 },
+      cristal: { base: 'cristal', tom: 1.2 },
+    },
+    natureza: { passaros: 0.8, grilos: 0.5, tom: 1.3 },
+    personagem: { acessorio: 'touca-chef', roupaEstilo: 1, roupaCor: 4, calcaCor: 4 },
+  };
 }

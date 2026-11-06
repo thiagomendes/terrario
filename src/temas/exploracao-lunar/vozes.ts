@@ -1,0 +1,163 @@
+import type { TipoCriatura } from '../../jogo/criaturas';
+import type { VozCriatura } from '../tipos';
+
+/** Vozes da Lua: bipes de máquina, chiadinhos de cristal e um "uuu?" curioso. */
+export const VOZES_LUNARES: Record<TipoCriatura, VozCriatura> = {
+  // rover-pastor: bipes quadrados de máquina
+  cervo: {
+    chamado: {
+      onda: 'square',
+      de: 660,
+      ate: 880,
+      dur: 0.08,
+      repeticoes: 3,
+      intervalo: 0.07,
+      ganho: 0.35,
+    },
+    susto: {
+      onda: 'sawtooth',
+      de: 900,
+      ate: 380,
+      dur: 0.2,
+      repeticoes: 1,
+      intervalo: 0,
+      ruido: 0.25,
+      ganho: 0.4,
+    },
+    contente: {
+      onda: 'square',
+      de: 520,
+      ate: 780,
+      dur: 0.1,
+      repeticoes: 2,
+      intervalo: 0.05,
+      ganho: 0.3,
+    },
+  },
+  // coelho-lunar: assobiozinho que sobe devagar
+  coelho: {
+    chamado: {
+      onda: 'sine',
+      de: 1400,
+      ate: 2000,
+      dur: 0.09,
+      repeticoes: 2,
+      intervalo: 0.14,
+      vibrato: 5,
+      ganho: 0.5,
+    },
+    susto: {
+      onda: 'sine',
+      de: 2400,
+      ate: 1500,
+      dur: 0.14,
+      repeticoes: 1,
+      intervalo: 0,
+      ganho: 0.7,
+    },
+    contente: {
+      onda: 'triangle',
+      de: 1200,
+      ate: 1600,
+      dur: 0.06,
+      repeticoes: 3,
+      intervalo: 0.1,
+      ganho: 0.45,
+    },
+  },
+  // peixe de gelo: tilintar de cristal
+  peixe: {
+    chamado: {
+      onda: 'sine',
+      de: 1800,
+      ate: 2400,
+      dur: 0.05,
+      repeticoes: 2,
+      intervalo: 0.09,
+      ganho: 0.4,
+    },
+    susto: {
+      onda: 'sine',
+      de: 2600,
+      ate: 3400,
+      dur: 0.05,
+      repeticoes: 3,
+      intervalo: 0.04,
+      ganho: 0.5,
+    },
+    contente: {
+      onda: 'sine',
+      de: 1500,
+      ate: 1900,
+      dur: 0.07,
+      repeticoes: 1,
+      intervalo: 0,
+      ganho: 0.4,
+    },
+  },
+  // eco-sombra: "uuu?" que sobe no fim, e um "ii-ii!" fininho quando se assusta
+  espectro: {
+    chamado: {
+      onda: 'sine',
+      de: 220,
+      ate: 310,
+      dur: 0.6,
+      repeticoes: 1,
+      intervalo: 0,
+      vibrato: 5,
+      ruido: 0.25,
+      ganho: 0.5,
+    },
+    susto: {
+      onda: 'triangle',
+      de: 520,
+      ate: 1100,
+      dur: 0.16,
+      repeticoes: 2,
+      intervalo: 0.06,
+      vibrato: 12,
+      ganho: 0.55,
+    },
+    contente: {
+      onda: 'sine',
+      de: 300,
+      ate: 360,
+      dur: 0.28,
+      repeticoes: 2,
+      intervalo: 0.1,
+      vibrato: 6,
+      ganho: 0.45,
+    },
+  },
+  // robô-companheiro: "bip-bup" alegre e trinado feliz
+  raposa: {
+    chamado: {
+      onda: 'square',
+      de: 880,
+      ate: 1320,
+      dur: 0.07,
+      repeticoes: 2,
+      intervalo: 0.08,
+      ganho: 0.3,
+    },
+    susto: {
+      onda: 'sawtooth',
+      de: 1200,
+      ate: 600,
+      dur: 0.15,
+      repeticoes: 1,
+      intervalo: 0,
+      ruido: 0.15,
+      ganho: 0.35,
+    },
+    contente: {
+      onda: 'sine',
+      de: 660,
+      ate: 990,
+      dur: 0.08,
+      repeticoes: 3,
+      intervalo: 0.05,
+      ganho: 0.5,
+    },
+  },
+};

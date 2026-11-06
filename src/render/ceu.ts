@@ -22,6 +22,7 @@ uniform float arcoIris;
 // do tema (constantes por mundo; os padroes reproduzem o Bruma e Luz)
 uniform float haloSol;
 uniform float faixaCrep;
+uniform vec3 corCrep;
 
 vec3 corDoCeu(vec3 d) {
   float h = d.y;
@@ -36,7 +37,7 @@ vec3 corDoCeu(vec3 d) {
   // faixa alaranjada no horizonte do lado do sol
   float ladoSol = dot(normalize(vec3(d.x, 0.001, d.z)), normalize(vec3(paraSol.x, 0.001, paraSol.z)));
   float faixa = exp(-abs(h) * 9.0) * pow(max(ladoSol * 0.5 + 0.5, 0.0), 3.0);
-  c += vec3(1.0, 0.45, 0.2) * faixa * crepusculo * 0.45 * faixaCrep;
+  c += corCrep * faixa * crepusculo * 0.45 * faixaCrep;
   // arco-iris a 42 graus do ponto oposto ao sol
   if (arcoIris > 0.001 && h > 0.0) {
     float ang = acos(clamp(dot(d, -paraSol), -1.0, 1.0));
@@ -210,6 +211,7 @@ export const UNIFORMES_CEU = [
   'arcoIris',
   'haloSol',
   'faixaCrep',
+  'corCrep',
 ];
 
 /** Uniformes só do domo do céu (astros do tema). */
@@ -276,7 +278,12 @@ export function aplicarUniformesCeu(mat: ShaderMaterial, a: EstadoAtmosfera): vo
   const c = tema().ceu;
   mat.setFloat('haloSol', c.haloSol);
   mat.setFloat('faixaCrep', c.faixaCrepusculo);
+  const cc = c.corCrepusculo ?? CREPUSCULO_PADRAO;
+  mat.setColor3('corCrep', corCrepusculo.set(cc[0], cc[1], cc[2]));
 }
+
+const CREPUSCULO_PADRAO = [1.0, 0.45, 0.2] as const;
+const corCrepusculo = new Color3();
 
 /** Astros do tema: constantes do mundo, aplicadas uma vez. */
 function aplicarAstros(mat: ShaderMaterial): void {

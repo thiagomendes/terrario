@@ -488,6 +488,23 @@ function construirEstrutura(
               if (Math.abs(dz) === 2) em(8 + dx, h + y, 8 + dz, parede);
         }
       break;
+    case 'ninho':
+      // ninho raso: anel de pedras de dois andares em volta do baú, com ovos de pedra lisa
+      for (let dz = -3; dz <= 3; dz++)
+        for (let dx = -3; dx <= 3; dx++) {
+          const d = Math.hypot(dx, dz);
+          if (d > 3.4 || d < 2.2) continue;
+          em(8 + dx, h + 1, 8 + dz, gasto(dx, 1, dz));
+          if (d > 2.8 && hash2(dx, dz, semente + 66) < 0.6)
+            em(8 + dx, h + 2, 8 + dz, gasto(dx, 2, dz));
+        }
+      for (const [dx, dz] of [
+        [1, 1],
+        [-1, 1],
+        [1, -1],
+      ])
+        em(8 + dx, h + 1, 8 + dz, Bloco.PEDRA_LISA);
+      break;
     case 'torre':
       // torre fina e torta com uma plataforma no alto
       for (let y = 1; y <= 5; y++) {
@@ -732,6 +749,31 @@ export function arvoreDaForma(
         por(blocos, x + dx, t + 1, z + dz, folha);
         if (dx === 0 || dz === 0) por(blocos, x + dx * 2, t, z + dz * 2, folha);
       }
+      break;
+    }
+    case 'araucaria': {
+      // tronco alto e nu, copa achatada em andares no alto (guarda-chuva)
+      const t = coluna(7 + Math.floor(r * 3));
+      for (const [dy, raio] of [
+        [-1, 2],
+        [0, 2],
+        [1, 1],
+      ] as const)
+        for (let dz = -raio; dz <= raio; dz++)
+          for (let dx = -raio; dx <= raio; dx++) {
+            if (raio === 2 && Math.abs(dx) === 2 && Math.abs(dz) === 2) continue;
+            // o andar de baixo é só a borda: dá a cara de guarda-chuva
+            if (dy === -1 && Math.abs(dx) < 2 && Math.abs(dz) < 2) continue;
+            por(blocos, x + dx, t + dy, z + dz, folha);
+          }
+      // um andar menor no meio do tronco
+      for (const [dx, dz] of [
+        [1, 0],
+        [-1, 0],
+        [0, 1],
+        [0, -1],
+      ])
+        por(blocos, x + dx, t - 3, z + dz, folha);
       break;
     }
     case 'cristal': {
