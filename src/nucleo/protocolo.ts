@@ -113,6 +113,8 @@ type ComandoSemSeq =
   | { t: 'comer'; slot: number }
   | { t: 'renascer' }
   | { t: 'salvar'; pedido: number }
+  /** Depois de uma queda: o valor oficial destas células (as previsões que ficaram). */
+  | { t: 'conferir'; id: number; celulas: Pos[] }
   /** Servidor local: a aba sumiu (ou voltou); o mundo para junto, como antes. */
   | { t: 'pausar'; pausar: boolean }
   | { t: 'depurar'; d: Depuracao };

@@ -308,6 +308,12 @@ export function criarGerenciador(op: OpcoesGerenciador) {
       sala: estadoSala(s),
       voce: jog.id,
       guardado: guardados.get(`${s.mundo.id}/${jog.id}`),
+      edicoes: s.nucleo.estado.edicoes.exportar(),
+      semPovoado: [...s.nucleo.semPovoado],
+      pos: (() => {
+        const t = s.nucleo.estado.jogadores.get(jog.id)!.tel;
+        return { x: t.x, y: t.y, z: t.z, yaw: t.yaw, pitch: t.pitch };
+      })(),
     });
     log(`${jog.apelido} entrou em ${s.sala.codigo} (${s.presentes.size})`);
   }

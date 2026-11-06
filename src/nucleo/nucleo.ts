@@ -10,7 +10,7 @@
 import { registrarCatalogo } from '../jogo/catalogo';
 import { criarEdicoes, empacotar } from '../world/edicoes';
 import { Bloco, ehAlvo, obterBloco } from '../world/blocks';
-import { encontrarNascimento } from '../world/chunk';
+import { alturaTerreno, encontrarNascimento } from '../world/chunk';
 import { definirRegioesSemPovoado, regiaoDoChunk } from '../world/povoado';
 import { criarConteineres, TAMANHO_BAU } from '../jogo/conteineres';
 import { criarMundoDeItens, dropsDoBloco } from '../jogo/drops';
@@ -210,15 +210,17 @@ export function criarNucleo(op: OpcoesNucleo) {
     // o nascimento já é o centro de um bloco
     const x = pos?.x ?? nascimento.x;
     const z = pos?.z ?? nascimento.z;
+    // quem chega pela primeira vez fica em cima do terreno do nascimento
+    const y0 = pos?.y ?? alturaTerreno(Math.floor(x), Math.floor(z), semente) + 1;
     const j: Jogador = {
       id,
       tel: {
         x,
-        y: pos?.y ?? 80,
+        y: y0,
         z,
         yaw: pos?.yaw ?? 0,
         pitch: pos?.pitch ?? 0,
-        olhos: (pos?.y ?? 80) + 1.62,
+        olhos: y0 + 1.62,
         noChao: false,
         voando: false,
         vel: 0,
@@ -247,7 +249,7 @@ export function criarNucleo(op: OpcoesNucleo) {
       querDormir: 0,
       perfil: oc?.perfil ?? { apelido: 'Jogador', aparencia: {} },
       constroi: oc?.constroi ?? true,
-      corpo: { x, y: pos?.y ?? 80, z, vivo: true, criativo: modo === 'criativo' },
+      corpo: { x, y: y0, z, vivo: true, criativo: modo === 'criativo' },
     };
     j.inventario.ouvir(() => {
       j.inventarioSujo = true;
@@ -765,6 +767,9 @@ export function criarNucleo(op: OpcoesNucleo) {
         j.sobrevivencia.renascer();
         j.eventos.push({ e: 'teleporte', x: j.spawn.x, z: j.spawn.z });
         break;
+      case 'conferir':
+        for (const q of c.celulas.slice(0, 500)) corrigir(j, q.x, q.y, q.z);
+        break;
       case 'depurar':
         if (depuracao) depurar(j, c.d);
         break;
@@ -916,7 +921,8 @@ export function criarNucleo(op: OpcoesNucleo) {
     perfisSujos = false;
     for (const j of jogadores.values()) {
       const q: Quadro = { t: 'quadro', n, ack: j.ack, ambiente: amb, criaturas, itens };
-      if (todos.length > 1) q.jogadores = todos.filter((o) => o.id !== j.id);
+      // na nuvem a lista vai sempre (vazia também: quem saiu some da tela)
+      if (!confiar || todos.length > 1) q.jogadores = todos.filter((o) => o.id !== j.id);
       if (perfis) q.perfis = perfis;
       if (!j.iniciado) {
         q.primeiro = true;

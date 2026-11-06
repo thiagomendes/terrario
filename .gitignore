@@ -5,3 +5,4 @@ playwright-report/
 capturas-temas/
 .claude/
 servidor/dist/
+node_modules

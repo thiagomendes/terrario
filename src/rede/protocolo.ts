@@ -68,7 +68,19 @@ export interface EstadoSala {
 }
 
 export type RespostaServidor =
-  | { t: 'bemvindo'; mundo: MundoNuvem; sala: EstadoSala; voce: string; guardado?: unknown }
+  | {
+      t: 'bemvindo';
+      mundo: MundoNuvem;
+      sala: EstadoSala;
+      voce: string;
+      /** Diário e mapa deste jogador neste mundo. */
+      guardado?: unknown;
+      /** Edições de blocos do mundo e regiões sem povoado (o navegador monta o terreno igual). */
+      edicoes: Record<string, Array<[number, number]>>;
+      semPovoado: string[];
+      /** Onde este jogador estava (ou o nascimento). */
+      pos: { x: number; y: number; z: number; yaw: number; pitch: number };
+    }
   | { t: 'recusado'; motivo: MotivoRecusa }
   | { t: 'sala'; sala: EstadoSala }
   | { t: 'expulso' }

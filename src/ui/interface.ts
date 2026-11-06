@@ -290,6 +290,11 @@ export function criarInterface(
       if (opMundo.mundo) atualizarCartao(await opMundo.repo!.obter(opMundo.mundo.id));
     });
   }
+  // entrar no mundo de um amigo pelo código que ele mandou
+  const bCodigo = botaoJogo('Entrar com código', 'globo', 'data-entrar-com-codigo');
+  bCodigo.addEventListener('click', () =>
+    window.dispatchEvent(new CustomEvent('brumaluz:entrarCodigo')),
+  );
   const bPersonagem = botaoJogo('Personagem', 'pessoa', 'data-abrir-personagem');
   dupla.appendChild(bPersonagem);
   const painelConfig = opMundo.config ? criarPainelConfig(app, opMundo.config) : null;
@@ -298,6 +303,7 @@ export function criarInterface(
     bConfig.addEventListener('click', () => painelConfig.abrir());
     menuBotoes.appendChild(bConfig);
   }
+  menuBotoes.appendChild(bCodigo);
   menu.append(titulo, logo, sub, menuBotoes);
   if (vitrine) menu.appendChild(vitrine.elemento);
   const rodape = document.createElement('div');
@@ -438,6 +444,10 @@ export function criarInterface(
       pausa.fechar();
       void opMundo.salvar?.();
       entrada.hidden = false;
+    },
+    amigos: () => {
+      pausa.fechar();
+      window.dispatchEvent(new CustomEvent('brumaluz:amigos'));
     },
     // botões grandes da pausa: abrem a função como se a tecla fosse apertada
     abrirFuncao: (codigo) => {

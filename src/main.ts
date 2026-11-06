@@ -30,21 +30,54 @@ import { ativarTema } from './temas/ativar';
 import { povoadoDoTema, tema } from './temas/ativo';
 import { temaExiste } from './temas';
 import { CORES_MARCADOR, type Marcador } from './jogo/mapa';
+import type { DadosMundo } from './jogo/mundos';
+import { normalizarCodigo } from './jogo/codigos';
+import { definirEstiloMundo } from './world/chunk';
+import type { BemVindo, ConexaoNuvem } from './cliente/conexaoNuvem';
+import { dadosDaSala, entrarNaSala, irParaSala, ligarAmigos } from './nuvem';
 
 async function iniciar(app: HTMLElement): Promise<void> {
   registrarCatalogo();
   const repo = criarRepositorioMundos(armazemIndexedDB());
-  const pedido = new URLSearchParams(location.search).get('mundo');
-  let mundo: MetaMundo | null = pedido ? await repo.obter(pedido) : null;
-  mundo ??= await repo.ultimo();
-  mundo ??= await repo.criar('Meu primeiro mundo', SEMENTE_PADRAO_MUNDO, 'criativo');
-  const dados = await repo.carregar(mundo.id);
+  const params = new URLSearchParams(location.search);
+  // mundo com amigos: ?sala=CÓDIGO (link, QR Code ou "Entrar com código")
+  const sala = params.get('sala');
+  let nuvem: { conexao: ConexaoNuvem; bv: BemVindo; novo: boolean } | undefined;
+  let fecharTela: (() => void) | undefined;
+  let mundo: MetaMundo | null = null;
+  let dados: DadosMundo;
+  if (sala) {
+    const r = await entrarNaSala(app, normalizarCodigo(sala) ?? sala);
+    if (!r) return;
+    const d = dadosDaSala(r.bv);
+    mundo = d.mundo;
+    dados = d.dados;
+    nuvem = { conexao: r.conexao, bv: r.bv, novo: params.get('novo') === '1' };
+    fecharTela = r.fecharTela;
+  } else {
+    const pedido = params.get('mundo');
+    mundo = pedido ? await repo.obter(pedido) : null;
+    // um mundo que foi para a nuvem abre lá (sem internet, fica um do aparelho)
+    if (mundo?.nuvem && navigator.onLine) return irParaSala(mundo.nuvem);
+    if (!mundo) {
+      const lista = await repo.listar();
+      mundo =
+        lista.find((m) => !m.nuvem) ??
+        (await repo.criar('Meu primeiro mundo', SEMENTE_PADRAO_MUNDO, 'criativo'));
+    }
+    dados = await repo.carregar(mundo.id);
+  }
   // o tema do mundo vale para a página inteira: aparência, nomes e terreno
   // ?tema=<id> mostra o mundo em outro tema sem salvar a troca (prévia e capturas)
-  const temaPrevia = new URLSearchParams(location.search).get('tema');
+  const temaPrevia = params.get('tema');
   const emPrevia =
-    !!temaPrevia && temaExiste(temaPrevia) && temaPrevia !== (mundo.tema ?? 'bruma-e-luz');
+    !nuvem &&
+    !!temaPrevia &&
+    temaExiste(temaPrevia) &&
+    temaPrevia !== (mundo.tema ?? 'bruma-e-luz');
   const temaMundo = ativarTema(emPrevia ? temaPrevia : mundo.tema);
+  // na nuvem o terreno segue o estilo gravado com o mundo (igual ao do servidor)
+  if (nuvem) definirEstiloMundo(nuvem.bv.mundo.estilo);
   if (mundo.tema && !temaExiste(mundo.tema))
     setTimeout(() => notificar(`Tema desconhecido: este mundo abriu como ${temaMundo.nome}`), 1500);
 
@@ -83,9 +116,17 @@ async function iniciar(app: HTMLElement): Promise<void> {
   cena = criarCena(canvas, hotbar, {
     mundo: atual,
     dados,
-    repo: emPrevia ? undefined : repo,
+    // na nuvem quem salva é o servidor; em prévia de outro tema, ninguém
+    repo: emPrevia || nuvem ? undefined : repo,
     config,
+    conexao: nuvem?.conexao,
   });
+  ligarAmigos(app, cena, { repo, mundo: nuvem ? undefined : atual, nuvem });
+  if (fecharTela) {
+    const pronto = cena;
+    const esperar = () => (pronto.estado.ready ? fecharTela!() : setTimeout(esperar, 200));
+    esperar();
+  }
   if (emPrevia)
     setTimeout(() => notificar(`Prévia de ${temaMundo.nome}: nada deste passeio é salvo`), 1800);
   panorama(cena);

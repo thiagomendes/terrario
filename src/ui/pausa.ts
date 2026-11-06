@@ -61,6 +61,8 @@ export interface AcoesPausa {
   telaInicial(): void;
   /** Abre uma função do jogo pelo código da tecla (grade de botões grandes). */
   abrirFuncao?(codigo: string): void;
+  /** Jogar com amigos: convite, código e quem está no mundo. */
+  amigos?(): void;
 }
 
 export function criarMenuPausa(raiz: HTMLElement, nomeMundo: string, acoes: AcoesPausa) {
@@ -125,10 +127,14 @@ export function criarMenuPausa(raiz: HTMLElement, nomeMundo: string, acoes: Acoe
     'jogar',
   );
   const grade = acoes.abrirFuncao ? [criarGradeFuncoes(acoes.abrirFuncao)] : [];
+  const amigos = acoes.amigos
+    ? [botao('Jogar com amigos', 'primario', acoes.amigos, 'data-pausa-amigos', 'pessoa')]
+    : [];
   card.append(
     h,
     m,
     continuar,
+    ...amigos,
     ...grade,
     dupla,
     botao('Salvar agora', '', acoes.salvar, 'data-pausa-salvar', 'salvar'),

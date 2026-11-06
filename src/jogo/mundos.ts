@@ -15,6 +15,8 @@ export interface MetaMundo {
   tema?: string;
   /** Versão do mundo: 2 = criado já com povoados (mundos antigos não têm). */
   versao?: number;
+  /** Levado para a nuvem: o código da sala (abrir o mundo leva até ela). */
+  nuvem?: string;
 }
 
 export interface JogadorSalvo {
@@ -121,6 +123,8 @@ export interface RepositorioMundos {
   excluir(id: string): Promise<void>;
   /** Mundo jogado mais recentemente, ou null. */
   ultimo(): Promise<MetaMundo | null>;
+  /** O mundo foi para a nuvem (ou o código mudou). */
+  marcarNuvem(id: string, codigo: string): Promise<void>;
 }
 
 export function criarRepositorioMundos(
@@ -189,6 +193,12 @@ export function criarRepositorioMundos(
     },
     async ultimo() {
       return (await repo.listar())[0] ?? null;
+    },
+    async marcarNuvem(id, codigo) {
+      await atualizar(id, (m) => {
+        m.nuvem = codigo;
+        m.jogadoEm = agora();
+      });
     },
   };
   return repo;

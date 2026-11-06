@@ -154,6 +154,20 @@ export function criarEstadoCliente(op: OpcoesEstadoCliente) {
         enviar({ t: 'salvar', pedido: p });
       });
     },
+    /**
+     * Voltou de uma queda: pede o valor oficial das células ainda previstas (o comando
+     * pode ter se perdido no caminho) e recomeça a sequência dos quadros.
+     */
+    reconferir(): void {
+      proximoQuadro = -1;
+      adiantados.clear();
+      if (pendentes.size === 0) return;
+      const celulas = [...pendentes.keys()].map((k) => {
+        const [x, y, z] = k.split(',').map(Number);
+        return { x, y, z };
+      });
+      enviar({ t: 'conferir', id: proximoId(), celulas });
+    },
     /** Há previsão local esperando confirmação nesta célula? */
     pendente(x: number, y: number, z: number): boolean {
       return pendentes.has(celula(x, y, z));

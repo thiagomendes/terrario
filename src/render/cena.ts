@@ -174,6 +174,7 @@ import type { Pose } from '../personagem/poses';
 import { criarBraco } from './braco';
 import { criarPersonagem } from './personagem';
 import { criarModoFoto } from './modoFoto';
+import { criarOutrosJogadores } from './outrosJogadores';
 import { amostrarMapaChunk } from './mapaChunk';
 import { conexaoLocal, type Conexao } from '../cliente/conexao';
 import { criarEstadoCliente } from '../cliente/estado';
@@ -243,6 +244,8 @@ export interface EstadoDepuracao {
   latenciaEdicaoMs?: number;
   remalhaMs?: number;
   aplicadasNoUltimoQuadro?: number;
+  /** Os outros jogadores no mundo (com amigos). */
+  outrosJogadores?: () => { id: string; apelido: string; x: number; y: number; z: number }[];
   /** Tempo médio da lógica de cada quadro na linha principal, fora o desenho (ms). */
   logicaQuadroMs?: number;
   atmosfera?: { noite: number; crepusculo: number };
@@ -479,7 +482,16 @@ export function criarCena(
       window.dispatchEvent(
         new CustomEvent('brumaluz:conteiner', { detail: { conteiner: c, novo } }),
       ),
-    aoQuadro: () => {
+    aoQuadro: (q) => {
+      if (q.perfis) outrosJogadores.definirPerfis(q.perfis);
+      if (q.jogadores) {
+        // quem aparece pela primeira vez chega com festa (brilho e som)
+        const antes = new Set(outrosJogadores.lista.map((o) => o.id));
+        outrosJogadores.receber(q.jogadores);
+        for (const o of q.jogadores)
+          if (!antes.has(o.id) && quadrosVistos > 1) chegouAmigo(o.x, o.y, o.z);
+      }
+      quadrosVistos++;
       const a = cliente.ambiente;
       dia = a.dia;
       hora = a.hora;
@@ -494,6 +506,7 @@ export function criarCena(
       ...((dadosIniciais?.extras?.['sobrevivencia'] as Partial<EstadoSobrevivencia>) ?? {}),
     },
   });
+  let quadrosVistos = 0;
   const enviar = (c: Comando) => {
     // o que as telas (ou os testes) mudaram nos itens vai antes da ação que depende disso
     if (c.t !== 'jogador' && c.t !== 'transacao') cliente.sincronia.verificar();
@@ -564,6 +577,8 @@ export function criarCena(
     if (semBrilho(m.name)) glow.addExcludedMesh(m as Mesh);
   });
 
+  // os outros jogadores (mundo com amigos): personagem, apelido e item na mão
+  const outrosJogadores = criarOutrosJogadores(scene, (m) => glow.addExcludedMesh(m));
   const ceu = criarCeu(scene);
   const agua = criarAgua(scene);
   glow.addExcludedMesh(ceu.malha);
@@ -1919,6 +1934,7 @@ export function criarCena(
     aplicarAtmosfera(tempo, dtBruto);
     atualizarItens(dtQuadro, tempo);
     quadroCriaturas?.(dtQuadro, tempo);
+    outrosJogadores.atualizar(dtQuadro, Math.max(0.2, luzJogador * (0.45 + 0.55 * luzDia)));
     quadroConstrucao?.(tempo);
     balanco.atualizar(tempo);
     logicaMs += (performance.now() - inicioQuadro - logicaMs) * 0.05;
@@ -2406,6 +2422,8 @@ export function criarCena(
   }
   let salvando: Promise<void> | null = null;
   async function salvar(comMiniatura = true): Promise<boolean> {
+    // na nuvem o servidor grava sozinho a cada poucos segundos
+    if (opcoes.conexao && !opcoes.repo && opcoes.mundo?.nuvem) return true;
     const repo = opcoes.repo;
     const mundo = opcoes.mundo;
     if (!repo || !mundo || !estado.ready) return false;
@@ -2591,6 +2609,18 @@ export function criarCena(
         window.dispatchEvent(new CustomEvent('brumaluz:acordou'));
         break;
       }
+      case 'entrou':
+        toast(`${e.apelido} chegou no mundo!`);
+        tocarSom(motorAudio, 'entrada');
+        window.dispatchEvent(new CustomEvent('brumaluz:entrou', { detail: e }));
+        break;
+      case 'saiu':
+        toast(`${e.apelido} saiu do mundo`);
+        window.dispatchEvent(new CustomEvent('brumaluz:saiu', { detail: e }));
+        break;
+      case 'sonoEspera':
+        window.dispatchEvent(new CustomEvent('brumaluz:sonoEspera', { detail: e.faltam }));
+        break;
       case 'trocou':
         window.dispatchEvent(
           new CustomEvent('brumaluz:trocou', {
@@ -2607,6 +2637,17 @@ export function criarCena(
     }
   }
 
+  /** Um amigo apareceu: brilho de cristal subindo no lugar. */
+  function chegouAmigo(x: number, y: number, z: number): void {
+    for (let k = 0; k < 3; k++)
+      aplicarPlano('quebra', {
+        x: Math.floor(x),
+        y: Math.floor(y) + k,
+        z: Math.floor(z),
+        bloco: Bloco.CRISTAL_LUZ,
+      });
+  }
+  estado.outrosJogadores = () => outrosJogadores.lista;
   estado.definirClima = (t) => enviar({ t: 'depurar', d: { f: 'clima', tipo: t } });
   estado.dia = () => dia;
   estado.definirDia = (d) => {
@@ -2680,6 +2721,16 @@ export function criarCena(
     blocoEm,
     semente,
     salvar,
+    /** O mundo como está agora (para levar para a nuvem). */
+    dadosAtuais: () => coletarDados(),
+    /** O que é só do jogador (diário, mapa): vai junto com ele na nuvem. */
+    extrasDoCliente() {
+      const out: Record<string, unknown> = {};
+      for (const [k, sv] of salvaveis) out[k] = sv.salvar();
+      return out;
+    },
+    /** Voltou de uma queda de internet: confere as previsões que ficaram. */
+    reconferir: () => cliente.reconferir(),
     /** Usa um bloco pelo núcleo (porta, baú, fornalha, cama). */
     usarBloco(x: number, y: number, z: number) {
       pedirUso(x, y, z);
