@@ -39,6 +39,8 @@ export const CSS_INVENTARIO = `
 .slot-inv .dur i { display: block; height: 100%; border-radius: 2px; }
 .separador { height: 1px; background: rgba(255,255,255,0.08); margin: 2px 0; }
 .catalogo { display: grid; gap: 8px; }
+.catalogo[hidden], .livro[hidden] { display: none !important; }
+.inventario .topo > .secao:first-child { display: flex; gap: 16px; align-items: flex-start; flex-wrap: wrap; }
 .catalogo input {
   min-height: 38px; padding: 6px 12px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.14);
   background: rgba(0,0,0,0.3); color: #ece6da; font: 500 0.92rem system-ui, sans-serif;

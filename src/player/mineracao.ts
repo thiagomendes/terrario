@@ -39,6 +39,8 @@ export interface EntradaMineracao {
   dt: number;
   segurando: boolean;
   alvo: AlvoMineracao | null;
+  /** Multiplicador de velocidade (ferramenta); padrão 1. */
+  velocidade?: number;
 }
 
 export interface ResultadoMineracao {
@@ -94,7 +96,7 @@ export function atualizarMineracao(
 
   const anterior = estado.danos.get(chaveAlvo);
   const base = anterior && anterior.bloco === alvo.bloco ? anterior.progresso : 0;
-  const dureza = DUREZA[alvo.bloco];
+  const dureza = DUREZA[alvo.bloco] / Math.max(0.05, entrada.velocidade ?? 1);
   const progresso = dureza <= 0 ? 1 : Math.min(1, base + dt / dureza);
   const continuando = estado.chaveAtual === chaveAlvo;
   let tempoGolpe = (continuando ? estado.tempoGolpe : 0) + dt;

@@ -8,12 +8,27 @@ export interface Drop {
 }
 
 /** O que um bloco quebrado solta (sobrevivência). */
-export function dropsDoBloco(bloco: number, rng: Gerador): Drop[] {
+export function dropsDoBloco(bloco: number, rng: Gerador, coleta = true): Drop[] {
+  if (!coleta) return [];
   const um = (b: number): Drop[] => [{ item: idDoBloco(b), qtd: 1 }];
   switch (bloco) {
-    case Bloco.AR:
     case Bloco.GRAMA_ALTA:
+      return rng() < 0.12 ? [{ item: 'fibra', qtd: 1 }] : [];
     case Bloco.ARBUSTO_SECO:
+      return rng() < 0.5 ? [{ item: 'graveto', qtd: 1 + Math.floor(rng() * 2) }] : [];
+    case Bloco.ARBUSTO_FRUTINHAS:
+      return [{ item: 'frutinhas', qtd: 1 + Math.floor(rng() * 3) }];
+    case Bloco.MINERIO_CARVAO:
+      return [{ item: 'carvao', qtd: 1 }];
+    case Bloco.MINERIO_COBRE:
+      return [{ item: 'cobre_bruto', qtd: 1 + Math.floor(rng() * 2) }];
+    case Bloco.MINERIO_FERRO:
+      return [{ item: 'ferro_bruto', qtd: 1 }];
+    case Bloco.MINERIO_OURO:
+      return [{ item: 'ouro_bruto', qtd: 1 }];
+    case Bloco.MINERIO_LUZITA:
+      return [{ item: 'luzita', qtd: 1 }];
+    case Bloco.AR:
     case Bloco.VIDRO:
     case Bloco.GELO:
     case Bloco.ROCHA_MATRIZ:
@@ -33,8 +48,12 @@ export function dropsDoBloco(bloco: number, rng: Gerador): Drop[] {
     case Bloco.FOLHAS_BETULA:
     case Bloco.FOLHAS_PINHO:
     case Bloco.FOLHAS_LANTERNA:
-    case Bloco.FOLHAS_OUTONO:
-      return rng() < 0.2 ? um(bloco) : [];
+    case Bloco.FOLHAS_OUTONO: {
+      const r = rng();
+      if (r < 0.06) return [{ item: 'maca', qtd: 1 }];
+      if (r < 0.14) return [{ item: 'graveto', qtd: 1 }];
+      return [];
+    }
     default:
       return um(bloco);
   }

@@ -12,6 +12,8 @@ export interface OpcoesMinerador {
   barramento: Barramento;
   /** Entrega a quebra ao `executarInteracao('quebrar')`; true se a edição valeu. */
   quebrar: (alvo: AlvoMineracao) => boolean;
+  /** Multiplicador de velocidade para o bloco (ferramenta na mão). */
+  velocidade?: (bloco: number) => number;
 }
 
 export interface Minerador {
@@ -46,7 +48,8 @@ export function criarMinerador(opcoes: OpcoesMinerador): Minerador {
       opcoes.barramento.emitir('slot', { indice });
     },
     atualizar(dt, alvo) {
-      const r = atualizarMineracao(estado, { dt, segurando, alvo });
+      const velocidade = alvo ? (opcoes.velocidade?.(alvo.bloco) ?? 1) : 1;
+      const r = atualizarMineracao(estado, { dt, segurando, alvo, velocidade });
       estado = r.estado;
       progresso = r.progresso;
       if (!alvo) return { quebrou: false, progresso };

@@ -48,6 +48,7 @@ import { PluginBalanco } from './balanco';
 import { SEMENTE_PADRAO, TAM_X, TAM_Z } from '../world/chunk';
 import type { DadosMundo, MetaMundo, ModoJogo, RepositorioMundos } from '../jogo/mundos';
 import { criarMundoDeItens, dropsDoBloco } from '../jogo/drops';
+import { podeColetar, velocidadeMineracao } from '../jogo/ferramentas';
 import { obterItem } from '../jogo/itens';
 import { criarRenderItens } from './itensSoltos';
 import { perfilDaQualidade, type Config, type GerenciadorConfig } from '../jogo/config';
@@ -109,6 +110,16 @@ import { criarBraco } from './braco';
 import { criarPersonagem } from './personagem';
 
 const RAIO_INICIAL = 3;
+/** Blocos que o clique direito usa em vez de colocar algo. */
+const INTERATIVOS = new Set<number>([
+  Bloco.MESA_TRABALHO,
+  Bloco.FORNALHA,
+  Bloco.FORNALHA_ACESA,
+  Bloco.BAU,
+  Bloco.PORTA,
+  Bloco.PORTA_ABERTA,
+  Bloco.CAMA,
+]);
 let raioChunks = RAIO_INICIAL;
 let fatorNevoa = 1;
 const RAIO_SOMBRA = 1;
@@ -630,7 +641,53 @@ export function criarCena(
         jogador: controle.jogador,
         editar: editarBloco,
       }),
+    velocidade: (bloco) => velocidadeMineracao(bloco, ferramentaNaMao(), modo === 'criativo'),
   });
+
+  /** Ferramenta segurada (se houver). */
+  function ferramentaNaMao() {
+    const p = hotbar.pilhaAtiva();
+    return p ? obterItem(p.item)?.ferramenta : undefined;
+  }
+
+  /** Clique direito: usa blocos interativos, come comida ou coloca bloco. */
+  function usarOuColocar(shift: boolean): void {
+    const a = calcularAlvo();
+    const alvoBloco = a ? blocoEm(a.x, a.y, a.z) : Bloco.AR;
+    if (a && !shift && INTERATIVOS.has(alvoBloco)) {
+      if (alvoBloco === Bloco.PORTA || alvoBloco === Bloco.PORTA_ABERTA) {
+        alternarPorta(a.x, a.y, a.z);
+        return;
+      }
+      window.dispatchEvent(
+        new CustomEvent('brumaluz:usar', { detail: { bloco: alvoBloco, x: a.x, y: a.y, z: a.z } }),
+      );
+      return;
+    }
+    const p = hotbar.pilhaAtiva();
+    const def = p ? obterItem(p.item) : undefined;
+    if (def?.comida && modo === 'sobrevivencia') {
+      if (estado.sobrevivencia?.comer(def.comida.fome, def.comida.saturacao)) {
+        inventario.remover(hotbar.ativo, 1);
+        tocarSom(motorAudio, 'comer');
+        animador.evento('colocacao');
+      }
+      return;
+    }
+    interagirComEventos('colocar');
+  }
+
+  /** Abre ou fecha a porta (e a metade de cima/baixo, se houver). */
+  function alternarPorta(x: number, y: number, z: number): void {
+    const b = blocoEm(x, y, z);
+    const novo = b === Bloco.PORTA ? Bloco.PORTA_ABERTA : Bloco.PORTA;
+    editarBloco(x, y, z, novo);
+    for (const dy of [-1, 1]) {
+      const v = blocoEm(x, y + dy, z);
+      if (v === Bloco.PORTA || v === Bloco.PORTA_ABERTA) editarBloco(x, y + dy, z, novo);
+    }
+    tocarSom(motorAudio, 'colocar', 'madeira');
+  }
 
   let ultimaColocacao: number | null = null;
   canvas.addEventListener('mousedown', (e) => {
@@ -641,7 +698,7 @@ export function criarCena(
       const agora = performance.now() / 1000;
       if (!colocacaoPermitida(agora, ultimaColocacao)) return;
       ultimaColocacao = agora;
-      interagirComEventos('colocar');
+      usarOuColocar(e.shiftKey);
     }
   });
   window.addEventListener('mouseup', (e) => {
@@ -733,6 +790,7 @@ export function criarCena(
   barramento.ouvir('colocacao', () => animador.evento('colocacao'));
   let slotNaMao = -1;
   let blocoNaMaoAtual = -1;
+  let itemNaMaoAtual = '';
   /** Giro extra do corpo em relação à câmera (só para capturas). */
   let giroCorpo = 0;
   let luzJogador = 1;
@@ -747,10 +805,14 @@ export function criarCena(
     braco.definirVisivel(vis.braco);
     personagem.definirVisivel(vis.corpo);
     const blocoMao = hotbar.blocoAtivo();
-    if (hotbar.ativo !== slotNaMao || blocoMao !== blocoNaMaoAtual) {
+    const itemMao = hotbar.pilhaAtiva()?.item ?? '';
+    if (hotbar.ativo !== slotNaMao || blocoMao !== blocoNaMaoAtual || itemMao !== itemNaMaoAtual) {
+      itemNaMaoAtual = itemMao;
       slotNaMao = hotbar.ativo;
       blocoNaMaoAtual = blocoMao;
       braco.definirBloco(blocoMao || null);
+      const pilhaMao = hotbar.pilhaAtiva();
+      braco.definirItem(!blocoMao && pilhaMao ? iconeDoItem(pilhaMao.item) : null);
     }
     braco.atualizarVista(dt, animador.vista());
     personagem.aplicarPose(pose, {
@@ -928,7 +990,24 @@ export function criarCena(
   });
   barramento.ouvir('quebra', (d) => {
     if (modo !== 'sobrevivencia') return;
-    for (const drop of dropsDoBloco(d.bloco, rngDrops)) {
+    const ferramenta = ferramentaNaMao();
+    // desgaste da ferramenta
+    const p = hotbar.pilhaAtiva();
+    if (ferramenta && p && p.dur !== undefined && (obterBlocoDef(d.bloco)?.dureza ?? 0) > 0) {
+      const dur = p.dur - 1;
+      if (dur <= 0) {
+        inventario.definir(hotbar.ativo, null);
+        tocarSom(motorAudio, 'recusa');
+        window.dispatchEvent(
+          new CustomEvent('brumaluz:toast', {
+            detail: `${obterItem(p.item)?.nome ?? 'Ferramenta'} quebrou!`,
+          }),
+        );
+      } else {
+        inventario.definir(hotbar.ativo, { ...p, dur });
+      }
+    }
+    for (const drop of dropsDoBloco(d.bloco, rngDrops, podeColetar(d.bloco, ferramenta))) {
       mundoItens.soltar(drop.item, drop.qtd, d.x + 0.5, d.y + 0.4, d.z + 0.5, rngDrops);
     }
   });

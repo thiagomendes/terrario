@@ -13,7 +13,8 @@ export type EventoSom =
   | 'recusa'
   | 'entrada'
   | 'coleta'
-  | 'dano';
+  | 'dano'
+  | 'comer';
 
 export const EVENTOS_SOM: readonly EventoSom[] = [
   'golpe',
@@ -27,6 +28,7 @@ export const EVENTOS_SOM: readonly EventoSom[] = [
   'entrada',
   'coleta',
   'dano',
+  'comer',
 ];
 
 export const VARIACOES_POR_EVENTO = 4;
@@ -84,6 +86,7 @@ const BASE_EVENTO: Record<EventoSom, BaseEvento> = {
   troca: { ganho: 0.3, duracao: 0.08, ruido: 0.1, escalaTom: 1, grupoAudio: 'efeitos' },
   recusa: { ganho: 0.35, duracao: 0.2, ruido: 0.1, escalaTom: 1, grupoAudio: 'efeitos' },
   entrada: { ganho: 0.4, duracao: 0.5, ruido: 0.05, escalaTom: 1, grupoAudio: 'efeitos' },
+  comer: { ganho: 0.4, duracao: 0.3, ruido: 0.8, escalaTom: 1, grupoAudio: 'efeitos' },
   dano: { ganho: 0.6, duracao: 0.25, ruido: 0.6, escalaTom: 1, grupoAudio: 'efeitos' },
   coleta: { ganho: 0.28, duracao: 0.09, ruido: 0, escalaTom: 1, grupoAudio: 'efeitos' },
 };
@@ -94,6 +97,7 @@ const FIXOS: Partial<Record<EventoSom, BaseMaterial>> = {
   entrada: { frequencia: 392, filtroHz: 2400 },
   coleta: { frequencia: 740, filtroHz: 3000 },
   dano: { frequencia: 190, filtroHz: 900 },
+  comer: { frequencia: 300, filtroHz: 1800 },
 };
 
 export const AMPLITUDE_TOM = 0.12;
@@ -405,6 +409,23 @@ function desenharSom(par: ParametrosSom, evento: EventoSom, grupo: GrupoMaterial
             0.12,
           ),
         );
+        break;
+      case 'comer':
+        for (let i = 0; i < 3; i++) {
+          pecas.push(
+            ruido(
+              ctx,
+              out,
+              t0 + i * 0.11,
+              'bandpass',
+              par.filtroHz * (1 + i * 0.1),
+              1.4,
+              0.6,
+              0.07,
+              0.004,
+            ),
+          );
+        }
         break;
       case 'dano':
         pecas.push(ruido(ctx, out, t0, 'lowpass', par.filtroHz, 0.8, 0.9, 0.16, 0.002));

@@ -4,11 +4,15 @@ import { criarInterface } from './ui/interface';
 import { armazemIndexedDB } from './jogo/indexeddb';
 import { SEMENTE_PADRAO_MUNDO, criarRepositorioMundos, type MetaMundo } from './jogo/mundos';
 import { CSS_INVENTARIO, criarInventarioUI } from './ui/inventario';
+import { CSS_CRIACAO, criarCriacao } from './ui/criacao';
+import { registrarCatalogo } from './jogo/catalogo';
+import { Bloco } from './world/blocks';
 import { criarGerenciadorConfig } from './jogo/config';
 import { CSS_STATUS, criarStatus, criarTelaMorte } from './ui/status';
 import { notificar } from './ui/interface';
 
 async function iniciar(app: HTMLElement): Promise<void> {
+  registrarCatalogo();
   const repo = criarRepositorioMundos(armazemIndexedDB());
   const pedido = new URLSearchParams(location.search).get('mundo');
   let mundo: MetaMundo | null = pedido ? await repo.obter(pedido) : null;
@@ -98,7 +102,7 @@ function ligarInventario(
   hotbar: ReturnType<typeof criarHotbar>,
 ): void {
   const estilo = document.createElement('style');
-  estilo.textContent = CSS_INVENTARIO;
+  estilo.textContent = CSS_INVENTARIO + CSS_CRIACAO;
   document.head.appendChild(estilo);
   const ui = criarInventarioUI(app, {
     inventario: hotbar.inventario,
@@ -113,7 +117,29 @@ function ligarInventario(
       canvas.requestPointerLock?.();
     },
   });
-  (window as unknown as { __inventarioUI?: typeof ui }).__inventarioUI = ui;
+  const criacao = criarCriacao(ui, hotbar.inventario, {
+    criativo: () => cena.estado.modo === 'criativo',
+    aoFabricar: (r) => window.dispatchEvent(new CustomEvent('brumaluz:fabricou', { detail: r.id })),
+  });
+  const fecharOriginal = ui.fechar;
+  ui.fechar = () => {
+    criacao.devolver();
+    fecharOriginal();
+  };
+  const abrir = (lado: 2 | 3) => {
+    criacao.definirLado(lado);
+    ui.abrir();
+    criacao.render();
+    document.exitPointerLock?.();
+  };
+  window.addEventListener('brumaluz:usar', (e) => {
+    const d = (e as CustomEvent<{ bloco: number }>).detail;
+    if (d.bloco === Bloco.MESA_TRABALHO) abrir(3);
+  });
+  (window as unknown as { __inventarioUI?: unknown }).__inventarioUI = {
+    abrir: (lado: 2 | 3 = 2) => abrir(lado),
+    fechar: () => ui.fechar(),
+  };
   window.addEventListener('keydown', (e) => {
     if ((e.target as HTMLElement)?.closest?.('input, textarea')) return;
     const naEntrada =
@@ -121,10 +147,7 @@ function ligarInventario(
       document.body.dataset.overlay === 'pausa';
     if (e.code === 'KeyE' && !e.repeat && !naEntrada) {
       if (ui.aberto) ui.fechar();
-      else {
-        ui.abrir();
-        document.exitPointerLock?.();
-      }
+      else abrir(2);
     } else if (e.code === 'Escape' && ui.aberto) {
       ui.fechar();
     }

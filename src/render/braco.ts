@@ -22,6 +22,8 @@ export interface Braco {
   definirSlot(slot: number): void;
   /** Bloco na mão (null = mão vazia). */
   definirBloco(bloco: number | null): void;
+  /** Item plano (ferramenta, comida) na mão, pelo ícone; null esconde. */
+  definirItem(icone: string | null): void;
   aplicarPose(pose: Pose): void;
   /** Anima o braço (viewmodel): repouso discreto, golpe, colocação, balanço e troca. */
   atualizarVista(dt: number, vista: Vista): void;
@@ -102,9 +104,23 @@ export function criarBraco(scene: Scene, camera: TargetCamera, aparencia: Aparen
   miniatura.rotation.set(0.15, 0.75, 0.05);
   miniatura.scaling.setAll(1.35);
 
-  const malhas = [braco, miniatura];
+  // item plano na mão (ferramentas, comidas)
+  const itemPlano: Mesh = MeshBuilder.CreatePlane('braco-item', { size: 0.3 }, scene);
+  itemPlano.position.set(0.0, 0.12, TAM_BRACO[1] + 0.02);
+  itemPlano.rotation.set(0.1, -1.35, -0.35);
+  const matItem = new StandardMaterial('braco-item-material', scene);
+  matItem.specularColor = Color3.Black();
+  matItem.ambientColor = Color3.White();
+  matItem.backFaceCulling = false;
+  matItem.emissiveColor = new Color3(0.35, 0.35, 0.35);
+  matItem.useAlphaFromDiffuseTexture = true;
+  itemPlano.material = matItem;
+  const texturasItem = new Map<string, Texture>();
+  let iconeAtual: string | null = null;
+
+  const malhas = [braco, miniatura, itemPlano];
   for (const m of malhas) {
-    m.parent = m === braco || m === miniatura ? pivoBraco : camera;
+    m.parent = m === braco || m === miniatura || m === itemPlano ? pivoBraco : camera;
     m.isPickable = false;
     m.receiveShadows = false;
     m.renderingGroupId = GRUPO_BRACO;
@@ -127,6 +143,7 @@ export function criarBraco(scene: Scene, camera: TargetCamera, aparencia: Aparen
   function atualizarVisibilidade(): void {
     braco.setEnabled(visivel);
     miniatura.setEnabled(visivel && temBloco);
+    itemPlano.setEnabled(visivel && !temBloco && iconeAtual !== null);
   }
 
   function aplicarFaces(bloco: number): void {
@@ -231,6 +248,20 @@ export function criarBraco(scene: Scene, camera: TargetCamera, aparencia: Aparen
     definirBloco(blocoNaMao(slot));
   }
 
+  function definirItem(icone: string | null): void {
+    iconeAtual = icone;
+    if (icone) {
+      let t = texturasItem.get(icone);
+      if (!t) {
+        t = new Texture(icone, scene, true, true, Texture.NEAREST_SAMPLINGMODE);
+        t.hasAlpha = true;
+        texturasItem.set(icone, t);
+      }
+      matItem.diffuseTexture = t;
+    }
+    atualizarVisibilidade();
+  }
+
   function definirBloco(bloco: number | null): void {
     temBloco = bloco !== null && bloco !== 0;
     troca = 0;
@@ -252,6 +283,7 @@ export function criarBraco(scene: Scene, camera: TargetCamera, aparencia: Aparen
   return {
     definirSlot,
     definirBloco,
+    definirItem,
     aplicarPose,
     atualizarVista,
     definirBalanco(a) {
@@ -260,6 +292,7 @@ export function criarBraco(scene: Scene, camera: TargetCamera, aparencia: Aparen
     definirLuz(f) {
       matBraco.diffuseColor.set(f, f, f);
       matBloco.diffuseColor.set(f, f, f);
+      matItem.diffuseColor.set(f, f, f);
       const e = 0.12 * f;
       matBraco.emissiveColor.set(e, e * 0.92, e * 1.08);
       matBloco.emissiveColor.set(e, e * 0.92, e * 1.08);
