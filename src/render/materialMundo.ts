@@ -16,6 +16,9 @@ export class PluginMundo extends MaterialPluginBase {
   inverno = 0;
   /** Superfícies molhadas pela chuva (mais escuras e brilhantes). */
   molhado = 0;
+  /** Força do vento nas folhas (0 desliga; só no material sólido). */
+  ventoFolhas = 0;
+  tempoMundo = 0;
 
   constructor(material: Material) {
     super(material, 'Mundo', 210, { MUNDO: false });
@@ -52,7 +55,10 @@ export class PluginMundo extends MaterialPluginBase {
         { name: 'outono', size: 1, type: 'float' },
         { name: 'inverno', size: 1, type: 'float' },
         { name: 'molhado', size: 1, type: 'float' },
+        { name: 'ventoFolhas', size: 1, type: 'float' },
+        { name: 'tempoMundo', size: 1, type: 'float' },
       ],
+      vertex: 'uniform float ventoFolhas;\nuniform float tempoMundo;',
       fragment:
         'uniform vec3 corBruma;\nuniform float forcaBruma;\nuniform float luzBlocos;\nuniform float outono;\nuniform float inverno;\nuniform float molhado;',
     };
@@ -68,6 +74,8 @@ export class PluginMundo extends MaterialPluginBase {
     uniformBuffer.updateFloat('outono', this.outono);
     uniformBuffer.updateFloat('inverno', this.inverno);
     uniformBuffer.updateFloat('molhado', this.molhado);
+    uniformBuffer.updateFloat('ventoFolhas', this.ventoFolhas);
+    uniformBuffer.updateFloat('tempoMundo', this.tempoMundo);
   }
 
   override getCustomCode(shaderType: string): Record<string, string> | null {
@@ -75,6 +83,16 @@ export class PluginMundo extends MaterialPluginBase {
       return {
         CUSTOM_VERTEX_DEFINITIONS: 'attribute vec2 luz;\nvarying vec2 vLuzMundo;',
         CUSTOM_VERTEX_MAIN_END: 'vLuzMundo = luz;',
+        CUSTOM_VERTEX_UPDATE_POSITION: `
+          #ifdef VERTEXCOLOR
+          if (ventoFolhas > 0.0 && color.a < 0.99) {
+            float fase = tempoMundo * 1.3 + position.x * 0.45 + position.y * 0.3 + position.z * 0.37;
+            positionUpdated.x += sin(fase) * 0.045 * ventoFolhas;
+            positionUpdated.z += cos(fase * 1.21) * 0.04 * ventoFolhas;
+            positionUpdated.y += sin(fase * 0.7) * 0.015 * ventoFolhas;
+          }
+          #endif
+        `,
       };
     }
     if (shaderType !== 'fragment') return null;

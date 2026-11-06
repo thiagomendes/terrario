@@ -493,6 +493,8 @@ export function criarCena(
     const k = 1 - Math.exp(-dt / 20);
     outonoAtual += ((estacao === 'outono' ? 1 : 0) - outonoAtual) * k;
     invernoAtual += ((estacao === 'inverno' ? 1 : 0) - invernoAtual) * k;
+    mundoSolido.ventoFolhas = 1 + clima.estado.chuva * 1.5 + clima.estado.raios;
+    mundoSolido.tempoMundo = tempo;
     for (const m of [mundoSolido, mundoPlanta]) {
       m.outono = outonoAtual;
       m.inverno = invernoAtual * 0.9;
@@ -516,6 +518,8 @@ export function criarCena(
     estado.musica = contextoMusica;
     estado.precipitacao = precipitacao.ativas();
     precipitacao.atualizar(cameraVisao.position, clima.estado.chuva, nevando, jogadorCoberto);
+    const arborizado = b === 'floresta' || b === 'pantano' || b === 'taiga' || b === 'campos';
+    precipitacao.folhas(cameraVisao.position, arborizado && !jogadorCoberto ? 1 : 0, outonoAtual);
     ambiente?.definirChuva(nevando ? clima.estado.chuva * 0.25 : clima.estado.chuva);
     flash = Math.max(0, flash - dt * 6);
     pipeline.imageProcessing.exposure = 1.1 + flash * 2.2;
@@ -591,6 +595,8 @@ export function criarCena(
     dados.indices = b.indices;
     dados.applyToMesh(m);
     if (b.luz.length > 0) m.setVerticesData('luz', b.luz, false, 2);
+    // no sólido o alfa do vértice marca folhas (vento), não transparência
+    if (mat === matSolido) m.hasVertexAlpha = false;
     m.material = mat;
     m.position.set(cx * TAM_X, 0, cz * TAM_Z);
     m.freezeWorldMatrix();

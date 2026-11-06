@@ -75,7 +75,52 @@ export function criarPrecipitacao(scene: Scene) {
   neve.emitRate = 0;
   neve.start();
 
+  // folhas caindo das árvores (mais no outono)
+  const folhaTex = textura(scene, 'folha', (ctx) => {
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath();
+    ctx.ellipse(16, 16, 12, 6, Math.PI / 4, 0, Math.PI * 2);
+    ctx.fill();
+  });
+  const folhas = new ParticleSystem('folhas', 160, scene);
+  folhas.particleTexture = folhaTex;
+  folhas.emitter = new Vector3();
+  folhas.minEmitBox = new Vector3(-14, 4, -14);
+  folhas.maxEmitBox = new Vector3(14, 9, 14);
+  folhas.direction1 = new Vector3(-0.6, -0.4, -0.3);
+  folhas.direction2 = new Vector3(0.6, -0.8, 0.3);
+  folhas.minEmitPower = 0.6;
+  folhas.maxEmitPower = 1.2;
+  folhas.minLifeTime = 6;
+  folhas.maxLifeTime = 10;
+  folhas.minSize = 0.1;
+  folhas.maxSize = 0.18;
+  folhas.minAngularSpeed = -2;
+  folhas.maxAngularSpeed = 2;
+  folhas.blendMode = ParticleSystem.BLENDMODE_STANDARD;
+  folhas.emitRate = 0;
+  folhas.start();
+  let outonoFolhas = -1;
+
   return {
+    /** Folhas caindo: intensidade 0..1 e quanto de outono (cor). */
+    folhas(posicao: Vector3, intensidade: number, outono: number) {
+      (folhas.emitter as Vector3).copyFrom(posicao);
+      folhas.emitRate = intensidade * (4 + outono * 14);
+      const q = Math.round(outono * 10) / 10;
+      if (q !== outonoFolhas) {
+        outonoFolhas = q;
+        const verde = new Color4(0.32, 0.58, 0.22, 0.95);
+        const ocre = new Color4(0.9, 0.5, 0.15, 0.95);
+        folhas.color1 = Color4.Lerp(verde, ocre, q);
+        folhas.color2 = Color4.Lerp(
+          new Color4(0.4, 0.66, 0.26, 0.9),
+          new Color4(0.8, 0.32, 0.1, 0.9),
+          q,
+        );
+        folhas.colorDead = new Color4(folhas.color2.r, folhas.color2.g, folhas.color2.b, 0);
+      }
+    },
     ativas: () => ({
       chuva: chuva.getActiveCount(),
       neve: neve.getActiveCount(),

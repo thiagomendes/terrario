@@ -14,6 +14,8 @@ const TILE_TERRA = indiceDoTile('terra');
 /** Tabela de opacidade por id (laço quente da malha). */
 const OPACO_T = new Uint8Array(256);
 for (let i = 0; i < 256; i++) OPACO_T[i] = obterBloco(i)?.opaco ? 1 : 0;
+const FOLHAS_T = new Uint8Array(256);
+for (let i = 0; i < 256; i++) FOLHAS_T[i] = obterBloco(i)?.folhas ? 1 : 0;
 import { ALTURA, TAM_X, TAM_Z, indice } from '../world/chunk';
 
 const INSET_UV = 0.001;
@@ -244,7 +246,8 @@ export function gerarMalha(
       solido.posicoes.push(x + lx, y + ly, z + lz);
       solido.normais.push(f.n[0], f.n[1], f.n[2]);
       solido.uvs.push(...uvDoCanto(tile, ...uvLocal(f.n, lx, ly, lz)));
-      solido.cores.push(valor, valor, valor, 1);
+      // alfa < 1 marca folhas (balançam ao vento no shader)
+      solido.cores.push(valor, valor, valor, FOLHAS_T[id] ? 0.5 : 1);
       luzCanto(
         [
           [fx, fy, fz],
