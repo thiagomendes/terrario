@@ -2,6 +2,9 @@ import { defineConfig } from '@playwright/test';
 
 export default defineConfig({
   testDir: 'e2e',
+  // cada navegador desenha o 3D por software (SwiftShader), com muita CPU e mais de 1 GB:
+  // com 8 de uma vez a máquina virtual do WSL (8 GB) estoura e os testes perdem o prazo
+  workers: 3,
   outputDir: 'test-results',
   use: {
     baseURL: 'http://127.0.0.1:4173',
