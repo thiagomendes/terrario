@@ -213,9 +213,22 @@ function hexCor(c: string): [number, number, number] {
       ];
       const P = (x: number, y: number, z: number) =>
         iso([b[0] + x * sx, b[1] + y * sy, b[2] + z * sz], w, cx, cy);
-      poligono(img, [P(0, 1, 0), P(1, 1, 0), P(1, 1, 1), P(0, 1, 1)], tinta(1));
-      poligono(img, [P(1, 1, 0), P(1, 1, 1), P(1, 0, 1), P(1, 0, 0)], tinta(0.72));
-      poligono(img, [P(0, 1, 1), P(1, 1, 1), P(1, 0, 1), P(0, 0, 1)], tinta(0.86));
+      // profundidade pelo centro de cada face (observador em +x, +z e acima)
+      const prof = (x: number, y: number, z: number) =>
+        b[0] + x * sx + (b[2] + z * sz) + (b[1] + y * sy) * 0.8;
+      poligono(img, [P(0, 1, 0), P(1, 1, 0), P(1, 1, 1), P(0, 1, 1)], tinta(1), prof(0.5, 1, 0.5));
+      poligono(
+        img,
+        [P(1, 1, 0), P(1, 1, 1), P(1, 0, 1), P(1, 0, 0)],
+        tinta(0.72),
+        prof(1, 0.5, 0.5),
+      );
+      poligono(
+        img,
+        [P(0, 1, 1), P(1, 1, 1), P(1, 0, 1), P(0, 0, 1)],
+        tinta(0.86),
+        prof(0.5, 0.5, 1),
+      );
     }
   });
   salvarPng(img, 'criaturas.png');
