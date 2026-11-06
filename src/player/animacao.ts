@@ -10,6 +10,8 @@ export interface MovimentoAnimacao {
   velocidadeHoriz: number;
   correndo: boolean;
   noChao: boolean;
+  /** Voando no criativo (pernas juntas em vez da pose de pulo). */
+  voando?: boolean;
 }
 
 /** Estado contínuo para o braço em primeira pessoa (viewmodel). */
@@ -76,6 +78,7 @@ export function criarAnimador(): Animador {
         tempo,
         progressoColocar: a.progressoColocar,
         afundar: a.afundar,
+        voando: movimento.voando,
       });
       return atual;
     },

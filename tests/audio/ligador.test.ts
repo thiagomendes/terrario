@@ -8,6 +8,12 @@ import {
 } from '../../src/audio/ligador';
 import { criarMotorAudio } from '../../src/audio/motor';
 import { perfilDoSom } from '../../src/audio/sons';
+import {
+  VARIACOES_AMOSTRA,
+  sintetizarAmostra,
+  type EventoMaterial,
+} from '../../src/audio/amostras';
+import type { GrupoMaterial } from '../../src/audio/materiais';
 import { criarBarramento } from '../../src/player/eventos';
 import { Bloco } from '../../src/world/blocks';
 import { ContextoFalso, FonteFalsa, NoFalso } from './falso';
@@ -34,12 +40,35 @@ class ContextoSom extends ContextoFalso {
   createBiquadFilter() {
     return new FiltroFalso();
   }
+  buffers: Float32Array[] = [];
+  fontes: { buffer: unknown }[] = [];
   createBuffer(_c: number, n: number) {
-    return { getChannelData: () => new Float32Array(n) };
+    const d = new Float32Array(n);
+    this.buffers.push(d);
+    return { getChannelData: () => d, dados: d };
   }
   createBufferSource() {
-    return Object.assign(new FonteFalsa(), { buffer: null as unknown, loop: false });
+    const f = Object.assign(new FonteFalsa(), {
+      buffer: null as unknown,
+      loop: false,
+      playbackRate: { value: 1 },
+    });
+    this.fontes.push(f);
+    return f;
   }
+}
+
+/** A amostra tocada é a do material (alguma das variações) e não a de outro. */
+function tocouAmostra(ctx: ContextoSom, ev: EventoMaterial, grupo: GrupoMaterial): boolean {
+  const ultima = ctx.fontes[ctx.fontes.length - 1]?.buffer as { dados?: Float32Array } | undefined;
+  if (!ultima?.dados) return false;
+  for (let v = 0; v < VARIACOES_AMOSTRA; v++) {
+    const ref = sintetizarAmostra(ev, grupo, v, ctx.sampleRate);
+    if (ref.length === ultima.dados.length && ref.every((x, i) => x === ultima.dados![i])) {
+      return true;
+    }
+  }
+  return false;
 }
 
 async function preparar() {
@@ -58,27 +87,25 @@ function perto(freq: number, base: number) {
 }
 
 describe('ligarAudio', () => {
-  it('quebra de pedra usa a quebra de pedra, não a de madeira', async () => {
+  it('quebra de pedra usa a amostra de pedra, não a de madeira', async () => {
     const { ctx, barramento } = await preparar();
     barramento.emitir('quebra', { ...pos, bloco: Bloco.PEDRA_RACHADA });
-    const f = ctx.oscs[0].frequency.value;
-    expect(perto(f, perfilDoSom('quebra', 'pedra').frequencia)).toBe(true);
-    expect(perto(f, perfilDoSom('quebra', 'madeira').frequencia)).toBe(false);
+    expect(tocouAmostra(ctx, 'quebra', 'pedra')).toBe(true);
+    expect(tocouAmostra(ctx, 'quebra', 'madeira')).toBe(false);
   });
 
   it('colocação de madeira usa colocar de madeira', async () => {
     const { ctx, barramento } = await preparar();
     barramento.emitir('colocacao', { ...pos, bloco: Bloco.TABUAS });
-    const f = ctx.oscs[0].frequency.value;
-    expect(perto(f, perfilDoSom('colocar', 'madeira').frequencia)).toBe(true);
-    expect(perto(f, perfilDoSom('colocar', 'pedra').frequencia)).toBe(false);
+    expect(tocouAmostra(ctx, 'colocar', 'madeira')).toBe(true);
+    expect(tocouAmostra(ctx, 'colocar', 'pedra')).toBe(false);
   });
 
-  it('golpe, recusa e slot tocam uma voz cada', async () => {
+  it('golpe toca a amostra do material; recusa e slot, um tom cada', async () => {
     const { ctx, barramento } = await preparar();
     barramento.emitir('golpe', { ...pos, bloco: Bloco.TERRA_MUSGOSA });
-    expect(ctx.oscs).toHaveLength(1);
-    expect(perto(ctx.oscs[0].frequency.value, perfilDoSom('golpe', 'terra').frequencia)).toBe(true);
+    expect(tocouAmostra(ctx, 'golpe', 'terra')).toBe(true);
+    expect(ctx.oscs).toHaveLength(0);
     let n = ctx.oscs.length;
     barramento.emitir('recusa', { motivo: 'x' });
     expect(perto(ctx.oscs[n].frequency.value, perfilDoSom('recusa', 'pedra').frequencia)).toBe(

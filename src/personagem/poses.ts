@@ -20,6 +20,8 @@ export interface EntradaPose {
   progressoColocar?: number;
   /** Afundar do tronco 0..1 (pulo ou aterrissagem, opcional). */
   afundar?: number;
+  /** Voando no criativo: pernas juntas, levemente para trás, balançando devagar. */
+  voando?: boolean;
 }
 
 export interface Pose {
@@ -45,7 +47,12 @@ export function calcularPose(entrada: EntradaPose): Pose {
   let pernaEsquerda = 0 - balanco;
   let tronco = 0 - (entrada.afundar ?? 0) * AFUNDAR_MAXIMO;
   let cabeca = 0;
-  if (noAr) {
+  if (entrada.voando) {
+    // flutuando: pernas juntas, um pouco para trás, com um balanço lento e pequeno
+    const flutua = Math.sin(tempo * 1.8) * 0.06;
+    pernaDireita = 0.22 + flutua;
+    pernaEsquerda = 0.22 + flutua;
+  } else if (noAr) {
     pernaDireita = 0.3;
     pernaEsquerda = -0.3;
   }

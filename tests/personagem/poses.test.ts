@@ -83,3 +83,21 @@ describe('criarAcoes', () => {
     expect(p.tronco).toBeLessThan(-0.05);
   });
 });
+
+describe('pose de voo', () => {
+  it('voando, as pernas ficam juntas (não na pose de pulo)', () => {
+    for (const tempo of [0, 0.4, 1.3]) {
+      const p = calcularPose({
+        andando: false,
+        correndo: false,
+        noAr: true,
+        minerando: false,
+        colocando: false,
+        tempo,
+        voando: true,
+      });
+      expect(p.pernaDireita).toBeCloseTo(p.pernaEsquerda, 5);
+      expect(p.pernaDireita).toBeGreaterThan(0);
+    }
+  });
+});

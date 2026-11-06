@@ -1,3 +1,4 @@
+import { criarGradeFuncoes } from './atalhos';
 import { rotuloComIcone, type NomeIcone } from './pixicones';
 import {
   alternarTelaCheia,
@@ -58,6 +59,8 @@ export interface AcoesPausa {
   mundos(): void;
   salvar(): void;
   telaInicial(): void;
+  /** Abre uma função do jogo pelo código da tecla (grade de botões grandes). */
+  abrirFuncao?(codigo: string): void;
 }
 
 export function criarMenuPausa(raiz: HTMLElement, nomeMundo: string, acoes: AcoesPausa) {
@@ -121,10 +124,12 @@ export function criarMenuPausa(raiz: HTMLElement, nomeMundo: string, acoes: Acoe
     'data-pausa-continuar',
     'jogar',
   );
+  const grade = acoes.abrirFuncao ? [criarGradeFuncoes(acoes.abrirFuncao)] : [];
   card.append(
     h,
     m,
     continuar,
+    ...grade,
     dupla,
     botao('Salvar agora', '', acoes.salvar, 'data-pausa-salvar', 'salvar'),
     bTela,

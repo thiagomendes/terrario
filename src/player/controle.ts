@@ -112,6 +112,16 @@ export function criarControle(
     if (a) teclas[a] = true;
     if (e.code === 'Space' && !e.repeat) toquePulo();
   });
+  /** Aviso curto de como voar (as crianças não sabem os atalhos). */
+  function avisarVoo(voando: boolean): void {
+    const toque = document.body.classList.contains('toque-ativo');
+    const texto = voando
+      ? toque
+        ? 'Voo ligado · pular sobe · descer desce · dois toques em pular pousa'
+        : 'Voo ligado · Espaço sobe · Shift desce · Espaço duas vezes pousa'
+      : 'Voo desligado';
+    window.dispatchEvent(new CustomEvent('brumaluz:toast', { detail: texto }));
+  }
   /** Dois toques no pulo alternam o voo (só no criativo). */
   function toquePulo(): void {
     if (!podeVoar) return;
@@ -120,6 +130,7 @@ export function criarControle(
       jogador.voando = !jogador.voando;
       jogador.vy = 0;
       ultimoEspaco = -1;
+      avisarVoo(!!jogador.voando);
     } else {
       ultimoEspaco = agora;
     }

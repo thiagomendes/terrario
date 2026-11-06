@@ -1,3 +1,9 @@
+import {
+  EVENTOS_MATERIAL,
+  VARIACOES_AMOSTRA,
+  sintetizarAmostra,
+  type EventoMaterial,
+} from './amostras';
 import { criarGerador, criarVariador, jitter, type Gerador } from './variacao';
 import type { ContextoAudio, FonteAudio, GrupoAudio, MotorAudio, NoAudio } from './motor';
 import type { GrupoMaterial } from './materiais';
@@ -362,7 +368,86 @@ function batidaMaterial(
 
 const PENTATONICA = [293.66, 329.63, 369.99, 440, 493.88]; // ré, mi, fá#, lá, si
 
+/** Amostras PCM por contexto (geradas uma vez, na primeira vez que tocam). */
+const amostrasPorContexto = new WeakMap<object, Map<string, BufferSom>>();
+function bufferDaAmostra(
+  ctx: ContextoSintese,
+  ev: EventoMaterial,
+  grupo: GrupoMaterial,
+  variacao: number,
+): BufferSom {
+  let mapa = amostrasPorContexto.get(ctx);
+  if (!mapa) {
+    mapa = new Map();
+    amostrasPorContexto.set(ctx, mapa);
+  }
+  const k = `${ev}|${grupo}|${variacao}`;
+  let buf = mapa.get(k);
+  if (!buf) {
+    const taxa = ctx.sampleRate || 44100;
+    const dados = sintetizarAmostra(ev, grupo, variacao, taxa);
+    buf = ctx.createBuffer(1, dados.length, taxa);
+    buf.getChannelData(0).set(dados);
+    mapa.set(k, buf);
+  }
+  return buf;
+}
+
+/**
+ * Gera as amostras com antecedência, uma por vez em momentos ociosos (cada uma custa
+ * alguns ms): o primeiro golpe em cada material não engasga o quadro.
+ */
+export function aquecerAmostras(motor: MotorAudio, grupos: readonly GrupoMaterial[]): void {
+  const ctx = motor.contexto as ContextoSintese | null;
+  if (!ctx) return;
+  // primeiro os mais comuns (passos e golpes), depois o resto
+  const ordem: EventoMaterial[] = ['passo', 'golpe', 'quebra', 'colocar', 'aterrissagem', 'pulo'];
+  const fila: [EventoMaterial, GrupoMaterial, number][] = [];
+  for (let v = 0; v < VARIACOES_AMOSTRA; v++)
+    for (const ev of ordem) for (const g of grupos) fila.push([ev, g, v]);
+  const ocioso = (f: () => void) => {
+    const ric = (globalThis as { requestIdleCallback?: (cb: () => void, o?: unknown) => void })
+      .requestIdleCallback;
+    if (ric) ric(f, { timeout: 500 });
+    else setTimeout(f, 40);
+  };
+  const proximo = () => {
+    const item = fila.shift();
+    if (!item) return;
+    bufferDaAmostra(ctx, item[0], item[1], item[2]);
+    ocioso(proximo);
+  };
+  ocioso(proximo);
+}
+
+/**
+ * Sons de material (quebrar, golpear, pisar, colocar...) tocam amostras sintetizadas
+ * do material — cascalho, lascas, farfalhar — com leve variação de tom e volume.
+ */
+function desenharAmostra(par: ParametrosSom, evento: EventoMaterial, grupo: GrupoMaterial) {
+  return (ctxBase: ContextoAudio, destino: NoAudio): FonteAudio => {
+    const ctx = ctxBase as ContextoSintese;
+    const t0 = ctx.currentTime;
+    const out = ctx.createGain() as GanhoSom;
+    out.gain.value = par.ganho;
+    out.connect(destino);
+    const f = ctx.createBufferSource();
+    f.buffer = bufferDaAmostra(ctx, evento, grupo, par.variacao % VARIACOES_AMOSTRA);
+    f.loop = false;
+    // tom levemente diferente a cada vez (o perfil já sorteia a frequência)
+    const base = perfilDoSom(evento, grupo).frequencia;
+    const taxa = Math.max(0.82, Math.min(1.18, par.frequencia / base));
+    if (f.playbackRate) f.playbackRate.value = taxa;
+    f.connect(out);
+    f.start(t0);
+    return f;
+  };
+}
+
 function desenharSom(par: ParametrosSom, evento: EventoSom, grupo: GrupoMaterial) {
+  if ((EVENTOS_MATERIAL as readonly string[]).includes(evento)) {
+    return desenharAmostra(par, evento as EventoMaterial, grupo);
+  }
   return (ctxBase: ContextoAudio, destino: NoAudio): FonteAudio => {
     const ctx = ctxBase as ContextoSintese;
     const t0 = ctx.currentTime;

@@ -1,3 +1,4 @@
+import { CSS_ATALHOS, criarBarraAtalhos } from './atalhos';
 import type { Hotbar } from '../player/hotbar';
 import { criarBarra } from './barra';
 import { textoIndicador } from '../audio/ligador';
@@ -421,7 +422,27 @@ export function criarInterface(
       void opMundo.salvar?.();
       entrada.hidden = false;
     },
+    // botões grandes da pausa: abrem a função como se a tecla fosse apertada
+    abrirFuncao: (codigo) => {
+      pausa.fechar();
+      window.dispatchEvent(new KeyboardEvent('keydown', { code: codigo }));
+      // a câmera só alterna: volta direto ao jogo
+      if (codigo === 'KeyV') travarPonteiro(canvasJogo());
+    },
   });
+  // barra de atalhos do HUD (desktop): ícone e tecla de cada função
+  const estiloAtalhos = document.createElement('style');
+  estiloAtalhos.textContent = CSS_ATALHOS;
+  document.head.appendChild(estiloAtalhos);
+  const barraAtalhos = criarBarraAtalhos(app, (codigo) => {
+    if (codigo === 'Pausa') {
+      document.exitPointerLock?.();
+      window.dispatchEvent(new CustomEvent('brumaluz:pausar'));
+      return;
+    }
+    window.dispatchEvent(new KeyboardEvent('keydown', { code: codigo }));
+  });
+  opMundo.config?.ouvir((c) => barraAtalhos.definir(c.mostrarAtalhos));
   window.addEventListener('brumaluz:pausar', () => {
     if (!entrada.hidden || pausa.aberto) return;
     jogoIniciado = true;

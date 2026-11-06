@@ -109,6 +109,12 @@ const ABAS: Record<Aba, { titulo: string; itens: Def[] }> = {
         nome: 'Tela cheia ao jogar',
         dica: 'Ao clicar em Jogar, onde o navegador permite',
       },
+      {
+        tipo: 'bool',
+        chave: 'mostrarAtalhos',
+        nome: 'Barra de atalhos',
+        dica: 'Ícones com as teclas de cada função no canto da tela',
+      },
     ],
   },
   audio: {

@@ -152,8 +152,8 @@ import {
   manterAudioDesbloqueado,
   teclaParaMudo,
 } from '../audio/ligador';
-import { grupoDoBloco } from '../audio/materiais';
-import { iniciarAmbiente, tocarSom, type Ambiente } from '../audio/sons';
+import { grupoDoBloco, GRUPOS_MATERIAL } from '../audio/materiais';
+import { iniciarAmbiente, tocarSom, type Ambiente, aquecerAmostras } from '../audio/sons';
 import { blocoSobPes, criarDetectorMovimento } from '../player/movimento';
 import { VEL_ANDAR, VEL_CORRER } from '../player/fisica';
 import {
@@ -1236,6 +1236,7 @@ export function criarCena(
       velocidadeHoriz,
       correndo: corrida,
       noChao: j.noChao,
+      voando: !!j.voando,
     });
     const foto = !!estado.modoFoto?.ativo();
     // no modo foto o corpo aparece quando a câmera livre se afasta dos olhos
@@ -1690,6 +1691,7 @@ export function criarCena(
       await motorAudio.ativar();
       if (motorAudio.estado !== 'ativo') return;
       tocarSom(motorAudio, 'entrada');
+      aquecerAmostras(motorAudio, GRUPOS_MATERIAL);
       ambiente = iniciarAmbiente(motorAudio);
       if (configAtual)
         ambiente.definirVolumes(configAtual.volumeMusica, configAtual.volumeAmbiente);

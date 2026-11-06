@@ -24,6 +24,8 @@ export interface Config {
   legendas: boolean;
   /** Entrar em tela cheia ao clicar em Jogar (onde o navegador permite). */
   telaCheia: boolean;
+  /** Barra de atalhos com ícones e teclas no canto da tela (desktop). */
+  mostrarAtalhos: boolean;
 }
 
 export const CHAVE_CONFIG = 'brumaluz:config';
@@ -43,6 +45,7 @@ export const CONFIG_PADRAO: Config = {
   escalaInterface: 1,
   legendas: false,
   telaCheia: true,
+  mostrarAtalhos: true,
 };
 
 export const LIMITES = {
@@ -81,6 +84,7 @@ export function normalizarConfig(entrada: unknown): Config {
     escalaInterface: faixa(o.escalaInterface, ...LIMITES.escalaInterface, p.escalaInterface),
     legendas: bool(o.legendas, p.legendas),
     telaCheia: bool(o.telaCheia, p.telaCheia),
+    mostrarAtalhos: bool(o.mostrarAtalhos, p.mostrarAtalhos),
   };
 }
 
