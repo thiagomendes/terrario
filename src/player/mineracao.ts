@@ -1,18 +1,12 @@
 import { Bloco, REGISTRO_BLOCOS } from '../world/blocks';
 
-/** Segundos de mineração contínua por bloco. */
-export const DUREZA: Readonly<Record<number, number>> = {
-  [Bloco.GRAMA_ALTA]: 0,
-  [Bloco.FLOR]: 0,
-  [Bloco.COGUMELO_BRILHANTE]: 0,
-  [Bloco.FOLHAGEM]: 0.3,
-  [Bloco.TERRA_MUSGOSA]: 0.5,
-  [Bloco.AREIA_BRUMA]: 0.5,
-  [Bloco.TABUAS]: 0.9,
-  [Bloco.MADEIRA_RETORCIDA]: 1.1,
-  [Bloco.CRISTAL_LUZ]: 1.4,
-  [Bloco.PEDRA_RACHADA]: 1.6,
-};
+/** Segundos de mineração contínua por bloco, à mão (vem do registro). */
+export const DUREZA: Readonly<Record<number, number>> = Object.fromEntries(
+  REGISTRO_BLOCOS.filter((d) => d.id !== Bloco.AR && d.dureza !== undefined).map((d) => [
+    d.id,
+    d.dureza as number,
+  ]),
+);
 
 export const DURACAO_MAXIMA = 1.6;
 export const INTERVALO_GOLPE = 0.25;

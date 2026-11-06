@@ -120,8 +120,15 @@ describe('inventário', () => {
 
 describe('drops', () => {
   const rng = criarGerador(3);
-  it('blocos soltam a si mesmos e grama alta não solta nada', () => {
-    expect(dropsDoBloco(Bloco.PEDRA_RACHADA, rng)).toEqual([{ item: PEDRA, qtd: 1 }]);
+  it('blocos soltam a si mesmos, pedra vira pedregulho, grama vira terra e grama alta nada', () => {
+    expect(dropsDoBloco(Bloco.TABUAS, rng)).toEqual([{ item: idDoBloco(Bloco.TABUAS), qtd: 1 }]);
+    expect(dropsDoBloco(Bloco.PEDRA_RACHADA, rng)).toEqual([
+      { item: idDoBloco(Bloco.PEDREGULHO), qtd: 1 },
+    ]);
+    expect(dropsDoBloco(Bloco.TERRA_MUSGOSA, rng)).toEqual([
+      { item: idDoBloco(Bloco.TERRA), qtd: 1 },
+    ]);
+    expect(dropsDoBloco(Bloco.ROCHA_MATRIZ, rng)).toEqual([]);
     expect(dropsDoBloco(Bloco.GRAMA_ALTA, rng)).toEqual([]);
   });
 

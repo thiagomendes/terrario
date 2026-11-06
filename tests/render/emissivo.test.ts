@@ -53,7 +53,7 @@ describe('emissivo', () => {
 
   it('tiles não emissivos ficam pretos e o cristal continua azul', () => {
     for (const t of atlas.tiles) {
-      if (emissivos.includes(t.bloco)) continue;
+      if (t.emissivo || emissivos.includes(t.bloco)) continue;
       const w = atlas.largura;
       const ox = Math.round(t.uv.u0 * w);
       const oy = Math.round(t.uv.v0 * atlas.altura);

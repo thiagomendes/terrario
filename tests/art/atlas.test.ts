@@ -1,5 +1,15 @@
 import { describe, expect, it } from 'vitest';
-import { gerarAtlas, CELULA, COLUNAS, PADDING, TAM_TILE, LARGURA_ATLAS } from '../../src/art/atlas';
+import {
+  gerarAtlas,
+  CELULA,
+  COLUNAS,
+  LINHAS,
+  PADDING,
+  TAM_TILE,
+  LARGURA_ATLAS,
+} from '../../src/art/atlas';
+import { NOMES_TILES } from '../../src/art/tiles';
+import { REGISTRO_BLOCOS } from '../../src/world/blocks';
 import { Bloco } from '../../src/world/blocks';
 
 const atlas = gerarAtlas(1);
@@ -25,8 +35,9 @@ function interior(indice: number): number[][] {
 }
 
 describe('atlas', () => {
-  it('tem 10 tiles com UVs válidos e sem sobreposição', () => {
-    expect(atlas.tiles).toHaveLength(10);
+  it('um tile por nome, UVs válidos, sem sobreposição e todo bloco com faces', () => {
+    expect(atlas.tiles).toHaveLength(NOMES_TILES.length);
+    expect(NOMES_TILES.length).toBeLessThanOrEqual(COLUNAS * LINHAS);
     for (const t of atlas.tiles) {
       const { u0, v0, u1, v1 } = t.uv;
       expect(u0).toBeGreaterThanOrEqual(0);
@@ -35,15 +46,20 @@ describe('atlas', () => {
       expect(v1).toBeLessThanOrEqual(1);
       expect(u1).toBeGreaterThan(u0);
     }
-    for (let a = 0; a < 10; a++) {
-      for (let b = a + 1; b < 10; b++) {
+    for (let a = 0; a < atlas.tiles.length; a++) {
+      for (let b = a + 1; b < atlas.tiles.length; b++) {
         const A = atlas.tiles[a].uv;
         const B = atlas.tiles[b].uv;
         const separa = A.u1 <= B.u0 || B.u1 <= A.u0 || A.v1 <= B.v0 || B.v1 <= A.v0;
         expect(separa).toBe(true);
       }
     }
-    for (let id = 1; id <= 10; id++) expect(atlas.uvDoBloco(id)).toBeDefined();
+    for (const b of REGISTRO_BLOCOS) {
+      if (b.id === Bloco.AR) continue;
+      for (const f of ['topo', 'lado', 'base', 'frente'] as const) {
+        expect(atlas.uvDaFace(b.id, f), `${b.nome} ${f}`).toBeDefined();
+      }
+    }
   });
 
   it('é determinístico por semente', () => {

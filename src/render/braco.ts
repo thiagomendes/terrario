@@ -128,7 +128,7 @@ export function criarBraco(scene: Scene, camera: TargetCamera, aparencia: Aparen
   }
 
   function aplicarFaces(bloco: number): void {
-    const faces: FaceBloco[] = ['lado', 'lado', 'lado', 'lado', 'topo', 'base'];
+    const faces: FaceBloco[] = ['frente', 'lado', 'lado', 'lado', 'topo', 'base'];
     const faceUV = faces.map((f) => {
       const uv = atlas.uvDaFace(bloco, f) ?? atlas.uvDoBloco(bloco);
       return uv ? new Vector4(uv.u0, uv.v1, uv.u1, uv.v0) : new Vector4(0, 0, 1, 1);

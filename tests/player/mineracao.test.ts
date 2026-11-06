@@ -19,13 +19,14 @@ function passo(e: EstadoMineracao, dt: number, segurando: boolean, alvo: AlvoMin
 }
 
 describe('dureza', () => {
-  it('cobre todo bloco sólido ou planta, até 1,6 s', () => {
+  it('cobre todo bloco sólido ou planta (menos a rocha-matriz), até 3 s', () => {
     for (const d of REGISTRO_BLOCOS) {
-      if (d.solido || d.planta) {
+      if ((d.solido || d.planta) && d.id !== Bloco.ROCHA_MATRIZ) {
         expect(DUREZA[d.id], d.nome).toBeTypeOf('number');
-        expect(DUREZA[d.id]).toBeLessThanOrEqual(1.6);
+        expect(DUREZA[d.id]).toBeLessThanOrEqual(3);
       }
     }
+    expect(DUREZA[Bloco.ROCHA_MATRIZ]).toBeUndefined();
     expect(DUREZA[Bloco.PEDRA_RACHADA]).toBe(1.6);
     expect(DUREZA[Bloco.FOLHAGEM]).toBe(0.3);
     expect(DUREZA[Bloco.CRISTAL_LUZ]).toBe(1.4);

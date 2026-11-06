@@ -134,6 +134,7 @@ export interface EstadoDepuracao {
   selecionarSlot?: (i: number) => void;
   apontar?: (yaw: number, pitch: number) => void;
   bloco?: (x: number, y: number, z: number) => number;
+  definirBloco?: (x: number, y: number, z: number, b: number) => boolean;
   slotAtivo?: number;
   destaqueVisivel?: boolean;
   malhasAtivas?: number;
@@ -668,6 +669,7 @@ export function criarCena(
     j.vy = 0;
   };
   estado.bloco = blocoEm;
+  estado.definirBloco = (x, y, z, b) => editarBloco(x, y, z, b);
   estado.camera = {
     modo: () => estadoCamera.modo,
     alternar: () => {

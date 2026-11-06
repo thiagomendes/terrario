@@ -12,6 +12,7 @@ import {
 } from '../../src/player/fisica';
 import { acaoDaTecla, aplicarMouse, eixos, LIMITE_PITCH } from '../../src/player/entrada';
 import { ALTURA, TAM_X, TAM_Z, alturaTerreno, gerarChunk, indice } from '../../src/world/chunk';
+import { REGISTRO_BLOCOS } from '../../src/world/blocks';
 import { Bloco } from '../../src/world/blocks';
 import { criarEdicoes } from '../../src/world/edicoes';
 import { criarMundoSolido } from '../../src/player/controle';
@@ -117,7 +118,7 @@ describe('criarMundoSolido com blocos reais', () => {
       for (let z = 0; z < TAM_Z; z++)
         for (let x = 0; x < TAM_X; x++) {
           const b = real[indice(x, y, z)];
-          if (b >= Bloco.GRAMA_ALTA) expect(m(x, y, z)).toBe(false);
+          if (REGISTRO_BLOCOS[b]?.planta) expect(m(x, y, z)).toBe(false);
         }
   });
 });

@@ -3,10 +3,16 @@ import { Bloco, REGISTRO_BLOCOS } from '../../src/world/blocks';
 import { ALTURA, TAM_X, TAM_Z, gerarChunk } from '../../src/world/chunk';
 
 describe('registro', () => {
-  it('tem 7 blocos, 3 plantas e cristal emissivo', () => {
-    expect(REGISTRO_BLOCOS.filter((b) => b.id > 0 && !b.planta)).toHaveLength(7);
-    expect(REGISTRO_BLOCOS.filter((b) => b.planta)).toHaveLength(3);
+  it('índice igual ao id, plantas em cruz e emissivos com luz', () => {
+    REGISTRO_BLOCOS.forEach((b, i) => expect(b.id, b.nome).toBe(i));
+    expect(new Set(REGISTRO_BLOCOS.map((b) => b.nome)).size).toBe(REGISTRO_BLOCOS.length);
+    expect(REGISTRO_BLOCOS.filter((b) => b.planta).length).toBeGreaterThanOrEqual(3);
+    for (const b of REGISTRO_BLOCOS.filter((x) => x.planta)) expect(b.forma).toBe('cruz');
     expect(REGISTRO_BLOCOS[Bloco.CRISTAL_LUZ].emissivo).toBe(true);
+    for (const b of REGISTRO_BLOCOS.filter((x) => x.emissivo)) {
+      expect(b.luz ?? 0, b.nome).toBeGreaterThan(0);
+    }
+    expect(REGISTRO_BLOCOS[Bloco.TOCHA].luz).toBe(14);
   });
 });
 

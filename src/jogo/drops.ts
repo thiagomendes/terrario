@@ -9,14 +9,34 @@ export interface Drop {
 
 /** O que um bloco quebrado solta (sobrevivência). */
 export function dropsDoBloco(bloco: number, rng: Gerador): Drop[] {
+  const um = (b: number): Drop[] => [{ item: idDoBloco(b), qtd: 1 }];
   switch (bloco) {
     case Bloco.AR:
     case Bloco.GRAMA_ALTA:
+    case Bloco.ARBUSTO_SECO:
+    case Bloco.VIDRO:
+    case Bloco.GELO:
+    case Bloco.ROCHA_MATRIZ:
       return [];
+    case Bloco.PEDRA_RACHADA:
+      return um(Bloco.PEDREGULHO);
+    case Bloco.TERRA_MUSGOSA:
+    case Bloco.TERRA_NEVADA:
+      return um(Bloco.TERRA);
+    case Bloco.MUSGO_PANTANO:
+      return um(Bloco.LAMA);
+    case Bloco.PORTA_ABERTA:
+      return um(Bloco.PORTA);
+    case Bloco.FORNALHA_ACESA:
+      return um(Bloco.FORNALHA);
     case Bloco.FOLHAGEM:
-      return rng() < 0.2 ? [{ item: idDoBloco(Bloco.FOLHAGEM), qtd: 1 }] : [];
+    case Bloco.FOLHAS_BETULA:
+    case Bloco.FOLHAS_PINHO:
+    case Bloco.FOLHAS_LANTERNA:
+    case Bloco.FOLHAS_OUTONO:
+      return rng() < 0.2 ? um(bloco) : [];
     default:
-      return [{ item: idDoBloco(bloco), qtd: 1 }];
+      return um(bloco);
   }
 }
 

@@ -1,6 +1,8 @@
-import { obterBloco } from '../world/blocks';
-import { Bloco } from '../world/blocks';
-import { TILE_TERRA, TILE_TOPO, uvDaCelula } from '../art/atlas';
+import { Bloco, ehCruz, obterBloco } from '../world/blocks';
+import { uvDaCelula } from '../art/atlas';
+import { FACES_TILE, indiceDoTile } from '../art/tiles';
+
+const TILE_TERRA = indiceDoTile('terra');
 import { ALTURA, TAM_X, TAM_Z, indice } from '../world/chunk';
 
 const INSET_UV = 0.001;
@@ -42,9 +44,17 @@ const FACES: Face[] = [
   { n: [0, 0, -1], t1: [0, 1, 0], t2: [1, 0, 0] },
 ];
 
-/** Índice do tile no atlas para um bloco (blocos 1..10 usam tiles 0..9). */
+/** Índice do tile do lado de um bloco no atlas. */
 export function tileDoBloco(id: number): number {
-  return id - 1;
+  return FACES_TILE[id * 4 + 1];
+}
+
+/** Tile da face: topo (+y), base (-y), frente (+z) ou lado. */
+function tileDaFace(id: number, n: Vec): number {
+  if (n[1] > 0) return FACES_TILE[id * 4];
+  if (n[1] < 0) return FACES_TILE[id * 4 + 2];
+  if (n[2] > 0) return FACES_TILE[id * 4 + 3];
+  return FACES_TILE[id * 4 + 1];
 }
 
 /** Hash determinístico da posição, em [0, 1). */
@@ -136,10 +146,10 @@ export function gerarMalha(blocos: Uint8Array, vizinhos: Vizinhos = {}): MalhaCh
   }
 
   function adicionarFace(id: number, x: number, y: number, z: number, f: Face): void {
-    let tile = f.n[1] > 0 && TILE_TOPO[id] !== undefined ? TILE_TOPO[id] : tileDoBloco(id);
-    if (id === Bloco.TERRA_MUSGOSA && f.n[1] <= 0 && (f.n[1] < 0 || opaco(x, y + 1, z))) {
-      tile = TILE_TERRA;
-    }
+    let tile = tileDaFace(id, f.n);
+    const coberto = f.n[1] <= 0 && (f.n[1] < 0 || opaco(x, y + 1, z));
+    if (coberto && (id === Bloco.TERRA_MUSGOSA || id === Bloco.TERRA_NEVADA)) tile = TILE_TERRA;
+    if (coberto && id === Bloco.MUSGO_PANTANO) tile = FACES_TILE[Bloco.LAMA * 4 + 1];
     const base = solido.vertices;
     const ao: number[] = [];
     const fx = x + f.n[0];
@@ -176,12 +186,16 @@ export function gerarMalha(blocos: Uint8Array, vizinhos: Vizinhos = {}): MalhaCh
 
   function adicionarPlanta(id: number, x: number, y: number, z: number): void {
     const tile = tileDoBloco(id);
-    const altura =
-      id === Bloco.GRAMA_ALTA
+    const defP = obterBloco(id);
+    const fixo = defP?.forma === 'tocha' || !defP?.balanca;
+    const altura = fixo
+      ? 1
+      : id === Bloco.GRAMA_ALTA
         ? 0.5 + 0.35 * hashPosicao(x, y, z, 1)
         : 0.75 + 0.3 * hashPosicao(x, y, z, 1);
-    const escala = 0.8 + 0.4 * hashPosicao(x, y, z, 2);
-    const tom = 0.75 + 0.25 * hashPosicao(x, y, z, 3);
+    const escala = fixo ? 1 : 0.8 + 0.4 * hashPosicao(x, y, z, 2);
+    const tom = fixo ? 1 : 0.75 + 0.25 * hashPosicao(x, y, z, 3);
+    const peso = defP?.balanca ? 1 : 0;
     const a = 0.5 - 0.5 * escala;
     const b = 0.5 + 0.5 * escala;
     const planos: [Vec, Vec][] = [
@@ -213,7 +227,7 @@ export function gerarMalha(blocos: Uint8Array, vizinhos: Vizinhos = {}): MalhaCh
         plantas.uvs.push(...uvDoCanto(tile, s1, 1 - s2));
         const topo = s2 ? 1 : 0;
         const t = tom * (0.9 + 0.1 * topo);
-        plantas.cores.push(t, t * (0.95 + 0.05 * topo), tom, topo);
+        plantas.cores.push(t, t * (0.95 + 0.05 * topo), tom, topo * peso);
       });
       plantas.indices.push(base, base + 1, base + 2, base, base + 2, base + 3);
     }
@@ -226,7 +240,7 @@ export function gerarMalha(blocos: Uint8Array, vizinhos: Vizinhos = {}): MalhaCh
         if (id === 0) continue;
         const def = obterBloco(id);
         if (!def) continue;
-        if (def.planta) {
+        if (def.planta || ehCruz(id)) {
           adicionarPlanta(id, x, y, z);
           continue;
         }
@@ -234,7 +248,7 @@ export function gerarMalha(blocos: Uint8Array, vizinhos: Vizinhos = {}): MalhaCh
           const viz = ler(x + f.n[0], y + f.n[1], z + f.n[2]);
           const dv = obterBloco(viz);
           if (dv?.opaco) continue;
-          if (viz === id && !def.opaco && id !== Bloco.FOLHAGEM) continue;
+          if (viz === id && !def.opaco && !def.folhas) continue;
           adicionarFace(id, x, y, z, f);
         }
       }

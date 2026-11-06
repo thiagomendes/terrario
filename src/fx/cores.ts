@@ -1,4 +1,4 @@
-import { CELULA, COLUNAS, gerarAtlas, type Atlas } from '../art/atlas';
+import { TAM_TILE, gerarAtlas, type Atlas } from '../art/atlas';
 import { TETO_LUMINANCIA_EMISSIVA, luminancia } from '../render/emissivo';
 import { obterBloco } from '../world/blocks';
 
@@ -9,16 +9,16 @@ export function corMediaDoBloco(id: number, atlas?: Atlas): [number, number, num
   const def = obterBloco(id);
   if (!def || !(def.solido || def.planta)) return undefined;
   const a = atlas ?? (atlasPadrao ??= gerarAtlas());
-  const tile = a.tiles.find((t) => t.bloco === id);
-  if (!tile) return undefined;
-  const ox = (tile.indice % COLUNAS) * CELULA;
-  const oy = Math.floor(tile.indice / COLUNAS) * CELULA;
+  const uv = a.uvDaFace(id, 'lado');
+  if (!uv) return undefined;
+  const ox = Math.round(uv.u0 * a.largura);
+  const oy = Math.round(uv.v0 * a.altura);
   let r = 0;
   let g = 0;
   let b = 0;
   let n = 0;
-  for (let y = 0; y < CELULA; y++) {
-    for (let x = 0; x < CELULA; x++) {
+  for (let y = 0; y < TAM_TILE; y++) {
+    for (let x = 0; x < TAM_TILE; x++) {
       const i = ((oy + y) * a.largura + ox + x) * 4;
       if (a.pixels[i + 3] < 128) continue;
       r += a.pixels[i];

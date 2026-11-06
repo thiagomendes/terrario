@@ -35,7 +35,7 @@ export function gerarChunk(cx: number, cz: number, semente: number = SEMENTE_PAD
         } else if (y === h) {
           b = Bloco.TERRA_MUSGOSA;
         } else if (y >= h - 3) {
-          b = Bloco.TERRA_MUSGOSA;
+          b = Bloco.TERRA;
         }
         blocos[indice(x, y, z)] = b;
       }

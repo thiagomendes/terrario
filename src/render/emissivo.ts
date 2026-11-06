@@ -9,14 +9,15 @@ export function luminancia(r: number, g: number, b: number): number {
 }
 
 /**
- * Mapa emissivo RGBA: copia só os tiles dos blocos emissivos, limitando a
- * luminância ao teto e preservando o matiz. O resto fica preto.
+ * Mapa emissivo RGBA: copia os pixels saturados dos tiles emissivos (ou dos
+ * blocos listados), limitando a luminância ao teto e preservando o matiz.
+ * O resto fica preto.
  */
-export function construirMapaEmissivo(atlas: Atlas, emissivos: number[]): Uint8ClampedArray {
+export function construirMapaEmissivo(atlas: Atlas, emissivos: number[] = []): Uint8ClampedArray {
   const saida = new Uint8ClampedArray(atlas.pixels.length);
   for (let i = 3; i < saida.length; i += 4) saida[i] = 255;
   for (const tile of atlas.tiles) {
-    if (!emissivos.includes(tile.bloco)) continue;
+    if (!tile.emissivo && !emissivos.includes(tile.bloco)) continue;
     const ox = (tile.indice % COLUNAS) * CELULA;
     const oy = Math.floor(tile.indice / COLUNAS) * CELULA;
     for (let y = 0; y < CELULA; y++) {
@@ -26,6 +27,7 @@ export function construirMapaEmissivo(atlas: Atlas, emissivos: number[]): Uint8C
         const r = atlas.pixels[i];
         const g = atlas.pixels[i + 1];
         const b = atlas.pixels[i + 2];
+        if (Math.max(r, g, b) - Math.min(r, g, b) < 50) continue;
         const l = luminancia(r, g, b);
         const f = l > TETO_LUMINANCIA_EMISSIVA ? TETO_LUMINANCIA_EMISSIVA / l : 1;
         saida[i] = Math.floor(r * f);
