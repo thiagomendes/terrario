@@ -1,4 +1,5 @@
 import { tema } from '../temas/ativo';
+import { tocarVoz } from '../audio/sons';
 import { construirMapaEmissivo } from './emissivo';
 import { Engine } from '@babylonjs/core/Engines/engine';
 import { Scene } from '@babylonjs/core/scene';
@@ -1091,6 +1092,7 @@ export function criarCena(
           new CustomEvent('brumaluz:toast', { detail: 'A raposa-lume confia em você!' }),
         );
         window.dispatchEvent(new CustomEvent('brumaluz:domou'));
+        tocarVoz(motorAudio, naMira.tipo, 'contente', 1);
       }
       return;
     }
@@ -1958,8 +1960,10 @@ export function criarCena(
         controle.jogador.vy = 4.5;
       } else if (ev.tipo === 'ferida') {
         tocarSom(motorAudio, 'golpe', c.tipo === 'espectro' ? 'cristal' : 'terra');
+        tocarVoz(motorAudio, c.tipo, 'susto', volumeDaDistancia(c));
       } else if (ev.tipo === 'morte') {
-        if (c.tipo === 'espectro') tocarSom(motorAudio, 'espectro');
+        if (c.tipo === 'espectro' && temaAtual.id === 'bruma-e-luz') tocarSom(motorAudio, 'espectro');
+        else if (c.tipo === 'espectro') tocarVoz(motorAudio, 'espectro', 'susto', 1);
         else tocarSom(motorAudio, 'quebra', 'folhagem');
         for (const d of ev.drops ?? [])
           mundoItens.soltar(d.item, d.qtd, c.x, c.y + 0.5, c.z, rngDrops);
@@ -1969,7 +1973,9 @@ export function criarCena(
         ev.tipo === 'som' &&
         Math.hypot(c.x - camera.position.x, c.z - camera.position.z) < 20
       ) {
-        tocarSom(motorAudio, 'espectro');
+        // o gemido de sempre no Bruma e Luz; nos outros temas, a voz da noturna do tema
+        if (temaAtual.id === 'bruma-e-luz') tocarSom(motorAudio, 'espectro');
+        else tocarVoz(motorAudio, 'espectro', 'chamado', Math.max(0.4, volumeDaDistancia(c)));
         const a = Math.atan2(c.x - camera.position.x, c.z - camera.position.z) - camera.rotation.y;
         const rel = Math.atan2(Math.sin(a), Math.cos(a));
         const lado =
@@ -1984,6 +1990,24 @@ export function criarCena(
       }
     }
   }
+  /** Volume da voz pela distância (some a 24 blocos). */
+  const volumeDaDistancia = (c: { x: number; y: number; z: number }) => {
+    const d = Math.hypot(c.x - camera.position.x, c.y - camera.position.y, c.z - camera.position.z);
+    return Math.max(0, 1 - d / 24);
+  };
+  // chamados de vez em quando: no máximo um a cada poucos segundos, de um bicho por perto
+  let esperaChamado = 4;
+  const chamadosCriaturas = (dt: number) => {
+    esperaChamado -= dt;
+    if (esperaChamado > 0) return;
+    esperaChamado = 5 + rngDrops() * 9;
+    const perto = populacao.lista.filter(
+      (c) => c.estado !== 'morrendo' && c.tipo !== 'espectro' && volumeDaDistancia(c) > 0.25,
+    );
+    if (perto.length === 0) return;
+    const c = perto[Math.floor(rngDrops() * perto.length)];
+    tocarVoz(motorAudio, c.tipo, c.domada ? 'contente' : 'chamado', volumeDaDistancia(c));
+  };
   quadroCriaturas = (dt: number, tempo: number) => {
     relogioCache += dt;
     const j = controle.jogador;
@@ -1995,6 +2019,7 @@ export function criarCena(
       noite,
     );
     tratarEventosCriaturas(ev);
+    chamadosCriaturas(dt);
     perigoPerto =
       modo === 'sobrevivencia' &&
       populacao.lista.some(

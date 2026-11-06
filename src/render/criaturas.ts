@@ -11,7 +11,6 @@ import { tema } from '../temas/ativo';
 
 type Peca = PecaCriatura;
 
-
 interface Modelo {
   raiz: TransformNode;
   partes: { no: TransformNode; malha: Mesh; peca: Peca }[];
@@ -68,9 +67,17 @@ export function criarRenderCriaturas(
     const partes = tema().criaturas[c.tipo].map((peca, i) => {
       const no = new TransformNode(`criatura-${c.id}-${i}`, scene);
       no.parent = raiz;
-      // pivô: pernas no topo, cabeça na base do pescoço
-      const pivoY = peca.papel?.startsWith('perna') ? peca.p[1] + peca.t[1] / 2 : peca.p[1];
-      no.position.set(peca.p[0], pivoY, peca.p[2]);
+      // pivô: pernas no topo, antenas na base, asas na borda de dentro, o resto no centro
+      const papel = peca.papel;
+      const pivoY = papel?.startsWith('perna')
+        ? peca.p[1] + peca.t[1] / 2
+        : papel === 'antena'
+          ? peca.p[1] - peca.t[1] / 2
+          : peca.p[1];
+      const pivoX = papel?.startsWith('asa')
+        ? peca.p[0] - Math.sign(peca.p[0] || (papel === 'asa0' ? 1 : -1)) * (peca.t[0] / 2)
+        : peca.p[0];
+      no.position.set(pivoX, pivoY, peca.p[2]);
       const malha = MeshBuilder.CreateBox(
         `criatura-${c.id}-${i}-m`,
         { width: peca.t[0], height: peca.t[1], depth: peca.t[2] },
@@ -78,6 +85,7 @@ export function criarRenderCriaturas(
       );
       malha.parent = no;
       malha.position.y = peca.p[1] - pivoY;
+      malha.position.x = peca.p[0] - pivoX;
       malha.material = material(peca);
       malha.isPickable = false;
       if ((peca.brilho ?? 0) > 0.6) incluirNoGlow(malha);
@@ -113,9 +121,14 @@ export function criarRenderCriaturas(
         const ampAlvo = c.noChao ? Math.min(0.7, m.vel * 0.25) : 0;
         m.amp += (ampAlvo - m.amp) * Math.min(1, dt * 10);
         const balanco = Math.sin(m.fase) * m.amp;
-        const flutua = c.tipo === 'espectro' ? 0.12 + Math.sin(tempo * 2 + c.id) * 0.08 : 0;
-        m.raiz.position.set(c.x, c.y + flutua, c.z);
+        const mov = tema().movimento[c.tipo];
+        const andando = Math.min(1, m.amp * 2);
+        const flutua =
+          mov.flutua > 0 ? mov.flutua * 1.5 + Math.sin(tempo * 2 + c.id) * mov.flutua : 0;
+        const pulinho = mov.saltita * Math.abs(Math.sin(m.fase)) * andando;
+        m.raiz.position.set(c.x, c.y + flutua + pulinho, c.z);
         m.raiz.rotation.y = c.yaw;
+        if (c.estado !== 'morrendo') m.raiz.rotation.z = Math.sin(m.fase) * mov.ginga * andando;
         const morrer =
           c.estado === 'morrendo' ? c.dissolver : c.tipo === 'espectro' ? c.dissolver : 0;
         const escala = 1 - morrer * 0.8;
@@ -140,6 +153,19 @@ export function criarRenderCriaturas(
               break;
             case 'cauda':
               p.no.rotation.y = Math.sin(tempo * (c.tipo === 'peixe' ? 9 : 4) + c.id) * 0.35;
+              break;
+            case 'roda':
+              p.no.rotation.x = m.fase * 1.6;
+              break;
+            case 'asa0':
+              p.no.rotation.z = Math.sin(tempo * 9 + c.id) * 0.6;
+              break;
+            case 'asa1':
+              p.no.rotation.z = -Math.sin(tempo * 9 + c.id) * 0.6;
+              break;
+            case 'antena':
+              p.no.rotation.z = Math.sin(tempo * 2.5 + c.id) * 0.16;
+              p.no.rotation.x = Math.sin(tempo * 1.7 + c.id * 2) * 0.1 + balanco * 0.3;
               break;
           }
           p.malha.renderOverlay = c.ferida > 0;

@@ -4,6 +4,7 @@ import { textosOriginais } from '../originais';
 import type { Tema } from '../tipos';
 import { CRIATURAS_BRUMA } from './criaturas';
 import { MUNDO_BRUMA } from './mundo';
+import { MOVIMENTO_BRUMA, VOZES_BRUMA } from './vozes';
 
 let base: Tema | null = null;
 
@@ -62,7 +63,10 @@ export function temaBase(): Tema {
       folhas: [0.32, 0.58, 0.22],
       poeira: [150 / 255, 140 / 255, 130 / 255],
     },
+    climaVisual: { chuva: 'gotas', neve: true, relampago: true, arcoIris: true },
     criaturas: CRIATURAS_BRUMA,
+    movimento: MOVIMENTO_BRUMA,
+    vozes: VOZES_BRUMA,
     mundo: MUNDO_BRUMA,
     musica: {
       timbre: { onda: 'triangle', brilho: 1, sustentacao: 1, coro: 0 },

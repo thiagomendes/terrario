@@ -5,9 +5,11 @@ import {
   type EventoMaterial,
 } from './amostras';
 import { criarGerador, criarVariador, jitter, type Gerador } from './variacao';
-import type { ContextoAudio, FonteAudio, GrupoAudio, MotorAudio, NoAudio } from './motor';
+import type { ContextoAudio, Desenho, FonteAudio, GrupoAudio, MotorAudio, NoAudio } from './motor';
 import type { GrupoMaterial } from './materiais';
 import { tema } from '../temas/ativo';
+import type { PioCriatura, VozCriatura } from '../temas/tipos';
+import type { TipoCriatura } from '../jogo/criaturas';
 
 export type EventoSom =
   | 'golpe'
@@ -614,6 +616,89 @@ export function tocarSom(
   const par = parametrosVariados(perfil, variadorDe(evento, grupo)(), rngSom);
   const ok = motor.tocar(desenharSom(par, evento, grupo), { grupo: perfil.grupoAudio });
   return ok ? par : null;
+}
+
+/**
+ * Voz de criatura do tema: varreduras de tom repetidas, com vibrato e sopro opcionais.
+ * `volume` 0..1 (distância) e variação leve de tom a cada vez.
+ */
+export function desenharVoz(pio: PioCriatura, volume: number, variacao: number): Desenho {
+  return (ctxBase, destino) => {
+    const ctx = ctxBase as ContextoSintese;
+    const t0 = ctx.currentTime;
+    const out = ctx.createGain() as GanhoSom;
+    out.gain.value = 0.22 * volume * (pio.ganho ?? 1);
+    out.connect(destino);
+    const k = 1 + (variacao - 0.5) * 0.08;
+    // ondas ricas soam mais alto: compensa
+    const g = pio.onda === 'sine' ? 1 : pio.onda === 'triangle' ? 0.85 : 0.4;
+    const pecas: Peca[] = [];
+    for (let r = 0; r < Math.max(1, pio.repeticoes); r++) {
+      const t = t0 + r * (pio.dur + pio.intervalo);
+      const o = ctx.createOscillator();
+      o.type = pio.onda;
+      definir(o.frequency, pio.de * k, t);
+      if (pio.vibrato && pio.vibrato > 0) {
+        // vibrato em degraus de rampa (funciona em qualquer contexto)
+        const passos = Math.max(2, Math.floor(pio.dur * pio.vibrato * 2));
+        for (let j = 1; j <= passos; j++) {
+          const u = j / passos;
+          const f = (pio.de + (pio.ate - pio.de) * u) * k * (1 + (j % 2 ? 0.025 : -0.025));
+          rampa(o.frequency, f, t + u * pio.dur);
+        }
+      } else rampaExp(o.frequency, pio.ate * k, t + pio.dur);
+      const ge = ctx.createGain() as GanhoSom;
+      ge.gain.value = 0;
+      definir(ge.gain, 0.0001, t);
+      rampa(ge.gain, g, t + Math.min(0.02, pio.dur * 0.2));
+      rampa(ge.gain, g * 0.7, t + pio.dur * 0.7);
+      rampa(ge.gain, 0.0001, t + pio.dur);
+      o.connect(ge);
+      ge.connect(out);
+      o.start(t);
+      o.stop(t + pio.dur + 0.03);
+      pecas.push({ fonte: o, fim: t + pio.dur + 0.03 });
+      if (pio.ruido && pio.ruido > 0)
+        pecas.push(
+          ruido(
+            ctx,
+            out,
+            t,
+            'bandpass',
+            (pio.de + pio.ate) * 0.5 * k,
+            1.2,
+            pio.ruido * 0.8,
+            pio.dur * 0.9,
+            0.01,
+          ),
+        );
+    }
+    const ultima = pecas.reduce((a, b) => (b.fim > a.fim ? b : a));
+    for (const p of pecas) {
+      if (p === ultima) continue;
+      p.fonte.onended = () => {
+        try {
+          p.fonte.disconnect();
+        } catch {
+          // já desconectado
+        }
+      };
+    }
+    return ultima.fonte;
+  };
+}
+
+/** Toca a voz de uma criatura do tema ativo (chamado, susto ou contente). */
+export function tocarVoz(
+  motor: MotorAudio,
+  tipo: TipoCriatura,
+  momento: keyof VozCriatura,
+  volume = 1,
+): boolean {
+  if (motor.estado !== 'ativo' || volume <= 0.02) return false;
+  const pio = tema().vozes[tipo]?.[momento];
+  if (!pio) return false;
+  return motor.tocar(desenharVoz(pio, Math.min(1, volume), rngSom()), { grupo: 'efeitos' });
 }
 
 export interface Ambiente {

@@ -1,8 +1,7 @@
-import { definirEstiloMundo } from '../world/chunk';
-import { definirTemaAtivo } from './ativo';
 import { obterTema } from './index';
-import { aplicarTextos } from './originais';
+import { ativarTemaPuro } from './ativarPuro';
 import type { Tema } from './tipos';
+import './todos';
 
 /**
  * Ativa o tema do mundo antes de criar a cena: aparência (atlas, céu, água, criaturas),
@@ -10,9 +9,7 @@ import type { Tema } from './tipos';
  */
 export function ativarTema(id: string | undefined | null): Tema {
   const t = obterTema(id);
-  definirTemaAtivo(t);
-  aplicarTextos(t.textos);
-  definirEstiloMundo(t.mundo);
+  ativarTemaPuro(t);
   document.documentElement.dataset.tema = t.id;
   document.documentElement.style.setProperty('--acento-tema', t.cores.acento);
   return t;

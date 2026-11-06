@@ -104,6 +104,17 @@ export interface ParticulasTema {
   poeira: Rgb;
 }
 
+/** Como o clima aparece no tema (o clima em si — quando chove, neva — não muda). */
+export interface ClimaVisualTema {
+  /** Chuva: gotas, poeira que cai devagar (Lua), granulado colorido (doces) ou nada visível. */
+  chuva: 'gotas' | 'poeira' | 'granulado' | 'nenhuma';
+  /** Flocos e topo branco no inverno. */
+  neve: boolean;
+  /** Clarão de relâmpago nas tempestades. */
+  relampago: boolean;
+  arcoIris: boolean;
+}
+
 /** Peça de criatura: tamanho [w, h, d], posição do centro (pés na origem, frente +z). */
 export interface PecaCriatura {
   t: [number, number, number];
@@ -111,7 +122,48 @@ export interface PecaCriatura {
   cor: string;
   brilho?: number;
   alfa?: number;
-  papel?: 'perna0' | 'perna1' | 'cabeca' | 'cauda';
+  /**
+   * Como a peça anima: pernas balançam (pivô no topo), cabeça acena, cauda abana;
+   * roda gira com o deslocamento; asa0/asa1 batem espelhadas (pivô na borda de dentro);
+   * antena balança devagar (pivô na base).
+   */
+  papel?: 'perna0' | 'perna1' | 'cabeca' | 'cauda' | 'roda' | 'asa0' | 'asa1' | 'antena';
+}
+
+/** Jeito de se mover da criatura (só visual). */
+export interface MovimentoCriatura {
+  /** Altura dos pulinhos ao andar (coelho, gelatina). */
+  saltita: number;
+  /** Flutua parada no ar (amplitude; a noturna do Bruma e Luz usa 0.08). */
+  flutua: number;
+  /** Ginga o corpo de lado ao andar (0 a 0.3). */
+  ginga: number;
+}
+
+/** Um som curto sintetizado: varredura de tom com repetições (pio, grunhido, bipe). */
+export interface PioCriatura {
+  onda: 'sine' | 'triangle' | 'square' | 'sawtooth';
+  /** Tom inicial e final (Hz). */
+  de: number;
+  ate: number;
+  /** Duração de cada repetição (s). */
+  dur: number;
+  repeticoes: number;
+  /** Tempo entre repetições (s). */
+  intervalo: number;
+  /** Vibrato (Hz; 0 = nenhum). */
+  vibrato?: number;
+  /** 0..1: sopro/chiado misturado (grunhido, ronco, chiado de rádio). */
+  ruido?: number;
+  /** Volume relativo (padrão 1). */
+  ganho?: number;
+}
+
+/** Vozes da criatura: chamado de vez em quando, susto ao levar golpe e contentamento. */
+export interface VozCriatura {
+  chamado: PioCriatura;
+  susto: PioCriatura;
+  contente: PioCriatura;
 }
 
 export type FormaArvore =
@@ -240,8 +292,11 @@ export interface Tema {
   agua: AguaTema;
   bruma: BrumaTema;
   particulas: ParticulasTema;
+  climaVisual: ClimaVisualTema;
   /** Modelos (pele) das criaturas: mesmas caixas de colisão, forma e cor do tema. */
   criaturas: Record<TipoCriatura, PecaCriatura[]>;
+  movimento: Record<TipoCriatura, MovimentoCriatura>;
+  vozes: Record<TipoCriatura, VozCriatura>;
   mundo: EstiloMundo;
   musica: {
     timbre: TimbreMusica;

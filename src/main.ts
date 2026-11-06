@@ -38,7 +38,9 @@ async function iniciar(app: HTMLElement): Promise<void> {
   mundo ??= await repo.criar('Meu primeiro mundo', SEMENTE_PADRAO_MUNDO, 'criativo');
   const dados = await repo.carregar(mundo.id);
   // o tema do mundo vale para a página inteira: aparência, nomes e terreno
-  const temaMundo = ativarTema(mundo.tema);
+  // ?tema=<id> mostra o mundo em outro tema sem salvar a troca (prévia e capturas)
+  const temaPrevia = new URLSearchParams(location.search).get('tema');
+  const temaMundo = ativarTema(temaPrevia && temaExiste(temaPrevia) ? temaPrevia : mundo.tema);
   if (mundo.tema && !temaExiste(mundo.tema))
     setTimeout(() => notificar(`Tema desconhecido: este mundo abriu como ${temaMundo.nome}`), 1500);
 
