@@ -21,6 +21,7 @@ export function executarInteracao(acao: AcaoInteracao, ctx: ContextoInteracao): 
   if (acao === 'quebrar') {
     return editar(alvo.x, alvo.y, alvo.z, Bloco.AR);
   }
+  if (ctx.blocoAtivo === Bloco.AR) return false;
   const p = posicaoColocacao(alvo);
   if (colocacaoBloqueada(p, ctx.jogador)) return false;
   return editar(p.x, p.y, p.z, ctx.blocoAtivo);

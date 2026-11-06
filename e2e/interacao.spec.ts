@@ -66,9 +66,9 @@ test('interação por ganchos: apontar, quebrar, colocar e trocar slot', async (
   const noPe = await page.evaluate(() => window.__brumaluz!.interagir!('colocar'));
   expect(noPe).toBe(false);
 
-  // Teclas 1 a 6.
+  // Teclas 1 a 9.
   const botoes = page.locator('[role="toolbar"] [data-slot]');
-  for (let i = 0; i < 6; i++) {
+  for (let i = 0; i < 9; i++) {
     await page.keyboard.press(`Digit${i + 1}`);
     await expect(botoes.nth(i)).toHaveAttribute('aria-pressed', 'true');
     expect(await page.evaluate(() => window.__brumaluz!.slotAtivo)).toBe(i);
@@ -83,8 +83,8 @@ test('interação por ganchos: apontar, quebrar, colocar e trocar slot', async (
   await page.mouse.wheel(0, -100);
   await expect(botoes.nth(0)).toHaveAttribute('aria-pressed', 'true');
   await page.mouse.wheel(0, -100);
-  await expect(botoes.nth(5)).toHaveAttribute('aria-pressed', 'true');
-  expect(await page.evaluate(() => window.__brumaluz!.slotAtivo)).toBe(5);
+  await expect(botoes.nth(8)).toHaveAttribute('aria-pressed', 'true');
+  expect(await page.evaluate(() => window.__brumaluz!.slotAtivo)).toBe(8);
 
   expect(erros, erros.join('\n')).toEqual([]);
 });

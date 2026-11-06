@@ -1,5 +1,5 @@
-import { atlasParaCanvas, gerarAtlas, TAM_TILE } from '../art/atlas';
 import { criarHotbar, deltaRodaParaPasso, teclaParaSlot, type Hotbar } from '../player/hotbar';
+import { iconeDoItem } from './icones';
 
 const CSS = `
 .barra {
@@ -50,6 +50,33 @@ const CSS = `
   image-rendering: pixelated;
   filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.45));
 }
+.barra .qtd {
+  position: absolute;
+  right: 4px;
+  bottom: 1px;
+  color: #fff;
+  font: 800 0.78rem system-ui, sans-serif;
+  text-shadow: 1px 1px 0 #000, -1px -1px 0 rgba(0,0,0,0.6);
+}
+body[data-modo='criativo'] .barra .qtd { display: none; }
+.barra .icone[src=''] { visibility: hidden; }
+.nome-item {
+  position: fixed;
+  left: 50%;
+  bottom: calc(max(12px, env(safe-area-inset-bottom)) + 74px);
+  transform: translateX(-50%);
+  padding: 4px 12px;
+  border-radius: 8px;
+  background: rgba(10, 12, 20, 0.55);
+  color: #fff;
+  font: 700 0.9rem system-ui, sans-serif;
+  text-shadow: 1px 1px 0 #000;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  z-index: 10;
+}
+.nome-item.visivel { opacity: 1; }
 .barra .numero {
   position: absolute;
   top: 1px;
@@ -61,99 +88,61 @@ const CSS = `
 }
 `;
 
-/** Desenha o bloco em perspectiva isométrica (topo e dois lados sombreados). */
-function desenharIsometrico(
-  ctx: CanvasRenderingContext2D,
-  fonte: HTMLCanvasElement,
-  faces: { topo: [number, number]; lado: [number, number] },
-  tam: number,
-  planta: boolean,
-): void {
-  const T = TAM_TILE;
-  ctx.imageSmoothingEnabled = false;
-  if (planta) {
-    ctx.drawImage(
-      fonte,
-      faces.lado[0],
-      faces.lado[1],
-      T,
-      T,
-      tam * 0.1,
-      tam * 0.1,
-      tam * 0.8,
-      tam * 0.8,
-    );
-    return;
-  }
-  const a = tam / 2;
-  const q = tam / 4;
-  const sombra = (f: number) => {
-    ctx.fillStyle = `rgba(0,0,0,${f})`;
-    ctx.fillRect(0, 0, T, T);
-  };
-  // topo: losango
-  ctx.save();
-  ctx.setTransform(a / T, q / T, -a / T, q / T, a, 0);
-  ctx.drawImage(fonte, faces.topo[0], faces.topo[1], T, T, 0, 0, T, T);
-  ctx.restore();
-  // lado esquerdo
-  ctx.save();
-  ctx.setTransform(a / T, q / T, 0, a / T, 0, q);
-  ctx.drawImage(fonte, faces.lado[0], faces.lado[1], T, T, 0, 0, T, T);
-  sombra(0.22);
-  ctx.restore();
-  // lado direito
-  ctx.save();
-  ctx.setTransform(a / T, -q / T, 0, a / T, a, a);
-  ctx.drawImage(fonte, faces.lado[0], faces.lado[1], T, T, 0, 0, T, T);
-  sombra(0.4);
-  ctx.restore();
-}
-
 export function criarBarra(app: HTMLElement, hotbar: Hotbar = criarHotbar()): Hotbar {
   const estilo = document.createElement('style');
   estilo.textContent = CSS;
   document.head.appendChild(estilo);
 
-  const atlas = gerarAtlas();
-  const fonte = atlasParaCanvas(atlas);
-
   const barra = document.createElement('div');
   barra.className = 'barra';
   barra.setAttribute('role', 'toolbar');
-  barra.setAttribute('aria-label', 'Barra de blocos');
+  barra.setAttribute('aria-label', 'Barra de itens');
+  const nomeItem = document.createElement('div');
+  nomeItem.className = 'nome-item';
+  nomeItem.setAttribute('aria-live', 'polite');
 
-  const botoes = hotbar.slots.map((slot, i) => {
+  const botoes = hotbar.slots.map((_, i) => {
     const botao = document.createElement('button');
     botao.type = 'button';
     botao.dataset.slot = String(i);
-    botao.title = slot.nome;
-    botao.setAttribute('aria-label', `${slot.nome} (tecla ${i + 1})`);
-
-    const icone = document.createElement('canvas');
+    const icone = document.createElement('img');
     icone.className = 'icone';
-    icone.width = 64;
-    icone.height = 64;
-    const topo = atlas.uvDaFace(slot.bloco, 'topo');
-    const lado = atlas.uvDaFace(slot.bloco, 'lado');
-    const ctx = icone.getContext('2d');
-    if (topo && lado && ctx) {
-      const px = (uv: { u0: number; v0: number }): [number, number] => [
-        Math.round(uv.u0 * atlas.largura),
-        Math.round(uv.v0 * atlas.altura),
-      ];
-      desenharIsometrico(ctx, fonte, { topo: px(topo), lado: px(lado) }, 64, false);
-    }
+    icone.alt = '';
+    icone.draggable = false;
     const numero = document.createElement('span');
     numero.className = 'numero';
     numero.textContent = String(i + 1);
-    botao.append(icone, numero);
+    const qtd = document.createElement('span');
+    qtd.className = 'qtd';
+    botao.append(icone, numero, qtd);
     barra.appendChild(botao);
-    return botao;
+    return { botao, icone, qtd };
   });
 
+  let ultimoAtivo = -1;
+  let timerNome: ReturnType<typeof setTimeout> | null = null;
   const atualizar = () => {
-    botoes.forEach((b, i) => b.setAttribute('aria-pressed', String(i === hotbar.ativo)));
+    const slots = hotbar.slots;
+    botoes.forEach(({ botao, icone, qtd }, i) => {
+      const s = slots[i];
+      const p = s.pilha;
+      botao.setAttribute('aria-pressed', String(i === hotbar.ativo));
+      botao.title = p ? s.nome : '';
+      botao.setAttribute('aria-label', `${p ? s.nome : 'vazio'} (tecla ${i + 1})`);
+      const src = p ? iconeDoItem(p.item) : '';
+      if (icone.getAttribute('src') !== src) icone.setAttribute('src', src);
+      qtd.textContent = p && p.qtd > 1 ? String(p.qtd) : '';
+    });
+    if (hotbar.ativo !== ultimoAtivo) {
+      ultimoAtivo = hotbar.ativo;
+      const p = hotbar.pilhaAtiva();
+      if (p) {
+        nomeItem.textContent = slots[hotbar.ativo].nome;
+        nomeItem.classList.add('visivel');
+        if (timerNome) clearTimeout(timerNome);
+        timerNome = setTimeout(() => nomeItem.classList.remove('visivel'), 1500);
+      }
+    }
   };
 
   barra.addEventListener('click', (e) => {
@@ -163,6 +152,7 @@ export function criarBarra(app: HTMLElement, hotbar: Hotbar = criarHotbar()): Ho
     atualizar();
   });
   document.addEventListener('keydown', (e) => {
+    if ((e.target as HTMLElement)?.closest?.('input, textarea')) return;
     const i = teclaParaSlot(e.code);
     if (i === null) return;
     hotbar.selecionar(i);
@@ -171,6 +161,8 @@ export function criarBarra(app: HTMLElement, hotbar: Hotbar = criarHotbar()): Ho
   document.addEventListener(
     'wheel',
     (e) => {
+      if (document.querySelector('.modal-fundo:not([hidden]), .inventario-fundo:not([hidden])'))
+        return;
       const passo = deltaRodaParaPasso(e.deltaY);
       if (passo > 0) hotbar.proximo();
       else if (passo < 0) hotbar.anterior();
@@ -180,8 +172,9 @@ export function criarBarra(app: HTMLElement, hotbar: Hotbar = criarHotbar()): Ho
     { passive: true },
   );
 
+  hotbar.inventario.ouvir(atualizar);
   window.addEventListener('brumaluz:slot', atualizar);
   atualizar();
-  app.appendChild(barra);
+  app.append(barra, nomeItem);
   return hotbar;
 }

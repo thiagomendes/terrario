@@ -26,7 +26,7 @@ import type { LinesMesh } from '@babylonjs/core/Meshes/linesMesh';
 import { COR_DESTAQUE, estadoDestaque } from './destaque';
 import { criarControle } from '../player/controle';
 import { gerarAtlas } from '../art/atlas';
-import { Bloco } from '../world/blocks';
+import { Bloco, obterBloco as obterBlocoDef } from '../world/blocks';
 import {
   DENSIDADE_NEVOA,
   DIRECAO_SOL,
@@ -45,7 +45,11 @@ import { criarVagalumes } from './vagalumes';
 import { PluginMundo } from './materialMundo';
 import { PluginBalanco } from './balanco';
 import { SEMENTE_PADRAO, TAM_X, TAM_Z } from '../world/chunk';
-import type { DadosMundo, MetaMundo, RepositorioMundos } from '../jogo/mundos';
+import type { DadosMundo, MetaMundo, ModoJogo, RepositorioMundos } from '../jogo/mundos';
+import { criarMundoDeItens, dropsDoBloco } from '../jogo/drops';
+import { obterItem } from '../jogo/itens';
+import { criarRenderItens } from './itensSoltos';
+import { iconeDoItem } from '../ui/icones';
 import type { Buffers } from '../mesh/malha';
 import type { RespostaChunk, PedidoChunk } from '../workers/chunk.worker';
 import { criarEdicoes } from '../world/edicoes';
@@ -98,7 +102,6 @@ import { chave, chunksDesejados, planejar, respostaObsoleta } from './gerenciado
 import { criarAnimador } from '../player/animacao';
 import { MODELOS, normalizarAparencia, type Aparencia } from '../personagem/aparencia';
 import { carregarAparencia, type Armazenamento } from '../personagem/persistencia';
-import { blocoNaMao } from '../personagem/mao';
 import type { Pose } from '../personagem/poses';
 import { criarBraco } from './braco';
 import { criarPersonagem } from './personagem';
@@ -134,6 +137,10 @@ export interface EstadoDepuracao {
   remalhaMs?: number;
   aplicadasNoUltimoQuadro?: number;
   atmosfera?: { noite: number; crepusculo: number };
+  itensSoltos?: number;
+  soltarItem?: (item: string, qtd: number, x: number, y: number, z: number) => void;
+  modo?: ModoJogo;
+  inventario?: import('../jogo/inventario').Inventario;
   alvo?: { x: number; y: number; z: number; normal: Vec3 } | null;
   barramento?: Barramento;
   minerar?: (
@@ -184,6 +191,16 @@ export function criarCena(
   opcoes: OpcoesCena = {},
 ) {
   const semente = opcoes.mundo?.semente ?? SEMENTE_PADRAO;
+  const modo: ModoJogo = opcoes.mundo?.modo ?? 'criativo';
+  document.body.dataset.modo = modo;
+  const inventario = hotbar.inventario;
+  const invSalvo = opcoes.dados?.extras?.['inventario'] as { ativo?: number } | undefined;
+  if (invSalvo) {
+    inventario.carregar(invSalvo);
+    if (typeof invSalvo.ativo === 'number') hotbar.selecionar(invSalvo.ativo);
+  } else if (modo === 'sobrevivencia') {
+    for (let i = 0; i < inventario.slots.length; i++) inventario.definir(i, null);
+  }
   const dadosIniciais = opcoes.dados;
   const salvaveis = new Map<string, Salvavel>();
   const estado: EstadoDepuracao = {
@@ -553,6 +570,7 @@ export function criarCena(
     const bloco = acao === 'quebrar' ? blocoEm(a.x, a.y, a.z) : hotbar.blocoAtivo();
     const pos = acao === 'quebrar' ? a : posicaoColocacao(a);
     const ok = interagir(acao);
+    if (ok && acao === 'colocar' && modo === 'sobrevivencia') inventario.remover(hotbar.ativo, 1);
     if (ok) {
       barramento.emitir(acao === 'quebrar' ? 'quebra' : 'colocacao', {
         x: pos.x,
@@ -672,6 +690,7 @@ export function criarCena(
   barramento.ouvir('golpe', () => animador.evento('golpe'));
   barramento.ouvir('colocacao', () => animador.evento('colocacao'));
   let slotNaMao = -1;
+  let blocoNaMaoAtual = -1;
   /** Giro extra do corpo em relação à câmera (só para capturas). */
   let giroCorpo = 0;
   function atualizarPersonagem(dt: number): void {
@@ -684,9 +703,11 @@ export function criarCena(
     const vis = visibilidadePorModo(estadoCamera.modo);
     braco.definirVisivel(vis.braco);
     personagem.definirVisivel(vis.corpo);
-    if (hotbar.ativo !== slotNaMao) {
+    const blocoMao = hotbar.blocoAtivo();
+    if (hotbar.ativo !== slotNaMao || blocoMao !== blocoNaMaoAtual) {
       slotNaMao = hotbar.ativo;
-      braco.definirSlot(slotNaMao);
+      blocoNaMaoAtual = blocoMao;
+      braco.definirBloco(blocoMao || null);
     }
     braco.atualizarVista(dt, animador.vista());
     personagem.aplicarPose(pose, {
@@ -707,7 +728,7 @@ export function criarCena(
     malhas: () => braco.contarMalhas() + personagem.contarMalhas(),
     pose: () => animador.pose(),
     maoBloco: () =>
-      visibilidadePorModo(estadoCamera.modo).braco ? blocoNaMao(hotbar.ativo) : null,
+      visibilidadePorModo(estadoCamera.modo).braco ? hotbar.blocoAtivo() || null : null,
     nomeExibido: () => aparencia.nome || MODELOS[aparencia.modelo].rotulo,
     girarCorpo: (rad: number) => {
       giroCorpo = rad;
@@ -844,6 +865,47 @@ export function criarCena(
   }
   barramento.ouvir('golpe', (d) => aplicarPlano('golpe', d));
   barramento.ouvir('quebra', (d) => aplicarPlano('quebra', d));
+  // Sobrevivência: o bloco quebrado vira item no chão.
+  const rngDrops = criarGerador(911);
+  const mundoItens = criarMundoDeItens((x, y, z) => {
+    const b = blocoEm(x, y, z);
+    return b !== Bloco.AR && !!obterBlocoDef(b)?.solido;
+  });
+  barramento.ouvir('quebra', (d) => {
+    if (modo !== 'sobrevivencia') return;
+    for (const drop of dropsDoBloco(d.bloco, rngDrops)) {
+      mundoItens.soltar(drop.item, drop.qtd, d.x + 0.5, d.y + 0.4, d.z + 0.5, rngDrops);
+    }
+  });
+  const renderItens = criarRenderItens(scene, atlas, textura, iconeDoItem, (m) =>
+    glow.addExcludedMesh(m),
+  );
+  let coletaAcumulada = new Map<string, number>();
+  let timerColeta: ReturnType<typeof setTimeout> | null = null;
+  function atualizarItens(dt: number, tempo: number): void {
+    const j = controle.jogador;
+    const coletados = mundoItens.atualizar(dt, j, (item, qtd, dur) =>
+      inventario.adicionar(item, qtd, dur),
+    );
+    for (const c of coletados) {
+      coletaAcumulada.set(c.item, (coletaAcumulada.get(c.item) ?? 0) + c.qtd);
+      tocarSom(motorAudio, 'coleta');
+      if (timerColeta) clearTimeout(timerColeta);
+      timerColeta = setTimeout(() => {
+        for (const [item, qtd] of coletaAcumulada) {
+          window.dispatchEvent(
+            new CustomEvent('brumaluz:toast', {
+              detail: `+${qtd} ${obterItem(item)?.nome ?? item}`,
+            }),
+          );
+        }
+        coletaAcumulada = new Map();
+      }, 350);
+    }
+    renderItens.atualizar(mundoItens.itens, tempo);
+    estado.itensSoltos = mundoItens.itens.length;
+  }
+  estado.soltarItem = (item, qtd, x, y, z) => mundoItens.soltar(item, qtd, x, y, z, rngDrops);
   barramento.ouvir('colocacao', (d) => aplicarPlano('colocacao', d));
 
   function atualizarEfeitos(dt: number): void {
@@ -979,6 +1041,7 @@ export function criarCena(
     const tempo = performance.now() / 1000;
     if (!estado.pausarDia) hora = normalizarHora(hora + dtBruto / DURACAO_DIA);
     aplicarAtmosfera(tempo);
+    atualizarItens(dtQuadro, tempo);
     balanco.atualizar(tempo);
     scene.render();
   });
@@ -1052,6 +1115,9 @@ export function criarCena(
     }
   }
   estado.salvar = salvar;
+  estado.modo = modo;
+  estado.inventario = inventario;
+  salvaveis.set('inventario', { salvar: () => ({ ...inventario.salvar(), ativo: hotbar.ativo }) });
   estado.mundo = opcoes.mundo ? { ...opcoes.mundo } : undefined;
   setInterval(() => void salvar(false), 30_000);
   document.addEventListener('visibilitychange', () => {

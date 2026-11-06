@@ -3,6 +3,7 @@ import { criarHotbar } from './player/hotbar';
 import { criarInterface } from './ui/interface';
 import { armazemIndexedDB } from './jogo/indexeddb';
 import { SEMENTE_PADRAO_MUNDO, criarRepositorioMundos, type MetaMundo } from './jogo/mundos';
+import { CSS_INVENTARIO, criarInventarioUI } from './ui/inventario';
 
 async function iniciar(app: HTMLElement): Promise<void> {
   const repo = criarRepositorioMundos(armazemIndexedDB());
@@ -34,6 +35,7 @@ async function iniciar(app: HTMLElement): Promise<void> {
   });
   cena = criarCena(canvas, hotbar, { mundo: atual, dados, repo });
   panorama(cena);
+  ligarInventario(app, canvas, cena, hotbar);
 }
 
 /** Na tela de título, a câmera gira devagar mostrando o mundo; ao jogar, volta à mira salva. */
@@ -75,3 +77,41 @@ function panorama(cena: ReturnType<typeof criarCena>): void {
 
 const app = document.getElementById('app');
 if (app) void iniciar(app);
+
+function ligarInventario(
+  app: HTMLElement,
+  canvas: HTMLCanvasElement,
+  cena: ReturnType<typeof criarCena>,
+  hotbar: ReturnType<typeof criarHotbar>,
+): void {
+  const estilo = document.createElement('style');
+  estilo.textContent = CSS_INVENTARIO;
+  document.head.appendChild(estilo);
+  const ui = criarInventarioUI(app, {
+    inventario: hotbar.inventario,
+    criativo: () => cena.estado.modo === 'criativo',
+    ativo: () => hotbar.ativo,
+    aoSobrar: (p) => {
+      const j = cena.controle.jogador;
+      cena.estado.soltarItem?.(p.item, p.qtd, j.x, j.y + 1.2, j.z);
+    },
+    aoFechar: () => {
+      if (document.querySelector('.entrada:not([hidden])')) return;
+      canvas.requestPointerLock?.();
+    },
+  });
+  (window as unknown as { __inventarioUI?: typeof ui }).__inventarioUI = ui;
+  window.addEventListener('keydown', (e) => {
+    if ((e.target as HTMLElement)?.closest?.('input, textarea')) return;
+    const naEntrada = !!document.querySelector('.entrada:not([hidden])');
+    if (e.code === 'KeyE' && !e.repeat && !naEntrada) {
+      if (ui.aberto) ui.fechar();
+      else {
+        ui.abrir();
+        document.exitPointerLock?.();
+      }
+    } else if (e.code === 'Escape' && ui.aberto) {
+      ui.fechar();
+    }
+  });
+}

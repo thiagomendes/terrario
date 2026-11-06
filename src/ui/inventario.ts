@@ -1,0 +1,357 @@
+import { TAMANHO_BARRA, TAMANHO_INVENTARIO, type Inventario, type Slot } from '../jogo/inventario';
+import { obterItem, todosItens, type DefItem } from '../jogo/itens';
+import { iconeDoItem } from './icones';
+
+export const CSS_INVENTARIO = `
+.inventario-fundo {
+  position: fixed; inset: 0; z-index: 30;
+  display: flex; align-items: center; justify-content: center;
+  padding: 12px; box-sizing: border-box;
+  background: rgba(6, 8, 14, 0.55); backdrop-filter: blur(4px);
+  font-family: system-ui, 'Segoe UI', sans-serif; color: #ece6da;
+  animation: modal-entra 0.15s ease-out;
+  --slot: clamp(34px, 8.6vw, 54px);
+}
+.inventario-fundo[hidden] { display: none; }
+.inventario {
+  display: grid; gap: 14px; max-height: 94vh; overflow-y: auto; box-sizing: border-box;
+  padding: 16px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.12);
+  background: linear-gradient(180deg, rgba(34, 36, 50, 0.96), rgba(20, 21, 30, 0.97));
+  box-shadow: 0 24px 64px rgba(0,0,0,0.55);
+  animation: cartao-entra 0.18s ease-out;
+}
+.inventario h2 { margin: 0; font-size: 1.05rem; color: #ffd98f; }
+.inventario .topo { display: flex; gap: 16px; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; }
+.inventario .secao { display: grid; gap: 8px; }
+.inventario .rotulo-secao { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.1em; color: #a59f93; }
+.grade-slots { display: grid; grid-template-columns: repeat(9, var(--slot)); gap: 4px; }
+.slot-inv {
+  position: relative; width: var(--slot); height: var(--slot); padding: 0;
+  border-radius: 8px; border: 1px solid rgba(255,255,255,0.1);
+  background: rgba(0,0,0,0.3); box-shadow: inset 0 2px 6px rgba(0,0,0,0.45);
+  cursor: pointer; transition: background 0.1s ease, border-color 0.1s ease;
+}
+.slot-inv:hover { background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.3); }
+.slot-inv.ativo { border-color: #ffd98f; }
+.slot-inv img { position: absolute; inset: 12%; width: 76%; height: 76%; image-rendering: pixelated; pointer-events: none; filter: drop-shadow(0 2px 2px rgba(0,0,0,0.45)); }
+.slot-inv .qtd { position: absolute; right: 4px; bottom: 1px; font: 800 0.78rem system-ui, sans-serif; color: #fff; text-shadow: 1px 1px 0 #000; pointer-events: none; }
+.slot-inv .dur { position: absolute; left: 12%; right: 12%; bottom: 4px; height: 3px; border-radius: 2px; background: rgba(0,0,0,0.6); pointer-events: none; }
+.slot-inv .dur i { display: block; height: 100%; border-radius: 2px; }
+.separador { height: 1px; background: rgba(255,255,255,0.08); margin: 2px 0; }
+.catalogo { display: grid; gap: 8px; }
+.catalogo input {
+  min-height: 38px; padding: 6px 12px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.14);
+  background: rgba(0,0,0,0.3); color: #ece6da; font: 500 0.92rem system-ui, sans-serif;
+}
+.catalogo .grade-slots { max-height: calc(var(--slot) * 3 + 8px); overflow-y: auto; padding-right: 4px; }
+.cursor-item { position: fixed; z-index: 60; width: 44px; height: 44px; pointer-events: none; transform: translate(-50%, -50%); }
+.cursor-item img { width: 100%; height: 100%; image-rendering: pixelated; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.6)); }
+.cursor-item .qtd { position: absolute; right: -2px; bottom: -4px; font: 800 0.85rem system-ui, sans-serif; color: #fff; text-shadow: 1px 1px 0 #000; }
+.dica-item {
+  position: fixed; z-index: 61; pointer-events: none; padding: 6px 10px; border-radius: 8px;
+  background: rgba(14, 10, 26, 0.95); border: 1px solid rgba(160, 120, 255, 0.45);
+  font: 600 0.85rem system-ui, sans-serif; color: #fff; box-shadow: 0 6px 18px rgba(0,0,0,0.5);
+}
+.dica-item small { display: block; color: #b3a8d6; font-weight: 500; }
+body[data-modo='criativo'] .slot-inv .qtd { display: none; }
+.ajuda-inv { font-size: 0.75rem; color: #8f897e; }
+`;
+
+export interface OpcoesInventarioUI {
+  inventario: Inventario;
+  criativo: () => boolean;
+  /** Índice ativo da barra (para destacar). */
+  ativo: () => number;
+  /** O que sobrar no cursor ao fechar (sem espaço) é entregue aqui. */
+  aoSobrar?: (p: NonNullable<Slot>) => void;
+  aoAbrir?: () => void;
+  aoFechar?: () => void;
+}
+
+export interface InventarioUI {
+  readonly aberto: boolean;
+  abrir(): void;
+  fechar(): void;
+  alternar(): void;
+  /** Área à esquerda do topo, para a grade de criação (T08). */
+  readonly areaExtra: HTMLElement;
+  /** Liga um slot externo (criação, fornalha) ao mesmo cursor. */
+  clicarExterno(
+    f: (el: HTMLElement, cursor: Slot, botao: 'esquerdo' | 'direito', shift: boolean) => Slot,
+  ): void;
+  /** Redesenha os slots (após mudança externa). */
+  render(): void;
+  criarSlot(): HTMLButtonElement;
+  desenharSlot(el: HTMLElement, p: Slot): void;
+}
+
+export function criarInventarioUI(raiz: HTMLElement, op: OpcoesInventarioUI): InventarioUI {
+  const inv = op.inventario;
+  const fundo = document.createElement('div');
+  fundo.className = 'inventario-fundo';
+  fundo.hidden = true;
+  fundo.setAttribute('data-inventario', '');
+  const painel = document.createElement('div');
+  painel.className = 'inventario';
+  painel.setAttribute('role', 'dialog');
+  painel.setAttribute('aria-label', 'Inventário');
+  fundo.appendChild(painel);
+
+  const topo = document.createElement('div');
+  topo.className = 'topo';
+  const areaExtra = document.createElement('div');
+  areaExtra.className = 'secao';
+  const catalogo = document.createElement('div');
+  catalogo.className = 'catalogo secao';
+  const busca = document.createElement('input');
+  busca.type = 'search';
+  busca.placeholder = 'Buscar blocos e itens…';
+  busca.setAttribute('data-busca-catalogo', '');
+  const gradeCat = document.createElement('div');
+  gradeCat.className = 'grade-slots';
+  const rotCat = document.createElement('div');
+  rotCat.className = 'rotulo-secao';
+  rotCat.textContent = 'Catálogo criativo';
+  catalogo.append(rotCat, busca, gradeCat);
+  topo.append(areaExtra, catalogo);
+
+  const titulo = document.createElement('h2');
+  titulo.textContent = 'Inventário';
+  const mochilaRot = document.createElement('div');
+  mochilaRot.className = 'rotulo-secao';
+  mochilaRot.textContent = 'Mochila';
+  const mochila = document.createElement('div');
+  mochila.className = 'grade-slots';
+  const barra = document.createElement('div');
+  barra.className = 'grade-slots';
+  const ajuda = document.createElement('div');
+  ajuda.className = 'ajuda-inv';
+  ajuda.textContent =
+    'Clique: pegar e soltar · Botão direito: metade ou um · Shift+clique: mover rápido · E ou Esc: fechar';
+  const sep = document.createElement('div');
+  sep.className = 'separador';
+  painel.append(titulo, topo, mochilaRot, mochila, sep, barra, ajuda);
+
+  const cursorEl = document.createElement('div');
+  cursorEl.className = 'cursor-item';
+  cursorEl.hidden = true;
+  const cursorImg = document.createElement('img');
+  const cursorQtd = document.createElement('span');
+  cursorQtd.className = 'qtd';
+  cursorEl.append(cursorImg, cursorQtd);
+  const dica = document.createElement('div');
+  dica.className = 'dica-item';
+  dica.hidden = true;
+  fundo.append(cursorEl, dica);
+  raiz.appendChild(fundo);
+
+  let cursor: Slot = null;
+  let aberto = false;
+
+  function criarSlot(): HTMLButtonElement {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'slot-inv';
+    const img = document.createElement('img');
+    img.alt = '';
+    img.draggable = false;
+    const q = document.createElement('span');
+    q.className = 'qtd';
+    b.append(img, q);
+    b.addEventListener('contextmenu', (e) => e.preventDefault());
+    return b;
+  }
+
+  function desenharSlot(el: HTMLElement, p: Slot): void {
+    const img = el.querySelector('img')!;
+    const q = el.querySelector('.qtd')!;
+    const src = p ? iconeDoItem(p.item) : '';
+    if (img.getAttribute('src') !== src) img.setAttribute('src', src);
+    img.style.visibility = p ? 'visible' : 'hidden';
+    q.textContent = p && p.qtd > 1 ? String(p.qtd) : '';
+    let dur = el.querySelector<HTMLElement>('.dur');
+    const def = p ? obterItem(p.item) : undefined;
+    if (p && p.dur !== undefined && def?.durabilidade) {
+      if (!dur) {
+        dur = document.createElement('span');
+        dur.className = 'dur';
+        dur.appendChild(document.createElement('i'));
+        el.appendChild(dur);
+      }
+      const f = Math.max(0, Math.min(1, p.dur / def.durabilidade));
+      const barraDur = dur.firstElementChild as HTMLElement;
+      barraDur.style.width = `${f * 100}%`;
+      barraDur.style.background = `hsl(${f * 120}, 80%, 50%)`;
+      dur.hidden = f >= 1;
+    } else if (dur) {
+      dur.hidden = true;
+    }
+    el.dataset.item = p?.item ?? '';
+  }
+
+  const slotsEl: HTMLButtonElement[] = [];
+  for (let i = 0; i < TAMANHO_INVENTARIO; i++) {
+    const b = criarSlot();
+    b.dataset.indice = String(i);
+    (i < TAMANHO_BARRA ? barra : mochila).appendChild(b);
+    slotsEl.push(b);
+  }
+  // a mochila vem em ordem de linhas (9..35)
+
+  function desenharCursor(): void {
+    cursorEl.hidden = !cursor;
+    if (!cursor) return;
+    cursorImg.src = iconeDoItem(cursor.item);
+    cursorQtd.textContent = cursor.qtd > 1 && !op.criativo() ? String(cursor.qtd) : '';
+  }
+
+  function render(): void {
+    if (!aberto) return;
+    slotsEl.forEach((el, i) => {
+      desenharSlot(el, inv.obter(i));
+      el.classList.toggle('ativo', i === op.ativo());
+    });
+    desenharCursor();
+  }
+
+  function mostrarDica(def: DefItem | undefined, x: number, y: number, extra = ''): void {
+    if (!def || cursor) {
+      dica.hidden = true;
+      return;
+    }
+    dica.hidden = false;
+    const tipo: Record<string, string> = {
+      bloco: 'Bloco',
+      ferramenta: 'Ferramenta',
+      comida: 'Comida',
+      material: 'Material',
+    };
+    dica.innerHTML = '';
+    dica.append(def.nome);
+    const s = document.createElement('small');
+    s.textContent = tipo[def.tipo] + extra;
+    dica.appendChild(s);
+    dica.style.left = `${x + 14}px`;
+    dica.style.top = `${y + 14}px`;
+  }
+
+  fundo.addEventListener('pointermove', (e) => {
+    cursorEl.style.left = `${e.clientX}px`;
+    cursorEl.style.top = `${e.clientY}px`;
+    const alvo = (e.target as HTMLElement).closest<HTMLElement>('.slot-inv');
+    const id = alvo?.dataset.item;
+    if (!id) {
+      dica.hidden = true;
+      return;
+    }
+    const i = alvo.dataset.indice ? Number(alvo.dataset.indice) : -1;
+    const p = i >= 0 ? inv.obter(i) : null;
+    const def = obterItem(id);
+    const extra =
+      p?.dur !== undefined && def?.durabilidade ? ` · ${p.dur}/${def.durabilidade}` : '';
+    mostrarDica(def, e.clientX, e.clientY, extra);
+  });
+
+  function clicarSlot(i: number, botao: 'esquerdo' | 'direito', shift: boolean): void {
+    if (shift && !cursor) {
+      inv.moverRapido(i);
+    } else {
+      cursor = inv.clicar(i, cursor, botao);
+    }
+    render();
+  }
+  const tratar = (e: MouseEvent) => {
+    const el = (e.target as HTMLElement).closest<HTMLElement>('.slot-inv[data-indice]');
+    if (!el) return;
+    e.preventDefault();
+    clicarSlot(Number(el.dataset.indice), e.button === 2 ? 'direito' : 'esquerdo', e.shiftKey);
+  };
+  mochila.addEventListener('mousedown', tratar);
+  barra.addEventListener('mousedown', tratar);
+
+  // Catálogo criativo
+  function renderCatalogo(): void {
+    const termo = busca.value.trim().toLowerCase();
+    const itens = todosItens().filter((d) => !termo || d.nome.toLowerCase().includes(termo));
+    gradeCat.replaceChildren();
+    for (const d of itens) {
+      const b = criarSlot();
+      b.dataset.catalogo = d.id;
+      desenharSlot(b, { item: d.id, qtd: 1 });
+      gradeCat.appendChild(b);
+    }
+  }
+  busca.addEventListener('input', renderCatalogo);
+  busca.addEventListener('keydown', (e) => e.stopPropagation());
+  gradeCat.addEventListener('mousedown', (e) => {
+    const el = (e.target as HTMLElement).closest<HTMLElement>('[data-catalogo]');
+    if (!el) return;
+    e.preventDefault();
+    const def = obterItem(el.dataset.catalogo!);
+    if (!def) return;
+    if (cursor) {
+      cursor = null;
+    } else if (e.shiftKey) {
+      inv.adicionar(def.id, def.pilha, def.durabilidade);
+    } else {
+      cursor = {
+        item: def.id,
+        qtd: e.button === 2 ? 1 : def.pilha,
+        ...(def.durabilidade ? { dur: def.durabilidade } : {}),
+      };
+    }
+    render();
+  });
+
+  fundo.addEventListener('mousedown', (e) => {
+    if (e.target === fundo) fechar();
+  });
+  fundo.addEventListener('contextmenu', (e) => e.preventDefault());
+  inv.ouvir(render);
+
+  function abrir(): void {
+    if (aberto) return;
+    aberto = true;
+    fundo.hidden = false;
+    document.body.dataset.overlay = 'inventario';
+    catalogo.hidden = !op.criativo();
+    if (op.criativo()) renderCatalogo();
+    render();
+    op.aoAbrir?.();
+  }
+  function fechar(): void {
+    if (!aberto) return;
+    if (cursor) {
+      const resto = op.criativo() ? 0 : inv.adicionar(cursor.item, cursor.qtd, cursor.dur);
+      if (resto > 0) op.aoSobrar?.({ ...cursor, qtd: resto });
+      cursor = null;
+    }
+    aberto = false;
+    fundo.hidden = true;
+    dica.hidden = true;
+    delete document.body.dataset.overlay;
+    op.aoFechar?.();
+  }
+
+  return {
+    get aberto() {
+      return aberto;
+    },
+    abrir,
+    fechar,
+    alternar: () => (aberto ? fechar() : abrir()),
+    areaExtra,
+    clicarExterno(f) {
+      areaExtra.addEventListener('mousedown', (e) => {
+        const el = (e.target as HTMLElement).closest<HTMLElement>('[data-externo]');
+        if (!el) return;
+        e.preventDefault();
+        cursor = f(el, cursor, e.button === 2 ? 'direito' : 'esquerdo', e.shiftKey);
+        render();
+      });
+    },
+    criarSlot,
+    desenharSlot,
+    render,
+  };
+}

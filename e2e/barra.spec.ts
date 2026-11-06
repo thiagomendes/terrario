@@ -6,7 +6,7 @@ const VIEWPORTS = [
 ];
 
 for (const vp of VIEWPORTS) {
-  test(`barra de blocos em ${vp.nome}`, async ({ page }) => {
+  test(`barra de itens em ${vp.nome}`, async ({ page }) => {
     test.setTimeout(120_000);
     await page.setViewportSize({ width: vp.width, height: vp.height });
     const erros: string[] = [];
@@ -17,11 +17,11 @@ for (const vp of VIEWPORTS) {
     await page.goto('/');
 
     const barra = page.locator('[role="toolbar"]');
-    await expect(barra).toHaveAttribute('aria-label', 'Barra de blocos');
+    await expect(barra).toHaveAttribute('aria-label', 'Barra de itens');
     const botoes = barra.locator('[data-slot]');
-    await expect(botoes).toHaveCount(6);
+    await expect(botoes).toHaveCount(9);
 
-    for (let i = 0; i < 6; i++) {
+    for (let i = 0; i < 9; i++) {
       const nome = await botoes.nth(i).getAttribute('aria-label');
       expect(nome).toMatch(/^[^\d]+\(tecla \d\)$/);
       const render = await botoes
@@ -40,7 +40,7 @@ for (const vp of VIEWPORTS) {
     await expect(botoes.nth(2)).toHaveAttribute('aria-pressed', 'true');
     await expect(barra.locator('[aria-pressed="true"]')).toHaveCount(1);
     const borda = await botoes.nth(2).evaluate((el) => getComputedStyle(el).borderTopColor);
-    expect(borda).toBe('rgb(255, 179, 92)');
+    expect(borda).toBe('rgb(255, 244, 220)');
 
     const caixa = await barra.boundingBox();
     const centro = caixa!.x + caixa!.width / 2;

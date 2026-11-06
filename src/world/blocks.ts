@@ -19,6 +19,10 @@ export interface DefinicaoBloco {
   opaco: boolean;
   emissivo: boolean;
   planta: boolean;
+  /** Não vira item (ex.: ar). */
+  semItem?: boolean;
+  /** Forma da malha: cubo (padrão) ou cruz (plantas, tochas). */
+  forma?: 'cubo' | 'cruz';
 }
 
 function def(

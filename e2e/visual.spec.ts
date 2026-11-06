@@ -42,9 +42,9 @@ for (const vp of VIEWPORTS) {
     await expect(barra).toBeVisible();
     await page.keyboard.press('Digit3');
     const slots = page.locator('[role="toolbar"] [data-slot]');
-    expect(await slots.count()).toBe(6);
+    expect(await slots.count()).toBe(9);
     const caixas = [await barra.boundingBox()];
-    for (let i = 0; i < 6; i++) caixas.push(await slots.nth(i).boundingBox());
+    for (let i = 0; i < 9; i++) caixas.push(await slots.nth(i).boundingBox());
     for (const c of caixas) {
       expect(c, falhar()).not.toBeNull();
       expect(c!.x).toBeGreaterThanOrEqual(0);

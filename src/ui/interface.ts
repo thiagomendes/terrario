@@ -13,10 +13,10 @@ const CSS = `
 .entrada {
   position: fixed;
   inset: 0;
-  z-index: 20;
+  z-index: 5;
   overflow-y: auto;
   box-sizing: border-box;
-  padding: clamp(16px, 4vh, 48px) 16px;
+  padding: clamp(16px, 4vh, 48px) 16px 96px;
   cursor: pointer;
   color: #ece6da;
   font-family: system-ui, 'Segoe UI', sans-serif;
@@ -344,8 +344,10 @@ export function criarInterface(
     document.exitPointerLock?.();
   });
   document.addEventListener('pointerlockchange', () => {
-    entrada.hidden = document.pointerLockElement !== null;
+    if (document.pointerLockElement !== null) entrada.hidden = true;
+    else if (!document.body.dataset.overlay) entrada.hidden = false;
   });
+  window.addEventListener('brumaluz:toast', (e) => notificar((e as CustomEvent<string>).detail));
 
   setInterval(() => {
     const valor = window.__brumaluz?.fps ?? 0;

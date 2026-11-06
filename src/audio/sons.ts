@@ -11,7 +11,8 @@ export type EventoSom =
   | 'aterrissagem'
   | 'troca'
   | 'recusa'
-  | 'entrada';
+  | 'entrada'
+  | 'coleta';
 
 export const EVENTOS_SOM: readonly EventoSom[] = [
   'golpe',
@@ -23,6 +24,7 @@ export const EVENTOS_SOM: readonly EventoSom[] = [
   'troca',
   'recusa',
   'entrada',
+  'coleta',
 ];
 
 export const VARIACOES_POR_EVENTO = 4;
@@ -80,12 +82,14 @@ const BASE_EVENTO: Record<EventoSom, BaseEvento> = {
   troca: { ganho: 0.3, duracao: 0.08, ruido: 0.1, escalaTom: 1, grupoAudio: 'efeitos' },
   recusa: { ganho: 0.35, duracao: 0.2, ruido: 0.1, escalaTom: 1, grupoAudio: 'efeitos' },
   entrada: { ganho: 0.4, duracao: 0.5, ruido: 0.05, escalaTom: 1, grupoAudio: 'efeitos' },
+  coleta: { ganho: 0.28, duracao: 0.09, ruido: 0, escalaTom: 1, grupoAudio: 'efeitos' },
 };
 
 const FIXOS: Partial<Record<EventoSom, BaseMaterial>> = {
   troca: { frequencia: 880, filtroHz: 3000 },
   recusa: { frequencia: 130, filtroHz: 700 },
   entrada: { frequencia: 392, filtroHz: 2400 },
+  coleta: { frequencia: 740, filtroHz: 3000 },
 };
 
 export const AMPLITUDE_TOM = 0.12;
@@ -396,6 +400,12 @@ function desenharSom(par: ParametrosSom, evento: EventoSom, grupo: GrupoMaterial
             0.5,
             0.12,
           ),
+        );
+        break;
+      case 'coleta':
+        pecas.push(tom(ctx, out, t0, 'sine', par.frequencia, par.frequencia * 1.6, 0.4, 0.07));
+        pecas.push(
+          tom(ctx, out, t0 + 0.04, 'triangle', par.frequencia * 2, par.frequencia * 2, 0.15, 0.08),
         );
         break;
       case 'entrada':

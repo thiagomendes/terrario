@@ -20,6 +20,8 @@ const GRUPO_BRACO = 1;
 
 export interface Braco {
   definirSlot(slot: number): void;
+  /** Bloco na mão (null = mão vazia). */
+  definirBloco(bloco: number | null): void;
   aplicarPose(pose: Pose): void;
   /** Anima o braço (viewmodel): repouso discreto, golpe, colocação, balanço e troca. */
   atualizarVista(dt: number, vista: Vista): void;
@@ -222,10 +224,13 @@ export function criarBraco(scene: Scene, camera: TargetCamera, aparencia: Aparen
   }
 
   function definirSlot(slot: number): void {
-    const bloco = blocoNaMao(slot);
-    temBloco = bloco !== null;
+    definirBloco(blocoNaMao(slot));
+  }
+
+  function definirBloco(bloco: number | null): void {
+    temBloco = bloco !== null && bloco !== 0;
     troca = 0;
-    if (bloco !== null) aplicarFaces(bloco);
+    if (bloco !== null && bloco !== 0) aplicarFaces(bloco);
     atualizarVisibilidade();
   }
 
@@ -242,6 +247,7 @@ export function criarBraco(scene: Scene, camera: TargetCamera, aparencia: Aparen
 
   return {
     definirSlot,
+    definirBloco,
     aplicarPose,
     atualizarVista,
     aplicarAparencia,
