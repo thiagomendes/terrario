@@ -980,6 +980,8 @@ export function criarNucleo(op: OpcoesNucleo) {
   return {
     semente,
     modo,
+    /** Regiões sem povoado deste mundo (o servidor da nuvem põe de volta ao trocar de sala). */
+    semPovoado: semPovoado as readonly string[],
     conectar,
     desconectar,
     dadosJogador,
@@ -987,6 +989,17 @@ export function criarNucleo(op: OpcoesNucleo) {
     definirConstrucao(id: string, pode: boolean) {
       const j = jogadores.get(id);
       if (j) j.constroi = pode;
+    },
+    /** Voltou da queda: o próximo quadro recomeça a sequência e leva tudo de novo. */
+    reiniciarQuadros(id: string) {
+      const j = jogadores.get(id);
+      if (!j) return;
+      j.iniciado = false;
+      j.inventarioSujo = true;
+      j.transitoSujo = true;
+      j.conteinerSujo = true;
+      j.ultimaSobrevivencia = '';
+      perfisSujos = true;
     },
     definirPerfil(id: string, perfil: PerfilJogador) {
       const j = jogadores.get(id);

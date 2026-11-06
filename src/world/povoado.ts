@@ -118,6 +118,9 @@ export function limparPovoados(): void {
 let regioesBloqueadas: ReadonlySet<string> = new Set();
 let versao = 0;
 export function definirRegioesSemPovoado(regioes: readonly string[]): void {
+  // o servidor troca de mundo o tempo todo: a mesma lista não apaga os planos à toa
+  if (regioes.length === regioesBloqueadas.size && regioes.every((r) => regioesBloqueadas.has(r)))
+    return;
   regioesBloqueadas = new Set(regioes);
   cache.clear();
   versao++;

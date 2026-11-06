@@ -4,3 +4,4 @@ test-results/
 playwright-report/
 capturas-temas/
 .claude/
+servidor/dist/
