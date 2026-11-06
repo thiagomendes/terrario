@@ -83,6 +83,11 @@ export interface PlanoPovoado {
   dist: Uint8Array;
   /** Tipo do piso: 0 nada, 1 lote, 2 praça, 3 caminho. */
   piso: Uint8Array;
+  /**
+   * Células de borda plana em volta do piso: 2 quando o terreno permite (quem sai um
+   * pouco do caminho não desce degrau), senão 1. Não muda quais povoados existem.
+   */
+  borda: 1 | 2;
 }
 
 const BIOMAS_OK: ReadonlySet<Bioma> = new Set(['floresta', 'campos', 'deserto', 'taiga', 'praia']);
@@ -294,10 +299,13 @@ function planejar(rx: number, rz: number, semente: number, t: TerrenoNatural): P
     minZ = Math.min(minZ, z);
     maxZ = Math.max(maxZ, z);
   }
-  minX -= RAMPA;
-  maxX += RAMPA;
-  minZ -= RAMPA;
-  maxZ += RAMPA;
+  // caixa da regra de sempre (quais povoados existem) e uma célula a mais de grade,
+  // para a rampa da borda larga
+  const caixa = { minX: minX - RAMPA, maxX: maxX + RAMPA, minZ: minZ - RAMPA, maxZ: maxZ + RAMPA };
+  minX -= RAMPA + 1;
+  maxX += RAMPA + 1;
+  minZ -= RAMPA + 1;
+  maxZ += RAMPA + 1;
   const w = maxX - minX + 1;
   const d = maxZ - minZ + 1;
   const piso = new Uint8Array(w * d);
@@ -340,17 +348,27 @@ function planejar(rx: number, rz: number, semente: number, t: TerrenoNatural): P
       viz(i, x, z, -1, 1);
     }
   // a rampa precisa alcançar o terreno natural: na borda dela, o desnível tem que caber
-  // nos RAMPA blocos (senão sobraria um penhasco no fim)
+  // nos RAMPA blocos (senão sobraria um penhasco no fim). Com a borda larga, a rampa
+  // anda uma célula a mais e precisa caber do mesmo jeito; se não couber, fica a estreita.
+  let borda: 1 | 2 = 2;
   for (let z = 0; z < d; z++)
     for (let x = 0; x < w; x++) {
       const i = z * w + x;
-      if (dist[i] !== RAMPA) continue;
+      if (dist[i] !== RAMPA && dist[i] !== RAMPA + 1) continue;
       const nat = t.altura(minX + x, minZ + z, semente);
-      if (nat - h > RAMPA - 1 || h - nat > Math.ceil((RAMPA - 1) / 2)) return null;
+      const cabe = nat - h <= RAMPA - 1 && h - nat <= Math.ceil((RAMPA - 1) / 2);
+      if (dist[i] === RAMPA && !cabe) return null;
+      if (dist[i] === RAMPA + 1 && !cabe) borda = 1;
     }
   // o jogador nunca nasce dentro de um povoado
   const nasc = t.nascimento?.(semente);
-  if (nasc && nasc.x >= minX - 2 && nasc.x <= maxX + 2 && nasc.z >= minZ - 2 && nasc.z <= maxZ + 2)
+  if (
+    nasc &&
+    nasc.x >= caixa.minX - 2 &&
+    nasc.x <= caixa.maxX + 2 &&
+    nasc.z >= caixa.minZ - 2 &&
+    nasc.z <= caixa.maxZ + 2
+  )
     return null;
   return {
     id: `${rx},${rz}`,
@@ -366,6 +384,7 @@ function planejar(rx: number, rz: number, semente: number, t: TerrenoNatural): P
     maxZ,
     dist,
     piso,
+    borda,
   };
 }
 
@@ -435,11 +454,11 @@ export function ajusteDaColuna(
       piso: tipo === 2 ? Bloco.PEDRA_LISA : tipo === 3 ? Bloco.CASCALHO : undefined,
     };
   }
-  if (d > RAMPA) return null;
-  // uma célula de borda plana em volta de todo piso (quem corta a quina do caminho não
-  // cai); depois sobe até 1 bloco por célula e desce 1 bloco a cada 2 células
-  const e = d - 1;
+  if (d > RAMPA + p.borda - 1) return null;
+  // borda plana em volta de todo piso (1 ou 2 células: quem sai um pouco do caminho não
+  // desce degrau); depois sobe até 1 bloco por célula e desce 1 bloco a cada 2 células
+  const e = Math.max(0, d - p.borda);
   const h = Math.max(p.h - Math.ceil(e / 2), Math.min(p.h + e, natural));
   if (h === natural) return null;
-  return { h, ocupada: d <= 1 };
+  return { h, ocupada: d <= p.borda };
 }

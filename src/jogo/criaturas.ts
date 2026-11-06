@@ -130,6 +130,13 @@ export interface Criatura {
   teleportes?: number;
   /** Destino atual da rotina do morador (depuração). */
   destino?: [number, number, number];
+  /** Rota que o morador está seguindo (qual e em que sentido) e o ponto dela que mira. */
+  rotaChave?: string;
+  rotaIndice?: number;
+  /** Fase da rotina (dia ou indo para casa): ao trocar, a rota recomeça. */
+  rotaFase?: 'dia' | 'casa';
+  /** Canto da praça escolhido para contornar o marco (mantido até chegar nele). */
+  canto?: [number, number];
   x: number;
   y: number;
   z: number;
@@ -459,11 +466,43 @@ function pelaRota(
   rota: [number, number][],
   paraPorta: boolean,
   final: [number, number, number],
+  nome: string,
 ): [number, number, number] {
   if (rota.length === 0) return final;
   const ponto = (q: [number, number]): [number, number, number] => [q[0], final[1], q[1]];
   if (rota.length === 1)
     return Math.hypot(c.x - rota[0][0], c.z - rota[0][1]) < 0.5 ? final : ponto(rota[0]);
+  // já seguindo esta rota neste sentido: continua do ponto em que estava, só para a
+  // frente (sem isso, perto de um ponto o alvo alternava entre ele e o anterior e o
+  // morador ficava tremendo no lugar)
+  const chave = `${nome}${paraPorta ? '>' : '<'}`;
+  const passo = paraPorta ? 1 : -1;
+  if (c.rotaChave === chave && c.rotaIndice !== undefined && distRota(c, rota) < 3) {
+    let i = c.rotaIndice;
+    while (i >= 0 && i < rota.length && Math.hypot(c.x - rota[i][0], c.z - rota[i][1]) < 0.5)
+      i += passo;
+    c.rotaIndice = i;
+    if (i < 0 || i >= rota.length) return final;
+    // saiu do caminho (parou para olhar, foi empurrado): volta reto para ele em vez de
+    // cortar em diagonal até o próximo ponto (cortar desce a rampa ao lado do caminho)
+    const ant = rota[i - passo];
+    if (ant) {
+      const [ax, az] = ant;
+      const [bx, bz] = rota[i];
+      const vx = bx - ax;
+      const vz = bz - az;
+      const comp = Math.hypot(vx, vz) || 1;
+      const t = Math.max(0, Math.min(1, ((c.x - ax) * vx + (c.z - az) * vz) / (comp * comp)));
+      const px = ax + vx * t;
+      const pz = az + vz * t;
+      if (Math.hypot(c.x - px, c.z - pz) > 0.8) {
+        // um pouco à frente da projeção, no sentido da viagem
+        const f = Math.min(1, t + 0.6 / comp);
+        return [ax + vx * f, final[1], az + vz * f];
+      }
+    }
+    return ponto(rota[i]);
+  }
   // trecho da rota mais perto do morador (distância ao segmento, não ao ponto)
   let melhor = Infinity;
   let k = 0;
@@ -483,7 +522,11 @@ function pelaRota(
     }
   }
   // longe da rota e indo para a porta: entra nela pelo começo (a borda da praça)
-  if (paraPorta && melhor > 3) return ponto(rota[0]);
+  if (paraPorta && melhor > 3) {
+    c.rotaChave = chave;
+    c.rotaIndice = 0;
+    return ponto(rota[0]);
+  }
   // mira o fim do trecho no sentido da viagem; chegando nele, o próximo (ou o destino)
   let alvo = paraPorta ? k + 1 : k;
   while (
@@ -491,7 +534,9 @@ function pelaRota(
     alvo < rota.length &&
     Math.hypot(c.x - rota[alvo][0], c.z - rota[alvo][1]) < 0.5
   )
-    alvo += paraPorta ? 1 : -1;
+    alvo += passo;
+  c.rotaChave = chave;
+  c.rotaIndice = alvo;
   return alvo < 0 || alvo >= rota.length ? final : ponto(rota[alvo]);
 }
 
@@ -515,14 +560,32 @@ function navegar(
   rotaDestino: [number, number][] | null,
   final: [number, number, number],
 ): [number, number, number] {
-  if (rotaDestino && distRota(c, rotaDestino) <= 2) return pelaRota(c, rotaDestino, true, final);
+  const nome = (r: [number, number][] | null) => (r === m.rotaCasa ? 'casa' : 'oficina');
+  const entradaDe = (r: [number, number][] | null): [number, number, number] =>
+    r && r.length ? [r[0][0], final[1], r[0][1]] : final;
+  // continua na rota em que já está enquanto não se afasta dela (sem isso, perto da
+  // praça, a uns 2 blocos de duas rotas, a escolha trocava a cada passo)
+  if (c.rotaChave) {
+    const naCasa = c.rotaChave.startsWith('casa');
+    const r = naCasa ? m.rotaCasa : m.rotaOficina;
+    const ida = c.rotaChave.endsWith('>');
+    // rota já percorrida até o fim não segura ninguém (é hora de entrar na seguinte)
+    const terminou =
+      c.rotaIndice !== undefined && (ida ? c.rotaIndice >= r.length : c.rotaIndice < 0);
+    if (!terminou && distRota(c, r) < 3) {
+      if (r === rotaDestino && ida) return pelaRota(c, r, true, final, nome(r));
+      if (r !== rotaDestino && !ida) return pelaRota(c, r, false, entradaDe(rotaDestino), nome(r));
+    }
+  }
+  if (rotaDestino && distRota(c, rotaDestino) <= 2)
+    return pelaRota(c, rotaDestino, true, final, nome(rotaDestino));
   const entrada: [number, number, number] =
     rotaDestino && rotaDestino.length ? [rotaDestino[0][0], final[1], rotaDestino[0][1]] : final;
   for (const outra of [m.rotaCasa, m.rotaOficina]) {
     if (outra === rotaDestino) continue;
-    if (distRota(c, outra) < 2) return pelaRota(c, outra, false, entrada);
+    if (distRota(c, outra) < 2) return pelaRota(c, outra, false, entrada, nome(outra));
   }
-  return rotaDestino ? pelaRota(c, rotaDestino, true, final) : final;
+  return rotaDestino ? pelaRota(c, rotaDestino, true, final, nome(rotaDestino)) : final;
 }
 
 /** Distância do ponto (px, pz) ao segmento a-b. */
@@ -540,19 +603,44 @@ function distSegmento(
   return Math.hypot(px - (ax + vx * t), pz - (az + vz * t));
 }
 
-/** Se a reta até o destino passa pelo marco da praça, vai antes por um canto livre dela. */
+/**
+ * Se a reta até o destino passa pelo marco da praça, vai antes por um canto livre dela.
+ * Contorna canto a canto: escolhe o canto alcançável que mais aproxima do destino (sem
+ * exigir que dele já se chegue direto), e assim dá a volta no marco sem empacar.
+ */
 function contornarMarco(
   c: Criatura,
   alvo: [number, number, number],
   centro: [number, number],
 ): [number, number, number] {
+  /** A reta até o destino passa perto do marco? */
   const R = 2.7;
-  if (distSegmento(centro[0], centro[1], c.x, c.z, alvo[0], alvo[2]) >= R) return alvo;
+  /** Folga mínima de um trecho: o marco tem até 1,5 do centro, mais o corpo. */
+  const LIVRE = 2.2;
   if (
-    Math.hypot(c.x - centro[0], c.z - centro[1]) < R ||
+    distSegmento(centro[0], centro[1], c.x, c.z, alvo[0], alvo[2]) >= R ||
     Math.hypot(alvo[0] - centro[0], alvo[2] - centro[1]) < R
-  )
+  ) {
+    c.canto = undefined;
     return alvo;
+  }
+  // canto já escolhido: segue nele até chegar (trocar no caminho dava vaivém)
+  if (c.canto) {
+    const [qx, qz] = c.canto;
+    if (
+      Math.hypot(c.x - qx, c.z - qz) >= 0.6 &&
+      distSegmento(centro[0], centro[1], c.x, c.z, qx, qz) >= LIVRE
+    )
+      return [qx, alvo[1], qz];
+    c.canto = undefined;
+  }
+  const dc = Math.hypot(c.x - centro[0], c.z - centro[1]);
+  // encostado no marco: primeiro se afasta dele
+  if (dc < LIVRE) {
+    const ux = dc > 0.01 ? (c.x - centro[0]) / dc : 1;
+    const uz = dc > 0.01 ? (c.z - centro[1]) / dc : 0;
+    return [centro[0] + ux * (R + 0.3), alvo[1], centro[1] + uz * (R + 0.3)];
+  }
   let melhor: [number, number, number] = alvo;
   let custo = Infinity;
   for (const [dx, dz] of [
@@ -563,14 +651,16 @@ function contornarMarco(
   ]) {
     const qx = centro[0] + dx;
     const qz = centro[1] + dz;
-    if (distSegmento(centro[0], centro[1], c.x, c.z, qx, qz) < R) continue;
-    if (distSegmento(centro[0], centro[1], qx, qz, alvo[0], alvo[2]) < R) continue;
+    // o canto em que já está não conta; o trecho até o canto não pode raspar no marco
+    if (Math.hypot(c.x - qx, c.z - qz) < 0.6) continue;
+    if (distSegmento(centro[0], centro[1], c.x, c.z, qx, qz) < LIVRE) continue;
     const k = Math.hypot(c.x - qx, c.z - qz) + Math.hypot(alvo[0] - qx, alvo[2] - qz);
     if (k < custo) {
       custo = k;
       melhor = [qx, alvo[1], qz];
     }
   }
+  if (melhor !== alvo) c.canto = [melhor[0], melhor[2]];
   return melhor;
 }
 
@@ -597,6 +687,11 @@ function rotinaMorador(
     return;
   }
   const emCasa = noite > 0.35;
+  const fase = emCasa ? 'casa' : 'dia';
+  if (c.rotaFase !== fase) {
+    c.rotaFase = fase;
+    c.rotaChave = undefined;
+  }
   let alvo: [number, number, number];
   let parar = false;
   const dDentro = Math.hypot(c.x - m.dentro[0], c.z - m.dentro[2]);
@@ -628,6 +723,8 @@ function rotinaMorador(
       c.alvoZ = base[2];
       c.tempoEstado = 12 + rng() * 14;
       c.menorDistancia = undefined;
+      // viagem nova: a rota recomeça do ponto mais perto
+      c.rotaChave = undefined;
     }
     const final: [number, number, number] = [c.alvoX, m.praca[1], c.alvoZ];
     const vaiOficina = Math.hypot(c.alvoX - m.oficina[0], c.alvoZ - m.oficina[2]) < 0.5;
@@ -657,7 +754,7 @@ function rotinaMorador(
     c.semProgresso = 0;
   }
   c.destino = alvo;
-  const d = andarPara(c, def, alvo[0], alvo[2], emCasa ? 0.8 : 0.5);
+  const d = andarPara(c, def, alvo[0], alvo[2], emCasa ? 1.25 : 1);
   // anti-trava: se em 10 s não chegou mais perto, aparece no destino
   if (c.menorDistancia === undefined || d < c.menorDistancia - 0.3) {
     c.menorDistancia = d;
