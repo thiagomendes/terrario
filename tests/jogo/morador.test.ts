@@ -134,3 +134,52 @@ describe('moradores', () => {
     expect(c.estado).toBe('fugir');
   });
 });
+
+describe('moradores em povoados de várias sementes', () => {
+  it.each([1, 2, 7, 42, 99])(
+    'semente %i: andam pelos caminhos sem precisar do anti-trava',
+    (semente) => {
+      let p: PlanoPovoado | null = null;
+      for (let r = 0; r < 6 && !p; r++)
+        for (let rz = -r; rz <= r && !p; rz++)
+          for (let rx = -r; rx <= r && !p; rx++)
+            p = planoDaRegiao(rx, rz, semente, TERRENO_NATURAL);
+      expect(p).toBeTruthy();
+      const cache = new Map<string, Uint8Array>();
+      const bloco = (x: number, y: number, z: number) => {
+        if (y < 0 || y >= ALTURA) return 0;
+        const cx = Math.floor(x / TAM_X);
+        const cz = Math.floor(z / TAM_Z);
+        const k = `${cx},${cz}`;
+        let c = cache.get(k);
+        if (!c) {
+          c = gerarChunk(cx, cz, semente);
+          cache.set(k, c);
+        }
+        return c[indice(x - cx * TAM_X, y, z - cz * TAM_Z)];
+      };
+      const solido = ((x: number, y: number, z: number) =>
+        !!obterBloco(bloco(x, y, z))?.solido) as Solido;
+      const m: MundoPopulacao = {
+        solido,
+        agua: () => false,
+        luzBloco: () => 12,
+        ceuAberto: () => true,
+        bioma: (x, z) => biomaEm(x, z, semente),
+        superficie: (x, z) => {
+          for (let y = ALTURA - 2; y > 0; y--) if (solido(x, y, z)) return y + 1;
+          return null;
+        },
+        nivelMar: NIVEL_MAR,
+        povoados: () => [p!],
+      };
+      const pop = criarPopulacao(criarGerador(5));
+      const j = { x: p!.cx + 34.5, y: p!.h + 1, z: p!.cz + 0.5, vivo: true, criativo: true };
+      for (let i = 0; i < 6000; i++) pop.atualizar(0.1, m, j, (i % 600) / 600 > 0.6 ? 1 : 0);
+      const moradores = pop.lista.filter((c) => c.tipo === 'morador');
+      expect(moradores.length).toBe(p!.moradores.length);
+      for (const c of moradores)
+        expect(c.teleportes ?? 0, `morador ${c.morador!.n}`).toBeLessThanOrEqual(2);
+    },
+  );
+});

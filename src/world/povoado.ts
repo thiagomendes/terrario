@@ -241,37 +241,38 @@ function planejar(rx: number, rz: number, semente: number, t: TerrenoNatural): P
   const caminho = new Map<number, number>();
   for (const l of lotes) {
     const [px, pz] = frenteDaPorta(l);
-    // chega na borda da praça (anel livre a 3 do centro), nunca no canto (poste)
+    const eixoX = l.porta === 'l' || l.porta === 'o';
+    // entra na praça por uma célula da borda que não é canto (os cantos têm postes)
     const borda = (PRACA - 1) / 2;
-    let ax = Math.sign(px - cx) * Math.min(Math.abs(px - cx), borda);
-    let az = Math.sign(pz - cz) * Math.min(Math.abs(pz - cz), borda);
-    // fora dos cantos (postes): o outro eixo fica a no máximo borda - 1
-    if (l.porta === 'l' || l.porta === 'o') az = Math.sign(az) * Math.min(Math.abs(az), borda - 1);
-    else ax = Math.sign(ax) * Math.min(Math.abs(ax), borda - 1);
-    const alvoX = cx + ax;
-    const alvoZ = cz + az;
+    const lim = (v: number, m: number) => Math.sign(v) * Math.min(Math.abs(v), m);
+    const ex = eixoX ? Math.sign(px - cx) * borda : lim(px - cx, borda - 2);
+    const ez = eixoX ? lim(pz - cz, borda - 2) : Math.sign(pz - cz) * borda;
+    const E: [number, number] = [cx + ex, cz + ez];
+    // um passo para fora da praça no eixo da porta: a perna lateral corre fora da borda
+    const O: [number, number] = eixoX ? [E[0] + Math.sign(ex), E[1]] : [E[0], E[1] + Math.sign(ez)];
+    // da porta pelo eixo dela até a fileira de O, depois de lado até O, e entra em E
+    const C: [number, number] = eixoX ? [O[0], pz] : [px, O[1]];
     const pts: [number, number][] = [];
-    let x = px;
-    let z = pz;
-    pts.push([x, z]);
-    // primeiro anda no eixo de saída da porta, depois no outro
-    const primeiroX = l.porta === 'l' || l.porta === 'o';
-    for (let passo = 0; passo < 80 && (x !== alvoX || z !== alvoZ); passo++) {
-      if (primeiroX ? x !== alvoX : z === alvoZ) x += Math.sign(alvoX - x);
-      else z += Math.sign(alvoZ - z);
+    const andar = (de: [number, number], ate: [number, number]) => {
+      let [x, z] = de;
       pts.push([x, z]);
-    }
-    // rota a pé: borda da praça, quina do L e frente da porta
-    const quina: [number, number] = primeiroX ? [alvoX, pz] : [px, alvoZ];
-    l.rota = [[alvoX, alvoZ], quina, [px, pz]].filter(
-      (q, i, a) => i === 0 || q[0] !== a[i - 1][0] || q[1] !== a[i - 1][1],
-    ) as [number, number][];
-    pts.forEach(([x, z], k) => {
-      const f = pts.length > 1 ? k / (pts.length - 1) : 1;
-      const y = Math.round(l.h + (h - l.h) * f);
+      for (let passo = 0; passo < 80 && (x !== ate[0] || z !== ate[1]); passo++) {
+        if (x !== ate[0]) x += Math.sign(ate[0] - x);
+        else z += Math.sign(ate[1] - z);
+        pts.push([x, z]);
+      }
+    };
+    andar([px, pz], C);
+    andar(C, O);
+    andar(O, E);
+    // rota a pé (da praça para a porta), sem pontos repetidos
+    l.rota = [E, O, C, [px, pz] as [number, number]].filter(
+      (q, k, a) => k === 0 || q[0] !== a[k - 1][0] || q[1] !== a[k - 1][1],
+    );
+    for (const [x, z] of pts) {
       const c = chave(x, z);
-      if (!caminho.has(c)) caminho.set(c, y);
-    });
+      if (!caminho.has(c)) caminho.set(c, h);
+    }
   }
 
   // caixa: lotes, praça e caminhos, mais a rampa em volta
@@ -344,7 +345,8 @@ function planejar(rx: number, rz: number, semente: number, t: TerrenoNatural): P
     for (let x = 0; x < w; x++) {
       const i = z * w + x;
       if (dist[i] !== RAMPA) continue;
-      if (Math.abs(t.altura(minX + x, minZ + z, semente) - h) > RAMPA) return null;
+      const nat = t.altura(minX + x, minZ + z, semente);
+      if (nat - h > RAMPA - 1 || h - nat > Math.ceil((RAMPA - 1) / 2)) return null;
     }
   // o jogador nunca nasce dentro de um povoado
   const nasc = t.nascimento?.(semente);
@@ -434,7 +436,10 @@ export function ajusteDaColuna(
     };
   }
   if (d > RAMPA) return null;
-  const h = Math.max(p.h - d, Math.min(p.h + d, natural));
+  // uma célula de borda plana em volta de todo piso (quem corta a quina do caminho não
+  // cai); depois sobe até 1 bloco por célula e desce 1 bloco a cada 2 células
+  const e = d - 1;
+  const h = Math.max(p.h - Math.ceil(e / 2), Math.min(p.h + e, natural));
   if (h === natural) return null;
   return { h, ocupada: d <= 1 };
 }

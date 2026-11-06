@@ -152,6 +152,34 @@ describe('povoados: terreno e construções', () => {
     }
   });
 
+  it('caminhos não passam por dentro de lotes nem pelos postes da praça (6 sementes)', () => {
+    for (const sem of [1, 2, 3, 7, 42, SEMENTE])
+      for (const p of povoados(4, sem)) {
+        const postes = [
+          [4, 4],
+          [-4, 4],
+          [4, -4],
+          [-4, -4],
+        ].map(([dx, dz]) => `${p.cx + dx},${p.cz + dz}`);
+        for (const l of p.lotes)
+          for (const [x, z] of l.rota) {
+            expect(postes.includes(`${x},${z}`), `${p.id}: rota no poste ${x},${z}`).toBe(false);
+          }
+        for (const c of p.caminho.keys()) {
+          const x = Math.floor(c / 65536) - 32768;
+          const z = (c % 65536) - 32768;
+          expect(postes.includes(`${x},${z}`), `${p.id}: caminho no poste ${x},${z}`).toBe(false);
+          for (const l of p.lotes) {
+            const dentro = x >= l.x0 && x < l.x0 + 7 && z >= l.z0 && z < l.z0 + 7;
+            expect(
+              dentro,
+              `semente ${sem} ${p.id}: caminho ${x},${z} dentro do lote ${l.tipo}`,
+            ).toBe(false);
+          }
+        }
+      }
+  });
+
   it('em toda forma, a porta tem passagem livre do miolo da casa até a frente', () => {
     const [p] = povoados(1);
     for (const casa of ['duas-aguas', 'cupula', 'tenda', 'redonda', 'modulo'] as FormaCasa[]) {

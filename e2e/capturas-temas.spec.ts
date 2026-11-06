@@ -191,6 +191,8 @@ for (const id of TEMAS) {
     if (pv) {
       await page.evaluate((p) => {
         const e = window.__brumaluz!;
+        // um bloco de apoio no alto: o jogador não voa e cairia (a foto sairia do chão)
+        e.definirBloco!(Math.floor(p.cx - 14.5), p.h + 8, Math.floor(p.cz - 14.5), 45);
         e.teleportar!(p.cx - 14.5, p.cz - 14.5, p.h + 9);
         e.apontar!(Math.atan2(14.5, 14.5), 0.42);
       }, pv);
