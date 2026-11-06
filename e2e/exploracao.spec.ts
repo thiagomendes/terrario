@@ -112,25 +112,50 @@ for (const id of TEMAS) {
     });
     await esperar(page, 600);
     let quebrados = 0;
+    const falhas: string[] = [];
     for (const m of MATERIAIS) {
       const pos = await page.evaluate((m) => {
         const e = window.__brumaluz!;
-        const [x, y, z] = e.posicao!.map(Math.floor);
-        // yaw 0 olha para +z; pitch positivo olha para baixo: mira o bloco no chão à frente
-        e.definirBloco!(x, y, z + 2, m);
-        e.apontar!(0, 0.45);
-        return { x, y, z: z + 2 };
+        // posicao é o olho da câmera: o bloco vai na altura do peito, dois blocos à frente
+        const [ex, ey, ez] = e.posicao!;
+        const x = Math.floor(ex);
+        const y = Math.floor(ey) - 1;
+        const z = Math.floor(ez) + 2;
+        // caminho livre entre o olho e o bloco (o terreno em volta pode estar na frente)
+        for (let dz = 1; dz < 2; dz++)
+          for (const yy of [y, y + 1]) e.definirBloco!(x, yy, Math.floor(ez) + dz, 0);
+        e.definirBloco!(x, y, z, m);
+        // mira no centro do bloco (yaw 0 olha para +z; pitch positivo olha para baixo)
+        const dx = x + 0.5 - ex;
+        const dy = y + 0.5 - ey;
+        const dz = z + 0.5 - ez;
+        e.apontar!(Math.atan2(dx, dz), -Math.atan2(dy, Math.hypot(dx, dz)));
+        return { x, y, z };
       }, m);
-      await esperar(page, 250);
-      const ok = await page.evaluate((p) => {
+      // espera a mira achar o bloco recém-colocado (o primeiro passa pelo worker de edição)
+      await page
+        .waitForFunction(
+          (p) => {
+            const a = window.__brumaluz!.alvo;
+            return !!a && a.x === p.x && a.y === p.y && a.z === p.z;
+          },
+          pos,
+          { timeout: 5000 },
+        )
+        .catch(() => undefined);
+      const r = await page.evaluate((p) => {
         const e = window.__brumaluz!;
         const a = e.alvo;
-        if (!a || a.x !== p.x || a.y !== p.y || a.z !== p.z) return false;
-        return e.interagir!('quebrar') && e.bloco!(p.x, p.y, p.z) === 0;
+        if (!a || a.x !== p.x || a.y !== p.y || a.z !== p.z)
+          return `mira em ${a ? `${a.x},${a.y},${a.z}` : 'nada'} em vez de ${p.x},${p.y},${p.z}`;
+        if (!e.interagir!('quebrar')) return 'quebrar recusou';
+        const b = e.bloco!(p.x, p.y, p.z);
+        return b === 0 ? '' : `ficou o bloco ${b}`;
       }, pos);
-      if (ok) quebrados++;
+      if (!r) quebrados++;
+      else falhas.push(`bloco ${m}: ${r}`);
     }
-    expect(quebrados, 'materiais que não quebraram').toBe(MATERIAIS.length);
+    expect(falhas, 'materiais que não quebraram').toEqual([]);
     await esperar(page, 1200);
     for (let i = 0; i < 5; i++) {
       await page.evaluate((i) => window.__brumaluz!.selecionarSlot!(i), i);
@@ -186,8 +211,12 @@ for (const id of TEMAS) {
       type: 'quadros',
       description: `${id}: ${quadros.length} quadros, p95 ${p95.toFixed(0)} ms, pior ${ordenados[ordenados.length - 1].toFixed(0)} ms`,
     });
-    // WebGL por software (SwiftShader) é lento: o limite vale para engasgos, não para o FPS
-    expect(p95, 'quadros longos demais').toBeLessThan(600);
+    // WebGL por software (SwiftShader) roda a uns 3 quadros por segundo (p95 de 450 a 650 ms
+    // em todos os temas, inclusive o base): o limite pega travamentos, não o FPS
+    expect(
+      p95,
+      `quadros longos demais: p95 ${p95.toFixed(0)} ms em ${quadros.length} quadros`,
+    ).toBeLessThan(1000);
     expect(erros).toEqual([]);
   });
 }
