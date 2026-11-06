@@ -60,11 +60,24 @@ test('povoado: moradores, tela de trocas com mouse e teclado', async ({ page }) 
     { timeout: 120_000 },
   );
   // chegou ao povoado: o aviso (e a missão do diário) disparam
-  await page.waitForFunction(
-    (id) => (window as unknown as { __chegou?: string }).__chegou === id,
-    p.id,
-    { timeout: 20_000 },
-  );
+  const chegou = await page
+    .waitForFunction(
+      (id) =>
+        (window as unknown as { __chegou?: string }).__chegou === id ||
+        /encontrou|chegou/i.test(document.querySelector('.toast-area')?.textContent ?? ''),
+      p.id,
+      { timeout: 60_000 },
+    )
+    .then(() => true)
+    .catch(() => false);
+  const info = await page.evaluate(() => ({
+    chegou: (window as unknown as { __chegou?: string }).__chegou,
+    pos: window.__brumaluz!.posicao,
+  }));
+  expect(
+    chegou,
+    `sem aviso de chegada: ${JSON.stringify(info)} povoado ${p.id} em ${p.cx},${p.cz}`,
+  ).toBe(true);
   // dá os itens e mira no morador mais perto, chegando bem perto dele
   await page.evaluate((itens) => {
     for (const [i, q] of itens) window.__brumaluz!.inventario!.adicionar(i, q);
@@ -73,9 +86,11 @@ test('povoado: moradores, tela de trocas com mouse e teclado', async ({ page }) 
     const e = window.__brumaluz!;
     for (let tentativa = 0; tentativa < 20; tentativa++) {
       const [ex, ey, ez] = e.posicao!;
-      const m = (e.criaturas?.() ?? [])
+      // alterna entre os moradores (algum pode estar dentro de casa, atrás da parede)
+      const todos = (e.criaturas?.() ?? [])
         .filter((c) => c.tipo === 'morador')
-        .sort((a, b) => Math.hypot(a.x - ex, a.z - ez) - Math.hypot(b.x - ex, b.z - ez))[0];
+        .sort((a, b) => Math.hypot(a.x - ex, a.z - ez) - Math.hypot(b.x - ex, b.z - ez));
+      const m = todos[tentativa % Math.max(1, todos.length)];
       if (!m) return false;
       // a 2 blocos do morador, olhando para o peito dele
       const d = Math.hypot(m.x - ex, m.z - ez) || 1;
@@ -106,11 +121,8 @@ test('povoado: moradores, tela de trocas com mouse e teclado', async ({ page }) 
     expect(b!.height).toBeGreaterThanOrEqual(44);
     expect(await botoes.nth(i).getAttribute('aria-label')).toMatch(/receber/);
   }
-  const contar = () =>
-    page.evaluate(() => {
-      const inv = window.__brumaluz!.inventario!;
-      return inv.slots.reduce((s, x) => s + (x?.qtd ?? 0), 0);
-    });
+  // retrato do inventário (uma troca 3 por 3 não muda o total, mas muda os itens)
+  const contar = () => page.evaluate(() => JSON.stringify(window.__brumaluz!.inventario!.slots));
   // mouse: primeira troca
   const antes = await contar();
   await botoes.first().click();
@@ -129,9 +141,10 @@ test('povoado: moradores, tela de trocas com mouse e teclado', async ({ page }) 
   });
   await page.waitForTimeout(200);
   for (let i = 0; i < n; i++) await expect(botoes.nth(i)).toHaveAttribute('aria-disabled', 'true');
-  // acionar uma troca sem itens mostra o aviso
-  await botoes.first().click();
-  await expect(page.locator('#app')).toContainText(/falta/i);
+  // acionar uma troca sem itens (pelo teclado: o botão continua focável) mostra o aviso
+  await botoes.first().focus();
+  await page.keyboard.press('Enter');
+  await expect(page.locator('.toast-area')).toContainText(/falta/i);
   await page.keyboard.press('Escape');
   await expect(painel).toBeHidden();
   expect(erros).toEqual([]);

@@ -299,6 +299,16 @@ function mover(c: Criatura, def: DefCriatura, dt: number, m: Mundo, agua: number
   const s = m.solido;
   const peixe = def.comportamento === 'peixe';
   const livre = (x: number, y: number, z: number) => !colideCorpo(s, x, y, z, def.mw, def.alt);
+  // dentro de um bloco (chunk que carregou depois, bloco posto em cima, quadro longo):
+  // sobe até o primeiro espaço livre logo acima, em vez de ficar presa
+  if (!peixe && !livre(c.x, c.y, c.z)) {
+    for (let dy = 0.25; dy <= 2.5; dy += 0.25) {
+      if (!livre(c.x, c.y + dy, c.z)) continue;
+      c.y += dy;
+      c.vy = 0;
+      break;
+    }
+  }
   const tentar = (eixo: 'x' | 'z', d: number) => {
     if (d === 0) return;
     const nx = eixo === 'x' ? c.x + d : c.x;

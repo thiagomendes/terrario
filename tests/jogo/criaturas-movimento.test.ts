@@ -221,3 +221,18 @@ describe('criaturas: movimento', () => {
     expect(Math.hypot(a.x - b.x, a.z - b.z)).toBeGreaterThan(0.6);
   });
 });
+
+describe('criatura presa dentro de um bloco', () => {
+  it('sobe para o primeiro espaço livre acima', async () => {
+    const { passoCriatura, novaCriatura } = await import('../../src/jogo/criaturas');
+    const { criarGerador } = await import('../../src/audio/variacao');
+    // chão em y <= 64: o coelho começa afundado no bloco 64
+    const solido = ((_x: number, y: number) => y <= 64) as import('../../src/player/fisica').Solido;
+    const m = { solido, agua: () => false, luzBloco: () => 12, ceuAberto: () => true };
+    const c = novaCriatura(1, 'coelho', 0.5, 64.1, 0.5);
+    const j = { x: 20, y: 65, z: 20, vivo: true, criativo: true };
+    for (let i = 0; i < 10; i++) passoCriatura(c, 0.1, m, j, criarGerador(1), [], 0);
+    expect(c.y).toBeGreaterThanOrEqual(65);
+    expect(c.y).toBeLessThan(65.6);
+  });
+});

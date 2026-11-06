@@ -31,15 +31,22 @@ async function checarEstado(page: Page, etapa: string) {
   const s = await page.evaluate(() => {
     const e = window.__brumaluz!;
     const p = e.posicao ?? [NaN, NaN, NaN];
-    const presas = (e.criaturas?.() ?? []).filter((c) => {
+    const lista = (e.criaturas?.() ?? []).filter((c) => {
       const b = e.bloco!(Math.floor(c.x), Math.floor(c.y + 0.3), Math.floor(c.z));
       return b !== 0 && b !== 67 && ![8, 9, 10, 26, 33, 54, 37].includes(b);
-    }).length;
-    return { p, malhas: e.malhasAtivas ?? 0, presas, fps: e.fps };
+    });
+    const presas = lista.length;
+    const detalhe = lista
+      .map(
+        (c) =>
+          `${c.tipo} em ${c.x.toFixed(1)},${c.y.toFixed(1)},${c.z.toFixed(1)} no bloco ${e.bloco!(Math.floor(c.x), Math.floor(c.y + 0.3), Math.floor(c.z))}`,
+      )
+      .join('; ');
+    return { p, malhas: e.malhasAtivas ?? 0, presas, detalhe, fps: e.fps };
   });
   expect(s.p.every(Number.isFinite), `${etapa}: posição inválida ${s.p}`).toBe(true);
   expect(s.malhas, `${etapa}: mundo sem malhas`).toBeGreaterThan(0);
-  expect(s.presas, `${etapa}: criatura presa num bloco`).toBe(0);
+  expect(s.presas, `${etapa}: criatura presa num bloco: ${s.detalhe}`).toBe(0);
   return s;
 }
 
