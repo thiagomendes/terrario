@@ -112,6 +112,28 @@ Não há dependência nova nem arquivo de áudio ou textura externo: som, rachad
 
 Conferência auditiva: (manual) abra o jogo, clique para jogar e confirme golpes, quebra, colocação, passos, pulo, aterrissagem, troca de slot e ambiente, com variação entre repetições. A tecla M deve alternar "Som: ligado" e "Som: mudo". O áudio real não é verificável no sandbox.
 
+## Etapa 005: câmera e personagem
+
+Braço e mão em primeira pessoa, câmera de terceira pessoa (tecla V) e personagem voxel com painel de aparência (tecla C).
+
+Capturas esperadas em `test-results/screens` (sufixos `-desktop`, `-tablet` e `-celular`), geradas por `e2e/capturas-personagem.spec.ts`:
+
+- `painel-personagem-*.png`: painel de personalização na tela de entrada.
+- `primeira-pessoa-braco-*.png`: braço direito no canto inferior direito, com o bloco selecionado na mão.
+- `terceira-pessoa-personagem-*.png`: personagem inteiro visto de trás.
+
+Malhas (limite da spec: 20 malhas e 2 materiais, sem luz, sombra nem pós-processamento):
+
+- Braço em primeira pessoa: 2 malhas (braço e miniatura do bloco), em `renderingGroupId` 1.
+- Corpo em terceira pessoa: 6 partes base (cabeça, tronco, dois braços, duas pernas) mais cabelo e acessórios opcionais, no máximo 9 malhas conforme o modelo.
+- Total no pior caso: 11 malhas, abaixo do limite de 20. O gancho `window.__brumaluz.personagem.malhas()` informa o valor real, anexado ao relatório do Playwright como `personagem-*`.
+
+FPS: o valor de `window.__brumaluz.fps` também é anexado em `personagem-*`. Em SwiftShader (WebGL por software) ele é só informativo, sem meta, na mesma ordem de grandeza da tabela da etapa 003.
+
+Não há dependência nova nem arquivo de arte externo: modelo, textura, poses e braço são gerados por código.
+
+Conferência visual: (manual) abra o jogo, ajuste a aparência no painel, clique para jogar e confirme o braço e o bloco na mão, a troca do bloco ao trocar de slot, a tecla V alternando as câmeras, o personagem andando, correndo, pulando, minerando e colocando blocos, e a aparência mantida após recarregar a página.
+
 ## Ressalva do WebGL por software
 
 As capturas rodam em Chromium sem GPU, com WebGL por software (SwiftShader). O FPS medido com SwiftShader é apenas informativo, não uma meta. Para avaliar o desempenho real, abra o jogo num navegador com aceleração por hardware.
