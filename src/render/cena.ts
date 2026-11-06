@@ -69,8 +69,6 @@ import {
 } from '../jogo/clima';
 import { criarPrecipitacao } from './precipitacao';
 import { criarVisualConstrucao } from './construcao';
-import { corDaColuna, topoDaColuna, type Rgb } from '../jogo/mapa';
-import { corMediaDoBloco } from '../fx/cores';
 import {
   NOMES_FERRAMENTA,
   colar,
@@ -175,6 +173,8 @@ import { carregarAparencia, type Armazenamento } from '../personagem/persistenci
 import type { Pose } from '../personagem/poses';
 import { criarBraco } from './braco';
 import { criarPersonagem } from './personagem';
+import { criarModoFoto } from './modoFoto';
+import { amostrarMapaChunk } from './mapaChunk';
 import { conexaoLocal, type Conexao } from '../cliente/conexao';
 import { criarEstadoCliente } from '../cliente/estado';
 import {
@@ -242,6 +242,8 @@ export interface EstadoDepuracao {
   latenciaEdicaoMs?: number;
   remalhaMs?: number;
   aplicadasNoUltimoQuadro?: number;
+  /** Tempo médio da lógica de cada quadro na linha principal, fora o desenho (ms). */
+  logicaQuadroMs?: number;
   atmosfera?: { noite: number; crepusculo: number };
   itensSoltos?: number;
   blocoGerado?: (x: number, y: number, z: number) => number;
@@ -1866,7 +1868,11 @@ export function criarCena(
     }
   }
 
+  // tempo da lógica do quadro na linha principal (fora o desenho), média móvel em ms
+  let logicaMs = 0;
+  Object.defineProperty(estado, 'logicaQuadroMs', { get: () => logicaMs, enumerable: true });
   engine.runRenderLoop(() => {
+    const inicioQuadro = performance.now();
     quadroAtual++;
     if (pontoToque) mirarToque(pontoToque.x, pontoToque.y);
     const dtBruto = engine.getDeltaTime() / 1000;
@@ -1898,6 +1904,7 @@ export function criarCena(
     quadroCriaturas?.(dtQuadro, tempo);
     quadroConstrucao?.(tempo);
     balanco.atualizar(tempo);
+    logicaMs += (performance.now() - inicioQuadro - logicaMs) * 0.05;
     scene.render();
   });
   let escalaMinima = 1;
@@ -2281,128 +2288,24 @@ export function criarCena(
   };
 
   // Modo foto: câmera livre, filtros, desfoque e captura.
-  let modoFoto = false;
-  const fotoPos = new Vector3();
-  const curvasBase = ip.colorCurves;
-  function definirFiltro(f: string): void {
-    const c = new ColorCurves();
-    c.globalSaturation = 0;
-    switch (f) {
-      case 'quente':
-        c.globalHue = 30;
-        c.globalDensity = 35;
-        c.globalSaturation = 15;
-        break;
-      case 'frio':
-        c.globalHue = 210;
-        c.globalDensity = 35;
-        break;
-      case 'pb':
-        c.globalSaturation = -100;
-        break;
-      case 'sepia':
-        c.globalSaturation = -100;
-        c.globalHue = 35;
-        c.globalDensity = 55;
-        break;
-      case 'sonho':
-        c.globalSaturation = 35;
-        c.highlightsHue = 300;
-        c.highlightsDensity = 30;
-        break;
-      default:
-        ip.colorCurves = curvasBase;
-        pipeline.bloomWeight = 0.22;
-        return;
-    }
-    ip.colorCurves = c;
-    pipeline.bloomWeight = f === 'sonho' ? 0.6 : 0.22;
-  }
-  estado.modoFoto = {
-    ativo: () => modoFoto,
-    alternar: () => {
-      modoFoto = !modoFoto;
-      if (modoFoto) {
-        fotoPos.copyFrom(cameraVisao.position);
-        estado.pausarDia = true;
-      } else {
-        estado.pausarDia = false;
-        pipeline.depthOfFieldEnabled = false;
-        definirFiltro('natural');
-        cameraVisao.fov = camera.fov;
-      }
-      return modoFoto;
+  const modoFoto = criarModoFoto({
+    scene,
+    canvas,
+    camera,
+    cameraVisao,
+    pipeline,
+    teclas: controle.teclas,
+    alvo: calcularAlvo,
+    pausarDia: (p) => {
+      estado.pausarDia = p;
     },
-    filtro: definirFiltro,
-    desfoque: (v: number) => {
-      pipeline.depthOfFieldEnabled = v > 0.01;
-      if (v > 0.01) {
-        const a = calcularAlvo();
-        const dist = a
-          ? Math.hypot(a.x + 0.5 - fotoPos.x, a.y + 0.5 - fotoPos.y, a.z + 0.5 - fotoPos.z)
-          : 8;
-        pipeline.depthOfField.focusDistance = dist * 1000;
-        pipeline.depthOfField.fStop = 1.4 + (1 - v) * 8;
-        pipeline.depthOfField.focalLength = 50 + v * 100;
-      }
-    },
-    fov: (g: number) => {
-      cameraVisao.fov = (g * Math.PI) / 180;
-    },
-    capturar: () => {
-      scene.render();
-      const url = canvas.toDataURL('image/png');
-      const a = document.createElement('a');
-      const agora = new Date();
-      a.download = `terrario-${agora.toISOString().slice(0, 19).replace(/[:T]/g, '-')}.png`;
-      a.href = url;
-      a.click();
-      return url;
-    },
-  };
-  function quadroFoto(dt: number): void {
-    if (!modoFoto) return;
-    const t = controle.teclas;
-    const yaw = camera.rotation.y;
-    const pitch = camera.rotation.x;
-    const v = (t.correr ? 14 : 5) * dt;
-    const f = (t.frente ? 1 : 0) - (t.tras ? 1 : 0);
-    const d = (t.direita ? 1 : 0) - (t.esquerda ? 1 : 0);
-    fotoPos.x += (Math.sin(yaw) * Math.cos(pitch) * f + Math.cos(yaw) * d) * v;
-    fotoPos.z += (Math.cos(yaw) * Math.cos(pitch) * f - Math.sin(yaw) * d) * v;
-    fotoPos.y += (-Math.sin(pitch) * f + (t.pular ? 1 : 0)) * v;
-  }
-  quadroFotoRef = quadroFoto;
-  fotoPosRef = () => fotoPos;
+  });
+  estado.modoFoto = modoFoto;
+  quadroFotoRef = modoFoto.quadro;
+  fotoPosRef = modoFoto.posicao;
 
   // Mapa: cores de um chunk visto de cima (relevo e água)
-  estado.mapaChunk = (cx: number, cz: number) => {
-    // só chunks já entregues pelo worker: o mapa nunca gera terreno na thread principal
-    if (!provedor.tem(cx, cz)) return null;
-    const vizX = provedor.tem(cx - 1, cz);
-    const vizZ = provedor.tem(cx, cz - 1);
-    const out = new Uint8ClampedArray(TAM_X * TAM_Z * 4);
-    const alturas = new Int32Array((TAM_X + 1) * (TAM_Z + 1));
-    const topos: { bloco: number; y: number; agua: number }[] = [];
-    for (let z = -1; z < TAM_Z; z++)
-      for (let x = -1; x < TAM_X; x++) {
-        const wx = cx * TAM_X + (x < 0 && !vizX ? 0 : x);
-        const wz = cz * TAM_Z + (z < 0 && !vizZ ? 0 : z);
-        const t = topoDaColuna((y) => blocoEm(wx, y, wz));
-        alturas[(z + 1) * (TAM_X + 1) + (x + 1)] = t.y;
-        if (x >= 0 && z >= 0) topos.push(t);
-      }
-    let k = 0;
-    for (let z = 0; z < TAM_Z; z++)
-      for (let x = 0; x < TAM_X; x++, k++) {
-        const t = topos[k];
-        const base = (corMediaDoBloco(t.bloco) ?? [20, 22, 30]) as Rgb;
-        const no = alturas[z * (TAM_X + 1) + x];
-        const c = corDaColuna(base, t.y, no, t.agua);
-        out.set([c[0], c[1], c[2], 255], k * 4);
-      }
-    return out;
-  };
+  estado.mapaChunk = (cx: number, cz: number) => amostrarMapaChunk(provedor, blocoEm, cx, cz);
 
   // Controle direto (toque e gamepad): sem pointer lock
   estado.controleDireto = {
@@ -2722,6 +2625,11 @@ export function criarCena(
     blocoEm,
     semente,
     salvar,
+    /** Usa um bloco pelo núcleo (porta, baú, fornalha, cama). */
+    usarBloco(x: number, y: number, z: number) {
+      enviarTelemetria(true);
+      enviar({ t: 'usar', x, y, z });
+    },
     /** Fecha o baú ou a fornalha aberta (manda antes o que a tela mudou). */
     fecharConteiner() {
       sincronia.verificar();

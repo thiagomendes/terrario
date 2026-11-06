@@ -212,6 +212,8 @@ function ligarInventario(
   window.addEventListener('brumaluz:usar', (e) => {
     const d = (e as CustomEvent<{ bloco: number; x: number; y: number; z: number }>).detail;
     if (d.bloco === Bloco.MESA_TRABALHO) abrir(3);
+    // o evento também serve a testes e atalhos: baú, fornalha e cama vão ao núcleo
+    else cena.usarBloco(d.x, d.y, d.z);
   });
   // baú e fornalha: o núcleo manda o conteúdo (e as mudanças, como a fornalha fundindo)
   window.addEventListener('brumaluz:conteiner', (e) => {

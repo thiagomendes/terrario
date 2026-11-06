@@ -1,4 +1,4 @@
-# Brumaluz
+# Terrário (antes Brumaluz)
 
 ## Visão geral
 
@@ -17,6 +17,21 @@ A spec 005-camera-personagem (concluída) acrescentou braço e mão em primeira 
 A revisão visual e sonora (sem spec numerada, 2026-11-06) trocou a direção de arte para pixel-art natural de 16x16 com iluminação moderna: ciclo de dia e noite puro (`atmosfera.ts`), céu em shader (`ceu.ts`), água em plano com reflexo (`agua.ts`), bruma de vale e variação de tom por bloco (`materialMundo.ts`), vagalumes (`vagalumes.ts`), pós-processamento, personagem com textura por face e braço em primeira pessoa como viewmodel, e áudio com receitas por material e paisagem sonora.
 
 A spec 006-expansao (branch `feat/expansao`, 2026-11-06) transformou a cena em jogo completo: mundos salvos, inventário, crafting, ferramentas, modos criativo e sobrevivência, mundo de 128 de altura com biomas, cavernas e minérios, iluminação por blocos, água como bloco, blocos utilitários (fornalha, baú, porta, cama, escada, laje, cerca), criaturas (passivas, hostis e companheira), clima e estações, construção assistida, modo foto, mapas, diário de missões, música adaptativa, toque, gamepad e legendas. Detalhes em `.sdd/specs/006-expansao/report.md`.
+
+A spec 007-terrario-temas deu o nome Terrário ao jogo e criou os seis temas de mundo (só aparência, nomes e sons; a mecânica é a mesma). A spec 008-povoados trouxe vilas com moradores, profissões e trocas, na cara de cada tema.
+
+A spec 009-servidor-local separou o mundo do desenho. O **núcleo** (`src/nucleo/`) é o dono do mundo e das regras, puro, sem tela nem DOM: blocos e edições, baús e fornalhas, itens no chão, criaturas e moradores, inventário, sobrevivência, dia, clima e estações, em passos fixos de 50 ms. Ele roda num Web Worker (servidor local) e, na spec 010, roda igual no Node de um servidor na nuvem. O **cliente** (`src/render/`, `src/ui/`, `src/cliente/`) desenha, toca os sons, lê os controles e faz a física do próprio jogador; ele manda comandos e aplica os quadros que o núcleo devolve. Ações do jogador aparecem na hora (previsão) e são confirmadas ou desfeitas pelo núcleo.
+
+## Núcleo e cliente (spec 009)
+
+- `src/nucleo/protocolo.ts`: todas as mensagens (comandos, quadros, eventos, salvamento), serializáveis e com versão.
+- `src/nucleo/nucleo.ts`: o mundo e as regras; `mundo.ts`: terreno pela semente, edições, luz, céu e superfície para as criaturas.
+- `src/nucleo/anfitriao.ts`: roda o núcleo no relógio fixo e aplica os comandos na ordem de `seq`; `servidorLocal.worker.ts` é o Web Worker.
+- `src/cliente/conexao.ts`: a conexão com o núcleo (worker; na mesma thread para testes, com serialização, atraso e entrega embaralhada).
+- `src/cliente/estado.ts`: o que o cliente sabe do mundo, sem tela: previsões com confirmação, quadros em ordem, itens, criaturas, vida, dia e clima.
+- `src/cliente/replica.ts`: inventário e contêiner por transações (slot antes → depois) reaplicadas por cima do estado oficial; criaturas e itens com movimento suave.
+- Regra: nada em `src/nucleo/` importa desenho, interface, áudio de verdade, Babylon ou DOM (`tests/nucleo/fronteira.test.ts`).
+- Salvamento: o núcleo devolve a parte do mundo; a cena junta a câmera, o slot na mão, o diário e os marcadores e grava no IndexedDB, no mesmo formato de antes (mundos antigos abrem iguais).
 
 ## Stack
 
