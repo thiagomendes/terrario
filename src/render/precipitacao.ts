@@ -1,3 +1,4 @@
+import { tema } from '../temas/ativo';
 import { ParticleSystem } from '@babylonjs/core/Particles/particleSystem';
 import '@babylonjs/core/Particles/particleSystemComponent';
 import { DynamicTexture } from '@babylonjs/core/Materials/Textures/dynamicTexture';
@@ -47,9 +48,12 @@ export function criarPrecipitacao(scene: Scene) {
   chuva.maxSize = 0.13;
   chuva.minScaleY = 6;
   chuva.maxScaleY = 8;
-  chuva.color1 = new Color4(0.78, 0.84, 0.95, 0.7);
-  chuva.color2 = new Color4(0.68, 0.75, 0.88, 0.55);
-  chuva.colorDead = new Color4(0.6, 0.68, 0.82, 0);
+  const tp = tema().particulas;
+  // tinta do tema sobre as cores de base (Bruma e Luz: 0.78, 0.84, 0.95)
+  const tc = [tp.chuva[0] / 0.78, tp.chuva[1] / 0.84, tp.chuva[2] / 0.95];
+  chuva.color1 = new Color4(0.78 * tc[0], 0.84 * tc[1], 0.95 * tc[2], 0.7);
+  chuva.color2 = new Color4(0.68 * tc[0], 0.75 * tc[1], 0.88 * tc[2], 0.55);
+  chuva.colorDead = new Color4(0.6 * tc[0], 0.68 * tc[1], 0.82 * tc[2], 0);
   chuva.billboardMode = ParticleSystem.BILLBOARDMODE_STRETCHED;
   chuva.blendMode = ParticleSystem.BLENDMODE_STANDARD;
   chuva.emitRate = 0;
@@ -68,9 +72,10 @@ export function criarPrecipitacao(scene: Scene) {
   neve.maxLifeTime = 9;
   neve.minSize = 0.06;
   neve.maxSize = 0.13;
-  neve.color1 = new Color4(1, 1, 1, 0.9);
-  neve.color2 = new Color4(0.9, 0.94, 1, 0.75);
-  neve.colorDead = new Color4(1, 1, 1, 0);
+  const tn = tp.neve;
+  neve.color1 = new Color4(tn[0], tn[1], tn[2], 0.9);
+  neve.color2 = new Color4(0.9 * tn[0], 0.94 * tn[1], tn[2], 0.75);
+  neve.colorDead = new Color4(tn[0], tn[1], tn[2], 0);
   neve.blendMode = ParticleSystem.BLENDMODE_STANDARD;
   neve.emitRate = 0;
   neve.start();
@@ -115,11 +120,18 @@ export function criarPrecipitacao(scene: Scene) {
       const q = Math.round(outono * 10) / 10;
       if (q !== outonoFolhas) {
         outonoFolhas = q;
-        const verde = new Color4(0.32, 0.58, 0.22, 0.95);
+        const tf = tema().particulas.folhas;
+        const k = [tf[0] / 0.32, tf[1] / 0.58, tf[2] / 0.22];
+        const verde = new Color4(tf[0], tf[1], tf[2], 0.95);
         const ocre = new Color4(0.9, 0.5, 0.15, 0.95);
         folhas.color1 = Color4.Lerp(verde, ocre, q);
         folhas.color2 = Color4.Lerp(
-          new Color4(0.4, 0.66, 0.26, 0.9),
+          new Color4(
+            Math.min(1, 0.4 * k[0]),
+            Math.min(1, 0.66 * k[1]),
+            Math.min(1, 0.26 * k[2]),
+            0.9,
+          ),
           new Color4(0.8, 0.32, 0.1, 0.9),
           q,
         );

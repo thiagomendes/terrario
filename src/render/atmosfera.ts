@@ -1,3 +1,4 @@
+import { tema } from '../temas/ativo';
 export type Cor = readonly [number, number, number];
 
 export interface PaletaAtmosfera {
@@ -82,7 +83,7 @@ export interface EstadoAtmosfera {
   arco: number;
 }
 
-interface Quadro {
+export interface Quadro {
   h: number;
   zen: Cor;
   meio: Cor;
@@ -96,7 +97,8 @@ interface Quadro {
   dens: number;
 }
 
-const QUADROS: Quadro[] = [
+/** Ciclo do dia do tema Bruma e Luz (base). */
+export const QUADROS_CEU_BASE: Quadro[] = [
   {
     h: 0,
     zen: [0.01, 0.015, 0.05],
@@ -248,9 +250,11 @@ function suave(t: number): number {
 export function atmosferaNaHora(horaBruta: number): EstadoAtmosfera {
   const hora = normalizarHora(horaBruta);
   let i = 0;
-  while (i < QUADROS.length - 2 && QUADROS[i + 1].h <= hora) i++;
-  const a = QUADROS[i];
-  const b = QUADROS[i + 1];
+  // ciclo do dia do tema ativo (o Bruma e Luz usa os quadros base)
+  const quadros = tema().quadrosCeu;
+  while (i < quadros.length - 2 && quadros[i + 1].h <= hora) i++;
+  const a = quadros[i];
+  const b = quadros[i + 1];
   const tBruto = (hora - a.h) / (b.h - a.h);
   const t = tBruto * tBruto * (3 - 2 * tBruto);
 

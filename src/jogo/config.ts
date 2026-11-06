@@ -28,7 +28,9 @@ export interface Config {
   mostrarAtalhos: boolean;
 }
 
-export const CHAVE_CONFIG = 'brumaluz:config';
+export const CHAVE_CONFIG = 'terrario:config';
+/** Chave de antes do jogo se chamar Terrário: lida se a nova ainda não existe. */
+export const CHAVE_CONFIG_ANTIGA = 'brumaluz:config';
 
 export const CONFIG_PADRAO: Config = {
   volumeGeral: 0.8,
@@ -90,7 +92,7 @@ export function normalizarConfig(entrada: unknown): Config {
 
 export function carregarConfig(a: Armazenamento | null): Config {
   try {
-    const t = a?.getItem(CHAVE_CONFIG);
+    const t = a?.getItem(CHAVE_CONFIG) ?? a?.getItem(CHAVE_CONFIG_ANTIGA);
     return normalizarConfig(t ? JSON.parse(t) : null);
   } catch {
     return { ...CONFIG_PADRAO };

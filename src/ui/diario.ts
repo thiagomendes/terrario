@@ -1,3 +1,4 @@
+import { tema } from '../temas/ativo';
 import { MISSOES, type Diario } from '../jogo/diario';
 import { criarModal } from './mundos';
 import { iconeDoItem } from './icones';
@@ -50,7 +51,7 @@ export function criarUiDiario(
   op: { aoFechar?: () => void } = {},
 ) {
   // overlay 'diario': perder o ponteiro ao abrir não abre a pausa por baixo
-  const modal = criarModal('Diário', 'data-diario', 'diario');
+  const modal = criarModal(tema().textos.diario, 'data-diario', 'diario');
   const { fundo, corpo } = modal;
   if (op.aoFechar) modal.aoFechar(op.aoFechar);
   corpo.classList.add('diario');

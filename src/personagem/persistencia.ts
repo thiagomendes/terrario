@@ -5,7 +5,9 @@ export interface Armazenamento {
   setItem(chave: string, valor: string): void;
 }
 
-export const CHAVE_APARENCIA = 'brumaluz:aparencia';
+export const CHAVE_APARENCIA = 'terrario:aparencia';
+/** Chave de antes do jogo se chamar Terrário: lida se a nova ainda não existe. */
+export const CHAVE_APARENCIA_ANTIGA = 'brumaluz:aparencia';
 export const VERSAO_APARENCIA = 1;
 
 export function salvarAparencia(
@@ -25,7 +27,8 @@ export function salvarAparencia(
 export function carregarAparencia(armazenamento: Armazenamento | null): Aparencia {
   if (!armazenamento) return aparenciaPadrao();
   try {
-    const bruto = armazenamento.getItem(CHAVE_APARENCIA);
+    const bruto =
+      armazenamento.getItem(CHAVE_APARENCIA) ?? armazenamento.getItem(CHAVE_APARENCIA_ANTIGA);
     if (typeof bruto !== 'string') return aparenciaPadrao();
     const dado: unknown = JSON.parse(bruto);
     if (typeof dado !== 'object' || dado === null) return aparenciaPadrao();

@@ -12,7 +12,7 @@ const CAMPOS = [
   'calcaCor',
   'acessorio',
 ];
-const CHAVE = 'brumaluz:aparencia';
+const CHAVE = 'terrario:aparencia';
 
 function coletarErros(page: Page): string[] {
   const erros: string[] = [];

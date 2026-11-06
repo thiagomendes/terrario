@@ -4,6 +4,7 @@ import { Color3 } from '@babylonjs/core/Maths/math.color';
 import type { Scene } from '@babylonjs/core/scene';
 import type { Vector3 } from '@babylonjs/core/Maths/math.vector';
 import type { EstadoAtmosfera } from './atmosfera';
+import { tema } from '../temas/ativo';
 import { GLSL_CEU, UNIFORMES_CEU, aplicarUniformesCeu } from './ceu';
 import { NIVEL_MAR } from '../world/chunk';
 
@@ -35,6 +36,10 @@ uniform float tempo;
 uniform vec3 corNevoa;
 uniform float densNevoa;
 uniform float luzDia;
+uniform vec3 aguaFundoDia;
+uniform vec3 aguaFundoNoite;
+uniform vec3 aguaTinta;
+uniform float aguaOpacidade;
 ${GLSL_CEU}
 
 float onda(vec2 p, vec2 dir, float freq, float vel) {
@@ -65,14 +70,14 @@ void main() {
   float fCeu = pow(0.8, (1.0 - clamp(vLuz.x, 0.0, 1.0)) * 15.0);
   float fBloco = pow(0.86, (1.0 - clamp(vLuz.y, 0.0, 1.0)) * 15.0) * step(0.001, vLuz.y);
   vec3 ceu = corDoCeu(r) * fCeu;
-  vec3 fundo = mix(vec3(0.015, 0.04, 0.09), vec3(0.03, 0.22, 0.45), luzDia * fCeu);
-  vec3 c = mix(fundo, ceu * vec3(0.7, 0.88, 1.0), clamp(fres * 0.8 + 0.08, 0.0, 0.85));
+  vec3 fundo = mix(aguaFundoNoite, aguaFundoDia, luzDia * fCeu);
+  vec3 c = mix(fundo, ceu * aguaTinta, clamp(fres * 0.8 + 0.08, 0.0, 0.85));
   float brilho = pow(max(dot(r, paraSol), 0.0), 350.0) * 3.0 * (1.0 - noite) * fCeu;
   brilho += pow(max(dot(r, paraLua), 0.0), 600.0) * 1.2 * noite * fCeu;
   c += corSol * brilho;
   // tochas perto aquecem a agua
   c += vec3(1.0, 0.72, 0.42) * fBloco * 0.35;
-  float alfa = clamp(0.74 + fres * 0.25 + brilho, 0.0, 1.0);
+  float alfa = clamp(aguaOpacidade + fres * 0.25 + brilho, 0.0, 1.0);
   float dist = length(camPos - vPos);
   float nev = exp(-pow(dist * densNevoa, 2.0));
   c = mix(corNevoa, c, nev);
@@ -114,12 +119,22 @@ export function criarAgua(scene: Scene): Agua {
         'corNevoa',
         'densNevoa',
         'luzDia',
+        'aguaFundoDia',
+        'aguaFundoNoite',
+        'aguaTinta',
+        'aguaOpacidade',
         ...UNIFORMES_CEU,
       ],
       needAlphaBlending: true,
     },
   );
   mat.backFaceCulling = false;
+  // cor da água do tema (constante no mundo)
+  const ta = tema().agua;
+  mat.setColor3('aguaFundoDia', new Color3(...ta.fundoDia));
+  mat.setColor3('aguaFundoNoite', new Color3(...ta.fundoNoite));
+  mat.setColor3('aguaTinta', new Color3(...ta.tinta));
+  mat.setFloat('aguaOpacidade', ta.opacidade);
   const cor = new Color3();
   return {
     material: mat,

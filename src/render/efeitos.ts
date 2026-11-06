@@ -1,3 +1,4 @@
+import { tema } from '../temas/ativo';
 import { corMediaDoBloco } from '../fx/cores';
 import type { ParametrosParticula } from '../fx/particulas';
 import { criarGerador, jitter, type Gerador } from '../audio/variacao';
@@ -68,7 +69,7 @@ export function planejarEfeito<K extends NomeEvento>(
         vx: Math.cos(ang) * (0.7 + jitter(rng, 0, 0.2)),
         vy: 0.35 + jitter(rng, 0, 0.1),
         vz: Math.sin(ang) * (0.7 + jitter(rng, 0, 0.2)),
-        cor: COR_POEIRA,
+        cor: tema().particulas.poeira.map((v) => v * 255) as [number, number, number],
       });
     }
     return { particulas: lista, pulso: false };

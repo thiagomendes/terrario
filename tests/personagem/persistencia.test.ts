@@ -46,7 +46,7 @@ describe('persistência da aparência', () => {
     const a = falso();
     expect(salvarAparencia(a, custom)).toBe(true);
     expect(JSON.parse(a.dados.get(CHAVE_APARENCIA)!)).toEqual({ versao: 1, aparencia: custom });
-    expect(CHAVE_APARENCIA).toBe('brumaluz:aparencia');
+    expect(CHAVE_APARENCIA).toBe('terrario:aparencia');
   });
 
   it('ciclo preserva todos os campos', () => {
@@ -83,5 +83,16 @@ describe('persistência da aparência', () => {
     expect(carregarAparencia(null)).toEqual(aparenciaPadrao());
     expect(salvarAparencia(lancador, custom)).toBe(false);
     expect(carregarAparencia(lancador)).toEqual(aparenciaPadrao());
+  });
+});
+
+describe('migração do nome Brumaluz para Terrário', () => {
+  it('lê a aparência salva com a chave antiga', () => {
+    const a = falso();
+    salvarAparencia(a, { ...aparenciaPadrao(), cabeloEstilo: 3 });
+    // simula o navegador de antes: o mesmo dado, só na chave antiga
+    a.setItem('brumaluz:aparencia', a.getItem('terrario:aparencia')!);
+    a.dados.delete('terrario:aparencia');
+    expect(carregarAparencia(a).cabeloEstilo).toBe(3);
   });
 });

@@ -11,6 +11,8 @@ export interface MetaMundo {
   jogadoEm: number;
   /** Miniatura JPEG (data URL) da última vez que o mundo foi salvo. */
   miniatura?: string;
+  /** Tema visual do mundo (mundos antigos não têm: são Bruma e Luz). */
+  tema?: string;
 }
 
 export interface JogadorSalvo {
@@ -110,7 +112,7 @@ export function normalizarDados(bruto: unknown): DadosMundo {
 export interface RepositorioMundos {
   listar(): Promise<MetaMundo[]>;
   obter(id: string): Promise<MetaMundo | null>;
-  criar(nome: string, semente: number, modo: ModoJogo): Promise<MetaMundo>;
+  criar(nome: string, semente: number, modo: ModoJogo, tema?: string): Promise<MetaMundo>;
   carregar(id: string): Promise<DadosMundo>;
   salvar(id: string, dados: DadosMundo, miniatura?: string): Promise<void>;
   renomear(id: string, nome: string): Promise<void>;
@@ -145,7 +147,7 @@ export function criarRepositorioMundos(
     async obter(id) {
       return (await indice()).find((m) => m.id === id) ?? null;
     },
-    async criar(nome, semente, modo) {
+    async criar(nome, semente, modo, tema) {
       const lista = await indice();
       const t = agora();
       const id = `${t.toString(36)}${(contador++).toString(36)}${lista.length.toString(36)}`;
@@ -157,6 +159,7 @@ export function criarRepositorioMundos(
         criadoEm: t,
         jogadoEm: t,
       };
+      if (tema) meta.tema = tema;
       lista.push(meta);
       await gravarIndice(lista);
       await armazem.gravar(chaveDados(id), dadosVazios());

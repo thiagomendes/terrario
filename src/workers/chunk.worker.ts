@@ -1,7 +1,8 @@
+import type { EstiloMundo } from '../temas/tipos';
 import { gerarMalha } from '../mesh/malha';
 import type { Buffers } from '../mesh/malha';
 import { blocoDe, criarEdicoes, metasDoChunk, type Edicoes } from '../world/edicoes';
-import { gerarChunk } from '../world/chunk';
+import { definirEstiloMundo, gerarChunk } from '../world/chunk';
 
 /** Cache dos chunks gerados (antes das edições): evita regerar vizinhos. */
 const cache = new Map<string, Uint8Array>();
@@ -62,8 +63,17 @@ function buffersTransferiveis(b: Buffers): ArrayBuffer[] {
   ] as ArrayBuffer[];
 }
 
-self.onmessage = (ev: MessageEvent<PedidoChunk>) => {
-  const { cx, cz, semente, versao, edicoes: dados, bases } = ev.data;
+/** Primeira mensagem do worker: o estilo do mundo do tema (antes de qualquer chunk). */
+export interface PedidoEstilo {
+  estilo: EstiloMundo;
+}
+
+self.onmessage = (ev: MessageEvent<PedidoChunk | PedidoEstilo>) => {
+  if ('estilo' in ev.data) {
+    definirEstiloMundo(ev.data.estilo);
+    return;
+  }
+  const { cx, cz, semente, versao, edicoes: dados, bases } = ev.data as PedidoChunk;
   if (bases) {
     for (const [k, b] of Object.entries(bases)) {
       const [bx, bz] = k.split(',').map(Number);

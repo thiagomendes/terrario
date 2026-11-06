@@ -1,3 +1,4 @@
+import { tema } from '../temas/ativo';
 import { construirMapaEmissivo } from './emissivo';
 import { Engine } from '@babylonjs/core/Engines/engine';
 import { Scene } from '@babylonjs/core/scene';
@@ -82,7 +83,7 @@ import { empacotar } from '../world/edicoes';
 import { criarPopulacao } from '../jogo/populacao';
 import { criaturaNaMira, type TipoCriatura } from '../jogo/criaturas';
 import { criarRenderCriaturas } from './criaturas';
-import { biomaEm, NIVEL_MAR } from '../world/chunk';
+import { biomaEm, estiloMundo, NIVEL_MAR } from '../world/chunk';
 import { luzDoBloco } from '../world/blocks';
 import { perfilDaQualidade, type Config, type GerenciadorConfig } from '../jogo/config';
 import { iconeDoItem } from '../ui/icones';
@@ -322,6 +323,7 @@ export function criarCena(
   opcoes: OpcoesCena = {},
 ) {
   const semente = opcoes.mundo?.semente ?? SEMENTE_PADRAO;
+  const temaAtual = tema();
   const modo: ModoJogo = opcoes.mundo?.modo ?? 'criativo';
   document.body.dataset.modo = modo;
   const inventario = hotbar.inventario;
@@ -567,7 +569,7 @@ export function criarCena(
       flash = 1;
       setTimeout(() => {
         tocarSom(motorAudio, 'trovao');
-        legenda('Trovão');
+        legenda(temaAtual.textos.legendas.trovao);
       }, raio.atrasoTrovao * 1000);
     }
     const a = ajustarPorClima(baseHora, clima.estado);
@@ -663,12 +665,13 @@ export function criarCena(
     )
       sol.direction.set(dlx, dly, dlz);
     sol.intensity = a.intensidadeLuz;
+    const tb = temaAtual.bruma;
     const bruma: [number, number, number] = [
-      a.nevoa[0] * 0.85 + 0.12,
-      a.nevoa[1] * 0.85 + 0.12,
-      a.nevoa[2] * 0.85 + 0.14,
+      (a.nevoa[0] * 0.85 + 0.12) * tb.cor[0],
+      (a.nevoa[1] * 0.85 + 0.12) * tb.cor[1],
+      (a.nevoa[2] * 0.85 + 0.14) * tb.cor[2],
     ];
-    const forca = 0.35 + 0.35 * Math.max(a.crepusculo, a.noite);
+    const forca = (0.35 + 0.35 * Math.max(a.crepusculo, a.noite)) * tb.forca;
     mundoSolido.definirBruma(bruma, forca);
     mundoSolido.luzBlocos = 0.8 + 0.4 * a.noite;
     // flores, cogumelos e lanternas brilham de verdade ao entardecer e à noite; sob o sol, quase nada
@@ -699,6 +702,9 @@ export function criarCena(
   const workerEdicao = new Worker(new URL('../workers/chunk.worker.ts', import.meta.url), {
     type: 'module',
   });
+  // o estilo do mundo do tema vai antes de qualquer pedido de chunk
+  worker.postMessage({ estilo: estiloMundo() });
+  workerEdicao.postMessage({ estilo: estiloMundo() });
   /** Momento da edição por chunk (para medir quanto o bloco demora a aparecer). */
   const inicioEdicao = new Map<string, number>();
   const receber = (ev: MessageEvent<RespostaChunk>) => {
@@ -1974,7 +1980,7 @@ export function criarCena(
               : rel > 0
                 ? 'à direita'
                 : 'à esquerda';
-        legenda(`Gemido de espectro ${lado}`);
+        legenda(`${temaAtual.textos.legendas.criaturaNoturna} ${lado}`);
       }
     }
   }

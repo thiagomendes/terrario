@@ -1,7 +1,8 @@
 import { Effect } from '@babylonjs/core/Materials/effect';
 import { ShaderMaterial } from '@babylonjs/core/Materials/shaderMaterial';
 import { MeshBuilder } from '@babylonjs/core/Meshes/meshBuilder';
-import { Vector3 } from '@babylonjs/core/Maths/math.vector';
+import { Vector2, Vector3 } from '@babylonjs/core/Maths/math.vector';
+import { tema } from '../temas/ativo';
 import { Color3 } from '@babylonjs/core/Maths/math.color';
 import type { Scene } from '@babylonjs/core/scene';
 import type { EstadoAtmosfera } from './atmosfera';
@@ -18,6 +19,9 @@ uniform float noite;
 uniform float crepusculo;
 uniform float cobertura;
 uniform float arcoIris;
+// do tema (constantes por mundo; os padroes reproduzem o Bruma e Luz)
+uniform float haloSol;
+uniform float faixaCrep;
 
 vec3 corDoCeu(vec3 d) {
   float h = d.y;
@@ -28,11 +32,11 @@ vec3 corDoCeu(vec3 d) {
   float s = max(dot(d, paraSol), 0.0);
   // halo do sol, mais largo e quente no nascer e no por
   float halo = pow(s, 6.0) * (0.25 + 0.6 * crepusculo) + pow(s, 48.0) * 0.5;
-  c += corSol * halo * (1.0 - noite);
+  c += corSol * halo * (1.0 - noite) * haloSol;
   // faixa alaranjada no horizonte do lado do sol
   float ladoSol = dot(normalize(vec3(d.x, 0.001, d.z)), normalize(vec3(paraSol.x, 0.001, paraSol.z)));
   float faixa = exp(-abs(h) * 9.0) * pow(max(ladoSol * 0.5 + 0.5, 0.0), 3.0);
-  c += vec3(1.0, 0.45, 0.2) * faixa * crepusculo * 0.45;
+  c += vec3(1.0, 0.45, 0.2) * faixa * crepusculo * 0.45 * faixaCrep;
   // arco-iris a 42 graus do ponto oposto ao sol
   if (arcoIris > 0.001 && h > 0.0) {
     float ang = acos(clamp(dot(d, -paraSol), -1.0, 1.0));
@@ -61,6 +65,27 @@ const FRAGMENTO = /* glsl */ `
 precision highp float;
 varying vec3 vDir;
 uniform float tempo;
+uniform float estrelasDia;
+uniform vec3 corEstrelas;
+uniform float limiarEstrela;
+uniform vec3 corSolTema;
+uniform vec2 solLimiar;
+uniform vec3 paraSol2;
+uniform vec2 sol2Limiar;
+uniform vec3 sol2Cor;
+uniform vec3 corLuaTema;
+uniform vec2 luaLimiar;
+uniform float luaEscala;
+uniform vec3 planetaDir;
+uniform float planetaRaio;
+uniform vec3 planetaCor;
+uniform vec3 planetaCor2;
+uniform float planetaMistura;
+uniform float planetaNuvens;
+uniform vec3 aneisCor;
+uniform float aneisInc;
+uniform vec3 corNuvens;
+uniform float fatorNuvens;
 ${GLSL_CEU}
 
 float hash3(vec3 p) {
@@ -92,32 +117,69 @@ void main() {
   vec3 sp = d * 220.0;
   vec3 cel = floor(sp);
   float r = hash3(cel);
-  float estrela = step(0.992, r) * smoothstep(0.45, 0.0, length(fract(sp) - 0.5));
+  float estrela = step(limiarEstrela, r) * smoothstep(0.45, 0.0, length(fract(sp) - 0.5));
   estrela *= (0.55 + 0.45 * sin(tempo * (1.5 + r * 3.0) + r * 80.0));
-  c += vec3(0.85, 0.88, 1.0) * estrela * noite * smoothstep(0.0, 0.25, h) * 1.6;
+  c += corEstrelas * estrela * max(noite, estrelasDia) * smoothstep(0.0, 0.25, h) * 1.6;
 
-  // disco do sol
+  // planeta grande fixo (Terra vista da Lua, gigante gasoso); raio 0 = nenhum
+  if (planetaRaio > 0.0) {
+    float pd = dot(d, planetaDir);
+    float cosR = cos(planetaRaio);
+    vec3 pt = normalize(cross(planetaDir, vec3(0.0, 1.0, 0.0)));
+    vec3 pb = cross(pt, planetaDir);
+    vec2 pq = vec2(dot(d, pt), dot(d, pb)) / sin(planetaRaio);
+    // aneis: elipse achatada em volta, atras na metade de cima
+    if (aneisInc > 0.0) {
+      vec2 rq = vec2(pq.x, pq.y / aneisInc);
+      float rr = length(rq);
+      float anel = smoothstep(1.35, 1.42, rr) * (1.0 - smoothstep(2.05, 2.15, rr));
+      anel *= 0.55 + 0.45 * sin(rr * 38.0);
+      bool atras = pq.y > 0.0 && pd > cosR;
+      if (!atras) c = mix(c, aneisCor, anel * 0.85);
+    }
+    if (pd > cosR) {
+      float rho = length(pq);
+      vec3 n = normalize(pq.x * pt + pq.y * pb + sqrt(max(0.0, 1.0 - rho * rho)) * planetaDir);
+      float faixas = fbm(vec2(pq.x * 3.0 + tempo * 0.002, pq.y * 7.0)) ;
+      float massa = fbm(pq * 4.5 + vec2(tempo * 0.003, 0.0));
+      vec3 sup = mix(planetaCor, planetaCor2, smoothstep(0.45, 0.6, mix(faixas, massa, planetaMistura)));
+      // nuvens brancas por cima (planeta azul) e lado iluminado pelo sol
+      sup = mix(sup, vec3(0.95), smoothstep(0.62, 0.75, fbm(pq * 6.0 + 11.0)) * planetaNuvens);
+      float luzP = clamp(dot(n, paraSol) * 0.9 + 0.25, 0.06, 1.0);
+      vec3 cp = sup * luzP;
+      // borda com atmosfera fininha
+      cp += planetaCor * pow(rho, 6.0) * 0.35 * planetaNuvens;
+      c = mix(c, cp, smoothstep(cosR, cosR + 0.0006, pd));
+    }
+  }
+
+  // disco do sol (e o segundo sol, se houver)
   float s = dot(d, paraSol);
-  c = mix(c, vec3(1.25, 1.05, 0.8), smoothstep(0.9988, 0.9993, s));
+  c = mix(c, vec3(1.25, 1.05, 0.8) * corSolTema, smoothstep(solLimiar.x, solLimiar.y, s));
+  if (sol2Limiar.y > 0.0) {
+    float s2 = dot(d, paraSol2);
+    c += sol2Cor * pow(max(s2, 0.0), 40.0) * 0.25 * (1.0 - noite) * haloSol;
+    c = mix(c, sol2Cor, smoothstep(sol2Limiar.x, sol2Limiar.y, s2));
+  }
 
   // lua com crateras
   float l = dot(d, paraLua);
-  float disco = smoothstep(0.9975, 0.998, l);
+  float disco = smoothstep(luaLimiar.x, luaLimiar.y, l);
   vec3 lt = normalize(cross(paraLua, vec3(0.0, 1.0, 0.0)));
   vec3 lb = cross(lt, paraLua);
-  vec2 lp = vec2(dot(d, lt), dot(d, lb)) * 400.0;
+  vec2 lp = vec2(dot(d, lt), dot(d, lb)) * 400.0 / luaEscala;
   float cratera = fbm(lp * 0.6) * 0.5 + 0.6;
-  c = mix(c, vec3(0.86, 0.88, 0.95) * cratera, disco);
-  c += vec3(0.5, 0.6, 0.9) * pow(max(l, 0.0), 300.0) * 0.35 * noite;
+  c = mix(c, vec3(0.86, 0.88, 0.95) * corLuaTema * cratera, disco);
+  c += vec3(0.5, 0.6, 0.9) * corLuaTema * pow(max(l, 0.0), 300.0) * 0.35 * noite * step(0.001, luaEscala);
 
   // nuvens: plano projetado, em blocos suaves
-  if (h > 0.0) {
+  if (h > 0.0 && fatorNuvens > 0.0) {
     vec2 uv = d.xz / (h + 0.12) * 1.6 + vec2(tempo * 0.006, tempo * 0.0025);
     vec2 bloco = floor(uv * 6.0) / 6.0;
     float n = fbm(bloco * 1.3);
-    float nuvem = smoothstep(0.52 - cobertura * 0.3, 0.62 - cobertura * 0.25, n) * smoothstep(0.02, 0.2, h);
+    float nuvem = smoothstep(0.52 - cobertura * 0.3, 0.62 - cobertura * 0.25, n) * smoothstep(0.02, 0.2, h) * fatorNuvens;
     float lado = pow(max(dot(d, paraSol), 0.0), 3.0);
-    vec3 dia = mix(vec3(1.0, 0.98, 0.96), corSol * 1.05, crepusculo * 0.75 + lado * 0.3);
+    vec3 dia = mix(vec3(1.0, 0.98, 0.96) * corNuvens, corSol * 1.05, crepusculo * 0.75 + lado * 0.3);
     vec3 cn = mix(dia, ceuMeio * 0.35 + vec3(0.03), noite);
     cn = mix(cn, cn * vec3(0.55, 0.57, 0.62), smoothstep(0.4, 1.0, cobertura));
     c = mix(c, cn, nuvem * 0.85);
@@ -146,7 +208,40 @@ export const UNIFORMES_CEU = [
   'crepusculo',
   'cobertura',
   'arcoIris',
+  'haloSol',
+  'faixaCrep',
 ];
+
+/** Uniformes só do domo do céu (astros do tema). */
+const UNIFORMES_ASTROS = [
+  'estrelasDia',
+  'corEstrelas',
+  'limiarEstrela',
+  'corSolTema',
+  'solLimiar',
+  'paraSol2',
+  'sol2Limiar',
+  'sol2Cor',
+  'corLuaTema',
+  'luaLimiar',
+  'luaEscala',
+  'planetaDir',
+  'planetaRaio',
+  'planetaCor',
+  'planetaCor2',
+  'planetaMistura',
+  'planetaNuvens',
+  'aneisCor',
+  'aneisInc',
+  'corNuvens',
+  'fatorNuvens',
+];
+
+/** Limiares (cosseno) de um disco: o raio angular base vezes a escala do tema. */
+function limiarDisco(interno: number, externo: number, escala: number): Vector2 {
+  if (escala <= 0) return new Vector2(2, 3); // nunca alcançado: sem disco
+  return new Vector2(Math.cos(Math.acos(interno) * escala), Math.cos(Math.acos(externo) * escala));
+}
 
 /** Cores e vetores reaproveitados por material (o uniforme guarda a referência). */
 const temporarios = new WeakMap<
@@ -178,6 +273,68 @@ export function aplicarUniformesCeu(mat: ShaderMaterial, a: EstadoAtmosfera): vo
   mat.setFloat('crepusculo', a.crepusculo);
   mat.setFloat('cobertura', a.cobertura);
   mat.setFloat('arcoIris', a.arco);
+  const c = tema().ceu;
+  mat.setFloat('haloSol', c.haloSol);
+  mat.setFloat('faixaCrep', c.faixaCrepusculo);
+}
+
+/** Astros do tema: constantes do mundo, aplicadas uma vez. */
+function aplicarAstros(mat: ShaderMaterial): void {
+  const c = tema().ceu;
+  const cor = (v: readonly number[]) => new Color3(v[0], v[1], v[2]);
+  mat.setFloat('estrelasDia', c.estrelasDia);
+  mat.setColor3('corEstrelas', cor(c.corEstrelas));
+  // densidade 0.5 = 0.992 (o céu de sempre); 1 = o dobro de estrelas
+  mat.setFloat('limiarEstrela', 1 - 0.016 * c.densidadeEstrelas);
+  mat.setColor3('corSolTema', cor(c.corSol));
+  mat.setVector2('solLimiar', limiarDisco(0.9988, 0.9993, c.tamanhoSol));
+  if (c.segundoSol) {
+    mat.setVector2('sol2Limiar', limiarDisco(0.9988, 0.9993, c.segundoSol.tamanho));
+    mat.setColor3('sol2Cor', cor(c.segundoSol.cor));
+  } else {
+    mat.setVector2('sol2Limiar', new Vector2(0, 0));
+    mat.setColor3('sol2Cor', new Color3());
+  }
+  mat.setVector3('paraSol2', new Vector3(0, 1, 0));
+  mat.setColor3('corLuaTema', cor(c.corLua));
+  mat.setVector2('luaLimiar', limiarDisco(0.9975, 0.998, c.tamanhoLua));
+  mat.setFloat('luaEscala', c.tamanhoLua);
+  const p = c.planeta;
+  if (p) {
+    mat.setVector3('planetaDir', new Vector3(...p.direcao).normalize());
+    mat.setFloat('planetaRaio', p.raio);
+    mat.setColor3('planetaCor', cor(p.cor));
+    mat.setColor3('planetaCor2', cor(p.corSecundaria));
+    mat.setFloat('planetaMistura', p.mistura ?? 1);
+    mat.setFloat('planetaNuvens', p.nuvens ?? 0);
+    mat.setColor3('aneisCor', cor(p.aneis?.cor ?? [0, 0, 0]));
+    mat.setFloat('aneisInc', p.aneis?.inclinacao ?? 0);
+  } else {
+    mat.setVector3('planetaDir', new Vector3(0, 1, 0));
+    mat.setFloat('planetaRaio', 0);
+    mat.setColor3('planetaCor', new Color3());
+    mat.setColor3('planetaCor2', new Color3());
+    mat.setFloat('planetaMistura', 0);
+    mat.setFloat('planetaNuvens', 0);
+    mat.setColor3('aneisCor', new Color3());
+    mat.setFloat('aneisInc', 0);
+  }
+  mat.setColor3('corNuvens', cor(c.corNuvens));
+  mat.setFloat('fatorNuvens', c.fatorNuvens);
+}
+
+/** Direção do segundo sol: o primeiro girado em volta do eixo vertical. */
+export function direcaoSegundoSol(
+  paraSol: readonly number[],
+  deslocamento: number,
+  saida: Vector3,
+): Vector3 {
+  const c = Math.cos(deslocamento);
+  const s = Math.sin(deslocamento);
+  const x = paraSol[0] * c - paraSol[2] * s;
+  const z = paraSol[0] * s + paraSol[2] * c;
+  // um pouco mais baixo que o primeiro: os dois não se cruzam
+  return saida.set(x, paraSol[1] - 0.08, z).normalize();
 }
 
 export interface Ceu {
@@ -193,7 +350,7 @@ export function criarCeu(scene: Scene): Ceu {
     { vertex: 'ceu', fragment: 'ceu' },
     {
       attributes: ['position'],
-      uniforms: ['worldViewProjection', 'tempo', ...UNIFORMES_CEU],
+      uniforms: ['worldViewProjection', 'tempo', ...UNIFORMES_CEU, ...UNIFORMES_ASTROS],
     },
   );
   mat.backFaceCulling = false;
@@ -205,11 +362,16 @@ export function criarCeu(scene: Scene): Ceu {
   domo.applyFog = false;
   domo.renderingGroupId = 0;
   domo.alphaIndex = -1;
+  aplicarAstros(mat);
+  const sol2 = tema().ceu.segundoSol;
+  const dirSol2 = new Vector3();
   return {
     malha: domo,
     atualizar(a, tempo) {
       aplicarUniformesCeu(mat, a);
       mat.setFloat('tempo', tempo);
+      if (sol2)
+        mat.setVector3('paraSol2', direcaoSegundoSol(a.paraSol, sol2.deslocamento, dirSol2));
     },
   };
 }

@@ -35,7 +35,7 @@ describe('config', () => {
 
   it('carrega o padrão com JSON quebrado e persiste alterações', () => {
     const a = memoria();
-    a.setItem('brumaluz:config', '{quebrado');
+    a.setItem('terrario:config', '{quebrado');
     expect(carregarConfig(a)).toEqual(CONFIG_PADRAO);
     const g = criarGerenciadorConfig(a);
     const vistos: number[] = [];
@@ -53,5 +53,18 @@ describe('config', () => {
     expect(u.tamanhoSombra).toBeGreaterThan(a.tamanhoSombra);
     expect(a.vagalumes).toBeGreaterThan(m.vagalumes);
     expect(b.escalaMinima).toBeGreaterThan(u.escalaMinima);
+  });
+});
+
+describe('migração do nome Brumaluz para Terrário', () => {
+  it('lê a configuração antiga e grava na chave nova', () => {
+    const a = memoria();
+    a.setItem('brumaluz:config', JSON.stringify({ ...CONFIG_PADRAO, fov: 88 }));
+    expect(carregarConfig(a).fov).toBe(88);
+    const g = criarGerenciadorConfig(a);
+    g.alterar({ fov: 90 });
+    expect(JSON.parse(a.m.get('terrario:config')!).fov).toBe(90);
+    // a nova vale mais que a antiga
+    expect(carregarConfig(a).fov).toBe(90);
   });
 });

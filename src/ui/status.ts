@@ -1,3 +1,4 @@
+import { tema } from '../temas/ativo';
 import { AR_MAX, FOME_MAX, VIDA_MAX, type EstadoSobrevivencia } from '../jogo/sobrevivencia';
 
 export const CSS_STATUS = `
@@ -207,7 +208,7 @@ export function criarTelaMorte(raiz: HTMLElement, renascer: () => void) {
   f.hidden = true;
   f.setAttribute('data-morte', '');
   const h = document.createElement('h2');
-  h.textContent = 'Você desmaiou';
+  h.textContent = tema().textos.morte;
   const p = document.createElement('p');
   const b = document.createElement('button');
   b.type = 'button';

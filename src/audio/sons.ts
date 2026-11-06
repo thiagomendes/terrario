@@ -7,6 +7,7 @@ import {
 import { criarGerador, criarVariador, jitter, type Gerador } from './variacao';
 import type { ContextoAudio, FonteAudio, GrupoAudio, MotorAudio, NoAudio } from './motor';
 import type { GrupoMaterial } from './materiais';
+import { tema } from '../temas/ativo';
 
 export type EventoSom =
   | 'golpe'
@@ -432,12 +433,16 @@ function desenharAmostra(par: ParametrosSom, evento: EventoMaterial, grupo: Grup
     out.gain.value = par.ganho;
     out.connect(destino);
     const f = ctx.createBufferSource();
-    f.buffer = bufferDaAmostra(ctx, evento, grupo, par.variacao % VARIACOES_AMOSTRA);
+    // o tema pode trocar a receita (biscoito soa como madeira seca) e o tom do material
+    const ajuste = tema().materiais[grupo];
+    const receita = ajuste?.base ?? grupo;
+    f.buffer = bufferDaAmostra(ctx, evento, receita, par.variacao % VARIACOES_AMOSTRA);
     f.loop = false;
     // tom levemente diferente a cada vez (o perfil já sorteia a frequência)
     const base = perfilDoSom(evento, grupo).frequencia;
     const taxa = Math.max(0.82, Math.min(1.18, par.frequencia / base));
-    if (f.playbackRate) f.playbackRate.value = taxa;
+    const tom = Math.max(0.5, Math.min(2, ajuste?.tom ?? 1));
+    if (f.playbackRate) f.playbackRate.value = taxa * tom;
     f.connect(out);
     f.start(t0);
     return f;
@@ -736,6 +741,39 @@ export const PALETAS_MUSICAIS: Record<ContextoMusical, PaletaMusical> = {
   },
 };
 
+function timbre() {
+  return tema().musica.timbre;
+}
+
+const paletasConvertidas = new Map<string, PaletaMusical>();
+/** Paleta do contexto no tema ativo (notas MIDI do tema, transposição aplicada). */
+function paletaDoTema(c: ContextoMusical): PaletaMusical {
+  const t = tema();
+  const chave = `${t.id}|${c}`;
+  let p = paletasConvertidas.get(chave);
+  if (p) return p;
+  const k = Math.pow(2, t.musica.transporte / 12);
+  const doTema = t.musica.paletas?.[c];
+  const base = PALETAS_MUSICAIS[c];
+  p = doTema
+    ? {
+        acordes: doTema.acordes.map((a) => a.map((m) => nota(m) * k)),
+        melodia: doTema.melodia.map((m) => nota(m) * k),
+        intervalo: doTema.intervalo,
+        chanceNota: doTema.chanceNota,
+        pulso: doTema.pulso?.map((m) => nota(m) * k),
+        gotas: doTema.gotas,
+      }
+    : {
+        ...base,
+        acordes: base.acordes.map((a) => a.map((f) => f * k)),
+        melodia: base.melodia.map((f) => f * k),
+        pulso: base.pulso?.map((f) => f * k),
+      };
+  paletasConvertidas.set(chave, p);
+  return p;
+}
+
 function respostaReverb(ctx: ContextoSintese, segundos: number): BufferSom {
   const taxa = ctx.sampleRate || 44100;
   const n = Math.floor(taxa * segundos);
@@ -791,14 +829,15 @@ export function iniciarAmbiente(
 
   function tocarNota(t: number, f: number, ganho: number, ataque: number, dur: number): void {
     const ctx = ctxA!;
-    for (const desvio of [-5, 5]) {
+    const tm = timbre();
+    for (const desvio of [-5 - tm.coro, 5 + tm.coro]) {
       const o = ctx.createOscillator();
-      o.type = 'triangle';
+      o.type = tm.onda;
       o.frequency.value = f;
       if (o.detune) o.detune.value = desvio;
       const filtro = ctx.createBiquadFilter();
       filtro.type = 'lowpass';
-      filtro.frequency.value = 1400;
+      filtro.frequency.value = 1400 * tm.brilho;
       filtro.Q.value = 0.3;
       const g = ctx.createGain() as GanhoSom;
       g.gain.value = 0;
@@ -816,12 +855,18 @@ export function iniciarAmbiente(
   }
 
   function sino(t: number, f: number, ganho: number): void {
-    registrar(tom(ctxA!, busMusica!, t, 'sine', f, f, ganho, 2.2, 0.004));
-    registrar(tom(ctxA!, busMusica!, t, 'sine', f * 3, f * 3, ganho * 0.12, 0.8, 0.004));
+    const tm = timbre();
+    const onda = tm.sino ?? 'sine';
+    // ondas ricas (quadrada, dente de serra) soam mais alto: compensa o volume
+    const k = onda === 'sine' ? 1 : onda === 'triangle' ? 0.8 : 0.35;
+    registrar(tom(ctxA!, busMusica!, t, onda, f, f, ganho * k, 2.2 * tm.sustentacao, 0.004));
+    registrar(
+      tom(ctxA!, busMusica!, t, 'sine', f * 3, f * 3, ganho * 0.12, 0.8 * tm.sustentacao, 0.004),
+    );
   }
 
   function passaro(t: number): void {
-    const base = 2200 + rng() * 1800;
+    const base = (2200 + rng() * 1800) * tema().natureza.tom;
     const n = 2 + Math.floor(rng() * 4);
     for (let i = 0; i < n; i++) {
       const ti = t + i * (0.09 + rng() * 0.06);
@@ -842,8 +887,15 @@ export function iniciarAmbiente(
     }
   }
 
+  /** Bipes de rádio distantes (base lunar): no lugar de pássaros. */
+  function bipe(t: number): void {
+    const f = 1800 + Math.floor(rng() * 3) * 400;
+    for (let i = 0; i < 2; i++)
+      registrar(tom(ctxA!, busNatureza!, t + i * 0.16, 'sine', f, f, 0.03, 0.07, 0.003));
+  }
+
   function grilo(t: number): void {
-    const f = 4300 + rng() * 600;
+    const f = (4300 + rng() * 600) * tema().natureza.tom;
     for (let i = 0; i < 4; i++) {
       registrar(tom(ctxA!, busNatureza!, t + i * 0.055, 'sine', f, f, 0.035, 0.03, 0.004));
     }
@@ -853,7 +905,7 @@ export function iniciarAmbiente(
     if (!ctxA || !busMusica) return;
     const agora = ctxA.currentTime;
     const ate = agora + 0.6;
-    const p = PALETAS_MUSICAIS[contexto];
+    const p = paletaDoTema(contexto);
     while (proximoAcorde < ate) {
       const t = Math.max(proximoAcorde, agora + 0.05);
       const ac = p.acordes[indiceAcorde % p.acordes.length];
@@ -889,11 +941,13 @@ export function iniciarAmbiente(
     } else proximaGota = agora;
     while (proximoBicho < ate) {
       const t = Math.max(proximoBicho, agora + 0.05);
+      const nat = tema().natureza;
       if (rng() < noite) {
-        grilo(t);
+        if (rng() < nat.grilos) grilo(t);
         proximoBicho = t + 0.35 + rng() * 0.5;
       } else {
-        if (rng() < 0.6 * (1 - chuva)) passaro(t);
+        if (rng() < 0.6 * (1 - chuva) * nat.passaros) passaro(t);
+        else if (nat.bipes && rng() < 0.25) bipe(t);
         proximoBicho = t + 1.2 + rng() * 3;
       }
     }

@@ -53,20 +53,19 @@ export const TILES_EMISSIVOS: ReadonlySet<string> = new Set([
   'abobora_rosto',
 ]);
 
-type Px = [number, number, number, number];
-/** Pixel RGBA de um tile, com (x, y) em [0, 16). */
-type Pintor = (x: number, y: number, s: number) => Px;
+import type { Pintor, Px } from '../temas/tipos';
+import { tema } from '../temas/ativo';
 
-function hex(c: string): [number, number, number] {
+export function hex(c: string): [number, number, number] {
   const n = parseInt(c.slice(1), 16);
   return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
 }
 
-const T = TAM_TILE;
+export const T = TAM_TILE;
 const mod = (a: number, n: number) => ((a % n) + n) % n;
 
 /** Ruído de valor que se repete a cada tile (sem costura entre blocos). */
-function ruidoT(x: number, y: number, celX: number, celY: number, s: number): number {
+export function ruidoT(x: number, y: number, celX: number, celY: number, s: number): number {
   const fx = (x / T) * celX;
   const fy = (y / T) * celY;
   const x0 = Math.floor(fx);
@@ -83,7 +82,7 @@ function ruidoT(x: number, y: number, celX: number, celY: number, s: number): nu
   return a + (b - a) * sx + (c - a + (a - b - c + d) * sx) * sy;
 }
 
-function fbmT(x: number, y: number, cel: number, s: number, oitavas = 3): number {
+export function fbmT(x: number, y: number, cel: number, s: number, oitavas = 3): number {
   let soma = 0;
   let amp = 1;
   let total = 0;
@@ -97,18 +96,19 @@ function fbmT(x: number, y: number, cel: number, s: number, oitavas = 3): number
 }
 
 /** Escolhe um tom da rampa e aplica um leve tremor (estilo pixel-art pintado). */
-function rampa(cores: string[], t: number, x: number, y: number, s: number): Px {
+export function rampa(cores: string[], t: number, x: number, y: number, s: number): Px {
   const i = Math.max(0, Math.min(cores.length - 1, Math.floor(t * cores.length)));
   const c = hex(cores[i]);
   const j = (hash2(x, y, s + 999) - 0.5) * 8;
   return [c[0] + j, c[1] + j, c[2] + j, 255];
 }
 
-function escurece(p: Px, f: number): Px {
+export function escurece(p: Px, f: number): Px {
   return [p[0] * f, p[1] * f, p[2] * f, p[3]];
 }
 
-const VAZIO: Px = [0, 0, 0, 0];
+/** Pixel transparente (plantas, recortes). */
+export const VAZIO: Px = [0, 0, 0, 0];
 
 const GRAMA = ['#3d7a2c', '#468a32', '#509838', '#5ba63f', '#6ab64a'];
 const TERRA = ['#5b3d2a', '#684730', '#755136', '#835c3e'];
@@ -146,7 +146,7 @@ function pintorGramaLado(): Pintor {
 
 const PEDRA = ['#626268', '#6e6e74', '#7a7a80', '#87878d', '#95959b'];
 
-function pedraBase(x: number, y: number, s: number): Px {
+export function pedraBase(x: number, y: number, s: number): Px {
   const mancha = fbmT(x, y, 4, s + 8);
   const p = rampa(PEDRA, fbmT(x, y, 4, s) * 0.55 + hash2(x, y, s) * 0.45, x, y, s);
   if (mancha < 0.32) return escurece(p, 0.82);
@@ -155,7 +155,7 @@ function pedraBase(x: number, y: number, s: number): Px {
 }
 
 /** Pedra com veios de minério (manchas de 2 a 3 pixels). */
-function minerio(cores: string[], brilho?: string): Pintor {
+export function minerio(cores: string[], brilho?: string): Pintor {
   return (x, y, s) => {
     const n = fbmT(x, y, 4, s + 77);
     const v = hash2(x, y, s + 13);
@@ -168,12 +168,12 @@ function minerio(cores: string[], brilho?: string): Pintor {
   };
 }
 
-function ruidoPaleta(cores: string[], cel = 4, mistura = 0.5): Pintor {
+export function ruidoPaleta(cores: string[], cel = 4, mistura = 0.5): Pintor {
   return (x, y, s) =>
     rampa(cores, fbmT(x, y, cel, s) * (1 - mistura) + hash2(x, y, s) * mistura, x, y, s);
 }
 
-function folhasDe(cores: string[], buracos = 0.14, flores?: string): Pintor {
+export function folhasDe(cores: string[], buracos = 0.14, flores?: string): Pintor {
   return (x, y, s) => {
     const t = fbmT(x, y, 4, s) * 0.5 + hash2(x, y, s) * 0.5;
     if (hash2(x, y, s + 21) < buracos && t < 0.55) return VAZIO;
@@ -182,7 +182,7 @@ function folhasDe(cores: string[], buracos = 0.14, flores?: string): Pintor {
   };
 }
 
-function troncoDe(cores: string[], listra?: string): Pintor {
+export function troncoDe(cores: string[], listra?: string): Pintor {
   return (x, y, s) => {
     const veio = ruidoT(x, y, 8, 2, s) * 0.6 + hash2(x, y >> 2, s) * 0.4;
     const p = rampa(cores, veio, x, y, s);
@@ -191,7 +191,7 @@ function troncoDe(cores: string[], listra?: string): Pintor {
   };
 }
 
-function aneisDe(casca: string[], miolo: [string[], string[]]): Pintor {
+export function aneisDe(casca: string[], miolo: [string[], string[]]): Pintor {
   return (x, y, s) => {
     if (x === 0 || y === 0 || x === T - 1 || y === T - 1)
       return rampa(casca, hash2(x, y, s), x, y, s);
@@ -200,7 +200,7 @@ function aneisDe(casca: string[], miolo: [string[], string[]]): Pintor {
   };
 }
 
-function tabuasDe(cores: string[]): Pintor {
+export function tabuasDe(cores: string[]): Pintor {
   return (x, y, s) => {
     const tabua = y >> 2;
     const junta = (tabua * 5 + 3) % T;
@@ -212,7 +212,7 @@ function tabuasDe(cores: string[]): Pintor {
   };
 }
 
-function ladoComTopo(topo: Pintor, base: Pintor, sombra: string, prof = 2): Pintor {
+export function ladoComTopo(topo: Pintor, base: Pintor, sombra: string, prof = 2): Pintor {
   return (x, y, s) => {
     let borda = prof + Math.floor(hash2(x, 0, s + 17) * 3);
     if (hash2(x, 1, s + 17) > 0.75) borda += 2;
@@ -222,7 +222,7 @@ function ladoComTopo(topo: Pintor, base: Pintor, sombra: string, prof = 2): Pint
   };
 }
 
-function tijolosDe(cores: string[], argamassa: string, altura = 4, largura = 8): Pintor {
+export function tijolosDe(cores: string[], argamassa: string, altura = 4, largura = 8): Pintor {
   return (x, y, s) => {
     const fila = Math.floor(y / altura);
     const desloc = fila % 2 ? largura / 2 : 0;
@@ -234,7 +234,7 @@ function tijolosDe(cores: string[], argamassa: string, altura = 4, largura = 8):
   };
 }
 
-function laDe(cor: string): Pintor {
+export function laDe(cor: string): Pintor {
   const c = hex(cor);
   return (x, y, s) => {
     const fio = ((x + y) % 4 === 0 ? 0.88 : 1) * (0.94 + hash2(x, y, s) * 0.12);
@@ -243,7 +243,7 @@ function laDe(cor: string): Pintor {
 }
 
 /** Moldura de madeira com miolo próprio (mesa, baú). */
-function moldura(miolo: Pintor, madeira: string[] = ['#7a5432', '#86603a', '#93693f']): Pintor {
+export function moldura(miolo: Pintor, madeira: string[] = ['#7a5432', '#86603a', '#93693f']): Pintor {
   return (x, y, s) => {
     if (x <= 1 || y <= 1 || x >= T - 2 || y >= T - 2) {
       const p = rampa(madeira, hash2(x, y, s), x, y, s);
@@ -291,7 +291,8 @@ function bocaFornalha(acesa: boolean): Pintor {
   };
 }
 
-const PINTORES: Record<string, Pintor> = {
+/** Pintores do tema base (Bruma e Luz), por nome do tile. */
+export const PINTORES: Record<string, Pintor> = {
   grama_topo: pintorGramaTopo(),
   grama_lado: pintorGramaLado(),
   terra: pintorTerra(),
@@ -714,7 +715,8 @@ export function gerarAtlas(semente = 1337): Atlas {
   const pixels = new Uint8ClampedArray(LARGURA_ATLAS * ALTURA_ATLAS * 4);
   const tiles: TileAtlas[] = [];
   NOMES_TILES.forEach((nome, indice) => {
-    const pinta = PINTORES[nome];
+    // o tema pode repintar qualquer tile; o que ele não repinta usa o pintor base
+    const pinta = tema().pintores[nome] ?? PINTORES[nome];
     if (!pinta) throw new Error(`tile sem pintor: ${nome}`);
     const { ox, oy } = celulaDe(indice);
     const s = semente + sementeDoNome(nome) * 977;
@@ -736,7 +738,7 @@ export function gerarAtlas(semente = 1337): Atlas {
       nome,
       indice,
       uv: uvDaCelula(indice),
-      emissivo: TILES_EMISSIVOS.has(nome),
+      emissivo: tema().emissivos.includes(nome),
     });
   });
   const uvDoTile = (nome: string) => {

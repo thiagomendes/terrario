@@ -24,6 +24,9 @@ import {
   bloquearZoomDoNavegador,
 } from './ui/toque';
 import { criarDiario } from './jogo/diario';
+import { ativarTema } from './temas/ativar';
+import { tema } from './temas/ativo';
+import { temaExiste } from './temas';
 import { CORES_MARCADOR, type Marcador } from './jogo/mapa';
 
 async function iniciar(app: HTMLElement): Promise<void> {
@@ -34,6 +37,10 @@ async function iniciar(app: HTMLElement): Promise<void> {
   mundo ??= await repo.ultimo();
   mundo ??= await repo.criar('Meu primeiro mundo', SEMENTE_PADRAO_MUNDO, 'criativo');
   const dados = await repo.carregar(mundo.id);
+  // o tema do mundo vale para a página inteira: aparência, nomes e terreno
+  const temaMundo = ativarTema(mundo.tema);
+  if (mundo.tema && !temaExiste(mundo.tema))
+    setTimeout(() => notificar(`Tema desconhecido: este mundo abriu como ${temaMundo.nome}`), 1500);
 
   const canvas = document.createElement('canvas');
   canvas.id = 'cena';
@@ -255,6 +262,7 @@ function ligarStatus(
     if (avisou) return;
     avisou = true;
     const toque = modoToque();
+    notificar(tema().textos.boasVindas);
     notificar(
       sobrevivencia
         ? toque

@@ -1,3 +1,4 @@
+import type { EstiloMundo, FormaArvore } from '../temas/tipos';
 import { Bloco } from './blocks';
 import { crista2, fbm2, hash2, hash3, ruido3 } from './noise';
 
@@ -9,6 +10,24 @@ export const SEMENTE_PADRAO = 1337;
 export const NIVEL_MAR = 62;
 /** Compatibilidade: antigo nível dos lagos. */
 export const NIVEL_LAGO = NIVEL_MAR;
+
+/** Estilo do tema (só forma: árvores, estrutura, crateras, flora). Padrão = Bruma e Luz. */
+export const ESTILO_PADRAO: EstiloMundo = {
+  arvores: {},
+  estrutura: 'ruina',
+  crateras: 0,
+  flora: 1,
+};
+let estilo: EstiloMundo = ESTILO_PADRAO;
+
+/** Define o estilo do mundo (thread principal e workers, antes de gerar qualquer chunk). */
+export function definirEstiloMundo(e: EstiloMundo): void {
+  estilo = e;
+}
+
+export function estiloMundo(): EstiloMundo {
+  return estilo;
+}
 
 export type Bioma =
   | 'oceano'
@@ -66,7 +85,37 @@ export function alturaTerreno(wx: number, wz: number, semente: number): number {
   h += m * m * 52 * Math.min(1, Math.max(0, (c.continente - 0.38) / 0.15));
   // pântanos são baixos e planos
   if (c.umidade > 0.62 && c.temperatura > 0.38) h = Math.min(h, NIVEL_MAR + 2 + detalhe * 2);
+  if (estilo.crateras > 0 && h > NIVEL_MAR + 2)
+    h += relevoCrateras(wx, wz, semente, estilo.crateras);
   return Math.floor(Math.min(ALTURA - 14, h));
+}
+
+/** Tamanho da célula de crateras (uma cratera no máximo por célula). */
+const CELULA_CRATERA = 56;
+
+/**
+ * Crateras de impacto: tigela rebaixada com borda levantada. Cada célula de 56 blocos
+ * pode ter uma, com centro e raio sorteados; as células vizinhas também contam.
+ */
+export function relevoCrateras(wx: number, wz: number, semente: number, forca: number): number {
+  const gx = Math.floor(wx / CELULA_CRATERA);
+  const gz = Math.floor(wz / CELULA_CRATERA);
+  let d = 0;
+  for (let j = -1; j <= 1; j++)
+    for (let i = -1; i <= 1; i++) {
+      const cx = gx + i;
+      const cz = gz + j;
+      if (hash2(cx, cz, semente + 8801) > 0.55 * forca + 0.1) continue;
+      const r = 6 + hash2(cx, cz, semente + 8802) * 16;
+      const ox = (cx + 0.2 + hash2(cx, cz, semente + 8803) * 0.6) * CELULA_CRATERA;
+      const oz = (cz + 0.2 + hash2(cx, cz, semente + 8804) * 0.6) * CELULA_CRATERA;
+      const q = Math.hypot(wx - ox, wz - oz) / r;
+      if (q > 1.5) continue;
+      const fundo = r * 0.32;
+      if (q < 1) d -= fundo * (1 - q * q);
+      d += r * 0.12 * Math.exp(-(((q - 1) / 0.2) ** 2));
+    }
+  return d;
 }
 
 export function biomaEm(wx: number, wz: number, semente: number, h?: number): Bioma {
@@ -238,15 +287,28 @@ export function gerarChunk(cx: number, cz: number, semente: number = SEMENTE_PAD
       const r = hash2(wx, wz, semente + 5);
       const r2 = hash2(wx, wz, semente + 9);
       const margem = x >= 2 && x < TAM_X - 2 && z >= 2 && z < TAM_Z - 2;
+      // flora do tema: parte das plantas some (Lua: quase nada); árvores e cactos ficam
       const pos = (id: number) => {
+        if (estilo.flora < 1 && hash2(wx, wz, semente + 13) > estilo.flora) return;
         blocos[indice(x, topo, z)] = id;
       };
+      const arv = (tronco: number, folha: number, padrao: () => void) =>
+        plantarArvore(blocos, x, h, z, r2, b, tronco, folha, padrao);
       switch (b) {
         case 'floresta':
           if (margem && r < 0.03) {
-            if (r2 < 0.3) arvoreBetula(blocos, x, h, z, r2);
-            else if (r2 > 0.93) arvoreCarvalho(blocos, x, h, z, r2, Bloco.FOLHAS_OUTONO);
-            else arvoreCarvalho(blocos, x, h, z, r2, Bloco.FOLHAGEM);
+            if (r2 < 0.3)
+              arv(Bloco.TRONCO_BETULA, Bloco.FOLHAS_BETULA, () =>
+                arvoreBetula(blocos, x, h, z, r2),
+              );
+            else if (r2 > 0.93)
+              arv(Bloco.MADEIRA_RETORCIDA, Bloco.FOLHAS_OUTONO, () =>
+                arvoreCarvalho(blocos, x, h, z, r2, Bloco.FOLHAS_OUTONO),
+              );
+            else
+              arv(Bloco.MADEIRA_RETORCIDA, Bloco.FOLHAGEM, () =>
+                arvoreCarvalho(blocos, x, h, z, r2, Bloco.FOLHAGEM),
+              );
           } else if (r < 0.25) pos(Bloco.GRAMA_ALTA);
           else if (r < 0.28) pos(Bloco.FLOR);
           else if (r < 0.295) pos(Bloco.ARBUSTO_FRUTINHAS);
@@ -254,13 +316,17 @@ export function gerarChunk(cx: number, cz: number, semente: number = SEMENTE_PAD
           else if (r > 0.9985) pos(Bloco.CRISTAL_LUZ);
           break;
         case 'campos':
-          if (margem && r < 0.004) arvoreCarvalho(blocos, x, h, z, r2, Bloco.FOLHAGEM);
+          if (margem && r < 0.004)
+            arv(Bloco.MADEIRA_RETORCIDA, Bloco.FOLHAGEM, () =>
+              arvoreCarvalho(blocos, x, h, z, r2, Bloco.FOLHAGEM),
+            );
           else if (r < 0.3) pos(Bloco.GRAMA_ALTA);
           else if (r < 0.4) pos(Bloco.FLOR);
           else if (r < 0.402) pos(Bloco.ABOBORA);
           break;
         case 'taiga':
-          if (margem && r < 0.035) arvorePinho(blocos, x, h, z, r2);
+          if (margem && r < 0.035)
+            arv(Bloco.TRONCO_PINHO, Bloco.FOLHAS_PINHO, () => arvorePinho(blocos, x, h, z, r2));
           else if (r < 0.06) pos(Bloco.GRAMA_ALTA);
           else if (r < 0.07) pos(Bloco.ARBUSTO_FRUTINHAS);
           break;
@@ -271,14 +337,18 @@ export function gerarChunk(cx: number, cz: number, semente: number = SEMENTE_PAD
           } else if (r < 0.014) pos(Bloco.ARBUSTO_SECO);
           break;
         case 'pantano':
-          if (margem && r < 0.02) arvoreLanterna(blocos, x, h, z, r2);
+          if (margem && r < 0.02)
+            arv(Bloco.TRONCO_LANTERNA, Bloco.FOLHAS_LANTERNA, () =>
+              arvoreLanterna(blocos, x, h, z, r2),
+            );
           else if (r < 0.12) pos(Bloco.JUNCO);
           else if (r < 0.2) pos(Bloco.GRAMA_ALTA);
           else if (r < 0.24) pos(Bloco.COGUMELO_BRILHANTE);
           else if (r > 0.997) pos(Bloco.CRISTAL_LUZ);
           break;
         case 'montanhas':
-          if (chao === Bloco.TERRA_MUSGOSA && margem && r < 0.01) arvorePinho(blocos, x, h, z, r2);
+          if (chao === Bloco.TERRA_MUSGOSA && margem && r < 0.01)
+            arv(Bloco.TRONCO_PINHO, Bloco.FOLHAS_PINHO, () => arvorePinho(blocos, x, h, z, r2));
           else if (chao === Bloco.TERRA_MUSGOSA && r < 0.15) pos(Bloco.GRAMA_ALTA);
           break;
         case 'praia':
@@ -310,6 +380,10 @@ function construirRuina(
   if (h <= NIVEL_MAR + 1 || h > ALTURA - 20) return;
   const parede = b === 'deserto' ? Bloco.ARENITO : Bloco.TIJOLOS_PEDRA;
   const resto = b === 'deserto' ? Bloco.AREIA_DESERTO : Bloco.PEDREGULHO;
+  if (estilo.estrutura !== 'ruina') {
+    construirEstrutura(blocos, h, semente, parede, resto, estilo.estrutura);
+    return;
+  }
   for (let dz = -3; dz <= 3; dz++)
     for (let dx = -3; dx <= 3; dx++) {
       const x = 8 + dx;
@@ -327,6 +401,111 @@ function construirRuina(
     }
   blocos[indice(8, h + 1, 8)] = Bloco.BAU;
   blocos[indice(6, h + 1, 6)] = Bloco.COGUMELO_BRILHANTE;
+}
+
+/**
+ * Estruturas raras dos temas: o mesmo terreno aplainado, os mesmos blocos (parede,
+ * resto, pedra lisa, folhagem), o baú no centro e um cogumelo de luz — só o desenho muda.
+ */
+function construirEstrutura(
+  blocos: Uint8Array,
+  h: number,
+  semente: number,
+  parede: number,
+  resto: number,
+  forma: Exclude<EstiloMundo['estrutura'], 'ruina'>,
+): void {
+  const em = (x: number, y: number, z: number, id: number) => {
+    if (x < 0 || x >= TAM_X || z < 0 || z >= TAM_Z || y < 1 || y >= ALTURA) return;
+    blocos[indice(x, y, z)] = id;
+  };
+  const gasto = (x: number, y: number, z: number) =>
+    hash2(x * 7 + y, z, semente + 63) < 0.18 ? resto : parede;
+  // piso e espaço livre (como a ruína)
+  for (let dz = -3; dz <= 3; dz++)
+    for (let dx = -3; dx <= 3; dx++) {
+      const x = 8 + dx;
+      const z = 8 + dz;
+      em(x, h, z, hash2(x, z, semente + 61) < 0.3 ? resto : Bloco.PEDRA_LISA);
+      for (let y = h + 1; y < h + 6; y++) em(x, y, z, Bloco.AR);
+    }
+  switch (forma) {
+    case 'cupula':
+      // cúpula baixa com porta voltada para +z e uma janela no topo
+      for (let dz = -3; dz <= 3; dz++)
+        for (let dx = -3; dx <= 3; dx++)
+          for (let dy = 1; dy <= 4; dy++) {
+            const r = Math.hypot(dx, dz, (dy - 0.5) * 1.15);
+            if (r < 2.6 || r > 3.5) continue;
+            if (dz >= 2 && Math.abs(dx) <= 0 && dy <= 2) continue;
+            em(
+              8 + dx,
+              h + dy,
+              8 + dz,
+              dy === 4 && dx === 0 && dz === 0 ? Bloco.AR : gasto(dx, dy, dz),
+            );
+          }
+      break;
+    case 'circulo':
+      // círculo de pedras em pé, de alturas diferentes, com musgo no alto
+      for (let k = 0; k < 8; k++) {
+        const a = (k / 8) * Math.PI * 2;
+        const x = Math.round(8 + Math.cos(a) * 3);
+        const z = Math.round(8 + Math.sin(a) * 3);
+        const alt = 2 + Math.floor(hash2(k, 3, semente + 64) * 3);
+        for (let y = 1; y <= alt; y++) em(x, h + y, z, parede);
+        if (hash2(k, 5, semente + 65) < 0.5) em(x, h + alt + 1, z, Bloco.FOLHAGEM);
+      }
+      break;
+    case 'arcos':
+      // três arcos alinhados (costelas de um gigante de pedra)
+      for (const dz of [-2, 0, 2])
+        for (let dx = -3; dx <= 3; dx++) {
+          const alt = Math.round(4 - (dx * dx) / 3);
+          if (Math.abs(dx) === 3)
+            for (let y = 1; y <= alt; y++) em(8 + dx, h + y, 8 + dz, gasto(dx, y, dz));
+          else em(8 + dx, h + alt, 8 + dz, gasto(dx, alt, dz));
+        }
+      break;
+    case 'casinha':
+      // casinha de paredes baixas, telhado em duas águas e porta na frente
+      for (let dz = -2; dz <= 2; dz++)
+        for (let dx = -2; dx <= 2; dx++) {
+          const borda = Math.abs(dx) === 2 || Math.abs(dz) === 2;
+          if (borda)
+            for (let y = 1; y <= 2; y++) {
+              if (dz === 2 && dx === 0) continue;
+              em(8 + dx, h + y, 8 + dz, gasto(dx, y, dz));
+            }
+          em(
+            8 + dx,
+            h + 3 + (2 - Math.abs(dx)),
+            8 + dz,
+            Math.abs(dx) === 0 ? Bloco.FOLHAGEM : parede,
+          );
+          if (Math.abs(dx) === 2 || dz === -2 || dz === 2)
+            for (let y = 3; y < 3 + (2 - Math.abs(dx)); y++)
+              if (Math.abs(dz) === 2) em(8 + dx, h + y, 8 + dz, parede);
+        }
+      break;
+    case 'torre':
+      // torre fina e torta com uma plataforma no alto
+      for (let y = 1; y <= 5; y++) {
+        const ox = y > 3 ? 1 : 0;
+        for (const [dx, dz] of [
+          [-1, -1],
+          [1, -1],
+          [-1, 1],
+          [1, 1],
+        ])
+          em(8 + dx + ox, h + y, 8 + dz, gasto(dx, y, dz));
+      }
+      for (let dz = -1; dz <= 1; dz++)
+        for (let dx = -1; dx <= 2; dx++) em(8 + dx, h + 6, 8 + dz, Bloco.PEDRA_LISA);
+      break;
+  }
+  em(8, h + 1, 8, Bloco.BAU);
+  em(6, h + 1, 6, Bloco.COGUMELO_BRILHANTE);
 }
 
 function por(
@@ -424,6 +603,153 @@ function arvoreLanterna(blocos: Uint8Array, x: number, h: number, z: number, r: 
   ]) {
     const n = 1 + Math.floor(hash2(x + dx, z + dz, 3) * 3);
     for (let i = 1; i <= n; i++) por(blocos, x + dx, topo - 1 - i, z + dz, Bloco.FOLHAS_LANTERNA);
+  }
+}
+
+/**
+ * Árvore no estilo do tema. Sem forma definida para o bioma, usa a árvore de sempre;
+ * com forma, monta o desenho com o mesmo tronco e as mesmas folhas do bioma.
+ */
+function plantarArvore(
+  blocos: Uint8Array,
+  x: number,
+  h: number,
+  z: number,
+  r: number,
+  b: Bioma,
+  tronco: number,
+  folha: number,
+  padrao: () => void,
+): void {
+  const formas = estilo.arvores[b];
+  if (!formas || formas.length === 0) return padrao();
+  const forma =
+    formas[Math.floor(hash2(x * 31 + h, z, 4441 + Math.floor(r * 1000)) * formas.length)];
+  arvoreDaForma(blocos, x, h, z, r, forma, tronco, folha);
+}
+
+export function arvoreDaForma(
+  blocos: Uint8Array,
+  x: number,
+  h: number,
+  z: number,
+  r: number,
+  forma: FormaArvore,
+  tronco: number,
+  folha: number,
+): void {
+  const coluna = (n: number) => {
+    for (let i = 1; i <= n; i++) por(blocos, x, h + i, z, tronco, true);
+    return h + n;
+  };
+  switch (forma) {
+    case 'carvalho':
+    case 'betula':
+    case 'pinho':
+    case 'lanterna': {
+      // as formas clássicas, com os blocos do bioma
+      const t = coluna(forma === 'pinho' ? 6 + Math.floor(r * 4) : 4 + Math.floor(r * 4));
+      if (forma === 'pinho') {
+        for (let y = t + 1, d = 0; y >= h + 3; y--, d++) {
+          const raio = d === 0 ? 0 : d % 2 === 1 ? Math.min(2, 1 + Math.floor(d / 4)) : 1;
+          for (let dz = -raio; dz <= raio; dz++)
+            for (let dx = -raio; dx <= raio; dx++)
+              if (!(raio === 2 && Math.abs(dx) === 2 && Math.abs(dz) === 2))
+                por(blocos, x + dx, y, z + dz, folha);
+        }
+        por(blocos, x, t + 2, z, folha);
+      } else {
+        for (let dy = -2; dy <= 1; dy++) {
+          const raio = dy >= 0 ? 1 : 2;
+          for (let dz = -raio; dz <= raio; dz++)
+            for (let dx = -raio; dx <= raio; dx++)
+              if (!(Math.abs(dx) === raio && Math.abs(dz) === raio))
+                por(blocos, x + dx, t + dy, z + dz, folha);
+        }
+        por(blocos, x, t + 2, z, folha);
+      }
+      break;
+    }
+    case 'palmeira': {
+      // tronco alto e fino, folhas em cruz caindo nas pontas
+      const t = coluna(6 + Math.floor(r * 3));
+      por(blocos, x, t + 1, z, folha);
+      for (const [dx, dz] of [
+        [1, 0],
+        [-1, 0],
+        [0, 1],
+        [0, -1],
+      ]) {
+        por(blocos, x + dx, t + 1, z + dz, folha);
+        por(blocos, x + dx * 2, t, z + dz * 2, folha);
+        por(blocos, x + dx * 2, t - 1, z + dz * 2, folha);
+      }
+      for (const [dx, dz] of [
+        [1, 1],
+        [-1, 1],
+        [1, -1],
+        [-1, -1],
+      ])
+        por(blocos, x + dx, t, z + dz, folha);
+      break;
+    }
+    case 'fungo': {
+      // cogumelo gigante: talo grosso de um bloco e chapéu largo e achatado
+      const t = coluna(4 + Math.floor(r * 3));
+      for (let dz = -2; dz <= 2; dz++)
+        for (let dx = -2; dx <= 2; dx++) {
+          const canto = Math.abs(dx) === 2 && Math.abs(dz) === 2;
+          if (canto) continue;
+          const borda = Math.abs(dx) === 2 || Math.abs(dz) === 2;
+          por(blocos, x + dx, borda ? t : t + 1, z + dz, folha);
+        }
+      por(blocos, x, t + 2, z, folha);
+      break;
+    }
+    case 'pirulito': {
+      // haste fina e uma bola redonda no alto
+      const t = coluna(3 + Math.floor(r * 3));
+      for (let dy = 0; dy <= 4; dy++)
+        for (let dz = -2; dz <= 2; dz++)
+          for (let dx = -2; dx <= 2; dx++)
+            if (Math.hypot(dx, dz, dy - 2) <= 2.3) por(blocos, x + dx, t + 1 + dy, z + dz, folha);
+      break;
+    }
+    case 'samambaia': {
+      // samambaia-árvore: tronco curto e frondes longas em X, arqueadas
+      const t = coluna(3 + Math.floor(r * 3));
+      por(blocos, x, t + 1, z, folha);
+      for (const [dx, dz] of [
+        [1, 0],
+        [-1, 0],
+        [0, 1],
+        [0, -1],
+        [1, 1],
+        [-1, -1],
+        [1, -1],
+        [-1, 1],
+      ]) {
+        por(blocos, x + dx, t + 1, z + dz, folha);
+        if (dx === 0 || dz === 0) por(blocos, x + dx * 2, t, z + dz * 2, folha);
+      }
+      break;
+    }
+    case 'cristal': {
+      // formação de cristal: base curta e pontas de alturas diferentes
+      const t = coluna(1 + Math.floor(r * 2));
+      const altC = 3 + Math.floor(r * 3);
+      for (let i = 1; i <= altC; i++) por(blocos, x, t + i, z, folha);
+      for (const [dx, dz, k] of [
+        [1, 0, 0.7],
+        [-1, 0, 0.45],
+        [0, 1, 0.6],
+        [0, -1, 0.35],
+      ] as const) {
+        const n = Math.max(1, Math.round(altC * k));
+        for (let i = 0; i < n; i++) por(blocos, x + dx, t + i, z + dz, folha);
+      }
+      break;
+    }
   }
 }
 

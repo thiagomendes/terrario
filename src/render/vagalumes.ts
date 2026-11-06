@@ -1,3 +1,4 @@
+import { tema } from '../temas/ativo';
 import { ParticleSystem } from '@babylonjs/core/Particles/particleSystem';
 import '@babylonjs/core/Particles/particleSystemComponent';
 import { DynamicTexture } from '@babylonjs/core/Materials/Textures/dynamicTexture';
@@ -48,8 +49,9 @@ export function criarVagalumes(scene: Scene): Vagalumes {
   function cores(noite: number): void {
     // de noite: verde-limão pulsante; de dia: pólen dourado discreto
     const a = 0.15 + 0.85 * noite;
-    const dia = new Color4(1, 0.85, 0.5, 0.35);
-    const noiteC = new Color4(0.75, 1, 0.45, 1);
+    const tp = tema().particulas;
+    const dia = new Color4(...tp.vagalumeDia, 0.35);
+    const noiteC = new Color4(...tp.vagalumeNoite, 1);
     const c = Color4.Lerp(dia, noiteC, noite);
     ps.removeColorGradient(0);
     ps.removeColorGradient(0.25);
