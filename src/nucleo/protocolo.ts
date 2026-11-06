@@ -71,7 +71,10 @@ export interface MudancaSlot {
   depois: Slot;
 }
 
-export type Comando =
+/** Comando numerado: o anfitrião aplica na ordem de `seq`, mesmo que cheguem trocados. */
+export type Comando = ComandoSemSeq & { seq?: number };
+
+type ComandoSemSeq =
   | ({ t: 'jogador' } & Telemetria)
   | { t: 'quebrar'; id: number; x: number; y: number; z: number; slot: number }
   | {

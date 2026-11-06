@@ -176,19 +176,12 @@ import type { Pose } from '../personagem/poses';
 import { criarBraco } from './braco';
 import { criarPersonagem } from './personagem';
 import { conexaoLocal, type Conexao } from '../cliente/conexao';
-import {
-  criarReplicaCriaturas,
-  criarReplicaItens,
-  criarSincronizadorItens,
-  type ConteinerReplica,
-} from '../cliente/replica';
+import { criarEstadoCliente } from '../cliente/estado';
 import {
   PASSO,
   VERSAO_PROTOCOLO,
   type Comando,
   type EventoNucleo,
-  type Mensagem,
-  type Quadro,
   type SalvoNucleo,
 } from '../nucleo/protocolo';
 import type { EstadoClima } from '../jogo/clima';
@@ -473,14 +466,33 @@ export function criarCena(
       estilo: estiloMundo(),
       dados: dadosIniciais,
     });
-  let idComando = 0;
-  const proximoId = () => ++idComando;
-  /** Células com previsão local ainda não confirmada (chave → id do comando). */
-  const pendentesBloco = new Map<string, number>();
-  const celula = (x: number, y: number, z: number) => `${x},${y},${z}`;
-  function enviar(c: Comando): void {
-    conexao.enviar(c);
-  }
+  // o que o cliente sabe do mundo (previsões, itens, criaturas, vida, dia e clima)
+  const cliente = criarEstadoCliente({
+    conexao,
+    inventario,
+    aplicarBloco: (x, y, z, b, meta) => editarBloco(x, y, z, b, meta),
+    aoEvento: (e) => tratarEvento(e),
+    aoConteiner: (c, novo) =>
+      window.dispatchEvent(
+        new CustomEvent('brumaluz:conteiner', { detail: { conteiner: c, novo } }),
+      ),
+    aoQuadro: () => {
+      const a = cliente.ambiente;
+      dia = a.dia;
+      hora = a.hora;
+      diaPausado = a.pausado;
+      estadoClima = a.clima;
+    },
+    hora: dadosIniciais && dadosIniciais.hora >= 0 ? dadosIniciais.hora : HORA_INICIAL,
+    dia: Number(dadosIniciais?.extras?.['dia']) || 0,
+    clima: criarClima(criarGerador(semente + 31), dadosIniciais?.extras?.['clima']).estado,
+    sobrevivencia: {
+      ...estadoInicial(),
+      ...((dadosIniciais?.extras?.['sobrevivencia'] as Partial<EstadoSobrevivencia>) ?? {}),
+    },
+  });
+  const enviar = (c: Comando) => cliente.enviar(c);
+  const proximoId = () => cliente.proximoId();
 
   function armazenamentoLocal(): Armazenamento | null {
     try {
@@ -645,11 +657,8 @@ export function criarCena(
 
   // Clima e estações
   // dia e clima vêm do núcleo; até o primeiro quadro, vale o que estava salvo
-  let estadoClima: EstadoClima = criarClima(
-    criarGerador(semente + 31),
-    dadosIniciais?.extras?.['clima'],
-  ).estado;
-  let dia = Number(dadosIniciais?.extras?.['dia']) || 0;
+  let estadoClima: EstadoClima = cliente.ambiente.clima;
+  let dia = cliente.ambiente.dia;
   let diaPausado = false;
   let outonoAtual = 0;
   let invernoAtual = 0;
@@ -961,10 +970,8 @@ export function criarCena(
     return empacotar(blocoEm(x, y, z), edicoes.obterMeta(x, y, z));
   }
   /** Prevê na hora um bloco que o núcleo ainda vai confirmar. */
-  function prever(id: number, x: number, y: number, z: number, b: number, meta = 0): boolean {
-    pendentesBloco.set(celula(x, y, z), id);
-    return editarBloco(x, y, z, b, meta);
-  }
+  const prever = (id: number, x: number, y: number, z: number, b: number, meta = 0) =>
+    cliente.prever(id, x, y, z, b, meta);
   /** Vários blocos de uma vez (construção, desfazer, espelho, testes): só no criativo. */
   function editarLote(lote: { x: number; y: number; z: number; v: number }[]): void {
     if (!lote.length) return;
@@ -1247,7 +1254,7 @@ export function criarCena(
     }
     if (def?.comida && modo === 'sobrevivencia') {
       // fome cheia: nem tenta (o núcleo confere de novo)
-      if (estadoSobrevivencia.fome < 20) enviar({ t: 'comer', slot: hotbar.ativo });
+      if (cliente.sobrevivencia.fome < 20) enviar({ t: 'comer', slot: hotbar.ativo });
       return;
     }
     interagirComEventos('colocar');
@@ -1609,7 +1616,7 @@ export function criarCena(
       if (v === Bloco.PORTA || v === Bloco.PORTA_ABERTA) editarBloco(d.x, d.y + dy, d.z, Bloco.AR);
     }
   });
-  const replicaItens = criarReplicaItens();
+  const replicaItens = cliente.itens;
   const renderItens = criarRenderItens(scene, atlas, textura, iconeDoItem, (m) =>
     glow.addExcludedMesh(m),
   );
@@ -1960,7 +1967,7 @@ export function criarCena(
   opcoes.config?.ouvir(aplicarConfig);
 
   // Criaturas: o núcleo simula; a cena desenha a cópia suavizada.
-  const replicaCriaturas = criarReplicaCriaturas();
+  const replicaCriaturas = cliente.criaturas;
   const cacheCeu = new Map<string, { topo: number; t: number }>();
   let relogioCache = 0;
   /**
@@ -2438,15 +2445,9 @@ export function criarCena(
 
   // Salvamento: o núcleo devolve o mundo (blocos, baús, criaturas, inventário, vida,
   // dia, clima); a cena junta a câmera e o que é só do jogador (diário, mapa, barra).
-  let pedidoSalvar = 0;
-  const esperandoSalvo = new Map<number, (d: SalvoNucleo) => void>();
   function pedirNucleo(): Promise<SalvoNucleo> {
-    const pedido = ++pedidoSalvar;
-    return new Promise((resolve) => {
-      esperandoSalvo.set(pedido, resolve);
-      enviarTelemetria(true);
-      enviar({ t: 'salvar', pedido });
-    });
+    enviarTelemetria(true);
+    return cliente.pedirSalvamento();
   }
   async function coletarDados(): Promise<DadosMundo> {
     const j = controle.jogador;
@@ -2506,13 +2507,9 @@ export function criarCena(
 
   // Modos: criativo voa; sobrevivência tem vida, fome, ar, queda e morte (no núcleo).
   controle.definirVoo(modo === 'criativo');
-  let estadoSobrevivencia: EstadoSobrevivencia = {
-    ...estadoInicial(),
-    ...((dadosIniciais?.extras?.['sobrevivencia'] as Partial<EstadoSobrevivencia>) ?? {}),
-  };
   const sobrevivenciaCliente: SobrevivenciaCliente = {
     get estado() {
-      return estadoSobrevivencia;
+      return cliente.sobrevivencia;
     },
     dano: (qtd, causa = 'outro') => enviar({ t: 'depurar', d: { f: 'dano', qtd, causa } }),
   };
@@ -2562,45 +2559,8 @@ export function criarCena(
     enviarTelemetria();
   };
 
-  // Itens nas telas (inventário, baú, fornalha): mudanças viram transações
-  const sincronia = criarSincronizadorItens(inventario, enviar, proximoId);
-  let conteinerAberto: ConteinerReplica | null = null;
-  let ultimoAckTransacao = 0;
-
-  function aplicarQuadro(q: Quadro): void {
-    // tempo e clima
-    const a = q.ambiente;
-    if (a.dia !== dia) dia = a.dia;
-    hora = a.hora;
-    diaPausado = a.pausado;
-    estadoClima = a.clima;
-    // previsões confirmadas deixam de valer: o que o núcleo diz passa a mandar
-    for (const [k, id] of pendentesBloco) if (id <= q.ack) pendentesBloco.delete(k);
-    for (const b of q.blocos ?? []) {
-      if (pendentesBloco.has(celula(b.x, b.y, b.z))) continue;
-      editarBloco(b.x, b.y, b.z, b.v & 255, (b.v >> 8) & 255);
-    }
-    if (q.criaturas) replicaCriaturas.receber(q.criaturas);
-    if (q.itens) replicaItens.receber(q.itens);
-    if (q.inventario) {
-      ultimoAckTransacao = q.inventario.ackTransacao;
-      sincronia.inventario(q.inventario.slots, q.inventario.ackTransacao);
-    }
-    if (q.conteiner !== undefined) {
-      const antes = conteinerAberto;
-      conteinerAberto = sincronia.conteiner(q.conteiner, ultimoAckTransacao);
-      window.dispatchEvent(
-        new CustomEvent('brumaluz:conteiner', {
-          detail: {
-            conteiner: conteinerAberto,
-            novo: !!conteinerAberto && conteinerAberto !== antes,
-          },
-        }),
-      );
-    }
-    if (q.sobrevivencia) estadoSobrevivencia = q.sobrevivencia;
-    for (const e of q.eventos ?? []) tratarEvento(e);
-  }
+  const sincronia = cliente.sincronia;
+  const conteinerAberto = () => cliente.conteiner;
 
   const criaturaPorId = (id: number) => replicaCriaturas.lista.find((c) => c.id === id);
   function tratarEvento(e: EventoNucleo): void {
@@ -2726,14 +2686,6 @@ export function criarCena(
     }
   }
 
-  conexao.aoReceber((m: Mensagem) => {
-    if (m.t === 'quadro') aplicarQuadro(m);
-    else if (m.t === 'salvo') {
-      esperandoSalvo.get(m.pedido)?.(m.dados);
-      esperandoSalvo.delete(m.pedido);
-    } else if (m.t === 'erro') console.error('núcleo:', m.mensagem);
-  });
-
   estado.definirClima = (t) => enviar({ t: 'depurar', d: { f: 'clima', tipo: t } });
   estado.dia = () => dia;
   estado.definirDia = (d) => {
@@ -2773,7 +2725,7 @@ export function criarCena(
     /** Fecha o baú ou a fornalha aberta (manda antes o que a tela mudou). */
     fecharConteiner() {
       sincronia.verificar();
-      if (conteinerAberto) enviar({ t: 'fecharConteiner' });
+      if (conteinerAberto()) enviar({ t: 'fecharConteiner' });
     },
     /** Pede uma troca ao morador (o inventário novo chega do núcleo). */
     trocar(criatura: number, profissao: Profissao, troca: string) {

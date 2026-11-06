@@ -63,17 +63,35 @@ export function criarAnfitriao(
     );
   }
 
+  // comandos numerados entram em ordem (a rede pode entregar trocado)
+  let esperado = 1;
+  const adiantados = new Map<number, Comando>();
+  function processar(c: Comando): void {
+    try {
+      if (c.t === 'salvar') {
+        enviar({ t: 'salvo', pedido: c.pedido, dados: nucleo.salvar() });
+        return;
+      }
+      nucleo.comando(JOGADOR_LOCAL, c);
+    } catch (e) {
+      enviar({ t: 'erro', mensagem: String(e) });
+    }
+  }
+
   return {
     nucleo,
     receber(c) {
-      try {
-        if (c.t === 'salvar') {
-          enviar({ t: 'salvo', pedido: c.pedido, dados: nucleo.salvar() });
-          return;
-        }
-        nucleo.comando(JOGADOR_LOCAL, c);
-      } catch (e) {
-        enviar({ t: 'erro', mensagem: String(e) });
+      if (c.seq === undefined) {
+        processar(c);
+        return;
+      }
+      if (c.seq < esperado) return;
+      adiantados.set(c.seq, c);
+      while (adiantados.has(esperado)) {
+        const atual = adiantados.get(esperado)!;
+        adiantados.delete(esperado);
+        esperado++;
+        processar(atual);
       }
     },
     passo,
