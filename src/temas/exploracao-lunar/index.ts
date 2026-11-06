@@ -3,6 +3,7 @@ import { CEU_LUA, QUADROS_CEU_LUA } from './ceu';
 import { CRIATURAS_LUNARES, MOVIMENTO_LUNAR } from './criaturas';
 import { MUSICA_LUA } from './musica';
 import { EMISSIVOS_LUNARES, PINTORES_LUNARES } from './pintores';
+import { FORMAS_POVOADO_LUNAR, POVOADO_LUNAR } from './povoado';
 import { TEXTOS_LUNARES } from './textos';
 import { VOZES_LUNARES } from './vozes';
 
@@ -58,6 +59,7 @@ export function construirExploracaoLunar(): Tema {
     criaturas: CRIATURAS_LUNARES,
     movimento: MOVIMENTO_LUNAR,
     vozes: VOZES_LUNARES,
+    povoado: POVOADO_LUNAR,
     mundo: {
       arvores: {
         floresta: ['cristal', 'cristal', 'pinho'],
@@ -70,6 +72,7 @@ export function construirExploracaoLunar(): Tema {
       estrutura: 'cupula',
       crateras: 0.8,
       flora: 0.3,
+      povoado: FORMAS_POVOADO_LUNAR,
     },
     musica: MUSICA_LUA,
     materiais: {

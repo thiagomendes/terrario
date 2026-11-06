@@ -1,5 +1,6 @@
 import { CRIATURAS } from '../jogo/criaturas';
 import { nomeDoMorador, povoadosPerto } from '../jogo/povoados';
+import { definirRegioesSemPovoado, regiaoDoChunk } from '../world/povoado';
 import { povoadoDoTema, tema } from '../temas/ativo';
 import { tocarVoz } from '../audio/sons';
 import { construirMapaEmissivo } from './emissivo';
@@ -201,6 +202,8 @@ export interface EstadoDepuracao {
   tema?: string;
   /** Direção do astro fixo do tema (Terra, gigante gasoso), se houver. */
   astro?: number[];
+  /** Povoados a até 900 blocos do jogador (centro da praça e altura do piso). */
+  povoados?: () => { id: string; cx: number; cz: number; h: number; moradores: number }[];
   chunksCarregados: number;
   fps: number;
   escalaResolucao: number;
@@ -357,6 +360,12 @@ export function criarCena(
   window.__brumaluz = estado;
   estado.tema = temaAtual.id;
   if (temaAtual.ceu.planeta) estado.astro = [...temaAtual.ceu.planeta.direcao];
+  estado.povoados = () => {
+    const j = controle.jogador;
+    return povoadosPerto(j.x, j.z, 900, semente)
+      .sort((a, b) => Math.hypot(a.cx - j.x, a.cz - j.z) - Math.hypot(b.cx - j.x, b.cz - j.z))
+      .map((p) => ({ id: p.id, cx: p.cx, cz: p.cz, h: p.h, moradores: p.moradores.length }));
+  };
 
   // Sem preserveDrawingBuffer: GPUs de celular descartam o buffer a cada quadro (menos banda).
   // Capturas e miniaturas renderizam um quadro e leem o canvas na mesma tarefa.
@@ -383,6 +392,19 @@ export function criarCena(
   let estadoCamera = criarEstadoCamera();
   const edicoes = criarEdicoes();
   if (dadosIniciais) edicoes.importar(dadosIniciais.edicoes);
+  // mundo de antes dos povoados: nenhum povoado nasce onde o jogador já mexeu
+  const semPovoado =
+    (opcoes.mundo?.versao ?? 1) < 2 && dadosIniciais
+      ? [
+          ...new Set(
+            Object.keys(dadosIniciais.edicoes).map((k) => {
+              const [cx, cz] = k.split(',').map(Number);
+              return regiaoDoChunk(cx, cz);
+            }),
+          ),
+        ]
+      : [];
+  definirRegioesSemPovoado(semPovoado);
   // blocos-base compartilhados (chegam do worker junto com a malha)
   const provedor = criarProvedorBlocos(semente);
   const controle = criarControle(canvas, camera, semente, edicoes, (cx, cz) =>
@@ -720,8 +742,8 @@ export function criarCena(
     type: 'module',
   });
   // o estilo do mundo do tema vai antes de qualquer pedido de chunk
-  worker.postMessage({ estilo: estiloMundo() });
-  workerEdicao.postMessage({ estilo: estiloMundo() });
+  worker.postMessage({ estilo: estiloMundo(), semPovoado });
+  workerEdicao.postMessage({ estilo: estiloMundo(), semPovoado });
   /** Momento da edição por chunk (para medir quanto o bloco demora a aparecer). */
   const inicioEdicao = new Map<string, number>();
   const receber = (ev: MessageEvent<RespostaChunk>) => {

@@ -186,6 +186,51 @@ for (const id of TEMAS) {
       await cena(page, 0.42, 'limpo', 6000);
       await foto(page, `${id}-agua`);
     }
+    // povoado: de dia visto de cima de um canto, à noite e a tela de trocas
+    const pv = await page.evaluate(() => window.__brumaluz!.povoados?.()[0] ?? null);
+    if (pv) {
+      await page.evaluate((p) => {
+        const e = window.__brumaluz!;
+        e.teleportar!(p.cx - 14.5, p.cz - 14.5, p.h + 9);
+        e.apontar!(Math.atan2(14.5, 14.5), 0.42);
+      }, pv);
+      await cena(page, 0.42, 'limpo', 7000);
+      await foto(page, `${id}-povoado`);
+      await cena(page, 0.02, 'limpo', 3000);
+      await foto(page, `${id}-povoado-noite`);
+      await cena(page, 0.42, 'limpo', 1500);
+      const abriu = await page.evaluate(async () => {
+        const e = window.__brumaluz!;
+        for (let t = 0; t < 15; t++) {
+          const [ex, , ez] = e.posicao!;
+          const m = (e.criaturas?.() ?? [])
+            .filter((c) => c.tipo === 'morador')
+            .sort((a, b) => Math.hypot(a.x - ex, a.z - ez) - Math.hypot(b.x - ex, b.z - ez))[0];
+          if (!m) {
+            await new Promise((r) => setTimeout(r, 1000));
+            continue;
+          }
+          const d = Math.hypot(m.x - ex, m.z - ez) || 1;
+          e.teleportar!(m.x - ((m.x - ex) / d) * 2, m.z - ((m.z - ez) / d) * 2, m.y);
+          await new Promise((r) => setTimeout(r, 400));
+          const [px, py, pz] = e.posicao!;
+          e.apontar!(
+            Math.atan2(m.x - px, m.z - pz),
+            -Math.atan2(m.y + 1.1 - py, Math.hypot(m.x - px, m.z - pz)),
+          );
+          await new Promise((r) => setTimeout(r, 400));
+          e.controleDireto!.usar();
+          await new Promise((r) => setTimeout(r, 300));
+          if (!document.querySelector<HTMLElement>('[data-painel-trocas]')?.hidden) return true;
+        }
+        return false;
+      });
+      if (abriu) {
+        await page.waitForTimeout(600);
+        await foto(page, `${id}-trocas`);
+        await page.keyboard.press('Escape');
+      }
+    }
     if (erros.length) throw new Error(erros.join('\n'));
   });
 }

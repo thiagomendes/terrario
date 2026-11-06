@@ -179,6 +179,12 @@ export const TEXTOS_DINOS: TextosTema = {
     marcador: { titulo: 'Mapa do tesouro', descricao: 'Marque um achado no mapa (tecla K)' },
     construtor: { titulo: 'Vila pré-histórica', descricao: 'Coloque 100 blocos' },
     foto: { titulo: 'Registro da expedição', descricao: 'Tire uma foto no modo foto (tecla P)' },
+    povoado: {
+      titulo: 'Colegas de expedição',
+      descricao: 'Encontre um acampamento de paleontólogos',
+    },
+    trocas: { titulo: 'Troca de achados', descricao: 'Faça 3 trocas com os paleontólogos' },
+    ferreiro: { titulo: 'Martelinho novo', descricao: 'Faça uma troca com a ferramenteira' },
   },
   boasVindas: 'Boas-vindas à Era dos Dinos! Os fósseis estão esperando por você',
   morte: 'Ufa! Você desmaiou de cansaço',

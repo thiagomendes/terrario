@@ -3,6 +3,7 @@ import { QUADROS_MATA } from './ceu';
 import { CRIATURAS_MATA } from './criaturas';
 import { PALETAS_MATA, TIMBRE_MATA } from './musica';
 import { EMISSIVOS_MATA, PINTORES_MATA } from './pintores';
+import { POVOADO_MATA } from './povoado';
 import { TEXTOS_MATA } from './textos';
 import { MOVIMENTO_MATA, VOZES_MATA } from './vozes';
 
@@ -76,6 +77,8 @@ export function construirMataEncantada(): Tema {
       estrutura: 'circulo',
       crateras: 0,
       flora: 1,
+      // casinhas de roça, barraca de feira de chita e paiol redondo em volta da fonte
+      povoado: { casa: 'duas-aguas', oficina: 'tenda', deposito: 'redonda', marco: 'fonte' },
     },
     musica: { timbre: TIMBRE_MATA, transporte: 0, paletas: PALETAS_MATA },
     materiais: {
@@ -87,6 +90,7 @@ export function construirMataEncantada(): Tema {
       cristal: { tom: 1.2 },
     },
     natureza: { passaros: 1.6, grilos: 1.5, tom: 1.05 },
+    povoado: POVOADO_MATA,
     personagem: { acessorio: 'chapeu-explorador', roupaEstilo: 4, roupaCor: 11, calcaCor: 4 },
   };
 }

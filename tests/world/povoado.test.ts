@@ -9,11 +9,14 @@ import {
   ALTURA,
   TERRENO_NATURAL,
   alturaTerreno,
+  encontrarNascimento,
 } from '../../src/world/chunk';
 import {
   planoDaRegiao,
   frenteDaPorta,
   limparPovoados,
+  definirRegioesSemPovoado,
+  regiaoDoChunk,
   REGIAO_POVOADO,
   type FormaCasa,
   type FormaMarco,
@@ -188,5 +191,37 @@ describe('povoados: terreno e construções', () => {
       expect(n, casa).toBe(ref);
     });
     definirEstiloMundo(ESTILO_PADRAO);
+  });
+});
+
+describe('povoados: robustez', () => {
+  it('o jogador nunca nasce dentro de um povoado (30 sementes)', () => {
+    for (let s = 1; s <= 30; s++) {
+      const n = encontrarNascimento(s);
+      const rx = Math.floor(n.x / REGIAO_POVOADO);
+      const rz = Math.floor(n.z / REGIAO_POVOADO);
+      for (let dx = -1; dx <= 1; dx++)
+        for (let dz = -1; dz <= 1; dz++) {
+          const p = planoDaRegiao(rx + dx, rz + dz, s, TERRENO_NATURAL);
+          if (!p) continue;
+          const dentro = n.x >= p.minX && n.x <= p.maxX && n.z >= p.minZ && n.z <= p.maxZ;
+          expect(dentro, `semente ${s}`).toBe(false);
+        }
+    }
+  });
+
+  it('mundo antigo: região com edição do jogador não ganha povoado', () => {
+    const [p] = povoados(1);
+    const rx = Math.floor(p.cx / REGIAO_POVOADO);
+    const rz = Math.floor(p.cz / REGIAO_POVOADO);
+    const cx = Math.floor(p.cx / 16);
+    const cz = Math.floor(p.cz / 16);
+    expect(regiaoDoChunk(cx, cz)).toBe(`${rx},${rz}`);
+    definirRegioesSemPovoado([regiaoDoChunk(cx, cz)]);
+    expect(planoDaRegiao(rx, rz, SEMENTE, TERRENO_NATURAL)).toBeNull();
+    // e o terreno ali volta a ser o natural
+    expect(alturaTerreno(p.cx, p.cz, SEMENTE)).toBe(TERRENO_NATURAL.altura(p.cx, p.cz, SEMENTE));
+    definirRegioesSemPovoado([]);
+    expect(planoDaRegiao(rx, rz, SEMENTE, TERRENO_NATURAL)).not.toBeNull();
   });
 });

@@ -3,6 +3,7 @@ import { gerarMalha } from '../mesh/malha';
 import type { Buffers } from '../mesh/malha';
 import { blocoDe, criarEdicoes, metasDoChunk, type Edicoes } from '../world/edicoes';
 import { definirEstiloMundo, gerarChunk } from '../world/chunk';
+import { definirRegioesSemPovoado } from '../world/povoado';
 
 /** Cache dos chunks gerados (antes das edições): evita regerar vizinhos. */
 const cache = new Map<string, Uint8Array>();
@@ -66,11 +67,14 @@ function buffersTransferiveis(b: Buffers): ArrayBuffer[] {
 /** Primeira mensagem do worker: o estilo do mundo do tema (antes de qualquer chunk). */
 export interface PedidoEstilo {
   estilo: EstiloMundo;
+  /** Regiões sem povoado (mundos de antes dos povoados com edições nelas). */
+  semPovoado?: string[];
 }
 
 self.onmessage = (ev: MessageEvent<PedidoChunk | PedidoEstilo>) => {
   if ('estilo' in ev.data) {
     definirEstiloMundo(ev.data.estilo);
+    definirRegioesSemPovoado(ev.data.semPovoado ?? []);
     return;
   }
   const { cx, cz, semente, versao, edicoes: dados, bases } = ev.data as PedidoChunk;

@@ -6,6 +6,7 @@ import {
   REGIAO_POVOADO,
   type PlanoPovoado,
   type TerrenoNatural,
+  versaoDosPovoados,
 } from './povoado';
 import { construirPovoado } from './construcoes';
 import { Bloco } from './blocks';
@@ -96,6 +97,7 @@ export const TERRENO_NATURAL: TerrenoNatural = {
   altura: (wx, wz, s) => alturaNatural(wx, wz, s),
   bioma: (wx, wz, s, h) => biomaEm(wx, wz, s, h),
   nivelMar: NIVEL_MAR,
+  nascimento: (s) => encontrarNascimento(s),
 };
 
 let povoadosLigados = true;
@@ -110,7 +112,7 @@ let ultimoPlano: PlanoPovoado | null = null;
 export function povoadoNaColuna(wx: number, wz: number, semente: number): PlanoPovoado | null {
   const rx = Math.floor(wx / REGIAO_POVOADO);
   const rz = Math.floor(wz / REGIAO_POVOADO);
-  const k = `${rx},${rz},${semente}`;
+  const k = `${rx},${rz},${semente},${versaoDosPovoados()}`;
   if (k !== ultimaRegiao) {
     ultimaRegiao = k;
     ultimoPlano = planoDaRegiao(rx, rz, semente, TERRENO_NATURAL);
@@ -891,14 +893,25 @@ export function arvoreDaForma(
 }
 
 /** Procura um ponto de nascimento em terra firme perto da origem. */
+/** Nascimento pelo terreno natural (povoados nunca cobrem este ponto). */
+const nascimentos = new Map<number, { x: number; z: number }>();
 export function encontrarNascimento(semente: number): { x: number; z: number } {
+  let n = nascimentos.get(semente);
+  if (!n) {
+    n = procurarNascimento(semente);
+    nascimentos.set(semente, n);
+  }
+  return n;
+}
+
+function procurarNascimento(semente: number): { x: number; z: number } {
   for (let raio = 0; raio < 400; raio += 4) {
     const passos = Math.max(1, Math.floor(raio / 2));
     for (let i = 0; i < passos; i++) {
       const a = (i / passos) * Math.PI * 2;
       const x = Math.round(8 + Math.cos(a) * raio);
       const z = Math.round(8 + Math.sin(a) * raio);
-      const h = alturaTerreno(x, z, semente);
+      const h = alturaNatural(x, z, semente);
       const b = biomaEm(x, z, semente, h);
       if (h > NIVEL_MAR + 1 && h < 88 && b !== 'deserto') return { x: x + 0.5, z: z + 0.5 };
     }

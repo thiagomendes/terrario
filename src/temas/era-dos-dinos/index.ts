@@ -3,6 +3,7 @@ import { QUADROS_CEU_DINOS } from './ceu';
 import { CRIATURAS_DINOS, MOVIMENTO_DINOS, VOZES_DINOS } from './criaturas';
 import { MUSICA_DINOS } from './musica';
 import { PINTORES_DINOS } from './pintores';
+import { POVOADO_DINOS } from './povoado';
 import { TEXTOS_DINOS } from './textos';
 
 let cache: Tema | null = null;
@@ -92,6 +93,7 @@ export function construirEraDosDinos(): Tema {
       estrutura: 'ninho',
       crateras: 0,
       flora: 1,
+      povoado: { casa: 'tenda', oficina: 'tenda', deposito: 'modulo', marco: 'esqueleto' },
     },
     musica: MUSICA_DINOS,
     materiais: {
@@ -103,6 +105,7 @@ export function construirEraDosDinos(): Tema {
       cristal: { tom: 0.85 },
     },
     natureza: { passaros: 0.6, grilos: 1.2, tom: 0.55 },
+    povoado: POVOADO_DINOS,
     personagem: {
       modelo: 'exploradora',
       acessorio: 'chapeu-explorador',

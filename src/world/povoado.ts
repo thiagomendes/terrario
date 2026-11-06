@@ -89,6 +89,8 @@ export interface TerrenoNatural {
   altura(wx: number, wz: number, semente: number): number;
   bioma(wx: number, wz: number, semente: number, h: number): Bioma;
   nivelMar: number;
+  /** Ponto de nascimento do jogador (nenhum povoado o cobre). */
+  nascimento?(semente: number): { x: number; z: number };
 }
 
 const chave = (x: number, z: number) => (x + 32768) * 65536 + (z + 32768);
@@ -98,6 +100,30 @@ const cache = new Map<string, PlanoPovoado | null>();
 /** Limpa o cache (testes que trocam de semente muitas vezes). */
 export function limparPovoados(): void {
   cache.clear();
+  versao++;
+}
+
+/**
+ * Regiões sem povoado neste mundo: num mundo criado antes dos povoados, as regiões
+ * onde o jogador já editou algo (o povoado não pode nascer em cima da construção dele).
+ */
+let regioesBloqueadas: ReadonlySet<string> = new Set();
+let versao = 0;
+export function definirRegioesSemPovoado(regioes: readonly string[]): void {
+  regioesBloqueadas = new Set(regioes);
+  cache.clear();
+  versao++;
+}
+
+/** Muda sempre que os planos podem ter mudado (para memórias fora deste módulo). */
+export function versaoDosPovoados(): number {
+  return versao;
+}
+
+/** Região ("rx,rz") de um chunk. */
+export function regiaoDoChunk(cx: number, cz: number): string {
+  const n = REGIAO_POVOADO / 16;
+  return `${Math.floor(cx / n)},${Math.floor(cz / n)}`;
 }
 
 /** Plano do povoado da região (rx, rz), ou null se ela não tiver povoado. */
@@ -107,6 +133,7 @@ export function planoDaRegiao(
   semente: number,
   t: TerrenoNatural,
 ): PlanoPovoado | null {
+  if (regioesBloqueadas.has(`${rx},${rz}`)) return null;
   const k = `${rx},${rz},${semente}`;
   if (cache.has(k)) return cache.get(k)!;
   const p = planejar(rx, rz, semente, t);
@@ -296,6 +323,10 @@ function planejar(rx: number, rz: number, semente: number, t: TerrenoNatural): P
       viz(i, x, z, 1, 1);
       viz(i, x, z, -1, 1);
     }
+  // o jogador nunca nasce dentro de um povoado
+  const nasc = t.nascimento?.(semente);
+  if (nasc && nasc.x >= minX - 2 && nasc.x <= maxX + 2 && nasc.z >= minZ - 2 && nasc.z <= maxZ + 2)
+    return null;
   return {
     id: `${rx},${rz}`,
     cx,

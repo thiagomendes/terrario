@@ -13,6 +13,8 @@ export interface MetaMundo {
   miniatura?: string;
   /** Tema visual do mundo (mundos antigos não têm: são Bruma e Luz). */
   tema?: string;
+  /** Versão do mundo: 2 = criado já com povoados (mundos antigos não têm). */
+  versao?: number;
 }
 
 export interface JogadorSalvo {
@@ -158,6 +160,7 @@ export function criarRepositorioMundos(
         modo: modo === 'sobrevivencia' ? 'sobrevivencia' : 'criativo',
         criadoEm: t,
         jogadoEm: t,
+        versao: 2,
       };
       if (tema) meta.tema = tema;
       lista.push(meta);

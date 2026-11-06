@@ -235,16 +235,16 @@ function marco(p: PlanoPovoado, forma: FormaMarco, em: Pincel): void {
       em(cx, h + 6, cz, Bloco.LANTERNA);
       break;
     case 'esqueleto':
-      // coluna e costelas de pedra lisa, crânio na ponta
-      for (let dx = -3; dx <= 2; dx++) em(cx + dx, h + 3, cz, Bloco.PEDRA_LISA);
+      // coluna e costelas claras (lã branca: cor de osso em todo tema), crânio na ponta
+      for (let dx = -3; dx <= 2; dx++) em(cx + dx, h + 3, cz, Bloco.LA_BRANCA);
       for (const dx of [-2, 0, 2])
         for (const dz of [-1, 1]) {
-          em(cx + dx, h + 3, cz + dz, Bloco.PEDRA_LISA);
-          em(cx + dx, h + 2, cz + dz * 2, Bloco.PEDRA_LISA);
-          em(cx + dx, h + 1, cz + dz * 2, Bloco.PEDRA_LISA);
+          em(cx + dx, h + 3, cz + dz, Bloco.LA_BRANCA);
+          em(cx + dx, h + 2, cz + dz * 2, Bloco.LA_BRANCA);
+          em(cx + dx, h + 1, cz + dz * 2, Bloco.LA_BRANCA);
         }
       for (let y = h + 2; y <= h + 3; y++)
-        for (const dz of [0, 1]) em(cx + 3, y, cz + dz, Bloco.PEDRA_LISA);
+        for (const dz of [0, 1]) em(cx + 3, y, cz + dz, Bloco.LA_BRANCA);
       em(cx - 3, h + 1, cz, Bloco.LANTERNA);
       break;
   }

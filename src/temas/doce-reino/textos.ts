@@ -184,6 +184,9 @@ export const TEXTOS_DOCE: TextosTema = {
     },
     construtor: { titulo: 'Mestre confeiteiro', descricao: 'Coloque 100 blocos' },
     foto: { titulo: 'Foto de vitrine', descricao: 'Tire uma foto no modo foto (tecla P)' },
+    povoado: { titulo: 'Vizinhos docinhos', descricao: 'Encontre um vilarejo dos confeiteiros' },
+    trocas: { titulo: 'Troca-troca de doces', descricao: 'Faça 3 trocas com os confeiteiros' },
+    ferreiro: { titulo: 'Colher novinha', descricao: 'Faça uma troca com a colhereira' },
   },
   capitulos: {
     'Primeiros passos': 'Primeiras receitas',

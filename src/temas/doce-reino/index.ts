@@ -1,6 +1,7 @@
 import type { QuadroCeu, Tema } from '../tipos';
 import { CRIATURAS_DOCE, MOVIMENTO_DOCE } from './criaturas';
 import { PINTORES_DOCE } from './pintores';
+import { POVOADO_DOCE } from './povoado';
 import { TEXTOS_DOCE } from './textos';
 import { VOZES_DOCE } from './vozes';
 
@@ -195,6 +196,8 @@ export function construirDoceReino(): Tema {
       estrutura: 'casinha',
       crateras: 0,
       flora: 1,
+      // casinhas de pão de mel, forno-cúpula de bolo, pote redondo de biscoitos e fonte de chocolate
+      povoado: { casa: 'duas-aguas', oficina: 'cupula', deposito: 'redonda', marco: 'fonte' },
     },
     // caixinha de música: acordes suaves e sininho brilhante, escalas pentatônicas maiores
     musica: {
@@ -290,6 +293,7 @@ export function construirDoceReino(): Tema {
       cristal: { base: 'cristal', tom: 1.2 },
     },
     natureza: { passaros: 0.8, grilos: 0.5, tom: 1.3 },
+    povoado: POVOADO_DOCE,
     personagem: { acessorio: 'touca-chef', roupaEstilo: 1, roupaCor: 4, calcaCor: 4 },
   };
 }

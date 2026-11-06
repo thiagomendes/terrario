@@ -2,6 +2,7 @@ import type { Tema } from '../tipos';
 import { CEU_PLANETA, QUADROS_PLANETA } from './ceu';
 import { CRIATURAS_PLANETA, MOVIMENTO_PLANETA, VOZES_PLANETA } from './criaturas';
 import { EMISSIVOS_PLANETA, PINTORES_PLANETA } from './pintores';
+import { POVOADO_PLANETA } from './povoado';
 import { TEXTOS_PLANETA } from './textos';
 
 let tema: Tema | null = null;
@@ -66,6 +67,8 @@ export function construirPlanetaVivo(): Tema {
       },
       // torre de observação abandonada, com a caixa de amostras no pé
       estrutura: 'torre',
+      // posto de pesquisa: casas em cúpula, oficina e depósito em módulos, antena na praça
+      povoado: { casa: 'cupula', oficina: 'modulo', deposito: 'modulo', marco: 'antena' },
       crateras: 0,
       flora: 1,
     },
@@ -167,6 +170,7 @@ export function construirPlanetaVivo(): Tema {
     },
     // chilreios alienígenas agudos de dia; quase nenhum grilo à noite
     natureza: { passaros: 1, grilos: 0.2, tom: 1.3 },
+    povoado: POVOADO_PLANETA,
     personagem: {
       modelo: 'exploradora',
       acessorio: 'mochila',

@@ -171,6 +171,12 @@ export const TEXTOS_PLANETA: TextosTema = {
     marcador: { titulo: 'Mapa da expedição', descricao: 'Crie um marcador no mapa (tecla K)' },
     construtor: { titulo: 'Base de pesquisa', descricao: 'Coloque 100 blocos' },
     foto: { titulo: 'Registro científico', descricao: 'Tire uma foto no modo foto (tecla P)' },
+    povoado: { titulo: 'Contato imediato', descricao: 'Encontre um posto de pesquisa alienígena' },
+    trocas: { titulo: 'Troca interestelar', descricao: 'Faça 3 trocas com os alienígenas' },
+    ferreiro: {
+      titulo: 'Ferramenta alienígena',
+      descricao: 'Faça uma troca com a mecânica, que faz ferramentas',
+    },
   },
   capitulos: {
     'Primeiros passos': 'Pouso',

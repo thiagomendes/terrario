@@ -174,6 +174,12 @@ export const TEXTOS_MATA: TextosTema = {
     marcador: { titulo: 'Mapa da trilha', descricao: 'Marque um ponto no mapa (tecla K)' },
     construtor: { titulo: 'Mestre de obras', descricao: 'Coloque 100 blocos' },
     foto: { titulo: 'Retrato da mata', descricao: 'Tire uma foto no modo foto (tecla P)' },
+    povoado: { titulo: 'Ô de casa!', descricao: 'Encontre uma vila dos artesãos' },
+    trocas: { titulo: 'Feirinha boa', descricao: 'Faça 3 trocas com os moradores da vila' },
+    ferreiro: {
+      titulo: 'Ferramenta feita à mão',
+      descricao: 'Faça uma troca com o ferreiro da vila',
+    },
   },
   capitulos: {
     'Primeiros passos': 'Trilha de entrada',

@@ -176,6 +176,12 @@ export const TEXTOS_LUNARES: TextosTema = {
     marcador: { titulo: 'Cartógrafo lunar', descricao: 'Crie um marcador no mapa (tecla K)' },
     construtor: { titulo: 'Construtor de base', descricao: 'Coloque 100 blocos' },
     foto: { titulo: 'Foto para a Terra', descricao: 'Tire uma foto no modo foto (tecla P)' },
+    povoado: { titulo: 'Vizinhos de cratera', descricao: 'Encontre uma colônia lunar' },
+    trocas: { titulo: 'Comércio espacial', descricao: 'Faça 3 trocas com os colonos' },
+    ferreiro: {
+      titulo: 'Ferramenta da oficina',
+      descricao: 'Faça uma troca com a mecânica da colônia',
+    },
   },
   capitulos: {
     'Primeiros passos': 'Pouso',
