@@ -745,11 +745,12 @@ export function criarCena(
   estado.apontar = (yaw, pitch) => controle.apontar(yaw, pitch);
   estado.teleportar = (x, z, yFixo) => {
     const j = controle.jogador;
+    const livre = (yy: number) => !obterBlocoDef(blocoEm(Math.floor(x), yy, Math.floor(z)))?.solido;
     let y = yFixo ?? alturaTerreno(Math.floor(x), Math.floor(z), semente) + 1;
     while (
       yFixo === undefined &&
       y < ALTURA - 2 &&
-      blocoEm(Math.floor(x), y, Math.floor(z)) !== Bloco.AR
+      !(livre(y) && livre(y + 1))
     )
       y++;
     j.x = x;
