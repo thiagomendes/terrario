@@ -578,7 +578,7 @@ export function criarCena(
   });
 
   // os outros jogadores (mundo com amigos): personagem, apelido e item na mão
-  const outrosJogadores = criarOutrosJogadores(scene, (m) => glow.addExcludedMesh(m));
+  const outrosJogadores = criarOutrosJogadores(scene);
   const ceu = criarCeu(scene);
   const agua = criarAgua(scene);
   glow.addExcludedMesh(ceu.malha);
@@ -666,6 +666,9 @@ export function criarCena(
   matSolido.specularColor = Color3.Black();
   matSolido.ambientColor = Color3.White();
   matSolido.backFaceCulling = false;
+  // o recorte usa o alfa da arte: sem isto, o miolo do vidro, os furos das folhas e as
+  // janelinhas da porta saíam pretos em vez de vazados
+  matSolido.useAlphaFromDiffuseTexture = true;
   matSolido.transparencyMode = Material.MATERIAL_ALPHATEST;
   matSolido.alphaCutOff = 0.5;
   const mundoSolido = new PluginMundo(matSolido);
@@ -1179,9 +1182,19 @@ export function criarCena(
       jogador: controle.jogador,
       editar: (x, y, z, b) => {
         const meta = metaColocacao(b);
-        // porta ocupa dois blocos: as duas metades entram no mesmo passo do desfazer
-        const porta = b === Bloco.PORTA && blocoEm(x, y + 1, z) === Bloco.AR;
-        return editarRegistrando(x, y, z, b, meta, porta ? [{ x, y: y + 1, z }] : []);
+        // porta ocupa dois blocos: as duas metades entram no mesmo passo do desfazer;
+        // planta, neve ou água em cima dão lugar; bloco firme em cima: não cabe (nada de
+        // meia porta)
+        if (b === Bloco.PORTA) {
+          const cima = obterBlocoDef(blocoEm(x, y + 1, z));
+          const cabe = !cima || cima.id === Bloco.AR || !!cima.planta || !!cima.liquido;
+          if (!cabe || y + 1 >= ALTURA) {
+            toast('A porta precisa de 2 blocos de altura');
+            return false;
+          }
+          return editarRegistrando(x, y, z, b, meta, [{ x, y: y + 1, z }]);
+        }
+        return editarRegistrando(x, y, z, b, meta);
       },
       posicao: posicaoDeColocar,
       ocupa: (b) => !!obterBlocoDef(b)?.solido,
@@ -2064,10 +2077,75 @@ export function criarCena(
   function atacarNaMira(): boolean {
     const c = criaturaApontada();
     if (!c) return false;
+    if (c.morador) {
+      // morador não apanha: o golpe vira um "oi" (e ele vira para o jogador)
+      enviarTelemetria(true);
+      enviar({ t: 'falar', criatura: c.id });
+      tocarVoz(motorAudio, 'morador', 'contente', 1);
+      return true;
+    }
     animador.evento('golpe');
     enviarTelemetria(true);
     enviar({ t: 'atacar', criatura: c.id, slot: hotbar.ativo });
     return true;
+  }
+  /** Morador, ou raposa com frutinhas na mão: o toque e o segurar não batem neles. */
+  function amigoNaMira(): boolean {
+    const c = criaturaApontada();
+    if (!c) return false;
+    if (c.morador) return true;
+    return c.tipo === 'raposa' && !c.domada && hotbar.pilhaAtiva()?.item === 'frutinhas';
+  }
+  /** Comida na mão no modo sobrevivência. */
+  function comidaNaMao(): boolean {
+    const p = hotbar.pilhaAtiva();
+    return modo === 'sobrevivencia' && !!(p && obterItem(p.item)?.comida);
+  }
+  // segurar para comer (toque): 1,1 s mastigando; soltar antes cancela
+  let comerTimer = 0;
+  function comecarAComer(): void {
+    pararDeComer();
+    if (cliente.sobrevivencia.fome >= 20) {
+      toast('Você está sem fome');
+      return;
+    }
+    tocarSom(motorAudio, 'comer');
+    comerTimer = window.setTimeout(() => {
+      comerTimer = 0;
+      enviar({ t: 'comer', slot: hotbar.ativo });
+      // ainda segurando: continua comendo enquanto tiver fome e comida
+      window.setTimeout(() => {
+        if (gestoSegurando() && comidaNaMao() && cliente.sobrevivencia.fome < 20) comecarAComer();
+      }, 250);
+    }, 1100);
+  }
+  function pararDeComer(): void {
+    if (comerTimer) clearTimeout(comerTimer);
+    comerTimer = 0;
+  }
+  const gestoSegurando = () => pontoToque !== null;
+  // dica perto da mira: como falar com o morador, domar a raposa, comer
+  let esperaDica = 0;
+  let dicaAtual = '';
+  function atualizarDica(dt: number): void {
+    esperaDica -= dt;
+    if (esperaDica > 0) return;
+    esperaDica = 0.25;
+    const toque = document.body.classList.contains('toque-ativo');
+    let t = '';
+    const c = criaturaApontada();
+    const p = hotbar.pilhaAtiva();
+    if (c?.morador) {
+      const nome = nomeDoMorador(c.morador.povoado, c.morador.n);
+      t = toque ? `Toque em ${nome} para trocar` : `Clique direito (ou F): trocar com ${nome}`;
+    } else if (c && c.tipo === 'raposa' && !c.domada && p?.item === 'frutinhas') {
+      t = toque ? 'Toque na raposa para dar frutinhas' : 'Clique direito (ou F): dar frutinhas';
+    } else if (comidaNaMao() && cliente.sobrevivencia.fome < 20) {
+      t = toque ? 'Segure o dedo na tela para comer' : 'Clique direito (ou F): comer';
+    }
+    if (t === dicaAtual) return;
+    dicaAtual = t;
+    window.dispatchEvent(new CustomEvent('brumaluz:dicaMira', { detail: t }));
   }
   /** Volume da voz pela distância (some a 24 blocos). */
   const volumeDaDistancia = (c: { x: number; y: number; z: number }) => {
@@ -2112,6 +2190,7 @@ export function criarCena(
     replicaCriaturas.atualizar(dt);
     chamadosCriaturas(dt);
     avisarPovoado(dt);
+    atualizarDica(dt);
     perigoPerto =
       modo === 'sobrevivencia' &&
       replicaCriaturas.lista.some(
@@ -2268,6 +2347,10 @@ export function criarCena(
       }
       return;
     }
+    if (e.code === 'KeyF' && document.pointerLockElement && !document.body.dataset.overlay) {
+      usarOuColocar(false);
+      return;
+    }
     if (modo !== 'criativo') return;
     if (e.code === 'KeyB') {
       modoConstrucao = modoConstrucao + 1 >= FERRAMENTAS.length ? -1 : modoConstrucao + 1;
@@ -2357,8 +2440,17 @@ export function criarCena(
     },
     quebrar: (ativo) => {
       if (ativo) {
+        // no toque, segurar com comida na mão (sobrevivência) come em vez de quebrar
+        if (comidaNaMao()) {
+          comecarAComer();
+          return;
+        }
+        if (amigoNaMira()) return;
         if (!atacarNaMira()) minerador.pressionar();
-      } else minerador.soltar();
+      } else {
+        pararDeComer();
+        minerador.soltar();
+      }
     },
     usar: () => usarOuColocar(false),
     mirar: (x, y) => {
@@ -2371,7 +2463,7 @@ export function criarCena(
       alvoMemoQuadro = -1;
     },
     tocar: () => {
-      if (!atacarNaMira()) usarOuColocar(false);
+      if (amigoNaMira() || !atacarNaMira()) usarOuColocar(false);
     },
     voando: () => !!controle.jogador.voando,
   };

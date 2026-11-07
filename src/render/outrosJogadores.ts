@@ -4,22 +4,43 @@
  * correr e voar. A posição chega 20 vezes por segundo e anda suave entre os quadros.
  */
 import type { Scene } from '@babylonjs/core/scene';
-import { MeshBuilder } from '@babylonjs/core/Meshes/meshBuilder';
-import { Mesh } from '@babylonjs/core/Meshes/mesh';
-import { StandardMaterial } from '@babylonjs/core/Materials/standardMaterial';
-import { DynamicTexture } from '@babylonjs/core/Materials/Textures/dynamicTexture';
-import { Color3 } from '@babylonjs/core/Maths/math.color';
+import { Matrix, Vector3 } from '@babylonjs/core/Maths/math.vector';
 import { criarPersonagem } from './personagem';
 import { criarAnimador } from '../player/animacao';
 import { normalizarAparencia } from '../personagem/aparencia';
 import { blocoDoItem } from '../jogo/itens';
 import type { JogadorVisto, PerfilJogador } from '../nucleo/protocolo';
 
+/** Apelido em HTML por cima do jogo: nítido em qualquer tela (sem desfoque do 3D). */
+const CSS_ROTULO = `
+.rotulo-amigo { position: fixed; left: 0; top: 0; z-index: 6; pointer-events: none;
+  padding: 3px 10px; border-radius: 9px; background: rgba(14, 10, 20, 0.72); color: #fff4d8;
+  font: 700 14px system-ui, sans-serif; white-space: nowrap; will-change: transform;
+  text-shadow: 0 1px 0 rgba(0,0,0,0.5); }
+.rotulo-amigo[hidden] { display: none; }
+body[data-overlay] .rotulo-amigo, body.modo-foto .rotulo-amigo, body.tela-titulo .rotulo-amigo { display: none; }
+`;
+let cssPosto = false;
+function criarRotulo(texto: string): HTMLDivElement {
+  if (!cssPosto) {
+    cssPosto = true;
+    const st = document.createElement('style');
+    st.textContent = CSS_ROTULO;
+    document.head.append(st);
+  }
+  const d = document.createElement('div');
+  d.className = 'rotulo-amigo';
+  d.textContent = texto;
+  d.hidden = true;
+  document.body.append(d);
+  return d;
+}
+
 interface Outro {
   id: string;
   personagem: ReturnType<typeof criarPersonagem>;
   animador: ReturnType<typeof criarAnimador>;
-  placa: Mesh;
+  placa: HTMLDivElement;
   alvo: JogadorVisto;
   x: number;
   y: number;
@@ -29,38 +50,9 @@ interface Outro {
   apelido: string;
 }
 
-function desenharPlaca(scene: Scene, texto: string): Mesh {
-  const tex = new DynamicTexture(`placa-${texto}`, { width: 256, height: 64 }, scene, false);
-  tex.hasAlpha = true;
-  const ctx = tex.getContext() as CanvasRenderingContext2D;
-  ctx.clearRect(0, 0, 256, 64);
-  ctx.font = '700 34px system-ui, sans-serif';
-  const w = Math.min(244, ctx.measureText(texto).width + 28);
-  ctx.fillStyle = 'rgba(14, 10, 20, 0.72)';
-  ctx.beginPath();
-  ctx.roundRect((256 - w) / 2, 8, w, 48, 14);
-  ctx.fill();
-  ctx.fillStyle = '#fff4d8';
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.fillText(texto, 128, 33, 230);
-  tex.update();
-  const mat = new StandardMaterial(`placa-mat-${texto}`, scene);
-  mat.diffuseTexture = tex;
-  mat.emissiveColor = Color3.White();
-  mat.disableLighting = true;
-  mat.useAlphaFromDiffuseTexture = true;
-  mat.backFaceCulling = false;
-  const p = MeshBuilder.CreatePlane(`placa-${texto}`, { width: 1.6, height: 0.4 }, scene);
-  p.material = mat;
-  p.billboardMode = Mesh.BILLBOARDMODE_ALL;
-  p.isPickable = false;
-  // o apelido aparece mesmo atrás de folhas e paredes finas
-  p.renderingGroupId = 1;
-  return p;
-}
-
-export function criarOutrosJogadores(scene: Scene, semBrilho: (m: Mesh) => void) {
+export function criarOutrosJogadores(scene: Scene) {
+  const ponto = new Vector3();
+  const tela = new Vector3();
   const outros = new Map<string, Outro>();
   let perfis: Record<string, PerfilJogador> = {};
 
@@ -68,8 +60,7 @@ export function criarOutrosJogadores(scene: Scene, semBrilho: (m: Mesh) => void)
     const perfil = perfis[v.id];
     const apelido = perfil?.apelido ?? 'Amigo';
     const personagem = criarPersonagem(scene, normalizarAparencia(perfil?.aparencia ?? {}));
-    const placa = desenharPlaca(scene, apelido);
-    semBrilho(placa);
+    const placa = criarRotulo(apelido);
     return {
       id: v.id,
       personagem,
@@ -87,8 +78,7 @@ export function criarOutrosJogadores(scene: Scene, semBrilho: (m: Mesh) => void)
 
   function descartar(o: Outro): void {
     o.personagem.descartar();
-    o.placa.material?.dispose(true, true);
-    o.placa.dispose();
+    o.placa.remove();
   }
 
   return {
@@ -100,10 +90,7 @@ export function criarOutrosJogadores(scene: Scene, semBrilho: (m: Mesh) => void)
         if (!novo) continue;
         o.personagem.aplicarAparencia(normalizarAparencia(novo.aparencia));
         if (novo.apelido !== o.apelido) {
-          o.placa.material?.dispose(true, true);
-          o.placa.dispose();
-          o.placa = desenharPlaca(scene, novo.apelido);
-          semBrilho(o.placa);
+          o.placa.textContent = novo.apelido;
           o.apelido = novo.apelido;
         }
       }
@@ -125,6 +112,13 @@ export function criarOutrosJogadores(scene: Scene, semBrilho: (m: Mesh) => void)
     },
     atualizar(dt: number, luz: number) {
       const k = Math.min(1, dt * 14);
+      const cam = scene.activeCamera;
+      const motor = scene.getEngine();
+      const canvas = motor.getRenderingCanvas();
+      const larg = motor.getRenderWidth();
+      const alt = motor.getRenderHeight();
+      const vista = cam?.viewport.toGlobal(larg, alt);
+      const transform = scene.getTransformMatrix();
       for (const o of outros.values()) {
         const a = o.alvo;
         // longe demais (teleporte, renasceu): vai direto
@@ -154,7 +148,23 @@ export function criarOutrosJogadores(scene: Scene, semBrilho: (m: Mesh) => void)
         o.personagem.aplicarPose(pose, { dt, olhar: a.pitch, vista: o.animador.vista() });
         o.personagem.posicionar(o.x, o.y, o.z, o.yaw);
         o.personagem.definirLuz(luz);
-        o.placa.position.set(o.x, o.y + 2.25, o.z);
+        // apelido acima da cabeça, projetado na tela (some atrás da câmera e muito longe)
+        let mostrar = false;
+        if (cam && vista && canvas) {
+          ponto.set(o.x, o.y + 2.2, o.z);
+          const dist = Vector3.Distance(cam.globalPosition, ponto);
+          Vector3.ProjectToRef(ponto, Matrix.IdentityReadOnly, transform, vista, tela);
+          if (tela.z > 0 && tela.z < 1 && dist < 64) {
+            const r = canvas.getBoundingClientRect();
+            const x = r.left + (tela.x / larg) * r.width;
+            const y = r.top + (tela.y / alt) * r.height;
+            const e = o.placa;
+            e.style.transform = `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px) translate(-50%, -100%)`;
+            e.style.opacity = String(dist > 40 ? Math.max(0.35, 1 - (dist - 40) / 30) : 1);
+            mostrar = true;
+          }
+        }
+        if (o.placa.hidden === mostrar) o.placa.hidden = !mostrar;
       }
     },
     /** Para o minimapa e a seta que aponta para os amigos. */

@@ -28,7 +28,9 @@ export const CSS_ATALHOS = `
 .barra-atalhos[hidden] { display: none; }
 /* desktop mais estreito: coluna na lateral, sem encostar na barra de itens */
 @media (max-width: 1180px) {
-  .barra-atalhos { flex-direction: column; bottom: calc(90px + env(safe-area-inset-bottom, 0px)); }
+  /* duas colunas: a barra fica baixa e não sobe por cima dos avisos e da missão */
+  .barra-atalhos { display: grid; grid-template-columns: repeat(2, auto);
+    bottom: calc(90px + env(safe-area-inset-bottom, 0px)); }
 }
 .barra-atalhos button {
   display: grid; justify-items: center; gap: 1px; min-width: 46px; padding: 5px 6px 3px;

@@ -5,6 +5,7 @@ import { modoToque } from './ui/pixicones';
 import { armazemIndexedDB } from './jogo/indexeddb';
 import { SEMENTE_PADRAO_MUNDO, criarRepositorioMundos, type MetaMundo } from './jogo/mundos';
 import { CSS_INVENTARIO, criarInventarioUI } from './ui/inventario';
+import { criarDicaMira } from './ui/dicaMira';
 import { CSS_CRIACAO, criarCriacao } from './ui/criacao';
 import { CSS_CONTEINER, criarPainelBau, criarPainelFornalha } from './ui/conteiner';
 import { CSS_TROCAS, criarPainelTrocas } from './ui/trocas';
@@ -112,6 +113,7 @@ async function iniciar(app: HTMLElement): Promise<void> {
       location.href = url.toString();
     },
   });
+  criarDicaMira();
   // em prévia de outro tema nada é salvo: o mundo continua sendo do tema dele
   cena = criarCena(canvas, hotbar, {
     mundo: atual,

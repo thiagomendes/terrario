@@ -12,7 +12,7 @@ import {
 
 export const CSS_INVENTARIO = `
 .inventario-fundo {
-  position: fixed; inset: 0; z-index: 30;
+  position: fixed; inset: 0; z-index: 33;
   display: flex; align-items: center; justify-content: center;
   padding: 12px; box-sizing: border-box;
   background: rgba(6, 8, 14, 0.55); backdrop-filter: blur(4px);

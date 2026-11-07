@@ -411,8 +411,11 @@ export function criarNucleo(op: OpcoesNucleo) {
       return;
     }
     editar(x, y, z, bloco, meta);
-    for (const e of c.extras ?? [])
-      if (mundo.bloco(e.x, e.y, e.z) === Bloco.AR) editar(e.x, e.y, e.z, bloco, meta);
+    for (const e of c.extras ?? []) {
+      // a outra metade da porta: entra no lugar de ar, planta ou água
+      const v = obterBloco(mundo.bloco(e.x, e.y, e.z));
+      if (!v || v.id === Bloco.AR || v.planta || v.liquido) editar(e.x, e.y, e.z, bloco, meta);
+    }
     if (modo === 'sobrevivencia') j.inventario.remover(c.slot, 1);
     for (const o of jogadores.values())
       o.eventos.push({ e: 'colocacao', x, y, z, bloco, meu: o === j });
@@ -626,6 +629,8 @@ export function criarNucleo(op: OpcoesNucleo) {
   function atacar(j: Jogador, c: Extract<Comando, { t: 'atacar' }>): void {
     const cr = criatura(c.criatura);
     if (!cr || Math.hypot(cr.x - j.tel.x, cr.z - j.tel.z) > ALCANCE_CRIATURA) return;
+    // morador não apanha
+    if (cr.morador) return;
     const p = j.inventario.obter(c.slot);
     const f = ferramentaDe(p);
     const dano = f ? (f.tipo === 'espada' ? f.dano : Math.max(2, f.dano)) : 1;
