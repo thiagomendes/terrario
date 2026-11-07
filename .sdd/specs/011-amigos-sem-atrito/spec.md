@@ -134,3 +134,20 @@ Aprovada pelo dono ("pode mandar ver na próxima spec"), depois da 012. O que mu
   entrada termina num botão ("Entrar", "Começar a jogar"), que serve de gesto.
 - **Parar de compartilhar** com amigos jogando: o servidor avisa todos, grava, devolve o
   mundo ao dono e só então fecha a sala.
+
+## Andamento (7 nov 2026, publicado em d81a9aa)
+- [x] T01 Mundo novo com amigos: do "Criar" até o código na tela em 3,1 a 3,5 s (critério 1: menos de 5 s).
+- [x] T02 Convite no mundo, com o mundo já carregado atrás: "Esperando os amigos…", quem chega brilha e "Começar a jogar". Botão fixo com quantos estão no mundo; a pausa tem "Convidar amigos".
+- [x] T03 Pelo link: "Entrar no mundo de Ana", com o tema e quem está lá; do "Entrar" até jogando em 4,0 a 4,6 s, com o som já ligado (critério 2: menos de 8 s). O código digitado entra direto, sem segundo "Jogar" (critério 3).
+- [x] T04 Parar de jogar com amigos: o mundo volta inteiro para o aparelho, com a construção dos amigos. O código morre, e quem estava recebe uma despedida gentil. Se o dono cair no meio, recebe o mundo ao voltar (critério 4).
+- [x] T05 Nomes: nunca mais "Jogador". O nome vazio vira o personagem mais o tema, como "Aventureiro Lunar" (critério 6).
+- [x] T06 e2e com toques e tempos medidos (`e2e/amigos-sem-atrito.spec.ts`), capturas nos 6 temas no computador e no celular, alvos de 44 px.
+- [x] Auditoria independente: 17 achados; os de gravidade alta e média estão corrigidos (critério 10).
+- [x] T08 Celular em pé: as informações da esquerda recolhem num botão.
+- [ ] T07 Rodada em família de 15 minutos em dois aparelhos, no site publicado (critério 9). Depende do dono.
+- [ ] Relatório visual da spec, ao fechar.
+
+**Ficou de fora, anotado:**
+- Ligar e parar "Jogar com amigos" pela lista de mundos: hoje é pelo cartão de amigos e pela pausa.
+- No "Entrar com código", o som depende do primeiro toque no jogo (no iPhone, o navegador exige isso).
+
