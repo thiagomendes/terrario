@@ -5,13 +5,13 @@ body.modo-foto .painel-construcao, body.modo-foto .toast-area, body.modo-foto .m
 .painel-foto {
   position: fixed; left: 50%; bottom: 14px; transform: translateX(-50%); z-index: 30;
   display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: center; justify-content: center;
-  max-width: calc(100vw - 24px); padding: 10px 14px; box-sizing: border-box; border-radius: 14px;
-  background: rgba(10, 12, 20, 0.72); border: 1px solid rgba(255,255,255,0.14); backdrop-filter: blur(6px);
-  color: #ece6da; font: 600 0.82rem system-ui, sans-serif;
+  max-width: calc(100vw - 24px); padding: 12px 16px 10px; box-sizing: border-box; border-radius: 22px;
+  background: rgba(255, 250, 240, 0.94); color: var(--tinta); font: 800 0.84rem var(--jogo);
+  box-shadow: 0 6px 0 var(--painel-borda), 0 14px 26px rgba(40, 25, 10, 0.3);
 }
 .painel-foto[hidden] { display: none; }
 .painel-foto label { display: grid; gap: 2px; }
-.painel-foto input[type='range'] { width: 110px; accent-color: #ffc46b; }
+.painel-foto input[type='range'] { width: 110px; accent-color: var(--amarela-fundo); }
 .grade-foto { position: fixed; inset: 0; pointer-events: none; z-index: 29;
   background:
     linear-gradient(to right, transparent calc(33.33% - 0.5px), rgba(255,255,255,0.35) 33.33%, transparent calc(33.33% + 0.5px), transparent calc(66.66% - 0.5px), rgba(255,255,255,0.35) 66.66%, transparent calc(66.66% + 0.5px)),
