@@ -320,3 +320,22 @@ test('chuva de brinquedo: de dia e à noite', async ({ page }) => {
   await page.waitForTimeout(3000);
   await foto(page, 'chuva-noite');
 });
+
+test('qualidade automática: detalhe baixo (celular) e alto', async ({ page }) => {
+  test.setTimeout(300_000);
+  for (const d of ['baixo', 'alto']) {
+    await page.setViewportSize({ width: 1280, height: 720 });
+    await page.goto(`/?detalhe=${d}`);
+    await pronto(page);
+    await page.evaluate(() => {
+      document.querySelector<HTMLElement>('.entrada')?.setAttribute('hidden', '');
+      const e = window.__brumaluz!;
+      e.pausarDia = true;
+      e.hora = 0.42;
+      e.camera!.definir('terceira');
+      e.apontar!(0, 0.25);
+    });
+    await page.waitForTimeout(2500);
+    await foto(page, `detalhe-${d}`);
+  }
+});

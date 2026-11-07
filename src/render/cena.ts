@@ -309,6 +309,8 @@ export interface EstadoDepuracao {
   }[];
   invocar?: (tipo: TipoCriatura, x: number, y: number, z: number) => void;
   sobrevivencia?: SobrevivenciaCliente;
+  /** Qualidade das peças de brinquedo escolhida (celular: 'baixo'). */
+  detalhe?: 'alto' | 'baixo';
   /** Capturas: respingo de água num ponto (gotinhas e roda de ondinhas). */
   respingo?: (x: number, y: number, z: number, forca?: number) => void;
   /** Testes e capturas: dispara um movimento (golpe, comer, pulo, colocação). */
@@ -882,8 +884,18 @@ export function criarCena(
   });
   // o estilo do mundo do tema vai antes de qualquer pedido de chunk
   const coresPlantas = coresDasPlantas(atlas);
-  worker.postMessage({ estilo: estiloMundo(), semPovoado, coresPlantas });
-  workerEdicao.postMessage({ estilo: estiloMundo(), semPovoado, coresPlantas });
+  // qualidade automática (spec 012): no celular as quinas são chanfros e as bolinhas têm
+  // menos gomos; ?detalhe=alto|baixo força para comparar
+  const pedidoDetalhe = new URLSearchParams(location.search).get('detalhe');
+  const detalhe: 'alto' | 'baixo' =
+    pedidoDetalhe === 'alto' || pedidoDetalhe === 'baixo'
+      ? pedidoDetalhe
+      : toqueGrosso
+        ? 'baixo'
+        : 'alto';
+  estado.detalhe = detalhe;
+  worker.postMessage({ estilo: estiloMundo(), semPovoado, coresPlantas, detalhe });
+  workerEdicao.postMessage({ estilo: estiloMundo(), semPovoado, coresPlantas, detalhe });
   /** Momento da edição por chunk (para medir quanto o bloco demora a aparecer). */
   const inicioEdicao = new Map<string, number>();
   const receber = (ev: MessageEvent<RespostaChunk>) => {

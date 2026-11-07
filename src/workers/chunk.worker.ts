@@ -1,10 +1,14 @@
 import type { EstiloMundo } from '../temas/tipos';
-import { gerarMalha } from '../mesh/malha';
+import { definirDetalheMalha, gerarMalha } from '../mesh/malha';
 import type { Buffers } from '../mesh/malha';
 import { blocoDe, criarEdicoes, metasDoChunk, type Edicoes } from '../world/edicoes';
 import { definirEstiloMundo, gerarChunk } from '../world/chunk';
 import { definirRegioesSemPovoado } from '../world/povoado';
-import { definirCoresPlantas, type CoresPlanta } from '../mesh/plantasBrinquedo';
+import {
+  definirCoresPlantas,
+  definirDetalhePlantas,
+  type CoresPlanta,
+} from '../mesh/plantasBrinquedo';
 
 /** Cache dos chunks gerados (antes das edições): evita regerar vizinhos. */
 const cache = new Map<string, Uint8Array>();
@@ -72,6 +76,8 @@ export interface PedidoEstilo {
   semPovoado?: string[];
   /** Cores das plantas de brinquedo, lidas do atlas do tema. */
   coresPlantas?: Record<number, CoresPlanta>;
+  /** Qualidade das peças de brinquedo: 'baixo' no celular. */
+  detalhe?: 'alto' | 'baixo';
 }
 
 self.onmessage = (ev: MessageEvent<PedidoChunk | PedidoEstilo>) => {
@@ -79,6 +85,8 @@ self.onmessage = (ev: MessageEvent<PedidoChunk | PedidoEstilo>) => {
     definirEstiloMundo(ev.data.estilo);
     definirRegioesSemPovoado(ev.data.semPovoado ?? []);
     definirCoresPlantas(ev.data.coresPlantas);
+    definirDetalheMalha(ev.data.detalhe ?? 'alto');
+    definirDetalhePlantas(ev.data.detalhe ?? 'alto');
     return;
   }
   const { cx, cz, semente, versao, edicoes: dados, bases } = ev.data as PedidoChunk;

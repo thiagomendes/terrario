@@ -41,6 +41,11 @@ export const PLANTAS_BRINQUEDO: readonly number[] = [
 
 const PADRAO: CoresPlanta = { folha: [0.42, 0.7, 0.32], destaque: [0.93, 0.36, 0.55] };
 let tabela: Record<number, CoresPlanta> = {};
+/** Celular: bolinhas com menos gomos (qualidade automática). */
+let gomos = 1;
+export function definirDetalhePlantas(d: 'alto' | 'baixo'): void {
+  gomos = d === 'baixo' ? 0.65 : 1;
+}
 
 /** Cores das plantas do tema (mensagem de estilo do worker). */
 export function definirCoresPlantas(t: Record<number, CoresPlanta> | undefined): void {
@@ -149,6 +154,8 @@ export function plantaDeBrinquedo(
     an = 7,
     ae = 4,
   ) => {
+    an = Math.max(4, Math.round(an * gomos));
+    ae = Math.max(2, Math.round(ae * gomos));
     const base = alvo.vertices;
     for (let i = 0; i <= ae; i++) {
       const fi = (i / ae) * Math.PI;
