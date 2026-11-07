@@ -17,6 +17,7 @@ import { coresDoBloco } from '../fx/cores';
 import { caixasDoBloco, temFormaParcial, type Caixa } from '../world/formas';
 import { Bloco, obterBloco } from '../world/blocks';
 import { caixaArredondada, cilindro, esfera, type Plasticos } from './formas';
+import { modeloDeBloco } from './blocosBrinquedo';
 
 /** Cor da cabeça da ferramenta por material (as mesmas do catálogo). */
 const MATERIAL: Record<string, string> = {
@@ -227,8 +228,20 @@ export function modeloNaMao(
     if (forma === 'porta')
       add(bo('macaneta', 0.018, '#f2c14e', [1, 1, 1], 0.3), 0.36 * k, 0.95 * k - 0.12, 0.12 * k);
     if (forma === 'cama') {
-      // lençol claro e travesseiro na cabeceira
+      // lençol claro, cobertor colorido, travesseiro e a cabeceira de madeira
       add(cx('lencol', 0.92 * k, 0.08 * k, 1.4 * k, 0.02, '#f4efe6'), 0, 0.52 * k - 0.12, 0.25 * k);
+      add(
+        cx('cobertor', 1.02 * k, 0.12 * k, 1.12 * k, 0.03, '#d9504a'),
+        0,
+        0.55 * k - 0.12,
+        0.42 * k,
+      );
+      add(
+        cx('cabeceira', 1.04 * k, 1.0 * k, 0.16 * k, 0.03, '#8a5a34'),
+        0,
+        0.5 * k - 0.12,
+        -0.95 * k,
+      );
       add(
         cx('travesseiro', 0.7 * k, 0.12 * k, 0.32 * k, 0.03, '#ffffff'),
         0,
@@ -239,6 +252,12 @@ export function modeloNaMao(
     return { no, malhas, ferramenta: false };
   }
   if (bloco !== null && bloco > 0) {
+    // minério, tronco, fornalha, baú...: o modelinho que parece com o bloco
+    const proprio = modeloDeBloco(scene, mats, bloco, `${prefixo}-mao`, 0.24);
+    if (proprio) {
+      for (const m of proprio) add(m, m.position.x, m.position.y, m.position.z);
+      return { no, malhas, ferramenta: false };
+    }
     const c = coresDoBloco(bloco);
     const lado = c ? hexDe(c.lado) : '#a9adb8';
     const topo = c ? hexDe(c.topo) : lado;

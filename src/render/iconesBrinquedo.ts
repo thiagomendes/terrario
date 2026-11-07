@@ -26,6 +26,7 @@ import { plantaDeBrinquedo, PLANTAS_BRINQUEDO, type AlvoPlanta } from '../mesh/p
 import { caixaArredondada, criarPlasticos } from './formas';
 import { modeloVidro } from './itensBrinquedo';
 import { modeloNaMao } from './itensBrinquedo';
+import { modeloDeBloco } from './blocosBrinquedo';
 
 const TAM = 96;
 
@@ -124,6 +125,25 @@ export function gerarIconesBrinquedo(
     const b = obterBloco(bloco);
     if (bloco === Bloco.VIDRO) {
       for (const m of modeloVidro(scene, `icone-${id}`, 1)) m.parent = raiz;
+      raiz.rotation.set(-0.5, Math.PI / 4, 0);
+      return raiz;
+    }
+    if (b?.forma === 'cama') {
+      // a cama do ícone é a mesma da mão (com lençol e travesseiro), maior
+      const m = modeloNaMao(scene, mats, bloco, null, `icone-${id}`);
+      if (m) {
+        m.no.parent = raiz;
+        m.no.scaling.setAll(4);
+        raiz.rotation.set(-0.5, Math.PI / 4, 0);
+        return raiz;
+      }
+    }
+    // blocos com modelo próprio (minério, tronco, fornalha, baú...), nas cores do tema
+    const proprio = modeloDeBloco(scene, mats, bloco, `icone-${id}`, 1, (bl, face) =>
+      corDaFace(atlas, bl, face),
+    );
+    if (proprio) {
+      for (const m of proprio) m.parent = raiz;
       raiz.rotation.set(-0.5, Math.PI / 4, 0);
       return raiz;
     }
