@@ -177,6 +177,25 @@ export function gerarMalha(
   const agua = new Acumulador();
 
   /** Faces da água viradas para o ar; o topo fica um pouco abaixo da borda do bloco. */
+  /** Fundura (0..1, até 8 blocos) e beira (0..1) no canto (cx, cz) da superfície em y. */
+  function fundoDoCanto(cx: number, y: number, cz: number): [number, number] {
+    let soma = 0;
+    let beira = 0;
+    for (const dx of [-1, 0])
+      for (const dz of [-1, 0]) {
+        const x = cx + dx;
+        const z = cz + dz;
+        if (ler(x, y, z) !== Bloco.AGUA) {
+          beira = 1;
+          continue;
+        }
+        let n = 1;
+        while (n < 8 && ler(x, y - n, z) === Bloco.AGUA) n++;
+        soma += n;
+      }
+    return [soma / 4 / 8, beira];
+  }
+
   function adicionarAgua(x: number, y: number, z: number): void {
     const acima = ler(x, y + 1, z);
     const topoBaixo = acima !== Bloco.AGUA ? 0.875 : 1;
@@ -190,6 +209,7 @@ export function gerarMalha(
       if (dv?.opaco || dv?.solido || viz === Bloco.GELO) continue;
       const base = agua.vertices;
       const deslocar = f.n[0] + f.n[1] + f.n[2] > 0 ? 1 : 0;
+      const topo = f.n[1] > 0;
       for (const [s1, s2] of CANTOS) {
         const lx = deslocar * Math.abs(f.n[0]) + s1 * f.t1[0] + s2 * f.t2[0];
         let ly = deslocar * Math.abs(f.n[1]) + s1 * f.t1[1] + s2 * f.t2[1];
@@ -198,7 +218,12 @@ export function gerarMalha(
         agua.posicoes.push(x + lx, y + ly, z + lz);
         agua.normais.push(f.n[0], f.n[1], f.n[2]);
         agua.uvs.push(lx, lz);
-        agua.cores.push(1, 1, 1, 1);
+        // água de brinquedo (spec 012): no topo, r = fundura no canto (média das quatro
+        // colunas em volta, até 8 blocos) e g = beira (o canto encosta em algo que não é água)
+        if (topo) {
+          const [fundo, beira] = fundoDoCanto(x + lx, y, z + lz);
+          agua.cores.push(fundo, beira, 1, 1);
+        } else agua.cores.push(0.6, 0, 1, 1);
         // luz do lugar (célula acima da superfície): água de caverna fica escura
         agua.luz.push(luzAguaCeu, luzAguaBloco);
       }

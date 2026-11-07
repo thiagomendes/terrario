@@ -4,6 +4,8 @@ export const GRAVIDADE_PARTICULA = -14;
 /** Tipos de partícula (spec 012): pecinha de plástico ou confete. */
 export const PECINHA = 0;
 export const CONFETE = 1;
+/** Gotinha de água (respingo ao entrar na água e da chuva). */
+export const GOTA = 2;
 /** O confete vive mais, cai devagar e plana (arrasto no ar). */
 export const VIDA_CONFETE = 1.3;
 const GRAVIDADE_CONFETE = -3.2;

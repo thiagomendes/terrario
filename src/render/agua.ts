@@ -15,6 +15,8 @@ const VERTICE = /* glsl */ `
 precision highp float;
 attribute vec3 position;
 attribute vec2 luz;
+attribute vec4 color;
+varying vec2 vFundo;
 uniform mat4 world;
 uniform mat4 viewProjection;
 varying vec3 vPos;
@@ -23,6 +25,7 @@ void main() {
   vec4 p = world * vec4(position, 1.0);
   vPos = p.xyz;
   vLuz = luz;
+  vFundo = color.rg;
   gl_Position = viewProjection * p;
 }
 `;
@@ -31,6 +34,7 @@ const FRAGMENTO = /* glsl */ `
 precision highp float;
 varying vec3 vPos;
 varying vec2 vLuz;
+varying vec2 vFundo;
 uniform vec3 camPos;
 uniform float tempo;
 uniform vec3 corNevoa;
@@ -83,7 +87,16 @@ void main() {
   c += vec3(1.0) * smoothstep(0.86, 0.97, risco) * 0.28 * luzDia * fCeu * (1.0 - noite);
   // tochas perto aquecem a agua
   c += vec3(1.0, 0.72, 0.42) * fBloco * 0.35;
-  float alfa = clamp(aguaOpacidade + fres * 0.25 + brilho, 0.0, 1.0);
+  // rasa deixa ver o fundo (areia, pedras); funda fica azul firme
+  float fundura = smoothstep(0.0, 0.5, vFundo.x);
+  vec3 raso = mix(fundo, vec3(0.55, 0.9, 0.92), 0.55) * (0.55 + 0.45 * luzDia * fCeu);
+  c = mix(mix(raso, c, 0.55), c, fundura);
+  float alfa = clamp(mix(0.32, aguaOpacidade + 0.12, fundura) + fres * 0.25 + brilho, 0.0, 1.0);
+  // espuminha macia na beira, ondulando devagar
+  float onda = 0.12 * sin(p.x * 2.1 + tempo * 1.3) * sin(p.y * 1.7 - tempo * 1.1);
+  float espuma = smoothstep(0.32, 0.78, vFundo.y + onda) * (0.45 + 0.55 * luzDia * fCeu);
+  c = mix(c, vec3(0.97, 0.99, 1.0) * (0.5 + 0.5 * luzDia * fCeu), espuma * 0.85);
+  alfa = max(alfa, espuma * 0.9);
   float dist = length(camPos - vPos);
   float nev = exp(-pow(dist * densNevoa, 2.0));
   c = mix(corNevoa, c, nev);
@@ -116,7 +129,7 @@ export function criarAgua(scene: Scene): Agua {
     scene,
     { vertex: 'agua', fragment: 'agua' },
     {
-      attributes: ['position', 'luz'],
+      attributes: ['position', 'luz', 'color'],
       uniforms: [
         'world',
         'viewProjection',

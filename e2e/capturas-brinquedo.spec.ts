@@ -1,4 +1,5 @@
 import { test, type Page } from '@playwright/test';
+import { Bloco } from '../src/world/blocks';
 
 /**
  * Capturas do visual de brinquedo (spec 012) nos enquadramentos dos esboços de referência
@@ -204,4 +205,95 @@ test('telas de brinquedo: inicial, jogo, pausa', async ({ page }) => {
   );
   await page.waitForTimeout(800);
   await foto(page, 'tela-pausa');
+});
+
+test('água de brinquedo: beira e debaixo dela', async ({ page }) => {
+  test.setTimeout(300_000);
+  const ID_AGUA = Bloco.AGUA;
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await page.goto('/');
+  await pronto(page);
+  await page.evaluate(() => {
+    document.querySelector<HTMLElement>('.entrada')?.setAttribute('hidden', '');
+    const e = window.__brumaluz!;
+    e.pausarDia = true;
+    e.hora = 0.45;
+  });
+  const agua = await page.evaluate((AGUA_ID) => {
+    const e = window.__brumaluz!;
+    const [px, , pz] = e.posicao!.map(Math.floor);
+    const ehAgua = (x: number, y: number, z: number) => e.bloco!(x, y, z) === AGUA_ID;
+    for (let raio = 1; raio < 50; raio++)
+      for (let dx = -raio; dx <= raio; dx++)
+        for (let dz = -raio; dz <= raio; dz++) {
+          if (Math.max(Math.abs(dx), Math.abs(dz)) !== raio) continue;
+          const x = px + dx,
+            z = pz + dz;
+          for (let y = 75; y > 50; y--) {
+            const b = e.bloco!(x, y, z);
+            if (b === 0) continue;
+            if (ehAgua(x, y, z) && e.bloco!(x + 1, y, z) !== 0 && !ehAgua(x + 1, y, z))
+              return { x, y, z };
+            break;
+          }
+        }
+    return null;
+  }, ID_AGUA);
+  if (agua) {
+    await page.evaluate(({ x, y, z }) => {
+      const e = window.__brumaluz!;
+      e.teleportar!(x + 1.5, z - 3.5, y + 3);
+    }, agua);
+    await page.waitForTimeout(1500);
+    await page.evaluate(({ x, y, z }) => {
+      const e = window.__brumaluz!;
+      const [qx, qy, qz] = e.posicao!;
+      e.apontar!(
+        Math.atan2(x + 0.5 - qx, z + 0.5 - qz),
+        Math.atan2(qy - y, Math.hypot(x - qx, z - qz)),
+      );
+    }, agua);
+    await page.waitForTimeout(1500);
+    await page.screenshot({ path: `${PASTA}/brinquedo-agua-beira.jpg`, type: 'jpeg', quality: 82 });
+    // respingo: gotinhas redondas e roda de ondinhas
+    await page.evaluate(
+      ({ x, y, z }) => window.__brumaluz!.respingo!(x - 1.5, y + 0.875, z + 1.5, 1),
+      agua,
+    );
+    await page.waitForTimeout(180);
+    await page.screenshot({
+      path: `${PASTA}/brinquedo-agua-respingo.jpg`,
+      type: 'jpeg',
+      quality: 82,
+    });
+    // debaixo d'água: uma coluna funda (5 blocos de água) perto dali
+    const fundo = await page.evaluate(
+      ({ x, y, z, A }) => {
+        const e = window.__brumaluz!;
+        for (let r = 1; r < 40; r++)
+          for (let dx = -r; dx <= r; dx++)
+            for (let dz = -r; dz <= r; dz++) {
+              if (Math.max(Math.abs(dx), Math.abs(dz)) !== r) continue;
+              let n = 0;
+              while (n < 5 && e.bloco!(x + dx, y - n, z + dz) === A) n++;
+              if (n >= 5) return { x: x + dx, y, z: z + dz };
+            }
+        return null;
+      },
+      { ...agua, A: ID_AGUA },
+    );
+    if (fundo) {
+      await page.evaluate(({ x, y, z }) => {
+        const e = window.__brumaluz!;
+        e.teleportar!(x + 0.5, z + 0.5, y - 3.5);
+        e.apontar!(0.6, -0.1);
+      }, fundo);
+      await page.waitForTimeout(700);
+    }
+    await page.screenshot({
+      path: `${PASTA}/brinquedo-agua-debaixo.jpg`,
+      type: 'jpeg',
+      quality: 82,
+    });
+  }
 });

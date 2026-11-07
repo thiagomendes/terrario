@@ -19,6 +19,8 @@ export class PluginMundo extends MaterialPluginBase {
   /** Força do vento nas folhas (0 desliga; só no material sólido). */
   ventoFolhas = 0;
   tempoMundo = 0;
+  /** Piso da luz do céu (debaixo d'água de brinquedo nunca fica escuro). */
+  pisoCeu = 0;
 
   /** Desenha as juntas entre blocos (quina macia e um friso), só no material sólido. */
   private readonly juntas: boolean;
@@ -62,10 +64,11 @@ export class PluginMundo extends MaterialPluginBase {
         { name: 'molhado', size: 1, type: 'float' },
         { name: 'ventoFolhas', size: 1, type: 'float' },
         { name: 'tempoMundo', size: 1, type: 'float' },
+        { name: 'pisoCeu', size: 1, type: 'float' },
       ],
       vertex: 'uniform float ventoFolhas;\nuniform float tempoMundo;',
       fragment:
-        'uniform vec3 corBruma;\nuniform float forcaBruma;\nuniform float luzBlocos;\nuniform float outono;\nuniform float inverno;\nuniform float molhado;',
+        'uniform float pisoCeu;\nuniform vec3 corBruma;\nuniform float forcaBruma;\nuniform float luzBlocos;\nuniform float outono;\nuniform float inverno;\nuniform float molhado;',
     };
   }
 
@@ -81,6 +84,7 @@ export class PluginMundo extends MaterialPluginBase {
     uniformBuffer.updateFloat('molhado', this.molhado);
     uniformBuffer.updateFloat('ventoFolhas', this.ventoFolhas);
     uniformBuffer.updateFloat('tempoMundo', this.tempoMundo);
+    uniformBuffer.updateFloat('pisoCeu', this.pisoCeu);
   }
 
   override getCustomCode(shaderType: string): Record<string, string> | null {
@@ -172,7 +176,7 @@ export class PluginMundo extends MaterialPluginBase {
           // ceu escurece cavernas; luz de blocos (tochas) aquece
           float ceuL = clamp(vLuzMundo.x, 0.0, 1.0);
           float blocoL = clamp(vLuzMundo.y, 0.0, 1.0);
-          float fCeu = pow(0.8, (1.0 - ceuL) * 15.0);
+          float fCeu = max(pow(0.8, (1.0 - ceuL) * 15.0), pisoCeu);
           float fBloco = blocoL > 0.001 ? pow(0.86, (1.0 - blocoL) * 15.0) * smoothstep(0.15, 0.55, blocoL) : 0.0;
           vec3 corTocha = vec3(1.0, 0.72, 0.42) * fBloco * 2.4 * luzBlocos;
           color.rgb = color.rgb * fCeu + baseColor.rgb * corTocha * (1.0 - fCeu * 0.6) + baseColor.rgb * 0.03;

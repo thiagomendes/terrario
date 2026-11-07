@@ -137,8 +137,8 @@ const VIZINHANCA: readonly [number, number][] = [
   [-1, 1],
   [1, 1],
 ];
-import { CONFETE, criarPoolParticulas, LIMITE_PARTICULAS, vidaDe } from '../fx/particulas';
-import { caixaArredondada, cilindro } from './formas';
+import { CONFETE, GOTA, criarPoolParticulas, LIMITE_PARTICULAS, vidaDe } from '../fx/particulas';
+import { caixaArredondada, cilindro, esfera } from './formas';
 import { ESTAGIOS_RACHADURA, gerarTexturaRachadura, TAM_RACHADURA } from '../fx/rachadura';
 import {
   DURACAO_PULSO,
@@ -309,6 +309,8 @@ export interface EstadoDepuracao {
   }[];
   invocar?: (tipo: TipoCriatura, x: number, y: number, z: number) => void;
   sobrevivencia?: SobrevivenciaCliente;
+  /** Capturas: respingo de água num ponto (gotinhas e roda de ondinhas). */
+  respingo?: (x: number, y: number, z: number, forca?: number) => void;
   /** Testes e capturas: dispara um movimento (golpe, comer, pulo, colocação). */
   animar?: (evento: import('../player/animacao').EventoAnimacao) => void;
   /** Testes: espera o núcleo processar o que já foi mandado. */
@@ -811,13 +813,17 @@ export function criarCena(
     submersoSuave += ((submersa ? 1 : 0) - submersoSuave) * Math.min(1, dt / 0.25);
     const l = 0.25 + 0.75 * (1 - a.noite);
     const ns = submersoSuave;
+    // debaixo d'água o fundo fica claro como piscina (a luz do céu tem um piso)
+    mundoSolido.pisoCeu = 0.62 * ns * (0.4 + 0.6 * (1 - a.noite));
+    mundoPlanta.pisoCeu = mundoSolido.pisoCeu;
     scene.fogColor.set(
-      a.nevoa[0] + (0.04 * l - a.nevoa[0]) * ns,
-      a.nevoa[1] + (0.2 * l - a.nevoa[1]) * ns,
-      a.nevoa[2] + (0.32 * l - a.nevoa[2]) * ns,
+      // debaixo d'água de brinquedo: azul-claro de piscina, nunca preto
+      a.nevoa[0] + (0.28 * l - a.nevoa[0]) * ns,
+      a.nevoa[1] + (0.62 * l - a.nevoa[1]) * ns,
+      a.nevoa[2] + (0.82 * l - a.nevoa[2]) * ns,
     );
     const densAr = a.densidadeNevoa * fatorNevoa;
-    scene.fogDensity = densAr + (0.09 - densAr) * ns;
+    scene.fogDensity = densAr + (0.06 - densAr) * ns;
     scene.clearColor.set(a.nevoa[0], a.nevoa[1], a.nevoa[2], 1);
     scene.ambientColor.set(...a.ambiente);
     luz.diffuse.set(...a.ceuLuz);
@@ -1624,7 +1630,7 @@ export function criarCena(
   const pool = criarPoolParticulas(LIMITE_PARTICULAS);
   // efeitos de brinquedo (spec 012): cada vaga tem uma pecinha de plástico com pino (lasca
   // do bloco) e um confete achatado; acende a que o tipo da partícula pede
-  const pecasParticulas: { peca: Mesh; pino: Mesh; confete: Mesh }[] = [];
+  const pecasParticulas: { peca: Mesh; pino: Mesh; confete: Mesh; gota: Mesh }[] = [];
   const matsParticulas: StandardMaterial[] = [];
   for (let i = 0; i < pool.capacidade; i++) {
     const mat = new StandardMaterial(`particula-mat-${i}`, scene);
@@ -1646,11 +1652,13 @@ export function criarCena(
       mat,
       1,
     );
-    for (const m of [peca, pino, confete]) {
+    // gotinha: bolinha de água (respingo e chuva)
+    const gota = esfera(`particula-gota-${i}`, scene, 0.055, mat, [1, 1.25, 1]);
+    for (const m of [peca, pino, confete, gota]) {
       m.setEnabled(false);
       prepararEfeito(m);
     }
-    pecasParticulas.push({ peca, pino, confete });
+    pecasParticulas.push({ peca, pino, confete, gota });
     matsParticulas.push(mat);
   }
 
@@ -1803,26 +1811,126 @@ export function criarCena(
     }
   }
 
+  // rodinhas de onda na superfície (entrar na água, gota de chuva caindo)
+  const matRoda = new StandardMaterial('roda-agua', scene);
+  matRoda.disableLighting = true;
+  matRoda.emissiveColor = new Color3(0.95, 0.98, 1);
+  matRoda.alpha = 0.8;
+  const rodas: { m: Mesh; t: number; tam: number }[] = [];
+  for (let i = 0; i < 10; i++) {
+    const m = MeshBuilder.CreateTorus(
+      `roda-agua-${i}`,
+      { diameter: 1, thickness: 0.07, tessellation: 28 },
+      scene,
+    );
+    m.material = matRoda.clone(`roda-agua-mat-${i}`);
+    m.scaling.y = 0.25;
+    m.setEnabled(false);
+    prepararEfeito(m);
+    rodas.push({ m, t: 1, tam: 1 });
+  }
+  let proximaRoda = 0;
+  function soltarRoda(x: number, y: number, z: number, tam = 1): void {
+    const r = rodas[proximaRoda++ % rodas.length];
+    r.m.position.set(x, y + 0.02, z);
+    r.t = 0;
+    r.tam = tam;
+    r.m.setEnabled(true);
+  }
+  /** Respingo de gotinhas redondas e uma roda de ondinhas onde o boneco cai na água. */
+  function respingo(x: number, y: number, z: number, forca: number): void {
+    const n = Math.round(6 + forca * 8);
+    const lista = [];
+    for (let i = 0; i < n; i++) {
+      const ang = (i / n) * Math.PI * 2 + rngFx() * 0.6;
+      const v = 0.8 + rngFx() * 1.2 * forca;
+      lista.push({
+        x: x + Math.cos(ang) * 0.25,
+        y: y + 0.05,
+        z: z + Math.sin(ang) * 0.25,
+        vx: Math.cos(ang) * v,
+        vy: 2.4 + rngFx() * 2.2 * forca,
+        vz: Math.sin(ang) * v,
+        cor: [0.62, 0.86, 1] as [number, number, number],
+        tipo: GOTA,
+      });
+    }
+    pool.emitir(lista);
+    soltarRoda(x, y, z, 1 + forca * 0.6);
+    if (forca > 0.5) setTimeout(() => soltarRoda(x, y, z, 0.7), 180);
+  }
+  let pesNaAgua = false;
+  let pingando = 0;
+  function atualizarAguaDoBoneco(dt: number): void {
+    const j = controle.jogador;
+    const fx = Math.floor(j.x);
+    const fz = Math.floor(j.z);
+    const fy = Math.floor(j.y + 0.05);
+    const agora = blocoEm(fx, fy, fz) === Bloco.AGUA;
+    if (agora !== pesNaAgua) {
+      // altura da superfície: sobe até achar o topo da água
+      let sy = fy;
+      while (sy < fy + 4 && blocoEm(fx, sy + 1, fz) === Bloco.AGUA) sy++;
+      const superficie = sy + (blocoEm(fx, sy + 1, fz) === Bloco.AGUA ? 1 : 0.875);
+      if (agora) respingo(j.x, superficie, j.z, Math.min(1, Math.abs(j.vy) / 10));
+      else pingando = 0.9;
+      pesNaAgua = agora;
+    }
+    // ao sair, o boneco pinga por um instante
+    if (pingando > 0) {
+      pingando -= dt;
+      if (rngFx() < dt * 14)
+        pool.emitir([
+          {
+            x: j.x + (rngFx() - 0.5) * 0.4,
+            y: j.y + 0.6 + rngFx() * 0.6,
+            z: j.z + (rngFx() - 0.5) * 0.4,
+            vx: 0,
+            vy: -0.5,
+            vz: 0,
+            cor: [0.62, 0.86, 1],
+            tipo: GOTA,
+          },
+        ]);
+    }
+  }
+  estado.respingo = (x, y, z, forca = 1) => respingo(x, y, z, forca);
+
   function atualizarEfeitos(dt: number): void {
+    atualizarAguaDoBoneco(dt);
+    for (const r of rodas) {
+      if (r.t >= 1) continue;
+      r.t = Math.min(1, r.t + dt / 0.9);
+      const e = (0.25 + r.t * 1.35) * r.tam;
+      r.m.scaling.set(e, 0.25, e);
+      (r.m.material as StandardMaterial).alpha = 0.8 * (1 - r.t) * (1 - r.t);
+      if (r.t >= 1) r.m.setEnabled(false);
+    }
     pool.atualizar(dt, (x, y, z) => !!obterBlocoDef(blocoEm(x, y, z))?.solido);
     const vivas = pool.vivas();
     for (let i = 0; i < pecasParticulas.length; i++) {
-      const { peca, pino, confete } = pecasParticulas[i];
+      const { peca, pino, confete, gota } = pecasParticulas[i];
       if (i >= vivas) {
         if (peca.isEnabled()) peca.setEnabled(false);
         if (confete.isEnabled()) confete.setEnabled(false);
+        if (gota.isEnabled()) gota.setEnabled(false);
         continue;
       }
-      const ehConfete = pool.tipos[i] === CONFETE;
-      const m = ehConfete ? confete : peca;
+      const tipo = pool.tipos[i];
+      const ehConfete = tipo === CONFETE;
+      const ehGota = tipo === GOTA;
+      const m = ehGota ? gota : ehConfete ? confete : peca;
+      for (const outra of [peca, confete, gota])
+        if (outra !== m && outra.isEnabled()) outra.setEnabled(false);
       if (!m.isEnabled()) m.setEnabled(true);
       if (!pino.isEnabled()) pino.setEnabled(true);
-      const outra = ehConfete ? peca : confete;
-      if (outra.isEnabled()) outra.setEnabled(false);
+      matsParticulas[i].alpha = ehGota ? 0.75 : 1;
       m.position.set(pool.posicoes[i * 3], pool.posicoes[i * 3 + 1], pool.posicoes[i * 3 + 2]);
       const idade = pool.idades[i];
       const sem = pool.sementes[i] * Math.PI * 2;
-      if (ehConfete) {
+      if (ehGota) {
+        m.rotation.set(0, 0, 0);
+      } else if (ehConfete) {
         // confete rodopia e balança enquanto plana
         m.rotation.set(
           Math.sin(idade * 9 + sem) * 1.3,

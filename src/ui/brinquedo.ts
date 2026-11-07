@@ -152,6 +152,30 @@ export const CSS_BRINQUEDO = `
   box-shadow: 0 2px 0 rgba(150, 110, 60, 0.3);
 }
 
+/* ---------- debaixo d'água: piscina clara, bolhinhas e faixas de luz ---------- */
+:root body.submerso::after {
+  background:
+    repeating-linear-gradient(105deg, rgba(255, 255, 255, 0) 0 90px, rgba(255, 255, 255, 0.04) 120px 150px, rgba(255, 255, 255, 0) 180px 260px),
+    linear-gradient(180deg, rgba(150, 215, 255, 0.34), rgba(60, 140, 215, 0.3) 60%, rgba(30, 95, 180, 0.4));
+  background-size: 400px 100%, 100% 100%;
+  animation: luz-agua 7s ease-in-out infinite alternate;
+}
+@keyframes luz-agua { from { background-position: 0 0, 0 0; } to { background-position: 120px 0, 0 0; } }
+.bolhas-agua { position: fixed; inset: 0; pointer-events: none; z-index: 3; overflow: hidden; display: none; }
+body.submerso .bolhas-agua { display: block; }
+.bolhas-agua i {
+  position: absolute; bottom: -24px; width: var(--tam); height: var(--tam); border-radius: 50%;
+  border: 1.5px solid rgba(255, 255, 255, 0.75); background: radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.85), rgba(255, 255, 255, 0.08) 45%);
+  animation: bolha-sobe linear infinite;
+}
+@keyframes bolha-sobe {
+  0% { transform: translate(0, 0); opacity: 0; }
+  10% { opacity: 1; }
+  50% { transform: translate(12px, -50vh); }
+  100% { transform: translate(-8px, -105vh); opacity: 0.6; }
+}
+@media (prefers-reduced-motion: reduce) { .bolhas-agua i, :root body.submerso::after { animation: none; } }
+
 /* ---------- vitrine e cartões dos temas ---------- */
 :root body .vitrine-temas, :root body .cartao-tema {
   background: rgba(255, 250, 240, 0.94); color: var(--tinta); border: 0; border-radius: 18px;

@@ -189,6 +189,19 @@ export function criarInterface(
   camInd.setAttribute('data-camera-indicador', '');
   camInd.textContent = textoIndicadorCamera('primeira');
   hud.append(mira, fps, somInd, camInd);
+  // debaixo d'água (spec 012): bolhinhas subindo e faixas de luz, só com body.submerso
+  const bolhas = document.createElement('div');
+  bolhas.className = 'bolhas-agua';
+  bolhas.setAttribute('aria-hidden', 'true');
+  for (let i = 0; i < 14; i++) {
+    const b = document.createElement('i');
+    b.style.left = `${(i * 37) % 100}%`;
+    b.style.animationDelay = `${(i * 0.53) % 4}s`;
+    b.style.animationDuration = `${3 + ((i * 7) % 5) * 0.6}s`;
+    b.style.setProperty('--tam', `${6 + ((i * 5) % 4) * 4}px`);
+    bolhas.appendChild(b);
+  }
+  app.appendChild(bolhas);
   app.appendChild(hud);
   criarBarra(app, hotbar);
 
