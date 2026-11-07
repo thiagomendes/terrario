@@ -509,8 +509,10 @@ document.querySelector('[data-coxas]').innerHTML = coxa.repeat(10);
 /** Braço da 1ª pessoa: manga da blusa, punho e a mão redonda à vista (igual à 3ª pessoa). */
 function montarMao(corPele, corBlusa, corPunho) {
   const g = new THREE.Group();
-  const manga = new THREE.Mesh(new RoundedBoxGeometry(0.2, 0.46, 0.2, 4, 0.08), plastico(corBlusa));
-  manga.position.y = 0.2; // a manga vai da mão para trás (para fora da tela)
+  // manga comprida: a ponta de trás sempre fica fora da tela (o braço vem do corpo,
+  // nunca aparece solto); na tela, só a ponta do braço, o punho e a mão
+  const manga = new THREE.Mesh(new RoundedBoxGeometry(0.2, 1.4, 0.2, 4, 0.08), plastico(corBlusa));
+  manga.position.y = 0.67;
   const punho = new THREE.Mesh(new RoundedBoxGeometry(0.23, 0.07, 0.23, 4, 0.03), plastico(corPunho));
   punho.position.y = -0.02;
   const mao = new THREE.Mesh(new THREE.SphereGeometry(0.135, 28, 20), plastico(corPele, { roughness: 0.4 }));

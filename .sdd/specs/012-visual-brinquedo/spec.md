@@ -73,7 +73,7 @@ A spec só fecha quando o dono olha as duplas e diz que está igual ou melhor.
 
   Também ganham movimento próprio: nadar, voar (criativo), cair, deitar na cama, desmaiar e renascer, e acenar.
 - **Câmeras:**
-  - **Primeira pessoa:** como na terceira pessoa, aparecem separadas a manga da blusa (na cor da roupa), o punho marcando onde ela termina e a mãozinha redonda cor de pele, bem à vista, segurando o item em estilo brinquedo. Não aparece mais o braço inteiro de uma peça só. A mão balança ao andar e faz cada ação com o mesmo preparo da terceira pessoa.
+  - **Primeira pessoa:** como na terceira pessoa, aparecem separadas a manga da blusa (na cor da roupa), o punho marcando onde ela termina e a mãozinha redonda cor de pele, bem à vista, segurando o item em estilo brinquedo. Não aparece mais o braço inteiro de uma peça só, e o braço **nunca parece solto**: a manga sempre sai pela borda de baixo da tela, como se viesse do corpo, e o que se vê é só a ponta do braço, o punho e a mão. Ao comer, a mão sobe de baixo até perto da boca. A mão balança ao andar e faz cada ação com o mesmo preparo da terceira pessoa.
   - **Terceira pessoa:** por cima do ombro, como no esboço.
   - **De frente:** como hoje.
 - **Moradores e bichos:** no mesmo traço do personagem, nos seis temas. Isso inclui os moradores de cada profissão, a raposa e as criaturas de cada tema (dia e noite), com os movimentos de cada um.

@@ -292,8 +292,10 @@ const camera = new THREE.PerspectiveCamera(45, 16 / 9, 0.05, 80);
 /** Braço da 1ª pessoa: manga da blusa, punho e a mão redonda à vista (igual à 3ª pessoa). */
 function montarMao(corPele, corBlusa, corPunho) {
   const g = new THREE.Group();
-  const manga = new THREE.Mesh(new RoundedBoxGeometry(0.2, 0.46, 0.2, 4, 0.08), plastico(corBlusa));
-  manga.position.y = 0.2; // a manga vai da mão para trás (para fora da tela)
+  // manga comprida: a ponta de trás sempre fica fora da tela (o braço vem do corpo,
+  // nunca aparece solto); na tela, só a ponta do braço, o punho e a mão
+  const manga = new THREE.Mesh(new RoundedBoxGeometry(0.2, 1.4, 0.2, 4, 0.08), plastico(corBlusa));
+  manga.position.y = 0.67;
   const punho = new THREE.Mesh(new RoundedBoxGeometry(0.23, 0.07, 0.23, 4, 0.03), plastico(corPunho));
   punho.position.y = -0.02;
   const mao = new THREE.Mesh(new THREE.SphereGeometry(0.135, 28, 20), plastico(corPele, { roughness: 0.4 }));
@@ -485,7 +487,7 @@ function quadro() {
     // a mão à vista, um pouco à direita e abaixo do centro; a manga sai dela para o canto
     // de baixo à direita. Golpear levanta e abaixa a direção do braço; comer leva a mão à boca.
     const g = novo ? m.golpeMao : m.golpeMao * 0.7;
-    posicionarMao(braco1, [0.3 + bal - m.comerMao * 0.24, -0.26 + Math.abs(bal) * 0.5 + m.comerMao * 0.12 + g * 0.06, -0.78 + m.comerMao * 0.16], -0.5 - m.comerMao * 0.3, 0.55 - g * 0.5 + m.comerMao * 0.3, 0.6);
+    posicionarMao(braco1, [0.3 + bal - m.comerMao * 0.16, -0.26 + Math.abs(bal) * 0.5 - m.comerMao * 0.06 + g * 0.06, -0.78 + m.comerMao * 0.3], -0.5 + m.comerMao * 0.25, 0.55 - g * 0.5 + m.comerMao * 0.9, 0.6);
     bracoHoje.position.set(0.42, -0.4 + Math.abs(bal) * 0.5, -0.7);
     bracoHoje.rotation.set(-0.95 + m.golpeMao * 0.35, -0.35, 0.3);
     renderer.render(cenaMao, cameraMao);
