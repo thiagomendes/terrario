@@ -169,4 +169,14 @@ export const CSS_BRINQUEDO = `
 :root body .vitrine-temas .pontos i { background: var(--painel-borda); border-radius: 50%; }
 :root body .vitrine-temas .pontos i.ativa { background: var(--amarela-fundo); }
 :root body .cartao-tema[aria-checked='true'] { outline: 3px solid var(--amarela); outline-offset: 2px; }
+
+/* ---------- ícones e botão de fechar ---------- */
+:root body .pixicone { filter: none; }
+:root body .botao-fechar {
+  border: 0; border-radius: 50%; color: var(--tinta);
+  background: linear-gradient(to bottom, #fffdf6, var(--creme));
+  box-shadow: 0 4px 0 var(--creme-fundo), 0 6px 12px rgba(60, 35, 10, 0.22), inset 0 2px 0 rgba(255, 255, 255, 0.8);
+}
+:root body .botao-fechar:hover, :root body .botao-fechar:focus-visible { background: #fffdf6; color: var(--tinta); }
+:root body .botao-fechar:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--creme-fundo); }
 `;

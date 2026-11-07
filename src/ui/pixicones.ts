@@ -582,18 +582,26 @@ export const PIXICONES = {
 
 export type NomeIcone = keyof typeof PIXICONES;
 
-/** SVG do ícone (string), para usar em innerHTML ou CSS. */
+let idMassinha = 0;
+/**
+ * SVG do ícone (string), para usar em innerHTML ou CSS. Traço de brinquedo (spec 012): a
+ * grade de pixels passa por um filtro de "massinha" (desfoca e recorta o contorno), e os
+ * degraus viram curvas macias; o meio-tom fica por cima, com cantos redondos.
+ */
 export function svgIcone(nome: NomeIcone): string {
   const linhas = PIXICONES[nome];
-  let rects = '';
+  let cheios = '';
+  let meios = '';
   linhas.forEach((linha, y) => {
     for (let x = 0; x < linha.length; x++) {
       const c = linha[x];
-      if (c === '#') rects += `<rect x="${x}" y="${y}" width="1" height="1"/>`;
-      else if (c === '+') rects += `<rect x="${x}" y="${y}" width="1" height="1" opacity=".45"/>`;
+      if (c === '#') cheios += `<rect x="${x - 0.05}" y="${y - 0.05}" width="1.1" height="1.1"/>`;
+      else if (c === '+')
+        meios += `<rect x="${x}" y="${y}" width="1" height="1" rx="0.35" opacity=".45"/>`;
     }
   });
-  return `<svg class="pixicone" viewBox="0 0 12 12" width="1em" height="1em" fill="currentColor" shape-rendering="crispEdges" aria-hidden="true" focusable="false">${rects}</svg>`;
+  const id = `massinha-${++idMassinha}`;
+  return `<svg class="pixicone" viewBox="-1 -1 14 14" width="1em" height="1em" fill="currentColor" aria-hidden="true" focusable="false"><defs><filter id="${id}" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="0.42"/><feColorMatrix values="1 0 0 0 0 0 1 0 0 0 0 0 1 0 0 0 0 0 16 -7"/></filter></defs><g filter="url(#${id})">${cheios}</g>${meios}</svg>`;
 }
 
 /** Elemento do ícone. */
