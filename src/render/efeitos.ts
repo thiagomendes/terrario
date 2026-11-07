@@ -1,5 +1,5 @@
 import { tema } from '../temas/ativo';
-import { corMediaDoBloco } from '../fx/cores';
+import { corMediaDoBloco, coresDoBloco } from '../fx/cores';
 import { CONFETE, type ParametrosParticula } from '../fx/particulas';
 import { criarGerador, jitter, type Gerador } from '../audio/variacao';
 import type { EventosJogo, NomeEvento } from '../player/eventos';
@@ -66,6 +66,23 @@ export function planejarEfeito<K extends NomeEvento>(
     const n = quebra ? PARTICULAS_QUEBRA : PARTICULAS_GOLPE;
     const particulas = emitirParticulas(d, cor, n, rng, quebra ? 2.5 : 1.5);
     if (quebra) {
+      // o confete sai nas cores do próprio bloco (grama: verde do topo e marrom da terra),
+      // em tons mais claros e mais escuros, para parecer pedacinho do que estourou
+      const c = coresDoBloco(d.bloco) ?? { topo: cor, lado: cor };
+      const tom = (b: number[], f: number): [number, number, number] =>
+        b.map((v) => Math.max(0, Math.min(255, f >= 1 ? v + (255 - v) * (f - 1) : v * f))) as [
+          number,
+          number,
+          number,
+        ];
+      const paleta = [
+        tom(c.topo, 1),
+        tom(c.lado, 1),
+        tom(c.topo, 1.25),
+        tom(c.lado, 0.8),
+        tom(c.topo, 0.85),
+        tom(c.lado, 1.2),
+      ];
       // e uma chuvinha de confete que sobe do bloco e desce planando
       for (let i = 0; i < CONFETES_QUEBRA; i++) {
         const ang = (i / CONFETES_QUEBRA) * Math.PI * 2 + jitter(rng, 0, 0.5);
@@ -77,7 +94,7 @@ export function planejarEfeito<K extends NomeEvento>(
           vx: Math.cos(ang) * v,
           vy: 3.4 + jitter(rng, 0, 0.6),
           vz: Math.sin(ang) * v,
-          cor: CORES_CONFETE[i % CORES_CONFETE.length],
+          cor: paleta[i % paleta.length],
           tipo: CONFETE,
         });
       }

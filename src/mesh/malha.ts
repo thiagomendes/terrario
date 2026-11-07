@@ -9,7 +9,7 @@ import {
 } from '../world/formas';
 import { LUZ_MAXIMA, calcularLuz } from '../world/luz';
 import { FACES_TILE, TILE_BRANCO, TILES_BRILHO, indiceDoTile } from '../art/tiles';
-import { plantaDeBrinquedo } from './plantasBrinquedo';
+import { corDaCopa, plantaDeBrinquedo } from './plantasBrinquedo';
 
 const TILE_TERRA = indiceDoTile('terra');
 /** Tabela de opacidade por id (laço quente da malha). */
@@ -136,6 +136,18 @@ let detalheBaixo = false;
 export function definirDetalheMalha(d: 'alto' | 'baixo'): void {
   detalheBaixo = d === 'baixo';
 }
+/** Quanto cada canto da copa anda para o meio das folhas em volta (copa lisa). */
+const FORCA_COPA = 0.9;
+/** Copa lisa (cantos puxados): desligada, as copas são bolas (copaDeBolas). */
+let copaLisa = false;
+/** Copas de pirulito: cada grupo de folhas vira uma bola lisa. */
+let copaDeBolas = true;
+export function definirCopaDeBolas(v: boolean): void {
+  copaDeBolas = v;
+}
+export function definirCopaLisa(v: boolean): void {
+  copaLisa = v;
+}
 /** Raio das quinas das copas (folhas), bem mais redondas. */
 export const RAIO_COPA = 0.48;
 
@@ -188,6 +200,121 @@ export function gerarMalha(
   const agua = new Acumulador();
 
   /** Faces da água viradas para o ar; o topo fica um pouco abaixo da borda do bloco. */
+  /**
+   * Para cada um dos 8 cantos do bloco de folha: o deslocamento até o meio das células
+   * cheias em volta (folha ou bloco opaco) e a direção para fora (contra as cheias). Cantos
+   * vizinhos são iguais nos dois blocos que os dividem: a copa fica inteira, sem frestas.
+   */
+  const cacheCopa = new Map<number, Float32Array>();
+  function cantosDaCopa(x: number, y: number, z: number): Float32Array {
+    const chave = indice(x, y, z);
+    const ja = cacheCopa.get(chave);
+    if (ja) return ja;
+    const out = new Float32Array(48);
+    for (let c = 0; c < 8; c++) {
+      const cx = c & 1;
+      const cy = (c >> 1) & 1;
+      const cz = (c >> 2) & 1;
+      let n = 0;
+      let sx = 0;
+      let sy = 0;
+      let sz = 0;
+      for (let i = 0; i < 8; i++) {
+        const ox = (i & 1) - 1 + cx;
+        const oy = ((i >> 1) & 1) - 1 + cy;
+        const oz = ((i >> 2) & 1) - 1 + cz;
+        const v = ler(x + ox, y + oy, z + oz);
+        if (!FOLHAS_T[v] && !OPACO_T[v]) continue;
+        n++;
+        // centro da célula em relação ao canto
+        sx += ox + 0.5 - cx;
+        sy += oy + 0.5 - cy;
+        sz += oz + 0.5 - cz;
+      }
+      if (n === 0 || n === 8) continue;
+      out[c * 6] = (sx / n) * FORCA_COPA;
+      out[c * 6 + 1] = (sy / n) * FORCA_COPA;
+      out[c * 6 + 2] = (sz / n) * FORCA_COPA;
+      out[c * 6 + 3] = -sx;
+      out[c * 6 + 4] = -sy;
+      out[c * 6 + 5] = -sz;
+    }
+    cacheCopa.set(chave, out);
+    return out;
+  }
+
+  /**
+   * Copas de pirulito (spec 012): as folhas à mostra se juntam em pedaços de 3x3x3 blocos e
+   * cada pedaço vira uma bola lisa no meio das suas folhas, do tamanho da quantidade. Árvore
+   * pequena vira uma bola só; grande, uma nuvem de bolas. Os blocos continuam no mundo.
+   */
+  const grupos = new Map<
+    number,
+    { sx: number; sy: number; sz: number; n: number; ids: Map<number, number> }
+  >();
+  function juntarFolha(id: number, x: number, y: number, z: number): void {
+    const k = (Math.floor((x + 1) / 3) * 64 + Math.floor((z + 1) / 3)) * 256 + Math.floor(y / 3);
+    let g = grupos.get(k);
+    if (!g) {
+      g = { sx: 0, sy: 0, sz: 0, n: 0, ids: new Map() };
+      grupos.set(k, g);
+    }
+    g.sx += x + 0.5;
+    g.sy += y + 0.5;
+    g.sz += z + 0.5;
+    g.n++;
+    g.ids.set(id, (g.ids.get(id) ?? 0) + 1);
+  }
+  function desenharCopas(): void {
+    for (const g of grupos.values()) {
+      const cx = g.sx / g.n;
+      const cy = g.sy / g.n;
+      const cz = g.sz / g.n;
+      let id = 0;
+      let mais = 0;
+      for (const [i, q] of g.ids)
+        if (q > mais) {
+          mais = q;
+          id = i;
+        }
+      const sorte = hashPosicao(Math.floor(cx), Math.floor(cy), Math.floor(cz), 41);
+      const raio = (g.n < 3 ? 0.62 : 0.9 + 0.4 * Math.cbrt(g.n)) * (0.95 + 0.1 * sorte);
+      const cor = corDaCopa(id);
+      const fx = Math.floor(cx);
+      const fy = Math.floor(cy);
+      const fz = Math.floor(cz);
+      const luz: [number, number] = [
+        Math.max(mapaLuz.ceu(fx, fy + 1, fz), mapaLuz.ceu(fx, fy, fz)) / LUZ_MAXIMA,
+        mapaLuz.bloco(fx, fy, fz) / LUZ_MAXIMA,
+      ];
+      const an = detalheBaixo ? 9 : 14;
+      const ae = detalheBaixo ? 6 : 10;
+      const base = solido.vertices;
+      for (let i = 0; i <= ae; i++) {
+        const fi = (i / ae) * Math.PI;
+        for (let j = 0; j <= an; j++) {
+          const te = (j / an) * Math.PI * 2;
+          const nx = Math.sin(fi) * Math.cos(te);
+          const ny = Math.cos(fi);
+          const nz = Math.sin(fi) * Math.sin(te);
+          solido.posicoes.push(cx + nx * raio, cy + ny * raio * 0.92, cz + nz * raio);
+          solido.normais.push(nx, ny, nz);
+          solido.uvs.push(UV_BRANCO[0], UV_BRANCO[1]);
+          // embaixo um pouco mais escuro (a copa faz sombra em si mesma); alfa < 1: folhas
+          const k = 0.82 + 0.18 * (ny * 0.5 + 0.5);
+          solido.cores.push(cor[0] * k, cor[1] * k, cor[2] * k, 0.5);
+          solido.luz.push(luz[0], luz[1]);
+        }
+      }
+      for (let i = 0; i < ae; i++)
+        for (let j = 0; j < an; j++) {
+          const a = base + i * (an + 1) + j;
+          const b = a + an + 1;
+          solido.indices.push(a, a + 1, b, a + 1, b + 1, b);
+        }
+    }
+  }
+
   /** Fundura (0..1, até 8 blocos) e beira (0..1) no canto (cx, cz) da superfície em y. */
   function fundoDoCanto(cx: number, y: number, cz: number): [number, number] {
     let soma = 0;
@@ -325,7 +452,8 @@ export function gerarMalha(
     // blocos a face segue reta até a borda (a junta é desenhada no material)
     // as folhas viram copa macia: quina bem redonda onde não encostam em outra folha
     const ehFolha = FOLHAS_T[id] === 1;
-    const arredonda = OPACO_T[id] === 1 || ehFolha;
+    // com a copa lisa a forma das folhas vem do alisamento (faces simples, bem mais leves)
+    const arredonda = OPACO_T[id] === 1 || (ehFolha && !copaLisa);
     const RAIO = ehFolha ? RAIO_COPA : RAIO_QUINA;
     const mostra = (dx: number, dy: number, dz: number) => {
       if (!arredonda) return 0;
@@ -343,6 +471,7 @@ export function gerarMalha(
       else r.push(1);
       return r;
     };
+    const copa = ehFolha && copaLisa ? cantosDaCopa(x, y, z) : null;
     const p1 = passos(f.t1);
     const p2 = passos(f.t2);
     const base = solido.vertices;
@@ -375,6 +504,40 @@ export function gerarMalha(
             px = ix + nx * RAIO;
             py = iy + ny * RAIO;
             pz = iz + nz * RAIO;
+          }
+        }
+        if (copa) {
+          // copa lisa de pirulito: cada canto puxa para o meio das folhas em volta
+          const w = [1 - px, px];
+          const v = [1 - py, py];
+          const u = [1 - pz, pz];
+          let dx = 0;
+          let dy = 0;
+          let dz = 0;
+          let gx = 0;
+          let gy = 0;
+          let gz = 0;
+          for (let c = 0; c < 8; c++) {
+            const k = w[c & 1] * v[(c >> 1) & 1] * u[(c >> 2) & 1];
+            dx += copa[c * 6] * k;
+            dy += copa[c * 6 + 1] * k;
+            dz += copa[c * 6 + 2] * k;
+            gx += copa[c * 6 + 3] * k;
+            gy += copa[c * 6 + 4] * k;
+            gz += copa[c * 6 + 5] * k;
+          }
+          px += dx;
+          py += dy;
+          pz += dz;
+          const lg = Math.hypot(gx, gy, gz);
+          if (lg > 1e-4) {
+            nx = nx * 0.05 + (gx / lg) * 0.95;
+            ny = ny * 0.05 + (gy / lg) * 0.95;
+            nz = nz * 0.05 + (gz / lg) * 0.95;
+            const ln = Math.hypot(nx, ny, nz) || 1;
+            nx /= ln;
+            ny /= ln;
+            nz /= ln;
           }
         }
         solido.posicoes.push(x + px, y + py, z + pz);
@@ -546,6 +709,13 @@ export function gerarMalha(
           adicionarPlanta(id, x, y, z);
           continue;
         }
+        // copas de pirulito: as folhas viram bolas lisas (desenhadas depois, por grupo)
+        if (def.folhas && copaDeBolas) {
+          if (FACES.some((f) => !OPACO_T[ler(x + f.n[0], y + f.n[1], z + f.n[2])])) {
+            juntarFolha(id, x, y, z);
+          }
+          continue;
+        }
         for (const f of FACES) {
           const viz = ler(x + f.n[0], y + f.n[1], z + f.n[2]);
           const dv = obterBloco(viz);
@@ -559,5 +729,6 @@ export function gerarMalha(
     }
   }
 
+  desenharCopas();
   return { solido: solido.finalizar(), plantas: plantas.finalizar(), agua: agua.finalizar() };
 }

@@ -8,7 +8,7 @@
  * partir do atlas do tema (`coresDasPlantas`), e a textura é o tile branco do atlas (a cor
  * vai nos vértices).
  */
-import { Bloco } from '../world/blocks';
+import { Bloco, REGISTRO_BLOCOS } from '../world/blocks';
 import type { Atlas } from '../art/atlas';
 import { TAM_TILE } from '../art/atlas';
 
@@ -47,6 +47,18 @@ export function definirDetalhePlantas(d: 'alto' | 'baixo'): void {
   gomos = d === 'baixo' ? 0.65 : 1;
 }
 
+/** Cor da copa de bolas pelo bloco de folha (do atlas do tema; verde se não houver). */
+export function corDaCopa(id: number): Rgb01 {
+  const c = tabela[id];
+  if (!c) return [0.36, 0.66, 0.3];
+  // copa de brinquedo: um pouco mais clara que a média do tile
+  return [
+    Math.min(1, c.folha[0] * 1.12 + 0.03),
+    Math.min(1, c.folha[1] * 1.12 + 0.03),
+    Math.min(1, c.folha[2] * 1.12 + 0.03),
+  ];
+}
+
 /** Cores das plantas do tema (mensagem de estilo do worker). */
 export function definirCoresPlantas(t: Record<number, CoresPlanta> | undefined): void {
   tabela = t ?? {};
@@ -58,7 +70,9 @@ export function definirCoresPlantas(t: Record<number, CoresPlanta> | undefined):
  */
 export function coresDasPlantas(atlas: Atlas): Record<number, CoresPlanta> {
   const saida: Record<number, CoresPlanta> = {};
-  for (const id of PLANTAS_BRINQUEDO) {
+  // as folhas de todo bloco de copa entram também (cor da copa de bolas)
+  const folhas = REGISTRO_BLOCOS.filter((b) => b?.folhas).map((b) => b.id);
+  for (const id of [...PLANTAS_BRINQUEDO, ...folhas]) {
     const uv = atlas.uvDaFace(id, 'lado');
     if (!uv) continue;
     const ox = Math.round(uv.u0 * atlas.largura);

@@ -25,8 +25,13 @@ describe('planejarEfeito', () => {
     const cor = corMediaDoBloco(Bloco.PEDRA_RACHADA);
     expect(cor).toBeDefined();
     for (const q of pecinhas) expect(q.cor).toEqual(cor);
-    // confete colorido e subindo (desce planando depois)
-    expect(new Set(confetes.map((q) => q.cor.join(','))).size).toBeGreaterThan(3);
+    // confete nos tons do próprio bloco (mais claro e mais escuro), subindo e depois planando
+    expect(new Set(confetes.map((q) => q.cor.join(','))).size).toBeGreaterThan(2);
+    const [r0, g0, b0] = cor!;
+    for (const q of confetes) {
+      const perto = Math.abs(q.cor[0] - r0) + Math.abs(q.cor[1] - g0) + Math.abs(q.cor[2] - b0);
+      expect(perto).toBeLessThan(260);
+    }
     for (const q of confetes) expect(q.vy).toBeGreaterThan(2);
     expect(p.pulso).toBe(false);
   });

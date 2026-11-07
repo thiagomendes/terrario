@@ -144,8 +144,17 @@ test('pose neutra parado, muda ao minerar e mão acompanha o slot', async ({ pag
           pedra,
         );
         if (quebrado) pedra = await prepararPedra(page);
-        await page.evaluate(() => window.__brumaluz!.minerar!(0.25, true));
-        return page.evaluate(() => Math.abs(window.__brumaluz!.personagem!.pose().bracoDireito));
+        // mina e observa a pose quadro a quadro (sob carga uma amostra só pode cair fora do golpe)
+        return page.evaluate(async () => {
+          const e = window.__brumaluz!;
+          let maior = 0;
+          for (let i = 0; i < 20; i++) {
+            e.minerar!(0.05, true);
+            await new Promise((r) => requestAnimationFrame(r));
+            maior = Math.max(maior, Math.abs(e.personagem!.pose().bracoDireito));
+          }
+          return maior;
+        });
       },
       { timeout: 60_000 },
     )
