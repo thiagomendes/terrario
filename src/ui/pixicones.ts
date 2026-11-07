@@ -620,17 +620,21 @@ export function rotuloComIcone(el: HTMLElement, nome: NomeIcone, texto?: string)
 
 export const CSS_PIXICONES = `
 .pixicone-caixa { display: inline-flex; align-items: center; justify-content: center; line-height: 0; vertical-align: -0.14em; }
-.pixicone { width: 1em; height: 1em; filter: drop-shadow(1px 1px 0 rgba(0, 0, 0, 0.45)); }
+.pixicone { width: 1em; height: 1em; }
+/* fechar: bolinha creme de peça, o X escuro no meio */
 .botao-fechar {
-  position: absolute; top: 10px; right: 10px; z-index: 5;
+  position: absolute; top: 12px; right: 12px; z-index: 5;
   display: inline-flex; align-items: center; justify-content: center;
   width: 44px; height: 44px; padding: 0; cursor: pointer;
-  border: 2px solid #120e16; border-radius: 0; color: #f6f2ea; font-size: 1.1rem;
-  background: #3a3542; box-shadow: inset 2px 2px 0 rgba(255, 255, 255, 0.18), inset -2px -3px 0 rgba(0, 0, 0, 0.4);
+  border: 0; border-radius: 50%; color: var(--tinta); font-size: 1.1rem;
+  background: linear-gradient(to bottom, #fffdf6, var(--creme));
+  box-shadow: 0 4px 0 var(--creme-fundo), 0 6px 12px rgba(60, 35, 10, 0.22), inset 0 2px 0 rgba(255, 255, 255, 0.8);
+  transition: transform 0.08s, box-shadow 0.08s;
   touch-action: manipulation;
 }
-.botao-fechar:hover, .botao-fechar:focus-visible { background: #4a4454; color: #ffe7a3; outline: none; }
-.botao-fechar:active { transform: translateY(2px); }
+.botao-fechar:hover { filter: brightness(1.03); }
+.botao-fechar:focus-visible { outline: 3px solid var(--azul); outline-offset: 2px; }
+.botao-fechar:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--creme-fundo); }
 /* telas de toque: sem dicas de teclado e mouse */
 @media (pointer: coarse) {
   .ajuda-inv, .mapa-mundo .dica, .rodape-titulo ul { display: none !important; }

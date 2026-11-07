@@ -3,6 +3,7 @@ import { EVENTO_ICONES, iconeDoItem } from './icones';
 import { modoToque } from './pixicones';
 
 const CSS = `
+/* barra de itens: bandeja creme com um poço por item; o escolhido sobe com borda amarela */
 .barra {
   position: fixed;
   left: 50%;
@@ -10,14 +11,13 @@ const CSS = `
   transform: translateX(-50%);
   display: flex;
   gap: clamp(3px, 1vw, 6px);
-  padding: 5px;
+  padding: 7px;
   box-sizing: border-box;
   max-width: calc(100vw - 8px);
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  border-radius: 10px;
-  background: rgba(10, 12, 20, 0.55);
-  backdrop-filter: blur(6px);
-  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.35);
+  border: 0;
+  border-radius: 20px;
+  background: rgba(255, 250, 240, 0.78);
+  box-shadow: 0 4px 0 rgba(150, 110, 60, 0.35), 0 10px 20px rgba(40, 25, 10, 0.18);
   pointer-events: auto;
   z-index: 10;
 }
@@ -30,48 +30,49 @@ const CSS = `
   min-height: 36px;
   padding: 4px;
   box-sizing: border-box;
-  border: 2px solid rgba(255, 255, 255, 0.08);
-  border-radius: 6px;
-  background: rgba(255, 255, 255, 0.06);
+  border: 0;
+  border-radius: 12px;
+  background: var(--poco);
+  box-shadow: var(--sombra-poco);
   cursor: pointer;
-  transition: transform 0.12s ease, background 0.12s ease;
+  transition: transform 0.1s ease, background 0.1s ease;
 }
-.barra button:hover { background: rgba(255, 255, 255, 0.12); }
+.barra button:hover { background: #fff3d6; }
 .barra button[aria-pressed='true'] {
-  border-color: #fff4dc;
-  background: rgba(255, 244, 220, 0.16);
-  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.5), 0 0 14px rgba(255, 220, 150, 0.45);
-  transform: translateY(-4px) scale(1.06);
+  background: #fff3d6;
+  outline: 3px solid var(--amarela);
+  outline-offset: -1px;
+  box-shadow: inset 0 3px 0 rgba(120, 80, 30, 0.1), 0 4px 0 var(--amarela-fundo);
+  transform: translateY(-4px);
 }
-.barra button:focus-visible { outline: 2px solid #fff1d6; }
+.barra button:focus-visible { outline: 3px solid var(--azul); }
 .barra .icone {
   display: block;
   width: 100%;
   height: 100%;
-  image-rendering: pixelated;
-  filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.45));
+  filter: drop-shadow(0 2px 1px rgba(90, 55, 20, 0.3));
 }
 .barra .qtd {
   position: absolute;
   right: 4px;
   bottom: 1px;
   color: #fff;
-  font: 800 0.78rem system-ui, sans-serif;
-  text-shadow: 1px 1px 0 #000, -1px -1px 0 rgba(0,0,0,0.6);
+  font: 900 0.78rem var(--jogo);
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.55), 0 0 3px rgba(0, 0, 0, 0.45);
 }
 body[data-modo='criativo'] .barra .qtd { display: none; }
 .barra .icone[src=''] { visibility: hidden; }
 .nome-item {
   position: fixed;
   left: 50%;
-  bottom: calc(max(12px, env(safe-area-inset-bottom)) + 74px);
+  bottom: calc(max(12px, env(safe-area-inset-bottom)) + 78px);
   transform: translateX(-50%);
-  padding: 4px 12px;
-  border-radius: 8px;
-  background: rgba(10, 12, 20, 0.55);
-  color: #fff;
-  font: 700 0.9rem system-ui, sans-serif;
-  text-shadow: 1px 1px 0 #000;
+  padding: 4px 14px;
+  border-radius: 999px;
+  background: rgba(255, 250, 240, 0.92);
+  color: var(--tinta);
+  font: 800 0.9rem var(--jogo);
+  box-shadow: 0 2px 0 rgba(150, 110, 60, 0.3);
   pointer-events: none;
   opacity: 0;
   transition: opacity 0.3s ease;
@@ -82,11 +83,9 @@ body.toque-ativo .barra .numero { display: none; }
 .barra .numero {
   position: absolute;
   top: 1px;
-  left: 4px;
-  color: #fff;
-  font: 700 0.68rem system-ui, sans-serif;
-  text-shadow: 1px 1px 0 #000;
-  opacity: 0.85;
+  left: 5px;
+  color: var(--tinta-suave);
+  font: 800 0.66rem var(--jogo);
 }
 `;
 
