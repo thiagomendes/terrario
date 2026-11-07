@@ -20,21 +20,37 @@ describe('estado da câmera', () => {
     expect(teclaParaCamera('KeyV')).toBe(true);
     expect(teclaParaCamera('KeyC')).toBe(false);
   });
-  it('definir igual não muda e alternar duas vezes volta', () => {
+  it('definir igual não muda e alternar passa por primeira, terceira e de frente', () => {
     const e = criarEstadoCamera();
     expect(definir(e, 'primeira')).toBe(e);
     expect(definir(e, 'terceira').modo).toBe('terceira');
-    expect(alternar(alternar(e)).modo).toBe('primeira');
+    expect(alternar(e).modo).toBe('terceira');
+    expect(alternar(alternar(e)).modo).toBe('frente');
+    expect(alternar(alternar(alternar(e))).modo).toBe('primeira');
   });
   it('visibilidade e texto por modo', () => {
     expect(visibilidadePorModo('primeira')).toEqual({ braco: true, corpo: false });
     expect(visibilidadePorModo('terceira')).toEqual({ braco: false, corpo: true });
     expect(textoIndicador('primeira')).toBe('Câmera: 1ª pessoa (V)');
     expect(textoIndicador('terceira')).toBe('Câmera: 3ª pessoa (V)');
+    expect(textoIndicador('frente')).toBe('Câmera: de frente (V)');
+    expect(visibilidadePorModo('frente')).toEqual({ braco: false, corpo: true });
   });
 });
 
 describe('posicaoTerceiraPessoa', () => {
+  it('por cima do ombro sai para a direita; de frente fica na frente do jogador', () => {
+    const olhos = { x: 0.5, y: 70, z: 0.5 };
+    const livre = () => false;
+    const ombro = posicaoTerceiraPessoa(olhos, 0, 0, livre, { lado: 0.55 });
+    expect(ombro.x).toBeCloseTo(0.5 + 0.55, 5);
+    expect(ombro.z).toBeLessThan(olhos.z);
+    const frente = posicaoTerceiraPessoa(olhos, 0, 0, livre, { frente: true });
+    expect(frente.z).toBeGreaterThan(olhos.z);
+    // parede à direita: volta para o centro
+    const parede = (x: number) => x === 1;
+    expect(posicaoTerceiraPessoa(olhos, 0, 0, parede, { lado: 0.55 }).x).toBeCloseTo(0.5, 5);
+  });
   it('espaço livre: 3,5 blocos, oposto à mira', () => {
     const p = posicaoTerceiraPessoa(olhos, 0, 0, livre);
     expect(dist(p)).toBeCloseTo(3.5, 5);

@@ -13,13 +13,15 @@ const base = {
 describe('calcularPose', () => {
   it('parado devolve balanço 0 e valores finitos', () => {
     const p = calcularPose(base);
-    for (const v of Object.values(p)) expect(Number.isFinite(v)).toBe(true);
+    for (const v of Object.values(p))
+      if (typeof v === 'number') expect(Number.isFinite(v)).toBe(true);
     expect(p.bracoDireito).toBe(0);
     expect(p.bracoEsquerdo).toBe(0);
     expect(p.pernaDireita).toBe(0);
     expect(p.pernaEsquerda).toBe(0);
     expect(p.tronco).toBe(0);
-    expect(p.cabeca).toBe(0);
+    // parado, a cabeça só olha em volta de leve (spec 012)
+    expect(Math.abs(p.cabeca)).toBeLessThan(0.06);
   });
 
   it('andar balança em oposição de fase e correr tem mais amplitude', () => {

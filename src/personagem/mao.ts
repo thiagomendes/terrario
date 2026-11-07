@@ -41,7 +41,9 @@ export function posicaoBraco(pose: Pose, tamanhoTela: TamanhoTela): PosicaoBraco
   const z = DISTANCIA_BRACO;
   const baseX = BRACO_NDC_X * z * metade * aspecto;
   const baseY = BRACO_NDC_Y * z * metade;
-  const y = baseY - pose.bracoDireito * ESCALA_BALANCO + pose.tronco;
+  // golpe com preparo (spec 012) vai mais longe: o braço da vista fica no canto mesmo assim
+  const braco = Math.max(-1.2, Math.min(0, pose.bracoDireito));
+  const y = baseY - braco * ESCALA_BALANCO + pose.tronco;
   const ndcX = baseX / (z * metade * aspecto);
   const ndcY = y / (z * metade);
   const mx = MINIATURA_NDC_X * z * metade * aspecto;

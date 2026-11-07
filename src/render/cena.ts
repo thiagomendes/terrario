@@ -162,6 +162,7 @@ import {
   criarEstadoCamera,
   definir as definirCamera,
   posicaoTerceiraPessoa,
+  LADO_OMBRO,
   teclaParaCamera,
   visibilidadePorModo,
   type ModoCamera,
@@ -1440,13 +1441,17 @@ export function criarCena(
       cameraVisao.position.copyFrom(camera.position);
       return;
     }
+    const frente = estadoCamera.modo === 'frente';
     const p = posicaoTerceiraPessoa(
       { x: camera.position.x, y: camera.position.y, z: camera.position.z },
       camera.rotation.y,
       camera.rotation.x,
       (x, y, z) => obterBlocoDef(blocoEm(x, y, z))?.solido === true,
+      frente ? { frente: true } : { lado: LADO_OMBRO },
     );
     cameraVisao.position.set(p.x, p.y, p.z);
+    // de frente, a câmera olha de volta para o jogador
+    if (frente) cameraVisao.rotation.set(-camera.rotation.x, camera.rotation.y + Math.PI, 0);
   }
   Object.defineProperty(estado, 'slotAtivo', { get: () => hotbar.ativo, enumerable: true });
   barramento.ouvir('golpe', () => animador.evento('golpe'));

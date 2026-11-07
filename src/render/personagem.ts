@@ -9,6 +9,7 @@ import type { Mesh } from '@babylonjs/core/Meshes/mesh';
 import { TransformNode } from '@babylonjs/core/Meshes/transformNode';
 import { Material } from '@babylonjs/core/Materials/material';
 import { criarItemNaMao } from './itemNaMao';
+import { criarBoneco } from './boneco';
 import type { Scene } from '@babylonjs/core/scene';
 import type { Aparencia } from '../personagem/aparencia';
 import { montarPartes, type NomeParte } from '../personagem/modelo';
@@ -47,7 +48,13 @@ interface ParteViva {
   textura: RawTexture;
 }
 
+/** O personagem do jogo: o boneco de brinquedo (spec 012). */
 export function criarPersonagem(scene: Scene, aparencia: Aparencia): Personagem {
+  return criarBoneco(scene, aparencia);
+}
+
+/** O personagem antigo, de caixas e pixels (guardado até a troca ser conferida). */
+export function criarPersonagemPixel(scene: Scene, aparencia: Aparencia): Personagem {
   const raiz = new TransformNode('personagem', scene);
   const corpo = new TransformNode('personagem-corpo', scene);
   corpo.parent = raiz;

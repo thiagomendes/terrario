@@ -1,4 +1,5 @@
-export type ModoCamera = 'primeira' | 'terceira';
+/** Primeira pessoa, terceira (por cima do ombro) e de frente (olhando para o jogador). */
+export type ModoCamera = 'primeira' | 'terceira' | 'frente';
 
 export interface EstadoCamera {
   modo: ModoCamera;
@@ -24,8 +25,12 @@ export function definir(estado: EstadoCamera, modo: ModoCamera): EstadoCamera {
 }
 
 export function alternar(estado: EstadoCamera): EstadoCamera {
-  return { modo: estado.modo === 'primeira' ? 'terceira' : 'primeira' };
+  const ordem: ModoCamera[] = ['primeira', 'terceira', 'frente'];
+  return { modo: ordem[(ordem.indexOf(estado.modo) + 1) % ordem.length] };
 }
+
+/** Deslocamento para a direita da câmera em terceira pessoa (por cima do ombro, spec 012). */
+export const LADO_OMBRO = 0.55;
 
 export function teclaParaCamera(codigo: string): boolean {
   return codigo === 'KeyV';
@@ -36,6 +41,7 @@ export function visibilidadePorModo(modo: ModoCamera): { braco: boolean; corpo: 
 }
 
 export function textoIndicador(modo: ModoCamera): string {
+  if (modo === 'frente') return 'Câmera: de frente (V)';
   return modo === 'primeira' ? 'Câmera: 1ª pessoa (V)' : 'Câmera: 3ª pessoa (V)';
 }
 
@@ -45,15 +51,29 @@ export function posicaoTerceiraPessoa(
   yaw: number,
   pitch: number,
   solido: (x: number, y: number, z: number) => boolean,
+  opcoes: { lado?: number; frente?: boolean } = {},
 ): Vec3 {
   const cp = Math.cos(pitch);
-  const dx = -cp * Math.sin(yaw);
-  const dy = Math.sin(pitch);
-  const dz = -cp * Math.cos(yaw);
+  // de frente: a câmera vai para a frente do jogador (e olha de volta para ele)
+  const sinal = opcoes.frente ? -1 : 1;
+  const dx = -cp * Math.sin(yaw) * sinal;
+  const dy = Math.sin(pitch) * sinal;
+  const dz = -cp * Math.cos(yaw) * sinal;
+  // por cima do ombro: o ponto de partida sai para a direita, se não houver parede ali
+  let base = olhos;
+  const lado = opcoes.lado ?? 0;
+  if (lado !== 0) {
+    const ladoP = {
+      x: olhos.x + Math.cos(yaw) * lado,
+      y: olhos.y,
+      z: olhos.z - Math.sin(yaw) * lado,
+    };
+    if (!solido(Math.floor(ladoP.x), Math.floor(ladoP.y), Math.floor(ladoP.z))) base = ladoP;
+  }
   const em = (d: number): Vec3 => ({
-    x: olhos.x + dx * d,
-    y: olhos.y + dy * d,
-    z: olhos.z + dz * d,
+    x: base.x + dx * d,
+    y: base.y + dy * d,
+    z: base.z + dz * d,
   });
   const bate = (d: number): boolean => {
     const p = em(d);
