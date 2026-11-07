@@ -243,7 +243,9 @@ export function criarPainelAmigos(raiz: HTMLElement, op: OpcoesPainelAmigos) {
           try {
             await op.abrirParaAmigos?.();
           } catch (e) {
-            erro.textContent = e instanceof Error ? e.message : String(e);
+            // desistiu no diálogo do apelido: só volta o botão
+            const msg = e instanceof Error ? e.message : String(e);
+            erro.textContent = msg === 'cancelado' ? '' : msg;
             abrir.disabled = false;
             abrir.textContent = 'Abrir para amigos';
           }

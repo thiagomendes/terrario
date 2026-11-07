@@ -10,6 +10,7 @@ import { estiloMundo } from './world/chunk';
 import { normalizarCodigo } from './jogo/codigos';
 import type { DadosMundo, MetaMundo, RepositorioMundos } from './jogo/mundos';
 import { notificar } from './ui/interface';
+import { perguntar } from './ui/dialogo';
 import {
   CSS_AMIGOS,
   TEXTO_RECUSA,
@@ -317,7 +318,16 @@ async function levarParaNuvem(cena: Cena, op: OpcoesAmigos): Promise<void> {
   if (!navigator.onLine) throw new Error(TEXTO_RECUSA['sem-internet']);
   let apelido = identidade().apelido;
   if (!apelido) {
-    apelido = limparApelido(prompt('Como os amigos vão te chamar?') ?? '') || 'Jogador';
+    // diálogo de brinquedo (spec 012), já com o nome do personagem preenchido
+    const sugestao = carregarAparencia(localStorage).nome ?? '';
+    const r = await perguntar({
+      titulo: 'Seu apelido',
+      texto: 'Como os amigos vão te chamar? Ele aparece em cima do seu personagem.',
+      campo: sugestao,
+      confirmar: 'Continuar',
+    });
+    if (r === null) throw new Error('cancelado');
+    apelido = limparApelido(typeof r === 'string' ? r : '') || 'Jogador';
     definirApelido(apelido);
   }
   const dados = await cena.dadosAtuais();
