@@ -643,23 +643,88 @@ export async function criarMundoComAmigos(
   await subirParaNuvem(repo, meta, undefined, nome, tema.mundo);
 }
 
+/** Nome para os amigos: o do aparelho, ou pergunta no diálogo (já com a sugestão do tema). */
+async function apelidoParaAmigos(tema?: string): Promise<string> {
+  const ja = identidade().apelido;
+  if (ja) return ja;
+  const r = await perguntar({
+    titulo: 'Seu nome para os amigos',
+    texto: 'Ele aparece em cima do seu personagem.',
+    campo: sugestaoDeApelido(tema),
+    confirmar: 'Continuar',
+  });
+  if (r === null) throw new Error('cancelado');
+  const apelido = apelidoOuSugerido(typeof r === 'string' ? r : '', tema);
+  definirApelido(apelido);
+  return apelido;
+}
+
+/**
+ * Da lista de mundos (spec 011): um mundo do aparelho passa a ser com amigos. Vai para a nuvem
+ * com tudo o que tem e abre já com o convite.
+ */
+export async function levarMundoParaAmigos(
+  repo: RepositorioMundos,
+  meta: MetaMundo,
+): Promise<void> {
+  const apelido = await apelidoParaAmigos(meta.tema);
+  const dados = await repo.carregar(meta.id);
+  const tema = temaExiste(meta.tema ?? '') ? obterTema(meta.tema!) : obterTema('bruma-e-luz');
+  await subirParaNuvem(repo, meta, dados, apelido, tema.mundo);
+}
+
+/**
+ * Da lista de mundos (spec 011): o dono traz o mundo com amigos de volta para o aparelho sem
+ * precisar entrar nele. Conecta, confere que é o dono, pede o mundo e grava aqui.
+ */
+export async function pararMundoComAmigos(repo: RepositorioMundos, meta: MetaMundo): Promise<void> {
+  if (!meta.nuvem) return;
+  if (!navigator.onLine) throw new Error(TEXTO_RECUSA['sem-internet']);
+  const codigo = meta.nuvem;
+  const conexao = conexaoNuvem({
+    url: urlServidor(),
+    jogador: jogador(identidade().apelido),
+    codigo,
+  });
+  const prazo = (ms: number) =>
+    new Promise<never>((_, rej) => setTimeout(() => rej(new Error('servidor')), ms));
+  const devolvido = new Promise<DadosMundo>((res) => conexao.aoDevolvido(res));
+  try {
+    const bv = await Promise.race([conexao.pronta, devolvido.then(() => null), prazo(15_000)]);
+    if (bv && bv.sala.dono !== bv.voce) {
+      conexao.encerrar();
+      throw new Error('Só quem criou o mundo pode parar de jogar com amigos.');
+    }
+    if (bv) conexao.pedir({ t: 'dono', acao: 'devolver' });
+    const dados = await Promise.race([devolvido, prazo(30_000)]);
+    await guardarDevolvido(
+      repo,
+      {
+        nome: meta.nome,
+        semente: meta.semente,
+        modo: meta.modo,
+        tema: meta.tema ?? 'bruma-e-luz',
+      },
+      [codigo, ...(bv ? [bv.sala.codigo] : [])],
+      dados,
+    );
+  } catch (e) {
+    conexao.encerrar();
+    // o código não vale mais: o mundo volta a ser só do aparelho (com o que tinha aqui)
+    if (e instanceof Error && e.message === 'codigo') {
+      await repo.desmarcarNuvem(meta.id);
+      return;
+    }
+    if (e instanceof Error && !(e.message in TEXTO_RECUSA)) throw e;
+    throw new Error(textoDoMotivo(e));
+  }
+}
+
 /** Leva o mundo do aparelho para a nuvem e entra nele pelo código novo. */
 async function levarParaNuvem(cena: Cena, op: OpcoesAmigos): Promise<void> {
   const m = op.mundo;
   if (!m) throw new Error('Abra um mundo primeiro.');
-  let apelido = identidade().apelido;
-  if (!apelido) {
-    // diálogo de brinquedo (spec 012), já com o nome sugerido preenchido
-    const r = await perguntar({
-      titulo: 'Seu nome para os amigos',
-      texto: 'Ele aparece em cima do seu personagem.',
-      campo: sugestaoDeApelido(m.tema),
-      confirmar: 'Continuar',
-    });
-    if (r === null) throw new Error('cancelado');
-    apelido = apelidoOuSugerido(typeof r === 'string' ? r : '', m.tema);
-    definirApelido(apelido);
-  }
+  const apelido = await apelidoParaAmigos(m.tema);
   await subirParaNuvem(op.repo, m, await cena.dadosAtuais(), apelido, estiloMundo());
 }
 

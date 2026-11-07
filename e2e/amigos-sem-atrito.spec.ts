@@ -229,3 +229,51 @@ test('capturas: convite e entrar pelo link nos 6 temas, no computador e no celul
     await dono.context().close();
   }
 });
+
+test('lista de mundos: ligar e parar de jogar com amigos sem entrar no mundo', async ({
+  browser,
+}) => {
+  test.setTimeout(600_000);
+  const sufixo = Date.now().toString(36);
+  const ana = await jogador(browser, `ana-lista-${sufixo}`, 'Ana');
+  await ana.goto('/');
+  await pronto(ana);
+  // um bloco no mundo do aparelho, para conferir que ele vai e volta
+  const cel = await ana.evaluate(() => {
+    const e = window.__brumaluz!;
+    const [x, y, z] = e.posicao!;
+    const c = { x: Math.floor(x) + 2, y: Math.floor(y), z: Math.floor(z) };
+    e.definirBloco!(c.x, c.y, c.z, 7);
+    return c;
+  });
+  await ana.waitForTimeout(500);
+  await ana.locator('[data-abrir-mundos]').click();
+  await ana.locator('.cartao-mundo-item.atual [data-ligar-amigos]').click();
+  const codigo = await ana
+    .locator('[data-painel-amigos] [data-codigo-mundo]')
+    .getAttribute('data-codigo-mundo', { timeout: 120_000 });
+  expect(codigo).toMatch(/^[A-Z]+-[A-Z]+-\d\d$/);
+  await ana.waitForFunction(({ x, y, z }) => window.__brumaluz!.bloco!(x, y, z) === 7, cel, {
+    timeout: 60_000,
+  });
+  // volta ao começo (outro mundo do aparelho) e para pela lista, sem entrar no mundo
+  await ana.goto('/');
+  await pronto(ana);
+  await ana.locator('[data-abrir-mundos]').click();
+  const item = ana.locator('.cartao-mundo-item', { has: ana.locator('[data-selo-amigos]') });
+  await expect(item).toHaveCount(1);
+  await item.locator('[data-parar-amigos]').click();
+  await ana.locator('[data-dialogo-confirmar]').click();
+  await expect(ana.locator('[data-selo-amigos]')).toHaveCount(0, { timeout: 60_000 });
+  // o mundo voltou com o bloco, e o código morreu
+  const id = await ana
+    .locator('.cartao-mundo-item', { has: ana.locator('[data-ligar-amigos]') })
+    .first()
+    .getAttribute('data-mundo');
+  expect(id).toBeTruthy();
+  const dani = await jogador(browser, `dani-lista-${sufixo}`, 'Dani');
+  await dani.goto(`/?sala=${codigo}`);
+  await expect(dani.locator('[data-tela-entrar]')).toContainText('Esse código não existe', {
+    timeout: 60_000,
+  });
+});

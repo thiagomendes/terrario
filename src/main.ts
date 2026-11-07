@@ -42,6 +42,8 @@ import {
   irParaSala,
   ligarAmigos,
   sugestaoDeApelido,
+  levarMundoParaAmigos,
+  pararMundoComAmigos,
 } from './nuvem';
 
 async function iniciar(app: HTMLElement): Promise<void> {
@@ -122,6 +124,12 @@ async function iniciar(app: HTMLElement): Promise<void> {
       await criarMundoComAmigos(repo, meta, apelido);
     },
     sugestaoApelido: (tema) => sugestaoDeApelido(tema),
+    levarParaAmigos: async (meta) => {
+      // o mundo aberto agora: grava o que está na tela antes de levar
+      if (meta.id === atual.id) await cena?.salvar();
+      await levarMundoParaAmigos(repo, meta);
+    },
+    pararComAmigos: (meta) => pararMundoComAmigos(repo, meta),
     abrirMundo: async (id) => {
       await cena?.salvar();
       const url = new URL(location.href);

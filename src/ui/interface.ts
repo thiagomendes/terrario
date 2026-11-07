@@ -168,6 +168,8 @@ export interface OpcoesInterface {
   criarComAmigos?: (meta: MetaMundo, apelido: string) => Promise<void>;
   /** Sugestão para "Seu nome para os amigos" no tema escolhido. */
   sugestaoApelido?: (tema: string) => string;
+  levarParaAmigos?: (meta: MetaMundo) => Promise<void>;
+  pararComAmigos?: (meta: MetaMundo) => Promise<void>;
   config?: GerenciadorConfig;
   salvar?: () => Promise<boolean>;
 }
@@ -317,6 +319,8 @@ export function criarInterface(
       abrir: (id) => opMundo.abrirMundo?.(id),
       criarComAmigos: opMundo.criarComAmigos,
       sugestaoApelido: opMundo.sugestaoApelido,
+      levarParaAmigos: opMundo.levarParaAmigos,
+      pararComAmigos: opMundo.pararComAmigos,
     });
     const bMundos = botaoJogo('Mundos', 'globo', 'data-abrir-mundos');
     abrirMundos = () => void painelMundos.abrir();

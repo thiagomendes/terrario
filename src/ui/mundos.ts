@@ -264,6 +264,10 @@ export interface OpcoesPainelMundos {
   /** Mundo novo já com amigos: cria na nuvem e entra (rejeita com a mensagem a mostrar). */
   criarComAmigos?(meta: MetaMundo, apelido: string): Promise<void>;
   sugestaoApelido?(tema: string): string;
+  /** Mundo do aparelho passa a ser com amigos (vai para a nuvem e abre com o convite). */
+  levarParaAmigos?(meta: MetaMundo): Promise<void>;
+  /** Mundo com amigos volta para o aparelho (só o dono). Rejeita com a mensagem a mostrar. */
+  pararComAmigos?(meta: MetaMundo): Promise<void>;
 }
 
 export function criarPainelMundos(raiz: HTMLElement, op: OpcoesPainelMundos) {
@@ -459,7 +463,40 @@ export function criarPainelMundos(raiz: HTMLElement, op: OpcoesPainelMundos) {
         await op.repo.excluir(m.id);
         await render();
       });
-      acoes.append(jogar, renomear, excluir);
+      // jogar com amigos direto da lista (spec 011): ligar leva para a nuvem; parar traz de volta
+      const amigos = document.createElement('button');
+      amigos.type = 'button';
+      const nuvem = !!m.nuvem;
+      amigos.className = nuvem ? 'btn' : 'btn azul';
+      amigos.textContent = nuvem ? 'Parar com amigos' : 'Jogar com amigos';
+      amigos.setAttribute(nuvem ? 'data-parar-amigos' : 'data-ligar-amigos', '');
+      amigos.hidden = nuvem ? !op.pararComAmigos : !op.levarParaAmigos;
+      amigos.addEventListener('click', async () => {
+        if (nuvem) {
+          const ok = await perguntar({
+            titulo: 'Parar de jogar com amigos',
+            texto: `"${m.nome}" volta inteiro para este aparelho, com tudo o que os amigos construíram. O código deixa de valer.`,
+            confirmar: 'Trazer o mundo de volta',
+            perigo: true,
+          });
+          if (ok !== true) return;
+        }
+        amigos.disabled = true;
+        amigos.textContent = nuvem ? 'Trazendo o mundo…' : 'Levando para a nuvem…';
+        try {
+          if (nuvem) {
+            await op.pararComAmigos!(m);
+            await render();
+          } else await op.levarParaAmigos!(m);
+        } catch (err) {
+          amigos.disabled = false;
+          amigos.textContent = nuvem ? 'Parar com amigos' : 'Jogar com amigos';
+          const msg = err instanceof Error ? err.message : String(err);
+          if (msg !== 'cancelado')
+            await perguntar({ titulo: 'Não deu certo', texto: msg, confirmar: 'Entendi' });
+        }
+      });
+      acoes.append(jogar, amigos, renomear, excluir);
       item.append(mini, info, acoes);
       lista.appendChild(item);
     }
