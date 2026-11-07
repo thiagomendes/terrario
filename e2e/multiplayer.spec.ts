@@ -98,10 +98,13 @@ test('dois navegadores no mesmo mundo: convite, entrada pelo link e tudo sincron
 
   // as mesmas criaturas, no mesmo lugar (até 1 bloco de diferença)
   await ana.waitForTimeout(3000);
-  const ca = await ana.evaluate(() => window.__brumaluz!.criaturas!());
-  const cb = await bia.evaluate(() => window.__brumaluz!.criaturas!());
+  // lidas ao mesmo tempo e comparadas pela identidade de cada criatura
+  const [ca, cb] = await Promise.all([
+    ana.evaluate(() => window.__brumaluz!.criaturas!()),
+    bia.evaluate(() => window.__brumaluz!.criaturas!()),
+  ]);
   const comuns = ca.filter((a) =>
-    cb.some((b) => Math.hypot(a.x - b.x, a.z - b.z) < 1.5 && a.tipo === b.tipo),
+    cb.some((b) => b.id === a.id && Math.hypot(a.x - b.x, a.z - b.z) < 1.5),
   );
   console.log(
     `criaturas: Ana vê ${ca.length}, Bia vê ${cb.length}, no mesmo lugar ${comuns.length}`,

@@ -67,7 +67,8 @@ test('toque: o morador abre as trocas e não apanha; segurar com maçã come', a
         Math.atan2(agora.x - px, agora.z - pz),
         -Math.atan2(agora.y + 1.1 - py, Math.hypot(agora.x - px, agora.z - pz)),
       );
-      await new Promise((res) => setTimeout(res, 700));
+      // a dica aparece com o morador na mira (com 1 FPS pode levar uns segundos)
+      for (let i = 0; i < 25 && !dica; i++) await new Promise((res) => setTimeout(res, 200));
       e.controleDireto!.tocar!();
       await new Promise((res) => setTimeout(res, 600));
       const painel = document.querySelector<HTMLElement>('[data-painel-trocas]');
