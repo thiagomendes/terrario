@@ -112,7 +112,7 @@ export function criarEntrarComCodigo(raiz: HTMLElement, op: OpcoesEntrar) {
   apelido.type = 'text';
   apelido.className = 'apelido';
   apelido.placeholder = 'Como te chamam?';
-  apelido.maxLength = 16;
+  apelido.maxLength = 22;
   apelido.value = op.apelido;
   apelido.setAttribute('data-campo-apelido', '');
   const erro = document.createElement('div');

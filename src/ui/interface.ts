@@ -164,6 +164,10 @@ export interface OpcoesInterface {
   repo?: RepositorioMundos;
   mundo?: MetaMundo | null;
   abrirMundo?: (id: string) => void;
+  /** Mundo novo já com amigos (spec 011): cria na nuvem e entra com o convite aberto. */
+  criarComAmigos?: (meta: MetaMundo, apelido: string) => Promise<void>;
+  /** Sugestão para "Seu nome para os amigos" no tema escolhido. */
+  sugestaoApelido?: (tema: string) => string;
   config?: GerenciadorConfig;
   salvar?: () => Promise<boolean>;
 }
@@ -281,6 +285,8 @@ export function criarInterface(
       repo: opMundo.repo,
       atual: opMundo.mundo ?? null,
       abrir: (id) => opMundo.abrirMundo?.(id),
+      criarComAmigos: opMundo.criarComAmigos,
+      sugestaoApelido: opMundo.sugestaoApelido,
     });
     const bMundos = botaoJogo('Mundos', 'globo', 'data-abrir-mundos');
     abrirMundos = () => void painelMundos.abrir();

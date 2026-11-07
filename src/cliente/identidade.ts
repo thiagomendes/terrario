@@ -43,13 +43,36 @@ export function identidade(): IdentidadeLocal {
   return nova;
 }
 
-/** Apelido: até 16 letras, sem nada estranho. */
+/** Tamanho máximo do apelido (cabe "Construtora dos Dinos"). */
+export const MAX_APELIDO = 22;
+
+/** Apelido: até 22 letras, sem nada estranho. */
 export function limparApelido(texto: string): string {
   return texto
     .replace(/[^\p{L}\p{N} _-]/gu, '')
     .replace(/\s+/g, ' ')
     .trim()
-    .slice(0, 16);
+    .slice(0, MAX_APELIDO);
+}
+
+/** O complemento do nome sugerido em cada tema (neutro: vale para menina e menino). */
+const DO_TEMA: Record<string, string> = {
+  'bruma-e-luz': 'da Bruma',
+  'planeta-vivo': 'Estelar',
+  'doce-reino': 'Doce',
+  'era-dos-dinos': 'dos Dinos',
+  'exploracao-lunar': 'Lunar',
+  'mata-encantada': 'da Mata',
+};
+
+/**
+ * Nome sugerido quando a criança não escreve nenhum (spec 011): o personagem dela mais o tema
+ * do mundo, como "Exploradora Lunar". Nunca mais "Jogador".
+ */
+export function nomeSugerido(personagem: string, tema?: string): string {
+  const base = limparApelido(personagem) || 'Aventureiro';
+  const extra = (tema && DO_TEMA[tema]) || DO_TEMA['bruma-e-luz'];
+  return limparApelido(`${base} ${extra}`);
 }
 
 export function definirApelido(apelido: string): void {

@@ -38,6 +38,33 @@ export interface AlvoGesto {
  * Ativa o áudio no primeiro gesto. No celular, toque (touchend/click) é o que o
  * navegador aceita como gesto para som; pointerdown e tecla cobrem o desktop.
  */
+let preparado: AudioContext | null = null;
+
+/**
+ * Cria e destrava o áudio dentro de um toque que vem antes de o mundo existir (o "Entrar" de
+ * jogar com amigos, spec 011): o motor usa este contexto depois, sem esperar outro toque.
+ * O iPhone só libera o som criado (ou retomado) dentro do próprio gesto.
+ */
+export function prepararAudioNoGesto(): void {
+  if (preparado || typeof AudioContext === 'undefined') return;
+  try {
+    preparado = new AudioContext();
+    void preparado.resume().catch(() => undefined);
+    const b = preparado.createBuffer(1, 1, 22050);
+    const f = preparado.createBufferSource();
+    f.buffer = b;
+    f.connect(preparado.destination);
+    f.start(0);
+  } catch {
+    preparado = null;
+  }
+}
+
+/** O contexto preparado no gesto de entrada, se houver (e se o navegador o liberou). */
+export function contextoPreparado(): AudioContext | null {
+  return preparado;
+}
+
 export function ativarNoPrimeiroGesto(alvo: AlvoGesto, motor: Pick<MotorAudio, 'ativar'>) {
   let usado = false;
   const ouvinte = () => {

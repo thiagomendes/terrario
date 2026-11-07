@@ -100,6 +100,22 @@ export const CSS_MODAL = `
   background: linear-gradient(to bottom, #ffe39a, var(--amarela) 55%, #f5b42e);
   box-shadow: 0 4px 0 var(--amarela-fundo), 0 7px 12px rgba(60, 35, 10, 0.2), inset 0 2px 0 rgba(255, 255, 255, 0.6);
 }
+.chip.amigos { background: #dff5d6; color: #2f6b1c; }
+.chip.codigo { background: #fff1cc; color: var(--tinta); letter-spacing: 0.04em; }
+/* jogar com amigos (spec 011): chave grande com explicação curta */
+.chave-amigos {
+  display: flex; gap: 12px; align-items: center; min-height: 56px; padding: 10px 14px; border-radius: 16px;
+  background: #eef8e8; box-shadow: inset 0 3px 0 rgba(60, 110, 40, 0.12); cursor: pointer; color: var(--tinta);
+}
+.chave-amigos[hidden] { display: none; }
+.chave-amigos input { width: 26px; height: 26px; flex: none; accent-color: #4caa3a; }
+.chave-amigos span { display: grid; gap: 2px; }
+.chave-amigos b { font: 800 1rem var(--jogo); }
+.chave-amigos small { font-weight: 600; color: var(--tinta-suave); line-height: 1.35; }
+.campo[hidden] { display: none; }
+.erro-novo { min-height: 0; color: var(--vermelha); font-weight: 800; }
+.erro-novo:empty { display: none; }
+.linha.fim { justify-content: flex-end; }
 .linha { display: flex; gap: 12px; flex-wrap: wrap; align-items: end; }
 .linha > .campo { flex: 1 1 200px; }
 @media (max-width: 560px) {
@@ -245,6 +261,9 @@ export interface OpcoesPainelMundos {
   repo: RepositorioMundos;
   atual: MetaMundo | null;
   abrir(id: string): void;
+  /** Mundo novo já com amigos: cria na nuvem e entra (rejeita com a mensagem a mostrar). */
+  criarComAmigos?(meta: MetaMundo, apelido: string): Promise<void>;
+  sugestaoApelido?(tema: string): string;
 }
 
 export function criarPainelMundos(raiz: HTMLElement, op: OpcoesPainelMundos) {
@@ -273,8 +292,28 @@ export function criarPainelMundos(raiz: HTMLElement, op: OpcoesPainelMundos) {
           <button type="button" data-modo="sobrevivencia" aria-pressed="false">Sobrevivência</button>
         </div>
       </div>
+    </div>
+    <label class="chave-amigos"><input type="checkbox" data-com-amigos>
+      <span><b>Jogar com amigos</b><small>O mundo fica na nuvem e ganha um código para os amigos entrarem.</small></span></label>
+    <label class="campo" data-campo-apelido-novo hidden>Seu nome para os amigos
+      <input name="apelido" maxlength="22" autocomplete="nickname" data-novo-apelido></label>
+    <div class="erro-novo" role="alert" data-erro-novo></div>
+    <div class="linha fim">
       <button type="submit" class="btn primario" data-criar-mundo>Criar e jogar</button>
     </div>`;
+  // jogar com amigos (spec 011): o campo do nome aparece logo abaixo, já preenchido
+  const comAmigos = form.querySelector('[data-com-amigos]') as HTMLInputElement;
+  const campoApelido = form.querySelector('[data-campo-apelido-novo]') as HTMLElement;
+  const inputApelido = form.querySelector('[data-novo-apelido]') as HTMLInputElement;
+  const erroNovo = form.querySelector('[data-erro-novo]') as HTMLElement;
+  const botaoCriar = form.querySelector('[data-criar-mundo]') as HTMLButtonElement;
+  comAmigos.closest('label')!.hidden = !op.criarComAmigos;
+  comAmigos.addEventListener('change', () => {
+    campoApelido.hidden = !comAmigos.checked;
+    botaoCriar.textContent = comAmigos.checked ? 'Criar e chamar os amigos' : 'Criar e jogar';
+    if (comAmigos.checked && !inputApelido.value)
+      inputApelido.value = op.sugestaoApelido?.(seletor.valor) ?? '';
+  });
   // tema: cartões com prévia; a aparência sugerida do tema é opcional (não troca sozinha)
   const textoVisual = form.querySelector('[data-visual-tema-texto]') as HTMLElement;
   const caixaVisual = form.querySelector('[data-visual-tema]') as HTMLInputElement;
@@ -310,6 +349,22 @@ export function criarPainelMundos(raiz: HTMLElement, op: OpcoesPainelMundos) {
       }
     }
     const meta = await op.repo.criar(nome || 'Novo mundo', semente, modo, tema);
+    if (comAmigos.checked && op.criarComAmigos) {
+      erroNovo.textContent = '';
+      botaoCriar.disabled = true;
+      botaoCriar.textContent = 'Criando o mundo na nuvem…';
+      try {
+        await op.criarComAmigos(meta, inputApelido.value);
+        return;
+      } catch (err) {
+        // não deu (sem internet, servidor): o mundo fica no aparelho e a criança sabe por quê
+        erroNovo.textContent = `${err instanceof Error ? err.message : String(err)} O mundo ficou no aparelho.`;
+        botaoCriar.disabled = false;
+        botaoCriar.textContent = 'Criar e chamar os amigos';
+        await render();
+        return;
+      }
+    }
     op.abrir(meta.id);
   });
 
@@ -339,7 +394,19 @@ export function criarPainelMundos(raiz: HTMLElement, op: OpcoesPainelMundos) {
       const tm = obterTema(m.tema);
       chipTema.textContent = tm.nome;
       chipTema.style.setProperty('--acento', tm.cores.acento);
-      det.append(chip, ' ', chipTema, ` · semente ${m.semente} · ${formatarData(m.jogadoEm)}`);
+      det.append(chip, ' ', chipTema);
+      // mundo com amigos: o selo e o código (abrir entra direto, como pelo link)
+      if (m.nuvem) {
+        const ca = document.createElement('span');
+        ca.className = 'chip amigos';
+        ca.textContent = 'com amigos';
+        ca.setAttribute('data-selo-amigos', '');
+        const cc = document.createElement('span');
+        cc.className = 'chip codigo';
+        cc.textContent = m.nuvem;
+        det.append(' ', ca, ' ', cc);
+      }
+      det.append(` · ${formatarData(m.jogadoEm)}`);
       info.append(nome, det);
       const acoes = document.createElement('div');
       acoes.className = 'acoes';

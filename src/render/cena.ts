@@ -154,6 +154,7 @@ import {
   ativarNoPrimeiroGesto,
   ligarAudio,
   manterAudioDesbloqueado,
+  contextoPreparado,
   teclaParaMudo,
 } from '../audio/ligador';
 import { grupoDoBloco, GRUPOS_MATERIAL } from '../audio/materiais';
@@ -2145,7 +2146,10 @@ export function criarCena(
   }
 
   // Áudio: o contexto só nasce no primeiro gesto do jogador.
-  const motorAudio = criarMotorAudio(() => new AudioContext() as unknown as ContextoAudio);
+  // o toque em "Entrar" (jogar com amigos) já preparou o som: o motor usa o mesmo contexto
+  const motorAudio = criarMotorAudio(
+    () => (contextoPreparado() ?? new AudioContext()) as unknown as ContextoAudio,
+  );
   ligarAudio(barramento, motorAudio);
   const detector = criarDetectorMovimento();
   let ambiente: Ambiente | null = null;
@@ -2164,17 +2168,23 @@ export function criarCena(
     renascerPedidoEm >= 0 && performance.now() - renascerPedidoEm < 3000;
   let configAtual: Config | null = null;
   manterAudioDesbloqueado(document, motorAudio);
-  ativarNoPrimeiroGesto(document, {
+  let somLigado = false;
+  const ligarSom = {
     ativar: async () => {
+      if (somLigado) return;
       await motorAudio.ativar();
-      if (motorAudio.estado !== 'ativo') return;
+      if (motorAudio.estado !== 'ativo' || somLigado) return;
+      somLigado = true;
       tocarSom(motorAudio, 'entrada');
       aquecerAmostras(motorAudio, GRUPOS_MATERIAL);
       ambiente = iniciarAmbiente(motorAudio);
       if (configAtual)
         ambiente.definirVolumes(configAtual.volumeMusica, configAtual.volumeAmbiente);
     },
-  });
+  };
+  ativarNoPrimeiroGesto(document, ligarSom);
+  // entrou por "Entrar" com o som já destravado: liga sem esperar outro toque
+  if (contextoPreparado()) void ligarSom.ativar().catch(() => undefined);
   window.addEventListener('keydown', (e) => {
     if (teclaParaMudo(e.code) && !e.repeat) motorAudio.alternarMudo();
   });

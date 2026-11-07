@@ -4,7 +4,14 @@
  * convite e do dono, os avisos de conexão e o diário e o mapa que vão junto.
  */
 import { conexaoNuvem, type BemVindo, type ConexaoNuvem } from './cliente/conexaoNuvem';
-import { definirApelido, identidade, limparApelido, urlServidor } from './cliente/identidade';
+import {
+  definirApelido,
+  identidade,
+  limparApelido,
+  nomeSugerido,
+  urlServidor,
+} from './cliente/identidade';
+import { rotuloDoModelo } from './personagem/aparencia';
 import { carregarAparencia } from './personagem/persistencia';
 import { estiloMundo } from './world/chunk';
 import { normalizarCodigo } from './jogo/codigos';
@@ -116,7 +123,7 @@ function jogador(apelido: string) {
   } catch {
     // sem armazenamento: aparência padrão
   }
-  return { id: id.id, chave: id.chave, apelido: limparApelido(apelido) || 'Jogador', aparencia };
+  return { id: id.id, chave: id.chave, apelido: apelidoOuSugerido(apelido), aparencia };
 }
 
 function textoDoErro(e: unknown): string {
@@ -311,26 +318,72 @@ export function ligarAmigos(raiz: HTMLElement, cena: Cena, op: OpcoesAmigos): vo
   if (nv.novo) setTimeout(() => painel.abrir(), 600);
 }
 
+/** O nome do personagem deste aparelho (para sugerir o apelido). */
+function personagemDoAparelho(): string {
+  try {
+    const a = carregarAparencia(window.localStorage);
+    return a.nome || rotuloDoModelo(a);
+  } catch {
+    return '';
+  }
+}
+
+/** Apelido a usar: o escrito, o do aparelho ou o sugerido do tema (nunca "Jogador"). */
+export function apelidoOuSugerido(escrito: string | undefined, tema?: string): string {
+  return (
+    limparApelido(escrito ?? '') ||
+    identidade().apelido ||
+    nomeSugerido(personagemDoAparelho(), tema)
+  );
+}
+
+/** Sugestão para o campo "Seu nome" (o do aparelho ou o do tema). */
+export function sugestaoDeApelido(tema?: string): string {
+  return identidade().apelido || nomeSugerido(personagemDoAparelho(), tema);
+}
+
+/**
+ * Mundo novo já com amigos (spec 011, T01): nasce direto na nuvem (sem passar pelo aparelho)
+ * e a página entra nele com o convite aberto.
+ */
+export async function criarMundoComAmigos(
+  repo: RepositorioMundos,
+  meta: MetaMundo,
+  apelido: string,
+): Promise<void> {
+  const nome = apelidoOuSugerido(apelido, meta.tema);
+  definirApelido(nome);
+  await subirParaNuvem(repo, meta, undefined, nome);
+}
+
 /** Leva o mundo do aparelho para a nuvem e entra nele pelo código novo. */
 async function levarParaNuvem(cena: Cena, op: OpcoesAmigos): Promise<void> {
   const m = op.mundo;
   if (!m) throw new Error('Abra um mundo primeiro.');
-  if (!navigator.onLine) throw new Error(TEXTO_RECUSA['sem-internet']);
   let apelido = identidade().apelido;
   if (!apelido) {
-    // diálogo de brinquedo (spec 012), já com o nome do personagem preenchido
-    const sugestao = carregarAparencia(localStorage).nome ?? '';
+    // diálogo de brinquedo (spec 012), já com o nome sugerido preenchido
     const r = await perguntar({
-      titulo: 'Seu apelido',
-      texto: 'Como os amigos vão te chamar? Ele aparece em cima do seu personagem.',
-      campo: sugestao,
+      titulo: 'Seu nome para os amigos',
+      texto: 'Ele aparece em cima do seu personagem.',
+      campo: sugestaoDeApelido(m.tema),
       confirmar: 'Continuar',
     });
     if (r === null) throw new Error('cancelado');
-    apelido = limparApelido(typeof r === 'string' ? r : '') || 'Jogador';
+    apelido = apelidoOuSugerido(typeof r === 'string' ? r : '', m.tema);
     definirApelido(apelido);
   }
-  const dados = await cena.dadosAtuais();
+  await subirParaNuvem(op.repo, m, await cena.dadosAtuais(), apelido);
+}
+
+/** Cria a sala na nuvem com este mundo (e os dados dele, se houver) e entra pelo código. */
+async function subirParaNuvem(
+  repo: RepositorioMundos,
+  m: MetaMundo,
+  dados: DadosMundo | undefined,
+  apelido: string,
+): Promise<void> {
+  if (!navigator.onLine) throw new Error(TEXTO_RECUSA['sem-internet']);
   const conexao = conexaoNuvem({
     url: urlServidor(),
     jogador: jogador(apelido),
@@ -341,7 +394,7 @@ async function levarParaNuvem(cena: Cena, op: OpcoesAmigos): Promise<void> {
       modo: m.modo,
       versaoMundo: m.versao ?? 1,
       estilo: estiloMundo(),
-      dados,
+      ...(dados ? { dados } : {}),
     },
   });
   const prazo = new Promise<never>((_, rej) =>
@@ -349,7 +402,7 @@ async function levarParaNuvem(cena: Cena, op: OpcoesAmigos): Promise<void> {
   );
   try {
     const bv = await Promise.race([conexao.pronta, prazo]);
-    await op.repo.marcarNuvem(m.id, bv.sala.codigo);
+    await repo.marcarNuvem(m.id, bv.sala.codigo);
     conexao.encerrar();
     irParaSala(bv.sala.codigo, true);
   } catch (e) {

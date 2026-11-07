@@ -141,6 +141,67 @@ describe('salas do servidor', () => {
     );
   });
 
+  it('prévia do mundo: nome, tema, dono e quem está lá (sem id nem chave)', async () => {
+    const { g, codigo } = await criarSala();
+    const b = canal('5.6.7.8');
+    await g.receber(
+      b,
+      JSON.stringify({ t: 'entrar', versao: VERSAO_REDE, jogador: ident('bia'), codigo }),
+    );
+    const p = await g.previa(codigo.toLowerCase(), '9.9.9.9');
+    expect(p).toMatchObject({
+      codigo,
+      nome: 'Mundo da família',
+      tema: 'bruma-e-luz',
+      dono: 'ana',
+      fechado: false,
+      cheio: false,
+    });
+    expect(p!.presentes.sort()).toEqual(['ana', 'bia']);
+    expect(JSON.stringify(p)).not.toContain('chave');
+    expect(await g.previa('NADA-DISSO-00', '9.9.9.9')).toBeNull();
+  });
+
+  it('parar de jogar com amigos: o dono recebe o mundo inteiro, os outros saem e o código morre', async () => {
+    const { g, a, codigo, avancar } = await criarSala();
+    const b = canal('5.6.7.8');
+    await g.receber(
+      b,
+      JSON.stringify({ t: 'entrar', versao: VERSAO_REDE, jogador: ident('bia'), codigo }),
+    );
+    await avancar(300);
+    const j = g.ativas.get(codigo)!.nucleo.estado.jogadores.get('ana')!;
+    const x = Math.floor(j.tel.x) + 1;
+    const z = Math.floor(j.tel.z);
+    const y = alturaTerreno(x, z, 1337) - 1;
+    await g.receber(a, JSON.stringify({ t: 'quebrar', id: 1, x, y, z, slot: 0, seq: 1 }));
+    await avancar(200);
+    // a Bia não manda no mundo
+    await g.receber(b, JSON.stringify({ t: 'dono', acao: 'devolver' }));
+    expect(g.ativas.has(codigo)).toBe(true);
+    await g.receber(a, JSON.stringify({ t: 'dono', acao: 'devolver' }));
+    const dev = a.recebidas.find((m) => m.t === 'devolvido') as Extract<
+      RespostaServidor,
+      { t: 'devolvido' }
+    >;
+    expect(dev).toBeTruthy();
+    expect(dev.dados.versao).toBe(1);
+    expect(Object.keys(dev.dados.edicoes).length).toBeGreaterThan(0);
+    expect(dev.dados.extras['inventario']).toBeTruthy();
+    expect(dev.dados.jogador).toBeTruthy();
+    expect(b.recebidas.some((m) => m.t === 'encerrada')).toBe(true);
+    expect(b.fechado()).toBe(true);
+    expect(a.fechado()).toBe(true);
+    expect(g.ativas.has(codigo)).toBe(false);
+    // o código deixa de valer
+    const c = canal('7.7.7.7');
+    await g.receber(
+      c,
+      JSON.stringify({ t: 'entrar', versao: VERSAO_REDE, jogador: ident('caio'), codigo }),
+    );
+    expect(c.recebidas.some((m) => m.t === 'recusado')).toBe(true);
+  });
+
   it('código errado recusa, e chutar muitos códigos bloqueia o endereço', async () => {
     const { g } = await criarSala();
     for (let i = 0; i < 20; i++) {

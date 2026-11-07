@@ -81,6 +81,18 @@ interface SalaAtiva {
   erroEm: number;
 }
 
+/** O que a tela "Entrar no mundo de…" mostra antes de entrar. */
+export interface PreviaMundo {
+  codigo: string;
+  nome: string;
+  tema: string;
+  modo: string;
+  dono: string;
+  presentes: string[];
+  fechado: boolean;
+  cheio: boolean;
+}
+
 export interface OpcoesGerenciador {
   armazem: Armazem;
   agora?: () => number;
@@ -329,7 +341,7 @@ export function criarGerenciador(op: OpcoesGerenciador) {
       s.nucleo.conectar(jog.id, {
         salvo: guardado?.dados,
         perfil: {
-          apelido: String(jog.apelido ?? 'Jogador').slice(0, 20),
+          apelido: String(jog.apelido ?? 'Jogador').slice(0, 22),
           aparencia: jog.aparencia ?? {},
         },
         constroi: ehDono || s.sala.constroem,
@@ -385,6 +397,7 @@ export function criarGerenciador(op: OpcoesGerenciador) {
   ): Promise<void> {
     const id = pr.id;
     if (s.sala.dono !== id || s.sala.chaveDono !== pr.chave) return;
+    if (p.acao === 'devolver') return devolver(s, pr);
     if (p.acao === 'expulsar' && p.id !== id) {
       s.expulsos.add(p.id);
       s.sala.expulsos = [...s.expulsos];
@@ -413,6 +426,46 @@ export function criarGerenciador(op: OpcoesGerenciador) {
     }
     await armazem.gravarSala(s.sala);
     for (const pr of s.presentes.values()) enviar(pr.canal, { t: 'sala', sala: estadoSala(s) });
+  }
+
+  /**
+   * Parar de jogar com amigos (spec 011): grava, monta o mundo como ele fica no aparelho
+   * (blocos, baús, criaturas e o inventário, a vida e o diário do dono), manda para o dono,
+   * avisa os outros com carinho e apaga o código (ele deixa de valer).
+   */
+  async function devolver(s: SalaAtiva, pr: Presente): Promise<void> {
+    contexto(s);
+    await gravarMundo(s);
+    const salvo = s.nucleo.salvar();
+    const dj = s.nucleo.dadosJogador(pr.id);
+    const guardado = (guardados.get(`${s.mundo.id}/${pr.id}`) ?? {}) as Record<string, unknown>;
+    const dados: DadosMundo = {
+      versao: 1,
+      edicoes: salvo.edicoes,
+      jogador: dj?.pos ?? null,
+      hora: salvo.hora,
+      extras: {
+        ...salvo.extras,
+        ...(dj
+          ? { inventario: dj.inventario, sobrevivencia: dj.sobrevivencia, spawn: dj.spawn }
+          : {}),
+        ...(guardado.diario ? { diario: guardado.diario } : {}),
+        ...(guardado.marcadores ? { marcadores: guardado.marcadores } : {}),
+      },
+    };
+    enviar(pr.canal, { t: 'devolvido', dados });
+    for (const outro of s.presentes.values()) {
+      if (outro.id === pr.id) continue;
+      enviar(outro.canal, { t: 'encerrada' });
+      outro.canal?.fechar();
+    }
+    // o código e os antigos deixam de valer; o mundo guardado fica (some com a manutenção)
+    ativas.delete(s.sala.codigo);
+    for (const [c, a] of antigos) if (a === s) antigos.delete(c);
+    await armazem.apagarSala(s.sala.codigo);
+    log(`${s.sala.codigo}: o dono levou o mundo de volta para o aparelho`);
+    s.presentes.clear();
+    pr.canal?.fechar();
   }
 
   async function receber(canal: Canal, texto: string): Promise<void> {
@@ -659,9 +712,48 @@ export function criarGerenciador(op: OpcoesGerenciador) {
     }
   }
 
+  /**
+   * Prévia do mundo para a tela "Entrar no mundo de…" (spec 011): nome, tema, o dono e quem
+   * está lá. Nada de id nem chave. Conta como tentativa de código (mesmo limite do entrar).
+   */
+  async function previa(codigoBruto: string, ip: string): Promise<PreviaMundo | null> {
+    if (excedeu(erros, ip, TENTATIVAS)) return null;
+    contar(erros, ip);
+    const codigo = normalizarCodigo(codigoBruto);
+    if (!codigo) return null;
+    const ativa = ativas.get(codigo);
+    const sala = ativa?.sala ?? (await armazem.lerSala(codigo));
+    if (!sala) return null;
+    contar(erros, ip, -1);
+    const mundo = ativa?.mundo ?? (await armazem.lerMundo(sala.mundoId))?.mundo;
+    if (!mundo) return null;
+    const apelidoDe = (id: string) => ativa?.nucleo.estado.jogadores.get(id)?.perfil.apelido;
+    const dono =
+      apelidoDe(sala.dono) ??
+      (await armazem.lerJogador(sala.mundoId, sala.dono))?.perfil.apelido ??
+      '';
+    const presentes = ativa
+      ? [...ativa.presentes.values()]
+          .filter((p) => p.canal)
+          .map((p) => apelidoDe(p.id) ?? '')
+          .filter(Boolean)
+      : [];
+    return {
+      codigo: sala.codigo,
+      nome: mundo.nome,
+      tema: mundo.tema,
+      modo: mundo.modo,
+      dono,
+      presentes,
+      fechado: sala.fechado,
+      cheio: presentes.length >= MAX_JOGADORES,
+    };
+  }
+
   return {
     receber,
     caiu,
+    previa,
     passo,
     manutencao,
     gravarTudo,

@@ -45,6 +45,8 @@ export type PedidoCliente =
   | { t: 'dono'; acao: 'trocarCodigo' }
   | { t: 'dono'; acao: 'fechar'; fechado: boolean }
   | { t: 'dono'; acao: 'construir'; pode: boolean }
+  /** Parar de jogar com amigos (spec 011): o mundo volta inteiro para o aparelho do dono. */
+  | { t: 'dono'; acao: 'devolver' }
   /** Diário e mapa do jogador (guardados com os dados dele neste mundo). */
   | { t: 'guardar'; dados: unknown }
   | Comando;
@@ -86,4 +88,8 @@ export type RespostaServidor =
   | { t: 'recusado'; motivo: MotivoRecusa }
   | { t: 'sala'; sala: EstadoSala }
   | { t: 'expulso' }
+  /** O mundo voltou para o aparelho do dono: os dados para gravar lá (só o dono recebe). */
+  | { t: 'devolvido'; dados: DadosMundo }
+  /** O dono parou de jogar com amigos: a sala acabou (os outros recebem). */
+  | { t: 'encerrada' }
   | Mensagem;

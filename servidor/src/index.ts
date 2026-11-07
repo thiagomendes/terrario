@@ -36,10 +36,49 @@ function origemPermitida(req: IncomingMessage): boolean {
   return /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(o);
 }
 
+/** Endereço de quem pediu: o Container Apps acrescenta o de verdade no fim do cabeçalho. */
+function ipDe(req: IncomingMessage): string {
+  return (
+    String(req.headers['x-forwarded-for'] ?? '')
+      .split(',')
+      .map((p) => p.trim())
+      .filter(Boolean)
+      .pop() ??
+    req.socket.remoteAddress ??
+    ''
+  );
+}
+
 const http = createServer((req, res) => {
   if (req.url === '/saude') {
     res.writeHead(200, { 'content-type': 'application/json' });
     res.end(JSON.stringify({ ok: true, ...salas.resumo }));
+    return;
+  }
+  // prévia do mundo para a tela "Entrar no mundo de…" (spec 011): só para os sites do jogo
+  const previa = /^\/previa\/([A-Za-z0-9-]{3,40})$/.exec(req.url ?? '');
+  if (previa && req.method === 'GET') {
+    const cabecalhos: Record<string, string> = {
+      'content-type': 'application/json',
+      'cache-control': 'no-store',
+      vary: 'Origin',
+    };
+    if (!origemPermitida(req)) {
+      res.writeHead(403, cabecalhos);
+      res.end('{}');
+      return;
+    }
+    cabecalhos['access-control-allow-origin'] = String(req.headers.origin);
+    salas
+      .previa(previa[1], ipDe(req))
+      .then((p) => {
+        res.writeHead(p ? 200 : 404, cabecalhos);
+        res.end(JSON.stringify(p ?? {}));
+      })
+      .catch(() => {
+        res.writeHead(500, cabecalhos);
+        res.end('{}');
+      });
     return;
   }
   res.writeHead(404, { 'content-type': 'text/plain; charset=utf-8' });
@@ -58,14 +97,7 @@ const wss = new WebSocketServer({
 wss.on('connection', (ws: WebSocket, req: IncomingMessage) => {
   // a entrada do Container Apps acrescenta o endereço de verdade no fim (o começo quem
   // escreve é o próprio navegador, então não vale para limitar tentativas)
-  const ip =
-    String(req.headers['x-forwarded-for'] ?? '')
-      .split(',')
-      .map((p) => p.trim())
-      .filter(Boolean)
-      .pop() ??
-    req.socket.remoteAddress ??
-    '';
+  const ip = ipDe(req);
   const canal: Canal = {
     ip,
     enviar: (t) => {

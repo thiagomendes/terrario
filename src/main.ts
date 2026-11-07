@@ -35,7 +35,14 @@ import type { DadosMundo } from './jogo/mundos';
 import { normalizarCodigo } from './jogo/codigos';
 import { definirEstiloMundo } from './world/chunk';
 import type { BemVindo, ConexaoNuvem } from './cliente/conexaoNuvem';
-import { dadosDaSala, entrarNaSala, irParaSala, ligarAmigos } from './nuvem';
+import {
+  criarMundoComAmigos,
+  dadosDaSala,
+  entrarNaSala,
+  irParaSala,
+  ligarAmigos,
+  sugestaoDeApelido,
+} from './nuvem';
 
 async function iniciar(app: HTMLElement): Promise<void> {
   registrarCatalogo();
@@ -104,6 +111,11 @@ async function iniciar(app: HTMLElement): Promise<void> {
     mundo: atual,
     config,
     salvar: () => cena?.salvar() ?? Promise.resolve(false),
+    criarComAmigos: async (meta, apelido) => {
+      await cena?.salvar();
+      await criarMundoComAmigos(repo, meta, apelido);
+    },
+    sugestaoApelido: (tema) => sugestaoDeApelido(tema),
     abrirMundo: async (id) => {
       await cena?.salvar();
       const url = new URL(location.href);
