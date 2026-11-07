@@ -156,6 +156,15 @@ for (const id of TEMAS) {
     });
     await page.waitForTimeout(4000);
     await foto(page, `bichos-${id}`);
+    // o mesmo lugar à noite
+    await page.evaluate(() => {
+      window.__brumaluz!.hora = 0.92;
+    });
+    await page.waitForTimeout(2500);
+    await foto(page, `noite-${id}`);
+    await page.evaluate(() => {
+      window.__brumaluz!.hora = 0.42;
+    });
     // um povoado: os moradores das três profissões
     const p = await page.evaluate(() => window.__brumaluz!.povoados!()[0]);
     if (!p) return;
