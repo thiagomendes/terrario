@@ -84,13 +84,27 @@ wss.on('connection', (ws: WebSocket, req: IncomingMessage) => {
     // excesso fecha a conexão: o navegador reconecta e renumera (ignorar uma mensagem
     // deixaria um buraco na ordem e o jogador parado esperando por ela)
     if (++contagem > MAX_POR_SEGUNDO) {
-      if (contagem === MAX_POR_SEGUNDO + 1) ws.close(4008, 'devagar');
+      if (contagem === MAX_POR_SEGUNDO + 1) {
+        log(`conexão fechada: mais de ${MAX_POR_SEGUNDO} mensagens por segundo`);
+        ws.close(4008, 'devagar');
+      }
       return;
     }
     void salas.receber(canal, dados.toString()).catch((e) => log(`erro: ${String(e)}`));
   });
-  ws.on('close', () => salas.caiu(canal));
-  ws.on('error', () => salas.caiu(canal));
+  const aberta = Date.now();
+  ws.on('close', (codigo: number) => {
+    // 1000/1001: saiu normalmente (fechou a aba, trocou de página); o resto é queda
+    if (codigo !== 1000 && codigo !== 1001)
+      log(
+        `conexão caiu (código ${codigo}, depois de ${Math.round((Date.now() - aberta) / 1000)} s)`,
+      );
+    salas.caiu(canal);
+  });
+  ws.on('error', (e) => {
+    log(`erro na conexão: ${String(e)}`);
+    salas.caiu(canal);
+  });
 });
 
 // relógio: 20 passos por segundo para todas as salas

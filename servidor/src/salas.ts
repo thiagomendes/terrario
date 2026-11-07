@@ -515,8 +515,12 @@ export function criarGerenciador(op: OpcoesGerenciador) {
       pr.canal = null;
     }
     contexto(s);
+    const apelido = s.nucleo.estado.jogadores.get(pr.id)?.perfil.apelido ?? pr.id;
     s.nucleo.desconectar(pr.id);
     s.presentes.delete(pr.id);
+    log(
+      `${apelido} saiu de ${s.sala.codigo}${porQueda ? ' (não voltou em 30 s)' : ''} (${s.presentes.size})`,
+    );
     if (s.presentes.size === 0) s.vaziaDesde = agora();
   }
 
