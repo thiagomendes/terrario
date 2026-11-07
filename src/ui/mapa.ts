@@ -6,7 +6,7 @@ export const CSS_MAPA = `
 .minimapa {
   position: fixed; top: 44px; right: 10px; z-index: 7; width: 156px; height: 156px; border-radius: 50%;
   overflow: hidden; border: 2px solid rgba(255,255,255,0.35); box-shadow: 0 6px 18px rgba(0,0,0,0.45);
-  background: #0c0f18; pointer-events: none;
+  background: #b9c8d8; pointer-events: none;
   transform: scale(var(--escala-ui, 1)); transform-origin: top right;
 }
 .minimapa canvas { width: 100%; height: 100%; image-rendering: pixelated; }
@@ -88,6 +88,10 @@ export function zoomPorPinca(zoomInicial: number, dist0: number, dist: number): 
   return limitarZoom(zoomInicial * (dist / dist0));
 }
 
+/** Cor do que ainda não foi visto ou carregado: névoa clara no minimapa, mais funda no grande. */
+const NEVOA = '#b9c8d8';
+const NEVOA_GRANDE = '#27303f';
+
 export function criarMapas(raiz: HTMLElement, fonte: FonteMapa) {
   const cache = new Map<string, HTMLCanvasElement>();
   const fila: string[] = [];
@@ -101,15 +105,34 @@ export function criarMapas(raiz: HTMLElement, fonte: FonteMapa) {
     naFila.add(k);
     fila.push(k);
   }
-  /** Gera a imagem de até n chunks da fila; devolve se algo mudou. */
+  /** Algum pedaço pedido ainda não tinha chegado: o minimapa tenta de novo sozinho. */
+  let faltou = false;
+  /** Gera a imagem de até n chunks da fila, os mais perto do jogador primeiro. */
   function processar(n: number): boolean {
     let mudou = false;
+    const p = fonte.posicao();
+    const pcx = p.x / TAM_X - 0.5;
+    const pcz = p.z / TAM_X - 0.5;
     for (let i = 0; i < n && fila.length; i++) {
-      const k = fila.shift()!;
+      let melhor = 0;
+      let dMelhor = Infinity;
+      for (let j = 0; j < fila.length; j++) {
+        const [a, b] = fila[j].split(',').map(Number);
+        const d = (a - pcx) ** 2 + (b - pcz) ** 2;
+        if (d < dMelhor) {
+          dMelhor = d;
+          melhor = j;
+        }
+      }
+      const k = fila.splice(melhor, 1)[0];
       naFila.delete(k);
       const [cx, cz] = k.split(',').map(Number);
       const cores = fonte.amostrar(cx, cz);
-      if (!cores) continue; // ainda não carregado: o minimapa pede de novo depois
+      if (!cores) {
+        // ainda não carregado: pede de novo daqui a pouco, mesmo com o jogador parado
+        faltou = true;
+        continue;
+      }
       const c = cache.get(k) ?? document.createElement('canvas');
       c.width = TAM_X;
       c.height = TAM_X;
@@ -298,7 +321,8 @@ export function criarMapas(raiz: HTMLElement, fonte: FonteMapa) {
     const ctx = cv.getContext('2d')!;
     const escala = 1.6; // pixels por bloco
     ctx.imageSmoothingEnabled = false;
-    ctx.fillStyle = '#0c0f18';
+    // o que ainda não chegou é névoa clara (nada de cantos pretos)
+    ctx.fillStyle = NEVOA;
     ctx.fillRect(0, 0, cv.width, cv.height);
     const meia = cv.width / 2;
     const ccx = Math.floor(x / TAM_X);
@@ -307,7 +331,13 @@ export function criarMapas(raiz: HTMLElement, fonte: FonteMapa) {
       for (let dx = -3; dx <= 3; dx++) {
         const img = imagem(ccx + dx, ccz + dz);
         if (!img) {
-          pedir(ccx + dx, ccz + dz);
+          // fora do círculo não precisa
+          const ox = (ccx + dx + 0.5) * TAM_X - x;
+          const oz = (ccz + dz + 0.5) * TAM_X - z;
+          if (Math.hypot(ox, oz) * escala < meia + TAM_X * escala * 0.75) {
+            pedir(ccx + dx, ccz + dz);
+            faltou = true;
+          }
           continue;
         }
         const wx = (ccx + dx) * TAM_X;
@@ -320,6 +350,12 @@ export function criarMapas(raiz: HTMLElement, fonte: FonteMapa) {
           TAM_X * escala,
         );
       }
+    // borda do círculo se esfuma, como uma lente
+    const borda = ctx.createRadialGradient(meia, meia, meia * 0.72, meia, meia, meia);
+    borda.addColorStop(0, 'rgba(185, 200, 216, 0)');
+    borda.addColorStop(1, 'rgba(185, 200, 216, 0.55)');
+    ctx.fillStyle = borda;
+    ctx.fillRect(0, 0, cv.width, cv.height);
     desenharMarcadores(ctx, (mx, mz) => [meia + (mx - x) * escala, meia + (mz - z) * escala]);
     // norte para cima: +z do mundo aponta para baixo no mapa, então o yaw é espelhado
     desenharJogador(ctx, meia, meia, Math.PI - yaw);
@@ -388,7 +424,7 @@ export function criarMapas(raiz: HTMLElement, fonte: FonteMapa) {
     if (cvG.height !== lh) cvG.height = lh;
     const ctx = cvG.getContext('2d')!;
     ctx.imageSmoothingEnabled = false;
-    ctx.fillStyle = '#080a12';
+    ctx.fillStyle = NEVOA_GRANDE;
     ctx.fillRect(0, 0, cvG.width, cvG.height);
     const para = (wx: number, wz: number): [number, number] => [
       cvG.width / 2 + (wx - centro.x) * zoom,
@@ -428,6 +464,7 @@ export function criarMapas(raiz: HTMLElement, fonte: FonteMapa) {
   // mapa grande sendo arrastado): o minimapa não disputa o quadro com o jogo.
   let ultimaVez = 0;
   let ultimaReamostra = 0;
+  let ultimaFalta = 0;
   let ultimo = { x: NaN, z: NaN, yaw: NaN };
   cvG.addEventListener('pointermove', () => (grandeSujo = true));
   cvG.addEventListener('wheel', () => (grandeSujo = true));
@@ -435,14 +472,20 @@ export function criarMapas(raiz: HTMLElement, fonte: FonteMapa) {
     requestAnimationFrame(quadro);
     if (agora - ultimaVez < 80) return;
     ultimaVez = agora;
-    const chegaram = processar(grande.hidden ? 1 : 4);
+    const chegaram = processar(grande.hidden ? 3 : 6);
     const p = fonte.posicao();
     const andou =
       Math.abs(p.x - ultimo.x) > 0.25 ||
       Math.abs(p.z - ultimo.z) > 0.25 ||
       Math.abs(p.yaw - ultimo.yaw) > 0.01;
     const foto = document.body.classList.contains('modo-foto');
-    if (!foto && (andou || chegaram)) {
+    // pedaço que faltava: tenta de novo a cada meio segundo, mesmo parado
+    const repetir = faltou && fila.length === 0 && agora - ultimaFalta > 500;
+    if (repetir) {
+      ultimaFalta = agora;
+      faltou = false;
+    }
+    if (!foto && (andou || chegaram || repetir)) {
       desenharMini();
       desenharBussola();
       ultimo = { x: p.x, z: p.z, yaw: p.yaw };
