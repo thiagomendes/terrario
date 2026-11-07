@@ -28,9 +28,7 @@ async function mundoSobrevivencia(page: Page) {
   });
 }
 
-test('toque: o morador abre as trocas e não apanha; segurar com maçã come', async ({
-  browser,
-}) => {
+test('toque: o morador abre as trocas e não apanha; segurar com maçã come', async ({ browser }) => {
   test.setTimeout(600_000);
   const ctx = await browser.newContext({
     viewport: { width: 1024, height: 600 },
@@ -85,7 +83,11 @@ test('toque: o morador abre as trocas e não apanha; segurar com maçã come', a
   expect(r.abriu, 'o toque no morador abre as trocas').toBe(true);
   expect(r.feridos, 'nenhum morador apanhou').toBe(0);
   expect(r.dica).toMatch(/^Toque em .+ para trocar$/);
-  await page.screenshot({ path: 'capturas-temas/ajuste-toque-morador.jpg', type: 'jpeg', quality: 80 });
+  await page.screenshot({
+    path: 'capturas-temas/ajuste-toque-morador.jpg',
+    type: 'jpeg',
+    quality: 80,
+  });
 
   // com fome e uma maçã na mão: segurar come (e não quebra o chão)
   const comeu = await page.evaluate(async () => {
@@ -132,37 +134,58 @@ test('porta: um clique põe as duas metades; sem espaço, avisa e não põe meia
     document.querySelector('.entrada')?.setAttribute('hidden', '');
     const e = window.__brumaluz!;
     const avisos: string[] = [];
-    window.addEventListener('brumaluz:toast', (ev) => avisos.push(String((ev as CustomEvent).detail)));
-    const [x, y, z] = e.posicao!;
-    const fx = Math.floor(x);
-    const fz = Math.floor(z);
-    const fy = Math.floor(y);
-    // chão firme 2 blocos à frente, com espaço livre em cima
-    for (let dy = 0; dy < 4; dy++) e.definirBloco!(fx, fy + dy, fz + 2, 0);
-    e.definirBloco!(fx, fy - 1, fz + 2, 3);
+    window.addEventListener('brumaluz:toast', (ev) =>
+      avisos.push(String((ev as CustomEvent).detail)),
+    );
+    const espera = (ms: number) => new Promise((res) => setTimeout(res, ms));
+    // de pé no chão, numa laje de pedra montada em volta
+    const [x0, , z0] = e.posicao!;
+    const fx = Math.floor(x0);
+    const fz = Math.floor(z0);
+    e.teleportar!(fx + 0.5, fz + 0.5);
+    await espera(1500);
+    const fy = Math.floor(e.posicao![1]);
+    for (let dx = -1; dx <= 1; dx++)
+      for (let dz = -1; dz <= 3; dz++) {
+        e.definirBloco!(fx + dx, fy - 1, fz + dz, 3);
+        for (let dy = 0; dy < 4; dy++) e.definirBloco!(fx + dx, fy + dy, fz + dz, 0);
+      }
+    e.teleportar!(fx + 0.5, fz + 0.5, fy);
     e.inventario!.definir(0, { item: 'bloco:57', qtd: 5 });
     e.selecionarSlot!(0);
-    const mirar = () => {
-      const [px, py, pz] = e.posicao!;
-      const dz = fz + 2.5 - pz;
-      const dx = fx + 0.5 - px;
-      e.apontar!(Math.atan2(dx, dz), -Math.atan2(fy - (py + 1.62), Math.hypot(dx, dz)));
+    const alvos: string[] = [];
+    const mirar = async (frente: number) => {
+      const ok = () => {
+        const a = e.alvo;
+        return !!a && a.x === fx && a.y === fy - 1 && a.z === fz + frente;
+      };
+      // reaponta a cada tentativa (logo depois do teletransporte a posição ainda assenta)
+      for (let i = 0; i < 40 && !ok(); i++) {
+        const [px, py, pz] = e.posicao!;
+        const dz = fz + frente + 0.5 - pz;
+        const dx = fx + 0.5 - px;
+        // a posição é a dos olhos
+        e.apontar!(Math.atan2(dx, dz), -Math.atan2(fy - py, Math.hypot(dx, dz)));
+        await espera(300);
+      }
+      const a = e.alvo;
+      alvos.push(JSON.stringify({ a, p: e.posicao, fx, fy, fz, frente }));
+      return !!a && a.x === fx && a.y === fy - 1 && a.z === fz + frente;
     };
-    mirar();
-    await e.sincronizar?.();
+    const mirou1 = await mirar(1);
     e.interagir!('colocar');
     await e.sincronizar?.();
-    const inteira = [e.bloco!(fx, fy, fz + 2), e.bloco!(fx, fy + 1, fz + 2)];
-    // de novo, agora com um bloco de pedra logo acima
-    e.definirBloco!(fx, fy, fz + 2, 0);
-    e.definirBloco!(fx, fy + 1, fz + 2, 3);
+    const inteira = [e.bloco!(fx, fy, fz + 1), e.bloco!(fx, fy + 1, fz + 1)];
+    // no mesmo lugar, agora com um bloco de pedra em cima
+    e.definirBloco!(fx, fy, fz + 1, 0);
+    e.definirBloco!(fx, fy + 1, fz + 1, 3);
     await e.sincronizar?.();
-    mirar();
-    await e.sincronizar?.();
+    const mirou2 = await mirar(1);
     e.interagir!('colocar');
     await e.sincronizar?.();
-    return { inteira, semEspaco: e.bloco!(fx, fy, fz + 2), avisos };
+    return { alvos, mirou1, mirou2, inteira, semEspaco: e.bloco!(fx, fy, fz + 1), avisos };
   });
+  expect(r.mirou1 && r.mirou2, `mirou o chão à frente ${r.alvos.join(' | ')}`).toBe(true);
   expect(r.inteira).toEqual([57, 57]);
   expect(r.semEspaco).toBe(0);
   expect(r.avisos).toContain('A porta precisa de 2 blocos de altura');
@@ -194,6 +217,40 @@ for (const [w, h] of [
       return { topo: barra.top, fundo };
     });
     expect(r.topo).toBeGreaterThan(r.fundo);
-    await page.screenshot({ path: `capturas-temas/ajuste-barra-${w}x${h}.jpg`, type: 'jpeg', quality: 75 });
+    await page.screenshot({
+      path: `capturas-temas/ajuste-barra-${w}x${h}.jpg`,
+      type: 'jpeg',
+      quality: 75,
+    });
   });
 }
+
+test('vidro: dá para ver o lado de fora de dentro de uma casa de pedra', async ({ page }) => {
+  test.setTimeout(300_000);
+  await page.setViewportSize({ width: 960, height: 540 });
+  await page.goto('/');
+  await pronto(page);
+  await page.evaluate(async () => {
+    document.querySelector('.entrada')?.setAttribute('hidden', '');
+    const e = window.__brumaluz!;
+    e.pausarDia = true;
+    e.hora = 0.42;
+    const [x, y, z] = e.posicao!;
+    const [fx, fy, fz] = [Math.floor(x), Math.floor(y - 1.62), Math.floor(z)];
+    for (let dx = -2; dx <= 2; dx++)
+      for (let dz = -2; dz <= 2; dz++)
+        for (let dy = 0; dy <= 3; dy++) {
+          const borda = Math.abs(dx) === 2 || Math.abs(dz) === 2 || dy === 3;
+          e.definirBloco!(fx + dx, fy + dy, fz + dz, borda ? 3 : 0);
+        }
+    for (let dx = -1; dx <= 1; dx++)
+      for (let dy = 1; dy <= 2; dy++) e.definirBloco!(fx + dx, fy + dy, fz + 2, 36);
+    e.apontar!(0, 0);
+  });
+  await page.waitForTimeout(8000);
+  await page.screenshot({
+    path: 'capturas-temas/ajuste-vidro-dentro.jpg',
+    type: 'jpeg',
+    quality: 80,
+  });
+});
