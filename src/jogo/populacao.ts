@@ -190,16 +190,16 @@ export function criarPopulacao(rng: Gerador, salvo?: unknown) {
     if (t === 'raposa' && rng() > 0.25) return;
     if (!BIOMAS[t]!.includes(bioma) || contar(t) >= LIMITES[t]) return;
     const n = t === 'raposa' ? 1 : 1 + Math.floor(rng() * 3);
+    const def = CRIATURAS[t];
     for (let i = 0; i < n; i++) {
-      lista.push(
-        novaCriatura(
-          proximo++,
-          t,
-          x + 0.5 + (rng() - 0.5) * 3,
-          sy + 0.1,
-          z + 0.5 + (rng() - 0.5) * 3,
-        ),
-      );
+      // cada um do grupo nasce no chão da própria coluna, e só se o corpo inteiro couber
+      // (antes todos ficavam na altura do centro e nasciam dentro de barrancos e árvores)
+      const cx = x + 0.5 + (rng() - 0.5) * 3;
+      const cz = z + 0.5 + (rng() - 0.5) * 3;
+      const syi = m.superficie(Math.floor(cx), Math.floor(cz));
+      if (syi === null || m.agua(Math.floor(cx), syi, Math.floor(cz))) continue;
+      if (colideCorpo(m.solido, cx, syi + 0.1, cz, def.mw, def.alt)) continue;
+      lista.push(novaCriatura(proximo++, t, cx, syi + 0.1, cz));
     }
   }
 

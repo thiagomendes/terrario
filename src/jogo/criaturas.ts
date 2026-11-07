@@ -311,11 +311,34 @@ function mover(c: Criatura, def: DefCriatura, dt: number, m: Mundo, agua: number
   // dentro de um bloco (chunk que carregou depois, bloco posto em cima, quadro longo):
   // sobe até o primeiro espaço livre logo acima, em vez de ficar presa
   if (!peixe && !livre(c.x, c.y, c.z)) {
-    for (let dy = 0.25; dy <= 2.5; dy += 0.25) {
+    let solta = false;
+    for (let dy = 0.25; dy <= 6 && !solta; dy += 0.25) {
       if (!livre(c.x, c.y + dy, c.z)) continue;
       c.y += dy;
       c.vy = 0;
-      break;
+      solta = true;
+    }
+    // presa num barranco ou numa árvore: tenta os lados, na altura do chão de lá
+    for (const [dx, dz] of [
+      [1, 0],
+      [-1, 0],
+      [0, 1],
+      [0, -1],
+      [1, 1],
+      [-1, -1],
+      [1, -1],
+      [-1, 1],
+    ]) {
+      if (solta) break;
+      for (let dy = 0; dy <= 3; dy += 0.5) {
+        if (!livre(c.x + dx, c.y + dy, c.z + dz)) continue;
+        c.x += dx;
+        c.z += dz;
+        c.y += dy;
+        c.vy = 0;
+        solta = true;
+        break;
+      }
     }
   }
   const tentar = (eixo: 'x' | 'z', d: number) => {

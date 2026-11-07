@@ -1,5 +1,7 @@
 # Backlog
 
+> O que está em andamento na spec 012 fica no registro dela (seção "Registro de tudo o que o dono pediu nesta rodada"), não aqui.
+
 Ideias e pedidos do dono que ainda não viraram spec. Cada item diz de onde veio e o que precisa ficar claro antes de virar spec.
 
 ## Pedidos

@@ -194,3 +194,39 @@ Lista de conferência (cada item fecha com captura no celular e no computador):
 **Sensação**
 - [ ] D1. **Bloco some na hora ao quebrar:** hoje ele espera a malha nova do chunk (de 70 a 480 ms com a CPU 4× mais lenta, e mais no celular). Passa a sumir no mesmo quadro do clique, no próprio desenho, enquanto a malha nova não chega.
 - [ ] D2. Desempenho medido de novo no fim (computador e CPU desacelerada).
+
+## Registro de tudo o que o dono pediu nesta rodada (7 nov 2026)
+Lista única para nada se perder. Cada item: feito (com o que comprova) ou pendente (na ordem em que será feito). Atualizar a cada entrega.
+
+**Feito**
+- [x] Juntas entre blocos aparentes (decisão do dono).
+- [x] Publicar o estado da primeira etapa (site e servidor no ar, 2aac217).
+- [x] Árvores de pirulito: copas de bola na cor do tema (capturas `bichos-*`).
+- [x] Confete ao quebrar nas cores do próprio bloco (teste em `efeitos.test.ts`).
+- [x] Tela azul-escura ao criar mundo: o banco do aparelho (IndexedDB) pendurava no iPhone; agora acorda e tenta de novo (`indexeddb.test.ts`). Falta o dono confirmar no aparelho.
+- [x] Bloco some na hora ao quebrar (D1, `e2e/bloco-some.spec.ts`).
+- [x] Editor de personagem com o boneco de brinquedo no palco e nas miniaturas (A1).
+- [x] Moradores dos povoados como bonecos B, com roupa e peças do tema (A2).
+- [x] Bichos de brinquedo nos seis temas: cabeça maior, olhos com brilho, patas de cápsula, sem translucidez (A3; falta conferir as capturas de perto).
+- [x] Interface reescrita em brinquedo (B1–B6), inventário sem cartão dentro de cartão, contraste da tela de mundos.
+- [x] Item na mão invisível em primeira pessoa: era o celular em pé; o braço se ajusta à largura da tela.
+- [x] Voz de morador "em laço" na Lua: não reproduziu; os chamados de rádio repetidos foram acalmados. Falta o dono confirmar.
+- [x] Bichos nascendo presos dentro de blocos: cada um nasce no chão da própria coluna e, se ficar preso, se solta para cima ou para o lado.
+
+**Pendente, nesta ordem**
+1. Conferir os bichos de perto (A3) e o brilho estourado ou translúcido de flores e criaturas da noite.
+2. Fotos da vitrine dos temas (ainda as de pixel) e a miniatura do mundo na lista.
+3. A4: itens soltos no chão como modelo 3D de brinquedo.
+4. A5: nomes dos modelos de personagem (Andarilho etc.), coerentes no feminino e no masculino.
+5. C1–C3: rachadura e contorno do bloco mirado, blocos com forma (tocha, porta, vidro, cama, baú, fornalha, cerca, escada, laje), lado da grama sem chuvisco.
+6. C4: chuva com céu cinza-azulado claro e relâmpago suave; espuma na beira em degrau.
+7. Restos de interface: renomear e excluir mundo ainda usam a janela do navegador; apelido acima dos amigos ainda escuro; avisos de boas-vindas por cima do inventário.
+8. B7: ícone do site, do app instalado e imagem de compartilhamento.
+9. D2: medir o desempenho de novo (computador e CPU desacelerada) e publicar.
+
+**Fora desta spec (no backlog do projeto, `.sdd/backlog.md`)**
+- Barra de itens vazia no começo do mundo.
+- Contas de jogador.
+- Spec 011, Amigos sem atrito.
+- Rodada em família de 15 minutos (critério 13 da 010).
+- Braço do amigo mirando o bloco.
