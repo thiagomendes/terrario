@@ -234,10 +234,11 @@ Lista única para nada se perder. Cada item: feito (com o que comprova) ou pende
 - [x] Chuva de céu cinza-azulado claro e relâmpago suave, sem estourar.
 - [x] Ícone do site e do app instalado (bloco de grama de quinas redondas com o T do logo, SVG e PNG 180/512) e imagem de compartilhamento da tela inicial nova.
 
+- [x] D2: desempenho medido de novo (57 a 60 fps no computador; 49 a 55 com a CPU 4× mais lenta) e publicado em 4a96875 (site e servidor no ar).
+
 **Pendente, nesta ordem**
 
 6. Espuma na beira em degrau (anotada também no backlog; a beira rasa já tem espuma).
-9. D2: medir o desempenho de novo (computador e CPU desacelerada) e publicar.
 
 **Fora desta spec (no backlog do projeto, `.sdd/backlog.md`)**
 - Barra de itens vazia no começo do mundo.
