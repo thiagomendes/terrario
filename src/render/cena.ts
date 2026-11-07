@@ -342,6 +342,7 @@ export interface EstadoDepuracao {
     definir: (parcial: Partial<Aparencia>) => void;
     visivel: () => { braco: boolean; corpo: boolean };
     malhas: () => number;
+    malhasBraco: () => number;
     pose: () => Pose;
     maoBloco: () => number | null;
     nomeExibido: () => string;
@@ -1598,6 +1599,8 @@ export function criarCena(
     },
     visivel: () => visibilidadePorModo(estadoCamera.modo),
     malhas: () => braco.contarMalhas() + personagem.contarMalhas(),
+    /** Peças do braço da vista (manga, punho, mão e o item na mão). */
+    malhasBraco: () => braco.contarMalhas(),
     pose: () => animador.pose(),
     maoBloco: () =>
       visibilidadePorModo(estadoCamera.modo).braco ? hotbar.blocoAtivo() || null : null,

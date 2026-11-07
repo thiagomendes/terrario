@@ -222,12 +222,14 @@ export function criarBraco(scene: Scene, camera: TargetCamera, aparencia: Aparen
   const q = new Quaternion();
   const PARA_BAIXO = new Vector3(0, -1, 0);
 
+  /** Tela estreita (celular em pé): o braço encolhe um pouco (1 na tela deitada). */
+  let escalaTela = 1;
   function posicionar(mao: Vector3, d: Vector3): void {
     dir.copyFrom(d).normalize();
     Quaternion.FromUnitVectorsToRef(PARA_BAIXO, dir, q);
     if (grupo.rotationQuaternion) grupo.rotationQuaternion.copyFrom(q);
     else grupo.rotationQuaternion = q.clone();
-    grupo.scaling.setAll(ESCALA);
+    grupo.scaling.setAll(ESCALA * escalaTela);
     // a mão (0, -0.13, 0 no braço) fica no ponto pedido
     grupo.position.set(
       mao.x - dir.x * 0.13 * ESCALA,
@@ -267,9 +269,20 @@ export function criarBraco(scene: Scene, camera: TargetCamera, aparencia: Aparen
         ? suave(Math.min(1, v.comer / 0.3)) * (1 - suave(Math.max(0, (v.comer - 0.85) / 0.15)))
         : 0;
     const e = 1 - (1 - troca) * (1 - troca);
+    // o campo de visão vertical é fixo: em tela estreita a largura visível encolhe e a mão
+    // (que fica à direita) saía da tela com o item. A mão vem para dentro da largura visível.
+    const aspecto = scene.getEngine().getAspectRatio(camera) || 16 / 9;
+    const meiaLarg = Math.tan(FOV_VISTA / 2) * aspecto * MAO.z;
+    escalaTela = Math.max(0.72, Math.min(1, aspecto / 1.25));
+    // celular em pé: a mão sobe (os botões de toque ocupam a parte de baixo) e vem para o meio
+    const emPe = Math.max(0, Math.min(1, (1.3 - aspecto) / 0.85));
+    const maoX = Math.min(MAO.x, meiaLarg * (0.6 - 0.12 * emPe));
+    const maoY = MAO.y + emPe * 0.12;
+    // e a ferramenta aponta mais para o meio (a cabeça não sai pela direita)
+    if (modelo?.ferramenta) modelo.no.rotation.z = 0.35 * -1 + emPe * 0.75;
     const mao = maoAlvo.set(
-      MAO.x + bal + balX - c * 0.16,
-      MAO.y +
+      maoX + bal + balX - c * 0.16,
+      maoY +
         Math.abs(bal) * 0.5 +
         balY +
         g * 0.06 -
@@ -280,7 +293,7 @@ export function criarBraco(scene: Scene, camera: TargetCamera, aparencia: Aparen
       MAO.z - c * 0.3 + col * 0.08,
     );
     const d = dirAlvo.set(
-      DIRECAO.x + c * 0.25,
+      DIRECAO.x + c * 0.25 - emPe * 0.35,
       DIRECAO.y - g * 0.5 + c * 0.9 - col * 0.2,
       DIRECAO.z,
     );

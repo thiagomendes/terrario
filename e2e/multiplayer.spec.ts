@@ -72,6 +72,22 @@ test('dois navegadores no mesmo mundo: convite, entrada pelo link e tudo sincron
     { timeout: 30_000 },
   );
 
+  // o item na mão aparece na primeira pessoa de quem entrou pelo código (bug visto em família)
+  const pecasMao = await bia.evaluate(async () => {
+    const e = window.__brumaluz!;
+    e.camera!.definir('primeira');
+    e.inventario!.definir(0, { item: 'picareta_ferro', qtd: 1 });
+    e.selecionarSlot!(0);
+    await new Promise((r) => setTimeout(r, 600));
+    return {
+      braco: e.personagem!.malhasBraco(),
+      visivel: e.personagem!.visivel(),
+    };
+  });
+  console.log(`braço da Bia: ${JSON.stringify(pecasMao)}`);
+  expect(pecasMao.visivel.braco).toBe(true);
+  expect(pecasMao.braco).toBeGreaterThan(3);
+
   // Ana quebra um bloco perto dela: Bia vê
   const cel = await ana.evaluate(() => {
     const e = window.__brumaluz!;
