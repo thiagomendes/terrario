@@ -43,8 +43,8 @@ export function preencherKit(inv: Inventario, blocos: readonly number[]): void {
 }
 
 export function criarHotbar(inventario?: Inventario): Hotbar {
+  // começa vazia, como no núcleo: o inventário de verdade chega do servidor
   const inv = inventario ?? criarInventario();
-  if (!inventario) preencherKit(inv, [...SLOTS.map((s) => s.bloco), ...KIT_EXTRA]);
   let ativo = 0;
   const total = TAMANHO_BARRA;
   const slotVisivel = (i: number): SlotVisivel => {

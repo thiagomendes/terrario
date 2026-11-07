@@ -151,8 +151,10 @@ test('pose neutra parado, muda ao minerar e mão acompanha o slot', async ({ pag
         return page.evaluate(async () => {
           const e = window.__brumaluz!;
           let maior = 0;
+          // cada chamada segura mais que o intervalo do golpe (0,25 s): a pedra não quebra na
+          // hora, e minerar em pedaços menores soltava o botão antes do primeiro golpe
           for (let i = 0; i < 20; i++) {
-            e.minerar!(0.05, true);
+            e.minerar!(0.3, true);
             await new Promise((r) => requestAnimationFrame(r));
             maior = Math.max(maior, Math.abs(e.personagem!.pose().bracoDireito));
           }

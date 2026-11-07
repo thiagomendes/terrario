@@ -184,7 +184,11 @@ export function criarBoneco(
     j.pernaD.rotation.x = suave('pernaD', pose.pernaDireita, k);
     j.pernaE.rotation.x = suave('pernaE', pose.pernaEsquerda, k);
     // segurando algo, o antebraço fica um pouco à frente (como antes)
-    j.bracoD.rotation.x = suave('bracoD', pose.bracoDireito - (segurando ? 0.32 : 0), k);
+    // no golpe o braço mira para onde o jogador olha (bloco no chão, na parede ou no alto):
+    // quem vê o amigo minerar enxerga o braço indo no bloco certo
+    const noGolpe = Math.min(1, Math.abs(pose.bracoDireito) / 0.6);
+    const mira = olhar * 0.75 * noGolpe;
+    j.bracoD.rotation.x = suave('bracoD', pose.bracoDireito - (segurando ? 0.32 : 0) + mira, k);
     j.bracoE.rotation.x = suave('bracoE', pose.bracoEsquerdo, k);
     j.bracoD.rotation.z = suave('bracoDZ', -0.06 - (pose.bracoDireitoAbre ?? 0), k);
     j.bracoE.rotation.z = suave('bracoEZ', 0.06 + (pose.bracoEsquerdoAbre ?? 0), k);

@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
 
-import { criarHotbar, deltaRodaParaPasso, SLOTS, teclaParaSlot } from '../../src/player/hotbar';
+import {
+  criarHotbar,
+  deltaRodaParaPasso,
+  preencherKit,
+  SLOTS,
+  teclaParaSlot,
+} from '../../src/player/hotbar';
 
 describe('hotbar', () => {
   it('define 6 slots na ordem', () => {
@@ -30,9 +36,11 @@ describe('hotbar', () => {
     expect(h.ativo).toBe(0);
   });
 
-  it('a barra mostra o kit inicial e o bloco ativo vem do inventário', () => {
+  it('a barra começa vazia; com o kit, o bloco ativo vem do inventário', () => {
     const h = criarHotbar();
     expect(h.slots).toHaveLength(9);
+    expect(h.slots.every((s) => s.bloco === 0)).toBe(true);
+    preencherKit(h.inventario, SLOTS.map((s) => s.bloco));
     expect(h.slots.slice(0, 6).map((s) => s.bloco)).toEqual(SLOTS.map((s) => s.bloco));
     h.selecionar(1);
     expect(h.blocoAtivo()).toBe(SLOTS[1].bloco);
