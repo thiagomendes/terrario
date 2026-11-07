@@ -1,10 +1,10 @@
+import { preencherKit, SLOTS, KIT_EXTRA } from '../../src/player/hotbar';
 import { describe, expect, it } from 'vitest';
 import { conexaoNaMesmaThread } from '../../src/cliente/conexao';
 import { criarEstadoCliente } from '../../src/cliente/estado';
 import { criarEdicoes } from '../../src/world/edicoes';
 import { criarInventario } from '../../src/jogo/inventario';
 import { estadoInicial } from '../../src/jogo/sobrevivencia';
-import { preencherKit, SLOTS, KIT_EXTRA } from '../../src/player/hotbar';
 import { encontrarNascimento, alturaTerreno, ESTILO_PADRAO } from '../../src/world/chunk';
 import { Bloco } from '../../src/world/blocks';
 import { PASSO, VERSAO_PROTOCOLO, type Comando } from '../../src/nucleo/protocolo';
@@ -28,9 +28,8 @@ function partida(modo: 'criativo' | 'sobrevivencia', canal = { atrasoMs: 150, em
     { serializar: true, ...canal },
   );
   const edicoes = criarEdicoes();
+  // mundo novo: a barra começa vazia nos dois modos
   const inv = criarInventario();
-  preencherKit(inv, [...SLOTS.map((s) => s.bloco), ...KIT_EXTRA]);
-  if (modo === 'sobrevivencia') for (let i = 0; i < inv.slots.length; i++) inv.definir(i, null);
   const cliente = criarEstadoCliente({
     conexao,
     inventario: inv,
@@ -130,7 +129,15 @@ describe('protocolo num canal ruim', () => {
   it('o inventário mexido pela tela chega igual, sem piscar nem perder item', () => {
     const { conexao, cliente, inv, avancar } = partida('criativo');
     const nucleo = conexao.anfitriao.nucleo;
-    avancar(300);
+    // o kit de blocos posto no núcleo (o mundo novo começa com a barra vazia)
+    const oficialJ = nucleo.estado.jogadores.get('local')! as unknown as {
+      inventario: Parameters<typeof preencherKit>[0];
+      inventarioSujo: boolean;
+    };
+    preencherKit(oficialJ.inventario, [...SLOTS.map((s) => s.bloco), ...KIT_EXTRA]);
+    oficialJ.inventarioSujo = true;
+    avancar(1000);
+    expect(inv.slots.filter(Boolean).length).toBe(9);
     // várias mudanças seguidas antes de qualquer confirmação voltar
     for (let i = 0; i < 8; i++) {
       const a = inv.obter(i);

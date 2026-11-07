@@ -196,12 +196,14 @@ export function criarNucleo(op: OpcoesNucleo) {
   const posSalva = dados?.jogador;
   const spawnSalvo = extras['spawn'] as { x: number; z: number } | undefined;
 
+  /**
+   * Mundo novo começa com a barra vazia, nos dois modos (pedido do dono): o jogador escolhe o
+   * que pôr em cada espaço — no criativo pelo catálogo do inventário, na sobrevivência com o
+   * que for coletando.
+   */
   function novoInventario(salvo: unknown): Inventario {
     const inv = criarInventario();
-    preencherKit(inv, [...SLOTS.map((s) => s.bloco), ...KIT_EXTRA]);
     if (salvo) inv.carregar(salvo);
-    else if (modo === 'sobrevivencia')
-      for (let i = 0; i < inv.slots.length; i++) inv.definir(i, null);
     return inv;
   }
   let perfisSujos = false;
@@ -755,6 +757,10 @@ export function criarNucleo(op: OpcoesNucleo) {
         break;
       case 'dano':
         j.sobrevivencia.dano(d.qtd, d.causa, true);
+        break;
+      case 'kit':
+        preencherKit(j.inventario, [...SLOTS.map((s) => s.bloco), ...KIT_EXTRA]);
+        j.inventarioSujo = true;
         break;
     }
   }

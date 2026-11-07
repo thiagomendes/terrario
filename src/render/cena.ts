@@ -308,6 +308,8 @@ export interface EstadoDepuracao {
     vida: number;
   }[];
   invocar?: (tipo: TipoCriatura, x: number, y: number, z: number) => void;
+  /** Testes que constroem: põe o kit de blocos na barra (o mundo novo começa vazio). */
+  darKit?: () => void;
   /** Vitrine dos testes: um bicho parado, sem cérebro, com o desenho do jogo. */
   estatua?: (tipo: TipoCriatura, x: number, y: number, z: number, yaw: number) => void;
   sobrevivencia?: SobrevivenciaCliente;
@@ -2522,6 +2524,7 @@ export function criarCena(
       vida: c.vida,
     }));
   estado.invocar = (tipo, x, y, z) => enviar({ t: 'depurar', d: { f: 'invocar', tipo, x, y, z } });
+  estado.darKit = () => enviar({ t: 'depurar', d: { f: 'kit' } });
 
   // Modo construção (criativo): ferramentas de forma, copiar/colar e espelho.
   const visualConstrucao = criarVisualConstrucao(scene, atlas, textura, (m) =>

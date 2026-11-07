@@ -128,7 +128,9 @@ export type Depuracao =
   | { f: 'pausarDia'; pausar: boolean }
   | { f: 'soltarItem'; item: string; qtd: number; x: number; y: number; z: number; dur?: number }
   | { f: 'spawn'; x: number; z: number }
-  | { f: 'dano'; qtd: number; causa: CausaDano };
+  | { f: 'dano'; qtd: number; causa: CausaDano }
+  /** Põe o kit de blocos na barra (os testes que constroem; o jogo começa com ela vazia). */
+  | { f: 'kit' };
 
 /** O que é de cada jogador num mundo de vários (salvo à parte do mundo). */
 export interface DadosJogador {
