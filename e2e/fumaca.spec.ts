@@ -30,7 +30,8 @@ for (const vp of VIEWPORTS) {
     const ler = () => page.evaluate(() => (window as unknown as { __brumaluz: Estado }).__brumaluz);
 
     await page.goto('/');
-    await expect(page.locator('#app')).toContainText('Terrário');
+    // a primeira carga com a máquina ocupada pode passar de 5 s (banco do aparelho, fontes)
+    await expect(page.locator('#app')).toContainText('Terrário', { timeout: 30_000 });
     await expect(page.locator('#app')).toContainText('Jogar');
     await page.waitForFunction(
       () => (window as unknown as { __brumaluz?: Estado }).__brumaluz?.ready === true,
