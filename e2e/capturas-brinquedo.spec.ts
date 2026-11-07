@@ -77,3 +77,59 @@ test('boneco de brinquedo nos enquadramentos dos esboços', async ({ page }) => 
   await page.waitForTimeout(90);
   await foto(page, 'frente-pulo');
 });
+
+const TEMAS = [
+  'bruma-e-luz',
+  'planeta-vivo',
+  'mata-encantada',
+  'doce-reino',
+  'era-dos-dinos',
+  'exploracao-lunar',
+];
+for (const id of TEMAS) {
+  test(`bichos e moradores de brinquedo: ${id}`, async ({ page }) => {
+    test.setTimeout(300_000);
+    await page.setViewportSize({ width: 1280, height: 720 });
+    await page.goto(`/?tema=${id}`);
+    await pronto(page);
+    // os bichos do tema em fila, na frente do jogador (cervo, coelho, raposa e a noturna)
+    await page.evaluate(async () => {
+      document.querySelector<HTMLElement>('.entrada')?.setAttribute('hidden', '');
+      const e = window.__brumaluz!;
+      e.pausarDia = true;
+      e.hora = 0.42;
+      e.definirClima?.('limpo');
+      e.camera!.definir('terceira');
+      const [x, , z] = e.posicao!;
+      const tipos = ['cervo', 'coelho', 'raposa', 'espectro'] as const;
+      tipos.forEach((t, i) => e.invocar!(t, x - 3 + i * 2, 90, z + 5));
+      e.apontar!(0, 0.3);
+    });
+    await page.waitForTimeout(4000);
+    await foto(page, `bichos-${id}`);
+    // um povoado: os moradores das três profissões
+    const p = await page.evaluate(() => window.__brumaluz!.povoados!()[0]);
+    if (!p) return;
+    await page.evaluate((p) => window.__brumaluz!.teleportar!(p.cx + 2.5, p.cz + 2.5), p);
+    await page.waitForFunction(
+      () => (window.__brumaluz!.criaturas?.() ?? []).some((c) => c.tipo === 'morador'),
+      undefined,
+      { timeout: 120_000 },
+    );
+    await page.evaluate(async () => {
+      const e = window.__brumaluz!;
+      const m = (e.criaturas?.() ?? []).find((c) => c.tipo === 'morador')!;
+      const [px, , pz] = e.posicao!;
+      const d = Math.hypot(m.x - px, m.z - pz) || 1;
+      e.teleportar!(m.x - ((m.x - px) / d) * 3, m.z - ((m.z - pz) / d) * 3, m.y);
+      await new Promise((r) => setTimeout(r, 400));
+      const [qx, qy, qz] = e.posicao!;
+      e.apontar!(
+        Math.atan2(m.x - qx, m.z - qz),
+        -Math.atan2(m.y + 0.9 - qy, Math.hypot(m.x - qx, m.z - qz)),
+      );
+    });
+    await page.waitForTimeout(2500);
+    await foto(page, `morador-${id}`);
+  });
+}

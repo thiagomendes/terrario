@@ -8,6 +8,7 @@ import type { Scene } from '@babylonjs/core/scene';
 import type { Criatura } from '../jogo/criaturas';
 import type { PecaCriatura } from '../temas/tipos';
 import { povoadoDoTema, tema } from '../temas/ativo';
+import { caixaArredondada, esfera } from './formas';
 
 type Peca = PecaCriatura;
 
@@ -52,10 +53,12 @@ export function criarRenderCriaturas(
     if (!m) {
       m = new StandardMaterial(`criatura-${k}`, scene);
       const c = Color3.FromHexString(p.cor);
-      m.diffuseColor = c;
-      m.specularColor = Color3.Black();
+      // plástico de brinquedo (spec 012): mesmo piso de luz do boneco e um brilho suave
+      m.diffuseColor = c.scale(0.78);
+      m.specularColor = new Color3(0.22, 0.22, 0.22);
+      m.specularPower = 40;
       m.ambientColor = Color3.White();
-      m.emissiveColor = c.scale(p.brilho ?? 0);
+      m.emissiveColor = c.scale(Math.max(0.36, p.brilho ?? 0));
       if (p.alfa !== undefined) m.alpha = p.alfa;
       materiais.set(k, m);
     }
@@ -82,11 +85,16 @@ export function criarRenderCriaturas(
         ? peca.p[0] - Math.sign(peca.p[0] || (papel === 'asa0' ? 1 : -1)) * (peca.t[0] / 2)
         : peca.p[0];
       no.position.set(pivoX, pivoY, peca.p[2]);
-      const malha = MeshBuilder.CreateBox(
-        `criatura-${c.id}-${i}-m`,
-        { width: peca.t[0], height: peca.t[1], depth: peca.t[2] },
-        scene,
-      );
+      // formas de brinquedo: peças pequenas (olhos, nariz, botões) viram bolinhas; as
+      // outras, caixas de cantos arredondados (raio pela menor medida)
+      const [w, h, d] = peca.t;
+      const maior = Math.max(w, h, d);
+      const menor = Math.min(w, h, d);
+      const nome = `criatura-${c.id}-${i}-m`;
+      const malha =
+        maior <= 0.09
+          ? esfera(nome, scene, maior / 2, material(peca), [w / maior, h / maior, d / maior])
+          : caixaArredondada(nome, scene, w, h, d, Math.min(0.12, menor * 0.32), material(peca), 3);
       malha.parent = no;
       malha.position.y = peca.p[1] - pivoY;
       malha.position.x = peca.p[0] - pivoX;
@@ -182,7 +190,9 @@ export function criarRenderCriaturas(
           const mat = p.malha.material as StandardMaterial;
           if (!p.peca.brilho) {
             const base = corBase(p.peca.cor);
-            mat.diffuseColor.set(base.r * l, base.g * l, base.b * l);
+            mat.diffuseColor.set(base.r * l * 0.78, base.g * l * 0.78, base.b * l * 0.78);
+            mat.emissiveColor.set(base.r * l * 0.36, base.g * l * 0.36, base.b * l * 0.36);
+            mat.specularColor.set(0.22 * l, 0.22 * l, 0.22 * l);
           }
         }
       }
