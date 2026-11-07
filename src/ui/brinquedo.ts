@@ -55,6 +55,11 @@ export const CSS_BRINQUEDO = `
 :root body .barra-atalhos kbd, :root body .pausa .grade-funcoes kbd { color: var(--tinta-suave); font-family: var(--jogo); font-weight: 800; }
 
 /* ---------- tela inicial ---------- */
+/* o mundo atrás fica claro como no esboço: só um véu leve embaixo, para o rodapé ler bem */
+:root body .entrada {
+  font-family: var(--jogo);
+  background: linear-gradient(180deg, rgba(120, 170, 230, 0.12), rgba(0, 0, 0, 0) 35%, rgba(0, 0, 0, 0) 75%, rgba(40, 30, 60, 0.35));
+}
 :root body .logo-titulo { display: none; }
 :root body .titulo-oculto {
   position: static; width: auto; height: auto; overflow: visible; clip: auto; white-space: nowrap; margin: 0;

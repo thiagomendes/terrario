@@ -175,17 +175,20 @@ void main() {
   c = mix(c, vec3(0.86, 0.88, 0.95) * corLuaTema * cratera, disco);
   c += vec3(0.5, 0.6, 0.9) * corLuaTema * pow(max(l, 0.0), 300.0) * 0.35 * noite * step(0.001, luaEscala);
 
-  // nuvens: plano projetado, em blocos suaves
+  // nuvens de brinquedo (spec 012): fofas e redondas, borda definida, miolo mais claro
   if (h > 0.0 && fatorNuvens > 0.0) {
     vec2 uv = d.xz / (h + 0.12) * 1.6 + vec2(tempo * 0.006, tempo * 0.0025);
-    vec2 bloco = floor(uv * 6.0) / 6.0;
-    float n = fbm(bloco * 1.3);
-    float nuvem = smoothstep(0.52 - cobertura * 0.3, 0.62 - cobertura * 0.25, n) * smoothstep(0.02, 0.2, h);
+    float n = fbm(uv * 1.1) * 0.75 + fbm(uv * 3.1) * 0.25;
+    float limiar = 0.55 - cobertura * 0.3;
+    float nuvem = smoothstep(limiar, limiar + 0.025, n) * smoothstep(0.02, 0.2, h);
+    float miolo = smoothstep(limiar, limiar + 0.16, n);
     float lado = pow(max(dot(d, paraSol), 0.0), 3.0);
     vec3 dia = mix(vec3(1.0, 0.98, 0.96) * corNuvens, corSol * 1.05, crepusculo * 0.75 + lado * 0.3);
+    // beirada azulada e miolo branco: volume de algodão
+    dia = mix(dia * vec3(0.86, 0.9, 0.98), dia, miolo);
     vec3 cn = mix(dia, ceuMeio * 0.35 + vec3(0.03), noite);
     cn = mix(cn, cn * vec3(0.55, 0.57, 0.62), smoothstep(0.4, 1.0, cobertura));
-    c = mix(c, cn, nuvem * 0.85);
+    c = mix(c, cn, nuvem * 0.92);
   }
 
   gl_FragColor = vec4(c, 1.0);
