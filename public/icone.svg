@@ -1,1 +1,43 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="512" height="512"><rect width="32" height="32" fill="#1b1230"/><polygon points="5.0,20 16,25.5 16,35.5 5.0,30.0" fill="#7a5236"/><polygon points="27.0,20 16,25.5 16,35.5 27.0,30.0" fill="#5e3f29"/><polygon points="5.0,20 16,25.5 16,27.7 5.0,22.2" fill="#4f9a37"/><polygon points="27.0,20 16,25.5 16,27.7 27.0,22.2" fill="#3f7d2c"/><polygon points="16,14.5 27.0,20 16,25.5 5.0,20" fill="#6ab64a"/><rect x="13" y="19" width="1.4" height="1" fill="#86cc5e"/><rect x="18" y="21" width="1.4" height="1" fill="#86cc5e"/><rect x="16" y="18" width="1.4" height="1" fill="#58a23e"/><rect x="20" y="19.5" width="1.4" height="1" fill="#58a23e"/><rect x="8.4" y="2.4" width="4.2" height="4.2" fill="#160b06"/><rect x="11.4" y="2.4" width="4.2" height="4.2" fill="#160b06"/><rect x="14.4" y="2.4" width="4.2" height="4.2" fill="#160b06"/><rect x="17.4" y="2.4" width="4.2" height="4.2" fill="#160b06"/><rect x="20.4" y="2.4" width="4.2" height="4.2" fill="#160b06"/><rect x="14.4" y="5.4" width="4.2" height="4.2" fill="#160b06"/><rect x="14.4" y="8.4" width="4.2" height="4.2" fill="#160b06"/><rect x="14.4" y="11.4" width="4.2" height="4.2" fill="#160b06"/><rect x="9" y="3" width="3" height="3" fill="#fff3c4"/><rect x="9" y="3" width="3" height="0.6" fill="#ffffff" opacity="0.4"/><rect x="12" y="3" width="3" height="3" fill="#fff3c4"/><rect x="12" y="3" width="3" height="0.6" fill="#ffffff" opacity="0.4"/><rect x="15" y="3" width="3" height="3" fill="#fff3c4"/><rect x="15" y="3" width="3" height="0.6" fill="#ffffff" opacity="0.4"/><rect x="18" y="3" width="3" height="3" fill="#fff3c4"/><rect x="18" y="3" width="3" height="0.6" fill="#ffffff" opacity="0.4"/><rect x="21" y="3" width="3" height="3" fill="#fff3c4"/><rect x="21" y="3" width="3" height="0.6" fill="#ffffff" opacity="0.4"/><rect x="15" y="6" width="3" height="3" fill="#ffcc6e"/><rect x="15" y="6" width="3" height="0.6" fill="#ffffff" opacity="0.4"/><rect x="15" y="9" width="3" height="3" fill="#ffcc6e"/><rect x="15" y="9" width="3" height="0.6" fill="#ffffff" opacity="0.4"/><rect x="15" y="12" width="3" height="3" fill="#e8842c"/><rect x="15" y="12" width="3" height="0.6" fill="#ffffff" opacity="0.4"/></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="ceu" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#8fcaf5"/>
+      <stop offset="1" stop-color="#d4ecfb"/>
+    </linearGradient>
+    <linearGradient id="logo" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#fff3b0"/>
+      <stop offset="0.35" stop-color="#ffd24a"/>
+      <stop offset="0.8" stop-color="#ff9b2f"/>
+      <stop offset="1" stop-color="#f0742a"/>
+    </linearGradient>
+    <linearGradient id="topo" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#9be27c"/>
+      <stop offset="1" stop-color="#6cc34f"/>
+    </linearGradient>
+    <linearGradient id="esq" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#5fae45"/>
+      <stop offset="0.26" stop-color="#5fae45"/>
+      <stop offset="0.28" stop-color="#b8794a"/>
+      <stop offset="1" stop-color="#94592f"/>
+    </linearGradient>
+    <linearGradient id="dir" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#4c9638"/>
+      <stop offset="0.26" stop-color="#4c9638"/>
+      <stop offset="0.28" stop-color="#9a6238"/>
+      <stop offset="1" stop-color="#7a4826"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="url(#ceu)"/>
+  <!-- o T do logo, em letra gordinha com a sombra em degrau -->
+  <g transform="translate(0 6)">
+    <path d="M150 58 H362 Q382 58 382 78 V104 Q382 124 362 124 H296 V214 Q296 236 274 236 H238 Q216 236 216 214 V124 H150 Q130 124 130 104 V78 Q130 58 150 58 Z" fill="#8a3c13"/>
+  </g>
+  <path d="M150 52 H362 Q382 52 382 72 V98 Q382 118 362 118 H296 V208 Q296 230 274 230 H238 Q216 230 216 208 V118 H150 Q130 118 130 98 V72 Q130 52 150 52 Z" fill="url(#logo)"/>
+  <path d="M158 70 H300" stroke="#ffffff" stroke-opacity="0.6" stroke-width="10" stroke-linecap="round"/>
+  <!-- bloco de grama de brinquedo, de quina, com as quinas redondas -->
+  <ellipse cx="256" cy="462" rx="150" ry="22" fill="#2f5a7a" opacity="0.18"/>
+  <path d="M110 300 Q110 286 122 292 L246 354 Q256 359 256 372 L256 452 Q256 466 244 460 L122 398 Q110 392 110 378 Z" fill="url(#esq)"/>
+  <path d="M402 300 Q402 286 390 292 L266 354 Q256 359 256 372 L256 452 Q256 466 268 460 L390 398 Q402 392 402 378 Z" fill="url(#dir)"/>
+  <path d="M256 214 Q266 214 276 219 L390 276 Q404 283 390 290 L270 350 Q256 357 242 350 L122 290 Q108 283 122 276 L236 219 Q246 214 256 214 Z" fill="url(#topo)"/>
+  <path d="M170 276 Q174 270 184 266 L236 240" stroke="#ffffff" stroke-opacity="0.55" stroke-width="10" stroke-linecap="round" fill="none"/>
+</svg>

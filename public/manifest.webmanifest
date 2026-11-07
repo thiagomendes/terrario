@@ -6,14 +6,26 @@
   "scope": "/",
   "display": "fullscreen",
   "orientation": "any",
-  "background_color": "#1b1230",
-  "theme_color": "#1b1230",
+  "background_color": "#8fcaf5",
+  "theme_color": "#8fcaf5",
   "lang": "pt-BR",
   "icons": [
     {
       "src": "/icone.svg",
       "sizes": "any",
       "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/icone-180.png",
+      "sizes": "180x180",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icone-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
       "purpose": "any"
     }
   ]

@@ -230,11 +230,13 @@ Lista única para nada se perder. Cada item: feito (com o que comprova) ou pende
 
 - [x] Restos de interface: renomear, excluir mundo e as confirmações de amigos usam o diálogo de brinquedo (`e2e/dialogo.spec.ts`); apelido acima dos amigos em pílula creme; avisos não cobrem a janela aberta.
 
+- [x] Tocha de brinquedo (cabinho e chama redonda que brilha); o vidro já fica liso com a textura filtrada.
+- [x] Chuva de céu cinza-azulado claro e relâmpago suave, sem estourar.
+- [x] Ícone do site e do app instalado (bloco de grama de quinas redondas com o T do logo, SVG e PNG 180/512) e imagem de compartilhamento da tela inicial nova.
+
 **Pendente, nesta ordem**
 
-5. C2: tocha e vidro em formas de brinquedo (o resto dos blocos com forma já está macio pela textura filtrada).
-6. C4: chuva com céu cinza-azulado claro e relâmpago suave; espuma na beira em degrau.
-8. B7: ícone do site, do app instalado e imagem de compartilhamento.
+6. Espuma na beira em degrau (anotada também no backlog; a beira rasa já tem espuma).
 9. D2: medir o desempenho de novo (computador e CPU desacelerada) e publicar.
 
 **Fora desta spec (no backlog do projeto, `.sdd/backlog.md`)**
