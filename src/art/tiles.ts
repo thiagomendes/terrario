@@ -8,6 +8,7 @@ export const TILE_BRANCO = 'branco';
 export const TILES_BRILHO: Readonly<Record<number, string>> = {
   [Bloco.FLOR]: 'brilho_flor',
   [Bloco.COGUMELO_BRILHANTE]: 'brilho_cogumelo',
+  [Bloco.TOCHA]: 'brilho_tocha',
 };
 /** Tiles que não são de bloco: os das peças de brinquedo (branco e brilhos). */
 export const TILES_PECAS: readonly string[] = [TILE_BRANCO, ...Object.values(TILES_BRILHO)];

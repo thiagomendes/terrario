@@ -707,6 +707,11 @@ export function gerarMalha(
           adicionarAgua(x, y, z);
           continue;
         }
+        // tocha de brinquedo: pecinha no buffer das plantas (spec 012)
+        if (id === Bloco.TOCHA) {
+          adicionarPlanta(id, x, y, z);
+          continue;
+        }
         if (temFormaParcial(id)) {
           const meta = metas.get(indice(x, y, z)) ?? 0;
           const caixas = caixasDoBloco(id, meta, (d) => {

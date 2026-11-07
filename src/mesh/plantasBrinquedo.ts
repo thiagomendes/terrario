@@ -37,6 +37,7 @@ export const PLANTAS_BRINQUEDO: readonly number[] = [
   Bloco.ARBUSTO_FRUTINHAS,
   Bloco.ARBUSTO_SECO,
   Bloco.JUNCO,
+  Bloco.TOCHA,
 ];
 
 const PADRAO: CoresPlanta = { folha: [0.42, 0.7, 0.32], destaque: [0.93, 0.36, 0.55] };
@@ -368,6 +369,21 @@ export function plantaDeBrinquedo(
           4,
         );
       }
+      break;
+    }
+    case Bloco.TOCHA: {
+      // tocha de brinquedo: cabinho de madeira e uma bolinha de chama que brilha
+      const cabo: Rgb01 = [0.55, 0.36, 0.22];
+      const cxT = x + 0.5;
+      const czT = z + 0.5;
+      haste(cxT, y, czT, cxT, y + 0.5, czT, 0.055, 0.05, mistura(cabo, [0, 0, 0], 0.15), cabo, 6);
+      bola(cxT, y + 0.52, czT, 0.075, 0.03, 0.075, mistura(cabo, [0, 0, 0], 0.3), 6, 2);
+      // a chama já é clareada pela luz da própria tocha: base mais baixa para não estourar
+      const chama: Rgb01 = uvBrilho ? [0.62, 0.5, 0.42] : [1, 0.72, 0.25];
+      comBrilho(() => {
+        bola(cxT, y + 0.62, czT, 0.1, 0.13, 0.1, chama, 7, 4);
+        bola(cxT, y + 0.75, czT, 0.05, 0.07, 0.05, chama, 5, 3);
+      });
       break;
     }
     case Bloco.JUNCO: {

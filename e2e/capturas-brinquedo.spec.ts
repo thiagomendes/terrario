@@ -601,3 +601,26 @@ test('itens soltos de brinquedo', async ({ page }) => {
   await page.waitForTimeout(2500);
   await foto(page, 'itens-soltos');
 });
+
+test('tochas de brinquedo à noite', async ({ page }) => {
+  test.setTimeout(240_000);
+  await page.setViewportSize({ width: 960, height: 600 });
+  await page.goto('/');
+  await pronto(page);
+  await page.evaluate(async () => {
+    document.querySelector<HTMLElement>('.entrada')?.setAttribute('hidden', '');
+    const e = window.__brumaluz!;
+    e.pausarDia = true;
+    e.hora = 0.9;
+    const [x, y, z] = e.posicao!.map(Math.floor);
+    for (const [dx, dz] of [
+      [-1, 3],
+      [1, 3],
+      [0, 5],
+    ])
+      e.definirBloco!(x + dx, y, z + dz, 37);
+    e.apontar!(0, 0.3);
+  });
+  await page.waitForTimeout(3000);
+  await foto(page, 'tochas-noite');
+});
