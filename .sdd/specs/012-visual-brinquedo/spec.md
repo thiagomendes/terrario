@@ -1,7 +1,7 @@
 ---
 id: 012-visual-brinquedo
 title: 'Visual de brinquedo: o jogo inteiro com cara de brinquedo, do bloco ao personagem e ao site'
-status: IN_REVIEW
+status: IN_PROGRESS
 base_branch: main
 branch: feat/visual-brinquedo
 created_at: 2026-11-07T17:00:00Z
@@ -163,3 +163,33 @@ A água parece gelatina azul ou resina de brinquedo, e a chuva parece chuvinha d
 - Relatório visual: https://claude.ai/artifact/K3EPyN63F6md1GTBd8oznJ (cada esboço ao lado da captura do jogo, os seis temas de dia e de noite, efeitos, medidas).
 - Aguardando o dono: juntas aparentes ou suaves, um jogo no celular de verdade e a publicação (levar o ramo para o `main`).
 - Ficou para depois: árvores com forma própria por tema (a forma vem da geração do mundo, compartilhada com o servidor; por agora todas viraram copas de bolha), céu cinza-azulado e relâmpago suave na chuva, espuma na beira em degrau.
+
+## Etapa 2: acabamento (revisão geral de 7 nov 2026)
+Na primeira etapa, só o boneco do jogador foi redesenhado de verdade. O resto ganhou quinas redondas ou uma camada de estilo por cima do antigo. O dono testou no celular e viu remendo. Esta etapa revisa tudo e refaz o que ficou para trás, peça por peça. Não se mantém compatibilidade com mundos salvos: se preciso, eles são apagados.
+
+Lista de conferência (cada item fecha com captura no celular e no computador):
+
+**Gente e bichos**
+- [ ] A1. **Editor de personagem:** o palco e as miniaturas dos modelos mostram o boneco B, desenhado do modelo 3D, sem prévias de pixel. As abas e os botões do painel também em peça.
+- [ ] A2. **Moradores dos povoados:** viram bonecos B, com roupa, chapéu e acessórios da profissão e do tema (antenas no Planeta Vivo, gorro no Saci etc.), andando com a animação do boneco.
+- [ ] A3. **Bichos e criaturas da noite, nos seis temas:** proporção de brinquedo (cabeça maior), olhos redondos com brilho, bochechas, patas de cápsula, focinho de bolinha. Sem caixas só arredondadas.
+- [ ] A4. **Itens soltos no chão:** o modelo 3D de brinquedo girando, no lugar do ícone chapado.
+
+**Interface (reescrita do estilo de cada tela; sai a camada de remendo)**
+- [ ] B1. Tela inicial, vitrine dos temas e ícones de cada tema.
+- [ ] B2. Mundos: lista, criar, renomear, excluir, com contraste certo e as fotos novas dos temas.
+- [ ] B3. Inventário, baú, fornalha, livro de receitas e trocas, sem cartão dentro de cartão.
+- [ ] B4. Diário, mapa grande, configurações, pausa, morte e modo foto.
+- [ ] B5. Jogar com amigos: convite, código e QR, entrar com código, avisos de conexão.
+- [ ] B6. Controles de toque, bússola e dicas.
+- [ ] B7. Ícone do site, ícone do app instalado e imagem de compartilhamento.
+
+**Mundo**
+- [ ] C1. Rachadura ao minerar em traço de brinquedo, e o contorno do bloco mirado.
+- [ ] C2. Tocha, porta, vidro, cama, baú, fornalha, cerca, escada e laje: os lados ainda têm pixel; ganham acabamento de peça.
+- [ ] C3. Lado da grama e dos blocos com desenho forte: menos chuvisco nos temas (o glacê do Doce Reino, a terra).
+- [ ] C4. Chuva com céu cinza-azulado claro e relâmpago suave; espuma na beira em degrau.
+
+**Sensação**
+- [ ] D1. **Bloco some na hora ao quebrar:** hoje ele espera a malha nova do chunk (de 70 a 480 ms com a CPU 4× mais lenta, e mais no celular). Passa a sumir no mesmo quadro do clique, no próprio desenho, enquanto a malha nova não chega.
+- [ ] D2. Desempenho medido de novo no fim (computador e CPU desacelerada).
