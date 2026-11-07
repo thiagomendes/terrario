@@ -56,9 +56,16 @@ const wss = new WebSocketServer({
 });
 
 wss.on('connection', (ws: WebSocket, req: IncomingMessage) => {
-  const ip = String(req.headers['x-forwarded-for'] ?? req.socket.remoteAddress ?? '')
-    .split(',')[0]
-    .trim();
+  // a entrada do Container Apps acrescenta o endereço de verdade no fim (o começo quem
+  // escreve é o próprio navegador, então não vale para limitar tentativas)
+  const ip =
+    String(req.headers['x-forwarded-for'] ?? '')
+      .split(',')
+      .map((p) => p.trim())
+      .filter(Boolean)
+      .pop() ??
+    req.socket.remoteAddress ??
+    '';
   const canal: Canal = {
     ip,
     enviar: (t) => {
@@ -74,7 +81,12 @@ wss.on('connection', (ws: WebSocket, req: IncomingMessage) => {
       janela = agora;
       contagem = 0;
     }
-    if (++contagem > MAX_POR_SEGUNDO) return; // excesso é ignorado
+    // excesso fecha a conexão: o navegador reconecta e renumera (ignorar uma mensagem
+    // deixaria um buraco na ordem e o jogador parado esperando por ela)
+    if (++contagem > MAX_POR_SEGUNDO) {
+      if (contagem === MAX_POR_SEGUNDO + 1) ws.close(4008, 'devagar');
+      return;
+    }
     void salas.receber(canal, dados.toString()).catch((e) => log(`erro: ${String(e)}`));
   });
   ws.on('close', () => salas.caiu(canal));
@@ -92,7 +104,11 @@ setInterval(
     let k = 0;
     while (acumulado >= PASSO && k < 5) {
       acumulado -= PASSO;
-      salas.passo();
+      try {
+        salas.passo();
+      } catch (e) {
+        log(`passo: ${String(e)}`);
+      }
       k++;
     }
     if (k === 5) acumulado = 0;
@@ -100,7 +116,25 @@ setInterval(
   (PASSO * 1000) / 2,
 );
 // gravação e salas que dormem
-setInterval(() => void salas.manutencao().catch((e) => log(`manutenção: ${String(e)}`)), 1000);
+// (uma de cada vez: com o Storage lento, a próxima espera a anterior terminar)
+let emManutencao = false;
+setInterval(() => {
+  if (emManutencao) return;
+  emManutencao = true;
+  void salas
+    .manutencao()
+    .catch((e) => log(`manutenção: ${String(e)}`))
+    .finally(() => (emManutencao = false));
+}, 1000);
+process.on('unhandledRejection', (e) => log(`promessa sem tratamento: ${String(e)}`));
+process.on('uncaughtException', (e) => {
+  // estado incerto: grava o que der e sai (o Container Apps sobe de novo)
+  log(`erro inesperado: ${e.stack ?? String(e)}`);
+  void salas
+    .gravarTudo()
+    .catch(() => undefined)
+    .finally(() => process.exit(1));
+});
 
 // uma linha de métricas por minuto (vai para o Log Analytics): salas, jogadores e ritmo
 setInterval(() => {

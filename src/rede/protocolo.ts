@@ -73,6 +73,8 @@ export type RespostaServidor =
       mundo: MundoNuvem;
       sala: EstadoSala;
       voce: string;
+      /** Muda quando a sala é aberta de novo (servidor recomeçou): o navegador recarrega. */
+      instancia?: string;
       /** Diário e mapa deste jogador neste mundo. */
       guardado?: unknown;
       /** Edições de blocos do mundo e regiões sem povoado (o navegador monta o terreno igual). */

@@ -24,6 +24,8 @@ export interface ConexaoNuvem extends Conexao {
   readonly estado: EstadoConexao;
   aoEstado(f: (e: EstadoConexao, motivo?: MotivoRecusa) => void): void;
   aoSala(f: (s: EstadoSala) => void): void;
+  /** O servidor recomeçou e abriu a sala de novo (o que está na tela pode estar à frente). */
+  aoReaberta(f: () => void): void;
   /** Painel do dono e o diário/mapa do jogador. */
   pedir(p: PedidoCliente): void;
 }
@@ -44,6 +46,9 @@ export function conexaoNuvem(op: OpcoesNuvem): ConexaoNuvem {
   const ouvintes: ((m: Mensagem) => void)[] = [];
   const ouvintesEstado: ((e: EstadoConexao, motivo?: MotivoRecusa) => void)[] = [];
   const ouvintesSala: ((s: EstadoSala) => void)[] = [];
+  const ouvintesReaberta: (() => void)[] = [];
+  let instancia: string | undefined;
+  let primeira = true;
   let ws: WebSocket | null = null;
   let estado: EstadoConexao = 'conectando';
   let codigo = op.codigo;
@@ -113,7 +118,14 @@ export function conexaoNuvem(op: OpcoesNuvem): ConexaoNuvem {
         mudar('conectado');
         const { t: _t, ...bv } = m;
         void _t;
+        const reaberta = !primeira && m.instancia !== undefined && m.instancia !== instancia;
+        primeira = false;
+        instancia = m.instancia;
         resolver(bv);
+        if (reaberta) {
+          for (const f of ouvintesReaberta) f();
+          return;
+        }
         for (const c of guardados.splice(0)) mandar(c);
         for (const f of ouvintesSala) f(m.sala);
       } else if (m.t === 'recusado') {
@@ -155,6 +167,9 @@ export function conexaoNuvem(op: OpcoesNuvem): ConexaoNuvem {
     },
     aoSala: (f) => {
       ouvintesSala.push(f);
+    },
+    aoReaberta: (f) => {
+      ouvintesReaberta.push(f);
     },
     encerrar() {
       encerrada = true;

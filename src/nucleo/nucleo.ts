@@ -29,6 +29,7 @@ import { colocacaoBloqueada } from '../player/alvo';
 import { preencherKit, SLOTS, KIT_EXTRA } from '../player/hotbar';
 import { criarAcessoMundo } from './mundo';
 import { contaFecha } from './conta';
+import { sanear } from './saneamento';
 import {
   PASSO,
   type Ambiente,
@@ -422,6 +423,16 @@ export function criarNucleo(op: OpcoesNucleo) {
       recusar(j, c.id, 'editar', c.lote.slice(0, 20000));
       return;
     }
+    if (!confiar) {
+      const longe = c.lote.some(
+        (e) =>
+          e.y < 0 || e.y >= 128 || Math.max(Math.abs(e.x - j.tel.x), Math.abs(e.z - j.tel.z)) > 64,
+      );
+      if (longe) {
+        recusar(j, c.id, 'editar', c.lote.slice(0, 500));
+        return;
+      }
+    }
     for (const e of c.lote) editar(e.x, e.y, e.z, e.v & 255, (e.v >> 8) & 255);
   }
 
@@ -555,7 +566,12 @@ export function criarNucleo(op: OpcoesNucleo) {
     );
     // na nuvem a conta dos itens tem que fechar (no criativo o catálogo dá de tudo)
     const contaOk = confiar || modo === 'criativo' || contaFecha(c.mudancas, c.fabricou ?? []);
-    const conteinerOk = j.constroi || c.mudancas.every((m) => m.onde === 'inv' || m.onde === 'tr');
+    const noConteiner = c.mudancas.some((m) => m.onde === 'bau' || m.onde === 'forn');
+    const ct = j.conteiner;
+    const alcanca = !ct || confiar || perto(j, ct.x, ct.y, ct.z, ALCANCE_REGRAS + 2);
+    // foi embora com o baú aberto: fecha
+    if (noConteiner && !alcanca) j.conteiner = null;
+    const conteinerOk = !noConteiner || (j.constroi && alcanca);
     if (!valida || !contaOk || !conteinerOk) {
       // Tudo volta ao oficial, inclusive o que estava nas mãos (nada duplica nem some).
       j.inventarioSujo = true;
@@ -665,9 +681,19 @@ export function criarNucleo(op: OpcoesNucleo) {
   const VEL_MAX = modo === 'criativo' ? 40 : 14;
   function telemetria(j: Jogador, c: Telemetria): void {
     const { quedas, pulos, golpes } = c;
+    // depois de entrar ou renascer, a primeira posição ainda tem que ser perto de onde
+    // o núcleo sabe que o jogador está (ou do ponto de renascer)
+    if (!confiar && !depuracao && j.saltoPermitido) {
+      const pertoDe = (x: number, z: number) => Math.hypot(c.x - x, c.z - z) <= 80;
+      if (!pertoDe(j.tel.x, j.tel.z) && !pertoDe(j.spawn.x, j.spawn.z)) {
+        j.eventos.push({ e: 'teleporte', x: j.tel.x, z: j.tel.z, y: j.tel.y });
+        return;
+      }
+    }
     // na nuvem a posição tem que ser possível: andar, correr, voar e cair, não saltar
     if (!confiar && !depuracao && !j.saltoPermitido) {
-      const dt = (n - j.passoTelemetria) * PASSO + 0.3;
+      // ficar calado não dá direito a saltar mais longe depois
+      const dt = Math.min((n - j.passoTelemetria) * PASSO, 1) + 0.3;
       const horiz = Math.hypot(c.x - j.tel.x, c.z - j.tel.z);
       const sobe = c.y - j.tel.y;
       if (
@@ -718,27 +744,46 @@ export function criarNucleo(op: OpcoesNucleo) {
   }
 
   /** Tira do que o jogador tem (primeiro das mãos, depois da mochila); devolve quanto tirou. */
-  function retirar(j: Jogador, item: string, qtd: number): number {
+  function retirar(
+    j: Jogador,
+    item: string,
+    qtd: number,
+  ): { item: string; qtd: number; dur?: number }[] {
     let falta = Math.max(0, Math.floor(qtd));
-    for (let i = 0; i < j.transito.length && falta > 0; i++) {
-      const p = j.transito[i];
-      if (!p || p.item !== item) continue;
-      const t = Math.min(falta, p.qtd);
-      j.transito[i] = p.qtd - t > 0 ? { ...p, qtd: p.qtd - t } : null;
-      falta -= t;
-    }
-    if (falta > 0) {
-      const t = Math.min(falta, j.inventario.contar(item));
-      if (t > 0 && j.inventario.consumir(item, t)) falta -= t;
-    }
+    const tirados: { item: string; qtd: number; dur?: number }[] = [];
+    const de = (ler: (i: number) => Slot, gravar: (i: number, p: Slot) => void, n: number) => {
+      for (let i = 0; i < n && falta > 0; i++) {
+        const p = ler(i);
+        if (!p || p.item !== item) continue;
+        const t = Math.min(falta, p.qtd);
+        gravar(i, p.qtd - t > 0 ? { ...p, qtd: p.qtd - t } : null);
+        tirados.push({ item, qtd: t, dur: p.dur });
+        falta -= t;
+      }
+    };
+    de(
+      (i) => j.transito[i] ?? null,
+      (i, p) => {
+        j.transito[i] = p;
+      },
+      j.transito.length,
+    );
+    de(
+      (i) => j.inventario.obter(i),
+      (i, p) => j.inventario.definir(i, p),
+      j.inventario.slots.length,
+    );
     j.transitoSujo = true;
     j.inventarioSujo = true;
-    return Math.max(0, Math.floor(qtd)) - Math.max(0, falta);
+    return tirados;
   }
 
-  function comando(id: string, c: Comando): void {
+  function comando(id: string, bruto: Comando): void {
     const j = jogadores.get(id);
     if (!j) return;
+    // na nuvem, mensagem fora do formato (números absurdos, tamanhos enormes) não entra
+    const c = confiar ? bruto : sanear(bruto);
+    if (!c) return;
     if ('id' in c && typeof c.id === 'number') j.ack = Math.max(j.ack, c.id);
     switch (c.t) {
       case 'jogador':
@@ -765,9 +810,13 @@ export function criarNucleo(op: OpcoesNucleo) {
         break;
       case 'soltar':
         for (const p of c.itens) {
-          const qtd = confiar ? p.qtd : retirar(j, p.item, p.qtd);
-          if (qtd > 0)
-            mundoItens.soltar(p.item, qtd, j.tel.x, j.tel.olhos - 0.4, j.tel.z, rngDrops, p.dur);
+          if (confiar) {
+            mundoItens.soltar(p.item, p.qtd, c.x, c.y, c.z, rngDrops, p.dur);
+            continue;
+          }
+          // na nuvem só sai o que o jogador tem, com a durabilidade que tem
+          for (const t of retirar(j, p.item, p.qtd))
+            mundoItens.soltar(t.item, t.qtd, j.tel.x, j.tel.olhos - 0.4, j.tel.z, rngDrops, t.dur);
         }
         break;
       case 'atacar':
@@ -788,6 +837,8 @@ export function criarNucleo(op: OpcoesNucleo) {
         comer(j, c);
         break;
       case 'renascer':
+        // na nuvem só quem desmaiou renasce (senão seria cura e teletransporte de graça)
+        if (!confiar && !j.sobrevivencia.estado.morto) break;
         j.saltoPermitido = true;
         j.sobrevivencia.renascer();
         j.eventos.push({ e: 'teleporte', x: j.spawn.x, z: j.spawn.z });

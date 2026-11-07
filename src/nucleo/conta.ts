@@ -6,6 +6,7 @@
  */
 import type { Slot } from '../jogo/inventario';
 import { aceita, ingredientesDe, RECEITAS } from '../jogo/receitas';
+import { obterItem } from '../jogo/itens';
 import type { MudancaSlot } from './protocolo';
 
 export interface Fabricacao {
@@ -13,9 +14,18 @@ export interface Fabricacao {
   vezes: number;
 }
 
+/**
+ * Identidade de um item na conta: ferramenta com durabilidade diferente é outro item
+ * (senão daria para trocar uma picareta gasta por uma nova "de graça").
+ */
+const chave = (item: string, dur?: number) => {
+  const max = obterItem(item)?.durabilidade;
+  return max ? `${item}#${dur ?? max}` : item;
+};
 const somar = (m: Map<string, number>, p: Slot, sinal: number) => {
   if (!p || !(p.qtd > 0)) return;
-  m.set(p.item, (m.get(p.item) ?? 0) + sinal * p.qtd);
+  const k = chave(p.item, p.dur);
+  m.set(k, (m.get(k) ?? 0) + sinal * p.qtd);
 };
 
 /**
@@ -37,13 +47,16 @@ export function contaFecha(
   for (const f of fabricou) {
     const r = RECEITAS.find((x) => x.id === f.receita);
     if (!r || !Number.isInteger(f.vezes) || f.vezes < 1 || f.vezes > 64) return false;
-    saldo.set(r.resultado.item, (saldo.get(r.resultado.item) ?? 0) - r.resultado.qtd * f.vezes);
+    const kr = chave(r.resultado.item);
+    saldo.set(kr, (saldo.get(kr) ?? 0) - r.resultado.qtd * f.vezes);
     for (let v = 0; v < f.vezes; v++) pedidos.push(...ingredientesDe(r));
   }
   // nenhum item a mais; os que faltam têm que ser exatamente os ingredientes
   const faltam: string[] = [];
-  for (const [item, q] of saldo) {
-    if (q > 0) return false;
+  for (const [k, q] of saldo) {
+    // só inteiros (quantidade fracionada é truque) e nada a mais
+    if (!Number.isInteger(q) || q > 0 || -q > 4096) return false;
+    const item = k.split('#')[0];
     for (let i = 0; i < -q; i++) faltam.push(item);
   }
   if (faltam.length !== pedidos.length) return false;

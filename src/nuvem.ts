@@ -7,6 +7,7 @@ import { conexaoNuvem, type BemVindo, type ConexaoNuvem } from './cliente/conexa
 import { definirApelido, identidade, limparApelido, urlServidor } from './cliente/identidade';
 import { carregarAparencia } from './personagem/persistencia';
 import { estiloMundo } from './world/chunk';
+import { normalizarCodigo } from './jogo/codigos';
 import type { DadosMundo, MetaMundo, RepositorioMundos } from './jogo/mundos';
 import { notificar } from './ui/interface';
 import {
@@ -253,10 +254,22 @@ export function ligarAmigos(raiz: HTMLElement, cena: Cena, op: OpcoesAmigos): vo
     painel.definirSala(s, voce);
     // o código mudou: o endereço da página e o mundo do aparelho acompanham
     const u = new URL(location.href);
-    if (u.searchParams.get('sala') !== s.codigo) {
+    const antigo = u.searchParams.get('sala');
+    if (antigo !== s.codigo) {
       u.searchParams.set('sala', s.codigo);
       history.replaceState(null, '', u.toString());
+      // o mundo do aparelho que foi para a nuvem passa a abrir pelo código novo
+      void op.repo.listar().then(async (ms) => {
+        for (const m of ms)
+          if (m.nuvem && antigo && normalizarCodigo(m.nuvem) === normalizarCodigo(antigo))
+            await op.repo.marcarNuvem(m.id, s.codigo);
+      });
     }
+  });
+  // o servidor recomeçou (nova versão): abre o mundo de novo, do jeito que ficou guardado
+  nv.conexao.aoReaberta(() => {
+    telaCarregando('Atualizando o mundo…');
+    setTimeout(() => location.reload(), 300);
   });
   const aviso = criarAvisoConexao(raiz);
   // achar os amigos: seta na borda da tela para quem está longe

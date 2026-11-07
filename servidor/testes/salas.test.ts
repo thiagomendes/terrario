@@ -150,7 +150,7 @@ describe('salas do servidor', () => {
         JSON.stringify({
           t: 'entrar',
           versao: VERSAO_REDE,
-          jogador: ident('x'),
+          jogador: ident('xis'),
           codigo: 'LUA-SOL-01',
         }),
       );
@@ -162,7 +162,7 @@ describe('salas do servidor', () => {
       JSON.stringify({
         t: 'entrar',
         versao: VERSAO_REDE,
-        jogador: ident('x'),
+        jogador: ident('xis'),
         codigo: 'LUA-SOL-01',
       }),
     );
@@ -271,5 +271,133 @@ describe('salas do servidor', () => {
     );
     expect(velho.recebidas[0]).toEqual({ t: 'recusado', motivo: 'versao' });
     expect(VERSAO_PROTOCOLO).toBe(1);
+  });
+});
+
+describe('o servidor aguenta mensagem de quem quer estragar', () => {
+  const entrar = (jogador: unknown, extra: object) =>
+    JSON.stringify({ t: 'entrar', versao: VERSAO_REDE, jogador, ...extra });
+
+  it('estilo malformado não derruba: a sala anda com o estilo padrão', async () => {
+    const s = servidor();
+    const a = canal();
+    await s.g.receber(
+      a,
+      entrar(ident('ana'), { criar: { ...criarMundo, estilo: { crateras: 0 } } }),
+    );
+    expect(a.recebidas.some((m) => m.t === 'bemvindo')).toBe(true);
+    await s.avancar(500);
+    expect(quadros(a).length).toBeGreaterThan(5);
+  });
+
+  it('levar para a nuvem: as construções do aparelho sobrevivem à sala dormir', async () => {
+    const s = servidor();
+    const a = canal();
+    const dados = {
+      versao: 1,
+      edicoes: { '0,0': [[5, 1]], '100,100': [[7, 3]] },
+      jogador: null,
+      hora: 0.3,
+      extras: {},
+    };
+    await s.g.receber(a, entrar(ident('ana'), { criar: { ...criarMundo, dados } }));
+    const bv = a.recebidas.find((m) => m.t === 'bemvindo') as Extract<
+      RespostaServidor,
+      { t: 'bemvindo' }
+    >;
+    s.g.caiu(a);
+    await s.avancar(100_000);
+    expect(s.g.ativas.size).toBe(0);
+    const b = canal();
+    await s.g.receber(b, entrar(ident('ana'), { codigo: bv.sala.codigo }));
+    const bv2 = b.recebidas.find((m) => m.t === 'bemvindo') as Extract<
+      RespostaServidor,
+      { t: 'bemvindo' }
+    >;
+    expect(Object.keys(bv2.edicoes).sort()).toEqual(['0,0', '100,100']);
+  });
+
+  it('rajada de "entrar" na mesma conexão cria uma sala só, e não deixa fantasmas', async () => {
+    const s = servidor();
+    const a = canal();
+    await Promise.all(
+      Array.from({ length: 5 }, () => s.g.receber(a, entrar(ident('ana'), { criar: criarMundo }))),
+    );
+    expect(s.g.ativas.size).toBe(1);
+    s.g.caiu(a);
+    await s.avancar(100_000);
+    expect(s.g.ativas.size).toBe(0);
+  });
+
+  it('rajada de palpites conta todos, e id fora do formato é recusado', async () => {
+    const s = servidor();
+    const a = canal('9.9.9.9');
+    await Promise.all(
+      Array.from({ length: 40 }, (_, i) =>
+        s.g.receber(
+          canal('9.9.9.9'),
+          entrar(ident(`chute${i}`), { codigo: `NADA-NADA-${10 + i}` }),
+        ),
+      ),
+    );
+    await s.g.receber(a, entrar(ident('ana'), { codigo: 'NADA-NADA-99' }));
+    expect(a.recebidas.at(-1)).toEqual({ t: 'recusado', motivo: 'limite' });
+    const c = canal('7.7.7.7');
+    await s.g.receber(c, entrar({ ...ident('x'), id: '../regioes/0,0' }, { criar: criarMundo }));
+    expect(c.recebidas.at(-1)).toEqual({ t: 'recusado', motivo: 'identidade' });
+  });
+
+  it('ninguém toma o lugar de quem acabou de entrar, nem os poderes do dono', async () => {
+    const { g, a, codigo } = await criarSala();
+    const ladrao = canal('6.6.6.6');
+    await g.receber(
+      ladrao,
+      entrar({ ...ident('ana'), chave: 'outra-chave-qualquer-0000' }, { codigo }),
+    );
+    expect(ladrao.recebidas.at(-1)).toEqual({ t: 'recusado', motivo: 'identidade' });
+    expect(a.fechado()).toBe(false);
+  });
+
+  it('o dono troca o código: quem estava volta pelo antigo, quem não estava não', async () => {
+    const { g, a, codigo, avancar } = await criarSala();
+    const b = canal('5.6.7.8');
+    await g.receber(b, entrar(ident('bia'), { codigo }));
+    g.caiu(b);
+    await g.receber(a, JSON.stringify({ t: 'dono', acao: 'trocarCodigo' }));
+    await avancar(1000);
+    const b2 = canal('5.6.7.8');
+    await g.receber(b2, entrar(ident('bia'), { codigo }));
+    const bv = b2.recebidas.find((m) => m.t === 'bemvindo') as Extract<
+      RespostaServidor,
+      { t: 'bemvindo' }
+    >;
+    expect(bv.sala.codigo).not.toBe(codigo);
+    const c = canal('8.8.8.8');
+    await g.receber(c, entrar(ident('caio'), { codigo }));
+    expect(c.recebidas.at(-1)).toEqual({ t: 'recusado', motivo: 'codigo' });
+  });
+
+  it('uma mensagem perdida na ordem não deixa o jogador parado para sempre', async () => {
+    const { g, a, avancar } = await criarSala();
+    await avancar(200);
+    // a mensagem 1 nunca chega; as próximas 201 chegam
+    for (let seq = 2; seq <= 202; seq++)
+      await g.receber(
+        a,
+        JSON.stringify({
+          t: 'colocar',
+          id: seq,
+          x: 0,
+          y: 90,
+          z: seq,
+          bloco: 7,
+          meta: 0,
+          slot: 0,
+          seq,
+        }),
+      );
+    await avancar(200);
+    const colocados = quadros(a).flatMap((q) => q.blocos ?? []);
+    expect(colocados.length).toBeGreaterThan(100);
   });
 });

@@ -216,3 +216,70 @@ describe('posição plausível na nuvem', () => {
     expect(ev.some((e) => e.e === 'teleporte')).toBe(true);
   });
 });
+
+describe('mensagens absurdas na nuvem', () => {
+  it('coordenadas gigantes, milhões de golpes e slots repetidos não travam nem duplicam', () => {
+    const n = criarNucleo({
+      semente: SEMENTE,
+      modo: 'sobrevivencia',
+      versaoMundo: 2,
+      confiarNoCliente: false,
+    });
+    n.conectar('ana', { perfil: { apelido: 'Ana', aparencia: {} } });
+    const t0 = performance.now();
+    n.comando('ana', { ...tel(X + 0.5, Z + 0.5), x: 1e300 } as Comando);
+    n.comando('ana', { ...tel(X + 0.5, Z + 0.5), golpes: 1e10, pulos: 1e10 } as Comando);
+    n.comando('ana', tel(X + 3e7, Z + 0.5));
+    for (let i = 0; i < 20; i++) n.passo();
+    expect(performance.now() - t0).toBeLessThan(3000);
+    expect(Math.abs(n.estado.jogadores.get('ana')!.tel.x - X)).toBeLessThan(10);
+    // slot repetido na mesma transação
+    n.comando('ana', { t: 'depurar', d: { f: 'dano', qtd: 0, causa: 'outro' } });
+    const inv = n.estado.jogadores.get('ana')!.inventario;
+    inv.definir(0, { item: 'carvao', qtd: 10 });
+    n.comando('ana', {
+      t: 'transacao',
+      id: 1,
+      mudancas: [
+        { onde: 'inv', i: 0, antes: { item: 'carvao', qtd: 10 }, depois: null },
+        { onde: 'inv', i: 1, antes: null, depois: { item: 'carvao', qtd: 10 } },
+        {
+          onde: 'inv',
+          i: 0,
+          antes: { item: 'carvao', qtd: 10 },
+          depois: { item: 'carvao', qtd: 10 },
+        },
+      ],
+    });
+    expect(inv.contar('carvao')).toBe(10);
+    // quantidade quebrada e durabilidade inventada
+    n.comando('ana', {
+      t: 'transacao',
+      id: 2,
+      mudancas: [
+        {
+          onde: 'inv',
+          i: 0,
+          antes: { item: 'carvao', qtd: 10 },
+          depois: { item: 'carvao', qtd: 9.5 },
+        },
+      ],
+    });
+    expect(inv.obter(0)).toEqual({ item: 'carvao', qtd: 10 });
+    inv.definir(2, { item: 'picareta_ferro', qtd: 1, dur: 2 });
+    n.comando('ana', {
+      t: 'transacao',
+      id: 3,
+      mudancas: [
+        { onde: 'inv', i: 2, antes: { item: 'picareta_ferro', qtd: 1, dur: 2 }, depois: null },
+        { onde: 'inv', i: 3, antes: null, depois: { item: 'picareta_ferro', qtd: 1, dur: 250 } },
+      ],
+    });
+    expect(inv.obter(2)).toEqual({ item: 'picareta_ferro', qtd: 1, dur: 2 });
+    // renascer sem ter desmaiado não cura nem teletransporta
+    n.comando('ana', { t: 'depurar', d: { f: 'dano', qtd: 5, causa: 'outro' } });
+    const vida = n.estado.jogadores.get('ana')!.sobrevivencia.estado.vida;
+    n.comando('ana', { t: 'renascer' });
+    expect(n.estado.jogadores.get('ana')!.sobrevivencia.estado.vida).toBe(vida);
+  });
+});

@@ -7,6 +7,7 @@
 import { createHash, randomUUID } from 'node:crypto';
 import { criarNucleo, type Nucleo } from '../../src/nucleo/nucleo';
 import { definirEstiloMundo } from '../../src/world/chunk';
+import { estiloSeguro } from '../../src/world/estiloSeguro';
 import { definirRegioesSemPovoado } from '../../src/world/povoado';
 import { gerarCodigo, normalizarCodigo } from '../../src/jogo/codigos';
 import type { DadosMundo } from '../../src/jogo/mundos';
@@ -41,6 +42,12 @@ const ESPERA_VAZIA = 60_000;
 const INTERVALO_GRAVAR = 5_000;
 /** Tentativas de código errado por endereço a cada 10 minutos. */
 const TENTATIVAS = 20;
+/** Mundos novos por endereço a cada 10 minutos, e salas na memória ao mesmo tempo. */
+const CRIACOES = 10;
+const MAX_SALAS = 300;
+/** Identidade do aparelho: só letras, números, - e _ (vira nome de arquivo no Storage). */
+const ID_VALIDO = /^[A-Za-z0-9_-]{2,64}$/;
+const JANELA = 600_000;
 
 const resumo = (chave: string) => createHash('sha256').update(chave).digest('hex');
 /** Números com 2 casas: metade dos bytes, sem diferença que se veja. */
@@ -68,6 +75,10 @@ interface SalaAtiva {
   vaziaDesde: number | null;
   ultimaGravacao: number;
   expulsos: Set<string>;
+  /** Muda cada vez que a sala é aberta (o navegador percebe que o servidor recomeçou). */
+  instancia: string;
+  /** Último erro registrado no passo (para não encher o log). */
+  erroEm: number;
 }
 
 export interface OpcoesGerenciador {
@@ -89,6 +100,11 @@ export function criarGerenciador(op: OpcoesGerenciador) {
   const carregando = new Map<string, Promise<SalaAtiva | null>>();
   const deCanal = new Map<Canal, { sala: SalaAtiva; id: string }>();
   const erros = new Map<string, { n: number; desde: number }>();
+  const criacoes = new Map<string, { n: number; desde: number }>();
+  /** Conexões com um "entrar" em andamento (um por vez). */
+  const entrando = new Set<Canal>();
+  /** Códigos trocados pelo dono: só quem estava na sala volta por eles. */
+  const antigos = new Map<string, SalaAtiva>();
   /** Diário e mapa de cada jogador em cada mundo (vão junto dos dados dele). */
   const guardados = new Map<string, unknown>();
 
@@ -116,15 +132,16 @@ export function criarGerenciador(op: OpcoesGerenciador) {
     };
   }
 
-  function limitado(ip: string): boolean {
-    const e = erros.get(ip);
-    if (!e || agora() - e.desde > 600_000) return false;
-    return e.n >= TENTATIVAS;
+  function excedeu(m: Map<string, { n: number; desde: number }>, ip: string, max: number) {
+    const e = m.get(ip);
+    if (!e || agora() - e.desde > JANELA) return false;
+    return e.n >= max;
   }
-  function errou(ip: string): void {
-    const e = erros.get(ip);
-    if (!e || agora() - e.desde > 600_000) erros.set(ip, { n: 1, desde: agora() });
-    else e.n++;
+  function contar(m: Map<string, { n: number; desde: number }>, ip: string, d = 1): void {
+    const e = m.get(ip);
+    if (!e || agora() - e.desde > JANELA) {
+      if (d > 0) m.set(ip, { n: d, desde: agora() });
+    } else e.n = Math.max(0, e.n + d);
   }
 
   async function carregar(codigo: string): Promise<SalaAtiva | null> {
@@ -156,7 +173,9 @@ export function criarGerenciador(op: OpcoesGerenciador) {
     }
   }
 
-  function abrir(sala: Sala, mundo: MundoNuvem, dados: DadosMundo | undefined): SalaAtiva {
+  function abrir(sala: Sala, salvoMundo: MundoNuvem, dados: DadosMundo | undefined): SalaAtiva {
+    // estilo guardado de antes desta conferência também passa pelo saneamento
+    const mundo = { ...salvoMundo, estilo: estiloSeguro(salvoMundo.estilo) };
     definirEstiloMundo(mundo.estilo);
     const nucleo = criarNucleo({
       semente: mundo.semente,
@@ -175,6 +194,8 @@ export function criarGerenciador(op: OpcoesGerenciador) {
       vaziaDesde: agora(),
       ultimaGravacao: agora(),
       expulsos: new Set(sala.expulsos ?? []),
+      instancia: randomUUID(),
+      erroEm: 0,
     };
     ativas.set(sala.codigo, s);
     log(`sala ${sala.codigo} aberta (${mundo.tema}, ${mundo.modo})`);
@@ -196,7 +217,7 @@ export function criarGerenciador(op: OpcoesGerenciador) {
       tema: String(c.tema),
       modo: c.modo === 'sobrevivencia' ? 'sobrevivencia' : 'criativo',
       versaoMundo: Number(c.versaoMundo) || 2,
-      estilo: c.estilo,
+      estilo: estiloSeguro(c.estilo),
     };
     const sala: Sala = {
       codigo,
@@ -225,6 +246,8 @@ export function criarGerenciador(op: OpcoesGerenciador) {
     }
     await armazem.gravarSala(sala);
     const s = abrir(sala, mundo, d);
+    // o que veio do aparelho é novo para o Storage: todas as regiões com edição vão gravadas
+    for (const k of Object.keys(d?.edicoes ?? {})) s.regioesSujas.add(regiaoDe(k));
     if (doDono)
       await armazem.gravarJogador(mundo.id, jog.id, {
         chave: resumo(jog.chave),
@@ -234,6 +257,14 @@ export function criarGerenciador(op: OpcoesGerenciador) {
     await gravarMundo(s);
     log(`sala ${codigo} criada`);
     return s;
+  }
+
+  /** A sala do código: ativa, dormindo no Storage ou (para quem estava nela) o código antigo. */
+  async function salaDoCodigo(codigo: string, id: string): Promise<SalaAtiva | null> {
+    const velha = antigos.get(codigo);
+    if (velha)
+      return velha.presentes.has(id) && ativas.get(velha.sala.codigo) === velha ? velha : null;
+    return carregar(codigo);
   }
 
   async function entrar(canal: Canal, p: Extract<PedidoCliente, { t: 'entrar' }>): Promise<void> {
@@ -246,29 +277,45 @@ export function criarGerenciador(op: OpcoesGerenciador) {
     if (
       !jog ||
       typeof jog.id !== 'string' ||
+      !ID_VALIDO.test(jog.id) ||
       typeof jog.chave !== 'string' ||
-      jog.chave.length < 16
+      jog.chave.length < 16 ||
+      jog.chave.length > 200
     )
       return recusar('identidade');
-    if (limitado(canal.ip)) return recusar('limite');
+    const chave = resumo(jog.chave);
     let s: SalaAtiva | null;
-    if (p.criar) s = await criar(canal, jog, p.criar);
-    else {
+    let guardado: Awaited<ReturnType<Armazem['lerJogador']>> = null;
+    if (p.criar) {
+      if (excedeu(criacoes, canal.ip, CRIACOES) || ativas.size >= MAX_SALAS)
+        return recusar('limite');
+      contar(criacoes, canal.ip);
+      s = await criar(canal, jog, p.criar);
+    } else {
+      if (excedeu(erros, canal.ip, TENTATIVAS)) return recusar('limite');
+      // conta antes de esperar o Storage (rajadas de palpites contam todas); acerto devolve
+      contar(erros, canal.ip);
       const codigo = normalizarCodigo(String(p.codigo ?? ''));
-      s = codigo ? await carregar(codigo) : null;
-      if (!s) {
-        errou(canal.ip);
-        return recusar('codigo');
+      s = null;
+      // a sala pode dormir enquanto esperamos: confere de novo e, se for o caso, recarrega
+      for (let tentativa = 0; codigo && tentativa < 3; tentativa++) {
+        s = await salaDoCodigo(codigo, jog.id);
+        if (!s) break;
+        guardado = await armazem.lerJogador(s.mundo.id, jog.id);
+        if (ativas.get(s.sala.codigo) === s) break;
+        s = null;
       }
+      if (!s) return recusar('codigo');
+      contar(erros, canal.ip, -1);
     }
     const ehDono = s.sala.dono === jog.id && s.sala.chaveDono === resumo(jog.chave);
     if (s.expulsos.has(jog.id)) return recusar('expulso');
     if (s.sala.fechado && !ehDono) return recusar('fechado');
     const ja = s.presentes.get(jog.id);
     if (!ja && s.presentes.size >= MAX_JOGADORES) return recusar('cheio');
-    // ninguém entra no lugar de outro
-    const guardado = await armazem.lerJogador(s.mundo.id, jog.id);
-    if (guardado && guardado.chave !== resumo(jog.chave)) return recusar('identidade');
+    // ninguém entra no lugar de outro (nem de quem ainda não foi gravado)
+    if (guardado && guardado.chave !== chave) return recusar('identidade');
+    if (ja && ja.chave !== chave) return recusar('identidade');
     contexto(s);
     if (ja) {
       // voltou da queda: o mesmo jogador, no mesmo lugar
@@ -289,15 +336,21 @@ export function criarGerenciador(op: OpcoesGerenciador) {
       });
       if (guardado?.guardado !== undefined && !guardados.has(`${s.mundo.id}/${jog.id}`))
         guardados.set(`${s.mundo.id}/${jog.id}`, guardado.guardado);
-      s.presentes.set(jog.id, {
+      const novo: Presente = {
         id: jog.id,
-        chave: resumo(jog.chave),
+        chave,
         canal,
         desligadoEm: null,
         esperado: undefined,
         adiantados: new Map(),
         ultimoSalvo: '',
-      });
+      };
+      s.presentes.set(jog.id, novo);
+      // a chave fica registrada já na entrada (ninguém toma o lugar antes da 1ª gravação)
+      if (!guardado) {
+        const sala = s;
+        void gravarJogador(sala, novo, true).catch((e) => log(`gravar jogador: ${String(e)}`));
+      }
     }
     s.vaziaDesde = null;
     s.sala.acessadoEm = agora();
@@ -307,6 +360,7 @@ export function criarGerenciador(op: OpcoesGerenciador) {
       mundo: s.mundo,
       sala: estadoSala(s),
       voce: jog.id,
+      instancia: s.instancia,
       guardado: guardados.get(`${s.mundo.id}/${jog.id}`),
       edicoes: s.nucleo.estado.edicoes.exportar(),
       semPovoado: [...s.nucleo.semPovoado],
@@ -326,10 +380,11 @@ export function criarGerenciador(op: OpcoesGerenciador) {
 
   async function dono(
     s: SalaAtiva,
-    id: string,
+    pr: Presente,
     p: Extract<PedidoCliente, { t: 'dono' }>,
   ): Promise<void> {
-    if (s.sala.dono !== id) return;
+    const id = pr.id;
+    if (s.sala.dono !== id || s.sala.chaveDono !== pr.chave) return;
     if (p.acao === 'expulsar' && p.id !== id) {
       s.expulsos.add(p.id);
       s.sala.expulsos = [...s.expulsos];
@@ -337,7 +392,7 @@ export function criarGerenciador(op: OpcoesGerenciador) {
       if (alvo) {
         enviar(alvo.canal, { t: 'expulso' });
         alvo.canal?.fechar();
-        await despedir(s, alvo);
+        await despedir(s, alvo, false);
       }
     } else if (p.acao === 'trocarCodigo') {
       const antigo = s.sala.codigo;
@@ -347,6 +402,7 @@ export function criarGerenciador(op: OpcoesGerenciador) {
       s.sala.codigo = novo;
       ativas.delete(antigo);
       ativas.set(novo, s);
+      antigos.set(antigo, s);
       await armazem.gravarSala(s.sala);
       await armazem.apagarSala(antigo);
     } else if (p.acao === 'fechar') s.sala.fechado = !!p.fechado;
@@ -366,15 +422,23 @@ export function criarGerenciador(op: OpcoesGerenciador) {
     } catch {
       return;
     }
+    if (!p || typeof p !== 'object') return;
     const quem = deCanal.get(canal);
     if (!quem) {
-      if (p.t === 'entrar') await entrar(canal, p);
+      // um "entrar" por vez em cada conexão (rajadas não criam salas nem fantasmas)
+      if (p.t !== 'entrar' || entrando.has(canal)) return;
+      entrando.add(canal);
+      try {
+        await entrar(canal, p);
+      } finally {
+        entrando.delete(canal);
+      }
       return;
     }
     const { sala: s, id } = quem;
     const pr = s.presentes.get(id);
     if (!pr || pr.canal !== canal) return;
-    if (p.t === 'dono') return dono(s, id, p);
+    if (p.t === 'dono') return dono(s, pr, p);
     if (p.t === 'entrar') return;
     if (p.t === 'guardar') {
       // diário e mapa do jogador (opaco, com limite de tamanho)
@@ -384,6 +448,7 @@ export function criarGerenciador(op: OpcoesGerenciador) {
     }
     const c = p as Comando;
     if (c.seq === undefined) return aplicar(s, pr, c);
+    if (typeof c.seq !== 'number' || !Number.isInteger(c.seq)) return;
     // em ordem de seq: cada conexão numera do 1 (o cliente renumera ao reconectar)
     if (pr.esperado === undefined) pr.esperado = 1;
     if (c.seq < pr.esperado) return;
@@ -394,11 +459,22 @@ export function criarGerenciador(op: OpcoesGerenciador) {
       pr.esperado++;
       aplicar(s, pr, atual);
     }
-    if (pr.adiantados.size > 200) pr.adiantados.clear();
+    if (pr.adiantados.size > 200) {
+      // um buraco que não vai se fechar (mensagem perdida): pula para o que chegou
+      pr.esperado = Math.min(...pr.adiantados.keys());
+      while (pr.adiantados.has(pr.esperado)) {
+        const atual = pr.adiantados.get(pr.esperado)!;
+        pr.adiantados.delete(pr.esperado);
+        pr.esperado++;
+        aplicar(s, pr, atual);
+      }
+      pr.adiantados.clear();
+    }
   }
 
   /** A conexão caiu: o jogador fica no mundo um tempo, esperando voltar. */
   function caiu(canal: Canal): void {
+    entrando.delete(canal);
     const quem = deCanal.get(canal);
     deCanal.delete(canal);
     if (!quem) return;
@@ -428,28 +504,34 @@ export function criarGerenciador(op: OpcoesGerenciador) {
     });
   }
 
-  async function despedir(s: SalaAtiva, pr: Presente): Promise<void> {
-    contexto(s);
+  async function despedir(s: SalaAtiva, pr: Presente, porQueda: boolean): Promise<void> {
     await gravarJogador(s, pr, true);
+    // voltou enquanto gravávamos: fica
+    if (porQueda && pr.desligadoEm === null) return;
+    if (s.presentes.get(pr.id) !== pr) return;
+    if (pr.canal) {
+      deCanal.delete(pr.canal);
+      pr.canal.fechar();
+      pr.canal = null;
+    }
+    contexto(s);
     s.nucleo.desconectar(pr.id);
     s.presentes.delete(pr.id);
     if (s.presentes.size === 0) s.vaziaDesde = agora();
   }
 
   async function gravarMundo(s: SalaAtiva): Promise<void> {
+    contexto(s);
     const salvo = s.nucleo.salvar();
-    // regiões que mudaram: as edições dos 64 chunks de cada uma
-    for (const r of s.regioesSujas) {
-      const [rx, rz] = r.split(',').map(Number);
-      const parte: Record<string, Array<[number, number]>> = {};
-      for (let cx = rx * 8; cx < rx * 8 + 8; cx++)
-        for (let cz = rz * 8; cz < rz * 8 + 8; cz++) {
-          const k = `${cx},${cz}`;
-          if (salvo.edicoes[k]) parte[k] = salvo.edicoes[k];
-        }
-      await armazem.gravarRegiao(s.mundo.id, r, parte);
-    }
+    // o que muda durante a gravação fica para a próxima (a lista é tirada antes de esperar)
+    const sujas = [...s.regioesSujas];
     s.regioesSujas.clear();
+    try {
+      await gravarRegioes(s, sujas, salvo.edicoes);
+    } catch (e) {
+      for (const r of sujas) s.regioesSujas.add(r);
+      throw e;
+    }
     await armazem.gravarMundo(s.mundo.id, {
       mundo: s.mundo,
       hora: salvo.hora,
@@ -457,6 +539,24 @@ export function criarGerenciador(op: OpcoesGerenciador) {
     });
     await armazem.gravarSala(s.sala);
     s.ultimaGravacao = agora();
+  }
+
+  async function gravarRegioes(
+    s: SalaAtiva,
+    sujas: string[],
+    edicoes: DadosMundo['edicoes'],
+  ): Promise<void> {
+    // regiões que mudaram: as edições dos 64 chunks de cada uma
+    for (const r of sujas) {
+      const [rx, rz] = r.split(',').map(Number);
+      const parte: Record<string, Array<[number, number]>> = {};
+      for (let cx = rx * 8; cx < rx * 8 + 8; cx++)
+        for (let cz = rz * 8; cz < rz * 8 + 8; cz++) {
+          const k = `${cx},${cz}`;
+          if (edicoes[k]) parte[k] = edicoes[k];
+        }
+      await armazem.gravarRegiao(s.mundo.id, r, parte);
+    }
   }
 
   // ritmo: quanto tempo cada passo leva (médio e o pior do último minuto)
@@ -475,15 +575,23 @@ export function criarGerenciador(op: OpcoesGerenciador) {
   function passo2(): void {
     for (const s of ativas.values()) {
       if (s.presentes.size === 0) continue;
-      contexto(s);
-      s.nucleo.passo(PASSO);
-      const quadros = s.nucleo.quadros();
-      for (const pr of s.presentes.values()) {
-        const q = quadros.get(pr.id);
-        if (!q) continue;
-        for (const b of q.blocos ?? [])
-          s.regioesSujas.add(regiaoDe(`${Math.floor(b.x / 16)},${Math.floor(b.z / 16)}`));
-        if (pr.canal) enviar(pr.canal, filtrar(s, pr.id, q));
+      // um mundo com problema não para os outros
+      try {
+        contexto(s);
+        s.nucleo.passo(PASSO);
+        const quadros = s.nucleo.quadros();
+        for (const pr of s.presentes.values()) {
+          const q = quadros.get(pr.id);
+          if (!q) continue;
+          for (const b of q.blocos ?? [])
+            s.regioesSujas.add(regiaoDe(`${Math.floor(b.x / 16)},${Math.floor(b.z / 16)}`));
+          if (pr.canal) enviar(pr.canal, filtrar(s, pr.id, q));
+        }
+      } catch (e) {
+        if (agora() - s.erroEm > 60_000) {
+          s.erroEm = agora();
+          log(`erro na sala ${s.sala.codigo}: ${e instanceof Error ? e.stack : String(e)}`);
+        }
       }
     }
   }
@@ -505,31 +613,45 @@ export function criarGerenciador(op: OpcoesGerenciador) {
   /** Tarefas lentas: quedas vencidas, gravação a cada 5 s, salas vazias dormindo. */
   async function manutencao(): Promise<void> {
     for (const [codigo, s] of [...ativas]) {
-      for (const pr of [...s.presentes.values()])
-        if (pr.desligadoEm !== null && agora() - pr.desligadoEm > TOLERANCIA_QUEDA)
-          await despedir(s, pr);
-      if (agora() - s.ultimaGravacao >= INTERVALO_GRAVAR) {
-        await gravarMundo(s);
-        for (const pr of s.presentes.values()) await gravarJogador(s, pr);
+      try {
+        await manter(codigo, s);
+      } catch (e) {
+        log(`manutenção da sala ${codigo}: ${String(e)}`);
       }
-      if (
-        s.presentes.size === 0 &&
-        s.vaziaDesde !== null &&
-        agora() - s.vaziaDesde > ESPERA_VAZIA
-      ) {
-        await gravarMundo(s);
-        ativas.delete(codigo);
-        log(`sala ${codigo} dormiu`);
-      }
+    }
+    // limites vencidos saem da memória
+    for (const m of [erros, criacoes])
+      for (const [ip, e] of m) if (agora() - e.desde > JANELA) m.delete(ip);
+    for (const [c, s] of antigos) if (ativas.get(s.sala.codigo) !== s) antigos.delete(c);
+  }
+
+  async function manter(codigo: string, s: SalaAtiva): Promise<void> {
+    for (const pr of [...s.presentes.values()])
+      if (pr.desligadoEm !== null && agora() - pr.desligadoEm > TOLERANCIA_QUEDA)
+        await despedir(s, pr, true);
+    if (agora() - s.ultimaGravacao >= INTERVALO_GRAVAR) {
+      await gravarMundo(s);
+      for (const pr of [...s.presentes.values()]) await gravarJogador(s, pr);
+    }
+    if (s.presentes.size === 0 && s.vaziaDesde !== null && agora() - s.vaziaDesde > ESPERA_VAZIA) {
+      await gravarMundo(s);
+      // alguém entrou enquanto gravávamos: a sala continua acordada
+      if (s.presentes.size > 0 || ativas.get(codigo) !== s) return;
+      ativas.delete(codigo);
+      log(`sala ${codigo} dormiu`);
     }
   }
 
   /** Antes de desligar (nova versão do servidor): grava tudo. */
   async function gravarTudo(): Promise<void> {
     for (const s of ativas.values()) {
-      contexto(s);
-      for (const pr of s.presentes.values()) await gravarJogador(s, pr, true);
-      await gravarMundo(s);
+      try {
+        contexto(s);
+        for (const pr of s.presentes.values()) await gravarJogador(s, pr, true);
+        await gravarMundo(s);
+      } catch (e) {
+        log(`gravar ${s.sala.codigo}: ${String(e)}`);
+      }
     }
   }
 
