@@ -18,6 +18,20 @@ const nova = () => {
 };
 
 describe('motor de áudio', () => {
+  it('vozes presas (sem aviso de fim, como no iPhone) não calam o jogo', async () => {
+    const ctx = new ContextoFalso(false);
+    let t = 0;
+    const motor = criarMotorAudio(() => ctx, { maxVozes: 4, agora: () => t });
+    await motor.ativar();
+    // 4 sons cujo fim nunca é avisado ocupam todas as vagas
+    for (let i = 0; i < 4; i++) expect(motor.tocar(nova)).toBe(true);
+    expect(motor.vozes).toBe(4);
+    // muito tempo depois: as presas saem e o som novo toca
+    t += 6000;
+    expect(motor.tocar(nova)).toBe(true);
+    expect(motor.vozes).toBe(1);
+  });
+
   it('nasce inativo, não chama a fábrica e ignora tocar sem fila', async () => {
     const { motor, chamadas } = montar();
     expect(motor.estado).toBe('inativo');

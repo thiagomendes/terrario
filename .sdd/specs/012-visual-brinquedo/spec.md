@@ -226,13 +226,14 @@ Lista única para nada se perder. Cada item: feito (com o que comprova) ou pende
 - [x] C3 e parte do C2: textura do mundo filtrada, sem degrau de pixel em nenhum bloco (portas, camas, baús, fornalhas, lado da grama).
 - [x] Moradoras sem barba: o rosto do morador segue o gênero.
 
+- [x] Som que sumia ao quebrar blocos depois de um tempo: as vozes presas (no iPhone o aviso de fim não chega quando o áudio é interrompido) enchiam o limite de 12; agora saem depois de 5 s, e o áudio é retomado também no toque (`motor.test.ts`). Falta o dono confirmar no aparelho.
+
 **Pendente, nesta ordem**
 
 5. C2: tocha e vidro em formas de brinquedo (o resto dos blocos com forma já está macio pela textura filtrada).
 6. C4: chuva com céu cinza-azulado claro e relâmpago suave; espuma na beira em degrau.
 7. Restos de interface: renomear e excluir mundo ainda usam a janela do navegador; apelido acima dos amigos ainda escuro; avisos de boas-vindas por cima do inventário.
 8. B7: ícone do site, do app instalado e imagem de compartilhamento.
-8b. **Som que some ao quebrar blocos** (visto em família): depois de um tempo jogando, o som some a cada bloco quebrado e volta, até parar de vez. Suspeita: fontes de som que acumulam sem ser liberadas.
 9. D2: medir o desempenho de novo (computador e CPU desacelerada) e publicar.
 
 **Fora desta spec (no backlog do projeto, `.sdd/backlog.md`)**

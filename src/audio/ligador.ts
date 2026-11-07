@@ -54,6 +54,7 @@ export function manterAudioDesbloqueado(alvo: AlvoGesto, motor: Pick<MotorAudio,
   const ouvinte = () => motor.retomar();
   alvo.addEventListener('touchend', ouvinte);
   alvo.addEventListener('click', ouvinte);
+  alvo.addEventListener('pointerdown', ouvinte);
 }
 
 export function teclaParaMudo(codigo: string): boolean {

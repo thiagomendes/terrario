@@ -35,7 +35,16 @@ export type FabricaContexto = () => ContextoAudio;
 export interface OpcoesMotor {
   maxVozes?: number;
   ganhos?: Partial<Record<GrupoAudio, number>>;
+  /** Relógio em ms (testes); padrão performance.now. */
+  agora?: () => number;
 }
+
+/**
+ * Nenhum efeito do jogo dura mais que uns 3 s: uma voz comum mais velha que isto ficou presa
+ * (no iPhone o aviso de fim não chega quando o áudio é interrompido) e é encerrada na marra.
+ * Sem isso as vagas presas se acumulavam e, depois de um tempo jogando, o som sumia.
+ */
+export const VIDA_MAXIMA_VOZ_MS = 5000;
 
 export interface OpcoesTocar {
   grupo?: GrupoAudio;
@@ -69,10 +78,14 @@ const GANHOS_PADRAO: Record<GrupoAudio, number> = {
 interface Voz {
   fonte: FonteAudio;
   alta: boolean;
+  /** Quando começou (ms do relógio do motor). */
+  inicio: number;
 }
 
 export function criarMotorAudio(fabrica: FabricaContexto, opcoes: OpcoesMotor = {}): MotorAudio {
   const maxVozes = opcoes.maxVozes ?? MAX_VOZES;
+  const agora =
+    opcoes.agora ?? (() => (typeof performance !== 'undefined' ? performance.now() : Date.now()));
   const ganhosGrupo = { ...GANHOS_PADRAO, ...opcoes.ganhos };
   let estado: EstadoAudio = 'inativo';
   let mudo = false;
@@ -182,6 +195,20 @@ export function criarMotorAudio(fabrica: FabricaContexto, opcoes: OpcoesMotor = 
     tocar(desenho, op = {}) {
       if (estado !== 'ativo' || mudo || !ctx || !grupos) return false;
       const alta = op.prioridade === 'alta';
+      // vozes presas (o aviso de fim não chegou): libera as vagas
+      const t = agora();
+      for (let i = vozes.length - 1; i >= 0; i--) {
+        const v = vozes[i];
+        if (v.alta || t - v.inicio < VIDA_MAXIMA_VOZ_MS) continue;
+        encerrar(v);
+        try {
+          v.fonte.stop();
+        } catch {
+          // já parada
+        }
+      }
+      // o sistema suspendeu o áudio (iPhone): retoma junto com o som novo
+      if (ctx.state && ctx.state !== 'running') void ctx.resume().catch(() => undefined);
       if (vozes.length >= maxVozes) {
         const antiga = vozes.findIndex((v) => !v.alta);
         if (antiga < 0) return false;
@@ -194,7 +221,7 @@ export function criarMotorAudio(fabrica: FabricaContexto, opcoes: OpcoesMotor = 
         }
       }
       const fonte = desenho(ctx, grupos[op.grupo ?? 'efeitos']);
-      const voz: Voz = { fonte, alta };
+      const voz: Voz = { fonte, alta, inicio: t };
       fonte.onended = () => encerrar(voz);
       vozes.push(voz);
       return true;
