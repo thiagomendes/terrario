@@ -1,7 +1,7 @@
 ---
 id: 012-visual-brinquedo
 title: 'Visual de brinquedo: o jogo inteiro com cara de brinquedo, do bloco ao personagem e ao site'
-status: IN_PROGRESS
+status: IN_REVIEW
 base_branch: main
 branch: feat/visual-brinquedo
 created_at: 2026-11-07T17:00:00Z
@@ -158,3 +158,8 @@ A água parece gelatina azul ou resina de brinquedo, e a chuva parece chuvinha d
 - **Celular:** quinas arredondadas e sombra macia custam mais. Mitigação: malha arredondada só perto, sombra só perto, qualidade automática e medição a cada fase.
 - **Muitas peças de arte** (seis temas, todos os bichos, todos os itens). Mitigação: as formas saem de geradores com parâmetros por tema, como as texturas de hoje, e não de modelos feitos um a um.
 - **Ficar diferente do esboço no caminho:** as duplas de captura são refeitas a cada fase, não só no fim.
+
+## Fechamento (7 nov 2026)
+- Relatório visual: https://claude.ai/artifact/K3EPyN63F6md1GTBd8oznJ (cada esboço ao lado da captura do jogo, os seis temas de dia e de noite, efeitos, medidas).
+- Aguardando o dono: juntas aparentes ou suaves, um jogo no celular de verdade e a publicação (levar o ramo para o `main`).
+- Ficou para depois: árvores com forma própria por tema (a forma vem da geração do mundo, compartilhada com o servidor; por agora todas viraram copas de bolha), céu cinza-azulado e relâmpago suave na chuva, espuma na beira em degrau.
