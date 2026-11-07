@@ -3103,7 +3103,10 @@ export function criarCena(
   estado.modo = modo;
   estado.inventario = inventario;
   estado.mundo = opcoes.mundo ? { ...opcoes.mundo } : undefined;
-  setInterval(() => void salvar(false), 30_000);
+  // a cada 30 s salva; a cada 2 min também tira a foto da miniatura (a lista de mundos mostra
+  // o mundo como ele está agora, sem esperar pausar ou trocar de mundo)
+  let salvamentos = 0;
+  setInterval(() => void salvar(++salvamentos % 4 === 0), 30_000);
   // cópia recente do núcleo: ao fechar a aba não dá tempo de perguntar ao worker
   let copiaNucleo: SalvoNucleo | null = null;
   setInterval(() => {
