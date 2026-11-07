@@ -2,33 +2,45 @@ import { LIMITES, type Config, type GerenciadorConfig, type Qualidade } from '..
 import { criarModal } from './mundos';
 
 export const CSS_CONFIG = `
-.abas { display: flex; gap: 4px; padding: 4px; margin-bottom: 14px; border-radius: 12px; background: rgba(0,0,0,0.3); flex-wrap: wrap; }
-.abas button {
-  flex: 1 1 auto; min-height: 36px; padding: 6px 12px; border: 0; border-radius: 9px;
-  background: transparent; color: #b9b2a6; font: 600 0.88rem system-ui, sans-serif; cursor: pointer;
+/* abas: trilho de poço com a aba escolhida em peça amarela */
+.abas {
+  display: flex; gap: 6px; padding: 6px; margin-bottom: 14px; border-radius: 16px; flex-wrap: wrap;
+  background: var(--poco); box-shadow: var(--sombra-poco);
 }
-.abas button[aria-selected='true'] { background: rgba(255,255,255,0.12); color: #fff; }
+.abas button {
+  flex: 1 1 auto; min-height: 38px; padding: 6px 12px; border: 0; border-radius: 12px;
+  background: transparent; color: var(--tinta); font: 800 0.9rem var(--jogo); cursor: pointer;
+  transition: background 0.1s ease;
+}
+.abas button:hover { background: rgba(255, 255, 255, 0.6); }
+.abas button:focus-visible { outline: 3px solid var(--azul); outline-offset: 2px; }
+.abas button[aria-selected='true'] {
+  background: linear-gradient(to bottom, #ffe39a, var(--amarela) 55%, #f5b42e);
+  box-shadow: 0 3px 0 var(--amarela-fundo), inset 0 2px 0 rgba(255, 255, 255, 0.6);
+}
 .opcao-config {
   display: grid; grid-template-columns: minmax(140px, 1fr) minmax(0, 1.4fr) 56px; gap: 12px; align-items: center;
-  padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.06);
+  padding: 12px 0; border-bottom: 2px dashed var(--painel-borda);
 }
-.opcao-config .nome { font-weight: 600; font-size: 0.92rem; }
-.opcao-config .nome small { display: block; font-weight: 400; font-size: 0.76rem; color: #8f897e; }
-.opcao-config .valor { text-align: right; font: 700 0.85rem ui-monospace, monospace; color: #ffd98f; }
-.opcao-config input[type='range'] { width: 100%; accent-color: #ffc46b; }
+.opcao-config:last-child { border-bottom: 0; }
+.opcao-config .nome { font-weight: 800; font-size: 0.95rem; color: var(--tinta); }
+.opcao-config .nome small { display: block; font-weight: 600; font-size: 0.78rem; color: var(--tinta-suave); }
+.opcao-config .valor { text-align: right; font: 800 0.9rem var(--jogo); color: var(--tinta); }
+.opcao-config input[type='range'] { width: 100%; accent-color: var(--amarela-fundo); }
 .interruptor {
-  justify-self: start; position: relative; width: 46px; height: 26px; border-radius: 13px; border: 0;
-  background: rgba(255,255,255,0.15); cursor: pointer; transition: background 0.15s ease;
+  justify-self: start; position: relative; width: 52px; height: 30px; border-radius: 15px; border: 0;
+  background: #e6d3b0; box-shadow: var(--sombra-poco); cursor: pointer; transition: background 0.15s ease;
 }
 .interruptor::after {
-  content: ''; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%;
-  background: #fff; transition: transform 0.15s ease;
+  content: ''; position: absolute; top: 3px; left: 3px; width: 24px; height: 24px; border-radius: 50%;
+  background: #fff; box-shadow: 0 2px 0 rgba(120, 80, 30, 0.3); transition: transform 0.15s ease;
 }
-.interruptor[aria-checked='true'] { background: #f0a94a; }
+.interruptor[aria-checked='true'] { background: var(--azul); }
+.interruptor:focus-visible { outline: 3px solid var(--azul-fundo); outline-offset: 2px; }
 /* área de toque maior que o desenho do interruptor */
-.interruptor::before { content: ''; position: absolute; inset: -9px -4px; }
-.interruptor[aria-checked='true']::after { transform: translateX(20px); }
-.rodape-config { display: flex; justify-content: space-between; gap: 8px; margin-top: 16px; flex-wrap: wrap; }
+.interruptor::before { content: ''; position: absolute; inset: -7px -4px; }
+.interruptor[aria-checked='true']::after { transform: translateX(22px); }
+.rodape-config { display: flex; justify-content: space-between; gap: 10px; margin-top: 16px; flex-wrap: wrap; }
 @media (max-width: 560px) { .opcao-config { grid-template-columns: 1fr 56px; } .opcao-config .controle { grid-column: 1 / -1; grid-row: 2; } }
 `;
 
