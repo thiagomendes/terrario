@@ -213,15 +213,18 @@ Lista única para nada se perder. Cada item: feito (com o que comprova) ou pende
 - [x] Voz de morador "em laço" na Lua: não reproduziu; os chamados de rádio repetidos foram acalmados. Falta o dono confirmar.
 - [x] Bichos nascendo presos dentro de blocos: cada um nasce no chão da própria coluna e, se ficar preso, se solta para cima ou para o lado.
 
+- [x] Criaturas da noite em plástico pastel que brilha no escuro, sem translucidez nem brilho estourado (capturas `perto-*`).
+- [x] Fotos novas da vitrine dos temas (a miniatura de cada mundo na lista já sai do jogo ao salvar).
+- [x] Revisão das janelas com interação: trocas e receitas na largura toda; receita sem ingredientes legível (não parece desligada); avisos não cobrem a janela aberta (capturas `painel-*`, celular e computador).
+
 **Pendente, nesta ordem**
-1. Conferir os bichos de perto (A3) e o brilho estourado ou translúcido de flores e criaturas da noite.
-2. Fotos da vitrine dos temas (ainda as de pixel) e a miniatura do mundo na lista.
 3. A4: itens soltos no chão como modelo 3D de brinquedo.
-4. A5: nomes dos modelos de personagem (Andarilho etc.), coerentes no feminino e no masculino.
+4. A5: nomes dos modelos de personagem (Andarilho etc.) coerentes no feminino e no masculino, e o gênero dos moradores ("Tonho · Ferreira": nome masculino com profissão no feminino).
 5. C1–C3: rachadura e contorno do bloco mirado, blocos com forma (tocha, porta, vidro, cama, baú, fornalha, cerca, escada, laje), lado da grama sem chuvisco.
 6. C4: chuva com céu cinza-azulado claro e relâmpago suave; espuma na beira em degrau.
 7. Restos de interface: renomear e excluir mundo ainda usam a janela do navegador; apelido acima dos amigos ainda escuro; avisos de boas-vindas por cima do inventário.
 8. B7: ícone do site, do app instalado e imagem de compartilhamento.
+8b. **Som que some ao quebrar blocos** (visto em família): depois de um tempo jogando, o som some a cada bloco quebrado e volta, até parar de vez. Suspeita: fontes de som que acumulam sem ser liberadas.
 9. D2: medir o desempenho de novo (computador e CPU desacelerada) e publicar.
 
 **Fora desta spec (no backlog do projeto, `.sdd/backlog.md`)**

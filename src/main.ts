@@ -220,7 +220,7 @@ function ligarInventario(
   // trocas: o núcleo confere e faz; a tela mostra o pedido e o inventário novo
   let moradorAtual = 0;
   const painelTrocas = criarPainelTrocas(ui, hotbar.inventario, {
-    aviso: (t) => notificar(t),
+    aviso: (t) => notificar(t, undefined, true),
     fazer: (profissao, t) => cena.trocar(moradorAtual, profissao, t.id),
   });
   window.addEventListener('brumaluz:trocar', (e) => {
@@ -229,7 +229,8 @@ function ligarInventario(
     abrirConteiner(() => painelTrocas.abrir(d.profissao, d.nome));
   });
   window.addEventListener('brumaluz:trocaRecusada', (e) => {
-    if ((e as CustomEvent<string>).detail === 'faltam') notificar(povoadoDoTema().textos.faltam);
+    if ((e as CustomEvent<string>).detail === 'faltam')
+      notificar(povoadoDoTema().textos.faltam, undefined, true);
   });
   const fecharOriginal = ui.fechar;
   ui.fechar = () => {

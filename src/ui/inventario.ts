@@ -56,6 +56,9 @@ export const CSS_INVENTARIO = `
 .catalogo { display: grid; gap: 8px; }
 .catalogo[hidden], .livro[hidden] { display: none !important; }
 .inventario .topo > .secao:first-child { display: flex; gap: 18px; align-items: flex-start; flex-wrap: wrap; }
+/* trocas e livro ocupam a largura toda do painel (não ficam numa coluna estreita) */
+.inventario .topo > .secao:first-child:has(> .painel-trocas:not([hidden])) { flex: 1 1 100%; }
+.inventario .topo > .secao:first-child > .painel-trocas { flex: 1 1 100%; }
 .catalogo input {
   min-height: 42px; padding: 6px 14px; border: 0; border-radius: 14px;
   background: var(--poco); color: var(--tinta); font: 700 0.95rem var(--jogo); box-shadow: var(--sombra-poco);

@@ -7,11 +7,11 @@ import type { InventarioUI } from './inventario';
 
 export const CSS_TROCAS = `
 /* trocas são uma seção do inventário: sem fundo nem sombra próprios */
-.painel-trocas { display: grid; gap: 10px; min-width: 0; }
+.painel-trocas { display: grid; gap: 10px; min-width: 0; width: 100%; justify-self: stretch; box-sizing: border-box; }
 .painel-trocas[hidden] { display: none; }
 .painel-trocas .quem { font: 700 1.1rem var(--display); color: var(--tinta); }
 .painel-trocas .quem small { display: block; font: 600 0.8rem var(--jogo); color: var(--tinta-suave); }
-.lista-trocas { display: grid; gap: 8px; }
+.lista-trocas { display: grid; gap: 8px; width: 100%; }
 .troca {
   display: grid; grid-template-columns: auto auto auto 1fr; align-items: center; gap: 8px;
   padding: 6px 8px 10px; border-radius: 16px; background: rgba(243, 230, 204, 0.45);

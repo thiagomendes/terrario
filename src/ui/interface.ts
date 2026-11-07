@@ -64,7 +64,9 @@ body.submerso .bolhas-agua { display: block; }
   width: max-content; max-width: calc(100vw - 24px); text-align: center;
 }
 /* sem HUD de jogo (título, pausa): os avisos voltam ao alto */
-body.tela-titulo .toast-area, body[data-overlay] .toast-area { top: 12px; }
+body.tela-titulo .toast-area { top: 12px; }
+/* com uma janela aberta, os avisos descem para baixo e não cobrem o título dela */
+body[data-overlay] .toast-area { top: auto; bottom: calc(env(safe-area-inset-bottom, 0px) + 14px); z-index: 60; }
 /* bússola no alto ao centro; construção logo abaixo; avisos abaixo dela */
 @media (max-width: 560px) {
   /* retrato: coluna da esquerda (HUD) e do minimapa ocupam o alto; construção acima dos controles */
@@ -125,7 +127,23 @@ export function travarPonteiro(el: Element | null = document.getElementById('cen
 }
 
 /** Mostra uma notificação curta no topo da tela. */
-export function notificar(texto: string, nomeIcone?: NomeIcone): void {
+export function notificar(
+  texto: string,
+  nomeIcone?: NomeIcone,
+  /** Aviso da própria janela aberta (falta item na troca): aparece mesmo com ela aberta. */
+  urgente = false,
+): void {
+  // com uma janela aberta (inventário, trocas, mapa), o aviso comum espera ela fechar: no
+  // celular o painel ocupa quase a tela toda e o aviso cobria o título e os espaços
+  if (!urgente && document.body.dataset.overlay) {
+    const t0 = performance.now();
+    const esperar = () => {
+      if (!document.body.dataset.overlay) notificar(texto, nomeIcone);
+      else if (performance.now() - t0 < 60_000) setTimeout(esperar, 400);
+    };
+    setTimeout(esperar, 400);
+    return;
+  }
   let area = document.querySelector<HTMLElement>('.toast-area');
   if (!area) {
     area = document.createElement('div');

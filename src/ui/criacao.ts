@@ -24,7 +24,7 @@ export const CSS_CRIACAO = `
 .criacao .resultado { width: calc(var(--slot) * 1.25); height: calc(var(--slot) * 1.25); }
 .criacao .resultado.pronto { background: #fff1c4; box-shadow: inset 0 0 0 3px var(--amarela), 0 3px 0 var(--amarela-fundo); }
 .criacao .btn { width: 100%; }
-.livro { display: grid; gap: 8px; min-width: min(320px, 100%); max-width: 100%; box-sizing: border-box; }
+.livro { display: grid; gap: 8px; width: 100%; min-width: min(320px, 100%); max-width: 100%; box-sizing: border-box; justify-self: stretch; }
 .livro input {
   min-height: 42px; padding: 6px 14px; border: 0; border-radius: 14px; box-sizing: border-box; width: 100%;
   background: var(--poco); color: var(--tinta); font: 700 0.95rem var(--jogo); box-shadow: var(--sombra-poco);
@@ -38,8 +38,11 @@ export const CSS_CRIACAO = `
 .receita:hover { background: #fff3d6; }
 .receita:focus-visible { outline: 3px solid var(--azul); outline-offset: 1px; }
 .receita.disponivel { background: #fff6dc; box-shadow: inset 0 0 0 2px var(--amarela), 0 3px 0 var(--amarela-fundo); }
-.receita.bloqueada { color: var(--tinta-suave); }
-.receita.bloqueada img { opacity: 0.55; }
+.receita.bloqueada { color: var(--tinta); }
+/* falta ingrediente: a receita segue legível (não parece desligada); só os ingredientes que
+   faltam ficam um pouco apagados */
+.receita.bloqueada img { opacity: 0.85; }
+.receita.bloqueada .ingr img { opacity: 0.6; }
 .receita img { width: 32px; height: 32px; }
 .receita .ingr { display: flex; gap: 2px; margin-top: 2px; flex-wrap: wrap; }
 .receita .ingr img { width: 16px; height: 16px; }
