@@ -8,10 +8,18 @@ export const CSS_SETAS = `
 .setas-amigos { position: fixed; inset: 0; pointer-events: none; z-index: 5; }
 .seta-amigo {
   position: absolute; display: flex; align-items: center; gap: 6px; transform: translate(-50%, -50%);
-  padding: 4px 10px 4px 6px; border-radius: 999px; background: rgba(14, 10, 20, 0.7);
-  color: #fff4d8; font: 700 0.85rem system-ui, sans-serif; white-space: nowrap;
+  padding: 4px 12px 4px 6px; border-radius: 999px; background: rgba(255, 250, 240, 0.94);
+  color: var(--tinta); font: 800 0.85rem var(--jogo); white-space: nowrap;
+  box-shadow: 0 3px 0 rgba(150, 110, 60, 0.3), 0 6px 12px rgba(40, 25, 10, 0.2);
 }
-.seta-amigo i { width: 0; height: 0; border-left: 7px solid transparent; border-right: 7px solid transparent; border-bottom: 12px solid var(--cor); }
+/* bolinha da cor do amigo com a setinha branca apontando */
+.seta-amigo i {
+  width: 20px; height: 20px; border-radius: 50%; background: var(--cor); box-shadow: inset 0 -2px 0 rgba(0, 0, 0, 0.18);
+  position: relative;
+}
+.seta-amigo i::after {
+  content: ''; position: absolute; left: 5px; top: 4px; border-left: 5px solid transparent; border-right: 5px solid transparent; border-bottom: 9px solid #fff;
+}
 body[data-overlay] .setas-amigos, body.tela-titulo .setas-amigos { display: none; }
 `;
 
