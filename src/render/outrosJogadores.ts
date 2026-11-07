@@ -14,9 +14,9 @@ import type { JogadorVisto, PerfilJogador } from '../nucleo/protocolo';
 /** Apelido em HTML por cima do jogo: nítido em qualquer tela (sem desfoque do 3D). */
 const CSS_ROTULO = `
 .rotulo-amigo { position: fixed; left: 0; top: 0; z-index: 6; pointer-events: none;
-  padding: 3px 10px; border-radius: 9px; background: rgba(14, 10, 20, 0.72); color: #fff4d8;
-  font: 700 14px system-ui, sans-serif; white-space: nowrap; will-change: transform;
-  text-shadow: 0 1px 0 rgba(0,0,0,0.5); }
+  padding: 3px 12px; border-radius: 999px; background: rgba(255, 250, 240, 0.92); color: #3b2a1e;
+  font: 800 14px var(--jogo, system-ui), sans-serif; white-space: nowrap; will-change: transform;
+  box-shadow: 0 2px 0 rgba(150, 110, 60, 0.35), 0 4px 10px rgba(40, 25, 10, 0.2); }
 .rotulo-amigo[hidden] { display: none; }
 body[data-overlay] .rotulo-amigo, body.modo-foto .rotulo-amigo, body.tela-titulo .rotulo-amigo { display: none; }
 `;

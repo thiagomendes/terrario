@@ -1,3 +1,4 @@
+import { perguntar } from './dialogo';
 /**
  * Jogar com amigos (spec 010): entrar com código, o painel do convite (código ilustrado,
  * copiar, compartilhar, QR Code), quem está no mundo, o painel do dono e os avisos de
@@ -344,13 +345,14 @@ export function criarPainelAmigos(raiz: HTMLElement, op: OpcoesPainelAmigos) {
       } else if (souDono && op.dono) {
         const b = botao(
           'Pedir para sair',
-          () => {
-            if (
-              confirm(
-                `Pedir para ${j.apelido} sair do mundo? Ele não vai poder voltar com este código.`,
-              )
-            )
-              op.dono!.expulsar(j.id);
+          async () => {
+            const ok = await perguntar({
+              titulo: 'Pedir para sair',
+              texto: `Pedir para ${j.apelido} sair do mundo? Quem sair não volta com este código.`,
+              confirmar: 'Pedir para sair',
+              perigo: true,
+            });
+            if (ok === true) op.dono!.expulsar(j.id);
           },
           'data-expulsar',
         );
@@ -387,13 +389,13 @@ export function criarPainelAmigos(raiz: HTMLElement, op: OpcoesPainelAmigos) {
         chave('Fechar para novas visitas', sala.fechado, (v) => d.fechar(v), 'data-fechado'),
         botao(
           'Trocar o código',
-          () => {
-            if (
-              confirm(
-                'Trocar o código? O antigo para de funcionar na hora (quem já está continua).',
-              )
-            )
-              d.trocarCodigo();
+          async () => {
+            const ok = await perguntar({
+              titulo: 'Trocar o código',
+              texto: 'O código antigo para de funcionar na hora (quem já está no mundo continua).',
+              confirmar: 'Trocar',
+            });
+            if (ok === true) d.trocarCodigo();
           },
           'data-trocar-codigo',
         ),

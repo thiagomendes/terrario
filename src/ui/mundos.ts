@@ -1,3 +1,4 @@
+import { perguntar } from './dialogo';
 import { criarSeletorTemas } from './temasUi';
 import { obterTema, TEMA_PADRAO } from '../temas';
 import type { IdTema } from '../temas/tipos';
@@ -165,6 +166,8 @@ export function criarModal(titulo: string, atributo: string, overlay?: string) {
   const api = { fechar: () => fecharModal() };
   const aoTecla = (e: KeyboardEvent) => {
     if (e.key !== 'Escape' || !aberto || pilhaModais[pilhaModais.length - 1] !== api) return;
+    // um diálogo aberto por cima (renomear, excluir) cuida do próprio Esc
+    if (document.querySelector('[data-dialogo]')) return;
     e.preventDefault();
     e.stopImmediatePropagation();
     fecharModal();
@@ -353,8 +356,12 @@ export function criarPainelMundos(raiz: HTMLElement, op: OpcoesPainelMundos) {
       renomear.className = 'btn';
       renomear.textContent = 'Renomear';
       renomear.addEventListener('click', async () => {
-        const novo = window.prompt('Novo nome do mundo', m.nome);
-        if (novo === null) return;
+        const novo = await perguntar({
+          titulo: 'Renomear mundo',
+          campo: m.nome,
+          confirmar: 'Salvar nome',
+        });
+        if (typeof novo !== 'string') return;
         await op.repo.renomear(m.id, novo);
         await render();
       });
@@ -365,7 +372,13 @@ export function criarPainelMundos(raiz: HTMLElement, op: OpcoesPainelMundos) {
       excluir.disabled = op.atual?.id === m.id;
       excluir.title = excluir.disabled ? 'Não dá para excluir o mundo aberto' : '';
       excluir.addEventListener('click', async () => {
-        if (!window.confirm(`Excluir "${m.nome}" para sempre?`)) return;
+        const ok = await perguntar({
+          titulo: 'Excluir mundo',
+          texto: `Excluir "${m.nome}" para sempre? Não dá para desfazer.`,
+          confirmar: 'Excluir',
+          perigo: true,
+        });
+        if (ok !== true) return;
         await op.repo.excluir(m.id);
         await render();
       });
