@@ -515,7 +515,7 @@ export function gerarMalha(
     const hi: Vec = [mostra(1, 0, 0), mostra(0, 1, 0), mostra(0, 0, 1)];
     const passos = (t: Vec): number[] => {
       const eixo = t[0] ? 0 : t[1] ? 1 : 2;
-      const fr = detalheBaixo ? [0, 1] : ehFolha ? [0, 0.18, 0.42, 0.7, 1] : [0, 0.45, 1];
+      const fr = detalheBaixo ? [0, 1] : [0, 0.45, 1];
       const r: number[] = lo[eixo] ? fr.map((f) => f * RAIO) : [0];
       // o lado de cima é o espelho do de baixo
       if (hi[eixo]) r.push(...fr.map((f) => 1 - f * RAIO).reverse());

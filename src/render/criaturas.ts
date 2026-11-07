@@ -3,7 +3,8 @@ import { Color3 } from '@babylonjs/core/Maths/math.color';
 import { StandardMaterial } from '@babylonjs/core/Materials/standardMaterial';
 import { MeshBuilder } from '@babylonjs/core/Meshes/meshBuilder';
 import { TransformNode } from '@babylonjs/core/Meshes/transformNode';
-import type { Mesh } from '@babylonjs/core/Meshes/mesh';
+import { Mesh } from '@babylonjs/core/Meshes/mesh';
+import { VertexBuffer } from '@babylonjs/core/Buffers/buffer';
 import type { Scene } from '@babylonjs/core/scene';
 import type { Criatura } from '../jogo/criaturas';
 import type { PecaCriatura } from '../temas/tipos';
@@ -20,7 +21,12 @@ type Peca = PecaBicho;
 
 interface Modelo {
   raiz: TransformNode;
-  partes: { no: TransformNode; malha: Mesh; peca: Peca }[];
+  /** Uma parte por grupo que se mexe junto (corpo, cabeça, cada perna...), já fundida. */
+  partes: { no: TransformNode; malhas: Mesh[]; papel: Peca['papel'] }[];
+  /** Material do plástico deste bicho (a luz do lugar escurece só ele). */
+  plastico: StandardMaterial;
+  /** Materiais próprios (descartados com o bicho). */
+  proprios: StandardMaterial[];
   fase: number;
   /** Posição no quadro anterior: as pernas seguem o deslocamento real, não o desejado. */
   ultX: number;
@@ -49,7 +55,6 @@ export function criarRenderCriaturas(
   excluirDoGlow: (m: Mesh) => void,
   incluirNoGlow: (m: Mesh) => void,
 ) {
-  const materiais = new Map<string, StandardMaterial>();
   const modelos = new Map<number, Modelo>();
   /** Moradores de brinquedo: o boneco B com as cores e peças do tema (spec 012, A2). */
   const moradores = new Map<
@@ -84,23 +89,6 @@ export function criarRenderCriaturas(
   }
   let quadro = 0;
 
-  function material(p: Peca): StandardMaterial {
-    const k = `${p.cor}|${p.brilho ?? 0}|${p.alfa ?? 1}`;
-    let m = materiais.get(k);
-    if (!m) {
-      m = new StandardMaterial(`criatura-${k}`, scene);
-      const c = Color3.FromHexString(p.cor);
-      // plástico de brinquedo (spec 012): mesmo piso de luz do boneco e um brilho suave
-      m.diffuseColor = c.scale(0.78);
-      m.specularColor = new Color3(0.22, 0.22, 0.22);
-      m.specularPower = 40;
-      m.ambientColor = Color3.White();
-      m.emissiveColor = c.scale(Math.max(0.36, p.brilho ?? 0));
-      if (p.alfa !== undefined) m.alpha = p.alfa;
-      materiais.set(k, m);
-    }
-    return m;
-  }
 
   function montar(c: Criatura): Modelo {
     const raiz = new TransformNode(`criatura-${c.id}`, scene);
@@ -121,41 +109,109 @@ export function criarRenderCriaturas(
     const pescoco: [number, number, number] | null = cabecaMaior
       ? [cabecaMaior.p[0], cabecaMaior.p[1] - cabecaMaior.t[1] * 0.4, cabecaMaior.p[2]]
       : null;
-    const partes = pecas.map((peca, i) => {
-      const no = new TransformNode(`criatura-${c.id}-${i}`, scene);
-      no.parent = raiz;
-      // pivô: pernas no topo, antenas na base, asas na borda de dentro, o resto no centro
+    // desempenho (spec 012): as peças que se mexem juntas viram uma malha só, com a cor nos
+    // vértices; cada bicho desenhava uma malha por peça (o dobro de chamadas com os bichos novos)
+    const plastico = new StandardMaterial(`criatura-${c.id}-plastico`, scene);
+    plastico.diffuseColor = new Color3(0.78, 0.78, 0.78);
+    plastico.specularColor = new Color3(0.22, 0.22, 0.22);
+    plastico.specularPower = 40;
+    plastico.ambientColor = Color3.White();
+    plastico.emissiveColor = new Color3(0.36, 0.36, 0.36);
+    const suave = new StandardMaterial(`criatura-${c.id}-suave`, scene);
+    suave.diffuseColor = new Color3(0.78, 0.78, 0.78);
+    suave.specularColor = new Color3(0.22, 0.22, 0.22);
+    suave.specularPower = 40;
+    suave.emissiveColor = new Color3(0.45, 0.45, 0.45);
+    const forte = suave.clone(`criatura-${c.id}-forte`);
+    forte.emissiveColor = new Color3(0.55, 0.55, 0.55);
+    const grupos = new Map<
+      string,
+      { pivo: [number, number, number]; papel: Peca['papel']; pecas: Peca[] }
+    >();
+    for (const peca of pecas) {
+      // pivô: pernas no topo, antenas na base, asas na borda de dentro, cabeça no pescoço
       const papel = peca.papel;
-      const pivoY = papel?.startsWith('perna')
-        ? peca.p[1] + peca.t[1] / 2
-        : papel === 'antena'
-          ? peca.p[1] - peca.t[1] / 2
-          : peca.p[1];
-      const pivoX = papel?.startsWith('asa')
-        ? peca.p[0] - Math.sign(peca.p[0] || (papel === 'asa0' ? 1 : -1)) * (peca.t[0] / 2)
-        : peca.p[0];
-      const naCabeca = papel === 'cabeca' && pescoco;
-      const px = naCabeca ? pescoco[0] : pivoX;
-      const py = naCabeca ? pescoco[1] : pivoY;
-      const pz = naCabeca ? pescoco[2] : peca.p[2];
-      no.position.set(px, py, pz);
-      const [w, h, d] = peca.t;
-      const maior = Math.max(w, h, d);
-      const nome = `criatura-${c.id}-${i}-m`;
-      const malha =
-        peca.forma === 'bola'
-          ? esfera(nome, scene, maior / 2, material(peca), [w / maior, h / maior, d / maior])
-          : caixaArredondada(nome, scene, w, h, d, peca.raio, material(peca), 3);
-      malha.parent = no;
-      malha.position.set(peca.p[0] - px, peca.p[1] - py, peca.p[2] - pz);
-      if (peca.rot) malha.rotation.set(peca.rot[0], peca.rot[1], peca.rot[2]);
-      malha.material = material(peca);
-      malha.isPickable = false;
-      if ((peca.brilho ?? 0) > 0.45) incluirNoGlow(malha);
-      else excluirDoGlow(malha);
-      return { no, malha, peca };
+      let pivo: [number, number, number];
+      if (!papel) pivo = [0, 0, 0];
+      else if (papel === 'cabeca' && pescoco) pivo = pescoco;
+      else if (papel.startsWith('perna')) pivo = [0, peca.p[1] + peca.t[1] / 2, peca.p[2]];
+      else if (papel === 'antena') pivo = [peca.p[0], peca.p[1] - peca.t[1] / 2, peca.p[2]];
+      else if (papel.startsWith('asa'))
+        pivo = [
+          peca.p[0] - Math.sign(peca.p[0] || (papel === 'asa0' ? 1 : -1)) * (peca.t[0] / 2),
+          peca.p[1],
+          peca.p[2],
+        ];
+      else pivo = [peca.p[0], peca.p[1], peca.p[2]];
+      // pernas do mesmo lado do passo giram juntas no eixo x: o x do pivô não importa
+      const chave = `${papel ?? ''}|${pivo.map((v) => v.toFixed(3)).join(',')}`;
+      let g = grupos.get(chave);
+      if (!g) {
+        g = { pivo, papel, pecas: [] };
+        grupos.set(chave, g);
+      }
+      g.pecas.push(peca);
+    }
+    let n = 0;
+    const partes = [...grupos.values()].map((g) => {
+      const no = new TransformNode(`criatura-${c.id}-g${n++}`, scene);
+      no.parent = raiz;
+      no.position.set(g.pivo[0], g.pivo[1], g.pivo[2]);
+      const porClasse: Record<'plastico' | 'suave' | 'forte', Mesh[]> = {
+        plastico: [],
+        suave: [],
+        forte: [],
+      };
+      for (const peca of g.pecas) {
+        const [w, h, d] = peca.t;
+        const maior = Math.max(w, h, d);
+        const nome = `criatura-${c.id}-p${n++}`;
+        const malha =
+          peca.forma === 'bola'
+            ? esfera(nome, scene, maior / 2, plastico, [w / maior, h / maior, d / maior])
+            : caixaArredondada(nome, scene, w, h, d, peca.raio, plastico, 3);
+        malha.position.set(peca.p[0] - g.pivo[0], peca.p[1] - g.pivo[1], peca.p[2] - g.pivo[2]);
+        if (peca.rot) malha.rotation.set(peca.rot[0], peca.rot[1], peca.rot[2]);
+        const cor = corBase(peca.cor);
+        const nv = malha.getTotalVertices();
+        const cores = new Float32Array(nv * 4);
+        for (let k = 0; k < nv; k++) cores.set([cor.r, cor.g, cor.b, 1], k * 4);
+        malha.setVerticesData(VertexBuffer.ColorKind, cores);
+        const b = peca.brilho ?? 0;
+        porClasse[b > 0.45 ? 'forte' : b > 0 ? 'suave' : 'plastico'].push(malha);
+      }
+      const malhas: Mesh[] = [];
+      for (const [classe, lista] of Object.entries(porClasse) as [
+        'plastico' | 'suave' | 'forte',
+        Mesh[],
+      ][]) {
+        if (!lista.length) continue;
+        const fundida =
+          lista.length === 1
+            ? lista[0]
+            : Mesh.MergeMeshes(lista, true, true, undefined, false, false);
+        if (!fundida) continue;
+        fundida.parent = no;
+        fundida.material = classe === 'plastico' ? plastico : classe === 'suave' ? suave : forte;
+        fundida.isPickable = false;
+        if (classe === 'forte') incluirNoGlow(fundida);
+        else excluirDoGlow(fundida);
+        malhas.push(fundida);
+      }
+      return { no, malhas, papel: g.papel };
     });
-    return { raiz, partes, fase: 0, ultX: c.x, ultZ: c.z, vel: 0, amp: 0, quadro: 0 };
+    return {
+      raiz,
+      partes,
+      plastico,
+      proprios: [plastico, suave, forte],
+      fase: 0,
+      ultX: c.x,
+      ultZ: c.z,
+      vel: 0,
+      amp: 0,
+      quadro: 0,
+    };
   }
 
   let proximaEstatua = -1;
@@ -242,8 +298,17 @@ export function criarRenderCriaturas(
         );
         if (c.estado === 'morrendo') m.raiz.rotation.z = morrer * 1.4;
         const l = luz(c);
+        // escurece nas cavernas (luz aproximada): um material por bicho
+        {
+          const mat = m.plastico;
+          mat.diffuseColor.set(l * 0.78, l * 0.78, l * 0.78);
+          // criatura da noite: plástico que brilha no escuro (não some no breu, não estoura)
+          const e = c.tipo === 'espectro' ? Math.max(l * 0.36, 0.5) : l * 0.36;
+          mat.emissiveColor.set(e, e, e);
+          mat.specularColor.set(0.22 * l, 0.22 * l, 0.22 * l);
+        }
         for (const p of m.partes) {
-          switch (p.peca.papel) {
+          switch (p.papel) {
             case 'perna0':
               p.no.rotation.x = balanco;
               break;
@@ -271,21 +336,13 @@ export function criarRenderCriaturas(
               p.no.rotation.x = Math.sin(tempo * 1.7 + c.id * 2) * 0.1 + balanco * 0.3;
               break;
           }
-          p.malha.renderOverlay = c.ferida > 0;
-          if (p.malha.renderOverlay) {
-            p.malha.overlayColor = COR_FERIDA;
-            p.malha.overlayAlpha = 0.55;
-          }
-          p.malha.visibility = c.tipo === 'espectro' ? 1 - morrer : 1;
-          // escurece nas cavernas (luz aproximada)
-          const mat = p.malha.material as StandardMaterial;
-          if (!p.peca.brilho) {
-            const base = corBase(p.peca.cor);
-            mat.diffuseColor.set(base.r * l * 0.78, base.g * l * 0.78, base.b * l * 0.78);
-            // criatura da noite: plástico que brilha no escuro (não some no breu, não estoura)
-            const e = c.tipo === 'espectro' ? Math.max(l * 0.36, 0.5) : l * 0.36;
-            mat.emissiveColor.set(base.r * e, base.g * e, base.b * e);
-            mat.specularColor.set(0.22 * l, 0.22 * l, 0.22 * l);
+          for (const malha of p.malhas) {
+            malha.renderOverlay = c.ferida > 0;
+            if (malha.renderOverlay) {
+              malha.overlayColor = COR_FERIDA;
+              malha.overlayAlpha = 0.55;
+            }
+            malha.visibility = c.tipo === 'espectro' ? 1 - morrer : 1;
           }
         }
       }
@@ -297,9 +354,10 @@ export function criarRenderCriaturas(
       for (const [id, m] of modelos) {
         if (m.quadro === quadro) continue;
         for (const p of m.partes) {
-          p.malha.dispose();
+          for (const malha of p.malhas) malha.dispose();
           p.no.dispose();
         }
+        for (const mat of m.proprios) mat.dispose();
         m.raiz.dispose();
         modelos.delete(id);
       }
