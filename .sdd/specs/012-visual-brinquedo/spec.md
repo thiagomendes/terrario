@@ -220,8 +220,9 @@ Lista única para nada se perder. Cada item: feito (com o que comprova) ou pende
 - [x] A5: modelos com nomes de brinquedo nas duas formas (Aventureiro/Aventureira, Jardineiro/Jardineira, Inventor/Inventora, Cientista, Explorador/Exploradora, Artista, Construtor/Construtora), acompanhando o corpo; moradores com nome e corpo no gênero da profissão (`generoMoradores.test.ts`).
 - [x] Publicado o estado de 7 nov à tarde (badea27): site e servidor.
 
+- [x] A4: itens soltos no chão como o modelo 3D de brinquedo da mão; plantas com as pecinhas do mundo (captura `itens-soltos`).
+
 **Pendente, nesta ordem**
-3. A4: itens soltos no chão como modelo 3D de brinquedo.
 
 5. C1–C3: rachadura e contorno do bloco mirado, blocos com forma (tocha, porta, vidro, cama, baú, fornalha, cerca, escada, laje), lado da grama sem chuvisco.
 6. C4: chuva com céu cinza-azulado claro e relâmpago suave; espuma na beira em degrau.

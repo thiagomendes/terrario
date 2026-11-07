@@ -1,96 +1,120 @@
 import { Color3 } from '@babylonjs/core/Maths/math.color';
-import { Vector4 } from '@babylonjs/core/Maths/math.vector';
 import { StandardMaterial } from '@babylonjs/core/Materials/standardMaterial';
-import { Texture } from '@babylonjs/core/Materials/Textures/texture';
-import { MeshBuilder } from '@babylonjs/core/Meshes/meshBuilder';
-import type { Mesh } from '@babylonjs/core/Meshes/mesh';
+import { TransformNode } from '@babylonjs/core/Meshes/transformNode';
+import { Mesh } from '@babylonjs/core/Meshes/mesh';
+import { VertexData } from '@babylonjs/core/Meshes/mesh.vertexData';
 import type { BaseTexture } from '@babylonjs/core/Materials/Textures/baseTexture';
 import type { Scene } from '@babylonjs/core/scene';
-import type { Atlas, FaceBloco } from '../art/atlas';
+import type { Atlas } from '../art/atlas';
 import type { ItemSolto as ItemCompleto } from '../jogo/drops';
+import { obterItem } from '../jogo/itens';
+import { obterBloco } from '../world/blocks';
+import { plantaDeBrinquedo, PLANTAS_BRINQUEDO, type AlvoPlanta } from '../mesh/plantasBrinquedo';
+import { criarPlasticos } from './formas';
+import { modeloNaMao } from './itensBrinquedo';
 
 /** O que o desenho precisa de um item no chão. */
 type ItemSolto = Pick<ItemCompleto, 'id' | 'item' | 'qtd' | 'x' | 'y' | 'z'>;
-import { obterItem } from '../jogo/itens';
-import { obterBloco } from '../world/blocks';
 
-/** Desenha os itens soltos: cubinhos girando para blocos, placas com o ícone para o resto. */
+/**
+ * Itens soltos de brinquedo (spec 012, A4): o mesmo modelo 3D que vai na mão (a ferramenta
+ * inteira, a maçã, o lingote, o bloco de quina redonda com a tampa da grama) e as pecinhas das
+ * plantas do mundo, girando e flutuando. Antes eram cubinhos de pixel e placas com o ícone.
+ */
 export function criarRenderItens(
   scene: Scene,
-  atlas: Atlas,
-  texAtlas: BaseTexture,
-  icone: (item: string) => string,
+  _atlas: Atlas,
+  _texAtlas: BaseTexture,
+  _icone: (item: string) => string,
   excluirDoGlow: (m: Mesh) => void,
 ) {
-  const matBloco = new StandardMaterial('item-solto-bloco', scene);
-  matBloco.diffuseTexture = texAtlas;
-  matBloco.specularColor = Color3.Black();
-  matBloco.ambientColor = Color3.White();
-  matBloco.emissiveColor = new Color3(0.08, 0.08, 0.08);
-  const matsIcone = new Map<string, StandardMaterial>();
-  const malhas = new Map<number, Mesh>();
+  const mats = criarPlasticos(scene, 'item-solto');
+  const matVertices = new StandardMaterial('item-solto-vertices', scene);
+  matVertices.specularColor = new Color3(0.15, 0.15, 0.15);
+  matVertices.emissiveColor = new Color3(0.3, 0.3, 0.3);
+  const itens = new Map<number, { no: TransformNode; malhas: Mesh[] }>();
 
-  function materialIcone(item: string): StandardMaterial {
-    let m = matsIcone.get(item);
-    if (!m) {
-      m = new StandardMaterial(`item-icone-${item}`, scene);
-      const t = new Texture(icone(item), scene, true, true, Texture.NEAREST_SAMPLINGMODE);
-      t.hasAlpha = true;
-      m.diffuseTexture = t;
-      m.useAlphaFromDiffuseTexture = true;
-      m.backFaceCulling = false;
-      m.specularColor = Color3.Black();
-      m.ambientColor = Color3.White();
-      m.emissiveColor = new Color3(0.15, 0.15, 0.15);
-      matsIcone.set(item, m);
-    }
-    return m;
-  }
-
-  function criar(it: ItemSolto): Mesh {
+  function criar(it: ItemSolto): { no: TransformNode; malhas: Mesh[] } {
+    const no = new TransformNode(`item-${it.id}`, scene);
     const def = obterItem(it.item);
     const bloco = def?.bloco;
-    let m: Mesh;
-    const planta =
-      bloco !== undefined && (obterBloco(bloco)?.planta || obterBloco(bloco)?.forma === 'cruz');
-    if (bloco !== undefined && !planta) {
-      const faces: FaceBloco[] = ['frente', 'lado', 'lado', 'lado', 'topo', 'base'];
-      const faceUV = faces.map((f) => {
-        const uv = atlas.uvDaFace(bloco, f) ?? atlas.uvDoBloco(bloco);
-        return uv ? new Vector4(uv.u0, uv.v1, uv.u1, uv.v0) : new Vector4(0, 0, 1, 1);
-      });
-      m = MeshBuilder.CreateBox(`item-${it.id}`, { size: 0.25, faceUV }, scene);
-      m.material = matBloco;
+    const b = bloco !== undefined ? obterBloco(bloco) : undefined;
+    const malhas: Mesh[] = [];
+    if (
+      bloco !== undefined &&
+      (b?.planta || b?.forma === 'cruz') &&
+      PLANTAS_BRINQUEDO.includes(bloco)
+    ) {
+      const alvo: AlvoPlanta = {
+        posicoes: [],
+        normais: [],
+        uvs: [],
+        cores: [],
+        luz: [],
+        indices: [],
+        get vertices() {
+          return this.posicoes.length / 3;
+        },
+      };
+      plantaDeBrinquedo(bloco, -0.5, 0, -0.5, alvo, [0, 0], [1, 0], () => 0.5, false);
+      const m = new Mesh(`item-${it.id}-planta`, scene);
+      const dados = new VertexData();
+      dados.positions = alvo.posicoes;
+      dados.normals = alvo.normais;
+      dados.indices = alvo.indices;
+      dados.colors = alvo.cores.map((v, i) => (i % 4 === 3 ? 1 : v));
+      dados.applyToMesh(m);
+      m.material = matVertices;
+      m.parent = no;
+      m.scaling.setAll(0.6);
+      malhas.push(m);
     } else {
-      m = MeshBuilder.CreatePlane(`item-${it.id}`, { size: 0.42 }, scene);
-      m.material = materialIcone(it.item);
+      const modelo = modeloNaMao(
+        scene,
+        mats,
+        bloco !== undefined ? bloco : null,
+        bloco === undefined ? it.item : null,
+        `item-${it.id}`,
+      );
+      if (modelo) {
+        modelo.no.parent = no;
+        // a ferramenta inclinada, apoiada no chão; o resto um pouco maior que na mão
+        if (modelo.ferramenta) {
+          modelo.no.rotation.set(0, 0, -0.5);
+          modelo.no.position.set(0.12, -0.12, 0);
+          modelo.no.scaling.setAll(0.8);
+        } else modelo.no.scaling.setAll(1.3);
+        malhas.push(...modelo.malhas);
+      }
     }
-    m.isPickable = false;
-    m.receiveShadows = false;
-    excluirDoGlow(m);
-    return m;
+    for (const m of malhas) {
+      m.isPickable = false;
+      m.receiveShadows = false;
+      excluirDoGlow(m);
+    }
+    return { no, malhas };
   }
 
   return {
-    atualizar(itens: readonly ItemSolto[], tempo: number): void {
+    atualizar(lista: readonly ItemSolto[], tempo: number): void {
       const vivos = new Set<number>();
-      for (const it of itens) {
+      for (const it of lista) {
         vivos.add(it.id);
-        let m = malhas.get(it.id);
+        let m = itens.get(it.id);
         if (!m) {
           m = criar(it);
-          malhas.set(it.id, m);
+          itens.set(it.id, m);
         }
         const bob = Math.sin(tempo * 2.5 + it.id) * 0.06;
-        m.position.set(it.x, it.y + 0.08 + bob, it.z);
-        m.rotation.y = tempo * 1.6 + it.id;
-        const s = it.qtd > 1 ? 1.15 : 1;
-        m.scaling.setAll(s);
+        m.no.position.set(it.x, it.y + 0.14 + bob, it.z);
+        m.no.rotation.y = tempo * 1.6 + it.id;
+        m.no.scaling.setAll(it.qtd > 1 ? 1.15 : 1);
       }
-      for (const [id, m] of malhas) {
+      for (const [id, m] of itens) {
         if (vivos.has(id)) continue;
-        m.dispose();
-        malhas.delete(id);
+        for (const malha of m.malhas) malha.dispose();
+        m.no.dispose();
+        itens.delete(id);
       }
     },
   };

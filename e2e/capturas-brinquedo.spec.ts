@@ -580,3 +580,24 @@ for (const id of TEMAS) {
     await page.screenshot({ path: `public/temas/${id}.jpg`, type: 'jpeg', quality: 80 });
   });
 }
+
+test('itens soltos de brinquedo', async ({ page }) => {
+  test.setTimeout(240_000);
+  await page.setViewportSize({ width: 960, height: 600 });
+  await page.goto('/');
+  await pronto(page);
+  await page.evaluate(() => {
+    document.querySelector<HTMLElement>('.entrada')?.setAttribute('hidden', '');
+    const e = window.__brumaluz!;
+    e.pausarDia = true;
+    e.hora = 0.45;
+    const [x, y, z] = e.posicao!;
+    const itens = ['picareta_ferro', 'maca', 'lingote_ouro', 'bloco:1', 'carvao', 'bloco:9'];
+    itens.forEach((it, i) =>
+      e.soltarItem?.(it, 1, x - 1.4 + (i % 3) * 1.4, y + 0.6, z + 4.2 + Math.floor(i / 3) * 1.2),
+    );
+    e.apontar!(0, 0.38);
+  });
+  await page.waitForTimeout(2500);
+  await foto(page, 'itens-soltos');
+});
