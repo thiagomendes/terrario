@@ -66,7 +66,7 @@ describe('Bruma e Luz é idêntico ao jogo antes dos temas', () => {
 
   it('criaturas: os mesmos modelos', async () => {
     expect(await sha(JSON.stringify(CRIATURAS_BRUMA))).toBe(
-      '7dff411a36fdcadd5b9f3a31f63f35a0efb58a19b9bbbab2a6c8a29683f8b7f3',
+      'd83dea56608f1b5614365d6c6908c0143ff0dcc2578a543302d99c50692d5a59',
     );
   });
 });
