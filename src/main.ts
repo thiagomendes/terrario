@@ -59,6 +59,7 @@ async function iniciar(app: HTMLElement): Promise<void> {
       app,
       normalizarCodigo(sala) ?? sala,
       params.get('direto') === '1',
+      repo,
     );
     if (!r) return;
     const d = dadosDaSala(r.bv);

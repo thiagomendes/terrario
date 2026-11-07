@@ -14,6 +14,7 @@ import {
 import { rotuloDoModelo } from './personagem/aparencia';
 import { carregarAparencia } from './personagem/persistencia';
 import { estiloMundo } from './world/chunk';
+import type { EstiloMundo } from './temas/tipos';
 import { normalizarCodigo } from './jogo/codigos';
 import type { DadosMundo, MetaMundo, RepositorioMundos } from './jogo/mundos';
 import { notificar } from './ui/interface';
@@ -43,7 +44,18 @@ interface PreviaMundo {
   fechado: boolean;
   cheio: boolean;
   naoExiste?: boolean;
+  limite?: boolean;
 }
+const VAZIA: PreviaMundo = {
+  codigo: '',
+  nome: '',
+  tema: '',
+  modo: '',
+  dono: '',
+  presentes: [],
+  fechado: false,
+  cheio: false,
+};
 import { CSS_SETAS, criarSetasAmigos } from './ui/setasAmigos';
 import type { criarCena } from './render/cena';
 
@@ -158,6 +170,7 @@ async function previaDoMundo(codigo: string): Promise<PreviaMundo | null> {
       signal: ctl.signal,
     });
     clearTimeout(t);
+    if (r.status === 429) return { ...VAZIA, limite: true };
     if (r.status === 404)
       return {
         codigo: '',
@@ -198,7 +211,7 @@ function pedirApelido(raiz: HTMLElement, codigo: string): Promise<string> {
   return new Promise((resolve) => {
     estilo();
     const m = criarEntrarComCodigo(raiz, {
-      apelido: identidade().apelido,
+      apelido: sugestaoDeApelido(),
       aoEntrar: async (_c, apelido) => {
         definirApelido(apelido);
         m.fechar();
@@ -209,46 +222,111 @@ function pedirApelido(raiz: HTMLElement, codigo: string): Promise<string> {
   });
 }
 
+type TelaProgresso = { passo(t: string, f: number): void; erro(t: string): void; fechar(): void };
+
+/** Conecta e espera o "bem-vindo" (até 15 s). Rejeita com o motivo do servidor. */
+async function conectar(
+  codigo: string,
+  apelido: string,
+  tela: TelaProgresso,
+  repo?: RepositorioMundos,
+): Promise<{ conexao: ConexaoNuvem; bv: BemVindo }> {
+  if (!navigator.onLine) throw new Error('sem-internet');
+  tela.passo('Conectando ao servidor…', 0.2);
+  const conexao = conexaoNuvem({ url: urlServidor(), jogador: jogador(apelido), codigo });
+  // o dono que caiu enquanto trazia o mundo para o aparelho recebe o mundo ao voltar
+  if (repo)
+    conexao.aoDevolvido((dados) => {
+      tela.passo('Trazendo o mundo para o aparelho…', 0.9);
+      void abrirDevolvido(repo, codigo, dados).catch(() =>
+        tela.erro('Não deu para guardar o mundo no aparelho. Tente de novo.'),
+      );
+    });
+  const prazo = new Promise<never>((_, rej) =>
+    setTimeout(() => rej(new Error('servidor')), 15_000),
+  );
+  try {
+    tela.passo('Acordando o mundo…', 0.5);
+    const bv = await Promise.race([conexao.pronta, prazo]);
+    tela.passo('Montando o terreno…', 0.85);
+    return { conexao, bv };
+  } catch (e) {
+    conexao.encerrar();
+    throw e;
+  }
+}
+
+/** Texto para a criança, a partir do motivo (recusa do servidor, sem internet...). */
+function textoDoMotivo(e: unknown): string {
+  const m = e instanceof Error ? e.message : String(e);
+  return (TEXTO_RECUSA as Record<string, string>)[m] ?? TEXTO_RECUSA.servidor;
+}
+
 /**
- * Pelo link ou pelo QR (spec 011, T03): "Entrar no mundo de Ana", com o tema, quem está lá e
- * "Seu nome". Um toque em "Entrar" e a criança está jogando (o mesmo cartão mostra o progresso
- * e, se não der, o porquê). Devolve a tela já no modo de progresso.
+ * Pelo link ou pelo QR (spec 011, T03): o cartão "Entrar no mundo de Ana" aparece na hora e
+ * se completa com a prévia (tema, de quem é, quem está). Cada toque em "Entrar" tenta entrar;
+ * se não der, o motivo aparece no mesmo cartão e "Tentar de novo" tenta outra vez ali mesmo.
  */
-async function telaDePrevia(codigo: string): Promise<{
-  apelido: string;
-  tela: { passo(t: string, f: number): void; erro(t: string): void; fechar(): void };
-}> {
+function entrarPeloLink(
+  codigo: string,
+  repo?: RepositorioMundos,
+): Promise<{ conexao: ConexaoNuvem; bv: BemVindo; fecharTela: () => void } | null> {
   estilo();
-  const p = navigator.onLine ? await previaDoMundo(codigo) : null;
   return new Promise((resolve) => {
+    let tema: string | undefined;
+    let tentando = false;
     const tela = criarTelaEntrar({
-      previa:
-        p && !p.naoExiste
-          ? {
-              nome: p.nome,
-              tema: p.tema,
-              nomeTema: temaExiste(p.tema) ? obterTema(p.tema).nome : p.tema,
-              dono: p.dono,
-              presentes: p.presentes,
-            }
-          : null,
-      apelido: sugestaoDeApelido(p?.tema),
+      apelido: sugestaoDeApelido(),
       aoEntrar: (escrito) => {
         // o toque em "Entrar" é o gesto: o som já fica liberado para o mundo
         prepararAudioNoGesto();
-        const apelido = apelidoOuSugerido(escrito, p?.tema);
+        if (tentando) return;
+        tentando = true;
+        const apelido = apelidoOuSugerido(escrito, tema);
         definirApelido(apelido);
-        resolve({
-          apelido,
-          tela: { passo: (_t, f) => tela.passo(f), erro: (t) => tela.erro(t), fechar: tela.fechar },
-        });
+        const progresso: TelaProgresso = {
+          passo: (_t, f) => tela.passo(f),
+          erro: (t) => tela.erro(t),
+          fechar: tela.fechar,
+        };
+        conectar(codigo, apelido, progresso, repo)
+          .then(({ conexao, bv }) => resolve({ conexao, bv, fecharTela: tela.fechar }))
+          .catch(async (e) => {
+            tentando = false;
+            // mundo deste aparelho preso a um código que deixou de valer: abre o do aparelho
+            if (repo && e instanceof Error && e.message === 'codigo')
+              if (await soltarCodigoMorto(repo, codigo)) return;
+            tela.erro(textoDoMotivo(e));
+          });
       },
       aoVoltar: () => voltarAoLocal(),
     });
-    if (!navigator.onLine) tela.erro(TEXTO_RECUSA['sem-internet']);
-    else if (p?.naoExiste) tela.erro(TEXTO_RECUSA.codigo);
-    else if (p?.fechado) tela.erro(TEXTO_RECUSA.fechado);
-    else if (p?.cheio) tela.erro(TEXTO_RECUSA.cheio);
+    if (!navigator.onLine) {
+      tela.semPrevia();
+      tela.erro(TEXTO_RECUSA['sem-internet']);
+      return;
+    }
+    void previaDoMundo(codigo).then((p) => {
+      if (!p) return tela.semPrevia();
+      if (p.limite) return tela.erro(TEXTO_RECUSA.limite);
+      if (p.naoExiste) {
+        tela.semPrevia();
+        return tela.erro(TEXTO_RECUSA.codigo);
+      }
+      tema = p.tema;
+      tela.definirPrevia(
+        {
+          nome: p.nome,
+          tema: p.tema,
+          nomeTema: temaExiste(p.tema) ? obterTema(p.tema).nome : p.tema,
+          dono: p.dono,
+          presentes: p.presentes,
+        },
+        sugestaoDeApelido(p.tema),
+      );
+      if (p.fechado) tela.erro(TEXTO_RECUSA.fechado);
+      else if (p.cheio) tela.erro(TEXTO_RECUSA.cheio);
+    });
   });
 }
 
@@ -257,52 +335,25 @@ export async function entrarNaSala(
   raiz: HTMLElement,
   codigo: string,
   direto = false,
+  repo?: RepositorioMundos,
 ): Promise<{ conexao: ConexaoNuvem; bv: BemVindo; fecharTela: () => void } | null> {
+  if (!direto) return entrarPeloLink(codigo, repo);
   let apelido = identidade().apelido;
-  let tela: { passo(t: string, f: number): void; erro(t: string): void; fechar(): void };
-  if (direto) {
-    if (!apelido) apelido = await pedirApelido(raiz, codigo);
-    tela = telaCarregando(`Entrando em ${codigo.split('-').join(' · ')}`);
-  } else {
-    // pelo link ou QR: a prévia do mundo e um toque em "Entrar"; erro aparece no mesmo cartão
-    for (;;) {
-      const r = await telaDePrevia(codigo);
-      apelido = r.apelido;
-      tela = r.tela;
-      break;
-    }
-  }
-  if (!navigator.onLine) {
-    tela.erro(TEXTO_RECUSA['sem-internet']);
-    return null;
-  }
-  tela.passo('Conectando ao servidor…', 0.2);
-  const conexao = conexaoNuvem({ url: urlServidor(), jogador: jogador(apelido), codigo });
-  // sem resposta em 15 s: o servidor não está lá
-  const prazo = new Promise<never>((_, rej) =>
-    setTimeout(() => rej(new Error('servidor')), 15_000),
-  );
+  if (!apelido) apelido = await pedirApelido(raiz, codigo);
+  const tela = telaCarregando(`Entrando em ${codigo.split('-').join(' · ')}`);
   try {
-    tela.passo('Acordando o mundo…', 0.5);
-    const bv = await Promise.race([conexao.pronta, prazo]);
-    tela.passo('Montando o terreno…', 0.85);
+    const { conexao, bv } = await conectar(codigo, apelido, tela, repo);
     return { conexao, bv, fecharTela: tela.fechar };
   } catch (e) {
-    conexao.encerrar();
-    tela.erro(textoDoErro(e));
-    if (!direto) {
-      // pelo link: "Tentar de novo" no mesmo cartão recomeça a entrada
-      return new Promise((resolve) => {
-        document.querySelector('[data-entrar-mundo]')?.addEventListener(
-          'click',
-          () => {
-            document.querySelector('[data-tela-entrar]')?.remove();
-            void entrarNaSala(raiz, codigo, false).then(resolve);
-          },
-          { once: true, capture: true },
-        );
-      });
-    }
+    // mundo deste aparelho preso a um código que deixou de valer: abre o do aparelho
+    if (
+      repo &&
+      e instanceof Error &&
+      e.message === 'codigo' &&
+      (await soltarCodigoMorto(repo, codigo))
+    )
+      return null;
+    tela.erro(textoDoMotivo(e));
     return null;
   }
 }
@@ -348,10 +399,12 @@ export interface OpcoesAmigos {
 }
 
 /** Painel "Jogar com amigos", "Entrar com código", avisos e o diário que vai junto. */
+let prazoDevolver: ReturnType<typeof setTimeout> | undefined;
+
 export function ligarAmigos(raiz: HTMLElement, cena: Cena, op: OpcoesAmigos): void {
   estilo();
   const entrar = criarEntrarComCodigo(raiz, {
-    apelido: identidade().apelido,
+    apelido: sugestaoDeApelido(),
     aoEntrar: async (codigo, apelido) => {
       definirApelido(apelidoOuSugerido(apelido));
       // já digitou o código e tocou em "Entrar": vai direto para o mundo (sem a prévia)
@@ -368,7 +421,18 @@ export function ligarAmigos(raiz: HTMLElement, cena: Cena, op: OpcoesAmigos): vo
           trocarCodigo: () => nv.conexao.pedir({ t: 'dono', acao: 'trocarCodigo' }),
           fechar: (fechado) => nv.conexao.pedir({ t: 'dono', acao: 'fechar', fechado }),
           construir: (pode) => nv.conexao.pedir({ t: 'dono', acao: 'construir', pode }),
-          devolver: () => nv.conexao.pedir({ t: 'dono', acao: 'devolver' }),
+          devolver: () => {
+            // o diário e o mapa de agora vão junto; a criança vê que está acontecendo
+            nv.conexao.pedir({ t: 'guardar', dados: cena.extrasDoCliente() });
+            nv.conexao.pedir({ t: 'dono', acao: 'devolver' });
+            const t = telaCarregando('Trazendo o mundo para o aparelho…');
+            t.passo('Guardando tudo o que vocês construíram…', 0.4);
+            prazoDevolver = setTimeout(
+              () =>
+                t.erro('O servidor não respondeu. O mundo continua com os amigos; tente de novo.'),
+              30_000,
+            );
+          },
         }
       : undefined,
     aoComecar: () => op.comecar?.(),
@@ -406,10 +470,13 @@ export function ligarAmigos(raiz: HTMLElement, cena: Cena, op: OpcoesAmigos): vo
   window.addEventListener('brumaluz:entrou', () => setTimeout(atualizarLista, 150));
   window.addEventListener('brumaluz:saiu', () => setTimeout(atualizarLista, 150));
   setInterval(atualizarLista, 1000);
+  // códigos deste mundo nesta visita (o dono pode trocar): o mundo do aparelho é achado por eles
+  const codigos = [nv.bv.sala.codigo];
   // parar de jogar com amigos: o mundo volta inteiro para o aparelho e abre aqui
   nv.conexao.aoDevolvido((dados) => {
+    clearTimeout(prazoDevolver);
     const t = telaCarregando('Trazendo o mundo para o aparelho…');
-    void guardarDevolvido(op.repo, nv.bv, dados)
+    void guardarDevolvido(op.repo, nv.bv.mundo, codigos, dados)
       .then((id) => {
         const u = new URL(location.href);
         u.search = '';
@@ -419,6 +486,7 @@ export function ligarAmigos(raiz: HTMLElement, cena: Cena, op: OpcoesAmigos): vo
       .catch(() => t.erro('Não deu para guardar o mundo no aparelho. Tente de novo.'));
   });
   nv.conexao.aoSala((s) => {
+    if (!codigos.includes(s.codigo)) codigos.push(s.codigo);
     painel.definirSala(s, voce);
     // o código mudou: o endereço da página e o mundo do aparelho acompanham
     const u = new URL(location.href);
@@ -472,7 +540,11 @@ export function ligarAmigos(raiz: HTMLElement, cena: Cena, op: OpcoesAmigos): vo
     if (document.visibilityState === 'hidden') guardar();
   });
   // primeira vez no mundo que acabou de ir para a nuvem: o convite já aberto, com o mundo atrás
+  // (só nesta entrada: recarregar a página não abre de novo)
   if (nv.novo) {
+    const u = new URL(location.href);
+    u.searchParams.delete('novo');
+    history.replaceState(null, '', u.toString());
     const abrirQuandoPronto = () =>
       cena.estado.ready ? painel.abrirConvite() : setTimeout(abrirQuandoPronto, 150);
     abrirQuandoPronto();
@@ -483,18 +555,52 @@ export function ligarAmigos(raiz: HTMLElement, cena: Cena, op: OpcoesAmigos): vo
  * Grava no aparelho o mundo que voltou da nuvem: no mesmo mundo de onde ele saiu (se este
  * aparelho o levou) ou num mundo novo com o nome e a semente dele. Devolve o id.
  */
-async function guardarDevolvido(
+export async function guardarDevolvido(
   repo: RepositorioMundos,
-  bv: BemVindo,
+  mundo: { nome: string; semente: number; modo: MetaMundo['modo']; tema: string },
+  codigos: string[],
   dados: DadosMundo,
 ): Promise<string> {
-  const codigo = normalizarCodigo(bv.sala.codigo);
+  // o código de agora e os anteriores (o dono pode ter trocado o código no meio)
+  const conhecidos = new Set(codigos.map((c) => normalizarCodigo(c)).filter(Boolean));
   const lista = await repo.listar();
-  let m = lista.find((x) => x.nuvem && normalizarCodigo(x.nuvem) === codigo);
+  let m = lista.find((x) => x.nuvem && conhecidos.has(normalizarCodigo(x.nuvem)));
+  const bv = { mundo };
   if (!m) m = await repo.criar(bv.mundo.nome, bv.mundo.semente, bv.mundo.modo, bv.mundo.tema);
   await repo.salvar(m.id, dados);
   await repo.desmarcarNuvem(m.id);
   return m.id;
+}
+
+/** Grava o mundo devolvido no mundo do aparelho que tinha este código e abre ele. */
+async function abrirDevolvido(
+  repo: RepositorioMundos,
+  codigo: string,
+  dados: DadosMundo,
+): Promise<void> {
+  const c = normalizarCodigo(codigo);
+  const m = (await repo.listar()).find((x) => x.nuvem && normalizarCodigo(x.nuvem) === c);
+  if (!m) throw new Error('sem mundo');
+  await repo.salvar(m.id, dados);
+  await repo.desmarcarNuvem(m.id);
+  abrirMundoDoAparelho(m.id);
+}
+
+/** O código não vale mais e um mundo do aparelho apontava para ele: desmarca e abre. */
+async function soltarCodigoMorto(repo: RepositorioMundos, codigo: string): Promise<boolean> {
+  const c = normalizarCodigo(codigo);
+  const m = (await repo.listar()).find((x) => x.nuvem && normalizarCodigo(x.nuvem) === c);
+  if (!m) return false;
+  await repo.desmarcarNuvem(m.id);
+  abrirMundoDoAparelho(m.id);
+  return true;
+}
+
+function abrirMundoDoAparelho(id: string): void {
+  const u = new URL(location.href);
+  u.search = '';
+  u.searchParams.set('mundo', id);
+  location.href = u.toString();
 }
 
 /** O nome do personagem deste aparelho (para sugerir o apelido). */
@@ -532,7 +638,9 @@ export async function criarMundoComAmigos(
 ): Promise<void> {
   const nome = apelidoOuSugerido(apelido, meta.tema);
   definirApelido(nome);
-  await subirParaNuvem(repo, meta, undefined, nome);
+  // o terreno é o do tema escolhido (não o do mundo aberto agora na página)
+  const tema = temaExiste(meta.tema ?? '') ? obterTema(meta.tema!) : obterTema('bruma-e-luz');
+  await subirParaNuvem(repo, meta, undefined, nome, tema.mundo);
 }
 
 /** Leva o mundo do aparelho para a nuvem e entra nele pelo código novo. */
@@ -552,7 +660,7 @@ async function levarParaNuvem(cena: Cena, op: OpcoesAmigos): Promise<void> {
     apelido = apelidoOuSugerido(typeof r === 'string' ? r : '', m.tema);
     definirApelido(apelido);
   }
-  await subirParaNuvem(op.repo, m, await cena.dadosAtuais(), apelido);
+  await subirParaNuvem(op.repo, m, await cena.dadosAtuais(), apelido, estiloMundo());
 }
 
 /** Cria a sala na nuvem com este mundo (e os dados dele, se houver) e entra pelo código. */
@@ -561,6 +669,7 @@ async function subirParaNuvem(
   m: MetaMundo,
   dados: DadosMundo | undefined,
   apelido: string,
+  estilo: EstiloMundo,
 ): Promise<void> {
   if (!navigator.onLine) throw new Error(TEXTO_RECUSA['sem-internet']);
   const conexao = conexaoNuvem({
@@ -572,7 +681,7 @@ async function subirParaNuvem(
       tema: m.tema ?? 'bruma-e-luz',
       modo: m.modo,
       versaoMundo: m.versao ?? 1,
-      estilo: estiloMundo(),
+      estilo,
       ...(dados ? { dados } : {}),
     },
   });

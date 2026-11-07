@@ -25,6 +25,7 @@ export const CSS_AMIGOS = `
 .amigos .dica { color: var(--tinta-suave); font-weight: 600; margin: 0 0 12px; line-height: 1.45; }
 .amigos .acoes { display: flex; flex-wrap: wrap; gap: 12px; margin: 8px 0 4px; }
 .amigos .acoes .btn { min-height: 50px; padding: 0 20px; }
+.amigos .btn { min-height: 44px; }
 /* código do mundo: cada pedaço é uma peça amarela */
 .amigos .codigo { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: center; margin: 4px 0 16px; }
 .amigos .peca {
@@ -64,7 +65,8 @@ export const CSS_AMIGOS = `
 .botao-amigos .rostos i:first-child { margin-left: 0; background: #7cc6ff; }
 .botao-amigos .rostos i:nth-child(3) { background: #ff9fb8; }
 body[data-overlay] .botao-amigos, body.tela-titulo .botao-amigos, body.modo-foto .botao-amigos { display: none; }
-@media (max-width: 700px), (max-height: 520px) { .botao-amigos { top: auto; bottom: calc(118px + env(safe-area-inset-bottom)); right: 12px; } }
+/* celular: acima da grade de botões de toque (pular, correr, descer), sem cobrir nada */
+@media (max-width: 700px), (max-height: 520px) { .botao-amigos { top: auto; bottom: calc(300px + env(safe-area-inset-bottom)); right: 12px; } }
 /* entrar no mundo de alguém (link ou QR): o tema do mundo em cima, o nome e um botão */
 .tela-entrar {
   position: fixed; inset: 0; z-index: 80; display: grid; padding: 16px; overflow: auto;
@@ -178,7 +180,7 @@ export function criarEntrarComCodigo(raiz: HTMLElement, op: OpcoesEntrar) {
   const apelido = document.createElement('input');
   apelido.type = 'text';
   apelido.className = 'apelido';
-  apelido.placeholder = 'Como te chamam?';
+  apelido.placeholder = 'Seu nome para os amigos';
   apelido.maxLength = 22;
   apelido.value = op.apelido;
   apelido.setAttribute('data-campo-apelido', '');
@@ -190,16 +192,10 @@ export function criarEntrarComCodigo(raiz: HTMLElement, op: OpcoesEntrar) {
   const entrar = document.createElement('button');
   entrar.type = 'button';
   entrar.className = 'btn primario';
-  entrar.textContent = 'Entrar no mundo';
+  entrar.textContent = 'Entrar';
   entrar.setAttribute('data-entrar', '');
   acoes.append(entrar);
-  m.corpo.append(
-    dica,
-    campo('Código do mundo', codigo),
-    campo('Seu apelido', apelido),
-    erro,
-    acoes,
-  );
+  m.corpo.append(dica, campo('Código do mundo', codigo), campo('Seu nome', apelido), erro, acoes);
   raiz.appendChild(m.fundo);
 
   async function tentar(): Promise<void> {
@@ -208,11 +204,6 @@ export function criarEntrarComCodigo(raiz: HTMLElement, op: OpcoesEntrar) {
       erro.textContent =
         'Esse código não parece certo. Escreva as duas palavras e o número, como LUA-COMETA-48.';
       codigo.focus();
-      return;
-    }
-    if (!apelido.value.trim()) {
-      erro.textContent = 'Escolha um apelido para os amigos te verem no mundo.';
-      apelido.focus();
       return;
     }
     erro.textContent = '';
@@ -224,7 +215,7 @@ export function criarEntrarComCodigo(raiz: HTMLElement, op: OpcoesEntrar) {
       erro.textContent = e instanceof Error ? e.message : String(e);
     } finally {
       entrar.disabled = false;
-      entrar.textContent = 'Entrar no mundo';
+      entrar.textContent = 'Entrar';
     }
   }
   entrar.addEventListener('click', () => void tentar());
@@ -288,6 +279,17 @@ export function criarPainelAmigos(raiz: HTMLElement, op: OpcoesPainelAmigos) {
     b.setAttribute(attr, '');
     b.addEventListener('click', f);
     return b;
+  }
+
+  /** Redesenha e devolve o foco ao mesmo botão (pelo atributo dele), se ele ainda existir. */
+  function desenharMantendoFoco(): void {
+    const ativo = document.activeElement;
+    const attr =
+      ativo instanceof HTMLElement && m.corpo.contains(ativo)
+        ? [...ativo.attributes].find((a) => a.name.startsWith('data-'))?.name
+        : undefined;
+    desenhar();
+    if (attr) m.corpo.querySelector<HTMLElement>(`[${attr}]`)?.focus();
   }
 
   function desenhar(): void {
@@ -541,13 +543,16 @@ export function criarPainelAmigos(raiz: HTMLElement, op: OpcoesPainelAmigos) {
       return m.aberto;
     },
     definirSala(s: EstadoSala, voce: string) {
+      // só redesenha se algo mudou (redesenhar tira o foco e corta o "Copiado!")
+      const igual = JSON.stringify(s) === JSON.stringify(sala) && voce === eu;
       sala = s;
       eu = voce;
-      if (m.aberto) desenhar();
+      if (m.aberto && !igual) desenhar();
     },
     definirJogadores(lista: JogadorNaLista[]) {
+      const igual = JSON.stringify(lista) === JSON.stringify(jogadores);
       jogadores = lista;
-      if (m.aberto) desenhar();
+      if (m.aberto && !igual) desenharMantendoFoco();
     },
   };
 }
@@ -619,9 +624,8 @@ export interface PreviaNaTela {
  * o motivo (nunca uma tela nova vazia).
  */
 export function criarTelaEntrar(op: {
-  previa: PreviaNaTela | null;
   apelido: string;
-  /** Toque em "Entrar" (dentro do gesto: o áudio já pode ser preparado aqui). */
+  /** Cada toque em "Entrar" (dentro do gesto: o áudio já pode ser preparado aqui). */
   aoEntrar(apelido: string): void;
   aoVoltar(): void;
 }) {
@@ -634,32 +638,17 @@ export function criarTelaEntrar(op: {
   c.setAttribute('aria-modal', 'true');
   const arte = document.createElement('div');
   arte.className = 'arte';
-  const p = op.previa;
-  if (p) {
-    arte.style.backgroundImage = `url(/temas/${encodeURIComponent(p.tema)}.jpg)`;
-    const chip = document.createElement('span');
-    chip.className = 'chip-tema';
-    chip.textContent = p.nomeTema;
-    arte.appendChild(chip);
-  }
   const miolo = document.createElement('div');
   miolo.className = 'miolo';
   const h = document.createElement('h2');
-  h.textContent = p?.dono ? `Entrar no mundo de ${p.dono}` : 'Entrar no mundo';
+  h.textContent = 'Entrar no mundo';
   c.setAttribute('aria-label', h.textContent);
-  miolo.appendChild(h);
-  if (p) {
-    const nm = document.createElement('p');
-    nm.className = 'nome-mundo';
-    nm.textContent = p.nome;
-    const quem = document.createElement('p');
-    quem.className = 'quem';
-    quem.setAttribute('data-quem-esta', '');
-    quem.textContent = p.presentes.length
-      ? `No mundo agora: ${p.presentes.join(', ')}`
-      : 'Ninguém está jogando agora: você chega primeiro!';
-    miolo.append(nm, quem);
-  }
+  const nm = document.createElement('p');
+  nm.className = 'nome-mundo';
+  const quem = document.createElement('p');
+  quem.className = 'quem';
+  quem.setAttribute('data-quem-esta', '');
+  quem.textContent = 'Procurando o mundo…';
   const rot = document.createElement('label');
   rot.textContent = 'Seu nome';
   const nome = document.createElement('input');
@@ -682,16 +671,20 @@ export function criarTelaEntrar(op: {
   entrar.className = 'btn primario';
   entrar.textContent = 'Entrar';
   entrar.setAttribute('data-entrar-mundo', '');
-  miolo.append(rot, erro, barra, entrar);
+  miolo.append(h, nm, quem, rot, erro, barra, entrar);
   c.append(arte, miolo);
   el.appendChild(c);
   document.body.appendChild(el);
+  let nomeEscrito = false;
+  nome.addEventListener('input', () => (nomeEscrito = true));
   const ir = () => {
+    if (entrar.disabled) return;
     erro.textContent = '';
     entrar.disabled = true;
     entrar.textContent = 'Entrando…';
     nome.disabled = true;
     barra.hidden = false;
+    i.style.width = '10%';
     op.aoEntrar(nome.value);
   };
   entrar.addEventListener('click', ir);
@@ -700,6 +693,25 @@ export function criarTelaEntrar(op: {
   });
   requestAnimationFrame(() => entrar.focus());
   return {
+    /** A prévia chegou: o tema, de quem é o mundo e quem está lá. */
+    definirPrevia(p: PreviaNaTela, sugestao: string) {
+      arte.style.backgroundImage = `url(/temas/${encodeURIComponent(p.tema)}.jpg)`;
+      const chip = document.createElement('span');
+      chip.className = 'chip-tema';
+      chip.textContent = p.nomeTema;
+      arte.replaceChildren(chip);
+      h.textContent = p.dono ? `Entrar no mundo de ${p.dono}` : 'Entrar no mundo';
+      c.setAttribute('aria-label', h.textContent);
+      nm.textContent = p.nome;
+      quem.textContent = p.presentes.length
+        ? `No mundo agora: ${p.presentes.join(', ')}`
+        : 'Ninguém está jogando agora: você chega primeiro!';
+      if (!nomeEscrito && !nome.disabled) nome.value = sugestao;
+    },
+    /** Sem prévia (servidor sem resposta ainda): fica só o que dá para dizer. */
+    semPrevia() {
+      quem.textContent = '';
+    },
     passo(fracao: number) {
       i.style.width = `${Math.round(fracao * 100)}%`;
     },

@@ -94,6 +94,12 @@ test('criar com amigos, entrar pelo link e pelo código, e parar de jogar com am
   const linkAteJogando = Date.now() - t1;
   console.log(`link: do toque em Entrar até jogando: ${linkAteJogando} ms`);
   await expect(bia.locator('.entrada')).toBeHidden();
+  await bia.waitForTimeout(1500);
+  await bia.screenshot({
+    path: 'capturas-temas/amigos-bia-no-mundo-celular.jpg',
+    type: 'jpeg',
+    quality: 80,
+  });
   // o som já foi liberado pelo toque em "Entrar"
   await expect
     .poll(() => bia.evaluate(() => window.__brumaluz!.audio?.estado), { timeout: 10_000 })

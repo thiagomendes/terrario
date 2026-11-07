@@ -30,7 +30,12 @@ export function identidade(): IdentidadeLocal {
   try {
     const v = JSON.parse(a?.getItem(CHAVE) ?? 'null') as IdentidadeLocal | null;
     if (v && typeof v.id === 'string' && typeof v.chave === 'string' && v.chave.length >= 32)
-      return { id: v.id, chave: v.chave, apelido: typeof v.apelido === 'string' ? v.apelido : '' };
+      return {
+        id: v.id,
+        chave: v.chave,
+        // "Jogador" foi o nome que a versão antiga gravava quando ficava vazio: vale como vazio
+        apelido: typeof v.apelido === 'string' && v.apelido !== 'Jogador' ? v.apelido : '',
+      };
   } catch {
     // estragada: cria outra
   }

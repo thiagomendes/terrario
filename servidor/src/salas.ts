@@ -42,6 +42,8 @@ const ESPERA_VAZIA = 60_000;
 const INTERVALO_GRAVAR = 5_000;
 /** Tentativas de código errado por endereço a cada 10 minutos. */
 const TENTATIVAS = 20;
+/** Prévias de mundo por endereço a cada 10 minutos (acertos também contam). */
+const PREVIAS = 60;
 /** Mundos novos por endereço a cada 10 minutos, e salas na memória ao mesmo tempo. */
 const CRIACOES = 10;
 const MAX_SALAS = 300;
@@ -79,6 +81,8 @@ interface SalaAtiva {
   instancia: string;
   /** Último erro registrado no passo (para não encher o log). */
   erroEm: number;
+  /** O dono parou de jogar com amigos: nada mais grava nem reabre esta sala. */
+  encerrada?: boolean;
 }
 
 /** O que a tela "Entrar no mundo de…" mostra antes de entrar. */
@@ -117,6 +121,16 @@ export function criarGerenciador(op: OpcoesGerenciador) {
   const entrando = new Set<Canal>();
   /** Códigos trocados pelo dono: só quem estava na sala volta por eles. */
   const antigos = new Map<string, SalaAtiva>();
+  /**
+   * Mundos que voltaram para o aparelho do dono, por código: os dados ficam aqui uns minutos
+   * para o dono que caiu no meio receber de novo quando voltar (só ele, com a chave dele).
+   */
+  const devolvidos = new Map<
+    string,
+    { dono: string; chave: string; dados: DadosMundo; ate: number }
+  >();
+  /** Prévias por endereço (acertos também contam: cada uma lê o armazém). */
+  const previas = new Map<string, { n: number; desde: number }>();
   /** Diário e mapa de cada jogador em cada mundo (vão junto dos dados dele). */
   const guardados = new Map<string, unknown>();
 
@@ -157,6 +171,8 @@ export function criarGerenciador(op: OpcoesGerenciador) {
   }
 
   async function carregar(codigo: string): Promise<SalaAtiva | null> {
+    // código de um mundo que voltou para o aparelho do dono: não reabre (nem por corrida)
+    if (devolvidos.has(codigo)) return null;
     const ja = ativas.get(codigo);
     if (ja) return ja;
     const pendente = carregando.get(codigo);
@@ -308,6 +324,14 @@ export function criarGerenciador(op: OpcoesGerenciador) {
       // conta antes de esperar o Storage (rajadas de palpites contam todas); acerto devolve
       contar(erros, canal.ip);
       const codigo = normalizarCodigo(String(p.codigo ?? ''));
+      // o dono que caiu enquanto levava o mundo para o aparelho recebe o mundo agora
+      const dev = codigo ? devolvidos.get(codigo) : undefined;
+      if (dev && dev.dados && dev.dono === jog.id && dev.chave === chave) {
+        contar(erros, canal.ip, -1);
+        enviar(canal, { t: 'devolvido', dados: dev.dados });
+        canal.fechar();
+        return;
+      }
       s = null;
       // a sala pode dormir enquanto esperamos: confere de novo e, se for o caso, recarrega
       for (let tentativa = 0; codigo && tentativa < 3; tentativa++) {
@@ -434,8 +458,13 @@ export function criarGerenciador(op: OpcoesGerenciador) {
    * avisa os outros com carinho e apaga o código (ele deixa de valer).
    */
   async function devolver(s: SalaAtiva, pr: Presente): Promise<void> {
+    if (s.encerrada) return;
     contexto(s);
+    // ninguém mais entra por este código, nem pelos antigos, a partir de agora
+    devolvidos.set(s.sala.codigo, { dono: pr.id, chave: pr.chave, dados: null as never, ate: 0 });
+    for (const [c, a] of antigos) if (a === s) devolvidos.set(c, devolvidos.get(s.sala.codigo)!);
     await gravarMundo(s);
+    s.encerrada = true;
     const salvo = s.nucleo.salvar();
     const dj = s.nucleo.dadosJogador(pr.id);
     const guardado = (guardados.get(`${s.mundo.id}/${pr.id}`) ?? {}) as Record<string, unknown>;
@@ -453,6 +482,10 @@ export function criarGerenciador(op: OpcoesGerenciador) {
         ...(guardado.marcadores ? { marcadores: guardado.marcadores } : {}),
       },
     };
+    // guardado uns minutos: se o dono caiu no meio, recebe quando voltar com a chave dele
+    const pendente = { dono: pr.id, chave: pr.chave, dados, ate: agora() + 15 * 60_000 };
+    devolvidos.set(s.sala.codigo, pendente);
+    for (const [c, a] of antigos) if (a === s) devolvidos.set(c, pendente);
     enviar(pr.canal, { t: 'devolvido', dados });
     for (const outro of s.presentes.values()) {
       if (outro.id === pr.id) continue;
@@ -594,6 +627,8 @@ export function criarGerenciador(op: OpcoesGerenciador) {
       hora: salvo.hora,
       extras: salvo.extras,
     });
+    // o dono levou o mundo para o aparelho enquanto gravávamos: a sala não volta a existir
+    if (s.encerrada) return;
     await armazem.gravarSala(s.sala);
     s.ultimaGravacao = agora();
   }
@@ -676,13 +711,15 @@ export function criarGerenciador(op: OpcoesGerenciador) {
         log(`manutenção da sala ${codigo}: ${String(e)}`);
       }
     }
-    // limites vencidos saem da memória
-    for (const m of [erros, criacoes])
+    // limites vencidos e mundos devolvidos antigos saem da memória
+    for (const [c, d] of devolvidos) if (agora() > d.ate) devolvidos.delete(c);
+    for (const m of [erros, criacoes, previas])
       for (const [ip, e] of m) if (agora() - e.desde > JANELA) m.delete(ip);
     for (const [c, s] of antigos) if (ativas.get(s.sala.codigo) !== s) antigos.delete(c);
   }
 
   async function manter(codigo: string, s: SalaAtiva): Promise<void> {
+    if (s.encerrada) return;
     for (const pr of [...s.presentes.values()])
       if (pr.desligadoEm !== null && agora() - pr.desligadoEm > TOLERANCIA_QUEDA)
         await despedir(s, pr, true);
@@ -716,11 +753,12 @@ export function criarGerenciador(op: OpcoesGerenciador) {
    * Prévia do mundo para a tela "Entrar no mundo de…" (spec 011): nome, tema, o dono e quem
    * está lá. Nada de id nem chave. Conta como tentativa de código (mesmo limite do entrar).
    */
-  async function previa(codigoBruto: string, ip: string): Promise<PreviaMundo | null> {
-    if (excedeu(erros, ip, TENTATIVAS)) return null;
+  async function previa(codigoBruto: string, ip: string): Promise<PreviaMundo | 'limite' | null> {
+    if (excedeu(erros, ip, TENTATIVAS) || excedeu(previas, ip, PREVIAS)) return 'limite';
     contar(erros, ip);
+    contar(previas, ip);
     const codigo = normalizarCodigo(codigoBruto);
-    if (!codigo) return null;
+    if (!codigo || devolvidos.has(codigo)) return null;
     const ativa = ativas.get(codigo);
     const sala = ativa?.sala ?? (await armazem.lerSala(codigo));
     if (!sala) return null;
@@ -738,6 +776,8 @@ export function criarGerenciador(op: OpcoesGerenciador) {
           .map((p) => apelidoDe(p.id) ?? '')
           .filter(Boolean)
       : [];
+    // "cheio" conta como o entrar: todos os presentes (inclusive quem caiu e pode voltar)
+    const ocupados = ativa?.presentes.size ?? 0;
     return {
       codigo: sala.codigo,
       nome: mundo.nome,
@@ -746,7 +786,7 @@ export function criarGerenciador(op: OpcoesGerenciador) {
       dono,
       presentes,
       fechado: sala.fechado,
-      cheio: presentes.length >= MAX_JOGADORES,
+      cheio: ocupados >= MAX_JOGADORES,
     };
   }
 

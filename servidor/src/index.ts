@@ -72,6 +72,11 @@ const http = createServer((req, res) => {
     salas
       .previa(previa[1], ipDe(req))
       .then((p) => {
+        if (p === 'limite') {
+          res.writeHead(429, cabecalhos);
+          res.end('{}');
+          return;
+        }
         res.writeHead(p ? 200 : 404, cabecalhos);
         res.end(JSON.stringify(p ?? {}));
       })

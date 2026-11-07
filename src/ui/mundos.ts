@@ -308,6 +308,14 @@ export function criarPainelMundos(raiz: HTMLElement, op: OpcoesPainelMundos) {
   const erroNovo = form.querySelector('[data-erro-novo]') as HTMLElement;
   const botaoCriar = form.querySelector('[data-criar-mundo]') as HTMLButtonElement;
   comAmigos.closest('label')!.hidden = !op.criarComAmigos;
+  // a sugestão de nome acompanha o tema escolhido (até a criança escrever o dela)
+  let nomeEscrito = false;
+  inputApelido.addEventListener('input', () => (nomeEscrito = true));
+  form.addEventListener('click', (e) => {
+    if (!(e.target as HTMLElement).closest('[data-tema]') || nomeEscrito || !comAmigos.checked)
+      return;
+    requestAnimationFrame(() => (inputApelido.value = op.sugestaoApelido?.(seletor.valor) ?? ''));
+  });
   comAmigos.addEventListener('change', () => {
     campoApelido.hidden = !comAmigos.checked;
     botaoCriar.textContent = comAmigos.checked ? 'Criar e chamar os amigos' : 'Criar e jogar';
@@ -357,8 +365,10 @@ export function criarPainelMundos(raiz: HTMLElement, op: OpcoesPainelMundos) {
         await op.criarComAmigos(meta, inputApelido.value);
         return;
       } catch (err) {
-        // não deu (sem internet, servidor): o mundo fica no aparelho e a criança sabe por quê
-        erroNovo.textContent = `${err instanceof Error ? err.message : String(err)} O mundo ficou no aparelho.`;
+        // não deu (sem internet, servidor): nada fica pela metade; dá para tentar de novo ou
+        // desligar "Jogar com amigos" e criar só no aparelho
+        await op.repo.excluir(meta.id);
+        erroNovo.textContent = `${err instanceof Error ? err.message : String(err)} Tente de novo, ou desligue "Jogar com amigos" para criar só no aparelho.`;
         botaoCriar.disabled = false;
         botaoCriar.textContent = 'Criar e chamar os amigos';
         await render();

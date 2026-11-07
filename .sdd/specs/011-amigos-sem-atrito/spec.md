@@ -127,6 +127,7 @@ Aprovada pelo dono ("pode mandar ver na próxima spec"), depois da 012. O que mu
 | T05 | Nomes sugeridos por tema; fim da caixinha do navegador |
 | T06 | e2e dos fluxos com tempos e toques medidos; capturas nos 6 temas |
 | T07 | Rodada em família, auditoria e relatório visual |
+| T08 | Celular em pé com mais tela (pedido do dono em 7 nov, durante a 011): as informações do canto esquerdo de cima (personagem, clima, missão) viram ícones que abrem os detalhes num toque, ou um menu que abre e fecha; o joystick e os botões importantes continuam sempre à mão |
 
 ## Riscos
 - **Áudio no navegador:** sem um toque, o navegador não toca som. Por isso todo fluxo de

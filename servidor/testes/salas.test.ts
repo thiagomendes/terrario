@@ -200,6 +200,17 @@ describe('salas do servidor', () => {
       JSON.stringify({ t: 'entrar', versao: VERSAO_REDE, jogador: ident('caio'), codigo }),
     );
     expect(c.recebidas.some((m) => m.t === 'recusado')).toBe(true);
+    // a dona que caiu no meio volta pelo código e recebe o mundo de novo (só ela)
+    const a2 = canal();
+    await g.receber(
+      a2,
+      JSON.stringify({ t: 'entrar', versao: VERSAO_REDE, jogador: ident('ana'), codigo }),
+    );
+    expect(a2.recebidas.some((m) => m.t === 'devolvido')).toBe(true);
+    expect(await g.previa(codigo, '9.9.9.8')).toBeNull();
+    // nenhuma gravação atrasada traz a sala de volta
+    await avancar(70_000);
+    expect(g.ativas.has(codigo)).toBe(false);
   });
 
   it('código errado recusa, e chutar muitos códigos bloqueia o endereço', async () => {
