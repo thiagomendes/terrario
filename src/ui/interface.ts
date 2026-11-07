@@ -255,8 +255,11 @@ export function criarInterface(
   jogar.appendChild(subJogar);
   const atualizarCartao = (m: MetaMundo | null | undefined) => {
     const modo = m ? (m.modo === 'criativo' ? 'Criativo' : 'Sobrevivência') : '';
+    // mundo da nuvem: deixa claro que é o mundo com os amigos
     subJogar.textContent = m
-      ? `${m.nome} · ${modo} · ${obterTema(m.tema).nome}`
+      ? m.nuvem
+        ? `${m.nome} · com amigos · ${modo}`
+        : `${m.nome} · ${modo} · ${obterTema(m.tema).nome}`
       : 'Mundo de passagem';
   };
   atualizarCartao(opMundo.mundo);
