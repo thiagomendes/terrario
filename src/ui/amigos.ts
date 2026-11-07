@@ -67,11 +67,11 @@ body[data-overlay] .botao-amigos, body.tela-titulo .botao-amigos, body.modo-foto
 @media (max-width: 700px), (max-height: 520px) { .botao-amigos { top: auto; bottom: calc(118px + env(safe-area-inset-bottom)); right: 12px; } }
 /* entrar no mundo de alguém (link ou QR): o tema do mundo em cima, o nome e um botão */
 .tela-entrar {
-  position: fixed; inset: 0; z-index: 80; display: grid; place-items: center; padding: 16px; overflow: auto;
+  position: fixed; inset: 0; z-index: 80; display: grid; padding: 16px; overflow: auto;
   background: linear-gradient(180deg, #a9d4ff, #dcefff 60%, #fff4dc); font: 700 1rem var(--jogo, system-ui, sans-serif); color: #3b2a1e;
 }
 .tela-entrar .cartao {
-  width: min(440px, 100%); box-sizing: border-box; border-radius: 24px; overflow: hidden; background: #fffaf0;
+  margin: auto; width: min(440px, 100%); box-sizing: border-box; border-radius: 24px; overflow: hidden; background: #fffaf0;
   box-shadow: 0 8px 0 #f0d9b0, 0 22px 40px rgba(40, 25, 10, 0.25);
 }
 .tela-entrar .arte { height: 150px; background: #cfe9fb center / cover no-repeat; position: relative; }
@@ -92,6 +92,17 @@ body[data-overlay] .botao-amigos, body.tela-titulo .botao-amigos, body.modo-foto
 .tela-entrar .btn { min-height: 56px; font-size: 1.15rem; }
 .tela-entrar .erro { color: #c0392b; font-weight: 800; }
 .tela-entrar .erro:empty { display: none; }
+/* celular deitado: arte do lado, o resto ao lado dela, tudo cabe sem rolar */
+@media (max-height: 520px) and (min-width: 560px) {
+  .tela-entrar { padding: 10px; }
+  .tela-entrar .cartao { width: min(720px, 100%); display: grid; grid-template-columns: 38% 1fr; }
+  .tela-entrar .arte { height: auto; min-height: 100%; }
+  .tela-entrar .miolo { gap: 8px; padding: 14px 18px 16px; }
+  .tela-entrar h2 { font-size: 1.25rem; }
+  .tela-entrar input { min-height: 46px; }
+  .tela-entrar .btn { min-height: 48px; }
+}
+@media (max-height: 520px) and (max-width: 559px) { .tela-entrar .arte { height: 90px; } }
 .tela-entrar .barra { height: 14px; border-radius: 999px; background: #f3e6cc; box-shadow: inset 0 3px 0 rgba(120, 80, 30, 0.14); overflow: hidden; }
 .tela-entrar .barra[hidden] { display: none; }
 .tela-entrar .barra i { display: block; height: 100%; width: 0; border-radius: 999px; background: linear-gradient(90deg, #ffd45a, #ff9b2f); transition: width 0.4s ease; }

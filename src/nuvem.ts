@@ -28,6 +28,7 @@ import {
   criarTelaEntrar,
 } from './ui/amigos';
 import { prepararAudioNoGesto } from './audio/ligador';
+import { CSS_BRINQUEDO } from './ui/brinquedo';
 import { obterTema, temaExiste } from './temas';
 import type { MotivoRecusa } from './rede/protocolo';
 
@@ -53,7 +54,10 @@ function estilo(): void {
   if (estiloPronto) return;
   estiloPronto = true;
   const e = document.createElement('style');
+  // a base de brinquedo (letras, cores, botões-peça) vem junto: estas telas podem aparecer
+  // antes do resto da interface (entrar pelo link)
   e.textContent =
+    CSS_BRINQUEDO +
     CSS_AMIGOS +
     CSS_SETAS +
     `
