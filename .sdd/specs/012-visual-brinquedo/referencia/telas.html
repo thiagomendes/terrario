@@ -541,10 +541,14 @@ lm.position.set(2, 3, 2);
 cenaMao.add(lm);
 const camMao = new THREE.PerspectiveCamera(55, 16 / 9, 0.01, 10);
 const braco1 = montarMao('#e8b48a', '#3b6fb6', '#2f5a96');
-const pm = picareta();
+// a mão fecha na ponta do cabo: a picareta sobe a partir da pega
+const pm = new THREE.Group();
+const pmModelo = picareta();
+pmModelo.rotation.z = 0; // sem a inclinação usada no ícone
+pmModelo.position.y = 0.6; // o cabo vai de -0.05 (logo abaixo da mão) até a cabeça
+pm.add(pmModelo);
 pm.scale.setScalar(0.42);
 pm.rotation.set(-1.9, 0, -0.35);
-pm.position.set(0, 0, 0.06);
 braco1.segura.add(pm);
 const mao = braco1.g;
 cenaMao.add(mao);

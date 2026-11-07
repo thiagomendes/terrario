@@ -144,11 +144,11 @@ function esfera(r, cor, sx = 1, sy = 1, sz = 1) {
 }
 const junta = (x, y, z) => { const g = new THREE.Group(); g.position.set(x, y, z); return g; };
 
-/** Picareta de brinquedo (cabo e cabeça arredondados). */
+/** Picareta de brinquedo. A origem é o ponto de pega: a ponta do cabo, onde a mão fecha. */
 function picareta() {
   const g = new THREE.Group();
   const cabo = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.035, 0.55, 12), plastico('#b07a4f'));
-  cabo.position.y = 0.2;
+  cabo.position.y = 0.255; // de -0.02 (sai um tiquinho por baixo da mão) até 0.53
   const cabeca = new THREE.Group();
   for (const s of [-1, 1]) {
     const ponta = caixa(0.2, 0.07, 0.07, '#a9adb8', 0.03);
@@ -156,7 +156,7 @@ function picareta() {
     ponta.rotation.z = s * -0.25;
     cabeca.add(ponta);
   }
-  cabeca.position.y = 0.46;
+  cabeca.position.y = 0.52;
   g.add(cabo, cabeca);
   cabo.castShadow = true;
   return g;
@@ -197,7 +197,7 @@ function boneco() {
   item.rotation.x = Math.PI / 2;
   bracos.d.j.add(item);
   const pica = picareta();
-  pica.position.y = -0.12;
+  pica.position.y = 0; // segura na ponta do cabo
   item.add(pica);
   const comida = maca();
   comida.visible = false;
@@ -327,7 +327,7 @@ const braco1 = montarMao(P.pele, P.camisa, '#2f5a96');
 const picaMao = picareta();
 picaMao.scale.setScalar(1.1);
 picaMao.rotation.set(-1.9, 0, -0.35);
-picaMao.position.set(0, 0, 0.06);
+picaMao.position.set(0, 0, 0);
 const macaMao = maca();
 macaMao.scale.setScalar(1.5);
 macaMao.position.set(0, -0.05, 0.1);

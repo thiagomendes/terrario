@@ -1,7 +1,7 @@
 ---
 id: 012-visual-brinquedo
 title: 'Visual de brinquedo: o jogo inteiro com cara de brinquedo, do bloco ao personagem e ao site'
-status: DRAFT
+status: IN_PROGRESS
 base_branch: main
 branch: feat/visual-brinquedo
 created_at: 2026-11-07T17:00:00Z
@@ -77,6 +77,7 @@ A spec só fecha quando o dono olha as duplas e diz que está igual ou melhor.
   - **Terceira pessoa:** por cima do ombro, como no esboço.
   - **De frente:** como hoje.
 - **Moradores e bichos:** no mesmo traço do personagem, nos seis temas. Isso inclui os moradores de cada profissão, a raposa e as criaturas de cada tema (dia e noite), com os movimentos de cada um.
+- **Ferramentas na mão:** cada item tem o seu ponto de pega. Nas ferramentas é a **ponta do cabo**: a mão fecha ali, o cabo sobe a partir da mão até a cabeça da ferramenta, e o golpe gira em torno da mão. O mesmo ponto vale na primeira e na terceira pessoa e para os amigos.
 - **Itens e ícones:** os itens são modelos de brinquedo (picareta, espada, comida, blocos), e os ícones da barra e do inventário são desenhados a partir desses modelos, sempre iguais ao que aparece na mão.
 - **Efeitos, todos no mesmo estilo** (nada de quadradinho de pixel sobrando):
   - **Quebrar um bloco:** os pedaços saem como **peças arredondadas e confetes de plástico** na cor do bloco, que quicam e somem encolhendo, e não como cubinhos de textura.
@@ -108,7 +109,8 @@ A spec só fecha quando o dono olha as duplas e diz que está igual ou melhor.
 1. **Fidelidade ao esboço:** as seis duplas (jogo × esboço) da definição de sucesso, aprovadas pelo dono.
 2. **Personagem:** todas as opções do editor existem no estilo novo; personagens salvos abrem convertidos (teste com aparências antigas).
 3. **Movimentos:** cada ação tem a pose e o ritmo do esboço; teste confere que as poses mudam como esperado em cada ação.
-4. **Primeira pessoa:** manga, punho e mão separados e nas cores do personagem (roupa sem manga mostra o braço cor de pele até a mão), item na mão no estilo novo, sem o braço quadrado; captura de cada ação.
+4. **Pega das ferramentas:** toda ferramenta é segurada pela ponta do cabo (teste confere que o ponto de pega de cada item fica na mão), nas duas câmeras.
+4b. **Primeira pessoa:** manga, punho e mão separados e nas cores do personagem (roupa sem manga mostra o braço cor de pele até a mão), item na mão no estilo novo, sem o braço quadrado; captura de cada ação.
 5. **Bichos e moradores:** todos no estilo novo nos seis temas, com captura de cada um.
 6. **Mundo:** blocos, plantas e água no estilo novo nos seis temas, sem textura de pixels; capturas de dia e à noite.
 7. **Desempenho:**
