@@ -95,11 +95,12 @@ describe('malha de chunk', () => {
     expect(min).toBeLessThan(1);
   });
 
-  it('plantas geram 2 quads em buffer separado', () => {
+  it('plantas vão para o buffer de plantas (de brinquedo ou cruzadas)', () => {
     const c = vazio();
     c[indice(3, 3, 3)] = Bloco.GRAMA_ALTA;
     const m = gerarMalha(c);
-    expect(quads(m.plantas)).toBe(2);
+    // o capim vira um tufo de folhinhas 3D, todas no tile branco com a cor nos vértices
+    expect(quads(m.plantas)).toBeGreaterThan(2);
     expect(m.solido.indices.length).toBe(0);
   });
 

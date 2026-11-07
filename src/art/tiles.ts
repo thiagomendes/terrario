@@ -1,5 +1,7 @@
 import { REGISTRO_BLOCOS } from '../world/blocks';
 
+export const TILE_BRANCO = 'branco';
+
 /** Nomes de todos os tiles usados pelos blocos, na ordem das células do atlas. */
 export const NOMES_TILES: readonly string[] = (() => {
   const nomes: string[] = [];
@@ -8,6 +10,8 @@ export const NOMES_TILES: readonly string[] = (() => {
       if (n && n !== 'vazio' && !nomes.includes(n)) nomes.push(n);
     }
   }
+  // tile branco: as peças de brinquedo (plantas) levam a cor nos vértices
+  nomes.push(TILE_BRANCO);
   return nomes;
 })();
 

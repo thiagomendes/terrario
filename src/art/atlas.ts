@@ -1,6 +1,6 @@
 import { Bloco, REGISTRO_BLOCOS } from '../world/blocks';
 import { hash2 } from '../world/noise';
-import { NOMES_TILES, indiceDoTile } from './tiles';
+import { NOMES_TILES, TILE_BRANCO, indiceDoTile } from './tiles';
 
 /** Tiles de 16x16 em pixel-art, com borda larga para mipmaps sem sangrar. */
 export const TAM_TILE = 16;
@@ -771,14 +771,17 @@ export function gerarAtlas(semente = 1337, opcoes: { brinquedo?: boolean } = {})
   const tiles: TileAtlas[] = [];
   NOMES_TILES.forEach((nome, indice) => {
     // o tema pode repintar qualquer tile; o que ele não repinta usa o pintor base
-    const pinta = tema().pintores[nome] ?? PINTORES[nome];
+    const pinta =
+      nome === TILE_BRANCO
+        ? (): Px => [255, 255, 255, 255]
+        : (tema().pintores[nome] ?? PINTORES[nome]);
     if (!pinta) throw new Error(`tile sem pintor: ${nome}`);
     const { ox, oy } = celulaDe(indice);
     const s = semente + sementeDoNome(nome) * 977;
     const tile = new Float32Array(TAM_TILE * TAM_TILE * 4);
     for (let y = 0; y < TAM_TILE; y++)
       for (let x = 0; x < TAM_TILE; x++) tile.set(pinta(x, y, s), (y * TAM_TILE + x) * 4);
-    const limpo = brinquedo ? deBrinquedo(tile) : tile;
+    const limpo = brinquedo && nome !== TILE_BRANCO ? deBrinquedo(tile) : tile;
     for (let py = 0; py < CELULA; py++) {
       for (let px = 0; px < CELULA; px++) {
         const x = Math.min(TAM_TILE - 1, Math.max(0, px - PADDING));

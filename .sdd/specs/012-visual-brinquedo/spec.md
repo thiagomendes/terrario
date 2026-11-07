@@ -133,10 +133,10 @@ A spec só fecha quando o dono olha as duplas e diz que está igual ou melhor.
 | T04 | Câmeras: mão de brinquedo na 1ª pessoa, 3ª pessoa sobre o ombro |
 | T05 | Moradores e criaturas dos seis temas no estilo novo |
 | T06 | Blocos: quinas arredondadas nas arestas à mostra perto do jogador, malha simples longe, cores limpas com degradê |
-| T07 | Formas por tema: árvores, flores, grama, água e estruturas |
+| T07 | Formas por tema: árvores, flores, grama, água e estruturas. Plantas do chão viram peças de brinquedo (tufo baixo, flor de bolinha, cogumelo de cúpula, arbusto redondo) e o cenário não pode ficar poluído: capim baixo e na cor do chão, as flores são o destaque |
 | T08 | Itens em 3D e ícones gerados a partir deles |
 | T08b | Efeitos: pedaços, poeira, rachadura, destaque, itens no chão, clima, fumaça, vaga-lumes, nuvens, respingos, chegada, sono, dano |
-| T09 | Tela inicial, menus, HUD, vitrine dos temas e ícone do site |
+| T09 | Tela inicial, menus, HUD, vitrine dos temas e ícone do site. Minimapa e mapa grande no mesmo traço: sem pixel por bloco, cores limpas, relevo macio, água e árvores desenhadas, e nada de cantos pretos |
 | T10 | Desempenho: medição antes e depois, qualidade automática |
 | T11 | Capturas lado a lado com os esboços nos seis temas, auditoria e relatório visual |
 

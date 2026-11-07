@@ -4,6 +4,7 @@ import type { Buffers } from '../mesh/malha';
 import { blocoDe, criarEdicoes, metasDoChunk, type Edicoes } from '../world/edicoes';
 import { definirEstiloMundo, gerarChunk } from '../world/chunk';
 import { definirRegioesSemPovoado } from '../world/povoado';
+import { definirCoresPlantas, type CoresPlanta } from '../mesh/plantasBrinquedo';
 
 /** Cache dos chunks gerados (antes das edições): evita regerar vizinhos. */
 const cache = new Map<string, Uint8Array>();
@@ -69,12 +70,15 @@ export interface PedidoEstilo {
   estilo: EstiloMundo;
   /** Regiões sem povoado (mundos de antes dos povoados com edições nelas). */
   semPovoado?: string[];
+  /** Cores das plantas de brinquedo, lidas do atlas do tema. */
+  coresPlantas?: Record<number, CoresPlanta>;
 }
 
 self.onmessage = (ev: MessageEvent<PedidoChunk | PedidoEstilo>) => {
   if ('estilo' in ev.data) {
     definirEstiloMundo(ev.data.estilo);
     definirRegioesSemPovoado(ev.data.semPovoado ?? []);
+    definirCoresPlantas(ev.data.coresPlantas);
     return;
   }
   const { cx, cz, semente, versao, edicoes: dados, bases } = ev.data as PedidoChunk;

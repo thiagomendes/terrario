@@ -8,7 +8,8 @@ import {
   type Caixa,
 } from '../world/formas';
 import { LUZ_MAXIMA, calcularLuz } from '../world/luz';
-import { FACES_TILE, indiceDoTile } from '../art/tiles';
+import { FACES_TILE, TILE_BRANCO, indiceDoTile } from '../art/tiles';
+import { plantaDeBrinquedo } from './plantasBrinquedo';
 
 const TILE_TERRA = indiceDoTile('terra');
 /** Tabela de opacidade por id (laço quente da malha). */
@@ -118,6 +119,9 @@ class Acumulador {
     };
   }
 }
+
+/** Centro do tile branco (cor das peças de brinquedo vai nos vértices). */
+const UV_BRANCO: [number, number] = uvDoCanto(indiceDoTile(TILE_BRANCO), 0.5, 0.5);
 
 /** Raio das quinas de brinquedo (fração do bloco). */
 export const RAIO_QUINA = 0.13;
@@ -407,6 +411,21 @@ export function gerarMalha(
   function adicionarPlanta(id: number, x: number, y: number, z: number): void {
     const tile = tileDoBloco(id);
     const defP = obterBloco(id);
+    // plantas do chão de brinquedo (spec 012): pecinhas 3D na cor do tema
+    if (
+      plantaDeBrinquedo(
+        id,
+        x,
+        y,
+        z,
+        plantas,
+        UV_BRANCO,
+        [mapaLuz.ceu(x, y, z) / LUZ_MAXIMA, mapaLuz.bloco(x, y, z) / LUZ_MAXIMA],
+        (sal) => hashPosicao(x, y, z, sal),
+        !!defP?.balanca,
+      )
+    )
+      return;
     const fixo = defP?.forma === 'tocha' || !defP?.balanca;
     const altura = fixo
       ? 1

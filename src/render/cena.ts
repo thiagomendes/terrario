@@ -52,6 +52,7 @@ import {
 import { criarCeu } from './ceu';
 import { criarAgua } from './agua';
 import { criarVagalumes } from './vagalumes';
+import { coresDasPlantas } from '../mesh/plantasBrinquedo';
 import { PluginMundo } from './materialMundo';
 import { PluginBalanco } from './balanco';
 import { SEMENTE_PADRAO, TAM_X, TAM_Z } from '../world/chunk';
@@ -861,8 +862,9 @@ export function criarCena(
     type: 'module',
   });
   // o estilo do mundo do tema vai antes de qualquer pedido de chunk
-  worker.postMessage({ estilo: estiloMundo(), semPovoado });
-  workerEdicao.postMessage({ estilo: estiloMundo(), semPovoado });
+  const coresPlantas = coresDasPlantas(atlas);
+  worker.postMessage({ estilo: estiloMundo(), semPovoado, coresPlantas });
+  workerEdicao.postMessage({ estilo: estiloMundo(), semPovoado, coresPlantas });
   /** Momento da edição por chunk (para medir quanto o bloco demora a aparecer). */
   const inicioEdicao = new Map<string, number>();
   const receber = (ev: MessageEvent<RespostaChunk>) => {

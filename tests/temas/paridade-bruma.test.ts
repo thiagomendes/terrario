@@ -1,3 +1,5 @@
+import { TILE_BRANCO } from '../../src/art/tiles';
+import { CELULA, PADDING } from '../../src/art/atlas';
 import { describe, expect, it } from 'vitest';
 import { gerarAtlas } from '../../src/art/atlas';
 import {
@@ -32,9 +34,14 @@ describe('Bruma e Luz é idêntico ao jogo antes dos temas', () => {
     // a pintura de cada tile (antes das cores limpas de brinquedo da spec 012)
     const a = gerarAtlas(1337, { brinquedo: false });
     expect([a.largura, a.altura]).toEqual([512, 256]);
-    expect(await sha(new Uint8Array(a.pixels.buffer))).toBe(
-      '3aed3d5a8a609f6fe704538a62a5d75f4a87a7a43372b8ac899913165bca488c',
-    );
+    // o tile branco das peças de brinquedo (spec 012) é novo: fica de fora da comparação
+    const px = new Uint8Array(a.pixels.slice().buffer);
+    const branco = a.uvDoTile(TILE_BRANCO)!;
+    const bx = Math.round(branco.u0 * a.largura) - PADDING;
+    const by = Math.round(branco.v0 * a.altura) - PADDING;
+    for (let y = by; y < by + CELULA; y++)
+      px.fill(0, (y * a.largura + bx) * 4, (y * a.largura + bx + CELULA) * 4);
+    expect(await sha(px)).toBe('3aed3d5a8a609f6fe704538a62a5d75f4a87a7a43372b8ac899913165bca488c');
     const em = a.tiles
       .filter((t) => t.emissivo)
       .map((t) => t.nome)
