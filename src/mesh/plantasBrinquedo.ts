@@ -211,7 +211,7 @@ export function plantaDeBrinquedo(
   const tom = 0.9 + 0.15 * sorte(13);
   // folhagem nunca fica escura demais (plástico colorido, não sombra)
   const lum = cores.folha[0] * 0.3 + cores.folha[1] * 0.59 + cores.folha[2] * 0.11;
-  const clareia = lum < 0.42 ? Math.min(2.2, 0.42 / Math.max(lum, 0.05)) : 1;
+  const clareia = lum < 0.5 ? Math.min(2.4, 0.5 / Math.max(lum, 0.05)) : 1;
   const folha: Rgb01 = [
     Math.min(1, cores.folha[0] * tom * clareia),
     Math.min(1, cores.folha[1] * tom * clareia),

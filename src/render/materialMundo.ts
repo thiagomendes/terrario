@@ -87,10 +87,10 @@ export class PluginMundo extends MaterialPluginBase {
     if (shaderType === 'vertex') {
       return {
         CUSTOM_VERTEX_DEFINITIONS:
-          'attribute vec2 luz;\nvarying vec2 vLuzMundo;\nvarying vec3 vBlocoMundo;',
+          'attribute vec2 luz;\nvarying vec2 vLuzMundo;\nvarying vec3 vBlocoMundo;\nvarying float vFolhaMundo;',
         // posição sem o balanço do vento: tom por bloco e neve não "nadam" com as folhas
         CUSTOM_VERTEX_MAIN_END:
-          'vLuzMundo = luz;\nvBlocoMundo = (finalWorld * vec4(position, 1.0)).xyz;',
+          'vLuzMundo = luz;\nvBlocoMundo = (finalWorld * vec4(position, 1.0)).xyz;\nvFolhaMundo = 0.0;\n#ifdef VERTEXCOLOR\nvFolhaMundo = color.a < 0.99 ? 1.0 : 0.0;\n#endif',
         CUSTOM_VERTEX_UPDATE_POSITION: `
           #ifdef VERTEXCOLOR
           if (ventoFolhas > 0.0 && color.a < 0.99) {
@@ -110,6 +110,7 @@ export class PluginMundo extends MaterialPluginBase {
       CUSTOM_FRAGMENT_DEFINITIONS: `
         varying vec2 vLuzMundo;
         varying vec3 vBlocoMundo;
+        varying float vFolhaMundo;
         float hashMundo(vec3 p) {
           return fract(sin(dot(p, vec3(12.9898, 78.233, 37.719))) * 43758.5453);
         }
@@ -147,6 +148,8 @@ export class PluginMundo extends MaterialPluginBase {
           vec3 nJ = normalize(vNormalW);
           vec3 aJ = abs(nJ);
           float retoJ = smoothstep(0.985, 0.999, max(max(aJ.x, aJ.y), aJ.z));
+          // copas (folhas) são uma peça só: sem juntas
+          retoJ *= 1.0 - step(0.5, vFolhaMundo);
           if (retoJ > 0.0) {
             vec3 t1J = vec3(1.0, 0.0, 0.0);
             vec3 t2J = vec3(0.0, 0.0, 1.0);

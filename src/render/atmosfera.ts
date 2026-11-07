@@ -24,7 +24,7 @@ export const PALETA: PaletaAtmosfera = {
 /** Direção em que a luz do sol viaja na paleta de referência. */
 export const DIRECAO_SOL: Cor = [-0.55, -0.45, -0.7];
 
-export const DENSIDADE_NEVOA = 0.0075;
+export const DENSIDADE_NEVOA = 0.0058;
 
 export const NUM_CASCATAS = 2;
 

@@ -125,6 +125,8 @@ const UV_BRANCO: [number, number] = uvDoCanto(indiceDoTile(TILE_BRANCO), 0.5, 0.
 
 /** Raio das quinas de brinquedo (fração do bloco). */
 export const RAIO_QUINA = 0.13;
+/** Raio das quinas das copas (folhas), bem mais redondas. */
+export const RAIO_COPA = 0.34;
 
 const CANTOS: [number, number][] = [
   [0, 0],
@@ -285,15 +287,23 @@ export function gerarMalha(
     }
     // quinas de brinquedo (spec 012): só as arestas à mostra se arredondam; entre dois
     // blocos a face segue reta até a borda (a junta é desenhada no material)
-    const arredonda = OPACO_T[id] === 1 && !FOLHAS_T[id];
-    const mostra = (dx: number, dy: number, dz: number) =>
-      arredonda && !opaco(x + dx, y + dy, z + dz) ? 1 : 0;
+    // as folhas viram copa macia: quina bem redonda onde não encostam em outra folha
+    const ehFolha = FOLHAS_T[id] === 1;
+    const arredonda = OPACO_T[id] === 1 || ehFolha;
+    const RAIO = ehFolha ? RAIO_COPA : RAIO_QUINA;
+    const mostra = (dx: number, dy: number, dz: number) => {
+      if (!arredonda) return 0;
+      const v = ler(x + dx, y + dy, z + dz);
+      return OPACO_T[v] || (ehFolha && FOLHAS_T[v]) ? 0 : 1;
+    };
     const lo: Vec = [mostra(-1, 0, 0), mostra(0, -1, 0), mostra(0, 0, -1)];
     const hi: Vec = [mostra(1, 0, 0), mostra(0, 1, 0), mostra(0, 0, 1)];
     const passos = (t: Vec): number[] => {
       const eixo = t[0] ? 0 : t[1] ? 1 : 2;
-      const r: number[] = lo[eixo] ? [0, RAIO_QUINA * 0.45, RAIO_QUINA] : [0];
-      if (hi[eixo]) r.push(1 - RAIO_QUINA, 1 - RAIO_QUINA * 0.45, 1);
+      const fr = ehFolha ? [0, 0.2, 0.5, 1] : [0, 0.45, 1];
+      const r: number[] = lo[eixo] ? fr.map((f) => f * RAIO) : [0];
+      // o lado de cima é o espelho do de baixo
+      if (hi[eixo]) r.push(...fr.map((f) => 1 - f * RAIO).reverse());
       else r.push(1);
       return r;
     };
@@ -315,9 +325,9 @@ export function gerarMalha(
         let nz = f.n[2];
         if (arredonda && (p1.length > 2 || p2.length > 2)) {
           // ponto do cubo levado para a caixa de dentro e empurrado pelo raio
-          const ix = Math.min(Math.max(lx, lo[0] * RAIO_QUINA), 1 - hi[0] * RAIO_QUINA);
-          const iy = Math.min(Math.max(ly, lo[1] * RAIO_QUINA), 1 - hi[1] * RAIO_QUINA);
-          const iz = Math.min(Math.max(lz, lo[2] * RAIO_QUINA), 1 - hi[2] * RAIO_QUINA);
+          const ix = Math.min(Math.max(lx, lo[0] * RAIO), 1 - hi[0] * RAIO);
+          const iy = Math.min(Math.max(ly, lo[1] * RAIO), 1 - hi[1] * RAIO);
+          const iz = Math.min(Math.max(lz, lo[2] * RAIO), 1 - hi[2] * RAIO);
           const dx = lx - ix;
           const dy = ly - iy;
           const dz = lz - iz;
@@ -326,9 +336,9 @@ export function gerarMalha(
             nx = dx / len;
             ny = dy / len;
             nz = dz / len;
-            px = ix + nx * RAIO_QUINA;
-            py = iy + ny * RAIO_QUINA;
-            pz = iz + nz * RAIO_QUINA;
+            px = ix + nx * RAIO;
+            py = iy + ny * RAIO;
+            pz = iz + nz * RAIO;
           }
         }
         solido.posicoes.push(x + px, y + py, z + pz);
@@ -504,6 +514,8 @@ export function gerarMalha(
           const dv = obterBloco(viz);
           if (dv?.opaco) continue;
           if (viz === id && !def.opaco && !def.folhas) continue;
+          // dentro da copa não há face: as folhas são uma peça só, sem furos
+          if (def.folhas && FOLHAS_T[viz]) continue;
           adicionarFace(id, x, y, z, f);
         }
       }

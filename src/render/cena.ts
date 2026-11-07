@@ -607,10 +607,10 @@ export function criarCena(
   const ip = pipeline.imageProcessing;
   ip.toneMappingEnabled = true;
   ip.toneMappingType = ImageProcessingConfiguration.TONEMAPPING_ACES;
-  ip.exposure = 1.1;
+  ip.exposure = 1.18;
   ip.contrast = 1.12;
   ip.vignetteEnabled = true;
-  ip.vignetteWeight = 1.6;
+  ip.vignetteWeight = 0.7;
   ip.vignetteStretch = 0.4;
   ip.vignetteColor = new Color4(0.05, 0.03, 0.08, 0);
   ip.colorCurvesEnabled = true;
@@ -830,7 +830,8 @@ export function criarCena(
       (a.nevoa[1] * 0.85 + 0.12) * tb.cor[1],
       (a.nevoa[2] * 0.85 + 0.14) * tb.cor[2],
     ];
-    const forca = (0.35 + 0.35 * Math.max(a.crepusculo, a.noite)) * tb.forca;
+    // luz de brinquedo (spec 012): de dia o ar é limpo; a bruma dos vales volta ao entardecer
+    const forca = (0.12 + 0.58 * Math.max(a.crepusculo, a.noite)) * tb.forca;
     mundoSolido.definirBruma(bruma, forca);
     mundoSolido.luzBlocos = 0.8 + 0.4 * a.noite;
     // flores, cogumelos e lanternas brilham de verdade ao entardecer e à noite; sob o sol, quase nada

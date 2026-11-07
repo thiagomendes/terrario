@@ -694,8 +694,9 @@ function pintorPlanta(bloco: number): Pintor {
  * dão identidade ao bloco (o verde em cima da terra, as listras da tábua, os pontinhos do
  * minério). Cada pixel se aproxima da média da vizinhança, a não ser que destoe muito dela.
  */
-export function deBrinquedo(tile: Float32Array, raio = 2): Float32Array {
+export function deBrinquedo(tile: Float32Array, raio = 2, tapar = false): Float32Array {
   const n = TAM_TILE;
+  if (tapar) tile = taparFuros(tile);
   const saida = new Float32Array(tile.length);
   const lum = (i: number) => tile[i] * 0.3 + tile[i + 1] * 0.59 + tile[i + 2] * 0.11;
   for (let y = 0; y < n; y++) {
@@ -731,12 +732,46 @@ export function deBrinquedo(tile: Float32Array, raio = 2): Float32Array {
       const d = Math.abs(lum(i) - (r * 0.3 + g * 0.59 + b * 0.11)) / 255;
       const t = Math.min(1, Math.max(0, (d - 0.1) / 0.14));
       const k = 0.12 + 0.88 * t * t * (3 - 2 * t);
-      saida[i] = r + (tile[i] - r) * k;
-      saida[i + 1] = g + (tile[i + 1] - g) * k;
-      saida[i + 2] = b + (tile[i + 2] - b) * k;
+      // e um pouco mais claro: plástico colorido, não terra molhada
+      saida[i] = (r + (tile[i] - r) * k) * 0.86 + 26;
+      saida[i + 1] = (g + (tile[i + 1] - g) * k) * 0.86 + 26;
+      saida[i + 2] = (b + (tile[i + 2] - b) * k) * 0.86 + 26;
     }
   }
   return saida;
+}
+
+/** Copa de brinquedo: os furos das folhas viram folha (média das vizinhas opacas). */
+function taparFuros(tile: Float32Array): Float32Array {
+  const n = TAM_TILE;
+  const t = tile.slice();
+  const opacos: number[] = [];
+  for (let i = 0; i < n * n; i++) if (tile[i * 4 + 3] >= 128) opacos.push(i);
+  if (opacos.length === 0) return t;
+  for (let i = 0; i < n * n; i++) {
+    if (tile[i * 4 + 3] >= 128) continue;
+    const x = i % n;
+    const y = Math.floor(i / n);
+    let r = 0;
+    let g = 0;
+    let b = 0;
+    let c = 0;
+    for (let raio = 1; c === 0 && raio < n; raio++)
+      for (let dy = -raio; dy <= raio; dy++)
+        for (let dx = -raio; dx <= raio; dx++) {
+          const xx = x + dx;
+          const yy = y + dy;
+          if (xx < 0 || yy < 0 || xx >= n || yy >= n) continue;
+          const j = (yy * n + xx) * 4;
+          if (tile[j + 3] < 128) continue;
+          r += tile[j];
+          g += tile[j + 1];
+          b += tile[j + 2];
+          c++;
+        }
+    t.set([r / c, g / c, b / c, 255], i * 4);
+  }
+  return t;
 }
 
 function limita(v: number): number {
@@ -781,7 +816,10 @@ export function gerarAtlas(semente = 1337, opcoes: { brinquedo?: boolean } = {})
     const tile = new Float32Array(TAM_TILE * TAM_TILE * 4);
     for (let y = 0; y < TAM_TILE; y++)
       for (let x = 0; x < TAM_TILE; x++) tile.set(pinta(x, y, s), (y * TAM_TILE + x) * 4);
-    const limpo = brinquedo && nome !== TILE_BRANCO ? deBrinquedo(tile) : tile;
+    const ehFolha = REGISTRO_BLOCOS.some(
+      (b) => b.folhas && (b.tiles.lado === nome || b.tiles.topo === nome || b.tiles.base === nome),
+    );
+    const limpo = brinquedo && nome !== TILE_BRANCO ? deBrinquedo(tile, 2, ehFolha) : tile;
     for (let py = 0; py < CELULA; py++) {
       for (let px = 0; px < CELULA; px++) {
         const x = Math.min(TAM_TILE - 1, Math.max(0, px - PADDING));
