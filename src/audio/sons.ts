@@ -1041,11 +1041,11 @@ export function iniciarAmbiente(
       if (rng() < noite) {
         // grilos = 1 não sorteia nada a mais (o ambiente do tema base fica igual)
         if (nat.grilos >= 1 || rng() < nat.grilos) grilo(t);
-        else if (nat.bipes && rng() < 0.08) bipe(t);
+        else if (nat.bipes && rng() < 0.03) bipe(t);
         proximoBicho = t + 0.35 + rng() * 0.5;
       } else {
         if (rng() < 0.6 * (1 - chuva) * nat.passaros) passaro(t);
-        else if (nat.bipes && rng() < 0.25) bipe(t);
+        else if (nat.bipes && rng() < 0.1) bipe(t);
         proximoBicho = t + 1.2 + rng() * 3;
       }
     }

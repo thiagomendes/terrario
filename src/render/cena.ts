@@ -2434,12 +2434,23 @@ export function criarCena(
   // gerador próprio: os chamados não mexem na sequência dos drops
   const rngVozes = criarGerador(4242);
   let esperaChamado = 4;
+  // depois de conversar ou trocar, os moradores ficam quietos um tempo (não parecem falar sem
+  // parar, como os bipes de rádio da Lua pareciam)
+  let silencioMoradores = 0;
+  window.addEventListener('brumaluz:trocar', () => (silencioMoradores = 20));
   const chamadosCriaturas = (dt: number) => {
     esperaChamado -= dt;
+    if (document.querySelector('.painel-trocas:not([hidden])')) silencioMoradores = 20;
+    else silencioMoradores = Math.max(0, silencioMoradores - dt);
     if (esperaChamado > 0) return;
     esperaChamado = 5 + rngVozes() * 9;
     const perto = replicaCriaturas.lista.filter(
-      (c) => c.estado !== 'morrendo' && c.tipo !== 'espectro' && volumeDaDistancia(c) > 0.25,
+      (c) =>
+        c.estado !== 'morrendo' &&
+        c.tipo !== 'espectro' &&
+        volumeDaDistancia(c) > 0.25 &&
+        // moradores chamam bem menos que os bichos, e nunca logo depois de uma conversa
+        (c.tipo !== 'morador' || (silencioMoradores <= 0 && rngVozes() < 0.35)),
     );
     if (perto.length === 0) return;
     const c = perto[Math.floor(rngVozes() * perto.length)];

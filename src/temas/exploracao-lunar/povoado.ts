@@ -148,14 +148,14 @@ export const POVOADO_LUNAR: PovoadoTema = {
   // vozes de rádio: chiado e bipes curtos
   vozes: {
     chamado: {
-      onda: 'square',
+      onda: 'triangle',
       de: 520,
       ate: 620,
       dur: 0.1,
       repeticoes: 2,
       intervalo: 0.08,
-      ruido: 0.35,
-      ganho: 0.35,
+      ruido: 0.25,
+      ganho: 0.22,
     },
     susto: {
       onda: 'sawtooth',
@@ -178,7 +178,7 @@ export const POVOADO_LUNAR: PovoadoTema = {
       ganho: 0.5,
     },
     obrigado: {
-      onda: 'square',
+      onda: 'triangle',
       de: 700,
       ate: 1050,
       dur: 0.08,

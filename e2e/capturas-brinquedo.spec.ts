@@ -453,3 +453,39 @@ for (const [nomeVp, vp] of [
     await ctx.close();
   });
 }
+
+for (const id of TEMAS) {
+  test(`bichos de perto: ${id}`, async ({ page }) => {
+    test.setTimeout(300_000);
+    await page.setViewportSize({ width: 960, height: 640 });
+    await page.goto(`/?tema=${id}`);
+    await pronto(page);
+    await page.evaluate(() => {
+      document.querySelector<HTMLElement>('.entrada')?.setAttribute('hidden', '');
+      const e = window.__brumaluz!;
+      e.pausarDia = true;
+      e.hora = 0.45;
+      e.definirClima?.('limpo');
+      e.camera!.definir('primeira');
+    });
+    await page.waitForTimeout(1500);
+    for (const tipo of ['cervo', 'coelho', 'raposa', 'espectro'] as const) {
+      await page.evaluate((tipo) => {
+        const e = window.__brumaluz!;
+        e.hora = tipo === 'espectro' ? 0.92 : 0.45;
+        const [x, y, z] = e.posicao!;
+        e.invocar!(tipo, x, y + 0.5, z + 2.6);
+        e.apontar!(0, 0.25);
+      }, tipo);
+      await page.waitForTimeout(900);
+      await foto(page, `perto-${id}-${tipo}`);
+      // tira o bicho dali (desce para longe) antes do próximo
+      await page.evaluate(() => {
+        const e = window.__brumaluz!;
+        const [x, , z] = e.posicao!;
+        e.teleportar!(x + 30, z);
+      });
+      await page.waitForTimeout(800);
+    }
+  });
+}

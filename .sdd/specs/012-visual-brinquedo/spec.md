@@ -173,6 +173,7 @@ Lista de conferência (cada item fecha com captura no celular e no computador):
 - [ ] A1. **Editor de personagem:** o palco e as miniaturas dos modelos mostram o boneco B, desenhado do modelo 3D, sem prévias de pixel. As abas e os botões do painel também em peça.
 - [ ] A2. **Moradores dos povoados:** viram bonecos B, com roupa, chapéu e acessórios da profissão e do tema (antenas no Planeta Vivo, gorro no Saci etc.), andando com a animação do boneco.
 - [ ] A3. **Bichos e criaturas da noite, nos seis temas:** proporção de brinquedo (cabeça maior), olhos redondos com brilho, bochechas, patas de cápsula, focinho de bolinha. Sem caixas só arredondadas.
+- [ ] A5. **Nomes dos modelos de personagem** (Andarilho, Herbolária, Lanterneiro, Musgueira...): revisar para combinar com o mundo de brinquedo e ficar coerente no feminino e no masculino.
 - [ ] A4. **Itens soltos no chão:** o modelo 3D de brinquedo girando, no lugar do ícone chapado.
 
 **Interface (reescrita do estilo de cada tela; sai a camada de remendo)**

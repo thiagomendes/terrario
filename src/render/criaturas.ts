@@ -9,12 +9,13 @@ import type { Criatura } from '../jogo/criaturas';
 import type { PecaCriatura } from '../temas/tipos';
 import { povoadoDoTema, tema } from '../temas/ativo';
 import { caixaArredondada, esfera } from './formas';
+import { bichoDeBrinquedo, type PecaBicho } from './bichoBrinquedo';
 import { criarBoneco } from './boneco';
 import { moradorDeBrinquedo } from './moradorBoneco';
 import { criarAnimador } from '../player/animacao';
 import type { Personagem } from './personagem';
 
-type Peca = PecaCriatura;
+type Peca = PecaBicho;
 
 interface Modelo {
   raiz: TransformNode;
@@ -97,10 +98,12 @@ export function criarRenderCriaturas(
 
   function montar(c: Criatura): Modelo {
     const raiz = new TransformNode(`criatura-${c.id}`, scene);
-    const pecas =
+    // bicho de brinquedo: cabeça maior, olhos de bolinha com brilho, patas de cápsula (A3)
+    const pecas = bichoDeBrinquedo(
       c.tipo === 'morador'
         ? povoadoDoTema().moradores[c.morador?.profissao ?? 'construtor']
-        : tema().criaturas[c.tipo];
+        : tema().criaturas[c.tipo],
+    );
     const partes = pecas.map((peca, i) => {
       const no = new TransformNode(`criatura-${c.id}-${i}`, scene);
       no.parent = raiz;
@@ -115,22 +118,19 @@ export function criarRenderCriaturas(
         ? peca.p[0] - Math.sign(peca.p[0] || (papel === 'asa0' ? 1 : -1)) * (peca.t[0] / 2)
         : peca.p[0];
       no.position.set(pivoX, pivoY, peca.p[2]);
-      // formas de brinquedo: peças pequenas (olhos, nariz, botões) viram bolinhas; as
-      // outras, caixas de cantos arredondados (raio pela menor medida)
       const [w, h, d] = peca.t;
       const maior = Math.max(w, h, d);
-      const menor = Math.min(w, h, d);
       const nome = `criatura-${c.id}-${i}-m`;
       const malha =
-        maior <= 0.09
+        peca.forma === 'bola'
           ? esfera(nome, scene, maior / 2, material(peca), [w / maior, h / maior, d / maior])
-          : caixaArredondada(nome, scene, w, h, d, Math.min(0.12, menor * 0.32), material(peca), 3);
+          : caixaArredondada(nome, scene, w, h, d, peca.raio, material(peca), 3);
       malha.parent = no;
       malha.position.y = peca.p[1] - pivoY;
       malha.position.x = peca.p[0] - pivoX;
       malha.material = material(peca);
       malha.isPickable = false;
-      if ((peca.brilho ?? 0) > 0.6) incluirNoGlow(malha);
+      if ((peca.brilho ?? 0) > 0.45) incluirNoGlow(malha);
       else excluirDoGlow(malha);
       return { no, malha, peca };
     });
