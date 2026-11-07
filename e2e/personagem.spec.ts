@@ -144,7 +144,7 @@ test('pose neutra parado, muda ao minerar e mão acompanha o slot', async ({ pag
           pedra,
         );
         if (quebrado) pedra = await prepararPedra(page);
-        await page.evaluate(() => window.__brumaluz!.minerar!(0.05, true));
+        await page.evaluate(() => window.__brumaluz!.minerar!(0.25, true));
         return page.evaluate(() => Math.abs(window.__brumaluz!.personagem!.pose().bracoDireito));
       },
       { timeout: 60_000 },

@@ -18,19 +18,30 @@ function textura(scene: Scene, nome: string, desenhar: (ctx: CanvasRenderingCont
 
 /** Chuva (gotas esticadas) e neve (flocos) em volta da câmera. */
 export function criarPrecipitacao(scene: Scene) {
+  // chuva de brinquedo (spec 012): gota de desenho, redonda embaixo e pontuda em cima, com
+  // um brilhinho; o floco de neve é uma bolinha com brilho
   const gota = textura(scene, 'gota', (ctx) => {
-    const g = ctx.createLinearGradient(16, 0, 16, 32);
-    g.addColorStop(0, 'rgba(255,255,255,0)');
-    g.addColorStop(1, 'rgba(255,255,255,1)');
-    ctx.fillStyle = g;
-    ctx.fillRect(12, 0, 8, 32);
+    ctx.fillStyle = 'rgba(255,255,255,0.92)';
+    ctx.beginPath();
+    ctx.moveTo(16, 2);
+    ctx.bezierCurveTo(19, 11, 25, 16, 25, 22);
+    ctx.arc(16, 22, 9, 0, Math.PI, false);
+    ctx.bezierCurveTo(7, 16, 13, 11, 16, 2);
+    ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,1)';
+    ctx.beginPath();
+    ctx.ellipse(13, 21, 2.2, 3.4, -0.3, 0, Math.PI * 2);
+    ctx.fill();
   });
   const floco = textura(scene, 'floco', (ctx) => {
-    const g = ctx.createRadialGradient(16, 16, 0, 16, 16, 14);
+    const g = ctx.createRadialGradient(13, 12, 1, 16, 16, 13);
     g.addColorStop(0, 'rgba(255,255,255,1)');
+    g.addColorStop(0.75, 'rgba(255,255,255,0.95)');
     g.addColorStop(1, 'rgba(255,255,255,0)');
     ctx.fillStyle = g;
-    ctx.fillRect(0, 0, 32, 32);
+    ctx.beginPath();
+    ctx.arc(16, 16, 13, 0, Math.PI * 2);
+    ctx.fill();
   });
 
   const chuva = new ParticleSystem('chuva', 2600, scene);
@@ -40,14 +51,15 @@ export function criarPrecipitacao(scene: Scene) {
   chuva.maxEmitBox = new Vector3(18, 16, 18);
   chuva.direction1 = new Vector3(-0.6, -1, -0.3);
   chuva.direction2 = new Vector3(-0.4, -1, -0.1);
-  chuva.minEmitPower = 16;
-  chuva.maxEmitPower = 20;
-  chuva.minLifeTime = 0.9;
-  chuva.maxLifeTime = 1.2;
-  chuva.minSize = 0.09;
-  chuva.maxSize = 0.13;
-  chuva.minScaleY = 6;
-  chuva.maxScaleY = 8;
+  // gotinhas que se vê cair (mais lentas e curtas que um risco)
+  chuva.minEmitPower = 10;
+  chuva.maxEmitPower = 12;
+  chuva.minLifeTime = 1.3;
+  chuva.maxLifeTime = 1.7;
+  chuva.minSize = 0.12;
+  chuva.maxSize = 0.17;
+  chuva.minScaleY = 1.7;
+  chuva.maxScaleY = 2.1;
   const tp = tema().particulas;
   // tinta do tema sobre as cores de base (Bruma e Luz: 0.78, 0.84, 0.95)
   const tc = [tp.chuva[0] / 0.78, tp.chuva[1] / 0.84, tp.chuva[2] / 0.95];
@@ -60,7 +72,7 @@ export function criarPrecipitacao(scene: Scene) {
   const modoChuva = tema().climaVisual.chuva;
   /** Chuvas extras do granulado (cada uma com um par de cores de confeito). */
   const extras: ParticleSystem[] = [];
-  let taxaChuva = 2200;
+  let taxaChuva = 1300;
   if (modoChuva === 'poeira') {
     // poeira fina que desce devagar, quase parada no ar
     chuva.particleTexture = floco;
@@ -118,8 +130,11 @@ export function criarPrecipitacao(scene: Scene) {
   neve.maxEmitPower = 2;
   neve.minLifeTime = 6;
   neve.maxLifeTime = 9;
-  neve.minSize = 0.06;
-  neve.maxSize = 0.13;
+  neve.minSize = 0.09;
+  neve.maxSize = 0.17;
+  // flocos de bolinha balançam: giram um pouco e variam a direção
+  neve.minAngularSpeed = -1;
+  neve.maxAngularSpeed = 1;
   const tn = tp.neve;
   neve.color1 = new Color4(tn[0], tn[1], tn[2], 0.9);
   neve.color2 = new Color4(0.9 * tn[0], 0.94 * tn[1], tn[2], 0.75);

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import '../../src/temas/todos';
 import { obterTema, temasDisponiveis } from '../../src/temas';
 import { PINTORES } from '../../src/art/atlas';
-import { NOMES_TILES, TILE_BRANCO } from '../../src/art/tiles';
+import { NOMES_TILES, TILES_PECAS } from '../../src/art/tiles';
 import type { Px, Tema } from '../../src/temas/tipos';
 
 /**
@@ -144,7 +144,7 @@ describe.each(temasDisponiveis().map((id) => [id, obterTema(id)] as [string, Tem
 
     it('nenhum tile quase igual a outro de função diferente', () => {
       // o tile branco das peças de brinquedo não é de bloco
-      const nomes = NOMES_TILES.filter((n) => n !== TILE_BRANCO);
+      const nomes = NOMES_TILES.filter((n) => !TILES_PECAS.includes(n));
       const iguais: string[] = [];
       for (let i = 0; i < nomes.length; i++)
         for (let j = i + 1; j < nomes.length; j++) {

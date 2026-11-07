@@ -786,6 +786,8 @@ export function criarCena(
     ceuAbertoSuave += (alvoAberto - ceuAbertoSuave) * Math.min(1, dt / 0.35);
     const aberto = Math.round(ceuAbertoSuave * 50) / 50;
     precipitacao.atualizar(cameraVisao.position, clima.estado.chuva * aberto, nevando, false);
+    // respingos da chuva no chão e rodinhas na água (só chuva de gota, não neve nem poeira)
+    chuvaRespingos = nevando || tema().climaVisual.chuva !== 'gotas' ? 0 : clima.estado.chuva;
     precipitacao.definirLuz(0.25 + 0.75 * (1 - a.noite));
     const arborizado = b === 'floresta' || b === 'pantano' || b === 'taiga' || b === 'campos';
     precipitacao.folhas(cameraVisao.position, arborizado ? aberto : 0, outonoAtual);
@@ -1859,6 +1861,40 @@ export function criarCena(
     soltarRoda(x, y, z, 1 + forca * 0.6);
     if (forca > 0.5) setTimeout(() => soltarRoda(x, y, z, 0.7), 180);
   }
+  /** Intensidade da chuva que respinga agora (0 sem chuva). */
+  let chuvaRespingos = 0;
+  let acumuloRespingo = 0;
+  function respingosDeChuva(dt: number): void {
+    if (chuvaRespingos <= 0.02) return;
+    acumuloRespingo += dt * chuvaRespingos * 28;
+    const j = controle.jogador;
+    while (acumuloRespingo >= 1) {
+      acumuloRespingo -= 1;
+      const x = j.x + (rngFx() - 0.5) * 18;
+      const z = j.z + (rngFx() - 0.5) * 18;
+      const fx = Math.floor(x);
+      const fz = Math.floor(z);
+      let y = Math.floor(j.y) + 12;
+      const fim = Math.floor(j.y) - 10;
+      while (y > fim && blocoEm(fx, y, fz) === Bloco.AR) y--;
+      if (y <= fim) continue;
+      const b = blocoEm(fx, y, fz);
+      if (b === Bloco.AGUA) soltarRoda(x, y + 0.875, z, 0.38);
+      else if (obterBlocoDef(b)?.solido)
+        pool.emitir(
+          [0, 1].map((k) => ({
+            x,
+            y: y + 1.02,
+            z,
+            vx: (k ? 1 : -1) * (0.3 + rngFx() * 0.4),
+            vy: 1.4 + rngFx() * 0.6,
+            vz: (rngFx() - 0.5) * 0.6,
+            cor: [0.7, 0.86, 1] as [number, number, number],
+            tipo: GOTA,
+          })),
+        );
+    }
+  }
   let pesNaAgua = false;
   let pingando = 0;
   function atualizarAguaDoBoneco(dt: number): void {
@@ -1898,6 +1934,7 @@ export function criarCena(
 
   function atualizarEfeitos(dt: number): void {
     atualizarAguaDoBoneco(dt);
+    respingosDeChuva(dt);
     for (const r of rodas) {
       if (r.t >= 1) continue;
       r.t = Math.min(1, r.t + dt / 0.9);

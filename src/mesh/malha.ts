@@ -8,7 +8,7 @@ import {
   type Caixa,
 } from '../world/formas';
 import { LUZ_MAXIMA, calcularLuz } from '../world/luz';
-import { FACES_TILE, TILE_BRANCO, indiceDoTile } from '../art/tiles';
+import { FACES_TILE, TILE_BRANCO, TILES_BRILHO, indiceDoTile } from '../art/tiles';
 import { plantaDeBrinquedo } from './plantasBrinquedo';
 
 const TILE_TERRA = indiceDoTile('terra');
@@ -122,6 +122,9 @@ class Acumulador {
 
 /** Centro do tile branco (cor das peças de brinquedo vai nos vértices). */
 const UV_BRANCO: [number, number] = uvDoCanto(indiceDoTile(TILE_BRANCO), 0.5, 0.5);
+const UV_BRILHO: Record<number, [number, number]> = Object.fromEntries(
+  Object.entries(TILES_BRILHO).map(([b, nome]) => [b, uvDoCanto(indiceDoTile(nome), 0.5, 0.5)]),
+);
 
 /** Raio das quinas de brinquedo (fração do bloco). */
 export const RAIO_QUINA = 0.13;
@@ -458,6 +461,7 @@ export function gerarMalha(
         [mapaLuz.ceu(x, y, z) / LUZ_MAXIMA, mapaLuz.bloco(x, y, z) / LUZ_MAXIMA],
         (sal) => hashPosicao(x, y, z, sal),
         !!defP?.balanca,
+        UV_BRILHO[id],
       )
     )
       return;

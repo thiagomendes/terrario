@@ -297,3 +297,26 @@ test('água de brinquedo: beira e debaixo dela', async ({ page }) => {
     });
   }
 });
+
+test('chuva de brinquedo: de dia e à noite', async ({ page }) => {
+  test.setTimeout(300_000);
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await page.goto('/');
+  await pronto(page);
+  await page.evaluate(() => {
+    document.querySelector<HTMLElement>('.entrada')?.setAttribute('hidden', '');
+    const e = window.__brumaluz!;
+    e.pausarDia = true;
+    e.hora = 0.45;
+    e.definirClima?.('chuva');
+    e.camera!.definir('terceira');
+    e.apontar!(0.4, 0.25);
+  });
+  await page.waitForTimeout(6000);
+  await foto(page, 'chuva-dia');
+  await page.evaluate(() => {
+    window.__brumaluz!.hora = 0.9;
+  });
+  await page.waitForTimeout(3000);
+  await foto(page, 'chuva-noite');
+});

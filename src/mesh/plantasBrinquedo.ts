@@ -103,9 +103,20 @@ export function plantaDeBrinquedo(
   luz: readonly [number, number],
   sorte: (sal: number) => number,
   balanca: boolean,
+  /** Tile de brilho da planta (pétala, chapéu): cor e brilho noturno vêm dele. */
+  uvBrilho?: readonly [number, number],
 ): boolean {
   if (!PLANTAS_BRINQUEDO.includes(id)) return false;
   const cores = tabela[id] ?? PADRAO;
+  /** Enquanto ligado, as peças usam o tile de brilho (a cor vem dele; o vértice fica claro). */
+  let brilhando = false;
+  const comBrilho = (f: () => void) => {
+    if (!uvBrilho) return f();
+    brilhando = true;
+    f();
+    brilhando = false;
+  };
+  const tingir = (c: Rgb01): Rgb01 => (uvBrilho ? [1, 1, 1] : c);
   const peso = balanca ? 1 : 0;
 
   const vertice = (
@@ -119,7 +130,8 @@ export function plantaDeBrinquedo(
   ) => {
     alvo.posicoes.push(px, py, pz);
     alvo.normais.push(nx, ny, nz);
-    alvo.uvs.push(uvBranco[0], uvBranco[1]);
+    const uv = brilhando && uvBrilho ? uvBrilho : uvBranco;
+    alvo.uvs.push(uv[0], uv[1]);
     // alfa: quanto o vértice balança ao vento (de baixo para cima)
     alvo.cores.push(cor[0], cor[1], cor[2], Math.min(1, Math.max(0, py - y)) * peso);
     alvo.luz.push(luz[0], luz[1]);
@@ -253,21 +265,23 @@ export function plantaDeBrinquedo(
       // folhinha no caule
       bola(cx + 0.06, y + h * 0.4, cz, 0.07, 0.025, 0.04, folha, 6, 3);
       const giro = sorte(15) * Math.PI * 2;
-      const petala = mistura(cores.destaque, BRANCO, 0.08);
-      for (let i = 0; i < 5; i++) {
-        const a = giro + (i / 5) * Math.PI * 2;
-        bola(
-          cx + Math.cos(a) * 0.1,
-          topo,
-          cz + Math.sin(a) * 0.1,
-          0.085,
-          0.05,
-          0.085,
-          petala,
-          6,
-          3,
-        );
-      }
+      const petala = tingir(mistura(cores.destaque, BRANCO, 0.08));
+      comBrilho(() => {
+        for (let i = 0; i < 5; i++) {
+          const a = giro + (i / 5) * Math.PI * 2;
+          bola(
+            cx + Math.cos(a) * 0.1,
+            topo,
+            cz + Math.sin(a) * 0.1,
+            0.085,
+            0.05,
+            0.085,
+            petala,
+            6,
+            3,
+          );
+        }
+      });
       bola(cx, topo + 0.02, cz, 0.06, 0.045, 0.06, MIOLO, 6, 3);
       break;
     }
@@ -276,7 +290,7 @@ export function plantaDeBrinquedo(
       const pe = mistura(folha, BRANCO, 0.55);
       haste(cx, y, cz, cx, y + h, cz, 0.065, 0.05, pe, pe, 6);
       const chapeu = cores.destaque;
-      bola(cx, y + h, cz, 0.2, 0.13, 0.2, chapeu, 8, 4);
+      comBrilho(() => bola(cx, y + h, cz, 0.2, 0.13, 0.2, tingir(chapeu), 8, 4));
       for (let i = 0; i < 3; i++) {
         const a = sorte(16 + i) * Math.PI * 2;
         bola(

@@ -1,6 +1,6 @@
 import { Bloco, REGISTRO_BLOCOS } from '../world/blocks';
 import { hash2 } from '../world/noise';
-import { NOMES_TILES, TILE_BRANCO, indiceDoTile } from './tiles';
+import { NOMES_TILES, TILE_BRANCO, TILES_BRILHO, indiceDoTile } from './tiles';
 
 /** Tiles de 16x16 em pixel-art, com borda larga para mipmaps sem sangrar. */
 export const TAM_TILE = 16;
@@ -774,6 +774,35 @@ function taparFuros(tile: Float32Array): Float32Array {
   return t;
 }
 
+/** Cor de destaque de um tile: média dos 20% de pixels que mais se afastam dos tons verdes. */
+function destaqueDoTile(pixels: Uint8ClampedArray, indice: number): [number, number, number] {
+  const { ox, oy } = celulaDe(indice);
+  const px: number[][] = [];
+  for (let y = 0; y < TAM_TILE; y++)
+    for (let x = 0; x < TAM_TILE; x++) {
+      const i = ((oy + PADDING + y) * LARGURA_ATLAS + ox + PADDING + x) * 4;
+      if (pixels[i + 3] >= 128) px.push([pixels[i], pixels[i + 1], pixels[i + 2]]);
+    }
+  if (!px.length) return [255, 255, 255];
+  const verdes = px.filter((p) => p[1] >= p[0] && p[1] >= p[2]);
+  const base = (verdes.length ? verdes : px).reduce(
+    (s, p) => [s[0] + p[0], s[1] + p[1], s[2] + p[2]],
+    [0, 0, 0],
+  );
+  const n = verdes.length || px.length;
+  const f = [base[0] / n, base[1] / n, base[2] / n];
+  const d = (p: number[]) => Math.hypot(p[0] - f[0], p[1] - f[1], p[2] - f[2]);
+  const longe = [...px]
+    .sort((a, b) => d(b) - d(a))
+    .slice(0, Math.max(1, Math.ceil(px.length * 0.2)));
+  const m = longe.reduce((s, p) => [s[0] + p[0], s[1] + p[1], s[2] + p[2]], [0, 0, 0]);
+  return [m[0] / longe.length, m[1] / longe.length, m[2] / longe.length].map(Math.round) as [
+    number,
+    number,
+    number,
+  ];
+}
+
 function limita(v: number): number {
   return Math.max(0, Math.min(255, Math.round(v)));
 }
@@ -807,7 +836,7 @@ export function gerarAtlas(semente = 1337, opcoes: { brinquedo?: boolean } = {})
   NOMES_TILES.forEach((nome, indice) => {
     // o tema pode repintar qualquer tile; o que ele não repinta usa o pintor base
     const pinta =
-      nome === TILE_BRANCO
+      nome === TILE_BRANCO || nome.startsWith('brilho_')
         ? (): Px => [255, 255, 255, 255]
         : (tema().pintores[nome] ?? PINTORES[nome]);
     if (!pinta) throw new Error(`tile sem pintor: ${nome}`);
@@ -819,7 +848,10 @@ export function gerarAtlas(semente = 1337, opcoes: { brinquedo?: boolean } = {})
     const ehFolha = REGISTRO_BLOCOS.some(
       (b) => b.folhas && (b.tiles.lado === nome || b.tiles.topo === nome || b.tiles.base === nome),
     );
-    const limpo = brinquedo && nome !== TILE_BRANCO ? deBrinquedo(tile, 2, ehFolha) : tile;
+    const limpo =
+      brinquedo && nome !== TILE_BRANCO && !nome.startsWith('brilho_')
+        ? deBrinquedo(tile, 2, ehFolha)
+        : tile;
     for (let py = 0; py < CELULA; py++) {
       for (let px = 0; px < CELULA; px++) {
         const x = Math.min(TAM_TILE - 1, Math.max(0, px - PADDING));
@@ -838,9 +870,26 @@ export function gerarAtlas(semente = 1337, opcoes: { brinquedo?: boolean } = {})
       nome,
       indice,
       uv: uvDaCelula(indice),
-      emissivo: tema().emissivos.includes(nome),
+      emissivo: tema().emissivos.includes(nome) || nome.startsWith('brilho_'),
     });
   });
+  // tiles de brilho: a cor de destaque da planta (o que mais se afasta do verde no tile dela)
+  for (const [bloco, nome] of Object.entries(TILES_BRILHO)) {
+    const def = REGISTRO_BLOCOS[Number(bloco)];
+    const fonte = def ? indiceDoTile(def.tiles.lado) : -1;
+    const alvo = indiceDoTile(nome);
+    if (fonte < 0 || alvo < 0) continue;
+    const cor = destaqueDoTile(pixels, fonte);
+    const { ox, oy } = celulaDe(alvo);
+    for (let py = 0; py < CELULA; py++)
+      for (let px = 0; px < CELULA; px++) {
+        const i = ((oy + py) * LARGURA_ATLAS + ox + px) * 4;
+        pixels[i] = cor[0];
+        pixels[i + 1] = cor[1];
+        pixels[i + 2] = cor[2];
+        pixels[i + 3] = 255;
+      }
+  }
   const uvDoTile = (nome: string) => {
     const i = indiceDoTile(nome);
     return i >= 0 ? uvDaCelula(i) : undefined;

@@ -4,7 +4,7 @@ import { obterTema, temasDisponiveis, TEMA_PADRAO } from '../../src/temas';
 import { ativarTemaPuro } from '../../src/temas/ativarPuro';
 import { textosOriginais } from '../../src/temas/originais';
 import { gerarAtlas, PINTORES } from '../../src/art/atlas';
-import { NOMES_TILES, TILE_BRANCO } from '../../src/art/tiles';
+import { NOMES_TILES, TILES_PECAS } from '../../src/art/tiles';
 import { REGISTRO_BLOCOS } from '../../src/world/blocks';
 import { CRIATURAS, TIPOS_ANIMAIS, type TipoCriatura } from '../../src/jogo/criaturas';
 import { todosItens } from '../../src/jogo/itens';
@@ -316,7 +316,7 @@ describe('cada tema é ele mesmo', () => {
         Math.ceil(NOMES_TILES.length * 0.1),
       );
       for (const nome of NOMES_TILES) {
-        if (iguais.includes(nome) || nome === TILE_BRANCO) continue;
+        if (iguais.includes(nome) || TILES_PECAS.includes(nome)) continue;
         expect(t.pintores[nome], `tile ${nome} não repintado`).toBeTypeOf('function');
         // e de fato diferente do base
         let dif = 0;

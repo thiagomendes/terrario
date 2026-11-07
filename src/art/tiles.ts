@@ -1,6 +1,16 @@
-import { REGISTRO_BLOCOS } from '../world/blocks';
+import { Bloco, REGISTRO_BLOCOS } from '../world/blocks';
 
 export const TILE_BRANCO = 'branco';
+/**
+ * Tiles lisos na cor de destaque das plantas que brilham (pétala da flor, chapéu do cogumelo):
+ * as peças de brinquedo usam esse tile e brilham de noite na cor certa (spec 012).
+ */
+export const TILES_BRILHO: Readonly<Record<number, string>> = {
+  [Bloco.FLOR]: 'brilho_flor',
+  [Bloco.COGUMELO_BRILHANTE]: 'brilho_cogumelo',
+};
+/** Tiles que não são de bloco: os das peças de brinquedo (branco e brilhos). */
+export const TILES_PECAS: readonly string[] = [TILE_BRANCO, ...Object.values(TILES_BRILHO)];
 
 /** Nomes de todos os tiles usados pelos blocos, na ordem das células do atlas. */
 export const NOMES_TILES: readonly string[] = (() => {
@@ -11,7 +21,7 @@ export const NOMES_TILES: readonly string[] = (() => {
     }
   }
   // tile branco: as peças de brinquedo (plantas) levam a cor nos vértices
-  nomes.push(TILE_BRANCO);
+  nomes.push(...TILES_PECAS);
   return nomes;
 })();
 

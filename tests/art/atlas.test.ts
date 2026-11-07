@@ -8,7 +8,7 @@ import {
   TAM_TILE,
   LARGURA_ATLAS,
 } from '../../src/art/atlas';
-import { NOMES_TILES, TILE_BRANCO } from '../../src/art/tiles';
+import { NOMES_TILES, TILES_PECAS } from '../../src/art/tiles';
 import { REGISTRO_BLOCOS } from '../../src/world/blocks';
 import { Bloco } from '../../src/world/blocks';
 
@@ -74,7 +74,7 @@ describe('atlas', () => {
       const i = (y * cru.largura + x) * 4;
       return [cru.pixels[i], cru.pixels[i + 1], cru.pixels[i + 2], cru.pixels[i + 3]];
     };
-    for (const t of cru.tiles.filter((t) => t.nome !== TILE_BRANCO)) {
+    for (const t of cru.tiles.filter((t) => !TILES_PECAS.includes(t.nome))) {
       const [ox, oy] = origem(t.indice);
       const visiveis: number[][] = [];
       for (let y = 0; y < TAM_TILE; y++)
