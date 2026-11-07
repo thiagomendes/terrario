@@ -311,6 +311,8 @@ export interface EstadoDepuracao {
   sobrevivencia?: SobrevivenciaCliente;
   /** Qualidade das peças de brinquedo escolhida (celular: 'baixo'). */
   detalhe?: 'alto' | 'baixo';
+  /** Blocos quebrados que somem no desenho até a malha nova chegar (D1). */
+  blocosOcultos?: () => number[][];
   /** Capturas: respingo de água num ponto (gotinhas e roda de ondinhas). */
   respingo?: (x: number, y: number, z: number, forca?: number) => void;
   /** Testes e capturas: dispara um movimento (golpe, comer, pulo, colocação). */
@@ -711,7 +713,7 @@ export function criarCena(
   // arte com alfa 0 ou 1: recorte puro (sem disputar ordenação com a água)
   matPlanta.transparencyMode = Material.MATERIAL_ALPHATEST;
   matPlanta.alphaCutOff = 0.5;
-  const mundoPlanta = new PluginMundo(matPlanta);
+  const mundoPlanta = new PluginMundo(matPlanta, { plantas: true });
 
   // Clima e estações
   // dia e clima vêm do núcleo; até o primeiro quadro, vale o que estava salvo
@@ -907,6 +909,7 @@ export function criarCena(
       if (r.versao < (versoesPedidas.get(k) ?? 0)) return; // já há uma versão mais nova a caminho
       prioritarios.delete(k);
       aplicar(r);
+      liberarOcultos(k);
       const t0 = inicioEdicao.get(k);
       if (t0 !== undefined) {
         estado.latenciaEdicaoMs = performance.now() - t0;
@@ -919,6 +922,28 @@ export function criarCena(
   };
   worker.onmessage = receber;
   workerEdicao.onmessage = receber;
+
+  /** Blocos quebrados que somem já no desenho até a malha nova do chunk chegar (D1). */
+  const ocultos: { x: number; y: number; z: number; k: string; t: number }[] = [];
+  function gravarOcultos(): void {
+    for (const p of [mundoSolido, mundoPlanta]) {
+      p.ocultos.fill(0);
+      ocultos.slice(-8).forEach((o, i) => p.ocultos.set([o.x, o.y, o.z, 1], i * 4));
+    }
+  }
+  function ocultarAteRemalhar(x: number, y: number, z: number, k: string): void {
+    ocultos.push({ x, y, z, k, t: performance.now() });
+    while (ocultos.length > 8) ocultos.shift();
+    gravarOcultos();
+  }
+  estado.blocosOcultos = () => ocultos.map((o) => [o.x, o.y, o.z]);
+  function liberarOcultos(k: string): void {
+    const antes = ocultos.length;
+    const agora = performance.now();
+    for (let i = ocultos.length - 1; i >= 0; i--)
+      if (ocultos[i].k === k || agora - ocultos[i].t > 4000) ocultos.splice(i, 1);
+    if (ocultos.length !== antes) gravarOcultos();
+  }
 
   function criarMalha(nome: string, b: Buffers, mat: StandardMaterial, cx: number, cz: number) {
     if (b.indices.length === 0) return null;
@@ -1113,6 +1138,7 @@ export function criarCena(
     if (!edicoes.definir(x, y, z, bloco, meta)) return false;
     const cxE = Math.floor(x / TAM_X);
     const czE = Math.floor(z / TAM_Z);
+    if (bloco === Bloco.AR) ocultarAteRemalhar(x, y, z, chave(cxE, czE));
     // a luz muda até 15 blocos em volta: remalha o chunk e os 4 vizinhos
     const afetados = [
       { cx: cxE, cz: czE },
@@ -1614,6 +1640,7 @@ export function criarCena(
       const foiEditado = prioritarios.delete(k);
       const inicio = performance.now();
       aplicar(r);
+      liberarOcultos(k);
       aplicadas++;
       if (foiEditado) {
         estado.remalhasConcluidas = (estado.remalhasConcluidas ?? 0) + 1;

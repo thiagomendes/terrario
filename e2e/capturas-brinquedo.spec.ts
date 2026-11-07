@@ -348,3 +348,107 @@ test('qualidade automática: detalhe baixo (celular) e alto', async ({ page }) =
     await foto(page, `detalhe-${d}`);
   }
 });
+
+for (const [nomeVp, vp] of [
+  ['celular', { width: 390, height: 844 }],
+  ['desktop', { width: 1280, height: 720 }],
+] as const) {
+  test(`painéis de brinquedo: ${nomeVp}`, async ({ browser }) => {
+    test.setTimeout(400_000);
+    const ctx = await browser.newContext({
+      viewport: vp,
+      ...(nomeVp === 'celular' ? { hasTouch: true, isMobile: true, deviceScaleFactor: 2 } : {}),
+    });
+    const page = await ctx.newPage();
+    await page.goto('/');
+    await pronto(page);
+    const tirar = (n: string) =>
+      page.screenshot({
+        path: `${PASTA}/brinquedo-painel-${nomeVp}-${n}.jpg`,
+        type: 'jpeg',
+        quality: 80,
+      });
+    const fechar = async () => {
+      await page.keyboard.press('Escape');
+      await page.waitForTimeout(300);
+    };
+    // mundos, personagem e configurações a partir da tela inicial
+    for (const [attr, n] of [
+      ['data-abrir-mundos', 'mundos'],
+      ['data-abrir-personagem', 'personagem'],
+      ['data-abrir-config', 'config'],
+    ] as const) {
+      await page.locator(`[${attr}]`).first().click();
+      await page.waitForTimeout(800);
+      await tirar(n);
+      await fechar();
+      await page.evaluate(() =>
+        document.querySelector<HTMLElement>('.botao-fechar:not([hidden])')?.click(),
+      );
+      await page.waitForTimeout(300);
+    }
+    await page.evaluate(() => {
+      document.querySelector<HTMLElement>('.entrada')?.setAttribute('hidden', '');
+      const e = window.__brumaluz!;
+      e.pausarDia = true;
+      e.hora = 0.42;
+    });
+    await page.waitForTimeout(800);
+    const abrirInv = () =>
+      page.evaluate(() => document.querySelector<HTMLElement>('[data-funcao="KeyE"]')?.click());
+    await abrirInv();
+    await page.waitForTimeout(600);
+    await tirar('inventario');
+    await page.evaluate(() => document.querySelector<HTMLElement>('[data-livro]')?.click());
+    await page.waitForTimeout(600);
+    await tirar('livro');
+    await page.evaluate(() =>
+      document.querySelector<HTMLElement>('.botao-fechar:not([hidden])')?.click(),
+    );
+    await page.waitForTimeout(400);
+    // baú com alguns itens
+    await page.evaluate(() => {
+      const slots = Array.from({ length: 27 }, (_, i) =>
+        i === 4 ? { item: 'carvao', qtd: 12 } : i === 10 ? { item: 'maca', qtd: 3 } : null,
+      );
+      window.dispatchEvent(
+        new CustomEvent('brumaluz:conteiner', {
+          detail: { conteiner: { tipo: 'bau', slots }, novo: true },
+        }),
+      );
+    });
+    await page.waitForTimeout(700);
+    await tirar('bau');
+    await page.evaluate(() =>
+      document.querySelector<HTMLElement>('.botao-fechar:not([hidden])')?.click(),
+    );
+    await page.waitForTimeout(400);
+    // trocas com um morador
+    await page.evaluate(() =>
+      window.dispatchEvent(
+        new CustomEvent('brumaluz:trocar', {
+          detail: { profissao: 'ferreiro', nome: 'Tonho', criatura: 0 },
+        }),
+      ),
+    );
+    await page.waitForTimeout(700);
+    await tirar('trocas');
+    await page.evaluate(() =>
+      document.querySelector<HTMLElement>('.botao-fechar:not([hidden])')?.click(),
+    );
+    await page.waitForTimeout(400);
+    // diário e mapa grande
+    await page.evaluate(() => document.querySelector<HTMLElement>('[data-funcao="KeyJ"]')?.click());
+    await page.waitForTimeout(700);
+    await tirar('diario');
+    await fechar();
+    await page.evaluate(() =>
+      document.querySelector<HTMLElement>('.botao-fechar:not([hidden])')?.click(),
+    );
+    await page.waitForTimeout(300);
+    await page.evaluate(() => document.querySelector<HTMLElement>('[data-funcao="Tab"]')?.click());
+    await page.waitForTimeout(900);
+    await tirar('mapa');
+    await ctx.close();
+  });
+}

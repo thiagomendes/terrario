@@ -19,15 +19,24 @@ export class PluginMundo extends MaterialPluginBase {
   /** Força do vento nas folhas (0 desliga; só no material sólido). */
   ventoFolhas = 0;
   tempoMundo = 0;
+  /**
+   * Blocos recém-quebrados (até 8: x, y, z e 1 se vale): somem no mesmo quadro do clique, no
+   * próprio desenho, enquanto a malha nova do chunk não chega (spec 012, D1).
+   */
+  readonly ocultos = new Float32Array(32);
   /** Piso da luz do céu (debaixo d'água de brinquedo nunca fica escuro). */
   pisoCeu = 0;
 
   /** Desenha as juntas entre blocos (quina macia e um friso), só no material sólido. */
   private readonly juntas: boolean;
 
-  constructor(material: Material, opcoes: { juntas?: boolean } = {}) {
-    super(material, 'Mundo', 210, { MUNDO: false, MUNDO_JUNTAS: false });
+  /** Material de plantas: o dono do vértice é a célula onde ele está (sem normal de face). */
+  private readonly plantas: boolean;
+
+  constructor(material: Material, opcoes: { juntas?: boolean; plantas?: boolean } = {}) {
+    super(material, 'Mundo', 210, { MUNDO: false, MUNDO_JUNTAS: false, MUNDO_PLANTAS: false });
     this.juntas = !!opcoes.juntas;
+    this.plantas = !!opcoes.plantas;
     this._enable(true);
   }
 
@@ -42,6 +51,7 @@ export class PluginMundo extends MaterialPluginBase {
   override prepareDefines(defines: Record<string, unknown>): void {
     defines['MUNDO'] = true;
     defines['MUNDO_JUNTAS'] = this.juntas;
+    defines['MUNDO_PLANTAS'] = this.plantas;
   }
 
   definirBruma(cor: readonly [number, number, number], forca: number): void {
@@ -65,8 +75,10 @@ export class PluginMundo extends MaterialPluginBase {
         { name: 'ventoFolhas', size: 1, type: 'float' },
         { name: 'tempoMundo', size: 1, type: 'float' },
         { name: 'pisoCeu', size: 1, type: 'float' },
+        { name: 'blocosOcultos', size: 4, type: 'vec4', arraySize: 8 },
       ],
-      vertex: 'uniform float ventoFolhas;\nuniform float tempoMundo;',
+      vertex:
+        'uniform float ventoFolhas;\nuniform float tempoMundo;\nuniform vec4 blocosOcultos[8];',
       fragment:
         'uniform float pisoCeu;\nuniform vec3 corBruma;\nuniform float forcaBruma;\nuniform float luzBlocos;\nuniform float outono;\nuniform float inverno;\nuniform float molhado;',
     };
@@ -74,6 +86,7 @@ export class PluginMundo extends MaterialPluginBase {
 
   override bindForSubMesh(uniformBuffer: {
     updateFloat(nome: string, valor: number): void;
+    updateFloatArray(nome: string, valores: Float32Array): void;
     updateFloat3(nome: string, x: number, y: number, z: number): void;
   }): void {
     uniformBuffer.updateFloat3('corBruma', ...this.corBruma);
@@ -85,6 +98,7 @@ export class PluginMundo extends MaterialPluginBase {
     uniformBuffer.updateFloat('ventoFolhas', this.ventoFolhas);
     uniformBuffer.updateFloat('tempoMundo', this.tempoMundo);
     uniformBuffer.updateFloat('pisoCeu', this.pisoCeu);
+    uniformBuffer.updateFloatArray('blocosOcultos', this.ocultos);
   }
 
   override getCustomCode(shaderType: string): Record<string, string> | null {
@@ -96,6 +110,19 @@ export class PluginMundo extends MaterialPluginBase {
         CUSTOM_VERTEX_MAIN_END:
           'vLuzMundo = luz;\nvBlocoMundo = (finalWorld * vec4(position, 1.0)).xyz;\nvFolhaMundo = 0.0;\n#ifdef VERTEXCOLOR\nvFolhaMundo = color.a < 0.99 ? 1.0 : 0.0;\n#endif',
         CUSTOM_VERTEX_UPDATE_POSITION: `
+          {
+            // bloco recém-quebrado: todos os vértices dele vão para um ponto só (some na hora)
+            vec3 pmO = (world * vec4(position, 1.0)).xyz;
+            #ifdef MUNDO_PLANTAS
+            vec3 donoO = floor(pmO + vec3(0.0, 0.02, 0.0));
+            #else
+            vec3 donoO = floor(pmO - normal * 0.45);
+            #endif
+            for (int iO = 0; iO < 8; iO++) {
+              vec4 bO = blocosOcultos[iO];
+              if (bO.w > 0.5 && all(equal(donoO, bO.xyz))) positionUpdated = vec3(0.0);
+            }
+          }
           #ifdef VERTEXCOLOR
           if (ventoFolhas > 0.0 && color.a < 0.99) {
             // fase pela posicao no mundo: folhas de chunks vizinhos balancam juntas
