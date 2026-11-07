@@ -11,6 +11,9 @@ test('bloco quebrado some na hora, mesmo com a malha nova atrasada', async ({ pa
   await page.waitForFunction(() => window.__brumaluz?.ready === true, undefined, {
     timeout: 180_000,
   });
+  // o mundo novo começa com a barra vazia: o teste põe o kit de blocos
+  await page.evaluate(() => window.__brumaluz!.darKit?.());
+  await page.waitForFunction(() => !!window.__brumaluz!.inventario?.obter(1));
   await page.evaluate(() => {
     document.querySelector<HTMLElement>('.entrada')?.setAttribute('hidden', '');
     const e = window.__brumaluz!;

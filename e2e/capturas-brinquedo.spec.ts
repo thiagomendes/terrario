@@ -11,8 +11,12 @@ declare const process: { env: Record<string, string | undefined> };
 test.skip(!process.env.CAPTURAS_BRINQUEDO, 'capturas só com CAPTURAS_BRINQUEDO');
 const PASTA = 'capturas-temas';
 
-const pronto = (p: Page) =>
-  p.waitForFunction(() => window.__brumaluz?.ready === true, undefined, { timeout: 180_000 });
+const pronto = async (p: Page) => {
+  await p.waitForFunction(() => window.__brumaluz?.ready === true, undefined, { timeout: 180_000 });
+  // as fotos mostram a barra com blocos (o mundo novo começa com ela vazia)
+  await p.evaluate(() => window.__brumaluz!.darKit?.());
+  await p.waitForFunction(() => !!window.__brumaluz!.inventario?.obter(1));
+};
 const foto = (p: Page, nome: string) =>
   p.screenshot({ path: `${PASTA}/brinquedo-${nome}.jpg`, type: 'jpeg', quality: 82 });
 

@@ -22,6 +22,9 @@ test('interação por ganchos: apontar, quebrar, colocar e trocar slot', async (
   await page.waitForFunction(() => window.__brumaluz?.ready === true, undefined, {
     timeout: 120_000,
   });
+  // o mundo novo começa com a barra vazia: o teste põe o kit de blocos
+  await page.evaluate(() => window.__brumaluz!.darKit?.());
+  await page.waitForFunction(() => !!window.__brumaluz!.inventario?.obter(1));
 
   // Apontar para o terreno à frente.
   await apontar(page, 0.6);

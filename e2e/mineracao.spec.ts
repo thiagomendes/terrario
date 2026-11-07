@@ -27,6 +27,9 @@ async function abrir(page: Page): Promise<void> {
   await page.waitForFunction(() => window.__brumaluz?.ready === true, undefined, {
     timeout: 120_000,
   });
+  // o mundo novo começa com a barra vazia: o teste põe o kit de blocos
+  await page.evaluate(() => window.__brumaluz!.darKit?.());
+  await page.waitForFunction(() => !!window.__brumaluz!.inventario?.obter(1));
   await page.evaluate(() => {
     document.querySelector<HTMLElement>('.entrada')?.setAttribute('hidden', '');
   });

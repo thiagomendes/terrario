@@ -9,6 +9,9 @@ async function pronto(page: Page) {
   await page.waitForFunction(() => window.__brumaluz?.ready === true, undefined, {
     timeout: 180_000,
   });
+  // o mundo novo começa com a barra vazia: o teste põe o kit de blocos
+  await page.evaluate(() => window.__brumaluz!.darKit?.());
+  await page.waitForFunction(() => !!window.__brumaluz!.inventario?.obter(1));
 }
 
 async function mundoSobrevivencia(page: Page) {
