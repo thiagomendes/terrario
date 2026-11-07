@@ -9,6 +9,10 @@ import type { Criatura } from '../jogo/criaturas';
 import type { PecaCriatura } from '../temas/tipos';
 import { povoadoDoTema, tema } from '../temas/ativo';
 import { caixaArredondada, esfera } from './formas';
+import { criarBoneco } from './boneco';
+import { moradorDeBrinquedo } from './moradorBoneco';
+import { criarAnimador } from '../player/animacao';
+import type { Personagem } from './personagem';
 
 type Peca = PecaCriatura;
 
@@ -45,6 +49,32 @@ export function criarRenderCriaturas(
 ) {
   const materiais = new Map<string, StandardMaterial>();
   const modelos = new Map<number, Modelo>();
+  /** Moradores de brinquedo: o boneco B com as cores e peças do tema (spec 012, A2). */
+  const moradores = new Map<
+    number,
+    {
+      boneco: Personagem;
+      animador: ReturnType<typeof criarAnimador>;
+      ultX: number;
+      ultZ: number;
+      vel: number;
+      quadro: number;
+    }
+  >();
+  function montarMorador(c: Criatura) {
+    const pecas = povoadoDoTema().moradores[c.morador?.profissao ?? 'construtor'];
+    const m = moradorDeBrinquedo(pecas, c.id);
+    const boneco = criarBoneco(scene, m.aparencia, `morador-${c.id}`, m.ajustar);
+    for (const malha of boneco.raiz.getChildMeshes()) {
+      const mat = malha.material as StandardMaterial | null;
+      // só a lanterna e o que o tema marcou como brilhante entram no brilho
+      if (mat && mat.emissiveColor.r + mat.emissiveColor.g + mat.emissiveColor.b > 1.6)
+        incluirNoGlow(malha as Mesh);
+      else excluirDoGlow(malha as Mesh);
+      malha.isPickable = false;
+    }
+    return { boneco, animador: criarAnimador(), ultX: c.x, ultZ: c.z, vel: 0, quadro: 0 };
+  }
   let quadro = 0;
 
   function material(p: Peca): StandardMaterial {
@@ -116,6 +146,39 @@ export function criarRenderCriaturas(
     ): void {
       quadro++;
       for (const c of lista) {
+        if (c.tipo === 'morador') {
+          let mb = moradores.get(c.id);
+          if (!mb) {
+            mb = montarMorador(c);
+            moradores.set(c.id, mb);
+          }
+          mb.quadro = quadro;
+          const desloc = Math.hypot(c.x - mb.ultX, c.z - mb.ultZ);
+          mb.ultX = c.x;
+          mb.ultZ = c.z;
+          const velReal = dt > 0 && desloc < 2 ? desloc / dt : 0;
+          mb.vel += (velReal - mb.vel) * Math.min(1, dt * 10);
+          const pose = mb.animador.atualizar(dt, {
+            velocidadeHoriz: mb.vel,
+            correndo: c.estado === 'fugir',
+            noChao: c.noChao,
+            voando: false,
+          });
+          mb.boneco.aplicarPose(pose, { dt, olhar: 0, vista: mb.animador.vista() });
+          mb.boneco.posicionar(c.x, c.y, c.z, c.yaw);
+          mb.boneco.definirLuz(luz(c));
+          const morrer = c.estado === 'morrendo' ? c.dissolver : 0;
+          mb.boneco.raiz.scaling.setAll(1 - morrer * 0.8);
+          for (const malha of mb.boneco.raiz.getChildMeshes()) {
+            const mm = malha as Mesh;
+            mm.renderOverlay = c.ferida > 0;
+            if (mm.renderOverlay) {
+              mm.overlayColor = COR_FERIDA;
+              mm.overlayAlpha = 0.55;
+            }
+          }
+          continue;
+        }
         let m = modelos.get(c.id);
         if (!m) {
           m = montar(c);
@@ -133,7 +196,7 @@ export function criarRenderCriaturas(
         const ampAlvo = c.noChao ? Math.min(0.7, m.vel * 0.25) : 0;
         m.amp += (ampAlvo - m.amp) * Math.min(1, dt * 10);
         const balanco = Math.sin(m.fase) * m.amp;
-        const mov = c.tipo === 'morador' ? povoadoDoTema().movimento : tema().movimento[c.tipo];
+        const mov = tema().movimento[c.tipo];
         const andando = Math.min(1, m.amp * 2);
         const flutua =
           mov.flutua > 0 ? mov.flutua * 1.5 + Math.sin(tempo * 2 + c.id) * mov.flutua : 0;
@@ -195,6 +258,11 @@ export function criarRenderCriaturas(
             mat.specularColor.set(0.22 * l, 0.22 * l, 0.22 * l);
           }
         }
+      }
+      for (const [id, mb] of moradores) {
+        if (mb.quadro === quadro) continue;
+        mb.boneco.descartar();
+        moradores.delete(id);
       }
       for (const [id, m] of modelos) {
         if (m.quadro === quadro) continue;

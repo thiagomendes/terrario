@@ -283,10 +283,23 @@ export function gerarMalha(
       const fx = Math.floor(cx);
       const fy = Math.floor(cy);
       const fz = Math.floor(cz);
-      const luz: [number, number] = [
-        Math.max(mapaLuz.ceu(fx, fy + 1, fz), mapaLuz.ceu(fx, fy, fz)) / LUZ_MAXIMA,
-        mapaLuz.bloco(fx, fy, fz) / LUZ_MAXIMA,
-      ];
+      // a luz mais forte em volta da bola (o centro pode cair dentro do tronco, sem céu)
+      const alcance = Math.ceil(raio);
+      let ceuL = 0;
+      let blocoL = 0;
+      for (const [ox, oy, oz] of [
+        [0, 0, 0],
+        [0, alcance, 0],
+        [alcance, 0, 0],
+        [-alcance, 0, 0],
+        [0, 0, alcance],
+        [0, 0, -alcance],
+        [0, alcance + 1, 0],
+      ]) {
+        ceuL = Math.max(ceuL, mapaLuz.ceu(fx + ox, fy + oy, fz + oz));
+        blocoL = Math.max(blocoL, mapaLuz.bloco(fx + ox, fy + oy, fz + oz));
+      }
+      const luz: [number, number] = [ceuL / LUZ_MAXIMA, blocoL / LUZ_MAXIMA];
       const an = detalheBaixo ? 9 : 14;
       const ae = detalheBaixo ? 6 : 10;
       const base = solido.vertices;

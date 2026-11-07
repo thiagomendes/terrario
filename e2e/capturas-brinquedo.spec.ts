@@ -176,6 +176,7 @@ for (const id of TEMAS) {
     );
     await page.evaluate(async () => {
       const e = window.__brumaluz!;
+      e.camera!.definir('primeira');
       const m = (e.criaturas?.() ?? []).find((c) => c.tipo === 'morador')!;
       const [px, , pz] = e.posicao!;
       const d = Math.hypot(m.x - px, m.z - pz) || 1;

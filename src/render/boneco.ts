@@ -10,7 +10,7 @@ import { MeshBuilder } from '@babylonjs/core/Meshes/meshBuilder';
 import type { Mesh } from '@babylonjs/core/Meshes/mesh';
 import type { Scene } from '@babylonjs/core/scene';
 import type { Aparencia } from '../personagem/aparencia';
-import { planoBoneco, type Junta, type Peca } from '../personagem/boneco';
+import { planoBoneco, type Junta, type Peca, type PlanoBoneco } from '../personagem/boneco';
 import type { Pose } from '../personagem/poses';
 import { caixaArredondada, cilindro, criarPlasticos, esfera, type Plasticos } from './formas';
 import { modeloNaMao, type ModeloItem } from './itensBrinquedo';
@@ -58,6 +58,8 @@ export function criarBoneco(
   scene: Scene,
   aparencia: Aparencia,
   prefixo = 'personagem',
+  /** Ajusta o plano antes de montar (moradores: cores e peças do tema). */
+  ajustarPlano?: (p: PlanoBoneco) => PlanoBoneco,
 ): Personagem {
   const raiz = new TransformNode(prefixo, scene);
   const escalar = new TransformNode(`${prefixo}-escala`, scene);
@@ -118,7 +120,7 @@ export function criarBoneco(
 
   function aplicarAparencia(a: Aparencia): void {
     limpar();
-    const plano = planoBoneco(a);
+    const plano = ajustarPlano ? ajustarPlano(planoBoneco(a)) : planoBoneco(a);
     escalar.scaling.setAll(plano.escala);
     for (const [nome, j] of Object.entries(plano.juntas) as Array<
       [Junta, (typeof plano.juntas)[Junta]]
