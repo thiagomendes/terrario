@@ -1,7 +1,7 @@
 import { botaoFechar } from './pixicones';
 import { TAMANHO_BARRA, TAMANHO_INVENTARIO, type Inventario, type Slot } from '../jogo/inventario';
 import { obterItem, todosItens, type DefItem } from '../jogo/itens';
-import { iconeDoItem } from './icones';
+import { EVENTO_ICONES, iconeDoItem } from './icones';
 import {
   FOLGA_TOQUE_INV,
   TEMPO_TOQUE_LONGO,
@@ -248,6 +248,9 @@ export function criarInventarioUI(raiz: HTMLElement, op: OpcoesInventarioUI): In
     cursorImg.src = iconeDoItem(cursor.item);
     cursorQtd.textContent = cursor.qtd > 1 && !op.criativo() ? String(cursor.qtd) : '';
   }
+
+  // os ícones de brinquedo chegam aos poucos: redesenha o que estiver aberto
+  window.addEventListener(EVENTO_ICONES, () => render());
 
   function render(): void {
     if (!aberto) return;

@@ -104,6 +104,26 @@ test('boneco de brinquedo nos enquadramentos dos esboços', async ({ page }) => 
   await page.evaluate(() => window.__brumaluz!.animar!('pulo'));
   await page.waitForTimeout(90);
   await foto(page, 'frente-pulo');
+  // ícones de brinquedo (desenhados dos modelos 3D) na barra e no inventário
+  await page.evaluate(() => {
+    const e = window.__brumaluz!;
+    e.camera!.definir('primeira');
+    const itens = [
+      'machado_cobre',
+      'pa_cristal',
+      'espada_ferro',
+      'carne_assada',
+      'peixe_cru',
+      'torta_abobora',
+      'lingote_ouro',
+    ];
+    itens.forEach((it, i) => e.inventario!.definir(2 + i, { item: it, qtd: 1 }));
+  });
+  await page.waitForTimeout(2500);
+  await page.keyboard.press('KeyE');
+  await page.waitForTimeout(900);
+  await foto(page, 'inventario');
+  await page.keyboard.press('Escape');
 });
 
 const TEMAS = [

@@ -46,8 +46,20 @@ export function desenharIsometrico(
   ctx.restore();
 }
 
+/** Ícones de brinquedo desenhados do modelo 3D (spec 012); valem sobre os de pixel. */
+const brinquedo = new Map<string, string>();
+export const EVENTO_ICONES = 'brumaluz:icones';
+
+/** Recebe um lote de ícones de brinquedo e avisa a interface para redesenhar. */
+export function definirIconesBrinquedo(lote: Map<string, string>): void {
+  for (const [id, url] of lote) brinquedo.set(id, url);
+  window.dispatchEvent(new CustomEvent(EVENTO_ICONES));
+}
+
 /** Ícone do item como data URL (64x64), com cache. */
 export function iconeDoItem(item: string): string {
+  const deBrinquedo = brinquedo.get(item);
+  if (deBrinquedo) return deBrinquedo;
   const pronto = cache.get(item);
   if (pronto) return pronto;
   const c = document.createElement('canvas');

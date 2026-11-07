@@ -87,7 +87,8 @@ import { criaturaNaMira, type Criatura, type TipoCriatura } from '../jogo/criatu
 import { criarRenderCriaturas } from './criaturas';
 import { biomaEm, estiloMundo } from '../world/chunk';
 import { perfilDaQualidade, type Config, type GerenciadorConfig } from '../jogo/config';
-import { iconeDoItem } from '../ui/icones';
+import { definirIconesBrinquedo, iconeDoItem } from '../ui/icones';
+import { gerarIconesBrinquedo } from './iconesBrinquedo';
 import type { Buffers } from '../mesh/malha';
 import type { RespostaChunk, PedidoChunk } from '../workers/chunk.worker';
 import { criarProvedorBlocos } from '../world/provedor';
@@ -1599,6 +1600,8 @@ export function criarCena(
     estado.chunksCarregados = malhas.size;
     if (!estado.ready && pedidos.size === 0 && fila.tamanho === 0 && malhas.size > 0) {
       estado.ready = true;
+      // ícones de brinquedo desenhados dos modelos 3D, poucos por quadro
+      if (!pararIcones) pararIcones = gerarIconesBrinquedo(atlas, definirIconesBrinquedo);
     }
   }
 
@@ -1672,6 +1675,8 @@ export function criarCena(
   caixaRachadura.setEnabled(false);
   prepararEfeito(caixaRachadura);
   let estagioRachaduraAtual = 0;
+  /** Para o gerador de ícones de brinquedo (se a cena fechar antes do fim). */
+  let pararIcones: (() => void) | null = null;
 
   const matPulso = new StandardMaterial('pulso', scene);
   matPulso.diffuseColor = new Color3(0.8, 0.8, 0.85);

@@ -1,5 +1,5 @@
 import { criarHotbar, deltaRodaParaPasso, teclaParaSlot, type Hotbar } from '../player/hotbar';
-import { iconeDoItem } from './icones';
+import { EVENTO_ICONES, iconeDoItem } from './icones';
 import { modoToque } from './pixicones';
 
 const CSS = `
@@ -179,6 +179,8 @@ export function criarBarra(app: HTMLElement, hotbar: Hotbar = criarHotbar()): Ho
   );
 
   hotbar.inventario.ouvir(atualizar);
+  // os ícones de brinquedo chegam aos poucos depois que o jogo abre
+  window.addEventListener(EVENTO_ICONES, atualizar);
   window.addEventListener('brumaluz:slot', atualizar);
   atualizar();
   app.append(barra, nomeItem);
