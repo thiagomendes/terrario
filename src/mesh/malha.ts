@@ -129,7 +129,7 @@ const UV_BRILHO: Record<number, [number, number]> = Object.fromEntries(
 /** Raio das quinas de brinquedo (fração do bloco). */
 export const RAIO_QUINA = 0.13;
 /** Raio das quinas das copas (folhas), bem mais redondas. */
-export const RAIO_COPA = 0.34;
+export const RAIO_COPA = 0.48;
 
 const CANTOS: [number, number][] = [
   [0, 0],
@@ -328,7 +328,7 @@ export function gerarMalha(
     const hi: Vec = [mostra(1, 0, 0), mostra(0, 1, 0), mostra(0, 0, 1)];
     const passos = (t: Vec): number[] => {
       const eixo = t[0] ? 0 : t[1] ? 1 : 2;
-      const fr = ehFolha ? [0, 0.2, 0.5, 1] : [0, 0.45, 1];
+      const fr = ehFolha ? [0, 0.18, 0.42, 0.7, 1] : [0, 0.45, 1];
       const r: number[] = lo[eixo] ? fr.map((f) => f * RAIO) : [0];
       // o lado de cima é o espelho do de baixo
       if (hi[eixo]) r.push(...fr.map((f) => 1 - f * RAIO).reverse());
