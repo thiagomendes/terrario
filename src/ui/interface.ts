@@ -8,7 +8,7 @@ import { criarBarra } from './barra';
 import { textoIndicador } from '../audio/ligador';
 import type { EstadoAudio } from '../audio/motor';
 import { textoIndicador as textoIndicadorCamera } from '../player/camera';
-import { MODELOS, type Aparencia } from '../personagem/aparencia';
+import { rotuloDoModelo, type Aparencia } from '../personagem/aparencia';
 import type { Armazenamento } from '../personagem/persistencia';
 import { CSS_PAINEL, criarPainelPersonagem, teclaParaPainel } from './personagem';
 import { CSS_MODAL, criarPainelMundos } from './mundos';
@@ -371,7 +371,7 @@ export function criarInterface(
     travarPonteiro();
   }
   function rotuloNome(a: Aparencia): string {
-    return a.nome || MODELOS[a.modelo].rotulo;
+    return a.nome || rotuloDoModelo(a);
   }
   function armazenamento(): Armazenamento | null {
     try {

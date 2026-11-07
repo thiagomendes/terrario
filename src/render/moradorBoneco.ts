@@ -20,7 +20,16 @@ const TRONCO_Y = 1.11;
 const TRONCO_T: [number, number, number] = [0.5, 0.66, 0.28];
 const QUADRIL_Y = 0.78;
 
-const MODELOS: ModeloId[] = ['andarilho', 'herbolaria', 'lanterneiro', 'musgueira'];
+const MODELOS: ModeloId[] = [
+  'andarilho',
+  'herbolaria',
+  'lanterneiro',
+  'musgueira',
+  'exploradora',
+  'tecela',
+  'ferreiro',
+];
+const FEMININOS: ModeloId[] = ['herbolaria', 'musgueira', 'exploradora', 'tecela'];
 
 const volume = (p: PecaCriatura) => p.t[0] * p.t[1] * p.t[2];
 const hash = (n: number, s: number) => {
@@ -35,7 +44,12 @@ export interface Morador {
 }
 
 /** Aparência e ajuste do plano do boneco para um morador do tema. */
-export function moradorDeBrinquedo(pecas: readonly PecaCriatura[], id: number): Morador {
+export function moradorDeBrinquedo(
+  pecas: readonly PecaCriatura[],
+  id: number,
+  /** O corpo do boneco combina com o nome e a profissão do morador. */
+  genero?: 'f' | 'm',
+): Morador {
   const cabecas = pecas.filter((p) => p.papel === 'cabeca');
   const cabeca = [...cabecas].sort((a, b) => volume(b) - volume(a))[0];
   const pernas = pecas.filter((p) => p.papel === 'perna0' || p.papel === 'perna1');
@@ -68,7 +82,8 @@ export function moradorDeBrinquedo(pecas: readonly PecaCriatura[], id: number): 
   for (const p of cabecas)
     if (Math.max(...p.t) <= 0.09 && p.p[2] > 0.15 && p.p[1] < topo) usadas.add(p);
 
-  const a = aparenciaPadrao(MODELOS[Math.floor(hash(id, 1) * MODELOS.length)]);
+  const modelos = MODELOS.filter((m) => !genero || (genero === 'f') === FEMININOS.includes(m));
+  const a = aparenciaPadrao(modelos[Math.floor(hash(id, 1) * modelos.length)]);
   a.cabeloEstilo = Math.floor(hash(id, 2) * ESTILOS_CABELO);
   a.rosto = Math.floor(hash(id, 3) * 6);
   a.acessorio = 'nenhum';

@@ -120,7 +120,10 @@ export const SAIAS: Record<number, number> = { 6: 0.5, 7: 0.45, 8: 0.86 };
 
 export interface ModeloDef {
   id: ModeloId;
+  /** Nome do modelo na forma do corpo padrão dele. */
   rotulo: string;
+  /** Nome nas duas formas: acompanha o corpo escolhido (spec 012, A5). */
+  rotulos: { feminino: string; masculino: string };
   larguraTronco: number;
   comprimentoPernas: number;
   opcoes: Omit<Aparencia, 'nome' | 'modelo'>;
@@ -129,7 +132,8 @@ export interface ModeloDef {
 export const MODELOS: Record<ModeloId, ModeloDef> = {
   andarilho: {
     id: 'andarilho',
-    rotulo: 'Andarilho',
+    rotulo: 'Aventureiro',
+    rotulos: { feminino: 'Aventureira', masculino: 'Aventureiro' },
     larguraTronco: 0.5,
     comprimentoPernas: 0.7,
     opcoes: {
@@ -146,7 +150,8 @@ export const MODELOS: Record<ModeloId, ModeloDef> = {
   },
   herbolaria: {
     id: 'herbolaria',
-    rotulo: 'Herbolária',
+    rotulo: 'Jardineira',
+    rotulos: { feminino: 'Jardineira', masculino: 'Jardineiro' },
     larguraTronco: 0.44,
     comprimentoPernas: 0.66,
     opcoes: {
@@ -163,7 +168,8 @@ export const MODELOS: Record<ModeloId, ModeloDef> = {
   },
   lanterneiro: {
     id: 'lanterneiro',
-    rotulo: 'Lanterneiro',
+    rotulo: 'Inventor',
+    rotulos: { feminino: 'Inventora', masculino: 'Inventor' },
     larguraTronco: 0.56,
     comprimentoPernas: 0.62,
     opcoes: {
@@ -180,7 +186,8 @@ export const MODELOS: Record<ModeloId, ModeloDef> = {
   },
   musgueira: {
     id: 'musgueira',
-    rotulo: 'Musgueira',
+    rotulo: 'Cientista',
+    rotulos: { feminino: 'Cientista', masculino: 'Cientista' },
     larguraTronco: 0.48,
     comprimentoPernas: 0.74,
     opcoes: {
@@ -198,6 +205,7 @@ export const MODELOS: Record<ModeloId, ModeloDef> = {
   exploradora: {
     id: 'exploradora',
     rotulo: 'Exploradora',
+    rotulos: { feminino: 'Exploradora', masculino: 'Explorador' },
     larguraTronco: 0.46,
     comprimentoPernas: 0.72,
     opcoes: {
@@ -214,7 +222,8 @@ export const MODELOS: Record<ModeloId, ModeloDef> = {
   },
   tecela: {
     id: 'tecela',
-    rotulo: 'Tecelã',
+    rotulo: 'Artista',
+    rotulos: { feminino: 'Artista', masculino: 'Artista' },
     larguraTronco: 0.44,
     comprimentoPernas: 0.7,
     opcoes: {
@@ -231,7 +240,8 @@ export const MODELOS: Record<ModeloId, ModeloDef> = {
   },
   ferreiro: {
     id: 'ferreiro',
-    rotulo: 'Ferreiro',
+    rotulo: 'Construtor',
+    rotulos: { feminino: 'Construtora', masculino: 'Construtor' },
     larguraTronco: 0.58,
     comprimentoPernas: 0.64,
     opcoes: {
@@ -316,4 +326,10 @@ export function aplicarCorpo(a: Aparencia, corpo: Corpo): Aparencia {
     cabeloEstilo: [2, 6, 7, 8].includes(a.cabeloEstilo) ? 0 : a.cabeloEstilo,
     roupaEstilo: SAIAS[a.roupaEstilo] ? 0 : a.roupaEstilo,
   };
+}
+
+/** Nome do modelo na forma do corpo escolhido (Aventureiro, Aventureira). */
+export function rotuloDoModelo(a: Pick<Aparencia, 'modelo' | 'corpo'>): string {
+  const m = MODELOS[a.modelo];
+  return a.corpo === 'feminino' ? m.rotulos.feminino : m.rotulos.masculino;
 }

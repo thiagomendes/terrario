@@ -172,7 +172,7 @@ import {
 } from '../player/camera';
 import { chave, chunksDesejados, planejar, respostaObsoleta } from './gerenciador';
 import { criarAnimador } from '../player/animacao';
-import { MODELOS, normalizarAparencia, type Aparencia } from '../personagem/aparencia';
+import { normalizarAparencia, rotuloDoModelo, type Aparencia } from '../personagem/aparencia';
 import { carregarAparencia, type Armazenamento } from '../personagem/persistencia';
 import type { Pose } from '../personagem/poses';
 import { criarBraco } from './braco';
@@ -1360,7 +1360,7 @@ export function criarCena(
         new CustomEvent('brumaluz:trocar', {
           detail: {
             profissao: m.profissao,
-            nome: nomeDoMorador(m.povoado, m.n),
+            nome: nomeDoMorador(m.povoado, m.n, m.profissao),
             povoado: m.povoado,
             criatura: naMira.id,
           },
@@ -1604,7 +1604,7 @@ export function criarCena(
     pose: () => animador.pose(),
     maoBloco: () =>
       visibilidadePorModo(estadoCamera.modo).braco ? hotbar.blocoAtivo() || null : null,
-    nomeExibido: () => aparencia.nome || MODELOS[aparencia.modelo].rotulo,
+    nomeExibido: () => aparencia.nome || rotuloDoModelo(aparencia),
     girarCorpo: (rad: number) => {
       giroCorpo = rad;
     },
@@ -2400,7 +2400,7 @@ export function criarCena(
     const c = criaturaApontada();
     const p = hotbar.pilhaAtiva();
     if (c?.morador) {
-      const nome = nomeDoMorador(c.morador.povoado, c.morador.n);
+      const nome = nomeDoMorador(c.morador.povoado, c.morador.n, c.morador.profissao);
       t = toque ? `Toque em ${nome} para trocar` : `Clique direito (ou F): trocar com ${nome}`;
     } else if (c && c.tipo === 'raposa' && !c.domada && p?.item === 'frutinhas') {
       t = toque ? 'Toque na raposa para dar frutinhas' : 'Clique direito (ou F): dar frutinhas';

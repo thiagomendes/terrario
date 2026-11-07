@@ -12,6 +12,7 @@ import { caixaArredondada, esfera } from './formas';
 import { bichoDeBrinquedo, type PecaBicho } from './bichoBrinquedo';
 import { criarBoneco } from './boneco';
 import { moradorDeBrinquedo } from './moradorBoneco';
+import { generoDoMorador } from '../temas/nomes';
 import { criarAnimador } from '../player/animacao';
 import type { Personagem } from './personagem';
 
@@ -64,7 +65,12 @@ export function criarRenderCriaturas(
   >();
   function montarMorador(c: Criatura) {
     const pecas = povoadoDoTema().moradores[c.morador?.profissao ?? 'construtor'];
-    const m = moradorDeBrinquedo(pecas, c.id);
+    const prof = c.morador?.profissao ?? 'construtor';
+    const m = moradorDeBrinquedo(
+      pecas,
+      c.id,
+      c.morador ? generoDoMorador(c.morador.povoado, c.morador.n, prof) : undefined,
+    );
     const boneco = criarBoneco(scene, m.aparencia, `morador-${c.id}`, m.ajustar);
     for (const malha of boneco.raiz.getChildMeshes()) {
       const mat = malha.material as StandardMaterial | null;

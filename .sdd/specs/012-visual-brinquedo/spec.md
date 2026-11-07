@@ -217,9 +217,12 @@ Lista única para nada se perder. Cada item: feito (com o que comprova) ou pende
 - [x] Fotos novas da vitrine dos temas (a miniatura de cada mundo na lista já sai do jogo ao salvar).
 - [x] Revisão das janelas com interação: trocas e receitas na largura toda; receita sem ingredientes legível (não parece desligada); avisos não cobrem a janela aberta (capturas `painel-*`, celular e computador).
 
+- [x] A5: modelos com nomes de brinquedo nas duas formas (Aventureiro/Aventureira, Jardineiro/Jardineira, Inventor/Inventora, Cientista, Explorador/Exploradora, Artista, Construtor/Construtora), acompanhando o corpo; moradores com nome e corpo no gênero da profissão (`generoMoradores.test.ts`).
+- [x] Publicado o estado de 7 nov à tarde (badea27): site e servidor.
+
 **Pendente, nesta ordem**
 3. A4: itens soltos no chão como modelo 3D de brinquedo.
-4. A5: nomes dos modelos de personagem (Andarilho etc.) coerentes no feminino e no masculino, e o gênero dos moradores ("Tonho · Ferreira": nome masculino com profissão no feminino).
+
 5. C1–C3: rachadura e contorno do bloco mirado, blocos com forma (tocha, porta, vidro, cama, baú, fornalha, cerca, escada, laje), lado da grama sem chuvisco.
 6. C4: chuva com céu cinza-azulado claro e relâmpago suave; espuma na beira em degrau.
 7. Restos de interface: renomear e excluir mundo ainda usam a janela do navegador; apelido acima dos amigos ainda escuro; avisos de boas-vindas por cima do inventário.
