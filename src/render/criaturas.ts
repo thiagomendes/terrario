@@ -112,6 +112,15 @@ export function criarRenderCriaturas(
       // a criatura da noite: plástico pastel e cabeção (assusta pouco, é brinquedo)
       c.tipo === 'espectro' ? { pastel: 0.32, cabeca: 1.45 } : {},
     );
+    // a cabeça acena inteira: olhos, orelhas e chifres giram juntos em volta do pescoço (a
+    // base da maior peça de cabeça), senão cada peça girava no lugar e descolava
+    const vol = (q: (typeof pecas)[number]) => q.t[0] * q.t[1] * q.t[2];
+    const cabecaMaior = pecas
+      .filter((q) => q.papel === 'cabeca')
+      .sort((a, b) => vol(b) - vol(a))[0];
+    const pescoco: [number, number, number] | null = cabecaMaior
+      ? [cabecaMaior.p[0], cabecaMaior.p[1] - cabecaMaior.t[1] * 0.4, cabecaMaior.p[2]]
+      : null;
     const partes = pecas.map((peca, i) => {
       const no = new TransformNode(`criatura-${c.id}-${i}`, scene);
       no.parent = raiz;
@@ -125,7 +134,11 @@ export function criarRenderCriaturas(
       const pivoX = papel?.startsWith('asa')
         ? peca.p[0] - Math.sign(peca.p[0] || (papel === 'asa0' ? 1 : -1)) * (peca.t[0] / 2)
         : peca.p[0];
-      no.position.set(pivoX, pivoY, peca.p[2]);
+      const naCabeca = papel === 'cabeca' && pescoco;
+      const px = naCabeca ? pescoco[0] : pivoX;
+      const py = naCabeca ? pescoco[1] : pivoY;
+      const pz = naCabeca ? pescoco[2] : peca.p[2];
+      no.position.set(px, py, pz);
       const [w, h, d] = peca.t;
       const maior = Math.max(w, h, d);
       const nome = `criatura-${c.id}-${i}-m`;
@@ -134,8 +147,7 @@ export function criarRenderCriaturas(
           ? esfera(nome, scene, maior / 2, material(peca), [w / maior, h / maior, d / maior])
           : caixaArredondada(nome, scene, w, h, d, peca.raio, material(peca), 3);
       malha.parent = no;
-      malha.position.y = peca.p[1] - pivoY;
-      malha.position.x = peca.p[0] - pivoX;
+      malha.position.set(peca.p[0] - px, peca.p[1] - py, peca.p[2] - pz);
       if (peca.rot) malha.rotation.set(peca.rot[0], peca.rot[1], peca.rot[2]);
       malha.material = material(peca);
       malha.isPickable = false;
