@@ -286,6 +286,8 @@ export interface EstadoDepuracao {
   /** Dia atual (contado desde o início do mundo). */
   dia?: () => number;
   criaturas?: () => {
+    id: number;
+    profissao?: string;
     tipo: string;
     x: number;
     y: number;
@@ -295,6 +297,8 @@ export interface EstadoDepuracao {
   }[];
   invocar?: (tipo: TipoCriatura, x: number, y: number, z: number) => void;
   sobrevivencia?: SobrevivenciaCliente;
+  /** Testes: espera o núcleo processar o que já foi mandado. */
+  sincronizar?: () => Promise<void>;
   renascer?: () => void;
   definirSpawn?: (x: number, z: number) => void;
   inventario?: import('../jogo/inventario').Inventario;
@@ -335,6 +339,8 @@ declare global {
 export interface SobrevivenciaCliente {
   readonly estado: EstadoSobrevivencia;
   dano(qtd: number, causa?: CausaDano): void;
+  /** Testes: conta um pulo. */
+  pulo(correndo?: boolean): void;
 }
 
 export interface OpcoesCena {
@@ -1863,6 +1869,11 @@ export function criarCena(
   let cameraSubmersa = false;
   let quadroSobrevivencia: ((dt: number) => void) | null = null;
   const sobrevivenciaMorto = () => !!estado.sobrevivencia?.estado.morto;
+  /** Renascer pedido e o teletransporte para a cama ainda não chegou (até 3 s). */
+  let renascerPedidoEm = -1;
+  let fisicaRodou = true;
+  const esperandoRenascer = () =>
+    renascerPedidoEm >= 0 && performance.now() - renascerPedidoEm < 3000;
   let configAtual: Config | null = null;
   manterAudioDesbloqueado(document, motorAudio);
   ativarNoPrimeiroGesto(document, {
@@ -1923,8 +1934,9 @@ export function criarCena(
     const dtBruto = engine.getDeltaTime() / 1000;
     const dtQuadro = Math.min(dtBruto, DT_MAXIMO_QUADRO);
     const fotoAtiva = !!estado.modoFoto?.ativo();
-    if (!(modo === 'sobrevivencia' && sobrevivenciaMorto()))
-      controle.atualizar(fotoAtiva ? 0 : dtBruto);
+    // desmaiado (ou esperando o teletransporte do renascer): o corpo não anda
+    fisicaRodou = !(modo === 'sobrevivencia' && (sobrevivenciaMorto() || esperandoRenascer()));
+    if (fisicaRodou) controle.atualizar(fotoAtiva ? 0 : dtBruto);
     quadroFotoRef?.(Math.min(dtBruto, 0.1));
     quadroSobrevivencia?.(Math.min(dtBruto, 0.1));
     atualizarSomMovimento(Math.min(dtBruto, 0.05));
@@ -2205,6 +2217,8 @@ export function criarCena(
   };
   estado.criaturas = () =>
     replicaCriaturas.vistas.map((c) => ({
+      id: c.id,
+      profissao: c.morador?.profissao,
       tipo: c.tipo,
       x: c.x,
       y: c.y,
@@ -2542,15 +2556,26 @@ export function criarCena(
       return cliente.sobrevivencia;
     },
     dano: (qtd, causa = 'outro') => enviar({ t: 'depurar', d: { f: 'dano', qtd, causa } }),
+    // testes: um pulo (correndo gasta mais fome), contado na próxima telemetria
+    pulo: (correndo = false) => {
+      pulos++;
+      if (correndo) puloCorrendo = true;
+      enviarTelemetria(true);
+    },
   };
   estado.sobrevivencia = sobrevivenciaCliente;
   estado.definirSpawn = (x, z) => enviar({ t: 'depurar', d: { f: 'spawn', x, z } });
-  estado.renascer = () => enviar({ t: 'renascer' });
+  estado.renascer = () => {
+    quedas = [];
+    renascerPedidoEm = performance.now();
+    enviar({ t: 'renascer' });
+  };
 
   // Telemetria: o corpo do jogador anda aqui (resposta imediata); o núcleo recebe
   // a posição e o que pesa na sobrevivência (quedas, pulos, golpes, água).
   let quedas: number[] = [];
   let pulos = 0;
+  let puloCorrendo = false;
   let golpes = 0;
   let ultimaTelemetria = -1;
   barramento.ouvir('golpe', () => golpes++);
@@ -2571,7 +2596,7 @@ export function criarCena(
       noChao: j.noChao,
       voando: !!j.voando,
       vel: velocidadeHoriz,
-      correndo: corrida,
+      correndo: corrida || puloCorrendo,
       submerso:
         blocoEm(Math.floor(olhos.x), Math.floor(olhos.y), Math.floor(olhos.z)) === Bloco.AGUA,
       quedas,
@@ -2582,11 +2607,22 @@ export function criarCena(
     });
     quedas = [];
     pulos = 0;
+    puloCorrendo = false;
     golpes = 0;
   }
+  // testes: espera o núcleo ter processado tudo o que foi mandado (e o quadro seguinte)
+  estado.sincronizar = async () => {
+    await cliente.pedirSalvamento();
+    const n = cliente.quadrosRecebidos;
+    const fim = performance.now() + 5000;
+    while (cliente.quadrosRecebidos < n + 2 && performance.now() < fim)
+      await new Promise((r) => setTimeout(r, 20));
+  };
   quadroSobrevivencia = () => {
     const r = controle.resultado;
-    if (r.aterrissou && r.queda > 0) quedas.push(r.queda);
+    // só a queda do passo que rodou agora (parado, o resultado é o do último passo: a
+    // queda que desmaiou contaria de novo depois de renascer)
+    if (fisicaRodou && r.aterrissou && r.queda > 0) quedas.push(r.queda);
     enviarTelemetria();
   };
 
@@ -2681,6 +2717,7 @@ export function criarCena(
       case 'teleporte':
         estado.teleportar?.(e.x, e.z, e.y);
         controle.jogador.topoQueda = undefined;
+        renascerPedidoEm = -1;
         break;
       case 'relampago':
         if (!temaAtual.climaVisual.relampago) break;

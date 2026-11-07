@@ -603,7 +603,11 @@ export function criarNucleo(op: OpcoesNucleo) {
     return populacao.lista.find((c) => c.id === id);
   }
 
-  function tratarCriaturas(eventos: EventoCriatura[], alvo: Jogador | undefined): void {
+  function tratarCriaturas(
+    eventos: EventoCriatura[],
+    alvo: Jogador | undefined,
+    golpe = false,
+  ): void {
     for (const ev of eventos) {
       const c = ev.criatura;
       const atacado = ev.jogador
@@ -619,7 +623,8 @@ export function criarNucleo(op: OpcoesNucleo) {
       } else if (ev.tipo === 'morte') {
         for (const d of ev.drops ?? [])
           mundoItens.soltar(d.item, d.qtd, c.x, c.y + 0.5, c.z, rngDrops);
-        eventosGerais.push({ e: 'criaturaMorreu', id: c.id, tipo: c.tipo, drops: !!ev.drops });
+        // derrotada é só a que caiu num golpe (o sol que desfaz o espectro não conta no diário)
+        eventosGerais.push({ e: 'criaturaMorreu', id: c.id, tipo: c.tipo, drops: golpe });
       } else if (ev.tipo === 'som') {
         eventosGerais.push({ e: 'criaturaSom', id: c.id, tipo: c.tipo });
       }
@@ -634,7 +639,7 @@ export function criarNucleo(op: OpcoesNucleo) {
     const p = j.inventario.obter(c.slot);
     const f = ferramentaDe(p);
     const dano = f ? (f.tipo === 'espada' ? f.dano : Math.max(2, f.dano)) : 1;
-    tratarCriaturas(populacao.ferir(cr, dano, j.tel.x, j.tel.z), j);
+    tratarCriaturas(populacao.ferir(cr, dano, j.tel.x, j.tel.z), j, true);
     if (modo === 'sobrevivencia' && f && p?.dur !== undefined) {
       const dur = p.dur - (f.tipo === 'espada' ? 1 : 2);
       j.inventario.definir(c.slot, dur > 0 ? { ...p, dur } : null);
