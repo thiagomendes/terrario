@@ -52,7 +52,7 @@ import {
 import { criarCeu } from './ceu';
 import { criarAgua } from './agua';
 import { criarVagalumes } from './vagalumes';
-import { coresDasPlantas } from '../mesh/plantasBrinquedo';
+import { coresDasPlantas, definirCoresPlantas } from '../mesh/plantasBrinquedo';
 import { PluginMundo } from './materialMundo';
 import { PluginBalanco } from './balanco';
 import { SEMENTE_PADRAO, TAM_X, TAM_Z } from '../world/chunk';
@@ -891,6 +891,8 @@ export function criarCena(
   });
   // o estilo do mundo do tema vai antes de qualquer pedido de chunk
   const coresPlantas = coresDasPlantas(atlas);
+  // as pecinhas na mão e no chão (itens) usam as mesmas cores do mundo
+  definirCoresPlantas(coresPlantas);
   // qualidade automática (spec 012): no celular as quinas são chanfros e as bolinhas têm
   // menos gomos; ?detalhe=alto|baixo força para comparar
   const pedidoDetalhe = new URLSearchParams(location.search).get('detalhe');

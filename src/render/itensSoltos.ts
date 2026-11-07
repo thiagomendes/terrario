@@ -1,15 +1,10 @@
-import { Color3 } from '@babylonjs/core/Maths/math.color';
-import { StandardMaterial } from '@babylonjs/core/Materials/standardMaterial';
 import { TransformNode } from '@babylonjs/core/Meshes/transformNode';
-import { Mesh } from '@babylonjs/core/Meshes/mesh';
-import { VertexData } from '@babylonjs/core/Meshes/mesh.vertexData';
+import type { Mesh } from '@babylonjs/core/Meshes/mesh';
 import type { BaseTexture } from '@babylonjs/core/Materials/Textures/baseTexture';
 import type { Scene } from '@babylonjs/core/scene';
 import type { Atlas } from '../art/atlas';
 import type { ItemSolto as ItemCompleto } from '../jogo/drops';
 import { obterItem } from '../jogo/itens';
-import { obterBloco } from '../world/blocks';
-import { plantaDeBrinquedo, PLANTAS_BRINQUEDO, type AlvoPlanta } from '../mesh/plantasBrinquedo';
 import { criarPlasticos } from './formas';
 import { modeloNaMao } from './itensBrinquedo';
 
@@ -29,63 +24,29 @@ export function criarRenderItens(
   excluirDoGlow: (m: Mesh) => void,
 ) {
   const mats = criarPlasticos(scene, 'item-solto');
-  const matVertices = new StandardMaterial('item-solto-vertices', scene);
-  matVertices.specularColor = new Color3(0.15, 0.15, 0.15);
-  matVertices.emissiveColor = new Color3(0.3, 0.3, 0.3);
   const itens = new Map<number, { no: TransformNode; malhas: Mesh[] }>();
 
   function criar(it: ItemSolto): { no: TransformNode; malhas: Mesh[] } {
     const no = new TransformNode(`item-${it.id}`, scene);
     const def = obterItem(it.item);
     const bloco = def?.bloco;
-    const b = bloco !== undefined ? obterBloco(bloco) : undefined;
     const malhas: Mesh[] = [];
-    if (
-      bloco !== undefined &&
-      (b?.planta || b?.forma === 'cruz') &&
-      PLANTAS_BRINQUEDO.includes(bloco)
-    ) {
-      const alvo: AlvoPlanta = {
-        posicoes: [],
-        normais: [],
-        uvs: [],
-        cores: [],
-        luz: [],
-        indices: [],
-        get vertices() {
-          return this.posicoes.length / 3;
-        },
-      };
-      plantaDeBrinquedo(bloco, -0.5, 0, -0.5, alvo, [0, 0], [1, 0], () => 0.5, false);
-      const m = new Mesh(`item-${it.id}-planta`, scene);
-      const dados = new VertexData();
-      dados.positions = alvo.posicoes;
-      dados.normals = alvo.normais;
-      dados.indices = alvo.indices;
-      dados.colors = alvo.cores.map((v, i) => (i % 4 === 3 ? 1 : v));
-      dados.applyToMesh(m);
-      m.material = matVertices;
-      m.parent = no;
-      m.scaling.setAll(0.6);
-      malhas.push(m);
-    } else {
-      const modelo = modeloNaMao(
-        scene,
-        mats,
-        bloco !== undefined ? bloco : null,
-        bloco === undefined ? it.item : null,
-        `item-${it.id}`,
-      );
-      if (modelo) {
-        modelo.no.parent = no;
-        // a ferramenta inclinada, apoiada no chão; o resto um pouco maior que na mão
-        if (modelo.ferramenta) {
-          modelo.no.rotation.set(0, 0, -0.5);
-          modelo.no.position.set(0.12, -0.12, 0);
-          modelo.no.scaling.setAll(0.8);
-        } else modelo.no.scaling.setAll(1.3);
-        malhas.push(...modelo.malhas);
-      }
+    const modelo = modeloNaMao(
+      scene,
+      mats,
+      bloco !== undefined ? bloco : null,
+      bloco === undefined ? it.item : null,
+      `item-${it.id}`,
+    );
+    if (modelo) {
+      modelo.no.parent = no;
+      // a ferramenta inclinada, apoiada no chão; o resto um pouco maior que na mão
+      if (modelo.ferramenta) {
+        modelo.no.rotation.set(0, 0, -0.5);
+        modelo.no.position.set(0.12, -0.12, 0);
+        modelo.no.scaling.setAll(0.8);
+      } else modelo.no.scaling.setAll(1.3);
+      malhas.push(...modelo.malhas);
     }
     for (const m of malhas) {
       m.isPickable = false;

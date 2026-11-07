@@ -91,7 +91,11 @@ export function criarBoneco(
       // ferramenta: o cabo sai da mão para a frente com o braço abaixado; peças ficam
       // apoiadas na palma, um pouco à frente
       if (modelo.ferramenta) modelo.no.rotation.set(Math.PI / 2, 0, 0);
-      else modelo.no.position.set(0, -0.05, 0.09);
+      else if (modelo.planta) {
+        // a flor sai da mão para cima, do tamanho de uma flor de verdade na mão do boneco
+        modelo.no.position.set(0, -0.02, 0.1);
+        modelo.no.scaling.setAll(1.6);
+      } else modelo.no.position.set(0, -0.05, 0.09);
       for (const m of modelo.malhas) m.setEnabled(visivel);
     },
     segurando: () => modelo !== null,

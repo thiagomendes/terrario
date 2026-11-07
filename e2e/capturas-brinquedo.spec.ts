@@ -671,3 +671,28 @@ for (const id of [
     await foto(page, `vitrine-noite-${id}`);
   });
 }
+
+test('flor e cogumelo na mão', async ({ page }) => {
+  test.setTimeout(240_000);
+  await page.setViewportSize({ width: 960, height: 600 });
+  await page.goto('/');
+  await pronto(page);
+  await page.evaluate(() => {
+    document.querySelector<HTMLElement>('.entrada')?.setAttribute('hidden', '');
+    const e = window.__brumaluz!;
+    e.pausarDia = true;
+    e.hora = 0.42;
+    e.camera!.definir('primeira');
+    e.apontar!(0, 0.1);
+  });
+  await page.keyboard.press('Digit8');
+  await page.waitForTimeout(1500);
+  await foto(page, 'mao-flor-primeira');
+  await page.keyboard.press('Digit9');
+  await page.waitForTimeout(1200);
+  await foto(page, 'mao-cogumelo-primeira');
+  await page.keyboard.press('Digit8');
+  await page.evaluate(() => window.__brumaluz!.camera!.definir('frente'));
+  await page.waitForTimeout(1500);
+  await foto(page, 'mao-flor-terceira');
+});

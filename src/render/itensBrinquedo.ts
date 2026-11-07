@@ -5,7 +5,11 @@
  * do bloco no tema; comidas e materiais têm formas próprias.
  */
 import { TransformNode } from '@babylonjs/core/Meshes/transformNode';
-import type { Mesh } from '@babylonjs/core/Meshes/mesh';
+import { Mesh } from '@babylonjs/core/Meshes/mesh';
+import { VertexData } from '@babylonjs/core/Meshes/mesh.vertexData';
+import { StandardMaterial } from '@babylonjs/core/Materials/standardMaterial';
+import { Color3 } from '@babylonjs/core/Maths/math.color';
+import { plantaDeBrinquedo, PLANTAS_BRINQUEDO, type AlvoPlanta } from '../mesh/plantasBrinquedo';
 import type { Scene } from '@babylonjs/core/scene';
 import { obterItem } from '../jogo/itens';
 import { coresDoBloco } from '../fx/cores';
@@ -26,6 +30,8 @@ export interface ModeloItem {
   malhas: Mesh[];
   /** Ferramenta (segura pelo cabo, apontando para a frente) ou peça (no apoio da mão). */
   ferramenta: boolean;
+  /** Pecinha de planta (flor, cogumelo, tocha): fica de pé, um pouco maior na mão do boneco. */
+  planta?: boolean;
 }
 
 const hexDe = (rgb: [number, number, number]) =>
@@ -175,6 +181,11 @@ export function modeloNaMao(
     }
     return { no, malhas, ferramenta: false };
   }
+  if (bloco !== null && PLANTAS_BRINQUEDO.includes(bloco)) {
+    // flor, matinho, cogumelo, tocha: a mesma pecinha que vai no chão, não um bloco
+    add(malhaDePlanta(scene, bloco, `${prefixo}-planta`), 0, -0.04, 0);
+    return { no, malhas, ferramenta: false, planta: true };
+  }
   if (bloco !== null && bloco > 0) {
     const c = coresDoBloco(bloco);
     const lado = c ? hexDe(c.lado) : '#a9adb8';
@@ -188,4 +199,41 @@ export function modeloNaMao(
   }
   no.dispose();
   return null;
+}
+
+/** Tamanho da pecinha de planta na mão (o bloco de planta tem 1 de altura). */
+const ESCALA_PLANTA = 0.52;
+const matsPlanta = new WeakMap<Scene, StandardMaterial>();
+
+/** A pecinha 3D da planta (as cores vão nos vértices), com a base na origem. */
+function malhaDePlanta(scene: Scene, bloco: number, nome: string): Mesh {
+  const alvo: AlvoPlanta = {
+    posicoes: [],
+    normais: [],
+    uvs: [],
+    cores: [],
+    luz: [],
+    indices: [],
+    get vertices() {
+      return this.posicoes.length / 3;
+    },
+  };
+  plantaDeBrinquedo(bloco, -0.5, 0, -0.5, alvo, [0, 0], [1, 0], () => 0.5, false);
+  const m = new Mesh(nome, scene);
+  const dados = new VertexData();
+  dados.positions = alvo.posicoes.map((v) => v * ESCALA_PLANTA);
+  dados.normals = alvo.normais;
+  dados.indices = alvo.indices;
+  dados.colors = alvo.cores.map((v, i) => (i % 4 === 3 ? 1 : v));
+  dados.applyToMesh(m);
+  let mat = matsPlanta.get(scene);
+  if (!mat) {
+    mat = new StandardMaterial('planta-na-mao', scene);
+    mat.specularColor = new Color3(0.15, 0.15, 0.15);
+    mat.emissiveColor = new Color3(0.3, 0.3, 0.3);
+    mat.backFaceCulling = false;
+    matsPlanta.set(scene, mat);
+  }
+  m.material = mat;
+  return m;
 }

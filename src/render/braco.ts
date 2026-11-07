@@ -104,6 +104,10 @@ export function criarBraco(scene: Scene, camera: TargetCamera, aparencia: Aparen
     m.renderingGroupId = GRUPO_BRACO;
     m.alwaysSelectAsActiveMesh = true;
     m.setEnabled(visivel);
+    // só as peças de plástico do braço ganham o sombreado por vértice; a pecinha de planta
+    // já vem com as cores dela nos vértices (zerar deixava a flor preta na mão)
+    const mat = m.material as StandardMaterial | null;
+    if (!mat || !corDe.has(mat)) return;
     const n = m.getVerticesData(VertexBuffer.NormalKind);
     if (n) m.setVerticesData(VertexBuffer.ColorKind, new Float32Array((n.length / 3) * 4), true);
   };
