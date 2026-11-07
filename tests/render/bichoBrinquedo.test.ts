@@ -40,4 +40,24 @@ describe('bichos de brinquedo', () => {
       }
     }
   });
+
+  it('bicho desenhado à mão (com forma) passa como está, sem transparência e com teto de brilho', () => {
+    const pecas = [
+      { t: [0.4, 0.4, 0.4], p: [0, 1, 0], cor: '#ffffff', papel: 'cabeca', forma: 'bola' },
+      {
+        t: [0.1, 0.5, 0.1],
+        p: [0, 0.3, 0],
+        cor: '#000000',
+        forma: 'capsula',
+        alfa: 0.5,
+        brilho: 2,
+      },
+    ] as const;
+    const r = bichoDeBrinquedo(pecas as never);
+    expect(r).toHaveLength(2);
+    expect(r[0].t).toEqual([0.4, 0.4, 0.4]);
+    expect(r[1].forma).toBe('capsula');
+    expect(r[1].alfa).toBeUndefined();
+    expect(r[1].brilho).toBe(BRILHO_MAXIMO);
+  });
 });

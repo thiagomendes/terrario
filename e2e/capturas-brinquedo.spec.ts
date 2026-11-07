@@ -624,3 +624,50 @@ test('tochas de brinquedo à noite', async ({ page }) => {
   await page.waitForTimeout(3000);
   await foto(page, 'tochas-noite');
 });
+
+for (const id of [
+  'bruma-e-luz',
+  'planeta-vivo',
+  'doce-reino',
+  'era-dos-dinos',
+  'exploracao-lunar',
+  'mata-encantada',
+]) {
+  test(`vitrine dos bichos: ${id}`, async ({ page }) => {
+    test.setTimeout(240_000);
+    await page.setViewportSize({ width: 1280, height: 720 });
+    await page.goto(`/?tema=${id}`);
+    await pronto(page);
+    await page.evaluate(async () => {
+      document.querySelector<HTMLElement>('.entrada')?.setAttribute('hidden', '');
+      const s = document.createElement('style');
+      s.textContent =
+        '#hud, .hud, [data-hud], .barra, .minimapa, .bussola { display: none !important; }';
+      document.head.appendChild(s);
+      const e = window.__brumaluz!;
+      e.pausarDia = true;
+      e.hora = 0.42;
+      e.definirClima?.('limpo');
+      e.camera!.definir('primeira');
+      const [x0, , z0] = e.posicao!.map(Math.floor);
+      const y = 110;
+      for (let dx = -6; dx <= 6; dx++)
+        for (let dz = -2; dz <= 7; dz++) e.definirBloco!(x0 + dx, y, z0 + dz, 4);
+      e.teleportar!(x0 + 0.5, z0 + 0.5, y + 1);
+      await new Promise((r) => setTimeout(r, 800));
+      const tipos = ['cervo', 'coelho', 'raposa', 'espectro', 'peixe'] as const;
+      // de três quartos, virados para o jogador, um ao lado do outro
+      tipos.forEach((t, i) =>
+        e.estatua!(t, x0 + 0.5 - 4.4 + i * 2.2, y + 1, z0 + 6, Math.PI - 0.5),
+      );
+      e.apontar!(0, 0.22);
+    });
+    await page.waitForTimeout(3000);
+    await foto(page, `vitrine-${id}`);
+    await page.evaluate(() => {
+      window.__brumaluz!.hora = 0.92;
+    });
+    await page.waitForTimeout(2500);
+    await foto(page, `vitrine-noite-${id}`);
+  });
+}

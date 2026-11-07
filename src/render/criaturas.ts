@@ -136,6 +136,7 @@ export function criarRenderCriaturas(
       malha.parent = no;
       malha.position.y = peca.p[1] - pivoY;
       malha.position.x = peca.p[0] - pivoX;
+      if (peca.rot) malha.rotation.set(peca.rot[0], peca.rot[1], peca.rot[2]);
       malha.material = material(peca);
       malha.isPickable = false;
       if ((peca.brilho ?? 0) > 0.45) incluirNoGlow(malha);
@@ -145,7 +146,14 @@ export function criarRenderCriaturas(
     return { raiz, partes, fase: 0, ultX: c.x, ultZ: c.z, vel: 0, amp: 0, quadro: 0 };
   }
 
+  let proximaEstatua = -1;
   return {
+    /** Modelo parado de uma criatura (vitrine dos testes): o mesmo desenho do jogo. */
+    estatua(tipo: Criatura['tipo'], x: number, y: number, z: number, yaw: number): void {
+      const m = montar({ id: proximaEstatua--, tipo, x, z } as Criatura);
+      m.raiz.position.set(x, y, z);
+      m.raiz.rotation.y = yaw;
+    },
     atualizar(
       lista: readonly Criatura[],
       dt: number,

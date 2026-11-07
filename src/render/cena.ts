@@ -308,6 +308,8 @@ export interface EstadoDepuracao {
     vida: number;
   }[];
   invocar?: (tipo: TipoCriatura, x: number, y: number, z: number) => void;
+  /** Vitrine dos testes: um bicho parado, sem cérebro, com o desenho do jogo. */
+  estatua?: (tipo: TipoCriatura, x: number, y: number, z: number, yaw: number) => void;
   sobrevivencia?: SobrevivenciaCliente;
   /** Qualidade das peças de brinquedo escolhida (celular: 'baixo'). */
   detalhe?: 'alto' | 'baixo';
@@ -2337,6 +2339,7 @@ export function criarCena(
     (m) => glow.addExcludedMesh(m),
     () => undefined,
   );
+  estado.estatua = (tipo, x, y, z, yaw) => renderCriaturas.estatua(tipo, x, y, z, yaw);
   function direcaoOlhar() {
     if (raioToque) return raioToque.direcao;
     const yaw = camera.rotation.y;

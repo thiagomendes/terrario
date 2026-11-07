@@ -43,6 +43,19 @@ export function bichoDeBrinquedo(
   pecas: readonly PecaCriatura[],
   opcoes: OpcoesBicho = {},
 ): PecaBicho[] {
+  // desenhado à mão: usa como está (só sem transparência e com o teto do brilho)
+  if (pecas.some((p) => p.forma))
+    return pecas.map((p) => {
+      const menor = Math.min(...p.t);
+      const forma = p.forma ?? 'caixa';
+      return {
+        ...p,
+        forma,
+        raio: forma === 'capsula' ? menor * 0.49 : (p.raio ?? menor * 0.4),
+        alfa: undefined,
+        brilho: p.brilho !== undefined ? Math.min(BRILHO_MAXIMO, p.brilho) : undefined,
+      };
+    });
   const tom = opcoes.pastel ?? 0;
   const volume = (p: PecaCriatura) => p.t[0] * p.t[1] * p.t[2];
   const cabecas = pecas.filter((p) => p.papel === 'cabeca');

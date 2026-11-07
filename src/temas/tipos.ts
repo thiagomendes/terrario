@@ -131,6 +131,17 @@ export interface PecaCriatura {
    * antena balança devagar (pivô na base).
    */
   papel?: 'perna0' | 'perna1' | 'cabeca' | 'cauda' | 'roda' | 'asa0' | 'asa1' | 'antena';
+  /**
+   * Bicho desenhado à mão como brinquedo (spec 012): com a forma dita, o modelo é usado como
+   * está (sem a passagem automática de cabeça maior, olhos de bolinha etc.).
+   * 'bola' = elipsoide do tamanho t; 'capsula' = caixa de pontas bem redondas; 'caixa' = caixa
+   * com os cantos de raio `raio`.
+   */
+  forma?: 'bola' | 'capsula' | 'caixa';
+  /** Raio dos cantos da caixa (padrão: 40% do lado menor). */
+  raio?: number;
+  /** Inclinação da peça em radianos [x, y, z] (orelhas, chifres, rabo). */
+  rot?: [number, number, number];
 }
 
 /** Jeito de se mover da criatura (só visual). */
