@@ -11,6 +11,12 @@ test.skip(!process.env.MEDIR_DESEMPENHO, 'medição só com MEDIR_DESEMPENHO');
 test('quadros por segundo, parado e girando', async ({ page }) => {
   test.setTimeout(300_000);
   await page.setViewportSize({ width: 1280, height: 720 });
+  // DESACELERAR_CPU=4: CPU como a de um celular médio
+  const lento = Number(process.env.DESACELERAR_CPU ?? 0);
+  if (lento > 1) {
+    const cdp = await page.context().newCDPSession(page);
+    await cdp.send('Emulation.setCPUThrottlingRate', { rate: lento });
+  }
   await page.goto('/');
   await page.waitForFunction(() => window.__brumaluz?.ready === true, undefined, {
     timeout: 180_000,
