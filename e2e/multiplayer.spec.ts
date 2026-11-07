@@ -55,6 +55,12 @@ test('dois navegadores no mesmo mundo: convite, entrada pelo link e tudo sincron
   const bia = await jogador(browser, 'bia-e2e', 'Bia');
   const t0 = Date.now();
   await bia.goto(`/?sala=${codigo}`);
+  // spec 011: a prévia do mundo (de quem é, quem está) e um toque em "Entrar"
+  await expect(bia.locator('[data-tela-entrar] h2')).toHaveText('Entrar no mundo de Ana', {
+    timeout: 60_000,
+  });
+  await expect(bia.locator('[data-quem-esta]')).toContainText('Ana');
+  await bia.locator('[data-entrar-mundo]').click();
   await pronto(bia);
   const entrada = Date.now() - t0;
   console.log(`do link até o mundo pronto (WebGL por software): ${entrada} ms`);
@@ -162,11 +168,12 @@ test('código que não existe: mensagem para criança e volta ao mundo do aparel
   test.setTimeout(240_000);
   const caio = await jogador(browser, 'caio-e2e', 'Caio');
   await caio.goto('/?sala=LUA-COMETA-01');
-  await expect(caio.locator('[data-carregando-nuvem]')).toContainText('Esse código não existe', {
+  // spec 011: o motivo aparece no próprio cartão de entrar, nunca numa tela nova vazia
+  await expect(caio.locator('[data-tela-entrar]')).toContainText('Esse código não existe', {
     timeout: 60_000,
   });
   // nada de termos técnicos na tela
-  const texto = await caio.locator('[data-carregando-nuvem]').innerText();
+  const texto = await caio.locator('[data-tela-entrar]').innerText();
   expect(texto).not.toMatch(/erro \d|websocket|1006|undefined|null/i);
   await caio.locator('[data-voltar-meu-mundo]').click();
   await pronto(caio);

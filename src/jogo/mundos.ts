@@ -125,6 +125,8 @@ export interface RepositorioMundos {
   ultimo(): Promise<MetaMundo | null>;
   /** O mundo foi para a nuvem (ou o código mudou). */
   marcarNuvem(id: string, codigo: string): Promise<void>;
+  /** O mundo voltou da nuvem para o aparelho (spec 011): deixa de ter código. */
+  desmarcarNuvem(id: string): Promise<void>;
 }
 
 export function criarRepositorioMundos(
@@ -197,6 +199,12 @@ export function criarRepositorioMundos(
     async marcarNuvem(id, codigo) {
       await atualizar(id, (m) => {
         m.nuvem = codigo;
+        m.jogadoEm = agora();
+      });
+    },
+    async desmarcarNuvem(id) {
+      await atualizar(id, (m) => {
+        delete m.nuvem;
         m.jogadoEm = agora();
       });
     },

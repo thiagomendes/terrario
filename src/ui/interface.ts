@@ -176,7 +176,12 @@ export function criarInterface(
   app: HTMLElement,
   hotbar?: Hotbar,
   opMundo: OpcoesInterface = {},
-): { entrada: HTMLElement; acoes: HTMLElement } {
+): {
+  entrada: HTMLElement;
+  acoes: HTMLElement;
+  comecarSemTitulo(): void;
+  entrarNoJogo(): void;
+} {
   // base de brinquedo (spec 012) primeiro: cores, letras e peças que cada módulo refina
   const estiloBrinquedo = document.createElement('style');
   estiloBrinquedo.textContent = CSS_BRINQUEDO;
@@ -549,5 +554,21 @@ export function criarInterface(
     escrever(somInd, textoIndicador((a?.estado ?? 'inativo') as EstadoAudio, a?.mudo ?? false));
     escrever(camInd, textoIndicadorCamera(window.__brumaluz?.camera?.modo() ?? 'primeira'));
   }, 200);
-  return { entrada, acoes };
+  return {
+    entrada,
+    acoes,
+    /**
+     * Mundo com amigos (spec 011): a criança já escolheu entrar, então o jogo começa sem a
+     * tela de título nem um segundo "Jogar". O mouse prende no primeiro clique no mundo.
+     */
+    comecarSemTitulo() {
+      jogoIniciado = true;
+      entrada.hidden = true;
+    },
+    /** Dentro de um toque (o "Começar a jogar" do convite): tela cheia e mouse preso. */
+    entrarNoJogo() {
+      jogoIniciado = true;
+      entrarNoJogo();
+    },
+  };
 }

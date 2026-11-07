@@ -43,6 +43,58 @@ export const CSS_AMIGOS = `
 .amigos .chave { display: flex; align-items: center; gap: 10px; min-height: 48px; cursor: pointer; font-weight: 800; color: var(--tinta); }
 .amigos .chave input { width: 24px; height: 24px; accent-color: var(--azul-peca); }
 .amigos .passos { margin: 0 0 14px; padding-left: 1.3em; display: grid; gap: 8px; color: var(--tinta); font-weight: 600; }
+/* convite no mundo (spec 011): quem chega brilha; o botão de começar fica grande */
+.amigos .lista li.chegou { animation: chegou 1.6s ease-out; }
+@keyframes chegou { 0% { box-shadow: 0 0 0 0 rgba(255, 212, 90, 0.9); background: #fff1b8; } 100% { box-shadow: var(--sombra-poco); } }
+.amigos .esperando { display: flex; align-items: center; gap: 10px; color: var(--tinta-suave); font-weight: 700; padding: 10px 12px; border-radius: 14px; background: var(--poco); }
+.amigos .esperando i { width: 10px; height: 10px; border-radius: 50%; background: var(--amarela-fundo); animation: piscar 1.2s infinite; }
+.amigos .comecar { width: 100%; min-height: 56px; font-size: 1.15rem; margin-top: 6px; }
+.amigos .devolver { margin-top: 10px; }
+@media (prefers-reduced-motion: reduce) { .amigos .lista li.chegou, .amigos .esperando i { animation: none; } }
+/* botão fixo de amigos: pílula creme com o número de quem está no mundo */
+.botao-amigos {
+  position: fixed; z-index: 7; right: max(16px, env(safe-area-inset-right)); top: 226px;
+  display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 6px 14px 6px 10px; border: 0; border-radius: 999px;
+  background: rgba(255, 250, 240, 0.95); color: var(--tinta); font: 800 0.95rem var(--jogo); cursor: pointer;
+  box-shadow: 0 3px 0 rgba(150, 110, 60, 0.35), 0 8px 16px rgba(40, 25, 10, 0.2);
+}
+.botao-amigos:focus-visible { outline: 3px solid var(--azul); outline-offset: 2px; }
+.botao-amigos .rostos { display: inline-flex; }
+.botao-amigos .rostos i { width: 22px; height: 22px; border-radius: 50%; border: 2px solid #fffaf0; margin-left: -6px; background: #ffd45a; }
+.botao-amigos .rostos i:first-child { margin-left: 0; background: #7cc6ff; }
+.botao-amigos .rostos i:nth-child(3) { background: #ff9fb8; }
+body[data-overlay] .botao-amigos, body.tela-titulo .botao-amigos, body.modo-foto .botao-amigos { display: none; }
+@media (max-width: 700px), (max-height: 520px) { .botao-amigos { top: auto; bottom: calc(118px + env(safe-area-inset-bottom)); right: 12px; } }
+/* entrar no mundo de alguém (link ou QR): o tema do mundo em cima, o nome e um botão */
+.tela-entrar {
+  position: fixed; inset: 0; z-index: 80; display: grid; place-items: center; padding: 16px; overflow: auto;
+  background: linear-gradient(180deg, #a9d4ff, #dcefff 60%, #fff4dc); font: 700 1rem var(--jogo, system-ui, sans-serif); color: #3b2a1e;
+}
+.tela-entrar .cartao {
+  width: min(440px, 100%); box-sizing: border-box; border-radius: 24px; overflow: hidden; background: #fffaf0;
+  box-shadow: 0 8px 0 #f0d9b0, 0 22px 40px rgba(40, 25, 10, 0.25);
+}
+.tela-entrar .arte { height: 150px; background: #cfe9fb center / cover no-repeat; position: relative; }
+.tela-entrar .arte .chip-tema {
+  position: absolute; left: 14px; bottom: 12px; padding: 4px 12px; border-radius: 999px; font: 800 0.82rem var(--jogo, system-ui);
+  background: rgba(255, 250, 240, 0.92); color: #3b2a1e;
+}
+.tela-entrar .miolo { display: grid; gap: 12px; padding: 18px 20px 22px; }
+.tela-entrar h2 { margin: 0; font: 700 1.5rem/1.15 var(--display, system-ui, sans-serif); color: #b5531a; overflow-wrap: anywhere; }
+.tela-entrar .nome-mundo { margin: -6px 0 0; font-weight: 700; color: #6b5a4a; overflow-wrap: anywhere; }
+.tela-entrar .quem { margin: 0; color: #6b5a4a; font-weight: 600; line-height: 1.4; }
+.tela-entrar label { display: grid; gap: 6px; font-weight: 800; }
+.tela-entrar input {
+  min-height: 52px; padding: 10px 14px; box-sizing: border-box; border: 0; border-radius: 14px; width: 100%;
+  background: #f3e6cc; color: #3b2a1e; font: 800 1.15rem var(--jogo, system-ui); box-shadow: inset 0 3px 0 rgba(120, 80, 30, 0.12);
+}
+.tela-entrar input:focus-visible { outline: 3px solid #5aa7ff; outline-offset: 2px; }
+.tela-entrar .btn { min-height: 56px; font-size: 1.15rem; }
+.tela-entrar .erro { color: #c0392b; font-weight: 800; }
+.tela-entrar .erro:empty { display: none; }
+.tela-entrar .barra { height: 14px; border-radius: 999px; background: #f3e6cc; box-shadow: inset 0 3px 0 rgba(120, 80, 30, 0.14); overflow: hidden; }
+.tela-entrar .barra[hidden] { display: none; }
+.tela-entrar .barra i { display: block; height: 100%; width: 0; border-radius: 999px; background: linear-gradient(90deg, #ffd45a, #ff9b2f); transition: width 0.4s ease; }
 /* avisos de conexão: pílula creme com a bolinha piscando */
 .aviso-conexao {
   position: fixed; left: 50%; top: 12px; transform: translateX(-50%); z-index: 60;
@@ -57,7 +109,10 @@ export const CSS_AMIGOS = `
 `;
 
 /** O que dizer para cada recusa do servidor, do jeito de uma criança entender. */
-export const TEXTO_RECUSA: Record<MotivoRecusa | 'sem-internet' | 'servidor', string> = {
+export const TEXTO_RECUSA: Record<
+  MotivoRecusa | 'sem-internet' | 'servidor' | 'encerrada',
+  string
+> = {
   codigo: 'Esse código não existe. Confere com quem te mandou?',
   cheio: 'O mundo está cheio (8 amigos). Tenta daqui a pouco.',
   fechado: 'O dono fechou este mundo para visitas por enquanto.',
@@ -67,6 +122,7 @@ export const TEXTO_RECUSA: Record<MotivoRecusa | 'sem-internet' | 'servidor', st
   identidade: 'Não deu para entrar com este aparelho. Peça um código novo ao dono.',
   erro: 'Algo deu errado do nosso lado. Tente de novo daqui a pouco.',
   'sem-internet': 'Você está sem internet, mas seus mundos do aparelho continuam aqui.',
+  encerrada: 'O dono levou este mundo de volta para o aparelho dele. Obrigado por jogar junto!',
   servidor: 'O servidor dos mundos com amigos não respondeu. Tente de novo daqui a pouco.',
 };
 
@@ -189,7 +245,11 @@ export interface OpcoesPainelAmigos {
     trocarCodigo(): void;
     fechar(fechado: boolean): void;
     construir(pode: boolean): void;
+    /** Parar de jogar com amigos: o mundo volta inteiro para o aparelho. */
+    devolver(): void;
   };
+  /** Fechou o convite pelo "Começar a jogar" (o toque serve de gesto: mouse e som). */
+  aoComecar?(): void;
 }
 
 /** "Jogar com amigos": convite (código, link, QR), quem está no mundo e o painel do dono. */
@@ -197,9 +257,17 @@ export function criarPainelAmigos(raiz: HTMLElement, op: OpcoesPainelAmigos) {
   const m = criarModal('Jogar com amigos', 'data-painel-amigos', 'amigos');
   m.corpo.classList.add('amigos');
   raiz.appendChild(m.fundo);
+  // tocar fora do cartão fecha (o mundo já está atrás)
+  m.fundo.addEventListener('click', (e) => {
+    if (e.target === m.fundo) m.fechar();
+  });
   let sala: EstadoSala | null = null;
   let eu = '';
   let jogadores: JogadorNaLista[] = [];
+  /** Convite de quem acabou de criar: título de boas-vindas e o botão de começar. */
+  let modoConvite = false;
+  /** Quem já estava na lista (quem chega depois brilha). */
+  const vistos = new Set<string>();
 
   function botao(rot: string, f: () => void, attr: string, classe = 'btn'): HTMLButtonElement {
     const b = document.createElement('button');
@@ -327,14 +395,15 @@ export function criarPainelAmigos(raiz: HTMLElement, op: OpcoesPainelAmigos) {
     }
     const quem = document.createElement('p');
     quem.className = 'dica';
-    quem.textContent =
-      jogadores.length > 1 ? 'No mundo agora:' : 'Só você por enquanto. Mande o código!';
+    quem.textContent = 'No mundo agora:';
     const lista = document.createElement('ul');
     lista.className = 'lista';
     lista.setAttribute('data-lista-jogadores', '');
     const souDono = sala.dono === eu;
     for (const j of jogadores) {
       const li = document.createElement('li');
+      li.setAttribute('data-jogador', j.id);
+      if (vistos.size && !vistos.has(j.id)) li.classList.add('chegou');
       const n = document.createElement('span');
       n.className = 'nome';
       n.textContent = j.id === eu ? `${j.apelido} (você)` : j.apelido;
@@ -363,7 +432,28 @@ export function criarPainelAmigos(raiz: HTMLElement, op: OpcoesPainelAmigos) {
       }
       lista.appendChild(li);
     }
+    for (const j of jogadores) vistos.add(j.id);
     m.corpo.append(titulo, cod, qr, acoes, quem, lista);
+    if (jogadores.length <= 1) {
+      const esp = document.createElement('div');
+      esp.className = 'esperando';
+      esp.setAttribute('data-esperando', '');
+      const bol = document.createElement('i');
+      esp.append(bol, 'Esperando os amigos…');
+      m.corpo.append(esp);
+    }
+    if (modoConvite) {
+      const comecar = botao(
+        'Começar a jogar',
+        () => {
+          m.fechar();
+          op.aoComecar?.();
+        },
+        'data-comecar-a-jogar',
+        'btn primario comecar',
+      );
+      m.corpo.append(comecar);
+    }
     if (souDono && op.dono) {
       const d = op.dono;
       const chave = (rot: string, marcado: boolean, f: (v: boolean) => void, attr: string) => {
@@ -401,14 +491,39 @@ export function criarPainelAmigos(raiz: HTMLElement, op: OpcoesPainelAmigos) {
           },
           'data-trocar-codigo',
         ),
+        botao(
+          'Parar de jogar com amigos',
+          async () => {
+            const ok = await perguntar({
+              titulo: 'Parar de jogar com amigos',
+              texto:
+                'O mundo volta inteiro para este aparelho, com tudo o que os amigos construíram. O código deixa de valer e quem estiver no mundo recebe um aviso.',
+              confirmar: 'Trazer o mundo de volta',
+              perigo: true,
+            });
+            if (ok === true) d.devolver();
+          },
+          'data-devolver-mundo',
+          'btn devolver',
+        ),
       );
     }
   }
 
   return {
     abrir() {
+      modoConvite = false;
       desenhar();
       m.abrir();
+    },
+    /** O convite de quem acabou de criar o mundo (com "Começar a jogar"). */
+    abrirConvite() {
+      modoConvite = true;
+      desenhar();
+      m.abrir();
+      requestAnimationFrame(() =>
+        m.corpo.querySelector<HTMLButtonElement>('[data-comecar-a-jogar]')?.focus(),
+      );
     },
     fechar: () => m.fechar(),
     get aberto() {
@@ -445,5 +560,154 @@ export function criarAvisoConexao(raiz: HTMLElement) {
         el.hidden = false;
       } else el.hidden = true;
     },
+  };
+}
+
+/** Botão fixo de amigos: quantos estão no mundo e o mesmo cartão do convite. */
+export function criarBotaoAmigos(raiz: HTMLElement, aoClicar: () => void) {
+  const b = document.createElement('button');
+  b.type = 'button';
+  b.className = 'botao-amigos';
+  b.setAttribute('data-botao-amigos', '');
+  const rostos = document.createElement('span');
+  rostos.className = 'rostos';
+  rostos.setAttribute('aria-hidden', 'true');
+  const texto = document.createElement('span');
+  b.append(rostos, texto);
+  b.addEventListener('click', (e) => {
+    e.stopPropagation();
+    aoClicar();
+  });
+  raiz.appendChild(b);
+  const definir = (n: number) => {
+    rostos.replaceChildren(
+      ...Array.from({ length: Math.min(3, n) }, () => document.createElement('i')),
+    );
+    texto.textContent = n <= 1 ? 'Convidar' : `${n} no mundo`;
+    b.setAttribute(
+      'aria-label',
+      n <= 1 ? 'Convidar amigos' : `${n} pessoas no mundo: ver e convidar amigos`,
+    );
+  };
+  definir(1);
+  return { definir };
+}
+
+/** O que a tela de entrar mostra do mundo (vem do servidor antes de entrar). */
+export interface PreviaNaTela {
+  nome: string;
+  tema: string;
+  nomeTema: string;
+  dono: string;
+  presentes: string[];
+}
+
+/**
+ * "Entrar no mundo de Ana" (spec 011, T03): pelo link ou pelo QR. O tema do mundo em cima, o
+ * nome, quem está lá, "Seu nome" e um botão. O mesmo cartão mostra o progresso e, se não der,
+ * o motivo (nunca uma tela nova vazia).
+ */
+export function criarTelaEntrar(op: {
+  previa: PreviaNaTela | null;
+  apelido: string;
+  /** Toque em "Entrar" (dentro do gesto: o áudio já pode ser preparado aqui). */
+  aoEntrar(apelido: string): void;
+  aoVoltar(): void;
+}) {
+  const el = document.createElement('div');
+  el.className = 'tela-entrar';
+  el.setAttribute('data-tela-entrar', '');
+  const c = document.createElement('div');
+  c.className = 'cartao';
+  c.setAttribute('role', 'dialog');
+  c.setAttribute('aria-modal', 'true');
+  const arte = document.createElement('div');
+  arte.className = 'arte';
+  const p = op.previa;
+  if (p) {
+    arte.style.backgroundImage = `url(/temas/${encodeURIComponent(p.tema)}.jpg)`;
+    const chip = document.createElement('span');
+    chip.className = 'chip-tema';
+    chip.textContent = p.nomeTema;
+    arte.appendChild(chip);
+  }
+  const miolo = document.createElement('div');
+  miolo.className = 'miolo';
+  const h = document.createElement('h2');
+  h.textContent = p?.dono ? `Entrar no mundo de ${p.dono}` : 'Entrar no mundo';
+  c.setAttribute('aria-label', h.textContent);
+  miolo.appendChild(h);
+  if (p) {
+    const nm = document.createElement('p');
+    nm.className = 'nome-mundo';
+    nm.textContent = p.nome;
+    const quem = document.createElement('p');
+    quem.className = 'quem';
+    quem.setAttribute('data-quem-esta', '');
+    quem.textContent = p.presentes.length
+      ? `No mundo agora: ${p.presentes.join(', ')}`
+      : 'Ninguém está jogando agora: você chega primeiro!';
+    miolo.append(nm, quem);
+  }
+  const rot = document.createElement('label');
+  rot.textContent = 'Seu nome';
+  const nome = document.createElement('input');
+  nome.type = 'text';
+  nome.maxLength = 22;
+  nome.setAttribute('autocomplete', 'nickname');
+  nome.value = op.apelido;
+  nome.setAttribute('data-entrar-apelido', '');
+  rot.appendChild(nome);
+  const erro = document.createElement('div');
+  erro.className = 'erro';
+  erro.setAttribute('role', 'alert');
+  const barra = document.createElement('div');
+  barra.className = 'barra';
+  barra.hidden = true;
+  const i = document.createElement('i');
+  barra.appendChild(i);
+  const entrar = document.createElement('button');
+  entrar.type = 'button';
+  entrar.className = 'btn primario';
+  entrar.textContent = 'Entrar';
+  entrar.setAttribute('data-entrar-mundo', '');
+  miolo.append(rot, erro, barra, entrar);
+  c.append(arte, miolo);
+  el.appendChild(c);
+  document.body.appendChild(el);
+  const ir = () => {
+    erro.textContent = '';
+    entrar.disabled = true;
+    entrar.textContent = 'Entrando…';
+    nome.disabled = true;
+    barra.hidden = false;
+    op.aoEntrar(nome.value);
+  };
+  entrar.addEventListener('click', ir);
+  nome.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') ir();
+  });
+  requestAnimationFrame(() => entrar.focus());
+  return {
+    passo(fracao: number) {
+      i.style.width = `${Math.round(fracao * 100)}%`;
+    },
+    erro(t: string) {
+      erro.textContent = t;
+      barra.hidden = true;
+      nome.disabled = false;
+      entrar.disabled = false;
+      entrar.textContent = 'Tentar de novo';
+      if (!c.querySelector('[data-voltar-meu-mundo]')) {
+        const v = document.createElement('button');
+        v.type = 'button';
+        v.className = 'btn';
+        v.textContent = 'Voltar ao meu mundo';
+        v.setAttribute('data-voltar-meu-mundo', '');
+        v.addEventListener('click', op.aoVoltar);
+        miolo.appendChild(v);
+      }
+    },
+    fechar: () => el.remove(),
   };
 }

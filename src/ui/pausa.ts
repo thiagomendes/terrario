@@ -106,7 +106,7 @@ export function criarMenuPausa(raiz: HTMLElement, nomeMundo: string, acoes: Acoe
   );
   const grade = acoes.abrirFuncao ? [criarGradeFuncoes(acoes.abrirFuncao)] : [];
   const amigos = acoes.amigos
-    ? [botao('Jogar com amigos', 'azul', acoes.amigos, 'data-pausa-amigos', 'pessoa')]
+    ? [botao('Convidar amigos', 'azul', acoes.amigos, 'data-pausa-amigos', 'pessoa')]
     : [];
   card.append(
     h,

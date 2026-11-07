@@ -55,7 +55,11 @@ async function iniciar(app: HTMLElement): Promise<void> {
   let mundo: MetaMundo | null = null;
   let dados: DadosMundo;
   if (sala) {
-    const r = await entrarNaSala(app, normalizarCodigo(sala) ?? sala);
+    const r = await entrarNaSala(
+      app,
+      normalizarCodigo(sala) ?? sala,
+      params.get('direto') === '1',
+    );
     if (!r) return;
     const d = dadosDaSala(r.bv);
     mundo = d.mundo;
@@ -66,7 +70,8 @@ async function iniciar(app: HTMLElement): Promise<void> {
     const pedido = params.get('mundo');
     mundo = pedido ? await repo.obter(pedido) : null;
     // um mundo que foi para a nuvem abre lá (sem internet, fica um do aparelho)
-    if (mundo?.nuvem && navigator.onLine) return irParaSala(mundo.nuvem);
+    // (é o mundo desta criança: entra direto, sem a prévia do link)
+    if (mundo?.nuvem && navigator.onLine) return irParaSala(mundo.nuvem, false, true);
     if (!mundo) {
       const lista = await repo.listar();
       mundo =
@@ -106,7 +111,7 @@ async function iniciar(app: HTMLElement): Promise<void> {
     armazenamento = null;
   }
   const config = criarGerenciadorConfig(armazenamento);
-  criarInterface(app, hotbar, {
+  const ui = criarInterface(app, hotbar, {
     repo,
     mundo: atual,
     config,
@@ -135,7 +140,14 @@ async function iniciar(app: HTMLElement): Promise<void> {
     config,
     conexao: nuvem?.conexao,
   });
-  ligarAmigos(app, cena, { repo, mundo: nuvem ? undefined : atual, nuvem });
+  ligarAmigos(app, cena, {
+    repo,
+    mundo: nuvem ? undefined : atual,
+    nuvem,
+    comecar: () => ui.entrarNoJogo(),
+  });
+  // mundo com amigos: quem entrou já tocou em "Entrar" (ou acabou de criar): sem tela de título
+  if (nuvem) ui.comecarSemTitulo();
   if (fecharTela) {
     const pronto = cena;
     const esperar = () => (pronto.estado.ready ? fecharTela!() : setTimeout(esperar, 200));

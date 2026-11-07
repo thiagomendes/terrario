@@ -22,10 +22,27 @@ import {
   CSS_AMIGOS,
   TEXTO_RECUSA,
   criarAvisoConexao,
+  criarBotaoAmigos,
   criarEntrarComCodigo,
   criarPainelAmigos,
+  criarTelaEntrar,
 } from './ui/amigos';
+import { prepararAudioNoGesto } from './audio/ligador';
+import { obterTema, temaExiste } from './temas';
 import type { MotivoRecusa } from './rede/protocolo';
+
+/** A prévia que o servidor devolve (ou "não existe"). */
+interface PreviaMundo {
+  codigo: string;
+  nome: string;
+  tema: string;
+  modo: string;
+  dono: string;
+  presentes: string[];
+  fechado: boolean;
+  cheio: boolean;
+  naoExiste?: boolean;
+}
 import { CSS_SETAS, criarSetasAmigos } from './ui/setasAmigos';
 import type { criarCena } from './render/cena';
 
@@ -107,12 +124,53 @@ function voltarAoLocal(): void {
   location.href = u.toString();
 }
 
-function irParaSala(codigo: string, novo = false): void {
+/**
+ * Vai para o mundo da nuvem. `novo`: quem acabou de criar (o convite abre no mundo).
+ * `direto`: já escolheu entrar (código digitado, mundo da lista): sem a tela de prévia.
+ */
+function irParaSala(codigo: string, novo = false, direto = false): void {
   const u = new URL(location.href);
   u.search = '';
   u.searchParams.set('sala', codigo);
   if (novo) u.searchParams.set('novo', '1');
+  if (novo || direto) u.searchParams.set('direto', '1');
   location.href = u.toString();
+}
+
+/** Endereço HTTP do servidor (o mesmo do WebSocket, sem o /jogo). */
+function httpDoServidor(): string {
+  const u = new URL(urlServidor());
+  u.protocol = u.protocol === 'wss:' ? 'https:' : 'http:';
+  u.pathname = '';
+  return u.toString().replace(/\/$/, '');
+}
+
+/** Prévia do mundo (nome, tema, dono, quem está), ou null se não deu para saber. */
+async function previaDoMundo(codigo: string): Promise<PreviaMundo | null> {
+  try {
+    const ctl = new AbortController();
+    const t = setTimeout(() => ctl.abort(), 5000);
+    const r = await fetch(`${httpDoServidor()}/previa/${encodeURIComponent(codigo)}`, {
+      signal: ctl.signal,
+    });
+    clearTimeout(t);
+    if (r.status === 404)
+      return {
+        codigo: '',
+        nome: '',
+        tema: '',
+        modo: '',
+        dono: '',
+        presentes: [],
+        fechado: false,
+        cheio: false,
+        naoExiste: true,
+      };
+    if (!r.ok) return null;
+    return (await r.json()) as PreviaMundo;
+  } catch {
+    return null;
+  }
 }
 
 function jogador(apelido: string) {
@@ -147,14 +205,69 @@ function pedirApelido(raiz: HTMLElement, codigo: string): Promise<string> {
   });
 }
 
+/**
+ * Pelo link ou pelo QR (spec 011, T03): "Entrar no mundo de Ana", com o tema, quem está lá e
+ * "Seu nome". Um toque em "Entrar" e a criança está jogando (o mesmo cartão mostra o progresso
+ * e, se não der, o porquê). Devolve a tela já no modo de progresso.
+ */
+async function telaDePrevia(codigo: string): Promise<{
+  apelido: string;
+  tela: { passo(t: string, f: number): void; erro(t: string): void; fechar(): void };
+}> {
+  estilo();
+  const p = navigator.onLine ? await previaDoMundo(codigo) : null;
+  return new Promise((resolve) => {
+    const tela = criarTelaEntrar({
+      previa:
+        p && !p.naoExiste
+          ? {
+              nome: p.nome,
+              tema: p.tema,
+              nomeTema: temaExiste(p.tema) ? obterTema(p.tema).nome : p.tema,
+              dono: p.dono,
+              presentes: p.presentes,
+            }
+          : null,
+      apelido: sugestaoDeApelido(p?.tema),
+      aoEntrar: (escrito) => {
+        // o toque em "Entrar" é o gesto: o som já fica liberado para o mundo
+        prepararAudioNoGesto();
+        const apelido = apelidoOuSugerido(escrito, p?.tema);
+        definirApelido(apelido);
+        resolve({
+          apelido,
+          tela: { passo: (_t, f) => tela.passo(f), erro: (t) => tela.erro(t), fechar: tela.fechar },
+        });
+      },
+      aoVoltar: () => voltarAoLocal(),
+    });
+    if (!navigator.onLine) tela.erro(TEXTO_RECUSA['sem-internet']);
+    else if (p?.naoExiste) tela.erro(TEXTO_RECUSA.codigo);
+    else if (p?.fechado) tela.erro(TEXTO_RECUSA.fechado);
+    else if (p?.cheio) tela.erro(TEXTO_RECUSA.cheio);
+  });
+}
+
 /** Entra no mundo da sala: devolve a conexão e o mundo, ou mostra o erro e para. */
 export async function entrarNaSala(
   raiz: HTMLElement,
   codigo: string,
+  direto = false,
 ): Promise<{ conexao: ConexaoNuvem; bv: BemVindo; fecharTela: () => void } | null> {
   let apelido = identidade().apelido;
-  if (!apelido) apelido = await pedirApelido(raiz, codigo);
-  const tela = telaCarregando(`Entrando em ${codigo.split('-').join(' · ')}`);
+  let tela: { passo(t: string, f: number): void; erro(t: string): void; fechar(): void };
+  if (direto) {
+    if (!apelido) apelido = await pedirApelido(raiz, codigo);
+    tela = telaCarregando(`Entrando em ${codigo.split('-').join(' · ')}`);
+  } else {
+    // pelo link ou QR: a prévia do mundo e um toque em "Entrar"; erro aparece no mesmo cartão
+    for (;;) {
+      const r = await telaDePrevia(codigo);
+      apelido = r.apelido;
+      tela = r.tela;
+      break;
+    }
+  }
   if (!navigator.onLine) {
     tela.erro(TEXTO_RECUSA['sem-internet']);
     return null;
@@ -173,6 +286,19 @@ export async function entrarNaSala(
   } catch (e) {
     conexao.encerrar();
     tela.erro(textoDoErro(e));
+    if (!direto) {
+      // pelo link: "Tentar de novo" no mesmo cartão recomeça a entrada
+      return new Promise((resolve) => {
+        document.querySelector('[data-entrar-mundo]')?.addEventListener(
+          'click',
+          () => {
+            document.querySelector('[data-tela-entrar]')?.remove();
+            void entrarNaSala(raiz, codigo, false).then(resolve);
+          },
+          { once: true, capture: true },
+        );
+      });
+    }
     return null;
   }
 }
@@ -209,6 +335,8 @@ export function dadosDaSala(bv: BemVindo): { mundo: MetaMundo; dados: DadosMundo
 
 export interface OpcoesAmigos {
   repo: RepositorioMundos;
+  /** Fechou o convite com "Começar a jogar": entra no jogo (mouse preso, som). */
+  comecar?(): void;
   /** Mundo do aparelho aberto agora (para levar para a nuvem). */
   mundo?: MetaMundo;
   /** Mundo da nuvem aberto agora. */
@@ -221,8 +349,9 @@ export function ligarAmigos(raiz: HTMLElement, cena: Cena, op: OpcoesAmigos): vo
   const entrar = criarEntrarComCodigo(raiz, {
     apelido: identidade().apelido,
     aoEntrar: async (codigo, apelido) => {
-      definirApelido(apelido);
-      irParaSala(codigo);
+      definirApelido(apelidoOuSugerido(apelido));
+      // já digitou o código e tocou em "Entrar": vai direto para o mundo (sem a prévia)
+      irParaSala(codigo, false, true);
     },
   });
   window.addEventListener('brumaluz:entrarCodigo', () => entrar.abrir());
@@ -235,8 +364,10 @@ export function ligarAmigos(raiz: HTMLElement, cena: Cena, op: OpcoesAmigos): vo
           trocarCodigo: () => nv.conexao.pedir({ t: 'dono', acao: 'trocarCodigo' }),
           fechar: (fechado) => nv.conexao.pedir({ t: 'dono', acao: 'fechar', fechado }),
           construir: (pode) => nv.conexao.pedir({ t: 'dono', acao: 'construir', pode }),
+          devolver: () => nv.conexao.pedir({ t: 'dono', acao: 'devolver' }),
         }
       : undefined,
+    aoComecar: () => op.comecar?.(),
   });
   window.addEventListener('brumaluz:amigos', () => {
     document.exitPointerLock?.();
@@ -254,15 +385,35 @@ export function ligarAmigos(raiz: HTMLElement, cena: Cena, op: OpcoesAmigos): vo
   const voce = nv.bv.voce;
   const apelido = identidade().apelido || 'Você';
   painel.definirSala(nv.bv.sala, voce);
-  const atualizarLista = () =>
-    painel.definirJogadores([
+  // botão fixo de amigos: quantos estão no mundo e o mesmo cartão do convite
+  const botaoAmigos = criarBotaoAmigos(raiz, () => {
+    document.exitPointerLock?.();
+    painel.abrir();
+  });
+  const atualizarLista = () => {
+    const lista = [
       { id: voce, apelido },
       ...(cena.estado.outrosJogadores?.() ?? []).map((o) => ({ id: o.id, apelido: o.apelido })),
-    ]);
+    ];
+    painel.definirJogadores(lista);
+    botaoAmigos.definir(lista.length);
+  };
   atualizarLista();
-  window.addEventListener('brumaluz:entrou', () => setTimeout(atualizarLista, 200));
-  window.addEventListener('brumaluz:saiu', () => setTimeout(atualizarLista, 200));
-  setInterval(atualizarLista, 3000);
+  window.addEventListener('brumaluz:entrou', () => setTimeout(atualizarLista, 150));
+  window.addEventListener('brumaluz:saiu', () => setTimeout(atualizarLista, 150));
+  setInterval(atualizarLista, 1000);
+  // parar de jogar com amigos: o mundo volta inteiro para o aparelho e abre aqui
+  nv.conexao.aoDevolvido((dados) => {
+    const t = telaCarregando('Trazendo o mundo para o aparelho…');
+    void guardarDevolvido(op.repo, nv.bv, dados)
+      .then((id) => {
+        const u = new URL(location.href);
+        u.search = '';
+        u.searchParams.set('mundo', id);
+        location.href = u.toString();
+      })
+      .catch(() => t.erro('Não deu para guardar o mundo no aparelho. Tente de novo.'));
+  });
   nv.conexao.aoSala((s) => {
     painel.definirSala(s, voce);
     // o código mudou: o endereço da página e o mundo do aparelho acompanham
@@ -304,6 +455,8 @@ export function ligarAmigos(raiz: HTMLElement, cena: Cena, op: OpcoesAmigos): vo
       notificar('Voltamos! A conexão está de pé de novo.');
     } else if (e === 'expulso') {
       telaCarregando('Você saiu deste mundo').erro(TEXTO_RECUSA.expulso);
+    } else if (e === 'encerrada') {
+      telaCarregando('O passeio acabou').erro(TEXTO_RECUSA.encerrada);
     } else if (e === 'recusado') {
       telaCarregando('Não deu para voltar').erro(TEXTO_RECUSA[motivo ?? 'erro']);
     }
@@ -314,8 +467,30 @@ export function ligarAmigos(raiz: HTMLElement, cena: Cena, op: OpcoesAmigos): vo
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'hidden') guardar();
   });
-  // primeira vez no mundo que acabou de ir para a nuvem: o convite já aberto
-  if (nv.novo) setTimeout(() => painel.abrir(), 600);
+  // primeira vez no mundo que acabou de ir para a nuvem: o convite já aberto, com o mundo atrás
+  if (nv.novo) {
+    const abrirQuandoPronto = () =>
+      cena.estado.ready ? painel.abrirConvite() : setTimeout(abrirQuandoPronto, 150);
+    abrirQuandoPronto();
+  }
+}
+
+/**
+ * Grava no aparelho o mundo que voltou da nuvem: no mesmo mundo de onde ele saiu (se este
+ * aparelho o levou) ou num mundo novo com o nome e a semente dele. Devolve o id.
+ */
+async function guardarDevolvido(
+  repo: RepositorioMundos,
+  bv: BemVindo,
+  dados: DadosMundo,
+): Promise<string> {
+  const codigo = normalizarCodigo(bv.sala.codigo);
+  const lista = await repo.listar();
+  let m = lista.find((x) => x.nuvem && normalizarCodigo(x.nuvem) === codigo);
+  if (!m) m = await repo.criar(bv.mundo.nome, bv.mundo.semente, bv.mundo.modo, bv.mundo.tema);
+  await repo.salvar(m.id, dados);
+  await repo.desmarcarNuvem(m.id);
+  return m.id;
 }
 
 /** O nome do personagem deste aparelho (para sugerir o apelido). */
