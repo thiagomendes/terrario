@@ -2,138 +2,244 @@ import type { TipoCriatura } from '../../jogo/criaturas';
 import type { MovimentoCriatura, PecaCriatura, VozCriatura } from '../tipos';
 
 /**
- * Criaturas do Planeta Vivo (mesmas caixas de colisão do jogo):
- *  - lesma-pastora: corpo baixo com concha espiral nas costas e olhos em antenas;
- *  - pulga-bola: bolinha fofa rosa de pernas de mola, que saltita alto;
- *  - água-viva lilás: sino translúcido com miolo de luz e tentáculos;
- *  - sombrinha curiosa: bolota azul-noite com chapeuzinho de guarda-chuva e olhões;
- *  - robô-cão: caixinha prateada com tela de rosto sorridente e antena.
+ * Criaturas do Planeta Vivo, desenhadas à mão como brinquedo (spec 012) — mesmas caixas de
+ * colisão do jogo, pés em y=0 e frente para +z:
+ *  - lesma-pastora (cervo): sola gordinha, concha espiral laranja e olhões de bolinha nas antenas;
+ *  - pulga-bola (coelho): bolinha fofa rosa com topete, pernas de mola e anteninhas de luz;
+ *  - água-viva lilás (peixe): sino de plástico com luzinha no topo, carinha e tentáculos de bala;
+ *  - sombrinha curiosa (espectro): fantasminha pastel com chapéu de guarda-chuva e olhinhos que
+ *    brilham no escuro (brinquedo de brilhar, nunca vulto);
+ *  - robô-cão (raposa): caixinha branca com tela de rosto sorridente, orelhas laranja e antena.
  */
+
+type V3 = [number, number, number];
+type Extra = Pick<PecaCriatura, 'brilho' | 'papel' | 'raio' | 'rot'>;
+
+const bola = (t: V3, p: V3, cor: string, extra: Extra = {}): PecaCriatura => ({
+  t,
+  p,
+  cor,
+  forma: 'bola',
+  ...extra,
+});
+const capsula = (t: V3, p: V3, cor: string, extra: Extra = {}): PecaCriatura => ({
+  t,
+  p,
+  cor,
+  forma: 'capsula',
+  ...extra,
+});
+const caixa = (t: V3, p: V3, cor: string, extra: Extra = {}): PecaCriatura => ({
+  t,
+  p,
+  cor,
+  forma: 'caixa',
+  ...extra,
+});
+
+/** z da superfície da frente de uma bola (centro c, tamanho t) no ponto (x, y). */
+const naFrente = (c: V3, t: V3, x: number, y: number) => {
+  const nx = (2 * (x - c[0])) / t[0];
+  const ny = (2 * (y - c[1])) / t[1];
+  return c[2] + (t[2] / 2) * Math.sqrt(Math.max(0, 1 - nx * nx - ny * ny));
+};
+
+/** Par de olhos de bolinha escuros, cada um com o pontinho branco de brilho na frente-cima. */
+function olhos(
+  x: number,
+  y: number,
+  z: number,
+  larg: number,
+  alt: number,
+  extra: Extra = {},
+  cor = '#231a28',
+  brilhoPonto = 0.3,
+): PecaCriatura[] {
+  return [1, -1].flatMap((s) => [
+    bola([larg, alt, larg * 0.6], [s * x, y, z], cor, extra),
+    bola(
+      [larg * 0.38, larg * 0.38, larg * 0.2],
+      [s * x + larg * 0.18, y + alt * 0.22, z + larg * 0.26],
+      '#ffffff',
+      { ...extra, brilho: brilhoPonto },
+    ),
+  ]);
+}
+
+/** Par de bochechas rosadas (bolinhas achatadas). */
+const bochechas = (
+  x: number,
+  y: number,
+  z: number,
+  tam: number,
+  extra: Extra = {},
+  cor = '#ff8fb0',
+) => [1, -1].map((s) => bola([tam, tam * 0.6, tam * 0.35], [s * x, y, z], cor, extra));
+
+// ---- medidas de apoio (cabeças em bola, para pôr a carinha bem na superfície) ----
+const LESMA_CAB: V3 = [0.56, 0.52, 0.52];
+const LESMA_CAB_P: V3 = [0, 0.82, 0.5];
+const PULGA: V3 = [0.52, 0.5, 0.5];
+const PULGA_P: V3 = [0, 0.42, -0.02];
+const SINO: V3 = [0.48, 0.36, 0.46];
+const SINO_P: V3 = [0, 0.37, 0];
+const SOMBRA_CAB: V3 = [0.66, 0.56, 0.6];
+const SOMBRA_CAB_P: V3 = [0, 1.44, 0];
+
+const cab = { papel: 'cabeca' } as const;
+
 export const CRIATURAS_PLANETA: Record<TipoCriatura, PecaCriatura[]> = {
   cervo: [
-    // pé de lesma (sola) e corpo
-    { t: [0.54, 0.16, 1.2], p: [0, 0.16, 0], cor: '#4fb8a4' },
-    { t: [0.48, 0.3, 1.06], p: [0, 0.35, 0], cor: '#6fd8c0' },
-    // concha espiral
-    { t: [0.46, 0.66, 0.66], p: [0, 0.8, -0.14], cor: '#ff9a6a' },
-    { t: [0.5, 0.14, 0.7], p: [0, 0.74, -0.14], cor: '#b88cff' },
-    { t: [0.5, 0.26, 0.26], p: [0, 0.86, -0.14], cor: '#ffd36e', brilho: 0.5 },
-    { t: [0.52, 0.1, 0.1], p: [0, 0.86, -0.14], cor: '#c0503a' },
-    // pescoço e cabeça
-    { t: [0.34, 0.5, 0.3], p: [0, 0.62, 0.48], cor: '#6fd8c0' },
-    { t: [0.38, 0.32, 0.36], p: [0, 0.98, 0.58], cor: '#7fe4cc', papel: 'cabeca' },
-    { t: [0.16, 0.03, 0.02], p: [0, 0.9, 0.77], cor: '#1a3a40', papel: 'cabeca' },
-    { t: [0.08, 0.05, 0.02], p: [0.13, 0.94, 0.77], cor: '#ff9ac0', papel: 'cabeca' },
-    { t: [0.08, 0.05, 0.02], p: [-0.13, 0.94, 0.77], cor: '#ff9ac0', papel: 'cabeca' },
-    // antenas com olhos na ponta
-    { t: [0.06, 0.42, 0.06], p: [0.11, 1.35, 0.6], cor: '#6fd8c0', papel: 'antena' },
-    { t: [0.06, 0.42, 0.06], p: [-0.11, 1.35, 0.6], cor: '#6fd8c0', papel: 'antena' },
-    { t: [0.15, 0.15, 0.15], p: [0.11, 1.6, 0.6], cor: '#ffffff', papel: 'antena' },
-    { t: [0.15, 0.15, 0.15], p: [-0.11, 1.6, 0.6], cor: '#ffffff', papel: 'antena' },
-    { t: [0.07, 0.08, 0.03], p: [0.11, 1.6, 0.68], cor: '#151020', papel: 'antena' },
-    { t: [0.07, 0.08, 0.03], p: [-0.11, 1.6, 0.68], cor: '#151020', papel: 'antena' },
-    // pezinhos ondulantes da sola
-    { t: [0.16, 0.08, 0.24], p: [0.2, 0.04, 0.34], cor: '#3a9a88', papel: 'perna0' },
-    { t: [0.16, 0.08, 0.24], p: [-0.2, 0.04, 0.34], cor: '#3a9a88', papel: 'perna1' },
-    { t: [0.16, 0.08, 0.24], p: [0.2, 0.04, -0.34], cor: '#3a9a88', papel: 'perna1' },
-    { t: [0.16, 0.08, 0.24], p: [-0.2, 0.04, -0.34], cor: '#3a9a88', papel: 'perna0' },
+    // sola gordinha e corpo de lesma
+    capsula([0.54, 0.16, 1.16], [0, 0.09, -0.02], '#2fb898'),
+    bola([0.5, 0.4, 1.16], [0, 0.26, -0.04], '#4fd8b8'),
+    // concha espiral: bola laranja com anéis amarelo e lilás saindo dos lados
+    bola([0.5, 0.68, 0.72], [0, 0.76, -0.2], '#ff7a3a'),
+    bola([0.56, 0.46, 0.5], [0, 0.78, -0.2], '#ffc23a'),
+    bola([0.6, 0.2, 0.22], [0, 0.8, -0.2], '#a86cff'),
+    // pescoço curto entrando no corpo e na cabeça, e o cabeção
+    capsula([0.34, 0.38, 0.32], [0, 0.48, 0.4], '#4fd8b8'),
+    bola(LESMA_CAB, LESMA_CAB_P, '#62e6c8', cab),
+    ...bochechas(0.17, 0.76, naFrente(LESMA_CAB_P, LESMA_CAB, 0.17, 0.76) - 0.01, 0.11, cab),
+    bola([0.06, 0.045, 0.04], [0, 0.8, naFrente(LESMA_CAB_P, LESMA_CAB, 0, 0.8)], '#1f8a72', cab),
+    capsula(
+      [0.1, 0.03, 0.03],
+      [0, 0.73, naFrente(LESMA_CAB_P, LESMA_CAB, 0, 0.73)],
+      '#b8305a',
+      cab,
+    ),
+    // antenas (base dentro da cabeça) com olhões de bolinha na ponta
+    ...[1, -1].map((s) =>
+      capsula([0.07, 0.38, 0.07], [s * 0.12, 1.2, 0.52], '#4fd8b8', {
+        papel: 'antena',
+        rot: [0, 0, -s * 0.15],
+      }),
+    ),
+    ...olhos(0.15, 1.42, 0.53, 0.16, 0.18, { papel: 'antena' }),
+    // pezinhos ondulantes da sola (topo dentro da sola)
+    capsula([0.18, 0.12, 0.26], [0.22, 0.06, 0.34], '#1f9a80', { papel: 'perna0' }),
+    capsula([0.18, 0.12, 0.26], [-0.22, 0.06, 0.34], '#1f9a80', { papel: 'perna1' }),
+    capsula([0.18, 0.12, 0.26], [0.22, 0.06, -0.34], '#1f9a80', { papel: 'perna1' }),
+    capsula([0.18, 0.12, 0.26], [-0.22, 0.06, -0.34], '#1f9a80', { papel: 'perna0' }),
   ],
   coelho: [
-    { t: [0.4, 0.36, 0.4], p: [0, 0.34, -0.02], cor: '#ff8fc8' },
-    { t: [0.3, 0.08, 0.3], p: [0, 0.55, -0.02], cor: '#ffb0dc' },
-    { t: [0.32, 0.28, 0.12], p: [0, 0.36, 0.22], cor: '#ffc8e6', papel: 'cabeca' },
-    { t: [0.11, 0.12, 0.03], p: [0.08, 0.41, 0.29], cor: '#ffffff', papel: 'cabeca' },
-    { t: [0.11, 0.12, 0.03], p: [-0.08, 0.41, 0.29], cor: '#ffffff', papel: 'cabeca' },
-    { t: [0.05, 0.06, 0.02], p: [0.08, 0.4, 0.31], cor: '#1a1020', papel: 'cabeca' },
-    { t: [0.05, 0.06, 0.02], p: [-0.08, 0.4, 0.31], cor: '#1a1020', papel: 'cabeca' },
-    { t: [0.08, 0.03, 0.02], p: [0, 0.31, 0.29], cor: '#c0407a', papel: 'cabeca' },
-    { t: [0.03, 0.22, 0.03], p: [0.07, 0.68, 0.12], cor: '#ff8fc8', papel: 'antena' },
-    { t: [0.03, 0.22, 0.03], p: [-0.07, 0.68, 0.12], cor: '#ff8fc8', papel: 'antena' },
-    { t: [0.08, 0.08, 0.08], p: [0.07, 0.82, 0.12], cor: '#ffe27a', brilho: 0.8, papel: 'antena' },
-    { t: [0.08, 0.08, 0.08], p: [-0.07, 0.82, 0.12], cor: '#ffe27a', brilho: 0.8, papel: 'antena' },
-    // pernas de mola (coxa e pé)
-    { t: [0.08, 0.16, 0.2], p: [0.17, 0.17, -0.06], cor: '#e070b0', papel: 'perna0' },
-    { t: [0.1, 0.06, 0.2], p: [0.17, 0.03, 0.02], cor: '#b8508e', papel: 'perna0' },
-    { t: [0.08, 0.16, 0.2], p: [-0.17, 0.17, -0.06], cor: '#e070b0', papel: 'perna1' },
-    { t: [0.1, 0.06, 0.2], p: [-0.17, 0.03, 0.02], cor: '#b8508e', papel: 'perna1' },
+    // a pulga é uma bola só (corpo e cara), com topete fofo em cima
+    bola(PULGA, PULGA_P, '#ff6fb8'),
+    bola([0.16, 0.11, 0.15], [0, 0.68, 0.02], '#ff9ad0'),
+    bola([0.13, 0.09, 0.13], [0.08, 0.66, -0.07], '#ffc8e6'),
+    bola([0.13, 0.09, 0.13], [-0.08, 0.66, -0.07], '#ffc8e6'),
+    // carinha
+    ...olhos(0.1, 0.47, naFrente(PULGA_P, PULGA, 0.1, 0.47) - 0.01, 0.12, 0.14, cab),
+    ...bochechas(0.18, 0.37, naFrente(PULGA_P, PULGA, 0.18, 0.37) - 0.01, 0.1, cab, '#ff6fa0'),
+    bola([0.07, 0.05, 0.05], [0, 0.39, naFrente(PULGA_P, PULGA, 0, 0.39)], '#c0407a', cab),
+    capsula([0.07, 0.025, 0.02], [0, 0.335, naFrente(PULGA_P, PULGA, 0, 0.335)], '#7a2050', cab),
+    // anteninhas com luz amarela na ponta
+    ...[1, -1].flatMap((s) => [
+      capsula([0.035, 0.24, 0.035], [s * 0.1, 0.76, 0.06], '#ff6fb8', {
+        papel: 'antena',
+        rot: [0, 0, -s * 0.25],
+      }),
+      bola([0.1, 0.1, 0.1], [s * 0.13, 0.89, 0.06], '#ffe27a', { brilho: 0.55, papel: 'antena' }),
+    ]),
+    // pernas de mola gordinhas e pompom de rabo
+    capsula([0.15, 0.28, 0.19], [0.15, 0.14, 0.02], '#d8509e', { papel: 'perna0' }),
+    capsula([0.15, 0.28, 0.19], [-0.15, 0.14, 0.02], '#d8509e', { papel: 'perna1' }),
+    bola([0.13, 0.13, 0.13], [0, 0.44, -0.28], '#ffc8e6', { papel: 'cauda' }),
   ],
   peixe: [
-    { t: [0.42, 0.22, 0.42], p: [0, 0.33, 0], cor: '#c8a0ff', brilho: 0.6, alfa: 0.75 },
-    { t: [0.3, 0.08, 0.3], p: [0, 0.48, 0], cor: '#e0c8ff', brilho: 0.6, alfa: 0.8 },
-    { t: [0.14, 0.1, 0.14], p: [0, 0.31, 0], cor: '#7af7e0', brilho: 1.2 },
-    { t: [0.05, 0.05, 0.02], p: [0.08, 0.34, 0.215], cor: '#1a1030' },
-    { t: [0.05, 0.05, 0.02], p: [-0.08, 0.34, 0.215], cor: '#1a1030' },
-    { t: [0.04, 0.2, 0.04], p: [0.1, 0.12, 0.1], cor: '#ff9ad8', brilho: 0.7, papel: 'cauda' },
-    { t: [0.04, 0.2, 0.04], p: [-0.1, 0.12, 0.1], cor: '#ff9ad8', brilho: 0.7, papel: 'cauda' },
-    { t: [0.04, 0.2, 0.04], p: [0.1, 0.12, -0.1], cor: '#ff9ad8', brilho: 0.7, papel: 'cauda' },
-    { t: [0.04, 0.2, 0.04], p: [-0.1, 0.12, -0.1], cor: '#ff9ad8', brilho: 0.7, papel: 'cauda' },
+    // sino de plástico lilás com saia clara e luzinha no topo
+    bola(SINO, SINO_P, '#b07aff'),
+    bola([0.5, 0.07, 0.48], [0, 0.23, 0], '#d58cff'),
+    bola([0.14, 0.08, 0.14], [0, 0.54, 0], '#7af7e0', { brilho: 0.5 }),
+    // carinha
+    ...olhos(0.095, 0.38, naFrente(SINO_P, SINO, 0.095, 0.38) - 0.01, 0.1, 0.12),
+    ...bochechas(0.16, 0.32, naFrente(SINO_P, SINO, 0.16, 0.32) - 0.01, 0.08),
+    bola([0.05, 0.04, 0.03], [0, 0.3, naFrente(SINO_P, SINO, 0, 0.3)], '#c0407a'),
+    // tentáculos de bala com pontinhas de luz
+    ...[
+      [0.13, 0.12],
+      [-0.13, 0.12],
+      [0.13, -0.12],
+      [-0.13, -0.12],
+    ].flatMap(([x, z]) => [
+      capsula([0.08, 0.24, 0.08], [x, 0.13, z], '#ff5ab8', { papel: 'cauda' }),
+      bola([0.09, 0.09, 0.09], [x, 0.045, z], '#5af0ff', { brilho: 0.5, papel: 'cauda' }),
+    ]),
   ],
   espectro: [
-    // corpinho redondo e fofo, saia ondulada embaixo
-    { t: [0.56, 0.5, 0.5], p: [0, 1.06, 0], cor: '#3e3478', brilho: 0.3, alfa: 0.92 },
-    {
-      t: [0.46, 0.18, 0.42],
-      p: [0, 0.74, 0],
-      cor: '#52469a',
-      brilho: 0.3,
-      alfa: 0.8,
-      papel: 'cauda',
-    },
-    { t: [0.62, 0.44, 0.56], p: [0, 1.5, 0], cor: '#4a3e8a', brilho: 0.3, papel: 'cabeca' },
-    // guarda-chuvinha em cúpula de três andares
-    { t: [0.9, 0.08, 0.84], p: [0, 1.76, 0], cor: '#ff8ad0', brilho: 0.4, papel: 'cabeca' },
-    { t: [0.66, 0.1, 0.62], p: [0, 1.85, 0], cor: '#ffb0e0', brilho: 0.4, papel: 'cabeca' },
-    { t: [0.36, 0.1, 0.34], p: [0, 1.95, 0], cor: '#ff8ad0', brilho: 0.4, papel: 'cabeca' },
-    { t: [0.08, 0.12, 0.08], p: [0, 2.06, 0], cor: '#ffe27a', brilho: 0.9, papel: 'cabeca' },
-    // olhões curiosos (um olha para o lado) e boquinha de "oh!"
-    { t: [0.2, 0.22, 0.03], p: [0.14, 1.52, 0.29], cor: '#ffffff', brilho: 0.8, papel: 'cabeca' },
-    { t: [0.2, 0.22, 0.03], p: [-0.14, 1.52, 0.29], cor: '#ffffff', brilho: 0.8, papel: 'cabeca' },
-    { t: [0.09, 0.11, 0.02], p: [0.12, 1.54, 0.31], cor: '#151020', papel: 'cabeca' },
-    { t: [0.09, 0.11, 0.02], p: [-0.16, 1.54, 0.31], cor: '#151020', papel: 'cabeca' },
-    { t: [0.08, 0.08, 0.02], p: [0, 1.34, 0.29], cor: '#ff9ac0', papel: 'cabeca' },
+    // corpinho pastel com saia ondulada (boia no ar)
+    bola([0.5, 0.46, 0.46], [0, 1.0, 0], '#cfc6ff'),
+    bola([0.56, 0.16, 0.5], [0, 0.8, 0], '#e2dbff', { papel: 'cauda' }),
+    bola([0.16, 0.14, 0.16], [0.17, 0.73, 0.12], '#e2dbff', { papel: 'cauda' }),
+    bola([0.16, 0.14, 0.16], [-0.17, 0.73, 0.12], '#e2dbff', { papel: 'cauda' }),
+    bola([0.16, 0.14, 0.16], [0, 0.72, -0.18], '#e2dbff', { papel: 'cauda' }),
     // bracinhos
-    {
-      t: [0.12, 0.3, 0.12],
-      p: [0.34, 1.06, 0.06],
-      cor: '#3e3478',
-      brilho: 0.3,
-      alfa: 0.92,
+    capsula([0.13, 0.26, 0.13], [0.29, 1.02, 0.06], '#cfc6ff', {
       papel: 'perna0',
-    },
-    {
-      t: [0.12, 0.3, 0.12],
-      p: [-0.34, 1.06, 0.06],
-      cor: '#3e3478',
-      brilho: 0.3,
-      alfa: 0.92,
+      rot: [0, 0, 0.5],
+    }),
+    capsula([0.13, 0.26, 0.13], [-0.29, 1.02, 0.06], '#cfc6ff', {
       papel: 'perna1',
-    },
+      rot: [0, 0, -0.5],
+    }),
+    // cabeção com olhinhos que brilham no escuro, bochechas e boquinha de "oh!"
+    bola(SOMBRA_CAB, SOMBRA_CAB_P, '#ddd6ff', cab),
+    ...olhos(
+      0.14,
+      1.47,
+      naFrente(SOMBRA_CAB_P, SOMBRA_CAB, 0.14, 1.47) - 0.01,
+      0.15,
+      0.19,
+      { ...cab, brilho: 0.5 },
+      '#4a3aa8',
+      0.55,
+    ),
+    ...bochechas(0.22, 1.36, naFrente(SOMBRA_CAB_P, SOMBRA_CAB, 0.22, 1.36) - 0.01, 0.12, cab),
+    bola(
+      [0.07, 0.08, 0.04],
+      [0, 1.31, naFrente(SOMBRA_CAB_P, SOMBRA_CAB, 0, 1.31)],
+      '#ff7aa8',
+      cab,
+    ),
+    // chapéu de guarda-chuva em cúpula, com bolinhas de luz e pontinha amarela
+    bola([0.98, 0.08, 0.94], [0, 1.68, 0], '#ff6fc0', cab),
+    bola([0.86, 0.38, 0.82], [0, 1.74, 0], '#ff9ad2', cab),
+    bola([0.46, 0.24, 0.44], [0, 1.9, 0], '#ff6fc0', cab),
+    capsula([0.035, 0.1, 0.035], [0, 2.03, 0], '#ff9ad6', cab),
+    bola([0.1, 0.1, 0.1], [0, 2.1, 0], '#ffe27a', { ...cab, brilho: 0.55 }),
+    bola([0.07, 0.05, 0.07], [0, 1.84, 0.34], '#fff2a0', { ...cab, brilho: 0.5 }),
+    bola([0.07, 0.05, 0.07], [0.33, 1.82, 0.2], '#fff2a0', { ...cab, brilho: 0.5 }),
+    bola([0.07, 0.05, 0.07], [-0.33, 1.82, 0.2], '#fff2a0', { ...cab, brilho: 0.5 }),
   ],
   raposa: [
-    { t: [0.34, 0.28, 0.56], p: [0, 0.4, 0], cor: '#c8d2e0' },
-    { t: [0.2, 0.04, 0.36], p: [0, 0.555, -0.02], cor: '#5af0d0', brilho: 1 },
-    { t: [0.36, 0.06, 0.6], p: [0, 0.28, 0], cor: '#8a96aa' },
-    { t: [0.32, 0.28, 0.3], p: [0, 0.64, 0.36], cor: '#dfe6f0', papel: 'cabeca' },
-    { t: [0.26, 0.18, 0.02], p: [0, 0.64, 0.515], cor: '#1a2440', papel: 'cabeca' },
-    { t: [0.06, 0.07, 0.01], p: [0.07, 0.67, 0.527], cor: '#5af0ff', brilho: 1.2, papel: 'cabeca' },
-    {
-      t: [0.06, 0.07, 0.01],
-      p: [-0.07, 0.67, 0.527],
-      cor: '#5af0ff',
-      brilho: 1.2,
-      papel: 'cabeca',
-    },
-    { t: [0.1, 0.025, 0.01], p: [0, 0.59, 0.527], cor: '#5af0ff', brilho: 1.2, papel: 'cabeca' },
-    { t: [0.06, 0.16, 0.12], p: [0.19, 0.7, 0.34], cor: '#ff9a4a', papel: 'cabeca' },
-    { t: [0.06, 0.16, 0.12], p: [-0.19, 0.7, 0.34], cor: '#ff9a4a', papel: 'cabeca' },
-    { t: [0.03, 0.16, 0.03], p: [0.08, 0.86, 0.32], cor: '#8a96aa', papel: 'antena' },
-    { t: [0.07, 0.07, 0.07], p: [0.08, 0.96, 0.32], cor: '#ff5a7a', brilho: 1.1, papel: 'antena' },
-    { t: [0.05, 0.05, 0.24], p: [0, 0.5, -0.38], cor: '#8a96aa', papel: 'cauda' },
-    { t: [0.08, 0.08, 0.08], p: [0, 0.5, -0.52], cor: '#ff9a4a', brilho: 0.6, papel: 'cauda' },
-    { t: [0.09, 0.26, 0.09], p: [0.11, 0.13, 0.18], cor: '#6a7488', papel: 'perna0' },
-    { t: [0.09, 0.26, 0.09], p: [-0.11, 0.13, 0.18], cor: '#6a7488', papel: 'perna1' },
-    { t: [0.09, 0.26, 0.09], p: [0.11, 0.13, -0.18], cor: '#6a7488', papel: 'perna1' },
-    { t: [0.09, 0.26, 0.09], p: [-0.11, 0.13, -0.18], cor: '#6a7488', papel: 'perna0' },
+    // corpo de caixinha branca com faixa de luz e coleira laranja
+    caixa([0.42, 0.3, 0.6], [0, 0.38, -0.04], '#e8eef8', { raio: 0.12 }),
+    capsula([0.2, 0.05, 0.36], [0, 0.53, -0.08], '#5af0d0', { brilho: 0.4 }),
+    capsula([0.38, 0.08, 0.16], [0, 0.52, 0.2], '#ff9a4a'),
+    // cabeça com tela de rosto sorridente
+    caixa([0.46, 0.38, 0.38], [0, 0.7, 0.3], '#f2f5fb', { ...cab, raio: 0.13 }),
+    caixa([0.36, 0.26, 0.05], [0, 0.7, 0.495], '#1f2a50', { ...cab, raio: 0.07 }),
+    ...olhos(0.08, 0.72, 0.52, 0.09, 0.11, { ...cab, brilho: 0.55 }, '#5af0ff', 0.4),
+    capsula([0.1, 0.025, 0.02], [0, 0.635, 0.525], '#5af0ff', { ...cab, brilho: 0.5 }),
+    ...bochechas(0.135, 0.655, 0.522, 0.05, { ...cab, brilho: 0.4 }, '#ff8fc0'),
+    // orelhas de plástico laranja
+    ...[1, -1].map((s) =>
+      capsula([0.09, 0.2, 0.13], [s * 0.21, 0.9, 0.28], '#ff9a4a', {
+        ...cab,
+        rot: [0, 0, -s * 0.35],
+      }),
+    ),
+    // antena com luzinha
+    capsula([0.035, 0.16, 0.035], [0.08, 0.96, 0.24], '#8fa4e8', { papel: 'antena' }),
+    bola([0.09, 0.09, 0.09], [0.08, 1.06, 0.24], '#ff5a7a', { brilho: 0.55, papel: 'antena' }),
+    // rabinho levantado com bolinha laranja
+    capsula([0.08, 0.08, 0.24], [0, 0.52, -0.38], '#8fa4e8', { papel: 'cauda', rot: [0.5, 0, 0] }),
+    bola([0.11, 0.11, 0.11], [0, 0.58, -0.5], '#ff9a4a', { brilho: 0.4, papel: 'cauda' }),
+    // patinhas de cápsula (as diagonais alternam)
+    capsula([0.13, 0.3, 0.13], [0.13, 0.15, 0.18], '#8fa4e8', { papel: 'perna0' }),
+    capsula([0.13, 0.3, 0.13], [-0.13, 0.15, 0.18], '#8fa4e8', { papel: 'perna1' }),
+    capsula([0.13, 0.3, 0.13], [0.13, 0.15, -0.18], '#8fa4e8', { papel: 'perna1' }),
+    capsula([0.13, 0.3, 0.13], [-0.13, 0.15, -0.18], '#8fa4e8', { papel: 'perna0' }),
   ],
 };
 
