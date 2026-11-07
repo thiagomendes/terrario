@@ -75,6 +75,12 @@ void main() {
   float brilho = pow(max(dot(r, paraSol), 0.0), 350.0) * 3.0 * (1.0 - noite) * fCeu;
   brilho += pow(max(dot(r, paraLua), 0.0), 600.0) * 1.2 * noite * fCeu;
   c += corSol * brilho;
+  // acabamento de brinquedo (spec 012): água brilhante, mais clara, com um reflexo largo de
+  // plástico e risquinhos de brilho que andam devagar
+  c = mix(c, c * 1.12 + vec3(0.02, 0.05, 0.07), luzDia * fCeu);
+  c += corSol * pow(max(dot(r, paraSol), 0.0), 24.0) * 0.18 * (1.0 - noite) * fCeu;
+  float risco = sin(dot(p, vec2(0.83, 0.55)) * 2.3 + tempo * 0.9) * sin(dot(p, vec2(-0.45, 0.89)) * 1.9 - tempo * 0.7);
+  c += vec3(1.0) * smoothstep(0.86, 0.97, risco) * 0.28 * luzDia * fCeu * (1.0 - noite);
   // tochas perto aquecem a agua
   c += vec3(1.0, 0.72, 0.42) * fBloco * 0.35;
   float alfa = clamp(aguaOpacidade + fres * 0.25 + brilho, 0.0, 1.0);
