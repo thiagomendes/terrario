@@ -140,8 +140,12 @@ export function definirDetalheMalha(d: 'alto' | 'baixo'): void {
 const FORCA_COPA = 0.9;
 /** Copa lisa (cantos puxados): desligada, as copas são bolas (copaDeBolas). */
 let copaLisa = false;
-/** Copas de pirulito: cada grupo de folhas vira uma bola lisa. */
-let copaDeBolas = true;
+/**
+ * Copas de pirulito (cada grupo de folhas vira uma bola lisa): desligadas a pedido do dono — a
+ * bola não batia com o bloco de verdade (o boneco afundava nela e quebrar ficava estranho).
+ * As copas são blocos de folha de quinas redondas, como o resto do mundo de brinquedo.
+ */
+let copaDeBolas = false;
 export function definirCopaDeBolas(v: boolean): void {
   copaDeBolas = v;
 }
@@ -149,7 +153,7 @@ export function definirCopaLisa(v: boolean): void {
   copaLisa = v;
 }
 /** Raio das quinas das copas (folhas), bem mais redondas. */
-export const RAIO_COPA = 0.48;
+export const RAIO_COPA = 0.2;
 
 const CANTOS: [number, number][] = [
   [0, 0],

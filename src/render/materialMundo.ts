@@ -179,8 +179,7 @@ export class PluginMundo extends MaterialPluginBase {
           vec3 nJ = normalize(vNormalW);
           vec3 aJ = abs(nJ);
           float retoJ = smoothstep(0.985, 0.999, max(max(aJ.x, aJ.y), aJ.z));
-          // copas (folhas) são uma peça só: sem juntas
-          retoJ *= 1.0 - step(0.5, vFolhaMundo);
+          // copas de blocos de folha: juntas também, como peças de montar (a pedido do dono)
           if (retoJ > 0.0) {
             vec3 t1J = vec3(1.0, 0.0, 0.0);
             vec3 t2J = vec3(0.0, 0.0, 1.0);
