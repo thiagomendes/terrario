@@ -1,3 +1,4 @@
+import type { DadosMundo } from '../jogo/mundos';
 /**
  * Conexão com o servidor da nuvem (spec 010): o mesmo contrato da conexão local, por
  * WebSocket. Entra (ou cria) o mundo, renumera os comandos a cada conexão, guarda o que
@@ -14,7 +15,14 @@ import {
 } from '../rede/protocolo';
 import type { Conexao } from './conexao';
 
-export type EstadoConexao = 'conectando' | 'conectado' | 'reconectando' | 'recusado' | 'expulso';
+/** 'encerrada': o dono parou de jogar com amigos (a sala acabou). */
+export type EstadoConexao =
+  | 'conectando'
+  | 'conectado'
+  | 'reconectando'
+  | 'recusado'
+  | 'expulso'
+  | 'encerrada';
 
 export type BemVindo = Omit<Extract<RespostaServidor, { t: 'bemvindo' }>, 't'>;
 
@@ -24,6 +32,8 @@ export interface ConexaoNuvem extends Conexao {
   readonly estado: EstadoConexao;
   aoEstado(f: (e: EstadoConexao, motivo?: MotivoRecusa) => void): void;
   aoSala(f: (s: EstadoSala) => void): void;
+  /** O mundo voltou para este aparelho (o dono parou de jogar com amigos). */
+  aoDevolvido(f: (dados: DadosMundo) => void): void;
   /** O servidor recomeçou e abriu a sala de novo (o que está na tela pode estar à frente). */
   aoReaberta(f: () => void): void;
   /** Painel do dono e o diário/mapa do jogador. */
@@ -45,6 +55,7 @@ const ESPERAS = [500, 1000, 2000, 4000, 8000];
 export function conexaoNuvem(op: OpcoesNuvem): ConexaoNuvem {
   const ouvintes: ((m: Mensagem) => void)[] = [];
   const ouvintesEstado: ((e: EstadoConexao, motivo?: MotivoRecusa) => void)[] = [];
+  const ouvintesDevolvido: ((dados: DadosMundo) => void)[] = [];
   const ouvintesSala: ((s: EstadoSala) => void)[] = [];
   const ouvintesReaberta: (() => void)[] = [];
   let instancia: string | undefined;
@@ -135,6 +146,12 @@ export function conexaoNuvem(op: OpcoesNuvem): ConexaoNuvem {
       } else if (m.t === 'expulso') {
         encerrada = true;
         mudar('expulso');
+      } else if (m.t === 'encerrada') {
+        encerrada = true;
+        mudar('encerrada');
+      } else if (m.t === 'devolvido') {
+        encerrada = true;
+        for (const f of ouvintesDevolvido) f(m.dados);
       } else if (m.t === 'sala') {
         codigo = m.sala.codigo;
         for (const f of ouvintesSala) f(m.sala);
@@ -170,6 +187,9 @@ export function conexaoNuvem(op: OpcoesNuvem): ConexaoNuvem {
     },
     aoReaberta: (f) => {
       ouvintesReaberta.push(f);
+    },
+    aoDevolvido: (f) => {
+      ouvintesDevolvido.push(f);
     },
     encerrar() {
       encerrada = true;
