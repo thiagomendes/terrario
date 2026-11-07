@@ -143,6 +143,8 @@ for (const [id, nome] of TEMAS) {
     const textoHud = await page.evaluate(
       () =>
         [...document.querySelectorAll('[aria-label], [title]')]
+          // a tela de título fica de fora (a vitrine mostra todos os temas de propósito)
+          .filter((e) => !e.closest('.entrada'))
           .map((e) => `${e.getAttribute('aria-label') ?? ''} ${e.getAttribute('title') ?? ''}`)
           .join(' ') +
         ' ' +

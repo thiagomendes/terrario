@@ -1,5 +1,24 @@
 import { defineConfig } from '@playwright/test';
 
+/**
+ * Como o navegador de teste desenha o 3D: por padrão por software (SwiftShader, igual em
+ * qualquer máquina); com E2E_GPU=1, na placa de vídeo pela ponte do WSL (scripts/e2e-gpu.sh),
+ * bem mais rápido e com muito menos CPU.
+ */
+const LANCAR = process.env.E2E_GPU
+  ? {
+      ignoreDefaultArgs: ['--headless'],
+      args: [
+        '--headless=new',
+        '--enable-gpu',
+        '--ignore-gpu-blocklist',
+        '--disable-software-rasterizer',
+        '--use-gl=angle',
+        '--use-angle=gl-egl',
+      ],
+    }
+  : { args: ['--use-gl=angle', '--use-angle=swiftshader', '--ignore-gpu-blocklist'] };
+
 export default defineConfig({
   testDir: 'e2e',
   // cada navegador desenha o 3D por software (SwiftShader), com muita CPU e mais de 1 GB:
@@ -8,9 +27,7 @@ export default defineConfig({
   outputDir: 'test-results',
   use: {
     baseURL: 'http://127.0.0.1:4173',
-    launchOptions: {
-      args: ['--use-gl=angle', '--use-angle=swiftshader', '--ignore-gpu-blocklist'],
-    },
+    launchOptions: LANCAR,
   },
   webServer: [
     {
