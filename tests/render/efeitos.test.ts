@@ -6,20 +6,28 @@ import {
   opacidadePulso,
   planejarEfeito,
   COR_POEIRA,
+  PARTICULAS_QUEBRA,
+  CONFETES_QUEBRA,
 } from '../../src/render/efeitos';
 import { corMediaDoBloco } from '../../src/fx/cores';
-import { criarPoolParticulas, LIMITE_PARTICULAS } from '../../src/fx/particulas';
+import { CONFETE, PECINHA, criarPoolParticulas, LIMITE_PARTICULAS } from '../../src/fx/particulas';
 import { Bloco } from '../../src/world/blocks';
 
 const pos = { x: 3, y: 10, z: 4 };
 
 describe('planejarEfeito', () => {
-  it('quebra solta 10 partículas com a cor do bloco', () => {
+  it('quebra solta pecinhas na cor do bloco e confete de festa', () => {
     const p = planejarEfeito('quebra', { ...pos, bloco: Bloco.PEDRA_RACHADA });
-    expect(p.particulas).toHaveLength(10);
+    const pecinhas = p.particulas.filter((q) => (q.tipo ?? PECINHA) === PECINHA);
+    const confetes = p.particulas.filter((q) => q.tipo === CONFETE);
+    expect(pecinhas).toHaveLength(PARTICULAS_QUEBRA);
+    expect(confetes).toHaveLength(CONFETES_QUEBRA);
     const cor = corMediaDoBloco(Bloco.PEDRA_RACHADA);
     expect(cor).toBeDefined();
-    for (const q of p.particulas) expect(q.cor).toEqual(cor);
+    for (const q of pecinhas) expect(q.cor).toEqual(cor);
+    // confete colorido e subindo (desce planando depois)
+    expect(new Set(confetes.map((q) => q.cor.join(','))).size).toBeGreaterThan(3);
+    for (const q of confetes) expect(q.vy).toBeGreaterThan(2);
     expect(p.pulso).toBe(false);
   });
 

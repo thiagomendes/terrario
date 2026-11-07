@@ -136,7 +136,8 @@ const VIZINHANCA: readonly [number, number][] = [
   [-1, 1],
   [1, 1],
 ];
-import { criarPoolParticulas, LIMITE_PARTICULAS, VIDA_PARTICULA } from '../fx/particulas';
+import { CONFETE, criarPoolParticulas, LIMITE_PARTICULAS, vidaDe } from '../fx/particulas';
+import { caixaArredondada, cilindro } from './formas';
 import { ESTAGIOS_RACHADURA, gerarTexturaRachadura, TAM_RACHADURA } from '../fx/rachadura';
 import {
   DURACAO_PULSO,
@@ -1610,18 +1611,35 @@ export function criarCena(
 
   const rngFx = criarGerador(7);
   const pool = criarPoolParticulas(LIMITE_PARTICULAS);
-  const cubosParticulas: Mesh[] = [];
+  // efeitos de brinquedo (spec 012): cada vaga tem uma pecinha de plástico com pino (lasca
+  // do bloco) e um confete achatado; acende a que o tipo da partícula pede
+  const pecasParticulas: { peca: Mesh; pino: Mesh; confete: Mesh }[] = [];
   const matsParticulas: StandardMaterial[] = [];
   for (let i = 0; i < pool.capacidade; i++) {
-    const cubo = MeshBuilder.CreateBox(`particula-${i}`, { size: 0.12 }, scene);
     const mat = new StandardMaterial(`particula-mat-${i}`, scene);
-    mat.specularColor = Color3.Black();
+    mat.specularColor = new Color3(0.3, 0.3, 0.3);
+    mat.specularPower = 40;
     mat.emissiveColor = Color3.Black();
     mat.ambientColor = Color3.White();
-    cubo.material = mat;
-    cubo.setEnabled(false);
-    prepararEfeito(cubo);
-    cubosParticulas.push(cubo);
+    const peca = caixaArredondada(`particula-${i}`, scene, 0.14, 0.09, 0.14, 0.03, mat, 2);
+    const pino = cilindro(`particula-pino-${i}`, scene, 0.035, 0.035, 0.035, mat);
+    pino.parent = peca;
+    pino.position.y = 0.06;
+    const confete = caixaArredondada(
+      `particula-confete-${i}`,
+      scene,
+      0.1,
+      0.012,
+      0.065,
+      0.005,
+      mat,
+      1,
+    );
+    for (const m of [peca, pino, confete]) {
+      m.setEnabled(false);
+      prepararEfeito(m);
+    }
+    pecasParticulas.push({ peca, pino, confete });
     matsParticulas.push(mat);
   }
 
@@ -1775,24 +1793,43 @@ export function criarCena(
   function atualizarEfeitos(dt: number): void {
     pool.atualizar(dt, (x, y, z) => !!obterBlocoDef(blocoEm(x, y, z))?.solido);
     const vivas = pool.vivas();
-    for (let i = 0; i < cubosParticulas.length; i++) {
-      const cubo = cubosParticulas[i];
+    for (let i = 0; i < pecasParticulas.length; i++) {
+      const { peca, pino, confete } = pecasParticulas[i];
       if (i >= vivas) {
-        cubo.setEnabled(false);
+        if (peca.isEnabled()) peca.setEnabled(false);
+        if (confete.isEnabled()) confete.setEnabled(false);
         continue;
       }
-      cubo.setEnabled(true);
-      cubo.position.set(pool.posicoes[i * 3], pool.posicoes[i * 3 + 1], pool.posicoes[i * 3 + 2]);
+      const ehConfete = pool.tipos[i] === CONFETE;
+      const m = ehConfete ? confete : peca;
+      if (!m.isEnabled()) m.setEnabled(true);
+      if (!pino.isEnabled()) pino.setEnabled(true);
+      const outra = ehConfete ? peca : confete;
+      if (outra.isEnabled()) outra.setEnabled(false);
+      m.position.set(pool.posicoes[i * 3], pool.posicoes[i * 3 + 1], pool.posicoes[i * 3 + 2]);
+      const idade = pool.idades[i];
+      const sem = pool.sementes[i] * Math.PI * 2;
+      if (ehConfete) {
+        // confete rodopia e balança enquanto plana
+        m.rotation.set(
+          Math.sin(idade * 9 + sem) * 1.3,
+          idade * 4 + sem,
+          Math.cos(idade * 7 + sem) * 1.1,
+        );
+      } else {
+        // pecinha capota no ar e assenta
+        m.rotation.set(sem + idade * (5 + sem), sem * 0.7, idade * 3);
+      }
       // encolhe no fim da vida em vez de sumir de repente
-      const vida = pool.idades[i] / VIDA_PARTICULA;
-      cubo.scaling.setAll(vida < 0.6 ? 1 : Math.max(0.05, 1 - (vida - 0.6) / 0.4));
-      // escurecem com o lugar (caverna, noite), como o braço e o personagem
+      const vida = idade / vidaDe(pool.tipos[i]);
+      m.scaling.setAll(vida < 0.6 ? 1 : Math.max(0.05, 1 - (vida - 0.6) / 0.4));
+      // plástico colorido com piso de luz (como o boneco); escurece na caverna e à noite
       const lp = luzJogador * (0.45 + 0.55 * luzDia);
-      matsParticulas[i].diffuseColor.set(
-        pool.cores[i * 3] * lp,
-        pool.cores[i * 3 + 1] * lp,
-        pool.cores[i * 3 + 2] * lp,
-      );
+      const r = pool.cores[i * 3];
+      const g = pool.cores[i * 3 + 1];
+      const b = pool.cores[i * 3 + 2];
+      matsParticulas[i].diffuseColor.set(r * lp * 0.78, g * lp * 0.78, b * lp * 0.78);
+      matsParticulas[i].emissiveColor.set(r * lp * 0.36, g * lp * 0.36, b * lp * 0.36);
     }
     estado.fx = { particulas: vivas };
 

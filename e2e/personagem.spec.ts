@@ -69,6 +69,10 @@ test('KeyV alterna o modo e o indicador', async ({ page }) => {
   await page.keyboard.press('KeyV');
   await expect.poll(() => modo(page)).toBe('terceira');
   await expect.poll(() => indicador(page)).toContain('3ª pessoa');
+  // spec 012: a terceira câmera, de frente para o boneco
+  await page.keyboard.press('KeyV');
+  await expect.poll(() => modo(page)).toBe('frente');
+  await expect.poll(() => indicador(page)).toContain('de frente');
   await page.keyboard.press('KeyV');
   await expect.poll(() => modo(page)).toBe('primeira');
   await expect.poll(() => indicador(page)).toContain('1ª pessoa');
@@ -86,7 +90,8 @@ test('visibilidade por modo e limite de malhas', async ({ page }) => {
   expect(await vis()).toEqual({ braco: false, corpo: true });
   const malhas = await page.evaluate(() => window.__brumaluz!.personagem!.malhas());
   expect(malhas).toBeGreaterThan(0);
-  expect(malhas).toBeLessThanOrEqual(20);
+  // o boneco de brinquedo (spec 012) tem mais peças: rosto, punhos, cabelo, acessórios
+  expect(malhas).toBeLessThanOrEqual(90);
   expect(erros, erros.join('\n')).toEqual([]);
 });
 

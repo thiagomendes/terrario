@@ -17,3 +17,26 @@ describe('partículas com o mundo', () => {
     expect(pool.posicoes[0]).toBeGreaterThan(0.7);
   });
 });
+
+describe('confete de brinquedo', () => {
+  it('cai devagar, plana e vive mais que a pecinha', async () => {
+    const { criarPoolParticulas, CONFETE, VIDA_PARTICULA, VIDA_CONFETE } = await import(
+      '../../src/fx/particulas'
+    );
+    const pool = criarPoolParticulas(4);
+    pool.emitir([
+      { x: 0, y: 10, z: 0, vx: 0, vy: 0, vz: 0, cor: [1, 1, 1] },
+      { x: 5, y: 10, z: 0, vx: 2, vy: 0, vz: 0, cor: [1, 0, 0], tipo: CONFETE },
+    ]);
+    for (let t = 0; t < 0.5; t += 0.05) pool.atualizar(0.05);
+    const yPecinha = pool.posicoes[1];
+    const yConfete = pool.posicoes[4];
+    expect(10 - yConfete).toBeLessThan((10 - yPecinha) / 2);
+    // depois da vida da pecinha, só o confete continua
+    for (let t = 0.5; t < VIDA_PARTICULA + 0.1; t += 0.05) pool.atualizar(0.05);
+    expect(pool.vivas()).toBe(1);
+    expect(pool.tipos[0]).toBe(CONFETE);
+    for (let t = 0; t < VIDA_CONFETE; t += 0.05) pool.atualizar(0.05);
+    expect(pool.vivas()).toBe(0);
+  });
+});

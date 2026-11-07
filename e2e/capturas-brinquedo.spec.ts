@@ -55,6 +55,31 @@ test('boneco de brinquedo nos enquadramentos dos esboços', async ({ page }) => 
   await page.evaluate(() => window.__brumaluz!.animar!('comer'));
   await page.waitForTimeout(500);
   await foto(page, '1a-pessoa-comendo');
+  // efeito de quebrar: pecinhas de plástico e confete (o bloco à frente, no chão)
+  await page.evaluate(() => {
+    const e = window.__brumaluz!;
+    e.selecionarSlot!(0);
+    e.apontar!(0, 0.5);
+  });
+  await page.waitForTimeout(400);
+  const quebrar = () =>
+    page.evaluate(() => {
+      const e = window.__brumaluz!;
+      const [x, y, z] = e.posicao!;
+      for (const dx of [-1, 1])
+        e.barramento!.emitir('quebra', {
+          x: Math.floor(x) + dx,
+          y: Math.floor(y) - 2,
+          z: Math.floor(z) + 2,
+          bloco: e.bloco!(Math.floor(x), Math.floor(y) - 2, Math.floor(z) + 2) || 1,
+        });
+    });
+  await quebrar();
+  await page.waitForTimeout(140);
+  await foto(page, 'quebrar-1');
+  await quebrar();
+  await page.waitForTimeout(450);
+  await foto(page, 'quebrar-2');
   // terceira pessoa por cima do ombro, minerando
   await page.evaluate(() => {
     const e = window.__brumaluz!;

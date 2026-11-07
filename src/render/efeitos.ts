@@ -1,11 +1,21 @@
 import { tema } from '../temas/ativo';
 import { corMediaDoBloco } from '../fx/cores';
-import type { ParametrosParticula } from '../fx/particulas';
+import { CONFETE, type ParametrosParticula } from '../fx/particulas';
 import { criarGerador, jitter, type Gerador } from '../audio/variacao';
 import type { EventosJogo, NomeEvento } from '../player/eventos';
 import { estagioRachadura } from '../player/mineracao';
 
-export const PARTICULAS_QUEBRA = 10;
+export const PARTICULAS_QUEBRA = 8;
+/** Confete de festa ao quebrar (spec 012: efeitos de brinquedo). */
+export const CONFETES_QUEBRA = 9;
+export const CORES_CONFETE: [number, number, number][] = [
+  [255, 107, 138],
+  [255, 211, 77],
+  [90, 209, 255],
+  [123, 224, 123],
+  [197, 155, 255],
+  [255, 159, 67],
+];
 export const PARTICULAS_GOLPE = 2;
 export const PARTICULAS_POEIRA = 4;
 export const DURACAO_PULSO = 0.2;
@@ -54,7 +64,25 @@ export function planejarEfeito<K extends NomeEvento>(
     if (!cor) return vazio;
     const quebra = nome === 'quebra';
     const n = quebra ? PARTICULAS_QUEBRA : PARTICULAS_GOLPE;
-    return { particulas: emitirParticulas(d, cor, n, rng, quebra ? 2.5 : 1.5), pulso: false };
+    const particulas = emitirParticulas(d, cor, n, rng, quebra ? 2.5 : 1.5);
+    if (quebra) {
+      // e uma chuvinha de confete que sobe do bloco e desce planando
+      for (let i = 0; i < CONFETES_QUEBRA; i++) {
+        const ang = (i / CONFETES_QUEBRA) * Math.PI * 2 + jitter(rng, 0, 0.5);
+        const v = 0.7 + jitter(rng, 0.25, 0.2);
+        particulas.push({
+          x: d.x + 0.5 + Math.cos(ang) * 0.2,
+          y: d.y + 0.6,
+          z: d.z + 0.5 + Math.sin(ang) * 0.2,
+          vx: Math.cos(ang) * v,
+          vy: 3.4 + jitter(rng, 0, 0.6),
+          vz: Math.sin(ang) * v,
+          cor: CORES_CONFETE[i % CORES_CONFETE.length],
+          tipo: CONFETE,
+        });
+      }
+    }
+    return { particulas, pulso: false };
   }
   if (nome === 'colocacao') {
     // assentar: poeira baixa que escorre pelo chão em volta da base (nada de lascas voando)

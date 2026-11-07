@@ -1,6 +1,18 @@
 export const LIMITE_PARTICULAS = 64;
 export const VIDA_PARTICULA = 0.6;
 export const GRAVIDADE_PARTICULA = -14;
+/** Tipos de partícula (spec 012): pecinha de plástico ou confete. */
+export const PECINHA = 0;
+export const CONFETE = 1;
+/** O confete vive mais, cai devagar e plana (arrasto no ar). */
+export const VIDA_CONFETE = 1.3;
+const GRAVIDADE_CONFETE = -3.2;
+const QUEDA_MAXIMA_CONFETE = -1.4;
+
+/** Quanto vive cada tipo de partícula. */
+export function vidaDe(tipo: number): number {
+  return tipo === CONFETE ? VIDA_CONFETE : VIDA_PARTICULA;
+}
 
 export interface ParametrosParticula {
   x: number;
@@ -10,6 +22,8 @@ export interface ParametrosParticula {
   vy: number;
   vz: number;
   cor: [number, number, number];
+  /** PECINHA (padrão) ou CONFETE. */
+  tipo?: number;
 }
 
 export interface PoolParticulas {
@@ -23,6 +37,9 @@ export interface PoolParticulas {
   readonly posicoes: Float32Array;
   readonly cores: Float32Array;
   readonly idades: Float32Array;
+  readonly tipos: Uint8Array;
+  /** Número fixo de cada partícula (0..1): giro e balanço próprios. */
+  readonly sementes: Float32Array;
 }
 
 export function criarPoolParticulas(capacidade: number = LIMITE_PARTICULAS): PoolParticulas {
@@ -30,7 +47,10 @@ export function criarPoolParticulas(capacidade: number = LIMITE_PARTICULAS): Poo
   const velocidades = new Float32Array(capacidade * 3);
   const cores = new Float32Array(capacidade * 3);
   const idades = new Float32Array(capacidade);
+  const tipos = new Uint8Array(capacidade);
+  const sementes = new Float32Array(capacidade);
   let vivas = 0;
+  let proxima = 0;
 
   function copiar(de: number, para: number): void {
     for (let k = 0; k < 3; k++) {
@@ -39,6 +59,8 @@ export function criarPoolParticulas(capacidade: number = LIMITE_PARTICULAS): Poo
       cores[para * 3 + k] = cores[de * 3 + k];
     }
     idades[para] = idades[de];
+    tipos[para] = tipos[de];
+    sementes[para] = sementes[de];
   }
 
   return {
@@ -46,6 +68,8 @@ export function criarPoolParticulas(capacidade: number = LIMITE_PARTICULAS): Poo
     posicoes,
     cores,
     idades,
+    tipos,
+    sementes,
     vivas: () => vivas,
     emitir(lista) {
       let n = 0;
@@ -56,6 +80,10 @@ export function criarPoolParticulas(capacidade: number = LIMITE_PARTICULAS): Poo
         velocidades.set([p.vx, p.vy, p.vz], i * 3);
         cores.set(p.cor, i * 3);
         idades[i] = 0;
+        tipos[i] = p.tipo ?? PECINHA;
+        // sequência de Weyl: sementes bem espalhadas e determinísticas
+        proxima = (proxima + 0.618034) % 1;
+        sementes[i] = proxima;
         n++;
       }
       return n;
@@ -64,12 +92,22 @@ export function criarPoolParticulas(capacidade: number = LIMITE_PARTICULAS): Poo
       let i = 0;
       while (i < vivas) {
         idades[i] += dt;
-        if (idades[i] >= VIDA_PARTICULA) {
+        const confete = tipos[i] === CONFETE;
+        if (idades[i] >= (confete ? VIDA_CONFETE : VIDA_PARTICULA)) {
           vivas--;
           if (i !== vivas) copiar(vivas, i);
           continue;
         }
-        velocidades[i * 3 + 1] += GRAVIDADE_PARTICULA * dt;
+        if (confete) {
+          // plana: cai devagar, com arrasto, e balança de lado
+          velocidades[i * 3 + 1] = Math.max(
+            QUEDA_MAXIMA_CONFETE,
+            velocidades[i * 3 + 1] + GRAVIDADE_CONFETE * dt,
+          );
+          const arrasto = Math.exp(-dt * 1.8);
+          velocidades[i * 3] *= arrasto;
+          velocidades[i * 3 + 2] *= arrasto;
+        } else velocidades[i * 3 + 1] += GRAVIDADE_PARTICULA * dt;
         // quem nasce dentro do bloco (lascas do golpe) sai livre; colisão só do lado de fora
         const dentro =
           !!solido &&
