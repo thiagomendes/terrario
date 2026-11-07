@@ -1,0 +1,553 @@
+<title>Mundo de Brinquedo</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@500;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: cabeçalho curto; os dois mundos lado a lado (empilhados no celular), girando juntos; depois o que muda no jogo e o plano */
+:root {
+  --bg: #eef0f6;
+  --fg: #1c1b2b;
+  --suave: #5a5a72;
+  --linha: #cdd0de;
+  --acento: #a8610a;
+  --cartao: #f8f9fc;
+  --verde: #2f7d4f;
+  --aviso: #9a5b00;
+  --display: 'Pixelify Sans', 'Courier New', monospace;
+  --corpo: 'IBM Plex Sans', system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #12111c; --fg: #ecebf5; --suave: #a3a2bb; --linha: #2c2b40; --acento: #ffc96b; --cartao: #191827;
+    --verde: #7fd39b; --aviso: #ffb35c; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #12111c; --fg: #ecebf5; --suave: #a3a2bb; --linha: #2c2b40; --acento: #ffc96b; --cartao: #191827;
+  --verde: #7fd39b; --aviso: #ffb35c; color-scheme: dark;
+}
+body { background: var(--bg); color: var(--fg); font: 400 16px/1.55 var(--corpo); }
+.pagina {
+  max-width: 1240px; margin: 0 auto;
+  padding-block: 28px 64px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: grid; gap: 28px;
+}
+h1, h2, h3 { font-family: var(--display); margin: 0; line-height: 1.15; text-wrap: balance; font-variant-ligatures: none; }
+h1 { font-size: clamp(1.8rem, 5vw, 2.8rem); }
+h2 { font-size: clamp(1.3rem, 3vw, 1.7rem); }
+h3 { font-size: 1.1rem; }
+p { margin: 0; max-width: 70ch; }
+.rotulo { font: 600 0.75rem var(--corpo); letter-spacing: 0.12em; text-transform: uppercase; color: var(--acento); }
+header { display: grid; gap: 10px; }
+.lead { color: var(--suave); }
+.controles { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; }
+.grupo { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.grupo > span { font-size: 0.85rem; color: var(--suave); margin-right: 4px; }
+button.op {
+  font: 500 0.88rem var(--corpo); color: var(--fg); background: var(--cartao);
+  border: 1.5px solid var(--linha); border-radius: 999px; padding: 6px 14px; min-height: 36px; cursor: pointer;
+}
+button.op[aria-pressed="true"] { border-color: var(--acento); color: var(--acento); font-weight: 600; }
+button.op:focus-visible { outline: 2px solid var(--acento); outline-offset: 2px; }
+.mundos { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr)); }
+.mundo { display: grid; gap: 8px; align-content: start; }
+.mundo h2 { font-size: 1.2rem; }
+.tela { position: relative; aspect-ratio: 4 / 3; border-radius: 10px; overflow: hidden; border: 1px solid var(--linha); touch-action: pan-y; cursor: grab; background: #a9d4f5; }
+.tela canvas { display: block; width: 100%; height: 100%; }
+.mundo p { font-size: 0.92rem; color: var(--suave); }
+section { display: grid; gap: 14px; }
+.colunas { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); }
+.bloco { display: grid; gap: 8px; align-content: start; padding: 16px; border: 1px solid var(--linha); border-radius: 10px; background: var(--cartao); }
+.bloco ul, section > ul { margin: 0; padding-left: 1.2em; display: grid; gap: 5px; }
+.bloco li { font-size: 0.94rem; }
+table { border-collapse: collapse; width: 100%; font-size: 0.92rem; }
+.tabela { overflow-x: auto; }
+th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--linha); vertical-align: top; }
+th { color: var(--suave); font-weight: 600; }
+td:first-child { font-weight: 600; white-space: nowrap; }
+.ok { color: var(--verde); font-weight: 600; }
+.atencao { color: var(--aviso); font-weight: 600; }
+</style>
+
+<div class="pagina">
+  <header>
+    <span class="rotulo">Terrário · esboço de direção de arte</span>
+    <h1>E se o mundo inteiro fosse de brinquedo?</h1>
+    <p class="lead">O mesmo pedacinho de mundo nos dois estilos: um morro com grama, terra e pedra, uma lagoa com areia, uma árvore, flores, uma casinha com janela e porta e o personagem. Arraste qualquer um dos dois para girar; os dois giram juntos. É um esboço feito à parte, não o jogo, mas usa as mesmas medidas de bloco.</p>
+  </header>
+
+  <div class="controles" role="group" aria-label="Opções do esboço">
+    <div class="grupo" role="group" aria-label="Luz">
+      <span>Luz</span>
+      <button class="op" type="button" data-luz="dia" aria-pressed="true">Dia</button>
+      <button class="op" type="button" data-luz="tarde" aria-pressed="false">Fim de tarde</button>
+    </div>
+    <div class="grupo" role="group" aria-label="Juntas entre blocos no estilo brinquedo">
+      <span>Juntas entre blocos</span>
+      <button class="op" type="button" data-juntas="sim" aria-pressed="true">Aparentes</button>
+      <button class="op" type="button" data-juntas="nao" aria-pressed="false">Suaves</button>
+    </div>
+    <div class="grupo" role="group" aria-label="Câmera">
+      <span>Câmera</span>
+      <button class="op" type="button" data-camera="longe" aria-pressed="true">Longe</button>
+      <button class="op" type="button" data-camera="perto" aria-pressed="false">Perto do personagem</button>
+    </div>
+    <div class="grupo" role="group" aria-label="Giro">
+      <span>Giro</span>
+      <button class="op" type="button" data-giro="auto" aria-pressed="true">Sozinho</button>
+      <button class="op" type="button" data-giro="parado" aria-pressed="false">Parado</button>
+    </div>
+  </div>
+
+  <div class="mundos">
+    <div class="mundo">
+      <h2>Hoje</h2>
+      <div class="tela" data-estilo="hoje" aria-label="Mundo no estilo atual, em 3D"></div>
+      <p>Cubos retos com textura de pixels, como no jogo. Sombra só no canto dos blocos.</p>
+    </div>
+    <div class="mundo">
+      <h2>Brinquedo</h2>
+      <div class="tela" data-estilo="brinquedo" aria-label="Mundo no estilo brinquedo, em 3D"></div>
+      <p>Blocos arredondados com acabamento de plástico, cores limpas, sombra macia do sol, árvore de pirulito, flores de bolinha e água brilhante. Com as juntas aparentes, parece peça de montar; com as juntas suaves, cada morro vira uma peça só.</p>
+    </div>
+  </div>
+
+  <section aria-labelledby="s-viavel">
+    <h2 id="s-viavel">É viável? Sim, em partes, sem jogar nada fora</h2>
+    <p>As regras, o mundo, o multiplayer e os temas continuam iguais. Muda só como as coisas são desenhadas, e isso já é separado no jogo desde a spec 009.</p>
+    <div class="colunas">
+      <div class="bloco">
+        <h3>O que muda no desenho</h3>
+        <ul>
+          <li><strong>Blocos:</strong> a montagem da malha passa a arredondar as quinas que ficam à mostra (as escondidas entre dois blocos não custam nada).</li>
+          <li><strong>Cores:</strong> as texturas de pixels viram cores limpas com um leve degradê, uma paleta por tema (o Doce Reino fica ainda mais doce, a Lua mais lisa).</li>
+          <li><strong>Material:</strong> brilho suave de plástico e sombra macia do sol perto do jogador.</li>
+          <li><strong>Plantas e árvores:</strong> formas próprias por tema (pirulito, cogumelo, pinheiro de cone), em vez de cubos de folha.</li>
+          <li><strong>Gente e bichos:</strong> personagem, moradores, raposa e as criaturas de cada tema no mesmo estilo do B.</li>
+          <li><strong>Itens e ícones:</strong> desenhados de novo no mesmo traço.</li>
+        </ul>
+      </div>
+      <div class="bloco">
+        <h3>O cuidado: celular</h3>
+        <ul>
+          <li>Quinas arredondadas têm mais triângulos. Perto do jogador vale a pena; longe, o jogo usa a malha simples de hoje e ninguém nota.</li>
+          <li>A sombra macia do sol é o que mais pesa. Ela pode ficar mais curta ou ser desligada nos celulares mais fracos, com o jogo escolhendo sozinho pelo desempenho medido.</li>
+          <li>Cada etapa é medida antes e depois, no computador e no celular, como na spec 009.</li>
+        </ul>
+      </div>
+    </div>
+    <div class="tabela">
+      <table>
+        <thead><tr><th>Etapa</th><th>O que entra</th><th>Por quê nessa ordem</th></tr></thead>
+        <tbody>
+          <tr><td>1 · Gente e bichos</td><td>Personagem B, moradores, criaturas e item na mão</td><td>Maior impacto, menor risco: não mexe no mundo</td></tr>
+          <tr><td>2 · Blocos</td><td>Quinas arredondadas, material de plástico, sombra macia, malha simples ao longe</td><td>O coração do visual; precisa da medição de desempenho</td></tr>
+          <tr><td>3 · Cores e formas por tema</td><td>Paletas limpas, árvores, flores e água em cada um dos 6 temas</td><td>É a parte de arte; os temas mantêm a identidade</td></tr>
+          <tr><td>4 · Itens e telas</td><td>Ícones, barra de itens e capturas</td><td>Fecha o estilo</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>Dá para escolher também o meio-termo: só gente e bichos de brinquedo, com o mundo de blocos como hoje. Mas, como você notou, o personagem B num mundo de pixels tende a parecer de outro jogo.</p>
+  </section>
+</div>
+
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+} }
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
+
+const reduzir = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+// ---------- o mesmo pedacinho de mundo (14 × 14) ----------
+const N = 14;
+const blocos = new Map(); // "x,y,z" -> tipo
+const pos = (x, y, z) => `${x},${y},${z}`;
+function alturaEm(x, z) {
+  const h = 2.2 + 1.6 * Math.sin(x * 0.45 + 0.6) * Math.cos(z * 0.38 - 0.4) + 0.9 * Math.sin((x + z) * 0.31);
+  return Math.max(1, Math.round(h));
+}
+const lagoa = (x, z) => Math.hypot(x - 2.6, z - 10.8) < 2.4;
+for (let x = 0; x < N; x++)
+  for (let z = 0; z < N; z++) {
+    const naLagoa = lagoa(x, z);
+    const h = naLagoa ? 1 : alturaEm(x, z);
+    const praia = !naLagoa && Math.hypot(x - 2.6, z - 10.8) < 3.6;
+    for (let y = 0; y < h; y++) {
+      const topo = y === h - 1;
+      let t = y < h - 2 ? 'pedra' : 'terra';
+      if (topo) t = praia || naLagoa ? 'areia' : h >= 5 ? 'pedra' : 'grama';
+      blocos.set(pos(x, y, z), t);
+    }
+    if (naLagoa) blocos.set(pos(x, 1, z), 'agua');
+  }
+// casinha 4 × 4 de tábuas, com janela e porta, num chão plano
+const cx = 8, cz = 7;
+const chao = Math.max(...[0, 1, 2, 3].flatMap((i) => [0, 1, 2, 3].map((j) => alturaEm(cx + i, cz + j))));
+for (let i = 0; i < 4; i++)
+  for (let j = 0; j < 4; j++) {
+    for (let y = alturaEm(cx + i, cz + j); y < chao; y++) blocos.set(pos(cx + i, y, cz + j), 'terra');
+    blocos.set(pos(cx + i, chao - 1, cz + j), 'grama');
+    const borda = i === 0 || j === 0 || i === 3 || j === 3;
+    for (let y = chao; y < chao + 3; y++) {
+      if (!borda) continue;
+      let t = 'tabua';
+      if (j === 3 && i === 1 && y < chao + 2) t = 'porta';
+      if (i === 0 && j === 1 && y === chao + 1) t = 'vidro';
+      if (j === 0 && i === 2 && y === chao + 1) t = 'vidro';
+      if ((i === 0 || i === 3) && (j === 0 || j === 3)) t = 'tronco';
+      blocos.set(pos(cx + i, y, cz + j), t);
+    }
+    blocos.set(pos(cx + i, chao + 3, cz + j), 'telhado');
+  }
+const arvore = { x: 4, z: 4, base: alturaEm(4, 4) };
+const flores = [[6, 2], [2, 6], [11, 2], [5, 9], [12, 12], [3, 3], [10, 12]].filter(([x, z]) => blocos.get(pos(x, alturaEm(x, z) - 1, z)) === 'grama');
+const jogador = { x: 11, z: 12, y: alturaEm(11, 12) };
+const visivel = (x, y, z) => {
+  for (const [dx, dy, dz] of [[1,0,0],[-1,0,0],[0,1,0],[0,-1,0],[0,0,1],[0,0,-1]]) {
+    const v = blocos.get(pos(x + dx, y + dy, z + dz));
+    if (!v || v === 'agua' || v === 'vidro') return true;
+  }
+  return false;
+};
+
+// ---------- estilo de hoje: texturas de pixels ----------
+function texturaPixel(cores, semente, faixa) {
+  const c = document.createElement('canvas');
+  c.width = c.height = 16;
+  const g = c.getContext('2d');
+  let s = semente;
+  const rnd = () => ((s = (s * 16807) % 2147483647) / 2147483647);
+  for (let y = 0; y < 16; y++)
+    for (let x = 0; x < 16; x++) {
+      const lista = faixa && y < faixa.ate ? faixa.cores : cores;
+      g.fillStyle = lista[Math.floor(rnd() * lista.length)];
+      g.fillRect(x, y, 1, 1);
+    }
+  const t = new THREE.CanvasTexture(c);
+  t.magFilter = THREE.NearestFilter;
+  t.minFilter = THREE.NearestFilter;
+  t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+}
+const PX = {
+  grama: ['#5e9e3c', '#6aae44', '#57923a', '#73b84c'],
+  terra: ['#7a5232', '#86603b', '#6e4a2c', '#8f6640'],
+  pedra: ['#7d7f84', '#8c8e93', '#6f7176', '#9a9ca0'],
+  areia: ['#dcc98f', '#e6d49b', '#d2be84', '#ecdca8'],
+  tabua: ['#a87a46', '#b5864f', '#9a6e3e', '#8e6438'],
+  tronco: ['#6b4a2a', '#5c3f24', '#77532f'],
+  telhado: ['#a8413a', '#b84b42', '#963832'],
+  folha: ['#3f8a35', '#4a9a3c', '#357a2e', '#57a646'],
+  porta: ['#7a5230', '#86603b', '#6b4628'],
+};
+function materiaisHoje() {
+  const m = (cores, s, faixa) => new THREE.MeshLambertMaterial({ map: texturaPixel(cores, s, faixa) });
+  const lado = m(PX.terra, 7, { ate: 4, cores: PX.grama });
+  const topo = m(PX.grama, 3);
+  const baixo = m(PX.terra, 9);
+  return {
+    grama: [lado, lado, topo, baixo, lado, lado],
+    terra: m(PX.terra, 11), pedra: m(PX.pedra, 13), areia: m(PX.areia, 17),
+    tabua: m(PX.tabua, 19), tronco: m(PX.tronco, 23), telhado: m(PX.telhado, 29), porta: m(PX.porta, 31),
+    folha: m(PX.folha, 37),
+    agua: new THREE.MeshLambertMaterial({ color: '#3f78c8', transparent: true, opacity: 0.75 }),
+    vidro: new THREE.MeshLambertMaterial({ color: '#cfe8f2', transparent: true, opacity: 0.35 }),
+  };
+}
+
+// ---------- estilo brinquedo: cores limpas e plástico ----------
+const COR = {
+  grama: '#7cc95c', terra: '#b07a4f', pedra: '#a9adb8', areia: '#f1dca2', tabua: '#e0a865', tronco: '#9a6a43',
+  telhado: '#ef6f5f', porta: '#c8834c', folha: '#5cbf63', agua: '#58b7f0', vidro: '#d9f1ff',
+};
+function geoBrinquedo(tipo, raio) {
+  const g = new RoundedBoxGeometry(1, 1, 1, 3, raio);
+  const p = g.attributes.position;
+  const cores = new Float32Array(p.count * 3);
+  const c = new THREE.Color();
+  const topo = new THREE.Color(COR.grama), base = new THREE.Color(COR.terra);
+  for (let i = 0; i < p.count; i++) {
+    const y = p.getY(i);
+    if (tipo === 'grama') c.copy(y > 0.22 ? topo : base);
+    else if (tipo === 'tabua') c.set(COR.tabua).multiplyScalar(Math.floor((y + 0.5) * 3) % 2 ? 0.9 : 1);
+    else c.set(COR[tipo] ?? '#ffffff');
+    // um leve degradê de baixo para cima: volume sem textura
+    c.multiplyScalar(0.9 + 0.12 * (y + 0.5));
+    cores.set([c.r, c.g, c.b], i * 3);
+  }
+  g.setAttribute('color', new THREE.BufferAttribute(cores, 3));
+  return g;
+}
+const plastico = (extra = {}) => new THREE.MeshPhysicalMaterial({ vertexColors: true, roughness: 0.45, clearcoat: 0.35, clearcoatRoughness: 0.4, ...extra });
+
+// ---------- montar uma cena ----------
+function montar(estilo, juntas) {
+  const g = new THREE.Group();
+  const porTipo = {};
+  for (const [k, t] of blocos) {
+    const [x, y, z] = k.split(',').map(Number);
+    if (t !== 'agua' && !visivel(x, y, z)) continue;
+    (porTipo[t] ??= []).push([x, y, z]);
+  }
+  const mtx = new THREE.Matrix4();
+  const tint = new THREE.Color();
+  if (estilo === 'hoje') {
+    const mats = materiaisHoje();
+    const caixa = new THREE.BoxGeometry(1, 1, 1);
+    for (const [t, lista] of Object.entries(porTipo)) {
+      const geo = t === 'agua' ? new THREE.BoxGeometry(1, 0.85, 1).translate(0, -0.075, 0) : caixa;
+      const m = new THREE.InstancedMesh(geo, mats[t], lista.length);
+      lista.forEach(([x, y, z], i) => m.setMatrixAt(i, mtx.makeTranslation(x, y, z)));
+      g.add(m);
+    }
+    // árvore de cubos
+    const { x, z, base } = arvore;
+    const tronco = new THREE.InstancedMesh(caixa, mats.tronco, 4);
+    for (let i = 0; i < 4; i++) tronco.setMatrixAt(i, mtx.makeTranslation(x, base + i, z));
+    g.add(tronco);
+    const folhas = [];
+    for (let dx = -2; dx <= 2; dx++) for (let dz = -2; dz <= 2; dz++) for (let dy = 3; dy <= 5; dy++)
+      if (Math.abs(dx) + Math.abs(dz) + (dy === 5 ? 2 : 0) <= 3 && !(dx === 0 && dz === 0 && dy === 3)) folhas.push([x + dx, base + dy, z + dz]);
+    const f = new THREE.InstancedMesh(caixa, mats.folha, folhas.length);
+    folhas.forEach((p, i) => f.setMatrixAt(i, mtx.makeTranslation(...p)));
+    g.add(f);
+    // flores em X, de pixels
+    for (const [fx, fz] of flores) {
+      const tex = texturaPixel(['#00000000'], 1);
+      const c = document.createElement('canvas'); c.width = c.height = 16;
+      const ctx = c.getContext('2d');
+      ctx.fillStyle = '#3f8a35'; ctx.fillRect(7, 7, 2, 9);
+      ctx.fillStyle = '#e8487a'; ctx.fillRect(5, 2, 6, 6);
+      ctx.fillStyle = '#ffd34d'; ctx.fillRect(7, 4, 2, 2);
+      tex.image = c; tex.needsUpdate = true;
+      const mat = new THREE.MeshLambertMaterial({ map: tex, transparent: true, alphaTest: 0.5, side: THREE.DoubleSide });
+      for (const r of [Math.PI / 4, -Math.PI / 4]) {
+        const p = new THREE.Mesh(new THREE.PlaneGeometry(0.8, 0.8), mat);
+        p.position.set(fx, alturaEm(fx, fz) - 0.1, fz);
+        p.rotation.y = r;
+        g.add(p);
+      }
+    }
+    g.add(bonecoHoje());
+  } else {
+    const raio = juntas ? 0.13 : 0.04;
+    const escala = juntas ? 0.985 : 1.0;
+    for (const [t, lista] of Object.entries(porTipo)) {
+      let geo = geoBrinquedo(t, raio);
+      let mat = plastico();
+      if (t === 'agua') { geo = geoBrinquedo('agua', 0.2).scale(1, 0.75, 1).translate(0, -0.12, 0); mat = plastico({ transparent: true, opacity: 0.82, roughness: 0.1, clearcoat: 1 }); }
+      if (t === 'vidro') mat = plastico({ transparent: true, opacity: 0.45, roughness: 0.05, clearcoat: 1 });
+      const m = new THREE.InstancedMesh(geo, mat, lista.length);
+      lista.forEach(([x, y, z], i) => {
+        m.setMatrixAt(i, mtx.makeScale(escala, escala, escala).setPosition(x, y, z));
+        // cada peça um tiquinho diferente: parece feito à mão
+        const h = Math.sin(x * 12.9898 + y * 78.233 + z * 37.719) * 43758.5453;
+        m.setColorAt(i, tint.setScalar(0.95 + 0.07 * (h - Math.floor(h))));
+      });
+      m.castShadow = true;
+      m.receiveShadow = true;
+      g.add(m);
+    }
+    // árvore de pirulito
+    const { x, z, base } = arvore;
+    const tronco = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.3, 3.4, 16), new THREE.MeshPhysicalMaterial({ color: COR.tronco, roughness: 0.5, clearcoat: 0.3 }));
+    tronco.position.set(x, base + 1.2, z);
+    const copa = new THREE.Group();
+    const folhaMat = new THREE.MeshPhysicalMaterial({ color: COR.folha, roughness: 0.4, clearcoat: 0.5 });
+    for (const [px, py, pz, r] of [[0, 0, 0, 1.55], [0.9, -0.3, 0.4, 1.0], [-0.8, -0.2, -0.5, 1.05], [0.2, 0.75, -0.3, 0.95]]) {
+      const s = new THREE.Mesh(new THREE.SphereGeometry(r, 32, 20), folhaMat);
+      s.position.set(px, py, pz);
+      s.castShadow = true;
+      copa.add(s);
+    }
+    copa.position.set(x, base + 3.9, z);
+    tronco.castShadow = true;
+    g.add(tronco, copa);
+    // flores de bolinha
+    for (const [fx, fz] of flores) {
+      const fy = alturaEm(fx, fz) - 0.5;
+      const haste = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 0.5, 8), new THREE.MeshStandardMaterial({ color: '#4aa04f' }));
+      haste.position.set(fx, fy + 0.25, fz);
+      const cor = ['#ff6f9c', '#ffd34d', '#b18cff', '#ff8a5c'][(fx + fz) % 4];
+      const flor = new THREE.Group();
+      for (let i = 0; i < 5; i++) {
+        const p = new THREE.Mesh(new THREE.SphereGeometry(0.11, 16, 12), new THREE.MeshPhysicalMaterial({ color: cor, roughness: 0.4, clearcoat: 0.6 }));
+        const a = (i / 5) * Math.PI * 2;
+        p.position.set(Math.cos(a) * 0.13, 0, Math.sin(a) * 0.13);
+        flor.add(p);
+      }
+      const miolo = new THREE.Mesh(new THREE.SphereGeometry(0.09, 16, 12), new THREE.MeshPhysicalMaterial({ color: '#fff1a8', roughness: 0.3 }));
+      flor.add(miolo);
+      flor.position.set(fx, fy + 0.52, fz);
+      haste.castShadow = flor.castShadow = true;
+      g.add(haste, flor);
+    }
+    g.add(bonecoBrinquedo());
+  }
+  g.position.set(-N / 2 + 0.5, -2, -N / 2 + 0.5);
+  return g;
+}
+
+// ---------- os personagens (do esboço anterior) ----------
+function caixa(w, h, d, cor, r = 0) {
+  const geo = r > 0 ? new RoundedBoxGeometry(w, h, d, 4, Math.min(r, w / 2, h / 2, d / 2)) : new THREE.BoxGeometry(w, h, d);
+  const m = new THREE.Mesh(geo, r > 0 ? new THREE.MeshPhysicalMaterial({ color: cor, roughness: 0.5, clearcoat: 0.3 }) : new THREE.MeshLambertMaterial({ color: cor }));
+  m.castShadow = true;
+  return m;
+}
+const esfera = (r, cor, sx = 1, sy = 1, sz = 1) => {
+  const m = new THREE.Mesh(new THREE.SphereGeometry(r, 24, 16), new THREE.MeshPhysicalMaterial({ color: cor, roughness: 0.35, clearcoat: 0.4 }));
+  m.scale.set(sx, sy, sz);
+  m.castShadow = true;
+  return m;
+};
+const P = { pele: '#e8b48a', cabelo: '#4a2c1a', camisa: '#3b6fb6', calca: '#2d3a4f', sapato: '#4a3426', detalhe: '#f2d16b' };
+function bonecoHoje() {
+  const g = new THREE.Group();
+  const pe = caixa(0.25, 0.7, 0.25, P.calca), pd = caixa(0.25, 0.7, 0.25, P.calca);
+  pe.position.set(-0.125, 0.35, 0); pd.position.set(0.125, 0.35, 0);
+  const tronco = caixa(0.5, 0.7, 0.25, P.camisa); tronco.position.y = 1.05;
+  const be = caixa(0.2, 0.7, 0.2, P.camisa), bd = caixa(0.2, 0.7, 0.2, P.camisa);
+  be.position.set(-0.35, 1.05, 0); bd.position.set(0.35, 1.05, 0);
+  const cab = caixa(0.4, 0.4, 0.4, P.pele); cab.position.y = 1.6;
+  const cabelo = caixa(0.42, 0.12, 0.42, P.cabelo); cabelo.position.y = 1.76;
+  g.add(pe, pd, tronco, be, bd, cab, cabelo);
+  g.position.set(jogador.x, jogador.y - 0.5, jogador.z);
+  g.rotation.y = 0.6;
+  return g;
+}
+function bonecoBrinquedo() {
+  const g = new THREE.Group();
+  for (const x of [-0.11, 0.11]) {
+    const perna = caixa(0.17, 0.24, 0.18, P.calca, 0.07); perna.position.set(x, 0.22, 0);
+    const sapato = caixa(0.21, 0.13, 0.28, P.sapato, 0.06); sapato.position.set(x, 0.065, 0.03);
+    g.add(perna, sapato);
+  }
+  const tronco = caixa(0.46, 0.42, 0.34, P.camisa, 0.13); tronco.position.y = 0.55;
+  const bolso = caixa(0.16, 0.1, 0.02, P.detalhe, 0.03); bolso.position.set(0, 0.48, 0.17);
+  g.add(tronco, bolso);
+  for (const s of [-1, 1]) {
+    const braco = caixa(0.13, 0.26, 0.14, P.camisa, 0.06); braco.position.set(s * 0.29, 0.58, 0);
+    const mao = esfera(0.085, P.pele); mao.position.set(s * 0.29, 0.41, 0);
+    g.add(braco, mao);
+  }
+  const cab = new THREE.Group();
+  cab.position.y = 1.1;
+  cab.add(caixa(0.72, 0.68, 0.65, P.pele, 0.18));
+  const cabelo = caixa(0.77, 0.3, 0.7, P.cabelo, 0.15); cabelo.position.y = 0.22;
+  const topete = esfera(0.12, P.cabelo, 1.3, 0.8, 1); topete.position.set(0.1, 0.36, 0.18);
+  const nuca = caixa(0.77, 0.43, 0.16, P.cabelo, 0.07); nuca.position.set(0, 0.02, -0.3);
+  cab.add(cabelo, topete, nuca);
+  for (const x of [-0.15, 0.15]) {
+    const olho = esfera(0.075, '#231a28', 0.85, 1.1, 0.4); olho.position.set(x, -0.04, 0.33);
+    const brilho = esfera(0.024, '#ffffff', 1, 1, 0.4); brilho.position.set(x + 0.025, 0, 0.355);
+    const boche = esfera(0.05, '#ff8a8a', 1.3, 0.75, 0.25); boche.position.set(x * 1.45, -0.15, 0.32);
+    cab.add(olho, brilho, boche);
+  }
+  g.add(cab);
+  g.position.set(jogador.x, jogador.y - 0.5, jogador.z);
+  g.rotation.y = 0.6;
+  g.userData.cabeca = cab;
+  return g;
+}
+
+// ---------- palcos ----------
+const LUZES = {
+  dia: { ceu: '#a9d4f5', sol: '#fff4e0', forca: 2.4, hemi: ['#eaf4ff', '#6b8a52'], hemiF: 1.25, solPos: [9, 14, 7] },
+  tarde: { ceu: '#f3b98a', sol: '#ffb070', forca: 2.0, hemi: ['#ffd9b8', '#5a4a6a'], hemiF: 0.9, solPos: [-12, 6, 6] },
+};
+let luz = 'dia', juntas = true, giroAuto = !reduzir, perto = false;
+let giro = 0.7;
+const palcos = [];
+for (const tela of document.querySelectorAll('.tela')) {
+  const estilo = tela.dataset.estilo;
+  const renderer = new THREE.WebGLRenderer({ antialias: true });
+  renderer.setPixelRatio(Math.min(2, devicePixelRatio));
+  renderer.outputColorSpace = THREE.SRGBColorSpace;
+  if (estilo === 'brinquedo') {
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.05;
+  }
+  tela.appendChild(renderer.domElement);
+  const cena = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(32, 4 / 3, 0.5, 120);
+  const hemi = new THREE.HemisphereLight();
+  const sol = new THREE.DirectionalLight();
+  sol.castShadow = estilo === 'brinquedo';
+  sol.shadow.mapSize.set(2048, 2048);
+  sol.shadow.radius = 5;
+  sol.shadow.bias = -0.0005;
+  sol.shadow.normalBias = 0.03;
+  Object.assign(sol.shadow.camera, { left: -12, right: 12, top: 12, bottom: -12, near: 1, far: 50 });
+  cena.add(hemi, sol);
+  const p = { estilo, renderer, cena, camera, tela, hemi, sol, mundo: null };
+  p.aplicarLuz = () => {
+    const L = LUZES[luz];
+    cena.background = new THREE.Color(L.ceu);
+    cena.fog = new THREE.Fog(L.ceu, 30, 70);
+    hemi.color.set(L.hemi[0]); hemi.groundColor.set(L.hemi[1]); hemi.intensity = estilo === 'hoje' ? L.hemiF * 1.3 : L.hemiF;
+    sol.color.set(L.sol); sol.intensity = estilo === 'hoje' ? L.forca * 0.6 : L.forca;
+    sol.position.set(...L.solPos);
+  };
+  p.montar = () => {
+    if (p.mundo) cena.remove(p.mundo);
+    p.mundo = montar(estilo, juntas);
+    cena.add(p.mundo);
+  };
+  p.aplicarLuz();
+  p.montar();
+  let arrastando = false, ultimoX = 0;
+  tela.addEventListener('pointerdown', (e) => { arrastando = true; ultimoX = e.clientX; tela.setPointerCapture(e.pointerId); });
+  tela.addEventListener('pointermove', (e) => { if (!arrastando) return; giro += (e.clientX - ultimoX) * 0.01; ultimoX = e.clientX; });
+  tela.addEventListener('pointerup', () => (arrastando = false));
+  tela.addEventListener('pointercancel', () => (arrastando = false));
+  palcos.push(p);
+}
+function tamanho() {
+  for (const p of palcos) {
+    const r = p.tela.getBoundingClientRect();
+    p.renderer.setSize(r.width, r.height, false);
+    p.camera.aspect = r.width / r.height;
+    p.camera.updateProjectionMatrix();
+  }
+}
+addEventListener('resize', tamanho);
+tamanho();
+const relogio = new THREE.Clock();
+function quadro() {
+  const dt = Math.min(0.05, relogio.getDelta());
+  const t = relogio.elapsedTime;
+  if (giroAuto) giro += dt * 0.15;
+  for (const p of palcos) {
+    // perto: em volta do personagem (no lugar dele no mundo, que fica deslocado para o centro)
+    const alvo = perto ? new THREE.Vector3(jogador.x - N / 2 + 0.5, jogador.y - 1.2, jogador.z - N / 2 + 0.5) : new THREE.Vector3(0, 0.5, 0);
+    const d = perto ? 6.5 : 24;
+    p.camera.position.set(alvo.x + Math.sin(giro) * d, alvo.y + (perto ? 2.6 : 12.5), alvo.z + Math.cos(giro) * d);
+    p.camera.lookAt(alvo);
+    const cab = p.mundo.children.find((c) => c.userData.cabeca)?.userData.cabeca;
+    if (cab && !reduzir) cab.rotation.y = Math.sin(t * 0.8) * 0.25;
+    p.renderer.render(p.cena, p.camera);
+  }
+  requestAnimationFrame(quadro);
+}
+quadro();
+
+const ligar = (sel, f) => document.querySelectorAll(sel).forEach((b) => b.addEventListener('click', () => {
+  document.querySelectorAll(sel).forEach((o) => o.setAttribute('aria-pressed', String(o === b)));
+  f(b);
+}));
+ligar('[data-luz]', (b) => { luz = b.dataset.luz; palcos.forEach((p) => p.aplicarLuz()); });
+ligar('[data-juntas]', (b) => { juntas = b.dataset.juntas === 'sim'; palcos.filter((p) => p.estilo === 'brinquedo').forEach((p) => p.montar()); });
+ligar('[data-giro]', (b) => { giroAuto = b.dataset.giro === 'auto'; });
+ligar('[data-camera]', (b) => { perto = b.dataset.camera === 'perto'; });
+</script>

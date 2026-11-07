@@ -1,0 +1,489 @@
+<title>Movimento do Brinquedo</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@500;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: cabeçalho curto; um palco grande com o boneco; comandos de ação, de jeito de mover e de câmera; notas do que cada coisa mostra */
+:root {
+  --bg: #eef0f6;
+  --fg: #1c1b2b;
+  --suave: #5a5a72;
+  --linha: #cdd0de;
+  --acento: #a8610a;
+  --cartao: #f8f9fc;
+  --display: 'Pixelify Sans', 'Courier New', monospace;
+  --corpo: 'IBM Plex Sans', system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) { --bg: #12111c; --fg: #ecebf5; --suave: #a3a2bb; --linha: #2c2b40; --acento: #ffc96b; --cartao: #191827; color-scheme: dark; }
+}
+:root[data-theme="dark"] { --bg: #12111c; --fg: #ecebf5; --suave: #a3a2bb; --linha: #2c2b40; --acento: #ffc96b; --cartao: #191827; color-scheme: dark; }
+body { background: var(--bg); color: var(--fg); font: 400 16px/1.55 var(--corpo); }
+.pagina {
+  max-width: 1100px; margin: 0 auto;
+  padding-block: 28px 56px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: grid; gap: 20px;
+}
+h1, h2 { font-family: var(--display); margin: 0; line-height: 1.15; text-wrap: balance; font-variant-ligatures: none; }
+h1 { font-size: clamp(1.8rem, 5vw, 2.6rem); }
+h2 { font-size: 1.2rem; }
+p { margin: 0; max-width: 70ch; }
+.rotulo { font: 600 0.75rem var(--corpo); letter-spacing: 0.12em; text-transform: uppercase; color: var(--acento); }
+header { display: grid; gap: 10px; }
+.lead { color: var(--suave); }
+.controles { display: grid; gap: 10px; }
+.grupo { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.grupo > span { font-size: 0.85rem; color: var(--suave); min-width: 5.5em; }
+button.op {
+  font: 500 0.88rem var(--corpo); color: var(--fg); background: var(--cartao);
+  border: 1.5px solid var(--linha); border-radius: 999px; padding: 6px 14px; min-height: 40px; cursor: pointer;
+}
+button.op[aria-pressed="true"] { border-color: var(--acento); color: var(--acento); font-weight: 600; }
+button.op:focus-visible { outline: 2px solid var(--acento); outline-offset: 2px; }
+.tela { position: relative; aspect-ratio: 16 / 9; border-radius: 12px; overflow: hidden; border: 1px solid var(--linha); background: #a9d4f5; touch-action: pan-y; cursor: grab; }
+.tela canvas { display: block; width: 100%; height: 100%; }
+.legenda { position: absolute; left: 12px; bottom: 12px; padding: 6px 12px; border-radius: 8px; background: rgba(14, 10, 20, 0.62); color: #fff4d8; font: 600 0.85rem var(--corpo); pointer-events: none; }
+.mira { position: absolute; left: 50%; top: 50%; width: 16px; height: 16px; margin: -8px 0 0 -8px; pointer-events: none; }
+.mira::before, .mira::after { content: ''; position: absolute; background: rgba(255, 255, 255, 0.9); }
+.mira::before { left: 7px; top: 0; width: 2px; height: 16px; }
+.mira::after { top: 7px; left: 0; width: 16px; height: 2px; }
+.notas { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); }
+.nota { padding: 14px 16px; border: 1px solid var(--linha); border-radius: 10px; background: var(--cartao); display: grid; gap: 6px; align-content: start; }
+.nota ul { margin: 0; padding-left: 1.1em; display: grid; gap: 4px; font-size: 0.93rem; }
+</style>
+
+<div class="pagina">
+  <header>
+    <span class="rotulo">Terrário · esboço de movimento para a spec 012</span>
+    <h1>Como o boneco de brinquedo se mexe</h1>
+    <p class="lead">O personagem B em cada ação, com o jeito de mover de hoje e o jeito novo, e nas três câmeras do jogo. Arraste para girar nas câmeras de fora. Na primeira pessoa, a mão é a do brinquedo, segurando a picareta.</p>
+  </header>
+
+  <div class="controles">
+    <div class="grupo" role="group" aria-label="Ação">
+      <span>Ação</span>
+      <button class="op" type="button" data-acao="parado" aria-pressed="true">Parado</button>
+      <button class="op" type="button" data-acao="andar" aria-pressed="false">Andando</button>
+      <button class="op" type="button" data-acao="correr" aria-pressed="false">Correndo</button>
+      <button class="op" type="button" data-acao="pular" aria-pressed="false">Pulando</button>
+      <button class="op" type="button" data-acao="minerar" aria-pressed="false">Minerando</button>
+      <button class="op" type="button" data-acao="acenar" aria-pressed="false">Acenando</button>
+      <button class="op" type="button" data-acao="comer" aria-pressed="false">Comendo</button>
+    </div>
+    <div class="grupo" role="group" aria-label="Jeito de mover">
+      <span>Movimento</span>
+      <button class="op" type="button" data-jeito="hoje" aria-pressed="false">Como hoje</button>
+      <button class="op" type="button" data-jeito="novo" aria-pressed="true">Novo, com mais vida</button>
+    </div>
+    <div class="grupo" role="group" aria-label="Câmera">
+      <span>Câmera</span>
+      <button class="op" type="button" data-camera="tras" aria-pressed="true">3ª pessoa (por trás)</button>
+      <button class="op" type="button" data-camera="frente" aria-pressed="false">De frente</button>
+      <button class="op" type="button" data-camera="primeira" aria-pressed="false">1ª pessoa</button>
+    </div>
+  </div>
+
+  <div class="tela" aria-label="O personagem de brinquedo em 3D">
+    <div class="mira" hidden></div>
+    <div class="legenda" aria-live="polite">Parado · novo · 3ª pessoa</div>
+  </div>
+
+  <div class="notas">
+    <div class="nota">
+      <h2>O que o "novo" acrescenta</h2>
+      <ul>
+        <li><strong>Peso:</strong> o corpo sobe e desce a cada passo e se inclina para a frente quando corre.</li>
+        <li><strong>Mola:</strong> agacha antes de pular, estica no ar e achata um pouco ao cair.</li>
+        <li><strong>Golpe com preparo:</strong> a picareta vai para trás, desce rápido e acompanha o corpo, em vez de só balançar.</li>
+        <li><strong>Detalhes vivos:</strong> o topete balança atrasado, a cabeça olha em volta quando está parado e os olhos piscam.</li>
+      </ul>
+    </div>
+    <div class="nota">
+      <h2>Primeira pessoa</h2>
+      <ul>
+        <li>No lugar do braço quadrado, aparece a manga arredondada e a mãozinha do boneco, na cor da pele e da roupa escolhidas.</li>
+        <li>A mão balança de leve ao andar, golpeia com preparo ao minerar e leva a comida até a boca ao comer.</li>
+        <li>O item na mão (aqui, a picareta) também é de brinquedo.</li>
+      </ul>
+    </div>
+    <div class="nota">
+      <h2>Para depois (multiplayer)</h2>
+      <ul>
+        <li>Todos esses movimentos vão aparecer também nos amigos: quem está ao lado vê o outro minerar, pular, comer e acenar. Isso fica para a etapa do multiplayer, logo depois do visual.</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+} }
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
+
+const reduzir = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const P = { pele: '#e8b48a', cabelo: '#4a2c1a', camisa: '#3b6fb6', calca: '#2d3a4f', sapato: '#4a3426', detalhe: '#f2d16b' };
+const plastico = (cor, extra = {}) => new THREE.MeshPhysicalMaterial({ color: cor, roughness: 0.45, clearcoat: 0.35, clearcoatRoughness: 0.4, ...extra });
+function caixa(w, h, d, cor, r) {
+  const m = new THREE.Mesh(new RoundedBoxGeometry(w, h, d, 4, Math.min(r, w / 2, h / 2, d / 2)), plastico(cor));
+  m.castShadow = true;
+  return m;
+}
+function esfera(r, cor, sx = 1, sy = 1, sz = 1) {
+  const m = new THREE.Mesh(new THREE.SphereGeometry(r, 24, 16), plastico(cor, { roughness: 0.35 }));
+  m.scale.set(sx, sy, sz);
+  m.castShadow = true;
+  return m;
+}
+const junta = (x, y, z) => { const g = new THREE.Group(); g.position.set(x, y, z); return g; };
+
+/** Picareta de brinquedo (cabo e cabeça arredondados). */
+function picareta() {
+  const g = new THREE.Group();
+  const cabo = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.035, 0.55, 12), plastico('#b07a4f'));
+  cabo.position.y = 0.2;
+  const cabeca = new THREE.Group();
+  for (const s of [-1, 1]) {
+    const ponta = caixa(0.2, 0.07, 0.07, '#a9adb8', 0.03);
+    ponta.position.set(s * 0.1, 0, 0);
+    ponta.rotation.z = s * -0.25;
+    cabeca.add(ponta);
+  }
+  cabeca.position.y = 0.46;
+  g.add(cabo, cabeca);
+  cabo.castShadow = true;
+  return g;
+}
+const maca = () => { const m = esfera(0.09, '#e84a4a'); const f = esfera(0.03, '#5cbf63', 1.5, 0.6, 1); f.position.y = 0.09; m.add(f); return m; };
+
+function boneco() {
+  const raiz = new THREE.Group();
+  const corpo = new THREE.Group(); // tudo que sobe/desce e achata
+  raiz.add(corpo);
+  const quadril = 0.34;
+  const pernas = {};
+  for (const [lado, x] of [['e', -0.11], ['d', 0.11]]) {
+    const j = junta(x, quadril, 0);
+    const perna = caixa(0.17, 0.24, 0.18, P.calca, 0.07); perna.position.y = -0.12;
+    const sapato = caixa(0.21, 0.13, 0.28, P.sapato, 0.06); sapato.position.set(0, -0.275, 0.03);
+    j.add(perna, sapato);
+    corpo.add(j);
+    pernas[lado] = j;
+  }
+  const tronco = new THREE.Group();
+  tronco.position.y = quadril;
+  corpo.add(tronco);
+  const peito = caixa(0.46, 0.42, 0.34, P.camisa, 0.13); peito.position.y = 0.21;
+  const bolso = caixa(0.16, 0.1, 0.02, P.detalhe, 0.03); bolso.position.set(0, 0.14, 0.17);
+  tronco.add(peito, bolso);
+  const bracos = {};
+  for (const [lado, x] of [['e', -0.29], ['d', 0.29]]) {
+    const j = junta(x, 0.34, 0);
+    const braco = caixa(0.13, 0.26, 0.14, P.camisa, 0.06); braco.position.y = -0.1;
+    const mao = esfera(0.085, P.pele); mao.position.y = -0.27;
+    j.add(braco, mao);
+    tronco.add(j);
+    bracos[lado] = { j, mao };
+  }
+  const item = new THREE.Group();
+  item.position.set(0, -0.27, 0.04);
+  item.rotation.x = Math.PI / 2;
+  bracos.d.j.add(item);
+  const pica = picareta();
+  pica.position.y = -0.12;
+  item.add(pica);
+  const comida = maca();
+  comida.visible = false;
+  bracos.d.j.add(comida);
+  comida.position.set(0, -0.33, 0.06);
+  const cabeca = junta(0, 0.42 + 0.33, 0);
+  tronco.add(cabeca);
+  cabeca.add(caixa(0.72, 0.68, 0.65, P.pele, 0.18));
+  const cabelo = caixa(0.77, 0.3, 0.7, P.cabelo, 0.15); cabelo.position.y = 0.22;
+  const nuca = caixa(0.77, 0.43, 0.16, P.cabelo, 0.07); nuca.position.set(0, 0.02, -0.3);
+  const topete = junta(0.1, 0.33, 0.16);
+  topete.add(esfera(0.12, P.cabelo, 1.3, 0.8, 1));
+  cabeca.add(cabelo, nuca, topete);
+  const olhos = new THREE.Group();
+  for (const x of [-0.15, 0.15]) {
+    const o = esfera(0.075, '#231a28', 0.85, 1.1, 0.4); o.position.set(x, -0.04, 0.33);
+    const b = esfera(0.024, '#ffffff', 1, 1, 0.4); b.position.set(x + 0.025, 0, 0.355);
+    olhos.add(o, b);
+    const boch = esfera(0.05, '#ff8a8a', 1.3, 0.75, 0.25); boch.position.set(x * 1.45, -0.15, 0.32);
+    cabeca.add(boch);
+  }
+  const boca = esfera(0.035, '#9a4a3c', 1.4, 0.55, 0.3); boca.position.set(0, -0.18, 0.33);
+  cabeca.add(olhos, boca);
+  return { raiz, corpo, tronco, pernas, bracos, cabeca, topete, olhos, boca, pica, comida };
+}
+
+// ---------- cena ----------
+const tela = document.querySelector('.tela');
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(Math.min(2, devicePixelRatio));
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.autoClear = false;
+tela.prepend(renderer.domElement);
+const cena = new THREE.Scene();
+cena.background = new THREE.Color('#a9d4f5');
+cena.fog = new THREE.Fog('#a9d4f5', 14, 40);
+cena.add(new THREE.HemisphereLight('#eaf4ff', '#6b8a52', 1.25));
+const sol = new THREE.DirectionalLight('#fff4e0', 2.4);
+sol.position.set(4, 8, 5);
+sol.castShadow = true;
+sol.shadow.mapSize.set(2048, 2048);
+sol.shadow.radius = 5;
+sol.shadow.bias = -0.0005;
+sol.shadow.normalBias = 0.03;
+Object.assign(sol.shadow.camera, { left: -8, right: 8, top: 8, bottom: -8 });
+cena.add(sol);
+// chão de peças de grama e um bloco de pedra para minerar
+const geoGrama = new RoundedBoxGeometry(1, 1, 1, 3, 0.13);
+{
+  const pos = geoGrama.attributes.position;
+  const cores = new Float32Array(pos.count * 3);
+  const c = new THREE.Color();
+  for (let i = 0; i < pos.count; i++) {
+    c.set(pos.getY(i) > 0.22 ? '#7cc95c' : '#b07a4f').multiplyScalar(0.9 + 0.12 * (pos.getY(i) + 0.5));
+    cores.set([c.r, c.g, c.b], i * 3);
+  }
+  geoGrama.setAttribute('color', new THREE.BufferAttribute(cores, 3));
+}
+const chao = new THREE.InstancedMesh(geoGrama, new THREE.MeshPhysicalMaterial({ vertexColors: true, roughness: 0.45, clearcoat: 0.35 }), 17 * 17);
+{
+  const m = new THREE.Matrix4();
+  const tint = new THREE.Color();
+  let i = 0;
+  for (let x = -8; x <= 8; x++) for (let z = -8; z <= 8; z++) {
+    chao.setMatrixAt(i, m.makeScale(0.985, 0.985, 0.985).setPosition(x, -0.5, z));
+    const h = Math.sin(x * 12.9898 + z * 37.719) * 43758.5453;
+    chao.setColorAt(i++, tint.setScalar(0.95 + 0.07 * (h - Math.floor(h))));
+  }
+  chao.receiveShadow = true;
+}
+cena.add(chao);
+const pedra = new THREE.Mesh(new RoundedBoxGeometry(1, 1, 1, 3, 0.13), plastico('#a9adb8'));
+pedra.position.set(0, 0.5, 1.15);
+pedra.castShadow = pedra.receiveShadow = true;
+cena.add(pedra);
+for (const [x, z, r] of [[-3, -4, 1.2], [4, -3, 1], [-5, 3, 0.9]]) {
+  const t = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.24, 2.2, 14), plastico('#9a6a43'));
+  t.position.set(x, 1.1, z);
+  const c = new THREE.Mesh(new THREE.SphereGeometry(r, 28, 18), plastico('#5cbf63', { clearcoat: 0.5 }));
+  c.position.set(x, 2.4 + r * 0.5, z);
+  t.castShadow = c.castShadow = true;
+  cena.add(t, c);
+}
+const b = boneco();
+cena.add(b.raiz);
+const camera = new THREE.PerspectiveCamera(45, 16 / 9, 0.05, 80);
+
+// primeira pessoa: a mão desenhada por cima, numa cena própria (como no jogo)
+const cenaMao = new THREE.Scene();
+cenaMao.add(new THREE.HemisphereLight('#eaf4ff', '#6b8a52', 1.4));
+const solMao = new THREE.DirectionalLight('#fff4e0', 2.0);
+solMao.position.set(2, 3, 2);
+cenaMao.add(solMao);
+const cameraMao = new THREE.PerspectiveCamera(55, 16 / 9, 0.01, 10);
+const mao = new THREE.Group();
+const manga = caixa(0.2, 0.42, 0.2, P.camisa, 0.08);
+manga.position.y = 0.05;
+const punho = esfera(0.13, P.pele);
+punho.position.y = -0.22;
+const picaMao = picareta();
+picaMao.position.set(0, -0.26, 0.05);
+picaMao.rotation.x = Math.PI / 2 + 0.3;
+const macaMao = maca();
+macaMao.scale.setScalar(1.5);
+macaMao.position.set(0, -0.32, 0.08);
+mao.add(manga, punho, picaMao, macaMao);
+mao.scale.setScalar(0.62);
+cenaMao.add(mao);
+// o braço de hoje, para comparar na 1ª pessoa
+const bracoHoje = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.6, 0.22), new THREE.MeshLambertMaterial({ color: P.pele }));
+cenaMao.add(bracoHoje);
+
+let acao = 'parado', jeito = 'novo', cam = 'tras', giro = 0, inicioAcao = 0;
+const legenda = document.querySelector('.legenda');
+const mira = document.querySelector('.mira');
+const NOMES = { parado: 'Parado', andar: 'Andando', correr: 'Correndo', pular: 'Pulando', minerar: 'Minerando', acenar: 'Acenando', comer: 'Comendo' };
+const atualizarLegenda = () => {
+  legenda.textContent = `${NOMES[acao]} · ${jeito === 'novo' ? 'novo' : 'como hoje'} · ${cam === 'primeira' ? '1ª pessoa' : cam === 'frente' ? 'de frente' : '3ª pessoa'}`;
+  mira.hidden = cam !== 'primeira';
+};
+
+const suave = (x) => x * x * (3 - 2 * x);
+/** Golpe com preparo: 0..1 → ângulo (vai para trás, desce rápido, acompanha e volta). */
+function golpe(f, novo) {
+  if (!novo) return Math.sin(f * Math.PI * 2) * 0.9;
+  if (f < 0.35) return -1.1 * suave(f / 0.35);            // preparo, devagar
+  if (f < 0.5) return -1.1 + 2.6 * suave((f - 0.35) / 0.15); // desce rápido
+  return 1.5 * (1 - suave((f - 0.5) / 0.5));               // volta
+}
+
+function posar(t, dt) {
+  const novo = jeito === 'novo' && !reduzir;
+  const ta = t - inicioAcao;
+  // tudo volta ao lugar
+  b.corpo.position.set(0, 0, 0); b.corpo.scale.set(1, 1, 1); b.corpo.rotation.set(0, 0, 0);
+  b.tronco.rotation.set(0, 0, 0);
+  for (const l of ['e', 'd']) { b.pernas[l].rotation.set(0, 0, 0); b.bracos[l].j.rotation.set(0, 0, 0); }
+  b.cabeca.rotation.set(0, 0, 0);
+  b.pica.visible = acao !== 'comer';
+  b.comida.visible = acao === 'comer';
+  let golpeMao = 0, balanco = 0, comerMao = 0;
+  const vel = acao === 'correr' ? 12 : 8;
+  if (acao === 'andar' || acao === 'correr') {
+    const s = Math.sin(ta * vel);
+    const amp = acao === 'correr' ? 0.9 : 0.6;
+    b.pernas.e.rotation.x = s * amp;
+    b.pernas.d.rotation.x = -s * amp;
+    b.bracos.e.j.rotation.x = -s * amp * 0.9;
+    b.bracos.d.j.rotation.x = s * amp * 0.9;
+    balanco = s;
+    if (novo) {
+      b.corpo.position.y = Math.abs(Math.cos(ta * vel)) * (acao === 'correr' ? 0.07 : 0.04);
+      b.tronco.rotation.x = acao === 'correr' ? 0.22 : 0.06;
+      b.tronco.rotation.y = s * 0.12;
+      b.cabeca.rotation.y = -s * 0.1;
+      b.cabeca.rotation.x = acao === 'correr' ? -0.12 : 0;
+    }
+  } else if (acao === 'pular') {
+    const ciclo = 1.3, f = (ta % ciclo) / ciclo;
+    if (novo) {
+      if (f < 0.18) { const k = suave(f / 0.18); b.corpo.scale.set(1 + 0.12 * k, 1 - 0.16 * k, 1 + 0.12 * k); b.pernas.e.rotation.x = b.pernas.d.rotation.x = -0.5 * k; }
+      else if (f < 0.78) {
+        const k = (f - 0.18) / 0.6;
+        b.corpo.position.y = Math.sin(k * Math.PI) * 1.05;
+        const estica = 1 + 0.1 * Math.cos(k * Math.PI);
+        b.corpo.scale.set(1 / Math.sqrt(estica), estica, 1 / Math.sqrt(estica));
+        b.bracos.e.j.rotation.z = -1.2 * Math.sin(k * Math.PI);
+        b.bracos.d.j.rotation.z = 1.2 * Math.sin(k * Math.PI);
+        b.pernas.e.rotation.x = 0.3; b.pernas.d.rotation.x = -0.2;
+      } else { const k = 1 - suave((f - 0.78) / 0.22); b.corpo.scale.set(1 + 0.14 * k, 1 - 0.18 * k, 1 + 0.14 * k); }
+    } else {
+      b.corpo.position.y = Math.max(0, Math.sin(f * Math.PI * 2)) * 0.9;
+    }
+  } else if (acao === 'minerar') {
+    const f = (ta % 0.75) / 0.75;
+    golpeMao = golpe(f, novo);
+    b.bracos.d.j.rotation.x = -1.6 + golpeMao * 0.9;
+    if (novo) {
+      b.tronco.rotation.x = 0.1 + Math.max(0, golpeMao) * 0.18;
+      b.tronco.rotation.y = -0.2 + golpeMao * 0.08;
+      b.bracos.e.j.rotation.x = -0.3;
+      b.cabeca.rotation.x = 0.25;
+      if (f > 0.45 && f < 0.55) b.corpo.position.y = -0.015;
+    }
+  } else if (acao === 'acenar') {
+    b.bracos.d.j.rotation.z = 2.5 + Math.sin(ta * 9) * 0.35;
+    if (novo) {
+      b.cabeca.rotation.z = Math.sin(ta * 4.5) * 0.12;
+      b.corpo.position.y = Math.abs(Math.sin(ta * 4.5)) * 0.03;
+      b.tronco.rotation.z = Math.sin(ta * 4.5) * 0.05;
+    }
+  } else if (acao === 'comer') {
+    const f = (ta % 1.2) / 1.2;
+    const leva = novo ? suave(Math.min(1, f / 0.3)) : 1;
+    comerMao = leva;
+    b.bracos.d.j.rotation.x = -2.0 * leva + (novo ? Math.sin(ta * 14) * 0.08 * leva : 0);
+    b.bracos.d.j.rotation.z = 0.35 * leva;
+    if (novo) {
+      b.cabeca.rotation.x = 0.12 + Math.sin(ta * 14) * 0.05;
+      b.boca.scale.y = 0.55 + Math.abs(Math.sin(ta * 14)) * 0.6;
+    }
+  }
+  if (acao !== 'comer') b.boca.scale.y = 0.55;
+  // parado: respira, olha em volta
+  if (acao === 'parado' && novo) {
+    b.corpo.scale.y = 1 + Math.sin(t * 2.2) * 0.012;
+    b.cabeca.rotation.y = Math.sin(t * 0.6) * 0.5 * suave(Math.max(0, Math.sin(t * 0.3)));
+    b.cabeca.rotation.x = Math.sin(t * 0.9) * 0.05;
+    b.bracos.e.j.rotation.z = -0.05 - Math.sin(t * 2.2) * 0.03;
+    b.bracos.d.j.rotation.z = 0.05 + Math.sin(t * 2.2) * 0.03;
+  }
+  // topete atrasado: segue o movimento com mola
+  b.topete.rotation.x = novo ? -b.corpo.position.y * 2.5 - b.tronco.rotation.x * 0.8 + Math.sin(t * 3) * 0.05 : 0;
+  // piscar
+  b.olhos.scale.y = novo && t % 3.3 < 0.12 ? 0.1 : 1;
+  return { golpeMao, balanco, comerMao };
+}
+
+function tamanho() {
+  const r = tela.getBoundingClientRect();
+  renderer.setSize(r.width, r.height, false);
+  camera.aspect = cameraMao.aspect = r.width / r.height;
+  camera.updateProjectionMatrix();
+  cameraMao.updateProjectionMatrix();
+}
+addEventListener('resize', tamanho);
+tamanho();
+
+let arrastando = false, ultimoX = 0;
+tela.addEventListener('pointerdown', (e) => { arrastando = true; ultimoX = e.clientX; tela.setPointerCapture(e.pointerId); });
+tela.addEventListener('pointermove', (e) => { if (arrastando) { giro += (e.clientX - ultimoX) * 0.01; ultimoX = e.clientX; } });
+tela.addEventListener('pointerup', () => (arrastando = false));
+tela.addEventListener('pointercancel', () => (arrastando = false));
+
+const relogio = new THREE.Clock();
+function quadro() {
+  const dt = Math.min(0.05, relogio.getDelta());
+  const t = relogio.elapsedTime;
+  const m = posar(t, dt);
+  const altura = 1.15;
+  renderer.clear();
+  if (cam === 'primeira') {
+    b.raiz.visible = false;
+    camera.position.set(0, altura + (jeito === 'novo' && (acao === 'andar' || acao === 'correr') ? Math.abs(Math.cos((t - inicioAcao) * (acao === 'correr' ? 12 : 8))) * 0.05 : 0), -1.3);
+    camera.lookAt(0, 0.45, 1.6);
+    renderer.render(cena, camera);
+    renderer.clearDepth();
+    const novo = jeito === 'novo';
+    mao.visible = novo;
+    bracoHoje.visible = !novo;
+    picaMao.visible = acao !== 'comer';
+    macaMao.visible = acao === 'comer';
+    cameraMao.position.set(0, 0, 0);
+    cameraMao.lookAt(0, 0, -1);
+    const bal = m.balanco * (acao === 'correr' ? 0.05 : 0.03);
+    // mão de baixo à direita, como no jogo
+    // mão no canto de baixo à direita: a manga entra pela borda, o punho e a picareta ficam à vista
+    mao.position.set(0.36 + bal - m.comerMao * 0.22, -0.34 + Math.abs(bal) * 0.6 + m.comerMao * 0.16, -0.72 + m.comerMao * 0.12);
+    mao.rotation.set(-0.95 + (novo ? m.golpeMao * 0.5 : m.golpeMao * 0.35) - m.comerMao * 0.5, -0.4 - m.comerMao * 0.5, 0.35);
+    bracoHoje.position.set(0.42, -0.4 + Math.abs(bal) * 0.5, -0.7);
+    bracoHoje.rotation.set(-0.95 + m.golpeMao * 0.35, -0.35, 0.3);
+    renderer.render(cenaMao, cameraMao);
+  } else {
+    b.raiz.visible = true;
+    const frente = cam === 'frente';
+    // por cima do ombro direito (como no jogo) ou de frente, de lado para a pedra não tapar
+    const ang = giro + (frente ? 0.75 : Math.PI - 0.55);
+    const d = frente ? 4.8 : 4.0;
+    camera.position.set(Math.sin(ang) * d, frente ? 1.6 : 2.1, Math.cos(ang) * d);
+    camera.lookAt(0, frente ? 0.85 : 0.7, frente ? 0 : 0.5);
+    renderer.render(cena, camera);
+  }
+  requestAnimationFrame(quadro);
+}
+quadro();
+atualizarLegenda();
+
+const ligar = (sel, f) => document.querySelectorAll(sel).forEach((btn) => btn.addEventListener('click', () => {
+  document.querySelectorAll(sel).forEach((o) => o.setAttribute('aria-pressed', String(o === btn)));
+  f(btn);
+  atualizarLegenda();
+}));
+ligar('[data-acao]', (btn) => { acao = btn.dataset.acao; inicioAcao = relogio.elapsedTime; });
+ligar('[data-jeito]', (btn) => { jeito = btn.dataset.jeito; });
+ligar('[data-camera]', (btn) => { cam = btn.dataset.camera; giro = 0; });
+</script>

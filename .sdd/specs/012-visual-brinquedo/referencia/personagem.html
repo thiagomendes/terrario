@@ -1,0 +1,524 @@
+<title>Estilos de Personagem</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@500;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: cabeçalho curto; quatro palcos 3D lado a lado (dois por linha no celular), com as cores e o andar comandando todos juntos */
+:root {
+  --bg: #eef0f6;
+  --fg: #1c1b2b;
+  --suave: #5a5a72;
+  --linha: #cdd0de;
+  --acento: #a8610a;
+  --cartao: #f8f9fc;
+  --ceu-1: #bfe0ff;
+  --ceu-2: #eaf5ff;
+  --display: 'Pixelify Sans', 'Courier New', monospace;
+  --corpo: 'IBM Plex Sans', system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #12111c; --fg: #ecebf5; --suave: #a3a2bb; --linha: #2c2b40; --acento: #ffc96b; --cartao: #191827;
+    --ceu-1: #2a3d63; --ceu-2: #1b2440; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #12111c; --fg: #ecebf5; --suave: #a3a2bb; --linha: #2c2b40; --acento: #ffc96b; --cartao: #191827;
+  --ceu-1: #2a3d63; --ceu-2: #1b2440; color-scheme: dark;
+}
+body { background: var(--bg); color: var(--fg); font: 400 16px/1.55 var(--corpo); }
+.pagina {
+  max-width: 1180px; margin: 0 auto;
+  padding-block: 28px 56px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: grid; gap: 26px;
+}
+h1, h2 { font-family: var(--display); margin: 0; line-height: 1.15; text-wrap: balance; font-variant-ligatures: none; }
+h1 { font-size: clamp(1.8rem, 5vw, 2.8rem); }
+h2 { font-size: 1.25rem; }
+p { margin: 0; max-width: 70ch; }
+.rotulo { font: 600 0.75rem var(--corpo); letter-spacing: 0.12em; text-transform: uppercase; color: var(--acento); }
+header { display: grid; gap: 10px; }
+.lead { color: var(--suave); }
+.controles { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; }
+.grupo { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.grupo > span { font-size: 0.85rem; color: var(--suave); margin-right: 4px; }
+button.op {
+  font: 500 0.88rem var(--corpo); color: var(--fg); background: var(--cartao);
+  border: 1.5px solid var(--linha); border-radius: 999px; padding: 6px 14px; min-height: 36px; cursor: pointer;
+}
+button.op[aria-pressed="true"] { border-color: var(--acento); color: var(--acento); font-weight: 600; }
+button.op:focus-visible { outline: 2px solid var(--acento); outline-offset: 2px; }
+.palcos { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 250px), 1fr)); }
+.palco { display: grid; gap: 8px; align-content: start; padding: 12px; border: 1px solid var(--linha); border-radius: 12px; background: var(--cartao); }
+.palco.atual { border-style: dashed; }
+.tela { position: relative; aspect-ratio: 3 / 4; border-radius: 8px; overflow: hidden; background: linear-gradient(var(--ceu-1), var(--ceu-2)); touch-action: pan-y; cursor: grab; }
+.tela canvas { display: block; width: 100%; height: 100%; }
+.palco h2 { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.palco h2 small { font: 500 0.75rem var(--corpo); color: var(--suave); }
+.palco p { font-size: 0.9rem; color: var(--suave); }
+.nota { font-size: 0.9rem; color: var(--suave); }
+@media (prefers-reduced-motion: reduce) { .tela { cursor: default; } }
+</style>
+
+<div class="pagina">
+  <header>
+    <span class="rotulo">Terrário · esboço para a spec 012</span>
+    <h1>Que cara o personagem deve ter?</h1>
+    <p class="lead">Quatro direções lado a lado, com as mesmas cores. "Hoje" é o personagem atual, para comparar. Arraste para girar cada um, troque as cores e veja andando. É só um esboço: a escolhida vira o personagem do jogo nos seis temas, com todas as roupas e acessórios do editor.</p>
+  </header>
+
+  <div class="controles" role="group" aria-label="Opções do esboço">
+    <div class="grupo" role="group" aria-label="Cores">
+      <span>Cores</span>
+      <button class="op" type="button" data-paleta="0" aria-pressed="true">Andarilho</button>
+      <button class="op" type="button" data-paleta="1" aria-pressed="false">Exploradora</button>
+      <button class="op" type="button" data-paleta="2" aria-pressed="false">Astronauta</button>
+    </div>
+    <div class="grupo" role="group" aria-label="Movimento">
+      <span>Movimento</span>
+      <button class="op" type="button" data-mov="parado" aria-pressed="true">Parado</button>
+      <button class="op" type="button" data-mov="andando" aria-pressed="false">Andando</button>
+      <button class="op" type="button" data-mov="acenando" aria-pressed="false">Acenando</button>
+    </div>
+  </div>
+
+  <div class="palcos">
+    <article class="palco atual">
+      <h2>Hoje <small>atual</small></h2>
+      <div class="tela" data-estilo="hoje" aria-label="Personagem atual, em 3D"></div>
+      <p>Blocos retos, cabeça pequena (22% da altura) e braços do tamanho do tronco. Parece uma caixa em pé.</p>
+    </article>
+    <article class="palco">
+      <h2>A · Bloco refinado</h2>
+      <div class="tela" data-estilo="refinado" aria-label="Estilo bloco refinado, em 3D"></div>
+      <p>Continua sendo de blocos, mas com cantos suavizados, cabeça um pouco maior, mãos e sapatos, olhos com brilho e sobrancelha. É o mais perto do jogo de hoje, só que bem acabado.</p>
+    </article>
+    <article class="palco">
+      <h2>B · Brinquedo</h2>
+      <div class="tela" data-estilo="brinquedo" aria-label="Estilo brinquedo, em 3D"></div>
+      <p>Cabeça grande (40% da altura), formas arredondadas, mãozinhas redondas e olhos grandes. Tem cara de boneco, bem amigável para crianças, e lê bem de longe.</p>
+    </article>
+    <article class="palco">
+      <h2>C · Voxel detalhado</h2>
+      <div class="tela" data-estilo="voxel" aria-label="Estilo voxel detalhado, em 3D"></div>
+      <p>Feito de cubinhos menores, com nariz, orelhas e fios de cabelo. Combina com o mundo de blocos e permite mais detalhe nas roupas e nos rostos.</p>
+    </article>
+  </div>
+  <p class="nota">Arrastar gira o personagem. O desenho usa a mesma luz para os quatro. Me diz qual direção (ou uma mistura, por exemplo "a cabeça do B com o acabamento do A") e eu sigo dela para a spec 012.</p>
+</div>
+
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+} }
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
+
+const PALETAS = [
+  { pele: '#e8b48a', cabelo: '#4a2c1a', camisa: '#3b6fb6', calca: '#2d3a4f', sapato: '#4a3426', detalhe: '#f2d16b' },
+  { pele: '#a8714a', cabelo: '#1c1410', camisa: '#e0703a', calca: '#5b4a3a', sapato: '#2a211b', detalhe: '#7cc8a6' },
+  { pele: '#f1c9a5', cabelo: '#d9a441', camisa: '#e9edf2', calca: '#7d8796', sapato: '#3c4452', detalhe: '#ff7a59' },
+];
+let paleta = PALETAS[0];
+let movimento = 'parado';
+const reduzir = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+const mat = (cor, brilho = 0.62) => new THREE.MeshStandardMaterial({ color: cor, roughness: brilho, metalness: 0 });
+const caixa = (w, h, d, cor, r = 0) => {
+  const g = r > 0 ? new RoundedBoxGeometry(w, h, d, 4, Math.min(r, w / 2, h / 2, d / 2)) : new THREE.BoxGeometry(w, h, d);
+  const m = new THREE.Mesh(g, mat(cor));
+  m.castShadow = true;
+  return m;
+};
+const esfera = (r, cor, sx = 1, sy = 1, sz = 1, brilho = 0.5) => {
+  const m = new THREE.Mesh(new THREE.SphereGeometry(r, 24, 16), mat(cor, brilho));
+  m.scale.set(sx, sy, sz);
+  m.castShadow = true;
+  return m;
+};
+/** Junta (articulação): o filho pendurado a partir do ponto de giro. */
+function junta(x, y, z) {
+  const g = new THREE.Group();
+  g.position.set(x, y, z);
+  return g;
+}
+
+// ---------- os quatro estilos ----------
+function hoje(p) {
+  const raiz = new THREE.Group();
+  const pernaH = 0.7, troncoH = 0.7, cab = 0.4, larg = 0.5;
+  const partes = {};
+  for (const [lado, x] of [['pe', -0.125], ['pd', 0.125]]) {
+    const j = junta(x, pernaH, 0);
+    const perna = caixa(0.25, pernaH, 0.25, p.calca);
+    perna.position.y = -pernaH / 2;
+    j.add(perna);
+    raiz.add(j);
+    partes[lado] = j;
+  }
+  const tronco = caixa(larg, troncoH, 0.25, p.camisa);
+  tronco.position.y = pernaH + troncoH / 2;
+  raiz.add(tronco);
+  for (const [lado, x] of [['be', -(larg / 2 + 0.1)], ['bd', larg / 2 + 0.1]]) {
+    const j = junta(x, pernaH + troncoH - 0.05, 0);
+    const braco = caixa(0.2, troncoH, 0.2, p.camisa);
+    braco.position.y = -troncoH / 2 + 0.05;
+    const mao = caixa(0.2, 0.18, 0.2, p.pele);
+    mao.position.y = -troncoH + 0.14;
+    j.add(braco, mao);
+    raiz.add(j);
+    partes[lado] = j;
+  }
+  const cabeca = new THREE.Group();
+  cabeca.position.y = pernaH + troncoH + cab / 2;
+  cabeca.add(caixa(cab, cab, cab, p.pele));
+  const cabelo = caixa(cab + 0.02, 0.12, cab + 0.02, p.cabelo);
+  cabelo.position.y = cab / 2 - 0.05;
+  cabeca.add(cabelo);
+  const olhos = new THREE.Group();
+  for (const x of [-0.09, 0.09]) {
+    const o = caixa(0.07, 0.06, 0.01, '#20202a');
+    o.position.set(x, 0.0, cab / 2 + 0.005);
+    olhos.add(o);
+  }
+  cabeca.add(olhos);
+  raiz.add(cabeca);
+  return { raiz, partes, cabeca, olhos, altura: 1.8 };
+}
+
+function refinado(p) {
+  const raiz = new THREE.Group();
+  const r = 0.035;
+  const pernaH = 0.5, troncoH = 0.54, cab = 0.56, larg = 0.46;
+  const partes = {};
+  for (const [lado, x] of [['pe', -0.11], ['pd', 0.11]]) {
+    const j = junta(x, pernaH, 0);
+    const perna = caixa(0.19, pernaH - 0.1, 0.2, p.calca, r);
+    perna.position.y = -(pernaH - 0.1) / 2;
+    const sapato = caixa(0.22, 0.12, 0.3, p.sapato, 0.04);
+    sapato.position.set(0, -pernaH + 0.06, 0.04);
+    j.add(perna, sapato);
+    raiz.add(j);
+    partes[lado] = j;
+  }
+  const tronco = caixa(larg, troncoH, 0.28, p.camisa, r);
+  tronco.position.y = pernaH + troncoH / 2;
+  const cinto = caixa(larg + 0.01, 0.06, 0.29, p.sapato, 0.02);
+  cinto.position.y = pernaH + 0.05;
+  const fivela = caixa(0.08, 0.05, 0.01, p.detalhe, 0.01);
+  fivela.position.set(0, pernaH + 0.05, 0.15);
+  const gola = caixa(0.2, 0.05, 0.01, p.detalhe, 0.01);
+  gola.position.set(0, pernaH + troncoH - 0.04, 0.145);
+  raiz.add(tronco, cinto, fivela, gola);
+  for (const [lado, x] of [['be', -(larg / 2 + 0.085)], ['bd', larg / 2 + 0.085]]) {
+    const j = junta(x, pernaH + troncoH - 0.06, 0);
+    const braco = caixa(0.15, 0.38, 0.16, p.camisa, r);
+    braco.position.y = -0.17;
+    const mao = caixa(0.15, 0.13, 0.15, p.pele, 0.05);
+    mao.position.y = -0.42;
+    j.add(braco, mao);
+    raiz.add(j);
+    partes[lado] = j;
+  }
+  const cabeca = new THREE.Group();
+  cabeca.position.y = pernaH + troncoH + cab / 2 + 0.01;
+  cabeca.add(caixa(cab, cab, cab, p.pele, 0.06));
+  const cabelo = caixa(cab + 0.04, 0.2, cab + 0.04, p.cabelo, 0.06);
+  cabelo.position.y = cab / 2 - 0.06;
+  const nuca = caixa(cab + 0.04, cab * 0.7, 0.12, p.cabelo, 0.05);
+  nuca.position.set(0, 0.06, -cab / 2 + 0.03);
+  const franja = caixa(0.34, 0.09, 0.06, p.cabelo, 0.03);
+  franja.position.set(-0.08, cab / 2 - 0.15, cab / 2 + 0.01);
+  cabeca.add(cabelo, nuca, franja);
+  const olhos = new THREE.Group();
+  for (const x of [-0.12, 0.12]) {
+    const branco = caixa(0.11, 0.12, 0.02, '#ffffff', 0.02);
+    branco.position.set(x, -0.02, cab / 2 + 0.005);
+    const pupila = caixa(0.065, 0.08, 0.02, '#2a1f2e', 0.015);
+    pupila.position.set(x + (x < 0 ? 0.015 : -0.015), -0.03, cab / 2 + 0.015);
+    const brilho = caixa(0.025, 0.025, 0.01, '#ffffff');
+    brilho.position.set(x + (x < 0 ? 0.03 : 0), -0.005, cab / 2 + 0.026);
+    olhos.add(branco, pupila, brilho);
+    const sobrancelha = caixa(0.11, 0.025, 0.02, p.cabelo, 0.01);
+    sobrancelha.position.set(x, 0.07, cab / 2 + 0.01);
+    cabeca.add(sobrancelha);
+  }
+  const boca = caixa(0.09, 0.02, 0.01, '#9a4a3c', 0.008);
+  boca.position.set(0, -0.15, cab / 2 + 0.005);
+  cabeca.add(olhos, boca);
+  raiz.add(cabeca);
+  return { raiz, partes, cabeca, olhos, altura: 1.62 };
+}
+
+function brinquedo(p) {
+  const raiz = new THREE.Group();
+  const pernaH = 0.34, troncoH = 0.42, cab = 0.72, larg = 0.46;
+  const partes = {};
+  for (const [lado, x] of [['pe', -0.11], ['pd', 0.11]]) {
+    const j = junta(x, pernaH, 0);
+    const perna = caixa(0.17, 0.24, 0.18, p.calca, 0.07);
+    perna.position.y = -0.12;
+    const sapato = caixa(0.21, 0.13, 0.28, p.sapato, 0.06);
+    sapato.position.set(0, -pernaH + 0.065, 0.03);
+    j.add(perna, sapato);
+    raiz.add(j);
+    partes[lado] = j;
+  }
+  const tronco = caixa(larg, troncoH, 0.34, p.camisa, 0.13);
+  tronco.position.y = pernaH + troncoH / 2;
+  const bolso = caixa(0.16, 0.1, 0.02, p.detalhe, 0.03);
+  bolso.position.set(0, pernaH + 0.14, 0.17);
+  raiz.add(tronco, bolso);
+  for (const [lado, x] of [['be', -(larg / 2 + 0.06)], ['bd', larg / 2 + 0.06]]) {
+    const j = junta(x, pernaH + troncoH - 0.08, 0);
+    const braco = caixa(0.13, 0.26, 0.14, p.camisa, 0.06);
+    braco.position.y = -0.1;
+    const mao = esfera(0.085, p.pele);
+    mao.position.y = -0.27;
+    j.add(braco, mao);
+    raiz.add(j);
+    partes[lado] = j;
+  }
+  const cabeca = new THREE.Group();
+  cabeca.position.y = pernaH + troncoH + cab / 2 - 0.02;
+  cabeca.add(caixa(cab, cab * 0.94, cab * 0.9, p.pele, 0.18));
+  const cabelo = caixa(cab + 0.05, cab * 0.42, cab * 0.9 + 0.05, p.cabelo, 0.16);
+  cabelo.position.y = cab * 0.3;
+  const topete = esfera(0.12, p.cabelo, 1.3, 0.8, 1);
+  topete.position.set(0.1, cab * 0.5, 0.18);
+  const nuca = caixa(cab + 0.05, cab * 0.6, 0.16, p.cabelo, 0.07);
+  nuca.position.set(0, 0.02, -cab * 0.42);
+  cabeca.add(cabelo, topete, nuca);
+  const olhos = new THREE.Group();
+  for (const x of [-0.15, 0.15]) {
+    const olho = esfera(0.075, '#231a28', 0.85, 1.1, 0.4, 0.25);
+    olho.position.set(x, -0.04, cab * 0.45);
+    const brilho = esfera(0.024, '#ffffff', 1, 1, 0.4, 0.2);
+    brilho.position.set(x + 0.025, -0.0, cab * 0.45 + 0.03);
+    olhos.add(olho, brilho);
+    const bochecha = esfera(0.05, '#ff8a8a', 1.3, 0.75, 0.25, 0.8);
+    bochecha.material.transparent = true;
+    bochecha.material.opacity = 0.55;
+    bochecha.position.set(x * 1.45, -0.15, cab * 0.44);
+    cabeca.add(bochecha);
+  }
+  const boca = esfera(0.035, '#9a4a3c', 1.4, 0.55, 0.3);
+  boca.position.set(0, -0.18, cab * 0.45);
+  cabeca.add(olhos, boca);
+  raiz.add(cabeca);
+  return { raiz, partes, cabeca, olhos, altura: 1.5 };
+}
+
+/** Parte feita de cubinhos: grade [x][y][z] → cor (ou null). */
+function voxels(dim, colorir, v) {
+  const [nx, ny, nz] = dim;
+  const pos = [];
+  const cores = [];
+  for (let x = 0; x < nx; x++)
+    for (let y = 0; y < ny; y++)
+      for (let z = 0; z < nz; z++) {
+        const borda = x === 0 || y === 0 || z === 0 || x === nx - 1 || y === ny - 1 || z === nz - 1;
+        if (!borda) continue;
+        const c = colorir(x, y, z);
+        if (!c) continue;
+        pos.push([(x - (nx - 1) / 2) * v, (y - (ny - 1) / 2) * v, (z - (nz - 1) / 2) * v]);
+        cores.push(c);
+      }
+  const g = new THREE.BoxGeometry(v * 0.985, v * 0.985, v * 0.985);
+  const m = new THREE.InstancedMesh(g, new THREE.MeshStandardMaterial({ roughness: 0.7 }), pos.length);
+  const mtx = new THREE.Matrix4();
+  const cor = new THREE.Color();
+  pos.forEach((p, i) => {
+    mtx.makeTranslation(p[0], p[1], p[2]);
+    m.setMatrixAt(i, mtx);
+    // sombreado sutil por altura: dá volume sem textura
+    cor.set(cores[i]).multiplyScalar(0.93 + 0.07 * Math.sin(i * 12.9898) ** 2);
+    m.setColorAt(i, cor);
+  });
+  m.castShadow = true;
+  return m;
+}
+function voxel(p) {
+  const v = 0.06;
+  const raiz = new THREE.Group();
+  const partes = {};
+  const pernaN = 7, troncoN = 8, cabN = 9;
+  const pernaH = pernaN * v, troncoH = troncoN * v;
+  for (const [lado, x] of [['pe', -1.5 * v - 0.003], ['pd', 1.5 * v + 0.003]]) {
+    const j = junta(x, pernaH, 0);
+    const perna = voxels([3, pernaN, 3], (xx, y) => (y <= 1 ? p.sapato : p.calca), v);
+    perna.position.y = -pernaH / 2;
+    j.add(perna);
+    raiz.add(j);
+    partes[lado] = j;
+  }
+  const tronco = voxels([8, troncoN, 5], (x, y, z) => {
+    if (y === 0) return p.sapato;
+    if (z === 4 && y === troncoN - 1 && x >= 3 && x <= 4) return p.pele;
+    if (z === 4 && y === 3 && x === 5) return p.detalhe;
+    return p.camisa;
+  }, v);
+  tronco.position.y = pernaH + troncoH / 2;
+  raiz.add(tronco);
+  for (const [lado, x] of [['be', -5.5 * v], ['bd', 5.5 * v]]) {
+    const j = junta(x, pernaH + troncoH - v, 0);
+    const braco = voxels([3, 8, 3], (xx, y) => (y <= 1 ? p.pele : p.camisa), v);
+    braco.position.y = -3.5 * v;
+    j.add(braco);
+    raiz.add(j);
+    partes[lado] = j;
+  }
+  const cabeca = new THREE.Group();
+  cabeca.position.y = pernaH + troncoH + (cabN * v) / 2;
+  const f = cabN - 1;
+  const rosto = voxels([cabN, cabN, cabN], (x, y, z) => {
+    const frente = z === f;
+    if (y >= f - 1) return p.cabelo;
+    if (z <= 1 && y >= 2) return p.cabelo;
+    if ((x === 0 || x === f) && y >= 5) return p.cabelo;
+    if (frente && y === f - 2 && x >= 1 && x <= 4) return p.cabelo; // franja
+    if (frente && (y === 4 || y === 5) && (x === 2 || x === 6)) return y === 5 && (x === 2 || x === 6) ? '#ffffff' : '#2a1f2e';
+    if (frente && y === 2 && x >= 3 && x <= 5) return '#9a4a3c';
+    return p.pele;
+  }, v);
+  cabeca.add(rosto);
+  // nariz e orelhas: um cubinho para fora
+  const nariz = voxels([1, 1, 1], () => p.pele, v);
+  nariz.position.set(0, -0.5 * v, (cabN / 2 + 0.5) * v);
+  const orelhas = [-1, 1].map((s) => {
+    const o = voxels([1, 2, 1], () => p.pele, v);
+    o.position.set(s * (cabN / 2 + 0.5) * v, 0, 0);
+    return o;
+  });
+  cabeca.add(nariz, ...orelhas);
+  const olhos = new THREE.Group(); // piscar: fecha uma tira de pálpebra por cima
+  for (const x of [-2 * v, 2 * v]) {
+    const p2 = voxels([1, 2, 1], () => p.pele, v);
+    p2.position.set(x, 0.5 * v, (cabN / 2 + 0.01) * v);
+    olhos.add(p2);
+  }
+  olhos.visible = false;
+  cabeca.add(olhos);
+  raiz.add(cabeca);
+  return { raiz, partes, cabeca, olhos, piscarPorVisibilidade: true, altura: pernaH + troncoH + cabN * v };
+}
+
+const ESTILOS = { hoje, refinado, brinquedo, voxel };
+
+// ---------- um palco por estilo ----------
+const palcos = [];
+for (const tela of document.querySelectorAll('.tela')) {
+  const estilo = tela.dataset.estilo;
+  const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+  renderer.setPixelRatio(Math.min(2, devicePixelRatio));
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  renderer.outputColorSpace = THREE.SRGBColorSpace;
+  tela.appendChild(renderer.domElement);
+  const cena = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(30, 3 / 4, 0.1, 50);
+  camera.position.set(0, 1.15, 4.6);
+  camera.lookAt(0, 0.85, 0);
+  cena.add(new THREE.HemisphereLight('#eaf4ff', '#5d7a4a', 1.4));
+  const sol = new THREE.DirectionalLight('#fff3dc', 2.2);
+  sol.position.set(2.5, 4, 3);
+  sol.castShadow = true;
+  sol.shadow.mapSize.set(1024, 1024);
+  sol.shadow.radius = 4;
+  sol.shadow.bias = -0.0006;
+  sol.shadow.normalBias = 0.02;
+  Object.assign(sol.shadow.camera, { left: -1.5, right: 1.5, top: 2.5, bottom: -0.5 });
+  cena.add(sol);
+  const chao = new THREE.Mesh(new THREE.CircleGeometry(1.1, 48), new THREE.MeshStandardMaterial({ color: '#79b35a', roughness: 0.9 }));
+  chao.rotation.x = -Math.PI / 2;
+  chao.receiveShadow = true;
+  cena.add(chao);
+  const palco = { estilo, renderer, cena, camera, tela, giro: -0.5, arrastando: false, ultimoX: 0, boneco: null, fase: Math.random() * 6 };
+  palco.montar = () => {
+    if (palco.boneco) cena.remove(palco.boneco.raiz);
+    palco.boneco = ESTILOS[estilo](paleta);
+    // todos na mesma altura de tela: o "hoje" fica com 1,8 de referência
+    cena.add(palco.boneco.raiz);
+  };
+  palco.montar();
+  tela.addEventListener('pointerdown', (e) => {
+    palco.arrastando = true;
+    palco.ultimoX = e.clientX;
+    tela.setPointerCapture(e.pointerId);
+  });
+  tela.addEventListener('pointermove', (e) => {
+    if (!palco.arrastando) return;
+    palco.giro += (e.clientX - palco.ultimoX) * 0.012;
+    palco.ultimoX = e.clientX;
+  });
+  const soltar = () => (palco.arrastando = false);
+  tela.addEventListener('pointerup', soltar);
+  tela.addEventListener('pointercancel', soltar);
+  palcos.push(palco);
+}
+
+function tamanho() {
+  for (const p of palcos) {
+    const r = p.tela.getBoundingClientRect();
+    p.renderer.setSize(r.width, r.height, false);
+    p.camera.aspect = r.width / r.height;
+    p.camera.updateProjectionMatrix();
+  }
+}
+addEventListener('resize', tamanho);
+tamanho();
+
+const relogio = new THREE.Clock();
+function quadro() {
+  const t = relogio.getElapsedTime();
+  const dt = Math.min(0.05, relogio.getDelta());
+  for (const p of palcos) {
+    const b = p.boneco;
+    if (!p.arrastando && !reduzir) p.giro += dt * 0.25;
+    b.raiz.rotation.y = p.giro;
+    const tt = t + p.fase;
+    const andar = movimento === 'andando' && !reduzir;
+    const s = andar ? Math.sin(tt * 7) : 0;
+    b.partes.pe.rotation.x = s * 0.6;
+    b.partes.pd.rotation.x = -s * 0.6;
+    b.partes.be.rotation.x = -s * 0.5;
+    b.partes.bd.rotation.x = s * 0.5;
+    b.partes.be.rotation.z = 0.04;
+    b.partes.bd.rotation.z = -0.04;
+    if (movimento === 'acenando' && !reduzir) {
+      b.partes.bd.rotation.z = -2.6 + Math.sin(tt * 8) * 0.35;
+      b.partes.bd.rotation.x = 0;
+    }
+    b.raiz.position.y = andar ? Math.abs(Math.cos(tt * 7)) * 0.035 : (reduzir ? 0 : Math.sin(tt * 2) * 0.008);
+    b.cabeca.rotation.y = reduzir ? 0 : Math.sin(tt * 0.7) * 0.12;
+    // piscar a cada ~3 s
+    const piscando = !reduzir && tt % 3.1 < 0.12;
+    if (b.piscarPorVisibilidade) b.olhos.visible = piscando;
+    else b.olhos.scale.y = piscando ? 0.12 : 1;
+    p.renderer.render(p.cena, p.camera);
+  }
+  requestAnimationFrame(quadro);
+}
+quadro();
+
+// controles: cores e movimento valem para os quatro
+document.querySelectorAll('[data-paleta]').forEach((b) =>
+  b.addEventListener('click', () => {
+    paleta = PALETAS[Number(b.dataset.paleta)];
+    document.querySelectorAll('[data-paleta]').forEach((o) => o.setAttribute('aria-pressed', String(o === b)));
+    for (const p of palcos) p.montar();
+  }),
+);
+document.querySelectorAll('[data-mov]').forEach((b) =>
+  b.addEventListener('click', () => {
+    movimento = b.dataset.mov;
+    document.querySelectorAll('[data-mov]').forEach((o) => o.setAttribute('aria-pressed', String(o === b)));
+  }),
+);
+</script>
