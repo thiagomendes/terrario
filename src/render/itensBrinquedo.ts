@@ -13,6 +13,8 @@ import { plantaDeBrinquedo, PLANTAS_BRINQUEDO, type AlvoPlanta } from '../mesh/p
 import type { Scene } from '@babylonjs/core/scene';
 import { obterItem } from '../jogo/itens';
 import { coresDoBloco } from '../fx/cores';
+import { caixasDoBloco, temFormaParcial, type Caixa } from '../world/formas';
+import { obterBloco } from '../world/blocks';
 import { caixaArredondada, cilindro, esfera, type Plasticos } from './formas';
 
 /** Cor da cabeça da ferramenta por material (as mesmas do catálogo). */
@@ -185,6 +187,49 @@ export function modeloNaMao(
     // flor, matinho, cogumelo, tocha: a mesma pecinha que vai no chão, não um bloco
     add(malhaDePlanta(scene, bloco, `${prefixo}-planta`), 0, -0.04, 0);
     return { no, malhas, ferramenta: false, planta: true };
+  }
+  if (bloco !== null && bloco > 0 && temFormaParcial(bloco)) {
+    // porta, cerca, laje, escada, cama: o formato de verdade, com as caixas do próprio bloco
+    const c = coresDoBloco(bloco);
+    const cor = c ? hexDe(c.lado) : '#a9adb8';
+    const forma = obterBloco(bloco)?.forma;
+    let caixas: Caixa[] =
+      forma === 'porta'
+        ? [[0, 0, 0.4, 1, 2, 0.6]]
+        : forma === 'cama'
+          ? [[0, 0, 0, 1, 0.5, 2]]
+          : (caixasDoBloco(bloco, 0, (d) => d % 2 === 1) ?? [[0, 0, 0, 1, 1, 1]]);
+    // cabe no mesmo espaço do bloco na mão (o maior lado com 0,26)
+    let maior = 0;
+    for (const [x0, y0, z0, x1, y1, z1] of caixas)
+      maior = Math.max(maior, x1, y1, z1, -x0, -y0, -z0);
+    const k = 0.26 / maior;
+    const cx0 = 0.5;
+    const cz0 = forma === 'cama' ? 1 : 0.5;
+    caixas.forEach(([x0, y0, z0, x1, y1, z1], i) => {
+      const w = (x1 - x0) * k;
+      const h = (y1 - y0) * k;
+      const d = (z1 - z0) * k;
+      add(
+        cx(`forma${i}`, w, h, d, Math.min(0.04, Math.min(w, h, d) * 0.35), cor),
+        ((x0 + x1) / 2 - cx0) * k,
+        ((y0 + y1) / 2) * k - 0.12,
+        ((z0 + z1) / 2 - cz0) * k,
+      );
+    });
+    if (forma === 'porta')
+      add(bo('macaneta', 0.018, '#f2c14e', [1, 1, 1], 0.3), 0.36 * k, 0.95 * k - 0.12, 0.12 * k);
+    if (forma === 'cama') {
+      // lençol claro e travesseiro na cabeceira
+      add(cx('lencol', 0.92 * k, 0.08 * k, 1.4 * k, 0.02, '#f4efe6'), 0, 0.52 * k - 0.12, 0.25 * k);
+      add(
+        cx('travesseiro', 0.7 * k, 0.12 * k, 0.32 * k, 0.03, '#ffffff'),
+        0,
+        0.56 * k - 0.12,
+        -0.7 * k,
+      );
+    }
+    return { no, malhas, ferramenta: false };
   }
   if (bloco !== null && bloco > 0) {
     const c = coresDoBloco(bloco);
