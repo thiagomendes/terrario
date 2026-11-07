@@ -6,6 +6,10 @@ Ideias e pedidos do dono que ainda não viraram spec. Cada item diz de onde veio
 
 ## Pedidos
 
+- **Vidro sem cara de vidro no inventário e na mão** (pedido do dono em 7 nov 2026, durante a 011): no inventário e na mão o vidro é um bloco sólido; só depois de posto se vê que é transparente. Desenhar o ícone e o modelo da mão translúcidos, com o brilho de vidro.
+
+- **Som ambiente em loop** (relato do dono em 7 nov 2026): no meio do jogo, sem fazer nada, entrou um som contínuo, parecido com grilo, que só parou fechando o jogo. Suspeita: uma voz do ambiente (bichos da noite, chuva ou vento) que não recebe o fim. Investigar com a gravação das vozes ativas do ambiente e um limite de duração para elas, como o que foi feito para os efeitos na 012.
+
 - **Contas de jogador** (ideia do dono): conversar depois da spec 011.
 
 - **Rodada em família de 15 minutos em dois aparelhos** (critério 13 da spec 010). Pendente com o dono.
