@@ -32,6 +32,18 @@ if ! az ad app federated-credential list --id "$APP" --query "[].name" -o tsv | 
   echo "credencial federada criada (só o main de $REPO)"
 fi
 
+# o GitHub também manda o assunto com os ids do dono e do repositório (formato imutável)
+IDS=$(gh api repos/$REPO --jq '"\(.owner.login)@\(.owner.id)/\(.name)@\(.id)"')
+if ! az ad app federated-credential list --id "$APP" --query "[].name" -o tsv | grep -q github-terrario-main-ids; then
+  az ad app federated-credential create --id "$APP" --parameters "{
+    \"name\": \"github-terrario-main-ids\",
+    \"issuer\": \"https://token.actions.githubusercontent.com\",
+    \"subject\": \"repo:$IDS:ref:refs/heads/main\",
+    \"description\": \"GitHub Actions do terrario, só no main (formato com ids)\",
+    \"audiences\": [\"api://AzureADTokenExchange\"]
+  }" -o none
+fi
+
 ACR_ID=$(az acr show -n $REGISTRO --query id -o tsv)
 CA_ID=$(az containerapp show -g $GRUPO -n $APP_CA --query id -o tsv)
 az role assignment create --assignee-object-id "$SP" --assignee-principal-type ServicePrincipal \
