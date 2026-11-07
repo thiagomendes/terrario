@@ -242,14 +242,17 @@ Lista única para nada se perder. Cada item: feito (com o que comprova) ou pende
 - [x] Copas: blocos de folha de quinas redondas com juntas, no lugar das bolas (o boneco afundava na bola e quebrar ficava estranho).
 - [x] Flor, cogumelo e tocha na mão como a pecinha do chão (antes saía um cubo, e na primeira pessoa a flor saía preta).
 
-**Pendente, nesta ordem** (pedidos do dono em 7 nov, à tarde)
+- [x] Porta, cerca, laje, escada e cama na mão com o formato de verdade (e os ícones da barra também).
+- [x] Amigo "estourado": era o bloom do computador pegando roupa branca (no tablet o bloom fica desligado); o limite subiu para só luz de verdade brilhar.
+- [x] A troca de aparência no meio do jogo agora chega para os amigos (comando `aparencia`, testado no núcleo com dois jogadores).
+- [x] Apelido para jogar com amigos no diálogo de brinquedo, não na janela do navegador.
+- [x] Esc em tela cheia: o teclado trava o Esc no Chrome e no Edge (segurar o Esc sai da tela cheia); Esc com o mouse preso solta o mouse e pausa; as teclas que abrem cada janela também a fecham.
+- [x] Braço do amigo mirando o bloco: o golpe segue o olhar (veio do backlog).
+- [x] Desempenho: as peças dos bichos novos fundidas por parte que se mexe (parado tinha caído de 60 para 42 fps; voltou a 60).
 
-1. Blocos com forma na mão (porta, cerca, laje, escada, cama...): hoje aparecem como cubo; desenhar o formato de verdade.
-2. Personagem do amigo "estourado" (cores desbotadas) para quem vê, e a troca de aparência dele não chega para os outros.
-3. Compartilhar o mundo com amigos: trocar a janela nativa do navegador pelo diálogo de brinquedo.
-4. Domínio novo terrario.tmdevlab.com: o servidor tem que aceitar pedidos dele.
-5. Esc em tela cheia: o navegador sai da tela cheia; segurar o Esc no jogo quando der (Chrome) e ter outro jeito de fechar as janelas no computador, com o mouse livre.
-6. Braço do amigo mirando o bloco exato (veio do backlog).
+**Pendente**
+
+1. Domínio terrario.tmdevlab.com no servidor: já está no `infra/main.bicep`; falta aplicar no servidor que está no ar (a mudança direta foi barrada pela permissão; o dono roda o comando).
 
 **Fora desta spec (no backlog do projeto, `.sdd/backlog.md`)**
 - Barra de itens vazia no começo do mundo.
