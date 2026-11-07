@@ -27,10 +27,16 @@ export function topoDaColuna(ler: (y: number) => number): {
 /** Cor da coluna no mapa: cor do bloco com relevo (luz do noroeste) e água por profundidade. */
 export function corDaColuna(base: Rgb, y: number, yNoroeste: number, agua: number): Rgb {
   const relevo = Math.max(-0.25, Math.min(0.25, (y - yNoroeste) * 0.09));
-  let c: Rgb = [base[0] * (1 + relevo), base[1] * (1 + relevo), base[2] * (1 + relevo)];
+  // cores de brinquedo: um pouco mais claras e limpas que as do bloco
+  const claro = (v: number) => v * 0.86 + 34;
+  let c: Rgb = [
+    claro(base[0]) * (1 + relevo),
+    claro(base[1]) * (1 + relevo),
+    claro(base[2]) * (1 + relevo),
+  ];
   if (agua > 0) {
-    const f = Math.min(0.85, 0.45 + agua * 0.04);
-    const azul: Rgb = [38, 96, 168];
+    const f = Math.min(0.85, 0.5 + agua * 0.04);
+    const azul: Rgb = [84, 160, 230];
     c = [c[0] + (azul[0] - c[0]) * f, c[1] + (azul[1] - c[1]) * f, c[2] + (azul[2] - c[2]) * f];
   }
   return [

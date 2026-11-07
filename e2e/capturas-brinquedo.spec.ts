@@ -64,6 +64,9 @@ test('boneco de brinquedo nos enquadramentos dos esboços', async ({ page }) => 
   });
   await page.waitForTimeout(1200);
   await foto(page, '3a-pessoa');
+  await page
+    .locator('[data-minimapa]')
+    .screenshot({ path: `${PASTA}/brinquedo-minimapa.png`, scale: 'device' });
   await golpear('3a-pessoa-minerando', 60);
   // de frente
   await page.evaluate(() => {

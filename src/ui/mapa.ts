@@ -5,12 +5,14 @@ import { TAM_X } from '../world/chunk';
 export const CSS_MAPA = `
 .minimapa {
   position: fixed; top: 44px; right: 10px; z-index: 7; width: 156px; height: 156px; border-radius: 50%;
-  overflow: hidden; border: 2px solid rgba(255,255,255,0.35); box-shadow: 0 6px 18px rgba(0,0,0,0.45);
+  overflow: hidden; border: 5px solid #fbf7ee;
+  /* aro de plástico: borda clara com degrau embaixo e sombra macia */
+  box-shadow: 0 3px 0 #d9cfbd, 0 8px 18px rgba(20, 16, 40, 0.35), inset 0 2px 8px rgba(20, 16, 40, 0.35);
   background: #b9c8d8; pointer-events: none;
   transform: scale(var(--escala-ui, 1)); transform-origin: top right;
 }
-.minimapa canvas { width: 100%; height: 100%; image-rendering: pixelated; }
-.minimapa .norte { position: absolute; top: 2px; left: 50%; transform: translateX(-50%); font: 800 0.7rem system-ui; color: #ffd98f; text-shadow: 0 1px 2px #000; }
+.minimapa canvas { width: 100%; height: 100%; }
+.minimapa .norte { position: absolute; top: 3px; left: 50%; transform: translateX(-50%); font: 800 0.62rem system-ui; color: #fff; background: #ef5a5a; border-radius: 8px; padding: 0 5px; line-height: 1.35; box-shadow: 0 1px 0 #b83c3c; }
 .bussola {
   position: fixed; top: 10px; left: 50%; transform: translateX(-50%); z-index: 7; pointer-events: none;
   width: min(420px, 60vw); height: 26px; overflow: hidden; border-radius: 13px;
@@ -46,7 +48,7 @@ body:has(.entrada:not([hidden])) .minimapa, body:has(.entrada:not([hidden])) .bu
 .mapa-mundo .zoom-mapa button:active, .mapa-mundo .marcar-aqui:active { transform: translateY(2px); }
 .mapa-mundo h2 { margin: 0; font-size: 1.1rem; color: #ffd98f; }
 .mapa-mundo .dica { color: #a59f93; font-size: 0.82rem; }
-.mapa-mundo canvas { display: block; width: 100%; height: 100%; cursor: grab; image-rendering: pixelated; }
+.mapa-mundo canvas { display: block; width: 100%; height: 100%; cursor: grab; }
 .mapa-mundo .lista-marcadores { display: flex; gap: 6px; flex-wrap: wrap; }
 .mapa-mundo .lista-marcadores button { font-size: 0.78rem; min-height: 30px; padding: 4px 10px; }
 @media (pointer: coarse) { .mapa-mundo .lista-marcadores button { min-height: 44px; } }
@@ -149,8 +151,13 @@ export function criarMapas(raiz: HTMLElement, fonte: FonteMapa) {
   mini.className = 'minimapa';
   mini.setAttribute('data-minimapa', '');
   const cv = document.createElement('canvas');
-  cv.width = 156;
-  cv.height = 156;
+  // o dobro da resolução: traço macio também em tela de alta densidade
+  cv.width = 312;
+  cv.height = 312;
+  /** Mosaico dos 7x7 pedaços em volta, um pixel por bloco: suavizado de uma vez, sem emendas. */
+  const mosaico = document.createElement('canvas');
+  mosaico.width = TAM_X * 7;
+  mosaico.height = TAM_X * 7;
   const n = document.createElement('span');
   n.className = 'norte';
   n.textContent = 'N';
@@ -267,14 +274,14 @@ export function criarMapas(raiz: HTMLElement, fonte: FonteMapa) {
   ): void {
     for (const m of fonte.marcadores()) {
       const [px, py] = para(m.x, m.z);
-      ctx.save();
-      ctx.translate(px, py);
-      ctx.rotate(Math.PI / 4);
+      // alfinete de brinquedo: bolinha da cor com aro branco
+      ctx.beginPath();
+      ctx.arc(px, py, 4.5, 0, Math.PI * 2);
       ctx.fillStyle = m.cor;
-      ctx.strokeStyle = 'rgba(0,0,0,0.7)';
-      ctx.fillRect(-4, -4, 8, 8);
-      ctx.strokeRect(-4, -4, 8, 8);
-      ctx.restore();
+      ctx.fill();
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = '#fff';
+      ctx.stroke();
     }
     // amigos: bolinha da cor de cada um com a inicial do apelido
     for (const a of fonte.amigos?.() ?? []) {
@@ -284,7 +291,7 @@ export function criarMapas(raiz: HTMLElement, fonte: FonteMapa) {
       ctx.fillStyle = corDoAmigo(a.id);
       ctx.fill();
       ctx.lineWidth = 2;
-      ctx.strokeStyle = 'rgba(0,0,0,0.75)';
+      ctx.strokeStyle = '#fff';
       ctx.stroke();
       ctx.fillStyle = '#14101c';
       ctx.font = '800 8px system-ui, sans-serif';
@@ -301,32 +308,38 @@ export function criarMapas(raiz: HTMLElement, fonte: FonteMapa) {
   ): void {
     ctx.save();
     ctx.translate(px, py);
+    // sombrinha embaixo, depois a seta de plástico (branca com aro azul, cantos redondos)
+    ctx.beginPath();
+    ctx.ellipse(0, 2.5, 7, 3.5, 0, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(20, 16, 40, 0.28)';
+    ctx.fill();
     ctx.rotate(yaw);
     ctx.beginPath();
-    ctx.moveTo(0, -8);
-    ctx.lineTo(5.5, 6);
-    ctx.lineTo(0, 3);
-    ctx.lineTo(-5.5, 6);
+    ctx.moveTo(0, -8.5);
+    ctx.lineTo(6.5, 6);
+    ctx.quadraticCurveTo(0, 2.5, -6.5, 6);
     ctx.closePath();
-    ctx.fillStyle = '#fff';
-    ctx.strokeStyle = '#000';
-    ctx.lineWidth = 1.5;
-    ctx.fill();
+    ctx.lineJoin = 'round';
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = '#2f6fe0';
     ctx.stroke();
+    ctx.fillStyle = '#fff';
+    ctx.fill();
     ctx.restore();
   }
 
   function desenharMini(): void {
     const { x, z, yaw } = fonte.posicao();
     const ctx = cv.getContext('2d')!;
+    ctx.setTransform(2, 0, 0, 2, 0, 0);
     const escala = 1.6; // pixels por bloco
-    ctx.imageSmoothingEnabled = false;
-    // o que ainda não chegou é névoa clara (nada de cantos pretos)
-    ctx.fillStyle = NEVOA;
-    ctx.fillRect(0, 0, cv.width, cv.height);
-    const meia = cv.width / 2;
+    const meia = 78;
     const ccx = Math.floor(x / TAM_X);
     const ccz = Math.floor(z / TAM_X);
+    // o que ainda não chegou é névoa clara (nada de cantos pretos)
+    const m = mosaico.getContext('2d')!;
+    m.fillStyle = NEVOA;
+    m.fillRect(0, 0, mosaico.width, mosaico.height);
     for (let dz = -3; dz <= 3; dz++)
       for (let dx = -3; dx <= 3; dx++) {
         const img = imagem(ccx + dx, ccz + dz);
@@ -340,22 +353,26 @@ export function criarMapas(raiz: HTMLElement, fonte: FonteMapa) {
           }
           continue;
         }
-        const wx = (ccx + dx) * TAM_X;
-        const wz = (ccz + dz) * TAM_X;
-        ctx.drawImage(
-          img,
-          meia + (wx - x) * escala,
-          meia + (wz - z) * escala,
-          TAM_X * escala,
-          TAM_X * escala,
-        );
+        m.drawImage(img, (dx + 3) * TAM_X, (dz + 3) * TAM_X);
       }
+    // traço de brinquedo: o mosaico inteiro ampliado com suavização (sem pixel por bloco)
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+    const ox = (ccx - 3) * TAM_X;
+    const oz = (ccz - 3) * TAM_X;
+    ctx.drawImage(
+      mosaico,
+      meia + (ox - x) * escala,
+      meia + (oz - z) * escala,
+      mosaico.width * escala,
+      mosaico.height * escala,
+    );
     // borda do círculo se esfuma, como uma lente
     const borda = ctx.createRadialGradient(meia, meia, meia * 0.72, meia, meia, meia);
     borda.addColorStop(0, 'rgba(185, 200, 216, 0)');
     borda.addColorStop(1, 'rgba(185, 200, 216, 0.55)');
     ctx.fillStyle = borda;
-    ctx.fillRect(0, 0, cv.width, cv.height);
+    ctx.fillRect(0, 0, 156, 156);
     desenharMarcadores(ctx, (mx, mz) => [meia + (mx - x) * escala, meia + (mz - z) * escala]);
     // norte para cima: +z do mundo aponta para baixo no mapa, então o yaw é espelhado
     desenharJogador(ctx, meia, meia, Math.PI - yaw);
@@ -423,7 +440,7 @@ export function criarMapas(raiz: HTMLElement, fonte: FonteMapa) {
     if (cvG.width !== lw) cvG.width = lw;
     if (cvG.height !== lh) cvG.height = lh;
     const ctx = cvG.getContext('2d')!;
-    ctx.imageSmoothingEnabled = false;
+    ctx.imageSmoothingEnabled = true;
     ctx.fillStyle = NEVOA_GRANDE;
     ctx.fillRect(0, 0, cvG.width, cvG.height);
     const para = (wx: number, wz: number): [number, number] => [
