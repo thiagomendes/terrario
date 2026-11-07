@@ -288,6 +288,34 @@ const b = boneco();
 cena.add(b.raiz);
 const camera = new THREE.PerspectiveCamera(45, 16 / 9, 0.05, 80);
 
+
+/** Braço da 1ª pessoa: manga da blusa, punho e a mão redonda à vista (igual à 3ª pessoa). */
+function montarMao(corPele, corBlusa, corPunho) {
+  const g = new THREE.Group();
+  const manga = new THREE.Mesh(new RoundedBoxGeometry(0.2, 0.46, 0.2, 4, 0.08), plastico(corBlusa));
+  manga.position.y = 0.2; // a manga vai da mão para trás (para fora da tela)
+  const punho = new THREE.Mesh(new RoundedBoxGeometry(0.23, 0.07, 0.23, 4, 0.03), plastico(corPunho));
+  punho.position.y = -0.02;
+  const mao = new THREE.Mesh(new THREE.SphereGeometry(0.135, 28, 20), plastico(corPele, { roughness: 0.4 }));
+  mao.position.y = -0.13;
+  g.add(manga, punho, mao);
+  const segura = new THREE.Group(); // onde o item fica, na mão
+  segura.position.y = -0.13;
+  g.add(segura);
+  return { g, segura };
+}
+const _dir = new THREE.Vector3();
+const _q = new THREE.Quaternion();
+const _baixo = new THREE.Vector3(0, -1, 0);
+/** Põe a mão no ponto H (espaço da câmera) com o braço vindo de trás, de baixo e da direita. */
+function posicionarMao(m, H, dx, dy, s) {
+  _dir.set(dx, dy, -1).normalize();
+  _q.setFromUnitVectors(_baixo, _dir);
+  m.g.quaternion.copy(_q);
+  m.g.scale.setScalar(s);
+  m.g.position.set(H[0] + _dir.x * 0.13 * s, H[1] + _dir.y * 0.13 * s, H[2] + _dir.z * 0.13 * s);
+}
+
 // primeira pessoa: a mão desenhada por cima, numa cena própria (como no jogo)
 const cenaMao = new THREE.Scene();
 cenaMao.add(new THREE.HemisphereLight('#eaf4ff', '#6b8a52', 1.4));
@@ -295,19 +323,16 @@ const solMao = new THREE.DirectionalLight('#fff4e0', 2.0);
 solMao.position.set(2, 3, 2);
 cenaMao.add(solMao);
 const cameraMao = new THREE.PerspectiveCamera(55, 16 / 9, 0.01, 10);
-const mao = new THREE.Group();
-const manga = caixa(0.2, 0.42, 0.2, P.camisa, 0.08);
-manga.position.y = 0.05;
-const punho = esfera(0.13, P.pele);
-punho.position.y = -0.22;
+const braco1 = montarMao(P.pele, P.camisa, '#2f5a96');
 const picaMao = picareta();
-picaMao.position.set(0, -0.26, 0.05);
-picaMao.rotation.x = Math.PI / 2 + 0.3;
+picaMao.scale.setScalar(1.1);
+picaMao.rotation.set(-1.9, 0, -0.35);
+picaMao.position.set(0, 0, 0.06);
 const macaMao = maca();
 macaMao.scale.setScalar(1.5);
-macaMao.position.set(0, -0.32, 0.08);
-mao.add(manga, punho, picaMao, macaMao);
-mao.scale.setScalar(0.62);
+macaMao.position.set(0, -0.05, 0.1);
+braco1.segura.add(picaMao, macaMao);
+const mao = braco1.g;
 cenaMao.add(mao);
 // o braço de hoje, para comparar na 1ª pessoa
 const bracoHoje = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.6, 0.22), new THREE.MeshLambertMaterial({ color: P.pele }));
@@ -457,9 +482,10 @@ function quadro() {
     cameraMao.lookAt(0, 0, -1);
     const bal = m.balanco * (acao === 'correr' ? 0.05 : 0.03);
     // mão de baixo à direita, como no jogo
-    // mão no canto de baixo à direita: a manga entra pela borda, o punho e a picareta ficam à vista
-    mao.position.set(0.36 + bal - m.comerMao * 0.22, -0.34 + Math.abs(bal) * 0.6 + m.comerMao * 0.16, -0.72 + m.comerMao * 0.12);
-    mao.rotation.set(-0.95 + (novo ? m.golpeMao * 0.5 : m.golpeMao * 0.35) - m.comerMao * 0.5, -0.4 - m.comerMao * 0.5, 0.35);
+    // a mão à vista, um pouco à direita e abaixo do centro; a manga sai dela para o canto
+    // de baixo à direita. Golpear levanta e abaixa a direção do braço; comer leva a mão à boca.
+    const g = novo ? m.golpeMao : m.golpeMao * 0.7;
+    posicionarMao(braco1, [0.3 + bal - m.comerMao * 0.24, -0.26 + Math.abs(bal) * 0.5 + m.comerMao * 0.12 + g * 0.06, -0.78 + m.comerMao * 0.16], -0.5 - m.comerMao * 0.3, 0.55 - g * 0.5 + m.comerMao * 0.3, 0.6);
     bracoHoje.position.set(0.42, -0.4 + Math.abs(bal) * 0.5, -0.7);
     bracoHoje.rotation.set(-0.95 + m.golpeMao * 0.35, -0.35, 0.3);
     renderer.render(cenaMao, cameraMao);

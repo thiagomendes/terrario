@@ -26,8 +26,9 @@ O dono e o filho querem um jogo com identidade própria. Em 7 nov foram feitos t
 - **`personagem.html`:** quatro direções de personagem. Escolhida a **B, Brinquedo**.
 - **`mundo.html`:** o mesmo pedaço de mundo no estilo de hoje e no estilo brinquedo.
 - **`movimento.html`:** o boneco B em cada ação, com o movimento de hoje e o novo, nas três câmeras.
+- **`telas.html`:** a tela inicial, criar mundo, jogando (HUD), pausa e inventário no estilo brinquedo.
 
-O dono aprovou os três: "se o jogo sair igual ao esboço, será incrível".
+O dono aprovou os esboços: "se o jogo sair igual ao esboço, será incrível".
 
 ## Objetivo
 O jogo inteiro passa para o estilo brinquedo, **igual aos esboços**. Isso vale para:
@@ -46,7 +47,8 @@ As regras, o mundo salvo, o multiplayer e os temas continuam iguais. Muda só o 
 - terceira pessoa minerando;
 - primeira pessoa com a picareta;
 - pulo;
-- o mundo de longe e de perto.
+- o mundo de longe e de perto;
+- as cinco telas: inicial, criar mundo, jogando, pausa e inventário.
 
 A spec só fecha quando o dono olha as duplas e diz que está igual ou melhor.
 
@@ -71,7 +73,7 @@ A spec só fecha quando o dono olha as duplas e diz que está igual ou melhor.
 
   Também ganham movimento próprio: nadar, voar (criativo), cair, deitar na cama, desmaiar e renascer, e acenar.
 - **Câmeras:**
-  - **Primeira pessoa:** a manga arredondada e a mãozinha do boneco, nas cores escolhidas, com o item na mão em estilo brinquedo. A mão balança ao andar e faz cada ação com o mesmo preparo da terceira pessoa.
+  - **Primeira pessoa:** como na terceira pessoa, aparecem separadas a manga da blusa (na cor da roupa), o punho marcando onde ela termina e a mãozinha redonda cor de pele, bem à vista, segurando o item em estilo brinquedo. Não aparece mais o braço inteiro de uma peça só. A mão balança ao andar e faz cada ação com o mesmo preparo da terceira pessoa.
   - **Terceira pessoa:** por cima do ombro, como no esboço.
   - **De frente:** como hoje.
 - **Moradores e bichos:** no mesmo traço do personagem, nos seis temas. Isso inclui os moradores de cada profissão, a raposa e as criaturas de cada tema (dia e noite), com os movimentos de cada um.
@@ -106,7 +108,7 @@ A spec só fecha quando o dono olha as duplas e diz que está igual ou melhor.
 1. **Fidelidade ao esboço:** as seis duplas (jogo × esboço) da definição de sucesso, aprovadas pelo dono.
 2. **Personagem:** todas as opções do editor existem no estilo novo; personagens salvos abrem convertidos (teste com aparências antigas).
 3. **Movimentos:** cada ação tem a pose e o ritmo do esboço; teste confere que as poses mudam como esperado em cada ação.
-4. **Primeira pessoa:** mão e manga nas cores do personagem, item na mão no estilo novo, sem o braço quadrado; captura de cada ação.
+4. **Primeira pessoa:** manga, punho e mão separados e nas cores do personagem (roupa sem manga mostra o braço cor de pele até a mão), item na mão no estilo novo, sem o braço quadrado; captura de cada ação.
 5. **Bichos e moradores:** todos no estilo novo nos seis temas, com captura de cada um.
 6. **Mundo:** blocos, plantas e água no estilo novo nos seis temas, sem textura de pixels; capturas de dia e à noite.
 7. **Desempenho:**
@@ -114,10 +116,11 @@ A spec só fecha quando o dono olha as duplas e diz que está igual ou melhor.
    - no celular simulado (CPU 4× mais lenta), não pior que hoje no nível de qualidade escolhido;
    - medição antes e depois, como na spec 009;
    - a troca automática de qualidade testada.
-8. **Efeitos:** cada efeito da lista da Experiência no estilo novo, com captura de cada um (quebrar e colocar nos seis temas); nenhum efeito usa ainda a textura de pixels.
-9. **Tela inicial e site:** título, menus, vitrine, HUD e ícone do site no estilo novo; capturas no computador e no celular.
-10. **Nada quebra:** a paridade das 36 sessões, que muda só o desenho e não as regras, o multiplayer e todos os testes passam.
-11. **Auditoria independente** ao fim, com os achados corrigidos.
+8. **Telas:** as cinco telas do esboço (inicial, criar mundo, HUD, pausa, inventário) e as demais (personagem, diário, mapa, trocas, baú, fornalha, configurações, jogar com amigos) no estilo: botões de peça que afundam, painéis arredondados, ícones a partir dos modelos de brinquedo.
+9. **Efeitos:** cada efeito da lista da Experiência no estilo novo, com captura de cada um (quebrar e colocar nos seis temas); nenhum efeito usa ainda a textura de pixels.
+10. **Tela inicial e site:** título, menus, vitrine, HUD e ícone do site no estilo novo; capturas no computador e no celular.
+11. **Nada quebra:** a paridade das 36 sessões, que muda só o desenho e não as regras, o multiplayer e todos os testes passam.
+12. **Auditoria independente** ao fim, com os achados corrigidos.
 
 ## Fases e tarefas
 | # | Tarefa |
