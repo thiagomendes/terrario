@@ -380,6 +380,40 @@ export function gerarMalha(
       }
       agua.indices.push(base, base + 1, base + 2, base, base + 2, base + 3);
     }
+    // beira em degrau (spec 012): onde a superfície encosta numa parede, uma faixinha de
+    // espuma colada nela, na linha d'água (vista do chão a espuma do plano quase some)
+    if (topoBaixo < 1) {
+      for (const [dx, dz] of [
+        [1, 0],
+        [-1, 0],
+        [0, 1],
+        [0, -1],
+      ] as const) {
+        const dv = obterBloco(ler(x + dx, y, z + dz));
+        if (!dv?.opaco || !dv.solido || dv.liquido) continue;
+        const base = agua.vertices;
+        const px = x + 0.5 + dx * 0.49;
+        const pz = z + 0.5 + dz * 0.49;
+        const tx = dz !== 0 ? 0.5 : 0;
+        const tz = dx !== 0 ? 0.5 : 0;
+        for (const [s, h] of [
+          [-1, topoBaixo - 0.05],
+          [1, topoBaixo - 0.05],
+          [1, topoBaixo + 0.07],
+          [-1, topoBaixo + 0.07],
+        ] as const) {
+          const vx = px + tx * s;
+          const vz = pz + tz * s;
+          agua.posicoes.push(vx, y + h, vz);
+          agua.normais.push(-dx, 0, -dz);
+          agua.uvs.push(vx - x, vz - z);
+          agua.cores.push(0, 1, 1, 1);
+          agua.luz.push(luzAguaCeu, luzAguaBloco);
+        }
+        agua.indices.push(base, base + 1, base + 2, base, base + 2, base + 3);
+        agua.indices.push(base, base + 2, base + 1, base, base + 3, base + 2);
+      }
+    }
   }
 
   function ler(x: number, y: number, z: number): number {
