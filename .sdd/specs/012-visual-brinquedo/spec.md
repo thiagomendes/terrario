@@ -236,9 +236,20 @@ Lista única para nada se perder. Cada item: feito (com o que comprova) ou pende
 
 - [x] D2: desempenho medido de novo (57 a 60 fps no computador; 49 a 55 com a CPU 4× mais lenta) e publicado em 4a96875 (site e servidor no ar).
 
-**Pendente, nesta ordem**
+- [x] Espuma na beira em degrau: faixinha de espuma colada na parede, na linha d'água.
+- [x] Barra de itens vazia no começo do mundo, também no criativo (veio do backlog).
+- [x] Bichos dos seis temas redesenhados à mão como brinquedo (5 por tema), com membros encaixados e a cabeça que acena inteira; vitrine de dia e de noite por tema (`vitrine dos bichos`).
+- [x] Copas: blocos de folha de quinas redondas com juntas, no lugar das bolas (o boneco afundava na bola e quebrar ficava estranho).
+- [x] Flor, cogumelo e tocha na mão como a pecinha do chão (antes saía um cubo, e na primeira pessoa a flor saía preta).
 
-6. Espuma na beira em degrau (anotada também no backlog; a beira rasa já tem espuma).
+**Pendente, nesta ordem** (pedidos do dono em 7 nov, à tarde)
+
+1. Blocos com forma na mão (porta, cerca, laje, escada, cama...): hoje aparecem como cubo; desenhar o formato de verdade.
+2. Personagem do amigo "estourado" (cores desbotadas) para quem vê, e a troca de aparência dele não chega para os outros.
+3. Compartilhar o mundo com amigos: trocar a janela nativa do navegador pelo diálogo de brinquedo.
+4. Domínio novo terrario.tmdevlab.com: o servidor tem que aceitar pedidos dele.
+5. Esc em tela cheia: o navegador sai da tela cheia; segurar o Esc no jogo quando der (Chrome) e ter outro jeito de fechar as janelas no computador, com o mouse livre.
+6. Braço do amigo mirando o bloco exato (veio do backlog).
 
 **Fora desta spec (no backlog do projeto, `.sdd/backlog.md`)**
 - Barra de itens vazia no começo do mundo.
