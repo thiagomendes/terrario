@@ -668,7 +668,8 @@ export function criarCena(
     scene,
     true,
     false,
-    Texture.NEAREST_NEAREST_MIPLINEAR,
+    // traço de brinquedo: o atlas limpo filtrado (sem degrau de pixel em nenhum bloco)
+    Texture.TRILINEAR_SAMPLINGMODE,
   );
   textura.hasAlpha = true;
   textura.anisotropicFilteringLevel = 8;
@@ -1714,9 +1715,9 @@ export function criarCena(
       TAM_RACHADURA,
       TAM_RACHADURA,
       scene,
+      true,
       false,
-      false,
-      Texture.NEAREST_SAMPLINGMODE,
+      Texture.TRILINEAR_SAMPLINGMODE,
     );
     tex.hasAlpha = true;
     const mat = new StandardMaterial(`rachadura-${e}`, scene);
@@ -2064,7 +2065,7 @@ export function criarCena(
   estado.fx = { particulas: 0 };
   estado.rachadura = { visivel: false, estagio: 0 };
 
-  let contorno: LinesMesh | null = null;
+  let contorno: Mesh | null = null;
   let chaveContorno = '';
   /** Caixa visível do bloco (união das caixas de laje, escada, tocha; planta mais estreita). */
   function caixaVisual(x: number, y: number, z: number): CaixaLocal {
@@ -2085,6 +2086,13 @@ export function criarCena(
     return u as unknown as CaixaLocal;
   }
 
+  const matDestaque = new StandardMaterial('destaque-mat', scene);
+  matDestaque.disableLighting = true;
+  matDestaque.emissiveColor = new Color3(...COR_DESTAQUE)
+    .scale(0.35)
+    .add(new Color3(0.65, 0.65, 0.65));
+  matDestaque.alpha = 0.17;
+  matDestaque.backFaceCulling = true;
   function atualizarDestaque(): void {
     const alvo = alvoDoQuadro();
     const d = estadoDestaque(alvo, alvo ? caixaVisual(alvo.x, alvo.y, alvo.z) : CUBO);
@@ -2092,13 +2100,31 @@ export function criarCena(
       contorno?.dispose();
       contorno = null;
       chaveContorno = d.chave;
-      if (d.visivel) {
-        const linhas = d.arestas.map(([a, b]) => [new Vector3(...a), new Vector3(...b)]);
-        const l = MeshBuilder.CreateLineSystem('destaque', { lines: linhas }, scene);
-        l.color = new Color3(...COR_DESTAQUE);
+      if (d.visivel && alvo) {
+        // contorno de brinquedo: uma casca arredondada clara e translúcida em volta do bloco
+        // (como a peça escolhida brilhando), em vez das linhas finas de um pixel
+        const c = caixaVisual(alvo.x, alvo.y, alvo.z);
+        const folga = 0.035;
+        const w = c[3] - c[0] + folga * 2;
+        const h = c[4] - c[1] + folga * 2;
+        const p = c[5] - c[2] + folga * 2;
+        const l = caixaArredondada(
+          'destaque',
+          scene,
+          w,
+          h,
+          p,
+          Math.min(0.16, Math.min(w, h, p) * 0.3),
+          matDestaque,
+          3,
+        );
+        l.position.set(
+          alvo.x + (c[0] + c[3]) / 2,
+          alvo.y + (c[1] + c[4]) / 2,
+          alvo.z + (c[2] + c[5]) / 2,
+        );
         l.isPickable = false;
         l.receiveShadows = false;
-        // mesmo grupo do mundo: o contorno respeita paredes e o lado de trás do bloco
         l.renderingGroupId = 0;
         glow.addExcludedMesh(l);
         contorno = l;

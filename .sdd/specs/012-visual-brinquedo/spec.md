@@ -222,9 +222,13 @@ Lista única para nada se perder. Cada item: feito (com o que comprova) ou pende
 
 - [x] A4: itens soltos no chão como o modelo 3D de brinquedo da mão; plantas com as pecinhas do mundo (captura `itens-soltos`).
 
+- [x] C1: rachadura de traço macio (textura filtrada) e contorno do bloco mirado como casca arredondada clara.
+- [x] C3 e parte do C2: textura do mundo filtrada, sem degrau de pixel em nenhum bloco (portas, camas, baús, fornalhas, lado da grama).
+- [x] Moradoras sem barba: o rosto do morador segue o gênero.
+
 **Pendente, nesta ordem**
 
-5. C1–C3: rachadura e contorno do bloco mirado, blocos com forma (tocha, porta, vidro, cama, baú, fornalha, cerca, escada, laje), lado da grama sem chuvisco.
+5. C2: tocha e vidro em formas de brinquedo (o resto dos blocos com forma já está macio pela textura filtrada).
 6. C4: chuva com céu cinza-azulado claro e relâmpago suave; espuma na beira em degrau.
 7. Restos de interface: renomear e excluir mundo ainda usam a janela do navegador; apelido acima dos amigos ainda escuro; avisos de boas-vindas por cima do inventário.
 8. B7: ícone do site, do app instalado e imagem de compartilhamento.

@@ -85,7 +85,9 @@ export function moradorDeBrinquedo(
   const modelos = MODELOS.filter((m) => !genero || (genero === 'f') === FEMININOS.includes(m));
   const a = aparenciaPadrao(modelos[Math.floor(hash(id, 1) * modelos.length)]);
   a.cabeloEstilo = Math.floor(hash(id, 2) * ESTILOS_CABELO);
-  a.rosto = Math.floor(hash(id, 3) * 6);
+  // rosto no gênero do morador: cílios e sardas para elas; barba e bigode só para eles
+  const rostos = genero === 'f' ? [0, 1, 2, 3] : genero === 'm' ? [0, 2, 4, 5] : [0, 1, 2, 3, 4, 5];
+  a.rosto = rostos[Math.floor(hash(id, 3) * rostos.length)];
   a.acessorio = 'nenhum';
   const pele = cabeca?.cor;
   const roupa = tronco?.cor;

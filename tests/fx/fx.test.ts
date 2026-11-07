@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { corMediaDoBloco } from '../../src/fx/cores';
 import { criarPoolParticulas, VIDA_PARTICULA } from '../../src/fx/particulas';
-import { coberturaRachadura, gerarTexturaRachadura } from '../../src/fx/rachadura';
+import { TAM_RACHADURA, coberturaRachadura, gerarTexturaRachadura } from '../../src/fx/rachadura';
 import { TETO_LUMINANCIA_EMISSIVA, luminancia } from '../../src/render/emissivo';
 import { Bloco, REGISTRO_BLOCOS } from '../../src/world/blocks';
 
@@ -70,7 +70,7 @@ describe('textura de rachadura', () => {
     const cob = [1, 2, 3, 4, 5].map((e) => coberturaRachadura(gerarTexturaRachadura(e, 7)));
     for (let i = 1; i < 5; i++) expect(cob[i]).toBeGreaterThan(cob[i - 1]);
     expect(cob[0]).toBeGreaterThan(0);
-    expect(cob[4]).toBeLessThan(32 * 32);
+    expect(cob[4]).toBeLessThan(TAM_RACHADURA * TAM_RACHADURA);
     expect(gerarTexturaRachadura(3, 7)).toEqual(gerarTexturaRachadura(3, 7));
     expect(gerarTexturaRachadura(3, 7)).not.toEqual(gerarTexturaRachadura(3, 8));
   });
