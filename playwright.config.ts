@@ -15,6 +15,8 @@ const LANCAR = process.env.E2E_GPU
         '--disable-software-rasterizer',
         '--use-gl=angle',
         '--use-angle=gl-egl',
+        // medição de desempenho: sem o teto de 60 quadros do monitor
+        ...(process.env.E2E_SEM_VSYNC ? ['--disable-gpu-vsync', '--disable-frame-rate-limit'] : []),
       ],
     }
   : { args: ['--use-gl=angle', '--use-angle=swiftshader', '--ignore-gpu-blocklist'] };

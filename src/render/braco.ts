@@ -127,6 +127,7 @@ export function criarBraco(scene: Scene, camera: TargetCamera, aparencia: Aparen
     const mao = esfera('braco-mao', scene, 0.135, mats.cor(c.pele));
     mao.position.y = -0.13;
     corpo = [manga, punho, mao];
+    sujo = true;
     for (const m of corpo) {
       m.parent = grupo;
       preparar(m);
@@ -148,25 +149,44 @@ export function criarBraco(scene: Scene, camera: TargetCamera, aparencia: Aparen
       modelo.no.rotation.set(0.4, 0.6, 0);
     }
     for (const m of modelo.malhas) preparar(m);
+    sujo = true;
   }
 
   // ---------- sombreado de plástico por vértice ----------
   const mundoVista = new Matrix();
   const n = new Vector3();
   const nv = new Vector3();
+  /** Por malha: normais e cores guardadas (nada de alocar a cada quadro). */
+  const cache = new Map<Mesh, { normais: Float32Array; cores: Float32Array }>();
   function sombrear(m: Mesh): void {
-    const normais = m.getVerticesData(VertexBuffer.NormalKind);
     const mat = m.material as StandardMaterial | null;
     const base = mat ? corDe.get(mat) : undefined;
-    if (!normais || !base) return;
+    if (!base) return;
+    let c = cache.get(m);
+    if (!c) {
+      const dados = m.getVerticesData(VertexBuffer.NormalKind);
+      if (!dados) return;
+      const normais = Float32Array.from(dados);
+      c = { normais, cores: new Float32Array((normais.length / 3) * 4) };
+      cache.set(m, c);
+      m.onDisposeObservable.addOnce(() => cache.delete(m));
+    }
+    const { normais, cores } = c;
     m.computeWorldMatrix(true).multiplyToRef(camera.getViewMatrix(), mundoVista);
-    const cores = new Float32Array((normais.length / 3) * 4);
+    const e = mundoVista.m;
     for (let i = 0, j = 0; i < normais.length; i += 3, j += 4) {
-      n.set(normais[i], normais[i + 1], normais[i + 2]);
-      Vector3.TransformNormalToRef(n, mundoVista, nv);
-      nv.normalize();
-      const difusa = Math.max(0, Vector3.Dot(nv, LUZ));
-      const brilho = Math.pow(Math.max(0, Vector3.Dot(nv, MEIO)), 24) * 0.35;
+      const x = normais[i];
+      const y = normais[i + 1];
+      const z = normais[i + 2];
+      let nx = x * e[0] + y * e[4] + z * e[8];
+      let ny = x * e[1] + y * e[5] + z * e[9];
+      let nz = x * e[2] + y * e[6] + z * e[10];
+      const l = Math.hypot(nx, ny, nz) || 1;
+      nx /= l;
+      ny /= l;
+      nz /= l;
+      const difusa = Math.max(0, nx * LUZ.x + ny * LUZ.y + nz * LUZ.z);
+      const brilho = Math.pow(Math.max(0, nx * MEIO.x + ny * MEIO.y + nz * MEIO.z), 24) * 0.35;
       const k = (0.5 + 0.55 * difusa) * luz;
       cores[j] = Math.min(1, base.r * k + brilho * luz);
       cores[j + 1] = Math.min(1, base.g * k + brilho * luz);
@@ -175,6 +195,10 @@ export function criarBraco(scene: Scene, camera: TargetCamera, aparencia: Aparen
     }
     m.updateVerticesData(VertexBuffer.ColorKind, cores);
   }
+  /** O sombreado só muda quando o braço gira (ou a luz muda): a posição não mexe nele. */
+  const ultimoGiro = new Quaternion(NaN, 0, 0, 1);
+  let ultimaLuz = NaN;
+  let sujo = true;
 
   // ---------- movimento ----------
   let ultYaw = camera.rotation.y;
@@ -190,7 +214,8 @@ export function criarBraco(scene: Scene, camera: TargetCamera, aparencia: Aparen
   function posicionar(mao: Vector3, d: Vector3): void {
     dir.copyFrom(d).normalize();
     Quaternion.FromUnitVectorsToRef(PARA_BAIXO, dir, q);
-    grupo.rotationQuaternion = q.clone();
+    if (grupo.rotationQuaternion) grupo.rotationQuaternion.copyFrom(q);
+    else grupo.rotationQuaternion = q.clone();
     grupo.scaling.setAll(ESCALA);
     // a mão (0, -0.13, 0 no braço) fica no ponto pedido
     grupo.position.set(
@@ -201,6 +226,8 @@ export function criarBraco(scene: Scene, camera: TargetCamera, aparencia: Aparen
   }
 
   const suave = (x: number) => x * x * (3 - 2 * x);
+  const maoAlvo = new Vector3();
+  const dirAlvo = new Vector3();
   function atualizarVista(dt: number, v: Vista): void {
     const passo = dt > 0 && Number.isFinite(dt) ? Math.min(dt, 0.1) : 0;
     const fov = camera.fov > 0.1 ? camera.fov : FOV_VISTA;
@@ -229,7 +256,7 @@ export function criarBraco(scene: Scene, camera: TargetCamera, aparencia: Aparen
         ? suave(Math.min(1, v.comer / 0.3)) * (1 - suave(Math.max(0, (v.comer - 0.85) / 0.15)))
         : 0;
     const e = 1 - (1 - troca) * (1 - troca);
-    const mao = new Vector3(
+    const mao = maoAlvo.set(
       MAO.x + bal + balX - c * 0.16,
       MAO.y +
         Math.abs(bal) * 0.5 +
@@ -241,15 +268,25 @@ export function criarBraco(scene: Scene, camera: TargetCamera, aparencia: Aparen
         (1 - e) * 0.25,
       MAO.z - c * 0.3 + col * 0.08,
     );
-    const d = new Vector3(
+    const d = dirAlvo.set(
       DIRECAO.x + c * 0.25,
       DIRECAO.y - g * 0.5 + c * 0.9 - col * 0.2,
       DIRECAO.z,
     );
     posicionar(mao, d);
-    if (visivel) {
+    const giro = grupo.rotationQuaternion!;
+    const girou =
+      Math.abs(giro.x - ultimoGiro.x) +
+        Math.abs(giro.y - ultimoGiro.y) +
+        Math.abs(giro.z - ultimoGiro.z) +
+        Math.abs(giro.w - ultimoGiro.w) >
+        0.003 || Number.isNaN(ultimoGiro.x);
+    if (visivel && (sujo || girou || luz !== ultimaLuz)) {
       for (const m of corpo) sombrear(m);
       if (modelo) for (const m of modelo.malhas) sombrear(m);
+      ultimoGiro.copyFrom(giro);
+      ultimaLuz = luz;
+      sujo = false;
     }
   }
 

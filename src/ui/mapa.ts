@@ -357,7 +357,7 @@ export function criarMapas(raiz: HTMLElement, fonte: FonteMapa) {
       }
     // traço de brinquedo: o mosaico inteiro ampliado com suavização (sem pixel por bloco)
     ctx.imageSmoothingEnabled = true;
-    ctx.imageSmoothingQuality = 'high';
+    ctx.imageSmoothingQuality = 'low';
     const ox = (ccx - 3) * TAM_X;
     const oz = (ccz - 3) * TAM_X;
     ctx.drawImage(
