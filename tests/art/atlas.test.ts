@@ -67,16 +67,48 @@ describe('atlas', () => {
     expect(gerarAtlas(2).pixels).not.toEqual(atlas.pixels);
   });
 
-  it('cada tile tem variação de cor e luminância', () => {
-    for (const t of atlas.tiles) {
-      const visiveis = interior(t.indice).filter((p) => p[3] > 0);
-      const cores = new Set(visiveis.map((p) => p.join(',')));
-      expect(cores.size).toBeGreaterThan(12);
-      const ls = visiveis.map(lum);
+  it('cada tile pintado tem variação de cor e luminância', () => {
+    // a pintura crua; as cores limpas de brinquedo alisam de propósito (teste abaixo)
+    const cru = gerarAtlas(1, { brinquedo: false });
+    const lerCru = (x: number, y: number) => {
+      const i = (y * cru.largura + x) * 4;
+      return [cru.pixels[i], cru.pixels[i + 1], cru.pixels[i + 2], cru.pixels[i + 3]];
+    };
+    for (const t of cru.tiles) {
+      const [ox, oy] = origem(t.indice);
+      const visiveis: number[][] = [];
+      for (let y = 0; y < TAM_TILE; y++)
+        for (let x = 0; x < TAM_TILE; x++) visiveis.push(lerCru(ox + x, oy + y));
+      const opacos = visiveis.filter((p) => p[3] > 0);
+      const cores = new Set(opacos.map((p) => p.join(',')));
+      expect(cores.size, t.nome).toBeGreaterThan(12);
+      const ls = opacos.map(lum);
       const media = ls.reduce((a, b) => a + b, 0) / ls.length;
       const desvio = Math.sqrt(ls.reduce((a, b) => a + (b - media) ** 2, 0) / ls.length);
       expect(desvio).toBeGreaterThan(0);
     }
+  });
+
+  it('cores de brinquedo: o chuvisco some, os desenhos fortes ficam', () => {
+    const cru = gerarAtlas(1, { brinquedo: false });
+    const grama = atlas.tiles.find(
+      (t) => t.nome === NOMES_TILES[t.indice] && t.bloco === Bloco.TERRA_MUSGOSA,
+    )!;
+    const [ox, oy] = origem(grama.indice);
+    const desvio = (ler: (x: number, y: number) => number[]) => {
+      const ls: number[] = [];
+      for (let y = 0; y < TAM_TILE; y++)
+        for (let x = 0; x < TAM_TILE; x++) ls.push(lum(ler(ox + x, oy + y)));
+      const m = ls.reduce((a, b) => a + b, 0) / ls.length;
+      return Math.sqrt(ls.reduce((a, b) => a + (b - m) ** 2, 0) / ls.length);
+    };
+    const lerCru = (x: number, y: number) => {
+      const i = (y * cru.largura + x) * 4;
+      return [cru.pixels[i], cru.pixels[i + 1], cru.pixels[i + 2], cru.pixels[i + 3]];
+    };
+    // o lado da grama (verde em cima, terra embaixo) continua com contraste, mas menos chuvisco
+    expect(desvio(px)).toBeLessThan(desvio(lerCru));
+    expect(desvio(px)).toBeGreaterThan(desvio(lerCru) * 0.3);
   });
 
   it('cristal é azul saturado e a haste do cogumelo não é quase branca', () => {

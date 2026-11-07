@@ -764,7 +764,9 @@ function sementeDoNome(nome: string): number {
   return Math.abs(h) % 100000;
 }
 
-export function gerarAtlas(semente = 1337): Atlas {
+/** `brinquedo: false` desliga as cores limpas de brinquedo (a pintura crua de cada tile). */
+export function gerarAtlas(semente = 1337, opcoes: { brinquedo?: boolean } = {}): Atlas {
+  const brinquedo = opcoes.brinquedo ?? true;
   const pixels = new Uint8ClampedArray(LARGURA_ATLAS * ALTURA_ATLAS * 4);
   const tiles: TileAtlas[] = [];
   NOMES_TILES.forEach((nome, indice) => {
@@ -776,7 +778,7 @@ export function gerarAtlas(semente = 1337): Atlas {
     const tile = new Float32Array(TAM_TILE * TAM_TILE * 4);
     for (let y = 0; y < TAM_TILE; y++)
       for (let x = 0; x < TAM_TILE; x++) tile.set(pinta(x, y, s), (y * TAM_TILE + x) * 4);
-    const limpo = deBrinquedo(tile);
+    const limpo = brinquedo ? deBrinquedo(tile) : tile;
     for (let py = 0; py < CELULA; py++) {
       for (let px = 0; px < CELULA; px++) {
         const x = Math.min(TAM_TILE - 1, Math.max(0, px - PADDING));

@@ -29,7 +29,8 @@ async function sha(...partes: (Uint8Array | string)[]): Promise<string> {
 describe('Bruma e Luz é idêntico ao jogo antes dos temas', () => {
   it('atlas: os mesmos pixels e os mesmos tiles brilhantes', async () => {
     definirTemaAtivo(obterTema('bruma-e-luz'));
-    const a = gerarAtlas(1337);
+    // a pintura de cada tile (antes das cores limpas de brinquedo da spec 012)
+    const a = gerarAtlas(1337, { brinquedo: false });
     expect([a.largura, a.altura]).toEqual([512, 256]);
     expect(await sha(new Uint8Array(a.pixels.buffer))).toBe(
       '3aed3d5a8a609f6fe704538a62a5d75f4a87a7a43372b8ac899913165bca488c',
