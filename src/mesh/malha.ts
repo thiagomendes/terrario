@@ -119,6 +119,9 @@ class Acumulador {
   }
 }
 
+/** Raio das quinas de brinquedo (fração do bloco). */
+export const RAIO_QUINA = 0.13;
+
 const CANTOS: [number, number][] = [
   [0, 0],
   [1, 0],
@@ -244,11 +247,12 @@ export function gerarMalha(
     const coberto = f.n[1] <= 0 && (f.n[1] < 0 || opaco(x, y + 1, z));
     if (coberto && (id === Bloco.TERRA_MUSGOSA || id === Bloco.TERRA_NEVADA)) tile = TILE_TERRA;
     if (coberto && id === Bloco.MUSGO_PANTANO) tile = FACES_TILE[Bloco.LAMA * 4 + 1];
-    const base = solido.vertices;
-    const ao: number[] = [];
     const fx = x + f.n[0];
     const fy = y + f.n[1];
     const fz = z + f.n[2];
+    // oclusão e luz nos quatro cantos da face (o miolo interpola)
+    const ao: number[] = [];
+    const luzes: number[] = [];
     for (const [s1, s2] of CANTOS) {
       const a = s1 ? 1 : -1;
       const b = s2 ? 1 : -1;
@@ -260,17 +264,7 @@ export function gerarMalha(
         fz + a * f.t1[2] + b * f.t2[2],
       );
       const oclusao = l1 && l2 ? 3 : l1 + l2 + c;
-      const valor = 1 - 0.25 * oclusao;
-      ao.push(valor);
-      const deslocar = f.n[0] + f.n[1] + f.n[2] > 0 ? 1 : 0;
-      const lx = deslocar * Math.abs(f.n[0]) + s1 * f.t1[0] + s2 * f.t2[0];
-      const ly = deslocar * Math.abs(f.n[1]) + s1 * f.t1[1] + s2 * f.t2[1];
-      const lz = deslocar * Math.abs(f.n[2]) + s1 * f.t1[2] + s2 * f.t2[2];
-      solido.posicoes.push(x + lx, y + ly, z + lz);
-      solido.normais.push(f.n[0], f.n[1], f.n[2]);
-      solido.uvs.push(...uvDoCanto(tile, ...uvLocal(f.n, lx, ly, lz)));
-      // alfa < 1 marca folhas (balançam ao vento no shader)
-      solido.cores.push(valor, valor, valor, FOLHAS_T[id] ? 0.5 : 1);
+      ao.push(1 - 0.25 * oclusao);
       luzCanto(
         [
           [fx, fy, fz],
@@ -282,13 +276,89 @@ export function gerarMalha(
             fz + a * f.t1[2] + b * f.t2[2],
           ],
         ],
-        solido.luz,
+        luzes,
       );
     }
-    if (ao[0] + ao[2] > ao[1] + ao[3]) {
-      solido.indices.push(base, base + 1, base + 2, base, base + 2, base + 3);
-    } else {
-      solido.indices.push(base + 1, base + 2, base + 3, base + 1, base + 3, base);
+    // quinas de brinquedo (spec 012): só as arestas à mostra se arredondam; entre dois
+    // blocos a face segue reta até a borda (a junta é desenhada no material)
+    const arredonda = OPACO_T[id] === 1 && !FOLHAS_T[id];
+    const mostra = (dx: number, dy: number, dz: number) =>
+      arredonda && !opaco(x + dx, y + dy, z + dz) ? 1 : 0;
+    const lo: Vec = [mostra(-1, 0, 0), mostra(0, -1, 0), mostra(0, 0, -1)];
+    const hi: Vec = [mostra(1, 0, 0), mostra(0, 1, 0), mostra(0, 0, 1)];
+    const passos = (t: Vec): number[] => {
+      const eixo = t[0] ? 0 : t[1] ? 1 : 2;
+      const r: number[] = lo[eixo] ? [0, RAIO_QUINA * 0.45, RAIO_QUINA] : [0];
+      if (hi[eixo]) r.push(1 - RAIO_QUINA, 1 - RAIO_QUINA * 0.45, 1);
+      else r.push(1);
+      return r;
+    };
+    const p1 = passos(f.t1);
+    const p2 = passos(f.t2);
+    const base = solido.vertices;
+    const deslocar = f.n[0] + f.n[1] + f.n[2] > 0 ? 1 : 0;
+    const folha = FOLHAS_T[id] ? 0.5 : 1;
+    for (const s2 of p2) {
+      for (const s1 of p1) {
+        const lx = deslocar * Math.abs(f.n[0]) + s1 * f.t1[0] + s2 * f.t2[0];
+        const ly = deslocar * Math.abs(f.n[1]) + s1 * f.t1[1] + s2 * f.t2[1];
+        const lz = deslocar * Math.abs(f.n[2]) + s1 * f.t1[2] + s2 * f.t2[2];
+        let px = lx;
+        let py = ly;
+        let pz = lz;
+        let nx = f.n[0];
+        let ny = f.n[1];
+        let nz = f.n[2];
+        if (arredonda && (p1.length > 2 || p2.length > 2)) {
+          // ponto do cubo levado para a caixa de dentro e empurrado pelo raio
+          const ix = Math.min(Math.max(lx, lo[0] * RAIO_QUINA), 1 - hi[0] * RAIO_QUINA);
+          const iy = Math.min(Math.max(ly, lo[1] * RAIO_QUINA), 1 - hi[1] * RAIO_QUINA);
+          const iz = Math.min(Math.max(lz, lo[2] * RAIO_QUINA), 1 - hi[2] * RAIO_QUINA);
+          const dx = lx - ix;
+          const dy = ly - iy;
+          const dz = lz - iz;
+          const len = Math.hypot(dx, dy, dz);
+          if (len > 1e-6) {
+            nx = dx / len;
+            ny = dy / len;
+            nz = dz / len;
+            px = ix + nx * RAIO_QUINA;
+            py = iy + ny * RAIO_QUINA;
+            pz = iz + nz * RAIO_QUINA;
+          }
+        }
+        solido.posicoes.push(x + px, y + py, z + pz);
+        solido.normais.push(nx, ny, nz);
+        solido.uvs.push(...uvDoCanto(tile, ...uvLocal(f.n, lx, ly, lz)));
+        // bilinear entre os quatro cantos (ordem de CANTOS: 00, 10, 11, 01)
+        const w00 = (1 - s1) * (1 - s2);
+        const w10 = s1 * (1 - s2);
+        const w11 = s1 * s2;
+        const w01 = (1 - s1) * s2;
+        const valor = ao[0] * w00 + ao[1] * w10 + ao[2] * w11 + ao[3] * w01;
+        // alfa < 1 marca folhas (balançam ao vento no shader)
+        solido.cores.push(valor, valor, valor, folha);
+        solido.luz.push(
+          luzes[0] * w00 + luzes[2] * w10 + luzes[4] * w11 + luzes[6] * w01,
+          luzes[1] * w00 + luzes[3] * w10 + luzes[5] * w11 + luzes[7] * w01,
+        );
+      }
+    }
+    const n1 = p1.length;
+    for (let j = 0; j + 1 < p2.length; j++) {
+      for (let i = 0; i + 1 < n1; i++) {
+        const a = base + j * n1 + i;
+        const b = a + 1;
+        const c = a + n1 + 1;
+        const d = a + n1;
+        // mesma diagonal da oclusão de antes (sem listras no degradê)
+        const va = solido.cores[a * 4];
+        const vb = solido.cores[b * 4];
+        const vc = solido.cores[c * 4];
+        const vd = solido.cores[d * 4];
+        if (va + vc > vb + vd) solido.indices.push(a, b, c, a, c, d);
+        else solido.indices.push(b, c, d, b, d, a);
+      }
     }
   }
 

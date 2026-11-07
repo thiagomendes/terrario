@@ -551,7 +551,8 @@ export function criarCena(
 
   const sol = new DirectionalLight('sol', new Vector3(...DIRECAO_SOL), scene);
   sol.diffuse = new Color3(...PALETA.sol);
-  sol.specular = Color3.Black();
+  // brilho suave de plástico (spec 012): o sol acende o reflexo dos blocos e bonecos
+  sol.specular = new Color3(0.55, 0.52, 0.46);
   sol.intensity = 1.1;
   sol.position = new Vector3(60, 90, 60);
   sol.autoUpdateExtends = true;
@@ -672,7 +673,8 @@ export function criarCena(
   matSolido.diffuseTexture = textura;
   matSolido.emissiveTexture = texEmissiva;
   matSolido.emissiveColor = Color3.White();
-  matSolido.specularColor = Color3.Black();
+  matSolido.specularColor = new Color3(0.2, 0.2, 0.2);
+  matSolido.specularPower = 36;
   matSolido.ambientColor = Color3.White();
   matSolido.backFaceCulling = false;
   // o recorte usa o alfa da arte: sem isto, o miolo do vidro, os furos das folhas e as
@@ -680,7 +682,7 @@ export function criarCena(
   matSolido.useAlphaFromDiffuseTexture = true;
   matSolido.transparencyMode = Material.MATERIAL_ALPHATEST;
   matSolido.alphaCutOff = 0.5;
-  const mundoSolido = new PluginMundo(matSolido);
+  const mundoSolido = new PluginMundo(matSolido, { juntas: true });
 
   const matPlanta = new StandardMaterial('atlas-plantas', scene);
   matPlanta.diffuseTexture = textura;

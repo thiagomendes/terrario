@@ -57,6 +57,10 @@ describe('materiais por face', () => {
     let vistosLado = 0;
     for (let v = 0; v < normais.length / 3; v++) {
       const ny = normais[v * 3 + 1];
+      // só o miolo reto de cada face (as quinas arredondadas misturam as direções)
+      const nx = normais[v * 3];
+      const nz = normais[v * 3 + 2];
+      if (Math.max(Math.abs(nx), Math.abs(ny), Math.abs(nz)) < 0.9999) continue;
       const alvo = ny > 0 ? topo : lado;
       if (ny < 0) continue;
       const [cu, cv] = centro(alvo);

@@ -20,8 +20,12 @@ export class PluginMundo extends MaterialPluginBase {
   ventoFolhas = 0;
   tempoMundo = 0;
 
-  constructor(material: Material) {
-    super(material, 'Mundo', 210, { MUNDO: false });
+  /** Desenha as juntas entre blocos (quina macia e um friso), só no material sólido. */
+  private readonly juntas: boolean;
+
+  constructor(material: Material, opcoes: { juntas?: boolean } = {}) {
+    super(material, 'Mundo', 210, { MUNDO: false, MUNDO_JUNTAS: false });
+    this.juntas = !!opcoes.juntas;
     this._enable(true);
   }
 
@@ -35,6 +39,7 @@ export class PluginMundo extends MaterialPluginBase {
 
   override prepareDefines(defines: Record<string, unknown>): void {
     defines['MUNDO'] = true;
+    defines['MUNDO_JUNTAS'] = this.juntas;
   }
 
   definirBruma(cor: readonly [number, number, number], forca: number): void {
@@ -132,6 +137,32 @@ export class PluginMundo extends MaterialPluginBase {
           }
           baseColor.rgb *= 1.0 - molhado * 0.18 * aberto;
         }
+      `,
+      // juntas aparentes (spec 012): onde dois blocos se encostam a face é reta na malha;
+      // aqui a beirada de cada bloco ganha a quina macia (a normal tomba para fora, como
+      // nas quinas à mostra) e um friso fino mais escuro, e o bloco vira peça de montar
+      CUSTOM_FRAGMENT_BEFORE_LIGHTS: `
+        #ifdef MUNDO_JUNTAS
+        {
+          vec3 nJ = normalize(vNormalW);
+          vec3 aJ = abs(nJ);
+          float retoJ = smoothstep(0.985, 0.999, max(max(aJ.x, aJ.y), aJ.z));
+          if (retoJ > 0.0) {
+            vec3 t1J = vec3(1.0, 0.0, 0.0);
+            vec3 t2J = vec3(0.0, 0.0, 1.0);
+            if (aJ.x > 0.5) { t1J = vec3(0.0, 0.0, 1.0); t2J = vec3(0.0, 1.0, 0.0); }
+            else if (aJ.z > 0.5) { t2J = vec3(0.0, 1.0, 0.0); }
+            vec2 fJ = vec2(fract(dot(vBlocoMundo, t1J)), fract(dot(vBlocoMundo, t2J)));
+            vec2 eJ = min(fJ, 1.0 - fJ);
+            vec2 sJ = sign(fJ - 0.5);
+            vec2 kJ = 1.0 - smoothstep(vec2(0.0), vec2(0.17), eJ);
+            kJ *= kJ;
+            normalW = normalize(normalW + (t1J * sJ.x * kJ.x + t2J * sJ.y * kJ.y) * 1.6 * retoJ);
+            float frisoJ = 1.0 - smoothstep(0.004, 0.03, min(eJ.x, eJ.y));
+            baseColor.rgb *= 1.0 - 0.4 * frisoJ * retoJ;
+          }
+        }
+        #endif
       `,
       CUSTOM_FRAGMENT_BEFORE_FOG: `
         {

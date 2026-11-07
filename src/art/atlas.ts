@@ -689,6 +689,56 @@ function pintorPlanta(bloco: number): Pintor {
   };
 }
 
+/**
+ * Cores limpas de brinquedo (spec 012): o chuvisco de pixels some e ficam os desenhos que
+ * dão identidade ao bloco (o verde em cima da terra, as listras da tábua, os pontinhos do
+ * minério). Cada pixel se aproxima da média da vizinhança, a não ser que destoe muito dela.
+ */
+export function deBrinquedo(tile: Float32Array, raio = 2): Float32Array {
+  const n = TAM_TILE;
+  const saida = new Float32Array(tile.length);
+  const lum = (i: number) => tile[i] * 0.3 + tile[i + 1] * 0.59 + tile[i + 2] * 0.11;
+  for (let y = 0; y < n; y++) {
+    for (let x = 0; x < n; x++) {
+      const i = (y * n + x) * 4;
+      saida[i + 3] = tile[i + 3];
+      if (tile[i + 3] < 128) {
+        saida[i] = tile[i];
+        saida[i + 1] = tile[i + 1];
+        saida[i + 2] = tile[i + 2];
+        continue;
+      }
+      let r = 0;
+      let g = 0;
+      let b = 0;
+      let c = 0;
+      for (let dy = -raio; dy <= raio; dy++) {
+        for (let dx = -raio; dx <= raio; dx++) {
+          const xx = x + dx;
+          const yy = y + dy;
+          if (xx < 0 || yy < 0 || xx >= n || yy >= n) continue;
+          const j = (yy * n + xx) * 4;
+          if (tile[j + 3] < 128) continue;
+          r += tile[j];
+          g += tile[j + 1];
+          b += tile[j + 2];
+          c++;
+        }
+      }
+      r /= c;
+      g /= c;
+      b /= c;
+      const d = Math.abs(lum(i) - (r * 0.3 + g * 0.59 + b * 0.11)) / 255;
+      const t = Math.min(1, Math.max(0, (d - 0.1) / 0.14));
+      const k = 0.12 + 0.88 * t * t * (3 - 2 * t);
+      saida[i] = r + (tile[i] - r) * k;
+      saida[i + 1] = g + (tile[i + 1] - g) * k;
+      saida[i + 2] = b + (tile[i + 2] - b) * k;
+    }
+  }
+  return saida;
+}
+
 function limita(v: number): number {
   return Math.max(0, Math.min(255, Math.round(v)));
 }
@@ -723,16 +773,20 @@ export function gerarAtlas(semente = 1337): Atlas {
     if (!pinta) throw new Error(`tile sem pintor: ${nome}`);
     const { ox, oy } = celulaDe(indice);
     const s = semente + sementeDoNome(nome) * 977;
+    const tile = new Float32Array(TAM_TILE * TAM_TILE * 4);
+    for (let y = 0; y < TAM_TILE; y++)
+      for (let x = 0; x < TAM_TILE; x++) tile.set(pinta(x, y, s), (y * TAM_TILE + x) * 4);
+    const limpo = deBrinquedo(tile);
     for (let py = 0; py < CELULA; py++) {
       for (let px = 0; px < CELULA; px++) {
         const x = Math.min(TAM_TILE - 1, Math.max(0, px - PADDING));
         const y = Math.min(TAM_TILE - 1, Math.max(0, py - PADDING));
-        const p = pinta(x, y, s);
+        const j = (y * TAM_TILE + x) * 4;
         const i = ((oy + py) * LARGURA_ATLAS + ox + px) * 4;
-        pixels[i] = limita(p[0]);
-        pixels[i + 1] = limita(p[1]);
-        pixels[i + 2] = limita(p[2]);
-        pixels[i + 3] = limita(p[3]);
+        pixels[i] = limita(limpo[j]);
+        pixels[i + 1] = limita(limpo[j + 1]);
+        pixels[i + 2] = limita(limpo[j + 2]);
+        pixels[i + 3] = limita(limpo[j + 3]);
       }
     }
     const dono = REGISTRO_BLOCOS.find((b) => b.tiles.lado === nome);
