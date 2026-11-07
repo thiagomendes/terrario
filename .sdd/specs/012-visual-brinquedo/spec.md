@@ -99,6 +99,17 @@ A spec só fecha quando o dono olha as duplas e diz que está igual ou melhor.
 
   Tudo no mesmo estilo.
 
+### Água e chuva de brinquedo
+A água parece gelatina azul ou resina de brinquedo, e a chuva parece chuvinha de desenho. Nada fica escuro nem sujo.
+- **Superfície:** azul-clara e brilhante, com um reflexo largo de plástico e risquinhos de brilho que andam devagar. Ondinhas lentas, sem chuvisco de pixel.
+- **Fundo:** na beira, rasa, a água é translúcida e deixa ver a areia e as pedras. Quanto mais funda, mais azul e menos se vê; no fundo do mar, azul firme.
+- **Beira:** uma espuminha branca e macia onde a água encosta nos blocos e na areia.
+- **Boneco entrando e saindo:** ao entrar, saltam gotinhas redondas (contas de água) e abre uma roda de ondinhas na superfície. Nadando, o corpo aparece pela água, o boneco boia com um balanço leve e deixa um rastro de ondinhas. Ao sair, pingam gotas por um instante.
+- **Debaixo d'água:** a tela fica azul-clara com degradê (mais claro em cima), com bolhinhas redondas subindo e faixas de luz balançando. A visão alcança alguns blocos e some devagar no azul. Nunca preto: é piscina de brinquedo, não abismo.
+- **Água corrente e cachoeira:** listras claras descendo devagar e espuma no pé da queda.
+- **Chuva:** gotinhas em forma de gota (ou traço arredondado), azuladas e translúcidas, caindo em diagonal leve. No chão e na água, cada gota abre um respingo pequeno de bolinhas ou uma rodinha. O céu fica cinza-azulado claro, não escuro. A tempestade só aperta o ritmo e escurece um pouco, com relâmpago suave. A neve vira flocos de bolinha que caem balançando.
+- **Medida:** capturas na beira (fundo visível), no mar aberto, entrando na água (gotas e roda), nadando de fora e debaixo d'água, e com chuva de dia e à noite. O desempenho vem medido como nas outras etapas, porque as gotas e respingos usam o mesmo motor de partículas, com limite.
+
 ## Capricho na experiência (para não frustrar)
 - **Igual ao esboço**, conferido lado a lado (definição de sucesso).
 - **Nenhum aparelho fica pior de jogar:** o jogo mede o próprio desempenho e escolhe a qualidade sozinho. A malha arredondada fica perto e a simples longe, a sombra pode ficar mais curta e o brilho pode ser desligado. O ajuste nunca causa trancos no meio do jogo; tudo isso também fica nas configurações, para quem quiser escolher.
@@ -133,7 +144,7 @@ A spec só fecha quando o dono olha as duplas e diz que está igual ou melhor.
 | T04 | Câmeras: mão de brinquedo na 1ª pessoa, 3ª pessoa sobre o ombro |
 | T05 | Moradores e criaturas dos seis temas no estilo novo |
 | T06 | Blocos: quinas arredondadas nas arestas à mostra perto do jogador, malha simples longe, cores limpas com degradê |
-| T07 | Formas por tema: árvores, flores, grama, água e estruturas. Plantas do chão viram peças de brinquedo (tufo baixo, flor de bolinha, cogumelo de cúpula, arbusto redondo) e o cenário não pode ficar poluído: capim baixo e na cor do chão, as flores são o destaque |
+| T07 | Formas por tema: árvores, flores, grama, água e estruturas (água e chuva de brinquedo: ver a seção própria). Plantas do chão viram peças de brinquedo (tufo baixo, flor de bolinha, cogumelo de cúpula, arbusto redondo) e o cenário não pode ficar poluído: capim baixo e na cor do chão, as flores são o destaque |
 | T08 | Itens em 3D e ícones gerados a partir deles |
 | T08b | Efeitos: pedaços, poeira, rachadura, destaque, itens no chão, clima, fumaça, vaga-lumes, nuvens, respingos, chegada, sono, dano |
 | T09 | Tela inicial, menus, HUD, vitrine dos temas e ícone do site. Minimapa e mapa grande no mesmo traço: sem pixel por bloco, cores limpas, relevo macio, água e árvores desenhadas, e nada de cantos pretos |
