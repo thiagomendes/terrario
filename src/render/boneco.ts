@@ -13,7 +13,7 @@ import type { Aparencia } from '../personagem/aparencia';
 import { planoBoneco, type Junta, type Peca } from '../personagem/boneco';
 import type { Pose } from '../personagem/poses';
 import { caixaArredondada, cilindro, criarPlasticos, esfera, type Plasticos } from './formas';
-import { criarItemNaMao } from './itemNaMao';
+import { modeloNaMao, type ModeloItem } from './itensBrinquedo';
 import type { ExtrasPose, Personagem } from './personagem';
 
 export const MAXIMO_MALHAS_BONECO = 90;
@@ -71,17 +71,42 @@ export function criarBoneco(
   let repouso = {} as Record<Junta, [number, number, number]>;
   // a mão direita segura pela ponta do cabo: o nó "pega" fica no centro da mão
   const pega = new TransformNode(`${prefixo}-pega`, scene);
-  const naMao = criarItemNaMao(scene, pega, {
-    nome: `${prefixo}-mao`,
-    tamanhoBloco: 0.24,
-    pixel: 0.036,
-    iluminado: true,
-    grupo: 0,
-    posBloco: [0, -0.02, 0.1],
-    rotBloco: [0.15, Math.PI / 4, 0],
-    posItem: [0, 0, 0.02],
-    rotItem: [-0.35, -Math.PI / 2, 0],
-  });
+  // o item de brinquedo na mão, preso pelo ponto de pega (ponta do cabo nas ferramentas)
+  let modelo: ModeloItem | null = null;
+  let chaveMao = '';
+  const naMao = {
+    definir(bloco: number | null, item: string | null) {
+      const chave = `${bloco ?? ''}|${item ?? ''}`;
+      if (chave === chaveMao) return;
+      chaveMao = chave;
+      if (modelo) {
+        for (const m of modelo.malhas) m.dispose();
+        modelo.no.dispose();
+      }
+      modelo = modeloNaMao(scene, mats, bloco, item, `${prefixo}-mao`);
+      if (!modelo) return;
+      modelo.no.parent = pega;
+      // ferramenta: o cabo sai da mão para a frente com o braço abaixado; peças ficam
+      // apoiadas na palma, um pouco à frente
+      if (modelo.ferramenta) modelo.no.rotation.set(Math.PI / 2, 0, 0);
+      else modelo.no.position.set(0, -0.05, 0.09);
+      for (const m of modelo.malhas) m.setEnabled(visivel);
+    },
+    segurando: () => modelo !== null,
+    definirLuz(_f: number) {
+      // os materiais são os mesmos do boneco (seguem a mesma luz)
+    },
+    definirVisivel(v: boolean) {
+      if (modelo) for (const m of modelo.malhas) m.setEnabled(v);
+    },
+    descartar() {
+      if (modelo) {
+        for (const m of modelo.malhas) m.dispose();
+        modelo.no.dispose();
+      }
+      modelo = null;
+    },
+  };
 
   function limpar(): void {
     pega.parent = null;

@@ -4,7 +4,10 @@ import { VELOCIDADE_MINIMA_PASSO } from './movimento';
 /** Tempo (s) em que o estado "minerando" persiste após cada golpe. */
 export const JANELA_GOLPE = PERIODO_MINERAR * 1.4;
 
-export type EventoAnimacao = 'golpe' | 'colocacao' | 'pulo' | 'aterrissagem';
+export type EventoAnimacao = 'golpe' | 'colocacao' | 'pulo' | 'aterrissagem' | 'comer';
+
+/** Quanto dura levar a comida à boca e mastigar (s). */
+export const DURACAO_COMER = 1.1;
 
 export interface MovimentoAnimacao {
   velocidadeHoriz: number;
@@ -25,6 +28,8 @@ export interface Vista {
   colocar: number | null;
   /** 0 no chão, 1 no ar (suavizado). */
   noAr: number;
+  /** Progresso 0..1 de comer em curso, ou null. */
+  comer: number | null;
 }
 
 export interface Animador {
@@ -38,6 +43,7 @@ export function criarAnimador(): Animador {
   const acoes = criarAcoes();
   let tempo = 0;
   let desdeGolpe = Infinity;
+  let desdeComer = Infinity;
   let inicioGolpes = 0;
   let passada = 0;
   let noAr = 0;
@@ -52,6 +58,10 @@ export function criarAnimador(): Animador {
   });
   return {
     evento(nome) {
+      if (nome === 'comer') {
+        desdeComer = 0;
+        return;
+      }
       if (nome === 'golpe') {
         if (desdeGolpe >= JANELA_GOLPE) inicioGolpes = tempo;
         desdeGolpe = 0;
@@ -61,6 +71,7 @@ export function criarAnimador(): Animador {
       const passo = dt > 0 && Number.isFinite(dt) ? dt : 0;
       tempo += passo;
       desdeGolpe += passo;
+      desdeComer += passo;
       acoes.avancar(passo);
       const a = acoes.estado();
       const moveu = movimento.noChao && movimento.velocidadeHoriz > VELOCIDADE_MINIMA_PASSO;
@@ -79,6 +90,7 @@ export function criarAnimador(): Animador {
         progressoColocar: a.progressoColocar,
         afundar: a.afundar,
         voando: movimento.voando,
+        comendo: desdeComer < DURACAO_COMER ? desdeComer / DURACAO_COMER : undefined,
       });
       return atual;
     },
@@ -93,6 +105,7 @@ export function criarAnimador(): Animador {
           : null,
       colocar: colocarAtivo,
       noAr,
+      comer: desdeComer < DURACAO_COMER ? desdeComer / DURACAO_COMER : null,
     }),
   };
 }

@@ -298,6 +298,8 @@ export interface EstadoDepuracao {
   }[];
   invocar?: (tipo: TipoCriatura, x: number, y: number, z: number) => void;
   sobrevivencia?: SobrevivenciaCliente;
+  /** Testes e capturas: dispara um movimento (golpe, comer, pulo, colocação). */
+  animar?: (evento: import('../player/animacao').EventoAnimacao) => void;
   /** Testes: espera o núcleo processar o que já foi mandado. */
   sincronizar?: () => Promise<void>;
   renascer?: () => void;
@@ -1455,6 +1457,8 @@ export function criarCena(
   }
   Object.defineProperty(estado, 'slotAtivo', { get: () => hotbar.ativo, enumerable: true });
   barramento.ouvir('golpe', () => animador.evento('golpe'));
+  // testes e capturas: dispara um movimento do boneco
+  estado.animar = (e) => animador.evento(e);
   barramento.ouvir('colocacao', () => animador.evento('colocacao'));
   let slotNaMao = -1;
   let blocoNaMaoAtual = -1;
@@ -2127,6 +2131,7 @@ export function criarCena(
       return;
     }
     tocarSom(motorAudio, 'comer');
+    animador.evento('comer');
     comerTimer = window.setTimeout(() => {
       comerTimer = 0;
       enviar({ t: 'comer', slot: hotbar.ativo });
@@ -2704,7 +2709,7 @@ export function criarCena(
         break;
       case 'comeu':
         tocarSom(motorAudio, 'comer');
-        animador.evento('colocacao');
+        animador.evento('comer');
         window.dispatchEvent(new CustomEvent('brumaluz:comeu'));
         break;
       case 'dano':

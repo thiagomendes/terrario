@@ -139,7 +139,8 @@ export function calcularPose(entrada: EntradaPose): Pose {
     troncoX += Math.sin(p * Math.PI) * 0.08;
   }
   if (entrada.comendo !== undefined && entrada.comendo > 0) {
-    const leva = suave(Math.min(1, entrada.comendo / 0.3));
+    // leva até a boca (30% do tempo), mastiga e abaixa no fim
+    const leva = suave(Math.min(1, entrada.comendo / 0.3)) * (1 - suave(Math.max(0, (entrada.comendo - 0.85) / 0.15)));
     bracoDireito = -2.0 * leva + Math.sin(tempo * 14) * 0.08 * leva;
     bracoDireitoAbre = -0.35 * leva;
     cabeca = 0.12 + Math.sin(tempo * 14) * 0.05;

@@ -1,31 +1,41 @@
-import { Vector4 } from '@babylonjs/core/Maths/math.vector';
+/**
+ * Braço da primeira pessoa (spec 012, esboço de movimento): a manga comprida entra pela
+ * borda de baixo da tela (o braço nunca parece solto), depois o punho e a mãozinha redonda
+ * segurando o item de brinquedo pelo ponto de pega. Os movimentos são os mesmos da
+ * terceira pessoa: balanço ao andar, golpe com preparo, empurrão ao colocar e a comida
+ * levada à boca.
+ *
+ * Não usa as luzes da cena (o sol por trás deixaria a mão escura): o sombreado de plástico
+ * é feito por vértice, a cada quadro, a partir da direção de cada superfície vista da
+ * câmera, e o brilho geral segue a luz do lugar.
+ */
+import { TransformNode } from '@babylonjs/core/Meshes/transformNode';
 import { StandardMaterial } from '@babylonjs/core/Materials/standardMaterial';
-import { Texture } from '@babylonjs/core/Materials/Textures/texture';
-import { RawTexture } from '@babylonjs/core/Materials/Textures/rawTexture';
-import { MeshBuilder } from '@babylonjs/core/Meshes/meshBuilder';
+import { Color3 } from '@babylonjs/core/Maths/math.color';
+import { Matrix, Quaternion, Vector3 } from '@babylonjs/core/Maths/math.vector';
+import { VertexBuffer } from '@babylonjs/core/Buffers/buffer';
+import type { Mesh } from '@babylonjs/core/Meshes/mesh';
 import type { TargetCamera } from '@babylonjs/core/Cameras/targetCamera';
 import type { Scene } from '@babylonjs/core/scene';
 import type { Aparencia } from '../personagem/aparencia';
+import { planoBoneco } from '../personagem/boneco';
 import { blocoNaMao } from '../personagem/mao';
-import type { Mesh } from '@babylonjs/core/Meshes/mesh';
-import { Color3 } from '@babylonjs/core/Maths/math.color';
-import { criarItemNaMao, tonsFaces } from './itemNaMao';
+import { curvaGolpe, type Pose } from '../personagem/poses';
 import type { Vista } from '../player/animacao';
-import type { Pose } from '../personagem/poses';
-import { gerarTexturaParte } from '../personagem/textura';
-import { TransformNode } from '@babylonjs/core/Meshes/transformNode';
+import { caixaArredondada, esfera, type Plasticos } from './formas';
+import { modeloNaMao, type ModeloItem } from './itensBrinquedo';
 
-export const MAXIMO_MALHAS_BRACO = 3;
+export const MAXIMO_MALHAS_BRACO = 24;
 const GRUPO_BRACO = 1;
 
 export interface Braco {
   definirSlot(slot: number): void;
   /** Bloco na mão (null = mão vazia). */
   definirBloco(bloco: number | null): void;
-  /** Item (ferramenta, comida) na mão, em pixels 3D, pelo id; null esconde. */
+  /** Item (ferramenta, comida) na mão, pelo id; null esconde. */
   definirItem(item: string | null): void;
   aplicarPose(pose: Pose): void;
-  /** Anima o braço (viewmodel): repouso discreto, golpe, colocação, balanço e troca. */
+  /** Anima o braço: repouso, balanço, golpe, colocação, comer e troca de item. */
   atualizarVista(dt: number, vista: Vista): void;
   definirBalanco(ativo: boolean): void;
   /** Fator de luz do ambiente (1 ao ar livre, baixo em cavernas). */
@@ -36,129 +46,163 @@ export interface Braco {
   descartar(): void;
 }
 
+/** Campo de visão vertical em que o braço foi desenhado (o do esboço). */
+const FOV_VISTA = (55 * Math.PI) / 180;
+/** Onde fica a mão, no espaço da câmera (x direita, y cima, z frente), e de onde vem o braço. */
+const MAO = new Vector3(0.24, -0.19, 0.91);
+const DIRECAO = new Vector3(-0.5, 0.55, 1);
+const ESCALA = 0.6;
+/** Luz do braço, no espaço da câmera: de cima, da esquerda e um pouco da frente. */
+const LUZ = new Vector3(-0.45, 0.8, -0.4).normalize();
+const PARA_CAMERA = new Vector3(0, 0, -1);
+const MEIO = LUZ.add(PARA_CAMERA).normalize();
+
 export function criarBraco(scene: Scene, camera: TargetCamera, aparencia: Aparencia): Braco {
   scene.setRenderingAutoClearDepthStencil(GRUPO_BRACO, true, true, false);
-
-  // Proporções do viewmodel: braço fino, bloco na mão com o dobro da largura do braço e
-  // ferramentas em pixels 3D. Tudo pendurado num nó "mão" na ponta do braço.
-  const TAM_BRACO: [number, number, number] = [0.088, 0.46, 0.088];
-  /** Campo de visão vertical em que o viewmodel foi desenhado (independe do FOV do jogo). */
-  const FOV_VISTA = (70 * Math.PI) / 180;
-  const molde = gerarTexturaParte(aparencia, { nome: 'bracoDireito', tamanho: TAM_BRACO });
-  const texPele = RawTexture.CreateRGBATexture(
-    new Uint8Array(molde.pixels.buffer),
-    molde.largura,
-    molde.altura,
-    scene,
-    false,
-    false,
-    Texture.NEAREST_SAMPLINGMODE,
-  );
-  texPele.wrapU = Texture.CLAMP_ADDRESSMODE;
-  texPele.wrapV = Texture.CLAMP_ADDRESSMODE;
-
-  // O viewmodel não usa as luzes da cena (o sol por trás deixaria tudo escuro): cada face
-  // tem um tom fixo nas cores dos vértices e o brilho segue a luz do lugar (definirLuz).
-  const semLuz = (nome: string) => {
-    const m = new StandardMaterial(nome, scene);
-    m.disableLighting = true;
-    m.specularColor = Color3.Black();
-    m.emissiveColor = new Color3(1, 1, 1);
-    return m;
-  };
-  const matBraco = semLuz('braco-material');
-  matBraco.diffuseTexture = texPele;
-  const tons = tonsFaces;
-
-  const faceUV = molde.faces.map(
-    (f) =>
-      new Vector4(
-        f.x / molde.largura,
-        (f.y + f.h) / molde.altura,
-        (f.x + f.w) / molde.largura,
-        f.y / molde.altura,
-      ),
-  );
-  // raiz: corrige a perspectiva para o viewmodel ter o mesmo tamanho em qualquer FOV
   const raiz = new TransformNode('braco-raiz', scene);
   raiz.parent = camera;
-  // pivô no ombro; o braço (caixa em pé deitada para a frente) vai do ombro até a mão (+z)
-  const pivoBraco = new TransformNode('braco-pivo', scene);
-  pivoBraco.parent = raiz;
-  const braco: Mesh = MeshBuilder.CreateBox(
-    'braco-direito',
-    {
-      width: TAM_BRACO[0],
-      height: TAM_BRACO[1],
-      depth: TAM_BRACO[2],
-      faceUV,
-      wrap: true,
-      faceColors: tons([0.78, 0.9, 0.66, 0.94, 0.86, 0.6]),
-    },
-    scene,
-  );
-  braco.parent = pivoBraco;
-  braco.rotation.x = -Math.PI / 2;
-  braco.position.set(0, 0, TAM_BRACO[1] / 2);
-  const mao = new TransformNode('braco-mao', scene);
-  mao.parent = pivoBraco;
-  mao.position.set(0, 0, TAM_BRACO[1]);
+  const grupo = new TransformNode('braco-pivo', scene);
+  grupo.parent = raiz;
+  const segura = new TransformNode('braco-segura', scene);
+  segura.parent = grupo;
+  segura.position.set(0, -0.13, 0);
 
-  const naMao = criarItemNaMao(scene, mao, {
-    nome: 'braco',
-    tamanhoBloco: 0.15,
-    pixel: 0.019,
-    iluminado: false,
-    grupo: GRUPO_BRACO,
-    // bloco apoiado sobre o punho, girado para mostrar duas faces e o topo
-    posBloco: [-0.03, 0.075, 0.05],
-    rotBloco: [0.7, Math.PI / 4 + 0.1, 0.05],
-    // ferramenta com a cabeça apontando para a mira
-    posItem: [0, 0.01, -0.01],
-    rotItem: [0.1, -2.05, 0.3],
-  });
-  braco.isPickable = false;
-  braco.receiveShadows = false;
-  braco.renderingGroupId = GRUPO_BRACO;
-  braco.alwaysSelectAsActiveMesh = true;
-  braco.material = matBraco;
+  // materiais sem luz da cena: a cor de cada vértice é o sombreado (calculado abaixo)
+  const materiais = new Map<string, StandardMaterial>();
+  const corDe = new Map<StandardMaterial, Color3>();
+  const mats: Plasticos = {
+    cor(hex) {
+      const ja = materiais.get(hex);
+      if (ja) return ja;
+      const m = new StandardMaterial(`braco-material-${hex}`, scene);
+      m.disableLighting = true;
+      m.specularColor = Color3.Black();
+      m.diffuseColor = Color3.Black();
+      m.emissiveColor = new Color3(1, 1, 1);
+      materiais.set(hex, m);
+      corDe.set(m, Color3.FromHexString(hex));
+      return m;
+    },
+    definirLuz() {},
+    descartar() {
+      for (const m of materiais.values()) m.dispose();
+      materiais.clear();
+    },
+  };
+
+  let corpo: Mesh[] = [];
+  let modelo: ModeloItem | null = null;
+  let visivel = true;
+  let luz = 1;
   let blocoAtual: number | null = null;
   let itemAtual: string | null = null;
-  let visivel = true;
 
-  // Estado do viewmodel.
+  const preparar = (m: Mesh) => {
+    m.isPickable = false;
+    m.receiveShadows = false;
+    m.renderingGroupId = GRUPO_BRACO;
+    m.alwaysSelectAsActiveMesh = true;
+    m.setEnabled(visivel);
+    const n = m.getVerticesData(VertexBuffer.NormalKind);
+    if (n) m.setVerticesData(VertexBuffer.ColorKind, new Float32Array((n.length / 3) * 4), true);
+  };
+
+  function aplicarAparencia(a: Aparencia): void {
+    for (const m of corpo) m.dispose();
+    const c = planoBoneco(a).cores;
+    // manga comprida: a ponta de trás sempre fica fora da tela
+    const manga = caixaArredondada('braco-manga', scene, 0.2, 1.4, 0.2, 0.08, mats.cor(c.roupa), 3);
+    manga.position.y = 0.67;
+    const punho = caixaArredondada(
+      'braco-punho',
+      scene,
+      0.23,
+      0.07,
+      0.23,
+      0.03,
+      mats.cor(c.punho),
+      3,
+    );
+    punho.position.y = -0.02;
+    const mao = esfera('braco-mao', scene, 0.135, mats.cor(c.pele));
+    mao.position.y = -0.13;
+    corpo = [manga, punho, mao];
+    for (const m of corpo) {
+      m.parent = grupo;
+      preparar(m);
+    }
+  }
+
+  function trocarItem(): void {
+    if (modelo) {
+      for (const m of modelo.malhas) m.dispose();
+      modelo.no.dispose();
+    }
+    modelo = modeloNaMao(scene, mats, blocoAtual, itemAtual, 'braco-item');
+    troca = 0;
+    if (!modelo) return;
+    modelo.no.parent = segura;
+    if (modelo.ferramenta) modelo.no.rotation.set(1.9, 0, -0.35);
+    else {
+      modelo.no.position.set(0, -0.05, 0.1);
+      modelo.no.rotation.set(0.4, 0.6, 0);
+    }
+    for (const m of modelo.malhas) preparar(m);
+  }
+
+  // ---------- sombreado de plástico por vértice ----------
+  const mundoVista = new Matrix();
+  const n = new Vector3();
+  const nv = new Vector3();
+  function sombrear(m: Mesh): void {
+    const normais = m.getVerticesData(VertexBuffer.NormalKind);
+    const mat = m.material as StandardMaterial | null;
+    const base = mat ? corDe.get(mat) : undefined;
+    if (!normais || !base) return;
+    m.computeWorldMatrix(true).multiplyToRef(camera.getViewMatrix(), mundoVista);
+    const cores = new Float32Array((normais.length / 3) * 4);
+    for (let i = 0, j = 0; i < normais.length; i += 3, j += 4) {
+      n.set(normais[i], normais[i + 1], normais[i + 2]);
+      Vector3.TransformNormalToRef(n, mundoVista, nv);
+      nv.normalize();
+      const difusa = Math.max(0, Vector3.Dot(nv, LUZ));
+      const brilho = Math.pow(Math.max(0, Vector3.Dot(nv, MEIO)), 24) * 0.35;
+      const k = (0.5 + 0.55 * difusa) * luz;
+      cores[j] = Math.min(1, base.r * k + brilho * luz);
+      cores[j + 1] = Math.min(1, base.g * k + brilho * luz);
+      cores[j + 2] = Math.min(1, base.b * k + brilho * luz);
+      cores[j + 3] = 1;
+    }
+    m.updateVerticesData(VertexBuffer.ColorKind, cores);
+  }
+
+  // ---------- movimento ----------
   let ultYaw = camera.rotation.y;
   let ultPitch = camera.rotation.x;
   let balX = 0;
   let balY = 0;
   let troca = 1;
   let balancoAtivo = true;
-  /** 0 mão vazia, 1 segurando algo (suavizado): com item, o braço desce um pouco. */
-  let segurando = 1;
+  const dir = new Vector3();
+  const q = new Quaternion();
+  const PARA_BAIXO = new Vector3(0, -1, 0);
 
-  // Pose de repouso: ombro fora da tela, embaixo à direita; punho por volta de (0.45, -0.6) da tela.
-  const OMBRO = { x: 0.42, y: -0.4, z: 0.13 };
-  const REPOUSO = { rx: -0.42, ry: -0.27, rz: 0.12 };
-
-  function posicionar(
-    px: number,
-    py: number,
-    pz: number,
-    rx: number,
-    ry: number,
-    rz: number,
-  ): void {
-    pivoBraco.position.set(OMBRO.x + px, OMBRO.y + py, OMBRO.z + pz);
-    pivoBraco.rotation.set(rx, ry, rz);
+  function posicionar(mao: Vector3, d: Vector3): void {
+    dir.copyFrom(d).normalize();
+    Quaternion.FromUnitVectorsToRef(PARA_BAIXO, dir, q);
+    grupo.rotationQuaternion = q.clone();
+    grupo.scaling.setAll(ESCALA);
+    // a mão (0, -0.13, 0 no braço) fica no ponto pedido
+    grupo.position.set(
+      mao.x - dir.x * 0.13 * ESCALA,
+      mao.y - dir.y * 0.13 * ESCALA,
+      mao.z - dir.z * 0.13 * ESCALA,
+    );
   }
 
-  function aplicarPose(pose: Pose): void {
-    posicionar(0, pose.tronco, 0, REPOUSO.rx, REPOUSO.ry, REPOUSO.rz);
-  }
-
+  const suave = (x: number) => x * x * (3 - 2 * x);
   function atualizarVista(dt: number, v: Vista): void {
     const passo = dt > 0 && Number.isFinite(dt) ? Math.min(dt, 0.1) : 0;
-    // mesmo tamanho na tela em qualquer FOV: comprime a profundidade do viewmodel
     const fov = camera.fov > 0.1 ? camera.fov : FOV_VISTA;
     raiz.scaling.set(1, 1, Math.tan(FOV_VISTA / 2) / Math.tan(fov / 2));
     // atraso suave ao girar a câmera
@@ -174,103 +218,86 @@ export function criarBraco(scene: Scene, camera: TargetCamera, aparencia: Aparen
     balX += (alvoX - balX) * k;
     balY += (alvoY - balY) * k;
     troca = Math.min(1, troca + passo / 0.25);
-    const alvoSeg = naMao.segurando() ? 1 : 0;
-    segurando += (alvoSeg - segurando) * (1 - Math.exp(-passo * 10));
 
     const fase = v.tempo * (v.passada > 1.2 ? 2.4 : 1.6) * Math.PI;
     const amp = Math.min(v.passada, 1.5) * (balancoAtivo ? 1 : 0.15);
-    let px = Math.sin(fase) * 0.01 * amp + balX;
-    let py = -Math.abs(Math.cos(fase)) * 0.014 * amp + balY;
-    let pz = 0;
-    py += Math.sin(v.tempo * 1.4) * 0.003 * (1 - Math.min(1, amp));
-    py += v.noAr * 0.02;
-    // com item: braço um pouco mais baixo e recolhido, o item domina o quadro
-    py -= 0.02 * segurando;
-    let rx = REPOUSO.rx;
-    let ry = REPOUSO.ry;
-    let rz = REPOUSO.rz;
-    if (v.golpe !== null) {
-      // golpe: o braço sobe, avança em direção à mira e volta num arco
-      const s = Math.sin(v.golpe * Math.PI);
-      const s2 = Math.sin(v.golpe * Math.PI * 2);
-      ry -= 0.36 * s;
-      rx -= 0.22 * s2 - 0.12 * s;
-      rz += 0.3 * s;
-      pz += 0.06 * s;
-      px -= 0.05 * s;
-      py += 0.02 * s2;
-    }
-    if (v.colocar !== null) {
-      const s = Math.sin(v.colocar * Math.PI);
-      pz += 0.1 * s;
-      ry -= 0.14 * s;
-      rx -= 0.1 * s;
-    }
+    const bal = Math.sin(fase) * 0.03 * amp;
+    const g = v.golpe !== null ? curvaGolpe(v.golpe) : 0;
+    const col = v.colocar !== null ? Math.sin(v.colocar * Math.PI) : 0;
+    const c =
+      v.comer !== null
+        ? suave(Math.min(1, v.comer / 0.3)) * (1 - suave(Math.max(0, (v.comer - 0.85) / 0.15)))
+        : 0;
     const e = 1 - (1 - troca) * (1 - troca);
-    py -= (1 - e) * 0.25;
-    rx += (1 - e) * 0.5;
-    posicionar(px, py, pz, rx, ry, rz);
-  }
-
-  function aplicarAparencia(nova: Aparencia): void {
-    const t = gerarTexturaParte(nova, { nome: 'bracoDireito', tamanho: TAM_BRACO });
-    texPele.update(new Uint8Array(t.pixels.buffer));
-  }
-
-  function definirSlot(slot: number): void {
-    definirBloco(blocoNaMao(slot));
-  }
-
-  function definirItem(item: string | null): void {
-    if (item !== itemAtual) troca = 0;
-    itemAtual = item;
-    naMao.definir(blocoAtual, itemAtual);
-  }
-
-  function definirBloco(bloco: number | null): void {
-    blocoAtual = bloco;
-    troca = 0;
-    naMao.definir(blocoAtual, itemAtual);
+    const mao = new Vector3(
+      MAO.x + bal + balX - c * 0.16,
+      MAO.y +
+        Math.abs(bal) * 0.5 +
+        balY +
+        g * 0.06 -
+        c * 0.06 +
+        v.noAr * 0.02 +
+        Math.sin(v.tempo * 1.4) * 0.004 -
+        (1 - e) * 0.25,
+      MAO.z - c * 0.3 + col * 0.08,
+    );
+    const d = new Vector3(
+      DIRECAO.x + c * 0.25,
+      DIRECAO.y - g * 0.5 + c * 0.9 - col * 0.2,
+      DIRECAO.z,
+    );
+    posicionar(mao, d);
+    if (visivel) {
+      for (const m of corpo) sombrear(m);
+      if (modelo) for (const m of modelo.malhas) sombrear(m);
+    }
   }
 
   aplicarAparencia(aparencia);
-  definirSlot(0);
-  aplicarPose({
-    bracoDireito: 0,
-    bracoEsquerdo: 0,
-    pernaDireita: 0,
-    pernaEsquerda: 0,
-    tronco: 0,
-    cabeca: 0,
-  });
+  posicionar(MAO, DIRECAO);
 
   return {
-    definirSlot,
-    definirBloco,
-    definirItem,
-    aplicarPose,
+    definirSlot(slot) {
+      blocoAtual = blocoNaMao(slot);
+      trocarItem();
+    },
+    definirBloco(bloco) {
+      if (bloco === blocoAtual) return;
+      blocoAtual = bloco;
+      trocarItem();
+    },
+    definirItem(item) {
+      if (item === itemAtual) return;
+      itemAtual = item;
+      trocarItem();
+    },
+    aplicarPose() {
+      // o braço da vista anda pela Vista (atualizarVista)
+    },
     atualizarVista,
     definirBalanco(a) {
       balancoAtivo = a;
     },
     definirLuz(f) {
-      const v = Math.max(0.08, Math.min(1.1, f));
-      matBraco.emissiveColor.set(v, v * 0.97, v * 0.95);
-      naMao.definirLuz(f);
+      luz = Math.max(0.08, Math.min(1.1, f));
     },
     aplicarAparencia,
     definirVisivel(v) {
       visivel = v;
-      braco.setEnabled(visivel);
-      naMao.definirVisivel(visivel);
+      for (const m of corpo) m.setEnabled(v);
+      if (modelo) for (const m of modelo.malhas) m.setEnabled(v);
     },
-    contarMalhas: () => 1 + naMao.contarMalhas(),
+    contarMalhas: () => corpo.length + (modelo?.malhas.length ?? 0),
     descartar() {
-      braco.dispose();
-      naMao.descartar();
+      for (const m of corpo) m.dispose();
+      if (modelo) {
+        for (const m of modelo.malhas) m.dispose();
+        modelo.no.dispose();
+      }
+      mats.descartar();
+      segura.dispose();
+      grupo.dispose();
       raiz.dispose();
-      matBraco.dispose();
-      texPele.dispose();
     },
   };
 }
