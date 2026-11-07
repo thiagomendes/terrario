@@ -6,7 +6,7 @@ Ideias e pedidos do dono que ainda não viraram spec. Cada item diz de onde veio
 
 ## Pedidos
 
-- **Contas de jogador** (ideia do dono, para conversar depois).
+- **Contas de jogador** (ideia do dono): conversar depois da spec 011.
 
 - **Rodada em família de 15 minutos em dois aparelhos** (critério 13 da spec 010). Pendente com o dono.
 
