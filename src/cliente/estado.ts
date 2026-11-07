@@ -103,7 +103,10 @@ export function criarEstadoCliente(op: OpcoesEstadoCliente) {
   // adiantados esperam o que falta
   let proximoQuadro = -1;
   const adiantados = new Map<number, Quadro>();
+  /** Quadros recebidos (testes: esperar o núcleo). */
+  let quadrosRecebidos = 0;
   function receberQuadro(q: Quadro): void {
+    quadrosRecebidos++;
     if (q.primeiro) proximoQuadro = q.n;
     if (proximoQuadro >= 0 && q.n < proximoQuadro) return;
     adiantados.set(q.n, q);
@@ -155,6 +158,9 @@ export function criarEstadoCliente(op: OpcoesEstadoCliente) {
       });
     },
     /** Há previsão local esperando confirmação nesta célula? */
+    get quadrosRecebidos() {
+      return quadrosRecebidos;
+    },
     pendente(x: number, y: number, z: number): boolean {
       return pendentes.has(celula(x, y, z));
     },

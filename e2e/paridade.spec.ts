@@ -508,8 +508,15 @@ const SESSOES: Record<string, Sessao> = {
           const e = window.__brumaluz!;
           e.invocar!('raposa', cx + 3.5, y, cz - 2.5);
           e.selecionarSlot!(3);
+          await e.sincronizar?.();
+          // a raposa invocada (a mais perto da plataforma): no mundo em tempo real uma
+          // selvagem pode ter nascido por perto
+          const daPlataforma = () =>
+            (e.criaturas!() ?? [])
+              .filter((c) => c.tipo === 'raposa')
+              .sort((a, b) => Math.hypot(a.x - cx, a.z - cz) - Math.hypot(b.x - cx, b.z - cz))[0];
           for (let t = 0; t < 60; t++) {
-            const r = (e.criaturas!() ?? []).find((c) => c.tipo === 'raposa');
+            const r = daPlataforma();
             if (!r) return false;
             if (r.domada) return true;
             const [ex, , ez] = e.posicao!;
@@ -522,7 +529,7 @@ const SESSOES: Record<string, Sessao> = {
               await window.__par.quadros(2);
             }
             const [px, py, pz] = e.posicao!;
-            const agora = (e.criaturas!() ?? []).find((c) => c.tipo === 'raposa')!;
+            const agora = daPlataforma()!;
             const dx = agora.x - px;
             const dy = agora.y + 0.3 - py;
             const dz = agora.z - pz;
@@ -600,6 +607,7 @@ const SESSOES: Record<string, Sessao> = {
               0,
               Math.sign(cz - z),
             ]);
+            await e.sincronizar?.();
             const p = inv.slots[e.slotAtivo ?? 0] as { item: string; dur?: number } | null;
             out.push({ bloco, picareta: p?.item === 'picareta_madeira' ? (p.dur ?? -1) : 0 });
             await window.__par.coletar();
@@ -809,9 +817,20 @@ const SESSOES: Record<string, Sessao> = {
       }, p);
       const trocas = await page.evaluate(async () => {
         const out: Record<string, boolean[]> = {};
+        const e = window.__brumaluz!;
+        const perto = async (profissao: string) => {
+          const m = (e.criaturas?.() ?? []).find((c: any) => c.profissao === profissao) as any;
+          if (!m) return undefined;
+          e.teleportar!(m.x + 1.2, m.z, m.y);
+          await e.sincronizar?.();
+          return m.id as number;
+        };
         for (const profissao of ['ferreiro', 'cozinheiro', 'construtor']) {
+          const criatura = await perto(profissao);
           window.dispatchEvent(
-            new CustomEvent('brumaluz:trocar', { detail: { profissao, nome: 'Morador' } }),
+            new CustomEvent('brumaluz:trocar', {
+              detail: { profissao, nome: 'Morador', criatura },
+            }),
           );
           await window.__par.esperar(300);
           const botoes = [
@@ -821,11 +840,18 @@ const SESSOES: Record<string, Sessao> = {
           for (const b of botoes) {
             const pode = b.getAttribute('aria-disabled') !== 'true';
             out[profissao].push(pode);
+            await perto(profissao);
             b.click();
             await window.__par.quadros(1);
+            await e.sincronizar?.();
           }
           (window as any).__inventarioUI.fechar();
           await window.__par.quadros(1);
+        }
+        const p0 = (e.povoados?.() ?? [])[0];
+        if (p0 && e.sincronizar) {
+          e.teleportar!(p0.cx + 2.5, p0.cz + 2.5);
+          await window.__par.assentar();
         }
         return out;
       });
@@ -866,9 +892,10 @@ const SESSOES: Record<string, Sessao> = {
       expect(cama).toBe('ok');
       // fome primeiro (com a barriga cheia a vida voltaria com o tempo real): 75 pulos
       // correndo gastam a saturação (5) e 10 de fome
-      await page.evaluate(() => {
+      await page.evaluate(async () => {
         const s = window.__brumaluz!.sobrevivencia!;
         for (let i = 0; i < 75; i++) s.pulo(true);
+        await window.__brumaluz!.sincronizar?.();
       });
       const etapas: Etapas = { faminto: await retrato(page) };
       // queda de 8,5 blocos: 5 de dano
@@ -889,6 +916,7 @@ const SESSOES: Record<string, Sessao> = {
         await window.__par.quadros(2);
         e.controleDireto!.usar();
         await window.__par.quadros(2);
+        await e.sincronizar?.();
         return window.__par.eventos.includes('comeu');
       });
       expect(comeu).toBe(true);
