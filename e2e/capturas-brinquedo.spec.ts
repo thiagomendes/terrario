@@ -348,3 +348,165 @@ test('qualidade automática: detalhe baixo (celular) e alto', async ({ page }) =
     await foto(page, `detalhe-${d}`);
   }
 });
+
+for (const [nomeVp, vp] of [
+  ['celular', { width: 390, height: 844 }],
+  ['desktop', { width: 1280, height: 720 }],
+] as const) {
+  test(`painéis de brinquedo: ${nomeVp}`, async ({ browser }) => {
+    test.setTimeout(400_000);
+    const ctx = await browser.newContext({
+      viewport: vp,
+      ...(nomeVp === 'celular' ? { hasTouch: true, isMobile: true, deviceScaleFactor: 2 } : {}),
+    });
+    const page = await ctx.newPage();
+    await page.goto('/');
+    await pronto(page);
+    const tirar = (n: string) =>
+      page.screenshot({
+        path: `${PASTA}/brinquedo-painel-${nomeVp}-${n}.jpg`,
+        type: 'jpeg',
+        quality: 80,
+      });
+    // o X do painel que está à vista (há um por painel, os outros escondidos)
+    const fecharX = () =>
+      page.evaluate(() =>
+        Array.from(document.querySelectorAll<HTMLElement>('.botao-fechar'))
+          .find((b) => b.offsetParent !== null)
+          ?.click(),
+      );
+    const fechar = async () => {
+      await page.keyboard.press('Escape');
+      await page.waitForTimeout(300);
+    };
+    // mundos, personagem e configurações a partir da tela inicial
+    for (const [attr, n] of [
+      ['data-abrir-mundos', 'mundos'],
+      ['data-abrir-personagem', 'personagem'],
+      ['data-abrir-config', 'config'],
+    ] as const) {
+      await page.locator(`[${attr}]`).first().click();
+      await page.waitForTimeout(800);
+      await tirar(n);
+      await fechar();
+      // o editor de personagem não fecha com Esc nem tem o X: sai pelo «Voltar»
+      await page.evaluate(() => {
+        const visivel = (el: HTMLElement | null) => !!el && el.offsetParent !== null;
+        const voltar = document.querySelector<HTMLElement>('[data-voltar-titulo]');
+        if (visivel(voltar)) voltar!.click();
+        else
+          Array.from(document.querySelectorAll<HTMLElement>('.botao-fechar'))
+            .find((b) => b.offsetParent !== null)
+            ?.click();
+      });
+      await page.waitForTimeout(300);
+    }
+    await page.evaluate(() => {
+      document.querySelector<HTMLElement>('.entrada')?.setAttribute('hidden', '');
+      const e = window.__brumaluz!;
+      e.pausarDia = true;
+      e.hora = 0.42;
+    });
+    await page.waitForTimeout(800);
+    const abrirInv = () =>
+      page.evaluate(() => document.querySelector<HTMLElement>('[data-funcao="KeyE"]')?.click());
+    await abrirInv();
+    await page.waitForTimeout(600);
+    await tirar('inventario');
+    await page.evaluate(() => document.querySelector<HTMLElement>('[data-livro]')?.click());
+    await page.waitForTimeout(600);
+    await tirar('livro');
+    await fecharX();
+    await page.waitForTimeout(400);
+    // baú com alguns itens
+    await page.evaluate(() => {
+      const slots = Array.from({ length: 27 }, (_, i) =>
+        i === 4 ? { item: 'carvao', qtd: 12 } : i === 10 ? { item: 'maca', qtd: 3 } : null,
+      );
+      window.dispatchEvent(
+        new CustomEvent('brumaluz:conteiner', {
+          detail: { conteiner: { tipo: 'bau', slots }, novo: true },
+        }),
+      );
+    });
+    await page.waitForTimeout(700);
+    await tirar('bau');
+    await fecharX();
+    await page.waitForTimeout(400);
+    // trocas com um morador
+    await page.evaluate(() =>
+      window.dispatchEvent(
+        new CustomEvent('brumaluz:trocar', {
+          detail: { profissao: 'ferreiro', nome: 'Tonho', criatura: 0 },
+        }),
+      ),
+    );
+    await page.waitForTimeout(700);
+    await tirar('trocas');
+    await fecharX();
+    await page.waitForTimeout(400);
+    // fornalha fundindo
+    await page.evaluate(() =>
+      window.dispatchEvent(
+        new CustomEvent('brumaluz:conteiner', {
+          detail: {
+            conteiner: {
+              tipo: 'fornalha',
+              fornalha: {
+                entrada: { item: 'ferro_bruto', qtd: 3 },
+                combustivel: { item: 'carvao', qtd: 5 },
+                saida: null,
+                queima: 6,
+                queimaTotal: 10,
+                progresso: 0.45,
+              },
+            },
+            novo: true,
+          },
+        }),
+      ),
+    );
+    await page.waitForTimeout(700);
+    await tirar('fornalha');
+    await fecharX();
+    await page.waitForTimeout(400);
+    // jogar com amigos e entrar com código
+    await page.evaluate(() => window.dispatchEvent(new CustomEvent('brumaluz:amigos')));
+    await page.waitForTimeout(700);
+    await tirar('amigos');
+    await fechar();
+    await page.evaluate(() => window.dispatchEvent(new CustomEvent('brumaluz:entrarCodigo')));
+    await page.waitForTimeout(700);
+    await tirar('codigo');
+    await fechar();
+    // pausa, modo foto e a tela de morte
+    await page.evaluate(() => window.dispatchEvent(new CustomEvent('brumaluz:pausar')));
+    await page.waitForTimeout(700);
+    await tirar('pausa');
+    await page.evaluate(() => document.querySelector<HTMLElement>('[data-pausa-continuar]')?.click());
+    await page.waitForTimeout(400);
+    await page.evaluate(() => window.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyP' })));
+    await page.waitForTimeout(800);
+    await tirar('foto');
+    await page.evaluate(() => window.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyP' })));
+    await page.waitForTimeout(400);
+    await page.evaluate(() =>
+      window.dispatchEvent(new CustomEvent('brumaluz:morte', { detail: 'queda' })),
+    );
+    await page.waitForTimeout(900);
+    await tirar('morte');
+    await page.evaluate(() => document.querySelector<HTMLElement>('[data-renascer]')?.click());
+    await page.waitForTimeout(400);
+    // diário e mapa grande
+    await page.evaluate(() => document.querySelector<HTMLElement>('[data-funcao="KeyJ"]')?.click());
+    await page.waitForTimeout(700);
+    await tirar('diario');
+    await fechar();
+    await fecharX();
+    await page.waitForTimeout(300);
+    await page.evaluate(() => document.querySelector<HTMLElement>('[data-funcao="Tab"]')?.click());
+    await page.waitForTimeout(900);
+    await tirar('mapa');
+    await ctx.close();
+  });
+}
