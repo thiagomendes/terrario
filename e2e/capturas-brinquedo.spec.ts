@@ -529,23 +529,54 @@ for (const id of TEMAS) {
       e.camera!.definir('primeira');
     });
     await page.waitForTimeout(1500);
-    for (const tipo of ['cervo', 'coelho', 'raposa', 'espectro'] as const) {
-      await page.evaluate((tipo) => {
-        const e = window.__brumaluz!;
-        e.hora = tipo === 'espectro' ? 0.92 : 0.45;
-        const [x, y, z] = e.posicao!;
-        e.invocar!(tipo, x, y + 0.5, z + 2.6);
-        e.apontar!(0, 0.25);
-      }, tipo);
-      await page.waitForTimeout(900);
+    const inicio = await page.evaluate(() => window.__brumaluz!.posicao!);
+    const tipos = ['cervo', 'coelho', 'raposa', 'espectro'] as const;
+    for (const [n, tipo] of tipos.entries()) {
+      // cada bicho numa direção (o anterior fica fora do quadro), no mesmo ponto em terra
+      const yaw = (n * Math.PI) / 2;
+      await page.evaluate(
+        ({ tipo, yaw, inicio }) => {
+          const e = window.__brumaluz!;
+          e.hora = tipo === 'espectro' ? 0.92 : 0.45;
+          e.teleportar!(inicio[0], inicio[2]);
+          const [x, y, z] = e.posicao!;
+          e.invocar!(tipo, x + Math.sin(yaw) * 2.4, y + 0.3, z + Math.cos(yaw) * 2.4);
+          e.apontar!(yaw, 0.3);
+        },
+        { tipo, yaw, inicio },
+      );
+      await page.waitForTimeout(450);
       await foto(page, `perto-${id}-${tipo}`);
-      // tira o bicho dali (desce para longe) antes do próximo
-      await page.evaluate(() => {
-        const e = window.__brumaluz!;
-        const [x, , z] = e.posicao!;
-        e.teleportar!(x + 30, z);
-      });
-      await page.waitForTimeout(800);
     }
+  });
+}
+
+// fotos da vitrine dos temas (public/temas/<id>.jpg): manhã clara, sem interface
+for (const id of TEMAS) {
+  test(`vitrine do tema: ${id}`, async ({ page }) => {
+    test.setTimeout(300_000);
+    await page.setViewportSize({ width: 960, height: 540 });
+    await page.goto(`/?tema=${id}`);
+    await pronto(page);
+    await page.evaluate(() => {
+      const e = window.__brumaluz!;
+      e.pausarDia = true;
+      e.hora = 0.36;
+      e.definirClima?.('limpo');
+      const a = e.astro;
+      if (!a) e.apontar!(0.6, -0.12);
+      else {
+        const n = Math.hypot(a[0], a[1], a[2]);
+        e.apontar!(Math.atan2(a[0], a[2]), Math.min(-0.12, -Math.asin(a[1] / n) * 0.6));
+      }
+      // só o mundo: toda a interface some (o braço da vista também)
+      e.camera!.definir('primeira');
+      const st = document.createElement('style');
+      st.textContent =
+        '#app > :not(canvas), body > :not(#app):not(script) { display: none !important; }';
+      document.head.appendChild(st);
+    });
+    await page.waitForTimeout(4500);
+    await page.screenshot({ path: `public/temas/${id}.jpg`, type: 'jpeg', quality: 80 });
   });
 }

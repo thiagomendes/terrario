@@ -25,12 +25,30 @@ const lum = (hex: string) => {
 };
 
 /** As peças do bicho em formas de brinquedo, com olhos de bolinha, brilhos e bochechas. */
-export function bichoDeBrinquedo(pecas: readonly PecaCriatura[]): PecaBicho[] {
+const pastel = (hex: string, t: number) => {
+  if (t <= 0) return hex;
+  const n = parseInt(hex.slice(1), 16);
+  const c = [(n >> 16) & 255, (n >> 8) & 255, n & 255].map((v) => Math.round(v + (255 - v) * t));
+  return `#${c.map((v) => v.toString(16).padStart(2, '0')).join('')}`;
+};
+
+export interface OpcoesBicho {
+  /** Clareia as cores (criaturas da noite: plástico pastel em vez de vulto escuro). */
+  pastel?: number;
+  /** Quanto a cabeça cresce (padrão CABECA_MAIOR). */
+  cabeca?: number;
+}
+
+export function bichoDeBrinquedo(
+  pecas: readonly PecaCriatura[],
+  opcoes: OpcoesBicho = {},
+): PecaBicho[] {
+  const tom = opcoes.pastel ?? 0;
   const volume = (p: PecaCriatura) => p.t[0] * p.t[1] * p.t[2];
   const cabecas = pecas.filter((p) => p.papel === 'cabeca');
   const cabeca = [...cabecas].sort((a, b) => volume(b) - volume(a))[0];
   const centro = cabeca?.p ?? [0, 0, 0];
-  const k = cabeca ? CABECA_MAIOR : 1;
+  const k = cabeca ? (opcoes.cabeca ?? CABECA_MAIOR) : 1;
   // a cabeça maior sobe um pouco para não afundar no corpo
   const subir = cabeca ? cabeca.t[1] * (k - 1) * 0.35 : 0;
   const out: PecaBicho[] = [];
@@ -86,7 +104,7 @@ export function bichoDeBrinquedo(pecas: readonly PecaCriatura[]): PecaBicho[] {
       continue;
     }
     const perna = p.papel === 'perna0' || p.papel === 'perna1';
-    const fina = menor < maior * 0.45;
+    const fina = menor < maior * 0.5;
     const forma: FormaBicho =
       maior <= 0.1
         ? 'bola'
@@ -97,8 +115,10 @@ export function bichoDeBrinquedo(pecas: readonly PecaCriatura[]): PecaBicho[] {
     const raio =
       forma === 'capsula'
         ? menor * 0.49
-        : Math.min(naCabeca ? 0.2 : 0.16, menor * (naCabeca ? 0.42 : 0.38));
-    out.push({ ...p, t, p: pos, forma, raio, alfa: undefined, brilho });
+        : Math.min(naCabeca ? 0.24 : 0.2, menor * (naCabeca ? 0.45 : 0.42));
+    // os olhos e luzinhas mantêm a cor; o resto clareia (pastel) quando pedido
+    const cor = (p.brilho ?? 0) > 0.3 ? p.cor : pastel(p.cor, tom);
+    out.push({ ...p, t, p: pos, cor, forma, raio, alfa: undefined, brilho });
   }
   return out;
 }

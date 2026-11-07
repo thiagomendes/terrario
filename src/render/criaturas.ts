@@ -103,6 +103,8 @@ export function criarRenderCriaturas(
       c.tipo === 'morador'
         ? povoadoDoTema().moradores[c.morador?.profissao ?? 'construtor']
         : tema().criaturas[c.tipo],
+      // a criatura da noite: plástico pastel e cabeção (assusta pouco, é brinquedo)
+      c.tipo === 'espectro' ? { pastel: 0.32, cabeca: 1.45 } : {},
     );
     const partes = pecas.map((peca, i) => {
       const no = new TransformNode(`criatura-${c.id}-${i}`, scene);
@@ -254,7 +256,9 @@ export function criarRenderCriaturas(
           if (!p.peca.brilho) {
             const base = corBase(p.peca.cor);
             mat.diffuseColor.set(base.r * l * 0.78, base.g * l * 0.78, base.b * l * 0.78);
-            mat.emissiveColor.set(base.r * l * 0.36, base.g * l * 0.36, base.b * l * 0.36);
+            // criatura da noite: plástico que brilha no escuro (não some no breu, não estoura)
+            const e = c.tipo === 'espectro' ? Math.max(l * 0.36, 0.5) : l * 0.36;
+            mat.emissiveColor.set(base.r * e, base.g * e, base.b * e);
             mat.specularColor.set(0.22 * l, 0.22 * l, 0.22 * l);
           }
         }
