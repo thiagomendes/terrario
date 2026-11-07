@@ -1,3 +1,4 @@
+import { fotografarBoneco } from '../render/fotoBoneco';
 import { icone, rotuloComIcone, type NomeIcone } from './pixicones';
 import {
   ACESSORIOS,
@@ -446,7 +447,7 @@ export function criarPainelPersonagem(pai: HTMLElement, opcoes: OpcoesPainel) {
   /** Cada miniatura mostra a aparência atual com aquela opção aplicada. */
   function desenharMiniaturas(): void {
     for (const m of miniaturas) {
-      desenharPrevia(m.canvas, variante(aparencia, m.grupo.campo, m.valor), m.grupo.recorte);
+      fotografarBoneco(m.canvas, variante(aparencia, m.grupo.campo, m.valor), m.grupo.recorte);
     }
   }
   function mudou(proxima: Aparencia): void {

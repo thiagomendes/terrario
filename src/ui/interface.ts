@@ -1,3 +1,4 @@
+import { fotografarBoneco } from '../render/fotoBoneco';
 import { CSS_BRINQUEDO } from './brinquedo';
 import { CSS_TEMAS_UI, criarVitrineTitulo } from './temasUi';
 import { obterTema } from '../temas';
@@ -419,14 +420,14 @@ export function criarInterface(
     aoMudar: (a) => {
       nomeHud.textContent = rotuloNome(a);
       nomePrevia.textContent = rotuloNome(a);
-      desenharPrevia(previa, a);
+      fotografarBoneco(previa, a, 'corpo', 520);
       window.__brumaluz?.personagem?.definir(a);
     },
     aoJogar: entrarNoJogo,
   });
   nomeHud.textContent = rotuloNome(painel.aparencia());
   nomePrevia.textContent = rotuloNome(painel.aparencia());
-  desenharPrevia(previa, painel.aparencia());
+  fotografarBoneco(previa, painel.aparencia(), 'corpo', 520);
 
   entrada.addEventListener('click', (e) => {
     if (!telaPersonagem.hidden) return;
