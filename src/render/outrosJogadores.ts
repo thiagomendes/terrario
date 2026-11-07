@@ -48,6 +48,8 @@ interface Outro {
   yaw: number;
   mao: string | null;
   apelido: string;
+  /** Últimos contadores de golpe, colocação e comida vistos (null antes do primeiro). */
+  acoes: [number, number, number] | null;
 }
 
 export function criarOutrosJogadores(scene: Scene) {
@@ -72,6 +74,7 @@ export function criarOutrosJogadores(scene: Scene) {
       z: v.z,
       yaw: v.yaw,
       mao: null,
+      acoes: null,
       apelido,
     };
   }
@@ -139,6 +142,16 @@ export function criarOutrosJogadores(scene: Scene) {
           const b = blocoDoItem(a.mao);
           o.personagem.definirNaMao(b || null, !b && a.mao ? a.mao : null);
         }
+        // o amigo golpeou, colocou um bloco ou comeu: o mesmo movimento do boneco dele
+        if (a.acoes) {
+          const antes = o.acoes;
+          if (antes) {
+            if (a.acoes[0] > antes[0]) o.animador.evento('golpe');
+            if (a.acoes[1] > antes[1]) o.animador.evento('colocacao');
+            if (a.acoes[2] > antes[2]) o.animador.evento('comer');
+          }
+          o.acoes = [a.acoes[0], a.acoes[1], a.acoes[2]];
+        }
         const pose = o.animador.atualizar(dt, {
           velocidadeHoriz: a.vel,
           correndo: a.correndo,
@@ -175,11 +188,10 @@ export function criarOutrosJogadores(scene: Scene) {
         x: o.x,
         y: o.y,
         z: o.z,
+        /** Movimento em curso no boneco do amigo (testes e diagnóstico). */
+        golpeando: o.animador.vista().golpe !== null,
+        acoes: o.acoes,
       }));
-    },
-    /** O golpe (animação) quando o amigo quebra ou bate. */
-    golpe(id: string) {
-      outros.get(id)?.animador.evento('golpe');
     },
   };
 }

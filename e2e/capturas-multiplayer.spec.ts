@@ -107,6 +107,32 @@ for (const [id, nome] of TEMAS) {
     await ana.waitForTimeout(6000);
     await foto(ana, `${id}-amigo`);
 
+    // a Bia minera e coloca um bloco: a Ana vê o braço dela golpeando (spec 012)
+    await bia.evaluate(() => {
+      const e = window.__brumaluz!;
+      e.apontar!(-Math.PI / 2, 0.7);
+    });
+    await bia.waitForTimeout(400);
+    // golpes no ritmo de quem segura o botão (um a cada 250 ms)
+    const minerando = bia.evaluate(async () => {
+      const e = window.__brumaluz!;
+      const [x, y, z] = e.posicao!;
+      for (let i = 0; i < 12; i++) {
+        e.barramento!.emitir('golpe', {
+          x: Math.floor(x) - 1,
+          y: Math.floor(y) - 2,
+          z: Math.floor(z),
+          bloco: 1,
+        });
+        await new Promise((r) => setTimeout(r, 250));
+      }
+    });
+    for (const k of [1, 2, 3]) {
+      await ana.waitForTimeout(370);
+      await foto(ana, `${id}-amigo-minerando-${k}`);
+    }
+    await minerando;
+
     // Bia longe: seta na borda da tela e bolinha no minimapa
     await bia.evaluate(([x, z]) => window.__brumaluz!.teleportar!(x - 46, z + 20), [pa[0], pa[2]]);
     await ana.waitForTimeout(6000);

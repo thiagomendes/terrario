@@ -66,6 +66,51 @@ describe('núcleo com vários jogadores', () => {
     expect(q.get('bia')!.eventos?.find((e) => e.e === 'quebra')).toMatchObject({ meu: false });
   });
 
+  it('o amigo vê os movimentos: golpe, colocar bloco e comer sobem os contadores', () => {
+    const n = nuvem();
+    const acoesDaAna = () =>
+      n
+        .quadros()
+        .get('bia')!
+        .jogadores?.find((j) => j.id === 'ana')?.acoes;
+    expect(acoesDaAna()).toEqual([0, 0, 0]);
+    // golpes vêm na telemetria
+    n.comando('ana', tel(X + 0.5, Z + 0.5, { golpes: 3 }));
+    n.passo();
+    expect(acoesDaAna()).toEqual([3, 0, 0]);
+    // colocar um bloco que ela tem
+    inv(n, 'ana').definir(0, { item: idDoBloco(Bloco.TABUAS), qtd: 4 });
+    n.comando('ana', {
+      t: 'colocar',
+      id: 7,
+      x: X + 1,
+      y: Y,
+      z: Z + 1,
+      bloco: Bloco.TABUAS,
+      meta: 0,
+      slot: 0,
+    });
+    n.passo();
+    expect(acoesDaAna()?.[1]).toBe(1);
+    // comer com fome
+    const ana = n.estado.jogadores.get('ana')!;
+    // cansa até dar fome (pular correndo gasta)
+    for (let i = 0; i < 4000 && ana.sobrevivencia.estado.fome >= 18; i++)
+      ana.sobrevivencia.pulo(true);
+    expect(ana.sobrevivencia.estado.fome).toBeLessThan(20);
+    inv(n, 'ana').definir(1, { item: 'maca', qtd: 2 });
+    n.comando('ana', { t: 'comer', slot: 1 });
+    n.passo();
+    expect(acoesDaAna()?.[2]).toBe(1);
+    // e a Bia não aparece para ela mesma
+    expect(
+      n
+        .quadros()
+        .get('ana')!
+        .jogadores?.map((j) => j.id),
+    ).toEqual(['bia']);
+  });
+
   it('dois querem o mesmo item no chão: só um pega, e o total se conserva', () => {
     const n = nuvem();
     n.comando('ana', {

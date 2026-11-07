@@ -107,6 +107,8 @@ interface Jogador {
   querDormir: number;
   perfil: PerfilJogador;
   constroi: boolean;
+  /** Golpes, colocações e comidas desde que entrou (os amigos veem o movimento). */
+  acoes: [number, number, number];
   /** Passo da última telemetria aceita (para conferir se a posição nova é possível). */
   passoTelemetria: number;
   /** O núcleo mandou o jogador para longe (renascer): a próxima posição pode saltar. */
@@ -252,6 +254,7 @@ export function criarNucleo(op: OpcoesNucleo) {
       correcoes: [],
       sono: 0,
       querDormir: 0,
+      acoes: [0, 0, 0],
       passoTelemetria: n,
       saltoPermitido: true,
       perfil: oc?.perfil ?? { apelido: 'Jogador', aparencia: {} },
@@ -417,6 +420,7 @@ export function criarNucleo(op: OpcoesNucleo) {
       if (!v || v.id === Bloco.AR || v.planta || v.liquido) editar(e.x, e.y, e.z, bloco, meta);
     }
     if (modo === 'sobrevivencia') j.inventario.remover(c.slot, 1);
+    j.acoes[1]++;
     for (const o of jogadores.values())
       o.eventos.push({ e: 'colocacao', x, y, z, bloco, meu: o === j });
   }
@@ -684,6 +688,7 @@ export function criarNucleo(op: OpcoesNucleo) {
     if (j.sobrevivencia.comer(comida.fome, comida.saturacao)) {
       j.inventario.remover(c.slot, 1);
       j.eventos.push({ e: 'comeu', item: p.item });
+      j.acoes[2]++;
     }
   }
 
@@ -718,6 +723,7 @@ export function criarNucleo(op: OpcoesNucleo) {
     j.saltoPermitido = false;
     j.passoTelemetria = n;
     j.tel = { ...c, quedas: [], pulos: 0, golpes: 0 };
+    if (golpes > 0) j.acoes[0] += Math.min(golpes, 20);
     for (let i = 0; i < golpes; i++) j.sobrevivencia.acao();
     if (modo !== 'sobrevivencia' || j.sobrevivencia.estado.morto) return;
     for (const q of quedas) if (q > 0) j.sobrevivencia.queda(q);
@@ -1000,6 +1006,7 @@ export function criarNucleo(op: OpcoesNucleo) {
       noChao: o.tel.noChao,
       correndo: o.tel.correndo,
       mao: o.inventario.obter(o.tel.slot)?.item ?? null,
+      acoes: [o.acoes[0], o.acoes[1], o.acoes[2]],
     }));
     const perfis = perfisSujos
       ? Object.fromEntries([...jogadores.values()].map((o) => [o.id, o.perfil]))

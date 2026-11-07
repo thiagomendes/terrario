@@ -96,6 +96,27 @@ test('dois navegadores no mesmo mundo: convite, entrada pelo link e tudo sincron
     timeout: 15_000,
   });
 
+  // spec 012: Bia golpeia (no ritmo de quem segura o botão); Ana vê o boneco dela golpeando
+  const golpes = bia.evaluate(async () => {
+    const e = window.__brumaluz!;
+    for (let i = 0; i < 12; i++) {
+      e.barramento!.emitir('golpe', { x: 0, y: 0, z: 0, bloco: 1 });
+      await new Promise((r) => setTimeout(r, 250));
+    }
+  });
+  const viuGolpe = await ana.evaluate(async () => {
+    const e = window.__brumaluz!;
+    const t0 = performance.now();
+    let viu = false;
+    while (performance.now() - t0 < 6000 && !viu) {
+      viu = (e.outrosJogadores?.() ?? []).some((o) => o.apelido === 'Bia' && o.golpeando);
+      await new Promise((r) => requestAnimationFrame(r));
+    }
+    return viu;
+  });
+  await golpes;
+  expect(viuGolpe).toBe(true);
+
   // as mesmas criaturas, no mesmo lugar (até 1 bloco de diferença)
   await ana.waitForTimeout(3000);
   // lidas ao mesmo tempo e comparadas pela identidade de cada criatura

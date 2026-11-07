@@ -158,6 +158,11 @@ export interface JogadorVisto {
   correndo: boolean;
   /** Item na mão (o que ele segura e mostra). */
   mao: string | null;
+  /**
+   * Quantas vezes ele golpeou, colocou bloco e comeu desde que entrou (sempre sobe). Quem vê
+   * o amigo dispara o movimento quando um número cresce.
+   */
+  acoes?: [number, number, number];
 }
 
 /** Criatura como o cliente a desenha. */

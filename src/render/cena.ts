@@ -249,7 +249,15 @@ export interface EstadoDepuracao {
   remalhaMs?: number;
   aplicadasNoUltimoQuadro?: number;
   /** Os outros jogadores no mundo (com amigos). */
-  outrosJogadores?: () => { id: string; apelido: string; x: number; y: number; z: number }[];
+  outrosJogadores?: () => {
+    id: string;
+    apelido: string;
+    x: number;
+    y: number;
+    z: number;
+    golpeando?: boolean;
+    acoes?: [number, number, number] | null;
+  }[];
   /** Tempo médio da lógica de cada quadro na linha principal, fora o desenho (ms). */
   logicaQuadroMs?: number;
   atmosfera?: { noite: number; crepusculo: number };
