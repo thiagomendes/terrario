@@ -248,6 +248,41 @@ interface Peca {
   fim: number;
 }
 
+/**
+ * Começa a fonte e já agenda o fim. Nenhum som fica preso: com hora inválida (NaN) a fonte
+ * nem começa, e se o navegador recusar o "parar" agendado, ela é desligada na hora (um som
+ * sem fim virava um "grilo contínuo" que só parava fechando o jogo).
+ */
+export function comecarEParar(
+  fonte: FonteAudio & { start(t?: number): void; stop(t?: number): void },
+  t0: number,
+  fim: number,
+): void {
+  if (!Number.isFinite(t0) || !Number.isFinite(fim) || fim < t0) {
+    try {
+      fonte.disconnect();
+    } catch {
+      // nada a fazer
+    }
+    return;
+  }
+  fonte.start(t0);
+  try {
+    fonte.stop(fim);
+  } catch {
+    try {
+      fonte.stop();
+    } catch {
+      // já parada
+    }
+    try {
+      fonte.disconnect();
+    } catch {
+      // já desconectada
+    }
+  }
+}
+
 function ruido(
   ctx: ContextoSintese,
   destino: NoAudio,
@@ -274,8 +309,7 @@ function ruido(
   filtro.connect(g);
   g.connect(destino);
   const fim = t0 + ataque + queda + 0.02;
-  f.start(t0);
-  f.stop(fim);
+  comecarEParar(f, t0, fim);
   return { fonte: f, fim };
 }
 
@@ -302,8 +336,7 @@ function tom(
   o.connect(g);
   g.connect(destino);
   const fim = t0 + ataque + queda + 0.02;
-  o.start(t0);
-  o.stop(fim);
+  comecarEParar(o, t0, fim);
   return { fonte: o, fim };
 }
 
@@ -907,10 +940,14 @@ export function iniciarAmbiente(
   let indiceAcorde = 0;
   const rng = criarGerador(2026);
 
+  /** Quando cada som do ambiente deveria acabar (o vigia corta quem passar muito disso). */
+  const fins = new Map<FonteAudio, number>();
   function registrar(p: Peca): void {
     vivas.add(p.fonte);
+    fins.set(p.fonte, p.fim);
     p.fonte.onended = () => {
       vivas.delete(p.fonte);
+      fins.delete(p.fonte);
       try {
         p.fonte.disconnect();
       } catch {
@@ -993,9 +1030,29 @@ export function iniciarAmbiente(
     }
   }
 
+  /** Vigia: nota, grilo ou bipe que passou 3 s da hora de acabar é cortado e desligado. */
+  function vigiar(agora: number): void {
+    for (const [fonte, fim] of fins) {
+      if (agora < fim + 3) continue;
+      fins.delete(fonte);
+      vivas.delete(fonte);
+      try {
+        (fonte as FonteAudio & { stop(t?: number): void }).stop();
+      } catch {
+        // já parada
+      }
+      try {
+        fonte.disconnect();
+      } catch {
+        // já desconectada
+      }
+    }
+  }
+
   function agendar(): void {
     if (!ctxA || !busMusica) return;
     const agora = ctxA.currentTime;
+    vigiar(agora);
     const ate = agora + 0.6;
     const p = paletaDoTema(contexto);
     while (proximoAcorde < ate) {

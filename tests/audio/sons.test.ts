@@ -11,6 +11,7 @@ import {
   perfilDoSom,
   reiniciarVariacao,
   tocarSom,
+  comecarEParar,
 } from '../../src/audio/sons';
 import { ContextoFalso, FonteFalsa, NoFalso } from './falso';
 
@@ -194,5 +195,28 @@ describe('trilha adaptativa', () => {
     agendar!();
     amb.parar();
     expect(ctx.fontes.every((f) => f.parada)).toBe(true);
+  });
+});
+
+describe('nenhum som fica preso (grilo contínuo)', () => {
+  it('hora inválida: a fonte nem começa', () => {
+    const f = new FonteFalsa();
+    comecarEParar(f, Number.NaN, 1);
+    expect(f.iniciada).toBe(false);
+    comecarEParar(f, 1, Number.NaN);
+    expect(f.iniciada).toBe(false);
+  });
+  it('se o parar agendado falhar, a fonte para e desliga na hora', () => {
+    const f = new FonteFalsa();
+    let tentativas = 0;
+    f.stop = (t?: number) => {
+      tentativas++;
+      if (t !== undefined) throw new Error('recusado');
+      f.parada = true;
+    };
+    comecarEParar(f, 0, 0.5);
+    expect(f.iniciada).toBe(true);
+    expect(f.parada).toBe(true);
+    expect(tentativas).toBe(2);
   });
 });
