@@ -172,6 +172,31 @@ export interface OpcoesInterface {
   salvar?: () => Promise<boolean>;
 }
 
+/**
+ * Celular em pé (spec 011, T08): o canto esquerdo de cima vira um botão redondo. As pílulas
+ * (som, câmera, nome, dia e clima) e a missão só aparecem quando a criança toca nele.
+ */
+const CSS_HUD_COMPACTO = `
+.hud-info { display: none; }
+body.hud-compacto .hud-info {
+  display: grid; place-items: center; position: fixed; z-index: 7; top: calc(8px + env(safe-area-inset-top)); left: calc(8px + env(safe-area-inset-left));
+  width: 44px; height: 44px; padding: 0; border: 0; border-radius: 50%; cursor: pointer;
+  background: rgba(255, 250, 240, 0.95); box-shadow: 0 3px 0 rgba(150, 110, 60, 0.35), 0 6px 12px rgba(40, 25, 10, 0.2);
+}
+body.hud-compacto .hud-info svg { width: 30px; height: 30px; }
+body.hud-compacto .hud-info:focus-visible { outline: 3px solid var(--azul); outline-offset: 2px; }
+body.hud-compacto:not(.hud-aberto) .hud .som,
+body.hud-compacto:not(.hud-aberto) .hud .camera-indicador,
+body.hud-compacto:not(.hud-aberto) .missao-hud { display: none; }
+/* aberto: as pílulas descem logo abaixo do botão */
+body.hud-compacto.hud-aberto .hud .som { top: 58px; }
+body.hud-compacto.hud-aberto .hud [data-camera-indicador] { top: 90px; }
+body.hud-compacto.hud-aberto .hud [data-nome-jogador] { top: 122px !important; }
+body.hud-compacto.hud-aberto .hud [data-info-mundo] { top: 154px !important; }
+body.hud-compacto.hud-aberto .missao-hud { top: 188px; }
+body[data-overlay] .hud-info, body.tela-titulo .hud-info, body.modo-foto .hud-info { display: none !important; }
+`;
+
 export function criarInterface(
   app: HTMLElement,
   hotbar?: Hotbar,
@@ -409,6 +434,48 @@ export function criarInterface(
     if (infoMundo.textContent !== t) infoMundo.textContent = t;
     if (infoMundo.hidden !== !t) infoMundo.hidden = !t;
   }, 1000);
+  // celular em pé (spec 011, T08): as informações da esquerda recolhem num botão redondo;
+  // um toque mostra tudo (som, câmera, nome, dia e clima, missão) e fecha sozinho depois
+  const estiloCompacto = document.createElement('style');
+  estiloCompacto.textContent = CSS_HUD_COMPACTO;
+  document.head.appendChild(estiloCompacto);
+  const botaoInfo = document.createElement('button');
+  botaoInfo.type = 'button';
+  botaoInfo.className = 'hud-info';
+  botaoInfo.setAttribute('data-hud-info', '');
+  botaoInfo.setAttribute('aria-label', 'Mostrar as informações do jogo');
+  botaoInfo.setAttribute('aria-expanded', 'false');
+  botaoInfo.innerHTML =
+    '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="#ffd45a"/><circle cx="12" cy="7.2" r="1.7" fill="#5a3a12"/><rect x="10.4" y="10.2" width="3.2" height="8" rx="1.6" fill="#5a3a12"/></svg>';
+  app.appendChild(botaoInfo);
+  let fecharInfo: ReturnType<typeof setTimeout> | undefined;
+  const mostrarInfo = (v: boolean) => {
+    document.body.classList.toggle('hud-aberto', v);
+    botaoInfo.setAttribute('aria-expanded', String(v));
+    botaoInfo.setAttribute(
+      'aria-label',
+      v ? 'Esconder as informações do jogo' : 'Mostrar as informações do jogo',
+    );
+    clearTimeout(fecharInfo);
+    if (v) fecharInfo = setTimeout(() => mostrarInfo(false), 6000);
+  };
+  botaoInfo.addEventListener('click', (e) => {
+    e.stopPropagation();
+    mostrarInfo(!document.body.classList.contains('hud-aberto'));
+  });
+  // compacto no celular em pé (tela mais alta que larga e estreita)
+  const emPe = window.matchMedia('(orientation: portrait) and (max-width: 700px)');
+  const ajustarCompacto = () => {
+    const compacto = emPe.matches && document.body.classList.contains('toque-ativo');
+    document.body.classList.toggle('hud-compacto', compacto);
+    if (!compacto) mostrarInfo(false);
+  };
+  emPe.addEventListener?.('change', ajustarCompacto);
+  new MutationObserver(ajustarCompacto).observe(document.body, {
+    attributes: true,
+    attributeFilter: ['class'],
+  });
+  ajustarCompacto();
   const painel = criarPainelPersonagem(telaPersonagem, {
     armazenamento: armazenamento(),
     aoMudar: (a) => {

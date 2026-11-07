@@ -729,3 +729,28 @@ test('blocos com forma na mão', async ({ page }) => {
   await page.waitForTimeout(1500);
   await foto(page, 'mao-forma-porta-terceira');
 });
+
+test('celular em pé: informações recolhidas num botão', async ({ browser }) => {
+  test.setTimeout(240_000);
+  const ctx = await browser.newContext({
+    viewport: { width: 390, height: 844 },
+    hasTouch: true,
+    isMobile: true,
+  });
+  const page = await ctx.newPage();
+  await page.goto('/');
+  await pronto(page);
+  await page.evaluate(() => {
+    document.querySelector<HTMLElement>('.entrada')?.setAttribute('hidden', '');
+    const e = window.__brumaluz!;
+    e.pausarDia = true;
+    e.hora = 0.42;
+  });
+  await page.touchscreen.tap(195, 420);
+  await page.waitForTimeout(1500);
+  await foto(page, 'celular-em-pe-recolhido');
+  await page.locator('[data-hud-info]').tap();
+  await page.waitForTimeout(400);
+  await foto(page, 'celular-em-pe-aberto');
+  await ctx.close();
+});
