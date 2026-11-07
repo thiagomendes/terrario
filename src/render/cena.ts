@@ -620,7 +620,9 @@ export function criarCena(
   const pipeline = new DefaultRenderingPipeline('pos', true, scene, [cameraVisao]);
   pipeline.fxaaEnabled = true;
   pipeline.bloomEnabled = true;
-  pipeline.bloomThreshold = 0.85;
+  // só luz de verdade passa do limite: roupa branca e neve ao sol não estouram (no tablet o
+  // bloom fica desligado, e o amigo de jaleco branco aparecia certo lá e estourado aqui)
+  pipeline.bloomThreshold = 1.0;
   pipeline.bloomWeight = 0.22;
   pipeline.bloomKernel = toqueGrosso ? 32 : 48;
   pipeline.bloomScale = 0.5;
@@ -1604,6 +1606,8 @@ export function criarCena(
       aparencia = normalizarAparencia({ ...aparencia, ...parcial });
       braco.aplicarAparencia(aparencia);
       personagem.aplicarAparencia(aparencia);
+      // os amigos no mesmo mundo passam a ver a aparência nova
+      enviar({ t: 'aparencia', aparencia: { ...aparencia } as Record<string, unknown> });
     },
     visivel: () => visibilidadePorModo(estadoCamera.modo),
     malhas: () => braco.contarMalhas() + personagem.contarMalhas(),

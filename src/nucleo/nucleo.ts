@@ -871,6 +871,10 @@ export function criarNucleo(op: OpcoesNucleo) {
       case 'depurar':
         if (depuracao) depurar(j, c.d);
         break;
+      case 'aparencia':
+        j.perfil = { ...j.perfil, aparencia: c.aparencia };
+        perfisSujos = true;
+        break;
       case 'salvar':
         // o anfitrião responde (precisa do pedido)
         break;

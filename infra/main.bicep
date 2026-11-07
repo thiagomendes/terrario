@@ -18,7 +18,7 @@ param cpu string = '1.0'
 param memoria string = '2Gi'
 
 @description('Origens que podem abrir o WebSocket (o site do jogo).')
-param origens string = 'https://yellow-field-0d32c420f.5.azurestaticapps.net'
+param origens string = 'https://yellow-field-0d32c420f.5.azurestaticapps.net,https://terrario.tmdevlab.com'
 
 var sufixo = take(uniqueString(resourceGroup().id), 10)
 // a imagem de exemplo não tem /saude: as sondas só valem para o servidor de verdade

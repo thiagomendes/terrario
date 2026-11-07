@@ -66,6 +66,26 @@ describe('núcleo com vários jogadores', () => {
     expect(q.get('bia')!.eventos?.find((e) => e.e === 'quebra')).toMatchObject({ meu: false });
   });
 
+  it('o amigo troca a aparência no meio do jogo e o outro vê a nova', () => {
+    const n = nuvem('criativo');
+    n.quadros();
+    n.comando('bia', { t: 'aparencia', aparencia: { modelo: 'musgueira', corRoupa: '#ffffff' } });
+    n.passo();
+    const q = n.quadros();
+    expect(q.get('ana')!.perfis?.['bia']?.aparencia).toEqual({
+      modelo: 'musgueira',
+      corRoupa: '#ffffff',
+    });
+    expect(q.get('ana')!.perfis?.['bia']?.apelido).toBe('Bia');
+    // na nuvem, aparência que não é um objeto pequeno não entra
+    n.comando('bia', { t: 'aparencia', aparencia: { x: 'a'.repeat(5000) } });
+    n.passo();
+    expect(n.estado.jogadores.get('bia')!.perfil.aparencia).toEqual({
+      modelo: 'musgueira',
+      corRoupa: '#ffffff',
+    });
+  });
+
   it('o amigo vê os movimentos: golpe, colocar bloco e comer sobem os contadores', () => {
     const n = nuvem();
     const acoesDaAna = () =>

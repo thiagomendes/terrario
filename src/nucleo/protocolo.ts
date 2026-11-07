@@ -117,7 +117,9 @@ type ComandoSemSeq =
   | { t: 'conferir'; id: number; celulas: Pos[] }
   /** Servidor local: a aba sumiu (ou voltou); o mundo para junto, como antes. */
   | { t: 'pausar'; pausar: boolean }
-  | { t: 'depurar'; d: Depuracao };
+  | { t: 'depurar'; d: Depuracao }
+  /** O jogador trocou a aparência no meio do jogo: os amigos passam a ver a nova. */
+  | { t: 'aparencia'; aparencia: Record<string, unknown> };
 
 /** Atalhos de teste e captura (o servidor da nuvem só aceita em ambiente de testes). */
 export type Depuracao =

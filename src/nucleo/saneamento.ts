@@ -159,6 +159,14 @@ export function sanear(c: unknown): Comando | null {
       return typeof o.pausar === 'boolean' ? (o as unknown as Comando) : null;
     case 'depurar':
       return o.d && typeof o.d === 'object' ? (o as unknown as Comando) : null;
+    case 'aparencia':
+      // só um objeto pequeno (a aparência são umas poucas escolhas)
+      return o.aparencia &&
+        typeof o.aparencia === 'object' &&
+        !Array.isArray(o.aparencia) &&
+        JSON.stringify(o.aparencia).length <= 4096
+        ? (o as unknown as Comando)
+        : null;
     default:
       return null;
   }
