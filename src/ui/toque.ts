@@ -5,49 +5,65 @@ export const CSS_TOQUE = `
 .toque[hidden] { display: none; }
 /* a tela toda: arrastar olha, tocar coloca/usa, segurar quebra */
 .toque .olhar { position: absolute; inset: 0; pointer-events: auto; }
+/* joystick: um poço creme translúcido com a bolinha de peça no meio */
 .toque .joystick {
   position: absolute; left: max(18px, env(safe-area-inset-left)); bottom: calc(env(safe-area-inset-bottom, 0px) + 132px); width: 128px; height: 128px; border-radius: 50%;
-  background: rgba(10, 12, 20, 0.35); border: 2px solid rgba(255,255,255,0.25); pointer-events: auto; touch-action: none;
+  background: rgba(255, 250, 240, 0.38); box-shadow: inset 0 4px 0 rgba(120, 80, 30, 0.18), 0 3px 0 rgba(150, 110, 60, 0.3);
+  pointer-events: auto; touch-action: none;
 }
-.toque .pino { position: absolute; left: 50%; top: 50%; width: 54px; height: 54px; margin: -27px; border-radius: 50%; background: rgba(255,255,255,0.4); box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
+.toque .pino {
+  position: absolute; left: 50%; top: 50%; width: 54px; height: 54px; margin: -27px; border-radius: 50%;
+  background: radial-gradient(circle at 38% 32%, #fff, var(--creme) 55%, #f1e0c0);
+  box-shadow: 0 4px 0 var(--creme-fundo), 0 8px 12px rgba(60, 35, 10, 0.3);
+}
 .toque .botoes { position: absolute; right: max(14px, env(safe-area-inset-right)); bottom: calc(env(safe-area-inset-bottom, 0px) + 124px); display: grid; grid-template-columns: repeat(2, 68px); grid-template-rows: 68px 68px; gap: 10px; pointer-events: none; }
 .toque .botoes button { pointer-events: auto; }
 .toque .botoes .descer { grid-column: 2; grid-row: 1; }
 .toque .botoes .correr { grid-column: 1; grid-row: 2; }
 .toque .botoes .pular { grid-column: 2; grid-row: 2; }
 .toque .botoes .descer[hidden] { display: none; }
-.toque .topo { position: absolute; top: calc(env(safe-area-inset-top, 0px) + 156px); right: max(10px, env(safe-area-inset-right)); display: grid; gap: 8px; pointer-events: auto; }
+.toque .topo { position: absolute; top: calc(env(safe-area-inset-top, 0px) + 156px); right: max(10px, env(safe-area-inset-right)); display: grid; gap: 10px; pointer-events: auto; }
 .toque .mais { position: relative; }
 .toque .extras { position: absolute; top: 0; right: calc(100% + 8px); display: flex; flex-direction: row-reverse; gap: 8px; }
 .toque .extras[hidden] { display: none; }
+/* cada botão é uma peça redonda creme, meio transparente para não tampar o mundo */
 .toque button {
-  width: 68px; height: 68px; border-radius: 50%; border: 2px solid rgba(255,255,255,0.3);
-  background: rgba(10, 12, 20, 0.45); color: #fff; font-size: 1.7rem; touch-action: none;
-  display: grid; place-items: center; padding: 0;
+  width: 68px; height: 68px; border-radius: 50%; border: 0; padding: 0;
+  background: radial-gradient(circle at 40% 30%, rgba(255, 255, 255, 0.92), rgba(255, 246, 228, 0.8) 60%, rgba(240, 222, 190, 0.8));
+  box-shadow: 0 4px 0 rgba(200, 170, 120, 0.85), 0 8px 14px rgba(60, 35, 10, 0.25), inset 0 2px 0 rgba(255, 255, 255, 0.8);
+  color: var(--tinta); font-size: 1.7rem; touch-action: none;
+  display: grid; place-items: center; transition: transform 0.06s, box-shadow 0.06s;
 }
-.toque .topo button { width: 46px; height: 46px; font-size: 1.1rem; }
+.toque button:active { transform: translateY(3px); box-shadow: 0 1px 0 rgba(200, 170, 120, 0.85), 0 3px 6px rgba(60, 35, 10, 0.25); }
+.toque .topo button { width: 46px; height: 46px; font-size: 1.1rem; box-shadow: 0 3px 0 rgba(200, 170, 120, 0.85), 0 6px 10px rgba(60, 35, 10, 0.22), inset 0 2px 0 rgba(255, 255, 255, 0.8); }
 /* paisagem baixa (ex.: 844x390): ícones em linha no alto, joystick e botões nos cantos de baixo */
 @media (orientation: landscape) and (max-height: 500px) {
   .toque .joystick { bottom: max(10px, env(safe-area-inset-bottom)); left: max(14px, env(safe-area-inset-left)); width: 112px; height: 112px; }
   .toque .pino { width: 46px; height: 46px; margin: -23px; }
   .toque .botoes { bottom: max(10px, env(safe-area-inset-bottom)); right: max(10px, env(safe-area-inset-right)); grid-template-columns: repeat(2, 56px); grid-template-rows: 56px 56px; gap: 8px; }
   .toque .botoes button { width: 56px; height: 56px; font-size: 1.4rem; }
-  .toque .topo { top: max(6px, env(safe-area-inset-top)); grid-auto-flow: column; gap: 6px; }
+  .toque .topo { top: max(6px, env(safe-area-inset-top)); grid-auto-flow: column; gap: 8px; }
   .toque .topo button { width: 44px; height: 44px; }
-  .toque .extras { top: calc(100% + 6px); right: 0; flex-direction: column; gap: 6px; }
+  .toque .extras { top: calc(100% + 8px); right: 0; flex-direction: column; gap: 8px; }
 }
-.toque button.ativo { background: rgba(255, 217, 143, 0.45); border-color: #ffd98f; color: #fff7dc; }
+.toque button.ativo {
+  background: radial-gradient(circle at 40% 30%, #ffe9a8, var(--amarela) 60%, #f5b42e);
+  box-shadow: 0 4px 0 var(--amarela-fundo), 0 8px 14px rgba(60, 35, 10, 0.25), inset 0 2px 0 rgba(255, 255, 255, 0.6);
+}
 /* anel de progresso ao segurar para quebrar */
 .toque .anel {
   position: absolute; width: 56px; height: 56px; margin: -28px 0 0 -28px; border-radius: 50%;
-  border: 3px solid rgba(255, 241, 214, 0.9); box-shadow: 0 0 10px rgba(0,0,0,0.4);
+  border: 4px solid rgba(255, 255, 255, 0.95); box-shadow: 0 0 0 2px rgba(217, 134, 26, 0.6), 0 3px 8px rgba(40, 25, 10, 0.3);
   pointer-events: none; opacity: 0; transform: scale(0.6); transition: opacity 0.12s, transform 0.25s;
 }
 .toque .anel.visivel { opacity: 1; transform: scale(1); }
 .legendas { position: fixed; left: 12px; bottom: 120px; z-index: 9; display: grid; gap: 4px; pointer-events: none; }
 /* no toque o canto de baixo é do joystick: legendas no centro, acima da mira */
 body.toque-ativo .legendas { left: 50%; bottom: auto; top: 30%; transform: translateX(-50%); justify-items: center; }
-.legendas div { padding: 4px 10px; border-radius: 6px; background: rgba(0,0,0,0.72); color: #fff; font: 600 0.9rem system-ui, sans-serif; animation: toast 3.2s ease forwards; }
+.legendas div {
+  padding: 5px 14px; border-radius: 999px; background: rgba(255, 250, 240, 0.94); color: var(--tinta);
+  font: 800 0.9rem var(--jogo); box-shadow: 0 2px 0 rgba(150, 110, 60, 0.3); animation: toast 3.2s ease forwards;
+}
 /* no toque a mira some: aponta-se com o dedo */
 body.toque-ativo .hud .mira { display: none; }
 `;

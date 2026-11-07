@@ -4,7 +4,7 @@ import { AR_MAX, FOME_MAX, VIDA_MAX, type EstadoSobrevivencia } from '../jogo/so
 export const CSS_STATUS = `
 .status {
   position: fixed; left: 50%; z-index: 9; pointer-events: none;
-  bottom: calc(max(12px, env(safe-area-inset-bottom)) + 66px);
+  bottom: calc(max(12px, env(safe-area-inset-bottom)) + 70px);
   transform: translateX(-50%) scale(var(--escala-ui, 1)); transform-origin: bottom center;
   width: min(470px, calc(100vw - 16px));
   display: grid; grid-template-columns: 1fr 1fr; gap: 2px 12px;
@@ -12,26 +12,33 @@ export const CSS_STATUS = `
 .status[hidden] { display: none; }
 .status .linha-icones { display: flex; gap: 1px; }
 .status .linha-icones.direita { flex-direction: row-reverse; }
-.status img { width: clamp(14px, 3.6vw, 20px); height: clamp(14px, 3.6vw, 20px); image-rendering: pixelated; filter: drop-shadow(0 1px 1px rgba(0,0,0,0.7)); }
+.status img { width: clamp(14px, 3.6vw, 20px); height: clamp(14px, 3.6vw, 20px); filter: drop-shadow(0 1px 1px rgba(60, 30, 10, 0.55)); }
 .status .vida.pulsando img { animation: pulso-vida 0.6s ease-in-out infinite; }
 @keyframes pulso-vida { 50% { transform: translateY(-2px); } }
 .status .ar { grid-column: 2; }
 .vinheta-dano {
   position: fixed; inset: 0; z-index: 8; pointer-events: none; opacity: 0;
-  background: radial-gradient(ellipse at center, transparent 45%, rgba(190, 20, 20, 0.55));
+  background: radial-gradient(ellipse at center, transparent 50%, rgba(230, 70, 90, 0.45));
   transition: opacity 0.5s ease;
 }
 .vinheta-dano.ativa { opacity: 1; transition: none; }
+/* morte: véu rosado e um cartão creme no meio, sem susto */
 .morte-fundo {
   position: fixed; inset: 0; z-index: 35; display: flex; align-items: center; justify-content: center;
-  flex-direction: column; gap: 18px; padding: 16px; box-sizing: border-box; text-align: center;
-  background: radial-gradient(ellipse at center, rgba(90, 10, 16, 0.55), rgba(20, 2, 6, 0.88));
-  font-family: system-ui, 'Segoe UI', sans-serif; color: #ffe6e6; animation: modal-entra 0.6s ease-out;
+  padding: 16px; box-sizing: border-box; text-align: center;
+  background: radial-gradient(ellipse at center, rgba(200, 90, 120, 0.25), rgba(90, 40, 70, 0.55));
+  backdrop-filter: blur(4px);
+  font-family: var(--jogo); color: var(--tinta); animation: modal-entra 0.6s ease-out;
 }
 .morte-fundo[hidden] { display: none; }
-.morte-fundo h2 { margin: 0; font-size: clamp(2.2rem, 8vw, 4rem); text-shadow: 0 4px 24px rgba(0,0,0,0.6); }
-.morte-fundo p { margin: 0; color: #f0b9b9; }
-.morte-fundo .btn { min-width: 220px; min-height: 48px; font-size: 1.05rem; }
+.morte {
+  display: grid; gap: 14px; justify-items: center; width: min(380px, 100%); box-sizing: border-box; padding: 26px 22px 28px;
+  border-radius: 24px; background: var(--painel);
+  box-shadow: 0 8px 0 var(--painel-borda), 0 22px 40px rgba(40, 25, 10, 0.35); animation: cartao-entra 0.3s ease-out;
+}
+.morte-fundo h2 { margin: 0; font: 700 clamp(1.9rem, 7vw, 2.6rem)/1.05 var(--display); color: var(--titulo); }
+.morte-fundo p { margin: 0; font-weight: 700; color: var(--tinta); }
+.morte-fundo .btn { min-width: 220px; min-height: 52px; font: 700 1.2rem var(--display); }
 `;
 
 const DESENHOS: Record<string, { cores: Record<string, string>; linhas: string[] }> = {
@@ -221,7 +228,13 @@ export function criarTelaMorte(raiz: HTMLElement, renascer: () => void) {
     delete document.body.dataset.overlay;
     renascer();
   });
-  f.append(h, p, b);
+  // cartão creme no meio, como os outros painéis
+  const cartao = document.createElement('div');
+  cartao.className = 'morte';
+  cartao.setAttribute('role', 'dialog');
+  cartao.setAttribute('aria-label', h.textContent);
+  cartao.append(h, p, b);
+  f.append(cartao);
   f.addEventListener('click', (e) => e.stopPropagation());
   raiz.appendChild(f);
   return {

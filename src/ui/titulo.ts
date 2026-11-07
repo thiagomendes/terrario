@@ -194,28 +194,15 @@ export function desenharPrevia(
 
 export const CSS_TITULO = `
 body.tela-titulo #app > :not(.entrada):not(canvas):not(.modal-fundo):not(.pausa-fundo) { visibility: hidden !important; }
+/* o mundo atrás fica claro como no esboço: só um véu leve embaixo, para o rodapé ler bem */
 .entrada {
   position: fixed; inset: 0; z-index: 5; overflow-y: auto; overflow-x: hidden; box-sizing: border-box;
-  cursor: pointer; color: #f4efe6; font-family: system-ui, 'Segoe UI', sans-serif;
-  background:
-    radial-gradient(ellipse 70% 60% at 50% 42%, rgba(10, 8, 24, 0) 30%, rgba(10, 8, 24, 0.55) 100%),
-    linear-gradient(180deg, rgba(12, 8, 30, 0.35), rgba(12, 8, 30, 0) 30%, rgba(12, 8, 30, 0) 62%, rgba(8, 6, 18, 0.78));
+  cursor: pointer; color: #fff; font-family: var(--jogo);
+  background: linear-gradient(180deg, rgba(120, 170, 230, 0.12), rgba(0, 0, 0, 0) 35%, rgba(0, 0, 0, 0) 75%, rgba(40, 30, 60, 0.35));
 }
 .entrada[hidden] { display: none; }
-.entrada .bruma-titulo { position: fixed; inset: auto 0 0 0; height: 40vh; pointer-events: none; overflow: hidden; }
-.entrada .bruma-titulo i {
-  position: absolute; bottom: -8vh; width: 60vw; height: 26vh; border-radius: 50%;
-  background: radial-gradient(closest-side, var(--bruma-tema, rgba(214, 196, 255, 0.22)), transparent);
-  animation: bruma-deriva 26s linear infinite;
-}
-.entrada .bruma-titulo i:nth-child(2) { left: 30vw; bottom: -4vh; animation-duration: 34s; animation-delay: -12s; opacity: 0.8; }
-.entrada .bruma-titulo i:nth-child(3) { left: -20vw; bottom: 2vh; animation-duration: 40s; animation-delay: -25s; opacity: 0.6; }
-@keyframes bruma-deriva { from { transform: translateX(-30vw); } to { transform: translateX(110vw); } }
-.entrada .faisca {
-  position: fixed; width: 4px; height: 4px; background: var(--faisca-tema, #ffe7a0); box-shadow: 0 0 8px 2px var(--faisca-brilho, rgba(255, 210, 120, 0.7));
-  pointer-events: none; animation: faisca-sobe linear infinite; opacity: 0;
-}
-@keyframes faisca-sobe { 0% { transform: translateY(0); opacity: 0; } 15% { opacity: 0.9; } 100% { transform: translateY(-46vh); opacity: 0; } }
+/* bruma e faíscas eram do visual antigo: o céu de brinquedo fica limpo */
+.entrada .bruma-titulo, .entrada .faisca { display: none; }
 
 .titulo-menu {
   position: relative; min-height: 100%; box-sizing: border-box;
@@ -223,58 +210,44 @@ body.tela-titulo #app > :not(.entrada):not(canvas):not(.modal-fundo):not(.pausa-
   gap: clamp(10px, 2.2vh, 22px); padding: clamp(16px, 5vh, 56px) 16px clamp(64px, 10vh, 96px);
 }
 .titulo-menu[hidden] { display: none; }
-.logo-titulo {
-  display: block; width: min(680px, 88vw); height: auto; image-rendering: pixelated;
-  filter: drop-shadow(0 0 28px var(--brilho-logo, rgba(255, 186, 90, 0.42))) drop-shadow(0 10px 18px rgba(0, 0, 0, 0.5));
-  animation: logo-flutua 6s ease-in-out infinite;
-}
+/* o logo é o próprio título em letras gordinhas; o canvas antigo fica guardado */
+.logo-titulo { display: none; }
 @keyframes logo-flutua { 50% { transform: translateY(-6px); } }
-.titulo-oculto { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.titulo-oculto {
+  margin: 0; white-space: nowrap;
+  font: 700 clamp(3.2rem, 13vw, 8.6rem)/0.95 var(--display); letter-spacing: 0.02em;
+  background: linear-gradient(to bottom, #fff3b0 0%, #ffd24a 35%, #ff9b2f 75%, #f0742a 100%);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+  filter: drop-shadow(0 4px 0 #b8541b) drop-shadow(0 6px 0 #8a3c13) drop-shadow(0 14px 12px rgba(60, 25, 5, 0.35));
+  animation: logo-flutua 5s ease-in-out infinite;
+}
 .lema {
   margin: -4px 0 clamp(4px, 2vh, 18px); max-width: 92vw; text-align: center;
-  font-size: clamp(0.92rem, 2.6vw, 1.12rem); font-weight: 600; letter-spacing: 0.06em; color: #efe3ff;
-  text-shadow: 2px 2px 0 rgba(20, 10, 40, 0.75);
+  font-size: clamp(0.95rem, 2.6vw, 1.15rem); font-weight: 800; letter-spacing: 0.01em; color: #fff;
+  text-shadow: 0 2px 0 rgba(40, 60, 90, 0.45), 0 0 12px rgba(40, 60, 90, 0.35);
 }
-.menu-titulo { display: grid; gap: 12px; width: min(400px, 88vw); }
+.menu-titulo { display: grid; gap: 14px; width: min(400px, 88vw); }
 .menu-titulo .dupla { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+/* a peça de cada botão vem de brinquedo.ts; aqui só a medida */
 .botao-jogo {
-  --textura: none;
-  position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
-  min-height: 52px; padding: 8px 18px; box-sizing: border-box; cursor: pointer;
-  border: 3px solid #120e16; border-radius: 0; color: #f6f2ea;
-  font: 800 1.08rem/1.1 system-ui, 'Segoe UI', sans-serif; letter-spacing: 0.05em;
-  text-shadow: 2px 2px 0 #2a2630;
-  background: linear-gradient(rgba(255, 255, 255, 0.04), rgba(0, 0, 0, 0.26)), var(--textura) 0 0 / 48px 48px;
-  image-rendering: pixelated;
-  box-shadow: inset 3px 3px 0 rgba(255, 255, 255, 0.3), inset -3px -4px 0 rgba(0, 0, 0, 0.38),
-    0 5px 0 #0b080e, 0 10px 22px rgba(0, 0, 0, 0.45);
-  transition: transform 0.08s ease, filter 0.12s ease, color 0.12s ease;
+  position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+  min-height: 54px; padding: 8px 18px; box-sizing: border-box; cursor: pointer;
+  font-size: 1.08rem; line-height: 1.1;
 }
-.botao-jogo:hover, .botao-jogo:focus-visible { filter: brightness(1.16); color: #ffe7a3; outline: none; }
-.botao-jogo:focus-visible { box-shadow: inset 3px 3px 0 rgba(255, 255, 255, 0.3), inset -3px -4px 0 rgba(0, 0, 0, 0.38), 0 5px 0 #0b080e, 0 0 0 3px #ffd98f; }
-.botao-jogo:active { transform: translateY(4px); box-shadow: inset 3px 3px 0 rgba(255, 255, 255, 0.24), inset -3px -4px 0 rgba(0, 0, 0, 0.4), 0 1px 0 #0b080e; }
-.botao-jogo .sub { font-size: 0.74rem; font-weight: 700; letter-spacing: 0.08em; opacity: 0.86; text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.7); }
-.botao-jogo.primario {
-  min-height: 74px; font-size: 1.55rem; letter-spacing: 0.12em; color: #fff8e4; text-shadow: 3px 3px 0 #6a3208;
-  background: linear-gradient(rgba(255, 214, 120, 0.62), rgba(214, 112, 26, 0.72)), var(--textura) 0 0 / 48px 48px;
-  box-shadow: inset 3px 3px 0 rgba(255, 246, 210, 0.55), inset -3px -4px 0 rgba(110, 46, 6, 0.55),
-    0 5px 0 #0b080e, 0 0 34px rgba(255, 180, 80, 0.42), 0 10px 22px rgba(0, 0, 0, 0.45);
-  animation: brilho-jogar 2.8s ease-in-out infinite;
-}
-.botao-jogo.primario:hover { color: #fff; filter: brightness(1.1); }
-@keyframes brilho-jogar { 50% { box-shadow: inset 3px 3px 0 rgba(255, 246, 210, 0.55), inset -3px -4px 0 rgba(110, 46, 6, 0.55), 0 5px 0 #0b080e, 0 0 52px rgba(255, 196, 100, 0.7), 0 10px 22px rgba(0, 0, 0, 0.45); } }
-.botao-jogo .icone { font-size: 1.1em; filter: drop-shadow(1px 1px 0 rgba(0, 0, 0, 0.6)); }
+.botao-jogo .sub { font-size: 0.76rem; font-weight: 700; color: var(--tinta); opacity: 0.75; }
+.botao-jogo.primario { min-height: 76px; font: 700 1.7rem/1.05 var(--display); letter-spacing: 0.02em; }
+.botao-jogo.primario .sub { font-family: var(--jogo); font-size: 0.8rem; }
+.botao-jogo .icone { font-size: 1.1em; }
 .botao-jogo .linha { display: inline-flex; align-items: center; gap: 10px; white-space: nowrap; }
 @media (max-width: 420px) { .menu-titulo .dupla .botao-jogo { font-size: 0.98rem; padding: 8px 10px; } .menu-titulo .dupla .linha { gap: 6px; } }
 .rodape-titulo {
   position: fixed; left: 0; right: 0; bottom: 0; display: flex; justify-content: space-between; align-items: flex-end; gap: 12px;
-  padding: 10px 14px; pointer-events: none; font-size: 0.78rem; color: rgba(240, 232, 255, 0.72); text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.7);
+  padding: 10px 14px; pointer-events: none; font-size: 0.8rem; font-weight: 700; color: #fff; text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
 }
 .rodape-titulo ul { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px 12px; margin: 0; padding: 0; list-style: none; }
 .rodape-titulo kbd {
-  padding: 1px 6px; border: 2px solid #120e16; background: #3a3540; color: #ffe7a3;
-  box-shadow: inset 1px 1px 0 rgba(255, 255, 255, 0.25), inset -1px -2px 0 rgba(0, 0, 0, 0.4);
-  font: 700 0.72rem system-ui, sans-serif;
+  padding: 1px 7px; border-radius: 7px; background: rgba(255, 255, 255, 0.9); color: var(--tinta);
+  box-shadow: 0 2px 0 rgba(0, 0, 0, 0.2); text-shadow: none; font: 800 0.72rem var(--jogo);
 }
 @media (max-width: 720px) { .rodape-titulo ul { display: none; } }
 
@@ -290,42 +263,22 @@ body.tela-titulo #app > :not(.entrada):not(canvas):not(.modal-fundo):not(.pausa-
 .palco-personagem .pedestal { position: relative; display: grid; place-items: end center; width: min(300px, 62vw); aspect-ratio: 3 / 4; }
 .palco-personagem .pedestal::before {
   content: ''; position: absolute; left: 6%; right: 6%; bottom: 0; height: 18%; border-radius: 50%;
-  background: radial-gradient(closest-side, rgba(255, 210, 130, 0.45), rgba(255, 210, 130, 0));
+  background: radial-gradient(closest-side, rgba(255, 246, 228, 0.6), rgba(255, 246, 228, 0));
 }
 .palco-personagem .pedestal::after {
-  content: ''; position: absolute; left: 24%; right: 24%; bottom: 3%; height: 5%; border-radius: 50%; background: rgba(10, 6, 20, 0.55);
+  content: ''; position: absolute; left: 24%; right: 24%; bottom: 3%; height: 5%; border-radius: 50%; background: rgba(40, 30, 20, 0.35);
 }
 .palco-personagem canvas {
-  position: relative; z-index: 1; height: 92%; width: auto; image-rendering: pixelated;
-  filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.4)); animation: previa-respira 3.2s ease-in-out infinite; transform-origin: bottom center;
+  position: relative; z-index: 1; height: 92%; width: auto;
+  filter: drop-shadow(0 6px 10px rgba(40, 25, 10, 0.3)); animation: previa-respira 3.2s ease-in-out infinite; transform-origin: bottom center;
 }
 @keyframes previa-respira { 50% { transform: scaleY(1.012) translateY(-2px); } }
 .palco-personagem .nome-previa {
-  font: 800 1.3rem system-ui, sans-serif; letter-spacing: 0.06em; color: #fff3cf; text-shadow: 2px 2px 0 #3a1c06;
+  padding: 4px 16px; border-radius: 999px; background: rgba(255, 250, 240, 0.92); color: var(--tinta);
+  font: 700 1.3rem var(--display); box-shadow: 0 3px 0 rgba(150, 110, 60, 0.35);
 }
+.palco-personagem .nome-previa:empty { display: none; }
 .voltar-titulo { justify-self: start; }
-.tela-personagem .painel-personagem {
-  border: 3px solid #120e16; border-radius: 0;
-  background: linear-gradient(180deg, rgba(36, 30, 48, 0.94), rgba(22, 18, 30, 0.95));
-  box-shadow: inset 3px 3px 0 rgba(255, 255, 255, 0.08), inset -3px -3px 0 rgba(0, 0, 0, 0.4), 0 18px 48px rgba(0, 0, 0, 0.5);
-  max-height: none;
-}
+.tela-personagem .painel-personagem { max-height: none; }
 @media (min-width: 900px) { .tela-personagem .painel-personagem { max-height: min(88vh, 780px); min-height: min(470px, 88vh); } }
-.tela-personagem .painel-personagem h2 { font-size: 1.3rem; letter-spacing: 0.05em; color: #ffd98f; text-shadow: 2px 2px 0 #2a1606; }
-.tela-personagem .painel-personagem button {
-  border: 2px solid #120e16; border-radius: 0; background: #3a3542;
-  box-shadow: inset 2px 2px 0 rgba(255, 255, 255, 0.16), inset -2px -3px 0 rgba(0, 0, 0, 0.35);
-  text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.6);
-}
-.tela-personagem .painel-personagem button:hover { background: #4a4454; }
-.tela-personagem .painel-personagem button[aria-pressed='true'] {
-  background: #8a5a1c; color: #fff4d6; border-color: #120e16;
-  box-shadow: inset 2px 2px 0 rgba(255, 230, 170, 0.45), inset -2px -3px 0 rgba(60, 26, 4, 0.5), 0 0 0 2px #ffd98f;
-}
-.tela-personagem .painel-personagem input { border: 2px solid #120e16; border-radius: 0; background: #17131d; }
-.tela-personagem .painel-personagem .jogar {
-  min-height: 52px; font-size: 1.15rem; letter-spacing: 0.08em; color: #fff8e4; text-shadow: 2px 2px 0 #6a3208;
-  background: linear-gradient(#ffcf7a, #e0892e);
-  box-shadow: inset 2px 2px 0 rgba(255, 246, 210, 0.6), inset -2px -3px 0 rgba(110, 46, 6, 0.55);
-}
 `;

@@ -32,72 +32,98 @@ export const CSS_PAINEL = `
   overflow-y: auto;
   overflow-x: hidden;
   box-sizing: border-box;
-  padding: 14px 16px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 16px;
-  background: linear-gradient(180deg, rgba(30, 32, 46, 0.9), rgba(18, 19, 28, 0.92));
-  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.45);
+  padding: 16px 18px 0;
+  border: 0;
+  border-radius: 24px;
+  background: var(--painel);
+  color: var(--tinta);
+  box-shadow: 0 8px 0 var(--painel-borda), 0 22px 40px rgba(40, 25, 10, 0.35);
   text-align: left;
   cursor: default;
   justify-self: center;
   display: grid;
   align-content: start;
-  gap: 12px;
+  gap: 14px;
 }
-.painel-personagem .topo-painel { display: grid; grid-template-columns: 1fr auto; gap: 8px; }
+.painel-personagem .topo-painel { display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: center; }
 .painel-personagem button,
-.painel-personagem input {
-  font: 600 0.9rem system-ui, sans-serif;
-  color: #ece6da;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 9px;
-  background: rgba(255, 255, 255, 0.05);
+.painel-personagem input { font: 800 0.92rem var(--jogo); color: var(--tinta); }
+/* cada botão do editor é uma peça creme */
+.painel-personagem button {
+  cursor: pointer; border: 0; border-radius: 14px;
+  background: linear-gradient(to bottom, #fffdf6, var(--creme) 50%, #f6ead2);
+  box-shadow: 0 4px 0 var(--creme-fundo), 0 7px 12px rgba(60, 35, 10, 0.18), inset 0 2px 0 rgba(255, 255, 255, 0.8);
+  transition: transform 0.08s ease, box-shadow 0.08s ease, filter 0.1s ease;
 }
-.painel-personagem button { cursor: pointer; transition: background 0.12s ease, transform 0.08s ease; }
-.painel-personagem button:hover { background: rgba(255, 255, 255, 0.12); }
-.painel-personagem button:active { transform: translateY(1px); }
+.painel-personagem button:hover { filter: brightness(1.03); }
+.painel-personagem button:active {
+  transform: translateY(3px);
+  box-shadow: 0 1px 0 var(--creme-fundo), 0 3px 6px rgba(60, 35, 10, 0.18), inset 0 2px 0 rgba(255, 255, 255, 0.8);
+}
 .painel-personagem button:focus-visible,
-.painel-personagem input:focus-visible { outline: 2px solid #ffd98f; outline-offset: 2px; }
-.painel-personagem input { width: 100%; box-sizing: border-box; min-height: 44px; padding: 8px 12px; background: rgba(0, 0, 0, 0.25); font-size: 1rem; }
-.painel-personagem .dado { width: 48px; min-height: 44px; font-size: 1.4rem; padding: 0; }
-.painel-personagem .abas { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
-.painel-personagem .abas button { min-height: 48px; font-size: 1.45rem; padding: 0; }
-.painel-personagem .abas button[aria-selected='true'] { background: rgba(255, 196, 107, 0.22); border-color: #ffc46b; }
-.painel-personagem [data-aba-painel] { display: grid; gap: 12px; }
+.painel-personagem input:focus-visible { outline: 3px solid var(--azul); outline-offset: 2px; }
+.painel-personagem button[aria-pressed='true'],
+.painel-personagem .abas button[aria-selected='true'] {
+  background: linear-gradient(to bottom, #ffe39a, var(--amarela) 55%, #f5b42e);
+  box-shadow: 0 4px 0 var(--amarela-fundo), 0 7px 12px rgba(60, 35, 10, 0.2), inset 0 2px 0 rgba(255, 255, 255, 0.6);
+}
+.painel-personagem input {
+  width: 100%; box-sizing: border-box; min-height: 46px; padding: 8px 14px; font-size: 1rem; font-weight: 700;
+  border: 0; border-radius: 14px; background: var(--poco); box-shadow: inset 0 3px 0 rgba(120, 80, 30, 0.12);
+}
+.painel-personagem input::placeholder { color: var(--tinta-suave); }
+.painel-personagem .dado { width: 50px; min-height: 46px; font-size: 1.4rem; padding: 0; display: grid; place-items: center; }
+.painel-personagem .abas {
+  display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; padding: 6px; border-radius: 18px;
+  background: var(--poco); box-shadow: inset 0 3px 0 rgba(120, 80, 30, 0.12);
+}
+.painel-personagem .abas button { min-height: 46px; font-size: 1.45rem; padding: 0; display: grid; place-items: center; }
+.painel-personagem .abas button[aria-selected='false'] { background: transparent; box-shadow: none; }
+.painel-personagem .abas button[aria-selected='false']:hover { background: rgba(255, 255, 255, 0.55); }
+.painel-personagem [data-aba-painel] { display: grid; gap: 14px; }
 .painel-personagem [data-aba-painel][hidden] { display: none; }
-.painel-personagem .miniaturas { display: grid; grid-template-columns: repeat(auto-fill, minmax(78px, 1fr)); gap: 8px; }
+.painel-personagem .miniaturas { display: grid; grid-template-columns: repeat(auto-fill, minmax(78px, 1fr)); gap: 10px; padding-bottom: 4px; }
 .painel-personagem .miniaturas.largas { grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); }
 .painel-personagem button.miniatura {
-  display: grid; place-items: end center; padding: 6px 4px 4px; aspect-ratio: 1; min-height: 0;
-  background-image: radial-gradient(ellipse at 50% 90%, rgba(255, 210, 130, 0.18), rgba(0, 0, 0, 0) 70%);
+  display: grid; place-items: end center; padding: 6px 4px 4px; aspect-ratio: 1; min-height: 0; overflow: hidden;
+  background: radial-gradient(ellipse at 50% 88%, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0) 60%), var(--poco);
+  box-shadow: inset 0 3px 0 rgba(120, 80, 30, 0.14);
+}
+.painel-personagem button.miniatura:active { transform: none; box-shadow: inset 0 3px 0 rgba(120, 80, 30, 0.2); }
+.painel-personagem button.miniatura[aria-pressed='true'] {
+  background: radial-gradient(ellipse at 50% 88%, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0) 60%), #fff3d0;
+  box-shadow: inset 0 0 0 3px var(--amarela), 0 4px 0 var(--amarela-fundo);
 }
 .painel-personagem .largas button.miniatura { aspect-ratio: 3 / 4; }
-.painel-personagem button.miniatura canvas { width: auto; height: 100%; max-width: 100%; object-fit: contain; image-rendering: pixelated; }
-.painel-personagem .amostras { display: flex; flex-wrap: wrap; gap: 8px; padding-top: 10px; border-top: 1px dashed rgba(255, 255, 255, 0.14); }
+.painel-personagem button.miniatura canvas { width: auto; height: 100%; max-width: 100%; object-fit: contain; }
+.painel-personagem .amostras { display: flex; flex-wrap: wrap; gap: 10px; padding-top: 12px; border-top: 2px dashed var(--painel-borda); }
 .painel-personagem button.amostra {
-  width: 38px; min-height: 38px; height: 38px; padding: 0;
-  background: var(--cor) !important;
-  box-shadow: inset 2px 2px 0 rgba(255, 255, 255, 0.28), inset -2px -3px 0 rgba(0, 0, 0, 0.35);
+  width: 40px; min-height: 40px; height: 40px; padding: 0; border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, rgba(255, 255, 255, 0.45), rgba(255, 255, 255, 0) 45%), var(--cor) !important;
+  box-shadow: 0 3px 0 rgba(60, 35, 10, 0.28), inset 0 -3px 0 rgba(0, 0, 0, 0.15);
 }
 @media (pointer: coarse) { .painel-personagem button.amostra { width: 44px; height: 44px; min-height: 44px; } }
 .painel-personagem button.amostra[aria-pressed='true'] {
-  outline: 3px solid #ffd98f; outline-offset: 2px;
-  box-shadow: inset 2px 2px 0 rgba(255, 255, 255, 0.28), inset -2px -3px 0 rgba(0, 0, 0, 0.35);
+  outline: 3px solid var(--amarela-fundo); outline-offset: 3px;
+  box-shadow: 0 3px 0 rgba(60, 35, 10, 0.28), inset 0 -3px 0 rgba(0, 0, 0, 0.15);
 }
+/* Jogar fica preso embaixo; sombras creme em volta tampam as miniaturas que rolam por trás */
 .painel-personagem .jogar {
   position: sticky;
-  bottom: 0;
+  bottom: 16px;
   z-index: 1;
-  box-shadow: 0 -10px 18px rgba(18, 16, 26, 0.9);
   width: 100%;
-  min-height: 48px;
-  border-color: #ffc46b;
-  background: linear-gradient(180deg, #ffcf7a, #f0a94a);
-  color: #2a1a08;
-  font-size: 1.05rem;
-  font-weight: 800;
+  min-height: 52px;
+  margin: 2px 0 16px;
+  font: 700 1.2rem var(--display);
+  background: linear-gradient(to bottom, #ffe39a, var(--amarela) 55%, #f5b42e);
+  box-shadow: 0 5px 0 var(--amarela-fundo), inset 0 2px 0 rgba(255, 255, 255, 0.6),
+    0 24px 0 18px var(--painel), 0 -12px 0 18px var(--painel);
 }
-.painel-personagem .jogar:hover { background: linear-gradient(180deg, #ffd98f, #f5b45a); }
+.painel-personagem .jogar:active {
+  box-shadow: 0 1px 0 var(--amarela-fundo), inset 0 2px 0 rgba(255, 255, 255, 0.6),
+    0 20px 0 18px var(--painel), 0 -16px 0 18px var(--painel);
+}
 `;
 
 const NOMES_ROSTO = [

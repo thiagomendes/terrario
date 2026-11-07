@@ -34,14 +34,19 @@ function estilo(): void {
     `
 .carregando-nuvem {
   position: fixed; inset: 0; z-index: 80; display: grid; place-items: center; padding: 24px;
-  background: radial-gradient(circle at 50% 40%, #2a2238, #0b0910); color: #fff4d8;
-  font: 600 1.1rem system-ui, sans-serif; text-align: center;
+  background: linear-gradient(180deg, #a9d4ff, #dcefff 60%, #fff4dc); color: #3b2a1e;
+  font: 700 1.05rem var(--jogo, system-ui, sans-serif); text-align: center;
 }
-.carregando-nuvem .cartao { display: grid; gap: 14px; justify-items: center; max-width: 420px; }
-.carregando-nuvem h2 { margin: 0; font-size: 1.6rem; color: #ffd98f; }
-.carregando-nuvem .barra { width: 260px; height: 12px; border-radius: 999px; background: #241d2e; overflow: hidden; }
-.carregando-nuvem .barra i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, #ffd98f, #e6a64a); transition: width 0.4s ease; }
-.carregando-nuvem .btn { min-height: 48px; padding: 0 20px; font-weight: 800; }
+/* cartão creme de brinquedo; as cores vão escritas porque esta tela pode vir antes do resto */
+.carregando-nuvem .cartao {
+  display: grid; gap: 14px; justify-items: center; width: min(420px, 100%); box-sizing: border-box; padding: 26px 22px 28px;
+  border-radius: 24px; background: #fffaf0; box-shadow: 0 8px 0 #f0d9b0, 0 22px 40px rgba(40, 25, 10, 0.25);
+}
+.carregando-nuvem h2 { margin: 0; font: 700 1.6rem/1.1 var(--display, system-ui, sans-serif); color: #b5531a; }
+.carregando-nuvem p { margin: 0; color: #3b2a1e; }
+.carregando-nuvem .barra { width: min(260px, 100%); height: 14px; border-radius: 999px; background: #f3e6cc; box-shadow: inset 0 3px 0 rgba(120, 80, 30, 0.14); overflow: hidden; }
+.carregando-nuvem .barra i { display: block; height: 100%; width: 0; border-radius: 999px; background: linear-gradient(90deg, #ffd45a, #ff9b2f); transition: width 0.4s ease; }
+.carregando-nuvem .btn { min-height: 50px; padding: 0 20px; }
 `;
   document.head.appendChild(e);
 }

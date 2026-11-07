@@ -12,51 +12,74 @@ export const CSS_MAPA = `
   transform: scale(var(--escala-ui, 1)); transform-origin: top right;
 }
 .minimapa canvas { width: 100%; height: 100%; }
-.minimapa .norte { position: absolute; top: 3px; left: 50%; transform: translateX(-50%); font: 800 0.62rem system-ui; color: #fff; background: #ef5a5a; border-radius: 8px; padding: 0 5px; line-height: 1.35; box-shadow: 0 1px 0 #b83c3c; }
+.minimapa .norte { position: absolute; top: 3px; left: 50%; transform: translateX(-50%); font: 900 0.62rem var(--jogo); color: #fff; background: #e0484a; border-radius: 8px; padding: 0 5px; line-height: 1.35; box-shadow: 0 1px 0 #a8302f; }
+/* bússola: régua creme de cantos redondos, letras de tinta */
 .bussola {
   position: fixed; top: 10px; left: 50%; transform: translateX(-50%); z-index: 7; pointer-events: none;
-  width: min(420px, 60vw); height: 26px; overflow: hidden; border-radius: 13px;
-  background: linear-gradient(90deg, transparent, rgba(10,12,20,0.55) 15%, rgba(10,12,20,0.55) 85%, transparent);
-  font: 800 0.75rem system-ui, sans-serif; color: #ece6da;
+  width: min(420px, 60vw); height: 28px; overflow: hidden; border-radius: 14px;
+  background: rgba(255, 250, 240, 0.88); box-shadow: 0 3px 0 rgba(150, 110, 60, 0.35);
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
+  font: 900 0.76rem var(--jogo); color: var(--tinta);
 }
-.bussola span { position: absolute; top: 5px; transform: translateX(-50%); white-space: nowrap; text-shadow: 0 1px 2px #000; }
-.bussola .marcador { top: 8px; width: 9px; height: 9px; transform: translateX(-50%) rotate(45deg); border: 1px solid rgba(0,0,0,0.5); }
-.bussola::after { content: ''; position: absolute; left: 50%; top: 0; bottom: 0; width: 2px; background: #ffd98f; transform: translateX(-50%); opacity: 0.8; }
+.bussola span { position: absolute; top: 5px; transform: translateX(-50%); white-space: nowrap; }
+.bussola .marcador { top: 9px; width: 10px; height: 10px; border-radius: 50%; transform: translateX(-50%); box-shadow: 0 1px 0 rgba(60, 35, 10, 0.4); }
+.bussola::after { content: ''; position: absolute; left: 50%; top: 3px; bottom: 3px; width: 3px; border-radius: 2px; background: var(--amarela-fundo); transform: translateX(-50%); }
 body.modo-foto .bussola { display: none; }
 @media (max-width: 560px) {
   .bussola { display: none; }
   .minimapa { width: 104px; height: 104px; top: 40px; }
 }
 body:has(.entrada:not([hidden])) .minimapa, body:has(.entrada:not([hidden])) .bussola { display: none; }
-.mapa-mundo { position: fixed; inset: 0; z-index: 32; background: rgba(6,8,14,0.9); display: grid; grid-template-rows: auto 1fr; font-family: system-ui, sans-serif; color: #ece6da; }
+/* mapa grande: painel creme quase da tela toda, o mapa num poço de cantos redondos */
+.mapa-mundo {
+  position: fixed; inset: 0; z-index: 32; display: grid; grid-template-rows: auto 1fr; box-sizing: border-box;
+  padding: max(12px, env(safe-area-inset-top, 0px)) max(12px, env(safe-area-inset-right, 0px)) max(14px, env(safe-area-inset-bottom, 0px)) max(12px, env(safe-area-inset-left, 0px));
+  background: rgba(60, 45, 80, 0.32); backdrop-filter: blur(6px);
+  font-family: var(--jogo); color: var(--tinta);
+}
 .mapa-mundo[hidden] { display: none; }
-.mapa-mundo { padding-top: env(safe-area-inset-top, 0px); }
+.mapa-mundo::before {
+  content: ''; position: absolute; z-index: -1;
+  inset: max(12px, env(safe-area-inset-top, 0px)) max(12px, env(safe-area-inset-right, 0px)) max(14px, env(safe-area-inset-bottom, 0px)) max(12px, env(safe-area-inset-left, 0px));
+  border-radius: 24px; background: var(--painel); box-shadow: 0 8px 0 var(--painel-borda), 0 22px 40px rgba(40, 25, 10, 0.35);
+}
+.mapa-mundo { isolation: isolate; }
+.mapa-mundo > .botao-fechar { top: max(22px, calc(env(safe-area-inset-top, 0px) + 10px)); right: max(22px, calc(env(safe-area-inset-right, 0px) + 10px)); }
 /* o X fica no canto: o cabeçalho reserva o espaço dele */
-.mapa-mundo header { display: flex; align-items: center; gap: 12px; padding: 12px 64px 12px 16px; flex-wrap: wrap; }
-.mapa-mundo .area-mapa { position: relative; min-height: 0; }
-.mapa-mundo .zoom-mapa {
-  position: absolute; right: max(12px, env(safe-area-inset-right)); bottom: max(12px, env(safe-area-inset-bottom));
-  display: grid; gap: 8px;
+.mapa-mundo header { display: flex; align-items: center; gap: 10px 14px; padding: 14px 70px 12px 18px; flex-wrap: wrap; }
+.mapa-mundo .area-mapa {
+  position: relative; min-height: 0; margin: 0 12px 12px; border-radius: 18px; overflow: hidden;
+  background: #a9bbcf; box-shadow: inset 0 3px 0 rgba(60, 40, 20, 0.18);
 }
+.mapa-mundo .zoom-mapa { position: absolute; right: 12px; bottom: 14px; display: grid; gap: 12px; }
 .mapa-mundo .zoom-mapa button, .mapa-mundo .marcar-aqui {
-  display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-width: 44px; min-height: 44px;
-  padding: 0 10px; border: 2px solid #120e16; border-radius: 0; color: #f6f2ea; cursor: pointer;
-  background: #3a3542; box-shadow: inset 2px 2px 0 rgba(255, 255, 255, 0.18), inset -2px -3px 0 rgba(0, 0, 0, 0.4);
-  font: 700 0.85rem system-ui, sans-serif; touch-action: manipulation;
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-width: 46px; min-height: 44px;
+  padding: 0 12px; border: 0; border-radius: 14px; color: var(--tinta); cursor: pointer;
+  background: linear-gradient(to bottom, #fffdf6, var(--creme) 50%, #f6ead2);
+  box-shadow: 0 4px 0 var(--creme-fundo), 0 7px 12px rgba(60, 35, 10, 0.22), inset 0 2px 0 rgba(255, 255, 255, 0.8);
+  font: 800 0.88rem var(--jogo); touch-action: manipulation; transition: transform 0.08s, box-shadow 0.08s;
 }
-.mapa-mundo .zoom-mapa button:hover, .mapa-mundo .marcar-aqui:hover { background: #4a4454; color: #ffe7a3; }
-.mapa-mundo .zoom-mapa button:active, .mapa-mundo .marcar-aqui:active { transform: translateY(2px); }
-.mapa-mundo h2 { margin: 0; font-size: 1.1rem; color: #ffd98f; }
-.mapa-mundo .dica { color: #a59f93; font-size: 0.82rem; }
+.mapa-mundo .zoom-mapa button { font-size: 1.2rem; }
+.mapa-mundo .zoom-mapa button:hover, .mapa-mundo .marcar-aqui:hover { filter: brightness(1.03); }
+.mapa-mundo .zoom-mapa button:focus-visible, .mapa-mundo .marcar-aqui:focus-visible { outline: 3px solid var(--azul); outline-offset: 2px; }
+.mapa-mundo .zoom-mapa button:active, .mapa-mundo .marcar-aqui:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--creme-fundo); }
+.mapa-mundo .marcar-aqui[hidden] { display: none; }
+.mapa-mundo h2 { margin: 0; font: 700 1.4rem/1.1 var(--display); color: var(--titulo); }
+.mapa-mundo .dica { color: var(--tinta-suave); font-size: 0.84rem; font-weight: 700; }
 .mapa-mundo canvas { display: block; width: 100%; height: 100%; cursor: grab; }
-.mapa-mundo .lista-marcadores { display: flex; gap: 6px; flex-wrap: wrap; }
-.mapa-mundo .lista-marcadores button { font-size: 0.78rem; min-height: 30px; padding: 4px 10px; }
-@media (pointer: coarse) { .mapa-mundo .lista-marcadores button { min-height: 44px; } }
+.mapa-mundo .lista-marcadores { display: flex; gap: 8px; flex-wrap: wrap; }
+.mapa-mundo .lista-marcadores .btn { font-size: 0.8rem; min-height: 32px; padding: 4px 10px; margin-bottom: 4px; }
+.mapa-mundo .lista-marcadores .btn::before {
+  content: ''; width: 12px; height: 12px; border-radius: 50%; background: var(--cor-marcador, var(--amarela)); box-shadow: 0 1px 0 rgba(60, 35, 10, 0.4);
+}
+@media (pointer: coarse) { .mapa-mundo .lista-marcadores .btn { min-height: 44px; } }
 /* paisagem baixa no toque: a linha de ícones ocupa o alto à direita; minimapa menor abaixo dela */
 @media (orientation: landscape) and (max-height: 500px) {
   .minimapa { width: 96px; height: 96px; top: 40px; }
   body.toque-ativo .minimapa { width: 84px; height: 84px; top: calc(env(safe-area-inset-top, 0px) + 58px); right: max(10px, env(safe-area-inset-right)); }
   .bussola { width: min(300px, 36vw); }
+  .mapa-mundo header { padding-top: 8px; padding-bottom: 6px; }
 }
 `;
 
@@ -92,7 +115,7 @@ export function zoomPorPinca(zoomInicial: number, dist0: number, dist: number): 
 
 /** Cor do que ainda não foi visto ou carregado: névoa clara no minimapa, mais funda no grande. */
 const NEVOA = '#b9c8d8';
-const NEVOA_GRANDE = '#27303f';
+const NEVOA_GRANDE = '#a9bbcf';
 
 export function criarMapas(raiz: HTMLElement, fonte: FonteMapa) {
   const cache = new Map<string, HTMLCanvasElement>();
@@ -294,7 +317,7 @@ export function criarMapas(raiz: HTMLElement, fonte: FonteMapa) {
       ctx.strokeStyle = '#fff';
       ctx.stroke();
       ctx.fillStyle = '#14101c';
-      ctx.font = '800 8px system-ui, sans-serif';
+      ctx.font = '900 8px Nunito, system-ui, sans-serif';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.fillText((a.apelido[0] ?? '?').toUpperCase(), px, py + 0.5);
@@ -399,7 +422,7 @@ export function criarMapas(raiz: HTMLElement, fonte: FonteMapa) {
         const s = document.createElement('span');
         s.textContent = rot;
         s.style.left = '0';
-        if (rot.length === 1) s.style.color = rot === 'N' ? '#ff8a7a' : '#ffd98f';
+        if (rot.length === 1) s.style.color = rot === 'N' ? '#d0392b' : 'var(--titulo)';
         bussola.appendChild(s);
         rotulosBussola.push(s);
       }
@@ -465,9 +488,9 @@ export function criarMapas(raiz: HTMLElement, fonte: FonteMapa) {
       const b = document.createElement('button');
       b.type = 'button';
       b.className = 'btn';
-      b.append(icone('marcador'), ` ${m.nome} `, icone('fechar'));
-      b.style.color = '#ece6da';
-      b.style.borderColor = m.cor;
+      b.append(`${m.nome} `, icone('fechar'));
+      // a bolinha da cor do marcador vem antes do nome (CSS)
+      b.style.setProperty('--cor-marcador', m.cor);
       b.title = 'Remover marcador';
       b.addEventListener('click', () => {
         fonte.removerMarcador(m.id);

@@ -18,30 +18,34 @@ function iconeMissao(nome: string): HTMLElement {
 
 export const CSS_DIARIO = `
 .missao-hud {
-  position: absolute; top: 136px; left: 8px; max-width: 240px; padding: 6px 10px; border-radius: 10px;
-  background: rgba(10, 12, 20, 0.5); color: #ece6da; font: 600 0.78rem system-ui, sans-serif;
-  border-left: 3px solid #ffd98f; transform: scale(var(--escala-ui, 1)); transform-origin: top left;
+  position: absolute; top: 136px; left: 8px; max-width: 240px; padding: 7px 12px 8px; border-radius: 16px;
+  background: rgba(255, 250, 240, 0.9); color: var(--tinta); font: 800 0.78rem var(--jogo);
+  box-shadow: 0 3px 0 rgba(150, 110, 60, 0.35);
+  transform: scale(var(--escala-ui, 1)); transform-origin: top left;
 }
-.missao-hud small { display: block; color: #a59f93; font-weight: 500; margin-top: 2px; }
-.missao-hud .barra-progresso { height: 4px; border-radius: 2px; background: rgba(255,255,255,0.12); margin-top: 4px; overflow: hidden; }
-.missao-hud .barra-progresso i { display: block; height: 100%; background: linear-gradient(90deg, #ffd98f, #ffb35c); }
-.diario .capitulo { margin: 14px 0 6px; font-size: 0.74rem; text-transform: uppercase; letter-spacing: 0.1em; color: #a59f93; }
-.diario .missao { display: grid; grid-template-columns: 36px 1fr auto; gap: 10px; align-items: center; padding: 8px 10px; border-radius: 10px; background: rgba(255,255,255,0.03); margin-bottom: 4px; }
-.diario .missao.feita { background: rgba(255, 217, 143, 0.08); }
-.diario .missao .icone { font-size: 1.4rem; display: grid; place-items: center; filter: grayscale(0.6); }
-.diario .icone-item, .missao-hud .icone-item { width: 28px; height: 28px; image-rendering: pixelated; vertical-align: middle; }
+.missao-hud small { display: block; color: var(--tinta-suave); font-weight: 700; margin-top: 2px; }
+.missao-hud .barra-progresso { height: 7px; border-radius: 4px; background: #f0e2c8; margin-top: 5px; overflow: hidden; }
+.missao-hud .barra-progresso i { display: block; height: 100%; border-radius: 4px; background: linear-gradient(90deg, #8fdc6f, #5cbf4f); }
+.diario .capitulo { margin: 16px 0 8px; font-size: 0.74rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.1em; color: var(--tinta-suave); }
+.diario .missao {
+  display: grid; grid-template-columns: 40px 1fr auto; gap: 10px; align-items: center; padding: 8px 12px; margin-bottom: 6px;
+  border-radius: 16px; background: var(--poco); box-shadow: var(--sombra-poco);
+}
+.diario .missao.feita { background: #e4f6d8; box-shadow: inset 0 0 0 2px var(--verde); }
+.diario .missao .icone { font-size: 1.4rem; display: grid; place-items: center; filter: grayscale(0.5); opacity: 0.8; }
+.diario .icone-item, .missao-hud .icone-item { width: 28px; height: 28px; vertical-align: middle; }
 .missao-hud .icone-item { width: 18px; height: 18px; }
-.diario .missao.feita .icone { filter: none; }
-.diario .missao .nome { font-weight: 700; }
-.diario .missao small { color: #a59f93; }
-.diario .missao .estado { font: 700 0.8rem ui-monospace, monospace; color: #ffd98f; }
-.diario .resumo { color: #cfc8bb; margin: 0 0 6px; }
+.diario .missao.feita .icone { filter: none; opacity: 1; }
+.diario .missao .nome { font-weight: 800; color: var(--tinta); }
+.diario .missao small { font-weight: 600; color: var(--tinta-suave); }
+.diario .missao .estado { font: 800 0.82rem var(--jogo); color: var(--tinta); }
+.diario .missao.feita .estado { color: #24661c; }
+.diario .resumo { margin: 0 0 6px; font-weight: 700; color: var(--tinta); }
 /* paisagem baixa: cartão da missão compacto (não desce até o joystick) */
 @media (orientation: landscape) and (max-height: 500px) {
   .missao-hud { max-width: 200px; padding: 4px 8px; }
   .missao-hud small { display: none; }
 }
-.toast.conquista { border-color: rgba(255, 217, 143, 0.6); background: linear-gradient(90deg, rgba(60, 44, 12, 0.92), rgba(18, 16, 24, 0.92)); }
 `;
 
 export function criarUiDiario(

@@ -11,43 +11,46 @@ import type { EstadoConexao } from '../cliente/conexaoNuvem';
 
 export const CSS_AMIGOS = `
 .amigos .campo { display: grid; gap: 6px; margin: 0 0 14px; }
-.amigos label { font-weight: 700; color: #ffd98f; }
+.amigos label { font-weight: 800; color: var(--tinta); }
 .amigos input[type=text] {
-  font: 800 1.5rem ui-monospace, 'Cascadia Mono', monospace; letter-spacing: 0.06em; text-transform: uppercase;
-  padding: 12px 14px; min-height: 56px; border-radius: 10px; border: 2px solid #3a3346;
-  background: #120f18; color: #fff4d8; width: 100%; box-sizing: border-box;
+  font: 900 1.5rem var(--jogo); letter-spacing: 0.08em; text-transform: uppercase;
+  padding: 12px 14px; min-height: 56px; border-radius: 16px; border: 0;
+  background: var(--poco); color: var(--tinta); width: 100%; box-sizing: border-box; box-shadow: var(--sombra-poco);
 }
-.amigos input.apelido { text-transform: none; font: 700 1.2rem system-ui, sans-serif; letter-spacing: 0; }
-.amigos input:focus-visible { outline: 3px solid #ffd98f; outline-offset: 2px; }
-.amigos .erro { min-height: 1.4em; color: #ffb4a8; font-weight: 700; }
-.amigos .dica { color: #cfc6dc; margin: 0 0 12px; line-height: 1.45; }
-.amigos .acoes { display: flex; flex-wrap: wrap; gap: 10px; margin: 8px 0 4px; }
-.amigos .acoes .btn { min-height: 48px; padding: 0 18px; font-weight: 800; }
-.amigos .codigo { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: center; margin: 4px 0 12px; }
+.amigos input[type=text]::placeholder { color: var(--tinta-suave); letter-spacing: 0.04em; }
+.amigos input.apelido { text-transform: none; font: 800 1.2rem var(--jogo); letter-spacing: 0; }
+.amigos input:focus-visible { outline: 3px solid var(--azul); outline-offset: 2px; }
+.amigos .erro { min-height: 1.4em; color: var(--vermelha); font-weight: 800; }
+.amigos .dica { color: var(--tinta-suave); font-weight: 600; margin: 0 0 12px; line-height: 1.45; }
+.amigos .acoes { display: flex; flex-wrap: wrap; gap: 12px; margin: 8px 0 4px; }
+.amigos .acoes .btn { min-height: 50px; padding: 0 20px; }
+/* código do mundo: cada pedaço é uma peça amarela */
+.amigos .codigo { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: center; margin: 4px 0 16px; }
 .amigos .peca {
-  font: 900 clamp(1.4rem, 5vw, 2.2rem) ui-monospace, monospace; letter-spacing: 0.05em; color: #2a1606;
-  background: linear-gradient(#ffd98f, #e6a64a); padding: 10px 14px; border-radius: 10px;
-  box-shadow: inset 0 -4px 0 rgba(0,0,0,0.25), 0 3px 0 #0b080e;
+  font: 700 clamp(1.4rem, 5vw, 2.2rem) var(--display); letter-spacing: 0.06em; color: var(--tinta);
+  background: linear-gradient(to bottom, #ffe39a, var(--amarela) 55%, #f5b42e); padding: 8px 14px; border-radius: 14px;
+  box-shadow: 0 5px 0 var(--amarela-fundo), 0 9px 14px rgba(60, 35, 10, 0.2), inset 0 2px 0 rgba(255, 255, 255, 0.6);
 }
-.amigos .ponto { font-size: 1.6rem; color: #cfc6dc; }
-.amigos .qr { display: grid; justify-items: center; gap: 4px; margin: 6px 0 14px; }
-.amigos .qr img { width: 168px; height: 168px; image-rendering: pixelated; background: #fff; padding: 8px; border-radius: 10px; }
-.amigos .qr small { color: #cfc6dc; }
-.amigos .lista { list-style: none; margin: 0 0 12px; padding: 0; display: grid; gap: 6px; }
-.amigos .lista li { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 10px; background: rgba(255,255,255,0.05); }
-.amigos .lista .nome { flex: 1; font-weight: 700; }
-.amigos .lista .tag { font-size: 0.8rem; color: #2a1606; background: #ffd98f; border-radius: 999px; padding: 2px 8px; font-weight: 800; }
-.amigos .chave { display: flex; align-items: center; gap: 10px; min-height: 48px; cursor: pointer; }
-.amigos .chave input { width: 24px; height: 24px; }
-.amigos .passos { margin: 0 0 14px; padding-left: 1.3em; display: grid; gap: 8px; color: #ece6da; }
+.amigos .ponto { font-size: 1.6rem; font-weight: 900; color: var(--tinta-suave); }
+.amigos .qr { display: grid; justify-items: center; gap: 6px; margin: 6px 0 14px; }
+.amigos .qr img { width: 168px; height: 168px; image-rendering: pixelated; background: #fff; padding: 10px; border-radius: 16px; box-shadow: 0 4px 0 var(--painel-borda); }
+.amigos .qr small { color: var(--tinta-suave); font-weight: 700; }
+.amigos .lista { list-style: none; margin: 0 0 12px; padding: 0; display: grid; gap: 8px; }
+.amigos .lista li { display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-radius: 14px; background: var(--poco); box-shadow: var(--sombra-poco); }
+.amigos .lista .nome { flex: 1; font-weight: 800; color: var(--tinta); }
+.amigos .lista .tag { font-size: 0.8rem; color: var(--tinta); background: #ffe39a; border-radius: 999px; padding: 2px 10px; font-weight: 800; }
+.amigos .chave { display: flex; align-items: center; gap: 10px; min-height: 48px; cursor: pointer; font-weight: 800; color: var(--tinta); }
+.amigos .chave input { width: 24px; height: 24px; accent-color: var(--azul-peca); }
+.amigos .passos { margin: 0 0 14px; padding-left: 1.3em; display: grid; gap: 8px; color: var(--tinta); font-weight: 600; }
+/* avisos de conexão: pílula creme com a bolinha piscando */
 .aviso-conexao {
   position: fixed; left: 50%; top: 12px; transform: translateX(-50%); z-index: 60;
-  display: flex; align-items: center; gap: 10px; padding: 10px 16px; border-radius: 999px;
-  background: rgba(20, 16, 28, 0.92); color: #fff4d8; font: 700 0.95rem system-ui, sans-serif;
-  box-shadow: 0 8px 24px rgba(0,0,0,0.45); pointer-events: none;
+  display: flex; align-items: center; gap: 10px; padding: 10px 18px; border-radius: 999px;
+  background: rgba(255, 250, 240, 0.96); color: var(--tinta); font: 800 0.95rem var(--jogo);
+  box-shadow: 0 3px 0 rgba(150, 110, 60, 0.35), 0 8px 18px rgba(40, 25, 10, 0.25); pointer-events: none;
 }
 .aviso-conexao[hidden] { display: none; }
-.aviso-conexao .bolinha { width: 10px; height: 10px; border-radius: 50%; background: #ffd98f; animation: piscar 1s infinite; }
+.aviso-conexao .bolinha { width: 11px; height: 11px; border-radius: 50%; background: var(--amarela-fundo); animation: piscar 1s infinite; }
 @keyframes piscar { 50% { opacity: 0.3; } }
 @media (prefers-reduced-motion: reduce) { .aviso-conexao .bolinha { animation: none; } }
 `;

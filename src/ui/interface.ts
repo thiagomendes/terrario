@@ -2,7 +2,6 @@ import { fotografarBoneco } from '../render/fotoBoneco';
 import { CSS_BRINQUEDO } from './brinquedo';
 import { CSS_TEMAS_UI, criarVitrineTitulo } from './temasUi';
 import { obterTema } from '../temas';
-import { tema } from '../temas/ativo';
 import { CSS_ATALHOS, criarBarraAtalhos } from './atalhos';
 import type { Hotbar } from '../player/hotbar';
 import { criarBarra } from './barra';
@@ -15,8 +14,6 @@ import { CSS_PAINEL, criarPainelPersonagem, teclaParaPainel } from './personagem
 import { CSS_MODAL, criarPainelMundos } from './mundos';
 import { CSS_PIXICONES, icone, modoToque, type NomeIcone } from './pixicones';
 import { CSS_TITULO, desenharLogo, desenharPrevia } from './titulo';
-import { texturaDoBloco } from './icones';
-import { Bloco } from '../world/blocks';
 import { CSS_CONFIG, criarPainelConfig } from './configuracoes';
 import { CSS_PAUSA, criarMenuPausa } from './pausa';
 import { entrarTelaCheia } from './telaCheia';
@@ -29,18 +26,38 @@ const CSS = `
 .hud .fps { transform-origin: top right; }
 .hud .mira { transform: translate(-50%, -50%) scale(var(--escala-ui)); }
 .barra { transform: translateX(-50%) scale(var(--escala-ui)) !important; transform-origin: bottom center; }
+/* debaixo d'água: piscina clara, bolhinhas e faixas de luz */
 body.submerso::after {
   content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 3;
-  background: radial-gradient(ellipse at center, rgba(40, 120, 190, 0.18), rgba(5, 30, 60, 0.55));
+  background:
+    repeating-linear-gradient(105deg, rgba(255, 255, 255, 0) 0 90px, rgba(255, 255, 255, 0.04) 120px 150px, rgba(255, 255, 255, 0) 180px 260px),
+    linear-gradient(180deg, rgba(150, 215, 255, 0.34), rgba(60, 140, 215, 0.3) 60%, rgba(30, 95, 180, 0.4));
+  background-size: 400px 100%, 100% 100%;
+  animation: luz-agua 7s ease-in-out infinite alternate;
 }
+@keyframes luz-agua { from { background-position: 0 0, 0 0; } to { background-position: 120px 0, 0 0; } }
+.bolhas-agua { position: fixed; inset: 0; pointer-events: none; z-index: 3; overflow: hidden; display: none; }
+body.submerso .bolhas-agua { display: block; }
+.bolhas-agua i {
+  position: absolute; bottom: -24px; width: var(--tam); height: var(--tam); border-radius: 50%;
+  border: 1.5px solid rgba(255, 255, 255, 0.75); background: radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.85), rgba(255, 255, 255, 0.08) 45%);
+  animation: bolha-sobe linear infinite;
+}
+@keyframes bolha-sobe {
+  0% { transform: translate(0, 0); opacity: 0; }
+  10% { opacity: 1; }
+  50% { transform: translate(12px, -50vh); }
+  100% { transform: translate(-8px, -105vh); opacity: 0.6; }
+}
+@media (prefers-reduced-motion: reduce) { .bolhas-agua i, body.submerso::after { animation: none; } }
 .painel-construcao {
   position: fixed; top: 42px; left: 50%; transform: translateX(-50%); z-index: 8; pointer-events: none;
-  display: grid; justify-items: center; gap: 2px; padding: 8px 16px; border-radius: 12px;
-  background: rgba(10, 12, 20, 0.62); border: 1px solid rgba(255, 217, 143, 0.35);
-  color: #fff; font: 700 0.9rem system-ui, sans-serif; text-align: center;
+  display: grid; justify-items: center; gap: 2px; padding: 8px 16px; border-radius: 16px;
+  background: rgba(255, 250, 240, 0.92); color: var(--tinta); font: 800 0.9rem var(--jogo); text-align: center;
+  box-shadow: 0 3px 0 rgba(150, 110, 60, 0.3);
 }
 .painel-construcao[hidden] { display: none; }
-.painel-construcao small { font-weight: 500; color: #cfc8bb; }
+.painel-construcao small { font-weight: 700; color: var(--tinta-suave); }
 .toast-area {
   position: fixed; top: 96px; left: 50%; transform: translateX(-50%); z-index: 50;
   display: grid; gap: 6px; justify-items: center; pointer-events: none;
@@ -60,60 +77,28 @@ body.tela-titulo .toast-area, body[data-overlay] .toast-area { top: 12px; }
   body.toque-ativo .hud .fps { top: 58px; right: 104px; }
 }
 .toast {
-  padding: 8px 14px; border-radius: 10px; background: rgba(12, 14, 22, 0.82);
-  border: 1px solid rgba(255, 255, 255, 0.12); color: #ece6da; font: 600 0.88rem system-ui, sans-serif;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35); animation: toast 2.6s ease forwards;
+  padding: 8px 16px; border-radius: 999px; background: rgba(255, 250, 240, 0.95); color: var(--tinta);
+  font: 800 0.9rem var(--jogo);
+  box-shadow: 0 3px 0 rgba(150, 110, 60, 0.3), 0 8px 18px rgba(40, 25, 10, 0.2); animation: toast 2.6s ease forwards;
 }
+.toast.conquista { background: #fff3c4; box-shadow: 0 3px 0 var(--amarela-fundo), 0 8px 18px rgba(40, 25, 10, 0.2); }
 @keyframes toast { 0% { opacity: 0; transform: translateY(-6px); } 10%, 80% { opacity: 1; transform: none; } 100% { opacity: 0; } }
 .hud { position: fixed; inset: 0; pointer-events: none; overflow: hidden; }
-.hud .mira {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 18px;
-  height: 18px;
-  transform: translate(-50%, -50%);
-  pointer-events: none;
+/* mira: um anelzinho branco */
+.hud .mira { position: absolute; top: 50%; left: 50%; width: 18px; height: 18px; transform: translate(-50%, -50%); pointer-events: none; }
+.hud .mira::before {
+  content: ''; position: absolute; top: 1px; left: 1px; width: 12px; height: 12px; border-radius: 50%;
+  border: 2.5px solid rgba(255, 255, 255, 0.95); box-shadow: 0 0 0 1px rgba(40, 30, 60, 0.25), inset 0 0 0 1px rgba(40, 30, 60, 0.2);
 }
-.hud .mira::before,
-.hud .mira::after {
-  content: '';
-  position: absolute;
-  background: #fff1d6;
-  box-shadow: 0 0 3px #120a24;
+/* chips do alto: som, câmera, nome, mundo e quadros por segundo */
+.hud .fps, .hud .som, .hud .camera-indicador {
+  position: absolute; padding: 4px 11px; border-radius: 999px;
+  background: rgba(255, 250, 240, 0.86); color: var(--tinta); font: 800 0.76rem var(--jogo);
+  box-shadow: 0 2px 0 rgba(150, 110, 60, 0.35);
 }
-.hud .mira::before { top: 8px; left: 0; width: 18px; height: 2px; }
-.hud .mira::after { top: 0; left: 8px; width: 2px; height: 18px; }
-.hud .fps {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  padding: 4px 10px;
-  border-radius: 8px;
-  background: rgba(10, 12, 20, 0.5);
-  color: #ffd98f;
-  font: 600 0.9rem system-ui, sans-serif;
-}
-.hud .som {
-  position: absolute;
-  top: 8px;
-  left: 8px;
-  padding: 4px 10px;
-  border-radius: 8px;
-  background: rgba(10, 12, 20, 0.5);
-  color: #e6d6f7;
-  font: 600 0.8rem system-ui, sans-serif;
-}
-.hud .camera-indicador {
-  position: absolute;
-  top: 40px;
-  left: 8px;
-  padding: 4px 10px;
-  border-radius: 8px;
-  background: rgba(10, 12, 20, 0.5);
-  color: #e6d6f7;
-  font: 600 0.8rem system-ui, sans-serif;
-}
+.hud .fps { top: 8px; right: 8px; }
+.hud .som { top: 8px; left: 8px; }
+.hud .camera-indicador { top: 40px; left: 8px; }
 `;
 
 const TECLAS: ReadonlyArray<readonly [string, string]> = [
@@ -170,6 +155,10 @@ export function criarInterface(
   hotbar?: Hotbar,
   opMundo: OpcoesInterface = {},
 ): { entrada: HTMLElement; acoes: HTMLElement } {
+  // base de brinquedo (spec 012) primeiro: cores, letras e peças que cada módulo refina
+  const estiloBrinquedo = document.createElement('style');
+  estiloBrinquedo.textContent = CSS_BRINQUEDO;
+  document.head.appendChild(estiloBrinquedo);
   const estilo = document.createElement('style');
   estilo.textContent = CSS + CSS_PIXICONES;
   document.head.appendChild(estilo);
@@ -210,31 +199,9 @@ export function criarInterface(
   estiloTitulo.textContent = CSS_TITULO + CSS_TEMAS_UI;
   document.head.appendChild(estiloTitulo);
 
-  // Tela de título: logo em pixel-art sobre o panorama do mundo, menu de botões de jogo.
+  // Tela de título: logo em letras gordinhas sobre o panorama do mundo, menu de peças.
   const entrada = document.createElement('div');
   entrada.className = 'entrada';
-  // faíscas e bruma do título na cor do tema do mundo aberto
-  {
-    const t = tema();
-    const n = t.cores.logo.bruma.join(', ');
-    entrada.style.setProperty('--faisca-tema', `rgb(${t.cores.logo.topo.join(', ')})`);
-    entrada.style.setProperty('--faisca-brilho', `rgba(${t.cores.logo.meio.join(', ')}, 0.7)`);
-    entrada.style.setProperty('--bruma-tema', `rgba(${n}, 0.22)`);
-    entrada.style.setProperty('--brilho-logo', `rgba(${t.cores.logo.meio.join(', ')}, 0.42)`);
-  }
-  const bruma = document.createElement('div');
-  bruma.className = 'bruma-titulo';
-  bruma.append(...Array.from({ length: 3 }, () => document.createElement('i')));
-  entrada.appendChild(bruma);
-  for (let i = 0; i < 14; i++) {
-    const f = document.createElement('span');
-    f.className = 'faisca';
-    f.style.left = `${(i * 37 + 11) % 100}vw`;
-    f.style.bottom = `${(i * 23) % 30}vh`;
-    f.style.animationDuration = `${7 + ((i * 13) % 9)}s`;
-    f.style.animationDelay = `${-((i * 1.7) % 9)}s`;
-    entrada.appendChild(f);
-  }
   const menu = document.createElement('div');
   menu.className = 'titulo-menu';
   const titulo = document.createElement('h1');
@@ -248,12 +215,10 @@ export function criarInterface(
   const sub = document.createElement('p');
   sub.className = 'lema';
   sub.textContent = 'Explore, construa e descubra mundos';
-  const pedra = `url(${texturaDoBloco(Bloco.PEDRA_LISA)})`;
   const botaoJogo = (rotulo: string, nomeIcone: NomeIcone, attr: string, classe = '') => {
     const b = document.createElement('button');
     b.type = 'button';
     b.className = `botao-jogo ${classe}`.trim();
-    b.style.setProperty('--textura', pedra);
     b.setAttribute(attr, '');
     const linha = document.createElement('span');
     linha.className = 'linha';
@@ -554,9 +519,5 @@ export function criarInterface(
     escrever(somInd, textoIndicador((a?.estado ?? 'inativo') as EstadoAudio, a?.mudo ?? false));
     escrever(camInd, textoIndicadorCamera(window.__brumaluz?.camera?.modo() ?? 'primeira'));
   }, 200);
-  // estilo de brinquedo (spec 012) por último: vale sobre o de cada módulo
-  const estiloBrinquedo = document.createElement('style');
-  estiloBrinquedo.textContent = CSS_BRINQUEDO;
-  document.head.appendChild(estiloBrinquedo);
   return { entrada, acoes };
 }

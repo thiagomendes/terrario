@@ -21,8 +21,9 @@ export const CSS_ATALHOS = `
 .barra-atalhos {
   position: fixed; z-index: 7; left: max(10px, env(safe-area-inset-left, 0px));
   bottom: calc(10px + env(safe-area-inset-bottom, 0px));
-  display: flex; gap: 6px; padding: 6px; border-radius: 10px;
-  background: rgba(10, 12, 20, 0.45); pointer-events: auto;
+  display: flex; gap: 6px; padding: 6px 6px 10px; border-radius: 18px;
+  background: rgba(255, 250, 240, 0.7); pointer-events: auto;
+  box-shadow: 0 4px 0 rgba(150, 110, 60, 0.3), 0 10px 20px rgba(40, 25, 10, 0.15);
   transform: scale(var(--escala-ui, 1)); transform-origin: bottom left;
 }
 .barra-atalhos[hidden] { display: none; }
@@ -32,28 +33,25 @@ export const CSS_ATALHOS = `
   .barra-atalhos { display: grid; grid-template-columns: repeat(2, auto);
     bottom: calc(90px + env(safe-area-inset-bottom, 0px)); }
 }
+/* a peça vem de brinquedo.ts; aqui só a medida */
 .barra-atalhos button {
-  display: grid; justify-items: center; gap: 1px; min-width: 46px; padding: 5px 6px 3px;
-  border: 2px solid #120e16; background: #3a3542; color: #f6f2ea; cursor: pointer;
-  box-shadow: inset 2px 2px 0 rgba(255, 255, 255, 0.16), inset -2px -3px 0 rgba(0, 0, 0, 0.35);
-  font: 700 0.68rem system-ui, sans-serif;
+  display: grid; justify-items: center; gap: 1px; min-width: 46px; padding: 5px 6px 3px; border-radius: 12px;
+  font-size: 0.68rem;
+  box-shadow: 0 3px 0 var(--f), 0 5px 8px rgba(60, 35, 10, 0.18), inset 0 2px 0 rgba(255, 255, 255, 0.75);
 }
-.barra-atalhos button:hover, .barra-atalhos button:focus-visible { background: #4a4454; color: #ffe7a3; outline: none; }
+.barra-atalhos button:active { transform: translateY(2px); box-shadow: 0 1px 0 var(--f); }
 .barra-atalhos .pixicone-caixa { font-size: 1.15rem; }
-.barra-atalhos kbd { font: 700 0.62rem ui-monospace, monospace; color: #ffd98f; }
+.barra-atalhos kbd { font: 800 0.62rem var(--jogo); color: var(--tinta-suave); }
 body.tela-titulo .barra-atalhos, body.toque-ativo .barra-atalhos, body[data-overlay] .barra-atalhos,
 body.modo-foto .barra-atalhos { display: none; }
 /* na pausa: grade de botões grandes, um por função */
-.pausa .grade-funcoes { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.pausa .grade-funcoes { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; padding-bottom: 5px; }
 .pausa .grade-funcoes button {
-  display: grid; justify-items: center; gap: 4px; padding: 10px 6px; min-height: 72px; cursor: pointer;
-  border: 2px solid #120e16; background: #3a3542; color: #f6f2ea;
-  box-shadow: inset 2px 2px 0 rgba(255, 255, 255, 0.16), inset -2px -3px 0 rgba(0, 0, 0, 0.35);
-  font: 700 0.85rem system-ui, sans-serif;
+  display: grid; justify-items: center; align-content: center; gap: 3px; padding: 10px 6px; min-height: 78px;
+  font-size: 0.86rem;
 }
-.pausa .grade-funcoes button:hover, .pausa .grade-funcoes button:focus-visible { background: #4a4454; color: #ffe7a3; outline: none; }
-.pausa .grade-funcoes .pixicone-caixa { font-size: 1.6rem; }
-.pausa .grade-funcoes kbd { font: 700 0.7rem ui-monospace, monospace; color: #ffd98f; }
+.pausa .grade-funcoes .pixicone-caixa { font-size: 1.7rem; }
+.pausa .grade-funcoes kbd { font: 800 0.68rem var(--jogo); color: var(--tinta-suave); }
 body.toque-ativo .pausa .grade-funcoes kbd { display: none; }
 `;
 

@@ -6,27 +6,36 @@ import type { Profissao } from '../world/povoado';
 import type { InventarioUI } from './inventario';
 
 export const CSS_TROCAS = `
-.painel-trocas { display: grid; gap: 8px; min-width: 0; }
+/* trocas são uma seção do inventário: sem fundo nem sombra próprios */
+.painel-trocas { display: grid; gap: 10px; min-width: 0; }
 .painel-trocas[hidden] { display: none; }
-.painel-trocas .quem { font-weight: 800; font-size: 1rem; color: #ffd98f; }
-.painel-trocas .quem small { display: block; font-weight: 600; font-size: 0.78rem; color: #cfc6dc; }
-.lista-trocas { display: grid; gap: 6px; }
+.painel-trocas .quem { font: 700 1.1rem var(--display); color: var(--tinta); }
+.painel-trocas .quem small { display: block; font: 600 0.8rem var(--jogo); color: var(--tinta-suave); }
+.lista-trocas { display: grid; gap: 8px; }
 .troca {
   display: grid; grid-template-columns: auto auto auto 1fr; align-items: center; gap: 8px;
-  padding: 4px 6px; border: 2px solid #120e16; background: rgba(255, 255, 255, 0.05);
+  padding: 6px 8px 10px; border-radius: 16px; background: rgba(243, 230, 204, 0.45);
 }
 .troca .dar { display: flex; gap: 4px; }
-.troca .seta { color: #cfc6dc; font-weight: 800; }
+.troca .seta { color: var(--amarela-fundo); font-weight: 900; font-size: 1.2rem; }
 .troca .slot { pointer-events: none; }
+/* Trocar: peça verde; sem como pagar fica a peça creme apagada */
 .troca button.fazer {
-  justify-self: end; min-height: 48px; min-width: 92px; padding: 4px 12px; cursor: pointer;
-  border: 2px solid #120e16; background: #4c7a3e; color: #f6f2ea; font: 800 0.9rem system-ui, sans-serif;
-  box-shadow: inset 2px 2px 0 rgba(255, 255, 255, 0.2), inset -2px -3px 0 rgba(0, 0, 0, 0.35);
+  --c: var(--verde); --f: var(--verde-fundo);
+  justify-self: end; min-height: 46px; min-width: 92px; padding: 4px 14px; cursor: pointer;
+  border: 0; border-radius: 14px; color: #173d12; font: 800 0.92rem var(--jogo);
+  background: linear-gradient(to bottom, color-mix(in srgb, var(--c), white 35%) 0%, var(--c) 45%, color-mix(in srgb, var(--c), black 6%) 100%);
+  box-shadow: 0 4px 0 var(--f), 0 7px 12px rgba(60, 35, 10, 0.2), inset 0 2px 0 rgba(255, 255, 255, 0.7);
+  transition: transform 0.08s, box-shadow 0.08s;
 }
-.troca button.fazer:hover, .troca button.fazer:focus-visible { filter: brightness(1.15); outline: 3px solid #ffd98f; outline-offset: 1px; }
-.troca button.fazer[aria-disabled='true'] { background: #3a3542; color: #9a93a6; cursor: not-allowed; }
+.troca button.fazer:hover { filter: brightness(1.04); }
+.troca button.fazer:focus-visible { outline: 3px solid var(--azul); outline-offset: 2px; }
+.troca button.fazer:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--f); }
+.troca button.fazer[aria-disabled='true'] {
+  --c: var(--creme); --f: var(--creme-fundo); color: var(--tinta-suave); cursor: not-allowed; transform: none;
+}
 .troca.feita { animation: troca-feita 0.5s ease; }
-@keyframes troca-feita { 40% { background: rgba(140, 220, 120, 0.3); } }
+@keyframes troca-feita { 40% { background: rgba(127, 208, 106, 0.45); } }
 @media (prefers-reduced-motion: reduce) { .troca.feita { animation: none; } }
 `;
 

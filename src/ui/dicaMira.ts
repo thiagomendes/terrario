@@ -5,8 +5,9 @@
  */
 const CSS = `
 .dica-mira { position: fixed; left: 50%; top: calc(50% + 26px); transform: translateX(-50%);
-  z-index: 8; pointer-events: none; padding: 4px 12px; border-radius: 10px;
-  background: rgba(14, 10, 20, 0.62); color: #fff4d8; font: 700 0.85rem system-ui, sans-serif;
+  z-index: 8; pointer-events: none; padding: 5px 14px; border-radius: 999px;
+  background: rgba(255, 250, 240, 0.94); color: var(--tinta); font: 800 0.86rem var(--jogo);
+  box-shadow: 0 3px 0 rgba(150, 110, 60, 0.3), 0 8px 18px rgba(40, 25, 10, 0.2);
   white-space: nowrap; opacity: 0; transition: opacity 0.18s; }
 .dica-mira.visivel { opacity: 1; }
 body[data-overlay] .dica-mira, body.modo-foto .dica-mira, body.tela-titulo .dica-mira { display: none; }
