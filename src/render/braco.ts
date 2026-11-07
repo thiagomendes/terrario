@@ -49,8 +49,9 @@ export interface Braco {
 /** Campo de visão vertical em que o braço foi desenhado (o do esboço). */
 const FOV_VISTA = (55 * Math.PI) / 180;
 /** Onde fica a mão, no espaço da câmera (x direita, y cima, z frente), e de onde vem o braço. */
-const MAO = new Vector3(0.24, -0.19, 0.91);
-const DIRECAO = new Vector3(-0.5, 0.55, 1);
+const MAO = new Vector3(0.27, -0.24, 0.9);
+// mais em pé: a manga sai logo pela borda de baixo e só a ponta do braço aparece
+const DIRECAO = new Vector3(-0.32, 0.85, 1);
 const ESCALA = 0.6;
 /** Luz do braço, no espaço da câmera: de cima, da esquerda e um pouco da frente. */
 const LUZ = new Vector3(-0.45, 0.8, -0.4).normalize();
@@ -145,8 +146,18 @@ export function criarBraco(scene: Scene, camera: TargetCamera, aparencia: Aparen
     modelo.no.parent = segura;
     if (modelo.ferramenta) modelo.no.rotation.set(1.9, 0, -0.35);
     else {
-      modelo.no.position.set(0, -0.05, 0.1);
-      modelo.no.rotation.set(0.4, 0.6, 0);
+      // na vista o bloco e as peças vêm maiores (perto da mão, na medida do esboço)
+      modelo.no.position.set(0, -0.03, 0.13);
+      // em pé na vista: desfaz a inclinação de repouso do braço e mostra o topo de quina
+      const base = Quaternion.FromUnitVectorsToRef(
+        new Vector3(0, -1, 0),
+        DIRECAO.clone().normalize(),
+        new Quaternion(),
+      );
+      modelo.no.rotationQuaternion = Quaternion.Inverse(base).multiply(
+        Quaternion.FromEulerAngles(0.45, 0.65, 0),
+      );
+      modelo.no.scaling.setAll(1.2);
     }
     for (const m of modelo.malhas) preparar(m);
     sujo = true;

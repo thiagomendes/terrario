@@ -181,3 +181,27 @@ for (const id of TEMAS) {
     await foto(page, `morador-${id}`);
   });
 }
+
+test('telas de brinquedo: inicial, jogo, pausa', async ({ page }) => {
+  test.setTimeout(300_000);
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await page.goto('/');
+  await pronto(page);
+  await page.waitForTimeout(2500);
+  await foto(page, 'tela-inicial');
+  await page.locator('[data-jogar-titulo]').click();
+  await page.waitForTimeout(2500);
+  await page.evaluate(() => {
+    const e = window.__brumaluz!;
+    e.pausarDia = true;
+    e.hora = 0.42;
+    e.apontar!(0, 0.3);
+  });
+  await page.waitForTimeout(1500);
+  await foto(page, 'tela-jogo');
+  await page.evaluate(() =>
+    document.querySelector<HTMLElement>('.barra-atalhos [data-funcao="Pausa"]')?.click(),
+  );
+  await page.waitForTimeout(800);
+  await foto(page, 'tela-pausa');
+});

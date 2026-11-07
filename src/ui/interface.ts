@@ -1,3 +1,4 @@
+import { CSS_BRINQUEDO } from './brinquedo';
 import { CSS_TEMAS_UI, criarVitrineTitulo } from './temasUi';
 import { obterTema } from '../temas';
 import { tema } from '../temas/ativo';
@@ -539,5 +540,9 @@ export function criarInterface(
     escrever(somInd, textoIndicador((a?.estado ?? 'inativo') as EstadoAudio, a?.mudo ?? false));
     escrever(camInd, textoIndicadorCamera(window.__brumaluz?.camera?.modo() ?? 'primeira'));
   }, 200);
+  // estilo de brinquedo (spec 012) por último: vale sobre o de cada módulo
+  const estiloBrinquedo = document.createElement('style');
+  estiloBrinquedo.textContent = CSS_BRINQUEDO;
+  document.head.appendChild(estiloBrinquedo);
   return { entrada, acoes };
 }

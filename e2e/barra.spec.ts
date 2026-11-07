@@ -45,8 +45,12 @@ for (const vp of VIEWPORTS) {
     await botoes.nth(2).click();
     await expect(botoes.nth(2)).toHaveAttribute('aria-pressed', 'true');
     await expect(barra.locator('[aria-pressed="true"]')).toHaveCount(1);
-    const borda = await botoes.nth(2).evaluate((el) => getComputedStyle(el).borderTopColor);
-    expect(borda).toBe('rgb(255, 244, 220)');
+    // o espaço escolhido ganha o contorno amarelo de brinquedo (spec 012)
+    const contorno = await botoes.nth(2).evaluate((el) => {
+      const c = getComputedStyle(el);
+      return `${c.outlineStyle} ${c.outlineColor}`;
+    });
+    expect(contorno).toBe('solid rgb(255, 194, 61)');
 
     const caixa = await barra.boundingBox();
     const centro = caixa!.x + caixa!.width / 2;

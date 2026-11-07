@@ -37,3 +37,39 @@ export function corMediaDoBloco(id: number, atlas?: Atlas): [number, number, num
   }
   return [Math.round(cor[0]), Math.round(cor[1]), Math.round(cor[2])];
 }
+
+/**
+ * Cores de topo e de corpo do bloco (peças de brinquedo: ícones e bloco na mão). O corpo usa a
+ * metade de baixo do lado (na grama, a terra); o topo, o tile de cima.
+ */
+export function coresDoBloco(
+  id: number,
+  atlas?: Atlas,
+): { topo: [number, number, number]; lado: [number, number, number] } | undefined {
+  const def = obterBloco(id);
+  if (!def || !(def.solido || def.planta)) return undefined;
+  const a = atlas ?? (atlasPadrao ??= gerarAtlas());
+  const media = (face: 'topo' | 'lado', y0: number): [number, number, number] | undefined => {
+    const uv = a.uvDaFace(id, face);
+    if (!uv) return undefined;
+    const ox = Math.round(uv.u0 * a.largura);
+    const oy = Math.round(uv.v0 * a.altura);
+    let r = 0;
+    let g = 0;
+    let b = 0;
+    let n = 0;
+    for (let y = y0; y < TAM_TILE; y++)
+      for (let x = 0; x < TAM_TILE; x++) {
+        const i = ((oy + y) * a.largura + ox + x) * 4;
+        if (a.pixels[i + 3] < 128) continue;
+        r += a.pixels[i];
+        g += a.pixels[i + 1];
+        b += a.pixels[i + 2];
+        n++;
+      }
+    return n ? [r / n, g / n, b / n] : undefined;
+  };
+  const lado = media('lado', TAM_TILE / 2) ?? corMediaDoBloco(id, a);
+  if (!lado) return undefined;
+  return { topo: media('topo', 0) ?? lado, lado };
+}

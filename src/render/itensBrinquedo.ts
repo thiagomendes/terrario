@@ -8,7 +8,7 @@ import { TransformNode } from '@babylonjs/core/Meshes/transformNode';
 import type { Mesh } from '@babylonjs/core/Meshes/mesh';
 import type { Scene } from '@babylonjs/core/scene';
 import { obterItem } from '../jogo/itens';
-import { corMediaDoBloco } from '../fx/cores';
+import { coresDoBloco } from '../fx/cores';
 import { caixaArredondada, cilindro, esfera, type Plasticos } from './formas';
 
 /** Cor da cabeça da ferramenta por material (as mesmas do catálogo). */
@@ -176,8 +176,14 @@ export function modeloNaMao(
     return { no, malhas, ferramenta: false };
   }
   if (bloco !== null && bloco > 0) {
-    const cor = corMediaDoBloco(bloco);
-    add(cx('bloco', 0.24, 0.24, 0.24, 0.05, cor ? hexDe(cor) : '#a9adb8'));
+    const c = coresDoBloco(bloco);
+    const lado = c ? hexDe(c.lado) : '#a9adb8';
+    const topo = c ? hexDe(c.topo) : lado;
+    if (c && Math.hypot(c.topo[0] - c.lado[0], c.topo[1] - c.lado[1], c.topo[2] - c.lado[2]) > 40) {
+      // grama, neve: corpo na cor de baixo e uma tampa na cor do topo
+      add(cx('bloco', 0.24, 0.17, 0.24, 0.05, lado), 0, -0.035, 0);
+      add(cx('tampa', 0.245, 0.085, 0.245, 0.04, topo), 0, 0.08, 0);
+    } else add(cx('bloco', 0.24, 0.24, 0.24, 0.05, lado));
     return { no, malhas, ferramenta: false };
   }
   no.dispose();
