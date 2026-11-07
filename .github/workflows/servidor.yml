@@ -1,0 +1,81 @@
+name: Publicar servidor
+
+# O servidor dos mundos com amigos (Container Apps no Brasil), a cada envio ao main que
+# mexa nele ou no núcleo do jogo. Login na Azure sem senha (OIDC): a identidade
+# gh-terrario-servidor só envia imagens ao registro e atualiza o Container App.
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'servidor/**'
+      - 'src/nucleo/**'
+      - 'src/jogo/**'
+      - 'src/world/**'
+      - 'src/rede/**'
+      - 'src/temas/**'
+      - 'package-lock.json'
+      - '.github/workflows/servidor.yml'
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+concurrency:
+  group: servidor
+  cancel-in-progress: false
+
+env:
+  REGISTRO: crterrarioxuvrtk4qwp
+  GRUPO: rg-terrario
+  APP: ca-terrario-servidor
+  SAUDE: https://ca-terrario-servidor.ambitiousflower-128bd7d5.brazilsouth.azurecontainerapps.io/saude
+
+jobs:
+  publicar:
+    # só depois de a identidade existir (variáveis do repositório)
+    if: vars.AZURE_CLIENT_ID != ''
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Instalar dependências
+        run: npm ci --no-audit --no-fund
+
+      - name: Testes do servidor e do núcleo
+        run: npx vitest run servidor/testes tests/nucleo
+
+      - name: Montar o servidor
+        run: node servidor/construir.mjs
+
+      - name: Entrar na Azure (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Imagem no registro
+        run: |
+          TAG=${GITHUB_SHA::7}
+          IMAGEM=$REGISTRO.azurecr.io/servidor:$TAG
+          az acr login -n $REGISTRO
+          docker build -t $IMAGEM -f servidor/Dockerfile servidor
+          docker push $IMAGEM
+          echo "IMAGEM=$IMAGEM" >> $GITHUB_ENV
+
+      - name: Atualizar o Container App
+        run: az containerapp update -g $GRUPO -n $APP --image $IMAGEM -o none
+
+      - name: Conferir que voltou
+        run: |
+          for i in $(seq 1 30); do
+            if curl -fsS $SAUDE; then exit 0; fi
+            sleep 10
+          done
+          echo "O servidor não respondeu em 5 minutos"; exit 1
