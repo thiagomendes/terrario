@@ -99,6 +99,9 @@ A spec só fecha quando o dono olha as duplas e diz que está igual ou melhor.
 
   Tudo no mesmo estilo.
 
+### O amigo vê os movimentos
+No jogo com amigos, cada um vê o boneco do outro com os mesmos movimentos que ele vê no próprio: andar, correr, pular, voar, olhar para cima e para baixo, item na mão, golpe ao minerar e bater, colocar bloco e comer. Os três últimos chegam como contadores que só sobem, junto com a posição: quem vê dispara o movimento quando um número cresce. O campo é opcional, então servidor e clientes antigos continuam funcionando. O e2e de dois navegadores confere que a Ana vê o boneco da Bia golpeando.
+
 ### Água e chuva de brinquedo
 A água parece gelatina azul ou resina de brinquedo, e a chuva parece chuvinha de desenho. Nada fica escuro nem sujo.
 - **Superfície:** azul-clara e brilhante, com um reflexo largo de plástico e risquinhos de brilho que andam devagar. Ondinhas lentas, sem chuvisco de pixel.
