@@ -486,6 +486,12 @@ export function criarInterface(
       else entrada.hidden = false;
     }
   });
+  // Esc no jogo com o mouse preso na câmera: solta o mouse (e a pausa abre). Com o Esc travado
+  // em tela cheia o navegador não solta sozinho, então o jogo solta.
+  window.addEventListener('keydown', (e) => {
+    if (e.code === 'Escape' && document.pointerLockElement && !document.body.dataset.overlay)
+      document.exitPointerLock?.();
+  });
   window.addEventListener('keydown', (e) => {
     if (e.code !== 'Escape' || !pausa.aberto) return;
     if (document.querySelector('.modal-fundo:not([hidden])')) return;

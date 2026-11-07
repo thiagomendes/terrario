@@ -43,9 +43,32 @@ export function podeAlternarTelaCheia(): boolean {
   return suportaTelaCheia() && !rodandoComoApp();
 }
 
+type TecladoTravavel = { lock?: (teclas?: string[]) => Promise<void>; unlock?: () => void };
+const teclado = (): TecladoTravavel | undefined =>
+  typeof navigator !== 'undefined'
+    ? (navigator as Navigator & { keyboard?: TecladoTravavel }).keyboard
+    : undefined;
+
+/**
+ * Em tela cheia o Esc é do jogo (fecha a janela aberta, pausa), não do navegador: no Chrome e
+ * no Edge o teclado trava o Esc e, para sair da tela cheia, é só segurar o Esc (o próprio
+ * navegador avisa). Onde não existe a trava, as teclas que abrem cada janela também a fecham.
+ */
+function travarEsc(): void {
+  if (emTelaCheia()) silenciar(teclado()?.lock?.(['Escape']));
+  else teclado()?.unlock?.();
+}
+let travaLigada = false;
+function ligarTrava(): void {
+  if (travaLigada || typeof document === 'undefined') return;
+  travaLigada = true;
+  document.addEventListener('fullscreenchange', travarEsc);
+}
+
 /** Pede a tela cheia. Precisa ser chamada dentro de um gesto do usuário (clique). */
 export function entrarTelaCheia(): void {
   if (!podeAlternarTelaCheia() || emTelaCheia()) return;
+  ligarTrava();
   const el = document.documentElement as ElWebkit;
   try {
     if (typeof el.requestFullscreen === 'function')
