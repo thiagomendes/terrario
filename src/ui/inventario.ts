@@ -15,62 +15,65 @@ export const CSS_INVENTARIO = `
   position: fixed; inset: 0; z-index: 33;
   display: flex; align-items: center; justify-content: center;
   padding: 12px; box-sizing: border-box;
-  background: rgba(6, 8, 14, 0.55); backdrop-filter: blur(4px);
-  font-family: system-ui, 'Segoe UI', sans-serif; color: #ece6da;
+  background: rgba(60, 45, 80, 0.32); backdrop-filter: blur(6px) saturate(0.95);
+  font-family: var(--jogo); color: var(--tinta);
   animation: modal-entra 0.15s ease-out;
   /* cabe 9 slots na largura (390px) e não estica demais na altura (paisagem) */
-  --slot: clamp(28px, min(calc((100vw - 96px) / 9), 9vh), 54px);
+  --slot: clamp(28px, min(calc((100vw - 104px) / 9), 9vh), 54px);
 }
 .inventario-fundo[hidden] { display: none; }
 .inventario {
   position: relative;
   display: grid; gap: 14px; max-height: 94vh; max-height: calc(100dvh - 24px); overflow-y: auto; box-sizing: border-box;
   max-width: 100%; overscroll-behavior: contain; touch-action: pan-y;
-  padding: 16px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.12);
-  background: linear-gradient(180deg, rgba(34, 36, 50, 0.96), rgba(20, 21, 30, 0.97));
-  box-shadow: 0 24px 64px rgba(0,0,0,0.55);
+  padding: 18px 18px 20px; border: 0; border-radius: 24px;
+  background: var(--painel); color: var(--tinta);
+  box-shadow: 0 8px 0 var(--painel-borda), 0 22px 40px rgba(40, 25, 10, 0.35);
   animation: cartao-entra 0.18s ease-out;
 }
-.inventario h2 { margin: 0; padding-right: 52px; font-size: 1.05rem; color: #ffd98f; }
+.inventario h2 { margin: 0; padding-right: 52px; font: 700 1.5rem/1.1 var(--display); color: var(--titulo); }
 /* slots: arrastar e soltar no toque (o catálogo continua rolando) */
 .inventario .slot-inv { touch-action: none; -webkit-touch-callout: none; user-select: none; -webkit-user-select: none; }
 .inventario .catalogo .slot-inv { touch-action: pan-y; }
-.inventario .topo { display: flex; gap: 16px; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; }
-.inventario .secao { display: grid; gap: 8px; }
-.inventario .rotulo-secao { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.1em; color: #a59f93; }
-.grade-slots { display: grid; grid-template-columns: repeat(9, var(--slot)); gap: 4px; }
+.inventario .topo { display: flex; gap: 18px; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; }
+.inventario .secao { display: grid; gap: 8px; align-content: start; }
+.inventario .rotulo-secao { font-size: 0.72rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.1em; color: var(--tinta-suave); }
+.grade-slots { display: grid; grid-template-columns: repeat(9, var(--slot)); gap: 5px; }
+/* poço de cada item */
 .slot-inv {
   position: relative; width: var(--slot); height: var(--slot); padding: 0;
-  border-radius: 8px; border: 1px solid rgba(255,255,255,0.1);
-  background: rgba(0,0,0,0.3); box-shadow: inset 0 2px 6px rgba(0,0,0,0.45);
-  cursor: pointer; transition: background 0.1s ease, border-color 0.1s ease;
+  border: 0; border-radius: 12px; background: var(--poco); box-shadow: var(--sombra-poco);
+  cursor: pointer; transition: background 0.1s ease;
 }
-.slot-inv:hover { background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.3); }
-.slot-inv.ativo { border-color: #ffd98f; }
-.slot-inv img { position: absolute; inset: 12%; width: 76%; height: 76%; image-rendering: pixelated; pointer-events: none; filter: drop-shadow(0 2px 2px rgba(0,0,0,0.45)); }
-.slot-inv .qtd { position: absolute; right: 4px; bottom: 1px; font: 800 0.78rem system-ui, sans-serif; color: #fff; text-shadow: 1px 1px 0 #000; pointer-events: none; }
-.slot-inv .dur { position: absolute; left: 12%; right: 12%; bottom: 4px; height: 3px; border-radius: 2px; background: rgba(0,0,0,0.6); pointer-events: none; }
+.slot-inv:hover { background: #fff3d6; }
+.slot-inv:focus-visible { outline: 3px solid var(--azul); outline-offset: 1px; }
+.slot-inv.ativo { background: #fff3d6; outline: 3px solid var(--amarela); outline-offset: -1px; }
+.slot-inv img { position: absolute; inset: 12%; width: 76%; height: 76%; pointer-events: none; filter: drop-shadow(0 2px 1px rgba(90, 55, 20, 0.3)); }
+.slot-inv .qtd, .cursor-item .qtd { position: absolute; right: 4px; bottom: 1px; font: 900 0.78rem var(--jogo); color: #fff; text-shadow: 0 1px 0 rgba(0, 0, 0, 0.55), 0 0 3px rgba(0, 0, 0, 0.45); pointer-events: none; }
+.slot-inv .dur { position: absolute; left: 14%; right: 14%; bottom: 4px; height: 4px; border-radius: 2px; background: rgba(90, 60, 30, 0.3); pointer-events: none; }
 .slot-inv .dur i { display: block; height: 100%; border-radius: 2px; }
-.separador { height: 1px; background: rgba(255,255,255,0.08); margin: 2px 0; }
+.separador { height: 0; border-top: 2px dashed var(--painel-borda); margin: 2px 0; }
 .catalogo { display: grid; gap: 8px; }
 .catalogo[hidden], .livro[hidden] { display: none !important; }
-.inventario .topo > .secao:first-child { display: flex; gap: 16px; align-items: flex-start; flex-wrap: wrap; }
+.inventario .topo > .secao:first-child { display: flex; gap: 18px; align-items: flex-start; flex-wrap: wrap; }
 .catalogo input {
-  min-height: 38px; padding: 6px 12px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.14);
-  background: rgba(0,0,0,0.3); color: #ece6da; font: 500 0.92rem system-ui, sans-serif;
+  min-height: 42px; padding: 6px 14px; border: 0; border-radius: 14px;
+  background: var(--poco); color: var(--tinta); font: 700 0.95rem var(--jogo); box-shadow: var(--sombra-poco);
 }
-.catalogo .grade-slots { max-height: calc(var(--slot) * 3 + 8px); overflow-y: auto; padding-right: 4px; overscroll-behavior: contain; }
+.catalogo input::placeholder, .livro input::placeholder { color: var(--tinta-suave); }
+.catalogo input:focus-visible, .livro input:focus-visible { outline: 3px solid var(--azul); outline-offset: 1px; }
+.catalogo .grade-slots { max-height: calc(var(--slot) * 3 + 14px); overflow-y: auto; padding: 2px 4px 2px 0; overscroll-behavior: contain; }
 .cursor-item { position: fixed; z-index: 60; width: 44px; height: 44px; pointer-events: none; transform: translate(-50%, -50%); }
-.cursor-item img { width: 100%; height: 100%; image-rendering: pixelated; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.6)); }
-.cursor-item .qtd { position: absolute; right: -2px; bottom: -4px; font: 800 0.85rem system-ui, sans-serif; color: #fff; text-shadow: 1px 1px 0 #000; }
+.cursor-item img { width: 100%; height: 100%; filter: drop-shadow(0 5px 5px rgba(60, 35, 10, 0.4)); }
+.cursor-item .qtd { right: -2px; bottom: -4px; font-size: 0.85rem; }
 .dica-item {
-  position: fixed; z-index: 61; pointer-events: none; padding: 6px 10px; border-radius: 8px;
-  background: rgba(14, 10, 26, 0.95); border: 1px solid rgba(160, 120, 255, 0.45);
-  font: 600 0.85rem system-ui, sans-serif; color: #fff; box-shadow: 0 6px 18px rgba(0,0,0,0.5);
+  position: fixed; z-index: 61; pointer-events: none; padding: 6px 12px; border-radius: 12px;
+  background: var(--painel); color: var(--tinta); font: 800 0.86rem var(--jogo);
+  box-shadow: 0 3px 0 var(--painel-borda), 0 8px 16px rgba(40, 25, 10, 0.25);
 }
-.dica-item small { display: block; color: #b3a8d6; font-weight: 500; }
+.dica-item small { display: block; color: var(--tinta-suave); font-weight: 600; }
 body[data-modo='criativo'] .slot-inv .qtd { display: none; }
-.ajuda-inv, .ajuda-inv-toque { font-size: 0.75rem; color: #8f897e; }
+.ajuda-inv, .ajuda-inv-toque { font-size: 0.78rem; font-weight: 600; color: var(--tinta-suave); }
 `;
 
 /** Teclado virtual (iOS): ao focar, o campo rola para a área visível. */

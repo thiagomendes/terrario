@@ -15,32 +15,39 @@ import { iconeDoItem } from './icones';
 import { rolarAoFocar, type InventarioUI } from './inventario';
 
 export const CSS_CRIACAO = `
-.criacao { display: grid; gap: 8px; }
+/* criação e livro são seções do inventário: sem fundo nem sombra próprios */
+.criacao { display: grid; gap: 10px; }
 .criacao[hidden] { display: none; }
-.criacao .linha-criacao { display: flex; align-items: center; gap: 10px; }
-.criacao .grade-criacao { display: grid; gap: 4px; }
-.criacao .seta { font-size: 1.6rem; color: #a59f93; }
+.criacao .linha-criacao { display: flex; align-items: center; gap: 12px; }
+.criacao .grade-criacao { display: grid; gap: 5px; }
+.criacao .seta { font-size: 1.6rem; font-weight: 800; color: var(--amarela-fundo); }
 .criacao .resultado { width: calc(var(--slot) * 1.25); height: calc(var(--slot) * 1.25); }
-.criacao .resultado.pronto { border-color: #ffd98f; box-shadow: 0 0 12px rgba(255, 217, 143, 0.35); }
-.livro { display: grid; gap: 8px; min-width: min(320px, 80vw); }
+.criacao .resultado.pronto { background: #fff1c4; box-shadow: inset 0 0 0 3px var(--amarela), 0 3px 0 var(--amarela-fundo); }
+.criacao .btn { width: 100%; }
+.livro { display: grid; gap: 8px; min-width: min(320px, 100%); max-width: 100%; box-sizing: border-box; }
 .livro input {
-  min-height: 36px; padding: 6px 12px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.14);
-  background: rgba(0,0,0,0.3); color: #ece6da; font: 500 0.9rem system-ui, sans-serif;
+  min-height: 42px; padding: 6px 14px; border: 0; border-radius: 14px; box-sizing: border-box; width: 100%;
+  background: var(--poco); color: var(--tinta); font: 700 0.95rem var(--jogo); box-shadow: var(--sombra-poco);
 }
-.livro .lista { display: grid; gap: 4px; max-height: calc(var(--slot) * 4.6); overflow-y: auto; padding-right: 4px; overscroll-behavior: contain; touch-action: pan-y; }
+.livro .lista { display: grid; gap: 6px; max-height: calc(var(--slot) * 4.6); overflow-y: auto; padding: 2px 4px 4px 0; overscroll-behavior: contain; touch-action: pan-y; }
 .receita {
-  display: grid; grid-template-columns: 36px 1fr; gap: 8px; align-items: center; text-align: left;
-  padding: 4px 8px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.06);
-  background: rgba(255,255,255,0.03); color: #b9b2a6; cursor: pointer; font: 600 0.82rem system-ui, sans-serif;
+  display: grid; grid-template-columns: 36px 1fr; gap: 10px; align-items: center; text-align: left;
+  padding: 6px 10px; border: 0; border-radius: 14px; background: var(--poco); box-shadow: var(--sombra-poco);
+  color: var(--tinta); cursor: pointer; font: 800 0.86rem var(--jogo);
 }
-.receita:hover { background: rgba(255,255,255,0.09); }
-.receita.disponivel { color: #fff; border-color: rgba(255, 217, 143, 0.35); }
-.receita.bloqueada { opacity: 0.55; }
-.receita img { width: 32px; height: 32px; image-rendering: pixelated; }
+.receita:hover { background: #fff3d6; }
+.receita:focus-visible { outline: 3px solid var(--azul); outline-offset: 1px; }
+.receita.disponivel { background: #fff6dc; box-shadow: inset 0 0 0 2px var(--amarela), 0 3px 0 var(--amarela-fundo); }
+.receita.bloqueada { color: var(--tinta-suave); }
+.receita.bloqueada img { opacity: 0.55; }
+.receita img { width: 32px; height: 32px; }
 .receita .ingr { display: flex; gap: 2px; margin-top: 2px; flex-wrap: wrap; }
 .receita .ingr img { width: 16px; height: 16px; }
-.receita small { font-weight: 500; color: #8f897e; }
-.receita.mesa-necessaria::after { content: 'mesa'; font-size: 0.66rem; color: #ffb39f; margin-left: 4px; }
+.receita small { font-weight: 600; color: var(--tinta-suave); }
+.receita.mesa-necessaria::after {
+  content: 'mesa'; justify-self: start; grid-column: 2; padding: 1px 8px; border-radius: 999px;
+  font-size: 0.68rem; font-weight: 800; color: #9a2f12; background: #ffe0d6;
+}
 `;
 
 const NOMES_TAG: Record<string, string> = {

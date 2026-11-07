@@ -6,20 +6,21 @@ import type { Inventario } from '../jogo/inventario';
 import type { InventarioUI } from './inventario';
 
 export const CSS_CONTEINER = `
+/* baú e fornalha são seções do inventário: sem fundo nem sombra próprios */
 .painel-conteiner { display: grid; gap: 8px; }
 .painel-conteiner[hidden] { display: none; }
-.painel-fornalha { display: grid; grid-template-columns: auto auto auto; align-items: center; gap: 10px 14px; }
+.painel-fornalha { display: grid; grid-template-columns: auto auto auto; align-items: center; gap: 10px 16px; }
 .painel-fornalha .coluna { display: grid; gap: 8px; justify-items: center; }
-.painel-fornalha .chama { width: 28px; height: 28px; position: relative; }
+.painel-fornalha .chama { width: 30px; height: 30px; position: relative; }
 .painel-fornalha .chama::before, .painel-fornalha .chama i {
   content: ''; position: absolute; inset: 0; border-radius: 50% 50% 40% 40%;
-  background: rgba(255,255,255,0.08);
+  background: var(--poco);
   clip-path: polygon(50% 0, 80% 35%, 95% 70%, 75% 100%, 25% 100%, 5% 70%, 20% 35%);
 }
-.painel-fornalha .chama i { background: linear-gradient(0deg, #e8641a, #ffd45a); clip-path: inset(var(--vazio, 100%) 0 0 0); }
-.painel-fornalha .progresso { width: 52px; height: 10px; border-radius: 5px; background: rgba(255,255,255,0.08); overflow: hidden; }
-.painel-fornalha .progresso i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, #ffd98f, #ffb35c); }
-.grade-bau { display: grid; grid-template-columns: repeat(9, var(--slot)); gap: 4px; }
+.painel-fornalha .chama i { background: linear-gradient(0deg, #f06a1e, #ffd45a); clip-path: inset(var(--vazio, 100%) 0 0 0); }
+.painel-fornalha .progresso { width: 56px; height: 12px; border-radius: 6px; background: var(--poco); box-shadow: var(--sombra-poco); overflow: hidden; }
+.painel-fornalha .progresso i { display: block; height: 100%; width: 0; border-radius: 6px; background: linear-gradient(90deg, #ffd45a, #ff9b2f); }
+.grade-bau { display: grid; grid-template-columns: repeat(9, var(--slot)); gap: 5px; }
 `;
 
 export const TAMANHO_BAU = 27;
