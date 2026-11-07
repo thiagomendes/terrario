@@ -48,7 +48,7 @@ export const CSS_INVENTARIO = `
 .slot-inv:hover { background: #fff3d6; }
 .slot-inv:focus-visible { outline: 3px solid var(--azul); outline-offset: 1px; }
 .slot-inv.ativo { background: #fff3d6; outline: 3px solid var(--amarela); outline-offset: -1px; }
-.slot-inv img { position: absolute; inset: 12%; width: 76%; height: 76%; pointer-events: none; filter: drop-shadow(0 2px 1px rgba(90, 55, 20, 0.3)); }
+.slot-inv img { position: absolute; inset: 12%; width: 76%; height: 76%; image-rendering: pixelated; pointer-events: none; filter: drop-shadow(0 2px 1px rgba(90, 55, 20, 0.3)); }
 .slot-inv .qtd, .cursor-item .qtd { position: absolute; right: 4px; bottom: 1px; font: 900 0.78rem var(--jogo); color: #fff; text-shadow: 0 1px 0 rgba(0, 0, 0, 0.55), 0 0 3px rgba(0, 0, 0, 0.45); pointer-events: none; }
 .slot-inv .dur { position: absolute; left: 14%; right: 14%; bottom: 4px; height: 4px; border-radius: 2px; background: rgba(90, 60, 30, 0.3); pointer-events: none; }
 .slot-inv .dur i { display: block; height: 100%; border-radius: 2px; }

@@ -50,6 +50,7 @@ const CSS = `
   display: block;
   width: 100%;
   height: 100%;
+  image-rendering: pixelated;
   filter: drop-shadow(0 2px 1px rgba(90, 55, 20, 0.3));
 }
 .barra .qtd {
