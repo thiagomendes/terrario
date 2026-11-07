@@ -291,7 +291,8 @@ export function ajustarPorClima(
   c: { nuvens: number; chuva: number; neblina: number; arco: number },
 ): EstadoAtmosfera {
   const n = Math.min(1, Math.max(0, c.nuvens));
-  const cinza = (k: number): Cor => [0.5 * k, 0.53 * k, 0.58 * k];
+  // céu de chuva de brinquedo: cinza-azulado claro, nunca escuro
+  const cinza = (k: number): Cor => [0.62 * k, 0.68 * k, 0.78 * k];
   const brilhoDia = 1 - a.noite * 0.85;
   const t = Math.max(0, n - 0.2) * 0.85;
   const horizonte = mixC(a.ceuHorizonte, cinza(1.15 * brilhoDia), t);
@@ -301,7 +302,7 @@ export function ajustarPorClima(
     ceuMeio: mixC(a.ceuMeio, cinza(0.95 * brilhoDia), t),
     ceuHorizonte: horizonte,
     nevoa: horizonte,
-    intensidadeLuz: a.intensidadeLuz * (1 - 0.6 * Math.max(0, n - 0.2)),
+    intensidadeLuz: a.intensidadeLuz * (1 - 0.4 * Math.max(0, n - 0.2)),
     intensidadeCeu: a.intensidadeCeu * (1 - 0.15 * n),
     densidadeNevoa: a.densidadeNevoa + c.neblina * 0.028 + c.chuva * 0.008,
     crepusculo: a.crepusculo * (1 - n * 0.7),

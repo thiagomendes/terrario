@@ -322,7 +322,7 @@ test('chuva de brinquedo: de dia e à noite', async ({ page }) => {
     e.camera!.definir('terceira');
     e.apontar!(0.4, 0.25);
   });
-  await page.waitForTimeout(6000);
+  await page.waitForTimeout(14000);
   await foto(page, 'chuva-dia');
   await page.evaluate(() => {
     window.__brumaluz!.hora = 0.9;

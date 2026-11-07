@@ -798,8 +798,9 @@ export function criarCena(
     const arborizado = b === 'floresta' || b === 'pantano' || b === 'taiga' || b === 'campos';
     precipitacao.folhas(cameraVisao.position, arborizado ? aberto : 0, outonoAtual);
     ambiente?.definirChuva(nevando ? clima.estado.chuva * 0.25 : clima.estado.chuva);
-    flash = Math.max(0, flash - dt * 6);
-    pipeline.imageProcessing.exposure = 1.1 + flash * 2.2;
+    // relâmpago suave de brinquedo: clareia a cena sem estourar em branco
+    flash = Math.max(0, flash - dt * 3.2);
+    pipeline.imageProcessing.exposure = 1.18 + flash * flash * 0.85;
     estado.infoMundo = `Dia ${dia + 1} · ${NOMES_ESTACAO[estacao]} · ${NOMES_CLIMA[clima.estado.tipo]}`;
     estado.atmosfera = { noite: a.noite, crepusculo: a.crepusculo };
     // a câmera que de fato desenha (em 3ª pessoa fica atrás do personagem); a superfície
