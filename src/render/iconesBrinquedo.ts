@@ -19,11 +19,12 @@ import { StandardMaterial } from '@babylonjs/core/Materials/standardMaterial';
 import type { Atlas } from '../art/atlas';
 import { TAM_TILE } from '../art/atlas';
 import { obterItem, todosItens } from '../jogo/itens';
-import { obterBloco } from '../world/blocks';
+import { Bloco, obterBloco } from '../world/blocks';
 import { caixasDoBloco } from '../world/formas';
 import { corMediaDoBloco } from '../fx/cores';
 import { plantaDeBrinquedo, PLANTAS_BRINQUEDO, type AlvoPlanta } from '../mesh/plantasBrinquedo';
 import { caixaArredondada, criarPlasticos } from './formas';
+import { modeloVidro } from './itensBrinquedo';
 import { modeloNaMao } from './itensBrinquedo';
 
 const TAM = 96;
@@ -121,6 +122,11 @@ export function gerarIconesBrinquedo(
     }
     const bloco = def.bloco;
     const b = obterBloco(bloco);
+    if (bloco === Bloco.VIDRO) {
+      for (const m of modeloVidro(scene, `icone-${id}`, 1)) m.parent = raiz;
+      raiz.rotation.set(-0.5, Math.PI / 4, 0);
+      return raiz;
+    }
     if (b?.planta || b?.forma === 'cruz' || b?.forma === 'tocha') {
       if (!PLANTAS_BRINQUEDO.includes(bloco)) {
         raiz.dispose();

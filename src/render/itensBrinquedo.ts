@@ -9,12 +9,13 @@ import { Mesh } from '@babylonjs/core/Meshes/mesh';
 import { VertexData } from '@babylonjs/core/Meshes/mesh.vertexData';
 import { StandardMaterial } from '@babylonjs/core/Materials/standardMaterial';
 import { Color3 } from '@babylonjs/core/Maths/math.color';
+
 import { plantaDeBrinquedo, PLANTAS_BRINQUEDO, type AlvoPlanta } from '../mesh/plantasBrinquedo';
 import type { Scene } from '@babylonjs/core/scene';
 import { obterItem } from '../jogo/itens';
 import { coresDoBloco } from '../fx/cores';
 import { caixasDoBloco, temFormaParcial, type Caixa } from '../world/formas';
-import { obterBloco } from '../world/blocks';
+import { Bloco, obterBloco } from '../world/blocks';
 import { caixaArredondada, cilindro, esfera, type Plasticos } from './formas';
 
 /** Cor da cabeça da ferramenta por material (as mesmas do catálogo). */
@@ -188,6 +189,12 @@ export function modeloNaMao(
     add(malhaDePlanta(scene, bloco, `${prefixo}-planta`), 0, -0.04, 0);
     return { no, malhas, ferramenta: false, planta: true };
   }
+  if (bloco === Bloco.VIDRO) {
+    // cada peça já vem no lugar dela (a moldura nas arestas): mantém a posição
+    for (const m of modeloVidro(scene, `${prefixo}-mao`, 0.24))
+      add(m, m.position.x, m.position.y, m.position.z);
+    return { no, malhas, ferramenta: false };
+  }
   if (bloco !== null && bloco > 0 && temFormaParcial(bloco)) {
     // porta, cerca, laje, escada, cama: o formato de verdade, com as caixas do próprio bloco
     const c = coresDoBloco(bloco);
@@ -281,4 +288,82 @@ function malhaDePlanta(scene: Scene, bloco: number, nome: string): Mesh {
   }
   m.material = mat;
   return m;
+}
+
+const matsVidro = new WeakMap<Scene, { vidro: StandardMaterial; moldura: StandardMaterial }>();
+
+/**
+ * Vidro de brinquedo (pedido do dono): no inventário, na mão e no chão ele precisa parecer
+ * vidro, não um bloco sólido. Um cubo azul-clarinho translúcido, uma moldura branca nas
+ * arestas e dois riscos de brilho. `lado` é o tamanho do cubo; a origem fica no centro.
+ */
+export function modeloVidro(scene: Scene, nome: string, lado: number): Mesh[] {
+  let m = matsVidro.get(scene);
+  if (!m) {
+    const vidro = new StandardMaterial('vidro-brinquedo', scene);
+    vidro.diffuseColor = new Color3(0.72, 0.9, 1);
+    vidro.emissiveColor = new Color3(0.25, 0.36, 0.42);
+    vidro.specularColor = new Color3(0.9, 0.95, 1);
+    vidro.specularPower = 64;
+    vidro.alpha = 0.38;
+    vidro.backFaceCulling = false;
+    const moldura = new StandardMaterial('vidro-moldura', scene);
+    moldura.diffuseColor = new Color3(0.96, 0.98, 1);
+    moldura.emissiveColor = new Color3(0.45, 0.48, 0.5);
+    moldura.specularColor = new Color3(0.6, 0.6, 0.6);
+    m = { vidro, moldura };
+    matsVidro.set(scene, m);
+  }
+  const out: Mesh[] = [];
+  const corpo = caixaArredondada(`${nome}-vidro`, scene, lado, lado, lado, lado * 0.12, m.vidro, 3);
+  out.push(corpo);
+  // moldura: as 12 arestas em peças finas de plástico branco
+  const e = lado * 0.13;
+  const meio = lado / 2 - e / 2;
+  let k = 0;
+  for (const eixo of [0, 1, 2])
+    for (const a of [-1, 1])
+      for (const b of [-1, 1]) {
+        const t: [number, number, number] = [e, e, e];
+        t[eixo] = lado;
+        const aresta = caixaArredondada(
+          `${nome}-moldura${k++}`,
+          scene,
+          t[0],
+          t[1],
+          t[2],
+          e * 0.45,
+          m.moldura,
+          2,
+        );
+        const p: [number, number, number] = [0, 0, 0];
+        const outros = [0, 1, 2].filter((x) => x !== eixo);
+        p[outros[0]] = a * meio;
+        p[outros[1]] = b * meio;
+        aresta.position.set(p[0], p[1], p[2]);
+        out.push(aresta);
+      }
+  // riscos de brilho na frente, na diagonal (só no ícone: na mão viram um "+" estranho)
+  if (lado >= 0.5)
+    for (const [i, [dx, dy, w]] of (
+      [
+        [-0.12, 0.08, 0.34],
+        [0.1, -0.12, 0.2],
+      ] as const
+    ).entries()) {
+      const brilho = caixaArredondada(
+        `${nome}-brilho${i}`,
+        scene,
+        w * lado,
+        lado * 0.05,
+        lado * 0.02,
+        lado * 0.02,
+        m.moldura,
+        2,
+      );
+      brilho.position.set(dx * lado, dy * lado, -lado / 2 - 0.002);
+      brilho.rotation.z = 0.75;
+      out.push(brilho);
+    }
+  return out;
 }

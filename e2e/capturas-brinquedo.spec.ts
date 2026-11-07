@@ -711,13 +711,21 @@ test('blocos com forma na mão', async ({ page }) => {
     const e = window.__brumaluz!;
     e.pausarDia = true;
     e.hora = 0.42;
-    [56, 57, 59, 60, 61, 37].forEach((b, i) =>
+    [56, 57, 59, 60, 61, 37, 36].forEach((b, i) =>
       e.inventario!.definir(i, { item: `bloco:${b}`, qtd: 1 }),
     );
     e.camera!.definir('primeira');
     e.apontar!(0, 0.1);
   });
-  for (const [i, nome] of ['cama', 'porta', 'escada', 'laje', 'cerca', 'tocha'].entries()) {
+  for (const [i, nome] of [
+    'cama',
+    'porta',
+    'escada',
+    'laje',
+    'cerca',
+    'tocha',
+    'vidro',
+  ].entries()) {
     await page.evaluate((i) => window.__brumaluz!.selecionarSlot!(i), i);
     await page.waitForTimeout(900);
     await foto(page, `mao-forma-${nome}`);
