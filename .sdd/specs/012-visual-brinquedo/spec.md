@@ -76,6 +76,18 @@ A spec só fecha quando o dono olha as duplas e diz que está igual ou melhor.
   - **De frente:** como hoje.
 - **Moradores e bichos:** no mesmo traço do personagem, nos seis temas. Isso inclui os moradores de cada profissão, a raposa e as criaturas de cada tema (dia e noite), com os movimentos de cada um.
 - **Itens e ícones:** os itens são modelos de brinquedo (picareta, espada, comida, blocos), e os ícones da barra e do inventário são desenhados a partir desses modelos, sempre iguais ao que aparece na mão.
+- **Efeitos, todos no mesmo estilo** (nada de quadradinho de pixel sobrando):
+  - **Quebrar um bloco:** os pedaços saem como **peças arredondadas e confetes de plástico** na cor do bloco, que quicam e somem encolhendo, e não como cubinhos de textura.
+  - **Golpes e colocação:** o golpe solta uma poeirinha de bolinhas e a peça colocada entra com um "plim" (cresce e assenta com mola).
+  - **Rachadura:** vira **trincas desenhadas** que se espalham pela peça, sem o padrão de pixels.
+  - **Destaque do bloco mirado:** um contorno arredondado e macio.
+  - **Itens no chão:** mini peças e mini itens de brinquedo que flutuam e giram.
+  - **Clima:** chuva em gotas de plástico, neve em bolinhas, folhas de outono em formato de brinquedo e relâmpago.
+  - **Ambiente:** fumaça da fornalha e da chaminé em nuvenzinhas fofas, vaga-lumes como luzinhas redondas e o brilho dos cristais.
+  - **Céu e água:** nuvens fofas no céu e água com respingos em gotas.
+  - **Gente e bichos:** a chegada de um amigo (festa de confete), o dano e o desmaio, o sono (Zzz em balão) e a criatura derrotada (some num "puf" de fumacinha).
+
+  Qualquer efeito novo que aparecer no caminho segue a mesma regra.
 - **Tela inicial, menus e site:**
   - o título "Terrário" em letras de brinquedo;
   - botões com cara de peça;
@@ -102,9 +114,10 @@ A spec só fecha quando o dono olha as duplas e diz que está igual ou melhor.
    - no celular simulado (CPU 4× mais lenta), não pior que hoje no nível de qualidade escolhido;
    - medição antes e depois, como na spec 009;
    - a troca automática de qualidade testada.
-8. **Tela inicial e site:** título, menus, vitrine, HUD e ícone do site no estilo novo; capturas no computador e no celular.
-9. **Nada quebra:** a paridade das 36 sessões, que muda só o desenho e não as regras, o multiplayer e todos os testes passam.
-10. **Auditoria independente** ao fim, com os achados corrigidos.
+8. **Efeitos:** cada efeito da lista da Experiência no estilo novo, com captura de cada um (quebrar e colocar nos seis temas); nenhum efeito usa ainda a textura de pixels.
+9. **Tela inicial e site:** título, menus, vitrine, HUD e ícone do site no estilo novo; capturas no computador e no celular.
+10. **Nada quebra:** a paridade das 36 sessões, que muda só o desenho e não as regras, o multiplayer e todos os testes passam.
+11. **Auditoria independente** ao fim, com os achados corrigidos.
 
 ## Fases e tarefas
 | # | Tarefa |
@@ -117,6 +130,7 @@ A spec só fecha quando o dono olha as duplas e diz que está igual ou melhor.
 | T06 | Blocos: quinas arredondadas nas arestas à mostra perto do jogador, malha simples longe, cores limpas com degradê |
 | T07 | Formas por tema: árvores, flores, grama, água e estruturas |
 | T08 | Itens em 3D e ícones gerados a partir deles |
+| T08b | Efeitos: pedaços, poeira, rachadura, destaque, itens no chão, clima, fumaça, vaga-lumes, nuvens, respingos, chegada, sono, dano |
 | T09 | Tela inicial, menus, HUD, vitrine dos temas e ícone do site |
 | T10 | Desempenho: medição antes e depois, qualidade automática |
 | T11 | Capturas lado a lado com os esboços nos seis temas, auditoria e relatório visual |
