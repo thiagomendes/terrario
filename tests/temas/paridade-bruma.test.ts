@@ -28,8 +28,21 @@ async function sha(...partes: (Uint8Array | string)[]): Promise<string> {
   return [...new Uint8Array(d)].map((b) => b.toString(16).padStart(2, '0')).join('');
 }
 
-/** Tiles do plantio (spec 013), acrescentados depois da paridade. */
-const TILES_013 = ['terra_arada', 'trigo', 'milho', 'aboboreira', 'feno_lado', 'feno_topo'];
+/**
+ * Tiles do plantio (spec 013), acrescentados depois da paridade, e a porta, repintada de
+ * propósito na 013 como uma peça só de dois blocos (a metade de cima ganhou tile próprio).
+ * Os acrescentados ocupam células antes vazias (zeradas, o hash não muda); a porta não.
+ */
+const TILES_013 = [
+  'terra_arada',
+  'trigo',
+  'milho',
+  'aboboreira',
+  'feno_lado',
+  'feno_topo',
+  'porta',
+  'porta_cima',
+];
 
 describe('Bruma e Luz é idêntico ao jogo antes dos temas', () => {
   it('atlas: os mesmos pixels e os mesmos tiles brilhantes', async () => {
@@ -47,7 +60,9 @@ describe('Bruma e Luz é idêntico ao jogo antes dos temas', () => {
       for (let y = by; y < by + CELULA; y++)
         px.fill(0, (y * a.largura + bx) * 4, (y * a.largura + bx + CELULA) * 4);
     }
-    expect(await sha(px)).toBe('3aed3d5a8a609f6fe704538a62a5d75f4a87a7a43372b8ac899913165bca488c');
+    // hash refeito na 013 só porque a célula da porta (repintada de propósito) agora vai
+    // zerada; antes era 3aed3d5a8a609f6fe704538a62a5d75f4a87a7a43372b8ac899913165bca488c
+    expect(await sha(px)).toBe('51f279ca21dcf184e765ff7d308d21c5bdc6995eff9b0639f3091fdd071ab84c');
     const em = a.tiles
       .filter((t) => t.emissivo && !TILES_PECAS.includes(t.nome) && !TILES_013.includes(t.nome))
       .map((t) => t.nome)

@@ -8,7 +8,8 @@ import {
   type Caixa,
 } from '../world/formas';
 import { LUZ_MAXIMA, calcularLuz } from '../world/luz';
-import { FACES_TILE, TILE_BRANCO, TILES_BRILHO, indiceDoTile } from '../art/tiles';
+import { FACES_TILE, TILE_BRANCO, TILE_PORTA_CIMA, TILES_BRILHO, indiceDoTile } from '../art/tiles';
+import { ehPorta } from '../world/portas';
 import { corDaCopa, plantaDeBrinquedo } from './plantasBrinquedo';
 
 const TILE_TERRA = indiceDoTile('terra');
@@ -65,6 +66,8 @@ const FACES: Face[] = [
   { n: [0, 0, 1], t1: [1, 0, 0], t2: [0, 1, 0] },
   { n: [0, 0, -1], t1: [0, 1, 0], t2: [1, 0, 0] },
 ];
+
+const TILE_PORTA_CIMA_I = indiceDoTile(TILE_PORTA_CIMA);
 
 /** Índice do tile do lado de um bloco no atlas. */
 export function tileDoBloco(id: number): number {
@@ -628,8 +631,17 @@ export function gerarMalha(
 
   /** Blocos parciais: cada caixa vira 6 faces, cortando as que encostam em opacos. */
   function adicionarCaixas(id: number, x: number, y: number, z: number, caixas: Caixa[]): void {
+    // porta de dois blocos (spec 013): uma peça só. A metade de cima usa o tile dela nas faces
+    // em pé; onde as metades se encostam não há face nem junta (o alfa do vértice avisa o
+    // material: 0,996 = metade de cima, 0,993 = metade de baixo)
+    const porta = ehPorta(id);
+    const temEmbaixo = porta && ehPorta(ler(x, y - 1, z));
+    const temEmCima = porta && ehPorta(ler(x, y + 1, z));
+    const marca = temEmbaixo ? 0.996 : temEmCima ? 0.993 : 1;
     for (const c of caixas) {
       for (const f of FACES) {
+        if ((temEmbaixo && f.n[1] < 0 && c[1] <= 0) || (temEmCima && f.n[1] > 0 && c[4] >= 1))
+          continue;
         const naBorda =
           (f.n[0] > 0 && c[3] >= 1) ||
           (f.n[0] < 0 && c[0] <= 0) ||
@@ -638,7 +650,10 @@ export function gerarMalha(
           (f.n[2] > 0 && c[5] >= 1) ||
           (f.n[2] < 0 && c[2] <= 0);
         if (naBorda && opaco(x + f.n[0], y + f.n[1], z + f.n[2])) continue;
-        const tile = tileDaFace(id, f.n, metas.get(indice(x, y, z)) ?? 0);
+        const tile =
+          temEmbaixo && f.n[1] === 0
+            ? TILE_PORTA_CIMA_I
+            : tileDaFace(id, f.n, metas.get(indice(x, y, z)) ?? 0);
         const base = solido.vertices;
         const lc = naBorda ? [x + f.n[0], y + f.n[1], z + f.n[2]] : [x, y, z];
         const lc2: [number, number, number] = [lc[0], lc[1], lc[2]];
@@ -660,7 +675,7 @@ export function gerarMalha(
           solido.posicoes.push(x + p[0], y + p[1], z + p[2]);
           solido.normais.push(f.n[0], f.n[1], f.n[2]);
           solido.uvs.push(...uvDoCanto(tile, ...uvLocal(f.n, p[0], p[1], p[2])));
-          solido.cores.push(sombra, sombra, sombra, 1);
+          solido.cores.push(sombra, sombra, sombra, f.n[1] === 0 ? marca : 1);
           solido.luz.push(luzC, luzB);
         }
         solido.indices.push(base, base + 1, base + 2, base, base + 2, base + 3);

@@ -660,6 +660,22 @@ export function modeloDeBloco(
       break;
     }
 
+    case Bloco.PORTA: {
+      // porta inteira de brinquedo (dois blocos numa peça): batente, janela com caixilho em
+      // cruz em cima, duas almofadas embaixo e a maçaneta dourada, sem emenda no meio
+      const madeira = cor(Bloco.PORTA, 'lado') ?? lado0;
+      const escura = tom(madeira, 0.72);
+      caixa(madeira, 0.5, 1, 0.09, 0.03, 0, 0, 0);
+      for (const x of [-0.235, 0.235]) caixa(escura, 0.05, 1.02, 0.12, 0.02, x, 0, 0);
+      caixa(escura, 0.52, 0.05, 0.12, 0.02, 0, 0.49, 0);
+      caixa('#cfe8f2', 0.3, 0.26, 0.1, 0.02, 0, 0.24, 0, 0.35);
+      caixa(escura, 0.035, 0.28, 0.115, 0.01, 0, 0.24, 0);
+      caixa(escura, 0.32, 0.035, 0.115, 0.01, 0, 0.24, 0);
+      for (const x of [-0.1, 0.1]) caixa(tom(madeira, 0.86), 0.14, 0.3, 0.11, 0.02, x, -0.25, 0);
+      bola('#f2c14e', 0.035, [1, 1, 1], 0.17, 0, 0.06, 0.4);
+      bola('#f2c14e', 0.035, [1, 1, 1], 0.17, 0, -0.06, 0.4);
+      break;
+    }
     case Bloco.PORTEIRA: {
       // porteira de fazenda, mais larga que alta: dois mourões com chapéu, montantes, três
       // travessas, a mão-francesa em diagonal e as dobradiças de ferro

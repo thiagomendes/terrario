@@ -145,8 +145,8 @@ export function gerarIconesBrinquedo(
     if (proprio) {
       for (const m of proprio) m.parent = raiz;
       raiz.rotation.set(-0.5, Math.PI / 4, 0);
-      // porteira: quase de frente, para ver a diagonal (de lado ela vira uma escada)
-      if (bloco === Bloco.PORTEIRA) raiz.rotation.set(-0.25, 0.4, 0);
+      // porta e porteira: quase de frente, para ver a janela e a diagonal
+      if (bloco === Bloco.PORTEIRA || bloco === Bloco.PORTA) raiz.rotation.set(-0.25, 0.4, 0);
       return raiz;
     }
     if (b?.planta || b?.forma === 'cruz' || b?.forma === 'tocha') {

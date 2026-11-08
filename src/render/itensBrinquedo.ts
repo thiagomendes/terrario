@@ -322,18 +322,22 @@ export function modeloNaMao(
       add(m, m.position.x, m.position.y, m.position.z);
     return { no, malhas, ferramenta: false };
   }
-  // a porteira tem modelinho próprio (com os mourões e a diagonal de verdade), mais abaixo
-  if (bloco !== null && bloco > 0 && temFormaParcial(bloco) && bloco !== Bloco.PORTEIRA) {
+  // porta e porteira têm modelinho próprio (janela e almofadas; mourões e diagonal), mais abaixo
+  if (
+    bloco !== null &&
+    bloco > 0 &&
+    temFormaParcial(bloco) &&
+    bloco !== Bloco.PORTEIRA &&
+    bloco !== Bloco.PORTA
+  ) {
     // porta, cerca, laje, escada, cama: o formato de verdade, com as caixas do próprio bloco
     const c = coresDoBloco(bloco);
     const cor = c ? hexDe(c.lado) : '#a9adb8';
     const forma = obterBloco(bloco)?.forma;
     let caixas: Caixa[] =
-      forma === 'porta'
-        ? [[0, 0, 0.4, 1, 2, 0.6]]
-        : forma === 'cama'
-          ? [[0, 0, 0, 1, 0.5, 2]]
-          : (caixasDoBloco(bloco, 0, (d) => d % 2 === 1) ?? [[0, 0, 0, 1, 1, 1]]);
+      forma === 'cama'
+        ? [[0, 0, 0, 1, 0.5, 2]]
+        : (caixasDoBloco(bloco, 0, (d) => d % 2 === 1) ?? [[0, 0, 0, 1, 1, 1]]);
     // cabe no mesmo espaço do bloco na mão (o maior lado com 0,26)
     let maior = 0;
     for (const [x0, y0, z0, x1, y1, z1] of caixas)
@@ -352,8 +356,6 @@ export function modeloNaMao(
         ((z0 + z1) / 2 - cz0) * k,
       );
     });
-    if (forma === 'porta')
-      add(bo('macaneta', 0.018, '#f2c14e', [1, 1, 1], 0.3), 0.36 * k, 0.95 * k - 0.12, 0.12 * k);
     if (forma === 'cama') {
       // lençol claro, cobertor colorido, travesseiro e a cabeceira de madeira
       add(cx('lencol', 0.92 * k, 0.08 * k, 1.4 * k, 0.02, '#f4efe6'), 0, 0.52 * k - 0.12, 0.25 * k);
@@ -382,8 +384,8 @@ export function modeloNaMao(
     // minério, tronco, fornalha, baú...: o modelinho que parece com o bloco
     const proprio = modeloDeBloco(scene, mats, bloco, `${prefixo}-mao`, 0.24);
     if (proprio) {
-      // porteira: virada de frente para quem segura (de lado ela vira uma escada)
-      const giro = bloco === Bloco.PORTEIRA ? -1.2 : 0;
+      // porta e porteira: viradas de frente para quem segura (de lado são só uma tábua)
+      const giro = bloco === Bloco.PORTEIRA || bloco === Bloco.PORTA ? -1.2 : 0;
       for (const m of proprio) {
         const { x, y, z } = m.position;
         m.rotation.y += giro;

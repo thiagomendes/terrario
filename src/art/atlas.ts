@@ -212,6 +212,22 @@ export function tabuasDe(cores: string[]): Pintor {
   };
 }
 
+/**
+ * Porta de dois blocos pintada como uma peça só (spec 013). `inteira(x, yy, s)` vai de yy 0
+ * (o alto da porta) a 31 (o pé): a metade de cima é yy 0 a 15 e a de baixo, 16 a 31. As duas
+ * usam a mesma semente e os veios das tábuas se repetem a cada 16, então a madeira continua de
+ * uma metade para a outra, sem emenda.
+ */
+export function metadesDaPorta(inteira: Pintor): { porta: Pintor; porta_cima: Pintor } {
+  const S = 5309;
+  return { porta: (x, y) => inteira(x, y + T, S), porta_cima: (x, y) => inteira(x, y, S) };
+}
+
+/** Moldura da porta inteira: os lados, o alto e o pé (nada no meio, onde as metades se encostam). */
+export function bordaDaPorta(x: number, yy: number, n = 0): boolean {
+  return x <= n || x >= T - 1 - n || yy <= n || yy >= 2 * T - 1 - n;
+}
+
 export function ladoComTopo(topo: Pintor, base: Pintor, sombra: string, prof = 2): Pintor {
   return (x, y, s) => {
     let borda = prof + Math.floor(hash2(x, 0, s + 17) * 3);
@@ -295,6 +311,8 @@ function bocaFornalha(acesa: boolean): Pintor {
 }
 
 /** Pintores do tema base (Bruma e Luz), por nome do tile. */
+const TABUAS_PORTA = tabuasDe(['#8a603a', '#966a40', '#a27446']);
+
 export const PINTORES: Record<string, Pintor> = {
   grama_topo: pintorGramaTopo(),
   grama_lado: pintorGramaLado(),
@@ -611,13 +629,18 @@ export const PINTORES: Record<string, Pintor> = {
     if (y < 9) return rampa(['#efece6'], 0, x, y, s);
     return tabuasCarvalho(x, y, s);
   },
-  porta: (x, y, s) => {
-    const janela = x >= 3 && x <= 12 && y >= 2 && y <= 6 && !(x === 7 || x === 8);
+  // porta inteira: janela com caixilho em cruz em cima, almofadas e maçaneta embaixo
+  ...metadesDaPorta((x, yy, s) => {
+    const janela = x >= 3 && x <= 12 && yy >= 3 && yy <= 11 && x !== 7 && x !== 8 && yy !== 7;
     if (janela) return VAZIO;
-    if (x === 12 && y === 9) return rampa(['#d8c070'], 0, x, y, s);
-    const p = tabuasDe(['#8a603a', '#966a40', '#a27446'])(y, x, s);
-    return x <= 0 || x >= T - 1 || y <= 0 || y >= T - 1 ? escurece(p, 0.75) : p;
-  },
+    if (x === 12 && (yy === 18 || yy === 19)) return rampa(['#d8c070'], 0, x, yy, s);
+    const p = TABUAS_PORTA(yy & (T - 1), x, s);
+    if (bordaDaPorta(x, yy)) return escurece(p, 0.75);
+    const almofada = yy >= 21 && yy <= 28 && ((x >= 3 && x <= 6) || (x >= 9 && x <= 12));
+    if (!almofada) return p;
+    const aro = yy === 21 || yy === 28 || x === 3 || x === 6 || x === 9 || x === 12;
+    return escurece(p, aro ? 0.7 : 0.88);
+  }),
   tabuas_betula: tabuasDe(['#cdb48a', '#d6bd92', '#dec69b', '#e5cea3']),
   tabuas_pinho: tabuasDe(['#6b4a2c', '#765232', '#815a38', '#8b623e']),
   abobora_lado: (x, y, s) => {

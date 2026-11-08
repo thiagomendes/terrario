@@ -1,6 +1,8 @@
 import {
   T,
   VAZIO,
+  metadesDaPorta,
+  bordaDaPorta,
   escurece,
   fbmT,
   hex,
@@ -913,15 +915,15 @@ export const PINTORES_LUNARES: Record<string, Pintor> = {
   },
 
   // escotilha (porta) com janela redonda
-  porta: (x, y, s) => {
-    const d = Math.hypot(x - 7.5, y - 4.5);
+  ...metadesDaPorta((x, yy, s) => {
+    const d = Math.hypot(x - 7.5, yy - 7.5);
     if (d < 2.6) return VAZIO;
-    if (d < 3.6) return um('#c8ccd4', x, y, s);
-    if (x === 12 && (y === 9 || y === 10)) return um('#f4cc2a', x, y, s);
-    if (y >= 13 && y <= 14) return um((x + y) % 4 < 2 ? '#f4cc2a' : '#26282e', x, y, s);
-    const p = placaBranca(y, x, s);
-    return x <= 0 || x >= T - 1 || y <= 0 || y >= T - 1 ? escurece(p, 0.7) : p;
-  },
+    if (d < 3.6) return um('#c8ccd4', x, yy, s);
+    if (x === 12 && (yy === 18 || yy === 19)) return um('#f4cc2a', x, yy, s);
+    if (yy >= 27 && yy <= 28) return um((x + yy) % 4 < 2 ? '#f4cc2a' : '#26282e', x, yy, s);
+    const p = placaBranca(yy & (T - 1), x, s);
+    return bordaDaPorta(x, yy) ? escurece(p, 0.7) : p;
+  }),
 
   // abóbora lunar (verde-água) e abóbora-farol
   abobora_lado: (x, y, s) => {
