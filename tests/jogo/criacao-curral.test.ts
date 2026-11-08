@@ -56,7 +56,8 @@ function mundoReal(p: PlanoPovoado, abrirPorteiras = false): MundoPopulacao {
   if (abrirPorteiras)
     for (const c of p.currais!) {
       const y = p.lotes[c.lote].h + 1;
-      for (const dy of [0, 1]) edicoes.definir(c.portao[0], y + dy, c.portao[1], Bloco.PORTA_ABERTA);
+      for (const dy of [0, 1])
+        edicoes.definir(c.portao[0], y + dy, c.portao[1], Bloco.PORTA_ABERTA);
     }
   const bloco = (x: number, y: number, z: number): number => {
     if (y < 0 || y >= ALTURA) return Bloco.AR;
@@ -161,7 +162,8 @@ describe('cercado do sítio e criação', () => {
       p.currais!.forEach((_, k) => {
         const l = doCercado(pop.lista, p, k);
         expect(l).toHaveLength(BICHOS_POR_CERCADO);
-        for (const b of l) expect(dentro(p, k, b), `${b.tipo} ${b.x},${b.z} min ${i / 600}`).toBe(true);
+        for (const b of l)
+          expect(dentro(p, k, b), `${b.tipo} ${b.x},${b.z} min ${i / 600}`).toBe(true);
       });
     }
   });

@@ -72,7 +72,10 @@ function plataforma(n: Nucleo): void {
   lote(n, c);
 }
 
-function novo(modo: 'criativo' | 'sobrevivencia' = 'sobrevivencia', op: Partial<OpcoesNucleo> = {}) {
+function novo(
+  modo: 'criativo' | 'sobrevivencia' = 'sobrevivencia',
+  op: Partial<OpcoesNucleo> = {},
+) {
   const n = criarNucleo({ semente: SEMENTE, modo, versaoMundo: 2, confiarNoCliente: true, ...op });
   n.conectar('local');
   n.comando('local', tel(X + 0.5, Z + 0.5));
@@ -86,12 +89,19 @@ function novo(modo: 'criativo' | 'sobrevivencia' = 'sobrevivencia', op: Partial<
 
 function dar(n: Nucleo, slot: number, p: Slot, quem = 'local'): void {
   const antes = n.estado.jogadores.get(quem)!.inventario.obter(slot);
-  n.comando(quem, { t: 'transacao', id: id(), mudancas: [{ onde: 'inv', i: slot, antes, depois: p }] });
+  n.comando(quem, {
+    t: 'transacao',
+    id: id(),
+    mudancas: [{ onde: 'inv', i: slot, antes, depois: p }],
+  });
 }
 
 /** Põe um bicho na plataforma e devolve ele (o último da lista). */
 function invocar(n: Nucleo, tipo: TipoSer, dx: number, dz: number): Criatura {
-  n.comando('local', { t: 'depurar', d: { f: 'invocar', tipo, x: X + dx + 0.5, y: Y + 1, z: Z + dz + 0.5 } });
+  n.comando('local', {
+    t: 'depurar',
+    d: { f: 'invocar', tipo, x: X + dx + 0.5, y: Y + 1, z: Z + dz + 0.5 },
+  });
   const l = n.estado.populacao.lista;
   return l[l.length - 1];
 }
@@ -258,7 +268,8 @@ describe('dar comida', () => {
     const n = novo('criativo');
     dar(n, 0, { item: 'trigo', qtd: 64 });
     const lista: Criatura[] = [];
-    for (let i = 0; i < LIMITE_CRIADOS + 1; i++) lista.push(invocar(n, 'cervo', 1 + (i % 4), -3 + Math.floor(i / 4)));
+    for (let i = 0; i < LIMITE_CRIADOS + 1; i++)
+      lista.push(invocar(n, 'cervo', 1 + (i % 4), -3 + Math.floor(i / 4)));
     n.quadros();
     for (const c of lista.slice(0, LIMITE_CRIADOS)) {
       // perto do jogador (o alcance conta)
@@ -273,7 +284,11 @@ describe('dar comida', () => {
     ultimo.z = Z + 0.5;
     n.comando('local', alimentar(ultimo));
     expect(ultimo.criado).toBeFalsy();
-    expect(eventos(n)).toContainEqual({ e: 'criacaoRecusada', motivo: 'limite', aviso: AVISO_LIMITE });
+    expect(eventos(n)).toContainEqual({
+      e: 'criacaoRecusada',
+      motivo: 'limite',
+      aviso: AVISO_LIMITE,
+    });
     expect(AVISO_LIMITE).toBe('Já tem bicho demais por aqui. Que tal um curral?');
   });
 });
@@ -346,7 +361,8 @@ describe('o bicho criado', () => {
     const anel: [number, number, number, number][] = [];
     for (let dx = 0; dx < 5; dx++)
       for (let dz = 0; dz < 5; dz++)
-        if (dx === 0 || dz === 0 || dx === 4 || dz === 4) anel.push([ox + dx, Y + 1, oz + dz, Bloco.CERCA]);
+        if (dx === 0 || dz === 0 || dx === 4 || dz === 4)
+          anel.push([ox + dx, Y + 1, oz + dz, Bloco.CERCA]);
     lote(n, anel);
     const c = invocar(n, 'cervo', 8, 0);
     const g = invocar(n, 'coelho', 7, -1);
@@ -386,7 +402,10 @@ describe('salvar e reabrir', () => {
     n.comando('local', alimentar(g, 1));
     passos(n, 2);
     const s = n.salvar();
-    const salvo = s.extras['criaturas'] as { criados: Record<string, unknown>[]; raposas: unknown[] };
+    const salvo = s.extras['criaturas'] as {
+      criados: Record<string, unknown>[];
+      raposas: unknown[];
+    };
     expect(salvo.raposas).toEqual([]);
     expect(salvo.criados).toHaveLength(2);
     expect(salvo.criados[0]).toMatchObject({ tipo: 'cervo', vida: CRIATURAS.cervo.vida });
@@ -416,7 +435,10 @@ describe('salvar e reabrir', () => {
       undefined,
       { raposas: [{ x: X + 1, y: Y + 1, z: Z + 1, vida: 9 }] },
       { raposas: [], criados: 'lixo' },
-      { raposas: [], criados: [null, 3, { tipo: 'espectro', x: 1, y: 2, z: 3 }, { tipo: 'cervo', x: 'a' }] },
+      {
+        raposas: [],
+        criados: [null, 3, { tipo: 'espectro', x: 1, y: 2, z: 3 }, { tipo: 'cervo', x: 'a' }],
+      },
     ]) {
       const extras = { ...JSON.parse(JSON.stringify(s.extras)) };
       if (cri === undefined) delete extras['criaturas'];
@@ -551,7 +573,10 @@ describe('criatura da noite mansa (T04)', () => {
     const { n, e } = noite('mansa');
     n.comando('local', { t: 'depurar', d: { f: 'hora', hora: 0.5 } });
     passos(n, 5);
-    expect(n.estado.populacao.lista, `${e.estado} ${e.dissolver} ${e.x - X},${e.y},${e.z - Z} ${n.estado.hora}`).not.toContain(e);
+    expect(
+      n.estado.populacao.lista,
+      `${e.estado} ${e.dissolver} ${e.x - X},${e.y},${e.z - Z} ${n.estado.hora}`,
+    ).not.toContain(e);
   });
 
   it('a raposa domada não vai atrás da coruja mansa', () => {
@@ -584,8 +609,8 @@ describe('criatura da noite mansa (T04)', () => {
     } finally {
       definirEstiloMundo(ESTILO_PADRAO);
     }
-    expect(criarNucleo({ semente: SEMENTE, modo: 'sobrevivencia', versaoMundo: 2 }).estado.noite).toBe(
-      'assusta',
-    );
+    expect(
+      criarNucleo({ semente: SEMENTE, modo: 'sobrevivencia', versaoMundo: 2 }).estado.noite,
+    ).toBe('assusta');
   });
 });

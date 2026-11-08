@@ -219,7 +219,7 @@ export const MISSOES: readonly Missao[] = [
     meta: 1,
     icone: 'item:picareta_pedra',
   },
-  // spec 013: plantio (todos os temas). "Criar um bicho" entra com a criação (T03).
+  // spec 013: plantio e criação (todos os temas)
   {
     id: 'arar',
     capitulo: 'Roça',
@@ -255,6 +255,15 @@ export const MISSOES: readonly Missao[] = [
     contador: 'fabricou:pao',
     meta: 1,
     icone: 'item:pao',
+  },
+  {
+    id: 'criar',
+    capitulo: 'Roça',
+    titulo: 'Amigo de pelo',
+    descricao: 'Dê trigo a um cervo-musgo (ou sementes a um coelho-bruma)',
+    contador: 'criou',
+    meta: 1,
+    icone: 'coracao',
   },
 ];
 

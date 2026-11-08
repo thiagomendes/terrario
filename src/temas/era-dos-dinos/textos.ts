@@ -220,6 +220,10 @@ export const TEXTOS_DINOS: TextosTema = {
     plantar: { titulo: 'Semente antiga', descricao: 'Plante uma semente na terra vulcânica arada' },
     colher: { titulo: 'Colheita da tribo', descricao: 'Colha uma planta madura' },
     pao: { titulo: 'Broa da fogueira', descricao: 'Faça uma broa com 3 feixes de capim-dourado' },
+    criar: {
+      titulo: 'Dino de estimação',
+      descricao: 'Dê capim-dourado a um pescoçudo-filhote (ou sementes a uma lagartixa-pula-pula)',
+    },
   },
   boasVindas: 'Boas-vindas à Era dos Dinos! Os fósseis estão esperando por você',
   morte: 'Ufa! Você desmaiou de cansaço',

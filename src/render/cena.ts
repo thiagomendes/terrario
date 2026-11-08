@@ -96,6 +96,8 @@ import {
 import { empacotar } from '../world/edicoes';
 import { criaturaNaMira, type Criatura, type TipoCriatura } from '../jogo/criaturas';
 import { criarRenderCriaturas } from './criaturas';
+import { criarCoracoes } from './coracoes';
+import { AVISO_LIMITE, COMIDA_DOS_BICHOS, comeEsse, viraCriado } from '../jogo/criacao';
 import { biomaEm, estiloMundo } from '../world/chunk';
 import { perfilDaQualidade, type Config, type GerenciadorConfig } from '../jogo/config';
 import { definirIconesBrinquedo, iconeDoItem } from '../ui/icones';
@@ -324,6 +326,8 @@ export interface EstadoDepuracao {
   darKit?: () => void;
   /** Testes e capturas: a lavoura avança como se tantos segundos tivessem passado. */
   crescerLavoura?: (segundos: number) => void;
+  /** Spec 013: corações na tela agora (testes da criação). */
+  coracoes?: () => number;
   /** Vitrine dos testes: um bicho parado, sem cérebro, com o desenho do jogo. */
   estatua?: (tipo: TipoCriatura, x: number, y: number, z: number, yaw: number) => void;
   sobrevivencia?: SobrevivenciaCliente;
@@ -1428,6 +1432,13 @@ export function criarCena(
       tocarVoz(motorAudio, 'morador', 'contente', 1);
       return;
     }
+    if (naMira && viraCriado(naMira.tipo) && comeEsse(naMira.tipo, p?.item)) {
+      // spec 013: a comida do bicho na mão: dá a comida (os corações vêm do núcleo)
+      tocarSom(motorAudio, 'comer');
+      enviarTelemetria(true);
+      enviar({ t: 'alimentar', criatura: naMira.id, slot: hotbar.ativo });
+      return;
+    }
     if (naMira && naMira.tipo === 'raposa' && p?.item === 'frutinhas' && !naMira.domada) {
       tocarSom(motorAudio, 'comer');
       enviarTelemetria(true);
@@ -1826,6 +1837,8 @@ export function criarCena(
       tempoPulso = 0;
     }
   }
+  const coracoes = criarCoracoes(scene, prepararEfeito);
+  estado.coracoes = () => coracoes.vivos;
   barramento.ouvir('golpe', (d) => aplicarPlano('golpe', d));
   barramento.ouvir('quebra', (d) => aplicarPlano('quebra', d));
   /** Confete de folhinhas (e grãos dourados) ao colher a planta madura. */
@@ -2100,6 +2113,7 @@ export function criarCena(
       if (r.t >= 1) r.m.setEnabled(false);
     }
     pool.atualizar(dt, (x, y, z) => !!obterBlocoDef(blocoEm(x, y, z))?.solido);
+    coracoes.atualizar(dt);
     const vivas = pool.vivas();
     for (let i = 0; i < pecasParticulas.length; i++) {
       const { peca, pino, confete, gota } = pecasParticulas[i];
@@ -2501,12 +2515,17 @@ export function criarCena(
     enviar({ t: 'atacar', criatura: c.id, slot: hotbar.ativo });
     return true;
   }
-  /** Morador, ou raposa com frutinhas na mão: o toque e o segurar não batem neles. */
+  /**
+   * Morador, raposa com frutinhas na mão ou bicho com a comida dele na mão: o toque e o
+   * segurar não batem neles (o toque dá a comida).
+   */
   function amigoNaMira(): boolean {
     const c = criaturaApontada();
     if (!c) return false;
     if (c.morador) return true;
-    return c.tipo === 'raposa' && !c.domada && hotbar.pilhaAtiva()?.item === 'frutinhas';
+    const item = hotbar.pilhaAtiva()?.item;
+    if (viraCriado(c.tipo) && comeEsse(c.tipo, item)) return true;
+    return c.tipo === 'raposa' && !c.domada && item === 'frutinhas';
   }
   /** Comida na mão no modo sobrevivência. */
   function comidaNaMao(): boolean {
@@ -2551,6 +2570,18 @@ export function criarCena(
     if (c?.morador) {
       const nome = nomeDoMorador(c.morador.povoado, c.morador.n, c.morador.profissao);
       t = toque ? `Toque em ${nome} para trocar` : `Clique direito (ou F): trocar com ${nome}`;
+    } else if (c && viraCriado(c.tipo) && comeEsse(c.tipo, p?.item)) {
+      const bicho = comArtigo(CRIATURAS[c.tipo].nome);
+      const comida = minuscula(obterItem(p!.item)?.nome ?? p!.item);
+      t = toque
+        ? `Toque para dar ${comida} ${bicho.a}`
+        : `Clique direito (ou F): dar ${comida} ${bicho.a}`;
+    } else if (c && viraCriado(c.tipo) && c.estado !== 'morrendo') {
+      const bicho = comArtigo(CRIATURAS[c.tipo].nome);
+      const lista = COMIDA_DOS_BICHOS[c.tipo] ?? [];
+      const comida =
+        lista.length === 1 ? minuscula(obterItem(lista[0])?.nome ?? lista[0]) : 'uma semente';
+      t = `Segure ${comida} para ${bicho.o} seguir você`;
     } else if (c && c.tipo === 'raposa' && !c.domada && p?.item === 'frutinhas') {
       t = toque ? 'Toque na raposa para dar frutinhas' : 'Clique direito (ou F): dar frutinhas';
     } else if (comidaNaMao() && cliente.sobrevivencia.fome < 20) {
@@ -2561,6 +2592,16 @@ export function criarCena(
     if (t === dicaAtual) return;
     dicaAtual = t;
     window.dispatchEvent(new CustomEvent('brumaluz:dicaMira', { detail: t }));
+  }
+  const minuscula = (t: string) => t.charAt(0).toLowerCase() + t.slice(1);
+  /**
+   * Nome do bicho com artigo, no gênero da primeira palavra ("a vaca malhada", "o cervo-musgo"):
+   * `o` é "a vaca", `a` é "à vaca" (dar à vaca, dar ao cervo).
+   */
+  function comArtigo(nome: string): { o: string; a: string } {
+    const n = minuscula(nome);
+    const fem = /a$/.test(n.split(/[\s-]/)[0]);
+    return fem ? { o: `a ${n}`, a: `à ${n}` } : { o: `o ${n}`, a: `ao ${n}` };
   }
   /** Dicas da roça: arar com a enxada, plantar na terra arada, colher a madura. */
   function dicaDoPlantio(toque: boolean, item: string | undefined): string {
@@ -3134,6 +3175,27 @@ export function criarCena(
         toast(`${CRIATURAS.raposa.nome} confia em você!`);
         window.dispatchEvent(new CustomEvent('brumaluz:domou'));
         tocarVoz(motorAudio, e.tipo, 'contente', 1);
+        break;
+      case 'alimentou': {
+        // corações em quem ganhou comida (todos veem); o diário é de quem deu
+        coracoes.soltar(e.x, e.y + CRIATURAS[e.tipo].alt + 0.2, e.z, e.novo ? 6 : 3);
+        tocarVoz(motorAudio, e.tipo, 'contente', e.meu ? 1 : volumeDaDistancia(e));
+        if (e.meu && e.novo) {
+          tocarSom(motorAudio, 'coleta');
+          toast(`${CRIATURAS[e.tipo].nome} virou seu bichinho!`);
+          window.dispatchEvent(new CustomEvent('brumaluz:criou', { detail: e.tipo }));
+        }
+        break;
+      }
+      case 'criacaoRecusada':
+        toast(e.aviso || AVISO_LIMITE);
+        break;
+      case 'botouOvo':
+        if (volumeDaDistancia(e) > 0.2)
+          tocarVoz(motorAudio, 'coelho', 'chamado', volumeDaDistancia(e));
+        break;
+      case 'espantou':
+        window.dispatchEvent(new CustomEvent('brumaluz:espantou', { detail: e.tipo }));
         break;
       case 'comeu':
         tocarSom(motorAudio, 'comer');

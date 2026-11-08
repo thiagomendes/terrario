@@ -377,7 +377,11 @@ describe('salas do servidor', () => {
         t: 'entrar',
         versao: VERSAO_REDE,
         jogador: ident('ana'),
-        criar: { ...criarMundo, modo: 'sobrevivencia', estilo: { ...ESTILO_PADRAO, noite: 'mansa' } },
+        criar: {
+          ...criarMundo,
+          modo: 'sobrevivencia',
+          estilo: { ...ESTILO_PADRAO, noite: 'mansa' },
+        },
       }),
     );
     const bv = a.recebidas.find((m) => m.t === 'bemvindo') as Extract<

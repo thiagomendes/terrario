@@ -51,6 +51,8 @@ export function botaOvo(tipo: TipoSer): boolean {
  * sai do lugar da casa, para não mexer em nenhum gerador).
  */
 export function primeiraEsperaOvo(casaX: number, casaZ: number): number {
-  const h = Math.abs(Math.imul(Math.floor(casaX) | 0, 73856093) ^ Math.imul(Math.floor(casaZ) | 0, 19349663));
-  return SEGUNDOS_OVO * 0.8 + (h % 1000) / 1000 * SEGUNDOS_OVO * 0.4;
+  const h = Math.abs(
+    Math.imul(Math.floor(casaX) | 0, 73856093) ^ Math.imul(Math.floor(casaZ) | 0, 19349663),
+  );
+  return SEGUNDOS_OVO * 0.8 + ((h % 1000) / 1000) * SEGUNDOS_OVO * 0.4;
 }

@@ -102,10 +102,17 @@ export function criarPopulacao(rng: Gerador, salvo?: unknown, opcoes: OpcoesPopu
       c.criado = true;
       c.vida = num(b.vida) && b.vida > 0 ? Math.min(b.vida, CRIATURAS[b.tipo].vida) : c.vida;
       c.casa =
-        Array.isArray(b.casa) && num(b.casa[0]) && num(b.casa[1]) ? [b.casa[0], b.casa[1]] : [b.x, b.z];
+        Array.isArray(b.casa) && num(b.casa[0]) && num(b.casa[1])
+          ? [b.casa[0], b.casa[1]]
+          : [b.x, b.z];
       if (botaOvo(b.tipo))
         c.ovo = num(b.ovo) && b.ovo >= 0 ? Math.min(b.ovo, SEGUNDOS_OVO) : SEGUNDOS_OVO;
-      if (typeof b.curral === 'string' && Array.isArray(b.cerca) && b.cerca.length === 4 && b.cerca.every(num)) {
+      if (
+        typeof b.curral === 'string' &&
+        Array.isArray(b.cerca) &&
+        b.cerca.length === 4 &&
+        b.cerca.every(num)
+      ) {
         c.curral = b.curral;
         c.cerca = [b.cerca[0], b.cerca[1], b.cerca[2], b.cerca[3]];
       }

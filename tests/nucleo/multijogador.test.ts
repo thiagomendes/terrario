@@ -479,7 +479,10 @@ describe('criação com vários jogadores, na nuvem', () => {
     n.comando('ana', { t: 'depurar', d: { f: 'hora', hora: 0.5 } });
     n.comando('ana', { t: 'depurar', d: { f: 'pausarDia', pausar: true } });
     const invocar = (tipo: 'cervo' | 'coelho', dx: number) => {
-      n.comando('ana', { t: 'depurar', d: { f: 'invocar', tipo, x: X + dx + 0.5, y: Y, z: Z + 2.5 } });
+      n.comando('ana', {
+        t: 'depurar',
+        d: { f: 'invocar', tipo, x: X + dx + 0.5, y: Y, z: Z + 2.5 },
+      });
       const l = n.estado.populacao.lista;
       return l[l.length - 1];
     };
