@@ -329,19 +329,13 @@ const fenoTopo = fenoTopoDe(['#dcb45c', '#e8c46e', '#f0d080', '#f6dc96'], '#c056
 
 // --- casa e oficina --------------------------------------------------------------
 
-/** Chita: tecido de algodão com florzinhas estampadas em cima da cor de fundo. */
-function chita(fundo: string, flor: string, miolo: string): Pintor {
-  const c = hex(fundo);
-  return (x, y, s) => {
-    const cx = mod(x - 2, 8) - 2;
-    const cy = mod(y - 2 + ((x >> 3) % 2) * 4, 8) - 2;
-    const d = Math.abs(cx) + Math.abs(cy);
-    if (d === 0) return cor(miolo, x, y, s);
-    if (d === 1) return cor(flor, x, y, s);
-    if ((cx === 2 && cy === -1) || (cx === 3 && cy === -2)) return cor('#3f8a3a', x, y, s);
-    const fio = ((x + y) % 4 === 0 ? 0.9 : 1) * (0.95 + hash2(x, y, s) * 0.1);
-    return [c[0] * fio, c[1] * fio, c[2] * fio, 255];
-  };
+/** Madeira pintada: tábuas em pé, como a parede do celeiro do desenho, na cor de cada lã. */
+function madeiraPintada(base: string): Pintor {
+  const c = hex(base);
+  const tom = (k: number) =>
+    '#' + c.slice(0, 3).map((v) => Math.max(0, Math.min(255, Math.round(v * k))).toString(16).padStart(2, '0')).join('');
+  const tabuas = tabuasDe([tom(0.9), tom(0.97), tom(1.03), tom(1.08)]);
+  return (x, y, s) => tabuas(y, x, s);
 }
 
 /** Colcha de retalhos da cama de palha. */
@@ -764,14 +758,14 @@ export const PINTORES_RANCHO: Record<string, Pintor> = {
       s,
     );
   },
-  la_branca: chita('#f6f1e8', '#d9483b', '#ffd45a'),
-  la_vermelha: chita('#d9483b', '#ffffff', '#ffd45a'),
-  la_laranja: chita('#f08a2a', '#fff6d0', '#d9483b'),
-  la_amarela: chita('#f6cc3a', '#4a8fd8', '#ffffff'),
-  la_verde: chita('#4caa3a', '#ffd45a', '#d9483b'),
-  la_azul: chita('#3a6fd0', '#ffffff', '#ffd45a'),
-  la_roxa: chita('#8a4ab8', '#ffb3d0', '#ffffff'),
-  la_preta: chita('#2a2630', '#ff6a8a', '#ffd45a'),
+  la_branca: madeiraPintada('#f2ece0'),
+  la_vermelha: madeiraPintada('#c9402f'),
+  la_laranja: madeiraPintada('#e8862e'),
+  la_amarela: madeiraPintada('#f0c63c'),
+  la_verde: madeiraPintada('#4f9e3c'),
+  la_azul: madeiraPintada('#3d70c4'),
+  la_roxa: madeiraPintada('#8450b0'),
+  la_preta: madeiraPintada('#38323a'),
   frutinhas: amoreira,
   // ipê amarelo e ipê-rosa no outono
   folhas_outono: folhasComFlor(
