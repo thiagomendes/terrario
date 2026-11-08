@@ -12,4 +12,9 @@ Ideias e pedidos do dono que ainda não viraram spec. Cada item diz de onde veio
 
 ## Specs na fila
 
-- **013, Cidade e fazenda** (rascunho em `.sdd/specs/013-cidade-e-fazenda/spec.md`): esperando o dono escolher nomes, ordem, altura dos prédios e o bicho da noite.
+- **013, Rancho Alegre** (`.sdd/specs/013-rancho-alegre/spec.md`): em andamento.
+- **014, Cidade Grande** (rascunho em `.sdd/specs/014-cidade-grande/spec.md`): depois da 013; falta o dono decidir a altura dos prédios.
+
+## Ideias para depois da 013
+
+- **Leite e balde, filhotes, colmeia e mel** (fora de escopo da 013).
