@@ -20,6 +20,11 @@ import {
   tabuasDe,
   tijolosDe,
   troncoDe,
+  trigoDe,
+  milhoDe,
+  aboboreiraDe,
+  fenoLadoDe,
+  fenoTopoDe,
 } from '../../art/atlas';
 import type { Pintor, Px } from '../tipos';
 
@@ -298,81 +303,29 @@ const tochaBambu: Pintor = (x, y, s) => {
   return VAZIO;
 };
 
-// --- lavoura -------------------------------------------------------------------
+// --- lavoura (as fábricas do atlas, com as cores do desenho aprovado) -------------------
 
-/** Trigo: hastes douradas com espiguinhas (a cor da lavoura de trigo). */
-const trigo: Pintor = (x, y, s) => {
-  for (const h of [2, 5, 8, 11, 14]) {
-    const topo = 1 + Math.floor(hash2(h, 0, s) * 4);
-    const hx = h + Math.round((y - 15) * 0.04 * (h - 8));
-    if (x === hx && y >= topo) {
-      if (y < topo + 5) return rampa(['#e2b448', '#f0c85a', '#ffdc78'], hash2(x, y, s), x, y, s);
-      return rampa(['#c8a03a', '#b8922e'], hash2(x, y, s), x, y, s);
-    }
-    if (Math.abs(x - hx) === 1 && y >= topo && y < topo + 5 && (y + h) % 2 === 0)
-      return cor('#e8bc4c', x, y, s);
-  }
-  return VAZIO;
-};
-
-/** Milho: talo verde com folhas largas e a espiga amarela com o cabelinho. */
-const milho: Pintor = (x, y, s) => {
-  if ((x === 7 || x === 8) && y >= 1) return rampa(['#4a9a32', '#56a83a'], hash2(x, y, s), x, y, s);
-  // folhas em arco para os dois lados
-  for (const [y0, lado] of [
-    [5, 1],
-    [8, -1],
-    [11, 1],
-  ] as const) {
-    const dx = (x - 7.5) * lado;
-    if (dx > 0.5 && dx < 7 && Math.abs(y - (y0 + (dx * dx) / 12)) < 0.9)
-      return rampa(['#5aaa3a', '#68b846', '#78c454'], hash2(x, y, s), x, y, s);
-  }
-  // espiga de lado, palha verde-clara aberta e grãos amarelos
-  if (x >= 9 && x <= 11 && y >= 4 && y <= 9) {
-    if (x === 9 || y === 9) return cor('#a8d070', x, y, s);
-    return cor((x + y) % 2 ? '#ffd23a' : '#f2b81e', x, y, s);
-  }
-  if (x >= 10 && x <= 11 && y >= 2 && y <= 3) return cor('#c86a3a', x, y, s);
-  return VAZIO;
-};
-
-/** Pé de abóbora: rama rasteira de folhas grandes, florzinha amarela e a abóbora. */
-const aboboreira: Pintor = (x, y, s) => {
-  const ab = Math.hypot((x - 9.5) / 4.6, (y - 12) / 3.4);
-  if (ab < 1) {
-    if (x % 3 === 0) return cor('#d8701e', x, y, s);
-    return rampa(['#f08a22', '#ff9b2f', '#ffad48'], 1 - ab + hash2(x, y, s) * 0.2, x, y, s);
-  }
-  if (Math.hypot(x - 3.5, y - 5.5) < 1.6) return cor('#ffd23a', x, y, s);
-  for (const [cx, cy, r] of [
-    [4, 9, 3.6],
-    [11, 5, 3.4],
-    [6, 3, 2.6],
-  ] as const) {
-    const d = Math.hypot(x - cx, y - cy);
-    if (d < r)
-      return rampa(['#3f8a2c', '#4c9a36', '#5aaa40'], 1 - d / r + hash2(x, y, s) * 0.3, x, y, s);
-  }
-  if (Math.abs(y - 14 + (x - 8) * 0.2) < 0.7) return cor('#6aa83a', x, y, s);
-  return VAZIO;
-};
-
-/** Fardo de feno: palha dourada riscada e o barbante vermelho (como no desenho). */
-const fenoLado: Pintor = (x, y, s) => {
-  if (x === 4 || x === 11) return rampa(['#b84a32', '#c8563a'], hash2(x, y, s), x, y, s);
-  const fio = ruidoT(x, y, 2, 8, s) * 0.5 + hash2(x, y, s) * 0.5;
-  const p = rampa(FENO, fio, x, y, s);
-  if (y % 3 === 0 && hash2(x, y, s + 3) > 0.5) return escurece(p, 0.84);
-  return borda(x, y) ? escurece(p, 0.88) : p;
-};
-const fenoTopo: Pintor = (x, y, s) => {
-  if (x === 4 || x === 11) return rampa(['#b84a32', '#c8563a'], hash2(x, y, s), x, y, s);
-  const fio = ruidoT(x, y, 8, 2, s) * 0.5 + hash2(x, y, s) * 0.5;
-  const p = rampa(FENO, fio, x, y, s);
-  if (x % 3 === 1 && hash2(x, y, s + 3) > 0.5) return escurece(p, 0.84);
-  return borda(x, y) ? escurece(p, 0.88) : p;
-};
+/** Trigo: haste verde de broto e espiga dourada; madura, a haste doura junto. */
+const trigo = trigoDe(
+  ['#4f9c3a', '#5fae45', '#72bf52'],
+  ['#d8a83a', '#f0c850', '#ffd45a'],
+  '#fff0b0',
+);
+/** Milho: pé verde-vivo, espiga amarela e pendão claro. */
+const milho = milhoDe(
+  ['#3f8f30', '#4fa03a', '#5fae45', '#72c052'],
+  ['#f0b020', '#ffc83a', '#ffe070'],
+  '#f4e6b0',
+);
+/** Abóbora: rama verde e a abóbora laranja-viva do desenho. */
+const aboboreira = aboboreiraDe(
+  ['#3f8a2c', '#4c9a36', '#5aaa40', '#6aba4c'],
+  ['#e07a1e', '#f08a26', '#ff9b2f', '#ffad48'],
+  '#5a7a2a',
+);
+/** Fardo de feno amarelinho amarrado com barbante vermelho (como no desenho). */
+const fenoLado = fenoLadoDe(['#e2bc62', '#eccb74', '#f4d58a', '#f8e09e'], '#c0563a');
+const fenoTopo = fenoTopoDe(['#dcb45c', '#e8c46e', '#f0d080', '#f6dc96'], '#c0563a');
 
 // --- casa e oficina --------------------------------------------------------------
 
