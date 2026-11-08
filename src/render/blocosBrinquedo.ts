@@ -660,6 +660,40 @@ export function modeloDeBloco(
       break;
     }
 
+    case Bloco.PORTA: {
+      // porta inteira de brinquedo (dois blocos numa peça): batente, janela com caixilho em
+      // cruz em cima, duas almofadas embaixo e a maçaneta dourada, sem emenda no meio
+      const madeira = cor(Bloco.PORTA, 'lado') ?? lado0;
+      const escura = tom(madeira, 0.72);
+      caixa(madeira, 0.5, 1, 0.09, 0.03, 0, 0, 0);
+      for (const x of [-0.235, 0.235]) caixa(escura, 0.05, 1.02, 0.12, 0.02, x, 0, 0);
+      caixa(escura, 0.52, 0.05, 0.12, 0.02, 0, 0.49, 0);
+      caixa('#cfe8f2', 0.3, 0.26, 0.1, 0.02, 0, 0.24, 0, 0.35);
+      caixa(escura, 0.035, 0.28, 0.115, 0.01, 0, 0.24, 0);
+      caixa(escura, 0.32, 0.035, 0.115, 0.01, 0, 0.24, 0);
+      for (const x of [-0.1, 0.1]) caixa(tom(madeira, 0.86), 0.14, 0.3, 0.11, 0.02, x, -0.25, 0);
+      bola('#f2c14e', 0.035, [1, 1, 1], 0.17, 0, 0.06, 0.4);
+      bola('#f2c14e', 0.035, [1, 1, 1], 0.17, 0, -0.06, 0.4);
+      break;
+    }
+    case Bloco.PORTEIRA: {
+      // porteira de fazenda, mais larga que alta: dois mourões com chapéu, montantes, três
+      // travessas, a mão-francesa em diagonal e as dobradiças de ferro
+      const madeira = cor(Bloco.CERCA, 'lado') ?? lado0;
+      const escura = tom(madeira, 0.72);
+      const clara = tom(madeira, 1.1);
+      for (const x of [-0.45, 0.45]) {
+        caixa(escura, 0.1, 0.8, 0.12, 0.035, x, 0, 0);
+        caixa(tom(madeira, 0.6), 0.13, 0.05, 0.15, 0.02, x, 0.41, 0);
+      }
+      for (const x of [-0.35, 0.35]) caixa(madeira, 0.07, 0.62, 0.07, 0.025, x, -0.02, 0);
+      for (const y of [-0.24, -0.02, 0.2]) caixa(clara, 0.66, 0.075, 0.06, 0.025, 0, y, 0);
+      const g = grupo(0, -0.02, 0, 0, 0, Math.atan2(0.44, 0.62));
+      caixa(madeira, 0.74, 0.065, 0.09, 0.02, 0, 0, 0, undefined, g);
+      for (const y of [-0.24, 0.2]) caixa('#5a5a64', 0.07, 0.05, 0.09, 0.015, -0.4, y, 0, 0.4);
+      break;
+    }
+
     // ---------- cacto ----------
     case Bloco.CACTO: {
       const verde = lado0;

@@ -112,6 +112,8 @@ export const TEXTOS_RANCHO: TextosTema = {
     79: 'rama de abóbora (3 de 4)',
     80: 'rama com abóbora madura',
     81: 'fardo de feno',
+    82: 'porteira',
+    83: 'porteira aberta',
   },
   itens: {
     graveto: 'Graveto',

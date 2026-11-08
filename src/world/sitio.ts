@@ -179,10 +179,11 @@ function cercado(p: PlanoPovoado, l: Lote, em: Pincel, q: Q): void {
   for (let s = 0; s <= 6; s++)
     for (let f = 0; f <= 6; f++)
       if (s === 0 || s === 6 || f === 0 || f === 6) q(s, f, 1, Bloco.CERCA);
-  // porteira: porta de dois blocos na cerca (o jogador abre e fecha)
+  // porteira fechada na linha da cerca (o jogador abre e fecha). O portão fica sempre num
+  // lado norte ou sul do lote: a cerca ali corre em x, que é a direção da porteira sem
+  // metadado (frente em +z)
   const { portao } = portaoDoCercado(l, p.cz);
-  em(portao[0], l.h + 1, portao[1], Bloco.PORTA);
-  em(portao[0], l.h + 2, portao[1], Bloco.PORTA);
+  em(portao[0], l.h + 1, portao[1], Bloco.PORTEIRA);
   // luz no alto dos mourões da frente
   q(0, 0, 2, Bloco.TOCHA);
   q(6, 0, 2, Bloco.TOCHA);

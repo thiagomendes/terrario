@@ -89,7 +89,7 @@ export interface Cercado {
   z0: number;
   x1: number;
   z1: number;
-  /** Porteira (porta de dois blocos na cerca, que o jogador abre e fecha) e a célula de fora. */
+  /** Porteira (um bloco na linha da cerca, que o jogador abre e fecha) e a célula de fora. */
   portao: [number, number];
   fora: [number, number];
 }

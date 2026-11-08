@@ -244,8 +244,9 @@ describe('sítio: construções', () => {
       }
   });
 
-  it('curral e galinheiro fechados: cerca em volta e porteira de porta dupla', () => {
+  it('curral e galinheiro fechados: cerca em volta e uma porteira (não a porta da casa)', () => {
     const bloco = mundo();
+    const solido = criarMundoSolido(SEMENTE);
     for (const p of sitios())
       for (const c of p.currais!) {
         const l = p.lotes[c.lote];
@@ -255,12 +256,19 @@ describe('sítio: construções', () => {
             if (!borda) continue;
             const porteira = x === c.portao[0] && z === c.portao[1];
             expect(bloco(x, l.h + 1, z), `${p.id} ${l.uso} ${x},${z}`).toBe(
-              porteira ? Bloco.PORTA : Bloco.CERCA,
+              porteira ? Bloco.PORTEIRA : Bloco.CERCA,
             );
-            if (porteira) expect(bloco(x, l.h + 2, z)).toBe(Bloco.PORTA);
+            expect(bloco(x, l.h + 1, z)).not.toBe(Bloco.PORTA);
+            // um bloco só de altura: nada de porta de casa em cima
+            if (porteira) expect(bloco(x, l.h + 2, z)).toBe(Bloco.AR);
           }
-        // a porteira fica num lado de z constante (o painel da porta gerada corre em x)
+        // a porteira fica num lado de z constante (a porteira gerada, sem metadado, corre em x)
         expect([l.z0, l.z0 + 6]).toContain(c.portao[1]);
+        // fechada de verdade: segura como a cerca e atravessa a célula em x (na linha da cerca)
+        const [caixa] = solido.caixas!(c.portao[0], l.h + 1, c.portao[1])!;
+        expect(solido(c.portao[0], l.h + 1, c.portao[1])).toBe(true);
+        expect(caixa[4]).toBe(1.5);
+        expect([caixa[0], caixa[3]]).toEqual([0, 1]);
         // dá para chegar: a célula de fora tem chão e dois de ar
         expect(bloco(c.fora[0], l.h + 1, c.fora[1])).toBe(Bloco.AR);
         expect(bloco(c.fora[0], l.h + 2, c.fora[1])).toBe(Bloco.AR);

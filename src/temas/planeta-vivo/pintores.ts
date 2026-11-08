@@ -2,6 +2,8 @@ import { hash2 } from '../../world/noise';
 import {
   T,
   VAZIO,
+  metadesDaPorta,
+  bordaDaPorta,
   escurece,
   fbmT,
   hex,
@@ -758,16 +760,23 @@ const capsulaLado: Pintor = (x, y, s) => {
   return rampa(['#8a90a8', '#949ab2'], hash2(x, y, s), x, y, s);
 };
 
-const escotilha: Pintor = (x, y, s) => {
-  const d = Math.hypot(x - 7.5, y - 4.5);
+/** Escotilha inteira: vigia redonda em cima, rebites dos lados, trava e a fresta embaixo. */
+const escotilhas = metadesDaPorta((x, yy, s) => {
+  const d = Math.hypot(x - 7.5, yy - 7.5);
   if (d < 2.9) return VAZIO;
-  if (d < 4.1) return rampa(['#c8d0e0', '#dce2ee'], hash2(x, y, s), x, y, s);
-  if (x >= 11 && x <= 12 && y >= 9 && y <= 10) return cor('#ffb040', x, y, s);
-  const p = rampa(['#7a8aa0', '#8696ac', '#92a2b8'], hash2(x, y, s) * 0.4 + (x % 8) / 12, x, y, s);
-  if ((x === 2 || x === 13) && y % 4 === 2) return cor('#c8d0e0', x, y, s);
-  if (x === 7 && y > 8) return escurece(p, 0.75);
-  return naBorda(x, y) ? escurece(p, 0.7) : p;
-};
+  if (d < 4.1) return rampa(['#c8d0e0', '#dce2ee'], hash2(x, yy, s), x, yy, s);
+  if (x >= 11 && x <= 12 && yy >= 18 && yy <= 19) return cor('#ffb040', x, yy, s);
+  const p = rampa(
+    ['#7a8aa0', '#8696ac', '#92a2b8'],
+    hash2(x, yy, s) * 0.4 + (x % 8) / 12,
+    x,
+    yy,
+    s,
+  );
+  if ((x === 2 || x === 13) && yy % 4 === 2) return cor('#c8d0e0', x, yy, s);
+  if (x === 7 && yy > 13) return escurece(p, 0.75);
+  return bordaDaPorta(x, yy) ? escurece(p, 0.7) : p;
+});
 
 // cabaça-lua
 const CABACA = ['#8ad0d8', '#9adae0', '#aae4e8'];
@@ -881,7 +890,7 @@ export const PINTORES_PLANETA: Record<string, Pintor> = {
   ),
   cama_topo: capsulaTopo,
   cama_lado: capsulaLado,
-  porta: escotilha,
+  ...escotilhas,
   tabuas_betula: placasListradas,
   tabuas_pinho: placasQuartzo,
   abobora_lado: cabacaLado,

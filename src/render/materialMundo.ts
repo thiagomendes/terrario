@@ -105,10 +105,11 @@ export class PluginMundo extends MaterialPluginBase {
     if (shaderType === 'vertex') {
       return {
         CUSTOM_VERTEX_DEFINITIONS:
-          'attribute vec2 luz;\nvarying vec2 vLuzMundo;\nvarying vec3 vBlocoMundo;\nvarying float vFolhaMundo;',
+          'attribute vec2 luz;\nvarying vec2 vLuzMundo;\nvarying vec3 vBlocoMundo;\nvarying float vFolhaMundo;\nvarying float vPortaMundo;',
         // posição sem o balanço do vento: tom por bloco e neve não "nadam" com as folhas
         CUSTOM_VERTEX_MAIN_END:
-          'vLuzMundo = luz;\nvBlocoMundo = (finalWorld * vec4(position, 1.0)).xyz;\nvFolhaMundo = 0.0;\n#ifdef VERTEXCOLOR\nvFolhaMundo = color.a < 0.99 ? 1.0 : 0.0;\n#endif',
+          // porta de dois blocos (spec 013): alfa 0,996 na metade de cima, 0,993 na de baixo
+          'vLuzMundo = luz;\nvBlocoMundo = (finalWorld * vec4(position, 1.0)).xyz;\nvFolhaMundo = 0.0;\nvPortaMundo = 0.0;\n#ifdef VERTEXCOLOR\nvFolhaMundo = color.a < 0.99 ? 1.0 : 0.0;\nif (color.a > 0.99 && color.a < 0.999) vPortaMundo = color.a > 0.9945 ? 1.0 : -1.0;\n#endif',
         CUSTOM_VERTEX_UPDATE_POSITION: `
           {
             // bloco recém-quebrado: todos os vértices dele vão para um ponto só (some na hora)
@@ -142,6 +143,7 @@ export class PluginMundo extends MaterialPluginBase {
         varying vec2 vLuzMundo;
         varying vec3 vBlocoMundo;
         varying float vFolhaMundo;
+        varying float vPortaMundo;
         float hashMundo(vec3 p) {
           return fract(sin(dot(p, vec3(12.9898, 78.233, 37.719))) * 43758.5453);
         }
@@ -188,6 +190,8 @@ export class PluginMundo extends MaterialPluginBase {
             vec2 fJ = vec2(fract(dot(vBlocoMundo, t1J)), fract(dot(vBlocoMundo, t2J)));
             vec2 eJ = min(fJ, 1.0 - fJ);
             vec2 sJ = sign(fJ - 0.5);
+            // porta de dois blocos: sem junta onde as metades se encostam (uma peça só)
+            if (vPortaMundo != 0.0 && aJ.y < 0.5 && sJ.y * vPortaMundo < 0.0) eJ.y = 0.5;
             vec2 kJ = 1.0 - smoothstep(vec2(0.0), vec2(0.17), eJ);
             kJ *= kJ;
             normalW = normalize(normalW + (t1J * sJ.x * kJ.x + t2J * sJ.y * kJ.y) * 1.6 * retoJ);

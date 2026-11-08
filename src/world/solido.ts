@@ -1,6 +1,12 @@
 import { ALTURA, TAM_X, TAM_Z, gerarChunk, indice, SEMENTE_PADRAO } from './chunk';
 import { Bloco, obterBloco } from './blocks';
-import { caixasDoBloco, cercaConecta, temFormaParcial, vetorDirecao } from './formas';
+import {
+  caixasDoBloco,
+  cercaConecta,
+  colisaoPorteira,
+  temFormaParcial,
+  vetorDirecao,
+} from './formas';
 import type { Edicoes } from './edicoes';
 import type { Solido } from '../player/fisica';
 
@@ -62,6 +68,8 @@ export function criarMundoSolido(
     const b = bloco(x, y, z);
     if (!temFormaParcial(b)) return null;
     const meta = edicoes?.obterMeta(x, y, z) ?? 0;
+    // porteira fechada segura como a cerca: uma caixa inteira de 1,5 bloco, sem vãos
+    if (b === Bloco.PORTEIRA) return [colisaoPorteira(meta)];
     const caixas = caixasDoBloco(b, meta, (d) => {
       const [dx, dz] = vetorDirecao(d);
       return cercaConecta(bloco(x + dx, y, z + dz));

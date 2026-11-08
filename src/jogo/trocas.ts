@@ -123,6 +123,11 @@ export const TROCAS: Record<Profissao, readonly Troca[]> = {
       dar: [{ item: 'trigo', qtd: 8 }],
       receber: { item: b(Bloco.FENO), qtd: 1 },
     },
+    {
+      id: 'porteira',
+      dar: [{ item: b(Bloco.TABUAS), qtd: 4 }],
+      receber: { item: b(Bloco.PORTEIRA), qtd: 1 },
+    },
   ],
 };
 

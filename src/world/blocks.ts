@@ -82,11 +82,23 @@ export const Bloco = {
   ABOBOREIRA_2: 79,
   ABOBOREIRA_3: 80,
   FENO: 81,
+  // spec 013: porteira do curral (um bloco de altura; aberta troca o id e guarda a direção)
+  PORTEIRA: 82,
+  PORTEIRA_ABERTA: 83,
 } as const;
 
 export type Ferramenta = 'picareta' | 'machado' | 'pa' | 'espada';
 export type GrupoSom = 'terra' | 'pedra' | 'areia' | 'madeira' | 'folhagem' | 'cristal';
-export type Forma = 'cubo' | 'cruz' | 'laje' | 'escada' | 'cerca' | 'porta' | 'cama' | 'tocha';
+export type Forma =
+  | 'cubo'
+  | 'cruz'
+  | 'laje'
+  | 'escada'
+  | 'cerca'
+  | 'porta'
+  | 'cama'
+  | 'tocha'
+  | 'porteira';
 
 export interface TilesBloco {
   topo: string;
@@ -446,6 +458,19 @@ export const REGISTRO_BLOCOS: readonly DefinicaoBloco[] = [
     som: 'folhagem',
     tiles: { topo: 'feno_topo', lado: 'feno_lado' },
   }),
+  // porteira: a madeira da cerca; a aberta não segura ninguém e volta a ser porteira ao quebrar
+  def(
+    Bloco.PORTEIRA,
+    'porteira',
+    'tabuas',
+    madeira({ opaco: false, forma: 'porteira', dureza: 0.9 }),
+  ),
+  def(
+    Bloco.PORTEIRA_ABERTA,
+    'porteira aberta',
+    'tabuas',
+    madeira({ solido: false, opaco: false, forma: 'porteira', dureza: 0.9, semItem: true }),
+  ),
 ];
 
 export function obterBloco(id: number): DefinicaoBloco | undefined {

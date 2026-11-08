@@ -10,6 +10,8 @@ import {
   T,
   VAZIO,
   aneisDe,
+  metadesDaPorta,
+  bordaDaPorta,
   escurece,
   fbmT,
   folhasDe,
@@ -395,15 +397,21 @@ const bauMadeira: Pintor = (x, y, s) => {
 };
 
 /** Porta de tábua com a trava em Z e duas janelinhas. */
-const portaTabua: Pintor = (x, y, s) => {
-  const janela = y >= 2 && y <= 5 && ((x >= 3 && x <= 6) || (x >= 9 && x <= 12));
+/** Porta de fazenda inteira: duas janelinhas em cima e a trava em Z embaixo. */
+const TABUAS_PORTA = tabuasDe(['#a8743e', '#b47e46', '#c0884e']);
+const portasTabua = metadesDaPorta((x, yy, s) => {
+  const janela = yy >= 4 && yy <= 9 && ((x >= 3 && x <= 6) || (x >= 9 && x <= 12));
   if (janela) return VAZIO;
-  if (x === 12 && y === 10) return cor('#f0c040', x, y, s);
-  const p = tabuasDe(['#a8743e', '#b47e46', '#c0884e'])(y, x, s);
-  if (borda(x, y)) return escurece(p, 0.7);
-  const trava = y === 7 || y === 14 || (y > 7 && y < 14 && Math.abs(x - (2 + (14 - y) * 1.6)) < 1);
-  return trava ? cor('#7a4a26', x, y, s) : p;
-};
+  if (x === 12 && (yy === 18 || yy === 19)) return cor('#f0c040', x, yy, s);
+  const p = TABUAS_PORTA(yy & (T - 1), x, s);
+  if (bordaDaPorta(x, yy)) return escurece(p, 0.7);
+  const trava =
+    yy === 12 ||
+    yy === 21 ||
+    yy === 29 ||
+    (yy > 21 && yy < 29 && Math.abs(x - (2 + (29 - yy) * 1.4)) < 1);
+  return trava ? cor('#7a4a26', x, yy, s) : p;
+});
 
 /** Vidraça de janela de fazenda: caixilho branco em cruz e o vidro limpo. */
 const vidraca: Pintor = (x, y, s) => {
@@ -784,7 +792,7 @@ export const PINTORES_RANCHO: Record<string, Pintor> = {
     if (y < 9) return rampa(['#f6f1e8', '#fffaf2'], hash2(x, y, s), x, y, s);
     return tabuasIpe(x, y, s);
   },
-  porta: portaTabua,
+  ...portasTabua,
   // eucalipto (clarinho rosado) e araucária (avermelhada)
   tabuas_betula: tabuasDe(['#dcbc96', '#e2c49e', '#e8cca8', '#eed4b0']),
   tabuas_pinho: tabuasDe(['#94523a', '#a05c42', '#aa664a', '#b47052']),

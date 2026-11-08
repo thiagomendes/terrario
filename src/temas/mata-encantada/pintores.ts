@@ -2,6 +2,8 @@ import {
   T,
   VAZIO,
   aneisDe,
+  metadesDaPorta,
+  bordaDaPorta,
   escurece,
   fbmT,
   hex,
@@ -805,13 +807,15 @@ const redeLado: Pintor = (x, y, s) => {
 };
 
 const tabuasPortaIpe = tabuasDe(['#6e5a38', '#7a6440', '#866e48']);
-const portaIpe: Pintor = (x, y, s) => {
-  const janela = x >= 3 && x <= 12 && y >= 2 && y <= 6;
-  if (janela && x !== 7 && x !== 8 && y !== 4) return VAZIO;
-  if (x >= 11 && x <= 12 && y >= 8 && y <= 9) return cor('#3a2a18', x, y, s); // tramela
-  const p = tabuasPortaIpe(y, x, s);
-  return x <= 0 || x >= T - 1 || y <= 0 || y >= T - 1 ? escurece(p, 0.72) : p;
-};
+/** Porta de ipê inteira: janela com cruz em cima, tramela e duas travessas embaixo. */
+const portasIpe = metadesDaPorta((x, yy, s) => {
+  const janela = x >= 3 && x <= 12 && yy >= 3 && yy <= 10;
+  if (janela && x !== 7 && x !== 8 && yy !== 6 && yy !== 7) return VAZIO;
+  if (x >= 11 && x <= 12 && yy >= 18 && yy <= 19) return cor('#3a2a18', x, yy, s); // tramela
+  const p = tabuasPortaIpe(yy & (T - 1), x, s);
+  if (bordaDaPorta(x, yy)) return escurece(p, 0.72);
+  return yy === 22 || yy === 28 ? escurece(p, 0.8) : p;
+});
 
 const tabuasIpe = tabuasDe(['#948048', '#9e8a50', '#a89458', '#b29e60']);
 const tabuasAraucariaBase = tabuasDe(['#bc8662', '#c4906a', '#cc9a72', '#d4a47a']);
@@ -945,7 +949,7 @@ export const PINTORES_MATA: Record<string, Pintor> = {
   folhas_outono: copaIpeRosa,
   cama_lado: redeLado,
   cama_topo: redeTopo,
-  porta: portaIpe,
+  ...portasIpe,
   fornalha_acesa: bocaForno(true),
   tabuas_betula: tabuasIpe,
   tabuas_pinho: tabuasAraucaria,
