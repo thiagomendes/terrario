@@ -79,6 +79,8 @@ export type Comando = ComandoSemSeq & { seq?: number };
 type ComandoSemSeq =
   | ({ t: 'jogador' } & Telemetria)
   | { t: 'quebrar'; id: number; x: number; y: number; z: number; slot: number }
+  /** Enxada (no slot) na grama ou na terra: vira terra arada (spec 013). */
+  | { t: 'arar'; id: number; x: number; y: number; z: number; slot: number }
   | {
       t: 'colocar';
       id: number;
@@ -132,7 +134,9 @@ export type Depuracao =
   | { f: 'spawn'; x: number; z: number }
   | { f: 'dano'; qtd: number; causa: CausaDano }
   /** Põe o kit de blocos na barra (os testes que constroem; o jogo começa com ela vazia). */
-  | { f: 'kit' };
+  | { f: 'kit' }
+  /** A lavoura avança como se tantos segundos tivessem passado (até 1 hora). */
+  | { f: 'crescer'; segundos: number };
 
 /** O que é de cada jogador num mundo de vários (salvo à parte do mundo). */
 export interface DadosJogador {
@@ -219,7 +223,14 @@ export type ConteinerVisto =
 export type EventoNucleo =
   | { e: 'quebra'; x: number; y: number; z: number; bloco: number; meu: boolean }
   | { e: 'colocacao'; x: number; y: number; z: number; bloco: number; meu: boolean }
+  /** Motivos: 'quebrar', 'colocar', 'arar', 'semente' (semente fora da terra arada). */
   | { e: 'recusa'; comando: number; motivo: string }
+  /** Plantio (spec 013): som, efeito e diário. */
+  | { e: 'arou'; x: number; y: number; z: number; meu: boolean }
+  | { e: 'plantou'; x: number; y: number; z: number; bloco: number }
+  | { e: 'colheu'; x: number; y: number; z: number; bloco: number; madura: boolean; meu: boolean }
+  /** Uma planta perto deste jogador ficou madura (brilhinho e som curto). */
+  | { e: 'amadureceu'; x: number; y: number; z: number; bloco: number }
   | { e: 'porta'; x: number; y: number; z: number }
   | { e: 'coletou'; item: string; qtd: number }
   | { e: 'ferramentaQuebrou'; item: string }

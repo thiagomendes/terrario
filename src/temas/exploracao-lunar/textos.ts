@@ -212,6 +212,10 @@ export const TEXTOS_LUNARES: TextosTema = {
       titulo: 'Ferramenta da oficina',
       descricao: 'Faça uma troca com a mecânica da colônia',
     },
+    arar: { titulo: 'Solo preparado', descricao: 'Prepare o solo com a enxada' },
+    plantar: { titulo: 'Primeira muda', descricao: 'Plante uma semente no solo preparado' },
+    colher: { titulo: 'Colheita espacial', descricao: 'Colha uma planta madura' },
+    pao: { titulo: 'Pão de astronauta', descricao: 'Faça um pão com 3 trigos' },
   },
   capitulos: {
     'Primeiros passos': 'Pouso',
@@ -219,6 +223,7 @@ export const TEXTOS_LUNARES: TextosTema = {
     Sobreviver: 'Suporte de vida',
     Explorar: 'Expedição',
     Criar: 'Base em construção',
+    Roça: 'Estufa lunar',
   },
   boasVindas: 'Pouso concluído! Bem-vindo à Lua, pequeno astronauta',
   morte: 'Seu traje ficou sem energia. De volta à base!',

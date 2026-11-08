@@ -7,6 +7,7 @@ import { criarInventario } from '../../src/jogo/inventario';
 import { estadoInicial } from '../../src/jogo/sobrevivencia';
 import { encontrarNascimento, alturaTerreno, ESTILO_PADRAO } from '../../src/world/chunk';
 import { Bloco } from '../../src/world/blocks';
+import { podeArar, podePlantar } from '../../src/jogo/plantio';
 import { PASSO, VERSAO_PROTOCOLO, type Comando } from '../../src/nucleo/protocolo';
 
 /**
@@ -15,7 +16,11 @@ import { PASSO, VERSAO_PROTOCOLO, type Comando } from '../../src/nucleo/protocol
  */
 const SEMENTE = 1337;
 
-function partida(modo: 'criativo' | 'sobrevivencia', canal = { atrasoMs: 150, embaralhar: 7 }) {
+function partida(
+  modo: 'criativo' | 'sobrevivencia',
+  canal = { atrasoMs: 150, embaralhar: 7 },
+  aoQuadro?: () => void,
+) {
   const conexao = conexaoNaMesmaThread(
     {
       t: 'inicio',
@@ -34,6 +39,7 @@ function partida(modo: 'criativo' | 'sobrevivencia', canal = { atrasoMs: 150, em
     conexao,
     inventario: inv,
     aplicarBloco: (x, y, z, b, meta) => edicoes.definir(x, y, z, b, meta),
+    aoQuadro: () => aoQuadro?.(),
     hora: 0.3,
     dia: 0,
     clima: { tipo: 'limpo', nuvens: 0, chuva: 0, neblina: 0, raios: 0, arco: 0 } as never,
@@ -180,5 +186,57 @@ describe('protocolo num canal ruim', () => {
     expect(edicoes.obter(x + 3, y, z)).toBe(Bloco.TABUAS);
     avancar(60);
     expect(cliente.pendente(x + 3, y, z)).toBe(false);
+  });
+
+  it('arar e plantar previstos chegam iguais, sem piscar (spec 013)', () => {
+    let olhar: () => void = () => undefined;
+    const { conexao, cliente, edicoes, x, y, z, avancar, tel } = partida(
+      'criativo',
+      undefined,
+      () => olhar(),
+    );
+    const nucleo = conexao.anfitriao.nucleo;
+    const oficial = nucleo.estado.jogadores.get('local')!;
+    oficial.inventario.definir(0, { item: 'enxada_madeira', qtd: 1, dur: 60 });
+    oficial.inventario.definir(1, { item: 'semente_trigo', qtd: 8 });
+    // a terra na frente: grama com grama alta em cima (posta pelo próprio cliente)
+    const F = { x: x + 2, y: y - 1, z };
+    const C = { x: x + 2, y, z };
+    const lote = [
+      { ...F, v: Bloco.TERRA_MUSGOSA },
+      { ...C, v: Bloco.GRAMA_ALTA },
+      { x: x + 2, y: y + 1, z, v: Bloco.AR },
+    ];
+    const idLote = cliente.proximoId();
+    for (const e of lote) cliente.prever(idLote, e.x, e.y, e.z, e.v);
+    cliente.enviar({ t: 'editar', id: idLote, lote });
+    cliente.enviar(tel());
+    avancar(1500);
+    const ver = (p: { x: number; y: number; z: number }) =>
+      edicoes.obter(p.x, p.y, p.z) ?? nucleo.estado.mundo.gerado(p.x, p.y, p.z);
+    // a mesma regra que o núcleo usa decide a previsão
+    expect(podeArar(ver(F), ver(C))).toBe(true);
+    const idArar = cliente.proximoId();
+    cliente.prever(idArar, F.x, F.y, F.z, Bloco.TERRA_ARADA);
+    cliente.prever(idArar, C.x, C.y, C.z, Bloco.AR);
+    cliente.enviar({ t: 'arar', id: idArar, ...F, slot: 0 });
+    // a semente vai logo depois, antes da confirmação voltar
+    avancar(20);
+    expect(podePlantar(ver(F), ver(C))).toBe(true);
+    const idPlantar = cliente.proximoId();
+    cliente.prever(idPlantar, C.x, C.y, C.z, Bloco.TRIGO_0);
+    cliente.enviar({ t: 'colocar', id: idPlantar, ...C, bloco: Bloco.TRIGO_0, meta: 0, slot: 1 });
+    // a cada quadro aplicado, o que a tela mostra nas duas células nunca volta atrás
+    const vistos: [number, number][] = [];
+    olhar = () => vistos.push([ver(F), ver(C)]);
+    cliente.enviar(tel());
+    avancar(1500);
+    expect(vistos.length).toBeGreaterThan(5);
+    for (const v of vistos) expect(v).toEqual([Bloco.TERRA_ARADA, Bloco.TRIGO_0]);
+    expect(nucleo.estado.mundo.bloco(F.x, F.y, F.z)).toBe(Bloco.TERRA_ARADA);
+    expect(nucleo.estado.mundo.bloco(C.x, C.y, C.z)).toBe(Bloco.TRIGO_0);
+    expect(cliente.pendente(C.x, C.y, C.z)).toBe(false);
+    // semente ao lado, na grama sem arar: a regra diz não, nada é previsto nem pedido
+    expect(podePlantar(ver({ x: x + 3, y: y - 1, z }), ver({ x: x + 3, y, z }))).toBe(false);
   });
 });

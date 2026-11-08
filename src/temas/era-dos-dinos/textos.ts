@@ -184,6 +184,7 @@ export const TEXTOS_DINOS: TextosTema = {
     Sobreviver: 'Vida no acampamento',
     Explorar: 'Expedição',
     Criar: 'Vila de pedra',
+    Roça: 'Roça da tribo',
   },
   missoes: {
     madeira: { titulo: 'Catador de troncos', descricao: 'Quebre 4 troncos de árvore antiga' },
@@ -215,6 +216,10 @@ export const TEXTOS_DINOS: TextosTema = {
     },
     trocas: { titulo: 'Troca de achados', descricao: 'Faça 3 trocas com os paleontólogos' },
     ferreiro: { titulo: 'Martelinho novo', descricao: 'Faça uma troca com a ferramenteira' },
+    arar: { titulo: 'Terra revirada', descricao: 'Are a terra com a enxada' },
+    plantar: { titulo: 'Semente antiga', descricao: 'Plante uma semente na terra arada' },
+    colher: { titulo: 'Colheita da tribo', descricao: 'Colha uma planta madura' },
+    pao: { titulo: 'Pão da fogueira', descricao: 'Faça um pão com 3 trigos' },
   },
   boasVindas: 'Boas-vindas à Era dos Dinos! Os fósseis estão esperando por você',
   morte: 'Ufa! Você desmaiou de cansaço',

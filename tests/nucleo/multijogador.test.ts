@@ -348,3 +348,126 @@ describe('mensagens absurdas na nuvem', () => {
     expect(n.estado.jogadores.get('ana')!.sobrevivencia.estado.vida).toBe(vida);
   });
 });
+
+/** Spec 013, critério 2: o plantio na nuvem (sem confiar no cliente). */
+describe('plantio com vários jogadores, na nuvem', () => {
+  // a terra da lavoura entre a Ana (X) e a Bia (X + 2)
+  const F = { x: X + 1, y: Y - 1, z: Z + 1 };
+  const C = { x: X + 1, y: Y, z: Z + 1 };
+  function roca(modo: 'criativo' | 'sobrevivencia' = 'sobrevivencia') {
+    const n = nuvem(modo);
+    n.estado.edicoes.definir(F.x, F.y, F.z, Bloco.TERRA_MUSGOSA);
+    n.estado.edicoes.definir(C.x, C.y, C.z, Bloco.AR);
+    for (const id of ['ana', 'bia']) {
+      inv(n, id).definir(0, { item: 'enxada_madeira', qtd: 1, dur: 60 });
+      inv(n, id).definir(1, { item: 'semente_trigo', qtd: 4 });
+    }
+    n.quadros();
+    return n;
+  }
+  const bloco = (n: Nucleo, p: { x: number; y: number; z: number }) =>
+    n.estado.mundo.bloco(p.x, p.y, p.z);
+  const plantar = (id: number) =>
+    ({ t: 'colocar', id, ...C, bloco: Bloco.TRIGO_0, meta: 0, slot: 1 }) as Comando;
+
+  it('arar, plantar, crescer e colher passam pelo saneamento', () => {
+    const n = roca();
+    n.comando('ana', { t: 'arar', id: 1, ...F, slot: 0 });
+    expect(bloco(n, F)).toBe(Bloco.TERRA_ARADA);
+    n.comando('ana', plantar(2));
+    expect(bloco(n, C)).toBe(Bloco.TRIGO_0);
+    expect(inv(n, 'ana').contar('semente_trigo')).toBe(3);
+    // a Bia vê a lavoura nascer
+    n.passo();
+    const q = n.quadros().get('bia')!;
+    expect(q.blocos).toContainEqual({ ...F, v: Bloco.TERRA_ARADA });
+    expect(q.blocos).toContainEqual({ ...C, v: Bloco.TRIGO_0 });
+    expect(q.eventos?.find((e) => e.e === 'arou')).toMatchObject({ meu: false });
+    n.comando('ana', { t: 'depurar', d: { f: 'crescer', segundos: 400 } });
+    expect(bloco(n, C)).toBe(Bloco.TRIGO_3);
+    n.comando('bia', { t: 'quebrar', id: 1, ...C, slot: 0 });
+    expect(bloco(n, C)).toBe(Bloco.AR);
+    const trigo = n.estado.mundoItens.itens.filter((i) => i.item === 'trigo');
+    expect(trigo.reduce((t, i) => t + i.qtd, 0)).toBeGreaterThanOrEqual(1);
+  });
+
+  it('comando de arar adulterado some no saneamento; longe ou sem enxada é recusado', () => {
+    const n = roca();
+    for (const ruim of [
+      { t: 'arar', id: 1, x: F.x + 0.5, y: F.y, z: F.z, slot: 0 },
+      { t: 'arar', id: 2, ...F, slot: 99 },
+      { t: 'arar', id: 3, ...F },
+      { t: 'arar', id: -4, ...F, slot: 0 },
+    ])
+      n.comando('ana', ruim as unknown as Comando);
+    expect(bloco(n, F)).toBe(Bloco.TERRA_MUSGOSA);
+    expect(n.quadros().get('ana')!.ack).toBe(0);
+    // longe (a Bia está a 2 blocos daqui, a terra a 30)
+    n.estado.edicoes.definir(X + 30, Y - 1, Z, Bloco.TERRA_MUSGOSA);
+    n.comando('ana', { t: 'arar', id: 5, x: X + 30, y: Y - 1, z: Z, slot: 0 });
+    // com as sementes na mão em vez da enxada
+    n.comando('ana', { t: 'arar', id: 6, ...F, slot: 1 });
+    expect(bloco(n, F)).toBe(Bloco.TERRA_MUSGOSA);
+    const recusas = n
+      .quadros()
+      .get('ana')!
+      .eventos?.filter((e) => e.e === 'recusa');
+    expect(recusas?.map((e) => (e as { comando: number }).comando)).toEqual([5, 6]);
+    // semente sem a semente no inventário (slot vazio)
+    n.comando('ana', { t: 'arar', id: 7, ...F, slot: 0 });
+    n.comando('ana', { ...plantar(8), slot: 5 } as Comando);
+    expect(bloco(n, C)).toBe(Bloco.AR);
+  });
+
+  it('visitante que só passeia não ara, não planta e não colhe', () => {
+    const n = roca();
+    n.definirConstrucao('bia', false);
+    n.comando('bia', { t: 'arar', id: 1, ...F, slot: 0 });
+    expect(bloco(n, F)).toBe(Bloco.TERRA_MUSGOSA);
+    n.comando('ana', { t: 'arar', id: 1, ...F, slot: 0 });
+    n.comando('bia', plantar(2));
+    expect(bloco(n, C)).toBe(Bloco.AR);
+    n.comando('ana', plantar(2));
+    n.comando('ana', { t: 'depurar', d: { f: 'crescer', segundos: 400 } });
+    n.comando('bia', { t: 'quebrar', id: 3, ...C, slot: 0 });
+    expect(bloco(n, C)).toBe(Bloco.TRIGO_3);
+    expect(inv(n, 'bia').contar('semente_trigo')).toBe(4);
+  });
+
+  it('dois colhem a mesma planta no mesmo passo: só um leva', () => {
+    const n = roca();
+    n.comando('ana', { t: 'arar', id: 1, ...F, slot: 0 });
+    n.comando('ana', plantar(2));
+    n.comando('ana', { t: 'depurar', d: { f: 'crescer', segundos: 400 } });
+    n.quadros();
+    n.comando('ana', { t: 'quebrar', id: 3, ...C, slot: 0 });
+    n.comando('bia', { t: 'quebrar', id: 1, ...C, slot: 0 });
+    const q = n.quadros();
+    const colheitas = ['ana', 'bia'].filter((id) =>
+      q.get(id)!.eventos?.some((e) => e.e === 'colheu' && e.meu),
+    );
+    expect(colheitas).toEqual(['ana']);
+    expect(q.get('bia')!.eventos?.some((e) => e.e === 'recusa')).toBe(true);
+    const total = (item: string) =>
+      n.estado.mundoItens.itens.filter((i) => i.item === item).reduce((t, i) => t + i.qtd, 0);
+    expect(total('trigo')).toBeLessThanOrEqual(2);
+    expect(total('semente_trigo')).toBeLessThanOrEqual(2);
+    // e o total se conserva quando eles pegam (cada um o que chegou primeiro)
+    for (let i = 0; i < 60; i++) n.passo();
+    const pegou = ['ana', 'bia'].reduce((t, id) => t + inv(n, id).contar('trigo'), 0);
+    expect(pegou + total('trigo')).toBeGreaterThanOrEqual(1);
+    expect(pegou + total('trigo')).toBeLessThanOrEqual(2);
+  });
+
+  it('na nuvem a semente fora da terra arada e o bloco em cima da lavoura são recusados', () => {
+    const n = roca();
+    n.comando('ana', plantar(1));
+    expect(bloco(n, C)).toBe(Bloco.AR);
+    n.comando('ana', { t: 'arar', id: 2, ...F, slot: 0 });
+    n.comando('ana', plantar(3));
+    inv(n, 'bia').definir(2, { item: idDoBloco(Bloco.TABUAS), qtd: 4 });
+    n.comando('bia', { t: 'colocar', id: 1, ...C, bloco: Bloco.TABUAS, meta: 0, slot: 2 });
+    expect(bloco(n, C)).toBe(Bloco.TRIGO_0);
+    expect(inv(n, 'bia').contar(idDoBloco(Bloco.TABUAS))).toBe(4);
+  });
+});

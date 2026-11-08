@@ -207,6 +207,10 @@ export const TEXTOS_PLANETA: TextosTema = {
       titulo: 'Ferramenta alienígena',
       descricao: 'Faça uma troca com a mecânica, que faz ferramentas',
     },
+    arar: { titulo: 'Solo pronto', descricao: 'Prepare o solo com a enxada' },
+    plantar: { titulo: 'Muda plantada', descricao: 'Plante uma semente no solo preparado' },
+    colher: { titulo: 'Amostra colhida', descricao: 'Colha uma planta madura' },
+    pao: { titulo: 'Pão da base', descricao: 'Faça um pão com 3 trigos' },
   },
   capitulos: {
     'Primeiros passos': 'Pouso',
@@ -214,6 +218,7 @@ export const TEXTOS_PLANETA: TextosTema = {
     Sobreviver: 'Vida na expedição',
     Explorar: 'Mapear o planeta',
     Criar: 'Laboratório',
+    Roça: 'Horta da expedição',
   },
   boasVindas: 'Pouso confirmado! Boas-vindas ao Planeta Vivo, cientista',
   morte: 'Você desmaiou e acordou de volta na cápsula de pouso',

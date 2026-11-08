@@ -3,6 +3,7 @@ import { criarNucleo } from '../../src/nucleo/nucleo';
 import type { DadosMundo } from '../../src/jogo/mundos';
 import { Bloco } from '../../src/world/blocks';
 import { empacotar } from '../../src/world/edicoes';
+import { TAM_X, TAM_Z, indice } from '../../src/world/chunk';
 
 /**
  * Spec 009, critério 5: mundos salvos antes do servidor local abrem iguais. O formato
@@ -137,5 +138,33 @@ describe('mundos antigos no núcleo', () => {
     expect(q.sobrevivencia).toMatchObject({ vida: 14, fome: 11 });
     expect(q.inventario?.slots[1]).toEqual({ item: 'carvao', qtd: 12 });
     expect(q.ambiente.dia).toBe(7);
+  });
+
+  it('mundo de antes do plantio (sem extras.lavoura) abre igual e a lavoura posta depois cresce', () => {
+    const d = salvoAntigo();
+    // uma plantinha de trigo já nas edições, sem o progresso salvo
+    const lx = 4;
+    const lz = 7;
+    d.edicoes['3,5'].push(
+      [indice(lx, 100, lz), Bloco.TERRA_ARADA],
+      [indice(lx, 101, lz), Bloco.TRIGO_1],
+    );
+    const n = criarNucleo({
+      semente: 1337,
+      modo: 'sobrevivencia',
+      versaoMundo: 2,
+      dados: d,
+      confiarNoCliente: true,
+    });
+    n.conectar('local');
+    const s = n.salvar();
+    expect(s.edicoes).toEqual(d.edicoes);
+    const k = `${3 * TAM_X + lx},101,${5 * TAM_Z + lz}`;
+    expect(n.estado.lavoura.get(k)?.p).toBe(0);
+    expect(s.extras['lavoura']).toEqual({ [k]: 0 });
+    n.comando('local', { t: 'depurar', d: { f: 'crescer', segundos: 240 } });
+    expect(n.estado.mundo.bloco(3 * TAM_X + lx, 101, 5 * TAM_Z + lz)).toBeGreaterThan(
+      Bloco.TRIGO_1,
+    );
   });
 });

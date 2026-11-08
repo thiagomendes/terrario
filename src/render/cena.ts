@@ -60,6 +60,17 @@ import type { DadosMundo, MetaMundo, ModoJogo, RepositorioMundos } from '../jogo
 import { caixasDoBloco, cercaConecta, direcaoDoYaw, vetorDirecao } from '../world/formas';
 import { velocidadeMineracao } from '../jogo/ferramentas';
 import { obterItem } from '../jogo/itens';
+import {
+  AVISO_SEMENTE,
+  alvoDaEnxada,
+  ehEnxada,
+  ehLavoura,
+  lavouraDoBloco,
+  madura,
+  plantaBaixa,
+  podePlantar,
+  substituivel,
+} from '../jogo/plantio';
 import { criarRenderItens } from './itensSoltos';
 import {
   criarClima,
@@ -311,6 +322,8 @@ export interface EstadoDepuracao {
   invocar?: (tipo: TipoCriatura, x: number, y: number, z: number) => void;
   /** Testes que constroem: põe o kit de blocos na barra (o mundo novo começa vazio). */
   darKit?: () => void;
+  /** Testes e capturas: a lavoura avança como se tantos segundos tivessem passado. */
+  crescerLavoura?: (segundos: number) => void;
   /** Vitrine dos testes: um bicho parado, sem cérebro, com o desenho do jogo. */
   estatua?: (tipo: TipoCriatura, x: number, y: number, z: number, yaw: number) => void;
   sobrevivencia?: SobrevivenciaCliente;
@@ -1109,6 +1122,14 @@ export function criarCena(
     const id = proximoId();
     prever(id, x, y, z, b, meta);
     lote.push({ x, y, z, antes, depois: empacotar(b, meta) });
+    // a lavoura não flutua: quebrar a terra arada leva a planta de cima (o núcleo faz o mesmo)
+    if ((antes & 255) === Bloco.TERRA_ARADA && b !== Bloco.TERRA_ARADA) {
+      const cima = valorEm(x, y + 1, z);
+      if (ehLavoura(cima & 255)) {
+        prever(id, x, y + 1, z, Bloco.AR);
+        lote.push({ x, y: y + 1, z, antes: cima, depois: Bloco.AR });
+      }
+    }
     // quebrar meia porta leva a outra metade (o núcleo faz o mesmo)
     if (b === Bloco.AR && ((antes & 255) === Bloco.PORTA || (antes & 255) === Bloco.PORTA_ABERTA)) {
       for (const dy of [-1, 1]) {
@@ -1268,9 +1289,13 @@ export function criarCena(
         // porta ocupa dois blocos: as duas metades entram no mesmo passo do desfazer;
         // planta, neve ou água em cima dão lugar; bloco firme em cima: não cabe (nada de
         // meia porta)
+        // semente: só na terra arada (a mesma regra do núcleo; nada é previsto à toa)
+        if (lavouraDoBloco(b) && !podePlantar(blocoEm(x, y - 1, z), blocoEm(x, y, z))) {
+          toast(AVISO_SEMENTE);
+          return false;
+        }
         if (b === Bloco.PORTA) {
-          const cima = obterBlocoDef(blocoEm(x, y + 1, z));
-          const cabe = !cima || cima.id === Bloco.AR || !!cima.planta || !!cima.liquido;
+          const cabe = substituivel(blocoEm(x, y + 1, z));
           if (!cabe || y + 1 >= ALTURA) {
             toast('A porta precisa de 2 blocos de altura');
             return false;
@@ -1287,11 +1312,31 @@ export function criarCena(
   const barramento = criarBarramento();
   estado.barramento = barramento;
 
-  /** Onde um bloco vai parar: plantas (grama alta, flores) são substituídas no lugar. */
+  /**
+   * Onde um bloco vai parar: plantas baixas (grama alta, flores) são substituídas no lugar;
+   * a lavoura não (o bloco vai ao lado dela, e em cima dela não cabe).
+   */
   function posicaoDeColocar(a: { x: number; y: number; z: number; normal: Vec3 }): Vec3 {
-    return obterBlocoDef(blocoEm(a.x, a.y, a.z))?.planta
-      ? { x: a.x, y: a.y, z: a.z }
-      : posicaoColocacao(a);
+    return plantaBaixa(blocoEm(a.x, a.y, a.z)) ? { x: a.x, y: a.y, z: a.z } : posicaoColocacao(a);
+  }
+
+  /** Enxada na mão: ara a grama (ou a terra) na mira, prevendo com a regra do núcleo. */
+  function ararNaMira(a: { x: number; y: number; z: number }): boolean {
+    const alvo = alvoDaEnxada(a, blocoEm);
+    if (!alvo) {
+      barramento.emitir('recusa', { motivo: 'colocar' });
+      return false;
+    }
+    const id = proximoId();
+    prever(id, alvo.x, alvo.y, alvo.z, Bloco.TERRA_ARADA);
+    if (blocoEm(alvo.x, alvo.y + 1, alvo.z) !== Bloco.AR)
+      prever(id, alvo.x, alvo.y + 1, alvo.z, Bloco.AR);
+    enviarTelemetria(true);
+    enviar({ t: 'arar', id, x: alvo.x, y: alvo.y, z: alvo.z, slot: hotbar.ativo });
+    tocarSom(motorAudio, 'quebra', 'terra');
+    animador.evento('golpe');
+    aplicarPlano('golpe', { ...alvo, bloco: Bloco.TERRA_ARADA });
+    return true;
   }
 
   function alvoMineracao(): AlvoMineracao | null {
@@ -1392,6 +1437,10 @@ export function criarCena(
     if (def?.comida && modo === 'sobrevivencia') {
       // fome cheia: nem tenta (o núcleo confere de novo)
       if (cliente.sobrevivencia.fome < 20) enviar({ t: 'comer', slot: hotbar.ativo });
+      return;
+    }
+    if (a && ehEnxada(def?.ferramenta)) {
+      ararNaMira(a);
       return;
     }
     interagirComEventos('colocar');
@@ -1779,6 +1828,57 @@ export function criarCena(
   }
   barramento.ouvir('golpe', (d) => aplicarPlano('golpe', d));
   barramento.ouvir('quebra', (d) => aplicarPlano('quebra', d));
+  /** Confete de folhinhas (e grãos dourados) ao colher a planta madura. */
+  function festaDaColheita(x: number, y: number, z: number): void {
+    const cores: [number, number, number][] = [
+      [0.42, 0.72, 0.25],
+      [0.55, 0.82, 0.3],
+      [0.3, 0.6, 0.2],
+      [0.95, 0.8, 0.3],
+    ];
+    pool.emitir(
+      Array.from({ length: 16 }, (_, i) => {
+        const ang = (i / 16) * Math.PI * 2 + rngFx() * 0.5;
+        const v = 1.2 + rngFx() * 1.4;
+        return {
+          x: x + 0.5,
+          y: y + 0.5,
+          z: z + 0.5,
+          vx: Math.cos(ang) * v,
+          vy: 2.5 + rngFx() * 2,
+          vz: Math.sin(ang) * v,
+          cor: cores[i % cores.length],
+          tipo: CONFETE,
+        };
+      }),
+    );
+  }
+  /** Brilhinho dourado subindo quando a planta fica madura perto do jogador. */
+  function brilhoDeMadura(x: number, y: number, z: number): void {
+    const d = Math.hypot(x + 0.5 - camera.position.x, z + 0.5 - camera.position.z);
+    if (d > 24) return;
+    pool.emitir(
+      Array.from({ length: 8 }, () => ({
+        x: x + 0.2 + rngFx() * 0.6,
+        y: y + 0.6 + rngFx() * 0.4,
+        z: z + 0.2 + rngFx() * 0.6,
+        vx: (rngFx() - 0.5) * 0.4,
+        vy: 1 + rngFx() * 0.8,
+        vz: (rngFx() - 0.5) * 0.4,
+        cor: [1, 0.88, 0.35] as [number, number, number],
+        tipo: CONFETE,
+      })),
+    );
+    if (d < 12) tocarSom(motorAudio, 'coleta');
+  }
+  barramento.ouvir('quebra', (d) => {
+    // colher não continua cavando: segurar depois da planta não leva a terra arada junto
+    if (ehLavoura(d.bloco)) minerador.soltar();
+    if (madura(d.bloco)) {
+      festaDaColheita(d.x, d.y, d.z);
+      tocarSom(motorAudio, 'coleta');
+    }
+  });
   // quebrar meia porta leva a outra metade
   const replicaItens = cliente.itens;
   const renderItens = criarRenderItens(scene, atlas, textura, iconeDoItem, (m) =>
@@ -2455,10 +2555,33 @@ export function criarCena(
       t = toque ? 'Toque na raposa para dar frutinhas' : 'Clique direito (ou F): dar frutinhas';
     } else if (comidaNaMao() && cliente.sobrevivencia.fome < 20) {
       t = toque ? 'Segure o dedo na tela para comer' : 'Clique direito (ou F): comer';
+    } else {
+      t = dicaDoPlantio(toque, p?.item);
     }
     if (t === dicaAtual) return;
     dicaAtual = t;
     window.dispatchEvent(new CustomEvent('brumaluz:dicaMira', { detail: t }));
+  }
+  /** Dicas da roça: arar com a enxada, plantar na terra arada, colher a madura. */
+  function dicaDoPlantio(toque: boolean, item: string | undefined): string {
+    const a = alvoDoQuadro();
+    if (!a) return '';
+    const b = blocoEm(a.x, a.y, a.z);
+    const def = item ? obterItem(item) : undefined;
+    if (ehEnxada(def?.ferramenta))
+      return alvoDaEnxada(a, blocoEm)
+        ? toque
+          ? 'Toque na grama para arar'
+          : 'Clique direito: arar'
+        : '';
+    if (madura(b)) return toque ? 'Segure para colher' : 'Clique para colher';
+    if (lavouraDoBloco(def?.bloco ?? -1)) {
+      const p = posicaoDeColocar(a);
+      if (podePlantar(blocoEm(p.x, p.y - 1, p.z), blocoEm(p.x, p.y, p.z)))
+        return toque ? 'Toque na terra arada para plantar' : 'Clique direito: plantar';
+      return ehLavoura(b) ? '' : 'A semente vai na terra arada';
+    }
+    return '';
   }
   /** Volume da voz pela distância (some a 24 blocos). */
   const volumeDaDistancia = (c: { x: number; y: number; z: number }) => {
@@ -2540,6 +2663,7 @@ export function criarCena(
     }));
   estado.invocar = (tipo, x, y, z) => enviar({ t: 'depurar', d: { f: 'invocar', tipo, x, y, z } });
   estado.darKit = () => enviar({ t: 'depurar', d: { f: 'kit' } });
+  estado.crescerLavoura = (segundos) => enviar({ t: 'depurar', d: { f: 'crescer', segundos } });
 
   // Modo construção (criativo): ferramentas de forma, copiar/colar e espelho.
   const visualConstrucao = criarVisualConstrucao(scene, atlas, textura, (m) =>
@@ -2950,6 +3074,7 @@ export function criarCena(
         // o que os outros fazem (o próprio jogador já viu e ouviu na previsão)
         if (!e.meu) {
           aplicarPlano(e.e, e);
+          // a festa da colheita dos outros sai no evento 'colheu'
           tocarSom(
             motorAudio,
             e.e === 'quebra' ? 'quebra' : 'colocar',
@@ -3075,6 +3200,25 @@ export function criarCena(
         break;
       case 'recusa':
         barramento.emitir('recusa', { motivo: e.motivo === 'quebrar' ? 'quebrar' : 'colocar' });
+        if (e.motivo === 'semente') toast(AVISO_SEMENTE);
+        break;
+      case 'arou':
+        if (e.meu) window.dispatchEvent(new CustomEvent('brumaluz:arou'));
+        else tocarSom(motorAudio, 'quebra', 'terra');
+        break;
+      case 'plantou':
+        window.dispatchEvent(new CustomEvent('brumaluz:plantou', { detail: e.bloco }));
+        break;
+      case 'colheu':
+        // a festa de quem colhe já saiu na previsão; a dos outros sai aqui
+        if (!e.meu && e.madura) festaDaColheita(e.x, e.y, e.z);
+        if (e.meu)
+          window.dispatchEvent(
+            new CustomEvent('brumaluz:colheu', { detail: { bloco: e.bloco, madura: e.madura } }),
+          );
+        break;
+      case 'amadureceu':
+        brilhoDeMadura(e.x, e.y, e.z);
         break;
     }
   }

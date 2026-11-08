@@ -1,4 +1,4 @@
-import { Bloco } from '../world/blocks';
+import { Bloco, obterBloco } from '../world/blocks';
 import { idDoBloco } from './itens';
 import type { Gerador } from '../audio/variacao';
 
@@ -40,6 +40,8 @@ export function dropsDoBloco(bloco: number, rng: Gerador, coleta = true): Drop[]
       return um(Bloco.TERRA);
     case Bloco.MUSGO_PANTANO:
       return um(Bloco.LAMA);
+    case Bloco.TERRA_ARADA:
+      return um(Bloco.TERRA);
     case Bloco.PORTA_ABERTA:
       return um(Bloco.PORTA);
     case Bloco.FORNALHA_ACESA:
@@ -55,7 +57,8 @@ export function dropsDoBloco(bloco: number, rng: Gerador, coleta = true): Drop[]
       return [];
     }
     default:
-      return um(bloco);
+      // o que não vira item (estágios da lavoura) não solta a si mesmo: a colheita é à parte
+      return obterBloco(bloco)?.semItem ? [] : um(bloco);
   }
 }
 

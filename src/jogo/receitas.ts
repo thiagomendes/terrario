@@ -74,6 +74,14 @@ function ferramentas(): Receita[] {
         mesa: true,
         categoria: 'ferramentas',
       },
+      {
+        id: `enxada_${nivel}`,
+        forma: ['MM', ' G', ' G'],
+        chaves: { M: mat, G: 'graveto' },
+        resultado: { item: `enxada_${nivel}`, qtd: 1 },
+        mesa: true,
+        categoria: 'ferramentas',
+      },
     );
   }
   return r;
@@ -268,6 +276,35 @@ export const RECEITAS: readonly Receita[] = [
     resultado: { item: 'torta_abobora', qtd: 1 },
     categoria: 'comida',
   },
+  // spec 013: roça
+  {
+    id: 'pao',
+    forma: ['TTT'],
+    chaves: { T: 'trigo' },
+    resultado: { item: 'pao', qtd: 1 },
+    mesa: true,
+    categoria: 'comida',
+  },
+  {
+    id: 'feno',
+    forma: ['TTT', 'TTT', 'TTT'],
+    chaves: { T: 'trigo' },
+    resultado: { item: b(Bloco.FENO), qtd: 1 },
+    mesa: true,
+    categoria: 'blocos',
+  },
+  {
+    id: 'trigo_de_feno',
+    ingredientes: [b(Bloco.FENO)],
+    resultado: { item: 'trigo', qtd: 9 },
+    categoria: 'materiais',
+  },
+  {
+    id: 'sementes_abobora',
+    ingredientes: [b(Bloco.ABOBORA)],
+    resultado: { item: 'semente_abobora', qtd: 4 },
+    categoria: 'materiais',
+  },
   ...ferramentas(),
 ];
 
@@ -404,6 +441,8 @@ export const FUNDICAO: Record<string, string> = {
   [b(Bloco.TRONCO_LANTERNA)]: 'carvao',
   carne_crua: 'carne_assada',
   peixe_cru: 'peixe_assado',
+  milho: 'pipoca',
+  ovo: 'ovo_cozido',
 };
 
 /** Segundos de queima de cada combustível. */

@@ -8,7 +8,7 @@ import type { EstiloMundo } from '../temas/tipos';
 import type { Comando, Mensagem } from '../nucleo/protocolo';
 
 /** Sobe quando estas mensagens mudam de formato. */
-export const VERSAO_REDE = 1;
+export const VERSAO_REDE = 2;
 /** Jogadores por mundo. */
 export const MAX_JOGADORES = 8;
 

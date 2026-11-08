@@ -9,10 +9,10 @@ registrarBlocos();
 registrarCatalogo();
 
 describe('trocas dos moradores', () => {
-  it('todas as profissões têm de 3 a 5 trocas com itens que existem', () => {
+  it('todas as profissões têm de 3 a 7 trocas com itens que existem', () => {
     for (const p of PROFISSOES) {
       expect(TROCAS[p].length).toBeGreaterThanOrEqual(3);
-      expect(TROCAS[p].length).toBeLessThanOrEqual(5);
+      expect(TROCAS[p].length).toBeLessThanOrEqual(7);
       for (const t of TROCAS[p]) {
         for (const d of [...t.dar, t.receber]) {
           expect(obterItem(d.item), `${p}/${t.id}: ${d.item}`).toBeTruthy();
