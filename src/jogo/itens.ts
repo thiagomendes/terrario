@@ -1,7 +1,7 @@
 import { Bloco, REGISTRO_BLOCOS } from '../world/blocks';
 
 export type TipoItem = 'bloco' | 'ferramenta' | 'comida' | 'material';
-export type TipoFerramenta = 'picareta' | 'machado' | 'pa' | 'espada';
+export type TipoFerramenta = 'picareta' | 'machado' | 'pa' | 'espada' | 'enxada';
 
 export interface DefFerramenta {
   tipo: TipoFerramenta;

@@ -67,6 +67,21 @@ export const Bloco = {
   ABOBORA: 65,
   LAMPIAO_ABOBORA: 66,
   AGUA: 67,
+  // spec 013: plantio (todos os temas). Os estágios da lavoura vão de 0 (semente) a 3 (madura).
+  TERRA_ARADA: 68,
+  TRIGO_0: 69,
+  TRIGO_1: 70,
+  TRIGO_2: 71,
+  TRIGO_3: 72,
+  MILHO_0: 73,
+  MILHO_1: 74,
+  MILHO_2: 75,
+  MILHO_3: 76,
+  ABOBOREIRA_0: 77,
+  ABOBOREIRA_1: 78,
+  ABOBOREIRA_2: 79,
+  ABOBOREIRA_3: 80,
+  FENO: 81,
 } as const;
 
 export type Ferramenta = 'picareta' | 'machado' | 'pa' | 'espada';
@@ -175,6 +190,24 @@ const folhas = (o: Opcoes = {}): Opcoes => ({
 });
 const la = (id: number, nome: string, t: string) =>
   def(id, `lã ${nome}`, t, { dureza: 0.6, som: 'folhagem' });
+
+/**
+ * Os 4 estágios de uma planta da lavoura (ids seguidos). Não viram item: a semente planta o
+ * estágio 0 e a colheita solta o produto. Uma textura só por planta (a cor); a forma de cada
+ * estágio sai da peça de brinquedo (`mesh/plantasBrinquedo.ts`).
+ */
+function lavoura(
+  primeiro: number,
+  nome: string,
+  nomeTile: string,
+  madura = `${nome} maduro`,
+): DefinicaoBloco[] {
+  return [0, 1, 2, 3].map((e) =>
+    planta(primeiro + e, e === 3 ? madura : `${nome} (${e + 1} de 4)`, nomeTile, {
+      semItem: true,
+    }),
+  );
+}
 
 export const REGISTRO_BLOCOS: readonly DefinicaoBloco[] = [
   def(Bloco.AR, 'ar', 'vazio', { solido: false, opaco: false, semItem: true, dureza: undefined }),
@@ -398,6 +431,20 @@ export const REGISTRO_BLOCOS: readonly DefinicaoBloco[] = [
     liquido: true,
     semItem: true,
     dureza: undefined,
+  }),
+  def(
+    Bloco.TERRA_ARADA,
+    'terra arada',
+    'terra',
+    terra({ tiles: { topo: 'terra_arada', lado: 'terra', base: 'terra' } }),
+  ),
+  ...lavoura(Bloco.TRIGO_0, 'trigo', 'trigo'),
+  ...lavoura(Bloco.MILHO_0, 'milho', 'milho'),
+  ...lavoura(Bloco.ABOBOREIRA_0, 'aboboreira', 'aboboreira', 'aboboreira com abóbora'),
+  def(Bloco.FENO, 'fardo de feno', 'feno_lado', {
+    dureza: 0.5,
+    som: 'folhagem',
+    tiles: { topo: 'feno_topo', lado: 'feno_lado' },
   }),
 ];
 
