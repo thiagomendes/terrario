@@ -22,15 +22,33 @@ const MAX_DESNIVEL = 4;
 
 export type Profissao = 'ferreiro' | 'cozinheiro' | 'construtor';
 export const PROFISSOES: readonly Profissao[] = ['ferreiro', 'cozinheiro', 'construtor'];
-export type TipoLote = 'casa' | 'oficina' | 'deposito';
+/** 'campo' (spec 013): lote do sítio sem construção de morar (lavoura, curral, galinheiro). */
+export type TipoLote = 'casa' | 'oficina' | 'deposito' | 'campo';
 export type FormaCasa = 'duas-aguas' | 'cupula' | 'tenda' | 'redonda' | 'modulo';
-export type FormaMarco = 'poco' | 'fonte' | 'antena' | 'totem' | 'esqueleto';
+export type FormaMarco = 'poco' | 'fonte' | 'antena' | 'totem' | 'esqueleto' | 'moinho';
+/**
+ * Spec 013: o que o planejador põe nos lotes. 'vila' (ou sem o campo) é o povoado de
+ * sempre; 'sitio' troca as casas por casa da fazenda, celeiro, ferraria, silo, lavouras,
+ * curral e galinheiro (mesma região, mesmo raio e mesmo lote).
+ */
+export type PlantaPovoado = 'vila' | 'sitio';
+/** Uso de cada lote do sítio (o `tipo` continua dizendo casa, oficina, depósito ou campo). */
+export type UsoSitio =
+  | 'fazenda'
+  | 'celeiro'
+  | 'ferraria'
+  | 'silo'
+  | 'lavoura'
+  | 'curral'
+  | 'galinheiro';
 
 export interface FormasPovoado {
   casa: FormaCasa;
   oficina: FormaCasa;
   deposito: FormaCasa;
   marco: FormaMarco;
+  /** Spec 013: sem o campo, 'vila'. No sítio, casa/oficina/depósito não se aplicam. */
+  planta?: PlantaPovoado;
 }
 export const FORMAS_PADRAO: FormasPovoado = {
   casa: 'duas-aguas',
@@ -54,6 +72,26 @@ export interface Lote {
   porta: Lado;
   /** Caminho a pé da borda da praça até a frente da porta (com a quina do L). */
   rota: [number, number][];
+  /** Só no sítio: o que vai no lote. */
+  uso?: UsoSitio;
+}
+
+/**
+ * Cercado do sítio (curral ou galinheiro): onde nascem os bichos do sítio, até 3 por
+ * cercado. O papel do bicho é o mesmo em todo tema (o Rancho chama de vaca e galinha).
+ */
+export interface Cercado {
+  /** Índice do lote no plano. */
+  lote: number;
+  bicho: 'cervo' | 'coelho';
+  /** Miolo livre do cercado (inclusivo): onde os bichos nascem. */
+  x0: number;
+  z0: number;
+  x1: number;
+  z1: number;
+  /** Porteira (porta de dois blocos na cerca, que o jogador abre e fecha) e a célula de fora. */
+  portao: [number, number];
+  fora: [number, number];
 }
 
 export interface Morador {
@@ -88,6 +126,10 @@ export interface PlanoPovoado {
    * pouco do caminho não desce degrau), senão 1. Não muda quais povoados existem.
    */
   borda: 1 | 2;
+  /** Só no sítio (spec 013): os cercados com bichos. */
+  currais?: Cercado[];
+  /** Só no sítio: baú do celeiro (sementes e enxada), em coordenadas de mundo. */
+  bauCeleiro?: [number, number, number];
 }
 
 const BIOMAS_OK: ReadonlySet<Bioma> = new Set(['floresta', 'campos', 'deserto', 'taiga', 'praia']);
@@ -99,6 +141,8 @@ export interface TerrenoNatural {
   nivelMar: number;
   /** Ponto de nascimento do jogador (nenhum povoado o cobre). */
   nascimento?(semente: number): { x: number; z: number };
+  /** Spec 013: o que vai nos lotes (do estilo do mundo; sem o campo, 'vila'). */
+  readonly planta?: PlantaPovoado;
 }
 
 const chave = (x: number, z: number) => (x + 32768) * 65536 + (z + 32768);
@@ -145,7 +189,21 @@ export function planoDaRegiao(
   t: TerrenoNatural,
 ): PlanoPovoado | null {
   if (regioesBloqueadas.has(`${rx},${rz}`)) return null;
-  const k = `${rx},${rz},${semente}`;
+  return planoSemBloqueio(rx, rz, semente, t);
+}
+
+/**
+ * Plano da região sem olhar as regiões bloqueadas dos mundos antigos (o nascimento perto
+ * do sítio sai daqui, igual no cliente e no servidor).
+ */
+export function planoSemBloqueio(
+  rx: number,
+  rz: number,
+  semente: number,
+  t: TerrenoNatural,
+): PlanoPovoado | null {
+  const planta = t.planta ?? 'vila';
+  const k = planta === 'vila' ? `${rx},${rz},${semente}` : `${rx},${rz},${semente},${planta}`;
   if (cache.has(k)) return cache.get(k)!;
   const p = planejar(rx, rz, semente, t);
   if (cache.size > 256) cache.clear();
@@ -153,15 +211,74 @@ export function planoDaRegiao(
   return p;
 }
 
+/** Lotes do sítio, na ordem do anel (os vizinhos combinam: lavoura perto da casa e do celeiro). */
+function lotesDoSitio(
+  rx: number,
+  rz: number,
+  semente: number,
+): { tipo: TipoLote; profissao?: Profissao; uso: UsoSitio }[] {
+  const duas = hash2(rx, rz, semente + 7104) < 0.5;
+  return [
+    { tipo: 'casa', profissao: 'cozinheiro', uso: 'fazenda' },
+    { tipo: 'campo', uso: 'lavoura' },
+    { tipo: 'oficina', profissao: 'construtor', uso: 'celeiro' },
+    { tipo: 'deposito', uso: 'silo' },
+    { tipo: 'campo', uso: 'curral' },
+    { tipo: 'campo', uso: 'galinheiro' },
+    { tipo: 'oficina', profissao: 'ferreiro', uso: 'ferraria' },
+    ...(duas ? [{ tipo: 'campo' as const, uso: 'lavoura' as const }] : []),
+  ];
+}
+
+/**
+ * Porteira do cercado. A porta gerada pelo mundo tem sempre a mesma direção (painel no
+ * eixo x), então a porteira fica num lado de z constante: na frente, se a frente for
+ * norte ou sul; senão no lado (norte ou sul) mais perto da praça, junto da frente.
+ */
+export function portaoDoCercado(
+  l: Lote,
+  cz: number,
+): { portao: [number, number]; fora: [number, number] } {
+  if (l.porta === 'n') return { portao: [l.x0 + 3, l.z0], fora: [l.x0 + 3, l.z0 - 1] };
+  if (l.porta === 's')
+    return { portao: [l.x0 + 3, l.z0 + TAM_LOTE - 1], fora: [l.x0 + 3, l.z0 + TAM_LOTE] };
+  const x = l.porta === 'o' ? l.x0 + 1 : l.x0 + TAM_LOTE - 2;
+  return cz < l.z0 + 3
+    ? { portao: [x, l.z0], fora: [x, l.z0 - 1] }
+    : { portao: [x, l.z0 + TAM_LOTE - 1], fora: [x, l.z0 + TAM_LOTE] };
+}
+
+/** Lugares tentados por região no sítio (o povoado de sempre tenta só o primeiro). */
+const TENTATIVAS_SITIO = 6;
+
 function planejar(rx: number, rz: number, semente: number, t: TerrenoNatural): PlanoPovoado | null {
   // metade das regiões tem chance de povoado
   if (hash2(rx, rz, semente + 7101) > 0.5) return null;
+  if (t.planta !== 'sitio') return planejarEm(rx, rz, semente, t, 0);
+  // spec 013: o sítio procura mais de um lugar na região (o Rancho nasce perto de um),
+  // com sorteios novos a partir do segundo
+  for (let k = 0; k < TENTATIVAS_SITIO; k++) {
+    const p = planejarEm(rx, rz, semente, t, k);
+    if (p) return p;
+  }
+  return null;
+}
+
+function planejarEm(
+  rx: number,
+  rz: number,
+  semente: number,
+  t: TerrenoNatural,
+  tentativa: number,
+): PlanoPovoado | null {
   const margem = RAIO_POVOADO + 2;
+  const sx = tentativa === 0 ? 7102 : 7130 + tentativa * 2;
+  const sz = tentativa === 0 ? 7103 : 7131 + tentativa * 2;
   const cx = Math.floor(
-    rx * REGIAO_POVOADO + margem + hash2(rx, rz, semente + 7102) * (REGIAO_POVOADO - 2 * margem),
+    rx * REGIAO_POVOADO + margem + hash2(rx, rz, semente + sx) * (REGIAO_POVOADO - 2 * margem),
   );
   const cz = Math.floor(
-    rz * REGIAO_POVOADO + margem + hash2(rx, rz, semente + 7103) * (REGIAO_POVOADO - 2 * margem),
+    rz * REGIAO_POVOADO + margem + hash2(rx, rz, semente + sz) * (REGIAO_POVOADO - 2 * margem),
   );
   const h = t.altura(cx, cz, semente);
   if (h <= t.nivelMar + 1 || h >= 88) return null;
@@ -181,13 +298,17 @@ function planejar(rx: number, rz: number, semente: number, t: TerrenoNatural): P
   }
   if (max - min > 7) return null;
 
+  const sitio = t.planta === 'sitio';
   // lotes: 3 a 6 casas, as 3 oficinas e o depósito, num anel em volta da praça
+  // (no sítio, os lotes da roça: spec 013)
   const nCasas = 3 + Math.floor(hash2(rx, rz, semente + 7104) * 4);
-  const tipos: { tipo: TipoLote; profissao?: Profissao }[] = [
-    ...PROFISSOES.map((p) => ({ tipo: 'oficina' as const, profissao: p })),
-    { tipo: 'deposito' },
-    ...Array.from({ length: nCasas }, () => ({ tipo: 'casa' as const })),
-  ];
+  const tipos: { tipo: TipoLote; profissao?: Profissao; uso?: UsoSitio }[] = sitio
+    ? lotesDoSitio(rx, rz, semente)
+    : [
+        ...PROFISSOES.map((p) => ({ tipo: 'oficina' as const, profissao: p })),
+        { tipo: 'deposito' as const },
+        ...Array.from({ length: nCasas }, () => ({ tipo: 'casa' as const })),
+      ];
   const giro = hash2(rx, rz, semente + 7105) * Math.PI * 2;
   const raio = 14 + (tipos.length > 8 ? 2 : 0);
   const lotes: Lote[] = [];
@@ -224,26 +345,49 @@ function planejar(rx: number, rz: number, semente: number, t: TerrenoNatural): P
       const dz = cz - mz;
       const porta: Lado = Math.abs(dx) > Math.abs(dz) ? (dx > 0 ? 'l' : 'o') : dz > 0 ? 's' : 'n';
       lotes.push({ tipo: tp.tipo, profissao: tp.profissao, x0, z0, h: piso, porta, rota: [] });
+      if (tp.uso) lotes[lotes.length - 1].uso = tp.uso;
       return;
     }
   });
-  // sem as três oficinas e o depósito não há povoado
-  if (
-    lotes.filter((l) => l.tipo !== 'casa').length < 4 ||
-    lotes.filter((l) => l.tipo === 'casa').length < 2
-  )
-    return null;
-
-  // um morador por casa; profissões em rodízio
-  const oficinas = new Map(lotes.map((l, i) => [l.profissao, i] as const).filter(([p]) => p));
   const moradores: Morador[] = [];
-  lotes.forEach((l, i) => {
-    if (l.tipo !== 'casa') return;
-    const profissao = PROFISSOES[moradores.length % PROFISSOES.length];
-    moradores.push({ n: moradores.length, profissao, casa: i, oficina: oficinas.get(profissao)! });
-  });
-  for (const l of lotes)
-    if (l.tipo === 'casa') l.profissao = moradores.find((m) => lotes[m.casa] === l)?.profissao;
+  if (sitio) {
+    // o sítio precisa de tudo (só a segunda lavoura é opcional)
+    const usos = new Set(lotes.map((l) => l.uso));
+    if (lotes.length < 7 || usos.size < 7) return null;
+    // três moradores, cada um mora onde trabalha: a fazendeira (cozinheira) na casa da
+    // fazenda, o carpinteiro (construtor) no celeiro e a ferreira na ferraria
+    const onde: Record<Profissao, UsoSitio> = {
+      ferreiro: 'ferraria',
+      cozinheiro: 'fazenda',
+      construtor: 'celeiro',
+    };
+    for (const profissao of PROFISSOES) {
+      const i = lotes.findIndex((l) => l.uso === onde[profissao]);
+      moradores.push({ n: moradores.length, profissao, casa: i, oficina: i });
+    }
+  } else {
+    // sem as três oficinas e o depósito não há povoado
+    if (
+      lotes.filter((l) => l.tipo !== 'casa').length < 4 ||
+      lotes.filter((l) => l.tipo === 'casa').length < 2
+    )
+      return null;
+
+    // um morador por casa; profissões em rodízio
+    const oficinas = new Map(lotes.map((l, i) => [l.profissao, i] as const).filter(([p]) => p));
+    lotes.forEach((l, i) => {
+      if (l.tipo !== 'casa') return;
+      const profissao = PROFISSOES[moradores.length % PROFISSOES.length];
+      moradores.push({
+        n: moradores.length,
+        profissao,
+        casa: i,
+        oficina: oficinas.get(profissao)!,
+      });
+    });
+    for (const l of lotes)
+      if (l.tipo === 'casa') l.profissao = moradores.find((m) => lotes[m.casa] === l)?.profissao;
+  }
 
   // caminhos: da porta de cada lote até a borda da praça, em L, com a altura interpolada
   const caminho = new Map<number, number>();
@@ -282,6 +426,35 @@ function planejar(rx: number, rz: number, semente: number, t: TerrenoNatural): P
       if (!caminho.has(c)) caminho.set(c, h);
     }
   }
+
+  // sítio: os cercados, com o caminho da frente do lote até a porteira (por fora do lote)
+  const currais: Cercado[] = [];
+  if (sitio)
+    lotes.forEach((l, i) => {
+      if (l.uso !== 'curral' && l.uso !== 'galinheiro') return;
+      const { portao, fora } = portaoDoCercado(l, cz);
+      const [px, pz] = frenteDaPorta(l);
+      // até a quina do lote no lado da porteira, depois ao longo dele até a porteira
+      let [x, z] = [px, pz];
+      for (let passo = 0; passo < 20 && (x !== fora[0] || z !== fora[1]); passo++) {
+        if (z !== fora[1]) z += Math.sign(fora[1] - z);
+        else x += Math.sign(fora[0] - x);
+        const c = chave(x, z);
+        if (!caminho.has(c)) caminho.set(c, h);
+      }
+      // o galinheiro tem o abrigo no fundo: o miolo para nascer é a parte da frente
+      const curral = l.uso === 'curral';
+      currais.push({
+        lote: i,
+        bicho: curral ? 'cervo' : 'coelho',
+        x0: l.x0 + 1,
+        z0: l.z0 + 1,
+        x1: l.x0 + TAM_LOTE - 2,
+        z1: l.z0 + TAM_LOTE - 2,
+        portao,
+        fora,
+      });
+    });
 
   // caixa: lotes, praça e caminhos, mais a rampa em volta
   let minX = cx - (PRACA - 1) / 2;
@@ -363,8 +536,9 @@ function planejar(rx: number, rz: number, semente: number, t: TerrenoNatural): P
       if (dist[i] === RAMPA && !cabe) return null;
       if (dist[i] === RAMPA + 1 && !cabe) borda = 1;
     }
-  // o jogador nunca nasce dentro de um povoado
-  const nasc = t.nascimento?.(semente);
+  // o jogador nunca nasce dentro de um povoado (no sítio, é o nascimento que procura um
+  // lugar fora de todos eles, perto de um: spec 013)
+  const nasc = sitio ? undefined : t.nascimento?.(semente);
   if (
     nasc &&
     nasc.x >= caixa.minX - 2 &&
@@ -388,7 +562,35 @@ function planejar(rx: number, rz: number, semente: number, t: TerrenoNatural): P
     dist,
     piso,
     borda,
+    ...(sitio ? { currais, bauCeleiro: bauDoCeleiro(lotes) } : {}),
   };
+}
+
+/**
+ * Peças de cada lote do sítio em coordenadas do lote: `s` corre de lado (3 é o meio, onde
+ * fica a porta) e `f` da frente (0, voltada para a praça) ao fundo (6).
+ */
+export function noLote(l: Lote, s: number, f: number): [number, number] {
+  switch (l.porta) {
+    case 'n':
+      return [l.x0 + s, l.z0 + f];
+    case 's':
+      return [l.x0 + TAM_LOTE - 1 - s, l.z0 + TAM_LOTE - 1 - f];
+    case 'o':
+      return [l.x0 + f, l.z0 + s];
+    default:
+      return [l.x0 + TAM_LOTE - 1 - f, l.z0 + s];
+  }
+}
+
+/** O baú do celeiro (sementes e enxada): no fundo, à direita de quem entra. */
+export const BAU_CELEIRO: [number, number] = [4, 5];
+
+function bauDoCeleiro(lotes: Lote[]): [number, number, number] | undefined {
+  const l = lotes.find((q) => q.uso === 'celeiro');
+  if (!l) return undefined;
+  const [x, z] = noLote(l, ...BAU_CELEIRO);
+  return [x, l.h + 1, z];
 }
 
 /** Célula logo à frente da porta (do lado de fora). */

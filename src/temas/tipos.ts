@@ -200,7 +200,9 @@ export type FormaEstrutura =
   | 'arcos'
   | 'casinha'
   | 'torre'
-  | 'ninho';
+  | 'ninho'
+  /** Spec 013: espantalho com baú no meio de uma lavoura abandonada. */
+  | 'espantalho';
 
 /** Como o mundo é montado (só forma; os blocos e as regras são os mesmos). */
 export interface EstiloMundo {
@@ -213,6 +215,11 @@ export interface EstiloMundo {
   flora: number;
   /** Forma das construções dos povoados (só o desenho; blocos e regras são os mesmos). */
   povoado?: FormasPovoado;
+  /**
+   * Spec 013: como a criatura da noite age. Sem o campo, assusta como sempre; 'mansa'
+   * (Rancho Alegre) só pia e foge. O comportamento vem da T04; o campo já passa pela nuvem.
+   */
+  noite?: 'assusta' | 'mansa';
 }
 
 export interface TimbreMusica {
