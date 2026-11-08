@@ -1,6 +1,6 @@
 ---
 id: 013-cidade-e-fazenda
-title: 'Dois temas do mundo de verdade: a cidade grande e a fazenda'
+title: 'Dois temas do mundo de verdade: Cidade Grande e Rancho Alegre'
 status: DRAFT
 base_branch: main
 branch: feat/cidade-e-fazenda
@@ -68,8 +68,8 @@ O estilo continua o de brinquedo da 012: peças gordinhas, quinas redondas e jun
 
 Fazer só as peles agora daria uma cidade sem prédios e uma fazenda sem plantação; não recomendo.
 
-## Esboço do tema 1: a cidade grande
-**Nomes para escolher:** "Cidade Grande", "Metrópole de Montar", "Cidade Viva" ou "Centro da Cidade".
+## Esboço do tema 1: Cidade Grande
+Nome escolhido pelo dono em 7 nov 2026. Desenho de referência: `referencia/temas.html` (cenas em brinquedo, de dia e de noite).
 
 - **Céu e clima:** azul limpo de dia e pôr do sol laranja atrás dos prédios. À noite, as janelas acesas e os postes desenham a cidade. A chuva é de gotas. Sem neve; tem arco-íris.
 - **Terreno:** a cidade ocupa as regiões perto do nascimento. Entre elas ficam parques (gramado, lagos e árvores de rua como ipê e sibipiruna) e um rio com ponte. Longe da cidade, o mundo volta a ser natural (morros e praia), para dar onde minerar e construir.
@@ -103,8 +103,8 @@ Fazer só as peles agora daria uma cidade sem prédios e uma fazenda sem planta�
 - **Sons:** buzininha distante de dia, passarinho de praça e grilo de jardim à noite. Música com piano e baixo de jazz leve.
 - **Blocos com nome da cidade:** asfalto, concreto, calçada, tijolo aparente, vidro de janela, poste, placa e grama de praça.
 
-## Esboço do tema 2: a fazenda
-**Nomes para escolher:** "Sítio Feliz", "Fazendinha", "Vale da Colheita" ou "Roça do Vovô".
+## Esboço do tema 2: Rancho Alegre
+Nome escolhido pelo dono em 7 nov 2026. Desenho de referência: `referencia/temas.html`.
 
 - **Céu e clima:** amanhecer dourado e céu bem aberto. Chuva boa para a plantação (a lavoura cresce mais rápido na chuva), arco-íris e noite estrelada com vaga-lumes.
 - **Terreno:** campos largos, morros suaves, açude e riacho, mata nos morros e um pomar perto das casas.
@@ -154,13 +154,12 @@ Fazer só as peles agora daria uma cidade sem prédios e uma fazenda sem planta�
 | T03 | Criação: atrair bicho com a comida dele, seguir e cercado |
 | T04 | Planejador de sítio (forma do povoado `planta: 'sitio'`) com celeiro, curral e lavoura |
 | T05 | Planejador de cidade (`planta: 'cidade'`): quarteirões, ruas, prédios com andares e escadas, praça e parque |
-| T06 | Tema "fazenda": céu, água, sons, música, nomes, texturas, bichos e moradores de brinquedo, missões |
-| T07 | Tema "cidade": o mesmo, e as janelas acesas à noite |
+| T06 | Tema "Rancho Alegre": céu, água, sons, música, nomes, texturas, bichos e moradores de brinquedo, missões |
+| T07 | Tema "Cidade Grande": o mesmo, e as janelas acesas à noite |
 | T08 | Desempenho da cidade (celular) e ajustes |
 | T09 | e2e, capturas, vitrine, rodada em família, auditoria e relatório visual |
 
 ## Para o dono decidir antes de começar
-- **Os nomes dos dois temas** (sugestões acima).
 - **A ordem:** recomendo a fazenda primeiro. Ela traz o plantio e a criação, que valem para todos, e tem menos risco. A cidade vem depois, com o planejador de prédios.
 - **Altura dos prédios:** até 12 andares, ou mais baixos e mais largos (melhor no celular).
 - **O bicho da noite:** guaxinim e coruja, que são fofos e não atacam, ou algo que dê um pouco de desafio.
