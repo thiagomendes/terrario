@@ -68,31 +68,56 @@ async function abrirComPersistencia(nome: string): Promise<IDBDatabase | null> {
   return null;
 }
 
-/** Armazém sobre IndexedDB; se o navegador recusar, cai para memória sem lançar. */
+class SemBanco extends Error {}
+
+/** Armazém sobre IndexedDB; se o navegador recusar abrir, cai para memória sem lançar. */
 export function armazemIndexedDB(nome = 'brumaluz'): ArmazemChaveValor {
   const reserva = armazemMemoria();
   let falhou = false;
   const abrir = abrirComPersistencia(nome);
+  /** Uma transação com prazo: no iPhone ela às vezes pendura sem erro nenhum. */
   async function transacao<T>(
     modo: IDBTransactionMode,
     f: (s: IDBObjectStore) => IDBRequest<T>,
+    prazo = 8000,
   ): Promise<T | undefined> {
     const db = await abrir;
-    if (!db || falhou) throw new Error('sem banco');
+    if (!db || falhou) throw new SemBanco();
     return new Promise((resolve, reject) => {
-      const tx = db.transaction('kv', modo);
-      const req = f(tx.objectStore('kv'));
-      tx.oncomplete = () => resolve(req.result);
-      tx.onerror = () => reject(tx.error);
-      tx.onabort = () => reject(tx.error);
+      const t = setTimeout(() => reject(new Error('demorou')), prazo);
+      try {
+        const tx = db.transaction('kv', modo);
+        const req = f(tx.objectStore('kv'));
+        tx.oncomplete = () => {
+          clearTimeout(t);
+          resolve(req.result);
+        };
+        tx.onerror = () => {
+          clearTimeout(t);
+          reject(tx.error);
+        };
+        tx.onabort = () => {
+          clearTimeout(t);
+          reject(tx.error);
+        };
+      } catch (e) {
+        clearTimeout(t);
+        reject(e);
+      }
     });
   }
+  /**
+   * Sem banco (o navegador recusou abrir): vai para a memória, como antes. Erro numa operação
+   * (pendurou, estourou): tenta de novo e, se falhar outra vez, avisa quem pediu. Antes um erro
+   * só jogava tudo para a memória em silêncio, e o mundo trazido da nuvem sumia ao recarregar.
+   */
   async function tentar<T>(f: () => Promise<T>, r: () => Promise<T>): Promise<T> {
     try {
       return await f();
-    } catch {
-      falhou = true;
-      return r();
+    } catch (e) {
+      if (e instanceof SemBanco) return r();
+      await acordarIndexedDB();
+      return f();
     }
   }
   return {

@@ -476,6 +476,7 @@ export function ligarAmigos(raiz: HTMLElement, cena: Cena, op: OpcoesAmigos): vo
   nv.conexao.aoDevolvido((dados) => {
     clearTimeout(prazoDevolver);
     const t = telaCarregando('Trazendo o mundo para o aparelho…');
+    t.passo('Guardando no aparelho…', 0.8);
     void guardarDevolvido(op.repo, nv.bv.mundo, codigos, dados)
       .then((id) => {
         const u = new URL(location.href);
@@ -483,7 +484,11 @@ export function ligarAmigos(raiz: HTMLElement, cena: Cena, op: OpcoesAmigos): vo
         u.searchParams.set('mundo', id);
         location.href = u.toString();
       })
-      .catch(() => t.erro('Não deu para guardar o mundo no aparelho. Tente de novo.'));
+      .catch(() =>
+        t.erro(
+          'Não deu para guardar o mundo no aparelho agora. Recarregue a página: o mundo continua guardado na nuvem por alguns minutos.',
+        ),
+      );
   });
   nv.conexao.aoSala((s) => {
     if (!codigos.includes(s.codigo)) codigos.push(s.codigo);
@@ -567,9 +572,24 @@ export async function guardarDevolvido(
   let m = lista.find((x) => x.nuvem && conhecidos.has(normalizarCodigo(x.nuvem)));
   const bv = { mundo };
   if (!m) m = await repo.criar(bv.mundo.nome, bv.mundo.semente, bv.mundo.modo, bv.mundo.tema);
-  await repo.salvar(m.id, dados);
+  await gravarConferido(repo, m.id, dados);
   await repo.desmarcarNuvem(m.id);
   return m.id;
+}
+
+/**
+ * Grava o mundo devolvido e confere lendo de volta: só depois disso o código é esquecido e o
+ * mundo abre (o servidor guarda o mundo uns minutos; recarregar tenta de novo).
+ */
+async function gravarConferido(
+  repo: RepositorioMundos,
+  id: string,
+  dados: DadosMundo,
+): Promise<void> {
+  await repo.salvar(id, dados);
+  const lido = await repo.carregar(id);
+  const n = (e: DadosMundo['edicoes'] | undefined) => Object.keys(e ?? {}).length;
+  if (n(lido.edicoes) !== n(dados.edicoes)) throw new Error('gravou pela metade');
 }
 
 /** Grava o mundo devolvido no mundo do aparelho que tinha este código e abre ele. */
@@ -581,7 +601,7 @@ async function abrirDevolvido(
   const c = normalizarCodigo(codigo);
   const m = (await repo.listar()).find((x) => x.nuvem && normalizarCodigo(x.nuvem) === c);
   if (!m) throw new Error('sem mundo');
-  await repo.salvar(m.id, dados);
+  await gravarConferido(repo, m.id, dados);
   await repo.desmarcarNuvem(m.id);
   abrirMundoDoAparelho(m.id);
 }

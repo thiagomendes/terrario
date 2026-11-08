@@ -112,7 +112,7 @@ test('criar com amigos, entrar pelo link e pelo código, e parar de jogar com am
   expect(nomeBia).toMatch(/Lunar/);
   expect(nomeBia).not.toMatch(/Jogador/);
   await ana.locator('[data-comecar-a-jogar]').click();
-  await expect(ana.locator('[data-botao-amigos]')).toContainText('2 no mundo');
+  await expect(ana.locator('[data-botao-amigos]')).toHaveAttribute('data-quantos', '2');
 
   // 3. Caio entra digitando o código na tela de título: código e um toque
   const caio = await jogador(browser, `caio-${sufixo}`, 'Caio');
@@ -126,7 +126,9 @@ test('criar com amigos, entrar pelo link e pelo código, e parar de jogar com am
   // sem segundo "Jogar": já está no mundo
   await expect(caio.locator('.entrada')).toBeHidden();
   await expect(caio.locator('[data-tela-entrar]')).toHaveCount(0);
-  await expect(ana.locator('[data-botao-amigos]')).toContainText('3 no mundo', { timeout: 5_000 });
+  await expect(ana.locator('[data-botao-amigos]')).toHaveAttribute('data-quantos', '3', {
+    timeout: 5_000,
+  });
 
   // a Bia constrói: depois de parar, a construção dela fica no mundo da Ana
   const cel = await bia.evaluate(() => {

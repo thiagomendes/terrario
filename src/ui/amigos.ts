@@ -52,21 +52,30 @@ export const CSS_AMIGOS = `
 .amigos .comecar { width: 100%; min-height: 56px; font-size: 1.15rem; margin-top: 6px; }
 .amigos .devolver { margin-top: 10px; }
 @media (prefers-reduced-motion: reduce) { .amigos .lista li.chegou, .amigos .esperando i { animation: none; } }
-/* botão fixo de amigos: pílula creme com o número de quem está no mundo */
+/* botão fixo de amigos: ícone redondo de convidar, com o número de quem está num selo */
 .botao-amigos {
   position: fixed; z-index: 7; right: max(16px, env(safe-area-inset-right)); top: 226px;
-  display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 6px 14px 6px 10px; border: 0; border-radius: 999px;
-  background: rgba(255, 250, 240, 0.95); color: var(--tinta); font: 800 0.95rem var(--jogo); cursor: pointer;
-  box-shadow: 0 3px 0 rgba(150, 110, 60, 0.35), 0 8px 16px rgba(40, 25, 10, 0.2);
+  display: grid; place-items: center; width: 44px; height: 44px; padding: 0; border: 0; border-radius: 50%;
+  background: rgba(255, 250, 240, 0.95); cursor: pointer;
+  box-shadow: 0 3px 0 rgba(150, 110, 60, 0.35), 0 6px 12px rgba(40, 25, 10, 0.2);
 }
+.botao-amigos svg { width: 26px; height: 26px; }
 .botao-amigos:focus-visible { outline: 3px solid var(--azul); outline-offset: 2px; }
-.botao-amigos .rostos { display: inline-flex; }
-.botao-amigos .rostos i { width: 22px; height: 22px; border-radius: 50%; border: 2px solid #fffaf0; margin-left: -6px; background: #ffd45a; }
-.botao-amigos .rostos i:first-child { margin-left: 0; background: #7cc6ff; }
-.botao-amigos .rostos i:nth-child(3) { background: #ff9fb8; }
+.botao-amigos .selo {
+  position: absolute; top: -4px; right: -4px; min-width: 20px; height: 20px; padding: 0 5px; box-sizing: border-box;
+  border-radius: 999px; background: #4caa3a; color: #fff; font: 800 0.75rem/20px var(--jogo); text-align: center;
+  box-shadow: 0 2px 0 rgba(30, 70, 20, 0.4);
+}
+.botao-amigos .selo[hidden] { display: none; }
 body[data-overlay] .botao-amigos, body.tela-titulo .botao-amigos, body.modo-foto .botao-amigos { display: none; }
-/* celular: acima da grade de botões de toque (pular, correr, descer), sem cobrir nada */
-@media (max-width: 700px), (max-height: 520px) { .botao-amigos { top: auto; bottom: calc(300px + env(safe-area-inset-bottom)); right: 12px; } }
+/* celular: no canto de cima, ao lado do botão de informação (sem cobrir o mundo nem os botões) */
+@media (orientation: portrait) and (max-width: 700px) {
+  .botao-amigos { top: calc(8px + env(safe-area-inset-top)); right: auto; left: calc(62px + env(safe-area-inset-left)); }
+}
+/* celular deitado: ao lado da coluna de botões de toque da direita */
+@media (orientation: landscape) and (max-height: 520px) {
+  .botao-amigos { top: calc(156px + env(safe-area-inset-top)); right: max(66px, calc(env(safe-area-inset-right) + 56px)); }
+}
 /* entrar no mundo de alguém (link ou QR): o tema do mundo em cima, o nome e um botão */
 .tela-entrar {
   position: fixed; inset: 0; z-index: 80; display: grid; padding: 16px; overflow: auto;
@@ -585,21 +594,22 @@ export function criarBotaoAmigos(raiz: HTMLElement, aoClicar: () => void) {
   b.type = 'button';
   b.className = 'botao-amigos';
   b.setAttribute('data-botao-amigos', '');
-  const rostos = document.createElement('span');
-  rostos.className = 'rostos';
-  rostos.setAttribute('aria-hidden', 'true');
-  const texto = document.createElement('span');
-  b.append(rostos, texto);
+  // dois bonequinhos com um "+" (convidar): linguagem sem palavras
+  b.innerHTML =
+    '<svg viewBox="0 0 26 26" aria-hidden="true"><circle cx="9" cy="8" r="4" fill="#7cc6ff"/><path d="M2.5 21c0-4 3-6.5 6.5-6.5s6.5 2.5 6.5 6.5z" fill="#7cc6ff"/><circle cx="16.5" cy="9" r="3.4" fill="#ffb347"/><path d="M11.5 21c.4-3.4 2.6-5.4 5-5.4 2.6 0 4.7 2 5 5.4z" fill="#ffb347"/><circle cx="21" cy="5" r="4" fill="#4caa3a"/><path d="M21 3v4M19 5h4" stroke="#fff" stroke-width="1.6" stroke-linecap="round"/></svg>';
+  const selo = document.createElement('span');
+  selo.className = 'selo';
+  selo.hidden = true;
+  b.appendChild(selo);
   b.addEventListener('click', (e) => {
     e.stopPropagation();
     aoClicar();
   });
   raiz.appendChild(b);
   const definir = (n: number) => {
-    rostos.replaceChildren(
-      ...Array.from({ length: Math.min(3, n) }, () => document.createElement('i')),
-    );
-    texto.textContent = n <= 1 ? 'Convidar' : `${n} no mundo`;
+    selo.hidden = n <= 1;
+    selo.textContent = String(n);
+    b.setAttribute('data-quantos', String(n));
     b.setAttribute(
       'aria-label',
       n <= 1 ? 'Convidar amigos' : `${n} pessoas no mundo: ver e convidar amigos`,
