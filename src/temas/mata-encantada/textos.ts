@@ -89,6 +89,8 @@ export const TEXTOS_MATA: TextosTema = {
     79: 'pé de jerimum (3 de 4)',
     80: 'pé de jerimum carregado',
     81: 'fardo de palha de arroz',
+    82: 'porteira de bambu',
+    83: 'porteira de bambu aberta',
   },
   itens: {
     // spec 013: plantio

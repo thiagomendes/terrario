@@ -90,6 +90,8 @@ export const TEXTOS_DINOS: TextosTema = {
     [Bloco.ABOBOREIRA_2]: 'pé de cabaça (3 de 4)',
     [Bloco.ABOBOREIRA_3]: 'pé de cabaça carregado',
     [Bloco.FENO]: 'fardo de capim-dourado',
+    [Bloco.PORTEIRA]: 'porteira de galhos',
+    [Bloco.PORTEIRA_ABERTA]: 'porteira de galhos aberta',
   },
   itens: {
     // spec 013: plantio

@@ -92,14 +92,52 @@ export function caixasDoBloco(
       }
       return cx;
     }
+    case 'porteira': {
+      // fechada: atravessa a célula no eixo x (frente em +z, como a porta); aberta: gira
+      // 90 graus na dobradiça (lado x = 0) e fica encostada nesse lado
+      const aberta = id === Bloco.PORTEIRA_ABERTA;
+      return PORTEIRA_FECHADA.map((c) =>
+        girar(aberta ? [c[2] - 7 * P, c[1], 1 - c[3], c[5] - 7 * P, c[4], 1 - c[0]] : c, d),
+      );
+    }
     default:
       return null;
   }
 }
 
-/** A cerca liga a outra cerca ou a um bloco opaco. */
+/**
+ * Porteira de brinquedo fechada (frente em +z): dois montantes nas pontas, três travessas e
+ * a mão-francesa em diagonal (degraus finos). Os mourões são as cercas vizinhas.
+ */
+const PORTEIRA_FECHADA: Caixa[] = (() => {
+  const z0 = 7 * P;
+  const z1 = 9 * P;
+  const cx: Caixa[] = [
+    [0, P, z0, 2 * P, 15 * P, z1],
+    [14 * P, P, z0, 1, 15 * P, z1],
+    [2 * P, 2 * P, z0, 14 * P, 4 * P, z1],
+    [2 * P, 7 * P, z0, 14 * P, 9 * P, z1],
+    [2 * P, 12 * P, z0, 14 * P, 14.5 * P, z1],
+  ];
+  // diagonal da dobradiça embaixo para a ponta de cima (só aparece entre as travessas)
+  const passos = 6;
+  for (let i = 0; i < passos; i++) {
+    const x = 2 * P + i * 2 * P;
+    const y = 4 * P + (i * 8 * P) / (passos - 1) - P;
+    cx.push([x, y, 7.5 * P, x + 2 * P, y + 2 * P, 8.5 * P]);
+  }
+  return cx;
+})();
+
+/** Caixa de colisão da porteira fechada: segura como a cerca (inteira, sem vãos). */
+export function colisaoPorteira(meta: number): Caixa {
+  return girar([0, 0, 6 * P, 1, 1.5, 10 * P], direcaoDoMeta(meta));
+}
+
+/** A cerca liga a outra cerca, à porteira ou a um bloco opaco. */
 export function cercaConecta(vizinho: number): boolean {
-  if (vizinho === Bloco.CERCA) return true;
+  if (vizinho === Bloco.CERCA || vizinho === Bloco.PORTEIRA || vizinho === Bloco.PORTEIRA_ABERTA)
+    return true;
   return !!obterBloco(vizinho)?.opaco;
 }
 
@@ -112,6 +150,7 @@ export function temFormaParcial(id: number): boolean {
     f === 'cama' ||
     f === 'tocha' ||
     f === 'porta' ||
-    f === 'cerca'
+    f === 'cerca' ||
+    f === 'porteira'
   );
 }

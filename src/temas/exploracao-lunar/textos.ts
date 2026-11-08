@@ -85,6 +85,8 @@ export const TEXTOS_LUNARES: TextosTema = {
     79: 'aboboreira lunar (3 de 4)',
     80: 'aboboreira lunar carregada',
     81: 'fardo de palha de estufa',
+    82: 'portão de grade',
+    83: 'portão de grade aberto',
   },
   itens: {
     // spec 013: plantio
