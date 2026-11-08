@@ -187,6 +187,10 @@ export const TEXTOS_DOCE: TextosTema = {
     povoado: { titulo: 'Vizinhos docinhos', descricao: 'Encontre um vilarejo dos confeiteiros' },
     trocas: { titulo: 'Troca-troca de doces', descricao: 'Faça 3 trocas com os confeiteiros' },
     ferreiro: { titulo: 'Colher novinha', descricao: 'Faça uma troca com a colhereira' },
+    arar: { titulo: 'Canteiro de açúcar', descricao: 'Are a terra com a enxada' },
+    plantar: { titulo: 'Semente docinha', descricao: 'Plante uma semente na terra arada' },
+    colher: { titulo: 'Colheita docinha', descricao: 'Colha uma planta madura' },
+    pao: { titulo: 'Pão de mel', descricao: 'Faça um pão com 3 trigos' },
   },
   capitulos: {
     'Primeiros passos': 'Primeiras receitas',
@@ -194,6 +198,7 @@ export const TEXTOS_DOCE: TextosTema = {
     Sobreviver: 'Barriguinha feliz',
     Explorar: 'Passeio pelo reino',
     Criar: 'Mãos na massa',
+    Roça: 'Horta de açúcar',
   },
   boasVindas: 'Bem-vindo ao Doce Reino, onde tudo é feito de doce',
   morte: 'Você caiu num soninho de açúcar',

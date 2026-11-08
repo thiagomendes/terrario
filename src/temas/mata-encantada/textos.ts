@@ -180,6 +180,10 @@ export const TEXTOS_MATA: TextosTema = {
       titulo: 'Ferramenta feita à mão',
       descricao: 'Faça uma troca com o ferreiro da vila',
     },
+    arar: { titulo: 'Terra fofinha', descricao: 'Are a terra com a enxada' },
+    plantar: { titulo: 'Semente da mata', descricao: 'Plante uma semente na terra arada' },
+    colher: { titulo: 'Colheita da mata', descricao: 'Colha uma planta madura' },
+    pao: { titulo: 'Pão caseiro', descricao: 'Faça um pão com 3 trigos' },
   },
   capitulos: {
     'Primeiros passos': 'Trilha de entrada',
@@ -187,6 +191,7 @@ export const TEXTOS_MATA: TextosTema = {
     Sobreviver: 'Vida na mata',
     Explorar: 'Desbravar',
     Criar: 'Feito à mão',
+    Roça: 'Roçado',
   },
   boasVindas: 'Bem-vindo à Mata Encantada, onde os ipês florescem',
   morte: 'Você tropeçou e tirou um cochilo na trilha',

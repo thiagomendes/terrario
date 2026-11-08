@@ -147,5 +147,28 @@ export function colheita(b: number, rng: Gerador): Drop[] {
   ];
 }
 
+/** Aviso de criança quando a semente vai fora da terra arada. */
+export const AVISO_SEMENTE = 'A semente precisa de terra arada. Use a enxada na grama.';
+
+interface Pos {
+  x: number;
+  y: number;
+  z: number;
+}
+
+/**
+ * Onde a enxada ara com a mira em `a`: o próprio bloco, ou o de baixo quando a mira pega a
+ * grama alta (ou a flor) em cima da grama. Null: ali não ara.
+ */
+export function alvoDaEnxada(
+  a: Pos,
+  bloco: (x: number, y: number, z: number) => number,
+): Pos | null {
+  const b = bloco(a.x, a.y, a.z);
+  if (plantaBaixa(b) && podeArar(bloco(a.x, a.y - 1, a.z), b))
+    return { x: a.x, y: a.y - 1, z: a.z };
+  return podeArar(b, bloco(a.x, a.y + 1, a.z)) ? { x: a.x, y: a.y, z: a.z } : null;
+}
+
 /** Ferramenta é enxada? */
 export const ehEnxada = (f: { tipo: string } | undefined): boolean => f?.tipo === 'enxada';

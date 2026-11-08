@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  FUNDICAO,
   RECEITAS,
   consumirGrade,
   encontrarReceita,
@@ -52,6 +53,47 @@ describe('receitas', () => {
       7: 'graveto',
     });
     expect(encontrarReceita(mach, 3)?.resultado.item).toBe('machado_ferro');
+  });
+
+  it('roça (spec 013): pão, fardo de feno e de volta, sementes de abóbora e a fornalha', () => {
+    expect(
+      encontrarReceita(grade(3, { 3: 'trigo', 4: 'trigo', 5: 'trigo' }), 3)?.resultado,
+    ).toEqual({ item: 'pao', qtd: 1 });
+    // o pão é na mesa
+    expect(encontrarReceita(grade(2, { 0: 'trigo', 1: 'trigo' }), 2)).toBeNull();
+    const nove = Object.fromEntries(Array.from({ length: 9 }, (_, i) => [i, 'trigo']));
+    expect(encontrarReceita(grade(3, nove), 3)?.resultado).toEqual({
+      item: idDoBloco(Bloco.FENO),
+      qtd: 1,
+    });
+    expect(encontrarReceita(grade(2, { 2: idDoBloco(Bloco.FENO) }), 2)?.resultado).toEqual({
+      item: 'trigo',
+      qtd: 9,
+    });
+    expect(encontrarReceita(grade(2, { 1: idDoBloco(Bloco.ABOBORA) }), 2)?.resultado).toEqual({
+      item: 'semente_abobora',
+      qtd: 4,
+    });
+    expect(FUNDICAO['milho']).toBe('pipoca');
+    expect(FUNDICAO['ovo']).toBe('ovo_cozido');
+  });
+
+  it('enxada nos 5 materiais, sem trombar com o machado', () => {
+    for (const [nivel, mat] of [
+      ['madeira', TAB],
+      ['pedra', idDoBloco(Bloco.PEDREGULHO)],
+      ['cobre', 'lingote_cobre'],
+      ['ferro', 'lingote_ferro'],
+      ['cristal', 'luzita'],
+    ]) {
+      const g = grade(3, { 0: mat, 1: mat, 4: 'graveto', 7: 'graveto' });
+      expect(encontrarReceita(g, 3)?.resultado.item).toBe(`enxada_${nivel}`);
+      expect(obterItem(`enxada_${nivel}`)?.ferramenta?.tipo).toBe('enxada');
+      // espelhada também
+      expect(
+        encontrarReceita(grade(3, { 1: mat, 2: mat, 4: 'graveto', 7: 'graveto' }), 3)?.id,
+      ).toBe(`enxada_${nivel}`);
+    }
   });
 
   it('consumir tira um de cada slot', () => {

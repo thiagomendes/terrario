@@ -583,6 +583,12 @@ function ligarDiario(app: HTMLElement, cena: ReturnType<typeof criarCena>): void
     reg(`trocou:${(d as { profissao: string }).profissao}`);
   });
   ouvir('povoado', () => reg('visitou:povoado'));
+  // roça (spec 013): contam quando o núcleo confirma
+  ouvir('arou', () => reg('arou'));
+  ouvir('plantou', () => reg('plantou'));
+  ouvir('colheu', (d) => {
+    if ((d as { madura: boolean }).madura) reg('colheu');
+  });
   let ultimoBioma = '';
   setInterval(() => {
     const b = cena.estado.biomaAtual;

@@ -219,6 +219,43 @@ export const MISSOES: readonly Missao[] = [
     meta: 1,
     icone: 'item:picareta_pedra',
   },
+  // spec 013: plantio (todos os temas). "Criar um bicho" entra com a criação (T03).
+  {
+    id: 'arar',
+    capitulo: 'Roça',
+    titulo: 'Mão na enxada',
+    descricao: 'Are a terra com a enxada',
+    contador: 'arou',
+    meta: 1,
+    icone: 'item:enxada_madeira',
+  },
+  {
+    id: 'plantar',
+    capitulo: 'Roça',
+    titulo: 'Semente na terra',
+    descricao: 'Plante uma semente na terra arada',
+    contador: 'plantou',
+    meta: 1,
+    icone: 'item:semente_trigo',
+  },
+  {
+    id: 'colher',
+    capitulo: 'Roça',
+    titulo: 'Primeira colheita',
+    descricao: 'Colha uma planta madura',
+    contador: 'colheu',
+    meta: 1,
+    icone: 'item:trigo',
+  },
+  {
+    id: 'pao',
+    capitulo: 'Roça',
+    titulo: 'Pão quentinho',
+    descricao: 'Faça um pão com 3 trigos',
+    contador: 'fabricou:pao',
+    meta: 1,
+    icone: 'item:pao',
+  },
 ];
 
 export type Contadores = Record<string, number>;

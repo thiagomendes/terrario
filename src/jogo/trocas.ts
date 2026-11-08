@@ -78,6 +78,13 @@ export const TROCAS: Record<Profissao, readonly Troca[]> = {
       receber: { item: 'torta_abobora', qtd: 1 },
     },
     { id: 'macas', dar: [{ item: 'frutinhas', qtd: 8 }], receber: { item: 'maca', qtd: 2 } },
+    // spec 013: a roça (as sementes de trigo também saem da grama alta)
+    {
+      id: 'sementes',
+      dar: [{ item: 'frutinhas', qtd: 3 }],
+      receber: { item: 'semente_milho', qtd: 3 },
+    },
+    { id: 'pao', dar: [{ item: 'trigo', qtd: 5 }], receber: { item: 'pao', qtd: 2 } },
   ],
   construtor: [
     {
@@ -104,6 +111,17 @@ export const TROCAS: Record<Profissao, readonly Troca[]> = {
       id: 'porta',
       dar: [{ item: b(Bloco.TABUAS), qtd: 6 }],
       receber: { item: b(Bloco.PORTA), qtd: 2 },
+    },
+    // spec 013: curral e celeiro
+    {
+      id: 'cercas',
+      dar: [{ item: b(Bloco.TABUAS), qtd: 4 }],
+      receber: { item: b(Bloco.CERCA), qtd: 4 },
+    },
+    {
+      id: 'feno',
+      dar: [{ item: 'trigo', qtd: 8 }],
+      receber: { item: b(Bloco.FENO), qtd: 1 },
     },
   ],
 };
