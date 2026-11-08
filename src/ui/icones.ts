@@ -68,7 +68,7 @@ export function iconeDoItem(item: string): string {
   const ctx = c.getContext('2d');
   const def = obterItem(item);
   if (ctx && def) {
-    if (def.bloco !== undefined) {
+    if (def.bloco !== undefined && def.tipo === 'bloco') {
       const { atlas, fonte } = base();
       const px = (uv: { u0: number; v0: number }): [number, number] => [
         Math.round(uv.u0 * atlas.largura),

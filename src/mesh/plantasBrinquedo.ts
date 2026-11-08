@@ -38,7 +38,33 @@ export const PLANTAS_BRINQUEDO: readonly number[] = [
   Bloco.ARBUSTO_SECO,
   Bloco.JUNCO,
   Bloco.TOCHA,
+  // spec 013: a lavoura nos 4 estágios (a forma de cada estágio sai daqui; a cor, do tile)
+  Bloco.TRIGO_0,
+  Bloco.TRIGO_1,
+  Bloco.TRIGO_2,
+  Bloco.TRIGO_3,
+  Bloco.MILHO_0,
+  Bloco.MILHO_1,
+  Bloco.MILHO_2,
+  Bloco.MILHO_3,
+  Bloco.ABOBOREIRA_0,
+  Bloco.ABOBOREIRA_1,
+  Bloco.ABOBOREIRA_2,
+  Bloco.ABOBOREIRA_3,
 ];
+
+/** Planta da lavoura e estágio (0 a 3) de um bloco, ou null se não é lavoura. */
+export function estagioDaLavoura(
+  id: number,
+): { planta: 'trigo' | 'milho' | 'aboboreira'; estagio: number } | null {
+  if (id >= Bloco.TRIGO_0 && id <= Bloco.TRIGO_3)
+    return { planta: 'trigo', estagio: id - Bloco.TRIGO_0 };
+  if (id >= Bloco.MILHO_0 && id <= Bloco.MILHO_3)
+    return { planta: 'milho', estagio: id - Bloco.MILHO_0 };
+  if (id >= Bloco.ABOBOREIRA_0 && id <= Bloco.ABOBOREIRA_3)
+    return { planta: 'aboboreira', estagio: id - Bloco.ABOBOREIRA_0 };
+  return null;
+}
 
 const PADRAO: CoresPlanta = { folha: [0.42, 0.7, 0.32], destaque: [0.93, 0.36, 0.55] };
 let tabela: Record<number, CoresPlanta> = {};
@@ -137,7 +163,7 @@ export function plantaDeBrinquedo(
     brilhando = false;
   };
   const tingir = (c: Rgb01): Rgb01 => (uvBrilho ? [1, 1, 1] : c);
-  const peso = balanca ? 1 : 0;
+  let peso = balanca ? 1 : 0;
 
   const vertice = (
     px: number,
@@ -253,6 +279,230 @@ export function plantaDeBrinquedo(
   ];
   const ponta = mistura(folha, BRANCO, 0.18);
   const sombra: Rgb01 = [folha[0] * 0.72, folha[1] * 0.72, folha[2] * 0.72];
+
+  const lavoura = estagioDaLavoura(id);
+  if (lavoura) {
+    const { planta, estagio: e } = lavoura;
+    const verde: Rgb01 = folha;
+    // no meio da célula, sem o desvio das plantas soltas: a lavoura fica em fileiras
+    const mx = x + 0.5;
+    const mz = z + 0.5;
+    /** Broto: a hastezinha verde com duas folhinhas redondas (o estágio 0 das três). */
+    const broto = (bx: number, bz: number, h: number) => {
+      haste(bx, y, bz, bx, y + h, bz, 0.022, 0.016, sombra, verde, 4);
+      bola(bx - 0.035, y + h, bz, 0.04, 0.016, 0.026, ponta, 5, 2);
+      bola(bx + 0.035, y + h, bz, 0.04, 0.016, 0.026, ponta, 5, 2);
+    };
+    if (e === 0) {
+      // o canteiro recém-plantado: brotinhos em quadrado, com o grão (na cor do fruto) ao pé
+      const semente = mistura(cores.destaque, [0.35, 0.25, 0.15], 0.25);
+      for (const [dx, dz] of [
+        [-0.2, -0.2],
+        [0.2, -0.2],
+        [-0.2, 0.2],
+        [0.2, 0.2],
+      ] as const) {
+        broto(mx + dx, mz + dz, 0.09 + 0.03 * sorte(30 + dx * 10 + dz));
+        bola(mx + dx + 0.05, y + 0.015, mz + dz + 0.03, 0.035, 0.022, 0.03, semente, 5, 2);
+      }
+      return true;
+    }
+    if (planta === 'trigo') {
+      // tufos: 4 no estágio 1, 5 no 2 e 9 (em grade) maduro; a espiga engorda e doura
+      const pontos: Array<[number, number]> =
+        e === 1
+          ? [
+              [-0.2, -0.2],
+              [0.2, -0.2],
+              [-0.2, 0.2],
+              [0.2, 0.2],
+            ]
+          : e === 2
+            ? [
+                [-0.24, -0.24],
+                [0.24, -0.24],
+                [0, 0],
+                [-0.24, 0.24],
+                [0.24, 0.24],
+              ]
+            : [-0.28, 0, 0.28].flatMap((a) =>
+                [-0.28, 0, 0.28].map((b): [number, number] => [a, b]),
+              );
+      const alturas = [0, 0.24, 0.48, 0.74];
+      const caule: Rgb01 =
+        e === 3
+          ? mistura(verde, cores.destaque, 0.62)
+          : e === 2
+            ? mistura(verde, BRANCO, 0.05)
+            : verde;
+      const espiga: Rgb01 =
+        e === 3 ? mistura(cores.destaque, BRANCO, 0.12) : mistura(verde, cores.destaque, 0.4);
+      pontos.forEach(([dx, dz], i) => {
+        const bx = mx + dx;
+        const bz = mz + dz;
+        const h = alturas[e] * (0.88 + 0.24 * sorte(40 + i));
+        // pende um pouquinho para fora
+        const tx = bx + dx * 0.15 + (sorte(50 + i) - 0.5) * 0.06;
+        const tz = bz + dz * 0.15 + (sorte(60 + i) - 0.5) * 0.06;
+        if (e === 1) {
+          // folhinhas finas em leque
+          for (let k = 0; k < 3; k++) {
+            const a = sorte(70 + i) * 6 + (k / 3) * Math.PI * 2;
+            haste(
+              bx,
+              y,
+              bz,
+              bx + Math.cos(a) * 0.07,
+              y + h,
+              bz + Math.sin(a) * 0.07,
+              0.026,
+              0.008,
+              sombra,
+              ponta,
+              4,
+            );
+          }
+          return;
+        }
+        haste(bx, y, bz, tx, y + h, tz, 0.02, 0.016, mistura(caule, [0, 0, 0], 0.2), caule, 4);
+        if (e === 3) bola(tx, y + h + 0.08, tz, 0.05, 0.12, 0.05, espiga, 5, 4);
+        else bola(tx, y + h + 0.04, tz, 0.032, 0.07, 0.032, espiga, 5, 3);
+        // uma folha comprida saindo do meio da haste
+        if (i % 2 === 0) {
+          const a = sorte(80 + i) * Math.PI * 2;
+          haste(
+            bx,
+            y + h * 0.3,
+            bz,
+            bx + Math.cos(a) * 0.14,
+            y + h * 0.55,
+            bz + Math.sin(a) * 0.14,
+            0.022,
+            0.006,
+            caule,
+            ponta,
+            4,
+          );
+        }
+      });
+      return true;
+    }
+    if (planta === 'milho') {
+      const h = [0, 0.32, 0.7, 1.08][e];
+      const r0 = [0, 0.035, 0.05, 0.06][e];
+      haste(mx, y, mz, mx, y + h, mz, r0, r0 * 0.7, sombra, verde, 5);
+      // folhas compridas: sobem para fora e caem na ponta, em lados alternados
+      const nFolhas = [0, 2, 4, 5][e];
+      const giro = sorte(90) * Math.PI * 2;
+      for (let i = 0; i < nFolhas; i++) {
+        const a = giro + i * 2.4;
+        const fy = y + h * (0.18 + (0.7 * i) / Math.max(1, nFolhas));
+        const c = Math.cos(a);
+        const sn = Math.sin(a);
+        const L = [0, 0.18, 0.3, 0.36][e];
+        const meioX = mx + c * L * 0.55;
+        const meioZ = mz + sn * L * 0.55;
+        haste(mx, fy, mz, meioX, fy + L * 0.4, meioZ, 0.03, 0.022, verde, ponta, 4);
+        haste(
+          meioX,
+          fy + L * 0.4,
+          meioZ,
+          mx + c * L,
+          fy + L * 0.15,
+          mz + sn * L,
+          0.022,
+          0.006,
+          ponta,
+          ponta,
+          4,
+        );
+      }
+      if (e === 3) {
+        // pendão no alto e duas espigas amarelas com a palha verde em volta
+        const pendao = mistura(cores.destaque, BRANCO, 0.45);
+        for (let k = 0; k < 3; k++) {
+          const a = giro + (k / 3) * Math.PI * 2;
+          haste(
+            mx,
+            y + h,
+            mz,
+            mx + Math.cos(a) * 0.09,
+            y + h + 0.14,
+            mz + Math.sin(a) * 0.09,
+            0.016,
+            0.008,
+            pendao,
+            pendao,
+            4,
+          );
+        }
+        const espiga = mistura(cores.destaque, BRANCO, 0.08);
+        for (const [k, alt] of [
+          [0, 0.42],
+          [1, 0.6],
+        ] as const) {
+          const a = giro + 1.2 + k * Math.PI;
+          const ex = mx + Math.cos(a) * 0.1;
+          const ez = mz + Math.sin(a) * 0.1;
+          bola(ex, y + alt, ez, 0.065, 0.14, 0.065, espiga, 6, 4);
+          // a palha: folhas verdes abraçando a base da espiga
+          bola(ex, y + alt - 0.09, ez, 0.072, 0.08, 0.072, verde, 6, 3);
+        }
+      }
+      return true;
+    }
+    // aboboreira: folhas redondas na rama, a florzinha amarela e, madura, a abóbora
+    const nFolhas = [0, 3, 5, 5][e];
+    const raio = [0, 0.1, 0.15, 0.16][e];
+    const longe = [0, 0.13, 0.27, 0.3][e];
+    const giro = sorte(90) * Math.PI * 2;
+    for (let i = 0; i < nFolhas; i++) {
+      const a = giro + (i / nFolhas) * Math.PI * 2;
+      const fx = mx + Math.cos(a) * longe;
+      const fz = mz + Math.sin(a) * longe;
+      const fy = y + 0.1 + 0.08 * sorte(100 + i) + (e === 1 ? 0.04 : 0);
+      haste(mx, y, mz, fx, fy, fz, 0.02, 0.014, sombra, verde, 4);
+      bola(fx, fy, fz, raio, raio * 0.28, raio, i % 2 ? verde : mistura(verde, BRANCO, 0.1), 7, 3);
+    }
+    if (e === 2) bola(mx, y + 0.2, mz, 0.06, 0.05, 0.06, [1, 0.85, 0.3], 6, 3);
+    if (e === 3) {
+      // a abóbora não balança ao vento
+      peso = 0;
+      const fruto = cores.destaque;
+      const ax = mx + Math.cos(giro + 0.6) * 0.04;
+      const az = mz + Math.sin(giro + 0.6) * 0.04;
+      bola(ax, y + 0.2, az, 0.28, 0.2, 0.28, mistura(fruto, [0, 0, 0], 0.12), 9, 5);
+      // gomos
+      for (let i = 0; i < 4; i++) {
+        const a = (i / 4) * Math.PI * 2 + 0.4;
+        bola(
+          ax + Math.cos(a) * 0.13,
+          y + 0.21,
+          az + Math.sin(a) * 0.13,
+          0.17,
+          0.195,
+          0.17,
+          i % 2 ? fruto : mistura(fruto, BRANCO, 0.1),
+          7,
+          4,
+        );
+      }
+      haste(
+        ax,
+        y + 0.36,
+        az,
+        ax + 0.03,
+        y + 0.48,
+        az,
+        0.035,
+        0.028,
+        [0.42, 0.36, 0.18],
+        [0.5, 0.44, 0.22],
+        5,
+      );
+    }
+    return true;
+  }
 
   switch (id) {
     case Bloco.GRAMA_ALTA: {

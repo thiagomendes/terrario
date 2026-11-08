@@ -12,7 +12,7 @@ import { Color3 } from '@babylonjs/core/Maths/math.color';
 
 import { plantaDeBrinquedo, PLANTAS_BRINQUEDO, type AlvoPlanta } from '../mesh/plantasBrinquedo';
 import type { Scene } from '@babylonjs/core/scene';
-import { obterItem } from '../jogo/itens';
+import { obterItem, todosItens } from '../jogo/itens';
 import { coresDoBloco } from '../fx/cores';
 import { caixasDoBloco, temFormaParcial, type Caixa } from '../world/formas';
 import { Bloco, obterBloco } from '../world/blocks';
@@ -52,6 +52,14 @@ export function modeloNaMao(
   item: string | null,
   prefixo: string,
 ): ModeloItem | null {
+  // a semente "é" o bloco que ela planta (para colocar), mas na mão é a semente
+  if (bloco !== null && !item) {
+    const semente = itemQuePlanta(bloco);
+    if (semente) {
+      item = semente;
+      bloco = null;
+    }
+  }
   const no = new TransformNode(`${prefixo}-item`, scene);
   const malhas: Mesh[] = [];
   const add = (m: Mesh, x = 0, y = 0, z = 0) => {
@@ -101,6 +109,18 @@ export function modeloNaMao(
       } else if (tipo === 'machado') {
         add(cx('lamina', 0.17, 0.2, 0.05, 0.04, cor, brilho), 0.1, 0.46, 0);
         add(cx('nuca', 0.07, 0.08, 0.06, 0.025, cor, brilho), -0.04, 0.48, 0);
+      } else if (tipo === 'enxada') {
+        // enxada: o pescoço sai do alto do cabo para o lado e a lâmina larga desce paralela
+        // ao cabo, com um vão entre os dois (o que a separa do machado); a lâmina vira um
+        // pouco para mostrar a face larga, com o fio claro embaixo
+        add(cx('pescoco', 0.23, 0.042, 0.042, 0.018, cor, brilho), 0.105, 0.535, 0);
+        for (const [n, w, h, y, c] of [
+          ['lamina', 0.03, 0.1, 0.49, cor],
+          ['fio', 0.034, 0.03, 0.43, '#f4f4f8'],
+        ] as const) {
+          const l = add(cx(n, w, h, 0.17, 0.014, c, brilho), 0.215, y, 0);
+          l.rotation.y = 0.6;
+        }
       } else {
         // pá
         add(bo('lamina', 0.11, cor, [0.85, 1.05, 0.3], brilho), 0, 0.6, 0);
@@ -147,6 +167,112 @@ export function modeloNaMao(
         add(ci('torta', 0.07, 0.11, 0.11, '#e0a865'), 0, 0.035, 0);
         add(ci('recheio', 0.015, 0.09, 0.09, '#f08a2a'), 0, 0.075, 0);
         break;
+      // ---------- spec 013: plantio ----------
+      case 'semente_trigo':
+      case 'semente_milho':
+      case 'semente_abobora': {
+        // pacotinho de sementes com o desenho da planta na frente e grãos espalhados
+        const SEMENTE: Record<string, [string, string]> = {
+          semente_trigo: ['#d8a84a', '#f2c64a'],
+          semente_milho: ['#f0b428', '#ffd23a'],
+          semente_abobora: ['#f2e6bc', '#f08a24'],
+        };
+        const [grao, figura] = SEMENTE[item];
+        add(cx('pacote', 0.15, 0.19, 0.035, 0.02, '#f4ead2'), 0, 0.1, 0);
+        add(cx('dobra', 0.155, 0.04, 0.04, 0.015, '#c8a26a'), 0, 0.2, 0);
+        if (item === 'semente_trigo') {
+          add(ci('talo', 0.08, 0.008, 0.008, '#6aa83a'), 0, 0.06, -0.022);
+          add(bo('espiga', 0.026, figura, [0.8, 1.7, 0.5], 0.3), 0, 0.12, -0.022);
+        } else if (item === 'semente_milho') {
+          add(bo('espiga', 0.03, figura, [0.9, 1.7, 0.5], 0.3), 0, 0.1, -0.022);
+          add(bo('palha', 0.03, '#6aa83a', [1.1, 0.8, 0.5]), 0, 0.055, -0.022);
+        } else {
+          add(bo('abobora', 0.042, figura, [1.25, 0.9, 0.5], 0.3), 0, 0.09, -0.022);
+          add(ci('cabinho', 0.025, 0.008, 0.008, '#5c7a2a'), 0, 0.135, -0.022);
+        }
+        for (const [x, z] of [
+          [-0.05, -0.06],
+          [0.03, -0.075],
+          [0.08, -0.04],
+        ] as const)
+          add(bo(`grao${x}`, 0.022, grao, [1, 0.6, 1.4], 0.4), x, 0.012, z);
+        break;
+      }
+      case 'trigo': {
+        // feixe: hastes douradas amarradas com uma fitinha, espigas no alto
+        for (let i = 0; i < 5; i++) {
+          const a = (i - 2) * 0.12;
+          const h = add(ci(`haste${i}`, 0.24, 0.01, 0.01, '#c9a040'), Math.sin(a) * 0.12, 0.12, 0);
+          h.rotation.z = -a;
+          const e = add(
+            bo(`espiga${i}`, 0.028, '#f0c650', [0.85, 1.9, 0.85], 0.4),
+            Math.sin(a) * 0.26,
+            0.25 - Math.abs(a) * 0.1,
+            0,
+          );
+          e.rotation.z = -a;
+        }
+        add(ci('fita', 0.03, 0.03, 0.03, '#c0503a'), 0, 0.08, 0);
+        break;
+      }
+      case 'milho': {
+        // espiga amarela com grãos e a palha verde abrindo embaixo
+        add(bo('espiga', 0.05, '#ffcf3a', [1, 2.2, 1], 0.5), 0, 0.13, 0);
+        for (const [x, z, r] of [
+          [-0.035, 0, 0.5],
+          [0.035, 0, -0.5],
+          [0, 0.03, 0],
+        ] as const) {
+          const p = add(bo(`palha${x}${z}`, 0.04, '#6aa83a', [0.55, 1.8, 0.4]), x, 0.06, z);
+          p.rotation.z = r;
+        }
+        break;
+      }
+      case 'pao': {
+        // pão de forma redonda, dourado, com três cortes claros em cima
+        add(bo('pao', 0.1, '#c8843a', [1.45, 0.72, 0.95], 0.35), 0, 0.06, 0);
+        for (const x of [-0.06, 0, 0.06]) {
+          const c = add(bo(`corte${x}`, 0.02, '#f2cf8a', [0.7, 0.35, 2.6]), x, 0.13, 0);
+          c.rotation.y = 0.5;
+        }
+        break;
+      }
+      case 'pipoca': {
+        // balde listrado de vermelho e branco, cheio de pipoca
+        add(ci('balde', 0.13, 0.085, 0.06, '#f6f2ea'), 0, 0.065, 0);
+        for (let i = 0; i < 4; i++) {
+          const a = (i / 4) * Math.PI * 2;
+          const l = add(
+            cx(`listra${i}`, 0.035, 0.13, 0.012, 0.006, '#e03a34'),
+            Math.cos(a) * 0.073,
+            0.065,
+            Math.sin(a) * 0.073,
+          );
+          l.rotation.y = -a + Math.PI / 2;
+          l.rotation.x = 0;
+          l.rotation.z = 0;
+        }
+        for (const [x, y, z] of [
+          [-0.04, 0.14, 0],
+          [0.04, 0.14, 0.01],
+          [0, 0.15, -0.04],
+          [0, 0.145, 0.04],
+          [0, 0.18, 0],
+          [-0.03, 0.17, 0.03],
+          [0.035, 0.17, -0.03],
+        ] as const)
+          add(bo(`pipoca${x}${y}${z}`, 0.033, '#fff8e8', [1, 0.9, 1], 0.5), x, y, z);
+        break;
+      }
+      case 'ovo':
+        add(bo('ovo', 0.075, '#f4ead6', [0.82, 1.05, 0.82], 0.45), 0, 0.07, 0);
+        break;
+      case 'ovo_cozido': {
+        // ovo cozido cortado: a clara e a gema amarela à mostra
+        add(bo('clara', 0.08, '#fbf7ee', [1, 0.55, 1.25], 0.4), 0, 0.03, 0);
+        add(bo('gema', 0.045, '#ffc23a', [1, 0.45, 1.2], 0.5), 0, 0.065, 0);
+        break;
+      }
       case 'graveto': {
         const g = add(ci('graveto', 0.32, 0.018, 0.015, CABO), 0, 0.14, 0);
         g.rotation.z = 0.2;
@@ -385,4 +511,10 @@ export function modeloVidro(scene: Scene, nome: string, lado: number): Mesh[] {
       out.push(brilho);
     }
   return out;
+}
+
+/** O item que planta este bloco (as sementes), ou null. */
+function itemQuePlanta(bloco: number): string | null {
+  for (const d of todosItens()) if (d.tipo !== 'bloco' && d.bloco === bloco) return d.id;
+  return null;
 }

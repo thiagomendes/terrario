@@ -109,7 +109,7 @@ export function gerarIconesBrinquedo(
     const def = obterItem(id);
     if (!def) return null;
     const raiz = new TransformNode(`icone-${id}`, scene);
-    if (def.bloco === undefined) {
+    if (def.bloco === undefined || def.tipo !== 'bloco') {
       const m = modeloNaMao(scene, mats, null, id, `icone-${id}`);
       if (!m) {
         raiz.dispose();
