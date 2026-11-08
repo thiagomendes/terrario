@@ -212,6 +212,8 @@ export function criarGerenciador(op: OpcoesGerenciador) {
       dados,
       confiarNoCliente: false,
       depuracao: op.depuracao ?? false,
+      // spec 013: a criatura da noite deste mundo (cada sala guarda a sua)
+      noite: mundo.estilo.noite,
     });
     const s: SalaAtiva = {
       sala,

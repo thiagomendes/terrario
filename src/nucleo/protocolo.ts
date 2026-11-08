@@ -109,6 +109,8 @@ type ComandoSemSeq =
   | { t: 'soltar'; itens: Pilha[]; x: number; y: number; z: number }
   | { t: 'atacar'; criatura: number; slot: number }
   | { t: 'domar'; criatura: number; slot: number }
+  /** Dar a comida da mão (slot) a um bicho: ele vira criado (spec 013). */
+  | { t: 'alimentar'; criatura: number; slot: number }
   /** Falar com um morador: ele vira para o jogador. */
   | { t: 'falar'; criatura: number }
   | { t: 'trocar'; criatura: number; profissao: Profissao; troca: string }
@@ -187,6 +189,8 @@ export interface CriaturaVista {
   ferida: number;
   domada: boolean;
   vida: number;
+  /** Spec 013: bicho criado (ganhou comida; não some e é salvo). */
+  criado?: boolean;
   /** Só moradores: povoado, número e profissão (nome e roupa saem disso). */
   morador?: { povoado: string; n: number; profissao: Profissao };
 }
@@ -240,6 +244,21 @@ export type EventoNucleo =
   /** Uma criatura acertou este jogador (o cliente dá o empurrão). */
   | { e: 'ataque'; dano: number }
   | { e: 'domou'; id: number; tipo: TipoSer }
+  /** Criação (spec 013): alguém deu comida a um bicho (novo: virou criado agora). */
+  | {
+      e: 'alimentou';
+      id: number;
+      tipo: TipoSer;
+      x: number;
+      y: number;
+      z: number;
+      novo: boolean;
+      meu: boolean;
+    }
+  | { e: 'criacaoRecusada'; motivo: 'limite'; aviso: string }
+  | { e: 'botouOvo'; id: number; x: number; y: number; z: number }
+  /** A criatura da noite mansa fugiu deste jogador (o diário conta como espantar). */
+  | { e: 'espantou'; id: number; tipo: TipoSer }
   | { e: 'comeu'; item: string }
   | { e: 'dano'; causa: CausaDano; qtd: number }
   | { e: 'morte'; causa: CausaDano }

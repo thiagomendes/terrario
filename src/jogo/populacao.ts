@@ -15,6 +15,15 @@ import {
   type TipoSer,
 } from './criaturas';
 import { dentroDaCasa, frenteDaPorta, type PlanoPovoado } from '../world/povoado';
+import {
+  botaOvo,
+  comeEsse,
+  LIMITE_CRIADOS,
+  primeiraEsperaOvo,
+  RAIO_ATRAIR,
+  SEGUNDOS_OVO,
+  viraCriado,
+} from './criacao';
 
 /** Bichos por cercado do sítio (spec 013). */
 export const BICHOS_POR_CERCADO = 3;
@@ -44,18 +53,64 @@ const BIOMAS: Partial<Record<TipoCriatura, Bioma[]>> = {
   raposa: ['floresta', 'taiga'],
 };
 
-export function criarPopulacao(rng: Gerador, salvo?: unknown) {
+/** Bicho criado como vai no salvamento (`extras.criaturas.criados`, spec 013). */
+export interface CriadoSalvo {
+  tipo: 'cervo' | 'coelho';
+  x: number;
+  y: number;
+  z: number;
+  vida: number;
+  casa: [number, number];
+  /** Galinha: segundos até o próximo ovo. */
+  ovo?: number;
+  /** Ainda é do cercado do sítio ("povoado:cercado") e o miolo dele. */
+  curral?: string;
+  cerca?: [number, number, number, number];
+}
+
+export interface OpcoesPopulacao {
+  /** Spec 013: a criatura da noite do mundo (do estilo do tema). Sem o campo, assusta. */
+  noite?: 'assusta' | 'mansa';
+}
+
+const num = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
+
+/** Papéis que seguem a comida (os outros nem procuram quem a segura). */
+const COMEM: ReadonlySet<TipoSer> = new Set(['cervo', 'coelho']);
+
+export function criarPopulacao(rng: Gerador, salvo?: unknown, opcoes: OpcoesPopulacao = {}) {
   const lista: Criatura[] = [];
+  const mansa = opcoes.noite === 'mansa';
   let proximo = 1;
   let tempoSpawn = 0;
   // raposas domadas persistem
-  const s = salvo as { raposas?: { x: number; y: number; z: number; vida: number }[] } | undefined;
+  const s = salvo as
+    | { raposas?: { x: number; y: number; z: number; vida: number }[]; criados?: unknown }
+    | undefined;
   for (const r of s?.raposas ?? []) {
     const c = novaCriatura(proximo++, 'raposa', r.x, r.y, r.z);
     c.domada = true;
     c.vida = r.vida || CRIATURAS.raposa.vida;
     lista.push(c);
   }
+  // spec 013: os bichos criados também (mundos de antes não têm a chave)
+  if (Array.isArray(s?.criados))
+    for (const b of (s.criados as Partial<CriadoSalvo>[]).slice(0, LIMITE_CRIADOS)) {
+      if (!b || (b.tipo !== 'cervo' && b.tipo !== 'coelho')) continue;
+      if (!num(b.x) || !num(b.y) || !num(b.z)) continue;
+      const c = novaCriatura(proximo++, b.tipo, b.x, b.y, b.z);
+      c.criado = true;
+      c.vida = num(b.vida) && b.vida > 0 ? Math.min(b.vida, CRIATURAS[b.tipo].vida) : c.vida;
+      c.casa =
+        Array.isArray(b.casa) && num(b.casa[0]) && num(b.casa[1]) ? [b.casa[0], b.casa[1]] : [b.x, b.z];
+      if (botaOvo(b.tipo))
+        c.ovo = num(b.ovo) && b.ovo >= 0 ? Math.min(b.ovo, SEGUNDOS_OVO) : SEGUNDOS_OVO;
+      if (typeof b.curral === 'string' && Array.isArray(b.cerca) && b.cerca.length === 4 && b.cerca.every(num)) {
+        c.curral = b.curral;
+        c.cerca = [b.cerca[0], b.cerca[1], b.cerca[2], b.cerca[3]];
+      }
+      lista.push(c);
+    }
 
   const hostis: Criatura[] = [];
 
@@ -152,6 +207,8 @@ export function criarPopulacao(rng: Gerador, salvo?: unknown) {
         const [x, z] = livres[Math.floor(((2 * i + 1) * livres.length) / (2 * BICHOS_POR_CERCADO))];
         const c = novaCriatura(proximo++, cc.bicho, x + 0.5, y, z + 0.5);
         c.curral = chave;
+        // passeia só no miolo do cercado (não sai pela porteira)
+        c.cerca = [cc.x0, cc.z0, cc.x1, cc.z1];
         c.yaw = c.yawAlvo = (k + i) * 2.1;
         lista.push(c);
       }
@@ -162,7 +219,8 @@ export function criarPopulacao(rng: Gerador, salvo?: unknown) {
   function liberarCercados(js: readonly Jogador[]): void {
     if (cercadosChamados.size === 0) return;
     const vivos = new Set<string>();
-    for (const c of lista) if (c.curral) vivos.add(c.curral);
+    // o bicho criado não some: só os do sítio seguram o cercado (o criado ainda conta nos 3)
+    for (const c of lista) if (c.curral && !c.criado) vivos.add(c.curral);
     for (const chave of cercadosChamados) {
       if (vivos.has(chave)) continue;
       const [x, z] = centrosCercados.get(chave)!;
@@ -215,7 +273,7 @@ export function criarPopulacao(rng: Gerador, salvo?: unknown) {
   function tentarSpawn(m: MundoPopulacao, j: Jogador, noite: number): void {
     const contar = (t: TipoCriatura) => {
       let n = 0;
-      for (const c of lista) if (c.tipo === t && !c.domada && !c.curral) n++;
+      for (const c of lista) if (c.tipo === t && !c.domada && !c.curral && !c.criado) n++;
       return n;
     };
     const a = rng() * Math.PI * 2;
@@ -297,7 +355,11 @@ export function criarPopulacao(rng: Gerador, salvo?: unknown) {
       }
       // reaproveita o vetor de hostis: nada de filter por quadro
       hostis.length = 0;
-      for (const c of lista) if (CRIATURAS[c.tipo].comportamento === 'hostil') hostis.push(c);
+      // a criatura da noite mansa não é inimiga: a raposa domada não vai atrás dela
+      if (!mansa)
+        for (const c of lista) if (CRIATURAS[c.tipo].comportamento === 'hostil') hostis.push(c);
+      // alguém segura comida de bicho? (sem isso, nada muda: é o de sempre)
+      const comComida = js.some((j) => !!j.mao);
       const maisPerto = (c: Criatura): [Jogador, number] => {
         let melhor = js[0];
         let d = Math.hypot(c.x - melhor.x, c.z - melhor.z);
@@ -311,16 +373,35 @@ export function criarPopulacao(rng: Gerador, salvo?: unknown) {
         return [melhor, d];
       };
       for (const c of lista) {
-        const [j, dist] = maisPerto(c);
+        let [j, dist] = maisPerto(c);
         // longe demais: sem IA, só assenta no chão (não fica congelada no ar)
         if (dist > 56 && !c.domada) {
           assentarCriatura(c, dt, m);
           continue;
         }
-        const evc = passoCriatura(c, dt, m, j, rng, hostis, noite);
+        // o bicho segue quem segura a comida dele, mesmo que outro esteja mais perto
+        if (comComida && !comeEsse(c.tipo, j.mao) && COMEM.has(c.tipo)) {
+          let d = Infinity;
+          for (const o of js) {
+            const di = Math.hypot(c.x - o.x, c.z - o.z);
+            if (comeEsse(c.tipo, o.mao) && di < RAIO_ATRAIR + 4 && di < d) {
+              d = di;
+              j = o;
+            }
+          }
+        }
+        const evc = passoCriatura(c, dt, m, j, rng, hostis, noite, mansa);
         for (const e of evc) {
-          if (e.tipo === 'ataque') e.jogador = j;
+          if (e.tipo === 'ataque' || e.tipo === 'espantada') e.jogador = j;
           ev.push(e);
+        }
+        // a galinha criada bota ovo perto de casa (relógio dela, salvo; sem sorteio)
+        if (c.criado && c.ovo !== undefined && c.estado !== 'morrendo') {
+          c.ovo -= dt;
+          if (c.ovo <= 0) {
+            c.ovo = SEGUNDOS_OVO;
+            ev.push({ tipo: 'ovo', criatura: c });
+          }
         }
       }
       separar(m, dt);
@@ -328,7 +409,7 @@ export function criarPopulacao(rng: Gerador, salvo?: unknown) {
       let n = 0;
       for (const c of lista) {
         if (c.estado === 'morrendo' && c.dissolver >= 1) continue;
-        if (!c.domada && maisPerto(c)[1] > 80) continue;
+        if (!c.domada && !c.criado && maisPerto(c)[1] > 80) continue;
         lista[n++] = c;
       }
       lista.length = n;
@@ -346,6 +427,32 @@ export function criarPopulacao(rng: Gerador, salvo?: unknown) {
       }
       return false;
     },
+    /** Quantos bichos criados há no mundo (o limite é por mundo). */
+    get criados(): number {
+      let n = 0;
+      for (const c of lista) if (c.criado && c.estado !== 'morrendo') n++;
+      return n;
+    },
+    /**
+     * Dar comida (spec 013): o bicho passa a ser criado, com casa onde está. Já criado, só
+     * muda a casa para aqui. Devolve 'novo', 'ja' ou o motivo da recusa.
+     */
+    criar(c: Criatura): 'novo' | 'ja' | 'limite' | 'nao' {
+      if (!viraCriado(c.tipo) || c.estado === 'morrendo' || c.morador) return 'nao';
+      if (c.criado) {
+        c.casa = [c.x, c.z];
+        return 'ja';
+      }
+      if (this.criados >= LIMITE_CRIADOS) return 'limite';
+      c.criado = true;
+      c.casa = [c.x, c.z];
+      if (botaOvo(c.tipo)) c.ovo = primeiraEsperaOvo(c.x, c.z);
+      if (c.estado === 'fugir') {
+        c.estado = 'parado';
+        c.tempoEstado = 2;
+      }
+      return 'novo';
+    },
     adicionar(t: TipoSer, x: number, y: number, z: number): Criatura {
       const c = novaCriatura(proximo++, t, x, y, z);
       lista.push(c);
@@ -356,6 +463,21 @@ export function criarPopulacao(rng: Gerador, salvo?: unknown) {
         raposas: lista
           .filter((c) => c.domada && c.estado !== 'morrendo')
           .map((c) => ({ x: c.x, y: c.y, z: c.z, vida: c.vida })),
+        criados: lista
+          .filter((c) => c.criado && c.estado !== 'morrendo')
+          .map((c): CriadoSalvo => {
+            const r2 = (v: number) => Math.round(v * 100) / 100;
+            return {
+              tipo: c.tipo as CriadoSalvo['tipo'],
+              x: r2(c.x),
+              y: c.y,
+              z: r2(c.z),
+              vida: c.vida,
+              casa: [r2(c.casa?.[0] ?? c.x), r2(c.casa?.[1] ?? c.z)],
+              ...(c.ovo !== undefined ? { ovo: Math.round(c.ovo) } : {}),
+              ...(c.curral && c.cerca ? { curral: c.curral, cerca: c.cerca } : {}),
+            };
+          }),
       };
     },
   };

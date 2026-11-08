@@ -10,7 +10,8 @@
 import { registrarCatalogo } from '../jogo/catalogo';
 import { blocoDe, criarEdicoes, empacotar } from '../world/edicoes';
 import { Bloco, ehAlvo, obterBloco } from '../world/blocks';
-import { TAM_X, TAM_Z, alturaTerreno, encontrarNascimento } from '../world/chunk';
+import { TAM_X, TAM_Z, alturaTerreno, encontrarNascimento, estiloMundo } from '../world/chunk';
+import { AVISO_LIMITE, comeEsse, viraCriado } from '../jogo/criacao';
 import { definirRegioesSemPovoado, regiaoDoChunk } from '../world/povoado';
 import { criarConteineres, TAMANHO_BAU } from '../jogo/conteineres';
 import { criarMundoDeItens, dropsDoBloco } from '../jogo/drops';
@@ -89,6 +90,11 @@ export interface OpcoesNucleo {
   confiarNoCliente?: boolean;
   /** Aceita os atalhos de teste (`depurar`). Padrão: só quando confia no cliente. */
   depuracao?: boolean;
+  /**
+   * Spec 013: a criatura da noite deste mundo. Padrão: a do estilo do mundo definido antes de
+   * criar o núcleo (o servidor só conhece o estilo; cada sala guarda a sua aqui).
+   */
+  noite?: 'assusta' | 'mansa';
 }
 
 export interface OpcoesConexao {
@@ -132,7 +138,15 @@ interface Jogador {
   /** O núcleo mandou o jogador para longe (renascer): a próxima posição pode saltar. */
   saltoPermitido: boolean;
   /** Para as criaturas (o mesmo objeto a cada passo: os ataques dizem em quem foi). */
-  corpo: { x: number; y: number; z: number; vivo: boolean; criativo: boolean };
+  corpo: {
+    x: number;
+    y: number;
+    z: number;
+    vivo: boolean;
+    criativo: boolean;
+    /** O que está na mão, do inventário do núcleo (os bichos seguem a comida). */
+    mao: string | null;
+  };
 }
 
 export type Nucleo = ReturnType<typeof criarNucleo>;
@@ -198,7 +212,12 @@ export function criarNucleo(op: OpcoesNucleo) {
     return b !== Bloco.AR && !!obterBloco(b)?.solido;
   });
   mundoItens.carregar(extras['itensSoltos']);
-  const populacao = criarPopulacao(criarGerador(semente + 55), extras['criaturas']);
+  const noiteDoMundo = op.noite ?? estiloMundo().noite ?? 'assusta';
+  const populacao = criarPopulacao(criarGerador(semente + 55), extras['criaturas'], {
+    noite: noiteDoMundo,
+  });
+  // sorteios da criação (onde o ovo cai): gerador próprio, longe dos de sempre
+  const rngCriacao = criarGerador(semente + 1717);
   const clima = criarClima(criarGerador(semente + 31), extras['clima']);
   let dia = Number(extras['dia']) || 0;
   let hora = dados && dados.hora >= 0 ? dados.hora : HORA_INICIAL;
@@ -315,7 +334,7 @@ export function criarNucleo(op: OpcoesNucleo) {
       saltoPermitido: true,
       perfil: oc?.perfil ?? { apelido: 'Jogador', aparencia: {} },
       constroi: oc?.constroi ?? true,
-      corpo: { x, y: y0, z, vivo: true, criativo: modo === 'criativo' },
+      corpo: { x, y: y0, z, vivo: true, criativo: modo === 'criativo', mao: null },
     };
     j.inventario.ouvir(() => {
       j.inventarioSujo = true;
@@ -784,6 +803,13 @@ export function criarNucleo(op: OpcoesNucleo) {
         eventosGerais.push({ e: 'criaturaMorreu', id: c.id, tipo: c.tipo, drops: golpe });
       } else if (ev.tipo === 'som') {
         eventosGerais.push({ e: 'criaturaSom', id: c.id, tipo: c.tipo });
+      } else if (ev.tipo === 'ovo') {
+        // a galinha criada botou: o ovo cai do lado dela
+        mundoItens.soltar('ovo', 1, c.x, c.y + 0.3, c.z, rngCriacao);
+        eventosGerais.push({ e: 'botouOvo', id: c.id, x: c.x, y: c.y, z: c.z });
+      } else if (ev.tipo === 'espantada' && atacado) {
+        // a criatura da noite mansa fugiu de quem chegou perto (o diário conta como espantar)
+        atacado.eventos.push({ e: 'espantou', id: c.id, tipo: c.tipo });
       }
     }
   }
@@ -810,6 +836,43 @@ export function criarNucleo(op: OpcoesNucleo) {
     if (Math.hypot(cr.x - j.tel.x, cr.z - j.tel.z) > ALCANCE_CRIATURA) return;
     if (modo === 'sobrevivencia') j.inventario.remover(c.slot, 1);
     if (populacao.domar(cr)) j.eventos.push({ e: 'domou', id: cr.id, tipo: cr.tipo });
+  }
+
+  /**
+   * Dar comida a um bicho (spec 013): a comida tem que estar mesmo na mão (no inventário do
+   * núcleo). O bicho vira criado (gasta 1 na sobrevivência); se já era, ganha carinho e a
+   * casa passa a ser onde está, sem gastar nada.
+   */
+  function alimentar(j: Jogador, c: Extract<Comando, { t: 'alimentar' }>): void {
+    const cr = criatura(c.criatura);
+    const p = j.inventario.obter(c.slot);
+    if (
+      !cr ||
+      cr.estado === 'morrendo' ||
+      !viraCriado(cr.tipo) ||
+      !comeEsse(cr.tipo, p?.item) ||
+      j.sobrevivencia.estado.morto ||
+      Math.hypot(cr.x - j.tel.x, cr.z - j.tel.z) > ALCANCE_CRIATURA
+    )
+      return;
+    const r = populacao.criar(cr);
+    if (r === 'limite') {
+      j.eventos.push({ e: 'criacaoRecusada', motivo: 'limite', aviso: AVISO_LIMITE });
+      return;
+    }
+    if (r === 'nao') return;
+    if (r === 'novo' && modo === 'sobrevivencia') j.inventario.remover(c.slot, 1);
+    for (const o of jogadores.values())
+      o.eventos.push({
+        e: 'alimentou',
+        id: cr.id,
+        tipo: cr.tipo,
+        x: cr.x,
+        y: cr.y,
+        z: cr.z,
+        novo: r === 'novo',
+        meu: o === j,
+      });
   }
 
   function trocar(j: Jogador, c: Extract<Comando, { t: 'trocar' }>): void {
@@ -1005,6 +1068,9 @@ export function criarNucleo(op: OpcoesNucleo) {
       case 'domar':
         domar(j, c);
         break;
+      case 'alimentar':
+        alimentar(j, c);
+        break;
       case 'falar': {
         const cr = criatura(c.criatura);
         if (cr?.morador) cr.yawAlvo = Math.atan2(j.tel.x - cr.x, j.tel.z - cr.z);
@@ -1079,6 +1145,7 @@ export function criarNucleo(op: OpcoesNucleo) {
         o.corpo.y = o.tel.y;
         o.corpo.z = o.tel.z;
         o.corpo.vivo = !o.sobrevivencia.estado.morto;
+        o.corpo.mao = o.inventario.obter(o.tel.slot)?.item ?? null;
       }
       const ev = populacao.atualizar(
         dt,
@@ -1133,6 +1200,7 @@ export function criarNucleo(op: OpcoesNucleo) {
       ferida: c.ferida,
       domada: c.domada,
       vida: c.vida,
+      ...(c.criado ? { criado: true } : {}),
       morador: c.morador
         ? { povoado: c.morador.povoado, n: c.morador.n, profissao: c.morador.profissao }
         : undefined,
@@ -1304,6 +1372,8 @@ export function criarNucleo(op: OpcoesNucleo) {
         conteineres,
         jogadores,
         lavoura,
+        /** A criatura da noite deste mundo ('assusta' ou 'mansa'). */
+        noite: noiteDoMundo,
       };
     },
   };
