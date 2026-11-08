@@ -100,7 +100,8 @@ async function vaca(page: Page, toque: boolean) {
       }
       r.nasceu = id > 0;
       await mirarEm(id);
-      r.dicaSeguir = dicas.at(-1);
+      // a vaca pode dar um passo para fora da mira: vale a dica que apareceu mirando nela
+      r.dicaSeguir = dicas.find((d) => d.startsWith('Segure'));
       // o jogador se afasta 5 blocos e pega o trigo: a vaca vem e para a uns 2 blocos
       e.teleportar!(fx + 0.5, fz - 4.5, fy);
       e.inventario!.definir(0, { item: 'trigo', qtd: 5 });
@@ -113,7 +114,7 @@ async function vaca(page: Page, toque: boolean) {
       r.estadoSeguindo = v.estado;
       // dar o trigo
       await mirarEm(id);
-      r.dicaDar = dicas.at(-1);
+      r.dicaDar = dicas.filter((d) => d.includes(' dar ')).at(-1);
       toque ? e.controleDireto!.tocar!() : e.controleDireto!.usar!();
       let coracoes = 0;
       for (let i = 0; i < 20; i++) {
