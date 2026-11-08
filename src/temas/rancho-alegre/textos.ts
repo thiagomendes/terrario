@@ -208,6 +208,10 @@ export const TEXTOS_RANCHO: TextosTema = {
     povoado: { titulo: 'Vizinhos da roça', descricao: 'Encontre um sítio dos vizinhos' },
     trocas: { titulo: 'Feira da roça', descricao: 'Faça 3 trocas com os vizinhos' },
     ferreiro: { titulo: 'Ferramenta nova', descricao: 'Faça uma troca com a ferreira' },
+    arar: { titulo: 'Terra fofinha', descricao: 'Are a terra com a enxada' },
+    plantar: { titulo: 'Primeira semente', descricao: 'Plante uma semente na terra arada' },
+    colher: { titulo: 'Dia de colheita', descricao: 'Colha uma planta madura' },
+    pao: { titulo: 'Pão quentinho', descricao: 'Faça um pão caseiro com 3 feixes de trigo' },
   },
   capitulos: {
     'Primeiros passos': 'Chegada no sítio',
@@ -215,6 +219,7 @@ export const TEXTOS_RANCHO: TextosTema = {
     Sobreviver: 'Barriga cheia',
     Explorar: 'Passeio pela roça',
     Criar: 'Mãos à obra',
+    Roça: 'Roça do sítio',
   },
   boasVindas: 'Bem-vindo ao Rancho Alegre: plante, colha e cuide dos bichos',
   morte: 'Você cochilou no meio do pasto',

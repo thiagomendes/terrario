@@ -207,10 +207,10 @@ export const TEXTOS_PLANETA: TextosTema = {
       titulo: 'Ferramenta alienígena',
       descricao: 'Faça uma troca com a mecânica, que faz ferramentas',
     },
-    arar: { titulo: 'Solo pronto', descricao: 'Prepare o solo com a enxada' },
-    plantar: { titulo: 'Muda plantada', descricao: 'Plante uma semente no solo preparado' },
+    arar: { titulo: 'Solo pronto', descricao: 'Prepare um canteiro com o cultivador' },
+    plantar: { titulo: 'Muda plantada', descricao: 'Plante uma semente no canteiro de pesquisa' },
     colher: { titulo: 'Amostra colhida', descricao: 'Colha uma planta madura' },
-    pao: { titulo: 'Pão da base', descricao: 'Faça um pão com 3 trigos' },
+    pao: { titulo: 'Pão da base', descricao: 'Faça um pão com 3 grãos-estelares' },
   },
   capitulos: {
     'Primeiros passos': 'Pouso',

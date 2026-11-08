@@ -210,10 +210,10 @@ export const TEXTOS_MATA: TextosTema = {
       titulo: 'Ferramenta feita à mão',
       descricao: 'Faça uma troca com o ferreiro da vila',
     },
-    arar: { titulo: 'Terra fofinha', descricao: 'Are a terra com a enxada' },
-    plantar: { titulo: 'Semente da mata', descricao: 'Plante uma semente na terra arada' },
+    arar: { titulo: 'Terra fofinha', descricao: 'Faça uma leira com a enxada' },
+    plantar: { titulo: 'Semente da mata', descricao: 'Plante arroz na leira de terra roxa' },
     colher: { titulo: 'Colheita da mata', descricao: 'Colha uma planta madura' },
-    pao: { titulo: 'Pão caseiro', descricao: 'Faça um pão com 3 trigos' },
+    pao: { titulo: 'Bolinho caseiro', descricao: 'Faça um bolinho com 3 feixes de arroz' },
   },
   capitulos: {
     'Primeiros passos': 'Trilha de entrada',

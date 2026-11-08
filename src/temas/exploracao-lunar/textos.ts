@@ -212,10 +212,10 @@ export const TEXTOS_LUNARES: TextosTema = {
       titulo: 'Ferramenta da oficina',
       descricao: 'Faça uma troca com a mecânica da colônia',
     },
-    arar: { titulo: 'Solo preparado', descricao: 'Prepare o solo com a enxada' },
-    plantar: { titulo: 'Primeira muda', descricao: 'Plante uma semente no solo preparado' },
+    arar: { titulo: 'Solo preparado', descricao: 'Prepare um canteiro com o arado' },
+    plantar: { titulo: 'Primeira muda', descricao: 'Plante uma semente no canteiro hidropônico' },
     colher: { titulo: 'Colheita espacial', descricao: 'Colha uma planta madura' },
-    pao: { titulo: 'Pão de astronauta', descricao: 'Faça um pão com 3 trigos' },
+    pao: { titulo: 'Pão de astronauta', descricao: 'Faça um pão com 3 trigos de estufa' },
   },
   capitulos: {
     'Primeiros passos': 'Pouso',
