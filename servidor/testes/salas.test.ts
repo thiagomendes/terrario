@@ -320,6 +320,53 @@ describe('salas do servidor', () => {
     expect(g.ativas.get(codigo)!.nucleo.estado.mundo.bloco(x, y, z)).toBe(7);
   });
 
+  it('a lavoura cresce com alguém na sala, e a sala dorme e acorda igual (spec 013)', async () => {
+    const { g, a, codigo, avancar } = await criarSala();
+    await avancar(300);
+    const nucleo = g.ativas.get(codigo)!.nucleo;
+    const j = nucleo.estado.jogadores.get('ana')!;
+    j.inventario.definir(0, { item: 'enxada_madeira', qtd: 1, dur: 60 });
+    j.inventario.definir(1, { item: 'semente_milho', qtd: 4 });
+    const x = Math.floor(j.tel.x) + 2;
+    const z = Math.floor(j.tel.z);
+    const y = Math.floor(j.tel.y) - 1;
+    // grama e céu aberto em cima (no criativo a nuvem aceita o lote perto do jogador)
+    const lote = [
+      { x, y, z, v: 1 },
+      ...Array.from({ length: 8 }, (_, i) => ({ x, y: y + 1 + i, z, v: 0 })),
+    ];
+    await g.receber(a, JSON.stringify({ t: 'editar', id: 1, lote, seq: 1 }));
+    await g.receber(a, JSON.stringify({ t: 'arar', id: 2, x, y, z, slot: 0, seq: 2 }));
+    await g.receber(
+      a,
+      JSON.stringify({ t: 'colocar', id: 3, x, y: y + 1, z, bloco: 73, meta: 0, slot: 1, seq: 3 }),
+    );
+    await avancar(200);
+    expect(nucleo.estado.mundo.bloco(x, y, z)).toBe(68);
+    expect(nucleo.estado.mundo.bloco(x, y + 1, z)).toBe(73);
+    // dois minutos e pouco com a Ana na sala: passou de estágio (sol 1×, chuva 1,5×)
+    await avancar(125_000);
+    expect(nucleo.estado.mundo.bloco(x, y + 1, z)).toBe(74);
+    g.caiu(a);
+    await avancar(95_000);
+    expect(g.ativas.has(codigo)).toBe(false);
+    const k = `${x},${y + 1},${z}`;
+    const antes = { b: nucleo.estado.mundo.bloco(x, y + 1, z), p: nucleo.estado.lavoura.get(k)?.p };
+    expect(antes.p).toBeGreaterThan(0);
+    const a2 = canal();
+    await g.receber(
+      a2,
+      JSON.stringify({ t: 'entrar', versao: VERSAO_REDE, jogador: ident('ana'), codigo }),
+    );
+    const novo = g.ativas.get(codigo)!.nucleo;
+    expect(novo).not.toBe(nucleo);
+    expect(novo.estado.mundo.bloco(x, y + 1, z)).toBe(antes.b);
+    expect(novo.estado.lavoura.get(k)?.p).toBeCloseTo(antes.p!, 1);
+    // e continua crescendo com ela de volta
+    await avancar(130_000);
+    expect(novo.estado.mundo.bloco(x, y + 1, z)).toBeGreaterThan(antes.b);
+  });
+
   it('ninguém entra com o id de outro, e a versão errada é recusada', async () => {
     const { g, a, codigo, avancar } = await criarSala();
     await avancar(6000);
