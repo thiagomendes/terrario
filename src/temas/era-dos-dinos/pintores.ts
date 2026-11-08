@@ -621,15 +621,16 @@ const ninhoLado: Pintor = (x, y, s) => {
   return rampa(tranca ? ['#7a5530', '#8a6038'] : ['#5a3c22', '#664428'], hash2(x, y, s), x, y, s);
 };
 
-/** Porta de toras inteira: janelinha em cima, tranca de osso e amarração de cipó embaixo. */
+/** Porta de toras inteira: janelinha em cima, tranca de osso e duas amarrações de cipó. */
 const portas = metadesDaPorta((x, yy, s) => {
-  const janela = x >= 4 && x <= 11 && yy >= 3 && yy <= 10 && x !== 7 && x !== 8;
+  const janela = x >= 4 && x <= 11 && yy >= 7 && yy <= 13 && x !== 7 && x !== 8;
   if (janela) return VAZIO;
   if (x === 12 && (yy === 18 || yy === 19)) return osso(x, yy, s);
-  const p = tabuasSamambaia(x, yy & (T - 1), s);
+  // as toras correm de cima a baixo (só as linhas sem a amarração do bloco de toras)
+  const p = tabuasSamambaia(x, 5 + (yy % 6), s);
   if (bordaDaPorta(x, yy)) return escurece(p, 0.7);
-  if ((yy === 23 || yy === 24) && x > 0 && x < T - 1 && (x + yy) % 3 !== 0)
-    return rampa(['#5a6a2a', '#6b7a36'], hash2(x, yy, s), x, yy, s);
+  if (yy === 4 || yy === 27) return rampa(['#6b7a36', '#5a6a2a'], hash2(x, yy, s) * 0.99, x, yy, s);
+  if (yy === 3 || yy === 5 || yy === 26 || yy === 28) return escurece(p, 0.75);
   return p;
 });
 
