@@ -8,9 +8,9 @@
  * servidor da nuvem (spec 010) com o mesmo código.
  */
 import { registrarCatalogo } from '../jogo/catalogo';
-import { criarEdicoes, empacotar } from '../world/edicoes';
+import { blocoDe, criarEdicoes, empacotar } from '../world/edicoes';
 import { Bloco, ehAlvo, obterBloco } from '../world/blocks';
-import { alturaTerreno, encontrarNascimento } from '../world/chunk';
+import { TAM_X, TAM_Z, alturaTerreno, encontrarNascimento } from '../world/chunk';
 import { definirRegioesSemPovoado, regiaoDoChunk } from '../world/povoado';
 import { criarConteineres, TAMANHO_BAU } from '../jogo/conteineres';
 import { criarMundoDeItens, dropsDoBloco } from '../jogo/drops';
@@ -22,6 +22,20 @@ import { criarInventario, type Inventario, type Slot } from '../jogo/inventario'
 import { blocoDoItem, obterItem } from '../jogo/itens';
 import { podeColetar } from '../jogo/ferramentas';
 import { TROCAS, fazerTroca } from '../jogo/trocas';
+import {
+  CHANCE_SEMENTE_GRAMA,
+  SEGUNDOS_POR_ESTAGIO,
+  colheita,
+  ehEnxada,
+  ehLavoura,
+  lavouraDoBloco,
+  madura,
+  podeArar,
+  podePlantar,
+  proximoEstagio,
+  substituivel,
+  velocidadeCrescimento,
+} from '../jogo/plantio';
 import type { DadosMundo, ModoJogo } from '../jogo/mundos';
 import { DURACAO_DIA, HORA_INICIAL, noiteNaHora, normalizarHora } from '../jogo/tempo';
 import { criarGerador } from '../audio/variacao';
@@ -53,6 +67,10 @@ import {
 const ALCANCE_REGRAS = 8;
 /** Distância máxima para bater, domar e trocar com uma criatura. */
 const ALCANCE_CRIATURA = 7;
+/** De quanto em quanto tempo a lavoura cresce (segundos). */
+const INTERVALO_LAVOURA = 1;
+/** Quem está até aqui da planta vê o brilhinho e ouve o som quando ela amadurece. */
+const ALCANCE_MADURA = 24;
 /** Espera entre deitar na cama e acordar (o véu escurece a tela). */
 const ESPERA_SONO = 1.5;
 /** Quanto tempo quem deitou espera os outros deitarem. */
@@ -172,6 +190,9 @@ export function criarNucleo(op: OpcoesNucleo) {
   });
   const conteineres = criarConteineres(extras['conteineres'], semente);
   const rngDrops = criarGerador(911);
+  // sorteios do plantio (colheita, semente da grama alta): gerador próprio, para não mexer
+  // na sequência dos drops de sempre (a paridade gravada)
+  const rngPlantio = criarGerador(semente + 1313);
   const mundoItens = criarMundoDeItens((x, y, z) => {
     const b = mundo.bloco(x, y, z);
     return b !== Bloco.AR && !!obterBloco(b)?.solido;
@@ -190,6 +211,39 @@ export function criarNucleo(op: OpcoesNucleo) {
   /** Eventos para todos (relâmpago, sons de criaturas). */
   let eventosGerais: EventoNucleo[] = [];
   const jogadores = new Map<string, Jogador>();
+
+  /**
+   * Lavoura que ainda cresce: célula → progresso no estágio atual (segundos na velocidade 1).
+   * Sai das edições ao abrir o mundo; o progresso vem de `extras.lavoura` (faltando, 0).
+   */
+  const lavoura = new Map<string, { x: number; y: number; z: number; p: number }>();
+  {
+    const salvo = extras['lavoura'];
+    const progresso =
+      salvo && typeof salvo === 'object' && !Array.isArray(salvo)
+        ? (salvo as Record<string, unknown>)
+        : {};
+    const exportadas = edicoes.exportar();
+    for (const k of Object.keys(exportadas)) {
+      const [cx, cz] = k.split(',').map(Number);
+      for (const [i, v] of exportadas[k]) {
+        const b = blocoDe(v);
+        if (!ehLavoura(b) || madura(b)) continue;
+        const x = cx * TAM_X + (i % TAM_X);
+        const z = cz * TAM_Z + (Math.floor(i / TAM_X) % TAM_Z);
+        const y = Math.floor(i / (TAM_X * TAM_Z));
+        const chave = `${x},${y},${z}`;
+        const p = Number(progresso[chave]);
+        lavoura.set(chave, {
+          x,
+          y,
+          z,
+          p: Number.isFinite(p) && p > 0 ? Math.min(p, SEGUNDOS_POR_ESTAGIO) : 0,
+        });
+      }
+    }
+  }
+  let esperaLavoura = 0;
 
   // jogador do mundo salvo (o servidor local tem um só)
   const nascimento = encontrarNascimento(semente);
@@ -315,7 +369,25 @@ export function criarNucleo(op: OpcoesNucleo) {
   function editar(x: number, y: number, z: number, bloco: number, meta = 0): boolean {
     if (!edicoes.definir(x, y, z, bloco, meta)) return false;
     blocosMudados.push({ x, y, z, v: empacotar(bloco, meta) });
+    // a lavoura que cresce: entra ao ser plantada, sai quando amadurece ou some
+    const k = `${x},${y},${z}`;
+    if (ehLavoura(bloco) && !madura(bloco)) {
+      if (!lavoura.has(k)) lavoura.set(k, { x, y, z, p: 0 });
+    } else lavoura.delete(k);
+    // planta não flutua: sem a terra arada embaixo, a lavoura sai e devolve o que é dela
+    if (bloco !== Bloco.TERRA_ARADA) {
+      const cima = mundo.bloco(x, y + 1, z);
+      if (ehLavoura(cima)) {
+        editar(x, y + 1, z, Bloco.AR);
+        if (modo === 'sobrevivencia') soltarColheita(cima, x, y + 1, z);
+      }
+    }
     return true;
+  }
+
+  function soltarColheita(b: number, x: number, y: number, z: number): void {
+    for (const d of colheita(b, rngPlantio))
+      mundoItens.soltar(d.item, d.qtd, x + 0.5, y + 0.4, z + 0.5, rngPlantio);
   }
 
   function corrigir(j: Jogador, x: number, y: number, z: number): void {
@@ -372,6 +444,11 @@ export function criarNucleo(op: OpcoesNucleo) {
       for (const drop of dropsDoBloco(b, rngDrops, podeColetar(b, ferramenta))) {
         mundoItens.soltar(drop.item, drop.qtd, x + 0.5, y + 0.4, z + 0.5, rngDrops);
       }
+      // colher: madura dá o produto e sementes; verde devolve a semente
+      if (ehLavoura(b)) soltarColheita(b, x, y, z);
+      // a grama alta às vezes tem uma semente de trigo (sorteio à parte dos drops)
+      if (b === Bloco.GRAMA_ALTA && rngPlantio() < CHANCE_SEMENTE_GRAMA)
+        mundoItens.soltar('semente_trigo', 1, x + 0.5, y + 0.4, z + 0.5, rngPlantio);
     }
     // quebrar baú ou fornalha espalha o conteúdo (o de ruína nunca aberto também)
     if (b === Bloco.BAU || b === Bloco.FORNALHA || b === Bloco.FORNALHA_ACESA) {
@@ -385,8 +462,77 @@ export function criarNucleo(op: OpcoesNucleo) {
           o.conteinerSujo = true;
         }
     }
-    for (const o of jogadores.values())
+    for (const o of jogadores.values()) {
       o.eventos.push({ e: 'quebra', x, y, z, bloco: b, meu: o === j });
+      if (ehLavoura(b))
+        o.eventos.push({ e: 'colheu', x, y, z, bloco: b, madura: madura(b), meu: o === j });
+    }
+  }
+
+  /** Enxada na grama ou na terra: vira terra arada (planta baixa em cima sai junto). */
+  function arar(j: Jogador, c: Extract<Comando, { t: 'arar' }>): void {
+    const { x, y, z } = c;
+    const p = j.inventario.obter(c.slot);
+    const acima = mundo.bloco(x, y + 1, z);
+    if (
+      !ehEnxada(ferramentaDe(p)) ||
+      !j.constroi ||
+      !perto(j, x, y, z, ALCANCE_REGRAS) ||
+      j.sobrevivencia.estado.morto ||
+      !podeArar(mundo.bloco(x, y, z), acima)
+    ) {
+      recusar(j, c.id, 'arar', [c, { x, y: y + 1, z }]);
+      return;
+    }
+    editar(x, y, z, Bloco.TERRA_ARADA);
+    if (acima !== Bloco.AR) editar(x, y + 1, z, Bloco.AR);
+    if (modo === 'sobrevivencia' && p && p.dur !== undefined) {
+      const dur = p.dur - 1;
+      if (dur <= 0) {
+        j.inventario.definir(c.slot, null);
+        j.eventos.push({ e: 'ferramentaQuebrou', item: p.item });
+      } else j.inventario.definir(c.slot, { ...p, dur });
+    }
+    j.acoes[0]++;
+    for (const o of jogadores.values()) o.eventos.push({ e: 'arou', x, y, z, meu: o === j });
+  }
+
+  /** A lavoura cresce (sem sorteio): estágio novo quando o progresso enche. */
+  function crescer(segundos: number): void {
+    if (lavoura.size === 0) return;
+    const noite = noiteNaHora(hora);
+    const chuva = clima.estado.tipo === 'chuva' || clima.estado.tipo === 'tempestade';
+    for (const [k, c] of lavoura) {
+      let b = mundo.bloco(c.x, c.y, c.z);
+      if (proximoEstagio(b) === null) {
+        lavoura.delete(k);
+        continue;
+      }
+      const v = velocidadeCrescimento({
+        noite,
+        chuva,
+        ceuAberto: mundo.criaturas.ceuAberto(c.x, c.y, c.z),
+        luz: () => mundo.criaturas.luzBloco(c.x, c.y, c.z),
+      });
+      c.p += v * segundos;
+      let prox = proximoEstagio(b);
+      let mudou = false;
+      while (prox !== null && c.p >= SEGUNDOS_POR_ESTAGIO) {
+        c.p -= SEGUNDOS_POR_ESTAGIO;
+        b = prox;
+        prox = proximoEstagio(b);
+        mudou = true;
+      }
+      if (!mudou) continue;
+      const resto = c.p;
+      editar(c.x, c.y, c.z, b, edicoes.obterMeta(c.x, c.y, c.z));
+      const ainda = lavoura.get(k);
+      if (ainda) ainda.p = resto;
+      if (madura(b))
+        for (const o of jogadores.values())
+          if (Math.hypot(c.x + 0.5 - o.tel.x, c.z + 0.5 - o.tel.z) <= ALCANCE_MADURA)
+            o.eventos.push({ e: 'amadureceu', x: c.x, y: c.y, z: c.z, bloco: b });
+    }
   }
 
   function colocar(j: Jogador, c: Extract<Comando, { t: 'colocar' }>): void {
@@ -394,8 +540,12 @@ export function criarNucleo(op: OpcoesNucleo) {
     const celulas = [c, ...(c.extras ?? [])];
     const p = j.inventario.obter(c.slot);
     const def = obterBloco(bloco);
-    const atual = obterBloco(mundo.bloco(x, y, z));
-    const livre = !atual || atual.id === Bloco.AR || !!atual.liquido || !!atual.planta;
+    const blocoAtual = mundo.bloco(x, y, z);
+    // planta baixa e água dão lugar; a lavoura não (colocar em cima dela é recusado)
+    const livre = substituivel(blocoAtual);
+    // semente só na terra arada
+    const lav = lavouraDoBloco(bloco);
+    const plantavel = !lav || podePlantar(mundo.bloco(x, y - 1, z), blocoAtual);
     const temItem = modo === 'criativo' || (!!p && blocoDoItem(p.item) === bloco && p.qtd > 0);
     const ocupado =
       !!def?.solido &&
@@ -407,24 +557,25 @@ export function criarNucleo(op: OpcoesNucleo) {
       !j.constroi ||
       bloco === Bloco.AR ||
       !livre ||
+      !plantavel ||
       !temItem ||
       ocupado ||
       !perto(j, x, y, z, ALCANCE_REGRAS) ||
       j.sobrevivencia.estado.morto
     ) {
-      recusar(j, c.id, 'colocar', celulas);
+      recusar(j, c.id, lav && livre && !plantavel ? 'semente' : 'colocar', celulas);
       return;
     }
     editar(x, y, z, bloco, meta);
     for (const e of c.extras ?? []) {
-      // a outra metade da porta: entra no lugar de ar, planta ou água
-      const v = obterBloco(mundo.bloco(e.x, e.y, e.z));
-      if (!v || v.id === Bloco.AR || v.planta || v.liquido) editar(e.x, e.y, e.z, bloco, meta);
+      // a outra metade da porta: entra no lugar de ar, planta baixa ou água
+      if (substituivel(mundo.bloco(e.x, e.y, e.z))) editar(e.x, e.y, e.z, bloco, meta);
     }
     if (modo === 'sobrevivencia') j.inventario.remover(c.slot, 1);
     j.acoes[1]++;
     for (const o of jogadores.values())
       o.eventos.push({ e: 'colocacao', x, y, z, bloco, meu: o === j });
+    if (lav) j.eventos.push({ e: 'plantou', x, y, z, bloco });
   }
 
   function editarLote(j: Jogador, c: Extract<Comando, { t: 'editar' }>): void {
@@ -758,6 +909,10 @@ export function criarNucleo(op: OpcoesNucleo) {
       case 'dano':
         j.sobrevivencia.dano(d.qtd, d.causa, true);
         break;
+      case 'crescer':
+        // testes e capturas: a lavoura avança como se tantos segundos tivessem passado
+        crescer(Math.min(Math.max(0, Number(d.segundos) || 0), 3600));
+        break;
       case 'kit':
         preencherKit(j.inventario, [...SLOTS.map((s) => s.bloco), ...KIT_EXTRA]);
         j.inventarioSujo = true;
@@ -816,6 +971,9 @@ export function criarNucleo(op: OpcoesNucleo) {
         break;
       case 'colocar':
         colocar(j, c);
+        break;
+      case 'arar':
+        arar(j, c);
         break;
       case 'editar':
         editarLote(j, c);
@@ -936,6 +1094,13 @@ export function criarNucleo(op: OpcoesNucleo) {
       );
       for (const c of coletados)
         lista[c.quem].eventos.push({ e: 'coletou', item: c.item, qtd: c.qtd });
+    }
+
+    // a lavoura cresce com o mundo aberto (uma vez por segundo basta)
+    esperaLavoura += dt;
+    if (esperaLavoura >= INTERVALO_LAVOURA) {
+      crescer(esperaLavoura);
+      esperaLavoura = 0;
     }
 
     // fornalhas trabalham mesmo com o painel fechado
@@ -1073,6 +1238,7 @@ export function criarNucleo(op: OpcoesNucleo) {
       clima: clima.salvar(),
       dia,
       conteineres: conteineres.salvar(),
+      lavoura: Object.fromEntries([...lavoura].map(([k, c]) => [k, Math.round(c.p * 100) / 100])),
     };
     // na nuvem cada jogador é salvo à parte (dadosJogador); localmente vai junto do mundo
     if (j && confiar) {
@@ -1137,6 +1303,7 @@ export function criarNucleo(op: OpcoesNucleo) {
         mundoItens,
         conteineres,
         jogadores,
+        lavoura,
       };
     },
   };

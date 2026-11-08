@@ -82,6 +82,7 @@ export function sanear(c: unknown): Comando | null {
       return ok ? (o as unknown as Comando) : null;
     }
     case 'quebrar':
+    case 'arar':
       return celula(o as Partial<Pos>) &&
         inteiro(o.id, 0, Number.MAX_SAFE_INTEGER) &&
         inteiro(o.slot, 0, SLOTS - 1)
