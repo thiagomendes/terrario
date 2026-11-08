@@ -305,6 +305,26 @@ describe('sítio: nascimento e espantalho', () => {
     expect(perto).toBeGreaterThanOrEqual(18);
   });
 
+  it('no Rancho Alegre de verdade: sítio a até 60 blocos do nascimento (18 de 20 sementes)', () => {
+    const rancho = obterTema('rancho-alegre').mundo;
+    expect(rancho.povoado?.planta).toBe('sitio');
+    expect(estiloSeguro(rancho)).toEqual(rancho);
+    definirEstiloMundo(rancho);
+    let perto = 0;
+    for (let s = 1; s <= 20; s++) {
+      const n = encontrarNascimento(s);
+      let melhor = Infinity;
+      for (let rx = -3; rx <= 3; rx++)
+        for (let rz = -3; rz <= 3; rz++) {
+          const p = planoDaRegiao(rx, rz, s, TERRENO_NATURAL);
+          if (p) melhor = Math.min(melhor, Math.hypot(p.cx - n.x, p.cz - n.z));
+        }
+      if (melhor <= 60) perto++;
+    }
+    definirEstiloMundo(SITIO);
+    expect(perto).toBeGreaterThanOrEqual(18);
+  });
+
   it('espantalho: lavoura abandonada, espantalho e baú com sementes', () => {
     // procura um chunk com o espantalho perto da origem
     let achou: [number, number, number] | null = null;

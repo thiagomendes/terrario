@@ -278,22 +278,21 @@ export function marco(p: PlanoPovoado, forma: FormaMarco, em: Pincel): void {
       for (let dx = -1; dx <= 1; dx++)
         for (let dz = -1; dz <= 1; dz++) em(cx + dx, h + 9, cz + dz, Bloco.LA_VERMELHA);
       em(cx, h + 10, cz, Bloco.LA_VERMELHA);
-      // eixo e pás: um X de 4 braços (madeira) com a lona branca sempre do mesmo lado,
-      // como se girasse; o braço mais baixo fica acima da cabeça de quem passa
+      // eixo e pás: uma cruz de 4 braços de madeira, com a lona branca sempre do mesmo
+      // lado (como se girasse); o braço de baixo fica acima da cabeça de quem passa
       const z = cz - 2;
       const hy = h + 7;
       em(cx, hy, z, Bloco.MADEIRA_RETORCIDA);
       for (const [ax, ay] of [
-        [1, 1],
-        [-1, 1],
-        [-1, -1],
-        [1, -1],
+        [1, 0],
+        [0, 1],
+        [-1, 0],
+        [0, -1],
       ])
         for (let k = 1; k <= 4; k++) {
           em(cx + ax * k, hy + ay * k, z, Bloco.TABUAS);
           // lona ao lado do braço (girada 90 graus em relação a ele)
-          if (k >= 2 && hy + ay * k + ax >= h + 3)
-            em(cx + ax * k - ay, hy + ay * k + ax, z, Bloco.LA_BRANCA);
+          if (k >= 2) em(cx + ax * k - ay, hy + ay * k + ax, z, Bloco.LA_BRANCA);
         }
       em(cx, h + 3, cz - 2, Bloco.LANTERNA);
       break;

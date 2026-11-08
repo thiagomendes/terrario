@@ -282,7 +282,10 @@ function planejarEm(
   );
   const h = t.altura(cx, cz, semente);
   if (h <= t.nivelMar + 1 || h >= 88) return null;
-  if (!BIOMAS_OK.has(t.bioma(cx, cz, semente, h))) return null;
+  const bioma = t.bioma(cx, cz, semente, h);
+  if (!BIOMAS_OK.has(bioma)) return null;
+  // o sítio é de roça: nada de deserto (spec 013)
+  if (t.planta === 'sitio' && bioma === 'deserto') return null;
   // relevo calmo em volta da praça
   let min = h;
   let max = h;
