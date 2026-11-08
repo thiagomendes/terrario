@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { temasPedidos } from './temas';
 
 /**
  * Exploração automática (spec 007, critério 11): ~3 minutos de jogo em cada tema.
@@ -9,15 +10,7 @@ import { expect, test, type Page } from '@playwright/test';
  */
 declare const process: { env: Record<string, string | undefined> };
 const pedido = process.env.EXPLORACAO;
-const TODOS = [
-  'bruma-e-luz',
-  'planeta-vivo',
-  'mata-encantada',
-  'doce-reino',
-  'era-dos-dinos',
-  'exploracao-lunar',
-];
-const TEMAS = pedido && pedido !== '1' ? pedido.split(',') : TODOS;
+const TEMAS = temasPedidos(pedido);
 test.skip(!pedido, 'exploração só com EXPLORACAO');
 
 /** Um bloco de cada grupo de material (pedra, terra, areia, madeira, folhagem, cristal). */

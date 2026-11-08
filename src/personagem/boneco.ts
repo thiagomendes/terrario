@@ -639,6 +639,33 @@ export function planoBoneco(a: Aparencia): PlanoBoneco {
           brilho: 0.1,
         });
       break;
+    case 'chapeu-palha':
+      // chapéu de palha da roça: aba larga redonda, copa e fita vermelha (spec 013)
+      pecas.push({
+        nome: 'palha-aba',
+        junta: 'cabeca',
+        forma: 'cilindro',
+        tamanho: [0.05, 0.64, 0.64],
+        pos: [0, topo + 0.08, 0],
+        cor: '#f0cf6a',
+      });
+      pecas.push({
+        nome: 'palha-copa',
+        junta: 'cabeca',
+        forma: 'cilindro',
+        tamanho: [0.26, 0.36, 0.3],
+        pos: [0, topo + 0.21, 0],
+        cor: '#f0cf6a',
+      });
+      pecas.push({
+        nome: 'palha-fita',
+        junta: 'cabeca',
+        forma: 'cilindro',
+        tamanho: [0.07, 0.365, 0.36],
+        pos: [0, topo + 0.13, 0],
+        cor: '#d9483b',
+      });
+      break;
     case 'coroa-flores':
       for (let i = 0; i < 8; i++) {
         const ang = (i / 8) * Math.PI * 2;

@@ -220,3 +220,50 @@ describe('nenhum som fica preso (grilo contínuo)', () => {
     expect(tentativas).toBe(2);
   });
 });
+
+describe('sons do campo (Rancho Alegre)', () => {
+  it('galo, mugido, cigarra e sapo: curtos, na hora certa, nunca em laço e parados no fim', async () => {
+    const { definirTemaAtivo } = await import('../../src/temas/ativo');
+    const { obterTema, TEMA_PADRAO } = await import('../../src/temas');
+    await import('../../src/temas/todos');
+    definirTemaAtivo(obterTema('rancho-alegre'));
+    try {
+      const { ctx, motor } = await motorAtivo();
+      let agendar: (() => void) | null = null;
+      const amb = iniciarAmbiente(motor, {
+        setInterval: (f: () => void) => {
+          agendar = f;
+          return 1;
+        },
+        clearInterval: () => undefined,
+      });
+      const lacos = ctx.fontes.filter((f) => (f as { loop?: boolean }).loop).length;
+      const tipos = new Set<string>();
+      // um dia inteiro, de 0,2 em 0,2 s, passando pela madrugada, manhã, tarde e noite
+      for (let i = 0; i < 6000; i++) {
+        const h = (i / 6000 + 0.2) % 1;
+        amb.definirHora(h);
+        amb.definirNoite(h < 0.24 || h > 0.78 ? 1 : 0);
+        ctx.currentTime = i * 0.2;
+        agendar!();
+      }
+      for (const f of ctx.fontes) tipos.add((f as { type?: string }).type ?? '');
+      // só o vento e a chuva são contínuos: nenhum som do campo fica em laço
+      expect(ctx.fontes.filter((f) => (f as { loop?: boolean }).loop).length).toBe(lacos);
+      // cigarra e sapo usam onda quadrada, galo e mugido dente de serra
+      expect(tipos.has('square')).toBe(true);
+      expect(tipos.has('sawtooth')).toBe(true);
+      amb.parar();
+      expect(ctx.fontes.every((f) => f.parada)).toBe(true);
+    } finally {
+      definirTemaAtivo(obterTema(TEMA_PADRAO));
+    }
+  });
+
+  it('nos outros temas nada muda (sem sons do campo)', async () => {
+    const { obterTema, temasDisponiveis } = await import('../../src/temas');
+    await import('../../src/temas/todos');
+    for (const id of temasDisponiveis())
+      if (id !== 'rancho-alegre') expect(obterTema(id).natureza.roca, id).toBeUndefined();
+  });
+});

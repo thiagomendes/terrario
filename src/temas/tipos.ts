@@ -7,7 +7,7 @@
 import type { Bioma } from '../world/chunk';
 import type { TipoCriatura } from '../jogo/criaturas';
 import type { GrupoMaterial } from '../audio/materiais';
-import type { Aparencia } from '../personagem/aparencia';
+import type { Acessorio, Aparencia } from '../personagem/aparencia';
 import type { Estacao, TipoClima } from '../jogo/clima';
 import type { FormasPovoado, Profissao } from '../world/povoado';
 
@@ -17,7 +17,8 @@ export type IdTema =
   | 'mata-encantada'
   | 'doce-reino'
   | 'era-dos-dinos'
-  | 'exploracao-lunar';
+  | 'exploracao-lunar'
+  | 'rancho-alegre';
 
 export type Rgb = readonly [number, number, number];
 /** Pixel RGBA 0..255 de um tile. */
@@ -244,6 +245,12 @@ export interface NaturezaTema {
   bipes?: boolean;
   /** Volume do vento contínuo (padrão 1; 0 no vácuo). */
   vento?: number;
+  /**
+   * Sons curtos do campo (Rancho Alegre), cada um na sua hora: galo ao amanhecer, mugido ao
+   * longe de dia, cigarra de tarde e sapo à noite. Multiplicadores da chance (0 ou ausente =
+   * nunca). Sempre sons curtos, nunca em laço.
+   */
+  roca?: { galo?: number; mugido?: number; cigarra?: number; sapo?: number };
 }
 
 /** Ajuste do som de um material no tema (mesmo motor de amostras). */
@@ -285,6 +292,11 @@ export interface PovoadoTema {
   nomes: readonly string[];
   /** Pele do morador de cada profissão: pernas e braços com perna0/perna1, cabeça. */
   moradores: Record<Profissao, PecaCriatura[]>;
+  /**
+   * Acessório do boneco de cada profissão (o mesmo desenho do jogador, como o chapéu de palha
+   * da fazendeira). Sem ele, o morador não usa acessório.
+   */
+  acessorios?: Partial<Record<Profissao, Acessorio>>;
   movimento: MovimentoCriatura;
   vozes: VozCriatura & { obrigado: PioCriatura };
   textos: {

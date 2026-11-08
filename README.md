@@ -27,6 +27,7 @@ Ao criar um mundo, escolha o tema no cartão com a prévia. O tema muda blocos, 
 - **Doce Reino**: um mundo de bolo, glacê, biscoito e pirulitos, com chuva de granulado.
 - **Era dos Dinos**: samambaias gigantes, âmbar, fósseis e vulcões ao longe.
 - **Exploração Lunar**: regolito, crateras, céu negro com estrelas e a Terra no horizonte.
+- **Rancho Alegre**: um sítio do interior, com lavoura, celeiro, vaca, galinha, cachorro, viola caipira e os sons do campo.
 
 Mundos criados antes dos temas abrem como Bruma e Luz. Para ver o mundo aberto em outro tema sem salvar a troca, use `?tema=<id>` na URL. Os temas ficam em `src/temas/<id>/`; o formato está em `src/temas/tipos.ts`. Ferramentas para autores de tema, sem abrir o jogo:
 

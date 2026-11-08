@@ -1,4 +1,5 @@
 import { expect, test, type Browser, type Page } from '@playwright/test';
+import { IDS_TEMAS } from './temas';
 
 /**
  * Spec 011, amigos sem atrito: o mundo já nasce para jogar junto e entrar é um toque.
@@ -178,16 +179,9 @@ test('criar com amigos, entrar pelo link e pelo código, e parar de jogar com am
   expect(linkAteJogando).toBeLessThan(15_000);
 });
 
-const TEMAS = [
-  'bruma-e-luz',
-  'planeta-vivo',
-  'doce-reino',
-  'era-dos-dinos',
-  'exploracao-lunar',
-  'mata-encantada',
-] as const;
+const TEMAS = IDS_TEMAS;
 
-test('capturas: convite e entrar pelo link nos 6 temas, no computador e no celular', async ({
+test('capturas: convite e entrar pelo link em todos os temas, no computador e no celular', async ({
   browser,
 }) => {
   test.skip(!process.env.CAPTURAS_BRINQUEDO, 'capturas só com CAPTURAS_BRINQUEDO');

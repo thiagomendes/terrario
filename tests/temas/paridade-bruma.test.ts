@@ -28,15 +28,19 @@ async function sha(...partes: (Uint8Array | string)[]): Promise<string> {
   return [...new Uint8Array(d)].map((b) => b.toString(16).padStart(2, '0')).join('');
 }
 
+/** Tiles do plantio (spec 013), acrescentados depois da paridade. */
+const TILES_013 = ['terra_arada', 'trigo', 'milho', 'aboboreira', 'feno_lado', 'feno_topo'];
+
 describe('Bruma e Luz é idêntico ao jogo antes dos temas', () => {
   it('atlas: os mesmos pixels e os mesmos tiles brilhantes', async () => {
     definirTemaAtivo(obterTema('bruma-e-luz'));
     // a pintura de cada tile (antes das cores limpas de brinquedo da spec 012)
     const a = gerarAtlas(1337, { brinquedo: false });
     expect([a.largura, a.altura]).toEqual([512, 256]);
-    // os tiles das peças de brinquedo (spec 012) são novos: fica de fora da comparação
+    // os tiles das peças de brinquedo (spec 012) e os do plantio (spec 013) são novos: ficam
+    // de fora da comparação
     const px = new Uint8Array(a.pixels.slice().buffer);
-    for (const nome of TILES_PECAS) {
+    for (const nome of [...TILES_PECAS, ...TILES_013]) {
       const cel = a.uvDoTile(nome)!;
       const bx = Math.round(cel.u0 * a.largura) - PADDING;
       const by = Math.round(cel.v0 * a.altura) - PADDING;
@@ -45,7 +49,7 @@ describe('Bruma e Luz é idêntico ao jogo antes dos temas', () => {
     }
     expect(await sha(px)).toBe('3aed3d5a8a609f6fe704538a62a5d75f4a87a7a43372b8ac899913165bca488c');
     const em = a.tiles
-      .filter((t) => t.emissivo && !TILES_PECAS.includes(t.nome))
+      .filter((t) => t.emissivo && !TILES_PECAS.includes(t.nome) && !TILES_013.includes(t.nome))
       .map((t) => t.nome)
       .join(',');
     expect((await sha(em)).slice(0, 16)).toBe('be72a6aafb557d1a');

@@ -8,6 +8,12 @@ import {
   ladoComTopo,
   rampa,
   ruidoT,
+  terraAradaDe,
+  trigoDe,
+  milhoDe,
+  aboboreiraDe,
+  fenoLadoDe,
+  fenoTopoDe,
 } from '../../art/atlas';
 import { hash2 } from '../../world/noise';
 import type { Pintor, Px } from '../tipos';
@@ -920,4 +926,21 @@ export const PINTORES_DINOS: Record<string, Pintor> = {
   abobora_lado: cabacaLado,
   abobora_topo: cabacaTopo,
   abobora_rosto: cabacaRosto,
+
+  // spec 013: terra vulcânica arada, capim-dourado, milho-gigante, cabaça gigante e fardo
+  // de capim-dourado amarrado com cipó
+  terra_arada: terraAradaDe(terra, 0.42, 0.26),
+  trigo: trigoDe(['#3a6a22', '#467a28', '#528a30'], ['#d49a1c', '#e8b42c', '#f6cc44'], '#ffe488'),
+  milho: milhoDe(
+    ['#2e6a22', '#387a28', '#438a2e', '#509a36'],
+    ['#d8801c', '#ec9a2c', '#f8b844'],
+    '#d8c070',
+  ),
+  aboboreira: aboboreiraDe(
+    ['#2e6a22', '#387a28', '#438a2e', '#509a36'],
+    ['#7a922e', '#8aa03a', '#98ae42', '#a6ba4c'],
+    '#6a4a22',
+  ),
+  feno_lado: fenoLadoDe(['#b88a24', '#c89a32', '#d6aa42', '#e2ba54'], '#2e5a1c'),
+  feno_topo: fenoTopoDe(['#bc8e28', '#cc9e36', '#daae46', '#e6be58'], '#2e5a1c'),
 };

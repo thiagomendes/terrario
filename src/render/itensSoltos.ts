@@ -29,7 +29,8 @@ export function criarRenderItens(
   function criar(it: ItemSolto): { no: TransformNode; malhas: Mesh[] } {
     const no = new TransformNode(`item-${it.id}`, scene);
     const def = obterItem(it.item);
-    const bloco = def?.bloco;
+    // só o item que é o próprio bloco vira bloco (a semente, que planta um, é item)
+    const bloco = def?.tipo === 'bloco' ? def.bloco : undefined;
     const malhas: Mesh[] = [];
     const modelo = modeloNaMao(
       scene,

@@ -20,7 +20,8 @@ export function textosOriginais(): TextosTema {
   const blocos: Record<number, string> = {};
   for (const b of REGISTRO_BLOCOS) if (b.id !== 0) blocos[b.id] = b.nome;
   const itens: Record<string, string> = {};
-  for (const i of todosItens()) if (i.bloco === undefined) itens[i.id] = i.nome;
+  // itens que não são o próprio bloco (as sementes plantam um bloco, mas têm nome de item)
+  for (const i of todosItens()) if (i.tipo !== 'bloco') itens[i.id] = i.nome;
   const criaturas = {} as Record<TipoCriatura, string>;
   for (const t of TIPOS_ANIMAIS) criaturas[t] = CRIATURAS[t].nome;
   const missoes: Record<string, { titulo: string; descricao: string }> = {};
@@ -61,7 +62,7 @@ export function aplicarTextos(t: TextosTema): void {
     if (item) item.nome = nomeBonito(nome);
   }
   for (const i of todosItens()) {
-    if (i.bloco !== undefined) continue;
+    if (i.tipo === 'bloco') continue;
     const nome = t.itens[i.id] ?? o.itens[i.id];
     if (nome) i.nome = nome;
   }

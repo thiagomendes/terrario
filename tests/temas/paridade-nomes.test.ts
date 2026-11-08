@@ -20,7 +20,7 @@ describe('renomear pelo tema', () => {
         if (item) expect(item.nome).toBe(nomeBonito(t.textos.blocos[b.id]));
       }
       for (const i of todosItens())
-        if (i.bloco === undefined) expect(i.nome).toBe(t.textos.itens[i.id]);
+        if (i.tipo !== 'bloco') expect(i.nome).toBe(t.textos.itens[i.id]);
       expect(CRIATURAS.raposa.nome).toBe(t.textos.criaturas.raposa);
       expect(NOMES_BIOMA.pantano).toBe(t.textos.biomas.pantano);
     }
@@ -36,7 +36,7 @@ describe('renomear pelo tema', () => {
       const item = obterItem(idDoBloco(b.id));
       if (item) expect(item.nome).toBe(nomeBonito(orig.blocos[b.id]));
     }
-    for (const i of todosItens()) if (i.bloco === undefined) expect(i.nome).toBe(orig.itens[i.id]);
+    for (const i of todosItens()) if (i.tipo !== 'bloco') expect(i.nome).toBe(orig.itens[i.id]);
     expect(CRIATURAS.raposa.nome).toBe('Raposa-lume');
     expect(NOMES_BIOMA.pantano).toBe('Pântano bioluminescente');
   });

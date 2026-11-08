@@ -169,6 +169,7 @@ const NOMES_ACESSORIO: Record<Acessorio, string> = {
   avental: 'Avental',
   'touca-chef': 'Touca de chef',
   'coroa-flores': 'Coroa de flores',
+  'chapeu-palha': 'Chapéu de palha',
 };
 
 type Campo = Exclude<keyof Aparencia, 'nome'>;

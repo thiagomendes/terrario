@@ -1,22 +1,14 @@
 import { test, type Browser, type Page } from '@playwright/test';
+import { TEMAS_E2E, temasPedidos } from './temas';
 
 /**
- * Capturas do jogar com amigos (spec 010) nos seis temas: o convite, a entrada pelo
+ * Capturas do jogar com amigos (spec 010) em todos os temas: o convite, a entrada pelo
  * código, o amigo no mundo com o apelido, a seta para o amigo longe e o minimapa.
  * Pesado: só roda com CAPTURAS_MULTI=1 (ou CAPTURAS_MULTI=<id>,<id>).
  */
 declare const process: { env: Record<string, string | undefined> };
 const pedido = process.env.CAPTURAS_MULTI;
-const TODOS = [
-  ['bruma-e-luz', 'Bruma e Luz'],
-  ['planeta-vivo', 'Planeta Vivo'],
-  ['mata-encantada', 'Mata Encantada'],
-  ['doce-reino', 'Doce Reino'],
-  ['era-dos-dinos', 'Era dos Dinos'],
-  ['exploracao-lunar', 'Exploração Lunar'],
-] as const;
-const TEMAS =
-  pedido && pedido !== '1' ? TODOS.filter(([id]) => pedido.split(',').includes(id)) : TODOS;
+const TEMAS = TEMAS_E2E.filter(([id]) => temasPedidos(pedido).includes(id));
 test.skip(!pedido, 'capturas só com CAPTURAS_MULTI');
 const PASTA = 'capturas-temas';
 

@@ -1,12 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
+import { OUTROS_TEMAS, TEMAS_E2E } from './temas';
 
-const TEMAS = [
-  ['planeta-vivo', 'Planeta Vivo'],
-  ['mata-encantada', 'Mata Encantada'],
-  ['doce-reino', 'Doce Reino'],
-  ['era-dos-dinos', 'Era dos Dinos'],
-  ['exploracao-lunar', 'Exploração Lunar'],
-] as const;
+const TEMAS = OUTROS_TEMAS;
 
 async function pronto(page: Page) {
   await page.waitForFunction(() => window.__brumaluz?.ready === true, undefined, {
@@ -73,9 +68,9 @@ test('cartões de tema: grupo de opções com teclado e alvos grandes', async ({
   await pronto(page);
   await page.locator('[data-abrir-mundos]').click();
   const cartoes = page.locator('[data-painel-mundos] .cartao-tema');
-  await expect(cartoes).toHaveCount(6);
+  await expect(cartoes).toHaveCount(TEMAS_E2E.length);
   await expect(cartoes.first()).toHaveAttribute('aria-checked', 'true');
-  for (let i = 0; i < 6; i++) {
+  for (let i = 0; i < TEMAS_E2E.length; i++) {
     const caixa = await cartoes.nth(i).boundingBox();
     expect(caixa!.height).toBeGreaterThanOrEqual(44);
     expect(caixa!.width).toBeGreaterThanOrEqual(44);
@@ -85,7 +80,7 @@ test('cartões de tema: grupo de opções com teclado e alvos grandes', async ({
   await expect(cartoes.nth(1)).toHaveAttribute('aria-checked', 'true');
   await expect(cartoes.nth(1)).toBeFocused();
   await page.keyboard.press('End');
-  await expect(cartoes.nth(5)).toHaveAttribute('aria-checked', 'true');
+  await expect(cartoes.nth(TEMAS_E2E.length - 1)).toHaveAttribute('aria-checked', 'true');
   await page.keyboard.press('ArrowRight');
   await expect(cartoes.nth(0)).toHaveAttribute('aria-checked', 'true');
   // só um marcado por vez

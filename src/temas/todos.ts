@@ -8,9 +8,11 @@ import { construirMataEncantada } from './mata-encantada';
 import { construirDoceReino } from './doce-reino';
 import { construirEraDosDinos } from './era-dos-dinos';
 import { construirExploracaoLunar } from './exploracao-lunar';
+import { construirRanchoAlegre } from './rancho-alegre';
 
 registrarTema('planeta-vivo', construirPlanetaVivo);
 registrarTema('mata-encantada', construirMataEncantada);
 registrarTema('doce-reino', construirDoceReino);
 registrarTema('era-dos-dinos', construirEraDosDinos);
 registrarTema('exploracao-lunar', construirExploracaoLunar);
+registrarTema('rancho-alegre', construirRanchoAlegre);

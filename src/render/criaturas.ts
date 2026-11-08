@@ -75,6 +75,7 @@ export function criarRenderCriaturas(
       pecas,
       c.id,
       c.morador ? generoDoMorador(c.morador.povoado, c.morador.n, prof) : undefined,
+      povoadoDoTema().acessorios?.[prof],
     );
     const boneco = criarBoneco(scene, m.aparencia, `morador-${c.id}`, m.ajustar);
     for (const malha of boneco.raiz.getChildMeshes()) {

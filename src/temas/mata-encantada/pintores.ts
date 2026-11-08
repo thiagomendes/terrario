@@ -11,6 +11,12 @@ import {
   ruidoT,
   tabuasDe,
   tijolosDe,
+  terraAradaDe,
+  trigoDe,
+  milhoDe,
+  aboboreiraDe,
+  fenoLadoDe,
+  fenoTopoDe,
 } from '../../art/atlas';
 import { hash2 as H } from '../../world/noise';
 import type { Pintor, Px } from '../tipos';
@@ -946,6 +952,22 @@ export const PINTORES_MATA: Record<string, Pintor> = {
   abobora_lado: jerimumLado,
   abobora_topo: jerimumTopo,
   abobora_rosto: jerimumRosto,
+
+  // spec 013: leira de terra roxa, arrozal, milho crioulo, pé de jerimum e fardo de palha
+  terra_arada: terraAradaDe(terraRoxa, 0.45, 0.26),
+  trigo: trigoDe(['#3f7a2a', '#4c8a32', '#5a9a3a'], ['#d2ae52', '#e2c262', '#f0d47a'], '#fff0b0'),
+  milho: milhoDe(
+    ['#2f7a2a', '#3a8c32', '#48a03c', '#56b046'],
+    ['#c8402a', '#e8a228', '#f6cc48'],
+    '#e8c890',
+  ),
+  aboboreira: aboboreiraDe(
+    ['#2e6e26', '#3a822e', '#489638', '#56a842'],
+    ['#b8501a', '#cc6420', '#de7a2a', '#ea9036'],
+    '#5a6a2a',
+  ),
+  feno_lado: fenoLadoDe(['#b89a4c', '#c6a85a', '#d4b868', '#e0c678'], '#4a3018'),
+  feno_topo: fenoTopoDe(['#bea050', '#ccb060', '#d8be70', '#e4cc80'], '#4a3018'),
 };
 
 /** Tiles que brilham: quartzo, cogumelo luminoso, ametista, pirilampos, fogo e luzes. */
