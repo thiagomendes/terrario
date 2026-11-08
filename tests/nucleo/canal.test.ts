@@ -239,4 +239,22 @@ describe('protocolo num canal ruim', () => {
     // semente ao lado, na grama sem arar: a regra diz não, nada é previsto nem pedido
     expect(podePlantar(ver({ x: x + 3, y: y - 1, z }), ver({ x: x + 3, y, z }))).toBe(false);
   });
+  it('dar comida no canal ruim: o cliente vê o bicho criado e o trigo gasto (spec 013)', () => {
+    const { conexao, cliente, inv, x, y, z, avancar } = partida('sobrevivencia');
+    const nucleo = conexao.anfitriao.nucleo;
+    nucleo.estado.jogadores.get('local')!.inventario.definir(0, { item: 'trigo', qtd: 5 });
+    cliente.enviar({ t: 'depurar', d: { f: 'invocar', tipo: 'cervo', x: x + 2.5, y, z: z + 0.5 } });
+    avancar(800);
+    expect(inv.obter(0)).toEqual({ item: 'trigo', qtd: 5 });
+    const vaca = cliente.criaturas.vistas.find(
+      (c) => c.tipo === 'cervo' && Math.hypot(c.x - x - 2.5, c.z - z - 0.5) < 3,
+    )!;
+    expect(vaca.criado).toBeFalsy();
+    cliente.enviar({ t: 'alimentar', criatura: vaca.id, slot: 0 });
+    avancar(1000);
+    expect(nucleo.estado.populacao.lista.find((c) => c.id === vaca.id)?.criado).toBe(true);
+    expect(cliente.criaturas.vistas.find((c) => c.id === vaca.id)?.criado).toBe(true);
+    expect(cliente.criaturas.lista.find((c) => c.id === vaca.id)?.criado).toBe(true);
+    expect(inv.obter(0)).toEqual({ item: 'trigo', qtd: 4 });
+  });
 });

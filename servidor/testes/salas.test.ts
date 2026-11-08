@@ -367,6 +367,57 @@ describe('salas do servidor', () => {
     expect(novo.estado.mundo.bloco(x, y + 1, z)).toBeGreaterThan(antes.b);
   });
 
+  it('bichos criados dormem e acordam com a sala, e a noite mansa vem do estilo (spec 013)', async () => {
+    const s = servidor();
+    const { g, avancar } = s;
+    const a = canal();
+    await g.receber(
+      a,
+      JSON.stringify({
+        t: 'entrar',
+        versao: VERSAO_REDE,
+        jogador: ident('ana'),
+        criar: { ...criarMundo, modo: 'sobrevivencia', estilo: { ...ESTILO_PADRAO, noite: 'mansa' } },
+      }),
+    );
+    const bv = a.recebidas.find((m) => m.t === 'bemvindo') as Extract<
+      RespostaServidor,
+      { t: 'bemvindo' }
+    >;
+    const codigo = bv.sala.codigo;
+    await avancar(300);
+    const nucleo = g.ativas.get(codigo)!.nucleo;
+    expect(nucleo.estado.noite).toBe('mansa');
+    const j = nucleo.estado.jogadores.get('ana')!;
+    j.inventario.definir(0, { item: 'trigo', qtd: 3 });
+    j.inventario.definir(1, { item: 'semente_trigo', qtd: 3 });
+    const vaca = nucleo.estado.populacao.adicionar('cervo', j.tel.x + 2, j.tel.y, j.tel.z);
+    const galinha = nucleo.estado.populacao.adicionar('coelho', j.tel.x - 2, j.tel.y, j.tel.z);
+    await g.receber(a, JSON.stringify({ t: 'alimentar', criatura: vaca.id, slot: 0, seq: 1 }));
+    await g.receber(a, JSON.stringify({ t: 'alimentar', criatura: galinha.id, slot: 1, seq: 2 }));
+    await avancar(200);
+    expect(nucleo.estado.populacao.criados).toBe(2);
+    expect(j.inventario.contar('trigo')).toBe(2);
+    g.caiu(a);
+    await avancar(95_000);
+    expect(g.ativas.has(codigo)).toBe(false);
+    const a2 = canal();
+    await g.receber(
+      a2,
+      JSON.stringify({ t: 'entrar', versao: VERSAO_REDE, jogador: ident('ana'), codigo }),
+    );
+    const novo = g.ativas.get(codigo)!.nucleo;
+    expect(novo).not.toBe(nucleo);
+    expect(novo.estado.noite).toBe('mansa');
+    const de = novo.estado.populacao.lista.filter((c) => c.criado);
+    expect(de.map((c) => c.tipo).sort()).toEqual(['cervo', 'coelho']);
+    expect(de.find((c) => c.tipo === 'coelho')!.ovo).toBeGreaterThan(0);
+    // o cliente de volta vê os dois criados
+    await avancar(200);
+    const q = quadros(a2).at(-1)!;
+    expect(q.criaturas!.filter((c) => c.criado)).toHaveLength(2);
+  });
+
   it('ninguém entra com o id de outro, e a versão errada é recusada', async () => {
     const { g, a, codigo, avancar } = await criarSala();
     await avancar(6000);
