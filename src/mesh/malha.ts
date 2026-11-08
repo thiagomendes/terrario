@@ -513,6 +513,22 @@ export function gerarMalha(
     };
     const lo: Vec = [mostra(-1, 0, 0), mostra(0, -1, 0), mostra(0, 0, -1)];
     const hi: Vec = [mostra(1, 0, 0), mostra(0, 1, 0), mostra(0, 0, 1)];
+    // aresta encostada num bloco da diagonal (telhado em degrau, xadrez): se as duas se
+    // arredondassem, sobraria uma fresta entre elas por onde se vê o outro lado. Essa aresta
+    // fica reta nos dois blocos. Índice: eixo a, lado de a (0 baixo, 1 cima), eixo b, lado de b.
+    const reta = (a: number, sa: number, b: number, sb: number): boolean => {
+      if (!arredonda || !(sa ? hi[a] : lo[a]) || !(sb ? hi[b] : lo[b])) return false;
+      const d: Vec = [0, 0, 0];
+      d[a] = sa ? 1 : -1;
+      d[b] = sb ? 1 : -1;
+      return !mostra(d[0], d[1], d[2]);
+    };
+    const retas: boolean[] = [];
+    for (let a = 0; a < 3; a++)
+      for (let b = a + 1; b < 3; b++)
+        for (let sa = 0; sa < 2; sa++)
+          for (let sb = 0; sb < 2; sb++) retas.push(reta(a, sa, b, sb));
+    const algumaReta = retas.some(Boolean);
     const passos = (t: Vec): number[] => {
       const eixo = t[0] ? 0 : t[1] ? 1 : 2;
       const fr = detalheBaixo ? [0, 1] : [0, 0.45, 1];
@@ -541,9 +557,25 @@ export function gerarMalha(
         let nz = f.n[2];
         if (arredonda && (p1.length > 2 || p2.length > 2)) {
           // ponto do cubo levado para a caixa de dentro e empurrado pelo raio
-          const ix = Math.min(Math.max(lx, lo[0] * RAIO), 1 - hi[0] * RAIO);
-          const iy = Math.min(Math.max(ly, lo[1] * RAIO), 1 - hi[1] * RAIO);
-          const iz = Math.min(Math.max(lz, lo[2] * RAIO), 1 - hi[2] * RAIO);
+          let ix = Math.min(Math.max(lx, lo[0] * RAIO), 1 - hi[0] * RAIO);
+          let iy = Math.min(Math.max(ly, lo[1] * RAIO), 1 - hi[1] * RAIO);
+          let iz = Math.min(Math.max(lz, lo[2] * RAIO), 1 - hi[2] * RAIO);
+          if (algumaReta) {
+            // perto de uma aresta que fica reta: nos dois eixos dela o ponto não se recolhe
+            const l: Vec = [lx, ly, lz];
+            const lado = (e: number) => (l[e] < RAIO - 1e-6 ? 0 : l[e] > 1 - RAIO + 1e-6 ? 1 : -1);
+            const solto: Vec = [0, 0, 0];
+            let k = 0;
+            for (let a = 0; a < 3; a++)
+              for (let b = a + 1; b < 3; b++)
+                for (let sa = 0; sa < 2; sa++)
+                  for (let sb = 0; sb < 2; sb++) {
+                    if (retas[k++] && lado(a) === sa && lado(b) === sb) solto[a] = solto[b] = 1;
+                  }
+            if (solto[0]) ix = lx;
+            if (solto[1]) iy = ly;
+            if (solto[2]) iz = lz;
+          }
           const dx = lx - ix;
           const dy = ly - iy;
           const dz = lz - iz;
