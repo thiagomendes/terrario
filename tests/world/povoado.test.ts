@@ -237,16 +237,17 @@ describe('povoados: terreno e construções', () => {
   it('todas as formas dão a mesma mecânica (blocos funcionais iguais)', () => {
     const [p] = povoados(1);
     const casas: FormaCasa[] = ['duas-aguas', 'cupula', 'tenda', 'redonda', 'modulo'];
-    const marcos: FormaMarco[] = ['poco', 'fonte', 'antena', 'totem', 'esqueleto'];
+    const marcos: FormaMarco[] = ['poco', 'fonte', 'antena', 'totem', 'esqueleto', 'moinho'];
     let ref: string | null = null;
-    casas.forEach((casa, i) => {
+    marcos.forEach((marco, i) => {
+      const casa = casas[i % casas.length];
       definirEstiloMundo({
         ...ESTILO_PADRAO,
-        povoado: { casa, oficina: casa, deposito: casa, marco: marcos[i] },
+        povoado: { casa, oficina: casa, deposito: casa, marco },
       });
       const n = JSON.stringify(funcionais(p, mundo()));
       if (ref === null) ref = n;
-      expect(n, casa).toBe(ref);
+      expect(n, `${casa} ${marco}`).toBe(ref);
     });
     definirEstiloMundo(ESTILO_PADRAO);
   });

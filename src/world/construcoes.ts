@@ -7,6 +7,7 @@
  */
 import { Bloco } from './blocks';
 import type { FormaCasa, FormaMarco, FormasPovoado, Lote, PlanoPovoado } from './povoado';
+import { construirLoteDoSitio } from './sitio';
 
 const TAM_LOTE = 7;
 
@@ -199,7 +200,7 @@ const CASAS: Record<FormaCasa, (l: Lote, em: Pincel) => void> = {
   modulo: casaModulo,
 };
 
-function marco(p: PlanoPovoado, forma: FormaMarco, em: Pincel): void {
+export function marco(p: PlanoPovoado, forma: FormaMarco, em: Pincel): void {
   const { cx, cz, h } = p;
   switch (forma) {
     case 'poco':
@@ -253,6 +254,49 @@ function marco(p: PlanoPovoado, forma: FormaMarco, em: Pincel): void {
         for (const dz of [0, 1]) em(cx + 3, y, cz + dz, Bloco.LA_BRANCA);
       em(cx - 3, h + 1, cz, Bloco.LANTERNA);
       break;
+    case 'moinho': {
+      // spec 013: moinho de vento. Torre branca de 3x3 com telhado vermelho e quatro pás
+      // em X na frente (voltada para -z), paradas; a lanterna fica no alto da porta.
+      for (let y = h + 1; y <= h + 7; y++)
+        for (let dx = -1; dx <= 1; dx++)
+          for (let dz = -1; dz <= 1; dz++) {
+            const quina = dx !== 0 && dz !== 0;
+            const janela = y === h + 5 && !quina && (dx === 0) !== (dz === 0) && dz !== -1;
+            em(
+              cx + dx,
+              y,
+              cz + dz,
+              y === h + 1 ? Bloco.PEDRA_LISA : janela ? Bloco.VIDRO : Bloco.LA_BRANCA,
+            );
+          }
+      // telhado em degraus
+      for (let dx = -2; dx <= 2; dx++)
+        for (let dz = -2; dz <= 2; dz++) {
+          if (Math.abs(dx) === 2 && Math.abs(dz) === 2) continue;
+          em(cx + dx, h + 8, cz + dz, Bloco.LA_VERMELHA);
+        }
+      for (let dx = -1; dx <= 1; dx++)
+        for (let dz = -1; dz <= 1; dz++) em(cx + dx, h + 9, cz + dz, Bloco.LA_VERMELHA);
+      em(cx, h + 10, cz, Bloco.LA_VERMELHA);
+      // eixo e pás: uma cruz de 4 braços de madeira, com a lona branca sempre do mesmo
+      // lado (como se girasse); o braço de baixo fica acima da cabeça de quem passa
+      const z = cz - 2;
+      const hy = h + 7;
+      em(cx, hy, z, Bloco.MADEIRA_RETORCIDA);
+      for (const [ax, ay] of [
+        [1, 0],
+        [0, 1],
+        [-1, 0],
+        [0, -1],
+      ])
+        for (let k = 1; k <= 4; k++) {
+          em(cx + ax * k, hy + ay * k, z, Bloco.TABUAS);
+          // lona ao lado do braço (girada 90 graus em relação a ele)
+          if (k >= 2) em(cx + ax * k - ay, hy + ay * k + ax, z, Bloco.LA_BRANCA);
+        }
+      em(cx, h + 3, cz - 2, Bloco.LANTERNA);
+      break;
+    }
   }
 }
 
@@ -264,6 +308,11 @@ export function construirPovoado(p: PlanoPovoado, formas: FormasPovoado, em: Pin
       for (let dz = 0; dz < TAM_LOTE; dz++)
         for (let y = l.h + 1; y <= l.h + 9; y++) em(l.x0 + dx, y, l.z0 + dz, Bloco.AR);
   for (const l of p.lotes) {
+    // sítio (spec 013): cada lote tem o desenho do seu uso
+    if (l.uso) {
+      construirLoteDoSitio(p, l, em);
+      continue;
+    }
     const forma =
       l.tipo === 'casa' ? formas.casa : l.tipo === 'oficina' ? formas.oficina : formas.deposito;
     CASAS[forma](l, em);

@@ -4,6 +4,8 @@ import { novaFornalha, normalizarFornalha, passoFornalha, type EstadoFornalha } 
 import { hash3 } from '../world/noise';
 import { idDoBloco } from './itens';
 import { Bloco } from '../world/blocks';
+import { estiloMundo, TERRENO_NATURAL } from '../world/chunk';
+import { planoDaRegiao, REGIAO_POVOADO } from '../world/povoado';
 
 export const TAMANHO_BAU = 27;
 
@@ -40,6 +42,52 @@ export function tesouro(x: number, y: number, z: number, semente: number): Slot[
   return slots;
 }
 
+/** Item com a durabilidade cheia, se for ferramenta. */
+function slot(item: string, qtd: number): Slot {
+  const durabilidade = obterItem(item)?.durabilidade;
+  return durabilidade ? { item, qtd: 1, dur: durabilidade } : { item, qtd };
+}
+
+/**
+ * Conteúdo de um baú gerado pelo mundo. O do celeiro do sítio (spec 013) tem sementes e
+ * uma enxada, sempre nos primeiros lugares; o do espantalho tem o tesouro e sementes; os
+ * outros, o tesouro de sempre. Sorteios próprios (hash3 com sementes novas).
+ */
+export function conteudoGerado(x: number, y: number, z: number, semente: number): Slot[] {
+  const rx = Math.floor(x / REGIAO_POVOADO);
+  const rz = Math.floor(z / REGIAO_POVOADO);
+  const p = planoDaRegiao(rx, rz, semente, TERRENO_NATURAL);
+  const b = p?.bauCeleiro;
+  const qtd = (min: number, max: number, k: number) =>
+    min + Math.floor(hash3(x + k, y, z, semente + 4050) * (max - min + 1));
+  if (b && b[0] === x && b[1] === y && b[2] === z) {
+    const slots: Slot[] = Array.from({ length: TAMANHO_BAU }, () => null);
+    slots[0] = slot('enxada_madeira', 1);
+    slots[1] = slot('semente_trigo', qtd(6, 9, 1));
+    slots[2] = slot('semente_milho', qtd(4, 6, 2));
+    slots[3] = slot('semente_abobora', qtd(2, 3, 3));
+    return slots;
+  }
+  const slots = tesouro(x, y, z, semente);
+  const dentroDoPovoado = !!p && x >= p.minX && x <= p.maxX && z >= p.minZ && z <= p.maxZ;
+  if (
+    estiloMundo().estrutura === 'espantalho' &&
+    !dentroDoPovoado &&
+    ((x % 16) + 16) % 16 === 8 &&
+    ((z % 16) + 16) % 16 === 8
+  ) {
+    const sementes: [string, number][] = [
+      ['semente_trigo', qtd(3, 6, 4)],
+      ['semente_abobora', qtd(1, 2, 5)],
+    ];
+    for (const [item, n] of sementes) {
+      const livre = slots.findIndex((q) => !q);
+      if (livre >= 0) slots[livre] = slot(item, n);
+    }
+  }
+  return slots;
+}
+
 export function criarConteineres(salvo: unknown, semente: number) {
   const baus = new Map<string, Slot[]>();
   const fornalhas = new Map<string, EstadoFornalha>();
@@ -57,7 +105,9 @@ export function criarConteineres(salvo: unknown, semente: number) {
       const k = chavePos(x, y, z);
       let c = baus.get(k);
       if (!c) {
-        c = gerado ? tesouro(x, y, z, semente) : Array.from({ length: TAMANHO_BAU }, () => null);
+        c = gerado
+          ? conteudoGerado(x, y, z, semente)
+          : Array.from({ length: TAMANHO_BAU }, () => null);
         baus.set(k, c);
       }
       return c;
@@ -77,7 +127,7 @@ export function criarConteineres(salvo: unknown, semente: number) {
      */
     remover(x: number, y: number, z: number, gerado = false): Slot[] {
       const k = chavePos(x, y, z);
-      const salvo = baus.get(k) ?? (gerado ? tesouro(x, y, z, semente) : []);
+      const salvo = baus.get(k) ?? (gerado ? conteudoGerado(x, y, z, semente) : []);
       const out: Slot[] = [...salvo];
       const f = fornalhas.get(k);
       if (f) out.push(f.entrada, f.combustivel, f.saida);

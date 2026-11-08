@@ -16,6 +16,9 @@ import {
 } from './criaturas';
 import { dentroDaCasa, frenteDaPorta, type PlanoPovoado } from '../world/povoado';
 
+/** Bichos por cercado do sítio (spec 013). */
+export const BICHOS_POR_CERCADO = 3;
+
 export interface MundoPopulacao extends Mundo {
   bioma(x: number, z: number): Bioma;
   /** y do primeiro bloco livre acima do chão na coluna (ou null). */
@@ -71,6 +74,7 @@ export function criarPopulacao(rng: Gerador, salvo?: unknown) {
       if (m.superficie(p.cx, p.cz) === null) continue;
       const vivos = new Set<number>();
       for (const c of lista) if (c.morador?.povoado === p.id) vivos.add(c.morador.n);
+      chamarBichosDoSitio(m, p);
       if (vivos.size === p.moradores.length) continue;
       const y = p.h + 1;
       const centro = (x: number, z: number): [number, number, number] => [x + 0.5, y, z + 0.5];
@@ -107,6 +111,64 @@ export function criarPopulacao(rng: Gerador, salvo?: unknown) {
         };
         lista.push(c);
       }
+    }
+  }
+
+  /**
+   * Cercados do sítio já povoados nesta visita. O cercado só ganha bichos de novo depois
+   * que todos os dele sumiram e nenhum jogador está perto (volta com o sítio, como os
+   * moradores): nunca passa de 3, nem recarregando o mundo (os bichos não são salvos).
+   */
+  const cercadosChamados = new Set<string>();
+  const centrosCercados = new Map<string, [number, number]>();
+
+  /**
+   * Põe até 3 bichos em cada cercado do sítio, em pontos fixos do miolo (sem sorteio: os
+   * geradores de hoje continuam com a mesma sequência).
+   */
+  function chamarBichosDoSitio(m: MundoPopulacao, p: PlanoPovoado): void {
+    if (!p.currais) return;
+    p.currais.forEach((cc, k) => {
+      const chave = `${p.id}:${k}`;
+      if (cercadosChamados.has(chave)) return;
+      const def = CRIATURAS[cc.bicho];
+      const y = p.h + 1;
+      const livres: [number, number][] = [];
+      for (let z = cc.z0; z <= cc.z1; z++)
+        for (let x = cc.x0; x <= cc.x1; x++)
+          if (
+            m.solido(x, y - 1, z) &&
+            !m.agua(x, y - 1, z) &&
+            !colideCorpo(m.solido, x + 0.5, y, z + 0.5, def.mw, def.alt)
+          )
+            livres.push([x, z]);
+      if (livres.length === 0) return;
+      cercadosChamados.add(chave);
+      centrosCercados.set(chave, [(cc.x0 + cc.x1) / 2 + 0.5, (cc.z0 + cc.z1) / 2 + 0.5]);
+      let ja = 0;
+      for (const c of lista) if (c.curral === chave && c.estado !== 'morrendo') ja++;
+      for (let i = ja; i < BICHOS_POR_CERCADO; i++) {
+        // espalhados pelo miolo: 1/6, 3/6 e 5/6 da lista de pontos livres
+        const [x, z] = livres[Math.floor(((2 * i + 1) * livres.length) / (2 * BICHOS_POR_CERCADO))];
+        const c = novaCriatura(proximo++, cc.bicho, x + 0.5, y, z + 0.5);
+        c.curral = chave;
+        c.yaw = c.yawAlvo = (k + i) * 2.1;
+        lista.push(c);
+      }
+    });
+  }
+
+  /** Libera os cercados vazios e longe de todos (para renascerem na próxima visita). */
+  function liberarCercados(js: readonly Jogador[]): void {
+    if (cercadosChamados.size === 0) return;
+    const vivos = new Set<string>();
+    for (const c of lista) if (c.curral) vivos.add(c.curral);
+    for (const chave of cercadosChamados) {
+      if (vivos.has(chave)) continue;
+      const [x, z] = centrosCercados.get(chave)!;
+      if (js.some((j) => Math.hypot(j.x - x, j.z - z) < 70)) continue;
+      cercadosChamados.delete(chave);
+      centrosCercados.delete(chave);
     }
   }
 
@@ -153,7 +215,7 @@ export function criarPopulacao(rng: Gerador, salvo?: unknown) {
   function tentarSpawn(m: MundoPopulacao, j: Jogador, noite: number): void {
     const contar = (t: TipoCriatura) => {
       let n = 0;
-      for (const c of lista) if (c.tipo === t && !c.domada) n++;
+      for (const c of lista) if (c.tipo === t && !c.domada && !c.curral) n++;
       return n;
     };
     const a = rng() * Math.PI * 2;
@@ -230,6 +292,7 @@ export function criarPopulacao(rng: Gerador, salvo?: unknown) {
       tempoPovoado -= dt;
       if (tempoPovoado <= 0) {
         tempoPovoado = 1;
+        liberarCercados(js);
         for (const j of js) chamarMoradores(m, j);
       }
       // reaproveita o vetor de hostis: nada de filter por quadro

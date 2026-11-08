@@ -3,6 +3,7 @@ import {
   ajusteDaColuna,
   FORMAS_PADRAO,
   planoDaRegiao,
+  planoSemBloqueio,
   REGIAO_POVOADO,
   type PlanoPovoado,
   type TerrenoNatural,
@@ -98,6 +99,9 @@ export const TERRENO_NATURAL: TerrenoNatural = {
   bioma: (wx, wz, s, h) => biomaEm(wx, wz, s, h),
   nivelMar: NIVEL_MAR,
   nascimento: (s) => encontrarNascimento(s),
+  get planta() {
+    return estilo.povoado?.planta ?? 'vila';
+  },
 };
 
 let povoadosLigados = true;
@@ -112,7 +116,7 @@ let ultimoPlano: PlanoPovoado | null = null;
 export function povoadoNaColuna(wx: number, wz: number, semente: number): PlanoPovoado | null {
   const rx = Math.floor(wx / REGIAO_POVOADO);
   const rz = Math.floor(wz / REGIAO_POVOADO);
-  const k = `${rx},${rz},${semente},${versaoDosPovoados()}`;
+  const k = `${rx},${rz},${semente},${versaoDosPovoados()},${TERRENO_NATURAL.planta}`;
   if (k !== ultimaRegiao) {
     ultimaRegiao = k;
     ultimoPlano = planoDaRegiao(rx, rz, semente, TERRENO_NATURAL);
@@ -602,6 +606,29 @@ function construirEstrutura(
       ])
         em(8 + dx, h + 1, 8 + dz, Bloco.PEDRA_LISA);
       break;
+    case 'espantalho': {
+      // spec 013: lavoura abandonada (terra arada com umas plantas maduras, grama tomando
+      // conta) e um espantalho de chapéu de abóbora atrás do baú
+      const maduras = [Bloco.TRIGO_3, Bloco.MILHO_3, Bloco.ABOBOREIRA_3];
+      for (let dz = -3; dz <= 3; dz++)
+        for (let dx = -3; dx <= 3; dx++) {
+          const x = 8 + dx;
+          const z = 8 + dz;
+          const r = hash2(x, z, semente + 67);
+          if (r < 0.6) {
+            em(x, h, z, Bloco.TERRA_ARADA);
+            if (r < 0.22) em(x, h + 1, z, maduras[Math.floor(hash2(z, x, semente + 68) * 3)]);
+          } else {
+            em(x, h, z, Bloco.TERRA_MUSGOSA);
+            if (r > 0.75) em(x, h + 1, z, Bloco.GRAMA_ALTA);
+          }
+        }
+      for (let y = 1; y <= 3; y++) em(8, h + y, 9, y < 3 ? Bloco.CERCA : Bloco.LA_AZUL);
+      em(7, h + 3, 9, Bloco.CERCA);
+      em(9, h + 3, 9, Bloco.CERCA);
+      em(8, h + 4, 9, Bloco.ABOBORA);
+      break;
+    }
     case 'torre':
       // torre fina e torta com uma plataforma no alto
       for (let y = 1; y <= 5; y++) {
@@ -894,27 +921,75 @@ export function arvoreDaForma(
 
 /** Procura um ponto de nascimento em terra firme perto da origem. */
 /** Nascimento pelo terreno natural (povoados nunca cobrem este ponto). */
-const nascimentos = new Map<number, { x: number; z: number }>();
+const nascimentos = new Map<string, { x: number; z: number }>();
 export function encontrarNascimento(semente: number): { x: number; z: number } {
-  let n = nascimentos.get(semente);
+  const sitio = TERRENO_NATURAL.planta === 'sitio';
+  const k = sitio ? `${semente},sitio` : `${semente}`;
+  let n = nascimentos.get(k);
   if (!n) {
-    n = procurarNascimento(semente);
-    nascimentos.set(semente, n);
+    n = sitio ? nascimentoPertoDoSitio(semente) : procurarNascimento(semente);
+    nascimentos.set(k, n);
   }
   return n;
 }
 
-function procurarNascimento(semente: number): { x: number; z: number } {
+function bomParaNascer(x: number, z: number, semente: number): boolean {
+  const h = alturaNatural(x, z, semente);
+  const b = biomaEm(x, z, semente, h);
+  return h > NIVEL_MAR + 1 && h < 88 && b !== 'deserto';
+}
+
+function procurarNascimento(
+  semente: number,
+  livre: (x: number, z: number) => boolean = () => true,
+): { x: number; z: number } {
   for (let raio = 0; raio < 400; raio += 4) {
     const passos = Math.max(1, Math.floor(raio / 2));
     for (let i = 0; i < passos; i++) {
       const a = (i / passos) * Math.PI * 2;
       const x = Math.round(8 + Math.cos(a) * raio);
       const z = Math.round(8 + Math.sin(a) * raio);
-      const h = alturaNatural(x, z, semente);
-      const b = biomaEm(x, z, semente, h);
-      if (h > NIVEL_MAR + 1 && h < 88 && b !== 'deserto') return { x: x + 0.5, z: z + 0.5 };
+      if (bomParaNascer(x, z, semente) && livre(x, z)) return { x: x + 0.5, z: z + 0.5 };
     }
   }
   return { x: 8.5, z: 8.5 };
+}
+
+/**
+ * Spec 013 (Rancho Alegre): o jogador nasce com o sítio à vista. Procura o sítio mais perto
+ * da origem e um ponto em terra firme logo fora dele (e de qualquer outro), voltado para a
+ * origem. É puro (só semente e estilo): o servidor acha o mesmo ponto.
+ */
+function nascimentoPertoDoSitio(semente: number): { x: number; z: number } {
+  const plano = (rx: number, rz: number) => planoSemBloqueio(rx, rz, semente, TERRENO_NATURAL);
+  const livre = (x: number, z: number) => {
+    const rx = Math.floor(x / REGIAO_POVOADO);
+    const rz = Math.floor(z / REGIAO_POVOADO);
+    for (let dx = -1; dx <= 1; dx++)
+      for (let dz = -1; dz <= 1; dz++) {
+        const p = plano(rx + dx, rz + dz);
+        if (p && x >= p.minX - 2 && x <= p.maxX + 2 && z >= p.minZ - 2 && z <= p.maxZ + 2)
+          return false;
+      }
+    return true;
+  };
+  const sitios: PlanoPovoado[] = [];
+  for (let rx = -2; rx <= 2; rx++)
+    for (let rz = -2; rz <= 2; rz++) {
+      const p = plano(rx, rz);
+      if (p) sitios.push(p);
+    }
+  const dist = (p: PlanoPovoado) => Math.hypot(p.cx - 8, p.cz - 8);
+  sitios.sort((a, b) => dist(a) - dist(b) || a.cx - b.cx || a.cz - b.cz);
+  for (const p of sitios.slice(0, 4)) {
+    const virado = Math.atan2(8 - p.cz, 8 - p.cx);
+    for (let d = 30; d <= 56; d += 2)
+      for (let k = 0; k < 24; k++) {
+        const a = virado + (k % 2 ? 1 : -1) * Math.ceil(k / 2) * ((Math.PI * 2) / 24);
+        const x = Math.round(p.cx + Math.cos(a) * d);
+        const z = Math.round(p.cz + Math.sin(a) * d);
+        if (bomParaNascer(x, z, semente) && livre(x, z)) return { x: x + 0.5, z: z + 0.5 };
+      }
+  }
+  return procurarNascimento(semente, livre);
 }

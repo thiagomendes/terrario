@@ -196,13 +196,21 @@ export function construirRanchoAlegre(): Tema {
         montanhas: ['araucaria', 'carvalho'],
         pantano: ['lanterna'],
       },
-      // TODO(013, após a junção): 'espantalho' (a estrutura rara do sítio)
-      estrutura: 'casinha',
+      // espantalho com baú no meio de uma lavoura abandonada
+      estrutura: 'espantalho',
       crateras: 0,
       flora: 1,
-      // TODO(013, após a junção): planta: 'sitio' e marco: 'moinho'
-      // casa da fazenda, oficina de telhado de duas águas e o silo redondo, em volta do poço
-      povoado: { casa: 'duas-aguas', oficina: 'duas-aguas', deposito: 'redonda', marco: 'poco' },
+      // sítio (spec 013): casa da fazenda, celeiro, ferraria, silo, lavouras, curral e
+      // galinheiro em volta do moinho (as formas de casa só valem para a vila)
+      povoado: {
+        casa: 'duas-aguas',
+        oficina: 'duas-aguas',
+        deposito: 'redonda',
+        marco: 'moinho',
+        planta: 'sitio',
+      },
+      // a coruja da noite é mansa (o comportamento vem da T04)
+      noite: 'mansa',
     },
     // viola caipira (sino de corda dedilhada) e sanfona (acordes de palheta com o "musette")
     musica: {

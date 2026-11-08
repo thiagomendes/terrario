@@ -4,7 +4,13 @@
  */
 import type { EstiloMundo, FormaArvore, FormaEstrutura } from '../temas/tipos';
 import { ESTILO_PADRAO, type Bioma } from './chunk';
-import { FORMAS_PADRAO, type FormaCasa, type FormaMarco, type FormasPovoado } from './povoado';
+import {
+  FORMAS_PADRAO,
+  type FormaCasa,
+  type FormaMarco,
+  type FormasPovoado,
+  type PlantaPovoado,
+} from './povoado';
 
 const BIOMAS: readonly Bioma[] = [
   'oceano',
@@ -36,9 +42,12 @@ const ESTRUTURAS: readonly FormaEstrutura[] = [
   'casinha',
   'torre',
   'ninho',
+  'espantalho',
 ];
 const CASAS: readonly FormaCasa[] = ['duas-aguas', 'cupula', 'tenda', 'redonda', 'modulo'];
-const MARCOS: readonly FormaMarco[] = ['poco', 'fonte', 'antena', 'totem', 'esqueleto'];
+const MARCOS: readonly FormaMarco[] = ['poco', 'fonte', 'antena', 'totem', 'esqueleto', 'moinho'];
+const PLANTAS: readonly PlantaPovoado[] = ['vila', 'sitio'];
+const NOITES: readonly NonNullable<EstiloMundo['noite']>[] = ['assusta', 'mansa'];
 
 const entre01 = (v: unknown, padrao: number) =>
   typeof v === 'number' && Number.isFinite(v) ? Math.min(1, Math.max(0, v)) : padrao;
@@ -68,6 +77,10 @@ export function estiloSeguro(v: unknown): EstiloMundo {
         oficina: uma(p.oficina, CASAS, FORMAS_PADRAO.oficina),
         deposito: uma(p.deposito, CASAS, FORMAS_PADRAO.deposito),
         marco: uma(p.marco, MARCOS, FORMAS_PADRAO.marco),
+        // spec 013: sem o campo, continua sem (o povoado de sempre)
+        ...(PLANTAS.includes(p.planta as PlantaPovoado)
+          ? { planta: p.planta as PlantaPovoado }
+          : {}),
       }
     : undefined;
   return {
@@ -76,5 +89,6 @@ export function estiloSeguro(v: unknown): EstiloMundo {
     crateras: entre01(o.crateras, ESTILO_PADRAO.crateras),
     flora: entre01(o.flora, ESTILO_PADRAO.flora),
     ...(povoado ? { povoado } : {}),
+    ...(NOITES.includes(o.noite as never) ? { noite: o.noite as EstiloMundo['noite'] } : {}),
   };
 }
