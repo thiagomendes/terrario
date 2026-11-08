@@ -195,6 +195,11 @@ export function montarPartes(aparencia: Aparencia): Parte[] {
     case 'touca-chef':
       partes.push(naCabeca([LADO_CABECA + 0.06, 0.3, LADO_CABECA + 0.06], ALTURA_CABECA + 0.13));
       break;
+    case 'chapeu-palha':
+      // copa e aba bem larga (chapéu de palha da roça)
+      partes.push(naCabeca([LADO_CABECA + 0.02, 0.16, LADO_CABECA + 0.02], ALTURA_CABECA + 0.06));
+      partes.push(naCabeca([LADO_CABECA + 0.4, 0.04, LADO_CABECA + 0.4], ALTURA_CABECA - 0.01));
+      break;
     case 'coroa-flores':
       partes.push(naCabeca([LADO_CABECA + 0.06, 0.08, LADO_CABECA + 0.06], ALTURA_CABECA - 0.02));
       break;

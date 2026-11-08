@@ -880,6 +880,7 @@ export function criarCena(
     });
     vagalumes.atualizar(camera.position, a.noite, jogadorCoberto || cameraSubmersa ? 0 : 1);
     ambiente?.definirNoite(a.noite);
+    ambiente?.definirHora(hora);
   }
 
   const malhas = new Map<string, Mesh[]>();

@@ -17,7 +17,8 @@ export type IdTema =
   | 'mata-encantada'
   | 'doce-reino'
   | 'era-dos-dinos'
-  | 'exploracao-lunar';
+  | 'exploracao-lunar'
+  | 'rancho-alegre';
 
 export type Rgb = readonly [number, number, number];
 /** Pixel RGBA 0..255 de um tile. */
@@ -237,6 +238,12 @@ export interface NaturezaTema {
   bipes?: boolean;
   /** Volume do vento contínuo (padrão 1; 0 no vácuo). */
   vento?: number;
+  /**
+   * Sons curtos do campo (Rancho Alegre), cada um na sua hora: galo ao amanhecer, mugido ao
+   * longe de dia, cigarra de tarde e sapo à noite. Multiplicadores da chance (0 ou ausente =
+   * nunca). Sempre sons curtos, nunca em laço.
+   */
+  roca?: { galo?: number; mugido?: number; cigarra?: number; sapo?: number };
 }
 
 /** Ajuste do som de um material no tema (mesmo motor de amostras). */

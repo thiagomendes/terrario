@@ -149,7 +149,8 @@ export function moradorDeBrinquedo(
       const maior = Math.max(...t);
       const menor = Math.min(...t);
       pecasNovas.push(
-        maior <= 0.12
+        // bolinhas pequenas e as peças desenhadas como bola (aba redonda do chapéu de palha)
+        maior <= 0.12 || e.forma === 'bola'
           ? {
               nome: `extra-${i}`,
               junta,

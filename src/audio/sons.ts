@@ -8,7 +8,7 @@ import { criarGerador, criarVariador, jitter, type Gerador } from './variacao';
 import type { ContextoAudio, Desenho, FonteAudio, GrupoAudio, MotorAudio, NoAudio } from './motor';
 import type { GrupoMaterial } from './materiais';
 import { povoadoDoTema, tema } from '../temas/ativo';
-import type { PioCriatura, VozCriatura } from '../temas/tipos';
+import type { NaturezaTema, PioCriatura, VozCriatura } from '../temas/tipos';
 import type { TipoSer } from '../jogo/criaturas';
 
 export type EventoSom =
@@ -743,6 +743,8 @@ export interface Ambiente {
   parar(): void;
   /** 0 de dia (pássaros), 1 de noite (grilos); muda a mistura. */
   definirNoite(noite: number): void;
+  /** Hora do dia (0 a 1): os sons do campo têm hora (galo ao amanhecer, cigarra de tarde). */
+  definirHora(hora: number): void;
   /** Volumes relativos (0 a 1) da trilha e da natureza. */
   definirVolumes(musica: number, natureza: number): void;
   /** Intensidade da chuva (0 a 1): chiado contínuo e menos pássaros. */
@@ -939,6 +941,10 @@ export function iniciarAmbiente(
   let proximoBicho = 0;
   let indiceAcorde = 0;
   const rng = criarGerador(2026);
+  // sons do campo (Rancho Alegre): sorteio próprio, para não mudar o ambiente dos outros temas
+  const rngRoca = criarGerador(1313);
+  let hora = 0.5;
+  let proximaRoca = 0;
 
   /** Quando cada som do ambiente deveria acabar (o vigia corta quem passar muito disso). */
   const fins = new Map<FonteAudio, number>();
@@ -1030,6 +1036,60 @@ export function iniciarAmbiente(
     }
   }
 
+  /**
+   * Sons curtos do campo, cada um na sua hora. Todos são tons com fim marcado (nunca em laço)
+   * e passam pelo vigia como os grilos.
+   */
+  function galo(t: number): void {
+    const partes: [number, number, number, number][] = [
+      [0, 620, 760, 0.1],
+      [0.15, 760, 700, 0.1],
+      [0.3, 820, 920, 0.12],
+      [0.47, 920, 640, 0.5],
+    ];
+    for (const [dt, de, ate, dur] of partes) {
+      registrar(tom(ctxA!, busNatureza!, t + dt, 'sawtooth', de, ate, 0.018, dur, 0.02));
+      registrar(tom(ctxA!, busNatureza!, t + dt, 'triangle', de * 2, ate * 2, 0.012, dur, 0.02));
+    }
+  }
+
+  function mugido(t: number): void {
+    registrar(tom(ctxA!, busNatureza!, t, 'sawtooth', 165, 118, 0.022, 1.1, 0.22));
+    registrar(tom(ctxA!, busNatureza!, t, 'triangle', 330, 236, 0.012, 1.0, 0.22));
+  }
+
+  function cigarra(t: number): void {
+    const f = 4400 + rngRoca() * 600;
+    for (let i = 0; i < 18; i++) {
+      // cresce e some (o "zzziiii" da tarde)
+      const k = Math.sin((i / 17) * Math.PI);
+      registrar(
+        tom(ctxA!, busNatureza!, t + i * 0.06, 'square', f, f * 0.97, 0.006 + 0.01 * k, 0.04),
+      );
+    }
+  }
+
+  function sapo(t: number): void {
+    const n = 2 + Math.floor(rngRoca() * 2);
+    for (let i = 0; i < n; i++)
+      registrar(tom(ctxA!, busNatureza!, t + i * 0.2, 'square', 200, 140, 0.02, 0.1, 0.01));
+  }
+
+  function somDaRoca(t: number, roca: NonNullable<NaturezaTema['roca']>): void {
+    const sorte = () => rngRoca();
+    if ((roca.galo ?? 0) > 0 && hora > 0.22 && hora < 0.34 && sorte() < 0.5 * roca.galo!) galo(t);
+    else if ((roca.sapo ?? 0) > 0 && noite > 0.5 && sorte() < 0.45 * roca.sapo!) sapo(t);
+    else if (
+      (roca.cigarra ?? 0) > 0 &&
+      hora > 0.52 &&
+      hora < 0.72 &&
+      chuva < 0.3 &&
+      sorte() < 0.4 * roca.cigarra!
+    )
+      cigarra(t);
+    else if ((roca.mugido ?? 0) > 0 && noite < 0.5 && sorte() < 0.2 * roca.mugido!) mugido(t);
+  }
+
   /** Vigia: nota, grilo ou bipe que passou 3 s da hora de acabar é cortado e desligado. */
   function vigiar(agora: number): void {
     for (const [fonte, fim] of fins) {
@@ -1106,6 +1166,14 @@ export function iniciarAmbiente(
         proximoBicho = t + 1.2 + rng() * 3;
       }
     }
+    const roca = tema().natureza.roca;
+    if (roca) {
+      while (proximaRoca < ate) {
+        const t = Math.max(proximaRoca, agora + 0.05);
+        somDaRoca(t, roca);
+        proximaRoca = t + 7 + rngRoca() * 10;
+      }
+    } else proximaRoca = agora;
   }
 
   const ok = motor.estado === 'ativo' && !motor.mudo;
@@ -1186,6 +1254,9 @@ export function iniciarAmbiente(
   return {
     definirNoite(n) {
       noite = Math.max(0, Math.min(1, n));
+    },
+    definirHora(h) {
+      if (Number.isFinite(h)) hora = ((h % 1) + 1) % 1;
     },
     get contexto() {
       return contexto;

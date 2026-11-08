@@ -477,6 +477,19 @@ function pintorAcessorio(a: Aparencia, c: Cores): Pintor {
         return x % 3 === 0 ? tom(branco, 0.86) : grao(branco, x, y, 83, 0.03);
       };
     }
+    case 'chapeu-palha': {
+      const palha: Rgb = [240, 207, 106];
+      const fita: Rgb = [217, 72, 59];
+      return (face, x, y, _w, h) => {
+        // aba: palha trançada (xadrezinho)
+        if (h <= 2) return grao(tom(palha, (x + y) % 2 ? 0.9 : 1), x, y, 97, 0.05);
+        if (face === 'base') return null;
+        if (face === 'topo') return grao(tom(palha, (x + y) % 2 ? 0.92 : 1.02), x, y, 97, 0.05);
+        // fita vermelha na base da copa
+        if (y >= h - 2) return fita;
+        return grao(tom(palha, (x + y * 2) % 3 ? 1 : 0.88), x, y, 97, 0.05);
+      };
+    }
     case 'coroa-flores': {
       const folha: Rgb = [84, 150, 70];
       const petalas: Rgb[] = [
