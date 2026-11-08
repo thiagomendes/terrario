@@ -1,4 +1,5 @@
 import { test, type Page } from '@playwright/test';
+import { temasPedidos } from './temas';
 
 /**
  * Matriz de capturas por tema (spec 007, critério 5) e prévias dos cartões de tema
@@ -6,17 +7,9 @@ import { test, type Page } from '@playwright/test';
  *   CAPTURAS_TEMAS=1 npx playwright test e2e/capturas-temas.spec.ts
  * CAPTURAS_TEMAS=<id> roda só um tema.
  */
-const TODOS = [
-  'bruma-e-luz',
-  'planeta-vivo',
-  'mata-encantada',
-  'doce-reino',
-  'era-dos-dinos',
-  'exploracao-lunar',
-];
 declare const process: { env: Record<string, string | undefined> };
 const pedido = process.env.CAPTURAS_TEMAS;
-const TEMAS = pedido && pedido !== '1' ? pedido.split(',') : TODOS;
+const TEMAS = temasPedidos(pedido);
 // fora de test-results: o Playwright limpa aquela pasta a cada rodada
 const PASTA = 'capturas-temas';
 const AGUA = 67;

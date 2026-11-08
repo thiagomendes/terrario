@@ -1,4 +1,5 @@
 import { test, type Page } from '@playwright/test';
+import { IDS_TEMAS } from './temas';
 import { Bloco } from '../src/world/blocks';
 
 /**
@@ -131,14 +132,7 @@ test('boneco de brinquedo nos enquadramentos dos esboços', async ({ page }) => 
   await page.keyboard.press('Escape');
 });
 
-const TEMAS = [
-  'bruma-e-luz',
-  'planeta-vivo',
-  'mata-encantada',
-  'doce-reino',
-  'era-dos-dinos',
-  'exploracao-lunar',
-];
+const TEMAS = IDS_TEMAS;
 for (const id of TEMAS) {
   test(`bichos e moradores de brinquedo: ${id}`, async ({ page }) => {
     test.setTimeout(300_000);
@@ -629,14 +623,7 @@ test('tochas de brinquedo à noite', async ({ page }) => {
   await foto(page, 'tochas-noite');
 });
 
-for (const id of [
-  'bruma-e-luz',
-  'planeta-vivo',
-  'doce-reino',
-  'era-dos-dinos',
-  'exploracao-lunar',
-  'mata-encantada',
-]) {
+for (const id of IDS_TEMAS) {
   test(`vitrine dos bichos: ${id}`, async ({ page }) => {
     test.setTimeout(240_000);
     await page.setViewportSize({ width: 1280, height: 720 });
