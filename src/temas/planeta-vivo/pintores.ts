@@ -9,6 +9,12 @@ import {
   ruidoT,
   tijolosDe,
   ladoComTopo,
+  terraAradaDe,
+  trigoDe,
+  milhoDe,
+  aboboreiraDe,
+  fenoLadoDe,
+  fenoTopoDe,
 } from '../../art/atlas';
 import type { Pintor, Px } from '../tipos';
 
@@ -881,6 +887,23 @@ export const PINTORES_PLANETA: Record<string, Pintor> = {
   abobora_lado: cabacaLado,
   abobora_topo: cabacaTopo,
   abobora_rosto: cabacaRosto,
+
+  // spec 013: canteiro de pesquisa, grão-estelar, milho-bolha, cabaça-lua e fardo lilás
+  terra_arada: (x, y, s) => {
+    const p = terraAradaDe(soloAmbar, 0.5, 0.2)(x, y, s);
+    // pontinhos de esporo brilhando no sulco
+    if (y % 4 === 3 && hash2(x, y, s + 41) > 0.82) return cor('#7af0e0', x, y, s);
+    return p;
+  },
+  trigo: trigoDe(['#2a9a8a', '#34ae9a', '#40c2aa'], ['#b84aa8', '#cc5cbc', '#e070d0'], '#ffd0f4'),
+  milho: milhoDe(
+    ['#228a7a', '#2c9e8a', '#38b29a', '#46c4aa'],
+    ['#5a7ae8', '#7c96f4', '#a4b6ff'],
+    '#f0c0f0',
+  ),
+  aboboreira: aboboreiraDe(['#1f8a78', '#2a9e88', '#36b296', '#44c4a6'], CABACA, '#5aa0b4'),
+  feno_lado: fenoLadoDe(['#a872b4', '#b884c2', '#c696ce', '#d2a8da'], '#1f7a6c'),
+  feno_topo: fenoTopoDe(['#ac76b8', '#bc88c6', '#ca9ad2', '#d6acdc'], '#1f7a6c'),
 };
 
 /** Tiles que brilham: os do jogo base e as pontas dos tubos-flauta. */

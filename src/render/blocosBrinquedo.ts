@@ -625,6 +625,41 @@ export function modeloDeBloco(
       break;
     }
 
+    // ---------- spec 013: terra arada e fardo de feno ----------
+    case Bloco.TERRA_ARADA: {
+      // torrão de terra com três leiras roliças em cima (sulcos escuros entre elas)
+      caixa(lado0, 1, 0.78, 1, 0.12, 0, -0.11, 0);
+      caixa(tom(lado0, 0.6), 0.96, 0.1, 0.96, 0.04, 0, 0.27, 0);
+      for (const z of [-0.33, 0, 0.33]) caixa(tom(topo0, 1.12), 1, 0.2, 0.26, 0.1, 0, 0.3, z);
+      break;
+    }
+    case Bloco.FENO: {
+      // fardo: palha com fiapos, duas cordas dando a volta e as pontas da palha em cima
+      corpo(lado0, 0.1);
+      const corda = tom(lado0, 0.5);
+      for (const x of [-0.26, 0.26]) caixa(corda, 0.09, 1.03, 1.03, 0.04, x, 0, 0);
+      const rnd = sorteio(81);
+      const claro = tom(lado0, 1.18);
+      const escuro = tom(lado0, 0.82);
+      // fiapos deitados; na frente e atrás, só entre as cordas (que ficam em u = ±0,52)
+      for (const f of LADOS) {
+        const largo = FACES[f].n === 0;
+        for (let i = 0; i < 6; i++)
+          barra(
+            f,
+            (rnd() - 0.5) * (largo ? 0.6 : 0.2),
+            -0.75 + i * 0.3,
+            largo ? 0.4 : 0.3,
+            0.035,
+            i % 2 ? claro : escuro,
+            0,
+          );
+      }
+      for (let i = 0; i < 7; i++)
+        pinta('py', (rnd() - 0.5) * 1.6, (rnd() - 0.5) * 1.6, 0.05, escuro);
+      break;
+    }
+
     // ---------- cacto ----------
     case Bloco.CACTO: {
       const verde = lado0;

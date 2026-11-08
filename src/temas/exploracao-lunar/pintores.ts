@@ -8,6 +8,12 @@ import {
   moldura,
   rampa,
   ruidoT,
+  terraAradaDe,
+  trigoDe,
+  milhoDe,
+  aboboreiraDe,
+  fenoLadoDe,
+  fenoTopoDe,
 } from '../../art/atlas';
 import { hash2 } from '../../world/noise';
 import type { Pintor, Px } from '../tipos';
@@ -949,6 +955,27 @@ export const PINTORES_LUNARES: Record<string, Pintor> = {
     if (olho || boca) return rampa(['#7affd8', '#c8fff0'], hash2(x, y, s), x, y, s);
     return PINTORES_LUNARES.abobora_lado(x, y, s);
   },
+
+  // spec 013: canteiro hidropônico (regolito em leiras com canais de água), trigo e milho
+  // de estufa, aboboreira lunar e fardo de palha preso com cintas de metal
+  terra_arada: (x, y, s) => {
+    if (y % 4 === 3) return rampa(['#3a78c8', '#4a8ad8', '#5c9ce6'], hash2(x, y, s), x, y, s);
+    if (x === 0 || x === T - 1) return rampa(['#8e98a6', '#a2acb8'], hash2(x, y, s), x, y, s);
+    return terraAradaDe(regolitoGrosso, 0.6, 0.2)(x, y, s);
+  },
+  trigo: trigoDe(['#4a9a4a', '#58ac56', '#68be64'], ['#d8c47a', '#e6d48a', '#f4e4a4'], '#ffffff'),
+  milho: milhoDe(
+    ['#3c9a48', '#4aac54', '#5abe62', '#6ccc72'],
+    ['#e8c040', '#f4d458', '#fde878'],
+    '#f4f0d0',
+  ),
+  aboboreira: aboboreiraDe(
+    ['#6aa83a', '#7aba44', '#8ac850', '#9cd660'],
+    ['#1f706c', '#2f938c', '#38a59d', '#44b6ad'],
+    '#8a8e96',
+  ),
+  feno_lado: fenoLadoDe(['#c4b276', '#d0c084', '#dccc94', '#e6d8a4'], '#667284'),
+  feno_topo: fenoTopoDe(['#c8b67a', '#d4c488', '#e0d098', '#e8dca8'], '#667284'),
 };
 
 /** Tiles que brilham: além dos de luz, as centelhas do vale e as bagas de energia. */

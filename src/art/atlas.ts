@@ -653,7 +653,155 @@ export const PINTORES: Record<string, Pintor> = {
     if (olho || boca) return rampa(['#ffd060', '#ffe08a'], hash2(x, y, s), x, y, s);
     return PINTORES.abobora_lado(x, y, s);
   },
+  // spec 013: plantio
+  terra_arada: terraAradaDe(pintorTerra()),
+  trigo: trigoDe(['#4f8a2c', '#5e9c36', '#6eae40'], ['#c8922a', '#dcab3c', '#f0c858'], '#f6dc8a'),
+  milho: milhoDe(
+    ['#3d8a2e', '#4a9c38', '#5aae44', '#6cbe50'],
+    ['#e8a818', '#f6c430', '#ffdc58'],
+    '#efe0a0',
+  ),
+  aboboreira: aboboreiraDe(
+    ['#3d7a2c', '#4a8c34', '#5a9e3e', '#6ab04a'],
+    ['#c8601a', '#dc7422', '#ec8c2c', '#f6a03a'],
+  ),
+  feno_lado: fenoLadoDe(['#c49a38', '#d2aa44', '#dfba54', '#eaca66'], '#6e4220'),
+  feno_topo: fenoTopoDe(['#c9a03c', '#d8b04a', '#e4c05c', '#eed070'], '#6e4220'),
 };
+
+// ---------- spec 013: lavoura e feno (fábricas que os temas reaproveitam com as cores deles) ----------
+
+/**
+ * Terra arada de brinquedo: a terra do tema com 4 leiras (crista clara, sulco escuro), que
+ * se reconhecem de longe. `sulco` e `crista` dizem o quanto escurece e clareia.
+ */
+export function terraAradaDe(base: Pintor, sulco = 0.45, crista = 0.24): Pintor {
+  return (x, y, s) => {
+    const p = base(x, y, s);
+    const f = y % 4;
+    if (f === 3) return escurece(p, sulco);
+    if (f === 2) return escurece(p, 0.75);
+    if (f === 0)
+      return [
+        p[0] + (255 - p[0]) * crista,
+        p[1] + (255 - p[1]) * crista,
+        p[2] + (255 - p[2]) * crista,
+        p[3],
+      ];
+    return p;
+  };
+}
+
+/**
+ * Trigo (a cor das peças de brinquedo e o desenho em cruz de reserva): quatro hastes verdes
+ * com espigas grandes e granuladas no alto e uma folhinha em cada.
+ */
+export function trigoDe(caule: string[], espiga: string[], barba?: string): Pintor {
+  const HASTES: Array<[number, number]> = [
+    [2, 3],
+    [6, 1],
+    [10, 4],
+    [13, 2],
+  ];
+  return (x, y, s) => {
+    for (const [hx, topo] of HASTES) {
+      const fim = topo + 6;
+      if (y >= topo && y < fim && (x === hx || x === hx + 1)) {
+        const grao = (y - topo + x - hx) % 2 === 0;
+        return rampa(espiga, grao ? 0.85 : 0.35, x, y, s);
+      }
+      if (barba && y === topo - 1 && x === hx + ((topo + hx) % 2))
+        return rampa([barba], 0, x, y, s);
+      if (y >= fim && x === hx) return rampa(caule, 0.2 + (y - fim) / 12, x, y, s);
+      // folhinha saindo da haste, para o lado de fora
+      const lado = hx < 8 ? -1 : 1;
+      if (y === fim + 3 && x === hx + lado) return rampa(caule, 0.8, x, y, s);
+      if (y === fim + 2 && x === hx + 2 * lado) return rampa(caule, 0.9, x, y, s);
+    }
+    return VAZIO;
+  };
+}
+
+/** Milho: um pé alto com folhas compridas, o pendão no alto e uma espiga amarela de lado. */
+export function milhoDe(folha: string[], espiga: string[], palha: string): Pintor {
+  return (x, y, s) => {
+    // espiga: grãos em xadrez, com a palha verde em volta embaixo
+    if (x >= 9 && x <= 11 && y >= 5 && y <= 10) {
+      if (y === 10 || (y >= 9 && x === 11)) return rampa(folha, 0.7, x, y, s);
+      return rampa(espiga, (x + y) % 2 === 0 ? 0.85 : 0.4, x, y, s);
+    }
+    // pendão
+    if (
+      y <= 2 &&
+      (x === 7 || (y === 1 && (x === 6 || x === 8)) || (y === 0 && (x === 5 || x === 9)))
+    )
+      return rampa([palha], 0, x, y, s);
+    // caule
+    if ((x === 7 || x === 8) && y >= 2) return rampa(folha, 0.25 + y / 30, x, y, s);
+    // folhas compridas em diagonal, caindo para fora
+    const dx = x < 7 ? 7 - x : x - 8;
+    for (const [y0, lado] of [
+      [4, -1],
+      [7, 1],
+      [9, -1],
+      [12, 1],
+    ] as const) {
+      if ((lado < 0 ? x < 7 : x > 8) && dx <= 6 && y === y0 + Math.floor(dx / 2) - (dx > 4 ? 0 : 0))
+        if (!(lado > 0 && x >= 9 && x <= 11 && y >= 5 && y <= 10))
+          return rampa(folha, 0.55 + dx / 14, x, y, s);
+    }
+    return VAZIO;
+  };
+}
+
+/** Aboboreira: duas folhas redondas na rama e uma abóbora gorda com gomos embaixo. */
+export function aboboreiraDe(folha: string[], fruto: string[], cabo = '#6b7d30'): Pintor {
+  return (x, y, s) => {
+    // abóbora: elipse embaixo, com gomos mais escuros
+    const ax = (x - 8) / 5.6;
+    const ay = (y - 12.2) / 3.4;
+    if (ax * ax + ay * ay <= 1) {
+      const gomo = Math.abs(x - 8) === 2 || Math.abs(x - 8) === 5;
+      return rampa(fruto, gomo ? 0.1 : 0.5 + (1 - (y - 9) / 7) * 0.5, x, y, s);
+    }
+    if ((x === 8 || x === 9) && y === 8) return rampa([cabo], 0, x, y, s);
+    // folhas redondas, com a nervura mais escura
+    for (const [fx, fy, r] of [
+      [4, 5, 3.4],
+      [11.5, 4, 3.2],
+    ] as const) {
+      const d = Math.hypot(x - fx, y - fy);
+      if (d <= r) {
+        const nervura = x === Math.round(fx) || y === Math.round(fy);
+        return rampa(folha, nervura ? 0.1 : 0.45 + (1 - d / r) * 0.5, x, y, s);
+      }
+    }
+    // rama ligando as folhas à abóbora
+    if (y === 8 && x >= 4 && x <= 12) return rampa(folha, 0.2, x, y, s);
+    return VAZIO;
+  };
+}
+
+/** Lado do fardo de feno: palha em fiapos deitados e duas cordas em pé. */
+export function fenoLadoDe(palha: string[], corda: string): Pintor {
+  return (x, y, s) => {
+    if (x === 3 || x === 4 || x === 11 || x === 12) return rampa([corda], 0, x, y, s);
+    if (y === 0 || y === T - 1) return escurece(rampa(palha, 0.4, x, y, s), 0.82);
+    // fiapos: cada linha tem trechos de tom diferente, compridos na horizontal
+    const t = hash2(Math.floor((x + hash2(0, y, s) * 8) / 4), y, s + 7);
+    return rampa(palha, t, x, y, s);
+  };
+}
+
+/** Topo do fardo: as pontas da palha (pintinhas) e as mesmas duas cordas. */
+export function fenoTopoDe(palha: string[], corda: string): Pintor {
+  return (x, y, s) => {
+    if (x === 3 || x === 4 || x === 11 || x === 12) return rampa([corda], 0, x, y, s);
+    const h = hash2(x, y, s + 3);
+    if (h > 0.8) return escurece(rampa(palha, 0.3, x, y, s), 0.72);
+    return rampa(palha, fbmT(x, y, 4, s) * 0.5 + h * 0.5, x, y, s);
+  };
+}
 
 function pintorPlanta(bloco: number): Pintor {
   return (x, y, s) => {
