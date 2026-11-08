@@ -97,7 +97,7 @@ export function caixasDoBloco(
       // 90 graus na dobradiça (lado x = 0) e fica encostada nesse lado
       const aberta = id === Bloco.PORTEIRA_ABERTA;
       return PORTEIRA_FECHADA.map((c) =>
-        girar(aberta ? [c[2] - 7 * P, c[1], 1 - c[3], c[5] - 7 * P, c[4], 1 - c[0]] : c, d),
+        girar(aberta ? [c[2] - 6 * P, c[1], 1 - c[3], c[5] - 6 * P, c[4], 1 - c[0]] : c, d),
       );
     }
     default:
@@ -119,12 +119,12 @@ const PORTEIRA_FECHADA: Caixa[] = (() => {
     [2 * P, 7 * P, z0, 14 * P, 9 * P, z1],
     [2 * P, 12 * P, z0, 14 * P, 14.5 * P, z1],
   ];
-  // diagonal da dobradiça embaixo para a ponta de cima (só aparece entre as travessas)
-  const passos = 6;
+  // mão-francesa: diagonal pregada na frente, da dobradiça embaixo à ponta de cima
+  const passos = 12;
   for (let i = 0; i < passos; i++) {
-    const x = 2 * P + i * 2 * P;
-    const y = 4 * P + (i * 8 * P) / (passos - 1) - P;
-    cx.push([x, y, 7.5 * P, x + 2 * P, y + 2 * P, 8.5 * P]);
+    const x = 2 * P + i * P;
+    const y = 3 * P + (i * 9 * P) / (passos - 1);
+    cx.push([x, y, 6 * P, x + P, y + 2 * P, z0]);
   }
   return cx;
 })();

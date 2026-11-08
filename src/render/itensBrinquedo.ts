@@ -382,7 +382,13 @@ export function modeloNaMao(
     // minério, tronco, fornalha, baú...: o modelinho que parece com o bloco
     const proprio = modeloDeBloco(scene, mats, bloco, `${prefixo}-mao`, 0.24);
     if (proprio) {
-      for (const m of proprio) add(m, m.position.x, m.position.y, m.position.z);
+      // porteira: virada de frente para quem segura (de lado ela vira uma escada)
+      const giro = bloco === Bloco.PORTEIRA ? -1.2 : 0;
+      for (const m of proprio) {
+        const { x, y, z } = m.position;
+        m.rotation.y += giro;
+        add(m, x * Math.cos(giro) + z * Math.sin(giro), y, z * Math.cos(giro) - x * Math.sin(giro));
+      }
       return { no, malhas, ferramenta: false };
     }
     const c = coresDoBloco(bloco);
