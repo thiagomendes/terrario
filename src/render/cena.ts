@@ -58,6 +58,7 @@ import { PluginBalanco } from './balanco';
 import { SEMENTE_PADRAO, TAM_X, TAM_Z } from '../world/chunk';
 import type { DadosMundo, MetaMundo, ModoJogo, RepositorioMundos } from '../jogo/mundos';
 import { caixasDoBloco, cercaConecta, direcaoDoYaw, vetorDirecao } from '../world/formas';
+import { abreEFecha, alternado, ehPorta, ehPorteira } from '../world/portas';
 import { velocidadeMineracao } from '../jogo/ferramentas';
 import { obterItem } from '../jogo/itens';
 import {
@@ -216,6 +217,8 @@ const INTERATIVOS = new Set<number>([
   Bloco.PORTA,
   Bloco.PORTA_ABERTA,
   Bloco.CAMA,
+  Bloco.PORTEIRA,
+  Bloco.PORTEIRA_ABERTA,
 ]);
 let raioChunks = RAIO_INICIAL;
 let fatorNevoa = 1;
@@ -1274,7 +1277,8 @@ export function criarCena(
   function metaColocacao(bloco: number): number {
     const d = direcaoDoYaw(camera.rotation.y);
     const forma = obterBlocoDef(bloco)?.forma;
-    if (forma === 'escada' || forma === 'porta' || forma === 'cama') return d;
+    if (forma === 'escada' || forma === 'porta' || forma === 'cama' || forma === 'porteira')
+      return d;
     return obterBlocoDef(bloco)?.tiles.frente ? (d + 2) & 3 : 0;
   }
 
@@ -1391,7 +1395,7 @@ export function criarCena(
     const a = calcularAlvo();
     const alvoBloco = a ? blocoEm(a.x, a.y, a.z) : Bloco.AR;
     if (a && !shift && INTERATIVOS.has(alvoBloco)) {
-      if (alvoBloco === Bloco.PORTA || alvoBloco === Bloco.PORTA_ABERTA) {
+      if (abreEFecha(alvoBloco)) {
         alternarPorta(a.x, a.y, a.z);
         return;
       }
@@ -1450,10 +1454,11 @@ export function criarCena(
   function alternarPorta(x: number, y: number, z: number): void {
     // prevê as duas metades na hora; o som vem com a confirmação do núcleo
     const b = blocoEm(x, y, z);
-    const novo = b === Bloco.PORTA ? Bloco.PORTA_ABERTA : Bloco.PORTA;
+    const novo = alternado(b);
     const id = proximoId();
     prever(id, x, y, z, novo, edicoes.obterMeta(x, y, z));
     for (const dy of [-1, 1]) {
+      if (!ehPorta(b)) break;
       const v = blocoEm(x, y + dy, z);
       if (v === Bloco.PORTA || v === Bloco.PORTA_ABERTA)
         prever(id, x, y + dy, z, novo, edicoes.obterMeta(x, y + dy, z));
@@ -2558,9 +2563,20 @@ export function criarCena(
     } else {
       t = dicaDoPlantio(toque, p?.item);
     }
+    if (!t) t = dicaDaPorteira(toque);
     if (t === dicaAtual) return;
     dicaAtual = t;
     window.dispatchEvent(new CustomEvent('brumaluz:dicaMira', { detail: t }));
+  }
+  /** Porteira na mira (de perto): como abrir e fechar. */
+  function dicaDaPorteira(toque: boolean): string {
+    const a = alvoDoQuadro();
+    if (!a) return '';
+    const b = blocoEm(a.x, a.y, a.z);
+    if (!ehPorteira(b)) return '';
+    const aberta = b === Bloco.PORTEIRA_ABERTA;
+    if (toque) return aberta ? 'Toque para fechar a porteira' : 'Toque para abrir a porteira';
+    return aberta ? 'Clique direito: fechar' : 'Clique direito: abrir';
   }
   /** Dicas da roça: arar com a enxada, plantar na terra arada, colher a madura. */
   function dicaDoPlantio(toque: boolean, item: string | undefined): string {

@@ -322,7 +322,8 @@ export function modeloNaMao(
       add(m, m.position.x, m.position.y, m.position.z);
     return { no, malhas, ferramenta: false };
   }
-  if (bloco !== null && bloco > 0 && temFormaParcial(bloco)) {
+  // a porteira tem modelinho próprio (com os mourões e a diagonal de verdade), mais abaixo
+  if (bloco !== null && bloco > 0 && temFormaParcial(bloco) && bloco !== Bloco.PORTEIRA) {
     // porta, cerca, laje, escada, cama: o formato de verdade, com as caixas do próprio bloco
     const c = coresDoBloco(bloco);
     const cor = c ? hexDe(c.lado) : '#a9adb8';

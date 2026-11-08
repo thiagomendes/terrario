@@ -660,6 +660,24 @@ export function modeloDeBloco(
       break;
     }
 
+    case Bloco.PORTEIRA: {
+      // porteira de fazenda: dois mourões (as cercas de cada lado), montantes, três
+      // travessas, a mão-francesa em diagonal e as dobradiças de ferro
+      const madeira = cor(Bloco.CERCA, 'lado') ?? lado0;
+      const escura = tom(madeira, 0.78);
+      const clara = tom(madeira, 1.08);
+      for (const x of [-0.44, 0.44]) {
+        caixa(escura, 0.13, 1, 0.13, 0.04, x, 0, 0);
+        caixa(tom(madeira, 0.65), 0.15, 0.05, 0.15, 0.02, x, 0.5, 0);
+      }
+      for (const x of [-0.33, 0.33]) caixa(madeira, 0.08, 0.84, 0.08, 0.03, x, -0.02, 0);
+      for (const y of [-0.3, 0.02, 0.32]) caixa(clara, 0.62, 0.1, 0.07, 0.03, 0, y, 0);
+      const g = grupo(0, 0.01, 0, 0, 0, Math.atan2(0.6, 0.62));
+      caixa(madeira, 0.86, 0.08, 0.05, 0.025, 0, 0, 0, undefined, g);
+      for (const y of [-0.3, 0.32]) caixa('#5a5a64', 0.08, 0.06, 0.09, 0.02, -0.37, y, 0, 0.4);
+      break;
+    }
+
     // ---------- cacto ----------
     case Bloco.CACTO: {
       const verde = lado0;
