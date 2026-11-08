@@ -1,6 +1,9 @@
 import type { TextosTema } from '../tipos';
 
-/** Ferramentas: colher (picareta), espátula (machado), concha (pá) e pirulito (espada). */
+/**
+ * Ferramentas: colher (picareta), espátula (machado), concha (pá), pirulito (espada) e
+ * garfinho (enxada).
+ */
 const NIVEIS = {
   madeira: 'de pau',
   pedra: 'de caramelo',
@@ -23,6 +26,7 @@ function ferramentas(): Record<string, string> {
     r[`machado_${nivel}`] = `Espátula ${de}`;
     r[`pa_${nivel}`] = `Concha ${de}`;
     r[`espada_${nivel}`] = PIRULITOS[nivel];
+    r[`enxada_${nivel}`] = `Garfinho ${de}`;
   }
   return r;
 }
@@ -97,8 +101,33 @@ export const TEXTOS_DOCE: TextosTema = {
     65: 'abóbora cristalizada',
     66: 'abóbora risonha',
     67: 'refresco de menta',
+    // spec 013: plantio
+    68: 'canteiro de chocolate',
+    69: 'broto-doce (1 de 4)',
+    70: 'broto-doce (2 de 4)',
+    71: 'broto-doce (3 de 4)',
+    72: 'broto-doce maduro',
+    73: 'milho-caramelo (1 de 4)',
+    74: 'milho-caramelo (2 de 4)',
+    75: 'milho-caramelo (3 de 4)',
+    76: 'milho-caramelo maduro',
+    77: 'aboboreira doce (1 de 4)',
+    78: 'aboboreira doce (2 de 4)',
+    79: 'aboboreira doce (3 de 4)',
+    80: 'aboboreira doce carregada',
+    81: 'fardo de broto-doce',
   },
   itens: {
+    // spec 013: plantio
+    semente_trigo: 'Semente de broto-doce',
+    semente_milho: 'Semente de milho-caramelo',
+    semente_abobora: 'Semente de abóbora doce',
+    trigo: 'Broto-doce',
+    milho: 'Espiga de milho-caramelo',
+    pao: 'Pão de ló',
+    pipoca: 'Pipoca doce',
+    ovo: 'Ovinho de chocolate',
+    ovo_cozido: 'Ovinho trufado',
     graveto: 'Palito de biscoito',
     carvao: 'Gota de chocolate',
     luzita: 'Bala-estrela',

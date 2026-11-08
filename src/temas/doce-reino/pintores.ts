@@ -6,7 +6,21 @@
  * Os pintores rodam 16x16 por tile: só contas simples por pixel (nada de laço grande).
  */
 import { hash2 } from '../../world/noise';
-import { T, VAZIO, escurece, fbmT, hex, rampa, ruidoT } from '../../art/atlas';
+import {
+  T,
+  VAZIO,
+  escurece,
+  fbmT,
+  hex,
+  rampa,
+  ruidoT,
+  terraAradaDe,
+  trigoDe,
+  milhoDe,
+  aboboreiraDe,
+  fenoLadoDe,
+  fenoTopoDe,
+} from '../../art/atlas';
 import type { Pintor, Px } from '../tipos';
 
 const mod = (a: number, n: number) => ((a % n) + n) % n;
@@ -1154,4 +1168,27 @@ export const PINTORES_DOCE: Record<string, Pintor> = {
   abobora_lado: aboboraLado,
   abobora_topo: aboboraTopo,
   abobora_rosto: aboboraRosto,
+
+  // spec 013: canteiro de chocolate (com granulado), broto-doce, milho-caramelo,
+  // aboboreira doce e fardo de broto-doce amarrado com fita
+  terra_arada: (x, y, s) => {
+    if (y % 4 === 0) {
+      const g = granulado(x, y, s + 9, 0.5, CONFEITOS);
+      if (g) return g;
+    }
+    return terraAradaDe(massa, 0.45, 0.24)(x, y, s);
+  },
+  trigo: trigoDe(['#4ec084', '#5ed096', '#70e0a8'], ['#e8609c', '#f47cb2', '#ff9ccc'], '#ffffff'),
+  milho: milhoDe(
+    ['#46b47c', '#54c48a', '#64d49a', '#78e2ac'],
+    ['#c0701c', '#dc922e', '#f0b450'],
+    '#fff0c0',
+  ),
+  aboboreira: aboboreiraDe(
+    ['#3ea86c', '#4cba7a', '#5ccc8a', '#6edc9c'],
+    ['#ec6a2e', '#fa8444', '#ff9c5c', '#ffb678'],
+    '#c04a7a',
+  ),
+  feno_lado: fenoLadoDe(['#d89a48', '#e4ac58', '#eebe6a', '#f6ce7e'], '#e8468a'),
+  feno_topo: fenoTopoDe(['#dc9e4c', '#e8b05c', '#f0c06e', '#f8d082'], '#e8468a'),
 };
