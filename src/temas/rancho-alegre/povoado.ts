@@ -9,13 +9,6 @@ import { pio } from './vozes';
  */
 const ACIMA = 1.935;
 
-/** Chapéu de palha com fita vermelha, de aba redonda (como no desenho). */
-const CHAPEU_PALHA: PecaCriatura[] = [
-  { t: [0.4, 0.2, 0.4], p: [0, 1.975, 0], cor: '#f0cf6a', forma: 'bola', papel: 'cabeca' },
-  { t: [0.43, 0.04, 0.43], p: [0, 1.95, 0], cor: '#d9483b', forma: 'bola', papel: 'cabeca' },
-  { t: [0.74, 0.03, 0.74], p: [0, ACIMA, 0], cor: '#f0cf6a', forma: 'bola', papel: 'cabeca' },
-];
-
 /** Tranças de lado, presas à cabeça. */
 const trancas = (cor: string): PecaCriatura[] =>
   [1, -1].map((s) => ({
@@ -37,7 +30,6 @@ const MORADORES: Record<Profissao, PecaCriatura[]> = {
       cabelo: '#a0522d',
     }),
     ...trancas('#a0522d'),
-    ...CHAPEU_PALHA,
     // lencinho xadrez no pescoço
     { t: [0.26, 0.07, 0.05], p: [0, 1.41, 0.15], cor: '#ffd45a' },
   ],
@@ -50,7 +42,7 @@ const MORADORES: Record<Profissao, PecaCriatura[]> = {
       sapato: '#3a2a22',
       cabelo: '#3a2a1e',
     }),
-    { t: [0.46, 0.11, 0.42], p: [0, ACIMA, 0], cor: '#7a4826', papel: 'cabeca' },
+    { t: [0.46, 0.14, 0.42], p: [0, ACIMA, 0], cor: '#7a4826', papel: 'cabeca' },
     { t: [0.3, 0.03, 0.18], p: [0, ACIMA, 0.25], cor: '#7a4826', papel: 'cabeca' },
     { t: [0.52, 0.05, 0.3], p: [0, 1.06, 0], cor: '#8a5a3a' },
     { t: [0.05, 0.22, 0.05], p: [0.2, 0.98, 0.17], cor: '#b88a5a' },
@@ -94,6 +86,8 @@ export const POVOADO_RANCHO: PovoadoTema = {
     'Tunico',
   ],
   moradores: MORADORES,
+  // a fazendeira usa o mesmo chapéu de palha do jogador (aba redonda e fita vermelha)
+  acessorios: { cozinheiro: 'chapeu-palha' },
   // passo firme de quem anda na roça, com um balancinho
   movimento: { saltita: 0.02, flutua: 0, ginga: 0.05 },
   vozes: {

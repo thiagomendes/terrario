@@ -7,7 +7,7 @@
 import type { Bioma } from '../world/chunk';
 import type { TipoCriatura } from '../jogo/criaturas';
 import type { GrupoMaterial } from '../audio/materiais';
-import type { Aparencia } from '../personagem/aparencia';
+import type { Acessorio, Aparencia } from '../personagem/aparencia';
 import type { Estacao, TipoClima } from '../jogo/clima';
 import type { FormasPovoado, Profissao } from '../world/povoado';
 
@@ -285,6 +285,11 @@ export interface PovoadoTema {
   nomes: readonly string[];
   /** Pele do morador de cada profissão: pernas e braços com perna0/perna1, cabeça. */
   moradores: Record<Profissao, PecaCriatura[]>;
+  /**
+   * Acessório do boneco de cada profissão (o mesmo desenho do jogador, como o chapéu de palha
+   * da fazendeira). Sem ele, o morador não usa acessório.
+   */
+  acessorios?: Partial<Record<Profissao, Acessorio>>;
   movimento: MovimentoCriatura;
   vozes: VozCriatura & { obrigado: PioCriatura };
   textos: {

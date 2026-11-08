@@ -98,14 +98,17 @@ const areiaAcude: Pintor = (x, y, s) => {
   );
 };
 
-/** Terra arada: sulcos escuros e leiras claras, bem marcados (como no desenho). */
+/**
+ * Terra arada: leiras claras e sulcos escuros em faixas largas (de 4 pixels), para as listras
+ * aguentarem a limpeza de brinquedo e aparecerem de longe, como no desenho.
+ */
 const terraArada: Pintor = (x, y, s) => {
-  const leira = y % 4;
-  if (leira === 3) return rampa(['#5a3720', '#623c23'], hash2(x, y, s), x, y, s);
-  if (leira === 2) return rampa(['#7a4f2c', '#825530'], hash2(x, y, s), x, y, s);
-  if (leira === 0 && hash2(x, y, s + 9) > 0.8) return cor('#b8865a', x, y, s);
+  const leira = y % 8;
+  if (leira >= 5) return rampa(['#5e3a22', '#663f25'], hash2(x, y, s), x, y, s);
+  if (leira === 4) return rampa(['#7a4f2c'], 0, x, y, s);
+  if (leira === 0 && hash2(x, y, s + 9) > 0.7) return cor('#c08e60', x, y, s);
   return rampa(
-    ['#94643a', '#9b6a3e', '#a37144'],
+    ['#a06e40', '#a87646', '#b07e4c'],
     hash2(x, y, s) * 0.6 + fbmT(x, y, 4, s) * 0.4,
     x,
     y,

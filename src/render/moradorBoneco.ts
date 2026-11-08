@@ -49,6 +49,8 @@ export function moradorDeBrinquedo(
   id: number,
   /** O corpo do boneco combina com o nome e a profissão do morador. */
   genero?: 'f' | 'm',
+  /** Acessório do boneco que o tema dá à profissão (chapéu de palha da fazendeira). */
+  acessorio?: Aparencia['acessorio'],
 ): Morador {
   const cabecas = pecas.filter((p) => p.papel === 'cabeca');
   const cabeca = [...cabecas].sort((a, b) => volume(b) - volume(a))[0];
@@ -88,7 +90,7 @@ export function moradorDeBrinquedo(
   // rosto no gênero do morador: cílios e sardas para elas; barba e bigode só para eles
   const rostos = genero === 'f' ? [0, 1, 2, 3] : genero === 'm' ? [0, 2, 4, 5] : [0, 1, 2, 3, 4, 5];
   a.rosto = rostos[Math.floor(hash(id, 3) * rostos.length)];
-  a.acessorio = 'nenhum';
+  a.acessorio = acessorio ?? 'nenhum';
   const pele = cabeca?.cor;
   const roupa = tronco?.cor;
   const calca = perna?.cor;
