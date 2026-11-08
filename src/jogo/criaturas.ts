@@ -123,6 +123,11 @@ export interface Criatura {
   tipo: TipoSer;
   /** Só moradores: povoado, profissão e rotina. */
   morador?: DadosMorador;
+  /**
+   * Spec 013: bicho do sítio, nascido no cercado (curral ou galinheiro) com o povoado.
+   * Chave "povoado:cercado"; como os moradores, não é salvo e renasce com o sítio.
+   */
+  curral?: string;
   /** Tempo andando para um destino sem chegar mais perto (anti-trava do morador). */
   semProgresso?: number;
   menorDistancia?: number;
