@@ -320,6 +320,9 @@ export interface EstadoDepuracao {
     z: number;
     domada: boolean;
     vida: number;
+    /** Spec 013: bicho criado. */
+    criado?: boolean;
+    estado?: string;
   }[];
   invocar?: (tipo: TipoCriatura, x: number, y: number, z: number) => void;
   /** Testes que constroem: põe o kit de blocos na barra (o mundo novo começa vazio). */
@@ -2701,6 +2704,8 @@ export function criarCena(
       z: c.z,
       domada: c.domada,
       vida: c.vida,
+      criado: !!c.criado,
+      estado: c.estado,
     }));
   estado.invocar = (tipo, x, y, z) => enviar({ t: 'depurar', d: { f: 'invocar', tipo, x, y, z } });
   estado.darKit = () => enviar({ t: 'depurar', d: { f: 'kit' } });

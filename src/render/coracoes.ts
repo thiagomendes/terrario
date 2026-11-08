@@ -22,13 +22,13 @@ export function criarCoracoes(scene: Scene, preparar: (m: Mesh) => void) {
   const pecas: { m: Mesh; t: number; x: number; y: number; z: number; fase: number }[] = [];
   for (let i = 0; i < MAX; i++) {
     // dois lóbulos e a ponta (uma caixa girada 45°), numa peça só
-    const a = esfera(`coracao-a-${i}`, scene, 0.065, mat);
-    a.position.set(-0.05, 0.03, 0);
-    const b = esfera(`coracao-b-${i}`, scene, 0.065, mat);
-    b.position.set(0.05, 0.03, 0);
-    const p = caixaArredondada(`coracao-p-${i}`, scene, 0.105, 0.105, 0.07, 0.02, mat, 2);
+    const a = esfera(`coracao-a-${i}`, scene, 0.06, mat, [1, 1, 0.7]);
+    a.position.set(-0.052, 0.035, 0);
+    const b = esfera(`coracao-b-${i}`, scene, 0.06, mat, [1, 1, 0.7]);
+    b.position.set(0.052, 0.035, 0);
+    const p = caixaArredondada(`coracao-p-${i}`, scene, 0.12, 0.12, 0.08, 0.015, mat, 2);
     p.rotation.z = Math.PI / 4;
-    p.position.set(0, -0.025, 0);
+    p.position.set(0, -0.03, 0);
     const m = Mesh.MergeMeshes([a, b, p], true, true)!;
     m.name = `coracao-${i}`;
     m.billboardMode = Mesh.BILLBOARDMODE_Y;
@@ -67,7 +67,7 @@ export function criarCoracoes(scene: Scene, preparar: (m: Mesh) => void) {
         // cresce rápido, pulsa e encolhe no fim
         const e = Math.min(1, c.t * 6) * (u > 0.7 ? 1 - (u - 0.7) / 0.3 : 1);
         const pulso = 1 + Math.sin(c.t * 14) * 0.08;
-        c.m.scaling.setAll(Math.max(0.02, e * pulso * 1.6));
+        c.m.scaling.setAll(Math.max(0.02, e * pulso * 1.3));
       }
     },
     /** Quantos estão na tela (testes). */
