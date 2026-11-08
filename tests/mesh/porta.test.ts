@@ -53,7 +53,11 @@ describe('porta de dois blocos: uma peça só', () => {
     const m = porta(Bloco.PORTA);
     const naEmenda = vertices(m, 10.999, 11.001).filter((p) => p.ny !== 0);
     expect(naEmenda).toHaveLength(0);
-    const alfas = new Set(vertices(m, 10, 12).filter((p) => p.ny === 0).map((p) => p.a));
+    const alfas = new Set(
+      vertices(m, 10, 12)
+        .filter((p) => p.ny === 0)
+        .map((p) => p.a),
+    );
     expect([...alfas].map((a) => a.toFixed(3)).sort()).toEqual(['0.993', '0.996']);
   });
 
