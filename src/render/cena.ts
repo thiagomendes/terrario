@@ -1871,6 +1871,8 @@ export function criarCena(
     if (d < 12) tocarSom(motorAudio, 'coleta');
   }
   barramento.ouvir('quebra', (d) => {
+    // colher não continua cavando: segurar depois da planta não leva a terra arada junto
+    if (ehLavoura(d.bloco)) minerador.soltar();
     if (madura(d.bloco)) {
       festaDaColheita(d.x, d.y, d.z);
       tocarSom(motorAudio, 'coleta');
@@ -2571,13 +2573,13 @@ export function criarCena(
           ? 'Toque na grama para arar'
           : 'Clique direito: arar'
         : '';
+    if (madura(b)) return toque ? 'Segure para colher' : 'Clique para colher';
     if (lavouraDoBloco(def?.bloco ?? -1)) {
       const p = posicaoDeColocar(a);
       if (podePlantar(blocoEm(p.x, p.y - 1, p.z), blocoEm(p.x, p.y, p.z)))
         return toque ? 'Toque na terra arada para plantar' : 'Clique direito: plantar';
       return ehLavoura(b) ? '' : 'A semente vai na terra arada';
     }
-    if (madura(b)) return toque ? 'Segure para colher' : 'Clique para colher';
     return '';
   }
   /** Volume da voz pela distância (some a 24 blocos). */
