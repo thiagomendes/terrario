@@ -1,7 +1,7 @@
 ---
 id: 013-rancho-alegre
 title: 'Rancho Alegre: plantar, colher e criar bichos'
-status: IN_PROGRESS
+status: DONE
 base_branch: main
 branch: feat/rancho-alegre
 created_at: 2026-11-07T22:00:00Z

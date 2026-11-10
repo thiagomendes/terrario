@@ -6,6 +6,9 @@ Ideias e pedidos do dono que ainda não viraram spec. Cada item diz de onde veio
 
 ## Pedidos
 
+- **Rodada em família no Rancho Alegre** (critério 12 da 013). Pendente com o dono.
+- **Acabamento do Rancho:** refazer a foto da vitrine (um morro tapa o sítio), girar as pás do moinho, quebrar porta numa pilha de duas.
+
 - **Contas de jogador** (ideia do dono): conversar depois da spec 011.
 
 - **Rodada em família de 15 minutos em dois aparelhos** (critério 13 da spec 010). Pendente com o dono.
@@ -14,7 +17,7 @@ Ideias e pedidos do dono que ainda não viraram spec. Cada item diz de onde veio
 
 Ordem combinada com o dono (10 nov 2026): 013 → 015 → 017 → 016 → 014.
 
-- **013, Rancho Alegre** (`.sdd/specs/013-rancho-alegre/spec.md`): em andamento.
+- **013, Rancho Alegre:** publicada em 10 nov 2026 (relatório https://claude.ai/artifact/P27LQ7348TBUapLEzB1wgj); falta a rodada em família.
 - **015, Só terceira pessoa e roda de gestos** (`.sdd/specs/015-terceira-pessoa/spec.md`): esboço aprovado; vem logo depois da 013.
 - **017, Fantasias** (`.sdd/specs/017-fantasias/spec.md`): esboço publicado; fantasias dos temas livres; inclui conferir os chapéus soltos de hoje.
 - **014, Cidade Grande** (rascunho em `.sdd/specs/014-cidade-grande/spec.md`): depois da 013, da 015 e da 016; falta o dono decidir a altura dos prédios.
