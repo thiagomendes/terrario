@@ -170,6 +170,30 @@ test('corpo solto da câmera: vira para onde anda e a câmera não gira sozinha 
   expect(erros, erros.join('\n')).toEqual([]);
 });
 
+test('selfie do modo foto: ao sair, a câmera volta para trás do boneco', async ({ page }) => {
+  test.setTimeout(240_000);
+  const erros = coletarErros(page);
+  await abrir(page);
+  await noAr(page);
+  await page.evaluate(() => window.__brumaluz!.apontar!(0.7, 0.3));
+  await page.waitForTimeout(300);
+  const antes = await page.evaluate(() => window.__brumaluz!.rotacao!);
+  await page.evaluate(() => {
+    const f = window.__brumaluz!.modoFoto!;
+    f.alternar();
+    f.selfie();
+  });
+  await page.waitForTimeout(300);
+  const naSelfie = await page.evaluate(() => window.__brumaluz!.rotacao!);
+  expect(Math.abs(Math.cos(naSelfie[1] - antes[1]) - 1)).toBeGreaterThan(0.5);
+  await page.evaluate(() => window.__brumaluz!.modoFoto!.alternar());
+  await page.waitForTimeout(300);
+  const depois = await page.evaluate(() => window.__brumaluz!.rotacao!);
+  expect(Math.abs(depois[1] - antes[1])).toBeLessThan(0.02);
+  expect(Math.abs(depois[0] - antes[0])).toBeLessThan(0.02);
+  expect(erros, erros.join('\n')).toEqual([]);
+});
+
 test('casinha: a câmera chega perto sem entrar na parede e o boneco fica meio transparente', async ({
   page,
 }) => {

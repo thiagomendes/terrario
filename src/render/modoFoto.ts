@@ -73,6 +73,8 @@ export function criarModoFoto(op: OpcoesModoFoto) {
   // quem mostra a interface do modo foto (esconder o HUD, o painel) ouve aqui: assim
   // qualquer caminho que ligue o modo (tecla P, botão, depuração) esconde o HUD igual
   const ouvintes = new Set<(ativo: boolean) => void>();
+  /** Olhar de antes da selfie: ao sair do modo foto, a câmera volta para trás do boneco. */
+  let olharAntesSelfie: { yaw: number; pitch: number } | null = null;
   const api = {
     ativo: () => modoFoto,
     aoMudar(f: (ativo: boolean) => void): () => void {
@@ -84,7 +86,10 @@ export function criarModoFoto(op: OpcoesModoFoto) {
       if (modoFoto) {
         fotoPos.copyFrom(cameraVisao.position);
         op.pausarDia(true);
+        olharAntesSelfie = null;
       } else {
+        if (olharAntesSelfie) op.apontar?.(olharAntesSelfie.yaw, olharAntesSelfie.pitch);
+        olharAntesSelfie = null;
         op.pausarDia(false);
         pipeline.depthOfFieldEnabled = false;
         definirFiltro('natural');
@@ -103,6 +108,7 @@ export function criarModoFoto(op: OpcoesModoFoto) {
         b.y + ALTURA_SELFIE,
         b.z + Math.cos(b.yaw) * DISTANCIA_SELFIE,
       );
+      olharAntesSelfie ??= { yaw: camera.rotation.y, pitch: camera.rotation.x };
       op.apontar?.(b.yaw + Math.PI, 0.12);
       return true;
     },
