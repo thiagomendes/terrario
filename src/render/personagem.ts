@@ -43,5 +43,5 @@ export interface Personagem {
  * numa malha só, como nos moradores (menos desenhos por quadro; trocar a aparência remonta).
  */
 export function criarPersonagem(scene: Scene, aparencia: Aparencia): Personagem {
-  return criarBoneco(scene, aparencia, 'personagem', undefined, true);
+  return criarBoneco(scene, aparencia, 'personagem', undefined, true, true);
 }

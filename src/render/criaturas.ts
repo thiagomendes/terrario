@@ -24,12 +24,15 @@ import type { Personagem } from './personagem';
 type Peca = PecaBicho;
 
 /**
- * Bicho a mais de tantos blocos da câmera vira uma malha só, sem balançar as pernas (de
- * longe não se nota; corta os desenhos de cada perna, cabeça e cauda). Volta inteiro a
- * LONGE_VOLTA.
+ * Bicho a mais de tantos blocos da câmera vira uma malha por material (o plástico e o brilho
+ * dos olhos), na pose de descanso: corta os desenhos de cada perna, cabeça e cauda. Em
+ * terceira pessoa o sítio inteiro entra na vista, por isso começa já a 18 blocos (de lá as
+ * pernas mal aparecem). Volta inteiro a LONGE_VOLTA.
  */
-export const LONGE_LOD = 30;
-export const LONGE_VOLTA = 27;
+export const LONGE_LOD = 18;
+export const LONGE_VOLTA = 16;
+/** Quantos bichos montam a malha de longe por quadro (sem engasgo quando muitos chegam). */
+export const LONGE_POR_QUADRO = 1;
 
 interface Modelo {
   raiz: TransformNode;
@@ -52,8 +55,10 @@ interface Modelo {
    * Longe da câmera (spec 015): o plástico do bicho inteiro numa malha só, parado na pose de
    * descanso (um desenho em vez de um por perna). Feita na primeira vez que ele fica longe.
    */
-  longe?: Mesh | null;
+  longe?: Mesh[] | null;
   emLonge?: boolean;
+  /** Materiais que a malha de longe substitui (plástico e brilho dos olhos). */
+  substitui: Set<StandardMaterial>;
 }
 
 /** Cores reutilizadas: nada de alocar Color3 por parte a cada quadro. */
@@ -152,18 +157,19 @@ export function criarRenderCriaturas(
   let quadro = 0;
 
   /**
-   * O bicho longe numa malha só: as partes de plástico na pose de descanso, juntas no espaço
-   * da raiz. Os olhos e o que brilha (outros materiais) continuam nas partes.
+   * O bicho longe numa malha por material (plástico e brilho dos olhos), na pose de
+   * descanso, juntas no espaço da raiz. O que brilha de verdade continua nas partes.
    */
-  function montarLonge(m: Modelo): Mesh | null {
+  function montarLonge(m: Modelo): Mesh[] | null {
     const giros = m.partes.map((p) => p.no.rotation.clone());
     for (const p of m.partes) p.no.rotation.setAll(0);
     const inversa = Matrix.Invert(m.raiz.computeWorldMatrix(true));
-    const copias: Mesh[] = [];
+    const porMaterial = new Map<StandardMaterial, Mesh[]>();
     for (const p of m.partes) {
       p.no.computeWorldMatrix(true);
       for (const malha of p.malhas) {
-        if (malha.material !== m.plastico) continue;
+        const mat = malha.material as StandardMaterial | null;
+        if (!mat || !m.substitui.has(mat)) continue;
         const copia = malha.clone(`${malha.name}-longe`, null, true);
         if (!copia) continue;
         copia.parent = null;
@@ -173,38 +179,51 @@ export function criarRenderCriaturas(
         copia.scaling.setAll(1);
         copia.makeGeometryUnique();
         copia.bakeTransformIntoVertices(malha.computeWorldMatrix(true).multiply(inversa));
-        copias.push(copia);
+        let l = porMaterial.get(mat);
+        if (!l) porMaterial.set(mat, (l = []));
+        l.push(copia);
       }
     }
     m.partes.forEach((p, i) => p.no.rotation.copyFrom(giros[i]));
-    if (copias.length < 2) {
-      for (const c of copias) c.dispose();
-      return null;
+    const feitas: Mesh[] = [];
+    for (const [mat, copias] of porMaterial) {
+      const f =
+        copias.length === 1
+          ? copias[0]
+          : Mesh.MergeMeshes(copias, true, true, undefined, false, false);
+      if (!f) {
+        for (const c of copias) c.dispose();
+        for (const c of feitas) c.dispose();
+        return null;
+      }
+      f.name = `${m.raiz.name}-longe`;
+      f.material = mat;
+      f.parent = m.raiz;
+      f.isPickable = false;
+      excluirDoGlow(f);
+      feitas.push(f);
     }
-    const f = Mesh.MergeMeshes(copias, true, true, undefined, false, false);
-    if (!f) {
-      for (const c of copias) c.dispose();
-      return null;
-    }
-    f.name = `${m.raiz.name}-longe`;
-    f.material = m.plastico;
-    f.parent = m.raiz;
-    f.isPickable = false;
-    excluirDoGlow(f);
-    return f;
+    return feitas.length ? feitas : null;
   }
 
-  /** Troca entre o bicho inteiro (perto) e a malha só (longe), com folga para não piscar. */
+  /** Malhas de longe montadas neste quadro (o resto espera o próximo). */
+  let montadasNoQuadro = 0;
+  /** Troca entre o bicho inteiro (perto) e as malhas de longe, com folga para não piscar. */
   function escolherLonge(m: Modelo, x: number, y: number, z: number): void {
     const d = Math.hypot(x - camX, y - camY, z - camZ);
     const quer = m.emLonge ? d > LONGE_VOLTA : d > LONGE_LOD;
     if (quer === !!m.emLonge) return;
-    if (quer && m.longe === undefined) m.longe = montarLonge(m);
+    if (quer && m.longe === undefined) {
+      if (montadasNoQuadro >= LONGE_POR_QUADRO) return;
+      montadasNoQuadro++;
+      m.longe = montarLonge(m);
+    }
     if (quer && !m.longe) return;
     m.emLonge = quer;
-    m.longe?.setEnabled(quer);
+    if (m.longe) for (const f of m.longe) f.setEnabled(quer);
     for (const p of m.partes)
-      for (const malha of p.malhas) if (malha.material === m.plastico) malha.setEnabled(!quer);
+      for (const malha of p.malhas)
+        if (m.substitui.has(malha.material as StandardMaterial)) malha.setEnabled(!quer);
   }
 
   function montar(c: Criatura): Modelo {
@@ -322,6 +341,7 @@ export function criarRenderCriaturas(
       partes,
       plastico,
       proprios: [plastico, suave, forte],
+      substitui: new Set([plastico, suave]),
       fase: 0,
       ultX: c.x,
       ultZ: c.z,
@@ -363,6 +383,7 @@ export function criarRenderCriaturas(
       luz: (c: Criatura) => number,
     ): void {
       quadro++;
+      montadasNoQuadro = 0;
       prepararVista();
       for (const c of lista) {
         if (c.tipo === 'morador') {
@@ -454,7 +475,8 @@ export function criarRenderCriaturas(
           mat.specularColor.set(0.22 * l, 0.22 * l, 0.22 * l);
         }
         // atrás da câmera e longe: as patas e a cabeça ficam como estão neste quadro
-        const animar = !foraDaVista(c.x, c.y + 0.5, c.z);
+        // (de longe também: a pose de descanso já está na malha de longe)
+        const animar = !m.emLonge && !foraDaVista(c.x, c.y + 0.5, c.z);
         for (const p of m.partes) {
           if (animar)
             switch (p.papel) {
@@ -494,14 +516,15 @@ export function criarRenderCriaturas(
             malha.visibility = c.tipo === 'espectro' ? 1 - morrer : 1;
           }
         }
-        if (m.emLonge && m.longe) {
-          m.longe.renderOverlay = c.ferida > 0;
-          if (m.longe.renderOverlay) {
-            m.longe.overlayColor = COR_FERIDA;
-            m.longe.overlayAlpha = 0.55;
+        if (m.emLonge && m.longe)
+          for (const f of m.longe) {
+            f.renderOverlay = c.ferida > 0;
+            if (f.renderOverlay) {
+              f.overlayColor = COR_FERIDA;
+              f.overlayAlpha = 0.55;
+            }
+            f.visibility = c.tipo === 'espectro' ? 1 - morrer : 1;
           }
-          m.longe.visibility = c.tipo === 'espectro' ? 1 - morrer : 1;
-        }
       }
       for (const [id, mb] of moradores) {
         if (mb.quadro === quadro) continue;
@@ -515,7 +538,7 @@ export function criarRenderCriaturas(
           for (const malha of p.malhas) malha.dispose();
           p.no.dispose();
         }
-        m.longe?.dispose();
+        if (m.longe) for (const f of m.longe) f.dispose();
         for (const mat of m.proprios) mat.dispose();
         m.raiz.dispose();
         modelos.delete(id);

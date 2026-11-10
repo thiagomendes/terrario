@@ -55,6 +55,11 @@ export function montarPeca(scene: Scene, mats: Plasticos, p: Peca, prefixo: stri
   return m;
 }
 
+function naVista(m: Mesh): void {
+  m.alwaysSelectAsActiveMesh = true;
+  m.doNotSyncBoundingInfo = true;
+}
+
 export function criarBoneco(
   scene: Scene,
   aparencia: Aparencia,
@@ -67,6 +72,12 @@ export function criarBoneco(
    * falam). Para os moradores, que não trocam de aparência.
    */
   fundir = false,
+  /**
+   * Desempenho (spec 015): o boneco do jogador está sempre na frente da câmera de terceira
+   * pessoa; as peças não passam pelo teste de vista nem refazem a caixa envolvente a cada
+   * quadro (não projetam sombra e não são clicáveis).
+   */
+  sempreNaVista = false,
 ): Personagem {
   const raiz = new TransformNode(prefixo, scene);
   const escalar = new TransformNode(`${prefixo}-escala`, scene);
@@ -97,7 +108,10 @@ export function criarBoneco(
       modelo = modeloNaMao(scene, mats, bloco, item, `${prefixo}-mao`);
       if (!modelo) return;
       modelo.no.parent = pega;
-      for (const m of modelo.malhas) m.visibility = opacidade;
+      for (const m of modelo.malhas) {
+        m.visibility = opacidade;
+        if (sempreNaVista) naVista(m);
+      }
       // ferramenta: o cabo sai da mão para a frente com o braço abaixado; peças ficam
       // apoiadas na palma, um pouco à frente
       if (modelo.ferramenta) modelo.no.rotation.set(Math.PI / 2, 0, 0);
@@ -222,6 +236,7 @@ export function criarBoneco(
     }
     pega.parent = juntas.maoD;
     pega.position.set(0, 0, 0);
+    if (sempreNaVista) for (const m of malhas) naVista(m);
     olhos = malhas.filter((m) => /-(olho|brilho)/.test(m.name));
     boca = malhas.find((m) => m.name.endsWith('-boca')) ?? null;
     // a escala é a forma oval de cada peça: o piscar e a boca multiplicam sobre ela
@@ -315,7 +330,11 @@ export function criarBoneco(
       if (n === opacidade) return;
       opacidade = n;
       mats.definirSoFrente(n < 1);
-      for (const m of malhas) m.visibility = n;
+      for (const m of malhas) {
+        m.visibility = n;
+        // meio transparente, a ordem de desenho das peças usa a caixa de cada uma
+        if (sempreNaVista) m.doNotSyncBoundingInfo = n >= 1;
+      }
       if (modelo) for (const m of modelo.malhas) m.visibility = n;
     },
     opacidade: () => opacidade,
