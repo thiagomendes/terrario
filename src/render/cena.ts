@@ -2795,6 +2795,10 @@ export function criarCena(
         !sobrevivenciaMorto()
       );
     },
+    podeGesto: () => {
+      const j = controle.jogador;
+      return (j.noChao || !!j.voando) && !j.naAgua;
+    },
     gestoDoAmigo: (id, g) => outrosJogadores.gesto(id, g),
     gestoDoMorador: (id, g, voz) => {
       renderCriaturas.gesto(id, g);

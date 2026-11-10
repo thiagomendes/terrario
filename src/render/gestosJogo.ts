@@ -28,8 +28,13 @@ export interface OpcoesGestosJogo {
   animador: Animador;
   enviar(c: Comando): void;
   proximoId(): number;
-  /** Pode gesticular agora (no jogo, acordado, sem painel aberto). */
+  /** Pode abrir a roda agora (no jogo, acordado, sem painel aberto). */
   pode(): boolean;
+  /**
+   * Pode fazer o gesto agora: no chão e fora da água (no ar ou nadando a animação parava no
+   * primeiro quadro; aí não sai balão nem comando). Sem isto, vale `pode`.
+   */
+  podeGesto?(): boolean;
   /** Amigos e moradores: tocam o gesto que chegou do núcleo. */
   gestoDoAmigo(id: string, g: IdGesto): void;
   gestoDoMorador(id: number, g: IdGesto, voz: boolean): void;
@@ -55,7 +60,7 @@ export function criarGestosJogo(op: OpcoesGestosJogo): GestosJogo {
   let ultimo = -Infinity;
 
   function fazer(g: IdGesto): boolean {
-    if (!op.pode()) return false;
+    if (!op.pode() || (op.podeGesto && !op.podeGesto())) return false;
     const t = agora();
     if (t - ultimo < INTERVALO_GESTO) return false;
     ultimo = t;
