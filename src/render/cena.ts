@@ -194,6 +194,9 @@ import { criarBraco } from './braco';
 import { criarPersonagem } from './personagem';
 import { criarModoFoto } from './modoFoto';
 import { criarOutrosJogadores } from './outrosJogadores';
+// spec 015 (gestos): roda, previsão, comando e o que chega do núcleo
+import { comGestos } from '../personagem/gestos';
+import { criarGestosJogo, type GestosJogo } from './gestosJogo';
 import { amostrarMapaChunk } from './mapaChunk';
 import { conexaoLocal, type Conexao } from '../cliente/conexao';
 import { criarEstadoCliente } from '../cliente/estado';
@@ -339,13 +342,26 @@ export interface EstadoDepuracao {
     criado?: boolean;
     estado?: string;
   }[];
-  invocar?: (tipo: TipoCriatura, x: number, y: number, z: number) => void;
+  invocar?: (
+    tipo: TipoCriatura,
+    x: number,
+    y: number,
+    z: number,
+    extra?: { criado?: boolean; domada?: boolean },
+  ) => void;
   /** Testes que constroem: põe o kit de blocos na barra (o mundo novo começa vazio). */
   darKit?: () => void;
   /** Testes e capturas: a lavoura avança como se tantos segundos tivessem passado. */
   crescerLavoura?: (segundos: number) => void;
   /** Spec 013: corações na tela agora (testes da criação). */
   coracoes?: () => number;
+  /** Spec 015 (testes): gestos do jogador, roda aberta e moradores acenando. */
+  gestos?: {
+    fazer: (g: import('../personagem/gestos').IdGesto) => boolean;
+    roda: () => boolean;
+    local: () => { gesto: string | null; balao: string | null };
+    moradores: () => { id: number; gesto: string | null; balao: string | null }[];
+  };
   /** Vitrine dos testes: um bicho parado, sem cérebro, com o desenho do jogo. */
   estatua?: (tipo: TipoCriatura, x: number, y: number, z: number, yaw: number) => void;
   sobrevivencia?: SobrevivenciaCliente;
@@ -614,7 +630,9 @@ export function criarCena(
   let aparencia: Aparencia = carregarAparencia(armazenamentoLocal());
   const braco = criarBraco(scene, cameraVisao, aparencia);
   const personagem = criarPersonagem(scene, aparencia);
-  const animador = criarAnimador();
+  // spec 015 (gestos): o animador do jogador também toca gestos
+  const animador = comGestos(criarAnimador());
+  let gestos: GestosJogo | undefined;
   let velocidadeHoriz = 0;
   let corrida = false;
 
@@ -1682,6 +1700,7 @@ export function criarCena(
       vista: animador.vista(),
     });
     personagem.posicionar(j.x, j.y, j.z, camera.rotation.y + giroCorpo);
+    gestos?.atualizar(dt); // spec 015: balão do gesto
     // estimativa de luz no jogador: teto opaco acima = caverna (escurece braço e corpo)
     const ex = Math.floor(camera.position.x);
     const ey = Math.floor(camera.position.y);
@@ -2539,6 +2558,35 @@ export function criarCena(
     () => undefined,
   );
   estado.estatua = (tipo, x, y, z, yaw) => renderCriaturas.estatua(tipo, x, y, z, yaw);
+  // spec 015 (gestos): a roda, as teclas e o que os amigos e moradores fazem
+  gestos = criarGestosJogo({
+    scene,
+    raiz: personagem.raiz,
+    animador,
+    enviar,
+    proximoId,
+    pode: () => {
+      const b = document.body;
+      return (
+        !b.dataset.overlay &&
+        !b.classList.contains('modo-foto') &&
+        !b.classList.contains('tela-titulo') &&
+        !sobrevivenciaMorto()
+      );
+    },
+    gestoDoAmigo: (id, g) => outrosJogadores.gesto(id, g),
+    gestoDoMorador: (id, g, voz) => {
+      renderCriaturas.gesto(id, g);
+      const c = criaturaPorId(id);
+      if (voz && c) tocarVoz(motorAudio, 'morador', 'contente', volumeDaDistancia(c));
+    },
+  });
+  estado.gestos = {
+    fazer: (g) => gestos!.fazer(g),
+    roda: () => gestos!.roda.aberta,
+    local: () => ({ gesto: animador.gestoAtual, balao: gestos!.balao.gesto }),
+    moradores: () => renderCriaturas.gestosMoradores(),
+  };
   function direcaoOlhar() {
     if (raioToque) return raioToque.direcao;
     const yaw = camera.rotation.y;
@@ -2786,7 +2834,8 @@ export function criarCena(
       criado: !!c.criado,
       estado: c.estado,
     }));
-  estado.invocar = (tipo, x, y, z) => enviar({ t: 'depurar', d: { f: 'invocar', tipo, x, y, z } });
+  estado.invocar = (tipo, x, y, z, extra) =>
+    enviar({ t: 'depurar', d: { f: 'invocar', tipo, x, y, z, ...extra } });
   estado.darKit = () => enviar({ t: 'depurar', d: { f: 'kit' } });
   estado.crescerLavoura = (segundos) => enviar({ t: 'depurar', d: { f: 'crescer', segundos } });
 
@@ -3194,6 +3243,9 @@ export function criarCena(
   const criaturaPorId = (id: number) => replicaCriaturas.lista.find((c) => c.id === id);
   function tratarEvento(e: EventoNucleo): void {
     switch (e.e) {
+      case 'gesto': // spec 015: gesto de um amigo ou de um morador que respondeu
+        gestos?.evento(e);
+        break;
       case 'quebra':
       case 'colocacao':
         // o que os outros fazem (o próprio jogador já viu e ouviu na previsão)

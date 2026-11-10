@@ -6,6 +6,7 @@
  * mesmas regras.
  */
 import type { Pose } from './poses';
+import type { Animador } from '../player/animacao';
 
 export const IDS_GESTOS = [
   'acenar',
@@ -264,5 +265,41 @@ export function estadoParaGesto(
     andando: mov.velocidadeHoriz > 0.1,
     noAr: !mov.noChao && !mov.voando,
     ocupado: vista.golpe !== null || vista.colocar !== null || vista.comer !== null,
+  };
+}
+
+/** Animador que também faz gestos: a mesma pose de sempre, com o gesto por cima. */
+export interface AnimadorComGestos extends Animador {
+  /** Começa um gesto (null: para o que estiver tocando). */
+  gesto(id: IdGesto | null): void;
+  readonly gestoAtual: IdGesto | null;
+}
+
+/**
+ * Embrulha um animador (jogador, amigo ou morador): `atualizar` devolve a pose com o gesto em
+ * curso, interrompido pelas mesmas regras em todos os bonecos. Um embrulho só na criação do
+ * animador; o resto do código não muda.
+ */
+export function comGestos(a: Animador): AnimadorComGestos {
+  const tocador = criarTocadorGesto();
+  let ultima: Pose | null = null;
+  return {
+    evento: (nome) => a.evento(nome),
+    atualizar(dt, movimento) {
+      const pose = a.atualizar(dt, movimento);
+      ultima = tocador.atual
+        ? tocador.aplicar(pose, dt, estadoParaGesto(movimento, a.vista()))
+        : pose;
+      return ultima;
+    },
+    pose: () => ultima ?? a.pose(),
+    vista: () => a.vista(),
+    gesto(id) {
+      if (id) tocador.iniciar(id);
+      else tocador.parar();
+    },
+    get gestoAtual() {
+      return tocador.atual;
+    },
   };
 }

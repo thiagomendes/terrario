@@ -130,7 +130,16 @@ type ComandoSemSeq =
 
 /** Atalhos de teste e captura (o servidor da nuvem só aceita em ambiente de testes). */
 export type Depuracao =
-  | { f: 'invocar'; tipo: TipoSer; x: number; y: number; z: number }
+  | {
+      f: 'invocar';
+      tipo: TipoSer;
+      x: number;
+      y: number;
+      z: number;
+      /** Spec 015 (testes): já nasce criado, ou domado (raposa). */
+      criado?: boolean;
+      domada?: boolean;
+    }
   | { f: 'clima'; tipo: TipoClima }
   | { f: 'dia'; dia: number }
   | { f: 'hora'; hora: number }

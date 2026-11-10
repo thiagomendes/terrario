@@ -15,6 +15,8 @@ export const FUNCOES_JOGO: readonly FuncaoJogo[] = [
   { codigo: 'KeyC', tecla: 'C', nome: 'Personagem', icone: 'pessoa' },
   { codigo: 'KeyV', tecla: 'V', nome: 'Câmera', icone: 'olho' },
   { codigo: 'KeyP', tecla: 'P', nome: 'Modo foto', icone: 'foto' },
+  // spec 015: a roda de gestos
+  { codigo: 'KeyG', tecla: 'G', nome: 'Gestos', icone: 'carinha' },
 ];
 
 export const CSS_ATALHOS = `

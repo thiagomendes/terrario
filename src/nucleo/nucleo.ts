@@ -1211,9 +1211,12 @@ export function criarNucleo(op: OpcoesNucleo) {
 
   function depurar(j: Jogador, d: Depuracao): void {
     switch (d.f) {
-      case 'invocar':
-        populacao.adicionar(d.tipo, d.x, d.y, d.z);
+      case 'invocar': {
+        const c = populacao.adicionar(d.tipo, d.x, d.y, d.z);
+        if (d.domada && c.tipo === 'raposa') c.domada = true;
+        if (d.criado) populacao.criar(c);
         break;
+      }
       case 'clima':
         clima.definir(d.tipo);
         break;

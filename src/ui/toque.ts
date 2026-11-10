@@ -1,5 +1,6 @@
 import { icone, rotuloComIcone, type NomeIcone } from './pixicones';
 import { alternarTelaCheia, emTelaCheia, ouvirTelaCheia, podeAlternarTelaCheia } from './telaCheia';
+import { ICONE_CARINHA, svgDoIcone } from './iconesGestos';
 export const CSS_TOQUE = `
 .toque { position: fixed; inset: 0; z-index: 6; pointer-events: none; touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
 .toque[hidden] { display: none; }
@@ -24,6 +25,7 @@ export const CSS_TOQUE = `
 .toque .botoes .descer[hidden] { display: none; }
 .toque .topo { position: absolute; top: calc(env(safe-area-inset-top, 0px) + 156px); right: max(10px, env(safe-area-inset-right)); display: grid; gap: 10px; pointer-events: auto; }
 .toque .mais { position: relative; }
+.toque .topo .gestos .icone-carinha { width: 30px; height: 30px; }
 .toque .extras { position: absolute; top: 0; right: calc(100% + 8px); display: flex; flex-direction: row-reverse; gap: 8px; }
 .toque .extras[hidden] { display: none; }
 /* cada botão é uma peça redonda creme, meio transparente para não tampar o mundo */
@@ -146,6 +148,25 @@ export function classificarGesto(duracaoMs: number, deslocamentoPx: number): Ges
 }
 
 /** Controles de toque: joystick à esquerda, arrastar à direita para olhar e botões de ação. */
+/** Spec 015: a carinha ao lado do "+" abre a roda de gestos (quem abre é o jogo). */
+function botaoGestos(): HTMLButtonElement {
+  const b = document.createElement('button');
+  b.type = 'button';
+  b.className = 'gestos';
+  b.setAttribute('aria-label', 'Gestos');
+  b.setAttribute('aria-expanded', 'false');
+  b.setAttribute('data-abrir-gestos', '');
+  b.innerHTML = svgDoIcone(ICONE_CARINHA, 'icone-carinha');
+  const pedir = () => window.dispatchEvent(new CustomEvent('brumaluz:gestos'));
+  b.addEventListener('pointerdown', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    pedir();
+  });
+  b.addEventListener('click', (e) => e.detail === 0 && pedir());
+  return b;
+}
+
 export function criarToque(raiz: HTMLElement, c: ControleToque) {
   const el = document.createElement('div');
   el.className = 'toque';
@@ -311,6 +332,7 @@ export function criarToque(raiz: HTMLElement, c: ControleToque) {
     atalho('mapa', 'Mapa', 'Tab'),
     atalho('pausa', 'Pausa', 'Pausa'),
     mais,
+    botaoGestos(),
   );
 
   // joystick

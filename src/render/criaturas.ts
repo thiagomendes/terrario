@@ -16,6 +16,9 @@ import { criarBoneco } from './boneco';
 import { moradorDeBrinquedo } from './moradorBoneco';
 import { generoDoMorador } from '../temas/nomes';
 import { criarAnimador } from '../player/animacao';
+// spec 015 (gestos): o morador acena de volta; o balão fica em cima da cabeça
+import { comGestos, type IdGesto } from '../personagem/gestos';
+import { criarBalao, type BalaoGesto } from './balaoGesto';
 import type { Personagem } from './personagem';
 
 type Peca = PecaBicho;
@@ -62,7 +65,9 @@ export function criarRenderCriaturas(
     number,
     {
       boneco: Personagem;
-      animador: ReturnType<typeof criarAnimador>;
+      animador: ReturnType<typeof comGestos>;
+      /** Spec 015: balão do gesto (criado no primeiro aceno). */
+      balao?: BalaoGesto;
       ultX: number;
       ultZ: number;
       vel: number;
@@ -120,7 +125,7 @@ export function criarRenderCriaturas(
     }
     return {
       boneco,
-      animador: criarAnimador(),
+      animador: comGestos(criarAnimador()),
       ultX: c.x,
       ultZ: c.z,
       vel: 0,
@@ -264,6 +269,22 @@ export function criarRenderCriaturas(
       m.raiz.position.set(x, y, z);
       m.raiz.rotation.y = yaw;
     },
+    /** Spec 015: o morador acena (o boneco toca o gesto e o balão aparece). */
+    gesto(id: number, g: IdGesto): boolean {
+      const mb = moradores.get(id);
+      if (!mb) return false;
+      mb.animador.gesto(g);
+      (mb.balao ??= criarBalao(scene, mb.boneco.raiz)).mostrar(g);
+      return true;
+    },
+    /** Spec 015: gesto em curso e balão de cada morador desenhado (testes). */
+    gestosMoradores(): { id: number; gesto: IdGesto | null; balao: IdGesto | null }[] {
+      return [...moradores].map(([id, mb]) => ({
+        id,
+        gesto: mb.animador.gestoAtual,
+        balao: mb.balao?.gesto ?? null,
+      }));
+    },
     atualizar(
       lista: readonly Criatura[],
       dt: number,
@@ -295,6 +316,7 @@ export function criarRenderCriaturas(
           if (!foraDaVista(c.x, c.y + 1, c.z))
             mb.boneco.aplicarPose(pose, { dt, olhar: 0, vista: mb.animador.vista() });
           mb.boneco.posicionar(c.x, c.y, c.z, c.yaw);
+          mb.balao?.atualizar(dt);
           const l = luz(c);
           if (Math.abs(l - mb.luz) > 0.002) {
             mb.luz = l;
@@ -403,6 +425,7 @@ export function criarRenderCriaturas(
       }
       for (const [id, mb] of moradores) {
         if (mb.quadro === quadro) continue;
+        mb.balao?.descartar();
         mb.boneco.descartar();
         moradores.delete(id);
       }
