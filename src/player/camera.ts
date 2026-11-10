@@ -62,8 +62,16 @@ export const PITCH_LADO_INTEIRO = 1.1;
 /** Seguir com leve atraso (taxas por segundo, como no esboço). */
 export const SEGUIR_HORIZONTAL = 8;
 export const SEGUIR_VERTICAL = 6;
-/** Pulos maiores que isto num quadro (teleporte, renascer) vão direto. */
+/**
+ * Teleporte (renascer, porta da nuvem): o boneco andou num quadro mais que isto além do que a
+ * queda mais rápida andaria. Aí a câmera vai direto. Antes valia a distância até o ponto
+ * seguido, e voando rápido ou caindo o atraso passava disso: a câmera reiniciava a cada
+ * poucos quadros e o boneco pulava na tela.
+ */
 export const SALTO_DIRETO = 3;
+const VELOCIDADE_MAIS_RAPIDA = 45;
+/** O atraso nunca passa disto (blocos): voando rápido ou caindo, a câmera vem junto. */
+export const ATRASO_MAXIMO = 1.5;
 
 /** Andando sem mexer na câmera por este tempo, ela volta para trás do boneco. */
 export const ESPERA_RECENTRAR = 1.4;
@@ -321,6 +329,8 @@ export interface ResultadoCamera {
 /** O estado da câmera que segue o boneco: ponto seguido, distância atual e zoom. */
 export function criarCameraOrbita(zoom = ZOOM_PADRAO, alturaPivo = ALTURA_PIVO) {
   let seguido: Vec3 | null = null;
+  /** Os olhos no quadro anterior (para reconhecer teleporte). */
+  let anterior: Vec3 | null = null;
   let distancia = Number.NaN;
   let alvoDistancia = limitarZoom(zoom);
   let ultimo: ResultadoCamera | null = null;
@@ -329,11 +339,11 @@ export function criarCameraOrbita(zoom = ZOOM_PADRAO, alturaPivo = ALTURA_PIVO) 
   return {
     quadro(q: QuadroCamera): ResultadoCamera {
       const o = q.olhos;
-      if (
-        !seguido ||
-        Math.abs(o.x - seguido.x) + Math.abs(o.y - seguido.y) + Math.abs(o.z - seguido.z) >
-          SALTO_DIRETO
-      ) {
+      const salto = anterior
+        ? Math.hypot(o.x - anterior.x, o.y - anterior.y, o.z - anterior.z)
+        : Infinity;
+      anterior = { ...o };
+      if (!seguido || salto > SALTO_DIRETO + VELOCIDADE_MAIS_RAPIDA * Math.max(0, q.dt)) {
         seguido = { ...o };
         distancia = Number.NaN;
         subida = 0;
@@ -343,6 +353,15 @@ export function criarCameraOrbita(zoom = ZOOM_PADRAO, alturaPivo = ALTURA_PIVO) 
         seguido.x += (o.x - seguido.x) * kh;
         seguido.y += (o.y - seguido.y) * kv;
         seguido.z += (o.z - seguido.z) * kh;
+        // atraso limitado: em vez de reiniciar, a câmera é puxada junto
+        const ah = Math.hypot(o.x - seguido.x, o.z - seguido.z);
+        if (ah > ATRASO_MAXIMO) {
+          const k = 1 - ATRASO_MAXIMO / ah;
+          seguido.x += (o.x - seguido.x) * k;
+          seguido.z += (o.z - seguido.z) * k;
+        }
+        const av = o.y - seguido.y;
+        if (Math.abs(av) > ATRASO_MAXIMO) seguido.y = o.y - Math.sign(av) * ATRASO_MAXIMO;
       }
       // bem perto (pela distância do quadro anterior), o pivô sobe se o teto deixar
       const quer = subidaPerto(distancia, alturaPivo);

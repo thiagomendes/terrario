@@ -351,3 +351,63 @@ describe('olhando reto para baixo', () => {
     expect(r.opacidade).toBe(1);
   });
 });
+
+describe('voo rápido e queda (sem pula-pula)', () => {
+  /** Move os olhos a uma velocidade constante e confere que a câmera anda sempre para o mesmo lado. */
+  function rodar(v: { x: number; y: number; z: number }, segundos: number, dt = 1 / 60) {
+    const c = criarCameraOrbita();
+    const o = { ...olhos, y: 200 };
+    let r = c.quadro({ dt, olhos: o, yaw: 0, pitch: 0.3, bloqueia: livre });
+    const passos: { x: number; y: number; z: number }[] = [];
+    const distancias: number[] = [];
+    /** Onde o boneco aparece em relação à câmera: na tela, é isto que pula. */
+    const relativos: number[] = [];
+    for (let t = 0; t < segundos; t += dt) {
+      o.x += v.x * dt;
+      o.y += v.y * dt;
+      o.z += v.z * dt;
+      const p = r.posicao;
+      r = c.quadro({ dt, olhos: { ...o }, yaw: 0, pitch: 0.3, bloqueia: livre });
+      passos.push({ x: r.posicao.x - p.x, y: r.posicao.y - p.y, z: r.posicao.z - p.z });
+      distancias.push(r.distancia);
+      relativos.push(Math.hypot(o.x - r.posicao.x, o.y - r.posicao.y, o.z - r.posicao.z));
+    }
+    return { passos, distancias, relativos, c, o };
+  }
+  it('caindo a 40 blocos/s a câmera só desce e o atraso fica limitado', () => {
+    const { passos, distancias, relativos, c, o } = rodar({ x: 0, y: -40, z: 0 }, 3);
+    // o boneco não pula na tela: a distância até a câmera muda pouco de um quadro para outro
+    for (let i = 6; i < relativos.length; i++)
+      expect(Math.abs(relativos[i] - relativos[i - 1])).toBeLessThan(0.05);
+    // depois do arranque, nunca sobe de volta (o pula-pula era reiniciar o atraso)
+    for (const p of passos.slice(5)) expect(p.y).toBeLessThan(0);
+    for (const d of distancias.slice(5)) expect(d).toBeCloseTo(ZOOM_PADRAO, 3);
+    expect(o.y - c.seguido()!.y).toBeLessThan(0);
+    expect(Math.abs(o.y - c.seguido()!.y)).toBeLessThanOrEqual(1.5 + 1e-6);
+  });
+  it('voando rápido para a frente e subindo a câmera segue sem trancos', () => {
+    const { passos, relativos } = rodar({ x: 0, y: 8, z: 20 }, 3);
+    // depois do primeiro segundo (o atraso já se formou), o boneco fica parado na tela
+    for (let i = 60; i < relativos.length; i++)
+      expect(Math.abs(relativos[i] - relativos[i - 1])).toBeLessThan(0.05);
+    for (const p of passos.slice(5)) {
+      expect(p.y).toBeGreaterThan(0);
+      expect(p.z).toBeGreaterThan(0);
+      // nenhum quadro anda muito mais que o boneco (sem salto de volta para ele)
+      expect(Math.hypot(p.x, p.y, p.z)).toBeLessThan(Math.hypot(8, 20) / 60 + 0.05);
+    }
+  });
+  it('com poucos quadros por segundo a queda também não reinicia', () => {
+    const { passos, relativos } = rodar({ x: 0, y: -40, z: 0 }, 3, 1 / 15);
+    for (let i = 4; i < relativos.length; i++)
+      expect(Math.abs(relativos[i] - relativos[i - 1])).toBeLessThan(0.2);
+    for (const p of passos.slice(3)) expect(p.y).toBeLessThan(0);
+  });
+  it('teleporte (renascer) ainda vai direto', () => {
+    const c = criarCameraOrbita();
+    c.quadro({ dt: 1 / 60, olhos, yaw: 0, pitch: 0.3, bloqueia: livre });
+    const longe = { x: olhos.x + 50, y: olhos.y, z: olhos.z };
+    c.quadro({ dt: 1 / 60, olhos: longe, yaw: 0, pitch: 0.3, bloqueia: livre });
+    expect(dist(c.seguido()!, longe)).toBeLessThan(1e-9);
+  });
+});
