@@ -10,7 +10,8 @@
 import { registrarCatalogo } from '../jogo/catalogo';
 import { sanearDadosMundo } from './saneamento';
 import { blocoDe, criarEdicoes, empacotar } from '../world/edicoes';
-import { Bloco, ehAlvo, obterBloco } from '../world/blocks';
+import { Bloco, ehAlvo, luzDoBloco, obterBloco } from '../world/blocks';
+import { criarCacheGeracional } from './mundo';
 import { TAM_X, ALTURA, TAM_Z, alturaTerreno, encontrarNascimento, estiloMundo } from '../world/chunk';
 import { AVISO_LIMITE, comeEsse, viraCriado } from '../jogo/criacao';
 import { definirRegioesSemPovoado, regiaoDoChunk } from '../world/povoado';
@@ -70,7 +71,24 @@ import {
 const ALCANCE_REGRAS = 8;
 /** Distância máxima para bater, domar e trocar com uma criatura. */
 const ALCANCE_CRIATURA = 7;
-/** De quanto em quanto tempo a lavoura cresce (segundos). */
+/** Pés da lavoura que crescem num passo, no máximo (o custo do passo tem teto). */
+const ORCAMENTO_LAVOURA = 1024;
+/**
+ * Segundos que a luz de tocha guardada da lavoura vale. Pôr ou tirar fonte de luz perto já
+ * a esquece na hora; isto é só para conferir de vez em quando.
+ */
+const LUZ_LAVOURA_VALE = 60;
+/** Células de luz da lavoura calculadas num passo, no máximo (cada uma lê 2025 blocos). */
+const ORCAMENTO_LUZ = 32;
+/** Pé da lavoura que ainda cresce: progresso no estágio e quando cresceu por último. */
+interface PeLavoura {
+  x: number;
+  y: number;
+  z: number;
+  p: number;
+  t: number;
+}
+/** De quanto em quanto tempo cada pé da lavoura cresce (segundos). */
 const INTERVALO_LAVOURA = 1;
 /** Segundos mínimos entre duas comidas dadas ao mesmo bicho já criado. */
 const INTERVALO_COMIDA = 1;
@@ -240,7 +258,18 @@ export function criarNucleo(op: OpcoesNucleo) {
    * Lavoura que ainda cresce: célula → progresso no estágio atual (segundos na velocidade 1).
    * Sai das edições ao abrir o mundo; o progresso vem de `extras.lavoura` (faltando, 0).
    */
-  const lavoura = new Map<string, { x: number; y: number; z: number; p: number }>();
+  const lavoura = new Map<string, PeLavoura>();
+  /** Relógio da lavoura (segundos): cada pé guarda quando cresceu por último. */
+  let relogioLavoura = 0;
+  /** Onde parou a volta pela lavoura (cada passo cresce uma parte dela). */
+  let cursorLavoura: Iterator<[string, PeLavoura]> | null = null;
+  /**
+   * Luz de cada célula 2x2x2 da lavoura (só da lavoura; as criaturas têm a delas). Só muda
+   * quando entra ou sai uma fonte de luz perto, e aí a célula é esquecida na hora.
+   */
+  const luzLavoura = criarCacheGeracional<{ v: number; t: number }>(16384);
+  /** Células de luz calculadas neste passo (têm teto, como os pés). */
+  let luzesNoPasso = 0;
   {
     const salvo = extras['lavoura'];
     const progresso =
@@ -262,12 +291,12 @@ export function criarNucleo(op: OpcoesNucleo) {
           x,
           y,
           z,
+          t: 0,
           p: Number.isFinite(p) && p > 0 ? Math.min(p, SEGUNDOS_POR_ESTAGIO) : 0,
         });
       }
     }
   }
-  let esperaLavoura = 0;
 
   // jogador do mundo salvo (o servidor local tem um só)
   const nascimento = encontrarNascimento(semente);
@@ -391,12 +420,14 @@ export function criarNucleo(op: OpcoesNucleo) {
   }
 
   function editar(x: number, y: number, z: number, bloco: number, meta = 0): boolean {
+    const antes = mundo.bloco(x, y, z);
     if (!edicoes.definir(x, y, z, bloco, meta)) return false;
+    if (luzDoBloco(antes) > 0 || luzDoBloco(bloco) > 0) esquecerLuzPerto(x, y, z);
     blocosMudados.push({ x, y, z, v: empacotar(bloco, meta) });
     // a lavoura que cresce: entra ao ser plantada, sai quando amadurece ou some
     const k = `${x},${y},${z}`;
     if (ehLavoura(bloco) && !madura(bloco)) {
-      if (!lavoura.has(k)) lavoura.set(k, { x, y, z, p: 0 });
+      if (!lavoura.has(k)) lavoura.set(k, { x, y, z, p: 0, t: relogioLavoura });
     } else lavoura.delete(k);
     // planta não flutua: sem a terra arada embaixo, a lavoura sai e devolve o que é dela
     if (bloco !== Bloco.TERRA_ARADA) {
@@ -525,41 +556,118 @@ export function criarNucleo(op: OpcoesNucleo) {
     for (const o of jogadores.values()) o.eventos.push({ e: 'arou', x, y, z, meu: o === j });
   }
 
-  /** A lavoura cresce (sem sorteio): estágio novo quando o progresso enche. */
+  const celulaLuz = (x: number, y: number, z: number) => `${x & ~1},${y & ~1},${z & ~1}`;
+  /** A luz guardada do pé, se ainda vale. */
+  function luzGuardada(c: PeLavoura): number | undefined {
+    const g = luzLavoura.obter(celulaLuz(c.x, c.y, c.z));
+    return g && relogioLavoura - g.t < LUZ_LAVOURA_VALE ? g.v : undefined;
+  }
+  /** Luz de fontes perto do pé (guardada; uma tocha nova vale na hora). */
+  function luzDoPe(c: PeLavoura): number {
+    const g = luzGuardada(c);
+    if (g !== undefined) return g;
+    const v = mundo.luzDaCelula(c.x, c.y, c.z);
+    luzesNoPasso++;
+    luzLavoura.guardar(celulaLuz(c.x, c.y, c.z), { v, t: relogioLavoura });
+    return v;
+  }
+  /** Uma fonte de luz entrou ou saiu: esquece a luz das células que ela alcança. */
+  function esquecerLuzPerto(x: number, y: number, z: number): void {
+    if (luzLavoura.tamanho === 0) return;
+    for (let dy = -6; dy <= 6; dy += 2)
+      for (let dz = -8; dz <= 8; dz += 2)
+        for (let dx = -8; dx <= 8; dx += 2) luzLavoura.apagar(celulaLuz(x + dx, y + dy, z + dz));
+  }
+
+  /** Um pé cresce `segundos` (sem sorteio): estágio novo quando o progresso enche. */
+  function crescerPe(
+    k: string,
+    c: PeLavoura,
+    segundos: number,
+    noite: number,
+    chuva: boolean,
+  ): void {
+    let b = mundo.bloco(c.x, c.y, c.z);
+    if (proximoEstagio(b) === null) {
+      lavoura.delete(k);
+      return;
+    }
+    const v = velocidadeCrescimento({
+      noite,
+      chuva,
+      ceuAberto: mundo.criaturas.ceuAberto(c.x, c.y, c.z),
+      luz: () => luzDoPe(c),
+    });
+    c.p += v * segundos;
+    let prox = proximoEstagio(b);
+    let mudou = false;
+    while (prox !== null && c.p >= SEGUNDOS_POR_ESTAGIO) {
+      c.p -= SEGUNDOS_POR_ESTAGIO;
+      b = prox;
+      prox = proximoEstagio(b);
+      mudou = true;
+    }
+    if (!mudou) return;
+    const resto = c.p;
+    editar(c.x, c.y, c.z, b, edicoes.obterMeta(c.x, c.y, c.z));
+    const ainda = lavoura.get(k);
+    if (ainda) ainda.p = resto;
+    if (madura(b))
+      for (const o of jogadores.values())
+        if (Math.hypot(c.x + 0.5 - o.tel.x, c.z + 0.5 - o.tel.z) <= ALCANCE_MADURA)
+          o.eventos.push({ e: 'amadureceu', x: c.x, y: c.y, z: c.z, bloco: b });
+  }
+
+  function chuvaNoMundo(): boolean {
+    return clima.estado.tipo === 'chuva' || clima.estado.tipo === 'tempestade';
+  }
+
+  /** A lavoura inteira cresce `segundos` de uma vez (depuração: testes e capturas). */
   function crescer(segundos: number): void {
     if (lavoura.size === 0) return;
     const noite = noiteNaHora(hora);
-    const chuva = clima.estado.tipo === 'chuva' || clima.estado.tipo === 'tempestade';
-    for (const [k, c] of lavoura) {
-      let b = mundo.bloco(c.x, c.y, c.z);
-      if (proximoEstagio(b) === null) {
-        lavoura.delete(k);
+    const chuva = chuvaNoMundo();
+    for (const [k, c] of lavoura) crescerPe(k, c, segundos, noite, chuva);
+  }
+
+  /**
+   * A cada passo, uma parte da lavoura cresce o tempo que passou desde a vez dela: cada
+   * pé uma vez por segundo, e no máximo ORCAMENTO_LAVOURA pés por passo (numa lavoura
+   * enorme a volta demora mais, mas cada pé cresce o tempo todo que esperou; a velocidade
+   * de crescer é a mesma e o custo do passo tem teto).
+   */
+  function crescerAosPoucos(dt: number): void {
+    relogioLavoura += dt;
+    if (lavoura.size === 0) return;
+    const cota = Math.min(
+      ORCAMENTO_LAVOURA,
+      Math.ceil((lavoura.size * dt) / INTERVALO_LAVOURA),
+    );
+    const noite = noiteNaHora(hora);
+    const chuva = chuvaNoMundo();
+    luzesNoPasso = 0;
+    let reinicios = 0;
+    for (let i = 0; i < cota; i++) {
+      let r = cursorLavoura?.next();
+      if (!r || r.done) {
+        // uma volta inteira já foi feita neste passo (lavoura pequena): basta
+        if (++reinicios > 1) break;
+        cursorLavoura = lavoura.entries();
+        r = cursorLavoura.next();
+        if (r.done) break;
+      }
+      const [k, c] = r.value;
+      // sem sol, o pé precisa da luz de tocha; calculada demais neste passo, ele fica para
+      // a próxima volta (e cresce então todo o tempo que esperou)
+      if (
+        luzesNoPasso >= ORCAMENTO_LUZ &&
+        !(noite < 0.5 && mundo.criaturas.ceuAberto(c.x, c.y, c.z)) &&
+        luzGuardada(c) === undefined
+      )
         continue;
-      }
-      const v = velocidadeCrescimento({
-        noite,
-        chuva,
-        ceuAberto: mundo.criaturas.ceuAberto(c.x, c.y, c.z),
-        luz: () => mundo.criaturas.luzBloco(c.x, c.y, c.z),
-      });
-      c.p += v * segundos;
-      let prox = proximoEstagio(b);
-      let mudou = false;
-      while (prox !== null && c.p >= SEGUNDOS_POR_ESTAGIO) {
-        c.p -= SEGUNDOS_POR_ESTAGIO;
-        b = prox;
-        prox = proximoEstagio(b);
-        mudou = true;
-      }
-      if (!mudou) continue;
-      const resto = c.p;
-      editar(c.x, c.y, c.z, b, edicoes.obterMeta(c.x, c.y, c.z));
-      const ainda = lavoura.get(k);
-      if (ainda) ainda.p = resto;
-      if (madura(b))
-        for (const o of jogadores.values())
-          if (Math.hypot(c.x + 0.5 - o.tel.x, c.z + 0.5 - o.tel.z) <= ALCANCE_MADURA)
-            o.eventos.push({ e: 'amadureceu', x: c.x, y: c.y, z: c.z, bloco: b });
+      const passou = relogioLavoura - c.t;
+      c.t = relogioLavoura;
+      if (passou > 0) crescerPe(k, c, passou, noite, chuva);
     }
   }
 
@@ -633,7 +741,20 @@ export function criarNucleo(op: OpcoesNucleo) {
         return;
       }
     }
-    for (const e of c.lote) editar(e.x, e.y, e.z, e.v & 255, (e.v >> 8) & 255);
+    // a lavoura segue a regra de plantar (terra arada embaixo): primeiro o resto do lote
+    // (que pode trazer a terra arada), depois as plantas; planta sem terra arada não entra
+    // (e a tela é corrigida). Sem isso, milhares de pés no ar faziam o crescer pesar.
+    const plantas: typeof c.lote = [];
+    for (const e of c.lote) {
+      const b = e.v & 255;
+      if (ehLavoura(b)) plantas.push(e);
+      else editar(e.x, e.y, e.z, b, (e.v >> 8) & 255);
+    }
+    for (const e of plantas) {
+      if (mundo.bloco(e.x, e.y - 1, e.z) === Bloco.TERRA_ARADA)
+        editar(e.x, e.y, e.z, e.v & 255, (e.v >> 8) & 255);
+      else corrigir(j, e.x, e.y, e.z);
+    }
   }
 
   function alternarPorta(x: number, y: number, z: number): void {
@@ -1201,12 +1322,8 @@ export function criarNucleo(op: OpcoesNucleo) {
         lista[c.quem].eventos.push({ e: 'coletou', item: c.item, qtd: c.qtd });
     }
 
-    // a lavoura cresce com o mundo aberto (uma vez por segundo basta)
-    esperaLavoura += dt;
-    if (esperaLavoura >= INTERVALO_LAVOURA) {
-      crescer(esperaLavoura);
-      esperaLavoura = 0;
-    }
+    // a lavoura cresce com o mundo aberto (cada pé uma vez por segundo, com teto por passo)
+    crescerAosPoucos(dt);
 
     // fornalhas trabalham mesmo com o painel fechado
     conteineres.atualizar(

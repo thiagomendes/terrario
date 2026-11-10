@@ -15,6 +15,9 @@ import {
 import { planoDaRegiao, REGIAO_POVOADO } from '../../src/world/povoado';
 import { Bloco } from '../../src/world/blocks';
 import { sanear } from '../../src/nucleo/saneamento';
+import { criarEdicoes, empacotar } from '../../src/world/edicoes';
+import { luzDoBloco } from '../../src/world/blocks';
+import { criarAcessoMundo, criarCacheGeracional } from '../../src/nucleo/mundo';
 import { idDoBloco } from '../../src/jogo/itens';
 import type { Comando, Telemetria } from '../../src/nucleo/protocolo';
 
@@ -455,5 +458,120 @@ describe('salvamento com lixo não trava o núcleo', () => {
     expect(c.y).toBe(120);
     const salvo = n.salvar().extras.criaturas as { criados: { x: number; y: number }[] };
     expect(salvo.criados).toEqual([expect.objectContaining({ x: longe + 0.5, y: 120 })]);
+  });
+});
+
+describe('lavoura grande não pesa no servidor', () => {
+  it('editar em lote não põe planta sem terra arada (e a tela é corrigida)', () => {
+    const n = nuvem('criativo');
+    const lote = [];
+    for (let i = 0; i < 64; i++)
+      lote.push({ x: X - 32 + i, y: 120, z: Z, v: empacotar(Bloco.TRIGO_0) });
+    // terra arada e planta no mesmo lote (a planta vem antes no lote): entra
+    lote.push({ x: X, y: 110, z: Z + 3, v: empacotar(Bloco.TRIGO_1) });
+    lote.push({ x: X, y: 109, z: Z + 3, v: empacotar(Bloco.TERRA_ARADA) });
+    expect(mandar(n, 'ana', { t: 'editar', id: 5, lote })).toBe(true);
+    expect(n.estado.lavoura.size).toBe(1);
+    expect(bloco(n, X, 110, Z + 3)).toBe(Bloco.TRIGO_1);
+    expect(bloco(n, X - 32, 120, Z)).toBe(Bloco.AR);
+    const q = n.quadros().get('ana')!;
+    expect(q.blocos?.filter((b) => b.y === 120 && b.v === Bloco.AR).length).toBe(64);
+  });
+
+  it('40.960 pés de lavoura (10 andares, à noite, sem céu) custam menos de 10 ms por passo', () => {
+    const n = nuvem('criativo');
+    for (let k = 0; k < 10; k++) {
+      const terra = [];
+      const pes = [];
+      for (let i = 0; i < 4096; i++) {
+        const x = X - 32 + (i % 64);
+        const z = Z - 32 + Math.floor(i / 64);
+        terra.push({ x, y: 100 + 2 * k, z, v: empacotar(Bloco.TERRA_ARADA) });
+        pes.push({ x, y: 101 + 2 * k, z, v: empacotar(Bloco.TRIGO_0) });
+      }
+      mandar(n, 'ana', { t: 'editar', id: 100 + 2 * k, lote: terra });
+      mandar(n, 'ana', { t: 'editar', id: 101 + 2 * k, lote: pes });
+    }
+    // uma tocha no meio da lavoura (a luz conta) e a noite fechada
+    n.estado.edicoes.definir(X, 112, Z, Bloco.TOCHA);
+    n.comando('ana', { t: 'depurar', d: { f: 'hora', hora: 0 } });
+    n.comando('ana', { t: 'depurar', d: { f: 'pausarDia', pausar: true } });
+    expect(n.estado.lavoura.size).toBe(40960);
+    // 30 s de jogo: nos primeiros segundos a luz de cada célula é calculada aos poucos
+    // (com teto por passo); depois fica guardada
+    const passos = 600;
+    const tempos: number[] = [];
+    for (let i = 0; i < passos; i++) {
+      const a = performance.now();
+      n.passo();
+      n.quadros();
+      tempos.push(performance.now() - a);
+      if (process.env.DETALHE) console.log(i, tempos[i].toFixed(1));
+    }
+    const media = (de: number) => tempos.slice(de).reduce((a, b) => a + b, 0) / (passos - de);
+    const pior = Math.max(...tempos.slice(20));
+    console.log(
+      `lavoura de 40960 pés: ${media(0).toFixed(2)} ms por passo em 30 s ` +
+        `(${media(400).toFixed(2)} ms depois de aquecer; pior ${pior.toFixed(1)} ms)`,
+    );
+    expect(media(0)).toBeLessThan(10);
+    expect(pior).toBeLessThan(40);
+    // cresceu o tempo todo: 30 s à noite (metade) = uns 15 s de progresso em cada pé, e
+    // perto da tocha como de dia (30 s)
+    const ps = [...n.estado.lavoura.values()].map((c) => c.p);
+    expect(Math.min(...ps)).toBeGreaterThan(12);
+    expect(Math.max(...ps)).toBeLessThan(31);
+  }, 120_000);
+});
+
+describe('luz e caches do mundo do núcleo', () => {
+  it('a luz da célula lida direto dos chunks é a mesma da conta bloco a bloco', () => {
+    const ed = criarEdicoes();
+    const m = criarAcessoMundo(SEMENTE, ed);
+    // tochas e lanternas espalhadas, inclusive na beirada dos chunks
+    const fontes: [number, number, number, number][] = [
+      [X, Y + 1, Z, Bloco.TOCHA],
+      [X + 15 - (X & 15), Y + 3, Z, Bloco.LANTERNA],
+      [X - 9, Y, Z + 7, Bloco.TOCHA],
+      [X + 4, Y - 3, Z - 6, Bloco.LANTERNA],
+    ];
+    for (const [x, y, z, b] of fontes) ed.definir(x, y, z, b);
+    const conta = (xr: number, yr: number, zr: number) => {
+      const x = xr & ~1;
+      const y = yr & ~1;
+      const z = zr & ~1;
+      let melhor = 0;
+      for (let dy = -4; dy <= 4; dy++)
+        for (let dz = -7; dz <= 7; dz++)
+          for (let dx = -7; dx <= 7; dx++) {
+            const l = luzDoBloco(m.bloco(x + dx, y + dy, z + dz));
+            if (l > 0) melhor = Math.max(melhor, l - Math.abs(dx) - Math.abs(dy) - Math.abs(dz));
+          }
+      return melhor;
+    };
+    let acesas = 0;
+    for (let dx = -12; dx <= 12; dx += 3)
+      for (let dz = -12; dz <= 12; dz += 3)
+        for (const dy of [-5, 0, 2, 5]) {
+          const v = m.luzDaCelula(X + dx, Y + dy, Z + dz);
+          expect(v).toBe(conta(X + dx, Y + dy, Z + dz));
+          if (v > 0) acesas++;
+        }
+    expect(acesas).toBeGreaterThan(20);
+    // no fundo e no topo do mundo também
+    expect(m.luzDaCelula(X, 1, Z)).toBe(conta(X, 1, Z));
+    expect(m.luzDaCelula(X, 127, Z)).toBe(conta(X, 127, Z));
+  });
+
+  it('o cache esquece aos poucos (nunca apaga tudo de uma vez)', () => {
+    const c = criarCacheGeracional<number>(100);
+    for (let i = 0; i < 150; i++) c.guardar(`k${i}`, i);
+    // o que foi guardado há pouco continua lá, e o lido da geração velha volta para a nova
+    expect(c.obter('k149')).toBe(149);
+    expect(c.obter('k10')).toBe(10);
+    for (let i = 150; i < 260; i++) c.guardar(`k${i}`, i);
+    expect(c.obter('k259')).toBe(259);
+    expect(c.tamanho).toBeLessThanOrEqual(200);
+    expect(c.tamanho).toBeGreaterThan(100);
   });
 });
