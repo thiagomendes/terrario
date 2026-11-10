@@ -13,6 +13,7 @@ import { Bloco, ehAlvo, obterBloco } from '../world/blocks';
 import { TAM_X, TAM_Z, alturaTerreno, encontrarNascimento, estiloMundo } from '../world/chunk';
 import { AVISO_LIMITE, comeEsse, viraCriado } from '../jogo/criacao';
 import { definirRegioesSemPovoado, regiaoDoChunk } from '../world/povoado';
+import { abreEFecha, alternado, ehPorta } from '../world/portas';
 import { criarConteineres, TAMANHO_BAU } from '../jogo/conteineres';
 import { criarMundoDeItens, dropsDoBloco } from '../jogo/drops';
 import { criarPopulacao } from '../jogo/populacao';
@@ -617,8 +618,10 @@ export function criarNucleo(op: OpcoesNucleo) {
 
   function alternarPorta(x: number, y: number, z: number): void {
     const b = mundo.bloco(x, y, z);
-    const novo = b === Bloco.PORTA ? Bloco.PORTA_ABERTA : Bloco.PORTA;
+    const novo = alternado(b);
     editar(x, y, z, novo, edicoes.obterMeta(x, y, z));
+    // a porteira tem um bloco só; a porta leva a outra metade junto
+    if (!ehPorta(b)) return;
     for (const dy of [-1, 1]) {
       const v = mundo.bloco(x, y + dy, z);
       if (v === Bloco.PORTA || v === Bloco.PORTA_ABERTA)
@@ -636,7 +639,7 @@ export function criarNucleo(op: OpcoesNucleo) {
     }
     const abertura = c.id ?? 1_000_000 + ++aberturas;
     const b = mundo.bloco(x, y, z);
-    if (b === Bloco.PORTA || b === Bloco.PORTA_ABERTA) {
+    if (abreEFecha(b)) {
       alternarPorta(x, y, z);
       for (const o of jogadores.values()) o.eventos.push({ e: 'porta', x, y, z });
     } else if (

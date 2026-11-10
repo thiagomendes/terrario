@@ -10,6 +10,8 @@ import {
   T,
   VAZIO,
   aneisDe,
+  metadesDaPorta,
+  bordaDaPorta,
   escurece,
   fbmT,
   folhasDe,
@@ -329,19 +331,13 @@ const fenoTopo = fenoTopoDe(['#dcb45c', '#e8c46e', '#f0d080', '#f6dc96'], '#c056
 
 // --- casa e oficina --------------------------------------------------------------
 
-/** Chita: tecido de algodão com florzinhas estampadas em cima da cor de fundo. */
-function chita(fundo: string, flor: string, miolo: string): Pintor {
-  const c = hex(fundo);
-  return (x, y, s) => {
-    const cx = mod(x - 2, 8) - 2;
-    const cy = mod(y - 2 + ((x >> 3) % 2) * 4, 8) - 2;
-    const d = Math.abs(cx) + Math.abs(cy);
-    if (d === 0) return cor(miolo, x, y, s);
-    if (d === 1) return cor(flor, x, y, s);
-    if ((cx === 2 && cy === -1) || (cx === 3 && cy === -2)) return cor('#3f8a3a', x, y, s);
-    const fio = ((x + y) % 4 === 0 ? 0.9 : 1) * (0.95 + hash2(x, y, s) * 0.1);
-    return [c[0] * fio, c[1] * fio, c[2] * fio, 255];
-  };
+/** Madeira pintada: tábuas em pé, como a parede do celeiro do desenho, na cor de cada lã. */
+function madeiraPintada(base: string): Pintor {
+  const c = hex(base);
+  const tom = (k: number) =>
+    '#' + c.slice(0, 3).map((v) => Math.max(0, Math.min(255, Math.round(v * k))).toString(16).padStart(2, '0')).join('');
+  const tabuas = tabuasDe([tom(0.9), tom(0.97), tom(1.03), tom(1.08)]);
+  return (x, y, s) => tabuas(y, x, s);
 }
 
 /** Colcha de retalhos da cama de palha. */
@@ -401,15 +397,21 @@ const bauMadeira: Pintor = (x, y, s) => {
 };
 
 /** Porta de tábua com a trava em Z e duas janelinhas. */
-const portaTabua: Pintor = (x, y, s) => {
-  const janela = y >= 2 && y <= 5 && ((x >= 3 && x <= 6) || (x >= 9 && x <= 12));
+/** Porta de fazenda inteira: duas janelinhas em cima e a trava em Z embaixo. */
+const TABUAS_PORTA = tabuasDe(['#a8743e', '#b47e46', '#c0884e']);
+const portasTabua = metadesDaPorta((x, yy, s) => {
+  const janela = yy >= 4 && yy <= 9 && ((x >= 3 && x <= 6) || (x >= 9 && x <= 12));
   if (janela) return VAZIO;
-  if (x === 12 && y === 10) return cor('#f0c040', x, y, s);
-  const p = tabuasDe(['#a8743e', '#b47e46', '#c0884e'])(y, x, s);
-  if (borda(x, y)) return escurece(p, 0.7);
-  const trava = y === 7 || y === 14 || (y > 7 && y < 14 && Math.abs(x - (2 + (14 - y) * 1.6)) < 1);
-  return trava ? cor('#7a4a26', x, y, s) : p;
-};
+  if (x === 12 && (yy === 18 || yy === 19)) return cor('#f0c040', x, yy, s);
+  const p = TABUAS_PORTA(yy & (T - 1), x, s);
+  if (bordaDaPorta(x, yy)) return escurece(p, 0.7);
+  const trava =
+    yy === 12 ||
+    yy === 21 ||
+    yy === 29 ||
+    (yy > 21 && yy < 29 && Math.abs(x - (2 + (29 - yy) * 1.4)) < 1);
+  return trava ? cor('#7a4a26', x, yy, s) : p;
+});
 
 /** Vidraça de janela de fazenda: caixilho branco em cruz e o vidro limpo. */
 const vidraca: Pintor = (x, y, s) => {
@@ -764,14 +766,14 @@ export const PINTORES_RANCHO: Record<string, Pintor> = {
       s,
     );
   },
-  la_branca: chita('#f6f1e8', '#d9483b', '#ffd45a'),
-  la_vermelha: chita('#d9483b', '#ffffff', '#ffd45a'),
-  la_laranja: chita('#f08a2a', '#fff6d0', '#d9483b'),
-  la_amarela: chita('#f6cc3a', '#4a8fd8', '#ffffff'),
-  la_verde: chita('#4caa3a', '#ffd45a', '#d9483b'),
-  la_azul: chita('#3a6fd0', '#ffffff', '#ffd45a'),
-  la_roxa: chita('#8a4ab8', '#ffb3d0', '#ffffff'),
-  la_preta: chita('#2a2630', '#ff6a8a', '#ffd45a'),
+  la_branca: madeiraPintada('#f2ece0'),
+  la_vermelha: madeiraPintada('#c9402f'),
+  la_laranja: madeiraPintada('#e8862e'),
+  la_amarela: madeiraPintada('#f0c63c'),
+  la_verde: madeiraPintada('#4f9e3c'),
+  la_azul: madeiraPintada('#3d70c4'),
+  la_roxa: madeiraPintada('#8450b0'),
+  la_preta: madeiraPintada('#38323a'),
   frutinhas: amoreira,
   // ipê amarelo e ipê-rosa no outono
   folhas_outono: folhasComFlor(
@@ -790,7 +792,7 @@ export const PINTORES_RANCHO: Record<string, Pintor> = {
     if (y < 9) return rampa(['#f6f1e8', '#fffaf2'], hash2(x, y, s), x, y, s);
     return tabuasIpe(x, y, s);
   },
-  porta: portaTabua,
+  ...portasTabua,
   // eucalipto (clarinho rosado) e araucária (avermelhada)
   tabuas_betula: tabuasDe(['#dcbc96', '#e2c49e', '#e8cca8', '#eed4b0']),
   tabuas_pinho: tabuasDe(['#94523a', '#a05c42', '#aa664a', '#b47052']),

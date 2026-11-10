@@ -116,6 +116,8 @@ export const TEXTOS_DOCE: TextosTema = {
     79: 'aboboreira doce (3 de 4)',
     80: 'aboboreira doce carregada',
     81: 'fardo de broto-doce',
+    82: 'porteira doce',
+    83: 'porteira doce aberta',
   },
   itens: {
     // spec 013: plantio

@@ -249,6 +249,15 @@ export const RECEITAS: readonly Receita[] = [
     categoria: 'decoracao',
   },
   {
+    // spec 013: porteira do curral (gravetos nas pontas, tábuas no meio, como a cerca)
+    id: 'porteira',
+    forma: ['GTG', 'GTG'],
+    chaves: { T: '#tabuas', G: 'graveto' },
+    resultado: { item: b(Bloco.PORTEIRA), qtd: 1 },
+    mesa: true,
+    categoria: 'decoracao',
+  },
+  {
     id: 'porta',
     forma: ['TT', 'TT', 'TT'],
     chaves: { T: '#tabuas' },

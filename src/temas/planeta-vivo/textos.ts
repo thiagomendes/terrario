@@ -89,6 +89,8 @@ export const TEXTOS_PLANETA: TextosTema = {
     79: 'pé de cabaça-lua (3 de 4)',
     80: 'pé de cabaça-lua carregado',
     81: 'fardo de grão-estelar',
+    82: 'portãozinho de talo',
+    83: 'portãozinho de talo aberto',
   },
   itens: {
     // spec 013: plantio

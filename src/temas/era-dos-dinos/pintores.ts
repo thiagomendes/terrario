@@ -2,6 +2,8 @@ import {
   T,
   VAZIO,
   aneisDe,
+  metadesDaPorta,
+  bordaDaPorta,
   escurece,
   fbmT,
   hex,
@@ -619,13 +621,18 @@ const ninhoLado: Pintor = (x, y, s) => {
   return rampa(tranca ? ['#7a5530', '#8a6038'] : ['#5a3c22', '#664428'], hash2(x, y, s), x, y, s);
 };
 
-const porta: Pintor = (x, y, s) => {
-  const janela = x >= 4 && x <= 11 && y >= 2 && y <= 6 && x !== 7 && x !== 8;
+/** Porta de toras inteira: janelinha em cima, tranca de osso e duas amarrações de cipó. */
+const portas = metadesDaPorta((x, yy, s) => {
+  const janela = x >= 4 && x <= 11 && yy >= 7 && yy <= 13 && x !== 7 && x !== 8;
   if (janela) return VAZIO;
-  if (x === 12 && (y === 8 || y === 9)) return osso(x, y, s);
-  const p = tabuasSamambaia(x, y, s);
-  return borda(x, y) ? escurece(p, 0.7) : p;
-};
+  if (x === 12 && (yy === 18 || yy === 19)) return osso(x, yy, s);
+  // as toras correm de cima a baixo (só as linhas sem a amarração do bloco de toras)
+  const p = tabuasSamambaia(x, 5 + (yy % 6), s);
+  if (bordaDaPorta(x, yy)) return escurece(p, 0.7);
+  if (yy === 4 || yy === 27) return rampa(['#6b7a36', '#5a6a2a'], hash2(x, yy, s) * 0.99, x, yy, s);
+  if (yy === 3 || yy === 5 || yy === 26 || yy === 28) return escurece(p, 0.75);
+  return p;
+});
 
 // --- cabaça ------------------------------------------------------------------
 const cabacaLado: Pintor = (x, y, s) => {
@@ -920,7 +927,7 @@ export const PINTORES_DINOS: Record<string, Pintor> = {
   },
   cama_topo: ninhoTopo,
   cama_lado: ninhoLado,
-  porta,
+  ...portas,
   tabuas_betula: tabuasAraucaria,
   tabuas_pinho: tabuasPinheiro,
   abobora_lado: cabacaLado,

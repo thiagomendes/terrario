@@ -13,6 +13,13 @@ export const TILES_BRILHO: Readonly<Record<number, string>> = {
 /** Tiles que não são de bloco: os das peças de brinquedo (branco e brilhos). */
 export const TILES_PECAS: readonly string[] = [TILE_BRANCO, ...Object.values(TILES_BRILHO)];
 
+/**
+ * Metade de cima da porta (spec 013): a porta de dois blocos é uma peça só, com a janela em
+ * cima e as almofadas e a maçaneta embaixo. O registro dá o tile `porta` (a metade de baixo);
+ * a malha usa este nas faces em pé da metade que tem outra porta embaixo.
+ */
+export const TILE_PORTA_CIMA = 'porta_cima';
+
 /** Nomes de todos os tiles usados pelos blocos, na ordem das células do atlas. */
 export const NOMES_TILES: readonly string[] = (() => {
   const nomes: string[] = [];
@@ -21,6 +28,7 @@ export const NOMES_TILES: readonly string[] = (() => {
       if (n && n !== 'vazio' && !nomes.includes(n)) nomes.push(n);
     }
   }
+  nomes.push(TILE_PORTA_CIMA);
   // tile branco: as peças de brinquedo (plantas) levam a cor nos vértices
   nomes.push(...TILES_PECAS);
   return nomes;

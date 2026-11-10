@@ -9,6 +9,8 @@ import { hash2 } from '../../world/noise';
 import {
   T,
   VAZIO,
+  metadesDaPorta,
+  bordaDaPorta,
   escurece,
   fbmT,
   hex,
@@ -863,24 +865,25 @@ const camaLado: Pintor = (x, y, s) => {
   return tabuasBiscoito(x, y, s);
 };
 
-/** Porta de biscoito com glacê e janelinha de coração. */
-const porta: Pintor = (x, y, s) => {
+/** Porta de biscoito inteira: glacê em volta, janelinha de coração em cima, confeitos embaixo. */
+const portas = metadesDaPorta((x, yy, s) => {
   const hx = (x - 7.5) / 3.6;
-  const hy = (5 - y) / 3.2;
+  const hy = (7 - yy) / 3.2;
   const q = hx * hx + hy * hy - 1;
   if (q * q * q - hx * hx * hy * hy * hy < 0) return VAZIO;
-  if (x <= 0 || x >= T - 1 || y <= 0 || y >= T - 1) return cor('#fff6ee', x, y, s);
-  if (x === 12 && y === 9) return cor('#ff4a7a', x, y, s);
-  if (x === 1 || x === T - 2 || y === 1 || y === T - 2) return cor('#8a4a1e', x, y, s);
-  if (y === 11 && x > 2 && x < 13 && x % 2 === 0) return cor('#fff6ee', x, y, s);
+  if (bordaDaPorta(x, yy)) return cor('#fff6ee', x, yy, s);
+  if (x === 12 && (yy === 18 || yy === 19)) return cor('#ff4a7a', x, yy, s);
+  if (bordaDaPorta(x, yy, 1)) return cor('#8a4a1e', x, yy, s);
+  if ((yy === 22 || yy === 27) && x > 2 && x < 13 && x % 2 === 0) return cor('#fff6ee', x, yy, s);
+  const y = yy & (T - 1);
   return rampa(
     ['#a65d2e', '#b06834', '#ba733a'],
-    hash2(x, y, s) * 0.5 + fbmT(x, y, 4, s) * 0.5,
+    hash2(x, yy, s) * 0.5 + fbmT(x, y, 4, s) * 0.5,
     x,
-    y,
+    yy,
     s,
   );
-};
+});
 
 /** Abóbora cristalizada: gomos laranja cobertos de açúcar. */
 const aboboraLado: Pintor = (x, y, s) => {
@@ -1157,7 +1160,7 @@ export const PINTORES_DOCE: Record<string, Pintor> = {
   ),
   cama_lado: camaLado,
   cama_topo: camaTopo,
-  porta,
+  ...portas,
   fornalha_acesa: fornoFrente(true),
   tabuas_betula: (x, y, s) => {
     const p = placasBrancas(x, y, s);

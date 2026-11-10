@@ -44,6 +44,8 @@ export function dropsDoBloco(bloco: number, rng: Gerador, coleta = true): Drop[]
       return um(Bloco.TERRA);
     case Bloco.PORTA_ABERTA:
       return um(Bloco.PORTA);
+    case Bloco.PORTEIRA_ABERTA:
+      return um(Bloco.PORTEIRA);
     case Bloco.FORNALHA_ACESA:
       return um(Bloco.FORNALHA);
     case Bloco.FOLHAGEM:
