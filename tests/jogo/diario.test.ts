@@ -66,6 +66,21 @@ describe('diário na ordem do tema (spec 013)', () => {
     expect(b.salvar()).toEqual(a.salvar());
   });
 
+  it('vale o nome do capítulo de antes de o tema renomear', async () => {
+    await import('../../src/temas/todos');
+    const { obterTema } = await import('../../src/temas/index');
+    const { ativarTemaPuro } = await import('../../src/temas/ativarPuro');
+    const rancho = obterTema('rancho-alegre');
+    ativarTemaPuro(rancho);
+    try {
+      expect(MISSOES.find((m) => m.id === 'arar')!.capitulo).not.toBe('Roça');
+      const d = criarDiario(undefined, { primeiroCapitulo: rancho.primeiroCapitulo });
+      expect(d.atual()?.id).toBe('arar');
+    } finally {
+      ativarTemaPuro(obterTema('bruma-e-luz'));
+    }
+  });
+
   it('capítulo que não existe deixa a ordem de sempre', () => {
     expect(criarDiario(undefined, { primeiroCapitulo: 'Nada' }).atual()?.id).toBe('madeira');
   });

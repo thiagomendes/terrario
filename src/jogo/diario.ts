@@ -269,16 +269,18 @@ export const MISSOES: readonly Missao[] = [
 
 export type Contadores = Record<string, number>;
 
+/** Capítulo de cada missão como está aqui (o tema renomeia `capitulo` ao ativar). */
+const CAPITULO_ORIGINAL = new Map(MISSOES.map((m) => [m.id, m.capitulo]));
+
 /**
- * As missões na ordem em que o diário guia: com `primeiroCapitulo`, esse capítulo vem
- * antes e o resto segue na ordem de sempre (o Rancho Alegre começa pela Roça).
+ * As missões na ordem em que o diário guia: com `primeiroCapitulo` (o nome do capítulo
+ * nesta lista, antes do tema renomear), esse capítulo vem antes e o resto segue na ordem
+ * de sempre (o Rancho Alegre começa pela Roça).
  */
 export function ordemMissoes(primeiroCapitulo?: string): readonly Missao[] {
-  if (!primeiroCapitulo || !MISSOES.some((m) => m.capitulo === primeiroCapitulo)) return MISSOES;
-  return [
-    ...MISSOES.filter((m) => m.capitulo === primeiroCapitulo),
-    ...MISSOES.filter((m) => m.capitulo !== primeiroCapitulo),
-  ];
+  const doCapitulo = (m: Missao) => CAPITULO_ORIGINAL.get(m.id) === primeiroCapitulo;
+  if (!primeiroCapitulo || !MISSOES.some(doCapitulo)) return MISSOES;
+  return [...MISSOES.filter(doCapitulo), ...MISSOES.filter((m) => !doCapitulo(m))];
 }
 
 export interface OpcoesDiario {
