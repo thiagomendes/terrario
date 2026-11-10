@@ -81,6 +81,11 @@ export interface Pose {
   /** Corpo inteiro (a partir dos pés): inclinado para a frente e de lado (rad). */
   corpoX?: number;
   corpoZ?: number;
+  /**
+   * Peso do gesto em curso (0..1, spec 015): o braço e a cabeça deixam de seguir o sobe e
+   * desce da câmera (apontar e chamar não caem quando a criança olha para baixo).
+   */
+  pesoGesto?: number;
   /** Giro do braço no próprio eixo (apontar, gestos). */
   bracoDireitoGiro?: number;
   bracoEsquerdoGiro?: number;

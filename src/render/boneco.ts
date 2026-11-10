@@ -216,7 +216,9 @@ export function criarBoneco(
     const dt = extras ? Math.min(Math.max(extras.dt, 0), 0.1) : 1;
     const k = extras ? 1 - Math.exp(-dt * 16) : 1;
     const kLento = extras ? 1 - Math.exp(-dt * 6) : 1;
-    const olhar = extras ? Math.max(-0.9, Math.min(0.9, extras.olhar)) : 0;
+    // no gesto, braço e cabeça não seguem o sobe e desce da câmera (spec 015)
+    const semGesto = 1 - Math.min(1, Math.max(0, pose.pesoGesto ?? 0));
+    const olhar = extras ? Math.max(-0.9, Math.min(0.9, extras.olhar)) * semGesto : 0;
     const segurando = naMao.segurando();
     const j = juntas;
     j.corpo.position.y = suave('corpoY', pose.corpoY ?? pose.tronco, k);
