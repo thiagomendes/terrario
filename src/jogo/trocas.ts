@@ -120,7 +120,7 @@ export const TROCAS: Record<Profissao, readonly Troca[]> = {
     },
     {
       id: 'feno',
-      dar: [{ item: 'trigo', qtd: 8 }],
+      dar: [{ item: 'trigo', qtd: 10 }],
       receber: { item: b(Bloco.FENO), qtd: 1 },
     },
     {
