@@ -20,6 +20,7 @@ import {
   encontrarNascimento,
   estiloMundo,
   olharDoNascimento,
+  pontoDeNascer,
 } from '../world/chunk';
 import { AVISO_LIMITE, comeEsse, viraCriado } from '../jogo/criacao';
 import { definirRegioesSemPovoado, regiaoDoChunk } from '../world/povoado';
@@ -307,7 +308,8 @@ export function criarNucleo(op: OpcoesNucleo) {
   }
 
   // jogador do mundo salvo (o servidor local tem um só)
-  const nascimento = encontrarNascimento(semente);
+  // quem chega pela primeira vez nunca nasce em cima de uma árvore
+  const nascimento = pontoDeNascer(semente);
   const posSalva = dados?.jogador;
   const spawnSalvo = extras['spawn'] as { x: number; z: number } | undefined;
 

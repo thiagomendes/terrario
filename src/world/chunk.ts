@@ -373,7 +373,7 @@ export function gerarChunk(cx: number, cz: number, semente: number = SEMENTE_PAD
         plantarArvore(blocos, x, h, z, r2, b, tronco, folha, padrao);
       switch (b) {
         case 'floresta':
-          if (margem && r < 0.03) {
+          if (margem && r < CHANCE_ARVORE.floresta!) {
             if (r2 < 0.3)
               arv(Bloco.TRONCO_BETULA, Bloco.FOLHAS_BETULA, () =>
                 arvoreBetula(blocos, x, h, z, r2),
@@ -393,7 +393,7 @@ export function gerarChunk(cx: number, cz: number, semente: number = SEMENTE_PAD
           else if (r > 0.9985) pos(Bloco.CRISTAL_LUZ);
           break;
         case 'campos':
-          if (margem && r < 0.004)
+          if (margem && r < CHANCE_ARVORE.campos!)
             arv(Bloco.MADEIRA_RETORCIDA, Bloco.FOLHAGEM, () =>
               arvoreCarvalho(blocos, x, h, z, r2, Bloco.FOLHAGEM),
             );
@@ -402,19 +402,19 @@ export function gerarChunk(cx: number, cz: number, semente: number = SEMENTE_PAD
           else if (r < 0.402) pos(Bloco.ABOBORA);
           break;
         case 'taiga':
-          if (margem && r < 0.035)
+          if (margem && r < CHANCE_ARVORE.taiga!)
             arv(Bloco.TRONCO_PINHO, Bloco.FOLHAS_PINHO, () => arvorePinho(blocos, x, h, z, r2));
           else if (r < 0.06) pos(Bloco.GRAMA_ALTA);
           else if (r < 0.07) pos(Bloco.ARBUSTO_FRUTINHAS);
           break;
         case 'deserto':
-          if (r < 0.006) {
+          if (r < CHANCE_ARVORE.deserto!) {
             const alt = 1 + Math.floor(r2 * 3);
             for (let i = 0; i < alt; i++) blocos[indice(x, topo + i, z)] = Bloco.CACTO;
           } else if (r < 0.014) pos(Bloco.ARBUSTO_SECO);
           break;
         case 'pantano':
-          if (margem && r < 0.02)
+          if (margem && r < CHANCE_ARVORE.pantano!)
             arv(Bloco.TRONCO_LANTERNA, Bloco.FOLHAS_LANTERNA, () =>
               arvoreLanterna(blocos, x, h, z, r2),
             );
@@ -424,7 +424,7 @@ export function gerarChunk(cx: number, cz: number, semente: number = SEMENTE_PAD
           else if (r > 0.997) pos(Bloco.CRISTAL_LUZ);
           break;
         case 'montanhas':
-          if (chao === Bloco.TERRA_MUSGOSA && margem && r < 0.01)
+          if (chao === Bloco.TERRA_MUSGOSA && margem && r < CHANCE_ARVORE.montanhas!)
             arv(Bloco.TRONCO_PINHO, Bloco.FOLHAS_PINHO, () => arvorePinho(blocos, x, h, z, r2));
           else if (chao === Bloco.TERRA_MUSGOSA && r < 0.15) pos(Bloco.GRAMA_ALTA);
           break;
@@ -464,6 +464,10 @@ export function gerarChunk(cx: number, cz: number, semente: number = SEMENTE_PAD
   return blocos;
 }
 
+/** Sorteio da ruína (ou estrutura do tema) no meio do chunk. */
+const CHAVE_ESTRUTURA = 6060;
+const CHANCE_ESTRUTURA = 0.035;
+
 /** Ruína rara: paredes quebradas, piso e um baú com tesouro no centro. */
 function construirRuina(
   blocos: Uint8Array,
@@ -473,7 +477,7 @@ function construirRuina(
   alturas: Int32Array,
   biomas: Bioma[],
 ): void {
-  if (hash2(cx, cz, semente + 6060) > 0.035) return;
+  if (hash2(cx, cz, semente + CHAVE_ESTRUTURA) > CHANCE_ESTRUTURA) return;
   const c = 8 * TAM_X + 8;
   const b = biomas[c];
   if (b === 'oceano' || b === 'praia' || b === 'pantano' || b === 'montanhas') return;
@@ -745,6 +749,80 @@ function arvoreLanterna(blocos: Uint8Array, x: number, h: number, z: number, r: 
     const n = 1 + Math.floor(hash2(x + dx, z + dz, 3) * 3);
     for (let i = 1; i <= n; i++) por(blocos, x + dx, topo - 1 - i, z + dz, Bloco.FOLHAS_LANTERNA);
   }
+}
+
+/**
+ * Chance de uma coluna da superfície virar árvore (ou cacto, no deserto) em cada bioma, com
+ * o sorteio hash2(wx, wz, semente + 5). Serve à geração e ao ponto de nascer.
+ */
+const CHANCE_ARVORE: Partial<Record<Bioma, number>> = {
+  floresta: 0.03,
+  campos: 0.004,
+  taiga: 0.035,
+  deserto: 0.006,
+  pantano: 0.02,
+  montanhas: 0.01,
+};
+/** Quanto a copa mais larga (de qualquer tema) se afasta do tronco. */
+const RAIO_COPA = 2;
+
+/**
+ * A coluna pode ganhar árvore ou cacto? Conservador: não olha a borda do chunk, o chão nem
+ * os povoados (que só tiram árvores), então "não" é sempre não.
+ */
+function podeTerArvore(wx: number, wz: number, semente: number): boolean {
+  const h = alturaNatural(wx, wz, semente);
+  if (h < NIVEL_MAR) return false;
+  const chance = CHANCE_ARVORE[biomaEm(wx, wz, semente, h)];
+  return chance !== undefined && hash2(wx, wz, semente + 5) < chance;
+}
+
+/** Nenhuma árvore (tronco ou copa) alcança a coluna. */
+export function semArvoreEmVolta(x: number, z: number, semente: number): boolean {
+  for (let dz = -RAIO_COPA; dz <= RAIO_COPA; dz++)
+    for (let dx = -RAIO_COPA; dx <= RAIO_COPA; dx++)
+      if (podeTerArvore(x + dx, z + dz, semente)) return false;
+  return true;
+}
+
+/** O chunk pode ter a ruína (ou a estrutura do tema) do meio? Mesmo sorteio da geração. */
+function podeTerEstrutura(x: number, z: number, semente: number): boolean {
+  const cx = Math.floor(x / TAM_X);
+  const cz = Math.floor(z / TAM_Z);
+  return hash2(cx, cz, semente + CHAVE_ESTRUTURA) <= CHANCE_ESTRUTURA;
+}
+
+/**
+ * Onde o jogador novo (e quem renasce sem cama) aparece: o nascimento, ou a coluna mais
+ * perto dele sem árvore em volta e fora da ruína do chunk. Sem isso, a criança podia nascer
+ * no alto de uma copa, de uma ponta de cristal da Lua (sem chão para mirar) ou em cima do
+ * baú de uma ruína. O nascimento em si (que os povoados evitam) não muda: os mundos já
+ * salvos continuam iguais.
+ */
+export function pontoDeNascer(semente: number): { x: number; z: number } {
+  const n = encontrarNascimento(semente);
+  const x0 = Math.floor(n.x);
+  const z0 = Math.floor(n.z);
+  const livre = (x: number, z: number) =>
+    !podeTerEstrutura(x, z, semente) &&
+    semArvoreEmVolta(x, z, semente) &&
+    !povoadoNaColuna(x, z, semente);
+  // primeiro um lugar bom (terra firme, fora do deserto); senão, qualquer chão seco
+  const criterios = [
+    (x: number, z: number) => bomParaNascer(x, z, semente),
+    (x: number, z: number) => alturaNatural(x, z, semente) > NIVEL_MAR,
+  ];
+  for (const bom of criterios)
+    for (let raio = 0; raio <= 16; raio++)
+      for (let dz = -raio; dz <= raio; dz++)
+        for (let dx = -raio; dx <= raio; dx++) {
+          if (Math.max(Math.abs(dx), Math.abs(dz)) !== raio) continue;
+          const x = x0 + dx;
+          const z = z0 + dz;
+          if (!bom(x, z) || !livre(x, z)) continue;
+          return raio === 0 ? n : { x: x + 0.5, z: z + 0.5 };
+        }
+  return n;
 }
 
 /**

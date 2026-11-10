@@ -3,8 +3,8 @@ import {
   alturaTerreno,
   gerarChunk,
   SEMENTE_PADRAO,
-  encontrarNascimento,
   olharDoNascimento,
+  pontoDeNascer,
 } from '../world/chunk';
 import type { Edicoes } from '../world/edicoes';
 import { ALTURA_OLHOS, passoFisica, posicaoInicial } from './fisica';
@@ -25,7 +25,8 @@ export function criarControle(
   gerar: (cx: number, cz: number, semente: number) => Uint8Array = gerarChunk,
 ) {
   const solido = criarMundoSolido(semente, gerar, edicoes);
-  const nasc = encontrarNascimento(semente);
+  // nunca em cima de uma árvore (o nascimento de geração fica igual)
+  const nasc = pontoDeNascer(semente);
   const jogador = posicaoInicial(nasc.x, nasc.z, (x, z) => alturaTerreno(x, z, semente));
   const teclas: TeclasAtivas = {};
   // mundo de sítio (Rancho Alegre): nasce olhando para o sítio mais perto
