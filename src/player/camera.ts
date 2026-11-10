@@ -255,6 +255,17 @@ export function opacidadeBoneco(distancia: number): number {
   return Math.max(OPACIDADE_MINIMA, t * t * (3 - 2 * t));
 }
 
+/**
+ * Olhando quase reto para baixo, o lado some e a mira do centro passa pelo boneco até o bloco
+ * debaixo dos pés: o boneco fica meio transparente para esse bloco aparecer.
+ */
+export const OPACIDADE_OLHANDO_BAIXO = 0.35;
+
+/** Opacidade do boneco pelo pitch (1 até PITCH_LADO_INTEIRO; com o lado sumindo, desce). */
+export function opacidadePitch(pitch: number): number {
+  return OPACIDADE_OLHANDO_BAIXO + (1 - OPACIDADE_OLHANDO_BAIXO) * fatorLado(pitch);
+}
+
 /** Opacidade em degraus (só mexe nos materiais quando o degrau muda). */
 export function degrauOpacidade(a: number): number {
   return a >= 0.99 ? 1 : Math.round(a * 20) / 20;
@@ -371,7 +382,7 @@ export function criarCameraOrbita(zoom = ZOOM_PADRAO, alturaPivo = ALTURA_PIVO) 
         },
         pivo,
         distancia,
-        opacidade: opacidadeBoneco(distancia),
+        opacidade: Math.min(opacidadeBoneco(distancia), opacidadePitch(q.pitch)),
         desviando: livre < alvoDistancia - 0.4,
       };
       return ultimo;

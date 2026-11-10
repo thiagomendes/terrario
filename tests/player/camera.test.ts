@@ -31,7 +31,13 @@ import {
   ZOOM_PADRAO,
   type BloqueiaCamera,
 } from '../../src/player/camera';
-import { PASSO_ZOOM, passoDaRoda, limitarZoom as limitar } from '../../src/player/camera';
+import {
+  PASSO_ZOOM,
+  passoDaRoda,
+  limitarZoom as limitar,
+  opacidadePitch,
+  OPACIDADE_OLHANDO_BAIXO,
+} from '../../src/player/camera';
 
 const olhos = { x: 10.5, y: 20.62, z: 10.5 };
 const livre: BloqueiaCamera = () => false;
@@ -329,5 +335,19 @@ describe('roda do mouse e touchpad', () => {
     expect(z).toBeCloseTo(4, 5);
     expect(passoDaRoda(0)).toBe(0);
     expect(passoDaRoda(Number.NaN)).toBe(0);
+  });
+});
+
+describe('olhando reto para baixo', () => {
+  it('o boneco fica meio transparente e o bloco debaixo dos pés aparece', () => {
+    expect(opacidadePitch(0.3)).toBe(1);
+    expect(opacidadePitch(1.1)).toBe(1);
+    expect(opacidadePitch(PITCH_BAIXO)).toBe(OPACIDADE_OLHANDO_BAIXO);
+    const c = criarCameraOrbita(ZOOM_PADRAO);
+    let r = c.quadro({ dt: 1 / 60, olhos, yaw: 0, pitch: PITCH_BAIXO, bloqueia: livre });
+    r = c.quadro({ dt: 1 / 60, olhos, yaw: 0, pitch: PITCH_BAIXO, bloqueia: livre });
+    expect(r.opacidade).toBeLessThan(0.5);
+    r = c.quadro({ dt: 1 / 60, olhos, yaw: 0, pitch: 0.4, bloqueia: livre });
+    expect(r.opacidade).toBe(1);
   });
 });
