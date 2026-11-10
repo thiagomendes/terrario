@@ -38,11 +38,9 @@
       },
       "inventario": {
         "slots": [
-          {"item":"bloco:1","qtd":64}, {"item":"bloco:2","qtd":64}, {"item":"bloco:3","qtd":64},
-          {"item":"bloco:4","qtd":64}, {"item":"bloco:7","qtd":64}, {"item":"bloco:6","qtd":64},
-          {"item":"bloco:5","qtd":64}, {"item":"bloco:9","qtd":64}, {"item":"bloco:10","qtd":64},
           null, null, null, null, null, null, null, null, null, null, null, null, null, null, null,
-          null, null, null, null, null, null, null, null, null, null, null, null
+          null, null, null, null, null, null, null, null, null, null, null, null, null, null, null,
+          null, null, null, null, null, null
         ],
         "ativo": 0
       },
@@ -90,11 +88,9 @@
       },
       "inventario": {
         "slots": [
-          {"item":"bloco:1","qtd":64}, {"item":"bloco:2","qtd":64}, {"item":"bloco:3","qtd":64},
-          {"item":"bloco:4","qtd":64}, {"item":"bloco:7","qtd":64}, {"item":"bloco:6","qtd":64},
-          {"item":"bloco:5","qtd":64}, {"item":"bloco:9","qtd":64}, {"item":"bloco:10","qtd":64},
           null, null, null, null, null, null, null, null, null, null, null, null, null, null, null,
-          null, null, null, null, null, null, null, null, null, null, null, null
+          null, null, null, null, null, null, null, null, null, null, null, null, null, null, null,
+          null, null, null, null, null, null
         ],
         "ativo": 0
       },
@@ -142,11 +138,9 @@
       },
       "inventario": {
         "slots": [
-          {"item":"bloco:56","qtd":1}, {"item":"bloco:2","qtd":64}, {"item":"bloco:3","qtd":64},
-          {"item":"bloco:4","qtd":64}, {"item":"bloco:7","qtd":64}, {"item":"bloco:6","qtd":64},
-          {"item":"bloco:5","qtd":64}, {"item":"bloco:9","qtd":64}, {"item":"bloco:10","qtd":64},
+          {"item":"bloco:56","qtd":1}, null, null, null, null, null, null, null, null, null, null,
           null, null, null, null, null, null, null, null, null, null, null, null, null, null, null,
-          null, null, null, null, null, null, null, null, null, null, null, null
+          null, null, null, null, null, null, null, null, null, null
         ],
         "ativo": 0
       },
@@ -194,11 +188,9 @@
       },
       "inventario": {
         "slots": [
-          {"item":"bloco:56","qtd":1}, {"item":"bloco:2","qtd":64}, {"item":"bloco:3","qtd":64},
-          {"item":"bloco:4","qtd":64}, {"item":"bloco:7","qtd":64}, {"item":"bloco:6","qtd":64},
-          {"item":"bloco:5","qtd":64}, {"item":"bloco:9","qtd":64}, {"item":"bloco:10","qtd":64},
+          {"item":"bloco:56","qtd":1}, null, null, null, null, null, null, null, null, null, null,
           null, null, null, null, null, null, null, null, null, null, null, null, null, null, null,
-          null, null, null, null, null, null, null, null, null, null, null, null
+          null, null, null, null, null, null, null, null, null, null
         ],
         "ativo": 0
       },

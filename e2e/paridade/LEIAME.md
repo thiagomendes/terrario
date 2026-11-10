@@ -65,3 +65,20 @@ salvamento entra só a parte determinística:
 - **Arrumação do inventário na sessão `itens`:** dois itens coletados um depois do outro às vezes chegam em ordem trocada (física dos itens); ali o inventário vira a soma por item (`contagem`) mais o slot ativo.
 - **Biomas do diário (`bioma:*`):** o diário lê a posição a cada 2 s de relógio real; perto de uma divisa de biomas, teleportes curtos às vezes contam e às vezes não. Saem de todas as etapas.
 - **Profissão de quem atende quando se mira num morador:** depende de quem está mais perto naquele quadro; por isso as trocas que contam são as abertas pelo evento `brumaluz:trocar`.
+
+## Regravações
+
+- **Spec 013 (fecho), sessões `construir` e `clima` (as 12 gravações, 3 sementes × 2 temas):**
+  a spec 012 (commit 2d992f7) fez o mundo novo começar com a barra vazia também no criativo,
+  e essas duas sessões, as únicas no criativo, tinham sido gravadas com a barra cheia (nove
+  pilhas de 64 blocos). Conferido no código de antes da 013 (8edab94): todas as 12 falhavam
+  só no `extras.inventario.slots`, nada mais. Regravadas com `PARIDADE=gravar`; a diferença é
+  só essa (as nove pilhas viraram `null`; as frutinhas e a porta da sessão `construir` ficam).
+  A correção do espectro que não sumia ao amanhecer (no mesmo fecho) não mudou nenhuma
+  gravação.
+- **Spec 013 (fecho), sessão `trocas` (6 gravações):** a troca nova da porteira com o
+  construtor (commit 8bcd00a, depois da regravação das trocas em 8d0d9ab) é feita pela
+  sessão: uma troca a mais do construtor (`trocou` 17 → 18), uma porteira (`bloco:82`) no
+  inventário e 4 tábuas a menos. Mudança de propósito da mecânica nova; nada mais mudou.
+
+Depois dessas regravações, `PARIDADE=conferir` passa nas 36.

@@ -48,10 +48,9 @@
       "inventario": {
         "slots": [
           {"item":"bloco:7","qtd":1}, {"item":"bloco:57","qtd":1}, {"item":"bloco:47","qtd":1},
-          {"item":"frutinhas","qtd":1}, {"item":"bloco:44","qtd":1}, {"item":"bloco:6","qtd":64},
-          {"item":"bloco:5","qtd":64}, {"item":"bloco:9","qtd":64}, {"item":"bloco:10","qtd":64},
+          {"item":"frutinhas","qtd":1}, {"item":"bloco:44","qtd":1}, null, null, null, null, null,
           null, null, null, null, null, null, null, null, null, null, null, null, null, null, null,
-          null, null, null, null, null, null, null, null, null, null, null, null
+          null, null, null, null, null, null, null, null, null, null, null
         ],
         "ativo": 1
       },
@@ -108,10 +107,9 @@
       "inventario": {
         "slots": [
           {"item":"bloco:7","qtd":1}, {"item":"bloco:57","qtd":1}, {"item":"bloco:47","qtd":1},
-          {"item":"frutinhas","qtd":1}, {"item":"bloco:44","qtd":1}, {"item":"bloco:6","qtd":64},
-          {"item":"bloco:5","qtd":64}, {"item":"bloco:9","qtd":64}, {"item":"bloco:10","qtd":64},
+          {"item":"frutinhas","qtd":1}, {"item":"bloco:44","qtd":1}, null, null, null, null, null,
           null, null, null, null, null, null, null, null, null, null, null, null, null, null, null,
-          null, null, null, null, null, null, null, null, null, null, null, null
+          null, null, null, null, null, null, null, null, null, null, null
         ],
         "ativo": 1
       },
@@ -168,10 +166,9 @@
       "inventario": {
         "slots": [
           {"item":"bloco:7","qtd":1}, {"item":"bloco:57","qtd":1}, {"item":"bloco:47","qtd":1},
-          {"item":"frutinhas","qtd":1}, {"item":"bloco:44","qtd":1}, {"item":"bloco:6","qtd":64},
-          {"item":"bloco:5","qtd":64}, {"item":"bloco:9","qtd":64}, {"item":"bloco:10","qtd":64},
+          {"item":"frutinhas","qtd":1}, {"item":"bloco:44","qtd":1}, null, null, null, null, null,
           null, null, null, null, null, null, null, null, null, null, null, null, null, null, null,
-          null, null, null, null, null, null, null, null, null, null, null, null
+          null, null, null, null, null, null, null, null, null, null, null
         ],
         "ativo": 3
       },
