@@ -25,7 +25,7 @@
       },
       "conteineres": {"baus":{},"fornalhas":{}},
       "sobrevivencia": {"vida":20,"fome":20,"saturacao":5,"ar":10,"morto":false,"causa":null},
-      "spawn": {"x":50.5,"z":81.5},
+      "spawn": {"x":50.5,"z":82.5},
       "dia": 0,
       "clima": "limpo",
       "diario": {

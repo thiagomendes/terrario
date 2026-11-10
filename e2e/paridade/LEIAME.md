@@ -81,4 +81,20 @@ salvamento entra só a parte determinística:
   sessão: uma troca a mais do construtor (`trocou` 17 → 18), uma porteira (`bloco:82`) no
   inventário e 4 tábuas a menos. Mudança de propósito da mecânica nova; nada mais mudou.
 
+- **Spec 015 (junta), semente 1337 (as 12 gravações, 6 sessões × 2 temas):** a correção
+  da 013 que tira o nascimento de cima de árvore, cristal e ruína (commit d0bb0be,
+  `pontoDeNascer`) muda o ponto de nascer da 1337 de (50,5; 81,5) para (50,5; 82,5): ali
+  havia árvore possível. As sementes 42 e 7 não mudam (o nascimento já era livre). Conferido
+  com `PARIDADE_OBTIDO` (guarda o que saiu ao conferir) e comparando em coordenadas do mundo:
+  as edições são as mesmas, deslocadas 1 bloco em z (`spawn`, baús e fornalhas junto). A única
+  outra diferença vem do terreno do novo ponto: na sessão `itens` os 2 blocos cavados no
+  nascimento são grama alta e terra musgosa (antes terra musgosa e terra), e a grama alta
+  solta uma maçã (`coletou:maca`, um `bloco:11` a menos). Uma conferência deu `dia` 4 em
+  vez de 5 na etapa `meiaNoite` do `clima` (doce-reino), mas a gravação (duas rodadas iguais)
+  e a conferência seguinte deram 5: é a virada da meia-noite caindo depois do retrato, não
+  o nascimento. Regravadas com `PARIDADE=gravar PARIDADE_SEMENTES=1337`.
+
+`PARIDADE_OBTIDO=pasta` (com `PARIDADE=conferir`) grava o retrato de cada sessão conferida
+nessa pasta, para comparar com a gravação quando falha.
+
 Depois dessas regravações, `PARIDADE=conferir` passa nas 36.

@@ -1082,6 +1082,12 @@ for (const [nome, sessao] of Object.entries(SESSOES)) {
             true,
           );
           const gravado = JSON.parse(readFileSync(arquivo, 'utf8'));
+          // PARIDADE_OBTIDO=pasta: guarda o que saiu (para comparar com a gravação)
+          const obtido = process.env.PARIDADE_OBTIDO;
+          if (obtido) {
+            mkdirSync(obtido, { recursive: true });
+            writeFileSync(`${obtido}/${nome}-${semente}-${tema}.json`, formatar(conteudo) + '\n');
+          }
           expect(JSON.parse(JSON.stringify(conteudo))).toEqual(gravado);
         }
       });
