@@ -56,10 +56,11 @@ export function duracaoDoGesto(id: IdGesto): number {
 /** O cliente espera isto entre um gesto e outro (o botão não vira metralhadora). */
 export const INTERVALO_GESTO = 1.2;
 /**
- * O núcleo aceita um gesto por jogador a cada tanto (um pouco menos que o cliente: a rede
- * pode juntar dois envios; o que passar disso é descartado sem aviso).
+ * O núcleo aceita um gesto por jogador a cada tanto: bem menos que o cliente, porque a rede
+ * pode juntar dois envios (um atrasa, o outro chega na hora) e o cliente bem-comportado nunca
+ * pode perder um gesto; o que passar disso (cliente que manda em rajada) é descartado.
  */
-export const INTERVALO_GESTO_NUCLEO = 1.0;
+export const INTERVALO_GESTO_NUCLEO = 0.8;
 /** Quem está até tantos blocos vê o gesto (o mesmo raio dos itens no chão). */
 export const RAIO_VER_GESTO = 48;
 /** O morador até tantos blocos acena de volta. */

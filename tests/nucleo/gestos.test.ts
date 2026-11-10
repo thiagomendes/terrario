@@ -153,12 +153,24 @@ describe('comando gesto na nuvem', () => {
     expect(v.bia.map((e) => e.gesto)).toEqual(['aplaudir']);
   });
 
-  it('rajada de gestos: um por segundo, o resto some sem aviso', () => {
+  it('rajada de gestos: um a cada 0,8 s, o resto some sem aviso', () => {
     const n = nuvem();
     // 20 por segundo durante 3 s (um a cada passo)
     const v = passos(n, 3, () => n.comando('ana', gesto('acenar')));
-    expect(v.bia.length).toBe(3);
+    expect(v.bia.length).toBe(4);
     expect(v.ana).toEqual([]);
+  });
+
+  it('o cliente bem-comportado (1,2 s) nunca perde um gesto, mesmo com a rede juntando envios', () => {
+    const n = nuvem();
+    // gestos a cada 1,2 s; o segundo atrasa 0,35 s na rede e chega 0,85 s antes do terceiro
+    const chegadas = new Set([0, 24 + 7, 48, 72]);
+    let passo = 0;
+    const v = passos(n, 4, () => {
+      if (chegadas.has(passo)) n.comando('ana', gesto('acenar'));
+      passo++;
+    });
+    expect(v.bia.length).toBe(4);
   });
 
   it('longe não vê; desmaiado não gesticula', () => {
