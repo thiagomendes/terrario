@@ -2701,9 +2701,14 @@ export function criarCena(
   // parar, como os bipes de rádio da Lua pareciam)
   let silencioMoradores = 0;
   window.addEventListener('brumaluz:trocar', () => (silencioMoradores = 20));
+  let painelTrocas: HTMLElement | null = null;
   const chamadosCriaturas = (dt: number) => {
     esperaChamado -= dt;
-    if (document.querySelector('.painel-trocas:not([hidden])')) silencioMoradores = 20;
+    // o painel é criado uma vez: procura até achar e depois só olha se está aberto (sem
+    // varrer a página a cada quadro)
+    if (!painelTrocas?.isConnected)
+      painelTrocas = document.querySelector<HTMLElement>('.painel-trocas');
+    if (painelTrocas && !painelTrocas.hidden) silencioMoradores = 20;
     else silencioMoradores = Math.max(0, silencioMoradores - dt);
     if (esperaChamado > 0) return;
     esperaChamado = 5 + rngVozes() * 9;

@@ -7,7 +7,7 @@
  */
 import { TransformNode } from '@babylonjs/core/Meshes/transformNode';
 import { MeshBuilder } from '@babylonjs/core/Meshes/meshBuilder';
-import type { Mesh } from '@babylonjs/core/Meshes/mesh';
+import { Mesh } from '@babylonjs/core/Meshes/mesh';
 import type { Scene } from '@babylonjs/core/scene';
 import type { Aparencia } from '../personagem/aparencia';
 import { planoBoneco, type Junta, type Peca, type PlanoBoneco } from '../personagem/boneco';
@@ -60,6 +60,12 @@ export function criarBoneco(
   prefixo = 'personagem',
   /** Ajusta o plano antes de montar (moradores: cores e peças do tema). */
   ajustarPlano?: (p: PlanoBoneco) => PlanoBoneco,
+  /**
+   * Desempenho (spec 013): funde as peças da mesma junta e do mesmo material numa malha só
+   * (o desenho é o mesmo; olhos, brilho dos olhos e boca ficam soltos, porque piscam e
+   * falam). Para os moradores, que não trocam de aparência.
+   */
+  fundir = false,
 ): Personagem {
   const raiz = new TransformNode(prefixo, scene);
   const escalar = new TransformNode(`${prefixo}-escala`, scene);
@@ -138,12 +144,45 @@ export function criarBoneco(
       [Junta, (typeof plano.juntas)[Junta]]
     >)
       juntas[nome].parent = j.pai ? juntas[j.pai] : escalar;
+    const paraFundir = new Map<string, { junta: Junta; lista: Mesh[] }>();
     for (const p of plano.pecas) {
       if (p.soVista) continue;
       const m = montarPeca(scene, mats, p, prefixo);
+      if (fundir && !/(olho|brilho|boca)/.test(p.nome) && m.material) {
+        // só funde malhas com os mesmos dados de vértice (senão o Babylon recusa)
+        const k = `${p.junta}|${m.material.uniqueId}|${m.getVerticesDataKinds().sort().join()}`;
+        let g = paraFundir.get(k);
+        if (!g) paraFundir.set(k, (g = { junta: p.junta, lista: [] }));
+        g.lista.push(m);
+        continue;
+      }
       m.parent = juntas[p.junta];
       m.setEnabled(visivel);
       malhas.push(m);
+    }
+    // cada peça ainda sem pai: a posição dela já é a posição na junta
+    for (const { junta, lista } of paraFundir.values()) {
+      const material = lista[0].material;
+      const f =
+        lista.length === 1
+          ? lista[0]
+          : Mesh.MergeMeshes(lista, true, true, undefined, false, false);
+      if (!f) {
+        // não deu para fundir: as peças ficam soltas, como no boneco do jogador
+        for (const m of lista) {
+          m.parent = juntas[junta];
+          m.setEnabled(visivel);
+          malhas.push(m);
+        }
+        continue;
+      }
+      f.name = `${prefixo}-${junta}-fundida`;
+      f.material = material;
+      f.isPickable = false;
+      f.receiveShadows = false;
+      f.parent = juntas[junta];
+      f.setEnabled(visivel);
+      malhas.push(f);
     }
     pega.parent = juntas.maoD;
     pega.position.set(0, 0, 0);

@@ -133,7 +133,6 @@ test('quadros por segundo ao lado de um sítio do Rancho Alegre', async ({ page 
   await pronto(page);
   await page.locator('[data-abrir-mundos]').click();
   await page.locator('.cartao-tema[data-tema="rancho-alegre"]').click();
-  await page.locator('[data-modo="criativo"]').click();
   await page.locator('[data-novo-nome]').fill('Medida');
   await page.locator('[data-novo-semente]').fill(process.env.SEMENTE_SITIO ?? '1337');
   await page.locator('[data-criar-mundo]').click();
