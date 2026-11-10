@@ -2,8 +2,8 @@ import { expect, test, type Page } from '@playwright/test';
 import { mkdirSync } from 'node:fs';
 
 /**
- * Spec 015 (T04, critério 5): os 8 gestos. A roda abre com G (computador) e com a carinha
- * ao lado do "+" (toque); com ela aberta, 1 a 8 escolhem; o boneco faz o gesto, o balão com o
+ * Spec 015 (T04, critério 5): os 8 gestos. A roda abre com G (computador) e pelo botão da
+ * roda no alto (Gestos, ou segurando o botão); com ela aberta, 1 a 8 escolhem; o boneco faz o gesto, o balão com o
  * ícone aparece em cima da cabeça; andar interrompe. O mundo responde: o morador perto acena
  * de volta e "chamar" traz o bicho criado e a raposa domada.
  */
@@ -85,7 +85,7 @@ test('computador: G abre a roda, 1 a 8 escolhem, balão, andar interrompe; captu
   await page.keyboard.press('KeyG');
   await expect.poll(() => rodaAberta(page)).toBe(true);
   const botoes = page.locator('.roda.aberta button');
-  await expect(botoes).toHaveCount(8);
+  await expect(botoes).toHaveCount(9); // 8 gestos e o Voltar no meio
   await page.waitForTimeout(350);
   const caixa = await botoes.first().boundingBox();
   expect(caixa!.width).toBeGreaterThanOrEqual(56);
@@ -119,10 +119,12 @@ test('computador: G abre a roda, 1 a 8 escolhem, balão, andar interrompe; captu
   await expect.poll(() => rodaAberta(page)).toBe(true);
   await expect.poll(() => rodaAberta(page), { timeout: 9000 }).toBe(false);
 
-  // a carinha da barra de atalhos também abre; clicar no gesto faz
-  await page.locator('[data-barra-atalhos] [data-funcao="KeyG"]').click();
+  // o botão da roda no alto: Gestos, e clicar no gesto faz
+  await page.locator('[data-botao-roda]').click();
   await expect.poll(() => rodaAberta(page)).toBe(true);
-  await page.waitForTimeout(300);
+  await page.waitForTimeout(350);
+  await page.locator('.roda.aberta button[data-item="gestos"]').click();
+  await page.waitForTimeout(450);
   await page.locator('.roda.aberta button[data-item="dancar"]').click();
   await expect.poll(async () => (await local(page)).gesto).toBe('dancar');
   // andar interrompe
@@ -176,7 +178,7 @@ test('computador: G abre a roda, 1 a 8 escolhem, balão, andar interrompe; captu
   expect(erros).toEqual([]);
 });
 
-test('celular: a carinha ao lado do "+" abre a roda e o toque escolhe', async ({ browser }) => {
+test('celular: segurar o botão da roda abre os gestos e o toque escolhe', async ({ browser }) => {
   test.setTimeout(300_000);
   const ctx = await browser.newContext({
     viewport: { width: 390, height: 844 },
@@ -190,13 +192,19 @@ test('celular: a carinha ao lado do "+" abre a roda e o toque escolhe', async ({
   await page.evaluate(() => document.body.classList.add('toque-ativo'));
   await laje(page);
   await page.waitForTimeout(800);
-  const carinha = page.locator('.toque [data-abrir-gestos]');
-  await expect(carinha).toBeVisible();
-  await carinha.tap();
+  const botaoRoda = page.locator('[data-botao-roda]');
+  await expect(botaoRoda).toBeVisible();
+  const segurar = async () => {
+    await botaoRoda.dispatchEvent('pointerdown', { pointerType: 'touch', isPrimary: true });
+    await page.waitForTimeout(650);
+    await botaoRoda.dispatchEvent('pointerup', { pointerType: 'touch', isPrimary: true });
+    await botaoRoda.dispatchEvent('click');
+  };
+  await segurar();
   await expect.poll(() => rodaAberta(page)).toBe(true);
-  await page.waitForTimeout(400);
+  await page.waitForTimeout(450);
   // botões grandes (alvo de toque) que cabem na tela
-  for (const b of await page.locator('.roda.aberta button').all()) {
+  for (const b of await page.locator('.roda.aberta button:not(.voltar)').all()) {
     const c = (await b.boundingBox())!;
     expect(c.width).toBeGreaterThanOrEqual(60);
     expect(c.x).toBeGreaterThanOrEqual(0);
@@ -210,9 +218,9 @@ test('celular: a carinha ao lado do "+" abre a roda e o toque escolhe', async ({
   await page.screenshot({ path: `${PASTA}/comemorar-celular.png` });
   // tocar fora fecha (e não mexe no mundo)
   await page.waitForTimeout(1200);
-  await carinha.tap();
+  await segurar();
   await expect.poll(() => rodaAberta(page)).toBe(true);
-  await page.touchscreen.tap(30, 700);
+  await page.touchscreen.tap(30, 760);
   await expect.poll(() => rodaAberta(page)).toBe(false);
   expect(erros).toEqual([]);
   await ctx.close();

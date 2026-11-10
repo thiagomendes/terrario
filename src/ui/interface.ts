@@ -2,7 +2,7 @@ import { fotografarBoneco } from '../render/fotoBoneco';
 import { CSS_BRINQUEDO } from './brinquedo';
 import { CSS_TEMAS_UI, criarVitrineTitulo } from './temasUi';
 import { obterTema } from '../temas';
-import { CSS_ATALHOS, criarBarraAtalhos } from './atalhos';
+import { CSS_ATALHOS } from './atalhos';
 import type { Hotbar } from '../player/hotbar';
 import { criarBarra } from './barra';
 import { textoIndicador } from '../audio/ligador';
@@ -472,10 +472,11 @@ export function criarInterface(
     e.stopPropagation();
     mostrarInfo(!document.body.classList.contains('hud-aberto'));
   });
-  // compacto no celular em pé (tela mais alta que larga e estreita)
+  // spec 015 (opção C do menu): o botão de informações em todo aparelho (antes, só no
+  // celular em pé); ao lado dele fica o botão da roda
   const emPe = window.matchMedia('(orientation: portrait) and (max-width: 700px)');
   const ajustarCompacto = () => {
-    const compacto = emPe.matches && document.body.classList.contains('toque-ativo');
+    const compacto = true;
     document.body.classList.toggle('hud-compacto', compacto);
     if (!compacto) mostrarInfo(false);
   };
@@ -545,19 +546,13 @@ export function criarInterface(
       if (codigo === 'KeyV') travarPonteiro(canvasJogo());
     },
   });
-  // barra de atalhos do HUD (desktop): ícone e tecla de cada função
+  // spec 015 (opção C do menu, em todo aparelho): a barra de atalhos de baixo saiu; o menu
+  // fica na roda do botão de cima e a mochila embaixo do minimapa (src/ui/menuRoda.ts)
   const estiloAtalhos = document.createElement('style');
   estiloAtalhos.textContent = CSS_ATALHOS;
   document.head.appendChild(estiloAtalhos);
-  const barraAtalhos = criarBarraAtalhos(app, (codigo) => {
-    if (codigo === 'Pausa') {
-      document.exitPointerLock?.();
-      window.dispatchEvent(new CustomEvent('brumaluz:pausar'));
-      return;
-    }
-    window.dispatchEvent(new KeyboardEvent('keydown', { code: codigo }));
-  });
-  opMundo.config?.ouvir((c) => barraAtalhos.definir(c.mostrarAtalhos));
+  // a opção de antes ("barra de atalhos") passa a ligar os selinhos de tecla
+  opMundo.config?.ouvir((c) => document.body.classList.toggle('sem-teclas', !c.mostrarAtalhos));
   window.addEventListener('brumaluz:pausar', () => {
     if (!entrada.hidden || pausa.aberto) return;
     jogoIniciado = true;

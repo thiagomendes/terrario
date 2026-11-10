@@ -285,6 +285,8 @@ test('HUD do Rancho no celular: dicas, corações e avisos sem cobrir nada', asy
         ['joystick', '.toque .joystick'],
         ['botoes', '.toque .botoes > *'],
         ['info', '[data-hud-info]'],
+        // spec 015: o botão da roda e a mochila
+        ['menu', '.menu-hud'],
       ];
       const caixas: { n: string; r: DOMRect }[] = [];
       for (const [n, sel] of nomes)

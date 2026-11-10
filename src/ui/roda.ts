@@ -2,7 +2,7 @@
  * Roda de botões (spec 015): abre no meio da tela, em volta do boneco, com botões grandes de
  * ícone e nome curto; tocar fora fecha, Esc fecha e ela fecha sozinha. Como no esboço
  * aprovado (`.sdd/specs/015-terceira-pessoa/referencia/camera-e-gestos.html`). Serve para
- * qualquer lista: hoje os gestos; amanhã, se o dono escolher, os menus da tela.
+ * qualquer lista: o menu da tela e os gestos usam a mesma roda, trocando de lista no lugar.
  */
 
 export interface ItemRoda {
@@ -11,27 +11,37 @@ export interface ItemRoda {
   nome: string;
   /** SVG do ícone (innerHTML). */
   icone: string;
+  /** Tecla do computador, num selinho no botão (some no toque). */
+  tecla?: string;
+}
+
+/** Uma lista que a roda mostra (a roda troca de lista no mesmo lugar). */
+export interface ListaRoda {
+  itens: readonly ItemRoda[];
+  aoEscolher(id: string): void;
+  /** Botão "Voltar" no meio (volta para a lista de antes). */
+  aoVoltar?(): void;
+  /** Escolher não fecha a roda (quem escolheu troca de lista). */
+  manter?(id: string): boolean;
 }
 
 export interface OpcoesRoda {
-  itens: readonly ItemRoda[];
   /** Nome da roda (leitores de tela). */
   rotulo: string;
-  aoEscolher(id: string): void;
   /** Abriu ou fechou (o botão que abre mostra o estado). */
   aoMudar?(aberta: boolean): void;
   /** Fecha sozinha depois de tantos segundos aberta (padrão 6). */
   fecharEm?: number;
-  /** Mostra o número de cada botão (teclas 1 a 8 no computador). */
-  numeros?: boolean;
 }
 
 export interface Roda {
   readonly elemento: HTMLElement;
   readonly aberta: boolean;
-  abrir(): void;
+  /** A lista na roda agora. */
+  readonly lista: ListaRoda | null;
+  /** Abre (ou troca, se já aberta) com esta lista. */
+  abrir(lista: ListaRoda): void;
   fechar(): void;
-  alternar(): void;
   /** Escolhe o item da posição i (0 = o de cima), como um clique. */
   escolher(i: number): void;
   descartar(): void;
@@ -97,11 +107,13 @@ export const CSS_RODA = `
 .roda button kbd { position: absolute; top: -4px; right: -4px; min-width: 18px; height: 18px; padding: 0 4px; border-radius: 9px;
   display: grid; place-items: center; font: 800 0.66rem var(--jogo, system-ui), sans-serif; color: var(--tinta, #3b2a1e);
   background: #ffe4a8; box-shadow: 0 1px 0 #d9b56a; pointer-events: none; }
-.roda button.escolhido { background: #ffe4a8; }
+.roda button.escolhido, .roda button.voltar { background: #ffe4a8; }
 body.toque-ativo .roda button { width: 64px; height: 64px; margin: -32px; }
 body.toque-ativo .roda button svg { width: 34px; height: 34px; }
 body.toque-ativo .roda button kbd { display: none; }
 body[data-overlay] .roda, body.modo-foto .roda, body.tela-titulo .roda { display: none; }
+/* roda aberta: os avisos dão licença (voltam quando ela fecha) */
+body.roda-aberta .toast-area, body.roda-aberta .legendas { opacity: 0; transition: opacity 0.15s; }
 @media (prefers-reduced-motion: reduce) { .roda button, .roda::before { transition: none; } }
 `;
 
@@ -120,7 +132,22 @@ export function criarRoda(op: OpcoesRoda, raiz: HTMLElement = document.body): Ro
   el.setAttribute('aria-label', op.rotulo);
   el.setAttribute('aria-hidden', 'true');
   el.setAttribute('data-roda', '');
-  const botoes = op.itens.map((it, i) => {
+  // tocar fora (no fundo da roda) fecha
+  el.addEventListener('pointerdown', (e) => {
+    if (e.target === el) {
+      e.preventDefault();
+      fechar();
+    }
+  });
+  raiz.append(el);
+
+  let aberta = false;
+  let lista: ListaRoda | null = null;
+  let botoes: HTMLButtonElement[] = [];
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  let timerEscolha: ReturnType<typeof setTimeout> | undefined;
+
+  function botao(it: ItemRoda, i: number | null): HTMLButtonElement {
     const b = document.createElement('button');
     b.type = 'button';
     b.setAttribute('role', 'menuitem');
@@ -132,52 +159,67 @@ export function criarRoda(op: OpcoesRoda, raiz: HTMLElement = document.body): Ro
     nome.className = 'nome';
     nome.textContent = it.nome;
     b.append(nome);
-    if (op.numeros) {
+    if (it.tecla) {
       const k = document.createElement('kbd');
-      k.textContent = String(i + 1);
+      k.textContent = it.tecla;
       b.append(k);
     }
-    // pointerdown: no toque responde na hora (e não vira toque no mundo atrás)
-    b.addEventListener('pointerdown', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      escolher(i);
-    });
-    // teclado (Enter ou Espaço no botão focado)
+    // não deixa o toque virar toque no mundo atrás; escolhe no clique (vale como gesto do
+    // usuário para a tela cheia, no toque e no mouse)
+    b.addEventListener('pointerdown', (e) => e.stopPropagation());
     b.addEventListener('click', (e) => {
-      if (e.detail === 0) escolher(i);
+      e.stopPropagation();
+      if (i === null) lista?.aoVoltar?.();
+      else escolher(i);
     });
-    el.append(b);
     return b;
-  });
-  // tocar fora (no fundo da roda) fecha
-  el.addEventListener('pointerdown', (e) => {
-    if (e.target === el) {
-      e.preventDefault();
-      fechar();
+  }
+
+  function montar(l: ListaRoda): void {
+    for (const b of botoes) b.remove();
+    botoes = l.itens.map((it, i) => botao(it, i));
+    if (l.aoVoltar) {
+      const v = botao(
+        {
+          id: 'voltar',
+          nome: 'Voltar',
+          icone:
+            '<svg viewBox="0 0 32 32" aria-hidden="true" focusable="false"><path d="M18 8 L10 16 L18 24" fill="none" stroke="#3b2a1e" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+        },
+        null,
+      );
+      v.classList.add('voltar');
+      botoes.push(v);
     }
-  });
-  raiz.append(el);
+    el.append(...botoes);
+  }
 
-  let aberta = false;
-  let timer: ReturnType<typeof setTimeout> | undefined;
-  let timerEscolha: ReturnType<typeof setTimeout> | undefined;
-
-  function abrir(): void {
+  function abrir(l: ListaRoda): void {
     clearTimeout(timerEscolha);
+    const trocar = l !== lista || botoes.length === 0;
+    lista = l;
+    if (trocar) montar(l);
     for (const b of botoes) b.classList.remove('escolhido');
     const r = raioDaRoda(innerWidth, innerHeight);
     el.style.setProperty('--diam', `${r * 2 + 96}px`);
-    posicoesDaRoda(botoes.length, r).forEach(([x, y], i) => {
-      botoes[i].style.transform = `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px) scale(1)`;
-      botoes[i].tabIndex = 0;
-    });
+    const pos = posicoesDaRoda(l.itens.length, r);
+    // um quadro para a roda nascer encolhida no meio e abrir com o pulinho
+    const colocar = () =>
+      botoes.forEach((b, i) => {
+        b.style.transform = pos[i]
+          ? `translate(${pos[i][0].toFixed(1)}px, ${pos[i][1].toFixed(1)}px) scale(1)`
+          : 'translate(0, 0) scale(0.85)';
+        b.tabIndex = 0;
+      });
+    if (trocar) requestAnimationFrame(() => requestAnimationFrame(colocar));
+    else colocar();
     el.classList.add('aberta');
     el.setAttribute('aria-hidden', 'false');
     clearTimeout(timer);
     timer = setTimeout(fechar, (op.fecharEm ?? 6) * 1000);
     if (!aberta) {
       aberta = true;
+      document.body.classList.add('roda-aberta');
       op.aoMudar?.(true);
     }
   }
@@ -192,15 +234,18 @@ export function criarRoda(op: OpcoesRoda, raiz: HTMLElement = document.body): Ro
     }
     if (aberta) {
       aberta = false;
+      document.body.classList.remove('roda-aberta');
       op.aoMudar?.(false);
     }
   }
 
   function escolher(i: number): void {
-    const it = op.itens[i];
-    if (!it) return;
+    const l = lista;
+    const it = l?.itens[i];
+    if (!l || !it || !aberta) return;
     botoes.forEach((b, j) => b.classList.toggle('escolhido', j === i));
-    op.aoEscolher(it.id);
+    l.aoEscolher(it.id);
+    if (l.manter?.(it.id) || lista !== l) return;
     // o botão escolhido acende um instante antes de a roda fechar
     clearTimeout(timerEscolha);
     timerEscolha = setTimeout(fechar, 180);
@@ -211,9 +256,11 @@ export function criarRoda(op: OpcoesRoda, raiz: HTMLElement = document.body): Ro
     get aberta() {
       return aberta;
     },
+    get lista() {
+      return lista;
+    },
     abrir,
     fechar,
-    alternar: () => (aberta ? fechar() : abrir()),
     escolher,
     descartar() {
       clearTimeout(timer);

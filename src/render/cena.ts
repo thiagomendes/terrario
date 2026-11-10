@@ -359,6 +359,8 @@ export interface EstadoDepuracao {
   gestos?: {
     fazer: (g: import('../personagem/gestos').IdGesto) => boolean;
     roda: () => boolean;
+    /** Qual lista a roda mostra: 'menu', 'gestos' ou null (fechada). */
+    menu: () => 'menu' | 'gestos' | null;
     local: () => { gesto: string | null; balao: string | null };
     moradores: () => { id: number; gesto: string | null; balao: string | null }[];
   };
@@ -2584,6 +2586,7 @@ export function criarCena(
   estado.gestos = {
     fazer: (g) => gestos!.fazer(g),
     roda: () => gestos!.roda.aberta,
+    menu: () => gestos!.menu.aberta,
     local: () => ({ gesto: animador.gestoAtual, balao: gestos!.balao.gesto }),
     moradores: () => renderCriaturas.gestosMoradores(),
   };

@@ -1,6 +1,7 @@
 /**
- * Gestos no jogo (spec 015, T04): a roda de gestos, as teclas (G abre; com ela aberta, 1 a 8
- * escolhem e Esc fecha — fechada, os números continuam sendo da barra de itens), o gesto do
+ * Gestos no jogo (spec 015, T04): o menu da tela com a roda (src/ui/menuRoda.ts: G abre os
+ * gestos; com ela aberta, 1 a 8 escolhem e Esc fecha — fechada, os números continuam sendo da
+ * barra de itens), o gesto do
  * próprio boneco na hora (previsão), o comando para o núcleo e o que chega dele: o gesto dos
  * amigos e dos moradores que respondem.
  */
@@ -15,7 +16,8 @@ import {
 } from '../personagem/gestos';
 import type { Comando, EventoNucleo } from '../nucleo/protocolo';
 import { criarBalao, type BalaoGesto } from './balaoGesto';
-import { criarRoda, teclaDaRoda, type Roda } from '../ui/roda';
+import type { Roda } from '../ui/roda';
+import { criarMenuRoda, type MenuRoda } from '../ui/menuRoda';
 import { ICONES_GESTOS, svgDoIcone } from '../ui/iconesGestos';
 
 export interface OpcoesGestosJogo {
@@ -36,6 +38,7 @@ export interface OpcoesGestosJogo {
 
 export interface GestosJogo {
   readonly roda: Roda;
+  readonly menu: MenuRoda;
   /** Faz o gesto (do botão, da tecla ou dos testes). Devolve se valeu (limite de repetição). */
   fazer(g: IdGesto): boolean;
   /** Avança o balão do jogador (uma vez por quadro). */
@@ -63,54 +66,24 @@ export function criarGestosJogo(op: OpcoesGestosJogo): GestosJogo {
     return true;
   }
 
-  const botoesCarinha = () => document.querySelectorAll<HTMLElement>('[data-abrir-gestos]');
-  const roda = criarRoda({
-    itens: GESTOS.map((g) => ({ id: g.id, nome: g.nome, icone: svgDoIcone(ICONES_GESTOS[g.id]) })),
-    rotulo: 'Gestos',
-    // no toque os números somem (CSS)
-    numeros: true,
-    aoEscolher: (id) => {
+  // o menu da tela (opção C): a mesma roda tem o menu e os gestos
+  const menu = criarMenuRoda({
+    gestos: GESTOS.map((g) => ({ id: g.id, nome: g.nome, icone: svgDoIcone(ICONES_GESTOS[g.id]) })),
+    fazerGesto: (id) => {
       if (ehGesto(id)) fazer(id);
     },
-    aoMudar: (aberta) => {
-      for (const b of botoesCarinha()) {
-        b.setAttribute('aria-expanded', String(aberta));
-        b.classList.toggle('ativo', aberta);
-      }
-    },
+    pode: op.pode,
   });
-
-  // G abre e fecha; com a roda aberta, 1 a 8 escolhem e Esc fecha (antes da barra e da pausa)
-  window.addEventListener(
-    'keydown',
-    (e) => {
-      if (e.repeat && e.code === 'KeyG') return;
-      const alvo = e.target as HTMLElement | null;
-      if (
-        alvo &&
-        (alvo.tagName === 'INPUT' || alvo.tagName === 'TEXTAREA' || alvo.isContentEditable)
-      )
-        return;
-      const a = teclaDaRoda(e.code, roda.aberta, GESTOS.length);
-      if (!a) return;
-      if (a.acao === 'alternar') {
-        if (!roda.aberta && !op.pode()) return;
-        roda.alternar();
-      } else if (a.acao === 'fechar') roda.fechar();
-      else roda.escolher(a.i);
-      e.preventDefault();
-      e.stopImmediatePropagation();
-    },
-    true,
-  );
-  // a carinha (toque e barra do computador) pede pelo evento
+  const roda = menu.roda;
+  // pedido de abrir os gestos (testes, atalhos)
   window.addEventListener('brumaluz:gestos', () => {
-    if (!roda.aberta && !op.pode()) return;
-    roda.alternar();
+    if (menu.aberta === 'gestos') menu.fechar();
+    else menu.abrirGestos(true);
   });
 
   return {
     roda,
+    menu,
     fazer,
     atualizar(dt) {
       balao.atualizar(dt);

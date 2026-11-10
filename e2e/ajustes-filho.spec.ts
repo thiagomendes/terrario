@@ -200,7 +200,11 @@ for (const [w, h] of [
   [800, 600],
   [1180, 640],
 ]) {
-  test(`barra de atalhos em ${w}×${h} não cobre os avisos nem a missão`, async ({ page }) => {
+  // spec 015 (opção C do menu): a barra de atalhos de baixo saiu; o botão da roda e a mochila
+  // ficam no alto, dentro da tela, sem cobrir o minimapa nem um ao outro
+  test(`menu do alto em ${w}×${h}: roda e mochila na tela, sem cobrir o minimapa`, async ({
+    page,
+  }) => {
     test.setTimeout(240_000);
     await page.setViewportSize({ width: w, height: h });
     await page.goto('/');
@@ -208,21 +212,28 @@ for (const [w, h] of [
     await page.evaluate(() => document.querySelector('.entrada')?.setAttribute('hidden', ''));
     await page.waitForTimeout(800);
     const r = await page.evaluate(() => {
-      const barra = document.querySelector('.barra-atalhos')!.getBoundingClientRect();
-      // o mais baixo dos avisos do canto de cima (missão incluída)
-      let fundo = 0;
-      for (const el of document.querySelectorAll<HTMLElement>('body *')) {
-        const cs = getComputedStyle(el);
-        if (cs.position !== 'fixed' || el.closest('.barra-atalhos')) continue;
-        const b = el.getBoundingClientRect();
-        if (b.width === 0 || b.left > 300 || b.top > 260 || b.height > 300) continue;
-        fundo = Math.max(fundo, b.bottom);
-      }
-      return { topo: barra.top, fundo };
+      const caixa = (s: string) => document.querySelector(s)!.getBoundingClientRect();
+      return {
+        roda: caixa('[data-botao-roda]'),
+        mochila: caixa('[data-botao-mochila]'),
+        info: caixa('[data-hud-info]'),
+        mini: caixa('[data-minimapa]'),
+        barra: document.querySelector('.barra-atalhos'),
+      };
     });
-    expect(r.topo).toBeGreaterThan(r.fundo);
+    const sobrepoe = (a: DOMRect, b: DOMRect) =>
+      a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom;
+    expect(r.barra).toBeNull();
+    for (const b of [r.roda, r.mochila, r.info]) {
+      expect(b.width).toBeGreaterThanOrEqual(44);
+      expect(b.right).toBeLessThanOrEqual(w);
+      expect(b.bottom).toBeLessThanOrEqual(h);
+    }
+    expect(sobrepoe(r.roda, r.info)).toBe(false);
+    expect(sobrepoe(r.mochila, r.mini)).toBe(false);
+    expect(r.mochila.top).toBeGreaterThanOrEqual(r.mini.bottom);
     await page.screenshot({
-      path: `capturas-temas/ajuste-barra-${w}x${h}.jpg`,
+      path: `capturas-temas/ajuste-menu-${w}x${h}.jpg`,
       type: 'jpeg',
       quality: 75,
     });

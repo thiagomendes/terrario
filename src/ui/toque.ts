@@ -1,6 +1,4 @@
-import { icone, rotuloComIcone, type NomeIcone } from './pixicones';
-import { alternarTelaCheia, emTelaCheia, ouvirTelaCheia, podeAlternarTelaCheia } from './telaCheia';
-import { ICONE_CARINHA, svgDoIcone } from './iconesGestos';
+import { icone, type NomeIcone } from './pixicones';
 export const CSS_TOQUE = `
 .toque { position: fixed; inset: 0; z-index: 6; pointer-events: none; touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
 .toque[hidden] { display: none; }
@@ -25,7 +23,6 @@ export const CSS_TOQUE = `
 .toque .botoes .descer[hidden] { display: none; }
 .toque .topo { position: absolute; top: calc(env(safe-area-inset-top, 0px) + 156px); right: max(10px, env(safe-area-inset-right)); display: grid; gap: 10px; pointer-events: auto; }
 .toque .mais { position: relative; }
-.toque .topo .gestos .icone-carinha { width: 30px; height: 30px; }
 .toque .extras { position: absolute; top: 0; right: calc(100% + 8px); display: flex; flex-direction: row-reverse; gap: 8px; }
 .toque .extras[hidden] { display: none; }
 /* cada botão é uma peça redonda creme, meio transparente para não tampar o mundo */
@@ -148,25 +145,6 @@ export function classificarGesto(duracaoMs: number, deslocamentoPx: number): Ges
 }
 
 /** Controles de toque: joystick à esquerda, arrastar à direita para olhar e botões de ação. */
-/** Spec 015: a carinha ao lado do "+" abre a roda de gestos (quem abre é o jogo). */
-function botaoGestos(): HTMLButtonElement {
-  const b = document.createElement('button');
-  b.type = 'button';
-  b.className = 'gestos';
-  b.setAttribute('aria-label', 'Gestos');
-  b.setAttribute('aria-expanded', 'false');
-  b.setAttribute('data-abrir-gestos', '');
-  b.innerHTML = svgDoIcone(ICONE_CARINHA, 'icone-carinha');
-  const pedir = () => window.dispatchEvent(new CustomEvent('brumaluz:gestos'));
-  b.addEventListener('pointerdown', (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    pedir();
-  });
-  b.addEventListener('click', (e) => e.detail === 0 && pedir());
-  return b;
-}
-
 export function criarToque(raiz: HTMLElement, c: ControleToque) {
   const el = document.createElement('div');
   el.className = 'toque';
@@ -270,70 +248,8 @@ export function criarToque(raiz: HTMLElement, c: ControleToque) {
   anel.className = 'anel';
   el.appendChild(anel);
 
-  const atalho = (nome: NomeIcone, titulo: string, code: string) =>
-    segurar(
-      nome,
-      titulo,
-      () => {
-        extras.hidden = true;
-        bMais.classList.remove('ativo');
-        bMais.setAttribute('aria-expanded', 'false');
-        c.teclaDom(code);
-      },
-      () => undefined,
-    );
-  // "mais": câmera, diário, modo foto e tela cheia num leque ao lado
-  const mais = document.createElement('div');
-  mais.className = 'mais';
-  const bMais = document.createElement('button');
-  bMais.type = 'button';
-  bMais.appendChild(icone('mais'));
-  bMais.setAttribute('aria-label', 'Mais ações');
-  bMais.setAttribute('aria-expanded', 'false');
-  const extras = document.createElement('div');
-  extras.className = 'extras';
-  extras.hidden = true;
-  const alternarExtras = (e: Event) => {
-    e.preventDefault();
-    extras.hidden = !extras.hidden;
-    bMais.classList.toggle('ativo', !extras.hidden);
-    bMais.setAttribute('aria-expanded', String(!extras.hidden));
-  };
-  bMais.addEventListener('pointerdown', alternarExtras);
-  bMais.addEventListener('click', (e) => e.detail === 0 && alternarExtras(e));
-  extras.append(
-    atalho('olho', 'Câmera', 'KeyV'),
-    atalho('livro', 'Diário', 'KeyJ'),
-    atalho('foto', 'Modo foto', 'KeyP'),
-  );
-  if (podeAlternarTelaCheia()) {
-    // tela cheia exige ativação do usuário: no toque ela vem no pointerup, não no pointerdown
-    const bTela = document.createElement('button');
-    bTela.type = 'button';
-    bTela.setAttribute('data-toque-tela-cheia', '');
-    const rotular = () => {
-      const dentro = emTelaCheia();
-      rotuloComIcone(bTela, dentro ? 'janela' : 'telaCheia');
-      bTela.setAttribute('aria-label', dentro ? 'Sair da tela cheia' : 'Tela cheia');
-    };
-    bTela.addEventListener('pointerup', () => {
-      extras.hidden = true;
-      bMais.classList.remove('ativo');
-      alternarTelaCheia();
-    });
-    bTela.addEventListener('click', (e) => e.detail === 0 && alternarTelaCheia());
-    ouvirTelaCheia(rotular);
-    rotular();
-    extras.appendChild(bTela);
-  }
-  mais.append(bMais, extras);
-  topo.append(
-    atalho('mochila', 'Inventário', 'KeyE'),
-    atalho('mapa', 'Mapa', 'Tab'),
-    atalho('pausa', 'Pausa', 'Pausa'),
-    mais,
-    botaoGestos(),
-  );
+  // spec 015 (opção C do menu): os atalhos da direita (mochila, mapa, pausa e "+") saíram;
+  // a mochila fica embaixo do minimapa e o resto na roda do botão de cima (src/ui/menuRoda.ts)
 
   // joystick
   let joyId: number | null = null;
@@ -480,9 +396,6 @@ export function criarToque(raiz: HTMLElement, c: ControleToque) {
     for (const b of [bPular, bDescer]) b.classList.remove('ativo');
     c.tecla('pular', false);
     c.tecla('correr', false);
-    extras.hidden = true;
-    bMais.classList.remove('ativo');
-    bMais.setAttribute('aria-expanded', 'false');
   }
   window.addEventListener('blur', () => !el.hidden && soltarTudo());
 

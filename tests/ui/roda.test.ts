@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { posicoesDaRoda, raioDaRoda, teclaDaRoda } from '../../src/ui/roda';
 import { GESTOS } from '../../src/personagem/gestos';
 import { FUNCOES_JOGO } from '../../src/ui/atalhos';
+import { SEGURAR_GESTOS, itensDoMenu } from '../../src/ui/menuRoda';
 
 describe('roda de botões (spec 015)', () => {
   it('o raio cabe na tela: de 92 px no celular deitado a 130 px no computador', () => {
@@ -44,5 +45,28 @@ describe('roda de botões (spec 015)', () => {
     expect(GESTOS).toHaveLength(8);
     const g = FUNCOES_JOGO.filter((f) => f.codigo === 'KeyG');
     expect(g).toEqual([{ codigo: 'KeyG', tecla: 'G', nome: 'Gestos', icone: 'carinha' }]);
+  });
+
+  it('menu da opção C: os itens do esboço, cada um com a tecla de sempre', () => {
+    expect(itensDoMenu(true).map((i) => [i.id, i.tecla ?? null])).toEqual([
+      ['mapa', 'Tab'],
+      ['diario', 'J'],
+      ['personagem', 'C'],
+      ['foto', 'P'],
+      ['gestos', 'G'],
+      ['tela', null],
+      ['pausa', 'Esc'],
+    ]);
+    // sem tela cheia (iPhone, por exemplo), o item some
+    expect(itensDoMenu(false).some((i) => i.id === 'tela')).toBe(false);
+    // a mochila fica fora da roda (um toque, embaixo do minimapa)
+    expect(itensDoMenu(true).some((i) => (i.id as string) === 'mochila')).toBe(false);
+    expect(SEGURAR_GESTOS).toBeGreaterThanOrEqual(350);
+    expect(SEGURAR_GESTOS).toBeLessThanOrEqual(600);
+  });
+
+  it('com a roda de menu aberta (sem gestos) os números não escolhem nada', () => {
+    expect(teclaDaRoda('Digit1', true, 0)).toBeNull();
+    expect(teclaDaRoda('Escape', true, 0)).toEqual({ acao: 'fechar' });
   });
 });
