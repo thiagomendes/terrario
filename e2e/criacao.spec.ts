@@ -86,7 +86,11 @@ async function vaca(page: Page, toque: boolean) {
         );
         await espera(150);
         if (toque) e.controleDireto!.mirar!(innerWidth / 2, innerHeight / 2);
+        // a dica olha a mira a cada 0,25 s; com a máquina ocupada os quadros demoram:
+        // espera a dica mudar, até 5 s
+        const n = dicas.length;
         await espera(700);
+        for (let i = 0; i < 43 && dicas.length === n; i++) await espera(100);
       };
       const r: Record<string, unknown> = {};
       // a mão vazia, a vaca logo ali na frente: a dica ensina a segurar o trigo
