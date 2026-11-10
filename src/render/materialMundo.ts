@@ -112,7 +112,9 @@ export class PluginMundo extends MaterialPluginBase {
           'vLuzMundo = luz;\nvBlocoMundo = (finalWorld * vec4(position, 1.0)).xyz;\nvFolhaMundo = 0.0;\nvPortaMundo = 0.0;\n#ifdef VERTEXCOLOR\nvFolhaMundo = color.a < 0.99 ? 1.0 : 0.0;\nif (color.a > 0.99 && color.a < 0.999) vPortaMundo = color.a > 0.9945 ? 1.0 : -1.0;\n#endif',
         CUSTOM_VERTEX_UPDATE_POSITION: `
           {
-            // bloco recém-quebrado: todos os vértices dele vão para um ponto só (some na hora)
+            // bloco recém-quebrado: todos os vértices dele vão para o centro do próprio bloco (some
+            // na hora). Antes iam para a origem do chunk (altura 0): um triângulo com só parte dos
+            // vértices do bloco (copa arredondada, vento) virava um risco até o chão.
             vec3 pmO = (world * vec4(position, 1.0)).xyz;
             #ifdef MUNDO_PLANTAS
             vec3 donoO = floor(pmO + vec3(0.0, 0.02, 0.0));
@@ -121,7 +123,7 @@ export class PluginMundo extends MaterialPluginBase {
             #endif
             for (int iO = 0; iO < 8; iO++) {
               vec4 bO = blocosOcultos[iO];
-              if (bO.w > 0.5 && all(equal(donoO, bO.xyz))) positionUpdated = vec3(0.0);
+              if (bO.w > 0.5 && all(equal(donoO, bO.xyz))) positionUpdated = position + (bO.xyz + vec3(0.5) - pmO);
             }
           }
           #ifdef VERTEXCOLOR
