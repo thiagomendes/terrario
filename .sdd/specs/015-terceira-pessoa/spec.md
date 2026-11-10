@@ -59,8 +59,12 @@ Pedido do dono em 10 nov 2026: o boneco de brinquedo da 012 quase não aparece e
   - andar interrompe o gesto; "sentar" fica até andar.
 - **Botão da carinha:** no canto superior esquerdo, ao lado do "+" (decisão do dono), para a tela ficar limpa.
 
-## Para decidir no começo (ideia do dono)
-- **Uma roda só para os menus da tela:** em vez de vários botões, um botão abre uma roda que destrava inventário, mapa, diário, personagem, foto, configurações e os gestos. Esboço comparando com "roda de gestos + botões de hoje": `referencia/menus.html`. Se não ficar bom, segue como no esboço aprovado.
+## Menus da tela: opção C em todos os aparelhos (decisão do dono, 10 nov 2026)
+Esboço: `referencia/menus.html`, https://claude.ai/artifact/1ZGL5c9T41PnvQDUbGUghs. O dono escolheu a C e pediu a mesma experiência no celular, no tablet e no computador ("para a criança aprender a jogar tanto no browser quanto no tablet ou no celular"):
+- **Em cima à esquerda:** o botão de informações e, ao lado, um botão só que abre a roda (a mesma peça da roda de gestos, no meio da tela, em volta do boneco).
+- **Na roda:** Mapa, Diário, Personagem, Foto, Gestos, Tela cheia e Pausa. "Gestos" troca a roda pelos 8 gestos no mesmo lugar, com "Voltar" no meio; segurar o botão da roda abre direto os gestos.
+- **Fora da roda:** só a mochila, a um toque, embaixo do minimapa; tocar no minimapa abre o mapa grande.
+- **No computador:** o mesmo desenho, com o tamanho da tela do navegador; as teclas continuam (E, Tab, J, C, P, G, Esc; de 1 a 8 com a roda de gestos aberta) e cada item da roda mostra a tecla dele. Saem a barra de botões de baixo do computador e a coluna de cima do toque (mapa, pausa, "+").
 
 ## Lições aplicadas
 1. **Comando novo com caso no saneamento** (`gesto`) e teste no modo nuvem; limite de repetição no servidor.
@@ -85,7 +89,7 @@ Pedido do dono em 10 nov 2026: o boneco de brinquedo da 012 quase não aparece e
 3. Mira e alcance certos em 3ª pessoa (quebrar e colocar acertam o bloco do centro), no computador e no toque.
 4. Movimento como no esboço, também no boneco dos amigos.
 5. Os 8 gestos com animação, balão, `G`/1–8 e roda no toque; multijogador com saneamento e limite; morador acena de volta; "chamar" traz bichos.
-6. Menu conforme a decisão sobre a roda única.
+6. Menus na opção C, iguais no computador, no tablet e no celular, com as teclas de atalho no computador.
 7. Desempenho medido; capturas lado a lado com o esboço; testes de tela no computador e no celular.
 8. Nada quebra: todos os testes passam; auditoria independente; relatório visual.
 
@@ -96,8 +100,9 @@ Pedido do dono em 10 nov 2026: o boneco de brinquedo da 012 quase não aparece e
 | T02 | Câmera nova: órbita solta, seguir suave, voltar para trás, desvio de blocos, transparência, zoom; mira e alcance a partir do boneco |
 | T03 | Movimento com vida no boneco do jogador e dos amigos |
 | T04 | Gestos: poses, balão, comando `gesto` no núcleo e na nuvem, respostas do mundo |
-| T05 | Esboço da roda única e decisão; roda de gestos (e de menus, se escolhida) no computador e no toque |
+| T05 | Menus na opção C (roda única com a mochila fora) no computador e no toque, com as teclas |
 | T06 | Desempenho, capturas com o esboço, testes de tela, auditoria, publicação e relatório visual |
 
 ## Decisões do dono
-- 10 nov 2026: esboço aprovado como padrão de entrega; os 8 gestos ficam; botão da carinha no canto superior esquerdo, ao lado do "+"; ordem 013 → 015 → 017 → 016 → 014.
+- 10 nov 2026: esboço aprovado como padrão de entrega; os 8 gestos ficam; ordem 013 → 015 → 017 → 016 → 014.
+- 10 nov 2026: menus na opção C, iguais em todos os aparelhos.
