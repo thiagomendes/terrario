@@ -321,11 +321,20 @@ test('HUD do Rancho no celular: dicas, corações e avisos sem cobrir nada', asy
   await page.evaluate(() => window.__brumaluz!.selecionarSlot!(1));
   await mirar(fx + 1.5, fy - 0.5, fz + 1.5);
   await page.evaluate(() => window.__brumaluz!.controleDireto!.tocar!());
-  // mede logo que o aviso entra (ele some sozinho em poucos segundos)
-  await page.waitForTimeout(350);
+  // confere e mede logo que o aviso entra: ele some sozinho em 2,7 s, e com a suíte inteira
+  // rodando (1 quadro por segundo) só a captura de tela já pode levar mais que isso
+  await expect(page.locator('.toast-area')).toContainText('A semente precisa de terra arada');
+  // espera o aviso acabar de surgir (0,27 s de entrada), como a criança o vê
+  await page.waitForFunction(
+    () =>
+      [...document.querySelectorAll<HTMLElement>('.toast-area > *')].some(
+        (t) => t.textContent?.includes('terra arada') && Number(getComputedStyle(t).opacity) > 0.9,
+      ),
+    undefined,
+    { polling: 50, timeout: 2_500 },
+  );
   const s2 = await sobreposicoes();
   await page.screenshot({ path: `${PASTA_CAPTURAS}/rancho-celular-aviso.png` });
-  await expect(page.locator('.toast-area')).toContainText('A semente precisa de terra arada');
   expect(s2.vistos).toContain('aviso');
   expect(s2.ruins).toEqual([]);
 
