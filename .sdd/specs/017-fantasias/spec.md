@@ -44,5 +44,5 @@ No esboço a "Heroína Estrela" saiu com cara de menino. Regra:
 - Em "Dos temas", o tema do mundo aberto vem primeiro.
 - Ao abrir: a aba usada da última vez; vindo da sugestão de criar mundo, já abre em "Dos temas".
 
-## Quando (recomendação apresentada ao dono)
+## Quando (decidido pelo dono em 10 nov 2026)
 - Logo depois da 015 (terceira pessoa): a capa e a saia aproveitam o movimento novo do boneco, e é a parte que os filhos pediram. Depois, a 016 (construções protegidas) e a 014 (Cidade Grande).

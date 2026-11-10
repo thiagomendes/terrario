@@ -12,6 +12,8 @@ Ideias e pedidos do dono que ainda não viraram spec. Cada item diz de onde veio
 
 ## Specs na fila
 
+Ordem combinada com o dono (10 nov 2026): 013 → 015 → 017 → 016 → 014.
+
 - **013, Rancho Alegre** (`.sdd/specs/013-rancho-alegre/spec.md`): em andamento.
 - **015, Só terceira pessoa e roda de gestos** (`.sdd/specs/015-terceira-pessoa/spec.md`): esboço aprovado; vem logo depois da 013.
 - **017, Fantasias** (`.sdd/specs/017-fantasias/spec.md`): esboço publicado; fantasias dos temas livres; inclui conferir os chapéus soltos de hoje.
