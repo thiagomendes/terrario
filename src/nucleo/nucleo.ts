@@ -544,7 +544,17 @@ export function criarNucleo(op: OpcoesNucleo) {
       return;
     }
     editar(x, y, z, Bloco.TERRA_ARADA);
-    if (acima !== Bloco.AR) editar(x, y + 1, z, Bloco.AR);
+    if (acima !== Bloco.AR) {
+      editar(x, y + 1, z, Bloco.AR);
+      // a flor ou a grama alta que sai solta o que soltaria quebrada (sorteios do plantio,
+      // para não mexer na sequência dos drops de sempre)
+      if (modo === 'sobrevivencia') {
+        for (const d of dropsDoBloco(acima, rngPlantio, true))
+          mundoItens.soltar(d.item, d.qtd, x + 0.5, y + 1.4, z + 0.5, rngPlantio);
+        if (acima === Bloco.GRAMA_ALTA && rngPlantio() < CHANCE_SEMENTE_GRAMA)
+          mundoItens.soltar('semente_trigo', 1, x + 0.5, y + 1.4, z + 0.5, rngPlantio);
+      }
+    }
     if (modo === 'sobrevivencia' && p && p.dur !== undefined) {
       const dur = p.dur - 1;
       if (dur <= 0) {

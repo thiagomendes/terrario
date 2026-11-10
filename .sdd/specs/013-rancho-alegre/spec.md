@@ -62,7 +62,7 @@ Uma fazenda sem plantação e sem bichos de criação fica rasa. Por isso esta s
 ## Plantar e colher (mecânica nova, todos os temas)
 - **Blocos novos** (ids 68 em diante, nesta ordem): terra arada; trigo em 4 estágios; milho em 4 estágios; abóbora em 4 estágios (o último é o pé com a abóbora); fardo de feno. Os estágios não viram item (não aparecem no inventário nem no criativo).
 - **Itens novos:** enxada (nos 5 níveis de material, como as outras ferramentas), semente de trigo, semente de milho, semente de abóbora, trigo, milho, pão, pipoca, ovo e ovo cozido.
-- **Arar:** com a enxada na mão, usar (clique direito ou toque) na grama ou na terra com ar em cima vira terra arada. Gasta a enxada. Planta baixa em cima (grama alta, flor) sai junto.
+- **Arar:** com a enxada na mão, usar (clique direito ou toque) na grama ou na terra com ar em cima vira terra arada. Gasta a enxada. Planta baixa em cima (grama alta, flor) sai junto e, na sobrevivência, solta o que soltaria quebrada.
 - **Plantar:** a semente vai na terra arada (usar com a semente na mão). Fora da terra arada, aviso: "A semente precisa de terra arada. Use a enxada na grama."
 - **Crescer:** 4 estágios. Em sol aberto, de dia, cada estágio leva cerca de 2 minutos (do plantio ao maduro, 6 minutos). Chuva acelera em 1,5×. À noite ou no escuro, metade da velocidade, e perto de tocha ou lanterna (luz 9 ou mais) cresce como de dia. O progresso é contínuo e salvo, sem sorteio.
 - **Colher:** quebrar a planta. Madura: o produto (trigo 1 a 2, milho 1 a 3, abóbora 1) e 1 a 2 sementes. Verde: devolve a semente. Nunca se perde o que se plantou.

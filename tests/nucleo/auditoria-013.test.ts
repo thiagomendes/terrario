@@ -575,3 +575,28 @@ describe('luz e caches do mundo do núcleo', () => {
     expect(c.tamanho).toBeGreaterThan(100);
   });
 });
+
+describe('arar tira a planta baixa de cima e solta o que ela soltaria', () => {
+  it('a flor em cima da grama arada cai como item (sobrevivência)', () => {
+    const n = nuvem();
+    const F = { x: X + 1, y: Y - 1, z: Z + 1 };
+    n.estado.edicoes.definir(F.x, F.y, F.z, Bloco.TERRA_MUSGOSA);
+    n.estado.edicoes.definir(F.x, F.y + 1, F.z, Bloco.FLOR);
+    inv(n, 'ana').definir(0, { item: 'enxada_madeira', qtd: 1, dur: 60 });
+    mandar(n, 'ana', { t: 'arar', id: 1, ...F, slot: 0 });
+    expect(bloco(n, F.x, F.y, F.z)).toBe(Bloco.TERRA_ARADA);
+    expect(bloco(n, F.x, F.y + 1, F.z)).toBe(Bloco.AR);
+    expect(n.estado.mundoItens.itens.map((i) => i.item)).toEqual([idDoBloco(Bloco.FLOR)]);
+  });
+
+  it('no criativo nada cai', () => {
+    const n = nuvem('criativo');
+    const F = { x: X + 1, y: Y - 1, z: Z + 1 };
+    n.estado.edicoes.definir(F.x, F.y, F.z, Bloco.TERRA_MUSGOSA);
+    n.estado.edicoes.definir(F.x, F.y + 1, F.z, Bloco.FLOR);
+    inv(n, 'ana').definir(0, { item: 'enxada_madeira', qtd: 1, dur: 60 });
+    mandar(n, 'ana', { t: 'arar', id: 1, ...F, slot: 0 });
+    expect(bloco(n, F.x, F.y + 1, F.z)).toBe(Bloco.AR);
+    expect(n.estado.mundoItens.itens).toEqual([]);
+  });
+});
