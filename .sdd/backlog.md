@@ -18,7 +18,7 @@ Ideias e pedidos do dono que ainda não viraram spec. Cada item diz de onde veio
 Ordem combinada com o dono (10 nov 2026): 013 → 015 → 017 → 016 → 014.
 
 - **013, Rancho Alegre:** publicada em 10 nov 2026 (relatório https://claude.ai/artifact/P27LQ7348TBUapLEzB1wgj); falta a rodada em família.
-- **015, Só terceira pessoa e roda de gestos** (`.sdd/specs/015-terceira-pessoa/spec.md`): esboço aprovado; vem logo depois da 013.
+- **015, Só terceira pessoa e roda de gestos**: FEITA e publicada em 10 nov 2026 (relatório em `.sdd/specs/015-terceira-pessoa/report.md`). Falta a rodada em família. Polimento: vulto do boneco na casinha 3×3; morador colado na câmera tapa um canto; dono de cada bicho criado ("chamar" só os seus) vai para a 016.
 - **017, Fantasias** (`.sdd/specs/017-fantasias/spec.md`): esboço publicado; fantasias dos temas livres; inclui conferir os chapéus soltos de hoje.
 - **014, Cidade Grande** (rascunho em `.sdd/specs/014-cidade-grande/spec.md`): depois da 013, da 015 e da 016; falta o dono decidir a altura dos prédios.
 

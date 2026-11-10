@@ -1,7 +1,7 @@
 ---
 id: 015-terceira-pessoa
 title: 'Só terceira pessoa: câmera caprichada, movimento com vida e roda de gestos'
-status: IN_PROGRESS
+status: DONE
 base_branch: main
 branch: feat/terceira-pessoa
 created_at: 2026-11-10T12:00:00Z
