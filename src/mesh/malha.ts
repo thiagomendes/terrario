@@ -666,9 +666,17 @@ export function gerarMalha(
     // porta de dois blocos (spec 013): uma peça só. A metade de cima usa o tile dela nas faces
     // em pé; onde as metades se encostam não há face nem junta (o alfa do vértice avisa o
     // material: 0,996 = metade de cima, 0,993 = metade de baixo)
+    // Portas empilhadas formam pares de baixo para cima: conta as células de porta embaixo
+    // (par = metade de baixo, ímpar = de cima). Só some a emenda entre as duas metades do
+    // mesmo par quando as duas estão iguais (as duas abertas ou as duas fechadas).
     const porta = ehPorta(id);
-    const temEmbaixo = porta && ehPorta(ler(x, y - 1, z));
-    const temEmCima = porta && ehPorta(ler(x, y + 1, z));
+    let abaixo = 0;
+    if (porta) while (y - abaixo - 1 >= 0 && ehPorta(ler(x, y - abaixo - 1, z))) abaixo++;
+    const deCima = porta && abaixo % 2 === 1;
+    const par = deCima ? ler(x, y - 1, z) : porta && y + 1 < ALTURA ? ler(x, y + 1, z) : -1;
+    const juntas = porta && par === id;
+    const temEmbaixo = deCima && juntas;
+    const temEmCima = porta && !deCima && juntas;
     const marca = temEmbaixo ? 0.996 : temEmCima ? 0.993 : 1;
     for (const c of caixas) {
       for (const f of FACES) {
@@ -683,7 +691,7 @@ export function gerarMalha(
           (f.n[2] < 0 && c[2] <= 0);
         if (naBorda && opaco(x + f.n[0], y + f.n[1], z + f.n[2])) continue;
         const tile =
-          temEmbaixo && f.n[1] === 0
+          deCima && f.n[1] === 0
             ? TILE_PORTA_CIMA_I
             : tileDaFace(id, f.n, metas.get(indice(x, y, z)) ?? 0);
         const base = solido.vertices;

@@ -68,3 +68,50 @@ describe('porta de dois blocos: uma peça só', () => {
     for (let i = 0; i < m.cores.length / 4; i++) expect(m.cores[i * 4 + 3]).toBe(1);
   });
 });
+
+describe('portas empilhadas e metades diferentes (auditoria 013)', () => {
+  function coluna(bs: number[]): Buffers {
+    const c = new Uint8Array(TAM_X * ALTURA * TAM_Z);
+    bs.forEach((b, i) => (c[indice(5, 10 + i, 5)] = b));
+    return gerarMalha(c).solido;
+  }
+  const cima = indiceDoTile(TILE_PORTA_CIMA);
+  /** As faces em pé de cada bloco da coluna usam o tile de cima? */
+  /** Faces em pé (4 vértices cada) pelo bloco em que começam. */
+  const tilesDeCima = (m: Buffers, n: number) =>
+    Array.from({ length: n }, (_, k) => {
+      let faces = 0;
+      let deCima = 0;
+      for (let f = 0; f < m.posicoes.length / 12; f++) {
+        const ys = [0, 1, 2, 3].map((q) => m.posicoes[(f * 4 + q) * 3 + 1]);
+        if (m.normais[f * 12 + 1] !== 0 || Math.min(...ys) !== 10 + k) continue;
+        faces++;
+        if (
+          [0, 1, 2, 3].every((q) =>
+            dentro(cima, m.uvs[(f * 4 + q) * 2], m.uvs[(f * 4 + q) * 2 + 1]),
+          )
+        )
+          deCima++;
+      }
+      return faces > 0 && deCima === faces;
+    });
+
+  it('duas portas uma em cima da outra são duas portas (baixo, cima, baixo, cima)', () => {
+    const m = coluna([Bloco.PORTA, Bloco.PORTA, Bloco.PORTA, Bloco.PORTA]);
+    expect(tilesDeCima(m, 4)).toEqual([false, true, false, true]);
+    // entre as duas portas (y = 12) há o topo de uma e o fundo da outra; nas emendas, nada
+    const deitadas = (y: number) =>
+      vertices(m, y - 0.001, y + 0.001).filter((p) => p.ny !== 0).length;
+    expect(deitadas(11)).toBe(0);
+    expect(deitadas(13)).toBe(0);
+    expect(deitadas(12)).toBeGreaterThan(0);
+  });
+
+  it('uma metade aberta e a outra fechada: sem buraco (as faces da emenda ficam) e sem marca', () => {
+    const m = coluna([Bloco.PORTA, Bloco.PORTA_ABERTA]);
+    expect(tilesDeCima(m, 2)).toEqual([false, true]);
+    const emenda = vertices(m, 10.999, 11.001).filter((p) => p.ny !== 0);
+    expect(emenda.length).toBeGreaterThan(0);
+    for (const p of vertices(m, 10, 12)) expect(p.a).toBe(1);
+  });
+});
