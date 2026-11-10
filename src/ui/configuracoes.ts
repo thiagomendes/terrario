@@ -124,8 +124,8 @@ const ABAS: Record<Aba, { titulo: string; itens: Def[] }> = {
       {
         tipo: 'bool',
         chave: 'mostrarAtalhos',
-        nome: 'Barra de atalhos',
-        dica: 'Ícones com as teclas de cada função no canto da tela',
+        nome: 'Teclas nos botões',
+        dica: 'A tecla de cada função num selinho no botão (computador)',
       },
     ],
   },

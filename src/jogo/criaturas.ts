@@ -3,6 +3,7 @@ import type { Gerador } from '../audio/variacao';
 import type { Drop } from './drops';
 import type { Profissao } from '../world/povoado';
 import { comeEsse, PARA_SEGUINDO, RAIO_ATRAIR, RAIO_CASA, RAIO_SEGUIR } from './criacao';
+import { PARA_CHAMADO } from '../personagem/gestos';
 
 /** Os cinco animais (cada tema dá pele, nome e voz a eles). */
 export type TipoCriatura = 'cervo' | 'coelho' | 'peixe' | 'espectro' | 'raposa';
@@ -152,6 +153,13 @@ export interface Criatura {
   rotaIndice?: number;
   /** Fase da rotina (dia ou indo para casa): ao trocar, a rota recomeça. */
   rotaFase?: 'dia' | 'casa';
+  /** Spec 015: o morador parou para acenar de volta (segundos que ainda fica parado). */
+  pausaGesto?: number;
+  /**
+   * Spec 015: alguém fez o gesto de chamar. A raposa domada e o bicho criado vão até perto
+   * de (x, z) em até `t` segundos; o criado passa a morar ali. Não é salvo.
+   */
+  chamado?: { x: number; z: number; t: number };
   /** Canto da praça escolhido para contornar o marco (mantido até chegar nele). */
   canto?: [number, number];
   x: number;
@@ -783,6 +791,16 @@ function rotinaMorador(
     andarPara(c, def, c.alvoX, c.alvoZ, 1.6);
     return;
   }
+  // spec 015: parado acenando de volta para quem acenou (o núcleo já o virou)
+  if (c.pausaGesto !== undefined) {
+    c.pausaGesto -= dt;
+    if (c.pausaGesto > 0) {
+      frear(c, 0.5);
+      c.estado = 'parado';
+      return;
+    }
+    c.pausaGesto = undefined;
+  }
   const emCasa = noite > 0.35;
   const fase = emCasa ? 'casa' : 'dia';
   if (c.rotaFase !== fase) {
@@ -879,6 +897,37 @@ function rotinaMorador(
 }
 
 /**
+ * Spec 015: vai até perto de onde chamaram (sem sorteio). Chegou ou desistiu: para, olha para
+ * lá e, se é criado, passa a morar ali. Devolve false quando não há mais chamado.
+ */
+function atenderChamado(c: Criatura, def: DefCriatura, dt: number): boolean {
+  const ch = c.chamado;
+  if (!ch) return false;
+  ch.t -= dt;
+  const dx = ch.x - c.x;
+  const dz = ch.z - c.z;
+  const d = Math.hypot(dx, dz);
+  if (ch.t <= 0 || d <= PARA_CHAMADO + 0.3) {
+    c.chamado = undefined;
+    frear(c, 0.5);
+    if (d > 0.01) c.yawAlvo = Math.atan2(dx, dz);
+    c.estado = 'parado';
+    c.tempoEstado = 2;
+    if (c.criado) mudarCasa(c);
+    return true;
+  }
+  c.estado = 'seguir';
+  const k = PARA_CHAMADO / d;
+  andarPara(c, def, ch.x - dx * k, ch.z - dz * k, d > 5 ? 1.1 : 0.8);
+  if (c.tipo === 'coelho' && c.noChao && c.recargaPulo <= 0 && d > 3) {
+    c.vy = 4.5;
+    c.noChao = false;
+    c.recargaPulo = 0.45;
+  }
+  return true;
+}
+
+/**
  * Avança uma criatura. Devolve eventos (ataque ao jogador, morte com drops).
  */
 export function passoCriatura(
@@ -918,6 +967,8 @@ export function passoCriatura(
     // golpeada: o empurrão decai sozinho antes de a IA voltar a mandar
     c.atordoada -= dt;
     frear(c, Math.exp(-dt * 5));
+  } else if (c.chamado && atenderChamado(c, def, dt)) {
+    // spec 015: foi chamado e está indo (ou acabou de chegar)
   } else
     switch (def.comportamento) {
       case 'peixe': {

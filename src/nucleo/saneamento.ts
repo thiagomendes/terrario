@@ -10,6 +10,7 @@ import { obterItem } from '../jogo/itens';
 import type { Comando, MudancaSlot, Pos } from './protocolo';
 import type { DadosMundo } from '../jogo/mundos';
 import type { EdicoesExportadas } from '../world/edicoes';
+import { ehGesto } from '../personagem/gestos';
 
 /** Tamanho do mundo onde alguém pode estar (bem além de onde se joga). */
 export const XZ_MAX = 30_000_000;
@@ -164,6 +165,11 @@ export function sanear(c: unknown): Comando | null {
       return typeof o.pausar === 'boolean' ? (o as unknown as Comando) : null;
     case 'depurar':
       return o.d && typeof o.d === 'object' ? (o as unknown as Comando) : null;
+    case 'gesto':
+      // spec 015: só um dos 8 gestos
+      return inteiro(o.id, 0, Number.MAX_SAFE_INTEGER) && ehGesto(o.gesto)
+        ? (o as unknown as Comando)
+        : null;
     case 'aparencia':
       // só um objeto pequeno (a aparência são umas poucas escolhas)
       return o.aparencia &&

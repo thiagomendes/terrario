@@ -139,6 +139,27 @@ test('dois navegadores no mesmo mundo: convite, entrada pelo link e tudo sincron
   await golpes;
   expect(viuGolpe).toBe(true);
 
+  // spec 015: Ana comemora; Bia vê o boneco dela comemorando e o balão em cima da cabeça
+  await bia.evaluate(() => {
+    const e = window.__brumaluz!;
+    if (e.camera && e.camera.modo() !== 'terceira') e.camera.definir('terceira');
+    const a = (e.outrosJogadores?.() ?? []).find((o) => o.apelido === 'Ana');
+    const [x, , z] = e.posicao!;
+    if (a) e.apontar!(Math.atan2(a.x - x, a.z - z), 0.15);
+  });
+  await bia.waitForTimeout(500);
+  await ana.evaluate(() => window.__brumaluz!.gestos!.fazer('comemorar'));
+  await bia.waitForFunction(
+    () =>
+      (window.__brumaluz!.outrosJogadores?.() ?? []).some((o) => {
+        const g = o as { apelido: string; gesto?: string | null; balao?: string | null };
+        return g.apelido === 'Ana' && g.gesto === 'comemorar' && g.balao === 'comemorar';
+      }),
+    null,
+    { timeout: 10_000 },
+  );
+  await bia.screenshot({ path: 'test-results/gestos015/multiplayer-bia-ve-ana-comemorar.png' });
+
   // as mesmas criaturas, no mesmo lugar (até 1 bloco de diferença)
   await ana.waitForTimeout(3000);
   // lidas ao mesmo tempo e comparadas pela identidade de cada criatura

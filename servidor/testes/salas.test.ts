@@ -141,6 +141,30 @@ describe('salas do servidor', () => {
     );
   });
 
+  it('gesto (spec 015): a amiga vê, rajada vira um, inválido não entra, quem fez não recebe', async () => {
+    const { g, a, codigo, avancar } = await criarSala();
+    const b = canal('5.6.7.8');
+    await g.receber(
+      b,
+      JSON.stringify({ t: 'entrar', versao: VERSAO_REDE, jogador: ident('bia'), codigo }),
+    );
+    await avancar(300);
+    const gestos = (c: ReturnType<typeof canal>) =>
+      quadros(c).flatMap((q) => (q.eventos ?? []).filter((e) => e.e === 'gesto'));
+    let seq = 0;
+    const mandar = (gesto: unknown) =>
+      g.receber(a, JSON.stringify({ t: 'gesto', id: 900 + seq, gesto, seq: ++seq }));
+    await mandar('voar');
+    for (let i = 0; i < 5; i++) await mandar('acenar');
+    await avancar(300);
+    expect(gestos(b)).toEqual([{ e: 'gesto', gesto: 'acenar', jogador: 'ana' }]);
+    await avancar(900);
+    await mandar('sentar');
+    await avancar(200);
+    expect(gestos(b).map((e) => e.gesto)).toEqual(['acenar', 'sentar']);
+    expect(gestos(a)).toEqual([]);
+  });
+
   it('prévia do mundo: nome, tema, dono e quem está lá (sem id nem chave)', async () => {
     const { g, codigo } = await criarSala();
     const b = canal('5.6.7.8');
@@ -497,7 +521,7 @@ describe('o servidor aguenta mensagem de quem quer estragar', () => {
     const longe = 1e12;
     const dados = {
       versao: 1,
-      edicoes: { '0,0': [[5, 1]], '62500000000,0': [[7, 70]], 'lixo': 3 },
+      edicoes: { '0,0': [[5, 1]], '62500000000,0': [[7, 70]], lixo: 3 },
       jogador: { x: longe, y: 70, z: longe, yaw: 0, pitch: 0 },
       hora: 0.3,
       extras: {

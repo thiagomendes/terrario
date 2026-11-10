@@ -14,6 +14,7 @@ import type { DadosMundo, ModoJogo } from '../jogo/mundos';
 import type { EstiloMundo } from '../temas/tipos';
 import type { TipoSer } from '../jogo/criaturas';
 import type { Profissao } from '../world/povoado';
+import type { IdGesto } from '../personagem/gestos';
 
 /** Sobe quando uma mensagem muda de formato (cliente e servidor precisam concordar). */
 export const VERSAO_PROTOCOLO = 1;
@@ -123,11 +124,22 @@ type ComandoSemSeq =
   | { t: 'pausar'; pausar: boolean }
   | { t: 'depurar'; d: Depuracao }
   /** O jogador trocou a aparência no meio do jogo: os amigos passam a ver a nova. */
-  | { t: 'aparencia'; aparencia: Record<string, unknown> };
+  | { t: 'aparencia'; aparencia: Record<string, unknown> }
+  /** Spec 015: um gesto da roda (os amigos veem; o morador perto responde; chamar traz bichos). */
+  | { t: 'gesto'; id: number; gesto: IdGesto };
 
 /** Atalhos de teste e captura (o servidor da nuvem só aceita em ambiente de testes). */
 export type Depuracao =
-  | { f: 'invocar'; tipo: TipoSer; x: number; y: number; z: number }
+  | {
+      f: 'invocar';
+      tipo: TipoSer;
+      x: number;
+      y: number;
+      z: number;
+      /** Spec 015 (testes): já nasce criado, ou domado (raposa). */
+      criado?: boolean;
+      domada?: boolean;
+    }
   | { f: 'clima'; tipo: TipoClima }
   | { f: 'dia'; dia: number }
   | { f: 'hora'; hora: number }
@@ -272,7 +284,12 @@ export type EventoNucleo =
   | { e: 'saiu'; id: string; apelido: string }
   /** Deitou, mas a noite só passa quando todos deitarem. */
   | { e: 'sonoEspera'; faltam: number }
-  | { e: 'trocaRecusada'; motivo: string };
+  | { e: 'trocaRecusada'; motivo: string }
+  /**
+   * Spec 015: alguém fez um gesto perto deste jogador: um amigo (`jogador`) ou um morador
+   * respondendo (`criatura`; `voz`: este diz "oi"). Quem fez o gesto não recebe o dele.
+   */
+  | { e: 'gesto'; gesto: IdGesto; jogador?: string; criatura?: number; voz?: boolean };
 
 /** O que o núcleo manda a cada passo (só os campos que mudaram, menos o ambiente). */
 export interface Quadro {

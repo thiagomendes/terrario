@@ -2,7 +2,7 @@ import { fotografarBoneco } from '../render/fotoBoneco';
 import { CSS_BRINQUEDO } from './brinquedo';
 import { CSS_TEMAS_UI, criarVitrineTitulo } from './temasUi';
 import { obterTema } from '../temas';
-import { CSS_ATALHOS, criarBarraAtalhos } from './atalhos';
+import { CSS_ATALHOS } from './atalhos';
 import type { Hotbar } from '../player/hotbar';
 import { criarBarra } from './barra';
 import { textoIndicador } from '../audio/ligador';
@@ -183,16 +183,26 @@ export interface OpcoesInterface {
  */
 const CSS_HUD_COMPACTO = `
 .hud-info { display: none; }
-body.hud-compacto .hud-info {
+body.hud-compacto .hud-info, body.hud-botao-info .hud-info {
   display: grid; place-items: center; position: fixed; z-index: 7; top: calc(8px + env(safe-area-inset-top)); left: calc(8px + env(safe-area-inset-left));
   width: 44px; height: 44px; padding: 0; border: 0; border-radius: 50%; cursor: pointer;
   background: rgba(255, 250, 240, 0.95); box-shadow: 0 3px 0 rgba(150, 110, 60, 0.35), 0 6px 12px rgba(40, 25, 10, 0.2);
 }
-body.hud-compacto .hud-info svg { width: 30px; height: 30px; }
-body.hud-compacto .hud-info:focus-visible { outline: 3px solid var(--azul); outline-offset: 2px; }
+body.hud-compacto .hud-info svg, body.hud-botao-info .hud-info svg { width: 30px; height: 30px; }
+body.hud-compacto .hud-info:focus-visible, body.hud-botao-info .hud-info:focus-visible { outline: 3px solid var(--azul); outline-offset: 2px; }
 body.hud-compacto:not(.hud-aberto) .hud .som,
 body.hud-compacto:not(.hud-aberto) .hud .camera-indicador,
 body.hud-compacto:not(.hud-aberto) .missao-hud { display: none; }
+/* spec 015: computador e tablet também têm o botão (ao lado, o da roda); ele guarda só as
+   pílulas, e o cartão da missão fica sempre à vista, logo abaixo dos botões */
+body.hud-botao-info:not(.hud-aberto) .hud .som,
+body.hud-botao-info:not(.hud-aberto) .hud .camera-indicador { display: none; }
+body.hud-botao-info:not(.hud-compacto):not(.hud-aberto) .missao-hud { top: 60px; }
+body.hud-botao-info.hud-aberto .hud .som { top: 58px; }
+body.hud-botao-info.hud-aberto .hud [data-camera-indicador] { top: 90px; }
+body.hud-botao-info.hud-aberto .hud [data-nome-jogador] { top: 122px !important; }
+body.hud-botao-info.hud-aberto .hud [data-info-mundo] { top: 154px !important; }
+body.hud-botao-info.hud-aberto .missao-hud { top: 188px; }
 /* aberto: as pílulas descem logo abaixo do botão */
 body.hud-compacto.hud-aberto .hud .som { top: 58px; }
 body.hud-compacto.hud-aberto .hud [data-camera-indicador] { top: 90px; }
@@ -472,12 +482,18 @@ export function criarInterface(
     e.stopPropagation();
     mostrarInfo(!document.body.classList.contains('hud-aberto'));
   });
-  // compacto no celular em pé (tela mais alta que larga e estreita)
+  // compacto no celular em pé (tela mais alta que larga e estreita): pílulas e missão no
+  // botão. Spec 015 (opção C do menu): nos outros aparelhos o botão também existe (ao lado
+  // fica o da roda), mas guarda só as pílulas; a missão fica sempre à vista
+  document.body.classList.add('hud-botao-info');
   const emPe = window.matchMedia('(orientation: portrait) and (max-width: 700px)');
+  let eraCompacto: boolean | null = null;
   const ajustarCompacto = () => {
     const compacto = emPe.matches && document.body.classList.contains('toque-ativo');
+    if (compacto === eraCompacto) return;
+    eraCompacto = compacto;
     document.body.classList.toggle('hud-compacto', compacto);
-    if (!compacto) mostrarInfo(false);
+    mostrarInfo(false);
   };
   emPe.addEventListener?.('change', ajustarCompacto);
   new MutationObserver(ajustarCompacto).observe(document.body, {
@@ -545,19 +561,13 @@ export function criarInterface(
       if (codigo === 'KeyV') travarPonteiro(canvasJogo());
     },
   });
-  // barra de atalhos do HUD (desktop): ícone e tecla de cada função
+  // spec 015 (opção C do menu, em todo aparelho): a barra de atalhos de baixo saiu; o menu
+  // fica na roda do botão de cima e a mochila embaixo do minimapa (src/ui/menuRoda.ts)
   const estiloAtalhos = document.createElement('style');
   estiloAtalhos.textContent = CSS_ATALHOS;
   document.head.appendChild(estiloAtalhos);
-  const barraAtalhos = criarBarraAtalhos(app, (codigo) => {
-    if (codigo === 'Pausa') {
-      document.exitPointerLock?.();
-      window.dispatchEvent(new CustomEvent('brumaluz:pausar'));
-      return;
-    }
-    window.dispatchEvent(new KeyboardEvent('keydown', { code: codigo }));
-  });
-  opMundo.config?.ouvir((c) => barraAtalhos.definir(c.mostrarAtalhos));
+  // a opção de antes ("barra de atalhos") passa a ligar os selinhos de tecla
+  opMundo.config?.ouvir((c) => document.body.classList.toggle('sem-teclas', !c.mostrarAtalhos));
   window.addEventListener('brumaluz:pausar', () => {
     if (!entrada.hidden || pausa.aberto) return;
     jogoIniciado = true;

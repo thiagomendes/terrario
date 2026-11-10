@@ -28,6 +28,15 @@ import { abreEFecha, alternado, ehPorta } from '../world/portas';
 import { criarConteineres, TAMANHO_BAU } from '../jogo/conteineres';
 import { criarMundoDeItens, dropsDoBloco } from '../jogo/drops';
 import { criarPopulacao } from '../jogo/populacao';
+import {
+  ATRASO_RESPOSTA,
+  INTERVALO_GESTO_NUCLEO,
+  MORADORES_QUE_RESPONDEM,
+  RAIO_RESPOSTA_MORADOR,
+  RAIO_VER_GESTO,
+  moradorResponde,
+  type IdGesto,
+} from '../personagem/gestos';
 import type { EventoCriatura } from '../jogo/criaturas';
 import { criarClima, estacaoDoDia, type EstadoClima } from '../jogo/clima';
 import { criarSobrevivencia, type Sobrevivencia } from '../jogo/sobrevivencia';
@@ -168,6 +177,8 @@ interface Jogador {
   passoTelemetria: number;
   /** O núcleo mandou o jogador para longe (renascer): a próxima posição pode saltar. */
   saltoPermitido: boolean;
+  /** Spec 015: passo do último gesto aceito (limite de repetição). */
+  passoGesto: number;
   /** Para as criaturas (o mesmo objeto a cada passo: os ataques dizem em quem foi). */
   corpo: {
     x: number;
@@ -377,6 +388,7 @@ export function criarNucleo(op: OpcoesNucleo) {
       acoes: [0, 0, 0],
       passoTelemetria: n,
       saltoPermitido: true,
+      passoGesto: -Infinity,
       perfil: oc?.perfil ?? { apelido: 'Jogador', aparencia: {} },
       constroi: oc?.constroi ?? true,
       corpo: { x, y: y0, z, vivo: true, criativo: modo === 'criativo', mao: null },
@@ -1005,6 +1017,80 @@ export function criarNucleo(op: OpcoesNucleo) {
    * núcleo). O bicho vira criado (gasta 1 na sobrevivência); se já era, ganha carinho e a
    * casa passa a ser onde está, sem gastar nada.
    */
+  /** Spec 015: moradores que vão acenar de volta (no passo `passo`). */
+  let respostasGesto: { passo: number; criatura: number; gesto: IdGesto; voz: boolean }[] = [];
+
+  /** Manda o gesto a quem está perto de (x, z), menos a quem fez. */
+  function espalharGesto(
+    x: number,
+    z: number,
+    ev: Extract<EventoNucleo, { e: 'gesto' }>,
+    menos?: Jogador,
+  ): void {
+    for (const o of jogadores.values())
+      if (
+        o !== menos &&
+        Math.abs(o.tel.x - x) < RAIO_VER_GESTO &&
+        Math.abs(o.tel.z - z) < RAIO_VER_GESTO
+      )
+        o.eventos.push(ev);
+  }
+
+  /**
+   * Spec 015: um gesto da roda. Um por jogador a cada `INTERVALO_GESTO_NUCLEO` (o resto é
+   * descartado sem aviso); desmaiado não gesticula. Os amigos perto veem; o morador perto
+   * vira e acena de volta; "chamar" traz a raposa domada e os bichos criados.
+   */
+  function gesto(j: Jogador, g: IdGesto): void {
+    if (j.sobrevivencia.estado.morto) return;
+    if ((n - j.passoGesto) * PASSO < INTERVALO_GESTO_NUCLEO - 1e-9) return;
+    j.passoGesto = n;
+    const { x, y, z } = j.tel;
+    espalharGesto(x, z, { e: 'gesto', gesto: g, jogador: j.id }, j);
+    if (moradorResponde(g)) {
+      const perto: [number, number][] = [];
+      for (const c of populacao.lista) {
+        if (c.tipo !== 'morador' || c.estado === 'morrendo' || Math.abs(c.y - y) > 4) continue;
+        const d = Math.hypot(c.x - x, c.z - z);
+        if (d <= RAIO_RESPOSTA_MORADOR) perto.push([d, c.id]);
+      }
+      perto.sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+      perto.slice(0, MORADORES_QUE_RESPONDEM).forEach(([, id], i) => {
+        const c = criatura(id)!;
+        // para, vira para quem acenou e acena depois de um instante
+        c.yawAlvo = Math.atan2(x - c.x, z - c.z);
+        c.pausaGesto = ATRASO_RESPOSTA + 2.2;
+        respostasGesto.push({
+          passo: n + Math.round(ATRASO_RESPOSTA / PASSO),
+          criatura: id,
+          gesto: 'acenar',
+          voz: i === 0,
+        });
+      });
+    } else if (g === 'chamar') populacao.chamar(x, y, z);
+  }
+
+  /** Os moradores que chegou a hora de acenar de volta. */
+  function responderGestos(): void {
+    if (!respostasGesto.length) return;
+    const fica: typeof respostasGesto = [];
+    for (const r of respostasGesto) {
+      if (r.passo > n) {
+        fica.push(r);
+        continue;
+      }
+      const c = criatura(r.criatura);
+      if (!c || c.estado === 'morrendo') continue;
+      espalharGesto(c.x, c.z, {
+        e: 'gesto',
+        gesto: r.gesto,
+        criatura: c.id,
+        ...(r.voz ? { voz: true } : {}),
+      });
+    }
+    respostasGesto = fica;
+  }
+
   /** Passo em que cada bicho ganhou comida por último (os corações têm intervalo). */
   const ultimaComida = new Map<number, number>();
   function alimentar(j: Jogador, c: Extract<Comando, { t: 'alimentar' }>): void {
@@ -1125,9 +1211,12 @@ export function criarNucleo(op: OpcoesNucleo) {
 
   function depurar(j: Jogador, d: Depuracao): void {
     switch (d.f) {
-      case 'invocar':
-        populacao.adicionar(d.tipo, d.x, d.y, d.z);
+      case 'invocar': {
+        const c = populacao.adicionar(d.tipo, d.x, d.y, d.z);
+        if (d.domada && c.tipo === 'raposa') c.domada = true;
+        if (d.criado) populacao.criar(c);
         break;
+      }
       case 'clima':
         clima.definir(d.tipo);
         break;
@@ -1272,6 +1361,9 @@ export function criarNucleo(op: OpcoesNucleo) {
       case 'depurar':
         if (depuracao) depurar(j, c.d);
         break;
+      case 'gesto':
+        gesto(j, c.gesto);
+        break;
       case 'aparencia':
         j.perfil = { ...j.perfil, aparencia: c.aparencia };
         perfisSujos = true;
@@ -1339,6 +1431,9 @@ export function criarNucleo(op: OpcoesNucleo) {
       for (const c of coletados)
         lista[c.quem].eventos.push({ e: 'coletou', item: c.item, qtd: c.qtd });
     }
+
+    // spec 015: moradores acenando de volta
+    responderGestos();
 
     // a lavoura cresce com o mundo aberto (cada pé uma vez por segundo, com teto por passo)
     crescerAosPoucos(dt);

@@ -15,6 +15,7 @@ import {
   type TipoSer,
 } from './criaturas';
 import { dentroDaCasa, frenteDaPorta, type PlanoPovoado } from '../world/povoado';
+import { RAIO_CHAMAR, TEMPO_CHAMADO } from '../personagem/gestos';
 import {
   botaOvo,
   comeEsse,
@@ -440,6 +441,20 @@ export function criarPopulacao(rng: Gerador, salvo?: unknown, opcoes: OpcoesPopu
         return true;
       }
       return false;
+    },
+    /**
+     * Spec 015, gesto de chamar em (x, y, z): a raposa domada e os bichos criados até
+     * `RAIO_CHAMAR` blocos vêm até perto. Devolve quantos vêm.
+     */
+    chamar(x: number, y: number, z: number): number {
+      let n = 0;
+      for (const c of lista) {
+        if (c.estado === 'morrendo' || !(c.criado || (c.domada && c.tipo === 'raposa'))) continue;
+        if (Math.abs(c.y - y) > 6 || Math.hypot(c.x - x, c.z - z) > RAIO_CHAMAR) continue;
+        c.chamado = { x, z, t: TEMPO_CHAMADO };
+        n++;
+      }
+      return n;
     },
     /** Quantos bichos criados há no mundo (o limite é por mundo). */
     get criados(): number {

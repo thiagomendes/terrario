@@ -10,6 +10,9 @@ import { criarAnimador } from '../player/animacao';
 import { normalizarAparencia } from '../personagem/aparencia';
 import { blocoDoItem } from '../jogo/itens';
 import type { JogadorVisto, PerfilJogador } from '../nucleo/protocolo';
+// spec 015 (gestos): o animador embrulhado toca o gesto; o balão fica em cima da cabeça
+import { comGestos, type IdGesto } from '../personagem/gestos';
+import { criarBalao, type BalaoGesto } from './balaoGesto';
 
 /** Apelido em HTML por cima do jogo: nítido em qualquer tela (sem desfoque do 3D). */
 const CSS_ROTULO = `
@@ -39,7 +42,9 @@ function criarRotulo(texto: string): HTMLDivElement {
 interface Outro {
   id: string;
   personagem: ReturnType<typeof criarPersonagem>;
-  animador: ReturnType<typeof criarAnimador>;
+  animador: ReturnType<typeof comGestos>;
+  /** Spec 015: balão do gesto (criado no primeiro gesto). */
+  balao?: BalaoGesto;
   placa: HTMLDivElement;
   alvo: JogadorVisto;
   x: number;
@@ -66,7 +71,7 @@ export function criarOutrosJogadores(scene: Scene) {
     return {
       id: v.id,
       personagem,
-      animador: criarAnimador(),
+      animador: comGestos(criarAnimador()),
       placa,
       alvo: v,
       x: v.x,
@@ -80,6 +85,7 @@ export function criarOutrosJogadores(scene: Scene) {
   }
 
   function descartar(o: Outro): void {
+    o.balao?.descartar();
     o.personagem.descartar();
     o.placa.remove();
   }
@@ -161,6 +167,7 @@ export function criarOutrosJogadores(scene: Scene) {
         o.personagem.aplicarPose(pose, { dt, olhar: a.pitch, vista: o.animador.vista() });
         o.personagem.posicionar(o.x, o.y, o.z, o.yaw);
         o.personagem.definirLuz(luz);
+        o.balao?.atualizar(dt);
         // apelido acima da cabeça, projetado na tela (some atrás da câmera e muito longe)
         let mostrar = false;
         if (cam && vista && canvas) {
@@ -180,6 +187,13 @@ export function criarOutrosJogadores(scene: Scene) {
         if (o.placa.hidden === mostrar) o.placa.hidden = !mostrar;
       }
     },
+    /** Spec 015: o amigo fez um gesto (o boneco dele toca e o balão aparece). */
+    gesto(id: string, g: IdGesto) {
+      const o = outros.get(id);
+      if (!o) return;
+      o.animador.gesto(g);
+      (o.balao ??= criarBalao(scene, o.personagem.raiz)).mostrar(g);
+    },
     /** Para o minimapa e a seta que aponta para os amigos. */
     get lista() {
       return [...outros.values()].map((o) => ({
@@ -190,6 +204,9 @@ export function criarOutrosJogadores(scene: Scene) {
         z: o.z,
         /** Movimento em curso no boneco do amigo (testes e diagnóstico). */
         golpeando: o.animador.vista().golpe !== null,
+        /** Spec 015: gesto em curso e balão (testes). */
+        gesto: o.animador.gestoAtual,
+        balao: o.balao?.gesto ?? null,
         acoes: o.acoes,
       }));
     },

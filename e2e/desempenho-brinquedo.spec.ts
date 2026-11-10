@@ -163,3 +163,96 @@ test('quadros por segundo ao lado de um sítio do Rancho Alegre', async ({ page 
   console.log(`SITIO ${JSON.stringify({ ...lugar, perto })}`);
   await medirTudo(page, 'rancho-sitio', lugar.yaw, 0.15);
 });
+
+/** Spec 015: quadros por segundo com a roda do menu aberta (deve ser o mesmo que fechada). */
+test('quadros por segundo com a roda aberta', async ({ page }) => {
+  test.setTimeout(300_000);
+  await preparar(page);
+  // TELA=celular: celular em pé, com os controles de toque
+  const celular = process.env.TELA === 'celular';
+  if (celular) await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/');
+  await pronto(page);
+  await fecharEntrada(page);
+  if (celular) await page.evaluate(() => document.body.classList.add('toque-ativo'));
+  await page.waitForTimeout(12_000);
+  const medir4 = (ms = 4000, abrir = false) =>
+    page.evaluate(
+      async ({ ms, abrir }) => {
+        // abrir: mede desde o toque no botão (o pulinho da roda e os avisos sumindo)
+        if (abrir) document.querySelector<HTMLElement>('[data-botao-roda]')!.click();
+        const amostras: number[] = [];
+        let ultimo = performance.now();
+        const fim = ultimo + ms;
+        await new Promise<void>((ok) => {
+          const passo = () => {
+            const agora = performance.now();
+            amostras.push(agora - ultimo);
+            ultimo = agora;
+            if (agora < fim) requestAnimationFrame(passo);
+            else ok();
+          };
+          requestAnimationFrame(passo);
+        });
+        amostras.sort((a, b) => a - b);
+        return {
+          fps: Math.round((amostras.length / (ms / 1000)) * 10) / 10,
+          p95ms: Math.round(amostras[Math.floor(amostras.length * 0.95)] * 10) / 10,
+          maiorMs: Math.round(amostras[amostras.length - 1] * 10) / 10,
+          contador: window.__brumaluz!.fps,
+        };
+      },
+      { ms, abrir },
+    );
+  const fechada = await medir4();
+  const fechada1s = await medir4(1000);
+  // CONTROLE=1: as mesmas medidas sem tocar na roda (quanto o jogo varia sozinho no tempo)
+  const controle = !!process.env.CONTROLE;
+  const abrindo = await medir4(1000, !controle);
+  // PERFIL=1: onde vai o tempo com a roda aberta (as funções que mais gastam)
+  const cdp = process.env.PERFIL ? await page.context().newCDPSession(page) : null;
+  if (cdp) {
+    await cdp.send('Profiler.enable');
+    await cdp.send('Profiler.setSamplingInterval', { interval: 200 });
+    await cdp.send('Profiler.start');
+  }
+  const menu = await medir4();
+  if (cdp) {
+    const { profile } = (await cdp.send('Profiler.stop')) as unknown as {
+      profile: {
+        nodes: {
+          id: number;
+          callFrame: { functionName: string; url: string; lineNumber: number };
+        }[];
+        samples: number[];
+        timeDeltas: number[];
+      };
+    };
+    const porNo = new Map<number, number>();
+    profile.samples.forEach((id, i) =>
+      porNo.set(id, (porNo.get(id) ?? 0) + (profile.timeDeltas[i] ?? 0)),
+    );
+    const porFuncao = new Map<string, number>();
+    for (const n of profile.nodes) {
+      const t = porNo.get(n.id) ?? 0;
+      if (!t) continue;
+      const f = n.callFrame;
+      const k = `${f.functionName || '(anon)'} ${f.url.split('/').pop()}:${f.lineNumber}`;
+      porFuncao.set(k, (porFuncao.get(k) ?? 0) + t);
+    }
+    for (const [k, t] of [...porFuncao].sort((a, b) => b[1] - a[1]).slice(0, 20))
+      console.log(`PERFIL roda ${(t / 1000).toFixed(1)}ms ${k}`);
+  }
+  if (!controle) {
+    await page.keyboard.press('Escape');
+    await page.keyboard.press('KeyG');
+  }
+  await page.waitForTimeout(500);
+  const gestos = await medir4();
+  if (!controle) await page.keyboard.press('Escape');
+  await page.waitForTimeout(500);
+  const depois = await medir4();
+  console.log(
+    `DESEMPENHO roda ${JSON.stringify({ fechada, fechada1s, abrindo, menu, gestos, depois })}`,
+  );
+});

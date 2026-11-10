@@ -208,9 +208,7 @@ test('telas de brinquedo: inicial, jogo, pausa', async ({ page }) => {
   });
   await page.waitForTimeout(1500);
   await foto(page, 'tela-jogo');
-  await page.evaluate(() =>
-    document.querySelector<HTMLElement>('.barra-atalhos [data-funcao="Pausa"]')?.click(),
-  );
+  await page.evaluate(() => window.dispatchEvent(new CustomEvent('brumaluz:pausar')));
   await page.waitForTimeout(800);
   await foto(page, 'tela-pausa');
 });
@@ -408,7 +406,7 @@ for (const [nomeVp, vp] of [
     });
     await page.waitForTimeout(800);
     const abrirInv = () =>
-      page.evaluate(() => document.querySelector<HTMLElement>('[data-funcao="KeyE"]')?.click());
+      page.evaluate(() => window.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyE' })));
     await abrirInv();
     await page.waitForTimeout(600);
     await tirar('inventario');
@@ -499,13 +497,13 @@ for (const [nomeVp, vp] of [
     await page.evaluate(() => document.querySelector<HTMLElement>('[data-renascer]')?.click());
     await page.waitForTimeout(400);
     // diário e mapa grande
-    await page.evaluate(() => document.querySelector<HTMLElement>('[data-funcao="KeyJ"]')?.click());
+    await page.evaluate(() => window.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyJ' })));
     await page.waitForTimeout(700);
     await tirar('diario');
     await fechar();
     await fecharX();
     await page.waitForTimeout(300);
-    await page.evaluate(() => document.querySelector<HTMLElement>('[data-funcao="Tab"]')?.click());
+    await page.evaluate(() => window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Tab' })));
     await page.waitForTimeout(900);
     await tirar('mapa');
     await ctx.close();

@@ -66,6 +66,19 @@ describe('núcleo com vários jogadores', () => {
     expect(q.get('bia')!.eventos?.find((e) => e.e === 'quebra')).toMatchObject({ meu: false });
   });
 
+  it('gesto (spec 015): o amigo vê o gesto do outro, e só o dele', () => {
+    const n = nuvem('criativo');
+    n.quadros();
+    n.comando('bia', { t: 'gesto', id: 7, gesto: 'comemorar' });
+    n.passo();
+    const q = n.quadros();
+    expect(q.get('ana')!.eventos?.filter((e) => e.e === 'gesto')).toEqual([
+      { e: 'gesto', gesto: 'comemorar', jogador: 'bia' },
+    ]);
+    expect(q.get('bia')!.eventos?.some((e) => e.e === 'gesto') ?? false).toBe(false);
+    expect(q.get('bia')!.ack).toBeGreaterThanOrEqual(7);
+  });
+
   it('o amigo troca a aparência no meio do jogo e o outro vê a nova', () => {
     const n = nuvem('criativo');
     n.quadros();
