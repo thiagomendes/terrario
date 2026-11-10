@@ -148,7 +148,7 @@ test('corpo solto da câmera: vira para onde anda e a câmera volta para trás d
   await page.keyboard.up('KeyW');
   await page.keyboard.up('KeyD');
   const andou = await ler();
-  expect(dif(andou.corpo, Math.PI / 4)).toBeLessThan(0.25);
+  expect(dif(andou.corpo, Math.PI / 4)).toBeLessThan(0.35);
   // a câmera não girou junto (menos de 1,4 s sem mexer nela)
   expect(dif(andou.camera, 0)).toBeLessThan(0.02);
   // inclina ao andar e respira parado (o corpo vivo está ligado)

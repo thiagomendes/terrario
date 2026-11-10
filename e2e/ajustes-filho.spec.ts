@@ -162,12 +162,15 @@ test('porta: um clique põe as duas metades; sem espaço, avisa e não põe meia
       };
       // reaponta a cada tentativa (logo depois do teletransporte a posição ainda assenta)
       for (let i = 0; i < 40 && !ok(); i++) {
-        // o centro da tela mira o topo do chão (terceira pessoa, spec 015)
-        e.mirarPonto!(fx + 0.5, fy - 0.05, fz + frente + 0.5);
+        // o centro da tela mira o topo do chão, na borda de perto (de cima e do lado do
+        // ombro, a pedra em cima da porta tapa o meio do bloco: terceira pessoa, spec 015)
+        e.mirarPonto!(fx + 0.5, fy - 0.05, fz + frente + 0.2);
         await espera(300);
       }
       const a = e.alvo;
-      alvos.push(JSON.stringify({ a, p: e.posicao, fx, fy, fz, frente }));
+      alvos.push(
+        JSON.stringify({ a, p: e.posicao, piv: e.camera!.pivo(), rot: e.rotacao, fx, fy, fz, frente }),
+      );
       return !!a && a.x === fx && a.y === fy - 1 && a.z === fz + frente;
     };
     const mirou1 = await mirar(1);
