@@ -94,6 +94,34 @@ test('dois navegadores no mesmo mundo: convite, entrada pelo link e tudo sincron
   expect(pecasMao.visivel.corpo).toBe(true);
   expect(pecasMao.mao).toBeGreaterThan(0);
 
+  // spec 015: o boneco do amigo vira para onde ele anda (não para onde a câmera dele olha).
+  // Ana olha para +z e anda de lado (para +x); Bia vê o corpo dela virado para +x.
+  await ana.evaluate(() => window.__brumaluz!.apontar!(0, 0.3));
+  await ana.keyboard.down('KeyD');
+  const virada = await bia.evaluate(async () => {
+    const e = window.__brumaluz!;
+    const t0 = performance.now();
+    let melhor = { corpo: NaN, olhar: NaN };
+    while (performance.now() - t0 < 6000) {
+      const a = (e.outrosJogadores?.() ?? []).find((o) => o.apelido === 'Ana');
+      if (a?.yawCorpo !== undefined && a.yawOlhar !== undefined) {
+        melhor = { corpo: a.yawCorpo, olhar: a.yawOlhar };
+        const dif = Math.abs(
+          Math.atan2(Math.sin(a.yawCorpo - Math.PI / 2), Math.cos(a.yawCorpo - Math.PI / 2)),
+        );
+        if (dif < 0.35) break;
+      }
+      await new Promise((r) => requestAnimationFrame(r));
+    }
+    return melhor;
+  });
+  await ana.keyboard.up('KeyD');
+  console.log(`boneco da Ana visto pela Bia: ${JSON.stringify(virada)}`);
+  const dif = (a: number, b: number) => Math.abs(Math.atan2(Math.sin(a - b), Math.cos(a - b)));
+  expect(dif(virada.corpo, Math.PI / 2), 'o corpo vira para onde anda').toBeLessThan(0.35);
+  // a cabeça (o olhar) segue a câmera dela, não o corpo
+  expect(dif(virada.olhar, virada.corpo)).toBeGreaterThan(0.8);
+
   // Ana quebra um bloco perto dela: Bia vê
   const cel = await ana.evaluate(() => {
     const e = window.__brumaluz!;

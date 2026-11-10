@@ -129,7 +129,7 @@ for (const id of TEMAS) {
         const dx = x + 0.5 - ex;
         const dy = y + 0.5 - ey;
         const dz = z + 0.5 - ez;
-        e.apontar!(Math.atan2(dx, dz), -Math.atan2(dy, Math.hypot(dx, dz)));
+        e.mirarPonto!(ex + dx, ey + dy, ez + dz);
         return { x, y, z };
       }, m);
       // espera a mira achar o bloco recém-colocado (o primeiro passa pelo worker de edição)
@@ -195,10 +195,7 @@ for (const id of TEMAS) {
         e.teleportar!(m.x - ((m.x - ex) / d) * 2, m.z - ((m.z - ez) / d) * 2, m.y);
         await new Promise((r) => setTimeout(r, 400));
         const [px, py, pz] = e.posicao!;
-        e.apontar!(
-          Math.atan2(m.x - px, m.z - pz),
-          -Math.atan2(m.y + 1.1 - py, Math.hypot(m.x - px, m.z - pz)),
-        );
+        e.mirarPonto!(m.x, m.y + 1.1, m.z);
         await new Promise((r) => setTimeout(r, 400));
         e.controleDireto!.usar();
         await new Promise((r) => setTimeout(r, 300));

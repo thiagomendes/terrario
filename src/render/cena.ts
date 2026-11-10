@@ -282,6 +282,9 @@ export interface EstadoDepuracao {
     z: number;
     golpeando?: boolean;
     acoes?: [number, number, number] | null;
+    /** Para onde o boneco do amigo está virado e para onde ele olha (rad). */
+    yawCorpo?: number;
+    yawOlhar?: number;
   }[];
   /** Tempo médio da lógica de cada quadro na linha principal, fora o desenho (ms). */
   logicaQuadroMs?: number;
@@ -411,6 +414,10 @@ export interface EstadoDepuracao {
     /** Inclinação, curva e passada do corpo vivo (testes). */
     corpo: () => import('../personagem/vida').SaidaCorpo | null;
   };
+  /** Testes: onde um ponto do mundo aparece na tela (coordenadas CSS), ou null atrás da câmera. */
+  telaDoPonto?: (x: number, y: number, z: number) => { x: number; y: number } | null;
+  /** Testes: vira o olhar para o centro da tela mirar este ponto do mundo. */
+  mirarPonto?: (x: number, y: number, z: number) => void;
   /** Mira um bloco pelo centro da tela (testes): yaw e pitch para o raio da câmera passar no centro dele. */
   mirarBloco?: (x: number, y: number, z: number, normal?: Vec3) => boolean;
 }
@@ -1694,14 +1701,24 @@ export function criarCena(
       arrastandoCamera = ativo;
     },
   };
-  estado.mirarBloco = (x, y, z, normal) => {
-    const n = normal ?? { x: 0, y: 0, z: 0 };
-    const ax = x + 0.5 + n.x * 0.45;
-    const ay = y + 0.5 + n.y * 0.45;
-    const az = z + 0.5 + n.z * 0.45;
+  estado.telaDoPonto = (x, y, z) => {
+    const motor = scene.getEngine();
+    const w = motor.getRenderWidth();
+    const h = motor.getRenderHeight();
+    const v = Vector3.Project(
+      new Vector3(x, y, z),
+      Matrix.IdentityReadOnly,
+      scene.getTransformMatrix(),
+      cameraVisao.viewport.toGlobal(w, h),
+    );
+    if (v.z < 0 || v.z > 1) return null;
+    const r = canvas.getBoundingClientRect();
+    return { x: r.left + (v.x / w) * r.width, y: r.top + (v.y / h) * r.height };
+  };
+  /** Vira o olhar para o raio do centro da tela passar pelo ponto (o pivô muda com o olhar). */
+  estado.mirarPonto = (ax, ay, az) => {
     let yaw = camera.rotation.y;
     let pitch = camera.rotation.x;
-    // o pivô depende do olhar (o lado encolhe olhando para baixo): poucas voltas bastam
     for (let i = 0; i < 6; i++) {
       const s = orbita.seguido() ?? camera.position;
       const p = pivoCamera(s, yaw, pitch, bloqueiaCamera);
@@ -1714,6 +1731,10 @@ export function criarCena(
     controle.apontar(yaw, pitch);
     raioToque = null;
     alvoMemoQuadro = -1;
+  };
+  estado.mirarBloco = (x, y, z, normal) => {
+    const n = normal ?? { x: 0, y: 0, z: 0 };
+    estado.mirarPonto!(x + 0.5 + n.x * 0.45, y + 0.5 + n.y * 0.45, z + 0.5 + n.z * 0.45);
     const a = calcularAlvo();
     if (!a || a.x !== x || a.y !== y || a.z !== z) return false;
     return !normal || (a.normal.x === n.x && a.normal.y === n.y && a.normal.z === n.z);

@@ -100,7 +100,7 @@ test('povoado: moradores, tela de trocas com mouse e teclado', async ({ page }) 
       const dx = m.x - px;
       const dy = m.y + 1.1 - py;
       const dz = m.z - pz;
-      e.apontar!(Math.atan2(dx, dz), -Math.atan2(dy, Math.hypot(dx, dz)));
+      e.mirarPonto!(px + dx, py + dy, pz + dz);
       await new Promise((r) => setTimeout(r, 400));
       e.controleDireto!.usar();
       await new Promise((r) => setTimeout(r, 300));

@@ -66,10 +66,7 @@ test('toque: o morador abre as trocas e não apanha; segurar com maçã come', a
       await e.sincronizar?.();
       const [px, py, pz] = e.posicao!;
       const agora = (e.criaturas?.() ?? []).find((c) => c.id === m.id) ?? m;
-      e.apontar!(
-        Math.atan2(agora.x - px, agora.z - pz),
-        -Math.atan2(agora.y + 1.1 - py, Math.hypot(agora.x - px, agora.z - pz)),
-      );
+      e.mirarPonto!(agora.x, agora.y + 1.1, agora.z);
       // a dica aparece com o morador na mira (com 1 FPS pode levar uns segundos)
       for (let i = 0; i < 25 && !dica; i++) await new Promise((res) => setTimeout(res, 200));
       e.controleDireto!.tocar!();
@@ -165,11 +162,8 @@ test('porta: um clique põe as duas metades; sem espaço, avisa e não põe meia
       };
       // reaponta a cada tentativa (logo depois do teletransporte a posição ainda assenta)
       for (let i = 0; i < 40 && !ok(); i++) {
-        const [px, py, pz] = e.posicao!;
-        const dz = fz + frente + 0.5 - pz;
-        const dx = fx + 0.5 - px;
-        // a posição é a dos olhos
-        e.apontar!(Math.atan2(dx, dz), -Math.atan2(fy - py, Math.hypot(dx, dz)));
+        // o centro da tela mira o topo do chão (terceira pessoa, spec 015)
+        e.mirarPonto!(fx + 0.5, fy - 0.05, fz + frente + 0.5);
         await espera(300);
       }
       const a = e.alvo;

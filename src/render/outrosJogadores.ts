@@ -12,6 +12,7 @@ import { criarAnimador } from '../player/animacao';
 import { normalizarAparencia } from '../personagem/aparencia';
 import { blocoDoItem } from '../jogo/itens';
 import type { JogadorVisto, PerfilJogador } from '../nucleo/protocolo';
+import type { CamadaPose } from '../personagem/poses';
 
 /** Apelido em HTML por cima do jogo: nítido em qualquer tela (sem desfoque do 3D). */
 const CSS_ROTULO = `
@@ -208,6 +209,16 @@ export function criarOutrosJogadores(scene: Scene) {
         }
         if (o.placa.hidden === mostrar) o.placa.hidden = !mostrar;
       }
+    },
+    /**
+     * Gancho dos gestos (spec 015 T04): põe uma camada de pose no boneco do amigo (ou tira,
+     * com null). Devolve false se o amigo não está no mundo.
+     */
+    definirCamada(id: string, camada: CamadaPose | null): boolean {
+      const o = outros.get(id);
+      if (!o) return false;
+      o.animador.definirCamada(camada);
+      return true;
     },
     /** Para o minimapa e a seta que aponta para os amigos. */
     get lista() {

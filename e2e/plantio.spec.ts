@@ -75,7 +75,7 @@ async function roca(page: Page, toque: boolean) {
     await e.sincronizar!();
     const mirar = async (x: number, y: number, z: number) => {
       const [px, py, pz] = e.posicao!;
-      e.apontar!(Math.atan2(x - px, z - pz), -Math.atan2(y - py, Math.hypot(x - px, z - pz)));
+      e.mirarPonto!(x, y, z);
       await espera(150);
       if (toque) e.controleDireto!.mirar!(innerWidth / 2, innerHeight / 2);
       // a dica olha a mira a cada 0,25 s; com a máquina ocupada (mundo ainda carregando),
@@ -265,7 +265,7 @@ test('HUD do Rancho no celular: dicas, corações e avisos sem cobrir nada', asy
       async ([x, y, z]) => {
         const e = window.__brumaluz!;
         const [px, py, pz] = e.posicao!;
-        e.apontar!(Math.atan2(x - px, z - pz), -Math.atan2(y - py, Math.hypot(x - px, z - pz)));
+        e.mirarPonto!(x, y, z);
         await new Promise((r) => setTimeout(r, 150));
         e.controleDireto!.mirar!(innerWidth / 2, innerHeight / 2);
         await new Promise((r) => setTimeout(r, 900));
