@@ -96,7 +96,8 @@ export function sanear(c: unknown): Comando | null {
         inteiro(o.slot, 0, SLOTS - 1) &&
         (o.extras === undefined ||
           (Array.isArray(o.extras) &&
-            o.extras.length <= 2 &&
+            // só a metade de cima da porta (o núcleo confere que é a célula de cima)
+            o.extras.length <= 1 &&
             (o.extras as Pos[]).every((e) => celula(e))))
         ? (o as unknown as Comando)
         : null;

@@ -1162,7 +1162,19 @@ export function criarCena(
     enviarTelemetria(true);
     const slot = hotbar.ativo;
     if (b === Bloco.AR) enviar({ t: 'quebrar', id, x, y, z, slot });
-    else enviar({ t: 'colocar', id, x, y, z, bloco: b, meta, slot, extras: extrasFeitos });
+    // a outra parte só vai quando existe (a metade de cima da porta)
+    else
+      enviar({
+        t: 'colocar',
+        id,
+        x,
+        y,
+        z,
+        bloco: b,
+        meta,
+        slot,
+        ...(extrasFeitos.length ? { extras: extrasFeitos } : {}),
+      });
     if (espelho !== null && modo === 'criativo') {
       const m = espelharX({ x, y, z }, espelho);
       if (m.x !== x) {

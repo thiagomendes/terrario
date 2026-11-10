@@ -10,7 +10,7 @@
 import { registrarCatalogo } from '../jogo/catalogo';
 import { blocoDe, criarEdicoes, empacotar } from '../world/edicoes';
 import { Bloco, ehAlvo, obterBloco } from '../world/blocks';
-import { TAM_X, TAM_Z, alturaTerreno, encontrarNascimento, estiloMundo } from '../world/chunk';
+import { TAM_X, ALTURA, TAM_Z, alturaTerreno, encontrarNascimento, estiloMundo } from '../world/chunk';
 import { AVISO_LIMITE, comeEsse, viraCriado } from '../jogo/criacao';
 import { definirRegioesSemPovoado, regiaoDoChunk } from '../world/povoado';
 import { abreEFecha, alternado, ehPorta } from '../world/portas';
@@ -567,6 +567,19 @@ export function criarNucleo(op: OpcoesNucleo) {
     const lav = lavouraDoBloco(bloco);
     const plantavel = !lav || podePlantar(mundo.bloco(x, y - 1, z), blocoAtual);
     const temItem = modo === 'criativo' || (!!p && blocoDoItem(p.item) === bloco && p.qtd > 0);
+    // a outra parte só existe para a porta (dois blocos de altura): exatamente a célula de
+    // cima, que tem de estar livre. Qualquer outra "parte extra" é truque (uma semente
+    // plantando três pés, uma tábua virando três blocos longe dali) e o pedido é recusado.
+    const metade = c.extras && c.extras.length > 0 ? c.extras : null;
+    const extrasOk =
+      !metade ||
+      (bloco === Bloco.PORTA &&
+        metade.length === 1 &&
+        metade[0].x === x &&
+        metade[0].y === y + 1 &&
+        metade[0].z === z &&
+        y + 1 < ALTURA &&
+        substituivel(mundo.bloco(x, y + 1, z)));
     const ocupado =
       !!def?.solido &&
       [...jogadores.values()].some((o) =>
@@ -577,6 +590,7 @@ export function criarNucleo(op: OpcoesNucleo) {
       !j.constroi ||
       bloco === Bloco.AR ||
       !livre ||
+      !extrasOk ||
       !plantavel ||
       !temItem ||
       ocupado ||
@@ -587,10 +601,8 @@ export function criarNucleo(op: OpcoesNucleo) {
       return;
     }
     editar(x, y, z, bloco, meta);
-    for (const e of c.extras ?? []) {
-      // a outra metade da porta: entra no lugar de ar, planta baixa ou água
-      if (substituivel(mundo.bloco(e.x, e.y, e.z))) editar(e.x, e.y, e.z, bloco, meta);
-    }
+    // a metade de cima da porta (já conferida: ar, planta baixa ou água)
+    if (metade) editar(x, y + 1, z, bloco, meta);
     if (modo === 'sobrevivencia') j.inventario.remover(c.slot, 1);
     j.acoes[1]++;
     for (const o of jogadores.values())
