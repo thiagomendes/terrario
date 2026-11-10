@@ -155,8 +155,11 @@ export function notificar(
   t.className = nomeIcone === 'trofeu' ? 'toast conquista' : 'toast';
   if (nomeIcone) t.append(icone(nomeIcone), ' ');
   t.append(texto);
+  // tempo para uma criança ler: frase curta 2,6 s, frase longa até 6 s
+  const duracao = duracaoDoAviso(texto);
+  t.style.animationDuration = `${duracao}s`;
   area.appendChild(t);
-  setTimeout(() => t.remove(), 2700);
+  setTimeout(() => t.remove(), duracao * 1000 + 100);
   while (area.children.length > 4) area.firstElementChild?.remove();
 }
 
@@ -644,4 +647,9 @@ export function criarInterface(
       entrarNoJogo();
     },
   };
+}
+
+/** Segundos que um aviso fica na tela: cresce com o tamanho da frase (crianças leem devagar). */
+export function duracaoDoAviso(texto: string): number {
+  return Math.min(6, Math.max(2.6, 1.2 + texto.length * 0.07));
 }
