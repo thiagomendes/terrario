@@ -269,7 +269,25 @@ export const MISSOES: readonly Missao[] = [
 
 export type Contadores = Record<string, number>;
 
-export function criarDiario(salvo?: unknown) {
+/**
+ * As missões na ordem em que o diário guia: com `primeiroCapitulo`, esse capítulo vem
+ * antes e o resto segue na ordem de sempre (o Rancho Alegre começa pela Roça).
+ */
+export function ordemMissoes(primeiroCapitulo?: string): readonly Missao[] {
+  if (!primeiroCapitulo || !MISSOES.some((m) => m.capitulo === primeiroCapitulo)) return MISSOES;
+  return [
+    ...MISSOES.filter((m) => m.capitulo === primeiroCapitulo),
+    ...MISSOES.filter((m) => m.capitulo !== primeiroCapitulo),
+  ];
+}
+
+export interface OpcoesDiario {
+  /** Capítulo que o diário guia primeiro (dado do tema; sem ele, a ordem de sempre). */
+  primeiroCapitulo?: string;
+}
+
+export function criarDiario(salvo?: unknown, opcoes: OpcoesDiario = {}) {
+  const ordem = ordemMissoes(opcoes.primeiroCapitulo);
   const s = (salvo ?? {}) as { contadores?: Contadores; concluidas?: string[] };
   const contadores: Contadores = { ...(s.contadores ?? {}) };
   const concluidas = new Set<string>(s.concluidas ?? []);
@@ -297,9 +315,13 @@ export function criarDiario(salvo?: unknown) {
       return Math.min(1, (contadores[m.contador] ?? 0) / m.meta);
     },
     concluida: (id: string) => concluidas.has(id),
-    /** Primeira missão em aberto (a "missão atual"). */
+    /** Primeira missão em aberto (a "missão atual"), na ordem do tema. */
     atual(): Missao | null {
-      return MISSOES.find((m) => !concluidas.has(m.id)) ?? null;
+      return ordem.find((m) => !concluidas.has(m.id)) ?? null;
+    },
+    /** Todas as missões, na ordem em que o diário guia. */
+    get missoes(): readonly Missao[] {
+      return ordem;
     },
     get total() {
       return concluidas.size;

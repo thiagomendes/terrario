@@ -537,7 +537,9 @@ function ligarDiario(app: HTMLElement, cena: ReturnType<typeof criarCena>): void
   const estilo = document.createElement('style');
   estilo.textContent = CSS_DIARIO;
   document.head.appendChild(estilo);
-  const diario = criarDiario(cena.extrasSalvos('diario'));
+  const diario = criarDiario(cena.extrasSalvos('diario'), {
+    primeiroCapitulo: tema().primeiroCapitulo,
+  });
   cena.registrarSalvavel('diario', { salvar: () => diario.salvar() });
   const hud = document.querySelector<HTMLElement>('.hud') ?? app;
   const ui = criarUiDiario(app, hud, diario, {

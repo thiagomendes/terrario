@@ -88,7 +88,7 @@ export function criarUiDiario(
     r.textContent = `${d.total} de ${MISSOES.length} conquistas`;
     corpo.appendChild(r);
     let capitulo = '';
-    for (const m of MISSOES) {
+    for (const m of d.missoes) {
       if (m.capitulo !== capitulo) {
         capitulo = m.capitulo;
         const h = document.createElement('div');

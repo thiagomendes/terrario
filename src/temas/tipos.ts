@@ -387,4 +387,9 @@ export interface Tema {
   povoado?: PovoadoTema;
   /** Aparência sugerida ao criar o mundo (a personalização continua livre). */
   personagem: Partial<Aparencia>;
+  /**
+   * Opcional: capítulo do diário que guia primeiro (spec 013: o Rancho Alegre começa pela
+   * Roça). Sem ele, a ordem de sempre.
+   */
+  primeiroCapitulo?: string;
 }
