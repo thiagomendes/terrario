@@ -29,6 +29,7 @@ import { obterTema } from '../../src/temas';
  * de ser do cercado. E ninguém sai pela porteira aberta passeando.
  */
 const SEMENTE = 1337;
+const COMIDA = { cervo: 'trigo', coelho: 'semente_milho' } as const;
 const SITIO: EstiloMundo = { ...obterTema('rancho-alegre').mundo };
 
 beforeAll(() => {
@@ -56,8 +57,8 @@ function mundoReal(p: PlanoPovoado, abrirPorteiras = false): MundoPopulacao {
   if (abrirPorteiras)
     for (const c of p.currais!) {
       const y = p.lotes[c.lote].h + 1;
-      for (const dy of [0, 1])
-        edicoes.definir(c.portao[0], y + dy, c.portao[1], Bloco.PORTA_ABERTA);
+      // a porteira (spec 013): um bloco só, aberta é passagem
+      edicoes.definir(c.portao[0], y, c.portao[1], Bloco.PORTEIRA_ABERTA);
     }
   const bloco = (x: number, y: number, z: number): number => {
     if (y < 0 || y >= ALTURA) return Bloco.AR;
@@ -166,5 +167,63 @@ describe('cercado do sítio e criação', () => {
           expect(dentro(p, k, b), `${b.tipo} ${b.x},${b.z} min ${i / 600}`).toBe(true);
       });
     }
+  });
+  it('porteira fechada segura: com a comida do lado de fora da porteira, ninguém sai', () => {
+    const m = mundoReal(p);
+    const pop = criarPopulacao(criarGerador(13));
+    for (let i = 0; i < 20; i++) pop.atualizar(0.1, m, perto, 0);
+    p.currais!.forEach((c, k) => {
+      const jk: Jogador = {
+        ...perto,
+        x: c.fora[0] + 0.5,
+        z: c.fora[1] + 0.5,
+        mao: COMIDA[c.bicho],
+      };
+      for (let i = 0; i < 600; i++) {
+        pop.atualizar(0.1, m, jk, 0);
+        if (i % 20 === 19)
+          for (const b of doCercado(pop.lista, p, k)) expect(dentro(p, k, b)).toBe(true);
+      }
+      // quem viu a comida veio até a cerca
+      expect(doCercado(pop.lista, p, k).some((b) => b.estado === 'seguir')).toBe(true);
+    });
+  });
+
+  it('porteira aberta e a comida na mão: o bicho sai atrás, e deixa de ser do cercado', () => {
+    const m = mundoReal(p, true);
+    const pop = criarPopulacao(criarGerador(17));
+    for (let i = 0; i < 20; i++) pop.atualizar(0.1, m, perto, 0);
+    const l = p.lotes[c0.lote];
+    const ux = Math.sign(c0.fora[0] - c0.portao[0]);
+    const uz = Math.sign(c0.fora[1] - c0.portao[1]);
+    const j: Jogador = { ...perto, mao: COMIDA[c0.bicho] };
+    let saiu: Criatura | undefined;
+    for (let i = 0; i < 900 && !saiu; i++) {
+      const passo = Math.min(4, i / 100);
+      j.x = c0.fora[0] + 0.5 + ux * passo;
+      j.z = c0.fora[1] + 0.5 + uz * passo;
+      pop.atualizar(0.1, m, j, 0);
+      saiu = pop.lista.find(
+        (b) =>
+          b.tipo === c0.bicho &&
+          !(b.x > l.x0 && b.x < l.x0 + 7 && b.z > l.z0 && b.z < l.z0 + 7) &&
+          Math.hypot(b.x - j.x, b.z - j.z) < 4,
+      );
+    }
+    expect(saiu, 'nenhum bicho saiu atrás da comida').toBeDefined();
+    pop.criar(saiu!);
+    // soltou a comida lá fora: mora ali, não é mais do cercado, e o cercado nunca passa de 3
+    j.mao = null;
+    for (let i = 0; i < 5; i++) pop.atualizar(0.1, m, j, 0);
+    expect(saiu!.curral).toBeUndefined();
+    expect(saiu!.cerca).toBeUndefined();
+    expect(doCercado(pop.lista, p, 0).length).toBeLessThanOrEqual(BICHOS_POR_CERCADO);
+    for (let i = 0; i < 30; i++) pop.atualizar(0.1, m, longe, 0);
+    for (let i = 0; i < 30; i++) pop.atualizar(0.1, m, perto, 0);
+    expect(doCercado(pop.lista, p, 0)).toHaveLength(BICHOS_POR_CERCADO);
+    expect(pop.lista).toContain(saiu);
+    const salvo = JSON.parse(JSON.stringify(pop.salvar()));
+    expect(salvo.criados).toHaveLength(1);
+    expect(salvo.criados[0].curral).toBeUndefined();
   });
 });

@@ -504,12 +504,16 @@ function foraDoLar(c: Criatura): boolean {
  */
 export function mudarCasa(c: Criatura): void {
   c.casa = [c.x, c.z];
-  if (c.cerca) {
-    const [x0, z0, x1, z1] = c.cerca;
-    if (c.x < x0 || c.x > x1 + 1 || c.z < z0 || c.z > z1 + 1) {
-      c.cerca = undefined;
-      c.curral = undefined;
-    }
+  sairDoCercadoSeFora(c);
+}
+
+/** Fora do miolo do cercado (levado pela porteira): não é mais do cercado. */
+function sairDoCercadoSeFora(c: Criatura): void {
+  if (!c.cerca) return;
+  const [x0, z0, x1, z1] = c.cerca;
+  if (c.x < x0 || c.x > x1 + 1 || c.z < z0 || c.z > z1 + 1) {
+    c.cerca = undefined;
+    c.curral = undefined;
   }
 }
 
@@ -969,7 +973,9 @@ export function passoCriatura(
           // a comida saiu da mão (ou ficou longe): para aqui; o criado passa a morar aqui
           c.estado = 'parado';
           c.tempoEstado = 2;
+          // levado para fora do cercado: deixa de ser do cercado (criado ou não)
           if (c.criado) mudarCasa(c);
+          else sairDoCercadoSeFora(c);
         }
         if (c.tempoEstado <= 0) {
           if (rng() < 0.4) {
