@@ -118,6 +118,9 @@ export function criarControle(
   function apontar(novoYaw: number, novoPitch: number): void {
     yaw = novoYaw;
     pitch = novoPitch;
+    // a mira vale já (o alvo é calculado pela rotação da câmera), sem esperar o quadro
+    camera.rotation.x = pitch;
+    camera.rotation.y = yaw;
   }
 
   function definirMouse(sens: number, inverter: boolean): void {
