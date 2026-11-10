@@ -195,18 +195,17 @@ body.hud-compacto:not(.hud-aberto) .missao-hud { display: none; }
 /* spec 015: computador e tablet também têm o botão (ao lado, o da roda); ele guarda só as
    pílulas, e o cartão da missão fica sempre à vista, logo abaixo dos botões */
 body.hud-botao-info:not(.hud-aberto) .hud .som,
-body.hud-botao-info:not(.hud-aberto) .hud .camera-indicador { display: none; }
+body.hud-botao-info:not(.hud-aberto) .hud .chip-hud { display: none; }
 body.hud-botao-info:not(.hud-compacto):not(.hud-aberto) .missao-hud { top: 60px; }
 body.hud-botao-info.hud-aberto .hud .som { top: 58px; }
-body.hud-botao-info.hud-aberto .hud [data-camera-indicador] { top: 90px; }
-body.hud-botao-info.hud-aberto .hud [data-nome-jogador] { top: 122px !important; }
-body.hud-botao-info.hud-aberto .hud [data-info-mundo] { top: 154px !important; }
-body.hud-botao-info.hud-aberto .missao-hud { top: 188px; }
+body.hud-botao-info.hud-aberto .hud [data-nome-jogador] { top: 90px !important; }
+body.hud-botao-info.hud-aberto .hud [data-info-mundo] { top: 122px !important; }
+body.hud-botao-info.hud-aberto .missao-hud { top: 156px; }
 /* aberto: as pílulas descem logo abaixo do botão */
 body.hud-compacto.hud-aberto .hud .som { top: 58px; }
 body.hud-compacto.hud-aberto .hud [data-nome-jogador] { top: 90px !important; }
 body.hud-compacto.hud-aberto .hud [data-info-mundo] { top: 122px !important; }
-body.hud-compacto.hud-aberto .missao-hud { top: 188px; }
+body.hud-compacto.hud-aberto .missao-hud { top: 156px; }
 /* informações abertas: os avisos descem para baixo do cartão da missão (não o cobrem) */
 body.hud-compacto.hud-aberto:not([data-overlay]) .toast-area { top: 272px; }
 body[data-overlay] .hud-info, body.tela-titulo .hud-info, body.modo-foto .hud-info { display: none !important; }
