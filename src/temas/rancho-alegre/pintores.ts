@@ -335,15 +335,7 @@ const fenoTopo = fenoTopoDe(['#dcb45c', '#e8c46e', '#f0d080', '#f6dc96'], '#c056
 function madeiraPintada(base: string): Pintor {
   const c = hex(base);
   const tom = (k: number) =>
-    '#' +
-    c
-      .slice(0, 3)
-      .map((v) =>
-        Math.max(0, Math.min(255, Math.round(v * k)))
-          .toString(16)
-          .padStart(2, '0'),
-      )
-      .join('');
+    '#' + c.slice(0, 3).map((v) => Math.max(0, Math.min(255, Math.round(v * k))).toString(16).padStart(2, '0')).join('');
   const tabuas = tabuasDe([tom(0.9), tom(0.97), tom(1.03), tom(1.08)]);
   return (x, y, s) => tabuas(y, x, s);
 }
