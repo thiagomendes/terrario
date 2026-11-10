@@ -5,6 +5,7 @@
  * copia cada foto direto no canvas pedido.
  */
 import { Engine } from '@babylonjs/core/Engines/engine';
+import { antesDeSair, liberarEngine } from '../pagina';
 import { Scene } from '@babylonjs/core/scene';
 import { FreeCamera } from '@babylonjs/core/Cameras/freeCamera';
 import { Camera } from '@babylonjs/core/Cameras/camera';
@@ -83,6 +84,12 @@ function abrirEstudio(): typeof estudio {
     // de quina, um pouco virado para a direita (como no esboço)
     boneco.posicionar(0, 0, 0, Math.PI + 0.42);
     estudio = { canvas, engine, scene, camera, boneco };
+    // sair da página solta também o contexto do estúdio (no iPhone cada contexto pesa)
+    antesDeSair(() => {
+      liberarEngine(engine);
+      estudio = null;
+      falhou = true;
+    });
   } catch {
     falhou = true;
   }

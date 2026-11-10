@@ -45,6 +45,15 @@ import {
   levarMundoParaAmigos,
   pararMundoComAmigos,
 } from './nuvem';
+import {
+  antesDeSair,
+  falhouAoCarregar,
+  liberarEngine,
+  ligarSaida,
+  navegar,
+  tirarCarregando,
+} from './pagina';
+import { ligarContextoPerdido } from './render/contexto';
 
 async function iniciar(app: HTMLElement): Promise<void> {
   registrarCatalogo();
@@ -57,12 +66,15 @@ async function iniciar(app: HTMLElement): Promise<void> {
   let mundo: MetaMundo | null = null;
   let dados: DadosMundo;
   if (sala) {
-    const r = await entrarNaSala(
+    const pedido = entrarNaSala(
       app,
       normalizarCodigo(sala) ?? sala,
       params.get('direto') === '1',
       repo,
     );
+    // a tela da sala (cartão, apelido ou progresso) já está na frente: ela assume daqui
+    tirarCarregando();
+    const r = await pedido;
     if (!r) return;
     const d = dadosDaSala(r.bv);
     mundo = d.mundo;
@@ -136,7 +148,7 @@ async function iniciar(app: HTMLElement): Promise<void> {
       url.searchParams.set('mundo', id);
       // a prévia de tema vale só para esta página
       url.searchParams.delete('tema');
-      location.href = url.toString();
+      navegar(url.toString());
     },
   });
   criarDicaMira();
@@ -149,6 +161,12 @@ async function iniciar(app: HTMLElement): Promise<void> {
     config,
     conexao: nuvem?.conexao,
   });
+  // sair da página solta a placa de vídeo antes (no iPhone a página nova pode não ter memória)
+  const engine = cena.engine;
+  antesDeSair(() => liberarEngine(engine));
+  ligarSaida();
+  const cenaPronta = cena;
+  ligarContextoPerdido(canvas, () => cenaPronta.salvar());
   ligarAmigos(app, cena, {
     repo,
     mundo: nuvem ? undefined : atual,
@@ -171,6 +189,8 @@ async function iniciar(app: HTMLElement): Promise<void> {
   ligarMapas(app, cena);
   ligarDiario(app, cena);
   ligarControles(app, cena, hotbar, config);
+  // a tela de título (ou a da sala) já está montada: o "Carregando" do index.html some
+  tirarCarregando();
 }
 
 /** Na tela de título, a câmera gira devagar mostrando o mundo; ao jogar, volta à mira salva. */
@@ -211,7 +231,12 @@ function panorama(cena: ReturnType<typeof criarCena>): void {
 }
 
 const app = document.getElementById('app');
-if (app) void iniciar(app);
+if (app)
+  iniciar(app).catch((e: unknown) => {
+    console.error(e);
+    // nunca a tela azul vazia: o "Carregando" vira o botão "Tentar de novo"
+    falhouAoCarregar('Algo travou ao abrir o mundo. Toque no botão para tentar de novo.');
+  });
 
 function ligarInventario(
   app: HTMLElement,

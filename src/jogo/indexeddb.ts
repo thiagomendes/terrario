@@ -34,22 +34,28 @@ async function acordarIndexedDB(): Promise<void> {
 /** Um pedido de abrir, com tempo-limite (null se pendurou, recusou ou bloqueou). */
 function pedirAbertura(nome: string, limite: number): Promise<IDBDatabase | null | 'demorou'> {
   return new Promise((resolve) => {
-    const t = setTimeout(() => resolve('demorou'), limite);
+    let desistiu = false;
+    const t = setTimeout(() => {
+      desistiu = true;
+      resolve('demorou');
+    }, limite);
     try {
       const req = indexedDB.open(nome, 1);
       req.onupgradeneeded = () => req.result.createObjectStore('kv');
       req.onsuccess = () => {
         clearTimeout(t);
-        resolve(req.result);
+        // chegou depois do prazo (já há outro pedido no lugar dele): não fica uma conexão sobrando
+        if (desistiu) req.result.close?.();
+        else resolve(req.result);
       };
       req.onerror = () => {
         clearTimeout(t);
         resolve(null);
       };
-      req.onblocked = () => {
-        clearTimeout(t);
-        resolve(null);
-      };
+      // bloqueado por outra aba (ou pela página anterior, guardada pelo navegador): espera ela
+      // soltar; se demorar, o prazo tenta de novo. Antes caía para a memória, e o mundo
+      // aberto aparecia vazio e sem salvar
+      req.onblocked = () => undefined;
     } catch {
       clearTimeout(t);
       resolve(null);

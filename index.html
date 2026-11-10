@@ -76,10 +76,214 @@
       button {
         touch-action: manipulation;
       }
+      /* "um loadzinho": aparece antes de qualquer JS, até o jogo mostrar a tela dele */
+      #carregando {
+        position: fixed;
+        inset: 0;
+        z-index: 1000;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 18px;
+        background: linear-gradient(#8fcaf5, #bfe3fb);
+        color: #1f3b57;
+        font: 700 1.25rem/1.3 ui-rounded, 'SF Pro Rounded', system-ui, -apple-system, sans-serif;
+        text-align: center;
+        transition: opacity 0.35s ease;
+      }
+      #carregando.saindo {
+        opacity: 0;
+        pointer-events: none;
+      }
+      #carregando .palco {
+        position: relative;
+        width: 72px;
+        height: 110px;
+      }
+      #carregando .bloco {
+        position: absolute;
+        left: 6px;
+        bottom: 14px;
+        width: 60px;
+        height: 60px;
+        border-radius: 10px;
+        background: linear-gradient(#6fcf5b 0 30%, #4fae43 30% 38%, #b9824f 38% 100%);
+        box-shadow:
+          inset 0 -6px 0 rgba(0, 0, 0, 0.12),
+          0 3px 0 #8a5c34;
+        animation: pular 0.9s cubic-bezier(0.3, 0, 0.5, 1) infinite;
+      }
+      #carregando .bloco::before,
+      #carregando .bloco::after {
+        content: '';
+        position: absolute;
+        top: 28px;
+        width: 8px;
+        height: 10px;
+        border-radius: 4px;
+        background: #3a2a1c;
+      }
+      #carregando .bloco::before {
+        left: 16px;
+      }
+      #carregando .bloco::after {
+        right: 16px;
+      }
+      #carregando .sombra {
+        position: absolute;
+        left: 10px;
+        bottom: 4px;
+        width: 52px;
+        height: 10px;
+        border-radius: 50%;
+        background: rgba(31, 59, 87, 0.22);
+        animation: sombra 0.9s cubic-bezier(0.3, 0, 0.5, 1) infinite;
+      }
+      @keyframes pular {
+        0%,
+        100% {
+          transform: translateY(0) scale(1.08, 0.92);
+        }
+        12% {
+          transform: translateY(0) scale(1, 1);
+        }
+        50% {
+          transform: translateY(-38px) scale(0.96, 1.04);
+        }
+      }
+      @keyframes sombra {
+        0%,
+        100% {
+          transform: scale(1);
+          opacity: 1;
+        }
+        50% {
+          transform: scale(0.6);
+          opacity: 0.5;
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        #carregando .bloco,
+        #carregando .sombra {
+          animation-duration: 2.4s;
+        }
+      }
+      #carregando button {
+        min-height: 56px;
+        padding: 0 28px;
+        border: 0;
+        border-radius: 18px;
+        background: #ffb43b;
+        color: #3a2406;
+        font: inherit;
+        font-size: 1.3rem;
+        box-shadow: 0 5px 0 #c97f12;
+        cursor: pointer;
+      }
+      #carregando button[hidden],
+      #carregando p[hidden] {
+        display: none;
+      }
+      #carregando .detalhe {
+        max-width: 22em;
+        margin: 0 16px;
+        font-weight: 500;
+        font-size: 1rem;
+      }
     </style>
   </head>
   <body>
+    <div id="carregando" role="status" aria-live="polite" data-carregando>
+      <div class="palco" aria-hidden="true"><div class="sombra"></div><div class="bloco"></div></div>
+      <p data-carregando-texto>Carregando o mundo…</p>
+      <p class="detalhe" data-carregando-detalhe hidden></p>
+      <button type="button" data-tentar-de-novo hidden>Tentar de novo</button>
+    </div>
     <div id="app"></div>
+    <script>
+      // Vigia da abertura (antes de qualquer módulo): se o jogo não mostrar a tela dele em
+      // ~12 s, recarrega uma vez sozinho; se ainda assim travar, mostra "Tentar de novo".
+      // A marca na sessão impede recarregar em ciclo.
+      (function () {
+        var CHAVE = 'terrario:vigia';
+        var PRAZO = Number(new URLSearchParams(location.search).get('vigia')) || 12000;
+        var el = document.getElementById('carregando');
+        var feito = false;
+        function ler() {
+          try {
+            return Number(sessionStorage.getItem(CHAVE)) || 0;
+          } catch (e) {
+            return 0;
+          }
+        }
+        function gravar(v) {
+          try {
+            if (v) sessionStorage.setItem(CHAVE, String(v));
+            else sessionStorage.removeItem(CHAVE);
+          } catch (e) {}
+        }
+        function recarregar() {
+          try {
+            if (window.__terrarioSair) window.__terrarioSair();
+          } catch (e) {}
+          location.reload();
+        }
+        function mostrarBotao(detalhe) {
+          if (!el || !el.isConnected) return;
+          el.classList.remove('saindo');
+          var t = el.querySelector('[data-carregando-texto]');
+          var d = el.querySelector('[data-carregando-detalhe]');
+          var b = el.querySelector('[data-tentar-de-novo]');
+          t.textContent = 'O mundo está demorando para abrir';
+          d.textContent = detalhe || 'Toque no botão para tentar de novo.';
+          d.hidden = false;
+          b.hidden = false;
+        }
+        el.querySelector('[data-tentar-de-novo]').addEventListener('click', function () {
+          gravar(0);
+          recarregar();
+        });
+        var vigia = setTimeout(function () {
+          if (feito) return;
+          var marca = ler();
+          // uma volta só (a marca vale por 2 minutos)
+          if (!marca || Date.now() - marca > 120000) {
+            gravar(Date.now());
+            recarregar();
+          } else {
+            gravar(0);
+            mostrarBotao();
+          }
+        }, PRAZO);
+        window.__terrarioCarregando = {
+          /** O jogo já mostra a tela dele: some devagar, sem piscar. */
+          pronto: function () {
+            if (feito) return;
+            feito = true;
+            clearTimeout(vigia);
+            gravar(0);
+            if (!el || !el.isConnected) return;
+            // dois quadros: a tela do jogo já está desenhada por baixo
+            requestAnimationFrame(function () {
+              requestAnimationFrame(function () {
+                el.classList.add('saindo');
+                setTimeout(function () {
+                  el.remove();
+                }, 400);
+              });
+            });
+          },
+          /** Algo falhou na abertura: o botão em vez da tela vazia. */
+          falhou: function (detalhe) {
+            feito = true;
+            clearTimeout(vigia);
+            gravar(0);
+            mostrarBotao(detalhe);
+          },
+        };
+      })();
+    </script>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

@@ -18,6 +18,7 @@ import type { EstiloMundo } from './temas/tipos';
 import { normalizarCodigo } from './jogo/codigos';
 import type { DadosMundo, MetaMundo, RepositorioMundos } from './jogo/mundos';
 import { notificar } from './ui/interface';
+import { navegar, recarregar } from './pagina';
 import { perguntar } from './ui/dialogo';
 import {
   CSS_AMIGOS,
@@ -137,7 +138,7 @@ function voltarAoLocal(): void {
   const u = new URL(location.href);
   u.searchParams.delete('sala');
   u.searchParams.delete('novo');
-  location.href = u.toString();
+  navegar(u.toString());
 }
 
 /**
@@ -150,7 +151,7 @@ function irParaSala(codigo: string, novo = false, direto = false): void {
   u.searchParams.set('sala', codigo);
   if (novo) u.searchParams.set('novo', '1');
   if (novo || direto) u.searchParams.set('direto', '1');
-  location.href = u.toString();
+  navegar(u.toString());
 }
 
 /** Endereço HTTP do servidor (o mesmo do WebSocket, sem o /jogo). */
@@ -482,7 +483,7 @@ export function ligarAmigos(raiz: HTMLElement, cena: Cena, op: OpcoesAmigos): vo
         const u = new URL(location.href);
         u.search = '';
         u.searchParams.set('mundo', id);
-        location.href = u.toString();
+        navegar(u.toString());
       })
       .catch(() =>
         t.erro(
@@ -510,7 +511,7 @@ export function ligarAmigos(raiz: HTMLElement, cena: Cena, op: OpcoesAmigos): vo
   // o servidor recomeçou (nova versão): abre o mundo de novo, do jeito que ficou guardado
   nv.conexao.aoReaberta(() => {
     telaCarregando('Atualizando o mundo…');
-    setTimeout(() => location.reload(), 300);
+    setTimeout(() => recarregar(), 300);
   });
   const aviso = criarAvisoConexao(raiz);
   // achar os amigos: seta na borda da tela para quem está longe
@@ -620,7 +621,7 @@ function abrirMundoDoAparelho(id: string): void {
   const u = new URL(location.href);
   u.search = '';
   u.searchParams.set('mundo', id);
-  location.href = u.toString();
+  navegar(u.toString());
 }
 
 /** O nome do personagem deste aparelho (para sugerir o apelido). */

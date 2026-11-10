@@ -1,4 +1,5 @@
 import { CRIATURAS } from '../jogo/criaturas';
+import { saindoPorConta } from '../pagina';
 import { povoadosPerto } from '../jogo/povoados';
 import { nomeDoMorador } from '../temas/nomes';
 import { definirRegioesSemPovoado, regiaoDoChunk } from '../world/povoado';
@@ -3720,11 +3721,16 @@ export function criarCena(
     const escondida = document.visibilityState === 'hidden';
     // a aba sumiu: o mundo para junto (como antes, quando tudo rodava no quadro)
     enviar({ t: 'pausar', pausar: escondida });
-    if (escondida) void salvar();
+    // (saindo pelo jogo, o mundo acabou de ser salvo: nada de outra gravação na troca)
+    if (escondida && !saindoPorConta()) void salvar();
   });
-  window.addEventListener('pagehide', () => salvarJa());
+  // saída pedida pelo jogo (trocar de mundo, ir para a sala): o mundo já foi salvo antes, e
+  // uma gravação a mais no meio da troca de página pode segurar o banco da página nova no iPhone
+  window.addEventListener('pagehide', () => {
+    if (!saindoPorConta()) salvarJa();
+  });
   document.addEventListener('pointerlockchange', () => {
-    if (document.pointerLockElement !== canvas) void salvar();
+    if (document.pointerLockElement !== canvas && !saindoPorConta()) void salvar();
   });
 
   return {

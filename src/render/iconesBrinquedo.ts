@@ -5,6 +5,7 @@
  * desenha poucos ícones por quadro depois que o jogo abre (sem travar) e some no fim.
  */
 import { Engine } from '@babylonjs/core/Engines/engine';
+import { antesDeSair, liberarEngine } from '../pagina';
 import { Scene } from '@babylonjs/core/scene';
 import { FreeCamera } from '@babylonjs/core/Cameras/freeCamera';
 import { Camera } from '@babylonjs/core/Cameras/camera';
@@ -251,6 +252,7 @@ export function gerarIconesBrinquedo(
 
   const fila = todosItens().map((d) => d.id);
   let cancelado = false;
+  let encerrado = false;
   let quadro = 0;
   /** Modelo montado esperando os shaders ficarem prontos (a 1ª foto sairia vazia). */
   let esperando: { id: string; raiz: TransformNode; tentativas: number } | null = null;
@@ -283,12 +285,17 @@ export function gerarIconesBrinquedo(
     else encerrar();
   };
   const encerrar = () => {
+    if (encerrado) return;
+    encerrado = true;
     cancelado = true;
+    soltarAoSair();
     cancelAnimationFrame(quadro);
     mats.descartar();
     scene.dispose();
-    engine.dispose();
+    liberarEngine(engine);
   };
+  // sair da página no meio da geração: solta o contexto junto
+  const soltarAoSair = antesDeSair(() => encerrar());
   quadro = requestAnimationFrame(passo);
   return encerrar;
 }
