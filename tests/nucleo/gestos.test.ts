@@ -209,7 +209,7 @@ describe('comando gesto na nuvem', () => {
 });
 
 describe('chamar traz os bichos', () => {
-  it('a raposa domada e o bicho criado vêm até perto; o criado passa a morar ali', () => {
+  it('a raposa domada e o bicho criado vêm até perto e depois voltam para a casa de sempre', () => {
     const n = nuvem();
     const raposa = invocar(n, 'raposa', -10, 6);
     raposa.domada = true;
@@ -227,20 +227,22 @@ describe('chamar traz os bichos', () => {
     passos(n, 0.5);
     const dVaca0 = Math.hypot(vaca.x - (X + 0.5), vaca.z - (Z + 0.5));
     n.comando('ana', gesto('chamar'));
-    passos(n, 9);
+    passos(n, 8);
     const d = (c: Criatura) => Math.hypot(c.x - (X + 0.5), c.z - (Z + 0.5));
     expect(d(vaca)).toBeLessThan(PARA_CHAMADO + 1);
     expect(d(vaca)).toBeLessThan(dVaca0);
     expect(d(raposa)).toBeLessThan(PARA_CHAMADO + 1.5);
-    expect(vaca.chamado).toBeUndefined();
-    expect(vaca.casa).not.toEqual(casaAntes);
-    expect(Math.hypot(vaca.casa![0] - (X + 0.5), vaca.casa![1] - (Z + 0.5))).toBeLessThan(
-      PARA_CHAMADO + 1,
-    );
+    // chamar não muda a casa de ninguém
+    expect(vaca.casa).toEqual(casaAntes);
     // o longe ficou em casa; o solto não veio atrás
     expect(longe.casa![0]).toBeCloseTo(X + RAIO_CHAMAR + 4.5, 1);
     expect(longe.chamado).toBeUndefined();
     expect(solto.chamado).toBeUndefined();
+    // o chamado acaba e o criado volta para perto da casa de sempre
+    passos(n, 40);
+    expect(vaca.chamado).toBeUndefined();
+    expect(vaca.casa).toEqual(casaAntes);
+    expect(Math.hypot(vaca.x - casaAntes[0], vaca.z - casaAntes[1])).toBeLessThan(8);
   });
 
   it('o mesmo chamado dá o mesmo resultado (sem sorteio novo)', () => {

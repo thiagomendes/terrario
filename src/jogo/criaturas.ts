@@ -897,23 +897,28 @@ function rotinaMorador(
 }
 
 /**
- * Spec 015: vai até perto de onde chamaram (sem sorteio). Chegou ou desistiu: para, olha para
- * lá e, se é criado, passa a morar ali. Devolve false quando não há mais chamado.
+ * Spec 015: vai até perto de onde chamaram (sem sorteio) e fica ali, olhando para lá, até o
+ * chamado acabar; depois volta para a casa de sempre (chamar não muda a casa de ninguém).
+ * Devolve false quando não há mais chamado.
  */
 function atenderChamado(c: Criatura, def: DefCriatura, dt: number): boolean {
   const ch = c.chamado;
   if (!ch) return false;
   ch.t -= dt;
+  if (ch.t <= 0) {
+    c.chamado = undefined;
+    c.estado = 'parado';
+    c.tempoEstado = 0.5;
+    return true;
+  }
   const dx = ch.x - c.x;
   const dz = ch.z - c.z;
   const d = Math.hypot(dx, dz);
-  if (ch.t <= 0 || d <= PARA_CHAMADO + 0.3) {
-    c.chamado = undefined;
+  if (d <= PARA_CHAMADO + 0.3) {
     frear(c, 0.5);
     if (d > 0.01) c.yawAlvo = Math.atan2(dx, dz);
     c.estado = 'parado';
     c.tempoEstado = 2;
-    if (c.criado) mudarCasa(c);
     return true;
   }
   c.estado = 'seguir';
