@@ -344,7 +344,8 @@ export function criarRenderCriaturas(
       const mb = moradores.get(id);
       if (!mb) return false;
       fazerGesto(mb.animador, g);
-      (mb.balao ??= criarBalao(scene, mb.boneco.raiz)).mostrar(g);
+      // o balão do morador fica atrás das paredes (o de dentro de casa não aparece)
+      (mb.balao ??= criarBalao(scene, mb.boneco.raiz, undefined, false)).mostrar(g);
       return true;
     },
     /** Spec 015: gesto em curso e balão de cada morador desenhado (testes). */

@@ -6,6 +6,10 @@
  *
  * Nítido de qualquer distância: de perto tem o tamanho do esboço (0,75 bloco); de longe
  * cresce com a distância e fica sempre com uns 45 px na tela, por cima das paredes.
+ *
+ * Nunca enorme: mais perto da câmera que a aproximação máxima, o balão encolhe junto e fica
+ * na tela do tamanho que teria ali; colado na câmera ou atrás dela (o morador ao lado da
+ * câmera, o do jogador dentro da casinha) some, em vez de cobrir um pedaço da tela.
  */
 import type { Scene } from '@babylonjs/core/scene';
 import { Constants } from '@babylonjs/core/Engines/constants';
@@ -23,16 +27,56 @@ const LADO = 256;
 /** Tamanho de perto (blocos) e distância a partir da qual o balão cresce com ela. */
 const TAMANHO = 0.75;
 const LONGE = 12;
+/**
+ * Mais perto que isto da câmera (blocos), o balão encolhe na mesma proporção: na tela, nunca
+ * fica maior que com a câmera na aproximação máxima (o do jogador, na distância de sempre,
+ * fica como era).
+ */
+export const PERTO_MAXIMO = 2.5;
+/** O balão some entre estas distâncias da câmera (blocos). */
+export const SOME_FIM = 0.8;
+export const SOME_INICIO = 1.5;
+
+/**
+ * Tamanho (blocos) e opacidade do balão a `distancia` da câmera, com `frente` blocos na
+ * direção do olhar (negativo: atrás da câmera). Colado na câmera (de qualquer um, também o
+ * do jogador dentro da casinha) ele some, em vez de cobrir um pedaço da tela.
+ */
+export function medidaBalao(
+  distancia: number,
+  frente: number,
+): { tamanho: number; opacidade: number } {
+  const d = Number.isFinite(distancia) ? Math.max(0, distancia) : LONGE;
+  const tamanho = TAMANHO * Math.max(1, d / LONGE) * Math.min(1, d / PERTO_MAXIMO);
+  if (frente < 0.3) return { tamanho, opacidade: 0 };
+  const t = (d - SOME_FIM) / (SOME_INICIO - SOME_FIM);
+  return { tamanho, opacidade: Math.min(1, Math.max(0, t)) };
+}
 
 const porCena = new WeakMap<Scene, Record<IdGesto, StandardMaterial>>();
+const porCenaComParede = new WeakMap<Scene, Record<IdGesto, StandardMaterial>>();
 
-/** Os 8 materiais do balão (um por gesto), criados na primeira vez que a cena precisa. */
-export function materiaisDoBalao(scene: Scene): Record<IdGesto, StandardMaterial> {
-  const ja = porCena.get(scene);
+/**
+ * Os 8 materiais do balão (um por gesto), criados na primeira vez que a cena precisa.
+ * `atravessa`: por cima de tudo (o amigo atrás da parede também mostra o gesto); sem isso,
+ * a parede esconde o balão (o morador dentro de casa).
+ */
+export function materiaisDoBalao(
+  scene: Scene,
+  atravessa = true,
+): Record<IdGesto, StandardMaterial> {
+  const cache = atravessa ? porCena : porCenaComParede;
+  const ja = cache.get(scene);
   if (ja) return ja;
+  const sufixo = atravessa ? '' : '-parede';
   const mats = {} as Record<IdGesto, StandardMaterial>;
   for (const id of IDS_GESTOS) {
-    const tex = new DynamicTexture(`balao-gesto-${id}`, { width: LADO, height: LADO }, scene, true);
+    const tex = new DynamicTexture(
+      `balao-gesto-${id}${sufixo}`,
+      { width: LADO, height: LADO },
+      scene,
+      true,
+    );
     tex.hasAlpha = true;
     const img = new Image();
     img.onload = () => {
@@ -42,7 +86,7 @@ export function materiaisDoBalao(scene: Scene): Record<IdGesto, StandardMaterial
       tex.update(true, true);
     };
     img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svgDoBalao(id));
-    const m = new StandardMaterial(`balao-gesto-${id}`, scene);
+    const m = new StandardMaterial(`balao-gesto-${id}${sufixo}`, scene);
     // a cor vem toda do emissivo (sem luz nem sombra: o mesmo creme de dia, à noite e na
     // caverna); o difuso só dá o recorte (alfa)
     m.diffuseTexture = tex;
@@ -56,11 +100,11 @@ export function materiaisDoBalao(scene: Scene): Record<IdGesto, StandardMaterial
     m.backFaceCulling = false;
     m.fogEnabled = false;
     // por cima de tudo (o amigo atrás da parede também mostra o gesto)
-    m.depthFunction = Constants.ALWAYS;
+    if (atravessa) m.depthFunction = Constants.ALWAYS;
     m.disableDepthWrite = true;
     mats[id] = m;
   }
-  porCena.set(scene, mats);
+  cache.set(scene, mats);
   return mats;
 }
 
@@ -76,10 +120,20 @@ export interface BalaoGesto {
 }
 
 const tmp = new Vector3();
+const frenteCam = new Vector3();
+const FRENTE = Vector3.Forward();
 
-/** Balão preso a um boneco, `altura` blocos acima dos pés. */
-export function criarBalao(scene: Scene, pai: TransformNode, altura = 2.1): BalaoGesto {
-  const mats = materiaisDoBalao(scene);
+/**
+ * Balão preso a um boneco, `altura` blocos acima dos pés. `atravessaParede`: aparece por
+ * cima das paredes (jogadores); o dos moradores fica atrás delas.
+ */
+export function criarBalao(
+  scene: Scene,
+  pai: TransformNode,
+  altura = 2.1,
+  atravessaParede = true,
+): BalaoGesto {
+  const mats = materiaisDoBalao(scene, atravessaParede);
   // "personagem-": o brilho da cena não pega (como o boneco)
   const m = MeshBuilder.CreatePlane('personagem-balao-gesto', { size: 1 }, scene);
   m.parent = pai;
@@ -115,13 +169,28 @@ export function criarBalao(scene: Scene, pai: TransformNode, altura = 2.1): Bala
         return;
       }
       const cam = scene.activeCamera;
-      const d = cam ? Vector3.DistanceSquared(cam.globalPosition, pai.getAbsolutePosition()) : 0;
+      // a distância é até o balão (não até os pés): é ele que pode encostar na câmera
+      // o pai pode estar encolhido (morador sumindo): compensa para o balão não mudar
+      const e = pai.scaling.x || 1;
+      const p = pai.getAbsolutePosition();
+      let medida = { tamanho: TAMANHO, opacidade: 1 };
+      if (cam) {
+        const c = cam.globalPosition;
+        const dx = p.x - c.x;
+        const dy = p.y + altura * e - c.y;
+        const dz = p.z - c.z;
+        cam.getDirectionToRef(FRENTE, frenteCam);
+        medida = medidaBalao(
+          Math.hypot(dx, dy, dz),
+          dx * frenteCam.x + dy * frenteCam.y + dz * frenteCam.z,
+        );
+      }
+      m.visibility = medida.opacidade;
+      m.isVisible = medida.opacidade > 0.01;
       // aparece com um pulinho e some encolhendo
       const pop = idade < 0.18 ? 0.6 + 0.4 * Math.sin((idade / 0.18) * Math.PI * 0.5) : 1;
       const sai = resta < 0.15 ? resta / 0.15 : 1;
-      const s = TAMANHO * Math.max(1, Math.sqrt(d) / LONGE) * pop * sai;
-      // o pai pode estar encolhido (morador sumindo): compensa para o balão não mudar
-      const e = pai.scaling.x || 1;
+      const s = medida.tamanho * pop * sai;
       tmp.set(s / e, s / e, s / e);
       m.scaling.copyFrom(tmp);
     },
