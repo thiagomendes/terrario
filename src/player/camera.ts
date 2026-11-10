@@ -27,6 +27,18 @@ export const ZOOM_PADRAO = 3.8;
 /** Um dente da roda do mouse. */
 export const PASSO_ZOOM = 0.5;
 
+/**
+ * Quanto aproximar (negativo) ou afastar num evento da roda: proporcional ao giro (um dente,
+ * ~100 px, vale PASSO_ZOOM), para o touchpad, que manda muitos eventos pequenos, não pular de
+ * 2,5 a 7 de uma vez; nunca mais que um dente por evento. `modo` é o deltaMode do evento
+ * (1: linhas, 2: páginas).
+ */
+export function passoDaRoda(deltaY: number, modo = 0): number {
+  if (!Number.isFinite(deltaY) || deltaY === 0) return 0;
+  const px = modo === 1 ? deltaY * 33 : modo === 2 ? deltaY * 400 : deltaY;
+  return Math.max(-PASSO_ZOOM, Math.min(PASSO_ZOOM, (px / 100) * PASSO_ZOOM));
+}
+
 /** Limites do olhar: para baixo quase em pé sobre o boneco; para cima até ver o céu. */
 export const PITCH_BAIXO = 1.45;
 export const PITCH_CIMA = -1.2;

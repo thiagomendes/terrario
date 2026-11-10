@@ -183,7 +183,7 @@ import {
   ZOOM_PADRAO_TOQUE,
   direcaoOlhar as direcaoDoOlhar,
   pivoCamera,
-  PASSO_ZOOM,
+  passoDaRoda,
   recentrar as recentrarCamera,
   type BloqueiaCamera,
 } from '../player/camera';
@@ -1801,7 +1801,7 @@ export function criarCena(
       if (e.shiftKey || estado.modoFoto?.ativo()) return;
       if (e.deltaY === 0) return;
       e.preventDefault();
-      orbita.aproximar(Math.sign(e.deltaY) * PASSO_ZOOM);
+      orbita.aproximar(passoDaRoda(e.deltaY, e.deltaMode));
     },
     { passive: false },
   );

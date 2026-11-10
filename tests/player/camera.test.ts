@@ -31,6 +31,7 @@ import {
   ZOOM_PADRAO,
   type BloqueiaCamera,
 } from '../../src/player/camera';
+import { PASSO_ZOOM, passoDaRoda, limitarZoom as limitar } from '../../src/player/camera';
 
 const olhos = { x: 10.5, y: 20.62, z: 10.5 };
 const livre: BloqueiaCamera = () => false;
@@ -313,5 +314,20 @@ describe('voltar para trás do boneco', () => {
         yaw = recentrar({ ...base, yaw, yawCorpo: yaw + lado, tempo: 10 + i / 60 });
       expect(Math.abs(yaw)).toBeLessThan((15 * Math.PI) / 180);
     }
+  });
+});
+
+describe('roda do mouse e touchpad', () => {
+  it('um dente aproxima meio bloco; o touchpad vai aos poucos, sem pular de 2,5 a 7', () => {
+    expect(passoDaRoda(100)).toBe(PASSO_ZOOM);
+    expect(passoDaRoda(-100)).toBe(-PASSO_ZOOM);
+    expect(passoDaRoda(1000)).toBe(PASSO_ZOOM);
+    expect(passoDaRoda(3, 1)).toBeCloseTo(PASSO_ZOOM, 1);
+    // 10 eventos de 4 px (um gesto curto no touchpad) mexem só 0,2 bloco
+    let z = 3.8;
+    for (let i = 0; i < 10; i++) z = limitar(z + passoDaRoda(4));
+    expect(z).toBeCloseTo(4, 5);
+    expect(passoDaRoda(0)).toBe(0);
+    expect(passoDaRoda(Number.NaN)).toBe(0);
   });
 });
