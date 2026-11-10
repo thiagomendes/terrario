@@ -184,12 +184,137 @@ async function momentos(page: Page, prefixo: string) {
   await page.keyboard.up('KeyW');
 }
 
+const GESTOS = [
+  'acenar',
+  'cumprimentar',
+  'chamar',
+  'comemorar',
+  'aplaudir',
+  'dancar',
+  'apontar',
+  'sentar',
+] as const;
+
+/** A roda do menu, a dos gestos, cada gesto visto de frente e o morador acenando de volta. */
+async function rodasEGestos(page: Page, prefixo: string, toque: boolean) {
+  const clicar = (sel: string) => (toque ? page.locator(sel).tap() : page.locator(sel).click());
+  const menu = () => page.evaluate(() => window.__brumaluz!.gestos!.menu());
+  await page.evaluate(() => window.__brumaluz!.apontar!(0.6, 0.3));
+  await page.waitForTimeout(800);
+  await clicar('[data-botao-roda]');
+  await page.waitForFunction(() => window.__brumaluz!.gestos!.menu() === 'menu');
+  await page.waitForTimeout(450);
+  await foto(page, `${prefixo}-11-roda-menu`);
+  await clicar('.roda.aberta button.ativo[data-item="gestos"]');
+  await page.waitForFunction(() => window.__brumaluz!.gestos!.menu() === 'gestos');
+  await page.waitForTimeout(450);
+  await foto(page, `${prefixo}-12-roda-gestos`);
+  // escolhe "acenar" pela roda (como a criança) e fotografa logo depois
+  await clicar('.roda.aberta button.ativo[data-item="acenar"]');
+  if ((await menu()) !== null) await page.keyboard.press('Escape');
+  await page.waitForTimeout(1300);
+  // de frente para o boneco (a câmera é solta: girar não gira o corpo)
+  await page.evaluate(() => {
+    const e = window.__brumaluz!;
+    e.apontar!(e.camera!.yawCorpo() + Math.PI - 0.55, 0.22);
+  });
+  await page.waitForTimeout(600);
+  for (const [i, g] of GESTOS.entries()) {
+    await page.evaluate((g) => window.__brumaluz!.gestos!.fazer(g), g);
+    // o meio do gesto (sentar: já sentado)
+    await page.waitForTimeout(g === 'sentar' ? 900 : g === 'cumprimentar' ? 350 : 600);
+    await foto(page, `${prefixo}-${13 + i}-gesto-${g}`);
+    await page.waitForTimeout(1300);
+  }
+  // sentar fica até andar
+  await page.keyboard.down('KeyW');
+  await page.waitForTimeout(200);
+  await page.keyboard.up('KeyW');
+}
+
+async function moradorAcena(page: Page, prefixo: string) {
+  const p = await page.evaluate(() => window.__brumaluz!.povoados!()[0]);
+  if (!p) return;
+  await page.evaluate((p) => window.__brumaluz!.teleportar!(p.cx + 2.5, p.cz + 2.5), p);
+  await page
+    .waitForFunction(
+      () => (window.__brumaluz!.criaturas?.() ?? []).some((c) => c.tipo === 'morador'),
+      undefined,
+      { timeout: 120_000 },
+    )
+    .catch(() => undefined);
+  for (let tentativa = 0; tentativa < 6; tentativa++) {
+    const alvo = await page.evaluate(
+      async ({ cx, cz, tentativa }) => {
+        const e = window.__brumaluz!;
+        const m = e.criaturas!()
+          .filter((c) => c.tipo === 'morador')
+          .sort((a, b) => Math.hypot(a.x - cx, a.z - cz) - Math.hypot(b.x - cx, b.z - cz))[
+          tentativa % 2
+        ];
+        if (!m) return null;
+        const d = Math.hypot(cx - m.x, cz - m.z) || 1;
+        const px = m.x + ((cx - m.x) / d) * 4;
+        const pz = m.z + ((cz - m.z) / d) * 4;
+        e.teleportar!(px, pz);
+        await new Promise((r) => setTimeout(r, 900));
+        e.apontar!(Math.atan2(m.x - px, m.z - pz) + 0.35, 0.3);
+        await e.sincronizar!();
+        return m.id;
+      },
+      { cx: p.cx, cz: p.cz, tentativa },
+    );
+    if (alvo === null) return;
+    await page.waitForTimeout(1300);
+    await page.evaluate(() => window.__brumaluz!.gestos!.fazer('acenar'));
+    const ok = await page
+      .waitForFunction(
+        (id) =>
+          window
+            .__brumaluz!.gestos!.moradores()
+            .some((m) => m.id === id && m.gesto === 'acenar' && m.balao === 'acenar'),
+        alvo,
+        { timeout: 4000 },
+      )
+      .then(() => true)
+      .catch(() => false);
+    if (ok) {
+      await page.waitForTimeout(450);
+      await foto(page, `${prefixo}-21-morador-acena`);
+      return;
+    }
+  }
+}
+
 for (const tema of TEMAS)
   for (const tela of TELAS)
     test(`terceira pessoa: ${tema} no ${tela.nome}`, async ({ browser }) => {
-      test.setTimeout(300_000);
+      test.setTimeout(420_000);
       const { ctx, page } = await abrirJogo(browser, tema, tela);
+      const nasc = await page.evaluate(() => window.__brumaluz!.posicao!);
       await momentos(page, `${tema}-${tela.nome}`);
+      // longe da casinha e da caverna: um gramado limpo e plano para a roda e os gestos
+      await page.evaluate(
+        async ({ nasc, grama }) => {
+          const e = window.__brumaluz!;
+          const espera = (ms: number) => new Promise((r) => setTimeout(r, ms));
+          const fx = Math.floor(nasc[0]) - 16;
+          const fz = Math.floor(nasc[2]) - 16;
+          e.teleportar!(fx + 0.5, fz + 0.5);
+          await espera(1500);
+          const fy = Math.floor(e.posicao![1] - 1.62);
+          for (let dx = -7; dx <= 7; dx++)
+            for (let dz = -7; dz <= 7; dz++) {
+              e.definirBloco!(fx + dx, fy - 1, fz + dz, grama);
+              for (let dy = 0; dy < 6; dy++) e.definirBloco!(fx + dx, fy + dy, fz + dz, 0);
+            }
+          e.teleportar!(fx + 0.5, fz + 0.5, fy);
+          await espera(800);
+        },
+        { nasc, grama: Bloco.TERRA_MUSGOSA },
+      );
+      await rodasEGestos(page, `${tema}-${tela.nome}`, tela.toque);
+      await moradorAcena(page, `${tema}-${tela.nome}`);
       await ctx.close();
     });
 
@@ -233,5 +358,22 @@ test('esboço aprovado nos mesmos momentos', async ({ browser }) => {
   await page.keyboard.press('Space');
   await page.waitForTimeout(260);
   await f('5-pulo');
+  await page.waitForTimeout(1200);
+  // a roda de gestos (G) e cada gesto (1 a 8)
+  await page.keyboard.press('KeyG');
+  await page.waitForTimeout(450);
+  await f('12-roda-gestos');
+  await page.keyboard.press('Escape');
+  for (const [i, g] of GESTOS.entries()) {
+    await page.keyboard.press(`Digit${i + 1}`);
+    await page.waitForTimeout(g === 'sentar' ? 900 : g === 'cumprimentar' ? 350 : 600);
+    await f(`${13 + i}-gesto-${g}`);
+    await page.waitForTimeout(1400);
+    if (g === 'sentar') {
+      await page.keyboard.down('KeyW');
+      await page.waitForTimeout(150);
+      await page.keyboard.up('KeyW');
+    }
+  }
   await ctx.close();
 });
