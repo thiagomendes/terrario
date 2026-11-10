@@ -41,9 +41,6 @@ async function apontar(page: Page, yaw: number, pitch: number): Promise<void> {
     .not.toBeNull();
 }
 
-const modo = (page: Page) => page.evaluate(() => window.__brumaluz!.camera!.modo());
-const indicador = (page: Page) => page.locator('[data-camera-indicador]').innerText();
-
 // Coloca pedra na face apontada, mira nela de novo e devolve o alvo.
 async function prepararPedra(page: Page) {
   await apontar(page, 0, 0.6);
@@ -63,34 +60,38 @@ async function prepararPedra(page: Page) {
   return { x: a.x, y: a.y, z: a.z };
 }
 
-test('KeyV alterna o modo e o indicador', async ({ page }) => {
+test('só terceira pessoa: V não muda nada, sem indicador nem braço', async ({ page }) => {
   test.setTimeout(240_000);
   const erros = coletarErros(page);
   await abrir(page);
-  expect(await modo(page)).toBe('primeira');
-  expect(await indicador(page)).toContain('1ª pessoa');
+  const estadoCam = () =>
+    page.evaluate(() => {
+      const e = window.__brumaluz!;
+      const [cx, cy, cz] = e.camera!.posicao();
+      const [ox, oy, oz] = e.posicao!;
+      return { longe: Math.hypot(cx - ox, cy - oy, cz - oz), zoom: e.camera!.zoom() };
+    });
+  // a câmera fica atrás do boneco, longe dos olhos (nunca na cabeça)
+  await expect.poll(async () => (await estadoCam()).longe).toBeGreaterThan(1.5);
+  const antes = await estadoCam();
   await page.keyboard.press('KeyV');
-  await expect.poll(() => modo(page)).toBe('terceira');
-  await expect.poll(() => indicador(page)).toContain('3ª pessoa');
-  // spec 012: a terceira câmera, de frente para o boneco
-  await page.keyboard.press('KeyV');
-  await expect.poll(() => modo(page)).toBe('frente');
-  await expect.poll(() => indicador(page)).toContain('de frente');
-  await page.keyboard.press('KeyV');
-  await expect.poll(() => modo(page)).toBe('primeira');
-  await expect.poll(() => indicador(page)).toContain('1ª pessoa');
+  await page.waitForTimeout(400);
+  expect((await estadoCam()).zoom).toBe(antes.zoom);
+  expect((await estadoCam()).longe).toBeGreaterThan(1.5);
+  // sem o indicador de câmera e sem o botão V na barra de atalhos
+  await expect(page.locator('[data-camera-indicador]')).toHaveCount(0);
+  await expect(page.locator('.barra-atalhos', { hasText: 'Câmera' })).toHaveCount(0);
+  // o braço de primeira pessoa não existe mais: o corpo sempre aparece
+  expect(await page.evaluate(() => window.__brumaluz!.personagem!.visivel())).toEqual({
+    corpo: true,
+  });
   expect(erros, erros.join('\n')).toEqual([]);
 });
 
-test('visibilidade por modo e limite de malhas', async ({ page }) => {
+test('limite de malhas do boneco', async ({ page }) => {
   test.setTimeout(240_000);
   const erros = coletarErros(page);
   await abrir(page);
-  const vis = () => page.evaluate(() => window.__brumaluz!.personagem!.visivel());
-  expect(await vis()).toEqual({ braco: true, corpo: false });
-  await page.keyboard.press('KeyV');
-  await expect.poll(() => modo(page)).toBe('terceira');
-  expect(await vis()).toEqual({ braco: false, corpo: true });
   const malhas = await page.evaluate(() => window.__brumaluz!.personagem!.malhas());
   expect(malhas).toBeGreaterThan(0);
   // o boneco de brinquedo (spec 012) tem mais peças: rosto, punhos, cabelo, acessórios
@@ -98,30 +99,41 @@ test('visibilidade por modo e limite de malhas', async ({ page }) => {
   expect(erros, erros.join('\n')).toEqual([]);
 });
 
-test('alvo e quebra iguais nos dois modos', async ({ page }) => {
+test('mira do centro em terceira pessoa: acerta o bloco do centro, quebra e o boneco vira', async ({
+  page,
+}) => {
   test.setTimeout(300_000);
   const erros = coletarErros(page);
   await abrir(page);
-  // o alvo vem dos olhos: é o mesmo nos dois modos (medido antes de editar o mundo)
-  const alvos: { x: number; y: number; z: number }[] = [];
-  await apontar(page, 0, 0.6);
-  for (const m of ['primeira', 'terceira'] as const) {
-    await page.evaluate((v) => window.__brumaluz!.camera!.definir(v), m);
-    await expect.poll(() => modo(page)).toBe(m);
-    const a = await page.evaluate(() => window.__brumaluz!.alvo!);
-    alvos.push({ x: a.x, y: a.y, z: a.z });
-  }
-  expect(alvos[1]).toEqual(alvos[0]);
-  for (const m of ['primeira', 'terceira'] as const) {
-    await page.evaluate((v) => window.__brumaluz!.camera!.definir(v), m);
-    await expect.poll(() => modo(page)).toBe(m);
-    const pos = await prepararPedra(page);
-    const r = await page.evaluate(() => window.__brumaluz!.minerar!(2, true));
-    expect(r.quebrou, `modo ${m}`).toBe(true);
-    await expect
-      .poll(() => page.evaluate((p) => window.__brumaluz!.bloco!(p.x, p.y, p.z), pos))
-      .toBe(0);
-  }
+  const pos = await prepararPedra(page);
+  // o raio do centro da tela (da câmera pelo pivô) passa dentro do bloco mirado
+  const noCentro = await page.evaluate((p) => {
+    const e = window.__brumaluz!;
+    const c = e.camera!.posicao();
+    const v = e.camera!.pivo();
+    const d = [v[0] - c[0], v[1] - c[1], v[2] - c[2]];
+    const n = Math.hypot(d[0], d[1], d[2]);
+    for (let t = 0; t < 14; t += 0.02) {
+      const x = c[0] + (d[0] / n) * t;
+      const y = c[1] + (d[1] / n) * t;
+      const z = c[2] + (d[2] / n) * t;
+      if (Math.floor(x) === p.x && Math.floor(y) === p.y && Math.floor(z) === p.z) return true;
+    }
+    return false;
+  }, pos);
+  expect(noCentro).toBe(true);
+  // o alcance conta dos olhos do boneco (até 5 blocos)
+  const longe = await page.evaluate((p) => {
+    const [x, y, z] = window.__brumaluz!.posicao!;
+    return Math.hypot(p.x + 0.5 - x, p.y + 0.5 - y, p.z + 0.5 - z);
+  }, pos);
+  expect(longe).toBeLessThan(5.9);
+  // vira a câmera para o lado: minerando, o corpo vira para o bloco
+  const r = await page.evaluate(() => window.__brumaluz!.minerar!(2, true));
+  expect(r.quebrou).toBe(true);
+  await expect
+    .poll(() => page.evaluate((p) => window.__brumaluz!.bloco!(p.x, p.y, p.z), pos))
+    .toBe(0);
   expect(erros, erros.join('\n')).toEqual([]);
 });
 

@@ -4,8 +4,8 @@ import { Bloco } from '../src/world/blocks';
 
 /**
  * Capturas do visual de brinquedo (spec 012) nos enquadramentos dos esboços de referência
- * (.sdd/specs/012-visual-brinquedo/referencia): primeira pessoa (picareta, minerando,
- * comendo), terceira pessoa por cima do ombro minerando, de frente e o editor de personagem.
+ * (.sdd/specs/012-visual-brinquedo/referencia), em terceira pessoa (o jogo só tem ela desde a
+ * spec 015): picareta, minerando, comendo, a selfie do modo foto e o editor de personagem.
  * Pesado: só roda com CAPTURAS_BRINQUEDO=1.
  */
 declare const process: { env: Record<string, string | undefined> };
@@ -90,7 +90,6 @@ test('boneco de brinquedo nos enquadramentos dos esboços', async ({ page }) => 
   await page.evaluate(() => {
     const e = window.__brumaluz!;
     e.selecionarSlot!(0);
-    e.camera!.definir('terceira');
     e.apontar!(0, 0.25);
   });
   await page.waitForTimeout(1200);
@@ -102,8 +101,9 @@ test('boneco de brinquedo nos enquadramentos dos esboços', async ({ page }) => 
   // de frente
   await page.evaluate(() => {
     const e = window.__brumaluz!;
-    e.camera!.definir('frente');
-    e.apontar!(0, 0.15);
+    // a câmera de frente agora é a selfie do modo foto (spec 015)
+    if (!e.modoFoto!.ativo()) e.modoFoto!.alternar();
+    e.modoFoto!.selfie();
   });
   await page.waitForTimeout(1500);
   await foto(page, 'frente');
@@ -113,7 +113,7 @@ test('boneco de brinquedo nos enquadramentos dos esboços', async ({ page }) => 
   // ícones de brinquedo (desenhados dos modelos 3D) na barra e no inventário
   await page.evaluate(() => {
     const e = window.__brumaluz!;
-    e.camera!.definir('primeira');
+    if (e.modoFoto!.ativo()) e.modoFoto!.alternar();
     const itens = [
       'machado_cobre',
       'pa_cristal',
@@ -146,7 +146,6 @@ for (const id of TEMAS) {
       e.pausarDia = true;
       e.hora = 0.42;
       e.definirClima?.('limpo');
-      e.camera!.definir('terceira');
       const [x, , z] = e.posicao!;
       const tipos = ['cervo', 'coelho', 'raposa', 'espectro'] as const;
       tipos.forEach((t, i) => e.invocar!(t, x - 3 + i * 2, 90, z + 5));
@@ -174,7 +173,6 @@ for (const id of TEMAS) {
     );
     await page.evaluate(async () => {
       const e = window.__brumaluz!;
-      e.camera!.definir('primeira');
       const m = (e.criaturas?.() ?? []).find((c) => c.tipo === 'morador')!;
       const [px, , pz] = e.posicao!;
       const d = Math.hypot(m.x - px, m.z - pz) || 1;
@@ -317,7 +315,6 @@ test('chuva de brinquedo: de dia e à noite', async ({ page }) => {
     e.pausarDia = true;
     e.hora = 0.45;
     e.definirClima?.('chuva');
-    e.camera!.definir('terceira');
     e.apontar!(0.4, 0.25);
   });
   await page.waitForTimeout(14000);
@@ -340,7 +337,6 @@ test('qualidade automática: detalhe baixo (celular) e alto', async ({ page }) =
       const e = window.__brumaluz!;
       e.pausarDia = true;
       e.hora = 0.42;
-      e.camera!.definir('terceira');
       e.apontar!(0, 0.25);
     });
     await page.waitForTimeout(2500);
@@ -524,7 +520,6 @@ for (const id of TEMAS) {
       e.pausarDia = true;
       e.hora = 0.45;
       e.definirClima?.('limpo');
-      e.camera!.definir('primeira');
     });
     await page.waitForTimeout(1500);
     const inicio = await page.evaluate(() => window.__brumaluz!.posicao!);
@@ -568,7 +563,6 @@ for (const id of TEMAS) {
         e.apontar!(Math.atan2(a[0], a[2]), Math.min(-0.12, -Math.asin(a[1] / n) * 0.6));
       }
       // só o mundo: toda a interface some (o braço da vista também)
-      e.camera!.definir('primeira');
       const st = document.createElement('style');
       st.textContent =
         '#app > :not(canvas), body > :not(#app):not(script) { display: none !important; }';
@@ -639,7 +633,6 @@ for (const id of IDS_TEMAS) {
       e.pausarDia = true;
       e.hora = 0.42;
       e.definirClima?.('limpo');
-      e.camera!.definir('primeira');
       const [x0, , z0] = e.posicao!.map(Math.floor);
       const y = 110;
       for (let dx = -6; dx <= 6; dx++)
@@ -673,19 +666,22 @@ test('flor e cogumelo na mão', async ({ page }) => {
     const e = window.__brumaluz!;
     e.pausarDia = true;
     e.hora = 0.42;
-    e.camera!.definir('primeira');
     e.apontar!(0, 0.1);
   });
   await page.keyboard.press('Digit8');
   await page.waitForTimeout(1500);
-  await foto(page, 'mao-flor-primeira');
+  await foto(page, 'mao-flor');
   await page.keyboard.press('Digit9');
   await page.waitForTimeout(1200);
-  await foto(page, 'mao-cogumelo-primeira');
+  await foto(page, 'mao-cogumelo');
   await page.keyboard.press('Digit8');
-  await page.evaluate(() => window.__brumaluz!.camera!.definir('frente'));
+  await page.evaluate(() => {
+    const f = window.__brumaluz!.modoFoto!;
+    if (!f.ativo()) f.alternar();
+    f.selfie();
+  });
   await page.waitForTimeout(1500);
-  await foto(page, 'mao-flor-terceira');
+  await foto(page, 'mao-flor-selfie');
 });
 
 test('blocos com forma na mão', async ({ page }) => {
@@ -701,7 +697,6 @@ test('blocos com forma na mão', async ({ page }) => {
     [56, 57, 59, 60, 61, 37, 36].forEach((b, i) =>
       e.inventario!.definir(i, { item: `bloco:${b}`, qtd: 1 }),
     );
-    e.camera!.definir('primeira');
     e.apontar!(0, 0.1);
   });
   for (const [i, nome] of [
@@ -719,10 +714,12 @@ test('blocos com forma na mão', async ({ page }) => {
   }
   await page.evaluate(() => {
     window.__brumaluz!.selecionarSlot!(1);
-    window.__brumaluz!.camera!.definir('frente');
+    const f = window.__brumaluz!.modoFoto!;
+    if (!f.ativo()) f.alternar();
+    f.selfie();
   });
   await page.waitForTimeout(1500);
-  await foto(page, 'mao-forma-porta-terceira');
+  await foto(page, 'mao-forma-porta-selfie');
 });
 
 test('celular em pé: informações recolhidas num botão', async ({ browser }) => {

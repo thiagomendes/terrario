@@ -55,22 +55,14 @@ for (const vp of VIEWPORTS) {
     await expect.poll(() => page.evaluate(() => window.__brumaluz!.personagem!.maoBloco())).toBe(2);
     await page.evaluate(() => window.__brumaluz!.apontar!(0, 0.3));
 
-    // Primeira pessoa com braço e bloco na mão.
+    // Só terceira pessoa (spec 015): o boneco visível com o bloco na mão.
     expect(await page.evaluate(() => window.__brumaluz!.personagem!.visivel())).toEqual({
-      braco: true,
-      corpo: false,
-    });
-    await foto('primeira-pessoa-braco');
-
-    // Terceira pessoa com o personagem visível.
-    await page.keyboard.press('KeyV');
-    await expect
-      .poll(() => page.evaluate(() => window.__brumaluz!.camera!.modo()))
-      .toBe('terceira');
-    expect(await page.evaluate(() => window.__brumaluz!.personagem!.visivel())).toEqual({
-      braco: false,
       corpo: true,
     });
+    expect(await page.evaluate(() => window.__brumaluz!.personagem!.malhasMao())).toBeGreaterThan(
+      0,
+    );
+    await page.waitForTimeout(800);
     await foto('terceira-pessoa-personagem');
 
     const dados = await page.evaluate(() => ({

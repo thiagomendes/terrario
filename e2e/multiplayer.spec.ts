@@ -78,21 +78,21 @@ test('dois navegadores no mesmo mundo: convite, entrada pelo link e tudo sincron
     { timeout: 30_000 },
   );
 
-  // o item na mão aparece na primeira pessoa de quem entrou pelo código (bug visto em família)
+  // o item na mão aparece no boneco de quem entrou pelo código (bug visto em família;
+  // desde a spec 015 o jogo é só em terceira pessoa: a mão é a do boneco)
   const pecasMao = await bia.evaluate(async () => {
     const e = window.__brumaluz!;
-    e.camera!.definir('primeira');
     e.inventario!.definir(0, { item: 'picareta_ferro', qtd: 1 });
     e.selecionarSlot!(0);
     await new Promise((r) => setTimeout(r, 600));
     return {
-      braco: e.personagem!.malhasBraco(),
+      mao: e.personagem!.malhasMao(),
       visivel: e.personagem!.visivel(),
     };
   });
-  console.log(`braço da Bia: ${JSON.stringify(pecasMao)}`);
-  expect(pecasMao.visivel.braco).toBe(true);
-  expect(pecasMao.braco).toBeGreaterThan(3);
+  console.log(`mão da Bia: ${JSON.stringify(pecasMao)}`);
+  expect(pecasMao.visivel.corpo).toBe(true);
+  expect(pecasMao.mao).toBeGreaterThan(0);
 
   // Ana quebra um bloco perto dela: Bia vê
   const cel = await ana.evaluate(() => {
