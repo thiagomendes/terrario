@@ -14,6 +14,7 @@ Ideias e pedidos do dono que ainda não viraram spec. Cada item diz de onde veio
 
 - **013, Rancho Alegre** (`.sdd/specs/013-rancho-alegre/spec.md`): em andamento.
 - **015, Só terceira pessoa e roda de gestos** (`.sdd/specs/015-terceira-pessoa/spec.md`): esboço aprovado; vem logo depois da 013.
+- **017, Fantasias** (`.sdd/specs/017-fantasias/spec.md`): esboço publicado; fantasias dos temas livres; inclui conferir os chapéus soltos de hoje.
 - **014, Cidade Grande** (rascunho em `.sdd/specs/014-cidade-grande/spec.md`): depois da 013, da 015 e da 016; falta o dono decidir a altura dos prédios.
 
 ## Ideias para depois da 013

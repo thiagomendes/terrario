@@ -1,0 +1,524 @@
+<title>Fantasias do Terrário</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@500;700&family=IBM+Plex+Sans:wght@400;500;600&family=Nunito:wght@700;800&display=swap">
+<style>
+/* Layout: cabeçalho; à esquerda o palco giratório com o boneco, à direita as abas e os cartões das fantasias (empilha no celular); embaixo o que entra no jogo e o que falta decidir */
+:root {
+  --bg: #eef0f6;
+  --fg: #1c1b2b;
+  --suave: #5a5a72;
+  --linha: #cdd0de;
+  --acento: #a8610a;
+  --cartao: #f8f9fc;
+  --creme: #fff7e8;
+  --creme-sombra: #e9d6b2;
+  --tinta: #3b2a1e;
+  --display: 'Pixelify Sans', 'Courier New', monospace;
+  --corpo: 'IBM Plex Sans', system-ui, sans-serif;
+  --peca: 'Nunito', system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) { --bg: #12111c; --fg: #ecebf5; --suave: #a3a2bb; --linha: #2c2b40; --acento: #ffc96b; --cartao: #191827; color-scheme: dark; }
+}
+:root[data-theme="dark"] { --bg: #12111c; --fg: #ecebf5; --suave: #a3a2bb; --linha: #2c2b40; --acento: #ffc96b; --cartao: #191827; color-scheme: dark; }
+body { background: var(--bg); color: var(--fg); font: 400 16px/1.55 var(--corpo); }
+.pagina {
+  max-width: 1180px; margin: 0 auto;
+  padding-block: 28px 64px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: grid; gap: 24px;
+}
+h1, h2, h3 { font-family: var(--display); margin: 0; line-height: 1.15; text-wrap: balance; }
+h1 { font-size: clamp(1.8rem, 5vw, 2.6rem); }
+h3 { font-size: 1.05rem; }
+.olho { font: 600 0.78rem var(--corpo); letter-spacing: 0.12em; text-transform: uppercase; color: var(--acento); }
+.intro { max-width: 70ch; color: var(--suave); margin: 8px 0 0; }
+
+.editor { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr); gap: 0; border-radius: 18px; overflow: hidden; background: var(--creme); box-shadow: 0 6px 0 var(--creme-sombra); color: var(--tinta); }
+@media (max-width: 820px) { .editor { grid-template-columns: 1fr; } }
+.palco { position: relative; min-height: 440px; background: linear-gradient(#bfe3ff, #e8f5ff 70%, #cfe9b8 70%); touch-action: pan-y; cursor: grab; }
+@media (max-width: 820px) { .palco { min-height: 360px; } }
+.palco canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.palco .nome { position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%); font: 800 1rem var(--peca); background: var(--creme); padding: 6px 16px; border-radius: 999px; box-shadow: 0 3px 0 var(--creme-sombra); white-space: nowrap; }
+.painel { padding: 18px 18px 20px; display: grid; gap: 14px; align-content: start; min-width: 0; font-family: var(--peca); }
+.abas { display: flex; gap: 8px; flex-wrap: wrap; }
+.abas button { min-height: 44px; padding: 0 16px; border: 0; border-radius: 999px; background: #f3e6cc; color: var(--tinta); font: 800 0.95rem var(--peca); cursor: pointer; box-shadow: 0 3px 0 var(--creme-sombra); }
+.abas button[aria-selected="true"] { background: #ffd45a; }
+.abas button:focus-visible, .cartas button:focus-visible, .mundos button:focus-visible, .cores button:focus-visible { outline: 3px solid #a8610a; outline-offset: 2px; }
+.mundos { display: flex; gap: 6px; flex-wrap: wrap; }
+.mundos button { min-height: 36px; padding: 0 12px; border: 2px solid transparent; border-radius: 999px; background: #fffaf0; color: var(--tinta); font: 700 0.82rem var(--peca); cursor: pointer; }
+.mundos button[aria-pressed="true"] { border-color: #a8610a; }
+.mundos[hidden] { display: none; }
+.cartas { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 10px; }
+.cartas button { position: relative; display: grid; gap: 6px; justify-items: center; padding: 10px 8px 10px; border: 3px solid transparent; border-radius: 16px; background: #fffaf0; color: var(--tinta); font: 800 0.86rem/1.2 var(--peca); cursor: pointer; box-shadow: 0 3px 0 var(--creme-sombra); text-align: center; }
+.cartas button[aria-pressed="true"] { border-color: #ffb547; background: #fff1cf; }
+.cartas img { width: 84px; height: 96px; object-fit: contain; }
+.cartas .selo { position: absolute; top: 6px; right: 6px; font: 800 0.62rem var(--peca); background: #7cc35a; color: #fff; padding: 2px 6px; border-radius: 999px; }
+.cores { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; font-weight: 700; font-size: 0.9rem; }
+.cores button { width: 34px; height: 34px; border-radius: 50%; border: 3px solid #fff; box-shadow: 0 0 0 2px var(--creme-sombra); cursor: pointer; }
+.cores button[aria-pressed="true"] { box-shadow: 0 0 0 3px #a8610a; }
+.aviso { margin: 0; font-size: 0.85rem; color: #6a5a48; font-weight: 700; }
+
+.cartoes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+@media (max-width: 760px) { .cartoes { grid-template-columns: 1fr; } }
+.cartao { background: var(--cartao); border: 1px solid var(--linha); border-radius: 12px; padding: 16px 18px; min-width: 0; }
+.cartao ul { margin: 8px 0 0; padding-left: 1.2em; display: grid; gap: 6px; }
+.cartao.decidir { grid-column: 1 / -1; border-color: var(--acento); }
+</style>
+
+<main class="pagina">
+  <header>
+    <div class="olho">Terrário · esboço para depois do Rancho Alegre</div>
+    <h1>Fantasias do Terrário</h1>
+    <p class="intro">Pedido da filha (princesas) e do filho (heróis) do dono. As fantasias são looks prontos que vestem o boneco num toque; depois ainda dá para trocar a cor. Além delas, cada tema tem as suas fantasias, livres para usar em qualquer mundo. Tudo é desenho próprio: nada lembra personagem de filme ou desenho conhecido. Toque numa fantasia para vestir e arraste o boneco para girar.</p>
+  </header>
+
+  <section class="editor" aria-label="Escolher fantasia">
+    <div class="palco" id="palco" role="img" aria-label="O boneco de brinquedo vestindo a fantasia escolhida, girando devagar">
+      <div class="nome" id="nomeFantasia">Princesa das Flores</div>
+    </div>
+    <div class="painel">
+      <div class="abas" role="tablist" aria-label="Tipos de fantasia">
+        <button type="button" role="tab" data-aba="princesas" aria-selected="true">Princesas</button>
+        <button type="button" role="tab" data-aba="herois" aria-selected="false">Heróis</button>
+        <button type="button" role="tab" data-aba="mundo" aria-selected="false">Dos temas</button>
+      </div>
+      <div class="mundos" id="mundos" hidden role="group" aria-label="Tema"></div>
+      <div class="cartas" id="cartas"></div>
+      <div class="cores" id="cores"><span>Cor:</span></div>
+      <p class="aviso" id="aviso">Todas as fantasias servem para qualquer personagem.</p>
+    </div>
+  </section>
+
+  <section class="cartoes" aria-label="Como entra no jogo">
+    <div class="cartao">
+      <h3>No editor de personagem</h3>
+      <ul>
+        <li>Aba nova <b>Fantasias</b>, antes das peças. Um toque veste tudo: roupa, cores e enfeite.</li>
+        <li>Depois de vestir, dá para trocar a cor principal (4 a 6 opções por fantasia) e voltar a personalizar peça por peça.</li>
+        <li><b>Tirar fantasia</b> volta para o look de antes, sem perder nada.</li>
+        <li>As cartinhas mostram o próprio boneco vestido, como as miniaturas de hoje.</li>
+      </ul>
+    </div>
+    <div class="cartao">
+      <h3>Peças novas que as fantasias usam</h3>
+      <ul>
+        <li><b>Princesas:</b> saia rodada em camadas, mangas bufantes, coroa, tiara e varinha de estrela na mão.</li>
+        <li><b>Heróis:</b> capa que balança ao correr, máscara nos olhos, emblema no peito (estrela, raio, coração, folha), cinto e botas.</li>
+        <li><b>Dos temas:</b> macacão e camisa xadrez, colete com lenço, jaleco, traje espacial com capacete de bolha, capuz de dinossauro, capa de folhas.</li>
+        <li>Tudo de brinquedo, com peças fundidas para não pesar no celular.</li>
+        <li><b>Tudo encaixado:</b> chapéu, coroa, tiara, capuz e capa assentam no boneco como peça de montar, sem vão (pedido do dono). Um teste confere que nenhuma peça fica solta da cabeça ou do corpo.</li>
+      </ul>
+    </div>
+    <div class="cartao">
+      <h3>Fantasias dos temas</h3>
+      <ul>
+        <li>Cada tema tem 2: no Rancho, fazendeira e vaqueira; na Lua, astronauta; na Era dos Dinos, a fantasia de dino; e assim por diante.</li>
+        <li>Livres: servem em qualquer mundo, como as outras. Nada muda quando o jogador troca de mundo.</li>
+        <li>Ao criar um mundo, o jogo sugere: "Quer vestir a fantasia do Rancho Alegre?" (Sim ou Agora não). É só uma sugestão.</li>
+      </ul>
+    </div>
+    <div class="cartao">
+      <h3>No multijogador e nos direitos</h3>
+      <ul>
+        <li>Os amigos veem a fantasia (ela viaja com a aparência, que já chega a todos).</li>
+        <li>Nomes, cores e símbolos são próprios: nada de letra no peito, teia, morcego ou vestido igual ao de filme.</li>
+      </ul>
+    </div>
+    <div class="cartao decidir">
+      <h3>Para você decidir</h3>
+      <ul>
+        <li><b>Quem vê o quê:</b> no esboço, todas as fantasias servem para qualquer personagem; no corpo feminino as princesas aparecem primeiro e no masculino os heróis. Fica assim, ou separa?</li>
+        
+        <li><b>Quando:</b> recomendo como uma spec pequena depois da 016 (construções protegidas), ou junto da 015 se você quiser estrear tudo de uma vez.</li>
+      </ul>
+    </div>
+  </section>
+</main>
+
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+} }
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
+
+const reduzir = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+// ---------- peças ----------
+const geos = new Map();
+const gCaixa = (w, h, d, r) => {
+  const k = [w, h, d, r].join(',');
+  if (!geos.has(k)) geos.set(k, r > 0 ? new RoundedBoxGeometry(w, h, d, 3, Math.min(r, w / 2, h / 2, d / 2)) : new THREE.BoxGeometry(w, h, d));
+  return geos.get(k);
+};
+const gBola = new THREE.SphereGeometry(1, 22, 16);
+const mats = new Map();
+const mat = (cor, brilho = 0) => {
+  const k = cor + brilho;
+  if (!mats.has(k)) { const m = new THREE.MeshPhysicalMaterial({ color: cor, roughness: 0.45, clearcoat: 0.35, clearcoatRoughness: 0.4 }); if (brilho) { m.emissive = new THREE.Color(cor); m.emissiveIntensity = brilho; } mats.set(k, m); }
+  return mats.get(k);
+};
+const caixa = (w, h, d, cor, r = 0.05, brilho = 0) => { const m = new THREE.Mesh(gCaixa(w, h, d, r), mat(cor, brilho)); m.castShadow = true; return m; };
+const bola = (r, cor, sx = 1, sy = 1, sz = 1, brilho = 0) => { const m = new THREE.Mesh(gBola, mat(cor, brilho)); m.scale.set(r * sx, r * sy, r * sz); m.castShadow = true; return m; };
+const cil = (rt, rb, h, cor, n = 28) => { const m = new THREE.Mesh(new THREE.CylinderGeometry(rt, rb, h, n), mat(cor)); m.castShadow = true; return m; };
+const em = (o, x, y, z, rx = 0, ry = 0, rz = 0) => { o.position.set(x, y, z); o.rotation.set(rx, ry, rz); return o; };
+function forma(pontos, prof, cor, brilho = 0) {
+  const s = new THREE.Shape(); pontos.forEach(([x, y], i) => (i ? s.lineTo(x, y) : s.moveTo(x, y)));
+  const g = new THREE.ExtrudeGeometry(s, { depth: prof, bevelEnabled: true, bevelThickness: 0.012, bevelSize: 0.012, bevelSegments: 2 });
+  g.center();
+  const m = new THREE.Mesh(g, mat(cor, brilho)); m.castShadow = true; return m;
+}
+const estrela = (r, cor, prof = 0.03, brilho = 0) => forma(Array.from({ length: 10 }, (_, i) => { const a = Math.PI / 2 + (i * Math.PI) / 5; const rr = i % 2 ? r * 0.45 : r; return [Math.cos(a) * rr, Math.sin(a) * rr]; }), prof, cor, brilho);
+const raio = (s, cor) => forma([[0.02, 0.1], [-0.05, 0], [0, 0], [-0.03, -0.1], [0.06, 0.02], [0.01, 0.02], [0.05, 0.1]].map(([x, y]) => [x * s * 10, y * s * 10]), 0.03, cor);
+const coracao = (s, cor) => { const p = []; for (let i = 0; i <= 40; i++) { const t = (i / 40) * Math.PI * 2; p.push([16 * Math.sin(t) ** 3 * s * 0.01, (13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t)) * s * 0.01]); } return forma(p, 0.03, cor); };
+const folha = (s, cor) => { const p = []; for (let i = 0; i <= 30; i++) { const t = (i / 30) * Math.PI * 2; p.push([Math.sin(t) * 0.55 * s, Math.cos(t) * s]); } return forma(p, 0.025, cor); };
+
+// ---------- boneco com juntas (o B do jogo) ----------
+const BASE = { pele: '#e8b48a', cabelo: '#4a2c1a', camisa: '#3b6fb6', calca: '#2d3a4f', sapato: '#4a3426' };
+function boneco(o) {
+  const raiz = new THREE.Group();
+  const corpo = new THREE.Group(); raiz.add(corpo);
+  const pernas = [];
+  for (const s of [-1, 1]) {
+    const p = new THREE.Group(); p.position.set(s * 0.11, 0.34, 0);
+    p.add(em(caixa(0.17, 0.24, 0.18, o.calca ?? BASE.calca, 0.07), 0, -0.12, 0));
+    if (o.botas) p.add(em(caixa(0.2, 0.2, 0.3, o.botas, 0.06), 0, -0.24, 0.03));
+    else p.add(em(caixa(0.21, 0.13, 0.28, o.sapato ?? BASE.sapato, 0.06), 0, -0.275, 0.03));
+    corpo.add(p); pernas.push(p);
+  }
+  const tronco = new THREE.Group(); tronco.position.y = 0.36; corpo.add(tronco);
+  tronco.add(em(caixa(0.46, 0.42, 0.34, o.camisa ?? BASE.camisa, 0.13), 0, 0.19, 0));
+  const bracos = [];
+  for (const s of [-1, 1]) {
+    const b = new THREE.Group(); b.position.set(s * 0.29, 0.36, 0);
+    b.add(em(caixa(0.13, 0.26, 0.14, o.manga ?? o.camisa ?? BASE.camisa, 0.06), 0, -0.13, 0));
+    b.add(em(bola(0.085, o.luvas ?? o.pele ?? BASE.pele), 0, -0.3, 0));
+    if (o.bufante) b.add(em(bola(0.12, o.bufante, 1.1, 0.9, 1.1), 0, -0.02, 0));
+    tronco.add(b); bracos.push(b);
+  }
+  const cab = new THREE.Group(); cab.position.y = 0.74; tronco.add(cab);
+  cab.add(caixa(0.72, 0.68, 0.65, o.pele ?? BASE.pele, 0.18));
+  if (!o.semCabelo) {
+    cab.add(em(caixa(0.77, 0.3, 0.7, o.cabelo ?? BASE.cabelo, 0.15), 0, 0.22, 0));
+    cab.add(em(caixa(0.77, 0.43, 0.16, o.cabelo ?? BASE.cabelo, 0.07), 0, 0.02, -0.3));
+    if (o.longo) { cab.add(em(caixa(0.8, 0.75, 0.2, o.cabelo, 0.09), 0, -0.2, -0.3)); for (const s of [-1, 1]) cab.add(em(caixa(0.12, 0.55, 0.3, o.cabelo, 0.06), s * 0.39, -0.1, -0.05)); }
+  }
+  for (const s of [-1, 1]) {
+    cab.add(em(bola(0.075, '#231a28', 0.85, 1.1, 0.5), s * 0.15, -0.04, 0.33));
+    cab.add(em(bola(0.024, '#ffffff', 1, 1, 0.5), s * 0.15 + 0.025, 0, 0.355));
+    cab.add(em(bola(0.05, '#ff9aa8', 1.4, 0.75, 0.3), s * 0.22, -0.16, 0.32));
+  }
+  cab.add(em(bola(0.04, '#c85a6a', 1.4, 0.5, 0.3), 0, -0.2, 0.33));
+  raiz.userData = { corpo, tronco, cab, pernas, bracos };
+  return raiz;
+}
+
+// ---------- as fantasias ----------
+// cada uma é uma receita de peças; `cores` são as opções da cor principal (a primeira é a padrão)
+const FANTASIAS = {
+  princesas: [
+    { id: 'flores', nome: 'Princesa das Flores', cores: ['#ff8fc8', '#ffd45a', '#b89cff', '#7cc6ff', '#ff9b6b'], montar: (c) => princesa(c, 'tiara', 'flor') },
+    { id: 'estrelas', nome: 'Princesa das Estrelas', cores: ['#6f78ff', '#2f3a8a', '#ff8fc8', '#3fb8a8'], montar: (c) => princesa(c, 'coroa', 'estrela') },
+    { id: 'mar', nome: 'Princesa do Mar', cores: ['#3fc4d8', '#7cc6ff', '#5ad8a8', '#b89cff'], montar: (c) => princesa(c, 'concha', 'concha') },
+    { id: 'neve', nome: 'Princesa da Neve', cores: ['#dff4ff', '#cfd8ff', '#ffe4f2', '#e8ffe8'], montar: (c) => princesa(c, 'floco', 'floco') },
+  ],
+  herois: [
+    { id: 'relampago', nome: 'Herói Relâmpago', cores: ['#2f6fd8', '#7a3ad8', '#1aa88a', '#e8462e'], montar: (c) => heroi(c, '#ffd45a', 'raio') },
+    { id: 'estrela', nome: 'Heroína Estrela', cores: ['#ff6a9a', '#8a4ab8', '#ffb000', '#3fb8a8'], montar: (c) => heroi(c, '#ffffff', 'estrela') },
+    { id: 'coracao', nome: 'Herói Coração', cores: ['#3fae5a', '#2f6fd8', '#ff8a3d', '#8a4ab8'], montar: (c) => heroi(c, '#ff5a6a', 'coracao') },
+    { id: 'folha', nome: 'Heroína da Mata', cores: ['#4caa3a', '#2f8a7a', '#c9a03a', '#5a7a2a'], montar: (c) => heroi(c, '#d6ff8a', 'folha') },
+  ],
+  mundo: {
+    'Rancho Alegre': [
+      { id: 'fazendeira', nome: 'Fazendeira', cores: ['#3f6fb8', '#5a4a6e', '#3f8a5a'], montar: (c) => fazendeira(c) },
+      { id: 'vaqueira', nome: 'Vaqueira', cores: ['#a8733f', '#7a4826', '#c9a03a'], montar: (c) => vaqueira(c) },
+    ],
+    'Exploração Lunar': [{ id: 'astronauta', nome: 'Astronauta', cores: ['#f2f4f8', '#ffd45a', '#ff8fb3'], montar: (c) => astronauta(c) }],
+    'Era dos Dinos': [{ id: 'dino', nome: 'Fantasia de Dino', cores: ['#5fbf4a', '#ff8a3d', '#8a6aff', '#3fb8d8'], montar: (c) => dino(c) }],
+    'Doce Reino': [{ id: 'confeiteira', nome: 'Confeiteira', cores: ['#ff9ac8', '#9ad8ff', '#ffe08a'], montar: (c) => confeiteira(c) }],
+    'Planeta Vivo': [{ id: 'cientista', nome: 'Cientista', cores: ['#f6f6f6', '#cfe8ff', '#e8ffe0'], montar: (c) => cientista(c) }],
+    'Mata Encantada': [{ id: 'guardia', nome: 'Guardiã da Mata', cores: ['#4caa3a', '#2f8a5a', '#a8c83a'], montar: (c) => guardia(c) }],
+    'Bruma e Luz': [{ id: 'lanterneira', nome: 'Lanterneira', cores: ['#6a5ab8', '#2f6f8f', '#8a4a6a'], montar: (c) => lanterneira(c) }],
+  },
+};
+
+function claro(hex, k) { const c = new THREE.Color(hex); c.lerp(new THREE.Color('#ffffff'), k); return '#' + c.getHexString(); }
+function escuro(hex, k) { const c = new THREE.Color(hex); c.multiplyScalar(1 - k); return '#' + c.getHexString(); }
+
+function princesa(cor, enfeite, varinha) {
+  const b = boneco({ camisa: cor, manga: claro(cor, 0.35), bufante: claro(cor, 0.25), calca: claro(cor, 0.2), sapato: '#ffffff', cabelo: '#8a4a28', longo: true });
+  const { tronco, cab, bracos } = b.userData;
+  // saia rodada em camadas (sino), presa no tronco
+  const saia = new THREE.Group(); saia.position.y = 0.02; tronco.add(saia);
+  saia.add(em(cil(0.24, 0.5, 0.42, cor, 32), 0, -0.14, 0));
+  saia.add(em(cil(0.32, 0.56, 0.12, claro(cor, 0.3), 32), 0, -0.3, 0));
+  for (let i = 0; i < 10; i++) { const a = (i / 10) * Math.PI * 2; saia.add(em(bola(0.06, claro(cor, 0.55)), Math.sin(a) * 0.55, -0.34, Math.cos(a) * 0.55)); }
+  tronco.add(em(caixa(0.47, 0.06, 0.35, claro(cor, 0.5), 0.03), 0, 0.02, 0));
+  tronco.add(em(bola(0.05, '#ffd45a', 1, 1, 0.5, 0.2), 0, 0.3, 0.17));
+  // enfeite da cabeça
+  if (enfeite === 'coroa') {
+    const c = new THREE.Group(); c.position.y = 0.42; cab.add(c);
+    c.add(cil(0.26, 0.26, 0.1, '#ffd45a'));
+    for (let i = 0; i < 5; i++) { const a = (i / 5) * Math.PI * 2; c.add(em(cil(0.0, 0.06, 0.14, '#ffd45a', 8), Math.sin(a) * 0.22, 0.11, Math.cos(a) * 0.22)); c.add(em(bola(0.03, ['#ff5a8a', '#5ad8ff', '#7cff8a'][i % 3], 1, 1, 1, 0.3), Math.sin(a) * 0.26, 0.0, Math.cos(a) * 0.26)); }
+  } else if (enfeite === 'tiara') {
+    // tiara de arco: abraça o cabelo de orelha a orelha (encaixada, sem vão)
+    cab.add(em(new THREE.Mesh(new THREE.TorusGeometry(0.4, 0.04, 10, 32, Math.PI), mat('#ffd45a')), 0, -0.02, 0.1, 0, 0, 0));
+    for (const [a, c] of [[Math.PI * 0.32, '#ff5a8a'], [Math.PI * 0.5, '#ffffff'], [Math.PI * 0.68, '#ffd45a']]) cab.add(em(flor(c), Math.cos(a) * 0.41, -0.02 + Math.sin(a) * 0.41, 0.14));
+  } else if (enfeite === 'concha') {
+    cab.add(em(forma(Array.from({ length: 9 }, (_, i) => { const a = Math.PI * (i / 8); return [Math.cos(a) * 0.18, Math.sin(a) * 0.18]; }).concat([[0, -0.04]]), 0.04, '#ffd0e0'), 0, 0.46, 0.1));
+    cab.add(em(bola(0.045, '#ffffff', 1, 1, 1, 0.3), 0.2, 0.36, 0.2));
+  } else if (enfeite === 'floco') {
+    const f = new THREE.Group(); f.position.set(0, 0.5, 0.12); cab.add(f);
+    for (let i = 0; i < 3; i++) f.add(em(caixa(0.32, 0.04, 0.03, '#ffffff', 0.015, 0.25), 0, 0, 0, 0, 0, (i * Math.PI) / 3));
+    f.add(bola(0.05, '#bfe8ff', 1, 1, 1, 0.3));
+  }
+  // varinha na mão
+  const v = new THREE.Group(); v.position.set(0, -0.32, 0.05); bracos[1].add(v);
+  v.add(em(cil(0.02, 0.02, 0.4, '#ffffff', 10), 0, 0.15, 0.08, 0.6, 0, 0));
+  const ponta = varinha === 'estrela' || varinha === 'floco' ? estrela(0.09, '#ffd45a', 0.03, 0.35) : varinha === 'flor' ? flor('#ff8fc8') : forma(Array.from({ length: 9 }, (_, i) => { const a = Math.PI * (i / 8); return [Math.cos(a) * 0.08, Math.sin(a) * 0.08]; }).concat([[0, -0.02]]), 0.03, '#ffd0e0');
+  v.add(em(ponta, 0, 0.33, 0.2, 0.6, 0, 0));
+  b.userData.pose = 'princesa'; b.userData.saia = saia;
+  return b;
+}
+function flor(cor) { const g = new THREE.Group(); for (let i = 0; i < 5; i++) { const a = (i / 5) * Math.PI * 2; g.add(em(bola(0.045, cor, 1, 1, 0.5), Math.cos(a) * 0.05, Math.sin(a) * 0.05, 0)); } g.add(em(bola(0.035, '#ffd45a', 1, 1, 0.6), 0, 0, 0.02)); return g; }
+
+function heroi(cor, corEmblema, emblema) {
+  const b = boneco({ camisa: cor, calca: cor, luvas: escuro(cor, 0.35), botas: escuro(cor, 0.35), cabelo: '#2e2018' });
+  const { tronco, cab } = b.userData;
+  tronco.add(em(caixa(0.47, 0.07, 0.35, corEmblema, 0.03), 0, 0.02, 0));
+  tronco.add(em(caixa(0.1, 0.09, 0.03, escuro(cor, 0.3), 0.02), 0, 0.02, 0.18));
+  const em2 = emblema === 'raio' ? raio(0.1, corEmblema) : emblema === 'estrela' ? estrela(0.11, corEmblema) : emblema === 'coracao' ? coracao(0.9, corEmblema) : folha(0.12, corEmblema);
+  tronco.add(em(caixa(0.26, 0.24, 0.02, '#ffffff', 0.08), 0, 0.22, 0.17));
+  tronco.add(em(em2, 0, 0.22, 0.19));
+  // máscara nos olhos
+  cab.add(em(caixa(0.74, 0.16, 0.05, escuro(cor, 0.45), 0.05), 0, -0.02, 0.32));
+  for (const s of [-1, 1]) { cab.add(em(bola(0.075, '#231a28', 0.85, 1.1, 0.5), s * 0.15, -0.04, 0.35)); cab.add(em(bola(0.024, '#ffffff', 1, 1, 0.5), s * 0.15 + 0.025, 0, 0.375)); }
+  // capa que balança
+  // capa presa nos ombros por uma gola que encosta no tronco
+  const capa = new THREE.Group(); capa.position.set(0, 0.38, -0.17); tronco.add(capa);
+  const pano = caixa(0.58, 0.74, 0.06, escuro(cor, 0.15), 0.03); pano.position.set(0, -0.37, -0.02); capa.add(pano);
+  capa.add(em(caixa(0.6, 0.1, 0.12, corEmblema, 0.04), 0, 0, 0.04));
+  for (const s of [-1, 1]) capa.add(em(bola(0.05, corEmblema, 1, 1, 0.8), s * 0.2, -0.01, 0.12));
+  b.userData.capa = capa; b.userData.pose = 'heroi';
+  return b;
+}
+function fazendeira(cor) {
+  const b = boneco({ camisa: '#d9483b', manga: '#d9483b', calca: cor, sapato: '#5a3a26', cabelo: '#a0522d', longo: true });
+  const { tronco, cab } = b.userData;
+  // xadrez da camisa
+  for (let i = 0; i < 4; i++) tronco.add(em(caixa(0.47, 0.025, 0.35, '#ffffff', 0.01), 0, 0.05 + i * 0.1, 0));
+  // macacão: peito e alças
+  tronco.add(em(caixa(0.3, 0.22, 0.03, cor, 0.04), 0, 0.15, 0.17));
+  for (const s of [-1, 1]) tronco.add(em(caixa(0.06, 0.24, 0.03, cor, 0.02), s * 0.12, 0.3, 0.17));
+  tronco.add(em(caixa(0.47, 0.16, 0.35, cor, 0.06), 0, 0.03, 0));
+  chapeuPalha(cab);
+  b.userData.pose = 'acena';
+  return b;
+}
+function chapeuPalha(cab) {
+  cab.add(em(cil(0.62, 0.62, 0.05, '#f0cf6a'), 0, 0.38, 0));
+  cab.add(em(cil(0.3, 0.36, 0.26, '#f0cf6a', 24), 0, 0.52, 0));
+  cab.add(em(cil(0.365, 0.365, 0.06, '#d9483b', 24), 0, 0.43, 0));
+}
+function vaqueira(cor) {
+  const b = boneco({ camisa: '#f2e6c8', manga: '#f2e6c8', calca: '#3f6fb8', botas: cor, cabelo: '#4a2c1a', longo: true });
+  const { tronco, cab } = b.userData;
+  for (const s of [-1, 1]) tronco.add(em(caixa(0.16, 0.4, 0.03, cor, 0.03), s * 0.15, 0.19, 0.17));
+  tronco.add(em(forma([[-0.14, 0.05], [0.14, 0.05], [0, -0.12]], 0.03, '#d9483b'), 0, 0.33, 0.19));
+  cab.add(em(cil(0.6, 0.6, 0.05, escuro(cor, 0.1)), 0, 0.37, 0, 0.12, 0, 0));
+  cab.add(em(cil(0.28, 0.33, 0.28, escuro(cor, 0.1), 24), 0, 0.52, 0));
+  cab.add(em(cil(0.335, 0.335, 0.05, '#3b2a1e', 24), 0, 0.42, 0));
+  b.userData.pose = 'acena';
+  return b;
+}
+function astronauta(cor) {
+  const b = boneco({ camisa: cor, calca: cor, luvas: '#b9c0c8', botas: '#b9c0c8' });
+  const { tronco, cab } = b.userData;
+  tronco.add(em(caixa(0.22, 0.14, 0.03, '#3b4250', 0.03), 0, 0.22, 0.17));
+  for (const [x, c] of [[-0.06, '#ff5a5a'], [0, '#ffd45a'], [0.06, '#5aff8a']]) tronco.add(em(bola(0.022, c, 1, 1, 0.5, 0.5), x, 0.22, 0.19));
+  tronco.add(em(caixa(0.36, 0.4, 0.18, '#d6dde2', 0.08), 0, 0.2, -0.25));
+  const vidro = new THREE.Mesh(gBola, new THREE.MeshPhysicalMaterial({ color: '#cfe8ff', roughness: 0.05, transmission: 0.0, transparent: true, opacity: 0.32, clearcoat: 1 }));
+  vidro.scale.setScalar(0.52); vidro.position.y = 0.02; cab.add(vidro);
+  cab.add(em(new THREE.Mesh(new THREE.TorusGeometry(0.4, 0.06, 10, 30), mat('#d6dde2')), 0, -0.36, 0, Math.PI / 2, 0, 0));
+  b.userData.pose = 'flutua';
+  return b;
+}
+function dino(cor) {
+  const b = boneco({ camisa: cor, calca: cor, luvas: claro(cor, 0.2), botas: escuro(cor, 0.25), semCabelo: true });
+  const { tronco, cab } = b.userData;
+  tronco.add(em(caixa(0.3, 0.3, 0.03, '#fff3c8', 0.08), 0, 0.17, 0.17));
+  // capuz de dino com dentinhos e espinhos
+  cab.add(em(caixa(0.82, 0.36, 0.76, cor, 0.17), 0, 0.24, -0.02));
+  for (let i = 0; i < 5; i++) cab.add(em(cil(0, 0.045, 0.08, '#ffffff', 6), -0.28 + i * 0.14, 0.04, 0.37, Math.PI, 0, 0));
+  for (const s of [-1, 1]) cab.add(em(bola(0.08, '#ffffff', 1, 1, 0.6), s * 0.18, 0.36, 0.3));
+  for (const s of [-1, 1]) cab.add(em(bola(0.04, '#231a28', 1, 1, 0.6), s * 0.18, 0.37, 0.35));
+  for (let i = 0; i < 4; i++) cab.add(em(cil(0, 0.08, 0.16, escuro(cor, 0.3), 4), 0, 0.42 - i * 0.12, -0.12 - i * 0.12, -0.5, 0, 0));
+  // rabo
+  const rabo = new THREE.Group(); rabo.position.set(0, 0.04, -0.17); tronco.add(rabo);
+  for (let i = 0; i < 4; i++) rabo.add(em(bola(0.11 - i * 0.02, cor), 0, -0.04 - i * 0.04, -0.08 - i * 0.12));
+  b.userData.rabo = rabo; b.userData.pose = 'ruge';
+  return b;
+}
+function confeiteira(cor) {
+  const b = boneco({ camisa: '#ffffff', calca: cor, cabelo: '#7a4a28', longo: true });
+  const { tronco, cab } = b.userData;
+  tronco.add(em(caixa(0.36, 0.38, 0.03, cor, 0.04), 0, 0.15, 0.17));
+  for (let i = 0; i < 8; i++) tronco.add(em(caixa(0.05, 0.015, 0.02, ['#ff5a8a', '#5ad8ff', '#ffd45a', '#7cff8a'][i % 4], 0.006), -0.12 + (i % 4) * 0.08, 0.06 + Math.floor(i / 4) * 0.12, 0.19, 0, 0, i));
+  cab.add(em(caixa(0.6, 0.12, 0.55, '#ffffff', 0.05), 0, 0.42, 0));
+  cab.add(em(bola(0.3, '#ffffff', 1.1, 0.8, 1), 0, 0.62, 0));
+  cab.add(em(bola(0.06, '#e8202a', 1, 1, 1, 0.1), 0, 0.88, 0));
+  b.userData.pose = 'acena';
+  return b;
+}
+function cientista(cor) {
+  const b = boneco({ camisa: cor, calca: '#3f6fb8', cabelo: '#2e2018' });
+  const { tronco, cab } = b.userData;
+  tronco.add(em(caixa(0.48, 0.5, 0.36, cor, 0.12), 0, 0.12, 0));
+  tronco.add(em(caixa(0.1, 0.12, 0.03, '#d6dde2', 0.02), 0.13, 0.25, 0.19));
+  tronco.add(em(cil(0.012, 0.012, 0.1, '#2f6fd8', 8), 0.11, 0.33, 0.2));
+  for (const s of [-1, 1]) cab.add(em(new THREE.Mesh(new THREE.TorusGeometry(0.1, 0.025, 8, 20), mat('#3b4250')), s * 0.15, -0.04, 0.35));
+  cab.add(em(caixa(0.12, 0.03, 0.03, '#3b4250', 0.01), 0, -0.04, 0.35));
+  b.userData.pose = 'acena';
+  return b;
+}
+function guardia(cor) {
+  const b = boneco({ camisa: cor, calca: escuro(cor, 0.3), cabelo: '#3a2a1e', longo: true });
+  const { tronco, cab } = b.userData;
+  cab.add(em(new THREE.Mesh(new THREE.TorusGeometry(0.36, 0.05, 10, 30), mat('#3f8a2c')), 0, 0.33, 0, Math.PI / 2, 0, 0));
+  for (let i = 0; i < 7; i++) { const a = (i / 7) * Math.PI * 2; cab.add(em(flor(['#ff8fc8', '#ffffff', '#ffd45a'][i % 3]), Math.sin(a) * 0.36, 0.37, Math.cos(a) * 0.36)); }
+  const capa = new THREE.Group(); capa.position.set(0, 0.4, -0.18); tronco.add(capa);
+  for (let i = 0; i < 6; i++) capa.add(em(folha(0.2, i % 2 ? cor : escuro(cor, 0.2)), (i % 3 - 1) * 0.17, -0.25 - Math.floor(i / 3) * 0.32, 0));
+  b.userData.capa = capa; b.userData.pose = 'acena';
+  return b;
+}
+function lanterneira(cor) {
+  const b = boneco({ camisa: cor, calca: '#2d3a4f', cabelo: '#c9a45c', longo: true });
+  const { tronco, cab, bracos } = b.userData;
+  cab.add(em(caixa(0.84, 0.5, 0.78, cor, 0.2), 0, 0.12, -0.06));
+  cab.add(em(caixa(0.84, 0.32, 0.12, escuro(cor, 0.2), 0.06), 0, 0.33, 0.33));
+  const l = new THREE.Group(); l.position.set(0, -0.36, 0.06); bracos[1].add(l);
+  l.add(em(caixa(0.14, 0.16, 0.14, '#ffe58a', 0.05, 1.2), 0, -0.08, 0));
+  l.add(em(caixa(0.16, 0.03, 0.16, '#3b2a1e', 0.01), 0, 0.02, 0));
+  b.userData.pose = 'acena';
+  return b;
+}
+
+// ---------- miniaturas: o próprio boneco renderizado ----------
+const rMini = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
+rMini.setPixelRatio(1); rMini.setSize(168, 192); rMini.outputColorSpace = THREE.SRGBColorSpace; rMini.toneMapping = THREE.ACESFilmicToneMapping;
+const cMini = new THREE.Scene();
+cMini.add(new THREE.HemisphereLight('#ffffff', '#c9a87a', 1.6));
+const sMini = new THREE.DirectionalLight('#fff4e0', 2.2); sMini.position.set(2, 4, 5); cMini.add(sMini);
+const camMini = new THREE.PerspectiveCamera(30, 168 / 192, 0.1, 20); camMini.position.set(1.1, 1.3, 4.4); camMini.lookAt(0, 0.95, 0);
+function miniatura(f, cor) {
+  const b = f.montar(cor); b.rotation.y = -0.35; cMini.add(b);
+  rMini.render(cMini, camMini);
+  cMini.remove(b);
+  return rMini.domElement.toDataURL();
+}
+
+// ---------- palco ----------
+const palcoEl = document.getElementById('palco');
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+renderer.setPixelRatio(Math.min(2, devicePixelRatio));
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+palcoEl.prepend(renderer.domElement);
+const cena = new THREE.Scene();
+cena.add(new THREE.HemisphereLight('#eaf4ff', '#9ac07a', 1.3));
+const sol = new THREE.DirectionalLight('#fff4e0', 2.3); sol.position.set(3, 6, 4); sol.castShadow = true; sol.shadow.mapSize.set(1024, 1024); sol.shadow.radius = 4;
+Object.assign(sol.shadow.camera, { left: -3, right: 3, top: 3, bottom: -3 });
+cena.add(sol);
+const pedestal = new THREE.Mesh(gCaixa(2.2, 0.24, 2.2, 0.1), mat('#f3e6cc')); pedestal.position.y = -0.12; pedestal.receiveShadow = true; cena.add(pedestal);
+const camera = new THREE.PerspectiveCamera(30, 1, 0.1, 50);
+let atual = null, giro = -0.4, arrastando = false, ultimoX = 0, inicioPose = 0;
+palcoEl.addEventListener('pointerdown', (e) => { arrastando = true; ultimoX = e.clientX; palcoEl.setPointerCapture(e.pointerId); });
+palcoEl.addEventListener('pointermove', (e) => { if (arrastando) { giro += (e.clientX - ultimoX) * 0.01; ultimoX = e.clientX; } });
+palcoEl.addEventListener('pointerup', () => (arrastando = false));
+palcoEl.addEventListener('pointercancel', () => (arrastando = false));
+function vestir(f, cor) {
+  if (atual) cena.remove(atual);
+  atual = f.montar(cor); cena.add(atual);
+  inicioPose = relogio.elapsedTime;
+  document.getElementById('nomeFantasia').textContent = f.nome;
+}
+function tamanho() { const r = palcoEl.getBoundingClientRect(); renderer.setSize(r.width, r.height, false); camera.aspect = r.width / Math.max(1, r.height); camera.updateProjectionMatrix(); }
+addEventListener('resize', tamanho); tamanho();
+const relogio = new THREE.Clock();
+function quadro() {
+  const t = relogio.elapsedTime, f = t - inicioPose;
+  if (!arrastando && !reduzir) giro += 0.004;
+  const longe = camera.aspect < 0.9 ? 6.4 : 5.2;
+  camera.position.set(0, 1.45, longe); camera.lookAt(0, 0.9, 0);
+  if (atual) {
+    const u = atual.userData;
+    atual.rotation.y = giro;
+    // pose de apresentação ao vestir (1,6 s), depois respira
+    const p = Math.max(0, 1 - f / 1.6);
+    u.corpo.position.y = Math.abs(Math.sin(f * 5)) * 0.12 * p;
+    u.tronco.scale.y = 1 + Math.sin(t * 2.2) * 0.012;
+    const [be, bd] = u.bracos;
+    if (u.pose === 'princesa') { atual.rotation.y = giro + (reduzir ? 0 : Math.sin(Math.min(1, f / 1.2) * Math.PI) * Math.PI * 2 * (f < 1.2 ? f / 1.2 : 1)); be.rotation.z = -0.5; bd.rotation.x = -0.6; if (u.saia) u.saia.scale.set(1 + 0.08 * p, 1, 1 + 0.08 * p); }
+    if (u.pose === 'heroi') { be.rotation.z = -2.6 * Math.min(1, f / 0.3) * (f < 1.6 ? 1 : 0) - (f >= 1.6 ? 0.25 : 0); bd.rotation.z = f < 1.6 ? 0.3 : 0.25; }
+    if (u.pose === 'acena') { bd.rotation.z = f < 1.6 ? 2.6 + Math.sin(f * 14) * 0.3 : 0.1; }
+    if (u.pose === 'ruge') { u.cab.rotation.x = f < 1.6 ? -0.25 * Math.sin(f * 6) : 0; be.rotation.x = bd.rotation.x = f < 1.6 ? -1.2 : 0; }
+    if (u.pose === 'flutua') { u.corpo.position.y = 0.12 + Math.sin(t * 1.6) * 0.06; be.rotation.z = -0.4; bd.rotation.z = 0.4; }
+    if (u.capa) u.capa.rotation.x = 0.1 + Math.sin(t * 3) * 0.05 + p * 0.3;
+    if (u.rabo) u.rabo.rotation.y = Math.sin(t * 4) * 0.3;
+  }
+  renderer.render(cena, camera);
+  requestAnimationFrame(quadro);
+}
+
+// ---------- painel ----------
+const cartas = document.getElementById('cartas'), coresEl = document.getElementById('cores'), mundosEl = document.getElementById('mundos'), aviso = document.getElementById('aviso');
+let aba = 'princesas', mundo = 'Rancho Alegre', escolhida = FANTASIAS.princesas[0], corEscolhida = escolhida.cores[0];
+const lista = () => (aba === 'mundo' ? FANTASIAS.mundo[mundo] : FANTASIAS[aba]);
+function desenharMundos() {
+  mundosEl.innerHTML = '';
+  for (const m of Object.keys(FANTASIAS.mundo)) {
+    const b = document.createElement('button'); b.type = 'button'; b.textContent = m; b.setAttribute('aria-pressed', String(m === mundo));
+    b.addEventListener('click', () => { mundo = m; desenharMundos(); escolher(lista()[0]); desenharCartas(); avisoMundo(); });
+    mundosEl.appendChild(b);
+  }
+}
+function desenharCartas() {
+  cartas.innerHTML = '';
+  for (const f of lista()) {
+    const b = document.createElement('button'); b.type = 'button'; b.setAttribute('aria-pressed', String(f === escolhida));
+    const img = new Image(); img.alt = ''; img.src = miniatura(f, f.cores[0]);
+    b.append(img, document.createTextNode(f.nome));
+    if (aba === 'mundo') { const s = document.createElement('span'); s.className = 'selo'; s.textContent = 'tema'; b.appendChild(s); }
+    b.addEventListener('click', () => { escolher(f); desenharCartas(); });
+    cartas.appendChild(b);
+  }
+}
+function desenharCores() {
+  coresEl.innerHTML = '<span>Cor:</span>';
+  for (const c of escolhida.cores) {
+    const b = document.createElement('button'); b.type = 'button'; b.style.background = c; b.setAttribute('aria-label', 'Cor ' + c); b.setAttribute('aria-pressed', String(c === corEscolhida));
+    b.addEventListener('click', () => { corEscolhida = c; vestir(escolhida, c); desenharCores(); });
+    coresEl.appendChild(b);
+  }
+}
+function escolher(f) { escolhida = f; corEscolhida = f.cores[0]; vestir(f, corEscolhida); desenharCores(); }
+document.querySelectorAll('[data-aba]').forEach((b) => b.addEventListener('click', () => {
+  aba = b.dataset.aba;
+  document.querySelectorAll('[data-aba]').forEach((o) => o.setAttribute('aria-selected', String(o === b)));
+  mundosEl.hidden = aba !== 'mundo';
+  avisoMundo();
+  escolher(lista()[0]); desenharCartas();
+}));
+function avisoMundo() {
+  aviso.textContent = aba === 'mundo' ? `Fantasias do tema ${mundo}: servem em qualquer mundo. Ao criar um mundo deste tema, o jogo sugere vestir uma delas.` : 'Todas as fantasias servem para qualquer personagem.';
+}
+desenharMundos(); desenharCartas(); escolher(escolhida); quadro();
+</script>
