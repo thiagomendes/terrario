@@ -62,8 +62,15 @@ export function criarModoFoto(op: OpcoesModoFoto) {
     ip.colorCurves = c;
     pipeline.bloomWeight = f === 'sonho' ? 0.6 : 0.22;
   }
+  // quem mostra a interface do modo foto (esconder o HUD, o painel) ouve aqui: assim
+  // qualquer caminho que ligue o modo (tecla P, botão, depuração) esconde o HUD igual
+  const ouvintes = new Set<(ativo: boolean) => void>();
   const api = {
     ativo: () => modoFoto,
+    aoMudar(f: (ativo: boolean) => void): () => void {
+      ouvintes.add(f);
+      return () => ouvintes.delete(f);
+    },
     alternar: () => {
       modoFoto = !modoFoto;
       if (modoFoto) {
@@ -75,6 +82,7 @@ export function criarModoFoto(op: OpcoesModoFoto) {
         definirFiltro('natural');
         cameraVisao.fov = camera.fov;
       }
+      for (const f of ouvintes) f(modoFoto);
       return modoFoto;
     },
     filtro: definirFiltro,

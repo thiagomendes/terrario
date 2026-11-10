@@ -444,11 +444,14 @@ function ligarFoto(app: HTMLElement, cena: ReturnType<typeof criarCena>): void {
     },
     sair: () => alternar(),
   });
-  function alternar(): void {
-    const ativo = foto.alternar();
+  // o painel e o HUD seguem o modo foto, ligado por onde for (tecla, botão ou depuração)
+  foto.aoMudar((ativo) => {
     painel.mostrar(ativo, cena.estado.hora);
     if (ativo) document.body.dataset.overlay = 'foto';
     else if (document.body.dataset.overlay === 'foto') delete document.body.dataset.overlay;
+  });
+  function alternar(): void {
+    foto.alternar();
   }
   window.addEventListener('keydown', (e) => {
     if ((e.target as HTMLElement)?.closest?.('input, textarea') || e.repeat) return;

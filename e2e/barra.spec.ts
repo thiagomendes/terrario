@@ -65,3 +65,31 @@ for (const vp of VIEWPORTS) {
     expect(erros).toEqual([]);
   });
 }
+
+test('modo foto esconde a interface por qualquer caminho (tecla P e depuração)', async ({
+  page,
+}) => {
+  test.setTimeout(120_000);
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await page.goto('/');
+  await page.locator('.entrada').waitFor();
+  await page.waitForFunction(() => !!window.__brumaluz?.modoFoto);
+  await page.evaluate(() => document.querySelector('.entrada')?.setAttribute('hidden', ''));
+  const barra = page.locator('[role="toolbar"]');
+  await expect(barra).toBeVisible();
+  // pela depuração (o caminho das capturas de tema): a barra e o HUD somem, o painel aparece
+  await page.evaluate(() => window.__brumaluz!.modoFoto!.alternar());
+  await expect(barra).toBeHidden();
+  await expect(page.locator('.hud').first()).toBeHidden();
+  await expect(page.locator('.painel-foto')).toBeVisible();
+  expect(await page.evaluate(() => document.body.dataset.overlay)).toBe('foto');
+  await page.evaluate(() => window.__brumaluz!.modoFoto!.alternar());
+  await expect(barra).toBeVisible();
+  await expect(page.locator('.painel-foto')).toBeHidden();
+  // pela tecla P: o mesmo
+  await page.keyboard.press('KeyP');
+  await expect(barra).toBeHidden();
+  await page.keyboard.press('KeyP');
+  await expect(barra).toBeVisible();
+  expect(await page.evaluate(() => document.body.dataset.overlay ?? '')).toBe('');
+});
