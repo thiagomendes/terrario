@@ -589,6 +589,14 @@ function ligarDiario(app: HTMLElement, cena: ReturnType<typeof criarCena>): void
   ouvir('colheu', (d) => {
     if ((d as { madura: boolean }).madura) reg('colheu');
   });
+  // criação (spec 013): deu comida e o bicho virou criado
+  ouvir('criou', () => reg('criou'));
+  // a criatura da noite mansa (a coruja do Rancho) fugiu de perto: espantar conta como a
+  // missão da criatura da noite (lá ela não se derrota, se espanta)
+  ouvir('espantou', (t) => {
+    reg(`espantou:${t}`);
+    if (t === 'espectro') reg('derrotou:espectro');
+  });
   let ultimoBioma = '';
   setInterval(() => {
     const b = cena.estado.biomaAtual;

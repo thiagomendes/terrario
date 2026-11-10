@@ -138,6 +138,7 @@ export function sanear(c: unknown): Comando | null {
         : null;
     case 'atacar':
     case 'domar':
+    case 'alimentar':
       return inteiro(o.criatura, 0, Number.MAX_SAFE_INTEGER) && inteiro(o.slot, 0, SLOTS - 1)
         ? (o as unknown as Comando)
         : null;

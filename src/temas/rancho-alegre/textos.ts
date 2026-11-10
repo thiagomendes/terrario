@@ -214,6 +214,10 @@ export const TEXTOS_RANCHO: TextosTema = {
     plantar: { titulo: 'Primeira semente', descricao: 'Plante uma semente na terra arada' },
     colher: { titulo: 'Dia de colheita', descricao: 'Colha uma planta madura' },
     pao: { titulo: 'Pão quentinho', descricao: 'Faça um pão caseiro com 3 feixes de trigo' },
+    criar: {
+      titulo: 'Bicho do sítio',
+      descricao: 'Dê trigo a uma vaca malhada (ou milho a uma galinha caipira)',
+    },
   },
   capitulos: {
     'Primeiros passos': 'Chegada no sítio',

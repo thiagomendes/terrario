@@ -222,6 +222,10 @@ export const TEXTOS_DOCE: TextosTema = {
     plantar: { titulo: 'Semente docinha', descricao: 'Plante uma semente no canteiro de chocolate' },
     colher: { titulo: 'Colheita docinha', descricao: 'Colha uma planta madura' },
     pao: { titulo: 'Pão de ló', descricao: 'Faça um pão de ló com 3 brotos-doces' },
+    criar: {
+      titulo: 'Amigo docinho',
+      descricao: 'Dê broto-doce a uma ovelha de marshmallow (ou sementes a um coelho de gelatina)',
+    },
   },
   capitulos: {
     'Primeiros passos': 'Primeiras receitas',

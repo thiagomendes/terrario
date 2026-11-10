@@ -218,6 +218,10 @@ export const TEXTOS_LUNARES: TextosTema = {
     plantar: { titulo: 'Primeira muda', descricao: 'Plante uma semente no canteiro hidropônico' },
     colher: { titulo: 'Colheita espacial', descricao: 'Colha uma planta madura' },
     pao: { titulo: 'Pão de astronauta', descricao: 'Faça um pão com 3 trigos de estufa' },
+    criar: {
+      titulo: 'Rebanho da estação',
+      descricao: 'Dê trigo de estufa a um rover-pastor (ou sementes a um coelho-lunar)',
+    },
   },
   capitulos: {
     'Primeiros passos': 'Pouso',

@@ -216,6 +216,10 @@ export const TEXTOS_MATA: TextosTema = {
     plantar: { titulo: 'Semente da mata', descricao: 'Plante arroz na leira de terra roxa' },
     colher: { titulo: 'Colheita da mata', descricao: 'Colha uma planta madura' },
     pao: { titulo: 'Bolinho caseiro', descricao: 'Faça um bolinho com 3 feixes de arroz' },
+    criar: {
+      titulo: 'Amigo da mata',
+      descricao: 'Dê arroz a uma capivara (ou sementes a um sapo-cururu)',
+    },
   },
   capitulos: {
     'Primeiros passos': 'Trilha de entrada',

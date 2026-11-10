@@ -2,6 +2,7 @@ import { colideCorpo, type Solido } from '../player/fisica';
 import type { Gerador } from '../audio/variacao';
 import type { Drop } from './drops';
 import type { Profissao } from '../world/povoado';
+import { comeEsse, PARA_SEGUINDO, RAIO_ATRAIR, RAIO_CASA, RAIO_SEGUIR } from './criacao';
 
 /** Os cinco animais (cada tema dá pele, nome e voz a eles). */
 export type TipoCriatura = 'cervo' | 'coelho' | 'peixe' | 'espectro' | 'raposa';
@@ -128,6 +129,17 @@ export interface Criatura {
    * Chave "povoado:cercado"; como os moradores, não é salvo e renasce com o sítio.
    */
   curral?: string;
+  /**
+   * Spec 013: miolo do cercado (células de x0,z0 a x1,z1, inclusivo). O bicho do cercado só
+   * escolhe destinos dentro dele (não sai pela porteira passeando).
+   */
+  cerca?: [number, number, number, number];
+  /** Spec 013: ganhou comida de alguém. Não some, é salvo e passeia perto da casa. */
+  criado?: boolean;
+  /** Onde o bicho criado mora (ganhou comida ou parou de seguir): passeia até 6 blocos dela. */
+  casa?: [number, number];
+  /** Galinha criada: segundos até o próximo ovo. */
+  ovo?: number;
   /** Tempo andando para um destino sem chegar mais perto (anti-trava do morador). */
   semProgresso?: number;
   menorDistancia?: number;
@@ -192,10 +204,13 @@ export interface Jogador {
   vivo: boolean;
   /** Modo criativo: hostis ignoram. */
   criativo: boolean;
+  /** Item na mão (do inventário do núcleo, nunca do que o cliente diz): o bicho segue a comida. */
+  mao?: string | null;
 }
 
 export interface EventoCriatura {
-  tipo: 'ataque' | 'morte' | 'ferida' | 'domada' | 'som';
+  /** 'espantada': a criatura da noite mansa fugiu deste jogador; 'ovo': a galinha botou. */
+  tipo: 'ataque' | 'morte' | 'ferida' | 'domada' | 'som' | 'espantada' | 'ovo';
   criatura: Criatura;
   /** Ataque: em quem (o jogador mais perto da criatura). */
   jogador?: Jogador;
@@ -447,6 +462,58 @@ function desistir(c: Criatura, rng: Gerador, direcao: number): void {
     c.alvoX = c.x + Math.sin(c.desvioYaw) * 6;
     c.alvoZ = c.z + Math.cos(c.desvioYaw) * 6;
     c.tempoEstado = Math.max(c.tempoEstado, 2);
+    // o desvio também não leva o bicho do cercado (ou o criado) para longe de casa
+    limitarAoLar(c);
+  }
+}
+
+/**
+ * Bicho do cercado ou criado: o destino fica dentro do cercado e a até 6 blocos da casa.
+ * Sem cercado nem casa, nada muda.
+ */
+export function limitarAoLar(c: Criatura): void {
+  if (c.cerca) {
+    const [x0, z0, x1, z1] = c.cerca;
+    const m = CRIATURAS[c.tipo].mw + 0.15;
+    c.alvoX = Math.min(Math.max(c.alvoX, x0 + m), x1 + 1 - m);
+    c.alvoZ = Math.min(Math.max(c.alvoZ, z0 + m), z1 + 1 - m);
+  }
+  if (c.casa) {
+    const dx = c.alvoX - c.casa[0];
+    const dz = c.alvoZ - c.casa[1];
+    const d = Math.hypot(dx, dz);
+    if (d > RAIO_CASA) {
+      c.alvoX = c.casa[0] + (dx / d) * RAIO_CASA;
+      c.alvoZ = c.casa[1] + (dz / d) * RAIO_CASA;
+    }
+  }
+}
+
+/** Está longe de casa (ou fora do cercado)? Então volta, sem esperar o próximo passeio. */
+function foraDoLar(c: Criatura): boolean {
+  if (c.cerca) {
+    const [x0, z0, x1, z1] = c.cerca;
+    if (c.x < x0 || c.x > x1 + 1 || c.z < z0 || c.z > z1 + 1) return true;
+  }
+  return !!c.casa && Math.hypot(c.x - c.casa[0], c.z - c.casa[1]) > RAIO_CASA + 1;
+}
+
+/**
+ * O bicho criado parou de seguir: a casa passa a ser aqui. Levado para fora do cercado, deixa
+ * de ser do cercado (o sítio pode chamar outro para o lugar dele).
+ */
+export function mudarCasa(c: Criatura): void {
+  c.casa = [c.x, c.z];
+  sairDoCercadoSeFora(c);
+}
+
+/** Fora do miolo do cercado (levado pela porteira): não é mais do cercado. */
+function sairDoCercadoSeFora(c: Criatura): void {
+  if (!c.cerca) return;
+  const [x0, z0, x1, z1] = c.cerca;
+  if (c.x < x0 || c.x > x1 + 1 || c.z < z0 || c.z > z1 + 1) {
+    c.cerca = undefined;
+    c.curral = undefined;
   }
 }
 
@@ -822,6 +889,8 @@ export function passoCriatura(
   rng: Gerador,
   hostisPerto: readonly Criatura[],
   noite: number,
+  /** Spec 013: a criatura da noite é mansa (só pia e foge, nunca ataca). */
+  mansa = false,
 ): EventoCriatura[] {
   const def = CRIATURAS[c.tipo];
   const ev: EventoCriatura[] = [];
@@ -881,6 +950,33 @@ export function passoCriatura(
           }
           break;
         }
+        // spec 013: quem segura a comida perto é seguido (para a uns 2 blocos)
+        const dh = Math.hypot(dxj, dzj);
+        const raio = c.estado === 'seguir' ? RAIO_SEGUIR : RAIO_ATRAIR;
+        if (j.vivo && comeEsse(c.tipo, j.mao) && dh < raio && Math.abs(j.y - c.y) < 4) {
+          c.estado = 'seguir';
+          if (dh > PARA_SEGUINDO + 0.3) {
+            const k = dh > 0.01 ? PARA_SEGUINDO / dh : 0;
+            andarPara(c, def, j.x - dxj * k, j.z - dzj * k, dh > 5 ? 1 : 0.7);
+          } else {
+            frear(c, 0.6);
+            c.yawAlvo = Math.atan2(dxj, dzj);
+          }
+          if (c.tipo === 'coelho' && c.noChao && c.recargaPulo <= 0 && dh > 3) {
+            c.vy = 4.5;
+            c.noChao = false;
+            c.recargaPulo = 0.45;
+          }
+          break;
+        }
+        if (c.estado === 'seguir') {
+          // a comida saiu da mão (ou ficou longe): para aqui; o criado passa a morar aqui
+          c.estado = 'parado';
+          c.tempoEstado = 2;
+          // levado para fora do cercado: deixa de ser do cercado (criado ou não)
+          if (c.criado) mudarCasa(c);
+          else sairDoCercadoSeFora(c);
+        }
         if (c.tempoEstado <= 0) {
           if (rng() < 0.4) {
             c.estado = 'parado';
@@ -889,7 +985,17 @@ export function passoCriatura(
             c.estado = 'vagar';
             c.tempoEstado = 3 + rng() * 4;
             sortearAlvo(c, m, rng, 14);
+            limitarAoLar(c);
           }
+        }
+        if (c.estado === 'parado' && foraDoLar(c)) {
+          // empurrado ou fugido para longe de casa: volta (o destino fica dentro do lar)
+          c.estado = 'vagar';
+          c.tempoEstado = 4;
+          c.alvoX = c.x;
+          c.alvoZ = c.z;
+          if (c.casa) [c.alvoX, c.alvoZ] = c.casa;
+          limitarAoLar(c);
         }
         if (c.estado === 'vagar') {
           if (andarPara(c, def, c.alvoX, c.alvoZ, 0.6) < 0.4) c.tempoEstado = 0;
@@ -915,12 +1021,48 @@ export function passoCriatura(
             ev.push({ tipo: 'morte', criatura: c, drops: [] });
           }
         }
+        // a mansa que o dia desfez não volta a voar (a de sempre fica como era: paridade)
+        if (mansa && c.estado === 'morrendo') break;
         if (luz >= 9) {
           c.estado = 'fugir';
           c.tempoEstado = 2;
         }
         if (c.estado === 'fugir' && c.tempoEstado > 0) {
           andarPara(c, def, c.x - dxj * 4, c.z - dzj * 4, 1.2);
+          break;
+        }
+        if (mansa) {
+          // spec 013: mansa (a coruja do Rancho) chega curiosa, pia e foge de quem chega
+          // perto; nunca persegue nem ataca
+          if (j.vivo && distJ < 4) {
+            c.estado = 'fugir';
+            c.tempoEstado = 2.5;
+            ev.push({ tipo: 'espantada', criatura: c });
+            ev.push({ tipo: 'som', criatura: c });
+            andarPara(c, def, c.x - dxj * 4, c.z - dzj * 4, 1.3);
+            break;
+          }
+          const dh = Math.hypot(dxj, dzj);
+          if (j.vivo && dh > 7 && dh < 16) {
+            // curiosa: chega a uns 7 blocos e fica olhando
+            c.estado = 'seguir';
+            if (andarPara(c, def, j.x - (dxj / dh) * 7, j.z - (dzj / dh) * 7, 0.45) < 0.5)
+              c.yawAlvo = Math.atan2(dxj, dzj);
+          } else {
+            if (c.estado !== 'vagar') {
+              c.estado = 'vagar';
+              c.tempoEstado = 0;
+            }
+            if (c.tempoEstado <= 0) {
+              c.tempoEstado = 3 + rng() * 3;
+              sortearAlvo(c, m, rng, 12);
+            }
+            if (dh <= 7) {
+              frear(c, 0.6);
+              c.yawAlvo = Math.atan2(dxj, dzj);
+            } else andarPara(c, def, c.alvoX, c.alvoZ, 0.5);
+          }
+          if (rng() < dt * 0.2) ev.push({ tipo: 'som', criatura: c });
           break;
         }
         if (j.vivo && !j.criativo && distJ < 18) {

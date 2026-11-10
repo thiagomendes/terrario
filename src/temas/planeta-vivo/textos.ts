@@ -213,6 +213,10 @@ export const TEXTOS_PLANETA: TextosTema = {
     plantar: { titulo: 'Muda plantada', descricao: 'Plante uma semente no canteiro de pesquisa' },
     colher: { titulo: 'Amostra colhida', descricao: 'Colha uma planta madura' },
     pao: { titulo: 'Pão da base', descricao: 'Faça um pão com 3 grãos-estelares' },
+    criar: {
+      titulo: 'Bichinho da base',
+      descricao: 'Dê grão-estelar a uma lesma-pastora (ou sementes a uma pulga-bola)',
+    },
   },
   capitulos: {
     'Primeiros passos': 'Pouso',

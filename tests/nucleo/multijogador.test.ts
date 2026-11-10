@@ -471,3 +471,89 @@ describe('plantio com vários jogadores, na nuvem', () => {
     expect(inv(n, 'bia').contar(idDoBloco(Bloco.TABUAS))).toBe(4);
   });
 });
+
+/** Spec 013, critério 3: a criação na nuvem (sem confiar no cliente). */
+describe('criação com vários jogadores, na nuvem', () => {
+  function sitio() {
+    const n = nuvem();
+    n.comando('ana', { t: 'depurar', d: { f: 'hora', hora: 0.5 } });
+    n.comando('ana', { t: 'depurar', d: { f: 'pausarDia', pausar: true } });
+    const invocar = (tipo: 'cervo' | 'coelho', dx: number) => {
+      n.comando('ana', {
+        t: 'depurar',
+        d: { f: 'invocar', tipo, x: X + dx + 0.5, y: Y, z: Z + 2.5 },
+      });
+      const l = n.estado.populacao.lista;
+      return l[l.length - 1];
+    };
+    n.quadros();
+    return { n, invocar };
+  }
+
+  it('dar comida passa pelo saneamento e gasta do inventário do servidor', () => {
+    const { n, invocar } = sitio();
+    const vaca = invocar('cervo', 1);
+    inv(n, 'ana').definir(0, { item: 'trigo', qtd: 3 });
+    n.comando('ana', { t: 'alimentar', criatura: vaca.id, slot: 0 });
+    expect(vaca.criado).toBe(true);
+    expect(inv(n, 'ana').contar('trigo')).toBe(2);
+    n.passo();
+    const q = n.quadros();
+    // a Bia vê os corações (não é dela) e o bicho criado
+    expect(q.get('bia')!.eventos?.find((e) => e.e === 'alimentou')).toMatchObject({
+      id: vaca.id,
+      novo: true,
+      meu: false,
+    });
+    expect(q.get('ana')!.eventos?.find((e) => e.e === 'alimentou')).toMatchObject({ meu: true });
+    expect(q.get('bia')!.criaturas!.find((c) => c.id === vaca.id)?.criado).toBe(true);
+  });
+
+  it('o cliente não inventa comida: slot vazio, item de outro slot ou mensagem adulterada não valem', () => {
+    const { n, invocar } = sitio();
+    const vaca = invocar('cervo', 1);
+    inv(n, 'ana').definir(4, { item: 'trigo', qtd: 3 });
+    for (const ruim of [
+      { t: 'alimentar', criatura: vaca.id, slot: 0 },
+      { t: 'alimentar', criatura: vaca.id, slot: 99 },
+      { t: 'alimentar', criatura: vaca.id },
+      { t: 'alimentar', criatura: 'vaca', slot: 4 },
+      { t: 'alimentar', criatura: vaca.id + 0.5, slot: 4 },
+    ])
+      n.comando('ana', ruim as unknown as Comando);
+    expect(vaca.criado).toBeFalsy();
+    expect(inv(n, 'ana').contar('trigo')).toBe(3);
+    // a telemetria diz slot 4: agora o bicho segue (a mão vem do servidor)
+    n.comando('ana', tel(X + 0.5, Z + 0.5, { slot: 4 }));
+    for (let i = 0; i < 20; i++) n.passo();
+    expect(vaca.estado).toBe('seguir');
+  });
+
+  it('dois dão comida ao mesmo bicho: vira criado uma vez só, e só o primeiro gasta', () => {
+    const { n, invocar } = sitio();
+    const g = invocar('coelho', 1);
+    inv(n, 'ana').definir(0, { item: 'semente_trigo', qtd: 2 });
+    inv(n, 'bia').definir(0, { item: 'semente_milho', qtd: 2 });
+    n.comando('ana', { t: 'alimentar', criatura: g.id, slot: 0 });
+    n.comando('bia', { t: 'alimentar', criatura: g.id, slot: 0 });
+    expect(g.criado).toBe(true);
+    expect(inv(n, 'ana').contar('semente_trigo')).toBe(1);
+    expect(inv(n, 'bia').contar('semente_milho')).toBe(2);
+    expect(n.estado.populacao.criados).toBe(1);
+    const novos = [...n.quadros().values()]
+      .flatMap((q) => q.eventos ?? [])
+      .filter((e) => e.e === 'alimentou' && e.meu);
+    expect(novos.map((e) => (e as { novo: boolean }).novo)).toEqual([true, false]);
+  });
+
+  it('cada bicho segue quem segura a comida dele, mesmo com outro jogador mais perto', () => {
+    const { n, invocar } = sitio();
+    // a vaca está do lado da Bia; a Ana, a 5 blocos, tem o trigo
+    const vaca = invocar('cervo', 3);
+    n.comando('ana', tel(X - 2.5, Z + 0.5));
+    inv(n, 'ana').definir(0, { item: 'trigo', qtd: 3 });
+    for (let i = 0; i < 100; i++) n.passo();
+    const ana = n.estado.jogadores.get('ana')!.tel;
+    expect(Math.hypot(vaca.x - ana.x, vaca.z - ana.z)).toBeLessThan(3);
+  });
+});

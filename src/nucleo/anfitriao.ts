@@ -33,6 +33,7 @@ export function criarAnfitriao(
     versaoMundo: inicio.versaoMundo,
     dados: inicio.dados,
     confiarNoCliente: true,
+    noite: inicio.estilo?.noite,
   });
   nucleo.conectar(JOGADOR_LOCAL);
 
