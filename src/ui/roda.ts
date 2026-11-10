@@ -118,6 +118,8 @@ body.toque-ativo .roda button kbd { display: none; }
 body[data-overlay] .roda, body.modo-foto .roda, body.tela-titulo .roda { display: none; }
 /* roda aberta: os avisos dão licença (voltam quando ela fecha) */
 .toast-area.sob-roda, .legendas.sob-roda { opacity: 0; transition: opacity 0.15s; }
+/* tela baixa (celular deitado): a roda passa por cima da barra de itens; a barra dá licença */
+@media (max-height: 520px) { .barra.sob-roda { opacity: 0; pointer-events: none; transition: opacity 0.15s; } }
 @media (prefers-reduced-motion: reduce) { .roda button, .roda::before { transition: none; } }
 `;
 
@@ -203,9 +205,12 @@ export function criarRoda(op: OpcoesRoda, raiz: HTMLElement = document.body): Ro
     return bs;
   }
 
-  /** Os avisos dão licença enquanto a roda está aberta (só eles: nada de mexer no body). */
+  /**
+   * Os avisos (e, em tela baixa, a barra de itens) dão licença enquanto a roda está aberta
+   * (só eles: nada de mexer no body).
+   */
   function avisos(sob: boolean): void {
-    for (const a of document.querySelectorAll('.toast-area, .legendas'))
+    for (const a of document.querySelectorAll('.toast-area, .legendas, .barra'))
       a.classList.toggle('sob-roda', sob);
   }
 
