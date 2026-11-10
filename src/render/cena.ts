@@ -236,7 +236,15 @@ export interface EstadoDepuracao {
   /** Direção do astro fixo do tema (Terra, gigante gasoso), se houver. */
   astro?: number[];
   /** Povoados a até 900 blocos do jogador (centro da praça e altura do piso). */
-  povoados?: () => { id: string; cx: number; cz: number; h: number; moradores: number }[];
+  povoados?: () => {
+    id: string;
+    cx: number;
+    cz: number;
+    h: number;
+    moradores: number;
+    porteira?: [number, number];
+    foraPorteira?: [number, number];
+  }[];
   chunksCarregados: number;
   fps: number;
   escalaResolucao: number;
@@ -260,6 +268,8 @@ export interface EstadoDepuracao {
   slotAtivo?: number;
   destaqueVisivel?: boolean;
   malhasAtivas?: number;
+  /** Medição de desempenho: chamadas de desenho somadas desde o início, malhas na cena. */
+  desenho?: () => { chamadas: number; malhas: number; ativas: number };
   remalhasConcluidas?: number;
   /** Tempo da última edição até a malha do chunk aparecer (ms). */
   latenciaEdicaoMs?: number;
@@ -304,6 +314,8 @@ export interface EstadoDepuracao {
   modoFoto?: {
     ativo: () => boolean;
     alternar: () => boolean;
+    /** Avisa ao ligar e desligar (por qualquer caminho); devolve como parar de ouvir. */
+    aoMudar: (f: (ativo: boolean) => void) => () => void;
     filtro: (f: string) => void;
     desfoque: (v: number) => void;
     fov: (g: number) => void;
@@ -443,13 +455,29 @@ export function criarCena(
     const j = controle.jogador;
     return povoadosPerto(j.x, j.z, 900, semente)
       .sort((a, b) => Math.hypot(a.cx - j.x, a.cz - j.z) - Math.hypot(b.cx - j.x, b.cz - j.z))
-      .map((p) => ({ id: p.id, cx: p.cx, cz: p.cz, h: p.h, moradores: p.moradores.length }));
+      .map((p) => ({
+        id: p.id,
+        cx: p.cx,
+        cz: p.cz,
+        h: p.h,
+        moradores: p.moradores.length,
+        // sítio: a porteira do primeiro cercado e a célula de fora (medição e capturas)
+        ...(p.currais?.[0]
+          ? { porteira: p.currais[0].portao, foraPorteira: p.currais[0].fora }
+          : {}),
+      }));
   };
 
   // Sem preserveDrawingBuffer: GPUs de celular descartam o buffer a cada quadro (menos banda).
   // Capturas e miniaturas renderizam um quadro e leem o canvas na mesma tarefa.
   const engine = new Engine(canvas, false, { preserveDrawingBuffer: false, stencil: true });
   const scene = new Scene(engine);
+  // contador interno do Babylon (sem SceneInstrumentation ele só soma: a medição faz a conta)
+  estado.desenho = () => ({
+    chamadas: (engine as unknown as { _drawCalls?: { current: number } })._drawCalls?.current ?? 0,
+    malhas: scene.meshes.length,
+    ativas: scene.getActiveMeshes().length,
+  });
   const cor = new Color3(...PALETA.nevoa);
   scene.clearColor = new Color4(cor.r, cor.g, cor.b, 1);
   scene.fogMode = Scene.FOGMODE_EXP2;
