@@ -1756,6 +1756,11 @@ export function criarCena(
     if (estado.modoFoto?.ativo()) {
       cameraVisao.position.copyFrom(fotoPosRef());
       orbita.encaixar();
+      // na foto o boneco aparece inteiro
+      if (opacidadeAplicada !== 1) {
+        opacidadeAplicada = 1;
+        personagem.definirOpacidade(1);
+      }
       return;
     }
     // andando sem mexer na câmera, ela volta devagar para trás do boneco (nunca enquanto a
