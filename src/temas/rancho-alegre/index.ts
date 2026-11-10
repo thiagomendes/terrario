@@ -313,5 +313,7 @@ export function construirRanchoAlegre(): Tema {
     },
     povoado: POVOADO_RANCHO,
     personagem: { acessorio: 'chapeu-palha', roupaEstilo: 4, roupaCor: 10, calcaCor: 5 },
+    // a roça guia primeiro: arar, plantar e colher logo ao nascer perto do sítio
+    primeiroCapitulo: 'Roça',
   };
 }

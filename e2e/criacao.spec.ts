@@ -76,17 +76,26 @@ async function vaca(page: Page, toque: boolean) {
       );
       window.addEventListener('brumaluz:criou', () => eventos.push('criou'));
       const bichos = () => e.criaturas!().filter((c) => c.tipo === 'cervo');
-      const mirarEm = async (id: number) => {
-        const c = e.criaturas!().find((b) => b.id === id)!;
-        const [px, py, pz] = e.posicao!;
-        const ty = c.y + 0.8;
-        e.apontar!(
-          Math.atan2(c.x - px, c.z - pz),
-          -Math.atan2(ty - py, Math.hypot(c.x - px, c.z - pz)),
-        );
-        await espera(150);
-        if (toque) e.controleDireto!.mirar!(innerWidth / 2, innerHeight / 2);
-        await espera(700);
+      /**
+       * Mira na vaca até aparecer a dica esperada (a vaca anda e, com a máquina ocupada, os
+       * quadros demoram): reaponta para onde ela está a cada 0,3 s, até 8 s.
+       */
+      const mirarEm = async (id: number, quer: (d: string) => boolean) => {
+        const n = dicas.length;
+        for (let i = 0; i < 26; i++) {
+          const c = e.criaturas!().find((b) => b.id === id)!;
+          const [px, py, pz] = e.posicao!;
+          const ty = c.y + 0.8;
+          e.apontar!(
+            Math.atan2(c.x - px, c.z - pz),
+            -Math.atan2(ty - py, Math.hypot(c.x - px, c.z - pz)),
+          );
+          await espera(150);
+          if (toque) e.controleDireto!.mirar!(innerWidth / 2, innerHeight / 2);
+          await espera(150);
+          // a dica olha a mira a cada 0,25 s
+          if (i >= 2 && dicas.slice(n).some(quer)) break;
+        }
       };
       const r: Record<string, unknown> = {};
       // a mão vazia, a vaca logo ali na frente: a dica ensina a segurar o trigo
@@ -96,14 +105,33 @@ async function vaca(page: Page, toque: boolean) {
       let id = -1;
       for (let i = 0; i < 40 && id < 0; i++) {
         await espera(100);
-        id = bichos().find((c) => !antes.has(c.id))?.id ?? -1;
+        // a que nasceu onde foi invocada (no Rancho, a vaca do curral de um sítio perto ou
+        // uma que nasce sozinha também é nova, mas está longe)
+        id =
+          bichos().find(
+            (c) => !antes.has(c.id) && Math.hypot(c.x - (fx + 0.5), c.z - (fz + 2.6)) < 1.5,
+          )?.id ?? -1;
       }
       r.nasceu = id > 0;
-      await mirarEm(id);
+      await mirarEm(id, (d) => d.startsWith('Segure'));
       // a vaca pode dar um passo para fora da mira: vale a dica que apareceu mirando nela
       r.dicaSeguir = dicas.find((d) => d.startsWith('Segure'));
-      // o jogador se afasta 5 blocos e pega o trigo: a vaca vem e para a uns 2 blocos
-      e.teleportar!(fx + 0.5, fz - 4.5, fy);
+      // o jogador fica a uns 5 blocos da vaca (ela passeou enquanto a dica aparecia: conta
+      // de onde ela está agora, dentro da laje) e pega o trigo: ela vem e para a uns 2 blocos
+      {
+        const v0 = e.criaturas!().find((c) => c.id === id)!;
+        let melhor: [number, number] = [fx + 0.5, fz - 4.5];
+        let erro = Infinity;
+        for (let dx = -6; dx <= 6; dx++)
+          for (let dz = -6; dz <= 6; dz++) {
+            const d = Math.hypot(fx + dx + 0.5 - v0.x, fz + dz + 0.5 - v0.z);
+            if (Math.abs(d - 5) < erro) {
+              erro = Math.abs(d - 5);
+              melhor = [fx + dx + 0.5, fz + dz + 0.5];
+            }
+          }
+        e.teleportar!(melhor[0], melhor[1], fy);
+      }
       e.inventario!.definir(0, { item: 'trigo', qtd: 5 });
       e.selecionarSlot!(0);
       await e.sincronizar!();
@@ -113,7 +141,7 @@ async function vaca(page: Page, toque: boolean) {
       r.distSeguindo = Math.hypot(v.x - px, v.z - pz);
       r.estadoSeguindo = v.estado;
       // dar o trigo
-      await mirarEm(id);
+      await mirarEm(id, (d) => d.includes(' dar '));
       r.dicaDar = dicas.filter((d) => d.includes(' dar ')).at(-1);
       toque ? e.controleDireto!.tocar!() : e.controleDireto!.usar!();
       let coracoes = 0;
@@ -223,7 +251,11 @@ test('noite no Rancho: a coruja chega, pia e foge, e não machuca', async ({ pag
       let id = -1;
       for (let i = 0; i < 40 && id < 0; i++) {
         await espera(100);
-        id = corujas().find((c) => !antes.has(c.id))?.id ?? -1;
+        // a invocada (à noite outras nascem sozinhas, mais longe)
+        id =
+          corujas().find(
+            (c) => !antes.has(c.id) && Math.hypot(c.x - (fx + 0.5), c.z - (fz + 6.5)) < 2,
+          )?.id ?? -1;
       }
       window.addEventListener('brumaluz:espantou', () => missoes.push('espantou'));
       // anda até ela, devagar, várias vezes (ela foge e volta curiosa)

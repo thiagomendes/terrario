@@ -1021,8 +1021,9 @@ export function passoCriatura(
             ev.push({ tipo: 'morte', criatura: c, drops: [] });
           }
         }
-        // a mansa que o dia desfez não volta a voar (a de sempre fica como era: paridade)
-        if (mansa && c.estado === 'morrendo') break;
+        // o dia a desfez: para aqui (senão a perseguição ou o vagar apagavam o 'morrendo' e
+        // ela ficava no mundo, invisível, soltando um evento de morte por quadro)
+        if (c.estado === 'morrendo') break;
         if (luz >= 9) {
           c.estado = 'fugir';
           c.tempoEstado = 2;

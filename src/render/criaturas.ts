@@ -4,6 +4,7 @@ import { StandardMaterial } from '@babylonjs/core/Materials/standardMaterial';
 import { MeshBuilder } from '@babylonjs/core/Meshes/meshBuilder';
 import { TransformNode } from '@babylonjs/core/Meshes/transformNode';
 import { Mesh } from '@babylonjs/core/Meshes/mesh';
+import { Vector3 } from '@babylonjs/core/Maths/math.vector';
 import { VertexBuffer } from '@babylonjs/core/Buffers/buffer';
 import type { Scene } from '@babylonjs/core/scene';
 import type { Criatura } from '../jogo/criaturas';
@@ -66,8 +67,39 @@ export function criarRenderCriaturas(
       ultZ: number;
       vel: number;
       quadro: number;
+      /** Malhas do boneco (fixas: o morador não troca de roupa nem de item na mão). */
+      malhas: Mesh[];
+      ferido: boolean;
+      luz: number;
     }
   >();
+  /**
+   * Desempenho (spec 013, sítio com curral e moradores): quem está atrás da câmera e longe
+   * não precisa mexer as juntas neste quadro (ninguém vê; a posição continua indo). Uma
+   * margem larga em volta do campo de visão e da câmera evita qualquer diferença na tela.
+   */
+  const frente = new Vector3();
+  let camX = 0;
+  let camY = 0;
+  let camZ = 0;
+  function prepararVista(): void {
+    const cam = scene.activeCamera;
+    if (!cam) return;
+    cam.getDirectionToRef(Vector3.Forward(), frente);
+    const p = cam.globalPosition;
+    camX = p.x;
+    camY = p.y;
+    camZ = p.z;
+  }
+  function foraDaVista(x: number, y: number, z: number): boolean {
+    if (!scene.activeCamera) return false;
+    const dx = x - camX;
+    const dy = y - camY;
+    const dz = z - camZ;
+    const d = Math.hypot(dx, dy, dz);
+    // perto (sombra, braço que aparece de lado) e tudo à frente até ~115°: desenha
+    return d > 8 && (dx * frente.x + dy * frente.y + dz * frente.z) / d < -0.42;
+  }
   function montarMorador(c: Criatura) {
     const pecas = povoadoDoTema().moradores[c.morador?.profissao ?? 'construtor'];
     const prof = c.morador?.profissao ?? 'construtor';
@@ -77,7 +109,7 @@ export function criarRenderCriaturas(
       c.morador ? generoDoMorador(c.morador.povoado, c.morador.n, prof) : undefined,
       povoadoDoTema().acessorios?.[prof],
     );
-    const boneco = criarBoneco(scene, m.aparencia, `morador-${c.id}`, m.ajustar);
+    const boneco = criarBoneco(scene, m.aparencia, `morador-${c.id}`, m.ajustar, true);
     for (const malha of boneco.raiz.getChildMeshes()) {
       const mat = malha.material as StandardMaterial | null;
       // só a lanterna e o que o tema marcou como brilhante entram no brilho
@@ -86,10 +118,19 @@ export function criarRenderCriaturas(
       else excluirDoGlow(malha as Mesh);
       malha.isPickable = false;
     }
-    return { boneco, animador: criarAnimador(), ultX: c.x, ultZ: c.z, vel: 0, quadro: 0 };
+    return {
+      boneco,
+      animador: criarAnimador(),
+      ultX: c.x,
+      ultZ: c.z,
+      vel: 0,
+      quadro: 0,
+      malhas: boneco.raiz.getChildMeshes() as Mesh[],
+      ferido: false,
+      luz: -1,
+    };
   }
   let quadro = 0;
-
 
   function montar(c: Criatura): Modelo {
     const raiz = new TransformNode(`criatura-${c.id}`, scene);
@@ -230,6 +271,7 @@ export function criarRenderCriaturas(
       luz: (c: Criatura) => number,
     ): void {
       quadro++;
+      prepararVista();
       for (const c of lista) {
         if (c.tipo === 'morador') {
           let mb = moradores.get(c.id);
@@ -249,17 +291,26 @@ export function criarRenderCriaturas(
             noChao: c.noChao,
             voando: false,
           });
-          mb.boneco.aplicarPose(pose, { dt, olhar: 0, vista: mb.animador.vista() });
+          // o animador anda sempre (o passo segue de onde estava); as juntas só na vista
+          if (!foraDaVista(c.x, c.y + 1, c.z))
+            mb.boneco.aplicarPose(pose, { dt, olhar: 0, vista: mb.animador.vista() });
           mb.boneco.posicionar(c.x, c.y, c.z, c.yaw);
-          mb.boneco.definirLuz(luz(c));
+          const l = luz(c);
+          if (Math.abs(l - mb.luz) > 0.002) {
+            mb.luz = l;
+            mb.boneco.definirLuz(l);
+          }
           const morrer = c.estado === 'morrendo' ? c.dissolver : 0;
           mb.boneco.raiz.scaling.setAll(1 - morrer * 0.8);
-          for (const malha of mb.boneco.raiz.getChildMeshes()) {
-            const mm = malha as Mesh;
-            mm.renderOverlay = c.ferida > 0;
-            if (mm.renderOverlay) {
-              mm.overlayColor = COR_FERIDA;
-              mm.overlayAlpha = 0.55;
+          const ferido = c.ferida > 0;
+          if (ferido !== mb.ferido) {
+            mb.ferido = ferido;
+            for (const mm of mb.malhas) {
+              mm.renderOverlay = ferido;
+              if (ferido) {
+                mm.overlayColor = COR_FERIDA;
+                mm.overlayAlpha = 0.55;
+              }
             }
           }
           continue;
@@ -308,35 +359,38 @@ export function criarRenderCriaturas(
           mat.emissiveColor.set(e, e, e);
           mat.specularColor.set(0.22 * l, 0.22 * l, 0.22 * l);
         }
+        // atrás da câmera e longe: as patas e a cabeça ficam como estão neste quadro
+        const animar = !foraDaVista(c.x, c.y + 0.5, c.z);
         for (const p of m.partes) {
-          switch (p.papel) {
-            case 'perna0':
-              p.no.rotation.x = balanco;
-              break;
-            case 'perna1':
-              p.no.rotation.x = -balanco;
-              break;
-            case 'cabeca':
-              p.no.rotation.x =
-                Math.sin(tempo * 1.3 + c.id) * 0.06 + (c.estado === 'parado' ? 0.25 : 0);
-              break;
-            case 'cauda':
-              p.no.rotation.y = Math.sin(tempo * (c.tipo === 'peixe' ? 9 : 4) + c.id) * 0.35;
-              break;
-            case 'roda':
-              p.no.rotation.x = m.fase * 1.6;
-              break;
-            case 'asa0':
-              p.no.rotation.z = Math.sin(tempo * 9 + c.id) * 0.6;
-              break;
-            case 'asa1':
-              p.no.rotation.z = -Math.sin(tempo * 9 + c.id) * 0.6;
-              break;
-            case 'antena':
-              p.no.rotation.z = Math.sin(tempo * 2.5 + c.id) * 0.16;
-              p.no.rotation.x = Math.sin(tempo * 1.7 + c.id * 2) * 0.1 + balanco * 0.3;
-              break;
-          }
+          if (animar)
+            switch (p.papel) {
+              case 'perna0':
+                p.no.rotation.x = balanco;
+                break;
+              case 'perna1':
+                p.no.rotation.x = -balanco;
+                break;
+              case 'cabeca':
+                p.no.rotation.x =
+                  Math.sin(tempo * 1.3 + c.id) * 0.06 + (c.estado === 'parado' ? 0.25 : 0);
+                break;
+              case 'cauda':
+                p.no.rotation.y = Math.sin(tempo * (c.tipo === 'peixe' ? 9 : 4) + c.id) * 0.35;
+                break;
+              case 'roda':
+                p.no.rotation.x = m.fase * 1.6;
+                break;
+              case 'asa0':
+                p.no.rotation.z = Math.sin(tempo * 9 + c.id) * 0.6;
+                break;
+              case 'asa1':
+                p.no.rotation.z = -Math.sin(tempo * 9 + c.id) * 0.6;
+                break;
+              case 'antena':
+                p.no.rotation.z = Math.sin(tempo * 2.5 + c.id) * 0.16;
+                p.no.rotation.x = Math.sin(tempo * 1.7 + c.id * 2) * 0.1 + balanco * 0.3;
+                break;
+            }
           for (const malha of p.malhas) {
             malha.renderOverlay = c.ferida > 0;
             if (malha.renderOverlay) {

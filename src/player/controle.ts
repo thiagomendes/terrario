@@ -1,5 +1,11 @@
 import type { ResultadoFisica } from './fisica';
-import { alturaTerreno, gerarChunk, SEMENTE_PADRAO, encontrarNascimento } from '../world/chunk';
+import {
+  alturaTerreno,
+  gerarChunk,
+  SEMENTE_PADRAO,
+  encontrarNascimento,
+  olharDoNascimento,
+} from '../world/chunk';
 import type { Edicoes } from '../world/edicoes';
 import { ALTURA_OLHOS, passoFisica, posicaoInicial } from './fisica';
 import { criarMundoSolido } from '../world/solido';
@@ -22,7 +28,8 @@ export function criarControle(
   const nasc = encontrarNascimento(semente);
   const jogador = posicaoInicial(nasc.x, nasc.z, (x, z) => alturaTerreno(x, z, semente));
   const teclas: TeclasAtivas = {};
-  let yaw = 0.8;
+  // mundo de sítio (Rancho Alegre): nasce olhando para o sítio mais perto
+  let yaw = olharDoNascimento(semente) ?? 0.8;
   let pitch = 0.2;
   let sensibilidade = 1;
   let inverterY = false;

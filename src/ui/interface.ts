@@ -196,6 +196,8 @@ body.hud-compacto.hud-aberto .hud [data-camera-indicador] { top: 90px; }
 body.hud-compacto.hud-aberto .hud [data-nome-jogador] { top: 122px !important; }
 body.hud-compacto.hud-aberto .hud [data-info-mundo] { top: 154px !important; }
 body.hud-compacto.hud-aberto .missao-hud { top: 188px; }
+/* informações abertas: os avisos descem para baixo do cartão da missão (não o cobrem) */
+body.hud-compacto.hud-aberto:not([data-overlay]) .toast-area { top: 272px; }
 body[data-overlay] .hud-info, body.tela-titulo .hud-info, body.modo-foto .hud-info { display: none !important; }
 `;
 

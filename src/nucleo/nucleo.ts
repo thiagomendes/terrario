@@ -12,7 +12,15 @@ import { sanearDadosMundo } from './saneamento';
 import { blocoDe, criarEdicoes, empacotar } from '../world/edicoes';
 import { Bloco, ehAlvo, luzDoBloco, obterBloco } from '../world/blocks';
 import { criarCacheGeracional } from './mundo';
-import { TAM_X, ALTURA, TAM_Z, alturaTerreno, encontrarNascimento, estiloMundo } from '../world/chunk';
+import {
+  TAM_X,
+  ALTURA,
+  TAM_Z,
+  alturaTerreno,
+  encontrarNascimento,
+  estiloMundo,
+  olharDoNascimento,
+} from '../world/chunk';
 import { AVISO_LIMITE, comeEsse, viraCriado } from '../jogo/criacao';
 import { definirRegioesSemPovoado, regiaoDoChunk } from '../world/povoado';
 import { abreEFecha, alternado, ehPorta } from '../world/portas';
@@ -334,7 +342,8 @@ export function criarNucleo(op: OpcoesNucleo) {
         x,
         y: y0,
         z,
-        yaw: pos?.yaw ?? 0,
+        // mundo de sítio: quem chega pela primeira vez olha para o sítio mais perto
+        yaw: pos?.yaw ?? olharDoNascimento(semente) ?? 0,
         pitch: pos?.pitch ?? 0,
         olhos: y0 + 1.62,
         noChao: false,
@@ -649,10 +658,7 @@ export function criarNucleo(op: OpcoesNucleo) {
   function crescerAosPoucos(dt: number): void {
     relogioLavoura += dt;
     if (lavoura.size === 0) return;
-    const cota = Math.min(
-      ORCAMENTO_LAVOURA,
-      Math.ceil((lavoura.size * dt) / INTERVALO_LAVOURA),
-    );
+    const cota = Math.min(ORCAMENTO_LAVOURA, Math.ceil((lavoura.size * dt) / INTERVALO_LAVOURA));
     const noite = noiteNaHora(hora);
     const chuva = chuvaNoMundo();
     luzesNoPasso = 0;

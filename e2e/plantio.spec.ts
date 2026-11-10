@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { PASTA_CAPTURAS } from '../playwright.config';
 
 /**
  * Spec 013 (T02, critérios 1 e 7): arar, plantar, crescer e colher de verdade, pelo mouse
@@ -73,8 +74,11 @@ async function roca(page: Page, toque: boolean) {
       e.apontar!(Math.atan2(x - px, z - pz), -Math.atan2(y - py, Math.hypot(x - px, z - pz)));
       await espera(150);
       if (toque) e.controleDireto!.mirar!(innerWidth / 2, innerHeight / 2);
-      // a dica olha a mira a cada 0,25 s
+      // a dica olha a mira a cada 0,25 s; com a máquina ocupada (mundo ainda carregando),
+      // os quadros demoram: espera a dica mudar, até 5 s
+      const n = dicas.length;
       await espera(700);
+      for (let i = 0; i < 43 && dicas.length === n; i++) await espera(100);
     };
     const usar = () => (toque ? e.controleDireto!.tocar!() : e.controleDireto!.usar!());
     const r: Record<string, unknown> = {};
@@ -127,7 +131,10 @@ async function roca(page: Page, toque: boolean) {
     r.colhido = e.bloco!(C.x, C.y, C.z);
     r.terraFica = e.bloco!(F.x, F.y, F.z);
     // os itens pulam e vêm para a mochila
-    for (let i = 0; i < 30 && !(e.inventario!.contar('trigo') > 0); i++) {
+    // (o trigo e a semente da colheita chegam em quadros diferentes: espera os dois)
+    const colheu = () =>
+      e.inventario!.contar('trigo') > 0 && e.inventario!.contar('semente_trigo') >= 3;
+    for (let i = 0; i < 30 && !colheu(); i++) {
       if (i === 10) e.teleportar!(C.x + 0.5, C.z + 0.5, C.y);
       await espera(200);
     }
@@ -188,6 +195,159 @@ test('roça no celular: tocar ara e planta, segurar colhe', async ({ browser }) 
   await page.evaluate(() => document.body.classList.add('toque-ativo'));
   const r = await roca(page, true);
   conferir(r, true);
+  expect(erros).toEqual([]);
+  await ctx.close();
+});
+
+/**
+ * O HUD do Rancho Alegre no celular em pé (412×860): a dica da mira, os corações, o aviso
+ * de recusa e a missão do diário (que começa pela roça) não se cobrem nem cobrem a barra e
+ * os controles de toque. Grava as capturas para conferir de olho.
+ */
+test('HUD do Rancho no celular: dicas, corações e avisos sem cobrir nada', async ({ browser }) => {
+  test.setTimeout(400_000);
+  const ctx = await browser.newContext({
+    viewport: { width: 412, height: 860 },
+    hasTouch: true,
+    isMobile: true,
+  });
+  const page = await ctx.newPage();
+  const erros: string[] = [];
+  page.on('pageerror', (e) => erros.push(String(e)));
+  await page.goto('/');
+  await pronto(page);
+  await page.locator('[data-abrir-mundos]').click();
+  await page.locator('.cartao-tema[data-tema="rancho-alegre"]').click();
+  await page.locator('[data-modo="sobrevivencia"]').click();
+  await page.locator('[data-novo-nome]').fill('Roça no celular');
+  await page.locator('[data-criar-mundo]').click();
+  await page.waitForURL(/mundo=/);
+  await pronto(page);
+  await page.evaluate(() => {
+    document.querySelector('.entrada')?.setAttribute('hidden', '');
+    document.body.classList.add('toque-ativo');
+    const e = window.__brumaluz!;
+    e.pausarDia = true;
+    e.hora = 0.4;
+  });
+  // o diário do Rancho guia primeiro pela roça
+  await expect(page.locator('[data-missao-atual]')).toContainText('Terra fofinha');
+  const alvos = await page.evaluate(async () => {
+    const e = window.__brumaluz!;
+    const espera = (ms: number) => new Promise((r) => setTimeout(r, ms));
+    const [x0, , z0] = e.posicao!;
+    const fx = Math.floor(x0);
+    const fz = Math.floor(z0);
+    e.teleportar!(fx + 0.5, fz + 0.5);
+    await espera(1500);
+    const fy = Math.floor(e.posicao![1]);
+    for (let dx = -2; dx <= 3; dx++)
+      for (let dz = -2; dz <= 2; dz++) {
+        e.definirBloco!(fx + dx, fy - 1, fz + dz, 45);
+        for (let dy = 0; dy < 5; dy++) e.definirBloco!(fx + dx, fy + dy, fz + dz, 0);
+      }
+    e.definirBloco!(fx + 2, fy - 1, fz, 1);
+    e.teleportar!(fx + 0.5, fz + 0.5, fy);
+    e.inventario!.definir(0, { item: 'enxada_madeira', qtd: 1, dur: 60 });
+    e.inventario!.definir(1, { item: 'semente_trigo', qtd: 3 });
+    e.inventario!.definir(2, { item: 'trigo', qtd: 5 });
+    e.selecionarSlot!(0);
+    await espera(500);
+    await e.sincronizar!();
+    return { fx, fy, fz };
+  });
+  const mirar = (x: number, y: number, z: number) =>
+    page.evaluate(
+      async ([x, y, z]) => {
+        const e = window.__brumaluz!;
+        const [px, py, pz] = e.posicao!;
+        e.apontar!(Math.atan2(x - px, z - pz), -Math.atan2(y - py, Math.hypot(x - px, z - pz)));
+        await new Promise((r) => setTimeout(r, 150));
+        e.controleDireto!.mirar!(innerWidth / 2, innerHeight / 2);
+        await new Promise((r) => setTimeout(r, 900));
+      },
+      [x, y, z],
+    );
+  /** Caixas visíveis que não podem se cobrir (a dica, os avisos, a barra, os corações...). */
+  const sobreposicoes = () =>
+    page.evaluate(() => {
+      const nomes: [string, string][] = [
+        ['dica', '.dica-mira.visivel'],
+        ['aviso', '.toast-area > *'],
+        ['barra', '[role="toolbar"]'],
+        ['status', '.status'],
+        ['missao', '.missao-hud'],
+        ['minimapa', '.minimapa'],
+        ['joystick', '.toque .joystick'],
+        ['botoes', '.toque .botoes > *'],
+        ['info', '[data-hud-info]'],
+      ];
+      const caixas: { n: string; r: DOMRect }[] = [];
+      for (const [n, sel] of nomes)
+        for (const el of document.querySelectorAll<HTMLElement>(sel)) {
+          const cs = getComputedStyle(el);
+          const r = el.getBoundingClientRect();
+          if (cs.display === 'none' || cs.visibility === 'hidden' || r.width === 0) continue;
+          if (Number(cs.opacity) < 0.05) continue;
+          caixas.push({ n, r });
+        }
+      const ruins: string[] = [];
+      for (let i = 0; i < caixas.length; i++)
+        for (let j = i + 1; j < caixas.length; j++) {
+          const a = caixas[i].r;
+          const b = caixas[j].r;
+          const w = Math.min(a.right, b.right) - Math.max(a.left, b.left);
+          const h = Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top);
+          if (w > 2 && h > 2 && caixas[i].n !== caixas[j].n)
+            ruins.push(`${caixas[i].n} × ${caixas[j].n} (${Math.round(w)}×${Math.round(h)})`);
+        }
+      for (const c of caixas)
+        if (c.r.left < -1 || c.r.right > innerWidth + 1 || c.r.bottom > innerHeight + 1)
+          ruins.push(`${c.n} fora da tela`);
+      return { ruins, vistos: caixas.map((c) => c.n) };
+    });
+
+  const { fx, fy, fz } = alvos;
+  // 1. enxada na grama: a dica de arar abaixo da mira
+  await mirar(fx + 2.5, fy - 0.5, fz + 0.5);
+  await expect(page.locator('.dica-mira')).toHaveText('Toque na grama para arar');
+  const s1 = await sobreposicoes();
+  await page.screenshot({ path: `${PASTA_CAPTURAS}/rancho-celular-arar.png` });
+  // no celular em pé, a missão fica recolhida no botão de informações (spec 011)
+  expect(s1.vistos).toEqual(expect.arrayContaining(['dica', 'barra', 'status', 'joystick']));
+  expect(s1.ruins).toEqual([]);
+
+  // 2. semente na pedra: o aviso de criança aparece sem cobrir a dica nem a missão
+  await page.evaluate(() => window.__brumaluz!.selecionarSlot!(1));
+  await mirar(fx + 1.5, fy - 0.5, fz + 1.5);
+  await page.evaluate(() => window.__brumaluz!.controleDireto!.tocar!());
+  // mede logo que o aviso entra (ele some sozinho em poucos segundos)
+  await page.waitForTimeout(350);
+  const s2 = await sobreposicoes();
+  await page.screenshot({ path: `${PASTA_CAPTURAS}/rancho-celular-aviso.png` });
+  await expect(page.locator('.toast-area')).toContainText('A semente precisa de terra arada');
+  expect(s2.vistos).toContain('aviso');
+  expect(s2.ruins).toEqual([]);
+
+  // 3. machucado: os corações (meia vida) com o trigo na mão
+  await page.evaluate(async () => {
+    const e = window.__brumaluz!;
+    e.selecionarSlot!(2);
+    e.sobrevivencia!.dano(7);
+    await new Promise((r) => setTimeout(r, 900));
+  });
+  const s3 = await sobreposicoes();
+  await page.screenshot({ path: `${PASTA_CAPTURAS}/rancho-celular-coracoes.png` });
+  expect(s3.ruins).toEqual([]);
+
+  // 4. as informações abertas: a missão da roça aparece sem cobrir o minimapa nem a mira
+  await page.locator('[data-hud-info]').tap();
+  await expect(page.locator('[data-missao-atual]')).toBeVisible();
+  await page.waitForTimeout(400);
+  const s4 = await sobreposicoes();
+  await page.screenshot({ path: `${PASTA_CAPTURAS}/rancho-celular-missao.png` });
+  expect(s4.vistos).toContain('missao');
+  expect(s4.ruins).toEqual([]);
   expect(erros).toEqual([]);
   await ctx.close();
 });

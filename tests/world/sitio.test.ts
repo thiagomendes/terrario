@@ -11,7 +11,9 @@ import {
   TERRENO_NATURAL,
   biomaEm,
   encontrarNascimento,
+  olharDoNascimento,
 } from '../../src/world/chunk';
+import { criarNucleo } from '../../src/nucleo/nucleo';
 import {
   planoDaRegiao,
   frenteDaPorta,
@@ -331,6 +333,47 @@ describe('sítio: nascimento e espantalho', () => {
     }
     definirEstiloMundo(SITIO);
     expect(perto).toBeGreaterThanOrEqual(18);
+  });
+
+  it('o jogador nasce olhando para o sítio mais perto (no aparelho e na nuvem)', () => {
+    for (let s = 1; s <= 20; s++) {
+      const n = encontrarNascimento(s);
+      const yaw = olharDoNascimento(s);
+      expect(yaw, `semente ${s}`).toBeTypeOf('number');
+      // o sítio mais perto do nascimento
+      let melhor: PlanoPovoado | null = null;
+      for (let rx = -3; rx <= 3; rx++)
+        for (let rz = -3; rz <= 3; rz++) {
+          const p = planoDaRegiao(rx, rz, s, TERRENO_NATURAL);
+          if (
+            p &&
+            (!melhor ||
+              Math.hypot(p.cx - n.x, p.cz - n.z) < Math.hypot(melhor.cx - n.x, melhor.cz - n.z))
+          )
+            melhor = p;
+        }
+      if (!melhor || Math.hypot(melhor.cx - n.x, melhor.cz - n.z) > 60) continue;
+      // a frente da câmera (seno, cosseno do yaw) aponta para ele
+      const d = Math.hypot(melhor.cx - n.x, melhor.cz - n.z);
+      const frente = (Math.sin(yaw!) * (melhor.cx - n.x) + Math.cos(yaw!) * (melhor.cz - n.z)) / d;
+      expect(frente, `semente ${s}`).toBeGreaterThan(0.99);
+      // determinístico
+      expect(olharDoNascimento(s)).toBe(yaw);
+    }
+    // na nuvem: quem chega pela primeira vez já vem virado para o sítio
+    const nu = criarNucleo({ semente: SEMENTE, modo: 'sobrevivencia', versaoMundo: 2 });
+    nu.conectar('ana', {});
+    expect(nu.estado.jogadores.get('ana')!.tel.yaw).toBe(olharDoNascimento(SEMENTE));
+    // os outros temas não mudam
+    definirEstiloMundo(ESTILO_PADRAO);
+    try {
+      expect(olharDoNascimento(SEMENTE)).toBeUndefined();
+      const nb = criarNucleo({ semente: SEMENTE, modo: 'sobrevivencia', versaoMundo: 2 });
+      nb.conectar('ana', {});
+      expect(nb.estado.jogadores.get('ana')!.tel.yaw).toBe(0);
+    } finally {
+      definirEstiloMundo(SITIO);
+    }
   });
 
   it('espantalho: lavoura abandonada, espantalho e baú com sementes', () => {
