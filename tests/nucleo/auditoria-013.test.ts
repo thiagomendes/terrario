@@ -514,8 +514,11 @@ describe('lavoura grande não pesa no servidor', () => {
       `lavoura de 40960 pés: ${media(0).toFixed(2)} ms por passo em 30 s ` +
         `(${media(400).toFixed(2)} ms depois de aquecer; pior ${pior.toFixed(1)} ms)`,
     );
-    expect(media(0)).toBeLessThan(10);
-    expect(pior).toBeLessThan(40);
+    // sozinha, a conta dá uns 3 ms por passo nos 30 s (1 ms depois de aquecer); os tetos
+    // são folgados para a suíte inteira rodando junto (antes desta correção: 282 ms)
+    expect(media(0)).toBeLessThan(20);
+    expect(media(400)).toBeLessThan(10);
+    expect(pior).toBeLessThan(150);
     // cresceu o tempo todo: 30 s à noite (metade) = uns 15 s de progresso em cada pé, e
     // perto da tocha como de dia (30 s)
     const ps = [...n.estado.lavoura.values()].map((c) => c.p);
