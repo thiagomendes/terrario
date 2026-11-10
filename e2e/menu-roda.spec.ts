@@ -188,6 +188,26 @@ test('computador: menu de roda, cada item abre o seu, mochila e minimapa', async
   await expect(page.locator('.roda.aberta button.ativo[data-item="pausa"] kbd')).toHaveText('Esc');
   await page.keyboard.press('Escape');
   await expect.poll(() => menu(page)).toBe(null);
+  // pelo teclado: Enter no botão leva o foco para a roda, as setas andam entre os itens e
+  // fechar devolve o foco ao botão
+  await page.locator('[data-botao-roda]').focus();
+  await page.keyboard.press('Enter');
+  await expect.poll(() => menu(page)).toBe('menu');
+  const focado = () =>
+    page.evaluate(() => (document.activeElement as HTMLElement | null)?.dataset.item ?? null);
+  await expect.poll(focado).toBe('mapa');
+  await page.keyboard.press('ArrowRight');
+  const segundo = await focado();
+  expect(segundo).not.toBe('mapa');
+  expect(segundo).not.toBeNull();
+  await page.keyboard.press('ArrowLeft');
+  await expect.poll(focado).toBe('mapa');
+  await page.keyboard.press('Escape');
+  await expect.poll(() => menu(page)).toBe(null);
+  expect(
+    await page.evaluate(() => document.activeElement?.hasAttribute('data-botao-roda') ?? false),
+  ).toBe(true);
+  await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
   await page.keyboard.press('KeyE');
   await expect.poll(() => page.evaluate(() => document.body.dataset.overlay)).toBe('inventario');
   expect(erros).toEqual([]);

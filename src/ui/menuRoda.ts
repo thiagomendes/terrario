@@ -107,7 +107,7 @@ export interface MenuRoda {
   readonly roda: Roda;
   /** Qual lista está aberta: 'menu', 'gestos' ou null (fechada). */
   readonly aberta: 'menu' | 'gestos' | null;
-  abrirMenu(): void;
+  abrirMenu(focar?: boolean): void;
   /** Abre os gestos (com Voltar no meio, para o menu). */
   abrirGestos(): void;
   fechar(): void;
@@ -158,9 +158,9 @@ export function criarMenuRoda(op: OpcoesMenuRoda, raiz: HTMLElement = document.b
   roda.preparar(listaMenu);
   roda.preparar(listaGestos);
 
-  function abrirMenu(): void {
+  function abrirMenu(focar = false): void {
     if (!roda.aberta && !op.pode()) return;
-    roda.abrir(listaMenu);
+    roda.abrir(listaMenu, focar);
   }
   function abrirGestos(): void {
     if (!roda.aberta && !op.pode()) return;
@@ -199,7 +199,8 @@ export function criarMenuRoda(op: OpcoesMenuRoda, raiz: HTMLElement = document.b
       return;
     }
     if (roda.aberta) roda.fechar();
-    else abrirMenu();
+    // Enter ou espaço no botão (clique sem ponteiro): o foco entra na roda
+    else abrirMenu(e.detail === 0);
   });
 
   // a mochila, embaixo do minimapa

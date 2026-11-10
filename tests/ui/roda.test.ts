@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { posicoesDaRoda, raioDaRoda, teclaDaRoda } from '../../src/ui/roda';
+import { focoDaSeta, posicoesDaRoda, raioDaRoda, teclaDaRoda } from '../../src/ui/roda';
 import { GESTOS } from '../../src/personagem/gestos';
 import { FUNCOES_JOGO } from '../../src/ui/atalhos';
 import { SEGURAR_GESTOS, itensDoMenu } from '../../src/ui/menuRoda';
@@ -68,5 +68,16 @@ describe('roda de botões (spec 015)', () => {
   it('com a roda de menu aberta (sem gestos) os números não escolhem nada', () => {
     expect(teclaDaRoda('Digit1', true, 0)).toBeNull();
     expect(teclaDaRoda('Escape', true, 0)).toEqual({ acao: 'fechar' });
+  });
+
+  it('setas movem o foco entre os itens, dando a volta', () => {
+    expect(focoDaSeta('ArrowRight', 0, 8)).toBe(1);
+    expect(focoDaSeta('ArrowDown', 7, 8)).toBe(0);
+    expect(focoDaSeta('ArrowLeft', 0, 8)).toBe(7);
+    expect(focoDaSeta('ArrowUp', 3, 8)).toBe(2);
+    expect(focoDaSeta('Home', 5, 8)).toBe(0);
+    expect(focoDaSeta('End', 0, 9)).toBe(8);
+    expect(focoDaSeta('KeyW', 0, 8)).toBeNull();
+    expect(focoDaSeta('ArrowRight', 0, 0)).toBeNull();
   });
 });

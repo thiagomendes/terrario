@@ -39,8 +39,11 @@ export interface Roda {
   readonly aberta: boolean;
   /** A lista na roda agora. */
   readonly lista: ListaRoda | null;
-  /** Abre (ou troca, se já aberta) com esta lista. */
-  abrir(lista: ListaRoda): void;
+  /**
+   * Abre (ou troca, se já aberta) com esta lista. `focar`: aberta pelo teclado (Enter no
+   * botão), o foco entra no primeiro item e volta para quem tinha ao fechar.
+   */
+  abrir(lista: ListaRoda, focar?: boolean): void;
   /** Monta os botões de uma lista antes (abrir não cria nada na hora). */
   preparar(lista: ListaRoda): void;
   fechar(): void;
@@ -84,6 +87,19 @@ export function teclaDaRoda(
   if (code === 'Escape') return { acao: 'fechar' };
   const m = /^(?:Digit|Numpad)([1-9])$/.exec(code);
   if (m && Number(m[1]) <= n) return { acao: 'escolher', i: Number(m[1]) - 1 };
+  return null;
+}
+
+/**
+ * Setas com o foco num item da roda: direita e baixo vão para o próximo (sentido horário),
+ * esquerda e cima para o anterior, dando a volta; Home e End vão às pontas. null: não é seta.
+ */
+export function focoDaSeta(code: string, i: number, n: number): number | null {
+  if (n <= 0) return null;
+  if (code === 'ArrowRight' || code === 'ArrowDown') return (i + 1) % n;
+  if (code === 'ArrowLeft' || code === 'ArrowUp') return (i - 1 + n) % n;
+  if (code === 'Home') return 0;
+  if (code === 'End') return n - 1;
   return null;
 }
 
@@ -145,9 +161,21 @@ export function criarRoda(op: OpcoesRoda, raiz: HTMLElement = document.body): Ro
       fechar();
     }
   });
+  // setas movem o foco entre os itens (sem andar com o boneco)
+  el.addEventListener('keydown', (e) => {
+    const i = botoes.indexOf(document.activeElement as HTMLButtonElement);
+    if (i < 0) return;
+    const j = focoDaSeta(e.code, i, botoes.length);
+    if (j === null) return;
+    e.preventDefault();
+    e.stopPropagation();
+    botoes[j].focus();
+  });
   raiz.append(el);
 
   let aberta = false;
+  /** Quem tinha o foco antes de o teclado entrar na roda (volta para ele ao fechar). */
+  let focoAntes: HTMLElement | null = null;
   let lista: ListaRoda | null = null;
   let botoes: HTMLButtonElement[] = [];
   let timer: ReturnType<typeof setTimeout> | undefined;
@@ -216,8 +244,12 @@ export function criarRoda(op: OpcoesRoda, raiz: HTMLElement = document.body): Ro
 
   let raio = 0;
   let pos: [number, number][] = [];
-  function abrir(l: ListaRoda): void {
+  function abrir(l: ListaRoda, focar = false): void {
     clearTimeout(timerEscolha);
+    // trocando de lista com o foco dentro (Gestos, Voltar), o foco continua na roda
+    const focoDentro = el.contains(document.activeElement);
+    if (focar && !focoDentro) focoAntes = document.activeElement as HTMLElement | null;
+    const levarFoco = focar || focoDentro;
     const novos = !montadas.has(l);
     const bs = montar(l);
     if (l !== lista) {
@@ -246,8 +278,20 @@ export function criarRoda(op: OpcoesRoda, raiz: HTMLElement = document.body): Ro
         b.tabIndex = 0;
       });
     // montados agora: um quadro para nascerem encolhidos no meio e abrirem com o pulinho
-    if (novos) requestAnimationFrame(() => requestAnimationFrame(colocar));
-    else colocar();
+    const focarPrimeiro = () => {
+      if (levarFoco) botoes[0]?.focus();
+    };
+    if (novos)
+      requestAnimationFrame(() =>
+        requestAnimationFrame(() => {
+          colocar();
+          focarPrimeiro();
+        }),
+      );
+    else {
+      colocar();
+      focarPrimeiro();
+    }
     el.classList.add('aberta');
     el.setAttribute('aria-hidden', 'false');
     clearTimeout(timer);
@@ -261,6 +305,7 @@ export function criarRoda(op: OpcoesRoda, raiz: HTMLElement = document.body): Ro
 
   function fechar(): void {
     clearTimeout(timer);
+    const devolver = el.contains(document.activeElement);
     el.classList.remove('aberta');
     el.setAttribute('aria-hidden', 'true');
     for (const b of botoes) {
@@ -268,6 +313,12 @@ export function criarRoda(op: OpcoesRoda, raiz: HTMLElement = document.body): Ro
       b.style.transform = '';
       b.tabIndex = -1;
     }
+    if (devolver) {
+      // o foco não fica num botão escondido: volta para quem tinha antes
+      (document.activeElement as HTMLElement | null)?.blur?.();
+      if (focoAntes?.isConnected) focoAntes.focus();
+    }
+    focoAntes = null;
     if (aberta) {
       aberta = false;
       avisos(false);
