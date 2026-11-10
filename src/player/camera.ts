@@ -71,8 +71,11 @@ export const RAIO_CAMERA = 0.2;
 /** Afastar de volta depois de desviar (por segundo): chega rápido, volta devagar. */
 export const TAXA_AFASTAR = 3;
 
-/** Perto demais: o boneco fica meio transparente (nunca menos que isto). */
-export const OPACIDADE_MINIMA = 0.2;
+/**
+ * Perto demais: o boneco fica meio transparente (nunca menos que isto). Bem perto (casinha,
+ * corredor), quase some: a cabeça a um palmo da câmera não tapa a vista.
+ */
+export const OPACIDADE_MINIMA = 0.15;
 export const FADE_INICIO = 0.8;
 export const FADE_LARGURA = 1.5;
 
@@ -87,6 +90,11 @@ export const PERTO_INICIO = 1.8;
 export const PERTO_FIM = 0.9;
 /** Sobe e desce sem tranco (por segundo). */
 export const TAXA_SUBIR_PERTO = 5;
+/**
+ * Olhando para baixo numa casinha, o pivô alto empurra a câmera para o teto e ela cola na
+ * cabeça: se sem subir ela fica mais longe do que isto (blocos), o pivô não sobe.
+ */
+export const GANHO_SEM_SUBIR = 0.15;
 
 /**
  * Quanto o pivô quer subir nesta distância da câmera (0 longe; bem perto, até ALTURA_PERTO
@@ -220,9 +228,14 @@ export function suavizarDistancia(atual: number, livre: number, dt: number): num
   return atual + (livre - atual) * fracao(TAXA_AFASTAR, dt);
 }
 
-/** Opacidade do boneco do jogador pela distância da câmera (1 = normal). */
+/**
+ * Opacidade do boneco do jogador pela distância da câmera (1 = normal): uma curva suave, que
+ * some mais depressa bem perto e chega inteira a FADE_INICIO + FADE_LARGURA.
+ */
 export function opacidadeBoneco(distancia: number): number {
-  return Math.min(1, Math.max(OPACIDADE_MINIMA, (distancia - FADE_INICIO) / FADE_LARGURA));
+  if (!Number.isFinite(distancia)) return 1;
+  const t = Math.min(1, Math.max(0, (distancia - FADE_INICIO) / FADE_LARGURA));
+  return Math.max(OPACIDADE_MINIMA, t * t * (3 - 2 * t));
 }
 
 /** Opacidade em degraus (só mexe nos materiais quando o degrau muda). */
@@ -302,12 +315,25 @@ export function criarCameraOrbita(zoom = ZOOM_PADRAO, alturaPivo = ALTURA_PIVO) 
         quer,
         q.bloqueia,
       );
-      const alvoSubida = Math.min(quer, cabe);
+      let alvoSubida = Math.min(quer, cabe);
+      if (alvoSubida > 0) {
+        // subir só vale se não encostar a câmera na cabeça (teto baixo olhando para baixo)
+        const alto = pivoCamera(
+          seguido,
+          q.yaw,
+          q.pitch,
+          q.bloqueia,
+          LADO_OMBRO,
+          alturaPivo + alvoSubida,
+        );
+        const baixo = pivoCamera(seguido, q.yaw, q.pitch, q.bloqueia, LADO_OMBRO, alturaPivo);
+        const dAlto = distanciaLivre(alto, q.yaw, q.pitch, alvoDistancia, q.bloqueia);
+        const dBaixo = distanciaLivre(baixo, q.yaw, q.pitch, alvoDistancia, q.bloqueia);
+        if (dBaixo > dAlto + GANHO_SEM_SUBIR) alvoSubida = 0;
+      }
       // descer para caber no teto é na hora; subir e voltar, suave
       subida =
-        alvoSubida < subida
-          ? alvoSubida
-          : subida + (alvoSubida - subida) * fracao(TAXA_SUBIR_PERTO, q.dt);
+        cabe < subida ? cabe : subida + (alvoSubida - subida) * fracao(TAXA_SUBIR_PERTO, q.dt);
       const pivo = pivoCamera(seguido, q.yaw, q.pitch, q.bloqueia, LADO_OMBRO, alturaPivo + subida);
       const livre = distanciaLivre(pivo, q.yaw, q.pitch, alvoDistancia, q.bloqueia);
       distancia = suavizarDistancia(distancia, livre, q.dt);

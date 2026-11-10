@@ -114,12 +114,18 @@ export interface Plasticos {
   cor(hex: string, brilho?: number): StandardMaterial;
   /** Luz do ambiente (1 ao ar livre, baixa em cavernas). */
   definirLuz(f: number): void;
+  /**
+   * Meio transparente (spec 015): desenha a profundidade antes, para só a casca da frente de
+   * cada peça aparecer (sem os olhos vistos por dentro da cabeça). Desligado, custo nenhum.
+   */
+  definirSoFrente(ligado: boolean): void;
   descartar(): void;
 }
 
 export function criarPlasticos(scene: Scene, prefixo: string): Plasticos {
   const mats = new Map<string, { m: StandardMaterial; base: Color3; brilho: number }>();
   let luz = 1;
+  let soFrente = false;
   const aplicar = (e: { m: StandardMaterial; base: Color3; brilho: number }) => {
     // mesmo piso de luz do personagem de hoje: nunca fica preto contra o sol
     e.m.diffuseColor.copyFrom(e.base).scaleInPlace(0.78 * luz);
@@ -138,12 +144,18 @@ export function criarPlasticos(scene: Scene, prefixo: string): Plasticos {
       // as cores do esboço são em sRGB; o Babylon desenha em espaço "gama" direto
       e.base = Color3.FromHexString(hex);
       aplicar(e);
+      m.needDepthPrePass = soFrente;
       mats.set(chave, e);
       return m;
     },
     definirLuz(f) {
       luz = f;
       for (const e of mats.values()) aplicar(e);
+    },
+    definirSoFrente(ligado) {
+      if (ligado === soFrente) return;
+      soFrente = ligado;
+      for (const e of mats.values()) e.m.needDepthPrePass = ligado;
     },
     descartar() {
       for (const e of mats.values()) e.m.dispose();

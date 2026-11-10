@@ -180,6 +180,17 @@ describe('desvio de blocos', () => {
     expect(c2.alturaPivo()).toBe(ALTURA_PIVO);
     expect(foraDeBloco(baixa, r.posicao)).toBe(true);
   });
+  it('casinha 3x3 olhando para baixo: o pivô não sobe se isso colar a câmera na cabeça', () => {
+    const casa: BloqueiaCamera = (x, y, z) =>
+      y <= 19 || y >= 23 || x <= 9 || x >= 13 || z <= 9 || z >= 13;
+    const o = { x: 11.5, y: 21.62, z: 11.5 };
+    const c = criarCameraOrbita(ZOOM_PADRAO);
+    let r = c.quadro({ dt: 1 / 60, olhos: o, yaw: 2, pitch: 0.9, bloqueia: casa });
+    for (let i = 0; i < 120; i++)
+      r = c.quadro({ dt: 1 / 60, olhos: o, yaw: 2, pitch: 0.9, bloqueia: casa });
+    expect(r.distancia).toBeGreaterThan(0.7);
+    expect(foraDeBloco(casa, r.posicao)).toBe(true);
+  });
   it('em campo aberto o pivô não sobe', () => {
     const c = criarCameraOrbita(ZOOM_PADRAO);
     for (let i = 0; i < 60; i++)
@@ -208,12 +219,15 @@ describe('desvio de blocos', () => {
 });
 
 describe('transparência do boneco', () => {
-  it('opaco a partir de 2,3 blocos; nunca menos que 0,2', () => {
+  it('opaco a partir de 2,3 blocos; some mais depressa bem perto, nunca menos que 0,15', () => {
     expect(opacidadeBoneco(4)).toBe(1);
     expect(opacidadeBoneco(2.31)).toBe(1);
     expect(degrauOpacidade(opacidadeBoneco(2.3))).toBe(1);
     expect(opacidadeBoneco(1.55)).toBeCloseTo(0.5, 5);
+    expect(opacidadeBoneco(1.2)).toBeLessThan(0.2);
+    expect(opacidadeBoneco(0.9)).toBe(OPACIDADE_MINIMA);
     expect(opacidadeBoneco(0.5)).toBe(OPACIDADE_MINIMA);
+    expect(opacidadeBoneco(Number.NaN)).toBe(1);
     expect(opacidadeBoneco(0)).toBe(OPACIDADE_MINIMA);
   });
   it('degraus: só muda quando o degrau muda', () => {
@@ -221,7 +235,7 @@ describe('transparência do boneco', () => {
     expect(degrauOpacidade(0.51)).toBe(0.5);
     expect(degrauOpacidade(0.52)).toBe(0.5);
     expect(degrauOpacidade(0.26)).toBe(0.25);
-    expect(degrauOpacidade(OPACIDADE_MINIMA)).toBe(0.2);
+    expect(degrauOpacidade(OPACIDADE_MINIMA)).toBe(0.15);
   });
 });
 

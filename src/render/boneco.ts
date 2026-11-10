@@ -314,6 +314,7 @@ export function criarBoneco(
       const n = Math.min(1, Math.max(0, a));
       if (n === opacidade) return;
       opacidade = n;
+      mats.definirSoFrente(n < 1);
       for (const m of malhas) m.visibility = n;
       if (modelo) for (const m of modelo.malhas) m.visibility = n;
     },

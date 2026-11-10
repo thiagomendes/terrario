@@ -434,6 +434,11 @@ export interface EstadoDepuracao {
     girarCorpo?: (rad: number) => void;
     /** Inclinação, curva e passada do corpo vivo (testes). */
     corpo: () => import('../personagem/vida').SaidaCorpo | null;
+    /**
+     * Como o boneco está sendo desenhado (testes): quantas malhas vão na fila transparente e
+     * a menor visibilidade.
+     */
+    desenho?: () => { malhas: number; transparentes: number; menorVisibilidade: number };
   };
   /** Testes: onde um ponto do mundo aparece na tela (coordenadas CSS), ou null atrás da câmera. */
   telaDoPonto?: (x: number, y: number, z: number) => { x: number; y: number } | null;
@@ -1948,6 +1953,14 @@ export function criarCena(
     nomeExibido: () => aparencia.nome || rotuloDoModelo(aparencia),
     girarCorpo: (rad: number) => {
       giroCorpo = rad;
+    },
+    desenho: () => {
+      const ms = personagem.raiz.getChildMeshes(false).filter((m) => m.isEnabled());
+      return {
+        malhas: ms.length,
+        transparentes: ms.filter((m) => m.material?.needAlphaBlendingForMesh(m)).length,
+        menorVisibilidade: Math.min(1, ...ms.map((m) => m.visibility)),
+      };
     },
   };
   Object.defineProperty(estado, 'alvo', { get: calcularAlvo, enumerable: true });
