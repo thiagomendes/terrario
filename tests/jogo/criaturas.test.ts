@@ -45,6 +45,41 @@ describe('criaturas', () => {
     expect(morreu).toBe(true);
   });
 
+  it('espectro que persegue ao amanhecer se desfaz uma vez só e sai do mundo', () => {
+    // perseguindo (sobrevivência, jogador perto) e vagando (longe): os dois param ao se desfazer
+    for (const [jx, jz] of [
+      [3.5, 0.5],
+      [60, 60],
+    ]) {
+      const e = novaCriatura(1, 'espectro', 0.5, 10, 0.5);
+      const rng = criarGerador(4);
+      let mortes = 0;
+      for (let i = 0; i < 200; i++)
+        for (const ev of passoCriatura(e, 0.05, mundo(0, true), jog(jx, jz), rng, [], 0))
+          if (ev.tipo === 'morte') mortes++;
+      expect(mortes).toBe(1);
+      expect(e.estado).toBe('morrendo');
+      expect(e.dissolver).toBe(1);
+    }
+  });
+
+  it('a população tira o espectro desfeito pelo dia', () => {
+    const pop = criarPopulacao(criarGerador(5));
+    const e = pop.adicionar('espectro', 0.5, 10, 0.5);
+    const m = {
+      ...mundo(0, true),
+      bioma: () => 'campos' as const,
+      superficie: () => 10,
+      nivelMar: 0,
+    };
+    let mortes = 0;
+    for (let i = 0; i < 200 && pop.lista.includes(e); i++)
+      for (const ev of pop.atualizar(0.05, m, jog(3.5, 0.5), 0))
+        if (ev.tipo === 'morte' && ev.criatura === e) mortes++;
+    expect(pop.lista.includes(e)).toBe(false);
+    expect(mortes).toBe(1);
+  });
+
   it('cervo foge ao ser ferido e solta carne ao morrer', () => {
     const rng = criarGerador(3);
     const c = novaCriatura(1, 'cervo', 0.5, 10, 0.5);
