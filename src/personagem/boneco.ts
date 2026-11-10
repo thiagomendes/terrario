@@ -37,8 +37,6 @@ export interface Peca {
   cor: string;
   /** Brilho do plástico (0 fosco). */
   brilho?: number;
-  /** Peça que só aparece em primeira pessoa (a manga longa do braço da vista). */
-  soVista?: boolean;
 }
 
 export interface PlanoBoneco {
@@ -46,7 +44,7 @@ export interface PlanoBoneco {
   pecas: Peca[];
   /** Escala final (o boneco preenche a altura do jogador, 1,8 bloco de colisão). */
   escala: number;
-  /** Cores usadas pela mão da primeira pessoa e pelos ícones. */
+  /** Cores usadas pelos ícones e retratos. */
   cores: { pele: string; roupa: string; punho: string; calca: string; cabelo: string };
   /** Roupa sem manga: o braço é pele até a mão. */
   semManga: boolean;

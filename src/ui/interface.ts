@@ -7,7 +7,6 @@ import type { Hotbar } from '../player/hotbar';
 import { criarBarra } from './barra';
 import { textoIndicador } from '../audio/ligador';
 import type { EstadoAudio } from '../audio/motor';
-import { textoIndicador as textoIndicadorCamera } from '../player/camera';
 import { rotuloDoModelo, type Aparencia } from '../personagem/aparencia';
 import type { Armazenamento } from '../personagem/persistencia';
 import { CSS_PAINEL, criarPainelPersonagem, teclaParaPainel } from './personagem';
@@ -92,15 +91,15 @@ body[data-overlay] .toast-area { top: auto; bottom: calc(env(safe-area-inset-bot
   content: ''; position: absolute; top: 1px; left: 1px; width: 12px; height: 12px; border-radius: 50%;
   border: 2.5px solid rgba(255, 255, 255, 0.95); box-shadow: 0 0 0 1px rgba(40, 30, 60, 0.25), inset 0 0 0 1px rgba(40, 30, 60, 0.2);
 }
-/* chips do alto: som, câmera, nome, mundo e quadros por segundo */
-.hud .fps, .hud .som, .hud .camera-indicador {
+/* chips do alto: som, nome, mundo e quadros por segundo */
+.hud .fps, .hud .som, .hud .chip-hud {
   position: absolute; padding: 4px 11px; border-radius: 999px;
   background: rgba(255, 250, 240, 0.86); color: var(--tinta); font: 800 0.76rem var(--jogo);
   box-shadow: 0 2px 0 rgba(150, 110, 60, 0.35);
 }
 .hud .fps { top: 8px; right: 8px; }
 .hud .som { top: 8px; left: 8px; }
-.hud .camera-indicador { top: 40px; left: 8px; }
+.hud .chip-hud { top: 40px; left: 8px; }
 `;
 
 const TECLAS: ReadonlyArray<readonly [string, string]> = [
@@ -191,13 +190,12 @@ body.hud-compacto .hud-info {
 body.hud-compacto .hud-info svg { width: 30px; height: 30px; }
 body.hud-compacto .hud-info:focus-visible { outline: 3px solid var(--azul); outline-offset: 2px; }
 body.hud-compacto:not(.hud-aberto) .hud .som,
-body.hud-compacto:not(.hud-aberto) .hud .camera-indicador,
+body.hud-compacto:not(.hud-aberto) .hud .chip-hud,
 body.hud-compacto:not(.hud-aberto) .missao-hud { display: none; }
 /* aberto: as pílulas descem logo abaixo do botão */
 body.hud-compacto.hud-aberto .hud .som { top: 58px; }
-body.hud-compacto.hud-aberto .hud [data-camera-indicador] { top: 90px; }
-body.hud-compacto.hud-aberto .hud [data-nome-jogador] { top: 122px !important; }
-body.hud-compacto.hud-aberto .hud [data-info-mundo] { top: 154px !important; }
+body.hud-compacto.hud-aberto .hud [data-nome-jogador] { top: 90px !important; }
+body.hud-compacto.hud-aberto .hud [data-info-mundo] { top: 122px !important; }
 body.hud-compacto.hud-aberto .missao-hud { top: 188px; }
 /* informações abertas: os avisos descem para baixo do cartão da missão (não o cobrem) */
 body.hud-compacto.hud-aberto:not([data-overlay]) .toast-area { top: 272px; }
@@ -233,11 +231,7 @@ export function criarInterface(
   somInd.className = 'som';
   somInd.setAttribute('data-audio-indicador', '');
   somInd.textContent = textoIndicador('inativo', false);
-  const camInd = document.createElement('div');
-  camInd.className = 'camera-indicador';
-  camInd.setAttribute('data-camera-indicador', '');
-  camInd.textContent = textoIndicadorCamera('primeira');
-  hud.append(mira, fps, somInd, camInd);
+  hud.append(mira, fps, somInd);
   // debaixo d'água (spec 012): bolhinhas subindo e faixas de luz, só com body.submerso
   const bolhas = document.createElement('div');
   bolhas.className = 'bolhas-agua';
@@ -429,13 +423,13 @@ export function criarInterface(
   estiloPainel.textContent = CSS_PAINEL;
   document.head.appendChild(estiloPainel);
   const nomeHud = document.createElement('div');
-  nomeHud.className = 'camera-indicador';
-  nomeHud.style.top = '72px';
+  nomeHud.className = 'chip-hud';
+  nomeHud.style.top = '40px';
   nomeHud.setAttribute('data-nome-jogador', '');
   hud.appendChild(nomeHud);
   const infoMundo = document.createElement('div');
-  infoMundo.className = 'camera-indicador';
-  infoMundo.style.top = '104px';
+  infoMundo.className = 'chip-hud';
+  infoMundo.style.top = '72px';
   infoMundo.setAttribute('data-info-mundo', '');
   hud.appendChild(infoMundo);
   setInterval(() => {
@@ -541,8 +535,6 @@ export function criarInterface(
     abrirFuncao: (codigo) => {
       pausa.fechar();
       window.dispatchEvent(new KeyboardEvent('keydown', { code: codigo }));
-      // a câmera só alterna: volta direto ao jogo
-      if (codigo === 'KeyV') travarPonteiro(canvasJogo());
     },
   });
   // barra de atalhos do HUD (desktop): ícone e tecla de cada função
@@ -628,7 +620,6 @@ export function criarInterface(
   setInterval(() => {
     const a = window.__brumaluz?.audio;
     escrever(somInd, textoIndicador((a?.estado ?? 'inativo') as EstadoAudio, a?.mudo ?? false));
-    escrever(camInd, textoIndicadorCamera(window.__brumaluz?.camera?.modo() ?? 'primeira'));
   }, 200);
   return {
     entrada,

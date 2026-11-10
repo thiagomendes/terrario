@@ -11,6 +11,7 @@ import { ALTURA_OLHOS, passoFisica, posicaoInicial } from './fisica';
 import { criarMundoSolido } from '../world/solido';
 export { criarMundoSolido };
 import { acaoDaTecla, aplicarMouse, eixos, type TeclasAtivas } from './entrada';
+import { limitarPitch } from './camera';
 
 export interface AlvoCamera {
   position: { x: number; y: number; z: number };
@@ -35,6 +36,9 @@ export function criarControle(
   let sensibilidade = 1;
   let inverterY = false;
   let puloAutomatico = true;
+  /** Quando a criança mexeu na câmera pela última vez (s): a câmera só volta sozinha depois. */
+  let mexeuEm = -Infinity;
+  const agora = () => performance.now() / 1000;
 
   let podeVoar = false;
   let ultimoEspaco = -1;
@@ -88,6 +92,8 @@ export function criarControle(
       e.movementX * sensibilidade,
       e.movementY * sensibilidade * (inverterY ? -1 : 1),
     ));
+    pitch = limitarPitch(pitch);
+    if (e.movementX !== 0 || e.movementY !== 0) mexeuEm = agora();
   });
 
   function atualizar(dtSeg: number): void {
@@ -117,7 +123,8 @@ export function criarControle(
 
   function apontar(novoYaw: number, novoPitch: number): void {
     yaw = novoYaw;
-    pitch = novoPitch;
+    pitch = limitarPitch(novoPitch);
+    mexeuEm = agora();
     // a mira vale já (o alvo é calculado pela rotação da câmera), sem esperar o quadro
     camera.rotation.x = pitch;
     camera.rotation.y = yaw;
@@ -140,6 +147,14 @@ export function criarControle(
       dx * sensibilidade,
       dy * sensibilidade * (inverterY ? -1 : 1),
     ));
+    pitch = limitarPitch(pitch);
+    if (dx !== 0 || dy !== 0) mexeuEm = agora();
+  }
+
+  /** A câmera voltando sozinha para trás do boneco (não conta como a criança mexer). */
+  function recentrar(novoYaw: number): void {
+    yaw = novoYaw;
+    camera.rotation.y = yaw;
   }
 
   function definirVoo(permitido: boolean): void {
@@ -156,6 +171,11 @@ export function criarControle(
     definirPuloAutomatico,
     definirVoo,
     girar,
+    recentrar,
+    /** Quando a criança mexeu na câmera pela última vez (s, relógio da página). */
+    get mexeuEm() {
+      return mexeuEm;
+    },
     pular,
     teclas,
     get resultado() {

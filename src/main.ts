@@ -442,6 +442,9 @@ function ligarFoto(app: HTMLElement, cena: ReturnType<typeof criarCena>): void {
       notificar('Foto salva', 'foto');
       window.dispatchEvent(new CustomEvent('brumaluz:foto'));
     },
+    selfie: () => {
+      foto.selfie();
+    },
     sair: () => alternar(),
   });
   // o painel e o HUD seguem o modo foto, ligado por onde for (tecla, botão ou depuração)

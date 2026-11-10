@@ -81,3 +81,36 @@ export function colocacaoBloqueada(posicao: Vec3, jogador: Vec3): boolean {
     posicao.z + 1 > jogador.z - MEIA_LARGURA
   );
 }
+
+/**
+ * Mira em terceira pessoa (spec 015): o raio sai da câmera pelo centro da tela (ou pelo
+ * ponto tocado), mas só começa depois do boneco (`inicio`, a distância da câmera até o
+ * pivô), para nunca mirar o que está entre a câmera e o boneco. O alcance é medido a
+ * partir dos olhos do boneco, como o núcleo confere: um bloco além dele não vale, mesmo
+ * que o raio o encontre.
+ */
+export function mirarDaCamera(
+  camera: Vec3,
+  direcao: Vec3,
+  inicio: number,
+  olhos: Vec3,
+  alcance: number,
+  existe: ExisteBloco,
+): Alvo | null {
+  const t = Math.hypot(direcao.x, direcao.y, direcao.z);
+  if (!(t > 0)) return null;
+  const d = { x: direcao.x / t, y: direcao.y / t, z: direcao.z / t };
+  const ini = Math.max(0, inicio);
+  const origem = { x: camera.x + d.x * ini, y: camera.y + d.y * ini, z: camera.z + d.z * ini };
+  // além disto, nenhum ponto do raio fica no alcance dos olhos
+  const folga = Math.hypot(origem.x - olhos.x, origem.y - olhos.y, origem.z - olhos.z);
+  const a = raycastVoxel(origem, d, folga + alcance, existe);
+  if (!a) return null;
+  const p = {
+    x: origem.x + d.x * a.distancia,
+    y: origem.y + d.y * a.distancia,
+    z: origem.z + d.z * a.distancia,
+  };
+  if (Math.hypot(p.x - olhos.x, p.y - olhos.y, p.z - olhos.z) > alcance) return null;
+  return { ...a, distancia: a.distancia + ini };
+}

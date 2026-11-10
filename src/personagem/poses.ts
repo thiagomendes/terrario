@@ -8,6 +8,8 @@ const FREQUENCIA_CORRER = 2.4;
 const AMPLITUDE_ANDAR = 0.6;
 const AMPLITUDE_CORRER = 1.0;
 const AFUNDAR_MAXIMO = 0.08;
+/** Agachadinha do pulo (como no esboço: 0,12 do corpo). */
+const AGACHA_MAXIMO = 0.12;
 
 export interface EntradaPose {
   andando: boolean;
@@ -24,6 +26,18 @@ export interface EntradaPose {
   voando?: boolean;
   /** Progresso 0..1 de levar a comida à boca e mastigar (opcional). */
   comendo?: number;
+  /**
+   * Movimento com vida (spec 015): fase e amplitude da passada pela velocidade (no lugar
+   * do balanço fixo por tempo), agachadinha do pulo, inclinação e giro da cabeça.
+   */
+  passo?: { fase: number; amplitude: number };
+  /** Agachadinha do pulo e amortecida da aterrissagem (0..1). */
+  agacha?: number;
+  /** Corpo inteiro inclinado para a frente e de lado na curva (rad). */
+  inclina?: number;
+  roll?: number;
+  /** A cabeça vira um pouco para a câmera (rad, relativo ao corpo). */
+  cabecaGiro?: number;
 }
 
 const suave = (x: number) => x * x * (3 - 2 * x);
@@ -64,21 +78,46 @@ export interface Pose {
   piscar?: boolean;
   /** Boca abrindo (mastigar). */
   boca?: number;
+  /** Corpo inteiro (a partir dos pés): inclinado para a frente e de lado (rad). */
+  corpoX?: number;
+  corpoZ?: number;
+  /** Giro do braço no próprio eixo (apontar, gestos). */
+  bracoDireitoGiro?: number;
+  bracoEsquerdoGiro?: number;
 }
+
+/**
+ * Camada por cima da pose base (gestos, spec 015 T04): recebe a pose do quadro e devolve
+ * a pose com o gesto aplicado, ou null quando o gesto acabou (o animador tira a camada).
+ */
+export interface InfoCamada {
+  dt: number;
+  /** Tempo do animador (s). */
+  tempo: number;
+  /** Andando de verdade neste quadro (andar interrompe o gesto). */
+  andando: boolean;
+  noChao: boolean;
+}
+export type CamadaPose = (base: Pose, info: InfoCamada) => Pose | null;
 
 export function calcularPose(entrada: EntradaPose): Pose {
   const { andando, correndo, noAr, minerando, colocando, tempo } = entrada;
+  const vivo = entrada.passo;
   let balanco = 0;
-  if (andando || correndo) {
+  if (vivo) balanco = Math.sin(vivo.fase) * vivo.amplitude;
+  else if (andando || correndo) {
     const freq = correndo ? FREQUENCIA_CORRER : FREQUENCIA_ANDAR;
     const amp = correndo ? AMPLITUDE_CORRER : AMPLITUDE_ANDAR;
     balanco = Math.sin(tempo * freq * Math.PI * 2) * amp;
   }
-  let bracoDireito = 0 - balanco;
-  const bracoEsquerdo = balanco;
+  // braços um pouco menos que as pernas (como no esboço)
+  const bracos = vivo ? 0.9 : 1;
+  let bracoDireito = 0 - balanco * bracos;
+  const bracoEsquerdo = balanco * bracos;
   let pernaDireita = balanco;
   let pernaEsquerda = 0 - balanco;
-  let tronco = 0 - (entrada.afundar ?? 0) * AFUNDAR_MAXIMO;
+  const agacha = entrada.agacha ?? 0;
+  let tronco = 0 - (entrada.afundar ?? 0) * AFUNDAR_MAXIMO - agacha * AGACHA_MAXIMO;
   let cabeca = 0;
   if (entrada.voando) {
     // flutuando: pernas juntas, um pouco para trás, com um balanço lento e pequeno
@@ -91,34 +130,44 @@ export function calcularPose(entrada: EntradaPose): Pose {
   }
   // ---- movimentos de brinquedo (campos extras) ----
   const afundar = entrada.afundar ?? 0;
-  const passo = andando || correndo;
+  const passo = vivo ? vivo.amplitude > 0.02 : andando || correndo;
   const ritmo = correndo ? FREQUENCIA_CORRER : FREQUENCIA_ANDAR;
-  const fasePasso = tempo * ritmo * Math.PI * 2;
-  let corpoY = passo ? Math.abs(Math.cos(fasePasso)) * (correndo ? 0.06 : 0.035) : 0;
-  corpoY -= afundar * AFUNDAR_MAXIMO;
-  let escala = 1 - afundar * 0.16;
-  let troncoX = correndo ? 0.22 : andando ? 0.06 : 0;
-  let troncoY = passo ? Math.sin(fasePasso) * 0.12 : 0;
-  let troncoZ = 0;
-  let cabecaGiro = passo ? -Math.sin(fasePasso) * 0.1 : 0;
-  let cabecaLado = 0;
+  const fasePasso = vivo ? vivo.fase : tempo * ritmo * Math.PI * 2;
+  const forca = vivo ? Math.min(1, vivo.amplitude / AMPLITUDE_ANDAR) : 1;
+  let corpoY = vivo
+    ? Math.abs(Math.sin(fasePasso)) * 0.05 * vivo.amplitude
+    : passo
+      ? Math.abs(Math.cos(fasePasso)) * (correndo ? 0.06 : 0.035)
+      : 0;
+  corpoY -= afundar * AFUNDAR_MAXIMO + agacha * AGACHA_MAXIMO;
+  if (noAr && vivo && !entrada.voando) corpoY += 0.04;
+  let escala = 1 - afundar * 0.16 - agacha * 0.08;
+  let troncoX = vivo ? 0 : correndo ? 0.22 : andando ? 0.06 : 0;
+  let troncoY = passo ? Math.sin(fasePasso) * 0.12 * forca : 0;
+  const troncoZ = 0;
+  let cabecaGiro = passo ? -Math.sin(fasePasso) * 0.1 * forca : 0;
+  const cabecaLado = 0;
   let bracoDireitoAbre = 0;
   let bracoEsquerdoAbre = 0;
   let boca = 0;
   const parado = !passo && !noAr && !minerando && !colocando && !entrada.voando;
   if (parado) {
-    // respira e, de vez em quando, olha em volta
+    // respira e, de vez em quando, olha em volta (com a câmera por perto, a cabeça
+    // acompanha a câmera: só um leve balanço)
     escala *= 1 + Math.sin(tempo * 2.2) * 0.012;
-    cabecaGiro = Math.sin(tempo * 0.6) * 0.5 * suave(Math.max(0, Math.sin(tempo * 0.3)));
+    cabecaGiro =
+      entrada.cabecaGiro !== undefined
+        ? 0
+        : Math.sin(tempo * 0.6) * 0.5 * suave(Math.max(0, Math.sin(tempo * 0.3)));
     cabeca = Math.sin(tempo * 0.9) * 0.05;
     bracoEsquerdoAbre = 0.03 + Math.sin(tempo * 2.2) * 0.03;
     bracoDireitoAbre = bracoEsquerdoAbre;
   }
   if (noAr && !entrada.voando) {
     // no ar: estica um pouco e abre os braços
-    escala = Math.max(escala, 1.06);
-    bracoDireitoAbre = 0.9;
-    bracoEsquerdoAbre = 0.9;
+    escala = Math.max(escala, vivo ? 1.05 : 1.06);
+    bracoDireitoAbre = vivo ? 0.5 : 0.9;
+    bracoEsquerdoAbre = bracoDireitoAbre;
   }
   if (entrada.voando) {
     corpoY += Math.sin(tempo * 1.8) * 0.03;
@@ -140,16 +189,21 @@ export function calcularPose(entrada: EntradaPose): Pose {
   }
   if (entrada.comendo !== undefined && entrada.comendo > 0) {
     // leva até a boca (30% do tempo), mastiga e abaixa no fim
-    const leva = suave(Math.min(1, entrada.comendo / 0.3)) * (1 - suave(Math.max(0, (entrada.comendo - 0.85) / 0.15)));
+    const leva =
+      suave(Math.min(1, entrada.comendo / 0.3)) *
+      (1 - suave(Math.max(0, (entrada.comendo - 0.85) / 0.15)));
     bracoDireito = -2.0 * leva + Math.sin(tempo * 14) * 0.08 * leva;
     bracoDireitoAbre = -0.35 * leva;
     cabeca = 0.12 + Math.sin(tempo * 14) * 0.05;
     boca = Math.abs(Math.sin(tempo * 14)) * leva;
   }
+  // a cabeça acompanha um pouco a câmera (ou o olhar do amigo)
+  if (entrada.cabecaGiro !== undefined) cabecaGiro += entrada.cabecaGiro;
   // piscar a cada ~3,3 s
   const piscar = tempo % 3.3 < 0.12;
   // o topete vem atrasado: mexe ao contrário do corpo
-  const topete = -corpoY * 2.5 - troncoX * 0.8 + Math.sin(tempo * 3) * 0.05;
+  const topete =
+    -corpoY * 2.5 - troncoX * 0.8 - (entrada.inclina ?? 0) * 0.8 + Math.sin(tempo * 3) * 0.05;
   if (!Number.isFinite(tronco)) tronco = 0;
   return {
     bracoDireito,
@@ -170,6 +224,8 @@ export function calcularPose(entrada: EntradaPose): Pose {
     topete,
     piscar,
     boca,
+    corpoX: entrada.inclina ?? 0,
+    corpoZ: entrada.roll ?? 0,
   };
 }
 export type AcaoCurta = 'colocacao' | 'pulo' | 'aterrissagem';

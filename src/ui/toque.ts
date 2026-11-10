@@ -128,6 +128,10 @@ export interface ControleToque {
   /** Aponta para o ponto tocado (coordenadas do canvas, em CSS). */
   mirar?(x: number, y: number): void;
   soltarMira?(): void;
+  /** Pinça na tela: multiplica a distância da câmera (> 1 afasta, < 1 aproxima). */
+  zoom?(fator: number): void;
+  /** Dedo arrastando a câmera (true) ou soltou (false): ela não gira sozinha enquanto isso. */
+  arrastar?(ativo: boolean): void;
   /** Toque rápido: ataca a criatura ou coloca/usa no ponto mirado. */
   tocar?(): void;
   voando?(): boolean;
@@ -280,11 +284,7 @@ export function criarToque(raiz: HTMLElement, c: ControleToque) {
   };
   bMais.addEventListener('pointerdown', alternarExtras);
   bMais.addEventListener('click', (e) => e.detail === 0 && alternarExtras(e));
-  extras.append(
-    atalho('olho', 'Câmera', 'KeyV'),
-    atalho('livro', 'Diário', 'KeyJ'),
-    atalho('foto', 'Modo foto', 'KeyP'),
-  );
+  extras.append(atalho('livro', 'Diário', 'KeyJ'), atalho('foto', 'Modo foto', 'KeyP'));
   if (podeAlternarTelaCheia()) {
     // tela cheia exige ativação do usuário: no toque ela vem no pointerup, não no pointerdown
     const bTela = document.createElement('button');
@@ -363,8 +363,33 @@ export function criarToque(raiz: HTMLElement, c: ControleToque) {
     anel.style.top = `${y}px`;
     anel.classList.toggle('visivel', v);
   };
+  /** Pinça (dois dedos na tela): aproxima e afasta a câmera; nada de quebrar nem colocar. */
+  let pinca: { dedos: Map<number, { x: number; y: number }>; dist: number } | null = null;
+  const distPinca = (p: { dedos: Map<number, { x: number; y: number }> }) => {
+    const [a, b] = [...p.dedos.values()];
+    return a && b ? Math.hypot(a.x - b.x, a.y - b.y) : 0;
+  };
   olhar.addEventListener('pointerdown', (e) => {
-    if (gesto) return; // um dedo por vez na tela
+    if (pinca) return;
+    if (gesto) {
+      // segundo dedo: vira pinça (cancela o toque, o segurar e o arrastar do primeiro)
+      const g = gesto;
+      soltarGesto();
+      try {
+        olhar.setPointerCapture(e.pointerId);
+      } catch {
+        // ponteiro já liberado: segue sem captura
+      }
+      pinca = {
+        dedos: new Map([
+          [g.id, { x: g.x, y: g.y }],
+          [e.pointerId, { x: e.clientX, y: e.clientY }],
+        ]),
+        dist: 0,
+      };
+      pinca.dist = distPinca(pinca);
+      return;
+    }
     try {
       olhar.setPointerCapture(e.pointerId);
     } catch {
@@ -392,6 +417,17 @@ export function criarToque(raiz: HTMLElement, c: ControleToque) {
     gesto = g;
   });
   olhar.addEventListener('pointermove', (e) => {
+    if (pinca) {
+      const d = pinca.dedos.get(e.pointerId);
+      if (!d) return;
+      d.x = e.clientX;
+      d.y = e.clientY;
+      const agora = distPinca(pinca);
+      // abrir os dedos aproxima (a distância da câmera diminui), fechar afasta
+      if (agora > 8 && pinca.dist > 8) c.zoom?.(pinca.dist / agora);
+      pinca.dist = agora;
+      return;
+    }
     const g = gesto;
     if (!g || e.pointerId !== g.id) return;
     const dx = e.clientX - g.x;
@@ -410,14 +446,22 @@ export function criarToque(raiz: HTMLElement, c: ControleToque) {
       if (classificarGesto(0, desloc) !== 'arrastar') return;
       g.modo = 'arrastar';
       clearTimeout(g.timer);
+      c.arrastar?.(true);
     }
     c.olhar(dx * 2.2, dy * 2.2);
   });
   const terminar = (e: PointerEvent) => {
+    if (pinca) {
+      // a pinça acaba quando um dos dedos sai; o outro só volta a valer depois de soltar
+      if (pinca.dedos.delete(e.pointerId) && pinca.dedos.size < 2) pinca.dist = 0;
+      if (pinca.dedos.size === 0) pinca = null;
+      return;
+    }
     const g = gesto;
     if (!g || e.pointerId !== g.id) return;
     clearTimeout(g.timer);
     gesto = null;
+    if (g.modo === 'arrastar') c.arrastar?.(false);
     if (g.modo === 'segurar') {
       c.quebrar(false);
       c.soltarMira?.();
@@ -439,6 +483,7 @@ export function criarToque(raiz: HTMLElement, c: ControleToque) {
   olhar.addEventListener('pointercancel', terminar);
   // perdeu o dedo sem pointerup (sistema tomou o gesto, aba trocou): solta o que estava preso
   olhar.addEventListener('lostpointercapture', (e) => {
+    if (pinca?.dedos.delete(e.pointerId) && pinca.dedos.size === 0) pinca = null;
     if (gesto && e.pointerId === gesto.id) soltarGesto();
   });
 
@@ -447,6 +492,7 @@ export function criarToque(raiz: HTMLElement, c: ControleToque) {
     const g = gesto;
     gesto = null;
     if (g) clearTimeout(g.timer);
+    if (g?.modo === 'arrastar') c.arrastar?.(false);
     c.quebrar(false);
     c.soltarMira?.();
     mostrarAnel(0, 0, false);
@@ -454,6 +500,7 @@ export function criarToque(raiz: HTMLElement, c: ControleToque) {
   /** Solta tudo o que pode estar segurado: joystick, quebrar, pular e descer. */
   function soltarTudo(): void {
     soltarGesto();
+    pinca = null;
     if (joyId !== null || pino.style.transform) soltarJoy();
     for (const b of [bPular, bDescer]) b.classList.remove('ativo');
     c.tecla('pular', false);
@@ -505,7 +552,6 @@ export function ligarGamepad(c: ControleToque, slot: (passo: number) => void) {
       if (apertou(4)) slot(-1);
       if (apertou(5)) slot(1);
       if (apertou(2)) c.teclaDom('KeyE');
-      if (apertou(3)) c.teclaDom('KeyV');
       if (apertou(8)) c.teclaDom('Tab');
       if (apertou(9)) c.teclaDom('Pausa');
       for (let i = 0; i < g.buttons.length; i++) antes[i] = b(i);

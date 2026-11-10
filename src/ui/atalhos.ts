@@ -13,7 +13,6 @@ export const FUNCOES_JOGO: readonly FuncaoJogo[] = [
   { codigo: 'Tab', tecla: 'Tab', nome: 'Mapa', icone: 'mapa' },
   { codigo: 'KeyJ', tecla: 'J', nome: 'Diário', icone: 'livro' },
   { codigo: 'KeyC', tecla: 'C', nome: 'Personagem', icone: 'pessoa' },
-  { codigo: 'KeyV', tecla: 'V', nome: 'Câmera', icone: 'olho' },
   { codigo: 'KeyP', tecla: 'P', nome: 'Modo foto', icone: 'foto' },
 ];
 

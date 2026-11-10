@@ -19,7 +19,15 @@ export interface OpcoesModoFoto {
   alvo(): { x: number; y: number; z: number } | null;
   /** Pausa o relógio do dia enquanto fotografa. */
   pausarDia(pausar: boolean): void;
+  /** Pés e frente do boneco do jogador (a selfie fica na frente dele). */
+  boneco?(): { x: number; y: number; z: number; yaw: number };
+  /** Vira o olhar (a câmera do modo foto usa o olhar do jogador). */
+  apontar?(yaw: number, pitch: number): void;
 }
+
+/** Selfie: a câmera de frente para o boneco (a única câmera de frente do jogo, spec 015). */
+export const DISTANCIA_SELFIE = 2.4;
+export const ALTURA_SELFIE = 1.75;
 
 export function criarModoFoto(op: OpcoesModoFoto) {
   const { scene, canvas, camera, cameraVisao, pipeline } = op;
@@ -86,6 +94,18 @@ export function criarModoFoto(op: OpcoesModoFoto) {
       return modoFoto;
     },
     filtro: definirFiltro,
+    /** Põe a câmera na frente do boneco, olhando para ele. */
+    selfie: () => {
+      const b = op.boneco?.();
+      if (!b || !modoFoto) return false;
+      fotoPos.set(
+        b.x + Math.sin(b.yaw) * DISTANCIA_SELFIE,
+        b.y + ALTURA_SELFIE,
+        b.z + Math.cos(b.yaw) * DISTANCIA_SELFIE,
+      );
+      op.apontar?.(b.yaw + Math.PI, 0.12);
+      return true;
+    },
     desfoque: (v: number) => {
       pipeline.depthOfFieldEnabled = v > 0.01;
       if (v > 0.01) {

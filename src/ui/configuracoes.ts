@@ -111,8 +111,8 @@ const ABAS: Record<Aba, { titulo: string; itens: Def[] }> = {
       {
         tipo: 'bool',
         chave: 'balanco',
-        nome: 'Balanço ao andar',
-        dica: 'Movimento do braço e da câmera',
+        nome: 'Câmera volta sozinha',
+        dica: 'Andando, a câmera volta devagar para trás do boneco',
       },
       { tipo: 'bool', chave: 'mostrarFps', nome: 'Mostrar FPS' },
       {

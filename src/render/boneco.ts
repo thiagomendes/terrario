@@ -75,6 +75,8 @@ export function criarBoneco(
   let malhas: Mesh[] = [];
   let visivel = true;
   let luz = 1;
+  /** Meio transparente quando a câmera chega perto demais (spec 015); 1 = normal. */
+  let opacidade = 1;
   /** Posição de repouso de cada junta (a pose soma em cima). */
   let repouso = {} as Record<Junta, [number, number, number]>;
   // a mão direita segura pela ponta do cabo: o nó "pega" fica no centro da mão
@@ -94,6 +96,7 @@ export function criarBoneco(
       modelo = modeloNaMao(scene, mats, bloco, item, `${prefixo}-mao`);
       if (!modelo) return;
       modelo.no.parent = pega;
+      for (const m of modelo.malhas) m.visibility = opacidade;
       // ferramenta: o cabo sai da mão para a frente com o braço abaixado; peças ficam
       // apoiadas na palma, um pouco à frente
       if (modelo.ferramenta) modelo.no.rotation.set(Math.PI / 2, 0, 0);
@@ -146,7 +149,6 @@ export function criarBoneco(
       juntas[nome].parent = j.pai ? juntas[j.pai] : escalar;
     const paraFundir = new Map<string, { junta: Junta; lista: Mesh[] }>();
     for (const p of plano.pecas) {
-      if (p.soVista) continue;
       const m = montarPeca(scene, mats, p, prefixo);
       if (fundir && !/(olho|brilho|boca)/.test(p.nome) && m.material) {
         // só funde malhas com os mesmos dados de vértice (senão o Babylon recusa)
@@ -158,6 +160,7 @@ export function criarBoneco(
       }
       m.parent = juntas[p.junta];
       m.setEnabled(visivel);
+      m.visibility = opacidade;
       malhas.push(m);
     }
     // cada peça ainda sem pai: a posição dela já é a posição na junta
@@ -172,6 +175,7 @@ export function criarBoneco(
         for (const m of lista) {
           m.parent = juntas[junta];
           m.setEnabled(visivel);
+          m.visibility = opacidade;
           malhas.push(m);
         }
         continue;
@@ -182,6 +186,7 @@ export function criarBoneco(
       f.receiveShadows = false;
       f.parent = juntas[junta];
       f.setEnabled(visivel);
+      f.visibility = opacidade;
       malhas.push(f);
     }
     pega.parent = juntas.maoD;
@@ -215,6 +220,10 @@ export function criarBoneco(
     const segurando = naMao.segurando();
     const j = juntas;
     j.corpo.position.y = suave('corpoY', pose.corpoY ?? pose.tronco, k);
+    // movimento com vida: o corpo inteiro inclina para a frente e para dentro da curva
+    // (os valores já chegam suavizados do corpo vivo; os gestos também usam)
+    j.corpo.rotation.x = suave('corpoX', pose.corpoX ?? 0, k);
+    j.corpo.rotation.z = suave('corpoZ', pose.corpoZ ?? 0, k);
     const esc = suave('escala', pose.escala ?? 1, k);
     j.corpo.scaling.set(1 / Math.sqrt(esc), esc, 1 / Math.sqrt(esc));
     j.tronco.rotation.x = suave('troncoX', pose.troncoX ?? 0, kLento);
@@ -231,9 +240,11 @@ export function criarBoneco(
     j.bracoE.rotation.x = suave('bracoE', pose.bracoEsquerdo, k);
     j.bracoD.rotation.z = suave('bracoDZ', -0.06 - (pose.bracoDireitoAbre ?? 0), k);
     j.bracoE.rotation.z = suave('bracoEZ', 0.06 + (pose.bracoEsquerdoAbre ?? 0), k);
+    j.bracoD.rotation.y = suave('bracoDY', pose.bracoDireitoGiro ?? 0, k);
+    j.bracoE.rotation.y = suave('bracoEY', pose.bracoEsquerdoGiro ?? 0, k);
     // a cabeça acompanha o olhar da câmera e compensa a inclinação do tronco
     j.cabeca.rotation.x = suave('cabecaX', pose.cabeca + olhar * 0.75 - (pose.troncoX ?? 0), k);
-    j.cabeca.rotation.y = suave('cabecaY', pose.cabecaGiro ?? 0, kLento);
+    j.cabeca.rotation.y = suave('cabecaY', pose.cabecaGiro ?? 0, k);
     j.cabeca.rotation.z = suave('cabecaZ', pose.cabecaLado ?? 0, k);
     j.topete.rotation.x = suave('topete', pose.topete ?? 0, kLento);
     const pisca = pose.piscar ? 0.1 : 1;
@@ -264,7 +275,16 @@ export function criarBoneco(
       for (const m of malhas) m.setEnabled(v);
       naMao.definirVisivel(v);
     },
+    definirOpacidade(a) {
+      const n = Math.min(1, Math.max(0, a));
+      if (n === opacidade) return;
+      opacidade = n;
+      for (const m of malhas) m.visibility = n;
+      if (modelo) for (const m of modelo.malhas) m.visibility = n;
+    },
+    opacidade: () => opacidade,
     contarMalhas: () => malhas.length,
+    contarMalhasMao: () => (modelo ? modelo.malhas.length : 0),
     descartar() {
       limpar();
       naMao.descartar();
