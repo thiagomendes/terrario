@@ -1,7 +1,7 @@
 ---
 id: 015-terceira-pessoa
 title: 'Só terceira pessoa: câmera caprichada, movimento com vida e roda de gestos'
-status: DRAFT
+status: IN_PROGRESS
 base_branch: main
 branch: feat/terceira-pessoa
 created_at: 2026-11-10T12:00:00Z
@@ -19,20 +19,85 @@ environment: docker
 full_test_command: npx vitest run && scripts/e2e-gpu.sh
 install_command: npm ci --no-audit --no-fund
 ---
-## Contexto
+## Contexto e problema
 Pedido do dono em 10 nov 2026: o boneco de brinquedo da 012 quase não aparece em 1ª pessoa. O jogo passa a ser só em 3ª pessoa, com a câmera caprichada, o movimento menos robótico ("nada exagerado, já tá bem bom") e um menu de gestos sem encher a tela de botões.
 
 **Esboço aprovado** (10 nov 2026, "ficou excelente... vamos seguir o que está ali, como qualidade de entrega"): `referencia/camera-e-gestos.html`, https://claude.ai/artifact/HxVe9akzormCaxXt2sw7WZ. A entrega tem que ficar igual ao esboço no jeito de mexer, na câmera e na roda.
 
-## O que entra (como no esboço)
+## Objetivo
+- Jogar só em 3ª pessoa, com uma câmera que segue suave, desvia de paredes e nunca atrapalha minerar e construir.
+- Um boneco com peso e vida ao andar, correr, pular e ficar parado.
+- Oito gestos numa roda de um botão só, vistos pelos amigos e respondidos pelo mundo.
+
+## Fora de escopo (desta etapa)
+- Fantasias (017), construções protegidas (016), Cidade Grande (014).
+- Frases prontas e chat (convivência, mais adiante).
+- Animações novas para os moradores e bichos além de responder aos gestos.
+
+## Como no esboço aprovado
 - **Só 3ª pessoa:** saem a 1ª pessoa, a câmera de frente e o botão de câmera (V); o braço de 1ª pessoa deixa de ser desenhado. A câmera de frente fica só no modo foto (selfie). Preferências salvas com "1ª pessoa" abrem em 3ª, sem aviso.
-- **Câmera:** solta do corpo (girar a câmera não gira o boneco); segue com leve atraso; andando sem mexer nela, volta devagar para trás do boneco; desvia de paredes, árvores e tetos chegando perto em vez de atravessar; bem perto, o boneco fica meio transparente; aproximar e afastar de 2,5 a 7 blocos (roda do mouse e pinça); para minerar e construir o boneco vira para o bloco e a mira fica no centro.
-- **Movimento:** arranque e freada suaves; o corpo gira para a direção nova; inclina ao correr e nas curvas; passada e braços acompanham a velocidade; pulo com agachadinha e amortecida; parado respira e pisca; a cabeça acompanha um pouco a câmera.
-- **Roda de gestos:** os 8 do esboço (acenar, cumprimentar, chamar, comemorar, aplaudir, dançar, apontar, sentar), aprovados. Abre no meio da tela em volta do boneco, botões grandes, tocar fora fecha, fecha sozinha; no computador `G` e as teclas de 1 a 8. Ícone do gesto num balão em cima da cabeça por 2 s. No multijogador todos veem (comando novo com saneamento e limite de repetição). O mundo responde: o morador acena de volta; "chamar" traz o cachorro e os bichos criados.
+- **Câmera:**
+  - solta do corpo: girar a câmera não gira o boneco;
+  - segue com leve atraso, sem tranco;
+  - andando sem mexer nela, volta devagar para trás do boneco;
+  - desvia de paredes, árvores e tetos chegando perto, em vez de atravessar; bem perto, o boneco fica meio transparente;
+  - aproximar e afastar de 2,5 a 7 blocos (roda do mouse e pinça);
+  - para minerar e construir, o boneco vira para o bloco e a mira fica no centro da tela; o alcance continua medido a partir do boneco.
+- **Movimento:**
+  - arranque e freada suaves; o corpo gira para a direção nova em vez de virar de uma vez;
+  - inclina ao correr e para dentro nas curvas;
+  - passada e braços acompanham a velocidade; correr tem passada própria;
+  - pulo com agachadinha e amortecida;
+  - parado, respira e pisca; a cabeça acompanha um pouco a câmera;
+  - os amigos veem o mesmo (o boneco do amigo vira para onde anda).
+- **Roda de gestos:**
+  - os 8 do esboço: acenar, cumprimentar, chamar, comemorar, aplaudir, dançar, apontar e sentar;
+  - abre no meio da tela em volta do boneco, botões grandes, tocar fora fecha, fecha sozinha; no computador `G` e as teclas de 1 a 8;
+  - o ícone do gesto aparece num balão em cima da cabeça por 2 s;
+  - no multijogador todos veem (comando novo com saneamento e limite de repetição);
+  - o mundo responde: o morador perto acena de volta; "chamar" traz o cachorro (raposa domada) e os bichos criados que estão perto;
+  - andar interrompe o gesto; "sentar" fica até andar.
 - **Botão da carinha:** no canto superior esquerdo, ao lado do "+" (decisão do dono), para a tela ficar limpa.
 
-## Para explorar no começo da spec (ideia do dono)
-- **Uma roda só para os menus da tela:** em vez de vários botões, um botão abre uma roda que destrava inventário, mapa, diário, personagem, foto, configurações e os gestos. Fazer um esboço comparando "roda única" com "roda de gestos + botões de hoje" antes de decidir. Se não ficar bom, segue como no esboço aprovado.
+## Para decidir no começo (ideia do dono)
+- **Uma roda só para os menus da tela:** em vez de vários botões, um botão abre uma roda que destrava inventário, mapa, diário, personagem, foto, configurações e os gestos. Esboço comparando com "roda de gestos + botões de hoje": `referencia/menus.html`. Se não ficar bom, segue como no esboço aprovado.
 
-## Ordem
-Depois de fechar a 013 (Rancho Alegre) e antes da 014 (Cidade Grande), decisão do dono em 10 nov 2026.
+## Lições aplicadas
+1. **Comando novo com caso no saneamento** (`gesto`) e teste no modo nuvem; limite de repetição no servidor.
+2. **Telemetria plausível:** o arranque suave não pode mudar a velocidade máxima que o servidor confere (`VEL_MAX`); o movimento novo é de desenho, a física do jogador segue a mesma.
+3. **Uma regra só para prever e para conferir** (mira e alcance a partir do boneco, no cliente e no núcleo).
+4. **Tudo pelo toque também:** girar a câmera arrastando, pinça para aproximar, roda de gestos com botões grandes.
+5. **Peças fundidas e nada transparente sem motivo:** o boneco meio transparente só quando a câmera está perto demais, sem custo nos outros quadros.
+6. **Mundos e preferências antigos abrem iguais** (modo de câmera salvo migra para 3ª).
+7. **Listas e testes que dependem da 1ª pessoa** (testes de tela do personagem, mira, braço, capturas) passam a 3ª pessoa, sem perder o que conferiam.
+
+## Capricho na experiência (para não frustrar)
+- **Construir de perto é fácil:** a mira acerta o bloco que a criança vê no centro, mesmo com a câmera atrás; nunca mira um bloco escondido atrás do boneco.
+- **Cavernas e casas:** a câmera nunca entra na parede nem mostra o lado de dentro dos blocos; dentro de uma casa pequena ela chega perto e o boneco fica meio transparente.
+- **Sem enjoo:** nada de tranco, de câmera girando sozinha enquanto a criança mexe nela, nem de chacoalhar.
+- **Gestos sem ler:** só ícones grandes, com nome curto embaixo.
+- **Medido:** 60 fps no computador e pelo menos 45 com a CPU 4× mais lenta, andando no Rancho ao lado do sítio e dentro de uma caverna.
+- **Revisão jogando de verdade** antes de fechar, no computador e no celular, comparando com o esboço.
+
+## Critérios de qualidade (definição de pronto)
+1. Só 3ª pessoa; modo foto mantém a selfie; preferências antigas migram.
+2. Câmera como no esboço (seguir, voltar para trás, desviar, transparência, zoom), testada em campo aberto, caverna e dentro de casa.
+3. Mira e alcance certos em 3ª pessoa (quebrar e colocar acertam o bloco do centro), no computador e no toque.
+4. Movimento como no esboço, também no boneco dos amigos.
+5. Os 8 gestos com animação, balão, `G`/1–8 e roda no toque; multijogador com saneamento e limite; morador acena de volta; "chamar" traz bichos.
+6. Menu conforme a decisão sobre a roda única.
+7. Desempenho medido; capturas lado a lado com o esboço; testes de tela no computador e no celular.
+8. Nada quebra: todos os testes passam; auditoria independente; relatório visual.
+
+## Fases e tarefas
+| # | Tarefa |
+|---|---|
+| T01 | Só 3ª pessoa: tirar 1ª pessoa, câmera de frente (fica no modo foto), V e o braço; migrar preferências; ajustar testes |
+| T02 | Câmera nova: órbita solta, seguir suave, voltar para trás, desvio de blocos, transparência, zoom; mira e alcance a partir do boneco |
+| T03 | Movimento com vida no boneco do jogador e dos amigos |
+| T04 | Gestos: poses, balão, comando `gesto` no núcleo e na nuvem, respostas do mundo |
+| T05 | Esboço da roda única e decisão; roda de gestos (e de menus, se escolhida) no computador e no toque |
+| T06 | Desempenho, capturas com o esboço, testes de tela, auditoria, publicação e relatório visual |
+
+## Decisões do dono
+- 10 nov 2026: esboço aprovado como padrão de entrega; os 8 gestos ficam; botão da carinha no canto superior esquerdo, ao lado do "+"; ordem 013 → 015 → 017 → 016 → 014.
