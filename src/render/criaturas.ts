@@ -4,7 +4,7 @@ import { StandardMaterial } from '@babylonjs/core/Materials/standardMaterial';
 import { MeshBuilder } from '@babylonjs/core/Meshes/meshBuilder';
 import { TransformNode } from '@babylonjs/core/Meshes/transformNode';
 import { Mesh } from '@babylonjs/core/Meshes/mesh';
-import { Vector3 } from '@babylonjs/core/Maths/math.vector';
+import { Matrix, Vector3 } from '@babylonjs/core/Maths/math.vector';
 import { VertexBuffer } from '@babylonjs/core/Buffers/buffer';
 import type { Scene } from '@babylonjs/core/scene';
 import type { Criatura } from '../jogo/criaturas';
@@ -23,6 +23,14 @@ import type { Personagem } from './personagem';
 
 type Peca = PecaBicho;
 
+/**
+ * Bicho a mais de tantos blocos da câmera vira uma malha só, sem balançar as pernas (de
+ * longe não se nota; corta os desenhos de cada perna, cabeça e cauda). Volta inteiro a
+ * LONGE_VOLTA.
+ */
+export const LONGE_LOD = 30;
+export const LONGE_VOLTA = 27;
+
 interface Modelo {
   raiz: TransformNode;
   /** Uma parte por grupo que se mexe junto (corpo, cabeça, cada perna...), já fundida. */
@@ -40,6 +48,12 @@ interface Modelo {
   amp: number;
   /** Último quadro em que a criatura estava na lista (para descartar os modelos órfãos). */
   quadro: number;
+  /**
+   * Longe da câmera (spec 015): o plástico do bicho inteiro numa malha só, parado na pose de
+   * descanso (um desenho em vez de um por perna). Feita na primeira vez que ele fica longe.
+   */
+  longe?: Mesh | null;
+  emLonge?: boolean;
 }
 
 /** Cores reutilizadas: nada de alocar Color3 por parte a cada quadro. */
@@ -136,6 +150,62 @@ export function criarRenderCriaturas(
     };
   }
   let quadro = 0;
+
+  /**
+   * O bicho longe numa malha só: as partes de plástico na pose de descanso, juntas no espaço
+   * da raiz. Os olhos e o que brilha (outros materiais) continuam nas partes.
+   */
+  function montarLonge(m: Modelo): Mesh | null {
+    const giros = m.partes.map((p) => p.no.rotation.clone());
+    for (const p of m.partes) p.no.rotation.setAll(0);
+    const inversa = Matrix.Invert(m.raiz.computeWorldMatrix(true));
+    const copias: Mesh[] = [];
+    for (const p of m.partes) {
+      p.no.computeWorldMatrix(true);
+      for (const malha of p.malhas) {
+        if (malha.material !== m.plastico) continue;
+        const copia = malha.clone(`${malha.name}-longe`, null, true);
+        if (!copia) continue;
+        copia.parent = null;
+        copia.position.setAll(0);
+        copia.rotation.setAll(0);
+        copia.rotationQuaternion = null;
+        copia.scaling.setAll(1);
+        copia.makeGeometryUnique();
+        copia.bakeTransformIntoVertices(malha.computeWorldMatrix(true).multiply(inversa));
+        copias.push(copia);
+      }
+    }
+    m.partes.forEach((p, i) => p.no.rotation.copyFrom(giros[i]));
+    if (copias.length < 2) {
+      for (const c of copias) c.dispose();
+      return null;
+    }
+    const f = Mesh.MergeMeshes(copias, true, true, undefined, false, false);
+    if (!f) {
+      for (const c of copias) c.dispose();
+      return null;
+    }
+    f.name = `${m.raiz.name}-longe`;
+    f.material = m.plastico;
+    f.parent = m.raiz;
+    f.isPickable = false;
+    excluirDoGlow(f);
+    return f;
+  }
+
+  /** Troca entre o bicho inteiro (perto) e a malha só (longe), com folga para não piscar. */
+  function escolherLonge(m: Modelo, x: number, y: number, z: number): void {
+    const d = Math.hypot(x - camX, y - camY, z - camZ);
+    const quer = m.emLonge ? d > LONGE_VOLTA : d > LONGE_LOD;
+    if (quer === !!m.emLonge) return;
+    if (quer && m.longe === undefined) m.longe = montarLonge(m);
+    if (quer && !m.longe) return;
+    m.emLonge = quer;
+    m.longe?.setEnabled(quer);
+    for (const p of m.partes)
+      for (const malha of p.malhas) if (malha.material === m.plastico) malha.setEnabled(!quer);
+  }
 
   function montar(c: Criatura): Modelo {
     const raiz = new TransformNode(`criatura-${c.id}`, scene);
@@ -361,6 +431,7 @@ export function criarRenderCriaturas(
         const pulinho = mov.saltita * Math.abs(Math.sin(m.fase)) * andando;
         m.raiz.position.set(c.x, c.y + flutua + pulinho, c.z);
         m.raiz.rotation.y = c.yaw;
+        escolherLonge(m, c.x, c.y + 0.5, c.z);
         if (c.estado !== 'morrendo') m.raiz.rotation.z = Math.sin(m.fase) * mov.ginga * andando;
         const morrer =
           c.estado === 'morrendo' ? c.dissolver : c.tipo === 'espectro' ? c.dissolver : 0;
@@ -422,6 +493,14 @@ export function criarRenderCriaturas(
             malha.visibility = c.tipo === 'espectro' ? 1 - morrer : 1;
           }
         }
+        if (m.emLonge && m.longe) {
+          m.longe.renderOverlay = c.ferida > 0;
+          if (m.longe.renderOverlay) {
+            m.longe.overlayColor = COR_FERIDA;
+            m.longe.overlayAlpha = 0.55;
+          }
+          m.longe.visibility = c.tipo === 'espectro' ? 1 - morrer : 1;
+        }
       }
       for (const [id, mb] of moradores) {
         if (mb.quadro === quadro) continue;
@@ -435,6 +514,7 @@ export function criarRenderCriaturas(
           for (const malha of p.malhas) malha.dispose();
           p.no.dispose();
         }
+        m.longe?.dispose();
         for (const mat of m.proprios) mat.dispose();
         m.raiz.dispose();
         modelos.delete(id);

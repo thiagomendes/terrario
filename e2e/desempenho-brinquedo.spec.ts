@@ -153,7 +153,8 @@ test('quadros por segundo ao lado de um sítio do Rancho Alegre', async ({ page 
   });
   if (!lugar) throw new Error('sem sítio com cercado perto do nascimento');
   // o chão do sítio carrega, os moradores e os bichos do curral aparecem
-  await page.waitForTimeout(15_000);
+  // ESPERA_SITIO: quanto esperar no sítio antes de medir (ms; padrão 15 s)
+  await page.waitForTimeout(Number(process.env.ESPERA_SITIO ?? 15_000));
   const perto = await page.evaluate(({ x, z }) => {
     const cs = window.__brumaluz!.criaturas!().filter((c) => Math.hypot(c.x - x, c.z - z) < 40);
     const n: Record<string, number> = {};

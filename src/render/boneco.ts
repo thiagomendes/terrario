@@ -8,6 +8,7 @@
 import { TransformNode } from '@babylonjs/core/Meshes/transformNode';
 import { MeshBuilder } from '@babylonjs/core/Meshes/meshBuilder';
 import { Mesh } from '@babylonjs/core/Meshes/mesh';
+import { Vector3 } from '@babylonjs/core/Maths/math.vector';
 import type { Scene } from '@babylonjs/core/scene';
 import type { Aparencia } from '../personagem/aparencia';
 import { planoBoneco, type Junta, type Peca, type PlanoBoneco } from '../personagem/boneco';
@@ -147,14 +148,35 @@ export function criarBoneco(
       [Junta, (typeof plano.juntas)[Junta]]
     >)
       juntas[nome].parent = j.pai ? juntas[j.pai] : escalar;
-    const paraFundir = new Map<string, { junta: Junta; lista: Mesh[] }>();
+    const paraFundir = new Map<
+      string,
+      { junta: Junta; lista: Mesh[]; nome?: string; pivo?: [number, number, number] }
+    >();
     for (const p of plano.pecas) {
       const m = montarPeca(scene, mats, p, prefixo);
-      if (fundir && !/(olho|brilho|boca)/.test(p.nome) && m.material) {
-        // só funde malhas com os mesmos dados de vértice (senão o Babylon recusa)
-        const k = `${p.junta}|${m.material.uniqueId}|${m.getVerticesDataKinds().sort().join()}`;
+      // os dois olhos (e os dois brilhos) piscam juntos e ficam na mesma altura: viram uma
+      // malha só, que pisca em volta do meio deles
+      const par = /^(olho|brilho)-?\d/.exec(p.nome)?.[1];
+      if (fundir && par && m.material) {
+        const k = `${par}|${p.junta}|${m.material.uniqueId}|${m.getVerticesDataKinds().sort().join()}`;
         let g = paraFundir.get(k);
-        if (!g) paraFundir.set(k, (g = { junta: p.junta, lista: [] }));
+        if (!g)
+          paraFundir.set(k, (g = { junta: p.junta, lista: [], nome: `${par}s`, pivo: [0, 0, 0] }));
+        g.lista.push(m);
+        continue;
+      }
+      if (fundir && !/(olho|brilho|boca)/.test(p.nome) && m.material) {
+        // a mão não gira sozinha: as peças dela vão para a junta do braço (menos malhas)
+        let junta = p.junta;
+        if (junta === 'maoE' || junta === 'maoD') {
+          const j = plano.juntas[junta];
+          m.position.addInPlaceFromFloats(j.pos[0], j.pos[1], j.pos[2]);
+          junta = junta === 'maoE' ? 'bracoE' : 'bracoD';
+        }
+        // só funde malhas com os mesmos dados de vértice (senão o Babylon recusa)
+        const k = `${junta}|${m.material.uniqueId}|${m.getVerticesDataKinds().sort().join()}`;
+        let g = paraFundir.get(k);
+        if (!g) paraFundir.set(k, (g = { junta, lista: [] }));
         g.lista.push(m);
         continue;
       }
@@ -164,8 +186,15 @@ export function criarBoneco(
       malhas.push(m);
     }
     // cada peça ainda sem pai: a posição dela já é a posição na junta
-    for (const { junta, lista } of paraFundir.values()) {
+    for (const { junta, lista, nome, pivo } of paraFundir.values()) {
       const material = lista[0].material;
+      if (pivo) {
+        for (const m of lista) {
+          pivo[0] += m.position.x / lista.length;
+          pivo[1] += m.position.y / lista.length;
+          pivo[2] += m.position.z / lista.length;
+        }
+      }
       const f =
         lista.length === 1
           ? lista[0]
@@ -180,7 +209,9 @@ export function criarBoneco(
         }
         continue;
       }
-      f.name = `${prefixo}-${junta}-fundida`;
+      f.name = nome ? `${prefixo}-${nome}-fundida` : `${prefixo}-${junta}-fundida`;
+      // pisca em volta do meio dos olhos (não do meio da cabeça)
+      if (pivo && lista.length > 1) f.setPivotPoint(new Vector3(pivo[0], pivo[1], pivo[2]));
       f.material = material;
       f.isPickable = false;
       f.receiveShadows = false;
