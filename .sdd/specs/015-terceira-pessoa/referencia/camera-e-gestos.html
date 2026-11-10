@@ -1,0 +1,612 @@
+<title>Terceira Pessoa e Gestos</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@500;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: cabeçalho curto; o palco jogável grande com o HUD de brinquedo por cima; depois os cartões com o que muda e o que falta decidir */
+:root {
+  --bg: #eef0f6;
+  --fg: #1c1b2b;
+  --suave: #5a5a72;
+  --linha: #cdd0de;
+  --acento: #a8610a;
+  --cartao: #f8f9fc;
+  --creme: #fff7e8;
+  --creme-sombra: #e9d6b2;
+  --tinta: #3b2a1e;
+  --display: 'Pixelify Sans', 'Courier New', monospace;
+  --corpo: 'IBM Plex Sans', system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) { --bg: #12111c; --fg: #ecebf5; --suave: #a3a2bb; --linha: #2c2b40; --acento: #ffc96b; --cartao: #191827; color-scheme: dark; }
+}
+:root[data-theme="dark"] { --bg: #12111c; --fg: #ecebf5; --suave: #a3a2bb; --linha: #2c2b40; --acento: #ffc96b; --cartao: #191827; color-scheme: dark; }
+body { background: var(--bg); color: var(--fg); font: 400 16px/1.55 var(--corpo); }
+.pagina {
+  max-width: 1180px; margin: 0 auto;
+  padding-block: 28px 64px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: grid; gap: 24px;
+}
+h1, h2, h3 { font-family: var(--display); margin: 0; line-height: 1.15; text-wrap: balance; }
+h1 { font-size: clamp(1.8rem, 5vw, 2.6rem); }
+h2 { font-size: clamp(1.25rem, 3vw, 1.6rem); }
+h3 { font-size: 1.05rem; }
+.olho { font: 600 0.78rem var(--corpo); letter-spacing: 0.12em; text-transform: uppercase; color: var(--acento); }
+.intro { max-width: 70ch; color: var(--suave); margin: 8px 0 0; }
+
+/* ---- o palco ---- */
+.palco { position: relative; aspect-ratio: 16 / 10; max-width: 100%; border-radius: 16px; overflow: hidden; background: #a9d4f5; touch-action: none; user-select: none; -webkit-user-select: none; }
+@media (max-width: 640px) { .palco { aspect-ratio: 3 / 4; } }
+.palco canvas { display: block; width: 100%; height: 100%; }
+.hud { position: absolute; inset: 0; pointer-events: none; font-family: 'Nunito', var(--corpo); color: var(--tinta); }
+.peca {
+  background: var(--creme); border: 0; border-radius: 999px; color: var(--tinta);
+  box-shadow: 0 4px 0 var(--creme-sombra), 0 8px 14px rgba(60, 35, 10, 0.22), inset 0 2px 0 rgba(255, 255, 255, 0.85);
+}
+.joy { position: absolute; left: 18px; bottom: 18px; width: 112px; height: 112px; border-radius: 50%; background: rgba(255, 247, 232, 0.45); box-shadow: inset 0 0 0 3px rgba(255, 255, 255, 0.6); pointer-events: auto; touch-action: none; }
+.joy .pino { position: absolute; left: 50%; top: 50%; width: 46px; height: 46px; margin: -23px; border-radius: 50%; }
+.botoes { position: absolute; right: 18px; bottom: 18px; display: flex; gap: 12px; align-items: flex-end; pointer-events: auto; }
+.botoes button { width: 64px; height: 64px; display: grid; place-items: center; cursor: pointer; }
+.botoes button:active { transform: translateY(3px); }
+.botoes button:focus-visible, .roda button:focus-visible { outline: 3px solid #ffb547; outline-offset: 2px; }
+.botoes svg { width: 30px; height: 30px; }
+.botoes .gesto-botao { width: 52px; height: 52px; }
+.botoes .gesto-botao[aria-expanded="true"] { background: #ffe4a8; }
+.dica { position: absolute; left: 50%; top: 14px; transform: translateX(-50%); padding: 6px 14px; font-size: 0.85rem; font-weight: 700; white-space: nowrap; max-width: calc(100% - 32px); overflow: hidden; text-overflow: ellipsis; }
+
+/* roda de gestos: abre no meio da tela, em volta do boneco; tocar fora fecha */
+.roda { position: absolute; inset: 0; pointer-events: none; }
+.roda::before { content: ""; position: absolute; left: 50%; top: 50%; width: var(--diam, 300px); height: var(--diam, 300px); margin: calc(var(--diam, 300px) / -2); border-radius: 50%; background: radial-gradient(circle, rgba(255, 247, 232, 0) 34%, rgba(255, 247, 232, 0.42) 36%, rgba(255, 247, 232, 0.42) 100%); opacity: 0; transform: scale(0.6); transition: transform 0.22s, opacity 0.15s; }
+.roda.aberta { pointer-events: auto; }
+.roda.aberta::before { opacity: 1; transform: scale(1); }
+.roda button {
+  position: absolute; left: 50%; top: 50%; width: 60px; height: 60px; margin: -30px; display: grid; place-items: center; cursor: pointer;
+  opacity: 0; transform: translate(0, 0) scale(0.4); transition: transform 0.22s cubic-bezier(0.3, 1.4, 0.5, 1), opacity 0.15s;
+  pointer-events: none;
+}
+.roda.aberta button { opacity: 1; pointer-events: auto; }
+.roda button svg { width: 32px; height: 32px; }
+.roda button span { position: absolute; top: 100%; margin-top: 4px; font: 700 0.72rem var(--corpo); color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,0.6); white-space: nowrap; pointer-events: none; }
+.roda button.escolhido { background: #ffe4a8; }
+
+.indicadores { position: absolute; left: 14px; top: 14px; display: grid; gap: 6px; }
+.indicadores div { padding: 4px 12px; font-size: 0.78rem; font-weight: 700; }
+
+.controles { display: flex; flex-wrap: wrap; gap: 10px 20px; align-items: center; }
+.grupo { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.grupo > span { font-size: 0.86rem; color: var(--suave); }
+.grupo button { min-height: 44px; padding: 0 16px; border-radius: 999px; border: 1px solid var(--linha); background: var(--cartao); color: var(--fg); font: 500 0.95rem var(--corpo); cursor: pointer; }
+.grupo button[aria-pressed="true"] { border-color: var(--acento); color: var(--acento); font-weight: 600; box-shadow: inset 0 0 0 1px var(--acento); }
+.grupo button:focus-visible { outline: 3px solid var(--acento); outline-offset: 2px; }
+.teclas { font-size: 0.88rem; color: var(--suave); margin: 0; }
+kbd { font: 600 0.8rem var(--corpo); border: 1px solid var(--linha); border-bottom-width: 2px; border-radius: 6px; padding: 0 6px; background: var(--cartao); color: var(--fg); }
+
+.cartoes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+@media (max-width: 760px) { .cartoes { grid-template-columns: 1fr; } }
+.cartao { background: var(--cartao); border: 1px solid var(--linha); border-radius: 12px; padding: 16px 18px; min-width: 0; }
+.cartao ul { margin: 8px 0 0; padding-left: 1.2em; display: grid; gap: 6px; }
+.cartao.decidir { grid-column: 1 / -1; border-color: var(--acento); }
+@media (prefers-reduced-motion: reduce) { .roda button { transition: none; } }
+</style>
+
+<main class="pagina">
+  <header>
+    <div class="olho">Terrário · esboço para a spec 015</div>
+    <h1>Terceira Pessoa e Gestos</h1>
+    <p class="intro">O jogo fica só em terceira pessoa. A câmera segue o boneco com suavidade, desvia das paredes e volta sozinha para trás dele. O boneco vira para onde anda e ganha balanço e peso. Os gestos ficam numa roda que sai de um botão só. Ande pelo palco para sentir: <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> ou o joystick, arraste a tela para girar a câmera e use a roda do mouse ou a pinça para aproximar.</p>
+  </header>
+
+  <div class="palco" id="palco" role="application" aria-label="Palco jogável: um boneco de brinquedo num gramado com árvores, uma casinha, uma amiga e um morador. Joystick à esquerda, botões de pular e de gestos à direita.">
+    <div class="hud">
+      <div class="indicadores">
+        <div class="peca" id="indCamera">Câmera atrás</div>
+      </div>
+      <div class="dica peca" id="dica">Ande até a amiga e acene para ela</div>
+      <div class="joy" id="joy"><div class="pino peca"></div></div>
+      <div class="roda" id="roda" aria-hidden="true"></div>
+      <div class="botoes">
+        <button type="button" class="peca gesto-botao" id="botaoGestos" aria-label="Gestos" aria-expanded="false" aria-controls="roda">
+          <svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="12" fill="#ffd45a" stroke="#3b2a1e" stroke-width="2.2"/><circle cx="11.5" cy="13.5" r="1.8" fill="#3b2a1e"/><circle cx="20.5" cy="13.5" r="1.8" fill="#3b2a1e"/><path d="M10.5 18.5 Q16 24 21.5 18.5" fill="none" stroke="#3b2a1e" stroke-width="2.2" stroke-linecap="round"/></svg>
+        </button>
+        <button type="button" class="peca" id="botaoPular" aria-label="Pular">
+          <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M16 6 L26 17 H20 V26 H12 V17 H6 Z" fill="#7cc35a" stroke="#3b2a1e" stroke-width="2.2" stroke-linejoin="round"/></svg>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="controles">
+    <div class="grupo" role="group" aria-label="Movimento"><span>Movimento</span>
+      <button type="button" data-jeito="hoje" aria-pressed="false">Como hoje</button>
+      <button type="button" data-jeito="novo" aria-pressed="true">Novo</button>
+    </div>
+    <div class="grupo" role="group" aria-label="Câmera"><span>Câmera</span>
+      <button type="button" data-camera="hoje" aria-pressed="false">Como hoje (presa nas costas)</button>
+      <button type="button" data-camera="novo" aria-pressed="true">Nova (solta e suave)</button>
+    </div>
+    <p class="teclas"><kbd>G</kbd> abre a roda de gestos (ou <kbd>1</kbd>…<kbd>8</kbd> direto) · <kbd>Espaço</kbd> pula · <kbd>Shift</kbd> corre</p>
+  </div>
+
+  <section class="cartoes" aria-label="O que muda">
+    <div class="cartao">
+      <h3>Só terceira pessoa</h3>
+      <ul>
+        <li>Saem a 1ª pessoa e a câmera de frente, e com elas o botão de câmera (<kbd>V</kbd>), um botão a menos na tela.</li>
+        <li>A câmera de frente continua só no modo foto, para fazer selfie.</li>
+        <li>Sai também o braço de 1ª pessoa (a mão na tela), que deixa de ser desenhado.</li>
+        <li>Mundos e preferências salvos com "1ª pessoa" abrem em 3ª, sem aviso.</li>
+      </ul>
+    </div>
+    <div class="cartao">
+      <h3>Câmera caprichada</h3>
+      <ul>
+        <li>Solta do corpo: girar a câmera não gira o boneco. Ele vira para onde anda.</li>
+        <li>Segue com um leve atraso (sem tranco) e, andando, volta devagar para trás do boneco quando você não mexe nela.</li>
+        <li>Desvia de paredes, árvores e tetos de caverna: chega mais perto em vez de atravessar. Bem perto, o boneco fica meio transparente para não tapar a vista.</li>
+        <li>Aproximar e afastar com a roda do mouse ou pinça (de 2,5 a 7 blocos).</li>
+        <li>Para minerar e construir, o boneco vira para o bloco mirado, e a mira continua no centro da tela.</li>
+      </ul>
+    </div>
+    <div class="cartao">
+      <h3>Movimento com mais vida, sem exagero</h3>
+      <ul>
+        <li>Arranque e freada suaves; o boneco gira o corpo para a direção nova em vez de virar de uma vez.</li>
+        <li>Inclina um pouco para a frente ao correr e para dentro nas curvas.</li>
+        <li>Passada e balanço dos braços acompanham a velocidade; correr tem passada própria.</li>
+        <li>Pulo com agachadinha antes e amortecida ao cair; parado, respira e pisca.</li>
+        <li>A cabeça acompanha um pouco para onde a câmera olha.</li>
+      </ul>
+    </div>
+    <div class="cartao">
+      <h3>Gestos (roda de um botão só)</h3>
+      <ul>
+        <li>Oito gestos: acenar, cumprimentar, chamar, comemorar, aplaudir, dançar, apontar e sentar.</li>
+        <li>Só imagem, sem leitura: o ícone do gesto aparece num balãozinho em cima da cabeça por 2 segundos, para os amigos entenderem de longe.</li>
+        <li>No multijogador, todos veem o gesto (comando novo no servidor, com limite de repetição).</li>
+        <li>O mundo responde: o morador acena de volta, e "Chamar" faz o seu cachorro e os bichos que você cria virem até você.</li>
+        <li>A roda abre no meio da tela, em volta do boneco, com botões grandes. Tocar fora fecha, e ela também fecha sozinha. No computador, <kbd>G</kbd> e as teclas de número.</li>
+      </ul>
+    </div>
+    <div class="cartao decidir">
+      <h3>Para você decidir</h3>
+      <ul>
+        <li><b>Os 8 gestos:</b> são esses mesmos, ou troca algum (por exemplo "dormir" ou "pular de alegria" no lugar de "sentar")?</li>
+        <li><b>Onde fica o botão da carinha no celular:</b> ao lado do pular (como no esboço) ou dentro do menu "+" de cima, para a tela ficar ainda mais limpa?</li>
+        <li><b>Quando fazer:</b> recomendo como spec 015, logo depois de fechar o Rancho Alegre e antes da Cidade Grande, porque mexe no jeito de jogar de todos os temas.</li>
+      </ul>
+    </div>
+  </section>
+</main>
+
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+} }
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
+
+const reduzir = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const palcoEl = document.getElementById('palco');
+
+// ---------- peças ----------
+const geos = new Map();
+const gCaixa = (w, h, d, r) => {
+  const k = [w, h, d, r].join(',');
+  if (!geos.has(k)) geos.set(k, r > 0 ? new RoundedBoxGeometry(w, h, d, 3, Math.min(r, w / 2, h / 2, d / 2)) : new THREE.BoxGeometry(w, h, d));
+  return geos.get(k);
+};
+const gBola = new THREE.SphereGeometry(1, 20, 14);
+const matsMundo = new Map();
+const matMundo = (cor) => {
+  if (!matsMundo.has(cor)) matsMundo.set(cor, new THREE.MeshPhysicalMaterial({ color: cor, roughness: 0.48, clearcoat: 0.35, clearcoatRoughness: 0.4 }));
+  return matsMundo.get(cor);
+};
+function em(o, x, y, z, rx = 0, ry = 0, rz = 0) { o.position.set(x, y, z); o.rotation.set(rx, ry, rz); return o; }
+
+// boneco com juntas: cada um tem os próprios materiais (para ficar transparente quando a câmera chega perto)
+function boneco(o) {
+  const mats = [];
+  const mat = (cor) => { const m = new THREE.MeshPhysicalMaterial({ color: cor, roughness: 0.45, clearcoat: 0.35, clearcoatRoughness: 0.4, transparent: true }); mats.push(m); return m; };
+  const cache = {};
+  const M = (cor) => (cache[cor] ??= mat(cor));
+  const caixa = (w, h, d, cor, r) => { const m = new THREE.Mesh(gCaixa(w, h, d, r), M(cor)); m.castShadow = true; return m; };
+  const bola = (r, cor, sx = 1, sy = 1, sz = 1) => { const m = new THREE.Mesh(gBola, M(cor)); m.scale.set(r * sx, r * sy, r * sz); m.castShadow = true; return m; };
+  const raiz = new THREE.Group();
+  const corpo = new THREE.Group(); raiz.add(corpo);
+  const pernas = [];
+  for (const s of [-1, 1]) {
+    const p = new THREE.Group(); p.position.set(s * 0.11, 0.34, 0);
+    p.add(em(caixa(0.17, 0.24, 0.18, o.calca, 0.07), 0, -0.12, 0));
+    p.add(em(caixa(0.21, 0.13, 0.28, o.sapato, 0.06), 0, -0.275, 0.03));
+    corpo.add(p); pernas.push(p);
+  }
+  const tronco = new THREE.Group(); tronco.position.y = 0.36; corpo.add(tronco);
+  tronco.add(em(caixa(0.46, 0.42, 0.34, o.camisa, 0.13), 0, 0.19, 0));
+  if (o.detalhe) tronco.add(em(caixa(0.16, 0.1, 0.02, o.detalhe, 0.03), 0, 0.12, 0.17));
+  const bracos = [];
+  for (const s of [-1, 1]) {
+    const b = new THREE.Group(); b.position.set(s * 0.29, 0.36, 0);
+    b.add(em(caixa(0.13, 0.26, 0.14, o.camisa, 0.06), 0, -0.13, 0));
+    b.add(em(bola(0.085, o.pele), 0, -0.3, 0));
+    tronco.add(b); bracos.push(b);
+  }
+  const cab = new THREE.Group(); cab.position.y = 0.74; tronco.add(cab);
+  cab.add(caixa(0.72, 0.68, 0.65, o.pele, 0.18));
+  cab.add(em(caixa(0.77, 0.3, 0.7, o.cabelo, 0.15), 0, 0.22, 0));
+  cab.add(em(caixa(0.77, 0.43, 0.16, o.cabelo, 0.07), 0, 0.02, -0.3));
+  if (o.trancas) for (const s of [-1, 1]) cab.add(em(bola(0.1, o.cabelo, 1, 1.6, 1), s * 0.4, -0.2, -0.12));
+  const olhos = [];
+  for (const s of [-1, 1]) {
+    const olho = em(bola(0.075, '#231a28', 0.85, 1.1, 0.5), s * 0.15, -0.04, 0.33);
+    cab.add(olho); olhos.push(olho);
+    cab.add(em(bola(0.024, '#ffffff', 1, 1, 0.5), s * 0.15 + 0.025, 0, 0.355));
+    cab.add(em(bola(0.05, '#ff9aa8', 1.4, 0.75, 0.3), s * 0.22, -0.16, 0.32));
+  }
+  if (o.chapeu) { cab.add(em(new THREE.Mesh(new THREE.CylinderGeometry(0.62, 0.62, 0.05, 28), M('#f0cf6a')), 0, 0.38, 0)); cab.add(em(new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.36, 0.26, 24), M('#f0cf6a')), 0, 0.52, 0)); }
+  // balão do gesto em cima da cabeça
+  const balao = new THREE.Sprite(new THREE.SpriteMaterial({ transparent: true, depthTest: false }));
+  balao.scale.set(0.75, 0.75, 1); balao.position.y = 2.05; balao.visible = false; balao.renderOrder = 10;
+  raiz.add(balao);
+  return { raiz, corpo, tronco, cab, pernas, bracos, olhos, mats, balao };
+}
+
+// ---------- o mundo: gramado com casinha, árvores e uma parede para a câmera desviar ----------
+const N = 26;
+const altura = new Map(); // "x,z" -> altura de bloco sólido (0 = chão livre)
+const k = (x, z) => x + ',' + z;
+function pilar(x, z, h) { altura.set(k(x, z), Math.max(altura.get(k(x, z)) ?? 0, h)); }
+// casinha 5x5 com porta
+for (let x = 4; x <= 8; x++) for (let z = -8; z <= -4; z++) {
+  const borda = x === 4 || x === 8 || z === -8 || z === -4;
+  if (!borda) continue;
+  if (z === -4 && x === 6) continue;
+  pilar(x, z, 3);
+}
+// mureta e árvores
+for (let x = -9; x <= -3; x++) pilar(x, 3, 2);
+const arvores = [[-6, -6], [9, 5], [-10, 8], [2, 9]];
+for (const [x, z] of arvores) pilar(x, z, 4);
+const solido = (x, y, z) => y >= 0 && y < (altura.get(k(Math.floor(x), Math.floor(z))) ?? 0);
+
+function montarMundo(cena) {
+  const g = new THREE.Group();
+  const mtx = new THREE.Matrix4();
+  const lista = {};
+  const add = (cor, x, y, z) => (lista[cor] ??= []).push([x, y, z]);
+  for (let x = -N / 2; x < N / 2; x++) for (let z = -N / 2; z < N / 2; z++) { add((x + z) % 7 === 0 ? '#86cc62' : '#7cc35a', x + 0.5, -0.5, z + 0.5); add('#9a6a44', x + 0.5, -1.5, z + 0.5); }
+  for (let x = 4; x <= 8; x++) for (let z = -8; z <= -4; z++) {
+    const borda = x === 4 || x === 8 || z === -8 || z === -4;
+    if (!borda || (z === -4 && x === 6)) continue;
+    for (let y = 0; y < 3; y++) add(y === 1 && (x === 5 || x === 7) && z === -4 ? '#9fd3f5' : '#e3c08a', x + 0.5, y + 0.5, z + 0.5);
+  }
+  for (let n = 0; n < 3; n++) for (let x = 3 + n; x <= 9 - n; x++) for (let z = -9; z <= -3; z++) add('#c0563a', x + 0.5, 3.5 + n, z + 0.5);
+  for (let x = -9; x <= -3; x++) for (let y = 0; y < 2; y++) add('#b9bec6', x + 0.5, y + 0.5, 3.5);
+  const geo = gCaixa(0.96, 0.96, 0.96, 0.14);
+  for (const [cor, ps] of Object.entries(lista)) {
+    const m = new THREE.InstancedMesh(geo, matMundo(cor), ps.length);
+    ps.forEach((p, i) => { mtx.makeTranslation(p[0], p[1], p[2]); m.setMatrixAt(i, mtx); });
+    m.castShadow = true; m.receiveShadow = true;
+    g.add(m);
+  }
+  for (const [x, z] of arvores) {
+    const t = new THREE.Mesh(gCaixa(0.5, 2.4, 0.5, 0.12), matMundo('#7a4826')); em(t, x + 0.5, 1.2, z + 0.5); t.castShadow = true; g.add(t);
+    const c = new THREE.Mesh(gCaixa(2.2, 1.6, 2.2, 0.35), matMundo('#5fae45')); em(c, x + 0.5, 3, z + 0.5); c.castShadow = true; g.add(c);
+  }
+  cena.add(g);
+}
+
+// ---------- ícones dos gestos (desenho, sem texto) ----------
+const GESTOS = [
+  { id: 'acenar', nome: 'Acenar', icone: '<path d="M10 25 V12 a2 2 0 0 1 4 0 V18 V8 a2 2 0 0 1 4 0 V18 V9 a2 2 0 0 1 4 0 V19 V13 a2 2 0 0 1 4 0 V21 Q26 28 18 28 H16 Q11 28 10 25 Z" fill="#f2c9a0" stroke="#3b2a1e" stroke-width="1.8" stroke-linejoin="round"/><path d="M4 8 Q6 5 8 7 M3 13 Q5 11 7 12" stroke="#a8610a" stroke-width="1.8" fill="none" stroke-linecap="round"/>' },
+  { id: 'cumprimentar', nome: 'Cumprimentar', icone: '<circle cx="10" cy="9" r="4" fill="#f2c9a0" stroke="#3b2a1e" stroke-width="1.8"/><path d="M10 13 Q15 17 14 24 M14 24 L11 29 M14 24 L17 29" stroke="#3b6fb6" stroke-width="3" fill="none" stroke-linecap="round"/><path d="M19 16 Q24 13 27 17 Q24 20 20 19 Z" fill="#ffd45a" stroke="#3b2a1e" stroke-width="1.6"/>' },
+  { id: 'chamar', nome: 'Chamar', icone: '<path d="M7 20 H18 a3 3 0 0 0 0 -6 H15 V11 a2 2 0 0 0 -4 0 V20" fill="#f2c9a0" stroke="#3b2a1e" stroke-width="1.8" stroke-linejoin="round"/><path d="M22 9 Q27 16 22 23" stroke="#a8610a" stroke-width="2" fill="none" stroke-linecap="round"/><path d="M5 20 V26 H18" stroke="#3b2a1e" stroke-width="1.8" fill="none" stroke-linecap="round"/>' },
+  { id: 'comemorar', nome: 'Comemorar', icone: '<path d="M16 4 L19 12 L27 12 L21 17 L23 26 L16 21 L9 26 L11 17 L5 12 L13 12 Z" fill="#ffd45a" stroke="#3b2a1e" stroke-width="1.8" stroke-linejoin="round"/>' },
+  { id: 'aplaudir', nome: 'Aplaudir', icone: '<path d="M9 26 L6 14 a2 2 0 0 1 4 -1 L13 20 L12 9 a2 2 0 0 1 4 0 L17 22" fill="#f2c9a0" stroke="#3b2a1e" stroke-width="1.8" stroke-linejoin="round"/><path d="M23 26 L26 14 a2 2 0 0 0 -4 -1 L19 20" fill="#e8b48a" stroke="#3b2a1e" stroke-width="1.8" stroke-linejoin="round"/><path d="M20 6 L22 3 M25 9 L28 7 M15 4 L15 1" stroke="#a8610a" stroke-width="1.8" stroke-linecap="round"/>' },
+  { id: 'dancar', nome: 'Dançar', icone: '<path d="M12 23 V8 L25 5 V20" fill="none" stroke="#3b2a1e" stroke-width="2.2" stroke-linejoin="round"/><ellipse cx="9" cy="23" rx="4" ry="3" fill="#ff8fb3" stroke="#3b2a1e" stroke-width="1.8"/><ellipse cx="22" cy="20" rx="4" ry="3" fill="#ff8fb3" stroke="#3b2a1e" stroke-width="1.8"/>' },
+  { id: 'apontar', nome: 'Apontar', icone: '<path d="M4 15 H17 V12 L28 16 L17 20 V17 H4 Z" fill="#7cc6ff" stroke="#3b2a1e" stroke-width="1.8" stroke-linejoin="round"/>' },
+  { id: 'sentar', nome: 'Sentar', icone: '<path d="M8 6 V20 H22 V27 M8 20 V27" stroke="#7a4826" stroke-width="2.6" fill="none" stroke-linecap="round"/><path d="M8 15 H22 V20" stroke="#7a4826" stroke-width="2.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>' },
+];
+function svgIcone(g) { return `<svg viewBox="0 0 32 32" aria-hidden="true">${g.icone}</svg>`; }
+// texturas do balão: o mesmo ícone, desenhado num círculo creme
+const texturas = {};
+for (const g of GESTOS) {
+  const img = new Image();
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><circle cx="32" cy="30" r="27" fill="#fff7e8" stroke="#e9d6b2" stroke-width="3"/><path d="M26 55 L32 63 L38 55 Z" fill="#fff7e8"/><g transform="translate(14 12) scale(1.12)">${g.icone}</g></svg>`;
+  img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+  const t = new THREE.Texture(img); t.colorSpace = THREE.SRGBColorSpace;
+  img.onload = () => (t.needsUpdate = true);
+  texturas[g.id] = t;
+}
+
+// ---------- cena ----------
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(Math.min(2, devicePixelRatio));
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+palcoEl.prepend(renderer.domElement);
+const cena = new THREE.Scene();
+cena.background = new THREE.Color('#a9d4f5');
+cena.fog = new THREE.Fog('#a9d4f5', 26, 60);
+const camera = new THREE.PerspectiveCamera(55, 16 / 10, 0.1, 120);
+const hemi = new THREE.HemisphereLight('#eaf4ff', '#6b8a52', 1.25);
+const sol = new THREE.DirectionalLight('#fff4e0', 2.4);
+sol.position.set(9, 16, 7); sol.castShadow = true; sol.shadow.mapSize.set(2048, 2048); sol.shadow.radius = 4; sol.shadow.bias = -0.0005; sol.shadow.normalBias = 0.03;
+Object.assign(sol.shadow.camera, { left: -16, right: 16, top: 16, bottom: -16, near: 1, far: 50 });
+cena.add(hemi, sol, sol.target);
+montarMundo(cena);
+
+const ana = boneco({ pele: '#e8b48a', cabelo: '#4a2c1a', camisa: '#3b6fb6', calca: '#2d3a4f', sapato: '#4a3426', detalhe: '#f2d16b' });
+cena.add(ana.raiz);
+const amiga = boneco({ pele: '#9a6644', cabelo: '#1a1410', camisa: '#ff8fb3', calca: '#5a4a6e', sapato: '#3a2a22', trancas: true });
+em(amiga.raiz, -4, 0, -1, 0, 0.8, 0); cena.add(amiga.raiz);
+const morador = boneco({ pele: '#e2b48c', cabelo: '#a0522d', camisa: '#d9483b', calca: '#3f6fb8', sapato: '#5a3a26', chapeu: true, trancas: true });
+em(morador.raiz, 6.5, 0, -2.6, 0, Math.PI, 0); cena.add(morador.raiz);
+
+// ---------- estado ----------
+let jeito = 'novo', modoCam = 'novo';
+const J = { x: 0.5, z: 4.5, y: 0, vx: 0, vz: 0, vy: 0, yaw: Math.PI, noChao: true, fase: 0, agacha: 0, inclina: 0, roll: 0, ultimoYaw: Math.PI };
+const C = { yaw: Math.PI, pitch: 0.32, dist: 4.6, alvoDist: 4.6, x: 0, y: 1.4, z: 0, mexeuEm: -10 };
+const teclas = new Set();
+let joyX = 0, joyY = 0;
+let gestoAtual = null, gestoInicio = 0;
+const respostas = []; // [boneco, gesto, inicio]
+let tempo = 0;
+
+// ---------- entrada ----------
+addEventListener('keydown', (e) => {
+  if (e.target.closest && e.target.closest('input,textarea')) return;
+  const dentro = document.activeElement === document.body || palcoEl.contains(document.activeElement);
+  if (!dentro) return;
+  if (['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ShiftLeft', 'ShiftRight', 'Space'].includes(e.code)) { teclas.add(e.code); e.preventDefault(); }
+  if (e.code === 'Space' && !e.repeat) pular();
+  if (e.code === 'KeyG' && !e.repeat) alternarRoda();
+  if (/^Digit[1-8]$/.test(e.code)) fazerGesto(GESTOS[Number(e.code.slice(5)) - 1].id);
+  if (e.code === 'Escape') fecharRoda();
+});
+addEventListener('keyup', (e) => teclas.delete(e.code));
+palcoEl.addEventListener('pointerdown', () => palcoEl.focus?.());
+palcoEl.tabIndex = 0;
+
+// arrastar na tela gira a câmera; pinça e roda do mouse aproximam
+const dedos = new Map();
+let pinca0 = 0, dist0 = 0;
+renderer.domElement.addEventListener('pointerdown', (e) => { renderer.domElement.setPointerCapture(e.pointerId); dedos.set(e.pointerId, { x: e.clientX, y: e.clientY }); if (dedos.size === 2) { const [a, b] = [...dedos.values()]; pinca0 = Math.hypot(a.x - b.x, a.y - b.y); dist0 = C.alvoDist; } fecharRoda(); });
+renderer.domElement.addEventListener('pointermove', (e) => {
+  const d = dedos.get(e.pointerId); if (!d) return;
+  if (dedos.size === 2) { d.x = e.clientX; d.y = e.clientY; const [a, b] = [...dedos.values()]; const p = Math.hypot(a.x - b.x, a.y - b.y); C.alvoDist = Math.min(7, Math.max(2.5, dist0 * pinca0 / Math.max(1, p))); return; }
+  C.yaw -= (e.clientX - d.x) * 0.008;
+  C.pitch = Math.min(1.2, Math.max(-0.35, C.pitch + (e.clientY - d.y) * 0.006));
+  d.x = e.clientX; d.y = e.clientY; C.mexeuEm = tempo;
+});
+const soltar = (e) => dedos.delete(e.pointerId);
+renderer.domElement.addEventListener('pointerup', soltar);
+renderer.domElement.addEventListener('pointercancel', soltar);
+renderer.domElement.addEventListener('wheel', (e) => { e.preventDefault(); C.alvoDist = Math.min(7, Math.max(2.5, C.alvoDist + Math.sign(e.deltaY) * 0.5)); }, { passive: false });
+
+// joystick
+const joy = document.getElementById('joy'), pino = joy.querySelector('.pino');
+let joyId = null;
+joy.addEventListener('pointerdown', (e) => { joyId = e.pointerId; joy.setPointerCapture(e.pointerId); moverJoy(e); fecharRoda(); });
+joy.addEventListener('pointermove', (e) => { if (e.pointerId === joyId) moverJoy(e); });
+const soltarJoy = () => { joyId = null; joyX = joyY = 0; pino.style.transform = ''; };
+joy.addEventListener('pointerup', soltarJoy); joy.addEventListener('pointercancel', soltarJoy);
+function moverJoy(e) {
+  const r = joy.getBoundingClientRect();
+  let dx = (e.clientX - r.left - r.width / 2) / (r.width / 2), dy = (e.clientY - r.top - r.height / 2) / (r.height / 2);
+  const l = Math.hypot(dx, dy); if (l > 1) { dx /= l; dy /= l; }
+  joyX = dx; joyY = dy; pino.style.transform = `translate(${dx * 33}px, ${dy * 33}px)`;
+}
+document.getElementById('botaoPular').addEventListener('click', pular);
+
+// roda de gestos
+const roda = document.getElementById('roda'), botaoGestos = document.getElementById('botaoGestos');
+GESTOS.forEach((g, i) => {
+  const b = document.createElement('button');
+  b.type = 'button'; b.className = 'peca'; b.setAttribute('aria-label', g.nome); b.tabIndex = -1;
+  b.innerHTML = svgIcone(g) + `<span>${g.nome}</span>`;
+  b.dataset.ang = String(-Math.PI / 2 + (i / GESTOS.length) * Math.PI * 2);
+  b.addEventListener('click', () => fazerGesto(g.id));
+  roda.appendChild(b);
+});
+let fecharEm = 0;
+function abrirRoda() {
+  roda.classList.add('aberta'); botaoGestos.setAttribute('aria-expanded', 'true'); roda.setAttribute('aria-hidden', 'false');
+  const caixa = palcoEl.getBoundingClientRect();
+  const r = Math.max(92, Math.min(130, Math.min(caixa.width, caixa.height) * 0.3));
+  roda.style.setProperty('--diam', `${r * 2 + 96}px`);
+  for (const b of roda.children) { const a = Number(b.dataset.ang); b.style.transform = `translate(${Math.cos(a) * r}px, ${Math.sin(a) * r}px) scale(1)`; b.tabIndex = 0; }
+  fecharEm = tempo + 6;
+}
+function fecharRoda() {
+  roda.classList.remove('aberta'); botaoGestos.setAttribute('aria-expanded', 'false'); roda.setAttribute('aria-hidden', 'true');
+  for (const b of roda.children) { b.style.transform = ''; b.tabIndex = -1; }
+}
+function alternarRoda() { roda.classList.contains('aberta') ? fecharRoda() : abrirRoda(); }
+botaoGestos.addEventListener('click', alternarRoda);
+roda.addEventListener('pointerdown', (e) => { if (e.target === roda) fecharRoda(); });
+
+const dica = document.getElementById('dica');
+function fazerGesto(id) {
+  gestoAtual = id; gestoInicio = tempo;
+  for (const b of roda.children) b.classList.toggle('escolhido', b.getAttribute('aria-label') === GESTOS.find((g) => g.id === id).nome);
+  setTimeout(fecharRoda, 180);
+  mostrarBalao(ana, id);
+  // o mundo responde: quem está perto acena de volta; "chamar" traz a amiga
+  const perto = (b) => Math.hypot(b.raiz.position.x - J.x, b.raiz.position.z - J.z) < 7;
+  if (id === 'acenar' || id === 'cumprimentar') {
+    for (const b of [amiga, morador]) if (perto(b)) { respostas.push([b, id, tempo + 0.5]); setTimeout(() => mostrarBalao(b, id), 500); }
+    dica.textContent = perto(amiga) || perto(morador) ? 'Acenaram de volta!' : 'Chegue mais perto para acenarem de volta';
+  } else if (id === 'chamar') {
+    chamada = tempo; dica.textContent = 'A amiga vem até você';
+  } else if (id === 'sentar') {
+    dica.textContent = 'Ande para levantar';
+  } else dica.textContent = GESTOS.find((g) => g.id === id).nome + '!';
+}
+let chamada = -10;
+function mostrarBalao(b, id) { b.balao.material.map = texturas[id]; b.balao.material.needsUpdate = true; b.balao.visible = true; b.balaoAte = tempo + 2.2; }
+function pular() { if (J.noChao && gestoAtual !== 'sentar') { J.agacha = jeito === 'novo' ? 1 : 0; setTimeout(() => { if (J.noChao) { J.vy = 5.2; J.noChao = false; } }, jeito === 'novo' ? 70 : 0); } }
+
+// ---------- poses ----------
+const suave = (a, b, t) => a + (b - a) * Math.min(1, t);
+function angAlvo(a, b, t) { let d = ((b - a + Math.PI) % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2) - Math.PI; return a + d * Math.min(1, t); }
+function posarGesto(b, id, f, t) {
+  // f = segundos desde o começo; devolve false quando acabou
+  const [be, bd] = b.bracos;
+  const dur = { acenar: 1.8, cumprimentar: 1.4, chamar: 1.8, comemorar: 1.6, aplaudir: 1.8, dancar: 3.2, apontar: 1.8, sentar: 1e9 }[id];
+  if (f > dur) return false;
+  const ent = Math.min(1, f / 0.18) * Math.min(1, (dur - f) / 0.22);
+  if (id === 'acenar') { bd.rotation.z = suave(bd.rotation.z, 2.6 * ent + Math.sin(f * 14) * 0.35 * ent, 0.5); bd.rotation.x = 0; b.cab.rotation.z = Math.sin(f * 7) * 0.06; }
+  if (id === 'cumprimentar') { b.tronco.rotation.x = 0.5 * Math.sin(Math.min(1, f / 0.7) * Math.PI) ; bd.rotation.x = -0.3 * ent; be.rotation.x = -0.3 * ent; }
+  if (id === 'chamar') { bd.rotation.x = -1.5 * ent + Math.sin(f * 10) * 0.35 * ent; b.cab.rotation.x = -0.1 * ent; }
+  if (id === 'comemorar') { be.rotation.z = -2.7 * ent; bd.rotation.z = 2.7 * ent; b.corpo.position.y = Math.abs(Math.sin(f * 7.5)) * 0.35 * ent; }
+  if (id === 'aplaudir') { const c = Math.sin(f * 16) * 0.25; be.rotation.x = -1.2 * ent; bd.rotation.x = -1.2 * ent; be.rotation.z = (0.5 + c) * ent; bd.rotation.z = (-0.5 - c) * ent; }
+  if (id === 'dancar') { b.corpo.rotation.z = Math.sin(f * 6) * 0.15 * ent; b.corpo.rotation.y = Math.sin(f * 3) * 0.4 * ent; be.rotation.z = (-1.2 - Math.sin(f * 6) * 0.9) * ent; bd.rotation.z = (1.2 - Math.sin(f * 6) * 0.9) * ent; b.corpo.position.y = Math.abs(Math.sin(f * 6)) * 0.08 * ent; }
+  if (id === 'apontar') { bd.rotation.x = -1.55 * ent; bd.rotation.y = 0.15 * ent; b.cab.rotation.y = 0.2 * ent; }
+  if (id === 'sentar') { const s = Math.min(1, f / 0.4); b.pernas[0].rotation.x = b.pernas[1].rotation.x = -1.45 * s; b.corpo.position.y = -0.24 * s; be.rotation.x = bd.rotation.x = -0.3 * s; }
+  return true;
+}
+function zerar(b, dt) {
+  const t = Math.min(1, dt * 12);
+  for (const p of b.pernas) { p.rotation.x = suave(p.rotation.x, 0, t); }
+  for (const a of b.bracos) { a.rotation.x = suave(a.rotation.x, 0, t); a.rotation.z = suave(a.rotation.z, 0, t); a.rotation.y = suave(a.rotation.y, 0, t); }
+  b.tronco.rotation.x = suave(b.tronco.rotation.x, 0, t);
+  b.corpo.rotation.z = suave(b.corpo.rotation.z, 0, t); b.corpo.rotation.y = suave(b.corpo.rotation.y, 0, t);
+  b.corpo.position.y = suave(b.corpo.position.y, 0, t);
+  b.cab.rotation.set(suave(b.cab.rotation.x, 0, t), suave(b.cab.rotation.y, 0, t), suave(b.cab.rotation.z, 0, t));
+}
+function respirarEPiscar(b, t, semente) {
+  b.tronco.scale.y = 1 + Math.sin(t * 2.2 + semente) * 0.012;
+  const ciclo = (t + semente) % 3.6;
+  const fechado = ciclo < 0.12 ? 0.15 : 1;
+  for (const o of b.olhos) o.scale.y = 0.075 * 1.1 * fechado;
+}
+
+// ---------- quadro ----------
+function tamanho() {
+  const r = palcoEl.getBoundingClientRect();
+  renderer.setSize(r.width, r.height, false);
+  camera.aspect = r.width / Math.max(1, r.height);
+  camera.updateProjectionMatrix();
+}
+addEventListener('resize', tamanho); tamanho();
+const relogio = new THREE.Clock();
+const indCamera = document.getElementById('indCamera');
+function quadro() {
+  const dt = Math.min(0.05, relogio.getDelta()); tempo += dt;
+  // entrada → direção relativa à câmera
+  let ix = joyX, iz = -joyY;
+  if (teclas.has('KeyW')) iz += 1; if (teclas.has('KeyS')) iz -= 1; if (teclas.has('KeyA')) ix -= 1; if (teclas.has('KeyD')) ix += 1;
+  const l = Math.hypot(ix, iz); if (l > 1) { ix /= l; iz /= l; }
+  const correr = teclas.has('ShiftLeft') || teclas.has('ShiftRight') || Math.hypot(joyX, joyY) > 0.95;
+  const vmax = correr ? 6.2 : 3.6;
+  const fx = Math.sin(C.yaw), fz = Math.cos(C.yaw);
+  let dx = (fx * iz - fz * ix) * vmax, dz = (fz * iz + fx * ix) * vmax;
+  const andando = Math.hypot(ix, iz) > 0.05;
+  if (andando && gestoAtual) { gestoAtual = null; }
+  if (jeito === 'novo') {
+    const ac = andando ? 10 : 12;
+    J.vx = suave(J.vx, dx, dt * ac); J.vz = suave(J.vz, dz, dt * ac);
+  } else { J.vx = dx; J.vz = dz; }
+  // anda e para nas paredes (cada eixo)
+  const nx = J.x + J.vx * dt, nz = J.z + J.vz * dt;
+  const livre = (x, z) => !solido(x + 0.25, J.y + 0.1, z) && !solido(x - 0.25, J.y + 0.1, z) && !solido(x, J.y + 0.1, z + 0.25) && !solido(x, J.y + 0.1, z - 0.25) && Math.abs(x) < N / 2 - 0.4 && Math.abs(z) < N / 2 - 0.4;
+  if (livre(nx, J.z)) J.x = nx; else J.vx = 0;
+  if (livre(J.x, nz)) J.z = nz; else J.vz = 0;
+  // pulo
+  if (!J.noChao) { J.vy -= 16 * dt; J.y += J.vy * dt; if (J.y <= 0) { J.y = 0; J.vy = 0; J.noChao = true; J.agacha = jeito === 'novo' ? 0.8 : 0; } }
+  J.agacha = Math.max(0, J.agacha - dt * 6);
+  const vel = Math.hypot(J.vx, J.vz);
+  // o corpo vira para onde anda (novo) ou fica preso à câmera (hoje)
+  if (jeito === 'novo' && modoCam === 'novo') { if (vel > 0.3) J.yaw = angAlvo(J.yaw, Math.atan2(J.vx, J.vz), dt * 10); }
+  else J.yaw = C.yaw;
+  const giro = ((J.yaw - J.ultimoYaw + Math.PI * 3) % (Math.PI * 2)) - Math.PI; J.ultimoYaw = J.yaw;
+  // pose
+  const b = ana;
+  b.raiz.position.set(J.x, J.y, J.z); b.raiz.rotation.y = J.yaw;
+  let emGesto = gestoAtual && posarGesto(b, gestoAtual, tempo - gestoInicio, tempo);
+  if (!emGesto) { gestoAtual = null; zerar(b, dt); }
+  const ritmo = jeito === 'novo' ? (correr ? 13 : 9.5) : 9;
+  J.fase += dt * ritmo * Math.min(1, vel / 3);
+  const amp = jeito === 'novo' ? Math.min(1, vel / vmax) * (correr ? 0.95 : 0.7) : (vel > 0.1 ? 0.6 : 0);
+  if (!emGesto || gestoAtual === 'apontar' || gestoAtual === 'acenar' || gestoAtual === 'chamar') {
+    const s = Math.sin(J.fase) * amp;
+    b.pernas[0].rotation.x = s; b.pernas[1].rotation.x = -s;
+    if (!emGesto) { b.bracos[0].rotation.x = -s * 0.9; b.bracos[1].rotation.x = s * 0.9; }
+  }
+  if (jeito === 'novo') {
+    J.inclina = suave(J.inclina, (vel / 6.2) * (correr ? 0.22 : 0.1), dt * 6);
+    J.roll = suave(J.roll, Math.max(-0.2, Math.min(0.2, -giro / Math.max(dt, 1e-3) * 0.02)), dt * 5);
+    b.corpo.rotation.x = J.inclina; b.corpo.rotation.z = emGesto ? b.corpo.rotation.z : J.roll;
+    if (!emGesto) b.corpo.position.y = Math.abs(Math.sin(J.fase)) * 0.05 * amp - J.agacha * 0.12 + (!J.noChao ? 0.04 : 0);
+    b.corpo.scale.set(1 + J.agacha * 0.06, 1 - J.agacha * 0.08 + (!J.noChao && J.vy > 0 ? 0.05 : 0), 1 + J.agacha * 0.06);
+    if (!J.noChao && !emGesto) { b.bracos[0].rotation.z = -0.5; b.bracos[1].rotation.z = 0.5; }
+    // cabeça acompanha um pouco a câmera
+    if (!emGesto) { const rel = ((C.yaw - J.yaw + Math.PI * 3) % (Math.PI * 2)) - Math.PI; b.cab.rotation.y = suave(b.cab.rotation.y, Math.max(-0.5, Math.min(0.5, rel)) * 0.6, dt * 4); }
+    respirarEPiscar(b, tempo, 0);
+  } else { b.corpo.rotation.x = 0; b.corpo.scale.set(1, 1, 1); for (const o of b.olhos) o.scale.y = 0.0825; }
+
+  // amiga e morador: respiram, piscam, respondem
+  for (const [o, sem] of [[amiga, 1.3], [morador, 2.1]]) {
+    const r = respostas.find((q) => q[0] === o && tempo >= q[2]);
+    let ativo = false;
+    if (r) { ativo = posarGesto(o, r[1], tempo - r[2], tempo); if (!ativo) respostas.splice(respostas.indexOf(r), 1); }
+    if (!ativo) zerar(o, dt);
+    respirarEPiscar(o, tempo, sem);
+    // vira para o jogador quando ele está perto
+    const d = Math.hypot(J.x - o.raiz.position.x, J.z - o.raiz.position.z);
+    if (d < 7) o.raiz.rotation.y = angAlvo(o.raiz.rotation.y, Math.atan2(J.x - o.raiz.position.x, J.z - o.raiz.position.z), dt * 4);
+    if (o.balaoAte && tempo > o.balaoAte) o.balao.visible = false;
+  }
+  if (ana.balaoAte && tempo > ana.balaoAte) ana.balao.visible = false;
+  // "chamar": a amiga vem andando até ficar a 1,8 blocos
+  if (tempo - chamada < 6) {
+    const o = amiga.raiz.position; const ddx = J.x - o.x, ddz = J.z - o.z, d = Math.hypot(ddx, ddz);
+    if (d > 1.8) { o.x += (ddx / d) * 3 * dt; o.z += (ddz / d) * 3 * dt; amiga.pernas[0].rotation.x = Math.sin(tempo * 9) * 0.6; amiga.pernas[1].rotation.x = -Math.sin(tempo * 9) * 0.6; }
+  }
+  if (roda.classList.contains('aberta') && tempo > fecharEm) fecharRoda();
+
+  // ---------- câmera ----------
+  const alvoY = J.y + 1.35;
+  if (modoCam === 'novo') {
+    // segue com um leve atraso; andando sem mexer na câmera, volta devagar para trás do boneco
+    C.x = suave(C.x, J.x, dt * 8); C.y = suave(C.y, alvoY, dt * 6); C.z = suave(C.z, J.z, dt * 8);
+    if (vel > 1 && tempo - C.mexeuEm > 1.4 && !reduzir) C.yaw = angAlvo(C.yaw, J.yaw, dt * 1.2);
+  } else { C.x = J.x; C.y = alvoY; C.z = J.z; }
+  const cp = Math.cos(C.pitch);
+  const dir = new THREE.Vector3(-Math.sin(C.yaw) * cp, Math.sin(C.pitch), -Math.cos(C.yaw) * cp);
+  let dist = C.alvoDist;
+  if (modoCam === 'novo') {
+    // desvia das paredes: chega perto em vez de atravessar
+    for (let d = 0.3; d <= C.alvoDist; d += 0.1) {
+      const p = new THREE.Vector3(C.x, C.y, C.z).addScaledVector(dir, d);
+      if (solido(p.x, p.y, p.z) || p.y < 0.15) { dist = Math.max(0.6, d - 0.3); break; }
+    }
+    C.dist = dist < C.dist ? dist : suave(C.dist, dist, dt * 3);
+  } else C.dist = 3.5;
+  camera.position.set(C.x, C.y, C.z).addScaledVector(dir, C.dist);
+  camera.lookAt(C.x, C.y, C.z);
+  // perto demais: o boneco fica meio transparente
+  const alfa = modoCam === 'novo' ? Math.min(1, Math.max(0.25, (C.dist - 0.8) / 1.2)) : 1;
+  for (const m of ana.mats) { m.opacity = alfa; m.depthWrite = alfa > 0.95; }
+  indCamera.textContent = C.dist < C.alvoDist - 0.4 ? 'Câmera desviando da parede' : 'Câmera atrás';
+  sol.position.set(C.x + 9, 16, C.z + 7); sol.target.position.set(C.x, 0, C.z);
+  renderer.render(cena, camera);
+  requestAnimationFrame(quadro);
+}
+quadro();
+
+const ligar = (sel, f) => document.querySelectorAll(sel).forEach((b) => b.addEventListener('click', () => {
+  document.querySelectorAll(sel).forEach((o) => o.setAttribute('aria-pressed', String(o === b)));
+  f(b);
+}));
+ligar('[data-jeito]', (b) => (jeito = b.dataset.jeito));
+ligar('[data-camera]', (b) => (modoCam = b.dataset.camera));
+</script>
