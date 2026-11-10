@@ -38,6 +38,8 @@ export interface AcoesFoto {
   fov(graus: number): void;
   hora(h: number): void;
   capturar(): void;
+  /** Câmera de frente para o boneco. */
+  selfie(): void;
   sair(): void;
 }
 
@@ -100,6 +102,7 @@ export function criarPainelFoto(raiz: HTMLElement, acoes: AcoesFoto) {
     faixa('Desfoque', 0, 1, 0.05, 0, acoes.desfoque),
     faixa('Campo de visão', 30, 110, 1, 70, acoes.fov),
     faixa('Hora', 0, 1, 0.005, 0.35, acoes.hora),
+    botao('Selfie', acoes.selfie, 'btn', 'pessoa'),
     botao('Grade', () => (grade.hidden = !grade.hidden), 'btn', 'grade'),
     botao(
       'Capturar',

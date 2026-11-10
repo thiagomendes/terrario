@@ -143,19 +143,20 @@ test('dado corrompido ou localStorage indisponível usa a aparência padrão', a
   await indisponivel.close();
 });
 
-test('tecla C reabre a entrada e digitar no painel não alterna a câmera', async ({ page }) => {
+test('tecla C reabre a entrada e digitar no painel não mexe na câmera', async ({ page }) => {
   test.setTimeout(240_000);
   const erros = coletarErros(page);
   await abrir(page);
   const entrada = page.locator('.entrada');
-  const modo = () => page.evaluate(() => window.__brumaluz!.camera!.modo());
+  // só terceira pessoa (spec 015): digitar V no painel não mexe na câmera (nem no zoom)
+  const modo = () => page.evaluate(() => window.__brumaluz!.camera!.zoom());
   await expect(entrada).toBeVisible();
-  expect(await modo()).toBe('primeira');
+  const zoom0 = await modo();
 
   await page.locator('[data-campo="nome"]').click();
   await page.keyboard.type('Vavá 1M');
   await expect(page.locator('[data-campo="nome"]')).toHaveValue('Vavá 1M');
-  expect(await modo()).toBe('primeira');
+  expect(await modo()).toBe(zoom0);
 
   // A barra de blocos fica por cima do botão em 1280x720, então o clique é despachado direto.
   await page.locator('[data-jogar]').dispatchEvent('click');
@@ -166,6 +167,6 @@ test('tecla C reabre a entrada e digitar no painel não alterna a câmera', asyn
   await expect(page.locator('[data-painel-personagem]')).toBeVisible();
   await page.locator('[data-campo="nome"]').focus();
   await page.keyboard.press('KeyV');
-  expect(await modo()).toBe('primeira');
+  expect(await modo()).toBe(zoom0);
   expect(erros, erros.join('\n')).toEqual([]);
 });

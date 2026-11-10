@@ -169,7 +169,11 @@ export function criarBarra(app: HTMLElement, hotbar: Hotbar = criarHotbar()): Ho
     (e) => {
       if (document.querySelector('.modal-fundo:not([hidden]), .inventario-fundo:not([hidden])'))
         return;
-      const passo = deltaRodaParaPasso(e.deltaY);
+      // no mundo a roda aproxima e afasta a câmera (spec 015): troca o item em cima da
+      // barra ou com Shift (que alguns navegadores mandam como rolagem de lado)
+      const naBarra = !!(e.target as HTMLElement | null)?.closest?.('.barra');
+      if (!naBarra && !e.shiftKey) return;
+      const passo = deltaRodaParaPasso(e.deltaY || e.deltaX);
       if (passo > 0) hotbar.proximo();
       else if (passo < 0) hotbar.anterior();
       else return;

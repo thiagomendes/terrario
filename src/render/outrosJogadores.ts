@@ -2,6 +2,8 @@
  * Os outros jogadores no mundo (spec 010): o personagem de cada um com a aparência que
  * escolheu, o apelido flutuando acima da cabeça, o item na mão e as animações de andar,
  * correr e voar. A posição chega 20 vezes por segundo e anda suave entre os quadros.
+ * O corpo vira para onde o amigo anda (spec 015), tirado das posições suavizadas; a cabeça
+ * acompanha para onde ele olha, e minerando ou construindo ele vira para o olhar.
  */
 import type { Scene } from '@babylonjs/core/scene';
 import { Matrix, Vector3 } from '@babylonjs/core/Maths/math.vector';
@@ -10,8 +12,8 @@ import { criarAnimador } from '../player/animacao';
 import { normalizarAparencia } from '../personagem/aparencia';
 import { blocoDoItem } from '../jogo/itens';
 import type { JogadorVisto, PerfilJogador } from '../nucleo/protocolo';
-// spec 015 (gestos): o animador embrulhado toca o gesto; o balão fica em cima da cabeça
-import { comGestos, type IdGesto } from '../personagem/gestos';
+// spec 015 (gestos): o gesto é uma camada do animador; o balão fica em cima da cabeça
+import { fazerGesto, gestoDoAnimador, type IdGesto } from '../personagem/gestos';
 import { criarBalao, type BalaoGesto } from './balaoGesto';
 
 /** Apelido em HTML por cima do jogo: nítido em qualquer tela (sem desfoque do 3D). */
@@ -42,7 +44,7 @@ function criarRotulo(texto: string): HTMLDivElement {
 interface Outro {
   id: string;
   personagem: ReturnType<typeof criarPersonagem>;
-  animador: ReturnType<typeof comGestos>;
+  animador: ReturnType<typeof criarAnimador>;
   /** Spec 015: balão do gesto (criado no primeiro gesto). */
   balao?: BalaoGesto;
   placa: HTMLDivElement;
@@ -51,6 +53,9 @@ interface Outro {
   y: number;
   z: number;
   yaw: number;
+  /** Velocidade suavizada a partir das posições (blocos/s): o corpo vira para ela. */
+  vx: number;
+  vz: number;
   mao: string | null;
   apelido: string;
   /** Últimos contadores de golpe, colocação e comida vistos (null antes do primeiro). */
@@ -71,13 +76,15 @@ export function criarOutrosJogadores(scene: Scene) {
     return {
       id: v.id,
       personagem,
-      animador: comGestos(criarAnimador()),
+      animador: criarAnimador(v.yaw),
       placa,
       alvo: v,
       x: v.x,
       y: v.y,
       z: v.z,
       yaw: v.yaw,
+      vx: 0,
+      vz: 0,
       mao: null,
       acoes: null,
       apelido,
@@ -130,8 +137,11 @@ export function criarOutrosJogadores(scene: Scene) {
       const transform = scene.getTransformMatrix();
       for (const o of outros.values()) {
         const a = o.alvo;
+        const x0 = o.x;
+        const z0 = o.z;
         // longe demais (teleporte, renasceu): vai direto
-        if (Math.abs(a.x - o.x) + Math.abs(a.y - o.y) + Math.abs(a.z - o.z) > 8) {
+        const saltou = Math.abs(a.x - o.x) + Math.abs(a.y - o.y) + Math.abs(a.z - o.z) > 8;
+        if (saltou) {
           o.x = a.x;
           o.y = a.y;
           o.z = a.z;
@@ -139,6 +149,18 @@ export function criarOutrosJogadores(scene: Scene) {
           o.x += (a.x - o.x) * k;
           o.y += (a.y - o.y) * k;
           o.z += (a.z - o.z) * k;
+        }
+        // a velocidade de verdade sai das posições (chegam aos degraus, 20 por segundo):
+        // suavizada, para o corpo virar sem tremer
+        if (dt > 0 && !saltou) {
+          const kv = 1 - Math.exp(-dt * 8);
+          o.vx += ((o.x - x0) / dt - o.vx) * kv;
+          o.vz += ((o.z - z0) / dt - o.vz) * kv;
+        }
+        // parado de verdade (o servidor diz que não anda): sem resto de velocidade
+        if (a.vel < 0.05 && Math.hypot(a.x - o.x, a.z - o.z) < 0.02) {
+          o.vx *= 0.8;
+          o.vz *= 0.8;
         }
         let dy = a.yaw - o.yaw;
         dy = Math.atan2(Math.sin(dy), Math.cos(dy));
@@ -158,14 +180,21 @@ export function criarOutrosJogadores(scene: Scene) {
           }
           o.acoes = [a.acoes[0], a.acoes[1], a.acoes[2]];
         }
+        const va = o.animador.vista();
+        const agindo = va.golpe !== null || va.colocar !== null;
         const pose = o.animador.atualizar(dt, {
           velocidadeHoriz: a.vel,
           correndo: a.correndo,
           noChao: a.noChao,
           voando: a.voando,
+          vx: o.vx,
+          vz: o.vz,
+          // minerando ou construindo, vira para onde o amigo olha (o bloco dele)
+          alvoYaw: agindo ? o.yaw : null,
+          olharYaw: o.yaw,
         });
         o.personagem.aplicarPose(pose, { dt, olhar: a.pitch, vista: o.animador.vista() });
-        o.personagem.posicionar(o.x, o.y, o.z, o.yaw);
+        o.personagem.posicionar(o.x, o.y, o.z, o.animador.yaw());
         o.personagem.definirLuz(luz);
         o.balao?.atualizar(dt);
         // apelido acima da cabeça, projetado na tela (some atrás da câmera e muito longe)
@@ -191,7 +220,7 @@ export function criarOutrosJogadores(scene: Scene) {
     gesto(id: string, g: IdGesto) {
       const o = outros.get(id);
       if (!o) return;
-      o.animador.gesto(g);
+      fazerGesto(o.animador, g);
       (o.balao ??= criarBalao(scene, o.personagem.raiz)).mostrar(g);
     },
     /** Para o minimapa e a seta que aponta para os amigos. */
@@ -205,9 +234,12 @@ export function criarOutrosJogadores(scene: Scene) {
         /** Movimento em curso no boneco do amigo (testes e diagnóstico). */
         golpeando: o.animador.vista().golpe !== null,
         /** Spec 015: gesto em curso e balão (testes). */
-        gesto: o.animador.gestoAtual,
+        gesto: gestoDoAnimador(o.animador),
         balao: o.balao?.gesto ?? null,
         acoes: o.acoes,
+        /** Para onde o corpo está virado e para onde o amigo olha (rad). */
+        yawCorpo: o.animador.yaw(),
+        yawOlhar: o.yaw,
       }));
     },
   };

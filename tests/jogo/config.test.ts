@@ -68,3 +68,24 @@ describe('migração do nome Brumaluz para Terrário', () => {
     expect(carregarConfig(a).fov).toBe(90);
   });
 });
+
+describe('só terceira pessoa (spec 015): preferências antigas abrem iguais', () => {
+  it('configuração salva com câmera de 1ª pessoa carrega sem erro e some ao gravar', () => {
+    const a = memoria();
+    a.setItem(
+      'terrario:config',
+      JSON.stringify({ ...CONFIG_PADRAO, fov: 80, camera: 'primeira', modoCamera: 'frente' }),
+    );
+    const c = carregarConfig(a);
+    expect(c.fov).toBe(80);
+    expect('camera' in c).toBe(false);
+    expect('modoCamera' in c).toBe(false);
+    const g = criarGerenciadorConfig(a);
+    g.alterar({ fov: 81 });
+    const salvo = JSON.parse(a.m.get('terrario:config')!);
+    expect(salvo.camera).toBeUndefined();
+    expect(salvo.modoCamera).toBeUndefined();
+    // "Balanço ao andar" continua valendo: agora liga a câmera voltar para trás sozinha
+    expect(c.balanco).toBe(true);
+  });
+});

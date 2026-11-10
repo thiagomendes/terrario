@@ -86,10 +86,7 @@ async function vaca(page: Page, toque: boolean) {
           const c = e.criaturas!().find((b) => b.id === id)!;
           const [px, py, pz] = e.posicao!;
           const ty = c.y + 0.8;
-          e.apontar!(
-            Math.atan2(c.x - px, c.z - pz),
-            -Math.atan2(ty - py, Math.hypot(c.x - px, c.z - pz)),
-          );
+          e.mirarPonto!(c.x, ty, c.z);
           await espera(150);
           if (toque) e.controleDireto!.mirar!(innerWidth / 2, innerHeight / 2);
           await espera(150);

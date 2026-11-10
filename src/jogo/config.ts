@@ -16,7 +16,7 @@ export interface Config {
   /** Raio de chunks carregados em volta do jogador. */
   distancia: number;
   mostrarFps: boolean;
-  /** Balanço da câmera e do braço ao andar. */
+  /** Andando, a câmera volta sozinha para trás do boneco (spec 015; antes, balanço do braço). */
   balanco: boolean;
   /** Escala da interface (acessibilidade). */
   escalaInterface: number;

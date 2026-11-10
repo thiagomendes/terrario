@@ -35,11 +35,6 @@ async function entrar(page: Page) {
     e.pausarDia = true;
     e.hora = 0.42;
   });
-  // terceira pessoa (com a câmera nova da 015, já é a única)
-  await page.evaluate(() => {
-    const c = window.__brumaluz!.camera;
-    if (c && c.modo() !== 'terceira') c.definir('terceira');
-  });
 }
 
 /** Laje de pedra com ar em cima, em volta do jogador (campo limpo para as capturas). */

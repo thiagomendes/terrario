@@ -4,7 +4,8 @@ async function apontar(page: Page, pitch: number) {
   await page.evaluate((p) => window.__brumaluz!.apontar!(0, p), pitch);
   await page.waitForFunction((p) => {
     const r = window.__brumaluz!.rotacao;
-    return !!r && Math.abs(r[0] - p) < 1e-6 && Math.abs(r[1]) < 1e-6;
+    // o olhar para baixo vai até 1,45 (terceira pessoa, spec 015)
+    return !!r && Math.abs(r[0] - Math.min(p, 1.45)) < 1e-6 && Math.abs(r[1]) < 1e-6;
   }, pitch);
 }
 
@@ -77,9 +78,11 @@ test('interação por ganchos: apontar, quebrar, colocar e trocar slot', async (
     expect(await page.evaluate(() => window.__brumaluz!.slotAtivo)).toBe(i);
   }
 
-  // Roda do mouse: avança e volta ao início.
+  // Roda do mouse com Shift: avança e volta ao início (sem Shift, no mundo, ela aproxima a
+  // câmera; em cima da barra também troca, conferido em camera.spec.ts)
   await page.mouse.move(600, 300);
   await page.keyboard.press('Digit1');
+  await page.keyboard.down('Shift');
   await page.mouse.wheel(0, 100);
   await expect(botoes.nth(1)).toHaveAttribute('aria-pressed', 'true');
   expect(await page.evaluate(() => window.__brumaluz!.slotAtivo)).toBe(1);
@@ -88,6 +91,7 @@ test('interação por ganchos: apontar, quebrar, colocar e trocar slot', async (
   await page.mouse.wheel(0, -100);
   await expect(botoes.nth(8)).toHaveAttribute('aria-pressed', 'true');
   expect(await page.evaluate(() => window.__brumaluz!.slotAtivo)).toBe(8);
+  await page.keyboard.up('Shift');
 
   expect(erros, erros.join('\n')).toEqual([]);
 });

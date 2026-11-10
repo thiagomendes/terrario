@@ -74,8 +74,7 @@ async function roca(page: Page, toque: boolean) {
     await espera(500);
     await e.sincronizar!();
     const mirar = async (x: number, y: number, z: number) => {
-      const [px, py, pz] = e.posicao!;
-      e.apontar!(Math.atan2(x - px, z - pz), -Math.atan2(y - py, Math.hypot(x - px, z - pz)));
+      e.mirarPonto!(x, y, z);
       await espera(150);
       if (toque) e.controleDireto!.mirar!(innerWidth / 2, innerHeight / 2);
       // a dica olha a mira a cada 0,25 s; com a máquina ocupada (mundo ainda carregando),
@@ -264,8 +263,7 @@ test('HUD do Rancho no celular: dicas, corações e avisos sem cobrir nada', asy
     page.evaluate(
       async ([x, y, z]) => {
         const e = window.__brumaluz!;
-        const [px, py, pz] = e.posicao!;
-        e.apontar!(Math.atan2(x - px, z - pz), -Math.atan2(y - py, Math.hypot(x - px, z - pz)));
+        e.mirarPonto!(x, y, z);
         await new Promise((r) => setTimeout(r, 150));
         e.controleDireto!.mirar!(innerWidth / 2, innerHeight / 2);
         await new Promise((r) => setTimeout(r, 900));
@@ -315,7 +313,9 @@ test('HUD do Rancho no celular: dicas, corações e avisos sem cobrir nada', asy
 
   const { fx, fy, fz } = alvos;
   // 1. enxada na grama: a dica de arar abaixo da mira
-  await mirar(fx + 2.5, fy - 0.5, fz + 0.5);
+  // o topo do bloco (em terceira pessoa a mira vem de cima do ombro: no meio do bloco, o
+  // chão da frente tapa)
+  await mirar(fx + 2.5, fy - 0.05, fz + 0.5);
   await expect(page.locator('.dica-mira')).toHaveText('Toque na grama para arar');
   const s1 = await sobreposicoes();
   await page.screenshot({ path: `${PASTA_CAPTURAS}/rancho-celular-arar.png` });
@@ -325,7 +325,7 @@ test('HUD do Rancho no celular: dicas, corações e avisos sem cobrir nada', asy
 
   // 2. semente na pedra: o aviso de criança aparece sem cobrir a dica nem a missão
   await page.evaluate(() => window.__brumaluz!.selecionarSlot!(1));
-  await mirar(fx + 1.5, fy - 0.5, fz + 1.5);
+  await mirar(fx + 1.5, fy - 0.05, fz + 1.5);
   await page.evaluate(() => window.__brumaluz!.controleDireto!.tocar!());
   // confere e mede logo que o aviso entra: ele some sozinho em 2,7 s, e com a suíte inteira
   // rodando (1 quadro por segundo) só a captura de tela já pode levar mais que isso

@@ -108,7 +108,7 @@ import type { RespostaChunk, PedidoChunk } from '../workers/chunk.worker';
 import { criarProvedorBlocos } from '../world/provedor';
 import { criarEdicoes } from '../world/edicoes';
 import { ALTURA, alturaTerreno, indice } from '../world/chunk';
-import { posicaoColocacao, raycastVoxel, type Vec3 } from '../player/alvo';
+import { mirarDaCamera, posicaoColocacao, type Vec3 } from '../player/alvo';
 import { criarBarramento, type Barramento } from '../player/eventos';
 import { criarMinerador } from '../player/minerador';
 import { colocacaoPermitida, type AlvoMineracao } from '../player/mineracao';
@@ -176,26 +176,27 @@ import { iniciarAmbiente, tocarSom, type Ambiente, aquecerAmostras } from '../au
 import { blocoSobPes, criarDetectorMovimento } from '../player/movimento';
 import { VEL_ANDAR, VEL_CORRER } from '../player/fisica';
 import {
-  alternar as alternarCamera,
-  criarEstadoCamera,
-  definir as definirCamera,
-  posicaoTerceiraPessoa,
+  ALTURA_PIVO_TOQUE,
+  criarCameraOrbita,
+  degrauOpacidade,
   LADO_OMBRO,
-  teclaParaCamera,
-  visibilidadePorModo,
-  type ModoCamera,
+  ZOOM_PADRAO_TOQUE,
+  direcaoOlhar as direcaoDoOlhar,
+  pivoCamera,
+  PASSO_ZOOM,
+  recentrar as recentrarCamera,
+  type BloqueiaCamera,
 } from '../player/camera';
 import { chave, chunksDesejados, planejar, respostaObsoleta } from './gerenciador';
 import { criarAnimador } from '../player/animacao';
 import { normalizarAparencia, rotuloDoModelo, type Aparencia } from '../personagem/aparencia';
 import { carregarAparencia, type Armazenamento } from '../personagem/persistencia';
 import type { Pose } from '../personagem/poses';
-import { criarBraco } from './braco';
 import { criarPersonagem } from './personagem';
 import { criarModoFoto } from './modoFoto';
 import { criarOutrosJogadores } from './outrosJogadores';
 // spec 015 (gestos): roda, previsão, comando e o que chega do núcleo
-import { comGestos } from '../personagem/gestos';
+import { gestoDoAnimador } from '../personagem/gestos';
 import { criarGestosJogo, type GestosJogo } from './gestosJogo';
 import { amostrarMapaChunk } from './mapaChunk';
 import { conexaoLocal, type Conexao } from '../cliente/conexao';
@@ -287,6 +288,9 @@ export interface EstadoDepuracao {
     z: number;
     golpeando?: boolean;
     acoes?: [number, number, number] | null;
+    /** Para onde o boneco do amigo está virado e para onde ele olha (rad). */
+    yawCorpo?: number;
+    yawOlhar?: number;
   }[];
   /** Tempo médio da lógica de cada quadro na linha principal, fora o desenho (ms). */
   logicaQuadroMs?: number;
@@ -305,6 +309,10 @@ export interface EstadoDepuracao {
     /** Toque: aponta para o ponto tocado (coordenadas CSS do canvas); null volta à mira central. */
     mirar: (x: number, y: number) => void;
     soltarMira: () => void;
+    /** Pinça: multiplica a distância da câmera. */
+    zoom: (fator: number) => void;
+    /** Dedo arrastando a câmera. */
+    arrastar: (ativo: boolean) => void;
     /** Toque rápido na tela: ataca a criatura tocada ou usa/coloca no ponto. */
     tocar: () => void;
     voando: () => boolean;
@@ -323,6 +331,8 @@ export interface EstadoDepuracao {
     desfoque: (v: number) => void;
     fov: (g: number) => void;
     capturar: () => string;
+    /** A câmera de frente para o boneco (selfie). */
+    selfie: () => boolean;
   };
   infoMundo?: string;
   definirClima?: (t: TipoClima) => void;
@@ -390,22 +400,47 @@ export interface EstadoDepuracao {
   rachadura?: { visivel: boolean; estagio: number };
   fx?: { particulas: number };
   audio?: { estado: string; vozes: number; mudo: boolean; ambiente?: boolean };
+  /** A câmera de terceira pessoa (spec 015): o jogo só tem esta. */
   camera?: {
-    modo: () => ModoCamera;
-    alternar: () => void;
-    definir: (modo: ModoCamera) => void;
+    /** Distância atual (com o desvio de paredes) e a pedida pelo zoom, em blocos. */
+    distancia: () => number;
+    zoom: () => number;
+    /** Aproxima (negativo) ou afasta (positivo); devolve o zoom novo. */
+    aproximar: (delta: number) => number;
+    definirZoom: (d: number) => number;
+    /** Opacidade do boneco do jogador (1 normal; < 1 com a câmera perto demais). */
+    opacidadeBoneco: () => number;
+    /** Desviando de uma parede (chegou perto por causa de um bloco). */
+    desviando: () => boolean;
+    posicao: () => [number, number, number];
+    /** O ponto que a câmera olha (a mira do centro passa por ele). */
+    pivo: () => [number, number, number];
+    /** Yaw do corpo do boneco do jogador (solto da câmera). */
+    yawCorpo: () => number;
+    /** Dedo arrastando a câmera (ela nunca gira sozinha enquanto isso). */
+    arrastar: (ativo: boolean) => void;
   };
   personagem?: {
     aparencia: () => Aparencia;
     definir: (parcial: Partial<Aparencia>) => void;
-    visivel: () => { braco: boolean; corpo: boolean };
+    visivel: () => { corpo: boolean };
     malhas: () => number;
-    malhasBraco: () => number;
+    /** Peças do item que o boneco segura (0 com a mão vazia). */
+    malhasMao: () => number;
     pose: () => Pose;
+    /** Bloco que o boneco segura na mão (null: vazia ou item). */
     maoBloco: () => number | null;
     nomeExibido: () => string;
     girarCorpo?: (rad: number) => void;
+    /** Inclinação, curva e passada do corpo vivo (testes). */
+    corpo: () => import('../personagem/vida').SaidaCorpo | null;
   };
+  /** Testes: onde um ponto do mundo aparece na tela (coordenadas CSS), ou null atrás da câmera. */
+  telaDoPonto?: (x: number, y: number, z: number) => { x: number; y: number } | null;
+  /** Testes: vira o olhar para o centro da tela mirar este ponto do mundo. */
+  mirarPonto?: (x: number, y: number, z: number) => void;
+  /** Mira um bloco pelo centro da tela (testes): yaw e pitch para o raio da câmera passar no centro dele. */
+  mirarBloco?: (x: number, y: number, z: number, normal?: Vec3) => boolean;
 }
 
 declare global {
@@ -514,7 +549,11 @@ export function criarCena(
   scene.activeCamera = cameraVisao;
   // o jogo não usa picking do Babylon no movimento do ponteiro
   scene.skipPointerMovePicking = true;
-  let estadoCamera = criarEstadoCamera();
+  // a câmera de terceira pessoa (spec 015): segue o boneco, desvia de blocos, zoom
+  const toqueCamera = typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches;
+  const orbita = toqueCamera
+    ? criarCameraOrbita(ZOOM_PADRAO_TOQUE, ALTURA_PIVO_TOQUE)
+    : criarCameraOrbita();
   const edicoes = criarEdicoes();
   if (dadosIniciais) edicoes.importar(dadosIniciais.edicoes);
   // mundo de antes dos povoados: na primeira carga depois deles, congela a lista de
@@ -630,12 +669,13 @@ export function criarCena(
     }
   }
   let aparencia: Aparencia = carregarAparencia(armazenamentoLocal());
-  const braco = criarBraco(scene, cameraVisao, aparencia);
   const personagem = criarPersonagem(scene, aparencia);
-  // spec 015 (gestos): o animador do jogador também toca gestos
-  const animador = comGestos(criarAnimador());
+  const animador = criarAnimador(camera.rotation.y);
   let gestos: GestosJogo | undefined;
   let velocidadeHoriz = 0;
+  /** Velocidade do jogador em x e z (blocos/s): o boneco vira para onde anda. */
+  let velX = 0;
+  let velZ = 0;
   let corrida = false;
 
   const luz = new HemisphericLight('luz', new Vector3(0.3, 1, 0.2), scene);
@@ -665,7 +705,7 @@ export function criarCena(
   sombras.usePercentageCloserFiltering = true;
   sombras.stabilizeCascades = true;
 
-  /** Claridade do dia para o viewmodel (1 ao meio-dia, ~0.4 à noite). */
+  /** Claridade do dia para o boneco (1 ao meio-dia, ~0.4 à noite). */
   let luzDia = 1;
   // celular: desfoque menor (halo mais justo e mais barato) na mesma meia resolução
   const glow = new GlowLayer('glow', scene, {
@@ -673,9 +713,9 @@ export function criarCena(
     mainTextureRatio: 0.5,
   });
   glow.intensity = INTENSIDADE_GLOW;
-  // braço, personagem e item na mão nunca brilham: o piso de luz deles é emissivo,
+  // personagem e item na mão nunca brilham: o piso de luz deles é emissivo,
   // mas não é fonte de luz (inclui malhas criadas depois, como ao trocar a aparência)
-  const semBrilho = (nome: string) => nome.startsWith('braco-') || nome.startsWith('personagem');
+  const semBrilho = (nome: string) => nome.startsWith('personagem');
   for (const m of scene.meshes) if (semBrilho(m.name)) glow.addExcludedMesh(m as Mesh);
   scene.onNewMeshAddedObservable.add((m) => {
     if (semBrilho(m.name)) glow.addExcludedMesh(m as Mesh);
@@ -1284,40 +1324,99 @@ export function criarCena(
     return provedor.obter(cx, cz)[indice(x - cx * TAM_X, y, z - cz * TAM_Z)];
   }
 
-  /**
-   * Mira pelo toque: no celular o jogador aponta com o dedo (toque coloca, segurar
-   * quebra) em vez da mira do centro. Raio saindo da câmera de visão pelo ponto tocado;
-   * o alcance ganha a distância da câmera em 3ª pessoa.
-   */
-  let raioToque: { origem: Vec3; direcao: Vec3; extra: number } | null = null;
-  /** Ponto tocado (o raio é refeito a cada quadro: o jogador pode andar segurando). */
-  let pontoToque: { x: number; y: number } | null = null;
-  function mirarToque(xCss: number, yCss: number): void {
-    const r = scene.createPickingRay(xCss, yCss, Matrix.Identity(), cameraVisao);
-    const extra = Vector3.Distance(cameraVisao.position, camera.position);
-    raioToque = {
-      origem: { x: r.origin.x, y: r.origin.y, z: r.origin.z },
-      direcao: { x: r.direction.x, y: r.direction.y, z: r.direction.z },
-      extra,
-    };
-    alvoMemoQuadro = -1;
-  }
+  /** Célula que a câmera não atravessa: todo bloco, menos água, plantas e tochas. */
+  const cacheBloqueia: (boolean | undefined)[] = [];
+  // a marcha da câmera e o pivô leem as mesmas células várias vezes por quadro: guarda o
+  // resultado até o quadro (ou o mundo) mudar
+  const celulasCamera = new Map<number, boolean>();
+  let celulasQuadro = -1;
+  let celulasEdicoes = -1;
+  const bloqueiaCamera: BloqueiaCamera = (x, y, z) => {
+    if (celulasQuadro !== quadroAtual || celulasEdicoes !== edicoes.versaoGeral) {
+      celulasCamera.clear();
+      celulasQuadro = quadroAtual;
+      celulasEdicoes = edicoes.versaoGeral;
+    }
+    const k = ((x + 131072) * 1024 + (y + 512)) * 262144 + (z + 131072);
+    const ja = celulasCamera.get(k);
+    if (ja !== undefined) return ja;
+    const b = blocoEm(x, y, z);
+    let v = false;
+    if (b !== Bloco.AR) {
+      const c = cacheBloqueia[b];
+      if (c === undefined) {
+        const d = obterBlocoDef(b);
+        v = !!d && !d.liquido && !d.planta && d.forma !== 'tocha';
+        cacheBloqueia[b] = v;
+      } else v = c;
+    }
+    celulasCamera.set(k, v);
+    return v;
+  };
 
-  function calcularAlvo() {
-    const yaw = camera.rotation.y;
-    const pitch = camera.rotation.x;
-    const direcao = raioToque?.direcao ?? {
-      x: Math.sin(yaw) * Math.cos(pitch),
-      y: -Math.sin(pitch),
-      z: Math.cos(yaw) * Math.cos(pitch),
-    };
-    const origem = raioToque?.origem ?? {
+  /**
+   * Mira em terceira pessoa (spec 015): o raio do centro da tela passa pelo pivô da câmera
+   * (acima e ao lado da cabeça) na direção do olhar e começa ali, depois do boneco; o
+   * alcance é medido dos olhos do boneco, como o núcleo confere. O pivô sai do ponto que a
+   * câmera segue e do olhar de agora: apontar e mirar valem já, sem esperar o quadro.
+   */
+  function pivoMira(): Vec3 {
+    const s = orbita.seguido() ?? {
       x: camera.position.x,
       y: camera.position.y,
       z: camera.position.z,
     };
-    const a = raycastVoxel(origem, direcao, ALCANCE + (raioToque?.extra ?? 0), (x, y, z) =>
-      ehAlvo(blocoEm(x, y, z)),
+    return pivoCamera(
+      s,
+      camera.rotation.y,
+      camera.rotation.x,
+      bloqueiaCamera,
+      LADO_OMBRO,
+      orbita.alturaPivo(),
+    );
+  }
+
+  /**
+   * Mira pelo toque: no celular o jogador aponta com o dedo (toque coloca, segurar
+   * quebra) em vez da mira do centro. Raio saindo da câmera de visão pelo ponto tocado,
+   * começando na altura do boneco (o que está entre a câmera e ele não conta).
+   */
+  let raioToque: { origem: Vec3; direcao: Vec3; inicio: number } | null = null;
+  /** Ponto tocado (o raio é refeito a cada quadro: o jogador pode andar segurando). */
+  let pontoToque: { x: number; y: number } | null = null;
+  function mirarToque(xCss: number, yCss: number): void {
+    const r = scene.createPickingRay(xCss, yCss, Matrix.Identity(), cameraVisao);
+    const p = pivoMira();
+    const inicio =
+      (p.x - r.origin.x) * r.direction.x +
+      (p.y - r.origin.y) * r.direction.y +
+      (p.z - r.origin.z) * r.direction.z;
+    raioToque = {
+      origem: { x: r.origin.x, y: r.origin.y, z: r.origin.z },
+      direcao: { x: r.direction.x, y: r.direction.y, z: r.direction.z },
+      inicio: Math.max(0, inicio),
+    };
+    alvoMemoQuadro = -1;
+  }
+
+  function raioMira(): { origem: Vec3; direcao: Vec3; inicio: number } {
+    if (raioToque) return raioToque;
+    return {
+      origem: pivoMira(),
+      direcao: direcaoDoOlhar(camera.rotation.y, camera.rotation.x),
+      inicio: 0,
+    };
+  }
+
+  function calcularAlvo() {
+    const r = raioMira();
+    const a = mirarDaCamera(
+      r.origem,
+      r.direcao,
+      r.inicio,
+      { x: camera.position.x, y: camera.position.y, z: camera.position.z },
+      ALCANCE,
+      (x, y, z) => ehAlvo(blocoEm(x, y, z)),
     );
     return a ? { x: a.x, y: a.y, z: a.z, normal: a.normal } : null;
   }
@@ -1607,6 +1706,9 @@ export function criarCena(
     j.vy = 0;
     // sem dano de queda herdado do lugar de onde veio
     j.topoQueda = undefined;
+    // a câmera vai junto, sem atravessar o caminho, e o boneco chega de costas para ela
+    orbita.encaixar();
+    animador.definirYaw(camera.rotation.y);
   };
   estado.bloco = blocoEm;
   estado.meta = (x, y, z) => edicoes.obterMeta(x, y, z);
@@ -1622,40 +1724,124 @@ export function criarCena(
     const cz = Math.floor(z / TAM_Z);
     return provedor.obter(cx, cz)[indice(x - cx * TAM_X, y, z - cz * TAM_Z)];
   };
+  /** Dedo arrastando a câmera no toque (ela nunca gira sozinha enquanto isso). */
+  let arrastandoCamera = false;
+  /** Opacidade do boneco aplicada (só muda as malhas quando o degrau muda). */
+  let opacidadeAplicada = 1;
+  const reduzirMovimento =
+    typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  /** Configuração "câmera volta para trás sozinha" (Balanço ao andar). */
+  let recentrarLigado = true;
   estado.camera = {
-    modo: () => estadoCamera.modo,
-    alternar: () => {
-      estadoCamera = alternarCamera(estadoCamera);
+    distancia: () => orbita.ultimo()?.distancia ?? orbita.zoom(),
+    zoom: () => orbita.zoom(),
+    aproximar: (d) => orbita.aproximar(d),
+    definirZoom: (d) => orbita.definirZoom(d),
+    opacidadeBoneco: () => personagem.opacidade(),
+    desviando: () => orbita.ultimo()?.desviando ?? false,
+    posicao: () => [cameraVisao.position.x, cameraVisao.position.y, cameraVisao.position.z],
+    pivo: () => {
+      const p = pivoMira();
+      return [p.x, p.y, p.z];
     },
-    definir: (modo) => {
-      estadoCamera = definirCamera(estadoCamera, modo);
+    yawCorpo: () => animador.yaw(),
+    arrastar: (ativo) => {
+      arrastandoCamera = ativo;
     },
   };
-  window.addEventListener('keydown', (e) => {
-    if (teclaParaCamera(e.code) && !e.repeat) estado.camera?.alternar();
-  });
-  function atualizarCameraVisao(): void {
+  estado.telaDoPonto = (x, y, z) => {
+    const motor = scene.getEngine();
+    const w = motor.getRenderWidth();
+    const h = motor.getRenderHeight();
+    const v = Vector3.Project(
+      new Vector3(x, y, z),
+      Matrix.IdentityReadOnly,
+      scene.getTransformMatrix(),
+      cameraVisao.viewport.toGlobal(w, h),
+    );
+    if (v.z < 0 || v.z > 1) return null;
+    const r = canvas.getBoundingClientRect();
+    return { x: r.left + (v.x / w) * r.width, y: r.top + (v.y / h) * r.height };
+  };
+  /** Vira o olhar para o raio do centro da tela passar pelo ponto (o pivô muda com o olhar). */
+  estado.mirarPonto = (ax, ay, az) => {
+    let yaw = camera.rotation.y;
+    let pitch = camera.rotation.x;
+    for (let i = 0; i < 6; i++) {
+      const s = orbita.seguido() ?? camera.position;
+      const p = pivoCamera(s, yaw, pitch, bloqueiaCamera, LADO_OMBRO, orbita.alturaPivo());
+      const dx = ax - p.x;
+      const dy = ay - p.y;
+      const dz = az - p.z;
+      yaw = Math.atan2(dx, dz);
+      pitch = -Math.atan2(dy, Math.hypot(dx, dz));
+    }
+    controle.apontar(yaw, pitch);
+    raioToque = null;
+    alvoMemoQuadro = -1;
+  };
+  estado.mirarBloco = (x, y, z, normal) => {
+    const n = normal ?? { x: 0, y: 0, z: 0 };
+    estado.mirarPonto!(x + 0.5 + n.x * 0.45, y + 0.5 + n.y * 0.45, z + 0.5 + n.z * 0.45);
+    const a = calcularAlvo();
+    if (!a || a.x !== x || a.y !== y || a.z !== z) return false;
+    return !normal || (a.normal.x === n.x && a.normal.y === n.y && a.normal.z === n.z);
+  };
+  // roda do mouse no jogo: aproxima e afasta (na barra, ou com Shift, troca o item)
+  canvas.addEventListener(
+    'wheel',
+    (e) => {
+      if (e.shiftKey || estado.modoFoto?.ativo()) return;
+      if (e.deltaY === 0) return;
+      e.preventDefault();
+      orbita.aproximar(Math.sign(e.deltaY) * PASSO_ZOOM);
+    },
+    { passive: false },
+  );
+  function atualizarCameraVisao(dt: number): void {
+    const agora = performance.now();
     cameraVisao.rotation.copyFrom(camera.rotation);
     if (estado.modoFoto?.ativo()) {
       cameraVisao.position.copyFrom(fotoPosRef());
-      braco.definirVisivel(false);
+      orbita.encaixar();
+      // na foto o boneco aparece inteiro
+      if (opacidadeAplicada !== 1) {
+        opacidadeAplicada = 1;
+        personagem.definirOpacidade(1);
+      }
       return;
     }
-    if (estadoCamera.modo === 'primeira') {
-      cameraVisao.position.copyFrom(camera.position);
-      return;
+    // andando sem mexer na câmera, ela volta devagar para trás do boneco (nunca enquanto a
+    // criança arrasta, minera ou constrói, nem com movimento reduzido)
+    const v = animador.vista();
+    const yaw = recentrarCamera({
+      dt,
+      tempo: agora / 1000,
+      mexeuEm: controle.mexeuEm,
+      arrastando: arrastandoCamera,
+      velocidade: velocidadeHoriz,
+      yaw: camera.rotation.y,
+      yawCorpo: animador.yaw(),
+      permitido: recentrarLigado && !reduzirMovimento && v.golpe === null && v.colocar === null,
+    });
+    if (yaw !== camera.rotation.y) {
+      controle.recentrar(yaw);
+      cameraVisao.rotation.y = yaw;
     }
-    const frente = estadoCamera.modo === 'frente';
-    const p = posicaoTerceiraPessoa(
-      { x: camera.position.x, y: camera.position.y, z: camera.position.z },
-      camera.rotation.y,
-      camera.rotation.x,
-      (x, y, z) => obterBlocoDef(blocoEm(x, y, z))?.solido === true,
-      frente ? { frente: true } : { lado: LADO_OMBRO },
-    );
-    cameraVisao.position.set(p.x, p.y, p.z);
-    // de frente, a câmera olha de volta para o jogador
-    if (frente) cameraVisao.rotation.set(-camera.rotation.x, camera.rotation.y + Math.PI, 0);
+    const r = orbita.quadro({
+      dt,
+      olhos: { x: camera.position.x, y: camera.position.y, z: camera.position.z },
+      yaw: camera.rotation.y,
+      pitch: camera.rotation.x,
+      bloqueia: bloqueiaCamera,
+    });
+    cameraVisao.position.set(r.posicao.x, r.posicao.y, r.posicao.z);
+    // perto demais: o boneco fica meio transparente (só troca quando o degrau muda)
+    const op = degrauOpacidade(r.opacidade);
+    if (op !== opacidadeAplicada) {
+      opacidadeAplicada = op;
+      personagem.definirOpacidade(op);
+    }
   }
   Object.defineProperty(estado, 'slotAtivo', { get: () => hotbar.ativo, enumerable: true });
   barramento.ouvir('golpe', () => animador.evento('golpe'));
@@ -1665,43 +1851,58 @@ export function criarCena(
   let slotNaMao = -1;
   let blocoNaMaoAtual = -1;
   let itemNaMaoAtual = '';
-  /** Giro extra do corpo em relação à câmera (só para capturas). */
+  /** Giro extra do corpo (só para capturas). */
   let giroCorpo = 0;
   let luzJogador = 1;
+  /** Para onde o corpo vira minerando ou construindo: o bloco da mira (ou o olhar). */
+  function yawDaAcao(): number | null {
+    const v = animador.vista();
+    if (v.golpe === null && v.colocar === null) return null;
+    const j = controle.jogador;
+    const a = alvoDoQuadro();
+    if (a) {
+      const dx = a.x + 0.5 - j.x;
+      const dz = a.z + 0.5 - j.z;
+      if (Math.hypot(dx, dz) > 0.45) return Math.atan2(dx, dz);
+    }
+    return camera.rotation.y;
+  }
   function atualizarPersonagem(dt: number): void {
     const j = controle.jogador;
+    // na tela de título (o panorama gira a câmera), o boneco fica de costas para ela: ao
+    // começar a jogar, ele já está olhando para onde a criança olha
+    if (document.body.classList.contains('tela-titulo')) animador.definirYaw(camera.rotation.y);
     const pose = animador.atualizar(dt, {
       velocidadeHoriz,
       correndo: corrida,
       noChao: j.noChao,
       voando: !!j.voando,
+      // movimento com vida (spec 015): o corpo vira para onde anda, solto da câmera
+      vx: velX,
+      vz: velZ,
+      alvoYaw: yawDaAcao(),
+      olharYaw: camera.rotation.y,
     });
     const foto = !!estado.modoFoto?.ativo();
     // no modo foto o corpo aparece quando a câmera livre se afasta dos olhos
     const longeDosOlhos = foto && Vector3.Distance(fotoPosRef(), camera.position) > 1.2;
-    const vis = visibilidadePorModo(estadoCamera.modo);
-    // no título o panorama mostra só o mundo (sem braço)
-    const naTela = document.body.classList.contains('tela-titulo');
-    braco.definirVisivel(vis.braco && !foto && !naTela);
-    personagem.definirVisivel(foto ? longeDosOlhos : vis.corpo);
+    personagem.definirVisivel(foto ? longeDosOlhos : true);
     const blocoMao = hotbar.blocoAtivo();
     const itemMao = hotbar.pilhaAtiva()?.item ?? '';
     if (hotbar.ativo !== slotNaMao || blocoMao !== blocoNaMaoAtual || itemMao !== itemNaMaoAtual) {
       itemNaMaoAtual = itemMao;
       slotNaMao = hotbar.ativo;
       blocoNaMaoAtual = blocoMao;
-      braco.definirBloco(blocoMao || null);
       const pilhaMao = hotbar.pilhaAtiva();
-      braco.definirItem(!blocoMao && pilhaMao ? pilhaMao.item : null);
       personagem.definirNaMao(blocoMao || null, !blocoMao && pilhaMao ? pilhaMao.item : null);
     }
-    braco.atualizarVista(dt, animador.vista());
     personagem.aplicarPose(pose, {
       dt,
-      olhar: camera.rotation.x,
+      // a cabeça do próprio boneco acompanha só um pouco o sobe e desce da câmera
+      olhar: camera.rotation.x * 0.5,
       vista: animador.vista(),
     });
-    personagem.posicionar(j.x, j.y, j.z, camera.rotation.y + giroCorpo);
+    personagem.posicionar(j.x, j.y, j.z, animador.yaw() + giroCorpo);
     gestos?.atualizar(dt); // spec 015: balão do gesto
     // estimativa de luz no jogador: teto opaco acima = caverna (escurece braço e corpo)
     const ex = Math.floor(camera.position.x);
@@ -1723,7 +1924,6 @@ export function criarCena(
     jogadorCoberto = coberto && ey < 55;
     const alvoLuz = coberto ? (ey < 55 ? 0.22 : 0.55) : 1;
     luzJogador += (alvoLuz - luzJogador) * Math.min(1, dt * 3);
-    braco.definirLuz(luzJogador * luzDia);
     personagem.definirLuz(luzJogador * (0.45 + 0.55 * luzDia));
   }
   let tetoX = NaN;
@@ -1735,18 +1935,16 @@ export function criarCena(
     aparencia: () => ({ ...aparencia }),
     definir: (parcial) => {
       aparencia = normalizarAparencia({ ...aparencia, ...parcial });
-      braco.aplicarAparencia(aparencia);
       personagem.aplicarAparencia(aparencia);
       // os amigos no mesmo mundo passam a ver a aparência nova
       enviar({ t: 'aparencia', aparencia: { ...aparencia } as Record<string, unknown> });
     },
-    visivel: () => visibilidadePorModo(estadoCamera.modo),
-    malhas: () => braco.contarMalhas() + personagem.contarMalhas(),
-    /** Peças do braço da vista (manga, punho, mão e o item na mão). */
-    malhasBraco: () => braco.contarMalhas(),
+    visivel: () => ({ corpo: personagem.raiz.isEnabled() && !estado.modoFoto?.ativo() }),
+    malhas: () => personagem.contarMalhas(),
+    malhasMao: () => personagem.contarMalhasMao(),
     pose: () => animador.pose(),
-    maoBloco: () =>
-      visibilidadePorModo(estadoCamera.modo).braco ? hotbar.blocoAtivo() || null : null,
+    maoBloco: () => hotbar.blocoAtivo() || null,
+    corpo: () => animador.corpo(),
     nomeExibido: () => aparencia.nome || rotuloDoModelo(aparencia),
     girarCorpo: (rad: number) => {
       giroCorpo = rad;
@@ -2405,6 +2603,10 @@ export function criarCena(
     const j = controle.jogador;
     const vel = dt > 0 ? Math.hypot(j.x - ultimoX, j.z - ultimoZ) / dt : 0;
     velocidadeHoriz = vel;
+    velX = dt > 0 ? (j.x - ultimoX) / dt : 0;
+    velZ = dt > 0 ? (j.z - ultimoZ) / dt : 0;
+    // teleporte não é andar
+    if (vel > 40) velX = velZ = 0;
     corrida = vel > (VEL_ANDAR + VEL_CORRER) / 2;
     ultimoX = j.x;
     ultimoZ = j.z;
@@ -2430,7 +2632,6 @@ export function criarCena(
   engine.runRenderLoop(() => {
     const inicioQuadro = performance.now();
     quadroAtual++;
-    if (pontoToque) mirarToque(pontoToque.x, pontoToque.y);
     const dtBruto = engine.getDeltaTime() / 1000;
     const dtQuadro = Math.min(dtBruto, DT_MAXIMO_QUADRO);
     const fotoAtiva = !!estado.modoFoto?.ativo();
@@ -2440,6 +2641,9 @@ export function criarCena(
     quadroFotoRef?.(Math.min(dtBruto, 0.1));
     quadroSobrevivencia?.(Math.min(dtBruto, 0.1));
     atualizarSomMovimento(Math.min(dtBruto, 0.05));
+    // a câmera segue o boneco antes da mira: o alvo do quadro é o que a criança vê
+    atualizarCameraVisao(Math.min(dtBruto, 0.1));
+    if (pontoToque) mirarToque(pontoToque.x, pontoToque.y);
     verificarSlot();
     // o que as telas mexeram nos itens vira transação para o núcleo
     sincronia.verificar();
@@ -2449,7 +2653,6 @@ export function criarCena(
     // partículas e pulsos seguem o tempo real (com teto), mesmo com poucos FPS
     atualizarEfeitos(Math.min(dtBruto, 0.25));
     atualizarProvisorios(Math.min(dtBruto, 0.25));
-    atualizarCameraVisao();
     atualizarPersonagem(dtQuadro);
     estado.fps = engine.getFps();
     estado.posicao = [camera.position.x, camera.position.y, camera.position.z];
@@ -2527,7 +2730,8 @@ export function criarCena(
     ambiente?.definirVolumes(c.volumeMusica, c.volumeAmbiente);
     controle.definirMouse(c.sensibilidade, c.inverterY);
     controle.definirPuloAutomatico(c.puloAutomatico);
-    braco.definirBalanco(c.balanco);
+    // "Balanço ao andar": com ele desligado, a câmera não volta sozinha para trás do boneco
+    recentrarLigado = c.balanco;
   }
   opcoes.config?.ouvir(aplicarConfig);
 
@@ -2587,27 +2791,23 @@ export function criarCena(
     fazer: (g) => gestos!.fazer(g),
     roda: () => gestos!.roda.aberta,
     menu: () => gestos!.menu.aberta,
-    local: () => ({ gesto: animador.gestoAtual, balao: gestos!.balao.gesto }),
+    local: () => ({ gesto: gestoDoAnimador(animador), balao: gestos!.balao.gesto }),
     moradores: () => renderCriaturas.gestosMoradores(),
   };
-  function direcaoOlhar() {
-    if (raioToque) return raioToque.direcao;
-    const yaw = camera.rotation.y;
-    const pitch = camera.rotation.x;
-    return {
-      x: Math.sin(yaw) * Math.cos(pitch),
-      y: -Math.sin(pitch),
-      z: Math.cos(yaw) * Math.cos(pitch),
-    };
-  }
   function criaturaApontada() {
-    const o = raioToque?.origem ?? camera.position;
-    const r = criaturaNaMira(
-      replicaCriaturas.lista,
-      { x: o.x, y: o.y, z: o.z },
-      direcaoOlhar(),
-      3.6 + (raioToque?.extra ?? 0),
+    // o raio da mira (centro ou dedo), a partir do boneco; o alcance conta dos olhos
+    const m = raioMira();
+    const o = {
+      x: m.origem.x + m.direcao.x * m.inicio,
+      y: m.origem.y + m.direcao.y * m.inicio,
+      z: m.origem.z + m.direcao.z * m.inicio,
+    };
+    const folga = Math.hypot(
+      o.x - camera.position.x,
+      o.y - camera.position.y,
+      o.z - camera.position.z,
     );
+    const r = criaturaNaMira(replicaCriaturas.lista, o, m.direcao, 3.6 + folga);
     if (!r) return null;
     const a = calcularAlvo();
     if (a) {
@@ -3043,6 +3243,13 @@ export function criarCena(
     pausarDia: (p) => {
       estado.pausarDia = p;
     },
+    boneco: () => ({
+      x: controle.jogador.x,
+      y: controle.jogador.y,
+      z: controle.jogador.z,
+      yaw: animador.yaw(),
+    }),
+    apontar: (y, p) => controle.apontar(y, p),
   });
   estado.modoFoto = modoFoto;
   quadroFotoRef = modoFoto.quadro;
@@ -3089,6 +3296,12 @@ export function criarCena(
       pontoToque = null;
       raioToque = null;
       alvoMemoQuadro = -1;
+    },
+    zoom: (fator) => {
+      if (Number.isFinite(fator) && fator > 0) orbita.definirZoom(orbita.zoom() * fator);
+    },
+    arrastar: (ativo) => {
+      arrastandoCamera = ativo;
     },
     tocar: () => {
       if (amigoNaMira() || !atacarNaMira()) usarOuColocar(false);

@@ -78,21 +78,49 @@ test('dois navegadores no mesmo mundo: convite, entrada pelo link e tudo sincron
     { timeout: 30_000 },
   );
 
-  // o item na mão aparece na primeira pessoa de quem entrou pelo código (bug visto em família)
+  // o item na mão aparece no boneco de quem entrou pelo código (bug visto em família;
+  // desde a spec 015 o jogo é só em terceira pessoa: a mão é a do boneco)
   const pecasMao = await bia.evaluate(async () => {
     const e = window.__brumaluz!;
-    e.camera!.definir('primeira');
     e.inventario!.definir(0, { item: 'picareta_ferro', qtd: 1 });
     e.selecionarSlot!(0);
     await new Promise((r) => setTimeout(r, 600));
     return {
-      braco: e.personagem!.malhasBraco(),
+      mao: e.personagem!.malhasMao(),
       visivel: e.personagem!.visivel(),
     };
   });
-  console.log(`braço da Bia: ${JSON.stringify(pecasMao)}`);
-  expect(pecasMao.visivel.braco).toBe(true);
-  expect(pecasMao.braco).toBeGreaterThan(3);
+  console.log(`mão da Bia: ${JSON.stringify(pecasMao)}`);
+  expect(pecasMao.visivel.corpo).toBe(true);
+  expect(pecasMao.mao).toBeGreaterThan(0);
+
+  // spec 015: o boneco do amigo vira para onde ele anda (não para onde a câmera dele olha).
+  // Ana olha para +z e anda de lado (para +x); Bia vê o corpo dela virado para +x.
+  await ana.evaluate(() => window.__brumaluz!.apontar!(0, 0.3));
+  await ana.keyboard.down('KeyD');
+  const virada = await bia.evaluate(async () => {
+    const e = window.__brumaluz!;
+    const t0 = performance.now();
+    let melhor = { corpo: NaN, olhar: NaN };
+    while (performance.now() - t0 < 6000) {
+      const a = (e.outrosJogadores?.() ?? []).find((o) => o.apelido === 'Ana');
+      if (a?.yawCorpo !== undefined && a.yawOlhar !== undefined) {
+        melhor = { corpo: a.yawCorpo, olhar: a.yawOlhar };
+        const dif = Math.abs(
+          Math.atan2(Math.sin(a.yawCorpo - Math.PI / 2), Math.cos(a.yawCorpo - Math.PI / 2)),
+        );
+        if (dif < 0.35) break;
+      }
+      await new Promise((r) => requestAnimationFrame(r));
+    }
+    return melhor;
+  });
+  await ana.keyboard.up('KeyD');
+  console.log(`boneco da Ana visto pela Bia: ${JSON.stringify(virada)}`);
+  const dif = (a: number, b: number) => Math.abs(Math.atan2(Math.sin(a - b), Math.cos(a - b)));
+  expect(dif(virada.corpo, Math.PI / 2), 'o corpo vira para onde anda').toBeLessThan(0.35);
+  // a cabeça (o olhar) segue a câmera dela, não o corpo
+  expect(dif(virada.olhar, virada.corpo)).toBeGreaterThan(0.8);
 
   // Ana quebra um bloco perto dela: Bia vê
   const cel = await ana.evaluate(() => {
@@ -142,7 +170,6 @@ test('dois navegadores no mesmo mundo: convite, entrada pelo link e tudo sincron
   // spec 015: Ana comemora; Bia vê o boneco dela comemorando e o balão em cima da cabeça
   await bia.evaluate(() => {
     const e = window.__brumaluz!;
-    if (e.camera && e.camera.modo() !== 'terceira') e.camera.definir('terceira');
     const a = (e.outrosJogadores?.() ?? []).find((o) => o.apelido === 'Ana');
     const [x, , z] = e.posicao!;
     if (a) e.apontar!(Math.atan2(a.x - x, a.z - z), 0.15);

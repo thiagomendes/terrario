@@ -11,9 +11,10 @@ import {
   GESTOS,
   INTERVALO_GESTO,
   ehGesto,
-  type AnimadorComGestos,
+  fazerGesto,
   type IdGesto,
 } from '../personagem/gestos';
+import type { Animador } from '../player/animacao';
 import type { Comando, EventoNucleo } from '../nucleo/protocolo';
 import { criarBalao, type BalaoGesto } from './balaoGesto';
 import type { Roda } from '../ui/roda';
@@ -24,7 +25,7 @@ export interface OpcoesGestosJogo {
   scene: Scene;
   /** O boneco do jogador (o balão fica em cima dele). */
   raiz: TransformNode;
-  animador: AnimadorComGestos;
+  animador: Animador;
   enviar(c: Comando): void;
   proximoId(): number;
   /** Pode gesticular agora (no jogo, acordado, sem painel aberto). */
@@ -59,7 +60,7 @@ export function criarGestosJogo(op: OpcoesGestosJogo): GestosJogo {
     if (t - ultimo < INTERVALO_GESTO) return false;
     ultimo = t;
     // previsão: o boneco e o balão na hora; o núcleo avisa os amigos e o mundo responde
-    op.animador.gesto(g);
+    fazerGesto(op.animador, g);
     balao.mostrar(g);
     op.enviar({ t: 'gesto', id: op.proximoId(), gesto: g });
     window.dispatchEvent(new CustomEvent('brumaluz:gesto', { detail: g }));

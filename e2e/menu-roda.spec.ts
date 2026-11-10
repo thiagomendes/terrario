@@ -27,8 +27,6 @@ async function entrar(page: Page) {
     const e = window.__brumaluz!;
     e.pausarDia = true;
     e.hora = 0.42;
-    const c = e.camera;
-    if (c && c.modo() !== 'terceira') c.definir('terceira');
   });
   await page.waitForTimeout(1200);
 }

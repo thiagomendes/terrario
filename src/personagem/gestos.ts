@@ -5,7 +5,7 @@
  * raios (comando `gesto`), o desenho usa as poses (jogador, amigos e moradores), tudo com as
  * mesmas regras.
  */
-import type { Pose } from './poses';
+import type { CamadaPose, InfoCamada, Pose } from './poses';
 import type { Animador } from '../player/animacao';
 
 export const IDS_GESTOS = [
@@ -255,51 +255,74 @@ export function criarTocadorGesto(): TocadorGesto {
   };
 }
 
-/** O estado do boneco a partir do que o animador recebe (o mesmo para todos os bonecos). */
-export function estadoParaGesto(
-  mov: { velocidadeHoriz: number; noChao: boolean; voando?: boolean },
-  vista: { golpe: number | null; colocar: number | null; comer: number | null },
-): EstadoGesto {
+/** O estado do boneco a partir do que o animador passa para a camada (o mesmo em todos). */
+export function estadoDaCamada(info: InfoCamada): EstadoGesto {
   return {
-    // o mesmo limite do passo do animador (VELOCIDADE_MINIMA_PASSO)
-    andando: mov.velocidadeHoriz > 0.1,
-    noAr: !mov.noChao && !mov.voando,
-    ocupado: vista.golpe !== null || vista.colocar !== null || vista.comer !== null,
+    andando: info.andando,
+    // voando parado no criativo pode gesticular; pular ou cair interrompe
+    noAr: !info.noChao && !info.voando,
+    ocupado: info.ocupado,
   };
 }
 
-/** Animador que também faz gestos: a mesma pose de sempre, com o gesto por cima. */
-export interface AnimadorComGestos extends Animador {
-  /** Começa um gesto (null: para o que estiver tocando). */
-  gesto(id: IdGesto | null): void;
-  readonly gestoAtual: IdGesto | null;
+/** A camada de um gesto no animador: a função de pose e qual gesto ela toca. */
+export interface CamadaGesto extends CamadaPose {
+  readonly gesto: IdGesto;
 }
 
 /**
- * Embrulha um animador (jogador, amigo ou morador): `atualizar` devolve a pose com o gesto em
- * curso, interrompido pelas mesmas regras em todos os bonecos. Um embrulho só na criação do
- * animador; o resto do código não muda.
+ * O gesto como camada do animador (`Animador.definirCamada`): o mesmo caminho para o jogador,
+ * os amigos e os moradores. A camada conta o próprio tempo e devolve null quando o gesto
+ * acaba ou é interrompido (andar, pular, minerar, colocar, comer); aí o animador tira ela.
  */
-export function comGestos(a: Animador): AnimadorComGestos {
+export function camadaDeGesto(id: IdGesto): CamadaGesto {
   const tocador = criarTocadorGesto();
-  let ultima: Pose | null = null;
-  return {
-    evento: (nome) => a.evento(nome),
-    atualizar(dt, movimento) {
-      const pose = a.atualizar(dt, movimento);
-      ultima = tocador.atual
-        ? tocador.aplicar(pose, dt, estadoParaGesto(movimento, a.vista()))
-        : pose;
-      return ultima;
-    },
-    pose: () => ultima ?? a.pose(),
-    vista: () => a.vista(),
-    gesto(id) {
-      if (id) tocador.iniciar(id);
-      else tocador.parar();
-    },
-    get gestoAtual() {
-      return tocador.atual;
-    },
+  tocador.iniciar(id);
+  /** Interrompido: o gesto sai em SAIDA_GESTO s a partir do instante em que parou (sem tranco). */
+  let saindo = -1;
+  let parouEm = 0;
+  const camada: CamadaPose = (base, info) => {
+    if (saindo < 0) {
+      const antes = tocador.tempo;
+      const pose = tocador.aplicar(base, info.dt, estadoDaCamada(info));
+      if (tocador.atual) return pose;
+      // acabou sozinho: o peso já tinha chegado a zero
+      if (!interrompeGesto(estadoDaCamada(info)) || pesoDoGesto(id, antes) <= 0) return null;
+      saindo = 0;
+      parouEm = antes;
+    }
+    saindo += info.dt > 0 && Number.isFinite(info.dt) ? info.dt : 0;
+    const k = 1 - saindo / SAIDA_GESTO;
+    if (k <= 0) return null;
+    return misturarPoses(base, aplicarGesto({ ...base }, id, parouEm), k);
   };
+  return Object.assign(camada, { gesto: id });
+}
+
+/** Quanto o gesto interrompido leva para sair (s). */
+export const SAIDA_GESTO = 0.15;
+
+/** Mistura duas poses (k = 0: a primeira, 1: a segunda) nos campos numéricos. */
+function misturarPoses(a: Pose, b: Pose, k: number): Pose {
+  const r: Pose = { ...a };
+  const dst = r as unknown as Record<string, unknown>;
+  const pb = b as unknown as Record<string, unknown>;
+  for (const chave of Object.keys(pb)) {
+    const vb = pb[chave];
+    const va = dst[chave];
+    if (typeof vb !== 'number') continue;
+    dst[chave] = typeof va === 'number' ? va + (vb - va) * k : vb * k;
+  }
+  return r;
+}
+
+/** Põe o gesto no boneco (null tira o que estiver tocando). */
+export function fazerGesto(a: Pick<Animador, 'definirCamada'>, id: IdGesto | null): void {
+  a.definirCamada(id ? camadaDeGesto(id) : null);
+}
+
+/** O gesto que o boneco está fazendo agora (null: nenhum). */
+export function gestoDoAnimador(a: Pick<Animador, 'camada'>): IdGesto | null {
+  const c = a.camada() as Partial<CamadaGesto> | null;
+  return c && ehGesto(c.gesto) ? c.gesto : null;
 }

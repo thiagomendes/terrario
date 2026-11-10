@@ -17,7 +17,7 @@ import { moradorDeBrinquedo } from './moradorBoneco';
 import { generoDoMorador } from '../temas/nomes';
 import { criarAnimador } from '../player/animacao';
 // spec 015 (gestos): o morador acena de volta; o balão fica em cima da cabeça
-import { comGestos, type IdGesto } from '../personagem/gestos';
+import { fazerGesto, gestoDoAnimador, type IdGesto } from '../personagem/gestos';
 import { criarBalao, type BalaoGesto } from './balaoGesto';
 import type { Personagem } from './personagem';
 
@@ -65,7 +65,7 @@ export function criarRenderCriaturas(
     number,
     {
       boneco: Personagem;
-      animador: ReturnType<typeof comGestos>;
+      animador: ReturnType<typeof criarAnimador>;
       /** Spec 015: balão do gesto (criado no primeiro aceno). */
       balao?: BalaoGesto;
       ultX: number;
@@ -125,7 +125,7 @@ export function criarRenderCriaturas(
     }
     return {
       boneco,
-      animador: comGestos(criarAnimador()),
+      animador: criarAnimador(),
       ultX: c.x,
       ultZ: c.z,
       vel: 0,
@@ -273,7 +273,7 @@ export function criarRenderCriaturas(
     gesto(id: number, g: IdGesto): boolean {
       const mb = moradores.get(id);
       if (!mb) return false;
-      mb.animador.gesto(g);
+      fazerGesto(mb.animador, g);
       (mb.balao ??= criarBalao(scene, mb.boneco.raiz)).mostrar(g);
       return true;
     },
@@ -281,7 +281,7 @@ export function criarRenderCriaturas(
     gestosMoradores(): { id: number; gesto: IdGesto | null; balao: IdGesto | null }[] {
       return [...moradores].map(([id, mb]) => ({
         id,
-        gesto: mb.animador.gestoAtual,
+        gesto: gestoDoAnimador(mb.animador),
         balao: mb.balao?.gesto ?? null,
       }));
     },

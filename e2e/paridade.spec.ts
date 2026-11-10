@@ -93,7 +93,7 @@ function instalarAjudantes(): void {
         const dx = ax - px;
         const dy = ay - py;
         const dz = az - pz;
-        e().apontar(Math.atan2(dx, dz), -Math.atan2(dy, Math.hypot(dx, dz)));
+        e().mirarPonto!(px + dx, py + dy, pz + dz);
         await par.quadros(2);
         const a = e().alvo;
         if (a && a.x === x && a.y === y && a.z === z) {
@@ -104,7 +104,9 @@ function instalarAjudantes(): void {
       return false;
     },
     async quebrar(x: number, y: number, z: number, normal?: number[]) {
-      if (!(await par.mirar(x, y, z, normal))) return -1;
+      // em terceira pessoa (spec 015) a mira sai de cima do ombro: a face pedida pode não
+      // aparecer dali; para quebrar, qualquer face do bloco serve
+      if (!(await par.mirar(x, y, z, normal)) && !(normal && (await par.mirar(x, y, z)))) return -1;
       const b = e().bloco(x, y, z);
       for (let i = 0; i < 600; i++) {
         if (e().minerar(0.05).quebrou) return b;
@@ -533,7 +535,7 @@ const SESSOES: Record<string, Sessao> = {
             const dx = agora.x - px;
             const dy = agora.y + 0.3 - py;
             const dz = agora.z - pz;
-            e.apontar!(Math.atan2(dx, dz), -Math.atan2(dy, Math.hypot(dx, dz)));
+            e.mirarPonto!(px + dx, py + dy, pz + dz);
             await window.__par.quadros(1);
             e.controleDireto!.usar();
             await window.__par.quadros(1);
@@ -564,7 +566,9 @@ const SESSOES: Record<string, Sessao> = {
         const out: { bloco: number }[] = [];
         for (let i = 0; i < 2; i++) {
           await window.__par.assentar();
-          e.apontar!(0, 1.55);
+          // o bloco debaixo dos pés, pelo centro da tela (terceira pessoa, spec 015)
+          const [px, py, pz] = e.posicao!;
+          e.mirarPonto!(Math.floor(px) + 0.5, Math.floor(py - 1.62) - 0.5, Math.floor(pz) + 0.5);
           await window.__par.quadros(2);
           const a = e.alvo;
           if (!a) break;
@@ -797,10 +801,7 @@ const SESSOES: Record<string, Sessao> = {
           e.teleportar!(m.x - ((m.x - ex) / d) * 2, m.z - ((m.z - ez) / d) * 2, m.y);
           await window.__par.quadros(2);
           const [px, py, pz] = e.posicao!;
-          e.apontar!(
-            Math.atan2(m.x - px, m.z - pz),
-            -Math.atan2(m.y + 1.1 - py, Math.hypot(m.x - px, m.z - pz)),
-          );
+          e.mirarPonto!(m.x, m.y + 1.1, m.z);
           await window.__par.quadros(1);
           // mirando porta, cama, baú ou fornalha de uma casa, "usar" mexeria no povoado
           const a = e.alvo;

@@ -7,11 +7,15 @@ import {
   criarTocadorGesto,
   duracaoDoGesto,
   ehGesto,
-  estadoParaGesto,
+  estadoDaCamada,
+  fazerGesto,
+  gestoDoAnimador,
+  SAIDA_GESTO,
   interrompeGesto,
   pesoDoGesto,
   type EstadoGesto,
 } from '../../src/personagem/gestos';
+import { criarAnimador } from '../../src/player/animacao';
 import { ICONES_GESTOS, svgDoBalao } from '../../src/ui/iconesGestos';
 
 const parado = (): Pose =>
@@ -150,17 +154,78 @@ describe('tocador de gesto', () => {
     expect(t.tempo).toBe(0);
   });
 
-  it('o estado vem do mesmo que o animador recebe', () => {
-    const nada = { golpe: null, colocar: null, comer: null };
-    expect(estadoParaGesto({ velocidadeHoriz: 0, noChao: true }, nada)).toEqual(quieto);
-    expect(estadoParaGesto({ velocidadeHoriz: 2, noChao: true }, nada).andando).toBe(true);
-    expect(estadoParaGesto({ velocidadeHoriz: 0, noChao: false }, nada).noAr).toBe(true);
+  it('o estado vem do que o animador passa para a camada', () => {
+    const info = { dt: 0.1, tempo: 0, andando: false, noChao: true, voando: false, ocupado: false };
+    expect(estadoDaCamada(info)).toEqual(quieto);
+    expect(estadoDaCamada({ ...info, andando: true }).andando).toBe(true);
+    expect(estadoDaCamada({ ...info, noChao: false }).noAr).toBe(true);
     // voando parado no criativo pode gesticular
-    expect(estadoParaGesto({ velocidadeHoriz: 0, noChao: false, voando: true }, nada)).toEqual(
-      quieto,
-    );
-    expect(
-      estadoParaGesto({ velocidadeHoriz: 0, noChao: true }, { ...nada, golpe: 0.2 }).ocupado,
-    ).toBe(true);
+    expect(estadoDaCamada({ ...info, noChao: false, voando: true })).toEqual(quieto);
+    expect(estadoDaCamada({ ...info, ocupado: true }).ocupado).toBe(true);
+  });
+});
+
+describe('gesto como camada do animador', () => {
+  const dt = 1 / 30;
+  const parar = { velocidadeHoriz: 0, correndo: false, noChao: true, vx: 0, vz: 0 };
+  const andar = { velocidadeHoriz: 3, correndo: false, noChao: true, vx: 0, vz: 3 };
+
+  it('toca no animador, aparece como gesto atual e sai sozinho no fim', () => {
+    const a = criarAnimador(0);
+    a.atualizar(dt, parar);
+    fazerGesto(a, 'acenar');
+    expect(gestoDoAnimador(a)).toBe('acenar');
+    for (let i = 0; i < 15; i++) a.atualizar(dt, parar);
+    expect(a.pose().bracoDireitoAbre!).toBeLessThan(-2);
+    for (let i = 0; i < 60; i++) a.atualizar(dt, parar);
+    expect(gestoDoAnimador(a)).toBeNull();
+    expect(a.camada()).toBeNull();
+  });
+
+  it('andar interrompe sem tranco (sai em SAIDA_GESTO s); sentar fica até andar', () => {
+    const a = criarAnimador(0);
+    a.atualizar(dt, parar);
+    fazerGesto(a, 'sentar');
+    for (let i = 0; i < 300; i++) a.atualizar(dt, parar);
+    expect(gestoDoAnimador(a)).toBe('sentar');
+    const sentado = a.pose().pernaDireita;
+    expect(sentado).toBeLessThan(-1.3);
+    const p1 = a.atualizar(dt, andar).pernaDireita;
+    // no primeiro quadro andando ainda está quase sentado (sai misturando)
+    expect(p1).toBeLessThan(-0.8);
+    for (let i = 0; i < Math.ceil(SAIDA_GESTO / dt) + 1; i++) a.atualizar(dt, andar);
+    expect(gestoDoAnimador(a)).toBeNull();
+    expect(a.pose().pernaDireita).toBeGreaterThan(-1);
+  });
+
+  it('minerar, colocar e comer interrompem', () => {
+    for (const ev of ['golpe', 'colocacao', 'comer'] as const) {
+      const a = criarAnimador(0);
+      a.atualizar(dt, parar);
+      fazerGesto(a, 'dancar');
+      a.atualizar(dt, parar);
+      a.evento(ev);
+      for (let i = 0; i < Math.ceil(SAIDA_GESTO / dt) + 2; i++) a.atualizar(dt, parar);
+      expect(gestoDoAnimador(a)).toBeNull();
+    }
+  });
+
+  it('pular interrompe; voando parado não', () => {
+    const a = criarAnimador(0);
+    a.atualizar(dt, parar);
+    fazerGesto(a, 'aplaudir');
+    for (let i = 0; i < 10; i++) a.atualizar(dt, { ...parar, noChao: false, voando: true });
+    expect(gestoDoAnimador(a)).toBe('aplaudir');
+    for (let i = 0; i < 10; i++) a.atualizar(dt, { ...parar, noChao: false });
+    expect(gestoDoAnimador(a)).toBeNull();
+  });
+
+  it('outro gesto troca o que estava; null tira', () => {
+    const a = criarAnimador(0);
+    fazerGesto(a, 'acenar');
+    fazerGesto(a, 'comemorar');
+    expect(gestoDoAnimador(a)).toBe('comemorar');
+    fazerGesto(a, null);
+    expect(gestoDoAnimador(a)).toBeNull();
   });
 });
