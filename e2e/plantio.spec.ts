@@ -18,6 +18,10 @@ async function mundoSobrevivencia(page: Page) {
   await page.locator('[data-abrir-mundos]').click();
   await page.locator('[data-modo="sobrevivencia"]').click();
   await page.locator('[data-novo-nome]').fill('Roça');
+  // semente fixa: arar a grama alta às vezes solta uma semente de trigo (1 em 8, sorteio da
+  // semente do mundo) e ela vinha para a mochila, deixando 3 sementes em vez de 2. Nesta,
+  // a primeira grama arada não solta nada
+  await page.locator('[data-novo-semente]').fill('4242');
   await page.locator('[data-criar-mundo]').click();
   await page.waitForURL(/mundo=/);
   await pronto(page);
