@@ -100,14 +100,33 @@ async function vaca(page: Page, toque: boolean) {
       let id = -1;
       for (let i = 0; i < 40 && id < 0; i++) {
         await espera(100);
-        id = bichos().find((c) => !antes.has(c.id))?.id ?? -1;
+        // a que nasceu onde foi invocada (no Rancho, a vaca do curral de um sítio perto ou
+        // uma que nasce sozinha também é nova, mas está longe)
+        id =
+          bichos().find(
+            (c) => !antes.has(c.id) && Math.hypot(c.x - (fx + 0.5), c.z - (fz + 2.6)) < 1.5,
+          )?.id ?? -1;
       }
       r.nasceu = id > 0;
       await mirarEm(id);
       // a vaca pode dar um passo para fora da mira: vale a dica que apareceu mirando nela
       r.dicaSeguir = dicas.find((d) => d.startsWith('Segure'));
-      // o jogador se afasta 5 blocos e pega o trigo: a vaca vem e para a uns 2 blocos
-      e.teleportar!(fx + 0.5, fz - 4.5, fy);
+      // o jogador fica a uns 5 blocos da vaca (ela passeou enquanto a dica aparecia: conta
+      // de onde ela está agora, dentro da laje) e pega o trigo: ela vem e para a uns 2 blocos
+      {
+        const v0 = e.criaturas!().find((c) => c.id === id)!;
+        let melhor: [number, number] = [fx + 0.5, fz - 4.5];
+        let erro = Infinity;
+        for (let dx = -6; dx <= 6; dx++)
+          for (let dz = -6; dz <= 6; dz++) {
+            const d = Math.hypot(fx + dx + 0.5 - v0.x, fz + dz + 0.5 - v0.z);
+            if (Math.abs(d - 5) < erro) {
+              erro = Math.abs(d - 5);
+              melhor = [fx + dx + 0.5, fz + dz + 0.5];
+            }
+          }
+        e.teleportar!(melhor[0], melhor[1], fy);
+      }
       e.inventario!.definir(0, { item: 'trigo', qtd: 5 });
       e.selecionarSlot!(0);
       await e.sincronizar!();
@@ -227,7 +246,11 @@ test('noite no Rancho: a coruja chega, pia e foge, e não machuca', async ({ pag
       let id = -1;
       for (let i = 0; i < 40 && id < 0; i++) {
         await espera(100);
-        id = corujas().find((c) => !antes.has(c.id))?.id ?? -1;
+        // a invocada (à noite outras nascem sozinhas, mais longe)
+        id =
+          corujas().find(
+            (c) => !antes.has(c.id) && Math.hypot(c.x - (fx + 0.5), c.z - (fz + 6.5)) < 2,
+          )?.id ?? -1;
       }
       window.addEventListener('brumaluz:espantou', () => missoes.push('espantou'));
       // anda até ela, devagar, várias vezes (ela foge e volta curiosa)
