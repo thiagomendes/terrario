@@ -285,7 +285,7 @@ describe('voltar para trás do boneco', () => {
     arrastando: false,
     velocidade: 4.3,
     yaw: 0,
-    yawCorpo: 1,
+    yawCorpo: 0.3,
     permitido: true,
   };
   it('andando sem mexer na câmera, gira devagar para o corpo', () => {
@@ -300,9 +300,18 @@ describe('voltar para trás do boneco', () => {
     expect(recentrar({ ...base, permitido: false })).toBe(0);
     expect(recentrar({ ...base, yawCorpo: ANGULO_MAXIMO_RECENTRAR + 0.2 })).toBe(0);
   });
-  it('em 3 s andando em curva, chega atrás do boneco', () => {
+  it('em 3 s andando para longe da câmera, chega atrás do boneco', () => {
     let yaw = 0;
     for (let i = 0; i < 180; i++) yaw = recentrar({ ...base, yaw, tempo: 10 + i / 60 });
-    expect(Math.abs(difAngulo(yaw, 1))).toBeLessThan(0.1);
+    expect(Math.abs(difAngulo(yaw, 0.3))).toBeLessThan(0.1);
+  });
+  it('andando de lado (D) por 5 s, a câmera quase não gira sozinha (sem enjoo)', () => {
+    // o andar é relativo à câmera: o corpo fica sempre 90° para o lado dela
+    for (const lado of [Math.PI / 2, -Math.PI / 2, Math.PI / 4]) {
+      let yaw = 0;
+      for (let i = 0; i < 300; i++)
+        yaw = recentrar({ ...base, yaw, yawCorpo: yaw + lado, tempo: 10 + i / 60 });
+      expect(Math.abs(yaw)).toBeLessThan((15 * Math.PI) / 180);
+    }
   });
 });

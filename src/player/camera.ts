@@ -58,8 +58,13 @@ export const ESPERA_RECENTRAR = 1.4;
 export const TAXA_RECENTRAR = 1.2;
 /** Só volta andando de verdade (blocos/s). */
 export const VELOCIDADE_RECENTRAR = 1;
-/** Andando para a câmera (boneco de frente para ela), ela não gira sozinha. */
-export const ANGULO_MAXIMO_RECENTRAR = 1.9;
+/**
+ * Só volta com o corpo quase na direção da câmera: de lado (andando de lado, na diagonal) ou
+ * de frente para ela, não gira sozinha (o andar é relativo à câmera, então ela correria atrás
+ * do corpo sem parar). Inteira até ANGULO_RECENTRAR_INTEIRO, some até ANGULO_MAXIMO_RECENTRAR.
+ */
+export const ANGULO_RECENTRAR_INTEIRO = (20 * Math.PI) / 180;
+export const ANGULO_MAXIMO_RECENTRAR = Math.PI / 4;
 
 /** Desvio de blocos: passos da marcha e folga até a parede. */
 export const PASSO_COLISAO = 0.1;
@@ -261,8 +266,16 @@ export function recentrar(e: EntradaRecentrar): number {
   if (!e.permitido || e.arrastando) return e.yaw;
   if (e.velocidade <= VELOCIDADE_RECENTRAR) return e.yaw;
   if (e.tempo - e.mexeuEm <= ESPERA_RECENTRAR) return e.yaw;
-  if (Math.abs(difAngulo(e.yaw, e.yawCorpo)) > ANGULO_MAXIMO_RECENTRAR) return e.yaw;
-  return angAlvo(e.yaw, e.yawCorpo, e.dt * TAXA_RECENTRAR);
+  const dif = Math.abs(difAngulo(e.yaw, e.yawCorpo));
+  if (dif >= ANGULO_MAXIMO_RECENTRAR) return e.yaw;
+  const t = Math.min(
+    1,
+    Math.max(
+      0,
+      (ANGULO_MAXIMO_RECENTRAR - dif) / (ANGULO_MAXIMO_RECENTRAR - ANGULO_RECENTRAR_INTEIRO),
+    ),
+  );
+  return angAlvo(e.yaw, e.yawCorpo, e.dt * TAXA_RECENTRAR * t * t * (3 - 2 * t));
 }
 
 export interface QuadroCamera {

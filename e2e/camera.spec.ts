@@ -109,7 +109,7 @@ test('roda do mouse aproxima e afasta (2,5 a 7); em cima da barra troca o item',
   expect(erros, erros.join('\n')).toEqual([]);
 });
 
-test('corpo solto da câmera: vira para onde anda e a câmera volta para trás dele', async ({
+test('corpo solto da câmera: vira para onde anda e a câmera não gira sozinha andando de lado', async ({
   page,
 }) => {
   test.setTimeout(240_000);
@@ -154,7 +154,8 @@ test('corpo solto da câmera: vira para onde anda e a câmera volta para trás d
   // inclina ao andar e respira parado (o corpo vivo está ligado)
   const corpo = await page.evaluate(() => window.__brumaluz!.personagem!.corpo());
   expect(corpo).not.toBeNull();
-  // andando de lado sem mexer na câmera: depois de 1,4 s ela começa a voltar para trás do boneco
+  // andando de lado sem mexer na câmera: ela não corre atrás do corpo (sem enjoo; voltar para
+  // trás do boneco é só andando quase para longe dela, nos testes da câmera)
   await page.evaluate(() => {
     const e = window.__brumaluz!;
     const [x, , z] = e.posicao!;
@@ -162,12 +163,10 @@ test('corpo solto da câmera: vira para onde anda e a câmera volta para trás d
     e.apontar!(0, 0.3);
   });
   await page.keyboard.down('KeyD');
-  await page.waitForTimeout(1000);
-  expect(dif((await ler()).camera, 0)).toBeLessThan(0.02);
-  await page.waitForTimeout(1600);
+  await page.waitForTimeout(2600);
   await page.keyboard.up('KeyD');
   const voltou = await ler();
-  expect(dif(voltou.camera, 0)).toBeGreaterThan(0.1);
+  expect(dif(voltou.camera, 0)).toBeLessThan(0.05);
   expect(erros, erros.join('\n')).toEqual([]);
 });
 
