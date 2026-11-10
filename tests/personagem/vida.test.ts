@@ -111,6 +111,13 @@ describe('peso no movimento', () => {
     const t = rodar(criarCorpo(0), { olharYaw: -0.2 }, 240);
     expect(t.cabeca).toBeCloseTo(-0.2 * FRACAO_CABECA, 2);
   });
+  it('andando para a câmera a cabeça não vira de um ombro para o outro', () => {
+    const a = rodar(criarCorpo(0), { olharYaw: Math.PI - 0.02 }, 240);
+    const b = rodar(criarCorpo(0), { olharYaw: -Math.PI + 0.02 }, 240);
+    expect(Math.abs(a.cabeca)).toBeLessThan(0.01);
+    expect(Math.abs(b.cabeca)).toBeLessThan(0.01);
+    expect(Math.abs(a.cabeca - b.cabeca)).toBeLessThan(0.02);
+  });
   it('determinístico: mesma entrada, mesmo resultado', () => {
     const a = rodar(criarCorpo(0.3), { vx: 2, vz: 3, correndo: true }, 50);
     const b = rodar(criarCorpo(0.3), { vx: 2, vz: 3, correndo: true }, 50);

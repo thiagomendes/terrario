@@ -34,6 +34,8 @@ export const AMPLITUDE_ANDAR = 0.7;
 export const AMPLITUDE_CORRER = 0.95;
 /** A cabeça acompanha a câmera até este ângulo, e só uma parte dele. */
 export const LIMITE_CABECA = 0.5;
+/** Com o olhar mais de tanto para trás (rad), a cabeça vai deixando de acompanhar. */
+export const CABECA_SOME_DE = 2.2;
 export const FRACAO_CABECA = 0.6;
 /** Agachadinha do pulo e amortecida da aterrissagem (0..1), e quão rápido some. */
 export const AGACHA_PULO = 1;
@@ -115,7 +117,11 @@ export function atualizarCorpo(c: EstadoCorpo, e: EntradaCorpo): SaidaCorpo {
     : 0;
   c.agacha = Math.max(0, c.agacha - dt * TAXA_AGACHA);
   const rel = difAngulo(c.yaw, e.olharYaw);
-  const alvoCabeca = Math.max(-LIMITE_CABECA, Math.min(LIMITE_CABECA, rel)) * FRACAO_CABECA;
+  // câmera quase de frente (andando para ela): o lado do olhar troca de sinal perto de ±π e a
+  // cabeça virava de um ombro para o outro; ali ela volta devagar para a frente
+  const t = Math.min(1, Math.max(0, (Math.PI - Math.abs(rel)) / (Math.PI - CABECA_SOME_DE)));
+  const alvoCabeca =
+    Math.max(-LIMITE_CABECA, Math.min(LIMITE_CABECA, rel)) * FRACAO_CABECA * t * t * (3 - 2 * t);
   c.cabeca += (alvoCabeca - c.cabeca) * fracao(4, dt);
   return {
     yaw: c.yaw,
