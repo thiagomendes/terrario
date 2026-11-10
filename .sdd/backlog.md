@@ -18,4 +18,6 @@ Ideias e pedidos do dono que ainda não viraram spec. Cada item diz de onde veio
 
 ## Ideias para depois da 013
 
+- **Construções protegidas** (ideia do dono, 10 nov 2026, em refinamento): sair do "tudo quebra tudo". Casas, sítios e estruturas do mundo não quebram (portas, baús e camas continuam usáveis; a lavoura do sítio se replanta sozinha); no multijogador, cada um só quebra o que ele mesmo colocou (o dono do mundo pode tudo). Terreno natural (pedra, terra, árvores, minérios) quebra como hoje. Falta decidir: criativo, baú de amigo, mundos antigos, opção "construir juntos". Proposta: spec 016, antes da Cidade Grande.
+
 - **Leite e balde, filhotes, colmeia e mel** (fora de escopo da 013).
