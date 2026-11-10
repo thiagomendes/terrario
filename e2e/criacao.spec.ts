@@ -76,21 +76,26 @@ async function vaca(page: Page, toque: boolean) {
       );
       window.addEventListener('brumaluz:criou', () => eventos.push('criou'));
       const bichos = () => e.criaturas!().filter((c) => c.tipo === 'cervo');
-      const mirarEm = async (id: number) => {
-        const c = e.criaturas!().find((b) => b.id === id)!;
-        const [px, py, pz] = e.posicao!;
-        const ty = c.y + 0.8;
-        e.apontar!(
-          Math.atan2(c.x - px, c.z - pz),
-          -Math.atan2(ty - py, Math.hypot(c.x - px, c.z - pz)),
-        );
-        await espera(150);
-        if (toque) e.controleDireto!.mirar!(innerWidth / 2, innerHeight / 2);
-        // a dica olha a mira a cada 0,25 s; com a máquina ocupada os quadros demoram:
-        // espera a dica mudar, até 5 s
+      /**
+       * Mira na vaca até aparecer a dica esperada (a vaca anda e, com a máquina ocupada, os
+       * quadros demoram): reaponta para onde ela está a cada 0,3 s, até 8 s.
+       */
+      const mirarEm = async (id: number, quer: (d: string) => boolean) => {
         const n = dicas.length;
-        await espera(700);
-        for (let i = 0; i < 43 && dicas.length === n; i++) await espera(100);
+        for (let i = 0; i < 26; i++) {
+          const c = e.criaturas!().find((b) => b.id === id)!;
+          const [px, py, pz] = e.posicao!;
+          const ty = c.y + 0.8;
+          e.apontar!(
+            Math.atan2(c.x - px, c.z - pz),
+            -Math.atan2(ty - py, Math.hypot(c.x - px, c.z - pz)),
+          );
+          await espera(150);
+          if (toque) e.controleDireto!.mirar!(innerWidth / 2, innerHeight / 2);
+          await espera(150);
+          // a dica olha a mira a cada 0,25 s
+          if (i >= 2 && dicas.slice(n).some(quer)) break;
+        }
       };
       const r: Record<string, unknown> = {};
       // a mão vazia, a vaca logo ali na frente: a dica ensina a segurar o trigo
@@ -108,7 +113,7 @@ async function vaca(page: Page, toque: boolean) {
           )?.id ?? -1;
       }
       r.nasceu = id > 0;
-      await mirarEm(id);
+      await mirarEm(id, (d) => d.startsWith('Segure'));
       // a vaca pode dar um passo para fora da mira: vale a dica que apareceu mirando nela
       r.dicaSeguir = dicas.find((d) => d.startsWith('Segure'));
       // o jogador fica a uns 5 blocos da vaca (ela passeou enquanto a dica aparecia: conta
@@ -136,7 +141,7 @@ async function vaca(page: Page, toque: boolean) {
       r.distSeguindo = Math.hypot(v.x - px, v.z - pz);
       r.estadoSeguindo = v.estado;
       // dar o trigo
-      await mirarEm(id);
+      await mirarEm(id, (d) => d.includes(' dar '));
       r.dicaDar = dicas.filter((d) => d.includes(' dar ')).at(-1);
       toque ? e.controleDireto!.tocar!() : e.controleDireto!.usar!();
       let coracoes = 0;
