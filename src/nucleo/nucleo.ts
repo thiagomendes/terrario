@@ -442,6 +442,10 @@ export function criarNucleo(op: OpcoesNucleo) {
       recusar(j, c.id, 'quebrar', [c, { x, y: y - 1, z }, { x, y: y + 1, z }]);
       return;
     }
+    // baú do mundo (ruína, celeiro) ainda no lugar em que nasceu: nunca foi trocado, então o
+    // tesouro dele ainda vale. Quebrado uma vez, a célula ganha edição; o baú posto de novo
+    // ali é um baú comum (vazio), senão quebrar e recolocar dava o tesouro outra vez.
+    const intocado = edicoes.obter(x, y, z) === undefined;
     editar(x, y, z, Bloco.AR);
     // quebrar meia porta leva a outra metade
     if (b === Bloco.PORTA || b === Bloco.PORTA_ABERTA) {
@@ -472,7 +476,7 @@ export function criarNucleo(op: OpcoesNucleo) {
     }
     // quebrar baú ou fornalha espalha o conteúdo (o de ruína nunca aberto também)
     if (b === Bloco.BAU || b === Bloco.FORNALHA || b === Bloco.FORNALHA_ACESA) {
-      const gerado = b === Bloco.BAU && mundo.gerado(x, y, z) === Bloco.BAU;
+      const gerado = b === Bloco.BAU && intocado && mundo.gerado(x, y, z) === Bloco.BAU;
       for (const p of conteineres.remover(x, y, z, gerado)) {
         if (p) mundoItens.soltar(p.item, p.qtd, x + 0.5, y + 0.5, z + 0.5, rngDrops, p.dur);
       }

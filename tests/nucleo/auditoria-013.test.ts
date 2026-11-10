@@ -1,6 +1,18 @@
 import { describe, expect, it } from 'vitest';
 import { criarNucleo, type Nucleo } from '../../src/nucleo/nucleo';
-import { encontrarNascimento, alturaTerreno } from '../../src/world/chunk';
+import '../../src/temas/todos';
+import { obterTema } from '../../src/temas';
+import {
+  encontrarNascimento,
+  alturaTerreno,
+  definirEstiloMundo,
+  ESTILO_PADRAO,
+  gerarChunk,
+  indice,
+  ALTURA,
+  TERRENO_NATURAL,
+} from '../../src/world/chunk';
+import { planoDaRegiao, REGIAO_POVOADO } from '../../src/world/povoado';
 import { Bloco } from '../../src/world/blocks';
 import { sanear } from '../../src/nucleo/saneamento';
 import { idDoBloco } from '../../src/jogo/itens';
@@ -157,5 +169,110 @@ describe('colocar com "outra parte": só a metade de cima da porta', () => {
     expect(bloco(n, X + 2, Y, Z + 2)).toBe(Bloco.PORTA);
     expect(bloco(n, X + 2, Y + 1, Z + 2)).toBe(Bloco.PORTA);
     expect(inv(n, 'ana').contar(idDoBloco(Bloco.PORTA))).toBe(1);
+  });
+});
+
+/**
+ * Quebra o baú, junta o que caiu, põe um baú novo no mesmo lugar e repete. O tesouro do
+ * baú do mundo sai uma vez só; depois é um baú comum, vazio.
+ */
+function voltasNoBau(semente: number, bx: number, by: number, bz: number): string[][] {
+  const n = criarNucleo({
+    semente,
+    modo: 'sobrevivencia',
+    versaoMundo: 2,
+    confiarNoCliente: false,
+    depuracao: true,
+  });
+  n.conectar('ana', { perfil: { apelido: 'Ana', aparencia: {} } });
+  n.comando('ana', { t: 'depurar', d: { f: 'spawn', x: bx + 2.5, z: bz + 0.5 } });
+  n.estado.jogadores.get('ana')!.saltoPermitido = true;
+  n.comando('ana', {
+    t: 'jogador',
+    x: bx + 2.5,
+    y: by,
+    z: bz + 0.5,
+    yaw: 0,
+    pitch: 0,
+    olhos: by + 1.62,
+    noChao: true,
+    voando: false,
+    vel: 0,
+    correndo: false,
+    submerso: false,
+    quedas: [],
+    pulos: 0,
+    golpes: 0,
+    slot: 0,
+  });
+  expect(n.estado.mundo.bloco(bx, by, bz)).toBe(Bloco.BAU);
+  const i = n.estado.jogadores.get('ana')!.inventario;
+  const voltas: string[][] = [];
+  for (let v = 0; v < 3; v++) {
+    n.estado.mundoItens.itens.length = 0;
+    mandar(n, 'ana', { t: 'quebrar', id: 10 + v * 2, x: bx, y: by, z: bz, slot: 0 });
+    voltas.push(
+      n.estado.mundoItens.itens
+        .map((o) => o.item)
+        .filter((o) => o !== idDoBloco(Bloco.BAU))
+        .sort(),
+    );
+    i.definir(5, { item: idDoBloco(Bloco.BAU), qtd: 1 });
+    mandar(n, 'ana', {
+      t: 'colocar',
+      id: 11 + v * 2,
+      x: bx,
+      y: by,
+      z: bz,
+      bloco: Bloco.BAU,
+      meta: 0,
+      slot: 5,
+    });
+    expect(n.estado.mundo.bloco(bx, by, bz)).toBe(Bloco.BAU);
+  }
+  return voltas;
+}
+
+describe('o tesouro do baú do mundo sai uma vez só', () => {
+  it('o baú do celeiro do sítio (Rancho, semente 42) não se refaz ao ser recolocado', () => {
+    definirEstiloMundo(obterTema('rancho-alegre').mundo);
+    try {
+      const semente = 42;
+      const n0 = encontrarNascimento(semente);
+      let bau: [number, number, number] | undefined;
+      const rx0 = Math.floor(n0.x / REGIAO_POVOADO);
+      const rz0 = Math.floor(n0.z / REGIAO_POVOADO);
+      for (let dx = -1; dx <= 1 && !bau; dx++)
+        for (let dz = -1; dz <= 1 && !bau; dz++)
+          bau = planoDaRegiao(rx0 + dx, rz0 + dz, semente, TERRENO_NATURAL)?.bauCeleiro;
+      expect(bau).toBeDefined();
+      const voltas = voltasNoBau(semente, ...bau!);
+      expect(voltas[0]).toContain('enxada_madeira');
+      expect(voltas[1]).toEqual([]);
+      expect(voltas[2]).toEqual([]);
+    } finally {
+      definirEstiloMundo(ESTILO_PADRAO);
+    }
+  });
+
+  it('o baú de ruína também não', () => {
+    // a ruína mais perto do nascimento (o baú fica no meio do chunk, em 8, h + 1, 8)
+    let bau: [number, number, number] | undefined;
+    const cx0 = Math.floor(X / 16);
+    const cz0 = Math.floor(Z / 16);
+    for (let r = 0; r < 40 && !bau; r++)
+      for (let dx = -r; dx <= r && !bau; dx++)
+        for (let dz = -r; dz <= r && !bau; dz++) {
+          if (Math.max(Math.abs(dx), Math.abs(dz)) !== r) continue;
+          const c = gerarChunk(cx0 + dx, cz0 + dz, SEMENTE);
+          for (let y = 1; y < ALTURA && !bau; y++)
+            if (c[indice(8, y, 8)] === Bloco.BAU)
+              bau = [(cx0 + dx) * 16 + 8, y, (cz0 + dz) * 16 + 8];
+        }
+    expect(bau).toBeDefined();
+    const voltas = voltasNoBau(SEMENTE, ...bau!);
+    expect(voltas[0].length).toBeGreaterThan(0);
+    expect(voltas[1]).toEqual([]);
+    expect(voltas[2]).toEqual([]);
   });
 });
