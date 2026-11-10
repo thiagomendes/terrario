@@ -38,10 +38,9 @@ Separada da spec 013 em 7 nov 2026: o dono escolheu fazer o Rancho Alegre primei
 ## Para o dono decidir antes de começar
 - **Altura dos prédios:** no esboço, de 2 a 6 andares. Mais alto (até 12) pesa no celular; mais baixo e mais largo é mais seguro.
 
-## Ferramenta para os prédios (pergunta do dono, 10 nov 2026)
-O dono perguntou se vale trazer o Blender ou outra ferramenta para dar densidade à cidade. Avaliar no começo da spec com um teste pequeno:
-- **Recomendado: prédios como "plantas" de blocos** desenhadas num editor de voxel (MagicaVoxel, grátis) e convertidas por um script para dados do jogo. Continuam sendo blocos de verdade (dá para entrar, minerar, proteger), iguais no servidor, e o planejador da cidade só escolhe, gira e combina as plantas. Qualquer um da família pode desenhar um prédio.
-- **Blender só para poucos enfeites que não são blocos** (carro, roda-gigante), em glTF no estilo de brinquedo e medidos no celular. Para prédios ele complica: vira malha solta, fora da regra dos blocos, pesa no celular e abre um segundo jeito de fazer arte.
+## Ferramenta para os prédios (decisão do dono, 10 nov 2026)
+- **Sem Blender.** "Não vamos complicar."
+- **MagicaVoxel, se ajudar de verdade:** prédios desenhados como "plantas" de blocos no editor de voxel e convertidos por um script para dados do jogo, no padrão de sempre (blocos de verdade, iguais no servidor; o planejador da cidade escolhe, gira e combina as plantas). Validar no começo da spec com um prédio de teste; se não compensar, as plantas ficam escritas em código como as do sítio.
 
 ## Riscos já conhecidos
 - **Desempenho:** prédios altos têm muito mais blocos à vista e muito vidro. A janela vira bloco com recorte (não transparente), o miolo dos prédios fecha e a cidade fica limitada aos quarteirões próximos. Medir no celular (meta: 45 fps no centro).
