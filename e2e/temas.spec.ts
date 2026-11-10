@@ -124,8 +124,22 @@ for (const [id, nome] of TEMAS) {
     await expect(page.locator('[data-mundo-atual]')).toContainText(nome);
     // joga: quebra o bloco mirado e salva
     await page.evaluate(() => document.querySelector('.entrada')?.setAttribute('hidden', ''));
-    await page.evaluate(() => window.__brumaluz!.apontar!(0, 1.2));
-    await page.waitForFunction(() => window.__brumaluz!.alvo !== null);
+    // olha para o chão até ter um bloco na mira. Com vários testes juntos o chão em volta
+    // demora a chegar do worker: reaponta a cada meio segundo e, se nada aparecer em 20 s,
+    // põe o jogador de novo em cima do terreno (o chão já carregado)
+    const inicio = Date.now();
+    await page.waitForFunction(
+      (inicio) => {
+        const e = window.__brumaluz!;
+        if (Date.now() - inicio > 20_000 && e.posicao) {
+          e.teleportar!(e.posicao[0], e.posicao[2]);
+        }
+        e.apontar!(0, 1.2);
+        return e.alvo !== null;
+      },
+      inicio,
+      { polling: 500, timeout: 120_000 },
+    );
     const alvo = await page.evaluate(() => window.__brumaluz!.alvo);
     expect(await page.evaluate(() => window.__brumaluz!.interagir!('quebrar'))).toBe(true);
     expect(await page.evaluate(() => window.__brumaluz!.salvar!(true))).toBe(true);
