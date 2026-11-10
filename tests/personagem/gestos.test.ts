@@ -29,8 +29,8 @@ const parado = (): Pose =>
   });
 const quieto: EstadoGesto = { andando: false, noAr: false, ocupado: false };
 /** Rotação z do braço como o boneco aplica (render/boneco.ts). */
-const zDireito = (p: Pose) => -0.06 - (p.bracoDireitoAbre ?? 0);
-const zEsquerdo = (p: Pose) => 0.06 + (p.bracoEsquerdoAbre ?? 0);
+const zDireito = (p: Pose) => 0.06 + (p.bracoDireitoAbre ?? 0);
+const zEsquerdo = (p: Pose) => -0.06 - (p.bracoEsquerdoAbre ?? 0);
 
 describe('os 8 gestos do esboço', () => {
   it('ids, nomes, durações e ícones', () => {
@@ -176,7 +176,7 @@ describe('gesto como camada do animador', () => {
     fazerGesto(a, 'acenar');
     expect(gestoDoAnimador(a)).toBe('acenar');
     for (let i = 0; i < 15; i++) a.atualizar(dt, parar);
-    expect(a.pose().bracoDireitoAbre!).toBeLessThan(-2);
+    expect(a.pose().bracoDireitoAbre!).toBeGreaterThan(2);
     for (let i = 0; i < 60; i++) a.atualizar(dt, parar);
     expect(gestoDoAnimador(a)).toBeNull();
     expect(a.camada()).toBeNull();

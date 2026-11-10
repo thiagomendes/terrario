@@ -185,13 +185,13 @@ export function aplicarGesto(pose: Pose, id: IdGesto, f: number): Pose {
   if (p <= 0) return pose;
   const j = juntasDoGesto(id, f);
   pose.pesoGesto = Math.max(pose.pesoGesto ?? 0, p);
-  // braços: o boneco usa "abre" (z = -0,06 - abre no direito, 0,06 + abre no esquerdo)
+  // braços: o boneco usa "abre" (z = 0,06 + abre no direito, −0,06 − abre no esquerdo)
   if (j.bdX !== undefined) pose.bracoDireito = mistura(pose.bracoDireito, j.bdX, p);
   if (j.beX !== undefined) pose.bracoEsquerdo = mistura(pose.bracoEsquerdo, j.beX, p);
   if (j.bdZ !== undefined)
-    pose.bracoDireitoAbre = mistura(pose.bracoDireitoAbre ?? 0, -j.bdZ - 0.06, p);
+    pose.bracoDireitoAbre = mistura(pose.bracoDireitoAbre ?? 0, j.bdZ - 0.06, p);
   if (j.beZ !== undefined)
-    pose.bracoEsquerdoAbre = mistura(pose.bracoEsquerdoAbre ?? 0, j.beZ - 0.06, p);
+    pose.bracoEsquerdoAbre = mistura(pose.bracoEsquerdoAbre ?? 0, -j.beZ - 0.06, p);
   if (j.troncoX !== undefined) pose.troncoX = mistura(pose.troncoX ?? 0, j.troncoX, p);
   if (j.troncoY !== undefined) pose.troncoY = mistura(pose.troncoY ?? 0, j.troncoY, p);
   if (j.troncoZ !== undefined) pose.troncoZ = mistura(pose.troncoZ ?? 0, j.troncoZ, p);

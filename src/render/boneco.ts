@@ -240,8 +240,10 @@ export function criarBoneco(
     const mira = olhar * 0.75 * noGolpe;
     j.bracoD.rotation.x = suave('bracoD', pose.bracoDireito - (segurando ? 0.32 : 0) + mira, k);
     j.bracoE.rotation.x = suave('bracoE', pose.bracoEsquerdo, k);
-    j.bracoD.rotation.z = suave('bracoDZ', -0.06 - (pose.bracoDireitoAbre ?? 0), k);
-    j.bracoE.rotation.z = suave('bracoEZ', 0.06 + (pose.bracoEsquerdoAbre ?? 0), k);
+    // "abre" positivo leva o braço para fora (o direito fica em +x: z positivo o afasta do
+    // corpo; o esquerdo, em −x, z negativo)
+    j.bracoD.rotation.z = suave('bracoDZ', 0.06 + (pose.bracoDireitoAbre ?? 0), k);
+    j.bracoE.rotation.z = suave('bracoEZ', -0.06 - (pose.bracoEsquerdoAbre ?? 0), k);
     j.bracoD.rotation.y = suave('bracoDY', pose.bracoDireitoGiro ?? 0, k);
     j.bracoE.rotation.y = suave('bracoEY', pose.bracoEsquerdoGiro ?? 0, k);
     // a cabeça acompanha o olhar da câmera e compensa a inclinação do tronco
