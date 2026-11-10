@@ -19,7 +19,7 @@ import {
   PERTO_FIM,
   PERTO_INICIO,
   RAIO_CAMERA,
-  SUBIR_PERTO,
+  ALTURA_PERTO,
   subidaPerto,
   PITCH_BAIXO,
   PITCH_CIMA,
@@ -169,7 +169,7 @@ describe('desvio de blocos', () => {
       r = c.quadro({ dt: 1 / 60, olhos: o, yaw: 0, pitch: 0.2, bloqueia: casa });
     expect(r.distancia).toBeLessThan(PERTO_INICIO);
     expect(c.alturaPivo()).toBeGreaterThan(ALTURA_PIVO + 0.1);
-    expect(c.alturaPivo()).toBeLessThanOrEqual(ALTURA_PIVO + SUBIR_PERTO + 1e-9);
+    expect(c.alturaPivo()).toBeLessThanOrEqual(ALTURA_PERTO + 1e-9);
     expect(r.pivo.y + RAIO_CAMERA).toBeLessThan(23);
     expect(foraDeBloco(casa, r.posicao)).toBe(true);
     // teto baixo (2 blocos): não sobe além do que cabe
@@ -186,7 +186,12 @@ describe('desvio de blocos', () => {
       c.quadro({ dt: 1 / 60, olhos, yaw: 0, pitch: 0.2, bloqueia: livre });
     expect(c.alturaPivo()).toBe(ALTURA_PIVO);
     expect(subidaPerto(ZOOM_MINIMO)).toBe(0);
-    expect(subidaPerto(PERTO_FIM)).toBeCloseTo(SUBIR_PERTO, 9);
+    expect(subidaPerto(PERTO_FIM)).toBeCloseTo(ALTURA_PERTO - ALTURA_PIVO, 9);
+    // no toque (pivô no pescoço) sobe mais, até a mesma altura
+    expect(subidaPerto(PERTO_FIM, ALTURA_PIVO_TOQUE)).toBeCloseTo(
+      ALTURA_PERTO - ALTURA_PIVO_TOQUE,
+      9,
+    );
   });
   it('distância livre: nunca negativa, para uma folga antes da parede', () => {
     const colado: BloqueiaCamera = (_x, _y, z) => z <= 10;
@@ -203,10 +208,11 @@ describe('desvio de blocos', () => {
 });
 
 describe('transparência do boneco', () => {
-  it('opaco a partir de 2 blocos; nunca menos que 0,2', () => {
+  it('opaco a partir de 2,3 blocos; nunca menos que 0,2', () => {
     expect(opacidadeBoneco(4)).toBe(1);
-    expect(opacidadeBoneco(2)).toBe(1);
-    expect(opacidadeBoneco(1.4)).toBeCloseTo(0.5, 5);
+    expect(opacidadeBoneco(2.31)).toBe(1);
+    expect(degrauOpacidade(opacidadeBoneco(2.3))).toBe(1);
+    expect(opacidadeBoneco(1.55)).toBeCloseTo(0.5, 5);
     expect(opacidadeBoneco(0.5)).toBe(OPACIDADE_MINIMA);
     expect(opacidadeBoneco(0)).toBe(OPACIDADE_MINIMA);
   });

@@ -74,24 +74,28 @@ export const TAXA_AFASTAR = 3;
 /** Perto demais: o boneco fica meio transparente (nunca menos que isto). */
 export const OPACIDADE_MINIMA = 0.2;
 export const FADE_INICIO = 0.8;
-export const FADE_LARGURA = 1.2;
+export const FADE_LARGURA = 1.5;
 
 /**
- * Bem perto (casinha, corredor): o pivô sobe um pouco, se houver espaço até o teto, e a
- * câmera olha por cima da cabeça em vez de ficar atrás dela (o boneco não enche a tela).
- * Começa a subir abaixo de PERTO_INICIO blocos e sobe tudo a PERTO_FIM.
+ * Bem perto (casinha, corredor): o pivô sobe até ALTURA_PERTO acima dos olhos, se houver
+ * espaço até o teto, e a câmera olha por cima da cabeça em vez de ficar atrás dela (o boneco
+ * não enche a tela). No toque, com o pivô no pescoço, sobe mais. Começa a subir abaixo de
+ * PERTO_INICIO blocos e chega lá a PERTO_FIM.
  */
-export const SUBIR_PERTO = 0.4;
+export const ALTURA_PERTO = 0.75;
 export const PERTO_INICIO = 1.8;
 export const PERTO_FIM = 0.9;
 /** Sobe e desce sem tranco (por segundo). */
 export const TAXA_SUBIR_PERTO = 5;
 
-/** Quanto o pivô quer subir nesta distância da câmera (0 longe, SUBIR_PERTO bem perto). */
-export function subidaPerto(distancia: number): number {
+/**
+ * Quanto o pivô quer subir nesta distância da câmera (0 longe; bem perto, até ALTURA_PERTO
+ * acima dos olhos, a partir da altura normal do pivô).
+ */
+export function subidaPerto(distancia: number, alturaPivo = ALTURA_PIVO): number {
   if (!Number.isFinite(distancia) || distancia >= PERTO_INICIO) return 0;
   const t = Math.min(1, (PERTO_INICIO - distancia) / (PERTO_INICIO - PERTO_FIM));
-  return SUBIR_PERTO * t * t * (3 - 2 * t);
+  return Math.max(0, ALTURA_PERTO - alturaPivo) * t * t * (3 - 2 * t);
 }
 
 /** Até quanto o pivô pode subir a partir de y sem a bolinha da câmera tocar o teto. */
@@ -292,7 +296,7 @@ export function criarCameraOrbita(zoom = ZOOM_PADRAO, alturaPivo = ALTURA_PIVO) 
         seguido.z += (o.z - seguido.z) * kh;
       }
       // bem perto (pela distância do quadro anterior), o pivô sobe se o teto deixar
-      const quer = subidaPerto(distancia);
+      const quer = subidaPerto(distancia, alturaPivo);
       const cabe = subidaLivre(
         { x: seguido.x, y: seguido.y + alturaPivo, z: seguido.z },
         quer,
