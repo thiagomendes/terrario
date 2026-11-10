@@ -16,6 +16,11 @@ import {
   limitarZoom,
   opacidadeBoneco,
   OPACIDADE_MINIMA,
+  PERTO_FIM,
+  PERTO_INICIO,
+  RAIO_CAMERA,
+  SUBIR_PERTO,
+  subidaPerto,
   PITCH_BAIXO,
   PITCH_CIMA,
   pivoCamera,
@@ -154,6 +159,35 @@ describe('desvio de blocos', () => {
     expect(r.opacidade).toBeLessThan(1);
     expect(r.opacidade).toBeGreaterThanOrEqual(OPACIDADE_MINIMA);
   });
+  it('casinha 3x3: bem perto, o pivô sobe um pouco (olha por cima da cabeça) sem tocar o teto', () => {
+    const casa: BloqueiaCamera = (x, y, z) =>
+      y <= 19 || y >= 23 || x <= 9 || x >= 13 || z <= 9 || z >= 13;
+    const o = { x: 11.5, y: 21.62, z: 11.5 };
+    const c = criarCameraOrbita(ZOOM_PADRAO);
+    let r = c.quadro({ dt: 1 / 60, olhos: o, yaw: 0, pitch: 0.2, bloqueia: casa });
+    for (let i = 0; i < 120; i++)
+      r = c.quadro({ dt: 1 / 60, olhos: o, yaw: 0, pitch: 0.2, bloqueia: casa });
+    expect(r.distancia).toBeLessThan(PERTO_INICIO);
+    expect(c.alturaPivo()).toBeGreaterThan(ALTURA_PIVO + 0.1);
+    expect(c.alturaPivo()).toBeLessThanOrEqual(ALTURA_PIVO + SUBIR_PERTO + 1e-9);
+    expect(r.pivo.y + RAIO_CAMERA).toBeLessThan(23);
+    expect(foraDeBloco(casa, r.posicao)).toBe(true);
+    // teto baixo (2 blocos): não sobe além do que cabe
+    const baixa: BloqueiaCamera = (x, y, z) => casa(x, y, z) || y >= 22;
+    const c2 = criarCameraOrbita(ZOOM_PADRAO);
+    for (let i = 0; i < 120; i++)
+      r = c2.quadro({ dt: 1 / 60, olhos: o, yaw: 0, pitch: 0.2, bloqueia: baixa });
+    expect(c2.alturaPivo()).toBe(ALTURA_PIVO);
+    expect(foraDeBloco(baixa, r.posicao)).toBe(true);
+  });
+  it('em campo aberto o pivô não sobe', () => {
+    const c = criarCameraOrbita(ZOOM_PADRAO);
+    for (let i = 0; i < 60; i++)
+      c.quadro({ dt: 1 / 60, olhos, yaw: 0, pitch: 0.2, bloqueia: livre });
+    expect(c.alturaPivo()).toBe(ALTURA_PIVO);
+    expect(subidaPerto(ZOOM_MINIMO)).toBe(0);
+    expect(subidaPerto(PERTO_FIM)).toBeCloseTo(SUBIR_PERTO, 9);
+  });
   it('distância livre: nunca negativa, para uma folga antes da parede', () => {
     const colado: BloqueiaCamera = (_x, _y, z) => z <= 10;
     const d = distanciaLivre({ x: 10.5, y: 20.8, z: 10.5 }, 0, 0, 5, colado);
@@ -169,7 +203,7 @@ describe('desvio de blocos', () => {
 });
 
 describe('transparência do boneco', () => {
-  it('opaco a partir de 2 blocos; nunca menos que 0,25', () => {
+  it('opaco a partir de 2 blocos; nunca menos que 0,2', () => {
     expect(opacidadeBoneco(4)).toBe(1);
     expect(opacidadeBoneco(2)).toBe(1);
     expect(opacidadeBoneco(1.4)).toBeCloseTo(0.5, 5);
@@ -181,6 +215,7 @@ describe('transparência do boneco', () => {
     expect(degrauOpacidade(0.51)).toBe(0.5);
     expect(degrauOpacidade(0.52)).toBe(0.5);
     expect(degrauOpacidade(0.26)).toBe(0.25);
+    expect(degrauOpacidade(OPACIDADE_MINIMA)).toBe(0.2);
   });
 });
 

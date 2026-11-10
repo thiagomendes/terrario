@@ -213,7 +213,7 @@ test('casinha: a câmera chega perto sem entrar na parede e o boneco fica meio t
     .poll(() => page.evaluate(() => window.__brumaluz!.camera!.opacidadeBoneco()))
     .toBeLessThan(1);
   const op = await page.evaluate(() => window.__brumaluz!.camera!.opacidadeBoneco());
-  expect(op).toBeGreaterThanOrEqual(0.25);
+  expect(op).toBeGreaterThanOrEqual(0.2);
   // saindo da casa (teleporte para fora), volta ao normal
   await page.evaluate((c) => window.__brumaluz!.teleportar!(c.x + 0.5, c.z + 3.5 + 5, c.y + 6), c);
   await page.evaluate(() => window.__brumaluz!.apontar!(0, 0.3));

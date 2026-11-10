@@ -72,9 +72,39 @@ export const RAIO_CAMERA = 0.2;
 export const TAXA_AFASTAR = 3;
 
 /** Perto demais: o boneco fica meio transparente (nunca menos que isto). */
-export const OPACIDADE_MINIMA = 0.25;
+export const OPACIDADE_MINIMA = 0.2;
 export const FADE_INICIO = 0.8;
 export const FADE_LARGURA = 1.2;
+
+/**
+ * Bem perto (casinha, corredor): o pivô sobe um pouco, se houver espaço até o teto, e a
+ * câmera olha por cima da cabeça em vez de ficar atrás dela (o boneco não enche a tela).
+ * Começa a subir abaixo de PERTO_INICIO blocos e sobe tudo a PERTO_FIM.
+ */
+export const SUBIR_PERTO = 0.4;
+export const PERTO_INICIO = 1.8;
+export const PERTO_FIM = 0.9;
+/** Sobe e desce sem tranco (por segundo). */
+export const TAXA_SUBIR_PERTO = 5;
+
+/** Quanto o pivô quer subir nesta distância da câmera (0 longe, SUBIR_PERTO bem perto). */
+export function subidaPerto(distancia: number): number {
+  if (!Number.isFinite(distancia) || distancia >= PERTO_INICIO) return 0;
+  const t = Math.min(1, (PERTO_INICIO - distancia) / (PERTO_INICIO - PERTO_FIM));
+  return SUBIR_PERTO * t * t * (3 - 2 * t);
+}
+
+/** Até quanto o pivô pode subir a partir de y sem a bolinha da câmera tocar o teto. */
+export function subidaLivre(base: Vec3, quer: number, bloqueia: BloqueiaCamera): number {
+  if (quer <= 0) return 0;
+  let livre = 0;
+  for (let d = 0.05; d <= quer + 1e-9; d += 0.05) {
+    if (bloqueia(Math.floor(base.x), Math.floor(base.y + d + RAIO_CAMERA), Math.floor(base.z)))
+      break;
+    livre = d;
+  }
+  return livre;
+}
 
 export const limitarZoom = (d: number): number =>
   Number.isFinite(d) ? Math.min(ZOOM_MAXIMO, Math.max(ZOOM_MINIMO, d)) : ZOOM_PADRAO;
@@ -124,8 +154,9 @@ export function pivoCamera(
   altura = ALTURA_PIVO,
 ): Vec3 {
   let base = { x: seguido.x, y: seguido.y + altura, z: seguido.z };
-  // teto baixo logo acima da cabeça: o pivô fica nos olhos
-  if (celula(bloqueia, base)) base = { x: seguido.x, y: seguido.y, z: seguido.z };
+  // teto baixo logo acima da cabeça (a bolinha da câmera tocaria nele): o pivô fica nos olhos
+  if (celula(bloqueia, base) || celula(bloqueia, { ...base, y: base.y + RAIO_CAMERA }))
+    base = { x: seguido.x, y: seguido.y, z: seguido.z };
   const quer = lado * fatorLado(pitch);
   if (quer <= 0) return base;
   const rx = Math.cos(yaw);
@@ -240,6 +271,8 @@ export function criarCameraOrbita(zoom = ZOOM_PADRAO, alturaPivo = ALTURA_PIVO) 
   let distancia = Number.NaN;
   let alvoDistancia = limitarZoom(zoom);
   let ultimo: ResultadoCamera | null = null;
+  /** Quanto o pivô subiu por estar perto (blocos). */
+  let subida = 0;
   return {
     quadro(q: QuadroCamera): ResultadoCamera {
       const o = q.olhos;
@@ -250,6 +283,7 @@ export function criarCameraOrbita(zoom = ZOOM_PADRAO, alturaPivo = ALTURA_PIVO) 
       ) {
         seguido = { ...o };
         distancia = Number.NaN;
+        subida = 0;
       } else {
         const kh = fracao(SEGUIR_HORIZONTAL, q.dt);
         const kv = fracao(SEGUIR_VERTICAL, q.dt);
@@ -257,7 +291,20 @@ export function criarCameraOrbita(zoom = ZOOM_PADRAO, alturaPivo = ALTURA_PIVO) 
         seguido.y += (o.y - seguido.y) * kv;
         seguido.z += (o.z - seguido.z) * kh;
       }
-      const pivo = pivoCamera(seguido, q.yaw, q.pitch, q.bloqueia, LADO_OMBRO, alturaPivo);
+      // bem perto (pela distância do quadro anterior), o pivô sobe se o teto deixar
+      const quer = subidaPerto(distancia);
+      const cabe = subidaLivre(
+        { x: seguido.x, y: seguido.y + alturaPivo, z: seguido.z },
+        quer,
+        q.bloqueia,
+      );
+      const alvoSubida = Math.min(quer, cabe);
+      // descer para caber no teto é na hora; subir e voltar, suave
+      subida =
+        alvoSubida < subida
+          ? alvoSubida
+          : subida + (alvoSubida - subida) * fracao(TAXA_SUBIR_PERTO, q.dt);
+      const pivo = pivoCamera(seguido, q.yaw, q.pitch, q.bloqueia, LADO_OMBRO, alturaPivo + subida);
       const livre = distanciaLivre(pivo, q.yaw, q.pitch, alvoDistancia, q.bloqueia);
       distancia = suavizarDistancia(distancia, livre, q.dt);
       const f = direcaoOlhar(q.yaw, q.pitch);
@@ -284,8 +331,11 @@ export function criarCameraOrbita(zoom = ZOOM_PADRAO, alturaPivo = ALTURA_PIVO) 
       return alvoDistancia;
     },
     zoom: () => alvoDistancia,
-    /** Altura do pivô acima dos olhos (negativa no toque). */
-    alturaPivo: () => alturaPivo,
+    /**
+     * Altura do pivô acima dos olhos (negativa no toque), com a subida de quando a câmera
+     * está bem perto: a mira usa a mesma.
+     */
+    alturaPivo: () => alturaPivo + subida,
     /** Ponto seguido (olhos com atraso); null antes do primeiro quadro. */
     seguido: (): Vec3 | null => (seguido ? { ...seguido } : null),
     ultimo: () => ultimo,
