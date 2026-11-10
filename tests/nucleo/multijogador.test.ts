@@ -535,6 +535,8 @@ describe('criação com vários jogadores, na nuvem', () => {
     inv(n, 'ana').definir(0, { item: 'semente_trigo', qtd: 2 });
     inv(n, 'bia').definir(0, { item: 'semente_milho', qtd: 2 });
     n.comando('ana', { t: 'alimentar', criatura: g.id, slot: 0 });
+    // a Bia logo depois (no mesmo segundo os corações não se repetem)
+    for (let i = 0; i < 21; i++) n.passo();
     n.comando('bia', { t: 'alimentar', criatura: g.id, slot: 0 });
     expect(g.criado).toBe(true);
     expect(inv(n, 'ana').contar('semente_trigo')).toBe(1);

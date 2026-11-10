@@ -17,6 +17,8 @@ export interface Edicoes {
   /** Sobe a cada edição em qualquer chunk (invalida caches de leitura). */
   readonly versaoGeral: number;
   doChunk(cx: number, cz: number): Array<[number, number]>;
+  /** As edições do chunk sem cópia (índice local → valor empacotado), só para ler. */
+  mapaDoChunk?(cx: number, cz: number): ReadonlyMap<number, number> | undefined;
   exportar(): EdicoesExportadas;
   importar(dados: EdicoesExportadas): void;
 }
@@ -79,6 +81,9 @@ export function criarEdicoes(): Edicoes {
     doChunk(cx, cz) {
       const mapa = chunks.get(chave(cx, cz));
       return mapa ? Array.from(mapa.entries()) : [];
+    },
+    mapaDoChunk(cx, cz) {
+      return chunks.get(chave(cx, cz));
     },
     exportar() {
       const saida: EdicoesExportadas = {};

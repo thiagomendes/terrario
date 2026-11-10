@@ -1162,7 +1162,19 @@ export function criarCena(
     enviarTelemetria(true);
     const slot = hotbar.ativo;
     if (b === Bloco.AR) enviar({ t: 'quebrar', id, x, y, z, slot });
-    else enviar({ t: 'colocar', id, x, y, z, bloco: b, meta, slot, extras: extrasFeitos });
+    // a outra parte só vai quando existe (a metade de cima da porta)
+    else
+      enviar({
+        t: 'colocar',
+        id,
+        x,
+        y,
+        z,
+        bloco: b,
+        meta,
+        slot,
+        ...(extrasFeitos.length ? { extras: extrasFeitos } : {}),
+      });
     if (espelho !== null && modo === 'criativo') {
       const m = espelharX({ x, y, z }, espelho);
       if (m.x !== x) {
@@ -1875,9 +1887,23 @@ export function criarCena(
     );
   }
   /** Brilhinho dourado subindo quando a planta fica madura perto do jogador. */
+  /**
+   * Muitos pés amadurecem no mesmo passo numa lavoura grande: um som de brilho a cada
+   * 0,4 s no máximo (antes eram dezenas de sons por cima uns dos outros) e até 12 brilhos
+   * nesse intervalo (cada pé o seu, até o teto).
+   */
+  const brilhosMadura = { janela: -Infinity, som: false, brilhos: 0 };
   function brilhoDeMadura(x: number, y: number, z: number): void {
     const d = Math.hypot(x + 0.5 - camera.position.x, z + 0.5 - camera.position.z);
     if (d > 24) return;
+    const agora = performance.now();
+    if (agora - brilhosMadura.janela >= 400) {
+      brilhosMadura.janela = agora;
+      brilhosMadura.som = false;
+      brilhosMadura.brilhos = 0;
+    }
+    if (brilhosMadura.brilhos >= 12) return;
+    brilhosMadura.brilhos++;
     pool.emitir(
       Array.from({ length: 8 }, () => ({
         x: x + 0.2 + rngFx() * 0.6,
@@ -1890,7 +1916,10 @@ export function criarCena(
         tipo: CONFETE,
       })),
     );
-    if (d < 12) tocarSom(motorAudio, 'coleta');
+    if (d < 12 && !brilhosMadura.som) {
+      brilhosMadura.som = true;
+      tocarSom(motorAudio, 'coleta');
+    }
   }
   barramento.ouvir('quebra', (d) => {
     // colher não continua cavando: segurar depois da planta não leva a terra arada junto

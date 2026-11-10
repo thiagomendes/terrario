@@ -216,7 +216,7 @@ export const TEXTOS_RANCHO: TextosTema = {
     pao: { titulo: 'Pão quentinho', descricao: 'Faça um pão caseiro com 3 feixes de trigo' },
     criar: {
       titulo: 'Bicho do sítio',
-      descricao: 'Dê trigo a uma vaca malhada (ou milho a uma galinha caipira)',
+      descricao: 'Dê trigo a uma vaca malhada (ou grão de milho a uma galinha caipira)',
     },
   },
   capitulos: {

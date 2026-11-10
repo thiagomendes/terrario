@@ -8,9 +8,11 @@
 import type { Slot } from '../jogo/inventario';
 import { obterItem } from '../jogo/itens';
 import type { Comando, MudancaSlot, Pos } from './protocolo';
+import type { DadosMundo } from '../jogo/mundos';
+import type { EdicoesExportadas } from '../world/edicoes';
 
 /** Tamanho do mundo onde alguém pode estar (bem além de onde se joga). */
-const XZ_MAX = 30_000_000;
+export const XZ_MAX = 30_000_000;
 const Y_MIN = -64;
 const Y_MAX = 512;
 const SLOTS = 36;
@@ -96,7 +98,8 @@ export function sanear(c: unknown): Comando | null {
         inteiro(o.slot, 0, SLOTS - 1) &&
         (o.extras === undefined ||
           (Array.isArray(o.extras) &&
-            o.extras.length <= 2 &&
+            // só a metade de cima da porta (o núcleo confere que é a célula de cima)
+            o.extras.length <= 1 &&
             (o.extras as Pos[]).every((e) => celula(e))))
         ? (o as unknown as Comando)
         : null;
@@ -172,4 +175,176 @@ export function sanear(c: unknown): Comando | null {
     default:
       return null;
   }
+}
+
+// ---------------------------------------------------------------------------
+// Mundo salvo (auditoria 013): "levar para a nuvem" sobe o salvamento do aparelho como
+// veio. Um bicho em x = 1e300 travava o servidor (cada passo gerava terreno lá). Tudo o que
+// tem posição passa pelos mesmos limites dos comandos; o que estiver fora sai.
+
+/** Altura em que bicho e item solto podem estar (o mundo tem 128 de altura). */
+const Y_CORPO_MIN = 0;
+const Y_CORPO_MAX = 256;
+const MAX_CRIATURAS_SALVAS = 64;
+const MAX_ITENS_SALVOS = 400;
+const MAX_CONTEINERES = 20_000;
+const MAX_LAVOURA = 100_000;
+const MAX_SEM_POVOADO = 4096;
+/** O cercado do sítio tem uns 5×5; mais do que isto não é cercado. */
+const CERCA_MAX = 64;
+
+const objeto = (v: unknown): v is Record<string, unknown> =>
+  !!v && typeof v === 'object' && !Array.isArray(v);
+
+/** Um ponto dentro do mundo (bicho ou item solto). */
+function corpoValido(v: unknown): boolean {
+  if (!objeto(v)) return false;
+  return xz(v.x) && xz(v.z) && finito(v.y) && v.y >= Y_CORPO_MIN && v.y <= Y_CORPO_MAX;
+}
+
+/** Posição salva do jogador (x, y, z dentro do mundo), ou null. */
+export function posicaoSalvaValida<T>(p: T): T | null {
+  if (!objeto(p)) return null;
+  return xz(p.x) && y(p.y) && xz(p.z) ? p : null;
+}
+
+const CHAVE_CELULA = /^(-?\d{1,9}),(-?\d{1,4}),(-?\d{1,9})$/;
+/** Chave "x,y,z" de uma célula dentro do mundo. */
+export function chaveCelulaValida(k: string): boolean {
+  const m = CHAVE_CELULA.exec(k);
+  return (
+    !!m &&
+    Math.abs(Number(m[1])) <= XZ_MAX &&
+    Number(m[2]) >= 0 &&
+    Number(m[2]) < 256 &&
+    Math.abs(Number(m[3])) <= XZ_MAX
+  );
+}
+const CHAVE_PAR = /^(-?\d{1,9}),(-?\d{1,9})$/;
+function chavePar(k: string, max: number): boolean {
+  const m = CHAVE_PAR.exec(k);
+  return !!m && Math.abs(Number(m[1])) <= max && Math.abs(Number(m[2])) <= max;
+}
+
+/** Só as entradas com chave de célula válida (no máximo `max`). */
+function porCelula(v: unknown, max: number): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  if (!objeto(v)) return out;
+  let n = 0;
+  for (const [k, val] of Object.entries(v)) {
+    if (n >= max) break;
+    if (!chaveCelulaValida(k)) continue;
+    out[k] = val;
+    n++;
+  }
+  return out;
+}
+
+function bichoCriado(b: Record<string, unknown>): Record<string, unknown> {
+  const out = { ...b };
+  const casa = b.casa;
+  if (!(Array.isArray(casa) && casa.length === 2 && xz(casa[0]) && xz(casa[1]))) delete out.casa;
+  const cerca = b.cerca;
+  const cercaOk =
+    typeof b.curral === 'string' &&
+    b.curral.length <= 64 &&
+    Array.isArray(cerca) &&
+    cerca.length === 4 &&
+    cerca.every((v) => xz(v)) &&
+    cerca[0] <= cerca[2] &&
+    cerca[1] <= cerca[3] &&
+    cerca[2] - cerca[0] <= CERCA_MAX &&
+    cerca[3] - cerca[1] <= CERCA_MAX;
+  if (!cercaOk) {
+    delete out.curral;
+    delete out.cerca;
+  }
+  return out;
+}
+
+/**
+ * Os extras do mundo salvo com tudo o que tem posição dentro do mundo: bichos criados e
+ * raposas domadas, itens soltos, baús e fornalhas, lavoura, ponto de nascer e regiões sem
+ * povoado. Entrada que não serve sai (o resto do mundo abre normalmente). O núcleo passa
+ * todo salvamento por aqui ao abrir; o servidor, ao receber um mundo do aparelho.
+ */
+export function sanearExtras(e: unknown): Record<string, unknown> {
+  if (!objeto(e)) return {};
+  const out: Record<string, unknown> = { ...e };
+  if ('criaturas' in out) {
+    const c = objeto(out.criaturas) ? out.criaturas : {};
+    const lista = (v: unknown) =>
+      Array.isArray(v) ? v.slice(0, MAX_CRIATURAS_SALVAS).filter(corpoValido) : [];
+    out.criaturas = {
+      ...c,
+      raposas: lista(c.raposas),
+      criados: (lista(c.criados) as Record<string, unknown>[]).map(bichoCriado),
+    };
+  }
+  if ('itensSoltos' in out)
+    out.itensSoltos = Array.isArray(out.itensSoltos)
+      ? out.itensSoltos.slice(0, MAX_ITENS_SALVOS).filter(corpoValido)
+      : [];
+  if ('conteineres' in out) {
+    const c = objeto(out.conteineres) ? out.conteineres : {};
+    out.conteineres = {
+      ...c,
+      baus: porCelula(c.baus, MAX_CONTEINERES),
+      fornalhas: porCelula(c.fornalhas, MAX_CONTEINERES),
+    };
+  }
+  if ('lavoura' in out) {
+    const l = porCelula(out.lavoura, MAX_LAVOURA);
+    for (const k of Object.keys(l)) if (!finito(l[k])) delete l[k];
+    out.lavoura = l;
+  }
+  if ('spawn' in out) {
+    const sp = out.spawn;
+    if (!(objeto(sp) && xz(sp.x) && xz(sp.z))) delete out.spawn;
+  }
+  if ('povoados' in out) {
+    const p = objeto(out.povoados) ? out.povoados : {};
+    if (Array.isArray(p.semPovoado))
+      out.povoados = {
+        ...p,
+        semPovoado: p.semPovoado
+          .slice(0, MAX_SEM_POVOADO)
+          .filter((k): k is string => typeof k === 'string' && chavePar(k, XZ_MAX / 128 + 1)),
+      };
+    else delete out.povoados;
+  }
+  return out;
+}
+
+/** Edições com chave de chunk e células válidas (o resto sai). */
+export function sanearEdicoes(ed: unknown): EdicoesExportadas {
+  const out: EdicoesExportadas = {};
+  if (!objeto(ed)) return out;
+  const maxChunk = Math.ceil(XZ_MAX / 16) + 1;
+  for (const [k, lista] of Object.entries(ed)) {
+    if (!chavePar(k, maxChunk) || !Array.isArray(lista)) continue;
+    const boas = (lista as unknown[]).filter(
+      (p): p is [number, number] =>
+        Array.isArray(p) &&
+        p.length === 2 &&
+        inteiro(p[0], 0, 16 * 16 * 128 - 1) &&
+        inteiro(p[1], 0, 65535),
+    );
+    if (boas.length) out[k] = boas;
+  }
+  return out;
+}
+
+/** O mundo salvo inteiro (de um aparelho): edições, jogador e extras dentro dos limites. */
+export function sanearDadosMundo(d: unknown): DadosMundo {
+  const o = objeto(d) ? (d as Partial<DadosMundo>) : {};
+  return {
+    ...o,
+    versao: 1,
+    edicoes: sanearEdicoes(o.edicoes),
+    jogador: posicaoSalvaValida(o.jogador ?? null),
+    // a hora vai de 0 a 1 (negativa: o núcleo começa na hora de sempre)
+    hora: finito(o.hora) && o.hora >= 0 && o.hora < 1 ? o.hora : -1,
+    extras: sanearExtras(o.extras),
+  };
 }

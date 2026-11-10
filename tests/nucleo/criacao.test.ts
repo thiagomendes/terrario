@@ -220,7 +220,9 @@ describe('dar comida', () => {
     n.passo();
     const q = n.quadros().get('local')!;
     expect(q.criaturas!.find((v) => v.id === c.id)?.criado).toBe(true);
-    // de novo: só carinho, sem gastar, e a casa vem para onde ele está
+    // de novo (passado o intervalo de 1 s dos corações): só carinho, sem gastar, e a casa
+    // vem para onde ele está
+    for (let i = 0; i < 20; i++) n.passo();
     c.x += 1;
     n.comando('local', alimentar(c));
     expect(qtd(n, 0)).toBe(4);

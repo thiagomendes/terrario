@@ -25,6 +25,9 @@ import {
   viraCriado,
 } from './criacao';
 
+/** Além disto de todos os jogadores, o bicho de sempre some e o criado fica parado. */
+const LONGE_SOME = 80;
+
 /** Bichos por cercado do sítio (spec 013). */
 export const BICHOS_POR_CERCADO = 3;
 
@@ -381,6 +384,10 @@ export function criarPopulacao(rng: Gerador, salvo?: unknown, opcoes: OpcoesPopu
       };
       for (const c of lista) {
         let [j, dist] = maisPerto(c);
+        // o bicho criado longe de todos (onde o bicho de sempre já teria sumido) fica parado
+        // onde está, sem IA e sem assentar: nada de gerar terreno lá a cada passo (é salvo
+        // e volta a andar quando alguém chega perto)
+        if (c.criado && dist > LONGE_SOME) continue;
         // longe demais: sem IA, só assenta no chão (não fica congelada no ar)
         if (dist > 56 && !c.domada) {
           assentarCriatura(c, dt, m);
@@ -416,7 +423,7 @@ export function criarPopulacao(rng: Gerador, salvo?: unknown, opcoes: OpcoesPopu
       let n = 0;
       for (const c of lista) {
         if (c.estado === 'morrendo' && c.dissolver >= 1) continue;
-        if (!c.domada && !c.criado && maisPerto(c)[1] > 80) continue;
+        if (!c.domada && !c.criado && maisPerto(c)[1] > LONGE_SOME) continue;
         lista[n++] = c;
       }
       lista.length = n;
