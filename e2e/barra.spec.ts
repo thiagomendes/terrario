@@ -83,9 +83,15 @@ test('modo foto esconde a interface por qualquer caminho (tecla P e depuração)
   await expect(page.locator('.hud').first()).toBeHidden();
   await expect(page.locator('.painel-foto')).toBeVisible();
   expect(await page.evaluate(() => document.body.dataset.overlay)).toBe('foto');
+  // a mira não marca bloco na foto
+  await page.evaluate(() => window.__brumaluz!.apontar!(0, 1.2));
+  await page.waitForTimeout(400);
+  expect(await page.evaluate(() => window.__brumaluz!.destaqueVisivel)).toBe(false);
   await page.evaluate(() => window.__brumaluz!.modoFoto!.alternar());
   await expect(barra).toBeVisible();
   await expect(page.locator('.painel-foto')).toBeHidden();
+  // fora do modo foto, a mira volta a marcar o chão
+  await page.waitForFunction(() => window.__brumaluz!.destaqueVisivel === true);
   // pela tecla P: o mesmo
   await page.keyboard.press('KeyP');
   await expect(barra).toBeHidden();

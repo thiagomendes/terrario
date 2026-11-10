@@ -2257,7 +2257,8 @@ export function criarCena(
   matDestaque.alpha = 0.17;
   matDestaque.backFaceCulling = true;
   function atualizarDestaque(): void {
-    const alvo = alvoDoQuadro();
+    // no modo foto a mira não marca bloco (a foto sai limpa)
+    const alvo = estado.modoFoto?.ativo() ? null : alvoDoQuadro();
     const d = estadoDestaque(alvo, alvo ? caixaVisual(alvo.x, alvo.y, alvo.z) : CUBO);
     if (d.chave !== chaveContorno) {
       contorno?.dispose();

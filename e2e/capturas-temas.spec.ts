@@ -47,6 +47,10 @@ async function semHud(page: Page, sim: boolean) {
   await page.evaluate((sim) => {
     const f = window.__brumaluz!.modoFoto!;
     if (f.ativo() !== sim) f.alternar();
+    // a foto da vitrine sai sem nada por cima: nem o HUD (o modo foto esconde) nem o
+    // painel do próprio modo foto
+    const painel = document.querySelector<HTMLElement>('.painel-foto');
+    if (painel) painel.style.visibility = sim ? 'hidden' : '';
   }, sim);
   await page.waitForTimeout(300);
 }
@@ -68,7 +72,14 @@ for (const id of TEMAS) {
     await entrarNoJogo(page);
     // com astro fixo no céu (Terra, gigante com anéis), a câmera olha para ele
     const vista = await page.evaluate(() => {
-      const a = window.__brumaluz!.astro;
+      const e = window.__brumaluz!;
+      const a = e.astro;
+      // mundo de sítio (Rancho Alegre): olha para o sítio mais perto, como ao nascer
+      const sitio = e.tema === 'rancho-alegre' ? e.povoados!()[0] : undefined;
+      if (!a && sitio) {
+        const [x, , z] = e.posicao!;
+        return { yaw: Math.atan2(sitio.cx - x, sitio.cz - z), pitch: -0.12, ceu: -0.55 };
+      }
       if (!a) return { yaw: 0.6, pitch: -0.12, ceu: -0.55 };
       const n = Math.hypot(a[0], a[1], a[2]);
       const yaw = Math.atan2(a[0], a[2]);
