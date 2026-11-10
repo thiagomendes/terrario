@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
   ALTURA_PIVO,
+  ALTURA_PIVO_TOQUE,
+  ZOOM_PADRAO_TOQUE,
   ANGULO_MAXIMO_RECENTRAR,
   criarCameraOrbita,
   degrauOpacidade,
@@ -95,6 +97,13 @@ describe('órbita em campo aberto', () => {
     expect(fatorLado(1.45)).toBe(0);
     expect(fatorLado(1.25)).toBeGreaterThan(0);
     expect(fatorLado(1.25)).toBeLessThan(1);
+  });
+  it('no toque o pivô desce até o pescoço (o boneco fica acima da barra) e o zoom começa mais longe', () => {
+    const c = criarCameraOrbita(ZOOM_PADRAO_TOQUE, ALTURA_PIVO_TOQUE);
+    const r = c.quadro({ dt: 1 / 60, olhos, yaw: 0, pitch: 0.3, bloqueia: livre });
+    expect(r.pivo.y).toBeCloseTo(olhos.y + ALTURA_PIVO_TOQUE, 5);
+    expect(ALTURA_PIVO_TOQUE).toBeLessThan(0);
+    expect(c.zoom()).toBeGreaterThan(ZOOM_PADRAO);
   });
   it('parede à direita: o pivô encolhe o lado e nunca entra nela', () => {
     const parede: BloqueiaCamera = (x) => x >= 11;

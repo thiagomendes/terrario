@@ -176,8 +176,11 @@ import { iniciarAmbiente, tocarSom, type Ambiente, aquecerAmostras } from '../au
 import { blocoSobPes, criarDetectorMovimento } from '../player/movimento';
 import { VEL_ANDAR, VEL_CORRER } from '../player/fisica';
 import {
+  ALTURA_PIVO_TOQUE,
   criarCameraOrbita,
   degrauOpacidade,
+  LADO_OMBRO,
+  ZOOM_PADRAO_TOQUE,
   direcaoOlhar as direcaoDoOlhar,
   pivoCamera,
   PASSO_ZOOM,
@@ -529,7 +532,10 @@ export function criarCena(
   // o jogo não usa picking do Babylon no movimento do ponteiro
   scene.skipPointerMovePicking = true;
   // a câmera de terceira pessoa (spec 015): segue o boneco, desvia de blocos, zoom
-  const orbita = criarCameraOrbita();
+  const toqueCamera = typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches;
+  const orbita = toqueCamera
+    ? criarCameraOrbita(ZOOM_PADRAO_TOQUE, ALTURA_PIVO_TOQUE)
+    : criarCameraOrbita();
   const edicoes = criarEdicoes();
   if (dadosIniciais) edicoes.importar(dadosIniciais.edicoes);
   // mundo de antes dos povoados: na primeira carga depois deles, congela a lista de
@@ -1301,15 +1307,31 @@ export function criarCena(
 
   /** Célula que a câmera não atravessa: todo bloco, menos água, plantas e tochas. */
   const cacheBloqueia: (boolean | undefined)[] = [];
+  // a marcha da câmera e o pivô leem as mesmas células várias vezes por quadro: guarda o
+  // resultado até o quadro (ou o mundo) mudar
+  const celulasCamera = new Map<number, boolean>();
+  let celulasQuadro = -1;
+  let celulasEdicoes = -1;
   const bloqueiaCamera: BloqueiaCamera = (x, y, z) => {
-    const b = blocoEm(x, y, z);
-    if (b === Bloco.AR) return false;
-    let v = cacheBloqueia[b];
-    if (v === undefined) {
-      const d = obterBlocoDef(b);
-      v = !!d && !d.liquido && !d.planta && d.forma !== 'tocha';
-      cacheBloqueia[b] = v;
+    if (celulasQuadro !== quadroAtual || celulasEdicoes !== edicoes.versaoGeral) {
+      celulasCamera.clear();
+      celulasQuadro = quadroAtual;
+      celulasEdicoes = edicoes.versaoGeral;
     }
+    const k = ((x + 131072) * 1024 + (y + 512)) * 262144 + (z + 131072);
+    const ja = celulasCamera.get(k);
+    if (ja !== undefined) return ja;
+    const b = blocoEm(x, y, z);
+    let v = false;
+    if (b !== Bloco.AR) {
+      const c = cacheBloqueia[b];
+      if (c === undefined) {
+        const d = obterBlocoDef(b);
+        v = !!d && !d.liquido && !d.planta && d.forma !== 'tocha';
+        cacheBloqueia[b] = v;
+      } else v = c;
+    }
+    celulasCamera.set(k, v);
     return v;
   };
 
@@ -1325,7 +1347,14 @@ export function criarCena(
       y: camera.position.y,
       z: camera.position.z,
     };
-    return pivoCamera(s, camera.rotation.y, camera.rotation.x, bloqueiaCamera);
+    return pivoCamera(
+      s,
+      camera.rotation.y,
+      camera.rotation.x,
+      bloqueiaCamera,
+      LADO_OMBRO,
+      orbita.alturaPivo(),
+    );
   }
 
   /**
@@ -1721,7 +1750,7 @@ export function criarCena(
     let pitch = camera.rotation.x;
     for (let i = 0; i < 6; i++) {
       const s = orbita.seguido() ?? camera.position;
-      const p = pivoCamera(s, yaw, pitch, bloqueiaCamera);
+      const p = pivoCamera(s, yaw, pitch, bloqueiaCamera, LADO_OMBRO, orbita.alturaPivo());
       const dx = ax - p.x;
       const dy = ay - p.y;
       const dz = az - p.z;

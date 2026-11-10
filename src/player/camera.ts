@@ -36,6 +36,12 @@ export const PITCH_CIMA = -1.2;
  * do centro passa ao lado da cabeça (nunca aponta um bloco escondido atrás do boneco).
  */
 export const ALTURA_PIVO = 0.2;
+/**
+ * No toque não há mira no meio da tela (a criança toca no bloco): o pivô desce até o
+ * pescoço e o boneco fica no meio da tela, acima da barra de itens (celular deitado).
+ */
+export const ALTURA_PIVO_TOQUE = -0.35;
+export const ZOOM_PADRAO_TOQUE = 4.4;
 export const LADO_OMBRO = 0.45;
 /** Olhando quase reto para baixo, o lado some (a mira volta para o pé do boneco). */
 export const PITCH_SEM_LADO = 1.4;
@@ -115,8 +121,9 @@ export function pivoCamera(
   pitch: number,
   bloqueia: BloqueiaCamera,
   lado = LADO_OMBRO,
+  altura = ALTURA_PIVO,
 ): Vec3 {
-  let base = { x: seguido.x, y: seguido.y + ALTURA_PIVO, z: seguido.z };
+  let base = { x: seguido.x, y: seguido.y + altura, z: seguido.z };
   // teto baixo logo acima da cabeça: o pivô fica nos olhos
   if (celula(bloqueia, base)) base = { x: seguido.x, y: seguido.y, z: seguido.z };
   const quer = lado * fatorLado(pitch);
@@ -228,7 +235,7 @@ export interface ResultadoCamera {
 }
 
 /** O estado da câmera que segue o boneco: ponto seguido, distância atual e zoom. */
-export function criarCameraOrbita(zoom = ZOOM_PADRAO) {
+export function criarCameraOrbita(zoom = ZOOM_PADRAO, alturaPivo = ALTURA_PIVO) {
   let seguido: Vec3 | null = null;
   let distancia = Number.NaN;
   let alvoDistancia = limitarZoom(zoom);
@@ -250,7 +257,7 @@ export function criarCameraOrbita(zoom = ZOOM_PADRAO) {
         seguido.y += (o.y - seguido.y) * kv;
         seguido.z += (o.z - seguido.z) * kh;
       }
-      const pivo = pivoCamera(seguido, q.yaw, q.pitch, q.bloqueia);
+      const pivo = pivoCamera(seguido, q.yaw, q.pitch, q.bloqueia, LADO_OMBRO, alturaPivo);
       const livre = distanciaLivre(pivo, q.yaw, q.pitch, alvoDistancia, q.bloqueia);
       distancia = suavizarDistancia(distancia, livre, q.dt);
       const f = direcaoOlhar(q.yaw, q.pitch);
@@ -277,6 +284,8 @@ export function criarCameraOrbita(zoom = ZOOM_PADRAO) {
       return alvoDistancia;
     },
     zoom: () => alvoDistancia,
+    /** Altura do pivô acima dos olhos (negativa no toque). */
+    alturaPivo: () => alturaPivo,
     /** Ponto seguido (olhos com atraso); null antes do primeiro quadro. */
     seguido: (): Vec3 | null => (seguido ? { ...seguido } : null),
     ultimo: () => ultimo,

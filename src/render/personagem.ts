@@ -37,7 +37,11 @@ export interface Personagem {
   descartar(): void;
 }
 
-/** O personagem do jogo: o boneco de brinquedo (spec 012). */
+/**
+ * O personagem do jogo: o boneco de brinquedo (spec 012). Desde a spec 015 ele aparece o
+ * tempo todo (só terceira pessoa): as peças da mesma junta e do mesmo material são fundidas
+ * numa malha só, como nos moradores (menos desenhos por quadro; trocar a aparência remonta).
+ */
 export function criarPersonagem(scene: Scene, aparencia: Aparencia): Personagem {
-  return criarBoneco(scene, aparencia);
+  return criarBoneco(scene, aparencia, 'personagem', undefined, true);
 }
