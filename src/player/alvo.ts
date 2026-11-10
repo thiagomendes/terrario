@@ -84,15 +84,15 @@ export function colocacaoBloqueada(posicao: Vec3, jogador: Vec3): boolean {
 
 /**
  * Mira em terceira pessoa (spec 015): o raio sai da câmera pelo centro da tela (ou pelo
- * ponto tocado), mas só começa depois do boneco (`inicio`, a distância da câmera até o
- * pivô), para nunca mirar o que está entre a câmera e o boneco. O alcance é medido a
- * partir dos olhos do boneco, como o núcleo confere: um bloco além dele não vale, mesmo
- * que o raio o encontre.
+ * ponto tocado) e o alvo é o primeiro bloco que ele encontra, o mesmo que a criança vê
+ * (nada é pulado: tocar numa parede perto mira essa parede, nunca um bloco atrás dela). O
+ * alcance é medido a partir dos olhos do boneco, como o núcleo confere: um bloco além dele
+ * não vale, mesmo que o raio o encontre. Raio que já nasce dentro de um bloco (sem face)
+ * não mira nada.
  */
 export function mirarDaCamera(
   camera: Vec3,
   direcao: Vec3,
-  inicio: number,
   olhos: Vec3,
   alcance: number,
   existe: ExisteBloco,
@@ -100,17 +100,16 @@ export function mirarDaCamera(
   const t = Math.hypot(direcao.x, direcao.y, direcao.z);
   if (!(t > 0)) return null;
   const d = { x: direcao.x / t, y: direcao.y / t, z: direcao.z / t };
-  const ini = Math.max(0, inicio);
-  const origem = { x: camera.x + d.x * ini, y: camera.y + d.y * ini, z: camera.z + d.z * ini };
   // além disto, nenhum ponto do raio fica no alcance dos olhos
-  const folga = Math.hypot(origem.x - olhos.x, origem.y - olhos.y, origem.z - olhos.z);
-  const a = raycastVoxel(origem, d, folga + alcance, existe);
+  const folga = Math.hypot(camera.x - olhos.x, camera.y - olhos.y, camera.z - olhos.z);
+  const a = raycastVoxel(camera, d, folga + alcance, existe);
   if (!a) return null;
+  if (a.normal.x === 0 && a.normal.y === 0 && a.normal.z === 0) return null;
   const p = {
-    x: origem.x + d.x * a.distancia,
-    y: origem.y + d.y * a.distancia,
-    z: origem.z + d.z * a.distancia,
+    x: camera.x + d.x * a.distancia,
+    y: camera.y + d.y * a.distancia,
+    z: camera.z + d.z * a.distancia,
   };
   if (Math.hypot(p.x - olhos.x, p.y - olhos.y, p.z - olhos.z) > alcance) return null;
-  return { ...a, distancia: a.distancia + ini };
+  return a;
 }

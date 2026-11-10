@@ -1383,46 +1383,48 @@ export function criarCena(
 
   /**
    * Mira pelo toque: no celular o jogador aponta com o dedo (toque coloca, segurar
-   * quebra) em vez da mira do centro. Raio saindo da câmera de visão pelo ponto tocado,
-   * começando na altura do boneco (o que está entre a câmera e ele não conta).
+   * quebra) em vez da mira do centro. Raio saindo da câmera de visão pelo ponto tocado:
+   * o primeiro bloco que ele encontra é o que a criança vê (a câmera nunca está dentro
+   * de um bloco).
    */
-  let raioToque: { origem: Vec3; direcao: Vec3; inicio: number } | null = null;
+  let raioToque: { origem: Vec3; direcao: Vec3 } | null = null;
   /** Ponto tocado (o raio é refeito a cada quadro: o jogador pode andar segurando). */
   let pontoToque: { x: number; y: number } | null = null;
   function mirarToque(xCss: number, yCss: number): void {
     const r = scene.createPickingRay(xCss, yCss, Matrix.Identity(), cameraVisao);
-    const p = pivoMira();
-    const inicio =
-      (p.x - r.origin.x) * r.direction.x +
-      (p.y - r.origin.y) * r.direction.y +
-      (p.z - r.origin.z) * r.direction.z;
     raioToque = {
       origem: { x: r.origin.x, y: r.origin.y, z: r.origin.z },
       direcao: { x: r.direction.x, y: r.direction.y, z: r.direction.z },
-      inicio: Math.max(0, inicio),
     };
     alvoMemoQuadro = -1;
   }
 
-  function raioMira(): { origem: Vec3; direcao: Vec3; inicio: number } {
+  /**
+   * O raio da mira do centro passa pelo pivô (o caminho da câmera até ele é livre: a câmera
+   * desvia dos blocos marchando dali para trás), então sair do pivô é o mesmo que sair da
+   * câmera, e vale já no quadro em que o olhar muda.
+   */
+  function raioMira(): { origem: Vec3; direcao: Vec3 } {
     if (raioToque) return raioToque;
     return {
       origem: pivoMira(),
       direcao: direcaoDoOlhar(camera.rotation.y, camera.rotation.x),
-      inicio: 0,
     };
   }
 
-  function calcularAlvo() {
+  function alvoComDistancia() {
     const r = raioMira();
-    const a = mirarDaCamera(
+    return mirarDaCamera(
       r.origem,
       r.direcao,
-      r.inicio,
       { x: camera.position.x, y: camera.position.y, z: camera.position.z },
       ALCANCE,
       (x, y, z) => ehAlvo(blocoEm(x, y, z)),
     );
+  }
+
+  function calcularAlvo() {
+    const a = alvoComDistancia();
     return a ? { x: a.x, y: a.y, z: a.z, normal: a.normal } : null;
   }
 
@@ -2807,26 +2809,23 @@ export function criarCena(
     local: () => ({ gesto: gestoDoAnimador(animador), balao: gestos!.balao.gesto }),
     moradores: () => renderCriaturas.gestosMoradores(),
   };
+  /** Até onde o bicho apontado vale, dos olhos (o núcleo confere 7 blocos no chão). */
+  const ALCANCE_BICHO = 3.6;
   function criaturaApontada() {
-    // o raio da mira (centro ou dedo), a partir do boneco; o alcance conta dos olhos
+    // o mesmo raio da mira (centro ou dedo); o alcance conta dos olhos, como nos blocos
     const m = raioMira();
-    const o = {
-      x: m.origem.x + m.direcao.x * m.inicio,
-      y: m.origem.y + m.direcao.y * m.inicio,
-      z: m.origem.z + m.direcao.z * m.inicio,
-    };
-    const folga = Math.hypot(
-      o.x - camera.position.x,
-      o.y - camera.position.y,
-      o.z - camera.position.z,
-    );
-    const r = criaturaNaMira(replicaCriaturas.lista, o, m.direcao, 3.6 + folga);
+    const olhos = camera.position;
+    const folga = Math.hypot(m.origem.x - olhos.x, m.origem.y - olhos.y, m.origem.z - olhos.z);
+    const r = criaturaNaMira(replicaCriaturas.lista, m.origem, m.direcao, ALCANCE_BICHO + folga);
     if (!r) return null;
-    const a = calcularAlvo();
-    if (a) {
-      const db = Math.hypot(a.x + 0.5 - o.x, a.y + 0.5 - o.y, a.z + 0.5 - o.z);
-      if (db + 0.4 < r.distancia) return null;
-    }
+    const t = Math.hypot(m.direcao.x, m.direcao.y, m.direcao.z) || 1;
+    const px = m.origem.x + (m.direcao.x / t) * r.distancia;
+    const py = m.origem.y + (m.direcao.y / t) * r.distancia;
+    const pz = m.origem.z + (m.direcao.z / t) * r.distancia;
+    if (Math.hypot(px - olhos.x, py - olhos.y, pz - olhos.z) > ALCANCE_BICHO) return null;
+    // um bloco na frente esconde o bicho
+    const a = alvoComDistancia();
+    if (a && a.distancia + 0.4 < r.distancia) return null;
     return r.criatura;
   }
   /** Clique esquerdo numa criatura: ataca com a arma da mão. */
