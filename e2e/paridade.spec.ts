@@ -104,7 +104,9 @@ function instalarAjudantes(): void {
       return false;
     },
     async quebrar(x: number, y: number, z: number, normal?: number[]) {
-      if (!(await par.mirar(x, y, z, normal))) return -1;
+      // em terceira pessoa (spec 015) a mira sai de cima do ombro: a face pedida pode não
+      // aparecer dali; para quebrar, qualquer face do bloco serve
+      if (!(await par.mirar(x, y, z, normal)) && !(normal && (await par.mirar(x, y, z)))) return -1;
       const b = e().bloco(x, y, z);
       for (let i = 0; i < 600; i++) {
         if (e().minerar(0.05).quebrou) return b;
@@ -564,7 +566,9 @@ const SESSOES: Record<string, Sessao> = {
         const out: { bloco: number }[] = [];
         for (let i = 0; i < 2; i++) {
           await window.__par.assentar();
-          e.apontar!(0, 1.55);
+          // o bloco debaixo dos pés, pelo centro da tela (terceira pessoa, spec 015)
+          const [px, py, pz] = e.posicao!;
+          e.mirarPonto!(Math.floor(px) + 0.5, Math.floor(py - 1.62) - 0.5, Math.floor(pz) + 0.5);
           await window.__par.quadros(2);
           const a = e.alvo;
           if (!a) break;
