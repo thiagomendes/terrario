@@ -1,0 +1,254 @@
+<title>Menus do Terrário</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@500;700&family=IBM+Plex+Sans:wght@400;500;600&family=Nunito:wght@700;800&display=swap">
+<style>
+/* Layout: cabeçalho; três celulares lado a lado (empilham no celular), cada um com um jeito de organizar os menus, todos tocáveis; embaixo a comparação e a recomendação */
+:root {
+  --bg: #eef0f6;
+  --fg: #1c1b2b;
+  --suave: #5a5a72;
+  --linha: #cdd0de;
+  --acento: #a8610a;
+  --cartao: #f8f9fc;
+  --creme: #fff7e8;
+  --creme-sombra: #e9d6b2;
+  --tinta: #3b2a1e;
+  --display: 'Pixelify Sans', 'Courier New', monospace;
+  --corpo: 'IBM Plex Sans', system-ui, sans-serif;
+  --peca: 'Nunito', system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) { --bg: #12111c; --fg: #ecebf5; --suave: #a3a2bb; --linha: #2c2b40; --acento: #ffc96b; --cartao: #191827; color-scheme: dark; }
+}
+:root[data-theme="dark"] { --bg: #12111c; --fg: #ecebf5; --suave: #a3a2bb; --linha: #2c2b40; --acento: #ffc96b; --cartao: #191827; color-scheme: dark; }
+body { background: var(--bg); color: var(--fg); font: 400 16px/1.55 var(--corpo); }
+.pagina { max-width: 1240px; margin: 0 auto; padding-block: 28px 64px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); display: grid; gap: 24px; }
+h1, h2, h3 { font-family: var(--display); margin: 0; line-height: 1.15; text-wrap: balance; }
+h1 { font-size: clamp(1.8rem, 5vw, 2.6rem); }
+h3 { font-size: 1.05rem; }
+.olho { font: 600 0.78rem var(--corpo); letter-spacing: 0.12em; text-transform: uppercase; color: var(--acento); }
+.intro { max-width: 72ch; color: var(--suave); margin: 8px 0 0; }
+
+.celulares { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; align-items: start; }
+@media (max-width: 980px) { .celulares { grid-template-columns: 1fr; justify-items: center; } }
+.opcao { display: grid; gap: 10px; min-width: 0; width: 100%; max-width: 380px; justify-self: center; }
+.opcao header { display: grid; gap: 2px; }
+.opcao .rotulo { font: 800 0.8rem var(--peca); color: var(--acento); letter-spacing: 0.06em; text-transform: uppercase; }
+.opcao .conta { font-size: 0.9rem; color: var(--suave); }
+.recomendada { position: relative; }
+.recomendada .selo { position: absolute; right: 0; top: 0; font: 800 0.72rem var(--peca); background: #7cc35a; color: #fff; padding: 3px 10px; border-radius: 999px; }
+
+.tela { position: relative; aspect-ratio: 412 / 860; max-width: 100%; border-radius: 28px; overflow: hidden; background: #a9d4f5 url('fundo-jogo.jpg') 50% 0 / auto 100% no-repeat; box-shadow: 0 0 0 8px #1c1b2b, 0 14px 30px rgba(0,0,0,0.25); font-family: var(--peca); color: var(--tinta); user-select: none; -webkit-user-select: none; touch-action: manipulation; }
+.peca { background: var(--creme); border: 0; color: var(--tinta); box-shadow: 0 3px 0 var(--creme-sombra), 0 6px 12px rgba(60, 35, 10, 0.22), inset 0 2px 0 rgba(255, 255, 255, 0.85); }
+.b { position: absolute; width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; cursor: pointer; padding: 0; }
+.b:active { transform: translateY(2px); }
+.b svg { width: 24px; height: 24px; }
+.b:focus-visible, .item:focus-visible { outline: 3px solid #ffb547; outline-offset: 2px; }
+.b.aberto { background: #ffe4a8; }
+.mapa { position: absolute; right: 10px; top: 10px; width: 96px; height: 96px; border-radius: 50%; background: radial-gradient(circle at 40% 40%, #d8c89a, #b5a36e 70%, #8fb4d8 72%); box-shadow: 0 0 0 5px var(--creme), 0 4px 10px rgba(0,0,0,0.2); }
+.joy { position: absolute; left: 14px; bottom: 76px; width: 104px; height: 104px; border-radius: 50%; background: rgba(255, 247, 232, 0.45); box-shadow: inset 0 0 0 3px rgba(255, 255, 255, 0.6); }
+.joy::after { content: ""; position: absolute; left: 50%; top: 50%; width: 44px; height: 44px; margin: -22px; border-radius: 50%; background: var(--creme); box-shadow: 0 3px 0 var(--creme-sombra); }
+.barra { position: absolute; left: 8px; right: 8px; bottom: 10px; height: 46px; border-radius: 14px; display: grid; grid-template-columns: repeat(9, 1fr); gap: 4px; padding: 4px; }
+.barra i { border-radius: 8px; background: #f3e6cc; }
+.barra i:first-child { box-shadow: inset 0 0 0 2px #ffb547; }
+.aviso { position: absolute; left: 50%; top: 42%; transform: translate(-50%, -50%); padding: 8px 14px; border-radius: 14px; font-weight: 800; font-size: 0.85rem; white-space: nowrap; opacity: 0; transition: opacity 0.2s; pointer-events: none; }
+.aviso.ver { opacity: 1; }
+.extras { position: absolute; display: flex; gap: 8px; }
+.extras[hidden] { display: none; }
+.extras .b { position: static; }
+.balao { position: absolute; left: 50%; top: 31%; width: 54px; height: 54px; margin-left: -27px; border-radius: 50%; display: grid; place-items: center; opacity: 0; transform: scale(0.6); transition: opacity 0.2s, transform 0.25s cubic-bezier(0.3, 1.4, 0.5, 1); pointer-events: none; }
+.balao.ver { opacity: 1; transform: scale(1); }
+.balao svg { width: 32px; height: 32px; }
+
+/* a roda: no meio da tela, em volta do boneco */
+.roda { position: absolute; inset: 0; pointer-events: none; }
+.roda::before { content: ""; position: absolute; left: 50%; top: 52%; width: 280px; height: 280px; margin: -140px; border-radius: 50%; background: radial-gradient(circle, rgba(255, 247, 232, 0) 30%, rgba(255, 247, 232, 0.5) 32%); opacity: 0; transform: scale(0.6); transition: transform 0.22s, opacity 0.15s; }
+.roda.aberta { pointer-events: auto; }
+.roda.aberta::before { opacity: 1; transform: scale(1); }
+.item { position: absolute; left: 50%; top: 52%; width: 58px; height: 58px; margin: -29px; border-radius: 50%; display: grid; place-items: center; cursor: pointer; padding: 0; opacity: 0; transform: scale(0.4); transition: transform 0.22s cubic-bezier(0.3, 1.4, 0.5, 1), opacity 0.15s; pointer-events: none; }
+.roda.aberta .item { opacity: 1; pointer-events: auto; }
+.item svg { width: 30px; height: 30px; }
+.item span { position: absolute; top: 100%; margin-top: 3px; font: 800 0.66rem var(--peca); color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,0.65); white-space: nowrap; pointer-events: none; }
+.item.voltar { background: #ffe4a8; }
+
+.cartoes { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+@media (max-width: 860px) { .cartoes { grid-template-columns: 1fr; } }
+.cartao { background: var(--cartao); border: 1px solid var(--linha); border-radius: 12px; padding: 16px 18px; min-width: 0; }
+.cartao ul { margin: 8px 0 0; padding-left: 1.2em; display: grid; gap: 6px; }
+.cartao.reco { border-color: var(--acento); grid-column: 1 / -1; }
+kbd { font: 600 0.8rem var(--corpo); border: 1px solid var(--linha); border-bottom-width: 2px; border-radius: 6px; padding: 0 6px; background: var(--cartao); color: var(--fg); }
+@media (prefers-reduced-motion: reduce) { .item, .roda::before, .balao { transition: none; } }
+</style>
+
+<main class="pagina">
+  <header>
+    <div class="olho">Terrário · spec 015 · para decidir</div>
+    <h1>Menus do Terrário</h1>
+    <p class="intro">A sua ideia foi juntar os menus da tela numa roda, como a de gestos. Os três celulares abaixo funcionam de verdade: toque nos botões para comparar. Em todos, a câmera (V) já saiu, e os gestos abrem a mesma roda do esboço aprovado. No computador nada muda: as teclas continuam (<kbd>E</kbd> mochila, <kbd>Tab</kbd> mapa, <kbd>J</kbd> diário, <kbd>C</kbd> personagem, <kbd>P</kbd> foto, <kbd>G</kbd> gestos, <kbd>Esc</kbd> pausa).</p>
+  </header>
+
+  <section class="celulares" aria-label="Três jeitos de organizar os menus">
+    <div class="opcao" id="opA">
+      <header><div class="rotulo">A · Como aprovado</div><h3>Botões de hoje + carinha</h3><div class="conta">6 botões em cima (com o de informações). Tudo a um toque, menos diário e foto, que ficam no "+".</div></header>
+      <div class="tela" data-op="a"></div>
+    </div>
+    <div class="opcao" id="opB">
+      <header><div class="rotulo">B · Roda única</div><h3>Um botão abre tudo</h3><div class="conta">2 botões em cima (com o de informações). Mochila e gestos a dois toques.</div></header>
+      <div class="tela" data-op="b"></div>
+    </div>
+    <div class="opcao recomendada" id="opC">
+      <span class="selo">recomendada</span>
+      <header><div class="rotulo">C · Mochila + roda</div><h3>O mais usado fora, o resto na roda</h3><div class="conta">3 botões em cima (com o de informações). Mochila a um toque; gestos a dois (ou segurando o botão da roda).</div></header>
+      <div class="tela" data-op="c"></div>
+    </div>
+  </section>
+
+  <section class="cartoes" aria-label="Comparação">
+    <div class="cartao">
+      <h3>A · Como aprovado</h3>
+      <ul>
+        <li>Mochila, mapa, pausa e "+" como hoje, e a carinha no canto superior esquerdo, ao lado das informações.</li>
+        <li>Rápido para quem já conhece; é o que tem mais botões.</li>
+      </ul>
+    </div>
+    <div class="cartao">
+      <h3>B · Roda única</h3>
+      <ul>
+        <li>A tela mais limpa: um botão só, e tudo sai dele (mochila, mapa, diário, personagem, foto, gestos, tela cheia, pausa).</li>
+        <li>Mas a mochila, que se abre toda hora para trocar e fabricar, passa a pedir dois toques.</li>
+      </ul>
+    </div>
+    <div class="cartao">
+      <h3>C · Mochila + roda</h3>
+      <ul>
+        <li>A mochila fica a um toque, e o resto (mapa, diário, personagem, foto, gestos, tela cheia, pausa) sai da roda.</li>
+        <li>O minimapa continua na tela e, tocado, abre o mapa grande: o mapa fica a um toque também.</li>
+      </ul>
+    </div>
+    <div class="cartao reco">
+      <h3>Recomendação: C</h3>
+      <ul>
+        <li>Fica quase tão limpa quanto a B (três botões em cima em vez de seis) sem atrasar o que a criança faz o tempo todo: abrir a mochila.</li>
+        <li>A roda é a mesma peça da roda de gestos (mesmo jeito de abrir, fechar e escolher), então a criança aprende uma vez só. "Gestos" dentro dela abre a roda de gestos no mesmo lugar, com um botão de voltar no meio.</li>
+        <li>Para os gestos não ficarem longe, segurar o dedo no botão da roda abre direto os gestos.</li>
+      </ul>
+    </div>
+  </section>
+</main>
+
+<script>
+const IC = {
+  mochila: '<path d="M9 11 a7 7 0 0 1 14 0 V26 a2 2 0 0 1 -2 2 H11 a2 2 0 0 1 -2 -2 Z" fill="#c9884a" stroke="#3b2a1e" stroke-width="2"/><path d="M12 11 a4 4 0 0 1 8 0" fill="none" stroke="#3b2a1e" stroke-width="2"/><rect x="12" y="17" width="8" height="6" rx="1.5" fill="#f2d16b" stroke="#3b2a1e" stroke-width="1.6"/>',
+  mapa: '<path d="M5 8 L12 5 L20 8 L27 5 V24 L20 27 L12 24 L5 27 Z" fill="#cfe8a8" stroke="#3b2a1e" stroke-width="2" stroke-linejoin="round"/><path d="M12 5 V24 M20 8 V27" stroke="#3b2a1e" stroke-width="1.6"/><circle cx="17" cy="15" r="2.4" fill="#e8463c"/>',
+  diario: '<rect x="7" y="5" width="18" height="22" rx="2" fill="#7cc6ff" stroke="#3b2a1e" stroke-width="2"/><path d="M11 5 V27" stroke="#3b2a1e" stroke-width="1.6"/><path d="M14 11 H21 M14 15 H21" stroke="#ffffff" stroke-width="2" stroke-linecap="round"/>',
+  personagem: '<rect x="10" y="4" width="12" height="11" rx="3" fill="#e8b48a" stroke="#3b2a1e" stroke-width="2"/><rect x="9" y="16" width="14" height="10" rx="3" fill="#3b6fb6" stroke="#3b2a1e" stroke-width="2"/><circle cx="13.5" cy="10" r="1.3" fill="#3b2a1e"/><circle cx="18.5" cy="10" r="1.3" fill="#3b2a1e"/>',
+  foto: '<rect x="5" y="10" width="22" height="15" rx="3" fill="#b9bec6" stroke="#3b2a1e" stroke-width="2"/><path d="M11 10 L13 6 H19 L21 10" fill="#b9bec6" stroke="#3b2a1e" stroke-width="2" stroke-linejoin="round"/><circle cx="16" cy="17.5" r="4.3" fill="#7cc6ff" stroke="#3b2a1e" stroke-width="2"/>',
+  gestos: '<circle cx="16" cy="16" r="11" fill="#ffd45a" stroke="#3b2a1e" stroke-width="2.2"/><circle cx="12" cy="14" r="1.7" fill="#3b2a1e"/><circle cx="20" cy="14" r="1.7" fill="#3b2a1e"/><path d="M11 18.5 Q16 23.5 21 18.5" fill="none" stroke="#3b2a1e" stroke-width="2.2" stroke-linecap="round"/>',
+  tela: '<path d="M6 12 V6 H12 M20 6 H26 V12 M26 20 V26 H20 M12 26 H6 V20" fill="none" stroke="#3b2a1e" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>',
+  pausa: '<rect x="9" y="7" width="5" height="18" rx="2" fill="#3b2a1e"/><rect x="18" y="7" width="5" height="18" rx="2" fill="#3b2a1e"/>',
+  mais: '<path d="M16 7 V25 M7 16 H25" stroke="#3b2a1e" stroke-width="3.2" stroke-linecap="round"/>',
+  roda: '<circle cx="16" cy="16" r="3.2" fill="#3b2a1e"/><circle cx="16" cy="6.5" r="3" fill="#ff8fb3" stroke="#3b2a1e" stroke-width="1.6"/><circle cx="25" cy="13" r="3" fill="#7cc6ff" stroke="#3b2a1e" stroke-width="1.6"/><circle cx="21.5" cy="24" r="3" fill="#7cc35a" stroke="#3b2a1e" stroke-width="1.6"/><circle cx="10.5" cy="24" r="3" fill="#ffd45a" stroke="#3b2a1e" stroke-width="1.6"/><circle cx="7" cy="13" r="3" fill="#c9884a" stroke="#3b2a1e" stroke-width="1.6"/>',
+  voltar: '<path d="M18 8 L10 16 L18 24" fill="none" stroke="#3b2a1e" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>',
+  acenar: '<path d="M10 25 V12 a2 2 0 0 1 4 0 V18 V8 a2 2 0 0 1 4 0 V18 V9 a2 2 0 0 1 4 0 V19 V13 a2 2 0 0 1 4 0 V21 Q26 28 18 28 H16 Q11 28 10 25 Z" fill="#f2c9a0" stroke="#3b2a1e" stroke-width="1.8" stroke-linejoin="round"/>',
+  cumprimentar: '<circle cx="10" cy="9" r="4" fill="#f2c9a0" stroke="#3b2a1e" stroke-width="1.8"/><path d="M10 13 Q15 17 14 24 M14 24 L11 29 M14 24 L17 29" stroke="#3b6fb6" stroke-width="3" fill="none" stroke-linecap="round"/>',
+  chamar: '<path d="M7 20 H18 a3 3 0 0 0 0 -6 H15 V11 a2 2 0 0 0 -4 0 V20" fill="#f2c9a0" stroke="#3b2a1e" stroke-width="1.8" stroke-linejoin="round"/><path d="M22 9 Q27 16 22 23" stroke="#a8610a" stroke-width="2" fill="none" stroke-linecap="round"/>',
+  comemorar: '<path d="M16 4 L19 12 L27 12 L21 17 L23 26 L16 21 L9 26 L11 17 L5 12 L13 12 Z" fill="#ffd45a" stroke="#3b2a1e" stroke-width="1.8" stroke-linejoin="round"/>',
+  aplaudir: '<path d="M9 26 L6 14 a2 2 0 0 1 4 -1 L13 20 L12 9 a2 2 0 0 1 4 0 L17 22" fill="#f2c9a0" stroke="#3b2a1e" stroke-width="1.8" stroke-linejoin="round"/><path d="M23 26 L26 14 a2 2 0 0 0 -4 -1 L19 20" fill="#e8b48a" stroke="#3b2a1e" stroke-width="1.8" stroke-linejoin="round"/>',
+  dancar: '<path d="M12 23 V8 L25 5 V20" fill="none" stroke="#3b2a1e" stroke-width="2.2" stroke-linejoin="round"/><ellipse cx="9" cy="23" rx="4" ry="3" fill="#ff8fb3" stroke="#3b2a1e" stroke-width="1.8"/><ellipse cx="22" cy="20" rx="4" ry="3" fill="#ff8fb3" stroke="#3b2a1e" stroke-width="1.8"/>',
+  apontar: '<path d="M4 15 H17 V12 L28 16 L17 20 V17 H4 Z" fill="#7cc6ff" stroke="#3b2a1e" stroke-width="1.8" stroke-linejoin="round"/>',
+  sentar: '<path d="M8 6 V20 H22 V27 M8 20 V27 M8 15 H22 V20" stroke="#7a4826" stroke-width="2.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>',
+};
+const svg = (n) => `<svg viewBox="0 0 32 32" aria-hidden="true">${IC[n]}</svg>`;
+const NOMES = { mochila: 'Mochila', mapa: 'Mapa', diario: 'Diário', personagem: 'Personagem', foto: 'Foto', gestos: 'Gestos', tela: 'Tela cheia', pausa: 'Pausa', acenar: 'Acenar', cumprimentar: 'Cumprimentar', chamar: 'Chamar', comemorar: 'Comemorar', aplaudir: 'Aplaudir', dancar: 'Dançar', apontar: 'Apontar', sentar: 'Sentar' };
+const GESTOS = ['acenar', 'cumprimentar', 'chamar', 'comemorar', 'aplaudir', 'dancar', 'apontar', 'sentar'];
+const MENUS = {
+  b: ['mochila', 'mapa', 'diario', 'personagem', 'foto', 'gestos', 'tela', 'pausa'],
+  c: ['mapa', 'diario', 'personagem', 'foto', 'gestos', 'tela', 'pausa'],
+};
+
+function botao(nome, x, y, rotulo) {
+  const b = document.createElement('button');
+  b.type = 'button'; b.className = 'b peca'; b.innerHTML = svg(nome); b.setAttribute('aria-label', rotulo ?? NOMES[nome] ?? nome);
+  if (x !== null) { b.style.left = x; b.style.top = y; }
+  return b;
+}
+
+for (const tela of document.querySelectorAll('.tela')) {
+  const op = tela.dataset.op;
+  tela.insertAdjacentHTML('beforeend', '<div class="mapa" aria-hidden="true"></div><div class="joy" aria-hidden="true"></div><div class="barra peca" aria-hidden="true">' + '<i></i>'.repeat(9) + '</div>');
+  const aviso = document.createElement('div'); aviso.className = 'aviso peca'; tela.appendChild(aviso);
+  const balao = document.createElement('div'); balao.className = 'balao peca'; tela.appendChild(balao);
+  const roda = document.createElement('div'); roda.className = 'roda'; tela.appendChild(roda);
+  let tempoAviso = 0, tempoRoda = 0, tempoBalao = 0;
+  const avisar = (t) => { aviso.textContent = t; aviso.classList.add('ver'); clearTimeout(tempoAviso); tempoAviso = setTimeout(() => aviso.classList.remove('ver'), 1600); };
+  const gesto = (g) => { balao.innerHTML = svg(g); balao.classList.add('ver'); clearTimeout(tempoBalao); tempoBalao = setTimeout(() => balao.classList.remove('ver'), 2000); };
+  // pular e correr, embaixo à direita (iguais nos três)
+  const pular = botao('voltar', 'calc(100% - 66px)', 'calc(100% - 124px)', 'Pular'); pular.style.width = pular.style.height = '56px'; pular.innerHTML = svg('voltar').replace('M18 8 L10 16 L18 24', 'M8 19 L16 11 L24 19'); tela.appendChild(pular);
+  const correr = botao('voltar', 'calc(100% - 132px)', 'calc(100% - 112px)', 'Correr'); correr.innerHTML = '<svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="19" cy="7" r="3" fill="#3b2a1e"/><path d="M14 13 L20 12 L23 17 M19 13 L16 20 L20 25 M16 20 L10 24 M14 13 L9 16" stroke="#3b2a1e" stroke-width="2.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>'; tela.appendChild(correr);
+
+  let botaoRoda = null;
+  function abrirRoda(itens, aoEscolher, comVoltar) {
+    roda.innerHTML = '';
+    const r = 104;
+    itens.forEach((n, i) => {
+      const it = document.createElement('button');
+      it.type = 'button'; it.className = 'item peca'; it.innerHTML = svg(n) + `<span>${NOMES[n]}</span>`; it.setAttribute('aria-label', NOMES[n]);
+      const a = -Math.PI / 2 + (i / itens.length) * Math.PI * 2;
+      it.dataset.t = `translate(${Math.cos(a) * r}px, ${Math.sin(a) * r}px) scale(1)`;
+      it.addEventListener('click', (e) => { e.stopPropagation(); aoEscolher(n); });
+      roda.appendChild(it);
+    });
+    if (comVoltar) {
+      const v = document.createElement('button'); v.type = 'button'; v.className = 'item peca voltar'; v.innerHTML = svg('voltar') + '<span>Voltar</span>'; v.setAttribute('aria-label', 'Voltar');
+      v.dataset.t = 'translate(0, 0) scale(0.85)';
+      v.addEventListener('click', (e) => { e.stopPropagation(); abrirMenu(); });
+      roda.appendChild(v);
+    }
+    requestAnimationFrame(() => { roda.classList.add('aberta'); for (const it of roda.children) it.style.transform = it.dataset.t; });
+    botaoRoda?.classList.add('aberto');
+    clearTimeout(tempoRoda); tempoRoda = setTimeout(fechar, 6000);
+  }
+  function fechar() { roda.classList.remove('aberta'); for (const it of roda.children) it.style.transform = ''; botaoRoda?.classList.remove('aberto'); }
+  roda.addEventListener('click', (e) => { if (e.target === roda) fechar(); });
+  const abrirGestos = (comVoltar) => abrirRoda(GESTOS, (g) => { fechar(); gesto(g); }, comVoltar);
+  const escolherMenu = (n) => { if (n === 'gestos') return abrirGestos(true); fechar(); avisar('Abriria: ' + NOMES[n]); };
+  const abrirMenu = () => abrirRoda(MENUS[op], escolherMenu, false);
+
+  if (op === 'a') {
+    // canto superior direito como hoje: mochila, (mapa é o minimapa), pausa e "+"; a carinha ao lado do "+", em cima à esquerda
+    const info = botao('mais', '12px', '12px', 'Informações'); info.innerHTML = '<svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="11" fill="#ffd45a" stroke="#3b2a1e" stroke-width="2"/><path d="M16 14 V22" stroke="#3b2a1e" stroke-width="3" stroke-linecap="round"/><circle cx="16" cy="10" r="1.8" fill="#3b2a1e"/></svg>';
+    tela.append(info);
+    const col = [['mochila', 120], ['mapa', 172], ['pausa', 224], ['mais', 276]];
+    for (const [n, y] of col) {
+      const b = botao(n, 'calc(100% - 56px)', y + 'px'); tela.appendChild(b);
+      if (n === 'mochila') b.addEventListener('click', () => avisar('Abriria: Mochila'));
+      if (n === 'pausa') b.addEventListener('click', () => avisar('Abriria: Pausa'));
+      if (n === 'mapa') b.addEventListener('click', () => avisar('Abriria: Mapa'));
+      if (n === 'mais') {
+        const ex = document.createElement('div'); ex.className = 'extras'; ex.hidden = true; ex.style.right = '64px'; ex.style.top = '276px';
+        for (const m of ['diario', 'foto', 'tela']) { const e = botao(m, null, null); e.addEventListener('click', () => { ex.hidden = true; avisar('Abriria: ' + NOMES[m]); }); ex.appendChild(e); }
+        tela.appendChild(ex);
+        b.addEventListener('click', () => { ex.hidden = !ex.hidden; b.classList.toggle('aberto', !ex.hidden); });
+      }
+    }
+    const carinha = botao('gestos', '64px', '12px'); tela.appendChild(carinha);
+    botaoRoda = carinha;
+    carinha.addEventListener('click', () => (roda.classList.contains('aberta') ? fechar() : abrirGestos(false)));
+  } else {
+    const info = botao('mais', '12px', '12px', 'Informações'); info.innerHTML = '<svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="11" fill="#ffd45a" stroke="#3b2a1e" stroke-width="2"/><path d="M16 14 V22" stroke="#3b2a1e" stroke-width="3" stroke-linecap="round"/><circle cx="16" cy="10" r="1.8" fill="#3b2a1e"/></svg>';
+    tela.append(info);
+    const bRoda = botao('roda', '64px', '12px', 'Menu'); tela.appendChild(bRoda); botaoRoda = bRoda;
+    let segurando = 0, abriuGestos = false;
+    bRoda.addEventListener('pointerdown', () => { abriuGestos = false; segurando = setTimeout(() => { abriuGestos = true; abrirGestos(true); }, 450); });
+    const soltar = () => clearTimeout(segurando);
+    bRoda.addEventListener('pointerup', soltar); bRoda.addEventListener('pointerleave', soltar); bRoda.addEventListener('pointercancel', soltar);
+    bRoda.addEventListener('click', () => { if (abriuGestos) return; roda.classList.contains('aberta') ? fechar() : abrirMenu(); });
+    if (op === 'c') {
+      const m = botao('mochila', 'calc(100% - 56px)', '120px'); m.addEventListener('click', () => avisar('Abriria: Mochila')); tela.appendChild(m);
+    }
+  }
+  tela.querySelector('.mapa').addEventListener('click', () => avisar('Abriria: Mapa'));
+}
+</script>
