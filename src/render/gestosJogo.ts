@@ -78,7 +78,7 @@ export function criarGestosJogo(op: OpcoesGestosJogo): GestosJogo {
   // pedido de abrir os gestos (testes, atalhos)
   window.addEventListener('brumaluz:gestos', () => {
     if (menu.aberta === 'gestos') menu.fechar();
-    else menu.abrirGestos(true);
+    else menu.abrirGestos();
   });
 
   return {

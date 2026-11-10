@@ -84,7 +84,7 @@ async function cadaItem(page: Page, tocar: boolean, nome: string) {
   await expect.poll(() => menu(page)).toBe('menu');
   await page.waitForTimeout(400);
   const itens = await page
-    .locator('.roda.aberta button')
+    .locator('.roda.aberta button.ativo')
     .evaluateAll((bs) => bs.map((b) => b.getAttribute('data-item')));
   expect(itens.filter((i) => i !== 'tela')).toEqual([
     'mapa',
@@ -102,7 +102,7 @@ async function cadaItem(page: Page, tocar: boolean, nome: string) {
     await clicar('[data-botao-roda]');
     await expect.poll(() => menu(page)).toBe('menu');
     await page.waitForTimeout(350);
-    await clicar(`.roda.aberta button[data-item="${id}"]`);
+    await clicar(`.roda.aberta button.ativo[data-item="${id}"]`);
     await expect.poll(() => ABRE[id](page), { message: id }).toBe(true);
     await expect.poll(() => menu(page)).toBe(null);
     await voltarAoJogo(page);
@@ -112,17 +112,17 @@ async function cadaItem(page: Page, tocar: boolean, nome: string) {
   await clicar('[data-botao-roda]');
   await expect.poll(() => menu(page)).toBe('menu');
   await page.waitForTimeout(350);
-  await clicar('.roda.aberta button[data-item="gestos"]');
+  await clicar('.roda.aberta button.ativo[data-item="gestos"]');
   await expect.poll(() => menu(page)).toBe('gestos');
   await page.waitForTimeout(450);
-  await expect(page.locator('.roda.aberta button')).toHaveCount(9);
+  await expect(page.locator('.roda.aberta button.ativo')).toHaveCount(9);
   await page.screenshot({ path: `${PASTA}/menu-gestos-${nome}.png` });
-  await clicar('.roda.aberta button[data-item="voltar"]');
+  await clicar('.roda.aberta button.ativo[data-item="voltar"]');
   await expect.poll(() => menu(page)).toBe('menu');
   await page.waitForTimeout(350);
-  await clicar('.roda.aberta button[data-item="gestos"]');
+  await clicar('.roda.aberta button.ativo[data-item="gestos"]');
   await page.waitForTimeout(450);
-  await clicar('.roda.aberta button[data-item="aplaudir"]');
+  await clicar('.roda.aberta button.ativo[data-item="aplaudir"]');
   await expect
     .poll(() => page.evaluate(() => window.__brumaluz!.gestos!.local().gesto))
     .toBe('aplaudir');
@@ -154,16 +154,40 @@ test('computador: menu de roda, cada item abre o seu, mochila e minimapa', async
   page.on('pageerror', (e) => erros.push(String(e)));
   await page.setViewportSize({ width: 1280, height: 720 });
   await entrar(page);
+  // no computador a missão fica sempre à vista (abaixo dos botões); o botão de informações
+  // mostra e esconde só as pílulas
+  const missao = page.locator('[data-missao-atual]');
+  await expect(missao).toBeVisible();
+  await expect(page.locator('.hud .som')).toBeHidden();
+  const caixas = await page.evaluate(() => {
+    const c = (s: string) => document.querySelector(s)!.getBoundingClientRect();
+    return { missao: c('.missao-hud'), roda: c('[data-botao-roda]'), info: c('[data-hud-info]') };
+  });
+  expect(caixas.missao.top).toBeGreaterThanOrEqual(
+    Math.max(caixas.roda.bottom, caixas.info.bottom),
+  );
+  await page.locator('[data-hud-info]').click();
+  await expect(page.locator('.hud .som')).toBeVisible();
+  await expect(missao).toBeVisible();
+  const aberto = await page.evaluate(() => ({
+    som: document.querySelector('.hud .som')!.getBoundingClientRect(),
+    missao: document.querySelector('.missao-hud')!.getBoundingClientRect(),
+  }));
+  expect(aberto.missao.top).toBeGreaterThanOrEqual(aberto.som.bottom);
+  await page.screenshot({ path: `${PASTA}/hud-informacoes-computador.png` });
+  await page.locator('[data-hud-info]').click();
+  await expect(page.locator('.hud .som')).toBeHidden();
+  await expect(missao).toBeVisible();
   await cadaItem(page, false, 'computador');
   // as teclas de sempre continuam, e G abre os gestos (os itens mostram a tecla)
   await page.keyboard.press('KeyG');
   await expect.poll(() => menu(page)).toBe('gestos');
-  await expect(page.locator('.roda.aberta button[data-item="acenar"] kbd')).toHaveText('1');
+  await expect(page.locator('.roda.aberta button.ativo[data-item="acenar"] kbd')).toHaveText('1');
   await page.keyboard.press('KeyG');
   await expect.poll(() => menu(page)).toBe(null);
   await page.locator('[data-botao-roda]').click();
-  await expect(page.locator('.roda.aberta button[data-item="mapa"] kbd')).toHaveText('Tab');
-  await expect(page.locator('.roda.aberta button[data-item="pausa"] kbd')).toHaveText('Esc');
+  await expect(page.locator('.roda.aberta button.ativo[data-item="mapa"] kbd')).toHaveText('Tab');
+  await expect(page.locator('.roda.aberta button.ativo[data-item="pausa"] kbd')).toHaveText('Esc');
   await page.keyboard.press('Escape');
   await expect.poll(() => menu(page)).toBe(null);
   await page.keyboard.press('KeyE');
@@ -184,11 +208,13 @@ test('celular: menu de roda pelo toque, segurar abre os gestos', async ({ browse
   await entrar(page);
   await page.evaluate(() => document.body.classList.add('toque-ativo'));
   await page.waitForTimeout(400);
+  // celular em pé: a missão fica guardada no botão de informações (como antes)
+  await expect(page.locator('[data-missao-atual]')).toBeHidden();
   await cadaItem(page, true, 'celular');
   // nada de selinho de tecla no toque
   await page.locator('[data-botao-roda]').tap();
   await page.waitForTimeout(400);
-  expect(await page.locator('.roda.aberta button kbd:visible').count()).toBe(0);
+  expect(await page.locator('.roda.aberta button.ativo kbd:visible').count()).toBe(0);
   expect(erros).toEqual([]);
   await ctx.close();
 });
@@ -208,6 +234,8 @@ test('celular deitado e tablet: o alto cabe sem cobrir nada', async ({ browser }
     await entrar(page);
     await page.evaluate(() => document.body.classList.add('toque-ativo'));
     await page.waitForTimeout(500);
+    // fora do celular em pé, a missão fica à vista
+    await expect(page.locator('[data-missao-atual]')).toBeVisible();
     const r = await page.evaluate(() => {
       const c = (s: string) => document.querySelector(s)?.getBoundingClientRect() ?? null;
       return {

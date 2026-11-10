@@ -108,7 +108,8 @@ export interface MenuRoda {
   /** Qual lista está aberta: 'menu', 'gestos' ou null (fechada). */
   readonly aberta: 'menu' | 'gestos' | null;
   abrirMenu(): void;
-  abrirGestos(comVoltar?: boolean): void;
+  /** Abre os gestos (com Voltar no meio, para o menu). */
+  abrirGestos(): void;
   fechar(): void;
 }
 
@@ -140,7 +141,7 @@ export function criarMenuRoda(op: OpcoesMenuRoda, raiz: HTMLElement = document.b
     aoEscolher: (id) => {
       const it = itens.find((i) => i.id === id);
       if (!it) return;
-      if (id === 'gestos') return abrirGestos(true);
+      if (id === 'gestos') return abrirGestos();
       // a roda fecha antes (o painel que abre não fica embaixo dela)
       roda.fechar();
       if (id === 'tela') alternarTelaCheia();
@@ -148,22 +149,24 @@ export function criarMenuRoda(op: OpcoesMenuRoda, raiz: HTMLElement = document.b
       else if (it.codigo) tecla(it.codigo);
     },
   };
-  const gestosSemVoltar: ListaRoda = {
+  const listaGestos: ListaRoda = {
     itens: op.gestos.map((g, i) => ({ ...g, tecla: String(i + 1) })),
     aoEscolher: (id) => op.fazerGesto(id),
+    aoVoltar: () => abrirMenu(),
   };
-  const gestosComVoltar: ListaRoda = { ...gestosSemVoltar, aoVoltar: () => abrirMenu() };
+  // desempenho: os botões das duas listas já ficam montados (abrir não cria nada)
+  roda.preparar(listaMenu);
+  roda.preparar(listaGestos);
 
   function abrirMenu(): void {
     if (!roda.aberta && !op.pode()) return;
     roda.abrir(listaMenu);
   }
-  function abrirGestos(comVoltar = true): void {
+  function abrirGestos(): void {
     if (!roda.aberta && !op.pode()) return;
-    roda.abrir(comVoltar ? gestosComVoltar : gestosSemVoltar);
+    roda.abrir(listaGestos);
   }
-  const emGestos = () =>
-    roda.aberta && (roda.lista === gestosComVoltar || roda.lista === gestosSemVoltar);
+  const emGestos = () => roda.aberta && roda.lista === listaGestos;
 
   // o botão da roda: toque abre o menu; segurar abre os gestos
   const bRoda = document.createElement('button');
@@ -182,7 +185,7 @@ export function criarMenuRoda(op: OpcoesMenuRoda, raiz: HTMLElement = document.b
     clearTimeout(segurando);
     segurando = setTimeout(() => {
       abriuSegurando = true;
-      abrirGestos(true);
+      abrirGestos();
     }, SEGURAR_GESTOS);
   });
   const soltar = () => clearTimeout(segurando);
@@ -237,7 +240,7 @@ export function criarMenuRoda(op: OpcoesMenuRoda, raiz: HTMLElement = document.b
       if (!a) return;
       if (a.acao === 'alternar') {
         if (emGestos()) roda.fechar();
-        else if (op.pode() || roda.aberta) roda.abrir(gestosComVoltar);
+        else if (op.pode() || roda.aberta) roda.abrir(listaGestos);
         else return;
       } else if (a.acao === 'fechar') roda.fechar();
       else roda.escolher(a.i);

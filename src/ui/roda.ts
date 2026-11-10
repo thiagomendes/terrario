@@ -41,6 +41,8 @@ export interface Roda {
   readonly lista: ListaRoda | null;
   /** Abre (ou troca, se já aberta) com esta lista. */
   abrir(lista: ListaRoda): void;
+  /** Monta os botões de uma lista antes (abrir não cria nada na hora). */
+  preparar(lista: ListaRoda): void;
   fechar(): void;
   /** Escolhe o item da posição i (0 = o de cima), como um clique. */
   escolher(i: number): void;
@@ -99,7 +101,9 @@ export const CSS_RODA = `
   opacity: 0; transform: translate(0, 0) scale(0.4); transition: transform 0.22s cubic-bezier(0.3, 1.4, 0.5, 1), opacity 0.15s;
   pointer-events: none; touch-action: none;
 }
-.roda.aberta button { opacity: 1; pointer-events: auto; }
+.roda.aberta button.ativo { opacity: 1; pointer-events: auto; }
+/* desempenho: cada botão já nasce na sua camada (abrir só move e acende, sem pintar nada) */
+.roda button, .roda::before { will-change: transform, opacity; }
 .roda button:focus-visible { outline: 3px solid #ffb547; outline-offset: 2px; }
 .roda button svg { width: 32px; height: 32px; pointer-events: none; }
 .roda button .nome { position: absolute; top: 100%; margin-top: 4px; font: 800 0.74rem var(--jogo, system-ui), sans-serif; color: #fff;
@@ -113,7 +117,7 @@ body.toque-ativo .roda button svg { width: 34px; height: 34px; }
 body.toque-ativo .roda button kbd { display: none; }
 body[data-overlay] .roda, body.modo-foto .roda, body.tela-titulo .roda { display: none; }
 /* roda aberta: os avisos dão licença (voltam quando ela fecha) */
-body.roda-aberta .toast-area, body.roda-aberta .legendas { opacity: 0; transition: opacity 0.15s; }
+.toast-area.sob-roda, .legendas.sob-roda { opacity: 0; transition: opacity 0.15s; }
 @media (prefers-reduced-motion: reduce) { .roda button, .roda::before { transition: none; } }
 `;
 
@@ -175,9 +179,12 @@ export function criarRoda(op: OpcoesRoda, raiz: HTMLElement = document.body): Ro
     return b;
   }
 
-  function montar(l: ListaRoda): void {
-    for (const b of botoes) b.remove();
-    botoes = l.itens.map((it, i) => botao(it, i));
+  /** Botões já montados de cada lista (montados uma vez; trocar de lista não cria nada). */
+  const montadas = new Map<ListaRoda, HTMLButtonElement[]>();
+  function montar(l: ListaRoda): HTMLButtonElement[] {
+    const ja = montadas.get(l);
+    if (ja) return ja;
+    const bs = l.itens.map((it, i) => botao(it, i));
     if (l.aoVoltar) {
       const v = botao(
         {
@@ -189,29 +196,52 @@ export function criarRoda(op: OpcoesRoda, raiz: HTMLElement = document.body): Ro
         null,
       );
       v.classList.add('voltar');
-      botoes.push(v);
+      bs.push(v);
     }
-    el.append(...botoes);
+    el.append(...bs);
+    montadas.set(l, bs);
+    return bs;
   }
 
+  /** Os avisos dão licença enquanto a roda está aberta (só eles: nada de mexer no body). */
+  function avisos(sob: boolean): void {
+    for (const a of document.querySelectorAll('.toast-area, .legendas'))
+      a.classList.toggle('sob-roda', sob);
+  }
+
+  let raio = 0;
+  let pos: [number, number][] = [];
   function abrir(l: ListaRoda): void {
     clearTimeout(timerEscolha);
-    const trocar = l !== lista || botoes.length === 0;
+    const novos = !montadas.has(l);
+    const bs = montar(l);
+    if (l !== lista) {
+      // a lista de antes volta para o meio, encolhida e apagada
+      for (const b of botoes) {
+        b.classList.remove('ativo');
+        b.style.transform = '';
+        b.tabIndex = -1;
+      }
+    }
     lista = l;
-    if (trocar) montar(l);
+    botoes = bs;
     for (const b of botoes) b.classList.remove('escolhido');
     const r = raioDaRoda(innerWidth, innerHeight);
-    el.style.setProperty('--diam', `${r * 2 + 96}px`);
-    const pos = posicoesDaRoda(l.itens.length, r);
-    // um quadro para a roda nascer encolhida no meio e abrir com o pulinho
+    if (r !== raio || pos.length !== l.itens.length) {
+      raio = r;
+      el.style.setProperty('--diam', `${r * 2 + 96}px`);
+    }
+    pos = posicoesDaRoda(l.itens.length, r);
     const colocar = () =>
       botoes.forEach((b, i) => {
+        b.classList.add('ativo');
         b.style.transform = pos[i]
           ? `translate(${pos[i][0].toFixed(1)}px, ${pos[i][1].toFixed(1)}px) scale(1)`
           : 'translate(0, 0) scale(0.85)';
         b.tabIndex = 0;
       });
-    if (trocar) requestAnimationFrame(() => requestAnimationFrame(colocar));
+    // montados agora: um quadro para nascerem encolhidos no meio e abrirem com o pulinho
+    if (novos) requestAnimationFrame(() => requestAnimationFrame(colocar));
     else colocar();
     el.classList.add('aberta');
     el.setAttribute('aria-hidden', 'false');
@@ -219,7 +249,7 @@ export function criarRoda(op: OpcoesRoda, raiz: HTMLElement = document.body): Ro
     timer = setTimeout(fechar, (op.fecharEm ?? 6) * 1000);
     if (!aberta) {
       aberta = true;
-      document.body.classList.add('roda-aberta');
+      avisos(true);
       op.aoMudar?.(true);
     }
   }
@@ -229,12 +259,13 @@ export function criarRoda(op: OpcoesRoda, raiz: HTMLElement = document.body): Ro
     el.classList.remove('aberta');
     el.setAttribute('aria-hidden', 'true');
     for (const b of botoes) {
+      b.classList.remove('ativo');
       b.style.transform = '';
       b.tabIndex = -1;
     }
     if (aberta) {
       aberta = false;
-      document.body.classList.remove('roda-aberta');
+      avisos(false);
       op.aoMudar?.(false);
     }
   }
@@ -260,6 +291,7 @@ export function criarRoda(op: OpcoesRoda, raiz: HTMLElement = document.body): Ro
       return lista;
     },
     abrir,
+    preparar: (l) => void montar(l),
     fechar,
     escolher,
     descartar() {

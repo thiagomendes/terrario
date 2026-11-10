@@ -84,7 +84,7 @@ test('computador: G abre a roda, 1 a 8 escolhem, balão, andar interrompe; captu
   const slot0 = await page.evaluate(() => window.__brumaluz!.slotAtivo);
   await page.keyboard.press('KeyG');
   await expect.poll(() => rodaAberta(page)).toBe(true);
-  const botoes = page.locator('.roda.aberta button');
+  const botoes = page.locator('.roda.aberta button.ativo');
   await expect(botoes).toHaveCount(9); // 8 gestos e o Voltar no meio
   await page.waitForTimeout(350);
   const caixa = await botoes.first().boundingBox();
@@ -123,9 +123,9 @@ test('computador: G abre a roda, 1 a 8 escolhem, balão, andar interrompe; captu
   await page.locator('[data-botao-roda]').click();
   await expect.poll(() => rodaAberta(page)).toBe(true);
   await page.waitForTimeout(350);
-  await page.locator('.roda.aberta button[data-item="gestos"]').click();
+  await page.locator('.roda.aberta button.ativo[data-item="gestos"]').click();
   await page.waitForTimeout(450);
-  await page.locator('.roda.aberta button[data-item="dancar"]').click();
+  await page.locator('.roda.aberta button.ativo[data-item="dancar"]').click();
   await expect.poll(async () => (await local(page)).gesto).toBe('dancar');
   // andar interrompe
   await page.evaluate(() => window.__brumaluz!.controleDireto!.mover(1, 0));
@@ -204,14 +204,14 @@ test('celular: segurar o botão da roda abre os gestos e o toque escolhe', async
   await expect.poll(() => rodaAberta(page)).toBe(true);
   await page.waitForTimeout(450);
   // botões grandes (alvo de toque) que cabem na tela
-  for (const b of await page.locator('.roda.aberta button:not(.voltar)').all()) {
+  for (const b of await page.locator('.roda.aberta button.ativo:not(.voltar)').all()) {
     const c = (await b.boundingBox())!;
     expect(c.width).toBeGreaterThanOrEqual(60);
     expect(c.x).toBeGreaterThanOrEqual(0);
     expect(c.x + c.width).toBeLessThanOrEqual(390);
   }
   await page.screenshot({ path: `${PASTA}/roda-celular.png` });
-  await page.locator('.roda.aberta button[data-item="comemorar"]').tap();
+  await page.locator('.roda.aberta button.ativo[data-item="comemorar"]').tap();
   await expect.poll(() => local(page)).toEqual({ gesto: 'comemorar', balao: 'comemorar' });
   await expect.poll(() => rodaAberta(page)).toBe(false);
   await page.waitForTimeout(400);
