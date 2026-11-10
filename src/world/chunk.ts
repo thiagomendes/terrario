@@ -922,15 +922,31 @@ export function arvoreDaForma(
 /** Procura um ponto de nascimento em terra firme perto da origem. */
 /** Nascimento pelo terreno natural (povoados nunca cobrem este ponto). */
 const nascimentos = new Map<string, { x: number; z: number }>();
+/** Para onde o jogador olha ao nascer (só nos mundos de sítio: para o sítio mais perto). */
+const olhares = new Map<number, number | undefined>();
 export function encontrarNascimento(semente: number): { x: number; z: number } {
   const sitio = TERRENO_NATURAL.planta === 'sitio';
   const k = sitio ? `${semente},sitio` : `${semente}`;
   let n = nascimentos.get(k);
   if (!n) {
-    n = sitio ? nascimentoPertoDoSitio(semente) : procurarNascimento(semente);
+    if (sitio) {
+      const r = nascimentoPertoDoSitio(semente);
+      n = { x: r.x, z: r.z };
+      olhares.set(semente, r.olhar);
+    } else n = procurarNascimento(semente);
     nascimentos.set(k, n);
   }
   return n;
+}
+
+/**
+ * Spec 013: num mundo de sítio, o yaw da câmera (frente = seno, cosseno) que olha do
+ * nascimento para o sítio mais perto; nos outros, undefined (fica o olhar de sempre).
+ */
+export function olharDoNascimento(semente: number): number | undefined {
+  if (TERRENO_NATURAL.planta !== 'sitio') return undefined;
+  encontrarNascimento(semente);
+  return olhares.get(semente);
 }
 
 function bomParaNascer(x: number, z: number, semente: number): boolean {
@@ -960,7 +976,7 @@ function procurarNascimento(
  * da origem e um ponto em terra firme logo fora dele (e de qualquer outro), voltado para a
  * origem. É puro (só semente e estilo): o servidor acha o mesmo ponto.
  */
-function nascimentoPertoDoSitio(semente: number): { x: number; z: number } {
+function nascimentoPertoDoSitio(semente: number): { x: number; z: number; olhar?: number } {
   const plano = (rx: number, rz: number) => planoSemBloqueio(rx, rz, semente, TERRENO_NATURAL);
   const livre = (x: number, z: number) => {
     const rx = Math.floor(x / REGIAO_POVOADO);
@@ -988,8 +1004,11 @@ function nascimentoPertoDoSitio(semente: number): { x: number; z: number } {
         const a = virado + (k % 2 ? 1 : -1) * Math.ceil(k / 2) * ((Math.PI * 2) / 24);
         const x = Math.round(p.cx + Math.cos(a) * d);
         const z = Math.round(p.cz + Math.sin(a) * d);
-        if (bomParaNascer(x, z, semente) && livre(x, z)) return { x: x + 0.5, z: z + 0.5 };
+        if (bomParaNascer(x, z, semente) && livre(x, z))
+          return { x: x + 0.5, z: z + 0.5, olhar: Math.atan2(p.cx - x - 0.5, p.cz - z - 0.5) };
       }
   }
-  return procurarNascimento(semente, livre);
+  const n = procurarNascimento(semente, livre);
+  const p = sitios[0];
+  return p ? { ...n, olhar: Math.atan2(p.cx - n.x, p.cz - n.z) } : n;
 }

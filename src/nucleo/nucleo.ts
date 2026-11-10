@@ -10,7 +10,14 @@
 import { registrarCatalogo } from '../jogo/catalogo';
 import { blocoDe, criarEdicoes, empacotar } from '../world/edicoes';
 import { Bloco, ehAlvo, obterBloco } from '../world/blocks';
-import { TAM_X, TAM_Z, alturaTerreno, encontrarNascimento, estiloMundo } from '../world/chunk';
+import {
+  TAM_X,
+  TAM_Z,
+  alturaTerreno,
+  encontrarNascimento,
+  estiloMundo,
+  olharDoNascimento,
+} from '../world/chunk';
 import { AVISO_LIMITE, comeEsse, viraCriado } from '../jogo/criacao';
 import { definirRegioesSemPovoado, regiaoDoChunk } from '../world/povoado';
 import { abreEFecha, alternado, ehPorta } from '../world/portas';
@@ -301,7 +308,8 @@ export function criarNucleo(op: OpcoesNucleo) {
         x,
         y: y0,
         z,
-        yaw: pos?.yaw ?? 0,
+        // mundo de sítio: quem chega pela primeira vez olha para o sítio mais perto
+        yaw: pos?.yaw ?? olharDoNascimento(semente) ?? 0,
         pitch: pos?.pitch ?? 0,
         olhos: y0 + 1.62,
         noChao: false,
