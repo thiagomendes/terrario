@@ -76,7 +76,7 @@ export function teclaDaRoda(
 }
 
 export const CSS_RODA = `
-.roda { position: fixed; inset: 0; z-index: 8; pointer-events: none; touch-action: none; user-select: none; -webkit-user-select: none; }
+.roda { position: fixed; inset: 0; z-index: 55; pointer-events: none; touch-action: none; user-select: none; -webkit-user-select: none; }
 .roda::before { content: ""; position: absolute; left: 50%; top: 50%; width: var(--diam, 300px); height: var(--diam, 300px); margin: calc(var(--diam, 300px) / -2); border-radius: 50%;
   background: radial-gradient(circle, rgba(255, 247, 232, 0) 34%, rgba(255, 247, 232, 0.42) 36%, rgba(255, 247, 232, 0.42) 100%);
   opacity: 0; transform: scale(0.6); transition: transform 0.22s, opacity 0.15s; }

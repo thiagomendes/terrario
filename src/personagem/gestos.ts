@@ -141,7 +141,7 @@ function juntasDoGesto(id: IdGesto, f: number): Juntas {
       return { bdX: -1.5 + Math.sin(f * 10) * 0.35, bdZ: 0, cabX: -0.1 };
     case 'comemorar':
       // os dois braços para o alto e pulinhos
-      return { beZ: -2.7, bdZ: 2.7, beX: 0, bdX: 0, corpoY: Math.abs(Math.sin(f * 7.5)) * 0.35 };
+      return { beZ: -2.85, bdZ: 2.85, beX: 0, bdX: 0, corpoY: Math.abs(Math.sin(f * 7.5)) * 0.35 };
     case 'aplaudir': {
       const c = Math.sin(f * 16) * 0.25;
       return { beX: -1.2, bdX: -1.2, beZ: 0.5 + c, bdZ: -0.5 - c };

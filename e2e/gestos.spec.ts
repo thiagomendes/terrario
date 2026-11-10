@@ -149,7 +149,7 @@ test('computador: G abre a roda, 1 a 8 escolhem, balão, andar interrompe; captu
 
   // capturas de cada gesto, de frente (o boneco virado para a câmera) e no meio do gesto
   await page.waitForTimeout(2200);
-  await page.evaluate(() => window.__brumaluz!.personagem!.girarCorpo?.(Math.PI));
+  await page.evaluate(() => window.__brumaluz!.personagem!.girarCorpo?.(Math.PI * 0.78));
   const meio: Record<string, number> = {
     acenar: 700,
     cumprimentar: 380,
@@ -232,24 +232,29 @@ test('o morador perto acena de volta', async ({ page }) => {
     undefined,
     { timeout: 120_000 },
   );
-  // chega a uns 4 blocos de um morador, olhando para ele
+  // chega a uns 4 blocos de um morador perto da praça (lugar aberto), olhando para ele
   let respondeu = false;
   for (let tentativa = 0; tentativa < 6 && !respondeu; tentativa++) {
-    const alvo = await page.evaluate(async () => {
-      const e = window.__brumaluz!;
-      const [x, , z] = e.posicao!;
-      const m = e.criaturas!()
-        .filter((c) => c.tipo === 'morador')
-        .sort((a, b) => Math.hypot(a.x - x, a.z - z) - Math.hypot(b.x - x, b.z - z))[0];
-      const px = m.x + 4;
-      const pz = m.z + 0.5;
-      e.teleportar!(px, pz);
-      await new Promise((r) => setTimeout(r, 900));
-      // a câmera atrás do jogador, olhando o morador (yaw: atan2(dx, dz))
-      e.apontar!(Math.atan2(m.x - px, m.z - pz), 0.2);
-      await e.sincronizar!();
-      return m.id;
-    });
+    const alvo = await page.evaluate(
+      async ({ cx, cz, tentativa }) => {
+        const e = window.__brumaluz!;
+        const m = e.criaturas!()
+          .filter((c) => c.tipo === 'morador')
+          .sort((a, b) => Math.hypot(a.x - cx, a.z - cz) - Math.hypot(b.x - cx, b.z - cz))[
+          tentativa % 2
+        ];
+        const d = Math.hypot(cx - m.x, cz - m.z) || 1;
+        const px = m.x + ((cx - m.x) / d) * 4;
+        const pz = m.z + ((cz - m.z) / d) * 4;
+        e.teleportar!(px, pz);
+        await new Promise((r) => setTimeout(r, 900));
+        // a câmera atrás do jogador, olhando o morador um pouco de lado (yaw: atan2(dx, dz))
+        e.apontar!(Math.atan2(m.x - px, m.z - pz) + 0.35, 0.35);
+        await e.sincronizar!();
+        return m.id;
+      },
+      { cx: p.cx, cz: p.cz, tentativa },
+    );
     await page.waitForTimeout(1300);
     await page.evaluate(() => window.__brumaluz!.gestos!.fazer('acenar'));
     respondeu = await page
@@ -257,7 +262,7 @@ test('o morador perto acena de volta', async ({ page }) => {
         (id) =>
           window
             .__brumaluz!.gestos!.moradores()
-            .some((m) => m.gesto === 'acenar' && m.balao === 'acenar' && (m.id === id || true)),
+            .some((m) => m.id === id && m.gesto === 'acenar' && m.balao === 'acenar'),
         alvo,
         { timeout: 4000 },
       )

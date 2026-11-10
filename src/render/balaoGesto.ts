@@ -43,11 +43,16 @@ export function materiaisDoBalao(scene: Scene): Record<IdGesto, StandardMaterial
     };
     img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svgDoBalao(id));
     const m = new StandardMaterial(`balao-gesto-${id}`, scene);
+    // a cor vem toda do emissivo (sem luz nem sombra: o mesmo creme de dia, à noite e na
+    // caverna); o difuso só dá o recorte (alfa)
     m.diffuseTexture = tex;
+    m.emissiveTexture = tex;
     m.useAlphaFromDiffuseTexture = true;
     m.disableLighting = true;
-    m.emissiveColor = Color3.Black();
+    m.diffuseColor = Color3.Black();
+    m.emissiveColor = Color3.White();
     m.specularColor = Color3.Black();
+    m.ambientColor = Color3.Black();
     m.backFaceCulling = false;
     m.fogEnabled = false;
     // por cima de tudo (o amigo atrás da parede também mostra o gesto)
@@ -73,7 +78,7 @@ export interface BalaoGesto {
 const tmp = new Vector3();
 
 /** Balão preso a um boneco, `altura` blocos acima dos pés. */
-export function criarBalao(scene: Scene, pai: TransformNode, altura = 2.2): BalaoGesto {
+export function criarBalao(scene: Scene, pai: TransformNode, altura = 2.1): BalaoGesto {
   const mats = materiaisDoBalao(scene);
   // "personagem-": o brilho da cena não pega (como o boneco)
   const m = MeshBuilder.CreatePlane('personagem-balao-gesto', { size: 1 }, scene);
