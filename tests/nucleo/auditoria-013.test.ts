@@ -209,7 +209,7 @@ function voltasNoBau(semente: number, bx: number, by: number, bz: number): strin
   const i = n.estado.jogadores.get('ana')!.inventario;
   const voltas: string[][] = [];
   for (let v = 0; v < 3; v++) {
-    n.estado.mundoItens.itens.length = 0;
+    (n.estado.mundoItens.itens as unknown[]).length = 0;
     mandar(n, 'ana', { t: 'quebrar', id: 10 + v * 2, x: bx, y: by, z: bz, slot: 0 });
     voltas.push(
       n.estado.mundoItens.itens
@@ -353,5 +353,107 @@ describe('portas e porteiras na nuvem', () => {
     mandar(n, 'bia', { t: 'quebrar', id: 2, x: X + 3, y: Y, z: Z + 1, slot: 0 });
     expect(bloco(n, X + 2, Y, Z + 2)).toBe(Bloco.PORTEIRA);
     expect(bloco(n, X + 3, Y, Z + 1)).toBe(Bloco.PORTA_ABERTA);
+  });
+});
+
+describe('salvamento com lixo não trava o núcleo', () => {
+  function abrir(extras: Record<string, unknown>, edicoes: Record<string, unknown> = {}) {
+    const n = criarNucleo({
+      semente: SEMENTE,
+      modo: 'sobrevivencia',
+      versaoMundo: 2,
+      confiarNoCliente: false,
+      dados: {
+        versao: 1,
+        edicoes: edicoes as never,
+        jogador: null,
+        hora: 0.5,
+        extras,
+      },
+    });
+    n.conectar('ana', { perfil: { apelido: 'Ana', aparencia: {} } });
+    return n;
+  }
+  /** Milissegundos por passo, em 40 passos (o servidor tem 50 ms por passo). */
+  function medir(n: Nucleo): number {
+    const t0 = performance.now();
+    for (let i = 0; i < 40; i++) n.passo();
+    return (performance.now() - t0) / 40;
+  }
+
+  for (const v of [1e9, -1e12, 1e300, -1e300])
+    it(`bichos criados em x = ${v} saem ao abrir (e o passo é rápido)`, () => {
+      const criados = Array.from({ length: 24 }, () => ({
+        tipo: 'cervo',
+        x: v,
+        y: 70,
+        z: v,
+        vida: 10,
+        casa: [v, v],
+      }));
+      const n = abrir({ criaturas: { criados, raposas: [{ x: v, y: 70, z: 0, vida: 8 }] } });
+      expect(medir(n)).toBeLessThan(20);
+      expect(n.estado.populacao.lista.filter((c) => c.criado || c.domada)).toEqual([]);
+    });
+
+  it('bicho com y absurdo, casa e cerca absurdas: sai o que não serve, o resto fica', () => {
+    const criados = [
+      { tipo: 'coelho', x: X + 2, y: -1e300, z: Z + 2, vida: 10, casa: [X, Z], ovo: 1 },
+      {
+        tipo: 'cervo',
+        x: X + 2,
+        y: Y,
+        z: Z + 2,
+        vida: 10,
+        casa: [1e300, 0],
+        curral: 'x:0',
+        cerca: [1e300, 1e300, -1e300, -1e300],
+      },
+    ];
+    const n = abrir({ criaturas: { criados } });
+    n.comando('ana', tel(X + 0.5, Z + 0.5));
+    expect(medir(n)).toBeLessThan(20);
+    const l = n.estado.populacao.lista.filter((c) => c.criado);
+    expect(l.map((c) => c.tipo)).toEqual(['cervo']);
+    expect(l[0].cerca).toBeUndefined();
+    expect(Math.abs(l[0].casa![0] - (X + 2))).toBeLessThan(8);
+  });
+
+  it('itens soltos, baús, lavoura e nascimento fora do mundo saem; edição de chunk lixo também', () => {
+    const k = `${Math.floor(X / 16)},${Math.floor(Z / 16)}`;
+    const n = abrir(
+      {
+        itensSoltos: [
+          { item: 'trigo', qtd: 1, x: 1e300, y: 70, z: 0 },
+          { item: 'trigo', qtd: 2, x: X + 0.5, y: Y + 0.5, z: Z + 0.5 },
+        ],
+        conteineres: { baus: { '1e300,70,0': [], [`${X},${Y},${Z}`]: [] } },
+        lavoura: { [`${X},120,${Z}`]: 1e300, __proto__: 5, '9e99,1,1': 3 },
+        spawn: { x: 1e300, z: 0 },
+      },
+      { [k]: [[5, 1]], '1e300,0': [[0, 70]], '9999999999999,0': [[0, 70]], lixo: 3 },
+    );
+    expect(n.estado.mundoItens.itens.map((i) => i.qtd)).toEqual([2]);
+    expect(Math.abs(n.estado.jogadores.get('ana')!.spawn.x)).toBeLessThan(1e8);
+    expect(medir(n)).toBeLessThan(20);
+    const salvo = n.salvar();
+    expect(Object.keys(salvo.edicoes)).toEqual([k]);
+    expect(Object.keys((salvo.extras.conteineres as { baus: object }).baus)).toEqual([
+      `${X},${Y},${Z}`,
+    ]);
+  });
+
+  it('o bicho criado longe de todos fica parado (sem IA nem terreno) e é salvo', () => {
+    const longe = 2_000_000;
+    const criados = [{ tipo: 'cervo', x: longe + 0.5, y: 120, z: 0.5, vida: 10, casa: [longe, 0] }];
+    const n = abrir({ criaturas: { criados } });
+    n.comando('ana', tel(X + 0.5, Z + 0.5));
+    const c = n.estado.populacao.lista.find((b) => b.criado)!;
+    expect(c).toBeDefined();
+    for (let i = 0; i < 100; i++) n.passo();
+    // não caiu (não assenta): ninguém gerou o terreno de lá
+    expect(c.y).toBe(120);
+    const salvo = n.salvar().extras.criaturas as { criados: { x: number; y: number }[] };
+    expect(salvo.criados).toEqual([expect.objectContaining({ x: longe + 0.5, y: 120 })]);
   });
 });

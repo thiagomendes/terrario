@@ -8,6 +8,7 @@
  * servidor da nuvem (spec 010) com o mesmo código.
  */
 import { registrarCatalogo } from '../jogo/catalogo';
+import { sanearDadosMundo } from './saneamento';
 import { blocoDe, criarEdicoes, empacotar } from '../world/edicoes';
 import { Bloco, ehAlvo, obterBloco } from '../world/blocks';
 import { TAM_X, ALTURA, TAM_Z, alturaTerreno, encontrarNascimento, estiloMundo } from '../world/chunk';
@@ -157,7 +158,8 @@ export type Nucleo = ReturnType<typeof criarNucleo>;
 export function criarNucleo(op: OpcoesNucleo) {
   registrarCatalogo();
   const { semente, modo } = op;
-  const dados = op.dados;
+  // o salvamento pode vir de qualquer aparelho: o que tem posição fora do mundo sai
+  const dados = op.dados ? sanearDadosMundo(op.dados) : undefined;
   const extras = dados?.extras ?? {};
   const confiar = op.confiarNoCliente ?? false;
   const depuracao = op.depuracao ?? confiar;

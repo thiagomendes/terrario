@@ -8,6 +8,7 @@ import { createHash, randomUUID } from 'node:crypto';
 import { criarNucleo, type Nucleo } from '../../src/nucleo/nucleo';
 import { definirEstiloMundo } from '../../src/world/chunk';
 import { estiloSeguro } from '../../src/world/estiloSeguro';
+import { sanearDadosMundo } from '../../src/nucleo/saneamento';
 import { definirRegioesSemPovoado } from '../../src/world/povoado';
 import { gerarCodigo, normalizarCodigo } from '../../src/jogo/codigos';
 import type { DadosMundo } from '../../src/jogo/mundos';
@@ -260,7 +261,9 @@ export function criarGerenciador(op: OpcoesGerenciador) {
       acessadoEm: agora(),
     };
     // levar para a nuvem: o mundo vai inteiro; o que era do jogador fica com o dono
-    const d = c.dados;
+    // o mundo do aparelho vem como o cliente mandou: o que tem posição fora do mundo (um
+    // bicho em x = 1e300 travava a sala) sai antes de a sala existir
+    const d = c.dados ? sanearDadosMundo(c.dados) : undefined;
     let doDono: DadosJogador | undefined;
     if (d) {
       const { inventario, sobrevivencia, spawn, diario, marcadores, ...doMundo } = d.extras;

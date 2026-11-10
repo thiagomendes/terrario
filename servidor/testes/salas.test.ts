@@ -491,6 +491,49 @@ describe('o servidor aguenta mensagem de quem quer estragar', () => {
     expect(Object.keys(bv2.edicoes).sort()).toEqual(['0,0', '100,100']);
   });
 
+  it('levar para a nuvem um mundo com lixo (bicho em x = 1e12): a sala anda rápido e manda quadros', async () => {
+    const s = servidor();
+    const a = canal();
+    const longe = 1e12;
+    const dados = {
+      versao: 1,
+      edicoes: { '0,0': [[5, 1]], '62500000000,0': [[7, 70]], 'lixo': 3 },
+      jogador: { x: longe, y: 70, z: longe, yaw: 0, pitch: 0 },
+      hora: 0.3,
+      extras: {
+        criaturas: {
+          criados: Array.from({ length: 24 }, () => ({
+            tipo: 'cervo',
+            x: longe,
+            y: 70,
+            z: longe,
+            vida: 10,
+            casa: [longe, longe],
+          })),
+          raposas: [{ x: longe, y: 70, z: -longe, vida: 10 }],
+        },
+        itensSoltos: [{ item: 'trigo', qtd: 1, x: longe, y: 70, z: 0 }],
+        lavoura: { [`${longe},70,0`]: 5 },
+        conteineres: { baus: { [`${longe},70,0`]: [] } },
+        spawn: { x: longe, z: longe },
+      },
+    };
+    await s.g.receber(a, entrar(ident('ana'), { criar: { ...criarMundo, dados } }));
+    expect(a.recebidas.some((m) => m.t === 'bemvindo')).toBe(true);
+    const sala = [...s.g.ativas.values()][0];
+    const t0 = performance.now();
+    await s.avancar(1000);
+    const ms = (performance.now() - t0) / 20;
+    expect(ms).toBeLessThan(25);
+    expect(quadros(a).length).toBeGreaterThan(15);
+    const est = sala.nucleo.estado;
+    expect(est.populacao.lista.every((c) => Math.abs(c.x) < 1e8 && Math.abs(c.z) < 1e8)).toBe(true);
+    expect(est.mundoItens.itens.every((i) => Math.abs(i.x) < 1e8)).toBe(true);
+    const ana = est.jogadores.get('ana')!;
+    expect(Math.abs(ana.tel.x)).toBeLessThan(1e8);
+    expect(Math.abs(ana.spawn.x)).toBeLessThan(1e8);
+  });
+
   it('rajada de "entrar" na mesma conexão cria uma sala só, e não deixa fantasmas', async () => {
     const s = servidor();
     const a = canal();
