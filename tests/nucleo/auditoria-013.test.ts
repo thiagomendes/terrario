@@ -276,3 +276,82 @@ describe('o tesouro do baú do mundo sai uma vez só', () => {
     expect(voltas[2]).toEqual([]);
   });
 });
+
+describe('dar comida na nuvem', () => {
+  function cervoPerto(n: Nucleo, x: number, z: number): number {
+    n.comando('ana', { t: 'depurar', d: { f: 'invocar', tipo: 'cervo', x, y: Y, z } });
+    const l = n.estado.populacao.lista;
+    return l[l.length - 1].id;
+  }
+  function dia(n: Nucleo): void {
+    n.comando('ana', { t: 'depurar', d: { f: 'hora', hora: 0.5 } });
+    n.comando('ana', { t: 'depurar', d: { f: 'pausarDia', pausar: true } });
+  }
+
+  it('a visitante sem permissão de construir não cria bicho (nem enche o limite do mundo)', () => {
+    const n = nuvem();
+    n.definirConstrucao('bia', false);
+    dia(n);
+    inv(n, 'bia').definir(0, { item: 'trigo', qtd: 30 });
+    for (let i = 0; i < 5; i++)
+      mandar(n, 'bia', { t: 'alimentar', criatura: cervoPerto(n, X + 2.5, Z + 2.5), slot: 0 });
+    expect(n.estado.populacao.criados).toBe(0);
+    // não gastou o trigo e foi avisada
+    expect(inv(n, 'bia').contar('trigo')).toBe(30);
+    const q = n.quadros().get('bia')!;
+    expect(q.eventos?.some((e) => e.e === 'recusa' && e.motivo === 'visitante')).toBe(true);
+    expect(q.eventos?.some((e) => e.e === 'alimentou')).toBe(false);
+    // a dona cria
+    inv(n, 'ana').definir(0, { item: 'trigo', qtd: 1 });
+    mandar(n, 'ana', { t: 'alimentar', criatura: cervoPerto(n, X + 1.5, Z + 1.5), slot: 0 });
+    expect(n.estado.populacao.criados).toBe(1);
+  });
+
+  it('o mesmo bicho criado mostra corações no máximo uma vez por segundo', () => {
+    const n = nuvem();
+    dia(n);
+    inv(n, 'ana').definir(0, { item: 'trigo', qtd: 30 });
+    const id = cervoPerto(n, X + 1.5, Z + 1.5);
+    const coracoes = () =>
+      n
+        .quadros()
+        .get('bia')!
+        .eventos?.filter((e) => e.e === 'alimentou').length ?? 0;
+    for (let i = 0; i < 30; i++) mandar(n, 'ana', { t: 'alimentar', criatura: id, slot: 0 });
+    expect(n.estado.populacao.criados).toBe(1);
+    expect(coracoes()).toBe(1);
+    // passado um segundo, ganha comida de novo
+    for (let i = 0; i < 21; i++) n.passo();
+    n.quadros();
+    for (let i = 0; i < 30; i++) mandar(n, 'ana', { t: 'alimentar', criatura: id, slot: 0 });
+    expect(coracoes()).toBe(1);
+    // a visitante pode dar comida ao bicho que já é criado
+    n.definirConstrucao('bia', false);
+    inv(n, 'bia').definir(0, { item: 'trigo', qtd: 1 });
+    for (let i = 0; i < 21; i++) n.passo();
+    n.quadros();
+    mandar(n, 'bia', { t: 'alimentar', criatura: id, slot: 0 });
+    expect(coracoes()).toBe(1);
+  });
+});
+
+describe('portas e porteiras na nuvem', () => {
+  it('a visitante abre e fecha a porteira e a porta, mas não quebra nenhuma', () => {
+    const n = nuvem();
+    n.definirConstrucao('bia', false);
+    n.estado.edicoes.definir(X + 2, Y, Z + 2, Bloco.PORTEIRA);
+    n.estado.edicoes.definir(X + 3, Y, Z + 1, Bloco.PORTA);
+    n.estado.edicoes.definir(X + 3, Y + 1, Z + 1, Bloco.PORTA);
+    mandar(n, 'bia', { t: 'usar', x: X + 2, y: Y, z: Z + 2 });
+    expect(bloco(n, X + 2, Y, Z + 2)).toBe(Bloco.PORTEIRA_ABERTA);
+    mandar(n, 'bia', { t: 'usar', x: X + 2, y: Y, z: Z + 2 });
+    expect(bloco(n, X + 2, Y, Z + 2)).toBe(Bloco.PORTEIRA);
+    mandar(n, 'bia', { t: 'usar', x: X + 3, y: Y, z: Z + 1 });
+    expect(bloco(n, X + 3, Y, Z + 1)).toBe(Bloco.PORTA_ABERTA);
+    expect(bloco(n, X + 3, Y + 1, Z + 1)).toBe(Bloco.PORTA_ABERTA);
+    mandar(n, 'bia', { t: 'quebrar', id: 1, x: X + 2, y: Y, z: Z + 2, slot: 0 });
+    mandar(n, 'bia', { t: 'quebrar', id: 2, x: X + 3, y: Y, z: Z + 1, slot: 0 });
+    expect(bloco(n, X + 2, Y, Z + 2)).toBe(Bloco.PORTEIRA);
+    expect(bloco(n, X + 3, Y, Z + 1)).toBe(Bloco.PORTA_ABERTA);
+  });
+});

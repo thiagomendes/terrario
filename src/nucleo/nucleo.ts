@@ -71,6 +71,8 @@ const ALCANCE_REGRAS = 8;
 const ALCANCE_CRIATURA = 7;
 /** De quanto em quanto tempo a lavoura cresce (segundos). */
 const INTERVALO_LAVOURA = 1;
+/** Segundos mínimos entre duas comidas dadas ao mesmo bicho já criado. */
+const INTERVALO_COMIDA = 1;
 /** Quem está até aqui da planta vê o brilhinho e ouve o som quando ela amadurece. */
 const ALCANCE_MADURA = 24;
 /** Espera entre deitar na cama e acordar (o véu escurece a tela). */
@@ -862,6 +864,8 @@ export function criarNucleo(op: OpcoesNucleo) {
    * núcleo). O bicho vira criado (gasta 1 na sobrevivência); se já era, ganha carinho e a
    * casa passa a ser onde está, sem gastar nada.
    */
+  /** Passo em que cada bicho ganhou comida por último (os corações têm intervalo). */
+  const ultimaComida = new Map<number, number>();
   function alimentar(j: Jogador, c: Extract<Comando, { t: 'alimentar' }>): void {
     const cr = criatura(c.criatura);
     const p = j.inventario.obter(c.slot);
@@ -874,12 +878,25 @@ export function criarNucleo(op: OpcoesNucleo) {
       Math.hypot(cr.x - j.tel.x, cr.z - j.tel.z) > ALCANCE_CRIATURA
     )
       return;
+    // criar bicho novo é mexer no mundo (como arar e plantar): quem só passeia não cria
+    if (!cr.criado && !j.constroi) {
+      j.eventos.push({ e: 'recusa', comando: 0, motivo: 'visitante' });
+      return;
+    }
+    // o já criado ganha corações no máximo uma vez por segundo (senão um clique repetido
+    // enchia todo mundo de eventos e vozes)
+    if (cr.criado) {
+      const ultima = ultimaComida.get(cr.id);
+      if (ultima !== undefined && (n - ultima) * PASSO < INTERVALO_COMIDA) return;
+    }
     const r = populacao.criar(cr);
     if (r === 'limite') {
       j.eventos.push({ e: 'criacaoRecusada', motivo: 'limite', aviso: AVISO_LIMITE });
       return;
     }
     if (r === 'nao') return;
+    ultimaComida.set(cr.id, n);
+    if (ultimaComida.size > 256) ultimaComida.delete(ultimaComida.keys().next().value as number);
     if (r === 'novo' && modo === 'sobrevivencia') j.inventario.remover(c.slot, 1);
     for (const o of jogadores.values())
       o.eventos.push({

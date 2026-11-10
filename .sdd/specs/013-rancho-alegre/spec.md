@@ -70,7 +70,7 @@ Uma fazenda sem plantação e sem bichos de criação fica rasa. Por isso esta s
 - **Receitas:** pão (3 trigo, mesa); fardo de feno (9 trigo) e de volta (1 fardo dá 9 trigo); pipoca (milho na fornalha); ovo cozido (ovo na fornalha); sementes de abóbora (1 abóbora dá 4); enxada nos 5 materiais.
 - **Trocas** (iguais em todo tema): a cozinheira troca sementes e pão; o construtor, cercas e fardos de feno.
 - **Regras que protegem a criança:** a terra arada não volta a ser terra sozinha; ninguém pisoteia a lavoura; colocar bloco em cima da planta é recusado; quebrar a terra embaixo solta a planta e a semente.
-- **Na nuvem:** visitante sem permissão de construir não ara, não planta e não colhe; dois jogadores colhendo a mesma planta, só um leva.
+- **Na nuvem:** visitante sem permissão de construir não ara, não planta e não colhe; dois jogadores colhendo a mesma planta, só um leva. O visitante abre e fecha portas e porteiras (como hoje), mas não quebra nenhuma.
 
 ## Criar bichos (mecânica nova, todos os temas)
 - **Comida de cada papel** (igual em todo tema; o nome muda): cervo come trigo; coelho come semente (qualquer); raposa come frutinhas (como hoje). Peixe e criatura da noite não são criados.
@@ -82,6 +82,7 @@ Uma fazenda sem plantação e sem bichos de criação fica rasa. Por isso esta s
 - **A raposa continua igual:** domada com frutinhas, segue o dono e ajuda contra a criatura da noite.
 - **Ovo:** a galinha criada (papel coelho) bota um ovo a cada 5 minutos, mais ou menos, perto da casa dela. O ovo cozido é comida.
 - **Limite:** até 24 bichos criados por mundo (para o celular e para o servidor). No limite, aviso: "Já tem bicho demais por aqui. Que tal um curral?"
+- **Na nuvem:** criar bicho novo é mexer no mundo: o visitante sem permissão de construir não cria (como não ara nem planta). Ao bicho que já é criado ele pode dar comida, e o mesmo bicho mostra corações no máximo uma vez por segundo, para um clique repetido não encher todo mundo de corações e vozes.
 
 ## Sítio (planejador `planta: 'sitio'`)
 - Mesma região de 128 blocos, mesmo raio e lote de 7×7 do povoado de hoje. Muda o que vai em cada lote:
