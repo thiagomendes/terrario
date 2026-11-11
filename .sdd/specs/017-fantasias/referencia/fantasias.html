@@ -4,7 +4,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@500;700&family=IBM+Plex+Sans:wght@400;500;600&family=Nunito:wght@700;800&display=swap">
 <style>
-/* Layout: cabeçalho; à esquerda o palco giratório com o boneco, à direita as abas e os cartões das fantasias (empilha no celular); embaixo o que entra no jogo e o que falta decidir */
+/* Layout: cabeçalho; à esquerda o palco giratório com o boneco, à direita quem é o personagem (menina/menino, pele, cabelo), as abas e os cartões das fantasias (empilha no celular); embaixo as regras que entram no jogo e o que foi decidido */
 :root {
   --bg: #eef0f6;
   --fg: #1c1b2b;
@@ -44,22 +44,38 @@ h3 { font-size: 1.05rem; }
 .palco canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
 .palco .nome { position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%); font: 800 1rem var(--peca); background: var(--creme); padding: 6px 16px; border-radius: 999px; box-shadow: 0 3px 0 var(--creme-sombra); white-space: nowrap; }
 .painel { padding: 18px 18px 20px; display: grid; gap: 14px; align-content: start; min-width: 0; font-family: var(--peca); }
+
+.quem { display: grid; gap: 8px; padding: 10px 12px; border-radius: 14px; background: #fbefd8; }
+.quem .linha { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; font-weight: 700; font-size: 0.86rem; }
+.quem .rotulo { min-width: 52px; }
+.corpo { display: inline-flex; gap: 4px; padding: 3px; border-radius: 999px; background: #f3e6cc; }
+.corpo button { min-height: 40px; padding: 0 14px; border: 0; border-radius: 999px; background: transparent; color: var(--tinta); font: 800 0.92rem var(--peca); cursor: pointer; }
+.corpo button[aria-pressed="true"] { background: #fff; box-shadow: 0 2px 0 var(--creme-sombra); }
+.amostras { display: flex; gap: 6px; flex-wrap: wrap; }
+.amostras button { width: 28px; height: 28px; border-radius: 50%; border: 3px solid #fff; box-shadow: 0 0 0 2px var(--creme-sombra); cursor: pointer; }
+.amostras button[aria-pressed="true"] { box-shadow: 0 0 0 3px #a8610a; }
+
 .abas { display: flex; gap: 8px; flex-wrap: wrap; }
 .abas button { min-height: 44px; padding: 0 16px; border: 0; border-radius: 999px; background: #f3e6cc; color: var(--tinta); font: 800 0.95rem var(--peca); cursor: pointer; box-shadow: 0 3px 0 var(--creme-sombra); }
 .abas button[aria-selected="true"] { background: #ffd45a; }
-.abas button:focus-visible, .cartas button:focus-visible, .mundos button:focus-visible, .cores button:focus-visible { outline: 3px solid #a8610a; outline-offset: 2px; }
-.mundos { display: flex; gap: 6px; flex-wrap: wrap; }
-.mundos button { min-height: 36px; padding: 0 12px; border: 2px solid transparent; border-radius: 999px; background: #fffaf0; color: var(--tinta); font: 700 0.82rem var(--peca); cursor: pointer; }
+.abas button:focus-visible, .cartas button:focus-visible, .mundos button:focus-visible, .cores button:focus-visible, .corpo button:focus-visible, .amostras button:focus-visible, .tirar:focus-visible { outline: 3px solid #a8610a; outline-offset: 2px; }
+.mundos { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; font-weight: 700; font-size: 0.82rem; }
+.mundos button { min-height: 32px; padding: 0 10px; border: 2px solid transparent; border-radius: 999px; background: #fffaf0; color: var(--tinta); font: 700 0.78rem var(--peca); cursor: pointer; }
 .mundos button[aria-pressed="true"] { border-color: #a8610a; }
 .mundos[hidden] { display: none; }
 .cartas { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 10px; }
+.cartas .grupo { grid-column: 1 / -1; font: 800 0.8rem var(--peca); color: #7a5a30; margin: 2px 0 -4px; }
 .cartas button { position: relative; display: grid; gap: 6px; justify-items: center; padding: 10px 8px 10px; border: 3px solid transparent; border-radius: 16px; background: #fffaf0; color: var(--tinta); font: 800 0.86rem/1.2 var(--peca); cursor: pointer; box-shadow: 0 3px 0 var(--creme-sombra); text-align: center; }
 .cartas button[aria-pressed="true"] { border-color: #ffb547; background: #fff1cf; }
 .cartas img { width: 84px; height: 96px; object-fit: contain; }
 .cartas .selo { position: absolute; top: 6px; right: 6px; font: 800 0.62rem var(--peca); background: #7cc35a; color: #fff; padding: 2px 6px; border-radius: 999px; }
+.cartas .selo.meu { background: #e8862e; }
+.rodape { display: flex; gap: 10px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
 .cores { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; font-weight: 700; font-size: 0.9rem; }
 .cores button { width: 34px; height: 34px; border-radius: 50%; border: 3px solid #fff; box-shadow: 0 0 0 2px var(--creme-sombra); cursor: pointer; }
 .cores button[aria-pressed="true"] { box-shadow: 0 0 0 3px #a8610a; }
+.tirar { min-height: 40px; padding: 0 14px; border: 2px solid #d9c39a; border-radius: 999px; background: #fffaf0; color: var(--tinta); font: 800 0.86rem var(--peca); cursor: pointer; }
+.tirar[aria-pressed="true"] { background: #f3e6cc; }
 .aviso { margin: 0; font-size: 0.85rem; color: #6a5a48; font-weight: 700; }
 
 .cartoes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
@@ -71,25 +87,39 @@ h3 { font-size: 1.05rem; }
 
 <main class="pagina">
   <header>
-    <div class="olho">Terrário · esboço para depois do Rancho Alegre</div>
+    <div class="olho">Terrário · esboço da spec 017</div>
     <h1>Fantasias do Terrário</h1>
-    <p class="intro">Pedido da filha (princesas) e do filho (heróis) do dono. As fantasias são looks prontos que vestem o boneco num toque; depois ainda dá para trocar a cor. Além delas, cada tema tem as suas fantasias, livres para usar em qualquer mundo. Tudo é desenho próprio: nada lembra personagem de filme ou desenho conhecido. Toque numa fantasia para vestir e arraste o boneco para girar.</p>
+    <p class="intro">Pedido da filha (princesas) e do filho (heróis) do dono. As fantasias são looks prontos que vestem o personagem da criança num toque, sem trocar quem ele é: corpo, pele, rosto e cabelo continuam os dela. Depois ainda dá para trocar a cor. Tudo é desenho próprio: nada lembra personagem de filme ou desenho conhecido. Escolha Menina ou Menino, toque numa fantasia para vestir e arraste o boneco para girar.</p>
   </header>
 
   <section class="editor" aria-label="Escolher fantasia">
-    <div class="palco" id="palco" role="img" aria-label="O boneco de brinquedo vestindo a fantasia escolhida, girando devagar">
+    <div class="palco" id="palco" role="img" aria-label="O boneco de brinquedo da criança vestindo a fantasia escolhida, girando devagar">
       <div class="nome" id="nomeFantasia">Princesa das Flores</div>
     </div>
     <div class="painel">
+      <div class="quem" aria-label="O personagem da criança">
+        <div class="linha">
+          <span class="rotulo">Corpo:</span>
+          <div class="corpo" role="group" aria-label="Corpo">
+            <button type="button" data-corpo="menina" aria-pressed="true">Menina</button>
+            <button type="button" data-corpo="menino" aria-pressed="false">Menino</button>
+          </div>
+        </div>
+        <div class="linha"><span class="rotulo">Pele:</span><div class="amostras" id="peles" role="group" aria-label="Pele"></div></div>
+        <div class="linha"><span class="rotulo">Cabelo:</span><div class="amostras" id="cabelos" role="group" aria-label="Cor do cabelo"></div></div>
+      </div>
       <div class="abas" role="tablist" aria-label="Tipos de fantasia">
-        <button type="button" role="tab" data-aba="princesas" aria-selected="true">Princesas</button>
+        <button type="button" role="tab" data-aba="realeza" aria-selected="true">Realeza</button>
         <button type="button" role="tab" data-aba="herois" aria-selected="false">Heróis</button>
         <button type="button" role="tab" data-aba="mundo" aria-selected="false">Dos temas</button>
       </div>
-      <div class="mundos" id="mundos" hidden role="group" aria-label="Tema"></div>
+      <div class="mundos" id="mundos" hidden role="group" aria-label="Mundo aberto (de mentirinha)"></div>
       <div class="cartas" id="cartas"></div>
-      <div class="cores" id="cores"><span>Cor:</span></div>
-      <p class="aviso" id="aviso">Todas as fantasias servem para qualquer personagem.</p>
+      <div class="rodape">
+        <div class="cores" id="cores"><span>Cor:</span></div>
+        <button type="button" class="tirar" id="tirar" aria-pressed="false">Tirar fantasia</button>
+      </div>
+      <p class="aviso" id="aviso"></p>
     </div>
   </section>
 
@@ -99,26 +129,35 @@ h3 { font-size: 1.05rem; }
       <ul>
         <li>Aba nova <b>Fantasias</b>, antes das peças. Um toque veste tudo: roupa, cores e enfeite.</li>
         <li>Depois de vestir, dá para trocar a cor principal (4 a 6 opções por fantasia) e voltar a personalizar peça por peça.</li>
-        <li><b>Tirar fantasia</b> volta para o look de antes, sem perder nada.</li>
-        <li>As cartinhas mostram o próprio boneco vestido, como as miniaturas de hoje.</li>
+        <li><b>Tirar fantasia</b> volta exatamente para o look de antes, sem perder nada.</li>
+        <li>As cartinhas mostram o próprio personagem da criança vestido (mesma pele, rosto e cabelo), como as miniaturas de hoje.</li>
+      </ul>
+    </div>
+    <div class="cartao">
+      <h3>Menina e menino</h3>
+      <ul>
+        <li><b>A fantasia veste o personagem da criança</b>, sem trocar quem ele é: corpo, pele, rosto (menina com cílios e boquinha rosada) e cabelo continuam os dela.</li>
+        <li>A heroína é uma heroína: o rabo de cavalo e as mechas aparecem por baixo da máscara e por cima da capa; chapéus, capuzes e o capacete deixam o cabelo à mostra.</li>
+        <li><b>Os nomes acompanham o corpo</b>, como Aventureiro/Aventureira na 012: Heroína/Herói Relâmpago, Fazendeira/Fazendeiro, Guardiã/Guardião da Mata.</li>
+        <li><b>Princesa é sempre feminina.</b> No corpo de menino, os mesmos 4 cartões da Realeza viram príncipes, com as mesmas cores: casaco com faixa, capa curta, coroa e cetro, sem saia.</li>
       </ul>
     </div>
     <div class="cartao">
       <h3>Peças novas que as fantasias usam</h3>
       <ul>
         <li><b>Princesas:</b> saia rodada em camadas, mangas bufantes, coroa, tiara e varinha de estrela na mão.</li>
-        <li><b>Heróis:</b> capa que balança ao correr, máscara nos olhos, emblema no peito (estrela, raio, coração, folha), cinto e botas.</li>
+        <li><b>Príncipes:</b> casaco com faixa atravessada, dragonas, medalha com o símbolo do cartão, capa curta com gola de pelúcia, coroa e cetro.</li>
+        <li><b>Heróis:</b> capa que balança ao correr, máscara nos olhos (com pontinhas na da heroína), emblema no peito (estrela, raio, coração, folha), cinto e botas.</li>
         <li><b>Dos temas:</b> macacão e camisa xadrez, colete com lenço, jaleco, traje espacial com capacete de bolha, capuz de dinossauro, capa de folhas.</li>
-        <li>Tudo de brinquedo, com peças fundidas para não pesar no celular.</li>
-        <li><b>Tudo encaixado:</b> chapéu, coroa, tiara, capuz e capa assentam no boneco como peça de montar, sem vão (pedido do dono). Um teste confere que nenhuma peça fica solta da cabeça ou do corpo.</li>
+        <li><b>Tudo encaixado:</b> chapéu, coroa, tiara, capuz e capa assentam no boneco como peça de montar, sem vão (pedido do dono). Um teste confere que nenhuma peça fica solta da cabeça ou do corpo, nos dois corpos e em todos os cabelos.</li>
       </ul>
     </div>
     <div class="cartao">
-      <h3>Fantasias dos temas</h3>
+      <h3>Ordem na tela</h3>
       <ul>
-        <li>Cada tema tem 2: no Rancho, fazendeira e vaqueira; na Lua, astronauta; na Era dos Dinos, a fantasia de dino; e assim por diante.</li>
-        <li>Livres: servem em qualquer mundo, como as outras. Nada muda quando o jogador troca de mundo.</li>
-        <li>Ao criar um mundo, o jogo sugere: "Quer vestir a fantasia do Rancho Alegre?" (Sim ou Agora não). É só uma sugestão.</li>
+        <li>Abas sempre na mesma ordem: <b>Realeza · Heróis · Dos temas</b>. Nada muda de lugar pelo corpo escolhido: a criança aprende onde fica cada coisa.</li>
+        <li>Em "Dos temas", o tema do mundo aberto vem primeiro (no esboço dá para fingir qual mundo está aberto); depois os outros, todos livres para qualquer mundo.</li>
+        <li>Ao abrir: a aba usada da última vez; vindo da sugestão de criar mundo ("Quer vestir a fantasia do Rancho Alegre?"), já abre em "Dos temas".</li>
       </ul>
     </div>
     <div class="cartao">
@@ -129,11 +168,10 @@ h3 { font-size: 1.05rem; }
       </ul>
     </div>
     <div class="cartao decidir">
-      <h3>Para você decidir</h3>
+      <h3>Decidido com o dono (10 nov)</h3>
       <ul>
-        <li><b>Quem vê o quê:</b> no esboço, todas as fantasias servem para qualquer personagem; no corpo feminino as princesas aparecem primeiro e no masculino os heróis. Fica assim, ou separa?</li>
-        
-        <li><b>Quando:</b> recomendo como uma spec pequena depois da 016 (construções protegidas), ou junto da 015 se você quiser estrear tudo de uma vez.</li>
+        <li><b>Quem vê o quê:</b> todo mundo vê as mesmas três abas, na mesma ordem. O corpo escolhido muda só o jeito de vestir e o nome: na Realeza, princesas para menina e príncipes para menino; nas outras abas, a mesma fantasia com o nome no feminino ou no masculino.</li>
+        <li><b>Por quê:</b> no esboço anterior a "Heroína Estrela" saiu com cara de menino, porque a fantasia trocava o cabelo e o rosto. Agora a fantasia só veste; quem a criança é não muda.</li>
       </ul>
     </div>
   </section>
@@ -179,81 +217,148 @@ const estrela = (r, cor, prof = 0.03, brilho = 0) => forma(Array.from({ length: 
 const raio = (s, cor) => forma([[0.02, 0.1], [-0.05, 0], [0, 0], [-0.03, -0.1], [0.06, 0.02], [0.01, 0.02], [0.05, 0.1]].map(([x, y]) => [x * s * 10, y * s * 10]), 0.03, cor);
 const coracao = (s, cor) => { const p = []; for (let i = 0; i <= 40; i++) { const t = (i / 40) * Math.PI * 2; p.push([16 * Math.sin(t) ** 3 * s * 0.01, (13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t)) * s * 0.01]); } return forma(p, 0.03, cor); };
 const folha = (s, cor) => { const p = []; for (let i = 0; i <= 30; i++) { const t = (i / 30) * Math.PI * 2; p.push([Math.sin(t) * 0.55 * s, Math.cos(t) * s]); } return forma(p, 0.025, cor); };
+const concha = (r, cor) => forma(Array.from({ length: 9 }, (_, i) => { const a = Math.PI * (i / 8); return [Math.cos(a) * r, Math.sin(a) * r]; }).concat([[0, -r * 0.22]]), 0.03, cor);
+function floco(r, cor) { const f = new THREE.Group(); for (let i = 0; i < 3; i++) f.add(em(caixa(r * 2, r * 0.25, 0.03, cor, 0.012, 0.25), 0, 0, 0, 0, 0, (i * Math.PI) / 3)); f.add(bola(r * 0.32, '#bfe8ff', 1, 1, 1, 0.3)); return f; }
+function flor(cor) { const g = new THREE.Group(); for (let i = 0; i < 5; i++) { const a = (i / 5) * Math.PI * 2; g.add(em(bola(0.045, cor, 1, 1, 0.5), Math.cos(a) * 0.05, Math.sin(a) * 0.05, 0)); } g.add(em(bola(0.035, '#ffd45a', 1, 1, 0.6), 0, 0, 0.02)); return g; }
+
+// ---------- o personagem da criança (quem ele é não muda com a fantasia) ----------
+const PELES = ['#f3cfae', '#e8b48a', '#b97a4e', '#7a4a2e'];
+const CABELOS = ['#2e2018', '#6b3a1e', '#d9a54a', '#b8461e'];
+const P = { corpo: 'menina', pele: '#e8b48a', cabelo: '#6b3a1e' };
+const menina = () => P.corpo === 'menina';
+const BASE = { menina: { camisa: '#e8668e', calca: '#3b4f7a', sapato: '#ffffff' }, menino: { camisa: '#3b6fb6', calca: '#2d3a4f', sapato: '#4a3426' } };
+
+// cabelo da criança: menina com mechas na frente das orelhas, rabo de cavalo e laço; menino curto com topete e costeletas
+// o: capuz (cobre o topo), capacete (bolha: rabo vira coque)
+function cabelo(cab, o) {
+  const c = P.cabelo;
+  if (!o.capuz) {
+    cab.add(em(caixa(0.77, 0.3, 0.7, c, 0.15), 0, 0.22, 0));
+    cab.add(em(caixa(0.77, menina() ? 0.55 : 0.43, 0.16, c, 0.07), 0, menina() ? -0.05 : 0.02, -0.3));
+  }
+  if (menina()) {
+    const curto = o.capacete;
+    for (const s of [-1, 1]) {
+      cab.add(em(caixa(0.11, curto ? 0.4 : 0.56, 0.26, c, 0.05), s * 0.4, curto ? -0.04 : -0.1, 0.0));
+      cab.add(em(bola(0.07, c, 1, 1.1, 1.6), s * 0.4, curto ? -0.24 : -0.38, 0.0));
+    }
+    if (curto) {
+      cab.add(em(bola(0.12, c), 0, 0.12, -0.36));
+      cab.add(em(bola(0.05, '#ff5a8a'), 0, 0.12, -0.24));
+    } else {
+      // rabo de cavalo que cai por cima da capa
+      const r = new THREE.Group(); r.position.set(0, 0.08, -0.4); cab.add(r);
+      r.add(em(bola(0.13, c, 1, 1.2, 1), 0, -0.1, -0.06));
+      r.add(em(bola(0.11, c, 1, 1.25, 1), 0, -0.3, -0.1));
+      r.add(em(bola(0.08, c, 1, 1.2, 1), 0, -0.47, -0.08));
+      // laço
+      r.add(em(bola(0.05, '#ff5a8a'), 0, 0.02, -0.02));
+      for (const s of [-1, 1]) r.add(em(bola(0.075, '#ff5a8a', 1.1, 0.75, 0.5), s * 0.1, 0.03, -0.03, 0, 0, s * 0.4));
+      b_rabo = r;
+    }
+  } else {
+    if (!o.capuz) {
+      cab.add(em(caixa(0.18, 0.1, 0.16, c, 0.04), 0.1, 0.39, 0.16, 0, 0, -0.35));
+      cab.add(em(caixa(0.16, 0.09, 0.15, c, 0.04), -0.06, 0.4, 0.2, 0, 0, 0.25));
+    }
+  }
+}
+let b_rabo = null;
+
+// rosto: menina com cílios e boquinha rosada; menino simples
+function olhos(cab, z) {
+  for (const s of [-1, 1]) {
+    cab.add(em(bola(0.075, '#231a28', 0.85, 1.1, 0.5), s * 0.15, -0.04, z));
+    cab.add(em(bola(0.024, '#ffffff', 1, 1, 0.5), s * 0.15 + 0.025, 0, z + 0.025));
+    if (menina()) for (const a of [0.25, 0.75, 1.2]) cab.add(em(caixa(0.022, 0.07, 0.02, '#231a28', 0.008), s * (0.15 + Math.sin(a) * 0.075), -0.04 + Math.cos(a) * 0.085 + 0.02, z + 0.01, 0, 0, -s * a));
+  }
+}
+function rosto(cab) {
+  olhos(cab, 0.33);
+  for (const s of [-1, 1]) cab.add(em(bola(menina() ? 0.055 : 0.04, menina() ? '#ff8fa6' : '#efa88e', 1.4, 0.75, 0.3), s * 0.22, -0.16, 0.32));
+  if (menina()) cab.add(em(bola(0.046, '#e0507a', 1.5, 0.62, 0.35), 0, -0.2, 0.33));
+  else cab.add(em(caixa(0.1, 0.025, 0.02, '#7a3a36', 0.01), 0, -0.2, 0.33));
+}
 
 // ---------- boneco com juntas (o B do jogo) ----------
-const BASE = { pele: '#e8b48a', cabelo: '#4a2c1a', camisa: '#3b6fb6', calca: '#2d3a4f', sapato: '#4a3426' };
-function boneco(o) {
+function boneco(o = {}) {
+  const base = BASE[P.corpo];
   const raiz = new THREE.Group();
   const corpo = new THREE.Group(); raiz.add(corpo);
   const pernas = [];
   for (const s of [-1, 1]) {
     const p = new THREE.Group(); p.position.set(s * 0.11, 0.34, 0);
-    p.add(em(caixa(0.17, 0.24, 0.18, o.calca ?? BASE.calca, 0.07), 0, -0.12, 0));
+    p.add(em(caixa(0.17, 0.24, 0.18, o.calca ?? base.calca, 0.07), 0, -0.12, 0));
     if (o.botas) p.add(em(caixa(0.2, 0.2, 0.3, o.botas, 0.06), 0, -0.24, 0.03));
-    else p.add(em(caixa(0.21, 0.13, 0.28, o.sapato ?? BASE.sapato, 0.06), 0, -0.275, 0.03));
+    else p.add(em(caixa(0.21, 0.13, 0.28, o.sapato ?? base.sapato, 0.06), 0, -0.275, 0.03));
     corpo.add(p); pernas.push(p);
   }
   const tronco = new THREE.Group(); tronco.position.y = 0.36; corpo.add(tronco);
-  tronco.add(em(caixa(0.46, 0.42, 0.34, o.camisa ?? BASE.camisa, 0.13), 0, 0.19, 0));
+  tronco.add(em(caixa(0.46, 0.42, 0.34, o.camisa ?? base.camisa, 0.13), 0, 0.19, 0));
   const bracos = [];
   for (const s of [-1, 1]) {
     const b = new THREE.Group(); b.position.set(s * 0.29, 0.36, 0);
-    b.add(em(caixa(0.13, 0.26, 0.14, o.manga ?? o.camisa ?? BASE.camisa, 0.06), 0, -0.13, 0));
-    b.add(em(bola(0.085, o.luvas ?? o.pele ?? BASE.pele), 0, -0.3, 0));
+    b.add(em(caixa(0.13, 0.26, 0.14, o.manga ?? o.camisa ?? base.camisa, 0.06), 0, -0.13, 0));
+    b.add(em(bola(0.085, o.luvas ?? P.pele), 0, -0.3, 0));
     if (o.bufante) b.add(em(bola(0.12, o.bufante, 1.1, 0.9, 1.1), 0, -0.02, 0));
     tronco.add(b); bracos.push(b);
   }
   const cab = new THREE.Group(); cab.position.y = 0.74; tronco.add(cab);
-  cab.add(caixa(0.72, 0.68, 0.65, o.pele ?? BASE.pele, 0.18));
-  if (!o.semCabelo) {
-    cab.add(em(caixa(0.77, 0.3, 0.7, o.cabelo ?? BASE.cabelo, 0.15), 0, 0.22, 0));
-    cab.add(em(caixa(0.77, 0.43, 0.16, o.cabelo ?? BASE.cabelo, 0.07), 0, 0.02, -0.3));
-    if (o.longo) { cab.add(em(caixa(0.8, 0.75, 0.2, o.cabelo, 0.09), 0, -0.2, -0.3)); for (const s of [-1, 1]) cab.add(em(caixa(0.12, 0.55, 0.3, o.cabelo, 0.06), s * 0.39, -0.1, -0.05)); }
-  }
-  for (const s of [-1, 1]) {
-    cab.add(em(bola(0.075, '#231a28', 0.85, 1.1, 0.5), s * 0.15, -0.04, 0.33));
-    cab.add(em(bola(0.024, '#ffffff', 1, 1, 0.5), s * 0.15 + 0.025, 0, 0.355));
-    cab.add(em(bola(0.05, '#ff9aa8', 1.4, 0.75, 0.3), s * 0.22, -0.16, 0.32));
-  }
-  cab.add(em(bola(0.04, '#c85a6a', 1.4, 0.5, 0.3), 0, -0.2, 0.33));
-  raiz.userData = { corpo, tronco, cab, pernas, bracos };
+  cab.add(caixa(0.72, 0.68, 0.65, P.pele, 0.18));
+  b_rabo = null;
+  cabelo(cab, o);
+  rosto(cab);
+  raiz.userData = { corpo, tronco, cab, pernas, bracos, rabo2: b_rabo, pose: 'acena' };
   return raiz;
 }
 
 // ---------- as fantasias ----------
 // cada uma é uma receita de peças; `cores` são as opções da cor principal (a primeira é a padrão)
+// `nome` com { menina, menino } acompanha o corpo escolhido
 const FANTASIAS = {
-  princesas: [
-    { id: 'flores', nome: 'Princesa das Flores', cores: ['#ff8fc8', '#ffd45a', '#b89cff', '#7cc6ff', '#ff9b6b'], montar: (c) => princesa(c, 'tiara', 'flor') },
-    { id: 'estrelas', nome: 'Princesa das Estrelas', cores: ['#6f78ff', '#2f3a8a', '#ff8fc8', '#3fb8a8'], montar: (c) => princesa(c, 'coroa', 'estrela') },
-    { id: 'mar', nome: 'Princesa do Mar', cores: ['#3fc4d8', '#7cc6ff', '#5ad8a8', '#b89cff'], montar: (c) => princesa(c, 'concha', 'concha') },
-    { id: 'neve', nome: 'Princesa da Neve', cores: ['#dff4ff', '#cfd8ff', '#ffe4f2', '#e8ffe8'], montar: (c) => princesa(c, 'floco', 'floco') },
+  realeza: [
+    { id: 'flores', nome: { menina: 'Princesa das Flores', menino: 'Príncipe das Flores' }, cores: ['#ff8fc8', '#ffd45a', '#b89cff', '#7cc6ff', '#ff9b6b'], montar: (c) => realeza(c, 'tiara', 'flor') },
+    { id: 'estrelas', nome: { menina: 'Princesa das Estrelas', menino: 'Príncipe das Estrelas' }, cores: ['#6f78ff', '#2f3a8a', '#ff8fc8', '#3fb8a8'], montar: (c) => realeza(c, 'coroa', 'estrela') },
+    { id: 'mar', nome: { menina: 'Princesa do Mar', menino: 'Príncipe do Mar' }, cores: ['#3fc4d8', '#7cc6ff', '#5ad8a8', '#b89cff'], montar: (c) => realeza(c, 'concha', 'concha') },
+    { id: 'neve', nome: { menina: 'Princesa da Neve', menino: 'Príncipe da Neve' }, cores: ['#dff4ff', '#cfd8ff', '#ffe4f2', '#e8ffe8'], montar: (c) => realeza(c, 'floco', 'floco') },
   ],
   herois: [
-    { id: 'relampago', nome: 'Herói Relâmpago', cores: ['#2f6fd8', '#7a3ad8', '#1aa88a', '#e8462e'], montar: (c) => heroi(c, '#ffd45a', 'raio') },
-    { id: 'estrela', nome: 'Heroína Estrela', cores: ['#ff6a9a', '#8a4ab8', '#ffb000', '#3fb8a8'], montar: (c) => heroi(c, '#ffffff', 'estrela') },
-    { id: 'coracao', nome: 'Herói Coração', cores: ['#3fae5a', '#2f6fd8', '#ff8a3d', '#8a4ab8'], montar: (c) => heroi(c, '#ff5a6a', 'coracao') },
-    { id: 'folha', nome: 'Heroína da Mata', cores: ['#4caa3a', '#2f8a7a', '#c9a03a', '#5a7a2a'], montar: (c) => heroi(c, '#d6ff8a', 'folha') },
+    { id: 'relampago', nome: { menina: 'Heroína Relâmpago', menino: 'Herói Relâmpago' }, cores: ['#2f6fd8', '#7a3ad8', '#1aa88a', '#e8462e'], montar: (c) => heroi(c, '#ffd45a', 'raio') },
+    { id: 'estrela', nome: { menina: 'Heroína Estrela', menino: 'Herói Estrela' }, cores: ['#ff6a9a', '#8a4ab8', '#ffb000', '#3fb8a8'], montar: (c) => heroi(c, '#ffffff', 'estrela') },
+    { id: 'coracao', nome: { menina: 'Heroína Coração', menino: 'Herói Coração' }, cores: ['#3fae5a', '#2f6fd8', '#ff8a3d', '#8a4ab8'], montar: (c) => heroi(c, '#ff5a6a', 'coracao') },
+    { id: 'folha', nome: { menina: 'Heroína da Mata', menino: 'Herói da Mata' }, cores: ['#4caa3a', '#2f8a7a', '#c9a03a', '#5a7a2a'], montar: (c) => heroi(c, '#d6ff8a', 'folha') },
   ],
-  mundo: {
-    'Rancho Alegre': [
-      { id: 'fazendeira', nome: 'Fazendeira', cores: ['#3f6fb8', '#5a4a6e', '#3f8a5a'], montar: (c) => fazendeira(c) },
-      { id: 'vaqueira', nome: 'Vaqueira', cores: ['#a8733f', '#7a4826', '#c9a03a'], montar: (c) => vaqueira(c) },
-    ],
-    'Exploração Lunar': [{ id: 'astronauta', nome: 'Astronauta', cores: ['#f2f4f8', '#ffd45a', '#ff8fb3'], montar: (c) => astronauta(c) }],
-    'Era dos Dinos': [{ id: 'dino', nome: 'Fantasia de Dino', cores: ['#5fbf4a', '#ff8a3d', '#8a6aff', '#3fb8d8'], montar: (c) => dino(c) }],
-    'Doce Reino': [{ id: 'confeiteira', nome: 'Confeiteira', cores: ['#ff9ac8', '#9ad8ff', '#ffe08a'], montar: (c) => confeiteira(c) }],
-    'Planeta Vivo': [{ id: 'cientista', nome: 'Cientista', cores: ['#f6f6f6', '#cfe8ff', '#e8ffe0'], montar: (c) => cientista(c) }],
-    'Mata Encantada': [{ id: 'guardia', nome: 'Guardiã da Mata', cores: ['#4caa3a', '#2f8a5a', '#a8c83a'], montar: (c) => guardia(c) }],
-    'Bruma e Luz': [{ id: 'lanterneira', nome: 'Lanterneira', cores: ['#6a5ab8', '#2f6f8f', '#8a4a6a'], montar: (c) => lanterneira(c) }],
-  },
+  mundo: [
+    { tema: 'Rancho Alegre', curto: 'Rancho', fantasias: [
+      { id: 'fazendeira', nome: { menina: 'Fazendeira', menino: 'Fazendeiro' }, cores: ['#3f6fb8', '#5a4a6e', '#3f8a5a'], montar: (c) => fazendeira(c) },
+      { id: 'vaqueira', nome: { menina: 'Vaqueira', menino: 'Vaqueiro' }, cores: ['#a8733f', '#7a4826', '#c9a03a'], montar: (c) => vaqueira(c) },
+    ] },
+    { tema: 'Exploração Lunar', curto: 'Lua', fantasias: [{ id: 'astronauta', nome: 'Astronauta', cores: ['#f2f4f8', '#ffd45a', '#ff8fb3'], montar: (c) => astronauta(c) }] },
+    { tema: 'Era dos Dinos', curto: 'Dinos', fantasias: [{ id: 'dino', nome: 'Fantasia de Dino', cores: ['#5fbf4a', '#ff8a3d', '#8a6aff', '#3fb8d8'], montar: (c) => dino(c) }] },
+    { tema: 'Doce Reino', curto: 'Doce', fantasias: [{ id: 'confeiteira', nome: { menina: 'Confeiteira', menino: 'Confeiteiro' }, cores: ['#ff9ac8', '#9ad8ff', '#ffe08a'], montar: (c) => confeiteira(c) }] },
+    { tema: 'Planeta Vivo', curto: 'Planeta', fantasias: [{ id: 'cientista', nome: 'Cientista', cores: ['#f6f6f6', '#cfe8ff', '#e8ffe0'], montar: (c) => cientista(c) }] },
+    { tema: 'Mata Encantada', curto: 'Mata', fantasias: [{ id: 'guardia', nome: { menina: 'Guardiã da Mata', menino: 'Guardião da Mata' }, cores: ['#4caa3a', '#2f8a5a', '#a8c83a'], montar: (c) => guardia(c) }] },
+    { tema: 'Bruma e Luz', curto: 'Bruma', fantasias: [{ id: 'lanterneira', nome: { menina: 'Lanterneira', menino: 'Lanterneiro' }, cores: ['#6a5ab8', '#2f6f8f', '#8a4a6a'], montar: (c) => lanterneira(c) }] },
+  ],
 };
+const nomeDe = (f) => (typeof f.nome === 'string' ? f.nome : f.nome[P.corpo]);
+const SEM = { id: 'sem', nome: { menina: 'Do jeito dela', menino: 'Do jeito dele' }, cores: [], montar: () => boneco() };
 
 function claro(hex, k) { const c = new THREE.Color(hex); c.lerp(new THREE.Color('#ffffff'), k); return '#' + c.getHexString(); }
 function escuro(hex, k) { const c = new THREE.Color(hex); c.multiplyScalar(1 - k); return '#' + c.getHexString(); }
 
+const emblemaReal = (tipo, cor) => (tipo === 'estrela' ? estrela(0.07, cor ?? '#ffd45a', 0.03, 0.35) : tipo === 'flor' ? flor(cor ?? '#ff8fc8') : tipo === 'concha' ? concha(0.07, cor ?? '#ffd0e0') : floco(0.07, '#ffffff'));
+function coroa(cab, frente) {
+  const c = new THREE.Group(); c.position.y = 0.42; cab.add(c);
+  c.add(cil(0.26, 0.26, 0.1, '#ffd45a'));
+  for (let i = 0; i < 5; i++) { const a = (i / 5) * Math.PI * 2; c.add(em(cil(0.0, 0.06, 0.14, '#ffd45a', 8), Math.sin(a) * 0.22, 0.11, Math.cos(a) * 0.22)); c.add(em(bola(0.03, ['#ff5a8a', '#5ad8ff', '#7cff8a'][i % 3], 1, 1, 1, 0.3), Math.sin(a) * 0.26, 0.0, Math.cos(a) * 0.26)); }
+  if (frente) c.add(em(frente, 0, 0.02, 0.28));
+}
+
+function realeza(cor, enfeite, simbolo) { return menina() ? princesa(cor, enfeite, simbolo) : principe(cor, simbolo); }
+
 function princesa(cor, enfeite, varinha) {
-  const b = boneco({ camisa: cor, manga: claro(cor, 0.35), bufante: claro(cor, 0.25), calca: claro(cor, 0.2), sapato: '#ffffff', cabelo: '#8a4a28', longo: true });
+  const b = boneco({ camisa: cor, manga: claro(cor, 0.35), bufante: claro(cor, 0.25), calca: claro(cor, 0.2), sapato: '#ffffff' });
   const { tronco, cab, bracos } = b.userData;
   // saia rodada em camadas (sino), presa no tronco
   const saia = new THREE.Group(); saia.position.y = 0.02; tronco.add(saia);
@@ -263,45 +368,77 @@ function princesa(cor, enfeite, varinha) {
   tronco.add(em(caixa(0.47, 0.06, 0.35, claro(cor, 0.5), 0.03), 0, 0.02, 0));
   tronco.add(em(bola(0.05, '#ffd45a', 1, 1, 0.5, 0.2), 0, 0.3, 0.17));
   // enfeite da cabeça
-  if (enfeite === 'coroa') {
-    const c = new THREE.Group(); c.position.y = 0.42; cab.add(c);
-    c.add(cil(0.26, 0.26, 0.1, '#ffd45a'));
-    for (let i = 0; i < 5; i++) { const a = (i / 5) * Math.PI * 2; c.add(em(cil(0.0, 0.06, 0.14, '#ffd45a', 8), Math.sin(a) * 0.22, 0.11, Math.cos(a) * 0.22)); c.add(em(bola(0.03, ['#ff5a8a', '#5ad8ff', '#7cff8a'][i % 3], 1, 1, 1, 0.3), Math.sin(a) * 0.26, 0.0, Math.cos(a) * 0.26)); }
-  } else if (enfeite === 'tiara') {
+  if (enfeite === 'coroa') coroa(cab);
+  else if (enfeite === 'tiara') {
     // tiara de arco: abraça o cabelo de orelha a orelha (encaixada, sem vão)
     cab.add(em(new THREE.Mesh(new THREE.TorusGeometry(0.4, 0.04, 10, 32, Math.PI), mat('#ffd45a')), 0, -0.02, 0.1, 0, 0, 0));
     for (const [a, c] of [[Math.PI * 0.32, '#ff5a8a'], [Math.PI * 0.5, '#ffffff'], [Math.PI * 0.68, '#ffd45a']]) cab.add(em(flor(c), Math.cos(a) * 0.41, -0.02 + Math.sin(a) * 0.41, 0.14));
   } else if (enfeite === 'concha') {
-    cab.add(em(forma(Array.from({ length: 9 }, (_, i) => { const a = Math.PI * (i / 8); return [Math.cos(a) * 0.18, Math.sin(a) * 0.18]; }).concat([[0, -0.04]]), 0.04, '#ffd0e0'), 0, 0.46, 0.1));
+    cab.add(em(concha(0.18, '#ffd0e0'), 0, 0.46, 0.1));
     cab.add(em(bola(0.045, '#ffffff', 1, 1, 1, 0.3), 0.2, 0.36, 0.2));
   } else if (enfeite === 'floco') {
-    const f = new THREE.Group(); f.position.set(0, 0.5, 0.12); cab.add(f);
-    for (let i = 0; i < 3; i++) f.add(em(caixa(0.32, 0.04, 0.03, '#ffffff', 0.015, 0.25), 0, 0, 0, 0, 0, (i * Math.PI) / 3));
-    f.add(bola(0.05, '#bfe8ff', 1, 1, 1, 0.3));
+    cab.add(em(floco(0.16, '#ffffff'), 0, 0.5, 0.12));
   }
   // varinha na mão
   const v = new THREE.Group(); v.position.set(0, -0.32, 0.05); bracos[1].add(v);
   v.add(em(cil(0.02, 0.02, 0.4, '#ffffff', 10), 0, 0.15, 0.08, 0.6, 0, 0));
-  const ponta = varinha === 'estrela' || varinha === 'floco' ? estrela(0.09, '#ffd45a', 0.03, 0.35) : varinha === 'flor' ? flor('#ff8fc8') : forma(Array.from({ length: 9 }, (_, i) => { const a = Math.PI * (i / 8); return [Math.cos(a) * 0.08, Math.sin(a) * 0.08]; }).concat([[0, -0.02]]), 0.03, '#ffd0e0');
+  const ponta = varinha === 'estrela' || varinha === 'floco' ? estrela(0.09, '#ffd45a', 0.03, 0.35) : varinha === 'flor' ? flor('#ff8fc8') : concha(0.08, '#ffd0e0');
   v.add(em(ponta, 0, 0.33, 0.2, 0.6, 0, 0));
   b.userData.pose = 'princesa'; b.userData.saia = saia;
   return b;
 }
-function flor(cor) { const g = new THREE.Group(); for (let i = 0; i < 5; i++) { const a = (i / 5) * Math.PI * 2; g.add(em(bola(0.045, cor, 1, 1, 0.5), Math.cos(a) * 0.05, Math.sin(a) * 0.05, 0)); } g.add(em(bola(0.035, '#ffd45a', 1, 1, 0.6), 0, 0, 0.02)); return g; }
+
+// príncipe: casaco com faixa, dragonas, capa curta e coroa; sem saia. Mesmas cores do cartão da princesa
+function principe(cor, simbolo) {
+  const escuroCasaco = escuro(cor, 0.12);
+  const b = boneco({ camisa: escuroCasaco, manga: escuroCasaco, calca: escuro(cor, 0.5), botas: '#3b2a1e', luvas: '#ffffff' });
+  const { tronco, cab, bracos } = b.userData;
+  // casaco que desce um pouco abaixo da cintura (barra dourada), sem rodar
+  tronco.add(em(caixa(0.48, 0.5, 0.36, escuroCasaco, 0.12), 0, 0.14, 0));
+  tronco.add(em(caixa(0.49, 0.05, 0.37, '#ffd45a', 0.02), 0, -0.09, 0));
+  tronco.add(em(caixa(0.49, 0.06, 0.37, escuro(cor, 0.55), 0.02), 0, 0.03, 0));
+  tronco.add(em(caixa(0.08, 0.07, 0.02, '#ffd45a', 0.015), 0, 0.03, 0.19));
+  // faixa atravessada do ombro à cintura
+  tronco.add(em(caixa(0.09, 0.6, 0.03, '#ffffff', 0.02), 0.01, 0.2, 0.185, 0, 0, 0.72));
+  tronco.add(em(caixa(0.05, 0.6, 0.032, '#ffd45a', 0.015), 0.01, 0.2, 0.19, 0, 0, 0.72));
+  // medalha com o símbolo do cartão
+  tronco.add(em(bola(0.055, '#ffd45a', 1, 1, 0.4, 0.15), 0.13, 0.3, 0.19));
+  tronco.add(em(emblemaReal(simbolo), 0.13, 0.3, 0.215));
+  // gola alta
+  tronco.add(em(caixa(0.34, 0.06, 0.3, '#ffd45a', 0.02), 0, 0.41, 0));
+  // dragonas
+  for (const br of bracos) { br.add(em(caixa(0.17, 0.05, 0.17, '#ffd45a', 0.02), 0, 0.0, 0)); br.add(em(caixa(0.14, 0.06, 0.15, claro(cor, 0.5), 0.02), 0, -0.24, 0)); }
+  // capa curta com gola de pelúcia
+  const capa = new THREE.Group(); capa.position.set(0, 0.38, -0.17); tronco.add(capa);
+  capa.add(em(caixa(0.64, 0.5, 0.06, claro(cor, 0.15), 0.03), 0, -0.25, -0.03));
+  capa.add(em(caixa(0.6, 0.46, 0.02, '#ffd45a', 0.01), 0, -0.24, -0.065));
+  capa.add(em(caixa(0.56, 0.42, 0.02, claro(cor, 0.15), 0.01), 0, -0.24, -0.075));
+  for (let i = 0; i < 7; i++) capa.add(em(bola(0.055, '#ffffff'), -0.27 + i * 0.09, 0.0, 0.02));
+  for (let i = 0; i < 7; i++) capa.add(em(bola(0.045, '#ffffff'), -0.27 + i * 0.09, -0.5, -0.03));
+  coroa(cab, emblemaReal(simbolo));
+  // cetro na mão
+  const v = new THREE.Group(); v.position.set(0, -0.32, 0.05); bracos[1].add(v);
+  v.add(em(cil(0.022, 0.022, 0.42, '#ffd45a', 10), 0, 0.15, 0.08, 0.6, 0, 0));
+  v.add(em(bola(0.06, '#ffd45a', 1, 1, 1, 0.2), 0, 0.33, 0.2));
+  v.add(em(emblemaReal(simbolo), 0, 0.33, 0.27, 0, 0, 0));
+  b.userData.capa = capa; b.userData.pose = 'principe';
+  return b;
+}
 
 function heroi(cor, corEmblema, emblema) {
-  const b = boneco({ camisa: cor, calca: cor, luvas: escuro(cor, 0.35), botas: escuro(cor, 0.35), cabelo: '#2e2018' });
+  const b = boneco({ camisa: cor, calca: cor, luvas: escuro(cor, 0.35), botas: escuro(cor, 0.35) });
   const { tronco, cab } = b.userData;
   tronco.add(em(caixa(0.47, 0.07, 0.35, corEmblema, 0.03), 0, 0.02, 0));
   tronco.add(em(caixa(0.1, 0.09, 0.03, escuro(cor, 0.3), 0.02), 0, 0.02, 0.18));
   const em2 = emblema === 'raio' ? raio(0.1, corEmblema) : emblema === 'estrela' ? estrela(0.11, corEmblema) : emblema === 'coracao' ? coracao(0.9, corEmblema) : folha(0.12, corEmblema);
   tronco.add(em(caixa(0.26, 0.24, 0.02, '#ffffff', 0.08), 0, 0.22, 0.17));
   tronco.add(em(em2, 0, 0.22, 0.19));
-  // máscara nos olhos
-  cab.add(em(caixa(0.74, 0.16, 0.05, escuro(cor, 0.45), 0.05), 0, -0.02, 0.32));
-  for (const s of [-1, 1]) { cab.add(em(bola(0.075, '#231a28', 0.85, 1.1, 0.5), s * 0.15, -0.04, 0.35)); cab.add(em(bola(0.024, '#ffffff', 1, 1, 0.5), s * 0.15 + 0.025, 0, 0.375)); }
-  // capa que balança
-  // capa presa nos ombros por uma gola que encosta no tronco
+  // máscara nos olhos (a da heroína tem pontinhas); os olhos da criança por cima, com cílios se for menina
+  const corMascara = escuro(cor, 0.45);
+  cab.add(em(caixa(0.74, 0.16, 0.05, corMascara, 0.05), 0, -0.02, 0.32));
+  if (menina()) for (const s of [-1, 1]) cab.add(em(caixa(0.14, 0.08, 0.05, corMascara, 0.03), s * 0.35, 0.05, 0.315, 0, 0, s * 0.55));
+  olhos(cab, 0.35);
+  // capa presa nos ombros por uma gola que encosta no tronco; o rabo de cavalo cai por cima dela
   const capa = new THREE.Group(); capa.position.set(0, 0.38, -0.17); tronco.add(capa);
   const pano = caixa(0.58, 0.74, 0.06, escuro(cor, 0.15), 0.03); pano.position.set(0, -0.37, -0.02); capa.add(pano);
   capa.add(em(caixa(0.6, 0.1, 0.12, corEmblema, 0.04), 0, 0, 0.04));
@@ -310,7 +447,7 @@ function heroi(cor, corEmblema, emblema) {
   return b;
 }
 function fazendeira(cor) {
-  const b = boneco({ camisa: '#d9483b', manga: '#d9483b', calca: cor, sapato: '#5a3a26', cabelo: '#a0522d', longo: true });
+  const b = boneco({ camisa: '#d9483b', manga: '#d9483b', calca: cor, sapato: '#5a3a26' });
   const { tronco, cab } = b.userData;
   // xadrez da camisa
   for (let i = 0; i < 4; i++) tronco.add(em(caixa(0.47, 0.025, 0.35, '#ffffff', 0.01), 0, 0.05 + i * 0.1, 0));
@@ -328,7 +465,7 @@ function chapeuPalha(cab) {
   cab.add(em(cil(0.365, 0.365, 0.06, '#d9483b', 24), 0, 0.43, 0));
 }
 function vaqueira(cor) {
-  const b = boneco({ camisa: '#f2e6c8', manga: '#f2e6c8', calca: '#3f6fb8', botas: cor, cabelo: '#4a2c1a', longo: true });
+  const b = boneco({ camisa: '#f2e6c8', manga: '#f2e6c8', calca: '#3f6fb8', botas: cor });
   const { tronco, cab } = b.userData;
   for (const s of [-1, 1]) tronco.add(em(caixa(0.16, 0.4, 0.03, cor, 0.03), s * 0.15, 0.19, 0.17));
   tronco.add(em(forma([[-0.14, 0.05], [0.14, 0.05], [0, -0.12]], 0.03, '#d9483b'), 0, 0.33, 0.19));
@@ -339,22 +476,22 @@ function vaqueira(cor) {
   return b;
 }
 function astronauta(cor) {
-  const b = boneco({ camisa: cor, calca: cor, luvas: '#b9c0c8', botas: '#b9c0c8' });
+  const b = boneco({ camisa: cor, calca: cor, luvas: '#b9c0c8', botas: '#b9c0c8', capacete: true });
   const { tronco, cab } = b.userData;
   tronco.add(em(caixa(0.22, 0.14, 0.03, '#3b4250', 0.03), 0, 0.22, 0.17));
   for (const [x, c] of [[-0.06, '#ff5a5a'], [0, '#ffd45a'], [0.06, '#5aff8a']]) tronco.add(em(bola(0.022, c, 1, 1, 0.5, 0.5), x, 0.22, 0.19));
   tronco.add(em(caixa(0.36, 0.4, 0.18, '#d6dde2', 0.08), 0, 0.2, -0.25));
   const vidro = new THREE.Mesh(gBola, new THREE.MeshPhysicalMaterial({ color: '#cfe8ff', roughness: 0.05, transmission: 0.0, transparent: true, opacity: 0.32, clearcoat: 1 }));
-  vidro.scale.setScalar(0.52); vidro.position.y = 0.02; cab.add(vidro);
+  vidro.scale.setScalar(0.54); vidro.position.y = 0.02; cab.add(vidro);
   cab.add(em(new THREE.Mesh(new THREE.TorusGeometry(0.4, 0.06, 10, 30), mat('#d6dde2')), 0, -0.36, 0, Math.PI / 2, 0, 0));
   b.userData.pose = 'flutua';
   return b;
 }
 function dino(cor) {
-  const b = boneco({ camisa: cor, calca: cor, luvas: claro(cor, 0.2), botas: escuro(cor, 0.25), semCabelo: true });
+  const b = boneco({ camisa: cor, calca: cor, luvas: claro(cor, 0.2), botas: escuro(cor, 0.25), capuz: true });
   const { tronco, cab } = b.userData;
   tronco.add(em(caixa(0.3, 0.3, 0.03, '#fff3c8', 0.08), 0, 0.17, 0.17));
-  // capuz de dino com dentinhos e espinhos
+  // capuz de dino com dentinhos e espinhos; as mechas e o rabo de cavalo da menina saem por baixo
   cab.add(em(caixa(0.82, 0.36, 0.76, cor, 0.17), 0, 0.24, -0.02));
   for (let i = 0; i < 5; i++) cab.add(em(cil(0, 0.045, 0.08, '#ffffff', 6), -0.28 + i * 0.14, 0.04, 0.37, Math.PI, 0, 0));
   for (const s of [-1, 1]) cab.add(em(bola(0.08, '#ffffff', 1, 1, 0.6), s * 0.18, 0.36, 0.3));
@@ -367,7 +504,7 @@ function dino(cor) {
   return b;
 }
 function confeiteira(cor) {
-  const b = boneco({ camisa: '#ffffff', calca: cor, cabelo: '#7a4a28', longo: true });
+  const b = boneco({ camisa: '#ffffff', calca: cor });
   const { tronco, cab } = b.userData;
   tronco.add(em(caixa(0.36, 0.38, 0.03, cor, 0.04), 0, 0.15, 0.17));
   for (let i = 0; i < 8; i++) tronco.add(em(caixa(0.05, 0.015, 0.02, ['#ff5a8a', '#5ad8ff', '#ffd45a', '#7cff8a'][i % 4], 0.006), -0.12 + (i % 4) * 0.08, 0.06 + Math.floor(i / 4) * 0.12, 0.19, 0, 0, i));
@@ -378,7 +515,7 @@ function confeiteira(cor) {
   return b;
 }
 function cientista(cor) {
-  const b = boneco({ camisa: cor, calca: '#3f6fb8', cabelo: '#2e2018' });
+  const b = boneco({ camisa: cor, calca: '#3f6fb8' });
   const { tronco, cab } = b.userData;
   tronco.add(em(caixa(0.48, 0.5, 0.36, cor, 0.12), 0, 0.12, 0));
   tronco.add(em(caixa(0.1, 0.12, 0.03, '#d6dde2', 0.02), 0.13, 0.25, 0.19));
@@ -389,7 +526,7 @@ function cientista(cor) {
   return b;
 }
 function guardia(cor) {
-  const b = boneco({ camisa: cor, calca: escuro(cor, 0.3), cabelo: '#3a2a1e', longo: true });
+  const b = boneco({ camisa: cor, calca: escuro(cor, 0.3) });
   const { tronco, cab } = b.userData;
   cab.add(em(new THREE.Mesh(new THREE.TorusGeometry(0.36, 0.05, 10, 30), mat('#3f8a2c')), 0, 0.33, 0, Math.PI / 2, 0, 0));
   for (let i = 0; i < 7; i++) { const a = (i / 7) * Math.PI * 2; cab.add(em(flor(['#ff8fc8', '#ffffff', '#ffd45a'][i % 3]), Math.sin(a) * 0.36, 0.37, Math.cos(a) * 0.36)); }
@@ -399,8 +536,8 @@ function guardia(cor) {
   return b;
 }
 function lanterneira(cor) {
-  const b = boneco({ camisa: cor, calca: '#2d3a4f', cabelo: '#c9a45c', longo: true });
-  const { tronco, cab, bracos } = b.userData;
+  const b = boneco({ camisa: cor, calca: '#2d3a4f' });
+  const { cab, bracos } = b.userData;
   cab.add(em(caixa(0.84, 0.5, 0.78, cor, 0.2), 0, 0.12, -0.06));
   cab.add(em(caixa(0.84, 0.32, 0.12, escuro(cor, 0.2), 0.06), 0, 0.33, 0.33));
   const l = new THREE.Group(); l.position.set(0, -0.36, 0.06); bracos[1].add(l);
@@ -444,17 +581,17 @@ palcoEl.addEventListener('pointerdown', (e) => { arrastando = true; ultimoX = e.
 palcoEl.addEventListener('pointermove', (e) => { if (arrastando) { giro += (e.clientX - ultimoX) * 0.01; ultimoX = e.clientX; } });
 palcoEl.addEventListener('pointerup', () => (arrastando = false));
 palcoEl.addEventListener('pointercancel', () => (arrastando = false));
-function vestir(f, cor) {
+const relogio = new THREE.Clock();
+function vestir(f, cor, comPose = true) {
   if (atual) cena.remove(atual);
   atual = f.montar(cor); cena.add(atual);
-  inicioPose = relogio.elapsedTime;
-  document.getElementById('nomeFantasia').textContent = f.nome;
+  if (comPose) inicioPose = relogio.elapsedTime;
+  document.getElementById('nomeFantasia').textContent = nomeDe(f);
 }
 function tamanho() { const r = palcoEl.getBoundingClientRect(); renderer.setSize(r.width, r.height, false); camera.aspect = r.width / Math.max(1, r.height); camera.updateProjectionMatrix(); }
 addEventListener('resize', tamanho); tamanho();
-const relogio = new THREE.Clock();
 function quadro() {
-  const t = relogio.elapsedTime, f = t - inicioPose;
+  const t = relogio.getElapsedTime(), f = t - inicioPose;
   if (!arrastando && !reduzir) giro += 0.004;
   const longe = camera.aspect < 0.9 ? 6.4 : 5.2;
   camera.position.set(0, 1.45, longe); camera.lookAt(0, 0.9, 0);
@@ -466,43 +603,59 @@ function quadro() {
     u.corpo.position.y = Math.abs(Math.sin(f * 5)) * 0.12 * p;
     u.tronco.scale.y = 1 + Math.sin(t * 2.2) * 0.012;
     const [be, bd] = u.bracos;
-    if (u.pose === 'princesa') { atual.rotation.y = giro + (reduzir ? 0 : Math.sin(Math.min(1, f / 1.2) * Math.PI) * Math.PI * 2 * (f < 1.2 ? f / 1.2 : 1)); be.rotation.z = -0.5; bd.rotation.x = -0.6; if (u.saia) u.saia.scale.set(1 + 0.08 * p, 1, 1 + 0.08 * p); }
+    const gira = () => (reduzir ? 0 : Math.sin(Math.min(1, f / 1.2) * Math.PI) * Math.PI * 2 * (f < 1.2 ? f / 1.2 : 1));
+    if (u.pose === 'princesa') { atual.rotation.y = giro + gira(); be.rotation.z = -0.5; bd.rotation.x = -0.6; if (u.saia) u.saia.scale.set(1 + 0.08 * p, 1, 1 + 0.08 * p); }
+    if (u.pose === 'principe') { atual.rotation.y = giro + gira(); be.rotation.z = -0.3; bd.rotation.x = -0.6; u.tronco.rotation.x = f > 1.2 && f < 2.2 && !reduzir ? Math.sin(((f - 1.2) / 1.0) * Math.PI) * 0.35 : 0; }
     if (u.pose === 'heroi') { be.rotation.z = -2.6 * Math.min(1, f / 0.3) * (f < 1.6 ? 1 : 0) - (f >= 1.6 ? 0.25 : 0); bd.rotation.z = f < 1.6 ? 0.3 : 0.25; }
     if (u.pose === 'acena') { bd.rotation.z = f < 1.6 ? 2.6 + Math.sin(f * 14) * 0.3 : 0.1; }
     if (u.pose === 'ruge') { u.cab.rotation.x = f < 1.6 ? -0.25 * Math.sin(f * 6) : 0; be.rotation.x = bd.rotation.x = f < 1.6 ? -1.2 : 0; }
     if (u.pose === 'flutua') { u.corpo.position.y = 0.12 + Math.sin(t * 1.6) * 0.06; be.rotation.z = -0.4; bd.rotation.z = 0.4; }
     if (u.capa) u.capa.rotation.x = 0.1 + Math.sin(t * 3) * 0.05 + p * 0.3;
     if (u.rabo) u.rabo.rotation.y = Math.sin(t * 4) * 0.3;
+    if (u.rabo2) u.rabo2.rotation.x = 0.08 + Math.sin(t * 3 + 0.6) * 0.06 + p * 0.25;
   }
   renderer.render(cena, camera);
   requestAnimationFrame(quadro);
 }
 
 // ---------- painel ----------
-const cartas = document.getElementById('cartas'), coresEl = document.getElementById('cores'), mundosEl = document.getElementById('mundos'), aviso = document.getElementById('aviso');
-let aba = 'princesas', mundo = 'Rancho Alegre', escolhida = FANTASIAS.princesas[0], corEscolhida = escolhida.cores[0];
-const lista = () => (aba === 'mundo' ? FANTASIAS.mundo[mundo] : FANTASIAS[aba]);
+const cartas = document.getElementById('cartas'), coresEl = document.getElementById('cores'), mundosEl = document.getElementById('mundos'), aviso = document.getElementById('aviso'), tirarEl = document.getElementById('tirar');
+let aba = 'realeza', mundoAberto = 'Rancho Alegre', escolhida = FANTASIAS.realeza[0], corEscolhida = escolhida.cores[0], antes = null;
+// em "Dos temas", o tema do mundo aberto vem primeiro
+const temasEmOrdem = () => { const t = FANTASIAS.mundo; return [t.find((x) => x.tema === mundoAberto), ...t.filter((x) => x.tema !== mundoAberto)]; };
+const lista = () => (aba === 'mundo' ? temasEmOrdem().flatMap((x) => x.fantasias) : FANTASIAS[aba]);
+const temaDe = (f) => FANTASIAS.mundo.find((x) => x.fantasias.includes(f));
 function desenharMundos() {
-  mundosEl.innerHTML = '';
-  for (const m of Object.keys(FANTASIAS.mundo)) {
-    const b = document.createElement('button'); b.type = 'button'; b.textContent = m; b.setAttribute('aria-pressed', String(m === mundo));
-    b.addEventListener('click', () => { mundo = m; desenharMundos(); escolher(lista()[0]); desenharCartas(); avisoMundo(); });
+  mundosEl.innerHTML = '<span>Mundo aberto agora (de mentirinha):</span>';
+  for (const m of FANTASIAS.mundo) {
+    const b = document.createElement('button'); b.type = 'button'; b.textContent = m.tema; b.setAttribute('aria-pressed', String(m.tema === mundoAberto));
+    b.addEventListener('click', () => { mundoAberto = m.tema; desenharMundos(); desenharCartas(); avisar(); });
     mundosEl.appendChild(b);
   }
 }
+function carta(f) {
+  const b = document.createElement('button'); b.type = 'button'; b.setAttribute('aria-pressed', String(f === escolhida));
+  const img = new Image(); img.alt = ''; img.src = miniatura(f, f.cores[0]);
+  b.append(img, document.createTextNode(nomeDe(f)));
+  if (aba === 'mundo') { const t = temaDe(f); const s = document.createElement('span'); s.className = 'selo' + (t.tema === mundoAberto ? ' meu' : ''); s.textContent = t.curto; b.appendChild(s); }
+  b.addEventListener('click', () => { escolher(f); desenharCartas(); });
+  return b;
+}
+function grupo(texto) { const d = document.createElement('div'); d.className = 'grupo'; d.textContent = texto; return d; }
 function desenharCartas() {
   cartas.innerHTML = '';
-  for (const f of lista()) {
-    const b = document.createElement('button'); b.type = 'button'; b.setAttribute('aria-pressed', String(f === escolhida));
-    const img = new Image(); img.alt = ''; img.src = miniatura(f, f.cores[0]);
-    b.append(img, document.createTextNode(f.nome));
-    if (aba === 'mundo') { const s = document.createElement('span'); s.className = 'selo'; s.textContent = 'tema'; b.appendChild(s); }
-    b.addEventListener('click', () => { escolher(f); desenharCartas(); });
-    cartas.appendChild(b);
-  }
+  if (aba === 'mundo') {
+    const [meu, ...outros] = temasEmOrdem();
+    cartas.appendChild(grupo(`Do seu mundo · ${meu.tema}`));
+    meu.fantasias.forEach((f) => cartas.appendChild(carta(f)));
+    cartas.appendChild(grupo('Dos outros temas'));
+    outros.forEach((t) => t.fantasias.forEach((f) => cartas.appendChild(carta(f))));
+  } else lista().forEach((f) => cartas.appendChild(carta(f)));
+  tirarEl.setAttribute('aria-pressed', String(escolhida === SEM));
+  tirarEl.textContent = escolhida === SEM ? 'Vestir de novo' : 'Tirar fantasia';
 }
 function desenharCores() {
-  coresEl.innerHTML = '<span>Cor:</span>';
+  coresEl.innerHTML = escolhida.cores.length ? '<span>Cor:</span>' : '';
   for (const c of escolhida.cores) {
     const b = document.createElement('button'); b.type = 'button'; b.style.background = c; b.setAttribute('aria-label', 'Cor ' + c); b.setAttribute('aria-pressed', String(c === corEscolhida));
     b.addEventListener('click', () => { corEscolhida = c; vestir(escolhida, c); desenharCores(); });
@@ -510,15 +663,45 @@ function desenharCores() {
   }
 }
 function escolher(f) { escolhida = f; corEscolhida = f.cores[0]; vestir(f, corEscolhida); desenharCores(); }
+function amostras(el, lista, chave) {
+  el.innerHTML = '';
+  for (const c of lista) {
+    const b = document.createElement('button'); b.type = 'button'; b.style.background = c; b.setAttribute('aria-label', (chave === 'pele' ? 'Pele ' : 'Cabelo ') + c); b.setAttribute('aria-pressed', String(P[chave] === c));
+    b.addEventListener('click', () => { P[chave] = c; amostras(el, lista, chave); mudouQuem(); });
+    el.appendChild(b);
+  }
+}
+// trocar quem é o personagem não tira a fantasia: ela continua vestida, só se ajusta ao corpo, à pele e ao cabelo
+function mudouQuem() { vestir(escolhida, corEscolhida, false); desenharCartas(); avisar(); }
+document.querySelectorAll('[data-corpo]').forEach((b) => b.addEventListener('click', () => {
+  P.corpo = b.dataset.corpo;
+  if (P.corpo === 'menino' && P.cabelo === '#6b3a1e') P.cabelo = '#2e2018';
+  else if (P.corpo === 'menina' && P.cabelo === '#2e2018') P.cabelo = '#6b3a1e';
+  document.querySelectorAll('[data-corpo]').forEach((o) => o.setAttribute('aria-pressed', String(o === b)));
+  amostras(document.getElementById('cabelos'), CABELOS, 'cabelo');
+  inicioPose = relogio.elapsedTime;
+  mudouQuem();
+}));
 document.querySelectorAll('[data-aba]').forEach((b) => b.addEventListener('click', () => {
   aba = b.dataset.aba;
   document.querySelectorAll('[data-aba]').forEach((o) => o.setAttribute('aria-selected', String(o === b)));
   mundosEl.hidden = aba !== 'mundo';
-  avisoMundo();
-  escolher(lista()[0]); desenharCartas();
+  escolher(lista()[0]); desenharCartas(); avisar();
 }));
-function avisoMundo() {
-  aviso.textContent = aba === 'mundo' ? `Fantasias do tema ${mundo}: servem em qualquer mundo. Ao criar um mundo deste tema, o jogo sugere vestir uma delas.` : 'Todas as fantasias servem para qualquer personagem.';
+tirarEl.addEventListener('click', () => {
+  if (escolhida === SEM) { if (antes) { escolhida = antes.f; corEscolhida = antes.c; vestir(escolhida, corEscolhida); desenharCores(); } }
+  else { antes = { f: escolhida, c: corEscolhida }; escolhida = SEM; vestir(SEM); desenharCores(); }
+  desenharCartas();
+});
+function avisar() {
+  const ela = menina();
+  aviso.textContent = aba === 'realeza'
+    ? (ela ? 'Corpo de menina: as quatro princesas. No corpo de menino, os mesmos cartões viram príncipes.' : 'Corpo de menino: os mesmos quatro cartões, em versão de príncipe (casaco, faixa, capa curta e coroa).')
+    : aba === 'herois'
+      ? (ela ? 'A heroína continua com o rosto e o cabelo dela: o rabo de cavalo fica por cima da capa.' : 'O herói continua com o rosto e o cabelo dele. Os nomes acompanham o corpo.')
+      : `O tema do mundo aberto (${mundoAberto}) vem primeiro. Todas servem em qualquer mundo.`;
 }
-desenharMundos(); desenharCartas(); escolher(escolhida); quadro();
+amostras(document.getElementById('peles'), PELES, 'pele');
+amostras(document.getElementById('cabelos'), CABELOS, 'cabelo');
+desenharMundos(); desenharCartas(); escolher(escolhida); avisar(); quadro();
 </script>

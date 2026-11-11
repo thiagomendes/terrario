@@ -20,7 +20,7 @@ full_test_command: npx vitest run && scripts/e2e-gpu.sh
 install_command: npm ci --no-audit --no-fund
 ---
 ## Contexto
-Pedido dos filhos do dono (10 nov 2026): a filha (3 anos) quer roupinhas de princesa; o filho (4 anos), roupas de herói. Além de personalizar peça por peça, looks prontos que vestem o boneco num toque. Esboço: `referencia/fantasias.html`, https://claude.ai/artifact/F9fUhyR1B2J5jb8QoVf6sH.
+Pedido dos filhos do dono (10 nov 2026): a filha (3 anos) quer roupinhas de princesa; o filho (4 anos), roupas de herói. Além de personalizar peça por peça, looks prontos que vestem o boneco num toque. Esboço aprovado em 11 nov 2026: `referencia/fantasias.html`, https://claude.ai/artifact/F9fUhyR1B2J5jb8QoVf6sH.
 
 ## Objetivo
 - Um toque veste uma fantasia inteira (Realeza, Heróis, Dos temas), sem trocar quem o personagem é.
@@ -78,12 +78,17 @@ No esboço a "Heroína Estrela" saiu com cara de menino. Regra:
 ## Fases e tarefas
 | # | Tarefa |
 |---|---|
-| T01 | Encaixe: teste de distância enfeite↔cabeça/corpo no plano do boneco (todos os modelos, corpos, cabelos e acessórios) e correção dos chapéus soltos de hoje |
+| T01 | Encaixe: teste dos vãos de enfeites, braços e pernas (parado e nas poses) no jogador, amigos e moradores, em todos os modelos, corpos e cabelos; corrigir o que está solto hoje |
 | T02 | Modelo das fantasias: catálogo (grupo, nomes por corpo, peças, cores), campo na aparência com o look de antes, persistência, saneamento e multijogador |
 | T03 | Peças novas no boneco, fundidas por parte que se mexe; capa e saia com balanço ligado ao movimento e aos gestos; versão de príncipe |
 | T04 | Aba Fantasias no editor (Realeza · Heróis · Dos temas), cor principal, personalizar a partir da fantasia, "Tirar fantasia", festa ao vestir |
 | T05 | Sugestão ao criar mundo e ordem "tema do mundo primeiro" |
 | T06 | Desempenho, capturas com o esboço, testes de tela, auditoria, publicação e relatório visual |
+
+## Decisões do dono
+- 10 nov 2026: fantasias dos temas livres; feminino e masculino como acima; logo depois da 015.
+- 11 nov 2026: esboço com menina e menino, Realeza (princesas e príncipes) e abas fixas aprovado ("Ficou ótimo"), como padrão de entrega.
+- 11 nov 2026: **todos os membros conectados como no esboço.** Hoje dá para ver chapéus, braços e pernas soltos do corpo, no personagem principal e nos moradores. A T01 cobre braços, pernas e enfeites, parados e em movimento (passada, pulo, sentar, voo e os 8 gestos), no boneco do jogador, dos amigos e dos moradores, com teste que mede os vãos.
 
 ## Quando (decidido pelo dono em 10 nov 2026)
 - Logo depois da 015 (terceira pessoa): a capa e a saia aproveitam o movimento novo do boneco, e é a parte que os filhos pediram. Depois, a 016 (construções protegidas) e a 014 (Cidade Grande).
