@@ -170,5 +170,21 @@ export function alvoDaEnxada(
   return podeArar(b, bloco(a.x, a.y + 1, a.z)) ? { x: a.x, y: a.y, z: a.z } : null;
 }
 
+/**
+ * Onde a semente vai com a mira em `a`: em cima da terra arada mirada (por qualquer face: a
+ * criança toca a beirada do canteiro e espera que plante nele), ou no lugar da grama alta
+ * (ou flor) que está em cima dela. Null: não é canteiro, vale a regra comum de colocar.
+ */
+export function alvoDaSemente(
+  a: Pos,
+  bloco: (x: number, y: number, z: number) => number,
+): Pos | null {
+  const b = bloco(a.x, a.y, a.z);
+  if (b === Bloco.TERRA_ARADA) return { x: a.x, y: a.y + 1, z: a.z };
+  if (plantaBaixa(b) && bloco(a.x, a.y - 1, a.z) === Bloco.TERRA_ARADA)
+    return { x: a.x, y: a.y, z: a.z };
+  return null;
+}
+
 /** Ferramenta é enxada? */
 export const ehEnxada = (f: { tipo: string } | undefined): boolean => f?.tipo === 'enxada';

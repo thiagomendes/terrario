@@ -65,6 +65,7 @@ import { obterItem } from '../jogo/itens';
 import {
   AVISO_SEMENTE,
   alvoDaEnxada,
+  alvoDaSemente,
   ehEnxada,
   ehLavoura,
   lavouraDoBloco,
@@ -110,6 +111,7 @@ import { criarProvedorBlocos } from '../world/provedor';
 import { criarEdicoes } from '../world/edicoes';
 import { ALTURA, alturaTerreno, indice } from '../world/chunk';
 import { mirarDaCamera, posicaoColocacao, type Vec3 } from '../player/alvo';
+import { ALCANCE_MIRA, ALCANCE_TOQUE, clienteAlcanca } from '../jogo/alcance';
 import { criarBarramento, type Barramento } from '../player/eventos';
 import { criarMinerador } from '../player/minerador';
 import { colocacaoPermitida, type AlvoMineracao } from '../player/mineracao';
@@ -232,7 +234,8 @@ let fatorNevoa = 1;
 /** Chunks em volta da câmera que projetam sombra (celular usa 1: menos geometria na passada). */
 const RAIO_SOMBRA_DESKTOP = 2;
 const RAIO_SOMBRA_CELULAR = 1;
-const ALCANCE = 5;
+/** Raio do toque que procura um bloco além do alcance (para avisar "longe demais"). */
+const ALCANCE_VER_LONGE = 48;
 
 export interface EstadoDepuracao {
   ready: boolean;
@@ -316,6 +319,13 @@ export interface EstadoDepuracao {
     arrastar: (ativo: boolean) => void;
     /** Toque rápido na tela: ataca a criatura tocada ou usa/coloca no ponto. */
     tocar: () => void;
+    /**
+     * O dedo aponta um bloco longe demais (e nada mais vale ali: nem bicho no caminho nem
+     * comida na mão): o toque e o segurar não fariam nada.
+     */
+    dedoLonge: () => boolean;
+    /** Aviso sem palavras de "longe demais": um som baixinho. */
+    avisarLonge: () => void;
     voando: () => boolean;
   };
   musica?: string;
@@ -441,6 +451,16 @@ export interface EstadoDepuracao {
      */
     desenho?: () => { malhas: number; transparentes: number; menorVisibilidade: number };
   };
+  /**
+   * Testes: o que o dedo pegaria no ponto da tela (coordenadas CSS do canvas): o bloco, a
+   * distância dos olhos ao ponto atingido e se está no alcance do toque.
+   */
+  alvoDoDedo?: (
+    x: number,
+    y: number,
+  ) => { x: number; y: number; z: number; distancia: number; alcanca: boolean } | null;
+  /** Testes: o bloco que o destaque (contorno) marca agora, ou null. */
+  destaque?: () => { x: number; y: number; z: number } | null;
   /** Testes: onde um ponto do mundo aparece na tela (coordenadas CSS), ou null atrás da câmera. */
   telaDoPonto?: (x: number, y: number, z: number) => { x: number; y: number } | null;
   /** Testes: vira o olhar para o centro da tela mirar este ponto do mundo. */
@@ -1391,14 +1411,22 @@ export function criarCena(
   let raioToque: { origem: Vec3; direcao: Vec3 } | null = null;
   /** Ponto tocado (o raio é refeito a cada quadro: o jogador pode andar segurando). */
   let pontoToque: { x: number; y: number } | null = null;
-  function mirarToque(xCss: number, yCss: number): void {
+  function raioNaTela(xCss: number, yCss: number): { origem: Vec3; direcao: Vec3 } {
     const r = scene.createPickingRay(xCss, yCss, Matrix.Identity(), cameraVisao);
-    raioToque = {
+    return {
       origem: { x: r.origin.x, y: r.origin.y, z: r.origin.z },
       direcao: { x: r.direction.x, y: r.direction.y, z: r.direction.z },
     };
+  }
+  function mirarToque(xCss: number, yCss: number): void {
+    raioToque = raioNaTela(xCss, yCss);
     alvoMemoQuadro = -1;
   }
+  /**
+   * O último bloco em que o dedo agiu e até quando o corpo vira para ele (a animação do
+   * golpe ou da colocação dura um pouco mais que o toque, que já soltou a mira).
+   */
+  let alvoDoToque: { x: number; y: number; z: number; ate: number } | null = null;
 
   /**
    * O raio da mira do centro passa pelo pivô (o caminho da câmera até ele é livre: a câmera
@@ -1413,14 +1441,30 @@ export function criarCena(
     };
   }
 
-  function alvoComDistancia() {
-    const r = raioMira();
-    return mirarDaCamera(
+  /**
+   * O primeiro bloco no raio, no alcance da mira: o do centro (mouse) ou o do dedo, mais
+   * generoso, que também passa pela conta do núcleo (o cliente só prevê o que ele aceita).
+   */
+  function alvoNoRaio(r: { origem: Vec3; direcao: Vec3 }, toque: boolean) {
+    const olhos = { x: camera.position.x, y: camera.position.y, z: camera.position.z };
+    const a = mirarDaCamera(
       r.origem,
       r.direcao,
-      { x: camera.position.x, y: camera.position.y, z: camera.position.z },
-      ALCANCE,
+      olhos,
+      toque ? ALCANCE_TOQUE : ALCANCE_MIRA,
       (x, y, z) => ehAlvo(blocoEm(x, y, z)),
+    );
+    if (a && toque && !clienteAlcanca(olhos, a.x, a.y, a.z)) return null;
+    return a;
+  }
+  function alvoComDistancia() {
+    return alvoNoRaio(raioMira(), raioToque !== null);
+  }
+  /** Fora do alcance, o raio do dedo bate num bloco que a criança vê? */
+  function blocoLongeNoRaio(r: { origem: Vec3; direcao: Vec3 }): boolean {
+    const olhos = { x: camera.position.x, y: camera.position.y, z: camera.position.z };
+    return !!mirarDaCamera(r.origem, r.direcao, olhos, ALCANCE_VER_LONGE, (x, y, z) =>
+      ehAlvo(blocoEm(x, y, z)),
     );
   }
 
@@ -1495,6 +1539,9 @@ export function criarCena(
    * a lavoura não (o bloco vai ao lado dela, e em cima dela não cabe).
    */
   function posicaoDeColocar(a: { x: number; y: number; z: number; normal: Vec3 }): Vec3 {
+    // semente na mão: o canteiro mirado (pela beirada ou pela grama alta em cima dele)
+    const canteiro = lavouraDoBloco(hotbar.blocoAtivo()) ? alvoDaSemente(a, blocoEm) : null;
+    if (canteiro) return canteiro;
     return plantaBaixa(blocoEm(a.x, a.y, a.z)) ? { x: a.x, y: a.y, z: a.z } : posicaoColocacao(a);
   }
 
@@ -1757,6 +1804,22 @@ export function criarCena(
       arrastandoCamera = ativo;
     },
   };
+  estado.alvoDoDedo = (x, y) => {
+    const r = raioNaTela(x, y);
+    const olhos = { x: camera.position.x, y: camera.position.y, z: camera.position.z };
+    const a = mirarDaCamera(r.origem, r.direcao, olhos, ALCANCE_VER_LONGE, (bx, by, bz) =>
+      ehAlvo(blocoEm(bx, by, bz)),
+    );
+    if (!a) return null;
+    const t = Math.hypot(r.direcao.x, r.direcao.y, r.direcao.z) || 1;
+    const p = {
+      x: r.origem.x + (r.direcao.x / t) * a.distancia,
+      y: r.origem.y + (r.direcao.y / t) * a.distancia,
+      z: r.origem.z + (r.direcao.z / t) * a.distancia,
+    };
+    const distancia = Math.hypot(p.x - olhos.x, p.y - olhos.y, p.z - olhos.z);
+    return { x: a.x, y: a.y, z: a.z, distancia, alcanca: !!alvoNoRaio(r, true) };
+  };
   estado.telaDoPonto = (x, y, z) => {
     const motor = scene.getEngine();
     const w = motor.getRenderWidth();
@@ -1867,7 +1930,9 @@ export function criarCena(
     const v = animador.vista();
     if (v.golpe === null && v.colocar === null) return null;
     const j = controle.jogador;
-    const a = alvoDoQuadro();
+    // o toque já soltou a mira: o corpo vira para o bloco tocado, não para o do centro
+    const recente = alvoDoToque && performance.now() < alvoDoToque.ate ? alvoDoToque : null;
+    const a = recente ?? alvoDoQuadro();
     if (a) {
       const dx = a.x + 0.5 - j.x;
       const dz = a.z + 0.5 - j.z;
@@ -2520,9 +2585,19 @@ export function criarCena(
     .add(new Color3(0.65, 0.65, 0.65));
   matDestaque.alpha = 0.17;
   matDestaque.backFaceCulling = true;
+  let alvoDestacado: { x: number; y: number; z: number } | null = null;
+  const d0 = (a: { x: number; y: number; z: number } | null) =>
+    a ? { x: a.x, y: a.y, z: a.z } : null;
+  estado.destaque = () => alvoDestacado;
   function atualizarDestaque(): void {
-    // no modo foto a mira não marca bloco (a foto sai limpa)
-    const alvo = estado.modoFoto?.ativo() ? null : alvoDoQuadro();
+    // no modo foto a mira não marca bloco (a foto sai limpa); no toque só o dedo marca: sem
+    // dedo na tela, nada de contorno no bloco do centro (a criança toca onde quer, e o
+    // contorno no meio fazia parecer que o toque ia para lá)
+    const semMarca =
+      !!estado.modoFoto?.ativo() ||
+      (pontoToque === null && document.body.classList.contains('toque-ativo'));
+    const alvo = semMarca ? null : alvoDoQuadro();
+    alvoDestacado = d0(alvo);
     const d = estadoDestaque(alvo, alvo ? caixaVisual(alvo.x, alvo.y, alvo.z) : CUBO);
     if (d.chave !== chaveContorno) {
       contorno?.dispose();
@@ -3307,6 +3382,7 @@ export function criarCena(
     usar: () => usarOuColocar(false),
     mirar: (x, y) => {
       pontoToque = { x, y };
+      alvoDoToque = null;
       mirarToque(x, y);
     },
     soltarMira: () => {
@@ -3321,8 +3397,18 @@ export function criarCena(
       arrastandoCamera = ativo;
     },
     tocar: () => {
+      // o corpo vira para o bloco tocado durante a animação (a mira do dedo solta já)
+      const a = raioToque ? calcularAlvo() : null;
+      if (a) alvoDoToque = { x: a.x, y: a.y, z: a.z, ate: performance.now() + 900 };
       if (amigoNaMira() || !atacarNaMira()) usarOuColocar(false);
     },
+    dedoLonge: () =>
+      raioToque !== null &&
+      !alvoComDistancia() &&
+      !criaturaApontada() &&
+      !comidaNaMao() &&
+      blocoLongeNoRaio(raioToque),
+    avisarLonge: () => tocarSom(motorAudio, 'recusa'),
     voando: () => !!controle.jogador.voando,
   };
 

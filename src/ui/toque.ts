@@ -56,6 +56,18 @@ export const CSS_TOQUE = `
   pointer-events: none; opacity: 0; transform: scale(0.6); transition: opacity 0.12s, transform 0.25s;
 }
 .toque .anel.visivel { opacity: 1; transform: scale(1); }
+/* longe demais: o anel fica cinza e balança "não" (sem palavras, para quem ainda não lê) */
+.toque .anel.longe {
+  border-color: rgba(205, 205, 205, 0.95); box-shadow: 0 0 0 2px rgba(90, 90, 90, 0.45), 0 3px 8px rgba(40, 25, 10, 0.3);
+  animation: anel-nao 0.42s ease-in-out;
+}
+@keyframes anel-nao {
+  0%, 100% { translate: 0 0; }
+  20% { translate: -7px 0; }
+  45% { translate: 6px 0; }
+  70% { translate: -4px 0; }
+  85% { translate: 2px 0; }
+}
 .legendas { position: fixed; left: 12px; bottom: 120px; z-index: 9; display: grid; gap: 4px; pointer-events: none; }
 /* no toque o canto de baixo é do joystick: legendas no centro, acima da mira */
 body.toque-ativo .legendas { left: 50%; bottom: auto; top: 30%; transform: translateX(-50%); justify-items: center; }
@@ -133,6 +145,10 @@ export interface ControleToque {
   arrastar?(ativo: boolean): void;
   /** Toque rápido: ataca a criatura ou coloca/usa no ponto mirado. */
   tocar?(): void;
+  /** O dedo aponta um bloco longe demais (o toque não faria nada). */
+  dedoLonge?(): boolean;
+  /** Som baixinho de "longe demais". */
+  avisarLonge?(): void;
   voando?(): boolean;
 }
 
@@ -304,6 +320,32 @@ export function criarToque(raiz: HTMLElement, c: ControleToque) {
     anel.style.left = `${x}px`;
     anel.style.top = `${y}px`;
     anel.classList.toggle('visivel', v);
+    if (!v) anel.classList.remove('longe');
+  };
+  /** Anel cinza balançando "não" no dedo (e o som baixinho): longe demais. */
+  let esperaAnel = 0;
+  const avisarLonge = (x: number, y: number, fixo: boolean) => {
+    clearTimeout(esperaAnel);
+    // reinicia a animação mesmo com o anel já cinza
+    anel.classList.remove('longe');
+    void anel.offsetWidth;
+    mostrarAnel(x, y, true);
+    anel.classList.add('longe');
+    c.avisarLonge?.();
+    if (!fixo) esperaAnel = window.setTimeout(() => mostrarAnel(0, 0, false), 650);
+  };
+  /** Segurando: o anel fica cinza enquanto o dedo estiver num bloco longe demais. */
+  let vigiaLonge = 0;
+  const vigiarLonge = () => {
+    const g = gesto;
+    if (!g || g.modo !== 'segurar') {
+      vigiaLonge = 0;
+      return;
+    }
+    const longe = !!c.dedoLonge?.();
+    if (longe && !anel.classList.contains('longe')) avisarLonge(g.x, g.y, true);
+    else if (!longe) anel.classList.remove('longe');
+    vigiaLonge = requestAnimationFrame(vigiarLonge);
   };
   /** Pinça (dois dedos na tela): aproxima e afasta a câmera; nada de quebrar nem colocar. */
   let pinca: { dedos: Map<number, { x: number; y: number }>; dist: number } | null = null;
@@ -354,9 +396,14 @@ export function criarToque(raiz: HTMLElement, c: ControleToque) {
       const p = pontoCanvas(g.x, g.y);
       c.mirar?.(p.x, p.y);
       c.quebrar(true);
+      clearTimeout(esperaAnel);
       mostrarAnel(g.x, g.y, true);
+      if (!vigiaLonge) vigiaLonge = requestAnimationFrame(vigiarLonge);
     }, TEMPO_SEGURAR);
     gesto = g;
+    // o dedo encostou: o destaque vai para o bloco embaixo dele (não o do centro)
+    const p = pontoCanvas(g.x, g.y);
+    c.mirar?.(p.x, p.y);
   });
   olhar.addEventListener('pointermove', (e) => {
     if (pinca) {
@@ -388,6 +435,8 @@ export function criarToque(raiz: HTMLElement, c: ControleToque) {
       if (classificarGesto(0, desloc) !== 'arrastar') return;
       g.modo = 'arrastar';
       clearTimeout(g.timer);
+      // arrastar gira a câmera: o destaque do dedo some
+      c.soltarMira?.();
       c.arrastar?.(true);
     }
     c.olhar(dx * 2.2, dy * 2.2);
@@ -415,11 +464,12 @@ export function criarToque(raiz: HTMLElement, c: ControleToque) {
       if (tipo === 'toque') {
         const p = pontoCanvas(g.x, g.y);
         c.mirar?.(p.x, p.y);
-        if (c.tocar) c.tocar();
+        if (c.dedoLonge?.()) avisarLonge(g.x, g.y, false);
+        else if (c.tocar) c.tocar();
         else c.usar();
-        c.soltarMira?.();
       }
     }
+    c.soltarMira?.();
   };
   olhar.addEventListener('pointerup', terminar);
   olhar.addEventListener('pointercancel', terminar);

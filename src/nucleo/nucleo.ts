@@ -11,6 +11,7 @@ import { registrarCatalogo } from '../jogo/catalogo';
 import { sanearDadosMundo } from './saneamento';
 import { blocoDe, criarEdicoes, empacotar } from '../world/edicoes';
 import { Bloco, ehAlvo, luzDoBloco, obterBloco } from '../world/blocks';
+import { ALCANCE_REGRAS, alcancaDosOlhos } from '../jogo/alcance';
 import { criarCacheGeracional } from './mundo';
 import {
   TAM_X,
@@ -85,8 +86,6 @@ import {
   type Telemetria,
 } from './protocolo';
 
-/** Distância máxima (dos olhos ao centro do bloco) para quebrar, colocar e usar. */
-const ALCANCE_REGRAS = 8;
 /** Distância máxima para bater, domar e trocar com uma criatura. */
 const ALCANCE_CRIATURA = 7;
 /** Pés da lavoura que crescem num passo, no máximo (o custo do passo tem teto). */
@@ -473,7 +472,7 @@ export function criarNucleo(op: OpcoesNucleo) {
   }
 
   function perto(j: Jogador, x: number, y: number, z: number, raio: number): boolean {
-    return Math.hypot(x + 0.5 - j.tel.x, y + 0.5 - j.tel.olhos, z + 0.5 - j.tel.z) <= raio;
+    return alcancaDosOlhos({ x: j.tel.x, y: j.tel.olhos, z: j.tel.z }, x, y, z, raio);
   }
 
   function recusar(
