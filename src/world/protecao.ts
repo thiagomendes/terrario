@@ -92,8 +92,16 @@ export function replantioDaLavoura(colhido: number): number | null {
   return lavouraDoBloco(colhido)?.primeiro ?? null;
 }
 
+/**
+ * De quem é a construção do chunk, para o aviso (spec 016, T03): a vila, o sítio, a ruína ou
+ * a estrutura rara do tema.
+ */
+export type LugarProtecao = 'vila' | 'sitio' | 'ruina' | 'estrutura';
+
 /** Proteção de um chunk: só a faixa de altura [y0, y1] com algo protegido. */
 export interface MascaraProtecao {
+  /** O que o mundo construiu aqui (o aviso fala dele). */
+  lugar: LugarProtecao;
   y0: number;
   y1: number;
   /** ((y - y0) * TAM_Z + z) * TAM_X + x */
@@ -193,7 +201,15 @@ export function protecaoDoChunk(
       for (const y of [h + 1, h + 2]) passagem(x0 + 8, y, z0 + 8 + dz);
   }
   if (y1 < 0) return null;
-  return { y0, y1, dados: cls.slice(y0 * CAMADA, (y1 + 1) * CAMADA) };
+  const lugar: LugarProtecao =
+    e.tipo === 'povoado'
+      ? e.plano.lotes.some((l) => l.uso !== undefined)
+        ? 'sitio'
+        : 'vila'
+      : e.forma === 'ruina'
+        ? 'ruina'
+        : 'estrutura';
+  return { lugar, y0, y1, dados: cls.slice(y0 * CAMADA, (y1 + 1) * CAMADA) };
 }
 
 /**
@@ -247,6 +263,8 @@ function passagensDoPovoado(
 export interface ProtecaoMundo {
   /** O que a célula é (ver o topo do arquivo). */
   em(x: number, y: number, z: number): Protecao;
+  /** De quem é a construção do chunk da coluna (null: nada protegido no chunk). */
+  lugar(x: number, z: number): LugarProtecao | null;
   /** Máscara do chunk (null: nada protegido nele). */
   doChunk(cx: number, cz: number): MascaraProtecao | null;
   /** Esquece tudo (o estilo e as regiões sem povoado também esquecem sozinhos). */
@@ -297,6 +315,9 @@ export function criarProtecaoMundo(
       return m.dados[
         ((y - m.y0) * TAM_Z + (z - cz * TAM_Z)) * TAM_X + (x - cx * TAM_X)
       ] as Protecao;
+    },
+    lugar(x, z) {
+      return doChunk(Math.floor(x / TAM_X), Math.floor(z / TAM_Z))?.lugar ?? null;
     },
     doChunk,
     limpar() {

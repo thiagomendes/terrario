@@ -16,6 +16,7 @@ import {
 } from './criaturas';
 import { dentroDaCasa, frenteDaPorta, type PlanoPovoado } from '../world/povoado';
 import { RAIO_CHAMAR, TEMPO_CHAMADO } from '../personagem/gestos';
+import { podeLevarBicho } from './permissao';
 import {
   botaOvo,
   comeEsse,
@@ -70,12 +71,20 @@ export interface CriadoSalvo {
   /** Ainda é do cercado do sítio ("povoado:cercado") e o miolo dele. */
   curral?: string;
   cerca?: [number, number, number, number];
+  /** Spec 016: quem criou (sem o campo: o dono do mundo). */
+  dono?: string;
 }
 
 export interface OpcoesPopulacao {
   /** Spec 013: a criatura da noite do mundo (do estilo do tema). Sem o campo, assusta. */
   noite?: 'assusta' | 'mansa';
+  /** Spec 016: id do dono do mundo (chama e leva todos os bichos criados). */
+  donoDoMundo?: string | null;
 }
+
+/** Spec 016: id de quem criou, como vai no salvamento (texto curto ou nada). */
+const donoSalvo = (v: unknown): string | undefined =>
+  typeof v === 'string' && v.length > 0 && v.length <= 64 ? v : undefined;
 
 const num = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
 
@@ -85,15 +94,35 @@ const COMEM: ReadonlySet<TipoSer> = new Set(['cervo', 'coelho']);
 export function criarPopulacao(rng: Gerador, salvo?: unknown, opcoes: OpcoesPopulacao = {}) {
   const lista: Criatura[] = [];
   const mansa = opcoes.noite === 'mansa';
+  const donoDoMundo = opcoes.donoDoMundo ?? null;
+  /** Spec 016: o jogador pode levar o bicho? (sem id: o jogo de um só, como antes) */
+  const leva = (c: Criatura, j: Jogador) =>
+    j.id === undefined || podeLevarBicho(j.id, c, donoDoMundo);
+  /** Quem não pode levar o bicho é visto por ele sem comida na mão (o mesmo objeto sempre). */
+  const semComida: Jogador = { x: 0, y: 0, z: 0, vivo: true, criativo: false, mao: null };
+  const comoVisto = (j: Jogador): Jogador => {
+    semComida.x = j.x;
+    semComida.y = j.y;
+    semComida.z = j.z;
+    semComida.vivo = j.vivo;
+    semComida.criativo = j.criativo;
+    semComida.id = j.id;
+    return semComida;
+  };
   let proximo = 1;
   let tempoSpawn = 0;
   // raposas domadas persistem
   const s = salvo as
-    | { raposas?: { x: number; y: number; z: number; vida: number }[]; criados?: unknown }
+    | {
+        raposas?: { x: number; y: number; z: number; vida: number; dono?: unknown }[];
+        criados?: unknown;
+      }
     | undefined;
   for (const r of s?.raposas ?? []) {
     const c = novaCriatura(proximo++, 'raposa', r.x, r.y, r.z);
     c.domada = true;
+    const dr = donoSalvo(r.dono);
+    if (dr) c.dono = dr;
     c.vida = r.vida || CRIATURAS.raposa.vida;
     lista.push(c);
   }
@@ -104,6 +133,8 @@ export function criarPopulacao(rng: Gerador, salvo?: unknown, opcoes: OpcoesPopu
       if (!num(b.x) || !num(b.y) || !num(b.z)) continue;
       const c = novaCriatura(proximo++, b.tipo, b.x, b.y, b.z);
       c.criado = true;
+      const db = donoSalvo(b.dono);
+      if (db) c.dono = db;
       c.vida = num(b.vida) && b.vida > 0 ? Math.min(b.vida, CRIATURAS[b.tipo].vida) : c.vida;
       c.casa =
         Array.isArray(b.casa) && num(b.casa[0]) && num(b.casa[1])
@@ -394,17 +425,50 @@ export function criarPopulacao(rng: Gerador, salvo?: unknown, opcoes: OpcoesPopu
           assentarCriatura(c, dt, m);
           continue;
         }
+        // spec 016: o bicho criado (ou a raposa domada) é de quem criou: segue só ele e o
+        // dono do mundo; os outros ele vê sem comida na mão, e fica onde está
+        const deAlguem = c.criado || c.domada;
         // o bicho segue quem segura a comida dele, mesmo que outro esteja mais perto
-        if (comComida && !comeEsse(c.tipo, j.mao) && COMEM.has(c.tipo)) {
+        if (
+          comComida &&
+          COMEM.has(c.tipo) &&
+          !(comeEsse(c.tipo, j.mao) && (!deAlguem || leva(c, j)))
+        ) {
           let d = Infinity;
           for (const o of js) {
             const di = Math.hypot(c.x - o.x, c.z - o.z);
-            if (comeEsse(c.tipo, o.mao) && di < RAIO_ATRAIR + 4 && di < d) {
+            if (
+              comeEsse(c.tipo, o.mao) &&
+              di < RAIO_ATRAIR + 4 &&
+              di < d &&
+              (!deAlguem || leva(c, o))
+            ) {
               d = di;
               j = o;
             }
           }
         }
+        // a raposa domada acompanha quem a domou (ou o dono do mundo); sem nenhum deles
+        // por perto, fica onde está
+        if (c.domada && c.tipo === 'raposa' && !leva(c, j)) {
+          let d = Infinity;
+          let melhor: Jogador | null = null;
+          for (const o of js) {
+            const di = Math.hypot(c.x - o.x, c.z - o.z);
+            if (di < d && leva(c, o)) {
+              d = di;
+              melhor = o;
+            }
+          }
+          if (melhor) j = melhor;
+          else {
+            j = comoVisto(j);
+            // parada: "o jogador" está nela (nada de seguir nem reaparecer longe)
+            j.x = c.x;
+            j.y = c.y;
+            j.z = c.z;
+          }
+        } else if (deAlguem && j.mao && !leva(c, j)) j = comoVisto(j);
         const evc = passoCriatura(c, dt, m, j, rng, hostis, noite, mansa);
         for (const e of evc) {
           if (e.tipo === 'ataque' || e.tipo === 'espantada') e.jogador = j;
@@ -433,10 +497,12 @@ export function criarPopulacao(rng: Gerador, salvo?: unknown, opcoes: OpcoesPopu
     ferir(c: Criatura, dano: number, deX: number, deZ: number): EventoCriatura[] {
       return ferir(c, dano, rng, deX, deZ);
     },
-    domar(c: Criatura): boolean {
+    /** Spec 016: `dono` é quem domou (sem ele: o dono do mundo). */
+    domar(c: Criatura, dono?: string): boolean {
       if (c.tipo !== 'raposa' || c.domada) return false;
       if (rng() < 0.45) {
         c.domada = true;
+        if (dono !== undefined) c.dono = dono;
         c.vida = CRIATURAS.raposa.vida;
         return true;
       }
@@ -444,17 +510,29 @@ export function criarPopulacao(rng: Gerador, salvo?: unknown, opcoes: OpcoesPopu
     },
     /**
      * Spec 015, gesto de chamar em (x, y, z): a raposa domada e os bichos criados até
-     * `RAIO_CHAMAR` blocos vêm até perto. Devolve quantos vêm.
+     * `RAIO_CHAMAR` blocos vêm até perto. Spec 016: com `quem`, só os que ele pode levar
+     * (os dele e, para o dono do mundo, todos). Devolve quantos vêm e o primeiro bicho de
+     * outra pessoa que ficou (para o aviso).
      */
-    chamar(x: number, y: number, z: number): number {
-      let n = 0;
+    chamar(
+      x: number,
+      y: number,
+      z: number,
+      quem?: string,
+    ): { vem: number; deOutro: Criatura | null } {
+      let vem = 0;
+      let deOutro: Criatura | null = null;
       for (const c of lista) {
         if (c.estado === 'morrendo' || !(c.criado || (c.domada && c.tipo === 'raposa'))) continue;
         if (Math.abs(c.y - y) > 6 || Math.hypot(c.x - x, c.z - z) > RAIO_CHAMAR) continue;
+        if (quem !== undefined && !podeLevarBicho(quem, c, donoDoMundo)) {
+          deOutro ??= c;
+          continue;
+        }
         c.chamado = { x, z, t: TEMPO_CHAMADO };
-        n++;
+        vem++;
       }
-      return n;
+      return { vem, deOutro };
     },
     /** Quantos bichos criados há no mundo (o limite é por mundo). */
     get criados(): number {
@@ -464,16 +542,19 @@ export function criarPopulacao(rng: Gerador, salvo?: unknown, opcoes: OpcoesPopu
     },
     /**
      * Dar comida (spec 013): o bicho passa a ser criado, com casa onde está. Já criado, só
-     * muda a casa para aqui. Devolve 'novo', 'ja' ou o motivo da recusa.
+     * muda a casa para aqui. Devolve 'novo', 'ja' ou o motivo da recusa. Spec 016: `dono` é
+     * quem criou (sem ele: o dono do mundo); o bicho de outra pessoa ganha carinho
+     * (`mudaCasa` falso) mas continua morando onde mora.
      */
-    criar(c: Criatura): 'novo' | 'ja' | 'limite' | 'nao' {
+    criar(c: Criatura, dono?: string, mudaCasa = true): 'novo' | 'ja' | 'limite' | 'nao' {
       if (!viraCriado(c.tipo) || c.estado === 'morrendo' || c.morador) return 'nao';
       if (c.criado) {
-        c.casa = [c.x, c.z];
+        if (mudaCasa) c.casa = [c.x, c.z];
         return 'ja';
       }
       if (this.criados >= LIMITE_CRIADOS) return 'limite';
       c.criado = true;
+      if (dono !== undefined) c.dono = dono;
       c.casa = [c.x, c.z];
       if (botaOvo(c.tipo)) c.ovo = primeiraEsperaOvo(c.x, c.z);
       if (c.estado === 'fugir') {
@@ -491,7 +572,13 @@ export function criarPopulacao(rng: Gerador, salvo?: unknown, opcoes: OpcoesPopu
       return {
         raposas: lista
           .filter((c) => c.domada && c.estado !== 'morrendo')
-          .map((c) => ({ x: c.x, y: c.y, z: c.z, vida: c.vida })),
+          .map((c) => ({
+            x: c.x,
+            y: c.y,
+            z: c.z,
+            vida: c.vida,
+            ...(c.dono !== undefined ? { dono: c.dono } : {}),
+          })),
         criados: lista
           .filter((c) => c.criado && c.estado !== 'morrendo')
           .map((c): CriadoSalvo => {
@@ -505,6 +592,7 @@ export function criarPopulacao(rng: Gerador, salvo?: unknown, opcoes: OpcoesPopu
               casa: [r2(c.casa?.[0] ?? c.x), r2(c.casa?.[1] ?? c.z)],
               ...(c.ovo !== undefined ? { ovo: Math.round(c.ovo) } : {}),
               ...(c.curral && c.cerca ? { curral: c.curral, cerca: c.cerca } : {}),
+              ...(c.dono !== undefined ? { dono: c.dono } : {}),
             };
           }),
       };

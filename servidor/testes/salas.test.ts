@@ -852,3 +852,117 @@ describe('dono do bloco na nuvem', () => {
     expect(bemvindo(a).donos).toEqual([]);
   });
 });
+
+describe('construções protegidas na sala (spec 016, três jogadores)', () => {
+  const entrarComo = (id: string, extra: object) =>
+    JSON.stringify({ t: 'entrar', versao: VERSAO_REDE, jogador: ident(id), ...extra });
+  const recusas = (c: ReturnType<typeof canal>) =>
+    quadros(c).flatMap((q) =>
+      (q.eventos ?? []).filter(
+        (e): e is Extract<NonNullable<Quadro['eventos']>[number], { e: 'recusa' }> =>
+          e.e === 'recusa',
+      ),
+    );
+
+  async function trio() {
+    const s = await criarSala();
+    const b = canal('5.6.7.8');
+    const c = canal('9.9.9.9');
+    await s.g.receber(b, entrarComo('bia', { codigo: s.codigo }));
+    await s.g.receber(c, entrarComo('caio', { codigo: s.codigo }));
+    await s.avancar(300);
+    const nucleo = () => s.g.ativas.get(s.codigo)!.nucleo;
+    const seqs = new Map<object, number>();
+    const mandar = (k: ReturnType<typeof canal>, m: object) => {
+      const seq = (seqs.get(k) ?? 0) + 1;
+      seqs.set(k, seq);
+      return s.g.receber(k, JSON.stringify({ ...m, seq }));
+    };
+    // os três no mesmo lugar, perto de uma célula no ar (longe de povoado e ruína)
+    const P = { x: 900, y: 100, z: 900 };
+    for (const k of [s.a, b, c])
+      await mandar(k, {
+        t: 'jogador',
+        x: P.x + 3.5,
+        y: P.y,
+        z: P.z + 0.5,
+        yaw: 0,
+        pitch: 0,
+        olhos: P.y + 1.62,
+        noChao: true,
+        voando: true,
+        vel: 0,
+        correndo: false,
+        submerso: false,
+        quedas: [],
+        pulos: 0,
+        golpes: 0,
+        slot: 0,
+      });
+    await s.avancar(100);
+    return { ...s, b, c, nucleo, mandar, P };
+  }
+
+  it('o Caio não quebra a parede da Bia (o servidor recusa e diz de quem é); a dona desfaz', async () => {
+    const { a, b, c, nucleo, mandar, P, avancar } = await trio();
+    await mandar(b, { t: 'colocar', id: 1, ...P, bloco: Bloco.TABUAS, meta: 0, slot: 0 });
+    await avancar(100);
+    expect(nucleo().donoDoBloco(P.x, P.y, P.z)).toBe('bia');
+    await mandar(c, { t: 'quebrar', id: 1, ...P, slot: 0 });
+    await avancar(100);
+    expect(nucleo().estado.mundo.bloco(P.x, P.y, P.z)).toBe(Bloco.TABUAS);
+    expect(recusas(c)).toContainEqual({
+      e: 'recusa',
+      comando: 1,
+      motivo: 'quebrar',
+      protecao: { motivo: 'amigo', dono: 'bia' },
+    });
+    // a tela do Caio volta ao bloco da Bia
+    expect(
+      quadros(c)
+        .flatMap((q) => q.blocos ?? [])
+        .filter((bl) => bl.x === P.x && bl.y === P.y && bl.z === P.z)
+        .at(-1)?.v,
+    ).toBe(empacotar(Bloco.TABUAS, 0, 1));
+    // a dona desfaz: todos veem o ar
+    await mandar(a, { t: 'quebrar', id: 1, ...P, slot: 0 });
+    await avancar(100);
+    expect(nucleo().estado.mundo.bloco(P.x, P.y, P.z)).toBe(Bloco.AR);
+    for (const k of [a, b, c])
+      expect(
+        quadros(k)
+          .flatMap((q) => q.blocos ?? [])
+          .filter((bl) => bl.x === P.x && bl.y === P.y && bl.z === P.z)
+          .at(-1)?.v,
+      ).toBe(Bloco.AR);
+  });
+
+  it('o baú da Bia não abre para o Caio, nem por transação mandada direto; abre para a dona', async () => {
+    const { a, b, c, nucleo, mandar, P, avancar } = await trio();
+    const Q = { ...P, z: P.z + 2 };
+    await mandar(b, { t: 'colocar', id: 1, ...Q, bloco: Bloco.BAU, meta: 0, slot: 0 });
+    await avancar(100);
+    nucleo().estado.conteineres.bau(Q.x, Q.y, Q.z, false)[0] = { item: 'trigo', qtd: 9 };
+    await mandar(c, { t: 'usar', id: 1, ...Q });
+    await mandar(c, {
+      t: 'transacao',
+      id: 2,
+      mudancas: [
+        { onde: 'bau', i: 0, antes: { item: 'trigo', qtd: 9 }, depois: null },
+        { onde: 'inv', i: 3, antes: null, depois: { item: 'trigo', qtd: 9 } },
+      ],
+    });
+    await avancar(100);
+    expect(quadros(c).some((q) => q.conteiner)).toBe(false);
+    expect(recusas(c)).toContainEqual(
+      expect.objectContaining({ motivo: 'usar', protecao: { motivo: 'bau', dono: 'bia' } }),
+    );
+    expect(nucleo().estado.conteineres.bau(Q.x, Q.y, Q.z, false)[0]).toEqual({
+      item: 'trigo',
+      qtd: 9,
+    });
+    await mandar(a, { t: 'usar', id: 1, ...Q });
+    await avancar(100);
+    expect(quadros(a).some((q) => q.conteiner?.tipo === 'bau')).toBe(true);
+  });
+});

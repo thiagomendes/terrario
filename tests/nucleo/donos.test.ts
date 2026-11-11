@@ -154,7 +154,9 @@ describe('dono do bloco no núcleo (nuvem)', () => {
 
   it('lavoura: a terra arada e o pé são de quem arou e plantou, e o pé que cresce segue dele', () => {
     const n = nuvem(undefined, 'sobrevivencia');
-    n.estado.edicoes.definir(A.x, A.y - 1, A.z, Bloco.TERRA_MUSGOSA);
+    // a terra é da Bia (spec 016: na terra da Ana ela não ara)
+    const iBia = n.estado.edicoes.donos.indice('bia', 'Bia');
+    n.estado.edicoes.definir(A.x, A.y - 1, A.z, Bloco.TERRA_MUSGOSA, 0, iBia);
     const inv = n.estado.jogadores.get('bia')!.inventario;
     inv.definir(0, { item: 'enxada_madeira', qtd: 1, dur: 60 });
     inv.definir(1, { item: 'semente_trigo', qtd: 4 });

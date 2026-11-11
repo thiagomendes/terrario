@@ -396,7 +396,17 @@ describe('plantio com vários jogadores, na nuvem', () => {
     expect(q.eventos?.find((e) => e.e === 'arou')).toMatchObject({ meu: false });
     n.comando('ana', { t: 'depurar', d: { f: 'crescer', segundos: 400 } });
     expect(bloco(n, C)).toBe(Bloco.TRIGO_3);
+    // spec 016: a horta é de quem plantou: a Bia não colhe a da Ana (o aviso diz de quem é)
     n.comando('bia', { t: 'quebrar', id: 1, ...C, slot: 0 });
+    expect(bloco(n, C)).toBe(Bloco.TRIGO_3);
+    n.passo();
+    expect(n.quadros().get('bia')!.eventos).toContainEqual({
+      e: 'recusa',
+      comando: 1,
+      motivo: 'quebrar',
+      protecao: { motivo: 'amigo', dono: 'Ana' },
+    });
+    n.comando('ana', { t: 'quebrar', id: 3, ...C, slot: 0 });
     expect(bloco(n, C)).toBe(Bloco.AR);
     const trigo = n.estado.mundoItens.itens.filter((i) => i.item === 'trigo');
     expect(trigo.reduce((t, i) => t + i.qtd, 0)).toBeGreaterThanOrEqual(1);

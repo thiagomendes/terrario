@@ -13,6 +13,15 @@ import { sanearDadosMundo, sanearDonos } from './saneamento';
 import { blocoDe, criarEdicoes, donoNaCelula, empacotar } from '../world/edicoes';
 import { Bloco, ehAlvo, luzDoBloco, obterBloco } from '../world/blocks';
 import { ALCANCE_REGRAS, alcancaDosOlhos } from '../jogo/alcance';
+import {
+  podeLevarBicho,
+  recusaBau,
+  recusaColocar,
+  recusaQuebrar,
+  type MundoDaRegra,
+  type RecusaProtecao,
+} from '../jogo/permissao';
+import { Protecao, criarProtecaoMundo, replantioDaLavoura } from '../world/protecao';
 import { criarCacheGeracional } from './mundo';
 import {
   TAM_X,
@@ -211,6 +220,8 @@ interface Jogador {
     criativo: boolean;
     /** O que está na mão, do inventário do núcleo (os bichos seguem a comida). */
     mao: string | null;
+    /** Spec 016: quem é (o bicho criado só segue quem pode levá-lo). */
+    id: string;
   };
 }
 
@@ -272,6 +283,27 @@ export function criarNucleo(op: OpcoesNucleo) {
     return false;
   });
   const conteineres = criarConteineres(extras['conteineres'], semente);
+  /**
+   * Spec 016: o que o mundo construiu (calculado da geração, como no cliente) e a regra de
+   * quem mexe em quê, a mesma que o cliente usa para prever.
+   */
+  const protecao = criarProtecaoMundo(semente);
+  /** Apelido do dono do mundo (ele não entra na tabela de donos; o aviso diz o nome dele). */
+  let apelidoDoMundo: string | undefined;
+  const regra: MundoDaRegra = {
+    protecao,
+    bloco: (x, y, z) => mundo.bloco(x, y, z),
+    gerado: (x, y, z) => mundo.gerado(x, y, z),
+    dono: (x, y, z) => donoNaCelula(edicoes, x, y, z, donoDoMundo),
+    apelido: (id) => apelidoDe(id),
+    donoDoMundo,
+  };
+  function apelidoDe(id: string): string | undefined {
+    return (
+      jogadores.get(id)?.perfil.apelido ??
+      (id === donoDoMundo ? apelidoDoMundo : edicoes.donos.apelido(id))
+    );
+  }
   const rngDrops = criarGerador(911);
   // sorteios do plantio (colheita, semente da grama alta): gerador próprio, para não mexer
   // na sequência dos drops de sempre (a paridade gravada)
@@ -284,6 +316,7 @@ export function criarNucleo(op: OpcoesNucleo) {
   const noiteDoMundo = op.noite ?? estiloMundo().noite ?? 'assusta';
   const populacao = criarPopulacao(criarGerador(semente + 55), extras['criaturas'], {
     noite: noiteDoMundo,
+    donoDoMundo,
   });
   // sorteios da criação (onde o ovo cai): gerador próprio, longe dos de sempre
   const rngCriacao = criarGerador(semente + 1717);
@@ -420,7 +453,7 @@ export function criarNucleo(op: OpcoesNucleo) {
       versaoDonos: -1,
       perfil: oc?.perfil ?? { apelido: 'Jogador', aparencia: {} },
       constroi: oc?.constroi ?? true,
-      corpo: { x, y: y0, z, vivo: true, criativo: modo === 'criativo', mao: null },
+      corpo: { x, y: y0, z, vivo: true, criativo: modo === 'criativo', mao: null, id },
     };
     j.inventario.ouvir(() => {
       j.inventarioSujo = true;
@@ -442,6 +475,7 @@ export function criarNucleo(op: OpcoesNucleo) {
       o.eventos.push({ e: 'entrou', id, apelido: j.perfil.apelido });
     // o apelido guardado com os blocos dele segue o atual (o aviso diz o nome de agora)
     edicoes.donos.renomear(id, j.perfil.apelido);
+    if (id === donoDoMundo) apelidoDoMundo = j.perfil.apelido;
     jogadores.set(id, j);
     perfisSujos = true;
   }
@@ -537,8 +571,11 @@ export function criarNucleo(op: OpcoesNucleo) {
     comando: number,
     motivo: string,
     celulas: { x: number; y: number; z: number }[],
+    protecao?: RecusaProtecao,
   ): void {
-    j.eventos.push({ e: 'recusa', comando, motivo });
+    j.eventos.push(
+      protecao ? { e: 'recusa', comando, motivo, protecao } : { e: 'recusa', comando, motivo },
+    );
     for (const c of celulas) corrigir(j, c.x, c.y, c.z);
   }
 
@@ -556,11 +593,27 @@ export function criarNucleo(op: OpcoesNucleo) {
       recusar(j, c.id, 'quebrar', [c, { x, y: y - 1, z }, { x, y: y + 1, z }]);
       return;
     }
+    // spec 016: o que o mundo construiu não quebra; o que alguém pôs, só ele e o dono do mundo
+    const protegido = recusaQuebrar(regra, j.id, x, y, z);
+    if (protegido) {
+      recusar(j, c.id, 'quebrar', [c, { x, y: y - 1, z }, { x, y: y + 1, z }], protegido);
+      return;
+    }
+    // a lavoura do mundo se replanta: o estágio 0 da mesma planta volta na hora (colher
+    // verde só recomeça, sem dar nada: senão o sítio virava fonte de sementes)
+    const replantio =
+      ehLavoura(b) && protecao.em(x, y, z) === Protecao.LAVOURA ? replantioDaLavoura(b) : null;
     // baú do mundo (ruína, celeiro) ainda no lugar em que nasceu: nunca foi trocado, então o
     // tesouro dele ainda vale. Quebrado uma vez, a célula ganha edição; o baú posto de novo
     // ali é um baú comum (vazio), senão quebrar e recolocar dava o tesouro outra vez.
     const intocado = edicoes.obter(x, y, z) === undefined;
-    editar(x, y, z, Bloco.AR);
+    if (replantio !== null) {
+      // entra de novo na lista da lavoura que cresce, do começo
+      lavoura.delete(`${x},${y},${z}`);
+      if (!editar(x, y, z, replantio, edicoes.obterMeta(x, y, z)))
+        lavoura.set(`${x},${y},${z}`, { x, y, z, p: 0, t: relogioLavoura });
+    } else editar(x, y, z, Bloco.AR);
+    const darColheita = replantio === null || madura(b);
     // quebrar meia porta leva a outra metade
     if (b === Bloco.PORTA || b === Bloco.PORTA_ABERTA) {
       for (const dy of [-1, 1]) {
@@ -579,11 +632,12 @@ export function criarNucleo(op: OpcoesNucleo) {
           j.eventos.push({ e: 'ferramentaQuebrou', item: p.item });
         } else j.inventario.definir(c.slot, { ...p, dur });
       }
-      for (const drop of dropsDoBloco(b, rngDrops, podeColetar(b, ferramenta))) {
-        mundoItens.soltar(drop.item, drop.qtd, x + 0.5, y + 0.4, z + 0.5, rngDrops);
-      }
+      if (darColheita)
+        for (const drop of dropsDoBloco(b, rngDrops, podeColetar(b, ferramenta))) {
+          mundoItens.soltar(drop.item, drop.qtd, x + 0.5, y + 0.4, z + 0.5, rngDrops);
+        }
       // colher: madura dá o produto e sementes; verde devolve a semente
-      if (ehLavoura(b)) soltarColheita(b, x, y, z);
+      if (ehLavoura(b) && darColheita) soltarColheita(b, x, y, z);
       // a grama alta às vezes tem uma semente de trigo (sorteio à parte dos drops)
       if (b === Bloco.GRAMA_ALTA && rngPlantio() < CHANCE_SEMENTE_GRAMA)
         mundoItens.soltar('semente_trigo', 1, x + 0.5, y + 0.4, z + 0.5, rngPlantio);
@@ -620,6 +674,14 @@ export function criarNucleo(op: OpcoesNucleo) {
       !podeArar(mundo.bloco(x, y, z), acima)
     ) {
       recusar(j, c.id, 'arar', [c, { x, y: y + 1, z }]);
+      return;
+    }
+    // spec 016: arar é mexer no chão (e na planta de cima): a mesma regra de quebrar
+    const protegido =
+      recusaQuebrar(regra, j.id, x, y, z) ??
+      (acima !== Bloco.AR ? recusaQuebrar(regra, j.id, x, y + 1, z) : null);
+    if (protegido) {
+      recusar(j, c.id, 'arar', [c, { x, y: y + 1, z }], protegido);
       return;
     }
     // a terra arada é de quem arou (a lavoura dele)
@@ -803,6 +865,14 @@ export function criarNucleo(op: OpcoesNucleo) {
       recusar(j, c.id, lav && livre && !plantavel ? 'semente' : 'colocar', celulas);
       return;
     }
+    // spec 016: passagem e construção do mundo ficam livres; a flor do amigo não some
+    const protegido =
+      recusaColocar(regra, j.id, x, y, z, bloco) ??
+      (metade ? recusaColocar(regra, j.id, x, y + 1, z, bloco) : null);
+    if (protegido) {
+      recusar(j, c.id, 'colocar', celulas, protegido);
+      return;
+    }
     // spec 016: o bloco guarda quem o colocou
     editar(x, y, z, bloco, meta, j.id);
     // a metade de cima da porta (já conferida: ar, planta baixa ou água)
@@ -833,16 +903,40 @@ export function criarNucleo(op: OpcoesNucleo) {
     // (que pode trazer a terra arada), depois as plantas; planta sem terra arada não entra
     // (e a tela é corrigida). Sem isso, milhares de pés no ar faziam o crescer pesar.
     const plantas: typeof c.lote = [];
+    let primeira: RecusaProtecao | null = null;
     for (const e of c.lote) {
       const b = e.v & 255;
-      if (ehLavoura(b)) plantas.push(e);
+      // spec 016: cada célula segue a regra de quebrar (o que sai) e de colocar (o que entra)
+      const r = recusaDoLote(j, e.x, e.y, e.z, b);
+      if (r) {
+        primeira ??= r;
+        corrigir(j, e.x, e.y, e.z);
+      } else if (ehLavoura(b)) plantas.push(e);
       else editar(e.x, e.y, e.z, b, (e.v >> 8) & 255, j.id);
     }
+    if (primeira)
+      j.eventos.push({ e: 'recusa', comando: c.id, motivo: 'editar', protecao: primeira });
     for (const e of plantas) {
       if (mundo.bloco(e.x, e.y - 1, e.z) === Bloco.TERRA_ARADA)
         editar(e.x, e.y, e.z, e.v & 255, (e.v >> 8) & 255, j.id);
       else corrigir(j, e.x, e.y, e.z);
     }
+  }
+
+  /** Uma célula do lote do criativo: o que sai e o que entra seguem a regra (null: pode). */
+  function recusaDoLote(
+    j: Jogador,
+    x: number,
+    y: number,
+    z: number,
+    b: number,
+  ): RecusaProtecao | null {
+    const atual = mundo.bloco(x, y, z);
+    if (atual === b) return null;
+    return (
+      (atual !== Bloco.AR ? recusaQuebrar(regra, j.id, x, y, z) : null) ??
+      (b !== Bloco.AR ? recusaColocar(regra, j.id, x, y, z, b) : null)
+    );
   }
 
   function alternarPorta(x: number, y: number, z: number): void {
@@ -877,6 +971,14 @@ export function criarNucleo(op: OpcoesNucleo) {
     ) {
       // quem só passeia não mexe nos baús e fornalhas dos outros
       j.eventos.push({ e: 'recusa', comando: c.id ?? 0, motivo: 'visitante' });
+    } else if (b === Bloco.BAU && recusaBau(regra, j.id, x, y, z)) {
+      // spec 016: o baú que alguém pôs abre só para ele e para o dono do mundo
+      j.eventos.push({
+        e: 'recusa',
+        comando: c.id ?? 0,
+        motivo: 'usar',
+        protecao: recusaBau(regra, j.id, x, y, z)!,
+      });
     } else if (b === Bloco.BAU) {
       // baú sem edição no lugar foi gerado pelo mundo (ruína): vem com tesouro
       conteineres.bau(x, y, z, edicoes.obter(x, y, z) === undefined);
@@ -982,7 +1084,9 @@ export function criarNucleo(op: OpcoesNucleo) {
     const alcanca = !ct || confiar || perto(j, ct.x, ct.y, ct.z, ALCANCE_REGRAS + 2);
     // foi embora com o baú aberto: fecha
     if (noConteiner && !alcanca) j.conteiner = null;
-    const conteinerOk = !noConteiner || (j.constroi && alcanca);
+    // spec 016: o baú de outra pessoa não abre; nem por transação mandada direto
+    const bauOk = !ct || ct.tipo !== 'bau' || !recusaBau(regra, j.id, ct.x, ct.y, ct.z);
+    const conteinerOk = !noConteiner || (j.constroi && alcanca && bauOk);
     if (!valida || !contaOk || !conteinerOk) {
       // Tudo volta ao oficial, inclusive o que estava nas mãos (nada duplica nem some).
       j.inventarioSujo = true;
@@ -1067,7 +1171,9 @@ export function criarNucleo(op: OpcoesNucleo) {
     if (!cr || cr.tipo !== 'raposa' || cr.domada || p?.item !== 'frutinhas') return;
     if (Math.hypot(cr.x - j.tel.x, cr.z - j.tel.z) > ALCANCE_CRIATURA) return;
     if (modo === 'sobrevivencia') j.inventario.remover(c.slot, 1);
-    if (populacao.domar(cr)) j.eventos.push({ e: 'domou', id: cr.id, tipo: cr.tipo });
+    // spec 016: a raposa é de quem domou (o dono do mundo não entra: sem dono, é dele)
+    if (populacao.domar(cr, j.id === donoDoMundo ? undefined : j.id))
+      j.eventos.push({ e: 'domou', id: cr.id, tipo: cr.tipo });
   }
 
   /**
@@ -1164,7 +1270,12 @@ export function criarNucleo(op: OpcoesNucleo) {
           voz: i === 0,
         });
       });
-    } else if (g === 'chamar') populacao.chamar(x, y, z);
+    } else if (g === 'chamar') {
+      // spec 016: vêm só os bichos de quem chamou (o dono do mundo chama todos); se só
+      // havia bicho dos outros por perto, o aviso diz de quem é
+      const r = populacao.chamar(x, y, z, j.id);
+      if (r.vem === 0 && r.deOutro) j.eventos.push(recusaBicho('chamar', r.deOutro));
+    }
   }
 
   /** Os moradores que chegou a hora de acenar de volta. */
@@ -1186,6 +1297,21 @@ export function criarNucleo(op: OpcoesNucleo) {
       });
     }
     respostasGesto = fica;
+  }
+
+  /** O aviso "esse bichinho é da Ana" (spec 016). */
+  function recusaBicho(
+    motivo: string,
+    cr: { dono?: string },
+  ): Extract<EventoNucleo, { e: 'recusa' }> {
+    const dono = cr.dono ?? donoDoMundo;
+    const apelido = dono ? apelidoDe(dono) : undefined;
+    return {
+      e: 'recusa',
+      comando: 0,
+      motivo,
+      protecao: apelido ? { motivo: 'bicho', dono: apelido } : { motivo: 'bicho' },
+    };
   }
 
   /** Passo em que cada bicho ganhou comida por último (os corações têm intervalo). */
@@ -1213,7 +1339,11 @@ export function criarNucleo(op: OpcoesNucleo) {
       const ultima = ultimaComida.get(cr.id);
       if (ultima !== undefined && (n - ultima) * PASSO < INTERVALO_COMIDA) return;
     }
-    const r = populacao.criar(cr);
+    // spec 016: o bicho de outra pessoa ganha carinho, mas continua morando onde mora (e o
+    // aviso diz de quem é); o novo é de quem deu a comida
+    const meu = podeLevarBicho(j.id, cr, donoDoMundo);
+    const r = populacao.criar(cr, j.id === donoDoMundo ? undefined : j.id, meu);
+    if (r === 'ja' && !meu) j.eventos.push(recusaBicho('alimentar', cr));
     if (r === 'limite') {
       j.eventos.push({ e: 'criacaoRecusada', motivo: 'limite', aviso: AVISO_LIMITE });
       return;
@@ -1763,6 +1893,7 @@ export function criarNucleo(op: OpcoesNucleo) {
       if (!j) return;
       j.perfil = perfil;
       edicoes.donos.renomear(id, perfil.apelido);
+      if (id === donoDoMundo) apelidoDoMundo = perfil.apelido;
       perfisSujos = true;
     },
     /** Spec 016: id do dono do mundo (null: o núcleo não sabe; tudo vai para a tabela). */
@@ -1776,8 +1907,10 @@ export function criarNucleo(op: OpcoesNucleo) {
     },
     /** Apelido guardado de quem colocou blocos (mesmo fora do mundo agora). */
     apelidoDoDono(id: string): string | undefined {
-      return jogadores.get(id)?.perfil.apelido ?? edicoes.donos.apelido(id);
+      return apelidoDe(id);
     },
+    /** Spec 016: a proteção do que o mundo construiu (a mesma conta do cliente). */
+    protecao,
     get quantos() {
       return jogadores.size;
     },

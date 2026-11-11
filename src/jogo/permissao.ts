@@ -1,0 +1,167 @@
+/**
+ * Quem pode mexer em quê (spec 016, T03). Uma regra só, como o alcance da 015: o núcleo
+ * (servidor na nuvem e modo local) confere com ela e o cliente prevê com ela (cadeado na
+ * mira, rachadura que nem começa e o aviso), então nada "pisca" e volta.
+ *
+ * 1. O que o mundo construiu (proteção da T01) ninguém quebra, nem o dono do mundo, em
+ *    nenhum modo. A lavoura do mundo colhe (e se replanta sozinha).
+ * 2. O que alguém colocou só ele quebra; o dono do mundo também pode (desfazer o do amigo).
+ * 3. Terreno natural: todos.
+ * 4. Colocar: passagem, estrutura e usável do mundo ficam como estão; só o bloco que a
+ *    geração pôs volta para o buraco (conserto). A planta (flor) do amigo não sai por baixo
+ *    de um bloco novo.
+ * 5. Baú posto por alguém: só ele e o dono do mundo abrem. Bicho criado ou domado: só quem
+ *    criou e o dono do mundo chamam e levam.
+ */
+import { Bloco } from '../world/blocks';
+import {
+  Protecao,
+  naoColoca,
+  naoQuebra,
+  type LugarProtecao,
+  type ProtecaoMundo,
+} from '../world/protecao';
+
+/** Por que não deu (o cliente escolhe o aviso). */
+export type MotivoProtecao = 'mundo' | 'amigo' | 'passagem' | 'bau' | 'bicho';
+
+export interface RecusaProtecao {
+  motivo: MotivoProtecao;
+  /** Apelido de quem é (amigo, baú, bicho). */
+  dono?: string;
+  /** De quem é a construção do mundo (mundo, passagem). */
+  lugar?: LugarProtecao;
+}
+
+/** O que a regra precisa ler (o núcleo e o cliente dão a sua cópia do mundo). */
+export interface MundoDaRegra {
+  protecao: Pick<ProtecaoMundo, 'em' | 'lugar'>;
+  bloco(x: number, y: number, z: number): number;
+  /** Bloco que a geração pôs (sem edições). */
+  gerado(x: number, y: number, z: number): number;
+  /** Id de quem colocou o bloco (null: natural, ar ou sem edição). */
+  dono(x: number, y: number, z: number): string | null;
+  apelido(id: string): string | undefined;
+  /** Id do dono do mundo (null: não se sabe; ninguém tem o poder dele). */
+  donoDoMundo: string | null;
+}
+
+/** `quem` pode mexer no que é de `dono`? (null: de ninguém) */
+export function podeMexer(quem: string, dono: string | null, donoDoMundo: string | null): boolean {
+  return dono === null || dono === quem || (donoDoMundo !== null && quem === donoDoMundo);
+}
+
+function doMundo(m: MundoDaRegra, x: number, z: number, motivo: MotivoProtecao): RecusaProtecao {
+  const lugar = m.protecao.lugar(x, z);
+  return lugar ? { motivo, lugar } : { motivo };
+}
+
+function deAlguem(m: MundoDaRegra, dono: string, motivo: MotivoProtecao): RecusaProtecao {
+  const apelido = m.apelido(dono);
+  return apelido ? { motivo, dono: apelido } : { motivo };
+}
+
+/** Quebrar (x, y, z): null pode; senão, o porquê. */
+export function recusaQuebrar(
+  m: MundoDaRegra,
+  quem: string,
+  x: number,
+  y: number,
+  z: number,
+): RecusaProtecao | null {
+  const p = m.protecao.em(x, y, z);
+  // a lavoura do mundo é de todos: colhe e se replanta
+  if (p === Protecao.LAVOURA) return null;
+  if (naoQuebra(p)) return doMundo(m, x, z, 'mundo');
+  const dono = m.dono(x, y, z);
+  if (podeMexer(quem, dono, m.donoDoMundo)) return null;
+  return deAlguem(m, dono!, m.bloco(x, y, z) === Bloco.BAU ? 'bau' : 'amigo');
+}
+
+/** Colocar `bloco` em (x, y, z) (célula vazia, com planta baixa ou água): null pode. */
+export function recusaColocar(
+  m: MundoDaRegra,
+  quem: string,
+  x: number,
+  y: number,
+  z: number,
+  bloco: number,
+): RecusaProtecao | null {
+  const p = m.protecao.em(x, y, z);
+  if (naoColoca(p)) {
+    // conserto: o bloco que a geração pôs volta ao buraco da estrutura
+    const conserto = p !== Protecao.PASSAGEM && bloco !== Bloco.AR && bloco === m.gerado(x, y, z);
+    if (!conserto) return doMundo(m, x, z, p === Protecao.PASSAGEM ? 'passagem' : 'mundo');
+  }
+  // a florzinha do amigo não some debaixo do bloco de outro
+  const dono = m.dono(x, y, z);
+  if (podeMexer(quem, dono, m.donoDoMundo)) return null;
+  return deAlguem(m, dono!, 'amigo');
+}
+
+/** Abrir o baú de (x, y, z): os do mundo são de todos; o posto, de quem pôs e do dono. */
+export function recusaBau(
+  m: MundoDaRegra,
+  quem: string,
+  x: number,
+  y: number,
+  z: number,
+): RecusaProtecao | null {
+  if (m.protecao.em(x, y, z) === Protecao.USAVEL) return null;
+  const dono = m.dono(x, y, z);
+  if (podeMexer(quem, dono, m.donoDoMundo)) return null;
+  return deAlguem(m, dono!, 'bau');
+}
+
+/**
+ * Bicho criado ou domado: `dono` é quem criou (undefined: o dono do mundo, como o bloco sem
+ * dono na tabela). Bicho solto (nem criado nem domado) é de todos.
+ */
+export function podeLevarBicho(
+  quem: string,
+  bicho: { criado?: boolean; domada?: boolean; dono?: string },
+  donoDoMundo: string | null,
+): boolean {
+  if (!bicho.criado && !bicho.domada) return true;
+  const dono = bicho.dono ?? donoDoMundo;
+  return podeMexer(quem, dono, donoDoMundo);
+}
+
+/** O aviso de criança para cada recusa (curto, gentil, com o nome). */
+export function avisoDaRecusa(r: RecusaProtecao): string {
+  const de = r.dono ? ` ${daOuDo(r.dono)}` : '';
+  switch (r.motivo) {
+    case 'mundo':
+      return r.lugar === 'sitio'
+        ? 'Esse cantinho é do sítio. Que tal construir a sua?'
+        : r.lugar === 'ruina'
+          ? 'Essa ruína é do mundo. Que tal construir a sua?'
+          : r.lugar === 'estrutura'
+            ? 'Isso o mundo construiu. Que tal construir o seu?'
+            : 'Essa casa é da vila. Que tal construir a sua?';
+    case 'passagem':
+      return 'Aqui é passagem: deixa livre para todo mundo passar.';
+    case 'bau':
+      return r.dono ? `Esse baú é${de}.` : 'Esse baú é de um amigo.';
+    case 'bicho':
+      return r.dono ? `Esse bichinho é${de}.` : 'Esse bichinho é de um amigo.';
+    case 'amigo':
+    default:
+      return r.dono ? `Essa parede é${de}.` : 'Essa parede é de um amigo.';
+  }
+}
+
+/** O aviso discreto do dono do mundo ao desfazer a construção de um amigo. */
+export function avisoTirouDoAmigo(apelido: string): string {
+  return `Você tirou um bloco ${daOuDo(apelido)}.`;
+}
+
+/**
+ * "da Ana", "do Léo" ou "de Davi": o jogo não sabe o gênero, então vai pelo fim do nome
+ * (a: "da", o: "do"; o resto, "de", que soa bem com qualquer nome).
+ */
+export function daOuDo(apelido: string): string {
+  const n = apelido.trim();
+  const ultima = n.slice(-1).toLowerCase();
+  return `${ultima === 'a' ? 'da' : ultima === 'o' ? 'do' : 'de'} ${n}`;
+}

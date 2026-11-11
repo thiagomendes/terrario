@@ -137,6 +137,11 @@ export interface Criatura {
   cerca?: [number, number, number, number];
   /** Spec 013: ganhou comida de alguém. Não some, é salvo e passeia perto da casa. */
   criado?: boolean;
+  /**
+   * Spec 016: quem criou (ou domou) o bicho. Sem o campo, é do dono do mundo (como o bloco
+   * sem dono na tabela). Só ele e o dono do mundo chamam e levam com a comida.
+   */
+  dono?: string;
   /** Onde o bicho criado mora (ganhou comida ou parou de seguir): passeia até 6 blocos dela. */
   casa?: [number, number];
   /** Galinha criada: segundos até o próximo ovo. */
@@ -214,6 +219,8 @@ export interface Jogador {
   criativo: boolean;
   /** Item na mão (do inventário do núcleo, nunca do que o cliente diz): o bicho segue a comida. */
   mao?: string | null;
+  /** Spec 016: id do jogador (o bicho criado só segue quem pode levá-lo). */
+  id?: string;
 }
 
 export interface EventoCriatura {

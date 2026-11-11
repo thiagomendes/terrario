@@ -100,7 +100,12 @@ describe('colocar com "outra parte": só a metade de cima da porta', () => {
     expect(n.estado.lavoura.size).toBe(0);
     // a semente não foi gasta e a tela é corrigida
     expect(inv(n, 'ana').contar('semente_trigo')).toBe(1);
-    expect(n.quadros().get('ana')!.eventos?.some((e) => e.e === 'recusa')).toBe(true);
+    expect(
+      n
+        .quadros()
+        .get('ana')!
+        .eventos?.some((e) => e.e === 'recusa'),
+    ).toBe(true);
   });
 
   it('o saneamento descarta mais de uma parte extra', () => {
@@ -176,10 +181,16 @@ describe('colocar com "outra parte": só a metade de cima da porta', () => {
 });
 
 /**
- * Quebra o baú, junta o que caiu, põe um baú novo no mesmo lugar e repete. O tesouro do
- * baú do mundo sai uma vez só; depois é um baú comum, vazio.
+ * Spec 016: o baú do mundo não quebra (nem pelo dono do mundo), então o tesouro não se refaz
+ * quebrando e recolocando: tenta quebrar três vezes (nada cai, o baú fica) e abre. Devolve o
+ * que caiu em cada tentativa e o que tem dentro.
  */
-function voltasNoBau(semente: number, bx: number, by: number, bz: number): string[][] {
+function voltasNoBau(
+  semente: number,
+  bx: number,
+  by: number,
+  bz: number,
+): { caiu: string[][]; dentro: string[] } {
   const n = criarNucleo({
     semente,
     modo: 'sobrevivencia',
@@ -209,34 +220,22 @@ function voltasNoBau(semente: number, bx: number, by: number, bz: number): strin
     slot: 0,
   });
   expect(n.estado.mundo.bloco(bx, by, bz)).toBe(Bloco.BAU);
-  const i = n.estado.jogadores.get('ana')!.inventario;
-  const voltas: string[][] = [];
+  const caiu: string[][] = [];
   for (let v = 0; v < 3; v++) {
     (n.estado.mundoItens.itens as unknown[]).length = 0;
-    mandar(n, 'ana', { t: 'quebrar', id: 10 + v * 2, x: bx, y: by, z: bz, slot: 0 });
-    voltas.push(
-      n.estado.mundoItens.itens
-        .map((o) => o.item)
-        .filter((o) => o !== idDoBloco(Bloco.BAU))
-        .sort(),
-    );
-    i.definir(5, { item: idDoBloco(Bloco.BAU), qtd: 1 });
-    mandar(n, 'ana', {
-      t: 'colocar',
-      id: 11 + v * 2,
-      x: bx,
-      y: by,
-      z: bz,
-      bloco: Bloco.BAU,
-      meta: 0,
-      slot: 5,
-    });
+    mandar(n, 'ana', { t: 'quebrar', id: 10 + v, x: bx, y: by, z: bz, slot: 0 });
+    caiu.push(n.estado.mundoItens.itens.map((o) => o.item));
     expect(n.estado.mundo.bloco(bx, by, bz)).toBe(Bloco.BAU);
   }
-  return voltas;
+  mandar(n, 'ana', { t: 'usar', id: 20, x: bx, y: by, z: bz });
+  const dentro = n.estado.conteineres
+    .bau(bx, by, bz, false)
+    .flatMap((p) => (p ? [p.item] : []))
+    .sort();
+  return { caiu, dentro };
 }
 
-describe('o tesouro do baú do mundo sai uma vez só', () => {
+describe('o tesouro do baú do mundo sai uma vez só (spec 016: o baú do mundo nem quebra)', () => {
   it('o baú do celeiro do sítio (Rancho, semente 42) não se refaz ao ser recolocado', () => {
     definirEstiloMundo(obterTema('rancho-alegre').mundo);
     try {
@@ -249,10 +248,9 @@ describe('o tesouro do baú do mundo sai uma vez só', () => {
         for (let dz = -1; dz <= 1 && !bau; dz++)
           bau = planoDaRegiao(rx0 + dx, rz0 + dz, semente, TERRENO_NATURAL)?.bauCeleiro;
       expect(bau).toBeDefined();
-      const voltas = voltasNoBau(semente, ...bau!);
-      expect(voltas[0]).toContain('enxada_madeira');
-      expect(voltas[1]).toEqual([]);
-      expect(voltas[2]).toEqual([]);
+      const { caiu, dentro } = voltasNoBau(semente, ...bau!);
+      expect(caiu).toEqual([[], [], []]);
+      expect(dentro).toContain('enxada_madeira');
     } finally {
       definirEstiloMundo(ESTILO_PADRAO);
     }
@@ -273,10 +271,9 @@ describe('o tesouro do baú do mundo sai uma vez só', () => {
               bau = [(cx0 + dx) * 16 + 8, y, (cz0 + dz) * 16 + 8];
         }
     expect(bau).toBeDefined();
-    const voltas = voltasNoBau(SEMENTE, ...bau!);
-    expect(voltas[0].length).toBeGreaterThan(0);
-    expect(voltas[1]).toEqual([]);
-    expect(voltas[2]).toEqual([]);
+    const { caiu, dentro } = voltasNoBau(SEMENTE, ...bau!);
+    expect(caiu).toEqual([[], [], []]);
+    expect(dentro.length).toBeGreaterThan(0);
   });
 });
 

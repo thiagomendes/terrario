@@ -6,6 +6,7 @@
  * O cliente nunca altera o mundo direto: manda comandos; o núcleo aplica as regras e
  * devolve o que mudou num "quadro" a cada passo (20 por segundo).
  */
+import type { RecusaProtecao } from '../jogo/permissao';
 import type { Pilha, Slot } from '../jogo/inventario';
 import type { EstadoClima, TipoClima } from '../jogo/clima';
 import type { EstadoSobrevivencia, CausaDano } from '../jogo/sobrevivencia';
@@ -255,8 +256,12 @@ export type ConteinerVisto =
 export type EventoNucleo =
   | { e: 'quebra'; x: number; y: number; z: number; bloco: number; meu: boolean }
   | { e: 'colocacao'; x: number; y: number; z: number; bloco: number; meu: boolean }
-  /** Motivos: 'quebrar', 'colocar', 'arar', 'semente' (semente fora da terra arada). */
-  | { e: 'recusa'; comando: number; motivo: string }
+  /**
+   * Motivos: 'quebrar', 'colocar', 'arar', 'semente' (semente fora da terra arada), 'usar',
+   * 'editar', 'chamar', 'alimentar', 'visitante'. Spec 016: `protecao` diz de quem é (o
+   * cliente mostra o aviso de criança).
+   */
+  | { e: 'recusa'; comando: number; motivo: string; protecao?: RecusaProtecao }
   /** Plantio (spec 013): som, efeito e diário. */
   | { e: 'arou'; x: number; y: number; z: number; meu: boolean }
   | { e: 'plantou'; x: number; y: number; z: number; bloco: number }
