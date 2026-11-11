@@ -1,0 +1,3574 @@
+{
+ "pagina": "sons.html (seção \"Bichos e moradores gravados\")",
+ "formato": "MP3 mono 22 050 Hz, 48 kbps, embutido em base64",
+ "fontes": [
+  {
+   "titulo": "Cow Moos #1",
+   "autor": "Joseph SARDIN",
+   "acervo": "BigSoundBank",
+   "url": "https://bigsoundbank.com/cow-moos-s0546.html",
+   "licenca": "CC0 1.0 (domínio público)",
+   "conferido": "página do som: \"CC0 (public domain): Free and royalty-free\"",
+   "arquivoLocal": "bsb/0546.mp3",
+   "usadoEm": [
+    "vaca.chamado.1",
+    "vaca.chamado.2",
+    "vaca.susto.1",
+    "vaca.susto.2",
+    "vaca.contente.1",
+    "vaca.contente.3",
+    "vaca.ai.1",
+    "vaca.ai.3"
+   ]
+  },
+  {
+   "titulo": "Cow moos #3",
+   "autor": "Joseph SARDIN",
+   "acervo": "BigSoundBank",
+   "url": "https://bigsoundbank.com/cow-moos-3-s2383.html",
+   "licenca": "CC0 1.0 (domínio público)",
+   "conferido": "página do som: \"CC0 (public domain): Free and royalty-free\"",
+   "arquivoLocal": "bsb/2383.mp3",
+   "usadoEm": [
+    "vaca.chamado.3",
+    "vaca.susto.3",
+    "vaca.contente.2",
+    "vaca.ai.2"
+   ]
+  },
+  {
+   "titulo": "Hen announcing shes lain an egg.ogg",
+   "autor": "alys (via PDSounds, nº 542)",
+   "acervo": "Wikimedia Commons",
+   "url": "https://commons.wikimedia.org/wiki/File:Hen_announcing_shes_lain_an_egg.ogg",
+   "licenca": "Domínio público (liberado pela autora, vale no mundo todo)",
+   "conferido": "página do arquivo e API do Commons (LicenseShortName = Public domain)",
+   "arquivoLocal": "commons/c_galinha_ovo.ogg",
+   "usadoEm": [
+    "galinha.chamado.1",
+    "galinha.chamado.2",
+    "galinha.ai.2"
+   ]
+  },
+  {
+   "titulo": "Hens Lays",
+   "autor": "Joseph SARDIN",
+   "acervo": "BigSoundBank",
+   "url": "https://bigsoundbank.com/hens-lays-s0978.html",
+   "licenca": "CC0 1.0 (domínio público)",
+   "conferido": "página do som: \"CC0 (public domain): Free and royalty-free\"",
+   "arquivoLocal": "bsb/0978.mp3",
+   "usadoEm": [
+    "galinha.chamado.3"
+   ]
+  },
+  {
+   "titulo": "Hens leaving coop.ogg",
+   "autor": "alys (via PDSounds)",
+   "acervo": "Wikimedia Commons",
+   "url": "https://commons.wikimedia.org/wiki/File:Hens_leaving_coop.ogg",
+   "licenca": "Domínio público (liberado pela autora)",
+   "conferido": "API do Commons (LicenseShortName = Public domain, License = pd)",
+   "arquivoLocal": "commons/c_galinhas_saindo.ogg",
+   "usadoEm": [
+    "galinha.susto.1",
+    "galinha.susto.2",
+    "galinha.susto.3",
+    "galinha.ai.1",
+    "galinha.ai.3"
+   ]
+  },
+  {
+   "titulo": "Chickens demanding food.ogg",
+   "autor": "alys (via PDSounds)",
+   "acervo": "Wikimedia Commons",
+   "url": "https://commons.wikimedia.org/wiki/File:Chickens_demanding_food.ogg",
+   "licenca": "Domínio público (liberado pela autora)",
+   "conferido": "API do Commons (LicenseShortName = Public domain, License = pd)",
+   "arquivoLocal": "commons/c_galinhas_comida.ogg",
+   "usadoEm": [
+    "galinha.contente.1",
+    "galinha.contente.2",
+    "galinha.contente.3"
+   ]
+  },
+  {
+   "titulo": "মুরগির বাচ্চার ডাক.oga (piados de um grupo de pintinhos)",
+   "autor": "Md. Tahmid Hossain (trabalho próprio)",
+   "acervo": "Wikimedia Commons",
+   "url": "https://commons.wikimedia.org/wiki/File:%E0%A6%AE%E0%A7%81%E0%A6%B0%E0%A6%97%E0%A6%BF%E0%A6%B0_%E0%A6%AC%E0%A6%BE%E0%A6%9A%E0%A7%8D%E0%A6%9A%E0%A6%BE%E0%A6%B0_%E0%A6%A1%E0%A6%BE%E0%A6%95.oga",
+   "licenca": "CC0 1.0",
+   "conferido": "página do arquivo (CC0 1.0 Universal Public Domain Dedication)",
+   "arquivoLocal": "commons/c_pintinhos.ogg",
+   "usadoEm": [
+    "pintinho.chamado.1",
+    "pintinho.chamado.2",
+    "pintinho.susto.1",
+    "pintinho.susto.2",
+    "pintinho.contente.1",
+    "pintinho.contente.2",
+    "pintinho.ai.1",
+    "pintinho.ai.2"
+   ]
+  },
+  {
+   "titulo": "Cock Song #1",
+   "autor": "Joseph SARDIN",
+   "acervo": "BigSoundBank",
+   "url": "https://bigsoundbank.com/cock-song-1-s0440.html",
+   "licenca": "CC0 1.0 (domínio público)",
+   "conferido": "página do som: \"CC0 (public domain): Free and royalty-free\"",
+   "arquivoLocal": "bsb/0440.mp3",
+   "usadoEm": [
+    "galo.chamado.1",
+    "galo.contente.1",
+    "galo.ai.1"
+   ]
+  },
+  {
+   "titulo": "Rooster Song",
+   "autor": "DenisChardonnet",
+   "acervo": "BigSoundBank",
+   "url": "https://bigsoundbank.com/song-of-rooster-s0283.html",
+   "licenca": "CC0 1.0 (domínio público)",
+   "conferido": "página do som: \"CC0 (public domain): Free and royalty-free\"",
+   "arquivoLocal": "bsb/0283.mp3",
+   "usadoEm": [
+    "galo.chamado.2",
+    "galo.contente.2"
+   ]
+  },
+  {
+   "titulo": "Small rooster crowing.ogg",
+   "autor": "alys (via PDSounds, nº 540)",
+   "acervo": "Wikimedia Commons",
+   "url": "https://commons.wikimedia.org/wiki/File:Small_rooster_crowing.ogg",
+   "licenca": "Domínio público (liberado pela autora, vale no mundo todo)",
+   "conferido": "página do arquivo e API do Commons",
+   "arquivoLocal": "commons/c_galo_pequeno.ogg",
+   "usadoEm": [
+    "galo.chamado.3",
+    "galo.ai.2"
+   ]
+  },
+  {
+   "titulo": "Medium rooster crowing.ogg",
+   "autor": "alys (via PDSounds)",
+   "acervo": "Wikimedia Commons",
+   "url": "https://commons.wikimedia.org/wiki/File:Medium_rooster_crowing.ogg",
+   "licenca": "Domínio público (liberado pela autora)",
+   "conferido": "API do Commons (LicenseShortName = Public domain, License = pd)",
+   "arquivoLocal": "commons/c_galo_medio.ogg",
+   "usadoEm": [
+    "galo.susto.1",
+    "galo.susto.2"
+   ]
+  },
+  {
+   "titulo": "Barking Dog #2",
+   "autor": "Joseph SARDIN",
+   "acervo": "BigSoundBank",
+   "url": "https://bigsoundbank.com/barking-dog-2-s2954.html",
+   "licenca": "CC0 1.0 (domínio público)",
+   "conferido": "página do som: \"CC0 (public domain): Free and royalty-free\"",
+   "arquivoLocal": "bsb/2954.mp3",
+   "usadoEm": [
+    "cachorro.chamado.1",
+    "cachorro.chamado.2",
+    "cachorro.chamado.3",
+    "cachorro.susto.1",
+    "cachorro.ai.1",
+    "cachorro.ai.2"
+   ]
+  },
+  {
+   "titulo": "Barking dog #1",
+   "autor": "Joseph SARDIN",
+   "acervo": "BigSoundBank",
+   "url": "https://bigsoundbank.com/barking-dog-s0916.html",
+   "licenca": "CC0 1.0 (domínio público)",
+   "conferido": "página do som: \"CC0 (public domain): Free and royalty-free\"",
+   "arquivoLocal": "bsb/0916.mp3",
+   "usadoEm": [
+    "cachorro.susto.2",
+    "cachorro.susto.3",
+    "cachorro.ai.3"
+   ]
+  },
+  {
+   "titulo": "Dogs Breathing",
+   "autor": "Joseph SARDIN",
+   "acervo": "BigSoundBank",
+   "url": "https://bigsoundbank.com/dogs-breathing-s1547.html",
+   "licenca": "CC0 1.0 (domínio público)",
+   "conferido": "página do som: \"CC0 (public domain): Free and royalty-free\"",
+   "arquivoLocal": "bsb/1547.mp3",
+   "usadoEm": [
+    "cachorro.contente.1",
+    "cachorro.contente.2",
+    "cachorro.contente.3",
+    "filhote.contente.1",
+    "filhote.contente.2"
+   ]
+  },
+  {
+   "titulo": "Small dog barking",
+   "autor": "Joseph SARDIN",
+   "acervo": "BigSoundBank",
+   "url": "https://bigsoundbank.com/small-dog-barking-s0612.html",
+   "licenca": "CC0 1.0 (domínio público)",
+   "conferido": "página do som: \"CC0 (public domain): Free and royalty-free\"",
+   "arquivoLocal": "bsb/0612.mp3",
+   "usadoEm": [
+    "filhote.chamado.1",
+    "filhote.susto.1",
+    "filhote.susto.2"
+   ]
+  },
+  {
+   "titulo": "Barking of a Spitz",
+   "autor": "Joseph SARDIN",
+   "acervo": "BigSoundBank",
+   "url": "https://bigsoundbank.com/barking-of-a-spitz-s0682.html",
+   "licenca": "CC0 1.0 (domínio público)",
+   "conferido": "página do som: \"CC0 (public domain): Free and royalty-free\"",
+   "arquivoLocal": "bsb/0682.mp3",
+   "usadoEm": [
+    "filhote.chamado.2"
+   ]
+  },
+  {
+   "titulo": "Puppy at a night.ogg",
+   "autor": "Knites (trabalho próprio)",
+   "acervo": "Wikimedia Commons",
+   "url": "https://commons.wikimedia.org/wiki/File:Puppy_at_a_night.ogg",
+   "licenca": "CC0 1.0",
+   "conferido": "página do arquivo (CC0 1.0 Universal Public Domain Dedication)",
+   "arquivoLocal": "commons/c_filhote_noite.ogg",
+   "usadoEm": [
+    "filhote.ai.1",
+    "filhote.ai.2"
+   ]
+  },
+  {
+   "titulo": "eSpeak NG 1.51 (Debian bookworm), vozes pt-br+f3 e pt-br+m3",
+   "autor": "projeto eSpeak NG",
+   "acervo": "programa de voz sintética, rodado aqui, sem gravação de ninguém",
+   "url": "https://github.com/espeak-ng/espeak-ng",
+   "licenca": "Programa sob GPL-3.0-ou-posterior; o som gerado não traz trecho gravado de pessoa nem de banco de voz (síntese por formantes). Não usamos as vozes MBROLA (licença não comercial).",
+   "conferido": "pacote espeak-ng do Debian; vozes MBROLA não instaladas",
+   "arquivoLocal": "espeak-ng",
+   "usadoEm": [
+    "moradora.cumprimento.1",
+    "moradora.cumprimento.2",
+    "moradora.contente.1",
+    "moradora.contente.2",
+    "moradora.obrigado.1",
+    "moradora.obrigado.2",
+    "moradora.surpresa.1",
+    "moradora.surpresa.2",
+    "morador.cumprimento.1",
+    "morador.cumprimento.2",
+    "morador.contente.1",
+    "morador.contente.2",
+    "morador.obrigado.1",
+    "morador.obrigado.2",
+    "morador.surpresa.1",
+    "morador.surpresa.2"
+   ]
+  }
+ ],
+ "arquivos": {
+  "vaca.chamado.1": {
+   "fonte": "bsb/0546.mp3",
+   "processamento": "trecho 0.69–1.95 s; tom +2.0 a +1.3 semitons (fita); filtro 70–3600 Hz; entrada/saída suaves, sala curta, volume igualado",
+   "receita": {
+    "fonte": "bsb/0546.mp3",
+    "ini": 0.69,
+    "fim": 1.95,
+    "emenda": [],
+    "fita": [
+     1.12,
+     1.08
+    ],
+    "semitons": [
+     2.0,
+     1.3
+    ],
+    "passaAlta": 70,
+    "passaBaixa": 3600,
+    "portao": false,
+    "seg": 1.33,
+    "rmsAtivoDb": -21.0,
+    "picoDb": -5.0
+   },
+   "mp3": {
+    "bytes": 8534,
+    "segMp3": 1.33,
+    "segWav": 1.33,
+    "picoDb": -5.6,
+    "rmsAtivoDb": -21.5,
+    "cortes": 0,
+    "centroideHz": 1234,
+    "f0": [
+     112,
+     115,
+     119,
+     126,
+     134,
+     141,
+     148,
+     158,
+     166,
+     171,
+     176,
+     266,
+     283,
+     286,
+     286,
+     290,
+     290,
+     290
+    ]
+   }
+  },
+  "vaca.chamado.2": {
+   "fonte": "bsb/0546.mp3",
+   "processamento": "trecho 6.10–7.40 s; tom +2.0 a +1.0 semitons (fita); filtro 70–3600 Hz; entrada/saída suaves, sala curta, volume igualado",
+   "receita": {
+    "fonte": "bsb/0546.mp3",
+    "ini": 6.1,
+    "fim": 7.4,
+    "emenda": [],
+    "fita": [
+     1.12,
+     1.06
+    ],
+    "semitons": [
+     2.0,
+     1.0
+    ],
+    "passaAlta": 70,
+    "passaBaixa": 3600,
+    "portao": false,
+    "seg": 1.378,
+    "rmsAtivoDb": -21.0,
+    "picoDb": -8.4
+   },
+   "mp3": {
+    "bytes": 8847,
+    "segMp3": 1.378,
+    "segWav": 1.378,
+    "picoDb": -8.9,
+    "rmsAtivoDb": -21.5,
+    "cortes": 0,
+    "centroideHz": 1030,
+    "f0": [
+     135,
+     146,
+     156,
+     167,
+     174,
+     182,
+     294,
+     290,
+     290,
+     294,
+     302,
+     302,
+     306,
+     306,
+     306,
+     306,
+     302,
+     306,
+     302,
+     302,
+     302,
+     302,
+     298,
+     298
+    ]
+   }
+  },
+  "vaca.chamado.3": {
+   "fonte": "bsb/2383.mp3",
+   "processamento": "trecho 0.60–1.85 s; tom +2.3 a +1.3 semitons (fita); filtro 70–3600 Hz; entrada/saída suaves, sala curta, volume igualado",
+   "receita": {
+    "fonte": "bsb/2383.mp3",
+    "ini": 0.6,
+    "fim": 1.85,
+    "emenda": [],
+    "fita": [
+     1.14,
+     1.08
+    ],
+    "semitons": [
+     2.3,
+     1.3
+    ],
+    "passaAlta": 70,
+    "passaBaixa": 3600,
+    "portao": false,
+    "seg": 1.31,
+    "rmsAtivoDb": -21.0,
+    "picoDb": -7.0
+   },
+   "mp3": {
+    "bytes": 8534,
+    "segMp3": 1.31,
+    "segWav": 1.31,
+    "picoDb": -7.2,
+    "rmsAtivoDb": -21.4,
+    "cortes": 0,
+    "centroideHz": 1055,
+    "f0": [
+     123,
+     129,
+     134,
+     141,
+     148,
+     156,
+     163,
+     171,
+     178,
+     187,
+     146,
+     290,
+     294,
+     294,
+     294
+    ]
+   }
+  },
+  "vaca.susto.1": {
+   "fonte": "bsb/0546.mp3",
+   "processamento": "trecho 3.34–3.72 s; tom +4.5 a +5.6 semitons (fita); filtro 90–3800 Hz; entrada/saída suaves, sala curta, volume igualado",
+   "receita": {
+    "fonte": "bsb/0546.mp3",
+    "ini": 3.34,
+    "fim": 3.72,
+    "emenda": [],
+    "fita": [
+     1.3,
+     1.38
+    ],
+    "semitons": [
+     4.5,
+     5.6
+    ],
+    "passaAlta": 90,
+    "passaBaixa": 3800,
+    "portao": false,
+    "seg": 0.458,
+    "rmsAtivoDb": -21.0,
+    "picoDb": -4.1
+   },
+   "mp3": {
+    "bytes": 3361,
+    "segMp3": 0.458,
+    "segWav": 0.458,
+    "picoDb": -4.6,
+    "rmsAtivoDb": -21.4,
+    "cortes": 0,
+    "centroideHz": 1619,
+    "f0": [
+     110,
+     115,
+     121,
+     126,
+     130,
+     135,
+     140,
+     145
+    ]
+   }
+  },
+  "vaca.susto.2": {
+   "fonte": "bsb/0546.mp3",
+   "processamento": "trecho 9.68–10.05 s; tom +4.8 a +6.1 semitons (fita); filtro 90–3800 Hz; entrada/saída suaves, sala curta, volume igualado",
+   "receita": {
+    "fonte": "bsb/0546.mp3",
+    "ini": 9.68,
+    "fim": 10.05,
+    "emenda": [],
+    "fita": [
+     1.32,
+     1.42
+    ],
+    "semitons": [
+     4.8,
+     6.1
+    ],
+    "passaAlta": 90,
+    "passaBaixa": 3800,
+    "portao": false,
+    "seg": 0.444,
+    "rmsAtivoDb": -21.0,
+    "picoDb": -4.0
+   },
+   "mp3": {
+    "bytes": 3205,
+    "segMp3": 0.444,
+    "segWav": 0.444,
+    "picoDb": -4.4,
+    "rmsAtivoDb": -21.4,
+    "cortes": 0,
+    "centroideHz": 1700,
+    "f0": [
+     112,
+     116,
+     120,
+     123,
+     127,
+     132,
+     134,
+     138
+    ]
+   }
+  },
+  "vaca.susto.3": {
+   "fonte": "bsb/2383.mp3",
+   "processamento": "trecho 0.60–0.98 s; tom +4.5 a +5.8 semitons (fita); filtro 90–3800 Hz; entrada/saída suaves, sala curta, volume igualado",
+   "receita": {
+    "fonte": "bsb/2383.mp3",
+    "ini": 0.6,
+    "fim": 0.98,
+    "emenda": [],
+    "fita": [
+     1.3,
+     1.4
+    ],
+    "semitons": [
+     4.5,
+     5.8
+    ],
+    "passaAlta": 90,
+    "passaBaixa": 3800,
+    "portao": false,
+    "seg": 0.456,
+    "rmsAtivoDb": -21.0,
+    "picoDb": -6.1
+   },
+   "mp3": {
+    "bytes": 3361,
+    "segMp3": 0.456,
+    "segWav": 0.456,
+    "picoDb": -6.5,
+    "rmsAtivoDb": -21.4,
+    "cortes": 0,
+    "centroideHz": 1788,
+    "f0": [
+     94,
+     100,
+     106,
+     112,
+     118,
+     125,
+     129,
+     134
+    ]
+   }
+  },
+  "vaca.contente.1": {
+   "fonte": "bsb/0546.mp3",
+   "processamento": "trecho 6.40–7.30 s; tom +0.0 a -0.5 semitons (fita); filtro 70–1100 Hz; entrada/saída suaves, sala curta, volume igualado",
+   "receita": {
+    "fonte": "bsb/0546.mp3",
+    "ini": 6.4,
+    "fim": 7.3,
+    "emenda": [],
+    "fita": [
+     1.0,
+     0.97
+    ],
+    "semitons": [
+     0.0,
+     -0.5
+    ],
+    "passaAlta": 70,
+    "passaBaixa": 1100,
+    "portao": false,
+    "seg": 1.105,
+    "rmsAtivoDb": -21.0,
+    "picoDb": -10.9
+   },
+   "mp3": {
+    "bytes": 7280,
+    "segMp3": 1.105,
+    "segWav": 1.105,
+    "picoDb": -11.4,
+    "rmsAtivoDb": -21.4,
+    "cortes": 0,
+    "centroideHz": 610,
+    "f0": [
+     138,
+     146,
+     154,
+     159,
+     166,
+     269,
+     266,
+     266,
+     266,
+     272,
+     272,
+     279,
+     279,
+     279,
+     272,
+     276,
+     276,
+     279,
+     276,
+     276,
+     272
+    ]
+   }
+  },
+  "vaca.contente.2": {
+   "fonte": "bsb/2383.mp3",
+   "processamento": "trecho 1.00–1.90 s; tom +0.0 a -0.7 semitons (fita); filtro 70–1100 Hz; entrada/saída suaves, sala curta, volume igualado",
+   "receita": {
+    "fonte": "bsb/2383.mp3",
+    "ini": 1.0,
+    "fim": 1.9,
+    "emenda": [],
+    "fita": [
+     1.0,
+     0.96
+    ],
+    "semitons": [
+     0.0,
+     -0.7
+    ],
+    "passaAlta": 70,
+    "passaBaixa": 1100,
+    "portao": false,
+    "seg": 1.11,
+    "rmsAtivoDb": -21.0,
+    "picoDb": -9.5
+   },
+   "mp3": {
+    "bytes": 7280,
+    "segMp3": 1.11,
+    "segWav": 1.11,
+    "picoDb": -9.9,
+    "rmsAtivoDb": -21.4,
+    "cortes": 0,
+    "centroideHz": 630,
+    "f0": [
+     111,
+     115,
+     119,
+     126,
+     130,
+     137,
+     143,
+     149,
+     154,
+     162,
+     167,
+     266,
+     130,
+     259,
+     259,
+     262,
+     262,
+     259,
+     262
+    ]
+   }
+  },
+  "vaca.contente.3": {
+   "fonte": "bsb/0546.mp3",
+   "processamento": "trecho 9.90–10.80 s; tom +0.3 a -0.3 semitons (fita); filtro 70–1100 Hz; entrada/saída suaves, sala curta, volume igualado",
+   "receita": {
+    "fonte": "bsb/0546.mp3",
+    "ini": 9.9,
+    "fim": 10.8,
+    "emenda": [],
+    "fita": [
+     1.02,
+     0.98
+    ],
+    "semitons": [
+     0.3,
+     -0.3
+    ],
+    "passaAlta": 70,
+    "passaBaixa": 1100,
+    "portao": false,
+    "seg": 1.09,
+    "rmsAtivoDb": -21.0,
+    "picoDb": -11.6
+   },
+   "mp3": {
+    "bytes": 7123,
+    "segMp3": 1.09,
+    "segWav": 1.09,
+    "picoDb": -12.0,
+    "rmsAtivoDb": -21.4,
+    "cortes": 0,
+    "centroideHz": 588,
+    "f0": [
+     98,
+     99,
+     102,
+     105,
+     108,
+     114,
+     119,
+     126,
+     133,
+     143,
+     152,
+     160,
+     266,
+     269,
+     269,
+     269,
+     269,
+     269,
+     269
+    ]
+   }
+  },
+  "vaca.ai.1": {
+   "fonte": "bsb/0546.mp3",
+   "processamento": "trecho 3.50–3.90 s; tom +3.2 a +9.7 semitons (fita); filtro 90–3800 Hz; entrada/saída suaves, sala curta, volume igualado",
+   "receita": {
+    "fonte": "bsb/0546.mp3",
+    "ini": 3.5,
+    "fim": 3.9,
+    "emenda": [],
+    "fita": [
+     1.2,
+     1.75
+    ],
+    "semitons": [
+     3.2,
+     9.7
+    ],
+    "passaAlta": 90,
+    "passaBaixa": 3800,
+    "portao": false,
+    "seg": 0.442,
+    "rmsAtivoDb": -21.0,
+    "picoDb": -3.0
+   },
+   "mp3": {
+    "bytes": 3205,
+    "segMp3": 0.442,
+    "segWav": 0.442,
+    "picoDb": -3.4,
+    "rmsAtivoDb": -21.4,
+    "cortes": 0,
+    "centroideHz": 1641,
+    "f0": [
+     117,
+     127,
+     149,
+     163,
+     185,
+     387,
+     218
+    ]
+   }
+  },
+  "vaca.ai.2": {
+   "fonte": "bsb/2383.mp3",
+   "processamento": "trecho 1.20–1.60 s; tom +3.4 a +10.2 semitons (fita); filtro 90–3800 Hz; entrada/saída suaves, sala curta, volume igualado",
+   "receita": {
+    "fonte": "bsb/2383.mp3",
+    "ini": 1.2,
+    "fim": 1.6,
+    "emenda": [],
+    "fita": [
+     1.22,
+     1.8
+    ],
+    "semitons": [
+     3.4,
+     10.2
+    ],
+    "passaAlta": 90,
+    "passaBaixa": 3800,
+    "portao": false,
+    "seg": 0.435,
+    "rmsAtivoDb": -21.0,
+    "picoDb": -5.9
+   },
+   "mp3": {
+    "bytes": 3205,
+    "segMp3": 0.435,
+    "segWav": 0.435,
+    "picoDb": -6.6,
+    "rmsAtivoDb": -21.4,
+    "cortes": 0,
+    "centroideHz": 1459,
+    "f0": [
+     148,
+     315,
+     181,
+     200,
+     230,
+     513,
+     279
+    ]
+   }
+  },
+  "vaca.ai.3": {
+   "fonte": "bsb/0546.mp3",
+   "processamento": "trecho 0.90–1.30 s; tom +2.9 a +9.2 semitons (fita); filtro 90–3800 Hz; entrada/saída suaves, sala curta, volume igualado",
+   "receita": {
+    "fonte": "bsb/0546.mp3",
+    "ini": 0.9,
+    "fim": 1.3,
+    "emenda": [],
+    "fita": [
+     1.18,
+     1.7
+    ],
+    "semitons": [
+     2.9,
+     9.2
+    ],
+    "passaAlta": 90,
+    "passaBaixa": 3800,
+    "portao": false,
+    "seg": 0.449,
+    "rmsAtivoDb": -21.0,
+    "picoDb": -6.9
+   },
+   "mp3": {
+    "bytes": 3361,
+    "segMp3": 0.449,
+    "segWav": 0.449,
+    "picoDb": -6.6,
+    "rmsAtivoDb": -21.4,
+    "cortes": 0,
+    "centroideHz": 2088,
+    "f0": [
+     167,
+     182
+    ]
+   }
+  },
+  "galinha.chamado.1": {
+   "fonte": "commons/c_galinha_ovo.ogg",
+   "processamento": "trecho 0.55–1.36 s; tom +0.8 semitons (fita); filtro 200–6500 Hz; chiado entre sons abaixado; entrada/saída suaves, sala curta, volume igualado",
+   "receita": {
+    "fonte": "commons/c_galinha_ovo.ogg",
+    "ini": 0.55,
+    "fim": 1.36,
+    "emenda": [],
+    "fita": [
+     1.05,
+     1.05
+    ],
+    "semitons": [
+     0.8,
+     0.8
+    ],
+    "passaAlta": 200,
+    "passaBaixa": 6500,
+    "portao": true,
+    "seg": 0.84,
+    "rmsAtivoDb": -21.0,
+    "picoDb": -8.1
+   },
+   "mp3": {
+    "bytes": 5712,
+    "segMp3": 0.84,
+    "segWav": 0.84,
+    "picoDb": -7.3,
+    "rmsAtivoDb": -21.4,
+    "cortes": 0,
+    "centroideHz": 1891,
+    "f0": [
+     1102,
+     1102,
+     1102,
+     1225,
+     1102,
+     1297,
+     1161,
+     1225
+    ]
+   }
+  },
+  "galinha.chamado.2": {
+   "fonte": "commons/c_galinha_ovo.ogg",
+   "processamento": "trecho 2.60–3.12 s; tom +0.8 semitons (fita); filtro 200–6500 Hz; chiado entre sons abaixado; entrada/saída suaves, sala curta, volume igualado",
+   "receita": {
+    "fonte": "commons/c_galinha_ovo.ogg",
+    "ini": 2.6,
+    "fim": 3.12,
+    "emenda": [],
+    "fita": [
+     1.05,
+     1.05
+    ],
+    "semitons": [
+     0.8,
+     0.8
+    ],
+    "passaAlta": 200,
+    "passaBaixa": 6500,
+    "portao": true,
+    "seg": 0.571,
+    "rmsAtivoDb": -21.0,
+    "picoDb": -5.3
+   },
+   "mp3": {
+    "bytes": 3988,
+    "segMp3": 0.571,
+    "segWav": 0.571,
+    "picoDb": -6.0,
+    "rmsAtivoDb": -21.4,
+    "cortes": 0,
+    "centroideHz": 1837,
+    "f0": [
+     329,
+     1225,
+     1225,
+     1225
+    ]
+   }
+  },
+  "galinha.chamado.3": {
+   "fonte": "bsb/0978.mp3",
+   "processamento": "trecho 1.95–2.75 s; tom +1.0 semitons (fita); filtro 200–6500 Hz; chiado entre sons abaixado; entrada/saída suaves, sala curta, volume igualado",
+   "receita": {
+    "fonte": "bsb/0978.mp3",
+    "ini": 1.95,
+    "fim": 2.75,
+    "emenda": [],
+    "fita": [
+     1.06,
+     1.06
+    ],
+    "semitons": [
+     1.0,
+     1.0
+    ],
+    "passaAlta": 200,
+    "passaBaixa": 6500,
+    "portao": true,
+    "seg": 0.85,
+    "rmsAtivoDb": -21.0,
+    "picoDb": -3.9
+   },
+   "mp3": {
+    "bytes": 5712,
+    "segMp3": 0.85,
+    "segWav": 0.85,
+    "picoDb": -4.1,
+    "rmsAtivoDb": -21.4,
+    "cortes": 0,
+    "centroideHz": 2252,
+    "f0": [
+     1297,
+     1297,
+     1225,
+     1225,
+     1378,
+     1575,
+     361,
+     1470,
+     1470,
+     1470,
+     1575,
+     1378
+    ]
+   }
+  },
+  "galinha.susto.1": {
+   "fonte": "commons/c_galinhas_saindo.ogg",
+   "processamento": "trecho 1.22–1.62 s; tom +1.3 a +2.0 semitons (fita); filtro 220–6000 Hz; chiado entre sons abaixado; entrada/saída suaves, sala curta, volume igualado",
+   "receita": {
+    "fonte": "commons/c_galinhas_saindo.ogg",
+    "ini": 1.22,
+    "fim": 1.62,
+    "emenda": [],
+    "fita": [
+     1.08,
+     1.12
+    ],
+    "semitons": [
+     1.3,
+     2.0
+    ],
+    "passaAlta": 220,
+    "passaBaixa": 6000,
+    "portao": true,
+    "seg": 0.548,
+    "rmsAtivoDb": -21.0,
+    "picoDb": -8.8
+   },
+   "mp3": {
+    "bytes": 3832,
+    "segMp3": 0.548,
+    "segWav": 0.548,
+    "picoDb": -8.8,
+    "rmsAtivoDb": -21.4,
+    "cortes": 0,
+    "centroideHz": 2236,
+    "f0": [
+     525,
+     1297,
+     1575
+    ]
+   }
+  },
+  "galinha.susto.2": {
+   "fonte": "commons/c_galinhas_saindo.ogg",
+   "processamento": "trecho 2.47–2.80 s; tom +1.3 a +2.0 semitons (fita); filtro 220–6000 Hz; chiado entre sons abaixado; entrada/saída suaves, sala curta, volume igualado",
+   "receita": {
+    "fonte": "commons/c_galinhas_saindo.ogg",
+    "ini": 2.47,
+    "fim": 2.8,
+    "emenda": [],
+    "fita": [
+     1.08,
+     1.12
+    ],
+    "semitons": [
+     1.3,
+     2.0
+    ],
+    "passaAlta": 220,
+    "passaBaixa": 6000,
+    "portao": true,
+    "seg": 0.484,
+    "rmsAtivoDb": -21.0,
+    "picoDb": -10.4
+   },
+   "mp3": {
+    "bytes": 3518,
+    "segMp3": 0.484,
+    "segWav": 0.484,
+    "picoDb": -10.6,
+    "rmsAtivoDb": -21.5,
+    "cortes": 0,
+    "centroideHz": 2340,
+    "f0": [
+     689,
+     1470,
+     1575,
+     788,
+     1470
+    ]
+   }
+  },
+  "galinha.susto.3": {
+   "fonte": "commons/c_galinhas_saindo.ogg",
+   "processamento": "trecho 4.52–4.82 s; tom +1.3 a +2.0 semitons (fita); filtro 220–6000 Hz; chiado entre sons abaixado; entrada/saída suaves, sala curta, volume igualado",
+   "receita": {
+    "fonte": "commons/c_galinhas_saindo.ogg",
+    "ini": 4.52,
+    "fim": 4.82,
+    "emenda": [],
+    "fita": [
+     1.08,
+     1.12
+    ],
+    "semitons": [
+     1.3,
+     2.0
+    ],
+    "passaAlta": 220,
+    "passaBaixa": 6000,
+    "portao": true,
+    "seg": 0.455,
+    "rmsAtivoDb": -21.0,
+    "picoDb": -8.6
+   },
+   "mp3": {
+    "bytes": 3361,
+    "segMp3": 0.455,
+    "segWav": 0.455,
+    "picoDb": -8.9,
+    "rmsAtivoDb": -21.4,
+    "cortes": 0,
+    "centroideHz": 2071,
+    "f0": [
+     649
+    ]
+   }
+  },
+  "galinha.contente.1": {
+   "fonte": "commons/c_galinhas_comida.ogg",
+   "processamento": "trecho 8.85–9.22 s; tom +0.5 a +0.0 semitons (fita); filtro 180–3800 Hz; chiado entre sons abaixado; entrada/saída suaves, sala curta, volume igualado",
+   "receita": {
+    "fonte": "commons/c_galinhas_comida.ogg",
+    "ini": 8.85,
+    "fim": 9.22,
+    "emenda": [],
+    "fita": [
+     1.03,
+     1.0
+    ],
+    "semitons": [
+     0.5,
+     0.0
+    ],
+    "passaAlta": 180,
+    "passaBaixa": 3800,
+    "portao": true,
+    "seg": 0.536,
+    "rmsAtivoDb": -21.0,
+    "picoDb": -6.1
+   },
+   "mp3": {
+    "bytes": 3832,
+    "segMp3": 0.536,
+    "segWav": 0.536,
+    "picoDb": -6.4,
+    "rmsAtivoDb": -21.5,
+    "cortes": 0,
+    "centroideHz": 1146,
+    "f0": [
+     315,
+     302,
+     302,
+     311,
+     689,
+     350,
+     272,
+     253
+    ]
+   }
+  },
+  "galinha.contente.2": {
+   "fonte": "commons/c_galinhas_comida.ogg",
+   "processamento": "trecho 9.48–10.02 s; tom +0.5 a +0.0 semitons (fita); filtro 180–3800 Hz; chiado entre sons abaixado; entrada/saída suaves, sala curta, volume igualado",
+   "receita": {
+    "fonte": "commons/c_galinhas_comida.ogg",
+    "ini": 9.48,
+    "fim": 10.02,
+    "emenda": [],
+    "fita": [
+     1.03,
+     1.0
+    ],
+    "semitons": [
+     0.5,
+     0.0
+    ],
+    "passaAlta": 180,
+    "passaBaixa": 3800,
+    "portao": true,
+    "seg": 0.721,
+    "rmsAtivoDb": -21.0,
+    "picoDb": -4.7
+   },
+   "mp3": {
+    "bytes": 4929,
+    "segMp3": 0.721,
+    "segWav": 0.721,
+    "picoDb": -5.1,
+    "rmsAtivoDb": -21.4,
+    "cortes": 0,
+    "centroideHz": 1109,
+    "f0": [
+     256,
+     711,
+     350,
+     306,
+     298,
+     848,
+     230,
+     294,
+     290
+    ]
+   }
+  },
+  "galinha.contente.3": {
+   "fonte": "commons/c_galinhas_comida.ogg",
+   "processamento": "trecho 7.40–7.56 s + 8.66–8.82 s; tom +0.5 a +0.0 semitons (fita); filtro 180–3800 Hz; chiado entre sons abaixado; entrada/saída suaves, sala curta, volume igualado",
+   "receita": {
+    "fonte": "commons/c_galinhas_comida.ogg",
+    "ini": 7.4,
+    "fim": 7.56,
+    "emenda": [
+     [
+      "comida",
+      8.66,
+      8.82
+     ]
+    ],
+    "fita": [
+     1.03,
+     1.0
+    ],
+    "semitons": [
+     0.5,
+     0.0
+    ],
+    "passaAlta": 180,
+    "passaBaixa": 3800,
+    "portao": true,
+    "seg": 0.603,
+    "rmsAtivoDb": -21.0,
+    "picoDb": -3.3
+   },
+   "mp3": {
+    "bytes": 4302,
+    "segMp3": 0.603,
+    "segWav": 0.603,
+    "picoDb": -3.7,
+    "rmsAtivoDb": -21.4,
+    "cortes": 0,
+    "centroideHz": 1272,
+    "f0": [
+     817,
+     689,
+     368,
+     356,
+     345,
+     788
+    ]
+   }
+  },
+  "galinha.ai.1": {
+   "fonte": "commons/c_galinhas_saindo.ogg",
+   "processamento": "trecho 2.50–2.74 s; tom +1.7 a +6.4 semitons (fita); filtro 220–6000 Hz; chiado entre sons abaixado; entrada/saída suaves, sala curta, volume igualado",
+   "receita": {
+    "fonte": "commons/c_galinhas_saindo.ogg",
+    "ini": 2.5,
+    "fim": 2.74,
+    "emenda": [],
+    "fita": [
+     1.1,
+     1.45
+    ],
+    "semitons": [
+     1.7,
+     6.4
+    ],
+    "passaAlta": 220,
+    "passaBaixa": 6000,
+    "portao": true,
+    "seg": 0.354,
+    "rmsAtivoDb": -21.0,
+    "picoDb": -9.3
+   },
+   "mp3": {
+    "bytes": 2735,
+    "segMp3": 0.354,
+    "segWav": 0.354,
+    "picoDb": -9.8,
+    "rmsAtivoDb": -21.4,
+    "cortes": 0,
+    "centroideHz": 2738,
+    "f0": [
+     513,
+     788,
+     1838,
+     1002
+    ]
+   }
+  },
+  "galinha.ai.2": {
+   "fonte": "commons/c_galinha_ovo.ogg",
+   "processamento": "trecho 1.80–1.92 s; tom +1.7 a +7.0 semitons (fita); filtro 220–6000 Hz; chiado entre sons abaixado; entrada/saída suaves, sala curta, volume igualado",
+   "receita": {
+    "fonte": "commons/c_galinha_ovo.ogg",
+    "ini": 1.8,
+    "fim": 1.92,
+    "emenda": [],
+    "fita": [
+     1.1,
+     1.5
+    ],
+    "semitons": [
+     1.7,
+     7.0
+    ],
+    "passaAlta": 220,
+    "passaBaixa": 6000,
+    "portao": true,
+    "seg": 0.222,
+    "rmsAtivoDb": -21.0,
+    "picoDb": -9.1
+   },
+   "mp3": {
+    "bytes": 1951,
+    "segMp3": 0.222,
+    "segWav": 0.222,
+    "picoDb": -9.1,
+    "rmsAtivoDb": -21.2,
+    "cortes": 0,
+    "centroideHz": 2253,
+    "f0": [
+     1378,
+     1470
+    ]
+   }
+  },
+  "galinha.ai.3": {
+   "fonte": "commons/c_galinhas_saindo.ogg",
+   "processamento": "trecho 1.24–1.46 s; tom +2.0 a +6.4 semitons (fita); filtro 220–6000 Hz; chiado entre sons abaixado; entrada/saída suaves, sala curta, volume igualado",
+   "receita": {
+    "fonte": "commons/c_galinhas_saindo.ogg",
+    "ini": 1.24,
+    "fim": 1.46,
+    "emenda": [],
+    "fita": [
+     1.12,
+     1.45
+    ],
+    "semitons": [
+     2.0,
+     6.4
+    ],
+    "passaAlta": 220,
+    "passaBaixa": 6000,
+    "portao": true,
+    "seg": 0.35,
+    "rmsAtivoDb": -21.0,
+    "picoDb": -8.9
+   },
+   "mp3": {
+    "bytes": 2735,
+    "segMp3": 0.35,
+    "segWav": 0.35,
+    "picoDb": -8.9,
+    "rmsAtivoDb": -21.4,
+    "cortes": 0,
+    "centroideHz": 2567,
+    "f0": [
+     551,
+     1575,
+     1838
+    ]
+   }
+  },
+  "pintinho.chamado.1": {
+   "fonte": "commons/c_pintinhos.ogg",
+   "processamento": "trecho 1.34–1.76 s; tom +0.0 semitons (fita); filtro 900–9000 Hz; chiado entre sons abaixado; entrada/saída suaves, sala curta, volume igualado",
+   "receita": {
+    "fonte": "commons/c_pintinhos.ogg",
+    "ini": 1.34,
+    "fim": 1.76,
+    "emenda": [],
+    "fita": [
+     1.0,
+     1.0
+    ],
+    "semitons": [
+     0.0,
+     0.0
+    ],
+    "passaAlta": 900,
+    "passaBaixa": 9000,
+    "portao": true,
+    "seg": 0.61,
+    "rmsAtivoDb": -21.0,
+    "picoDb": -9.4
+   },
+   "mp3": {
+    "bytes": 4302,
+    "segMp3": 0.61,
+    "segWav": 0.61,
+    "picoDb": -9.7,
+    "rmsAtivoDb": -21.4,
+    "cortes": 0,
+    "centroideHz": 4472,
+    "f0": [
+     1470,
+     1378,
+     1696,
+     1696,
+     848,
+     1378,
+     760,
+     1470,
+     1378
+    ]
+   }
+  },
+  "pintinho.chamado.2": {
+   "fonte": "commons/c_pintinhos.ogg",
+   "processamento": "trecho 1.98–2.14 s + 2.96–3.13 s; tom +0.0 semitons (fita); filtro 900–9000 Hz; chiado entre sons abaixado; entrada/saída suaves, sala curta, volume igualado",
+   "receita": {
+    "fonte": "commons/c_pintinhos.ogg",
+    "ini": 1.98,
+    "fim": 2.14,
+    "emenda": [
+     [
+      "pintos",
+      2.96,
+      3.13
+     ]
+    ],
+    "fita": [
+     1.0,
+     1.0
+    ],
+    "semitons": [
+     0.0,
+     0.0
+    ],
+    "passaAlta": 900,
+    "passaBaixa": 9000,
+    "portao": true,
+    "seg": 0.62,
+    "rmsAtivoDb": -21.0,
+    "picoDb": -8.3
+   },
+   "mp3": {
+    "bytes": 4302,
+    "segMp3": 0.62,
+    "segWav": 0.62,
+    "picoDb": -9.0,
+    "rmsAtivoDb": -21.4,
+    "cortes": 0,
+    "centroideHz": 4387,
+    "f0": [
+     1297,
+     1575,
+     1470,
+     1378,
+     1297,
+     1575,
+     1161,
+     1378,
+     1297
+    ]
+   }
+  },
+  "pintinho.susto.1": {
+   "fonte": "commons/c_pintinhos.ogg",
+   "processamento": "trecho 1.34–2.12 s; tom +2.9 semitons (fita); filtro 900–9000 Hz; chiado entre sons abaixado; entrada/saída suaves, sala curta, volume igualado",
+   "receita": {
+    "fonte": "commons/c_pintinhos.ogg",
+    "ini": 1.34,
+    "fim": 2.12,
+    "emenda": [],
+    "fita": [
+     1.18,
+     1.18
+    ],
+    "semitons": [
+     2.9,
+     2.9
+    ],
+    "passaAlta": 900,
+    "passaBaixa": 9000,
+    "portao": true,
+    "seg": 0.842,
+    "rmsAtivoDb": -21.0,
+    "picoDb": -7.5
+   },
+   "mp3": {
+    "bytes": 5712,
+    "segMp3": 0.842,
+    "segWav": 0.842,
+    "picoDb": -8.3,
+    "rmsAtivoDb": -21.2,
+    "cortes": 0,
+    "centroideHz": 5007,
+    "f0": [
+     1696,
+     1575,
+     1002,
+     1575,
+     760,
+     1696,
+     1470,
+     1575,
+     1470,
+     1297,
+     1575
+    ]
+   }
+  },
+  "pintinho.susto.2": {
+   "fonte": "commons/c_pintinhos.ogg",
+   "processamento": "trecho 4.60–5.50 s; tom +2.9 semitons (fita); filtro 900–9000 Hz; chiado entre sons abaixado; entrada/saída suaves, sala curta, volume igualado",
+   "receita": {
+    "fonte": "commons/c_pintinhos.ogg",
+    "ini": 4.6,
+    "fim": 5.5,
+    "emenda": [],
+    "fita": [
+     1.18,
+     1.18
+    ],
+    "semitons": [
+     2.9,
+     2.9
+    ],
+    "passaAlta": 900,
+    "passaBaixa": 9000,
+    "portao": true,
+    "seg": 0.944,
+    "rmsAtivoDb": -21.0,
+    "picoDb": -6.3
+   },
+   "mp3": {
+    "bytes": 6339,
+    "segMp3": 0.944,
+    "segWav": 0.944,
+    "picoDb": -7.1,
+    "rmsAtivoDb": -21.5,
+    "cortes": 0,
+    "centroideHz": 5047,
+    "f0": [
+     1225,
+     1575,
+     1575,
+     1838,
+     649,
+     1297,
+     1696,
+     1225,
+     788,
+     1696,
+     1575
+    ]
+   }
+  },
+  "pintinho.contente.1": {
+   "fonte": "commons/c_pintinhos.ogg",
+   "processamento": "trecho 2.56–2.80 s; tom -1.4 semitons (fita); filtro 900–7000 Hz; chiado entre sons abaixado; entrada/saída suaves, sala curta, volume igualado",
+   "receita": {
+    "fonte": "commons/c_pintinhos.ogg",
+    "ini": 2.56,
+    "fim": 2.8,
+    "emenda": [],
+    "fita": [
+     0.92,
+     0.92
+    ],
+    "semitons": [
+     -1.4,
+     -1.4
+    ],
+    "passaAlta": 900,
+    "passaBaixa": 7000,
+    "portao": true,
+    "seg": 0.456,
+    "rmsAtivoDb": -21.0,
+    "picoDb": -9.2
+   },
+   "mp3": {
+    "bytes": 3361,
+    "segMp3": 0.456,
+    "segWav": 0.456,
+    "picoDb": -8.2,
+    "rmsAtivoDb": -21.2,
+    "cortes": 0,
+    "centroideHz": 3912,
+    "f0": [
+     1297,
+     1838,
+     1696,
+     1838,
+     1838
+    ]
+   }
+  },
+  "pintinho.contente.2": {
+   "fonte": "commons/c_pintinhos.ogg",
+   "processamento": "trecho 4.20–4.41 s; tom -1.4 semitons (fita); filtro 900–7000 Hz; chiado entre sons abaixado; entrada/saída suaves, sala curta, volume igualado",
+   "receita": {
+    "fonte": "commons/c_pintinhos.ogg",
+    "ini": 4.2,
+    "fim": 4.41,
+    "emenda": [],
+    "fita": [
+     0.92,
+     0.92
+    ],
+    "semitons": [
+     -1.4,
+     -1.4
+    ],
+    "passaAlta": 900,
+    "passaBaixa": 7000,
+    "portao": true,
+    "seg": 0.423,
+    "rmsAtivoDb": -21.0,
+    "picoDb": -8.7
+   },
+   "mp3": {
+    "bytes": 3205,
+    "segMp3": 0.423,
+    "segWav": 0.423,
+    "picoDb": -10.0,
+    "rmsAtivoDb": -21.5,
+    "cortes": 0,
+    "centroideHz": 4042,
+    "f0": [
+     1297,
+     1838,
+     1838,
+     817,
+     1225
+    ]
+   }
+  },
+  "pintinho.ai.1": {
+   "fonte": "commons/c_pintinhos.ogg",
+   "processamento": "trecho 0.15–0.35 s; tom -0.9 a +3.9 semitons (fita); filtro 900–9000 Hz; chiado entre sons abaixado; entrada/saída suaves, sala curta, volume igualado",
+   "receita": {
+    "fonte": "commons/c_pintinhos.ogg",
+    "ini": 0.15,
+    "fim": 0.35,
+    "emenda": [],
+    "fita": [
+     0.95,
+     1.25
+    ],
+    "semitons": [
+     -0.9,
+     3.9
+    ],
+    "passaAlta": 900,
+    "passaBaixa": 9000,
+    "portao": true,
+    "seg": 0.366,
+    "rmsAtivoDb": -21.0,
+    "picoDb": -8.5
+   },
+   "mp3": {
+    "bytes": 2891,
+    "segMp3": 0.368,
+    "segWav": 0.366,
+    "picoDb": -7.8,
+    "rmsAtivoDb": -21.2,
+    "cortes": 0,
+    "centroideHz": 4795,
+    "f0": [
+     1575,
+     1575,
+     1161,
+     1575
+    ]
+   }
+  },
+  "pintinho.ai.2": {
+   "fonte": "commons/c_pintinhos.ogg",
+   "processamento": "trecho 4.61–4.78 s; tom -0.9 a +3.9 semitons (fita); filtro 900–9000 Hz; chiado entre sons abaixado; entrada/saída suaves, sala curta, volume igualado",
+   "receita": {
+    "fonte": "commons/c_pintinhos.ogg",
+    "ini": 4.61,
+    "fim": 4.78,
+    "emenda": [],
+    "fita": [
+     0.95,
+     1.25
+    ],
+    "semitons": [
+     -0.9,
+     3.9
+    ],
+    "passaAlta": 900,
+    "passaBaixa": 9000,
+    "portao": true,
+    "seg": 0.339,
+    "rmsAtivoDb": -21.0,
+    "picoDb": -10.5
+   },
+   "mp3": {
+    "bytes": 2578,
+    "segMp3": 0.339,
+    "segWav": 0.339,
+    "picoDb": -11.6,
+    "rmsAtivoDb": -22.4,
+    "cortes": 0,
+    "centroideHz": 4891,
+    "f0": [
+     1696,
+     1470,
+     1102,
+     1470,
+     689
+    ]
+   }
+  },
+  "galo.chamado.1": {
+   "fonte": "bsb/0440.mp3",
+   "processamento": "trecho 0.20–2.05 s; tom +2.0 semitons (fita); filtro 250–6500 Hz; entrada/saída suaves, sala curta, volume igualado",
+   "receita": {
+    "fonte": "bsb/0440.mp3",
+    "ini": 0.2,
+    "fim": 2.05,
+    "emenda": [],
+    "fita": [
+     1.12,
+     1.12
+    ],
+    "semitons": [
+     2.0,
+     2.0
+    ],
+    "passaAlta": 250,
+    "passaBaixa": 6500,
+    "portao": false,
+    "seg": 1.778,
+    "rmsAtivoDb": -21.0,
+    "picoDb": -7.7
+   },
+   "mp3": {
+    "bytes": 11355,
+    "segMp3": 1.778,
+    "segWav": 1.778,
+    "picoDb": -7.8,
+    "rmsAtivoDb": -21.5,
+    "cortes": 0,
+    "centroideHz": 2206,
+    "f0": [
+     760,
+     387,
+     959,
+     490,
+     490,
+     1002,
+     1102,
+     1102,
+     1002,
+     882,
+     1002,
+     1002,
+     1050,
+     1050,
+     1050,
+     1050,
+     1050,
+     1050,
+     1002,
+     1002,
+     1002,
+     1002,
+     1002,
+     1002,
+     788,
+     959,
+     959,
+     959,
+     490,
+     490,
+     490,
+     959,
+     959,
+     919
+    ]
+   }
+  },
+  "galo.chamado.2": {
+   "fonte": "bsb/0283.mp3",
+   "processamento": "trecho 0.10–2.16 s; tom +2.4 semitons (fita); filtro 250–6500 Hz; entrada/saída suaves, sala curta, volume igualado",
+   "receita": {
+    "fonte": "bsb/0283.mp3",
+    "ini": 0.1,
+    "fim": 2.16,
+    "emenda": [],
+    "fita": [
+     1.15,
+     1.15
+    ],
+    "semitons": [
+     2.4,
+     2.4
+    ],
+    "passaAlta": 250,
+    "passaBaixa": 6500,
+    "portao": false,
+    "seg": 1.966,
+    "rmsAtivoDb": -21.0,
+    "picoDb": -8.6
+   },
+   "mp3": {
+    "bytes": 12452,
+    "segMp3": 1.966,
+    "segWav": 1.966,
+    "picoDb": -8.9,
+    "rmsAtivoDb": -21.4,
+    "cortes": 0,
+    "centroideHz": 1760,
+    "f0": [
+     817,
+     424,
+     711,
+     848,
+     1002,
+     1002,
+     848,
+     882,
+     882,
+     882,
+     848,
+     848,
+     848,
+     424,
+     424,
+     424,
+     424,
+     817,
+     817,
+     817,
+     817,
+     817,
+     817,
+     817,
+     817,
+     817,
+     817,
+     817,
+     817,
+     817,
+     817,
+     817,
+     817,
+     817,
+     817,
+     788,
+     788,
+     817,
+     817
+    ]
+   }
+  },
+  "galo.chamado.3": {
+   "fonte": "commons/c_galo_pequeno.ogg",
+   "processamento": "trecho 2.66–4.12 s; tom +0.8 semitons (fita); filtro 250–6500 Hz; chiado entre sons abaixado; entrada/saída suaves, sala curta, volume igualado",
+   "receita": {
+    "fonte": "commons/c_galo_pequeno.ogg",
+    "ini": 2.66,
+    "fim": 4.12,
+    "emenda": [],
+    "fita": [
+     1.05,
+     1.05
+    ],
+    "semitons": [
+     0.8,
+     0.8
+    ],
+    "passaAlta": 250,
+    "passaBaixa": 6500,
+    "portao": true,
+    "seg": 1.54,
+    "rmsAtivoDb": -21.0,
+    "picoDb": -12.5
+   },
+   "mp3": {
+    "bytes": 9788,
+    "segMp3": 1.54,
+    "segWav": 1.54,
+    "picoDb": -12.4,
+    "rmsAtivoDb": -21.4,
+    "cortes": 0,
+    "centroideHz": 2401,
+    "f0": [
+     459,
+     459,
+     469,
+     237,
+     649,
+     1161,
+     1102,
+     469,
+     459,
+     450,
+     1050,
+     959,
+     450,
+     882,
+     882,
+     882,
+     882,
+     882,
+     450,
+     919,
+     919,
+     919,
+     919,
+     882,
+     817,
+     1161
+    ]
+   }
+  },
+  "galo.susto.1": {
+   "fonte": "commons/c_galo_medio.ogg",
+   "processamento": "trecho 0.19–0.53 s; tom +2.0 a +2.6 semitons (fita); filtro 250–6000 Hz; chiado entre sons abaixado; entrada/saída suaves, sala curta, volume igualado",
+   "receita": {
+    "fonte": "commons/c_galo_medio.ogg",
+    "ini": 0.19,
+    "fim": 0.53,
+    "emenda": [],
+    "fita": [
+     1.12,
+     1.16
+    ],
+    "semitons": [
+     2.0,
+     2.6
+    ],
+    "passaAlta": 250,
+    "passaBaixa": 6000,
+    "portao": true,
+    "seg": 0.481,
+    "rmsAtivoDb": -21.0,
+    "picoDb": -6.3
+   },
+   "mp3": {
+    "bytes": 3518,
+    "segMp3": 0.481,
+    "segWav": 0.481,
+    "picoDb": -7.0,
+    "rmsAtivoDb": -21.4,
+    "cortes": 0,
+    "centroideHz": 1551,
+    "f0": [
+     919,
+     959,
+     848,
+     882,
+     848,
+     919
+    ]
+   }
+  },
+  "galo.susto.2": {
+   "fonte": "commons/c_galo_medio.ogg",
+   "processamento": "trecho 5.26–5.42 s + 2.06–2.16 s; tom +1.7 semitons (fita); filtro 250–6000 Hz; chiado entre sons abaixado; entrada/saída suaves, sala curta, volume igualado",
+   "receita": {
+    "fonte": "commons/c_galo_medio.ogg",
+    "ini": 5.26,
+    "fim": 5.42,
+    "emenda": [
+     [
+      "galoM",
+      2.06,
+      2.16
+     ]
+    ],
+    "fita": [
+     1.1,
+     1.1
+    ],
+    "semitons": [
+     1.7,
+     1.7
+    ],
+    "passaAlta": 250,
+    "passaBaixa": 6000,
+    "portao": true,
+    "seg": 0.512,
+    "rmsAtivoDb": -21.0,
+    "picoDb": -8.3
+   },
+   "mp3": {
+    "bytes": 3675,
+    "segMp3": 0.512,
+    "segWav": 0.512,
+    "picoDb": -8.7,
+    "rmsAtivoDb": -21.4,
+    "cortes": 0,
+    "centroideHz": 1862,
+    "f0": [
+     668,
+     689,
+     711,
+     959,
+     1002
+    ]
+   }
+  },
+  "galo.contente.1": {
+   "fonte": "bsb/0440.mp3",
+   "processamento": "trecho 0.21–0.47 s; tom -0.9 a -1.4 semitons (fita); filtro 250–3500 Hz; entrada/saída suaves, sala curta, volume igualado",
+   "receita": {
+    "fonte": "bsb/0440.mp3",
+    "ini": 0.21,
+    "fim": 0.47,
+    "emenda": [],
+    "fita": [
+     0.95,
+     0.92
+    ],
+    "semitons": [
+     -0.9,
+     -1.4
+    ],
+    "passaAlta": 250,
+    "passaBaixa": 3500,
+    "portao": false,
+    "seg": 0.431,
+    "rmsAtivoDb": -21.0,
+    "picoDb": -12.3
+   },
+   "mp3": {
+    "bytes": 3205,
+    "segMp3": 0.431,
+    "segWav": 0.431,
+    "picoDb": -12.7,
+    "rmsAtivoDb": -21.5,
+    "cortes": 0,
+    "centroideHz": 1560,
+    "f0": [
+     630,
+     329,
+     1575,
+     817,
+     817,
+     817
+    ]
+   }
+  },
+  "galo.contente.2": {
+   "fonte": "bsb/0283.mp3",
+   "processamento": "trecho 0.10–0.32 s; tom -0.9 a -1.4 semitons (fita); filtro 250–3500 Hz; entrada/saída suaves, sala curta, volume igualado",
+   "receita": {
+    "fonte": "bsb/0283.mp3",
+    "ini": 0.1,
+    "fim": 0.32,
+    "emenda": [],
+    "fita": [
+     0.95,
+     0.92
+    ],
+    "semitons": [
+     -0.9,
+     -1.4
+    ],
+    "passaAlta": 250,
+    "passaBaixa": 3500,
+    "portao": false,
+    "seg": 0.429,
+    "rmsAtivoDb": -21.0,
+    "picoDb": -7.5
+   },
+   "mp3": {
+    "bytes": 3205,
+    "segMp3": 0.429,
+    "segWav": 0.429,
+    "picoDb": -8.0,
+    "rmsAtivoDb": -21.4,
+    "cortes": 0,
+    "centroideHz": 1210,
+    "f0": [
+     286,
+     668,
+     668,
+     1161,
+     1050
+    ]
+   }
+  },
+  "galo.ai.1": {
+   "fonte": "bsb/0440.mp3",
+   "processamento": "trecho 1.55–1.85 s; tom +1.7 a +7.0 semitons (fita); filtro 250–6000 Hz; entrada/saída suaves, sala curta, volume igualado",
+   "receita": {
+    "fonte": "bsb/0440.mp3",
+    "ini": 1.55,
+    "fim": 1.85,
+    "emenda": [],
+    "fita": [
+     1.1,
+     1.5
+    ],
+    "semitons": [
+     1.7,
+     7.0
+    ],
+    "passaAlta": 250,
+    "passaBaixa": 6000,
+    "portao": false,
+    "seg": 0.407,
+    "rmsAtivoDb": -21.0,
+    "picoDb": -11.3
+   },
+   "mp3": {
+    "bytes": 3048,
+    "segMp3": 0.407,
+    "segWav": 0.407,
+    "picoDb": -11.7,
+    "rmsAtivoDb": -21.4,
+    "cortes": 0,
+    "centroideHz": 2412,
+    "f0": [
+     817,
+     1102,
+     1161,
+     1161,
+     1225,
+     1297
+    ]
+   }
+  },
+  "galo.ai.2": {
+   "fonte": "commons/c_galo_pequeno.ogg",
+   "processamento": "trecho 3.47–3.75 s; tom +1.7 a +7.0 semitons (fita); filtro 250–6000 Hz; chiado entre sons abaixado; entrada/saída suaves, sala curta, volume igualado",
+   "receita": {
+    "fonte": "commons/c_galo_pequeno.ogg",
+    "ini": 3.47,
+    "fim": 3.75,
+    "emenda": [],
+    "fita": [
+     1.1,
+     1.5
+    ],
+    "semitons": [
+     1.7,
+     7.0
+    ],
+    "passaAlta": 250,
+    "passaBaixa": 6000,
+    "portao": true,
+    "seg": 0.391,
+    "rmsAtivoDb": -21.0,
+    "picoDb": -11.7
+   },
+   "mp3": {
+    "bytes": 2891,
+    "segMp3": 0.391,
+    "segWav": 0.391,
+    "picoDb": -12.1,
+    "rmsAtivoDb": -21.5,
+    "cortes": 0,
+    "centroideHz": 2463,
+    "f0": [
+     1050,
+     513,
+     1050,
+     1102,
+     1161,
+     1225
+    ]
+   }
+  },
+  "cachorro.chamado.1": {
+   "fonte": "bsb/2954.mp3",
+   "processamento": "trecho 0.09–0.64 s; tom +1.0 semitons (fita); filtro 120–5500 Hz; entrada/saída suaves, sala curta, volume igualado",
+   "receita": {
+    "fonte": "bsb/2954.mp3",
+    "ini": 0.09,
+    "fim": 0.64,
+    "emenda": [],
+    "fita": [
+     1.06,
+     1.06
+    ],
+    "semitons": [
+     1.0,
+     1.0
+    ],
+    "passaAlta": 120,
+    "passaBaixa": 5500,
+    "portao": false,
+    "seg": 0.668,
+    "rmsAtivoDb": -21.0,
+    "picoDb": -5.3
+   },
+   "mp3": {
+    "bytes": 4615,
+    "segMp3": 0.668,
+    "segWav": 0.668,
+    "picoDb": -5.7,
+    "rmsAtivoDb": -21.4,
+    "cortes": 0,
+    "centroideHz": 963,
+    "f0": [
+     596,
+     513,
+     525,
+     513,
+     612,
+     165,
+     501,
+     469
+    ]
+   }
+  },
+  "cachorro.chamado.2": {
+   "fonte": "bsb/2954.mp3",
+   "processamento": "trecho 8.06–8.62 s; tom +1.0 semitons (fita); filtro 120–5500 Hz; entrada/saída suaves, sala curta, volume igualado",
+   "receita": {
+    "fonte": "bsb/2954.mp3",
+    "ini": 8.06,
+    "fim": 8.62,
+    "emenda": [],
+    "fita": [
+     1.06,
+     1.06
+    ],
+    "semitons": [
+     1.0,
+     1.0
+    ],
+    "passaAlta": 120,
+    "passaBaixa": 5500,
+    "portao": false,
+    "seg": 0.677,
+    "rmsAtivoDb": -21.0,
+    "picoDb": -5.6
+   },
+   "mp3": {
+    "bytes": 4615,
+    "segMp3": 0.677,
+    "segWav": 0.677,
+    "picoDb": -6.1,
+    "rmsAtivoDb": -21.5,
+    "cortes": 0,
+    "centroideHz": 946,
+    "f0": [
+     596,
+     513,
+     525,
+     525,
+     612,
+     165,
+     501,
+     479
+    ]
+   }
+  },
+  "cachorro.chamado.3": {
+   "fonte": "bsb/2954.mp3",
+   "processamento": "trecho 2.48–3.05 s; tom +1.0 semitons (fita); filtro 120–5500 Hz; entrada/saída suaves, sala curta, volume igualado",
+   "receita": {
+    "fonte": "bsb/2954.mp3",
+    "ini": 2.48,
+    "fim": 3.05,
+    "emenda": [],
+    "fita": [
+     1.06,
+     1.06
+    ],
+    "semitons": [
+     1.0,
+     1.0
+    ],
+    "passaAlta": 120,
+    "passaBaixa": 5500,
+    "portao": false,
+    "seg": 0.696,
+    "rmsAtivoDb": -21.0,
+    "picoDb": -5.4
+   },
+   "mp3": {
+    "bytes": 4772,
+    "segMp3": 0.696,
+    "segWav": 0.696,
+    "picoDb": -5.9,
+    "rmsAtivoDb": -21.4,
+    "cortes": 0,
+    "centroideHz": 1021,
+    "f0": [
+     596,
+     501,
+     513,
+     513,
+     315,
+     479,
+     469
+    ]
+   }
+  },
+  "cachorro.susto.1": {
+   "fonte": "bsb/2954.mp3",
+   "processamento": "trecho 11.80–11.99 s; tom +3.2 a +4.3 semitons (fita); filtro 150–5500 Hz; entrada/saída suaves, sala curta, volume igualado",
+   "receita": {
+    "fonte": "bsb/2954.mp3",
+    "ini": 11.8,
+    "fim": 11.99,
+    "emenda": [],
+    "fita": [
+     1.2,
+     1.28
+    ],
+    "semitons": [
+     3.2,
+     4.3
+    ],
+    "passaAlta": 150,
+    "passaBaixa": 5500,
+    "portao": false,
+    "seg": 0.304,
+    "rmsAtivoDb": -21.0,
+    "picoDb": -6.9
+   },
+   "mp3": {
+    "bytes": 2421,
+    "segMp3": 0.304,
+    "segWav": 0.304,
+    "picoDb": -7.4,
+    "rmsAtivoDb": -21.4,
+    "cortes": 0,
+    "centroideHz": 1168,
+    "f0": [
+     668,
+     596,
+     596
+    ]
+   }
+  },
+  "cachorro.susto.2": {
+   "fonte": "bsb/0916.mp3",
+   "processamento": "trecho 15.67–15.86 s; tom +2.4 a +3.4 semitons (fita); filtro 150–5500 Hz; entrada/saída suaves, sala curta, volume igualado",
+   "receita": {
+    "fonte": "bsb/0916.mp3",
+    "ini": 15.67,
+    "fim": 15.86,
+    "emenda": [],
+    "fita": [
+     1.15,
+     1.22
+    ],
+    "semitons": [
+     2.4,
+     3.4
+    ],
+    "passaAlta": 150,
+    "passaBaixa": 5500,
+    "portao": false,
+    "seg": 0.312,
+    "rmsAtivoDb": -21.0,
+    "picoDb": -6.3
+   },
+   "mp3": {
+    "bytes": 2421,
+    "segMp3": 0.312,
+    "segWav": 0.312,
+    "picoDb": -7.0,
+    "rmsAtivoDb": -21.5,
+    "cortes": 0,
+    "centroideHz": 1503,
+    "f0": [
+     441,
+     711
+    ]
+   }
+  },
+  "cachorro.susto.3": {
+   "fonte": "bsb/0916.mp3",
+   "processamento": "trecho 19.83–20.02 s; tom +2.4 a +3.4 semitons (fita); filtro 150–5500 Hz; entrada/saída suaves, sala curta, volume igualado",
+   "receita": {
+    "fonte": "bsb/0916.mp3",
+    "ini": 19.83,
+    "fim": 20.02,
+    "emenda": [],
+    "fita": [
+     1.15,
+     1.22
+    ],
+    "semitons": [
+     2.4,
+     3.4
+    ],
+    "passaAlta": 150,
+    "passaBaixa": 5500,
+    "portao": false,
+    "seg": 0.312,
+    "rmsAtivoDb": -21.0,
+    "picoDb": -9.0
+   },
+   "mp3": {
+    "bytes": 2421,
+    "segMp3": 0.312,
+    "segWav": 0.312,
+    "picoDb": -9.9,
+    "rmsAtivoDb": -21.5,
+    "cortes": 0,
+    "centroideHz": 1502,
+    "f0": [
+     408,
+     711,
+     668
+    ]
+   }
+  },
+  "cachorro.contente.1": {
+   "fonte": "bsb/1547.mp3",
+   "processamento": "trecho 2.98–3.94 s; tom +0.0 semitons (fita); filtro 300–5000 Hz; chiado entre sons abaixado; entrada/saída suaves, sala curta, volume igualado",
+   "receita": {
+    "fonte": "bsb/1547.mp3",
+    "ini": 2.98,
+    "fim": 3.94,
+    "emenda": [],
+    "fita": [
+     1.0,
+     1.0
+    ],
+    "semitons": [
+     0.0,
+     0.0
+    ],
+    "passaAlta": 300,
+    "passaBaixa": 5000,
+    "portao": true,
+    "seg": 1.15,
+    "rmsAtivoDb": -21.0,
+    "picoDb": -6.0
+   },
+   "mp3": {
+    "bytes": 7593,
+    "segMp3": 1.152,
+    "segWav": 1.15,
+    "picoDb": -6.3,
+    "rmsAtivoDb": -21.4,
+    "cortes": 0,
+    "centroideHz": 1593,
+    "f0": [
+     432,
+     432,
+     596,
+     580
+    ]
+   }
+  },
+  "cachorro.contente.2": {
+   "fonte": "bsb/1547.mp3",
+   "processamento": "trecho 4.12–4.94 s; tom +0.0 semitons (fita); filtro 300–5000 Hz; chiado entre sons abaixado; entrada/saída suaves, sala curta, volume igualado",
+   "receita": {
+    "fonte": "bsb/1547.mp3",
+    "ini": 4.12,
+    "fim": 4.94,
+    "emenda": [],
+    "fita": [
+     1.0,
+     1.0
+    ],
+    "semitons": [
+     0.0,
+     0.0
+    ],
+    "passaAlta": 300,
+    "passaBaixa": 5000,
+    "portao": true,
+    "seg": 0.992,
+    "rmsAtivoDb": -21.0,
+    "picoDb": -6.5
+   },
+   "mp3": {
+    "bytes": 6496,
+    "segMp3": 0.992,
+    "segWav": 0.992,
+    "picoDb": -6.7,
+    "rmsAtivoDb": -21.4,
+    "cortes": 0,
+    "centroideHz": 1755,
+    "f0": []
+   }
+  },
+  "cachorro.contente.3": {
+   "fonte": "bsb/1547.mp3",
+   "processamento": "trecho 4.98–5.80 s; tom +0.7 semitons (fita); filtro 300–5000 Hz; chiado entre sons abaixado; entrada/saída suaves, sala curta, volume igualado",
+   "receita": {
+    "fonte": "bsb/1547.mp3",
+    "ini": 4.98,
+    "fim": 5.8,
+    "emenda": [],
+    "fita": [
+     1.04,
+     1.04
+    ],
+    "semitons": [
+     0.7,
+     0.7
+    ],
+    "passaAlta": 300,
+    "passaBaixa": 5000,
+    "portao": true,
+    "seg": 0.968,
+    "rmsAtivoDb": -21.0,
+    "picoDb": -7.0
+   },
+   "mp3": {
+    "bytes": 6496,
+    "segMp3": 0.969,
+    "segWav": 0.968,
+    "picoDb": -7.0,
+    "rmsAtivoDb": -21.4,
+    "cortes": 0,
+    "centroideHz": 1769,
+    "f0": []
+   }
+  },
+  "cachorro.ai.1": {
+   "fonte": "bsb/2954.mp3",
+   "processamento": "trecho 5.09–5.24 s; tom +5.2 a +10.7 semitons (fita); filtro 150–5500 Hz; entrada/saída suaves, sala curta, volume igualado",
+   "receita": {
+    "fonte": "bsb/2954.mp3",
+    "ini": 5.09,
+    "fim": 5.24,
+    "emenda": [],
+    "fita": [
+     1.35,
+     1.85
+    ],
+    "semitons": [
+     5.2,
+     10.7
+    ],
+    "passaAlta": 150,
+    "passaBaixa": 5500,
+    "portao": false,
+    "seg": 0.261,
+    "rmsAtivoDb": -21.0,
+    "picoDb": -6.5
+   },
+   "mp3": {
+    "bytes": 2108,
+    "segMp3": 0.261,
+    "segWav": 0.261,
+    "picoDb": -7.0,
+    "rmsAtivoDb": -21.5,
+    "cortes": 0,
+    "centroideHz": 1615,
+    "f0": [
+     788,
+     1050
+    ]
+   }
+  },
+  "cachorro.ai.2": {
+   "fonte": "bsb/2954.mp3",
+   "processamento": "trecho 0.45–0.63 s; tom +5.2 a +10.7 semitons (fita); filtro 150–5500 Hz; entrada/saída suaves, sala curta, volume igualado",
+   "receita": {
+    "fonte": "bsb/2954.mp3",
+    "ini": 0.45,
+    "fim": 0.63,
+    "emenda": [],
+    "fita": [
+     1.35,
+     1.85
+    ],
+    "semitons": [
+     5.2,
+     10.7
+    ],
+    "passaAlta": 150,
+    "passaBaixa": 5500,
+    "portao": false,
+    "seg": 0.272,
+    "rmsAtivoDb": -21.0,
+    "picoDb": -7.0
+   },
+   "mp3": {
+    "bytes": 2264,
+    "segMp3": 0.272,
+    "segWav": 0.272,
+    "picoDb": -7.0,
+    "rmsAtivoDb": -21.3,
+    "cortes": 0,
+    "centroideHz": 1523,
+    "f0": [
+     848,
+     760,
+     760
+    ]
+   }
+  },
+  "cachorro.ai.3": {
+   "fonte": "bsb/0916.mp3",
+   "processamento": "trecho 4.26–4.46 s; tom +5.2 a +10.2 semitons (fita); filtro 150–5500 Hz; entrada/saída suaves, sala curta, volume igualado",
+   "receita": {
+    "fonte": "bsb/0916.mp3",
+    "ini": 4.26,
+    "fim": 4.46,
+    "emenda": [],
+    "fita": [
+     1.35,
+     1.8
+    ],
+    "semitons": [
+     5.2,
+     10.2
+    ],
+    "passaAlta": 150,
+    "passaBaixa": 5500,
+    "portao": false,
+    "seg": 0.277,
+    "rmsAtivoDb": -21.0,
+    "picoDb": -8.0
+   },
+   "mp3": {
+    "bytes": 2264,
+    "segMp3": 0.277,
+    "segWav": 0.277,
+    "picoDb": -8.5,
+    "rmsAtivoDb": -20.1,
+    "cortes": 0,
+    "centroideHz": 1882,
+    "f0": [
+     1002,
+     1102
+    ]
+   }
+  },
+  "filhote.chamado.1": {
+   "fonte": "bsb/0612.mp3",
+   "processamento": "trecho 0.17–0.77 s; tom +3.4 semitons (fita); filtro 250–6500 Hz; entrada/saída suaves, sala curta, volume igualado",
+   "receita": {
+    "fonte": "bsb/0612.mp3",
+    "ini": 0.17,
+    "fim": 0.77,
+    "emenda": [],
+    "fita": [
+     1.22,
+     1.22
+    ],
+    "semitons": [
+     3.4,
+     3.4
+    ],
+    "passaAlta": 250,
+    "passaBaixa": 6500,
+    "portao": false,
+    "seg": 0.653,
+    "rmsAtivoDb": -21.0,
+    "picoDb": -7.3
+   },
+   "mp3": {
+    "bytes": 4459,
+    "segMp3": 0.653,
+    "segWav": 0.653,
+    "picoDb": -7.7,
+    "rmsAtivoDb": -21.4,
+    "cortes": 0,
+    "centroideHz": 1514,
+    "f0": [
+     882,
+     1102,
+     1161,
+     1161,
+     248,
+     1161,
+     1161,
+     1102,
+     1050,
+     1050,
+     1002,
+     959
+    ]
+   }
+  },
+  "filhote.chamado.2": {
+   "fonte": "bsb/0682.mp3",
+   "processamento": "trecho 0.72–1.17 s; tom +4.5 semitons (fita); filtro 250–6500 Hz; entrada/saída suaves, sala curta, volume igualado",
+   "receita": {
+    "fonte": "bsb/0682.mp3",
+    "ini": 0.72,
+    "fim": 1.17,
+    "emenda": [],
+    "fita": [
+     1.3,
+     1.3
+    ],
+    "semitons": [
+     4.5,
+     4.5
+    ],
+    "passaAlta": 250,
+    "passaBaixa": 6500,
+    "portao": false,
+    "seg": 0.504,
+    "rmsAtivoDb": -21.0,
+    "picoDb": -8.6
+   },
+   "mp3": {
+    "bytes": 3675,
+    "segMp3": 0.504,
+    "segWav": 0.504,
+    "picoDb": -8.2,
+    "rmsAtivoDb": -21.4,
+    "cortes": 0,
+    "centroideHz": 2373,
+    "f0": [
+     959,
+     689,
+     1696,
+     1838
+    ]
+   }
+  },
+  "filhote.susto.1": {
+   "fonte": "bsb/0612.mp3",
+   "processamento": "trecho 9.30–9.58 s; tom +5.2 a +5.8 semitons (fita); filtro 250–6500 Hz; entrada/saída suaves, sala curta, volume igualado",
+   "receita": {
+    "fonte": "bsb/0612.mp3",
+    "ini": 9.3,
+    "fim": 9.58,
+    "emenda": [],
+    "fita": [
+     1.35,
+     1.4
+    ],
+    "semitons": [
+     5.2,
+     5.8
+    ],
+    "passaAlta": 250,
+    "passaBaixa": 6500,
+    "portao": false,
+    "seg": 0.359,
+    "rmsAtivoDb": -21.0,
+    "picoDb": -5.5
+   },
+   "mp3": {
+    "bytes": 2735,
+    "segMp3": 0.359,
+    "segWav": 0.359,
+    "picoDb": -6.0,
+    "rmsAtivoDb": -21.5,
+    "cortes": 0,
+    "centroideHz": 1641,
+    "f0": [
+     1225,
+     1225
+    ]
+   }
+  },
+  "filhote.susto.2": {
+   "fonte": "bsb/0612.mp3",
+   "processamento": "trecho 13.27–13.54 s; tom +5.2 a +5.8 semitons (fita); filtro 250–6500 Hz; entrada/saída suaves, sala curta, volume igualado",
+   "receita": {
+    "fonte": "bsb/0612.mp3",
+    "ini": 13.27,
+    "fim": 13.54,
+    "emenda": [],
+    "fita": [
+     1.35,
+     1.4
+    ],
+    "semitons": [
+     5.2,
+     5.8
+    ],
+    "passaAlta": 250,
+    "passaBaixa": 6500,
+    "portao": false,
+    "seg": 0.352,
+    "rmsAtivoDb": -21.0,
+    "picoDb": -6.2
+   },
+   "mp3": {
+    "bytes": 2735,
+    "segMp3": 0.352,
+    "segWav": 0.352,
+    "picoDb": -6.9,
+    "rmsAtivoDb": -21.5,
+    "cortes": 0,
+    "centroideHz": 1661,
+    "f0": [
+     1225,
+     1225
+    ]
+   }
+  },
+  "filhote.contente.1": {
+   "fonte": "bsb/1547.mp3",
+   "processamento": "trecho 3.00–3.62 s; tom +6.4 semitons (fita); filtro 400–6000 Hz; chiado entre sons abaixado; entrada/saída suaves, sala curta, volume igualado",
+   "receita": {
+    "fonte": "bsb/1547.mp3",
+    "ini": 3.0,
+    "fim": 3.62,
+    "emenda": [],
+    "fita": [
+     1.45,
+     1.45
+    ],
+    "semitons": [
+     6.4,
+     6.4
+    ],
+    "passaAlta": 400,
+    "passaBaixa": 6000,
+    "portao": true,
+    "seg": 0.599,
+    "rmsAtivoDb": -21.0,
+    "picoDb": -5.9
+   },
+   "mp3": {
+    "bytes": 4145,
+    "segMp3": 0.599,
+    "segWav": 0.599,
+    "picoDb": -6.0,
+    "rmsAtivoDb": -21.5,
+    "cortes": 0,
+    "centroideHz": 2391,
+    "f0": [
+     1470,
+     630
+    ]
+   }
+  },
+  "filhote.contente.2": {
+   "fonte": "bsb/1547.mp3",
+   "processamento": "trecho 4.30–4.94 s; tom +6.4 semitons (fita); filtro 400–6000 Hz; chiado entre sons abaixado; entrada/saída suaves, sala curta, volume igualado",
+   "receita": {
+    "fonte": "bsb/1547.mp3",
+    "ini": 4.3,
+    "fim": 4.94,
+    "emenda": [],
+    "fita": [
+     1.45,
+     1.45
+    ],
+    "semitons": [
+     6.4,
+     6.4
+    ],
+    "passaAlta": 400,
+    "passaBaixa": 6000,
+    "portao": true,
+    "seg": 0.613,
+    "rmsAtivoDb": -21.0,
+    "picoDb": -6.2
+   },
+   "mp3": {
+    "bytes": 4302,
+    "segMp3": 0.613,
+    "segWav": 0.613,
+    "picoDb": -6.7,
+    "rmsAtivoDb": -21.4,
+    "cortes": 0,
+    "centroideHz": 2674,
+    "f0": []
+   }
+  },
+  "filhote.ai.1": {
+   "fonte": "commons/c_filhote_noite.ogg",
+   "processamento": "trecho 7.58–7.95 s; tom +0.0 a +2.0 semitons (fita); filtro 500–6500 Hz; chiado entre sons abaixado; entrada/saída suaves, sala curta, volume igualado",
+   "receita": {
+    "fonte": "commons/c_filhote_noite.ogg",
+    "ini": 7.58,
+    "fim": 7.95,
+    "emenda": [],
+    "fita": [
+     1.0,
+     1.12
+    ],
+    "semitons": [
+     0.0,
+     2.0
+    ],
+    "passaAlta": 500,
+    "passaBaixa": 6500,
+    "portao": true,
+    "seg": 0.528,
+    "rmsAtivoDb": -21.0,
+    "picoDb": -7.3
+   },
+   "mp3": {
+    "bytes": 3832,
+    "segMp3": 0.528,
+    "segWav": 0.528,
+    "picoDb": -7.2,
+    "rmsAtivoDb": -21.3,
+    "cortes": 0,
+    "centroideHz": 3754,
+    "f0": [
+     1838,
+     380,
+     1050,
+     1050,
+     1161,
+     596,
+     596,
+     596
+    ]
+   }
+  },
+  "filhote.ai.2": {
+   "fonte": "commons/c_filhote_noite.ogg",
+   "processamento": "trecho 6.16–6.36 s; tom +0.0 a +2.4 semitons (fita); filtro 500–6500 Hz; chiado entre sons abaixado; entrada/saída suaves, sala curta, volume igualado",
+   "receita": {
+    "fonte": "commons/c_filhote_noite.ogg",
+    "ini": 6.16,
+    "fim": 6.36,
+    "emenda": [],
+    "fita": [
+     1.0,
+     1.15
+    ],
+    "semitons": [
+     0.0,
+     2.4
+    ],
+    "passaAlta": 500,
+    "passaBaixa": 6500,
+    "portao": true,
+    "seg": 0.372,
+    "rmsAtivoDb": -21.0,
+    "picoDb": -8.2
+   },
+   "mp3": {
+    "bytes": 2891,
+    "segMp3": 0.372,
+    "segWav": 0.372,
+    "picoDb": -8.3,
+    "rmsAtivoDb": -21.5,
+    "cortes": 0,
+    "centroideHz": 4047,
+    "f0": [
+     1161,
+     1225,
+     1297,
+     1378,
+     711
+    ]
+   }
+  },
+  "moradora.cumprimento.1": {
+   "fonte": "espeak-ng",
+   "processamento": "sílabas ô-ba-li da voz pt-br+f3, cada uma afinada numa nota (0, +4, +7 semitons sobre 340 Hz) e emendada; filtro, sala curta, volume",
+   "receita": {
+    "fonte": "espeak-ng pt-br+f3 (pitch 85)",
+    "silabas": [
+     "ô",
+     "ba",
+     "li"
+    ],
+    "notas": [
+     0,
+     4,
+     7
+    ],
+    "baseHz": 340.0,
+    "seg": 0.456,
+    "rmsAtivoDb": -21.0,
+    "picoDb": -9.8
+   },
+   "mp3": {
+    "bytes": 3361,
+    "segMp3": 0.456,
+    "segWav": 0.456,
+    "picoDb": -10.2,
+    "rmsAtivoDb": -21.5,
+    "cortes": 0,
+    "centroideHz": 1772,
+    "f0": [
+     339,
+     339,
+     450,
+     441,
+     551,
+     513,
+     490,
+     424
+    ]
+   }
+  },
+  "moradora.cumprimento.2": {
+   "fonte": "espeak-ng",
+   "processamento": "sílabas ma-ni-do-pa da voz pt-br+f3, cada uma afinada numa nota (+2, +5, +9, +4 semitons sobre 340 Hz) e emendada; filtro, sala curta, volume",
+   "receita": {
+    "fonte": "espeak-ng pt-br+f3 (pitch 85)",
+    "silabas": [
+     "ma",
+     "ni",
+     "do",
+     "pa"
+    ],
+    "notas": [
+     2,
+     5,
+     9,
+     4
+    ],
+    "baseHz": 340.0,
+    "seg": 0.514,
+    "rmsAtivoDb": -21.0,
+    "picoDb": -6.7
+   },
+   "mp3": {
+    "bytes": 3675,
+    "segMp3": 0.514,
+    "segWav": 0.514,
+    "picoDb": -7.2,
+    "rmsAtivoDb": -20.9,
+    "cortes": 0,
+    "centroideHz": 1744,
+    "f0": [
+     387,
+     416,
+     459,
+     525,
+     286,
+     580,
+     432,
+     401,
+     368
+    ]
+   }
+  },
+  "moradora.contente.1": {
+   "fonte": "espeak-ng",
+   "processamento": "sílabas la-li-lu-li-la da voz pt-br+f3, cada uma afinada numa nota (+5, +9, +5, +10, +12 semitons sobre 340 Hz) e emendada; filtro, sala curta, volume",
+   "receita": {
+    "fonte": "espeak-ng pt-br+f3 (pitch 85)",
+    "silabas": [
+     "la",
+     "li",
+     "lu",
+     "li",
+     "la"
+    ],
+    "notas": [
+     5,
+     9,
+     5,
+     10,
+     12
+    ],
+    "baseHz": 340.0,
+    "seg": 0.508,
+    "rmsAtivoDb": -21.0,
+    "picoDb": -7.1
+   },
+   "mp3": {
+    "bytes": 3675,
+    "segMp3": 0.508,
+    "segWav": 0.508,
+    "picoDb": -7.6,
+    "rmsAtivoDb": -21.5,
+    "cortes": 0,
+    "centroideHz": 2081,
+    "f0": [
+     424,
+     145,
+     596,
+     459,
+     155,
+     630,
+     630,
+     649,
+     649
+    ]
+   }
+  },
+  "moradora.contente.2": {
+   "fonte": "espeak-ng",
+   "processamento": "sílabas bi-du-bi-du-bi da voz pt-br+f3, cada uma afinada numa nota (+7, +4, +9, +5, +12 semitons sobre 340 Hz) e emendada; filtro, sala curta, volume",
+   "receita": {
+    "fonte": "espeak-ng pt-br+f3 (pitch 85)",
+    "silabas": [
+     "bi",
+     "du",
+     "bi",
+     "du",
+     "bi"
+    ],
+    "notas": [
+     7,
+     4,
+     9,
+     5,
+     12
+    ],
+    "baseHz": 340.0,
+    "seg": 0.481,
+    "rmsAtivoDb": -21.0,
+    "picoDb": -9.9
+   },
+   "mp3": {
+    "bytes": 3518,
+    "segMp3": 0.481,
+    "segWav": 0.481,
+    "picoDb": -10.4,
+    "rmsAtivoDb": -21.5,
+    "cortes": 0,
+    "centroideHz": 1325,
+    "f0": [
+     525,
+     525,
+     441,
+     596,
+     580,
+     459,
+     735,
+     689,
+     649
+    ]
+   }
+  },
+  "moradora.obrigado.1": {
+   "fonte": "espeak-ng",
+   "processamento": "sílabas pi-ru-li da voz pt-br+f3, cada uma afinada numa nota (+7, +4, 0 semitons sobre 340 Hz) e emendada; filtro, sala curta, volume",
+   "receita": {
+    "fonte": "espeak-ng pt-br+f3 (pitch 85)",
+    "silabas": [
+     "pi",
+     "ru",
+     "li"
+    ],
+    "notas": [
+     7,
+     4,
+     0
+    ],
+    "baseHz": 340.0,
+    "seg": 0.615,
+    "rmsAtivoDb": -21.0,
+    "picoDb": -9.6
+   },
+   "mp3": {
+    "bytes": 4302,
+    "segMp3": 0.615,
+    "segWav": 0.615,
+    "picoDb": -10.0,
+    "rmsAtivoDb": -21.4,
+    "cortes": 0,
+    "centroideHz": 1771,
+    "f0": [
+     538,
+     501,
+     469,
+     441,
+     416,
+     350,
+     356,
+     356,
+     311,
+     298
+    ]
+   }
+  },
+  "moradora.obrigado.2": {
+   "fonte": "espeak-ng",
+   "processamento": "sílabas ma-ti-nha da voz pt-br+f3, cada uma afinada numa nota (+4, +7, +12 semitons sobre 340 Hz) e emendada; filtro, sala curta, volume",
+   "receita": {
+    "fonte": "espeak-ng pt-br+f3 (pitch 85)",
+    "silabas": [
+     "ma",
+     "ti",
+     "nha"
+    ],
+    "notas": [
+     4,
+     7,
+     12
+    ],
+    "baseHz": 340.0,
+    "seg": 0.497,
+    "rmsAtivoDb": -21.0,
+    "picoDb": -8.2
+   },
+   "mp3": {
+    "bytes": 3675,
+    "segMp3": 0.498,
+    "segWav": 0.497,
+    "picoDb": -8.8,
+    "rmsAtivoDb": -21.4,
+    "cortes": 0,
+    "centroideHz": 2241,
+    "f0": [
+     432,
+     450,
+     459,
+     538,
+     501,
+     689,
+     711,
+     689,
+     612
+    ]
+   }
+  },
+  "moradora.surpresa.1": {
+   "fonte": "espeak-ng",
+   "processamento": "sílabas ô-pa da voz pt-br+f3, cada uma afinada numa nota (0, +3 semitons sobre 340 Hz) e emendada; filtro, sala curta, volume",
+   "receita": {
+    "fonte": "espeak-ng pt-br+f3 (pitch 85)",
+    "silabas": [
+     "ô",
+     "pa"
+    ],
+    "notas": [
+     0,
+     3
+    ],
+    "baseHz": 340.0,
+    "seg": 0.367,
+    "rmsAtivoDb": -21.0,
+    "picoDb": -9.9
+   },
+   "mp3": {
+    "bytes": 2891,
+    "segMp3": 0.368,
+    "segWav": 0.367,
+    "picoDb": -10.4,
+    "rmsAtivoDb": -21.5,
+    "cortes": 0,
+    "centroideHz": 1965,
+    "f0": [
+     339,
+     339,
+     513,
+     525
+    ]
+   }
+  },
+  "moradora.surpresa.2": {
+   "fonte": "espeak-ng",
+   "processamento": "sílabas é-bu-ri da voz pt-br+f3, cada uma afinada numa nota (+2, 0, +5 semitons sobre 340 Hz) e emendada; filtro, sala curta, volume",
+   "receita": {
+    "fonte": "espeak-ng pt-br+f3 (pitch 85)",
+    "silabas": [
+     "é",
+     "bu",
+     "ri"
+    ],
+    "notas": [
+     2,
+     0,
+     5
+    ],
+    "baseHz": 340.0,
+    "seg": 0.403,
+    "rmsAtivoDb": -21.0,
+    "picoDb": -8.2
+   },
+   "mp3": {
+    "bytes": 3048,
+    "segMp3": 0.403,
+    "segWav": 0.403,
+    "picoDb": -8.6,
+    "rmsAtivoDb": -21.4,
+    "cortes": 0,
+    "centroideHz": 1816,
+    "f0": [
+     380,
+     380,
+     356,
+     361,
+     565,
+     565
+    ]
+   }
+  },
+  "morador.cumprimento.1": {
+   "fonte": "espeak-ng",
+   "processamento": "sílabas ô-ba-li da voz pt-br+m3, cada uma afinada numa nota (0, +4, +7 semitons sobre 205 Hz) e emendada; filtro, sala curta, volume",
+   "receita": {
+    "fonte": "espeak-ng pt-br+m3 (pitch 99)",
+    "silabas": [
+     "ô",
+     "ba",
+     "li"
+    ],
+    "notas": [
+     0,
+     4,
+     7
+    ],
+    "baseHz": 205.0,
+    "seg": 0.456,
+    "rmsAtivoDb": -21.0,
+    "picoDb": -8.9
+   },
+   "mp3": {
+    "bytes": 3361,
+    "segMp3": 0.456,
+    "segWav": 0.456,
+    "picoDb": -9.3,
+    "rmsAtivoDb": -21.4,
+    "cortes": 0,
+    "centroideHz": 1929,
+    "f0": [
+     206,
+     206,
+     262,
+     311,
+     298,
+     286,
+     253
+    ]
+   }
+  },
+  "morador.cumprimento.2": {
+   "fonte": "espeak-ng",
+   "processamento": "sílabas ma-ni-do-pa da voz pt-br+m3, cada uma afinada numa nota (+2, +5, +9, +4 semitons sobre 205 Hz) e emendada; filtro, sala curta, volume",
+   "receita": {
+    "fonte": "espeak-ng pt-br+m3 (pitch 99)",
+    "silabas": [
+     "ma",
+     "ni",
+     "do",
+     "pa"
+    ],
+    "notas": [
+     2,
+     5,
+     9,
+     4
+    ],
+    "baseHz": 205.0,
+    "seg": 0.514,
+    "rmsAtivoDb": -21.0,
+    "picoDb": -7.2
+   },
+   "mp3": {
+    "bytes": 3675,
+    "segMp3": 0.514,
+    "segWav": 0.514,
+    "picoDb": -7.7,
+    "rmsAtivoDb": -21.4,
+    "cortes": 0,
+    "centroideHz": 1713,
+    "f0": [
+     232,
+     235,
+     279,
+     302,
+     345,
+     350,
+     256,
+     225
+    ]
+   }
+  },
+  "morador.contente.1": {
+   "fonte": "espeak-ng",
+   "processamento": "sílabas la-li-lu-li-la da voz pt-br+m3, cada uma afinada numa nota (+5, +9, +5, +10, +12 semitons sobre 205 Hz) e emendada; filtro, sala curta, volume",
+   "receita": {
+    "fonte": "espeak-ng pt-br+m3 (pitch 99)",
+    "silabas": [
+     "la",
+     "li",
+     "lu",
+     "li",
+     "la"
+    ],
+    "notas": [
+     5,
+     9,
+     5,
+     10,
+     12
+    ],
+    "baseHz": 205.0,
+    "seg": 0.491,
+    "rmsAtivoDb": -21.0,
+    "picoDb": -6.0
+   },
+   "mp3": {
+    "bytes": 3518,
+    "segMp3": 0.491,
+    "segWav": 0.491,
+    "picoDb": -6.5,
+    "rmsAtivoDb": -21.4,
+    "cortes": 0,
+    "centroideHz": 2202,
+    "f0": [
+     262,
+     345,
+     356,
+     279,
+     374,
+     387,
+     387,
+     387
+    ]
+   }
+  },
+  "morador.contente.2": {
+   "fonte": "espeak-ng",
+   "processamento": "sílabas bi-du-bi-du-bi da voz pt-br+m3, cada uma afinada numa nota (+7, +4, +9, +5, +12 semitons sobre 205 Hz) e emendada; filtro, sala curta, volume",
+   "receita": {
+    "fonte": "espeak-ng pt-br+m3 (pitch 99)",
+    "silabas": [
+     "bi",
+     "du",
+     "bi",
+     "du",
+     "bi"
+    ],
+    "notas": [
+     7,
+     4,
+     9,
+     5,
+     12
+    ],
+    "baseHz": 205.0,
+    "seg": 0.469,
+    "rmsAtivoDb": -21.0,
+    "picoDb": -9.6
+   },
+   "mp3": {
+    "bytes": 3361,
+    "segMp3": 0.469,
+    "segWav": 0.469,
+    "picoDb": -10.0,
+    "rmsAtivoDb": -21.5,
+    "cortes": 0,
+    "centroideHz": 1771,
+    "f0": [
+     320,
+     311,
+     262,
+     356,
+     345,
+     272,
+     432,
+     416
+    ]
+   }
+  },
+  "morador.obrigado.1": {
+   "fonte": "espeak-ng",
+   "processamento": "sílabas pi-ru-li da voz pt-br+m3, cada uma afinada numa nota (+7, +4, 0 semitons sobre 205 Hz) e emendada; filtro, sala curta, volume",
+   "receita": {
+    "fonte": "espeak-ng pt-br+m3 (pitch 99)",
+    "silabas": [
+     "pi",
+     "ru",
+     "li"
+    ],
+    "notas": [
+     7,
+     4,
+     0
+    ],
+    "baseHz": 205.0,
+    "seg": 0.574,
+    "rmsAtivoDb": -21.0,
+    "picoDb": -9.7
+   },
+   "mp3": {
+    "bytes": 3988,
+    "segMp3": 0.574,
+    "segWav": 0.574,
+    "picoDb": -10.1,
+    "rmsAtivoDb": -21.4,
+    "cortes": 0,
+    "centroideHz": 2078,
+    "f0": [
+     320,
+     302,
+     283,
+     262,
+     253,
+     208,
+     212,
+     202,
+     195,
+     361
+    ]
+   }
+  },
+  "morador.obrigado.2": {
+   "fonte": "espeak-ng",
+   "processamento": "sílabas ma-ti-nha da voz pt-br+m3, cada uma afinada numa nota (+4, +7, +12 semitons sobre 205 Hz) e emendada; filtro, sala curta, volume",
+   "receita": {
+    "fonte": "espeak-ng pt-br+m3 (pitch 99)",
+    "silabas": [
+     "ma",
+     "ti",
+     "nha"
+    ],
+    "notas": [
+     4,
+     7,
+     12
+    ],
+    "baseHz": 205.0,
+    "seg": 0.48,
+    "rmsAtivoDb": -21.0,
+    "picoDb": -7.0
+   },
+   "mp3": {
+    "bytes": 3518,
+    "segMp3": 0.48,
+    "segWav": 0.48,
+    "picoDb": -7.6,
+    "rmsAtivoDb": -21.4,
+    "cortes": 0,
+    "centroideHz": 2259,
+    "f0": [
+     262,
+     266,
+     269,
+     320,
+     306,
+     416,
+     424,
+     416
+    ]
+   }
+  },
+  "morador.surpresa.1": {
+   "fonte": "espeak-ng",
+   "processamento": "sílabas ô-pa da voz pt-br+m3, cada uma afinada numa nota (0, +3 semitons sobre 205 Hz) e emendada; filtro, sala curta, volume",
+   "receita": {
+    "fonte": "espeak-ng pt-br+m3 (pitch 99)",
+    "silabas": [
+     "ô",
+     "pa"
+    ],
+    "notas": [
+     0,
+     3
+    ],
+    "baseHz": 205.0,
+    "seg": 0.352,
+    "rmsAtivoDb": -21.0,
+    "picoDb": -10.0
+   },
+   "mp3": {
+    "bytes": 2735,
+    "segMp3": 0.352,
+    "segWav": 0.352,
+    "picoDb": -9.9,
+    "rmsAtivoDb": -21.5,
+    "cortes": 0,
+    "centroideHz": 1947,
+    "f0": [
+     204,
+     204,
+     315,
+     329
+    ]
+   }
+  },
+  "morador.surpresa.2": {
+   "fonte": "espeak-ng",
+   "processamento": "sílabas é-bu-ri da voz pt-br+m3, cada uma afinada numa nota (+2, 0, +5 semitons sobre 205 Hz) e emendada; filtro, sala curta, volume",
+   "receita": {
+    "fonte": "espeak-ng pt-br+m3 (pitch 99)",
+    "silabas": [
+     "é",
+     "bu",
+     "ri"
+    ],
+    "notas": [
+     2,
+     0,
+     5
+    ],
+    "baseHz": 205.0,
+    "seg": 0.393,
+    "rmsAtivoDb": -21.0,
+    "picoDb": -4.5
+   },
+   "mp3": {
+    "bytes": 3048,
+    "segMp3": 0.394,
+    "segWav": 0.393,
+    "picoDb": -4.9,
+    "rmsAtivoDb": -21.4,
+    "cortes": 0,
+    "centroideHz": 1992,
+    "f0": [
+     230,
+     230,
+     212,
+     212,
+     350,
+     356
+    ]
+   }
+  }
+ }
+}
