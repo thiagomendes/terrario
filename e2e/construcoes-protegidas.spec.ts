@@ -404,3 +404,43 @@ test('celular: o cadeado aparece no contorno do dedo e a rachadura nem começa',
   await p.waitForTimeout(300);
   expect(await p.evaluate(() => window.__brumaluz!.cadeado!.visivel)).toBe(false);
 });
+
+test('voltar para casa: pela pausa e pela roda, com o aviso de esperar um pouquinho', async ({
+  browser,
+}) => {
+  test.setTimeout(300_000);
+  mkdirSync(PASTA, { recursive: true });
+  const p = await jogador(browser, `casa-${Date.now().toString(36)}`, 'Duda');
+  await mundoCriativo(p, 'Casa da Duda');
+  await p.waitForTimeout(3000);
+  // a cama (o ponto de renascer) fica onde ela está; depois ela vai longe
+  const casa = await p.evaluate(() => {
+    const e = window.__brumaluz!;
+    const [x, , z] = e.posicao!;
+    e.definirSpawn!(x, z);
+    return { x, z };
+  });
+  await ir(p, casa.x + 150, casa.z + 40);
+  await p.waitForTimeout(3000);
+  const longe = (c: number[]) => Math.hypot(c[0] - casa.x, c[2] - casa.z);
+  expect(longe(await p.evaluate(() => window.__brumaluz!.posicao!))).toBeGreaterThan(100);
+  // pela pausa
+  await p.evaluate(() => window.dispatchEvent(new CustomEvent('brumaluz:pausar')));
+  await expect(p.locator('[data-pausa-casa]')).toBeVisible();
+  await p.screenshot({ path: `${PASTA}/11-pausa-voltar-para-casa.png` });
+  await p.locator('[data-pausa-casa]').click();
+  await expect(aviso(p, 'Voltando para casa!')).toBeVisible();
+  await expect
+    .poll(async () => longe(await p.evaluate(() => window.__brumaluz!.posicao!)), {
+      timeout: 15_000,
+    })
+    .toBeLessThan(12);
+  // pela roda, logo em seguida: espera um pouquinho
+  // (o canvas fica por cima no headless com o ponteiro preso: o clique vai direto no botão)
+  await p.locator('[data-botao-roda]').dispatchEvent('click');
+  await p.waitForTimeout(400);
+  await expect(p.locator('.roda.aberta button.ativo[data-item="casa"]')).toBeVisible();
+  await p.screenshot({ path: `${PASTA}/12-roda-para-casa.png` });
+  await p.locator('.roda.aberta button.ativo[data-item="casa"]').dispatchEvent('click');
+  await expect(aviso(p, 'Espera um pouquinho para voltar de novo.')).toBeVisible();
+});

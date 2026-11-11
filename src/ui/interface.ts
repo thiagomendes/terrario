@@ -186,9 +186,9 @@ export function notificar(
     document.body.appendChild(area);
   }
   // o mesmo aviso já à vista (a criança tentou de novo): fica mais um pouco, sem repetir
-  const igual = [...area.children].find(
-    (c) => (c as HTMLElement).dataset.texto === texto,
-  ) as HTMLElement | undefined;
+  const igual = [...area.children].find((c) => (c as HTMLElement).dataset.texto === texto) as
+    | HTMLElement
+    | undefined;
   if (igual) {
     const d = duracaoDoAviso(texto);
     igual.style.animation = 'none';
@@ -233,9 +233,9 @@ export function notificarColeta(texto: string): void {
     area.setAttribute('aria-live', 'polite');
     document.body.appendChild(area);
   }
-  const ja = [...area.children].find(
-    (c) => (c as HTMLElement).dataset.nome === nome,
-  ) as HTMLElement | undefined;
+  const ja = [...area.children].find((c) => (c as HTMLElement).dataset.nome === nome) as
+    | HTMLElement
+    | undefined;
   const t = ja ?? document.createElement('div');
   const total = (ja ? Number(t.dataset.qtd) : 0) + qtd;
   t.className = 'toast coleta';
@@ -698,7 +698,8 @@ export function criarInterface(
         figura: foto,
         marca: 'sugestao-fantasia',
       });
-      if (document.body.dataset.overlay === 'sugestao-fantasia') delete document.body.dataset.overlay;
+      if (document.body.dataset.overlay === 'sugestao-fantasia')
+        delete document.body.dataset.overlay;
       if (sim !== true) {
         // dentro do clique do botão: volta a jogar com o mouse preso, como estava
         if (estavaPreso) {
@@ -756,6 +757,13 @@ export function criarInterface(
     amigos: () => {
       pausa.fechar();
       window.dispatchEvent(new CustomEvent('brumaluz:amigos'));
+    },
+    // spec 016: a saída de quem ficou cercado (o núcleo leva para a cama ou o nascer)
+    voltarCasa: () => {
+      telaCheiaAoJogar();
+      pausa.fechar();
+      travarPonteiro(canvasJogo());
+      window.dispatchEvent(new CustomEvent('brumaluz:voltarCasa'));
     },
     // botões grandes da pausa: abrem a função como se a tecla fosse apertada
     abrirFuncao: (codigo) => {

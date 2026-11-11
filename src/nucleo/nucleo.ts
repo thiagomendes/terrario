@@ -82,6 +82,7 @@ import { contaFecha } from './conta';
 import { limparApelido } from '../jogo/apelido';
 import { sanear } from './saneamento';
 import {
+  ESPERA_VOLTA_CASA,
   PASSO,
   type Ambiente,
   type BlocoMudado,
@@ -214,6 +215,8 @@ interface Jogador {
   saltoPermitido: boolean;
   /** Spec 015: passo do último gesto aceito (limite de repetição). */
   passoGesto: number;
+  /** Spec 016: passo da última volta para casa (intervalo entre duas). */
+  passoVoltaCasa: number;
   /** Auditoria 017: passo da última aparência aplicada (limite de repetição). */
   passoAparencia: number;
   /** Auditoria 017: a última aparência que chegou dentro da janela (aplicada quando ela fecha). */
@@ -457,6 +460,7 @@ export function criarNucleo(op: OpcoesNucleo) {
       passoTelemetria: n,
       saltoPermitido: true,
       passoGesto: -Infinity,
+      passoVoltaCasa: -Infinity,
       passoAparencia: -Infinity,
       aparenciaPendente: null,
       versaoDonos: -1,
@@ -1411,6 +1415,22 @@ export function criarNucleo(op: OpcoesNucleo) {
     }
   }
 
+  /**
+   * Spec 016: "Voltar para casa" leva o jogador à cama (ou ao ponto de nascer), sem curar e
+   * sem mexer no inventário: é a saída de quem ficou cercado. Quem desmaiou usa o renascer;
+   * entre duas voltas, ESPERA_VOLTA_CASA segundos (o aviso diz para esperar).
+   */
+  function voltarCasa(j: Jogador): void {
+    if (j.sobrevivencia.estado.morto) return;
+    if ((n - j.passoVoltaCasa) * PASSO < ESPERA_VOLTA_CASA - 1e-9) {
+      j.eventos.push({ e: 'recusa', comando: 0, motivo: 'voltarCasa' });
+      return;
+    }
+    j.passoVoltaCasa = n;
+    j.saltoPermitido = true;
+    j.eventos.push({ e: 'teleporte', x: j.spawn.x, z: j.spawn.z });
+  }
+
   /** Mais rápido que isto é teletransporte (blocos por segundo, com folga). */
   const VEL_MAX = modo === 'criativo' ? 40 : 14;
   function telemetria(j: Jogador, c: Telemetria): void {
@@ -1634,6 +1654,9 @@ export function criarNucleo(op: OpcoesNucleo) {
         j.saltoPermitido = true;
         j.sobrevivencia.renascer();
         j.eventos.push({ e: 'teleporte', x: j.spawn.x, z: j.spawn.z });
+        break;
+      case 'voltarCasa':
+        voltarCasa(j);
         break;
       case 'conferir':
         for (const q of c.celulas.slice(0, 500)) corrigir(j, q.x, q.y, q.z);

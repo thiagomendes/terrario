@@ -5,6 +5,10 @@
  */
 import { avisoDaRecusa, avisoTirouDoAmigo, type RecusaProtecao } from '../jogo/permissao';
 
+/** Spec 016: "Voltar para casa" (a saída de quem ficou cercado). */
+export const AVISO_VOLTA_CASA = 'Voltando para casa!';
+export const AVISO_ESPERA_CASA = 'Espera um pouquinho para voltar de novo.';
+
 /** Segundos até o mesmo aviso (mesmo motivo e mesmo dono ou lugar) poder voltar. */
 export const ESPERA_AVISO = 4;
 /** Segundos entre dois "Você tirou um bloco do Léo" (discreto: o dono sabe o que fez). */

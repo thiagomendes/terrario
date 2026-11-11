@@ -183,6 +183,7 @@ export function sanear(c: unknown): Comando | null {
     case 'comer':
       return inteiro(o.slot, 0, SLOTS - 1) ? (o as unknown as Comando) : null;
     case 'renascer':
+    case 'voltarCasa':
     case 'fecharConteiner':
       return o as unknown as Comando;
     case 'salvar':

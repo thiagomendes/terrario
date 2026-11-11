@@ -3,7 +3,7 @@
  * aparelho). Em cima à esquerda, o botão de informações e, ao lado, UM botão de roda; embaixo
  * do minimapa, só a mochila (um toque); tocar no minimapa abre o mapa grande. A roda (a mesma
  * peça da roda de gestos, em volta do boneco) tem Mapa, Diário, Personagem, Foto, Gestos,
- * Tela cheia e Pausa; "Gestos" troca a roda pelos 8 gestos, com "Voltar" no meio; segurar o
+ * Para casa (spec 016), Tela cheia e Pausa; "Gestos" troca a roda pelos 8 gestos, com "Voltar" no meio; segurar o
  * botão da roda abre os gestos direto. No computador as teclas continuam (E, Tab, J, C, P, G,
  * Esc) e cada item mostra a dele; 1 a 8 só com a roda de gestos aberta. O (de "opções") abre e
  * fecha a roda do menu: o mouse preso na câmera é solto sem a pausa e volta a prender quando a
@@ -25,6 +25,7 @@ const IC = {
   gestos:
     '<circle cx="16" cy="16" r="11" fill="#ffd45a" stroke="#3b2a1e" stroke-width="2.2"/><circle cx="12" cy="14" r="1.7" fill="#3b2a1e"/><circle cx="20" cy="14" r="1.7" fill="#3b2a1e"/><path d="M11 18.5 Q16 23.5 21 18.5" fill="none" stroke="#3b2a1e" stroke-width="2.2" stroke-linecap="round"/>',
   tela: '<path d="M6 12 V6 H12 M20 6 H26 V12 M26 20 V26 H20 M12 26 H6 V20" fill="none" stroke="#3b2a1e" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>',
+  casa: '<path d="M5 15 L16 5 L27 15" fill="none" stroke="#3b2a1e" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/><path d="M8 14 V27 H24 V14" fill="#ffd45a" stroke="#3b2a1e" stroke-width="2" stroke-linejoin="round"/><path d="M5 15 L16 5 L27 15 Z" fill="#e8463c" stroke="#3b2a1e" stroke-width="2" stroke-linejoin="round"/><rect x="13.5" y="19" width="5" height="8" rx="1" fill="#c9884a" stroke="#3b2a1e" stroke-width="1.6"/>',
   pausa:
     '<rect x="9" y="7" width="5" height="18" rx="2" fill="#3b2a1e"/><rect x="18" y="7" width="5" height="18" rx="2" fill="#3b2a1e"/>',
   roda: '<circle cx="16" cy="16" r="3.2" fill="#3b2a1e"/><circle cx="16" cy="6.5" r="3" fill="#ff8fb3" stroke="#3b2a1e" stroke-width="1.6"/><circle cx="25" cy="13" r="3" fill="#7cc6ff" stroke="#3b2a1e" stroke-width="1.6"/><circle cx="21.5" cy="24" r="3" fill="#7cc35a" stroke="#3b2a1e" stroke-width="1.6"/><circle cx="10.5" cy="24" r="3" fill="#ffd45a" stroke="#3b2a1e" stroke-width="1.6"/><circle cx="7" cy="13" r="3" fill="#c9884a" stroke="#3b2a1e" stroke-width="1.6"/>',
@@ -35,7 +36,7 @@ const svg = (miolo: string) =>
 
 /** O que cada item do menu faz: a tecla de sempre (o jogo já sabe o que fazer com ela). */
 export interface ItemMenu {
-  id: 'mapa' | 'diario' | 'personagem' | 'foto' | 'gestos' | 'tela' | 'pausa';
+  id: 'mapa' | 'diario' | 'personagem' | 'foto' | 'gestos' | 'casa' | 'tela' | 'pausa';
   nome: string;
   /** Tecla que o item aperta (e que aparece no selinho). */
   codigo?: string;
@@ -50,6 +51,8 @@ export function itensDoMenu(telaCheia: boolean): ItemMenu[] {
     { id: 'personagem', nome: 'Personagem', codigo: 'KeyC', tecla: 'C' },
     { id: 'foto', nome: 'Foto', codigo: 'KeyP', tecla: 'P' },
     { id: 'gestos', nome: 'Gestos', tecla: 'G' },
+    // spec 016: a saída de quem ficou cercado
+    { id: 'casa', nome: 'Para casa' },
     { id: 'tela', nome: 'Tela cheia' },
     { id: 'pausa', nome: 'Pausa', tecla: 'Esc' },
   ];
@@ -200,6 +203,7 @@ export function criarMenuRoda(op: OpcoesMenuRoda, raiz: HTMLElement = document.b
       // a roda fecha antes (o painel que abre não fica embaixo dela)
       roda.fechar();
       if (id === 'tela') alternarTelaCheia();
+      else if (id === 'casa') window.dispatchEvent(new CustomEvent('brumaluz:voltarCasa'));
       else if (id === 'pausa') pausar();
       else if (it.codigo) tecla(it.codigo);
     },

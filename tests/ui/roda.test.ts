@@ -54,6 +54,7 @@ describe('roda de botões (spec 015)', () => {
       ['personagem', 'C'],
       ['foto', 'P'],
       ['gestos', 'G'],
+      ['casa', null],
       ['tela', null],
       ['pausa', 'Esc'],
     ]);

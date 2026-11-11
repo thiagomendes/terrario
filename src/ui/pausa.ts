@@ -41,6 +41,8 @@ export interface AcoesPausa {
   abrirFuncao?(codigo: string): void;
   /** Jogar com amigos: convite, código e quem está no mundo. */
   amigos?(): void;
+  /** Spec 016: volta para a cama (ou o ponto de nascer): a saída de quem ficou cercado. */
+  voltarCasa?(): void;
 }
 
 export function criarMenuPausa(raiz: HTMLElement, nomeMundo: string, acoes: AcoesPausa) {
@@ -108,10 +110,14 @@ export function criarMenuPausa(raiz: HTMLElement, nomeMundo: string, acoes: Acoe
   const amigos = acoes.amigos
     ? [botao('Convidar amigos', 'azul', acoes.amigos, 'data-pausa-amigos', 'pessoa')]
     : [];
+  const casa = acoes.voltarCasa
+    ? [botao('Voltar para casa', '', acoes.voltarCasa, 'data-pausa-casa', 'casa')]
+    : [];
   card.append(
     h,
     m,
     continuar,
+    ...casa,
     ...amigos,
     ...grade,
     dupla,

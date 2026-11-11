@@ -90,6 +90,7 @@ async function cadaItem(page: Page, tocar: boolean, nome: string) {
     'personagem',
     'foto',
     'gestos',
+    'casa',
     'pausa',
   ]);
   await page.screenshot({ path: `${PASTA}/menu-roda-${nome}.png` });

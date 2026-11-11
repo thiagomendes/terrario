@@ -22,6 +22,8 @@ import type { DonosExportados, DonosMudados } from '../world/edicoes';
 export const VERSAO_PROTOCOLO = 1;
 /** Passo fixo da simulação, em segundos (20 passos por segundo). */
 export const PASSO = 0.05;
+/** Segundos entre duas voltas para casa (spec 016: curto, só para não virar teletransporte). */
+export const ESPERA_VOLTA_CASA = 8;
 
 export interface Pos {
   x: number;
@@ -134,6 +136,11 @@ type ComandoSemSeq =
   | { t: 'trocar'; criatura: number; profissao: Profissao; troca: string }
   | { t: 'comer'; slot: number }
   | { t: 'renascer' }
+  /**
+   * Spec 016: "Voltar para casa" (a cama ou o ponto de nascer), para a criança que ficou
+   * presa (cercada por blocos dos amigos, com o dono fora). O núcleo leva; tem um intervalo.
+   */
+  | { t: 'voltarCasa' }
   | { t: 'salvar'; pedido: number }
   /** Depois de uma queda: o valor oficial destas células (as previsões que ficaram). */
   | { t: 'conferir'; id: number; celulas: Pos[] }

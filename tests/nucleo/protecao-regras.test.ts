@@ -25,7 +25,12 @@ import { Protecao, criarProtecaoMundo } from '../../src/world/protecao';
 import { recusaQuebrar, type MundoDaRegra, type RecusaProtecao } from '../../src/jogo/permissao';
 import { sanear } from '../../src/nucleo/saneamento';
 import { idDoBloco } from '../../src/jogo/itens';
-import type { Comando, EventoNucleo, Mensagem } from '../../src/nucleo/protocolo';
+import {
+  ESPERA_VOLTA_CASA,
+  type Comando,
+  type EventoNucleo,
+  type Mensagem,
+} from '../../src/nucleo/protocolo';
 import '../../src/temas/todos';
 import { obterTema } from '../../src/temas';
 
@@ -664,6 +669,37 @@ describe('auditoria da 016: o vão de ar no chão da ruína (nuvem)', () => {
     expect(recusaDe(n, 'leo', r).recusa?.protecao).toEqual({ motivo: 'amigo', dono: 'Bia' });
     quebrar(n, 'bia', V!);
     expect(bloco(n, V!)).toBe(Bloco.AR);
+  });
+});
+
+describe.each<Modo>(['local', 'nuvem'])('voltar para casa (%s)', (modo) => {
+  it('cercada pelos blocos do amigo, a criança volta para a cama; com um intervalo curto', () => {
+    const C = { x: 400, y: 95, z: 410 };
+    const n = abrir(modo, 'sobrevivencia', C);
+    const quem = modo === 'local' ? 'local' : 'bia';
+    const j = n.estado.jogadores.get(quem)!;
+    j.spawn = { x: 100.5, z: 120.5 };
+    const teleportes = () => {
+      n.passo();
+      return (n.quadros().get(quem)!.eventos ?? []).filter((e) => e.e === 'teleporte');
+    };
+    teleportes();
+    mandar(n, quem, { t: 'voltarCasa' });
+    expect(teleportes()).toEqual([{ e: 'teleporte', x: 100.5, z: 120.5 }]);
+    // a próxima posição (lá na cama) é aceita, mesmo longe
+    n.comando(quem, tel({ x: 100.5, y: 90, z: 120.5 }));
+    expect(Math.hypot(j.tel.x - 100.5, j.tel.z - 120.5)).toBeLessThan(1);
+    // de novo logo em seguida: espera um pouquinho (o aviso, sem levar)
+    mandar(n, quem, { t: 'voltarCasa' });
+    n.passo();
+    const q = n.quadros().get(quem)!.eventos ?? [];
+    expect(q.some((e) => e.e === 'teleporte')).toBe(false);
+    expect(q).toContainEqual({ e: 'recusa', comando: 0, motivo: 'voltarCasa' });
+    // passado o intervalo, volta
+    for (let k = 0; k < ESPERA_VOLTA_CASA / 0.05; k++) n.passo();
+    n.quadros();
+    mandar(n, quem, { t: 'voltarCasa' });
+    expect(teleportes()).toHaveLength(1);
   });
 });
 

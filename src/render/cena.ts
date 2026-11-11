@@ -19,7 +19,7 @@ import {
   type MundoDaRegra,
   type RecusaProtecao,
 } from '../jogo/permissao';
-import { criarAvisosProtecao } from '../player/avisosProtecao';
+import { AVISO_ESPERA_CASA, AVISO_VOLTA_CASA, criarAvisosProtecao } from '../player/avisosProtecao';
 import { criarCadeado } from '../ui/cadeado';
 import {
   criarProtecaoMundo,
@@ -235,6 +235,7 @@ import { amostrarMapaChunk } from './mapaChunk';
 import { conexaoLocal, type Conexao } from '../cliente/conexao';
 import { criarEstadoCliente } from '../cliente/estado';
 import {
+  ESPERA_VOLTA_CASA,
   PASSO,
   VERSAO_PROTOCOLO,
   type Comando,
@@ -481,6 +482,8 @@ export interface EstadoDepuracao {
   /** Testes: espera o núcleo processar o que já foi mandado. */
   sincronizar?: () => Promise<void>;
   renascer?: () => void;
+  /** Spec 016: "Voltar para casa" (a cama ou o ponto de nascer). */
+  voltarCasa?: () => void;
   definirSpawn?: (x: number, z: number) => void;
   inventario?: import('../jogo/inventario').Inventario;
   alvo?: { x: number; y: number; z: number; normal: Vec3 } | null;
@@ -3883,6 +3886,24 @@ export function criarCena(
     renascerPedidoEm = performance.now();
     enviar({ t: 'renascer' });
   };
+  /**
+   * Spec 016: "Voltar para casa" (pausa e roda do menu). O núcleo leva (e confere o
+   * intervalo); aqui só o aviso: saindo agora, ou "espera um pouquinho".
+   */
+  let voltouCasaEm = -Infinity;
+  estado.voltarCasa = () => {
+    if (sobrevivenciaCliente.estado.morto) return;
+    const agora = performance.now() / 1000;
+    if (agora - voltouCasaEm < ESPERA_VOLTA_CASA) {
+      toast(AVISO_ESPERA_CASA);
+      return;
+    }
+    voltouCasaEm = agora;
+    toast(AVISO_VOLTA_CASA);
+    enviarTelemetria(true);
+    enviar({ t: 'voltarCasa' });
+  };
+  window.addEventListener('brumaluz:voltarCasa', () => estado.voltarCasa?.());
 
   // Telemetria: o corpo do jogador anda aqui (resposta imediata); o núcleo recebe
   // a posição e o que pesa na sobrevivência (quedas, pulos, golpes, água).
@@ -4101,6 +4122,7 @@ export function criarCena(
       case 'recusa':
         barramento.emitir('recusa', { motivo: e.motivo === 'quebrar' ? 'quebrar' : 'colocar' });
         if (e.motivo === 'semente') toast(AVISO_SEMENTE);
+        if (e.motivo === 'voltarCasa') toast(AVISO_ESPERA_CASA);
         // spec 016: o núcleo disse de quem é (bicho do amigo, ou a previsão errou)
         if (e.protecao) avisosProtecao.avisar(e.protecao);
         break;
