@@ -257,3 +257,115 @@ test('quadros por segundo com a roda aberta', async ({ page }) => {
     `DESEMPENHO roda ${JSON.stringify({ fechada, fechada1s, abrindo, menu, gestos, depois })}`,
   );
 });
+
+/**
+ * Spec 017: quadros por segundo com 4 amigos fantasiados (capa e saia) correndo em volta do
+ * jogador, que também está fantasiado. Mede antes sem amigos (controle) e depois com eles.
+ */
+test('quadros por segundo com 4 amigos fantasiados', async ({ page }) => {
+  test.setTimeout(300_000);
+  await preparar(page);
+  await page.goto('/');
+  await pronto(page);
+  await fecharEntrada(page);
+  await page.waitForTimeout(12_000);
+  const medirAmigos = (com: boolean, ms = 6000, vestidos = true) =>
+    page.evaluate(
+      async ({ com, ms, vestidos }) => {
+        const e = window.__brumaluz!;
+        const [x0, y0, z0] = e.posicao!;
+        const fantasias = [
+          { corpo: 'feminino', cabeloEstilo: 2, fantasia: { id: 'realeza-flores', cor: 0 } },
+          { corpo: 'masculino', cabeloEstilo: 0, fantasia: { id: 'heroi-relampago', cor: 0 } },
+          { corpo: 'feminino', cabeloEstilo: 5, fantasia: { id: 'heroi-estrela', cor: 0 } },
+          { corpo: 'feminino', cabeloEstilo: 7, fantasia: { id: 'realeza-neve', cor: 1 } },
+        ];
+        const amostras: number[] = [];
+        let ultimo = performance.now();
+        const inicio = ultimo;
+        const fim = ultimo + ms;
+        await new Promise<void>((ok) => {
+          const passo = () => {
+            const agora = performance.now();
+            amostras.push(agora - ultimo);
+            ultimo = agora;
+            const t = (agora - inicio) / 1000;
+            e.amigosDeTeste!(
+              com
+                ? fantasias.map((ap0, i) => {
+                    // vestidos = false: os mesmos amigos sem fantasia (para comparar)
+                    const ap = vestidos
+                      ? ap0
+                      : { corpo: ap0.corpo, cabeloEstilo: ap0.cabeloEstilo };
+                    const a = t * 1.6 + (i * Math.PI) / 2;
+                    return {
+                      id: `f${i}`,
+                      aparencia: ap,
+                      x: x0 + Math.sin(a) * 3,
+                      y: y0,
+                      z: z0 + 3 + Math.cos(a) * 3,
+                      yaw: a + Math.PI / 2,
+                      vel: 4.8,
+                      correndo: true,
+                    };
+                  })
+                : [],
+            );
+            if (agora < fim) requestAnimationFrame(passo);
+            else ok();
+          };
+          requestAnimationFrame(passo);
+        });
+        amostras.sort((a, b) => a - b);
+        return {
+          fps: Math.round((amostras.length / (ms / 1000)) * 10) / 10,
+          p95ms: Math.round(amostras[Math.floor(amostras.length * 0.95)] * 10) / 10,
+        };
+      },
+      { com, ms, vestidos },
+    );
+  await page.evaluate(() =>
+    window.__brumaluz!.personagem!.definir({ fantasia: { id: 'heroi-coracao', cor: 0 } } as never),
+  );
+  await page.evaluate(() => window.__brumaluz!.apontar!(0, 0.15));
+  const sem = await medirAmigos(false);
+  // a primeira volta monta os bonecos; mede depois
+  await medirAmigos(true, 1500);
+  // PERFIL=1: onde vai o tempo com os amigos fantasiados
+  const cdp = process.env.PERFIL ? await page.context().newCDPSession(page) : null;
+  if (cdp) {
+    await cdp.send('Profiler.enable');
+    await cdp.send('Profiler.setSamplingInterval', { interval: 200 });
+    await cdp.send('Profiler.start');
+  }
+  const com = await medirAmigos(true);
+  if (cdp) {
+    const { profile } = (await cdp.send('Profiler.stop')) as unknown as {
+      profile: {
+        nodes: {
+          id: number;
+          callFrame: { functionName: string; url: string; lineNumber: number };
+        }[];
+        samples: number[];
+        timeDeltas: number[];
+      };
+    };
+    const porNo = new Map<number, number>();
+    profile.samples.forEach((id, i) =>
+      porNo.set(id, (porNo.get(id) ?? 0) + (profile.timeDeltas[i] ?? 0)),
+    );
+    const porFuncao = new Map<string, number>();
+    for (const n of profile.nodes) {
+      const t = porNo.get(n.id) ?? 0;
+      if (!t) continue;
+      const f = n.callFrame;
+      const k = `${f.functionName || '(anon)'} ${f.url.split('/').pop()}:${f.lineNumber}`;
+      porFuncao.set(k, (porFuncao.get(k) ?? 0) + t);
+    }
+    for (const [k, t] of [...porFuncao].sort((a, b) => b[1] - a[1]).slice(0, 30))
+      console.log(`PERFIL amigos ${(t / 1000).toFixed(1)}ms ${k}`);
+  }
+  await medirAmigos(true, 1500, false);
+  const semFantasia = await medirAmigos(true, 6000, false);
+  console.log(`DESEMPENHO amigos-fantasiados ${JSON.stringify({ sem, com, semFantasia })}`);
+});
