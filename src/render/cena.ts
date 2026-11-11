@@ -9,7 +9,8 @@ import { tocarVoz } from '../audio/sons';
 import { construirMapaEmissivo } from './emissivo';
 import { criarTintaProtecao } from './tintaProtecao';
 import {
-  recusaBau,
+  ehConteiner,
+  recusaConteiner,
   recusaColocar,
   recusaQuebrar,
   type MundoDaRegra,
@@ -1849,11 +1850,11 @@ export function criarCena(
         );
         return;
       }
-      // spec 016: o baú que alguém pôs abre só para ele e para o dono do mundo
-      const bau = alvoBloco === Bloco.BAU ? recusaBau(regra, voce, a.x, a.y, a.z) : null;
-      if (bau) {
+      // spec 016: o baú e a fornalha que alguém pôs abrem só para ele e para o dono do mundo
+      const fechado = recusaConteiner(regra, voce, a.x, a.y, a.z);
+      if (fechado) {
         barramento.emitir('recusa', { motivo: 'colocar' });
-        recusarProtegido(bau);
+        recusarProtegido(fechado);
         return;
       }
       // baú e fornalha abrem quando o núcleo manda o conteúdo; a cama decide o sono lá
@@ -2865,12 +2866,12 @@ export function criarCena(
   estado.protecaoNaMira = () => protecaoNaMira();
   /**
    * O cadeado aparece no que não quebra e também não se usa (a porta da vila abre: com
-   * cadeado ela parecia trancada). O baú que não abre ganha cadeado.
+   * cadeado ela parecia trancada). O baú e a fornalha que não abrem ganham cadeado.
    */
   function trancadoNaMira(a: { x: number; y: number; z: number }): boolean {
     if (!protecaoNaMira()) return false;
     const b = blocoEm(a.x, a.y, a.z);
-    if (b === Bloco.BAU) return recusaBau(regra, voce, a.x, a.y, a.z) !== null;
+    if (ehConteiner(b)) return recusaConteiner(regra, voce, a.x, a.y, a.z) !== null;
     return !INTERATIVOS.has(b);
   }
   const pontoCadeado = new Vector3();

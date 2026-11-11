@@ -15,7 +15,8 @@ import { Bloco, ehAlvo, luzDoBloco, obterBloco } from '../world/blocks';
 import { ALCANCE_REGRAS, alcancaDosOlhos } from '../jogo/alcance';
 import {
   podeLevarBicho,
-  recusaBau,
+  ehConteiner,
+  recusaConteiner,
   recusaColocar,
   recusaQuebrar,
   type MundoDaRegra,
@@ -76,6 +77,7 @@ import { colocacaoBloqueada } from '../player/alvo';
 import { preencherKit, SLOTS, KIT_EXTRA } from '../player/hotbar';
 import { criarAcessoMundo } from './mundo';
 import { contaFecha } from './conta';
+import { limparApelido } from '../jogo/apelido';
 import { sanear } from './saneamento';
 import {
   PASSO,
@@ -155,6 +157,11 @@ export interface OpcoesNucleo {
    * o "levar para a nuvem" já fica com o dono certo.
    */
   dono?: string;
+  /**
+   * Apelido do dono do mundo antes de ele entrar (na nuvem, o guardado com a sala): com o
+   * dono fora, o aviso diz "Essa parede é da Bia." e não "de um amigo". Passa a limpo aqui.
+   */
+  apelidoDono?: string;
 }
 
 /**
@@ -289,7 +296,7 @@ export function criarNucleo(op: OpcoesNucleo) {
    */
   const protecao = criarProtecaoMundo(semente);
   /** Apelido do dono do mundo (ele não entra na tabela de donos; o aviso diz o nome dele). */
-  let apelidoDoMundo: string | undefined;
+  let apelidoDoMundo: string | undefined = limparApelido(String(op.apelidoDono ?? '')) || undefined;
   const regra: MundoDaRegra = {
     protecao,
     bloco: (x, y, z) => mundo.bloco(x, y, z),
@@ -971,13 +978,13 @@ export function criarNucleo(op: OpcoesNucleo) {
     ) {
       // quem só passeia não mexe nos baús e fornalhas dos outros
       j.eventos.push({ e: 'recusa', comando: c.id ?? 0, motivo: 'visitante' });
-    } else if (b === Bloco.BAU && recusaBau(regra, j.id, x, y, z)) {
-      // spec 016: o baú que alguém pôs abre só para ele e para o dono do mundo
+    } else if (ehConteiner(b) && recusaConteiner(regra, j.id, x, y, z)) {
+      // spec 016: o baú e a fornalha que alguém pôs abrem só para ele e para o dono do mundo
       j.eventos.push({
         e: 'recusa',
         comando: c.id ?? 0,
         motivo: 'usar',
-        protecao: recusaBau(regra, j.id, x, y, z)!,
+        protecao: recusaConteiner(regra, j.id, x, y, z)!,
       });
     } else if (b === Bloco.BAU) {
       // baú sem edição no lugar foi gerado pelo mundo (ruína): vem com tesouro
@@ -1084,9 +1091,9 @@ export function criarNucleo(op: OpcoesNucleo) {
     const alcanca = !ct || confiar || perto(j, ct.x, ct.y, ct.z, ALCANCE_REGRAS + 2);
     // foi embora com o baú aberto: fecha
     if (noConteiner && !alcanca) j.conteiner = null;
-    // spec 016: o baú de outra pessoa não abre; nem por transação mandada direto
-    const bauOk = !ct || ct.tipo !== 'bau' || !recusaBau(regra, j.id, ct.x, ct.y, ct.z);
-    const conteinerOk = !noConteiner || (j.constroi && alcanca && bauOk);
+    // spec 016: o baú e a fornalha de outra pessoa não abrem; nem por transação mandada direto
+    const donoOk = !ct || !recusaConteiner(regra, j.id, ct.x, ct.y, ct.z, ct.tipo);
+    const conteinerOk = !noConteiner || (j.constroi && alcanca && donoOk);
     if (!valida || !contaOk || !conteinerOk) {
       // Tudo volta ao oficial, inclusive o que estava nas mãos (nada duplica nem some).
       j.inventarioSujo = true;

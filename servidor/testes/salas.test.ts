@@ -965,4 +965,107 @@ describe('construções protegidas na sala (spec 016, três jogadores)', () => {
     await avancar(100);
     expect(quadros(a).some((q) => q.conteiner?.tipo === 'bau')).toBe(true);
   });
+
+  it('a fornalha da Bia segue o baú: não abre para o Caio nem por transação; abre para a dona', async () => {
+    const { a, b, c, nucleo, mandar, P, avancar } = await trio();
+    const Q = { ...P, z: P.z + 2 };
+    await mandar(b, { t: 'colocar', id: 1, ...Q, bloco: Bloco.FORNALHA, meta: 0, slot: 0 });
+    await avancar(100);
+    nucleo().estado.conteineres.fornalha(Q.x, Q.y, Q.z).saida = { item: 'trigo', qtd: 3 };
+    await mandar(c, { t: 'usar', id: 1, ...Q });
+    await mandar(c, {
+      t: 'transacao',
+      id: 2,
+      mudancas: [
+        { onde: 'forn', i: 2, antes: { item: 'trigo', qtd: 3 }, depois: null },
+        { onde: 'inv', i: 3, antes: null, depois: { item: 'trigo', qtd: 3 } },
+      ],
+    });
+    await avancar(100);
+    expect(quadros(c).some((q) => q.conteiner)).toBe(false);
+    expect(recusas(c)).toContainEqual(
+      expect.objectContaining({ motivo: 'usar', protecao: { motivo: 'fornalha', dono: 'bia' } }),
+    );
+    expect(nucleo().estado.conteineres.fornalha(Q.x, Q.y, Q.z).saida).toEqual({
+      item: 'trigo',
+      qtd: 3,
+    });
+    for (const k of [b, a]) await mandar(k, { t: 'usar', id: 1, ...Q });
+    await avancar(100);
+    expect(quadros(b).some((q) => q.conteiner?.tipo === 'fornalha')).toBe(true);
+    expect(quadros(a).some((q) => q.conteiner?.tipo === 'fornalha')).toBe(true);
+  });
+
+  it('com a dona fora, a sala que acorda diz o nome dela ("é da Ana"), passado a limpo', async () => {
+    const s = servidor();
+    const a = canal();
+    const ana = { ...ident('ana'), apelido: '  Ana💥 ' };
+    await s.g.receber(
+      a,
+      JSON.stringify({ t: 'entrar', versao: VERSAO_REDE, jogador: ana, criar: criarMundo }),
+    );
+    const bv = a.recebidas.find((m) => m.t === 'bemvindo') as Extract<
+      RespostaServidor,
+      { t: 'bemvindo' }
+    >;
+    const codigo = bv.sala.codigo;
+    expect((await s.armazem.lerSala(codigo))?.apelidoDono).toBe('Ana');
+    const P = { x: 900, y: 100, z: 900 };
+    const tel = (seq: number) =>
+      JSON.stringify({
+        t: 'jogador',
+        x: P.x + 3.5,
+        y: P.y,
+        z: P.z + 0.5,
+        yaw: 0,
+        pitch: 0,
+        olhos: P.y + 1.62,
+        noChao: true,
+        voando: true,
+        vel: 0,
+        correndo: false,
+        submerso: false,
+        quedas: [],
+        pulos: 0,
+        golpes: 0,
+        slot: 0,
+        seq,
+      });
+    await s.avancar(300);
+    await s.g.receber(a, tel(1));
+    await s.g.receber(
+      a,
+      JSON.stringify({ t: 'colocar', id: 1, ...P, bloco: Bloco.TABUAS, meta: 0, slot: 0, seq: 2 }),
+    );
+    await s.avancar(6000);
+    // a dona sai; a sala dorme (30 s de tolerância + 60 s vazia)
+    s.g.caiu(a);
+    await s.avancar(95_000);
+    expect(s.g.ativas.has(codigo)).toBe(false);
+    // a Bia chega sozinha e tenta quebrar a parede da Ana
+    const b = canal('5.6.7.8');
+    await s.g.receber(b, entrarComo('bia', { codigo }));
+    await s.avancar(300);
+    await s.g.receber(b, tel(1));
+    await s.g.receber(b, JSON.stringify({ t: 'quebrar', id: 1, ...P, slot: 0, seq: 2 }));
+    await s.avancar(100);
+    const nucleo = s.g.ativas.get(codigo)!.nucleo;
+    expect(nucleo.estado.jogadores.has('ana')).toBe(false);
+    expect(nucleo.estado.mundo.bloco(P.x, P.y, P.z)).toBe(Bloco.TABUAS);
+    expect(recusas(b)).toContainEqual(
+      expect.objectContaining({ protecao: { motivo: 'amigo', dono: 'Ana' } }),
+    );
+    // o que vier estragado na sala guardada também entra limpo
+    b.fechar();
+    s.g.caiu(b);
+    await s.avancar(95_000);
+    const sala = (await s.armazem.lerSala(codigo))!;
+    await s.armazem.gravarSala({ ...sala, apelidoDono: '<b>Ana</b>'.repeat(8) });
+    const b2 = canal('5.6.7.8');
+    await s.g.receber(b2, entrarComo('bia', { codigo }));
+    await s.avancar(300);
+    const apelido = s.g.ativas.get(codigo)!.nucleo.apelidoDoDono('ana')!;
+    expect(apelido).toMatch(/^[\p{L}\p{N} _-]{1,22}$/u);
+    expect(apelido.startsWith('bAnab')).toBe(true);
+  });
 });

@@ -142,7 +142,7 @@ async function mirarAte(p: Page, b: P, normal?: P) {
   await p.waitForTimeout(250);
 }
 
-test('três amigos na nuvem: casa da vila, parede do amigo, passagem, baú, porta e bicho', async ({
+test('três amigos na nuvem: casa da vila, parede do amigo, passagem, baú, fornalha, porta e bicho', async ({
   browser,
 }) => {
   test.setTimeout(900_000);
@@ -217,27 +217,41 @@ test('três amigos na nuvem: casa da vila, parede do amigo, passagem, baú, port
   const B = { x: C.x + 2, y: C.y, z: C.z };
   const Q = { x: C.x + 2, y: C.y, z: C.z + 2 };
   const D = { x: C.x + 2, y: C.y, z: C.z - 2 };
+  const F = { x: C.x + 1, y: C.y, z: C.z + 3 };
   for (const p of todos) await ir(p, C.x - 1.5, C.z + 0.5);
   await bia.waitForTimeout(4000);
   // a Bia constrói (de novo, se o servidor ainda não tinha a posição nova dela e recusou)
   const construir = () =>
     bia.evaluate(
-      ({ B, Q, D, tabuas, bau, porta }) => {
+      ({ B, Q, D, F, tabuas, bau, porta, fornalha }) => {
         const e = window.__brumaluz!;
         e.definirBloco!(B.x, B.y, B.z, tabuas);
         e.definirBloco!(B.x, B.y + 1, B.z, tabuas);
         e.definirBloco!(Q.x, Q.y, Q.z, bau);
+        e.definirBloco!(F.x, F.y, F.z, fornalha);
         e.definirBloco!(D.x, D.y, D.z, porta, 3);
         e.definirBloco!(D.x, D.y + 1, D.z, porta, 3);
       },
-      { B, Q, D, tabuas: Bloco.TABUAS, bau: Bloco.BAU, porta: Bloco.PORTA },
+      {
+        B,
+        Q,
+        D,
+        F,
+        tabuas: Bloco.TABUAS,
+        bau: Bloco.BAU,
+        porta: Bloco.PORTA,
+        fornalha: Bloco.FORNALHA,
+      },
     );
   await expect
     .poll(
       async () => {
         const ok = await bia.evaluate(
-          (B) => window.__brumaluz!.donoDoBloco!(B.x, B.y, B.z) === window.__brumaluz!.voce,
-          B,
+          ({ B, F }) =>
+            [B, F].every(
+              (b) => window.__brumaluz!.donoDoBloco!(b.x, b.y, b.z) === window.__brumaluz!.voce,
+            ),
+          { B, F },
         );
         if (!ok) await construir();
         return ok;
@@ -284,6 +298,19 @@ test('três amigos na nuvem: casa da vila, parede do amigo, passagem, baú, port
   await mirarAte(ana, Q, { x: -1, y: 0, z: 0 });
   await ana.evaluate(() => window.__brumaluz!.controleDireto!.usar());
   await expect(ana.locator('.painel-conteiner').first()).toBeVisible({ timeout: 15_000 });
+  await ana.keyboard.press('Escape');
+
+  // 4b. a fornalha da Bia segue o baú (decisão do dono): cadeado e aviso para o Léo; a dona abre
+  await mirarAte(leo, F, { x: -1, y: 0, z: 0 });
+  await expect.poll(() => leo.evaluate(() => window.__brumaluz!.cadeado!.visivel)).toBe(true);
+  await leo.evaluate(() => window.__brumaluz!.controleDireto!.usar());
+  await expect(aviso(leo, 'Essa fornalha é da Bia.')).toBeVisible();
+  await leo.waitForTimeout(1500);
+  expect(await leo.evaluate(() => document.body.dataset.overlay ?? '')).toBe('');
+  await leo.screenshot({ path: `${PASTA}/7b-leo-aviso-fornalha-da-bia.png` });
+  await mirarAte(ana, F, { x: -1, y: 0, z: 0 });
+  await ana.evaluate(() => window.__brumaluz!.controleDireto!.usar());
+  await expect(ana.locator('.painel-fornalha').first()).toBeVisible({ timeout: 15_000 });
   await ana.keyboard.press('Escape');
 
   // 5. a porta da Bia: o Léo abre e fecha, mas não quebra

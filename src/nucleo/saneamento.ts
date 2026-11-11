@@ -19,6 +19,7 @@ import {
 } from '../world/edicoes';
 import { ehGesto } from '../personagem/gestos';
 import { normalizarAparencia } from '../personagem/aparencia';
+import { limparApelido } from '../jogo/apelido';
 
 /** Tamanho do mundo onde alguém pode estar (bem além de onde se joga). */
 export const XZ_MAX = 30_000_000;
@@ -379,7 +380,7 @@ export function sanearDonos(d: unknown): DonosExportados {
     const id = par[0];
     if (typeof id !== 'string' || !ID_DONO.test(id) || vistos.has(id)) return ['', ''];
     vistos.add(id);
-    const apelido = typeof par[1] === 'string' ? par[1].slice(0, 22) : '';
+    const apelido = typeof par[1] === 'string' ? limparApelido(par[1]) : '';
     return [id, apelido];
   });
 }

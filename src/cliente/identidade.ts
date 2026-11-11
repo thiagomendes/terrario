@@ -2,6 +2,8 @@
  * Identidade anônima do aparelho para jogar com amigos (spec 010): um id, uma chave que
  * nunca sai daqui a não ser para o servidor conferir, e o apelido. Nenhum dado pessoal.
  */
+import { limparApelido } from '../jogo/apelido';
+
 export interface IdentidadeLocal {
   id: string;
   chave: string;
@@ -48,17 +50,7 @@ export function identidade(): IdentidadeLocal {
   return nova;
 }
 
-/** Tamanho máximo do apelido (cabe "Construtora dos Dinos"). */
-export const MAX_APELIDO = 22;
-
-/** Apelido: até 22 letras, sem nada estranho. */
-export function limparApelido(texto: string): string {
-  return texto
-    .replace(/[^\p{L}\p{N} _-]/gu, '')
-    .replace(/\s+/g, ' ')
-    .trim()
-    .slice(0, MAX_APELIDO);
-}
+export { MAX_APELIDO, limparApelido } from '../jogo/apelido';
 
 /** O complemento do nome sugerido em cada tema (neutro: vale para menina e menino). */
 const DO_TEMA: Record<string, string> = {

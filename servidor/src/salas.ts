@@ -23,6 +23,7 @@ import {
   type PedidoCliente,
   type RespostaServidor,
 } from '../../src/rede/protocolo';
+import { limparApelido } from '../../src/jogo/apelido';
 import { FORMATO_MUNDO, regiaoDe, type Armazem, type MundoGuardado, type Sala } from './armazem';
 
 /** O que o gerenciador precisa de uma conexão (WebSocket de verdade ou de teste). */
@@ -224,8 +225,10 @@ export function criarGerenciador(op: OpcoesGerenciador) {
       depuracao: op.depuracao ?? false,
       // spec 013: a criatura da noite deste mundo (cada sala guarda a sua)
       noite: mundo.estilo.noite,
-      // spec 016: o que o dono coloca (e o que veio do aparelho dele) é do dono
+      // spec 016: o que o dono coloca (e o que veio do aparelho dele) é do dono; com ele
+      // fora, os avisos dizem o nome dele (o núcleo passa a limpo)
       dono: sala.dono,
+      apelidoDono: sala.apelidoDono,
     });
     const s: SalaAtiva = {
       sala,
@@ -265,6 +268,7 @@ export function criarGerenciador(op: OpcoesGerenciador) {
       codigo,
       mundoId: mundo.id,
       dono: jog.id,
+      apelidoDono: jog.apelido,
       chaveDono: resumo(jog.chave),
       fechado: false,
       constroem: true,
@@ -327,6 +331,8 @@ export function criarGerenciador(op: OpcoesGerenciador) {
       jog.chave.length > 200
     )
       return recusar('identidade');
+    // o apelido vai para os avisos dos outros e para o Storage: passa a limpo como no aparelho
+    jog.apelido = limparApelido(String(jog.apelido ?? '')) || 'Jogador';
     const chave = resumo(jog.chave);
     let s: SalaAtiva | null;
     let guardado: Awaited<ReturnType<Armazem['lerJogador']>> = null;
@@ -361,6 +367,8 @@ export function criarGerenciador(op: OpcoesGerenciador) {
       contar(erros, canal.ip, -1);
     }
     const ehDono = s.sala.dono === jog.id && s.sala.chaveDono === resumo(jog.chave);
+    // o nome do dono para quando ele sair (gravado com a sala na próxima gravação)
+    if (ehDono) s.sala.apelidoDono = jog.apelido;
     if (s.expulsos.has(jog.id)) return recusar('expulso');
     if (s.sala.fechado && !ehDono) return recusar('fechado');
     const ja = s.presentes.get(jog.id);
@@ -385,7 +393,7 @@ export function criarGerenciador(op: OpcoesGerenciador) {
       s.nucleo.conectar(jog.id, {
         salvo: guardado?.dados,
         perfil: {
-          apelido: String(jog.apelido ?? 'Jogador').slice(0, 22),
+          apelido: jog.apelido,
           aparencia: sanearAparencia(jog.aparencia) ?? {},
         },
         constroi: ehDono || s.sala.constroem,
@@ -791,6 +799,7 @@ export function criarGerenciador(op: OpcoesGerenciador) {
     const apelidoDe = (id: string) => ativa?.nucleo.estado.jogadores.get(id)?.perfil.apelido;
     const dono =
       apelidoDe(sala.dono) ??
+      sala.apelidoDono ??
       (await armazem.lerJogador(sala.mundoId, sala.dono))?.perfil.apelido ??
       '';
     const presentes = ativa

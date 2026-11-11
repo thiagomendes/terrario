@@ -494,6 +494,94 @@ describe('regra 4: baús (nuvem)', () => {
   });
 });
 
+/** A fornalha que a vila gerou (usável: de todos). */
+function fornalhaDaVila(n: Nucleo): Celula {
+  const plano = povoadoPerto(SEMENTE);
+  for (const casa of plano.lotes)
+    for (let s = -1; s <= 8; s++)
+      for (let f = -2; f <= 8; f++)
+        for (let y = casa.h; y <= casa.h + 3; y++) {
+          const [x, z] = noLote(casa, s, f);
+          if (n.estado.mundo.gerado(x, y, z) === Bloco.FORNALHA) return { x, y, z };
+        }
+  throw new Error('sem fornalha na vila');
+}
+
+describe.each<Modo>(['local', 'nuvem'])('regra 4: fornalhas (%s)', (modo) => {
+  // decisão do dono (11 nov 2026): a fornalha posta segue o baú; a da vila é de todos
+  const C = { x: 400, y: 95, z: 410 };
+  /** Na nuvem a Bia põe; no aparelho, a criança (dona) põe e um amigo de teste tenta. */
+  const POE: Record<Modo, string> = { local: 'local', nuvem: 'bia' };
+
+  function montar(): Nucleo {
+    const n = abrir(modo, 'sobrevivencia', C);
+    if (modo === 'local') {
+      n.conectar('leo', { perfil: { apelido: 'Léo', aparencia: {} } });
+      n.definirPerfil('local', { apelido: 'Ana', aparencia: {} });
+    }
+    return n;
+  }
+  const forn = (n: Nucleo) => n.estado.conteineres.fornalha(C.x, C.y, C.z);
+
+  it('a fornalha posta abre só para quem pôs e para a dona; nem a transação nem a quebra passam', () => {
+    const n = montar();
+    const quem = POE[modo];
+    const inv = (q: string) => n.estado.jogadores.get(q)!.inventario;
+    inv(quem).definir(0, { item: idDoBloco(Bloco.FORNALHA), qtd: 1 });
+    inv(quem).definir(1, { item: 'trigo', qtd: 4 });
+    colocar(n, quem, C, Bloco.FORNALHA);
+    expect(bloco(n, C)).toBe(Bloco.FORNALHA);
+    mandar(n, quem, { t: 'usar', id: id(), ...C });
+    expect(n.estado.jogadores.get(quem)!.conteiner?.tipo).toBe('fornalha');
+    mandar(n, quem, {
+      t: 'transacao',
+      id: id(),
+      mudancas: [
+        { onde: 'inv', i: 1, antes: { item: 'trigo', qtd: 4 }, depois: null },
+        { onde: 'forn', i: 2, antes: null, depois: { item: 'trigo', qtd: 4 } },
+      ],
+    });
+    expect(forn(n).saida).toEqual({ item: 'trigo', qtd: 4 });
+    // o Léo não abre, e o aviso diz de quem é
+    const dono = modo === 'nuvem' ? 'Bia' : 'Ana';
+    ir(n, 'leo', C);
+    const i = id();
+    mandar(n, 'leo', { t: 'usar', id: i, ...C });
+    expect(n.estado.jogadores.get('leo')!.conteiner).toBeNull();
+    expect(recusaDe(n, 'leo', i).recusa?.protecao).toEqual({ motivo: 'fornalha', dono });
+    // tirar a saída por transação mandada direto não leva nada (nem fingindo a fornalha aberta)
+    n.estado.jogadores.get('leo')!.conteiner = { tipo: 'fornalha', abertura: 1, ...C };
+    mandar(n, 'leo', {
+      t: 'transacao',
+      id: id(),
+      mudancas: [
+        { onde: 'forn', i: 2, antes: { item: 'trigo', qtd: 4 }, depois: null },
+        { onde: 'inv', i: 3, antes: null, depois: { item: 'trigo', qtd: 4 } },
+      ],
+    });
+    expect(forn(n).saida).toEqual({ item: 'trigo', qtd: 4 });
+    expect(inv('leo').contar('trigo')).toBe(0);
+    // nem quebra para espalhar
+    const q = quebrar(n, 'leo', C);
+    expect(bloco(n, C)).toBe(Bloco.FORNALHA);
+    expect(recusaDe(n, 'leo', q).recusa?.protecao).toEqual({ motivo: 'fornalha', dono });
+    // a dona abre (na nuvem, a fornalha da Bia)
+    ir(n, DONA[modo], C);
+    mandar(n, DONA[modo], { t: 'usar', id: id(), ...C });
+    expect(n.estado.jogadores.get(DONA[modo])!.conteiner?.tipo).toBe('fornalha');
+  });
+
+  it('a fornalha da vila é de todos', () => {
+    const n = montar();
+    const V = fornalhaDaVila(n);
+    for (const quem of ['leo', DONA[modo]]) {
+      ir(n, quem, V);
+      mandar(n, quem, { t: 'usar', id: id(), ...V });
+      expect(n.estado.jogadores.get(quem)!.conteiner?.tipo).toBe('fornalha');
+    }
+  });
+});
+
 describe('lavoura do sítio: colhe e se replanta (local e nuvem)', () => {
   const RANCHO = 42;
   afterAll(() => {

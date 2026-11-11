@@ -5,7 +5,7 @@ import {
   daOuDo,
   podeLevarBicho,
   podeMexer,
-  recusaBau,
+  recusaConteiner,
   recusaColocar,
   recusaQuebrar,
   type MundoDaRegra,
@@ -63,6 +63,9 @@ describe('a regra', () => {
     '6,0,0': { b: Bloco.BAU, dono: 'leo' },
     '7,0,0': { p: Protecao.ESTRUTURA, g: Bloco.TABUAS },
     '8,0,0': { b: Bloco.FLOR, dono: 'leo' },
+    '10,0,0': { p: Protecao.USAVEL, b: Bloco.FORNALHA_ACESA, g: Bloco.FORNALHA },
+    '11,0,0': { b: Bloco.FORNALHA, dono: 'leo' },
+    '12,0,0': { b: Bloco.FORNALHA_ACESA, dono: 'leo' },
   });
 
   it('quebrar: o mundo não deixa ninguém; o do amigo, só ele e a dona; a lavoura, todos', () => {
@@ -103,10 +106,29 @@ describe('a regra', () => {
   });
 
   it('baú: o do mundo é de todos; o posto, de quem pôs e da dona', () => {
-    expect(recusaBau(m, 'bia', 2, 0, 0)).toBeNull();
-    expect(recusaBau(m, 'bia', 6, 0, 0)).toEqual({ motivo: 'bau', dono: 'Léo' });
-    expect(recusaBau(m, 'leo', 6, 0, 0)).toBeNull();
-    expect(recusaBau(m, 'ana', 6, 0, 0)).toBeNull();
+    expect(recusaConteiner(m, 'bia', 2, 0, 0)).toBeNull();
+    expect(recusaConteiner(m, 'bia', 6, 0, 0)).toEqual({ motivo: 'bau', dono: 'Léo' });
+    expect(recusaConteiner(m, 'leo', 6, 0, 0)).toBeNull();
+    expect(recusaConteiner(m, 'ana', 6, 0, 0)).toBeNull();
+    // outro bloco não é contêiner
+    expect(recusaConteiner(m, 'bia', 5, 0, 0)).toBeNull();
+  });
+
+  it('fornalha: a da vila é de todos; a posta, de quem pôs e da dona (apagada ou acesa)', () => {
+    expect(recusaConteiner(m, 'bia', 10, 0, 0)).toBeNull();
+    for (const x of [11, 12]) {
+      expect(recusaConteiner(m, 'bia', x, 0, 0)).toEqual({ motivo: 'fornalha', dono: 'Léo' });
+      expect(recusaConteiner(m, 'leo', x, 0, 0)).toBeNull();
+      expect(recusaConteiner(m, 'ana', x, 0, 0)).toBeNull();
+    }
+    // a transação confere pelo contêiner aberto, mesmo se o bloco já mudou
+    expect(recusaConteiner(m, 'bia', 5, 0, 0, 'fornalha')).toEqual({
+      motivo: 'fornalha',
+      dono: 'Léo',
+    });
+    expect(recusaQuebrar(m, 'bia', 11, 0, 0)).toEqual({ motivo: 'fornalha', dono: 'Léo' });
+    expect(avisoDaRecusa({ motivo: 'fornalha', dono: 'Ana' })).toBe('Essa fornalha é da Ana.');
+    expect(avisoDaRecusa({ motivo: 'fornalha' })).toBe('Essa fornalha é de um amigo.');
   });
 
   it('bicho: o solto é de todos; o criado, de quem criou e do dono do mundo', () => {

@@ -20,6 +20,11 @@ export interface Sala extends EstadoSala {
   acessadoEm: number;
   /** Expulsos pelo dono (não entram de novo). */
   expulsos?: string[];
+  /**
+   * Spec 016: o apelido do dono da última vez que ele entrou (com ele fora, os avisos da
+   * sala dizem o nome dele, não "de um amigo").
+   */
+  apelidoDono?: string;
 }
 
 /**

@@ -10,8 +10,8 @@
  * 4. Colocar: passagem, estrutura e usável do mundo ficam como estão; só o bloco que a
  *    geração pôs volta para o buraco (conserto). A planta (flor) do amigo não sai por baixo
  *    de um bloco novo.
- * 5. Baú posto por alguém: só ele e o dono do mundo abrem. Bicho criado ou domado: só quem
- *    criou e o dono do mundo chamam e levam.
+ * 5. Baú e fornalha postos por alguém: só ele e o dono do mundo abrem (a fornalha da vila é
+ *    de todos). Bicho criado ou domado: só quem criou e o dono do mundo chamam e levam.
  */
 import { Bloco } from '../world/blocks';
 import {
@@ -23,7 +23,7 @@ import {
 } from '../world/protecao';
 
 /** Por que não deu (o cliente escolhe o aviso). */
-export type MotivoProtecao = 'mundo' | 'amigo' | 'passagem' | 'bau' | 'bicho';
+export type MotivoProtecao = 'mundo' | 'amigo' | 'passagem' | 'bau' | 'fornalha' | 'bicho';
 
 export interface RecusaProtecao {
   motivo: MotivoProtecao;
@@ -75,7 +75,18 @@ export function recusaQuebrar(
   if (naoQuebra(p)) return doMundo(m, x, z, 'mundo');
   const dono = m.dono(x, y, z);
   if (podeMexer(quem, dono, m.donoDoMundo)) return null;
-  return deAlguem(m, dono!, m.bloco(x, y, z) === Bloco.BAU ? 'bau' : 'amigo');
+  return deAlguem(m, dono!, motivoDoBloco(m.bloco(x, y, z)) ?? 'amigo');
+}
+
+/** Baú e fornalha são contêineres (abrir segue a mesma regra); o resto, null. */
+export function ehConteiner(b: number): boolean {
+  return motivoDoBloco(b) !== null;
+}
+
+function motivoDoBloco(b: number): 'bau' | 'fornalha' | null {
+  if (b === Bloco.BAU) return 'bau';
+  if (b === Bloco.FORNALHA || b === Bloco.FORNALHA_ACESA) return 'fornalha';
+  return null;
 }
 
 /** Colocar `bloco` em (x, y, z) (célula vazia, com planta baixa ou água): null pode. */
@@ -99,18 +110,25 @@ export function recusaColocar(
   return deAlguem(m, dono!, 'amigo');
 }
 
-/** Abrir o baú de (x, y, z): os do mundo são de todos; o posto, de quem pôs e do dono. */
-export function recusaBau(
+/**
+ * Abrir o baú ou a fornalha de (x, y, z) (e mexer no que tem dentro): os do mundo são de
+ * todos; o posto, de quem pôs e do dono do mundo (decisão do dono, 11 nov 2026: a fornalha
+ * segue o baú). Outro bloco: null. `tipo` diz o contêiner já aberto (a transação confere
+ * mesmo se o bloco mudou no meio).
+ */
+export function recusaConteiner(
   m: MundoDaRegra,
   quem: string,
   x: number,
   y: number,
   z: number,
+  tipo?: 'bau' | 'fornalha',
 ): RecusaProtecao | null {
-  if (m.protecao.em(x, y, z) === Protecao.USAVEL) return null;
+  const motivo = tipo ?? motivoDoBloco(m.bloco(x, y, z));
+  if (!motivo || m.protecao.em(x, y, z) === Protecao.USAVEL) return null;
   const dono = m.dono(x, y, z);
   if (podeMexer(quem, dono, m.donoDoMundo)) return null;
-  return deAlguem(m, dono!, 'bau');
+  return deAlguem(m, dono!, motivo);
 }
 
 /**
@@ -143,6 +161,8 @@ export function avisoDaRecusa(r: RecusaProtecao): string {
       return 'Aqui é passagem: deixa livre para todo mundo passar.';
     case 'bau':
       return r.dono ? `Esse baú é${de}.` : 'Esse baú é de um amigo.';
+    case 'fornalha':
+      return r.dono ? `Essa fornalha é${de}.` : 'Essa fornalha é de um amigo.';
     case 'bicho':
       return r.dono ? `Esse bichinho é${de}.` : 'Esse bichinho é de um amigo.';
     case 'amigo':
