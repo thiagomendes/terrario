@@ -63,6 +63,11 @@ Recomendado depois da 016 e antes da 014: 017 → 016 → **019** → 014 → 01
 ## Esboço
 `referencia/sons.html`, https://claude.ai/artifact/9FjUNAaG9PJg1U47wMzbUW: página para ouvir o hoje e a proposta lado a lado, por tema e por contexto, e as vozes dos bichos.
 
+## Arquivos de som no repositório
+- `public/sons/pacotes/<tema>-musica.mp3`, `<tema>-vozes.mp3` e `comum-vozes.mp3`: os MP3 de cada tema emendados num pacote só; cada som é uma fatia do pacote.
+- `public/sons/indice.json`: onde cada som começa e acaba no pacote, as receitas de contexto da música, as camadas, as frases e os créditos.
+- O que gerou tudo isso (partituras, scripts e manifestos) fica em `referencia/fontes/`, para regravar quando for preciso.
+
 ## Fases e tarefas
 | # | Tarefa |
 |---|---|

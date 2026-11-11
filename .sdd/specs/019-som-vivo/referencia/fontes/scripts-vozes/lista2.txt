@@ -1,0 +1,13 @@
+risadas	File:Laughter(s).ogg
+risada_menina	File:Short clip of girl laughing.wav
+risada_desenho	File:Cartoon Laugh.ogg
+bebe_balbucio	File:Baby 5 months old gabbling laughing practising voice.ogg
+gata_jovem	File:Maullido de gata hembra joven.ogg
+gato_siames	File:Meow of a Siamese cat - freemaster2.wav
+gato_pede	File:Meow of a pleading cat.oga
+caoz_pradaria	File:Cynomys ludovicianus barking-audio.ogg
+pardal	File:House Sparrow 202279702.wav
+pardal_sardin	File:Joseph Sardin - Passer domesticus tschilp call.oga
+pombo_maos	File:Wood pigeon call 128.ogg
+peru	File:Turkey in Antefasy.wav
+pombo	File:Pigeon in Antefasy.wav

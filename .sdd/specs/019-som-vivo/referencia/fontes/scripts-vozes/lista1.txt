@@ -1,0 +1,42 @@
+ovelha1	File:Sheep bleat.ogg
+ovelha2	File:Sheep bleating.ogg
+ovelha3	File:Sheep in Antefasy.wav
+cabra1	File:Goat in Antefasy.wav
+cabras	File:Herd of goats bleating.ogg
+coelho_sq	File:Rabbit oinks and squeaks.wav
+ra_comestivel	File:Edible frogs, sounds. May. The Village of Krzemienica, Łódź Voivodeship, Poland.ogg
+sapo	File:Erdkröte Paarungsruf.OGG
+perereca	File:Laubfrosch Balzruf.OGG
+coruja	File:Steinkauz.OGG
+bolhas1	File:Water bubbles chortling.ogg
+bolhas2	File:Toberbreedia water bubbling.opus
+bolhas3	File:Bauchamp - 124 bubble percu 2.ogg
+assobio1	File:Human whistling.ogg
+assobio2	File:Soft whistle.ogg
+assobio3	File:Wolf whistle.ogg
+lobos	File:Rallying.ogg
+lobo_uivo	File:Wolf howls.ogg
+cao_uivo	File:Jem howls.ogg
+spitz_fala	File:Lisa talking.ogg
+gato_ronrona	File:Purring cat.oga
+pomba	File:Dove cooing.ogg
+elefante	File:Elephant voice - trumpeting.ogg
+guira	File:Guira guira 340477.wav
+cobaia_feliz	File:Guinea Pig Happy.ogg
+cobaia_chilreio	File:Guinea Pig Chirping.ogg
+cobaia_wheek	File:Guinea Pig Feeding Wheek.ogg
+cobaia_aflita	File:Guinea Pig In Distress.ogg
+cobaia_aviso	File:Guinea Pig Keep Away.ogg
+borracha	File:Rubber squeaking.ogg
+risada_elfo	File:Elf laughter.ogg
+risadinha	File:Smiles and giggly.webm
+bebe_fala	File:Even tempered baby 14 months communicative.ogg
+cantarola	File:Woman humming a nondescript tune.wav
+morcego	File:Bat feeding buzz.wav
+golfinho	File:161691 felixblume dolphin-screaming-underwater-in-caribbean-sea-mexico.wav
+macaco	File:Monkey in Antefasy.wav
+cavalo	File:Horse in Antefasy.wav
+orca	File:Killer whale simple.ogg
+pelicano	File:Baby pelican.ogg
+bebe_boceja	File:Baby yawning cute.ogg
+corda	File:Deep twang of loose bow string.ogg
