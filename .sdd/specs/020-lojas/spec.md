@@ -56,11 +56,48 @@ Pergunta do dono (11 nov 2026): levar o Terrário para a App Store e o Google Pl
 - Em jogo infantil, toda compra fica atrás do portão dos pais, sem pressão nem truques para a criança.
 
 ## Etapas propostas (cada uma com esboço e aprovação, como sempre)
+0. **Nome e propriedade intelectual:** buscas de marca, parecer, registro da Cubolândia e troca de nome no jogo, mantendo os mundos salvos.
 1. **Android:** casca Capacitor, ícone, tela de abertura, tela cheia, vibração, salvamento local e teste fechado na loja com a família. É a mais simples.
 2. **Regras de jogo infantil:** portão dos pais, denunciar e bloquear, política de privacidade, classificação de idade e revisão de rastreadores. Vale para as duas lojas.
 3. **iPhone:** a mesma casca, build na nuvem, TestFlight com a família e envio à Apple.
 4. **Contas e compras:** conta dos pais, progresso na nuvem e compra pela loja com conferência no servidor. Só se e quando o dono quiser vender.
 5. **Computador:** Tauri ou Electron e, se fizer sentido, Steam.
+
+## Nome novo: Cubolândia (decisão do dono, 11 nov 2026)
+- **Por que trocar:** "Terrário" fica a uma letra de **Terraria**, um jogo famoso de construir e explorar e marca registrada da Re-Logic, no mesmo gênero e nas mesmas lojas. Há risco de recusa na revisão ou de reclamação de marca.
+- **Nome escolhido: Cubolândia.**
+  - Nas telas e no logotipo, com acento; em endereço, nome do pacote e fora do Brasil, `cubolandia`.
+  - Na loja vai com subtítulo, por exemplo "Cubolândia: mundos de brinquedo", para não se perder entre os muitos jogos de cubo.
+- **Reservas, se a Cubolândia não passar:** Montamundo e Mundaréu. Brumaluz é a mais segura para registrar, mas fala só de um tema.
+- **Descartado:** Cubiverso, porque já existe "Cubiverse" na Steam e numa game jam.
+- **Busca preliminar** (11 nov 2026, só web e páginas das lojas):
+  - Cubolândia e Cubolandia não colidiram com nenhum jogo. Só apareceram "Cubalandia", uma peça de teatro cubana, "Republic of Cubeland", uma micronação, e "Jogo do Cubolito", um app brasileiro de nome parecido e diferente o bastante.
+  - Montamundo, Mundaréu e Brumaluz também estavam livres.
+- **Antes de trocar qualquer coisa no jogo:**
+  1. Busca de marca no INPI (classes 9 e 41) e nas bases dos EUA (USPTO) e da Europa (EUIPO).
+  2. Busca direta na App Store e no Google Play, no Brasil e nos EUA.
+  3. Domínio (cubolandia.com.br e .com) e perfis nas redes livres.
+  4. Parecer do advogado de propriedade intelectual.
+  5. Se tudo passar, pedir o registro da marca no INPI antes de publicar.
+- **Troca no jogo (rebrand):**
+  - nome, logotipo e ícone nas telas (título, carregando, pausa, manifest do app, ícones, cartão de compartilhar, título da página);
+  - textos que citam "Terrário";
+  - domínio novo com redirecionamento do antigo (terrario.tmdevlab.com continua abrindo e leva ao novo);
+  - **mundos e preferências salvos continuam iguais:** o armazenamento local não pode mudar de nome sem migrar, e as salas da nuvem e os códigos seguem valendo.
+  - Os nomes internos da infraestrutura (rg-terrario, repositório) podem ficar como estão.
+
+## Revisão de propriedade intelectual (antes de enviar às lojas)
+- **Jeito de jogar** (blocos, quebrar e colocar, receitas, sobrevivência, jogar item no chão): são mecânicas, que o direito autoral não protege. Não precisa mudar.
+- **Inventário de tudo o que vai no app,** com a licença de cada item:
+  - fontes (Google Fonts, licença aberta);
+  - sons gravados da 019 (CC0 ou domínio público, crédito por arquivo);
+  - banco de instrumentos (FluidR3 GM, MIT);
+  - voz sintética dos moradores (eSpeak NG: confirmar que o som gerado não herda a GPL);
+  - bibliotecas do código (Babylon.js e as demais, com as licenças de cada uma).
+- **Nada que imite outro jogo:** sem texturas, personagens, criaturas, itens, nomes de blocos ou sons copiados. A busca de 11 nov não achou nenhum nome do Minecraft no jogo.
+- **Texto e palavras-chave da loja sem citar outros jogos.** Nada de "igual ao Minecraft"; é marca registrada, e a Apple recusa apps que se apresentam como cópia.
+- **Limpar os cinco comentários "como no Minecraft"** do código (src/main.ts, src/render/cena.ts, src/jogo/drops.ts, src/ui/inventario.ts). Não aparecem para o jogador, mas o código vai para as lojas sem referência a outro jogo.
+- **Parecer do advogado** anexado antes do envio.
 
 ## Capricho na experiência (para não frustrar)
 - Abrir o app leva direto ao jogo, com o "Carregando o mundo…" de hoje, sem tela de navegador nem barra de endereço.
@@ -73,3 +110,4 @@ Pergunta do dono (11 nov 2026): levar o Terrário para a App Store e o Google Pl
 
 ## Decisões do dono
 - 11 nov 2026: registrar no backlog como rascunho, com tudo o que conversamos. O esboço vem quando chegar a vez.
+- 11 nov 2026: nome novo **Cubolândia** (reservas: Montamundo e Mundaréu), a confirmar com busca de marca e advogado antes de trocar; revisão de propriedade intelectual antes do envio às lojas.
