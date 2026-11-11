@@ -720,10 +720,19 @@ export function criarCena(
       const cz = Math.floor(z / TAM_Z);
       return provedor.obter(cx, cz)[indice(x - cx * TAM_X, y, z - cz * TAM_Z)];
     },
-    dono: (x, y, z) => donoNaCelula(edicoes, x, y, z, donoDoMundo),
+    dono: (x, y, z) =>
+      // o primeiro bloco de quem ainda não está na tabela: é dele (sem cadeado piscando)
+      meusSemTabela.size && edicoes.indiceDono(x, y, z) === 0 && meusSemTabela.has(`${x},${y},${z}`)
+        ? voce
+        : donoNaCelula(edicoes, x, y, z, donoDoMundo),
     apelido: (id) => apelidosVistos.get(id) ?? edicoes.donos.apelido(id),
     donoDoMundo,
   };
+  /**
+   * Spec 016: células que este jogador colocou antes de entrar na tabela de donos (o núcleo
+   * ainda não mandou o índice dele). Somem quando a tabela chega com ele.
+   */
+  const meusSemTabela = new Set<string>();
   const avisosProtecao = criarAvisosProtecao({
     toast: (t) => window.dispatchEvent(new CustomEvent('brumaluz:toast', { detail: t })),
   });
@@ -773,6 +782,7 @@ export function criarCena(
     aoQuadro: (q) => {
       if (q.donos) edicoes.donos.importar(sanearDonos(q.donos));
       if (q.donosNovos) edicoes.donos.aplicar(sanearDonosMudados(q.donosNovos));
+      if (meusSemTabela.size && meuIndiceDono() !== undefined) meusSemTabela.clear();
       if (q.perfis)
         for (const [id, p] of Object.entries(q.perfis)) apelidosVistos.set(id, p.apelido);
       if (q.perfis) outrosJogadores.definirPerfis(q.perfis);
@@ -1356,8 +1366,12 @@ export function criarCena(
     return empacotar(blocoEm(x, y, z), edicoes.obterMeta(x, y, z));
   }
   /** Prevê na hora um bloco que o núcleo ainda vai confirmar. */
-  const prever = (id: number, x: number, y: number, z: number, b: number, meta = 0) =>
-    cliente.prever(id, x, y, z, b, meta, b === Bloco.AR ? undefined : meuIndiceDono());
+  const prever = (id: number, x: number, y: number, z: number, b: number, meta = 0) => {
+    const dono = b === Bloco.AR ? undefined : meuIndiceDono();
+    if (b !== Bloco.AR && dono === undefined && meusSemTabela.size < 4096)
+      meusSemTabela.add(`${x},${y},${z}`);
+    return cliente.prever(id, x, y, z, b, meta, dono);
+  };
   /**
    * Spec 016: índice do dono que este jogador recebe ao colocar (o dono do mundo é o 0; quem
    * ainda não está na tabela fica sem previsão de dono até o núcleo mandar).
