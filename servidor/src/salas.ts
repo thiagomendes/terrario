@@ -420,6 +420,9 @@ export function criarGerenciador(op: OpcoesGerenciador) {
     s.sala.acessadoEm = agora();
     deCanal.set(canal, { sala: s, id: jog.id });
     const edicoes = s.nucleo.estado.edicoes;
+    // a tabela de donos vai no "bem-vindo": o primeiro quadro não repete (quem volta de uma
+    // queda recebe de novo no quadro: a aba que ficou aberta não relê o "bem-vindo")
+    if (!ja) s.nucleo.donosEnviados(jog.id);
     enviar(canal, {
       t: 'bemvindo',
       mundo: s.mundo,

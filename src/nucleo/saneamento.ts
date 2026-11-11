@@ -15,6 +15,7 @@ import {
   indiceDonoDe,
   semDono,
   type DonosExportados,
+  type DonosMudados,
   type EdicoesExportadas,
 } from '../world/edicoes';
 import { ehGesto } from '../personagem/gestos';
@@ -383,6 +384,20 @@ export function sanearDonos(d: unknown): DonosExportados {
     const apelido = typeof par[1] === 'string' ? limparApelido(par[1]) : '';
     return [id, apelido];
   });
+}
+
+/** As entradas mudadas da tabela de donos (o quadro), passadas a limpo. */
+export function sanearDonosMudados(d: unknown): DonosMudados {
+  if (!Array.isArray(d)) return [];
+  const out: DonosMudados = [];
+  for (const e of d.slice(0, MAX_DONOS)) {
+    if (!Array.isArray(e)) continue;
+    const [i, id, a] = e as unknown[];
+    if (!Number.isInteger(i) || (i as number) < 1 || (i as number) > MAX_DONOS) continue;
+    if (typeof id !== 'string' || (id !== '' && !ID_DONO.test(id))) continue;
+    out.push([i as number, id, typeof a === 'string' ? limparApelido(a) : '']);
+  }
+  return out;
 }
 
 /** Edições com índice de dono fora da tabela ficam com o dono do mundo (índice 0). */

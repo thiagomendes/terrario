@@ -132,7 +132,7 @@ import type { Buffers } from '../mesh/malha';
 import type { RespostaChunk, PedidoChunk } from '../workers/chunk.worker';
 import { criarProvedorBlocos } from '../world/provedor';
 import { criarEdicoes, donoNaCelula } from '../world/edicoes';
-import { sanearDonos } from '../nucleo/saneamento';
+import { sanearDonos, sanearDonosMudados } from '../nucleo/saneamento';
 import { JOGADOR_LOCAL } from '../nucleo/anfitriao';
 import { ALTURA, alturaTerreno, indice } from '../world/chunk';
 import { mirarDaCamera, posicaoColocacao, type Vec3 } from '../player/alvo';
@@ -772,6 +772,7 @@ export function criarCena(
       ),
     aoQuadro: (q) => {
       if (q.donos) edicoes.donos.importar(sanearDonos(q.donos));
+      if (q.donosNovos) edicoes.donos.aplicar(sanearDonosMudados(q.donosNovos));
       if (q.perfis)
         for (const [id, p] of Object.entries(q.perfis)) apelidosVistos.set(id, p.apelido);
       if (q.perfis) outrosJogadores.definirPerfis(q.perfis);

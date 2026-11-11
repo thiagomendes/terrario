@@ -16,7 +16,7 @@ import type { EstiloMundo } from '../temas/tipos';
 import type { TipoSer } from '../jogo/criaturas';
 import type { Profissao } from '../world/povoado';
 import type { IdGesto } from '../personagem/gestos';
-import type { DonosExportados } from '../world/edicoes';
+import type { DonosExportados, DonosMudados } from '../world/edicoes';
 
 /** Sobe quando uma mensagem muda de formato (cliente e servidor precisam concordar). */
 export const VERSAO_PROTOCOLO = 1;
@@ -344,6 +344,11 @@ export interface Quadro {
    * no primeiro quadro (se tiver alguém) e quando muda.
    */
   donos?: DonosExportados;
+  /**
+   * Spec 016: só o que entrou ou mudou na tabela de donos desde o último quadro (quem já
+   * tem a tabela não recebe as 4095 entradas de novo a cada amigo novo ou apelido trocado).
+   */
+  donosNovos?: DonosMudados;
 }
 
 /** Parte do salvamento que pertence ao núcleo (o cliente junta a câmera, o diário e o mapa). */

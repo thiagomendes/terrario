@@ -25,6 +25,8 @@ export const VALOR_MAXIMO = 65535 | (MAX_DONOS << 16);
 
 /** Tabela de donos como é gravada e enviada: [id, apelido] na ordem dos índices (1, 2, ...). */
 export type DonosExportados = Array<[string, string]>;
+/** Entradas novas ou renomeadas da tabela: [índice, id, apelido] (o quadro manda só elas). */
+export type DonosMudados = Array<[number, string, string]>;
 
 export interface Edicoes {
   /**
@@ -70,14 +72,22 @@ export interface TabelaDonos {
   /** Sobe a cada mudança (quem manda a tabela sabe quando mandar de novo). */
   readonly versao: number;
   readonly tamanho: number;
+  /** A tabela encheu (MAX_DONOS): quem não está nela não ganha índice. */
+  readonly cheia: boolean;
   exportar(): DonosExportados;
   importar(lista: DonosExportados | undefined): void;
+  /** O que entrou ou mudou depois da versão `v` (o quadro manda só isso a quem já tem). */
+  mudadasDesde(v: number): DonosMudados;
+  /** Aplica as entradas mudadas (o cliente, com o que o núcleo mandou). */
+  aplicar(mudadas: DonosMudados): void;
 }
 
 export function criarTabelaDonos(): TabelaDonos {
   let lista: DonosExportados = [];
   let porId = new Map<string, number>();
   let versao = 0;
+  /** Versão em que cada entrada mudou por último (o mesmo índice da lista). */
+  let mudouEm: number[] = [];
   return {
     id: (i) => (i >= 1 ? lista[i - 1]?.[0] : undefined),
     indice(id, apelido) {
@@ -86,7 +96,7 @@ export function criarTabelaDonos(): TabelaDonos {
       if (lista.length >= MAX_DONOS) return 0;
       lista.push([id, apelido ?? '']);
       porId.set(id, lista.length);
-      versao++;
+      mudouEm.push(++versao);
       return lista.length;
     },
     procurar: (id) => porId.get(id) ?? 0,
@@ -98,7 +108,7 @@ export function criarTabelaDonos(): TabelaDonos {
       const i = porId.get(id);
       if (i === undefined || lista[i - 1][1] === apelido) return false;
       lista[i - 1] = [id, apelido];
-      versao++;
+      mudouEm[i - 1] = ++versao;
       return true;
     },
     get versao() {
@@ -106,6 +116,30 @@ export function criarTabelaDonos(): TabelaDonos {
     },
     get tamanho() {
       return lista.length;
+    },
+    get cheia() {
+      return lista.length >= MAX_DONOS;
+    },
+    mudadasDesde(v) {
+      const out: DonosMudados = [];
+      for (let i = 0; i < lista.length; i++)
+        if (mudouEm[i] > v) out.push([i + 1, lista[i][0], lista[i][1]]);
+      return out;
+    },
+    aplicar(mudadas) {
+      for (const [i, id, a] of mudadas) {
+        if (!Number.isInteger(i) || i < 1 || i > MAX_DONOS) continue;
+        while (lista.length < i) {
+          lista.push(['', '']);
+          mudouEm.push(versao);
+        }
+        const antes = lista[i - 1][0];
+        if (antes && porId.get(antes) === i) porId.delete(antes);
+        lista[i - 1] = [id, a];
+        if (id && !porId.has(id)) porId.set(id, i);
+        mudouEm[i - 1] = versao + 1;
+      }
+      if (mudadas.length) versao++;
     },
     exportar: () => lista.map(([id, a]) => [id, a] as [string, string]),
     importar(l) {
@@ -116,6 +150,7 @@ export function criarTabelaDonos(): TabelaDonos {
         if (id && !porId.has(id)) porId.set(id, i + 1);
       });
       versao++;
+      mudouEm = lista.map(() => versao);
     },
   };
 }

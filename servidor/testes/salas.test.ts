@@ -734,16 +734,12 @@ describe('dono do bloco na nuvem', () => {
         .find((bl) => bl.x === x && bl.y === y && bl.z === z);
     expect(viu(a)?.v).toBe(daBia);
     expect(viu(b)?.v).toBe(daBia);
-    for (const c of [a, b])
-      expect(
-        quadros(c)
-          .map((q) => q.donos)
-          .filter(Boolean)
-          .at(-1),
-      ).toEqual([
-        ['caio', 'Caio'],
-        ['bia', 'bia'],
-      ]);
+    // o "bem-vindo" levou a tabela; os quadros, só a entrada nova (nem repetem a inteira)
+    for (const c of [a, b]) {
+      expect(bemvindo(c).donos).toContainEqual(['caio', 'Caio']);
+      expect(quadros(c).some((q) => q.donos)).toBe(false);
+      expect(quadros(c).flatMap((q) => q.donosNovos ?? [])).toContainEqual([2, 'bia', 'bia']);
+    }
   });
 
   it('navegador de antes da 016 recebe "versão nova" (não quebra no formato novo)', async () => {

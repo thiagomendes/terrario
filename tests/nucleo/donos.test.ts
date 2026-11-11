@@ -10,13 +10,14 @@ import { Bloco } from '../../src/world/blocks';
 import {
   MAX_DONOS,
   criarEdicoes,
+  criarTabelaDonos,
   donoNaCelula,
   empacotar,
   indiceDonoDe,
   semDono,
   type EdicoesExportadas,
 } from '../../src/world/edicoes';
-import { sanear, sanearDadosMundo } from '../../src/nucleo/saneamento';
+import { sanear, sanearDadosMundo, sanearDonosMudados } from '../../src/nucleo/saneamento';
 import type { DadosMundo } from '../../src/jogo/mundos';
 import type { Comando, Mensagem, Telemetria } from '../../src/nucleo/protocolo';
 
@@ -192,7 +193,7 @@ describe('dono do bloco no núcleo (nuvem)', () => {
     expect(n.donoDoBloco(A.x, A.y, A.z)).toBe('bia');
   });
 
-  it('os quadros levam o dono nos blocos e a tabela quando muda; quem chega recebe no começo', () => {
+  it('os quadros levam o dono nos blocos e só o que mudou na tabela; quem chega recebe ela inteira', () => {
     const n = nuvem();
     n.quadros();
     n.comando('bia', colocar(1, A));
@@ -200,11 +201,13 @@ describe('dono do bloco no núcleo (nuvem)', () => {
     const q = n.quadros();
     for (const id of ['ana', 'bia']) {
       expect(q.get(id)!.blocos).toContainEqual({ ...A, v: empacotar(Bloco.TABUAS, 0, 1) });
-      expect(q.get(id)!.donos).toEqual([['bia', 'Bia']]);
+      expect(q.get(id)!.donos).toBeUndefined();
+      expect(q.get(id)!.donosNovos).toEqual([[1, 'bia', 'Bia']]);
     }
     // a tabela não vai de novo sem mudar
     n.passo();
     expect(n.quadros().get('ana')!.donos).toBeUndefined();
+    expect(n.quadros().get('ana')!.donosNovos).toBeUndefined();
     // quem chega depois recebe a tabela no primeiro quadro
     n.conectar('caio', { perfil: { apelido: 'Caio', aparencia: {} } });
     n.passo();
@@ -322,6 +325,77 @@ describe('saneamento da tabela de donos (mundo que vem do aparelho)', () => {
   });
 });
 
+describe('a tabela de donos sem abuso (auditoria da 016)', () => {
+  it('o quadro manda só o que entrou ou mudou; a cópia aplicada fica igual', () => {
+    const t = criarTabelaDonos();
+    const copia = criarTabelaDonos();
+    for (let i = 0; i < 3000; i++) t.indice(`j${i}`, `J${i}`);
+    copia.importar(t.exportar());
+    const v = t.versao;
+    t.indice('nova', 'Nova');
+    t.renomear('j7', 'Sete');
+    const d = t.mudadasDesde(v);
+    expect(d).toEqual([
+      [8, 'j7', 'Sete'],
+      [3001, 'nova', 'Nova'],
+    ]);
+    copia.aplicar(sanearDonosMudados(JSON.parse(JSON.stringify(d))));
+    expect(copia.exportar()).toEqual(t.exportar());
+    expect(copia.procurar('nova')).toBe(3001);
+    expect(copia.apelido('j7')).toBe('Sete');
+    expect(t.mudadasDesde(t.versao)).toEqual([]);
+  });
+
+  it('a entrada mudada estragada sai limpa no saneamento', () => {
+    expect(
+      sanearDonosMudados([
+        [1, 'bia', 'B<i>a</i>'],
+        [0, 'x', ''],
+        [MAX_DONOS + 1, 'x', ''],
+        [2, '../x', ''],
+        [3, 'caio', 'C'.repeat(500)],
+        'lixo',
+      ]),
+    ).toEqual([
+      [1, 'bia', 'Biai'],
+      [3, 'caio', 'C'.repeat(22)],
+    ]);
+  });
+
+  it('quem entra e troca de apelido não faz a tabela inteira ir de novo', () => {
+    const n = nuvem();
+    n.comando('bia', colocar(1, A));
+    n.passo();
+    n.quadros();
+    n.definirPerfil('bia', { apelido: 'Bia Nova', aparencia: {} });
+    n.passo();
+    const q = n.quadros().get('ana')!;
+    expect(q.donos).toBeUndefined();
+    expect(q.donosNovos).toEqual([[1, 'bia', 'Bia Nova']]);
+  });
+
+  it('com a tabela cheia, quem não está nela passeia (o bloco não vira da dona)', () => {
+    const muitos = Array.from({ length: MAX_DONOS }, (_, i) => [`j${i}`, ''] as [string, string]);
+    const n = nuvem({
+      versao: 1,
+      edicoes: {},
+      jogador: null,
+      hora: 0.5,
+      extras: { donos: muitos },
+    });
+    limpar(n);
+    n.comando('bia', colocar(1, A));
+    expect(n.estado.mundo.bloco(A.x, A.y, A.z)).toBe(Bloco.AR);
+    // quem já está na tabela e a dona continuam construindo
+    n.conectar('j5', { perfil: { apelido: 'Cinco', aparencia: {} } });
+    n.comando('j5', tel(X + 2.5, Z + 0.5));
+    n.comando('j5', colocar(1, B));
+    expect(n.donoDoBloco(B.x, B.y, B.z)).toBe('j5');
+    n.comando('ana', colocar(2, A));
+    expect(n.donoDoBloco(A.x, A.y, A.z)).toBe('ana');
+  });
+});
+
 describe('a cópia do cliente sabe o mesmo dono que o núcleo', () => {
   it('quadros por JSON: donoNaCelula na cópia = donoDoBloco no núcleo', () => {
     const n = nuvem();
@@ -341,6 +415,7 @@ describe('a cópia do cliente sabe o mesmo dono que o núcleo', () => {
       aplicarBloco: (x, y, z, b, meta, dono) => copia.definir(x, y, z, b, meta, dono),
       aoQuadro: (q) => {
         if (q.donos) copia.donos.importar(q.donos);
+        if (q.donosNovos) copia.donos.aplicar(q.donosNovos);
       },
       hora: 0.3,
       dia: 0,

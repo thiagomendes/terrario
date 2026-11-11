@@ -516,6 +516,15 @@ export function criarNucleo(op: OpcoesNucleo) {
     return d;
   }
 
+  /**
+   * Pode mexer em blocos agora? Spec 016: com a tabela de donos cheia (MAX_DONOS pessoas),
+   * quem não está nela passeia como visitante: o bloco dele não pode virar do dono do mundo.
+   */
+  function constroiAgora(j: Jogador): boolean {
+    if (!j.constroi) return false;
+    return j.id === donoDoMundo || !edicoes.donos.cheia || edicoes.donos.procurar(j.id) > 0;
+  }
+
   /** Índice do dono para as edições: o dono do mundo é o 0 (não entra na tabela). */
   function indiceDe(id: string): number {
     if (id === donoDoMundo) return 0;
@@ -595,7 +604,7 @@ export function criarNucleo(op: OpcoesNucleo) {
     const b = mundo.bloco(x, y, z);
     if (
       !ehAlvo(b) ||
-      !j.constroi ||
+      !constroiAgora(j) ||
       !perto(j, x, y, z, ALCANCE_REGRAS) ||
       j.sobrevivencia.estado.morto
     ) {
@@ -673,7 +682,7 @@ export function criarNucleo(op: OpcoesNucleo) {
     const acima = mundo.bloco(x, y + 1, z);
     if (
       !ehEnxada(ferramentaDe(p)) ||
-      !j.constroi ||
+      !constroiAgora(j) ||
       !perto(j, x, y, z, ALCANCE_REGRAS) ||
       j.sobrevivencia.estado.morto ||
       !podeArar(mundo.bloco(x, y, z), acima)
@@ -857,7 +866,7 @@ export function criarNucleo(op: OpcoesNucleo) {
       );
     if (
       !def ||
-      !j.constroi ||
+      !constroiAgora(j) ||
       bloco === Bloco.AR ||
       !livre ||
       !extrasOk ||
@@ -890,7 +899,7 @@ export function criarNucleo(op: OpcoesNucleo) {
   }
 
   function editarLote(j: Jogador, c: Extract<Comando, { t: 'editar' }>): void {
-    if ((modo !== 'criativo' && !confiar) || !j.constroi || c.lote.length > 20000) {
+    if ((modo !== 'criativo' && !confiar) || !constroiAgora(j) || c.lote.length > 20000) {
       recusar(j, c.id, 'editar', c.lote.slice(0, 20000));
       return;
     }
@@ -1806,9 +1815,11 @@ export function criarNucleo(op: OpcoesNucleo) {
         // tabela vazia não precisa ir no começo (é o que o cliente já supõe)
         if (j.versaoDonos < 0 && edicoes.donos.tamanho === 0) j.versaoDonos = edicoes.donos.versao;
       }
-      // spec 016: a tabela de donos inteira quando muda (pequena; quem chega recebe no começo)
+      // spec 016: quem chega recebe a tabela de donos inteira (se o "bem-vindo" já não
+      // levou); depois, só o que entrou ou mudou
       if (j.versaoDonos !== edicoes.donos.versao) {
-        q.donos = edicoes.donos.exportar();
+        if (j.versaoDonos < 0) q.donos = edicoes.donos.exportar();
+        else q.donosNovos = edicoes.donos.mudadasDesde(j.versaoDonos);
         j.versaoDonos = edicoes.donos.versao;
       }
       const blocos = [...blocosMudados, ...j.correcoes];
@@ -1877,6 +1888,14 @@ export function criarNucleo(op: OpcoesNucleo) {
     conectar,
     desconectar,
     dadosJogador,
+    /**
+     * Spec 016: a tabela de donos inteira já foi a este jogador por fora (o "bem-vindo" da
+     * nuvem): o primeiro quadro não manda de novo, só o que mudar daqui em diante.
+     */
+    donosEnviados(id: string) {
+      const j = jogadores.get(id);
+      if (j) j.versaoDonos = edicoes.donos.versao;
+    },
     /** Visitantes podem construir? (o dono decide) */
     definirConstrucao(id: string, pode: boolean) {
       const j = jogadores.get(id);
