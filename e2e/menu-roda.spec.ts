@@ -274,3 +274,92 @@ test('celular deitado e tablet: o alto cabe sem cobrir nada', async ({ browser }
     await ctx.close();
   }
 });
+
+test('computador: O abre e fecha a roda do menu, soltando o mouse sem a pausa', async ({
+  page,
+}) => {
+  test.setTimeout(300_000);
+  const erros: string[] = [];
+  page.on('pageerror', (e) => erros.push(String(e)));
+  await page.setViewportSize({ width: 1280, height: 720 });
+  // mouse preso de mentirinha (o navegador do teste não prende de verdade): prender e soltar
+  // avisam o jogo como o navegador avisa
+  await page.addInitScript(() => {
+    let preso: Element | null = null;
+    Object.defineProperty(document, 'pointerLockElement', { get: () => preso });
+    const avisar = () => document.dispatchEvent(new Event('pointerlockchange'));
+    HTMLElement.prototype.requestPointerLock = function (this: HTMLElement) {
+      preso = this;
+      setTimeout(avisar, 0);
+      return Promise.resolve();
+    } as typeof HTMLElement.prototype.requestPointerLock;
+    document.exitPointerLock = () => {
+      if (!preso) return;
+      preso = null;
+      setTimeout(avisar, 0);
+    };
+  });
+  await page.goto('/');
+  await page.waitForFunction(() => window.__brumaluz?.ready === true, undefined, {
+    timeout: 180_000,
+  });
+  const preso = () => page.evaluate(() => document.pointerLockElement?.id ?? null);
+  const pausa = () => page.evaluate(() => document.body.dataset.overlay === 'pausa');
+  // entrar no jogo prende o mouse
+  await page.evaluate(() => {
+    document.querySelector('.entrada')?.setAttribute('hidden', '');
+    document.getElementById('cena')!.requestPointerLock();
+  });
+  await expect.poll(preso).toBe('cena');
+  await page.waitForTimeout(800);
+  // o selinho do botão da roda mostra a tecla
+  await expect(page.locator('[data-botao-roda] kbd')).toHaveText('O');
+
+  // O: a roda abre, o mouse solta e a pausa não aparece; O de novo: fecha e prende
+  await page.keyboard.press('KeyO');
+  await expect.poll(() => menu(page)).toBe('menu');
+  await expect.poll(preso).toBe(null);
+  await page.waitForTimeout(400);
+  expect(await pausa()).toBe(false);
+  await page.screenshot({ path: `${PASTA}/menu-roda-tecla-o.png` });
+  await page.keyboard.press('KeyO');
+  await expect.poll(() => menu(page)).toBe(null);
+  await expect.poll(preso).toBe('cena');
+  expect(await pausa()).toBe(false);
+
+  // Esc também fecha e prende de novo
+  await page.keyboard.press('KeyO');
+  await expect.poll(() => menu(page)).toBe('menu');
+  await expect.poll(preso).toBe(null);
+  await page.keyboard.press('Escape');
+  await expect.poll(() => menu(page)).toBe(null);
+  await expect.poll(preso).toBe('cena');
+  await page.waitForTimeout(400);
+  expect(await pausa()).toBe(false);
+
+  // um item que abre uma tela (o mapa): o mouse fica solto, com o mapa por cima
+  await page.keyboard.press('KeyO');
+  await expect.poll(() => menu(page)).toBe('menu');
+  await page.waitForTimeout(350);
+  await page.locator('.roda.aberta button.ativo[data-item="mapa"]').click();
+  await expect.poll(() => page.evaluate(() => document.body.dataset.overlay)).toBe('mapa');
+  await page.waitForTimeout(400);
+  expect(await preso()).toBe(null);
+  await page.keyboard.press('Tab');
+  await expect
+    .poll(() => page.evaluate(() => document.body.dataset.overlay ?? null))
+    .not.toBe('mapa');
+
+  // digitando num campo, O é só a letra
+  await page.evaluate(() => {
+    const i = document.createElement('input');
+    i.id = 'campo-teste';
+    document.body.append(i);
+    i.focus();
+  });
+  await page.keyboard.press('KeyO');
+  await page.waitForTimeout(300);
+  expect(await menu(page)).toBe(null);
+  expect(await page.inputValue('#campo-teste')).toBe('o');
+  expect(erros).toEqual([]);
+});

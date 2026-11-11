@@ -5,7 +5,9 @@
  * peça da roda de gestos, em volta do boneco) tem Mapa, Diário, Personagem, Foto, Gestos,
  * Tela cheia e Pausa; "Gestos" troca a roda pelos 8 gestos, com "Voltar" no meio; segurar o
  * botão da roda abre os gestos direto. No computador as teclas continuam (E, Tab, J, C, P, G,
- * Esc) e cada item mostra a dele; 1 a 8 só com a roda de gestos aberta.
+ * Esc) e cada item mostra a dele; 1 a 8 só com a roda de gestos aberta. O (de "opções") abre e
+ * fecha a roda do menu: o mouse preso na câmera é solto sem a pausa e volta a prender quando a
+ * roda fecha, a não ser que o item escolhido abra uma tela.
  */
 import { criarRoda, teclaDaRoda, type ItemRoda, type ListaRoda, type Roda } from './roda';
 import { alternarTelaCheia, podeAlternarTelaCheia } from './telaCheia';
@@ -54,6 +56,24 @@ export function itensDoMenu(telaCheia: boolean): ItemMenu[] {
   return telaCheia ? l : l.filter((i) => i.id !== 'tela');
 }
 
+/** Tecla que abre e fecha a roda do menu no computador (O de "opções"). */
+export const TECLA_MENU = 'KeyO';
+
+/** Itens que abrem uma tela por cima do jogo: depois deles o mouse fica solto. */
+const ABREM_TELA: ReadonlySet<ItemMenu['id']> = new Set([
+  'mapa',
+  'diario',
+  'personagem',
+  'foto',
+  'pausa',
+]);
+
+/**
+ * Marca no `body` enquanto a roda do menu está aberta com o mouse solto pelo O: quem abre a
+ * pausa quando o mouse solta (a interface) não abre.
+ */
+export const SOLTO_PELA_RODA = 'roda';
+
 /** Segurar o botão da roda por tanto tempo (ms) abre os gestos direto. */
 export const SEGURAR_GESTOS = 450;
 
@@ -101,6 +121,8 @@ export interface OpcoesMenuRoda {
   /** Aperta uma tecla do jogo (o item faz o que a tecla faz). */
   tecla?(codigo: string): void;
   pausar?(): void;
+  /** Prende o mouse na câmera de novo (computador). */
+  travar?(): void;
 }
 
 export interface MenuRoda {
@@ -126,13 +148,45 @@ export function criarMenuRoda(op: OpcoesMenuRoda, raiz: HTMLElement = document.b
     op.tecla ?? ((code: string) => window.dispatchEvent(new KeyboardEvent('keydown', { code })));
   const pausar = op.pausar ?? (() => window.dispatchEvent(new CustomEvent('brumaluz:pausar')));
 
+  const travar =
+    op.travar ??
+    (() => {
+      try {
+        const r = document.getElementById('cena')?.requestPointerLock?.() as unknown;
+        if (r && typeof (r as Promise<void>).catch === 'function')
+          (r as Promise<void>).catch(() => {});
+      } catch {
+        // o navegador recusou (sem gesto da criança): o jogo pausa logo abaixo
+      }
+    });
+  /** A roda do menu foi aberta pelo O com o mouse preso (fechar prende de novo). */
+  let soltouPeloO = false;
+  /** O item escolhido abre uma tela: o mouse fica solto. */
+  let abriuTela = false;
+
   const roda = criarRoda({
     rotulo: 'Menu',
     aoMudar: (aberta) => {
       bRoda.classList.toggle('ativo', aberta);
       bRoda.setAttribute('aria-expanded', String(aberta));
+      if (!aberta && soltouPeloO) voltarAoJogo();
     },
   });
+
+  function voltarAoJogo(): void {
+    soltouPeloO = false;
+    if (document.body.dataset.solto === SOLTO_PELA_RODA) delete document.body.dataset.solto;
+    if (abriuTela) {
+      abriuTela = false;
+      return;
+    }
+    travar();
+    // fechou sozinha (o tempo da roda acabou, sem gesto): o navegador não prende, e o mouse
+    // solto sem tela nenhuma vira a pausa de sempre
+    setTimeout(() => {
+      if (!document.pointerLockElement && !document.body.dataset.overlay && !roda.aberta) pausar();
+    }, 400);
+  }
 
   const itens = itensDoMenu(podeAlternarTelaCheia());
   const listaMenu: ListaRoda = {
@@ -142,6 +196,7 @@ export function criarMenuRoda(op: OpcoesMenuRoda, raiz: HTMLElement = document.b
       const it = itens.find((i) => i.id === id);
       if (!it) return;
       if (id === 'gestos') return abrirGestos();
+      abriuTela = ABREM_TELA.has(it.id);
       // a roda fecha antes (o painel que abre não fica embaixo dela)
       roda.fechar();
       if (id === 'tela') alternarTelaCheia();
@@ -175,7 +230,7 @@ export function criarMenuRoda(op: OpcoesMenuRoda, raiz: HTMLElement = document.b
   bRoda.setAttribute('aria-label', 'Menu (segure para os gestos)');
   bRoda.setAttribute('aria-expanded', 'false');
   bRoda.setAttribute('data-botao-roda', '');
-  bRoda.innerHTML = svg(IC.roda);
+  bRoda.innerHTML = svg(IC.roda) + '<kbd>O</kbd>';
   let segurando: ReturnType<typeof setTimeout> | undefined;
   let abriuSegurando = false;
   bRoda.addEventListener('pointerdown', (e) => {
@@ -226,17 +281,41 @@ export function criarMenuRoda(op: OpcoesMenuRoda, raiz: HTMLElement = document.b
     tecla('Tab');
   });
 
-  // G abre os gestos; com a roda de gestos aberta, 1 a 8 escolhem; Esc fecha a roda
+  /** O: abre a roda do menu (soltando o mouse sem a pausa) ou fecha a que está aberta. */
+  function alternarPeloO(): boolean {
+    if (roda.aberta) {
+      roda.fechar();
+      return true;
+    }
+    if (!op.pode()) return false;
+    abriuTela = false;
+    if (document.pointerLockElement) {
+      soltouPeloO = true;
+      document.body.dataset.solto = SOLTO_PELA_RODA;
+      document.exitPointerLock?.();
+    }
+    roda.abrir(listaMenu);
+    return true;
+  }
+
+  // G abre os gestos; com a roda de gestos aberta, 1 a 8 escolhem; Esc fecha a roda; O abre e
+  // fecha a roda do menu
   window.addEventListener(
     'keydown',
     (e) => {
-      if (e.repeat && e.code === 'KeyG') return;
+      if (e.repeat && (e.code === 'KeyG' || e.code === TECLA_MENU)) return;
       const alvo = e.target as HTMLElement | null;
       if (
         alvo &&
         (alvo.tagName === 'INPUT' || alvo.tagName === 'TEXTAREA' || alvo.isContentEditable)
       )
         return;
+      if (e.code === TECLA_MENU) {
+        if (!alternarPeloO()) return;
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        return;
+      }
       const a = teclaDaRoda(e.code, roda.aberta, emGestos() ? op.gestos.length : 0);
       if (!a) return;
       if (a.acao === 'alternar') {

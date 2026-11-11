@@ -142,6 +142,7 @@ const TECLAS: ReadonlyArray<readonly [string, string]> = [
   ['Shift', 'correr'],
   ['Mouse', 'olhar'],
   ['E', 'inventário'],
+  ['O', 'menu'],
   ['Esc', 'pausa'],
 ];
 
@@ -779,7 +780,8 @@ export function criarInterface(
       jogoIniciado = true;
       entrada.hidden = true;
       pausa.fechar();
-    } else if (!document.body.dataset.overlay) {
+    } else if (!document.body.dataset.overlay && !document.body.dataset.solto) {
+      // (`data-solto`: a roda do menu aberta pelo O soltou o mouse; fechar prende de novo)
       if (jogoIniciado && entrada.hidden) pausa.abrir();
       else entrada.hidden = false;
     }
