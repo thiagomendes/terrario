@@ -631,19 +631,36 @@ export function criarInterface(
       ? undefined
       : fantasiaParaSugerir(loja, idSugestao, true, tema, painel.aparencia());
     if (!def && !testando) marcarSugerida(loja, idSugestao);
-    // espera o mundo pronto e nada aberto por cima (convite, pausa, outro diálogo, mouse preso)
+    // espera o mundo aberto e jogável: pronto, sem título, editor, carregamento, pausa ou
+    // outro diálogo por cima (o convite só aparece com a criança já dentro do mundo)
     const livre = () =>
       window.__brumaluz?.ready === true &&
-      !document.pointerLockElement &&
+      entrada.hidden &&
+      telaPersonagem.hidden &&
+      !pausa.aberto &&
       !document.body.dataset.overlay &&
       !document.querySelector('[data-dialogo], .modal-fundo:not([hidden])');
+    /** Desde quando está livre (o convite espera um instante, não pula no clique de Jogar). */
+    let livreDesde = 0;
+    const ESPERA_NO_MUNDO_MS = 1200;
     const sugerir = async () => {
       if (!def) return;
       if (!livre()) {
-        setTimeout(() => void sugerir(), 500);
+        livreDesde = 0;
+        setTimeout(() => void sugerir(), 300);
+        return;
+      }
+      if (!livreDesde) livreDesde = performance.now();
+      if (performance.now() - livreDesde < ESPERA_NO_MUNDO_MS) {
+        setTimeout(() => void sugerir(), 300);
         return;
       }
       marcarSugerida(loja, idSugestao);
+      // no computador o mouse está preso na câmera: solta sem abrir a pausa (o diálogo é a
+      // camada por cima) e prende de novo no "Agora não"
+      const estavaPreso = !!document.pointerLockElement;
+      document.body.dataset.overlay = 'sugestao-fantasia';
+      if (estavaPreso) document.exitPointerLock?.();
       // o boneco da criança já vestido com a fantasia, na foto do diálogo
       const foto = document.createElement('canvas');
       foto.className = 'foto-sugestao';
@@ -659,11 +676,25 @@ export function criarInterface(
         figura: foto,
         marca: 'sugestao-fantasia',
       });
-      if (sim !== true) return;
+      if (document.body.dataset.overlay === 'sugestao-fantasia') delete document.body.dataset.overlay;
+      if (sim !== true) {
+        // dentro do clique do botão: volta a jogar com o mouse preso, como estava
+        if (estavaPreso) {
+          travarPonteiro(canvasJogo());
+          // fechou pelo Esc (sem clique, o navegador não prende de novo): a pausa aparece,
+          // como quando o mouse solta no meio do jogo
+          setTimeout(() => {
+            if (!document.pointerLockElement && !document.body.dataset.overlay && entrada.hidden)
+              window.dispatchEvent(new CustomEvent('brumaluz:pausar'));
+          }, 400);
+        }
+        return;
+      }
       abrirEditorNasFantasias();
       painel.vestir(def.id);
     };
-    void sugerir();
+    // começa depois de montar a interface inteira (a pausa vem logo abaixo)
+    setTimeout(() => void sugerir(), 0);
   }
 
   entrada.addEventListener('click', (e) => {
