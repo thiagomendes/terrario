@@ -1,7 +1,7 @@
 ---
 id: 017-fantasias
 title: 'Fantasias prontas: princesas, heróis e fantasias dos temas'
-status: DRAFT
+status: IN_PROGRESS
 base_branch: main
 branch: feat/fantasias
 created_at: 2026-11-10T16:00:00Z
@@ -21,6 +21,17 @@ install_command: npm ci --no-audit --no-fund
 ---
 ## Contexto
 Pedido dos filhos do dono (10 nov 2026): a filha (3 anos) quer roupinhas de princesa; o filho (4 anos), roupas de herói. Além de personalizar peça por peça, looks prontos que vestem o boneco num toque. Esboço: `referencia/fantasias.html`, https://claude.ai/artifact/F9fUhyR1B2J5jb8QoVf6sH.
+
+## Objetivo
+- Um toque veste uma fantasia inteira (Realeza, Heróis, Dos temas), sem trocar quem o personagem é.
+- Peças novas bonitas e encaixadas, que se mexem com o boneco da 015 (capa e saia balançam).
+- Os amigos veem a fantasia no multijogador.
+- Os enfeites de hoje (chapéus, coroa de flores, capuz...) assentam na cabeça, sem vão, em todos os modelos, corpos e cabelos.
+
+## Fora de escopo
+- Fantasias novas por conquista ou loja (todas vêm liberadas).
+- Peças com física de verdade (a capa e a saia balançam por animação, sem colisão).
+- Itens que as fantasias "fazem" (a varinha é de enfeite, não solta magia).
 
 ## Como no esboço
 - **Aba "Fantasias"** no editor de personagem, antes das peças: Princesas (Flores, Estrelas, Mar, Neve), Heróis (Relâmpago, Estrela, Coração, Mata) e Dos temas (fazendeira e vaqueira no Rancho; astronauta, dino, confeiteira, cientista, guardiã da mata, lanterneira...). Um toque veste tudo; depois dá para trocar a cor principal e voltar a personalizar peça por peça; "Tirar fantasia" volta ao look de antes.
@@ -43,6 +54,36 @@ No esboço a "Heroína Estrela" saiu com cara de menino. Regra:
 - Abas sempre na mesma ordem: **Realeza · Heróis · Dos temas** (criança aprende o lugar das coisas; nada muda de lugar pelo corpo escolhido).
 - Em "Dos temas", o tema do mundo aberto vem primeiro.
 - Ao abrir: a aba usada da última vez; vindo da sugestão de criar mundo, já abre em "Dos temas".
+
+## Capricho na experiência (para não frustrar)
+- **Vestir é instantâneo:** um toque e o boneco da prévia já aparece vestido (menos de 100 ms no computador, sem piscar).
+- **Desfazer sem medo:** "Tirar fantasia" volta exatamente ao look de antes, mesmo depois de fechar e abrir o jogo.
+- **Cor principal num toque:** 3 a 5 bolinhas por fantasia, combinadas de propósito (nada de cor que deixe a fantasia feia).
+- **Nomes curtos e certos:** "Heroína Relâmpago" no corpo feminino, "Herói Relâmpago" no masculino; "Princesa das Estrelas" / "Príncipe das Estrelas". Sem texto difícil.
+- **Festa ao vestir:** um brilho rápido e o boneco da prévia faz uma pose (comemorar) ao trocar de fantasia.
+- **Nada solto e nada atravessando:** capa e saia não entram nas pernas correndo, pulando, sentando ou nos 8 gestos; capacete de bolha não corta o cabelo volumoso (o cabelo é escondido ou achatado por baixo, como no capuz).
+- **Medido:** 60 fps no computador e pelo menos 45 com CPU 4× mais lenta, com 4 amigos fantasiados (capa e saia) na tela; trocar de fantasia não cria malhas novas a cada quadro.
+- **Revisão jogando de verdade** antes de fechar, no computador e no celular, comparando com o esboço.
+
+## Critérios de qualidade (definição de pronto)
+1. Aba Fantasias no editor como no esboço aprovado, nas três abas na ordem fixa; vestir, trocar a cor, personalizar peça por peça e "Tirar fantasia" funcionam e são salvos.
+2. Fantasia veste o personagem da criança (corpo, pele, rosto e cabelo dela); nomes pelo corpo; Realeza com príncipe no corpo masculino.
+3. Todas as peças novas encaixadas, fundidas por parte que se mexe; capa e saia acompanham o movimento e os gestos sem atravessar.
+4. Teste de encaixe: distância entre cada enfeite e a cabeça (ou o corpo) dentro do limite em todos os modelos × corpos × cabelos × fantasias; os chapéus soltos de hoje corrigidos.
+5. Multijogador: a fantasia chega ao amigo pelo comando `aparencia`, com saneamento (id desconhecido vira "sem fantasia", cor fora da paleta vira a padrão); aparências antigas abrem iguais.
+6. Sugestão ao criar mundo ("Quer vestir a fantasia do Rancho Alegre?") com Sim / Agora não, sem repetir no mesmo mundo.
+7. Desempenho medido; capturas lado a lado com o esboço; testes de tela no computador e no celular.
+8. Nada quebra: todos os testes passam; auditoria independente; relatório visual.
+
+## Fases e tarefas
+| # | Tarefa |
+|---|---|
+| T01 | Encaixe: teste de distância enfeite↔cabeça/corpo no plano do boneco (todos os modelos, corpos, cabelos e acessórios) e correção dos chapéus soltos de hoje |
+| T02 | Modelo das fantasias: catálogo (grupo, nomes por corpo, peças, cores), campo na aparência com o look de antes, persistência, saneamento e multijogador |
+| T03 | Peças novas no boneco, fundidas por parte que se mexe; capa e saia com balanço ligado ao movimento e aos gestos; versão de príncipe |
+| T04 | Aba Fantasias no editor (Realeza · Heróis · Dos temas), cor principal, personalizar a partir da fantasia, "Tirar fantasia", festa ao vestir |
+| T05 | Sugestão ao criar mundo e ordem "tema do mundo primeiro" |
+| T06 | Desempenho, capturas com o esboço, testes de tela, auditoria, publicação e relatório visual |
 
 ## Quando (decidido pelo dono em 10 nov 2026)
 - Logo depois da 015 (terceira pessoa): a capa e a saia aproveitam o movimento novo do boneco, e é a parte que os filhos pediram. Depois, a 016 (construções protegidas) e a 014 (Cidade Grande).
