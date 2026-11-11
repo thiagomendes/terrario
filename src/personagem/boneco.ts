@@ -7,6 +7,7 @@
  */
 import { MODELOS, PALETAS, type Aparencia } from './aparencia';
 import type { Pose } from './poses';
+import { roupaDaFantasia, vestirFantasia } from './bonecoFantasia';
 
 export type Junta =
   | 'corpo'
@@ -18,9 +19,17 @@ export type Junta =
   | 'maoE'
   | 'maoD'
   | 'pernaE'
-  | 'pernaD';
+  | 'pernaD'
+  // spec 017: as peças que balançam sozinhas (capa, saia e rabo de dino)
+  | 'capa'
+  | 'saia'
+  | 'rabo';
 
-export type FormaPeca = 'caixa' | 'esfera' | 'cilindro' | 'anel';
+/**
+ * placa (spec 017): um desenho chato com espessura (estrela, raio, coração, folha, concha, a
+ * capa), feito do contorno em `perfil` no plano xy, com a espessura em z.
+ */
+export type FormaPeca = 'caixa' | 'esfera' | 'cilindro' | 'anel' | 'placa';
 
 export interface Peca {
   nome: string;
@@ -28,9 +37,15 @@ export interface Peca {
   forma: FormaPeca;
   /**
    * caixa: largura, altura, profundidade; esfera: raio × escala (x, y, z);
-   * cilindro: altura, raio de baixo, raio de cima; anel: diâmetro, espessura, (sem uso).
+   * cilindro: altura, raio de baixo, raio de cima; anel: diâmetro, espessura e o arco em
+   * radianos (0 = anel inteiro; o arco fica centrado em +z, no plano xz);
+   * placa: largura e altura do contorno (só informação) e a espessura.
    */
   tamanho: [number, number, number];
+  /** Contorno da placa (pontos x, y na medida final, em volta do centro). */
+  perfil?: Array<[number, number]>;
+  /** Transparência (spec 017: a bolha do capacete); sem nada, opaco. */
+  alfa?: number;
   /** Raio dos cantos (só caixa). */
   raio?: number;
   pos: [number, number, number];
@@ -42,7 +57,7 @@ export interface Peca {
    * Enfeite (acessório, e as fantasias da spec 017): onde ele se apoia. O teste de encaixe
    * mede a distância entre cada enfeite e essa parte do boneco (nada solto, nada atravessando).
    */
-  apoio?: 'cabeca' | 'tronco' | 'mao';
+  apoio?: 'cabeca' | 'tronco' | 'mao' | 'braco' | 'perna';
 }
 
 export interface PlanoBoneco {
@@ -80,11 +95,16 @@ export function planoBoneco(a: Aparencia): PlanoBoneco {
   const feminino = a.corpo === 'feminino';
   const pele = PALETAS.pele[a.pele] ?? PALETAS.pele[0];
   const cabelo = PALETAS.cabelo[a.cabeloCor] ?? PALETAS.cabelo[0];
-  const roupa = PALETAS.roupa[a.roupaCor] ?? PALETAS.roupa[0];
-  const calca = PALETAS.calca[a.calcaCor] ?? PALETAS.calca[0];
-  const sapato = escurecer(misturar(calca, '#5a3a22', 0.5), 0.25);
+  // spec 017: a fantasia pinta a roupa de baixo (camisa, manga, calça e sapato) e tira o
+  // estilo da roupa e o enfeite de baixo da vista; quem a criança é (corpo, pele, rosto e
+  // cabelo) continua igual
+  const fantasia = a.fantasia ? roupaDaFantasia(a.fantasia, a.corpo) : null;
+  const roupa = fantasia?.camisa ?? PALETAS.roupa[a.roupaCor] ?? PALETAS.roupa[0];
+  const calca = fantasia?.calca ?? PALETAS.calca[a.calcaCor] ?? PALETAS.calca[0];
+  const sapato = fantasia?.sapato ?? escurecer(misturar(calca, '#5a3a22', 0.5), 0.25);
   const detalhe = clarear(roupa, 0.45);
-  const punho = escurecer(roupa, 0.22);
+  const punho = escurecer(fantasia?.manga ?? roupa, 0.22);
+  const acessorio = fantasia ? 'nenhum' : a.acessorio;
 
   // proporções: o modelo e o corpo variam um pouco a largura e o comprimento das pernas
   const larg = Math.max(
@@ -112,6 +132,11 @@ export function planoBoneco(a: Aparencia): PlanoBoneco {
     maoD: { pai: 'bracoD', pos: [0, -0.27, 0] },
     cabeca: { pai: 'tronco', pos: [0, yCab, 0] },
     topete: { pai: 'cabeca', pos: [0.1, cab.h / 2 - 0.01, 0.16] },
+    // spec 017: a capa presa atrás dos ombros, a saia na cintura (no corpo, como as pernas,
+    // para não entrar nelas quando o tronco inclina) e o rabo de dino nas costas, embaixo
+    capa: { pai: 'tronco', pos: [0, troncoH - 0.03, -prof / 2 + 0.02] },
+    saia: { pai: 'corpo', pos: [0, quadril, 0] },
+    rabo: { pai: 'tronco', pos: [0, 0.1, -prof / 2 + 0.02] },
   };
   const pecas: Peca[] = [];
   const caixa = (
@@ -153,7 +178,8 @@ export function planoBoneco(a: Aparencia): PlanoBoneco {
   caixa('quadril', 'tronco', [larg - 0.02, 0.16, prof - 0.03], [0, -0.04, 0], calca, 0.05);
 
   // tronco e roupa
-  const estilo = a.roupaEstilo;
+  // com fantasia, a roupa é lisa (as peças da fantasia vêm por cima)
+  const estilo = fantasia ? -1 : a.roupaEstilo;
   const corPeito = estilo === 4 ? detalhe : roupa; // colete: camisa clara por baixo
   caixa('peito', 'tronco', [larg, troncoH, prof], [0, troncoH / 2, 0], corPeito, 0.13);
   const frente = prof / 2 + 0.005;
@@ -242,7 +268,7 @@ export function planoBoneco(a: Aparencia): PlanoBoneco {
     default:
       break;
   }
-  if (estilo !== 1 && estilo !== 2 && estilo !== 5)
+  if (estilo >= 0 && estilo !== 1 && estilo !== 2 && estilo !== 5)
     caixa(
       'bolso',
       'tronco',
@@ -266,8 +292,14 @@ export function planoBoneco(a: Aparencia): PlanoBoneco {
   }
 
   // braços: manga, punho e a mão redonda (sem manga: braço de pele)
-  const semManga = estilo === 1; // avental de ferreiro: braços de fora
-  const corManga = semManga ? pele : estilo === 4 ? detalhe : roupa;
+  const semManga = estilo === 1; // avental de ferreiro: braços de fora (nunca com fantasia)
+  const corManga = fantasia
+    ? (fantasia.manga ?? roupa)
+    : semManga
+      ? pele
+      : estilo === 4
+        ? detalhe
+        : roupa;
   for (const lado of ['bracoE', 'bracoD'] as const) {
     caixa(`${lado}-manga`, lado, [0.13, 0.26, 0.14], [0, -0.1, 0], corManga, 0.06);
     // ombro redondo no eixo do braço: o braço gira em volta dele e nunca descola do tronco
@@ -497,7 +529,7 @@ export function planoBoneco(a: Aparencia): PlanoBoneco {
 
   // acessórios
   const antesDosEnfeites = pecas.length;
-  switch (a.acessorio) {
+  switch (acessorio) {
     case 'capuz': {
       // capuz aberto na frente: topo, costas e lados, com o rosto de fora (antes era uma
       // caixa inteira por cima da cabeça, que tapava os olhos)
@@ -734,25 +766,59 @@ export function planoBoneco(a: Aparencia): PlanoBoneco {
       break;
   }
   const apoio: Peca['apoio'] =
-    a.acessorio === 'lanterna'
+    acessorio === 'lanterna'
       ? 'mao'
-      : a.acessorio === 'mochila' || a.acessorio === 'cachecol' || a.acessorio === 'avental'
+      : acessorio === 'mochila' || acessorio === 'cachecol' || acessorio === 'avental'
         ? 'tronco'
         : 'cabeca';
   for (let i = antesDosEnfeites; i < pecas.length; i++) pecas[i].apoio = apoio;
-  const modo: ModoCabelo | null =
-    a.acessorio === 'capuz' || a.acessorio === 'capacete'
-      ? a.acessorio
-      : apoio === 'cabeca' && a.acessorio !== 'oculos' && a.acessorio !== 'nenhum'
+  let modo: ModoCabelo | null =
+    acessorio === 'capuz' || acessorio === 'capacete'
+      ? acessorio
+      : apoio === 'cabeca' && acessorio !== 'oculos' && acessorio !== 'nenhum'
         ? 'chapeu'
         : null;
-  if (modo) ajeitarCabeloDebaixo(pecas, modo, topoTampa, cab);
+  let rabo: 'guardar' | 'baixo' = 'guardar';
+  if (a.fantasia) {
+    const vestida = vestirFantasia(a.fantasia, a.corpo, pecas, {
+      feminino,
+      larg,
+      troncoH,
+      prof,
+      frente,
+      pernaH,
+      quadril,
+      xBraco,
+      cab,
+      topo,
+      topoTampa,
+      baseChapeu,
+      zRosto,
+      raspado: e === 3,
+      tampa: {
+        w: cab.w + (e === 3 ? 0.02 : 0.05),
+        h: tampaH,
+        d: cab.d + (e === 3 ? 0.02 : 0.05),
+        y: topo - tampaH / 2 + (e === 3 ? 0.03 : 0.07),
+        raio: e === 3 ? 0.06 : 0.15,
+      },
+    });
+    modo = vestida.cabelo;
+    rabo = vestida.rabo;
+  }
+  if (modo) ajeitarCabeloDebaixo(pecas, modo, topoTampa, cab, rabo);
 
   return {
     juntas,
     pecas,
     escala: ESCALA_BONECO,
-    cores: { pele, roupa: corManga, punho: semManga ? pele : punho, calca, cabelo },
+    cores: {
+      pele,
+      roupa: corManga,
+      punho: semManga && !fantasia ? pele : punho,
+      calca,
+      cabelo,
+    },
     semManga,
   };
 }
@@ -762,27 +828,44 @@ export function planoBoneco(a: Aparencia): PlanoBoneco {
  * capacete ou o capuz. Debaixo de chapéu, os cachos de cima baixam até a tampa e o coque vira
  * um coque baixo na nuca; dentro do capacete e do capuz o cabelo de cima fica guardado (só o
  * que cai abaixo dele continua aparecendo).
+ *
+ * Fantasias (T03): 'bolha' é o capacete de bolha do astronauta (o cabelo inteiro fica dentro
+ * do vidro: o comprido vira coque na nuca e o resto encolhe até caber); no capuz de dino o
+ * rabo de cavalo sai por baixo do capuz (`rabo: 'baixo'`) em vez de ficar guardado.
  */
-export type ModoCabelo = 'chapeu' | 'capuz' | 'capacete';
+export type ModoCabelo = 'chapeu' | 'capuz' | 'capacete' | 'bolha';
+
+/** A bolha do capacete do astronauta (na cabeça): centro e raios (x, y, z). */
+export const BOLHA = {
+  centro: [0, 0.07, 0] as [number, number, number],
+  raios: [0.55, 0.53, 0.53] as [number, number, number],
+};
 
 export function ajeitarCabeloDebaixo(
   pecas: Peca[],
   modo: ModoCabelo,
   topoTampa: number,
   cab: { w: number; h: number; d: number },
+  rabo: 'guardar' | 'baixo' = 'guardar',
 ): void {
   const chapeu = modo === 'chapeu';
   const capuz = modo === 'capuz';
   const capacete = modo === 'capacete';
+  const bolha = modo === 'bolha';
+  const cabeloComprido = pecas.some((p) => /^(costas|rabo|coque|tranca)/.test(p.nome));
   const guardar = (p: Peca): boolean => {
     if (p.apoio || p.junta === 'corpo') return false;
     const n = p.nome;
-    if (capuz) return /^(topete|coque|cacho|rabo)/.test(n);
+    if (capuz)
+      return rabo === 'baixo'
+        ? /^(topete|coque|cacho)/.test(n)
+        : /^(topete|coque|cacho|rabo)/.test(n);
     if (capacete)
       return (
         /^(cabelo|topete|franja|chanel-franja|coque|rabo-preso)/.test(n) ||
         (n.startsWith('cacho') && p.pos[1] > 0.1)
       );
+    if (bolha) return /^(topete|coque|rabo|costas|tranca)/.test(n);
     return false;
   };
   for (let i = pecas.length - 1; i >= 0; i--) if (guardar(pecas[i])) pecas.splice(i, 1);
@@ -802,7 +885,85 @@ export function ajeitarCabeloDebaixo(
       const x = Math.sign(p.pos[0]) * Math.min(Math.abs(p.pos[0]), borda - meio);
       p.pos = [x, p.pos[1], p.pos[2]];
     }
+    if (capuz && rabo === 'baixo' && p.junta === 'cabeca') {
+      // o rabo de cavalo sai por baixo do capuz, na nuca
+      if (p.nome === 'rabo-preso') p.pos = [0, 0.02, -cab.d / 2 - 0.04];
+      if (p.nome === 'rabo') p.pos = [0, -0.18, -cab.d / 2 - 0.1];
+    }
   }
+  if (!bolha) return;
+  // dentro da bolha: o cabelo comprido vira um coque baixo na nuca, e o que sobrar para fora
+  // do vidro encolhe na direção do meio da cabeça até caber
+  const cor = pecas.find((p) => p.nome === 'cabelo' || p.nome === 'nuca')?.cor;
+  if (cabeloComprido && cor)
+    pecas.push({
+      nome: 'coque-bolha',
+      junta: 'cabeca',
+      forma: 'esfera',
+      tamanho: [0.12, 0.12, 0.11],
+      pos: [0, 0.02, -cab.d / 2 - 0.05],
+      cor,
+    });
+  for (const p of pecas) {
+    if (p.apoio || p.junta !== 'cabeca') continue;
+    if (/^(cabeca|olho|brilho|cilio|bochecha|boca|sarda)/.test(p.nome)) continue;
+    for (let i = 0; i < 12 && foraDaBolha(p) > 0; i++) {
+      const k = 0.94;
+      p.pos = [
+        BOLHA.centro[0] + (p.pos[0] - BOLHA.centro[0]) * k,
+        BOLHA.centro[1] + (p.pos[1] - BOLHA.centro[1]) * k,
+        BOLHA.centro[2] + (p.pos[2] - BOLHA.centro[2]) * k,
+      ];
+      p.tamanho = [p.tamanho[0] * k, p.tamanho[1] * k, p.tamanho[2] * k];
+      if (p.raio !== undefined) p.raio *= k;
+    }
+  }
+}
+
+/** Quanto a peça passa da bolha (pontos da superfície dela): > 0 sai do vidro. */
+function foraDaBolha(p: Peca): number {
+  const pontos: Array<[number, number, number]> = [];
+  const dirs: Array<[number, number, number]> = [];
+  for (const sx of [-1, 0, 1])
+    for (const sy of [-1, 0, 1])
+      for (const sz of [-1, 0, 1]) if (sx || sy || sz) dirs.push([sx, sy, sz]);
+  if (p.forma === 'esfera')
+    for (const d of dirs) {
+      const l = Math.hypot(...d);
+      pontos.push([
+        (d[0] / l) * p.tamanho[0],
+        (d[1] / l) * p.tamanho[1],
+        (d[2] / l) * p.tamanho[2],
+      ]);
+    }
+  else {
+    const meio = [p.tamanho[0] / 2, p.tamanho[1] / 2, p.tamanho[2] / 2];
+    const r = p.forma === 'caixa' ? Math.min(p.raio ?? 0.05, ...meio) : 0;
+    for (const d of dirs) {
+      const l = Math.hypot(...d);
+      pontos.push([
+        d[0] * (meio[0] - r) + (d[0] / l) * r,
+        d[1] * (meio[1] - r) + (d[1] / l) * r,
+        d[2] * (meio[2] - r) + (d[2] / l) * r,
+      ]);
+    }
+  }
+  const [rx, ry, rz] = p.rot ?? [0, 0, 0];
+  let pior = -Infinity;
+  for (const q of pontos) {
+    // giro como no Babylon (z, depois x, depois y)
+    let [x, y, z] = q;
+    [x, y] = [x * Math.cos(rz) - y * Math.sin(rz), x * Math.sin(rz) + y * Math.cos(rz)];
+    [y, z] = [y * Math.cos(rx) - z * Math.sin(rx), y * Math.sin(rx) + z * Math.cos(rx)];
+    [x, z] = [x * Math.cos(ry) + z * Math.sin(ry), -x * Math.sin(ry) + z * Math.cos(ry)];
+    const v = Math.hypot(
+      (p.pos[0] + x - BOLHA.centro[0]) / BOLHA.raios[0],
+      (p.pos[1] + y - BOLHA.centro[1]) / BOLHA.raios[1],
+      (p.pos[2] + z - BOLHA.centro[2]) / BOLHA.raios[2],
+    );
+    pior = Math.max(pior, v - 0.96);
+  }
+  return pior;
 }
 
 /** Altura do boneco no jogo (blocos), do pé ao topo da cabeça. */
@@ -842,8 +1003,69 @@ export interface RotacoesPose {
   bracoE: [number, number, number];
   pernaD: [number, number, number];
   pernaE: [number, number, number];
+  /**
+   * Spec 017: a capa (levanta para trás), a saia (inclina e abre: escala x, y, z) e o rabo
+   * de dino (levanta e abana). Só animação, sem física: cada um sai das juntas da pose, com
+   * folga para nunca entrar nas pernas, nos braços nem no corpo.
+   */
+  capa: [number, number, number];
+  saia: [number, number, number];
+  saiaEscala: [number, number, number];
+  rabo: [number, number, number];
   corpoY: number;
   escala: number;
+}
+
+/**
+ * Quanto a capa, a saia e o rabo se mexem numa pose (spec 017). As pernas e os braços que vão
+ * para trás levantam a capa e o rabo (andando, correndo); a passada abre a saia (ela roda);
+ * no pulo a capa sobe, na aterrissagem a saia abre e achata; sentado, a capa se espalha atrás
+ * (sem entrar no chão), a saia inclina por cima das pernas e o rabo levanta.
+ */
+function balancoDasPecas(pose: Pose): Pick<RotacoesPose, 'capa' | 'saia' | 'saiaEscala' | 'rabo'> {
+  const t = pose.tempo ?? 0;
+  const pD = pose.pernaDireita;
+  const pE = pose.pernaEsquerda;
+  const limitar = (v: number) => Math.max(0, Math.min(1, v));
+  const sentado = limitar(Math.min(-pD, -pE) / 1.2);
+  const pernaAtras = Math.max(0, pD, pE);
+  const bracoAtras = Math.max(0, pose.bracoDireito, pose.bracoEsquerdo);
+  const passo = Math.max(Math.abs(pD), Math.abs(pE)) * (1 - sentado);
+  const esc = pose.escala ?? 1;
+  const noAr = limitar((esc - 1) * 10);
+  const amortece = limitar((1 - esc) * 5);
+  const inclina = Math.max(0, pose.corpoX ?? 0);
+  const lado = (pose.troncoZ ?? 0) + (pose.corpoZ ?? 0);
+  // o vento na capa: sempre um pouquinho, mais forte andando
+  const vento = (0.5 + 0.5 * Math.sin(t * 3.1)) * (0.03 + 0.07 * passo);
+  return {
+    capa: [
+      0.08 +
+        0.55 * Math.max(pernaAtras, bracoAtras * 0.9) +
+        0.5 * inclina +
+        0.35 * noAr +
+        0.2 * amortece +
+        0.9 * sentado +
+        vento,
+      0,
+      -0.5 * lado,
+    ],
+    saia: [
+      0.3 * inclina - 0.75 * sentado + Math.sin(t * 2.3) * 0.02 * passo,
+      0,
+      -0.4 * (pose.corpoZ ?? 0),
+    ],
+    saiaEscala: [
+      1 + 0.4 * passo + 0.12 * noAr + 0.15 * amortece + 0.2 * sentado,
+      1 - 0.15 * amortece - 0.15 * sentado,
+      1 + 0.4 * passo + 0.12 * noAr + 0.15 * amortece + 0.2 * sentado,
+    ],
+    rabo: [
+      0.6 * pernaAtras + 0.3 * noAr + 0.7 * sentado + 0.05 * Math.sin(t * 2),
+      0.3 * Math.sin(t * 4) * (1 - 0.5 * limitar(passo)),
+      0,
+    ],
+  };
 }
 
 /**
@@ -858,7 +1080,7 @@ export function rotacoesDaPose(pose: Pose, olhar: number, segurando: boolean): R
   // quem vê o amigo minerar enxerga o braço indo no bloco certo
   const noGolpe = Math.min(1, Math.abs(pose.bracoDireito) / 0.6);
   const mira = olho * 0.75 * noGolpe;
-  return {
+  const r: RotacoesPose = {
     corpoY: pose.corpoY ?? pose.tronco,
     escala: pose.escala ?? 1,
     corpo: [pose.corpoX ?? 0, 0, pose.corpoZ ?? 0],
@@ -884,5 +1106,7 @@ export function rotacoesDaPose(pose: Pose, olhar: number, segurando: boolean): R
       pose.cabecaLado ?? 0,
     ],
     topete: [pose.topete ?? 0, 0, 0],
+    ...balancoDasPecas(pose),
   };
+  return r;
 }

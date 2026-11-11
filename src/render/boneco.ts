@@ -19,7 +19,15 @@ import {
   type PlanoBoneco,
 } from '../personagem/boneco';
 import type { Pose } from '../personagem/poses';
-import { caixaArredondada, cilindro, criarPlasticos, esfera, type Plasticos } from './formas';
+import {
+  caixaArredondada,
+  cilindro,
+  criarPlasticos,
+  dadosAnel,
+  dadosPlaca,
+  esfera,
+  type Plasticos,
+} from './formas';
 import { modeloNaMao, type ModeloItem } from './itensBrinquedo';
 import type { ExtrasPose, Personagem } from './personagem';
 
@@ -27,7 +35,7 @@ export const MAXIMO_MALHAS_BONECO = 90;
 
 /** Uma peça em 3D a partir do plano. */
 export function montarPeca(scene: Scene, mats: Plasticos, p: Peca, prefixo: string): Mesh {
-  const mat = mats.cor(p.cor, p.brilho ?? 0.28);
+  const mat = mats.cor(p.cor, p.brilho ?? 0.28, p.alfa ?? 1);
   const nome = `${prefixo}-${p.nome}`;
   let m: Mesh;
   if (p.forma === 'caixa')
@@ -46,7 +54,18 @@ export function montarPeca(scene: Scene, mats: Plasticos, p: Peca, prefixo: stri
     m = esfera(nome, scene, r, mat, [p.tamanho[0] / r, p.tamanho[1] / r, p.tamanho[2] / r]);
   } else if (p.forma === 'cilindro')
     m = cilindro(nome, scene, p.tamanho[0], p.tamanho[1], p.tamanho[2], mat);
-  else {
+  else if (p.forma === 'placa') {
+    m = new Mesh(nome, scene);
+    dadosPlaca(p.perfil ?? [], p.tamanho[2]).applyToMesh(m);
+    m.material = mat;
+    m.isPickable = false;
+  } else if (p.tamanho[2] > 0) {
+    // arco de anel (a tiara, spec 017)
+    m = new Mesh(nome, scene);
+    dadosAnel(p.tamanho[0], p.tamanho[1], p.tamanho[2]).applyToMesh(m);
+    m.material = mat;
+    m.isPickable = false;
+  } else {
     m = MeshBuilder.CreateTorus(
       nome,
       { diameter: p.tamanho[0], thickness: p.tamanho[1], tessellation: 20 },
@@ -185,7 +204,7 @@ export function criarBoneco(
         g.lista.push(m);
         continue;
       }
-      if (fundir && !/(olho|brilho|boca)/.test(p.nome) && m.material) {
+      if (fundir && !/^(olho|brilho|boca)/.test(p.nome) && m.material) {
         // a mão não gira sozinha: as peças dela vão para a junta do braço (menos malhas)
         let junta = p.junta;
         if (junta === 'maoE' || junta === 'maoD') {
@@ -263,6 +282,14 @@ export function criarBoneco(
     return n;
   };
 
+  /** Sobe na hora até o alvo e desce suave (a capa levanta com a perna e cai devagar). */
+  const subirJunto = (chave: string, alvo: number, k: number) => {
+    const v = atual.get(chave) ?? alvo;
+    const n = alvo >= v ? alvo : v + (alvo - v) * k;
+    atual.set(chave, n);
+    return n;
+  };
+
   function aplicarPose(pose: Pose, extras?: ExtrasPose): void {
     if (!juntas.corpo) return;
     const dt = extras ? Math.min(Math.max(extras.dt, 0), 0.1) : 1;
@@ -293,6 +320,16 @@ export function criarBoneco(
     j.cabeca.rotation.y = suave('cabecaY', alvo.cabeca[1], k);
     j.cabeca.rotation.z = suave('cabecaZ', alvo.cabeca[2], k);
     j.topete.rotation.x = suave('topete', alvo.topete[0], kLento);
+    // spec 017: capa, saia e rabo sobem junto com o movimento (nunca ficam para trás das
+    // pernas e dos braços) e descem devagar, como pano
+    j.capa.rotation.x = subirJunto('capaX', alvo.capa[0], kLento);
+    j.capa.rotation.z = suave('capaZ', alvo.capa[2], kLento);
+    j.saia.rotation.x = suave('saiaX', alvo.saia[0], k);
+    j.saia.rotation.z = suave('saiaZ', alvo.saia[2], kLento);
+    const abre = subirJunto('saiaAbre', alvo.saiaEscala[0], kLento);
+    j.saia.scaling.set(abre, suave('saiaY', alvo.saiaEscala[1], k), abre);
+    j.rabo.rotation.x = subirJunto('raboX', alvo.rabo[0], kLento);
+    j.rabo.rotation.y = suave('raboY', alvo.rabo[1], k);
     const pisca = pose.piscar ? 0.1 : 1;
     for (const o of olhos) o.scaling.y = (baseY.get(o) ?? 1) * pisca;
     if (boca) boca.scaling.y = (baseY.get(boca) ?? 1) * (1 + (pose.boca ?? 0) * 1.1);
@@ -309,6 +346,8 @@ export function criarBoneco(
       raiz.rotation.y = yaw;
     },
     definirLuz(f) {
+      // os amigos e moradores recebem a luz a cada quadro: só repinta quando ela muda
+      if (Math.abs(f - luz) < 0.002) return;
       luz = f;
       mats.definirLuz(f);
       naMao.definirLuz(f);

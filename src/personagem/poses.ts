@@ -89,6 +89,8 @@ export interface Pose {
   /** Giro do braço no próprio eixo (apontar, gestos). */
   bracoDireitoGiro?: number;
   bracoEsquerdoGiro?: number;
+  /** Tempo do animador (s): o vento na capa e o rabo de dino abanando (spec 017). */
+  tempo?: number;
 }
 
 /**
@@ -235,6 +237,7 @@ export function calcularPose(entrada: EntradaPose): Pose {
     boca,
     corpoX: entrada.inclina ?? 0,
     corpoZ: entrada.roll ?? 0,
+    tempo,
   };
 }
 export type AcaoCurta = 'colocacao' | 'pulo' | 'aterrissagem';

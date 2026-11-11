@@ -108,10 +108,160 @@ function pushTri(p: number[], n: number[], ix: number[], a: number, b: number, c
   else ix.push(a, c, b);
 }
 
+/** Triangula um contorno simples (orelhas), devolvendo os índices dos triângulos. */
+export function triangular(pts: Array<[number, number]>): number[] {
+  const n = pts.length;
+  let area = 0;
+  for (let i = 0; i < n; i++) {
+    const [x0, y0] = pts[i];
+    const [x1, y1] = pts[(i + 1) % n];
+    area += x0 * y1 - x1 * y0;
+  }
+  const idx = Array.from({ length: n }, (_, i) => i);
+  if (area < 0) idx.reverse();
+  const tri: number[] = [];
+  const cruz = (a: number, b: number, c: number) =>
+    (pts[b][0] - pts[a][0]) * (pts[c][1] - pts[a][1]) -
+    (pts[b][1] - pts[a][1]) * (pts[c][0] - pts[a][0]);
+  const dentro = (p: number, a: number, b: number, c: number) =>
+    cruz(a, b, p) >= 0 && cruz(b, c, p) >= 0 && cruz(c, a, p) >= 0;
+  let guarda = 0;
+  while (idx.length > 3 && guarda++ < 2000) {
+    let cortou = false;
+    for (let i = 0; i < idx.length; i++) {
+      const a = idx[(i + idx.length - 1) % idx.length];
+      const b = idx[i];
+      const c = idx[(i + 1) % idx.length];
+      if (cruz(a, b, c) <= 1e-12) continue;
+      if (idx.some((q) => q !== a && q !== b && q !== c && dentro(q, a, b, c))) continue;
+      tri.push(a, b, c);
+      idx.splice(i, 1);
+      cortou = true;
+      break;
+    }
+    if (!cortou) break;
+  }
+  if (idx.length === 3) tri.push(idx[0], idx[1], idx[2]);
+  return tri;
+}
+
+/**
+ * Placa (spec 017): o contorno no plano xy com espessura em z (estrela, raio, coração, folha,
+ * concha, a capa). Frente e verso planos e a borda com a normal de cada lado.
+ */
+export function dadosPlaca(perfil: Array<[number, number]>, espessura: number): VertexData {
+  const positions: number[] = [];
+  const normals: number[] = [];
+  const uvs: number[] = [];
+  const indices: number[] = [];
+  const h = espessura / 2;
+  const tri = triangular(perfil);
+  for (const s of [1, -1]) {
+    const base = positions.length / 3;
+    for (const [x, y] of perfil) {
+      positions.push(x, y, s * h);
+      normals.push(0, 0, s);
+      uvs.push(0, 0);
+    }
+    for (let i = 0; i < tri.length; i += 3)
+      pushTri(positions, normals, indices, base + tri[i], base + tri[i + 1], base + tri[i + 2]);
+  }
+  const n = perfil.length;
+  // sentido do contorno: a normal da borda aponta para fora
+  let area = 0;
+  for (let i = 0; i < n; i++) {
+    const [x0, y0] = perfil[i];
+    const [x1, y1] = perfil[(i + 1) % n];
+    area += x0 * y1 - x1 * y0;
+  }
+  const sinal = area >= 0 ? 1 : -1;
+  for (let i = 0; i < n; i++) {
+    const [x0, y0] = perfil[i];
+    const [x1, y1] = perfil[(i + 1) % n];
+    const l = Math.hypot(x1 - x0, y1 - y0) || 1;
+    const nx = ((y1 - y0) / l) * sinal;
+    const ny = (-(x1 - x0) / l) * sinal;
+    const base = positions.length / 3;
+    for (const [x, y, z] of [
+      [x0, y0, h],
+      [x1, y1, h],
+      [x1, y1, -h],
+      [x0, y0, -h],
+    ]) {
+      positions.push(x, y, z);
+      normals.push(nx, ny, 0);
+      uvs.push(0, 0);
+    }
+    pushTri(positions, normals, indices, base, base + 1, base + 2);
+    pushTri(positions, normals, indices, base, base + 2, base + 3);
+  }
+  const vd = new VertexData();
+  vd.positions = positions;
+  vd.normals = normals;
+  vd.uvs = uvs;
+  vd.indices = indices;
+  return vd;
+}
+
+/**
+ * Anel (toro deitado no plano xz) inteiro ou só um arco (spec 017: a tiara), com o arco
+ * centrado em +z. `diametro` passa pelo meio do tubo.
+ */
+export function dadosAnel(
+  diametro: number,
+  espessura: number,
+  arco = 0,
+  lados = 22,
+  voltas = 10,
+): VertexData {
+  const R = diametro / 2;
+  const r = espessura / 2;
+  const inteiro = !(arco > 0) || arco >= Math.PI * 2 - 1e-6;
+  const a0 = inteiro ? 0 : Math.PI / 2 - arco / 2;
+  const a1 = inteiro ? Math.PI * 2 : Math.PI / 2 + arco / 2;
+  const positions: number[] = [];
+  const normals: number[] = [];
+  const uvs: number[] = [];
+  const indices: number[] = [];
+  const linhas = inteiro ? lados : Math.max(4, Math.round((lados * (a1 - a0)) / (Math.PI * 2)) + 1);
+  for (let i = 0; i <= linhas; i++) {
+    const t = a0 + ((a1 - a0) * i) / linhas;
+    // ponto do arco: x = R cos t, z = R sin t (no plano xz)
+    const cx = Math.cos(t);
+    const cz = Math.sin(t);
+    for (let j = 0; j <= voltas; j++) {
+      const f = (j / voltas) * Math.PI * 2;
+      const nx = cx * Math.cos(f);
+      const ny = Math.sin(f);
+      const nz = cz * Math.cos(f);
+      positions.push(R * cx + r * nx, r * ny, R * cz + r * nz);
+      normals.push(nx, ny, nz);
+      uvs.push(i / linhas, j / voltas);
+    }
+  }
+  const linha = voltas + 1;
+  for (let i = 0; i < linhas; i++)
+    for (let j = 0; j < voltas; j++) {
+      const a = i * linha + j;
+      const b = a + linha;
+      pushTri(positions, normals, indices, a, b, b + 1);
+      pushTri(positions, normals, indices, a, b + 1, a + 1);
+    }
+  const vd = new VertexData();
+  vd.positions = positions;
+  vd.normals = normals;
+  vd.uvs = uvs;
+  vd.indices = indices;
+  return vd;
+}
+
 /** Materiais de plástico de um conjunto (personagem, bicho): todos seguem a luz do lugar. */
 export interface Plasticos {
-  /** Material da cor (um por cor, reaproveitado). */
-  cor(hex: string, brilho?: number): StandardMaterial;
+  /**
+   * Material da cor (um por cor, reaproveitado). `alfa` < 1: transparente (a bolha do
+   * capacete, spec 017).
+   */
+  cor(hex: string, brilho?: number, alfa?: number): StandardMaterial;
   /** Luz do ambiente (1 ao ar livre, baixa em cavernas). */
   definirLuz(f: number): void;
   /**
@@ -133,11 +283,17 @@ export function criarPlasticos(scene: Scene, prefixo: string): Plasticos {
     e.m.specularColor.set(e.brilho * luz, e.brilho * luz, e.brilho * luz);
   };
   return {
-    cor(hex, brilho = 0.28) {
-      const chave = `${hex}|${brilho}`;
+    cor(hex, brilho = 0.28, alfa = 1) {
+      const chave = `${hex}|${brilho}|${alfa}`;
       const ja = mats.get(chave);
       if (ja) return ja.m;
       const m = new StandardMaterial(`${prefixo}-plastico-${hex}`, scene);
+      if (alfa < 1) {
+        m.alpha = alfa;
+        // vidro: só a casca de fora, sem gravar profundidade (o cabelo e o rosto aparecem)
+        m.backFaceCulling = true;
+        m.disableDepthWrite = true;
+      }
       m.specularPower = 42;
       m.ambientColor = Color3.White();
       const e = { m, base: Color3.FromHexString(hex).toLinearSpace(), brilho };
