@@ -1441,7 +1441,9 @@ export function criarNucleo(op: OpcoesNucleo) {
       case 'invocar': {
         const c = populacao.adicionar(d.tipo, d.x, d.y, d.z);
         if (d.domada && c.tipo === 'raposa') c.domada = true;
-        if (d.criado) populacao.criar(c);
+        // spec 016: o bicho criado pelo atalho é de quem chamou o atalho (como dar comida)
+        if (d.criado) populacao.criar(c, j.id === donoDoMundo ? undefined : j.id);
+        if (d.domada && c.tipo === 'raposa' && j.id !== donoDoMundo) c.dono = j.id;
         break;
       }
       case 'clima':
