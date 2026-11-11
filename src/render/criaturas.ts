@@ -15,6 +15,7 @@ import { bichoDeBrinquedo, type PecaBicho } from './bichoBrinquedo';
 import { criarBoneco } from './boneco';
 import { moradorDeBrinquedo } from './moradorBoneco';
 import { generoDoMorador } from '../temas/nomes';
+import type { Profissao } from '../world/povoado';
 import { criarAnimador } from '../player/animacao';
 // spec 015 (gestos): o morador acena de volta; o balão fica em cima da cabeça
 import { fazerGesto, gestoDoAnimador, type IdGesto } from '../personagem/gestos';
@@ -354,8 +355,37 @@ export function criarRenderCriaturas(
   let proximaEstatua = -1;
   return {
     /** Modelo parado de uma criatura (vitrine dos testes): o mesmo desenho do jogo. */
-    estatua(tipo: Criatura['tipo'], x: number, y: number, z: number, yaw: number): void {
-      const m = montar({ id: proximaEstatua--, tipo, x, z } as Criatura);
+    estatua(
+      tipo: Criatura['tipo'],
+      x: number,
+      y: number,
+      z: number,
+      yaw: number,
+      /** Morador da vitrine: a profissão e o número dele no povoado (sorteia o boneco). */
+      morador?: { profissao: Profissao; n: number },
+    ): void {
+      const c = {
+        id: proximaEstatua--,
+        tipo,
+        x,
+        z,
+        ...(morador && { morador: { povoado: 'vitrine', ...morador } }),
+      } as Criatura;
+      if (tipo === 'morador') {
+        // o morador é o boneco do jogador com as peças do tema (como no povoado), parado
+        const mb = montarMorador(c);
+        const pose = mb.animador.atualizar(0, {
+          velocidadeHoriz: 0,
+          correndo: false,
+          noChao: true,
+          voando: false,
+        });
+        mb.boneco.aplicarPose(pose, { dt: 0, olhar: 0, vista: mb.animador.vista() });
+        mb.boneco.posicionar(x, y, z, yaw);
+        mb.boneco.definirLuz(1);
+        return;
+      }
+      const m = montar(c);
       m.raiz.position.set(x, y, z);
       m.raiz.rotation.y = yaw;
     },
