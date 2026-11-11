@@ -7,6 +7,14 @@ import { encontrarNascimento } from '../world/chunk';
 import { povoadoDoTema, tema } from '../temas/ativo';
 import { tocarVoz } from '../audio/sons';
 import { construirMapaEmissivo } from './emissivo';
+import { criarTintaProtecao } from './tintaProtecao';
+import {
+  criarProtecaoMundo,
+  NOMES_PROTECAO,
+  nomeProtecao,
+  type Protecao,
+  type ProtecaoMundo,
+} from '../world/protecao';
 import { Engine } from '@babylonjs/core/Engines/engine';
 import { Scene } from '@babylonjs/core/scene';
 import { UniversalCamera } from '@babylonjs/core/Cameras/universalCamera';
@@ -414,6 +422,12 @@ export interface EstadoDepuracao {
     local: () => { gesto: string | null; balao: string | null };
     moradores: () => { id: number; gesto: string | null; balao: string | null }[];
   };
+  /**
+   * Spec 016 (só nos testes de tela): o que a proteção do mundo diz da célula, e a tinta
+   * que pinta as células protegidas num raio em volta do jogador (0 apaga; devolve quantas).
+   */
+  protecao?: (x: number, y: number, z: number) => import('../world/protecao').NomeProtecao;
+  tingirProtecao?: (raio?: number, so?: import('../world/protecao').NomeProtecao[]) => number;
   /** Vitrine dos testes: um bicho parado, sem cérebro, com o desenho do jogo. */
   estatua?: (
     tipo: TipoCriatura | 'morador',
@@ -2940,6 +2954,18 @@ export function criarCena(
     (m) => glow.addExcludedMesh(m),
     () => undefined,
   );
+  // spec 016: a proteção do mundo à vista nas capturas (só nos testes de tela)
+  if (ehTesteDeTela()) {
+    let prot: ProtecaoMundo | null = null;
+    const protecao = () => (prot ??= criarProtecaoMundo(semente));
+    const tinta = criarTintaProtecao(scene, protecao);
+    estado.protecao = (x, y, z) => nomeProtecao(protecao().em(x, y, z));
+    estado.tingirProtecao = (raio = 24, so) => {
+      const j = controle.jogador;
+      const filtro = so?.map((n) => NOMES_PROTECAO.indexOf(n) as Protecao);
+      return tinta.pintar(j.x, j.z, raio, filtro);
+    };
+  }
   // só nos testes de tela (auditoria 017: num jogo de verdade não há vitrine)
   if (ehTesteDeTela())
     estado.estatua = (tipo, x, y, z, yaw, morador) =>

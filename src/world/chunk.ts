@@ -436,32 +436,95 @@ export function gerarChunk(cx: number, cz: number, semente: number = SEMENTE_PAD
       }
     }
   }
-  // povoado da região, se alcançar este chunk (e então sem ruína)
-  const plano = povoadosLigados
-    ? planoDaRegiao(
-        Math.floor((cx * TAM_X) / REGIAO_POVOADO),
-        Math.floor((cz * TAM_Z) / REGIAO_POVOADO),
-        semente,
-        TERRENO_NATURAL,
-      )
-    : null;
+  pintarEstruturas(blocos, cx, cz, semente, alturas, biomas);
+  return blocos;
+}
+
+/** O que o mundo construiu no chunk: a parte do povoado que cai nele, ou a ruína do meio. */
+export type EstruturaDoChunk =
+  | { tipo: 'povoado'; plano: PlanoPovoado }
+  | { tipo: 'ruina'; h: number; forma: EstiloMundo['estrutura'] }
+  | null;
+
+/** O povoado da região alcança o chunk? (o mesmo teste da geração) */
+function planoQueTocaOChunk(cx: number, cz: number, semente: number): PlanoPovoado | null {
+  if (!povoadosLigados) return null;
+  const plano = planoDaRegiao(
+    Math.floor((cx * TAM_X) / REGIAO_POVOADO),
+    Math.floor((cz * TAM_Z) / REGIAO_POVOADO),
+    semente,
+    TERRENO_NATURAL,
+  );
   const x0 = cx * TAM_X;
   const z0 = cz * TAM_Z;
-  const tocaPlano =
+  const toca =
     !!plano &&
     plano.maxX >= x0 &&
     plano.minX < x0 + TAM_X &&
     plano.maxZ >= z0 &&
     plano.minZ < z0 + TAM_Z;
-  if (plano && tocaPlano) {
+  return toca ? plano : null;
+}
+
+/**
+ * Pinta no chunk o que o mundo construiu (o último passo da geração). A proteção das
+ * construções (spec 016) refaz este mesmo passo num rascunho, então o que ela protege é
+ * exatamente o que a geração pôs. `alturas` e `biomas` só são lidos no meio do chunk.
+ */
+export function pintarEstruturas(
+  blocos: Uint8Array,
+  cx: number,
+  cz: number,
+  semente: number,
+  alturas: Int32Array,
+  biomas: readonly Bioma[],
+): EstruturaDoChunk {
+  // povoado da região, se alcançar este chunk (e então sem ruína)
+  const plano = planoQueTocaOChunk(cx, cz, semente);
+  const x0 = cx * TAM_X;
+  const z0 = cz * TAM_Z;
+  if (plano) {
     construirPovoado(plano, estilo.povoado ?? FORMAS_PADRAO, (wx, y, wz, id) => {
       const x = wx - x0;
       const z = wz - z0;
       if (x < 0 || x >= TAM_X || z < 0 || z >= TAM_Z || y < 1 || y >= ALTURA) return;
       blocos[indice(x, y, z)] = id;
     });
-  } else construirRuina(blocos, cx, cz, semente, alturas, biomas);
-  return blocos;
+    return { tipo: 'povoado', plano };
+  }
+  const h = construirRuina(blocos, cx, cz, semente, alturas, biomas);
+  return h === null ? null : { tipo: 'ruina', h, forma: estilo.estrutura };
+}
+
+/**
+ * Estrutura do chunk sem gerar o terreno (spec 016): o povoado que o alcança, ou a altura
+ * e a forma da ruína do meio (mesmos sorteios da geração). Pinta no rascunho, se houver.
+ */
+export function estruturaDoChunk(
+  cx: number,
+  cz: number,
+  semente: number,
+  rascunho?: Uint8Array,
+): EstruturaDoChunk {
+  const plano = planoQueTocaOChunk(cx, cz, semente);
+  if (!plano && hash2(cx, cz, semente + CHAVE_ESTRUTURA) > CHANCE_ESTRUTURA) return null;
+  const alturas = new Int32Array(TAM_X * TAM_Z);
+  const biomas: Bioma[] = [];
+  if (!plano) {
+    const c = 8 * TAM_X + 8;
+    const wx = cx * TAM_X + 8;
+    const wz = cz * TAM_Z + 8;
+    alturas[c] = alturaTerreno(wx, wz, semente);
+    biomas[c] = biomaEm(wx, wz, semente, alturas[c]);
+  }
+  return pintarEstruturas(
+    rascunho ?? new Uint8Array(TAM_X * ALTURA * TAM_Z),
+    cx,
+    cz,
+    semente,
+    alturas,
+    biomas,
+  );
 }
 
 /** Sorteio da ruína (ou estrutura do tema) no meio do chunk. */
@@ -475,19 +538,19 @@ function construirRuina(
   cz: number,
   semente: number,
   alturas: Int32Array,
-  biomas: Bioma[],
-): void {
-  if (hash2(cx, cz, semente + CHAVE_ESTRUTURA) > CHANCE_ESTRUTURA) return;
+  biomas: readonly Bioma[],
+): number | null {
+  if (hash2(cx, cz, semente + CHAVE_ESTRUTURA) > CHANCE_ESTRUTURA) return null;
   const c = 8 * TAM_X + 8;
   const b = biomas[c];
-  if (b === 'oceano' || b === 'praia' || b === 'pantano' || b === 'montanhas') return;
+  if (b === 'oceano' || b === 'praia' || b === 'pantano' || b === 'montanhas') return null;
   const h = alturas[c];
-  if (h <= NIVEL_MAR + 1 || h > ALTURA - 20) return;
+  if (h <= NIVEL_MAR + 1 || h > ALTURA - 20) return null;
   const parede = b === 'deserto' ? Bloco.ARENITO : Bloco.TIJOLOS_PEDRA;
   const resto = b === 'deserto' ? Bloco.AREIA_DESERTO : Bloco.PEDREGULHO;
   if (estilo.estrutura !== 'ruina') {
     construirEstrutura(blocos, h, semente, parede, resto, estilo.estrutura);
-    return;
+    return h;
   }
   for (let dz = -3; dz <= 3; dz++)
     for (let dx = -3; dx <= 3; dx++) {
@@ -506,6 +569,7 @@ function construirRuina(
     }
   blocos[indice(8, h + 1, 8)] = Bloco.BAU;
   blocos[indice(6, h + 1, 6)] = Bloco.COGUMELO_BRILHANTE;
+  return h;
 }
 
 /**

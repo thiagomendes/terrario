@@ -3,6 +3,7 @@ dist/
 test-results/
 playwright-report/
 capturas-temas/
+capturas-protecao/
 .claude/
 servidor/dist/
 node_modules
