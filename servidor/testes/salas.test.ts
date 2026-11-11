@@ -281,6 +281,21 @@ describe('salas do servidor', () => {
     expect(quadros(a2)[0].inventario).toBeDefined();
   });
 
+  it('o mesmo jogador abre em outra aba: a antiga recebe "substituido" e fecha (sem disputa)', async () => {
+    const { g, a, codigo, avancar } = await criarSala();
+    await avancar(300);
+    const a2 = canal();
+    await g.receber(
+      a2,
+      JSON.stringify({ t: 'entrar', versao: VERSAO_REDE, jogador: ident('ana'), codigo }),
+    );
+    expect(a.recebidas.at(-1)).toEqual({ t: 'substituido' });
+    expect(a.fechado()).toBe(true);
+    expect(a2.fechado()).toBe(false);
+    expect(a2.recebidas.some((m) => m.t === 'substituido')).toBe(false);
+    expect(g.ativas.get(codigo)!.presentes.size).toBe(1);
+  });
+
   it('o dono expulsa e troca o código; o antigo deixa de valer na hora', async () => {
     const { g, a, codigo, avancar } = await criarSala();
     const b = canal('5.6.7.8');

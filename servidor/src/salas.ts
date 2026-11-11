@@ -360,7 +360,11 @@ export function criarGerenciador(op: OpcoesGerenciador) {
     contexto(s);
     if (ja) {
       // voltou da queda: o mesmo jogador, no mesmo lugar
-      if (ja.canal && ja.canal !== canal) ja.canal.fechar();
+      if (ja.canal && ja.canal !== canal) {
+        // a aba (ou aparelho) antiga para de tentar: sem isso as duas se derrubam sem fim
+        enviar(ja.canal, { t: 'substituido' });
+        ja.canal.fechar();
+      }
       ja.canal = canal;
       ja.desligadoEm = null;
       ja.esperado = undefined;

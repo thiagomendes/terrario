@@ -132,7 +132,7 @@ body[data-overlay] .botao-amigos, body.tela-titulo .botao-amigos, body.modo-foto
 
 /** O que dizer para cada recusa do servidor, do jeito de uma criança entender. */
 export const TEXTO_RECUSA: Record<
-  MotivoRecusa | 'sem-internet' | 'servidor' | 'encerrada',
+  MotivoRecusa | 'sem-internet' | 'servidor' | 'encerrada' | 'substituido',
   string
 > = {
   codigo: 'Esse código não existe. Confere com quem te mandou?',
@@ -144,6 +144,7 @@ export const TEXTO_RECUSA: Record<
   identidade: 'Não deu para entrar com este aparelho. Peça um código novo ao dono.',
   erro: 'Algo deu errado do nosso lado. Tente de novo daqui a pouco.',
   'sem-internet': 'Você está sem internet, mas seus mundos do aparelho continuam aqui.',
+  substituido: 'Este mundo foi aberto em outra aba ou em outro aparelho.',
   encerrada: 'O dono levou este mundo de volta para o aparelho dele. Obrigado por jogar junto!',
   servidor: 'O servidor dos mundos com amigos não respondeu. Tente de novo daqui a pouco.',
 };

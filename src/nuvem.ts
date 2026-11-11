@@ -118,9 +118,19 @@ function telaCarregando(texto: string) {
       p.textContent = t;
       i.style.width = `${Math.round(fracao * 100)}%`;
     },
-    erro(t: string) {
+    /** `jogarAqui`: um botão a mais que recarrega e entra de novo neste aparelho. */
+    erro(t: string, jogarAqui = false) {
       p.textContent = t;
       barra.remove();
+      if (jogarAqui) {
+        const a = document.createElement('button');
+        a.type = 'button';
+        a.className = 'btn primario';
+        a.textContent = 'Jogar aqui';
+        a.setAttribute('data-jogar-aqui', '');
+        a.addEventListener('click', () => recarregar());
+        c.appendChild(a);
+      }
       const b = document.createElement('button');
       b.type = 'button';
       b.className = 'btn primario';
@@ -535,6 +545,8 @@ export function ligarAmigos(raiz: HTMLElement, cena: Cena, op: OpcoesAmigos): vo
       telaCarregando('Você saiu deste mundo').erro(TEXTO_RECUSA.expulso);
     } else if (e === 'encerrada') {
       telaCarregando('O passeio acabou').erro(TEXTO_RECUSA.encerrada);
+    } else if (e === 'substituido') {
+      telaCarregando('Aberto em outro lugar').erro(TEXTO_RECUSA.substituido, true);
     } else if (e === 'recusado') {
       telaCarregando('Não deu para voltar').erro(TEXTO_RECUSA[motivo ?? 'erro']);
     }

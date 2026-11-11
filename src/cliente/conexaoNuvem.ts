@@ -22,7 +22,9 @@ export type EstadoConexao =
   | 'reconectando'
   | 'recusado'
   | 'expulso'
-  | 'encerrada';
+  | 'encerrada'
+  /** O mesmo jogador abriu o mundo em outra aba ou aparelho. */
+  | 'substituido';
 
 export type BemVindo = Omit<Extract<RespostaServidor, { t: 'bemvindo' }>, 't'>;
 
@@ -115,6 +117,8 @@ export function conexaoNuvem(op: OpcoesNuvem): ConexaoNuvem {
       );
     };
     s.onmessage = (ev: MessageEvent<string>) => {
+      // conexão velha (já trocada por outra): nada do que ela diz vale
+      if (ws !== s) return;
       let m: RespostaServidor;
       try {
         m = JSON.parse(ev.data) as RespostaServidor;
@@ -149,6 +153,9 @@ export function conexaoNuvem(op: OpcoesNuvem): ConexaoNuvem {
       } else if (m.t === 'encerrada') {
         encerrada = true;
         mudar('encerrada');
+      } else if (m.t === 'substituido') {
+        encerrada = true;
+        mudar('substituido');
       } else if (m.t === 'devolvido') {
         encerrada = true;
         for (const f of ouvintesDevolvido) f(m.dados);

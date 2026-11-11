@@ -92,4 +92,6 @@ export type RespostaServidor =
   | { t: 'devolvido'; dados: DadosMundo }
   /** O dono parou de jogar com amigos: a sala acabou (os outros recebem). */
   | { t: 'encerrada' }
+  /** O mesmo jogador abriu o mundo em outra aba ou aparelho: esta conexão para (sem reconectar). */
+  | { t: 'substituido' }
   | Mensagem;
