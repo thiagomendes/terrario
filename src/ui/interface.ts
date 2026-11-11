@@ -8,6 +8,15 @@ import { criarBarra } from './barra';
 import { textoIndicador } from '../audio/ligador';
 import type { EstadoAudio } from '../audio/motor';
 import { rotuloDoModelo, type Aparencia } from '../personagem/aparencia';
+import { rotuloDaFantasia } from '../personagem/fantasias';
+import { festejarNoPalco } from './abaFantasias';
+import { perguntar } from './dialogo';
+import {
+  CHAVE_TESTAR,
+  fantasiaParaSugerir,
+  marcarSugerida,
+  perguntaDaSugestao,
+} from './sugestaoFantasia';
 import type { Armazenamento } from '../personagem/persistencia';
 import { CSS_PAINEL, criarPainelPersonagem, teclaParaPainel } from './personagem';
 import { CSS_MODAL, criarPainelMundos } from './mundos';
@@ -256,6 +265,11 @@ export interface OpcoesInterface {
   pararComAmigos?: (meta: MetaMundo) => Promise<void>;
   config?: GerenciadorConfig;
   salvar?: () => Promise<boolean>;
+  /**
+   * Spec 017: a criança acabou de criar este mundo (a sugestão de fantasia aparece uma vez).
+   * `id` é o mundo do aparelho onde a sugestão fica lembrada.
+   */
+  mundoNovo?: { id: string };
 }
 
 /**
@@ -501,7 +515,8 @@ export function criarInterface(
     travarPonteiro();
   }
   function rotuloNome(a: Aparencia): string {
-    return a.nome || rotuloDoModelo(a);
+    // sem nome escrito, a fantasia vestida dá o nome ("Princesa das Flores")
+    return a.nome || (a.fantasia && rotuloDaFantasia(a.fantasia, a.corpo)) || rotuloDoModelo(a);
   }
   function armazenamento(): Armazenamento | null {
     try {
@@ -578,17 +593,78 @@ export function criarInterface(
   ajustarCompacto();
   const painel = criarPainelPersonagem(telaPersonagem, {
     armazenamento: armazenamento(),
+    temaDoMundo: opMundo.mundo ? (opMundo.mundo.tema ?? 'bruma-e-luz') : undefined,
+    aoFestejar: () => festejarNoPalco(pedestal),
     aoMudar: (a) => {
       nomeHud.textContent = rotuloNome(a);
       nomePrevia.textContent = rotuloNome(a);
       fotografarBoneco(previa, a, 'corpo', 520);
-      window.__brumaluz?.personagem?.definir(a);
+      // `definir` junta com a aparência de antes: sem fantasia tem que ir explícito
+      window.__brumaluz?.personagem?.definir({ ...a, fantasia: a.fantasia });
     },
     aoJogar: entrarNoJogo,
   });
   nomeHud.textContent = rotuloNome(painel.aparencia());
   nomePrevia.textContent = rotuloNome(painel.aparencia());
   fotografarBoneco(previa, painel.aparencia(), 'corpo', 520);
+
+  /** Abre o editor na aba Fantasias (de dentro do jogo também: como a tecla C). */
+  function abrirEditorNasFantasias(): void {
+    entrada.hidden = false;
+    mostrarTela('personagem');
+    document.exitPointerLock?.();
+    painel.abrirFantasias('temas');
+  }
+  // Spec 017 (T05): mundo recém-criado sugere uma vez a fantasia do tema dele
+  if (opMundo.mundo && opMundo.mundoNovo) {
+    const loja = armazenamento();
+    const idSugestao = opMundo.mundoNovo.id;
+    const tema = opMundo.mundo.tema;
+    // nos testes de tela a sugestão só aparece quando o teste pede (os outros fluxos seguem)
+    let testando = false;
+    try {
+      testando = navigator.webdriver && loja?.getItem(CHAVE_TESTAR) !== '1';
+    } catch {
+      testando = navigator.webdriver;
+    }
+    const def = testando
+      ? undefined
+      : fantasiaParaSugerir(loja, idSugestao, true, tema, painel.aparencia());
+    if (!def && !testando) marcarSugerida(loja, idSugestao);
+    // espera o mundo pronto e nada aberto por cima (convite, pausa, outro diálogo, mouse preso)
+    const livre = () =>
+      window.__brumaluz?.ready === true &&
+      !document.pointerLockElement &&
+      !document.body.dataset.overlay &&
+      !document.querySelector('[data-dialogo], .modal-fundo:not([hidden])');
+    const sugerir = async () => {
+      if (!def) return;
+      if (!livre()) {
+        setTimeout(() => void sugerir(), 500);
+        return;
+      }
+      marcarSugerida(loja, idSugestao);
+      // o boneco da criança já vestido com a fantasia, na foto do diálogo
+      const foto = document.createElement('canvas');
+      foto.className = 'foto-sugestao';
+      foto.style.height = '150px';
+      foto.setAttribute('aria-hidden', 'true');
+      const a = painel.aparencia();
+      fotografarBoneco(foto, { ...a, fantasia: { id: def.id, cor: 0 } }, 'corpo', 300);
+      const sim = await perguntar({
+        titulo: perguntaDaSugestao(tema),
+        texto: `${rotuloDaFantasia(def, a.corpo)}. Dá para tirar quando quiser.`,
+        confirmar: 'Sim',
+        cancelar: 'Agora não',
+        figura: foto,
+        marca: 'sugestao-fantasia',
+      });
+      if (sim !== true) return;
+      abrirEditorNasFantasias();
+      painel.vestir(def.id);
+    };
+    void sugerir();
+  }
 
   entrada.addEventListener('click', (e) => {
     if (!telaPersonagem.hidden) return;

@@ -119,7 +119,9 @@ export function fotografarBoneco(
   fila.push({ alvo, aparencia, recorte, chave });
   if (!andando) {
     andando = true;
-    requestAnimationFrame(passo);
+    // fila parada: tira a foto logo depois do toque, sem esperar o próximo quadro (spec 017:
+    // vestir aparece na hora); o resto da fila segue quadro a quadro
+    queueMicrotask(passo);
   }
 }
 
