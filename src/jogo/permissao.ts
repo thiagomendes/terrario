@@ -14,6 +14,7 @@
  *    de todos). Bicho criado ou domado: só quem criou e o dono do mundo chamam e levam.
  */
 import { Bloco } from '../world/blocks';
+import { ehPorta } from '../world/portas';
 import { ehLavoura } from './plantio';
 import {
   Protecao,
@@ -155,6 +156,28 @@ export function celulaDoLote(
     (ab !== Bloco.AR ? recusaQuebrar(m, quem, x, y, z) : null) ??
     (b !== Bloco.AR ? recusaColocar(m, quem, x, y, z, b) : null);
   return r ? { recusa: r } : { v: v & 0xffff, manterDono: false };
+}
+
+/**
+ * A outra metade da porta de (x, y, z) que sai junto ao quebrar (o y dela), ou null. Portas
+ * empilhadas formam pares de baixo para cima (como a malha desenha); a outra metade só sai
+ * se for do mesmo dono e quem quebra puder quebrá-la (a porta solta da Bia em cima da do Léo
+ * não leva a metade dele).
+ */
+export function outraMetadeDaPorta(
+  m: MundoDaRegra,
+  quem: string,
+  x: number,
+  y: number,
+  z: number,
+): number | null {
+  if (!ehPorta(m.bloco(x, y, z))) return null;
+  let abaixo = 0;
+  while (y - abaixo - 1 >= 0 && ehPorta(m.bloco(x, y - abaixo - 1, z))) abaixo++;
+  const oy = abaixo % 2 === 1 ? y - 1 : y + 1;
+  if (!ehPorta(m.bloco(x, oy, z))) return null;
+  if (m.dono(x, oy, z) !== m.dono(x, y, z)) return null;
+  return recusaQuebrar(m, quem, x, oy, z) ? null : oy;
 }
 
 /**

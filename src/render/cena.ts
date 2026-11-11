@@ -11,6 +11,7 @@ import { criarTintaProtecao } from './tintaProtecao';
 import {
   celulaDoLote,
   ehConteiner,
+  outraMetadeDaPorta,
   recusaConteiner,
   recusaColocar,
   recusaQuebrar,
@@ -1417,6 +1418,8 @@ export function criarCena(
       const apelido = regra.apelido(doAmigo);
       if (apelido) avisosProtecao.tirouDoAmigo(apelido);
     }
+    // a outra metade da porta, conferida antes de a primeira sumir da previsão
+    const outraMetade = quebra ? outraMetadeDaPorta(regra, voce, x, y, z) : null;
     const id = proximoId();
     // o replantio fica com o dono que a lavoura já tinha (o núcleo faz igual)
     if (quebra && b !== Bloco.AR) cliente.prever(id, x, y, z, b, meta);
@@ -1430,16 +1433,11 @@ export function criarCena(
         lote.push({ x, y: y + 1, z, antes: cima, depois: Bloco.AR });
       }
     }
-    // quebrar meia porta leva a outra metade (o núcleo faz o mesmo)
-    if (quebra && ((antes & 255) === Bloco.PORTA || (antes & 255) === Bloco.PORTA_ABERTA)) {
-      for (const dy of [-1, 1]) {
-        const v = blocoEm(x, y + dy, z);
-        if (v === Bloco.PORTA || v === Bloco.PORTA_ABERTA) {
-          const a = valorEm(x, y + dy, z);
-          prever(id, x, y + dy, z, Bloco.AR);
-          lote.push({ x, y: y + dy, z, antes: a, depois: Bloco.AR });
-        }
-      }
+    // quebrar meia porta leva a outra metade do mesmo par, se puder (o núcleo faz o mesmo)
+    if (outraMetade !== null) {
+      const a = valorEm(x, outraMetade, z);
+      prever(id, x, outraMetade, z, Bloco.AR);
+      lote.push({ x, y: outraMetade, z, antes: a, depois: Bloco.AR });
     }
     const extrasFeitos: { x: number; y: number; z: number }[] = [];
     for (const e of extras) {

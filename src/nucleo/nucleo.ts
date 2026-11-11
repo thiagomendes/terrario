@@ -17,6 +17,7 @@ import {
   podeLevarBicho,
   celulaDoLote,
   ehConteiner,
+  outraMetadeDaPorta,
   recusaConteiner,
   recusaColocar,
   recusaQuebrar,
@@ -615,6 +616,8 @@ export function criarNucleo(op: OpcoesNucleo) {
     // tesouro dele ainda vale. Quebrado uma vez, a célula ganha edição; o baú posto de novo
     // ali é um baú comum (vazio), senão quebrar e recolocar dava o tesouro outra vez.
     const intocado = edicoes.obter(x, y, z) === undefined;
+    // quebrar meia porta leva a outra metade (a do mesmo par, do mesmo dono, se puder)
+    const outraMetade = outraMetadeDaPorta(regra, j.id, x, y, z);
     if (replantio !== null) {
       // entra de novo na lista da lavoura que cresce, do começo
       lavoura.delete(`${x},${y},${z}`);
@@ -622,13 +625,7 @@ export function criarNucleo(op: OpcoesNucleo) {
         lavoura.set(`${x},${y},${z}`, { x, y, z, p: 0, t: relogioLavoura });
     } else editar(x, y, z, Bloco.AR);
     const darColheita = replantio === null || madura(b);
-    // quebrar meia porta leva a outra metade
-    if (b === Bloco.PORTA || b === Bloco.PORTA_ABERTA) {
-      for (const dy of [-1, 1]) {
-        const v = mundo.bloco(x, y + dy, z);
-        if (v === Bloco.PORTA || v === Bloco.PORTA_ABERTA) editar(x, y + dy, z, Bloco.AR);
-      }
-    }
+    if (outraMetade !== null) editar(x, outraMetade, z, Bloco.AR);
     // sobrevivência: a ferramenta gasta e o bloco vira item no chão
     if (modo === 'sobrevivencia') {
       const p = j.inventario.obter(c.slot);

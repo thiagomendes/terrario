@@ -582,7 +582,7 @@ describe.each<Modo>(['local', 'nuvem'])('regra 4: fornalhas (%s)', (modo) => {
   });
 });
 
-describe('auditoria da 016: lote do criativo (nuvem)', () => {
+describe('auditoria da 016: lote do criativo e portas empilhadas (nuvem)', () => {
   const C = { x: 400, y: 95, z: 410 };
   const lote = (n: Nucleo, quem: string, cs: Array<Celula & { v: number }>) => {
     const i = id();
@@ -610,6 +610,35 @@ describe('auditoria da 016: lote do criativo (nuvem)', () => {
     lote(n, 'bia', [{ ...L.parede, v }]);
     expect(n.estado.edicoes.obter(L.parede.x, L.parede.y, L.parede.z)).toBeUndefined();
     expect(n.donoDoBloco(L.parede.x, L.parede.y, L.parede.z)).toBeNull();
+  });
+
+  it('a porta solta da Bia em cima da do Léo não leva a metade dele ao quebrar', () => {
+    const n = abrir('nuvem', 'criativo', C);
+    const i = id();
+    ir(n, 'leo', C);
+    mandar(n, 'leo', {
+      t: 'colocar',
+      id: i,
+      ...C,
+      bloco: Bloco.PORTA,
+      meta: 0,
+      slot: 0,
+      extras: [{ ...C, y: C.y + 1 }],
+    });
+    const cima = { ...C, y: C.y + 1 };
+    const solta = { ...C, y: C.y + 2 };
+    expect([bloco(n, C), bloco(n, cima)]).toEqual([Bloco.PORTA, Bloco.PORTA]);
+    colocar(n, 'bia', solta, Bloco.PORTA);
+    expect(bloco(n, solta)).toBe(Bloco.PORTA);
+    quebrar(n, 'bia', solta);
+    expect([bloco(n, C), bloco(n, cima), bloco(n, solta)]).toEqual([
+      Bloco.PORTA,
+      Bloco.PORTA,
+      Bloco.AR,
+    ]);
+    // o Léo quebra a de baixo: as duas metades dele saem
+    quebrar(n, 'leo', C);
+    expect([bloco(n, C), bloco(n, cima)]).toEqual([Bloco.AR, Bloco.AR]);
   });
 });
 
