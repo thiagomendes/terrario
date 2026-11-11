@@ -838,6 +838,49 @@ describe('dono do bloco na nuvem', () => {
     expect(valores(dev.dados.edicoes)).toContain(empacotar(Bloco.TABUAS, 0, 2));
   });
 
+  it('queda no meio da gravação: a tabela de donos já foi (as regiões vão na próxima)', async () => {
+    const { g, codigo, armazem, nucleo, avancar } = await levada();
+    const b = canal('5.6.7.8');
+    await g.receber(b, entrarComo('bia', { codigo }));
+    await avancar(300);
+    const j = nucleo().estado.jogadores.get('bia')!;
+    const x = Math.floor(j.tel.x) + 2;
+    const z = Math.floor(j.tel.z);
+    const y = Math.floor(j.tel.y);
+    nucleo().estado.edicoes.definir(x, y, z, Bloco.AR);
+    const gravarRegiao = armazem.gravarRegiao;
+    let quedas = 0;
+    armazem.gravarRegiao = async () => {
+      quedas++;
+      throw new Error('o Storage caiu');
+    };
+    await g.receber(
+      b,
+      JSON.stringify({
+        t: 'colocar',
+        id: 1,
+        x,
+        y,
+        z,
+        bloco: Bloco.TABUAS,
+        meta: 0,
+        slot: 0,
+        seq: 1,
+      }),
+    );
+    await avancar(6000);
+    expect(quedas).toBeGreaterThan(0);
+    const mundoId = g.ativas.get(codigo)!.mundo.id;
+    expect((await armazem.lerMundo(mundoId))!.extras.donos).toContainEqual(['bia', 'bia']);
+    // o Storage volta: a região do bloco da Bia vai, com o dono dela
+    armazem.gravarRegiao = gravarRegiao;
+    await avancar(6000);
+    const regioes = await armazem.lerRegioes(mundoId);
+    expect(valores(Object.assign({}, ...Object.values(regioes)))).toContain(
+      empacotar(Bloco.TABUAS, 0, 2),
+    );
+  });
+
   it('dono malformado vindo do aparelho não derruba nem rouba: entra limpo', async () => {
     const s = servidor();
     const a = canal();

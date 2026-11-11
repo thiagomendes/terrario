@@ -647,17 +647,20 @@ export function criarGerenciador(op: OpcoesGerenciador) {
     const sujas = [...s.regioesSujas];
     s.regioesSujas.clear();
     try {
+      // spec 016: o mundo (com a tabela de donos, que só cresce) vai antes das regiões: uma
+      // queda no meio deixa a tabela com gente a mais, nunca bloco com dono que não existe
+      // (que viraria do dono do mundo)
+      await armazem.gravarMundo(s.mundo.id, {
+        formato: FORMATO_MUNDO,
+        mundo: s.mundo,
+        hora: salvo.hora,
+        extras: salvo.extras,
+      });
       await gravarRegioes(s, sujas, salvo.edicoes);
     } catch (e) {
       for (const r of sujas) s.regioesSujas.add(r);
       throw e;
     }
-    await armazem.gravarMundo(s.mundo.id, {
-      formato: FORMATO_MUNDO,
-      mundo: s.mundo,
-      hora: salvo.hora,
-      extras: salvo.extras,
-    });
     // o dono levou o mundo para o aparelho enquanto gravávamos: a sala não volta a existir
     if (s.encerrada) return;
     await armazem.gravarSala(s.sala);
