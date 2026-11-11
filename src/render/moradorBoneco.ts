@@ -10,7 +10,12 @@ import {
   type Aparencia,
   type ModeloId,
 } from '../personagem/aparencia';
-import type { Junta, Peca, PlanoBoneco } from '../personagem/boneco';
+import {
+  ajeitarCabeloDebaixo,
+  type Junta,
+  type Peca,
+  type PlanoBoneco,
+} from '../personagem/boneco';
 import type { PecaCriatura } from '../temas/tipos';
 
 /** Medidas do morador de blocos dos temas (corpoDeMorador): centro da cabeça e do tronco. */
@@ -122,23 +127,32 @@ export function moradorDeBrinquedo(
       0.34 / TRONCO_T[2],
     ];
     const quadril = plano.juntas.tronco.pos[1];
+    /** Peças do chapéu do tema (assentam no cabelo do boneco no fim). */
+    const chapeu: Peca[] = [];
     extras.forEach((e, i) => {
       let junta: Junta;
+      let apoio: Peca['apoio'];
+      /** Chapéu, touca ou capacete do tema: assenta no cabelo do boneco. */
+      let ehChapeu = false;
       let pos: [number, number, number];
       let t: [number, number, number];
       const topoTema = CABECA_Y + CABECA_T / 2;
       if (e.papel !== 'antena' && e.p[1] - e.t[1] / 2 >= topoTema - 0.04) {
         // chapéu, touca, capacete: assenta em cima da cabeça do boneco (e do cabelo dele)
         junta = 'cabeca';
+        apoio = 'cabeca';
+        ehChapeu = true;
         t = [e.t[0] * kCab, e.t[1] * kCab * 0.8, e.t[2] * kCab];
         const base = (e.p[1] - e.t[1] / 2 - topoTema) * kCab * 0.8;
         pos = [e.p[0] * kCab, 0.34 + 0.05 + base + t[1] / 2, e.p[2] * kCab];
       } else if (e.papel === 'antena' || e.p[1] >= CABECA_Y - 0.1) {
         junta = 'cabeca';
+        apoio = 'cabeca';
         pos = [e.p[0] * kCab, (e.p[1] - CABECA_Y) * kCab, e.p[2] * kCab];
         t = [e.t[0] * kCab, e.t[1] * kCab, e.t[2] * kCab];
       } else if (e.p[1] >= QUADRIL_Y - 0.1) {
         junta = 'tronco';
+        apoio = 'tronco';
         // lenço e gola (entre o tronco e a cabeça): no alto do tronco, sem cobrir o rosto
         const y = Math.min(troncoH + 0.02, troncoH / 2 + (e.p[1] - TRONCO_Y) * kTronco[1]);
         pos = [e.p[0] * kTronco[0], y, e.p[2] * kTronco[2] + 0.02];
@@ -154,16 +168,17 @@ export function moradorDeBrinquedo(
         // bolinhas pequenas e as peças desenhadas como bola (aba redonda do chapéu de palha)
         maior <= 0.12 || e.forma === 'bola'
           ? {
-              nome: `extra-${i}`,
+              nome: ehChapeu ? `chapeu-tema-${i}` : `extra-${i}`,
               junta,
               forma: 'esfera',
               tamanho: [t[0] / 2, t[1] / 2, t[2] / 2],
               pos,
               cor: e.cor,
               brilho: e.brilho,
+              apoio,
             }
           : {
-              nome: `extra-${i}`,
+              nome: ehChapeu ? `chapeu-tema-${i}` : `extra-${i}`,
               junta,
               forma: 'caixa',
               tamanho: t,
@@ -171,9 +186,45 @@ export function moradorDeBrinquedo(
               pos,
               cor: e.cor,
               brilho: e.brilho,
+              apoio,
             },
       );
+      if (ehChapeu) chapeu.push(pecasNovas[pecasNovas.length - 1]);
     });
+    // o chapéu do tema assenta no cabelo do boneco (spec 017): o cabelo de blocos do tema
+    // tinha outra altura, e o chapéu ficava solto em cima do cabelo raspado ou do liso
+    const tampa = pecasNovas.find((p) => p.nome === 'cabelo' && p.junta === 'cabeca');
+    if (chapeu.length && tampa) {
+      const altura = (p: Peca) => (p.forma === 'esfera' ? p.tamanho[1] : p.tamanho[1] / 2);
+      const topoTampa = tampa.pos[1] + tampa.tamanho[1] / 2;
+      // a tampa tem cantos redondos: perto da borda o alto dela é mais baixo (a antena de
+      // lado encosta onde a tampa já faz a curva)
+      const r = Math.min(tampa.raio ?? 0.05, tampa.tamanho[1] / 2);
+      const alturaTampa = (x: number, z: number) => {
+        const dx = Math.max(0, Math.abs(x) - (tampa.tamanho[0] / 2 - r));
+        const dz = Math.max(0, Math.abs(z) - (tampa.tamanho[2] / 2 - r));
+        const d = Math.min(r, Math.hypot(dx, dz));
+        return topoTampa - (r - Math.sqrt(r * r - d * d));
+      };
+      const baixa = chapeu.reduce((a, p) => (p.pos[1] - altura(p) < a.pos[1] - altura(a) ? p : a));
+      const dy = alturaTampa(baixa.pos[0], baixa.pos[2]) - 0.005 - (baixa.pos[1] - altura(baixa));
+      for (const p of chapeu) p.pos = [p.pos[0], p.pos[1] + dy, p.pos[2]];
+      // enfeite da frente de um gorro do tema que virou o cabelo do boneco (glacê, estampa):
+      // gruda na frente da tampa de cabelo, em vez de ficar no ar diante dela
+      const frente = tampa.pos[2] + tampa.tamanho[2] / 2;
+      for (const p of chapeu) {
+        const meiaProf = p.forma === 'esfera' ? p.tamanho[2] : p.tamanho[2] / 2;
+        if (p.pos[2] - meiaProf < frente - 0.01) continue;
+        const y = Math.min(p.pos[1], topoTampa - 0.08);
+        const canto = Math.min(
+          r,
+          Math.max(0, Math.abs(y - tampa.pos[1]) - (tampa.tamanho[1] / 2 - r)),
+        );
+        const z = frente - (r - Math.sqrt(r * r - canto * canto)) + meiaProf - 0.005;
+        p.pos = [p.pos[0], y, z];
+      }
+      ajeitarCabeloDebaixo(pecasNovas, 'chapeu', topoTampa, { w: 0.72, h: 0.68, d: 0.65 });
+    }
     return {
       ...plano,
       pecas: pecasNovas,

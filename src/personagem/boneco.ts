@@ -6,6 +6,7 @@
  * escala final; origem nos pés, frente para +z.
  */
 import { MODELOS, PALETAS, type Aparencia } from './aparencia';
+import type { Pose } from './poses';
 
 export type Junta =
   | 'corpo'
@@ -37,6 +38,11 @@ export interface Peca {
   cor: string;
   /** Brilho do plástico (0 fosco). */
   brilho?: number;
+  /**
+   * Enfeite (acessório, e as fantasias da spec 017): onde ele se apoia. O teste de encaixe
+   * mede a distância entre cada enfeite e essa parte do boneco (nada solto, nada atravessando).
+   */
+  apoio?: 'cabeca' | 'tronco' | 'mao';
 }
 
 export interface PlanoBoneco {
@@ -91,7 +97,8 @@ export function planoBoneco(a: Aparencia): PlanoBoneco {
   const prof = 0.34;
   const cab = { w: 0.72, h: 0.68, d: 0.65 };
   const yCab = troncoH + 0.33;
-  const xBraco = larg / 2 + 0.06;
+  // o ombro fica um pouco para dentro do lado do tronco: o braço sai encaixado (spec 017)
+  const xBraco = larg / 2 + 0.05;
   const xPerna = larg * 0.24;
 
   const juntas: PlanoBoneco['juntas'] = {
@@ -140,6 +147,10 @@ export function planoBoneco(a: Aparencia): PlanoBoneco {
     caixa(`${lado}-perna`, lado, [0.17, pernaH, 0.18], [0, -pernaH / 2, 0], calca, 0.07);
     caixa(`${lado}-sapato`, lado, [0.21, 0.13, 0.28], [0, -quadril + 0.065, 0.03], sapato, 0.06);
   }
+  // quadril (spec 017, pedido do dono): a peça de montar onde as pernas encaixam. A boca de
+  // cima da perna gira dentro dele, e nenhuma fresta abre entre a perna e o tronco andando,
+  // correndo, pulando ou sentado
+  caixa('quadril', 'tronco', [larg - 0.02, 0.16, prof - 0.03], [0, -0.04, 0], calca, 0.05);
 
   // tronco e roupa
   const estilo = a.roupaEstilo;
@@ -259,6 +270,9 @@ export function planoBoneco(a: Aparencia): PlanoBoneco {
   const corManga = semManga ? pele : estilo === 4 ? detalhe : roupa;
   for (const lado of ['bracoE', 'bracoD'] as const) {
     caixa(`${lado}-manga`, lado, [0.13, 0.26, 0.14], [0, -0.1, 0], corManga, 0.06);
+    // ombro redondo no eixo do braço: o braço gira em volta dele e nunca descola do tronco
+    // (acenar, comemorar, dançar)
+    bola(`${lado}-ombro`, lado, 0.068, [0, 0, 0], corManga, [1, 0.9, 1]);
     if (!semManga)
       caixa(
         `${lado}-punho`,
@@ -355,6 +369,13 @@ export function planoBoneco(a: Aparencia): PlanoBoneco {
   const e = a.cabeloEstilo;
   const topo = cab.h / 2;
   const tampaH = e === 3 ? 0.14 : 0.3;
+  /** Alto da tampa de cabelo (o raspado é bem mais baixo que os outros cortes). */
+  const topoTampa = topo + (e === 3 ? 0.03 : 0.07);
+  /**
+   * Onde os chapéus assentam: as medidas deles foram feitas para o cabelo comum (tampa em
+   * topo + 0,07); no raspado tudo desce junto, senão o chapéu fica solto acima da cabeça.
+   */
+  const baseChapeu = topo + (topoTampa - (topo + 0.07));
   caixa(
     'cabelo',
     'cabeca',
@@ -475,25 +496,44 @@ export function planoBoneco(a: Aparencia): PlanoBoneco {
   }
 
   // acessórios
+  const antesDosEnfeites = pecas.length;
   switch (a.acessorio) {
-    case 'capuz':
+    case 'capuz': {
+      // capuz aberto na frente: topo, costas e lados, com o rosto de fora (antes era uma
+      // caixa inteira por cima da cabeça, que tapava os olhos)
+      const corCapuz = escurecer(roupa, 0.15);
+      const capW = cab.w + 0.12;
+      const capH = cab.h + 0.1;
+      const capD = cab.d + 0.13;
+      const capY = 0.05;
+      const capZ = -0.025;
       caixa(
         'capuz',
         'cabeca',
-        [cab.w + 0.12, cab.h + 0.1, cab.d + 0.1],
-        [0, 0.05, -0.04],
-        escurecer(roupa, 0.15),
-        0.2,
+        [capW, 0.14, capD],
+        [0, capY + capH / 2 - 0.07, capZ],
+        corCapuz,
+        0.07,
       );
       caixa(
-        'capuz-abertura',
+        'capuz-costas',
         'cabeca',
-        [cab.w * 0.8, cab.h * 0.78, 0.02],
-        [0, -0.03, cab.d / 2 + 0.035],
-        escurecer(roupa, 0.45),
-        0.12,
+        [capW, capH, 0.14],
+        [0, capY, capZ - capD / 2 + 0.07],
+        corCapuz,
+        0.07,
       );
+      for (const s of [-1, 1])
+        caixa(
+          `capuz-lado${s}`,
+          'cabeca',
+          [0.1, capH, capD],
+          [s * (capW / 2 - 0.05), capY, capZ],
+          corCapuz,
+          0.05,
+        );
       break;
+    }
     case 'lanterna':
       pecas.push({
         nome: 'lanterna-alca',
@@ -513,7 +553,7 @@ export function planoBoneco(a: Aparencia): PlanoBoneco {
         junta: 'cabeca',
         forma: 'cilindro',
         tamanho: [0.05, 0.56, 0.56],
-        pos: [0, topo + 0.1, 0],
+        pos: [0, baseChapeu + 0.1, 0],
         cor: '#8a5a32',
       });
       pecas.push({
@@ -521,10 +561,10 @@ export function planoBoneco(a: Aparencia): PlanoBoneco {
         junta: 'cabeca',
         forma: 'cilindro',
         tamanho: [0.24, 0.3, 0.27],
-        pos: [0, topo + 0.24, 0],
+        pos: [0, baseChapeu + 0.24, 0],
         cor: '#8a5a32',
       });
-      caixa('chapeu-fita', 'cabeca', [0.62, 0.05, 0.62], [0, topo + 0.16, 0], roupa, 0.02);
+      caixa('chapeu-fita', 'cabeca', [0.62, 0.05, 0.62], [0, baseChapeu + 0.16, 0], roupa, 0.02);
       break;
     case 'mochila':
       caixa(
@@ -602,11 +642,25 @@ export function planoBoneco(a: Aparencia): PlanoBoneco {
         junta: 'cabeca',
         forma: 'cilindro',
         tamanho: [0.04, 0.6, 0.6],
-        pos: [0, topo + 0.06, 0],
+        pos: [0, baseChapeu + 0.06, 0],
         cor: '#d9c08a',
       });
-      bola('explorador-copa', 'cabeca', 0.3, [0, topo + 0.08, 0], '#d9c08a', [1.15, 0.55, 1.1]);
-      caixa('explorador-fita', 'cabeca', [0.66, 0.05, 0.62], [0, topo + 0.12, 0], '#7a5a32', 0.02);
+      bola(
+        'explorador-copa',
+        'cabeca',
+        0.3,
+        [0, baseChapeu + 0.08, 0],
+        '#d9c08a',
+        [1.15, 0.55, 1.1],
+      );
+      caixa(
+        'explorador-fita',
+        'cabeca',
+        [0.66, 0.05, 0.62],
+        [0, baseChapeu + 0.12, 0],
+        '#7a5a32',
+        0.02,
+      );
       break;
     case 'avental':
       caixa(
@@ -624,7 +678,7 @@ export function planoBoneco(a: Aparencia): PlanoBoneco {
         junta: 'cabeca',
         forma: 'cilindro',
         tamanho: [0.12, 0.38, 0.38],
-        pos: [0, topo + 0.04, 0],
+        pos: [0, baseChapeu + 0.04, 0],
         cor: '#ffffff',
       });
       for (const [x, z] of [
@@ -633,7 +687,7 @@ export function planoBoneco(a: Aparencia): PlanoBoneco {
         [0, 0.1],
         [0, -0.1],
       ] as const)
-        bola(`touca${x}${z}`, 'cabeca', 0.17, [x, topo + 0.24, z], '#ffffff', [1, 0.9, 1], {
+        bola(`touca${x}${z}`, 'cabeca', 0.17, [x, baseChapeu + 0.24, z], '#ffffff', [1, 0.9, 1], {
           brilho: 0.1,
         });
       break;
@@ -644,7 +698,7 @@ export function planoBoneco(a: Aparencia): PlanoBoneco {
         junta: 'cabeca',
         forma: 'cilindro',
         tamanho: [0.05, 0.64, 0.64],
-        pos: [0, topo + 0.08, 0],
+        pos: [0, baseChapeu + 0.08, 0],
         cor: '#f0cf6a',
       });
       pecas.push({
@@ -652,7 +706,7 @@ export function planoBoneco(a: Aparencia): PlanoBoneco {
         junta: 'cabeca',
         forma: 'cilindro',
         tamanho: [0.26, 0.36, 0.3],
-        pos: [0, topo + 0.21, 0],
+        pos: [0, baseChapeu + 0.21, 0],
         cor: '#f0cf6a',
       });
       pecas.push({
@@ -660,7 +714,7 @@ export function planoBoneco(a: Aparencia): PlanoBoneco {
         junta: 'cabeca',
         forma: 'cilindro',
         tamanho: [0.07, 0.365, 0.36],
-        pos: [0, topo + 0.13, 0],
+        pos: [0, baseChapeu + 0.13, 0],
         cor: '#d9483b',
       });
       break;
@@ -671,7 +725,7 @@ export function planoBoneco(a: Aparencia): PlanoBoneco {
           `flor${i}`,
           'cabeca',
           0.06,
-          [Math.sin(ang) * 0.36, topo + 0.04, Math.cos(ang) * 0.33],
+          [Math.sin(ang) * 0.36, baseChapeu + 0.04, Math.cos(ang) * 0.33],
           ['#ff6f9c', '#ffd34d', '#b18cff', '#ffffff'][i % 4],
         );
       }
@@ -679,6 +733,20 @@ export function planoBoneco(a: Aparencia): PlanoBoneco {
     default:
       break;
   }
+  const apoio: Peca['apoio'] =
+    a.acessorio === 'lanterna'
+      ? 'mao'
+      : a.acessorio === 'mochila' || a.acessorio === 'cachecol' || a.acessorio === 'avental'
+        ? 'tronco'
+        : 'cabeca';
+  for (let i = antesDosEnfeites; i < pecas.length; i++) pecas[i].apoio = apoio;
+  const modo: ModoCabelo | null =
+    a.acessorio === 'capuz' || a.acessorio === 'capacete'
+      ? a.acessorio
+      : apoio === 'cabeca' && a.acessorio !== 'oculos' && a.acessorio !== 'nenhum'
+        ? 'chapeu'
+        : null;
+  if (modo) ajeitarCabeloDebaixo(pecas, modo, topoTampa, cab);
 
   return {
     juntas,
@@ -689,8 +757,132 @@ export function planoBoneco(a: Aparencia): PlanoBoneco {
   };
 }
 
+/**
+ * O cabelo debaixo do enfeite (spec 017, T01): nada de cabelo atravessando o chapéu, o
+ * capacete ou o capuz. Debaixo de chapéu, os cachos de cima baixam até a tampa e o coque vira
+ * um coque baixo na nuca; dentro do capacete e do capuz o cabelo de cima fica guardado (só o
+ * que cai abaixo dele continua aparecendo).
+ */
+export type ModoCabelo = 'chapeu' | 'capuz' | 'capacete';
+
+export function ajeitarCabeloDebaixo(
+  pecas: Peca[],
+  modo: ModoCabelo,
+  topoTampa: number,
+  cab: { w: number; h: number; d: number },
+): void {
+  const chapeu = modo === 'chapeu';
+  const capuz = modo === 'capuz';
+  const capacete = modo === 'capacete';
+  const guardar = (p: Peca): boolean => {
+    if (p.apoio || p.junta === 'corpo') return false;
+    const n = p.nome;
+    if (capuz) return /^(topete|coque|cacho|rabo)/.test(n);
+    if (capacete)
+      return (
+        /^(cabelo|topete|franja|chanel-franja|coque|rabo-preso)/.test(n) ||
+        (n.startsWith('cacho') && p.pos[1] > 0.1)
+      );
+    return false;
+  };
+  for (let i = pecas.length - 1; i >= 0; i--) if (guardar(pecas[i])) pecas.splice(i, 1);
+  for (const p of pecas) {
+    if (p.apoio) continue;
+    if (chapeu && p.nome.startsWith('cacho'))
+      // o cacho de cima não passa da tampa (o chapéu assenta nela)
+      p.pos = [p.pos[0], Math.min(p.pos[1], topoTampa - p.tamanho[1]), p.pos[2]];
+    if (chapeu && p.nome === 'coque') {
+      p.tamanho = [0.13, 0.13, 0.13];
+      p.pos = [0, -0.02, -cab.d / 2 - 0.07];
+    }
+    if (capuz && /^(lado|chanel-?\d|tranca)/.test(p.nome)) {
+      // o cabelo dos lados fica por dentro do capuz e cai por baixo dele
+      const borda = cab.w / 2 + 0.04;
+      const meio = p.forma === 'caixa' ? p.tamanho[0] / 2 : p.tamanho[0];
+      const x = Math.sign(p.pos[0]) * Math.min(Math.abs(p.pos[0]), borda - meio);
+      p.pos = [x, p.pos[1], p.pos[2]];
+    }
+  }
+}
+
 /** Altura do boneco no jogo (blocos), do pé ao topo da cabeça. */
 export function alturaBoneco(a: Aparencia): number {
   const p = planoBoneco(a);
   return (p.juntas.tronco.pos[1] + p.juntas.cabeca.pos[1] + 0.34) * p.escala;
+}
+
+/**
+ * O ponto mais alto do boneco (blocos), contando cabelo e chapéu: as fotos do editor enquadram
+ * até aqui, senão a copa do chapéu, o coque e os cachos saem cortados (e a aba parece solta).
+ */
+export function topoBoneco(a: Aparencia): number {
+  const p = planoBoneco(a);
+  let topo = 0;
+  for (const peca of p.pecas) {
+    let y = peca.pos[1];
+    for (let j: Junta | null = peca.junta; j; j = p.juntas[j].pai) y += p.juntas[j].pos[1];
+    const meiaAltura =
+      peca.forma === 'esfera'
+        ? peca.tamanho[1]
+        : peca.forma === 'cilindro'
+          ? peca.tamanho[0] / 2
+          : peca.tamanho[1] / 2;
+    topo = Math.max(topo, y + meiaAltura);
+  }
+  return topo * p.escala;
+}
+
+/** Giro de cada junta numa pose (rad, x/y/z como no Babylon), mais a altura e a mola do corpo. */
+export interface RotacoesPose {
+  corpo: [number, number, number];
+  tronco: [number, number, number];
+  cabeca: [number, number, number];
+  topete: [number, number, number];
+  bracoD: [number, number, number];
+  bracoE: [number, number, number];
+  pernaD: [number, number, number];
+  pernaE: [number, number, number];
+  corpoY: number;
+  escala: number;
+}
+
+/**
+ * Para onde cada junta do boneco gira numa pose (o render/boneco.ts suaviza entre quadros;
+ * o teste de encaixe confere que nada se solta nessas poses). `olhar`: pitch da câmera.
+ */
+export function rotacoesDaPose(pose: Pose, olhar: number, segurando: boolean): RotacoesPose {
+  // no gesto, braço e cabeça não seguem o sobe e desce da câmera (spec 015)
+  const semGesto = 1 - Math.min(1, Math.max(0, pose.pesoGesto ?? 0));
+  const olho = Math.max(-0.9, Math.min(0.9, olhar)) * semGesto;
+  // no golpe o braço mira para onde o jogador olha (bloco no chão, na parede ou no alto):
+  // quem vê o amigo minerar enxerga o braço indo no bloco certo
+  const noGolpe = Math.min(1, Math.abs(pose.bracoDireito) / 0.6);
+  const mira = olho * 0.75 * noGolpe;
+  return {
+    corpoY: pose.corpoY ?? pose.tronco,
+    escala: pose.escala ?? 1,
+    corpo: [pose.corpoX ?? 0, 0, pose.corpoZ ?? 0],
+    tronco: [pose.troncoX ?? 0, pose.troncoY ?? 0, pose.troncoZ ?? 0],
+    pernaD: [pose.pernaDireita, 0, 0],
+    pernaE: [pose.pernaEsquerda, 0, 0],
+    // segurando algo, o antebraço fica um pouco à frente; "abre" positivo leva o braço para
+    // fora (o direito fica em +x: z positivo o afasta do corpo; o esquerdo, em −x, z negativo)
+    bracoD: [
+      pose.bracoDireito - (segurando ? 0.32 : 0) + mira,
+      pose.bracoDireitoGiro ?? 0,
+      0.06 + (pose.bracoDireitoAbre ?? 0),
+    ],
+    bracoE: [
+      pose.bracoEsquerdo,
+      pose.bracoEsquerdoGiro ?? 0,
+      -0.06 - (pose.bracoEsquerdoAbre ?? 0),
+    ],
+    // a cabeça acompanha o olhar da câmera e compensa a inclinação do tronco
+    cabeca: [
+      pose.cabeca + olho * 0.75 - (pose.troncoX ?? 0),
+      pose.cabecaGiro ?? 0,
+      pose.cabecaLado ?? 0,
+    ],
+    topete: [pose.topete ?? 0, 0, 0],
+  };
 }

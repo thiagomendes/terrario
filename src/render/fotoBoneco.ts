@@ -14,7 +14,7 @@ import { DirectionalLight } from '@babylonjs/core/Lights/directionalLight';
 import { Color3, Color4 } from '@babylonjs/core/Maths/math.color';
 import { Vector3 } from '@babylonjs/core/Maths/math.vector';
 import { aparenciaPadrao, type Aparencia } from '../personagem/aparencia';
-import { alturaBoneco } from '../personagem/boneco';
+import { alturaBoneco, topoBoneco } from '../personagem/boneco';
 import { criarBoneco } from './boneco';
 import type { Personagem } from './personagem';
 
@@ -169,7 +169,8 @@ function passo(): void {
     const h = alturaBoneco(pedido.aparencia);
     const [f0, f1] = FAIXAS[pedido.recorte];
     const y0 = h * f0;
-    const y1 = h * f1;
+    // a faixa vai até o alto do chapéu ou do penteado (a copa não sai cortada)
+    const y1 = f1 >= 1 ? Math.max(h * f1, topoBoneco(pedido.aparencia) + h * (f1 - 1)) : h * f1;
     const meiaAlt = (y1 - y0) / 2 / 0.92;
     const meiaLarg = meiaAlt * (larg / alt);
     const cy = (y0 + y1) / 2;

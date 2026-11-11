@@ -11,7 +11,13 @@ import { Mesh } from '@babylonjs/core/Meshes/mesh';
 import { Vector3 } from '@babylonjs/core/Maths/math.vector';
 import type { Scene } from '@babylonjs/core/scene';
 import type { Aparencia } from '../personagem/aparencia';
-import { planoBoneco, type Junta, type Peca, type PlanoBoneco } from '../personagem/boneco';
+import {
+  planoBoneco,
+  rotacoesDaPose,
+  type Junta,
+  type Peca,
+  type PlanoBoneco,
+} from '../personagem/boneco';
 import type { Pose } from '../personagem/poses';
 import { caixaArredondada, cilindro, criarPlasticos, esfera, type Plasticos } from './formas';
 import { modeloNaMao, type ModeloItem } from './itensBrinquedo';
@@ -262,41 +268,31 @@ export function criarBoneco(
     const dt = extras ? Math.min(Math.max(extras.dt, 0), 0.1) : 1;
     const k = extras ? 1 - Math.exp(-dt * 16) : 1;
     const kLento = extras ? 1 - Math.exp(-dt * 6) : 1;
-    // no gesto, braço e cabeça não seguem o sobe e desce da câmera (spec 015)
-    const semGesto = 1 - Math.min(1, Math.max(0, pose.pesoGesto ?? 0));
-    const olhar = extras ? Math.max(-0.9, Math.min(0.9, extras.olhar)) * semGesto : 0;
-    const segurando = naMao.segurando();
+    // para onde cada junta vai nesta pose (a mesma conta do teste de encaixe)
+    const alvo = rotacoesDaPose(pose, extras ? extras.olhar : 0, naMao.segurando());
     const j = juntas;
-    j.corpo.position.y = suave('corpoY', pose.corpoY ?? pose.tronco, k);
+    j.corpo.position.y = suave('corpoY', alvo.corpoY, k);
     // movimento com vida: o corpo inteiro inclina para a frente e para dentro da curva
     // (os valores já chegam suavizados do corpo vivo; os gestos também usam)
-    j.corpo.rotation.x = suave('corpoX', pose.corpoX ?? 0, k);
-    j.corpo.rotation.z = suave('corpoZ', pose.corpoZ ?? 0, k);
-    const esc = suave('escala', pose.escala ?? 1, k);
+    j.corpo.rotation.x = suave('corpoX', alvo.corpo[0], k);
+    j.corpo.rotation.z = suave('corpoZ', alvo.corpo[2], k);
+    const esc = suave('escala', alvo.escala, k);
     j.corpo.scaling.set(1 / Math.sqrt(esc), esc, 1 / Math.sqrt(esc));
-    j.tronco.rotation.x = suave('troncoX', pose.troncoX ?? 0, kLento);
-    j.tronco.rotation.y = suave('troncoY', pose.troncoY ?? 0, k);
-    j.tronco.rotation.z = suave('troncoZ', pose.troncoZ ?? 0, k);
-    j.pernaD.rotation.x = suave('pernaD', pose.pernaDireita, k);
-    j.pernaE.rotation.x = suave('pernaE', pose.pernaEsquerda, k);
-    // segurando algo, o antebraço fica um pouco à frente (como antes)
-    // no golpe o braço mira para onde o jogador olha (bloco no chão, na parede ou no alto):
-    // quem vê o amigo minerar enxerga o braço indo no bloco certo
-    const noGolpe = Math.min(1, Math.abs(pose.bracoDireito) / 0.6);
-    const mira = olhar * 0.75 * noGolpe;
-    j.bracoD.rotation.x = suave('bracoD', pose.bracoDireito - (segurando ? 0.32 : 0) + mira, k);
-    j.bracoE.rotation.x = suave('bracoE', pose.bracoEsquerdo, k);
-    // "abre" positivo leva o braço para fora (o direito fica em +x: z positivo o afasta do
-    // corpo; o esquerdo, em −x, z negativo)
-    j.bracoD.rotation.z = suave('bracoDZ', 0.06 + (pose.bracoDireitoAbre ?? 0), k);
-    j.bracoE.rotation.z = suave('bracoEZ', -0.06 - (pose.bracoEsquerdoAbre ?? 0), k);
-    j.bracoD.rotation.y = suave('bracoDY', pose.bracoDireitoGiro ?? 0, k);
-    j.bracoE.rotation.y = suave('bracoEY', pose.bracoEsquerdoGiro ?? 0, k);
-    // a cabeça acompanha o olhar da câmera e compensa a inclinação do tronco
-    j.cabeca.rotation.x = suave('cabecaX', pose.cabeca + olhar * 0.75 - (pose.troncoX ?? 0), k);
-    j.cabeca.rotation.y = suave('cabecaY', pose.cabecaGiro ?? 0, k);
-    j.cabeca.rotation.z = suave('cabecaZ', pose.cabecaLado ?? 0, k);
-    j.topete.rotation.x = suave('topete', pose.topete ?? 0, kLento);
+    j.tronco.rotation.x = suave('troncoX', alvo.tronco[0], kLento);
+    j.tronco.rotation.y = suave('troncoY', alvo.tronco[1], k);
+    j.tronco.rotation.z = suave('troncoZ', alvo.tronco[2], k);
+    j.pernaD.rotation.x = suave('pernaD', alvo.pernaD[0], k);
+    j.pernaE.rotation.x = suave('pernaE', alvo.pernaE[0], k);
+    j.bracoD.rotation.x = suave('bracoD', alvo.bracoD[0], k);
+    j.bracoE.rotation.x = suave('bracoE', alvo.bracoE[0], k);
+    j.bracoD.rotation.z = suave('bracoDZ', alvo.bracoD[2], k);
+    j.bracoE.rotation.z = suave('bracoEZ', alvo.bracoE[2], k);
+    j.bracoD.rotation.y = suave('bracoDY', alvo.bracoD[1], k);
+    j.bracoE.rotation.y = suave('bracoEY', alvo.bracoE[1], k);
+    j.cabeca.rotation.x = suave('cabecaX', alvo.cabeca[0], k);
+    j.cabeca.rotation.y = suave('cabecaY', alvo.cabeca[1], k);
+    j.cabeca.rotation.z = suave('cabecaZ', alvo.cabeca[2], k);
+    j.topete.rotation.x = suave('topete', alvo.topete[0], kLento);
     const pisca = pose.piscar ? 0.1 : 1;
     for (const o of olhos) o.scaling.y = (baseY.get(o) ?? 1) * pisca;
     if (boca) boca.scaling.y = (baseY.get(boca) ?? 1) * (1 + (pose.boca ?? 0) * 1.1);
