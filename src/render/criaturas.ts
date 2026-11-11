@@ -37,6 +37,11 @@ export const LONGE_VOLTA = 16;
 export const LONGE_POR_QUADRO = 1;
 /** Spec 017: bonecos de morador novos por quadro (o povoado aparece sem travar). */
 export const MORADORES_POR_QUADRO = 1;
+/**
+ * Auditoria 017: um aceno do servidor para um morador ainda na fila de montar espera por ele
+ * até aqui (segundos); mais velho que isso, o aceno já passou e é esquecido.
+ */
+export const VALIDADE_GESTO_PENDENTE = 2;
 const MAXIMO_PLANOS = 200;
 
 interface Modelo {
@@ -181,6 +186,10 @@ export function criarRenderCriaturas(
     };
   }
   let quadro = 0;
+  /** Segundos somados dos quadros (relógio dos acenos pendentes). */
+  let relogio = 0;
+  /** Auditoria 017: acenos para moradores que ainda não têm boneco (tocam quando ele sai). */
+  const gestosPendentes = new Map<number, { g: IdGesto; quando: number }>();
 
   /**
    * O bicho longe numa malha por material (plástico e brilho dos olhos), na pose de
@@ -379,7 +388,29 @@ export function criarRenderCriaturas(
     };
   }
 
+  function descartarModelo(m: Modelo): void {
+    for (const p of m.partes) {
+      for (const malha of p.malhas) malha.dispose();
+      p.no.dispose();
+    }
+    if (m.longe) for (const f of m.longe) f.dispose();
+    for (const mat of m.proprios) mat.dispose();
+    m.raiz.dispose();
+  }
+
+  type BonecoMorador = NonNullable<ReturnType<typeof moradores.get>>;
+  function acenar(mb: BonecoMorador, g: IdGesto): void {
+    fazerGesto(mb.animador, g);
+    // o balão do morador fica atrás das paredes (o de dentro de casa não aparece)
+    (mb.balao ??= criarBalao(scene, mb.boneco.raiz, undefined, false)).mostrar(g);
+  }
+
   let proximaEstatua = -1;
+  /**
+   * Estátuas da vitrine por lugar: a nova no mesmo lugar descarta a de antes (auditoria 017:
+   * o boneco do morador parado ficava para sempre na cena).
+   */
+  const estatuas = new Map<string, () => void>();
   return {
     /** Modelo parado de uma criatura (vitrine dos testes): o mesmo desenho do jogo. */
     estatua(
@@ -398,6 +429,8 @@ export function criarRenderCriaturas(
         z,
         ...(morador && { morador: { povoado: 'vitrine', ...morador } }),
       } as Criatura;
+      const lugar = `${x},${y},${z}`;
+      estatuas.get(lugar)?.();
       if (tipo === 'morador') {
         // o morador é o boneco do jogador com as peças do tema (como no povoado), parado
         const mb = montarMorador(c);
@@ -410,19 +443,26 @@ export function criarRenderCriaturas(
         mb.boneco.aplicarPose(pose, { dt: 0, olhar: 0, vista: mb.animador.vista() });
         mb.boneco.posicionar(x, y, z, yaw);
         mb.boneco.definirLuz(1);
+        estatuas.set(lugar, () => mb.boneco.descartar());
         return;
       }
       const m = montar(c);
       m.raiz.position.set(x, y, z);
       m.raiz.rotation.y = yaw;
+      estatuas.set(lugar, () => descartarModelo(m));
     },
-    /** Spec 015: o morador acena (o boneco toca o gesto e o balão aparece). */
+    /**
+     * Spec 015: o morador acena (o boneco toca o gesto e o balão aparece). O morador que ainda
+     * espera na fila de montar acena quando o boneco dele sair (auditoria 017); devolve se
+     * acenou agora.
+     */
     gesto(id: number, g: IdGesto): boolean {
       const mb = moradores.get(id);
-      if (!mb) return false;
-      fazerGesto(mb.animador, g);
-      // o balão do morador fica atrás das paredes (o de dentro de casa não aparece)
-      (mb.balao ??= criarBalao(scene, mb.boneco.raiz, undefined, false)).mostrar(g);
+      if (!mb) {
+        gestosPendentes.set(id, { g, quando: relogio });
+        return false;
+      }
+      acenar(mb, g);
       return true;
     },
     /** Spec 015: gesto em curso e balão de cada morador desenhado (testes). */
@@ -440,6 +480,7 @@ export function criarRenderCriaturas(
       luz: (c: Criatura) => number,
     ): void {
       quadro++;
+      relogio += dt;
       montadasNoQuadro = 0;
       moradoresNoQuadro = 0;
       prepararVista();
@@ -459,6 +500,11 @@ export function criarRenderCriaturas(
             }
             mb = montarMorador(c, prep);
             moradores.set(c.id, mb);
+            const pendente = gestosPendentes.get(c.id);
+            if (pendente) {
+              gestosPendentes.delete(c.id);
+              if (relogio - pendente.quando <= VALIDADE_GESTO_PENDENTE) acenar(mb, pendente.g);
+            }
           }
           mb.quadro = quadro;
           const desloc = Math.hypot(c.x - mb.ultX, c.z - mb.ultZ);
@@ -602,15 +648,11 @@ export function criarRenderCriaturas(
       }
       for (const [id, m] of modelos) {
         if (m.quadro === quadro) continue;
-        for (const p of m.partes) {
-          for (const malha of p.malhas) malha.dispose();
-          p.no.dispose();
-        }
-        if (m.longe) for (const f of m.longe) f.dispose();
-        for (const mat of m.proprios) mat.dispose();
-        m.raiz.dispose();
+        descartarModelo(m);
         modelos.delete(id);
       }
+      for (const [id, p] of gestosPendentes)
+        if (relogio - p.quando > VALIDADE_GESTO_PENDENTE) gestosPendentes.delete(id);
     },
   };
 }

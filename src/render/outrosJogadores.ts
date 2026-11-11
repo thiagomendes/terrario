@@ -58,6 +58,8 @@ interface Outro {
   vz: number;
   mao: string | null;
   apelido: string;
+  /** Auditoria 017: a aparência já vestida, passada a limpo em texto (só refaz quando muda). */
+  chaveAparencia: string;
   /** Últimos contadores de golpe, colocação e comida vistos (null antes do primeiro). */
   acoes: [number, number, number] | null;
   /** Transparência do apelido já escrita (só escreve quando muda). */
@@ -97,7 +99,8 @@ export function criarOutrosJogadores(scene: Scene) {
   function criar(v: JogadorVisto): Outro {
     const perfil = perfis[v.id];
     const apelido = perfil?.apelido ?? 'Amigo';
-    const personagem = criarPersonagem(scene, normalizarAparencia(perfil?.aparencia ?? {}));
+    const aparencia = normalizarAparencia(perfil?.aparencia ?? {});
+    const personagem = criarPersonagem(scene, aparencia);
     const placa = criarRotulo(apelido);
     return {
       id: v.id,
@@ -114,6 +117,7 @@ export function criarOutrosJogadores(scene: Scene) {
       mao: null,
       acoes: null,
       apelido,
+      chaveAparencia: JSON.stringify(aparencia),
       opacidadePlaca: -1,
     };
   }
@@ -125,13 +129,21 @@ export function criarOutrosJogadores(scene: Scene) {
   }
 
   return {
-    /** Apelidos e aparências (chegam quando alguém entra ou muda). */
+    /**
+     * Apelidos e aparências (chegam quando alguém entra ou muda). Os perfis vêm todos juntos:
+     * só refaz o boneco de quem mudou de visual (auditoria 017); o apelido só troca o texto.
+     */
     definirPerfis(p: Record<string, PerfilJogador>) {
       perfis = p;
       for (const o of outros.values()) {
         const novo = perfis[o.id];
         if (!novo) continue;
-        o.personagem.aplicarAparencia(normalizarAparencia(novo.aparencia));
+        const aparencia = normalizarAparencia(novo.aparencia);
+        const chave = JSON.stringify(aparencia);
+        if (chave !== o.chaveAparencia) {
+          o.chaveAparencia = chave;
+          o.personagem.aplicarAparencia(aparencia);
+        }
         if (novo.apelido !== o.apelido) {
           o.placa.textContent = novo.apelido;
           o.apelido = novo.apelido;

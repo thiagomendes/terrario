@@ -591,6 +591,28 @@ export function criarInterface(
     attributeFilter: ['class'],
   });
   ajustarCompacto();
+  /**
+   * Auditoria 017: cada `definir` refaz o boneco e manda a aparência aos amigos. Um toque vai
+   * na hora; digitando o nome, espera a criança parar (`ESPERA_NOME` ms) e manda só o último.
+   */
+  const ESPERA_NOME = 300;
+  let vestida: Aparencia | null = null;
+  let esperaNome: ReturnType<typeof setTimeout> | undefined;
+  const vestir = (a: Aparencia) => {
+    vestida = a;
+    // `definir` junta com a aparência de antes: sem fantasia tem que ir explícito
+    window.__brumaluz?.personagem?.definir({ ...a, fantasia: a.fantasia });
+  };
+  function vestirNoJogo(a: Aparencia): void {
+    clearTimeout(esperaNome);
+    esperaNome = undefined;
+    const soNome =
+      vestida !== null &&
+      vestida.nome !== a.nome &&
+      JSON.stringify({ ...vestida, nome: '' }) === JSON.stringify({ ...a, nome: '' });
+    if (soNome) esperaNome = setTimeout(() => vestir(a), ESPERA_NOME);
+    else vestir(a);
+  }
   const painel = criarPainelPersonagem(telaPersonagem, {
     armazenamento: armazenamento(),
     temaDoMundo: opMundo.mundo ? (opMundo.mundo.tema ?? 'bruma-e-luz') : undefined,
@@ -599,8 +621,7 @@ export function criarInterface(
       nomeHud.textContent = rotuloNome(a);
       nomePrevia.textContent = rotuloNome(a);
       fotografarBoneco(previa, a, 'corpo', 520);
-      // `definir` junta com a aparência de antes: sem fantasia tem que ir explícito
-      window.__brumaluz?.personagem?.definir({ ...a, fantasia: a.fantasia });
+      vestirNoJogo(a);
     },
     aoJogar: entrarNoJogo,
   });

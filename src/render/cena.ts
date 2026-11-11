@@ -132,6 +132,11 @@ const DT_MAXIMO_QUADRO = 1 / 30;
 /** Cor reutilizada (evita alocar Color3 por quadro). */
 const BRANCO = new Color3(1, 1, 1);
 /** Cantos diagonais que a luz de uma edição em (lx, lz) do chunk alcança. */
+/** O navegador está nas mãos de um teste de tela (Playwright)? Só então os ganchos de teste. */
+function ehTesteDeTela(): boolean {
+  return typeof navigator !== 'undefined' && navigator.webdriver === true;
+}
+
 function diagonaisAlcancadas(lx: number, lz: number): [number, number][] {
   const out: [number, number][] = [];
   for (const dx of [-1, 1])
@@ -2919,8 +2924,10 @@ export function criarCena(
     (m) => glow.addExcludedMesh(m),
     () => undefined,
   );
-  estado.estatua = (tipo, x, y, z, yaw, morador) =>
-    renderCriaturas.estatua(tipo, x, y, z, yaw, morador);
+  // só nos testes de tela (auditoria 017: num jogo de verdade não há vitrine)
+  if (ehTesteDeTela())
+    estado.estatua = (tipo, x, y, z, yaw, morador) =>
+      renderCriaturas.estatua(tipo, x, y, z, yaw, morador);
   // spec 015 (gestos): a roda, as teclas e o que os amigos e moradores fazem
   gestos = criarGestosJogo({
     scene,
@@ -3823,31 +3830,33 @@ export function criarCena(
   }
   estado.outrosJogadores = () => outrosJogadores.lista;
   let perfisDeTeste = '';
-  estado.amigosDeTeste = (lista) => {
-    const perfis: Record<string, { apelido: string; aparencia: Record<string, unknown> }> = {};
-    for (const a of lista) perfis[a.id] = { apelido: a.id, aparencia: a.aparencia };
-    // só remonta os bonecos quando a aparência muda (o teste move os amigos a cada quadro)
-    const chave = JSON.stringify(perfis);
-    if (chave !== perfisDeTeste) {
-      perfisDeTeste = chave;
-      outrosJogadores.definirPerfis(perfis);
-    }
-    outrosJogadores.receber(
-      lista.map((a) => ({
-        id: a.id,
-        x: a.x,
-        y: a.y,
-        z: a.z,
-        yaw: a.yaw ?? 0,
-        pitch: 0,
-        vel: a.vel ?? 0,
-        voando: false,
-        noChao: true,
-        correndo: a.correndo ?? false,
-        mao: null,
-      })),
-    );
-  };
+  // só nos testes de tela (auditoria 017: numa sessão de verdade trocaria os perfis dos amigos)
+  if (ehTesteDeTela())
+    estado.amigosDeTeste = (lista) => {
+      const perfis: Record<string, { apelido: string; aparencia: Record<string, unknown> }> = {};
+      for (const a of lista) perfis[a.id] = { apelido: a.id, aparencia: a.aparencia };
+      // só remonta os bonecos quando a aparência muda (o teste move os amigos a cada quadro)
+      const chave = JSON.stringify(perfis);
+      if (chave !== perfisDeTeste) {
+        perfisDeTeste = chave;
+        outrosJogadores.definirPerfis(perfis);
+      }
+      outrosJogadores.receber(
+        lista.map((a) => ({
+          id: a.id,
+          x: a.x,
+          y: a.y,
+          z: a.z,
+          yaw: a.yaw ?? 0,
+          pitch: 0,
+          vel: a.vel ?? 0,
+          voando: false,
+          noChao: true,
+          correndo: a.correndo ?? false,
+          mao: null,
+        })),
+      );
+    };
   estado.definirClima = (t) => enviar({ t: 'depurar', d: { f: 'clima', tipo: t } });
   estado.dia = () => dia;
   estado.definirDia = (d) => {

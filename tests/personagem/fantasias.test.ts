@@ -27,7 +27,8 @@ import {
   type Armazenamento,
 } from '../../src/personagem/persistencia';
 import { sanear, sanearAparencia } from '../../src/nucleo/saneamento';
-import { criarNucleo } from '../../src/nucleo/nucleo';
+import { criarNucleo, INTERVALO_APARENCIA } from '../../src/nucleo/nucleo';
+import { PASSO } from '../../src/nucleo/protocolo';
 import type { IdTema } from '../../src/temas/tipos';
 
 const TEMAS: IdTema[] = [
@@ -278,7 +279,8 @@ describe('fantasia no multijogador', () => {
       t: 'aparencia',
       aparencia: { ...minhaRede(), fantasia: { id: 'teia', cor: 0 } },
     });
-    n.passo();
+    // a segunda logo depois espera a janela do limite (auditoria 017) e entra quando ela fecha
+    for (let i = 0; i * PASSO < INTERVALO_APARENCIA + PASSO; i++) n.passo();
     const sem = n.estado.jogadores.get('ana')!.perfil.aparencia as unknown as Aparencia;
     expect(sem.fantasia).toBeUndefined();
     expect(sem.nome).toBe('Lia');

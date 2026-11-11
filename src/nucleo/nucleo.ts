@@ -8,6 +8,7 @@
  * servidor da nuvem (spec 010) com o mesmo código.
  */
 import { registrarCatalogo } from '../jogo/catalogo';
+import { normalizarAparencia } from '../personagem/aparencia';
 import { sanearDadosMundo } from './saneamento';
 import { blocoDe, criarEdicoes, empacotar } from '../world/edicoes';
 import { Bloco, ehAlvo, luzDoBloco, obterBloco } from '../world/blocks';
@@ -109,6 +110,11 @@ interface PeLavoura {
 const INTERVALO_LAVOURA = 1;
 /** Segundos mínimos entre duas comidas dadas ao mesmo bicho já criado. */
 const INTERVALO_COMIDA = 1;
+/**
+ * Auditoria 017: segundos mínimos entre duas aparências aplicadas do mesmo jogador (cada uma
+ * refaz o boneco dele na tela de todos; a que chega antes espera e entra depois).
+ */
+export const INTERVALO_APARENCIA = 0.5;
 /** Quem está até aqui da planta vê o brilhinho e ouve o som quando ela amadurece. */
 const ALCANCE_MADURA = 24;
 /** Espera entre deitar na cama e acordar (o véu escurece a tela). */
@@ -184,6 +190,10 @@ interface Jogador {
   saltoPermitido: boolean;
   /** Spec 015: passo do último gesto aceito (limite de repetição). */
   passoGesto: number;
+  /** Auditoria 017: passo da última aparência aplicada (limite de repetição). */
+  passoAparencia: number;
+  /** Auditoria 017: a última aparência que chegou dentro da janela (aplicada quando ela fecha). */
+  aparenciaPendente: Record<string, unknown> | null;
   /** Para as criaturas (o mesmo objeto a cada passo: os ataques dizem em quem foi). */
   corpo: {
     x: number;
@@ -394,6 +404,8 @@ export function criarNucleo(op: OpcoesNucleo) {
       passoTelemetria: n,
       saltoPermitido: true,
       passoGesto: -Infinity,
+      passoAparencia: -Infinity,
+      aparenciaPendente: null,
       perfil: oc?.perfil ?? { apelido: 'Jogador', aparencia: {} },
       constroi: oc?.constroi ?? true,
       corpo: { x, y: y0, z, vivo: true, criativo: modo === 'criativo', mao: null },
@@ -1041,6 +1053,45 @@ export function criarNucleo(op: OpcoesNucleo) {
         o.eventos.push(ev);
   }
 
+  /** A aparência passada a limpo, em texto (as chaves saem sempre na mesma ordem). */
+  const chaveAparencia = (a: unknown): string => JSON.stringify(normalizarAparencia(a));
+
+  function aplicarAparencia(j: Jogador, a: Record<string, unknown>): void {
+    j.perfil = { ...j.perfil, aparencia: a };
+    j.passoAparencia = n;
+    perfisSujos = true;
+  }
+
+  /**
+   * Auditoria 017: o editor manda a aparência a cada toque. A igual à de agora é ignorada (não
+   * refaz o boneco de ninguém); fora isso, no máximo uma a cada `INTERVALO_APARENCIA` por
+   * jogador. A que chega dentro da janela fica guardada (só a última) e entra quando a janela
+   * fecha: o visual final sempre chega.
+   */
+  function pedirAparencia(j: Jogador, a: Record<string, unknown>): void {
+    const chave = chaveAparencia(a);
+    if (chave === chaveAparencia(j.perfil.aparencia)) {
+      j.aparenciaPendente = null;
+      return;
+    }
+    if ((n - j.passoAparencia) * PASSO < INTERVALO_APARENCIA - 1e-9) {
+      j.aparenciaPendente = a;
+      return;
+    }
+    j.aparenciaPendente = null;
+    aplicarAparencia(j, a);
+  }
+
+  /** A aparência guardada entra quando a janela do jogador fecha. */
+  function aparenciasPendentes(): void {
+    for (const j of jogadores.values()) {
+      const a = j.aparenciaPendente;
+      if (!a || (n - j.passoAparencia) * PASSO < INTERVALO_APARENCIA - 1e-9) continue;
+      j.aparenciaPendente = null;
+      aplicarAparencia(j, a);
+    }
+  }
+
   /**
    * Spec 015: um gesto da roda. Um por jogador a cada `INTERVALO_GESTO_NUCLEO` (o resto é
    * descartado sem aviso); desmaiado não gesticula. Os amigos perto veem; o morador perto
@@ -1408,8 +1459,7 @@ export function criarNucleo(op: OpcoesNucleo) {
         gesto(j, c.gesto);
         break;
       case 'aparencia':
-        j.perfil = { ...j.perfil, aparencia: c.aparencia };
-        perfisSujos = true;
+        pedirAparencia(j, c.aparencia);
         break;
       case 'salvar':
         // o anfitrião responde (precisa do pedido)
@@ -1427,6 +1477,7 @@ export function criarNucleo(op: OpcoesNucleo) {
     const raio = clima.atualizar(dt, estacaoDoDia(dia), noite < 0.5);
     if (raio) eventosGerais.push({ e: 'relampago', atrasoTrovao: raio.atrasoTrovao });
 
+    aparenciasPendentes();
     let amanhece = false;
     for (const j of jogadores.values()) {
       if (j.querDormir > 0) j.querDormir = Math.max(0, j.querDormir - dt);
