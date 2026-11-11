@@ -85,6 +85,17 @@ No esboço a "Heroína Estrela" saiu com cara de menino. Regra:
 | T05 | Sugestão ao criar mundo e ordem "tema do mundo primeiro" |
 | T06 | Desempenho, capturas com o esboço, testes de tela, auditoria, publicação e relatório visual |
 
+## Notas da T02 (modelo das fantasias)
+- **Catálogo** em `src/personagem/fantasias.ts` (só dados): id, grupo (`realeza`, `herois`, `temas`), tema (só nas dos temas), nomes por corpo, 3 a 5 cores (a primeira é a padrão), cor do emblema e, por corpo, a roupa de baixo, as peças (tipo, papel de cor, símbolo, se é opcional) e como o cabelo fica por baixo (`livre`, `chapeu`, `capuz`, `capacete`). Na Realeza o corpo masculino veste o príncipe (casaco com faixa, capa curta, coroa e cetro, sem saia).
+- **Camada por cima:** `Aparencia.fantasia?: { id, cor, sem? }`. A fantasia não mexe em corpo, pele, rosto, cabelo, nome, roupa, calça nem enfeite: eles ficam guardados como estavam. "Tirar fantasia" só apaga o campo, então volta exatamente ao look de antes, mesmo depois de fechar e abrir o jogo. Aparências antigas abrem iguais (o campo só existe quando há fantasia; a versão do salvamento não mudou).
+- **Personalizar depois de vestir** (regra simples para criança):
+  - quem ela é (nome, corpo, pele, rosto, cabelo) muda e a fantasia continua; trocar o corpo troca o nome (Princesa/Príncipe);
+  - a cor principal troca entre as bolinhas da fantasia;
+  - as peças opcionais da fantasia (capa, máscara, varinha, coroa, chapéu, capacete...) saem e voltam com um toque (`sem`); as que fazem a fantasia (saia, emblema, macacão...) não saem;
+  - roupa, calça e enfeite estão debaixo da fantasia: escolher um deles tira a fantasia e a peça escolhida entra no look de antes, para a mudança aparecer na hora (nada de toque "que não faz nada");
+  - escolher outro modelo pronto ou o dado sorteia um look novo, sem fantasia.
+- **Rede:** o comando `aparencia` e a entrada no servidor passam a aparência a limpo (`sanearAparencia`): id desconhecido vira "sem fantasia", cor fora da paleta vira a padrão, peça em `sem` que não é opcional sai.
+
 ## Decisões do dono
 - 10 nov 2026: fantasias dos temas livres; feminino e masculino como acima; logo depois da 015.
 - 11 nov 2026: esboço com menina e menino, Realeza (princesas e príncipes) e abas fixas aprovado ("Ficou ótimo"), como padrão de entrega.

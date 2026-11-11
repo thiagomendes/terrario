@@ -1,3 +1,10 @@
+import {
+  fantasiaPorId,
+  normalizarFantasia,
+  type FantasiaVestida,
+  type TipoPeca,
+} from './fantasias';
+
 export type ModeloId =
   | 'andarilho'
   | 'herbolaria'
@@ -38,6 +45,11 @@ export interface Aparencia {
   roupaCor: number;
   calcaCor: number;
   acessorio: Acessorio;
+  /**
+   * Spec 017: fantasia vestida por cima do look (camada). Roupa, calça e enfeite acima
+   * continuam guardados como estavam: tirar a fantasia é só apagar este campo.
+   */
+  fantasia?: FantasiaVestida;
 }
 
 export const TAMANHO_MAXIMO_NOME = 16;
@@ -289,7 +301,7 @@ export function normalizarAparencia(entrada: unknown): Aparencia {
   const obj: Record<string, unknown> =
     typeof entrada === 'object' && entrada !== null ? (entrada as Record<string, unknown>) : {};
   const base = aparenciaPadrao(ehModeloId(obj.modelo) ? obj.modelo : 'andarilho');
-  return {
+  const a: Aparencia = {
     nome: limparNome(obj.nome),
     modelo: base.modelo,
     pele: indice(obj.pele, PALETAS.pele.length, base.pele),
@@ -304,6 +316,10 @@ export function normalizarAparencia(entrada: unknown): Aparencia {
       ? (obj.acessorio as Acessorio)
       : base.acessorio,
   };
+  // aparências antigas (sem fantasia) saem iguais: o campo só existe quando há fantasia
+  const fantasia = normalizarFantasia(obj.fantasia, a.corpo);
+  if (fantasia) a.fantasia = fantasia;
+  return a;
 }
 
 /**
@@ -334,4 +350,60 @@ export function aplicarCorpo(a: Aparencia, corpo: Corpo): Aparencia {
 export function rotuloDoModelo(a: Pick<Aparencia, 'modelo' | 'corpo'>): string {
   const m = MODELOS[a.modelo];
   return a.corpo === 'feminino' ? m.rotulos.feminino : m.rotulos.masculino;
+}
+
+// ---------------------------------------------------------------------------
+// Spec 017: vestir, trocar a cor, personalizar e tirar a fantasia.
+
+/** Veste a fantasia com a cor padrão (ou a pedida). O look de baixo fica intacto. */
+export function vestirFantasia(a: Aparencia, id: string, cor = 0): Aparencia {
+  const def = fantasiaPorId(id);
+  if (!def) return tirarFantasia(a);
+  return { ...a, fantasia: { id: def.id, cor: cor >= 0 && cor < def.cores.length ? cor : 0 } };
+}
+
+/** Troca a cor principal (mantém as peças que a criança tirou). */
+export function trocarCorDaFantasia(a: Aparencia, cor: number): Aparencia {
+  if (!a.fantasia) return a;
+  return normalizarAparencia({ ...a, fantasia: { ...a.fantasia, cor } });
+}
+
+/** Tira ou recoloca uma peça opcional da fantasia (capa, varinha, máscara...). */
+export function alternarPecaDaFantasia(a: Aparencia, peca: TipoPeca): Aparencia {
+  if (!a.fantasia) return a;
+  const sem = a.fantasia.sem ?? [];
+  const novo = sem.includes(peca) ? sem.filter((p) => p !== peca) : [...sem, peca];
+  return normalizarAparencia({ ...a, fantasia: { ...a.fantasia, sem: novo } });
+}
+
+/** "Tirar fantasia": volta exatamente ao look de antes (que nunca foi mexido). */
+export function tirarFantasia(a: Aparencia): Aparencia {
+  if (!a.fantasia) return a;
+  const antes = { ...a };
+  delete antes.fantasia;
+  return antes;
+}
+
+/** Campos que a fantasia cobre: mexer neles tira a fantasia. */
+export const CAMPOS_DEBAIXO_DA_FANTASIA = [
+  'roupaEstilo',
+  'roupaCor',
+  'calcaCor',
+  'acessorio',
+] as const;
+
+/**
+ * Personalizar peça por peça com a fantasia vestida (regra da T02):
+ * - quem a criança é (nome, corpo, pele, rosto, cabelo) muda e a fantasia continua;
+ * - roupa, calça e enfeite estão debaixo da fantasia: escolher um deles tira a fantasia e a
+ *   peça escolhida entra no look de antes (assim a mudança aparece na hora);
+ * - as peças da própria fantasia (capa, varinha...) se tiram com alternarPecaDaFantasia.
+ */
+export function personalizar(
+  a: Aparencia,
+  mudanca: Partial<Omit<Aparencia, 'fantasia'>>,
+): Aparencia {
+  const cobre = CAMPOS_DEBAIXO_DA_FANTASIA.some((c) => mudanca[c] !== undefined);
+  const base = cobre ? tirarFantasia(a) : a;
+  return normalizarAparencia({ ...base, ...mudanca });
 }
