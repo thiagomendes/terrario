@@ -35,6 +35,16 @@ Pedido do dono (11 nov 2026): "o som ainda está muito básico para o jogo". A m
 - 11 nov 2026: proposta do esboço aprovada ("gostei da proposta", "ficaram legal as novas"). **Continua gerado na hora**, sem pré-gravar nem baixar arquivos.
 - 11 nov 2026: **sem aumentar o volume da trilha.** Ela tem que ser suave e não irritar o jogador. A música nova entra no jogo com o mesmo volume percebido da de hoje (no esboço, o "Hoje" foi aumentado só para comparar) e fica sempre abaixo dos efeitos e das vozes. Isso será medido com uma régua de volume (RMS) nos testes. O controle "Música" de Configurações → Áudio, que já existe (padrão 60%), continua sendo o jeito de baixar ou subir a trilha.
 
+## Revisar tudo o que já existe (pedido do dono, 11 nov 2026)
+O esboço mostrou só alguns bichos. A spec revê **todo** o som do jogo, para nenhum bicho ou momento ficar bom e outro pobre. A primeira tarefa é um inventário completo, uma tabela com o que existe, como soa hoje, a proposta e o estado (feito ou falta). Nada fecha enquanto sobrar linha "como hoje" sem motivo.
+- **Bichos de todos os 7 temas:** as 5 vagas de criatura de cada tema (cervo, coelho, peixe, espectro e raposa, cada uma com o nome e o jeito do tema: vaca, galinha, saci, dinos, bichos da Lua...), ou seja, 35 bichos. Cada um com chamado, susto, contente, "ai" do golpe e o baque do tamanho dele, mais a voz de filhote dos bichos criados e domados.
+- **Moradores dos 7 povoados:** a voz de cada tema (chamado, susto, contente e "obrigado"), a resposta aos gestos da 015 e as falas das missões.
+- **Ações da criança:** golpe, quebrar, colocar, passos, pulo, aterrissagem, comer, coletar, dano, trocar de item, recusa e entrada, em todos os materiais e nos materiais próprios de cada tema (biscoito, cristal, regolito...).
+- **Mundo:** trovão, chuva, vento, pássaros, grilos, sons da roça (galo, mugido, cigarra, sapo), bipes da Lua, água e caverna.
+- **Música dos 7 temas** em camadas (dia, entardecer, noite, chuva, caverna, perigo, andando e correndo, amigos perto), cada tema com a sua orquestrinha, todos com o capricho do Rancho do esboço.
+- **Interface:** menus, a roda, o inventário, o craft, as conquistas e a festa ao vestir fantasia (017).
+- **Régua para todos:** volume percebido por grupo (música abaixo dos efeitos e das vozes), teto de sons ao mesmo tempo e um teste que toca cada som do inventário e confere que nenhum fica mudo, cortado ou alto demais.
+
 ## Na sequência
 Recomendado depois da 016 e antes da 014: 017 → 016 → **019** → 014 → 018. Assim a Cidade Grande (014) e os mundos da 018 já nascem com a trilha e os sons deles.
 
