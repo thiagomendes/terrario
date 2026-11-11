@@ -354,16 +354,29 @@ test('nuvem, celular: arrastar com o dedo o que fabricou', async ({ browser }) =
   expect(s.slots).toEqual(t0.slots);
   expect(s.naMao).toBe(false);
 
-  // 6. tocar fora fecha; com algo na mão, ele volta para a mochila
+  // 6. fechar com algo na mão: volta para a mochila
   await d.tocar(await centro(page, slot(9)));
   await assentar(page);
   expect((await estado(page)).naMao).toBe(true);
-  await d.tocar({ x: 6, y: 6 });
+  await page.keyboard.press('Escape');
   await expect.poll(() => page.evaluate(() => document.body.dataset.overlay ?? '')).toBe('');
   await assentar(page);
   s = await estado(page);
   expect(s.tabuas).toBe(t0.tabuas);
   expect(s.madeira).toBe(t0.madeira);
+  // 7. tocar fora da janela com algo na mão joga no chão (dar a um amigo); sem nada, fecha
+  await abrirInventario(page, true);
+  const quatro = s.slots.findIndex((x) => x === `${TABUAS}x4`);
+  await d.tocar(await centro(page, slot(quatro)));
+  await assentar(page);
+  await d.tocar({ x: 6, y: 6 });
+  await assentar(page);
+  s = await estado(page);
+  expect(await page.evaluate(() => document.body.dataset.overlay)).toBe('inventario');
+  expect(s.naMao).toBe(false);
+  expect(s.tabuas).toBe(t0.tabuas - 4);
+  await d.tocar({ x: 6, y: 6 });
+  await expect.poll(() => page.evaluate(() => document.body.dataset.overlay ?? '')).toBe('');
   expect(erros).toEqual([]);
   await page.context().close();
 });

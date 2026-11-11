@@ -1,4 +1,4 @@
-import { botaoFechar } from './pixicones';
+import { botaoFechar, icone } from './pixicones';
 import { TAMANHO_BARRA, TAMANHO_INVENTARIO, type Inventario, type Slot } from '../jogo/inventario';
 import { obterItem, todosItens, type DefItem } from '../jogo/itens';
 import { EVENTO_ICONES, iconeDoItem } from './icones';
@@ -76,6 +76,18 @@ export const CSS_INVENTARIO = `
 }
 .dica-item small { display: block; color: var(--tinta-suave); font-weight: 600; }
 body[data-modo='criativo'] .slot-inv .qtd { display: none; }
+/* jogar no chão (dar a um amigo): área tracejada, acende com algo na mão */
+.inventario .soltar-chao {
+  display: flex; align-items: center; justify-content: center; gap: 10px; min-height: 48px;
+  padding: 6px 16px; border: 3px dashed var(--painel-borda); border-radius: 16px;
+  background: transparent; color: var(--tinta-suave); font: 800 0.95rem var(--jogo);
+  cursor: pointer; touch-action: none; -webkit-touch-callout: none; user-select: none; -webkit-user-select: none;
+  transition: background 0.1s ease, border-color 0.1s ease, color 0.1s ease;
+}
+.inventario .soltar-chao .pixicone-caixa { font-size: 1.5rem; display: inline-flex; }
+.inventario .soltar-chao.pronto { border-color: var(--amarela); color: var(--tinta); background: #fff6dc; }
+.inventario .soltar-chao.pronto:hover { background: #fff1c4; }
+.inventario .soltar-chao:focus-visible { outline: 3px solid var(--azul); outline-offset: 1px; }
 .ajuda-inv, .ajuda-inv-toque { font-size: 0.78rem; font-weight: 600; color: var(--tinta-suave); }
 `;
 
@@ -93,6 +105,8 @@ export interface OpcoesInventarioUI {
   ativo: () => number;
   /** O que sobrar no cursor ao fechar (sem espaço) é entregue aqui. */
   aoSobrar?: (p: NonNullable<Slot>) => void;
+  /** Jogar no chão de propósito (área "Soltar no chão" ou fora da janela). */
+  aoJogar?: (p: NonNullable<Slot>) => void;
   aoAbrir?: () => void;
   aoFechar?: () => void;
 }
@@ -168,12 +182,20 @@ export function criarInventarioUI(raiz: HTMLElement, op: OpcoesInventarioUI): In
   const ajuda = document.createElement('div');
   ajuda.className = 'ajuda-inv';
   ajuda.textContent =
-    'Clique: pegar e soltar · Botão direito: metade ou um · Shift+clique: mover rápido · E ou Esc: fechar';
+    'Clique: pegar e soltar · Botão direito: metade ou um · Shift+clique: mover rápido · Fora da janela ou em Soltar no chão: jogar para um amigo · Q no jogo: jogar um · E ou Esc: fechar';
   // no toque (sem teclas): a linha própria aparece no lugar da de mouse/teclado
   const ajudaToque = document.createElement('div');
   ajudaToque.className = 'ajuda-inv-toque ajuda-toque';
   ajudaToque.textContent =
-    'Toque: pegar e soltar · Segure: metade ou um · Dois toques: mover rápido · Arraste até outro espaço para soltar';
+    'Toque: pegar e soltar · Segure: metade ou um · Dois toques: mover rápido · Arraste até outro espaço para soltar · Arraste até Soltar no chão (ou para fora) para dar a um amigo · No jogo, segure um espaço da barra: joga um';
+  // jogar no chão: dar um item a um amigo, como no Minecraft
+  const soltarChao = document.createElement('button');
+  soltarChao.type = 'button';
+  soltarChao.className = 'soltar-chao';
+  soltarChao.setAttribute('data-soltar-chao', '');
+  soltarChao.setAttribute('aria-label', 'Soltar no chão (para um amigo pegar)');
+  soltarChao.append(icone('chao'), 'Soltar no chão');
+  soltarChao.addEventListener('contextmenu', (e) => e.preventDefault());
   const sep = document.createElement('div');
   sep.className = 'separador';
   painel.append(
@@ -183,6 +205,7 @@ export function criarInventarioUI(raiz: HTMLElement, op: OpcoesInventarioUI): In
     mochila,
     sep,
     barra,
+    soltarChao,
     ajuda,
     ajudaToque,
     botaoFechar(() => fechar()),
@@ -260,6 +283,7 @@ export function criarInventarioUI(raiz: HTMLElement, op: OpcoesInventarioUI): In
 
   function desenharCursor(): void {
     cursorEl.hidden = !cursor;
+    soltarChao.classList.toggle('pronto', !!cursor);
     if (!cursor) return;
     cursorImg.src = iconeDoItem(cursor.item);
     cursorQtd.textContent = cursor.qtd > 1 && !op.criativo() ? String(cursor.qtd) : '';
@@ -338,6 +362,16 @@ export function criarInventarioUI(raiz: HTMLElement, op: OpcoesInventarioUI): In
     render();
   }
 
+  /** O que está na mão vai para o chão (botão direito: só um). */
+  function jogarDaMao(botao: 'esquerdo' | 'direito'): void {
+    if (!cursor) return;
+    const qtd = botao === 'direito' ? 1 : cursor.qtd;
+    const p = { ...cursor, qtd };
+    cursor = cursor.qtd > qtd ? { ...cursor, qtd: cursor.qtd - qtd } : null;
+    render();
+    op.aoJogar?.(p);
+  }
+
   type Externo = (
     el: HTMLElement,
     cursor: Slot,
@@ -345,7 +379,8 @@ export function criarInventarioUI(raiz: HTMLElement, op: OpcoesInventarioUI): In
     shift: boolean,
   ) => Slot;
   const externos: Externo[] = [];
-  const SELETOR_SLOT = '.slot-inv[data-indice], [data-catalogo], [data-externo]';
+  const SELETOR_SLOT =
+    '.slot-inv[data-indice], [data-catalogo], [data-externo], [data-soltar-chao]';
   const alvoSlot = (el: EventTarget | Element | null): HTMLElement | null =>
     el instanceof Element ? el.closest<HTMLElement>(SELETOR_SLOT) : null;
   /**
@@ -356,7 +391,9 @@ export function criarInventarioUI(raiz: HTMLElement, op: OpcoesInventarioUI): In
     !el.dataset.catalogo && !el.classList.contains('resultado');
   /** Um "clique" num slot qualquer (mochila, barra, catálogo, criação, baú, fornalha). */
   function acionar(el: HTMLElement, botao: 'esquerdo' | 'direito', shift: boolean): void {
-    if (el.dataset.catalogo) {
+    if (el.dataset.soltarChao !== undefined) {
+      jogarDaMao(botao);
+    } else if (el.dataset.catalogo) {
       clicarCatalogo(el.dataset.catalogo, botao, shift);
     } else if (el.dataset.externo !== undefined) {
       for (const f of externos) cursor = f(el, cursor, botao, shift);
@@ -461,19 +498,28 @@ export function criarInventarioUI(raiz: HTMLElement, op: OpcoesInventarioUI): In
     if (e.pointerType === 'mouse') {
       const origem = arrasteMouse;
       arrasteMouse = null;
+      // clicar fora da janela: com algo na mão, joga no chão (como no Minecraft); sem nada,
+      // fecha
       if (noFundo) {
-        fechar();
+        if (cursor) jogarDaMao(e.button === 2 ? 'direito' : 'esquerdo');
+        else fechar();
         return;
       }
       if (!origem || e.button !== 0 || !cursor) return;
-      const destino = alvoSlot(document.elementFromPoint(e.clientX, e.clientY));
+      const sob = document.elementFromPoint(e.clientX, e.clientY);
+      const destino = alvoSlot(sob);
       if (destino && destino !== origem && recebeArraste(destino))
         acionar(destino, 'esquerdo', false);
+      // arrastou até fora da janela: joga no chão
+      else if (sob === fundo) jogarDaMao('esquerdo');
       return;
     }
     const t = toque;
     if (!t || e.pointerId !== t.id) {
-      if (noFundo) fechar();
+      if (noFundo) {
+        if (cursor) jogarDaMao('esquerdo');
+        else fechar();
+      }
       return;
     }
     clearTimeout(t.timer);
@@ -482,7 +528,15 @@ export function criarInventarioUI(raiz: HTMLElement, op: OpcoesInventarioUI): In
     const desloc = Math.hypot(e.clientX - t.x0, e.clientY - t.y0);
     if (t.moveu || desloc > FOLGA_TOQUE_INV) {
       ultimoToque = null;
-      const destino = alvoSlot(document.elementFromPoint(e.clientX, e.clientY));
+      const sob = document.elementFromPoint(e.clientX, e.clientY);
+      const destino = alvoSlot(sob);
+      // arrastou até fora da janela: joga no chão o que arrastou
+      if (!destino && sob === fundo) {
+        if (acoesDeArrastar(t.cursorVazio, t.longo).includes('origem'))
+          acionar(t.el, 'esquerdo', false);
+        jogarDaMao('esquerdo');
+        return;
+      }
       if (!destino || destino === t.el || !recebeArraste(destino)) return;
       for (const qual of acoesDeArrastar(t.cursorVazio, t.longo)) {
         acionar(qual === 'origem' ? t.el : destino, 'esquerdo', false);

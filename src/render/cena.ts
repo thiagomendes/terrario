@@ -303,6 +303,13 @@ export interface EstadoDepuracao {
   blocoGerado?: (x: number, y: number, z: number) => number;
   /** Solta um item no chão (dur: durabilidade restante de ferramentas). */
   soltarItem?: (item: string, qtd: number, x: number, y: number, z: number, dur?: number) => void;
+  /**
+   * Joga um item no chão de propósito, para a frente do boneco (dar a um amigo). Quem jogou
+   * só pega de volta depois de um tempinho. `slot`: de onde sai (Q tira do que está na mão).
+   */
+  jogarItem?: (item: string, qtd: number, dur?: number, slot?: number) => void;
+  /** Itens no chão como esta tela vê (testes). */
+  itensNoChao?: () => { item: string; qtd: number; x: number; y: number; z: number }[];
   modo?: ModoJogo;
   controleDireto?: {
     olhar: (dx: number, dy: number) => void;
@@ -2293,6 +2300,22 @@ export function criarCena(
   }
   estado.soltarItem = (item, qtd, x, y, z, dur) =>
     enviar({ t: 'soltar', itens: [{ item, qtd, dur }], x, y, z });
+  estado.jogarItem = (item, qtd, dur, slot) => {
+    if (!(qtd > 0)) return;
+    const j = controle.jogador;
+    enviar({
+      t: 'soltar',
+      itens: [{ item, qtd, ...(dur !== undefined ? { dur } : {}) }],
+      x: j.x,
+      y: j.y + 1.2,
+      z: j.z,
+      // para onde o boneco olha (na terceira pessoa o corpo é solto da câmera)
+      jogar: { yaw: animador.yaw(), ...(slot !== undefined ? { slot } : {}) },
+    });
+    tocarSom(motorAudio, 'troca');
+  };
+  estado.itensNoChao = () =>
+    replicaItens.lista.map((i) => ({ item: i.item, qtd: i.qtd, x: i.x, y: i.y, z: i.z }));
   barramento.ouvir('colocacao', (d) => aplicarPlano('colocacao', d));
 
   /**

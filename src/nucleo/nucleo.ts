@@ -136,6 +136,12 @@ export interface OpcoesNucleo {
   noite?: 'assusta' | 'mansa';
 }
 
+/**
+ * Item jogado no chão de propósito: sai para a frente (blocos por segundo). Cai a uns 3
+ * blocos, fora do raio que puxa os itens: quem jogou não puxa de volta parado no lugar.
+ */
+const VELOCIDADE_ARREMESSO = 4.5;
+
 export interface OpcoesConexao {
   /** O que o jogador tinha neste mundo (inventário, vida, renascer, posição). */
   salvo?: DadosJogador;
@@ -1253,6 +1259,8 @@ export function criarNucleo(op: OpcoesNucleo) {
     j: Jogador,
     item: string,
     qtd: number,
+    /** Slot da mochila de onde tirar primeiro (Q tira do que está na mão). */
+    preferir?: number,
   ): { item: string; qtd: number; dur?: number }[] {
     let falta = Math.max(0, Math.floor(qtd));
     const tirados: { item: string; qtd: number; dur?: number }[] = [];
@@ -1266,6 +1274,12 @@ export function criarNucleo(op: OpcoesNucleo) {
         falta -= t;
       }
     };
+    if (preferir !== undefined && j.inventario.obter(preferir)?.item === item)
+      de(
+        (i) => (i === 0 ? j.inventario.obter(preferir) : null),
+        (_i, p) => j.inventario.definir(preferir, p),
+        1,
+      );
     de(
       (i) => j.transito[i] ?? null,
       (i, p) => {
@@ -1281,6 +1295,21 @@ export function criarNucleo(op: OpcoesNucleo) {
     j.transitoSujo = true;
     j.inventarioSujo = true;
     return tirados;
+  }
+
+  /** Onde e com que velocidade sai um item jogado para a frente (yaw: para onde o boneco olha). */
+  function arremesso(j: Jogador, yaw: number) {
+    const fx = Math.sin(yaw);
+    const fz = Math.cos(yaw);
+    return {
+      de: j.id,
+      x: j.tel.x + fx * 0.35,
+      y: j.tel.olhos - 0.45,
+      z: j.tel.z + fz * 0.35,
+      vx: fx * VELOCIDADE_ARREMESSO,
+      vy: 2.6,
+      vz: fz * VELOCIDADE_ARREMESSO,
+    };
   }
 
   function comando(id: string, bruto: Comando): void {
@@ -1316,17 +1345,32 @@ export function criarNucleo(op: OpcoesNucleo) {
       case 'transacao':
         transacao(j, c);
         break;
-      case 'soltar':
+      case 'soltar': {
+        // jogado de propósito (dar a um amigo): sai na frente do boneco, para onde ele olha,
+        // e quem jogou só pega de volta depois de um tempinho
+        const arr = c.jogar ? arremesso(j, c.jogar.yaw) : undefined;
         for (const p of c.itens) {
           if (confiar) {
-            mundoItens.soltar(p.item, p.qtd, c.x, c.y, c.z, rngDrops, p.dur);
+            if (arr) mundoItens.soltar(p.item, p.qtd, arr.x, arr.y, arr.z, rngDrops, p.dur, arr);
+            else mundoItens.soltar(p.item, p.qtd, c.x, c.y, c.z, rngDrops, p.dur);
             continue;
           }
           // na nuvem só sai o que o jogador tem, com a durabilidade que tem
-          for (const t of retirar(j, p.item, p.qtd))
-            mundoItens.soltar(t.item, t.qtd, j.tel.x, j.tel.olhos - 0.4, j.tel.z, rngDrops, t.dur);
+          for (const t of retirar(j, p.item, p.qtd, c.jogar?.slot))
+            if (arr) mundoItens.soltar(t.item, t.qtd, arr.x, arr.y, arr.z, rngDrops, t.dur, arr);
+            else
+              mundoItens.soltar(
+                t.item,
+                t.qtd,
+                j.tel.x,
+                j.tel.olhos - 0.4,
+                j.tel.z,
+                rngDrops,
+                t.dur,
+              );
         }
         break;
+      }
       case 'atacar':
         atacar(j, c);
         break;
@@ -1424,7 +1468,7 @@ export function criarNucleo(op: OpcoesNucleo) {
       tratarCriaturas(ev, lista[0]);
       const coletados = mundoItens.atualizar(
         dt,
-        lista.map((o) => o.tel),
+        lista.map((o) => ({ x: o.tel.x, y: o.tel.y, z: o.tel.z, id: o.id })),
         (item, qtd, dur, quem) => lista[quem].inventario.adicionar(item, qtd, dur),
       );
       for (const c of coletados)

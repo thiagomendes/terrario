@@ -255,6 +255,7 @@ function ligarInventario(
       const j = cena.controle.jogador;
       cena.estado.soltarItem?.(p.item, p.qtd, j.x, j.y + 1.2, j.z, p.dur);
     },
+    aoJogar: (p) => cena.estado.jogarItem?.(p.item, p.qtd, p.dur),
     aoFechar: () => {
       if (document.querySelector('.entrada:not([hidden])')) return;
       travarPonteiro(canvas);
@@ -375,8 +376,26 @@ function ligarInventario(
       else abrir(2);
     } else if (e.code === 'Escape' && ui.aberto) {
       ui.fechar();
+    } else if (e.code === 'KeyQ' && !naEntrada && !document.body.dataset.overlay) {
+      // Q joga um do item na mão; Ctrl+Q, a pilha toda (dar a um amigo, como no Minecraft)
+      e.preventDefault();
+      jogarDaBarra(hotbar.ativo, e.ctrlKey || e.metaKey ? Infinity : 1);
     }
   });
+  // toque: segurar um espaço da barra joga um
+  window.addEventListener('brumaluz:jogarDaBarra', (e) => {
+    const d = (e as CustomEvent<{ slot: number; qtd: number }>).detail;
+    if (!ui.aberto && !document.body.dataset.overlay) jogarDaBarra(d.slot, d.qtd);
+  });
+  /** Tira da barra e joga no chão, para a frente do boneco. */
+  function jogarDaBarra(slot: number, quantos: number): void {
+    const inv = hotbar.inventario;
+    const p = inv.obter(slot);
+    if (!p || cena.estado.sobrevivencia?.estado.morto) return;
+    const qtd = Math.min(p.qtd, quantos);
+    inv.definir(slot, p.qtd > qtd ? { ...p, qtd: p.qtd - qtd } : null);
+    cena.estado.jogarItem?.(p.item, qtd, p.dur, slot);
+  }
 }
 
 function ligarStatus(

@@ -107,7 +107,18 @@ type ComandoSemSeq =
       fabricou?: { receita: string; vezes: number }[];
     }
   /** Itens que saem das mãos do jogador para o chão (o que não coube, jogar fora). */
-  | { t: 'soltar'; itens: Pilha[]; x: number; y: number; z: number }
+  | {
+      t: 'soltar';
+      itens: Pilha[];
+      x: number;
+      y: number;
+      z: number;
+      /**
+       * Jogado de propósito (dar a um amigo): sai para a frente do boneco (yaw do corpo) e
+       * quem jogou só pega de volta depois de um tempinho.
+       */
+      jogar?: { yaw: number; /** Slot da mochila de onde sai (Q: o da mão). */ slot?: number };
+    }
   | { t: 'atacar'; criatura: number; slot: number }
   | { t: 'domar'; criatura: number; slot: number }
   /** Dar a comida da mão (slot) a um bicho: ele vira criado (spec 013). */

@@ -81,6 +81,8 @@ body[data-modo='criativo'] .barra .qtd { display: none; }
 }
 .nome-item.visivel { opacity: 1; }
 body.toque-ativo .barra .numero { display: none; }
+/* segurar um espaço da barra joga um no chão: sem menu de cópia nem seleção no iPhone */
+.barra button { -webkit-touch-callout: none; user-select: none; -webkit-user-select: none; }
 .barra .numero {
   position: absolute;
   top: 1px;
@@ -89,6 +91,9 @@ body.toque-ativo .barra .numero { display: none; }
   font: 800 0.66rem var(--jogo);
 }
 `;
+
+/** Segurar um espaço da barra por este tempo (toque) joga um item dele no chão. */
+export const TEMPO_SEGURAR_JOGAR = 550;
 
 export function criarBarra(app: HTMLElement, hotbar: Hotbar = criarHotbar()): Hotbar {
   const estilo = document.createElement('style');
@@ -150,6 +155,46 @@ export function criarBarra(app: HTMLElement, hotbar: Hotbar = criarHotbar()): Ho
       }
     }
   };
+
+  // Toque: segurar um espaço da barra joga um item dele no chão (dar a um amigo)
+  let segurando: { id: number; slot: number; x: number; y: number; timer: number } | null = null;
+  const soltarSegurar = () => {
+    if (segurando) clearTimeout(segurando.timer);
+    segurando = null;
+  };
+  barra.addEventListener('pointerdown', (e) => {
+    if (e.pointerType === 'mouse') return;
+    const alvo = (e.target as HTMLElement).closest<HTMLElement>('[data-slot]');
+    if (!alvo) return;
+    soltarSegurar();
+    const slot = Number(alvo.dataset.slot);
+    const s = {
+      id: e.pointerId,
+      slot,
+      x: e.clientX,
+      y: e.clientY,
+      timer: window.setTimeout(() => {
+        if (segurando !== s) return;
+        segurando = null;
+        hotbar.selecionar(slot);
+        atualizar();
+        window.dispatchEvent(
+          new CustomEvent('brumaluz:jogarDaBarra', { detail: { slot, qtd: 1 } }),
+        );
+        navigator.vibrate?.(12);
+      }, TEMPO_SEGURAR_JOGAR),
+    };
+    segurando = s;
+  });
+  barra.addEventListener('pointermove', (e) => {
+    if (segurando && e.pointerId === segurando.id)
+      if (Math.hypot(e.clientX - segurando.x, e.clientY - segurando.y) > 12) soltarSegurar();
+  });
+  for (const t of ['pointerup', 'pointercancel', 'pointerleave'] as const)
+    barra.addEventListener(t, (e) => {
+      if (segurando && e.pointerId === segurando.id) soltarSegurar();
+    });
+  barra.addEventListener('contextmenu', (e) => e.preventDefault());
 
   barra.addEventListener('click', (e) => {
     const alvo = (e.target as HTMLElement).closest<HTMLElement>('[data-slot]');

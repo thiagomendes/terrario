@@ -76,11 +76,25 @@ export interface ItemSolto {
   vy: number;
   vz: number;
   idade: number;
+  /** Quem jogou no chão (de propósito): ele só pega de volta depois de TEMPO_DONO_RECOLHER. */
+  de?: string;
+}
+
+/** Opções de um item jogado no chão de propósito (dar a um amigo, como no Minecraft). */
+export interface Arremesso {
+  /** Id de quem jogou. */
+  de: string;
+  /** Velocidade inicial (para a frente do boneco). */
+  vx: number;
+  vy: number;
+  vz: number;
 }
 
 export const RAIO_ATRACAO = 2.6;
 export const RAIO_COLETA = 0.8;
 export const TEMPO_ANTES_DE_COLETAR = 0.45;
+/** Quem jogou o item no chão só pega de volta depois disto (os outros, logo). */
+export const TEMPO_DONO_RECOLHER = 2;
 export const VIDA_ITEM = 300;
 export const MAX_ITENS_SOLTOS = 200;
 const GRAVIDADE = 18;
@@ -96,6 +110,7 @@ export interface MundoDeItens {
     z: number,
     rng: Gerador,
     dur?: number,
+    arremesso?: Arremesso,
   ): void;
   /** Itens no chão para o salvamento. */
   salvar(): { item: string; qtd: number; dur?: number; x: number; y: number; z: number }[];
@@ -106,32 +121,66 @@ export interface MundoDeItens {
    */
   atualizar(
     dt: number,
-    jogador: { x: number; y: number; z: number } | readonly { x: number; y: number; z: number }[],
+    jogador: PosColetor | readonly PosColetor[],
     coletar: (item: string, qtd: number, dur: number | undefined, quem: number) => number,
   ): (Drop & { quem: number })[];
 }
+
+/** Quem pode pegar itens: a posição e (com vários jogadores) o id. */
+export type PosColetor = { x: number; y: number; z: number; id?: string };
 
 export function criarMundoDeItens(
   solido: (x: number, y: number, z: number) => boolean,
 ): MundoDeItens {
   let itens: ItemSolto[] = [];
   let proximo = 1;
+  /** Gravidade, paredes e chão (o item não está sendo puxado por ninguém). */
+  function cair(it: ItemSolto, dt: number): void {
+    it.vy -= GRAVIDADE * dt;
+    const nx = it.x + it.vx * dt;
+    const nz = it.z + it.vz * dt;
+    if (!solido(Math.floor(nx), Math.floor(it.y), Math.floor(it.z))) it.x = nx;
+    else it.vx = 0;
+    if (!solido(Math.floor(it.x), Math.floor(it.y), Math.floor(nz))) it.z = nz;
+    else it.vz = 0;
+    const ny = it.y + it.vy * dt;
+    if (it.vy < 0 && solido(Math.floor(it.x), Math.floor(ny - MEIA_ALTURA), Math.floor(it.z))) {
+      it.y = Math.floor(ny - MEIA_ALTURA) + 1 + MEIA_ALTURA;
+      it.vy = 0;
+      it.vx *= 0.5;
+      it.vz *= 0.5;
+    } else {
+      it.y = ny;
+    }
+    if (it.y < -10) it.qtd = 0;
+  }
   return {
     get itens() {
       return itens;
     },
-    soltar(item, qtd, x, y, z, rng, dur) {
+    soltar(item, qtd, x, y, z, rng, dur, arremesso) {
       if (!(qtd > 0)) return;
       // perto de um igual (sem durabilidade): junta na mesma pilha em vez de lotar o chão
+      // (o jogado de propósito só junta com o que o mesmo jogador jogou)
       if (dur === undefined) {
         const igual = itens.find(
           (o) =>
-            o.item === item && o.dur === undefined && Math.hypot(o.x - x, o.y - y, o.z - z) < 1.5,
+            o.item === item &&
+            o.dur === undefined &&
+            o.de === arremesso?.de &&
+            Math.hypot(o.x - x, o.y - y, o.z - z) < 1.5,
         );
         if (igual) {
           igual.qtd += qtd;
+          if (arremesso) igual.idade = 0;
           return;
         }
+      }
+      if (arremesso) {
+        const { de, vx, vy, vz } = arremesso;
+        itens.push({ id: proximo++, item, qtd, dur, x, y, z, vx, vy, vz, idade: 0, de });
+        if (itens.length > MAX_ITENS_SOLTOS) itens.splice(0, itens.length - MAX_ITENS_SOLTOS);
+        return;
       }
       const a = rng() * Math.PI * 2;
       itens.push({
@@ -179,21 +228,29 @@ export function criarMundoDeItens(
       const dt = jogadoresDt;
       const coletados: (Drop & { quem: number })[] = [];
       if (!(dt > 0)) return coletados;
-      const js = Array.isArray(jj) ? jj : [jj as { x: number; y: number; z: number }];
+      const js: readonly PosColetor[] = Array.isArray(jj) ? jj : [jj as PosColetor];
       if (js.length === 0) return coletados;
       for (const it of itens) {
         it.idade += dt;
-        // o jogador mais perto (com um só, é ele)
-        let quem = 0;
+        // passado o tempo, o dono pode pegar como qualquer um (e junta com os outros)
+        if (it.de !== undefined && it.idade > TEMPO_DONO_RECOLHER) it.de = undefined;
+        // o jogador mais perto (com um só, é ele); quem jogou de propósito espera um pouco
+        let quem = -1;
         let melhor = Infinity;
+        const donoEspera = it.de !== undefined && it.idade <= TEMPO_DONO_RECOLHER;
         for (let q = 0; q < js.length; q++) {
+          if (donoEspera && js[q].id === it.de) continue;
           const dq = Math.hypot(js[q].x - it.x, js[q].y + 0.7 - it.y, js[q].z - it.z);
           if (dq < melhor) {
             melhor = dq;
             quem = q;
           }
         }
-        const j = js[quem];
+        const j = quem >= 0 ? js[quem] : undefined;
+        if (!j) {
+          cair(it, dt);
+          continue;
+        }
         const alvoY = j.y + 0.7;
         const dx = j.x - it.x;
         const dy = alvoY - it.y;
@@ -221,23 +278,7 @@ export function criarMundoDeItens(
           it.z += it.vz * dt;
           continue;
         }
-        it.vy -= GRAVIDADE * dt;
-        const nx = it.x + it.vx * dt;
-        const nz = it.z + it.vz * dt;
-        if (!solido(Math.floor(nx), Math.floor(it.y), Math.floor(it.z))) it.x = nx;
-        else it.vx = 0;
-        if (!solido(Math.floor(it.x), Math.floor(it.y), Math.floor(nz))) it.z = nz;
-        else it.vz = 0;
-        const ny = it.y + it.vy * dt;
-        if (it.vy < 0 && solido(Math.floor(it.x), Math.floor(ny - MEIA_ALTURA), Math.floor(it.z))) {
-          it.y = Math.floor(ny - MEIA_ALTURA) + 1 + MEIA_ALTURA;
-          it.vy = 0;
-          it.vx *= 0.5;
-          it.vz *= 0.5;
-        } else {
-          it.y = ny;
-        }
-        if (it.y < -10) it.qtd = 0;
+        cair(it, dt);
       }
       // junta itens iguais próximos e remove os vazios ou velhos
       for (let a = 0; a < itens.length; a++) {
@@ -245,7 +286,7 @@ export function criarMundoDeItens(
         if (A.qtd <= 0 || A.dur !== undefined) continue;
         for (let b = a + 1; b < itens.length; b++) {
           const B = itens[b];
-          if (B.qtd <= 0 || B.item !== A.item || B.dur !== undefined) continue;
+          if (B.qtd <= 0 || B.item !== A.item || B.dur !== undefined || B.de !== A.de) continue;
           if (Math.hypot(A.x - B.x, A.y - B.y, A.z - B.z) < 0.6) {
             A.qtd += B.qtd;
             B.qtd = 0;

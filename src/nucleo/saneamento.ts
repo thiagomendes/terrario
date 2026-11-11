@@ -137,7 +137,13 @@ export function sanear(c: unknown): Comando | null {
         (o.itens as unknown[]).every((p) => p !== null && slotValido(p)) &&
         xz(o.x) &&
         y(o.y) &&
-        xz(o.z)
+        xz(o.z) &&
+        (o.jogar === undefined ||
+          (typeof o.jogar === 'object' &&
+            o.jogar !== null &&
+            Number.isFinite((o.jogar as { yaw?: unknown }).yaw) &&
+            ((o.jogar as { slot?: unknown }).slot === undefined ||
+              inteiro((o.jogar as { slot?: unknown }).slot, 0, SLOTS - 1))))
         ? (o as unknown as Comando)
         : null;
     case 'atacar':
