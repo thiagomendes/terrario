@@ -3,6 +3,7 @@ import { criarNucleo, type Nucleo } from '../../src/nucleo/nucleo';
 import { encontrarNascimento, alturaTerreno } from '../../src/world/chunk';
 import { Bloco } from '../../src/world/blocks';
 import { idDoBloco } from '../../src/jogo/itens';
+import { aparenciaPadrao } from '../../src/personagem/aparencia';
 import type { Comando, Telemetria } from '../../src/nucleo/protocolo';
 
 /** Spec 010: o mesmo núcleo com vários jogadores e sem confiar no cliente (nuvem). */
@@ -85,18 +86,13 @@ describe('núcleo com vários jogadores', () => {
     n.comando('bia', { t: 'aparencia', aparencia: { modelo: 'musgueira', corRoupa: '#ffffff' } });
     n.passo();
     const q = n.quadros();
-    expect(q.get('ana')!.perfis?.['bia']?.aparencia).toEqual({
-      modelo: 'musgueira',
-      corRoupa: '#ffffff',
-    });
+    // spec 017: a aparência chega passada a limpo (campo desconhecido sai, o resto é o modelo)
+    expect(q.get('ana')!.perfis?.['bia']?.aparencia).toEqual(aparenciaPadrao('musgueira'));
     expect(q.get('ana')!.perfis?.['bia']?.apelido).toBe('Bia');
     // na nuvem, aparência que não é um objeto pequeno não entra
     n.comando('bia', { t: 'aparencia', aparencia: { x: 'a'.repeat(5000) } });
     n.passo();
-    expect(n.estado.jogadores.get('bia')!.perfil.aparencia).toEqual({
-      modelo: 'musgueira',
-      corRoupa: '#ffffff',
-    });
+    expect(n.estado.jogadores.get('bia')!.perfil.aparencia).toEqual(aparenciaPadrao('musgueira'));
   });
 
   it('o amigo vê os movimentos: golpe, colocar bloco e comer sobem os contadores', () => {

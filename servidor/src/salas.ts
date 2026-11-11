@@ -8,7 +8,7 @@ import { createHash, randomUUID } from 'node:crypto';
 import { criarNucleo, type Nucleo } from '../../src/nucleo/nucleo';
 import { definirEstiloMundo } from '../../src/world/chunk';
 import { estiloSeguro } from '../../src/world/estiloSeguro';
-import { sanearDadosMundo } from '../../src/nucleo/saneamento';
+import { sanearAparencia, sanearDadosMundo } from '../../src/nucleo/saneamento';
 import { definirRegioesSemPovoado } from '../../src/world/povoado';
 import { gerarCodigo, normalizarCodigo } from '../../src/jogo/codigos';
 import type { DadosMundo } from '../../src/jogo/mundos';
@@ -284,7 +284,7 @@ export function criarGerenciador(op: OpcoesGerenciador) {
     if (doDono)
       await armazem.gravarJogador(mundo.id, jog.id, {
         chave: resumo(jog.chave),
-        perfil: { apelido: jog.apelido, aparencia: jog.aparencia },
+        perfil: { apelido: jog.apelido, aparencia: sanearAparencia(jog.aparencia) ?? {} },
         dados: doDono,
       });
     await gravarMundo(s);
@@ -375,7 +375,7 @@ export function criarGerenciador(op: OpcoesGerenciador) {
         salvo: guardado?.dados,
         perfil: {
           apelido: String(jog.apelido ?? 'Jogador').slice(0, 22),
-          aparencia: jog.aparencia ?? {},
+          aparencia: sanearAparencia(jog.aparencia) ?? {},
         },
         constroi: ehDono || s.sala.constroem,
       });

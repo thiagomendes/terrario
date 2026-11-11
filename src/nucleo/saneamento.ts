@@ -11,12 +11,23 @@ import type { Comando, MudancaSlot, Pos } from './protocolo';
 import type { DadosMundo } from '../jogo/mundos';
 import type { EdicoesExportadas } from '../world/edicoes';
 import { ehGesto } from '../personagem/gestos';
+import { normalizarAparencia } from '../personagem/aparencia';
 
 /** Tamanho do mundo onde alguém pode estar (bem além de onde se joga). */
 export const XZ_MAX = 30_000_000;
 const Y_MIN = -64;
 const Y_MAX = 512;
 const SLOTS = 36;
+
+/**
+ * Aparência que viaja na rede: objeto pequeno, passado a limpo (spec 017: fantasia com id
+ * desconhecido vira "sem fantasia" e cor fora da paleta vira a padrão). Null se não serve.
+ */
+export function sanearAparencia(a: unknown): Record<string, unknown> | null {
+  if (!a || typeof a !== 'object' || Array.isArray(a)) return null;
+  if (JSON.stringify(a).length > 4096) return null;
+  return { ...normalizarAparencia(a) };
+}
 
 const finito = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
 const inteiro = (v: unknown, min: number, max: number): v is number =>
@@ -176,14 +187,11 @@ export function sanear(c: unknown): Comando | null {
       return inteiro(o.id, 0, Number.MAX_SAFE_INTEGER) && ehGesto(o.gesto)
         ? (o as unknown as Comando)
         : null;
-    case 'aparencia':
-      // só um objeto pequeno (a aparência são umas poucas escolhas)
-      return o.aparencia &&
-        typeof o.aparencia === 'object' &&
-        !Array.isArray(o.aparencia) &&
-        JSON.stringify(o.aparencia).length <= 4096
-        ? (o as unknown as Comando)
-        : null;
+    case 'aparencia': {
+      // só um objeto pequeno (a aparência são umas poucas escolhas), já passado a limpo
+      const aparencia = sanearAparencia(o.aparencia);
+      return aparencia ? ({ ...o, aparencia } as unknown as Comando) : null;
+    }
     default:
       return null;
   }
