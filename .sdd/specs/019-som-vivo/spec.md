@@ -31,6 +31,10 @@ Pedido do dono (11 nov 2026): "o som ainda está muito básico para o jogo". A m
 - **Vozes dos bichos com personalidade:** galinha, vaca, cavalo, porco, cachorro, saci, dinos, bichos da Lua... Cada um tem chamado, susto, contente e "ai" de golpe de desenho animado (nada de vidro nem de grito), e os filhotes falam mais fino.
 - **Leve:** um teto de vozes, nada de laço contínuo pesado e CPU medida no celular.
 
+## Decisões do dono
+- 11 nov 2026: proposta do esboço aprovada ("gostei da proposta", "ficaram legal as novas"). **Continua gerado na hora**, sem pré-gravar nem baixar arquivos.
+- 11 nov 2026: **sem aumentar o volume da trilha.** Ela tem que ser suave e não irritar o jogador. A música nova entra no jogo com o mesmo volume percebido da de hoje (no esboço, o "Hoje" foi aumentado só para comparar) e fica sempre abaixo dos efeitos e das vozes. Isso será medido com uma régua de volume (RMS) nos testes. O controle "Música" de Configurações → Áudio, que já existe (padrão 60%), continua sendo o jeito de baixar ou subir a trilha.
+
 ## Na sequência
 Recomendado depois da 016 e antes da 014: 017 → 016 → **019** → 014 → 018. Assim a Cidade Grande (014) e os mundos da 018 já nascem com a trilha e os sons deles.
 
