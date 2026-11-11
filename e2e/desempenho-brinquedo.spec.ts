@@ -369,3 +369,88 @@ test('quadros por segundo com 4 amigos fantasiados', async ({ page }) => {
   const semFantasia = await medirAmigos(true, 6000, false);
   console.log(`DESEMPENHO amigos-fantasiados ${JSON.stringify({ sem, com, semFantasia })}`);
 });
+
+/**
+ * Correção da 017 (luz dos bonecos): entrar e sair debaixo de um teto com 4 amigos e os
+ * moradores de um sítio por perto. A luz do lugar desce e sobe suave por ~1 s, e cada passo
+ * repinta os plásticos de todos os bonecos: o pior quadro dessa transição não pode travar.
+ */
+test('quadros ao entrar e sair da sombra com amigos e moradores', async ({ page }) => {
+  test.setTimeout(420_000);
+  await preparar(page);
+  await page.goto('/?tema=rancho-alegre');
+  await pronto(page);
+  await fecharEntrada(page);
+  const lugar = await page.evaluate(() => {
+    const e = window.__brumaluz!;
+    const p = e.povoados!()[0];
+    e.teleportar!(p.cx + 4.5, p.cz + 4.5);
+    return { cx: p.cx, cz: p.cz };
+  });
+  await page.waitForTimeout(Number(process.env.ESPERA_SITIO ?? 15_000));
+  const medida = await page.evaluate(async () => {
+    const e = window.__brumaluz!;
+    const [x0, y0, z0] = e.posicao!;
+    const fx = Math.floor(x0);
+    const fz = Math.floor(z0);
+    const fy = Math.floor(y0);
+    const amigos = (t: number) =>
+      e.amigosDeTeste!(
+        [0, 1, 2, 3].map((i) => ({
+          id: `c${i}`,
+          aparencia: {
+            corpo: i % 2 ? 'masculino' : 'feminino',
+            fantasia: { id: 'realeza-flores', cor: i % 3 },
+          },
+          x: x0 + Math.sin(t + i * 1.6) * 2.5,
+          y: y0,
+          z: z0 + Math.cos(t + i * 1.6) * 2.5,
+        })),
+      );
+    const espera = (ms: number) => new Promise((r) => setTimeout(r, ms));
+    // monta os amigos antes de medir
+    for (let i = 0; i < 60; i++) {
+      amigos(i * 0.05);
+      await new Promise((r) => requestAnimationFrame(r));
+    }
+    await espera(500);
+    // longe = o mesmo teto a 24 blocos (só o custo de refazer o chão, sem mudar a luz)
+    const teto = (bloco: number, longe = 0) => {
+      for (let dx = -3; dx <= 3; dx++)
+        for (let dz = -3; dz <= 3; dz++) e.definirBloco!(fx + dx + longe, fy + 4, fz + dz, bloco);
+    };
+    const quadros = async (ms: number) => {
+      const amostras: number[] = [];
+      let ultimo = performance.now();
+      const fim = ultimo + ms;
+      while (performance.now() < fim) {
+        await new Promise((r) => requestAnimationFrame(r));
+        const agora = performance.now();
+        amostras.push(agora - ultimo);
+        ultimo = agora;
+        amigos(agora / 1000);
+      }
+      amostras.sort((a, b) => a - b);
+      const r = (v: number) => Math.round(v * 10) / 10;
+      return {
+        fps: r(amostras.length / (ms / 1000)),
+        p95ms: r(amostras[Math.floor(amostras.length * 0.95)]),
+        piorMs: r(amostras[amostras.length - 1]),
+      };
+    };
+    const moradores = (e.criaturas?.() ?? []).filter(
+      (c) => c.tipo === 'morador' && Math.hypot(c.x - x0, c.z - z0) < 40,
+    ).length;
+    const parado = await quadros(2000);
+    teto(45, 24);
+    const tetoLonge = await quadros(2500);
+    teto(0, 24);
+    await quadros(1500);
+    teto(45);
+    const entrando = await quadros(2500);
+    teto(0);
+    const saindo = await quadros(2500);
+    return { moradores, parado, tetoLonge, entrando, saindo };
+  });
+  console.log(`DESEMPENHO sombra-amigos ${JSON.stringify({ ...lugar, ...medida })}`);
+});

@@ -26,6 +26,9 @@ export const DIRECAO_SOL: Cor = [-0.55, -0.45, -0.7];
 
 export const DENSIDADE_NEVOA = 0.0058;
 
+/** Exposição do pós-processo (com o tonemapping neutro; correção da 017). */
+export const EXPOSICAO_CENA = 1;
+
 export const NUM_CASCATAS = 2;
 
 export const INTENSIDADE_GLOW = 0.5;

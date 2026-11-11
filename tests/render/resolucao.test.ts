@@ -29,3 +29,24 @@ describe('resolução adaptativa', () => {
     expect(ajustarEscala(1.5, 45, 1)).toBe(1.5);
   });
 });
+
+describe('resolução no celular (correção da 017)', () => {
+  it('segue a densidade da tela até 2, em passos', () => {
+    expect(escalaBase(390, 3, true)).toBe(0.5);
+    expect(escalaBase(390, 2, true)).toBe(0.5);
+    expect(escalaBase(390, 1.5, true)).toBe(0.75);
+    expect(escalaBase(390, 1, true)).toBe(1);
+    // sem toque ou tela larga (tablet, computador): como antes
+    expect(escalaBase(390, 3, false)).toBe(1);
+    expect(escalaBase(1280, 2, true)).toBe(1.25);
+  });
+
+  it('a nitidez extra cai abaixo de 50 quadros e volta com folga', () => {
+    expect(ajustarEscala(0.5, 45, 0.5)).toBe(0.75);
+    expect(ajustarEscala(0.75, 45, 0.5)).toBe(1);
+    // no nível 1, 45 quadros fica (como sempre foi)
+    expect(ajustarEscala(1, 45, 0.5)).toBe(1);
+    expect(ajustarEscala(0.75, 60, 0.5)).toBe(0.5);
+    expect(ajustarEscala(0.5, 60, 0.5)).toBe(0.5);
+  });
+});

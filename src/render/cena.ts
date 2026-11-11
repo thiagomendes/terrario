@@ -39,6 +39,7 @@ import { gerarAtlas, type FaceBloco } from '../art/atlas';
 import { Bloco, ehAlvo, obterBloco as obterBlocoDef } from '../world/blocks';
 import {
   DENSIDADE_NEVOA,
+  EXPOSICAO_CENA,
   DIRECAO_SOL,
   DURACAO_DIA,
   HORA_INICIAL,
@@ -125,7 +126,7 @@ import {
 import type { EdicoesExportadas } from '../world/edicoes';
 import { chunksAfetados } from './remalha';
 import { criarFilaRemalha, MAX_REMALHAS_POR_QUADRO } from './fila';
-import { ajustarEscala, escalaBase } from './resolucao';
+import { ajustarEscala, ESCALA_INICIO_TOQUE, escalaBase } from './resolucao';
 
 /** Limite do dt (s) que alimenta minerador e efeitos: quadros lentos não os atropelam. */
 const DT_MAXIMO_QUADRO = 1 / 30;
@@ -791,6 +792,8 @@ export function criarCena(
 
   // Pós-processamento: HDR, tonemapping ACES, bloom suave, vinheta e FXAA.
   const pipeline = new DefaultRenderingPipeline('pos', true, scene, [cameraVisao]);
+  /** Exposição de base (o relâmpago soma por cima). */
+  const tomCena = { exposicao: EXPOSICAO_CENA };
   pipeline.fxaaEnabled = true;
   pipeline.bloomEnabled = true;
   // só luz de verdade passa do limite: roupa branca e neve ao sol não estouram (no tablet o
@@ -802,8 +805,12 @@ export function criarCena(
   pipeline.imageProcessingEnabled = true;
   const ip = pipeline.imageProcessing;
   ip.toneMappingEnabled = true;
-  ip.toneMappingType = ImageProcessingConfiguration.TONEMAPPING_ACES;
-  ip.exposure = 1.18;
+  // correção da 017 ("névoa em cima do cenário e do personagem"): o ACES sobre as cores do
+  // jogo levava o branco a 0,83 e escurecia o meio-tom; nada na tela passava de 0,86 e a
+  // imagem inteira parecia ter um véu claro por cima. O neutro (Khronos PBR Neutral) deixa o
+  // meio-tom como está e só dobra o alto, até quase 1: a mesma cor do mundo, sem o véu.
+  ip.toneMappingType = ImageProcessingConfiguration.TONEMAPPING_KHR_PBR_NEUTRAL;
+  ip.exposure = EXPOSICAO_CENA;
   ip.contrast = 1.12;
   ip.vignetteEnabled = true;
   ip.vignetteWeight = 0.7;
@@ -979,7 +986,7 @@ export function criarCena(
     ambiente?.definirChuva(nevando ? clima.estado.chuva * 0.25 : clima.estado.chuva);
     // relâmpago suave de brinquedo: clareia a cena sem estourar em branco
     flash = Math.max(0, flash - dt * 3.2);
-    pipeline.imageProcessing.exposure = 1.18 + flash * flash * 0.85;
+    pipeline.imageProcessing.exposure = tomCena.exposicao + flash * flash * 0.85;
     estado.infoMundo = `Dia ${dia + 1} · ${NOMES_ESTACAO[estacao]} · ${NOMES_CLIMA[clima.estado.tipo]}`;
     estado.atmosfera = { noite: a.noite, crepusculo: a.crepusculo };
     // a câmera que de fato desenha (em 3ª pessoa fica atrás do personagem); a superfície
@@ -1010,7 +1017,10 @@ export function criarCena(
       a.nevoa[1] + (0.62 * l - a.nevoa[1]) * ns,
       a.nevoa[2] + (0.82 * l - a.nevoa[2]) * ns,
     );
-    const densAr = a.densidadeNevoa * fatorNevoa;
+    // correção da 017: de dia o ar fica um quarto mais limpo (o fundo não some num leite
+    // claro); ao entardecer e à noite a névoa volta à de antes
+    const arDia = 0.75 + 0.25 * Math.max(a.noite, a.crepusculo);
+    const densAr = a.densidadeNevoa * fatorNevoa * arDia;
     scene.fogDensity = densAr + (0.06 - densAr) * ns;
     scene.clearColor.set(a.nevoa[0], a.nevoa[1], a.nevoa[2], 1);
     scene.ambientColor.set(...a.ambiente);
@@ -1035,7 +1045,7 @@ export function criarCena(
       (a.nevoa[2] * 0.85 + 0.14) * tb.cor[2],
     ];
     // luz de brinquedo (spec 012): de dia o ar é limpo; a bruma dos vales volta ao entardecer
-    const forca = (0.12 + 0.58 * Math.max(a.crepusculo, a.noite)) * tb.forca;
+    const forca = (0.08 + 0.62 * Math.max(a.crepusculo, a.noite)) * tb.forca;
     mundoSolido.definirBruma(bruma, forca);
     mundoSolido.luzBlocos = 0.8 + 0.4 * a.noite;
     // flores, cogumelos e lanternas brilham de verdade ao entardecer e à noite; sob o sol, quase nada
@@ -2830,13 +2840,19 @@ export function criarCena(
     scene.render();
   });
   let escalaMinima = 1;
-  let base = Math.max(escalaBase(window.innerWidth), escalaMinima);
+  // celular: até a densidade da tela (correção da 017), na qualidade alta ou ultra; a nitidez
+  // extra cai sozinha quando faltam quadros. Baixa e média seguem com menos pixels.
+  const baseDaTela = () => {
+    const b = escalaBase(window.innerWidth, window.devicePixelRatio || 1, toqueGrosso);
+    return b < 1 && escalaMinima <= 1 ? b : Math.max(b, escalaMinima);
+  };
+  let base = baseDaTela();
   function aplicarEscala(valor: number): void {
     estado.escalaResolucao = valor;
     engine.setHardwareScalingLevel(valor);
     engine.resize();
   }
-  aplicarEscala(base);
+  aplicarEscala(Math.max(base, base < 1 ? ESCALA_INICIO_TOQUE : base));
   // Cada troca de escala recria os render targets (pós e glow) e dá uma travada:
   // só troca depois de duas leituras seguidas pedindo a mesma direção.
   let pedidoEscala = 0;
@@ -2855,7 +2871,7 @@ export function criarCena(
   }, 2000);
   window.addEventListener('resize', () => {
     const anterior = base;
-    base = Math.max(escalaBase(window.innerWidth), escalaMinima);
+    base = baseDaTela();
     if (base !== anterior) aplicarEscala(Math.max(base, estado.escalaResolucao));
     else engine.resize();
   });
@@ -2881,8 +2897,8 @@ export function criarCena(
     vagalumes.definirDensidade(q.vagalumes / 260);
     if (q.escalaMinima !== escalaMinima) {
       escalaMinima = q.escalaMinima;
-      base = Math.max(escalaBase(window.innerWidth), escalaMinima);
-      aplicarEscala(base);
+      base = baseDaTela();
+      aplicarEscala(Math.max(base, base < 1 ? ESCALA_INICIO_TOQUE : base));
     }
     motorAudio.definirVolume('geral', c.volumeGeral);
     motorAudio.definirVolume('efeitos', c.volumeEfeitos);

@@ -100,7 +100,7 @@ export function gerarIconesBrinquedo(
   const sol = new DirectionalLight('icone-sol', new Vector3(0.45, -0.8, 0.6), scene);
   sol.intensity = 0.75;
   sol.specular = new Color3(0.6, 0.6, 0.6);
-  const mats = criarPlasticos(scene, 'icone');
+  const mats = criarPlasticos(scene, 'icone', { classico: true });
   const matVertices = new StandardMaterial('icone-vertices', scene);
   matVertices.specularColor = new Color3(0.15, 0.15, 0.15);
   matVertices.emissiveColor = new Color3(0.32, 0.32, 0.32);
