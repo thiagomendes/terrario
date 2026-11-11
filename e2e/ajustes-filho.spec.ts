@@ -67,9 +67,13 @@ test('toque: o morador abre as trocas e não apanha; segurar com maçã come', a
       const [px, py, pz] = e.posicao!;
       const agora = (e.criaturas?.() ?? []).find((c) => c.id === m.id) ?? m;
       e.mirarPonto!(agora.x, agora.y + 1.1, agora.z);
-      // a dica aparece com o morador na mira (com 1 FPS pode levar uns segundos)
+      // no toque a dica segue o dedo: o dedo encosta no morador (como a criança faz)
+      const pt = e.telaDoPonto!(agora.x, agora.y + 1.1, agora.z);
+      if (pt) e.controleDireto!.mirar!(pt.x, pt.y);
+      // a dica aparece com o dedo no morador (com 1 FPS pode levar uns segundos)
       for (let i = 0; i < 25 && !dica; i++) await new Promise((res) => setTimeout(res, 200));
       e.controleDireto!.tocar!();
+      e.controleDireto!.soltarMira!();
       await new Promise((res) => setTimeout(res, 600));
       const painel = document.querySelector<HTMLElement>('[data-painel-trocas]');
       abriu = !!painel && !painel.hidden;

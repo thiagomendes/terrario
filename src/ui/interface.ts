@@ -70,7 +70,14 @@ body[data-overlay] .toast-area { top: auto; bottom: calc(env(safe-area-inset-bot
 @media (max-width: 560px) {
   /* retrato: coluna da esquerda (HUD) e do minimapa ocupam o alto; construção acima dos controles */
   .painel-construcao { top: auto; bottom: calc(env(safe-area-inset-bottom, 0px) + 280px); max-width: calc(100vw - 32px); }
-  .toast-area { top: 216px; max-width: calc(100vw - 132px); }
+  /* avisos no alto, embaixo dos botões e ao lado do minimapa (antes no meio da tela, onde
+     tapavam o jogo); letra menor e no máximo dois à vista */
+  .toast-area {
+    top: calc(env(safe-area-inset-top, 0px) + 62px); left: 8px; right: 142px; transform: none;
+    width: auto; max-width: none;
+  }
+  .toast-area > .toast { padding: 6px 12px; font-size: 0.8rem; }
+  .toast-area > :nth-last-child(n + 3) { display: none; }
 }
 @media (orientation: landscape) and (max-height: 500px) {
   .painel-construcao { top: 56px; padding: 4px 12px; font-size: 0.8rem; }
@@ -168,7 +175,22 @@ export function notificar(
     area.setAttribute('aria-live', 'polite');
     document.body.appendChild(area);
   }
+  // o mesmo aviso já à vista (a criança tentou de novo): fica mais um pouco, sem repetir
+  const igual = [...area.children].find(
+    (c) => (c as HTMLElement).dataset.texto === texto,
+  ) as HTMLElement | undefined;
+  if (igual) {
+    const d = duracaoDoAviso(texto);
+    igual.style.animation = 'none';
+    void igual.offsetWidth;
+    igual.style.animation = '';
+    igual.style.animationDuration = `${d}s`;
+    clearTimeout(Number(igual.dataset.timer ?? 0));
+    igual.dataset.timer = String(window.setTimeout(() => igual.remove(), d * 1000 + 100));
+    return;
+  }
   const t = document.createElement('div');
+  t.dataset.texto = texto;
   t.className = nomeIcone === 'trofeu' ? 'toast conquista' : 'toast';
   if (nomeIcone) t.append(icone(nomeIcone), ' ');
   t.append(texto);
@@ -176,7 +198,7 @@ export function notificar(
   const duracao = duracaoDoAviso(texto);
   t.style.animationDuration = `${duracao}s`;
   area.appendChild(t);
-  setTimeout(() => t.remove(), duracao * 1000 + 100);
+  t.dataset.timer = String(window.setTimeout(() => t.remove(), duracao * 1000 + 100));
   while (area.children.length > 4) area.firstElementChild?.remove();
 }
 
