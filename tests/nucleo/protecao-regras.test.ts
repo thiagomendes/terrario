@@ -582,6 +582,37 @@ describe.each<Modo>(['local', 'nuvem'])('regra 4: fornalhas (%s)', (modo) => {
   });
 });
 
+describe('auditoria da 016: lote do criativo (nuvem)', () => {
+  const C = { x: 400, y: 95, z: 410 };
+  const lote = (n: Nucleo, quem: string, cs: Array<Celula & { v: number }>) => {
+    const i = id();
+    ir(n, quem, cs[0]);
+    mandar(n, quem, { t: 'editar', id: i, lote: cs });
+    return i;
+  };
+
+  it('o lote igual não toma o bloco do amigo (nem o natural, nem a casa da vila)', () => {
+    const n = abrir('nuvem', 'criativo', C);
+    lote(n, 'leo', [{ ...C, v: Bloco.TABUAS }]);
+    expect(n.donoDoBloco(C.x, C.y, C.z)).toBe('leo');
+    // a Bia manda o mesmo bloco: não vira dela, e então não pode apagar
+    lote(n, 'bia', [{ ...C, v: Bloco.TABUAS }]);
+    expect(n.donoDoBloco(C.x, C.y, C.z)).toBe('leo');
+    const r = lote(n, 'bia', [{ ...C, v: Bloco.AR }]);
+    expect(bloco(n, C)).toBe(Bloco.TABUAS);
+    expect(recusaDe(n, 'bia', r).recusa?.protecao).toEqual({ motivo: 'amigo', dono: 'Léo' });
+    // girar o bloco do Léo (mesmo bloco, outro meta) também é mexer nele
+    lote(n, 'bia', [{ ...C, v: empacotar(Bloco.TABUAS, 2) }]);
+    expect(n.estado.edicoes.obterMeta(C.x, C.y, C.z)).toBe(0);
+    // a casa da vila mandada igual não ganha edição (o tesouro e o meta ficam como o mundo fez)
+    const L = acharLugares(n);
+    const v = n.estado.mundo.bloco(L.parede.x, L.parede.y, L.parede.z);
+    lote(n, 'bia', [{ ...L.parede, v }]);
+    expect(n.estado.edicoes.obter(L.parede.x, L.parede.y, L.parede.z)).toBeUndefined();
+    expect(n.donoDoBloco(L.parede.x, L.parede.y, L.parede.z)).toBeNull();
+  });
+});
+
 describe('lavoura do sítio: colhe e se replanta (local e nuvem)', () => {
   const RANCHO = 42;
   afterAll(() => {
@@ -634,6 +665,43 @@ describe('lavoura do sítio: colhe e se replanta (local e nuvem)', () => {
     // e cresce de novo
     n.comando(quem, { t: 'depurar', d: { f: 'crescer', segundos: 400 } });
     expect(bloco(n, pe)).toBe(madura);
+  });
+
+  it('o lote do criativo só colhe a lavoura do sítio (não apaga nem troca)', () => {
+    definirEstiloMundo(obterTema('rancho-alegre').mundo);
+    limparPovoados();
+    const plano = povoadoPerto(RANCHO);
+    const l = plano.lotes.find((x) => x.uso === 'lavoura')!;
+    const [x, z] = noLote(l, 1, 2);
+    const pe = { x, y: l.h + 1, z };
+    const n = criarNucleo({
+      semente: RANCHO,
+      modo: 'criativo',
+      versaoMundo: 2,
+      confiarNoCliente: false,
+      depuracao: true,
+      dono: 'ana',
+    });
+    n.conectar('ana', { perfil: { apelido: 'Ana', aparencia: {} } });
+    n.conectar('bia', { perfil: { apelido: 'Bia', aparencia: {} } });
+    const planta = n.estado.mundo.bloco(pe.x, pe.y, pe.z);
+    const milho = planta >= Bloco.MILHO_0 && planta <= Bloco.MILHO_3;
+    const madura = milho ? Bloco.MILHO_3 : Bloco.TRIGO_3;
+    const zero = milho ? Bloco.MILHO_0 : Bloco.TRIGO_0;
+    n.estado.edicoes.definir(pe.x, pe.y, pe.z, madura);
+    ir(n, 'bia', pe);
+    const trocar = id();
+    mandar(n, 'bia', { t: 'editar', id: trocar, lote: [{ ...pe, v: Bloco.TABUAS }] });
+    expect(bloco(n, pe)).toBe(madura);
+    expect(recusaDe(n, 'bia', trocar).recusa?.protecao).toEqual({
+      motivo: 'mundo',
+      lugar: 'sitio',
+    });
+    // apagar com o lote é colher: volta o estágio 0, do mundo, e cresce de novo
+    mandar(n, 'bia', { t: 'editar', id: id(), lote: [{ ...pe, v: Bloco.AR }] });
+    expect(bloco(n, pe)).toBe(zero);
+    expect(n.donoDoBloco(pe.x, pe.y, pe.z)).not.toBe('bia');
+    expect(n.estado.lavoura.has(`${pe.x},${pe.y},${pe.z}`)).toBe(true);
   });
 
   it.each<Modo>(['local', 'nuvem'])(

@@ -14,10 +14,12 @@
  *    de todos). Bicho criado ou domado: só quem criou e o dono do mundo chamam e levam.
  */
 import { Bloco } from '../world/blocks';
+import { ehLavoura } from './plantio';
 import {
   Protecao,
   naoColoca,
   naoQuebra,
+  replantioDaLavoura,
   type LugarProtecao,
   type ProtecaoMundo,
 } from '../world/protecao';
@@ -108,6 +110,51 @@ export function recusaColocar(
   const dono = m.dono(x, y, z);
   if (podeMexer(quem, dono, m.donoDoMundo)) return null;
   return deAlguem(m, dono!, 'amigo');
+}
+
+/** Uma célula do lote do criativo: pula (nada muda), recusa ou o valor que entra. */
+export type CelulaDoLote =
+  | { pula: true }
+  | { recusa: RecusaProtecao }
+  /** `manterDono`: a célula fica com o dono que tinha (colheita, giro do mesmo bloco). */
+  | { v: number; manterDono: boolean };
+
+/**
+ * O lote do criativo, célula a célula (núcleo e cliente): `v` é o valor pedido (bloco e meta)
+ * e `atual` o valor de agora (sem o dono).
+ * - Igual: pula (não carimba quem mandou: senão o lote "tomava" o bloco do amigo ou criava
+ *   edição nas casas do mundo e esvaziava o tesouro da ruína).
+ * - Mesmo bloco com outro meta: é mexer no bloco (regra de quebrar), e o dono fica.
+ * - Lavoura do mundo: só colher (vira o estágio 0 da mesma planta, como quebrar); outra
+ *   coisa por cima não entra.
+ * - O resto: o que sai segue a regra de quebrar, o que entra a de colocar.
+ */
+export function celulaDoLote(
+  m: MundoDaRegra,
+  quem: string,
+  x: number,
+  y: number,
+  z: number,
+  v: number,
+  atual: number,
+): CelulaDoLote {
+  const b = v & 255;
+  const ab = atual & 255;
+  if ((v & 0xffff) === (atual & 0xffff)) return { pula: true };
+  if (b === ab) {
+    const r = recusaQuebrar(m, quem, x, y, z);
+    return r ? { recusa: r } : { v: v & 0xffff, manterDono: true };
+  }
+  if (ehLavoura(ab) && m.protecao.em(x, y, z) === Protecao.LAVOURA) {
+    const rep = replantioDaLavoura(ab);
+    if (rep === null || (b !== Bloco.AR && b !== rep)) return { recusa: doMundo(m, x, z, 'mundo') };
+    const nv = rep | (atual & 0xff00);
+    return nv === (atual & 0xffff) ? { pula: true } : { v: nv, manterDono: true };
+  }
+  const r =
+    (ab !== Bloco.AR ? recusaQuebrar(m, quem, x, y, z) : null) ??
+    (b !== Bloco.AR ? recusaColocar(m, quem, x, y, z, b) : null);
+  return r ? { recusa: r } : { v: v & 0xffff, manterDono: false };
 }
 
 /**

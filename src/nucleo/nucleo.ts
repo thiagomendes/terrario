@@ -15,6 +15,7 @@ import { Bloco, ehAlvo, luzDoBloco, obterBloco } from '../world/blocks';
 import { ALCANCE_REGRAS, alcancaDosOlhos } from '../jogo/alcance';
 import {
   podeLevarBicho,
+  celulaDoLote,
   ehConteiner,
   recusaConteiner,
   recusaColocar,
@@ -912,14 +913,24 @@ export function criarNucleo(op: OpcoesNucleo) {
     const plantas: typeof c.lote = [];
     let primeira: RecusaProtecao | null = null;
     for (const e of c.lote) {
-      const b = e.v & 255;
-      // spec 016: cada célula segue a regra de quebrar (o que sai) e de colocar (o que entra)
-      const r = recusaDoLote(j, e.x, e.y, e.z, b);
-      if (r) {
-        primeira ??= r;
+      // spec 016: cada célula segue a regra de quebrar (o que sai) e de colocar (o que entra);
+      // a igual não muda nada (nem o dono), a lavoura do mundo só se colhe
+      const atual = empacotar(mundo.bloco(e.x, e.y, e.z), edicoes.obterMeta(e.x, e.y, e.z));
+      const d = celulaDoLote(regra, j.id, e.x, e.y, e.z, e.v, atual);
+      if ('pula' in d) continue;
+      if ('recusa' in d) {
+        primeira ??= d.recusa;
         corrigir(j, e.x, e.y, e.z);
+        continue;
+      }
+      const b = d.v & 255;
+      const meta = (d.v >> 8) & 255;
+      if (d.manterDono) {
+        // colheita da lavoura do mundo: entra de novo na lista que cresce, do começo
+        lavoura.delete(`${e.x},${e.y},${e.z}`);
+        editar(e.x, e.y, e.z, b, meta);
       } else if (ehLavoura(b)) plantas.push(e);
-      else editar(e.x, e.y, e.z, b, (e.v >> 8) & 255, j.id);
+      else editar(e.x, e.y, e.z, b, meta, j.id);
     }
     if (primeira)
       j.eventos.push({ e: 'recusa', comando: c.id, motivo: 'editar', protecao: primeira });
@@ -928,22 +939,6 @@ export function criarNucleo(op: OpcoesNucleo) {
         editar(e.x, e.y, e.z, e.v & 255, (e.v >> 8) & 255, j.id);
       else corrigir(j, e.x, e.y, e.z);
     }
-  }
-
-  /** Uma célula do lote do criativo: o que sai e o que entra seguem a regra (null: pode). */
-  function recusaDoLote(
-    j: Jogador,
-    x: number,
-    y: number,
-    z: number,
-    b: number,
-  ): RecusaProtecao | null {
-    const atual = mundo.bloco(x, y, z);
-    if (atual === b) return null;
-    return (
-      (atual !== Bloco.AR ? recusaQuebrar(regra, j.id, x, y, z) : null) ??
-      (b !== Bloco.AR ? recusaColocar(regra, j.id, x, y, z, b) : null)
-    );
   }
 
   function alternarPorta(x: number, y: number, z: number): void {

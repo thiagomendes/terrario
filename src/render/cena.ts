@@ -9,6 +9,7 @@ import { tocarVoz } from '../audio/sons';
 import { construirMapaEmissivo } from './emissivo';
 import { criarTintaProtecao } from './tintaProtecao';
 import {
+  celulaDoLote,
   ehConteiner,
   recusaConteiner,
   recusaColocar,
@@ -1367,20 +1368,21 @@ export function criarCena(
     // spec 016: cada célula segue a regra do núcleo (o que sai e o que entra); a recusada
     // nem vai (o núcleo recusaria e ela piscaria)
     let primeira: RecusaProtecao | null = null;
-    lote = lote.filter((e) => {
-      const atual = blocoEm(e.x, e.y, e.z);
-      const b = e.v & 255;
-      if (atual === b) return true;
-      const r =
-        (atual !== Bloco.AR ? recusaQuebrar(regra, voce, e.x, e.y, e.z) : null) ??
-        (b !== Bloco.AR ? recusaColocar(regra, voce, e.x, e.y, e.z, b) : null);
-      primeira ??= r;
-      return !r;
-    });
+    const vai: { x: number; y: number; z: number; v: number; manterDono: boolean }[] = [];
+    for (const e of lote) {
+      // a igual não vai (nem carimba o dono); a lavoura do mundo só se colhe
+      const d = celulaDoLote(regra, voce, e.x, e.y, e.z, e.v, valorEm(e.x, e.y, e.z));
+      if ('pula' in d) continue;
+      if ('recusa' in d) primeira ??= d.recusa;
+      else vai.push({ x: e.x, y: e.y, z: e.z, v: d.v, manterDono: d.manterDono });
+    }
     if (primeira) avisosProtecao.avisar(primeira);
-    if (!lote.length) return;
+    if (!vai.length) return;
+    lote = vai.map(({ x, y, z, v }) => ({ x, y, z, v }));
     const id = proximoId();
-    for (const e of lote) prever(id, e.x, e.y, e.z, e.v & 255, (e.v >> 8) & 255);
+    // a colheita e o giro ficam com o dono que tinham (o núcleo faz igual)
+    for (const e of vai)
+      (e.manterDono ? cliente.prever : prever)(id, e.x, e.y, e.z, e.v & 255, (e.v >> 8) & 255);
     enviarTelemetria(true);
     enviar({ t: 'editar', id, lote });
   }
