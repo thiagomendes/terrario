@@ -29,3 +29,4 @@ Ordem combinada com o dono (10 nov 2026): 013 → 015 → 017 → 016 → 014 �
 
 - **Leite e balde, filhotes, colmeia e mel** (fora de escopo da 013).
 - **019, Som vivo** (`.sdd/specs/019-som-vivo/spec.md`): trilhas compostas por tema, em camadas que seguem o mundo; moda de viola de verdade no Rancho; vozes e golpes dos bichos com personalidade; esboço para ouvir.
+- **020, Nas lojas** (`.sdd/specs/020-lojas/spec.md`, rascunho): casca nativa (Capacitor no celular, Tauri ou Electron no computador) com o mesmo jogo web e o mesmo servidor; regras da Apple e do Google para jogo infantil (portão dos pais, denunciar e bloquear, privacidade); contas e compras como fase futura. Esboço quando chegar a vez; fica depois da 018.
