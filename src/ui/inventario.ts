@@ -108,6 +108,16 @@ export interface InventarioUI {
   clicarExterno(
     f: (el: HTMLElement, cursor: Slot, botao: 'esquerdo' | 'direito', shift: boolean) => Slot,
   ): void;
+  /**
+   * Roda ao fechar por qualquer caminho (E, Esc, o X, tocar fora): devolve a grade de
+   * criação, fecha o baú ou a fornalha. Roda antes de o cursor voltar para a mochila.
+   */
+  antesDeFechar(f: () => void): void;
+  /**
+   * Shift+clique (dois toques) na mochila ou na barra com um baú ou fornalha aberta: a pilha
+   * vai para lá. `f` devolve o que sobrou na mochila, ou undefined se não está aberto.
+   */
+  moverRapidoPara(f: (p: NonNullable<Slot>) => Slot | undefined): void;
   /** Redesenha os slots (após mudança externa). */
   render(): void;
   /** Item preso ao cursor (entra nas transações de itens). */
@@ -308,9 +318,20 @@ export function criarInventarioUI(raiz: HTMLElement, op: OpcoesInventarioUI): In
     mostrarDica(def, e.clientX, e.clientY, extra);
   });
 
+  const destinosRapidos: ((p: NonNullable<Slot>) => Slot | undefined)[] = [];
   function clicarSlot(i: number, botao: 'esquerdo' | 'direito', shift: boolean): void {
     if (shift && !cursor) {
-      inv.moverRapido(i);
+      const p = inv.obter(i);
+      let feito = false;
+      for (const f of destinosRapidos) {
+        if (!p) break;
+        const resto = f({ ...p });
+        if (resto === undefined) continue;
+        inv.definir(i, resto);
+        feito = true;
+        break;
+      }
+      if (!feito) inv.moverRapido(i);
     } else {
       cursor = inv.clicar(i, cursor, botao);
     }
@@ -327,6 +348,12 @@ export function criarInventarioUI(raiz: HTMLElement, op: OpcoesInventarioUI): In
   const SELETOR_SLOT = '.slot-inv[data-indice], [data-catalogo], [data-externo]';
   const alvoSlot = (el: EventTarget | Element | null): HTMLElement | null =>
     el instanceof Element ? el.closest<HTMLElement>(SELETOR_SLOT) : null;
+  /**
+   * Onde um arraste pode soltar. Soltar no catálogo não guarda nada e soltar num resultado
+   * (criação, saída da fornalha) pegaria mais um em vez de soltar: nos dois, nada acontece.
+   */
+  const recebeArraste = (el: HTMLElement) =>
+    !el.dataset.catalogo && !el.classList.contains('resultado');
   /** Um "clique" num slot qualquer (mochila, barra, catálogo, criação, baú, fornalha). */
   function acionar(el: HTMLElement, botao: 'esquerdo' | 'direito', shift: boolean): void {
     if (el.dataset.catalogo) {
@@ -387,6 +414,38 @@ export function criarInventarioUI(raiz: HTMLElement, op: OpcoesInventarioUI): In
     }, TEMPO_TOQUE_LONGO);
     toque = t;
   });
+  /**
+   * Arrastando perto da borda de cima ou de baixo da janela, ela rola sozinha (celular
+   * deitado: a barra fica abaixo da dobra e o dedo não rola enquanto arrasta um item).
+   */
+  let yArraste = -1;
+  let rolando = 0;
+  function rolarNoArraste(): void {
+    rolando = 0;
+    if (yArraste < 0 || painel.scrollHeight <= painel.clientHeight) return;
+    const r = painel.getBoundingClientRect();
+    const borda = 56;
+    let v = 0;
+    if (yArraste > r.bottom - borda) v = Math.min(1, (yArraste - (r.bottom - borda)) / borda);
+    else if (yArraste < r.top + borda) v = -Math.min(1, (r.top + borda - yArraste) / borda);
+    if (v) painel.scrollTop += v * 14;
+    rolando = requestAnimationFrame(rolarNoArraste);
+  }
+  function pararRolagem(): void {
+    yArraste = -1;
+    if (rolando) cancelAnimationFrame(rolando);
+    rolando = 0;
+  }
+  fundo.addEventListener('pointermove', (e) => {
+    const arrastando =
+      e.pointerType === 'mouse'
+        ? !!arrasteMouse && !!cursor && (e.buttons & 1) === 1
+        : !!toque && e.pointerId === toque.id && toque.moveu;
+    if (arrastando) {
+      yArraste = e.clientY;
+      if (!rolando) rolando = requestAnimationFrame(rolarNoArraste);
+    } else if (yArraste >= 0 && e.pointerType === 'mouse') pararRolagem();
+  });
   fundo.addEventListener('pointermove', (e) => {
     const t = toque;
     if (!t || e.pointerId !== t.id || t.moveu) return;
@@ -396,6 +455,7 @@ export function criarInventarioUI(raiz: HTMLElement, op: OpcoesInventarioUI): In
     }
   });
   fundo.addEventListener('pointerup', (e) => {
+    pararRolagem();
     const noFundo = e.target === fundo && fundoPressionado;
     fundoPressionado = false;
     if (e.pointerType === 'mouse') {
@@ -407,7 +467,8 @@ export function criarInventarioUI(raiz: HTMLElement, op: OpcoesInventarioUI): In
       }
       if (!origem || e.button !== 0 || !cursor) return;
       const destino = alvoSlot(document.elementFromPoint(e.clientX, e.clientY));
-      if (destino && destino !== origem) acionar(destino, 'esquerdo', false);
+      if (destino && destino !== origem && recebeArraste(destino))
+        acionar(destino, 'esquerdo', false);
       return;
     }
     const t = toque;
@@ -422,7 +483,7 @@ export function criarInventarioUI(raiz: HTMLElement, op: OpcoesInventarioUI): In
     if (t.moveu || desloc > FOLGA_TOQUE_INV) {
       ultimoToque = null;
       const destino = alvoSlot(document.elementFromPoint(e.clientX, e.clientY));
-      if (!destino || destino === t.el || destino.dataset.catalogo) return;
+      if (!destino || destino === t.el || !recebeArraste(destino)) return;
       for (const qual of acoesDeArrastar(t.cursorVazio, t.longo)) {
         acionar(qual === 'origem' ? t.el : destino, 'esquerdo', false);
       }
@@ -444,6 +505,7 @@ export function criarInventarioUI(raiz: HTMLElement, op: OpcoesInventarioUI): In
     ultimoToque = g === 'simples' ? { el: t.el, t: agora } : null;
   });
   fundo.addEventListener('pointercancel', (e) => {
+    pararRolagem();
     if (toque && e.pointerId === toque.id) {
       clearTimeout(toque.timer);
       toque = null;
@@ -496,11 +558,18 @@ export function criarInventarioUI(raiz: HTMLElement, op: OpcoesInventarioUI): In
     render();
     op.aoAbrir?.();
   }
+  const aoFecharAntes: (() => void)[] = [];
   function fechar(): void {
     if (!aberto) return;
+    for (const f of aoFecharAntes) f();
     if (cursor) {
       const resto = op.criativo() ? 0 : inv.adicionar(cursor.item, cursor.qtd, cursor.dur);
-      if (resto > 0) op.aoSobrar?.({ ...cursor, qtd: resto });
+      // o que não coube fica na mão até sair para o chão (a conta dos itens fecha em cada
+      // passo: mochila mais mão, depois a mão para o chão)
+      if (resto > 0) {
+        cursor = { ...cursor, qtd: resto };
+        op.aoSobrar?.(cursor);
+      }
       cursor = null;
     }
     aberto = false;
@@ -509,6 +578,7 @@ export function criarInventarioUI(raiz: HTMLElement, op: OpcoesInventarioUI): In
     if (toque) clearTimeout(toque.timer);
     toque = null;
     arrasteMouse = null;
+    pararRolagem();
     delete document.body.dataset.overlay;
     op.aoFechar?.();
   }
@@ -530,6 +600,12 @@ export function criarInventarioUI(raiz: HTMLElement, op: OpcoesInventarioUI): In
     areaExtra,
     clicarExterno(f) {
       externos.push(f);
+    },
+    antesDeFechar(f) {
+      aoFecharAntes.push(f);
+    },
+    moverRapidoPara(f) {
+      destinosRapidos.push(f);
     },
     criarSlot,
     desenharSlot,

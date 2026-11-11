@@ -3886,6 +3886,10 @@ export function criarCena(
     }) {
       sincronia.definirTransito(f);
     },
+    /** A grade de criação fez uma receita (vai com a transação, para a nuvem conferir). */
+    registrarFabricacao(receita: string) {
+      sincronia.fabricou(receita);
+    },
     /** Pede uma troca ao morador (o inventário novo chega do núcleo). */
     trocar(criatura: number, profissao: Profissao, troca: string) {
       sincronia.verificar();

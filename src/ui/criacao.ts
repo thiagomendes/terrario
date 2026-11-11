@@ -13,6 +13,7 @@ import {
 } from '../jogo/receitas';
 import { iconeDoItem } from './icones';
 import { rolarAoFocar, type InventarioUI } from './inventario';
+import { trocar } from './conteiner';
 
 export const CSS_CRIACAO = `
 /* criação e livro são seções do inventário: sem fundo nem sombra próprios */
@@ -47,6 +48,14 @@ export const CSS_CRIACAO = `
 .receita .ingr { display: flex; gap: 2px; margin-top: 2px; flex-wrap: wrap; }
 .receita .ingr img { width: 16px; height: 16px; }
 .receita small { font-weight: 600; color: var(--tinta-suave); }
+/* Livro aberto em tela larga: ao lado da grade, não por cima da mochila. Em largura toda,
+   num notebook (720 ou 768 de altura) a barra e quase toda a mochila saíam da janela e não
+   dava para arrastar o resultado até elas. */
+@media (min-width: 600px) {
+  .inventario .topo > .secao:first-child:has(> .livro:not([hidden])) { flex: 1 1 100%; flex-wrap: nowrap; }
+  .inventario .livro { flex: 1 1 0; width: auto; min-width: 0; }
+  .inventario .livro .lista { max-height: calc(var(--slot) * 3.4); }
+}
 .receita.mesa-necessaria::after {
   content: 'mesa'; justify-self: start; grid-column: 2; padding: 1px 8px; border-radius: 999px;
   font-size: 0.68rem; font-weight: 800; color: #9a2f12; background: #ffe0d6;
@@ -64,7 +73,7 @@ const NOMES_TAG: Record<string, string> = {
 export interface Criacao {
   mostrar(v: boolean): void;
   definirLado(lado: 2 | 3): void;
-  /** Devolve à mochila o que ficou na grade (ao fechar). */
+  /** Devolve à mochila o que ficou na grade (ao fechar); o que não couber vai para o chão. */
   devolver(): void;
   /** Grade de criação (até 9 casas), para as transações de itens. */
   lerGrade(i: number): Slot;
@@ -75,7 +84,12 @@ export interface Criacao {
 export function criarCriacao(
   ui: InventarioUI,
   inv: Inventario,
-  op: { criativo: () => boolean; aoFabricar?: (r: Receita) => void },
+  op: {
+    criativo: () => boolean;
+    aoFabricar?: (r: Receita) => void;
+    /** O que não coube na mochila ao esvaziar a grade (vai para o chão). */
+    aoSobrar?: (p: Pilha) => void;
+  },
 ): Criacao {
   let lado: 2 | 3 = 2;
   let grade: Grade = [null, null, null, null];
@@ -198,6 +212,11 @@ export function criarCriacao(
   function preencher(r: Receita): void {
     if (r.mesa && lado < 3) return;
     devolver();
+    // mochila cheia: o que estava na grade ficou nela (não some)
+    if (grade.some((p) => p)) {
+      render();
+      return;
+    }
     if (!podeFazer(r, (i) => inv.contar(i))) return;
     const pos: { i: number; chave: string }[] = [];
     if (r.forma) {
@@ -262,31 +281,34 @@ export function criarCriacao(
     const i = Number(alvo.slice(6));
     const s = grade[i];
     let novo: Slot = cursor;
-    if (botao === 'direito' && cursor) {
-      if (!s) {
-        grade[i] = { ...cursor, qtd: 1 };
-        novo = cursor.qtd > 1 ? { ...cursor, qtd: cursor.qtd - 1 } : null;
-      } else if (s.item === cursor.item) {
-        s.qtd += 1;
-        novo = cursor.qtd > 1 ? { ...cursor, qtd: cursor.qtd - 1 } : null;
-      }
-    } else if (shift && s && !cursor) {
+    if (shift && s && !cursor) {
       const resto = inv.adicionar(s.item, s.qtd, s.dur);
       grade[i] = resto > 0 ? { ...s, qtd: resto } : null;
-    } else if (cursor && s && s.item === cursor.item && s.dur === undefined) {
-      s.qtd += cursor.qtd;
-      novo = null;
     } else {
-      grade[i] = cursor ? { ...cursor } : null;
-      novo = s;
+      // as mesmas regras do baú: botão direito põe um (ou pega metade), juntar não passa
+      // da pilha
+      [grade[i], novo] = trocar(s, cursor, botao);
     }
     render();
     return novo;
   });
 
+  /** Grade de volta para a mochila; o que não couber fica na grade. */
   function devolver(): void {
-    for (const p of grade) if (p) inv.adicionar(p.item, p.qtd, p.dur);
-    grade = Array.from({ length: lado * lado }, () => null);
+    grade = grade.map((p) => {
+      if (!p) return null;
+      const resto = inv.adicionar(p.item, p.qtd, p.dur);
+      return resto > 0 ? { ...p, qtd: resto } : null;
+    });
+  }
+  /** Esvazia a grade: volta para a mochila e o que não couber vai para o chão. */
+  function esvaziar(): void {
+    devolver();
+    grade.forEach((p, i) => {
+      if (!p) return;
+      op.aoSobrar?.(p);
+      grade[i] = null;
+    });
   }
 
   montar();
@@ -302,14 +324,14 @@ export function criarCriacao(
     },
     definirLado(n) {
       if (n === lado) return;
-      devolver();
+      esvaziar();
       lado = n;
       grade = Array.from({ length: n * n }, () => null);
       montar();
       render();
     },
     devolver() {
-      devolver();
+      esvaziar();
       render();
     },
     render,

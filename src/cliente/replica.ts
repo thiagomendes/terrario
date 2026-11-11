@@ -57,6 +57,12 @@ export function criarSincronizadorItens(
   let transito: Omit<Fonte, 'onde'> | null = null;
   /** Aberturas que o jogador já fechou (chegam atrasadas: não abrem de novo). */
   let fechadasAte = 0;
+  /**
+   * Receitas feitas na tela desde a última transação: vão junto com ela, para a nuvem
+   * conferir a conta (ingredientes saem, resultado entra). Sem isso a nuvem recusa e o
+   * resultado some da mão.
+   */
+  const fabricadas = new Map<string, number>();
 
   const fontes = (): Fonte[] => {
     const lista: Fonte[] = [
@@ -119,7 +125,11 @@ export function criarSincronizadorItens(
     if (!mudancas.length) return;
     const id = proximoId();
     pendentes.push({ id, mudancas });
-    enviar({ t: 'transacao', id, mudancas });
+    if (fabricadas.size) {
+      const fabricou = [...fabricadas].map(([receita, vezes]) => ({ receita, vezes }));
+      fabricadas.clear();
+      enviar({ t: 'transacao', id, mudancas, fabricou });
+    } else enviar({ t: 'transacao', id, mudancas });
   }
 
   /** Estado oficial de um lugar, com as transações pendentes reaplicadas por cima. */
@@ -145,6 +155,10 @@ export function criarSincronizadorItens(
 
   return {
     verificar,
+    /** A tela fez uma receita: entra na próxima transação (a que leva os slots mudados). */
+    fabricou(receita: string): void {
+      fabricadas.set(receita, (fabricadas.get(receita) ?? 0) + 1);
+    },
     /** Liga o cursor e a grade da tela de inventário (entram nas transações). */
     definirTransito(f: Omit<Fonte, 'onde'>): void {
       transito = f;

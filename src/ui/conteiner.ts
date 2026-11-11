@@ -55,6 +55,34 @@ export function trocar(alvo: Slot, cursor: Slot, botao: 'esquerdo' | 'direito'):
 }
 
 /**
+ * Junta uma pilha nos slots (primeiro nas pilhas iguais, depois nos vazios).
+ * Devolve o que não coube (null = coube tudo).
+ */
+export function juntarEm(slots: Slot[], indices: readonly number[], p: NonNullable<Slot>): Slot {
+  let resto = p.qtd;
+  const max = maxPilha(p.item);
+  if (p.dur === undefined)
+    for (const i of indices) {
+      const s = slots[i];
+      if (resto <= 0) break;
+      if (s && s.item === p.item && s.dur === undefined && s.qtd < max) {
+        const n = Math.min(max - s.qtd, resto);
+        slots[i] = { ...s, qtd: s.qtd + n };
+        resto -= n;
+      }
+    }
+  for (const i of indices) {
+    if (resto <= 0) break;
+    if (!slots[i]) {
+      const n = Math.min(max, resto);
+      slots[i] = { ...p, qtd: n };
+      resto -= n;
+    }
+  }
+  return resto > 0 ? { ...p, qtd: resto } : null;
+}
+
+/**
  * Pega a saída da fornalha para o cursor sem passar do máximo da pilha.
  * Devolve o novo cursor, o que fica na saída e quanto foi pego (0 = nada).
  */
@@ -106,6 +134,17 @@ export function criarPainelBau(ui: InventarioUI, inv: Inventario) {
     conteudo[i] = novo;
     render();
     return c;
+  });
+  // Shift+clique na mochila com o baú aberto: vai para o baú
+  ui.moverRapidoPara((p) => {
+    if (!conteudo) return undefined;
+    const resto = juntarEm(
+      conteudo,
+      Array.from({ length: TAMANHO_BAU }, (_, k) => k),
+      p,
+    );
+    render();
+    return resto;
   });
   return {
     elemento: raiz,
@@ -191,6 +230,18 @@ export function criarPainelFornalha(ui: InventarioUI) {
     f[campo] = novo;
     render();
     return c;
+  });
+  // Shift+clique na mochila com a fornalha aberta: o que funde vai para a entrada, o que
+  // queima vai para o combustível
+  ui.moverRapidoPara((p) => {
+    if (!f) return undefined;
+    const campo = FUNDICAO[p.item] ? 'entrada' : COMBUSTIVEL[p.item] ? 'combustivel' : null;
+    if (!campo) return undefined;
+    const slots: Slot[] = [f[campo]];
+    const resto = juntarEm(slots, [0], p);
+    f[campo] = slots[0];
+    render();
+    return resto;
   });
   return {
     elemento: raiz,

@@ -262,7 +262,18 @@ function ligarInventario(
   });
   const criacao = criarCriacao(ui, hotbar.inventario, {
     criativo: () => cena.estado.modo === 'criativo',
-    aoFabricar: (r) => window.dispatchEvent(new CustomEvent('brumaluz:fabricou', { detail: r.id })),
+    aoSobrar: (p) => {
+      const j = cena.controle.jogador;
+      cena.estado.soltarItem?.(p.item, p.qtd, j.x, j.y + 1.2, j.z, p.dur);
+    },
+    aoFabricar: (r) => {
+      // a receita vai na mesma transação dos slots (a nuvem confere a conta dos itens)
+      cena.registrarFabricacao(r.id);
+      // o aviso sai depois que o resultado chega à mão: quem ouve não pega a tela no meio
+      queueMicrotask(() =>
+        window.dispatchEvent(new CustomEvent('brumaluz:fabricou', { detail: r.id })),
+      );
+    },
   });
   // cursor (0) e grade (1..9) entram nas transações: nada duplica nem some numa recusa
   cena.definirTransito({
@@ -290,15 +301,14 @@ function ligarInventario(
     if ((e as CustomEvent<string>).detail === 'faltam')
       notificar(povoadoDoTema().textos.faltam, undefined, true);
   });
-  const fecharOriginal = ui.fechar;
-  ui.fechar = () => {
+  // por qualquer caminho (E, Esc, o X, tocar fora): a grade volta e o baú fecha
+  ui.antesDeFechar(() => {
     criacao.devolver();
     painelBau.fechar();
     painelFornalha.fechar();
     painelTrocas.fechar();
     cena.fecharConteiner();
-    fecharOriginal();
-  };
+  });
   const abrir = (lado: 2 | 3) => {
     painelBau.fechar();
     painelFornalha.fechar();
