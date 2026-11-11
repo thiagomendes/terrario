@@ -25,14 +25,26 @@ Pedido do dono (11 nov 2026): "o som ainda está muito básico para o jogo". A m
 - O golpe no bicho usa o som de material.
 
 ## Direção (a confirmar com o esboço)
-- **Instrumentos de verdade, ainda sintetizados**, sem baixar arquivos: corda dedilhada (viola caipira com cordas em par, violão), sanfona, flauta, marimba, sinos, sintetizador espacial. Cada tema ganha a sua orquestrinha.
+- **Instrumentos de verdade** (decisão de 11 nov: gravados, ver Decisões do dono): corda dedilhada (viola caipira com cordas em par, violão), sanfona, flauta, marimba, sinos, sintetizador espacial. Cada tema ganha a sua orquestrinha.
 - **Música composta, não sorteada:** frases curtas por tema e contexto (ponteio de moda de viola no Rancho), que se repetem com variação.
 - **Camadas que seguem o mundo:** uma base que nunca para, com instrumentos que entram e saem conforme a hora do dia, a chuva, a caverna, o perigo, o andar e o correr, a lavoura e os amigos por perto. As trocas são em cruz, no tempo da música, nunca bruscas. O silêncio também conta: há pausas.
 - **Vozes dos bichos com personalidade:** galinha, vaca, cavalo, porco, cachorro, saci, dinos, bichos da Lua... Cada um tem chamado, susto, contente e "ai" de golpe de desenho animado (nada de vidro nem de grito), e os filhotes falam mais fino.
 - **Leve:** um teto de vozes, nada de laço contínuo pesado e CPU medida no celular.
 
 ## Decisões do dono
-- 11 nov 2026: proposta do esboço aprovada ("gostei da proposta", "ficaram legal as novas"). **Continua gerado na hora**, sem pré-gravar nem baixar arquivos.
+- 11 nov 2026: proposta do esboço aprovada ("gostei da proposta", "ficaram legal as novas").
+- 11 nov 2026 (depois de ouvir a amostra gravada: "diferença absurda... ficou muito bom"): **híbrido, gravado onde faz diferença.**
+  - **Música:** gravada a partir da nossa partitura, com instrumentos amostrados de licença livre. Vai em camadas e em frases separadas, montadas na hora para variar. No Rancho, o dono preferiu o arranjo **acústico** (violões dobrados e sanfona).
+  - **Vozes de bichos e moradores:** gravadas, com algumas versões de cada.
+  - **Passos, quebrar e colocar bloco:** continuam gerados na hora.
+  - **Metas medidas:**
+    - por tema, a música ocupa menos de 15 MB de memória e baixa menos de 2 MB;
+    - só baixa ao entrar num mundo daquele tema e fica guardada;
+    - o mundo nunca espera a música para abrir;
+    - só ficam abertas as camadas que tocam;
+    - a música do tema é solta ao sair do mundo.
+  - **Teste WebKit:** imita o iPhone e confere a memória ao trocar de mundo.
+- **Fluxo:** no começo da spec, um esboço maior com tudo pré-gravado para aprovar, e só depois entra no jogo.
 - 11 nov 2026: **sem aumentar o volume da trilha.** Ela tem que ser suave e não irritar o jogador. A música nova entra no jogo com o mesmo volume percebido da de hoje (no esboço, o "Hoje" foi aumentado só para comparar) e fica sempre abaixo dos efeitos e das vozes. Isso será medido com uma régua de volume (RMS) nos testes. O controle "Música" de Configurações → Áudio, que já existe (padrão 60%), continua sendo o jeito de baixar ou subir a trilha.
 
 ## Revisar tudo o que já existe (pedido do dono, 11 nov 2026)
