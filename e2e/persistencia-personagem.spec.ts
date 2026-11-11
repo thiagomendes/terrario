@@ -85,6 +85,8 @@ test('escolhas no painel mudam a aparência e persistem após recarregar', async
 
   await expect(botao(page, 'pele', '3')).toHaveAttribute('aria-pressed', 'true');
   await expect(page.locator('[data-nome-jogador]')).toHaveText('Luzia');
+  // o nome digitado chega ao boneco do jogo depois que a criança para de digitar (300 ms)
+  await expect.poll(async () => (await aparencia(page)).nome).toBe('Luzia');
   const depois = await aparencia(page);
   expect(depois).not.toEqual(antes);
   expect(depois).toMatchObject({
