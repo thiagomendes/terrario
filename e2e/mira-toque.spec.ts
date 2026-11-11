@@ -213,6 +213,31 @@ test('o toque age no bloco embaixo do dedo: ara, planta, quebra; longe avisa e n
   const bloco = (b: Campo) => page.evaluate((b) => window.__brumaluz!.bloco!(b.x, b.y, b.z), b);
   const G = { x: c.x + 2, y: c.y - 1, z: c.z + 2 };
 
+  // a dica da mira no toque: sem dedo, a mira do centro não vale (nem na grama, de enxada)
+  await page.evaluate(() => {
+    const w = window as unknown as { dicas: string[] };
+    w.dicas = [];
+    window.addEventListener('brumaluz:dicaMira', (ev) =>
+      w.dicas.push(String((ev as CustomEvent).detail ?? '')),
+    );
+  });
+  const ultimaDica = () =>
+    page.evaluate(() => (window as unknown as { dicas: string[] }).dicas.at(-1) ?? '');
+  const Hc = { x: c.x + 3, y: c.y - 1, z: c.z + 1 };
+  await page.evaluate((h) => window.__brumaluz!.mirarPonto!(h.x + 0.5, h.y + 1, h.z + 0.5), Hc);
+  await page.waitForTimeout(400);
+  expect((await page.evaluate(() => window.__brumaluz!.alvo))?.x).toBe(Hc.x);
+  await page.waitForTimeout(700);
+  expect(await ultimaDica()).toBe('');
+  await page.evaluate(() => window.__brumaluz!.apontar!(0, 0.5));
+  await page.waitForTimeout(800);
+  // com o dedo parado na grama, a dica fala dela; soltou, some
+  const pd = await telaDoTopo(page, { x: c.x + 2, y: c.y - 1, z: c.z + 2 });
+  await page.evaluate((p) => window.__brumaluz!.controleDireto!.mirar(p.x, p.y), pd);
+  await expect.poll(ultimaDica).toBe('Toque na grama para arar');
+  await page.evaluate(() => window.__brumaluz!.controleDireto!.soltarMira());
+  await expect.poll(ultimaDica).toBe('');
+
   // sem dedo na tela, nada de contorno no bloco da mira do centro
   await expect.poll(() => page.evaluate(() => window.__brumaluz!.destaque!())).toBeNull();
   const centro = await page.evaluate(() => window.__brumaluz!.alvo);

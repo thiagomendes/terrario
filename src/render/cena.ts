@@ -1426,7 +1426,15 @@ export function criarCena(
    * O último bloco em que o dedo agiu e até quando o corpo vira para ele (a animação do
    * golpe ou da colocação dura um pouco mais que o toque, que já soltou a mira).
    */
-  let alvoDoToque: { x: number; y: number; z: number; ate: number } | null = null;
+  let alvoDoToque: {
+    x: number;
+    y: number;
+    z: number;
+    normal: Vec3;
+    ate: number;
+    /** Até quando a dica da mira fala deste bloco (sem dedo na tela). */
+    ateDica: number;
+  } | null = null;
 
   /**
    * O raio da mira do centro passa pelo pivô (o caminho da câmera até ele é livre: a câmera
@@ -2585,6 +2593,17 @@ export function criarCena(
     .add(new Color3(0.65, 0.65, 0.65));
   matDestaque.alpha = 0.17;
   matDestaque.backFaceCulling = true;
+  /**
+   * No toque o contorno só aparece com o dedo na tela: mais forte (o dobro) e mais claro,
+   * para a criança pequena ver na hora qual peça o dedo pegou.
+   */
+  const matDestaqueDedo = new StandardMaterial('destaque-dedo-mat', scene);
+  matDestaqueDedo.disableLighting = true;
+  matDestaqueDedo.emissiveColor = new Color3(...COR_DESTAQUE)
+    .scale(0.55)
+    .add(new Color3(0.5, 0.5, 0.5));
+  matDestaqueDedo.alpha = 0.36;
+  matDestaqueDedo.backFaceCulling = true;
   let alvoDestacado: { x: number; y: number; z: number } | null = null;
   const d0 = (a: { x: number; y: number; z: number } | null) =>
     a ? { x: a.x, y: a.y, z: a.z } : null;
@@ -2593,9 +2612,8 @@ export function criarCena(
     // no modo foto a mira não marca bloco (a foto sai limpa); no toque só o dedo marca: sem
     // dedo na tela, nada de contorno no bloco do centro (a criança toca onde quer, e o
     // contorno no meio fazia parecer que o toque ia para lá)
-    const semMarca =
-      !!estado.modoFoto?.ativo() ||
-      (pontoToque === null && document.body.classList.contains('toque-ativo'));
+    const toqueAtivo = document.body.classList.contains('toque-ativo');
+    const semMarca = !!estado.modoFoto?.ativo() || (pontoToque === null && toqueAtivo);
     const alvo = semMarca ? null : alvoDoQuadro();
     alvoDestacado = d0(alvo);
     const d = estadoDestaque(alvo, alvo ? caixaVisual(alvo.x, alvo.y, alvo.z) : CUBO);
@@ -2618,7 +2636,7 @@ export function criarCena(
           h,
           p,
           Math.min(0.16, Math.min(w, h, p) * 0.3),
-          matDestaque,
+          toqueAtivo ? matDestaqueDedo : matDestaque,
           3,
         );
         l.position.set(
@@ -2633,6 +2651,7 @@ export function criarCena(
         contorno = l;
       }
     }
+    if (contorno) contorno.material = toqueAtivo ? matDestaqueDedo : matDestaque;
     estado.destaqueVisivel = contorno !== null;
   }
 
@@ -2974,7 +2993,12 @@ export function criarCena(
     esperaDica = 0.25;
     const toque = document.body.classList.contains('toque-ativo');
     let t = '';
-    const c = criaturaApontada();
+    // no toque sem dedo na tela, a mira do centro não vale (o contorno também some): a dica
+    // fala do último bloco tocado, por um instante, ou só do que não depende de bloco
+    const semDedo = toque && pontoToque === null;
+    const recente = alvoDoToque && performance.now() < alvoDoToque.ateDica ? alvoDoToque : null;
+    const alvo = semDedo ? recente : alvoDoQuadro();
+    const c = semDedo ? null : criaturaApontada();
     const p = hotbar.pilhaAtiva();
     if (c?.morador) {
       const nome = nomeDoMorador(c.morador.povoado, c.morador.n, c.morador.profissao);
@@ -2996,13 +3020,14 @@ export function criarCena(
     } else if (comidaNaMao() && cliente.sobrevivencia.fome < 20) {
       t = toque ? 'Segure o dedo na tela para comer' : 'Clique direito (ou F): comer';
     } else {
-      t = dicaDoPlantio(toque, p?.item);
+      t = dicaDoPlantio(alvo, toque, p?.item);
     }
-    if (!t) t = dicaDaPorteira(toque);
+    if (!t) t = dicaDaPorteira(alvo, toque);
     if (t === dicaAtual) return;
     dicaAtual = t;
     window.dispatchEvent(new CustomEvent('brumaluz:dicaMira', { detail: t }));
   }
+  type AlvoDaDica = { x: number; y: number; z: number; normal: Vec3 } | null;
   const minuscula = (t: string) => t.charAt(0).toLowerCase() + t.slice(1);
   /**
    * Nome do bicho com artigo, no gênero da primeira palavra ("a vaca malhada", "o cervo-musgo"):
@@ -3014,8 +3039,7 @@ export function criarCena(
     return fem ? { o: `a ${n}`, a: `à ${n}` } : { o: `o ${n}`, a: `ao ${n}` };
   }
   /** Porteira na mira (de perto): como abrir e fechar. */
-  function dicaDaPorteira(toque: boolean): string {
-    const a = alvoDoQuadro();
+  function dicaDaPorteira(a: AlvoDaDica, toque: boolean): string {
     if (!a) return '';
     const b = blocoEm(a.x, a.y, a.z);
     if (!ehPorteira(b)) return '';
@@ -3024,8 +3048,7 @@ export function criarCena(
     return aberta ? 'Clique direito: fechar' : 'Clique direito: abrir';
   }
   /** Dicas da roça: arar com a enxada, plantar na terra arada, colher a madura. */
-  function dicaDoPlantio(toque: boolean, item: string | undefined): string {
-    const a = alvoDoQuadro();
+  function dicaDoPlantio(a: AlvoDaDica, toque: boolean, item: string | undefined): string {
     if (!a) return '';
     const b = blocoEm(a.x, a.y, a.z);
     const def = item ? obterItem(item) : undefined;
@@ -3399,7 +3422,8 @@ export function criarCena(
     tocar: () => {
       // o corpo vira para o bloco tocado durante a animação (a mira do dedo solta já)
       const a = raioToque ? calcularAlvo() : null;
-      if (a) alvoDoToque = { x: a.x, y: a.y, z: a.z, ate: performance.now() + 900 };
+      const agora = performance.now();
+      if (a) alvoDoToque = { ...a, ate: agora + 900, ateDica: agora + 2500 };
       if (amigoNaMira() || !atacarNaMira()) usarOuColocar(false);
     },
     dedoLonge: () =>
