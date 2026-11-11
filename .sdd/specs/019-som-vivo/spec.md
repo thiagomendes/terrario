@@ -35,4 +35,4 @@ Pedido do dono (11 nov 2026): "o som ainda está muito básico para o jogo". A m
 Recomendado depois da 016 e antes da 014: 017 → 016 → **019** → 014 → 018. Assim a Cidade Grande (014) e os mundos da 018 já nascem com a trilha e os sons deles.
 
 ## Esboço
-`referencia/sons.html`: página para ouvir o hoje e a proposta lado a lado, por tema e por contexto, e as vozes dos bichos.
+`referencia/sons.html`, https://claude.ai/artifact/9FjUNAaG9PJg1U47wMzbUW: página para ouvir o hoje e a proposta lado a lado, por tema e por contexto, e as vozes dos bichos.
