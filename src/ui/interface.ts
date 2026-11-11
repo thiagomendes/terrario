@@ -8,6 +8,8 @@ import { criarBarra } from './barra';
 import { textoIndicador } from '../audio/ligador';
 import type { EstadoAudio } from '../audio/motor';
 import { rotuloDoModelo, type Aparencia } from '../personagem/aparencia';
+import { rotuloDaFantasia } from '../personagem/fantasias';
+import { festejarNoPalco } from './abaFantasias';
 import type { Armazenamento } from '../personagem/persistencia';
 import { CSS_PAINEL, criarPainelPersonagem, teclaParaPainel } from './personagem';
 import { CSS_MODAL, criarPainelMundos } from './mundos';
@@ -501,7 +503,8 @@ export function criarInterface(
     travarPonteiro();
   }
   function rotuloNome(a: Aparencia): string {
-    return a.nome || rotuloDoModelo(a);
+    // sem nome escrito, a fantasia vestida dá o nome ("Princesa das Flores")
+    return a.nome || (a.fantasia && rotuloDaFantasia(a.fantasia, a.corpo)) || rotuloDoModelo(a);
   }
   function armazenamento(): Armazenamento | null {
     try {
@@ -578,11 +581,14 @@ export function criarInterface(
   ajustarCompacto();
   const painel = criarPainelPersonagem(telaPersonagem, {
     armazenamento: armazenamento(),
+    temaDoMundo: opMundo.mundo ? (opMundo.mundo.tema ?? 'bruma-e-luz') : undefined,
+    aoFestejar: () => festejarNoPalco(pedestal),
     aoMudar: (a) => {
       nomeHud.textContent = rotuloNome(a);
       nomePrevia.textContent = rotuloNome(a);
       fotografarBoneco(previa, a, 'corpo', 520);
-      window.__brumaluz?.personagem?.definir(a);
+      // `definir` junta com a aparência de antes: sem fantasia tem que ir explícito
+      window.__brumaluz?.personagem?.definir({ ...a, fantasia: a.fantasia });
     },
     aoJogar: entrarNoJogo,
   });

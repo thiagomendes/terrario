@@ -1,4 +1,6 @@
 import { fotografarBoneco } from '../render/fotoBoneco';
+import { CSS_FANTASIAS, criarAbaFantasias } from './abaFantasias';
+import type { GrupoFantasia } from '../personagem/fantasias';
 import { icone, rotuloComIcone, type NomeIcone } from './pixicones';
 import {
   ACESSORIOS,
@@ -15,6 +17,8 @@ import {
   TAMANHO_MAXIMO_NOME,
   aplicarModelo,
   normalizarAparencia,
+  personalizar,
+  vestirFantasia,
   type Acessorio,
   type Aparencia,
 } from '../personagem/aparencia';
@@ -25,7 +29,8 @@ export function teclaParaPainel(codigo: string): boolean {
   return codigo === 'KeyC';
 }
 
-export const CSS_PAINEL = `
+export const CSS_PAINEL =
+  `
 .painel-personagem {
   width: min(620px, 100%);
   max-height: 46vh;
@@ -74,7 +79,7 @@ export const CSS_PAINEL = `
 .painel-personagem input::placeholder { color: var(--tinta-suave); }
 .painel-personagem .dado { width: 50px; min-height: 46px; font-size: 1.4rem; padding: 0; display: grid; place-items: center; }
 .painel-personagem .abas {
-  display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; padding: 6px; border-radius: 18px;
+  display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; padding: 6px; border-radius: 18px;
   background: var(--poco); box-shadow: inset 0 3px 0 rgba(120, 80, 30, 0.12);
 }
 .painel-personagem .abas button { min-height: 46px; font-size: 1.45rem; padding: 0; display: grid; place-items: center; }
@@ -124,7 +129,7 @@ export const CSS_PAINEL = `
   box-shadow: 0 1px 0 var(--amarela-fundo), inset 0 2px 0 rgba(255, 255, 255, 0.6),
     0 20px 0 18px var(--painel), 0 -16px 0 18px var(--painel);
 }
-`;
+` + CSS_FANTASIAS;
 
 const NOMES_ROSTO = [
   'Clássico',
@@ -172,7 +177,7 @@ const NOMES_ACESSORIO: Record<Acessorio, string> = {
   'chapeu-palha': 'Chapéu de palha',
 };
 
-type Campo = Exclude<keyof Aparencia, 'nome'>;
+type Campo = Exclude<keyof Aparencia, 'nome' | 'fantasia'>;
 type Valor = string | number;
 
 /** Opções em miniatura (mostram o resultado) ou em amostras de cor. */
@@ -206,7 +211,11 @@ const ORDEM_PELE = indices(PALETAS.pele.length).sort(
   (a, b) => claridade(PALETAS.pele[b]) - claridade(PALETAS.pele[a]),
 );
 
+/** A aba das fantasias (spec 017): vem antes das peças e tem o miolo próprio. */
+export const ABA_FANTASIAS = 'fantasias';
+
 export const ABAS: Aba[] = [
+  { id: ABA_FANTASIAS, icone: 'coroa', titulo: 'Fantasias', grupos: [] },
   {
     id: 'corpo',
     icone: 'pessoa',
@@ -332,10 +341,15 @@ export const ABA_DO_CAMPO = Object.fromEntries(
   ABAS.flatMap((a) => a.grupos.map((g) => [g.campo, a.id])),
 ) as Record<Campo, string>;
 
+/**
+ * A aparência com a opção escolhida. Com fantasia vestida (spec 017): quem a criança é muda e
+ * a fantasia continua; roupa, calça e acessório tiram a fantasia (a peça entra no look de
+ * antes); outro modelo pronto é um look novo, sem fantasia.
+ */
 function variante(base: Aparencia, campo: Campo, valor: Valor): Aparencia {
   if (campo === 'modelo') return aplicarModelo(base, valor as Aparencia['modelo']);
   if (campo === 'corpo') return aplicarCorpo(base, valor as Aparencia['corpo']);
-  return { ...base, [campo]: valor };
+  return personalizar(base, { [campo]: valor });
 }
 
 /** Cortes e roupas que combinam com cada corpo (o dado sorteia dentro deles). */
@@ -373,7 +387,11 @@ export const CORTES_LONGOS = Object.keys(CABELOS_LONGOS).map(Number);
 
 export interface OpcoesPainel {
   armazenamento: Armazenamento | null;
+  /** Tema do mundo aberto: em "Dos temas" as fantasias dele vêm primeiro. */
+  temaDoMundo?: string;
   aoMudar: (aparencia: Aparencia) => void;
+  /** A criança acabou de vestir uma fantasia: brilho e pulinho na prévia. */
+  aoFestejar?: () => void;
   aoJogar: () => void;
 }
 
@@ -410,12 +428,22 @@ export function criarPainelPersonagem(pai: HTMLElement, opcoes: OpcoesPainel) {
   const botoesAba: HTMLButtonElement[] = [];
   const paineis: HTMLElement[] = [];
   const botoes: HTMLButtonElement[] = [];
-  const miniaturas: Array<{ canvas: HTMLCanvasElement; grupo: GrupoVisual; valor: Valor }> = [];
+  const miniaturas: Array<{
+    canvas: HTMLCanvasElement;
+    grupo: GrupoVisual;
+    valor: Valor;
+    aba: string;
+  }> = [];
 
+  let abaAtual = 'corpo';
   function mostrarAba(id: string): void {
+    abaAtual = id;
     for (const b of botoesAba) b.setAttribute('aria-selected', String(b.dataset.aba === id));
     for (const p of paineis) p.hidden = p.dataset.abaPainel !== id;
+    desenharMiniaturas();
+    fantasias?.atualizar();
   }
+  let fantasias: ReturnType<typeof criarAbaFantasias> | null = null;
 
   for (const aba of ABAS) {
     const b = document.createElement('button');
@@ -453,13 +481,22 @@ export function criarPainelPersonagem(pai: HTMLElement, opcoes: OpcoesPainel) {
           if (g.campo === 'modelo' || g.campo === 'acessorio') b.title = g.rotulos[i];
           const c = document.createElement('canvas');
           b.appendChild(c);
-          miniaturas.push({ canvas: c, grupo: g, valor });
+          miniaturas.push({ canvas: c, grupo: g, valor, aba: aba.id });
         }
         b.addEventListener('click', () => mudou(variante(aparencia, g.campo, valor)));
         botoes.push(b);
         lista.appendChild(b);
       });
       painel.appendChild(lista);
+    }
+    if (aba.id === ABA_FANTASIAS) {
+      painel.hidden = true;
+      fantasias = criarAbaFantasias(painel, {
+        armazenamento: opcoes.armazenamento,
+        temaDoMundo: opcoes.temaDoMundo,
+        aparencia: () => aparencia,
+        mudar: (a, festa) => mudou(a, festa),
+      });
     }
     paineis.push(painel);
   }
@@ -471,18 +508,25 @@ export function criarPainelPersonagem(pai: HTMLElement, opcoes: OpcoesPainel) {
       b.setAttribute('aria-pressed', String(atual === b.dataset.valor));
     }
   }
-  /** Cada miniatura mostra a aparência atual com aquela opção aplicada. */
+  /**
+   * Cada miniatura mostra a aparência atual com aquela opção aplicada. Só as da aba à vista:
+   * as outras saem quando a criança abrir a aba (a prévia não espera na fila).
+   */
   function desenharMiniaturas(): void {
     for (const m of miniaturas) {
+      if (m.aba !== abaAtual) continue;
       fotografarBoneco(m.canvas, variante(aparencia, m.grupo.campo, m.valor), m.grupo.recorte);
     }
   }
-  function mudou(proxima: Aparencia): void {
+  function mudou(proxima: Aparencia, festa = false): void {
     aparencia = normalizarAparencia(proxima);
+    // a prévia primeiro (a foto dela entra na fila antes das miniaturas)
+    opcoes.aoMudar(aparencia);
+    if (festa) opcoes.aoFestejar?.();
     marcar();
+    fantasias?.atualizar();
     desenharMiniaturas();
     salvarAparencia(opcoes.armazenamento, aparencia);
-    opcoes.aoMudar(aparencia);
   }
 
   campoNome.addEventListener('input', () => mudou({ ...aparencia, nome: campoNome.value }));
@@ -505,7 +549,18 @@ export function criarPainelPersonagem(pai: HTMLElement, opcoes: OpcoesPainel) {
 
   mostrarAba('corpo');
   marcar();
-  desenharMiniaturas();
   pai.appendChild(raiz);
-  return { raiz, aparencia: () => aparencia };
+  return {
+    raiz,
+    aparencia: () => aparencia,
+    /** Abre a aba Fantasias (num grupo, se pedido: a sugestão do mundo novo abre em "Dos temas"). */
+    abrirFantasias(grupo?: GrupoFantasia) {
+      if (grupo) fantasias?.mostrarGrupo(grupo);
+      mostrarAba(ABA_FANTASIAS);
+    },
+    /** Veste a fantasia com festa (a sugestão do mundo novo). */
+    vestir(id: string) {
+      mudou(vestirFantasia(aparencia, id), true);
+    },
+  };
 }
