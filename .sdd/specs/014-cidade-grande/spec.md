@@ -35,6 +35,9 @@ Separada da spec 013 em 7 nov 2026: o dono escolheu fazer o Rancho Alegre primei
 - **Estrutura rara:** roda-gigante de um parque de diversões abandonado, com baú.
 - **Sons e música:** buzininha distante de dia, passarinho de praça, grilo de jardim à noite; piano e baixo de jazz leve.
 
+## Atividade própria da cidade (decisão do dono, 10 nov 2026)
+A cidade já nasce com o jeito dela, em vez de herdar a roça dos outros temas (ver a 018, que vem depois). Pensar no esboço qual é a atividade-assinatura da cidade.
+
 ## Para o dono decidir antes de começar
 - **Altura dos prédios:** no esboço, de 2 a 6 andares. Mais alto (até 12) pesa no celular; mais baixo e mais largo é mais seguro.
 
