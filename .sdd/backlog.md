@@ -15,7 +15,7 @@ Ideias e pedidos do dono que ainda não viraram spec. Cada item diz de onde veio
 
 ## Specs na fila
 
-Ordem combinada com o dono (10 nov 2026): 013 → 015 → 017 → 016 → 014 → 018.
+Ordem combinada com o dono (10 nov 2026): 013 → 015 → 017 → 016 → 014 → 018. Proposta de 11 nov 2026 (019 antes da 014): 017 → 016 → 019 → 014 → 018.
 
 - **013, Rancho Alegre:** publicada em 10 nov 2026 (relatório https://claude.ai/artifact/P27LQ7348TBUapLEzB1wgj); falta a rodada em família.
 - **015, Só terceira pessoa e roda de gestos**: FEITA e publicada em 10 nov 2026 (relatório em `.sdd/specs/015-terceira-pessoa/report.md`). Falta a rodada em família. Polimento: vulto do boneco na casinha 3×3; morador colado na câmera tapa um canto; dono de cada bicho criado ("chamar" só os seus) vai para a 016.
@@ -28,3 +28,4 @@ Ordem combinada com o dono (10 nov 2026): 013 → 015 → 017 → 016 → 014 �
 - **016, Construções protegidas:** rascunho da spec (`.sdd/specs/016-construcoes-protegidas/spec.md`), estratégia aprovada em 10 nov 2026.
 
 - **Leite e balde, filhotes, colmeia e mel** (fora de escopo da 013).
+- **019, Som vivo** (`.sdd/specs/019-som-vivo/spec.md`): trilhas compostas por tema, em camadas que seguem o mundo; moda de viola de verdade no Rancho; vozes e golpes dos bichos com personalidade; esboço para ouvir.
