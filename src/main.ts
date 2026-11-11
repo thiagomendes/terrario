@@ -54,6 +54,7 @@ import {
   tirarCarregando,
 } from './pagina';
 import { ligarContextoPerdido } from './render/contexto';
+import { ehMundoNovo } from './ui/sugestaoFantasia';
 
 async function iniciar(app: HTMLElement): Promise<void> {
   registrarCatalogo();
@@ -126,9 +127,21 @@ async function iniciar(app: HTMLElement): Promise<void> {
     armazenamento = null;
   }
   const config = criarGerenciadorConfig(armazenamento);
+  // spec 017: mundo recém-criado aqui (no aparelho ou na nuvem) sugere a fantasia do tema
+  let mundoNovo: { id: string } | undefined;
+  if (!nuvem) {
+    if (ehMundoNovo(armazenamento, atual.id)) mundoNovo = { id: atual.id };
+  } else if (nuvem.novo) {
+    const codigo = normalizarCodigo(nuvem.bv.sala.codigo);
+    const local = (await repo.listar()).find(
+      (m) => m.nuvem && normalizarCodigo(m.nuvem) === codigo,
+    );
+    if (local && ehMundoNovo(armazenamento, local.id)) mundoNovo = { id: local.id };
+  }
   const ui = criarInterface(app, hotbar, {
     repo,
     mundo: atual,
+    mundoNovo,
     config,
     salvar: () => cena?.salvar() ?? Promise.resolve(false),
     criarComAmigos: async (meta, apelido) => {

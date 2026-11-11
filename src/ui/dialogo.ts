@@ -22,6 +22,7 @@ export const CSS_DIALOGO = `
 .dialogo input:focus-visible { outline: 3px solid var(--azul, #5aa7ff); outline-offset: 2px; }
 .dialogo .botoes { display: flex; gap: 10px; justify-content: flex-end; flex-wrap: wrap; }
 .dialogo .botoes .btn { min-height: 44px; padding: 8px 18px; }
+.dialogo .figura { justify-self: center; margin: -4px 0 -6px; }
 `;
 
 let estiloPosto = false;
@@ -35,6 +36,10 @@ export interface OpcoesDialogo {
   cancelar?: string;
   /** Ação que não tem volta (excluir): o botão de confirmar fica vermelho. */
   perigo?: boolean;
+  /** Desenho em cima da pergunta (a sugestão de fantasia mostra o boneco vestido). */
+  figura?: HTMLElement;
+  /** Marca para achar o diálogo (atributo data-<marca>). */
+  marca?: string;
 }
 
 /** Abre o diálogo. Devolve o texto (com campo), true (sem campo) ou null se cancelou. */
@@ -53,6 +58,11 @@ export function perguntar(op: OpcoesDialogo): Promise<string | true | null> {
     caixa.className = 'dialogo';
     caixa.setAttribute('role', 'dialog');
     caixa.setAttribute('aria-modal', 'true');
+    if (op.marca) fundo.setAttribute(`data-${op.marca}`, '');
+    if (op.figura) {
+      op.figura.classList.add('figura');
+      caixa.appendChild(op.figura);
+    }
     const h = document.createElement('h2');
     h.textContent = op.titulo;
     caixa.setAttribute('aria-label', op.titulo);

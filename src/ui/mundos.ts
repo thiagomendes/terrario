@@ -4,6 +4,7 @@ import { obterTema, TEMA_PADRAO } from '../temas';
 import type { IdTema } from '../temas/tipos';
 import { carregarAparencia, salvarAparencia } from '../personagem/persistencia';
 import { botaoFechar } from './pixicones';
+import { marcarMundoNovo } from './sugestaoFantasia';
 import {
   SEMENTE_PADRAO_MUNDO,
   TAMANHO_MAXIMO_NOME_MUNDO,
@@ -361,6 +362,12 @@ export function criarPainelMundos(raiz: HTMLElement, op: OpcoesPainelMundos) {
       }
     }
     const meta = await op.repo.criar(nome || 'Novo mundo', semente, modo, tema);
+    // spec 017: a página do mundo novo sugere uma vez a fantasia do tema
+    try {
+      marcarMundoNovo(window.localStorage, meta.id);
+    } catch {
+      // sem armazenamento: o mundo abre sem sugestão
+    }
     if (comAmigos.checked && op.criarComAmigos) {
       erroNovo.textContent = '';
       botaoCriar.disabled = true;
