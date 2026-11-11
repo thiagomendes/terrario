@@ -1,7 +1,7 @@
 ---
 id: 016-construcoes-protegidas
 title: 'Construções protegidas: o que o mundo fez não quebra, e cada um só quebra o que colocou'
-status: IN_PROGRESS
+status: DONE
 base_branch: main
 branch: feat/construcoes-protegidas
 created_at: 2026-11-10T14:00:00Z
