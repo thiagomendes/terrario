@@ -16,6 +16,11 @@ on:
       - 'package-lock.json'
       - '.github/workflows/servidor.yml'
   workflow_dispatch:
+    inputs:
+      agora:
+        description: 'Publicar já, mesmo com gente jogando'
+        type: boolean
+        default: false
 
 permissions:
   id-token: write
@@ -68,6 +73,20 @@ jobs:
           docker build -t $IMAGEM -f servidor/Dockerfile servidor
           docker push $IMAGEM
           echo "IMAGEM=$IMAGEM" >> $GITHUB_ENV
+
+      # Reiniciar com as crianças jogando derruba todo mundo por uns segundos (10 nov):
+      # espera a sala esvaziar, até 2 h. Depois disso publica assim mesmo (o mundo é
+      # gravado no SIGTERM e o jogo reconecta sozinho).
+      - name: Esperar ninguém estar jogando
+        if: ${{ !inputs.agora }}
+        run: |
+          for i in $(seq 1 120); do
+            N=$(curl -fsS $SAUDE | jq -r '.jogadores // 0' || echo 0)
+            if [ "$N" = "0" ]; then echo "Ninguém jogando: pode publicar"; exit 0; fi
+            echo "$N jogando agora; espero 1 minuto ($i/120)"
+            sleep 60
+          done
+          echo "Ainda tem gente depois de 2 h: publicando assim mesmo"
 
       - name: Atualizar o Container App
         run: az containerapp update -g $GRUPO -n $APP --image $IMAGEM -o none

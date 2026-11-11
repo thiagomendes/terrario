@@ -1,5 +1,6 @@
 // Terrário: servidor do multiplayer (spec 010), no grupo rg-terrario, em Brazil South.
-// Container Apps com 1 CPU e 2 GB sempre ligado (uma réplica: as salas ficam na memória),
+// Container Apps com 0,5 CPU e 1 GB sempre ligado (uma réplica: as salas ficam na memória;
+// a rodada da família em 10 nov usou 135 MB e 1 ms por passo com 3 jogadores),
 // registro de imagens (ACR), Storage Account para os mundos (blob) e as salas (tabela),
 // monitoramento e alerta se o servidor cair. O app usa a própria identidade para baixar
 // a imagem e acessar o armazenamento: nenhuma chave em código ou configuração.
@@ -14,8 +15,8 @@ param imagem string = 'mcr.microsoft.com/k8se/quickstart:latest'
 param porta int = 80
 
 @description('CPU e memória da réplica.')
-param cpu string = '1.0'
-param memoria string = '2Gi'
+param cpu string = '0.5'
+param memoria string = '1Gi'
 
 @description('Origens que podem abrir o WebSocket (o site do jogo).')
 param origens string = 'https://yellow-field-0d32c420f.5.azurestaticapps.net,https://terrario.tmdevlab.com'
