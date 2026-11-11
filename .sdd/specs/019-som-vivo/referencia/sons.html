@@ -1,0 +1,957 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sons do Terrário</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#fbf6ec; --card:#ffffff; --ink:#2b2318; --muted:#6e6252; --line:#e8dcc6;
+  --accent:#d9483b; --accent-ink:#ffffff; --sun:#ffc93a; --leaf:#3f9a52; --sky:#3b7dd8;
+  --chip:#f3ead9; --chip-on:#ffe7a3; --chip-on-ink:#3a2a00; --bar:#3f9a52; --bar-bg:#efe5d2;
+  --hoje:#8a7f70; --warn:#b4541c; --shadow:0 2px 0 rgba(60,40,10,.08);
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#17130e; --card:#221c15; --ink:#f5ecdc; --muted:#b9ab95; --line:#3a3125;
+    --accent:#ff6a5c; --accent-ink:#1a0d0a; --sun:#ffc93a; --leaf:#6cc47d; --sky:#7fb0ff;
+    --chip:#2d261d; --chip-on:#5a4614; --chip-on-ink:#ffe9a8; --bar:#6cc47d; --bar-bg:#332b20;
+    --hoje:#a89c8a; --warn:#ff9a5c; --shadow:0 2px 0 rgba(0,0,0,.3);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#17130e; --card:#221c15; --ink:#f5ecdc; --muted:#b9ab95; --line:#3a3125;
+  --accent:#ff6a5c; --accent-ink:#1a0d0a; --sun:#ffc93a; --leaf:#6cc47d; --sky:#7fb0ff;
+  --chip:#2d261d; --chip-on:#5a4614; --chip-on-ink:#ffe9a8; --bar:#6cc47d; --bar-bg:#332b20;
+  --hoje:#a89c8a; --warn:#ff9a5c; --shadow:0 2px 0 rgba(0,0,0,.3);
+  color-scheme: dark;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{background:var(--bg);color:var(--ink);font:16px/1.5 Nunito,system-ui,-apple-system,"Segoe UI",sans-serif;overflow-x:hidden}
+main{max-width:960px;margin:0 auto;padding:0 16px 80px}
+header.top{padding:28px 0 8px}
+h1{font-size:2rem;line-height:1.15;margin:0 0 4px;font-weight:800}
+h2{font-size:1.35rem;margin:0 0 6px;font-weight:800}
+h3{font-size:1.05rem;margin:0 0 6px;font-weight:800}
+p{margin:6px 0}
+.sub{color:var(--muted);margin:0}
+section{margin:28px 0}
+.nota{color:var(--muted);font-size:.95rem;max-width:68ch}
+.nota b{color:var(--ink)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px;box-shadow:var(--shadow);min-width:0}
+.grid{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr))}
+.lado{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr))}
+.tag{display:inline-block;font-size:.75rem;font-weight:800;letter-spacing:.04em;text-transform:uppercase;padding:2px 8px;border-radius:999px;background:var(--chip);color:var(--muted)}
+.tag.prop{background:var(--chip-on);color:var(--chip-on-ink)}
+button{font:inherit;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.btn{min-height:44px;min-width:44px;padding:8px 14px;border-radius:12px;border:1px solid var(--line);background:var(--chip);color:var(--ink);font-weight:700;touch-action:manipulation}
+.btn:hover{filter:brightness(.97)}
+.btn:active{transform:translateY(1px)}
+.btn.prim{background:var(--accent);color:var(--accent-ink);border-color:transparent}
+.btn.hoje{background:transparent;color:var(--hoje);border-style:dashed}
+.btn[aria-pressed="true"]{background:var(--chip-on);color:var(--chip-on-ink);border-color:var(--sun)}
+.btn.tocando{outline:3px solid var(--sun);outline-offset:1px}
+.fila{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0}
+.rotulo{font-size:.8rem;color:var(--muted);font-weight:700;margin:10px 0 0}
+.seg{display:inline-flex;flex-wrap:wrap;gap:6px}
+/* barra fixa */
+.barra{position:sticky;top:0;z-index:5;background:var(--bg);background:color-mix(in srgb,var(--bg) 92%,transparent);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);border-bottom:1px solid var(--line);margin:0 -16px;padding:8px 16px}
+.barra .in{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px}
+.vol{display:flex;align-items:center;gap:8px;min-height:44px}
+.vol input{width:120px;accent-color:var(--accent)}
+.medidor{font-size:.82rem;color:var(--muted);display:flex;flex-wrap:wrap;gap:4px 12px}
+.medidor b{color:var(--ink);font-variant-numeric:tabular-nums}
+.nivel{width:60px;height:8px;border-radius:4px;background:var(--bar-bg);overflow:hidden;display:inline-block;vertical-align:middle}
+.nivel i{display:block;height:100%;width:0;background:var(--leaf)}
+.aviso{display:none;background:var(--chip-on);color:var(--chip-on-ink);border-radius:12px;padding:10px 14px;margin:8px 0;font-weight:700}
+.aviso.on{display:block}
+/* ligar */
+.ligar{display:flex;flex-direction:column;align-items:flex-start;gap:8px;padding:18px;border-radius:16px;background:var(--card);border:2px dashed var(--sun);margin:14px 0}
+.ligar .btn{font-size:1.1rem;padding:12px 22px}
+/* camadas */
+.ctx{display:flex;flex-wrap:wrap;gap:8px}
+.camadas{display:grid;gap:6px;margin-top:12px}
+.cam{display:grid;grid-template-columns:minmax(0,1fr) 90px;gap:8px;align-items:center;font-size:.9rem}
+.cam .nm{overflow:hidden;text-overflow:ellipsis}
+.cam .nm small{color:var(--muted)}
+.cam .lv{height:12px;border-radius:6px;background:var(--bar-bg);overflow:hidden}
+.cam .lv i{display:block;height:100%;width:0;background:var(--bar);transition:none}
+.cam.esp .lv i{background:var(--sun)}
+.cam.fixa .nm{font-weight:800}
+.pulso{display:flex;gap:5px;align-items:center;margin-top:10px;flex-wrap:wrap}
+.pulso span.d{width:12px;height:12px;border-radius:50%;background:var(--bar-bg)}
+.pulso span.d.on{background:var(--accent)}
+.pulso .sec{margin-left:8px;font-weight:800;font-size:.9rem}
+.pend{font-size:.85rem;color:var(--warn);min-height:1.4em;margin-top:6px}
+.bicho h3{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+.semhoje{font-size:.85rem;color:var(--muted);font-style:italic;margin:6px 0}
+ul.diag{padding-left:20px;margin:8px 0}
+ul.diag li{margin:6px 0}
+code{font-size:.85em;background:var(--chip);padding:1px 5px;border-radius:6px;word-break:break-word}
+.tabela{width:100%;border-collapse:collapse;font-size:.88rem}
+.tabela td,.tabela th{border-bottom:1px solid var(--line);padding:6px 4px;text-align:left;vertical-align:top}
+.rodape{color:var(--muted);font-size:.85rem;margin-top:40px}
+</style>
+</head>
+<body>
+<main>
+  <header class="top">
+    <h1>Sons do Terrário</h1>
+    <p class="sub">Esboço da spec 019 · Som vivo. Ouça o som de hoje ao lado da proposta.</p>
+  </header>
+
+  <div class="barra" role="region" aria-label="Controles do som">
+    <div class="in">
+      <div class="vol"><label for="vol"><b>Volume</b></label><input id="vol" type="range" min="0" max="1" step="0.01" value="0.8"></div>
+      <button class="btn prim" id="parar" type="button">Parar tudo</button>
+      <div class="medidor" aria-live="off">
+        <span>Som: <b id="mEstado">desligado</b></span>
+        <span>Vozes: <b id="mVozes">0</b></span>
+        <span>Nós: <b id="mNos">0</b> <small>(+<span id="mFixos">0</span> fixos)</small></span>
+        <span>Pico: <b id="mPico">0</b></span>
+        <span>Agenda: <b id="mAgenda">0</b> ms/s</span>
+        <span class="nivel" title="nível de saída"><i id="mNivel"></i></span>
+      </div>
+    </div>
+    <div class="aviso" id="avisoPausa">O som pausou (ligação, outro app ou tela bloqueada). Toque em qualquer lugar para voltar.</div>
+  </div>
+
+  <div class="ligar" id="caixaLigar">
+    <b>Os navegadores só deixam tocar som depois de um toque.</b>
+    <button class="btn prim" id="ligar" type="button">Tocar para ligar o som</button>
+    <span class="nota">No iPhone, tire do modo silencioso se não ouvir nada.</span>
+  </div>
+
+  <section id="diag">
+    <h2>O que achamos no som de hoje</h2>
+    <ul class="diag nota">
+      <li><b>A "viola" do Rancho não é viola.</b> Os acordes são duas ondas serrilhadas com filtro, que levam 2,5 s para entrar e duram 7 s: soam como um teclado de fundo. A "corda" é um sino de onda triangular, e as notas são <b>sorteadas uma por vez</b> de uma lista. Nunca soam duas notas juntas em terças, e não há frase: por isso não parece moda de viola.</li>
+      <li><b>A trilha é monótona.</b> Cada contexto (dia, noite, caverna, perigo) troca a paleta inteira, e dentro dela os mesmos 4 acordes giram a cada 6 s para sempre. Chuva, andar, correr e amigos por perto não mudam nada na música. Não há pausa.</li>
+      <li><b>Os bichos soam como bipe.</b> Cada voz (<code>PioCriatura</code>) é <b>uma única onda que sobe ou desce de tom</b>, às vezes com chiado. Sem vogais nem corpo, a vaca e o cachorro parecem apitos de tons diferentes. Não existe "ai", nem voz de filhote.</li>
+      <li><b>O Saci faz barulho de vidro</b> porque o golpe no bicho usa o som de golpe <b>de material</b>: <code>tocarSom('golpe', tipo === 'espectro' ? 'cristal' : 'terra')</code> em <code>render/cena.ts</code>. O tipo <code>espectro</code> é o fantasma de cristal do Bruma e Luz, mas na Mata Encantada é o Saci que ocupa esse lugar. A receita "cristal" é um estilhaço: estalo, ressonâncias agudas de 2 a 3 kHz que somem rápido e cacos tilintando de 3 a 9 kHz. Ou seja, vidro quebrando de verdade.</li>
+      <li><b>Todos os outros bichos apanham igual:</b> o mesmo golpe de "terra" (4 variações) para vaca, galinha, cachorro ou dinossauro, seguido do "susto" de onda única.</li>
+    </ul>
+  </section>
+
+  <section id="rancho">
+    <h2>Rancho Alegre: hoje e proposta</h2>
+    <p class="nota">Só a música do dia, sem vento nem passarinhos, para comparar. A proposta é uma <b>moda de viola</b> com cordas em par, ponteio em terças em sol maior, frases A, A', B e um respiro, sanfona macia que "respira" no fole e baixo alternado de violão.</p>
+    <div class="lado">
+      <div class="card">
+        <span class="tag">Hoje</span>
+        <h3>Trilha do dia, como está no jogo</h3>
+        <p class="nota">Acordes de serrilhada lenta, sino triangular sorteado e o pulso grave do dia.</p>
+        <div class="fila"><button class="btn hoje" data-musica="hoje" type="button">Tocar o de hoje</button></div>
+      </div>
+      <div class="card">
+        <span class="tag prop">Proposta</span>
+        <h3>Moda de viola do Rancho</h3>
+        <p class="nota">Viola caipira dedilhada (Karplus–Strong, cordas em par), sanfona e violão. Frase composta que volta com pequenas variações.</p>
+        <div class="fila"><button class="btn prim" data-musica="rancho" type="button">Tocar a proposta</button></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="camadas">
+    <h2>A música que acompanha o mundo</h2>
+    <p class="nota">Uma <b>base que nunca para</b> (sanfona e baixo) e instrumentos que entram e saem conforme o que acontece no jogo. Toda troca espera o <b>próximo compasso</b> e entra em cruz, devagar. A cada volta há um <b>respiro</b> de dois compassos só com a base. No jogo, isso troca as paletas de hoje por camadas: quem decide é a hora do dia, o clima, onde a criança está e o que ela faz.</p>
+    <div class="card">
+      <div class="fila"><button class="btn prim" data-musica="rancho" type="button">Tocar a moda com camadas</button></div>
+      <p class="rotulo">Hora do dia</p>
+      <div class="seg" role="group" aria-label="Hora do dia">
+        <button class="btn" data-hora="dia" aria-pressed="true" type="button">Dia</button>
+        <button class="btn" data-hora="tarde" aria-pressed="false" type="button">Entardecer</button>
+        <button class="btn" data-hora="noite" aria-pressed="false" type="button">Noite</button>
+      </div>
+      <p class="rotulo">Onde e como</p>
+      <div class="ctx">
+        <button class="btn" data-tog="chuva" aria-pressed="false" type="button">Chuva</button>
+        <button class="btn" data-tog="caverna" aria-pressed="false" type="button">Caverna</button>
+        <button class="btn" data-tog="perigo" aria-pressed="false" type="button">Perigo</button>
+        <button class="btn" data-tog="amigos" aria-pressed="false" type="button">Amigos perto</button>
+      </div>
+      <p class="rotulo">Movimento</p>
+      <div class="seg" role="group" aria-label="Movimento">
+        <button class="btn" data-mov="0" aria-pressed="true" type="button">Parado</button>
+        <button class="btn" data-mov="1" aria-pressed="false" type="button">Andando</button>
+        <button class="btn" data-mov="2" aria-pressed="false" type="button">Correndo</button>
+      </div>
+      <div class="pulso" aria-hidden="true" id="pulso"></div>
+      <div class="pend" id="pend"></div>
+      <div class="camadas" id="listaCamadas"></div>
+    </div>
+  </section>
+
+  <section id="temas">
+    <h2>Cada tema, sua orquestrinha</h2>
+    <p class="nota">Trechos curtos para mostrar que cada mundo ganha instrumentos próprios. No jogo, cada um teria as mesmas camadas do Rancho.</p>
+    <div class="grid">
+      <div class="card"><span class="tag prop">Proposta</span><h3>Exploração Lunar</h3><p class="nota">Sintetizador macio em fá lídio e arpejo de sinos com eco, bem espaçado.</p><div class="fila"><button class="btn prim" data-musica="lua" type="button">Tocar</button></div></div>
+      <div class="card"><span class="tag prop">Proposta</span><h3>Doce Reino</h3><p class="nota">Caixinha de música em valsa, com marimba fazendo o baixo e os acordes.</p><div class="fila"><button class="btn prim" data-musica="doce" type="button">Tocar</button></div></div>
+      <div class="card"><span class="tag prop">Proposta</span><h3>Era dos Dinos</h3><p class="nota">Tambores de tronco, chocalho de semente e uma flauta grave pentatônica.</p><div class="fila"><button class="btn prim" data-musica="dinos" type="button">Tocar</button></div></div>
+    </div>
+  </section>
+
+  <section id="vozes">
+    <h2>Vozes dos bichos</h2>
+    <p class="nota">Cada bicho tem <b>chamado</b>, <b>susto</b>, <b>contente</b> e <b>"ai"</b> (de desenho animado: guinchinho, "boing", "uó"; nada de vidro nem de grito). Ligue <b>Filhote</b> para ouvir o bebê, com voz mais fina e curta. A proposta usa vogais (formantes): a vaca diz "muuu", o cachorro "au". "Hoje" toca a voz atual do jogo.</p>
+    <div class="grid" id="gradeBichos"></div>
+  </section>
+
+  <section id="golpe">
+    <h2>Golpe no bicho</h2>
+    <p class="nota">Hoje: som de material (cristal no Saci, terra nos outros) e depois o susto. Proposta: um <b>baque macio</b> do tamanho do bicho (pelo, pena, pano) e o <b>"ai"</b> dele, que muda um pouco a cada golpe.</p>
+    <div class="lado">
+      <div class="card">
+        <span class="tag">Hoje</span><h3>Como está</h3>
+        <div class="fila">
+          <button class="btn hoje" data-golpe-hoje="saci" type="button">Golpe no Saci</button>
+          <button class="btn hoje" data-golpe-hoje="vaca" type="button">Golpe na vaca</button>
+          <button class="btn hoje" data-golpe-hoje="galinha" type="button">Golpe na galinha</button>
+        </div>
+      </div>
+      <div class="card">
+        <span class="tag prop">Proposta</span><h3>Baque e "ai"</h3>
+        <div class="fila">
+          <button class="btn" data-golpe="saci" type="button">Golpe no Saci</button>
+          <button class="btn" data-golpe="vaca" type="button">Golpe na vaca</button>
+          <button class="btn" data-golpe="galinha" type="button">Golpe na galinha</button>
+          <button class="btn" data-golpe="dino" type="button">Golpe no dino</button>
+          <button class="btn" data-golpe="lua" type="button">Golpe no coelho-lunar</button>
+          <button class="btn prim" data-golpe3="vaca" type="button">Bater 3 vezes na vaca</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="leve">
+    <h2>Leve no celular</h2>
+    <p class="nota">Acompanhe a barra de cima: <b>vozes</b> são as fontes de som tocando agora e <b>nós</b> são as peças de áudio temporárias. Depois de "Parar tudo" os dois voltam a zero; ficam só os fixos (volume, limitador, eco geral).</p>
+    <table class="tabela nota">
+      <tr><th>Como fica leve</th><th>Por quê</th></tr>
+      <tr><td>Corda calculada uma vez por nota</td><td>A viola (Karplus–Strong) é gerada na primeira vez e guardada. Depois, cada nota é só uma fonte de buffer, como tocar uma amostra.</td></tr>
+      <tr><td>Camada calada não agenda nada</td><td>Se o ganzá está fora, nenhuma nota dele é criada. Só tocam as camadas que se ouvem.</td></tr>
+      <tr><td>Filtros por instrumento, não por nota</td><td>O corpo da viola, o fole da sanfona e o eco da gruta são um só para todas as notas.</td></tr>
+      <tr><td>Teto de 8 falas de bicho</td><td>Se muitos bichos falam juntos, o mais antigo se cala primeiro.</td></tr>
+      <tr><td>Tudo some sozinho</td><td>Cada som se desliga ao acabar; nada fica em laço.</td></tr>
+    </table>
+    <div class="fila"><button class="btn" id="carga" type="button">Teste de carga: música e 8 bichos juntos</button></div>
+  </section>
+
+  <p class="rodape">Esboço sem arquivos de som: tudo é sintetizado na hora com Web Audio. As partes "Hoje" são cópias simplificadas e fiéis de <code>src/audio/sons.ts</code> e <code>src/audio/amostras.ts</code>.</p>
+</main>
+
+<script>
+'use strict';
+// ------------------------------------------------------------------ utilidades
+const mtof = m => 440 * Math.pow(2, (m - 69) / 12);
+function semente(s){ let e = s >>> 0; return () => { e = (e + 0x6d2b79f5) >>> 0; let t = e; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
+const hash = n => { let h = (n * 2654435761) >>> 0; h ^= h >>> 13; h = Math.imul(h, 0x5bd1e995) >>> 0; return (h ^ (h >>> 15)) >>> 0; };
+function autom(p, pts, t, exp){
+  p.setValueAtTime(pts[0][1], t + pts[0][0]);
+  for (let i = 1; i < pts.length; i++){
+    const [dt, v] = pts[i];
+    if (exp) p.exponentialRampToValueAtTime(Math.max(v, 1e-4), t + dt); else p.linearRampToValueAtTime(v, t + dt);
+  }
+}
+
+// ------------------------------------------------------------------ motor: grupos que se limpam sozinhos
+class Grupo {
+  constructor(e, dono, auto){ this.e = e; this.dono = dono; this.auto = auto; this.nos = []; this.fontes = []; this.acabadas = 0; this.livre = false; if (e.coleta) e.coleta.push(this); }
+  add(n){ this.nos.push(n); this.e.nos++; return n; }
+  osc(tipo, f){ const o = this.add(this.e.ctx.createOscillator()); if (typeof tipo === 'string') o.type = tipo; else o.setPeriodicWave(tipo); o.frequency.value = f; return o; }
+  ganho(v){ const g = this.add(this.e.ctx.createGain()); g.gain.value = v; return g; }
+  filtro(tipo, f, q = 0.7, gd = 0){ const b = this.add(this.e.ctx.createBiquadFilter()); b.type = tipo; b.frequency.value = f; b.Q.value = q; b.gain.value = gd; return b; }
+  buf(b){ const s = this.add(this.e.ctx.createBufferSource()); s.buffer = b; return s; }
+  atraso(seg){ const d = this.add(this.e.ctx.createDelay(2)); d.delayTime.value = seg; return d; }
+  tocar(s, t0, t1, ofs){
+    if (ofs) s.start(t0, ofs); else s.start(t0);
+    if (t1 != null) s.stop(t1);
+    this.fontes.push(s); this.e.fontes++; this.e.pico = Math.max(this.e.pico, this.e.fontes);
+    s.onended = () => this._fim(s); return s;
+  }
+  _fim(s){ if (s._d) return; s._d = 1; this.e.fontes--; this.acabadas++; if (this.auto && this.acabadas >= this.fontes.length) this.soltar(); }
+  parar(quando){
+    for (const s of this.fontes) if (!s._d) { try { s.stop(quando); } catch (_) {} }
+    if (this.e.vivo) setTimeout(() => this.soltar(), Math.max(0, (quando - this.e.ctx.currentTime) * 1000) + 400);
+    else this.soltar();
+  }
+  soltar(){
+    if (this.livre) return; this.livre = true;
+    for (const s of this.fontes) if (!s._d) { s._d = 1; this.e.fontes--; try { s.stop(); } catch (_) {} }
+    for (const n of this.nos) { try { n.disconnect(); } catch (_) {} }
+    this.e.nos -= this.nos.length; this.nos = []; this.e.grupos.delete(this);
+  }
+}
+class Motor {
+  constructor(ctx, destino, eco, fx, vivo){
+    this.ctx = ctx; this.destino = destino; this.eco = eco; this.fx = fx; this.vivo = vivo;
+    this.nos = 0; this.fontes = 0; this.pico = 0; this.grupos = new Set(); this.cache = new Map(); this.dono = 'fx'; this.coleta = null; this.falas = [];
+    this.msAgenda = 0;
+  }
+  g(dono, auto = true){ const g = new Grupo(this, dono || this.dono, auto); this.grupos.add(g); return g; }
+  pararDono(teste, quando){ for (const g of [...this.grupos]) if (teste(g.dono)) g.parar(quando); }
+  ruido(){
+    let b = this.cache.get('ruido'); if (b) return b;
+    const sr = this.ctx.sampleRate, n = Math.floor(sr * 1.5); b = this.ctx.createBuffer(1, n, sr);
+    const d = b.getChannelData(0), r = semente(99); for (let i = 0; i < n; i++) d[i] = r() * 2 - 1;
+    this.cache.set('ruido', b); return b;
+  }
+  pulso(duty){
+    const k = 'pulso' + duty; let w = this.cache.get(k); if (w) return w;
+    const N = 40, re = new Float32Array(N), im = new Float32Array(N);
+    for (let n = 1; n < N; n++) re[n] = (2 / (n * Math.PI)) * Math.sin(n * Math.PI * duty);
+    w = this.ctx.createPeriodicWave(re, im); this.cache.set(k, w); return w;
+  }
+  /** Fala de bicho: junta os grupos criados e respeita o teto de 8 falas. */
+  falar(fn){
+    const now = this.ctx.currentTime;
+    this.falas = this.falas.filter(f => f.grupos.some(g => !g.livre));
+    while (this.falas.length >= 8) { const v = this.falas.shift(); for (const g of v.grupos) g.parar(now + 0.03); }
+    this.coleta = []; try { fn(); } finally { this.falas.push({ grupos: this.coleta }); this.coleta = null; }
+  }
+}
+function respostaEco(ctx, seg, decai, sem){
+  const sr = ctx.sampleRate, n = Math.floor(sr * seg), b = ctx.createBuffer(2, n, sr), r = semente(sem);
+  for (let c = 0; c < 2; c++){ const d = b.getChannelData(c); for (let i = 0; i < n; i++) d[i] = (r() * 2 - 1) * Math.pow(1 - i / n, decai); }
+  return b;
+}
+
+// ------------------------------------------------------------------ instrumentos da proposta
+/** Corda dedilhada (Karplus–Strong), calculada uma vez por nota e guardada. */
+function corda(e, midi, brilho){
+  const k = 'ks' + midi + '_' + brilho; let c = e.cache.get(k); if (c) return c;
+  const sr = e.ctx.sampleRate, f = mtof(midi), N = Math.max(2, Math.floor(sr / f - 0.5)), fa = sr / (N + 0.5);
+  const T60 = midi < 52 ? 3.0 : midi < 64 ? 2.3 : 1.6;
+  const dur = Math.min(T60 * 0.85 + 0.15, 2.8), len = Math.floor(sr * dur);
+  const rho = Math.pow(10, -3 / (T60 * fa)), r = semente(midi * 31 + 7);
+  const y = new Float32Array(len), ex = new Float32Array(N); let lp = 0;
+  for (let i = 0; i < N; i++){ lp += ((r() * 2 - 1) - lp) * brilho; ex[i] = lp; }
+  const P = Math.max(1, Math.round(N * 0.2)); // ponto do dedilhado (perto do cavalete)
+  for (let i = 0; i < N; i++) y[i] = ex[i] - (i >= P ? ex[i - P] : 0);
+  for (let i = N; i < len; i++) y[i] = rho * 0.5 * (y[i - N] + (i - N - 1 >= 0 ? y[i - N - 1] : 0));
+  let xp = 0, yp = 0, pico = 0; // tira DC
+  for (let i = 0; i < len; i++){ const x = y[i]; yp = x - xp + 0.995 * yp; xp = x; y[i] = yp; pico = Math.max(pico, Math.abs(yp)); }
+  const fade = Math.floor(sr * 0.03), g = pico > 0 ? 0.5 / pico : 0;
+  for (let i = 0; i < len; i++) y[i] *= g * (i > len - fade ? (len - i) / fade : 1);
+  const b = e.ctx.createBuffer(1, len, sr); b.getChannelData(0).set(y);
+  c = { b, taxa: f / fa }; e.cache.set(k, c); return c;
+}
+/** Uma ordem da viola caipira: duas cordas (oitava nas graves, uníssono nas agudas). */
+function viola(e, dest, t, midi, vel, op = {}){
+  const G = e.g(); const brilho = op.brilho ?? 0.55;
+  const c = corda(e, midi, brilho), s = G.buf(c.b); s.playbackRate.value = c.taxa;
+  const a = G.ganho(vel); s.connect(a); a.connect(dest); G.tocar(s, t, t + c.b.duration);
+  if (op.par !== false){
+    const oit = midi < 62, c2 = oit ? corda(e, midi + 12, 0.65) : c, s2 = G.buf(c2.b);
+    s2.playbackRate.value = c2.taxa * (oit ? 1.0015 : 1.0035);
+    const a2 = G.ganho(vel * (oit ? 0.4 : 0.7)), t2 = t + (op.rasgo ?? 0.011);
+    s2.connect(a2); a2.connect(dest); G.tocar(s2, t2, t2 + c2.b.duration);
+  }
+}
+/** Palheta da sanfona: duas ondas de pulso desafinadas (o "musette"). */
+function sanfona(e, dest, t, midi, dur, vel, ataque = 0.25){
+  const G = e.g(), w = e.pulso(0.3), a = G.ganho(0);
+  a.gain.setValueAtTime(0, t); a.gain.linearRampToValueAtTime(vel, t + ataque);
+  a.gain.linearRampToValueAtTime(vel * 0.8, t + Math.max(ataque + 0.01, dur - 0.1)); a.gain.linearRampToValueAtTime(0, t + dur + 0.12);
+  for (const c of [-8, 7]){ const o = G.osc(w, mtof(midi)); o.detune.value = c; o.connect(a); G.tocar(o, t, t + dur + 0.15); }
+  a.connect(dest);
+}
+function ganza(e, dest, t, g){
+  const G = e.g(), s = G.buf(e.ruido()), f = G.filtro('bandpass', 6500, 1.1), a = G.ganho(0);
+  a.gain.setValueAtTime(0.0001, t); a.gain.linearRampToValueAtTime(g, t + 0.006); a.gain.exponentialRampToValueAtTime(0.0001, t + 0.07);
+  s.connect(f); f.connect(a); a.connect(dest); G.tocar(s, t, t + 0.08, (hash(Math.floor(t * 1000)) % 1000) / 1000);
+}
+function zabumba(e, dest, t, g){
+  const G = e.g(), o = G.osc('sine', 110), a = G.ganho(0);
+  o.frequency.setValueAtTime(110, t); o.frequency.exponentialRampToValueAtTime(52, t + 0.12);
+  a.gain.setValueAtTime(0.0001, t); a.gain.linearRampToValueAtTime(g, t + 0.004); a.gain.exponentialRampToValueAtTime(0.0001, t + 0.35);
+  o.connect(a); a.connect(dest); G.tocar(o, t, t + 0.37);
+  const s = G.buf(e.ruido()), f = G.filtro('lowpass', 900, 0.7), b = G.ganho(0);
+  b.gain.setValueAtTime(0.0001, t); b.gain.linearRampToValueAtTime(g * 0.35, t + 0.003); b.gain.exponentialRampToValueAtTime(0.0001, t + 0.04);
+  s.connect(f); f.connect(b); b.connect(dest); G.tocar(s, t, t + 0.05, 0.3);
+}
+function triangulo(e, dest, t, aberto, g){
+  const G = e.g(), a = G.ganho(0), d = aberto ? 0.7 : 0.07;
+  a.gain.setValueAtTime(0.0001, t); a.gain.linearRampToValueAtTime(g, t + 0.002); a.gain.exponentialRampToValueAtTime(0.0001, t + d);
+  [[2350, 1], [5770, 0.5], [8930, 0.25]].forEach(([f, l]) => { const o = G.osc('sine', f), x = G.ganho(l); o.connect(x); x.connect(a); G.tocar(o, t, t + d + 0.02); });
+  a.connect(dest);
+}
+
+// ------------------------------------------------------------------ HOJE: cópia fiel e simplificada de src/audio/sons.ts
+/** Volume do "hoje" igualado ao da proposta (+12 dB na trilha, +6 dB nas vozes) para a comparação ser justa. */
+const NIVEL_HOJE = 4, NIVEL_VOZ_HOJE = 2;
+const HOJE_RANCHO_DIA = {
+  acordes: [[43, 55, 59, 62], [48, 55, 60, 64], [50, 57, 62, 66], [43, 55, 59, 62]],
+  melodia: [67, 71, 69, 72, 71, 74, 76, 79], intervalo: 6, chanceNota: 0.6,
+  pulso: [43, 0, 50, 0, 43, 0, 50, 0], ganhoPulso: 0.45,
+  timbre: { onda: 'sawtooth', brilho: 0.75, sustentacao: 0.7, coro: 7, sino: 'triangle' },
+};
+function golpeEnvHoje(g, t0, pico, ataque, queda){ g.gain.value = 0; g.gain.setValueAtTime(0.0001, t0); g.gain.linearRampToValueAtTime(pico, t0 + ataque); g.gain.exponentialRampToValueAtTime(0.0001, t0 + ataque + queda); }
+function tomHoje(e, dest, t0, tipo, f0, f1, pico, queda, ataque = 0.002){
+  const G = e.g(), o = G.osc(tipo, f0); o.frequency.setValueAtTime(f0, t0);
+  if (f1 !== f0) o.frequency.exponentialRampToValueAtTime(f1, t0 + ataque + queda * 0.6);
+  const g = G.ganho(0); golpeEnvHoje(g, t0, pico, ataque, queda); o.connect(g); g.connect(dest); G.tocar(o, t0, t0 + ataque + queda + 0.02);
+}
+function ruidoHoje(e, dest, t0, tipo, freq, q, pico, queda, ataque = 0.003){
+  const G = e.g(), s = G.buf(e.ruido()); s.loop = true; const f = G.filtro(tipo, freq, q), g = G.ganho(0);
+  golpeEnvHoje(g, t0, pico, ataque, queda); s.connect(f); f.connect(g); g.connect(dest); G.tocar(s, t0, t0 + ataque + queda + 0.02);
+}
+class TrilhaHoje {
+  constructor(e){ this.e = e; this.rng = semente(2026); }
+  iniciar(t){
+    const e = this.e; e.dono = 'hoje'; const P = this.P = e.g('hoje', false);
+    const mestre = this.out = P.ganho(0.5 * NIVEL_HOJE); mestre.connect(e.destino);
+    const bus = this.bus = P.ganho(0.6); bus.connect(mestre);
+    const rev = P.add(e.ctx.createConvolver()); rev.buffer = respostaEco(e.ctx, 3.2, 3, 4242);
+    const envio = P.ganho(0.55); bus.connect(envio); envio.connect(rev); rev.connect(mestre);
+    this.pA = t + 0.5; this.pN = t + 3; this.pP = t; this.iA = 0; this.iP = 0; e.dono = 'fx';
+  }
+  nota(t, f, ganho, ataque, dur){
+    const tm = HOJE_RANCHO_DIA.timbre;
+    for (const desvio of [-5 - tm.coro, 5 + tm.coro]){
+      const G = this.e.g(), o = G.osc(tm.onda, f); o.detune.value = desvio;
+      const fl = G.filtro('lowpass', 1400 * tm.brilho, 0.3), g = G.ganho(0);
+      g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(ganho, t + ataque); g.gain.linearRampToValueAtTime(ganho * 0.7, t + dur * 0.6); g.gain.linearRampToValueAtTime(0, t + dur);
+      o.connect(fl); fl.connect(g); g.connect(this.bus); G.tocar(o, t, t + dur + 0.05);
+    }
+  }
+  sino(t, f, ganho){
+    const tm = HOJE_RANCHO_DIA.timbre;
+    tomHoje(this.e, this.bus, t, 'triangle', f, f, ganho * 0.8, 2.2 * tm.sustentacao, 0.004);
+    tomHoje(this.e, this.bus, t, 'sine', f * 3, f * 3, ganho * 0.12, 0.8 * tm.sustentacao, 0.004);
+  }
+  agendar(ate){
+    const p = HOJE_RANCHO_DIA, e = this.e; e.dono = 'hoje';
+    while (this.pA < ate){ const t = this.pA; for (const m of p.acordes[this.iA++ % 4]) this.nota(t, mtof(m), 0.05, 2.5, p.intervalo + 1); this.pA = t + p.intervalo; }
+    while (this.pN < ate){ const t = this.pN; if (this.rng() < p.chanceNota){ const f = mtof(p.melodia[Math.floor(this.rng() * p.melodia.length)]); this.sino(t, f, 0.06); this.sino(t + 0.375, f, 0.025); } this.pN = t + 1.5 + this.rng() * 2.5; }
+    while (this.pP < ate){ const t = this.pP, m = p.pulso[this.iP++ % p.pulso.length]; if (m > 0){ const f = mtof(m); tomHoje(e, this.bus, t, 'triangle', f, f * 0.98, 0.1 * p.ganhoPulso, 0.22, 0.01); } this.pP = t + 0.3; }
+    e.dono = 'fx';
+  }
+}
+// voz de hoje (desenharVoz)
+function vozHoje(e, dest, pio, t0, variacao = 0.5){
+  const G0 = e.g(), out = G0.ganho(0.22 * NIVEL_VOZ_HOJE * (pio.ganho ?? 1)); out.connect(dest);
+  const k = 1 + (variacao - 0.5) * 0.08, g = pio.onda === 'sine' ? 1 : pio.onda === 'triangle' ? 0.85 : 0.4;
+  let fim = t0;
+  for (let r = 0; r < Math.max(1, pio.rep); r++){
+    const t = t0 + r * (pio.dur + pio.int);
+    const o = G0.osc(pio.onda, pio.de * k); o.frequency.setValueAtTime(pio.de * k, t);
+    if (pio.vib){ const passos = Math.max(2, Math.floor(pio.dur * pio.vib * 2)); for (let j = 1; j <= passos; j++){ const u = j / passos; o.frequency.linearRampToValueAtTime((pio.de + (pio.ate - pio.de) * u) * k * (1 + (j % 2 ? 0.025 : -0.025)), t + u * pio.dur); } }
+    else o.frequency.exponentialRampToValueAtTime(pio.ate * k, t + pio.dur);
+    const ge = G0.ganho(0); ge.gain.setValueAtTime(0.0001, t); ge.gain.linearRampToValueAtTime(g, t + Math.min(0.02, pio.dur * 0.2)); ge.gain.linearRampToValueAtTime(g * 0.7, t + pio.dur * 0.7); ge.gain.linearRampToValueAtTime(0.0001, t + pio.dur);
+    o.connect(ge); ge.connect(out); G0.tocar(o, t, t + pio.dur + 0.03); fim = t + pio.dur + 0.03;
+    if (pio.ru) ruidoHoje(e, out, t, 'bandpass', (pio.de + pio.ate) * 0.5 * k, 1.2, pio.ru * 0.8, pio.dur * 0.9, 0.01);
+  }
+  return fim;
+}
+const pio = (onda, de, ate, dur, rep = 1, int = 0, x = {}) => Object.assign({ onda, de, ate, dur, rep, int }, x);
+const VOZ_HOJE = {
+  galinha: { chamado: pio('triangle', 720, 520, .08, 3, .07, { ru: .12, ganho: .6 }), susto: pio('triangle', 1100, 700, .1, 4, .04, { ru: .15, ganho: .7 }), contente: pio('triangle', 560, 480, .1, 2, .12, { ru: .08, ganho: .55 }) },
+  vaca: { chamado: pio('sawtooth', 165, 125, .95, 1, 0, { vib: 4, ru: .1, ganho: .55 }), susto: pio('sawtooth', 230, 160, .28, 1, 0, { vib: 6, ru: .1, ganho: .6 }), contente: pio('triangle', 150, 135, .5, 1, 0, { vib: 3, ganho: .6 }) },
+  cachorro: { chamado: pio('triangle', 640, 420, .1, 2, .14, { ru: .18 }), susto: pio('triangle', 1200, 650, .22, 1, 0, { vib: 9, ru: .1 }), contente: pio('triangle', 820, 1100, .07, 3, .08, { vib: 6, ru: .08, ganho: .7 }) },
+  saci: { chamado: pio('sine', 1400, 2100, .32, 2, .14, { vib: 6, ru: .1, ganho: .55 }), susto: pio('triangle', 900, 1600, .14, 1, 0, { ganho: .7 }), contente: pio('triangle', 820, 980, .07, 4, .06, { ganho: .6 }) },
+  dino: { chamado: pio('triangle', 200, 150, .7, 1, 0, { vib: 4, ru: .2 }), susto: pio('triangle', 340, 230, .22, 2, .1, { ru: .25 }), contente: pio('sine', 180, 230, .4, 2, .15, { vib: 5 }) },
+  lua: { chamado: pio('sine', 1400, 2000, .09, 2, .14, { vib: 5, ganho: .5 }), susto: pio('sine', 2400, 1500, .14, 1, 0, { ganho: .7 }), contente: pio('triangle', 1200, 1600, .06, 3, .1, { ganho: .45 }) },
+};
+// amostra de golpe de hoje (src/audio/amostras.ts, evento 'golpe')
+function biquadPCM(x, sr, tipo, freq, q){
+  const w = 2 * Math.PI * Math.min(freq, sr * 0.45) / sr, cw = Math.cos(w), a = Math.sin(w) / (2 * q);
+  let b0, b1, b2; if (tipo === 'lp'){ b0 = (1 - cw) / 2; b1 = 1 - cw; b2 = b0; } else if (tipo === 'hp'){ b0 = (1 + cw) / 2; b1 = -(1 + cw); b2 = b0; } else { b0 = a; b1 = 0; b2 = -a; }
+  const a0 = 1 + a, a1 = -2 * cw, a2 = 1 - a; let x1 = 0, x2 = 0, y1 = 0, y2 = 0;
+  for (let i = 0; i < x.length; i++){ const xi = x[i], y = (b0 * xi + b1 * x1 + b2 * x2 - a1 * y1 - a2 * y2) / a0; x2 = x1; x1 = xi; y2 = y1; y1 = y; x[i] = y; }
+}
+function graoPCM(s, sr, r, t, dur, ganho, tipo, freq, q){
+  const n = Math.max(8, Math.floor(dur * sr)), ini = Math.floor(t * sr); if (ini >= s.length) return;
+  const g = new Float32Array(n); for (let i = 0; i < n; i++) g[i] = r() * 2 - 1; biquadPCM(g, sr, tipo, freq, q);
+  const at = Math.max(1, Math.floor(n * 0.08));
+  for (let i = 0; i < n && ini + i < s.length; i++){ const env = i < at ? i / at : Math.exp(-5 * (i - at) / (n - at)); s[ini + i] += g[i] * env * ganho; }
+}
+function cascataPCM(s, sr, r, t0, dur, qtd, dg, fq, tipo, q, ganho){
+  for (let i = 0; i < qtd; i++){ const u = r(), t = t0 + dur * u * u, g = ganho * (1 - (t - t0) / (dur + 0.001)) * (0.4 + r() * 0.6); const d = dg[0] + r() * (dg[1] - dg[0]); const f = fq[0] * Math.pow(fq[1] / fq[0], r()); graoPCM(s, sr, r, t, d, g, tipo, f, q); }
+}
+function modoPCM(s, sr, t, freq, queda, ganho){ const ini = Math.floor(t * sr), w = 2 * Math.PI * freq / sr, fim = Math.min(s.length, ini + Math.floor(queda * 6 * sr)); for (let i = ini; i < fim; i++) s[i] += Math.sin(w * (i - ini)) * Math.exp(-((i - ini) / sr) / queda) * ganho; }
+function estaloPCM(s, sr, r, t, ganho){ const ini = Math.floor(t * sr), n = Math.floor(0.004 * sr); for (let i = 0; i < n && ini + i < s.length; i++) s[ini + i] += (r() * 2 - 1) * (1 - i / n) * ganho; }
+function amostraGolpeHoje(e, grupo, variacao){
+  const key = 'golpeHoje' + grupo + variacao; let b = e.cache.get(key); if (b) return b;
+  const sr = e.ctx.sampleRate, n = Math.floor(0.22 * sr), s = new Float32Array(n);
+  const gi = ['terra', 'pedra', 'areia', 'madeira', 'folhagem', 'cristal'].indexOf(grupo);
+  const r = semente(1000 + 1 * 97 + gi * 13 + variacao * 7919), k = 0.55, nG = x => Math.round(x * 0.35), durC = 0.09;
+  if (grupo === 'terra'){
+    graoPCM(s, sr, r, 0, 0.08, 1.0 * k, 'lp', 260 + r() * 120, 0.9);
+    cascataPCM(s, sr, r, 0.01, durC, nG(26), [0.008, 0.03], [350, 1800], 'lp', 0.8, 0.7 * k);
+  } else {
+    estaloPCM(s, sr, r, 0, 0.8 * k); const f0 = 2100 + r() * 900;
+    [1, 1.47, 2.09, 2.83].forEach((m, i) => modoPCM(s, sr, 0, f0 * m, 0.05 / (1 + i * 0.4), (0.3 / (i + 1)) * k));
+    for (let i = 0; i < 4; i++){ const t = 0.02 + r() * 0.1; modoPCM(s, sr, t, 3000 + r() * 6000, 0.012 + r() * 0.03, (0.12 + r() * 0.15) * k * (1 - t)); }
+    cascataPCM(s, sr, r, 0.005, durC, nG(14), [0.002, 0.005], [5000, 10000], 'hp', 1, 0.3 * k);
+  }
+  biquadPCM(s, sr, 'hp', 45, 0.7);
+  let pk = 0; for (let i = 0; i < n; i++) pk = Math.max(pk, Math.abs(s[i]));
+  const fat = pk > 0 ? 0.9 / pk : 0, rp = Math.floor(0.01 * sr); for (let i = 0; i < n; i++) s[i] *= fat * (i > n - rp ? (n - i) / rp : 1);
+  b = e.ctx.createBuffer(1, n, sr); b.getChannelData(0).set(s); e.cache.set(key, b); return b;
+}
+let contaGolpe = 0;
+function golpeHoje(e, dest, bicho, t){
+  const grupo = bicho === 'saci' ? 'cristal' : 'terra', v = contaGolpe++ % 4;
+  const G = e.g(), s = G.buf(amostraGolpeHoje(e, grupo, v)); s.playbackRate.value = (0.9 + (v / 3) * 0.2) * (grupo === 'terra' ? 0.95 : 1);
+  const g = G.ganho(0.5); s.connect(g); g.connect(dest); G.tocar(s, t);
+  vozHoje(e, dest, VOZ_HOJE[bicho].susto, t, v / 3);
+}
+
+// ------------------------------------------------------------------ PROPOSTA: vozes com vogais (formantes)
+const VOG = { u: [300, 870, 2240], o: [450, 800, 2830], O: [570, 840, 2410], a: [730, 1090, 2440], e: [530, 1840, 2480], i: [270, 2290, 3010], m: [250, 1000, 2300] };
+const B1 = { f: 1, tr: 1, d: 1, g: 1 };
+/** Voz: fonte (serrilhada ou pulso) + sopro, passando por 3 formantes que deslizam de vogal em vogal. */
+function V(e, dest, t, p, b = B1){
+  const G = e.g(), d = p.d * b.d, tr = (p.tr || 1) * b.tr, fm = b.f;
+  const o = G.osc(p.w === 'pulse' ? e.pulso(0.22) : (p.w || 'sawtooth'), p.f[0][1] * fm);
+  autom(o.frequency, p.f.map(([dt, v]) => [dt * b.d, v * fm]), t, true);
+  if (p.vib){ const [r, c, dl = 0.05] = p.vib, l = G.osc('sine', r), lg = G.ganho(0); lg.gain.setValueAtTime(0, t + dl * b.d); lg.gain.linearRampToValueAtTime(c, t + dl * b.d + 0.08); l.connect(lg); lg.connect(o.detune); G.tocar(l, t, t + d + 0.05); }
+  const mix = G.ganho(1), pre = G.ganho(1 - (p.nz || 0) * 0.75); o.connect(pre); pre.connect(mix);
+  if (p.nz){ const n = G.buf(e.ruido()); n.loop = true; const ng = G.ganho(p.nz * 0.9); n.connect(ng); ng.connect(mix); G.tocar(n, t, t + d + 0.05, (hash(Math.floor(t * 997)) % 100) / 100); }
+  const amp = G.ganho(0), vv = p.v.map(([dt, s]) => [dt * b.d, (b.vm && b.vm[s]) || s]);
+  [1, 0.5, 0.22].forEach((lv, k) => {
+    const f = G.filtro('bandpass', Math.min(VOG[vv[0][1]][k] * tr, 9000), p.q || (k ? 9 : 5));
+    autom(f.frequency, vv.map(([dt, s]) => [dt, Math.min(VOG[s][k] * tr, 9000)]), t, false);
+    const fg = G.ganho(lv * (p.comp || 3)); mix.connect(f); f.connect(fg); fg.connect(amp);
+  });
+  const gn = (p.gn ?? 1) * (b.g || 1) * 0.45, at = p.at ?? 0.02, rel = Math.min(p.rel ?? 0.06, d * 0.5);
+  amp.gain.setValueAtTime(0, t); amp.gain.linearRampToValueAtTime(gn, t + at); amp.gain.linearRampToValueAtTime(gn * 0.8, t + Math.max(at + 0.005, d - rel)); amp.gain.linearRampToValueAtTime(0, t + d);
+  let out = amp;
+  if (p.am){ const [r, dp] = p.am, ag = G.ganho(1 - dp / 2), l = G.osc('sine', r), lg = G.ganho(dp / 2); l.connect(lg); lg.connect(ag.gain); amp.connect(ag); out = ag; G.tocar(l, t, t + d + 0.05); }
+  out.connect(dest); G.tocar(o, t, t + d + 0.05);
+}
+/** Assobio (Saci, pintinho): seno com vibrato e um sopro que segue o tom. */
+function assobio(e, dest, t, f, d, gn = 0.22, vib = 25, b = B1){
+  const G = e.g(), dd = d * b.d, o = G.osc('sine', f[0][1] * b.f);
+  autom(o.frequency, f.map(([dt, v]) => [dt * b.d, v * b.f]), t, true);
+  const l = G.osc('sine', 6.5), lg = G.ganho(vib); l.connect(lg); lg.connect(o.detune);
+  const a = G.ganho(0); a.gain.setValueAtTime(0, t); a.gain.linearRampToValueAtTime(gn * b.g, t + 0.025); a.gain.linearRampToValueAtTime(gn * b.g * 0.7, t + dd * 0.8); a.gain.linearRampToValueAtTime(0, t + dd);
+  o.connect(a);
+  const n = G.buf(e.ruido()); n.loop = true; const nf = G.filtro('bandpass', f[0][1] * b.f, 6); autom(nf.frequency, f.map(([dt, v]) => [dt * b.d, v * b.f]), t, true);
+  const ng = G.ganho(0.12); n.connect(nf); nf.connect(ng); ng.connect(a);
+  a.connect(dest); G.tocar(o, t, t + dd + 0.03); G.tocar(l, t, t + dd + 0.03); G.tocar(n, t, t + dd + 0.03, 0.2);
+}
+/** "Boing" de mola: o tom cai e balança cada vez menos. */
+function boing(e, dest, t, f0, f1, d, gn = 0.2, b = B1){
+  const G = e.g(), dd = d * b.d, o = G.osc('triangle', f0 * b.f);
+  o.frequency.setValueAtTime(f0 * b.f, t); o.frequency.exponentialRampToValueAtTime(f1 * b.f, t + dd);
+  const l = G.osc('sine', 13), lg = G.ganho(160); lg.gain.setValueAtTime(160, t); lg.gain.exponentialRampToValueAtTime(5, t + dd); l.connect(lg); lg.connect(o.detune);
+  const a = G.ganho(0); a.gain.setValueAtTime(0.0001, t); a.gain.linearRampToValueAtTime(gn * b.g, t + 0.01); a.gain.exponentialRampToValueAtTime(0.0001, t + dd);
+  o.connect(a); a.connect(dest); G.tocar(o, t, t + dd + 0.02); G.tocar(l, t, t + dd + 0.02);
+}
+/** FM macio (bichos da Lua). */
+function fmVoz(e, dest, t, p, b = B1){
+  const G = e.g(), d = p.d * b.d, c = G.osc('sine', p.f[0][1] * b.f), m = G.osc('sine', p.f[0][1] * b.f * (p.r || 1.5)), mg = G.ganho(0);
+  autom(c.frequency, p.f.map(([dt, v]) => [dt * b.d, v * b.f]), t, true);
+  autom(m.frequency, p.f.map(([dt, v]) => [dt * b.d, v * b.f * (p.r || 1.5)]), t, true);
+  const ix = p.ix || [1.2, 0.2], f0 = p.f[0][1] * b.f;
+  mg.gain.setValueAtTime(ix[0] * f0, t); mg.gain.linearRampToValueAtTime(ix[1] * f0, t + d);
+  m.connect(mg); mg.connect(c.frequency);
+  if (p.vib){ const l = G.osc('sine', p.vib[0]), lg = G.ganho(p.vib[1]); l.connect(lg); lg.connect(c.detune); G.tocar(l, t, t + d + 0.03); }
+  const a = G.ganho(0), gn = (p.gn ?? 1) * 0.26 * b.g; a.gain.setValueAtTime(0, t); a.gain.linearRampToValueAtTime(gn, t + 0.012); a.gain.linearRampToValueAtTime(gn * 0.7, t + d * 0.7); a.gain.linearRampToValueAtTime(0, t + d);
+  c.connect(a); a.connect(dest); G.tocar(c, t, t + d + 0.03); G.tocar(m, t, t + d + 0.03);
+}
+/** Baque macio do golpe: corpo grave + "puf" de pelo, pena ou pano. */
+function baque(e, dest, t, tam, pano){
+  const G = e.g(), o = G.osc('sine', 150 / tam), a = G.ganho(0);
+  o.frequency.setValueAtTime(150 / tam, t); o.frequency.exponentialRampToValueAtTime(55 / tam, t + 0.1);
+  a.gain.setValueAtTime(0.0001, t); a.gain.linearRampToValueAtTime(0.22, t + 0.004); a.gain.exponentialRampToValueAtTime(0.0001, t + 0.17);
+  o.connect(a); a.connect(dest); G.tocar(o, t, t + 0.19);
+  const s = G.buf(e.ruido()), f = G.filtro(pano ? 'bandpass' : 'lowpass', pano ? 1100 : 650 / tam, pano ? 1.2 : 0.7), b = G.ganho(0);
+  b.gain.setValueAtTime(0.0001, t); b.gain.linearRampToValueAtTime(pano ? 0.28 : 0.2, t + 0.004); b.gain.exponentialRampToValueAtTime(0.0001, t + (pano ? 0.11 : 0.07));
+  s.connect(f); f.connect(b); b.connect(dest); G.tocar(s, t, t + 0.13, 0.5);
+}
+
+const BICHOS = {
+  galinha: { nome: 'Galinha', filhote: 'Pintinho', tam: 0.7, bebe: { f: 1, tr: 1, d: 1, g: 1 },
+    chamado(e, d, t, b){ if (b.pinto) { [0, .17, .34].forEach((x, i) => assobio(e, d, t + x, [[0, 3300], [.05, 4300], [.09, 3700 - i * 100]], .09, .22, 15)); return; }
+      for (const x of [0, .15, .3]) V(e, d, t + x, { w: 'pulse', f: [[0, 430], [.08, 390]], v: [[0, 'O'], [.08, 'a']], tr: 1.5, d: .09, nz: .15, at: .006, rel: .03 }, b);
+      V(e, d, t + .48, { w: 'pulse', f: [[0, 470], [.12, 560], [.3, 430]], v: [[0, 'a'], [.28, 'O']], tr: 1.5, d: .32, at: .01, nz: .1 }, b); },
+    susto(e, d, t, b){ if (b.pinto) { for (let i = 0; i < 5; i++) assobio(e, d, t + i * .08, [[0, 4000], [.05, 4800]], .06, .21, 10); return; }
+      for (let i = 0; i < 5; i++) V(e, d, t + i * .07, { w: 'pulse', f: [[0, 700 + i * 40], [.05, 640]], v: [[0, 'a']], tr: 1.5, d: .055, nz: .2, at: .004, rel: .02 }, b);
+      V(e, d, t + .38, { w: 'pulse', f: [[0, 820], [.2, 1000]], v: [[0, 'a'], [.2, 'e']], tr: 1.5, d: .22, at: .01 }, b); },
+    contente(e, d, t, b){ if (b.pinto) { assobio(e, d, t, [[0, 3600], [.1, 3200]], .1, .17, 10); assobio(e, d, t + .2, [[0, 3400], [.1, 3000]], .1, .14, 10); return; }
+      for (const x of [0, .38]) V(e, d, t + x, { w: 'pulse', f: [[0, 330], [.2, 310]], v: [[0, 'O']], tr: 1.5, d: .24, am: [28, .8], gn: .8, at: .03 }, b); },
+    ai(e, d, t, b){ if (b.pinto) { assobio(e, d, t, [[0, 3000], [.12, 4800], [.18, 4300]], .18, .24, 20); return; }
+      V(e, d, t, { w: 'pulse', f: [[0, 480], [.12, 1100], [.22, 980]], v: [[0, 'O'], [.15, 'i']], tr: 1.5, d: .24, at: .01 }, b); },
+  },
+  vaca: { nome: 'Vaca', filhote: 'Bezerro', tam: 1.6, bebe: { f: 1.9, tr: 1.25, d: .7, g: .85, vm: { u: 'e', o: 'e' } },
+    chamado(e, d, t, b){ V(e, d, t, { f: [[0, 118], [.3, 122], [1.0, 110], [1.35, 92]], v: [[0, 'm'], [.25, 'u'], [.9, 'o'], [1.3, 'u']], tr: .85, d: 1.4, vib: [5, 10, .3], nz: .08, at: .18, rel: .25 }, b); },
+    susto(e, d, t, b){ V(e, d, t, { f: [[0, 175], [.25, 140]], v: [[0, 'm'], [.08, 'o']], tr: .85, d: .34, at: .03 }, b); },
+    contente(e, d, t, b){ V(e, d, t, { f: [[0, 108], [.6, 116]], v: [[0, 'm'], [.6, 'm']], tr: .85, d: .7, gn: .8, at: .12, vib: [4, 6, .1] }, b); },
+    ai(e, d, t, b){ V(e, d, t, { f: [[0, 150], [.15, 215], [.4, 170]], v: [[0, 'u'], [.2, 'o']], tr: .85, d: .42, at: .02 }, b); },
+  },
+  cavalo: { nome: 'Cavalo', filhote: 'Potro', tam: 1.5, novo: true, bebe: { f: 1.5, tr: 1.2, d: .8, g: .9 },
+    chamado(e, d, t, b){ V(e, d, t, { f: [[0, 850], [.15, 1050], [1.1, 520]], v: [[0, 'i'], [.3, 'e'], [1.0, 'a']], d: 1.15, vib: [11, 70, .12], am: [13, .35], nz: .2, at: .04, rel: .2, gn: .8 }, b); },
+    susto(e, d, t, b){ V(e, d, t, { f: [[0, 95], [.4, 85]], v: [[0, 'o'], [.4, 'o']], d: .45, nz: .9, am: [26, .9], at: .02, gn: 1.5 }, b); },
+    contente(e, d, t, b){ V(e, d, t, { f: [[0, 160], [.5, 140]], v: [[0, 'm'], [.1, 'o']], d: .55, am: [16, .7], gn: .8, at: .05 }, b); },
+    ai(e, d, t, b){ V(e, d, t, { f: [[0, 700], [.12, 1000], [.25, 900]], v: [[0, 'e'], [.1, 'i']], d: .26, vib: [12, 40, .02], gn: 1.4 }, b); },
+  },
+  porco: { nome: 'Porco', filhote: 'Leitão', tam: 1.2, novo: true, bebe: { f: 1.6, tr: 1.3, d: .8, g: .9 },
+    chamado(e, d, t, b){ for (const x of [0, .3]) V(e, d, t + x, { w: 'pulse', f: [[0, 230], [.17, 175]], v: [[0, 'O'], [.12, 'i']], tr: 1.05, d: .19, am: [42, .6], nz: .25, at: .01 }, b); },
+    susto(e, d, t, b){ V(e, d, t, { f: [[0, 560], [.12, 820], [.3, 760]], v: [[0, 'u'], [.1, 'i']], tr: 1.05, d: .32, gn: 1.2, at: .02 }, b); },
+    contente(e, d, t, b){ for (const x of [0, .2, .4]) V(e, d, t + x, { w: 'pulse', f: [[0, 150], [.1, 140]], v: [[0, 'O']], tr: 1.05, d: .11, am: [38, .6], gn: 1.1, at: .01 }, b); },
+    ai(e, d, t, b){ V(e, d, t, { w: 'pulse', f: [[0, 280], [.14, 500]], v: [[0, 'O'], [.12, 'i']], tr: 1.05, d: .2, at: .01 }, b); },
+  },
+  cachorro: { nome: 'Cachorro', filhote: 'Filhote', tam: 1, bebe: { f: 1.6, tr: 1.35, d: .8, g: .9 },
+    chamado(e, d, t, b){ for (const x of [0, .24]) V(e, d, t + x, { f: [[0, 500], [.06, 470], [.15, 360]], v: [[0, 'a'], [.12, 'u']], tr: 1.15, d: .16, nz: .25, at: .006, rel: .04 }, b); },
+    susto(e, d, t, b){ V(e, d, t, { f: [[0, 650], [.15, 900], [.4, 780]], v: [[0, 'u'], [.2, 'i']], tr: 1.15, d: .42, gn: 1.1, vib: [7, 30, .1] }, b); },
+    contente(e, d, t, b){ V(e, d, t, { f: [[0, 620], [.1, 480]], v: [[0, 'a'], [.1, 'u']], tr: 1.15, d: .12, nz: .2, at: .006 }, b);
+      for (let i = 0; i < 4; i++) V(e, d, t + .25 + i * .14, { f: [[0, 300], [.08, 300]], v: [[0, 'a']], tr: 1.15, d: .08, nz: .95, gn: .5, at: .015 }, b); },
+    ai(e, d, t, b){ V(e, d, t, { f: [[0, 900], [.08, 1300], [.18, 1100]], v: [[0, 'i'], [.18, 'i']], tr: 1.15, d: .2, vib: [10, 40, .02], gn: 1.3 }, b); },
+  },
+  saci: { nome: 'Saci', filhote: 'Sacizinho', tam: 0.9, pano: true, bebe: { f: 1.3, tr: 1.15, d: .85, g: .9 },
+    chamado(e, d, t, b){ assobio(e, d, t, [[0, 1500], [.16, 2300]], .18, .22, 25, b); assobio(e, d, t + .28 * b.d, [[0, 2300], [.18, 1700], [.4, 2650]], .42, .22, 35, b); },
+    susto(e, d, t, b){ V(e, d, t, { f: [[0, 380], [.18, 560]], v: [[0, 'o'], [.1, 'a']], tr: 1.25, d: .22, at: .01 }, b); assobio(e, d, t + .22 * b.d, [[0, 1800], [.12, 2800]], .14, .18, 20, b); },
+    contente(e, d, t, b){ for (let i = 0; i < 4; i++) V(e, d, t + i * .12 * b.d, { f: [[0, 560 - i * 30], [.07, 520 - i * 30]], v: [[0, 'i'], [.06, 'e']], tr: 1.25, d: .075, nz: .35, at: .005, rel: .02 }, b);
+      assobio(e, d, t + .55 * b.d, [[0, 2000], [.1, 2400], [.2, 2100]], .2, .16, 20, b); },
+    ai(e, d, t, b){ V(e, d, t, { f: [[0, 430], [.25, 300]], v: [[0, 'u'], [.15, 'o']], tr: 1.25, d: .28, at: .01 }, b); boing(e, d, t + .05, 620, 240, .38, .1, b); },
+  },
+  dino: { nome: 'Dino pescoçudo', filhote: 'Dininho', tam: 1.8, bebe: { f: 2.3, tr: 1.6, d: .6, g: .85 },
+    chamado(e, d, t, b){ V(e, d, t, { f: [[0, 88], [.6, 92], [1.2, 76]], v: [[0, 'u'], [.4, 'o'], [1.1, 'm']], tr: .7, d: 1.25, am: [21, .25], nz: .1, at: .2, rel: .3, vib: [4, 8, .3], gn: 1.1 }, b); },
+    susto(e, d, t, b){ V(e, d, t, { w: 'pulse', f: [[0, 185], [.3, 150]], v: [[0, 'o'], [.15, 'a']], tr: .7, d: .32, at: .012 }, b); },
+    contente(e, d, t, b){ V(e, d, t, { f: [[0, 72], [.8, 70]], v: [[0, 'u'], [.8, 'u']], tr: .7, d: .85, am: [24, .7], gn: 1, at: .1 }, b); },
+    ai(e, d, t, b){ V(e, d, t, { f: [[0, 110], [.3, 175], [.45, 160]], v: [[0, 'u'], [.25, 'o']], tr: .7, d: .46, gn: 1.1 }, b); },
+  },
+  lua: { nome: 'Coelho-lunar', filhote: 'Coelhinho', tam: 0.8, gel: true, bebe: { f: 1.4, tr: 1, d: .8, g: .9 },
+    chamado(e, d, t, b){ fmVoz(e, d, t, { f: [[0, 1100], [.18, 1500]], d: .2 }, b); fmVoz(e, d, t + .28 * b.d, { f: [[0, 1350], [.3, 900]], d: .32, vib: [6, 30] }, b); },
+    susto(e, d, t, b){ for (const x of [0, .1]) fmVoz(e, d, t + x * b.d, { f: [[0, 2000], [.07, 2600]], d: .07, ix: [2, .5] }, b); },
+    contente(e, d, t, b){ for (let i = 0; i < 6; i++) fmVoz(e, d, t + i * .07 * b.d, { f: [[0, i % 2 ? 1750 : 1400], [.05, i % 2 ? 1700 : 1450]], d: .05, ix: [.8, .2] }, b); },
+    ai(e, d, t, b){ fmVoz(e, d, t, { f: [[0, 900], [.35, 340]], d: .38, r: 2, ix: [2, .3], vib: [12, 60] }, b); },
+  },
+};
+const MOMENTOS = [['chamado', 'Chamado'], ['susto', 'Susto'], ['contente', 'Contente'], ['ai', '"Ai"']];
+function bebeDe(bk, filhote){ if (!filhote) return B1; const b = Object.assign({}, BICHOS[bk].bebe); if (bk === 'galinha') b.pinto = true; return b; }
+function falaBicho(e, bk, mom, filhote, t, varF){
+  let b = bebeDe(bk, filhote); if (varF) b = Object.assign({}, b, { f: b.f * varF });
+  e.falar(() => BICHOS[bk][mom](e, e.fx, t, b));
+}
+let contaGolpeP = 0;
+function golpeProposta(e, bk, t){
+  const n = contaGolpeP++, varF = [1, 1.07, 0.94, 1.03][n % 4], bi = BICHOS[bk];
+  e.falar(() => {
+    if (bi.gel) boing(e, e.fx, t, 260, 170, .25, .25); else baque(e, e.fx, t, bi.tam * (n % 2 ? 1.05 : 0.97), bi.pano);
+    bi.ai(e, e.fx, t + 0.035, Object.assign({}, B1, { f: varF, g: 0.7, d: n % 3 === 2 ? 1.15 : 1 }));
+  });
+}
+
+// ------------------------------------------------------------------ PROPOSTA: moda de viola com camadas
+const BPM = 84, SEMI = 60 / BPM / 4, COMP = SEMI * 8; // compasso 2/4, grade em semicolcheias
+const FORMA = ['G', 'G', 'D', 'G', 'G', 'C', 'D', 'G', 'C', 'G', 'D', 'D', 'C', 'G', 'D', 'G', 'G', 'G'];
+const SECAO = i => i < 4 ? 'A' : i < 8 ? "A'" : i < 16 ? 'B' : 'Respiro (só a base)';
+const ACO = {
+  G: { r: 43, q: 50, s: [55, 59, 62], arp: [55, 59, 62, 59] }, C: { r: 48, q: 43, s: [55, 60, 64], arp: [48, 55, 60, 64] },
+  D: { r: 50, q: 45, s: [54, 57, 62], arp: [50, 57, 62, 66] }, Em: { r: 40, q: 47, s: [55, 59, 64], arp: [52, 55, 59, 64] },
+  B7: { r: 47, q: 42, s: [54, 57, 63], arp: [47, 54, 57, 63] },
+};
+// ponteio: graus de sol maior (0 = sol 4) e duração em colcheias; a segunda voz vai uma terça abaixo
+const MEL = [
+  [[4, 2], [4, 1], [5, 1]], [[4, 1], [3, 1], [2, 2]], [[1, 1], [2, 1], [3, 1], [1, 1]], [[2, 3], [null, 1]],
+  [[4, 2], [4, 1], [5, 1]], [[7, 1], [5, 1], [5, 2]], [[4, 1], [3, 1], [1, 1], [3, 1]], [[2, 2], [0, 2]],
+  [[5, 1], [7, 1], [5, 1], [4, 1]], [[4, 2], [2, 2]], [[3, 1], [4, 1], [5, 1], [3, 1]], [[1, 3], [null, 1]],
+  [[5, 1], [7, 1], [5, 1], [4, 1]], [[4, 1], [3, 1], [2, 2]], [[1, 1], [2, 1], [3, 1], [1, 1]], [[0, 3], [null, 1]],
+  [[null, 4]], [[null, 4]],
+];
+const MEL_POS = MEL.map(c => { const m = new Map(); let p = 0; for (const [g, d] of c){ if (g !== null) m.set(p, [g, d]); p += d * 2; } return m; });
+const ESC = [0, 2, 4, 5, 7, 9, 11];
+const grau = d => 67 + 12 * Math.floor(d / 7) + ESC[((d % 7) + 7) % 7];
+const CAMADAS = [
+  ['base', 'Base: sanfona e baixo do violão', 'sempre'], ['tercas', 'Viola em terças (ponteio)', 'dia'],
+  ['sextas', 'Viola em sextas, mais calma', 'entardecer'], ['dedilhado', 'Dedilhado da noite', 'noite e caverna'],
+  ['ganza', 'Ganzá', 'andando e correndo'], ['zabumba', 'Zabumba', 'correndo'],
+  ['amigos', 'Sanfona canta junto e triângulo', 'amigos perto'], ['pingos', 'Pingos agudos', 'chuva e caverna'],
+  ['perigo', 'Tremido grave e coração', 'perigo'], ['eco', 'Eco da gruta', 'caverna'], ['abafa', 'Abafado (filtro)', 'chuva e caverna'],
+];
+class Moda {
+  constructor(e){ this.e = e; this.estado = { hora: 'dia', chuva: false, caverna: false, perigo: false, mov: 0, amigos: false }; this.sujo = true; this.L = {}; }
+  alvos(s){
+    const luz = !s.caverna && !s.perigo;
+    return {
+      base: s.hora === 'noite' ? 0.65 : s.caverna ? 0.8 : 1,
+      tercas: s.hora === 'dia' && luz ? 1 : 0, sextas: s.hora === 'tarde' && luz ? 1 : 0,
+      dedilhado: (s.hora === 'noite' || s.caverna) && !s.perigo ? 1 : 0,
+      ganza: s.mov >= 1 && !s.caverna ? (s.mov === 2 ? 1 : 0.7) : 0, zabumba: s.mov === 2 && !s.caverna ? 1 : 0,
+      amigos: s.amigos && !s.perigo ? 1 : 0, pingos: s.chuva || s.caverna ? 1 : 0, perigo: s.perigo ? 1 : 0,
+      eco: s.caverna ? 1 : 0, abafa: s.caverna ? 1 : s.chuva ? 0.6 : 0,
+    };
+  }
+  iniciar(t){
+    const e = this.e, P = this.P = e.g('moda', false);
+    const out = this.out = P.ganho(0); out.gain.setValueAtTime(0, t); out.gain.linearRampToValueAtTime(1, t + 0.4); out.connect(e.destino);
+    const rv = P.ganho(0.2); out.connect(rv); rv.connect(e.eco);
+    const abafa = this.abafa = P.filtro('lowpass', 16000, 0.5); abafa.connect(out);
+    const mix = P.ganho(0.9); mix.connect(abafa);
+    const hp = P.filtro('highpass', 70, 0.7), pk1 = P.filtro('peaking', 230, 1, 3), pk2 = P.filtro('peaking', 2600, 1.2, 2.5);
+    hp.connect(pk1); pk1.connect(pk2); pk2.connect(mix);
+    const slp = P.filtro('lowpass', 2300, 0.7), spk = P.filtro('peaking', 1100, 1.4, 5), fole = P.ganho(0.85);
+    const lfo = P.osc('sine', 0.21), lg = P.ganho(0.15); lfo.connect(lg); lg.connect(fole.gain);
+    slp.connect(spk); spk.connect(fole); fole.connect(mix); P.tocar(lfo, t);
+    const perc = P.ganho(1); perc.connect(mix);
+    const ecoEnv = P.ganho(0), dl = P.atraso(0.43), fb = P.ganho(0.38), elp = P.filtro('lowpass', 1800, 0.7);
+    pk2.connect(ecoEnv); ecoEnv.connect(dl); dl.connect(elp); elp.connect(fb); fb.connect(dl); elp.connect(mix);
+    const mk = (k, dests) => { this.L[k] = { gs: dests.map(d => { const g = P.ganho(0); g.connect(d); return g; }), de: 0, para: 0, t0: 0, t1: 0 }; };
+    mk('base', [slp, hp]); mk('tercas', [hp]); mk('sextas', [hp]); mk('dedilhado', [hp]); mk('ganza', [perc]); mk('zabumba', [perc]);
+    mk('amigos', [slp, perc]); mk('pingos', [hp]); mk('perigo', [hp, perc]);
+    this.L.eco = { gs: [ecoEnv], esc: 0.55, de: 0, para: 0, t0: 0, t1: 0 };
+    this.L.abafa = { gs: [], de: 0, para: 0, t0: 0, t1: 0 };
+    this.t0 = t + 0.1; this.prox = this.t0; this.passo = 0; this.sujo = true; this.primeiro = true; this.atual = null; this.ac = 'G';
+  }
+  nivel(L, t){ if (t <= L.t0) return L.de; if (t >= L.t1) return L.para; return L.de + (L.para - L.de) * (t - L.t0) / (L.t1 - L.t0); }
+  aplicar(t){
+    this.ap = Object.assign({}, this.estado); const alvo = this.alvos(this.ap);
+    for (const k in this.L){
+      const L = this.L[k], a = alvo[k]; if (a === L.para && !this.primeiro) continue;
+      const cur = this.nivel(L, t), dur = this.primeiro ? 0.4 : a > cur ? COMP : COMP * 1.5;
+      for (const g of L.gs){ g.gain.cancelScheduledValues(t); g.gain.setValueAtTime(cur * (L.esc || 1), t); g.gain.linearRampToValueAtTime(a * (L.esc || 1), t + dur); }
+      L.de = cur; L.para = a; L.t0 = t; L.t1 = t + dur;
+    }
+    this.abafa.frequency.setTargetAtTime(this.ap.caverna ? 1100 : this.ap.chuva ? 2400 : 16000, t, 0.6);
+    this.aplicadoEm = t; this.primeiro = false;
+  }
+  ativo(k, t){ const L = this.L[k]; return L.para > 0 || t < L.t1; }
+  agendar(ate){ const e = this.e; e.dono = 'moda'; while (this.prox < ate){ this.passoEm(this.prox, this.passo++); this.prox += SEMI; } e.dono = 'fx'; }
+  passoEm(t, s){
+    const e = this.e, pos = s % 8, comp = Math.floor(s / 8), fc = comp % 18, volta = Math.floor(comp / 18), L = this.L;
+    if (pos === 0){ if (this.sujo){ this.sujo = false; this.aplicar(t); } this.ac = this.ap.perigo ? (comp % 2 ? 'B7' : 'Em') : FORMA[fc]; }
+    const s_ = this.ap, ac = ACO[this.ac], resp = fc >= 16 && !s_.perigo;
+    if (pos === 0) this.atual = { t, comp, fc, volta, sec: s_.perigo ? 'Perigo (mi menor)' : SECAO(fc) };
+    // base: sanfona a cada compasso (o fole respira) e baixo alternado
+    if (pos === 0) for (const m of ac.s) sanfona(e, L.base.gs[0], t, m, COMP + 0.05, resp ? 0.05 : 0.04, 0.3);
+    if (pos === 0) viola(e, L.base.gs[1], t, ac.r, 0.55, { par: false, brilho: 0.35 });
+    if (pos === 4 && s_.hora !== 'noite' && !resp) viola(e, L.base.gs[1], t, ac.q, 0.4, { par: false, brilho: 0.35 });
+    // ponteio
+    const nt = s_.perigo ? null : MEL_POS[fc].get(pos);
+    if (nt){
+      const [g, d] = nt, topo = grau(g);
+      if (this.ativo('tercas', t)){
+        const sextas = volta % 2 === 1 && fc >= 8 && fc < 16;
+        if (volta % 2 === 1 && d >= 2 && g > 0) viola(e, L.tercas.gs[0], t - 0.05, grau(g - 1), 0.14, { par: false });
+        viola(e, L.tercas.gs[0], t, topo, 0.34); viola(e, L.tercas.gs[0], t + 0.008, grau(g - (sextas ? 5 : 2)), 0.26);
+        if (volta % 3 === 2 && d === 1 && (fc === 2 || fc === 10)) viola(e, L.tercas.gs[0], t + SEMI, topo, 0.2);
+      }
+      if (this.ativo('sextas', t) && (pos % 4 === 0 || d >= 2)){ viola(e, L.sextas.gs[0], t, topo, 0.28); viola(e, L.sextas.gs[0], t + 0.02, grau(g - 5), 0.22); }
+      if (this.ativo('amigos', t)) sanfona(e, L.amigos.gs[0], t, topo, d * 2 * SEMI * 0.95, 0.035, 0.04);
+    }
+    if (this.ativo('dedilhado', t) && pos % 2 === 0 && !resp && !(comp % 4 === 3 && pos > 0)) viola(e, L.dedilhado.gs[0], t, ac.arp[pos / 2], pos === 0 ? 0.26 : 0.2, { rasgo: 0.02 });
+    if (this.ativo('pingos', t)){ const h = hash(comp * 8 + pos); if (h % 11 === 0) viola(e, L.pingos.gs[0], t, ac.s[h % 3] + 24, 0.14, { par: false, brilho: 0.7 }); }
+    if (this.ativo('ganza', t) && (s_.mov >= 2 || pos % 2 === 0)) ganza(e, L.ganza.gs[0], t, pos % 4 === 2 ? 0.16 : 0.09);
+    if (this.ativo('zabumba', t)){ if (pos === 0) zabumba(e, L.zabumba.gs[0], t, 0.5); if (pos === 3) zabumba(e, L.zabumba.gs[0], t, 0.25); if (pos === 4) zabumba(e, L.zabumba.gs[0], t, 0.35); }
+    if (this.ativo('amigos', t)) triangulo(e, L.amigos.gs[1], t, pos % 4 === 2, pos % 4 === 2 ? 0.05 : 0.025);
+    if (this.ativo('perigo', t)){ if (pos % 2 === 0) viola(e, L.perigo.gs[0], t, pos % 4 === 0 ? ac.r : ac.r + 7, 0.3, { par: false, brilho: 0.3 }); if (pos === 0 || pos === 1) zabumba(e, L.perigo.gs[1], t, pos === 0 ? 0.32 : 0.2); }
+  }
+}
+
+// ------------------------------------------------------------------ trechos dos outros temas
+class Trecho {
+  constructor(e, dono, dur, montar){ this.e = e; this.dono = dono; this.dur = dur; this.montar = montar; }
+  iniciar(t){
+    const e = this.e, P = this.P = e.g(this.dono, false), bus = this.out = P.ganho(0.9); bus.connect(e.destino);
+    const rv = P.ganho(0.25); bus.connect(rv); rv.connect(e.eco);
+    this.ev = this.montar(e, P, bus).sort((a, b) => a[0] - b[0]); this.i = 0; this.t0 = t + 0.1; this.fim = this.t0 + this.dur;
+  }
+  agendar(ate){ const e = this.e; e.dono = this.dono; while (this.i < this.ev.length && this.t0 + this.ev[this.i][0] < ate){ const [dt, f] = this.ev[this.i++]; f(this.t0 + dt); } e.dono = 'fx'; }
+}
+function pad(e, dest, t, m, d, g){ for (const [tp, det] of [['sine', -4], ['triangle', 4]]){ const G = e.g(), o = G.osc(tp, mtof(m)); o.detune.value = det; const a = G.ganho(0); a.gain.setValueAtTime(0, t); a.gain.linearRampToValueAtTime(g, t + 1.8); a.gain.linearRampToValueAtTime(g * 0.8, t + d - 1.5); a.gain.linearRampToValueAtTime(0, t + d); o.connect(a); a.connect(dest); G.tocar(o, t, t + d + 0.05); } }
+function sinoFM(e, dest, t, m, g){ const f = mtof(m), G = e.g(), c = G.osc('sine', f), md = G.osc('sine', f * 3.5), mg = G.ganho(f * 2.2); mg.gain.setValueAtTime(f * 2.2, t); mg.gain.exponentialRampToValueAtTime(f * 0.05, t + 1.2); md.connect(mg); mg.connect(c.frequency); const a = G.ganho(0); a.gain.setValueAtTime(0.0001, t); a.gain.linearRampToValueAtTime(g, t + 0.004); a.gain.exponentialRampToValueAtTime(0.0001, t + 2); c.connect(a); a.connect(dest); G.tocar(c, t, t + 2.02); G.tocar(md, t, t + 2.02); }
+function caixinha(e, dest, t, m, g){ const f = mtof(m), G = e.g(), a = G.ganho(0); a.gain.setValueAtTime(0.0001, t); a.gain.linearRampToValueAtTime(g, t + 0.002); a.gain.exponentialRampToValueAtTime(0.0001, t + 1.5); [[1, 1, 1.5], [2, 0.25, 0.8], [3, 0.12, 0.3]].forEach(([k, l]) => { const o = G.osc('sine', f * k), x = G.ganho(l); o.connect(x); x.connect(a); G.tocar(o, t, t + 1.52); }); a.connect(dest); }
+function marimba(e, dest, t, m, g){ const f = mtof(m), G = e.g(), a = G.ganho(0); a.gain.setValueAtTime(0.0001, t); a.gain.linearRampToValueAtTime(g, t + 0.003); a.gain.exponentialRampToValueAtTime(0.0001, t + 0.55); const o = G.osc('sine', f); o.connect(a); const b = G.ganho(0); b.gain.setValueAtTime(0.0001, t); b.gain.linearRampToValueAtTime(g * 0.3, t + 0.002); b.gain.exponentialRampToValueAtTime(0.0001, t + 0.12); const o2 = G.osc('sine', f * 3.93); o2.connect(b); a.connect(dest); b.connect(dest); G.tocar(o, t, t + 0.57); G.tocar(o2, t, t + 0.14); }
+function tronco(e, dest, t, f, g){ const G = e.g(), o = G.osc('sine', f), a = G.ganho(0); o.frequency.setValueAtTime(f, t); o.frequency.exponentialRampToValueAtTime(f * 0.92, t + 0.15); a.gain.setValueAtTime(0.0001, t); a.gain.linearRampToValueAtTime(g, t + 0.002); a.gain.exponentialRampToValueAtTime(0.0001, t + 0.25); o.connect(a); a.connect(dest); G.tocar(o, t, t + 0.27); const s = G.buf(e.ruido()), fl = G.filtro('bandpass', 1200, 2), b = G.ganho(0); b.gain.setValueAtTime(0.0001, t); b.gain.linearRampToValueAtTime(g * 0.25, t + 0.002); b.gain.exponentialRampToValueAtTime(0.0001, t + 0.03); s.connect(fl); fl.connect(b); b.connect(dest); G.tocar(s, t, t + 0.04, 0.7); }
+function flauta(e, dest, t, m, d, g){ const f = mtof(m), G = e.g(), o = G.osc('sine', f), o2 = G.osc('sine', f * 2), x2 = G.ganho(0.12), a = G.ganho(0); o2.connect(x2); x2.connect(a); o.connect(a); const l = G.osc('sine', 5), lg = G.ganho(0); lg.gain.setValueAtTime(0, t + 0.25); lg.gain.linearRampToValueAtTime(14, t + 0.45); l.connect(lg); lg.connect(o.detune); lg.connect(o2.detune); const s = G.buf(e.ruido()), nf = G.filtro('bandpass', f * 2, 4), ng = G.ganho(0.05); s.connect(nf); nf.connect(ng); ng.connect(a); a.gain.setValueAtTime(0, t); a.gain.linearRampToValueAtTime(g, t + 0.09); a.gain.linearRampToValueAtTime(g * 0.85, t + d - 0.12); a.gain.linearRampToValueAtTime(0, t + d); a.connect(dest); for (const x of [o, o2, l, s]) G.tocar(x, t, t + d + 0.02); }
+const TRECHOS = {
+  lua: e => new Trecho(e, 'lua', 12, (e, P, bus) => {
+    const lp = P.filtro('lowpass', 1500, 0.7); lp.connect(bus);
+    const env = P.ganho(0.5), dl = P.atraso(0.45), fb = P.ganho(0.32), el = P.filtro('lowpass', 2400, 0.7); env.connect(dl); dl.connect(el); el.connect(fb); fb.connect(dl); el.connect(bus);
+    const ev = [];
+    for (const m of [53, 57, 64, 71]) ev.push([0, t => pad(e, lp, t, m, 6, 0.035)]);
+    for (const m of [55, 59, 62, 69]) ev.push([5.4, t => pad(e, lp, t, m, 6.2, 0.035)]);
+    [77, 81, 84, 88, 83, 81].forEach((m, i) => ev.push([1 + i * 0.6, t => { sinoFM(e, bus, t, m, 0.09); sinoFM(e, env, t, m, 0.05); }]));
+    [79, 83, 86, 88, 86, 83].forEach((m, i) => ev.push([6 + i * 0.6, t => { sinoFM(e, bus, t, m, 0.09); sinoFM(e, env, t, m, 0.05); }]));
+    return ev;
+  }),
+  doce: e => new Trecho(e, 'doce', 11, (e, P, bus) => {
+    const B = 60 / 138, ev = [];
+    const mel = [[[81, 1], [78, 1], [81, 1]], [[83, 2], [81, 1]], [[78, 1], [76, 1], [74, 1]], [[76, 3]], [[78, 1], [81, 1], [86, 1]], [[85, 2], [83, 1]], [[81, 1], [79, 1], [76, 1]], [[74, 3]]];
+    const ch = [[50, [66, 69]], [43, [67, 71]], [50, [66, 69]], [45, [61, 64]], [50, [66, 69]], [43, [67, 71]], [45, [61, 67]], [50, [62, 66]]];
+    mel.forEach((bar, b) => { let p = 0; for (const [m, d] of bar){ const tt = (b * 3 + p) * B; ev.push([tt, t => caixinha(e, bus, t, m, 0.12)]); p += d; }
+      const [r, dy] = ch[b]; ev.push([b * 3 * B, t => marimba(e, bus, t, r, 0.28)]); for (const k of [1, 2]) for (const m of dy) ev.push([(b * 3 + k) * B, t => marimba(e, bus, t, m, 0.1)]); });
+    return ev;
+  }),
+  dinos: e => new Trecho(e, 'dinos', 12.5, (e, P, bus) => {
+    const C = 0.3, ev = [];
+    for (let b = 0; b < 5; b++){ const pat = [[0, 150, .35], [3, 210, .22], [4, 180, .28], [6, 210, .2], [7, 240, .15]]; for (const [p, f, g] of pat) if (b < 4 || p < 4) ev.push([(b * 8 + p) * C, t => tronco(e, bus, t, f, g)]); for (let p = 0; p < 8; p++) ev.push([(b * 8 + p) * C, t => ganza(e, bus, t, p % 2 ? 0.07 : 0.04)]); }
+    const mel = [[[57, 2], [60, 1], [62, 1], [64, 3], [62, 1]], [[60, 2], [57, 2], [55, 2], [57, 2]], [[64, 2], [67, 1], [64, 1], [62, 2], [60, 2]], [[57, 6], [null, 2]]];
+    mel.forEach((bar, b) => { let p = 0; for (const [m, d] of bar){ if (m) ev.push([((b + 1) * 8 + p) * C, t => flauta(e, bus, t, m, d * C * 0.98, 0.16)]); p += d; } });
+    return ev;
+  }),
+};
+
+// ------------------------------------------------------------------ áudio ao vivo
+let ctx = null, M = null, mestre = null, analisador = null, fixos = 0, musica = null, musicaNome = null, timer = null, querSom = false;
+function criarCadeia(c, vivo){
+  const m = c.createGain(); m.gain.value = vivo ? +document.getElementById('vol').value : 1;
+  let fim = m, n = 1;
+  if (vivo){ const lim = c.createDynamicsCompressor(); lim.threshold.value = -6; lim.knee.value = 4; lim.ratio.value = 12; lim.attack.value = 0.003; lim.release.value = 0.15; m.connect(lim); fim = lim; n++;
+    analisador = c.createAnalyser(); analisador.fftSize = 512; lim.connect(analisador); n++; }
+  fim.connect(c.destination);
+  const conv = c.createConvolver(); conv.buffer = respostaEco(c, 1.8, 2.5, 77); const eco = c.createGain(); eco.gain.value = 1; eco.connect(conv); conv.connect(m);
+  const fx = c.createGain(); fx.gain.value = 1; fx.connect(m); const fxr = c.createGain(); fxr.gain.value = 0.12; fx.connect(fxr); fxr.connect(eco); n += 5;
+  return { m, eco, fx, n };
+}
+function ligarAudio(){
+  if (!ctx){
+    const AC = window.AudioContext || window.webkitAudioContext; ctx = new AC({ latencyHint: 'interactive' });
+    try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch (_) {}
+    const cad = criarCadeia(ctx, true); mestre = cad.m; fixos = cad.n;
+    M = new Motor(ctx, cad.m, cad.eco, cad.fx, true);
+    // desbloqueio do iOS: um buffer mudo dentro do toque
+    const b = ctx.createBuffer(1, 1, 22050), s = ctx.createBufferSource(); s.buffer = b; s.connect(ctx.destination); s.start(0);
+    ctx.onstatechange = mostrarEstado;
+    document.getElementById('caixaLigar').style.display = 'none';
+  }
+  querSom = true;
+  if (ctx.state !== 'running') ctx.resume().catch(() => {});
+  mostrarEstado();
+}
+function mostrarEstado(){
+  if (!ctx) return; const st = ctx.state;
+  document.getElementById('mEstado').textContent = st === 'running' ? 'ligado' : st === 'interrupted' ? 'interrompido' : st === 'suspended' ? 'pausado' : st;
+  document.getElementById('avisoPausa').classList.toggle('on', querSom && st !== 'running');
+}
+['pointerdown', 'touchend', 'keydown'].forEach(ev => document.addEventListener(ev, () => { if (ctx && ctx.state !== 'running') ctx.resume().catch(() => {}); }, { capture: true, passive: true }));
+document.addEventListener('visibilitychange', () => { if (!document.hidden && ctx && querSom && ctx.state !== 'running') ctx.resume().catch(() => {}); });
+
+function pararMusica(){
+  if (!musica) return; const now = ctx.currentTime, nome = musica.P.dono;
+  try { musica.out ? (musica.out.gain.cancelScheduledValues(now), musica.out.gain.setValueAtTime(musica.out.gain.value, now), musica.out.gain.linearRampToValueAtTime(0, now + 0.08)) : 0; } catch (_) {}
+  M.pararDono(d => d === nome, now + 0.1); musica = null; musicaNome = null; clearInterval(timer); timer = null; marcarMusica();
+}
+function tocarMusica(nome){
+  ligarAudio();
+  if (musicaNome === nome){ pararMusica(); return; }
+  pararMusica();
+  if (nome === 'hoje') musica = new TrilhaHoje(M); else if (nome === 'rancho') { musica = moda; } else musica = TRECHOS[nome](M);
+  if (nome === 'rancho') moda.e = M;
+  musica.iniciar(ctx.currentTime); musicaNome = nome; marcarMusica();
+  const tick = () => {
+    const a = performance.now(); musica.agendar(ctx.currentTime + 0.35); const dt = performance.now() - a; M.msAgenda = M.msAgenda * 0.9 + dt * 0.1 * 20;
+    if (musica.fim && ctx.currentTime > musica.fim + 2.2) pararMusica();
+  };
+  tick(); timer = setInterval(tick, 50);
+}
+function marcarMusica(){ document.querySelectorAll('[data-musica]').forEach(b => { const on = b.dataset.musica === musicaNome; b.classList.toggle('tocando', on); b.textContent = on ? 'Parar' : b.dataset.rotulo; }); }
+function pararTudo(){
+  if (!ctx) return; const now = ctx.currentTime;
+  mestre.gain.cancelScheduledValues(now); mestre.gain.setValueAtTime(mestre.gain.value, now); mestre.gain.linearRampToValueAtTime(0, now + 0.06);
+  pararMusica(); M.pararDono(() => true, now + 0.08); M.falas = [];
+  setTimeout(() => { const t = ctx.currentTime; mestre.gain.setValueAtTime(0, t); mestre.gain.linearRampToValueAtTime(+document.getElementById('vol').value, t + 0.05); }, 160);
+}
+
+// ------------------------------------------------------------------ interface
+const moda = new Moda(null);
+document.querySelectorAll('[data-musica]').forEach(b => { b.dataset.rotulo = b.textContent; b.addEventListener('click', () => tocarMusica(b.dataset.musica)); });
+document.getElementById('ligar').addEventListener('click', ligarAudio);
+document.getElementById('parar').addEventListener('click', pararTudo);
+document.getElementById('vol').addEventListener('input', ev => { if (mestre) mestre.gain.setTargetAtTime(+ev.target.value, ctx.currentTime, 0.03); });
+function mudarEstado(f){ f(moda.estado); moda.sujo = true; moda.pedidoEm = performance.now(); if (musicaNome !== 'rancho') tocarMusica('rancho'); }
+document.querySelectorAll('[data-hora]').forEach(b => b.addEventListener('click', () => { document.querySelectorAll('[data-hora]').forEach(x => x.setAttribute('aria-pressed', x === b)); mudarEstado(s => s.hora = b.dataset.hora); }));
+document.querySelectorAll('[data-mov]').forEach(b => b.addEventListener('click', () => { document.querySelectorAll('[data-mov]').forEach(x => x.setAttribute('aria-pressed', x === b)); mudarEstado(s => s.mov = +b.dataset.mov); }));
+document.querySelectorAll('[data-tog]').forEach(b => b.addEventListener('click', () => { const on = b.getAttribute('aria-pressed') !== 'true'; b.setAttribute('aria-pressed', on); mudarEstado(s => s[b.dataset.tog] = on); }));
+// camadas e pulso
+const lista = document.getElementById('listaCamadas');
+lista.innerHTML = CAMADAS.map(([k, n, q]) => `<div class="cam${k === 'base' ? ' fixa' : ''}${k === 'eco' || k === 'abafa' ? ' esp' : ''}"><span class="nm">${n} <small>· ${q}</small></span><span class="lv"><i data-lv="${k}"></i></span></div>`).join('');
+document.getElementById('pulso').innerHTML = '<span class="d"></span>'.repeat(8) + '<span class="sec" id="secao">parado</span>';
+const pontos = [...document.querySelectorAll('#pulso .d')];
+// grade dos bichos
+const grade = document.getElementById('gradeBichos');
+const ORDEM = ['galinha', 'vaca', 'cavalo', 'porco', 'cachorro', 'saci', 'dino', 'lua'];
+grade.innerHTML = ORDEM.map(k => { const b = BICHOS[k], h = VOZ_HOJE[k];
+  return `<div class="card bicho" data-bicho="${k}"><h3><span>${b.nome}</span><button class="btn" data-filhote="${k}" aria-pressed="false" type="button">${b.filhote}</button></h3>
+  <span class="tag prop">Proposta</span><div class="fila">${MOMENTOS.map(([m, n]) => `<button class="btn" data-fala="${k}" data-mom="${m}" type="button">${n}</button>`).join('')}</div>
+  <span class="tag">Hoje</span>${h ? `<div class="fila">${MOMENTOS.slice(0, 3).map(([m, n]) => `<button class="btn hoje" data-hoje="${k}" data-mom="${m}" type="button">${n}</button>`).join('')}</div>` : `<p class="semhoje">Ainda não existe no jogo (bicho novo).</p>`}
+  ${k === 'saci' ? '<p class="semhoje">No jogo é a criatura noturna da Mata Encantada.</p>' : k === 'lua' ? '<p class="semhoje">Exploração Lunar.</p>' : k === 'dino' ? '<p class="semhoje">Era dos Dinos.</p>' : ''}</div>`; }).join('');
+grade.addEventListener('click', ev => {
+  const b = ev.target.closest('button'); if (!b) return; ligarAudio();
+  if (b.dataset.filhote){ b.setAttribute('aria-pressed', b.getAttribute('aria-pressed') !== 'true'); return; }
+  const k = b.dataset.fala || b.dataset.hoje, filhote = grade.querySelector(`[data-filhote="${k}"]`).getAttribute('aria-pressed') === 'true', t = ctx.currentTime + 0.03;
+  if (b.dataset.fala) falaBicho(M, k, b.dataset.mom, filhote, t);
+  else M.falar(() => vozHoje(M, M.fx, VOZ_HOJE[k][b.dataset.mom], t, Math.random()));
+});
+document.querySelectorAll('[data-golpe-hoje]').forEach(b => b.addEventListener('click', () => { ligarAudio(); M.falar(() => golpeHoje(M, M.fx, b.dataset.golpeHoje, ctx.currentTime + 0.03)); }));
+document.querySelectorAll('[data-golpe]').forEach(b => b.addEventListener('click', () => { ligarAudio(); golpeProposta(M, b.dataset.golpe, ctx.currentTime + 0.03); }));
+document.querySelectorAll('[data-golpe3]').forEach(b => b.addEventListener('click', () => { ligarAudio(); const t = ctx.currentTime + 0.03; for (let i = 0; i < 3; i++) golpeProposta(M, b.dataset.golpe3, t + i * 0.55); }));
+document.getElementById('carga').addEventListener('click', () => { ligarAudio(); if (musicaNome !== 'rancho') tocarMusica('rancho'); const t = ctx.currentTime + 0.05; ORDEM.forEach((k, i) => falaBicho(M, k, 'chamado', i % 2 === 1, t + i * 0.12)); });
+
+// medidor
+const el = id => document.getElementById(id);
+const dados = new Uint8Array(512);
+function quadro(){
+  if (M){
+    el('mVozes').textContent = M.fontes; el('mNos').textContent = M.nos; el('mFixos').textContent = fixos; el('mPico').textContent = M.pico; el('mAgenda').textContent = M.msAgenda.toFixed(1);
+    if (analisador){ analisador.getByteTimeDomainData(dados); let pk = 0; for (const v of dados) pk = Math.max(pk, Math.abs(v - 128)); el('mNivel').style.width = Math.min(100, pk / 128 * 140) + '%'; }
+    const t = ctx.currentTime, ligada = musicaNome === 'rancho' && moda.L.base;
+    for (const [k] of CAMADAS){ const i = lista.querySelector(`[data-lv="${k}"]`); i.style.width = (ligada ? Math.round(moda.nivel(moda.L[k], t) * 100) : 0) + '%'; }
+    if (ligada && t >= moda.t0){ const s = Math.floor((t - moda.t0) / SEMI), pos = s % 8, fc = Math.floor(s / 8) % 18; pontos.forEach((p, i) => p.classList.toggle('on', i === pos || (i === 0 && pos < 2))); el('secao').textContent = 'Compasso ' + (fc + 1) + ' de 18 · ' + (moda.ap && moda.ap.perigo ? 'Perigo' : SECAO(fc)); }
+    else { pontos.forEach(p => p.classList.remove('on')); el('secao').textContent = musicaNome === 'rancho' ? '' : 'a moda está parada'; }
+    el('pend').textContent = ligada && (moda.sujo || t < moda.aplicadoEm) ? 'A troca entra no próximo compasso...' : '';
+  }
+  requestAnimationFrame(quadro);
+}
+requestAnimationFrame(quadro);
+
+// ------------------------------------------------------------------ verificação sem ouvir (OfflineAudioContext)
+function medir(buf, janela = 0.05){
+  const sr = buf.sampleRate, n = buf.length, ch = [...Array(buf.numberOfChannels)].map((_, i) => buf.getChannelData(i));
+  let pk = 0, s2 = 0, dc = 0, clip = 0; for (const d of ch) for (let i = 0; i < n; i++){ const v = d[i]; const a = Math.abs(v); if (a > pk) pk = a; if (a >= 0.999) clip++; s2 += v * v; dc += v; }
+  const tot = n * ch.length, w = Math.floor(sr * janela); let silencio = 0, jan = 0, ativo2 = 0, ativoN = 0;
+  for (let i = 0; i + w <= n; i += w){ let e2 = 0; for (const d of ch) for (let j = i; j < i + w; j++) e2 += d[j] * d[j]; const r = Math.sqrt(e2 / (w * ch.length)); jan++; if (r < 0.001) silencio++; else { ativo2 += e2; ativoN += w * ch.length; } }
+  const db = x => x > 0 ? +(20 * Math.log10(x)).toFixed(1) : -999;
+  return { seg: +(n / sr).toFixed(2), pico: +pk.toFixed(3), picoDb: db(pk), rmsDb: db(Math.sqrt(s2 / tot)), rmsAtivoDb: db(Math.sqrt(ativo2 / Math.max(1, ativoN))), dc: +(dc / tot).toExponential(1), cortes: clip, silencio: +(silencio / jan).toFixed(2) };
+}
+async function renderizar(seg, montar){
+  const sr = 44100, oc = new OfflineAudioContext(2, Math.floor(sr * seg), sr), cad = criarCadeia(oc, false), e = new Motor(oc, cad.m, cad.eco, cad.fx, false);
+  montar(e, oc); const buf = await oc.startRendering(); const r = medir(buf); r.picoVozes = e.pico; r.nosNoFim = e.nos; r.fontesNoFim = e.fontes; return r;
+}
+function musicaOff(fabrica, seg, estado){ return renderizar(seg, e => { const m = fabrica(e); if (estado) Object.assign(m.estado, estado); m.iniciar(0); m.agendar(seg); }); }
+async function verificar(){
+  const out = {};
+  out.hojeRancho = await musicaOff(e => new TrilhaHoje(e), 14);
+  out.modaDia = await musicaOff(e => new Moda(e), 26);
+  out.modaTarde = await musicaOff(e => new Moda(e), 12, { hora: 'tarde' });
+  out.modaNoiteChuva = await musicaOff(e => new Moda(e), 12, { hora: 'noite', chuva: true });
+  out.modaCorrendoAmigos = await musicaOff(e => new Moda(e), 12, { mov: 2, amigos: true });
+  out.modaCaverna = await musicaOff(e => new Moda(e), 12, { caverna: true });
+  out.modaPerigo = await musicaOff(e => new Moda(e), 12, { perigo: true });
+  out.modaTudo = await musicaOff(e => new Moda(e), 12, { chuva: true, mov: 2, amigos: true });
+  for (const k of ['lua', 'doce', 'dinos']) out['trecho_' + k] = await musicaOff(e => TRECHOS[k](e), TRECHOS[k]({}).dur + 2.5);
+  const vozes = [];
+  for (const k of ORDEM) for (const [m] of MOMENTOS) for (const fil of [false, true]){
+    const r = await renderizar(2.2, e => falaBicho(e, k, m, fil, 0.02)); r.nome = k + '.' + m + (fil ? '.filhote' : ''); vozes.push(r);
+  }
+  for (const k of ['saci', 'vaca', 'galinha']) { const r = await renderizar(1.2, e => golpeHoje(e, e.fx, k, 0.02)); r.nome = 'golpeHoje.' + k; vozes.push(r); }
+  for (const k of ['saci', 'vaca', 'galinha', 'dino', 'lua']) { const r = await renderizar(1.2, e => golpeProposta(e, k, 0.02)); r.nome = 'golpe.' + k; vozes.push(r); }
+  for (const k of Object.keys(VOZ_HOJE)) for (const m of ['chamado', 'susto', 'contente']) { const r = await renderizar(1.5, e => vozHoje(e, e.fx, VOZ_HOJE[k][m], 0.02)); r.nome = 'hoje.' + k + '.' + m; vozes.push(r); }
+  out.vozes = vozes;
+  // afinação da corda: autocorrelação de uma nota isolada
+  out.afinacao = [];
+  for (const m of [43, 55, 67, 79]){
+    const sr = 44100, oc = new OfflineAudioContext(1, sr * 0.6, sr), e = new Motor(oc, oc.destination, oc.destination, oc.destination, false);
+    viola(e, oc.destination, 0, m, 0.5, { par: false }); const d = (await oc.startRendering()).getChannelData(0).subarray(Math.floor(sr * 0.1), Math.floor(sr * 0.5));
+    const ac = lag => { let c = 0, n1 = 0, n2 = 0; for (let i = 0; i + lag < d.length; i++){ c += d[i] * d[i + lag]; n1 += d[i] * d[i]; n2 += d[i + lag] * d[i + lag]; } return c / Math.sqrt(n1 * n2 + 1e-12); };
+    const lo = Math.floor(sr / 1500), hi = Math.floor(sr / 60), rs = []; let best = 0; for (let lag = lo; lag < hi; lag++){ rs[lag] = ac(lag); best = Math.max(best, rs[lag]); }
+    let lagB = lo; for (let lag = lo + 1; lag < hi - 1; lag++){ if (rs[lag] > 0.9 * best && rs[lag] >= rs[lag - 1] && rs[lag] >= rs[lag + 1]){ lagB = lag; break; } }
+    const a = ac(lagB - 1), b = ac(lagB), c = ac(lagB + 1), lagF = lagB + 0.5 * (a - c) / (a - 2 * b + c);
+    const f = sr / lagF; out.afinacao.push({ midi: m, alvo: +mtof(m).toFixed(2), medido: +f.toFixed(2), cents: +(1200 * Math.log2(f / mtof(m))).toFixed(1) });
+  }
+  return out;
+}
+window.__sons = { estado: () => ({ ctx: ctx && ctx.state, fontes: M ? M.fontes : 0, nos: M ? M.nos : 0, pico: M ? M.pico : 0, fixos, musica: musicaNome, camadas: musicaNome === 'rancho' ? Object.fromEntries(Object.keys(moda.L).map(k => [k, +moda.nivel(moda.L[k], ctx.currentTime).toFixed(2)])) : null }), verificar, pararTudo };
+</script>
+</body>
+</html>
