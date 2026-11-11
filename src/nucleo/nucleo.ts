@@ -1154,6 +1154,11 @@ export function criarNucleo(op: OpcoesNucleo) {
     if (!cr || Math.hypot(cr.x - j.tel.x, cr.z - j.tel.z) > ALCANCE_CRIATURA) return;
     // morador não apanha
     if (cr.morador) return;
+    // spec 016: o bicho criado ou domado do amigo também não (só quem criou e o dono do mundo)
+    if ((cr.criado || cr.domada) && !podeLevarBicho(j.id, cr, donoDoMundo)) {
+      j.eventos.push(recusaBicho('atacar', cr));
+      return;
+    }
     const p = j.inventario.obter(c.slot);
     const f = ferramentaDe(p);
     const dano = f ? (f.tipo === 'espada' ? f.dano : Math.max(2, f.dano)) : 1;
@@ -1735,6 +1740,7 @@ export function criarNucleo(op: OpcoesNucleo) {
       domada: c.domada,
       vida: c.vida,
       ...(c.criado ? { criado: true } : {}),
+      ...((c.criado || c.domada) && c.dono ? { dono: c.dono } : {}),
       morador: c.morador
         ? { povoado: c.morador.povoado, n: c.morador.n, profissao: c.morador.profissao }
         : undefined,

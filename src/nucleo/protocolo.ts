@@ -220,6 +220,8 @@ export interface CriaturaVista {
   vida: number;
   /** Spec 013: bicho criado (ganhou comida; não some e é salvo). */
   criado?: boolean;
+  /** Spec 016: id de quem criou ou domou (sem o campo: o dono do mundo). */
+  dono?: string;
   /** Só moradores: povoado, número e profissão (nome e roupa saem disso). */
   morador?: { povoado: string; n: number; profissao: Profissao };
 }

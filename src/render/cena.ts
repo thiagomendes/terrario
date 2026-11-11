@@ -12,6 +12,7 @@ import {
   celulaDoLote,
   ehConteiner,
   outraMetadeDaPorta,
+  podeLevarBicho,
   recusaConteiner,
   recusaColocar,
   recusaQuebrar,
@@ -3264,6 +3265,13 @@ export function criarCena(
       enviarTelemetria(true);
       enviar({ t: 'falar', criatura: c.id });
       tocarVoz(motorAudio, 'morador', 'contente', 1);
+      return true;
+    }
+    // spec 016: o bichinho criado ou domado do amigo não apanha (o núcleo confere igual)
+    if ((c.criado || c.domada) && !podeLevarBicho(voce, c, donoDoMundo)) {
+      const dono = c.dono ?? donoDoMundo;
+      const apelido = regra.apelido(dono);
+      avisosProtecao.avisar(apelido ? { motivo: 'bicho', dono: apelido } : { motivo: 'bicho' });
       return true;
     }
     animador.evento('golpe');

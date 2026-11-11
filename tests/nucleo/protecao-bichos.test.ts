@@ -232,6 +232,47 @@ describe('bicho criado tem dono (nuvem)', () => {
     expect(Math.hypot(raposa.x - lx, raposa.z - (Z - 8.5))).toBeGreaterThan(6);
   });
 
+  it('o Léo não machuca a vaca da Bia nem a raposa domada; a Bia e a dona podem', () => {
+    const n = nuvem();
+    const vaca = vacaDaBia(n, 2, 1);
+    const raposa = invocar(n, 'raposa', 1, 2);
+    inv(n, 'bia').definir(1, { item: 'frutinhas', qtd: 64 });
+    for (let i = 0; i < 40 && !raposa.domada; i++)
+      mandar(n, 'bia', { t: 'domar', criatura: raposa.id, slot: 1 });
+    expect(raposa.domada).toBe(true);
+    // a vista conta de quem é (o cliente prevê e avisa sem mandar o golpe)
+    n.passo();
+    const vista = n
+      .quadros()
+      .get('leo')!
+      .criaturas?.find((c) => c.id === vaca.id);
+    expect(vista?.dono).toBe('bia');
+    inv(n, 'leo').definir(0, { item: 'espada_pedra', qtd: 1, dur: 100 });
+    n.comando('leo', tel(X + 2.5, Z + 2.5));
+    for (const cr of [vaca, raposa]) {
+      const vida = cr.vida;
+      mandar(n, 'leo', { t: 'atacar', criatura: cr.id, slot: 0 });
+      expect(cr.vida).toBe(vida);
+    }
+    const r = passos(n, 0.1);
+    expect(r['leo']).toContainEqual({
+      e: 'recusa',
+      comando: 0,
+      motivo: 'atacar',
+      protecao: { motivo: 'bicho', dono: 'Bia' },
+    });
+    // a Bia pode (o bicho é dela); a dona do mundo também
+    n.comando('bia', tel(X + 2.5, Z + 2.5));
+    const v0 = vaca.vida;
+    mandar(n, 'bia', { t: 'atacar', criatura: vaca.id, slot: 0 });
+    expect(vaca.vida).toBeLessThan(v0);
+    n.comando('ana', tel(X + 2.5, Z + 2.5));
+    passos(n, 1.5);
+    const r0 = raposa.vida;
+    mandar(n, 'ana', { t: 'atacar', criatura: raposa.id, slot: 0 });
+    expect(raposa.vida).toBeLessThan(r0);
+  });
+
   it('o dono do bicho vai no salvamento e volta ao abrir', () => {
     const n = nuvem();
     const vaca = vacaDaBia(n);
