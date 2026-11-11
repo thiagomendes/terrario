@@ -7,6 +7,8 @@
 import { VertexData } from '@babylonjs/core/Meshes/mesh.vertexData';
 import { Mesh } from '@babylonjs/core/Meshes/mesh';
 import { MeshBuilder } from '@babylonjs/core/Meshes/meshBuilder';
+import { VertexBuffer } from '@babylonjs/core/Buffers/buffer';
+import { CreateSphereVertexData } from '@babylonjs/core/Meshes/Builders/sphereBuilder';
 import { StandardMaterial } from '@babylonjs/core/Materials/standardMaterial';
 import { Color3 } from '@babylonjs/core/Maths/math.color';
 import type { Scene } from '@babylonjs/core/scene';
@@ -255,13 +257,46 @@ export function dadosAnel(
   return vd;
 }
 
+/**
+ * Tinta das fantasias (spec 017). No material de sempre a cor entra na luz e no piso de luz e
+ * a soma é cortada em 1 por canal: ao sol o vestido rosa vira quase branco. Na tinta a cor vai
+ * nos vértices e multiplica a luz já cortada (o tom fica o do esboço, mais claro ou mais
+ * escuro, sem desbotar), com um pouco menos de luz direta e mais piso. Medido lado a lado com
+ * o esboço aprovado.
+ */
+export const DIFUSA_VIVA = 0.55;
+export const EMISSIVA_VIVA = 0.42;
+/** Um pouco mais funda que a cor do catálogo (o pós-processo do jogo clareia no fim). */
+export const GAMA_VIVA = 1.15;
+
+/** A cor da tinta da fantasia, para os vértices. */
+export function corViva(hex: string): [number, number, number] {
+  const c = Color3.FromHexString(hex);
+  return [c.r ** GAMA_VIVA, c.g ** GAMA_VIVA, c.b ** GAMA_VIVA];
+}
+
+/** Pinta todos os vértices da malha com a cor da tinta da fantasia. */
+export function pintarVertices(m: Mesh, hex: string): void {
+  const n = m.getTotalVertices();
+  const [r, g, b] = corViva(hex);
+  const cores = new Float32Array(n * 4);
+  for (let i = 0; i < n; i++) cores.set([r, g, b, 1], i * 4);
+  m.setVerticesData(VertexBuffer.ColorKind, cores, false, 4);
+}
+
 /** Materiais de plástico de um conjunto (personagem, bicho): todos seguem a luz do lugar. */
 export interface Plasticos {
   /**
    * Material da cor (um por cor, reaproveitado). `alfa` < 1: transparente (a bolha do
-   * capacete, spec 017).
+   * capacete, spec 017). `viva`: tinta das fantasias (spec 017), na cor do esboço aprovado.
    */
-  cor(hex: string, brilho?: number, alfa?: number): StandardMaterial;
+  cor(hex: string, brilho?: number, alfa?: number, viva?: boolean): StandardMaterial;
+  /**
+   * Tinta das fantasias (spec 017) num material só por brilho: a cor vai em cada vértice
+   * (`pintarVertices`), e as peças da mesma junta viram uma malha só mesmo com cores
+   * diferentes (menos desenhos por amigo fantasiado).
+   */
+  tinta(brilho?: number, alfa?: number): StandardMaterial;
   /** Luz do ambiente (1 ao ar livre, baixa em cavernas). */
   definirLuz(f: number): void;
   /**
@@ -273,18 +308,41 @@ export interface Plasticos {
 }
 
 export function criarPlasticos(scene: Scene, prefixo: string): Plasticos {
-  const mats = new Map<string, { m: StandardMaterial; base: Color3; brilho: number }>();
+  const mats = new Map<
+    string,
+    { m: StandardMaterial; base: Color3; brilho: number; viva: boolean }
+  >();
   let luz = 1;
   let soFrente = false;
-  const aplicar = (e: { m: StandardMaterial; base: Color3; brilho: number }) => {
+  /**
+   * Desempenho (spec 017, 4 amigos fantasiados no celular): o material fica congelado (o
+   * Babylon pula a conferência e o reenvio das cores a cada desenho). Quando a cor muda (luz
+   * do lugar) ou a transparência liga, descongela; congela de novo depois de um quadro
+   * desenhado com a cor nova.
+   */
+  let recongelar = false;
+  const congelarDepois = () => {
+    if (recongelar) return;
+    recongelar = true;
+    scene.onAfterRenderObservable.addOnce(() => {
+      recongelar = false;
+      if (soFrente) return;
+      for (const e of mats.values()) if (!e.m.isFrozen) e.m.freeze();
+    });
+  };
+  const aplicar = (e: { m: StandardMaterial; base: Color3; brilho: number; viva: boolean }) => {
     // mesmo piso de luz do personagem de hoje: nunca fica preto contra o sol
-    e.m.diffuseColor.copyFrom(e.base).scaleInPlace(0.78 * luz);
-    e.m.emissiveColor.copyFrom(e.base).scaleInPlace(0.36 * luz);
+    const kd = e.viva ? DIFUSA_VIVA : 0.78;
+    const ke = e.viva ? EMISSIVA_VIVA : 0.36;
+    if (e.m.isFrozen) e.m.unfreeze();
+    e.m.diffuseColor.copyFrom(e.base).scaleInPlace(kd * luz);
+    e.m.emissiveColor.copyFrom(e.base).scaleInPlace(ke * luz);
     e.m.specularColor.set(e.brilho * luz, e.brilho * luz, e.brilho * luz);
+    congelarDepois();
   };
   return {
-    cor(hex, brilho = 0.28, alfa = 1) {
-      const chave = `${hex}|${brilho}|${alfa}`;
+    cor(hex, brilho = 0.28, alfa = 1, viva = false) {
+      const chave = `${hex}|${brilho}|${alfa}|${viva ? 'v' : ''}`;
       const ja = mats.get(chave);
       if (ja) return ja.m;
       const m = new StandardMaterial(`${prefixo}-plastico-${hex}`, scene);
@@ -296,13 +354,21 @@ export function criarPlasticos(scene: Scene, prefixo: string): Plasticos {
       }
       m.specularPower = 42;
       m.ambientColor = Color3.White();
-      const e = { m, base: Color3.FromHexString(hex).toLinearSpace(), brilho };
-      // as cores do esboço são em sRGB; o Babylon desenha em espaço "gama" direto
-      e.base = Color3.FromHexString(hex);
+      // a tinta das fantasias (`viva`) usa este material em branco: a cor vem dos vértices
+      const c = Color3.FromHexString(hex);
+      const e = {
+        m,
+        base: viva ? new Color3(c.r ** GAMA_VIVA, c.g ** GAMA_VIVA, c.b ** GAMA_VIVA) : c,
+        brilho,
+        viva,
+      };
       aplicar(e);
       m.needDepthPrePass = soFrente;
       mats.set(chave, e);
       return m;
+    },
+    tinta(brilho = 0.28, alfa = 1) {
+      return this.cor('#ffffff', brilho, alfa, true);
     },
     definirLuz(f) {
       luz = f;
@@ -311,7 +377,12 @@ export function criarPlasticos(scene: Scene, prefixo: string): Plasticos {
     definirSoFrente(ligado) {
       if (ligado === soFrente) return;
       soFrente = ligado;
-      for (const e of mats.values()) e.m.needDepthPrePass = ligado;
+      // meio transparente: cada peça tem a sua visibilidade (o material não fica congelado)
+      for (const e of mats.values()) {
+        if (e.m.isFrozen) e.m.unfreeze();
+        e.m.needDepthPrePass = ligado;
+      }
+      if (!ligado) congelarDepois();
     },
     descartar() {
       for (const e of mats.values()) e.m.dispose();
@@ -332,10 +403,51 @@ export function caixaArredondada(
   seg = 4,
 ): Mesh {
   const m = new Mesh(nome, scene);
-  dadosCaixaArredondada(w, h, d, r, seg).applyToMesh(m);
+  caixaFeita(w, h, d, r, seg).applyToMesh(m);
   m.material = material;
   m.isPickable = false;
   return m;
+}
+
+/**
+ * Desempenho (spec 017, moradores aparecendo no povoado): a esfera e as caixas são feitas uma
+ * vez e copiadas
+ * (cada peça recebe os próprios números; fundir as malhas muda os dados).
+ */
+let esferaFeita: VertexData | null = null;
+
+function copiaDe(vd: VertexData, escala = 1): VertexData {
+  const c = new VertexData();
+  const pos = vd.positions!;
+  if (escala === 1) c.positions = pos.slice();
+  else {
+    const p = new Float32Array(pos.length);
+    for (let i = 0; i < pos.length; i++) p[i] = pos[i] * escala;
+    c.positions = p;
+  }
+  c.normals = vd.normals!.slice();
+  if (vd.uvs) c.uvs = vd.uvs.slice();
+  c.indices = vd.indices!.slice();
+  return c;
+}
+
+/** A caixa arredondada de cada medida, feita uma vez e copiada. */
+const caixasFeitas = new Map<string, VertexData>();
+export function caixaFeita(w: number, h: number, d: number, r: number, seg: number): VertexData {
+  const chave = `${w}|${h}|${d}|${r}|${seg}`;
+  let vd = caixasFeitas.get(chave);
+  if (!vd) {
+    vd = dadosCaixaArredondada(w, h, d, r, seg);
+    if (caixasFeitas.size >= 800) caixasFeitas.clear();
+    caixasFeitas.set(chave, vd);
+  }
+  return copiaDe(vd);
+}
+
+/** A mesma esfera do MeshBuilder (12 segmentos), feita uma vez e copiada no tamanho. */
+export function dadosEsfera(raio: number): VertexData {
+  esferaFeita ??= CreateSphereVertexData({ diameter: 2, segments: 12 });
+  return copiaDe(esferaFeita, raio);
 }
 
 export function esfera(
@@ -345,7 +457,8 @@ export function esfera(
   material: StandardMaterial,
   escala: [number, number, number] = [1, 1, 1],
 ): Mesh {
-  const m = MeshBuilder.CreateSphere(nome, { diameter: raio * 2, segments: 12 }, scene);
+  const m = new Mesh(nome, scene);
+  dadosEsfera(raio).applyToMesh(m);
   m.scaling.set(escala[0], escala[1], escala[2]);
   m.material = material;
   m.isPickable = false;

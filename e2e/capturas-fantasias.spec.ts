@@ -11,7 +11,7 @@ import { PASTA_CAPTURAS } from '../playwright.config';
 declare const process: { env: Record<string, string | undefined> };
 const PASTA = process.env.FANTASIAS_PASTA ?? `${PASTA_CAPTURAS}/fantasias`;
 
-const IDS = [
+const TODAS = [
   'realeza-flores',
   'realeza-estrelas',
   'realeza-mar',
@@ -29,6 +29,8 @@ const IDS = [
   'guardia-mata',
   'lanterneira',
 ];
+/** FANTASIAS_IDS=a,b: só essas (para comparar cores e peças com o esboço mais depressa). */
+const IDS = process.env.FANTASIAS_IDS ? process.env.FANTASIAS_IDS.split(',') : TODAS;
 const QUEM = {
   menina: { corpo: 'feminino', cabeloEstilo: 5, rosto: 1, cabeloCor: 1, pele: 1 },
   menino: { corpo: 'masculino', cabeloEstilo: 0, rosto: 0, cabeloCor: 0, pele: 2 },
@@ -89,11 +91,19 @@ test('fantasias na menina e no menino, de frente e de costas', async ({ page }) 
           } as never),
         { base, id },
       );
-      for (const [vista, giro] of [
-        ['frente', Math.PI * 0.82],
-        ['costas', -0.55],
+      // de frente para a câmera e de costas exatas (a conta usa onde a câmera está de fato,
+      // não um giro fixo: o corpo e a câmera não ficam no mesmo ângulo)
+      for (const [vista, meiaVolta] of [
+        ['frente', 0],
+        ['costas', Math.PI],
       ] as const) {
-        await page.evaluate((g) => window.__brumaluz!.personagem!.girarCorpo?.(g), giro);
+        await page.evaluate((v) => {
+          const e = window.__brumaluz!;
+          const [cx, , cz] = e.camera!.posicao();
+          const [px, , pz] = e.posicao!;
+          const paraCamera = Math.atan2(cx - px, cz - pz);
+          e.personagem!.girarCorpo?.(paraCamera + v - e.camera!.yawCorpo());
+        }, meiaVolta);
         await page.waitForTimeout(450);
         await page.screenshot({
           path: `${PASTA}/${id}-${quem}-${vista}.png`,
