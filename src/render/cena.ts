@@ -9,10 +9,20 @@ import { tocarVoz } from '../audio/sons';
 import { construirMapaEmissivo } from './emissivo';
 import { criarTintaProtecao } from './tintaProtecao';
 import {
+  recusaBau,
+  recusaColocar,
+  recusaQuebrar,
+  type MundoDaRegra,
+  type RecusaProtecao,
+} from '../jogo/permissao';
+import { criarAvisosProtecao } from '../player/avisosProtecao';
+import { criarCadeado } from '../ui/cadeado';
+import {
   criarProtecaoMundo,
   NOMES_PROTECAO,
   nomeProtecao,
-  type Protecao,
+  Protecao,
+  replantioDaLavoura,
   type ProtecaoMundo,
 } from '../world/protecao';
 import { Engine } from '@babylonjs/core/Engines/engine';
@@ -297,6 +307,12 @@ export interface EstadoDepuracao {
   /** Spec 016: id deste jogador e do dono do mundo (no aparelho, os dois são o jogador local). */
   voce?: string;
   donoDoMundo?: string;
+  /**
+   * Spec 016: por que o bloco da mira não quebra (null: quebra), com a mesma regra do núcleo,
+   * e se o cadeadinho está à vista (mira do centro ou dedo).
+   */
+  protecaoNaMira?: () => RecusaProtecao | null;
+  cadeado?: { visivel: boolean; x: number; y: number };
   hora?: number;
   definirBloco?: (x: number, y: number, z: number, b: number, meta?: number) => boolean;
   slotAtivo?: number;
@@ -686,6 +702,35 @@ export function criarCena(
   definirRegioesSemPovoado(semPovoado);
   // blocos-base compartilhados (chegam do worker junto com a malha)
   const provedor = criarProvedorBlocos(semente);
+  /**
+   * Spec 016: o que o mundo construiu e quem pôs cada bloco, com a mesma regra do núcleo: o
+   * cliente prevê a recusa (cadeado, rachadura que não começa e o aviso) e nada pisca.
+   */
+  const protecaoMundo = criarProtecaoMundo(semente);
+  const regra: MundoDaRegra = {
+    protecao: protecaoMundo,
+    bloco: (x, y, z) => blocoEm(x, y, z),
+    gerado: (x, y, z) => {
+      if (y < 0 || y >= ALTURA) return Bloco.AR;
+      const cx = Math.floor(x / TAM_X);
+      const cz = Math.floor(z / TAM_Z);
+      return provedor.obter(cx, cz)[indice(x - cx * TAM_X, y, z - cz * TAM_Z)];
+    },
+    dono: (x, y, z) => donoNaCelula(edicoes, x, y, z, donoDoMundo),
+    apelido: (id) => apelidosVistos.get(id) ?? edicoes.donos.apelido(id),
+    donoDoMundo,
+  };
+  const avisosProtecao = criarAvisosProtecao({
+    toast: (t) => window.dispatchEvent(new CustomEvent('brumaluz:toast', { detail: t })),
+  });
+  /**
+   * Recusa prevista: o aviso na hora, sem mandar nada ao núcleo (o som de "não deu" sai de
+   * quem chamou, uma vez só).
+   */
+  function recusarProtegido(r: RecusaProtecao): false {
+    avisosProtecao.avisar(r);
+    return false;
+  }
   const controle = criarControle(canvas, camera, semente, edicoes, (cx, cz) =>
     provedor.obter(cx, cz),
   );
@@ -1318,6 +1363,20 @@ export function criarCena(
   }
   /** Vários blocos de uma vez (construção, desfazer, espelho, testes): só no criativo. */
   function editarLote(lote: { x: number; y: number; z: number; v: number }[]): void {
+    // spec 016: cada célula segue a regra do núcleo (o que sai e o que entra); a recusada
+    // nem vai (o núcleo recusaria e ela piscaria)
+    let primeira: RecusaProtecao | null = null;
+    lote = lote.filter((e) => {
+      const atual = blocoEm(e.x, e.y, e.z);
+      const b = e.v & 255;
+      if (atual === b) return true;
+      const r =
+        (atual !== Bloco.AR ? recusaQuebrar(regra, voce, e.x, e.y, e.z) : null) ??
+        (b !== Bloco.AR ? recusaColocar(regra, voce, e.x, e.y, e.z, b) : null);
+      primeira ??= r;
+      return !r;
+    });
+    if (primeira) avisosProtecao.avisar(primeira);
     if (!lote.length) return;
     const id = proximoId();
     for (const e of lote) prever(id, e.x, e.y, e.z, e.v & 255, (e.v >> 8) & 255);
@@ -1334,10 +1393,31 @@ export function criarCena(
   ): boolean {
     const lote: Edicao[] = [];
     const antes = valorEm(x, y, z);
+    const quebra = b === Bloco.AR;
+    // spec 016: a mesma regra do núcleo (o que o mundo fez, o que é do amigo, a passagem)
+    const protegido = quebra
+      ? recusaQuebrar(regra, voce, x, y, z)
+      : (recusaColocar(regra, voce, x, y, z, b) ??
+        extras.reduce<RecusaProtecao | null>(
+          (r, e) => r ?? recusaColocar(regra, voce, e.x, e.y, e.z, b),
+          null,
+        ));
+    if (protegido) return recusarProtegido(protegido);
+    // o dono do mundo desfaz a construção de um amigo: um aviso discreto
+    const doAmigo = quebra ? regra.dono(x, y, z) : null;
+    // a lavoura do mundo se replanta na hora (o estágio 0 da mesma planta, como o núcleo)
+    if (quebra && ehLavoura(antes & 255) && protecaoMundo.em(x, y, z) === Protecao.LAVOURA)
+      b = replantioDaLavoura(antes & 255) ?? Bloco.AR;
     // nada muda: nada a prever nem a pedir
     if (antes === empacotar(b, meta)) return false;
+    if (doAmigo && doAmigo !== voce) {
+      const apelido = regra.apelido(doAmigo);
+      if (apelido) avisosProtecao.tirouDoAmigo(apelido);
+    }
     const id = proximoId();
-    prever(id, x, y, z, b, meta);
+    // o replantio fica com o dono que a lavoura já tinha (o núcleo faz igual)
+    if (quebra && b !== Bloco.AR) cliente.prever(id, x, y, z, b, meta);
+    else prever(id, x, y, z, b, meta);
     lote.push({ x, y, z, antes, depois: empacotar(b, meta) });
     // a lavoura não flutua: quebrar a terra arada leva a planta de cima (o núcleo faz o mesmo)
     if ((antes & 255) === Bloco.TERRA_ARADA && b !== Bloco.TERRA_ARADA) {
@@ -1348,7 +1428,7 @@ export function criarCena(
       }
     }
     // quebrar meia porta leva a outra metade (o núcleo faz o mesmo)
-    if (b === Bloco.AR && ((antes & 255) === Bloco.PORTA || (antes & 255) === Bloco.PORTA_ABERTA)) {
+    if (quebra && ((antes & 255) === Bloco.PORTA || (antes & 255) === Bloco.PORTA_ABERTA)) {
       for (const dy of [-1, 1]) {
         const v = blocoEm(x, y + dy, z);
         if (v === Bloco.PORTA || v === Bloco.PORTA_ABERTA) {
@@ -1368,7 +1448,7 @@ export function criarCena(
     }
     enviarTelemetria(true);
     const slot = hotbar.ativo;
-    if (b === Bloco.AR) enviar({ t: 'quebrar', id, x, y, z, slot });
+    if (quebra) enviar({ t: 'quebrar', id, x, y, z, slot });
     // a outra parte só vai quando existe (a metade de cima da porta)
     else
       enviar({
@@ -1382,7 +1462,7 @@ export function criarCena(
         slot,
         ...(extrasFeitos.length ? { extras: extrasFeitos } : {}),
       });
-    if (espelho !== null && modo === 'criativo') {
+    if (espelho !== null && modo === 'criativo' && !(quebra && b !== Bloco.AR)) {
       const m = espelharX({ x, y, z }, espelho);
       if (m.x !== x) {
         const a = valorEm(m.x, m.y, m.z);
@@ -1660,6 +1740,15 @@ export function criarCena(
       barramento.emitir('recusa', { motivo: 'colocar' });
       return false;
     }
+    const protegido =
+      recusaQuebrar(regra, voce, alvo.x, alvo.y, alvo.z) ??
+      (blocoEm(alvo.x, alvo.y + 1, alvo.z) !== Bloco.AR
+        ? recusaQuebrar(regra, voce, alvo.x, alvo.y + 1, alvo.z)
+        : null);
+    if (protegido) {
+      barramento.emitir('recusa', { motivo: 'colocar' });
+      return recusarProtegido(protegido);
+    }
     const id = proximoId();
     prever(id, alvo.x, alvo.y, alvo.z, Bloco.TERRA_ARADA);
     if (blocoEm(alvo.x, alvo.y + 1, alvo.z) !== Bloco.AR)
@@ -1674,7 +1763,31 @@ export function criarCena(
 
   function alvoMineracao(): AlvoMineracao | null {
     const a = alvoDoQuadro();
-    return a ? { x: a.x, y: a.y, z: a.z, bloco: blocoEm(a.x, a.y, a.z) } : null;
+    if (!a) return null;
+    // spec 016: no bloco protegido a rachadura nem começa; segurando, o aviso diz de quem é
+    const r = protecaoNaMira();
+    if (r) {
+      if (minerador.segurando) avisosProtecao.avisar(r);
+      return null;
+    }
+    return { x: a.x, y: a.y, z: a.z, bloco: blocoEm(a.x, a.y, a.z) };
+  }
+
+  /**
+   * Spec 016: o bloco da mira quebra? (null: quebra; senão, o porquê). Uma conta por bloco
+   * mirado e por versão do mundo (a mira parada não custa nada).
+   */
+  let chaveProtecaoMira = '';
+  let protecaoMira: RecusaProtecao | null = null;
+  function protecaoNaMira(): RecusaProtecao | null {
+    const a = alvoDoQuadro();
+    if (!a) return null;
+    const k = `${a.x},${a.y},${a.z},${edicoes.versaoGeral},${edicoes.donos.versao}`;
+    if (k !== chaveProtecaoMira) {
+      chaveProtecaoMira = k;
+      protecaoMira = recusaQuebrar(regra, voce, a.x, a.y, a.z);
+    }
+    return protecaoMira;
   }
 
   function interagirComEventos(acao: AcaoInteracao): boolean {
@@ -1734,6 +1847,13 @@ export function criarCena(
             detail: { bloco: alvoBloco, x: a.x, y: a.y, z: a.z },
           }),
         );
+        return;
+      }
+      // spec 016: o baú que alguém pôs abre só para ele e para o dono do mundo
+      const bau = alvoBloco === Bloco.BAU ? recusaBau(regra, voce, a.x, a.y, a.z) : null;
+      if (bau) {
+        barramento.emitir('recusa', { motivo: 'colocar' });
+        recusarProtegido(bau);
         return;
       }
       // baú e fornalha abrem quando o núcleo manda o conteúdo; a cama decide o sono lá
@@ -2725,6 +2845,59 @@ export function criarCena(
     .add(new Color3(0.5, 0.5, 0.5));
   matDestaqueDedo.alpha = 0.36;
   matDestaqueDedo.backFaceCulling = true;
+  /**
+   * Spec 016: o bloco que não quebra ganha um contorno de mel (quente, nada de vermelho de
+   * "erro") e o cadeadinho; a criança entende antes de bater.
+   */
+  const COR_TRANCADO = new Color3(1, 0.74, 0.3);
+  const matTrancado = new StandardMaterial('destaque-trancado-mat', scene);
+  matTrancado.disableLighting = true;
+  matTrancado.emissiveColor = COR_TRANCADO.scale(0.75).add(new Color3(0.2, 0.2, 0.2));
+  matTrancado.alpha = 0.22;
+  matTrancado.backFaceCulling = true;
+  const matTrancadoDedo = new StandardMaterial('destaque-dedo-trancado-mat', scene);
+  matTrancadoDedo.disableLighting = true;
+  matTrancadoDedo.emissiveColor = COR_TRANCADO.scale(0.85).add(new Color3(0.15, 0.15, 0.15));
+  matTrancadoDedo.alpha = 0.4;
+  matTrancadoDedo.backFaceCulling = true;
+  const cadeado = criarCadeado();
+  estado.cadeado = { visivel: false, x: 0, y: 0 };
+  estado.protecaoNaMira = () => protecaoNaMira();
+  /**
+   * O cadeado aparece no que não quebra e também não se usa (a porta da vila abre: com
+   * cadeado ela parecia trancada). O baú que não abre ganha cadeado.
+   */
+  function trancadoNaMira(a: { x: number; y: number; z: number }): boolean {
+    if (!protecaoNaMira()) return false;
+    const b = blocoEm(a.x, a.y, a.z);
+    if (b === Bloco.BAU) return recusaBau(regra, voce, a.x, a.y, a.z) !== null;
+    return !INTERATIVOS.has(b);
+  }
+  const pontoCadeado = new Vector3();
+  /** Onde o cadeado vai na tela: ao lado da mira, ou em cima do bloco que o dedo pegou. */
+  function posicionarCadeado(a: { x: number; y: number; z: number }, toque: boolean): void {
+    let px: number;
+    let py: number;
+    if (toque) {
+      const w = engine.getRenderWidth();
+      const h = engine.getRenderHeight();
+      pontoCadeado.set(a.x + 0.5, a.y + 1.2, a.z + 0.5);
+      const p = Vector3.Project(
+        pontoCadeado,
+        Matrix.IdentityReadOnly,
+        scene.getTransformMatrix(),
+        cameraVisao.viewport.toGlobal(w, h),
+      );
+      const r = canvas.getBoundingClientRect();
+      px = r.left + (p.x * r.width) / w;
+      py = r.top + (p.y * r.height) / h;
+    } else {
+      px = window.innerWidth / 2 + 17;
+      py = window.innerHeight / 2 - 15;
+    }
+    cadeado.mostrar(px, py);
+    estado.cadeado = { visivel: true, x: px, y: py };
+  }
   let alvoDestacado: { x: number; y: number; z: number } | null = null;
   const d0 = (a: { x: number; y: number; z: number } | null) =>
     a ? { x: a.x, y: a.y, z: a.z } : null;
@@ -2772,7 +2945,20 @@ export function criarCena(
         contorno = l;
       }
     }
-    if (contorno) contorno.material = toqueAtivo ? matDestaqueDedo : matDestaque;
+    const trancado = !!alvo && contorno !== null && trancadoNaMira(alvo);
+    if (contorno)
+      contorno.material = toqueAtivo
+        ? trancado
+          ? matTrancadoDedo
+          : matDestaqueDedo
+        : trancado
+          ? matTrancado
+          : matDestaque;
+    if (trancado) posicionarCadeado(alvo!, toqueAtivo);
+    else if (cadeado.visivel) {
+      cadeado.esconder();
+      estado.cadeado = { visivel: false, x: 0, y: 0 };
+    }
     estado.destaqueVisivel = contorno !== null;
   }
 
@@ -3002,8 +3188,7 @@ export function criarCena(
   );
   // spec 016: a proteção do mundo à vista nas capturas (só nos testes de tela)
   if (ehTesteDeTela()) {
-    let prot: ProtecaoMundo | null = null;
-    const protecao = () => (prot ??= criarProtecaoMundo(semente));
+    const protecao = (): ProtecaoMundo => protecaoMundo;
     const tinta = criarTintaProtecao(scene, protecao);
     estado.protecao = (x, y, z) => nomeProtecao(protecao().em(x, y, z));
     estado.tingirProtecao = (raio = 24, so) => {
@@ -3460,10 +3645,18 @@ export function criarCena(
     // prévia): no jogo normal basta o contorno no bloco mirado, como no Minecraft
     const ferramentaComFantasma =
       f === 'preencher' || f === 'parede' || f === 'linha' || f === 'esfera';
+    const pontoFantasma =
+      ferramentaComFantasma || (!f && configAtual?.previaColocar) ? colocar : null;
+    // spec 016: na passagem (ou na casa do mundo) o fantasma fica de outra cor: ali não vai
+    const proibido =
+      !!pontoFantasma &&
+      !!bloco &&
+      recusaColocar(regra, voce, pontoFantasma.x, pontoFantasma.y, pontoFantasma.z, bloco) !== null;
     visualConstrucao.fantasma(
-      ferramentaComFantasma || (!f && configAtual?.previaColocar) ? colocar : null,
+      pontoFantasma,
       bloco && def && !def.planta ? bloco : null,
       tempo,
+      proibido,
     );
     if (!f || !a) {
       visualConstrucao.caixa(null, null, BRANCO);
@@ -3884,6 +4077,8 @@ export function criarCena(
       case 'recusa':
         barramento.emitir('recusa', { motivo: e.motivo === 'quebrar' ? 'quebrar' : 'colocar' });
         if (e.motivo === 'semente') toast(AVISO_SEMENTE);
+        // spec 016: o núcleo disse de quem é (bicho do amigo, ou a previsão errou)
+        if (e.protecao) avisosProtecao.avisar(e.protecao);
         break;
       case 'arou':
         if (e.meu) window.dispatchEvent(new CustomEvent('brumaluz:arou'));

@@ -9,6 +9,10 @@ import type { Scene } from '@babylonjs/core/scene';
 import type { Atlas, FaceBloco } from '../art/atlas';
 import type { Ponto } from '../jogo/construcao';
 
+const COR_NORMAL = new Color3(0.25, 0.25, 0.25);
+/** Spec 016: o fantasma onde o bloco não vai (mel, como o contorno do que não quebra). */
+const COR_PROIBIDO = new Color3(0.85, 0.5, 0.12);
+
 /** Prévia fantasma do bloco a colocar e caixa de seleção do modo construção. */
 export function criarVisualConstrucao(
   scene: Scene,
@@ -20,7 +24,7 @@ export function criarVisualConstrucao(
   mat.diffuseTexture = texAtlas;
   mat.alpha = 0.38;
   mat.specularColor = Color3.Black();
-  mat.emissiveColor = new Color3(0.25, 0.25, 0.25);
+  mat.emissiveColor = COR_NORMAL.clone();
   mat.ambientColor = Color3.White();
   let fantasma: Mesh | null = null;
   let blocoFantasma = -1;
@@ -73,7 +77,11 @@ export function criarVisualConstrucao(
 
   return {
     /** Mostra o fantasma do bloco em p (ou esconde com bloco nulo). */
-    fantasma(p: Ponto | null, bloco: number | null, tempo: number): void {
+    /**
+     * Mostra o fantasma do bloco em p (ou esconde com bloco nulo). `proibido` (spec 016): ali
+     * não vai (passagem, construção do mundo): o fantasma fica de mel e mais apagado.
+     */
+    fantasma(p: Ponto | null, bloco: number | null, tempo: number, proibido = false): void {
       if (!p || !bloco) {
         fantasma?.setEnabled(false);
         return;
@@ -81,7 +89,8 @@ export function criarVisualConstrucao(
       if (bloco !== blocoFantasma) criarFantasma(bloco);
       fantasma!.setEnabled(true);
       fantasma!.position.set(p.x + 0.5, p.y + 0.5, p.z + 0.5);
-      mat.alpha = 0.3 + Math.sin(tempo * 4) * 0.08;
+      mat.emissiveColor.copyFrom(proibido ? COR_PROIBIDO : COR_NORMAL);
+      mat.alpha = (proibido ? 0.2 : 0.3) + Math.sin(tempo * 4) * 0.08;
     },
     caixa: definirCaixa,
   };
