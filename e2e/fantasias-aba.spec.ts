@@ -278,10 +278,39 @@ for (const tela of TELAS) {
       await pronto(page);
     };
     const dialogo = page.locator('[data-sugestao-fantasia]');
+    const titulo = page.locator('[data-jogar-titulo]');
+    /** Com a tela de título aberta o convite espera; entra no mundo pelo "Jogar". */
+    const jogar = async () => {
+      await expect(titulo).toBeVisible();
+      await page.waitForTimeout(2500);
+      await expect(dialogo).toHaveCount(0);
+      await titulo.click();
+      await expect(titulo).toBeHidden();
+    };
+    /** Entra no mundo de novo (depois de recarregar) e confere que o convite não volta. */
+    const semConviteAoJogar = async () => {
+      await page.reload();
+      await pronto(page);
+      await jogar();
+      await page.waitForTimeout(2500);
+      await expect(dialogo).toHaveCount(0);
+      // volta ao título para o próximo mundo
+      await page.reload();
+      await pronto(page);
+    };
 
     // Agora não: fecha e não volta neste mundo
     await criarRancho('Rancho um');
+    await jogar();
     await expect(dialogo).toBeVisible({ timeout: 20_000 });
+    // por trás do convite, o mundo aberto (sem título, editor nem carregamento)
+    expect(
+      await page.evaluate(() => ({
+        titulo: document.body.classList.contains('tela-titulo'),
+        pronto: window.__brumaluz?.ready === true,
+        pausa: !!document.querySelector('[data-pausa]:not([hidden])'),
+      })),
+    ).toEqual({ titulo: false, pronto: true, pausa: false });
     await expect(dialogo.locator('h2')).toHaveText('Quer vestir a fantasia do Rancho Alegre?');
     await expect(dialogo.locator('[data-dialogo-confirmar]')).toHaveText('Sim');
     await expect(dialogo.locator('[data-dialogo-cancelar]')).toHaveText('Agora não');
@@ -292,13 +321,11 @@ for (const tela of TELAS) {
     await dialogo.locator('[data-dialogo-cancelar]').click();
     await expect(dialogo).toHaveCount(0);
     expect(await aparencia(page)).toEqual(antes);
-    await page.reload();
-    await pronto(page);
-    await page.waitForTimeout(2000);
-    await expect(dialogo).toHaveCount(0);
+    await semConviteAoJogar();
 
     // Sim: veste a do tema e abre o editor em "Dos temas", com o tema do mundo primeiro
     await criarRancho('Rancho dois');
+    await jogar();
     await expect(dialogo).toBeVisible({ timeout: 20_000 });
     await dialogo.locator('[data-dialogo-confirmar]').click();
     await expect(dialogo).toHaveCount(0);
@@ -321,14 +348,12 @@ for (const tela of TELAS) {
     await expect(cartas.first()).toHaveAttribute('aria-pressed', 'true');
     await foto(page, 'sugestao-sim-dos-temas', tela);
     // não repete no mesmo mundo
-    await page.reload();
-    await pronto(page);
-    await page.waitForTimeout(2000);
-    await expect(dialogo).toHaveCount(0);
+    await semConviteAoJogar();
     expect((await aparencia(page)).fantasia?.id).toBe('fazendeira');
 
     // outro mundo do mesmo tema com a fantasia já vestida: nem pergunta
     await criarRancho('Rancho três');
+    await jogar();
     await page.waitForTimeout(2500);
     await expect(dialogo).toHaveCount(0);
     expect(erros, erros.join('\n')).toEqual([]);

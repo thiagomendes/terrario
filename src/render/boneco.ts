@@ -8,8 +8,12 @@
 import { TransformNode } from '@babylonjs/core/Meshes/transformNode';
 import { MeshBuilder } from '@babylonjs/core/Meshes/meshBuilder';
 import { Mesh } from '@babylonjs/core/Meshes/mesh';
-import { Vector3 } from '@babylonjs/core/Maths/math.vector';
+import { Matrix, Quaternion, Vector3 } from '@babylonjs/core/Maths/math.vector';
+import { VertexData } from '@babylonjs/core/Meshes/mesh.vertexData';
+import { CreateCylinderVertexData } from '@babylonjs/core/Meshes/Builders/cylinderBuilder';
+import { CreateTorusVertexData } from '@babylonjs/core/Meshes/Builders/torusBuilder';
 import type { Scene } from '@babylonjs/core/scene';
+import type { StandardMaterial } from '@babylonjs/core/Materials/standardMaterial';
 import type { Aparencia } from '../personagem/aparencia';
 import {
   planoBoneco,
@@ -22,10 +26,14 @@ import type { Pose } from '../personagem/poses';
 import {
   caixaArredondada,
   cilindro,
+  corViva,
   criarPlasticos,
+  caixaFeita,
+  dadosEsfera,
   dadosAnel,
   dadosPlaca,
   esfera,
+  pintarVertices,
   type Plasticos,
 } from './formas';
 import { modeloNaMao, type ModeloItem } from './itensBrinquedo';
@@ -35,7 +43,10 @@ export const MAXIMO_MALHAS_BONECO = 90;
 
 /** Uma peça em 3D a partir do plano. */
 export function montarPeca(scene: Scene, mats: Plasticos, p: Peca, prefixo: string): Mesh {
-  const mat = mats.cor(p.cor, p.brilho ?? 0.28, p.alfa ?? 1);
+  // a tinta da fantasia vai nos vértices, num material só por brilho (spec 017)
+  const mat = p.viva
+    ? mats.tinta(p.brilho ?? 0.28, p.alfa ?? 1)
+    : mats.cor(p.cor, p.brilho ?? 0.28, p.alfa ?? 1);
   const nome = `${prefixo}-${p.nome}`;
   let m: Mesh;
   if (p.forma === 'caixa')
@@ -74,10 +85,65 @@ export function montarPeca(scene: Scene, mats: Plasticos, p: Peca, prefixo: stri
     m.material = mat;
     m.isPickable = false;
   }
+  if (p.viva) pintarVertices(m, p.cor);
   m.position.set(p.pos[0], p.pos[1], p.pos[2]);
   if (p.rot) m.rotation.set(p.rot[0], p.rot[1], p.rot[2]);
   m.receiveShadows = false;
   return m;
+}
+
+/**
+ * Os dados de uma peça já no lugar dela na junta (spec 017, desempenho): a mesma malha que
+ * `montarPeca` faz, mas só na memória, sem mandar nada para a placa de vídeo. As peças da
+ * mesma junta e do mesmo material são juntadas aqui e sobem uma vez só (o morador que aparece
+ * no povoado não trava a tela). A conta da posição e das normais é a mesma do MergeMeshes.
+ */
+export function dadosDaPeca(p: Peca, deslocar?: [number, number, number]): VertexData {
+  let vd: VertexData;
+  let escala: [number, number, number] = [1, 1, 1];
+  if (p.forma === 'caixa')
+    vd = caixaFeita(p.tamanho[0], p.tamanho[1], p.tamanho[2], p.raio ?? 0.05, 3);
+  else if (p.forma === 'esfera') {
+    const r = Math.max(p.tamanho[0], p.tamanho[1], p.tamanho[2]);
+    vd = dadosEsfera(r);
+    escala = [p.tamanho[0] / r, p.tamanho[1] / r, p.tamanho[2] / r];
+  } else if (p.forma === 'cilindro')
+    vd = CreateCylinderVertexData({
+      height: p.tamanho[0],
+      diameterBottom: p.tamanho[1] * 2,
+      diameterTop: p.tamanho[2] * 2,
+      tessellation: 14,
+    });
+  else if (p.forma === 'placa') vd = dadosPlaca(p.perfil ?? [], p.tamanho[2]);
+  else if (p.tamanho[2] > 0) vd = dadosAnel(p.tamanho[0], p.tamanho[1], p.tamanho[2]);
+  else
+    vd = CreateTorusVertexData({
+      diameter: p.tamanho[0],
+      thickness: p.tamanho[1],
+      tessellation: 20,
+    });
+  if (p.viva) {
+    const n = vd.positions!.length / 3;
+    const [r, g, b] = corViva(p.cor);
+    const cores = new Float32Array(n * 4);
+    for (let i = 0; i < n; i++) cores.set([r, g, b, 1], i * 4);
+    vd.colors = cores;
+  }
+  const rot = p.rot ?? [0, 0, 0];
+  const d = deslocar ?? [0, 0, 0];
+  const m = Matrix.Compose(
+    new Vector3(escala[0], escala[1], escala[2]),
+    Quaternion.RotationYawPitchRoll(rot[1], rot[0], rot[2]),
+    new Vector3(p.pos[0] + d[0], p.pos[1] + d[1], p.pos[2] + d[2]),
+  );
+  vd.transform(m);
+  return vd;
+}
+
+/** As espécies de dados de vértice da peça (só junta malhas com as mesmas). */
+function tiposDaPeca(p: Peca): string {
+  // todas as formas têm posição, normal e uv; a tinta da fantasia tem cor
+  return p.viva ? 'cor' : '';
 }
 
 function naVista(m: Mesh): void {
@@ -187,70 +253,66 @@ export function criarBoneco(
       [Junta, (typeof plano.juntas)[Junta]]
     >)
       juntas[nome].parent = j.pai ? juntas[j.pai] : escalar;
+    // fundir: as peças da mesma junta e do mesmo material são juntadas na memória e sobem
+    // para a placa de vídeo uma vez só, numa malha (spec 013; spec 017 sem malhas de passagem)
     const paraFundir = new Map<
       string,
-      { junta: Junta; lista: Mesh[]; nome?: string; pivo?: [number, number, number] }
+      {
+        junta: Junta;
+        material: StandardMaterial;
+        dados: VertexData[];
+        nome: string;
+        pivo?: [number, number, number];
+        n: number;
+      }
     >();
+    const materialDe = (p: Peca) =>
+      p.viva
+        ? mats.tinta(p.brilho ?? 0.28, p.alfa ?? 1)
+        : mats.cor(p.cor, p.brilho ?? 0.28, p.alfa ?? 1);
     for (const p of plano.pecas) {
-      const m = montarPeca(scene, mats, p, prefixo);
       // os dois olhos (e os dois brilhos) piscam juntos e ficam na mesma altura: viram uma
       // malha só, que pisca em volta do meio deles
       const par = /^(olho|brilho)-?\d/.exec(p.nome)?.[1];
-      if (fundir && par && m.material) {
-        const k = `${par}|${p.junta}|${m.material.uniqueId}|${m.getVerticesDataKinds().sort().join()}`;
-        let g = paraFundir.get(k);
-        if (!g)
-          paraFundir.set(k, (g = { junta: p.junta, lista: [], nome: `${par}s`, pivo: [0, 0, 0] }));
-        g.lista.push(m);
-        continue;
-      }
-      if (fundir && !/^(olho|brilho|boca)/.test(p.nome) && m.material) {
+      if (fundir && (par || !/^(olho|brilho|boca)/.test(p.nome))) {
+        const material = materialDe(p);
         // a mão não gira sozinha: as peças dela vão para a junta do braço (menos malhas)
         let junta = p.junta;
-        if (junta === 'maoE' || junta === 'maoD') {
-          const j = plano.juntas[junta];
-          m.position.addInPlaceFromFloats(j.pos[0], j.pos[1], j.pos[2]);
+        let deslocar: [number, number, number] | undefined;
+        if (!par && (junta === 'maoE' || junta === 'maoD')) {
+          deslocar = plano.juntas[junta].pos;
           junta = junta === 'maoE' ? 'bracoE' : 'bracoD';
         }
-        // só funde malhas com os mesmos dados de vértice (senão o Babylon recusa)
-        const k = `${junta}|${m.material.uniqueId}|${m.getVerticesDataKinds().sort().join()}`;
+        const k = `${par ?? ''}|${junta}|${material.uniqueId}|${tiposDaPeca(p)}`;
         let g = paraFundir.get(k);
-        if (!g) paraFundir.set(k, (g = { junta, lista: [] }));
-        g.lista.push(m);
+        if (!g)
+          paraFundir.set(
+            k,
+            (g = par
+              ? { junta, material, dados: [], nome: `${par}s`, pivo: [0, 0, 0], n: 0 }
+              : { junta, material, dados: [], nome: junta, n: 0 }),
+          );
+        g.dados.push(dadosDaPeca(p, deslocar));
+        if (g.pivo) {
+          g.pivo[0] += p.pos[0];
+          g.pivo[1] += p.pos[1];
+          g.pivo[2] += p.pos[2];
+        }
+        g.n++;
         continue;
       }
+      const m = montarPeca(scene, mats, p, prefixo);
       m.parent = juntas[p.junta];
       m.setEnabled(visivel);
       m.visibility = opacidade;
       malhas.push(m);
     }
-    // cada peça ainda sem pai: a posição dela já é a posição na junta
-    for (const { junta, lista, nome, pivo } of paraFundir.values()) {
-      const material = lista[0].material;
-      if (pivo) {
-        for (const m of lista) {
-          pivo[0] += m.position.x / lista.length;
-          pivo[1] += m.position.y / lista.length;
-          pivo[2] += m.position.z / lista.length;
-        }
-      }
-      const f =
-        lista.length === 1
-          ? lista[0]
-          : Mesh.MergeMeshes(lista, true, true, undefined, false, false);
-      if (!f) {
-        // não deu para fundir: as peças ficam soltas, como no boneco do jogador
-        for (const m of lista) {
-          m.parent = juntas[junta];
-          m.setEnabled(visivel);
-          m.visibility = opacidade;
-          malhas.push(m);
-        }
-        continue;
-      }
-      f.name = nome ? `${prefixo}-${nome}-fundida` : `${prefixo}-${junta}-fundida`;
+    for (const { junta, material, dados, nome, pivo, n } of paraFundir.values()) {
+      const vd = dados.length === 1 ? dados[0] : dados[0].merge(dados.slice(1), true);
+      const f = new Mesh(`${prefixo}-${nome}-fundida`, scene);
+      vd.applyToMesh(f);
       // pisca em volta do meio dos olhos (não do meio da cabeça)
-      if (pivo && lista.length > 1) f.setPivotPoint(new Vector3(pivo[0], pivo[1], pivo[2]));
+      if (pivo) f.setPivotPoint(new Vector3(pivo[0] / n, pivo[1] / n, pivo[2] / n));
       f.material = material;
       f.isPickable = false;
       f.receiveShadows = false;

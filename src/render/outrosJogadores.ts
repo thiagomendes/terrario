@@ -60,6 +60,32 @@ interface Outro {
   apelido: string;
   /** Últimos contadores de golpe, colocação e comida vistos (null antes do primeiro). */
   acoes: [number, number, number] | null;
+  /** Transparência do apelido já escrita (só escreve quando muda). */
+  opacidadePlaca: number;
+}
+
+/** A caixa do canvas na página, medida de novo só quando a janela muda de tamanho ou rola. */
+let caixaGuardada: DOMRect | null = null;
+let canvasGuardado: HTMLCanvasElement | null = null;
+let ouvindoJanela = false;
+function medirCanvas(canvas: HTMLCanvasElement | null): DOMRect | undefined {
+  if (!canvas) return undefined;
+  if (!ouvindoJanela && typeof window !== 'undefined') {
+    ouvindoJanela = true;
+    const esquecer = () => {
+      caixaGuardada = null;
+    };
+    window.addEventListener('resize', esquecer);
+    window.addEventListener('scroll', esquecer, true);
+    window.visualViewport?.addEventListener('resize', esquecer);
+    document.addEventListener('fullscreenchange', esquecer);
+    if (typeof ResizeObserver === 'function') new ResizeObserver(esquecer).observe(canvas);
+  }
+  if (canvas !== canvasGuardado || !caixaGuardada) {
+    canvasGuardado = canvas;
+    caixaGuardada = canvas.getBoundingClientRect();
+  }
+  return caixaGuardada;
 }
 
 export function criarOutrosJogadores(scene: Scene) {
@@ -88,6 +114,7 @@ export function criarOutrosJogadores(scene: Scene) {
       mao: null,
       acoes: null,
       apelido,
+      opacidadePlaca: -1,
     };
   }
 
@@ -135,8 +162,9 @@ export function criarOutrosJogadores(scene: Scene) {
       const alt = motor.getRenderHeight();
       const vista = cam?.viewport.toGlobal(larg, alt);
       const transform = scene.getTransformMatrix();
-      // uma medida do canvas por quadro (pedir a cada amigo força o navegador a medir de novo)
-      const caixaCanvas = canvas?.getBoundingClientRect();
+      // a medida do canvas só muda quando a janela muda (medir a cada quadro força o navegador
+      // a refazer o estilo dos apelidos movidos no quadro de antes)
+      const caixaCanvas = outros.size ? medirCanvas(canvas) : undefined;
       for (const o of outros.values()) {
         const a = o.alvo;
         const x0 = o.x;
@@ -211,7 +239,11 @@ export function criarOutrosJogadores(scene: Scene) {
             const y = r.top + (tela.y / alt) * r.height;
             const e = o.placa;
             e.style.transform = `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px) translate(-50%, -100%)`;
-            e.style.opacity = String(dist > 40 ? Math.max(0.35, 1 - (dist - 40) / 30) : 1);
+            const op = dist > 40 ? Math.round(Math.max(0.35, 1 - (dist - 40) / 30) * 50) / 50 : 1;
+            if (op !== o.opacidadePlaca) {
+              o.opacidadePlaca = op;
+              e.style.opacity = String(op);
+            }
             mostrar = true;
           }
         }

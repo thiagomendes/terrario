@@ -13,6 +13,7 @@ import { povoadoDoTema, tema } from '../temas/ativo';
 import { caixaArredondada, esfera } from './formas';
 import { bichoDeBrinquedo, type PecaBicho } from './bichoBrinquedo';
 import { criarBoneco } from './boneco';
+import { planoBoneco, type PlanoBoneco } from '../personagem/boneco';
 import { moradorDeBrinquedo } from './moradorBoneco';
 import { generoDoMorador } from '../temas/nomes';
 import type { Profissao } from '../world/povoado';
@@ -34,6 +35,9 @@ export const LONGE_LOD = 18;
 export const LONGE_VOLTA = 16;
 /** Quantos bichos montam a malha de longe por quadro (sem engasgo quando muitos chegam). */
 export const LONGE_POR_QUADRO = 1;
+/** Spec 017: bonecos de morador novos por quadro (o povoado aparece sem travar). */
+export const MORADORES_POR_QUADRO = 1;
+const MAXIMO_PLANOS = 200;
 
 interface Modelo {
   raiz: TransformNode;
@@ -125,16 +129,37 @@ export function criarRenderCriaturas(
     // perto (sombra, braço que aparece de lado) e tudo à frente até ~115°: desenha
     return d > 8 && (dx * frente.x + dy * frente.y + dz * frente.z) / d < -0.42;
   }
-  function montarMorador(c: Criatura) {
-    const pecas = povoadoDoTema().moradores[c.morador?.profissao ?? 'construtor'];
+  /**
+   * Planos de morador já encaixados (spec 017): o mesmo morador (tema, profissão e boneco)
+   * encaixa os enfeites uma vez só; quem sai da vista e volta não refaz a conta.
+   */
+  const planosFeitos = new Map<string, PlanoBoneco>();
+  function prepararMorador(c: Criatura) {
     const prof = c.morador?.profissao ?? 'construtor';
+    const acessorio = povoadoDoTema().acessorios?.[prof];
     const m = moradorDeBrinquedo(
-      pecas,
+      povoadoDoTema().moradores[prof],
       c.id,
       c.morador ? generoDoMorador(c.morador.povoado, c.morador.n, prof) : undefined,
-      povoadoDoTema().acessorios?.[prof],
+      acessorio,
     );
-    const boneco = criarBoneco(scene, m.aparencia, `morador-${c.id}`, m.ajustar, true);
+    const chave = `${tema().id}|${prof}|${acessorio ?? ''}|${JSON.stringify(m.aparencia)}`;
+    return { m, chave };
+  }
+  /** O plano encaixado do morador (feito agora, ou o guardado). */
+  function planoDoMorador(prep: ReturnType<typeof prepararMorador>, p?: PlanoBoneco) {
+    let feito = planosFeitos.get(prep.chave);
+    if (!feito) {
+      feito = prep.m.ajustar(p ?? planoBoneco(prep.m.aparencia));
+      if (planosFeitos.size >= MAXIMO_PLANOS) planosFeitos.clear();
+      planosFeitos.set(prep.chave, feito);
+    }
+    return feito;
+  }
+  function montarMorador(c: Criatura, prep = prepararMorador(c)) {
+    const m = prep.m;
+    const ajustar = (p: PlanoBoneco) => planoDoMorador(prep, p);
+    const boneco = criarBoneco(scene, m.aparencia, `morador-${c.id}`, ajustar, true);
     for (const malha of boneco.raiz.getChildMeshes()) {
       const mat = malha.material as StandardMaterial | null;
       // só a lanterna e o que o tema marcou como brilhante entram no brilho
@@ -209,6 +234,8 @@ export function criarRenderCriaturas(
 
   /** Malhas de longe montadas neste quadro (o resto espera o próximo). */
   let montadasNoQuadro = 0;
+  /** Bonecos de morador montados neste quadro (spec 017). */
+  let moradoresNoQuadro = 0;
   /** Troca entre o bicho inteiro (perto) e as malhas de longe, com folga para não piscar. */
   function escolherLonge(m: Modelo, x: number, y: number, z: number): void {
     const d = Math.hypot(x - camX, y - camY, z - camZ);
@@ -414,12 +441,23 @@ export function criarRenderCriaturas(
     ): void {
       quadro++;
       montadasNoQuadro = 0;
+      moradoresNoQuadro = 0;
       prepararVista();
       for (const c of lista) {
         if (c.tipo === 'morador') {
           let mb = moradores.get(c.id);
           if (!mb) {
-            mb = montarMorador(c);
+            // um boneco novo por quadro: o povoado que aparece não trava a tela (os outros
+            // moradores entram nos quadros seguintes, uma fração de segundo depois)
+            if (moradoresNoQuadro >= MORADORES_POR_QUADRO) continue;
+            moradoresNoQuadro++;
+            // primeiro o encaixe dos enfeites (num quadro), depois as malhas (no seguinte)
+            const prep = prepararMorador(c);
+            if (!planosFeitos.has(prep.chave)) {
+              planoDoMorador(prep);
+              continue;
+            }
+            mb = montarMorador(c, prep);
             moradores.set(c.id, mb);
           }
           mb.quadro = quadro;

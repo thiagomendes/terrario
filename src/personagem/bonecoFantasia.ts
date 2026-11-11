@@ -518,19 +518,31 @@ export function vestirFantasia(
   };
 
   /**
-   * Tiara: uma fileira de contas por cima da tampa de cabelo, de orelha a orelha, no corte da
-   * frente (encosta no cabelo em todo o caminho, qualquer que seja o corte). Devolve o alto.
+   * Tiara: um arco liso por cima da tampa de cabelo, de orelha a orelha, no corte da frente
+   * (como no esboço). A borda de dentro segue o contorno do cabelo, então o arco encosta nele
+   * em todo o caminho, qualquer que seja o corte. `r`: meia largura do arco. Devolve o alto.
    */
   const arcoNaCabeca = (nome: string, c: string, r: number, z: number) => {
-    const contorno = contornoDaTampa(m, z, m.tampa.y - m.tampa.h / 2 + 0.06, r * 1.5);
+    const contorno = contornoDaTampa(m, z, m.tampa.y - m.tampa.h / 2 + 0.06, 0.035);
+    // sem pontos repetidos nem três em linha (a placa triangula o contorno)
+    const pontos: typeof contorno = [];
+    for (const q of contorno) {
+      const u = pontos[pontos.length - 1];
+      if (u && Math.hypot(q.p[0] - u.p[0], q.p[1] - u.p[1]) < 0.012) continue;
+      pontos.push(q);
+    }
+    const dentro = 0.006;
+    const fora = 2 * r - dentro;
+    const perfil: P2[] = [
+      ...pontos.map(({ p: [x, y], n: [nx, ny] }): P2 => [x - nx * dentro, y - ny * dentro]),
+      ...pontos
+        .slice()
+        .reverse()
+        .map(({ p: [x, y], n: [nx, ny] }): P2 => [x + nx * fora, y + ny * fora]),
+    ];
     let topo = -Infinity;
-    contorno.forEach(({ p: [x, y], n: [nx, ny] }, i) => {
-      const k = r - 0.008;
-      bola(`${nome}${i}`, 'cabeca', 'cabeca', r, [x + nx * k, y + ny * k, z], c, [1, 1, 1], {
-        brilho: 0.5,
-      });
-      topo = Math.max(topo, y + ny * k + r);
-    });
+    for (const [, y] of perfil) topo = Math.max(topo, y);
+    placa(nome, 'cabeca', 'cabeca', perfil, 2 * r, [0, 0, z], c, { brilho: 0.5 });
     return { topo };
   };
 
@@ -756,7 +768,7 @@ export function vestirFantasia(
         break;
       case 'tiara': {
         const z = 0.29;
-        const a = arcoNaCabeca('tiara', c, 0.03, z);
+        const a = arcoNaCabeca('tiara', c, 0.032, z);
         // três florzinhas na frente do alto da tiara
         const flores: Array<[number, string]> = [
           [-0.15, '#ff5a8a'],
@@ -780,22 +792,23 @@ export function vestirFantasia(
         const a = arcoNaCabeca('enfeite-arco', c, 0.026, z);
         const s = p.simbolo ?? 'concha';
         if (s === 'concha') {
+          // a concha do tamanho do esboço (leque de raio 0,18), em pé em cima do arco
           simbolo(
             'concha',
             'enfeite',
             'cabeca',
             'cabeca',
-            0.26,
-            [0, a.topo + 0.06, z],
+            0.36,
+            [0, a.topo + 0.09, z],
             '#ffd0e0',
-            0.035,
+            0.045,
           );
           bola(
             'enfeite-perola',
             'cabeca',
             'cabeca',
-            0.04,
-            [0.13, a.topo - 0.01, z + 0.02],
+            0.048,
+            [0.19, a.topo - 0.012, z + 0.03],
             BRANCO,
             [1, 1, 1],
             { brilho: 0.5 },
@@ -1582,28 +1595,16 @@ export function vestirFantasia(
         break;
       }
       case 'lanterna': {
-        caixa('lanterna-corpo', 'maoE', 'mao', [0.14, 0.16, 0.14], [0, -0.16, 0.04], c, 0.05, {
+        // a lanterna acesa na mão, um pouco à frente (aparece de frente, como no esboço);
+        // tinta de sempre, sem a tinta funda da fantasia: ela é a luz
+        const z = 0.085;
+        caixa('lanterna-corpo', 'maoE', 'mao', [0.18, 0.2, 0.18], [0, -0.19, z], c, 0.06, {
           brilho: 0.9,
+          viva: false,
         });
-        caixa(
-          'lanterna-tampa',
-          'maoE',
-          'mao',
-          [0.16, 0.035, 0.16],
-          [0, -0.065, 0.04],
-          '#3b2a1e',
-          0.012,
-        );
-        caixa(
-          'lanterna-fundo',
-          'maoE',
-          'mao',
-          [0.16, 0.03, 0.16],
-          [0, -0.25, 0.04],
-          '#3b2a1e',
-          0.012,
-        );
-        anel('lanterna-alca', 'maoE', 'mao', 0.12, 0.02, [0, -0.04, 0.04], '#5a4a3a', 0, {
+        caixa('lanterna-tampa', 'maoE', 'mao', [0.2, 0.04, 0.2], [0, -0.075, z], '#3b2a1e', 0.014);
+        caixa('lanterna-fundo', 'maoE', 'mao', [0.2, 0.035, 0.2], [0, -0.3, z], '#3b2a1e', 0.014);
+        anel('lanterna-alca', 'maoE', 'mao', 0.13, 0.022, [0, -0.045, z * 0.5], '#5a4a3a', 0, {
           rot: [0, Math.PI / 2, Math.PI / 2],
         });
         break;

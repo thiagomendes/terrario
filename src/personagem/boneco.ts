@@ -58,6 +58,11 @@ export interface Peca {
    * mede a distância entre cada enfeite e essa parte do boneco (nada solto, nada atravessando).
    */
   apoio?: 'cabeca' | 'tronco' | 'mao' | 'braco' | 'perna';
+  /**
+   * Tinta da fantasia (spec 017): a cor vai para o espaço linear no material, para ler no jogo
+   * como no esboço aprovado. O resto do boneco (pele, cabelo, rosto, roupas de sempre) não muda.
+   */
+  viva?: boolean;
 }
 
 export interface PlanoBoneco {
@@ -780,6 +785,7 @@ export function planoBoneco(a: Aparencia): PlanoBoneco {
         : null;
   let rabo: 'guardar' | 'baixo' = 'guardar';
   if (a.fantasia) {
+    const antes = pecas.length;
     const vestida = vestirFantasia(a.fantasia, a.corpo, pecas, {
       feminino,
       larg,
@@ -805,6 +811,12 @@ export function planoBoneco(a: Aparencia): PlanoBoneco {
     });
     modo = vestida.cabelo;
     rabo = vestida.rabo;
+    marcarTintaDaFantasia(
+      pecas,
+      antes,
+      [roupa, calca, sapato, detalhe, punho, corManga],
+      [pele, cabelo],
+    );
   }
   if (modo) ajeitarCabeloDebaixo(pecas, modo, topoTampa, cab, rabo);
 
@@ -821,6 +833,29 @@ export function planoBoneco(a: Aparencia): PlanoBoneco {
     },
     semManga,
   };
+}
+
+/**
+ * A tinta da fantasia (spec 017): as peças que ela acrescenta e a roupa de baixo pintada com
+ * as cores dela. O rosto, a pele e o cabelo da criança ficam com a tinta de sempre.
+ */
+function marcarTintaDaFantasia(
+  pecas: Peca[],
+  primeiraDaFantasia: number,
+  coresDaRoupa: string[],
+  coresDaCrianca: string[],
+): void {
+  const daFantasia = new Set(coresDaRoupa);
+  for (let i = primeiraDaFantasia; i < pecas.length; i++) daFantasia.add(pecas[i].cor);
+  for (const c of coresDaCrianca) daFantasia.delete(c);
+  for (let i = 0; i < pecas.length; i++) {
+    const p = pecas[i];
+    // a peça que pediu a tinta de sempre (a lanterna acesa) fica com ela
+    if (p.viva === false || /^(olho|brilho|boca|cilio|bochecha|sobrancelha|nariz)/.test(p.nome))
+      continue;
+    if (i >= primeiraDaFantasia ? !coresDaCrianca.includes(p.cor) : daFantasia.has(p.cor))
+      p.viva = true;
+  }
 }
 
 /**
