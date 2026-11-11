@@ -9,7 +9,15 @@
  * dois raios e anel). A distância entre duas peças é o menor valor dessa conta nos pontos da
  * superfície de uma, olhando da outra também (os dois lados).
  */
-import type { Junta, Peca, PlanoBoneco } from '../../src/personagem/boneco';
+import {
+  rotacoesDaPose,
+  type Junta,
+  type Peca,
+  type PlanoBoneco,
+} from '../../src/personagem/boneco';
+import { GESTOS, aplicarGesto } from '../../src/personagem/gestos';
+import { calcularPose, type EntradaPose, type Pose } from '../../src/personagem/poses';
+import { AMPLITUDE_ANDAR, AMPLITUDE_CORRER } from '../../src/personagem/vida';
 
 type V3 = [number, number, number];
 
@@ -31,16 +39,25 @@ const JUNTAS_APOIO: Record<NonNullable<Peca['apoio']>, Junta[]> = {
   cabeca: ['cabeca', 'topete'],
   tronco: ['tronco'],
   mao: ['maoE', 'maoD'],
+  braco: ['bracoE', 'bracoD', 'maoE', 'maoD'],
+  perna: ['pernaE', 'pernaD'],
 };
 
 /** Giro de cada junta numa pose (rad, x/y/z); sem nada, o boneco parado. */
 export type GirosJuntas = Partial<Record<Junta, V3>>;
+/** Escala de cada junta numa pose (a saia abre, spec 017); sem nada, 1. */
+export type EscalasJuntas = Partial<Record<Junta, V3>>;
 
-/** Passos da peça até o corpo: cada um põe o ponto no espaço do pai (gira e desloca). */
-function cadeia(plano: PlanoBoneco, p: Peca, giros: GirosJuntas): Array<{ pos: V3; rot?: V3 }> {
-  const passos: Array<{ pos: V3; rot?: V3 }> = [{ pos: p.pos, rot: p.rot }];
+/** Passos da peça até o corpo: cada um põe o ponto no espaço do pai (escala, gira e desloca). */
+function cadeia(
+  plano: PlanoBoneco,
+  p: Peca,
+  giros: GirosJuntas,
+  escalas: EscalasJuntas = {},
+): Array<{ pos: V3; rot?: V3; esc?: V3 }> {
+  const passos: Array<{ pos: V3; rot?: V3; esc?: V3 }> = [{ pos: p.pos, rot: p.rot }];
   for (let j: Junta | null = p.junta; j; j = plano.juntas[j].pai)
-    passos.push({ pos: plano.juntas[j].pos, rot: giros[j] });
+    passos.push({ pos: plano.juntas[j].pos, rot: giros[j], esc: escalas[j] });
   return passos;
 }
 
@@ -105,10 +122,60 @@ function distanciaLocal(p: Peca, q: V3): number {
     const s = cbx < 0 && cay < 0 ? -1 : 1;
     return s * Math.sqrt(Math.min(cax * cax + cay * cay, cbx * cbx + cby * cby));
   }
-  // anel deitado no plano xz (como o CreateTorus)
+  if (p.forma === 'placa') {
+    const d2 = distanciaPoligono(p.perfil ?? [], x, y);
+    const dz = Math.abs(z) - p.tamanho[2] / 2;
+    return Math.min(Math.max(d2, dz), 0) + Math.hypot(Math.max(d2, 0), Math.max(dz, 0));
+  }
+  // anel deitado no plano xz (como o CreateTorus); com arco, só a parte centrada em +z
   const R = p.tamanho[0] / 2;
   const r = p.tamanho[1] / 2;
+  const arco = p.tamanho[2];
+  if (arco > 0 && arco < Math.PI * 2) {
+    const a = Math.atan2(z, x);
+    let dif = a - Math.PI / 2;
+    dif = Math.atan2(Math.sin(dif), Math.cos(dif));
+    if (Math.abs(dif) > arco / 2) {
+      // fora do arco: a distância até a ponta mais perto (o tubo termina reto)
+      let d = Infinity;
+      for (const s of [-1, 1]) {
+        const t = Math.PI / 2 + (s * arco) / 2;
+        d = Math.min(d, Math.hypot(x - R * Math.cos(t), y, z - R * Math.sin(t)) - r);
+      }
+      return d;
+    }
+  }
   return comp(comp(x, z) - R, y) - r;
+}
+
+/** Distância (com sinal) de um ponto do plano até o contorno (negativa dentro). */
+function distanciaPoligono(pts: Array<[number, number]>, x: number, y: number): number {
+  const n = pts.length;
+  if (!n) return Infinity;
+  let d = (x - pts[0][0]) ** 2 + (y - pts[0][1]) ** 2;
+  let s = 1;
+  for (let i = 0, j = n - 1; i < n; j = i, i++) {
+    const [xi, yi] = pts[i];
+    const [xj, yj] = pts[j];
+    const ex = xj - xi;
+    const ey = yj - yi;
+    const wx = x - xi;
+    const wy = y - yi;
+    const t = Math.max(0, Math.min(1, (wx * ex + wy * ey) / (ex * ex + ey * ey || 1)));
+    const bx = wx - ex * t;
+    const by = wy - ey * t;
+    d = Math.min(d, bx * bx + by * by);
+    const c1 = y >= yi;
+    const c2 = y < yj;
+    const c3 = ex * wy > ey * wx;
+    if ((c1 && c2 && c3) || (!c1 && !c2 && !c3)) s = -s;
+  }
+  return s * Math.sqrt(d);
+}
+
+/** O ponto está dentro do contorno? */
+export function dentroDoPerfil(pts: Array<[number, number]>, x: number, y: number): boolean {
+  return distanciaPoligono(pts, x, y) < 0;
 }
 
 /** Pontos na superfície da peça (no próprio espaço dela). */
@@ -169,10 +236,44 @@ function pontosLocais(p: Peca, n = 10): V3[] {
     }
     return pts;
   }
+  if (p.forma === 'placa') {
+    const per = p.perfil ?? [];
+    const h = p.tamanho[2] / 2;
+    // a borda (nas duas faces e no meio) e uma grade dentro das faces
+    for (let i = 0; i < per.length; i++) {
+      const [x0, y0] = per[i];
+      const [x1, y1] = per[(i + 1) % per.length];
+      const passos = Math.max(1, Math.ceil(Math.hypot(x1 - x0, y1 - y0) / 0.03));
+      for (let k = 0; k < passos; k++) {
+        const t = k / passos;
+        for (const z of [-h, 0, h]) pts.push([x0 + (x1 - x0) * t, y0 + (y1 - y0) * t, z]);
+      }
+    }
+    let x0 = Infinity;
+    let x1 = -Infinity;
+    let y0 = Infinity;
+    let y1 = -Infinity;
+    for (const [x, y] of per) {
+      x0 = Math.min(x0, x);
+      x1 = Math.max(x1, x);
+      y0 = Math.min(y0, y);
+      y1 = Math.max(y1, y);
+    }
+    for (let i = 0; i <= n; i++)
+      for (let j = 0; j <= n; j++) {
+        const x = x0 + ((x1 - x0) * i) / n;
+        const y = y0 + ((y1 - y0) * j) / n;
+        if (dentroDoPerfil(per, x, y)) for (const z of [-h, h]) pts.push([x, y, z]);
+      }
+    return pts;
+  }
   const R = p.tamanho[0] / 2;
   const r = p.tamanho[1] / 2;
+  const arco = p.tamanho[2] > 0 && p.tamanho[2] < Math.PI * 2 ? p.tamanho[2] : 0;
   for (let j = 0; j < 2 * n; j++) {
-    const te = (j / (2 * n)) * Math.PI * 2;
+    const te = arco
+      ? Math.PI / 2 - arco / 2 + (j / (2 * n - 1)) * arco
+      : (j / (2 * n)) * Math.PI * 2;
     for (let i = 0; i < n; i++) {
       const fi = (i / n) * Math.PI * 2;
       const rr = R + r * Math.cos(fi);
@@ -192,6 +293,8 @@ export interface PecaMedida {
   distancia(q: V3): number;
   /** Ponto do espaço da peça para o boneco. */
   paraFora(q: V3): V3;
+  /** Ponto do boneco para o espaço da peça. */
+  paraDentro(q: V3): V3;
 }
 
 export function medirPeca(
@@ -199,11 +302,14 @@ export function medirPeca(
   p: Peca,
   giros: GirosJuntas = {},
   n = 10,
+  escalas: EscalasJuntas = {},
 ): PecaMedida {
-  const passos = cadeia(plano, p, giros);
+  const passos = cadeia(plano, p, giros, escalas);
+  // como no Babylon: o filho é escalado, girado e deslocado no espaço do pai
   const paraFora = (q: V3): V3 => {
     let g = q;
     for (const s of passos) {
+      if (s.esc) g = [g[0] * s.esc[0], g[1] * s.esc[1], g[2] * s.esc[2]];
       g = girar(g, s.rot, false);
       g = [g[0] + s.pos[0], g[1] + s.pos[1], g[2] + s.pos[2]];
     }
@@ -214,6 +320,7 @@ export function medirPeca(
     for (let i = passos.length - 1; i >= 0; i--) {
       const s = passos[i];
       g = girar([g[0] - s.pos[0], g[1] - s.pos[1], g[2] - s.pos[2]], s.rot, true);
+      if (s.esc) g = [g[0] / s.esc[0], g[1] / s.esc[1], g[2] / s.esc[2]];
     }
     return g;
   };
@@ -234,6 +341,7 @@ export function medirPeca(
     max,
     distancia: (q) => distanciaLocal(p, paraDentro(q)),
     paraFora,
+    paraDentro,
   };
 }
 
@@ -308,6 +416,8 @@ export function conferirEncaixe(plano: PlanoBoneco, folgaMaxima = FOLGA_MAXIMA):
     if (tipo !== 'cabeca') continue;
     for (const r of medidas.filter((m) => EH_ROSTO.test(m.peca.nome)))
       for (const e of meus) {
+        // vidro (a bolha do capacete): o rosto aparece através dele
+        if ((e.peca.alfa ?? 1) < 1) continue;
         const dentro = r.pontos.filter((q) => e.distancia(q) < -0.002).length;
         if (dentro > r.pontos.length * 0.1)
           problemas.push({ tipo: 'rosto', peca: e.peca.nome, medida: dentro, outra: r.peca.nome });
@@ -399,4 +509,183 @@ export function conferirMembros(
     if (pior > folgaMaxima) problemas.push({ tipo: 'quadril', junta: m.junta, medida: pior });
   }
   return problemas;
+}
+
+export interface ProblemaBalanco {
+  tipo: 'saia' | 'capa' | 'rabo';
+  /** A peça do boneco que entrou (perna, braço, tronco, cabelo). */
+  peca: string;
+  /** A peça que balança (pano da capa, sino da saia, bola do rabo). */
+  outra: string;
+  /** Quanto entrou. */
+  medida: number;
+}
+
+/** Pernas (com sapato e bota), braços (com a mão) e o tronco: o que a capa não pode cortar. */
+const EH_PERNA = /^perna[ED]-(perna|sapato|bota)/;
+const EH_BRACO = /^braco[ED]-(manga|ombro|punho|mao|bufante|dragona|xadrez)/;
+
+/**
+ * Capa, saia e rabo balançando sem atravessar o boneco (spec 017, pedido do dono), numa pose:
+ * - saia: nenhum ponto da perna (nem do sapato) sai pela parede da saia; sair pela barra pode
+ *   (as pernas balançam por dentro e aparecem embaixo);
+ * - capa: nenhum ponto das pernas, dos braços, do tronco (e das peças dele) nem do cabelo fica
+ *   atrás da frente do pano da capa (a capa nunca corta o corpo, de nenhum lado);
+ * - rabo: as bolas do rabo de dino não entram nas pernas.
+ */
+export function conferirBalanco(
+  plano: PlanoBoneco,
+  giros: GirosJuntas,
+  escalas: EscalasJuntas,
+  comCabelo = true,
+): ProblemaBalanco[] {
+  const problemas: ProblemaBalanco[] = [];
+  const medir = (p: Peca) => medirPeca(plano, p, giros, 6, escalas);
+  const pernas = plano.pecas.filter((p) => EH_PERNA.test(p.nome)).map(medir);
+  const saia = plano.pecas
+    .filter((p) => p.junta === 'saia' && p.forma === 'cilindro')
+    .map((p) => medirPeca(plano, p, giros, 6, escalas));
+  if (saia.length) {
+    let pior: { medida: number; peca: string; outra: string } | null = null;
+    for (const perna of pernas)
+      for (const q of perna.pontos) {
+        // na altura da saia (entre a barra e a cintura de alguma camada)
+        const naFaixa = saia.some((s) => {
+          const l = s.paraDentro(q);
+          return Math.abs(l[1]) <= s.peca.tamanho[0] / 2;
+        });
+        if (!naFaixa) continue;
+        let d = Infinity;
+        let qual = '';
+        for (const s of saia) {
+          const v = s.distancia(q);
+          if (v < d) {
+            d = v;
+            qual = s.peca.nome;
+          }
+        }
+        if (d > 0.004 && (!pior || d > pior.medida))
+          pior = { medida: d, peca: perna.peca.nome, outra: qual };
+      }
+    if (pior) problemas.push({ tipo: 'saia', ...pior });
+  }
+  const panos = plano.pecas
+    .filter((p) => p.junta === 'capa' && p.forma === 'placa')
+    .map((p) => medirPeca(plano, p, giros, 6, escalas));
+  if (panos.length) {
+    const corpo = plano.pecas
+      .filter(
+        (p) =>
+          p.junta !== 'capa' &&
+          (EH_PERNA.test(p.nome) ||
+            EH_BRACO.test(p.nome) ||
+            (p.junta === 'tronco' && !/^(dino-rabo)/.test(p.nome)) ||
+            (comCabelo && p.junta === 'cabeca' && !p.apoio && EH_CABELO.test(p.nome))),
+      )
+      .map(medir);
+    let pior: { medida: number; peca: string; outra: string } | null = null;
+    const longe = (a: PecaMedida, b: PecaMedida) =>
+      [0, 1, 2].some((k) => a.min[k] > b.max[k] + 0.01 || b.min[k] > a.max[k] + 0.01);
+    for (const c of corpo)
+      for (const pano of panos) {
+        if (longe(c, pano)) continue;
+        for (const q of c.pontos) {
+          const l = pano.paraDentro(q);
+          if (!dentroDoPerfil(pano.peca.perfil ?? [], l[0], l[1])) continue;
+          // a frente do pano é o lado +z (o do corpo): nada pode ficar atrás dela
+          // o cabelo pode cair por cima da capa (atrás dela), só não pode cortar o pano
+          const cabelo = c.peca.junta === 'cabeca';
+          const meia = pano.peca.tamanho[2] / 2;
+          const entrou = cabelo ? meia - Math.abs(l[2]) : meia - l[2];
+          if (entrou > 0.003 && (!pior || entrou > pior.medida))
+            pior = { medida: entrou, peca: c.peca.nome, outra: pano.peca.nome };
+        }
+      }
+    if (pior) problemas.push({ tipo: 'capa', ...pior });
+  }
+  const rabo = plano.pecas.filter((p) => p.junta === 'rabo').map(medir);
+  for (const r of rabo)
+    for (const perna of pernas) {
+      const d = distanciaEntre(r, perna, 0.05);
+      if (d < -0.003)
+        problemas.push({ tipo: 'rabo', peca: perna.peca.nome, outra: r.peca.nome, medida: -d });
+    }
+  return problemas;
+}
+
+/** Poses de teste: parado, a passada inteira andando e correndo, pulo, voo, golpe, comer e os 8 gestos. */
+export function posesDeTeste(): Array<{
+  nome: string;
+  pose: Pose;
+  olhar: number;
+  segurando: boolean;
+}> {
+  const lista: Array<{ nome: string; pose: Pose; olhar: number; segurando: boolean }> = [];
+  const entrada = (e: Partial<EntradaPose>): EntradaPose => ({
+    andando: false,
+    correndo: false,
+    noAr: false,
+    minerando: false,
+    colocando: false,
+    tempo: 0,
+    ...e,
+  });
+  const por = (nome: string, e: Partial<EntradaPose>, olhar = 0, segurando = false) =>
+    lista.push({ nome, pose: calcularPose(entrada(e)), olhar, segurando });
+  por('parado', {});
+  for (let i = 0; i < 12; i++) {
+    const fase = (i / 12) * Math.PI * 2;
+    por(`andar ${i}`, { andando: true, passo: { fase, amplitude: AMPLITUDE_ANDAR } });
+    por(`correr ${i}`, {
+      andando: true,
+      correndo: true,
+      passo: { fase, amplitude: AMPLITUDE_CORRER },
+      inclina: 0.22,
+      roll: i % 2 ? 0.2 : -0.2,
+    });
+  }
+  por('pulo', { noAr: true, passo: { fase: 0, amplitude: 0 } });
+  por('pulo antigo', { noAr: true });
+  por('agachar', { agacha: 1, afundar: 1 });
+  for (let t = 0; t < 4; t += 0.5) por(`voar ${t}`, { voando: true, tempo: t });
+  for (const olhar of [-0.9, 0, 0.9])
+    for (let i = 0; i < 10; i++)
+      por(`minerar ${olhar} ${i}`, { minerando: true, tempo: i * 0.025 }, olhar, true);
+  por('colocar', { colocando: true, progressoColocar: 0.5 }, 0, true);
+  for (const c of [0.3, 0.6]) por(`comer ${c}`, { comendo: c, tempo: c }, 0, true);
+  for (const g of GESTOS) {
+    const dur = Number.isFinite(g.duracao) ? g.duracao : 1.5;
+    for (let f = 0.2; f <= dur; f += 0.1) {
+      const base = calcularPose(entrada({ tempo: f }));
+      lista.push({
+        nome: `${g.id} ${f.toFixed(1)}`,
+        pose: aplicarGesto(base, g.id, f),
+        olhar: 0,
+        segurando: false,
+      });
+    }
+  }
+  return lista;
+}
+
+export function girosDaPose(p: { pose: Pose; olhar: number; segurando: boolean }): GirosJuntas {
+  const r = rotacoesDaPose(p.pose, p.olhar, p.segurando);
+  return {
+    corpo: r.corpo,
+    tronco: r.tronco,
+    cabeca: r.cabeca,
+    topete: r.topete,
+    bracoD: r.bracoD,
+    bracoE: r.bracoE,
+    pernaD: r.pernaD,
+    pernaE: r.pernaE,
+    capa: r.capa,
+    saia: r.saia,
+    rabo: r.rabo,
+  };
+}
+
+/** Escala das juntas numa pose (a saia abre e achata). */
+export function escalasDaPose(p: { pose: Pose; olhar: number; segurando: boolean }): EscalasJuntas {
+  return { saia: rotacoesDaPose(p.pose, p.olhar, p.segurando).saiaEscala };
 }
