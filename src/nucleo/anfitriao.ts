@@ -34,6 +34,8 @@ export function criarAnfitriao(
     dados: inicio.dados,
     confiarNoCliente: true,
     noite: inicio.estilo?.noite,
+    // spec 016: jogando sozinho, o jogador local é o dono de tudo o que colocou
+    dono: JOGADOR_LOCAL,
   });
   nucleo.conectar(JOGADOR_LOCAL);
 

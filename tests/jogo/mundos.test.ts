@@ -76,3 +76,51 @@ describe('dados e nomes', () => {
     expect(limparNomeMundo(3)).toBe('Novo mundo');
   });
 });
+
+/** Spec 016 (decisão do dono, 11 nov 2026): os mundos de antes são apagados uma vez. */
+describe('formato dos mundos do aparelho', () => {
+  it('aparelho com mundos de antes: só os mundos saem (uma vez); o resto fica', async () => {
+    const { armazem, r } = repo();
+    // como o jogo de antes gravava: índice e dados, sem marca de formato
+    await armazem.gravar('mundos', [
+      { id: 'a', nome: 'Velho', semente: 1, modo: 'criativo', criadoEm: 1, jogadoEm: 1 },
+      {
+        id: 'b',
+        nome: 'Outro',
+        semente: 2,
+        modo: 'criativo',
+        criadoEm: 1,
+        jogadoEm: 2,
+        nuvem: 'X',
+      },
+      null,
+    ]);
+    await armazem.gravar('mundo:a', { versao: 1, edicoes: { '0,0': [[1, 7]] } });
+    await armazem.gravar('mundo:b', { versao: 1, edicoes: {} });
+    await armazem.gravar('outra-coisa', { fica: true });
+    expect(await r.prepararFormato()).toBe(2);
+    expect(await r.listar()).toEqual([]);
+    expect(armazem.dados.has('mundo:a')).toBe(false);
+    expect(armazem.dados.has('mundo:b')).toBe(false);
+    expect(await armazem.obter('outra-coisa')).toEqual({ fica: true });
+    // o mundo novo fica, e a limpeza não acontece de novo
+    const novo = await r.criar('Novo', 3, 'criativo');
+    expect(await r.prepararFormato()).toBe(0);
+    expect((await r.listar()).map((m) => m.id)).toEqual([novo.id]);
+  });
+
+  it('aparelho novo: nada a apagar, sem aviso', async () => {
+    const { r } = repo();
+    expect(await r.prepararFormato()).toBe(0);
+    const m = await r.criar('Primeiro', 1, 'criativo');
+    expect(await r.prepararFormato()).toBe(0);
+    expect((await r.listar()).map((x) => x.id)).toEqual([m.id]);
+  });
+
+  it('índice com lixo não trava a limpeza', async () => {
+    const { armazem, r } = repo();
+    await armazem.gravar('mundos', 'lixo');
+    expect(await r.prepararFormato()).toBe(0);
+    expect(await r.listar()).toEqual([]);
+  });
+});

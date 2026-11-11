@@ -6,9 +6,13 @@
 import type { DadosMundo, ModoJogo } from '../jogo/mundos';
 import type { EstiloMundo } from '../temas/tipos';
 import type { Comando, Mensagem } from '../nucleo/protocolo';
+import type { DonosExportados } from '../world/edicoes';
 
-/** Sobe quando estas mensagens mudam de formato. */
-export const VERSAO_REDE = 2;
+/**
+ * Sobe quando estas mensagens mudam de formato. 3: spec 016 (dono nos blocos e tabela de
+ * donos; o navegador de antes recebe "versão nova, recarregue").
+ */
+export const VERSAO_REDE = 3;
 /** Jogadores por mundo. */
 export const MAX_JOGADORES = 8;
 
@@ -81,6 +85,8 @@ export type RespostaServidor =
       guardado?: unknown;
       /** Edições de blocos do mundo e regiões sem povoado (o navegador monta o terreno igual). */
       edicoes: Record<string, Array<[number, number]>>;
+      /** Spec 016: quem colocou os blocos ([id, apelido] na ordem dos índices das edições). */
+      donos: DonosExportados;
       semPovoado: string[];
       /** Onde este jogador estava (ou o nascimento). */
       pos: { x: number; y: number; z: number; yaw: number; pitch: number };

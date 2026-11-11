@@ -230,6 +230,8 @@ async function abrirMundo(
             'mundos',
           );
           kv.put({ versao: 1, edicoes: {}, jogador: null, hora: -1, extras: {} }, `mundo:${id}`);
+          // spec 016: formato dos mundos de agora (senão o jogo apaga como mundo antigo)
+          kv.put(2, 'formato');
           tx.oncomplete = () => {
             db.close();
             resolve();

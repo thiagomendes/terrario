@@ -46,6 +46,13 @@ export interface ArmazemChaveValor {
 export const TAMANHO_MAXIMO_NOME_MUNDO = 32;
 export const SEMENTE_PADRAO_MUNDO = 1337;
 const CHAVE_INDICE = 'mundos';
+/**
+ * Formato dos mundos do aparelho. 2: spec 016 (o dono de cada bloco). Decisão do dono (11 nov
+ * 2026): os mundos de antes não abrem mais e são apagados uma vez; o personagem e as
+ * preferências (fora daqui, no localStorage) ficam.
+ */
+export const FORMATO_MUNDOS = 2;
+const CHAVE_FORMATO = 'formato';
 const chaveDados = (id: string) => `mundo:${id}`;
 
 export function armazemMemoria(): ArmazemChaveValor & { dados: Map<string, unknown> } {
@@ -127,6 +134,11 @@ export interface RepositorioMundos {
   marcarNuvem(id: string, codigo: string): Promise<void>;
   /** O mundo voltou da nuvem para o aparelho (spec 011): deixa de ter código. */
   desmarcarNuvem(id: string): Promise<void>;
+  /**
+   * Spec 016: apaga os mundos de um formato antigo (só os mundos) e marca o formato de agora.
+   * Devolve quantos mundos foram apagados (0 na maioria das vezes). Chamar antes de listar.
+   */
+  prepararFormato(): Promise<number>;
 }
 
 export function criarRepositorioMundos(
@@ -170,6 +182,9 @@ export function criarRepositorioMundos(
       };
       if (tema) meta.tema = tema;
       lista.push(meta);
+      // o primeiro mundo de um aparelho novo já nasce no formato de agora
+      if ((await armazem.obter(CHAVE_FORMATO)) !== FORMATO_MUNDOS)
+        await armazem.gravar(CHAVE_FORMATO, FORMATO_MUNDOS);
       await gravarIndice(lista);
       await armazem.gravar(chaveDados(id), dadosVazios());
       return meta;
@@ -207,6 +222,22 @@ export function criarRepositorioMundos(
         delete m.nuvem;
         m.jogadoEm = agora();
       });
+    },
+    async prepararFormato() {
+      const formato = await armazem.obter(CHAVE_FORMATO);
+      if (formato === FORMATO_MUNDOS) return 0;
+      // índice inteiro, mesmo com lixo: cada mundo listado sai com os dados dele
+      const bruto = await armazem.obter(CHAVE_INDICE);
+      const lista = Array.isArray(bruto) ? (bruto as Partial<MetaMundo>[]) : [];
+      let apagados = 0;
+      for (const m of lista) {
+        if (!m || typeof m.id !== 'string') continue;
+        await armazem.remover(chaveDados(m.id));
+        apagados++;
+      }
+      await armazem.remover(CHAVE_INDICE);
+      await armazem.gravar(CHAVE_FORMATO, FORMATO_MUNDOS);
+      return apagados;
     },
   };
   return repo;

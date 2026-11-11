@@ -43,6 +43,8 @@ function nuvem(modo: 'criativo' | 'sobrevivencia' = 'sobrevivencia'): Nucleo {
     versaoMundo: 2,
     confiarNoCliente: false,
     depuracao: true,
+    // como a sala na nuvem: a Ana criou o mundo (spec 016)
+    dono: 'ana',
   });
   n.conectar('ana', { perfil: { apelido: 'Ana', aparencia: {} } });
   n.conectar('bia', { perfil: { apelido: 'Bia', aparencia: {} } });

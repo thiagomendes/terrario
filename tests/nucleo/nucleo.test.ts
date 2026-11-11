@@ -35,7 +35,14 @@ function novo(modo: 'criativo' | 'sobrevivencia' = 'sobrevivencia'): {
   y: number;
   z: number;
 } {
-  const n = criarNucleo({ semente: SEMENTE, modo, versaoMundo: 2, confiarNoCliente: true });
+  // como o servidor local: o jogador local é o dono do mundo (spec 016)
+  const n = criarNucleo({
+    semente: SEMENTE,
+    modo,
+    versaoMundo: 2,
+    confiarNoCliente: true,
+    dono: 'local',
+  });
   n.conectar('local');
   const p = encontrarNascimento(SEMENTE);
   const x = Math.floor(p.x);

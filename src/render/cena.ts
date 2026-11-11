@@ -109,7 +109,9 @@ import { gerarIconesBrinquedo } from './iconesBrinquedo';
 import type { Buffers } from '../mesh/malha';
 import type { RespostaChunk, PedidoChunk } from '../workers/chunk.worker';
 import { criarProvedorBlocos } from '../world/provedor';
-import { criarEdicoes } from '../world/edicoes';
+import { criarEdicoes, donoNaCelula } from '../world/edicoes';
+import { sanearDonos } from '../nucleo/saneamento';
+import { JOGADOR_LOCAL } from '../nucleo/anfitriao';
 import { ALTURA, alturaTerreno, indice } from '../world/chunk';
 import { mirarDaCamera, posicaoColocacao, type Vec3 } from '../player/alvo';
 import { ALCANCE_MIRA, ALCANCE_TOQUE, clienteAlcanca } from '../jogo/alcance';
@@ -277,6 +279,16 @@ export interface EstadoDepuracao {
   apontar?: (yaw: number, pitch: number) => void;
   bloco?: (x: number, y: number, z: number) => number;
   meta?: (x: number, y: number, z: number) => number;
+  /**
+   * Spec 016: quem colocou o bloco (null: natural, ar ou célula sem edição), com a mesma conta do
+   * núcleo (`donoNaCelula`) na cópia do cliente.
+   */
+  donoDoBloco?: (x: number, y: number, z: number) => string | null;
+  /** Spec 016: apelido guardado de quem colocou blocos (mesmo fora do mundo agora). */
+  apelidoDoDono?: (id: string) => string | undefined;
+  /** Spec 016: id deste jogador e do dono do mundo (no aparelho, os dois são o jogador local). */
+  voce?: string;
+  donoDoMundo?: string;
   hora?: number;
   definirBloco?: (x: number, y: number, z: number, b: number, meta?: number) => boolean;
   slotAtivo?: number;
@@ -526,6 +538,11 @@ export interface OpcoesCena {
   repo?: RepositorioMundos;
   /** Conexão com o núcleo (padrão: servidor local num Web Worker). */
   conexao?: Conexao;
+  /**
+   * Spec 016, na nuvem: o id deste jogador e o do dono do mundo (para saber de quem é cada
+   * bloco). Padrão: o jogador local, dono de tudo o que colocou.
+   */
+  identidade?: { voce: string; donoDoMundo: string };
 }
 
 /** Sistema que guarda estado próprio no salvamento do mundo (inventário, vida, mapa...). */
@@ -618,6 +635,12 @@ export function criarCena(
     : criarCameraOrbita();
   const edicoes = criarEdicoes();
   if (dadosIniciais) edicoes.importar(dadosIniciais.edicoes);
+  // spec 016: quem colocou cada bloco (a tabela do núcleo; muda pelos quadros)
+  edicoes.donos.importar(sanearDonos(dadosIniciais?.extras?.['donos']));
+  const voce = opcoes.identidade?.voce ?? JOGADOR_LOCAL;
+  const donoDoMundo = opcoes.identidade?.donoDoMundo ?? JOGADOR_LOCAL;
+  /** Apelidos de quem já esteve no mundo nesta sessão (o dono não entra na tabela de donos). */
+  const apelidosVistos = new Map<string, string>();
   // mundo de antes dos povoados: na primeira carga depois deles, congela a lista de
   // regiões sem povoado (as editadas e as em volta de onde o jogador está) e salva
   // com o mundo; nas cargas seguintes vale a lista salva, então nada some nem aparece
@@ -678,13 +701,16 @@ export function criarCena(
   const cliente = criarEstadoCliente({
     conexao,
     inventario,
-    aplicarBloco: (x, y, z, b, meta) => editarBloco(x, y, z, b, meta),
+    aplicarBloco: (x, y, z, b, meta, dono) => editarBloco(x, y, z, b, meta, dono),
     aoEvento: (e) => tratarEvento(e),
     aoConteiner: (c, novo) =>
       window.dispatchEvent(
         new CustomEvent('brumaluz:conteiner', { detail: { conteiner: c, novo } }),
       ),
     aoQuadro: (q) => {
+      if (q.donos) edicoes.donos.importar(sanearDonos(q.donos));
+      if (q.perfis)
+        for (const [id, p] of Object.entries(q.perfis)) apelidosVistos.set(id, p.apelido);
       if (q.perfis) outrosJogadores.definirPerfis(q.perfis);
       if (q.jogadores) {
         // quem aparece pela primeira vez chega com festa (brilho e som)
@@ -1267,7 +1293,15 @@ export function criarCena(
   }
   /** Prevê na hora um bloco que o núcleo ainda vai confirmar. */
   const prever = (id: number, x: number, y: number, z: number, b: number, meta = 0) =>
-    cliente.prever(id, x, y, z, b, meta);
+    cliente.prever(id, x, y, z, b, meta, b === Bloco.AR ? undefined : meuIndiceDono());
+  /**
+   * Spec 016: índice do dono que este jogador recebe ao colocar (o dono do mundo é o 0; quem
+   * ainda não está na tabela fica sem previsão de dono até o núcleo mandar).
+   */
+  function meuIndiceDono(): number | undefined {
+    if (voce === donoDoMundo) return 0;
+    return edicoes.donos.procurar(voce) || undefined;
+  }
   /** Vários blocos de uma vez (construção, desfazer, espelho, testes): só no criativo. */
   function editarLote(lote: { x: number; y: number; z: number; v: number }[]): void {
     if (!lote.length) return;
@@ -1349,8 +1383,15 @@ export function criarCena(
     editarLote(lote.map((e) => ({ x: e.x, y: e.y, z: e.z, v: e[usar] })));
   }
 
-  function editarBloco(x: number, y: number, z: number, bloco: number, meta = 0): boolean {
-    if (!edicoes.definir(x, y, z, bloco, meta)) return false;
+  function editarBloco(
+    x: number,
+    y: number,
+    z: number,
+    bloco: number,
+    meta = 0,
+    dono?: number,
+  ): boolean {
+    if (!edicoes.definir(x, y, z, bloco, meta, dono)) return false;
     const cxE = Math.floor(x / TAM_X);
     const czE = Math.floor(z / TAM_Z);
     if (bloco === Bloco.AR) ocultarAteRemalhar(x, y, z, chave(cxE, czE));
@@ -1737,12 +1778,13 @@ export function criarCena(
     const b = blocoEm(x, y, z);
     const novo = alternado(b);
     const id = proximoId();
-    prever(id, x, y, z, novo, edicoes.obterMeta(x, y, z));
+    // a porta continua de quem a colocou (sem previsão de dono)
+    cliente.prever(id, x, y, z, novo, edicoes.obterMeta(x, y, z));
     for (const dy of [-1, 1]) {
       if (!ehPorta(b)) break;
       const v = blocoEm(x, y + dy, z);
       if (v === Bloco.PORTA || v === Bloco.PORTA_ABERTA)
-        prever(id, x, y + dy, z, novo, edicoes.obterMeta(x, y + dy, z));
+        cliente.prever(id, x, y + dy, z, novo, edicoes.obterMeta(x, y + dy, z));
     }
     enviarTelemetria(true);
     enviar({ t: 'usar', id, x, y, z });
@@ -1820,6 +1862,10 @@ export function criarCena(
   };
   estado.bloco = blocoEm;
   estado.meta = (x, y, z) => edicoes.obterMeta(x, y, z);
+  estado.donoDoBloco = (x, y, z) => donoNaCelula(edicoes, x, y, z, donoDoMundo);
+  estado.apelidoDoDono = (id) => apelidosVistos.get(id) ?? edicoes.donos.apelido(id);
+  estado.voce = voce;
+  estado.donoDoMundo = donoDoMundo;
   estado.definirBloco = (x, y, z, b, meta) => {
     if (valorEm(x, y, z) === empacotar(b, meta ?? 0)) return false;
     editarLote([{ x, y, z, v: empacotar(b, meta ?? 0) }]);

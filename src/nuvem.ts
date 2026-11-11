@@ -392,6 +392,8 @@ export function dadosDaSala(bv: BemVindo): { mundo: MetaMundo; dados: DadosMundo
       hora: -1,
       extras: {
         povoados: { semPovoado: bv.semPovoado },
+        // spec 016: quem colocou os blocos (a cena monta a cópia com os mesmos donos)
+        ...(bv.donos.length ? { donos: bv.donos } : {}),
         ...(g.diario ? { diario: g.diario } : {}),
         ...(g.marcadores ? { marcadores: g.marcadores } : {}),
       },

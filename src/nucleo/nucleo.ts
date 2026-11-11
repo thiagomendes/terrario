@@ -9,8 +9,8 @@
  */
 import { registrarCatalogo } from '../jogo/catalogo';
 import { normalizarAparencia } from '../personagem/aparencia';
-import { sanearDadosMundo } from './saneamento';
-import { blocoDe, criarEdicoes, empacotar } from '../world/edicoes';
+import { sanearDadosMundo, sanearDonos } from './saneamento';
+import { blocoDe, criarEdicoes, donoNaCelula, empacotar } from '../world/edicoes';
 import { Bloco, ehAlvo, luzDoBloco, obterBloco } from '../world/blocks';
 import { ALCANCE_REGRAS, alcancaDosOlhos } from '../jogo/alcance';
 import { criarCacheGeracional } from './mundo';
@@ -140,6 +140,12 @@ export interface OpcoesNucleo {
    * criar o núcleo (o servidor só conhece o estilo; cada sala guarda a sua aqui).
    */
   noite?: 'assusta' | 'mansa';
+  /**
+   * Spec 016: id do dono do mundo (na nuvem, quem criou a sala; no servidor local, o jogador
+   * local). O que ele coloca não entra na tabela de donos: edição sem dono é dele, e assim
+   * o "levar para a nuvem" já fica com o dono certo.
+   */
+  dono?: string;
 }
 
 /**
@@ -194,6 +200,8 @@ interface Jogador {
   passoAparencia: number;
   /** Auditoria 017: a última aparência que chegou dentro da janela (aplicada quando ela fecha). */
   aparenciaPendente: Record<string, unknown> | null;
+  /** Spec 016: versão da tabela de donos que este jogador já recebeu (-1: nenhuma). */
+  versaoDonos: number;
   /** Para as criaturas (o mesmo objeto a cada passo: os ataques dizem em quem foi). */
   corpo: {
     x: number;
@@ -219,6 +227,9 @@ export function criarNucleo(op: OpcoesNucleo) {
 
   const edicoes = criarEdicoes();
   if (dados) edicoes.importar(dados.edicoes);
+  // quem colocou cada bloco (fora o dono do mundo): a posição na lista é o índice nas edições
+  edicoes.donos.importar(sanearDonos(extras['donos']));
+  const donoDoMundo = op.dono ?? null;
 
   // mundo de antes dos povoados: na primeira carga depois deles, congela a lista de
   // regiões sem povoado (as editadas e as em volta de onde o jogador está) e salva
@@ -406,6 +417,7 @@ export function criarNucleo(op: OpcoesNucleo) {
       passoGesto: -Infinity,
       passoAparencia: -Infinity,
       aparenciaPendente: null,
+      versaoDonos: -1,
       perfil: oc?.perfil ?? { apelido: 'Jogador', aparencia: {} },
       constroi: oc?.constroi ?? true,
       corpo: { x, y: y0, z, vivo: true, criativo: modo === 'criativo', mao: null },
@@ -428,6 +440,8 @@ export function criarNucleo(op: OpcoesNucleo) {
     });
     for (const o of jogadores.values())
       o.eventos.push({ e: 'entrou', id, apelido: j.perfil.apelido });
+    // o apelido guardado com os blocos dele segue o atual (o aviso diz o nome de agora)
+    edicoes.donos.renomear(id, j.perfil.apelido);
     jogadores.set(id, j);
     perfisSujos = true;
   }
@@ -459,11 +473,30 @@ export function criarNucleo(op: OpcoesNucleo) {
     return d;
   }
 
-  function editar(x: number, y: number, z: number, bloco: number, meta = 0): boolean {
+  /** Índice do dono para as edições: o dono do mundo é o 0 (não entra na tabela). */
+  function indiceDe(id: string): number {
+    if (id === donoDoMundo) return 0;
+    return edicoes.donos.indice(id, jogadores.get(id)?.perfil.apelido);
+  }
+
+  /**
+   * Muda um bloco. `dono`: quem colocou (o bloco passa a ser dele); sem ele, a célula fica
+   * com o dono que já tinha (porta que abre, fornalha que acende, planta que cresce). Ar
+   * nunca tem dono.
+   */
+  function editar(
+    x: number,
+    y: number,
+    z: number,
+    bloco: number,
+    meta = 0,
+    dono?: string,
+  ): boolean {
     const antes = mundo.bloco(x, y, z);
-    if (!edicoes.definir(x, y, z, bloco, meta)) return false;
+    if (!edicoes.definir(x, y, z, bloco, meta, dono === undefined ? undefined : indiceDe(dono)))
+      return false;
     if (luzDoBloco(antes) > 0 || luzDoBloco(bloco) > 0) esquecerLuzPerto(x, y, z);
-    blocosMudados.push({ x, y, z, v: empacotar(bloco, meta) });
+    blocosMudados.push({ x, y, z, v: edicoes.obterValor(x, y, z) ?? empacotar(bloco, meta) });
     // a lavoura que cresce: entra ao ser plantada, sai quando amadurece ou some
     const k = `${x},${y},${z}`;
     if (ehLavoura(bloco) && !madura(bloco)) {
@@ -486,7 +519,13 @@ export function criarNucleo(op: OpcoesNucleo) {
   }
 
   function corrigir(j: Jogador, x: number, y: number, z: number): void {
-    j.correcoes.push({ x, y, z, v: empacotar(mundo.bloco(x, y, z), edicoes.obterMeta(x, y, z)) });
+    // o valor inteiro, com o dono (o cliente guarda o mesmo que o núcleo)
+    j.correcoes.push({
+      x,
+      y,
+      z,
+      v: edicoes.obterValor(x, y, z) ?? empacotar(mundo.bloco(x, y, z)),
+    });
   }
 
   function perto(j: Jogador, x: number, y: number, z: number, raio: number): boolean {
@@ -583,7 +622,8 @@ export function criarNucleo(op: OpcoesNucleo) {
       recusar(j, c.id, 'arar', [c, { x, y: y + 1, z }]);
       return;
     }
-    editar(x, y, z, Bloco.TERRA_ARADA);
+    // a terra arada é de quem arou (a lavoura dele)
+    editar(x, y, z, Bloco.TERRA_ARADA, 0, j.id);
     if (acima !== Bloco.AR) {
       editar(x, y + 1, z, Bloco.AR);
       // a flor ou a grama alta que sai solta o que soltaria quebrada (sorteios do plantio,
@@ -763,9 +803,10 @@ export function criarNucleo(op: OpcoesNucleo) {
       recusar(j, c.id, lav && livre && !plantavel ? 'semente' : 'colocar', celulas);
       return;
     }
-    editar(x, y, z, bloco, meta);
+    // spec 016: o bloco guarda quem o colocou
+    editar(x, y, z, bloco, meta, j.id);
     // a metade de cima da porta (já conferida: ar, planta baixa ou água)
-    if (metade) editar(x, y + 1, z, bloco, meta);
+    if (metade) editar(x, y + 1, z, bloco, meta, j.id);
     if (modo === 'sobrevivencia') j.inventario.remover(c.slot, 1);
     j.acoes[1]++;
     for (const o of jogadores.values())
@@ -795,11 +836,11 @@ export function criarNucleo(op: OpcoesNucleo) {
     for (const e of c.lote) {
       const b = e.v & 255;
       if (ehLavoura(b)) plantas.push(e);
-      else editar(e.x, e.y, e.z, b, (e.v >> 8) & 255);
+      else editar(e.x, e.y, e.z, b, (e.v >> 8) & 255, j.id);
     }
     for (const e of plantas) {
       if (mundo.bloco(e.x, e.y - 1, e.z) === Bloco.TERRA_ARADA)
-        editar(e.x, e.y, e.z, e.v & 255, (e.v >> 8) & 255);
+        editar(e.x, e.y, e.z, e.v & 255, (e.v >> 8) & 255, j.id);
       else corrigir(j, e.x, e.y, e.z);
     }
   }
@@ -1625,6 +1666,13 @@ export function criarNucleo(op: OpcoesNucleo) {
       if (!j.iniciado) {
         q.primeiro = true;
         j.iniciado = true;
+        // tabela vazia não precisa ir no começo (é o que o cliente já supõe)
+        if (j.versaoDonos < 0 && edicoes.donos.tamanho === 0) j.versaoDonos = edicoes.donos.versao;
+      }
+      // spec 016: a tabela de donos inteira quando muda (pequena; quem chega recebe no começo)
+      if (j.versaoDonos !== edicoes.donos.versao) {
+        q.donos = edicoes.donos.exportar();
+        j.versaoDonos = edicoes.donos.versao;
       }
       const blocos = [...blocosMudados, ...j.correcoes];
       if (blocos.length) q.blocos = blocos;
@@ -1670,6 +1718,8 @@ export function criarNucleo(op: OpcoesNucleo) {
       conteineres: conteineres.salvar(),
       lavoura: Object.fromEntries([...lavoura].map(([k, c]) => [k, Math.round(c.p * 100) / 100])),
     };
+    // spec 016: quem colocou blocos (fora o dono); mundo sem amigos grava igual a antes
+    if (edicoes.donos.tamanho > 0) out['donos'] = edicoes.donos.exportar();
     // na nuvem cada jogador é salvo à parte (dadosJogador); localmente vai junto do mundo
     if (j && confiar) {
       out['sobrevivencia'] = j.sobrevivencia.salvar();
@@ -1704,13 +1754,29 @@ export function criarNucleo(op: OpcoesNucleo) {
       j.transitoSujo = true;
       j.conteinerSujo = true;
       j.ultimaSobrevivencia = '';
+      // a tabela de donos vai de novo (a conexão nova pode ser outro navegador)
+      j.versaoDonos = -1;
       perfisSujos = true;
     },
     definirPerfil(id: string, perfil: PerfilJogador) {
       const j = jogadores.get(id);
       if (!j) return;
       j.perfil = perfil;
+      edicoes.donos.renomear(id, perfil.apelido);
       perfisSujos = true;
+    },
+    /** Spec 016: id do dono do mundo (null: o núcleo não sabe; tudo vai para a tabela). */
+    donoDoMundo,
+    /**
+     * Spec 016: quem colocou o bloco desta célula (null: terreno natural, ar ou célula sem
+     * edição). O cliente faz a mesma conta com `donoNaCelula` na cópia dele.
+     */
+    donoDoBloco(x: number, y: number, z: number): string | null {
+      return donoNaCelula(edicoes, x, y, z, donoDoMundo);
+    },
+    /** Apelido guardado de quem colocou blocos (mesmo fora do mundo agora). */
+    apelidoDoDono(id: string): string | undefined {
+      return jogadores.get(id)?.perfil.apelido ?? edicoes.donos.apelido(id);
     },
     get quantos() {
       return jogadores.size;

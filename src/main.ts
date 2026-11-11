@@ -56,9 +56,16 @@ import {
 import { ligarContextoPerdido } from './render/contexto';
 import { ehMundoNovo } from './ui/sugestaoFantasia';
 
+/** Spec 016: aviso de uma vez só (os mundos de antes foram apagados), junto da boas-vindas. */
+let avisoMundosNovos: string | null = null;
+
 async function iniciar(app: HTMLElement): Promise<void> {
   registrarCatalogo();
   const repo = criarRepositorioMundos(armazemIndexedDB());
+  // spec 016 (decisão do dono, 11 nov 2026): os mundos de antes não abrem mais; apagados uma
+  // vez só (o personagem e as preferências ficam). Falhando, o jogo segue com o que tiver.
+  const apagados = await repo.prepararFormato().catch(() => 0);
+  if (apagados > 0) avisoMundosNovos = 'Os mundos começaram de novo! Bora construir?';
   const params = new URLSearchParams(location.search);
   // mundo com amigos: ?sala=CÓDIGO (link, QR Code ou "Entrar com código")
   const sala = params.get('sala');
@@ -173,6 +180,7 @@ async function iniciar(app: HTMLElement): Promise<void> {
     repo: emPrevia || nuvem ? undefined : repo,
     config,
     conexao: nuvem?.conexao,
+    identidade: nuvem ? { voce: nuvem.bv.voce, donoDoMundo: nuvem.bv.sala.dono } : undefined,
   });
   // sair da página solta a placa de vídeo antes (no iPhone a página nova pode não ter memória)
   const engine = cena.engine;
@@ -440,6 +448,8 @@ function ligarStatus(
   const avisar = () => {
     if (avisou) return;
     avisou = true;
+    if (avisoMundosNovos) notificar(avisoMundosNovos);
+    avisoMundosNovos = null;
     const toque = modoToque();
     notificar(tema().textos.boasVindas);
     notificar(
