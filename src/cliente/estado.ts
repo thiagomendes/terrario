@@ -14,6 +14,7 @@ import type { EstadoClima } from '../jogo/clima';
 import type { EstadoSobrevivencia } from '../jogo/sobrevivencia';
 import type { Comando, EventoNucleo, Mensagem, Quadro, SalvoNucleo } from '../nucleo/protocolo';
 import type { Conexao } from './conexao';
+import { indiceDonoDe } from '../world/edicoes';
 import {
   criarReplicaCriaturas,
   criarReplicaItens,
@@ -24,8 +25,18 @@ import {
 export interface OpcoesEstadoCliente {
   conexao: Conexao;
   inventario: Inventario;
-  /** Aplica um bloco na cópia local (e refaz a malha). Devolve se mudou. */
-  aplicarBloco(x: number, y: number, z: number, bloco: number, meta: number): boolean;
+  /**
+   * Aplica um bloco na cópia local (e refaz a malha). Devolve se mudou. `dono`: índice do dono
+   * que o núcleo mandou (spec 016); nas previsões não vem e a célula fica com o que tinha.
+   */
+  aplicarBloco(
+    x: number,
+    y: number,
+    z: number,
+    bloco: number,
+    meta: number,
+    dono?: number,
+  ): boolean;
   aoEvento?(e: EventoNucleo): void;
   /** Contêiner aberto mudou (novo: acabou de abrir). */
   aoConteiner?(c: ConteinerReplica | null, novo: boolean): void;
@@ -66,9 +77,18 @@ export function criarEstadoCliente(op: OpcoesEstadoCliente) {
   let conteiner: ConteinerReplica | null = null;
   let ultimoAckTransacao = 0;
 
-  function prever(id: number, x: number, y: number, z: number, b: number, meta = 0): boolean {
+  /** `dono`: índice do dono previsto (quem coloca prevê que é dele; sem: fica o da célula). */
+  function prever(
+    id: number,
+    x: number,
+    y: number,
+    z: number,
+    b: number,
+    meta = 0,
+    dono?: number,
+  ): boolean {
     pendentes.set(celula(x, y, z), id);
-    return op.aplicarBloco(x, y, z, b, meta);
+    return op.aplicarBloco(x, y, z, b, meta, dono);
   }
 
   function aplicar(q: Quadro): void {
@@ -81,7 +101,7 @@ export function criarEstadoCliente(op: OpcoesEstadoCliente) {
     for (const [k, id] of pendentes) if (id <= q.ack) pendentes.delete(k);
     for (const b of q.blocos ?? []) {
       if (pendentes.has(celula(b.x, b.y, b.z))) continue;
-      op.aplicarBloco(b.x, b.y, b.z, b.v & 255, (b.v >> 8) & 255);
+      op.aplicarBloco(b.x, b.y, b.z, b.v & 255, (b.v >> 8) & 255, indiceDonoDe(b.v));
     }
     if (q.criaturas) criaturas.receber(q.criaturas);
     if (q.itens) itens.receber(q.itens);

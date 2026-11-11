@@ -9,7 +9,14 @@ import type { Slot } from '../jogo/inventario';
 import { obterItem } from '../jogo/itens';
 import type { Comando, MudancaSlot, Pos } from './protocolo';
 import type { DadosMundo } from '../jogo/mundos';
-import type { EdicoesExportadas } from '../world/edicoes';
+import {
+  MAX_DONOS,
+  VALOR_MAXIMO,
+  indiceDonoDe,
+  semDono,
+  type DonosExportados,
+  type EdicoesExportadas,
+} from '../world/edicoes';
 import { ehGesto } from '../personagem/gestos';
 import { normalizarAparencia } from '../personagem/aparencia';
 
@@ -322,6 +329,7 @@ export function sanearExtras(e: unknown): Record<string, unknown> {
     const sp = out.spawn;
     if (!(objeto(sp) && xz(sp.x) && xz(sp.z))) delete out.spawn;
   }
+  if ('donos' in out) out.donos = sanearDonos(out.donos);
   if ('povoados' in out) {
     const p = objeto(out.povoados) ? out.povoados : {};
     if (Array.isArray(p.semPovoado))
@@ -348,23 +356,55 @@ export function sanearEdicoes(ed: unknown): EdicoesExportadas {
         Array.isArray(p) &&
         p.length === 2 &&
         inteiro(p[0], 0, 16 * 16 * 128 - 1) &&
-        inteiro(p[1], 0, 65535),
+        inteiro(p[1], 0, VALOR_MAXIMO),
     );
     if (boas.length) out[k] = boas;
   }
   return out;
 }
 
+/** Id de quem joga (o mesmo formato que o servidor aceita na entrada). */
+const ID_DONO = /^[A-Za-z0-9_-]{1,64}$/;
+
+/**
+ * Spec 016: a tabela de donos (quem colocou blocos) passada a limpo. A posição de cada um é
+ * o índice gravado nas edições, então entrada que não serve vira lugar vazio (vale o dono do
+ * mundo), sem mexer na posição das outras; id repetido também.
+ */
+export function sanearDonos(d: unknown): DonosExportados {
+  if (!Array.isArray(d)) return [];
+  const vistos = new Set<string>();
+  return d.slice(0, MAX_DONOS).map((e): [string, string] => {
+    const par = Array.isArray(e) ? (e as unknown[]) : [];
+    const id = par[0];
+    if (typeof id !== 'string' || !ID_DONO.test(id) || vistos.has(id)) return ['', ''];
+    vistos.add(id);
+    const apelido = typeof par[1] === 'string' ? par[1].slice(0, 22) : '';
+    return [id, apelido];
+  });
+}
+
+/** Edições com índice de dono fora da tabela ficam com o dono do mundo (índice 0). */
+function donosDentroDaTabela(ed: EdicoesExportadas, tamanho: number): void {
+  for (const lista of Object.values(ed))
+    for (let i = 0; i < lista.length; i++)
+      if (indiceDonoDe(lista[i][1]) > tamanho) lista[i] = [lista[i][0], semDono(lista[i][1])];
+}
+
 /** O mundo salvo inteiro (de um aparelho): edições, jogador e extras dentro dos limites. */
 export function sanearDadosMundo(d: unknown): DadosMundo {
   const o = objeto(d) ? (d as Partial<DadosMundo>) : {};
+  const edicoes = sanearEdicoes(o.edicoes);
+  const extras = sanearExtras(o.extras);
+  const donos = Array.isArray(extras.donos) ? (extras.donos as DonosExportados) : [];
+  donosDentroDaTabela(edicoes, donos.length);
   return {
     ...o,
     versao: 1,
-    edicoes: sanearEdicoes(o.edicoes),
+    edicoes,
     jogador: posicaoSalvaValida(o.jogador ?? null),
     // a hora vai de 0 a 1 (negativa: o núcleo começa na hora de sempre)
     hora: finito(o.hora) && o.hora >= 0 && o.hora < 1 ? o.hora : -1,
-    extras: sanearExtras(o.extras),
+    extras,
   };
 }

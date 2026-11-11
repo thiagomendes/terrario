@@ -22,7 +22,16 @@ export interface Sala extends EstadoSala {
   expulsos?: string[];
 }
 
+/**
+ * Formato dos mundos guardados. Spec 016 (decisão do dono, 11 nov 2026): os mundos de antes
+ * (sem dono nos blocos) não abrem mais; o Storage é limpo na publicação e o que sobrar é
+ * ignorado.
+ */
+export const FORMATO_MUNDO = 2;
+
 export interface MundoGuardado {
+  /** Formato (FORMATO_MUNDO); os de antes da spec 016 não têm. */
+  formato?: number;
   mundo: MundoNuvem;
   hora: number;
   extras: Record<string, unknown>;

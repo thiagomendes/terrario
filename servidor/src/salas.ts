@@ -23,7 +23,7 @@ import {
   type PedidoCliente,
   type RespostaServidor,
 } from '../../src/rede/protocolo';
-import { regiaoDe, type Armazem, type Sala } from './armazem';
+import { FORMATO_MUNDO, regiaoDe, type Armazem, type MundoGuardado, type Sala } from './armazem';
 
 /** O que o gerenciador precisa de uma conexão (WebSocket de verdade ou de teste). */
 export interface Canal {
@@ -171,6 +171,15 @@ export function criarGerenciador(op: OpcoesGerenciador) {
     } else e.n = Math.max(0, e.n + d);
   }
 
+  /**
+   * O mundo guardado, só se for do formato de agora (spec 016: os de antes foram apagados; um
+   * que sobrou é como se não existisse, e o código dá a recusa de sempre).
+   */
+  async function lerMundoAtual(id: string): Promise<MundoGuardado | null> {
+    const g = await armazem.lerMundo(id);
+    return g && g.formato === FORMATO_MUNDO ? g : null;
+  }
+
   async function carregar(codigo: string): Promise<SalaAtiva | null> {
     // código de um mundo que voltou para o aparelho do dono: não reabre (nem por corrida)
     if (devolvidos.has(codigo)) return null;
@@ -181,7 +190,7 @@ export function criarGerenciador(op: OpcoesGerenciador) {
     const p = (async () => {
       const sala = await armazem.lerSala(codigo);
       if (!sala) return null;
-      const g = await armazem.lerMundo(sala.mundoId);
+      const g = await lerMundoAtual(sala.mundoId);
       if (!g) return null;
       const regioes = await armazem.lerRegioes(sala.mundoId);
       const edicoes: DadosMundo['edicoes'] = {};
@@ -215,6 +224,8 @@ export function criarGerenciador(op: OpcoesGerenciador) {
       depuracao: op.depuracao ?? false,
       // spec 013: a criatura da noite deste mundo (cada sala guarda a sua)
       noite: mundo.estilo.noite,
+      // spec 016: o que o dono coloca (e o que veio do aparelho dele) é do dono
+      dono: sala.dono,
     });
     const s: SalaAtiva = {
       sala,
@@ -400,6 +411,7 @@ export function criarGerenciador(op: OpcoesGerenciador) {
     s.vaziaDesde = null;
     s.sala.acessadoEm = agora();
     deCanal.set(canal, { sala: s, id: jog.id });
+    const edicoes = s.nucleo.estado.edicoes;
     enviar(canal, {
       t: 'bemvindo',
       mundo: s.mundo,
@@ -407,7 +419,8 @@ export function criarGerenciador(op: OpcoesGerenciador) {
       voce: jog.id,
       instancia: s.instancia,
       guardado: guardados.get(`${s.mundo.id}/${jog.id}`),
-      edicoes: s.nucleo.estado.edicoes.exportar(),
+      edicoes: edicoes.exportar(),
+      donos: edicoes.donos.exportar(),
       semPovoado: [...s.nucleo.semPovoado],
       pos: (() => {
         const t = s.nucleo.estado.jogadores.get(jog.id)!.tel;
@@ -632,6 +645,7 @@ export function criarGerenciador(op: OpcoesGerenciador) {
       throw e;
     }
     await armazem.gravarMundo(s.mundo.id, {
+      formato: FORMATO_MUNDO,
       mundo: s.mundo,
       hora: salvo.hora,
       extras: salvo.extras,
@@ -772,7 +786,7 @@ export function criarGerenciador(op: OpcoesGerenciador) {
     const sala = ativa?.sala ?? (await armazem.lerSala(codigo));
     if (!sala) return null;
     contar(erros, ip, -1);
-    const mundo = ativa?.mundo ?? (await armazem.lerMundo(sala.mundoId))?.mundo;
+    const mundo = ativa?.mundo ?? (await lerMundoAtual(sala.mundoId))?.mundo;
     if (!mundo) return null;
     const apelidoDe = (id: string) => ativa?.nucleo.estado.jogadores.get(id)?.perfil.apelido;
     const dono =

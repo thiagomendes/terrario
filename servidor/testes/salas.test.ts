@@ -1,7 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { criarGerenciador, type Canal } from '../src/salas';
 import { armazemMemoria } from '../src/armazem';
-import { ESTILO_PADRAO, alturaTerreno } from '../../src/world/chunk';
+import { ESTILO_PADRAO, alturaTerreno, indice } from '../../src/world/chunk';
+import { Bloco } from '../../src/world/blocks';
+import { empacotar } from '../../src/world/edicoes';
+import { gerarCodigo } from '../../src/jogo/codigos';
 import { VERSAO_REDE, type RespostaServidor } from '../../src/rede/protocolo';
 import { VERSAO_PROTOCOLO, type Quadro } from '../../src/nucleo/protocolo';
 
@@ -655,5 +658,197 @@ describe('o servidor aguenta mensagem de quem quer estragar', () => {
     await avancar(200);
     const colocados = quadros(a).flatMap((q) => q.blocos ?? []);
     expect(colocados.length).toBeGreaterThan(100);
+  });
+});
+
+/** Spec 016, T02: quem colocou cada bloco, na sala da nuvem (e para o navegador de antes). */
+describe('dono do bloco na nuvem', () => {
+  const entrarComo = (id: string, extra: object) =>
+    JSON.stringify({ t: 'entrar', versao: VERSAO_REDE, jogador: ident(id), ...extra });
+  const bemvindo = (c: ReturnType<typeof canal>) =>
+    c.recebidas.find((m) => m.t === 'bemvindo') as Extract<RespostaServidor, { t: 'bemvindo' }>;
+  const valores = (e: Record<string, Array<[number, number]>>) =>
+    Object.values(e).flatMap((l) => l.map(([, v]) => v));
+
+  /** Mundo do aparelho da Ana: um bloco dela (sem dono) e um do Caio (de uma sala antiga). */
+  const doAparelho = {
+    versao: 1,
+    edicoes: {
+      '0,0': [
+        [indice(1, 70, 1), Bloco.TABUAS],
+        [indice(2, 70, 1), empacotar(Bloco.TABUAS, 0, 1)],
+      ],
+    },
+    jogador: null,
+    hora: 0.4,
+    extras: { donos: [['caio', 'Caio']] },
+  };
+
+  async function levada() {
+    const s = servidor();
+    const a = canal();
+    await s.g.receber(a, entrarComo('ana', { criar: { ...criarMundo, dados: doAparelho } }));
+    const codigo = bemvindo(a).sala.codigo;
+    return { ...s, a, codigo, nucleo: () => s.g.ativas.get(codigo)!.nucleo };
+  }
+
+  it('levar para a nuvem: o que era do aparelho é da dona; o do amigo segue dele', async () => {
+    const { a, nucleo } = await levada();
+    expect(nucleo().donoDoBloco(1, 70, 1)).toBe('ana');
+    expect(nucleo().donoDoBloco(2, 70, 1)).toBe('caio');
+    const bv = bemvindo(a);
+    expect(bv.donos).toEqual([['caio', 'Caio']]);
+    expect(valores(bv.edicoes)).toContain(empacotar(Bloco.TABUAS, 0, 1));
+  });
+
+  it('a amiga coloca: as duas veem o dono no bloco e a tabela nova', async () => {
+    const { g, a, codigo, nucleo, avancar } = await levada();
+    const b = canal('5.6.7.8');
+    await g.receber(b, entrarComo('bia', { codigo }));
+    await avancar(300);
+    const j = nucleo().estado.jogadores.get('bia')!;
+    const x = Math.floor(j.tel.x) + 2;
+    const z = Math.floor(j.tel.z);
+    const y = Math.floor(j.tel.y);
+    nucleo().estado.edicoes.definir(x, y, z, Bloco.AR);
+    await g.receber(
+      b,
+      JSON.stringify({
+        t: 'colocar',
+        id: 1,
+        x,
+        y,
+        z,
+        bloco: Bloco.TABUAS,
+        meta: 0,
+        slot: 0,
+        seq: 1,
+      }),
+    );
+    await avancar(200);
+    expect(nucleo().donoDoBloco(x, y, z)).toBe('bia');
+    const daBia = empacotar(Bloco.TABUAS, 0, 2);
+    const viu = (c: ReturnType<typeof canal>) =>
+      quadros(c)
+        .flatMap((q) => q.blocos ?? [])
+        .find((bl) => bl.x === x && bl.y === y && bl.z === z);
+    expect(viu(a)?.v).toBe(daBia);
+    expect(viu(b)?.v).toBe(daBia);
+    for (const c of [a, b])
+      expect(
+        quadros(c)
+          .map((q) => q.donos)
+          .filter(Boolean)
+          .at(-1),
+      ).toEqual([
+        ['caio', 'Caio'],
+        ['bia', 'bia'],
+      ]);
+  });
+
+  it('navegador de antes da 016 recebe "versão nova" (não quebra no formato novo)', async () => {
+    const { g, codigo } = await levada();
+    const velho = canal('7.7.7.7');
+    await g.receber(
+      velho,
+      JSON.stringify({ t: 'entrar', versao: 2, jogador: ident('caio'), codigo }),
+    );
+    expect(velho.recebidas).toEqual([{ t: 'recusado', motivo: 'versao' }]);
+    expect(velho.fechado()).toBe(true);
+  });
+
+  it('sala e mundo guardados antes da 016: o código não existe (e a prévia também não)', async () => {
+    const s = servidor();
+    const velhoCodigo = gerarCodigo(() => 0.3);
+    await s.armazem.gravarSala({
+      codigo: velhoCodigo,
+      mundoId: 'velho',
+      dono: 'ana',
+      chaveDono: 'x',
+      fechado: false,
+      constroem: true,
+      criadoEm: 0,
+      acessadoEm: 0,
+    });
+    await s.armazem.gravarMundo('velho', {
+      mundo: { id: 'velho', ...criarMundo },
+      hora: 0.3,
+      extras: {},
+    });
+    expect(await s.g.previa(velhoCodigo, '9.9.9.9')).toBeNull();
+    const a = canal();
+    await s.g.receber(a, entrarComo('ana', { codigo: velhoCodigo }));
+    expect(a.recebidas).toEqual([{ t: 'recusado', motivo: 'codigo' }]);
+    expect(s.g.ativas.size).toBe(0);
+  });
+
+  it('grava, dorme e acorda com os mesmos donos; devolver leva a tabela para o aparelho', async () => {
+    const { g, a, codigo, armazem, nucleo, avancar } = await levada();
+    const b = canal('5.6.7.8');
+    await g.receber(b, entrarComo('bia', { codigo }));
+    await avancar(300);
+    const j = nucleo().estado.jogadores.get('bia')!;
+    const x = Math.floor(j.tel.x) + 2;
+    const z = Math.floor(j.tel.z);
+    const y = Math.floor(j.tel.y);
+    nucleo().estado.edicoes.definir(x, y, z, Bloco.AR);
+    await g.receber(
+      b,
+      JSON.stringify({
+        t: 'colocar',
+        id: 1,
+        x,
+        y,
+        z,
+        bloco: Bloco.TABUAS,
+        meta: 0,
+        slot: 0,
+        seq: 1,
+      }),
+    );
+    await avancar(6000);
+    const mundoId = g.ativas.get(codigo)!.mundo.id;
+    expect((await armazem.lerMundo(mundoId))!.extras.donos).toEqual([
+      ['caio', 'Caio'],
+      ['bia', 'bia'],
+    ]);
+    g.caiu(a);
+    g.caiu(b);
+    await avancar(95_000);
+    expect(g.ativas.has(codigo)).toBe(false);
+    const a2 = canal();
+    await g.receber(a2, entrarComo('ana', { codigo }));
+    expect(nucleo().donoDoBloco(x, y, z)).toBe('bia');
+    expect(nucleo().donoDoBloco(1, 70, 1)).toBe('ana');
+    expect(nucleo().donoDoBloco(2, 70, 1)).toBe('caio');
+    expect(bemvindo(a2).donos).toEqual([
+      ['caio', 'Caio'],
+      ['bia', 'bia'],
+    ]);
+    await avancar(200);
+    await g.receber(a2, JSON.stringify({ t: 'dono', acao: 'devolver' }));
+    const dev = a2.recebidas.find((m) => m.t === 'devolvido') as Extract<
+      RespostaServidor,
+      { t: 'devolvido' }
+    >;
+    expect(dev.dados.extras.donos).toEqual([
+      ['caio', 'Caio'],
+      ['bia', 'bia'],
+    ]);
+    expect(valores(dev.dados.edicoes)).toContain(empacotar(Bloco.TABUAS, 0, 2));
+  });
+
+  it('dono malformado vindo do aparelho não derruba nem rouba: entra limpo', async () => {
+    const s = servidor();
+    const a = canal();
+    const ruim = {
+      ...doAparelho,
+      edicoes: { '0,0': [[indice(3, 70, 1), empacotar(Bloco.TABUAS, 0, 77)]] },
+      extras: { donos: 'lixo' },
+    };
+    await s.g.receber(a, entrarComo('ana', { criar: { ...criarMundo, dados: ruim } }));
+    const n = s.g.ativas.get(bemvindo(a).sala.codigo)!.nucleo;
+    expect(n.donoDoBloco(3, 70, 1)).toBe('ana');
+    expect(bemvindo(a).donos).toEqual([]);
   });
 });
