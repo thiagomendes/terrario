@@ -1,7 +1,7 @@
 ---
 id: 019-som-vivo
 title: 'Som vivo: trilhas que acompanham o mundo e vozes de verdade para os bichos'
-status: DRAFT
+status: IN_PROGRESS
 base_branch: main
 branch: feat/som-vivo
 created_at: 2026-11-11T12:00:00Z
@@ -62,3 +62,13 @@ Recomendado depois da 016 e antes da 014: 017 → 016 → **019** → 014 → 01
 
 ## Esboço
 `referencia/sons.html`, https://claude.ai/artifact/9FjUNAaG9PJg1U47wMzbUW: página para ouvir o hoje e a proposta lado a lado, por tema e por contexto, e as vozes dos bichos.
+
+## Fases e tarefas
+| # | Tarefa |
+|---|---|
+| T01 | Inventário de todo o som do jogo: tabela com o que existe, como soa hoje, a proposta e o estado |
+| T02 | Esboço grande, todo pré-gravado: música dos 7 temas em camadas e frases; vozes de todos os bichos e moradores dos 7 temas; golpes; ambiente. Aprovação do dono |
+| T03 | Motor de som gravado no jogo: baixa por tema e guarda; camadas e frases montadas na hora conforme o mundo; só abre o que toca e solta ao sair; metas de memória e download; o mundo nunca espera a música |
+| T04 | Vozes e golpes gravados no jogo, com variações e teto de vozes |
+| T05 | Revisão do resto do inventário (ações, mundo, interface) e régua de volume para todos |
+| T06 | Desempenho e memória (teste WebKit), testes de tela, auditoria, publicação e relatório visual |
