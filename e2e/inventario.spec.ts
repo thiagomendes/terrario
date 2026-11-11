@@ -370,11 +370,21 @@ test('nuvem, celular: arrastar com o dedo o que fabricou', async ({ browser }) =
   await d.tocar(await centro(page, slot(quatro)));
   await assentar(page);
   await d.tocar({ x: 6, y: 6 });
-  await assentar(page);
-  s = await estado(page);
+  // as tábuas vão para o chão (logo: passados 2 s, quem jogou pode pegar de volta se
+  // estiverem perto, num morro)
+  await expect
+    .poll(
+      () =>
+        page.evaluate(() =>
+          window.__brumaluz!.itensNoChao!()
+            .filter((i) => i.item === 'bloco:7')
+            .reduce((t, i) => t + i.qtd, 0),
+        ),
+      { timeout: 1800, intervals: [100] },
+    )
+    .toBe(4);
   expect(await page.evaluate(() => document.body.dataset.overlay)).toBe('inventario');
-  expect(s.naMao).toBe(false);
-  expect(s.tabuas).toBe(t0.tabuas - 4);
+  expect((await estado(page)).naMao).toBe(false);
   await d.tocar({ x: 6, y: 6 });
   await expect.poll(() => page.evaluate(() => document.body.dataset.overlay ?? '')).toBe('');
   expect(erros).toEqual([]);

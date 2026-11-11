@@ -120,6 +120,28 @@ async function dedo(page: Page) {
   };
 }
 
+/** Laje de pedra com ar em cima, em volta do jogador (o item cai no plano). */
+async function laje(page: Page, raio = 6) {
+  await page.evaluate(async (raio) => {
+    const e = window.__brumaluz!;
+    const espera = (ms: number) => new Promise((r) => setTimeout(r, ms));
+    const [x0, , z0] = e.posicao!;
+    const fx = Math.floor(x0);
+    const fz = Math.floor(z0);
+    e.teleportar!(fx + 0.5, fz + 0.5);
+    await espera(1500);
+    const fy = Math.floor(e.posicao![1]);
+    for (let dx = -raio; dx <= raio; dx++)
+      for (let dz = -raio; dz <= raio; dz++) {
+        e.definirBloco!(fx + dx, fy - 1, fz + dz, 45);
+        for (let dy = 0; dy < 4; dy++) e.definirBloco!(fx + dx, fy + dy, fz + dz, 0);
+      }
+    e.teleportar!(fx + 0.5, fz + 0.5, fy);
+    await espera(600);
+    await e.sincronizar!();
+  }, raio);
+}
+
 /** O item caiu na frente do boneco (no sentido para onde o corpo olha). */
 async function naFrente(page: Page, item: string) {
   return page.evaluate((item) => {
@@ -177,7 +199,8 @@ test('computador: Soltar no chão, fora da janela, Q e Ctrl+Q', async ({ browser
   await page.mouse.click(30, 360);
   await expect.poll(() => overlay(page)).toBe('');
 
-  // 6. Q joga um do que está na mão, para a frente do boneco
+  // 6. Q joga um do que está na mão, para a frente do boneco (num chão plano)
+  await laje(page);
   await page.keyboard.press('Digit4');
   await page.keyboard.press('KeyQ');
   await expect.poll(() => noChao(page, 'bloco:4')).toBe(1);

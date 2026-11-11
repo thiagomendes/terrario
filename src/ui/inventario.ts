@@ -78,8 +78,8 @@ export const CSS_INVENTARIO = `
 body[data-modo='criativo'] .slot-inv .qtd { display: none; }
 /* jogar no chão (dar a um amigo): área tracejada, acende com algo na mão */
 .inventario .soltar-chao {
-  display: flex; align-items: center; justify-content: center; gap: 10px; min-height: 48px;
-  padding: 6px 16px; border: 3px dashed var(--painel-borda); border-radius: 16px;
+  display: flex; align-items: center; justify-content: center; gap: 10px; min-height: 44px;
+  padding: 4px 16px; border: 3px dashed var(--painel-borda); border-radius: 16px;
   background: transparent; color: var(--tinta-suave); font: 800 0.95rem var(--jogo);
   cursor: pointer; touch-action: none; -webkit-touch-callout: none; user-select: none; -webkit-user-select: none;
   transition: background 0.1s ease, border-color 0.1s ease, color 0.1s ease;
@@ -89,6 +89,8 @@ body[data-modo='criativo'] .slot-inv .qtd { display: none; }
 .inventario .soltar-chao.pronto:hover { background: #fff1c4; }
 .inventario .soltar-chao:focus-visible { outline: 3px solid var(--azul); outline-offset: 1px; }
 .ajuda-inv, .ajuda-inv-toque { font-size: 0.78rem; font-weight: 600; color: var(--tinta-suave); }
+/* as dicas quebram linha na largura das grades (não alargam a janela) */
+.ajuda-inv, .ajuda-inv-toque { width: 0; min-width: 100%; }
 `;
 
 /** Teclado virtual (iOS): ao focar, o campo rola para a área visível. */
@@ -182,12 +184,12 @@ export function criarInventarioUI(raiz: HTMLElement, op: OpcoesInventarioUI): In
   const ajuda = document.createElement('div');
   ajuda.className = 'ajuda-inv';
   ajuda.textContent =
-    'Clique: pegar e soltar · Botão direito: metade ou um · Shift+clique: mover rápido · Fora da janela ou em Soltar no chão: jogar para um amigo · Q no jogo: jogar um · E ou Esc: fechar';
+    'Clique: pegar e soltar · Botão direito: metade ou um · Shift+clique: mover rápido · Clique fora ou em Soltar no chão: dar a um amigo · Q no jogo: jogar um · E ou Esc: fechar';
   // no toque (sem teclas): a linha própria aparece no lugar da de mouse/teclado
   const ajudaToque = document.createElement('div');
   ajudaToque.className = 'ajuda-inv-toque ajuda-toque';
   ajudaToque.textContent =
-    'Toque: pegar e soltar · Segure: metade ou um · Dois toques: mover rápido · Arraste até outro espaço para soltar · Arraste até Soltar no chão (ou para fora) para dar a um amigo · No jogo, segure um espaço da barra: joga um';
+    'Toque: pegar e soltar · Segure: metade ou um · Dois toques: mover rápido · Arraste até outro espaço para soltar · Arraste até Soltar no chão (ou para fora): dar a um amigo · No jogo, segure um item da barra: joga um';
   // jogar no chão: dar um item a um amigo, como no Minecraft
   const soltarChao = document.createElement('button');
   soltarChao.type = 'button';
