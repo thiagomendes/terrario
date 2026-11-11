@@ -127,6 +127,12 @@ test('criar com amigos, entrar pelo link e pelo código, e parar de jogar com am
   // sem segundo "Jogar": já está no mundo
   await expect(caio.locator('.entrada')).toBeHidden();
   await expect(caio.locator('[data-tela-entrar]')).toHaveCount(0);
+  // entrou direto (sem toque nesta página): a tela cheia entra no primeiro clique no jogo
+  expect(await caio.evaluate(() => !!document.fullscreenElement)).toBe(false);
+  await caio.mouse.click(400, 300);
+  await expect
+    .poll(() => caio.evaluate(() => !!document.fullscreenElement), { timeout: 5_000 })
+    .toBe(true);
   await expect(ana.locator('[data-botao-amigos]')).toHaveAttribute('data-quantos', '3', {
     timeout: 5_000,
   });

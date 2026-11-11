@@ -15,7 +15,7 @@ import { CSS_PIXICONES, icone, modoToque, type NomeIcone } from './pixicones';
 import { CSS_TITULO, desenharLogo, desenharPrevia } from './titulo';
 import { CSS_CONFIG, criarPainelConfig } from './configuracoes';
 import { CSS_PAUSA, criarMenuPausa } from './pausa';
-import { entrarTelaCheia } from './telaCheia';
+import { entrarTelaCheia, telaCheiaNoPrimeiroToque } from './telaCheia';
 import type { GerenciadorConfig } from '../jogo/config';
 import type { MetaMundo, RepositorioMundos } from '../jogo/mundos';
 
@@ -704,6 +704,8 @@ export function criarInterface(
     comecarSemTitulo() {
       jogoIniciado = true;
       entrada.hidden = true;
+      // sem toque não dá para pedir tela cheia: ela entra no primeiro toque no jogo
+      telaCheiaNoPrimeiroToque(() => opMundo.config?.atual.telaCheia ?? true);
     },
     /** Dentro de um toque (o "Começar a jogar" do convite): tela cheia e mouse preso. */
     entrarNoJogo() {

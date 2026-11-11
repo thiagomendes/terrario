@@ -79,6 +79,28 @@ export function entrarTelaCheia(): void {
   }
 }
 
+/**
+ * Quando o jogo começa sem um toque (entrar direto na sala pelo convite ou pelo código), o
+ * navegador não deixa pôr em tela cheia na hora: ela entra no primeiro toque, clique ou tecla
+ * no jogo. `quer` confere a configuração naquele momento. No iPhone a página não tem tela
+ * cheia (só instalada na tela de início), então não faz nada.
+ */
+export function telaCheiaNoPrimeiroToque(quer: () => boolean): void {
+  if (typeof document === 'undefined' || !podeAlternarTelaCheia()) return;
+  const eventos = ['pointerup', 'touchend', 'keydown'] as const;
+  const soltar = () => {
+    for (const ev of eventos) document.removeEventListener(ev, aoGesto, true);
+  };
+  function aoGesto(e: Event): void {
+    if (e instanceof KeyboardEvent && (e.key === 'Escape' || e.repeat)) return;
+    const alvo = e.target;
+    if (alvo instanceof HTMLInputElement || alvo instanceof HTMLTextAreaElement) return;
+    soltar();
+    if (quer() && !emTelaCheia()) entrarTelaCheia();
+  }
+  for (const ev of eventos) document.addEventListener(ev, aoGesto, true);
+}
+
 export function sairTelaCheia(): void {
   if (!emTelaCheia()) return;
   const d = document as DocWebkit;
