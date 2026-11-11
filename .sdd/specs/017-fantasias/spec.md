@@ -1,7 +1,7 @@
 ---
 id: 017-fantasias
 title: 'Fantasias prontas: princesas, heróis e fantasias dos temas'
-status: IN_PROGRESS
+status: DONE
 base_branch: main
 branch: feat/fantasias
 created_at: 2026-11-10T16:00:00Z
