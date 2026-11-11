@@ -70,11 +70,14 @@ describe('motor de áudio', () => {
     await motor.ativar();
     expect(ctx.compressores).toHaveLength(1);
     expect(ctx.compressores[0].conectados).toContain(ctx.destination);
-    expect(ctx.gains).toHaveLength(4);
+    // mestre + efeitos, passos, ambiente e vozes (spec 019)
+    expect(ctx.gains).toHaveLength(5);
     const ganhos = ctx.gains.slice(1).map((g) => g.gain.value);
     expect(ganhos[2]).toBeLessThanOrEqual(1);
     expect(ganhos[2]).toBeGreaterThan(0);
     expect(ganhos[0]).toBeGreaterThan(ganhos[1]);
+    // as vozes no mesmo ganho dos efeitos, onde iam antes
+    expect(ganhos[3]).toBe(ganhos[0]);
     const mestre = ctx.gains[0];
     expect(motor.alternarMudo()).toBe(true);
     expect(mestre.gain.value).toBe(0);

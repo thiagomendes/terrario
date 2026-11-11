@@ -153,6 +153,16 @@ const ABAS: Record<Aba, { titulo: string; itens: Def[] }> = {
       },
       {
         tipo: 'faixa',
+        chave: 'volumeVozes',
+        nome: 'Vozes',
+        dica: 'Bichos e moradores',
+        min: 0,
+        max: 1,
+        passo: 0.05,
+        formato: pct,
+      },
+      {
+        tipo: 'faixa',
         chave: 'volumeMusica',
         nome: 'Música',
         min: 0,

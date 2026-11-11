@@ -485,3 +485,36 @@ Notas sobre o resumo:
 - `perigo` só toca no modo sobrevivência.
 - `terra(areia)` quer dizer que o tema troca a receita de terra pela de areia
   (`exploracao-lunar/index.ts:79`).
+
+## T04: vozes e golpes gravados no jogo (11 nov 2026)
+
+Tocador em `src/audio/vozesGravadas.ts`, ligado na cena. O que cada momento toca agora:
+
+| Momento | Agora | Gatilho |
+|---|---|---|
+| chamado do bicho (sorteio de 5 a 14 s) | 'chamado' gravado, pela distância | `chamadosCriaturas` na cena |
+| chamado do bicho criado ou domado | 'contente' gravado em 70% das vezes, 'chamado' no resto (bug 5) | idem |
+| golpe no bicho (`criaturaFerida`) | baque do material e do porte do bicho no índice (`pelo`, `pena`, `pano`, `gelatina`, `agua`, `lata`, `crocante` × pequeno, médio, grande) e, 60 ms depois, o "ai" gravado. Nada de cristal nem de terra (bugs 1, 2 e 4) | `tratarEvento` |
+| derrota (`criaturaMorreu`) | "puf" do porte, "plop" do peixe, robô desmontando (Lua e Planeta) (bug 3) | idem |
+| criatura da noite por perto | 'chamado' gravado da noturna do tema, também no Bruma (bug 6) | idem |
+| domou, ganhou comida (carinho) | 'contente' gravado | idem |
+| botou ovo | 'chamado' gravado do coelho (a galinha do Rancho cacareja) | idem |
+| morador: falar (clique) | 'cumprimento' (conjunto A, voz do gênero do morador) | clique de uso |
+| morador: golpe (vira "oi") ou ferido | 'surpresa' | `atacarNaMira`, `criaturaFerida` |
+| morador: acena de volta (015) | 'cumprimento' | `gestoDoMorador` |
+| morador: chamado de longe | 'cumprimento' pela distância | `chamadosCriaturas` |
+| morador: troca feita | 'obrigado' na primeira troca da conversa, 'contente' nas seguintes | `brumaluz:trocou` |
+| morador: troca recusada (faltam itens) | 'surpresa' gentil: volume 0,7 e tom 0,92 (bug 17) | `brumaluz:trocaRecusada` |
+
+- **Filhote:** fica sem uso. O bicho criado é o mesmo bicho adulto (a vaca criada tem o
+  tamanho da vaca), e um "bezerro" saindo da vaca grande soaria errado. As vozes de filhote
+  ficam no pacote para quando houver um bicho bebê de verdade.
+- **Grupo 'vozes'** no motor (ganho 1, o mesmo dos efeitos onde as vozes iam) e controle
+  "Vozes" em Configurações → Áudio (padrão 100%; quem tinha baixado os efeitos começa no mesmo
+  valor). Baque e derrota ficam no grupo 'efeitos', como o golpe e a quebra de antes.
+- **Reserva:** até o pacote chegar (2,5 s depois de abrir o mundo, em segundo plano), ou se
+  ele falhar, toca a voz sintetizada de antes. O golpe da reserva é o baque de terra (nunca o
+  vidro) e a derrota da reserva é o susto sintetizado (nunca o arbusto).
+- **Teto:** 8 vozes do tocador (a mais velha esmaece em 30 ms), dentro das 12 do motor.
+  Espera mínima entre dois toques do mesmo momento do mesmo bicho (chamado 2 s, susto 0,5 s,
+  "ai" 0,18 s...).

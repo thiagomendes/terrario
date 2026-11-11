@@ -1,11 +1,16 @@
-import { CRIATURAS } from '../jogo/criaturas';
+import { CRIATURAS, type TipoSer } from '../jogo/criaturas';
 import { saindoPorConta } from '../pagina';
 import { povoadosPerto } from '../jogo/povoados';
-import { nomeDoMorador } from '../temas/nomes';
+import { generoDoMorador, nomeDoMorador } from '../temas/nomes';
 import { definirRegioesSemPovoado, regiaoDoChunk } from '../world/povoado';
 import { encontrarNascimento } from '../world/chunk';
 import { povoadoDoTema, tema } from '../temas/ativo';
-import { tocarVoz } from '../audio/sons';
+import {
+  criarVozesGravadas,
+  type GeneroVoz,
+  type MomentoBicho,
+  type MomentoMorador,
+} from '../audio/vozesGravadas';
 import { construirMapaEmissivo } from './emissivo';
 import { criarTintaProtecao } from './tintaProtecao';
 import {
@@ -440,6 +445,12 @@ export interface EstadoDepuracao {
     z: number,
     extra?: { criado?: boolean; domada?: boolean },
   ) => void;
+  /** Spec 019 (só nos testes de tela): golpeia o bicho pelo núcleo, como o clique faz. */
+  atacarCriatura?: (id: number) => void;
+  /** Spec 019 (só nos testes de tela): as vozes e golpes que tocaram (`gravada:ai:cervo`...). */
+  sonsTocados?: () => string[];
+  /** Spec 019 (só nos testes de tela): o pacote de vozes do tema. */
+  vozesGravadas?: () => { pronto: boolean; falhou: boolean; decodificadas: number };
   /** Testes que constroem: põe o kit de blocos na barra (o mundo novo começa vazio). */
   darKit?: () => void;
   /** Testes e capturas: a lavoura avança como se tantos segundos tivessem passado. */
@@ -1898,7 +1909,9 @@ export function criarCena(
       );
       enviarTelemetria(true);
       enviar({ t: 'falar', criatura: naMira.id });
-      tocarVoz(motorAudio, 'morador', 'contente', 1);
+      moradorDaTroca = naMira.id;
+      trocasNaVisita = 0;
+      vozMorador(naMira, 'cumprimento');
       return;
     }
     if (naMira && viraCriado(naMira.tipo) && comeEsse(naMira.tipo, p?.item)) {
@@ -2988,6 +3001,69 @@ export function criarCena(
     () => (contextoPreparado() ?? new AudioContext()) as unknown as ContextoAudio,
   );
   ligarAudio(barramento, motorAudio);
+  // spec 019: vozes gravadas dos bichos e dos moradores, o baque do golpe e o "puf" da derrota.
+  // O pacote do tema desce em segundo plano depois que o mundo abriu (nunca segura o mundo);
+  // até chegar, ou se não vier, fica a voz sintetizada de antes.
+  const sonsTocados: string[] = [];
+  const vozes = criarVozesGravadas({
+    motor: motorAudio,
+    tema: temaAtual.id,
+    base: import.meta.env.BASE_URL ?? '/',
+    reserva: {
+      bicho: (slot, m) => temaAtual.vozes[slot]?.[m === 'ai' ? 'susto' : m],
+      morador: (m) => {
+        const v = povoadoDoTema().vozes;
+        return m === 'cumprimento' ? v.contente : m === 'surpresa' ? v.susto : v[m];
+      },
+      // sem o pacote: o baque abafado de sempre (nunca o vidro)
+      golpe: () => void tocarSom(motorAudio, 'golpe', 'terra'),
+    },
+    // só nos testes de tela: o que tocou, para conferir sem ouvir
+    aoTocar: ehTesteDeTela()
+      ? (id) => {
+          sonsTocados.push(id);
+          if (sonsTocados.length > 300) sonsTocados.shift();
+        }
+      : undefined,
+  });
+  setTimeout(() => vozes.carregar(), 2500);
+  // saiu do mundo: solta o pacote e as fatias; voltou pelo histórico (cache da página): baixa de novo
+  window.addEventListener('pagehide', () => vozes.liberar());
+  window.addEventListener('pageshow', (ev) => {
+    if (ev.persisted) vozes.carregar();
+  });
+  if (ehTesteDeTela()) {
+    estado.sonsTocados = () => sonsTocados.slice();
+    estado.atacarCriatura = (id) => {
+      enviarTelemetria(true);
+      enviar({ t: 'atacar', criatura: id, slot: hotbar.ativo });
+    };
+    estado.vozesGravadas = () => ({
+      pronto: vozes.pronto,
+      falhou: vozes.falhou,
+      decodificadas: vozes.decodificadas,
+    });
+  }
+  /** O morador da conversa aberta e quantas trocas ela já teve (obrigado e depois contente). */
+  let moradorDaTroca = 0;
+  let trocasNaVisita = 0;
+  /** Voz do bicho (gravada, ou a sintetizada enquanto o pacote não chegou). */
+  const vozBicho = (c: { id: number; tipo: TipoSer }, momento: MomentoBicho, volume = 1) => {
+    if (c.tipo !== 'morador') vozes.bicho(c.tipo, momento, { volume, quem: c.id });
+  };
+  /** Voz do morador no gênero dele (conjunto A do esboço). */
+  const vozMorador = (
+    c: { id: number; morador?: { povoado: string; n: number; profissao: Profissao } } | undefined,
+    momento: MomentoMorador,
+    volume = 1,
+    tom = 1,
+  ) => {
+    const g: GeneroVoz =
+      c?.morador && generoDoMorador(c.morador.povoado, c.morador.n, c.morador.profissao) === 'm'
+        ? 'masculino'
+        : 'feminino';
+    vozes.morador(g, momento, { volume, quem: c?.id ?? 'morador', tom });
+  };
   const detector = criarDetectorMovimento();
   let ambiente: Ambiente | null = null;
   let perigoPerto = false;
@@ -3169,6 +3245,7 @@ export function criarCena(
     motorAudio.definirVolume('geral', c.volumeGeral);
     motorAudio.definirVolume('efeitos', c.volumeEfeitos);
     motorAudio.definirVolume('passos', c.volumeEfeitos);
+    motorAudio.definirVolume('vozes', c.volumeVozes);
     configAtual = c;
     ambiente?.definirVolumes(c.volumeMusica, c.volumeAmbiente);
     controle.definirMouse(c.sensibilidade, c.inverterY);
@@ -3245,7 +3322,9 @@ export function criarCena(
     gestoDoMorador: (id, g, voz) => {
       renderCriaturas.gesto(id, g);
       const c = criaturaPorId(id);
-      if (voz && c) tocarVoz(motorAudio, 'morador', 'contente', volumeDaDistancia(c));
+      // o morador acena de volta (a resposta do núcleo é sempre o aceno): "oi!"
+      if (voz && c)
+        vozMorador(c, g === 'acenar' ? 'cumprimento' : 'contente', volumeDaDistancia(c));
     },
   });
   estado.gestos = {
@@ -3279,10 +3358,11 @@ export function criarCena(
     const c = criaturaApontada();
     if (!c) return false;
     if (c.morador) {
-      // morador não apanha: o golpe vira um "oi" (e ele vira para o jogador)
+      // morador não apanha: o golpe vira um "oi" (e ele vira para o jogador), com um "opa!"
+      // de quem levou um susto
       enviarTelemetria(true);
       enviar({ t: 'falar', criatura: c.id });
-      tocarVoz(motorAudio, 'morador', 'contente', 1);
+      vozMorador(c, 'surpresa');
       return true;
     }
     // spec 016: o bichinho criado ou domado do amigo não apanha (o núcleo confere igual)
@@ -3428,7 +3508,16 @@ export function criarCena(
   };
   // chamados de vez em quando: no máximo um a cada poucos segundos, de um bicho por perto
   // obrigado do morador depois de uma troca
-  window.addEventListener('brumaluz:trocou', () => tocarVoz(motorAudio, 'morador', 'obrigado', 1));
+  // (a primeira troca da conversa ganha "obrigado"; as seguintes, o contente, para não repetir)
+  window.addEventListener('brumaluz:trocou', () => {
+    const c = criaturaPorId(moradorDaTroca);
+    vozMorador(c, trocasNaVisita++ === 0 ? 'obrigado' : 'contente');
+  });
+  // troca recusada (faltam itens): um "hum?" gentil, mais baixo e um tiquinho mais grave
+  window.addEventListener('brumaluz:trocaRecusada', (ev) => {
+    if ((ev as CustomEvent<string>).detail !== 'faltam') return;
+    vozMorador(criaturaPorId(moradorDaTroca), 'surpresa', 0.7, 0.92);
+  });
   // chegar perto de um povoado pela primeira vez nesta visita: aviso e diário
   const povoadosAvisados = new Set<string>();
   let esperaAvisoPovoado = 2;
@@ -3472,7 +3561,10 @@ export function criarCena(
     );
     if (perto.length === 0) return;
     const c = perto[Math.floor(rngVozes() * perto.length)];
-    tocarVoz(motorAudio, c.tipo, c.domada ? 'contente' : 'chamado', volumeDaDistancia(c));
+    const v = volumeDaDistancia(c);
+    // o morador cumprimenta de longe; o bicho criado ou domado chama contente quase sempre
+    if (c.tipo === 'morador') vozMorador(c, 'cumprimento', v);
+    else vozBicho(c, (c.domada || c.criado) && rngVozes() < 0.7 ? 'contente' : 'chamado', v);
   };
   quadroCriaturas = (dt: number, tempo: number) => {
     relogioCache += dt;
@@ -3993,24 +4085,32 @@ export function criarCena(
         toast(`${obterItem(e.item)?.nome ?? 'Ferramenta'} quebrou!`);
         break;
       case 'criaturaFerida': {
+        // spec 019: o baque do material e do porte do bicho e o "ai" dele (nada de vidro)
         const c = criaturaPorId(e.id);
-        tocarSom(motorAudio, 'golpe', e.tipo === 'espectro' ? 'cristal' : 'terra');
-        if (c) tocarVoz(motorAudio, e.tipo, 'susto', volumeDaDistancia(c));
+        const v = c ? Math.max(0.35, volumeDaDistancia(c)) : 1;
+        // o morador não se machuca: só leva um susto ("opa!")
+        if (e.tipo === 'morador') vozMorador(c, 'surpresa', v);
+        else vozes.golpe(e.tipo, { volume: v, quem: e.id });
         break;
       }
       case 'criaturaMorreu':
-        if (e.tipo === 'espectro' && temaAtual.id === 'bruma-e-luz')
-          tocarSom(motorAudio, 'espectro');
-        else if (e.tipo === 'espectro') tocarVoz(motorAudio, 'espectro', 'susto', 1);
-        else tocarSom(motorAudio, 'quebra', 'folhagem');
+        // spec 019: "puf" fofo ("plop" no peixe, robô desmontando na Lua), em vez do arbusto
+        if (e.tipo !== 'morador') {
+          const c = criaturaPorId(e.id);
+          vozes.derrota(e.tipo, {
+            volume: c ? Math.max(0.35, volumeDaDistancia(c)) : 1,
+            quem: e.id,
+          });
+        }
         if (e.drops) window.dispatchEvent(new CustomEvent('brumaluz:derrotou', { detail: e.tipo }));
         break;
       case 'criaturaSom': {
         const c = criaturaPorId(e.id);
         if (!c || Math.hypot(c.x - camera.position.x, c.z - camera.position.z) >= 20) break;
-        // o gemido de sempre no Bruma e Luz; nos outros temas, a voz da noturna do tema
-        if (temaAtual.id === 'bruma-e-luz') tocarSom(motorAudio, 'espectro');
-        else tocarVoz(motorAudio, 'espectro', 'chamado', Math.max(0.4, volumeDaDistancia(c)));
+        // a voz gravada da noturna do tema (o Espectro da bruma também: o "uuuh" dele); sem o
+        // pacote, o gemido de sempre no Bruma e Luz e a voz sintetizada nos outros
+        if (temaAtual.id === 'bruma-e-luz' && !vozes.pronto) tocarSom(motorAudio, 'espectro');
+        else vozBicho(c, 'chamado', Math.max(0.4, volumeDaDistancia(c)));
         const ang =
           Math.atan2(c.x - camera.position.x, c.z - camera.position.z) - camera.rotation.y;
         const rel = Math.atan2(Math.sin(ang), Math.cos(ang));
@@ -4033,12 +4133,13 @@ export function criarCena(
         tocarSom(motorAudio, 'entrada');
         toast(`${CRIATURAS.raposa.nome} confia em você!`);
         window.dispatchEvent(new CustomEvent('brumaluz:domou'));
-        tocarVoz(motorAudio, e.tipo, 'contente', 1);
+        if (e.tipo !== 'morador') vozes.bicho(e.tipo, 'contente', { quem: 'domou' });
         break;
       case 'alimentou': {
         // corações em quem ganhou comida (todos veem); o diário é de quem deu
         coracoes.soltar(e.x, e.y + CRIATURAS[e.tipo].alt + 0.2, e.z, e.novo ? 6 : 3);
-        tocarVoz(motorAudio, e.tipo, 'contente', e.meu ? 1 : volumeDaDistancia(e));
+        if (e.tipo !== 'morador')
+          vozes.bicho(e.tipo, 'contente', { volume: e.meu ? 1 : volumeDaDistancia(e), quem: e.id });
         if (e.meu && e.novo) {
           tocarSom(motorAudio, 'coleta');
           toast(`${CRIATURAS[e.tipo].nome} virou seu bichinho!`);
@@ -4051,7 +4152,7 @@ export function criarCena(
         break;
       case 'botouOvo':
         if (volumeDaDistancia(e) > 0.2)
-          tocarVoz(motorAudio, 'coelho', 'chamado', volumeDaDistancia(e));
+          vozes.bicho('coelho', 'chamado', { volume: volumeDaDistancia(e), quem: 'ovo' });
         break;
       case 'espantou':
         window.dispatchEvent(new CustomEvent('brumaluz:espantou', { detail: e.tipo }));

@@ -33,6 +33,16 @@ describe('config', () => {
     expect(normalizarConfig(null)).toEqual(CONFIG_PADRAO);
   });
 
+  it('volume das vozes (spec 019): padrão 100%, limitado, e quem baixou os efeitos começa igual', () => {
+    expect(CONFIG_PADRAO.volumeVozes).toBe(1);
+    expect(normalizarConfig({ volumeVozes: 3 }).volumeVozes).toBe(1);
+    expect(normalizarConfig({ volumeVozes: -1 }).volumeVozes).toBe(0);
+    expect(normalizarConfig({ volumeVozes: 0.4, volumeEfeitos: 0.9 }).volumeVozes).toBe(0.4);
+    // configuração de antes da spec 019: as vozes iam nos efeitos
+    expect(normalizarConfig({ volumeEfeitos: 0.3 }).volumeVozes).toBe(0.3);
+    expect(normalizarConfig({ volumeVozes: 'alto' }).volumeVozes).toBe(1);
+  });
+
   it('carrega o padrão com JSON quebrado e persiste alterações', () => {
     const a = memoria();
     a.setItem('terrario:config', '{quebrado');

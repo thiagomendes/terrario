@@ -736,7 +736,7 @@ export function tocarVoz(
         ? undefined
         : tema().vozes[tipo]?.[momento];
   if (!pio) return false;
-  return motor.tocar(desenharVoz(pio, Math.min(1, volume), rngSom()), { grupo: 'efeitos' });
+  return motor.tocar(desenharVoz(pio, Math.min(1, volume), rngSom()), { grupo: 'vozes' });
 }
 
 export interface Ambiente {

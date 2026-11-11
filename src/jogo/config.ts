@@ -5,6 +5,8 @@ export type Qualidade = 'baixa' | 'media' | 'alta' | 'ultra';
 export interface Config {
   volumeGeral: number;
   volumeEfeitos: number;
+  /** Vozes dos bichos e dos moradores (spec 019: grupo próprio, antes iam nos efeitos). */
+  volumeVozes: number;
   volumeMusica: number;
   volumeAmbiente: number;
   /** Multiplicador da sensibilidade do mouse (1 = padrão). */
@@ -39,6 +41,7 @@ export const CHAVE_CONFIG_ANTIGA = 'brumaluz:config';
 export const CONFIG_PADRAO: Config = {
   volumeGeral: 0.8,
   volumeEfeitos: 1,
+  volumeVozes: 1,
   volumeMusica: 0.6,
   volumeAmbiente: 0.8,
   sensibilidade: 1,
@@ -78,6 +81,8 @@ export function normalizarConfig(entrada: unknown): Config {
   return {
     volumeGeral: faixa(o.volumeGeral, 0, 1, p.volumeGeral),
     volumeEfeitos: faixa(o.volumeEfeitos, 0, 1, p.volumeEfeitos),
+    // quem já tinha baixado os efeitos (as vozes iam junto) não leva um susto: começa igual
+    volumeVozes: faixa(o.volumeVozes, 0, 1, faixa(o.volumeEfeitos, 0, 1, p.volumeVozes)),
     volumeMusica: faixa(o.volumeMusica, 0, 1, p.volumeMusica),
     volumeAmbiente: faixa(o.volumeAmbiente, 0, 1, p.volumeAmbiente),
     sensibilidade: faixa(o.sensibilidade, ...LIMITES.sensibilidade, p.sensibilidade),

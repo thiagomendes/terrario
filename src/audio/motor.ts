@@ -1,5 +1,6 @@
 export type EstadoAudio = 'inativo' | 'ativo' | 'bloqueado';
-export type GrupoAudio = 'efeitos' | 'passos' | 'ambiente';
+/** Spec 019: as vozes dos bichos e dos moradores têm grupo próprio (antes iam nos efeitos). */
+export type GrupoAudio = 'efeitos' | 'passos' | 'ambiente' | 'vozes';
 
 export const MAX_VOZES = 12;
 
@@ -73,6 +74,8 @@ const GANHOS_PADRAO: Record<GrupoAudio, number> = {
   efeitos: 1,
   passos: 0.6,
   ambiente: 0.7,
+  // o mesmo ganho dos efeitos, onde as vozes iam até a spec 019: soam como antes
+  vozes: 1,
 };
 
 interface Voz {
@@ -95,7 +98,7 @@ export function criarMotorAudio(fabrica: FabricaContexto, opcoes: OpcoesMotor = 
   let grupos: Record<GrupoAudio, NoAudio & { gain: ParametroAudio }> | null = null;
   let volumeGeral = 1;
   let filtroAbafado: { frequency: ParametroAudio } | null = null;
-  const volumes: Record<GrupoAudio, number> = { efeitos: 1, passos: 1, ambiente: 1 };
+  const volumes: Record<GrupoAudio, number> = { efeitos: 1, passos: 1, ambiente: 1, vozes: 1 };
   const vozes: Voz[] = [];
 
   function montarBus(c: ContextoAudio) {
@@ -123,7 +126,12 @@ export function criarMotorAudio(fabrica: FabricaContexto, opcoes: OpcoesMotor = 
     };
     m.gain.value = volumeGeral;
     mestre = m;
-    grupos = { efeitos: criar('efeitos'), passos: criar('passos'), ambiente: criar('ambiente') };
+    grupos = {
+      efeitos: criar('efeitos'),
+      passos: criar('passos'),
+      ambiente: criar('ambiente'),
+      vozes: criar('vozes'),
+    };
   }
 
   function encerrar(voz: Voz) {
