@@ -7,15 +7,7 @@ import {
   aparenciaPadrao,
   aplicarCorpo,
 } from '../../src/personagem/aparencia';
-import {
-  planoBoneco,
-  rotacoesDaPose,
-  topoBoneco,
-  type PlanoBoneco,
-} from '../../src/personagem/boneco';
-import { GESTOS, aplicarGesto } from '../../src/personagem/gestos';
-import { calcularPose, type EntradaPose, type Pose } from '../../src/personagem/poses';
-import { AMPLITUDE_ANDAR, AMPLITUDE_CORRER } from '../../src/personagem/vida';
+import { planoBoneco, topoBoneco, type PlanoBoneco } from '../../src/personagem/boneco';
 import { moradorDeBrinquedo } from '../../src/render/moradorBoneco';
 import '../../src/temas/todos';
 import { obterTema, temasDisponiveis } from '../../src/temas';
@@ -27,73 +19,10 @@ import {
   conferirEncaixe,
   conferirMembros,
   distanciaEntre,
+  girosDaPose,
   medirPeca,
-  type GirosJuntas,
+  posesDeTeste,
 } from './encaixe';
-
-/** Poses de teste: parado, a passada inteira andando e correndo, pulo, voo, golpe, comer e os 8 gestos. */
-function posesDeTeste(): Array<{ nome: string; pose: Pose; olhar: number; segurando: boolean }> {
-  const lista: Array<{ nome: string; pose: Pose; olhar: number; segurando: boolean }> = [];
-  const entrada = (e: Partial<EntradaPose>): EntradaPose => ({
-    andando: false,
-    correndo: false,
-    noAr: false,
-    minerando: false,
-    colocando: false,
-    tempo: 0,
-    ...e,
-  });
-  const por = (nome: string, e: Partial<EntradaPose>, olhar = 0, segurando = false) =>
-    lista.push({ nome, pose: calcularPose(entrada(e)), olhar, segurando });
-  por('parado', {});
-  for (let i = 0; i < 12; i++) {
-    const fase = (i / 12) * Math.PI * 2;
-    por(`andar ${i}`, { andando: true, passo: { fase, amplitude: AMPLITUDE_ANDAR } });
-    por(`correr ${i}`, {
-      andando: true,
-      correndo: true,
-      passo: { fase, amplitude: AMPLITUDE_CORRER },
-      inclina: 0.22,
-      roll: i % 2 ? 0.2 : -0.2,
-    });
-  }
-  por('pulo', { noAr: true, passo: { fase: 0, amplitude: 0 } });
-  por('pulo antigo', { noAr: true });
-  por('agachar', { agacha: 1, afundar: 1 });
-  for (let t = 0; t < 4; t += 0.5) por(`voar ${t}`, { voando: true, tempo: t });
-  for (const olhar of [-0.9, 0, 0.9])
-    for (let i = 0; i < 10; i++)
-      por(`minerar ${olhar} ${i}`, { minerando: true, tempo: i * 0.025 }, olhar, true);
-  por('colocar', { colocando: true, progressoColocar: 0.5 }, 0, true);
-  for (const c of [0.3, 0.6]) por(`comer ${c}`, { comendo: c, tempo: c }, 0, true);
-  for (const g of GESTOS) {
-    const dur = Number.isFinite(g.duracao) ? g.duracao : 1.5;
-    for (let f = 0.2; f <= dur; f += 0.1) {
-      const base = calcularPose(entrada({ tempo: f }));
-      lista.push({
-        nome: `${g.id} ${f.toFixed(1)}`,
-        pose: aplicarGesto(base, g.id, f),
-        olhar: 0,
-        segurando: false,
-      });
-    }
-  }
-  return lista;
-}
-
-function girosDaPose(p: { pose: Pose; olhar: number; segurando: boolean }): GirosJuntas {
-  const r = rotacoesDaPose(p.pose, p.olhar, p.segurando);
-  return {
-    corpo: r.corpo,
-    tronco: r.tronco,
-    cabeca: r.cabeca,
-    topete: r.topete,
-    bracoD: r.bracoD,
-    bracoE: r.bracoE,
-    pernaD: r.pernaD,
-    pernaE: r.pernaE,
-  };
-}
 
 /** Confere os membros de um plano em todas as poses de teste (pior vão de cada problema). */
 function membrosSoltos(plano: PlanoBoneco, rotulo: string): string[] {

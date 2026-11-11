@@ -296,6 +296,22 @@ export interface EstadoDepuracao {
     yawCorpo?: number;
     yawOlhar?: number;
   }[];
+  /**
+   * Testes (spec 017): amigos de mentirinha na tela, com a aparência dada (capturas das
+   * fantasias e medida de desempenho com amigos fantasiados). Lista vazia tira todos.
+   */
+  amigosDeTeste?: (
+    lista: Array<{
+      id: string;
+      aparencia: Record<string, unknown>;
+      x: number;
+      y: number;
+      z: number;
+      yaw?: number;
+      vel?: number;
+      correndo?: boolean;
+    }>,
+  ) => void;
   /** Tempo médio da lógica de cada quadro na linha principal, fora o desenho (ms). */
   logicaQuadroMs?: number;
   atmosfera?: { noite: number; crepusculo: number };
@@ -3806,6 +3822,32 @@ export function criarCena(
       });
   }
   estado.outrosJogadores = () => outrosJogadores.lista;
+  let perfisDeTeste = '';
+  estado.amigosDeTeste = (lista) => {
+    const perfis: Record<string, { apelido: string; aparencia: Record<string, unknown> }> = {};
+    for (const a of lista) perfis[a.id] = { apelido: a.id, aparencia: a.aparencia };
+    // só remonta os bonecos quando a aparência muda (o teste move os amigos a cada quadro)
+    const chave = JSON.stringify(perfis);
+    if (chave !== perfisDeTeste) {
+      perfisDeTeste = chave;
+      outrosJogadores.definirPerfis(perfis);
+    }
+    outrosJogadores.receber(
+      lista.map((a) => ({
+        id: a.id,
+        x: a.x,
+        y: a.y,
+        z: a.z,
+        yaw: a.yaw ?? 0,
+        pitch: 0,
+        vel: a.vel ?? 0,
+        voando: false,
+        noChao: true,
+        correndo: a.correndo ?? false,
+        mao: null,
+      })),
+    );
+  };
   estado.definirClima = (t) => enviar({ t: 'depurar', d: { f: 'clima', tipo: t } });
   estado.dia = () => dia;
   estado.definirDia = (d) => {

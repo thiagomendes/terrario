@@ -135,6 +135,8 @@ export function criarOutrosJogadores(scene: Scene) {
       const alt = motor.getRenderHeight();
       const vista = cam?.viewport.toGlobal(larg, alt);
       const transform = scene.getTransformMatrix();
+      // uma medida do canvas por quadro (pedir a cada amigo força o navegador a medir de novo)
+      const caixaCanvas = canvas?.getBoundingClientRect();
       for (const o of outros.values()) {
         const a = o.alvo;
         const x0 = o.x;
@@ -204,7 +206,7 @@ export function criarOutrosJogadores(scene: Scene) {
           const dist = Vector3.Distance(cam.globalPosition, ponto);
           Vector3.ProjectToRef(ponto, Matrix.IdentityReadOnly, transform, vista, tela);
           if (tela.z > 0 && tela.z < 1 && dist < 64) {
-            const r = canvas.getBoundingClientRect();
+            const r = caixaCanvas!;
             const x = r.left + (tela.x / larg) * r.width;
             const y = r.top + (tela.y / alt) * r.height;
             const e = o.placa;
