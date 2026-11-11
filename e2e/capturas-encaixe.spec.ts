@@ -152,3 +152,68 @@ test('encaixe no morador do povoado', async ({ page }) => {
   }
   expect(erros, erros.join('\n')).toEqual([]);
 });
+
+/**
+ * Enfeites dos moradores de cada tema (spec 017, T01): visor, óculos, gravata, botões,
+ * crachás e antenas encostados no boneco. Para cada profissão, três moradores parados (de
+ * frente, de perfil e de três quartos), de perto. ENCAIXE_TEMAS escolhe os temas (`<id>,<id>`).
+ */
+const TEMAS_MORADORES = (
+  process.env.ENCAIXE_TEMAS ??
+  'planeta-vivo,mata-encantada,doce-reino,exploracao-lunar,rancho-alegre'
+).split(',');
+for (const tema of TEMAS_MORADORES)
+  test(`encaixe dos enfeites dos moradores: ${tema}`, async ({ page }) => {
+    test.setTimeout(300_000);
+    await page.setViewportSize({ width: 1280, height: 720 });
+    const erros: string[] = [];
+    page.on('pageerror', (e) => erros.push(`pageerror: ${e.message}`));
+    await page.goto(`/?tema=${tema}`);
+    await page.waitForFunction(() => window.__brumaluz?.ready === true, undefined, {
+      timeout: 120_000,
+    });
+    // os avisos de cima tapariam as cabeças
+    await page.addStyleTag({ content: '.toast-area { display: none !important; }' });
+    const base = await page.evaluate(async () => {
+      document.querySelector('.entrada')?.setAttribute('hidden', '');
+      const e = window.__brumaluz!;
+      e.pausarDia = true;
+      e.hora = 0.42;
+      e.definirClima?.('limpo');
+      const [x0, , z0] = e.posicao!.map(Math.floor);
+      const y = 110;
+      // uma laje de pedra no alto para cada profissão, longe uma da outra
+      for (let dx = -6; dx <= 34; dx++)
+        for (let dz = -3; dz <= 8; dz++) {
+          e.definirBloco!(x0 + dx, y, z0 + dz, 45);
+          for (let dy = 1; dy < 5; dy++) e.definirBloco!(x0 + dx, y + dy, z0 + dz, 0);
+        }
+      return { x0, y, z0 };
+    });
+    const profissoes = ['ferreiro', 'cozinheiro', 'construtor'] as const;
+    for (let k = 0; k < profissoes.length; k++) {
+      await page.evaluate(
+        async ({ x0, y, z0, profissao, k }) => {
+          const e = window.__brumaluz!;
+          const x = x0 + 0.5 + k * 14;
+          // o jogador num buraco de dois blocos: a cabeça dele fica abaixo dos moradores
+          for (let dy = -1; dy <= 0; dy++) e.definirBloco!(Math.floor(x), y + dy, z0, 0);
+          e.definirBloco!(Math.floor(x), y - 2, z0, 45);
+          e.teleportar!(x, z0 + 0.5, y - 1);
+          await new Promise((r) => setTimeout(r, 600));
+          await e.sincronizar!();
+          // de frente, de perfil (o vão aparece de lado) e de três quartos
+          const z = z0 + 3.8;
+          e.estatua!('morador', x - 1.3, y + 1, z, Math.PI + 0.25, { profissao, n: 1 });
+          e.estatua!('morador', x, y + 1, z, Math.PI / 2, { profissao, n: 4 });
+          e.estatua!('morador', x + 1.3, y + 1, z, Math.PI - 0.7, { profissao, n: 7 });
+          e.apontar!(0, -0.32);
+          e.camera?.definirZoom(2.2);
+        },
+        { ...base, profissao: profissoes[k], k },
+      );
+      await page.waitForTimeout(1800);
+      await page.screenshot({ path: `${PASTA}/morador-${tema}-${profissoes[k]}.png` });
+    }
+    expect(erros, erros.join('\n')).toEqual([]);
+  });

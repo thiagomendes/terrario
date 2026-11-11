@@ -393,7 +393,14 @@ export interface EstadoDepuracao {
     moradores: () => { id: number; gesto: string | null; balao: string | null }[];
   };
   /** Vitrine dos testes: um bicho parado, sem cérebro, com o desenho do jogo. */
-  estatua?: (tipo: TipoCriatura, x: number, y: number, z: number, yaw: number) => void;
+  estatua?: (
+    tipo: TipoCriatura | 'morador',
+    x: number,
+    y: number,
+    z: number,
+    yaw: number,
+    morador?: { profissao: import('../world/povoado').Profissao; n: number },
+  ) => void;
   sobrevivencia?: SobrevivenciaCliente;
   /** Qualidade das peças de brinquedo escolhida (celular: 'baixo'). */
   detalhe?: 'alto' | 'baixo';
@@ -2896,7 +2903,8 @@ export function criarCena(
     (m) => glow.addExcludedMesh(m),
     () => undefined,
   );
-  estado.estatua = (tipo, x, y, z, yaw) => renderCriaturas.estatua(tipo, x, y, z, yaw);
+  estado.estatua = (tipo, x, y, z, yaw, morador) =>
+    renderCriaturas.estatua(tipo, x, y, z, yaw, morador);
   // spec 015 (gestos): a roda, as teclas e o que os amigos e moradores fazem
   gestos = criarGestosJogo({
     scene,

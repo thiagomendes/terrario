@@ -22,6 +22,7 @@ import { obterTema, temasDisponiveis } from '../../src/temas';
 import { generoDoMorador } from '../../src/temas/nomes';
 import type { Profissao } from '../../src/world/povoado';
 import {
+  EH_ROSTO,
   FOLGA_MAXIMA,
   conferirEncaixe,
   conferirMembros,
@@ -215,6 +216,95 @@ describe('encaixe dos acessórios (spec 017, T01)', () => {
       }
     }
     expect(falhas).toEqual([]);
+  });
+
+  it('os enfeites dos moradores (visor, óculos, gravata, botões, antenas) encostam no boneco', () => {
+    // todo tema × profissão × boneco sorteado (modelo, corpo, cabelo e rosto mudam com o número
+    // do morador), nos dois gêneros
+    const falhas = new Set<string>();
+    let moradores = 0;
+    let placas = 0;
+    const poses = posesDeTeste().filter((_, i) => i % 3 === 0);
+    for (const id of temasDisponiveis()) {
+      const pov = obterTema(id).povoado;
+      if (!pov) continue;
+      for (const prof of Object.keys(pov.moradores) as Profissao[])
+        for (const genero of ['f', 'm'] as const)
+          for (let n = 0; n < 30; n++) {
+            const m = moradorDeBrinquedo(pov.moradores[prof], n, genero, pov.acessorios?.[prof]);
+            const plano = m.ajustar(planoBoneco(m.aparencia));
+            moradores++;
+            const rotulo = `${id} ${prof} ${m.aparencia.modelo}`;
+            for (const p of conferirEncaixe(plano))
+              falhas.add(
+                `${rotulo}: ${p.tipo} ${p.peca}${p.outra ? `/${p.outra}` : ''} ${p.medida.toFixed(3)}`,
+              );
+            // toda peça do tema é um enfeite marcado (senão a régua não a mede)
+            for (const p of plano.pecas)
+              if (/^(extra|chapeu-tema)-/.test(p.nome) && !p.apoio)
+                falhas.add(`${rotulo}: ${p.nome} sem apoio`);
+            // a placa do rosto (pele atrás do visor, tela do robô): embutida na frente da
+            // cabeça, e o rosto do boneco por cima dela, encostado e à mostra
+            const placa = plano.pecas.find((p) => p.nome === 'rosto-tema');
+            if (placa) {
+              placas++;
+              const mp = medirPeca(plano, placa);
+              const cabeca = medirPeca(plano, plano.pecas.find((p) => p.nome === 'cabeca')!);
+              const folga = distanciaEntre(mp, cabeca);
+              if (folga > FOLGA_MAXIMA)
+                falhas.add(`${rotulo}: placa do rosto solta ${folga.toFixed(3)}`);
+              const rosto = plano.pecas.filter((p) => EH_ROSTO.test(p.nome));
+              const medidasRosto = rosto.map((r) => medirPeca(plano, r));
+              for (const mr of medidasRosto) {
+                const r = mr.peca;
+                // encosta na placa, na cabeça ou noutra peça do rosto (o brilho no olho)
+                const d = Math.min(
+                  distanciaEntre(mr, mp),
+                  distanciaEntre(mr, cabeca),
+                  ...medidasRosto.filter((o) => o !== mr).map((o) => distanciaEntre(mr, o, 0.05)),
+                );
+                if (d > FOLGA_MAXIMA)
+                  falhas.add(`${rotulo}: ${r.nome} solto da placa ${d.toFixed(3)}`);
+                const frente = Math.max(...mr.pontos.map((q) => q[2]));
+                const bico = mr.pontos.filter((q) => q[2] > frente - 0.004);
+                if (bico.some((q) => mp.distancia(q) < 0))
+                  falhas.add(`${rotulo}: placa do rosto tapa ${r.nome}`);
+              }
+            }
+            // a saia do tema fica no corpo (parada): continua encostada no quadril andando,
+            // correndo, sentado e nos gestos
+            const noCorpo = plano.pecas.filter((p) => p.apoio && p.junta === 'corpo');
+            if (!noCorpo.length || n > 3) continue;
+            for (const pose of poses) {
+              const giros = girosDaPose(pose);
+              const apoio = plano.pecas
+                .filter((p) => !p.apoio && (p.junta === 'tronco' || p.junta.startsWith('perna')))
+                .map((p) => medirPeca(plano, p, giros, 6));
+              const medidas = noCorpo.map((p) => medirPeca(plano, p, giros, 6));
+              // presos: o que encosta no tronco ou nas pernas, e o que encosta nos presos
+              const presos = new Set(
+                medidas.filter((e) => apoio.some((s) => distanciaEntre(e, s, 0.1) <= FOLGA_MAXIMA)),
+              );
+              for (let mudou = true; mudou; ) {
+                mudou = false;
+                for (const e of medidas)
+                  if (
+                    !presos.has(e) &&
+                    [...presos].some((q) => distanciaEntre(e, q, 0.1) <= FOLGA_MAXIMA)
+                  ) {
+                    presos.add(e);
+                    mudou = true;
+                  }
+              }
+              for (const e of medidas)
+                if (!presos.has(e))
+                  falhas.add(`${rotulo}: ${e.peca.nome} solto na pose ${pose.nome}`);
+            }
+          }
+    }
+    expect(moradores).toBeGreaterThan(500);
+    expect(placas).toBeGreaterThan(0);
+    expect([...falhas]).toEqual([]);
   });
 
   it('a foto do editor enquadra até o alto do chapéu', () => {
