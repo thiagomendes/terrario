@@ -82,6 +82,24 @@ body[data-overlay] .toast-area { top: auto; bottom: calc(env(safe-area-inset-bot
   font: 800 0.9rem var(--jogo);
   box-shadow: 0 3px 0 rgba(150, 110, 60, 0.3), 0 8px 18px rgba(40, 25, 10, 0.2); animation: toast 2.6s ease forwards;
 }
+.coleta-area {
+  position: fixed; top: 44px; left: 50%; transform: translateX(-50%); z-index: 50;
+  display: grid; gap: 4px; justify-items: center; pointer-events: none;
+  width: max-content; max-width: min(420px, calc(100vw - 24px));
+}
+/* o que a criança pegou: pílulas pequenas no alto (antes era no meio da tela e pulava na frente) */
+.toast.coleta {
+  padding: 3px 12px; font-size: 0.78rem; background: rgba(255, 250, 240, 0.86);
+  box-shadow: 0 2px 0 rgba(150, 110, 60, 0.25); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%;
+}
+body[data-overlay] .coleta-area, body.tela-titulo .coleta-area { display: none; }
+/* no computador e no celular deitado, duas à vista (logo abaixo ficam os outros avisos) */
+.coleta-area > :nth-last-child(n + 3) { display: none; }
+@media (max-width: 560px) {
+  /* retrato: no alto, entre os botões da esquerda e o minimapa */
+  .coleta-area { top: calc(env(safe-area-inset-top, 0px) + 12px); max-width: calc(100vw - 250px); }
+  .coleta-area > :nth-last-child(n + 3) { display: block; }
+}
 .toast.conquista { background: #fff3c4; box-shadow: 0 3px 0 var(--amarela-fundo), 0 8px 18px rgba(40, 25, 10, 0.2); }
 @keyframes toast { 0% { opacity: 0; transform: translateY(-6px); } 10%, 80% { opacity: 1; transform: none; } 100% { opacity: 0; } }
 .hud { position: fixed; inset: 0; pointer-events: none; overflow: hidden; }
@@ -160,6 +178,48 @@ export function notificar(
   area.appendChild(t);
   setTimeout(() => t.remove(), duracao * 1000 + 100);
   while (area.children.length > 4) area.firstElementChild?.remove();
+}
+
+/** Um aviso de coleta ("+2 Grão de milho")? Esses vão para o alto, pequenos. */
+export function ehAvisoDeColeta(texto: string): boolean {
+  return /^\+\d+ \S/.test(texto);
+}
+
+/**
+ * Mostra o que a criança pegou no alto da tela, numa pílula pequena. Pegar de novo o mesmo item
+ * soma na pílula que já está lá (em vez de empilhar outra), e no máximo 3 ficam à vista.
+ */
+export function notificarColeta(texto: string): void {
+  const m = /^\+(\d+) (.+)$/.exec(texto);
+  if (!m) return notificar(texto);
+  const qtd = Number(m[1]);
+  const nome = m[2];
+  let area = document.querySelector<HTMLElement>('.coleta-area');
+  if (!area) {
+    area = document.createElement('div');
+    area.className = 'coleta-area';
+    area.setAttribute('aria-live', 'polite');
+    document.body.appendChild(area);
+  }
+  const ja = [...area.children].find(
+    (c) => (c as HTMLElement).dataset.nome === nome,
+  ) as HTMLElement | undefined;
+  const t = ja ?? document.createElement('div');
+  const total = (ja ? Number(t.dataset.qtd) : 0) + qtd;
+  t.className = 'toast coleta';
+  t.dataset.nome = nome;
+  t.dataset.qtd = String(total);
+  t.textContent = `+${total} ${nome}`;
+  const duracao = 2.6;
+  // reinicia a animação (somou de novo: fica mais um pouco)
+  t.style.animation = 'none';
+  void t.offsetWidth;
+  t.style.animation = '';
+  t.style.animationDuration = `${duracao}s`;
+  if (!ja) area.appendChild(t);
+  clearTimeout(Number(t.dataset.timer ?? 0));
+  t.dataset.timer = String(window.setTimeout(() => t.remove(), duracao * 1000 + 100));
+  while (area.children.length > 3) area.firstElementChild?.remove();
 }
 
 export interface OpcoesInterface {
@@ -593,7 +653,11 @@ export function criarInterface(
       el.style.setProperty('--escala-ui', String(c.escalaInterface));
     }
   });
-  window.addEventListener('brumaluz:toast', (e) => notificar((e as CustomEvent<string>).detail));
+  window.addEventListener('brumaluz:toast', (e) => {
+    const texto = (e as CustomEvent<string>).detail;
+    if (ehAvisoDeColeta(texto)) notificarColeta(texto);
+    else notificar(texto);
+  });
   const painelConstrucao = document.createElement('div');
   painelConstrucao.className = 'painel-construcao';
   painelConstrucao.hidden = true;

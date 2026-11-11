@@ -8,17 +8,19 @@ export const CSS_SETAS = `
 .setas-amigos { position: fixed; inset: 0; pointer-events: none; z-index: 5; }
 .seta-amigo {
   position: absolute; display: flex; align-items: center; gap: 6px; transform: translate(-50%, -50%);
-  padding: 4px 12px 4px 6px; border-radius: 999px; background: rgba(255, 250, 240, 0.94);
-  color: var(--tinta); font: 800 0.85rem var(--jogo); white-space: nowrap;
-  box-shadow: 0 3px 0 rgba(150, 110, 60, 0.3), 0 6px 12px rgba(40, 25, 10, 0.2);
+  padding: 3px 10px 3px 5px; border-radius: 999px; background: rgba(255, 250, 240, 0.72);
+  color: var(--tinta); font: 800 0.74rem var(--jogo); white-space: nowrap;
+  box-shadow: 0 2px 0 rgba(150, 110, 60, 0.2);
+  /* discreta: mostra onde o amigo está sem tapar o jogo */
+  opacity: 0.72;
 }
 /* bolinha da cor do amigo com a setinha branca apontando */
 .seta-amigo i {
-  width: 20px; height: 20px; border-radius: 50%; background: var(--cor); box-shadow: inset 0 -2px 0 rgba(0, 0, 0, 0.18);
+  width: 16px; height: 16px; border-radius: 50%; background: var(--cor); box-shadow: inset 0 -2px 0 rgba(0, 0, 0, 0.18);
   position: relative;
 }
 .seta-amigo i::after {
-  content: ''; position: absolute; left: 5px; top: 4px; border-left: 5px solid transparent; border-right: 5px solid transparent; border-bottom: 9px solid #fff;
+  content: ''; position: absolute; left: 4px; top: 3px; border-left: 4px solid transparent; border-right: 4px solid transparent; border-bottom: 7px solid #fff;
 }
 body[data-overlay] .setas-amigos, body.tela-titulo .setas-amigos { display: none; }
 `;

@@ -9,3 +9,13 @@ describe('tempo dos avisos', () => {
     expect(duracaoDoAviso('x'.repeat(300))).toBe(6);
   });
 });
+
+describe('avisos de coleta vão para o alto', () => {
+  it('reconhece "+N Nome" e deixa os outros avisos onde estavam', async () => {
+    const { ehAvisoDeColeta } = await import('../../src/ui/interface');
+    expect(ehAvisoDeColeta('+1 Espiga de milho')).toBe(true);
+    expect(ehAvisoDeColeta('+12 Tábua')).toBe(true);
+    expect(ehAvisoDeColeta('A semente precisa de terra arada')).toBe(false);
+    expect(ehAvisoDeColeta('+ amigos')).toBe(false);
+  });
+});

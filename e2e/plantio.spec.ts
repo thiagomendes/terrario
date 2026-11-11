@@ -276,6 +276,7 @@ test('HUD do Rancho no celular: dicas, corações e avisos sem cobrir nada', asy
       const nomes: [string, string][] = [
         ['dica', '.dica-mira.visivel'],
         ['aviso', '.toast-area > *'],
+        ['coleta', '.coleta-area > *'],
         ['barra', '[role="toolbar"]'],
         ['status', '.status'],
         ['missao', '.missao-hud'],
