@@ -74,12 +74,19 @@ function abrirEstudio(): typeof estudio {
     camera.mode = Camera.ORTHOGRAPHIC_CAMERA;
     camera.minZ = 0.1;
     camera.maxZ = 40;
+    // a luz do meio-dia do jogo (sol forte e céu azulado): o boneco do editor é o do mundo
+    // (correção da 017: o plástico tem difusa baixa e não estoura sob o sol de 2)
     const ceu = new HemisphericLight('foto-ceu', new Vector3(-0.2, 1, -0.5), scene);
-    ceu.intensity = 0.6;
-    ceu.groundColor = new Color3(0.5, 0.45, 0.55);
+    ceu.intensity = 0.62;
+    ceu.diffuse = new Color3(0.72, 0.8, 1);
+    ceu.groundColor = new Color3(0.42, 0.38, 0.46);
+    // sem tonemapping aqui: o reflexo do céu e o do sol mais fracos que no mundo (o cabelo
+    // e a roupa não ficam metálicos)
+    ceu.specular = new Color3(0.18, 0.18, 0.2);
     const sol = new DirectionalLight('foto-sol', new Vector3(0.5, -0.7, 0.8), scene);
-    sol.intensity = 0.8;
-    sol.specular = new Color3(0.5, 0.5, 0.5);
+    sol.intensity = 1.6;
+    sol.diffuse = new Color3(1, 0.97, 0.9);
+    sol.specular = new Color3(0.32, 0.31, 0.3);
     const boneco = criarBoneco(scene, aparenciaPadrao(), 'foto');
     // de quina, um pouco virado para a direita (como no esboço)
     boneco.posicionar(0, 0, 0, Math.PI + 0.42);
