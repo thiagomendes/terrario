@@ -642,6 +642,31 @@ describe('auditoria da 016: lote do criativo e portas empilhadas (nuvem)', () =>
   });
 });
 
+describe('auditoria da 016: o vão de ar no chão da ruína (nuvem)', () => {
+  it('o bloco posto no vão embaixo da ruína é de quem pôs: ele quebra, o amigo não', () => {
+    const n = abrir('nuvem', 'criativo', { x: -300, y: 74, z: 5 });
+    // a ruína da semente perto de (-296, 8): uma célula de chão onde a geração deixou ar
+    let V: Celula | null = null;
+    for (let x = -304; x <= -288 && !V; x++)
+      for (let z = 0; z <= 16 && !V; z++)
+        for (let y = 60; y <= 80 && !V; y++)
+          if (
+            n.protecao.em(x, y, z) === Protecao.CHAO &&
+            n.estado.mundo.gerado(x, y, z) === Bloco.AR &&
+            n.estado.mundo.bloco(x, y, z) === Bloco.AR
+          )
+            V = { x, y, z };
+    expect(V, 'sem vão de ar no chão da ruína').not.toBeNull();
+    colocar(n, 'bia', V!, Bloco.TABUAS);
+    expect(bloco(n, V!)).toBe(Bloco.TABUAS);
+    const r = quebrar(n, 'leo', V!);
+    expect(bloco(n, V!)).toBe(Bloco.TABUAS);
+    expect(recusaDe(n, 'leo', r).recusa?.protecao).toEqual({ motivo: 'amigo', dono: 'Bia' });
+    quebrar(n, 'bia', V!);
+    expect(bloco(n, V!)).toBe(Bloco.AR);
+  });
+});
+
 describe('lavoura do sítio: colhe e se replanta (local e nuvem)', () => {
   const RANCHO = 42;
   afterAll(() => {

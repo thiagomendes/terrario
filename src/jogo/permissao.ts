@@ -75,7 +75,9 @@ export function recusaQuebrar(
   const p = m.protecao.em(x, y, z);
   // a lavoura do mundo é de todos: colhe e se replanta
   if (p === Protecao.LAVOURA) return null;
-  if (naoQuebra(p)) return doMundo(m, x, z, 'mundo');
+  // por garantia: chão onde a geração deixou ar é o bloco de quem pôs (nunca fica preso)
+  const chaoVazio = p === Protecao.CHAO && m.gerado(x, y, z) === Bloco.AR;
+  if (naoQuebra(p) && !chaoVazio) return doMundo(m, x, z, 'mundo');
   const dono = m.dono(x, y, z);
   if (podeMexer(quem, dono, m.donoDoMundo)) return null;
   return deAlguem(m, dono!, motivoDoBloco(m.bloco(x, y, z)) ?? 'amigo');

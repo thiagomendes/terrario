@@ -55,7 +55,9 @@ function falso(
 describe('a regra', () => {
   const m = falso({
     '0,0,0': { p: Protecao.ESTRUTURA, b: Bloco.TABUAS, g: Bloco.TABUAS },
-    '1,0,0': { p: Protecao.CHAO, b: Bloco.TERRA },
+    '1,0,0': { p: Protecao.CHAO, b: Bloco.TERRA, g: Bloco.TERRA },
+    // chão onde a geração deixou ar, com o bloco do Léo (o vão embaixo da ruína)
+    '13,0,0': { p: Protecao.CHAO, b: Bloco.TABUAS, dono: 'leo' },
     '2,0,0': { p: Protecao.USAVEL, b: Bloco.BAU, g: Bloco.BAU },
     '3,0,0': { p: Protecao.LAVOURA, b: Bloco.TRIGO_3, dono: 'ana' },
     '4,0,0': { p: Protecao.PASSAGEM },
@@ -80,6 +82,9 @@ describe('a regra', () => {
     expect(recusaQuebrar(m, 'ana', 5, 0, 0)).toBeNull();
     expect(recusaQuebrar(m, 'bia', 5, 0, 0)).toEqual({ motivo: 'amigo', dono: 'Léo' });
     expect(recusaQuebrar(m, 'bia', 6, 0, 0)).toEqual({ motivo: 'bau', dono: 'Léo' });
+    // o bloco posto no vão de ar do chão é de quem pôs (nunca fica preso)
+    expect(recusaQuebrar(m, 'leo', 13, 0, 0)).toBeNull();
+    expect(recusaQuebrar(m, 'bia', 13, 0, 0)).toEqual({ motivo: 'amigo', dono: 'Léo' });
   });
 
   it('colocar: passagem e casa não; o conserto sim; a flor do amigo não some', () => {
