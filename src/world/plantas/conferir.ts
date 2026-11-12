@@ -59,14 +59,17 @@ export interface OpcoesAndador {
 export type Lugar = [number, number, number];
 
 /**
- * Tudo o que se alcança a pé saindo da calçada da frente (a fileira f = -1, com os pés em
- * y = 0). Fora da planta, só a calçada da frente conta (os lados são os vizinhos).
+ * Tudo o que se alcança a pé saindo da calçada da frente (a fileira f = -1, com os pés logo
+ * acima do chão da cidade, `chao + 1`). Fora da planta, só a calçada da frente conta (os lados são os vizinhos).
  */
 export function alcancaveis(p: Planta, op: OpcoesAndador = {}): Set<string> {
   const fechadas = !!op.portasFechadas;
+  const chao = p.chao;
   const fis = (s: number, f: number, y: number): Fisica => {
-    if (y === -1) return { solido: [0, 1], pisos: [1] };
-    if (y < -1) return { solido: [0, 1], pisos: [] };
+    if (y < chao) return { solido: [0, 1], pisos: [] };
+    // o chão da cidade: a calçada da frente e o que a planta não pinta no nível dele
+    if (y === chao && (f < 0 || p.blocos[indicePlanta(p, s, f, y)] === NADA))
+      return { solido: [0, 1], pisos: [1] };
     if (f < 0) return { solido: null, pisos: [] };
     if (y >= p.altura) return { solido: null, pisos: [] };
     return fisicaDo(p.blocos[indicePlanta(p, s, f, y)], fechadas);
@@ -85,7 +88,7 @@ export function alcancaveis(p: Planta, op: OpcoesAndador = {}): Set<string> {
   /** Pisos da coluna (alturas absolutas), do mais alto ao mais baixo. */
   const pisos = (s: number, f: number): number[] => {
     const r: number[] = [];
-    for (let y = p.altura - 1; y >= -1; y--) for (const t of fis(s, f, y).pisos) r.push(y + t);
+    for (let y = p.altura - 1; y >= chao; y--) for (const t of fis(s, f, y).pisos) r.push(y + t);
     return r.sort((a, b) => b - a);
   };
   const cachePisos = new Map<string, number[]>();
@@ -104,7 +107,7 @@ export function alcancaveis(p: Planta, op: OpcoesAndador = {}): Set<string> {
     vistos.add(k);
     fila.push([s, f, Math.round(h * 2)]);
   };
-  for (let s = 0; s < p.largura; s++) entrar(s, -1, 0);
+  for (let s = 0; s < p.largura; s++) entrar(s, -1, chao + 1);
   while (fila.length) {
     const [s, f, h2] = fila.pop()!;
     const h = h2 / 2;

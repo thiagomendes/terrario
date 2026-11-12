@@ -119,7 +119,7 @@ const ANDAR: Camada[] = [
     '       }',
     '        ',
     'MJJMMJJM',
-    'Mi.....M',
+    'M......M',
     'M......M',
     'M.....EM',
     'M......M',
@@ -139,7 +139,7 @@ const ANDAR: Camada[] = [
   ],
 ];
 
-/** Telhado (o terraço): laje, parapeito de grade e o vão da escada com grade em volta. */
+/** Telhado (o terraço): laje, mureta da pedra da casa e o vão da escada com grade em volta. */
 const TELHADO: Camada[] = [
   [
     '        ',
@@ -154,14 +154,14 @@ const TELHADO: Camada[] = [
   ],
   [
     '        ',
-    '####    ',
-    '#      #',
-    '#      #',
-    '#    #.#',
-    '#    #.#',
-    '#    #.#',
-    '#      #',
-    '########',
+    'MMMM    ',
+    'M      M',
+    'M      M',
+    'M    #.M',
+    'M    #.M',
+    'M    #.M',
+    'M      M',
+    'MMMMMMMM',
   ],
 ];
 

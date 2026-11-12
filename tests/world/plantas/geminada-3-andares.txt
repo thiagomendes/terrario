@@ -72,7 +72,7 @@ y=7
        }
         
 MJLMMJJM
-Mi.....M
+M......M
 M......M
 M.....EM
 M......M
@@ -112,7 +112,7 @@ y=11
        }
         
 MJJMMLJM
-Mi.....M
+M......M
 M......M
 M.....EM
 M......M
@@ -140,14 +140,14 @@ DDDDDDED
 DDDDDDDD
 y=14
         
-####    
-#      #
-#      #
-#| | #.#
-#    #.#
-#| | #.#
-#      #
-########
+MMMM    
+M      M
+M      M
+M| | #.M
+M    #.M
+M| | #.M
+M      M
+MMMMMMMM
 y=15
         
         

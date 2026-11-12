@@ -1,41 +1,31 @@
 /**
- * Os modelos de prédio que o planejador da cidade escolhe por lote (spec 014). A T04 traz os
- * cinco; até lá, os lotes de 16 são duas geminadas lado a lado.
+ * Os cinco modelos de prédio que o planejador da cidade escolhe por lote (spec 014): a casa
+ * geminada de pedra marrom e o prédio de tijolo com loja (lotes de 8), a esquina art déco, o
+ * prédio alto do centro e a escola (lotes de 16).
  */
 import { casaGeminada } from './geminada';
-import { plantaVazia, type ParametrosPredio, type Planta } from './formato';
+import { predioDeTijolo } from './tijolo';
+import { predioLargo } from './largo';
+import type { ParametrosPredio, Planta } from './formato';
 
 export type ModeloPredio = 'geminada' | 'tijolo' | 'deco' | 'escola' | 'alto';
 
-export function construirModelo(
-  modelo: ModeloPredio,
-  params: ParametrosPredio,
-  largura: number,
-): Planta {
-  void modelo;
-  const a = casaGeminada({ ...params, andares: Math.min(4, params.andares) });
-  if (largura === a.largura) return a;
-  // dois lado a lado (o de lá espelhado)
-  const b = casaGeminada({
-    ...params,
-    andares: Math.min(4, params.andares),
-    espelho: !params.espelho,
-  });
-  const p = plantaVazia(a.modelo, largura, a.profundidade, Math.max(a.altura, b.altura), params);
-  for (const [q, ds] of [
-    [a, 0],
-    [b, a.largura],
-  ] as const)
-    for (let y = 0; y < q.altura; y++)
-      for (let f = 0; f < q.profundidade; f++)
-        for (let s = 0; s < q.largura; s++) {
-          const i = (y * q.profundidade + f) * q.largura + s;
-          const j = (y * p.profundidade + f) * p.largura + s + ds;
-          p.blocos[j] = q.blocos[i];
-          p.metas[j] = q.metas[i];
-        }
-  p.porta = a.porta;
-  p.terraco = a.terraco;
-  p.comodos = a.comodos;
-  return p;
+/** Largura do lote de cada modelo. */
+export const LARGURA_DO_MODELO: Record<ModeloPredio, number> = {
+  geminada: 8,
+  tijolo: 8,
+  deco: 16,
+  alto: 16,
+  escola: 16,
+};
+
+export function construirModelo(modelo: ModeloPredio, params: ParametrosPredio): Planta {
+  switch (modelo) {
+    case 'geminada':
+      return casaGeminada(params);
+    case 'tijolo':
+      return predioDeTijolo(params);
+    default:
+      return predioLargo(modelo, params);
+  }
 }

@@ -23,6 +23,13 @@ const TILE_TERRA = indiceDoTile('terra');
 /** Tabela de opacidade por id (laço quente da malha). */
 const OPACO_T = new Uint8Array(256);
 for (let i = 0; i < 256; i++) OPACO_T[i] = obterBloco(i)?.opaco ? 1 : 0;
+/**
+ * Spec 014: a janela da cidade conta como cheia para as quinas de brinquedo (a parede em volta
+ * dela fica reta): sem isso, cada janela arredondava as arestas das paredes vizinhas e a
+ * fachada custava seis vezes mais triângulos.
+ */
+const QUINA_RETA_T = new Uint8Array(256);
+QUINA_RETA_T[Bloco.JANELA] = 1;
 const FOLHAS_T = new Uint8Array(256);
 for (let i = 0; i < 256; i++) FOLHAS_T[i] = obterBloco(i)?.folhas ? 1 : 0;
 import { ALTURA, TAM_X, TAM_Z, indice } from '../world/chunk';
@@ -545,7 +552,7 @@ export function gerarMalha(
     const mostra = (dx: number, dy: number, dz: number) => {
       if (!arredonda) return 0;
       const v = ler(x + dx, y + dy, z + dz);
-      return OPACO_T[v] || (ehFolha && FOLHAS_T[v]) ? 0 : 1;
+      return OPACO_T[v] || QUINA_RETA_T[v] || (ehFolha && FOLHAS_T[v]) ? 0 : 1;
     };
     const lo: Vec = [mostra(-1, 0, 0), mostra(0, -1, 0), mostra(0, 0, -1)];
     const hi: Vec = [mostra(1, 0, 0), mostra(0, 1, 0), mostra(0, 0, 1)];

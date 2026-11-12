@@ -289,5 +289,54 @@ describe('planejador da cidade', () => {
   });
 });
 
+describe('os prédios na cidade (T04)', () => {
+  it('cada lote de prédio tem a planta do tamanho dele, com o modelo da zona', () => {
+    const p = cidadeDoMundo(1337)!;
+    const modelos = new Set<string>();
+    for (const l of p.lotes) {
+      if (l.uso === 'praca' || l.uso === 'canteiro') continue;
+      const pl = plantaDoLote(l)!;
+      expect(pl, `lote ${l.i}`).toBeTruthy();
+      expect(pl.largura, `lote ${l.i}`).toBe(l.largura);
+      expect(pl.profundidade).toBe(l.profundidade);
+      expect(p.h + pl.altura).toBeLessThan(124);
+      modelos.add(pl.modelo);
+    }
+    expect([...modelos].sort()).toEqual(['alto', 'deco', 'escola', 'geminada', 'tijolo']);
+  });
+
+  it('as esquinas largas viram a fachada do lado para a avenida (com janelas)', () => {
+    const s = 1337;
+    const p = cidadeDoMundo(s)!;
+    const b = mundo(s);
+    for (const l of p.lotes.filter((q) => q.modelo === 'deco' || q.modelo === 'alto')) {
+      // o lado da avenida: a coluna de fora do lote que é calçada da avenida
+      const xFora =
+        soloDaCidade(p, l.x0 - 1, l.z0 + 4) === Solo.CALCADA ? l.x0 : l.x0 + l.largura - 1;
+      let janelas = 0;
+      for (let z = l.z0; z < l.z0 + l.profundidade; z++)
+        for (let y = p.h + 2; y < p.h + 20; y++) {
+          const v = b(xFora, y, z);
+          if (v === Bloco.JANELA || v === Bloco.JANELA_ACESA) janelas++;
+        }
+      expect(janelas, `lote ${l.i} (${l.modelo})`).toBeGreaterThan(10);
+    }
+  });
+
+  it('a porta de cada prédio abre para a calçada da rua', () => {
+    const s = 1337;
+    const p = cidadeDoMundo(s)!;
+    const b = mundo(s);
+    for (const l of p.lotes) {
+      const pl = plantaDoLote(l);
+      if (!pl) continue;
+      const [x, z] = noLoteCidade(l, pl.porta[0], -1);
+      expect(soloDaCidade(p, x, z), `lote ${l.i}: na frente da porta`).toBe(Solo.CALCADA);
+      const [px, pz] = noLoteCidade(l, pl.porta[0], pl.porta[1]);
+      expect(b(px, p.h - pl.chao + pl.porta[2], pz), `lote ${l.i}: porta`).toBe(Bloco.PORTA);
+    }
+  });
+});
+
 void (null as unknown as PlanoCidade);
 void obterBloco;

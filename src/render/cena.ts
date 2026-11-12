@@ -1,9 +1,10 @@
+import type { PlanoCidade } from '../world/cidade';
 import { CRIATURAS, type TipoSer } from '../jogo/criaturas';
 import { antesDeSair, saindoPorConta } from '../pagina';
 import { povoadosPerto } from '../jogo/povoados';
 import { generoDoMorador, nomeDoMorador } from '../temas/nomes';
 import { definirRegioesSemPovoado, regiaoDoChunk } from '../world/povoado';
-import { encontrarNascimento } from '../world/chunk';
+import { cidadeDoMundo, encontrarNascimento } from '../world/chunk';
 import { povoadoDoTema, tema } from '../temas/ativo';
 import {
   criarVozesGravadas,
@@ -306,6 +307,8 @@ export interface EstadoDepuracao {
   /** Direção do astro fixo do tema (Terra, gigante gasoso), se houver. */
   astro?: number[];
   /** Povoados a até 900 blocos do jogador (centro da praça e altura do piso). */
+  /** Spec 014: o plano da Cidade Grande do mundo (testes de tela), ou null. */
+  cidade?: () => PlanoCidade | null;
   povoados?: () => {
     id: string;
     cx: number;
@@ -697,6 +700,7 @@ export function criarCena(
   window.__brumaluz = estado;
   estado.tema = temaAtual.id;
   if (temaAtual.ceu.planeta) estado.astro = [...temaAtual.ceu.planeta.direcao];
+  estado.cidade = () => cidadeDoMundo(semente);
   estado.povoados = () => {
     const j = controle.jogador;
     return povoadosPerto(j.x, j.z, 900, semente)

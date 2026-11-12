@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { Bloco } from '../../src/world/blocks';
+import { Bloco, obterBloco } from '../../src/world/blocks';
 import {
   alcancaRetangulo,
   alcancaveis,
@@ -17,6 +17,13 @@ import {
   type ParametrosPredio,
   type Planta,
 } from '../../src/world/plantas';
+import {
+  construirModelo,
+  LARGURA_DO_MODELO,
+  type ModeloPredio,
+} from '../../src/world/plantas/modelos';
+import { LOJAS } from '../../src/world/plantas/tijolo';
+import { NADA } from '../../src/world/plantas/formato';
 
 /**
  * Spec 014, T01: as plantas dos prédios em código. Cada modelo, em cada combinação de
@@ -107,5 +114,77 @@ describe('casa geminada de pedra marrom', () => {
     const arq = fileURLToPath(new URL('./plantas/geminada-3-andares.txt', import.meta.url));
     if (!existsSync(arq) || process.env.REGRAVAR_PLANTAS) writeFileSync(arq, texto);
     expect(texto).toBe(readFileSync(arq, 'utf8'));
+  });
+});
+
+describe('os outros quatro modelos (T04)', () => {
+  const casos: [ModeloPredio, number[]][] = [
+    ['tijolo', [3, 4]],
+    ['deco', [5, 6]],
+    ['alto', [6]],
+    ['escola', [2]],
+  ];
+  for (const [modelo, andares] of casos)
+    it.each(
+      combinacoes(andares).flatMap((c) =>
+        (['padaria', 'oficina', 'construcao', 'sorveteria'] as const).map(
+          (vende) =>
+            [`${modelo} ${JSON.stringify(c)} ${vende}`, { ...c, vende, loja: true }] as const,
+        ),
+      ),
+    )('forma %s', (nome, params) => {
+      const p = construirModelo(modelo, params);
+      expect(p.largura).toBe(LARGURA_DO_MODELO[modelo]);
+      expect(p.params.andares).toBe(
+        andares.includes(params.andares) ? params.andares : p.params.andares,
+      );
+      conferirForma(p, [LARGURA_DO_MODELO[modelo], 9], nome);
+      // cabe com folga na altura do mundo (a cidade fica no máximo em 84)
+      expect(84 + p.altura).toBeLessThan(124);
+    });
+
+  it('a loja mostra na placa o que vende e tem dentro o que precisa', () => {
+    for (const vende of ['padaria', 'oficina', 'construcao', 'sorveteria'] as const) {
+      const p = construirModelo('tijolo', { ...combinacoes([3])[0], vende });
+      let placa = -1;
+      let dentro = false;
+      for (let i = 0; i < p.blocos.length; i++) {
+        if (p.blocos[i] === Bloco.PLACA) placa = p.metas[i] >> 2;
+        if (p.blocos[i] === LOJAS[vende].U) dentro = true;
+      }
+      expect(placa, vende).toBe(LOJAS[vende].placa);
+      expect(dentro, vende).toBe(true);
+    }
+    // a padaria tem o forno aceso (o cozinheiro trabalha nele)
+    const pad = construirModelo('tijolo', { ...combinacoes([3])[0], vende: 'padaria' });
+    expect([...pad.blocos].includes(Bloco.FORNALHA_ACESA)).toBe(true);
+  });
+
+  it('janelas acesas: parte das janelas acende, sem espalhar luz', () => {
+    const p = construirModelo('deco', { ...combinacoes([6])[0], luzes: 99 });
+    const acesas = [...p.blocos].filter((b) => b === Bloco.JANELA_ACESA).length;
+    const apagadas = [...p.blocos].filter((b) => b === Bloco.JANELA).length;
+    expect(acesas).toBeGreaterThan(0.15 * (acesas + apagadas));
+    expect(acesas).toBeLessThan(0.6 * (acesas + apagadas));
+    expect(obterBloco(Bloco.JANELA_ACESA)?.luz ?? 0).toBe(0);
+    expect(obterBloco(Bloco.JANELA_ACESA)?.emissivo).toBe(true);
+  });
+
+  it("o prédio alto tem caixa d'água e baú no terraço; a esquina art déco tem o topo em degraus", () => {
+    const alto = construirModelo('alto', combinacoes([6])[0]);
+    const noTerraco = (p: typeof alto, b: number) => {
+      for (let f = 0; f < p.profundidade; f++)
+        for (let s = 0; s < p.largura; s++)
+          if (blocoDaPlanta(p, s, f, p.terraco) === b) return true;
+      return false;
+    };
+    expect(noTerraco(alto, Bloco.BAU)).toBe(true);
+    expect(noTerraco(alto, Bloco.CERCA)).toBe(true);
+    const deco = construirModelo('deco', combinacoes([6])[0]);
+    let topo = 0;
+    for (let i = 0; i < deco.blocos.length; i++)
+      if (deco.blocos[i] !== NADA && deco.blocos[i] !== 0)
+        topo = Math.max(topo, Math.floor(i / (16 * 9)));
+    expect(topo).toBeGreaterThanOrEqual(deco.terraco + 7);
   });
 });

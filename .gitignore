@@ -4,6 +4,7 @@ test-results/
 playwright-report/
 capturas-temas/
 capturas-protecao/
+capturas-cidade/
 .claude/
 servidor/dist/
 node_modules

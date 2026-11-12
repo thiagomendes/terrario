@@ -762,12 +762,13 @@ function pintoresDaCidade(): Record<string, Pintor> {
         ? rampa(['#b8892c'], 0, x, y, s)
         : rampa(['#d8a843', '#e0b24c'], hash2(x, y, s), x, y, s);
     },
-    // janela grande: moldura creme em cruz e vidro recortado com dois reflexos
+    // janela grande: moldura creme em cruz e o vidro azul-claro com dois reflexos (como no
+    // esboço aprovado: não se vê através, mas a luz do dia entra)
     janela: (x, y, s) => {
       if (molduraJanela(x, y)) return rampa(['#ece2cc', '#f1e8d4'], hash2(x, y, s), x, y, s);
       const d = (x % 8) + (y % 8);
-      if (d === 5 || d === 6) return [222, 242, 252, 255];
-      return VAZIO;
+      if (d === 5 || d === 6) return rampa(['#e4f4fb'], 0, x, y, s);
+      return rampa(['#8fc3e0', '#9dcce6', '#acd6ec'], ((x % 8) + (y % 8)) / 14, x, y, s);
     },
     // janela acesa: a mesma moldura e a luz morna de dentro, com cortina dos lados
     janela_acesa: (x, y, s) => {
@@ -785,8 +786,8 @@ function pintoresDaCidade(): Record<string, Pintor> {
     // laje de grade (patamar da escada de incêndio): barras em grade com vão escuro
     laje_grade: (x, y, s) =>
       x % 4 === 0 || y % 4 === 0
-        ? rampa(['#454951', '#4c5059'], hash2(x, y, s), x, y, s)
-        : rampa(['#1d1f24', '#22242a'], hash2(x, y, s), x, y, s),
+        ? rampa(['#6a707c', '#727885'], hash2(x, y, s), x, y, s)
+        : rampa(['#30333a', '#363940'], hash2(x, y, s), x, y, s),
     // poste: o globo creme em cima da haste de ferro (a cor do globo é o brilho da peça)
     poste: (x, y, s) =>
       Math.hypot(x - 7.5, y - 5) < 4.2

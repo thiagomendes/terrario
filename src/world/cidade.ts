@@ -382,6 +382,26 @@ function planejarCidade(semente: number, r: RelevoNatural): PlanoCidade {
       default:
         break;
     }
+    // as lojas: o que cada uma vende (a placa e o que tem dentro)
+    const VENDE = {
+      padaria: 'padaria',
+      oficina: 'oficina',
+      construcao: 'construcao',
+      sorveteria: 'sorveteria',
+    } as const;
+    if (l.uso in VENDE) params.vende = VENDE[l.uso as keyof typeof VENDE];
+    else if (params.loja || l.modelo === 'deco')
+      params.vende = (['padaria', 'oficina', 'construcao', 'sorveteria'] as const)[
+        Math.floor(s(8) * 4)
+      ];
+    // os prédios largos de esquina viram a fachada do lado (s = 15) para a avenida
+    if (l.largura === 16) {
+      const k = Math.round((l.x0 - (ax(base, bi) + LARG_AVENIDA)) / LOTE_X);
+      const avenidaEmXMenor = k === 0;
+      // na fileira 'n' o s cresce com x; na 's', ao contrário
+      const ladoS15EmXMaior = l.porta === 'n';
+      params.espelho = avenidaEmXMenor === ladoS15EmXMaior;
+    }
     if (l.modelo) l.params = params;
   }
 
@@ -675,7 +695,7 @@ export type PincelCidade = (wx: number, y: number, wz: number, id: number, meta?
 const plantas = new WeakMap<LoteCidade, Planta | null>();
 export function plantaDoLote(l: LoteCidade): Planta | null {
   if (plantas.has(l)) return plantas.get(l)!;
-  const p = l.modelo && l.params ? construirModelo(l.modelo, l.params, l.largura) : null;
+  const p = l.modelo && l.params ? construirModelo(l.modelo, l.params) : null;
   plantas.set(l, p);
   return p;
 }
@@ -719,16 +739,16 @@ export function construirCidade(p: PlanoCidade, cx: number, cz: number, em: Pinc
   const Y = p.h + 1;
   for (const l of p.lotes) {
     if (!tocaLote(l, r)) continue;
+    const pl = l.uso === 'praca' || l.uso === 'canteiro' ? null : plantaDoLote(l);
+    // a planta começa em cima da calçada (chao = -1) ou no nível dela (chao = 0)
+    const y0 = Y - 1 - (pl?.chao ?? -1);
     const q = (s: number, f: number, y: number, id: number, d?: number) => {
       const [x, z] = noLoteCidade(l, s, f);
-      em(x, Y + y, z, id, d === undefined ? undefined : dirNoMundo(l, d));
+      em(x, y0 + y, z, id, d === undefined ? undefined : dirNoMundo(l, d));
     };
     if (l.uso === 'praca') praca(l, q);
     else if (l.uso === 'canteiro') canteiro(l, q);
-    else {
-      const pl = plantaDoLote(l);
-      if (pl) pintarPlanta(l, pl, q);
-    }
+    else if (pl) pintarPlanta(l, pl, q);
   }
   // parque: a água do lago (o chão já desceu 2) e a entrada do metrô
   const { lago } = p;
@@ -901,10 +921,11 @@ export function passagensDaCidade(
     }
     const pl = plantaDoLote(l);
     if (!pl) continue;
+    const y0 = Y - 1 - pl.chao;
     for (const [s, f, y] of passagensDaPlanta(pl)) {
       if (f < 0) continue;
       const [x, z] = noLoteCidade(l, s, f);
-      passagem(x, Y + y, z);
+      passagem(x, y0 + y, z);
     }
   }
 }

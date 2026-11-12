@@ -48,7 +48,12 @@ export interface ParametrosPredio {
   loja: boolean;
   /** Semente das janelas acesas (cada janela acende ou não por ela). */
   luzes: number;
+  /** O que a loja do térreo vende (a placa e o que tem dentro). */
+  vende?: Vende;
 }
+
+/** Lojinhas do térreo: o desenho da placa e o que fica dentro (spec 014). */
+export type Vende = 'padaria' | 'oficina' | 'construcao' | 'sorveteria';
 
 /** Um apartamento (ou a loja) de um andar: o cômodo de dentro, sem a escada. */
 export interface Comodo {
@@ -75,6 +80,11 @@ export interface Planta {
   blocos: Uint8Array;
   /** Direção local por célula (SEM_DIR = sem direção). */
   metas: Uint8Array;
+  /**
+   * Altura (na planta) do bloco do chão da cidade: -1 (o padrão) quando a planta começa em
+   * cima da calçada; 0 quando o térreo fica no nível da rua e a planta pinta o piso dele.
+   */
+  chao: number;
   /** Porta da rua: célula de baixo da porta (s, f, y). */
   porta: [number, number, number];
   /** Altura dos pés no terraço. */
@@ -99,6 +109,7 @@ export function plantaVazia(
     params,
     blocos: new Uint8Array(n).fill(NADA),
     metas: new Uint8Array(n).fill(SEM_DIR),
+    chao: -1,
     porta: [0, 0, 0],
     terraco: 0,
     comodos: [],
@@ -113,8 +124,11 @@ export function dentro(p: Planta, s: number, f: number, y: number): boolean {
   return s >= 0 && s < p.largura && f >= 0 && f < p.profundidade && y >= 0 && y < p.altura;
 }
 
-/** Põe um bloco (com direção local, se tiver). Fora da planta é erro: nada sai do lote. */
-export function por(p: Planta, s: number, f: number, y: number, b: number, d?: DirLocal): void {
+/**
+ * Põe um bloco (com direção local, se tiver; os bits de cima do metadado, como o desenho da
+ * placa, vão junto). Fora da planta é erro: nada sai do lote.
+ */
+export function por(p: Planta, s: number, f: number, y: number, b: number, d?: number): void {
   if (!dentro(p, s, f, y)) throw new Error(`${p.modelo}: bloco fora do lote em ${s},${f},${y}`);
   const i = indicePlanta(p, s, f, y);
   p.blocos[i] = b;
@@ -172,8 +186,10 @@ export function espelhar(p: Planta): Planta {
         const j = indicePlanta(q, p.largura - 1 - s, f, y);
         q.blocos[j] = p.blocos[i];
         const d = p.metas[i];
-        q.metas[j] = d === 1 ? 3 : d === 3 ? 1 : d;
+        const lado = d & 3;
+        q.metas[j] = d === SEM_DIR || (lado !== 1 && lado !== 3) ? d : (d & ~3) | (lado ^ 2);
       }
+  q.chao = p.chao;
   q.porta = [p.largura - 1 - p.porta[0], p.porta[1], p.porta[2]];
   q.terraco = p.terraco;
   q.comodos = p.comodos.map((c) => ({
