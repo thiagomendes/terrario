@@ -14,6 +14,7 @@
  * - Reserva: enquanto o pacote não chegou ou se ele falhar, toca a voz sintetizada de hoje
  *   (nada fica mudo, nada vai para o console).
  */
+import { lerIndiceSons } from './indiceSons';
 import { desenharVoz } from './sons';
 import { criarGerador, type Gerador } from './variacao';
 import type { ContextoAudio, Desenho, FonteAudio, GrupoAudio, MotorAudio, NoAudio } from './motor';
@@ -264,15 +265,17 @@ type GanhoComRampa = NoAudio & {
 };
 
 async function baixarPadrao(url: string, sinal?: AbortSignal): Promise<ArrayBuffer> {
-  const r = await fetch(url, { signal: sinal });
+  // sem disputar a rede com o mundo; o cache do navegador guarda para a próxima vez
+  const r = await fetch(url, { signal: sinal, priority: 'low' } as RequestInit);
   if (!r.ok) throw new Error(`HTTP ${r.status}`);
   return r.arrayBuffer();
 }
 
-async function indicePadrao(url: string, sinal?: AbortSignal): Promise<IndiceSons> {
-  const r = await fetch(url, { signal: sinal });
-  if (!r.ok) throw new Error(`HTTP ${r.status}`);
-  return (await r.json()) as IndiceSons;
+/** O índice é o mesmo da música (`lerIndiceSons`): baixa e lê uma vez só. */
+async function indicePadrao(url: string): Promise<IndiceSons> {
+  const j = await lerIndiceSons(url);
+  if (!j) throw new Error('sem índice');
+  return j as IndiceSons;
 }
 
 /** Decodifica a 22 050 Hz num OfflineAudioContext; sem ele, no contexto do jogo. */

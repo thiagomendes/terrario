@@ -20,6 +20,8 @@
  * sem tocar é solto, e tudo é solto ao sair do mundo.
  */
 
+import { esquecerIndiceSons, lerIndiceSons } from './indiceSons';
+
 /** Taxa dos arquivos gravados (e da decodificação). */
 export const TAXA_TRILHA = 22050;
 
@@ -537,6 +539,7 @@ let indicePromessa: Promise<IndiceTrilha | null> | null = null;
 /** Para os testes: esquece o índice já lido. */
 export function esquecerIndiceTrilha(): void {
   indicePromessa = null;
+  esquecerIndiceSons();
 }
 
 export function bytesDoBuffer(b: Pick<AudioBuffer, 'length' | 'numberOfChannels'>): number {
@@ -563,11 +566,20 @@ export class CarregadorTrilha {
   private geracaoAbertos = 0;
   private baixando: Promise<boolean> | null = null;
   private readonly buscar: Buscar;
+  /** O JSON do índice: o mesmo das vozes (`lerIndiceSons`), menos com `buscar` de teste. */
+  private readonly lerIndice: (url: string) => Promise<unknown>;
   private readonly decodificar: Decodificar;
   private readonly base: string;
 
   constructor(op: { buscar?: Buscar; decodificar?: Decodificar; base?: string } = {}) {
-    this.buscar = op.buscar ?? buscarPadrao;
+    const buscar = op.buscar;
+    this.buscar = buscar ?? buscarPadrao;
+    this.lerIndice = buscar
+      ? (url) =>
+          buscar(url)
+            .then((r) => (r.ok ? r.json() : null))
+            .catch(() => null)
+      : lerIndiceSons;
     this.decodificar = op.decodificar ?? criarDecodificador(() => null);
     this.base = op.base ?? baseDoSite();
   }
@@ -583,8 +595,7 @@ export class CarregadorTrilha {
     this.baixando = (async () => {
       try {
         if (!indicePromessa) {
-          indicePromessa = this.buscar(`${this.base}sons/indice.json`)
-            .then((r) => (r.ok ? r.json() : null))
+          indicePromessa = this.lerIndice(`${this.base}sons/indice.json`)
             .then((j) => lerIndiceTrilha(j))
             .catch(() => null);
         }

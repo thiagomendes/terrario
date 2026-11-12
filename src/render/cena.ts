@@ -2468,8 +2468,10 @@ export function criarCena(
     estado.chunksCarregados = malhas.size;
     if (!estado.ready && pedidos.size === 0 && fila.tamanho === 0 && malhas.size > 0) {
       estado.ready = true;
-      // o mundo já abriu: só agora a música do tema começa a baixar (nunca o mundo espera)
+      // o mundo já abriu: só agora a música e as vozes do tema começam a baixar (nunca o
+      // mundo espera)
       trilha.baixar();
+      vozes.carregar();
       // ícones de brinquedo desenhados dos modelos 3D, poucos por quadro
       if (!pararIcones) pararIcones = gerarIconesBrinquedo(atlas, definirIconesBrinquedo);
     }
@@ -3182,7 +3184,7 @@ export function criarCena(
     meuAlvo.id = id;
     meuAlvo.em = performance.now();
   };
-  setTimeout(() => vozes.carregar(), 2500);
+  // as vozes baixam quando o mundo fica pronto (estado.ready), junto com a música
   // saiu do mundo: solta o pacote e as fatias; voltou pelo histórico (cache da página): baixa de novo
   window.addEventListener('pagehide', () => vozes.liberar());
   window.addEventListener('pageshow', (ev) => {
