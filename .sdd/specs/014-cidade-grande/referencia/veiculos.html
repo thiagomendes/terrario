@@ -1,0 +1,332 @@
+<title>Carrinhos da Cidade Grande</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@500;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: cabeçalho; uma faixa por versão (texto e custo à esquerda, fotos à direita, empilha no celular); depois a mecânica em quadros, os sons e a recomendação. Mesma família visual dos esboços da 013, 019 e da cidade. */
+:root {
+  --bg: #eef0f6;
+  --fg: #1c1b2b;
+  --suave: #55566e;
+  --linha: #cdd0de;
+  --acento: #b8650c;
+  --cartao: #f8f9fc;
+  --display: 'Pixelify Sans', 'Courier New', monospace;
+  --corpo: 'IBM Plex Sans', system-ui, sans-serif;
+  --mono: 'IBM Plex Mono', ui-monospace, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) { --bg: #12111c; --fg: #ecebf5; --suave: #a7a6bf; --linha: #2c2b40; --acento: #ffc96b; --cartao: #1a1928; color-scheme: dark; }
+}
+:root[data-theme="dark"] { --bg: #12111c; --fg: #ecebf5; --suave: #a7a6bf; --linha: #2c2b40; --acento: #ffc96b; --cartao: #1a1928; color-scheme: dark; }
+body { background: var(--bg); color: var(--fg); font: 400 16px/1.55 var(--corpo); }
+.pagina {
+  max-width: 1180px; margin: 0 auto;
+  padding-block: 28px 72px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: grid; gap: 48px;
+}
+h1, h2, h3 { font-family: var(--display); margin: 0; line-height: 1.15; text-wrap: balance; font-variant-ligatures: none; }
+h1 { font-size: clamp(1.9rem, 5vw, 2.9rem); }
+h2 { font-size: clamp(1.35rem, 3vw, 1.8rem); }
+h3 { font-size: 1.05rem; }
+p { margin: 0; }
+section { display: grid; gap: 16px; min-width: 0; }
+.olho { font: 600 0.78rem var(--corpo); letter-spacing: 0.12em; text-transform: uppercase; color: var(--acento); }
+.intro, .texto { max-width: 72ch; }
+.intro { color: var(--suave); }
+.aviso { background: var(--cartao); border: 1px solid var(--linha); border-radius: 12px; padding: 12px 16px; max-width: 78ch; font-size: 0.95rem; }
+.versao { display: grid; grid-template-columns: minmax(0, 20rem) minmax(0, 1fr); gap: 20px; align-items: start; padding-top: 18px; border-top: 1px solid var(--linha); }
+@media (max-width: 860px) { .versao { grid-template-columns: 1fr; } }
+.ficha { display: grid; gap: 10px; min-width: 0; }
+.ficha ul { margin: 0; padding-left: 1.15em; display: grid; gap: 5px; }
+.custo { font: 400 0.85rem/1.5 var(--mono); color: var(--suave); background: var(--cartao); border: 1px solid var(--linha); border-radius: 10px; padding: 8px 10px; }
+.fotos { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 0.48fr); gap: 12px; min-width: 0; }
+.fotos .celular { grid-column: 3; grid-row: 1 / span 2; }
+@media (max-width: 1000px) { .fotos { grid-template-columns: repeat(2, minmax(0, 1fr)); } .fotos .celular { grid-column: auto; grid-row: span 2; } }
+@media (max-width: 560px) { .fotos { grid-template-columns: 1fr; } .fotos .celular { grid-row: auto; max-width: 260px; } }
+figure { margin: 0; display: grid; gap: 5px; min-width: 0; align-content: start; }
+figure img { display: block; width: 100%; max-width: 100%; height: auto; border-radius: 12px; border: 1px solid var(--linha); background: var(--cartao); }
+figcaption { font-size: 0.88rem; color: var(--suave); }
+figcaption b { color: var(--fg); font-weight: 600; }
+.quadros { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+@media (max-width: 760px) { .quadros { grid-template-columns: 1fr; } }
+.duas { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+@media (max-width: 760px) { .duas { grid-template-columns: 1fr; } }
+.sons { display: grid; gap: 8px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 440px), 1fr)); }
+.som { display: grid; grid-template-columns: minmax(0, 13rem) minmax(0, 1fr); gap: 4px 14px; align-items: center; padding: 8px 12px; background: var(--cartao); border: 1px solid var(--linha); border-radius: 12px; }
+.som audio { width: 100%; min-width: 0; }
+.som .nome { font-weight: 600; font-size: 0.95rem; }
+.som .nota { grid-column: 1 / -1; font-size: 0.85rem; color: var(--suave); }
+@media (max-width: 640px) { .som { grid-template-columns: 1fr; } }
+.regras { margin: 0; padding-left: 1.2em; display: grid; gap: 8px; max-width: 78ch; }
+.tabela { overflow-x: auto; border: 1px solid var(--linha); border-radius: 12px; }
+table { border-collapse: collapse; width: 100%; font-size: 0.9rem; min-width: 640px; }
+th, td { text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--linha); vertical-align: top; }
+th { font-weight: 600; background: var(--cartao); }
+td.n { font-variant-numeric: tabular-nums; font-family: var(--mono); font-size: 0.85rem; }
+tr:last-child td { border-bottom: 0; }
+.veredito { border-left: 4px solid var(--acento); padding: 4px 0 4px 14px; max-width: 76ch; }
+ol.perguntas { margin: 0; padding-left: 1.4em; display: grid; gap: 8px; max-width: 76ch; }
+svg.circuito { width: 100%; max-width: 520px; height: auto; }
+svg.circuito .asfalto { fill: #3d3f46; }
+svg.circuito .quadra { fill: var(--cartao); stroke: var(--linha); }
+svg.circuito .volta-taxi { fill: none; stroke: #f4c20d; stroke-width: 3; stroke-dasharray: 8 6; }
+svg.circuito .volta-onibus { fill: none; stroke: #4f9be8; stroke-width: 3; stroke-dasharray: 8 6; }
+svg.circuito text { fill: var(--fg); font: 600 12px var(--corpo); }
+svg.circuito .cruz { fill: rgba(255, 214, 107, 0.45); }
+svg.circuito .ponto { fill: #4f9be8; }
+</style>
+
+<div class="pagina">
+  <header style="display:grid;gap:10px">
+    <div class="olho">Terrário · spec 014 · esboço só dos veículos</div>
+    <h1>Carrinhos da Cidade Grande</h1>
+    <p class="intro">O primeiro esboço tinha táxi e ônibus quadrados demais. Aqui há quatro jeitos novos, todos feitos das mesmas peças de plástico de brinquedo dos bonecos e das fantasias (caixas arredondadas, bolinhas, anéis), na mesma rua da cidade. Cada versão tem táxi e ônibus de dia, de noite e no celular, e os sons dela. Depois vêm a mecânica (como andam e param) e os sons comuns. No fim, a recomendação e perguntas para afinar.</p>
+    <p class="aviso"><b>Provisório:</b> é o palco do esboço da cidade (céu, luz e moradores do Rancho Alegre). Os veículos estão com o máximo de detalhe para julgar o desenho; os números de custo mostram o esboço e a meta do jogo, que funde as peças e baixa os detalhes.</p>
+  </header>
+
+  <section aria-labelledby="t-v1">
+    <div class="versao">
+      <div class="ficha">
+        <div class="olho">Versão 1</div>
+        <h2 id="t-v1">Brinquedo de corda</h2>
+        <p>O carrinho de lata de corda, feito de plástico macio.</p>
+        <ul>
+          <li>Rodas grandes e gordinhas, com calota; entre-eixos curto.</li>
+          <li>Cabine de bolha com faixa de vidro, para-choques cromados, faróis redondos.</li>
+          <li>A chave de corda nas costas do táxi; xadrez só de quadradinhos, sem letra.</li>
+          <li>Som de corda: zumbido baixinho com o tique-tique da catraca.</li>
+        </ul>
+        <p class="custo">Esboço: táxi <span data-custo="v1.taxi"></span>; ônibus <span data-custo="v1.onibus"></span>.<br>Meta no jogo: táxi até 3.500 triângulos, ônibus até 4.500, 3 chamadas de desenho por modelo.</p>
+      </div>
+      <div class="fotos">
+        <figure><img src="veiculos/v1-taxi.jpg" alt="Táxi amarelo de brinquedo de corda, cabine de bolha, rodas gordas, para-choque cromado e chave de corda" loading="lazy"><figcaption><b>Táxi</b> de 3/4.</figcaption></figure>
+        <figure class="celular"><img src="veiculos/v1-celular.jpg" alt="No celular em pé: a criança na calçada vendo o táxi e o ônibus da versão 1" loading="lazy"><figcaption><b>Celular,</b> a criança na calçada.</figcaption></figure>
+        <figure><img src="veiculos/v1-onibus.jpg" alt="Ônibus azul e branco de brinquedo, arredondado, com faixa de janelas e para-choque cromado" loading="lazy"><figcaption><b>Ônibus</b> de 3/4.</figcaption></figure>
+        <figure><img src="veiculos/v1-par-dia.jpg" alt="O táxi e o ônibus da versão 1 na avenida, de dia" loading="lazy"><figcaption><b>Os dois na rua,</b> de dia.</figcaption></figure>
+        <figure><img src="veiculos/v1-noite.jpg" alt="O táxi e o ônibus da versão 1 de noite, com faróis acesos e poças de luz no asfalto" loading="lazy"><figcaption><b>De noite,</b> faróis acesos.</figcaption></figure>
+      </div>
+    </div>
+    <div class="sons">
+      <div class="som"><span class="nome">Motor do táxi</span><audio controls preload="none" loop src="veiculos/sons/v1-motor-taxi.mp3"></audio></div>
+      <div class="som"><span class="nome">Motor do ônibus</span><audio controls preload="none" loop src="veiculos/sons/v1-motor-onibus.mp3"></audio></div>
+      <div class="som"><span class="nome">Buzina do táxi ("bi-bi")</span><audio controls preload="none" src="veiculos/sons/v1-buzina-taxi.mp3"></audio></div>
+      <div class="som"><span class="nome">Buzina do ônibus ("fom-fom")</span><audio controls preload="none" src="veiculos/sons/v1-buzina-onibus.mp3"></audio></div>
+    </div>
+  </section>
+
+  <section aria-labelledby="t-v2">
+    <div class="versao">
+      <div class="ficha">
+        <div class="olho">Versão 2</div>
+        <h2 id="t-v2">Bloquinhos</h2>
+        <p>A carroceria montada de tijolinhos arredondados, como se a criança tivesse montado o carro com os blocos do jogo.</p>
+        <ul>
+          <li>Cada pedaço é um cubinho fofo; janelas são cubinhos de vidro.</li>
+          <li>Rodas de pneu mais alto, calota branca.</li>
+          <li>Faróis quadradinhos.</li>
+          <li>Som de madeira: um puque-puque de motorzinho de brinquedo; buzina de pera de borracha.</li>
+        </ul>
+        <p class="custo">Esboço: táxi <span data-custo="v2.taxi"></span>; ônibus <span data-custo="v2.onibus"></span>.<br>Meta: igual à V1, mas o ônibus tem muitas peças (cada cubinho conta); fundido com cubinhos de 2 segmentos fica em uns 4.000.</p>
+      </div>
+      <div class="fotos">
+        <figure><img src="veiculos/v2-taxi.jpg" alt="Táxi feito de cubinhos amarelos arredondados, janelas de cubinhos azuis" loading="lazy"><figcaption><b>Táxi</b> de 3/4.</figcaption></figure>
+        <figure class="celular"><img src="veiculos/v2-celular.jpg" alt="No celular em pé: a criança na calçada vendo os veículos da versão 2" loading="lazy"><figcaption><b>Celular.</b></figcaption></figure>
+        <figure><img src="veiculos/v2-onibus.jpg" alt="Ônibus feito de cubinhos azuis, brancos e de vidro" loading="lazy"><figcaption><b>Ônibus</b> de 3/4.</figcaption></figure>
+        <figure><img src="veiculos/v2-par-dia.jpg" alt="O táxi e o ônibus da versão 2 na avenida, de dia" loading="lazy"><figcaption><b>Os dois na rua.</b></figcaption></figure>
+        <figure><img src="veiculos/v2-noite.jpg" alt="Os veículos da versão 2 de noite" loading="lazy"><figcaption><b>De noite.</b></figcaption></figure>
+      </div>
+    </div>
+    <div class="sons">
+      <div class="som"><span class="nome">Motor do táxi</span><audio controls preload="none" loop src="veiculos/sons/v2-motor-taxi.mp3"></audio></div>
+      <div class="som"><span class="nome">Motor do ônibus</span><audio controls preload="none" loop src="veiculos/sons/v2-motor-onibus.mp3"></audio></div>
+      <div class="som"><span class="nome">Buzina do táxi ("pó-pó")</span><audio controls preload="none" src="veiculos/sons/v2-buzina-taxi.mp3"></audio></div>
+      <div class="som"><span class="nome">Buzina do ônibus</span><audio controls preload="none" src="veiculos/sons/v2-buzina-onibus.mp3"></audio></div>
+    </div>
+  </section>
+
+  <section aria-labelledby="t-v3">
+    <div class="versao">
+      <div class="ficha">
+        <div class="olho">Versão 3</div>
+        <h2 id="t-v3">Com carinha</h2>
+        <p>A mais fofa: cúpula redonda, faróis que são olhinhos, um sorriso cromado no para-choque e bochechas cor-de-rosa. Discreta, sem boca que fala.</p>
+        <ul>
+          <li>Táxi amarelo e ônibus verde e branco, janelas redondinhas.</li>
+          <li>Extra: o carrinho de sorvete, com a casquinha no teto e calotas de estrelinha.</li>
+          <li>Som: um ronronzinho; buzina "bip-bip" que sobe (táxi) e "bom-bom" em terça (ônibus).</li>
+        </ul>
+        <p class="custo">Esboço: táxi <span data-custo="v3.taxi"></span>; ônibus <span data-custo="v3.onibus"></span>; sorvete <span data-custo="v3.extra"></span>.<br>Meta: como a V1; os olhos são 6 bolinhas a mais.</p>
+      </div>
+      <div class="fotos">
+        <figure><img src="veiculos/v3-taxi.jpg" alt="Táxi amarelo com cúpula redonda, faróis em forma de olhinhos, sorriso cromado e bochechas" loading="lazy"><figcaption><b>Táxi</b> de 3/4.</figcaption></figure>
+        <figure class="celular"><img src="veiculos/v3-celular.jpg" alt="No celular em pé: a criança na calçada vendo os veículos da versão 3" loading="lazy"><figcaption><b>Celular.</b></figcaption></figure>
+        <figure><img src="veiculos/v3-onibus.jpg" alt="Ônibus verde e branco com olhinhos e sorriso" loading="lazy"><figcaption><b>Ônibus</b> de 3/4.</figcaption></figure>
+        <figure><img src="veiculos/v3-sorvete.jpg" alt="Carrinho de sorvete rosa e branco com uma casquinha gigante no teto, olhinhos e calotas de estrela" loading="lazy"><figcaption><b>Extra:</b> o carrinho de sorvete.</figcaption></figure>
+        <figure><img src="veiculos/v3-par-dia.jpg" alt="O táxi e o ônibus da versão 3 na avenida, de dia" loading="lazy"><figcaption><b>Os dois na rua.</b></figcaption></figure>
+        <figure><img src="veiculos/v3-noite.jpg" alt="Os veículos da versão 3 de noite, com os olhinhos acesos" loading="lazy"><figcaption><b>De noite,</b> os olhinhos acendem.</figcaption></figure>
+      </div>
+    </div>
+    <div class="sons">
+      <div class="som"><span class="nome">Motor do táxi</span><audio controls preload="none" loop src="veiculos/sons/v3-motor-taxi.mp3"></audio></div>
+      <div class="som"><span class="nome">Motor do ônibus</span><audio controls preload="none" loop src="veiculos/sons/v3-motor-onibus.mp3"></audio></div>
+      <div class="som"><span class="nome">Buzina do táxi ("bip-bip")</span><audio controls preload="none" src="veiculos/sons/v3-buzina-taxi.mp3"></audio></div>
+      <div class="som"><span class="nome">Buzina do ônibus ("bom-bom")</span><audio controls preload="none" src="veiculos/sons/v3-buzina-onibus.mp3"></audio></div>
+    </div>
+  </section>
+
+  <section aria-labelledby="t-v4">
+    <div class="versao">
+      <div class="ficha">
+        <div class="olho">Versão 4</div>
+        <h2 id="t-v4">Vinil retrô</h2>
+        <p>Carro antigo de brinquedo de vinil brilhante: carroceria de cápsula, para-lamas redondos sobre as rodas, pneus de faixa branca, friso cromado e aros nos faróis.</p>
+        <ul>
+          <li>Duas cores: táxi amarelo com teto creme; ônibus verde-água e creme.</li>
+          <li>Mais brilho no plástico (o vinil) e mais cromado.</li>
+          <li>Som: zumbido redondo de carro antigo, com um borbulhar baixinho; buzina "uuu-a" bem macia.</li>
+        </ul>
+        <p class="custo">Esboço: táxi <span data-custo="v4.taxi"></span>; ônibus <span data-custo="v4.onibus"></span>.<br>Meta: como a V1.</p>
+      </div>
+      <div class="fotos">
+        <figure><img src="veiculos/v4-taxi.jpg" alt="Táxi retrô amarelo e creme de vinil com para-lamas redondos, pneus de faixa branca e friso cromado" loading="lazy"><figcaption><b>Táxi</b> de 3/4.</figcaption></figure>
+        <figure class="celular"><img src="veiculos/v4-celular.jpg" alt="No celular em pé: a criança na calçada vendo os veículos da versão 4" loading="lazy"><figcaption><b>Celular.</b></figcaption></figure>
+        <figure><img src="veiculos/v4-onibus.jpg" alt="Ônibus retrô verde-água e creme com para-lamas redondos" loading="lazy"><figcaption><b>Ônibus</b> de 3/4.</figcaption></figure>
+        <figure><img src="veiculos/v4-par-dia.jpg" alt="O táxi e o ônibus da versão 4 na avenida, de dia" loading="lazy"><figcaption><b>Os dois na rua.</b></figcaption></figure>
+        <figure><img src="veiculos/v4-noite.jpg" alt="Os veículos da versão 4 de noite" loading="lazy"><figcaption><b>De noite.</b></figcaption></figure>
+      </div>
+    </div>
+    <div class="sons">
+      <div class="som"><span class="nome">Motor do táxi</span><audio controls preload="none" loop src="veiculos/sons/v4-motor-taxi.mp3"></audio></div>
+      <div class="som"><span class="nome">Motor do ônibus</span><audio controls preload="none" loop src="veiculos/sons/v4-motor-onibus.mp3"></audio></div>
+      <div class="som"><span class="nome">Buzina do táxi ("uuu-a")</span><audio controls preload="none" src="veiculos/sons/v4-buzina-taxi.mp3"></audio></div>
+      <div class="som"><span class="nome">Buzina do ônibus (dois tons)</span><audio controls preload="none" src="veiculos/sons/v4-buzina-onibus.mp3"></audio></div>
+    </div>
+  </section>
+
+  <section aria-labelledby="t-mecanica">
+    <div class="olho">Vale para qualquer versão</div>
+    <h2 id="t-mecanica">Como andam, param e esperam</h2>
+    <div class="duas">
+      <figure>
+        <svg class="circuito" viewBox="0 0 520 300" role="img" aria-labelledby="t-svg">
+          <title id="t-svg">Voltas fixas em volta dos quarteirões: o táxi dá a volta num quarteirão, o ônibus em dois, sempre pela direita; o cruzamento é de um veículo por vez</title>
+          <rect class="asfalto" x="0" y="0" width="520" height="300"></rect>
+          <rect class="quadra" x="24" y="24" width="140" height="100" rx="6"></rect>
+          <rect class="quadra" x="190" y="24" width="140" height="100" rx="6"></rect>
+          <rect class="quadra" x="356" y="24" width="140" height="100" rx="6"></rect>
+          <rect class="quadra" x="24" y="150" width="140" height="126" rx="6"></rect>
+          <rect class="quadra" x="190" y="150" width="140" height="126" rx="6"></rect>
+          <rect class="quadra" x="356" y="150" width="140" height="126" rx="6"></rect>
+          <rect class="cruz" x="164" y="124" width="26" height="26"></rect>
+          <rect class="cruz" x="330" y="124" width="26" height="26"></rect>
+          <rect class="volta-taxi" x="14" y="14" width="160" height="120" rx="10"></rect>
+          <rect class="volta-onibus" x="182" y="142" width="322" height="144" rx="12"></rect>
+          <circle class="ponto" cx="260" cy="146" r="7"></circle>
+          <circle class="ponto" cx="430" cy="146" r="7"></circle>
+          <text x="40" y="76">volta do táxi</text>
+          <text x="214" y="214">volta do ônibus (com 2 paradas)</text>
+        </svg>
+        <figcaption><b>Voltas fixas:</b> cada táxi dá a volta num quarteirão, o ônibus em dois, sempre pela mão da direita e devagar (3 blocos por segundo). Os quadrados claros são os cruzamentos: um veículo por vez, e só entra quem tem lugar do outro lado (nunca dá nó). O desenho que mexe está no esboço da cidade (seção dos táxis).</figcaption>
+      </figure>
+      <figure><img src="veiculos/mecanica-crianca-na-faixa.jpg" alt="Táxi parado antes da faixa de pedestre com a criança atravessando e um balão fom-fom" loading="lazy"><figcaption><b>Criança na faixa:</b> o táxi freia devagar, para a 1,5 bloco sem encostar e dá um "fom-fom" de brinquedo, no máximo um a cada 6 s. Os de trás fazem fila.</figcaption></figure>
+    </div>
+    <h3>O balanço de parar e de sair</h3>
+    <div class="quadros">
+      <figure><img src="veiculos/mecanica-balanco-1.jpg" alt="Táxi andando, carroceria reta" loading="lazy"><figcaption><b>1 · Andando:</b> reto.</figcaption></figure>
+      <figure><img src="veiculos/mecanica-balanco-2.jpg" alt="Táxi freando, carroceria inclinada para a frente e um pouco achatada" loading="lazy"><figcaption><b>2 · Freou:</b> a carroceria mergulha um pouquinho e achata (as rodas ficam no chão).</figcaption></figure>
+      <figure><img src="veiculos/mecanica-balanco-3.jpg" alt="Táxi voltando, carroceria levemente para trás" loading="lazy"><figcaption><b>3 · Voltou:</b> passa um tiquinho para trás e assenta. Uns 0,4 s, como uma mola de brinquedo. Ao sair, o contrário.</figcaption></figure>
+    </div>
+    <h3>O ônibus no ponto</h3>
+    <div class="quadros">
+      <figure><img src="veiculos/mecanica-onibus-chegando.jpg" alt="Ônibus chegando ao ponto com a porta fechada" loading="lazy"><figcaption><b>1 · Chegando:</b> freia devagar (chiadinho de freio) e balança.</figcaption></figure>
+      <figure><img src="veiculos/mecanica-onibus-porta-aberta.jpg" alt="Ônibus parado no ponto com a porta aberta" loading="lazy"><figcaption><b>2 · Parado:</b> a porta abre com um "pssh" e a campainha "plim-plom"; espera 4 s (mais, se houver criança no ponto).</figcaption></figure>
+      <figure><img src="veiculos/mecanica-onibus-saindo.jpg" alt="Ônibus saindo do ponto com a porta fechada" loading="lazy"><figcaption><b>3 · Saindo:</b> a porta fecha e ele sai, com o balanço de sair.</figcaption></figure>
+    </div>
+    <div class="duas">
+      <figure><img src="veiculos/mecanica-buzinadinha.jpg" alt="Táxi passando por um morador na calçada com um balão bi-bi" loading="lazy"><figcaption><b>Buzinadinha amiga:</b> ao passar perto de um morador (ou de uma criança na calçada), o táxi às vezes dá um "bi" curtinho e o morador acena (gesto da 015). No máximo uma vez a cada 20 s por táxi.</figcaption></figure>
+      <div style="display:grid;gap:10px;align-content:start">
+        <h3>O resto das regras</h3>
+        <ul class="regras">
+          <li><b>Criança parada na frente:</b> o carro espera o tempo que for, buzina de leve no máximo a cada 6 s, o motorista acena. Nunca empurra, nunca machuca.</li>
+          <li><b>Criança em cima do carro ou do ônibus:</b> o veículo é sólido como um bloco (dá para subir pulando) e não anda enquanto tiver alguém em cima. Ninguém é carregado. Quando ela desce, ele segue.</li>
+          <li><b>Faróis de noite:</b> acendem ao anoitecer, com uma poça de luz no asfalto na frente e as lanternas vermelhas atrás (veja as fotos de noite de cada versão). A poça é um desenho no chão, não uma luz de verdade: não pesa.</li>
+          <li><b>Bichos na rua:</b> preferem a calçada; se um parar na frente, o carro espera e o bicho sai em 2 s.</li>
+          <li><b>Nunca encalha:</b> se ficar 60 s parado sem motivo, some num sopro e volta no começo da volta.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section aria-labelledby="t-sons">
+    <div class="olho">Feitos por nós, de brinquedo e baixinhos</div>
+    <h2 id="t-sons">Sons comuns e a rua inteira</h2>
+    <p class="texto">Os motores são laços bem baixos (-32 dB a 2 blocos) e somem com a distância: a 16 blocos não se ouvem mais. Buzinas e campainha ficam na altura das vozes dos bichos (-23 dB). A rua com veículos foi misturada com a trilha da cidade, para julgar o conjunto.</p>
+    <div class="sons">
+      <div class="som"><span class="nome">A rua, 15 s</span><audio controls preload="none" src="veiculos/sons/rua-com-veiculos.mp3"></audio><span class="nota">Trilha da cidade + táxi passando (com a buzinadinha para o morador) + ônibus chegando ao ponto (freio, porta, campainha) + buzina ao longe e um pombo. Versão 1.</span></div>
+      <div class="som"><span class="nome">Freio</span><audio controls preload="none" src="veiculos/sons/freio.mp3"></audio><span class="nota">Chiadinho de brinquedo, -26 dB.</span></div>
+      <div class="som"><span class="nome">Porta do ônibus</span><audio controls preload="none" src="veiculos/sons/onibus-porta.mp3"></audio><span class="nota">"Pssh", -26 dB.</span></div>
+      <div class="som"><span class="nome">Campainha da parada</span><audio controls preload="none" src="veiculos/sons/onibus-campainha.mp3"></audio><span class="nota">"Plim-plom", -23 dB.</span></div>
+      <div class="som"><span class="nome">Buzinadinha para o morador</span><audio controls preload="none" src="veiculos/sons/v1-bibi-morador.mp3"></audio><span class="nota">Um "bi" só, -28 dB.</span></div>
+    </div>
+    <div class="tabela">
+      <table>
+        <thead><tr><th>Som</th><th>Volume (RMS enquanto soa)</th><th>Quantos ao mesmo tempo</th></tr></thead>
+        <tbody>
+          <tr><td>Motores (laço)</td><td class="n">-32 dB a 2 blocos, zero a 16</td><td>os 3 veículos mais perto; os outros calados</td></tr>
+          <tr><td>Buzinas, campainha</td><td class="n">-23 dB</td><td>1 por veículo, com espera de 6 s (buzinadinha amiga: 20 s)</td></tr>
+          <tr><td>Freio, porta</td><td class="n">-26 dB</td><td>entram no teto das vozes gravadas</td></tr>
+          <tr><td>A rua com a trilha</td><td class="n">-24,7 dBFS (a trilha sozinha: -24,6)</td><td>quase não sobe o volume da cena</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="texto"><b>Custo no celular:</b> no máximo 3 laços de motor e mais 1 buzina por vez, o que cabe no teto de 8 vozes gravadas da 019 (e no de 12 vozes do motor de som). Os laços tocam dentro do mesmo pacote de vozes do tema (uns 40 KB a mais por versão). <b>Licenças:</b> todos os sons dos veículos são síntese nossa (numpy e scipy, script em <code>fontes/scripts/sons_veiculos.py</code>), sem gravação de ninguém. A mistura da rua usa a trilha da cidade (FluidR3_GM, MIT) e o pombo ("Dove cooing", domínio público).</p>
+  </section>
+
+  <section aria-labelledby="t-custo">
+    <div class="olho">Desempenho</div>
+    <h2 id="t-custo">Quanto cada um pesa</h2>
+    <div class="tabela">
+      <table>
+        <thead><tr><th>Versão</th><th>Táxi (esboço)</th><th>Ônibus (esboço)</th><th>No jogo (meta)</th></tr></thead>
+        <tbody>
+          <tr><td>1 · Brinquedo de corda</td><td class="n" data-custo="v1.taxi"></td><td class="n" data-custo="v1.onibus"></td><td rowspan="4">Táxi ≤ 3.500 triângulos, ônibus ≤ 4.500. Por modelo, 3 chamadas de desenho para todos os veículos daquele modelo: carroceria fundida com a cor nos vértices (como a tinta das fantasias da 017), rodas em instâncias e faróis à parte (acendem de noite). Longe (mais de 30 blocos), uma versão simples de uns 400 triângulos. Com 4 táxis e 1 ônibus: até 19 mil triângulos e 6 chamadas na cena.</td></tr>
+          <tr><td>2 · Bloquinhos</td><td class="n" data-custo="v2.taxi"></td><td class="n" data-custo="v2.onibus"></td></tr>
+          <tr><td>3 · Com carinha</td><td class="n" data-custo="v3.taxi"></td><td class="n" data-custo="v3.onibus"></td></tr>
+          <tr><td>4 · Vinil retrô</td><td class="n" data-custo="v4.taxi"></td><td class="n" data-custo="v4.onibus"></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="texto">No esboço cada peça é separada e com o máximo de detalhe (bolinhas de 784 triângulos, cantos de 4 segmentos), por isso os números são altos. Fundir as peças e usar bolinhas e cantos mais simples, como os moradores já fazem no celular, deixa cada carro na meta sem mudar o desenho.</p>
+  </section>
+
+  <section aria-labelledby="t-rec">
+    <div class="olho">O que eu faria</div>
+    <h2 id="t-rec">Recomendação</h2>
+    <p class="veredito"><b>A versão 1 (brinquedo de corda) como base, com os olhinhos da versão 3 como opção.</b> Ela é a que mais conversa com os bonecos do jogo (as mesmas bolinhas e caixas macias), lê bem de longe como "táxi" e "ônibus", é leve e combina com o som de corda. A carinha deixa os pequenos mais amigos dos carros, mas pode ficar para o carrinho de sorvete e o ônibus, e o táxi fica sem. A versão 2 lembra demais os blocos do mundo e fica pesada; a 4 é bonita, mas o retrô puxa para outra época.</p>
+    <h3>Para afinar</h3>
+    <ol class="perguntas">
+      <li>Carinha em todos, só em alguns (ônibus e sorvete) ou em nenhum?</li>
+      <li>As cores: táxi amarelo e ônibus azul, ou o ônibus verde da versão 3?</li>
+      <li>O carrinho de sorvete entra (ele pode parar na praça e tocar uma musiquinha)?</li>
+      <li>O som de corda (tique-tique) agrada, ou prefere um zumbido liso?</li>
+      <li>A chave de corda nas costas do táxi: fica ou sai?</li>
+    </ol>
+  </section>
+</div>
+
+<script>
+(() => {
+  // números do esboço, medidos no motor (custos.json das capturas)
+  const custos = {"v1":{"taxi":{"triangulos":14400,"chamadas":12,"pecas":43},"onibus":{"triangulos":10464,"chamadas":11,"pecas":28}},"v2":{"taxi":{"triangulos":14048,"chamadas":8,"pecas":59},"onibus":{"triangulos":39776,"chamadas":9,"pecas":193}},"v3":{"taxi":{"triangulos":19696,"chamadas":14,"pecas":42},"onibus":{"triangulos":13648,"chamadas":12,"pecas":29},"extra":{"triangulos":29960,"chamadas":17,"pecas":53}},"v4":{"taxi":{"triangulos":17520,"chamadas":11,"pecas":36},"onibus":{"triangulos":15152,"chamadas":11,"pecas":36}}};
+  const fmt = (n) => n.toLocaleString('pt-BR');
+  for (const el of document.querySelectorAll('[data-custo]')) {
+    const [v, q] = el.dataset.custo.split('.');
+    const c = custos[v] && custos[v][q];
+    if (c) el.textContent = `${fmt(c.triangulos)} triângulos, ${c.chamadas} materiais (${c.pecas} peças)`;
+  }
+})();
+</script>

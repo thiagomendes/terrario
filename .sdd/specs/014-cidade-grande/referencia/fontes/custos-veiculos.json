@@ -1,0 +1,55 @@
+{
+ "v1": {
+  "taxi": {
+   "triangulos": 14400,
+   "chamadas": 12,
+   "pecas": 43
+  },
+  "onibus": {
+   "triangulos": 10464,
+   "chamadas": 11,
+   "pecas": 28
+  }
+ },
+ "v2": {
+  "taxi": {
+   "triangulos": 14048,
+   "chamadas": 8,
+   "pecas": 59
+  },
+  "onibus": {
+   "triangulos": 39776,
+   "chamadas": 9,
+   "pecas": 193
+  }
+ },
+ "v3": {
+  "taxi": {
+   "triangulos": 19696,
+   "chamadas": 14,
+   "pecas": 42
+  },
+  "onibus": {
+   "triangulos": 13648,
+   "chamadas": 12,
+   "pecas": 29
+  },
+  "extra": {
+   "triangulos": 29960,
+   "chamadas": 17,
+   "pecas": 53
+  }
+ },
+ "v4": {
+  "taxi": {
+   "triangulos": 17520,
+   "chamadas": 11,
+   "pecas": 36
+  },
+  "onibus": {
+   "triangulos": 15152,
+   "chamadas": 11,
+   "pecas": 36
+  }
+ }
+}

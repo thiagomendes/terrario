@@ -191,8 +191,13 @@ async function iniciar(app: HTMLElement): Promise<void> {
     },
   });
   criarDicaMira();
-  // esboço da spec 014 (só com ?esboco=cidade): pedaço à parte, o jogo nunca o carrega
-  if (params.get('esboco') === 'cidade') (await import('./esboco/cidade')).prepararEsbocoCidade();
+  // esboços da spec 014 (só com ?esboco=cidade ou ?esboco=veiculos): pedaços à parte, o jogo
+  // nunca os carrega
+  const esboco = params.get('esboco');
+  if (esboco === 'cidade' || esboco === 'veiculos') {
+    (await import('./esboco/cidade')).prepararEsbocoCidade();
+    if (esboco === 'veiculos') (await import('./esboco/veiculos')).prepararEsbocoVeiculos();
+  }
   // em prévia de outro tema nada é salvo: o mundo continua sendo do tema dele
   cena = criarCena(canvas, hotbar, {
     mundo: atual,
