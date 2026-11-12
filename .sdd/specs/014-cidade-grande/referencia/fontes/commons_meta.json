@@ -1,0 +1,72 @@
+{
+ "pomba": {
+  "arquivo": "pomba.ogg",
+  "titulo": "File:Dove cooing.ogg",
+  "pagina": "https://commons.wikimedia.org/wiki/File:Dove_cooing.ogg",
+  "url": "https://upload.wikimedia.org/wikipedia/commons/0/05/Dove_cooing.ogg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+  "licenca": "Public domain",
+  "codigo": "pd",
+  "termos": "Public domain",
+  "autor": "mary905",
+  "credito": "http://www.pdsounds.org/audio/download/503/dovecooing4302008.mp3\n\nPDSounds description: http://www.pdsounds.org/sounds/dove_cooing\nTransferred by Fæ",
+  "desc": "Title dove cooing\nArtist mary905\nOriginal mp3 data Length:0:08 minutes (34.84 KB) Format:MP3 Mono 22kHz 32Kbps (CBR)\nUser tags Bird, Birdsong, calling, cooing, Dove, Pigeon, Roof\nType Single Subject\nPDSounds record number 503\nComment Dove cooing, recorded 30th april 2008.",
+  "bytes": 50644,
+  "mime": "application/ogg"
+ },
+ "gato_pede": {
+  "arquivo": "gato_pede.oga",
+  "titulo": "File:Meow of a pleading cat.oga",
+  "pagina": "https://commons.wikimedia.org/wiki/File:Meow_of_a_pleading_cat.oga",
+  "url": "https://upload.wikimedia.org/wikipedia/commons/6/6b/Meow_of_a_pleading_cat.oga?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+  "licenca": "Public domain",
+  "codigo": "pd",
+  "termos": "Public domain",
+  "autor": "Heismark",
+  "credito": "Own work",
+  "desc": "Cat asking to get out.",
+  "bytes": 33297,
+  "mime": "application/ogg"
+ },
+ "gata_jovem": {
+  "arquivo": "gata_jovem.ogg",
+  "titulo": "File:Maullido de gata hembra joven.ogg",
+  "pagina": "https://commons.wikimedia.org/wiki/File:Maullido_de_gata_hembra_joven.ogg",
+  "url": "https://upload.wikimedia.org/wikipedia/commons/c/c0/Maullido_de_gata_hembra_joven.ogg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+  "licenca": "CC0",
+  "codigo": "cc0",
+  "termos": "Creative Commons Zero, Public Domain Dedication",
+  "autor": "George Miquilena",
+  "credito": "Own work",
+  "desc": "Maullido de gata hembra joven",
+  "bytes": 26917,
+  "mime": "application/ogg"
+ },
+ "cobaia_chilreio": {
+  "arquivo": "cobaia_chilreio.ogg",
+  "titulo": "File:Guinea Pig Chirping.ogg",
+  "pagina": "https://commons.wikimedia.org/wiki/File:Guinea_Pig_Chirping.ogg",
+  "url": "https://upload.wikimedia.org/wikipedia/commons/2/27/Guinea_Pig_Chirping.ogg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+  "licenca": "Public domain",
+  "codigo": "pd",
+  "termos": "Public domain",
+  "autor": "myself",
+  "credito": "Own work",
+  "desc": "guinea pig when chirping (rare)",
+  "bytes": 85536,
+  "mime": "application/ogg"
+ },
+ "pardal_sardin": {
+  "arquivo": "pardal_sardin.oga",
+  "titulo": "File:Joseph Sardin - Passer domesticus tschilp call.oga",
+  "pagina": "https://commons.wikimedia.org/wiki/File:Joseph_Sardin_-_Passer_domesticus_tschilp_call.oga",
+  "url": "https://upload.wikimedia.org/wikipedia/commons/a/aa/Joseph_Sardin_-_Passer_domesticus_tschilp_call.oga?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+  "licenca": "CC0",
+  "codigo": "cc0",
+  "termos": "Creative Commons Zero, Public Domain Dedication",
+  "autor": "Joseph Sardin",
+  "credito": "Moineau domestique en peluche",
+  "desc": "A recording of the House Sparrow's typical tschilp call",
+  "bytes": 144049,
+  "mime": "application/ogg"
+ }
+}

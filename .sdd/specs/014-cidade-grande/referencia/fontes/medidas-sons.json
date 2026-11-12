@@ -1,0 +1,84 @@
+{
+ "pombo-chamado": {
+  "segundos": 1.93,
+  "rmsDb": -23.4,
+  "picoDb": -12.8,
+  "kb": 11.9,
+  "fontes": [
+   "commons/pomba.ogg"
+  ]
+ },
+ "pombo-contente": {
+  "segundos": 0.8,
+  "rmsDb": -23.4,
+  "picoDb": -10.9,
+  "kb": 5.3,
+  "fontes": [
+   "commons/pomba.ogg"
+  ]
+ },
+ "gato-chamado": {
+  "segundos": 1.32,
+  "rmsDb": -23.4,
+  "picoDb": -11.5,
+  "kb": 8.3,
+  "fontes": [
+   "commons/gato_pede.oga"
+  ]
+ },
+ "gato-contente": {
+  "segundos": 1.27,
+  "rmsDb": -23.4,
+  "picoDb": -13.2,
+  "kb": 8.0,
+  "fontes": [
+   "commons/gata_jovem.ogg"
+  ]
+ },
+ "cachorro-chamado": {
+  "segundos": 0.68,
+  "rmsDb": -23.4,
+  "picoDb": -7.8,
+  "kb": 4.7,
+  "fontes": [
+   "bsb/2954.mp3"
+  ]
+ },
+ "guaxinim-chamado": {
+  "segundos": 1.08,
+  "rmsDb": -23.4,
+  "picoDb": -9.1,
+  "kb": 7.0,
+  "fontes": [
+   "commons/cobaia_chilreio.ogg",
+   "sintese"
+  ]
+ },
+ "pardal": {
+  "segundos": 0.83,
+  "rmsDb": -23.4,
+  "picoDb": -7.9,
+  "kb": 5.4,
+  "fontes": [
+   "commons/pardal_sardin.oga"
+  ]
+ },
+ "buzininha-perto": {
+  "segundos": 0.62,
+  "rmsDb": -23.4,
+  "picoDb": -16.3,
+  "kb": 4.2,
+  "fontes": [
+   "sintese"
+  ]
+ },
+ "buzininha-longe": {
+  "segundos": 1.26,
+  "rmsDb": -31.4,
+  "picoDb": -20.1,
+  "kb": 8.0,
+  "fontes": [
+   "sintese"
+  ]
+ }
+}

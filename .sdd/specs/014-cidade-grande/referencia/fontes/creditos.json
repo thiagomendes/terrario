@@ -1,0 +1,27 @@
+{
+ "pagina": "referencia/cidade.html (seção \"Ouvir a cidade\")",
+ "formato": {
+  "musica": "MP3 CBR 64 kbps, mono, 22 050 Hz (LAME pelo ffmpeg), como os pacotes da 019",
+  "sons": "MP3 CBR 48 kbps, mono, 22 050 Hz, como as vozes da 019"
+ },
+ "regua": {
+  "musica": "RMS do arquivo inteiro: dia -24,6 dBFS e noite -27,5 dBFS, os mesmos alvos das trilhas da 019. Medido também em LUFS (ebur128): cidade dia -25,9, Rancho dia de hoje -25,5, cidade noite -28,6. A cidade fica um pouquinho abaixo do Rancho.",
+  "sons": "RMS \"enquanto soa\" (janelas de 50 ms acima de -60 dBFS) em -23 dB, como as vozes da 019; a buzininha ao longe fica em -31 dB"
+ },
+ "musica": {
+  "partitura": "original desta spec (compor_cidade.py): jazz leve em Fá maior, 18 compassos de 4/4 com swing; dia a 108, noite a 88",
+  "banco": "FluidR3_GM.sf2 (Frank Wen e colaboradores), licença MIT (pacote Debian fluid-soundfont-gm 3.1): piano acústico (0), baixo acústico (32), vibrafone (11, noite) e o kit de vassourinha (bateria, programa 40)",
+  "sintetizador": "FluidSynth 2.3 (Debian bookworm), só para gravar; não vai junto",
+  "comparacao": "rancho-dia-hoje.mp3 é o \"dia\" do Rancho montado do pacote que já está no jogo (base + frases do dia), sem mexer no volume: 24 s"
+ },
+ "fontes": [
+  {"arquivo": "commons/pomba.ogg", "titulo": "Dove cooing.ogg", "autor": "mary905", "acervo": "Wikimedia Commons", "url": "https://commons.wikimedia.org/wiki/File:Dove_cooing.ogg", "licenca": "Domínio público", "usadoEm": ["pombo-chamado", "pombo-contente"]},
+  {"arquivo": "commons/gato_pede.oga", "titulo": "Meow of a pleading cat.oga", "autor": "Heismark", "acervo": "Wikimedia Commons", "url": "https://commons.wikimedia.org/wiki/File:Meow_of_a_pleading_cat.oga", "licenca": "Domínio público", "usadoEm": ["gato-chamado"]},
+  {"arquivo": "commons/gata_jovem.ogg", "titulo": "Maullido de gata hembra joven.ogg", "autor": "George Miquilena", "acervo": "Wikimedia Commons", "url": "https://commons.wikimedia.org/wiki/File:Maullido_de_gata_hembra_joven.ogg", "licenca": "CC0 1.0", "usadoEm": ["gato-contente"]},
+  {"arquivo": "commons/cobaia_chilreio.ogg", "titulo": "Guinea Pig Chirping.ogg", "autor": "myself (autor do Commons)", "acervo": "Wikimedia Commons", "url": "https://commons.wikimedia.org/wiki/File:Guinea_Pig_Chirping.ogg", "licenca": "Domínio público", "usadoEm": ["guaxinim-chamado"], "nota": "não achamos gravação de guaxinim com licença livre; o chilreio vai 7 semitons abaixo, picadinho, com um trinado sintetizado"},
+  {"arquivo": "commons/pardal_sardin.oga", "titulo": "Joseph Sardin - Passer domesticus tschilp call.oga", "autor": "Joseph Sardin", "acervo": "Wikimedia Commons", "url": "https://commons.wikimedia.org/wiki/File:Joseph_Sardin_-_Passer_domesticus_tschilp_call.oga", "licenca": "CC0 1.0", "usadoEm": ["pardal"]},
+  {"arquivo": "bsb/2954.mp3", "titulo": "Barking Dog #2", "autor": "Joseph SARDIN", "acervo": "BigSoundBank", "url": "https://bigsoundbank.com/barking-dog-2-s2954.html", "licenca": "CC0 1.0 (domínio público)", "conferido": "página do som: \"CC0 (public domain): Free and royalty-free\"", "usadoEm": ["cachorro-chamado"]},
+  {"arquivo": "sintese", "titulo": "síntese própria (numpy/scipy, sons_cidade.py)", "licenca": "nossa; sem material de terceiros", "usadoEm": ["buzininha-perto", "buzininha-longe", "trinado do guaxinim-chamado"]}
+ ],
+ "comoRegravar": "Baixar com 019/referencia/fontes/scripts-vozes/commons_baixar.py (recusa o que não é CC0/domínio público; commons_meta.json é o que ele gravou) e o MP3 do BigSoundBank (UPLOAD/mp3/2954.mp3); num contêiner debian:bookworm-slim com fluidsynth, fluid-soundfont-gm, ffmpeg, python3-numpy e python3-scipy: compor_cidade.py -> fluidsynth (mesma linha do 019/renderizar.sh, reverb 0,5) -> processar_cidade.py; sons_cidade.py (precisa do lib.py de 019/scripts-vozes ao lado); praca.py"
+}

@@ -1,0 +1,58 @@
+{
+ "cidade-dia": {
+  "alvoRmsDb": -24.6,
+  "wav": {
+   "rmsDb": -24.6,
+   "picoDb": -9.32,
+   "segundos": 42.29
+  },
+  "mp3Decodificado": {
+   "rmsDb": -24.6,
+   "picoDb": -9.32,
+   "segundos": 42.29
+  },
+  "kb": 331.1
+ },
+ "cidade-noite": {
+  "alvoRmsDb": -27.5,
+  "wav": {
+   "rmsDb": -27.5,
+   "picoDb": -11.29,
+   "segundos": 51.86
+  },
+  "mp3Decodificado": {
+   "rmsDb": -27.51,
+   "picoDb": -11.33,
+   "segundos": 51.86
+  },
+  "kb": 406.0
+ },
+ "rancho-dia-hoje": {
+  "nota": "base + frases do dia v1, tirado de public/sons/pacotes/rancho-alegre-musica.mp3; volume do jogo, sem mexer",
+  "frases": [
+   "dia_a_1",
+   "dia_a2_1",
+   "dia_bx_1",
+   "dia_by_1"
+  ],
+  "wav": {
+   "rmsDb": -24.6,
+   "picoDb": -9.73,
+   "segundos": 25.71
+  },
+  "indiceDiz": {
+   "rmsDb": -24.6,
+   "picoDb": -9.73,
+   "cortes": 0,
+   "ganhos": {
+    "base": 1,
+    "frases dia": 1
+   }
+  },
+  "trecho24s": {
+   "rmsDb": -25.14,
+   "picoDb": -10.19,
+   "segundos": 24.0
+  }
+ }
+}
