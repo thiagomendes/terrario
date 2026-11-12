@@ -147,8 +147,8 @@ describe('atraso do codificador', () => {
 });
 
 describe('índice das vozes (conjunto aprovado)', () => {
-  it('todo bicho dos 7 temas tem chamado, susto, contente e "ai", e baque e derrota no comum', () => {
-    expect(INDICE.ordem).toHaveLength(7);
+  it('todo bicho dos 8 temas tem chamado, susto, contente e "ai", e baque e derrota no comum', () => {
+    expect(INDICE.ordem).toHaveLength(8);
     for (const t of INDICE.ordem) {
       const v = INDICE.temas[t].vozes!;
       const pacote = INDICE.tamanhos[`${t}-vozes.mp3`];

@@ -55,9 +55,24 @@ export interface ComumIndice {
   derrota: Record<string, ClipIndice[]>;
 }
 
+/**
+ * Spec 014 (T09): sons gravados do tema que não são vozes de bicho nem de morador, no mesmo
+ * pacote de vozes: os do canteiro de obras (`obra`: plim da escala, acorde, ta-dá, "hum?"
+ * do pedreiro, coreto, colher) e os do ambiente da rua (`ambiente`: pardal, buzininha ao
+ * longe, grilo de jardim). Cada chave tem uma lista de fatias.
+ */
+export type SecaoExtra = 'obra' | 'ambiente';
+
 /** O pedaço do `indice.json` que as vozes usam. */
 export interface IndiceSons {
-  temas: Record<string, { vozes?: VozesTemaIndice }>;
+  temas: Record<
+    string,
+    {
+      vozes?: VozesTemaIndice;
+      obra?: Record<string, ClipIndice[]>;
+      ambiente?: Record<string, ClipIndice[]>;
+    }
+  >;
   comum: ComumIndice;
 }
 
@@ -93,7 +108,34 @@ export const NIVEL_VOZES: Readonly<Record<string, Partial<Record<GrupoNivelVoz, 
   'era-dos-dinos': { bichos: -3.6, moradores: -2.7, baque: -1.5, derrota: 0.4 },
   'exploracao-lunar': { bichos: -8.5, moradores: -9.8, baque: -3.8, derrota: -1.1 },
   'rancho-alegre': { bichos: -5.9, moradores: -3.0, baque: -1.3, derrota: 0.4 },
+  'cidade-grande': { bichos: -7.7, moradores: -3.2, baque: -0.6, derrota: 0.45 },
 };
+
+/**
+ * Spec 014 (T09): ganho (dB) de cada som extra gravado (`secao.chave`), medido na régua de
+ * vozes (o canteiro contra o som sintetizado de antes, de 0 a 1,5 dB abaixo; o ambiente
+ * contra os passarinhos e grilos sintetizados de hoje). Chave que falta: 0 dB.
+ */
+export const NIVEL_EXTRAS: Readonly<Record<string, Readonly<Record<string, number>>>> = {
+  'cidade-grande': {
+    'obra.plim': -7.9,
+    'obra.acorde': -9.4,
+    'obra.tada': -10.0,
+    'obra.tadaGrande': -11.8,
+    'obra.hum': -11.2,
+    'obra.coreto': -13.9,
+    'obra.colher': -11.7,
+    'ambiente.pardal': -18.6,
+    'ambiente.buzininha': -30.2,
+    'ambiente.grilo': -29.8,
+  },
+};
+
+/** O ganho (linear) de um som extra gravado do tema. */
+export function ganhoExtra(temaId: string, secao: SecaoExtra, chave: string): number {
+  const db = NIVEL_EXTRAS[temaId]?.[`${secao}.${chave}`] ?? 0;
+  return Math.pow(10, db / 20);
+}
 
 /** O ganho (linear) do grupo gravado no tema. */
 export function ganhoVozGravada(temaId: string, grupo: GrupoNivelVoz): number {
@@ -224,6 +266,15 @@ export interface OpcoesToque {
   tom?: number;
 }
 
+export interface OpcoesExtra {
+  /** 0..1. */
+  volume?: number;
+  indice?: number;
+  grupo?: GrupoAudio;
+  /** Sem o gravado: o som de antes (devolve se tocou). */
+  reserva?: () => boolean;
+}
+
 export interface VozesGravadas {
   /** Pacote e índice baixados (as fatias abrem no primeiro toque). */
   readonly pronto: boolean;
@@ -238,6 +289,14 @@ export interface VozesGravadas {
   /** Bicho derrotado: "puf" fofo (ou "plop" do peixe, ou o robô). */
   derrota(slot: TipoCriatura, op?: OpcoesToque): void;
   morador(genero: GeneroVoz, momento: MomentoMorador, op?: OpcoesToque): void;
+  /**
+   * Spec 014 (T09): um som extra gravado do tema (`obra` ou `ambiente`), sem variar o tom (o
+   * plim toca a escala). `indice` escolhe a fatia (o plim de cada nota); sem ele, sorteia sem
+   * repetir. Sem o pacote (ou sem a chave), chama `reserva` (o som sintetizado de antes).
+   */
+  extra(secao: SecaoExtra, chave: string, op: OpcoesExtra): void;
+  /** O tema tem este som extra gravado (o índice já chegou)? */
+  temExtra(secao: SecaoExtra, chave: string): boolean;
   /** Sai do mundo: para as vozes e solta o pacote e as fatias (`carregar` baixa de novo). */
   liberar(): void;
 }
@@ -351,6 +410,7 @@ export function criarVozesGravadas(op: OpcoesVozesGravadas): VozesGravadas {
   let carregando: Promise<void> | null = null;
   let abortar: AbortController | null = null;
   let indiceTema: VozesTemaIndice | undefined;
+  let extrasTema: Partial<Record<SecaoExtra, Record<string, ClipIndice[]>>> | undefined;
   let comum: ComumIndice | undefined;
   let pacoteTema: ArrayBuffer | null = null;
   let pacoteComum: ArrayBuffer | null = null;
@@ -378,6 +438,10 @@ export function criarVozesGravadas(op: OpcoesVozesGravadas): VozesGravadas {
         ]);
         if (minha !== geracao) return;
         indiceTema = indice.temas[op.tema]?.vozes;
+        extrasTema = {
+          obra: indice.temas[op.tema]?.obra,
+          ambiente: indice.temas[op.tema]?.ambiente,
+        };
         comum = indice.comum;
         if (!indiceTema || !comum) throw new Error('tema sem vozes no índice');
         pacoteTema = tema;
@@ -663,8 +727,30 @@ export function criarVozesGravadas(op: OpcoesVozesGravadas): VozesGravadas {
         },
       );
     },
+    extra(secao, chave, o) {
+      const v = Math.max(0, Math.min(1, o.volume ?? 1));
+      if (!podeTocar() || v <= 0.02) return;
+      gravadaOuReserva(
+        `${secao}:${chave}`,
+        () => {
+          const lista = extrasTema?.[secao]?.[chave];
+          if (!lista || lista.length === 0) return null;
+          if (o.indice === undefined) return { qual: 'tema', lista, chave: `${secao}:${chave}` };
+          const i = Math.max(0, Math.min(lista.length - 1, Math.round(o.indice)));
+          return { qual: 'tema', lista: [lista[i]], chave: `${secao}:${chave}:${i}` };
+        },
+        o.grupo ?? 'efeitos',
+        ganhoExtra(op.tema, secao, chave) * v,
+        1,
+        () => o.reserva?.() ?? false,
+      );
+    },
+    temExtra(secao, chave) {
+      return pronto && (extrasTema?.[secao]?.[chave]?.length ?? 0) > 0;
+    },
     liberar() {
       geracao++;
+      extrasTema = undefined;
       abortar?.abort();
       abortar = null;
       carregando = null;

@@ -59,6 +59,9 @@ export const NIVEL_TRILHA: Readonly<Record<string, Partial<Record<ContextoNivel,
   'era-dos-dinos': { dia: 2.1, tarde: 2.6, noite: 5.1, caverna: 5.0, perigo: 4.0 },
   'exploracao-lunar': { dia: 4.8, tarde: 5.2, noite: 7.2, caverna: 6.9, perigo: 5.6 },
   'rancho-alegre': { dia: 0, tarde: 0.2, noite: 2.5, caverna: 3.0 },
+  // spec 014: no volume do Rancho gravado (o som da cidade antes da T09) e de 0 a 1,5 dB
+  // abaixo da reserva sintetizada da cidade
+  'cidade-grande': { dia: 0, tarde: 0.2, noite: 2.6, caverna: 2.9 },
 };
 
 /** O ajuste do tema no contexto, em ganho linear. */

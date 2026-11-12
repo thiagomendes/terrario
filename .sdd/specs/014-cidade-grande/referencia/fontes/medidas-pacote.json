@@ -1,0 +1,1546 @@
+{
+ "musica": {
+  "pacoteBytes": 1279979,
+  "pacoteKB": 1250.0,
+  "segundosDecodificados": 158.7,
+  "memoriaMB24k": 14.53,
+  "memoriaMBTaxaDoArquivo": 13.35,
+  "memoriaMB48k": 29.05,
+  "metas": {
+   "downloadMenorQue2MB": true,
+   "memoria24kMenorQue15MB": true
+  },
+  "andamento": 126,
+  "compassos": 16,
+  "segundosVolta": 30.476,
+  "ganhosDb": {
+   "base": 5.99,
+   "dia": 11.58,
+   "entardecer": 5.22,
+   "noite": 17.85,
+   "mov": 32.77,
+   "amigos": 33.72,
+   "pingos": 20.43
+  },
+  "mixes": {
+   "dia": {
+    "rmsDb": -24.6,
+    "picoDb": -8.89,
+    "cortes": 0,
+    "ganhos": {
+     "base": 1,
+     "frases dia": 1
+    }
+   },
+   "entardecer": {
+    "rmsDb": -25.07,
+    "picoDb": -9.87,
+    "cortes": 0,
+    "ganhos": {
+     "base": 1,
+     "frases entardecer": 1
+    }
+   },
+   "noite": {
+    "rmsDb": -27.5,
+    "picoDb": -11.18,
+    "cortes": 0,
+    "ganhos": {
+     "base": 0.65,
+     "noite": 1
+    }
+   },
+   "chuva (dia, sem o filtro)": {
+    "rmsDb": -24.44,
+    "picoDb": -8.88,
+    "cortes": 0,
+    "ganhos": {
+     "base": 1,
+     "frases dia": 1,
+     "pingos": 1
+    }
+   },
+   "caverna (sem o filtro)": {
+    "rmsDb": -27.57,
+    "picoDb": -11.57,
+    "cortes": 0,
+    "ganhos": {
+     "base": 0.6,
+     "noite": 1,
+     "pingos": 1
+    }
+   },
+   "andando": {
+    "rmsDb": -24.22,
+    "picoDb": -7.58,
+    "cortes": 0,
+    "ganhos": {
+     "base": 1,
+     "frases dia": 1,
+     "movimento": 0.6
+    }
+   },
+   "correndo": {
+    "rmsDb": -23.59,
+    "picoDb": -6.78,
+    "cortes": 0,
+    "ganhos": {
+     "base": 1,
+     "frases dia": 1,
+     "movimento": 1
+    }
+   },
+   "amigos (parado)": {
+    "rmsDb": -23.65,
+    "picoDb": -6.88,
+    "cortes": 0,
+    "ganhos": {
+     "base": 1,
+     "frases dia": 1,
+     "amigos": 1
+    }
+   },
+   "correndo + amigos": {
+    "rmsDb": -22.81,
+    "picoDb": -5.01,
+    "cortes": 0,
+    "ganhos": {
+     "base": 1,
+     "frases dia": 1,
+     "movimento": 1,
+     "amigos": 1
+    }
+   },
+   "tudo ligado (pior caso)": {
+    "rmsDb": -21.28,
+    "picoDb": -4.32,
+    "cortes": 0,
+    "ganhos": {}
+   }
+  },
+  "clips": {
+   "base": {
+    "segundos": 30.596,
+    "rmsDb": -25.79,
+    "kb": 239.8,
+    "picoDb": -12.13,
+    "cortes": 0,
+    "desvioCodificador": 0,
+    "naEscala": 0.809,
+    "centsMedio": 16.7,
+    "silencio": 0.0,
+    "emenda": {
+     "saltoDb": -63.53,
+     "passoTipicoDb": -56.0,
+     "erroPeriodicoDb": -43.63,
+     "saltoWav": 0.00034
+    }
+   },
+   "noite": {
+    "segundos": 30.596,
+    "rmsDb": -31.68,
+    "kb": 239.8,
+    "picoDb": -14.69,
+    "cortes": 0,
+    "desvioCodificador": 0,
+    "naEscala": 0.962,
+    "centsMedio": 5.0,
+    "silencio": 0.003,
+    "emenda": {
+     "saltoDb": -63.7,
+     "passoTipicoDb": -55.49,
+     "erroPeriodicoDb": -46.97,
+     "saltoWav": 8e-05
+    }
+   },
+   "amigos": {
+    "segundos": 3.93,
+    "rmsDb": -30.72,
+    "kb": 31.4,
+    "picoDb": -7.57,
+    "cortes": 0,
+    "desvioCodificador": 0,
+    "naEscala": null,
+    "centsMedio": null,
+    "silencio": 0.0,
+    "emenda": {
+     "saltoDb": -39.47,
+     "passoTipicoDb": -45.17,
+     "erroPeriodicoDb": -24.75,
+     "saltoWav": 0.00254
+    }
+   },
+   "mov": {
+    "segundos": 2.025,
+    "rmsDb": -30.34,
+    "kb": 16.5,
+    "picoDb": -10.45,
+    "cortes": 0,
+    "desvioCodificador": 0,
+    "naEscala": null,
+    "centsMedio": null,
+    "silencio": 0.0,
+    "emenda": {
+     "saltoDb": -50.88,
+     "passoTipicoDb": -49.82,
+     "erroPeriodicoDb": -26.5,
+     "saltoWav": 0.0003
+    }
+   },
+   "pingos": {
+    "segundos": 7.739,
+    "rmsDb": -38.78,
+    "kb": 61.2,
+    "picoDb": -19.05,
+    "cortes": 0,
+    "desvioCodificador": 0,
+    "naEscala": 0.92,
+    "centsMedio": 12.9,
+    "silencio": 0.493,
+    "emenda": {
+     "saltoDb": -37.84,
+     "passoTipicoDb": -72.15,
+     "erroPeriodicoDb": -48.28,
+     "saltoWav": 0.01221
+    }
+   },
+   "dia_a_1": {
+    "segundos": 8.379,
+    "rmsDb": -31.26,
+    "kb": 66.1,
+    "picoDb": -16.15,
+    "cortes": 0,
+    "desvioCodificador": 0,
+    "naEscala": 0.973,
+    "centsMedio": 6.7,
+    "silencio": 0.039
+   },
+   "dia_a_2": {
+    "segundos": 8.379,
+    "rmsDb": -31.26,
+    "kb": 66.1,
+    "picoDb": -16.39,
+    "cortes": 0,
+    "desvioCodificador": 0,
+    "naEscala": 0.971,
+    "centsMedio": 6.8,
+    "silencio": 0.033
+   },
+   "tarde_a_1": {
+    "segundos": 8.379,
+    "rmsDb": -33.51,
+    "kb": 66.1,
+    "picoDb": -20.58,
+    "cortes": 0,
+    "desvioCodificador": 0,
+    "naEscala": 0.997,
+    "centsMedio": 5.9,
+    "silencio": 0.0
+   },
+   "dia_a2_1": {
+    "segundos": 8.379,
+    "rmsDb": -30.06,
+    "kb": 66.1,
+    "picoDb": -15.38,
+    "cortes": 0,
+    "desvioCodificador": 0,
+    "naEscala": 0.98,
+    "centsMedio": 5.0,
+    "silencio": 0.059
+   },
+   "tarde_a2_1": {
+    "segundos": 8.379,
+    "rmsDb": -33.66,
+    "kb": 66.1,
+    "picoDb": -19.93,
+    "cortes": 0,
+    "desvioCodificador": 0,
+    "naEscala": 0.988,
+    "centsMedio": 6.0,
+    "silencio": 0.0
+   },
+   "dia_bx_1": {
+    "segundos": 8.379,
+    "rmsDb": -31.06,
+    "kb": 66.1,
+    "picoDb": -15.31,
+    "cortes": 0,
+    "desvioCodificador": 0,
+    "naEscala": 0.914,
+    "centsMedio": 7.6,
+    "silencio": 0.033
+   },
+   "dia_bx_2": {
+    "segundos": 8.379,
+    "rmsDb": -31.06,
+    "kb": 66.1,
+    "picoDb": -14.13,
+    "cortes": 0,
+    "desvioCodificador": 0,
+    "naEscala": 0.906,
+    "centsMedio": 8.5,
+    "silencio": 0.026
+   },
+   "tarde_bx_1": {
+    "segundos": 8.379,
+    "rmsDb": -33.59,
+    "kb": 66.1,
+    "picoDb": -20.58,
+    "cortes": 0,
+    "desvioCodificador": 0,
+    "naEscala": 0.855,
+    "centsMedio": 6.0,
+    "silencio": 0.0
+   },
+   "dia_by_1": {
+    "segundos": 8.379,
+    "rmsDb": -32.77,
+    "kb": 66.1,
+    "picoDb": -16.08,
+    "cortes": 0,
+    "desvioCodificador": 0,
+    "naEscala": 0.926,
+    "centsMedio": 8.3,
+    "silencio": 0.059
+   },
+   "tarde_by_1": {
+    "segundos": 8.379,
+    "rmsDb": -33.96,
+    "kb": 66.1,
+    "picoDb": -19.93,
+    "cortes": 0,
+    "desvioCodificador": 0,
+    "naEscala": 0.973,
+    "centsMedio": 5.8,
+    "silencio": 0.013
+   }
+  }
+ },
+ "vozes": {
+  "pacoteBytes": 515162,
+  "totais": {
+   "arquivos": 118,
+   "kb": 503.1,
+   "segundos": 85.9,
+   "decodificadoMB22k": 7.22,
+   "porSecao": {
+    "bichos": {
+     "arquivos": 75,
+     "kb": 292.0,
+     "segundos": 49.8,
+     "decodificadoMB22k": 4.19
+    },
+    "moradores": {
+     "arquivos": 16,
+     "kb": 63.4,
+     "segundos": 10.8,
+     "decodificadoMB22k": 0.91
+    },
+    "obra": {
+     "arquivos": 20,
+     "kb": 103.3,
+     "segundos": 17.6,
+     "decodificadoMB22k": 1.48
+    },
+    "ambiente": {
+     "arquivos": 7,
+     "kb": 44.4,
+     "segundos": 7.6,
+     "decodificadoMB22k": 0.64
+    }
+   }
+  },
+  "regua": "RMS \"enquanto soa\" (janelas de 50 ms acima de -60 dBFS) no MP3 decodificado; alvo -23 dB (coreto -26, buzininha -31); pico <= -1 dBFS",
+  "arquivos": {
+   "ambiente.buzininha.1": {
+    "seg": 1.332,
+    "alvoDb": -31.0,
+    "rmsDb": -31.0,
+    "picoDb": -20.6,
+    "bytes": 7993,
+    "cortes": 0,
+    "centroideHz": 958,
+    "acima4k": 0.0
+   },
+   "ambiente.buzininha.2": {
+    "seg": 1.254,
+    "alvoDb": -31.0,
+    "rmsDb": -31.0,
+    "picoDb": -18.6,
+    "bytes": 7523,
+    "cortes": 0,
+    "centroideHz": 913,
+    "acima4k": 0.0
+   },
+   "ambiente.grilo.1": {
+    "seg": 0.94,
+    "alvoDb": -23.0,
+    "rmsDb": -23.0,
+    "picoDb": -10.3,
+    "bytes": 5642,
+    "cortes": 0,
+    "centroideHz": 3402,
+    "acima4k": 0.001
+   },
+   "ambiente.grilo.2": {
+    "seg": 1.071,
+    "alvoDb": -23.0,
+    "rmsDb": -23.0,
+    "picoDb": -8.9,
+    "bytes": 6426,
+    "cortes": 0,
+    "centroideHz": 3208,
+    "acima4k": 0.001
+   },
+   "ambiente.pardal.1": {
+    "seg": 0.888,
+    "alvoDb": -23.0,
+    "rmsDb": -23.1,
+    "picoDb": -7.9,
+    "bytes": 5329,
+    "cortes": 0,
+    "centroideHz": 3728,
+    "acima4k": 0.234
+   },
+   "ambiente.pardal.2": {
+    "seg": 1.254,
+    "alvoDb": -23.0,
+    "rmsDb": -23.0,
+    "picoDb": -7.0,
+    "bytes": 7523,
+    "cortes": 0,
+    "centroideHz": 3842,
+    "acima4k": 0.249
+   },
+   "ambiente.pardal.3": {
+    "seg": 0.836,
+    "alvoDb": -23.0,
+    "rmsDb": -23.0,
+    "picoDb": -8.2,
+    "bytes": 5015,
+    "cortes": 0,
+    "centroideHz": 3701,
+    "acima4k": 0.202
+   },
+   "cervo.ai.1": {
+    "seg": 0.444,
+    "alvoDb": -23.0,
+    "rmsDb": -22.9,
+    "picoDb": -8.0,
+    "bytes": 2664,
+    "cortes": 0,
+    "centroideHz": 1025,
+    "acima4k": 0.0
+   },
+   "cervo.ai.2": {
+    "seg": 0.444,
+    "alvoDb": -23.0,
+    "rmsDb": -23.0,
+    "picoDb": -8.0,
+    "bytes": 2664,
+    "cortes": 0,
+    "centroideHz": 1001,
+    "acima4k": 0.0
+   },
+   "cervo.ai.3": {
+    "seg": 0.444,
+    "alvoDb": -23.0,
+    "rmsDb": -23.0,
+    "picoDb": -9.1,
+    "bytes": 2664,
+    "cortes": 0,
+    "centroideHz": 1243,
+    "acima4k": 0.0
+   },
+   "cervo.chamado.1": {
+    "seg": 0.758,
+    "alvoDb": -23.0,
+    "rmsDb": -23.0,
+    "picoDb": -7.4,
+    "bytes": 4545,
+    "cortes": 0,
+    "centroideHz": 730,
+    "acima4k": 0.0
+   },
+   "cervo.chamado.2": {
+    "seg": 0.758,
+    "alvoDb": -23.0,
+    "rmsDb": -23.0,
+    "picoDb": -8.9,
+    "bytes": 4545,
+    "cortes": 0,
+    "centroideHz": 807,
+    "acima4k": 0.0
+   },
+   "cervo.chamado.3": {
+    "seg": 0.758,
+    "alvoDb": -23.0,
+    "rmsDb": -23.0,
+    "picoDb": -7.6,
+    "bytes": 4545,
+    "cortes": 0,
+    "centroideHz": 772,
+    "acima4k": 0.0
+   },
+   "cervo.contente.1": {
+    "seg": 1.306,
+    "alvoDb": -23.0,
+    "rmsDb": -23.0,
+    "picoDb": -9.2,
+    "bytes": 7836,
+    "cortes": 0,
+    "centroideHz": 1376,
+    "acima4k": 0.0
+   },
+   "cervo.contente.2": {
+    "seg": 1.123,
+    "alvoDb": -23.0,
+    "rmsDb": -23.0,
+    "picoDb": -7.7,
+    "bytes": 6739,
+    "cortes": 0,
+    "centroideHz": 1558,
+    "acima4k": 0.001
+   },
+   "cervo.contente.3": {
+    "seg": 1.149,
+    "alvoDb": -23.0,
+    "rmsDb": -23.0,
+    "picoDb": -8.7,
+    "bytes": 6896,
+    "cortes": 0,
+    "centroideHz": 1506,
+    "acima4k": 0.001
+   },
+   "cervo.filhote.ai.1": {
+    "seg": 0.627,
+    "alvoDb": -23.0,
+    "rmsDb": -23.0,
+    "picoDb": -9.8,
+    "bytes": 3761,
+    "cortes": 0,
+    "centroideHz": 2707,
+    "acima4k": 0.041
+   },
+   "cervo.filhote.ai.2": {
+    "seg": 0.47,
+    "alvoDb": -23.0,
+    "rmsDb": -23.0,
+    "picoDb": -9.2,
+    "bytes": 2821,
+    "cortes": 0,
+    "centroideHz": 3164,
+    "acima4k": 0.09
+   },
+   "cervo.filhote.chamado.1": {
+    "seg": 0.731,
+    "alvoDb": -23.0,
+    "rmsDb": -23.0,
+    "picoDb": -9.9,
+    "bytes": 4388,
+    "cortes": 0,
+    "centroideHz": 1538,
+    "acima4k": 0.001
+   },
+   "cervo.filhote.chamado.2": {
+    "seg": 0.601,
+    "alvoDb": -23.0,
+    "rmsDb": -23.0,
+    "picoDb": -10.4,
+    "bytes": 3605,
+    "cortes": 0,
+    "centroideHz": 2381,
+    "acima4k": 0.007
+   },
+   "cervo.filhote.contente.1": {
+    "seg": 0.679,
+    "alvoDb": -23.0,
+    "rmsDb": -23.3,
+    "picoDb": -6.9,
+    "bytes": 4075,
+    "cortes": 0,
+    "centroideHz": 2376,
+    "acima4k": 0.018
+   },
+   "cervo.filhote.contente.2": {
+    "seg": 0.679,
+    "alvoDb": -23.0,
+    "rmsDb": -23.4,
+    "picoDb": -8.5,
+    "bytes": 4075,
+    "cortes": 0,
+    "centroideHz": 2667,
+    "acima4k": 0.057
+   },
+   "cervo.filhote.susto.1": {
+    "seg": 0.444,
+    "alvoDb": -23.0,
+    "rmsDb": -22.9,
+    "picoDb": -6.9,
+    "bytes": 2664,
+    "cortes": 0,
+    "centroideHz": 1515,
+    "acima4k": 0.0
+   },
+   "cervo.filhote.susto.2": {
+    "seg": 0.444,
+    "alvoDb": -23.0,
+    "rmsDb": -23.0,
+    "picoDb": -8.3,
+    "bytes": 2664,
+    "cortes": 0,
+    "centroideHz": 1535,
+    "acima4k": 0.0
+   },
+   "cervo.susto.1": {
+    "seg": 0.392,
+    "alvoDb": -23.0,
+    "rmsDb": -23.0,
+    "picoDb": -10.1,
+    "bytes": 2351,
+    "cortes": 0,
+    "centroideHz": 936,
+    "acima4k": 0.0
+   },
+   "cervo.susto.2": {
+    "seg": 0.418,
+    "alvoDb": -23.0,
+    "rmsDb": -22.9,
+    "picoDb": -8.5,
+    "bytes": 2508,
+    "cortes": 0,
+    "centroideHz": 1243,
+    "acima4k": 0.0
+   },
+   "cervo.susto.3": {
+    "seg": 0.418,
+    "alvoDb": -23.0,
+    "rmsDb": -23.1,
+    "picoDb": -11.3,
+    "bytes": 2508,
+    "cortes": 0,
+    "centroideHz": 1275,
+    "acima4k": 0.0
+   },
+   "coelho.ai.1": {
+    "seg": 0.444,
+    "alvoDb": -23.0,
+    "rmsDb": -23.0,
+    "picoDb": -10.2,
+    "bytes": 2664,
+    "cortes": 0,
+    "centroideHz": 852,
+    "acima4k": 0.0
+   },
+   "coelho.ai.2": {
+    "seg": 0.444,
+    "alvoDb": -23.0,
+    "rmsDb": -23.0,
+    "picoDb": -9.0,
+    "bytes": 2664,
+    "cortes": 0,
+    "centroideHz": 866,
+    "acima4k": 0.0
+   },
+   "coelho.ai.3": {
+    "seg": 0.444,
+    "alvoDb": -23.0,
+    "rmsDb": -23.0,
+    "picoDb": -10.7,
+    "bytes": 2664,
+    "cortes": 0,
+    "centroideHz": 716,
+    "acima4k": 0.0
+   },
+   "coelho.chamado.1": {
+    "seg": 1.985,
+    "alvoDb": -23.0,
+    "rmsDb": -23.0,
+    "picoDb": -12.3,
+    "bytes": 11912,
+    "cortes": 0,
+    "centroideHz": 573,
+    "acima4k": 0.0
+   },
+   "coelho.chamado.2": {
+    "seg": 1.515,
+    "alvoDb": -23.0,
+    "rmsDb": -23.0,
+    "picoDb": -13.7,
+    "bytes": 9090,
+    "cortes": 0,
+    "centroideHz": 549,
+    "acima4k": 0.0
+   },
+   "coelho.chamado.3": {
+    "seg": 1.019,
+    "alvoDb": -23.0,
+    "rmsDb": -23.0,
+    "picoDb": -16.1,
+    "bytes": 6112,
+    "cortes": 0,
+    "centroideHz": 521,
+    "acima4k": 0.0
+   },
+   "coelho.contente.1": {
+    "seg": 0.862,
+    "alvoDb": -23.0,
+    "rmsDb": -23.0,
+    "picoDb": -10.4,
+    "bytes": 5172,
+    "cortes": 0,
+    "centroideHz": 654,
+    "acima4k": 0.0
+   },
+   "coelho.contente.2": {
+    "seg": 0.888,
+    "alvoDb": -23.0,
+    "rmsDb": -23.0,
+    "picoDb": -8.4,
+    "bytes": 5329,
+    "cortes": 0,
+    "centroideHz": 642,
+    "acima4k": 0.0
+   },
+   "coelho.contente.3": {
+    "seg": 0.522,
+    "alvoDb": -23.0,
+    "rmsDb": -23.0,
+    "picoDb": -14.2,
+    "bytes": 3134,
+    "cortes": 0,
+    "centroideHz": 516,
+    "acima4k": 0.0
+   },
+   "coelho.filhote.ai.1": {
+    "seg": 0.392,
+    "alvoDb": -23.0,
+    "rmsDb": -23.0,
+    "picoDb": -10.3,
+    "bytes": 2351,
+    "cortes": 0,
+    "centroideHz": 1097,
+    "acima4k": 0.0
+   },
+   "coelho.filhote.ai.2": {
+    "seg": 0.392,
+    "alvoDb": -23.0,
+    "rmsDb": -23.0,
+    "picoDb": -8.9,
+    "bytes": 2351,
+    "cortes": 0,
+    "centroideHz": 1116,
+    "acima4k": 0.0
+   },
+   "coelho.filhote.chamado.1": {
+    "seg": 1.567,
+    "alvoDb": -23.0,
+    "rmsDb": -23.0,
+    "picoDb": -12.2,
+    "bytes": 9404,
+    "cortes": 0,
+    "centroideHz": 725,
+    "acima4k": 0.0
+   },
+   "coelho.filhote.chamado.2": {
+    "seg": 1.202,
+    "alvoDb": -23.0,
+    "rmsDb": -23.0,
+    "picoDb": -13.3,
+    "bytes": 7210,
+    "cortes": 0,
+    "centroideHz": 703,
+    "acima4k": 0.0
+   },
+   "coelho.filhote.contente.1": {
+    "seg": 0.705,
+    "alvoDb": -23.0,
+    "rmsDb": -23.0,
+    "picoDb": -9.9,
+    "bytes": 4232,
+    "cortes": 0,
+    "centroideHz": 841,
+    "acima4k": 0.0
+   },
+   "coelho.filhote.contente.2": {
+    "seg": 0.705,
+    "alvoDb": -23.0,
+    "rmsDb": -23.0,
+    "picoDb": -9.4,
+    "bytes": 4232,
+    "cortes": 0,
+    "centroideHz": 809,
+    "acima4k": 0.0
+   },
+   "coelho.filhote.susto.1": {
+    "seg": 0.418,
+    "alvoDb": -23.0,
+    "rmsDb": -23.0,
+    "picoDb": -10.5,
+    "bytes": 2508,
+    "cortes": 0,
+    "centroideHz": 1559,
+    "acima4k": 0.002
+   },
+   "coelho.filhote.susto.2": {
+    "seg": 0.418,
+    "alvoDb": -23.0,
+    "rmsDb": -23.0,
+    "picoDb": -8.9,
+    "bytes": 2508,
+    "cortes": 0,
+    "centroideHz": 1644,
+    "acima4k": 0.002
+   },
+   "coelho.susto.1": {
+    "seg": 0.496,
+    "alvoDb": -23.0,
+    "rmsDb": -23.0,
+    "picoDb": -9.3,
+    "bytes": 2978,
+    "cortes": 0,
+    "centroideHz": 1705,
+    "acima4k": 0.003
+   },
+   "coelho.susto.2": {
+    "seg": 0.496,
+    "alvoDb": -23.0,
+    "rmsDb": -22.9,
+    "picoDb": -4.7,
+    "bytes": 2978,
+    "cortes": 0,
+    "centroideHz": 1705,
+    "acima4k": 0.003
+   },
+   "espectro.ai.1": {
+    "seg": 0.444,
+    "alvoDb": -23.0,
+    "rmsDb": -22.9,
+    "picoDb": -6.3,
+    "bytes": 2664,
+    "cortes": 0,
+    "centroideHz": 1961,
+    "acima4k": 0.0
+   },
+   "espectro.ai.2": {
+    "seg": 0.444,
+    "alvoDb": -23.0,
+    "rmsDb": -23.0,
+    "picoDb": -7.3,
+    "bytes": 2664,
+    "cortes": 0,
+    "centroideHz": 2086,
+    "acima4k": 0.001
+   },
+   "espectro.chamado.1": {
+    "seg": 1.149,
+    "alvoDb": -23.0,
+    "rmsDb": -23.0,
+    "picoDb": -8.9,
+    "bytes": 6896,
+    "cortes": 0,
+    "centroideHz": 1132,
+    "acima4k": 0.0
+   },
+   "espectro.chamado.2": {
+    "seg": 0.914,
+    "alvoDb": -23.0,
+    "rmsDb": -23.0,
+    "picoDb": -8.9,
+    "bytes": 5485,
+    "cortes": 0,
+    "centroideHz": 1144,
+    "acima4k": 0.0
+   },
+   "espectro.chamado.3": {
+    "seg": 0.94,
+    "alvoDb": -23.0,
+    "rmsDb": -23.0,
+    "picoDb": -9.3,
+    "bytes": 5642,
+    "cortes": 0,
+    "centroideHz": 1172,
+    "acima4k": 0.0
+   },
+   "espectro.contente.1": {
+    "seg": 0.575,
+    "alvoDb": -23.0,
+    "rmsDb": -23.0,
+    "picoDb": -9.9,
+    "bytes": 3448,
+    "cortes": 0,
+    "centroideHz": 794,
+    "acima4k": 0.0
+   },
+   "espectro.contente.2": {
+    "seg": 0.575,
+    "alvoDb": -23.0,
+    "rmsDb": -23.0,
+    "picoDb": -7.1,
+    "bytes": 3448,
+    "cortes": 0,
+    "centroideHz": 753,
+    "acima4k": 0.0
+   },
+   "espectro.susto.1": {
+    "seg": 0.392,
+    "alvoDb": -23.0,
+    "rmsDb": -23.1,
+    "picoDb": -7.5,
+    "bytes": 2351,
+    "cortes": 0,
+    "centroideHz": 1261,
+    "acima4k": 0.0
+   },
+   "espectro.susto.2": {
+    "seg": 0.392,
+    "alvoDb": -23.0,
+    "rmsDb": -23.0,
+    "picoDb": -8.6,
+    "bytes": 2351,
+    "cortes": 0,
+    "centroideHz": 1208,
+    "acima4k": 0.0
+   },
+   "morador.contente.1": {
+    "seg": 0.653,
+    "alvoDb": -23.0,
+    "rmsDb": -23.0,
+    "picoDb": -12.4,
+    "bytes": 3918,
+    "cortes": 0,
+    "centroideHz": 1012,
+    "acima4k": 0.0
+   },
+   "morador.contente.2": {
+    "seg": 0.653,
+    "alvoDb": -23.0,
+    "rmsDb": -23.0,
+    "picoDb": -8.2,
+    "bytes": 3918,
+    "cortes": 0,
+    "centroideHz": 1698,
+    "acima4k": 0.005
+   },
+   "morador.cumprimento.1": {
+    "seg": 0.601,
+    "alvoDb": -23.0,
+    "rmsDb": -23.0,
+    "picoDb": -12.8,
+    "bytes": 3605,
+    "cortes": 0,
+    "centroideHz": 904,
+    "acima4k": 0.0
+   },
+   "morador.cumprimento.2": {
+    "seg": 0.627,
+    "alvoDb": -23.0,
+    "rmsDb": -23.0,
+    "picoDb": -9.3,
+    "bytes": 3761,
+    "cortes": 0,
+    "centroideHz": 1734,
+    "acima4k": 0.01
+   },
+   "morador.obrigado.1": {
+    "seg": 0.862,
+    "alvoDb": -23.0,
+    "rmsDb": -23.0,
+    "picoDb": -12.0,
+    "bytes": 5172,
+    "cortes": 0,
+    "centroideHz": 1024,
+    "acima4k": 0.0
+   },
+   "morador.obrigado.2": {
+    "seg": 0.836,
+    "alvoDb": -23.0,
+    "rmsDb": -23.0,
+    "picoDb": -14.1,
+    "bytes": 5015,
+    "cortes": 0,
+    "centroideHz": 864,
+    "acima4k": 0.0
+   },
+   "morador.surpresa.1": {
+    "seg": 0.575,
+    "alvoDb": -23.0,
+    "rmsDb": -23.0,
+    "picoDb": -11.1,
+    "bytes": 3448,
+    "cortes": 0,
+    "centroideHz": 805,
+    "acima4k": 0.0
+   },
+   "morador.surpresa.2": {
+    "seg": 0.601,
+    "alvoDb": -23.0,
+    "rmsDb": -23.0,
+    "picoDb": -10.7,
+    "bytes": 3605,
+    "cortes": 0,
+    "centroideHz": 931,
+    "acima4k": 0.0
+   },
+   "moradora.contente.1": {
+    "seg": 0.653,
+    "alvoDb": -23.0,
+    "rmsDb": -23.0,
+    "picoDb": -11.4,
+    "bytes": 3918,
+    "cortes": 0,
+    "centroideHz": 1347,
+    "acima4k": 0.0
+   },
+   "moradora.contente.2": {
+    "seg": 0.653,
+    "alvoDb": -23.0,
+    "rmsDb": -23.0,
+    "picoDb": -12.4,
+    "bytes": 3918,
+    "cortes": 0,
+    "centroideHz": 1696,
+    "acima4k": 0.003
+   },
+   "moradora.cumprimento.1": {
+    "seg": 0.601,
+    "alvoDb": -23.0,
+    "rmsDb": -23.0,
+    "picoDb": -11.0,
+    "bytes": 3605,
+    "cortes": 0,
+    "centroideHz": 1760,
+    "acima4k": 0.004
+   },
+   "moradora.cumprimento.2": {
+    "seg": 0.627,
+    "alvoDb": -23.0,
+    "rmsDb": -23.0,
+    "picoDb": -11.3,
+    "bytes": 3761,
+    "cortes": 0,
+    "centroideHz": 1149,
+    "acima4k": 0.0
+   },
+   "moradora.obrigado.1": {
+    "seg": 0.862,
+    "alvoDb": -23.0,
+    "rmsDb": -23.1,
+    "picoDb": -12.8,
+    "bytes": 5172,
+    "cortes": 0,
+    "centroideHz": 1015,
+    "acima4k": 0.0
+   },
+   "moradora.obrigado.2": {
+    "seg": 0.836,
+    "alvoDb": -23.0,
+    "rmsDb": -23.0,
+    "picoDb": -11.6,
+    "bytes": 5015,
+    "cortes": 0,
+    "centroideHz": 1836,
+    "acima4k": 0.002
+   },
+   "moradora.surpresa.1": {
+    "seg": 0.575,
+    "alvoDb": -23.0,
+    "rmsDb": -23.0,
+    "picoDb": -11.7,
+    "bytes": 3448,
+    "cortes": 0,
+    "centroideHz": 1294,
+    "acima4k": 0.0
+   },
+   "moradora.surpresa.2": {
+    "seg": 0.601,
+    "alvoDb": -23.0,
+    "rmsDb": -23.0,
+    "picoDb": -11.5,
+    "bytes": 3605,
+    "cortes": 0,
+    "centroideHz": 1867,
+    "acima4k": 0.005
+   },
+   "obra.acorde.1": {
+    "seg": 0.993,
+    "alvoDb": -23.0,
+    "rmsDb": -23.0,
+    "picoDb": -9.3,
+    "bytes": 5956,
+    "cortes": 0,
+    "centroideHz": 1926,
+    "acima4k": 0.011
+   },
+   "obra.acorde.2": {
+    "seg": 0.993,
+    "alvoDb": -23.0,
+    "rmsDb": -23.0,
+    "picoDb": -4.8,
+    "bytes": 5956,
+    "cortes": 0,
+    "centroideHz": 2271,
+    "acima4k": 0.053
+   },
+   "obra.colher.1": {
+    "seg": 0.575,
+    "alvoDb": -23.0,
+    "rmsDb": -23.4,
+    "picoDb": -12.0,
+    "bytes": 3448,
+    "cortes": 0,
+    "centroideHz": 2685,
+    "acima4k": 0.005
+   },
+   "obra.coreto.1": {
+    "seg": 2.978,
+    "alvoDb": -26.0,
+    "rmsDb": -26.0,
+    "picoDb": -13.0,
+    "bytes": 17868,
+    "cortes": 0,
+    "centroideHz": 2909,
+    "acima4k": 0.122
+   },
+   "obra.hum.1": {
+    "seg": 0.47,
+    "alvoDb": -23.0,
+    "rmsDb": -23.0,
+    "picoDb": -14.1,
+    "bytes": 2821,
+    "cortes": 0,
+    "centroideHz": 444,
+    "acima4k": 0.0
+   },
+   "obra.hum.2": {
+    "seg": 0.496,
+    "alvoDb": -23.0,
+    "rmsDb": -23.0,
+    "picoDb": -12.9,
+    "bytes": 2978,
+    "cortes": 0,
+    "centroideHz": 446,
+    "acima4k": 0.0
+   },
+   "obra.plim.1": {
+    "seg": 0.496,
+    "alvoDb": -23.0,
+    "rmsDb": -23.0,
+    "picoDb": -13.4,
+    "bytes": 2978,
+    "cortes": 0,
+    "centroideHz": 1909,
+    "acima4k": 0.001
+   },
+   "obra.plim.10": {
+    "seg": 0.496,
+    "alvoDb": -23.0,
+    "rmsDb": -23.0,
+    "picoDb": -11.5,
+    "bytes": 2978,
+    "cortes": 0,
+    "centroideHz": 2246,
+    "acima4k": 0.001
+   },
+   "obra.plim.11": {
+    "seg": 0.496,
+    "alvoDb": -23.0,
+    "rmsDb": -22.9,
+    "picoDb": -10.9,
+    "bytes": 2978,
+    "cortes": 0,
+    "centroideHz": 2966,
+    "acima4k": 0.01
+   },
+   "obra.plim.2": {
+    "seg": 0.496,
+    "alvoDb": -23.0,
+    "rmsDb": -23.1,
+    "picoDb": -11.5,
+    "bytes": 2978,
+    "cortes": 0,
+    "centroideHz": 2147,
+    "acima4k": 0.003
+   },
+   "obra.plim.3": {
+    "seg": 0.496,
+    "alvoDb": -23.0,
+    "rmsDb": -23.0,
+    "picoDb": -10.7,
+    "bytes": 2978,
+    "cortes": 0,
+    "centroideHz": 2250,
+    "acima4k": 0.003
+   },
+   "obra.plim.4": {
+    "seg": 0.496,
+    "alvoDb": -23.0,
+    "rmsDb": -23.0,
+    "picoDb": -10.7,
+    "bytes": 2978,
+    "cortes": 0,
+    "centroideHz": 2293,
+    "acima4k": 0.026
+   },
+   "obra.plim.5": {
+    "seg": 0.496,
+    "alvoDb": -23.0,
+    "rmsDb": -23.0,
+    "picoDb": -13.2,
+    "bytes": 2978,
+    "cortes": 0,
+    "centroideHz": 2447,
+    "acima4k": 0.021
+   },
+   "obra.plim.6": {
+    "seg": 0.496,
+    "alvoDb": -23.0,
+    "rmsDb": -23.0,
+    "picoDb": -11.6,
+    "bytes": 2978,
+    "cortes": 0,
+    "centroideHz": 2259,
+    "acima4k": 0.006
+   },
+   "obra.plim.7": {
+    "seg": 0.496,
+    "alvoDb": -23.0,
+    "rmsDb": -23.0,
+    "picoDb": -11.3,
+    "bytes": 2978,
+    "cortes": 0,
+    "centroideHz": 2419,
+    "acima4k": 0.005
+   },
+   "obra.plim.8": {
+    "seg": 0.496,
+    "alvoDb": -23.0,
+    "rmsDb": -23.1,
+    "picoDb": -13.3,
+    "bytes": 2978,
+    "cortes": 0,
+    "centroideHz": 2552,
+    "acima4k": 0.004
+   },
+   "obra.plim.9": {
+    "seg": 0.496,
+    "alvoDb": -23.0,
+    "rmsDb": -22.9,
+    "picoDb": -11.2,
+    "bytes": 2978,
+    "cortes": 0,
+    "centroideHz": 2078,
+    "acima4k": 0.001
+   },
+   "obra.tada.1": {
+    "seg": 1.541,
+    "alvoDb": -23.0,
+    "rmsDb": -23.0,
+    "picoDb": -6.6,
+    "bytes": 9247,
+    "cortes": 0,
+    "centroideHz": 1985,
+    "acima4k": 0.015
+   },
+   "obra.tada.2": {
+    "seg": 1.541,
+    "alvoDb": -23.0,
+    "rmsDb": -23.0,
+    "picoDb": -6.4,
+    "bytes": 9247,
+    "cortes": 0,
+    "centroideHz": 1762,
+    "acima4k": 0.012
+   },
+   "obra.tadaGrande.1": {
+    "seg": 2.586,
+    "alvoDb": -23.0,
+    "rmsDb": -23.0,
+    "picoDb": -4.7,
+    "bytes": 15516,
+    "cortes": 0,
+    "centroideHz": 1988,
+    "acima4k": 0.012
+   },
+   "peixe.ai.1": {
+    "seg": 0.313,
+    "alvoDb": -23.0,
+    "rmsDb": -23.0,
+    "picoDb": -11.0,
+    "bytes": 1881,
+    "cortes": 0,
+    "centroideHz": 909,
+    "acima4k": 0.0
+   },
+   "peixe.ai.2": {
+    "seg": 0.313,
+    "alvoDb": -23.0,
+    "rmsDb": -23.0,
+    "picoDb": -11.1,
+    "bytes": 1881,
+    "cortes": 0,
+    "centroideHz": 954,
+    "acima4k": 0.001
+   },
+   "peixe.chamado.1": {
+    "seg": 0.522,
+    "alvoDb": -23.0,
+    "rmsDb": -23.0,
+    "picoDb": -7.5,
+    "bytes": 3134,
+    "cortes": 0,
+    "centroideHz": 912,
+    "acima4k": 0.0
+   },
+   "peixe.chamado.2": {
+    "seg": 0.549,
+    "alvoDb": -23.0,
+    "rmsDb": -23.1,
+    "picoDb": -9.9,
+    "bytes": 3291,
+    "cortes": 0,
+    "centroideHz": 830,
+    "acima4k": 0.0
+   },
+   "peixe.chamado.3": {
+    "seg": 0.47,
+    "alvoDb": -23.0,
+    "rmsDb": -23.0,
+    "picoDb": -9.6,
+    "bytes": 2821,
+    "cortes": 0,
+    "centroideHz": 814,
+    "acima4k": 0.0
+   },
+   "peixe.contente.1": {
+    "seg": 0.444,
+    "alvoDb": -23.0,
+    "rmsDb": -23.0,
+    "picoDb": -10.9,
+    "bytes": 2664,
+    "cortes": 0,
+    "centroideHz": 597,
+    "acima4k": 0.0
+   },
+   "peixe.contente.2": {
+    "seg": 0.47,
+    "alvoDb": -23.0,
+    "rmsDb": -23.0,
+    "picoDb": -10.1,
+    "bytes": 2821,
+    "cortes": 0,
+    "centroideHz": 597,
+    "acima4k": 0.0
+   },
+   "peixe.susto.1": {
+    "seg": 0.366,
+    "alvoDb": -23.0,
+    "rmsDb": -23.0,
+    "picoDb": -11.2,
+    "bytes": 2194,
+    "cortes": 0,
+    "centroideHz": 1253,
+    "acima4k": 0.002
+   },
+   "peixe.susto.2": {
+    "seg": 0.392,
+    "alvoDb": -23.0,
+    "rmsDb": -23.0,
+    "picoDb": -8.5,
+    "bytes": 2351,
+    "cortes": 0,
+    "centroideHz": 1261,
+    "acima4k": 0.002
+   },
+   "raposa.ai.1": {
+    "seg": 0.34,
+    "alvoDb": -23.0,
+    "rmsDb": -23.4,
+    "picoDb": -9.6,
+    "bytes": 2037,
+    "cortes": 0,
+    "centroideHz": 1443,
+    "acima4k": 0.002
+   },
+   "raposa.ai.2": {
+    "seg": 0.34,
+    "alvoDb": -23.0,
+    "rmsDb": -23.0,
+    "picoDb": -10.8,
+    "bytes": 2037,
+    "cortes": 0,
+    "centroideHz": 1750,
+    "acima4k": 0.0
+   },
+   "raposa.chamado.1": {
+    "seg": 1.384,
+    "alvoDb": -23.0,
+    "rmsDb": -23.3,
+    "picoDb": -11.6,
+    "bytes": 8307,
+    "cortes": 0,
+    "centroideHz": 2045,
+    "acima4k": 0.0
+   },
+   "raposa.chamado.2": {
+    "seg": 1.071,
+    "alvoDb": -23.0,
+    "rmsDb": -23.0,
+    "picoDb": -8.0,
+    "bytes": 6426,
+    "cortes": 0,
+    "centroideHz": 2160,
+    "acima4k": 0.0
+   },
+   "raposa.chamado.3": {
+    "seg": 0.914,
+    "alvoDb": -23.0,
+    "rmsDb": -23.0,
+    "picoDb": -9.1,
+    "bytes": 5485,
+    "cortes": 0,
+    "centroideHz": 1898,
+    "acima4k": 0.0
+   },
+   "raposa.contente.1": {
+    "seg": 1.332,
+    "alvoDb": -23.0,
+    "rmsDb": -23.0,
+    "picoDb": -12.8,
+    "bytes": 7993,
+    "cortes": 0,
+    "centroideHz": 1562,
+    "acima4k": 0.005
+   },
+   "raposa.contente.2": {
+    "seg": 0.47,
+    "alvoDb": -23.0,
+    "rmsDb": -23.4,
+    "picoDb": -3.3,
+    "bytes": 2821,
+    "cortes": 0,
+    "centroideHz": 1506,
+    "acima4k": 0.001
+   },
+   "raposa.contente.3": {
+    "seg": 0.758,
+    "alvoDb": -23.0,
+    "rmsDb": -23.1,
+    "picoDb": -3.0,
+    "bytes": 4545,
+    "cortes": 0,
+    "centroideHz": 1545,
+    "acima4k": 0.0
+   },
+   "raposa.filhote.ai.1": {
+    "seg": 0.313,
+    "alvoDb": -23.0,
+    "rmsDb": -23.0,
+    "picoDb": -8.7,
+    "bytes": 1881,
+    "cortes": 0,
+    "centroideHz": 1573,
+    "acima4k": 0.002
+   },
+   "raposa.filhote.ai.2": {
+    "seg": 0.313,
+    "alvoDb": -23.0,
+    "rmsDb": -23.0,
+    "picoDb": -11.1,
+    "bytes": 1881,
+    "cortes": 0,
+    "centroideHz": 2066,
+    "acima4k": 0.001
+   },
+   "raposa.filhote.chamado.1": {
+    "seg": 1.123,
+    "alvoDb": -23.0,
+    "rmsDb": -23.0,
+    "picoDb": -10.7,
+    "bytes": 6739,
+    "cortes": 0,
+    "centroideHz": 2553,
+    "acima4k": 0.02
+   },
+   "raposa.filhote.chamado.2": {
+    "seg": 0.862,
+    "alvoDb": -23.0,
+    "rmsDb": -23.0,
+    "picoDb": -9.2,
+    "bytes": 5172,
+    "cortes": 0,
+    "centroideHz": 2681,
+    "acima4k": 0.093
+   },
+   "raposa.filhote.contente.1": {
+    "seg": 1.071,
+    "alvoDb": -23.0,
+    "rmsDb": -23.0,
+    "picoDb": -13.3,
+    "bytes": 6426,
+    "cortes": 0,
+    "centroideHz": 1198,
+    "acima4k": 0.001
+   },
+   "raposa.filhote.contente.2": {
+    "seg": 0.392,
+    "alvoDb": -23.0,
+    "rmsDb": -22.9,
+    "picoDb": -3.1,
+    "bytes": 2351,
+    "cortes": 0,
+    "centroideHz": 1840,
+    "acima4k": 0.001
+   },
+   "raposa.filhote.susto.1": {
+    "seg": 0.34,
+    "alvoDb": -23.0,
+    "rmsDb": -23.0,
+    "picoDb": -8.4,
+    "bytes": 2037,
+    "cortes": 0,
+    "centroideHz": 1489,
+    "acima4k": 0.002
+   },
+   "raposa.filhote.susto.2": {
+    "seg": 0.366,
+    "alvoDb": -23.0,
+    "rmsDb": -23.0,
+    "picoDb": -13.7,
+    "bytes": 2194,
+    "cortes": 0,
+    "centroideHz": 1734,
+    "acima4k": 0.0
+   },
+   "raposa.susto.1": {
+    "seg": 0.366,
+    "alvoDb": -23.0,
+    "rmsDb": -23.0,
+    "picoDb": -10.3,
+    "bytes": 2194,
+    "cortes": 0,
+    "centroideHz": 1422,
+    "acima4k": 0.004
+   },
+   "raposa.susto.2": {
+    "seg": 0.418,
+    "alvoDb": -23.0,
+    "rmsDb": -23.0,
+    "picoDb": -13.4,
+    "bytes": 2508,
+    "cortes": 0,
+    "centroideHz": 1333,
+    "acima4k": 0.0
+   }
+  }
+ },
+ "indice": {
+  "bytes": 144277,
+  "totalGeralVozes": {
+   "arquivos": 897,
+   "kb": 3356.9,
+   "segundos": 573.0,
+   "decodificadoMB22k": 48.2
+  }
+ }
+}

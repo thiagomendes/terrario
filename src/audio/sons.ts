@@ -1040,7 +1040,16 @@ export interface Ambiente {
    * Em 0, a sintetizada para de agendar notas (só os bichos e o vento seguem).
    */
   definirSintetizada(v: number, segundos: number): void;
+  /**
+   * Spec 014 (T09): quem toca os sons gravados da rua (pardal, buzininha ao longe, grilo de
+   * jardim) com o volume da natureza; devolve false se o gravado não está pronto (aí a
+   * buzininha sai sintetizada e os outros ficam para a próxima). Null: só sintetizados.
+   */
+  definirSonsDaRua(f: ((som: SomDaRua, volume: number) => boolean) | null): void;
 }
+
+/** Spec 014: os sons gravados do ambiente da cidade (`ambiente` no índice de sons). */
+export type SomDaRua = 'pardal' | 'buzininha' | 'grilo';
 
 interface RelogioAgenda {
   setInterval(f: () => void, ms: number): unknown;
@@ -1240,6 +1249,11 @@ export function iniciarAmbiente(
   const rngRoca = criarGerador(1313);
   let hora = 0.5;
   let proximaRoca = 0;
+  // sons da rua (Cidade Grande): sorteio próprio também
+  const rngRua = criarGerador(1414);
+  let proximaRua = 0;
+  let proximaBuzininha = 0;
+  let sonsDaRua: ((som: SomDaRua, volume: number) => boolean) | null = null;
 
   /** Quando cada som do ambiente deveria acabar (o vigia corta quem passar muito disso). */
   const fins = new Map<FonteAudio, number>();
@@ -1395,6 +1409,32 @@ export function iniciarAmbiente(
     else if ((roca.mugido ?? 0) > 0 && noite < 0.5 && sorte() < 0.2 * roca.mugido!) mugido(t);
   }
 
+  /** A buzininha de brinquedo ao longe, sintetizada (a reserva da gravada): "fom-fom". */
+  function buzininha(t: number): void {
+    registrar(tom(ctxA!, busNatureza!, t, 'square', 330, 322, 0.008, 0.12, 0.01));
+    registrar(tom(ctxA!, busNatureza!, t + 0.18, 'square', 392, 384, 0.008, 0.16, 0.01));
+  }
+
+  /**
+   * Sons da rua (Cidade Grande), cada um na sua hora: pardal de dia, grilo de jardim à noite
+   * (de 8 a 20 s) e a buzininha de brinquedo ao longe, rara (uma a cada 40 a 90 s), menos na
+   * madrugada. Todos curtos, nunca em laço.
+   */
+  function somDaRua(t: number, agora: number, rua: NonNullable<NaturezaTema['cidade']>): void {
+    const vol = volNatureza;
+    if (proximaRua < t) {
+      if (noite > 0.5) sonsDaRua?.('grilo', vol);
+      else if (chuva < 0.3) sonsDaRua?.('pardal', vol);
+      proximaRua = t + 8 + rngRua() * 12;
+    }
+    if ((rua.buzininha ?? 0) > 0 && proximaBuzininha < t) {
+      if (proximaBuzininha > 0 && noite < 0.8 && rngRua() < rua.buzininha!) {
+        if (!sonsDaRua?.('buzininha', vol)) buzininha(Math.max(t, agora + 0.05));
+      }
+      proximaBuzininha = t + 40 + rngRua() * 50;
+    }
+  }
+
   /** Vigia: nota, grilo ou bipe que passou 3 s da hora de acabar é cortado e desligado. */
   function vigiar(agora: number): void {
     for (const [fonte, fim] of fins) {
@@ -1488,6 +1528,8 @@ export function iniciarAmbiente(
         proximoBicho = t + 1.2 + rng() * 3;
       }
     }
+    const rua = tema().natureza.cidade;
+    if (rua) somDaRua(ate, agora, rua);
     const roca = tema().natureza.roca;
     if (roca) {
       while (proximaRoca < ate) {
@@ -1623,6 +1665,9 @@ export function iniciarAmbiente(
         proximoAcorde = Math.min(proximoAcorde, t + 0.3);
         proximaNota = Math.min(proximaNota, t + 1);
       }
+    },
+    definirSonsDaRua(f) {
+      sonsDaRua = f;
     },
     definirVolumes(musica, natureza) {
       volMusica = musica;

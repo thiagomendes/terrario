@@ -98,7 +98,9 @@ export function construirCidadeGrande(): Tema {
     },
     // jazz leve (a reserva sintetizada; a de verdade é o pacote gravado da cidade)
     musica: {
-      timbre: { onda: 'triangle', brilho: 0.85, sustentacao: 0.8, coro: 4, sino: 'sine' },
+      // o mesmo timbre e o mesmo volume da reserva do Rancho (o som que a cidade tinha antes
+      // da T09): a gravada fica no mesmo volume percebido dela
+      timbre: { onda: 'sawtooth', brilho: 0.75, sustentacao: 0.7, coro: 7, sino: 'triangle' },
       transporte: 0,
       paletas: {
         dia: {
@@ -113,7 +115,7 @@ export function construirCidadeGrande(): Tema {
           intervalo: 6,
           chanceNota: 0.55,
           pulso: [41, 0, 45, 0, 48, 0, 45, 0],
-          ganhoPulso: 0.35,
+          ganhoPulso: 0.45,
         },
         noite: {
           acordes: [

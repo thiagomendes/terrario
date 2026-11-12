@@ -20,6 +20,8 @@ export const AUTORES_GRAVACOES: Readonly<Record<string, readonly string[]>> = {
     'Eviatar Bach',
     'Flame, not lame',
     'Gasybeaugosse2020',
+    'George Miquilena',
+    'Heismark',
     'Joseph Sardin',
     'kessir',
     'Knites',
@@ -61,7 +63,7 @@ export const CREDITOS_SONS: readonly GrupoCreditos[] = [
   {
     titulo: 'Moradores, golpes, passos e o resto',
     texto:
-      'Sons feitos por nós: os moradores e os golpes, gravados de síntese própria; passos, blocos, gestos e menus, gerados na hora pelo jogo.',
+      'Sons feitos por nós: os moradores e os golpes, gravados de síntese própria; o canteiro de obras da cidade (piano e caixinha de música do FluidR3_GM, licença MIT) e a buzininha de brinquedo; passos, blocos, gestos e menus, gerados na hora pelo jogo.',
   },
 ];
 

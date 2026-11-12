@@ -1,10 +1,12 @@
-import { tocarSom, desenharVoz } from './sons';
+import { tocarSom, desenharVoz, tocarNotas, type NotaCurta } from './sons';
+import { ESCALA_OBRA, SINTETIZADOS_OBRA } from './somObra';
 import type { MotorAudio } from './motor';
 import { povoadoDoTema, tema } from '../temas/ativo';
 import type { PioCriatura } from '../temas/tipos';
 import type { TipoCriatura } from '../jogo/criaturas';
 import {
   TAXA_VOZES,
+  ganhoExtra,
   ganhoVozGravada,
   inicioSemAtraso,
   type ClipIndice,
@@ -28,7 +30,8 @@ import {
  */
 
 export interface LinhaReguaVozes {
-  grupo: GrupoNivelVoz;
+  /** O grupo das vozes, ou `obra.<chave>` e `ambiente.<chave>` (spec 014, os sons extras). */
+  grupo: GrupoNivelVoz | string;
   /** Quantos sons de hoje e gravados entraram na média. */
   nHoje: number;
   nGravada: number;
@@ -197,6 +200,39 @@ export async function medirReguaVozes(
     for (const clip of indice.comum.derrota[k] ?? [])
       grav.derrota.push(await medirClip(pComum, clip));
 
+  // spec 014 (T09): os sons extras gravados (canteiro e rua) contra os de antes
+  const extras: { grupo: string; hoje: number[]; grav: number[]; ganhoDb: number }[] = [];
+  const doTema = indice.temas[temaId];
+  for (const [chave, clips] of Object.entries(doTema?.obra ?? {})) {
+    const sint = SINTETIZADOS_OBRA[chave];
+    if (!sint) continue;
+    const hj: number[] = [];
+    const n = chave === 'plim' ? ESCALA_OBRA.length : 1;
+    for (let i = 0; i < n; i++)
+      hj.push(await medir(3.5, (oc, dest) => void sint(motorFalso(oc, dest), i)));
+    const gv: number[] = [];
+    for (const clip of clips) gv.push(await medirClip(pTema, clip));
+    extras.push({
+      grupo: `obra.${chave}`,
+      hoje: hj,
+      grav: gv,
+      ganhoDb: ganhoExtra(temaId, 'obra', chave),
+    });
+  }
+  for (const [chave, clips] of Object.entries(doTema?.ambiente ?? {})) {
+    const notas = AMBIENTE_HOJE[chave];
+    if (!notas) continue;
+    const hj = [await medir(2, (oc, dest) => void tocarNotas(motorFalso(oc, dest), notas, 0.4))];
+    const gv: number[] = [];
+    for (const clip of clips) gv.push(await medirClip(pTema, clip));
+    extras.push({
+      grupo: `ambiente.${chave}`,
+      hoje: hj,
+      grav: gv,
+      ganhoDb: ganhoExtra(temaId, 'ambiente', chave),
+    });
+  }
+
   const linhas: LinhaReguaVozes[] = (['bichos', 'moradores', 'baque', 'derrota'] as const).map(
     (grupo) => {
       const h = media(hoje[grupo]);
@@ -215,5 +251,41 @@ export async function medirReguaVozes(
       };
     },
   );
+  for (const x of extras) {
+    const h = media(x.hoje);
+    const c = media(x.grav);
+    const ganhoDb = cru ? 0 : 20 * Math.log10(x.ganhoDb);
+    linhas.push({
+      grupo: x.grupo,
+      nHoje: x.hoje.length,
+      nGravada: x.grav.length,
+      hojeDb: r2(h),
+      cruaDb: r2(c),
+      ganhoDb: r2(ganhoDb),
+      gravadaDb: r2(c + ganhoDb),
+      diferencaDb: r2(c + ganhoDb - h),
+      maisAltaDb: r2(Math.max(...x.grav) + ganhoDb - h),
+    });
+  }
   return { tema: temaId, linhas };
 }
+
+/**
+ * O ambiente de hoje para comparar com o gravado da rua (spec 014): o passarinho e o grilo
+ * sintetizados de `iniciarAmbiente` e a buzininha de reserva, com o barramento da natureza
+ * (0,8) e o mestre do ambiente (0,5) da cadeia de lá.
+ */
+const AMBIENTE_HOJE: Record<string, NotaCurta[]> = {
+  pardal: [0, 0.14, 0.27].map((t, i) => ({
+    t,
+    f: i % 2 ? 3600 : 2600,
+    f1: i % 2 ? 2700 : 3500,
+    pico: 0.11,
+    queda: 0.07,
+  })),
+  grilo: [0, 0.055, 0.11, 0.165].map((t) => ({ t, f: 4500, pico: 0.035, queda: 0.03 })),
+  buzininha: [
+    { t: 0, f: 330, f1: 322, tipo: 'square', pico: 0.008, queda: 0.12 },
+    { t: 0.18, f: 392, f1: 384, tipo: 'square', pico: 0.008, queda: 0.16 },
+  ],
+};

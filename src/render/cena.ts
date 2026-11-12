@@ -119,6 +119,7 @@ import {
   plimDaColher,
   plimDaObra,
   taDa,
+  type TocadorObra,
 } from '../audio/somObra';
 import { semDesbloqueios } from '../personagem/aparencia';
 import {
@@ -3292,6 +3293,9 @@ export function criarCena(
         }
       : undefined,
   });
+  /** Spec 014 (T09): os sons do canteiro gravados no pacote da cidade (a sintetizada é a reserva). */
+  const somObraGravado: TocadorObra = (chave, volume, reserva, indice) =>
+    vozes.extra('obra', chave, { volume, indice, reserva });
   /** O bicho que a criança golpeou por último (o golpe dela soa mesmo um pouco longe). */
   const meuAlvo = { id: -1, em: -Infinity };
   const MEU_GOLPE_MS = 3000;
@@ -3370,6 +3374,12 @@ export function criarCena(
       tocarSom(motorAudio, 'entrada');
       aquecerAmostras(motorAudio, GRUPOS_MATERIAL);
       ambiente = iniciarAmbiente(motorAudio);
+      // spec 014 (T09): os sons gravados da rua (só os temas que têm: a Cidade Grande)
+      ambiente.definirSonsDaRua((som, volume) => {
+        if (!vozes.temExtra('ambiente', som)) return false;
+        vozes.extra('ambiente', som, { volume, grupo: 'ambiente' });
+        return true;
+      });
       if (configAtual)
         ambiente.definirVolumes(configAtual.volumeMusica, configAtual.volumeAmbiente);
       trilha.ligar(ambiente);
@@ -4506,7 +4516,7 @@ export function criarCena(
       const dentro = !!centro && Math.abs(centro[0] - j.x) < 2.6 && Math.abs(centro[2] - j.z) < 2.6;
       if (dentro && !coretoDentro && tempo - coretoTocouEm > 20) {
         coretoTocouEm = tempo;
-        musiquinhaDoCoreto(motorAudio);
+        musiquinhaDoCoreto(motorAudio, 1, somObraGravado);
       }
       coretoDentro = dentro;
     }
@@ -4552,7 +4562,7 @@ export function criarCena(
         ? { motivo: 'obra', lugar: 'cidade', certo }
         : { motivo: 'obra', lugar: 'cidade' },
     );
-    humDoPedreiro(motorAudio);
+    humDoPedreiro(motorAudio, 1, somObraGravado);
     if (certo === undefined) return;
     // o pedreiro aponta para a obra
     const ped = replicaCriaturas.lista.find(
@@ -4590,7 +4600,13 @@ export function criarCena(
       slot: hotbar.ativo,
     });
     const celulas = cidadeObra ? celulasPlanejadas(cidadeObra, c.canteiro) : [];
-    plimDaObra(motorAudio, celulas.length - celulas.filter(vaziaNaObra).length, celulas.length);
+    plimDaObra(
+      motorAudio,
+      celulas.length - celulas.filter(vaziaNaObra).length,
+      celulas.length,
+      1,
+      somObraGravado,
+    );
     barramento.emitir('colocacao', { x: c.x, y: c.y, z: c.z, bloco: c.bloco });
     estado.obraColocados = (estado.obraColocados ?? 0) + 1;
     return true;
@@ -4692,10 +4708,10 @@ export function criarCena(
     if (!e.feita) {
       // o "plim" de quem pôs já saiu na previsão; o dos amigos sai aqui (se perto)
       if (!e.meu && perto && e.x !== undefined) {
-        plimDaObra(motorAudio, e.cheias, e.total, 0.7);
+        plimDaObra(motorAudio, e.cheias, e.total, 0.7, somObraGravado);
         aplicarPlano('colocacao', { x: e.x, y: e.y!, z: e.z!, bloco: Bloco.TIJOLOS });
       }
-      if (e.camada && perto) acordeDaCamada(motorAudio);
+      if (e.camada && perto) acordeDaCamada(motorAudio, 1, somObraGravado);
       return;
     }
     // a obra ficou pronta: vira parte da cidade (como no núcleo)
@@ -4710,7 +4726,7 @@ export function criarCena(
     const todas = obrasFeitas().length >= 6;
     if (perto) {
       festaDaObra(e.canteiro, todas);
-      taDa(motorAudio, todas);
+      taDa(motorAudio, todas, 1, somObraGravado);
       // a criança também bate palmas (sem travar o controle)
       gestos?.evento({ e: 'gesto', gesto: 'aplaudir', jogador: voce });
     }
@@ -4733,7 +4749,7 @@ export function criarCena(
         if (e.slot < 9)
           window.dispatchEvent(new CustomEvent('brumaluz:selecionarSlot', { detail: e.slot }));
         window.dispatchEvent(new CustomEvent('brumaluz:piscarSlot', { detail: e.slot }));
-        plimDaColher(motorAudio);
+        plimDaColher(motorAudio, somObraGravado);
         estado.colherRecebida = (estado.colherRecebida ?? 0) + 1;
         break;
       }

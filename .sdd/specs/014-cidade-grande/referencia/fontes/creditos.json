@@ -23,5 +23,175 @@
   {"arquivo": "bsb/2954.mp3", "titulo": "Barking Dog #2", "autor": "Joseph SARDIN", "acervo": "BigSoundBank", "url": "https://bigsoundbank.com/barking-dog-2-s2954.html", "licenca": "CC0 1.0 (domínio público)", "conferido": "página do som: \"CC0 (public domain): Free and royalty-free\"", "usadoEm": ["cachorro-chamado"]},
   {"arquivo": "sintese", "titulo": "síntese própria (numpy/scipy, sons_cidade.py)", "licenca": "nossa; sem material de terceiros", "usadoEm": ["buzininha-perto", "buzininha-longe", "trinado do guaxinim-chamado"]}
  ],
- "comoRegravar": "Baixar com 019/referencia/fontes/scripts-vozes/commons_baixar.py (recusa o que não é CC0/domínio público; commons_meta.json é o que ele gravou) e o MP3 do BigSoundBank (UPLOAD/mp3/2954.mp3); num contêiner debian:bookworm-slim com fluidsynth, fluid-soundfont-gm, ffmpeg, python3-numpy e python3-scipy: compor_cidade.py -> fluidsynth (mesma linha do 019/renderizar.sh, reverb 0,5) -> processar_cidade.py; sons_cidade.py (precisa do lib.py de 019/scripts-vozes ao lado); praca.py"
+ "comoRegravar": "Baixar com 019/referencia/fontes/scripts-vozes/commons_baixar.py (recusa o que não é CC0/domínio público; commons_meta.json é o que ele gravou) e o MP3 do BigSoundBank (UPLOAD/mp3/2954.mp3); num contêiner debian:bookworm-slim com fluidsynth, fluid-soundfont-gm, ffmpeg, python3-numpy e python3-scipy: compor_cidade.py -> fluidsynth (mesma linha do 019/renderizar.sh, reverb 0,5) -> processar_cidade.py; sons_cidade.py (precisa do lib.py de 019/scripts-vozes ao lado); praca.py",
+ "pacote": {
+  "onde": "public/sons/pacotes/cidade-grande-musica.mp3 e cidade-grande-vozes.mp3, entrada temas[\"cidade-grande\"] de public/sons/indice.json",
+  "scripts": "scripts-pacote/ (rodar.sh refaz tudo)",
+  "medidas": "medidas-pacote.json",
+  "musica": "partitura aprovada (compor_cidade.py) em 16 compassos de 4/4 a 126; FluidR3_GM (MIT) pelo FluidSynth; estalo de dedos de síntese nossa",
+  "fontes": [
+   {
+    "arquivo": "FluidR3_GM",
+    "titulo": "FluidR3_GM.sf2 (banco de instrumentos; celesta, piano e caixinha de música da obra)",
+    "autor": "Frank Wen e colaboradores",
+    "acervo": null,
+    "url": "https://packages.debian.org/bookworm/fluid-soundfont-gm",
+    "licenca": "MIT (pacote Debian fluid-soundfont-gm 3.1)",
+    "usosNoPacote": 18
+   },
+   {
+    "arquivo": "bsb/0612.mp3",
+    "titulo": "Small dog barking",
+    "autor": "Joseph SARDIN",
+    "acervo": "BigSoundBank",
+    "url": "https://bigsoundbank.com/small-dog-barking-s0612.html",
+    "licenca": "CC0 1.0 (domínio público)",
+    "usosNoPacote": 3
+   },
+   {
+    "arquivo": "bsb/0682.mp3",
+    "titulo": "Barking of a Spitz",
+    "autor": "Joseph SARDIN",
+    "acervo": "BigSoundBank",
+    "url": "https://bigsoundbank.com/barking-of-a-spitz-s0682.html",
+    "licenca": "CC0 1.0 (domínio público)",
+    "usosNoPacote": 1
+   },
+   {
+    "arquivo": "bsb/0916.mp3",
+    "titulo": "Barking dog #1",
+    "autor": "Joseph SARDIN",
+    "acervo": "BigSoundBank",
+    "url": "https://bigsoundbank.com/barking-dog-s0916.html",
+    "licenca": "CC0 1.0 (domínio público)",
+    "usosNoPacote": 3
+   },
+   {
+    "arquivo": "bsb/1547.mp3",
+    "titulo": "Dogs Breathing",
+    "autor": "Joseph SARDIN",
+    "acervo": "BigSoundBank",
+    "url": "https://bigsoundbank.com/dogs-breathing-s1547.html",
+    "licenca": "CC0 1.0 (domínio público)",
+    "usosNoPacote": 5
+   },
+   {
+    "arquivo": "bsb/2954.mp3",
+    "titulo": "Barking Dog #2",
+    "autor": "Joseph SARDIN",
+    "acervo": "BigSoundBank",
+    "url": "https://bigsoundbank.com/barking-dog-2-s2954.html",
+    "licenca": "CC0 1.0 (domínio público)",
+    "usosNoPacote": 6
+   },
+   {
+    "arquivo": "commons/bolhas2.opus",
+    "titulo": "File:Toberbreedia water bubbling.opus",
+    "autor": "A.-K. D.",
+    "acervo": "Wikimedia Commons",
+    "url": "https://commons.wikimedia.org/wiki/File:Toberbreedia_water_bubbling.opus",
+    "licenca": "CC0",
+    "usosNoPacote": 3
+   },
+   {
+    "arquivo": "commons/c_filhote_noite.ogg",
+    "titulo": "Puppy at a night.ogg",
+    "autor": "Knites (trabalho próprio)",
+    "acervo": "Wikimedia Commons",
+    "url": "https://commons.wikimedia.org/wiki/File:Puppy_at_a_night.ogg",
+    "licenca": "CC0 1.0",
+    "usosNoPacote": 2
+   },
+   {
+    "arquivo": "commons/cobaia_chilreio.ogg",
+    "titulo": "File:Guinea Pig Chirping.ogg",
+    "autor": "myself",
+    "acervo": "Wikimedia Commons",
+    "url": "https://commons.wikimedia.org/wiki/File:Guinea_Pig_Chirping.ogg",
+    "licenca": "Public domain",
+    "usosNoPacote": 7
+   },
+   {
+    "arquivo": "commons/cobaia_feliz.ogg",
+    "titulo": "File:Guinea Pig Happy.ogg",
+    "autor": "myself",
+    "acervo": "Wikimedia Commons",
+    "url": "https://commons.wikimedia.org/wiki/File:Guinea_Pig_Happy.ogg",
+    "licenca": "Public domain",
+    "usosNoPacote": 2
+   },
+   {
+    "arquivo": "commons/gata_jovem.ogg",
+    "titulo": "File:Maullido de gata hembra joven.ogg",
+    "autor": "George Miquilena",
+    "acervo": "Wikimedia Commons",
+    "url": "https://commons.wikimedia.org/wiki/File:Maullido_de_gata_hembra_joven.ogg",
+    "licenca": "CC0",
+    "usosNoPacote": 6
+   },
+   {
+    "arquivo": "commons/gato_pede.oga",
+    "titulo": "File:Meow of a pleading cat.oga",
+    "autor": "Heismark",
+    "acervo": "Wikimedia Commons",
+    "url": "https://commons.wikimedia.org/wiki/File:Meow_of_a_pleading_cat.oga",
+    "licenca": "Public domain",
+    "usosNoPacote": 9
+   },
+   {
+    "arquivo": "commons/gato_ronrona.oga",
+    "titulo": "File:Purring cat.oga",
+    "autor": "Mysid",
+    "acervo": "Wikimedia Commons",
+    "url": "https://commons.wikimedia.org/wiki/File:Purring_cat.oga",
+    "licenca": "Public domain",
+    "usosNoPacote": 3
+   },
+   {
+    "arquivo": "commons/pardal_sardin.oga",
+    "titulo": "File:Joseph Sardin - Passer domesticus tschilp call.oga",
+    "autor": "Joseph Sardin",
+    "acervo": "Wikimedia Commons",
+    "url": "https://commons.wikimedia.org/wiki/File:Joseph_Sardin_-_Passer_domesticus_tschilp_call.oga",
+    "licenca": "CC0",
+    "usosNoPacote": 3
+   },
+   {
+    "arquivo": "commons/pomba.ogg",
+    "titulo": "File:Dove cooing.ogg",
+    "autor": "mary905",
+    "acervo": "Wikimedia Commons",
+    "url": "https://commons.wikimedia.org/wiki/File:Dove_cooing.ogg",
+    "licenca": "Public domain",
+    "usosNoPacote": 16
+   },
+   {
+    "arquivo": "commons/pombo_maos.ogg",
+    "titulo": "File:Wood pigeon call 128.ogg",
+    "autor": "Crunchysaviour",
+    "acervo": "Wikimedia Commons",
+    "url": "https://commons.wikimedia.org/wiki/File:Wood_pigeon_call_128.ogg",
+    "licenca": "Public domain",
+    "usosNoPacote": 3
+   },
+   {
+    "arquivo": "sintese",
+    "titulo": "síntese própria (numpy/scipy, scripts deste esboço)",
+    "autor": null,
+    "acervo": null,
+    "url": null,
+    "licenca": "nossa; sem material de terceiros",
+    "usosNoPacote": 25
+   },
+   {
+    "arquivo": "sintese-formantes",
+    "titulo": "síntese própria (numpy/scipy, scripts deste esboço)",
+    "autor": null,
+    "acervo": null,
+    "url": null,
+    "licenca": "nossa; sem material de terceiros",
+    "usosNoPacote": 20
+   }
+  ]
+ }
 }
