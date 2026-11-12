@@ -10,7 +10,13 @@ import { CRIATURAS, TIPOS_ANIMAIS, type TipoCriatura } from '../../src/jogo/cria
 import { todosItens } from '../../src/jogo/itens';
 import { MISSOES } from '../../src/jogo/diario';
 import { RECEITAS } from '../../src/jogo/receitas';
-import { gerarChunk, ESTILO_PADRAO, definirEstiloMundo } from '../../src/world/chunk';
+import {
+  gerarChunk,
+  ESTILO_PADRAO,
+  definirEstiloMundo,
+  cidadeDoMundo,
+} from '../../src/world/chunk';
+import { ALCANCE_SUAVE, distanciaDaCidade } from '../../src/world/cidade';
 import { normalizarAparencia, aparenciaPadrao } from '../../src/personagem/aparencia';
 import type { Tema } from '../../src/temas/tipos';
 import { PROFISSOES } from '../../src/world/povoado';
@@ -317,10 +323,17 @@ describe('temas não mudam a mecânica', () => {
   });
 
   it('baús e minérios no mesmo lugar (mesma exploração em todo tema)', () => {
+    // spec 014: a Cidade Grande troca o terreno em volta do nascimento pela cidade (com os
+    // baús dos apartamentos); a conta compara o resto do mundo, fora da cidade e da rampa
+    definirEstiloMundo(obterTema('cidade-grande').mundo);
+    const cidade = cidadeDoMundo(1337)!;
+    const pular = (cx: number, cz: number) =>
+      distanciaDaCidade(cidade, cx * 16 + 8, cz * 16 + 8) <= ALCANCE_SUAVE + 16;
     const contar = () => {
       const r = { bau: 0, minerios: 0, comida: 0 };
       for (let cx = -8; cx <= 8; cx++)
         for (let cz = -8; cz <= 8; cz++) {
+          if (pular(cx, cz)) continue;
           const c = gerarChunk(cx, cz, 1337);
           for (let i = 0; i < c.length; i++) {
             if (c[i] === 42) r.bau++;

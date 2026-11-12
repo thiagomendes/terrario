@@ -115,7 +115,7 @@ self.onmessage = (ev: MessageEvent<PedidoChunk | PedidoEstilo>) => {
       xNegZPos: gerarChunkEditado(cx - 1, cz + 1, semente, edicoes),
       xPosZPos: gerarChunkEditado(cx + 1, cz + 1, semente, edicoes),
     },
-    metasDoChunk(cx, cz, edicoes),
+    metasDoChunk(cx, cz, edicoes, semente),
   );
   const resposta: RespostaChunk = {
     cx,

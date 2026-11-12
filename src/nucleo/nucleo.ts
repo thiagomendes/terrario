@@ -249,7 +249,7 @@ export function criarNucleo(op: OpcoesNucleo) {
   const confiar = op.confiarNoCliente ?? false;
   const depuracao = op.depuracao ?? confiar;
 
-  const edicoes = criarEdicoes();
+  const edicoes = criarEdicoes(semente);
   if (dados) edicoes.importar(dados.edicoes);
   // quem colocou cada bloco (fora o dono do mundo): a posição na lista é o índice nas edições
   edicoes.donos.importar(sanearDonos(extras['donos']));

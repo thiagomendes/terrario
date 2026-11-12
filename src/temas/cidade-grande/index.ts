@@ -36,6 +36,19 @@ export function construirCidadeGrande(): Tema {
     emissivos: [...r.emissivos, 'janela_acesa', 'poste'],
     povoado: r.povoado && { ...r.povoado, nome: 'Bairro da praça' },
     exclusivos: EXCLUSIVOS_CIDADE,
+    mundo: {
+      ...r.mundo,
+      // a roda-gigante de um parque de diversões abandonado, fora da cidade
+      estrutura: 'roda-gigante',
+      // a Cidade Grande (spec 014): uma cidade por mundo, em volta do nascimento
+      povoado: {
+        casa: 'duas-aguas',
+        oficina: 'duas-aguas',
+        deposito: 'duas-aguas',
+        marco: 'fonte',
+        planta: 'cidade',
+      },
+    },
     primeiroCapitulo: undefined,
   };
 }

@@ -222,13 +222,15 @@ export function avisoDaRecusa(r: RecusaProtecao): string {
   const de = r.dono ? ` ${daOuDo(r.dono)}` : '';
   switch (r.motivo) {
     case 'mundo':
-      return r.lugar === 'sitio'
-        ? 'Esse cantinho é do sítio. Que tal construir a sua?'
-        : r.lugar === 'ruina'
-          ? 'Essa ruína é do mundo. Que tal construir a sua?'
-          : r.lugar === 'estrutura'
-            ? 'Isso o mundo construiu. Que tal construir o seu?'
-            : 'Essa casa é da vila. Que tal construir a sua?';
+      return r.lugar === 'cidade'
+        ? 'Essa construção é da cidade. Que tal construir a sua?'
+        : r.lugar === 'sitio'
+          ? 'Esse cantinho é do sítio. Que tal construir a sua?'
+          : r.lugar === 'ruina'
+            ? 'Essa ruína é do mundo. Que tal construir a sua?'
+            : r.lugar === 'estrutura'
+              ? 'Isso o mundo construiu. Que tal construir o seu?'
+              : 'Essa casa é da vila. Que tal construir a sua?';
     case 'passagem':
       return 'Aqui é passagem: deixa livre para todo mundo passar.';
     case 'bau':

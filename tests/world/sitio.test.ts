@@ -94,7 +94,7 @@ describe('sítio: estilo e servidor', () => {
     expect(estiloSeguro(SITIO)).toEqual(SITIO);
     expect(estiloSeguro(JSON.parse(JSON.stringify(SITIO)))).toEqual(SITIO);
     expect(estiloSeguro({ ...SITIO, noite: 'brava' }).noite).toBeUndefined();
-    expect(estiloSeguro({ povoado: { planta: 'cidade' } }).povoado?.planta).toBeUndefined();
+    expect(estiloSeguro({ povoado: { planta: 'metropole' } }).povoado?.planta).toBeUndefined();
   });
 
   it('o servidor (estilo filtrado) gera o mesmo sítio, o mesmo nascimento e os mesmos blocos', () => {

@@ -34,6 +34,7 @@ import {
   type PlanoPovoado,
 } from './povoado';
 import { lavouraDoBloco } from '../jogo/plantio';
+import { distanciaDaCidade, passagensDaCidade } from './cidade';
 
 export const Protecao = {
   LIVRE: 0,
@@ -76,6 +77,7 @@ const USAVEIS: ReadonlySet<number> = new Set([
   Bloco.PORTEIRA,
   Bloco.PORTEIRA_ABERTA,
 ]);
+// os bancos da praça (degraus de escada) são estrutura: senta-se sem quebrar
 
 /** Ninguém quebra (o chão, a estrutura e os usáveis). A lavoura colhe. */
 export function naoQuebra(p: Protecao): boolean {
@@ -96,7 +98,7 @@ export function replantioDaLavoura(colhido: number): number | null {
  * De quem é a construção do chunk, para o aviso (spec 016, T03): a vila, o sítio, a ruína ou
  * a estrutura rara do tema.
  */
-export type LugarProtecao = 'vila' | 'sitio' | 'ruina' | 'estrutura';
+export type LugarProtecao = 'vila' | 'sitio' | 'ruina' | 'estrutura' | 'cidade';
 
 /** Proteção de um chunk: só a faixa de altura [y0, y1] com algo protegido. */
 export interface MascaraProtecao {
@@ -183,6 +185,18 @@ export function protecaoDoChunk(
       }
     // 3. passagens
     passagensDoPovoado(p, passagem);
+  } else if (e.tipo === 'cidade') {
+    // spec 014: o chão da cidade inteira (calçadas, pistas, parque) e a margem em volta não
+    // se cavam; o ar em cima das pistas e o caminho das portas e escadas ficam livres
+    const p = e.plano;
+    for (let z = 0; z < TAM_Z; z++)
+      for (let x = 0; x < TAM_X; x++) {
+        const wx = x0 + x;
+        const wz = z0 + z;
+        if (distanciaDaCidade(p, wx, wz) > MARGEM_CHAO) continue;
+        chao(wx, wz, alturaTerreno(wx, wz, semente));
+      }
+    passagensDaCidade(p, cx, cz, passagem);
   } else {
     // ruína (ou estrutura do tema): piso 7x7 no meio do chunk, mais a margem
     const { h } = e;
@@ -202,13 +216,15 @@ export function protecaoDoChunk(
   }
   if (y1 < 0) return null;
   const lugar: LugarProtecao =
-    e.tipo === 'povoado'
-      ? e.plano.lotes.some((l) => l.uso !== undefined)
-        ? 'sitio'
-        : 'vila'
-      : e.forma === 'ruina'
-        ? 'ruina'
-        : 'estrutura';
+    e.tipo === 'cidade'
+      ? 'cidade'
+      : e.tipo === 'povoado'
+        ? e.plano.lotes.some((l) => l.uso !== undefined)
+          ? 'sitio'
+          : 'vila'
+        : e.forma === 'ruina'
+          ? 'ruina'
+          : 'estrutura';
   return { lugar, y0, y1, dados: cls.slice(y0 * CAMADA, (y1 + 1) * CAMADA) };
 }
 

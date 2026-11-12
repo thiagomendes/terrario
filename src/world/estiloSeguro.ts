@@ -43,10 +43,11 @@ const ESTRUTURAS: readonly FormaEstrutura[] = [
   'torre',
   'ninho',
   'espantalho',
+  'roda-gigante',
 ];
 const CASAS: readonly FormaCasa[] = ['duas-aguas', 'cupula', 'tenda', 'redonda', 'modulo'];
 const MARCOS: readonly FormaMarco[] = ['poco', 'fonte', 'antena', 'totem', 'esqueleto', 'moinho'];
-const PLANTAS: readonly PlantaPovoado[] = ['vila', 'sitio'];
+const PLANTAS: readonly PlantaPovoado[] = ['vila', 'sitio', 'cidade'];
 const NOITES: readonly NonNullable<EstiloMundo['noite']>[] = ['assusta', 'mansa'];
 
 const entre01 = (v: unknown, padrao: number) =>

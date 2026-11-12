@@ -748,7 +748,7 @@ export function criarCena(
   const orbita = toqueCamera
     ? criarCameraOrbita(ZOOM_PADRAO_TOQUE, ALTURA_PIVO_TOQUE)
     : criarCameraOrbita();
-  const edicoes = criarEdicoes();
+  const edicoes = criarEdicoes(semente);
   if (dadosIniciais) edicoes.importar(dadosIniciais.edicoes);
   // spec 016: quem colocou cada bloco (a tabela do núcleo; muda pelos quadros)
   edicoes.donos.importar(sanearDonos(dadosIniciais?.extras?.['donos']));

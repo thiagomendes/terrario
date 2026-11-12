@@ -10,6 +10,15 @@ import {
   versaoDosPovoados,
 } from './povoado';
 import { construirPovoado } from './construcoes';
+import {
+  ajusteDaCidade,
+  cidadeNoChunk,
+  construirCidade,
+  distanciaDaCidade,
+  planoDaCidade,
+  RAMPA_CIDADE,
+  type PlanoCidade,
+} from './cidade';
 import { Bloco } from './blocks';
 import { crista2, fbm2, hash2, hash3, ruido3 } from './noise';
 
@@ -33,6 +42,7 @@ let estilo: EstiloMundo = ESTILO_PADRAO;
 
 /** Define o estilo do mundo (thread principal e workers, antes de gerar qualquer chunk). */
 export function definirEstiloMundo(e: EstiloMundo): void {
+  if (e !== estilo) metasGeradas.clear();
   estilo = e;
 }
 
@@ -88,6 +98,9 @@ function clima(wx: number, wz: number, semente: number): Clima {
 /** Altura do terreno com os povoados aplainados (o que o jogo de fato gera). */
 export function alturaTerreno(wx: number, wz: number, semente: number): number {
   const natural = alturaNatural(wx, wz, semente);
+  // spec 014: a Cidade Grande (o chão plano e o relevo amaciado em volta)
+  const cidade = cidadeDoMundo(semente);
+  if (cidade) return ajusteDaCidade(cidade, wx, wz, natural)?.h ?? natural;
   const p = povoadosLigados ? povoadoNaColuna(wx, wz, semente) : null;
   if (!p) return natural;
   return ajusteDaColuna(p, wx, wz, natural)?.h ?? natural;
@@ -105,6 +118,21 @@ export const TERRENO_NATURAL: TerrenoNatural = {
 };
 
 let povoadosLigados = true;
+
+/** O relevo natural, para o planejador da cidade. */
+const RELEVO = {
+  altura: (wx: number, wz: number, s: number) => alturaNatural(wx, wz, s),
+  nivelMar: NIVEL_MAR,
+};
+
+/**
+ * Spec 014: a cidade do mundo, se o tema for a Cidade Grande (`planta: 'cidade'`); senão null.
+ * Os povoados desligados (teste de paridade) desligam a cidade também.
+ */
+export function cidadeDoMundo(semente: number): PlanoCidade | null {
+  if (!povoadosLigados || estilo.povoado?.planta !== 'cidade') return null;
+  return planoDaCidade(semente, RELEVO, String(estilo.crateras));
+}
 /** Liga ou desliga os povoados (o teste de paridade com o jogo antigo desliga). */
 export function definirPovoados(ligado: boolean): void {
   povoadosLigados = ligado;
@@ -283,17 +311,26 @@ export function gerarChunk(cx: number, cz: number, semente: number = SEMENTE_PAD
   const salas = grade3(cx, cz, semente, (x, y, z) =>
     ruido3(x / 34, y / 18, z / 34, semente + 1003),
   );
+  const cidade = cidadeDoMundo(semente);
 
   for (let z = 0; z < TAM_Z; z++) {
     for (let x = 0; x < TAM_X; x++) {
       const wx = cx * TAM_X + x;
       const wz = cz * TAM_Z + z;
       const natural = alturaNatural(wx, wz, semente);
-      const plano = povoadosLigados ? povoadoNaColuna(wx, wz, semente) : null;
-      const ajuste = plano ? ajusteDaColuna(plano, wx, wz, natural) : null;
+      const plano = povoadosLigados && !cidade ? povoadoNaColuna(wx, wz, semente) : null;
+      const ajusteCidade = cidade ? ajusteDaCidade(cidade, wx, wz, natural) : null;
+      const ajuste = plano ? ajusteDaColuna(plano, wx, wz, natural) : ajusteCidade;
       const h = ajuste?.h ?? natural;
       alturas[z * TAM_X + x] = h;
-      ocupadas[z * TAM_X + x] = ajuste?.ocupada ? 1 : plano ? 2 : 0;
+      ocupadas[z * TAM_X + x] = ajusteCidade
+        ? ajusteCidade.ocupada
+        : ajuste?.ocupada
+          ? 1
+          : plano
+            ? 2
+            : 0;
+      const firme = !!ajusteCidade?.firme;
       const b = biomaEm(wx, wz, semente, h);
       biomas.push(b);
       const solo = b === 'deserto' ? 6 : 4;
@@ -306,7 +343,8 @@ export function gerarChunk(cx: number, cz: number, semente: number = SEMENTE_PAD
         // cavernas: túneis (cruzamento de duas superfícies) e salões no fundo
         if (id !== Bloco.ROCHA_MATRIZ && y > 3) {
           // embaixo do povoado o chão é firme (nenhum buraco abre sob as casas)
-          const proteger = plano ? y > h - 10 : h <= NIVEL_MAR + 3 ? y > h - 8 : y > h - 1;
+          const proteger =
+            firme || (plano ? y > h - 10 : h <= NIVEL_MAR + 3 ? y > h - 8 : y > h - 1);
           if (!proteger) {
             const a = Math.abs(tuneis(x, y, z) - 0.5);
             const c = Math.abs(tuneis2(x, y, z) - 0.5);
@@ -436,13 +474,16 @@ export function gerarChunk(cx: number, cz: number, semente: number = SEMENTE_PAD
       }
     }
   }
-  pintarEstruturas(blocos, cx, cz, semente, alturas, biomas);
+  const metas = cidade ? new Map<number, number>() : undefined;
+  pintarEstruturas(blocos, cx, cz, semente, alturas, biomas, metas);
+  if (metas) guardarMetas(cx, cz, semente, metas);
   return blocos;
 }
 
 /** O que o mundo construiu no chunk: a parte do povoado que cai nele, ou a ruína do meio. */
 export type EstruturaDoChunk =
   | { tipo: 'povoado'; plano: PlanoPovoado }
+  | { tipo: 'cidade'; plano: PlanoCidade }
   | { tipo: 'ruina'; h: number; forma: EstiloMundo['estrutura'] }
   | null;
 
@@ -478,11 +519,28 @@ export function pintarEstruturas(
   semente: number,
   alturas: Int32Array,
   biomas: readonly Bioma[],
+  metas?: Map<number, number>,
 ): EstruturaDoChunk {
-  // povoado da região, se alcançar este chunk (e então sem ruína)
-  const plano = planoQueTocaOChunk(cx, cz, semente);
   const x0 = cx * TAM_X;
   const z0 = cz * TAM_Z;
+  // spec 014: a cidade (e então nem povoado nem ruína)
+  const cidade = cidadeDoMundo(semente);
+  if (cidade && cidadeNoChunk(cidade, cx, cz)) {
+    construirCidade(cidade, cx, cz, (wx, y, wz, id, meta) => {
+      const x = wx - x0;
+      const z = wz - z0;
+      if (x < 0 || x >= TAM_X || z < 0 || z >= TAM_Z || y < 1 || y >= ALTURA) return;
+      const i = indice(x, y, z);
+      blocos[i] = id;
+      if (metas) {
+        if (meta) metas.set(i, meta);
+        else metas.delete(i);
+      }
+    });
+    return { tipo: 'cidade', plano: cidade };
+  }
+  // povoado da região, se alcançar este chunk (e então sem ruína)
+  const plano = planoQueTocaOChunk(cx, cz, semente);
   if (plano) {
     construirPovoado(plano, estilo.povoado ?? FORMAS_PADRAO, (wx, y, wz, id) => {
       const x = wx - x0;
@@ -505,9 +563,13 @@ export function estruturaDoChunk(
   cz: number,
   semente: number,
   rascunho?: Uint8Array,
+  metas?: Map<number, number>,
 ): EstruturaDoChunk {
-  const plano = planoQueTocaOChunk(cx, cz, semente);
-  if (!plano && hash2(cx, cz, semente + CHAVE_ESTRUTURA) > CHANCE_ESTRUTURA) return null;
+  const cidade = cidadeDoMundo(semente);
+  const naCidade = !!cidade && cidadeNoChunk(cidade, cx, cz);
+  const plano = naCidade ? null : planoQueTocaOChunk(cx, cz, semente);
+  if (!plano && !naCidade && hash2(cx, cz, semente + CHAVE_ESTRUTURA) > CHANCE_ESTRUTURA)
+    return null;
   const alturas = new Int32Array(TAM_X * TAM_Z);
   const biomas: Bioma[] = [];
   if (!plano) {
@@ -524,7 +586,54 @@ export function estruturaDoChunk(
     semente,
     alturas,
     biomas,
+    metas,
   );
+}
+
+// ------------------------------------------------------------------ metadados gerados
+
+/**
+ * Spec 014: a direção dos blocos que a cidade põe (degraus, portas, bancos, a frente das
+ * placas), por chunk. A geração não grava metadado no chunk (só blocos): ele sai daqui, do
+ * mesmo planejador, igual no servidor e no cliente. Nos outros temas é sempre vazio.
+ */
+const metasGeradas = new Map<string, ReadonlyMap<number, number>>();
+const SEM_METAS: ReadonlyMap<number, number> = new Map();
+function guardarMetas(
+  cx: number,
+  cz: number,
+  semente: number,
+  m: ReadonlyMap<number, number>,
+): void {
+  const k = `${cx},${cz},${semente}`;
+  metasGeradas.delete(k);
+  metasGeradas.set(k, m);
+  if (metasGeradas.size > 512) metasGeradas.delete(metasGeradas.keys().next().value as string);
+}
+
+/** Metadados que a geração deu no chunk (índice local → metadado). */
+export function metasGeradasDoChunk(
+  cx: number,
+  cz: number,
+  semente: number,
+): ReadonlyMap<number, number> {
+  const cidade = cidadeDoMundo(semente);
+  if (!cidade || !cidadeNoChunk(cidade, cx, cz)) return SEM_METAS;
+  const k = `${cx},${cz},${semente}`;
+  const ja = metasGeradas.get(k);
+  if (ja) return ja;
+  const m = new Map<number, number>();
+  estruturaDoChunk(cx, cz, semente, undefined, m);
+  guardarMetas(cx, cz, semente, m);
+  return m;
+}
+
+/** Metadado que a geração deu à célula (0 se nenhum). */
+export function metaGerada(x: number, y: number, z: number, semente: number): number {
+  if (estilo.povoado?.planta !== 'cidade' || y < 0 || y >= ALTURA) return 0;
+  const cx = Math.floor(x / TAM_X);
+  const cz = Math.floor(z / TAM_Z);
+  return metasGeradasDoChunk(cx, cz, semente).get(indice(x - cx * TAM_X, y, z - cz * TAM_Z)) ?? 0;
 }
 
 /** Sorteio da ruína (ou estrutura do tema) no meio do chunk. */
@@ -541,6 +650,10 @@ function construirRuina(
   biomas: readonly Bioma[],
 ): number | null {
   if (hash2(cx, cz, semente + CHAVE_ESTRUTURA) > CHANCE_ESTRUTURA) return null;
+  // spec 014: nada de estrutura rara na cidade nem na rampa dela
+  const cidade = cidadeDoMundo(semente);
+  if (cidade && distanciaDaCidade(cidade, cx * TAM_X + 8, cz * TAM_Z + 8) <= RAMPA_CIDADE + 12)
+    return null;
   const c = 8 * TAM_X + 8;
   const b = biomas[c];
   if (b === 'oceano' || b === 'praia' || b === 'pantano' || b === 'montanhas') return null;
@@ -695,6 +808,41 @@ function construirEstrutura(
       em(7, h + 3, 9, Bloco.CERCA);
       em(9, h + 3, 9, Bloco.CERCA);
       em(8, h + 4, 9, Bloco.ABOBORA);
+      break;
+    }
+    case 'roda-gigante': {
+      // spec 014: roda-gigante de um parque de diversões abandonado, de grade de ferro, num
+      // plano em x (z = 8): o aro, os raios, as cabines de laje e o cavalete dos dois lados;
+      // uns pedaços do aro faltam (abandonada). O baú fica embaixo, no meio.
+      const R = 5;
+      const cy = h + R + 2;
+      for (let dx = -R - 1; dx <= R + 1; dx++)
+        for (let dy = -R - 1; dy <= R + 1; dy++) {
+          const d = Math.hypot(dx, dy);
+          const aro = Math.abs(d - R) < 0.55;
+          const raio =
+            d < R && (dx === 0 || dy === 0 || Math.abs(Math.abs(dx) - Math.abs(dy)) < 0.5);
+          if (!aro && !raio) continue;
+          if (aro && hash2(dx + 20, dy + 20, semente + 69) < 0.12) continue;
+          em(8 + dx, cy + dy, 8, Bloco.GRADE_FERRO);
+        }
+      for (let k = 0; k < 8; k++) {
+        const a = (k / 8) * Math.PI * 2;
+        const x = 8 + Math.round(Math.cos(a) * R);
+        const y = cy + Math.round(Math.sin(a) * R);
+        for (const z of [7, 9]) em(x, y - 1, z, Bloco.LAJE_GRADE);
+      }
+      // cavalete: duas pernas de cada lado, do chão ao eixo
+      for (const z of [7, 9])
+        for (let y = h + 1; y <= cy; y++) {
+          const t = (cy - y) / (cy - h - 1);
+          const abre = Math.round(t * 3);
+          em(8 - abre, y, z, Bloco.GRADE_FERRO);
+          em(8 + abre, y, z, Bloco.GRADE_FERRO);
+        }
+      em(8, cy, 7, Bloco.CONCRETO);
+      em(8, cy, 9, Bloco.CONCRETO);
+      em(8, cy, 8, Bloco.CONCRETO);
       break;
     }
     case 'torre':
@@ -865,6 +1013,8 @@ function podeTerEstrutura(x: number, z: number, semente: number): boolean {
  */
 export function pontoDeNascer(semente: number): { x: number; z: number } {
   const n = encontrarNascimento(semente);
+  // a cidade já escolheu um lugar livre (a praça)
+  if (cidadeDoMundo(semente)) return n;
   const x0 = Math.floor(n.x);
   const z0 = Math.floor(n.z);
   const livre = (x: number, z: number) =>
@@ -1067,6 +1217,9 @@ const nascimentos = new Map<string, { x: number; z: number }>();
 /** Para onde o jogador olha ao nascer (só nos mundos de sítio: para o sítio mais perto). */
 const olhares = new Map<number, number | undefined>();
 export function encontrarNascimento(semente: number): { x: number; z: number } {
+  // spec 014: na calçada da praça, ao lado do primeiro canteiro
+  const cidade = cidadeDoMundo(semente);
+  if (cidade) return { x: cidade.nascimento.x, z: cidade.nascimento.z };
   const sitio = TERRENO_NATURAL.planta === 'sitio';
   const k = sitio ? `${semente},sitio` : `${semente}`;
   let n = nascimentos.get(k);
@@ -1086,6 +1239,8 @@ export function encontrarNascimento(semente: number): { x: number; z: number } {
  * nascimento para o sítio mais perto; nos outros, undefined (fica o olhar de sempre).
  */
 export function olharDoNascimento(semente: number): number | undefined {
+  const cidade = cidadeDoMundo(semente);
+  if (cidade) return cidade.nascimento.olhar;
   if (TERRENO_NATURAL.planta !== 'sitio') return undefined;
   encontrarNascimento(semente);
   return olhares.get(semente);

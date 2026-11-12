@@ -1,5 +1,5 @@
 import { Bloco } from './blocks';
-import { ALTURA, TAM_X, TAM_Z, gerarChunk, indice } from './chunk';
+import { ALTURA, TAM_X, TAM_Z, gerarChunk, indice, metaGerada, metasGeradasDoChunk } from './chunk';
 
 export type EdicoesExportadas = Record<string, Array<[number, number]>>;
 
@@ -155,7 +155,11 @@ export function criarTabelaDonos(): TabelaDonos {
   };
 }
 
-export function criarEdicoes(): Edicoes {
+/**
+ * `semente`: com ela, a célula sem edição dá o metadado que a geração pôs (spec 014: a
+ * direção dos degraus, portas e placas da cidade). Sem ela, 0, como sempre.
+ */
+export function criarEdicoes(semente?: number): Edicoes {
   const chunks = new Map<string, Map<number, number>>();
   const versoes = new Map<string, number>();
   const donos = criarTabelaDonos();
@@ -212,7 +216,9 @@ export function criarEdicoes(): Edicoes {
     obterMeta(x, y, z) {
       if (!valido(x, y, z)) return 0;
       const p = localizar(x, y, z);
-      return metaDe(chunks.get(p.chave)?.get(p.i) ?? 0);
+      const v = chunks.get(p.chave)?.get(p.i);
+      if (v !== undefined) return metaDe(v);
+      return semente === undefined ? 0 : metaGerada(x, y, z, semente);
     },
     get versaoGeral() {
       return geral;
@@ -273,9 +279,22 @@ export function gerarChunkEditado(
   return blocos;
 }
 
-/** Metadados editados do chunk (índice local → metadado). */
-export function metasDoChunk(cx: number, cz: number, edicoes: Edicoes): Map<number, number> {
-  const m = new Map<number, number>();
-  for (const [i, v] of edicoes.doChunk(cx, cz)) if (metaDe(v)) m.set(i, metaDe(v));
+/**
+ * Metadados do chunk (índice local → metadado): os que a geração deu (com a semente, spec
+ * 014) e, por cima, os das edições (a célula editada fica com o dela, mesmo se for 0).
+ */
+export function metasDoChunk(
+  cx: number,
+  cz: number,
+  edicoes: Edicoes,
+  semente?: number,
+): Map<number, number> {
+  const m = new Map<number, number>(
+    semente === undefined ? [] : metasGeradasDoChunk(cx, cz, semente),
+  );
+  for (const [i, v] of edicoes.doChunk(cx, cz)) {
+    if (metaDe(v)) m.set(i, metaDe(v));
+    else m.delete(i);
+  }
   return m;
 }

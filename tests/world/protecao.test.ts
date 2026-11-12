@@ -162,14 +162,18 @@ function conferirPovoado(p: PlanoPovoado, prot: ProtecaoMundo): void {
 const TEMAS = temasDisponiveis();
 
 describe('proteção do mundo: povoados e sítios em todo tema', () => {
-  it.each(TEMAS)('%s: blocos, chão, usáveis e passagens', (id) => {
-    definirEstiloMundo(obterTema(id).mundo);
-    limparPovoados();
-    const ps = povoados(2);
-    expect(ps.length, id).toBeGreaterThan(0);
-    const prot = criarProtecaoMundo(SEMENTE);
-    for (const p of ps.slice(0, 2)) conferirPovoado(p, prot);
-  });
+  // a Cidade Grande (spec 014) não tem povoado de região: a proteção dela está em cidade.test
+  it.each(TEMAS.filter((id) => obterTema(id).mundo.povoado?.planta !== 'cidade'))(
+    '%s: blocos, chão, usáveis e passagens',
+    (id) => {
+      definirEstiloMundo(obterTema(id).mundo);
+      limparPovoados();
+      const ps = povoados(2);
+      expect(ps.length, id).toBeGreaterThan(0);
+      const prot = criarProtecaoMundo(SEMENTE);
+      for (const p of ps.slice(0, 2)) conferirPovoado(p, prot);
+    },
+  );
 
   it('o sítio do Rancho protege o baú do celeiro e a lavoura replanta o mesmo pé', () => {
     definirEstiloMundo(obterTema('rancho-alegre').mundo);

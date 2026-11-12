@@ -205,7 +205,9 @@ export type FormaEstrutura =
   | 'torre'
   | 'ninho'
   /** Spec 013: espantalho com baú no meio de uma lavoura abandonada. */
-  | 'espantalho';
+  | 'espantalho'
+  /** Spec 014: a roda-gigante de um parque de diversões abandonado (Cidade Grande). */
+  | 'roda-gigante';
 
 /** Como o mundo é montado (só forma; os blocos e as regras são os mesmos). */
 export interface EstiloMundo {

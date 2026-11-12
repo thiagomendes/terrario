@@ -253,6 +253,8 @@ export function portaoDoCercado(
 const TENTATIVAS_SITIO = 6;
 
 function planejar(rx: number, rz: number, semente: number, t: TerrenoNatural): PlanoPovoado | null {
+  // spec 014: o mundo da cidade não tem povoado de região (a cidade é o povoado dele)
+  if (t.planta === 'cidade') return null;
   // metade das regiões tem chance de povoado
   if (hash2(rx, rz, semente + 7101) > 0.5) return null;
   if (t.planta !== 'sitio') return planejarEm(rx, rz, semente, t, 0);
