@@ -179,6 +179,7 @@ export function criarRenderCriaturas(
       c.id,
       c.morador ? generoDoMorador(c.morador.povoado, c.morador.n, prof) : undefined,
       acessorio,
+      povoadoDoTema().fantasias?.[prof],
     );
     const chave = `${tema().id}|${prof}|${acessorio ?? ''}|${JSON.stringify(m.aparencia)}`;
     return { m, chave };

@@ -23,8 +23,9 @@ const MORADORES: Record<Profissao, PecaCriatura[]> = {
     { t: [0.44, 0.46, 0.04], p: [0, 1.0, 0.155], cor: '#ffd45a' },
     { t: [0.16, 0.08, 0.02], p: [0, 0.94, 0.18], cor: '#f0a830' },
   ],
-  // pedreiro: camisa branca, colete laranja, calça jeans, cinto de ferramentas e o capacete
-  // amarelo de obra (o mesmo amarelo do capacete que a criança ganha)
+  // pedreiro: camisa branca, calça jeans e cinto de ferramentas; o capacete amarelo e o colete
+  // laranja são as peças de fantasia que a criança ganha no canteiro (`fantasias`, abaixo):
+  // o mesmo capacete redondo de aba curta, não um chapéu
   construtor: [
     ...corpoDeMorador({
       pele: '#b9825c',
@@ -33,22 +34,9 @@ const MORADORES: Record<Profissao, PecaCriatura[]> = {
       sapato: '#4a3426',
       cabelo: '#2e2018',
     }),
-    // colete laranja com as faixas claras
-    { t: [0.52, 0.5, 0.3], p: [0, 1.15, 0], cor: '#ff8a2a' },
-    { t: [0.53, 0.05, 0.31], p: [0, 1.08, 0], cor: '#fff2c4' },
-    { t: [0.53, 0.05, 0.31], p: [0, 1.24, 0], cor: '#fff2c4' },
     // cinto com a colher de pedreiro
     { t: [0.52, 0.06, 0.3], p: [0, 0.86, 0], cor: '#6b4a3a' },
     { t: [0.06, 0.16, 0.03], p: [0.2, 0.8, 0.16], cor: '#9aa0a8' },
-    // capacete amarelo: a cúpula e a aba
-    {
-      t: [0.48, 0.2, 0.48],
-      p: [0, ACIMA + 0.01, 0],
-      cor: '#ffc61a',
-      forma: 'bola',
-      papel: 'cabeca',
-    },
-    { t: [0.5, 0.04, 0.56], p: [0, ACIMA - 0.005, 0.03], cor: '#ffc61a', papel: 'cabeca' },
   ],
   // mecânico: macacão azul, boné vermelho e a chave inglesa no bolso
   ferreiro: [
@@ -94,6 +82,8 @@ export const POVOADO_CIDADE: PovoadoTema = {
   moradores: MORADORES,
   // a padeira usa a touca de chef do jogador
   acessorios: { cozinheiro: 'touca-chef' },
+  // o pedreiro veste o capacete e o colete de obra (camisa branca: a segunda cor do colete)
+  fantasias: { construtor: { id: 'colete-obra', cor: 1 } },
   // passo ligeiro de quem anda na calçada
   movimento: { saltita: 0.02, flutua: 0, ginga: 0.04 },
   vozes: {

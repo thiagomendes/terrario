@@ -391,15 +391,18 @@ async function cenasDaCidade(page: Page, pre: string, completo: boolean) {
   // a festa (poeira e confete) acaba; a câmera fica na frente da casinha, de onde se vê a
   // abertura dela e o quintal (o cachorro mora ali dentro ou bem na porta)
   await page.waitForTimeout(8000);
-  const vista = await page.evaluate(() => {
+  // no celular (em pé, estreito) a câmera fica mais para trás e mais alta, para caber a
+  // casinha inteira e o cachorro na frente dela
+  const longe = pre === 'cel' ? 4.6 : 1.2;
+  const vista = await page.evaluate((longe) => {
     const p = window.__brumaluz!.cidade!()!;
     const l = p.lotes.find((q) => q.canteiro === 1)!;
     const no = (s: number, f: number): [number, number] =>
       l.porta === 'n'
         ? [l.x0 + s + 0.5, l.z0 + f + 0.5]
         : [l.x0 + l.largura - 1 - s + 0.5, l.z0 + l.profundidade - 1 - f + 0.5];
-    return { cam: no(4.2, -1.2), alvo: no(3, 3.6) };
-  });
+    return { cam: no(4.2, -longe), alvo: no(3, 3.6) };
+  }, longe);
   const agora = await page.evaluate(
     ([x0, z0, w, d]) =>
       (window.__brumaluz!.criaturas?.() ?? []).find(
@@ -409,11 +412,21 @@ async function cenasDaCidade(page: Page, pre: string, completo: boolean) {
   );
   await camera(
     page,
-    [vista.cam[0], H + 2.6, vista.cam[1]],
+    [vista.cam[0], H + (pre === 'cel' ? 3.4 : 2.6), vista.cam[1]],
     [vista.alvo[0], H + 0.7, vista.alvo[1]],
   );
   console.log(`CACHORRO ${pre} ${JSON.stringify({ cachorro: [agora.x, agora.z], vista })}`);
+  // só a casinha e o cachorro: moradores e o boneco da criança não tapam a porta
+  await page.evaluate(() => {
+    (window as unknown as { __esconder: string[] }).__esconder = ['morador-', 'personagem'];
+  });
+  await page.waitForTimeout(400);
   await foto(page, `${pre}-cachorro-casinha`);
+  await page.evaluate(() => {
+    (window as unknown as { __esconder: string[] }).__esconder = [];
+    for (const m of window.__brumaluz!.cenaBabylon!().meshes)
+      if (m.name.startsWith('morador-') || m.name.startsWith('personagem')) m.isVisible = true;
+  });
   const missao2 = await missaoNoHud(page);
   console.log(`MISSAO-DEPOIS ${pre} ${JSON.stringify(missao2)}`);
 }

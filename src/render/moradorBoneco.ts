@@ -211,6 +211,8 @@ export function moradorDeBrinquedo(
   genero?: 'f' | 'm',
   /** Acessório do boneco que o tema dá à profissão (chapéu de palha da fazendeira). */
   acessorio?: Aparencia['acessorio'],
+  /** Spec 014 (T11): a fantasia que o tema dá à profissão (o capacete de obra do pedreiro). */
+  fantasia?: Aparencia['fantasia'],
 ): Morador {
   const cabecas = pecas.filter((p) => p.papel === 'cabeca');
   const cabeca = [...cabecas].sort((a, b) => volume(b) - volume(a))[0];
@@ -276,6 +278,7 @@ export function moradorDeBrinquedo(
   const rostos = genero === 'f' ? [0, 1, 2, 3] : genero === 'm' ? [0, 2, 4, 5] : [0, 1, 2, 3, 4, 5];
   a.rosto = rostos[Math.floor(hash(id, 3) * rostos.length)];
   a.acessorio = acessorio ?? 'nenhum';
+  if (fantasia) a.fantasia = { ...fantasia };
   const pele = cabeca?.cor;
   const roupa = tronco?.cor;
   const calca = perna?.cor;

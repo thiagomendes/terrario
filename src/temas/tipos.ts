@@ -8,6 +8,7 @@ import type { Bioma } from '../world/chunk';
 import type { TipoCriatura } from '../jogo/criaturas';
 import type { GrupoMaterial } from '../audio/materiais';
 import type { Acessorio, Aparencia } from '../personagem/aparencia';
+import type { FantasiaVestida } from '../personagem/fantasias';
 import type { Estacao, TipoClima } from '../jogo/clima';
 import type { FormasPovoado, Profissao } from '../world/povoado';
 import type { Exclusivos } from '../jogo/exclusivos';
@@ -319,6 +320,11 @@ export interface PovoadoTema {
    * da fazendeira). Sem ele, o morador não usa acessório.
    */
   acessorios?: Partial<Record<Profissao, Acessorio>>;
+  /**
+   * Spec 014 (T11): a fantasia (017) que a profissão veste, o mesmo desenho do jogador: o
+   * pedreiro da cidade usa o capacete e o colete de obra que a criança ganha no canteiro.
+   */
+  fantasias?: Partial<Record<Profissao, FantasiaVestida>>;
   movimento: MovimentoCriatura;
   vozes: VozCriatura & { obrigado: PioCriatura };
   textos: {
