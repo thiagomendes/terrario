@@ -76,6 +76,13 @@ for (const id of TEMAS) {
       const a = e.astro;
       // mundo de sítio (Rancho Alegre): olha para o sítio mais perto, como ao nascer
       const sitio = e.tema === 'rancho-alegre' ? e.povoados!()[0] : undefined;
+      // Cidade Grande (spec 014): no meio da avenida ao lado do parque, olhando a rua comprida
+      // entre os prédios (escada de incêndio, toldo e as torres ao longe)
+      const cidade = e.tema === 'cidade-grande' ? e.cidade?.() : null;
+      if (!a && cidade) {
+        e.teleportar!(cidade.ox + 20, cidade.parque.z0 - 4.5, cidade.h + 1);
+        return { yaw: Math.PI / 2, pitch: -0.16, ceu: -0.55 };
+      }
       if (!a && sitio) {
         const [x, , z] = e.posicao!;
         return { yaw: Math.atan2(sitio.cx - x, sitio.cz - z), pitch: -0.12, ceu: -0.55 };
