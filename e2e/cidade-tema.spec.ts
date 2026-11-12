@@ -9,7 +9,8 @@ import { PASTA_CAPTURAS } from '../playwright.config';
  * - a primeira missão da cidade é a obra do primeiro canteiro (não "quebre troncos");
  * - capturas de dia, no entardecer e de noite: o céu e o horizonte de torres da calçada, os
  *   moradores andando, os bichos (cachorro grande, pombo, gato, carpa e guaxinim), a escada
- *   de incêndio, e o cachorro morando na casinha da obra 1 pronta; no computador e no celular;
+ *   de incêndio, e o cachorro morando na casinha da obra 1 pronta; no computador e no celular
+ *   (bichos e casinha no celular desde a T11);
  * - medida no celular na esquina do parque (canteiro aberto à vista): quadros, chamadas e
  *   triângulos com tudo, sem os fantasmas da obra e sem o horizonte.
  */
@@ -428,13 +429,17 @@ test('tema da cidade: celular', async ({ browser }: { browser: Browser }) => {
   const page = await ctx.newPage();
   await page.addInitScript(() => document.documentElement?.classList.add('toque'));
   await abrir(page);
-  await cenasDaCidade(page, 'cel', false);
+  // T11: os bichos e o cachorro na casinha também no celular (a T08 só fez no computador)
+  await cenasDaCidade(page, 'cel', true);
   await ctx.close();
 });
 
-/** Quadros, chamadas e triângulos por 6 s, parado, com a câmera do jogo. */
-async function medir(page: Page, rotulo: string) {
-  const r = await page.evaluate(async () => {
+/**
+ * Quadros, chamadas e triângulos por 6 s com a câmera do jogo: parada ou girando devagar (a
+ * criança olhando em volta; o mapa de sombras é refeito a cada quadro).
+ */
+async function medir(page: Page, rotulo: string, girar = false) {
+  const r = await page.evaluate(async (girar) => {
     const e = window.__brumaluz!;
     const scene = e.cenaBabylon!();
     let tri = 0;
@@ -443,10 +448,13 @@ async function medir(page: Page, rotulo: string) {
     let ultimo = performance.now();
     const fim = ultimo + 6000;
     const d0 = e.desenho!();
+    const yaw0 = e.rotacao?.[1] ?? 0;
+    const t0 = performance.now();
     await new Promise<void>((ok) => {
       const passo = () => {
         const agora = performance.now();
         quadros++;
+        if (girar) e.apontar!(yaw0 + (agora - t0) * 0.0008, 0.1);
         tri += scene.getActiveIndices() / 3;
         amostras.push(agora - ultimo);
         ultimo = agora;
@@ -466,7 +474,7 @@ async function medir(page: Page, rotulo: string) {
       horizonte: e.horizonte?.() ?? null,
       fantasmas: e.fantasmasObra ?? 0,
     };
-  });
+  }, girar);
   console.log(`DESEMPENHO ${rotulo} ${JSON.stringify(r)}`);
   return r;
 }
@@ -508,6 +516,12 @@ for (const tela of ['celular', 'computador'] as const)
       await page.waitForTimeout(2500);
       const tudo = await medir(page, `${tela}${cpu}-${q}-tudo`);
       expect(tudo.fantasmas).toBeGreaterThan(0);
+      await medir(page, `${tela}${cpu}-${q}-girando`, true);
+      await page.evaluate(
+        ([pe, cx, cz]) => window.__brumaluz!.apontar!(Math.atan2(cx - pe[0], cz - pe[2]), 0.1),
+        [pe, c1.x0 + 4, c1.z0 + 4] as const,
+      );
+      await page.waitForTimeout(1500);
       await page.evaluate(() => {
         (window as unknown as { __esconder: string[] }).__esconder = ['fantasmas-'];
       });

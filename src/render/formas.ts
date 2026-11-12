@@ -303,8 +303,16 @@ export class PluginPlastico extends MaterialPluginBase {
    * o Babylon reenvia mesmo com o material congelado: trocar a luz não descongela nada.
    */
   luz = 1;
-  constructor(material: Material) {
-    super(material, 'Plastico', 220, { PLASTICO: false });
+  constructor(
+    material: Material,
+    /**
+     * Spec 014 (T11, desempenho da cidade): a cor da peça vem dos vértices, e a conta é a mesma
+     * de um material daquela cor (a cor entra antes do ombro suave): as peças da mesma junta
+     * de um morador viram uma malha só sem mudar nada no desenho.
+     */
+    readonly corVertice = false,
+  ) {
+    super(material, 'Plastico', 220, { PLASTICO: false, PLASTICO_CV: false });
     this._enable(true);
   }
   override getClassName(): string {
@@ -315,6 +323,7 @@ export class PluginPlastico extends MaterialPluginBase {
   }
   override prepareDefines(defines: Record<string, unknown>): void {
     defines['PLASTICO'] = true;
+    defines['PLASTICO_CV'] = this.corVertice;
   }
   override getUniforms() {
     return {
@@ -334,13 +343,23 @@ export class PluginPlastico extends MaterialPluginBase {
           // estúdio: do lado da câmera, um pouco de cima
           vec3 dirFrente = normalize(viewDirectionW + vec3(0.0, 0.55, 0.0));
           float frente = max(dot(normalW, dirFrente), 0.0);
+          #if defined(PLASTICO_CV) && defined(VERTEXCOLOR)
+          vec3 corPeca = vColor.rgb;
+          #else
+          vec3 corPeca = vec3(1.0);
+          #endif
           vec3 soma = (diffuseBase * diffuseColor + emissiveColor
-            + diffuseColor * (${LUZ_FRENTE.toFixed(4)} * frente)) * luzPlastico;
+            + diffuseColor * (${LUZ_FRENTE.toFixed(4)} * frente)) * corPeca * luzPlastico;
           // ombro suave a partir de 0,9, até 1,12 (o claro não vira uma chapa só e quase não
           // passa do limite do bloom: camisa branca ao sol não brilha)
           vec3 acima = max(soma - 0.9, 0.0) / 0.22;
           vec3 luzFinal = min(soma, 0.9) + 0.22 * acima / (1.0 + acima);
+          #if defined(PLASTICO_CV) && defined(VERTEXCOLOR)
+          // a cor do vértice já entrou na soma (baseColor é só ela: sem textura)
+          color.rgb += luzFinal - finalDiffuse;
+          #else
           color.rgb += luzFinal * baseColor.rgb - finalDiffuse;
+          #endif
           #ifdef SPECULARTERM
           color.rgb -= finalSpecular * (1.0 - luzPlastico);
           float nv = clamp(dot(normalW, viewDirectionW), 0.0, 1.0);
@@ -382,6 +401,11 @@ export interface Plasticos {
    * diferentes (menos desenhos por amigo fantasiado).
    */
   tinta(brilho?: number, alfa?: number): StandardMaterial;
+  /**
+   * Spec 014 (T11): material branco por brilho com a cor de cada vértice (`corDoVertice`),
+   * desenhado igual ao `cor` daquela cor. Null no perfil clássico (sem a conta do plástico).
+   */
+  corVertice(brilho?: number): StandardMaterial | null;
   /** Luz do ambiente (1 ao ar livre, baixa em cavernas). */
   definirLuz(f: number): void;
   /**
@@ -484,6 +508,27 @@ export function criarPlasticos(
     },
     tinta(brilho = 0.28, alfa = 1) {
       return this.cor('#ffffff', brilho, alfa, true);
+    },
+    corVertice(brilho = 0.28) {
+      if (classico) return null;
+      const chave = `cv|${brilho}`;
+      const ja = mats.get(chave);
+      if (ja) return ja.m;
+      const m = new StandardMaterial(`${prefixo}-plastico-cv`, scene);
+      m.specularPower = POTENCIA_REFLEXO;
+      m.ambientColor = Color3.Black();
+      const e: Plastico = {
+        m,
+        base: Color3.White(),
+        brilho,
+        viva: false,
+        plugin: new PluginPlastico(m, true),
+        esperando: false,
+      };
+      mats.set(chave, e);
+      m.needDepthPrePass = soFrente;
+      aplicar(e);
+      return m;
     },
     definirLuz(f) {
       luz = f;

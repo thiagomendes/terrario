@@ -10,6 +10,7 @@ import { MeshBuilder } from '@babylonjs/core/Meshes/meshBuilder';
 import { Mesh } from '@babylonjs/core/Meshes/mesh';
 import { Matrix, Quaternion, Vector3 } from '@babylonjs/core/Maths/math.vector';
 import { VertexData } from '@babylonjs/core/Meshes/mesh.vertexData';
+import { Color3 } from '@babylonjs/core/Maths/math.color';
 import { CreateCylinderVertexData } from '@babylonjs/core/Meshes/Builders/cylinderBuilder';
 import { CreateTorusVertexData } from '@babylonjs/core/Meshes/Builders/torusBuilder';
 import type { Scene } from '@babylonjs/core/scene';
@@ -98,7 +99,12 @@ export function montarPeca(scene: Scene, mats: Plasticos, p: Peca, prefixo: stri
  * mesma junta e do mesmo material são juntadas aqui e sobem uma vez só (o morador que aparece
  * no povoado não trava a tela). A conta da posição e das normais é a mesma do MergeMeshes.
  */
-export function dadosDaPeca(p: Peca, deslocar?: [number, number, number]): VertexData {
+export function dadosDaPeca(
+  p: Peca,
+  deslocar?: [number, number, number],
+  /** Spec 014 (T11): a cor da peça nos vértices, sem a gama da tinta (material `corVertice`). */
+  corNoVertice = false,
+): VertexData {
   let vd: VertexData;
   let escala: [number, number, number] = [1, 1, 1];
   if (p.forma === 'caixa')
@@ -122,9 +128,9 @@ export function dadosDaPeca(p: Peca, deslocar?: [number, number, number]): Verte
       thickness: p.tamanho[1],
       tessellation: 20,
     });
-  if (p.viva) {
+  if (p.viva || corNoVertice) {
     const n = vd.positions!.length / 3;
-    const [r, g, b] = corViva(p.cor);
+    const [r, g, b] = corNoVertice ? Color3.FromHexString(p.cor).asArray() : corViva(p.cor);
     const cores = new Float32Array(n * 4);
     for (let i = 0; i < n; i++) cores.set([r, g, b, 1], i * 4);
     vd.colors = cores;
@@ -141,9 +147,9 @@ export function dadosDaPeca(p: Peca, deslocar?: [number, number, number]): Verte
 }
 
 /** As espécies de dados de vértice da peça (só junta malhas com as mesmas). */
-function tiposDaPeca(p: Peca): string {
+function tiposDaPeca(p: Peca, corNoVertice = false): string {
   // todas as formas têm posição, normal e uv; a tinta da fantasia tem cor
-  return p.viva ? 'cor' : '';
+  return p.viva || corNoVertice ? 'cor' : '';
 }
 
 function naVista(m: Mesh): void {
@@ -270,12 +276,20 @@ export function criarBoneco(
       p.viva
         ? mats.tinta(p.brilho ?? 0.28, p.alfa ?? 1)
         : mats.cor(p.cor, p.brilho ?? 0.28, p.alfa ?? 1);
+    /**
+     * Spec 014 (T11, desempenho da cidade: 12 moradores à vista na praça): a peça opaca de cor
+     * lisa vai com a cor nos vértices num material por brilho, desenhado igual ao da cor; as
+     * peças da mesma junta viram uma malha só (de ~22 para ~9 malhas por morador).
+     */
+    const corVertice = (p: Peca) =>
+      !p.viva && (p.alfa ?? 1) >= 1 ? mats.corVertice(p.brilho ?? 0.28) : null;
     for (const p of plano.pecas) {
       // os dois olhos (e os dois brilhos) piscam juntos e ficam na mesma altura: viram uma
       // malha só, que pisca em volta do meio deles
       const par = /^(olho|brilho)-?\d/.exec(p.nome)?.[1];
       if (fundir && (par || !/^(olho|brilho|boca)/.test(p.nome))) {
-        const material = materialDe(p);
+        const cv = corVertice(p);
+        const material = cv ?? materialDe(p);
         // a mão não gira sozinha: as peças dela vão para a junta do braço (menos malhas)
         let junta = p.junta;
         let deslocar: [number, number, number] | undefined;
@@ -283,7 +297,7 @@ export function criarBoneco(
           deslocar = plano.juntas[junta].pos;
           junta = junta === 'maoE' ? 'bracoE' : 'bracoD';
         }
-        const k = `${par ?? ''}|${junta}|${material.uniqueId}|${tiposDaPeca(p)}`;
+        const k = `${par ?? ''}|${junta}|${material.uniqueId}|${tiposDaPeca(p, !!cv)}`;
         let g = paraFundir.get(k);
         if (!g)
           paraFundir.set(
@@ -292,7 +306,7 @@ export function criarBoneco(
               ? { junta, material, dados: [], nome: `${par}s`, pivo: [0, 0, 0], n: 0 }
               : { junta, material, dados: [], nome: junta, n: 0 }),
           );
-        g.dados.push(dadosDaPeca(p, deslocar));
+        g.dados.push(dadosDaPeca(p, deslocar, !!cv));
         if (g.pivo) {
           g.pivo[0] += p.pos[0];
           g.pivo[1] += p.pos[1];
@@ -314,6 +328,8 @@ export function criarBoneco(
       // pisca em volta do meio dos olhos (não do meio da cabeça)
       if (pivo) f.setPivotPoint(new Vector3(pivo[0] / n, pivo[1] / n, pivo[2] / n));
       f.material = material;
+      // a cor nos vértices é opaca (o alfa do vértice não vale nada)
+      f.hasVertexAlpha = false;
       f.isPickable = false;
       f.receiveShadows = false;
       f.parent = juntas[junta];

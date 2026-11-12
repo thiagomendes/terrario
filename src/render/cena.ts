@@ -53,6 +53,7 @@ import '@babylonjs/core/Culling/ray';
 import { DirectionalLight } from '@babylonjs/core/Lights/directionalLight';
 import { CascadedShadowGenerator } from '@babylonjs/core/Lights/Shadows/cascadedShadowGenerator';
 import { ShadowGenerator } from '@babylonjs/core/Lights/Shadows/shadowGenerator';
+import { RenderTargetTexture } from '@babylonjs/core/Materials/Textures/renderTargetTexture';
 import '@babylonjs/core/Lights/Shadows/shadowGeneratorSceneComponent';
 import { GlowLayer } from '@babylonjs/core/Layers/glowLayer';
 import '@babylonjs/core/Layers/effectLayerSceneComponent';
@@ -850,6 +851,8 @@ export function criarCena(
       feita: !!o.feita,
     });
   definirObrasFeitas([...obrasDoMundo].filter(([, o]) => o.feita).map(([n]) => n));
+  // testes de tela (T11): as obras feitas do mundo aberto, não só as feitas nesta sessão
+  estado.obrasFeitas = obrasFeitas();
   // blocos-base compartilhados (chegam do worker junto com a malha)
   const provedor = criarProvedorBlocos(semente);
   /**
@@ -1514,6 +1517,55 @@ export function criarCena(
   }
 
   const comSombra = new Set<Mesh>();
+  /**
+   * Spec 014 (T11, desempenho da cidade): só os chunks projetam sombra, e eles ficam parados.
+   * O mapa de sombras é refeito só quando algo nele muda: a vista da câmera (as cascatas
+   * acompanham), a direção do sol, a lista de quem projeta (chunk novo, refeito ou que saiu) ou
+   * o próprio mapa (tamanho, sombra religada). Com tudo parado, o mapa de antes é o mesmo que
+   * sairia de novo; andando ou girando, é refeito um quadro sim, um não.
+   */
+  let sombraMudou = true;
+  const vistaDaSombra = new Float32Array(16);
+  const solDaSombra = new Vector3(Number.NaN, 0, 0);
+  let naCameraPrincipal = false;
+  let pulouSombra = false;
+  scene.onBeforeCameraRenderObservable.add(() => {
+    naCameraPrincipal = true;
+  });
+  scene.onBeforeRenderTargetsRenderObservable.add(() => {
+    // só a chamada de dentro do desenho da câmera (a vista dela já está na cena)
+    if (!naCameraPrincipal) return;
+    naCameraPrincipal = false;
+    const mapa = sombras.getShadowMap();
+    if (!mapa) return;
+    if (mapa.refreshRate !== RenderTargetTexture.REFRESHRATE_RENDER_ONCE) {
+      mapa.refreshRate = RenderTargetTexture.REFRESHRATE_RENDER_ONCE;
+      sombraMudou = true;
+    }
+    const m = scene.getTransformMatrix().m;
+    let refazer = sombraMudou || !sol.direction.equals(solDaSombra);
+    for (let i = 0; i < 16 && !refazer; i++) if (m[i] !== vistaDaSombra[i]) refazer = true;
+    if (!refazer) {
+      pulouSombra = false;
+      return;
+    }
+    // só a vista andou (girando ou andando): refaz um quadro sim, um não. As cascatas são
+    // esferas em volta da vista (estáveis ao girar) e o mapa de um quadro atrás cobre a mesma
+    // cena; quem projeta e o sol mudando refazem na hora.
+    if (!sombraMudou && sol.direction.equals(solDaSombra) && !pulouSombra) {
+      pulouSombra = true;
+      return;
+    }
+    pulouSombra = false;
+    if (sombraMudou) {
+      // a caixa de quem projeta só muda com a lista (congelada no resto do tempo)
+      sombras.freezeShadowCastersBoundingInfo = true;
+    }
+    sombraMudou = false;
+    vistaDaSombra.set(m);
+    solDaSombra.copyFrom(sol.direction);
+    mapa.resetRefreshCounter();
+  });
   let sombraChunk = '';
   let sombrasSujas = true;
   function atualizarSombras(): void {
@@ -1535,9 +1587,11 @@ export function criarCena(
         if (perto && !comSombra.has(m)) {
           sombras.addShadowCaster(m);
           comSombra.add(m);
+          sombraMudou = true;
         } else if (!perto && comSombra.has(m)) {
           sombras.removeShadowCaster(m);
           comSombra.delete(m);
+          sombraMudou = true;
         }
       }
     }
@@ -1547,6 +1601,7 @@ export function criarCena(
     const k = chave(r.cx, r.cz);
     for (const p of provisorios) if (p.k === k) p.pronto = true;
     sombrasSujas = true;
+    sombraMudou = true;
     pedidos.delete(k);
     malhas.get(k)?.forEach((m) => {
       if (comSombra.has(m)) sombras.removeShadowCaster(m);
@@ -2571,7 +2626,7 @@ export function criarCena(
     const plano = planejar([...malhas.keys(), ...pedidos], desejados);
     for (const k of plano.descartar) {
       malhas.get(k)?.forEach((m) => {
-        comSombra.delete(m);
+        if (comSombra.delete(m)) sombraMudou = true;
         m.dispose();
       });
       malhas.delete(k);
@@ -3614,6 +3669,7 @@ export function criarCena(
   function aplicarEfeitos(): void {
     const q = perfilAtual;
     if (!q) return;
+    if (sol.shadowEnabled !== q.sombras) sombraMudou = true;
     sol.shadowEnabled = q.sombras;
     // tamanho do mapa de sombras do perfil (celular usa no máximo 1024; 512 no alívio 3)
     const tamSombra = toqueGrosso

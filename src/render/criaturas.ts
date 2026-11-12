@@ -6,6 +6,7 @@ import { TransformNode } from '@babylonjs/core/Meshes/transformNode';
 import { Mesh } from '@babylonjs/core/Meshes/mesh';
 import { Matrix, Vector3 } from '@babylonjs/core/Maths/math.vector';
 import { VertexBuffer } from '@babylonjs/core/Buffers/buffer';
+import type { Plane } from '@babylonjs/core/Maths/math.plane';
 import type { Scene } from '@babylonjs/core/scene';
 import type { Criatura } from '../jogo/criaturas';
 import type { PecaCriatura } from '../temas/tipos';
@@ -37,6 +38,8 @@ export const LONGE_VOLTA = 16;
 export const LONGE_POR_QUADRO = 1;
 /** Spec 017: bonecos de morador novos por quadro (o povoado aparece sem travar). */
 export const MORADORES_POR_QUADRO = 1;
+/** Raio da esfera do morador no teste de vista (corpo, braço esticado e o balão do gesto). */
+export const RAIO_VISTA_MORADOR = 3;
 /**
  * Auditoria 017: um aceno do servidor para um morador ainda na fila de montar espera por ele
  * até aqui (segundos); mais velho que isso, o aceno já passou e é esquecido.
@@ -141,6 +144,29 @@ export function criarRenderCriaturas(
     return d > 8 && (dx * frente.x + dy * frente.y + dz * frente.z) / d < -0.42;
   }
   /**
+   * Desempenho (spec 014, T11: a praça da cidade com 12 moradores): o boneco do morador entra
+   * ou sai da vista inteiro, por uma esfera em volta dele (com folga para o balão e o braço
+   * esticado), no lugar de cada peça passar pelo teste e refazer a caixa a cada quadro.
+   * Fora da vista ele não é desenhado; na vista, é igual a antes.
+   */
+  const centroVista = new Vector3();
+  function naVista(planos: readonly Plane[], x: number, y: number, z: number): boolean {
+    centroVista.set(x, y, z);
+    for (const p of planos) if (p.dotCoordinate(centroVista) <= -RAIO_VISTA_MORADOR) return false;
+    return true;
+  }
+  // logo antes de a cena escolher o que desenha, com a vista que ela vai usar (a da câmera do
+  // quadro, mesmo se alguém a mexeu depois da lógica: modo foto, câmeras dos testes)
+  scene.onBeforeActiveMeshesEvaluationObservable.add(() => {
+    const planos = scene.frustumPlanes;
+    if (!planos?.length) return;
+    for (const mb of moradores.values()) {
+      const r = mb.boneco.raiz;
+      const ver = naVista(planos, r.position.x, r.position.y + 1, r.position.z);
+      if (r.isEnabled(false) !== ver) r.setEnabled(ver);
+    }
+  });
+  /**
    * Planos de morador já encaixados (spec 017): o mesmo morador (tema, profissão e boneco)
    * encaixa os enfeites uma vez só; quem sai da vista e volta não refaz a conta.
    */
@@ -170,7 +196,9 @@ export function criarRenderCriaturas(
   function montarMorador(c: Criatura, prep = prepararMorador(c)) {
     const m = prep.m;
     const ajustar = (p: PlanoBoneco) => planoDoMorador(prep, p);
-    const boneco = criarBoneco(scene, m.aparencia, `morador-${c.id}`, ajustar, true);
+    // spec 014 (T11): as peças não passam pelo teste de vista uma por uma (o boneco inteiro
+    // passa, em `naVistaDoQuadro`) nem refazem a caixa a cada quadro
+    const boneco = criarBoneco(scene, m.aparencia, `morador-${c.id}`, ajustar, true, true);
     for (const malha of boneco.raiz.getChildMeshes()) {
       const mat = malha.material as StandardMaterial | null;
       // só a lanterna e o que o tema marcou como brilhante entram no brilho
