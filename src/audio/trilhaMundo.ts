@@ -80,6 +80,8 @@ export function criarTrilhaMundo(temaId: string, op: OpcoesTrilhaMundo = {}): Tr
   let aplicado: EstadoTrilha | null = null;
   let timer: ReturnType<typeof setInterval> | null = null;
   let solta = false;
+  /** A gravada falhou ao tocar: fica a de hoje até sair do mundo (sem remontar a cada passo). */
+  let desistiu = false;
 
   const estado = (): EstadoTrilha => (forcado ? { ...mundo, ...forcado } : mundo);
   const temPerigo = () => !!carregador.tema?.clips.some((c) => c.id === 'perigo');
@@ -111,7 +113,7 @@ export function criarTrilhaMundo(temaId: string, op: OpcoesTrilhaMundo = {}): Tr
   }
 
   function passo(): void {
-    if (solta || !ambiente || !carregador.pronto) return;
+    if (solta || desistiu || !ambiente || !carregador.pronto) return;
     try {
       const e = estado();
       if (!motor) {
@@ -144,6 +146,7 @@ export function criarTrilhaMundo(temaId: string, op: OpcoesTrilhaMundo = {}): Tr
   }
 
   function falhar(): void {
+    desistiu = true;
     motor?.parar(0.5);
     motor = null;
     fase = 'falhou';

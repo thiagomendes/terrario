@@ -118,4 +118,33 @@ describe('trilha do mundo', () => {
     expect(amb.sint).toEqual([]);
     t.soltar();
   });
+
+  it('a gravada quebrou ao tocar: volta a de hoje e não tenta remontar a cada passo', async () => {
+    const car = carregador();
+    let montagens = 0;
+    const ctxQuebrado = {
+      ...ctx,
+      createGain: () => {
+        montagens++;
+        throw new Error('contexto fechado');
+      },
+    };
+    const sint: [number, number][] = [];
+    const amb = {
+      saidaTrilha: () => ({ contexto: ctxQuebrado, destino: new No() }),
+      definirSintetizada: (v: number, s: number) => sint.push([v, s]),
+    };
+    const t = criarTrilhaMundo('bruma-e-luz', { carregador: car });
+    t.ligar(amb);
+    t.baixar();
+    for (let i = 0; i < 40 && montagens === 0; i++) await vi.advanceTimersByTimeAsync(200);
+    expect(montagens).toBe(1);
+    expect(t.info().fase).toBe('falhou');
+    expect(sint).toEqual([[1, 2]]);
+    await vi.advanceTimersByTimeAsync(3000);
+    t.forcar({ hora: 'noite' });
+    expect(montagens).toBe(1);
+    expect(t.info().gravada).toBe(false);
+    t.soltar();
+  });
 });
