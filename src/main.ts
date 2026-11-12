@@ -198,6 +198,8 @@ async function iniciar(app: HTMLElement): Promise<void> {
     (await import('./esboco/cidade')).prepararEsbocoCidade();
     if (esboco === 'veiculos') (await import('./esboco/veiculos')).prepararEsbocoVeiculos();
   }
+  // esboço da spec 021 (só com ?esboco=amigos): pedaço à parte, o jogo nunca o carrega
+  if (esboco === 'amigos') (await import('./esboco/amigos')).prepararEsbocoAmigos();
   // em prévia de outro tema nada é salvo: o mundo continua sendo do tema dele
   cena = criarCena(canvas, hotbar, {
     mundo: atual,
