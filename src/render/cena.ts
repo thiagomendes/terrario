@@ -161,7 +161,13 @@ import {
 import type { EdicoesExportadas } from '../world/edicoes';
 import { chunksAfetados } from './remalha';
 import { criarFilaRemalha, MAX_REMALHAS_POR_QUADRO } from './fila';
-import { ajustarEscala, ESCALA_INICIO_TOQUE, escalaBase } from './resolucao';
+import {
+  ajustarEscala,
+  criarPoliticaCelular,
+  degrausCelular,
+  ESCALA_INICIO_TOQUE,
+  escalaBase,
+} from './resolucao';
 
 /** Limite do dt (s) que alimenta minerador e efeitos: quadros lentos não os atropelam. */
 const DT_MAXIMO_QUADRO = 1 / 30;
@@ -311,6 +317,8 @@ export interface EstadoDepuracao {
   chunksCarregados: number;
   fps: number;
   escalaResolucao: number;
+  /** Efeitos tirados pelo celular sem folga (0 nenhum; ver ALIVIO_MAX em resolucao.ts). */
+  alivioEfeitos?: number;
   /** Hora do dia em [0, 1): 0 meia-noite, 0.5 meio-dia. Gravável nos testes. */
   /** Leva o jogador para o topo do terreno em (x, z) (testes e capturas). */
   teleportar?: (x: number, z: number, y?: number) => void;
@@ -349,6 +357,8 @@ export interface EstadoDepuracao {
   malhasAtivas?: number;
   /** Medição de desempenho: chamadas de desenho somadas desde o início, malhas na cena. */
   desenho?: () => { chamadas: number; malhas: number; ativas: number };
+  /** A cena do Babylon (só para medir nos testes: ligar e desligar efeitos, contar malhas). */
+  cenaBabylon?: () => Scene;
   remalhasConcluidas?: number;
   /** Tempo da última edição até a malha do chunk aparecer (ms). */
   latenciaEdicaoMs?: number;
@@ -704,6 +714,7 @@ export function criarCena(
   const engine = new Engine(canvas, false, { preserveDrawingBuffer: false, stencil: true });
   const scene = new Scene(engine);
   // contador interno do Babylon (sem SceneInstrumentation ele só soma: a medição faz a conta)
+  estado.cenaBabylon = () => scene;
   estado.desenho = () => ({
     chamadas: (engine as unknown as { _drawCalls?: { current: number } })._drawCalls?.current ?? 0,
     malhas: scene.meshes.length,
@@ -3390,16 +3401,56 @@ export function criarCena(
   };
   let base = baseDaTela();
   function aplicarEscala(valor: number): void {
+    if (estado.escalaResolucao === valor && engine.getHardwareScalingLevel() === valor) return;
     estado.escalaResolucao = valor;
     engine.setHardwareScalingLevel(valor);
     engine.resize();
   }
-  aplicarEscala(Math.max(base, base < 1 ? ESCALA_INICIO_TOQUE : base));
+  // Correção de 12 nov: no celular (toque) o nível nunca passa de 1 nem do que a qualidade pede;
+  // sem folga, tira efeitos caros, e cada piora tem de ajudar (ver criarPoliticaCelular).
+  /** Efeitos tirados (0 a ALIVIO_MAX): 1 bloom, 2 brilho, 3 sombra fina e FXAA. */
+  let alivio = 0;
+  estado.alivioEfeitos = 0;
+  /** O perfil da qualidade escolhida (chega com a configuração). */
+  let perfilAtual: ReturnType<typeof perfilDaQualidade> | null = null;
+  const tetoCelular = () => Math.max(base, 1, escalaMinima);
+  const inicioCelular = () => {
+    const d = degrausCelular(base, tetoCelular());
+    const alvo = Math.max(base, base < 1 ? ESCALA_INICIO_TOQUE : base);
+    return Math.max(
+      0,
+      d.findIndex((x) => x.escala >= alvo - 1e-6),
+    );
+  };
+  let politica = toqueGrosso
+    ? criarPoliticaCelular(degrausCelular(base, tetoCelular()), inicioCelular())
+    : null;
+  function aplicarDegrau(d: { escala: number; alivio: number }): void {
+    aplicarEscala(d.escala);
+    if (d.alivio !== alivio) {
+      alivio = d.alivio;
+      estado.alivioEfeitos = alivio;
+      aplicarEfeitos();
+    }
+  }
+  // ?escala=0.5: nível fixo, sem o ajuste automático (medidas e comparação de nitidez)
+  const escalaFixa = Number(new URLSearchParams(location.search).get('escala'));
+  if (escalaFixa > 0) politica = null;
+  if (escalaFixa > 0) aplicarEscala(escalaFixa);
+  else if (politica) aplicarDegrau(politica.degrau);
+  else aplicarEscala(base);
   // Cada troca de escala recria os render targets (pós e glow) e dá uma travada:
   // só troca depois de duas leituras seguidas pedindo a mesma direção.
   let pedidoEscala = 0;
   setInterval(() => {
-    if (!estado.ready) return;
+    if (!estado.ready || escalaFixa > 0) return;
+    if (politica) {
+      // fora da aba ou com a tela apagada os quadros não contam
+      if (document.hidden) return;
+      const d = politica.ler(estado.fps, performance.now() / 1000);
+      if (d) aplicarDegrau(d);
+      return;
+    }
     const nova = ajustarEscala(estado.escalaResolucao, estado.fps, base);
     const direcao = Math.sign(nova - estado.escalaResolucao);
     if (direcao === 0) {
@@ -3414,9 +3465,24 @@ export function criarCena(
   window.addEventListener('resize', () => {
     const anterior = base;
     base = baseDaTela();
-    if (base !== anterior) aplicarEscala(Math.max(base, estado.escalaResolucao));
-    else engine.resize();
+    if (base === anterior || escalaFixa > 0) engine.resize();
+    else if (politica) aplicarDegrau(politica.trocarDegraus(degrausCelular(base, tetoCelular())));
+    else aplicarEscala(Math.max(base, estado.escalaResolucao));
   });
+  /** Os efeitos do perfil de qualidade, menos o que o celular tirou por falta de quadros. */
+  function aplicarEfeitos(): void {
+    const q = perfilAtual;
+    if (!q) return;
+    sol.shadowEnabled = q.sombras;
+    // tamanho do mapa de sombras do perfil (celular usa no máximo 1024; 512 no alívio 3)
+    const tamSombra = toqueGrosso
+      ? Math.min(alivio >= 3 ? 512 : 1024, q.tamanhoSombra)
+      : q.tamanhoSombra;
+    if (sombras.getShadowMap()?.getSize().width !== tamSombra) sombras.mapSize = tamSombra;
+    pipeline.bloomEnabled = q.bloom && alivio < 1;
+    glow.isEnabled = q.glow && alivio < 2;
+    pipeline.fxaaEnabled = q.fxaa && alivio < 3;
+  }
 
   // Configurações do jogador (vídeo, áudio, controles).
   function aplicarConfig(c: Config): void {
@@ -3429,18 +3495,17 @@ export function criarCena(
     camera.maxZ = alcance;
     cameraVisao.maxZ = alcance;
     const q = perfilDaQualidade(c.qualidade);
-    sol.shadowEnabled = q.sombras;
-    // tamanho do mapa de sombras do perfil (celular usa no máximo 1024)
-    const tamSombra = toqueGrosso ? Math.min(1024, q.tamanhoSombra) : q.tamanhoSombra;
-    if (sombras.getShadowMap()?.getSize().width !== tamSombra) sombras.mapSize = tamSombra;
-    pipeline.bloomEnabled = q.bloom;
-    pipeline.fxaaEnabled = q.fxaa;
-    glow.isEnabled = q.glow;
+    perfilAtual = q;
+    aplicarEfeitos();
     vagalumes.definirDensidade(q.vagalumes / 260);
     if (q.escalaMinima !== escalaMinima) {
       escalaMinima = q.escalaMinima;
       base = baseDaTela();
-      aplicarEscala(Math.max(base, base < 1 ? ESCALA_INICIO_TOQUE : base));
+      if (escalaFixa > 0) aplicarEscala(escalaFixa);
+      else if (toqueGrosso) {
+        politica = criarPoliticaCelular(degrausCelular(base, tetoCelular()), inicioCelular());
+        aplicarDegrau(politica.degrau);
+      } else aplicarEscala(base);
     }
     motorAudio.definirVolume('geral', c.volumeGeral);
     motorAudio.definirVolume('efeitos', c.volumeEfeitos);

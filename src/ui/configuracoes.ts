@@ -126,6 +126,12 @@ const ABAS: Record<Aba, { titulo: string; itens: Def[] }> = {
       { tipo: 'bool', chave: 'mostrarFps', nome: 'Mostrar FPS' },
       {
         tipo: 'bool',
+        chave: 'mostrarNitidez',
+        nome: 'Mostrar FPS e nitidez',
+        dica: 'Um selinho no alto: quadros, nitidez e efeitos (para achar problemas)',
+      },
+      {
+        tipo: 'bool',
         chave: 'telaCheia',
         nome: 'Tela cheia ao jogar',
         dica: 'Ao clicar em Jogar, onde o navegador permite',

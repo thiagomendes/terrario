@@ -18,6 +18,12 @@ export interface Config {
   /** Raio de chunks carregados em volta do jogador. */
   distancia: number;
   mostrarFps: boolean;
+  /**
+   * Correção de 12 nov: um selinho no alto com os quadros, a nitidez (quantos pixels o jogo
+   * desenha por pixel da tela) e os efeitos tirados por falta de quadros. Para o dono contar
+   * o que o celular dele está fazendo. Desligado por padrão.
+   */
+  mostrarNitidez: boolean;
   /** Andando, a câmera volta sozinha para trás do boneco (spec 015; antes, balanço do braço). */
   balanco: boolean;
   /** Escala da interface (acessibilidade). */
@@ -50,6 +56,7 @@ export const CONFIG_PADRAO: Config = {
   qualidade: 'alta',
   distancia: 3,
   mostrarFps: true,
+  mostrarNitidez: false,
   balanco: true,
   escalaInterface: 1,
   legendas: false,
@@ -93,6 +100,7 @@ export function normalizarConfig(entrada: unknown): Config {
       : p.qualidade,
     distancia: Math.round(faixa(o.distancia, ...LIMITES.distancia, p.distancia)),
     mostrarFps: bool(o.mostrarFps, p.mostrarFps),
+    mostrarNitidez: bool(o.mostrarNitidez, p.mostrarNitidez),
     balanco: bool(o.balanco, p.balanco),
     escalaInterface: faixa(o.escalaInterface, ...LIMITES.escalaInterface, p.escalaInterface),
     legendas: bool(o.legendas, p.legendas),

@@ -132,9 +132,35 @@ body[data-overlay] .coleta-area, body.tela-titulo .coleta-area { display: none; 
   box-shadow: 0 2px 0 rgba(150, 110, 60, 0.35);
 }
 .hud .fps { top: 8px; right: 8px; }
+/* correção de 12 nov: quadros e nitidez, no alto e no meio (à vista também no celular) */
+.hud .nitidez {
+  position: absolute; top: calc(env(safe-area-inset-top, 0px) + 4px); left: 50%; transform: translateX(-50%);
+  padding: 2px 9px; border-radius: 999px; background: rgba(20, 16, 40, 0.72); color: #fff;
+  font: 700 0.7rem ui-monospace, SFMono-Regular, Menlo, monospace; white-space: nowrap; z-index: 2;
+}
 .hud .som { top: 8px; left: 8px; }
 .hud .chip-hud { top: 40px; left: 8px; }
 `;
+
+/**
+ * O selinho de quadros e nitidez (correção de 12 nov): "58 FPS · nitidez 1,33 de 3 ·
+ * 520×1126 · efeitos −1". A nitidez é quantos pixels o jogo desenha por pixel de CSS (1 é o
+ * de antes da 017; a tela do iPhone tem 3); "efeitos −n", quantos efeitos o celular tirou.
+ */
+export function textoNitidez(
+  e: { fps?: number; escalaResolucao?: number; alivioEfeitos?: number } | undefined,
+  densidadeTela: number,
+  tamanho: [number, number] | null,
+): string {
+  const num = (v: number) => (Math.round(v * 100) / 100).toString().replace('.', ',');
+  const partes = [`${Math.round(e?.fps ?? 0)} FPS`];
+  const escala = e?.escalaResolucao ?? 1;
+  partes.push(`nitidez ${num(1 / escala)} de ${num(densidadeTela)}`);
+  if (tamanho) partes.push(`${tamanho[0]}×${tamanho[1]}`);
+  const alivio = e?.alivioEfeitos ?? 0;
+  partes.push(alivio > 0 ? `efeitos −${alivio}` : 'efeitos todos');
+  return partes.join(' · ');
+}
 
 const TECLAS: ReadonlyArray<readonly [string, string]> = [
   ['W A S D', 'mover'],
@@ -337,7 +363,11 @@ export function criarInterface(
   somInd.className = 'som';
   somInd.setAttribute('data-audio-indicador', '');
   somInd.textContent = textoIndicador('inativo', false);
-  hud.append(mira, fps, somInd);
+  const nitidez = document.createElement('div');
+  nitidez.className = 'nitidez';
+  nitidez.setAttribute('data-nitidez', '');
+  nitidez.hidden = true;
+  hud.append(mira, fps, somInd, nitidez);
   // debaixo d'água (spec 012): bolhinhas subindo e faixas de luz, só com body.submerso
   const bolhas = document.createElement('div');
   bolhas.className = 'bolhas-agua';
@@ -810,6 +840,7 @@ export function criarInterface(
   });
   opMundo.config?.ouvir((c) => {
     fps.hidden = !c.mostrarFps;
+    nitidez.hidden = !c.mostrarNitidez;
     document.documentElement.style.setProperty('--escala-ui', String(c.escalaInterface));
     for (const el of document.querySelectorAll<HTMLElement>('.hud, .barra, .nome-item')) {
       el.style.setProperty('--escala-ui', String(c.escalaInterface));
@@ -851,6 +882,14 @@ export function criarInterface(
   setInterval(() => {
     if (fps.hidden) return;
     escrever(fps, `${Math.round(window.__brumaluz?.fps ?? 0)} FPS`);
+  }, 500);
+  setInterval(() => {
+    if (nitidez.hidden) return;
+    const c = document.getElementById('cena') as HTMLCanvasElement | null;
+    escrever(
+      nitidez,
+      textoNitidez(window.__brumaluz, window.devicePixelRatio || 1, c ? [c.width, c.height] : null),
+    );
   }, 500);
   setInterval(() => {
     const a = window.__brumaluz?.audio;
