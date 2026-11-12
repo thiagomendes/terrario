@@ -167,7 +167,8 @@ export function criaturaDoIndice(
   vozes: VozesTemaIndice | undefined,
   slot: TipoCriatura,
 ): CriaturaIndice | undefined {
-  return vozes?.criaturas.find((c) => c.slot === slot);
+  const lista = vozes?.criaturas;
+  return Array.isArray(lista) ? lista.find((c) => c?.slot === slot) : undefined;
 }
 
 /** Material e porte do baque e o "puf" da derrota de cada bicho, pelo índice do tema. */
@@ -176,7 +177,7 @@ export function somDoGolpe(
   slot: TipoCriatura,
 ): { material: string; porte: string; baque: string; derrota: string } | null {
   const c = criaturaDoIndice(vozes, slot);
-  if (!c) return null;
+  if (!c || typeof c.baque !== 'string') return null;
   const [material, porte] = c.baque.split('.');
   return { material, porte: porte ?? c.porte, baque: c.baque, derrota: c.derrota };
 }
@@ -518,8 +519,14 @@ export function criarVozesGravadas(op: OpcoesVozesGravadas): VozesGravadas {
     reservaToque: () => boolean,
     atraso = 0,
   ): void {
-    const alvo = pronto ? pegar() : null;
-    if (!alvo || alvo.lista.length === 0) {
+    let alvo: ReturnType<typeof pegar> = null;
+    try {
+      alvo = pronto ? pegar() : null;
+    } catch {
+      // índice sem a seção (ou fora do formato): a voz sintetizada, nunca um erro no jogo
+      alvo = null;
+    }
+    if (!alvo || !Array.isArray(alvo.lista) || alvo.lista.length === 0) {
       if (reservaToque()) op.aoTocar?.(`sintese:${id}`);
       return;
     }
@@ -563,7 +570,7 @@ export function criarVozesGravadas(op: OpcoesVozesGravadas): VozesGravadas {
         () => {
           const c = criaturaDoIndice(indiceTema, slot);
           return c
-            ? { qual: 'tema', lista: c.momentos[momento] ?? [], chave: `${slot}:${momento}` }
+            ? { qual: 'tema', lista: c.momentos?.[momento] ?? [], chave: `${slot}:${momento}` }
             : null;
         },
         'vozes',
@@ -584,7 +591,7 @@ export function criarVozesGravadas(op: OpcoesVozesGravadas): VozesGravadas {
         gravadaOuReserva(
           `baque:${g?.baque ?? slot}`,
           () => {
-            const lista = g && comum?.baque[g.baque];
+            const lista = g && comum?.baque?.[g.baque];
             return lista ? { qual: 'comum', lista, chave: `baque:${g.baque}` } : null;
           },
           'efeitos',
@@ -602,7 +609,7 @@ export function criarVozesGravadas(op: OpcoesVozesGravadas): VozesGravadas {
         `ai:${slot}`,
         () => {
           const c = criaturaDoIndice(indiceTema, slot);
-          return c ? { qual: 'tema', lista: c.momentos.ai ?? [], chave: `${slot}:ai` } : null;
+          return c ? { qual: 'tema', lista: c.momentos?.ai ?? [], chave: `${slot}:ai` } : null;
         },
         'vozes',
         ganho.bichos * v,
@@ -623,7 +630,7 @@ export function criarVozesGravadas(op: OpcoesVozesGravadas): VozesGravadas {
       gravadaOuReserva(
         `derrota:${g?.derrota ?? slot}`,
         () => {
-          const lista = g && comum?.derrota[g.derrota];
+          const lista = g && comum?.derrota?.[g.derrota];
           return lista ? { qual: 'comum', lista, chave: `derrota:${g.derrota}` } : null;
         },
         'efeitos',
@@ -644,7 +651,7 @@ export function criarVozesGravadas(op: OpcoesVozesGravadas): VozesGravadas {
       gravadaOuReserva(
         `morador:${genero}:${momento}`,
         () => {
-          const lista = indiceTema?.moradores[genero]?.[momento];
+          const lista = indiceTema?.moradores?.[genero]?.[momento];
           return lista ? { qual: 'tema', lista, chave: `${genero}:${momento}` } : null;
         },
         'vozes',

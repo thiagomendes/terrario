@@ -3185,11 +3185,9 @@ export function criarCena(
     meuAlvo.em = performance.now();
   };
   // as vozes baixam quando o mundo fica pronto (estado.ready), junto com a música
-  // saiu do mundo: solta o pacote e as fatias; voltou pelo histórico (cache da página): baixa de novo
+  // saiu do mundo: solta o pacote e as fatias (voltou pelo histórico: a página recarrega
+  // inteira, em ligarSaida, e as vozes baixam de novo quando o mundo fica pronto)
   window.addEventListener('pagehide', () => vozes.liberar());
-  window.addEventListener('pageshow', (ev) => {
-    if (ev.persisted) vozes.carregar();
-  });
   if (ehTesteDeTela()) {
     estado.sonsTocados = () => sonsTocados.slice();
     estado.atacarCriatura = (id) => {

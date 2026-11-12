@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { criarMotorAudio } from '../../src/audio/motor';
 import {
   ATRASO_AI,
@@ -338,5 +338,43 @@ describe('volume do golpe e da derrota de um bicho', () => {
     expect(volumeDoGolpeNoBicho(0, false)).toBe(0);
     // criatura que não se vê: nada (antes, 100%)
     expect(volumeDoGolpeNoBicho(null, false)).toBe(0);
+  });
+});
+
+describe('índice sem uma seção', () => {
+  it('golpe, derrota, bicho e morador caem na sintetizada, sem erro', async () => {
+    const ctx = new ContextoVoz();
+    const motor = criarMotorAudio(() => ctx as never);
+    await motor.ativar();
+    const tocados: string[] = [];
+    const tema = INDICE.temas['rancho-alegre'].vozes!;
+    const vozes = criarVozesGravadas({
+      motor,
+      tema: 'rancho-alegre',
+      reserva: reservaFalsa(),
+      // a criatura sem momentos, sem moradores e o comum sem baque nem derrota
+      carregarIndice: async () =>
+        ({
+          temas: {
+            'rancho-alegre': {
+              vozes: { criaturas: tema.criaturas.map((c) => ({ ...c, momentos: undefined })) },
+            },
+          },
+          comum: {},
+        }) as unknown as IndiceSons,
+      baixar: async () => new ArrayBuffer(1000),
+      decodificar: async () => ({ duration: 0.2 }),
+      aoTocar: (id) => tocados.push(id),
+    });
+    vozes.carregar();
+    await vi.waitFor(() => expect(vozes.pronto).toBe(true));
+    expect(() => {
+      vozes.golpe('cervo');
+      vozes.derrota('coelho');
+      vozes.bicho('raposa', 'chamado');
+      vozes.morador('feminino', 'contente');
+    }).not.toThrow();
+    expect(tocados.length).toBeGreaterThan(0);
+    expect(tocados.every((t) => t.startsWith('sintese:'))).toBe(true);
   });
 });
