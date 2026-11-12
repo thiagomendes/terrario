@@ -36,10 +36,10 @@ Separada da spec 013 em 7 nov 2026: o dono escolheu fazer o Rancho Alegre primei
 - **Sons e música:** buzininha distante de dia, passarinho de praça, grilo de jardim à noite; piano e baixo de jazz leve.
 
 ## Atividade própria da cidade (decisão do dono, 10 nov 2026)
-A cidade já nasce com o jeito dela, em vez de herdar a roça dos outros temas (ver a 018, que vem depois). Pensar no esboço qual é a atividade-assinatura da cidade.
+A cidade já nasce com o jeito dela, em vez de herdar a roça dos outros temas (ver a 018, que vem depois). **Decidido em 12 nov 2026: canteiro de obras.** O pedreiro mostra a planta de uma obra pequena (casinha, banca, ponto de ônibus...) em blocos fantasmas; a criança preenche os blocos e, ao terminar, a obra passa a fazer parte da cidade. Usa o construir de que as crianças já gostam.
 
-## Para o dono decidir antes de começar
-- **Altura dos prédios:** no esboço, de 2 a 6 andares. Mais alto (até 12) pesa no celular; mais baixo e mais largo é mais seguro.
+## Decisões do dono antes de começar (12 nov 2026)
+- **Altura dos prédios:** de 2 a 6 andares, como no esboço.
 
 ## Ferramenta para os prédios (decisão do dono, 10 nov 2026)
 - **Sem Blender.** "Não vamos complicar."
