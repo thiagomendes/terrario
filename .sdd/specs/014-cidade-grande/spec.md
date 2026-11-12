@@ -1,7 +1,8 @@
 ---
 id: 014-cidade-grande
 title: 'Cidade Grande: prédios de visitar, ruas e praças, e o canteiro de obras'
-status: DRAFT
+status: APPROVED
+approved_at: 2026-11-12
 base_branch: main
 branch: feat/cidade-grande
 created_at: 2026-11-07T23:30:00Z
@@ -24,7 +25,7 @@ Separada da spec 013 em 7 nov 2026: o dono escolheu fazer o Rancho Alegre primei
 
 O dono pediu em 10 nov 2026 que a cidade já nasça com o jeito dela, em vez de herdar a roça dos outros temas (a 018 vem depois e cuida dos outros). Em 12 nov 2026 ele decidiu a atividade: **canteiro de obras**. No mesmo dia pediu o **jeito de Manhattan** (sem copiar nada de verdade) e **carrinhos e ônibus** andando sozinhos pelas ruas, "se não ficar complexo demais".
 
-**Esboço para aprovar:** `referencia/cidade.html` (o canteiro passo a passo, as plantas das obras, um prédio, uma quadra vista da calçada, o horizonte, os carrinhos no cruzamento e os sons para ouvir). Nada é implementado antes da aprovação. As fotos do esboço são do motor de verdade, num palco só para isso: `src/esboco/cidade.ts` (carregado só com `?esboco=cidade`, num pedaço à parte que o jogo nunca baixa) e as capturas de `e2e/esboco-cidade.spec.ts` (`ESBOCO_CIDADE=1`, na GPU). Texturas e peças do palco são provisórias; as de verdade vêm da T02 em diante.
+**Esboço aprovado em 12 nov 2026:** `referencia/cidade.html` e `referencia/veiculos.html` (rodada 2): o canteiro passo a passo, as plantas das obras, um prédio, uma quadra vista da calçada, o horizonte, os carrinhos no cruzamento e os sons para ouvir. As fotos do esboço são do motor de verdade, num palco só para isso: `src/esboco/cidade.ts` (carregado só com `?esboco=cidade`, num pedaço à parte que o jogo nunca baixa) e as capturas de `e2e/esboco-cidade.spec.ts` (`ESBOCO_CIDADE=1`, na GPU). Texturas e peças do palco são provisórias; as de verdade vêm da T02 em diante.
 
 ## Objetivo
 - **Cidade Grande, o 8º tema**, com cara de cidade grande de brinquedo: ruas em grade, avenidas, um parque grande no meio, prédios de 2 a 6 andares que dá para visitar, lojinhas com toldo e moradores.
@@ -161,13 +162,21 @@ Pedido do dono em 12 nov 2026: carrinhos e ônibus de blocos, com rodas redondas
 
 ### Decidido no esboço dos veículos (rodada 2, 12 nov 2026)
 - **Visual:** a versão 3 ("com carinha") de `referencia/veiculos.html`: carroceria arredondada de plástico de brinquedo, faróis que são olhinhos, sorriso cromado, bochechas. Sem chave de corda e sem tique-tique de corda.
-- **A família:** táxi amarelo, carro de polícia (branco e azul, de brinquedo: estrelinha na porta e giroflex que pisca macio, nada de bravo), carro comum (um modelo só, em 4 cores), dois ônibus (azul e branco com a faixa longa de janelas, e o verde), e o carrinho de sorvete, que estaciona na praça e toca uma musiquinha original.
+- **A família:** táxi amarelo, carro de polícia (**preto e branco**, decisão do dono de 12 nov 2026; no esboço aparece branco e azul; de brinquedo: estrelinha na porta e giroflex que pisca macio, nada de bravo), carro comum (um modelo só, em 4 cores), dois ônibus (azul e branco com a faixa longa de janelas, e o verde), e o carrinho de sorvete, que estaciona na praça e toca uma musiquinha original.
 - **Som do motor:** de verdade, a partir de gravações CC0 (marcha lenta de um carro a gasolina, um diesel para o ônibus, uma van para o sorvete), lidas com a rotação de uma curva de RPM: arrancar, trocar de marcha, rodar, soltar o pedal, reduzir e parar; freio a ar no ônibus. Bem baixinho, some com a distância, no máximo 3 motores ao mesmo tempo.
 - **Polícia:** nada de sirene. Um "uí-uí" de brinquedo, curto e baixinho, raro (uma vez ao passar pela praça), e o giroflex piscando (pergunta ao dono na página dos veículos).
-- **Carrinho de sorvete:** a musiquinha é composta por nós (caixinha de música), não lembra nenhuma música de carro de sorvete conhecida; toca só parado na praça ou chegando devagar, some com a distância e fica mais baixa que a trilha da cidade.
+- **Carrinho de sorvete:** a musiquinha é composta por nós (caixinha de música), não lembra nenhuma música de carro de sorvete conhecida. Ao chegar à praça, toca inteira uma vez; parado, toca uma frase curta (uns 8 s) de vez em quando, no máximo a cada 90 a 120 s e só com uma criança a até uns 20 blocos. Some com a distância e fica sempre abaixo da trilha da cidade.
+
+### Respostas do dono à rodada 2 (12 nov 2026)
+1. **Polícia:** um "uí-uí" de brinquedo ao passar pela praça e o giroflex piscando.
+2. **A polícia é preta e branca** (não branca e azul; o esboço não foi refeito).
+3. **As quatro cores do carro comum** (coral, verde-água, lilás, laranja) estão aprovadas.
+4. **Os dois ônibus rodam,** cada um na sua volta.
+5. **Sons e volumes dos motores aprovados** como na rodada 2 ("agora ficou perfeito os sons"; o volume "no ponto, perfeito").
+6. **Musiquinha do sorvete** (o dono deixou o detalhe conosco; decisão nossa): inteira uma vez ao chegar à praça; depois uma frase de uns 8 s de vez em quando, no máximo a cada 90 a 120 s, só com criança a até uns 20 blocos, sempre abaixo da trilha.
 
 ### Versão mínima proposta para a 014
-- **A frota por cidade:** 2 táxis, 2 carros comuns, 1 polícia, 2 ônibus e 1 carrinho de sorvete (ele só vai e volta da praça). Cada um anda num **circuito fixo**: uma volta retangular em volta de um ou dois quarteirões, sempre pela mão da direita. O ônibus tem 3 paradas (uma delas é o ponto de ônibus da obra 3, quando estiver pronto).
+- **A frota por cidade:** 2 táxis, 2 carros comuns, 1 polícia, 2 ônibus (cada um na sua volta) e 1 carrinho de sorvete (ele só vai e volta da praça). Cada um anda num **circuito fixo**: uma volta retangular em volta de um ou dois quarteirões, sempre pela mão da direita. O ônibus tem 3 paradas (uma delas é o ponto de ônibus da obra 3, quando estiver pronto).
 - **Devagar:** 3 blocos por segundo no reto (a criança anda a 4,3 e corre a 7), freando e acelerando suave.
 - **Cruzamento:** o cruzamento é reservado por um veículo de cada vez. Um veículo só entra se o cruzamento estiver livre **e** houver lugar para ele do outro lado (assim nunca para no meio e nunca dá nó). Na faixa de pedestre, para se tiver alguém nela.
 - **Fila:** na mesma faixa, cada veículo mantém 2 blocos de distância do da frente.
@@ -319,25 +328,34 @@ Medidas que precisam passar antes de fechar:
 17. **Recompensas como fantasia:** capacete e colete desbloqueiam na cidade, ficam gravados na aparência e vestem em qualquer mundo; silhueta com cadeado antes; saneamento e limite da aparência na nuvem.
 
 ## Fases e tarefas
+Ordem final para implementar (12 nov 2026): primeiro o planejador, os prédios e o coração do canteiro; o tema e o som em seguida; os veículos são o último bloco e podem ser cortados sem mexer no resto.
+
 | # | Tarefa |
 |---|---|
-| T01 | Plantas paramétricas em código (`src/world/plantas/`): formato de camadas em texto, parâmetros (andares, cores da porta e do toldo, espelho, caixa d'água, loja), a casa geminada de 3 andares de referência e os testes de forma |
-| T02 | Blocos e itens novos: registro em `src/world/blocks.ts` (84 em diante), texturas em `src/art/tiles.ts`, nomes nos 7 temas de hoje, colher de pedreiro, peças de brinquedo (poste, placa), ícones, mão e chão |
-| T03 | Planejador `planta: 'cidade'` (`src/world/cidade.ts`, `src/world/povoado.ts`, `src/world/chunk.ts`): malha, zonas, lotes, terreno plano e rampa, nascimento, estrutura rara; `estiloSeguro`; proteção da cidade em `src/world/protecao.ts`; paridade dos sete temas |
-| T04 | Prédios: os 5 modelos em plantas, escadas, apartamentos, janelas acesas, caixa d'água, escada de incêndio, entrada do metrô; medida de malha e de quadros já aqui |
-| T05 | Canteiro no núcleo: as 6 plantas de obra, classe `OBRA` e `planejado`, `permissao.ts`, colocar com a colher e com o bloco certo, `extras.obras`, `definirObrasFeitas`, ajudantes, evento `obra`, saneamento, `VERSAO_REDE`; testes local e nuvem |
-| T06 | Canteiro no cliente: fantasmas em instâncias, pulso da camada, bloco na mira, ímã de toque, bloco errado (balão, pisca da barra), progresso, festa, placa, obra que ganha vida, pedreiro que acena, entrega a colher e vai para a próxima obra |
-| T07 | Diário ("Obras da cidade"), recompensas como peças de fantasia da 017 (desbloqueio na aparência, evento `obra`, silhueta com cadeado na aba, saneamento e limite), trocas do pedreiro |
-| T08 | Tema Cidade Grande (`src/temas/cidade-grande/`, registrado em `src/temas/todos.ts`): céu (pôr do sol atrás dos prédios, janelas acesas), água, terreno, nomes, texturas, moradores e bichos desenhados à mão, gato domado com peixe (`EstiloMundo.domar`), guaxinim manso, foto e cartão do tema |
-| T09 | Som: partitura em camadas, gravação, pacotes, vozes, ambiente (buzininha ao longe, passarinho, grilo), créditos, régua de volume |
+| T01 | Plantas paramétricas em código (`src/world/plantas/`): camadas em texto, parâmetros (andares, cores da porta e do toldo, espelho, caixa d'água, loja), a casa geminada de 3 andares de referência e os testes de forma |
+| T02 | Blocos e itens da cidade (84 em diante, `src/world/blocks.ts`), texturas de verdade em `src/art/tiles.ts`, colher de pedreiro, peças de brinquedo (poste, placa, toldo, tapume); `TemaDef.exclusivos` e o filtro na geração, nas trocas, no criativo e nas receitas dos outros temas |
+| T03 | Planejador `planta: 'cidade'` (`src/world/cidade.ts`, `povoado.ts`, `chunk.ts`): malha, zonas, lotes, terreno plano e rampa, nascimento ao lado do canteiro, estrutura rara, grafo de pistas e a vaga do sorvete; `estiloSeguro`; proteção da cidade (`protecao.ts`, pistas como `PASSAGEM`); paridade dos sete temas |
+| T04 | Prédios: os 5 modelos com as plantas da T01, escadas, apartamentos, janelas acesas sem espalhar luz, caixa d'água, escada de incêndio, entrada do metrô; medida de malha e de quadros |
+| T05 | Canteiro no núcleo: as 6 plantas de obra, classe `OBRA` e `planejado`, `permissao.ts`, colocar com a colher e com o bloco certo, `extras.obras`, `definirObrasFeitas`, ajudantes, evento `obra` com recompensa, saneamento, `VERSAO_REDE`; testes local e nuvem |
+| T06 | Canteiro no cliente: fantasmas em instâncias, pulso da camada, bloco na mira, ímã de toque, bloco errado, progresso, festa, placa, obra que ganha vida, pedreiro que acena, entrega a colher e vai para a próxima obra |
+| T07 | Diário ("Obras da cidade"), capacete e colete como peças de fantasia da 017 (desbloqueio na aparência, silhueta com cadeado, saneamento e limite), trocas do pedreiro |
+| T08 | Tema Cidade Grande (`src/temas/cidade-grande/`): céu da cidade, água, terreno, nomes, moradores e bichos desenhados à mão, gato domado com peixe (`EstiloMundo.domar`), guaxinim manso, foto e cartão do tema (troca o céu e os moradores provisórios do Rancho) |
+| T09 | Som da cidade: trilha em camadas, pacotes, vozes, ambiente (buzininha ao longe, passarinho, grilo), créditos, régua de volume |
 | T10 | Horizonte de torres ao longe, com medida |
-| T11 | Testes de tela: lista única de temas, canteiro no computador e no toque, duas crianças na nuvem, capturas |
-| T12 | **Veículos, núcleo** (bloco cortável): circuitos do planejador, simulação em `s`, reserva de cruzamento, olhar à frente, paradas do ônibus, evento `veiculo`, sala que dorme; 1 hora simulada |
-| T13 | **Veículos, cliente** (bloco cortável): `src/jogo/veiculos.ts` compartilhado, peças de táxi e ônibus, rodas, instâncias, perto e longe, colisão com o boneco, buzina e aceno, câmera |
-| T14 | **Veículos, testes e medida** (bloco cortável): teste de unidade das rotas só no asfalto e teste de tela de um minuto andando; bots na rua, celular, CPU 4× mais lenta |
-| T15 | Desempenho final, vitrine, auditoria independente, publicação (site e servidor juntos), rodada em família e relatório visual |
+| T11 | Testes de tela e de regra da cidade: lista única de temas, canteiro no computador e no toque, duas crianças na nuvem, "só na cidade" e "cada mundo é uma história", fantasia ganha na cidade vestida noutro mundo, capturas |
+| T12 | Fechamento da cidade: desempenho no celular, vitrine, auditoria independente, publicação (site e servidor juntos), rodada em família e relatório visual |
+| T13 | **Veículos, núcleo** (bloco cortável): rotas do grafo de pistas com curvas em arco, simulação em `s`, reserva de cruzamento, olhar à frente, paradas dos dois ônibus, sorvete na vaga, evento `veiculo`, sala que dorme; teste das rotas só no asfalto; 1 hora simulada |
+| T14 | **Veículos, cliente e sons** (bloco cortável): `src/jogo/veiculos.ts` compartilhado, a família da carinha (carro em 4 cores, táxi, polícia preta e branca, dois ônibus, sorvete), instâncias, perto e longe, faróis e giroflex, colisão com o boneco, motores com curva de RPM, buzinas, "uí-uí", musiquinha do sorvete com a regra de tocar |
+| T15 | **Veículos, testes, medida e publicação** (bloco cortável): teste de tela de um minuto andando só nas pistas, bots na rua, celular e CPU 4× mais lenta, auditoria, publicação e relatório |
 
-Ordem: T01 primeiro (o formato das plantas); T02 a T04 abrem a cidade; T05 a T07 são o coração (o canteiro); T08 a T11 completam o tema. O bloco T12 a T14 vem depois do canteiro pronto e pode ser cortado ou adiado sem mexer no resto.
+Se o bloco dos veículos for cortado ou adiado, a cidade fecha e é publicada na T12.
+
+## O que o esboço tem de provisório (a implementação troca pelo de verdade)
+- **Texturas pintadas por cima das lãs** (asfalto, faixa, zebra, pedra marrom, janela, pedra creme, friso dourado) e o cristal-luz como janela acesa: viram os blocos 84 em diante, com textura própria (T02).
+- **Céu, luz e moradores do Rancho Alegre** (o pedreiro é o carpinteiro do Rancho de capacete; o cachorro é o do sítio; vacas e galinhas escondidas): viram o tema da cidade (T08).
+- **Janelas acesas que espalham luz** pela fachada e pela rua: no jogo, a janela acesa brilha e não espalha luz (T04).
+- **Peças do palco** (fantasmas, tapume, andaime, postes, toldos, escada de incêndio, placa, horizonte e veículos montados peça por peça): viram peças fundidas e instanciadas dentro do orçamento (T04, T06, T10, T14).
+- **O palco em si** (`src/esboco/`, `?esboco=cidade` e `?esboco=veiculos`, `e2e/esboco-*.spec.ts`) não entra no jogo; pode ficar para regravar os esboços ou sair no fechamento.
 
 ## Riscos
 - **Desempenho no celular** (o maior): prédios altos, muitas janelas e interiores. Orçamento e plano B em "Desempenho"; medir já na T04, antes do tema completo.
@@ -352,7 +370,7 @@ Ordem: T01 primeiro (o formato das plantas); T02 a T04 abrem a cidade; T05 a T07
 O dono aceitou as nove recomendações do esboço, como estavam escritas:
 1. A obra feita é da cidade (blindada, com o nome de quem fez na placa), e não da criança. **Sim.**
 2. A colher de pedreiro enche os fantasmas sem gastar material, também na sobrevivência. **Sim.**
-3. Carrinhos e ônibus entram na versão mínima (4 táxis e 1 ônibus em circuitos fixos), depois do canteiro, como bloco que pode ser cortado (T12 a T14). **Sim.**
+3. Carrinhos e ônibus entram na versão mínima (4 táxis e 1 ônibus em circuitos fixos), depois do canteiro, como bloco que pode ser cortado (na ordem final, T13 a T15). **Sim.** Depois a frota cresceu na rodada 2 (ver "Carrinhos e ônibus").
 4. O horizonte de torres ao longe entra. **Sim.**
 5. O rio com ponte fica para depois; nesta etapa, lago no parque. **Sim.**
 6. Plantas dos prédios em texto em vez de MagicaVoxel, se a validação da T01 confirmar. **Mudou (12 nov 2026):** o dono tirou o MagicaVoxel de vez; plantas em código, paramétricas, sem validação nem conversor.
@@ -360,7 +378,7 @@ O dono aceitou as nove recomendações do esboço, como estavam escritas:
 8. O gato de rua é domado com peixe, só na cidade (`EstiloMundo.domar`). **Sim.**
 9. Sem elevador nesta etapa. **Sim.**
 
-A spec continua DRAFT até o dono aprovar o esboço novo, com as capturas do motor de verdade (`referencia/cidade.html`).
+Esboços aprovados em 12 nov 2026; a spec passou a APPROVED.
 
 ## Decisões do dono
 - 7 nov 2026: os nomes "Cidade Grande" e "Rancho Alegre"; começar pelo Rancho; bichos da noite fofos que não atacam.
@@ -373,3 +391,5 @@ A spec continua DRAFT até o dono aprovar o esboço novo, com as capturas do mot
 - 12 nov 2026: **capacete e colete do canteiro viram peças de fantasia da 017**, ganhas uma vez na cidade e usáveis em qualquer mundo (só aparência).
 - 12 nov 2026: **sem MagicaVoxel**; plantas em código, paramétricas (andares, cores da porta, espelho); muda a resposta da pergunta 6 e a T01.
 - 12 nov 2026: **veículos só nas pistas** (rotas do grafo de pistas, curvas dentro do asfalto, caixa sempre na faixa, nada os empurra, sorvete na vaga da rua, volta de encalhe pelo começo de uma faixa); com teste de unidade e de tela.
+- 12 nov 2026: respostas à rodada 2 dos veículos (ver "Respostas do dono à rodada 2"): "uí-uí" uma vez na praça e giroflex; **polícia preta e branca**; as quatro cores aprovadas; os dois ônibus, cada um na sua volta; sons e volumes dos motores aprovados; a regra da musiquinha do sorvete ficou conosco.
+- 12 nov 2026: **esboços aprovados** (a cidade com as capturas do motor e os veículos da rodada 2); spec APPROVED, com a ordem final das tarefas.
