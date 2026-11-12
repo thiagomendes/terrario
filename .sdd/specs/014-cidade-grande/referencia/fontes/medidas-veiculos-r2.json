@@ -1,0 +1,158 @@
+{
+ "carro-lenta": {
+  "nota": "laço de marcha lenta, 3 s",
+  "segundos": 3.0,
+  "rmsAtivoDb": -31.5,
+  "rmsDb": -31.5,
+  "picoDb": -20.0,
+  "lufs": "-33.1",
+  "kb": 18.1
+ },
+ "carro-passada": {
+  "nota": "arranca, troca de marcha, roda, solta o pedal, reduz e para",
+  "segundos": 11.0,
+  "rmsAtivoDb": -27.5,
+  "rmsDb": -27.5,
+  "picoDb": -12.2,
+  "lufs": "-27.9",
+  "kb": 86.8
+ },
+ "carro-passando": {
+  "nota": "passando da esquerda para a direita, estéreo",
+  "segundos": 6.0,
+  "rmsAtivoDb": -25.8,
+  "rmsDb": -25.9,
+  "picoDb": -10.3,
+  "lufs": "-25.8",
+  "kb": 47.6
+ },
+ "policia-lenta": {
+  "nota": "laço de marcha lenta, 3 s",
+  "segundos": 3.0,
+  "rmsAtivoDb": -31.5,
+  "rmsDb": -31.5,
+  "picoDb": -20.0,
+  "lufs": "-33.1",
+  "kb": 18.1
+ },
+ "policia-passada": {
+  "nota": "arranca, troca de marcha, roda, solta o pedal, reduz e para",
+  "segundos": 11.0,
+  "rmsAtivoDb": -27.5,
+  "rmsDb": -27.5,
+  "picoDb": -11.9,
+  "lufs": "-27.8",
+  "kb": 86.8
+ },
+ "policia-passando": {
+  "nota": "passando da esquerda para a direita, estéreo",
+  "segundos": 6.0,
+  "rmsAtivoDb": -25.8,
+  "rmsDb": -25.8,
+  "picoDb": -10.0,
+  "lufs": "-25.7",
+  "kb": 47.6
+ },
+ "onibus-lenta": {
+  "nota": "laço de marcha lenta, 3 s",
+  "segundos": 3.0,
+  "rmsAtivoDb": -29.4,
+  "rmsDb": -29.4,
+  "picoDb": -21.0,
+  "lufs": "-33.1",
+  "kb": 18.1
+ },
+ "onibus-passada": {
+  "nota": "arranca, troca de marcha, roda, solta o pedal, reduz e para",
+  "segundos": 12.0,
+  "rmsAtivoDb": -26.4,
+  "rmsDb": -26.4,
+  "picoDb": -10.4,
+  "lufs": "-27.7",
+  "kb": 94.5
+ },
+ "onibus-passando": {
+  "nota": "passando da esquerda para a direita, estéreo",
+  "segundos": 6.0,
+  "rmsAtivoDb": -24.8,
+  "rmsDb": -24.8,
+  "picoDb": -9.7,
+  "lufs": "-26.0",
+  "kb": 47.6
+ },
+ "sorvete-lenta": {
+  "nota": "laço de marcha lenta, 3 s",
+  "segundos": 3.0,
+  "rmsAtivoDb": -33.4,
+  "rmsDb": -33.4,
+  "picoDb": -18.8,
+  "lufs": "-32.9",
+  "kb": 18.1
+ },
+ "sorvete-passada": {
+  "nota": "arranca, troca de marcha, roda, solta o pedal, reduz e para",
+  "segundos": 10.0,
+  "rmsAtivoDb": -31.7,
+  "rmsDb": -31.7,
+  "picoDb": -10.3,
+  "lufs": "-27.2",
+  "kb": 78.8
+ },
+ "sorvete-passando": {
+  "nota": "passando da esquerda para a direita, estéreo",
+  "segundos": 6.0,
+  "rmsAtivoDb": -29.6,
+  "rmsDb": -29.8,
+  "picoDb": -7.8,
+  "lufs": "-25.7",
+  "kb": 47.6
+ },
+ "policia-ui-ui": {
+  "nota": "uí-uí de brinquedo, -26 dB, raro",
+  "segundos": 0.89,
+  "rmsAtivoDb": -26.4,
+  "rmsDb": -27.5,
+  "picoDb": -16.7,
+  "lufs": "-27.5",
+  "kb": 5.9
+ },
+ "sorvete-musiquinha": {
+  "nota": "melodia original de caixinha de música, -30 dBFS (a trilha da cidade é -24,6)",
+  "segundos": 24.27,
+  "rmsAtivoDb": -30.4,
+  "rmsDb": -30.5,
+  "picoDb": -14.5,
+  "lufs": "-29.1",
+  "kb": 190.2
+ },
+ "sorvete-com-a-trilha": {
+  "nota": "a trilha da cidade (como no arquivo) + a musiquinha chegando à praça e parando",
+  "segundos": 24.27,
+  "rmsAtivoDb": -24.1,
+  "rmsDb": -24.2,
+  "picoDb": -9.6,
+  "lufs": "-25.2",
+  "kb": 190.2
+ },
+ "trilha-sozinha-15s": {
+  "nota": "referência: só a trilha, do mesmo jeito que entra na mistura da rua",
+  "segundos": 15.0,
+  "rmsAtivoDb": -22.9,
+  "rmsDb": -22.9,
+  "picoDb": -7.5,
+  "lufs": "-24.4",
+  "kb": 118.0
+ },
+ "rua-com-veiculos": {
+  "nota": "trilha + carro passando, polícia passando com o uí-uí baixinho, ônibus chegando ao ponto (freio a ar), pombo, sorvete ao longe",
+  "segundos": 15.0,
+  "rmsAtivoDb": -22.6,
+  "rmsDb": -22.6,
+  "picoDb": -7.1,
+  "lufs": "-24.0",
+  "kb": 118.0
+ },
+ "trilha-da-cidade-sozinha-15s": {
+  "lufs": "-26.0"
+ }
+}

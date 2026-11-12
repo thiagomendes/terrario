@@ -1,5 +1,5 @@
 import { test, type Page } from '@playwright/test';
-import { writeFileSync } from 'node:fs';
+import { mkdirSync, writeFileSync } from 'node:fs';
 import { abrirPalco, camera, pontosDoPalco } from './esboco-palco';
 
 /**
@@ -10,7 +10,7 @@ import { abrirPalco, camera, pontosDoPalco } from './esboco-palco';
  */
 declare const process: { env: Record<string, string | undefined> };
 test.skip(!process.env.ESBOCO_CIDADE, 'capturas do esboço só com ESBOCO_CIDADE');
-const PASTA = 'capturas-temas/esboco-veiculos';
+const PASTA = 'capturas-temas/esboco-veiculos-r2';
 const foto = (page: Page, nome: string) =>
   page.screenshot({ path: `${PASTA}/${nome}.jpg`, type: 'jpeg', quality: 84 });
 
@@ -21,73 +21,114 @@ test('esboço dos veículos', async ({ page }) => {
   const pt = await pontosDoPalco(page);
   const [ox, oy, oz] = pt.origem;
   const Y = oy + 1;
-  const custos: Record<string, unknown> = {};
-  for (const v of [1, 2, 3, 4]) {
-    await page.evaluate((n) => window.__veiculos!.mostrar(n), v);
-    await page.waitForTimeout(1500);
-    custos[`v${v}`] = await page.evaluate(() => window.__veiculos!.custo());
-    const [tx, , tz] = await page.evaluate(() => window.__veiculos!.pontos.taxi);
-    const [bx, , bz] = await page.evaluate(() => window.__veiculos!.pontos.onibus);
-    await camera(page, [tx + 4.3, Y + 1.9, tz + 3.6], [tx, Y + 0.9, tz], 50);
-    await foto(page, `v${v}-taxi`);
-    await camera(page, [bx - 6.5, Y + 2.4, bz + 5.5], [bx - 0.5, Y + 1.3, bz], 52);
-    await foto(page, `v${v}-onibus`);
-    if (v === 3) {
-      const [ex, , ez] = await page.evaluate(() => window.__veiculos!.pontos.extra);
-      await camera(page, [ex + 4.3, Y + 2.2, ez + 3.8], [ex, Y + 1.4, ez], 52);
-      await foto(page, 'v3-sorvete');
-    }
-    // o par na rua, um de frente para o outro (de noite os faróis se veem de lado e as poças de luz no asfalto)
-    await page.evaluate(
-      ([ox2, tz2, bz2]) => {
-        const ve = window.__veiculos!;
-        ve.mover('taxi', ox2 + 26.5, tz2, 0);
-        ve.mover('onibus', ox2 + 38.5, bz2, Math.PI);
-        window.__esboco!.crianca(ox2 + 8, tz2 + 16, [ox2 + 8, tz2 + 20], false);
-      },
-      [ox, tz, bz] as const,
-    );
-    await camera(page, [ox + 32.5, Y + 2.8, oz + 40.6], [ox + 32.5, Y + 1.0, oz + 33.8], 70);
-    await foto(page, `v${v}-par-dia`);
-    await page.evaluate(() => window.__veiculos!.noite(true));
-    await page.waitForTimeout(4500);
-    await camera(page, [ox + 32.5, Y + 2.8, oz + 40.6], [ox + 32.5, Y + 1.0, oz + 33.8], 70);
-    await foto(page, `v${v}-noite`);
-    await page.evaluate(() => window.__veiculos!.noite(false));
-    await page.waitForTimeout(3500);
-    // celular em pé: a criança na calçada, vista de trás (terceira pessoa)
-    await page.evaluate(([x, z]) => window.__esboco!.crianca(x, z, [x + 8, z - 4], false), [
-      ox + 26,
-      oz + 38.3,
-    ] as const);
-    await page.setViewportSize({ width: 412, height: 860 });
-    await page.evaluate(() => {
-      window.dispatchEvent(new Event('resize'));
-      window.__brumaluz!.cenaBabylon!().getEngine().resize();
-    });
-    await page.waitForTimeout(1500);
-    await page.evaluate(
-      ([ox2, tz2, bz2]) => {
-        window.__veiculos!.mover('taxi', ox2 + 31.5, tz2, Math.PI);
-        window.__veiculos!.mover('onibus', ox2 + 39.5, bz2, Math.PI);
-      },
-      [ox, tz, bz] as const,
-    );
-    await camera(page, [ox + 23.2, Y + 3.3, oz + 40.6], [ox + 34, Y + 1.0, oz + 34.2], 62);
-    await foto(page, `v${v}-celular`);
-    await page.setViewportSize({ width: 1280, height: 720 });
-    await page.evaluate(() => {
-      window.dispatchEvent(new Event('resize'));
-      window.__brumaluz!.cenaBabylon!().getEngine().resize();
-    });
-    await page.waitForTimeout(1200);
-  }
-  writeFileSync(`${PASTA}/custos.json`, JSON.stringify(custos, null, 1));
-
-  // mecânica, com a versão 1
-  await page.evaluate(() => window.__veiculos!.mostrar(1));
+  // rodada 2: a família da versão 3 (carinha) na avenida em frente ao parque
+  await page.evaluate(() => window.__veiculos!.frota());
   await page.waitForTimeout(1500);
-  const [tx, , tz] = await page.evaluate(() => window.__veiculos!.pontos.taxi);
+  const custos = await page.evaluate(() => window.__veiculos!.custo());
+  mkdirSync(PASTA, { recursive: true });
+  writeFileSync(`${PASTA}/custos.json`, JSON.stringify(custos, null, 1));
+  const L = oz + 34.9;
+  const O = oz + 33.0;
+  const v = (q: string) => page.evaluate((qq) => window.__veiculos!.pontos[qq as 'taxi']!, q);
+  // de 3/4, um de cada vez no mesmo lugar da rua
+  for (const [qual, nome, onibus] of [
+    ['taxi', 'taxi', false],
+    ['policia', 'policia', false],
+    ['onibus', 'onibus-azul', true],
+    ['onibus2', 'onibus-verde', true],
+    ['extra', 'sorvete', false],
+  ] as const) {
+    const antes = await v(qual);
+    await page.evaluate(([q, x, z]) => window.__veiculos!.mover(q as 'taxi', x, z, 0), [
+      qual,
+      ox + 34,
+      L,
+    ] as const);
+    if (qual === 'policia') await page.evaluate(() => window.__veiculos!.giroflex(true));
+    await camera(
+      page,
+      onibus ? [ox + 40, Y + 2.4, L + 5.2] : [ox + 38.3, Y + 1.9, L + 3.6],
+      [ox + 34, Y + (onibus ? 1.3 : 0.9), L],
+      onibus ? 56 : 50,
+    );
+    await foto(page, `${nome}`);
+    if (qual === 'policia') await page.evaluate(() => window.__veiculos!.giroflex(false));
+    await page.evaluate(([q, x, z, yaw]) => window.__veiculos!.mover(q as 'taxi', x, z, yaw), [
+      qual,
+      antes[0],
+      antes[2],
+      antes[2] === O ? Math.PI : 0,
+    ] as const);
+  }
+  // as quatro cores do carro comum, em fila
+  await page.evaluate(
+    ([ox2, L2]) => {
+      const ve = window.__veiculos!;
+      ['civil1', 'civil2', 'civil3', 'civil4'].forEach((q, k) =>
+        ve.mover(q as 'taxi', ox2 + 24 + k * 4, L2, 0),
+      );
+    },
+    [ox, L] as const,
+  );
+  await camera(page, [ox + 41, Y + 2.3, L + 4.2], [ox + 31, Y + 0.8, L], 52);
+  await foto(page, 'carros-cores');
+  await page.evaluate(
+    ([ox2, L2, O2]) => {
+      const ve = window.__veiculos!;
+      ve.mover('civil1', ox2 + 70, L2, 0);
+      ve.mover('civil2', ox2 + 95, O2, Math.PI);
+      ve.mover('civil3', ox2 + 112, L2, 0);
+      ve.mover('civil4', ox2 + 117, L2, 0);
+      window.__esboco!.crianca(ox2 + 83, O2 - 3.4, [ox2 + 85, O2 + 3], false);
+    },
+    [ox, L, O] as const,
+  );
+  // a frota na rua, de dia e de noite (a câmera do lado do parque, olhando a avenida)
+  await page.waitForTimeout(6000);
+  const cFrota: [number, number, number] = [ox + 93, Y + 6.5, oz + 24.5];
+  const aFrota: [number, number, number] = [ox + 86, Y + 0.6, oz + 34];
+  await camera(page, cFrota, aFrota, 80);
+  await foto(page, 'frota-dia');
+  await page.evaluate(() => window.__veiculos!.noite(true));
+  await page.waitForTimeout(4500);
+  await camera(page, cFrota, aFrota, 80);
+  await foto(page, 'frota-noite');
+  await page.evaluate(() => window.__veiculos!.noite(false));
+  await page.waitForTimeout(3500);
+  // celular em pé: a criança na calçada do parque, vista de trás
+  await page.evaluate(([x, z]) => window.__esboco!.crianca(x, z, [x + 2, z + 6], false), [
+    ox + 83,
+    oz + 29.6,
+  ] as const);
+  await page.setViewportSize({ width: 412, height: 860 });
+  await page.evaluate(() => {
+    window.dispatchEvent(new Event('resize'));
+    window.__brumaluz!.cenaBabylon!().getEngine().resize();
+  });
+  await page.waitForTimeout(1500);
+  await camera(page, [ox + 81.5, Y + 3.3, oz + 24.2], [ox + 87, Y + 1.0, oz + 34], 64);
+  await foto(page, 'celular');
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await page.evaluate(() => {
+    window.dispatchEvent(new Event('resize'));
+    window.__brumaluz!.cenaBabylon!().getEngine().resize();
+  });
+  await page.waitForTimeout(1200);
+  // a polícia passa pela praça com um "uí-uí" baixinho e o giroflex piscando
+  await page.evaluate(() => {
+    window.__veiculos!.giroflex(true);
+    window.__veiculos!.balao('policia', 'uí-uí');
+  });
+  await camera(page, [ox + 95, Y + 3.2, oz + 27], [ox + 90, Y + 1.2, oz + 35], 58);
+  await foto(page, 'mecanica-policia-na-praca');
+  await page.evaluate(() => {
+    window.__veiculos!.giroflex(false);
+    window.__veiculos!.balao('policia', null);
+  });
+
+  // mecânica, com o táxi e o ônibus azul da família
+  const [tx, tz] = [ox + 34, L];
+  await page.evaluate(([x, z]) => window.__veiculos!.mover('taxi', x, z, 0), [tx, tz] as const);
   // o balanço de parar: normal, mergulha, volta um tiquinho
   for (const [nome, a, ach] of [
     ['balanco-1', 0, 0],

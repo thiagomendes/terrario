@@ -1,0 +1,47 @@
+{
+ "civil1": {
+  "triangulos": 17200,
+  "chamadas": 11,
+  "pecas": 29
+ },
+ "taxi": {
+  "triangulos": 19696,
+  "chamadas": 14,
+  "pecas": 42
+ },
+ "policia": {
+  "triangulos": 19536,
+  "chamadas": 16,
+  "pecas": 35
+ },
+ "onibus": {
+  "triangulos": 14816,
+  "chamadas": 13,
+  "pecas": 32
+ },
+ "civil2": {
+  "triangulos": 17200,
+  "chamadas": 11,
+  "pecas": 29
+ },
+ "extra": {
+  "triangulos": 29960,
+  "chamadas": 17,
+  "pecas": 53
+ },
+ "onibus2": {
+  "triangulos": 13648,
+  "chamadas": 12,
+  "pecas": 29
+ },
+ "civil3": {
+  "triangulos": 17200,
+  "chamadas": 11,
+  "pecas": 29
+ },
+ "civil4": {
+  "triangulos": 17200,
+  "chamadas": 11,
+  "pecas": 29
+ }
+}

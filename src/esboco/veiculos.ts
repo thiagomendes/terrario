@@ -15,7 +15,16 @@ import type { Material } from '@babylonjs/core/Materials/material';
 import type { Scene } from '@babylonjs/core/scene';
 import { caixaFeita, criarPlasticos, dadosAnel, dadosEsfera } from '../render/formas';
 
-type Qual = 'taxi' | 'onibus' | 'extra';
+type Qual =
+  | 'taxi'
+  | 'onibus'
+  | 'extra'
+  | 'policia'
+  | 'civil1'
+  | 'civil2'
+  | 'civil3'
+  | 'civil4'
+  | 'onibus2';
 interface Veiculo {
   qual: Qual;
   raiz: TransformNode;
@@ -24,12 +33,18 @@ interface Veiculo {
   pecas: Mesh[];
   farois: Mesh[];
   lanternas: Mesh[];
+  /** Giroflex da polícia: pisca macio (acende azul e branco). */
+  giro: Mesh[];
   porta: Mesh | null;
   rodas: TransformNode[];
 }
 
 interface EsbocoVeiculos {
   mostrar(versao: number): void;
+  /** Rodada 2: a família da versão 3 inteira na rua (táxi, polícia, carros, dois ônibus, sorvete). */
+  frota(): void;
+  /** Giroflex aceso (de dia também, para a foto). */
+  giroflex(aceso: boolean): void;
   noite(ligada: boolean): void;
   /** Inclina a carroceria para a frente (radianos) e achata um pouco: o balanço de parar. */
   balanco(angulo: number, achata?: number): void;
@@ -37,7 +52,7 @@ interface EsbocoVeiculos {
   mover(qual: Qual, x: number, z: number, yaw?: number): void;
   balao(qual: Qual, texto: string | null): void;
   custo(): Record<string, { triangulos: number; chamadas: number; pecas: number }>;
-  pontos: Record<Qual, [number, number, number]>;
+  pontos: Partial<Record<Qual, [number, number, number]>>;
 }
 
 declare global {
@@ -60,7 +75,7 @@ function ligar(scene: Scene): void {
   const veiculos = new Map<Qual, Veiculo>();
   const baloes = new Map<Qual, Mesh>();
   let noite = false;
-  const pontos: Record<Qual, [number, number, number]> = {
+  const pontos: Partial<Record<Qual, [number, number, number]>> = {
     taxi: [0, 0, 0],
     onibus: [0, 0, 0],
     extra: [0, 0, 0],
@@ -240,7 +255,17 @@ function ligar(scene: Scene): void {
     const raiz = new TransformNode(`veiculo-${qual}`, scene);
     const corpo = new TransformNode(`veiculo-${qual}-corpo`, scene);
     corpo.parent = raiz;
-    return { qual, raiz, corpo, pecas: [], farois: [], lanternas: [], porta: null, rodas: [] };
+    return {
+      qual,
+      raiz,
+      corpo,
+      pecas: [],
+      farois: [],
+      lanternas: [],
+      giro: [],
+      porta: null,
+      rodas: [],
+    };
   }
 
   // ------------------------------------------------------------------ as quatro versões
@@ -404,6 +429,65 @@ function ligar(scene: Scene): void {
       lanterna(ve, bola(ve, 0.12, '#e8473f', -2.6, 1.0, z, [0.5, 1, 1], 0.7));
     for (const x of [-1.7, 1.7]) for (const z of [-0.92, 0.92]) roda(ve, x, z, 0.52, 'calota');
   }
+  // ------------------------------------------------------------------ rodada 2: a família da versão 3
+  /** Carro da família (mesma carroceria): táxi, polícia ou carro comum de uma cor. */
+  function carro(ve: Veiculo, tipo: 'taxi' | 'policia' | 'civil', cor = '#ffc21a') {
+    const corpo = tipo === 'taxi' ? '#ffc21a' : tipo === 'policia' ? '#f7f8fb' : cor;
+    caixa(ve, 2.8, 0.86, 1.62, 0.42, corpo, 0, 0.84, 0, 0.5);
+    bola(ve, 1.0, corpo, -0.25, 1.42, 0, [0.95, 0.62, 0.75], 0.5);
+    janelasDeCupula(ve, -0.25, 1.42, [0.95, 0.62, 0.75]);
+    for (const z of [-0.45, 0.45]) olho(ve, 1.38, 1.02, z, 0.2);
+    sorriso(ve, 1.42, 0.66, 0.9, '#dfe3ea');
+    for (const z of [-0.62, 0.62])
+      bola(ve, 0.12, '#ff9aa8', 1.32, 0.78, z * 1.18, [0.4, 0.7, 1], 0.4);
+    for (const z of [-0.5, 0.5])
+      lanterna(ve, bola(ve, 0.11, '#e8473f', -1.42, 0.92, z, [0.5, 1, 1], 0.7));
+    if (tipo === 'taxi') {
+      caixa(ve, 0.55, 0.24, 0.32, 0.12, '#fff7d6', -0.25, 2.02, 0, 0.6);
+      for (const lado of [-1, 1])
+        for (let k = 0; k < 6; k++)
+          caixa(
+            ve,
+            0.2,
+            0.13,
+            0.05,
+            0.03,
+            k % 2 ? '#1f2026' : '#f6f4ee',
+            -0.6 + k * 0.24,
+            1.02,
+            lado * 0.82,
+            0.5,
+          );
+    }
+    if (tipo === 'policia') {
+      // faixa azul embaixo, estrelinha amarela na porta e giroflex macio (sem nada de bravo)
+      caixa(ve, 2.84, 0.34, 1.66, 0.16, '#2f6fd8', 0, 0.62, 0, 0.5);
+      for (const lado of [-1, 1])
+        bola(ve, 0.17, '#ffd23f', -0.15, 1.0, lado * 0.82, [1, 1, 0.25], 0.8);
+      caixa(ve, 0.8, 0.12, 0.42, 0.06, '#f7f8fb', -0.25, 2.03, 0, 0.6);
+      const azul = caixa(ve, 0.3, 0.2, 0.36, 0.1, '#7fb2ff', -0.42, 2.16, 0, 0.7);
+      const branca = caixa(ve, 0.3, 0.2, 0.36, 0.1, '#e9f1ff', -0.08, 2.16, 0, 0.7);
+      ve.giro.push(azul, branca);
+    }
+    for (const x of [-0.9, 0.9]) for (const z of [-0.8, 0.8]) roda(ve, x, z, 0.47, 'calota');
+  }
+  /** Ônibus azul e branco (da versão 1, faixa longa de janelas) com a carinha da versão 3. */
+  function onibusAzul(ve: Veiculo) {
+    caixa(ve, 5.4, 0.92, 1.95, 0.42, '#2f7fd8', 0, 0.9, 0, 0.5);
+    caixa(ve, 5.3, 1.0, 1.82, 0.44, '#f7f5ef', 0, 1.82, 0, 0.5);
+    caixa(ve, 4.3, 0.56, 1.98, 0.22, '#a6dcf3', -0.35, 1.86, 0, 0.85);
+    for (let k = 0; k < 3; k++)
+      caixa(ve, 0.12, 0.6, 2.0, 0.05, '#f7f5ef', -1.4 + k * 1.05, 1.86, 0, 0.5);
+    caixa(ve, 0.22, 0.6, 1.5, 0.12, '#a6dcf3', 2.6, 1.9, 0, 0.85);
+    caixa(ve, 4.9, 0.26, 1.7, 0.13, '#f7f5ef', 0, 2.42, 0, 0.5);
+    ve.porta = caixa(ve, 0.72, 1.32, 0.06, 0.05, '#cfe8f5', 1.7, 1.25, 0.98, 0.8);
+    for (const z of [-0.58, 0.58]) olho(ve, 2.68, 1.08, z, 0.22);
+    sorriso(ve, 2.73, 0.66, 1.1, '#dfe3ea');
+    for (const z of [-0.85, 0.85]) bola(ve, 0.13, '#ff9aa8', 2.62, 0.82, z, [0.4, 0.7, 1], 0.4);
+    for (const z of [-0.62, 0.62])
+      lanterna(ve, bola(ve, 0.12, '#e8473f', -2.72, 0.98, z, [0.5, 1, 1], 0.7));
+    for (const x of [-1.75, 1.75]) for (const z of [-0.92, 0.92]) roda(ve, x, z, 0.52, 'calota');
+  }
   /** Extra da V3: o carrinho de sorvete. */
   function v3Sorvete(ve: Veiculo) {
     caixa(ve, 3.4, 1.5, 1.7, 0.5, '#ffd1e0', 0, 1.15, 0, 0.5);
@@ -551,7 +635,7 @@ function ligar(scene: Scene): void {
       /^(taxi|taxi-cabine|taxi-teto|taxi-luz|taxi-xadrez|farol|roda|calota|onibus|onibus-vidros|coluna|onibus-teto|porta-onibus)$/;
     for (const m of scene.meshes.slice()) if (velhos.test(m.name) && !m.parent) m.dispose();
   }
-  function mostrar(versao: number) {
+  function limpar() {
     tirarVeiculosDoPalco();
     for (const ve of veiculos.values()) {
       for (const m of ve.pecas) m.dispose();
@@ -559,15 +643,54 @@ function ligar(scene: Scene): void {
     }
     veiculos.clear();
     corOriginal.clear();
+    for (const b of baloes.values()) b.dispose();
+    baloes.clear();
+  }
+  function colocar(
+    qual: Qual,
+    f: (v: Veiculo) => void,
+    x: number,
+    y: number,
+    z: number,
+    yaw: number,
+  ) {
+    const ve = novo(qual);
+    f(ve);
+    ve.raiz.position.set(x, y, z);
+    ve.raiz.rotation.y = yaw;
+    pontos[qual] = [x, y, z];
+    veiculos.set(qual, ve);
+  }
+  /** Rodada 2: a frota na avenida em frente ao parque (o sorvete parado na beira da praça). */
+  function frota() {
+    limpar();
+    const [ox, oy, oz] = window.__esboco!.pontos.origem;
+    const Y = oy + 1;
+    const L = oz + 34.9; // mão para o leste
+    const O = oz + 33.0; // mão para o oeste, encostada no parque
+    colocar('civil1', (v) => carro(v, 'civil', '#ff7a6b'), ox + 70, Y, L, 0);
+    colocar('taxi', (v) => carro(v, 'taxi'), ox + 78, Y, L, 0);
+    colocar('policia', (v) => carro(v, 'policia'), ox + 90, Y, L, 0);
+    colocar('onibus', onibusAzul, ox + 86, Y, O, Math.PI);
+    colocar('civil2', (v) => carro(v, 'civil', '#6fd3b0'), ox + 95, Y, O, Math.PI);
+    colocar('extra', v3Sorvete, ox + 72, Y, O, Math.PI);
+    colocar('onibus2', v3Onibus, ox + 78.5, Y, O, Math.PI);
+    // as outras cores do carro comum ficam lá no começo da avenida (para a foto das cores)
+    colocar('civil3', (v) => carro(v, 'civil', '#b79cf2'), ox + 8, Y, L, 0);
+    colocar('civil4', (v) => carro(v, 'civil', '#ffa94d'), ox + 12, Y, L, 0);
+    aplicarNoite();
+  }
+  function mostrar(versao: number) {
+    limpar();
     const [ox, oy, oz] = window.__esboco!.pontos.origem;
     const Y = oy + 1;
     const v = VERSOES[versao];
-    const lugar: Record<Qual, [number, number, number, number]> = {
+    const lugar: Record<'taxi' | 'onibus' | 'extra', [number, number, number, number]> = {
       taxi: [ox + 34, Y, oz + 34.9, 0],
       onibus: [ox + 23, Y, oz + 33.0, Math.PI],
       extra: [ox + 44, Y, oz + 34.9, 0],
     };
-    for (const qual of ['taxi', 'onibus', 'extra'] as Qual[]) {
+    for (const qual of ['taxi', 'onibus', 'extra'] as const) {
       const f = qual === 'extra' ? v.extra : v[qual];
       if (!f) continue;
       const ve = novo(qual);
@@ -581,13 +704,33 @@ function ligar(scene: Scene): void {
     aplicarNoite();
   }
 
+  let matGiroAzul: StandardMaterial | null = null;
+  let matGiroBranco: StandardMaterial | null = null;
+  function giroflex(aceso: boolean) {
+    if (!matGiroAzul) {
+      matGiroAzul = new StandardMaterial('giro-azul', scene);
+      matGiroAzul.disableLighting = true;
+      matGiroAzul.emissiveColor = Color3.FromHexString('#6fa8ff');
+      matGiroBranco = new StandardMaterial('giro-branco', scene);
+      matGiroBranco.disableLighting = true;
+      matGiroBranco.emissiveColor = Color3.FromHexString('#f2f6ff');
+    }
+    for (const ve of veiculos.values())
+      ve.giro.forEach((m, i) => {
+        if (!corOriginal.has(m)) corOriginal.set(m, m.material);
+        m.material = aceso ? (i === 0 ? matGiroAzul! : matGiroBranco!) : corOriginal.get(m)!;
+      });
+  }
   const api: EsbocoVeiculos = {
     mostrar,
+    frota,
+    giroflex,
     pontos,
     noite(ligada) {
       noite = ligada;
       window.__esboco!.noite(ligada);
       aplicarNoite();
+      giroflex(ligada);
     },
     balanco(angulo, achata = 0) {
       for (const ve of veiculos.values()) {

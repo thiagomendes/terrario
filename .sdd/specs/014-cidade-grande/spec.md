@@ -43,7 +43,7 @@ O dono pediu em 10 nov 2026 que a cidade já nasça com o jeito dela, em vez de 
 
 ## Decisões já tomadas
 - **12 nov 2026:** prédios de 2 a 6 andares; atividade própria = canteiro de obras.
-- **10 nov 2026:** sem Blender; MagicaVoxel só se ajudar de verdade, validado no começo com um prédio de teste; senão, plantas em código como as do sítio.
+- **10 nov 2026:** sem Blender. **12 nov 2026:** sem MagicaVoxel também; as plantas são escritas em código, como as do sítio, e paramétricas (ver "Plantas dos prédios em código").
 - **7 nov 2026:** bichos da noite fofos, que não atacam (o guaxinim usa a criatura da noite mansa da 013).
 
 ## Lições aplicadas (o que já deu bug antes e como esta spec evita)
@@ -127,7 +127,7 @@ O pedreiro mostra a planta de uma obra pequena em **blocos fantasmas**, azuis e 
 - **Festa (até 6 s, sem travar o controle):** confete de pedacinhos de tijolo e folhas, o "ta-dá" de piano com a buzininha, o pedreiro e os moradores perto batem palmas (gesto `aplaudir`), o tapume e o andaime somem num sopro de poeira.
 - **A placa vira "Feita por Ana e Léo"** (os ajudantes, até 4 nomes; os pais leem, as crianças veem os nomes).
 - **A obra ganha vida:** a casinha do cachorro ganha um cachorro morando nela; a banca ganha frutas; o ponto de ônibus passa a ser parada do ônibus (se os carrinhos entrarem); a sorveteria acende; a casinha acende a luz à noite; o coreto toca uma musiquinha quando alguém entra.
-- **Recompensa:** na primeira obra, o **capacete amarelo de obra** (acessório da 017, para todos os temas). Cada obra cola uma figurinha no diário (capítulo novo "Obras da cidade", `src/jogo/diario.ts`). Ao terminar as seis, festa maior com fogos de brinquedo e o **colete laranja** (acessório).
+- **Recompensa:** na primeira obra, o **capacete amarelo de obra**; ao terminar as seis, festa maior com fogos de brinquedo e o **colete laranja**. As duas são peças de fantasia da 017, ganhas uma vez na cidade e usáveis em qualquer mundo, como um troféu (ver "Recompensas do canteiro"). Cada obra também cola uma figurinha no diário do mundo (capítulo novo "Obras da cidade", `src/jogo/diario.ts`).
 - **A próxima obra:** o pedreiro anda até o próximo canteiro e acena de lá. Ficam dois canteiros abertos de cada vez, na ordem das plantas.
 
 ### As plantas das obras (6, da mais fácil para a maior)
@@ -142,6 +142,14 @@ O pedreiro mostra a planta de uma obra pequena em **blocos fantasmas**, azuis e 
 
 As plantas usam blocos que já existem ou entram nesta spec (tijolo, tábua, vidro, laje, cerca, porta, toldo, placa). As contas das obras 1, 3 e 4 são as do esboço; as outras saem da T05.
 
+### Recompensas do canteiro (decisão do dono, 12 nov 2026)
+O capacete amarelo e o colete laranja viram **peças de fantasia da 017**: desbloqueiam uma vez, na cidade, e a criança veste em qualquer mundo, como um troféu. É só aparência, não é progresso: inventário e progresso continuam por mundo.
+- **Onde fica gravado:** junto da aparência do personagem (`src/personagem/persistencia.ts`, chave `terrario:aparencia`), num campo novo `desbloqueios: string[]` (ids conhecidos, como `capacete-obra` e `colete-obra`; `normalizarAparencia` em `src/personagem/aparencia.ts` joga fora o que não conhece e limita a 16). Mundos e personagem continuam separados: apagar ou trocar de mundo não tira o desbloqueio.
+- **Quando desbloqueia:** o núcleo do mundo da cidade manda o evento `obra` com `recompensa` para cada ajudante, quando a obra termina (no aparelho e na nuvem, o núcleo é quem decide). O cliente grava o desbloqueio na aparência e mostra a festa da 017 ("Ganhou o capacete de obra!").
+- **No servidor:** o que vai pela rede é só o que está vestido, no comando `aparencia` de sempre, com o mesmo saneamento (`sanearAparencia` em `src/nucleo/saneamento.ts`: até 4096 caracteres e `normalizarAparencia`). As duas peças são peças conhecidas do catálogo e cabem com folga no limite (o teste `tests/nucleo/aparencia-limite.test.ts` ganha o caso com as duas). A lista de desbloqueios não viaja e o servidor não confere: é um enfeite, e o pior que pode acontecer é alguém vestir um capacete sem ter feito obra.
+- **Na aba de fantasias, antes de ganhar:** as duas peças aparecem como silhueta cinza com um cadeadinho e um desenho do canteiro; tocar mostra "Ganhe no canteiro da cidade" (texto curto e o desenho, para quem não lê). Depois de ganhar, a silhueta vira a peça colorida, com um brilho na primeira vez.
+- **Testes:** `normalizarAparencia` guarda os desbloqueios conhecidos e joga fora os outros; a aba só deixa vestir peça desbloqueada; o núcleo manda a recompensa para cada ajudante ao terminar a obra (local e nuvem); a aparência com as duas peças passa no saneamento e no limite; teste de tela: ganhar o capacete na cidade, abrir um mundo da Bruma e vestir.
+
 ### Quem é dono da obra (regras da 016)
 - **A obra é da cidade, não de quem fez.** Enquanto está aberta, cada célula da planta é uma célula de **obra**: só aceita o bloco da planta (é o "conserto" que a 016 já prevê para a estrutura, `gerado`), e o bloco que entra já fica blindado. Ao terminar, a obra vira **estrutura do mundo**, protegida como qualquer prédio: ninguém quebra, nem quem construiu, nem o dono do mundo. As portas e o banco dela são usáveis por todos.
 - **Por quê:** a criança não perde a obra por engano nem por um amigo, e a obra feita é igual às outras construções da cidade (a mesma máscara de proteção, o mesmo cadeadinho na mira). O crédito fica na placa e no diário.
@@ -151,11 +159,28 @@ As plantas usam blocos que já existem ou entram nesta spec (tijolo, tábua, vid
 ## Carrinhos e ônibus (bloco de tarefas separado, pode ser cortado)
 Pedido do dono em 12 nov 2026: carrinhos e ônibus de blocos, com rodas redondas, que ninguém quebra, que andam sozinhos certinho pelas ruas, param nos cruzamentos e para as pessoas, e com as colisões pensadas. "Se ficar complexo demais, revemos."
 
+### Decidido no esboço dos veículos (rodada 2, 12 nov 2026)
+- **Visual:** a versão 3 ("com carinha") de `referencia/veiculos.html`: carroceria arredondada de plástico de brinquedo, faróis que são olhinhos, sorriso cromado, bochechas. Sem chave de corda e sem tique-tique de corda.
+- **A família:** táxi amarelo, carro de polícia (branco e azul, de brinquedo: estrelinha na porta e giroflex que pisca macio, nada de bravo), carro comum (um modelo só, em 4 cores), dois ônibus (azul e branco com a faixa longa de janelas, e o verde), e o carrinho de sorvete, que estaciona na praça e toca uma musiquinha original.
+- **Som do motor:** de verdade, a partir de gravações CC0 (marcha lenta de um carro a gasolina, um diesel para o ônibus, uma van para o sorvete), lidas com a rotação de uma curva de RPM: arrancar, trocar de marcha, rodar, soltar o pedal, reduzir e parar; freio a ar no ônibus. Bem baixinho, some com a distância, no máximo 3 motores ao mesmo tempo.
+- **Polícia:** nada de sirene. Um "uí-uí" de brinquedo, curto e baixinho, raro (uma vez ao passar pela praça), e o giroflex piscando (pergunta ao dono na página dos veículos).
+- **Carrinho de sorvete:** a musiquinha é composta por nós (caixinha de música), não lembra nenhuma música de carro de sorvete conhecida; toca só parado na praça ou chegando devagar, some com a distância e fica mais baixa que a trilha da cidade.
+
 ### Versão mínima proposta para a 014
-- **4 táxis amarelos e 1 ônibus** por cidade. Cada um anda num **circuito fixo**: uma volta retangular em volta de um ou dois quarteirões, sempre pela mão da direita. O ônibus tem 3 paradas (uma delas é o ponto de ônibus da obra 3, quando estiver pronto).
+- **A frota por cidade:** 2 táxis, 2 carros comuns, 1 polícia, 2 ônibus e 1 carrinho de sorvete (ele só vai e volta da praça). Cada um anda num **circuito fixo**: uma volta retangular em volta de um ou dois quarteirões, sempre pela mão da direita. O ônibus tem 3 paradas (uma delas é o ponto de ônibus da obra 3, quando estiver pronto).
 - **Devagar:** 3 blocos por segundo no reto (a criança anda a 4,3 e corre a 7), freando e acelerando suave.
 - **Cruzamento:** o cruzamento é reservado por um veículo de cada vez. Um veículo só entra se o cruzamento estiver livre **e** houver lugar para ele do outro lado (assim nunca para no meio e nunca dá nó). Na faixa de pedestre, para se tiver alguém nela.
 - **Fila:** na mesma faixa, cada veículo mantém 2 blocos de distância do da frente.
+
+### Só nas pistas (regra do dono, 12 nov 2026: muito importante)
+Os veículos andam só nas pistas feitas para eles. Nunca na calçada, na praça, no parque, no gramado ou no canto da faixa de pedestre, e nunca cortando a esquina por cima do meio-fio.
+- **Rotas só do grafo de pistas do planejador** (`src/world/cidade.ts`): o caminho é o centro da faixa, e as curvas são arcos que ficam dentro do asfalto do cruzamento (raio escolhido para a caixa do veículo inteira caber na faixa, inclusive o ônibus).
+- **A caixa de colisão fica sempre dentro da faixa:** nas retas e nas curvas, com folga de pelo menos um quarto de bloco para o meio-fio.
+- **Nada tira um veículo do caminho:** nem criança, nem bicho, nem outro veículo. Ele só para e espera; nunca é empurrado nem desvia para a calçada.
+- **O carrinho de sorvete estaciona numa vaga pintada na rua**, na beira da praça (uma reentrância de asfalto do planejador), nunca dentro da praça.
+- **Quando encalha** (60 s parado sem motivo), o veículo some e volta no começo de uma faixa, fora da vista da criança; nunca atravessa a calçada para voltar.
+- **Ninguém constrói nas pistas:** o asfalto das faixas é `PASSAGEM` (016), então nenhum bloco entra ali.
+- **Testes:** um teste de unidade percorre cada rota inteira (uma volta completa) em passos pequenos e confere que cada ponto do caminho e cada roda de cada veículo cai numa célula de asfalto dentro da faixa dele; e um teste de tela de um minuto de veículos andando confere o mesmo nas posições reais, quadro a quadro.
 
 ### Gente e bichos na rua
 - **Nunca encosta em ninguém.** Antes de andar, o veículo olha a faixa à frente (4 blocos no reto, o cruzamento inteiro na curva). Tem criança, morador ou bicho ali: freia devagar e para a 1,5 bloco, sem tocar.
@@ -177,8 +202,8 @@ Pedido do dono em 12 nov 2026: carrinhos e ônibus de blocos, com rodas redondas
 - A pista e as faixas são `PASSAGEM` e as calçadas `CHAO` (016): o caminho dos carrinhos fica sempre livre.
 
 ### Desenho e desempenho
-- **Táxi:** carroceria de blocos amarela (4 × 2 × 2 com a cabine), luzinha no teto sem palavra nenhuma, faróis que acendem de noite, 4 rodas redondas pretas com calota. **Ônibus:** 8 × 2 × 3, azul e branco (genérico), janelas em fila, porta que abre na parada.
-- **Uma peça fundida por modelo** (carroceria) e as rodas à parte, todas como instâncias (`thinInstance`): 5 veículos dão **no máximo 4 chamadas de desenho** e menos de 10 mil triângulos.
+- **Modelos** (ver `referencia/veiculos.html`): o carro da família (táxi, polícia e carro comum são o mesmo modelo, com peças a mais e outra cor), os dois ônibus e o carrinho de sorvete. Faróis-olhinhos que acendem de noite, rodas redondas com calota.
+- **Meta por modelo:** carro até 3.500 triângulos e ônibus até 4.500; carroceria fundida com a cor nos vértices (como a tinta das fantasias da 017), rodas em instâncias e faróis à parte: 3 chamadas de desenho por modelo, para todos os veículos daquele modelo. Os 8 veículos da frota: até uns 30 mil triângulos e 12 chamadas na cena; longe (mais de 30 blocos), uma versão simples de uns 400 triângulos.
 - **Perto e longe:** a até 40 blocos as rodas giram e os faróis brilham; além disso as rodas param de girar; fora da névoa o veículo não é desenhado.
 - **Teto medido:** veículos custam no máximo 0,3 ms por quadro no celular (CPU 4× mais lenta) e nada que apareça na medida das salas do servidor.
 
@@ -218,7 +243,19 @@ Ids 84 em diante, nesta ordem; os nomes de cada tema e as texturas seguem a 013.
 
 Também entram o item **colher de pedreiro** (ferramenta que não gasta) e os acessórios **capacete de obra** e **colete laranja** (017). O atlas (`src/art/atlas.ts`, 16 × 8) tem 89 de 128 lugares usados; entram 17 texturas novas (106 de 128).
 
-**Nos outros temas:** os blocos novos aparecem no criativo de todos os temas com a mesma textura e um nome do tema (pergunta ao dono: recomendo assim, mais barato que pintar sete vezes).
+**Só na cidade** (decisão do dono, 12 nov 2026; ver "Só na Cidade Grande"): os blocos e itens novos não aparecem nos outros temas.
+
+## Só na Cidade Grande (decisão do dono, 12 nov 2026)
+Tudo o que esta spec cria é da Cidade Grande e não vai para os outros mundos: prédios, veículos, blocos novos, o canteiro de obras, o horizonte, o carrinho de sorvete, os sons e a música da cidade. É a linha da 018: cada mundo com o seu tema e a sua atividade.
+- **Como fica garantido:**
+  - o tema diz o que é só dele: `TemaDef.exclusivos` (lista de blocos e itens), e o tema da cidade lista os blocos novos (84 em diante), a colher de pedreiro e as peças de brinquedo da cidade;
+  - **geração:** só o planejador `planta: 'cidade'` põe esses blocos; os outros temas nunca os geram (a paridade dos sete temas continua bloco por bloco);
+  - **trocas:** as trocas do construtor com tijolo, vidro, toldo e colher só existem no tema da cidade (`src/jogo/trocas.ts` filtra por `exclusivos`);
+  - **criativo e receitas:** o inventário do criativo e o livro de receitas dos outros temas não mostram os exclusivos (`src/jogo/catalogo.ts` filtra pelo tema do mundo);
+  - **nomes e texturas:** os outros temas não precisam nomear nem pintar os exclusivos (o teste `tests/temas/cobertura.test.ts` pula os exclusivos de outro tema);
+  - **canteiro e veículos:** existem só no planejador e no núcleo do mundo da cidade (`planta: 'cidade'`).
+- **Cada mundo é uma história separada** (decisão do dono, 12 nov 2026), como no Minecraft: inventário, sobrevivência, ponto de nascer e progresso são gravados por mundo (já é assim no núcleo, `src/nucleo/nucleo.ts`, e no mundo salvo). Nada passa de um mundo para outro, então um item da cidade nunca chega a outro mundo e não há regra para isso. Teste novo: depois de jogar na cidade com tijolo, colher e blocos novos no inventário, um mundo de outro tema abre sem nenhum deles, e o criativo e as trocas desse mundo não os mostram.
+- **O que viaja entre mundos** continua sendo só o personagem: aparência, nome e fantasias (017). As recompensas do canteiro entram aí (ver "Recompensas do canteiro").
 
 ## Moradores e bichos
 - **Moradores** (desenhados à mão como no esboço de 7 nov): padeira ou padeiro (cozinheiro), mecânica ou mecânico (ferreiro), **pedreira ou pedreiro** (construtor; dono do canteiro, de capacete amarelo; troca tijolo, vidro, escada e toldo). Moram nos apartamentos, trabalham nas lojas, e o pedreiro passa o dia no canteiro aberto.
@@ -241,11 +278,11 @@ Também entram o item **colher de pedreiro** (ferramenta que não gasta) e os ac
 - **Se não couber:** primeiro os andares de cima dos prédios altos viram "fechados" (só a escada e o terraço visitáveis); depois a cidade encolhe para 4 × 4 quarteirões; por último, a altura máxima vira 5 andares (só com o dono).
 - **Medido:** `e2e/desempenho-brinquedo.spec.ts` ganha a cidade (centro de dia, de noite, com 5 veículos e um canteiro aberto), na GPU (`scripts/e2e-gpu.sh`) e com a CPU 4× mais lenta; e conferência no iPhone do dono.
 
-## Ferramenta para os prédios: MagicaVoxel ou plantas em código (T01)
-- **O formato do jogo é um só:** cada planta (prédio ou obra) é uma lista de camadas de texto, uma por altura, com uma letra por bloco (`T` tijolo, `J` janela, `.` ar...), em `src/world/plantas/`. O planejador gira e combina as plantas. Os blocos são de verdade e iguais no servidor.
-- **A validação:** fazer a mesma casa geminada de 3 andares das duas formas: (a) em texto, à mão; (b) no MagicaVoxel (pelo dono ou por quem tiver o programa), com um script `scripts/vox-para-planta.ts` que lê o arquivo `.vox` (formato aberto, simples de ler) e escreve a planta em texto, com uma paleta que liga cor a bloco.
-- **Comparar:** tempo para fazer, tempo para mudar (trocar uma janela, subir um andar), se dá para revisar a mudança lendo o código, e se a planta convertida sai igual à escrita.
-- **Recomendação:** plantas em texto. São 5 modelos de prédio e 6 obras pequenas, com regras (escada, porta, janelas) que o código repete melhor que o desenho, e o MagicaVoxel só ajuda se o dono quiser desenhar. Se ele preferir desenhar, o conversor fica e as plantas desenhadas viram texto do mesmo jeito.
+## Plantas dos prédios em código (decisão do dono, 12 nov 2026)
+- **Sem MagicaVoxel e sem conversor:** as plantas (prédios e obras) são escritas em código, como as do sítio (`src/world/sitio.ts`), em `src/world/plantas/`.
+- **Formato:** uma lista de camadas de texto por andar-tipo, uma letra por bloco (`T` tijolo, `J` janela, `P` porta, `E` escada, `.` ar...), e funções que montam o prédio a partir delas.
+- **Paramétricas, para dar variedade:** número de andares (2 a 6, repetindo o andar-tipo), cor da porta e do toldo, espelhado (porta e escada de incêndio do outro lado), caixa d'água sim ou não, loja no térreo sim ou não. O planejador sorteia os parâmetros por lote (com `hash2`, determinístico e igual no servidor).
+- **Testes:** cada modelo com cada combinação de parâmetros tem porta, escada até o terraço, interior de pelo menos 5 × 5 e nenhum bloco fora do lote; uma casa geminada de 3 andares de referência fica gravada como teste de regressão.
 
 ## Capricho na experiência (para não frustrar)
 Medidas que precisam passar antes de fechar:
@@ -277,27 +314,30 @@ Medidas que precisam passar antes de fechar:
 12. **Auditoria independente** ao fim, com os achados corrigidos (inclui a revisão de nomes e marcas da 020).
 13. **Rodada em família** na cidade.
 14. **Relatório visual** publicado ao fechar.
+15. **Veículos só nas pistas:** o teste de unidade das rotas (cada ponto e cada roda numa célula de asfalto da faixa, numa volta completa de cada rota, curvas incluídas) e o teste de tela de um minuto andando passam; o carrinho de sorvete para na vaga da rua; nenhum veículo é empurrado nem volta pela calçada.
+16. **Só na cidade:** nenhum bloco, item, troca, receita, canteiro ou veículo da cidade aparece em outro tema (geração, criativo, trocas, receitas); teste de que um mundo de outro tema abre sem os itens da cidade que a criança tinha na cidade (cada mundo é uma história separada).
+17. **Recompensas como fantasia:** capacete e colete desbloqueiam na cidade, ficam gravados na aparência e vestem em qualquer mundo; silhueta com cadeado antes; saneamento e limite da aparência na nuvem.
 
 ## Fases e tarefas
 | # | Tarefa |
 |---|---|
-| T01 | Validação MagicaVoxel × plantas em texto com uma casa geminada de 3 andares (`src/world/plantas/`, `scripts/vox-para-planta.ts` se valer); decisão anotada aqui |
+| T01 | Plantas paramétricas em código (`src/world/plantas/`): formato de camadas em texto, parâmetros (andares, cores da porta e do toldo, espelho, caixa d'água, loja), a casa geminada de 3 andares de referência e os testes de forma |
 | T02 | Blocos e itens novos: registro em `src/world/blocks.ts` (84 em diante), texturas em `src/art/tiles.ts`, nomes nos 7 temas de hoje, colher de pedreiro, peças de brinquedo (poste, placa), ícones, mão e chão |
 | T03 | Planejador `planta: 'cidade'` (`src/world/cidade.ts`, `src/world/povoado.ts`, `src/world/chunk.ts`): malha, zonas, lotes, terreno plano e rampa, nascimento, estrutura rara; `estiloSeguro`; proteção da cidade em `src/world/protecao.ts`; paridade dos sete temas |
 | T04 | Prédios: os 5 modelos em plantas, escadas, apartamentos, janelas acesas, caixa d'água, escada de incêndio, entrada do metrô; medida de malha e de quadros já aqui |
 | T05 | Canteiro no núcleo: as 6 plantas de obra, classe `OBRA` e `planejado`, `permissao.ts`, colocar com a colher e com o bloco certo, `extras.obras`, `definirObrasFeitas`, ajudantes, evento `obra`, saneamento, `VERSAO_REDE`; testes local e nuvem |
 | T06 | Canteiro no cliente: fantasmas em instâncias, pulso da camada, bloco na mira, ímã de toque, bloco errado (balão, pisca da barra), progresso, festa, placa, obra que ganha vida, pedreiro que acena, entrega a colher e vai para a próxima obra |
-| T07 | Diário ("Obras da cidade"), recompensas (capacete e colete, 017), trocas do pedreiro |
+| T07 | Diário ("Obras da cidade"), recompensas como peças de fantasia da 017 (desbloqueio na aparência, evento `obra`, silhueta com cadeado na aba, saneamento e limite), trocas do pedreiro |
 | T08 | Tema Cidade Grande (`src/temas/cidade-grande/`, registrado em `src/temas/todos.ts`): céu (pôr do sol atrás dos prédios, janelas acesas), água, terreno, nomes, texturas, moradores e bichos desenhados à mão, gato domado com peixe (`EstiloMundo.domar`), guaxinim manso, foto e cartão do tema |
 | T09 | Som: partitura em camadas, gravação, pacotes, vozes, ambiente (buzininha ao longe, passarinho, grilo), créditos, régua de volume |
 | T10 | Horizonte de torres ao longe, com medida |
 | T11 | Testes de tela: lista única de temas, canteiro no computador e no toque, duas crianças na nuvem, capturas |
 | T12 | **Veículos, núcleo** (bloco cortável): circuitos do planejador, simulação em `s`, reserva de cruzamento, olhar à frente, paradas do ônibus, evento `veiculo`, sala que dorme; 1 hora simulada |
 | T13 | **Veículos, cliente** (bloco cortável): `src/jogo/veiculos.ts` compartilhado, peças de táxi e ônibus, rodas, instâncias, perto e longe, colisão com o boneco, buzina e aceno, câmera |
-| T14 | **Veículos, testes e medida** (bloco cortável): bots na rua, celular, CPU 4× mais lenta |
+| T14 | **Veículos, testes e medida** (bloco cortável): teste de unidade das rotas só no asfalto e teste de tela de um minuto andando; bots na rua, celular, CPU 4× mais lenta |
 | T15 | Desempenho final, vitrine, auditoria independente, publicação (site e servidor juntos), rodada em família e relatório visual |
 
-Ordem: T01 primeiro (decide a ferramenta); T02 a T04 abrem a cidade; T05 a T07 são o coração (o canteiro); T08 a T11 completam o tema. O bloco T12 a T14 vem depois do canteiro pronto e pode ser cortado ou adiado sem mexer no resto.
+Ordem: T01 primeiro (o formato das plantas); T02 a T04 abrem a cidade; T05 a T07 são o coração (o canteiro); T08 a T11 completam o tema. O bloco T12 a T14 vem depois do canteiro pronto e pode ser cortado ou adiado sem mexer no resto.
 
 ## Riscos
 - **Desempenho no celular** (o maior): prédios altos, muitas janelas e interiores. Orçamento e plano B em "Desempenho"; medir já na T04, antes do tema completo.
@@ -315,8 +355,8 @@ O dono aceitou as nove recomendações do esboço, como estavam escritas:
 3. Carrinhos e ônibus entram na versão mínima (4 táxis e 1 ônibus em circuitos fixos), depois do canteiro, como bloco que pode ser cortado (T12 a T14). **Sim.**
 4. O horizonte de torres ao longe entra. **Sim.**
 5. O rio com ponte fica para depois; nesta etapa, lago no parque. **Sim.**
-6. Plantas dos prédios em texto em vez de MagicaVoxel, se a validação da T01 confirmar. **Sim.**
-7. Os blocos novos aparecem nos outros temas com a mesma textura (só o nome muda). **Sim.**
+6. Plantas dos prédios em texto em vez de MagicaVoxel, se a validação da T01 confirmar. **Mudou (12 nov 2026):** o dono tirou o MagicaVoxel de vez; plantas em código, paramétricas, sem validação nem conversor.
+7. Os blocos novos aparecem nos outros temas com a mesma textura (só o nome muda). **Mudou (12 nov 2026):** o dono decidiu que tudo da cidade é só da cidade (ver "Só na Cidade Grande").
 8. O gato de rua é domado com peixe, só na cidade (`EstiloMundo.domar`). **Sim.**
 9. Sem elevador nesta etapa. **Sim.**
 
@@ -327,3 +367,9 @@ A spec continua DRAFT até o dono aprovar o esboço novo, com as capturas do mot
 - 10 nov 2026: a cidade nasce com a atividade dela; sem Blender, MagicaVoxel só se ajudar de verdade.
 - 12 nov 2026: prédios de 2 a 6 andares; atividade = canteiro de obras; jeito de Manhattan sem copiar; carrinhos e ônibus, se não ficar complexo demais.
 - 12 nov 2026: aceitou as nove recomendações do esboço (ver "Perguntas ao dono"): obra da cidade, colher sem gastar material, carrinhos na versão mínima e cortável, horizonte, rio depois, plantas em texto, mesma textura nos outros temas, gato com peixe, sem elevador. Pediu o esboço refeito no visual de brinquedo do jogo (motor de verdade) antes de aprovar a spec.
+- 12 nov 2026 (rodada 2 dos veículos): versão 3 (com carinha) escolhida; sem chave de corda nem tique-tique; táxi, polícia de brinquedo, carro comum em cores, dois ônibus (azul e verde) e carrinho de sorvete com musiquinha original; motor com som de carro de verdade (gravações CC0 com curva de RPM); polícia sem sirene.
+- 12 nov 2026: **tudo da cidade é só da cidade** (prédios, veículos, blocos novos, canteiro, horizonte, sorvete, sons e música); muda a resposta da pergunta 7.
+- 12 nov 2026: **cada mundo é uma história separada**, com o seu inventário e o seu progresso; nada passa de um mundo para outro.
+- 12 nov 2026: **capacete e colete do canteiro viram peças de fantasia da 017**, ganhas uma vez na cidade e usáveis em qualquer mundo (só aparência).
+- 12 nov 2026: **sem MagicaVoxel**; plantas em código, paramétricas (andares, cores da porta, espelho); muda a resposta da pergunta 6 e a T01.
+- 12 nov 2026: **veículos só nas pistas** (rotas do grafo de pistas, curvas dentro do asfalto, caixa sempre na faixa, nada os empurra, sorvete na vaga da rua, volta de encalhe pelo começo de uma faixa); com teste de unidade e de tela.
