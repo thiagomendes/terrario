@@ -1,0 +1,46 @@
+import type { IdGesto } from '../personagem/gestos';
+import type { EventoSom } from './sons';
+
+/**
+ * Spec 019 (T05): os sons da interface e dos gestos. A interface (`src/ui/*`) não conhece o
+ * motor de som: ela pede o som por um evento da janela (`terrario:som`) e a cena toca, se o
+ * som estiver ligado. Sem cena (título, testes de unidade), o pedido não faz nada.
+ */
+export type SomInterface = Extract<
+  EventoSom,
+  'rodaAbrir' | 'rodaFechar' | 'mochila' | 'criar' | 'conquista' | 'festa' | 'toc'
+>;
+
+export const EVENTO_SOM_INTERFACE = 'terrario:som';
+
+export const SONS_INTERFACE: readonly SomInterface[] = [
+  'rodaAbrir',
+  'rodaFechar',
+  'mochila',
+  'criar',
+  'conquista',
+  'festa',
+  'toc',
+];
+
+export function ehSomInterface(v: unknown): v is SomInterface {
+  return typeof v === 'string' && (SONS_INTERFACE as readonly string[]).includes(v);
+}
+
+/** Pede um som de interface à cena. */
+export function tocarSomInterface(som: SomInterface): void {
+  if (typeof window === 'undefined') return;
+  window.dispatchEvent(new CustomEvent(EVENTO_SOM_INTERFACE, { detail: som }));
+}
+
+/** O som de cada gesto do jogador (spec 015): curto e macio, nunca mais alto que um passo forte. */
+export const SOM_DO_GESTO: Readonly<Record<IdGesto, EventoSom>> = {
+  acenar: 'aceno',
+  cumprimentar: 'aceno',
+  chamar: 'assobio',
+  comemorar: 'brilho',
+  aplaudir: 'palmas',
+  dancar: 'danca',
+  apontar: 'apontar',
+  sentar: 'sentar',
+};

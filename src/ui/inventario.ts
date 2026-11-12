@@ -1,4 +1,5 @@
 import { botaoFechar, icone } from './pixicones';
+import { tocarSomInterface } from '../audio/somInterface';
 import { TAMANHO_BARRA, TAMANHO_INVENTARIO, type Inventario, type Slot } from '../jogo/inventario';
 import { obterItem, todosItens, type DefItem } from '../jogo/itens';
 import { EVENTO_ICONES, iconeDoItem } from './icones';
@@ -613,6 +614,7 @@ export function criarInventarioUI(raiz: HTMLElement, op: OpcoesInventarioUI): In
     if (op.criativo()) renderCatalogo();
     render();
     op.aoAbrir?.();
+    tocarSomInterface('mochila');
   }
   const aoFecharAntes: (() => void)[] = [];
   function fechar(): void {

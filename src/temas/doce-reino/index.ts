@@ -292,7 +292,7 @@ export function construirDoceReino(): Tema {
       folhagem: { base: 'folhagem', tom: 1.35 },
       cristal: { base: 'cristal', tom: 1.2 },
     },
-    natureza: { passaros: 0.8, grilos: 0.5, tom: 1.3 },
+    natureza: { passaros: 0.8, grilos: 0.5, tom: 1.3, trovao: 'pipoca' },
     povoado: POVOADO_DOCE,
     personagem: { acessorio: 'touca-chef', roupaEstilo: 1, roupaCor: 4, calcaCor: 4 },
   };

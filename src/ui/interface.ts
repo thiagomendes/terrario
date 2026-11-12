@@ -455,7 +455,9 @@ export function criarInterface(
   const rodape = document.createElement('div');
   rodape.className = 'rodape-titulo';
   const versao = document.createElement('span');
-  versao.textContent = 'Terrário · arte, música e sons gerados por código';
+  // spec 019: a música e as vozes agora são gravadas (créditos em Configurações → Áudio)
+  versao.textContent =
+    'Terrário · arte e efeitos por código, música e vozes gravadas (créditos em Configurações → Áudio)';
   const lista = document.createElement('ul');
   for (const [tecla, acao] of TECLAS) {
     const item = document.createElement('li');

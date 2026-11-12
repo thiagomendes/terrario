@@ -1,5 +1,6 @@
 import { criarCena } from './render/cena';
 import { criarHotbar } from './player/hotbar';
+import { tocarSomInterface } from './audio/somInterface';
 import { criarInterface, travarPonteiro } from './ui/interface';
 import { modoToque } from './ui/pixicones';
 import { armazemIndexedDB } from './jogo/indexeddb';
@@ -291,6 +292,7 @@ function ligarInventario(
     aoFabricar: (r) => {
       // a receita vai na mesma transação dos slots (a nuvem confere a conta dos itens)
       cena.registrarFabricacao(r.id);
+      tocarSomInterface('criar');
       // o aviso sai depois que o resultado chega à mão: quem ouve não pega a tela no meio
       queueMicrotask(() =>
         window.dispatchEvent(new CustomEvent('brumaluz:fabricou', { detail: r.id })),
@@ -634,6 +636,7 @@ function ligarDiario(app: HTMLElement, cena: ReturnType<typeof criarCena>): void
   const reg = (chave: string, qtd = 1) => {
     for (const m of diario.registrar(chave, qtd)) {
       notificar(`Conquista: ${m.titulo}`, 'trofeu');
+      tocarSomInterface('conquista');
     }
     ui.renderHud();
   };

@@ -29,9 +29,42 @@ export const TAXA_TRILHA = 22050;
  * (e2e/trilha-regua.spec.ts, RMS de 40 s renderizados offline, Música 60%): com ganho 1, a
  * mistura "dia" gravada dava −42,6 dBFS em todo tema, e a de hoje ia de −40,3 (Lua) a −45,5
  * (Rancho, o mais baixo). O dono pediu que ela nunca fique mais alta que a de hoje: 0,7
- * (−3,1 dB) deixa o Rancho em −0,3 dB e os outros de 2,6 a 5,3 dB abaixo.
+ * (−3,1 dB) deixa o Rancho em −0,3 dB e os outros de 2,6 a 5,3 dB abaixo. A T05 acerta cada
+ * tema e contexto com `NIVEL_TRILHA`.
  */
 export const GANHO_TRILHA_GRAVADA = 0.7;
+
+/** O contexto que escolhe o ajuste de volume de cada tema (`NIVEL_TRILHA`). */
+export type ContextoNivel = 'dia' | 'tarde' | 'noite' | 'caverna' | 'perigo';
+
+export function contextoNivel(e: EstadoTrilha, temPerigo: boolean): ContextoNivel {
+  if (e.perigo && temPerigo) return 'perigo';
+  if (e.caverna) return 'caverna';
+  return e.hora;
+}
+
+/**
+ * Ajuste de volume (dB) por tema e contexto, por cima de `GANHO_TRILHA_GRAVADA` (spec 019,
+ * T05). Medido na régua (e2e/trilha-regua.spec.ts): cada tema fica de 0 a 1 dB abaixo da trilha
+ * de hoje no mesmo contexto, nunca acima (o dono: "o mesmo volume percebido da de hoje").
+ * Contexto que falta usa o do dia; tema que falta, 0.
+ */
+export const NIVEL_TRILHA: Readonly<Record<string, Partial<Record<ContextoNivel, number>>>> = {
+  'bruma-e-luz': { dia: 2.4, tarde: 2.9, noite: 5.8, caverna: 4.9, perigo: 4.2 },
+  'planeta-vivo': { dia: 4.1, tarde: 4.5, noite: 7.0, caverna: 7.2, perigo: 5.5 },
+  'mata-encantada': { dia: 2.4, tarde: 2.9, noite: 5.4, caverna: 5.9, perigo: 4.1 },
+  'doce-reino': { dia: 3.6, tarde: 3.8, noite: 7.2, caverna: 6.5, perigo: 5.9 },
+  'era-dos-dinos': { dia: 2.1, tarde: 2.6, noite: 5.1, caverna: 5.0, perigo: 4.0 },
+  'exploracao-lunar': { dia: 4.8, tarde: 5.2, noite: 7.2, caverna: 6.9, perigo: 5.6 },
+  'rancho-alegre': { dia: 0, tarde: 0.2, noite: 2.5, caverna: 3.0 },
+};
+
+/** O ajuste do tema no contexto, em ganho linear. */
+export function nivelTrilha(temaId: string, c: ContextoNivel): number {
+  const t = NIVEL_TRILHA[temaId];
+  const db = t?.[c] ?? t?.dia ?? 0;
+  return Math.pow(10, db / 20);
+}
 
 /** Quanto tempo uma camada ou frase fica aberta sem tocar antes de ser solta. */
 export const SOLTAR_APOS_S = 45;
@@ -673,6 +706,8 @@ export interface OpcoesTrilhaGravada {
   rng?: () => number;
   /** Segundos que a trilha leva para entrar (em cruz com a de hoje). */
   entrada?: number;
+  /** Sem o ajuste de volume do tema (só a régua, para medir o que falta ajustar). */
+  semNivel?: boolean;
 }
 
 /**
@@ -697,6 +732,8 @@ export class TrilhaGravada {
   private prox = { volta: 0, i: 0 };
   private sorteio: SorteioSemRepetir;
   private saida!: GainNode;
+  /** O ajuste de volume do tema no contexto de agora (`nivelTrilha`). */
+  private nivel!: GainNode;
   private filtro!: BiquadFilterNode;
   private envio!: GainNode;
   private atraso!: DelayNode;
@@ -749,7 +786,10 @@ export class TrilhaGravada {
     this.atraso.connect(this.realim);
     this.realim.connect(this.atraso);
     this.atraso.connect(this.saida);
-    this.saida.connect(this.destino);
+    this.nivel = this.no(c.createGain());
+    this.nivel.gain.value = this.nivelDe(e);
+    this.saida.connect(this.nivel);
+    this.nivel.connect(this.destino);
     const alv = alvoMix(e, this.op.temPerigo, this.op.rancho);
     this.alvo = alv;
     this.filtro.frequency.value = alv.fx.lp;
@@ -766,6 +806,15 @@ export class TrilhaGravada {
     }
     this.prox = { volta: 0, i: 0 };
     this.agendar();
+  }
+
+  private nivelDe(e: EstadoTrilha): number {
+    return this.op.semNivel ? 1 : nivelTrilha(this.tema.id, contextoNivel(e, this.op.temPerigo));
+  }
+
+  /** O ajuste de volume que vale agora (ganho linear). */
+  get ganhoNivel(): number {
+    return this.nivel?.gain.value ?? 1;
   }
 
   valor(k: Camada, t = this.ctx.currentTime): number {
@@ -909,6 +958,14 @@ export class TrilhaGravada {
       p.cancelScheduledValues(agora);
       p.setValueAtTime(interpolar(novos, agora), agora);
       for (const [t, v] of novos) if (t > agora) p.linearRampToValueAtTime(v, t);
+    }
+    // o ajuste de volume do contexto novo acompanha as camadas, em 1,5 compasso
+    const nv = this.nivelDe(e);
+    const pn = this.nivel.gain;
+    if (Math.abs(pn.value - nv) > 1e-4) {
+      pn.cancelScheduledValues(tb);
+      pn.setValueAtTime(pn.value, tb);
+      pn.linearRampToValueAtTime(nv, tb + 1.5 * this.compasso);
     }
     const fx = alv.fx;
     const tc = this.compasso / 3;

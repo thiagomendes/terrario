@@ -251,6 +251,14 @@ export interface NaturezaTema {
    * nunca). Sempre sons curtos, nunca em laço.
    */
   roca?: { galo?: number; mugido?: number; cigarra?: number; sapo?: number };
+  /**
+   * Spec 019: o som da tempestade (padrão 'trovao'). 'pipoca' no Doce Reino (a legenda diz
+   * "estouro de pipoca"); 'estalo' na Lua, o chiado de rádio da tempestade solar, sem clarão
+   * (no vácuo não há trovão).
+   */
+  trovao?: 'trovao' | 'pipoca' | 'estalo';
+  /** Spec 019: sem chiado de chuva (no vácuo a "chuva" é de poeira e não faz barulho). */
+  chuvaMuda?: boolean;
 }
 
 /** Ajuste do som de um material no tema (mesmo motor de amostras). */

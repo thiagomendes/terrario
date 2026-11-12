@@ -134,6 +134,7 @@ import { criarTrilhaMundo, type InfoTrilha } from '../audio/trilhaMundo';
 import { SinaisTrilha, RAIO_AMIGOS } from '../audio/sinaisTrilha';
 import type { EstadoTrilha } from '../audio/trilha';
 import type { ResultadoRegua } from '../audio/reguaTrilha';
+import type { ResultadoReguaVozes } from '../audio/reguaVozes';
 import { perfilDaQualidade, type Config, type GerenciadorConfig } from '../jogo/config';
 import { definirIconesBrinquedo, iconeDoItem } from '../ui/icones';
 import { gerarIconesBrinquedo } from './iconesBrinquedo';
@@ -212,9 +213,22 @@ import {
   manterAudioDesbloqueado,
   contextoPreparado,
   teclaParaMudo,
+  tocarSomDoBloco,
 } from '../audio/ligador';
+import { EVENTO_SOM_INTERFACE, SOM_DO_GESTO, ehSomInterface } from '../audio/somInterface';
+import { SOM_AGUA_INICIAL, passoSomAgua, type EstadoSomAgua } from '../audio/somAgua';
 import { grupoDoBloco, GRUPOS_MATERIAL } from '../audio/materiais';
-import { iniciarAmbiente, tocarSom, type Ambiente, aquecerAmostras } from '../audio/sons';
+import {
+  iniciarAmbiente,
+  tocarSom,
+  type Ambiente,
+  type EventoSom,
+  aquecerAmostras,
+  chuvaAudivel,
+  observarSons,
+  somDoTrovao,
+  SONS_NOVOS_019,
+} from '../audio/sons';
 import { blocoSobPes, criarDetectorMovimento } from '../player/movimento';
 import { VEL_ANDAR, VEL_CORRER } from '../player/fisica';
 import {
@@ -455,6 +469,8 @@ export interface EstadoDepuracao {
   sonsTocados?: () => string[];
   /** Spec 019 (só nos testes de tela): o pacote de vozes do tema. */
   vozesGravadas?: () => { pronto: boolean; falhou: boolean; decodificadas: number };
+  /** Spec 019 (só nos testes de tela): régua de volume das vozes e golpes gravados. */
+  reguaVozes?: (cru?: boolean) => Promise<ResultadoReguaVozes>;
   /** Testes que constroem: põe o kit de blocos na barra (o mundo novo começa vazio). */
   darKit?: () => void;
   /** Testes e capturas: a lavoura avança como se tantos segundos tivessem passado. */
@@ -517,7 +533,11 @@ export interface EstadoDepuracao {
     forcar(p: Partial<EstadoTrilha> | null): void;
     abrirTudo(): Promise<void>;
     /** Régua de volume: a trilha de hoje e a gravada, renderizadas offline no padrão. */
-    regua(contexto: 'dia' | 'noite', segundos?: number): Promise<ResultadoRegua>;
+    regua(
+      contexto: 'dia' | 'tarde' | 'noite' | 'caverna' | 'perigo',
+      segundos?: number,
+      semNivel?: boolean,
+    ): Promise<ResultadoRegua>;
   };
   /** A câmera de terceira pessoa (spec 015): o jogo só tem esta. */
   camera?: {
@@ -785,8 +805,19 @@ export function criarCena(
    * quem chamou, uma vez só).
    */
   function recusarProtegido(r: RecusaProtecao): false {
-    avisosProtecao.avisar(r);
+    avisarProtecao(r);
     return false;
+  }
+  /** Quando o cadeado tocou: a recusa que vem logo depois (do mesmo toque) fica calada. */
+  let protecaoEm = -Infinity;
+  /**
+   * Spec 019: o aviso da proteção com o "toc" do cadeado (baixinho, sem a bronca da recusa).
+   * Segurando o botão no bloco protegido, o toc repete devagar.
+   */
+  function avisarProtecao(r: RecusaProtecao): void {
+    avisosProtecao.avisar(r);
+    protecaoEm = performance.now();
+    somEfeito('toc', 450);
   }
   const controle = criarControle(canvas, camera, semente, edicoes, (cx, cz) =>
     provedor.obter(cx, cz),
@@ -1185,7 +1216,8 @@ export function criarCena(
     precipitacao.definirLuz(0.25 + 0.75 * (1 - a.noite));
     const arborizado = b === 'floresta' || b === 'pantano' || b === 'taiga' || b === 'campos';
     precipitacao.folhas(cameraVisao.position, arborizado ? aberto : 0, outonoAtual);
-    ambiente?.definirChuva(nevando ? clima.estado.chuva * 0.25 : clima.estado.chuva);
+    // spec 019: no vácuo (Lua) a "chuva" é de poeira e não faz chiado
+    ambiente?.definirChuva(chuvaAudivel(temaAtual.natureza, clima.estado.chuva, nevando));
     // relâmpago suave de brinquedo: clareia a cena sem estourar em branco
     flash = Math.max(0, flash - dt * 3.2);
     pipeline.imageProcessing.exposure = tomCena.exposicao + flash * flash * 0.85;
@@ -1495,7 +1527,7 @@ export function criarCena(
       if ('recusa' in d) primeira ??= d.recusa;
       else vai.push({ x: e.x, y: e.y, z: e.z, v: d.v, manterDono: d.manterDono });
     }
-    if (primeira) avisosProtecao.avisar(primeira);
+    if (primeira) avisarProtecao(primeira);
     if (!vai.length) return;
     lote = vai.map(({ x, y, z, v }) => ({ x, y, z, v }));
     const id = proximoId();
@@ -1865,8 +1897,9 @@ export function criarCena(
         ? recusaQuebrar(regra, voce, alvo.x, alvo.y + 1, alvo.z)
         : null);
     if (protegido) {
+      recusarProtegido(protegido);
       barramento.emitir('recusa', { motivo: 'colocar' });
-      return recusarProtegido(protegido);
+      return false;
     }
     const id = proximoId();
     prever(id, alvo.x, alvo.y, alvo.z, Bloco.TERRA_ARADA);
@@ -1886,7 +1919,7 @@ export function criarCena(
     // spec 016: no bloco protegido a rachadura nem começa; segurando, o aviso diz de quem é
     const r = protecaoNaMira();
     if (r) {
-      if (minerador.segurando) avisosProtecao.avisar(r);
+      if (minerador.segurando) avisarProtecao(r);
       return null;
     }
     return { x: a.x, y: a.y, z: a.z, bloco: blocoEm(a.x, a.y, a.z) };
@@ -1971,8 +2004,8 @@ export function criarCena(
       // spec 016: o baú e a fornalha que alguém pôs abrem só para ele e para o dono do mundo
       const fechado = recusaConteiner(regra, voce, a.x, a.y, a.z);
       if (fechado) {
-        barramento.emitir('recusa', { motivo: 'colocar' });
         recusarProtegido(fechado);
+        barramento.emitir('recusa', { motivo: 'colocar' });
         return;
       }
       // baú e fornalha abrem quando o núcleo manda o conteúdo; a cama decide o sono lá
@@ -3090,11 +3123,36 @@ export function criarCena(
   const motorAudio = criarMotorAudio(
     () => (contextoPreparado() ?? new AudioContext()) as unknown as ContextoAudio,
   );
-  ligarAudio(barramento, motorAudio);
+  ligarAudio(barramento, motorAudio, { calarRecusa: () => performance.now() - protecaoEm < 60 });
   // spec 019: vozes gravadas dos bichos e dos moradores, o baque do golpe e o "puf" da derrota.
   // O pacote do tema desce em segundo plano depois que o mundo abriu (nunca segura o mundo);
   // até chegar, ou se não vier, fica a voz sintetizada de antes.
   const sonsTocados: string[] = [];
+  /** Spec 019 (T05): os sons novos (ações, mundo, gestos, interface), com espera entre dois iguais. */
+  const ultimoEfeito = new Map<EventoSom, number>();
+  function somEfeito(ev: EventoSom, esperaMs = 120): void {
+    const t = performance.now();
+    if (t - (ultimoEfeito.get(ev) ?? -Infinity) < esperaMs) return;
+    ultimoEfeito.set(ev, t);
+    tocarSom(motorAudio, ev);
+  }
+  if (ehTesteDeTela())
+    observarSons((ev) => {
+      if (!SONS_NOVOS_019.includes(ev)) return;
+      sonsTocados.push(`efeito:${ev}`);
+      if (sonsTocados.length > 300) sonsTocados.shift();
+    });
+  // a interface pede o som pela janela (ela não conhece o motor)
+  window.addEventListener(EVENTO_SOM_INTERFACE, (ev) => {
+    const som = (ev as CustomEvent<unknown>).detail;
+    if (ehSomInterface(som)) somEfeito(som, som === 'conquista' ? 900 : 120);
+  });
+  // o gesto do próprio jogador (spec 015) ganha o som dele
+  window.addEventListener('brumaluz:gesto', (ev) => {
+    const g = (ev as CustomEvent<unknown>).detail;
+    if (typeof g === 'string' && g in SOM_DO_GESTO)
+      somEfeito(SOM_DO_GESTO[g as keyof typeof SOM_DO_GESTO], 300);
+  });
   const vozes = criarVozesGravadas({
     motor: motorAudio,
     tema: temaAtual.id,
@@ -3133,6 +3191,13 @@ export function criarCena(
       falhou: vozes.falhou,
       decodificadas: vozes.decodificadas,
     });
+    // carregada à parte: a régua não entra no pacote do jogo
+    estado.reguaVozes = async (cru) =>
+      (await import('../audio/reguaVozes')).medirReguaVozes(
+        temaAtual.id,
+        import.meta.env.BASE_URL ?? '/',
+        cru,
+      );
   }
   /** O morador da conversa aberta e quantas trocas ela já teve (obrigado e depois contente). */
   let moradorDaTroca = 0;
@@ -3207,11 +3272,17 @@ export function criarCena(
       forcar: (p) => trilha.forcar(p),
       abrirTudo: () => trilha.abrirTudo(),
       // carregada à parte: a régua não entra no pacote do jogo
-      regua: async (contexto, segundos) =>
-        (await import('../audio/reguaTrilha')).medirRegua(temaAtual.id, contexto, segundos),
+      regua: async (contexto, segundos, semNivel) =>
+        (await import('../audio/reguaTrilha')).medirRegua(
+          temaAtual.id,
+          contexto,
+          segundos,
+          semNivel,
+        ),
     };
   let ultimoX = controle.jogador.x;
   let ultimoZ = controle.jogador.z;
+  let somAgua: EstadoSomAgua = { ...SOM_AGUA_INICIAL };
   function atualizarSomMovimento(dt: number): void {
     const j = controle.jogador;
     const vel = dt > 0 ? Math.hypot(j.x - ultimoX, j.z - ultimoZ) / dt : 0;
@@ -3228,6 +3299,15 @@ export function criarCena(
       velocidadeHoriz: vel,
       correndo: vel > (VEL_ANDAR + VEL_CORRER) / 2,
     });
+    // spec 019: "chuá" ao cair na água e braçadas nadando
+    const agua = passoSomAgua(somAgua, {
+      naAgua: !!j.naAgua,
+      vy: j.vy,
+      velHoriz: vel > 40 ? 0 : vel,
+      dt,
+    });
+    somAgua = agua.estado;
+    for (const s of agua.sons) somEfeito(s, 200);
     if (eventos.length === 0) return;
     for (const ev of eventos) {
       if (ev === 'pulo' || ev === 'aterrissagem') animador.evento(ev);
@@ -3469,7 +3549,7 @@ export function criarCena(
     if ((c.criado || c.domada) && !podeLevarBicho(voce, c, donoDoMundo)) {
       const dono = c.dono ?? donoDoMundo;
       const apelido = regra.apelido(dono);
-      avisosProtecao.avisar(apelido ? { motivo: 'bicho', dono: apelido } : { motivo: 'bicho' });
+      avisarProtecao(apelido ? { motivo: 'bicho', dono: apelido } : { motivo: 'bicho' });
       return true;
     }
     animador.evento('golpe');
@@ -3496,6 +3576,8 @@ export function criarCena(
   }
   // segurar para comer (toque): 1,1 s mastigando; soltar antes cancela
   let comerTimer = 0;
+  /** Quando o mastigar (segurar para comer) começou: o fim da refeição é só o "nhac". */
+  let mastigouEm = -Infinity;
   function comecarAComer(): void {
     pararDeComer();
     if (cliente.sobrevivencia.fome >= 20) {
@@ -3503,6 +3585,7 @@ export function criarCena(
       return;
     }
     tocarSom(motorAudio, 'comer');
+    mastigouEm = performance.now();
     animador.evento('comer');
     comerTimer = window.setTimeout(() => {
       comerTimer = 0;
@@ -4167,11 +4250,7 @@ export function criarCena(
         if (!e.meu) {
           aplicarPlano(e.e, e);
           // a festa da colheita dos outros sai no evento 'colheu'
-          tocarSom(
-            motorAudio,
-            e.e === 'quebra' ? 'quebra' : 'colocar',
-            grupoDoBloco(e.bloco) ?? 'terra',
-          );
+          tocarSomDoBloco(motorAudio, e.e === 'quebra' ? 'quebra' : 'colocar', e.bloco, 'terra');
         }
         break;
       case 'porta':
@@ -4258,7 +4337,11 @@ export function criarCena(
         window.dispatchEvent(new CustomEvent('brumaluz:espantou', { detail: e.tipo }));
         break;
       case 'comeu':
-        tocarSom(motorAudio, 'comer');
+        // spec 019: o mastigar já tocou ao segurar (toque); aqui fecha com o "nhac", sem
+        // repetir as mordidas (antes o 'comer' tocava duas vezes por refeição)
+        if (performance.now() - mastigouEm < 2500) somEfeito('nhac');
+        else tocarSom(motorAudio, 'comer');
+        mastigouEm = -Infinity;
         animador.evento('comer');
         window.dispatchEvent(new CustomEvent('brumaluz:comeu'));
         break;
@@ -4279,14 +4362,18 @@ export function criarCena(
         controle.jogador.topoQueda = undefined;
         renascerPedidoEm = -1;
         break;
-      case 'relampago':
-        if (!temaAtual.climaVisual.relampago) break;
-        flash = 1;
+      case 'relampago': {
+        // spec 019: o som da tempestade do tema (pipoca no Doce); na Lua não há clarão, só
+        // o estalo de rádio da tempestade solar, com a legenda dele
+        const somTempestade = somDoTrovao(temaAtual.natureza);
+        if (!temaAtual.climaVisual.relampago && somTempestade !== 'estalo') break;
+        if (temaAtual.climaVisual.relampago) flash = 1;
         setTimeout(() => {
-          tocarSom(motorAudio, 'trovao');
+          somEfeito(somTempestade);
           legenda(temaAtual.textos.legendas.trovao);
         }, e.atrasoTrovao * 1000);
         break;
+      }
       case 'sono':
         window.dispatchEvent(new CustomEvent('brumaluz:sono', { detail: { dormiu: e.dormiu } }));
         break;
@@ -4321,11 +4408,11 @@ export function criarCena(
         window.dispatchEvent(new CustomEvent('brumaluz:trocaRecusada', { detail: e.motivo }));
         break;
       case 'recusa':
+        // spec 016: o núcleo disse de quem é (bicho do amigo, ou a previsão errou): o cadeado
+        if (e.protecao) avisarProtecao(e.protecao);
         barramento.emitir('recusa', { motivo: e.motivo === 'quebrar' ? 'quebrar' : 'colocar' });
         if (e.motivo === 'semente') toast(AVISO_SEMENTE);
         if (e.motivo === 'voltarCasa') toast(AVISO_ESPERA_CASA);
-        // spec 016: o núcleo disse de quem é (bicho do amigo, ou a previsão errou)
-        if (e.protecao) avisosProtecao.avisar(e.protecao);
         break;
       case 'arou':
         if (e.meu) window.dispatchEvent(new CustomEvent('brumaluz:arou'));

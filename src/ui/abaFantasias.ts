@@ -10,6 +10,7 @@
  * além da prévia e do cartão escolhido.
  */
 import { fotografarBoneco } from '../render/fotoBoneco';
+import { tocarSomInterface } from '../audio/somInterface';
 import {
   alternarPecaDaFantasia,
   tirarFantasia,
@@ -400,6 +401,7 @@ export function criarAbaFantasias(painel: HTMLElement, op: OpcoesAbaFantasias): 
     botao.classList.remove('festa');
     void botao.offsetWidth;
     botao.classList.add('festa');
+    tocarSomInterface('festa');
     op.mudar(proxima, true);
   }
 

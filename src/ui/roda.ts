@@ -4,6 +4,7 @@
  * aprovado (`.sdd/specs/015-terceira-pessoa/referencia/camera-e-gestos.html`). Serve para
  * qualquer lista: o menu da tela e os gestos usam a mesma roda, trocando de lista no lugar.
  */
+import { tocarSomInterface } from '../audio/somInterface';
 
 export interface ItemRoda {
   id: string;
@@ -300,6 +301,7 @@ export function criarRoda(op: OpcoesRoda, raiz: HTMLElement = document.body): Ro
       aberta = true;
       avisos(true);
       op.aoMudar?.(true);
+      tocarSomInterface('rodaAbrir');
     }
   }
 
@@ -323,6 +325,7 @@ export function criarRoda(op: OpcoesRoda, raiz: HTMLElement = document.body): Ro
       aberta = false;
       avisos(false);
       op.aoMudar?.(false);
+      tocarSomInterface('rodaFechar');
     }
   }
 

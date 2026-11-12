@@ -83,7 +83,15 @@ export function construirExploracaoLunar(): Tema {
       folhagem: { tom: 1.3, base: 'cristal' },
       cristal: { tom: 1.15 },
     },
-    natureza: { passaros: 0, grilos: 0, tom: 1, bipes: true, vento: 0 },
+    natureza: {
+      passaros: 0,
+      grilos: 0,
+      tom: 1,
+      bipes: true,
+      vento: 0,
+      trovao: 'estalo',
+      chuvaMuda: true,
+    },
     personagem: { acessorio: 'capacete', roupaEstilo: 2, roupaCor: 7, calcaCor: 6 },
   };
   return tema;

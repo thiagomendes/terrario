@@ -1,5 +1,6 @@
 import { LIMITES, type Config, type GerenciadorConfig, type Qualidade } from '../jogo/config';
 import { criarModal } from './mundos';
+import { CREDITOS_SONS } from '../audio/creditosSons';
 
 export const CSS_CONFIG = `
 /* abas: trilho de poço com a aba escolhida em peça amarela */
@@ -41,6 +42,14 @@ export const CSS_CONFIG = `
 .interruptor::before { content: ''; position: absolute; inset: -7px -4px; }
 .interruptor[aria-checked='true']::after { transform: translateX(22px); }
 .rodape-config { display: flex; justify-content: space-between; gap: 10px; margin-top: 16px; flex-wrap: wrap; }
+/* spec 019: créditos dos sons, recolhidos no fim da aba Áudio */
+.creditos-sons { margin-top: 12px; padding: 10px 12px; border-radius: 14px; background: var(--poco); box-shadow: var(--sombra-poco); color: var(--tinta); }
+.creditos-sons summary { font: 800 0.92rem var(--jogo); cursor: pointer; min-height: 32px; display: flex; align-items: center; }
+.creditos-sons summary:focus-visible { outline: 3px solid var(--azul); outline-offset: 2px; border-radius: 8px; }
+.creditos-sons .lista-creditos { max-height: 220px; overflow-y: auto; font-size: 0.8rem; line-height: 1.4; padding-right: 4px; }
+.creditos-sons h4 { margin: 10px 0 2px; font-size: 0.85rem; }
+.creditos-sons p { margin: 0; color: var(--tinta-suave); }
+.creditos-sons ul { margin: 4px 0 0; padding-left: 18px; color: var(--tinta-suave); columns: 2 140px; }
 @media (max-width: 560px) { .opcao-config { grid-template-columns: 1fr 56px; } .opcao-config .controle { grid-column: 1 / -1; grid-row: 2; } }
 `;
 
@@ -335,9 +344,39 @@ export function criarPainelConfig(raiz: HTMLElement, g: GerenciadorConfig) {
     return el;
   }
 
+  /** Spec 019: quem fez os sons (recolhido; abre ao tocar). */
+  function creditosSons(): HTMLElement {
+    const d = document.createElement('details');
+    d.className = 'creditos-sons';
+    d.dataset.creditosSons = '';
+    const s = document.createElement('summary');
+    s.textContent = 'Créditos dos sons';
+    const lista = document.createElement('div');
+    lista.className = 'lista-creditos';
+    for (const g of CREDITOS_SONS) {
+      const h = document.createElement('h4');
+      h.textContent = g.titulo;
+      const p = document.createElement('p');
+      p.textContent = g.texto;
+      lista.append(h, p);
+      if (g.autores?.length) {
+        const ul = document.createElement('ul');
+        for (const a of g.autores) {
+          const li = document.createElement('li');
+          li.textContent = a;
+          ul.appendChild(li);
+        }
+        lista.appendChild(ul);
+      }
+    }
+    d.append(s, lista);
+    return d;
+  }
+
   function render(): void {
     botoesAba.forEach((b) => b.setAttribute('aria-selected', String(b.dataset.aba === aba)));
     conteudo.replaceChildren(...ABAS[aba].itens.map(linha));
+    if (aba === 'audio') conteudo.appendChild(creditosSons());
   }
   restaurar.addEventListener('click', () => {
     g.restaurar();

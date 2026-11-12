@@ -239,17 +239,17 @@ O tema troca o tom e, às vezes, a receita (`AjusteMaterial`, aplicado em `sons:
 | Aterrissagem | Amostra 'aterrissagem' | `cena:3062` | Idem | como hoje (decisão do dono) |
 | Arar com a enxada | 'quebra' de terra | `cena:1778`; dos outros em `cena:4131` | Raspar de enxada gerado na hora (hoje é igual a quebrar terra) | refazer gerado |
 | Abrir e fechar porta ou porteira | 'colocar' de madeira | `cena:3986` | Rangido curto de dobradiça (porta de liga na Lua, porta de biscoito no Doce) | refazer gerado |
-| Comer (começar) | 'comer' (3 mordidas de ruído) | `cena:3325` | Mordidas gravadas e "nhac" final | gravar |
-| Comer (terminou, aviso do núcleo) | 'comer' de novo (o som toca 2 vezes por refeição) | `cena:4060` | Só o "nhac" final | refazer gerado |
+| Comer (começar) | 'comer' (3 mordidas de ruído) | `cena:3325` | Mordidas gravadas e "nhac" final | **feito (T05), gerado**: as mordidas continuam geradas e tocam uma vez só |
+| Comer (terminou, aviso do núcleo) | 'comer' de novo (o som toca 2 vezes por refeição) | `cena:4060` | Só o "nhac" final | **feito (T05)**: segurando para comer, o fim é o 'nhac'; no clique, a refeição toca 'comer' uma vez |
 | Coletar item do chão | 'coleta' (blip ascendente) | `cena:2522` | Mantém o blip, com tom por raridade | refazer gerado |
 | Colher planta madura | 'coleta' + confete | `cena:2510`; vista de perto em `cena:2502` | Festinha da colheita: blip e chocalho | refazer gerado |
 | Dano | 'dano' (ruído grave + tom que desce) | `cena:4065` | "Ui!" fofo gravado, sem grito; pode variar por causa (queda, afogamento, criatura) | gravar |
 | Trocar de item (slot) | 'troca' (dois bipes) | `ligador:20` | Mantém | como hoje (é curto, discreto e funciona) |
 | Jogar item | 'troca' | `cena:2553` | "Fuup" de arremesso | refazer gerado |
-| Recusa (não pode quebrar ou colocar, dedo longe, ferramenta quebrou) | 'recusa' (dois tons que descem) | `ligador:17`; `cena:3797`, `cena:3992`, `cena:4123` | Mantém a recusa. Ferramenta quebrou ganha um "crec" próprio | refazer gerado |
+| Recusa (não pode quebrar ou colocar, dedo longe, ferramenta quebrou) | 'recusa' (dois tons que descem) | `ligador:17`; `cena:3797`, `cena:3992`, `cena:4123` | Mantém a recusa. Ferramenta quebrou ganha um "crec" próprio | **em parte (T05)**: o que a proteção barra (spec 016: bloco, baú, fornalha, bicho do amigo) é um "toc" baixinho no lugar da recusa; falta o "crec" da ferramenta |
 | Entrada (ligar o som, amigo entrou, domou) | 'entrada' (arpejo pentatônico em ré) | `cena:3015`, `cena:4102`, `cena:4033` | Vinheta curta gravada por tema, tocada pela orquestrinha dele | gravar |
-| Água: entrar, nadar, mergulhar | **Mudo** | n/a | Splash ao entrar, braçadas e som abafado debaixo d'água | refazer gerado |
-| Bicho protegido (do amigo) | Só o aviso escrito, sem som | `cena:3292` | 'recusa' | refazer gerado |
+| Água: entrar, nadar, mergulhar | **Mudo** | n/a | Splash ao entrar, braçadas e som abafado debaixo d'água | **feito em parte (T05)**: "chuá" ao cair na água e ao pôr ou tirar o bloco de água (bug 8), braçada macia nadando (`src/audio/somAgua.ts`); falta o abafado debaixo d'água |
+| Bicho protegido (do amigo) | Só o aviso escrito, sem som | `cena:3292` | 'recusa' | **feito (T05)**: o "toc" do cadeado, o mesmo dos blocos protegidos |
 
 ---
 
@@ -262,8 +262,8 @@ Tudo vive em `iniciarAmbiente` (`sons:920`): dois barramentos (`busNatureza` 0.8
 | Som | Temas | Hoje | Gatilho | Proposta | Estado |
 |---|---|---|---|---|---|
 | Vento | Todos menos a Lua (vento 0) | Ruído em laço com filtro que respira (LFO a 0,07 Hz) | `sons:1204-1224` | Laço gravado curto e leve (folhas no Rancho e na Mata, assobio na taiga) que sobe com chuva e tempestade | gravar |
-| Chuva | Todos (na neve, ×0,25) | Ruído com passa-alta, ganho ∝ chuva | `sons:1225-1237`, `cena:1089` | Laço gravado de chuva: garoa e toró. No Doce, granulado (chuva de confeito); na Lua, chiado de poeira bem baixinho. Chuva no telhado quando coberto | gravar |
-| Trovão | Todos com `relampago`, ou seja, todos menos a Lua | Síntese 'trovao' (2 ruídos graves + tom) depois do relâmpago | `cena:4085`, `sons:546` | Trovão gravado e macio, em 2 versões. No Doce, "estouro de pipoca" (como diz a legenda); no Planeta, trovão elétrico | gravar |
+| Chuva | Todos (na neve, ×0,25) | Ruído com passa-alta, ganho ∝ chuva | `sons:1225-1237`, `cena:1089` | Laço gravado de chuva: garoa e toró. No Doce, granulado (chuva de confeito); na Lua, chiado de poeira bem baixinho. Chuva no telhado quando coberto | **em parte (T05)**: na Lua não há mais chiado (`chuvaMuda`, bug 13); o laço gravado fica para depois |
+| Trovão | Todos com `relampago`, ou seja, todos menos a Lua | Síntese 'trovao' (2 ruídos graves + tom) depois do relâmpago | `cena:4085`, `sons:546` | Trovão gravado e macio, em 2 versões. No Doce, "estouro de pipoca" (como diz a legenda); no Planeta, trovão elétrico | **em parte (T05), gerado**: o Doce estoura pipoca ('pipoca'); a Lua, sem clarão, toca o chiado de rádio 'estalo' com a legenda "Estalo de tempestade solar" (bug 14). Os outros seguem com o trovão de antes |
 | Pássaros | Dia; multiplicador por tema (Bruma 1, Planeta 1, Mata 1.6, Doce 0.8, Dinos 0.6, Lua 0, Rancho 1.1) e tom (Planeta e Doce 1.3, Dinos 0.55) | 2 a 5 pios de senoide sorteados | `sons:1003`, `sons:1164` | Pássaros gravados por tema: sabiá e bem-te-vi na Mata e no Rancho, chilreio alienígena no Planeta, pios de caixinha no Doce, aves pré-históricas nos Dinos | gravar |
 | Grilos | Noite; multiplicador (Bruma 1, Planeta 0.2, Mata 1.5, Doce 0.5, Dinos 1.2, Lua 0, Rancho 1) | 4 bipes de senoide a 4,3 kHz | `sons:1032`, `sons:1160` | Grilos gravados, curtos e sem laço. Sapinhos na Mata | gravar |
 | Bipes de rádio | Lua (no lugar de pássaros e grilos) | 2 bipes de senoide | `sons:1026`, `sons:1161`, `sons:1165` | Rádio da base: bipes e chiado curto, gravados | gravar |
@@ -338,16 +338,16 @@ Nenhum arquivo de `src/ui/` toca som.
 | Onde | Hoje | Gatilho para ligar | Proposta | Estado |
 |---|---|---|---|---|
 | Trocar de item na barra | 'troca' | `ligador:20` | Mantém | como hoje (discreto e já existe) |
-| Botão da roda: abrir e fechar (menu e gestos) | Mudo | `src/ui/roda.ts:247` (`abrir`), `src/ui/menuRoda.ts:220`, `:224` | "Plop" suave ao abrir, ao fechar e ao escolher | refazer gerado |
-| Gestos: acenar, aplaudir, comemorar, dançar, chamar... | Mudos (só a animação; o morador responde com voz) | `src/render/gestosJogo.ts`, `cena:3245` | Palminhas no aplaudir, "êêê" no comemorar, assobio no chamar, musiquinha de 2 s no dançar | gravar |
-| Mochila (inventário): abrir e fechar | Mudo | `src/ui/inventario.ts:607` | Zíper ou bolsa curto | refazer gerado |
+| Botão da roda: abrir e fechar (menu e gestos) | Mudo | `src/ui/roda.ts:247` (`abrir`), `src/ui/menuRoda.ts:220`, `:224` | "Plop" suave ao abrir, ao fechar e ao escolher | **feito (T05)**: 'rodaAbrir' e 'rodaFechar' (escolher fecha a roda) |
+| Gestos: acenar, aplaudir, comemorar, dançar, chamar... | Mudos (só a animação; o morador responde com voz) | `src/render/gestosJogo.ts`, `cena:3245` | Palminhas no aplaudir, "êêê" no comemorar, assobio no chamar, musiquinha de 2 s no dançar | **feito (T05), gerado**: palminhas (aplaudir), sino (acenar e cumprimentar), estrelinhas (comemorar), assobio (chamar), musiquinha (dançar), tique (apontar), "puf" (sentar); `SOM_DO_GESTO` em `src/audio/somInterface.ts` |
+| Mochila (inventário): abrir e fechar | Mudo | `src/ui/inventario.ts:607` | Zíper ou bolsa curto | **feito em parte (T05)**: zíper ao abrir ('mochila'); fechar segue mudo |
 | Arrastar e soltar item no inventário | Mudo | `src/ui/inventario.ts` (soltar no slot) | Tique leve | refazer gerado |
-| Craft: receita feita | Mudo | `src/main.ts:293` (`registrarFabricacao`) | "Tchanam" curto de criação | refazer gerado |
+| Craft: receita feita | Mudo | `src/main.ts:293` (`registrarFabricacao`) | "Tchanam" curto de criação | **feito (T05)**: 'criar' |
 | Baú e fornalha: abrir | Mudo | Contêiner aberto (`cena:3964`, `conteinerAberto`) | Rangido de tampa e chama da fornalha | refazer gerado |
 | Trocas com morador: abrir | Voz 'contente' (`cena:1901`) | `src/main.ts:317` | Já tem voz. Ganha um tique de papel na troca feita | refazer gerado |
-| Conquista (missão do diário concluída) | Mudo (toast amarelo) | `src/main.ts:636` (`notificar(..., 'trofeu')`), `src/ui/interface.ts:204` | Vinheta de conquista gravada, uma por tema (3 a 4 notas da orquestrinha) | gravar |
+| Conquista (missão do diário concluída) | Mudo (toast amarelo) | `src/main.ts:636` (`notificar(..., 'trofeu')`), `src/ui/interface.ts:204` | Vinheta de conquista gravada, uma por tema (3 a 4 notas da orquestrinha) | **feito (T05), gerado**: arpejo 'conquista', o mesmo em todo tema (no máximo um por segundo) |
 | Toasts comuns | Mudos | `src/ui/interface.ts:204` | Seguem mudos (são muitos e seriam irritantes) | como hoje (só a conquista ganha som) |
-| Festa ao vestir fantasia (017) | Muda (só a animação `.festa`) | `src/ui/abaFantasias.ts:396` (`escolher`) | Fanfarrinha de confete gravada, em 2 versões | gravar |
+| Festa ao vestir fantasia (017) | Muda (só a animação `.festa`) | `src/ui/abaFantasias.ts:396` (`escolher`) | Fanfarrinha de confete gravada, em 2 versões | **feito (T05), gerado**: confete 'festa' (4 versões) |
 | Título, pausa, configurações, mundos | Mudos | `src/ui/titulo.ts`, `src/ui/pausa.ts`, `src/ui/configuracoes.ts` | Tique de botão leve e comum a todos | refazer gerado |
 | Dormir e acordar | Mudo | `src/main.ts:479` (`brumaluz:sono`), `cena:4092` (`acordou`) | Canção de ninar de 2 compassos ao dormir e o galo ou passarinho do tema ao acordar | gravar |
 | Ligar o som (primeiro toque) | 'entrada' | `cena:3015` | A vinheta do tema (seção 3) | gravar |
@@ -373,9 +373,9 @@ Nenhum arquivo de `src/ui/` toca som.
 6. **O Espectro da bruma não usa a própria voz.** `VOZES_BRUMA.espectro.chamado` nunca toca: o
    Bruma usa a síntese 'espectro' (`cena:4003`, `cena:4012`).
 7. **Comer toca 'comer' duas vezes** por refeição: ao começar (`cena:3325`) e quando o núcleo
-   confirma (`cena:4060`).
+   confirma (`cena:4060`). **Corrigido na T05.**
 8. **A água soa como pedra.** O bloco "água" tem som de pedra (`src/world/blocks.ts`) ao colocar
-   ou tirar. Nadar e mergulhar não têm som.
+   ou tirar. Nadar e mergulhar não têm som. **Corrigido na T05** (falta o abafado submerso).
 9. **O bioma especial apaga a noite na trilha.** De noite no deserto, na taiga ou no pântano toca
    a paleta de bioma, que soa como dia (`cena:1067-1075`).
 10. **"Caverna" toca dentro de casa.** Basta um teto opaco abaixo de y 55 (`cena:2250`).
@@ -384,16 +384,18 @@ Nenhum arquivo de `src/ui/` toca som.
 12. **A troca de contexto é seca.** Muda a paleta e só adianta o próximo acorde; não há transição
     em cruz (`sons:1264-1268`).
 13. **Chuva no vácuo.** O chiado de chuva toca também na "chuva de poeira" da Lua: o vento é 0,
-    mas a chuva não. O granulado do Doce usa o mesmo chiado.
+    mas a chuva não. O granulado do Doce usa o mesmo chiado. **Lua corrigida na T05.**
 14. **O trovão do Doce não é pipoca.** A legenda diz "Estouro de pipoca", mas toca o trovão comum.
     Na Lua não há relâmpago, então a legenda "Estalo de tempestade solar" nunca aparece.
+    **Corrigido na T05** (pipoca no Doce; estalo de rádio com a legenda na Lua).
 15. **As vozes não têm volume próprio.** Bichos e moradores vão no grupo 'efeitos'
     (`sons:739`). A régua da spec (música abaixo dos efeitos e das vozes) pede um grupo 'vozes'.
 16. **O mugido e o galo do ambiente são sínteses à parte.** Não usam a voz da vaca, e o galo não
     tem bicho. Gravados, devem sair do mesmo arquivo da vaca.
 17. **O morador nunca fala "susto"** (não apanha) e é mudo na troca recusada.
 18. **Interface muda:** roda, mochila, craft, baú, conquistas, fantasia, menus e gestos do próprio
-    jogador.
+    jogador. **Em parte na T05:** roda, mochila (abrir), craft, conquistas, fantasia e gestos
+    ganharam som; baú, menus e fechar a mochila seguem mudos.
 19. **A spec cita cavalo e porco**, que não existem no jogo. O Rancho tem vaca, galinha, tilápia,
     coruja e cachorro.
 
@@ -518,3 +520,66 @@ Tocador em `src/audio/vozesGravadas.ts`, ligado na cena. O que cada momento toca
 - **Teto:** 8 vozes do tocador (a mais velha esmaece em 30 ms), dentro das 12 do motor.
   Espera mínima entre dois toques do mesmo momento do mesmo bicho (chamado 2 s, susto 0,5 s,
   "ai" 0,18 s...).
+
+## T05: régua de volume, o resto do inventário e os créditos (11 nov 2026)
+
+**Música no mesmo volume de hoje** (decisão do dono: suave, nunca mais alta). A T03 usava um
+ganho só (0,7), que deixava a maioria dos temas de 2,6 a 7,8 dB abaixo da trilha de hoje. Agora
+cada tema tem um ajuste por contexto (`NIVEL_TRILHA` em `src/audio/trilha.ts`, um nó de ganho
+depois da saída do motor, que troca em 1,5 compasso junto com as camadas). A régua
+(`e2e/trilha-regua.spec.ts`, RMS de 40 s renderizados offline, Música 60%) falha se a gravada
+passar 0,25 dB da de hoje ou ficar mais de 1,5 dB abaixo. `REGUA_CRUA=1` mede sem o ajuste,
+para refazer a tabela.
+
+| Tema | dia | tarde | noite | caverna | perigo |
+|---|---|---|---|---|---|
+| bruma-e-luz | +2,4 → −0,47 | +2,9 → −0,47 | +5,8 → −0,48 | +4,9 → −0,52 | +4,2 → −0,53 |
+| planeta-vivo | +4,1 → −0,53 | +4,5 → −0,51 | +7,0 → −0,45 | +7,2 → −0,52 | +5,5 → −0,52 |
+| mata-encantada | +2,4 → −0,50 | +2,9 → −0,51 | +5,4 → −0,53 | +5,9 → −0,48 | +4,1 → −0,51 |
+| doce-reino | +3,6 → −0,52 | +3,8 → −0,53 | +7,2 → −0,55 | +6,5 → −0,53 | +5,9 → −0,52 |
+| era-dos-dinos | +2,1 → −0,50 | +2,6 → −0,46 | +5,1 → −0,49 | +5,0 → −0,53 | +4,0 → −0,46 |
+| exploracao-lunar | +4,8 → −0,54 | +5,2 → −0,53 | +7,2 → −0,55 | +6,9 → −0,47 | +5,6 → −0,46 |
+| rancho-alegre | 0 → −0,27 | +0,2 → −0,53 | +2,5 → −0,53 | +3,0 → −0,50 | (não tem) |
+
+Cada célula: ajuste (dB) → gravada menos hoje (dB). A "tarde" compara com o dia de hoje (a
+trilha de hoje não tem entardecer).
+
+**Vozes e golpes no mesmo volume de hoje.** Régua nova (`src/audio/reguaVozes.ts`,
+`e2e/vozes-regua.spec.ts`): cada som de hoje (a voz sintetizada, o baque de terra e o
+farfalhar da derrota) e cada fatia gravada renderizados offline com o filtro K (o da medida de
+loudness), só no tempo em que soam (janelas de 50 ms a menos de 20 dB da mais forte). Com ganho
+1, as gravadas já soavam de 1 a 9 dB acima das de hoje (a estimativa de +2 dB da T04 as deixava
+ainda mais altas). Agora cada tema tem um ganho por grupo (`NIVEL_VOZES` em
+`src/audio/vozesGravadas.ts`); a régua falha se a média do grupo passar 0,25 dB da de hoje,
+ficar mais de 1,5 dB abaixo, ou se alguma versão sozinha passar 4,5 dB da média de hoje.
+
+| Tema | bichos | moradores | baque | derrota |
+|---|---|---|---|---|
+| bruma-e-luz | −2,2 → −0,50 | −3,3 → −0,54 | −0,9 → −0,54 | +0,6 → −0,50 |
+| planeta-vivo | −4,6 → −0,49 | −2,9 → −0,49 | −0,1 → −0,53 | +0,7 → −0,46 |
+| mata-encantada | −5,9 → −0,50 | −4,4 → −0,49 | −1,3 → −0,51 | +0,8 → −0,54 |
+| doce-reino | −3,5 → −0,49 | −1,7 → −0,51 | +0,2 → −0,51 | +0,5 → −0,49 |
+| era-dos-dinos | −3,6 → −0,49 | −2,7 → −0,48 | −1,5 → −0,49 | +0,4 → −0,52 |
+| exploracao-lunar | −8,5 → −0,54 | −9,8 → −0,52 | −3,8 → −0,48 | −1,1 → −0,46 |
+| rancho-alegre | −5,9 → −0,48 | −3,0 → −0,53 | −1,3 → −0,49 | +0,4 → −0,55 |
+
+**Sons novos** (todos gerados na hora, curtos e macios, nenhum mais alto que o golpe de bloco;
+receitas em `desenharNovo`, `src/audio/sons.ts`):
+- ações: 'nhac' (fim da refeição), 'agua' (chuá ao cair na água e no bloco de água), 'nado'
+  (braçada);
+- mundo: 'pipoca' (tempestade do Doce), 'estalo' (tempestade solar na Lua, sem clarão), Lua
+  sem chiado de chuva (`chuvaMuda`);
+- gestos (`SOM_DO_GESTO`): 'aceno', 'assobio', 'brilho', 'palmas', 'danca', 'apontar', 'sentar';
+- interface (pedida pela janela, `terrario:som`, `src/audio/somInterface.ts`): 'rodaAbrir',
+  'rodaFechar', 'mochila', 'criar', 'conquista', 'festa' e 'toc' (cadeado da spec 016, no lugar
+  da recusa).
+
+**Créditos:** o rodapé do título diz "arte e efeitos por código, música e vozes gravadas
+(créditos em Configurações → Áudio)". Em Configurações → Áudio, "Créditos dos sons" (recolhido)
+lista a música (FluidR3_GM, Frank Wen e colaboradores, MIT), as gravações livres dos bichos
+(Wikimedia Commons, BigSoundBank e PDSounds, com os autores) e a nossa síntese
+(`src/audio/creditosSons.ts`; um teste confere que os autores batem com `indice.json`).
+
+**Falta (fica para depois):** o laço gravado de chuva, vento, pássaros, grilos e sons da roça;
+o abafado debaixo d'água e o eco da caverna; porta, enxada, jogar item, "crec" da ferramenta;
+baú, menus e fechar a mochila; dormir e acordar; a vinheta de entrada por tema.

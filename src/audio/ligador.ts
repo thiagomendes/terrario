@@ -1,21 +1,51 @@
 import type { Barramento } from '../player/eventos';
-import { grupoDoBloco } from './materiais';
+import { grupoDoBloco, type GrupoMaterial } from './materiais';
 import type { EstadoAudio, MotorAudio } from './motor';
-import { tocarSom } from './sons';
+import { tocarSom, type EventoSom } from './sons';
+import { Bloco } from '../world/blocks';
 
-export function ligarAudio(barramento: Barramento, motor: MotorAudio): () => void {
+/**
+ * O som de golpear, tirar ou pôr um bloco. A água tem o "chuá" dela (spec 019: antes soava
+ * como pedra); o resto, a amostra do material.
+ */
+export function somDoBloco(
+  evento: 'golpe' | 'quebra' | 'colocar',
+  bloco: number,
+  padrao: 'pedra' | 'terra' = 'pedra',
+): { evento: EventoSom; grupo: GrupoMaterial } {
+  if (bloco === Bloco.AGUA) return { evento: 'agua', grupo: 'terra' };
+  return { evento, grupo: grupoDoBloco(bloco) ?? padrao };
+}
+
+export function tocarSomDoBloco(
+  motor: MotorAudio,
+  evento: 'golpe' | 'quebra' | 'colocar',
+  bloco: number,
+  padrao: 'pedra' | 'terra' = 'pedra',
+): void {
+  const s = somDoBloco(evento, bloco, padrao);
+  tocarSom(motor, s.evento, s.grupo);
+}
+
+export interface OpcoesLigarAudio {
+  /**
+   * A recusa de agora já teve o som dela (spec 019: o "toc" do cadeado, quando o que barrou
+   * foi a proteção da spec 016): a recusa de sempre não toca por cima.
+   */
+  calarRecusa?: () => boolean;
+}
+
+export function ligarAudio(
+  barramento: Barramento,
+  motor: MotorAudio,
+  op: OpcoesLigarAudio = {},
+): () => void {
   const desligar = [
-    barramento.ouvir('golpe', (d) => {
-      tocarSom(motor, 'golpe', grupoDoBloco(d.bloco) ?? 'pedra');
-    }),
-    barramento.ouvir('quebra', (d) => {
-      tocarSom(motor, 'quebra', grupoDoBloco(d.bloco) ?? 'pedra');
-    }),
-    barramento.ouvir('colocacao', (d) => {
-      tocarSom(motor, 'colocar', grupoDoBloco(d.bloco) ?? 'pedra');
-    }),
+    barramento.ouvir('golpe', (d) => tocarSomDoBloco(motor, 'golpe', d.bloco)),
+    barramento.ouvir('quebra', (d) => tocarSomDoBloco(motor, 'quebra', d.bloco)),
+    barramento.ouvir('colocacao', (d) => tocarSomDoBloco(motor, 'colocar', d.bloco)),
     barramento.ouvir('recusa', () => {
-      tocarSom(motor, 'recusa');
+      if (!op.calarRecusa?.()) tocarSom(motor, 'recusa');
     }),
     barramento.ouvir('slot', () => {
       tocarSom(motor, 'troca');

@@ -68,13 +68,39 @@ export const TETO_VOZES_GRAVADAS = 8;
 /** Variação de tom de cada toque (±3%). */
 export const VARIACAO_TOM = 0.03;
 /**
- * Ganho das vozes gravadas (−23 dB RMS nos arquivos). As vozes sintetizadas de hoje soam,
- * na média, perto de −21 dB enquanto tocam (0,22 de pico numa varredura): +2 dB as deixa no
- * mesmo volume percebido. A régua de volume da T05 confere.
+ * Ganho das vozes gravadas de um tema fora de `NIVEL_VOZES` (a estimativa da T04). A régua da
+ * T05 mostrou que, com ganho 1, as gravadas já soam de 1 a 9 dB acima das sintetizadas de hoje:
+ * cada tema tem o seu ganho na tabela.
  */
 export const GANHO_VOZ_GRAVADA = 1.25;
 /** Baque e "puf": no nível do golpe de material de hoje. */
 export const GANHO_BAQUE = 1;
+/** Os grupos de som gravado com ganho próprio por tema (`NIVEL_VOZES`). */
+export type GrupoNivelVoz = 'bichos' | 'moradores' | 'baque' | 'derrota';
+
+/**
+ * Ganho (dB) das vozes e dos golpes gravados por tema e grupo (spec 019, T05), medido na régua
+ * de vozes (e2e/vozes-regua.spec.ts): o volume percebido de cada grupo gravado fica de 0 a 1 dB
+ * abaixo do som de hoje no mesmo momento (a voz sintetizada, o baque de terra e o farfalhar da
+ * derrota). Tema ou grupo que falta usa `GANHO_VOZ_GRAVADA` nas vozes e `GANHO_BAQUE` nos golpes.
+ */
+export const NIVEL_VOZES: Readonly<Record<string, Partial<Record<GrupoNivelVoz, number>>>> = {
+  'bruma-e-luz': { bichos: -2.2, moradores: -3.3, baque: -0.9, derrota: 0.6 },
+  'planeta-vivo': { bichos: -4.6, moradores: -2.9, baque: -0.1, derrota: 0.7 },
+  'mata-encantada': { bichos: -5.9, moradores: -4.4, baque: -1.3, derrota: 0.8 },
+  'doce-reino': { bichos: -3.5, moradores: -1.7, baque: 0.2, derrota: 0.5 },
+  'era-dos-dinos': { bichos: -3.6, moradores: -2.7, baque: -1.5, derrota: 0.4 },
+  'exploracao-lunar': { bichos: -8.5, moradores: -9.8, baque: -3.8, derrota: -1.1 },
+  'rancho-alegre': { bichos: -5.9, moradores: -3.0, baque: -1.3, derrota: 0.4 },
+};
+
+/** O ganho (linear) do grupo gravado no tema. */
+export function ganhoVozGravada(temaId: string, grupo: GrupoNivelVoz): number {
+  const db = NIVEL_VOZES[temaId]?.[grupo];
+  if (db !== undefined) return Math.pow(10, db / 20);
+  return grupo === 'bichos' || grupo === 'moradores' ? GANHO_VOZ_GRAVADA : GANHO_BAQUE;
+}
+
 /** O "ai" entra logo depois do baque (s), como no esboço. */
 export const ATRASO_AI = 0.06;
 
@@ -491,6 +517,13 @@ export function criarVozesGravadas(op: OpcoesVozesGravadas): VozesGravadas {
   const tom = (o?: OpcoesToque) => tomVariado(rng) * (o?.tom ?? 1);
   const vol = (o?: OpcoesToque) => Math.max(0, Math.min(1, o?.volume ?? 1));
 
+  const ganho: Record<GrupoNivelVoz, number> = {
+    bichos: ganhoVozGravada(op.tema, 'bichos'),
+    moradores: ganhoVozGravada(op.tema, 'moradores'),
+    baque: ganhoVozGravada(op.tema, 'baque'),
+    derrota: ganhoVozGravada(op.tema, 'derrota'),
+  };
+
   const vozes: VozesGravadas = {
     get pronto() {
       return pronto;
@@ -516,7 +549,7 @@ export function criarVozesGravadas(op: OpcoesVozesGravadas): VozesGravadas {
             : null;
         },
         'vozes',
-        GANHO_VOZ_GRAVADA * v,
+        ganho.bichos * v,
         t,
         () => {
           const pio = reserva.bicho(slot, momento);
@@ -537,7 +570,7 @@ export function criarVozesGravadas(op: OpcoesVozesGravadas): VozesGravadas {
             return lista ? { qual: 'comum', lista, chave: `baque:${g.baque}` } : null;
           },
           'efeitos',
-          GANHO_BAQUE * v,
+          ganho.baque * v,
           tom(),
           () => {
             reserva.golpe();
@@ -554,7 +587,7 @@ export function criarVozesGravadas(op: OpcoesVozesGravadas): VozesGravadas {
           return c ? { qual: 'tema', lista: c.momentos.ai ?? [], chave: `${slot}:ai` } : null;
         },
         'vozes',
-        GANHO_VOZ_GRAVADA * v,
+        ganho.bichos * v,
         t,
         () => {
           const pio = reserva.bicho(slot, 'ai');
@@ -576,7 +609,7 @@ export function criarVozesGravadas(op: OpcoesVozesGravadas): VozesGravadas {
           return lista ? { qual: 'comum', lista, chave: `derrota:${g.derrota}` } : null;
         },
         'efeitos',
-        GANHO_BAQUE * v,
+        ganho.derrota * v,
         t,
         () => {
           // sem o pacote: o susto sintetizado (nunca mais o farfalhar de arbusto)
@@ -597,7 +630,7 @@ export function criarVozesGravadas(op: OpcoesVozesGravadas): VozesGravadas {
           return lista ? { qual: 'tema', lista, chave: `${genero}:${momento}` } : null;
         },
         'vozes',
-        GANHO_VOZ_GRAVADA * v,
+        ganho.moradores * v,
         t,
         () => {
           const pio = reserva.morador(momento);

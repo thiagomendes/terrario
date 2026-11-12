@@ -19,6 +19,7 @@ import {
   inicioFrase,
   interpolar,
   lerIndiceTrilha,
+  nivelTrilha,
   posicaoNoLaco,
   proximoCompasso,
   voltaDeRespiro,
@@ -407,6 +408,21 @@ describe('carregador da trilha', () => {
 });
 
 describe('motor da trilha gravada', () => {
+  it('passa pelo ajuste de volume do tema e troca o ajuste junto com o contexto', async () => {
+    const { ctx, m } = await montar('planeta-vivo');
+    m.iniciar(e(), 0.3);
+    expect(m.ganhoNivel).toBeCloseTo(nivelTrilha('planeta-vivo', 'dia'), 9);
+    ctx.currentTime = 1;
+    const tb = m.mudar(e({ hora: 'noite' }))!;
+    const nivel = (m as unknown as { nivel: { gain: Param } }).nivel.gain;
+    const rampa = nivel.chamadas.filter((c) => c[0] === 'rampa').pop()!;
+    expect(rampa[1]).toBeCloseTo(nivelTrilha('planeta-vivo', 'noite'), 9);
+    expect(rampa[2]).toBeCloseTo(tb + 1.5 * m.compasso, 9);
+    expect(nivelTrilha('planeta-vivo', 'noite')).toBeGreaterThan(
+      nivelTrilha('planeta-vivo', 'dia'),
+    );
+  });
+
   it('começa com as camadas do contexto no compasso 0 e a frase A', async () => {
     const { ctx, car, m } = await montar();
     await car.abrir('base');

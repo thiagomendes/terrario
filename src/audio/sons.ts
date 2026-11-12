@@ -26,7 +26,26 @@ export type EventoSom =
   | 'dano'
   | 'comer'
   | 'espectro'
-  | 'trovao';
+  | 'trovao'
+  | 'nhac'
+  | 'agua'
+  | 'nado'
+  | 'pipoca'
+  | 'estalo'
+  | 'palmas'
+  | 'aceno'
+  | 'brilho'
+  | 'assobio'
+  | 'danca'
+  | 'apontar'
+  | 'sentar'
+  | 'rodaAbrir'
+  | 'rodaFechar'
+  | 'mochila'
+  | 'criar'
+  | 'conquista'
+  | 'festa'
+  | 'toc';
 
 export const EVENTOS_SOM: readonly EventoSom[] = [
   'golpe',
@@ -43,6 +62,25 @@ export const EVENTOS_SOM: readonly EventoSom[] = [
   'comer',
   'espectro',
   'trovao',
+  'nhac',
+  'agua',
+  'nado',
+  'pipoca',
+  'estalo',
+  'palmas',
+  'aceno',
+  'brilho',
+  'assobio',
+  'danca',
+  'apontar',
+  'sentar',
+  'rodaAbrir',
+  'rodaFechar',
+  'mochila',
+  'criar',
+  'conquista',
+  'festa',
+  'toc',
 ];
 
 export const VARIACOES_POR_EVENTO = 4;
@@ -105,6 +143,26 @@ const BASE_EVENTO: Record<EventoSom, BaseEvento> = {
   comer: { ganho: 0.4, duracao: 0.3, ruido: 0.8, escalaTom: 1, grupoAudio: 'efeitos' },
   dano: { ganho: 0.6, duracao: 0.25, ruido: 0.6, escalaTom: 1, grupoAudio: 'efeitos' },
   coleta: { ganho: 0.28, duracao: 0.09, ruido: 0, escalaTom: 1, grupoAudio: 'efeitos' },
+  // spec 019 (T05): ações, mundo e interface. Curtos e macios: nenhum passa do golpe de bloco.
+  nhac: { ganho: 0.32, duracao: 0.12, ruido: 0.8, escalaTom: 1, grupoAudio: 'efeitos' },
+  agua: { ganho: 0.42, duracao: 0.45, ruido: 0.9, escalaTom: 1, grupoAudio: 'efeitos' },
+  nado: { ganho: 0.2, duracao: 0.35, ruido: 0.9, escalaTom: 1, grupoAudio: 'passos' },
+  pipoca: { ganho: 0.42, duracao: 1.1, ruido: 0.8, escalaTom: 1, grupoAudio: 'efeitos' },
+  estalo: { ganho: 0.22, duracao: 0.7, ruido: 0.9, escalaTom: 1, grupoAudio: 'efeitos' },
+  palmas: { ganho: 0.3, duracao: 1.4, ruido: 0.9, escalaTom: 1, grupoAudio: 'efeitos' },
+  aceno: { ganho: 0.16, duracao: 0.6, ruido: 0, escalaTom: 1, grupoAudio: 'efeitos' },
+  brilho: { ganho: 0.16, duracao: 0.6, ruido: 0, escalaTom: 1, grupoAudio: 'efeitos' },
+  assobio: { ganho: 0.13, duracao: 0.6, ruido: 0, escalaTom: 1, grupoAudio: 'efeitos' },
+  danca: { ganho: 0.14, duracao: 1.2, ruido: 0, escalaTom: 1, grupoAudio: 'efeitos' },
+  apontar: { ganho: 0.12, duracao: 0.08, ruido: 0, escalaTom: 1, grupoAudio: 'efeitos' },
+  sentar: { ganho: 0.2, duracao: 0.16, ruido: 0.6, escalaTom: 1, grupoAudio: 'efeitos' },
+  rodaAbrir: { ganho: 0.18, duracao: 0.09, ruido: 0, escalaTom: 1, grupoAudio: 'efeitos' },
+  rodaFechar: { ganho: 0.14, duracao: 0.09, ruido: 0, escalaTom: 1, grupoAudio: 'efeitos' },
+  mochila: { ganho: 0.2, duracao: 0.16, ruido: 0.8, escalaTom: 1, grupoAudio: 'efeitos' },
+  criar: { ganho: 0.2, duracao: 0.4, ruido: 0, escalaTom: 1, grupoAudio: 'efeitos' },
+  conquista: { ganho: 0.22, duracao: 0.9, ruido: 0, escalaTom: 1, grupoAudio: 'efeitos' },
+  festa: { ganho: 0.16, duracao: 0.8, ruido: 0.2, escalaTom: 1, grupoAudio: 'efeitos' },
+  toc: { ganho: 0.28, duracao: 0.07, ruido: 0.4, escalaTom: 1, grupoAudio: 'efeitos' },
 };
 
 const FIXOS: Partial<Record<EventoSom, BaseMaterial>> = {
@@ -116,6 +174,25 @@ const FIXOS: Partial<Record<EventoSom, BaseMaterial>> = {
   comer: { frequencia: 300, filtroHz: 1800 },
   espectro: { frequencia: 210, filtroHz: 700 },
   trovao: { frequencia: 45, filtroHz: 160 },
+  nhac: { frequencia: 240, filtroHz: 1700 },
+  agua: { frequencia: 520, filtroHz: 1400 },
+  nado: { frequencia: 420, filtroHz: 750 },
+  pipoca: { frequencia: 700, filtroHz: 1800 },
+  estalo: { frequencia: 300, filtroHz: 2600 },
+  palmas: { frequencia: 300, filtroHz: 1500 },
+  aceno: { frequencia: 880, filtroHz: 4000 },
+  brilho: { frequencia: 1175, filtroHz: 5000 },
+  assobio: { frequencia: 1400, filtroHz: 4000 },
+  danca: { frequencia: 587, filtroHz: 3000 },
+  apontar: { frequencia: 1250, filtroHz: 3000 },
+  sentar: { frequencia: 150, filtroHz: 450 },
+  rodaAbrir: { frequencia: 520, filtroHz: 3000 },
+  rodaFechar: { frequencia: 820, filtroHz: 3000 },
+  mochila: { frequencia: 200, filtroHz: 2600 },
+  criar: { frequencia: 587, filtroHz: 3000 },
+  conquista: { frequencia: 587, filtroHz: 3000 },
+  festa: { frequencia: 1500, filtroHz: 4000 },
+  toc: { frequencia: 520, filtroHz: 1200 },
 };
 
 export const AMPLITUDE_TOM = 0.12;
@@ -601,6 +678,8 @@ function desenharSom(par: ParametrosSom, evento: EventoSom, grupo: GrupoMaterial
           pecas.push(tom(ctx, out, t0 + i * 0.09, 'triangle', f, f, 0.12, 0.6));
         });
         break;
+      default:
+        desenharNovo(ctx, out, t0, evento, par, pecas);
     }
     const ultima = pecas.reduce((a, b) => (b.fim > a.fim ? b : a));
     for (const p of pecas) {
@@ -615,6 +694,158 @@ function desenharSom(par: ParametrosSom, evento: EventoSom, grupo: GrupoMaterial
     }
     return ultima.fonte;
   };
+}
+
+/**
+ * Spec 019 (T05): os sons novos de ações, mundo e interface. Todos curtos e macios, feitos de
+ * tons e de ruído filtrado, sem nada agudo e cortante.
+ */
+function desenharNovo(
+  ctx: ContextoSintese,
+  out: NoAudio,
+  t0: number,
+  evento: EventoSom,
+  par: ParametrosSom,
+  pecas: Peca[],
+): void {
+  const f = par.frequencia;
+  // um sorteio fixo pela versão (as 4 versões soam diferentes, cada uma sempre igual)
+  const sorte = criarGerador(0x0190 + par.variacao * 7919);
+  switch (evento) {
+    case 'nhac':
+      // a mordida final: um "nhac" só (o mastigar é o 'comer')
+      pecas.push(ruido(ctx, out, t0, 'bandpass', par.filtroHz, 1.3, 0.7, 0.06, 0.004));
+      pecas.push(tom(ctx, out, t0 + 0.01, 'triangle', f, f * 0.7, 0.35, 0.08));
+      break;
+    case 'agua':
+      // chuá: o corpo d'água (grave), o espirro (médio) e três bolhinhas que sobem
+      pecas.push(ruido(ctx, out, t0, 'lowpass', par.filtroHz, 0.7, 0.8, 0.32, 0.012));
+      pecas.push(ruido(ctx, out, t0 + 0.02, 'bandpass', par.filtroHz * 2.2, 1, 0.35, 0.18, 0.01));
+      for (let i = 0; i < 3; i++) {
+        const b = f * (1 + sorte() * 0.6);
+        pecas.push(tom(ctx, out, t0 + 0.12 + i * 0.07, 'sine', b, b * 2, 0.22, 0.05));
+      }
+      break;
+    case 'nado':
+      // braçada: um "fuuu" de água que sobe devagar e uma bolha
+      pecas.push(ruido(ctx, out, t0, 'bandpass', par.filtroHz, 0.9, 0.7, 0.22, 0.09));
+      pecas.push(tom(ctx, out, t0 + 0.2, 'sine', f, f * 1.8, 0.15, 0.05));
+      break;
+    case 'pipoca':
+      // o "trovão" do Doce Reino: pipoca estourando, sem estrondo
+      for (let i = 0, t = t0; i < 9; i++) {
+        const k = 0.8 + sorte() * 0.5;
+        pecas.push(ruido(ctx, out, t, 'bandpass', par.filtroHz * k, 2, 0.6, 0.03, 0.002));
+        pecas.push(tom(ctx, out, t, 'sine', f * k, f * k * 0.5, 0.35, 0.05));
+        t += 0.05 + sorte() * 0.11;
+      }
+      break;
+    case 'estalo':
+      // a tempestade solar na Lua: chiadinho de rádio do capacete (no vácuo não há trovão)
+      for (let i = 0; i < 6; i++)
+        pecas.push(
+          ruido(ctx, out, t0 + sorte() * 0.5, 'bandpass', par.filtroHz, 3, 0.5, 0.02, 0.002),
+        );
+      pecas.push(ruido(ctx, out, t0, 'bandpass', par.filtroHz * 0.6, 4, 0.18, 0.5, 0.05));
+      break;
+    case 'palmas':
+      // palminhas: 6 batidas no ritmo do gesto (1,8 s)
+      for (let i = 0; i < 6; i++) {
+        const t = t0 + i * 0.22 + sorte() * 0.02;
+        pecas.push(
+          ruido(
+            ctx,
+            out,
+            t,
+            'bandpass',
+            par.filtroHz * (0.9 + sorte() * 0.3),
+            1.6,
+            0.8,
+            0.045,
+            0.002,
+          ),
+        );
+      }
+      break;
+    case 'aceno':
+      // "plim" suave de sino
+      pecas.push(tom(ctx, out, t0, 'sine', f, f, 0.5, 0.5, 0.005));
+      pecas.push(tom(ctx, out, t0 + 0.09, 'sine', f * 1.5, f * 1.5, 0.35, 0.45, 0.005));
+      break;
+    case 'brilho':
+      // estrelinhas que sobem (comemorar)
+      [1, 1.122, 1.26, 1.498, 1.682].forEach((m, i) =>
+        pecas.push(tom(ctx, out, t0 + i * 0.06, 'sine', f * m, f * m, 0.4, 0.28, 0.004)),
+      );
+      break;
+    case 'assobio':
+      // "fiu-fiu" de chamar
+      pecas.push(tom(ctx, out, t0, 'sine', f, f * 1.5, 0.6, 0.16, 0.03));
+      pecas.push(tom(ctx, out, t0 + 0.24, 'sine', f * 1.05, f * 1.6, 0.6, 0.22, 0.03));
+      break;
+    case 'danca':
+      // musiquinha de 6 notas (ré, mi, fá#, lá, fá#, ré agudo)
+      [1, 1.122, 1.26, 1.498, 1.26, 2].forEach((m, i) => {
+        pecas.push(tom(ctx, out, t0 + i * 0.16, 'triangle', f * m, f * m, 0.5, 0.18, 0.005));
+        pecas.push(tom(ctx, out, t0 + i * 0.16, 'sine', f * m * 2, f * m * 2, 0.12, 0.12, 0.005));
+      });
+      break;
+    case 'apontar':
+      pecas.push(tom(ctx, out, t0, 'sine', f, f * 1.1, 0.5, 0.05, 0.003));
+      break;
+    case 'sentar':
+      // "puf" de sentar no chão
+      pecas.push(ruido(ctx, out, t0, 'lowpass', par.filtroHz, 0.7, 0.6, 0.12, 0.006));
+      pecas.push(tom(ctx, out, t0, 'sine', f, f * 0.6, 0.5, 0.12));
+      break;
+    case 'rodaAbrir':
+      // "plop" que sobe
+      pecas.push(tom(ctx, out, t0, 'sine', f, f * 1.7, 0.6, 0.08, 0.004));
+      break;
+    case 'rodaFechar':
+      pecas.push(tom(ctx, out, t0, 'sine', f, f * 0.55, 0.6, 0.08, 0.004));
+      break;
+    case 'mochila':
+      // abrir a bolsa: dois "zz" de zíper e o pano
+      pecas.push(ruido(ctx, out, t0, 'bandpass', par.filtroHz, 3, 0.45, 0.05, 0.01));
+      pecas.push(ruido(ctx, out, t0 + 0.06, 'bandpass', par.filtroHz * 1.35, 3, 0.4, 0.06, 0.01));
+      pecas.push(ruido(ctx, out, t0 + 0.04, 'lowpass', 500, 0.7, 0.3, 0.1, 0.01));
+      pecas.push(tom(ctx, out, t0, 'sine', f, f * 0.8, 0.25, 0.1));
+      break;
+    case 'criar':
+      // "tchanam": duas notas, a segunda mais alta e mais longa
+      pecas.push(tom(ctx, out, t0, 'triangle', f, f, 0.45, 0.12, 0.004));
+      pecas.push(tom(ctx, out, t0 + 0.12, 'triangle', f * 1.498, f * 1.498, 0.5, 0.32, 0.004));
+      pecas.push(tom(ctx, out, t0 + 0.12, 'sine', f * 2.996, f * 2.996, 0.12, 0.25, 0.004));
+      break;
+    case 'conquista':
+      // arpejo de conquista (ré, fá#, lá, ré) com brilho no fim
+      [1, 1.26, 1.498, 2].forEach((m, i) => {
+        pecas.push(tom(ctx, out, t0 + i * 0.1, 'sine', f * m, f * m, 0.45, 0.5, 0.005));
+        pecas.push(
+          tom(ctx, out, t0 + i * 0.1, 'triangle', f * m * 0.5, f * m * 0.5, 0.15, 0.35, 0.005),
+        );
+      });
+      pecas.push(tom(ctx, out, t0 + 0.42, 'sine', f * 4, f * 4, 0.12, 0.4, 0.005));
+      break;
+    case 'festa':
+      // confete: um "pof" macio e estrelinhas soltas
+      pecas.push(ruido(ctx, out, t0, 'bandpass', 900, 1, 0.4, 0.06, 0.004));
+      for (let i = 0; i < 8; i++) {
+        const k = 1 + sorte() * 1.2;
+        pecas.push(
+          tom(ctx, out, t0 + 0.05 + sorte() * 0.5, 'sine', f * k, f * k, 0.3, 0.12, 0.003),
+        );
+      }
+      break;
+    case 'toc':
+      // cadeado: "toc" de madeira, baixinho e sem bronca
+      pecas.push(tom(ctx, out, t0, 'sine', f, f * 0.9, 0.6, 0.05, 0.002));
+      pecas.push(ruido(ctx, out, t0, 'bandpass', par.filtroHz, 3, 0.3, 0.025, 0.002));
+      break;
+    default:
+      pecas.push(tom(ctx, out, t0, 'sine', f, f, 0.3, 0.05));
+  }
 }
 
 let variadores = new Map<string, () => number>();
@@ -639,6 +870,35 @@ function variadorDe(evento: EventoSom, grupo: GrupoMaterial) {
   return v;
 }
 
+/** Os sons novos da spec 019 (T05): ações, mundo, gestos e interface. */
+export const SONS_NOVOS_019: readonly EventoSom[] = [
+  'nhac',
+  'agua',
+  'nado',
+  'pipoca',
+  'estalo',
+  'palmas',
+  'aceno',
+  'brilho',
+  'assobio',
+  'danca',
+  'apontar',
+  'sentar',
+  'rodaAbrir',
+  'rodaFechar',
+  'mochila',
+  'criar',
+  'conquista',
+  'festa',
+  'toc',
+];
+
+let observador: ((evento: EventoSom) => void) | null = null;
+/** Só os testes de tela: avisa cada som que tocou (null desliga). */
+export function observarSons(f: ((evento: EventoSom) => void) | null): void {
+  observador = f;
+}
+
 /** Toca o som; devolve os parâmetros usados ou null se nenhuma voz foi criada. */
 export function tocarSom(
   motor: MotorAudio,
@@ -649,6 +909,7 @@ export function tocarSom(
   const perfil = perfilDoSom(evento, grupo);
   const par = parametrosVariados(perfil, variadorDe(evento, grupo)(), rngSom);
   const ok = motor.tocar(desenharSom(par, evento, grupo), { grupo: perfil.grupoAudio });
+  if (ok) observador?.(evento);
   return ok ? par : null;
 }
 
@@ -720,6 +981,21 @@ export function desenharVoz(pio: PioCriatura, volume: number, variacao: number):
     }
     return ultima.fonte;
   };
+}
+
+/** O som da tempestade no tema (spec 019): trovão, pipoca (Doce) ou estalo de rádio (Lua). */
+export function somDoTrovao(n: Pick<NaturezaTema, 'trovao'>): EventoSom {
+  return n.trovao ?? 'trovao';
+}
+
+/** Quanto chiado de chuva toca (0 a 1): neve é um quarto e no vácuo não há chiado. */
+export function chuvaAudivel(
+  n: Pick<NaturezaTema, 'chuvaMuda'>,
+  chuva: number,
+  nevando: boolean,
+): number {
+  if (n.chuvaMuda) return 0;
+  return nevando ? chuva * 0.25 : chuva;
 }
 
 /** Toca a voz de uma criatura do tema ativo (chamado, susto ou contente). */
