@@ -145,7 +145,7 @@ export function geometriaDoHorizonte(semente: number, torres = 96): GeometriaHor
     const w = 10 + Math.floor(h(i, 3) * 13);
     const d = 10 + Math.floor(h(i, 4) * 13);
     // as torres altas ficam mais para trás (o degradê de alturas dá profundidade)
-    const alto = 30 + Math.floor(h(i, 5) * 42 + ((r - r0) / (r1 - r0)) * 22);
+    const alto = 26 + Math.floor(h(i, 5) * 32 + ((r - r0) / (r1 - r0)) * 18);
     const rgb = PALETA[Math.floor(h(i, 6) * PALETA.length)];
     const du = Math.floor(h(i, 7) * 32) * 2;
     // a base começa bem abaixo do chão (os morros em volta escondem o pé)

@@ -89,6 +89,12 @@ export function criarRenderCriaturas(
   incluirNoGlow: (m: Mesh) => void,
 ) {
   const modelos = new Map<number, Modelo>();
+  /**
+   * Spec 014 (T08): a criatura da noite mansa (o guaxinim da cidade, a coruja do Rancho) é um
+   * bicho de brinquedo, não um fantasma: perto da luz ela encolhe e some, mas nunca fica
+   * meio transparente (só o espectro que assusta se desfaz em bruma).
+   */
+  const translucida = (tipo: string) => tipo === 'espectro' && tema().mundo.noite !== 'mansa';
   /** Moradores de brinquedo: o boneco B com as cores e peças do tema (spec 012, A2). */
   const moradores = new Map<
     number,
@@ -627,7 +633,7 @@ export function criarRenderCriaturas(
               malha.overlayColor = COR_FERIDA;
               malha.overlayAlpha = 0.55;
             }
-            malha.visibility = c.tipo === 'espectro' ? 1 - morrer : 1;
+            malha.visibility = translucida(c.tipo) ? 1 - morrer : 1;
           }
         }
         if (m.emLonge && m.longe)
@@ -637,7 +643,7 @@ export function criarRenderCriaturas(
               f.overlayColor = COR_FERIDA;
               f.overlayAlpha = 0.55;
             }
-            f.visibility = c.tipo === 'espectro' ? 1 - morrer : 1;
+            f.visibility = translucida(c.tipo) ? 1 - morrer : 1;
           }
       }
       for (const [id, mb] of moradores) {

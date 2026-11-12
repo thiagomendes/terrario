@@ -124,19 +124,24 @@ export function caixasDaMalha(
 ): Caixa[] | null {
   switch (id) {
     case Bloco.LAJE_GRADE:
-      // chapa de grade com a beirada (o topo em 0,5, como a laje)
-      return [[0, 6.5 * P, 0, 1, 8 * P, 1]];
+      // chapa de grade (o topo em 0,5, como a laje), com a cantoneira por baixo
+      return [
+        [0, 6.5 * P, 0, 1, 8 * P, 1],
+        [0, 4.5 * P, 0, 1, 6.5 * P, 1.5 * P],
+        [0, 4.5 * P, 14.5 * P, 1, 6.5 * P, 1],
+      ];
     case Bloco.ESCADA_GRADE: {
       const d = direcaoDoMeta(meta);
       return [
         // os dois degraus finos (o de baixo e o de cima, do lado para onde se sobe)
         girar([P, 6.5 * P, 0, 15 * P, 8 * P, 0.5], d),
         girar([P, 14.5 * P, 0.5, 15 * P, 1, 1], d),
-        // longarinas: as duas laterais de ferro, em dois lances (sobem com os degraus)
-        girar([0, 4 * P, 0, P, 9 * P, 0.5], d),
-        girar([15 * P, 4 * P, 0, 1, 9 * P, 0.5], d),
-        girar([0, 12 * P, 0.5, P, 1, 1], d),
-        girar([15 * P, 12 * P, 0.5, 1, 1, 1], d),
+        // longarinas: as duas laterais de ferro em degrau, emendadas com as da escada de cima
+        // e de baixo (a de cima começa onde esta acaba), para o lance ler como uma escada só
+        girar([0, 0, 0, 1.5 * P, 12 * P, 0.5], d),
+        girar([14.5 * P, 0, 0, 1, 12 * P, 0.5], d),
+        girar([0, 6 * P, 0.5, 1.5 * P, 1, 1], d),
+        girar([14.5 * P, 6 * P, 0.5, 1, 1, 1], d),
       ];
     }
     case Bloco.GRADE_FERRO: {

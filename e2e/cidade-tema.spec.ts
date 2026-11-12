@@ -335,17 +335,23 @@ async function cenasDaCidade(page: Page, pre: string, completo: boolean) {
   ] as V3);
   await page.waitForTimeout(1500);
   await foto(page, `${pre}-carpa`);
+  // à noite, no gramado do parque (longe das janelas acesas e dos postes): o guaxinim e,
+  // ao lado, o cachorro grande e o gato, sólidos como de dia
   await hora(page, 0.96);
+  const gx = p.lago.cx + 14;
+  const gz = p.lago.cz - 9;
   await page.evaluate(
-    ([bx, bz, H]) => {
+    ([gx, gz, H]) => {
       const e = window.__brumaluz!;
-      e.teleportar!(bx - 6, bz + 3, H + 1);
-      e.invocar!('espectro', bx + 1, H + 1, bz + 1);
+      e.teleportar!(gx - 6, gz + 4, H + 1);
+      e.invocar!('espectro', gx, H + 1, gz);
+      e.invocar!('cervo', gx + 2.2, H + 1, gz - 0.5);
+      e.invocar!('raposa', gx - 1.8, H + 1, gz + 0.3);
     },
-    [bx, bz, H] as const,
+    [gx, gz, H] as const,
   );
   await page.waitForTimeout(1000);
-  await camera(page, [bx + 1, H + 2.2, bz + 4.5], [bx + 1, H + 1, bz + 1]);
+  await camera(page, [gx + 0.3, H + 2.2, gz + 4.2], [gx + 0.3, H + 0.9, gz]);
   await foto(page, `${pre}-guaxinim-noite`);
 
   // o cachorro na casinha da obra 1 pronta
@@ -380,12 +386,32 @@ async function cenasDaCidade(page: Page, pre: string, completo: boolean) {
       )!,
     [c1.x0, c1.z0, c1.largura, c1.profundidade] as const,
   );
-  await page.waitForTimeout(5000);
+  void cao;
+  // a festa (poeira e confete) acaba; a câmera fica na frente da casinha, de onde se vê a
+  // abertura dela e o quintal (o cachorro mora ali dentro ou bem na porta)
+  await page.waitForTimeout(8000);
+  const vista = await page.evaluate(() => {
+    const p = window.__brumaluz!.cidade!()!;
+    const l = p.lotes.find((q) => q.canteiro === 1)!;
+    const no = (s: number, f: number): [number, number] =>
+      l.porta === 'n'
+        ? [l.x0 + s + 0.5, l.z0 + f + 0.5]
+        : [l.x0 + l.largura - 1 - s + 0.5, l.z0 + l.profundidade - 1 - f + 0.5];
+    return { cam: no(4.2, -1.2), alvo: no(3, 3.6) };
+  });
+  const agora = await page.evaluate(
+    ([x0, z0, w, d]) =>
+      (window.__brumaluz!.criaturas?.() ?? []).find(
+        (c) => c.tipo === 'cervo' && c.x >= x0 && c.x <= x0 + w && c.z >= z0 && c.z <= z0 + d,
+      )!,
+    [c1.x0, c1.z0, c1.largura, c1.profundidade] as const,
+  );
   await camera(
     page,
-    [c1.x0 + 4 - 3, H + 4, fz + (c1.porta === 'n' ? -2 : 2)],
-    [cao.x, H + 1, cao.z],
+    [vista.cam[0], H + 2.6, vista.cam[1]],
+    [vista.alvo[0], H + 0.7, vista.alvo[1]],
   );
+  console.log(`CACHORRO ${pre} ${JSON.stringify({ cachorro: [agora.x, agora.z], vista })}`);
   await foto(page, `${pre}-cachorro-casinha`);
   const missao2 = await missaoNoHud(page);
   console.log(`MISSAO-DEPOIS ${pre} ${JSON.stringify(missao2)}`);

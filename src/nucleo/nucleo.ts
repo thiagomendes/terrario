@@ -1270,6 +1270,9 @@ export function criarNucleo(op: OpcoesNucleo) {
       const [ax, az] = noLoteObra(l, 1, 1);
       const [bx, bz] = noLoteObra(l, 6, 7);
       c.cerca = [Math.min(ax, bx), Math.min(az, bz), Math.max(ax, bx), Math.max(az, bz)];
+      // a casa dele é a porta da casinha: passeia ali pertinho, sem ir longe dela
+      const [px, pz] = noLoteObra(l, 3, 2);
+      c.casa = [px + 0.5, pz + 0.5];
     }
   }
 
