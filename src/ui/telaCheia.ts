@@ -122,3 +122,57 @@ export function ouvirTelaCheia(f: () => void): void {
   document.addEventListener('fullscreenchange', f);
   document.addEventListener('webkitfullscreenchange', f);
 }
+
+/** O que se sabe da janela para o tamanho do canvas (separado para testar). */
+export interface MedidasJanela {
+  innerWidth: number;
+  innerHeight: number;
+  clientWidth: number;
+  clientHeight: number;
+  /** visualViewport (sem o teclado aberto é a janela inteira). */
+  vvWidth?: number;
+  vvHeight?: number;
+  screenWidth: number;
+  screenHeight: number;
+  app: boolean;
+}
+
+/**
+ * Tamanho do canvas em pixels de CSS (correção de 12 nov). Aberto pelo ícone da tela de início
+ * do iPhone (barra de status translúcida), o Safari às vezes faz a janela 47 px mais baixa que
+ * a tela (o tamanho da barra de status) e o `100vh` do canvas parava antes do fim: uma faixa
+ * azul (o fundo da página) embaixo da barra de itens. Como app, a página ocupa a tela toda:
+ * o canvas vai até o tamanho da tela (o `screen` do iPhone é sempre em pé; deitado, troca).
+ */
+export function tamanhoDoCanvas(m: MedidasJanela): { largura: number; altura: number } {
+  let largura = Math.max(m.innerWidth, m.clientWidth, m.vvWidth ?? 0);
+  let altura = Math.max(m.innerHeight, m.clientHeight, m.vvHeight ?? 0);
+  if (m.app && m.screenWidth > 0 && m.screenHeight > 0) {
+    const deitado = largura > altura;
+    const maior = Math.max(m.screenWidth, m.screenHeight);
+    const menor = Math.min(m.screenWidth, m.screenHeight);
+    const [sw, sh] = deitado ? [maior, menor] : [menor, maior];
+    // só completa o que falta (até ~1/8 da tela): nunca encolhe nem estica uma janela dividida
+    if (sh > altura && sh - altura <= sh / 8) altura = sh;
+    if (sw > largura && sw - largura <= sw / 8) largura = sw;
+  }
+  return { largura, altura };
+}
+
+/** Mede a janela agora. */
+export function medirJanela(): MedidasJanela {
+  const de = document.documentElement;
+  const vv = window.visualViewport;
+  return {
+    innerWidth: window.innerWidth,
+    innerHeight: window.innerHeight,
+    clientWidth: de.clientWidth,
+    clientHeight: de.clientHeight,
+    // com o zoom do vv (teclado, pinça) a medida não é a da janela
+    vvWidth: vv && Math.abs(vv.scale - 1) < 0.01 ? vv.width : undefined,
+    vvHeight: vv && Math.abs(vv.scale - 1) < 0.01 ? vv.height : undefined,
+    screenWidth: window.screen?.width ?? 0,
+    screenHeight: window.screen?.height ?? 0,
+    app: rodandoComoApp(),
+  };
+}

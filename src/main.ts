@@ -1,3 +1,4 @@
+import { medirJanela, tamanhoDoCanvas } from './ui/telaCheia';
 import { criarCena } from './render/cena';
 import { criarHotbar } from './player/hotbar';
 import { tocarSomInterface } from './audio/somInterface';
@@ -120,10 +121,27 @@ async function iniciar(app: HTMLElement): Promise<void> {
 
   const canvas = document.createElement('canvas');
   canvas.id = 'cena';
+  // fixo no canto e do tamanho da janela (como app no iPhone, da tela toda: sem a faixa azul
+  // embaixo; ver tamanhoDoCanvas)
+  canvas.style.position = 'fixed';
+  canvas.style.left = '0';
+  canvas.style.top = '0';
   canvas.style.width = '100vw';
   canvas.style.height = '100vh';
   canvas.style.display = 'block';
   canvas.style.outline = 'none';
+  const ajustarCanvas = () => {
+    const { largura, altura } = tamanhoDoCanvas(medirJanela());
+    canvas.style.width = `${largura}px`;
+    canvas.style.height = `${altura}px`;
+  };
+  ajustarCanvas();
+  // antes do resize do motor (ouvido depois, na cena): ele lê o tamanho novo do canvas
+  window.addEventListener('resize', ajustarCanvas);
+  // o iPhone às vezes só acerta o tamanho um pouco depois de girar
+  window.addEventListener('orientationchange', () =>
+    setTimeout(() => window.dispatchEvent(new Event('resize')), 300),
+  );
   app.appendChild(canvas);
   const hotbar = criarHotbar();
   const atual = mundo;
