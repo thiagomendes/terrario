@@ -1,5 +1,5 @@
 y=0
- E  }   
+ e  }   
  M      
 MMMMMMMM
 MMMMMMMM
@@ -10,7 +10,7 @@ MMMMMMMM
 MMMMMMMM
 y=1
      }  
- E      
+ e      
 MMMMMMMM
 MTTTTTTM
 MTTTTTTM
@@ -143,9 +143,9 @@ y=14
 ####    
 #      #
 #      #
-## # #.#
+#| | #.#
 #    #.#
-## # #.#
+#| | #.#
 #      #
 ########
 y=15
@@ -174,7 +174,7 @@ y=17
         
         
         
-  _     
+  m     
         
         
         

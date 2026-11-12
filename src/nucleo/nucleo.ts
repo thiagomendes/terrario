@@ -57,7 +57,8 @@ import { criarSobrevivencia, type Sobrevivencia } from '../jogo/sobrevivencia';
 import { criarInventario, type Inventario, type Slot } from '../jogo/inventario';
 import { blocoDoItem, obterItem } from '../jogo/itens';
 import { podeColetar } from '../jogo/ferramentas';
-import { TROCAS, fazerTroca } from '../jogo/trocas';
+import { TROCAS, fazerTroca, trocasDoMundo } from '../jogo/trocas';
+import { blocoNoMundo } from '../jogo/exclusivos';
 import {
   CHANCE_SEMENTE_GRAMA,
   SEGUNDOS_POR_ESTAGIO,
@@ -872,6 +873,8 @@ export function criarNucleo(op: OpcoesNucleo) {
       !def ||
       !constroiAgora(j) ||
       bloco === Bloco.AR ||
+      // spec 014: bloco só de outro tema não existe neste mundo (nem no criativo)
+      !blocoNoMundo(bloco, estiloMundo()) ||
       !livre ||
       !extrasOk ||
       !plantavel ||
@@ -1384,7 +1387,9 @@ export function criarNucleo(op: OpcoesNucleo) {
 
   function trocar(j: Jogador, c: Extract<Comando, { t: 'trocar' }>): void {
     const cr = criatura(c.criatura);
-    const t = TROCAS[c.profissao]?.find((x) => x.id === c.troca);
+    const t = TROCAS[c.profissao]
+      ? trocasDoMundo(c.profissao, estiloMundo()).find((x) => x.id === c.troca)
+      : undefined;
     if (!t || !cr?.morador || cr.morador.profissao !== c.profissao) {
       j.eventos.push({ e: 'trocaRecusada', motivo: 'morador' });
       return;

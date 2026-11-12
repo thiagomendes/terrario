@@ -43,6 +43,7 @@ export const NOMES_TEMAS: Record<IdTema, { nome: string; curto: string; de: stri
   'planeta-vivo': { nome: 'Planeta Vivo', curto: 'Planeta', de: 'do' },
   'mata-encantada': { nome: 'Mata Encantada', curto: 'Mata', de: 'da' },
   'bruma-e-luz': { nome: 'Bruma e Luz', curto: 'Bruma', de: 'de' },
+  'cidade-grande': { nome: 'Cidade Grande', curto: 'Cidade', de: 'da' },
 };
 
 export const ICONES_GRUPOS: Record<GrupoFantasia, NomeIcone> = {

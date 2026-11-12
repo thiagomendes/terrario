@@ -132,6 +132,7 @@ import { criarCoracoes } from './coracoes';
 import { AVISO_LIMITE, COMIDA_DOS_BICHOS, comeEsse, viraCriado } from '../jogo/criacao';
 import { biomaEm, estiloMundo } from '../world/chunk';
 import { criarTrilhaMundo, type InfoTrilha } from '../audio/trilhaMundo';
+import { temaDoSom } from '../audio/somDoTema';
 import { SinaisTrilha, RAIO_AMIGOS } from '../audio/sinaisTrilha';
 import type { EstadoTrilha } from '../audio/trilha';
 import type { ResultadoRegua } from '../audio/reguaTrilha';
@@ -653,7 +654,9 @@ export function criarCena(
   const modo: ModoJogo = opcoes.mundo?.modo ?? 'criativo';
   document.body.dataset.modo = modo;
   // Spec 019: a trilha gravada do tema (baixa quando o mundo fica pronto, toca quando o som liga)
-  const trilha = criarTrilhaMundo(temaAtual.id, { sobrevivencia: modo === 'sobrevivencia' });
+  const trilha = criarTrilhaMundo(temaDoSom(temaAtual.id), {
+    sobrevivencia: modo === 'sobrevivencia',
+  });
   const sinaisTrilha = new SinaisTrilha();
   antesDeSair(() => {
     const antes = trilha.info().medidas;
@@ -1119,7 +1122,7 @@ export function criarCena(
   let sinaisLentosEm = -Infinity;
   let amigosPerto = false;
   let lavouraPerto = false;
-  const rancho = temaAtual.id === 'rancho-alegre';
+  const rancho = temaDoSom(temaAtual.id) === 'rancho-alegre';
   function atualizarSinaisTrilha(
     dt: number,
     baseHora: { noite: number; crepusculo: number },
@@ -3174,7 +3177,7 @@ export function criarCena(
   });
   const vozes = criarVozesGravadas({
     motor: motorAudio,
-    tema: temaAtual.id,
+    tema: temaDoSom(temaAtual.id),
     base: import.meta.env.BASE_URL ?? '/',
     reserva: {
       bicho: (slot, m) => temaAtual.vozes[slot]?.[m === 'ai' ? 'susto' : m],
@@ -3219,7 +3222,7 @@ export function criarCena(
     // carregada à parte: a régua não entra no pacote do jogo
     estado.reguaVozes = async (cru) =>
       (await import('../audio/reguaVozes')).medirReguaVozes(
-        temaAtual.id,
+        temaDoSom(temaAtual.id),
         import.meta.env.BASE_URL ?? '/',
         cru,
       );
@@ -3308,7 +3311,7 @@ export function criarCena(
       // carregada à parte: a régua não entra no pacote do jogo
       regua: async (contexto, segundos, semNivel) =>
         (await import('../audio/reguaTrilha')).medirRegua(
-          temaAtual.id,
+          temaDoSom(temaAtual.id),
           contexto,
           segundos,
           semNivel,

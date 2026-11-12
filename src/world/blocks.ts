@@ -85,6 +85,26 @@ export const Bloco = {
   // spec 013: porteira do curral (um bloco de altura; aberta troca o id e guarda a direção)
   PORTEIRA: 82,
   PORTEIRA_ABERTA: 83,
+  // spec 014: a Cidade Grande (só existem no tema da cidade: `TemaDef.exclusivos`)
+  ASFALTO: 84,
+  FAIXA_RUA: 85,
+  FAIXA_PEDESTRE: 86,
+  CALCADA: 87,
+  CONCRETO: 88,
+  PEDRA_MARROM: 89,
+  ESCADINHA_PEDRA: 90,
+  PEDRA_CREME: 91,
+  FRISO_DOURADO: 92,
+  JANELA: 93,
+  JANELA_ACESA: 94,
+  GRADE_FERRO: 95,
+  LAJE_GRADE: 96,
+  POSTE: 97,
+  PLACA: 98,
+  TOLDO_VERMELHO: 99,
+  TOLDO_VERDE: 100,
+  TAPUME: 101,
+  ESCADA_GRADE: 102,
 } as const;
 
 export type Ferramenta = 'picareta' | 'machado' | 'pa' | 'espada';
@@ -98,7 +118,9 @@ export type Forma =
   | 'porta'
   | 'cama'
   | 'tocha'
-  | 'porteira';
+  | 'porteira'
+  /** Spec 014: placa de parede (uma tábua fina encostada atrás, o desenho na frente). */
+  | 'placa';
 
 export interface TilesBloco {
   topo: string;
@@ -106,6 +128,12 @@ export interface TilesBloco {
   base: string;
   /** Face da frente (fornalha, baú, mesa), mostrada em +z. */
   frente?: string;
+  /**
+   * Spec 014: desenhos da frente escolhidos pelo metadado (bits 2 a 4): a placa da padaria,
+   * da oficina, da loja de construção e da sorveteria. O 0 é a `frente` (o desenho de quem
+   * coloca a placa à mão).
+   */
+  frentes?: readonly string[];
 }
 
 export interface DefinicaoBloco {
@@ -146,7 +174,13 @@ type Opcoes = Partial<Omit<DefinicaoBloco, 'id' | 'nome' | 'tiles'>> & {
 function tiles(t: Opcoes['tiles'], padrao: string): TilesBloco {
   if (typeof t === 'string') return { topo: t, lado: t, base: t };
   const lado = t?.lado ?? padrao;
-  return { topo: t?.topo ?? lado, lado, base: t?.base ?? t?.topo ?? lado, frente: t?.frente };
+  return {
+    topo: t?.topo ?? lado,
+    lado,
+    base: t?.base ?? t?.topo ?? lado,
+    frente: t?.frente,
+    ...(t?.frentes ? { frentes: t.frentes } : {}),
+  };
 }
 
 function def(id: number, nome: string, nomeTile: string, o: Opcoes = {}): DefinicaoBloco {
@@ -470,6 +504,105 @@ export const REGISTRO_BLOCOS: readonly DefinicaoBloco[] = [
     'porteira aberta',
     'tabuas',
     madeira({ solido: false, opaco: false, forma: 'porteira', dureza: 0.9, semItem: true }),
+  ),
+  // spec 014: a Cidade Grande. Chão da cidade (asfalto, faixas e calçada) é pedra de rua;
+  // as paredes dos prédios, pedra; janela é bloco com recorte (vê-se o de dentro) e a
+  // janela acesa brilha sem espalhar luz (luz 0: não pesa no cálculo da luz)
+  def(Bloco.ASFALTO, 'asfalto', 'asfalto', pedra({ dureza: 1.4 })),
+  def(
+    Bloco.FAIXA_RUA,
+    'faixa de rua',
+    'asfalto',
+    pedra({ dureza: 1.4, tiles: { topo: 'faixa_rua', lado: 'asfalto' } }),
+  ),
+  def(
+    Bloco.FAIXA_PEDESTRE,
+    'faixa de pedestre',
+    'asfalto',
+    pedra({ dureza: 1.4, tiles: { topo: 'faixa_pedestre', lado: 'asfalto' } }),
+  ),
+  def(
+    Bloco.CALCADA,
+    'calçada',
+    'calcada_lado',
+    pedra({ dureza: 1.4, tiles: { topo: 'calcada', lado: 'calcada_lado' } }),
+  ),
+  def(Bloco.CONCRETO, 'concreto', 'concreto', pedra({ dureza: 1.6 })),
+  def(Bloco.PEDRA_MARROM, 'pedra marrom', 'pedra_marrom', pedra({ dureza: 1.6 })),
+  def(
+    Bloco.ESCADINHA_PEDRA,
+    'escadinha de pedra',
+    'pedra_marrom',
+    pedra({ opaco: false, forma: 'escada', dureza: 1.6 }),
+  ),
+  def(Bloco.PEDRA_CREME, 'pedra creme', 'pedra_creme', pedra({ dureza: 1.6 })),
+  def(Bloco.FRISO_DOURADO, 'friso dourado', 'friso_dourado', pedra({ dureza: 1.6 })),
+  def(Bloco.JANELA, 'janela grande', 'janela', {
+    opaco: false,
+    recorte: true,
+    dureza: 0.4,
+    som: 'cristal',
+  }),
+  def(Bloco.JANELA_ACESA, 'janela acesa', 'janela_acesa', {
+    emissivo: true,
+    dureza: 0.4,
+    som: 'cristal',
+  }),
+  def(
+    Bloco.GRADE_FERRO,
+    'grade de ferro',
+    'grade',
+    pedra({ opaco: false, forma: 'cerca', dureza: 1.2 }),
+  ),
+  def(
+    Bloco.LAJE_GRADE,
+    'laje de grade',
+    'laje_grade',
+    pedra({ opaco: false, forma: 'laje', dureza: 1.2 }),
+  ),
+  def(Bloco.POSTE, 'poste de luz', 'poste', {
+    solido: false,
+    opaco: false,
+    forma: 'tocha',
+    emissivo: true,
+    luz: 14,
+    dureza: 0.6,
+    som: 'pedra',
+  }),
+  def(
+    Bloco.PLACA,
+    'placa',
+    'placa_lado',
+    madeira({
+      solido: false,
+      opaco: false,
+      forma: 'placa',
+      dureza: 0.6,
+      tiles: {
+        lado: 'placa_lado',
+        frente: 'placa',
+        frentes: ['placa', 'placa_pao', 'placa_chave', 'placa_tijolo', 'placa_sorvete'],
+      },
+    }),
+  ),
+  def(Bloco.TOLDO_VERMELHO, 'toldo vermelho', 'toldo_vermelho', {
+    opaco: false,
+    forma: 'laje',
+    dureza: 0.4,
+    som: 'folhagem',
+  }),
+  def(Bloco.TOLDO_VERDE, 'toldo verde', 'toldo_verde', {
+    opaco: false,
+    forma: 'laje',
+    dureza: 0.4,
+    som: 'folhagem',
+  }),
+  def(Bloco.TAPUME, 'tapume', 'tapume', madeira({ opaco: false, forma: 'cerca', dureza: 0.9 })),
+  def(
+    Bloco.ESCADA_GRADE,
+    'escada de grade',
+    'laje_grade',
+    pedra({ opaco: false, forma: 'escada', dureza: 1.2 }),
   ),
 ];
 

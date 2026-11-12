@@ -273,6 +273,15 @@ export function modeloNaMao(
         add(bo('gema', 0.045, '#ffc23a', [1, 0.45, 1.2], 0.5), 0, 0.065, 0);
         break;
       }
+      case 'colher_pedreiro': {
+        // spec 014: cabo de madeira, a virola de ferro e a lâmina de aço em losango
+        add(ci('cabo', 0.2, 0.03, 0.026, CABO), 0, 0.1, 0);
+        add(ci('virola', 0.05, 0.022, 0.022, '#6a6e76'), 0, 0.22, 0);
+        const l = add(cx('lamina', 0.16, 0.16, 0.012, 0.01, '#d8dce2', 0.5), 0, 0.33, 0);
+        l.rotation.z = Math.PI / 4;
+        l.scaling.y = 1.35;
+        break;
+      }
       case 'graveto': {
         const g = add(ci('graveto', 0.32, 0.018, 0.015, CABO), 0, 0.14, 0);
         g.rotation.z = 0.2;

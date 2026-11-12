@@ -1,6 +1,8 @@
 import { icone, rotuloComIcone } from './pixicones';
 import type { Inventario, Pilha, Slot } from '../jogo/inventario';
 import { obterItem } from '../jogo/itens';
+import { receitaNoMundo } from '../jogo/exclusivos';
+import { estiloMundo } from '../world/chunk';
 import {
   RECEITAS,
   TAGS,
@@ -167,7 +169,9 @@ export function criarCriacao(
   function renderLivro(): void {
     const termo = busca.value.trim().toLowerCase();
     lista.replaceChildren();
-    const itens = RECEITAS.map((r) => ({ r, def: obterItem(r.resultado.item) }))
+    // spec 014: receitas com algo só de outro tema não aparecem neste mundo
+    const itens = RECEITAS.filter((r) => receitaNoMundo(r, estiloMundo()))
+      .map((r) => ({ r, def: obterItem(r.resultado.item) }))
       .filter(({ def }) => !!def && (!termo || def.nome.toLowerCase().includes(termo)))
       .map((x) => ({ ...x, ok: podeFazer(x.r, contar) && (!x.r.mesa || lado === 3) }))
       .sort((a, b) => Number(b.ok) - Number(a.ok));

@@ -38,6 +38,8 @@ export const PLANTAS_BRINQUEDO: readonly number[] = [
   Bloco.ARBUSTO_SECO,
   Bloco.JUNCO,
   Bloco.TOCHA,
+  // spec 014: o globo do poste da cidade
+  Bloco.POSTE,
   // spec 013: a lavoura nos 4 estágios (a forma de cada estágio sai daqui; a cor, do tile)
   Bloco.TRIGO_0,
   Bloco.TRIGO_1,
@@ -634,6 +636,19 @@ export function plantaDeBrinquedo(
         bola(cxT, y + 0.62, czT, 0.1, 0.13, 0.1, chama, 7, 4);
         bola(cxT, y + 0.75, czT, 0.05, 0.07, 0.05, chama, 5, 3);
       });
+      break;
+    }
+    case Bloco.POSTE: {
+      // spec 014: o globo do poste em cima da haste de grade: colarinho de ferro, o globo que
+      // brilha e a tampinha (a luz sai daqui, a 4 blocos da calçada)
+      const ferro: Rgb01 = [0.17, 0.18, 0.21];
+      const cxP = x + 0.5;
+      const czP = z + 0.5;
+      haste(cxP, y, czP, cxP, y + 0.3, czP, 0.07, 0.06, ferro, ferro, 6);
+      bola(cxP, y + 0.32, czP, 0.13, 0.05, 0.13, ferro, 6, 2);
+      const globo: Rgb01 = uvBrilho ? [0.66, 0.64, 0.58] : [1, 0.95, 0.8];
+      comBrilho(() => bola(cxP, y + 0.58, czP, 0.24, 0.26, 0.24, globo, 8, 5));
+      bola(cxP, y + 0.86, czP, 0.1, 0.04, 0.1, ferro, 6, 2);
       break;
     }
     case Bloco.JUNCO: {

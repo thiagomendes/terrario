@@ -2,6 +2,8 @@ import { botaoFechar, icone } from './pixicones';
 import { tocarSomInterface } from '../audio/somInterface';
 import { TAMANHO_BARRA, TAMANHO_INVENTARIO, type Inventario, type Slot } from '../jogo/inventario';
 import { obterItem, todosItens, type DefItem } from '../jogo/itens';
+import { itensDoCatalogo } from '../jogo/catalogo';
+import { estiloMundo } from '../world/chunk';
 import { EVENTO_ICONES, iconeDoItem } from './icones';
 import {
   FOLGA_TOQUE_INV,
@@ -574,7 +576,10 @@ export function criarInventarioUI(raiz: HTMLElement, op: OpcoesInventarioUI): In
   // Catálogo criativo
   function renderCatalogo(): void {
     const termo = busca.value.trim().toLowerCase();
-    const itens = todosItens().filter((d) => !termo || d.nome.toLowerCase().includes(termo));
+    // spec 014: o que é só de outro tema não aparece no criativo deste mundo
+    const itens = itensDoCatalogo(estiloMundo()).filter(
+      (d) => !termo || d.nome.toLowerCase().includes(termo),
+    );
     gradeCat.replaceChildren();
     for (const d of itens) {
       const b = criarSlot();

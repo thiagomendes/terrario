@@ -8,6 +8,8 @@ import type { Slot } from '../jogo/inventario';
 import { aceita, ingredientesDe, RECEITAS } from '../jogo/receitas';
 import { obterItem } from '../jogo/itens';
 import type { MudancaSlot } from './protocolo';
+import { receitaNoMundo } from '../jogo/exclusivos';
+import { estiloMundo } from '../world/chunk';
 
 export interface Fabricacao {
   receita: string;
@@ -46,7 +48,15 @@ export function contaFecha(
   const pedidos: string[] = [];
   for (const f of fabricou) {
     const r = RECEITAS.find((x) => x.id === f.receita);
-    if (!r || !Number.isInteger(f.vezes) || f.vezes < 1 || f.vezes > 64) return false;
+    // spec 014: receita com algo só de outro tema não existe neste mundo
+    if (
+      !r ||
+      !receitaNoMundo(r, estiloMundo()) ||
+      !Number.isInteger(f.vezes) ||
+      f.vezes < 1 ||
+      f.vezes > 64
+    )
+      return false;
     const kr = chave(r.resultado.item);
     saldo.set(kr, (saldo.get(kr) ?? 0) - r.resultado.qtd * f.vezes);
     for (let v = 0; v < f.vezes; v++) pedidos.push(...ingredientesDe(r));

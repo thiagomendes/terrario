@@ -1,4 +1,6 @@
-import { registrarItem, type TipoFerramenta } from './itens';
+import { COLHER_PEDREIRO, itemNoMundo } from './exclusivos';
+import type { EstiloMundo } from '../temas/tipos';
+import { registrarItem, todosItens, type DefItem, type TipoFerramenta } from './itens';
 import { Bloco } from '../world/blocks';
 import { registrarDesenho } from '../art/itens';
 
@@ -769,6 +771,29 @@ export function registrarCatalogo(): void {
     });
     registrarDesenho(id, { paleta: d.paleta, linhas: d.linhas });
   }
+  // spec 014: a colher de pedreiro da Cidade Grande (enche a obra sem gastar material)
+  registrarItem({ id: COLHER_PEDREIRO, nome: 'Colher de pedreiro', tipo: 'ferramenta', pilha: 1 });
+  registrarDesenho(COLHER_PEDREIRO, {
+    paleta: { k: '#22242a', w: '#cfd3da', W: '#eef1f5', b: '#6a6e76', c: '#b07a4f', C: '#d09a68' },
+    linhas: [
+      '................',
+      '.........kk.....',
+      '........kWwk....',
+      '.......kWwwwk...',
+      '......kWwwwwwk..',
+      '.....kWwwwwwwwk.',
+      '......kwwwwwwk..',
+      '.......kwwwwk...',
+      '........kwwk....',
+      '.......kbkk.....',
+      '......kbk.......',
+      '.....kCck.......',
+      '....kCck........',
+      '...kCck.........',
+      '...kck..........',
+      '....k...........',
+    ],
+  });
   const metais: [string, string, string, string, string][] = [
     ['cobre', 'Cobre', '#c46e3a', '#e08a55', '#ffc49a'],
     ['ferro', 'Ferro', '#cfab90', '#e2c4a8', '#ffffff'],
@@ -804,4 +829,13 @@ export function registrarCatalogo(): void {
       registrarDesenho(id, desenhoFerramenta(tipo, n.cor, n.cor2));
     }
   }
+}
+
+/**
+ * Spec 014: os itens do catálogo do criativo neste mundo (o que é só de outro tema não
+ * aparece: a Cidade Grande mostra os blocos da cidade; os outros temas, não).
+ */
+export function itensDoCatalogo(estilo: EstiloMundo): DefItem[] {
+  registrarCatalogo();
+  return todosItens().filter((d) => itemNoMundo(d.id, estilo));
 }

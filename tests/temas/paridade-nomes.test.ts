@@ -7,20 +7,30 @@ import { NOMES_BIOMA } from '../../src/world/chunk';
 import { obterTema, temasDisponiveis, TEMA_PADRAO } from '../../src/temas';
 import { ativarTemaPuro } from '../../src/temas/ativarPuro';
 import { textosOriginais } from '../../src/temas/originais';
+import { blocoExclusivo, EXCLUSIVOS_CIDADE } from '../../src/jogo/exclusivos';
+
+const exclusivo = (item: string) => EXCLUSIVOS_CIDADE.itens.includes(item);
 
 describe('renomear pelo tema', () => {
   it('cada tema renomeia blocos, itens de bloco, itens, criaturas e biomas', () => {
     for (const id of temasDisponiveis()) {
       const t = obterTema(id);
       ativarTemaPuro(t);
+      const orig = textosOriginais();
       for (const b of REGISTRO_BLOCOS) {
         if (!b.id) continue;
-        expect(b.nome).toBe(t.textos.blocos[b.id]);
+        // spec 014: o exclusivo de outro tema fica com o nome base (nunca aparece aqui)
+        const nome =
+          t.textos.blocos[b.id] ?? (blocoExclusivo(b.id) ? orig.blocos[b.id] : undefined);
+        expect(b.nome).toBe(nome);
         const item = obterItem(idDoBloco(b.id));
-        if (item) expect(item.nome).toBe(nomeBonito(t.textos.blocos[b.id]));
+        if (item) expect(item.nome).toBe(nomeBonito(nome!));
       }
       for (const i of todosItens())
-        if (i.tipo !== 'bloco') expect(i.nome).toBe(t.textos.itens[i.id]);
+        if (i.tipo !== 'bloco')
+          expect(i.nome).toBe(
+            t.textos.itens[i.id] ?? (exclusivo(i.id) ? orig.itens[i.id] : undefined),
+          );
       expect(CRIATURAS.raposa.nome).toBe(t.textos.criaturas.raposa);
       expect(NOMES_BIOMA.pantano).toBe(t.textos.biomas.pantano);
     }

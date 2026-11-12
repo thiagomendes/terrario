@@ -16,9 +16,11 @@ describe('registro', () => {
     expect(REGISTRO_BLOCOS.filter((b) => b.planta).length).toBeGreaterThanOrEqual(3);
     for (const b of REGISTRO_BLOCOS.filter((x) => x.planta)) expect(b.forma).toBe('cruz');
     expect(REGISTRO_BLOCOS[Bloco.CRISTAL_LUZ].emissivo).toBe(true);
-    for (const b of REGISTRO_BLOCOS.filter((x) => x.emissivo)) {
+    // a janela acesa da cidade (spec 014) brilha sem espalhar luz: é a única
+    for (const b of REGISTRO_BLOCOS.filter((x) => x.emissivo && x.id !== Bloco.JANELA_ACESA)) {
       expect(b.luz ?? 0, b.nome).toBeGreaterThan(0);
     }
+    expect(REGISTRO_BLOCOS[Bloco.JANELA_ACESA].luz ?? 0).toBe(0);
     expect(REGISTRO_BLOCOS[Bloco.TOCHA].luz).toBe(14);
   });
 });

@@ -76,7 +76,12 @@ export function caixasDoBloco(
     case 'cama':
       return [[0, 0, 0, 1, 9 * P, 1]];
     case 'tocha':
+      // o poste da cidade (spec 014) é o globo em cima da haste de grade: a peça inteira
+      if (id === Bloco.POSTE) return [[4 * P, 0, 4 * P, 12 * P, 14 * P, 12 * P]];
       return [[7 * P, 0, 7 * P, 9 * P, 10 * P, 9 * P]];
+    case 'placa':
+      // tábua fina encostada no lado de trás (oposto à frente), o desenho virado para a frente
+      return [girar([P, 2 * P, 0, 15 * P, 14 * P, 2 * P], d)];
     case 'porta': {
       // fechada: painel no lado de trás (oposto à frente); aberta: gira 90 graus
       const aberta = id === Bloco.PORTA_ABERTA;
@@ -134,11 +139,14 @@ export function colisaoPorteira(meta: number): Caixa {
   return girar([0, 0, 6 * P, 1, 1.5, 10 * P], direcaoDoMeta(meta));
 }
 
-/** A cerca liga a outra cerca, à porteira ou a um bloco opaco. */
+/**
+ * A cerca liga a outra cerca (de pau, a grade de ferro e o tapume da cidade, spec 014), à
+ * porteira ou a um bloco opaco.
+ */
 export function cercaConecta(vizinho: number): boolean {
-  if (vizinho === Bloco.CERCA || vizinho === Bloco.PORTEIRA || vizinho === Bloco.PORTEIRA_ABERTA)
-    return true;
-  return !!obterBloco(vizinho)?.opaco;
+  if (vizinho === Bloco.PORTEIRA || vizinho === Bloco.PORTEIRA_ABERTA) return true;
+  const def = obterBloco(vizinho);
+  return def?.forma === 'cerca' || !!def?.opaco;
 }
 
 /** Bloco com forma parcial (não é cubo nem cruz). */
@@ -151,6 +159,7 @@ export function temFormaParcial(id: number): boolean {
     f === 'tocha' ||
     f === 'porta' ||
     f === 'cerca' ||
-    f === 'porteira'
+    f === 'porteira' ||
+    f === 'placa'
   );
 }

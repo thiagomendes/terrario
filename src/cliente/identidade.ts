@@ -61,6 +61,7 @@ const DO_TEMA: Record<string, string> = {
   'exploracao-lunar': 'Lunar',
   'mata-encantada': 'da Mata',
   'rancho-alegre': 'do Rancho',
+  'cidade-grande': 'da Cidade',
 };
 
 /**

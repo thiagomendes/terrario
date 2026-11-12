@@ -2,6 +2,8 @@ import type { Inventario } from './inventario';
 import { idDoBloco } from './itens';
 import { Bloco } from '../world/blocks';
 import type { Profissao } from '../world/povoado';
+import type { EstiloMundo } from '../temas/tipos';
+import { trocaNoMundo } from './exclusivos';
 
 /**
  * Trocas dos moradores (spec 008): fixas por profissão, iguais em todo tema, sem
@@ -130,6 +132,14 @@ export const TROCAS: Record<Profissao, readonly Troca[]> = {
     },
   ],
 };
+
+/**
+ * Spec 014: as trocas da profissão neste mundo (as que pedem ou dão algo só de outro tema
+ * não existem aqui). O núcleo confere com esta mesma lista.
+ */
+export function trocasDoMundo(p: Profissao, estilo: EstiloMundo): readonly Troca[] {
+  return (TROCAS[p] ?? []).filter((t) => trocaNoMundo(t, estilo));
+}
 
 /** Tem tudo o que a troca pede? */
 export function podeTrocar(inv: Inventario, t: Troca): boolean {

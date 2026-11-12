@@ -8,7 +8,14 @@ import {
   type Caixa,
 } from '../world/formas';
 import { LUZ_MAXIMA, calcularLuz } from '../world/luz';
-import { FACES_TILE, TILE_BRANCO, TILE_PORTA_CIMA, TILES_BRILHO, indiceDoTile } from '../art/tiles';
+import {
+  FACES_TILE,
+  FRENTES_TILE,
+  TILE_BRANCO,
+  TILE_PORTA_CIMA,
+  TILES_BRILHO,
+  indiceDoTile,
+} from '../art/tiles';
 import { ehPorta } from '../world/portas';
 import { corDaCopa, plantaDeBrinquedo } from './plantasBrinquedo';
 
@@ -86,8 +93,34 @@ function tileDaFace(id: number, n: Vec, meta = 0): number {
   if (n[1] > 0) return FACES_TILE[id * 4];
   if (n[1] < 0) return FACES_TILE[id * 4 + 2];
   const [fx, fz] = NORMAL_DA_DIRECAO[meta & 3];
-  if (n[0] === fx && n[2] === fz) return FACES_TILE[id * 4 + 3];
+  if (n[0] === fx && n[2] === fz) {
+    // spec 014: a placa mostra o desenho do metadado (padaria, oficina, sorveteria...)
+    const variantes = FRENTES_TILE.get(id);
+    if (variantes) return variantes[(meta >> 2) % variantes.length];
+    return FACES_TILE[id * 4 + 3];
+  }
   return FACES_TILE[id * 4 + 1];
+}
+
+/**
+ * Spec 014: o topo da faixa amarela e da zebra segue a rua. A faixa amarela é um traço na
+ * borda +x do bloco (avenida, que corre em z); numa rua (que corre em x, com a faixa vizinha
+ * em x) o traço vai para a borda +z. A zebra tem as listras no sentido dos carros: perto de
+ * asfalto em x (rua que corre em x), as listras deitam em x.
+ */
+const ASFALTOS: ReadonlySet<number> = new Set([Bloco.ASFALTO, Bloco.FAIXA_RUA]);
+function topoGirado(
+  id: number,
+  ler: (x: number, y: number, z: number) => number,
+  x: number,
+  y: number,
+  z: number,
+): boolean {
+  if (id === Bloco.FAIXA_RUA)
+    return ler(x + 1, y, z) === Bloco.FAIXA_RUA || ler(x - 1, y, z) === Bloco.FAIXA_RUA;
+  if (id === Bloco.FAIXA_PEDESTRE)
+    return ASFALTOS.has(ler(x + 1, y, z)) || ASFALTOS.has(ler(x - 1, y, z));
+  return false;
 }
 
 /** Hash determinístico da posição, em [0, 1). */
@@ -542,6 +575,7 @@ export function gerarMalha(
       return r;
     };
     const copa = ehFolha && copaLisa ? cantosDaCopa(x, y, z) : null;
+    const girarTopo = f.n[1] > 0 && topoGirado(id, ler, x, y, z);
     const p1 = passos(f.t1);
     const p2 = passos(f.t2);
     const base = solido.vertices;
@@ -628,7 +662,10 @@ export function gerarMalha(
         }
         solido.posicoes.push(x + px, y + py, z + pz);
         solido.normais.push(nx, ny, nz);
-        solido.uvs.push(...uvDoCanto(tile, ...uvLocal(f.n, lx, ly, lz)));
+        const uv = uvLocal(f.n, lx, ly, lz);
+        solido.uvs.push(
+          ...(girarTopo ? uvDoCanto(tile, uv[1], uv[0]) : uvDoCanto(tile, uv[0], uv[1])),
+        );
         // bilinear entre os quatro cantos (ordem de CANTOS: 00, 10, 11, 01)
         const w00 = (1 - s1) * (1 - s2);
         const w10 = s1 * (1 - s2);
@@ -801,7 +838,7 @@ export function gerarMalha(
           continue;
         }
         // tocha de brinquedo: pecinha no buffer das plantas (spec 012)
-        if (id === Bloco.TOCHA) {
+        if (id === Bloco.TOCHA || id === Bloco.POSTE) {
           adicionarPlanta(id, x, y, z);
           continue;
         }

@@ -29,9 +29,10 @@ export type FormaMarco = 'poco' | 'fonte' | 'antena' | 'totem' | 'esqueleto' | '
 /**
  * Spec 013: o que o planejador põe nos lotes. 'vila' (ou sem o campo) é o povoado de
  * sempre; 'sitio' troca as casas por casa da fazenda, celeiro, ferraria, silo, lavouras,
- * curral e galinheiro (mesma região, mesmo raio e mesmo lote).
+ * curral e galinheiro (mesma região, mesmo raio e mesmo lote). 'cidade' (spec 014) é a
+ * Cidade Grande: uma cidade só por mundo, em volta do nascimento (`src/world/cidade.ts`).
  */
-export type PlantaPovoado = 'vila' | 'sitio';
+export type PlantaPovoado = 'vila' | 'sitio' | 'cidade';
 /** Uso de cada lote do sítio (o `tipo` continua dizendo casa, oficina, depósito ou campo). */
 export type UsoSitio =
   | 'fazenda'

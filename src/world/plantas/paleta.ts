@@ -6,21 +6,22 @@
 import { Bloco } from '../blocks';
 import type { Legenda } from './formato';
 
-/** Blocos dos prédios (os da cidade entram na T02; até lá, os parecidos que já existem). */
+/** Blocos dos prédios (os da cidade, ids 84 em diante: só existem no tema da cidade). */
 export const BLOCOS_PREDIO = {
-  pedraMarrom: Bloco.TIJOLOS,
-  escadinha: Bloco.ESCADA,
-  pedraCreme: Bloco.ARENITO,
-  friso: Bloco.LA_AMARELA,
-  concreto: Bloco.PEDRA_LISA,
-  janela: Bloco.VIDRO,
-  janelaAcesa: Bloco.BLOCO_LUZITA,
-  grade: Bloco.CERCA,
-  lajeGrade: Bloco.LAJE,
-  escadaGrade: Bloco.ESCADA,
-  toldoVermelho: Bloco.LA_VERMELHA,
-  toldoVerde: Bloco.LA_VERDE,
-  placa: Bloco.TABUAS,
+  pedraMarrom: Bloco.PEDRA_MARROM,
+  escadinha: Bloco.ESCADINHA_PEDRA,
+  pedraCreme: Bloco.PEDRA_CREME,
+  friso: Bloco.FRISO_DOURADO,
+  concreto: Bloco.CONCRETO,
+  janela: Bloco.JANELA,
+  janelaAcesa: Bloco.JANELA_ACESA,
+  grade: Bloco.GRADE_FERRO,
+  lajeGrade: Bloco.LAJE_GRADE,
+  escadaGrade: Bloco.ESCADA_GRADE,
+  toldoVermelho: Bloco.TOLDO_VERMELHO,
+  toldoVerde: Bloco.TOLDO_VERDE,
+  placa: Bloco.PLACA,
+  poste: Bloco.POSTE,
 } as const;
 
 /**

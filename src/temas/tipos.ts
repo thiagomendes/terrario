@@ -10,6 +10,7 @@ import type { GrupoMaterial } from '../audio/materiais';
 import type { Acessorio, Aparencia } from '../personagem/aparencia';
 import type { Estacao, TipoClima } from '../jogo/clima';
 import type { FormasPovoado, Profissao } from '../world/povoado';
+import type { Exclusivos } from '../jogo/exclusivos';
 
 export type IdTema =
   | 'bruma-e-luz'
@@ -18,7 +19,8 @@ export type IdTema =
   | 'doce-reino'
   | 'era-dos-dinos'
   | 'exploracao-lunar'
-  | 'rancho-alegre';
+  | 'rancho-alegre'
+  | 'cidade-grande';
 
 export type Rgb = readonly [number, number, number];
 /** Pixel RGBA 0..255 de um tile. */
@@ -400,4 +402,10 @@ export interface Tema {
    * Roça). Sem ele, a ordem de sempre.
    */
   primeiroCapitulo?: string;
+  /**
+   * Spec 014 (decisão do dono, 12 nov 2026): blocos e itens que só existem neste tema. Os
+   * outros temas não geram, não trocam, não mostram no criativo nem nas receitas, e não
+   * precisam nomear nem pintar. A regra fica em `src/jogo/exclusivos.ts`.
+   */
+  exclusivos?: Exclusivos;
 }

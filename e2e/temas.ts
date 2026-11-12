@@ -12,6 +12,7 @@ export const TEMAS_E2E = [
   ['era-dos-dinos', 'Era dos Dinos'],
   ['exploracao-lunar', 'Exploração Lunar'],
   ['rancho-alegre', 'Rancho Alegre'],
+  ['cidade-grande', 'Cidade Grande'],
 ] as const;
 
 export type IdTemaE2e = (typeof TEMAS_E2E)[number][0];

@@ -51,6 +51,9 @@ export const TILES_EMISSIVOS: ReadonlySet<string> = new Set([
   'bloco_luzita',
   'fornalha_acesa',
   'abobora_rosto',
+  // spec 014: a Cidade Grande
+  'janela_acesa',
+  'poste',
 ]);
 
 import type { Pintor, Px } from '../temas/tipos';
@@ -690,7 +693,148 @@ export const PINTORES: Record<string, Pintor> = {
   ),
   feno_lado: fenoLadoDe(['#c49a38', '#d2aa44', '#dfba54', '#eaca66'], '#6e4220'),
   feno_topo: fenoTopoDe(['#c9a03c', '#d8b04a', '#e4c05c', '#eed070'], '#6e4220'),
+  // spec 014: a Cidade Grande (só aparecem no tema da cidade; este é o desenho de verdade)
+  ...pintoresDaCidade(),
 };
+
+/** Tiles da Cidade Grande (spec 014), no jeito do atlas: tons de rampa e o tremor de pixel. */
+function pintoresDaCidade(): Record<string, Pintor> {
+  const asfalto: Pintor = (x, y, s) => {
+    const t = hash2(x, y, s) * 0.55 + fbmT(x, y, 4, s) * 0.45;
+    if (hash2(x, y, s + 3) > 0.95) return rampa(['#55575e'], 0, x, y, s);
+    return rampa(['#35373d', '#3b3d43', '#414349', '#46484e'], t, x, y, s);
+  };
+  const cor = (c: string) => (x: number, y: number, s: number) => rampa([c], 0, x, y, s);
+  /** Placa de brinquedo: tábua clara com moldura azul; `desenho` pinta o miolo (ou null). */
+  const placa =
+    (desenho: (x: number, y: number) => string | null): Pintor =>
+    (x, y, s) => {
+      if (x <= 0 || y <= 0 || x >= T - 1 || y >= T - 1) return cor('#24508a')(x, y, s);
+      if (x === 1 || y === 1 || x === T - 2 || y === T - 2) return cor('#2f6fb0')(x, y, s);
+      const d = desenho(x, y);
+      return d ? cor(d)(x, y, s) : rampa(['#f3ecd8', '#f7f1e2'], hash2(x, y, s), x, y, s);
+    };
+  const molduraJanela = (x: number, y: number) =>
+    x <= 1 || y <= 1 || x >= T - 2 || y >= T - 2 || x === 7 || x === 8 || y === 7 || y === 8;
+  const listras =
+    (a: string, b: string): Pintor =>
+    (x, y, s) =>
+      (x >> 2) % 2 === 0
+        ? rampa([a], hash2(x, y, s), x, y, s)
+        : rampa([b], hash2(x, y, s), x, y, s);
+  return {
+    asfalto,
+    // traço amarelo na borda +x (a malha gira o topo nas ruas que correm em x)
+    faixa_rua: (x, y, s) =>
+      x >= T - 3 ? rampa(['#f0bf2c', '#f4c93c'], hash2(x, y, s), x, y, s) : asfalto(x, y, s),
+    // zebra: listras de 4 no sentido dos carros
+    faixa_pedestre: (x, y, s) =>
+      (x >> 2) % 2 === 0
+        ? rampa(['#eeece6', '#f4f2ec'], hash2(x, y, s), x, y, s)
+        : asfalto(x, y, s),
+    // calçada de placas quadradas (duas por duas) com rejunte
+    calcada: (x, y, s) => {
+      if (x % 8 === 7 || y % 8 === 7) return cor('#a8a397')(x, y, s);
+      const tom = 0.95 + hash2(x >> 3, y >> 3, s) * 0.08;
+      return escurece(rampa(['#d3cfc4', '#d9d5ca', '#dfdbd0'], hash2(x, y, s), x, y, s), tom);
+    },
+    // lado da calçada: o meio-fio (a borda clara em cima, o concreto embaixo)
+    calcada_lado: (x, y, s) =>
+      y <= 3
+        ? rampa(['#d9d5ca', '#dfdbd0'], hash2(x, y, s), x, y, s)
+        : rampa(['#9d9a92', '#a6a39b', '#aeaba3'], fbmT(x, y, 2, s), x, y, s),
+    concreto: (x, y, s) => {
+      if (y === T - 1 || x === T - 1) return cor('#9a9b98')(x, y, s);
+      return rampa(
+        ['#adaeab', '#b3b4b1', '#babbb8'],
+        hash2(x, y, s) * 0.4 + fbmT(x, y, 2, s) * 0.6,
+        x,
+        y,
+        s,
+      );
+    },
+    pedra_marrom: tijolosDe(['#7a4632', '#834d37', '#8b543c'], '#5a3424', 8, 16),
+    pedra_creme: tijolosDe(['#e1d0ad', '#e7d8b8', '#ecdfc2'], '#c7b18a', 8, 16),
+    // friso dourado do art déco: chevron entre dois filetes escuros
+    friso_dourado: (x, y, s) => {
+      if (y === 0 || y === T - 1) return cor('#8f6a1e')(x, y, s);
+      return (Math.abs(x - 7.5) + y) % 6 < 2
+        ? rampa(['#b8892c'], 0, x, y, s)
+        : rampa(['#d8a843', '#e0b24c'], hash2(x, y, s), x, y, s);
+    },
+    // janela grande: moldura creme em cruz e vidro recortado com dois reflexos
+    janela: (x, y, s) => {
+      if (molduraJanela(x, y)) return rampa(['#ece2cc', '#f1e8d4'], hash2(x, y, s), x, y, s);
+      const d = (x % 8) + (y % 8);
+      if (d === 5 || d === 6) return [222, 242, 252, 255];
+      return VAZIO;
+    },
+    // janela acesa: a mesma moldura e a luz morna de dentro, com cortina dos lados
+    janela_acesa: (x, y, s) => {
+      if (molduraJanela(x, y)) return rampa(['#e0d3b6', '#e6dabf'], hash2(x, y, s), x, y, s);
+      const lx = x % 8;
+      if (lx === 2 || lx === 6) return rampa(['#e08c3c', '#e89a48'], hash2(x, y, s), x, y, s);
+      const d = Math.hypot((x % 8) - 4, (y % 8) - 4) / 3;
+      return rampa(['#ffe9a6', '#ffdd84', '#ffcf62'], d + hash2(x, y, s) * 0.2, x, y, s);
+    },
+    // grade de ferro (haste, parapeito, corrimão): ferro escuro com brilho de tinta
+    grade: (x, y, s) =>
+      x % 5 === 1
+        ? rampa(['#4b505a'], 0, x, y, s)
+        : rampa(['#2a2d33', '#30333a', '#363a41'], hash2(x, y, s), x, y, s),
+    // laje de grade (patamar da escada de incêndio): barras em grade com vão escuro
+    laje_grade: (x, y, s) =>
+      x % 4 === 0 || y % 4 === 0
+        ? rampa(['#454951', '#4c5059'], hash2(x, y, s), x, y, s)
+        : rampa(['#1d1f24', '#22242a'], hash2(x, y, s), x, y, s),
+    // poste: o globo creme em cima da haste de ferro (a cor do globo é o brilho da peça)
+    poste: (x, y, s) =>
+      Math.hypot(x - 7.5, y - 5) < 4.2
+        ? rampa(['#fff1c4', '#fff6d8'], hash2(x, y, s), x, y, s)
+        : rampa(['#2a2d33', '#33363d'], hash2(x, y, s), x, y, s),
+    placa_lado: (x, y, s) => escurece(tabuasCarvalho(x, y, s), 0.85),
+    // placas: só desenho, nenhuma letra (a de rua, a da padaria, a da oficina...)
+    placa: placa((x, y) => {
+      // casinha (a placa de quem põe à mão)
+      if (y >= 8 && y <= 12 && x >= 5 && x <= 10) return x === 7 && y >= 10 ? '#7a5432' : '#c8603e';
+      if (y >= 4 && y < 8 && Math.abs(x - 7.5) <= y - 3.5) return '#3b3f46';
+      return null;
+    }),
+    placa_pao: placa((x, y) => {
+      const d = ((x - 7.5) / 5) ** 2 + ((y - 8.5) / 3.2) ** 2;
+      if (d > 1) return null;
+      if (d < 0.9 && (x === 5 || x === 8 || x === 11) && y <= 8) return '#e9b46a';
+      return d > 0.7 ? '#a8692c' : '#c98a3e';
+    }),
+    placa_chave: placa((x, y) => {
+      // chave inglesa na diagonal
+      const u = (x - y) / Math.SQRT2;
+      const v = (x + y - 15) / Math.SQRT2;
+      if (Math.abs(u) <= 0.9 && Math.abs(v) <= 4.5) return '#8d9098';
+      if (Math.hypot(x - 11, y - 4) < 2.6 && !(x >= 11 && y <= 4)) return '#a4a7ae';
+      if (Math.hypot(x - 4, y - 11) < 2.6 && !(x <= 4 && y >= 11)) return '#a4a7ae';
+      return null;
+    }),
+    placa_tijolo: placa((x, y) => {
+      if (x < 3 || x > 12 || y < 5 || y > 11) return null;
+      if (y === 8 || (y < 8 ? x === 7 : x === 5 || x === 10)) return '#e8dcc8';
+      return '#c2533a';
+    }),
+    placa_sorvete: placa((x, y) => {
+      if (y >= 8 && y <= 13 && Math.abs(x - 7.5) <= (13.5 - y) * 0.55)
+        return (x + y) % 3 === 0 ? '#b77a3a' : '#d9a35a';
+      if (Math.hypot(x - 7.5, y - 6) < 3.4) return y < 5 ? '#f7b6cf' : '#f08cb4';
+      return null;
+    }),
+    toldo_vermelho: listras('#d8433a', '#f5f1e6'),
+    toldo_verde: listras('#3f8f5a', '#f5f1e6'),
+    // tapume do canteiro: listras laranja e branca na diagonal
+    tapume: (x, y, s) =>
+      ((x + y) >> 2) % 2 === 0
+        ? rampa(['#e8742a', '#ee8236'], hash2(x, y, s), x, y, s)
+        : rampa(['#f4f1ea', '#f8f6f0'], hash2(x, y, s), x, y, s),
+  };
+}
 
 // ---------- spec 013: lavoura e feno (fábricas que os temas reaproveitam com as cores deles) ----------
 

@@ -11,6 +11,18 @@ import {
 import { CRIATURAS_BRUMA } from '../../src/temas/bruma-e-luz/criaturas';
 import { definirTemaAtivo } from '../../src/temas/ativo';
 import { obterTema } from '../../src/temas';
+import { REGISTRO_BLOCOS } from '../../src/world/blocks';
+import { blocoExclusivo } from '../../src/jogo/exclusivos';
+
+/** Tiles dos blocos de antes da cidade (os que a cidade só reaproveita não saem da conta). */
+const NOMES_ANTIGOS = new Set(
+  REGISTRO_BLOCOS.filter((b) => !blocoExclusivo(b.id)).flatMap((b) => [
+    b.tiles.lado,
+    b.tiles.topo,
+    b.tiles.base,
+    b.tiles.frente,
+  ]),
+);
 
 /**
  * Paridade do Bruma e Luz: o tema extraído reproduz exatamente o jogo de antes.
@@ -44,6 +56,20 @@ const TILES_013 = [
   'porta_cima',
 ];
 
+/**
+ * Tiles da Cidade Grande (spec 014): só os blocos da cidade usam, e entram em células antes
+ * vazias. Ficam de fora da comparação, como os do plantio.
+ */
+const TILES_014 = [
+  ...new Set(
+    REGISTRO_BLOCOS.filter((b) => blocoExclusivo(b.id)).flatMap((b) =>
+      [b.tiles.lado, b.tiles.topo, b.tiles.base, b.tiles.frente, ...(b.tiles.frentes ?? [])].filter(
+        (n): n is string => !!n && !NOMES_ANTIGOS.has(n),
+      ),
+    ),
+  ),
+];
+
 describe('Bruma e Luz é idêntico ao jogo antes dos temas', () => {
   it('atlas: os mesmos pixels e os mesmos tiles brilhantes', async () => {
     definirTemaAtivo(obterTema('bruma-e-luz'));
@@ -53,7 +79,7 @@ describe('Bruma e Luz é idêntico ao jogo antes dos temas', () => {
     // os tiles das peças de brinquedo (spec 012) e os do plantio (spec 013) são novos: ficam
     // de fora da comparação
     const px = new Uint8Array(a.pixels.slice().buffer);
-    for (const nome of [...TILES_PECAS, ...TILES_013]) {
+    for (const nome of [...TILES_PECAS, ...TILES_013, ...TILES_014]) {
       const cel = a.uvDoTile(nome)!;
       const bx = Math.round(cel.u0 * a.largura) - PADDING;
       const by = Math.round(cel.v0 * a.altura) - PADDING;
@@ -64,7 +90,13 @@ describe('Bruma e Luz é idêntico ao jogo antes dos temas', () => {
     // zerada; antes era 3aed3d5a8a609f6fe704538a62a5d75f4a87a7a43372b8ac899913165bca488c
     expect(await sha(px)).toBe('51f279ca21dcf184e765ff7d308d21c5bdc6995eff9b0639f3091fdd071ab84c');
     const em = a.tiles
-      .filter((t) => t.emissivo && !TILES_PECAS.includes(t.nome) && !TILES_013.includes(t.nome))
+      .filter(
+        (t) =>
+          t.emissivo &&
+          !TILES_PECAS.includes(t.nome) &&
+          !TILES_013.includes(t.nome) &&
+          !TILES_014.includes(t.nome),
+      )
       .map((t) => t.nome)
       .join(',');
     expect((await sha(em)).slice(0, 16)).toBe('be72a6aafb557d1a');

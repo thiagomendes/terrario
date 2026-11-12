@@ -1,6 +1,7 @@
 import type { Inventario } from '../jogo/inventario';
 import { obterItem } from '../jogo/itens';
-import { podeTrocar, TROCAS, type Troca } from '../jogo/trocas';
+import { podeTrocar, trocasDoMundo, type Troca } from '../jogo/trocas';
+import { estiloMundo } from '../world/chunk';
 import { povoadoDoTema } from '../temas/ativo';
 import type { Profissao } from '../world/povoado';
 import type { InventarioUI } from './inventario';
@@ -82,7 +83,7 @@ export function criarPainelTrocas(ui: InventarioUI, inv: Inventario, op: OpcoesT
     const tp = povoadoDoTema();
     lista.replaceChildren();
     linhas.length = 0;
-    for (const t of TROCAS[p]) {
+    for (const t of trocasDoMundo(p, estiloMundo())) {
       const el = document.createElement('div');
       el.className = 'troca';
       el.setAttribute('role', 'listitem');

@@ -14,6 +14,44 @@ import { gerarChunk, ESTILO_PADRAO, definirEstiloMundo } from '../../src/world/c
 import { normalizarAparencia, aparenciaPadrao } from '../../src/personagem/aparencia';
 import type { Tema } from '../../src/temas/tipos';
 import { PROFISSOES } from '../../src/world/povoado';
+import { blocoExclusivo } from '../../src/jogo/exclusivos';
+import { idDoBloco } from '../../src/jogo/itens';
+
+/**
+ * Spec 014 (só na Cidade Grande): o que é exclusivo de um tema não precisa de nome nem de
+ * pintura nos outros. O tema dono nomeia; o pintor base do tile já é o desenho dele.
+ */
+function exclusivoDeOutro(t: Tema, item: string): boolean {
+  const meu = new Set([
+    ...(t.exclusivos?.blocos ?? []).map(idDoBloco),
+    ...(t.exclusivos?.itens ?? []),
+  ]);
+  if (meu.has(item)) return false;
+  return outrosExclusivos.has(item);
+}
+const outrosExclusivos = new Set(
+  temasDisponiveis().flatMap((id) => {
+    const ex = obterTema(id).exclusivos;
+    return ex ? [...ex.blocos.map(idDoBloco), ...ex.itens] : [];
+  }),
+);
+/** Tiles que só os blocos exclusivos usam (o desenho do tema dono). */
+const TILES_EXCLUSIVOS: ReadonlySet<string> = (() => {
+  const comuns = new Set<string>();
+  const exclusivos = new Set<string>();
+  for (const b of REGISTRO_BLOCOS) {
+    const nomes = [
+      b.tiles.lado,
+      b.tiles.topo,
+      b.tiles.base,
+      b.tiles.frente,
+      ...(b.tiles.frentes ?? []),
+    ];
+    for (const n of nomes) if (n) (blocoExclusivo(b.id) ? exclusivos : comuns).add(n);
+  }
+  for (const n of comuns) exclusivos.delete(n);
+  return exclusivos;
+})();
 
 /**
  * Regras que todo tema cumpre (spec 007): cobertura completa de nomes e tiles,
@@ -61,12 +99,14 @@ describe.each(temas.map((t) => [t.id, t] as [string, Tema]))('tema %s', (_id, t)
 
   it('dá nome a todos os blocos, itens, criaturas, biomas, climas e estações', () => {
     for (const id of Object.keys(orig.blocos)) {
+      if (exclusivoDeOutro(t, idDoBloco(Number(id)))) continue;
       const n = t.textos.blocos[Number(id)];
       expect(n, `bloco ${id} (${orig.blocos[Number(id)]})`).toBeTruthy();
       expect(n.length, `bloco ${id}: "${n}" longo demais`).toBeLessThanOrEqual(26);
       expect(n, `bloco ${id} sem espaço sobrando`).toBe(n.trim());
     }
     for (const id of Object.keys(orig.itens)) {
+      if (exclusivoDeOutro(t, id)) continue;
       const n = t.textos.itens[id];
       expect(n, `item ${id}`).toBeTruthy();
       expect(n.length, `item ${id}: "${n}" longo demais`).toBeLessThanOrEqual(26);
@@ -222,7 +262,7 @@ describe.each(temas.map((t) => [t.id, t] as [string, Tema]))('tema %s', (_id, t)
       for (const k of ['casa', 'oficina', 'deposito'] as const)
         expect(['duas-aguas', 'cupula', 'tenda', 'redonda', 'modulo']).toContain(f[k]);
       expect(['poco', 'fonte', 'antena', 'totem', 'esqueleto', 'moinho']).toContain(f.marco);
-      if (f.planta) expect(['vila', 'sitio']).toContain(f.planta);
+      if (f.planta) expect(['vila', 'sitio', 'cidade']).toContain(f.planta);
     }
   });
 
@@ -317,7 +357,8 @@ describe('cada tema é ele mesmo', () => {
         Math.ceil(NOMES_TILES.length * 0.1),
       );
       for (const nome of NOMES_TILES) {
-        if (iguais.includes(nome) || TILES_PECAS.includes(nome)) continue;
+        if (iguais.includes(nome) || TILES_PECAS.includes(nome) || TILES_EXCLUSIVOS.has(nome))
+          continue;
         expect(t.pintores[nome], `tile ${nome} não repintado`).toBeTypeOf('function');
         // e de fato diferente do base
         let dif = 0;
