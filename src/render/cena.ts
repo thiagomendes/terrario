@@ -113,6 +113,8 @@ import {
   type CelulaPlanejada,
 } from '../world/obras';
 import { criarFantasmasObra } from './fantasmasObra';
+import { criarRenderVeiculos, type RenderVeiculos, type VeiculoNaTela } from './veiculos';
+import { criarSomVeiculos, type Ouvinte, type SomVeiculos } from '../audio/somVeiculos';
 import { criarProgressoObra } from '../ui/progressoObra';
 import { MAO } from '../ui/dicaMira';
 import {
@@ -454,6 +456,20 @@ export interface EstadoDepuracao {
   voar?: (v: boolean) => void;
   /** Spec 014 (testes): as células vazias das obras abertas perto (a próxima camada primeiro). */
   fantasmasPerto?: () => { x: number; y: number; z: number; bloco: number; canteiro: number }[];
+  /** Spec 014 (T14, testes): os veículos desenhados, o custo e os eventos que chegaram. */
+  veiculos?: () => VeiculoNaTela[];
+  custoVeiculos?: () => ReturnType<RenderVeiculos['custo']> | null;
+  eventosVeiculos?: { id: number; o: string; t: number }[];
+  /** Spec 014 (T14, testes): onde fica o ponto s da volta do veículo id. */
+  poseVeiculo?: (id: number, s: number) => { x: number; z: number; yaw: number };
+  /** Spec 014 (T15, testes): veículos desenhados com roda ou canto fora da pista (vazio: ok). */
+  veiculosForaDaPista?: () => string[];
+  /** Spec 014 (T15, testes): cala os sons dos veículos (a régua da rua sem eles). */
+  calarVeiculos?: (mudo: boolean) => void;
+  /** Spec 014 (T15, testes): grava o som do jogo (a saída do motor), PCM 16 bits em base64. */
+  gravarSom?: (segundos: number) => Promise<{ taxa: number; l: string; r: string } | null>;
+  /** Spec 014 (T14, testes): os motores que tocam, a musiquinha e os toques. */
+  somVeiculos?: () => ReturnType<SomVeiculos['info']> & { tocados: string[] };
   blocoGerado?: (x: number, y: number, z: number) => number;
   /** Solta um item no chão (dur: durabilidade restante de ferramentas). */
   soltarItem?: (item: string, qtd: number, x: number, y: number, z: number, dur?: number) => void;
@@ -1035,6 +1051,9 @@ export function criarCena(
 
   /** Claridade do dia para o boneco (1 ao meio-dia, ~0.4 à noite). */
   let luzDia = 1;
+  /** Spec 014 (T14): os carrinhos e ônibus (só na Cidade Grande) e os sons deles. */
+  let renderVeiculos: RenderVeiculos | null = null;
+  let somVeiculos: SomVeiculos | null = null;
   // celular: desfoque menor (halo mais justo e mais barato) na mesma meia resolução
   const glow = new GlowLayer('glow', scene, {
     blurKernelSize: toqueGrosso ? 16 : 32,
@@ -1392,6 +1411,8 @@ export function criarCena(
     escuroSuave += (escuroAlvo - escuroSuave) * Math.min(1, dt / 0.5);
     glow.intensity = INTENSIDADE_GLOW * (0.15 + 0.85 * escuroSuave);
     luzDia = 0.38 + 0.62 * (1 - a.noite) * Math.min(1, a.intensidadeCeu + 0.4);
+    renderVeiculos?.definirLuz(Math.max(0.3, 0.45 + 0.55 * luzDia));
+    renderVeiculos?.definirNoite(Math.max(a.noite, a.crepusculo * 0.6));
     mundoPlanta.luzBlocos = mundoSolido.luzBlocos;
     mundoPlanta.definirBruma(bruma, forca);
     ceu.atualizar(a, tempo);
@@ -1860,6 +1881,8 @@ export function criarCena(
   const celulasCamera = new Map<number, boolean>();
   let celulasQuadro = -1;
   let celulasEdicoes = -1;
+  let caixasCamera: [number, number, number, number, number, number][] = [];
+  let caixasCameraQuadro = -1;
   const bloqueiaCamera: BloqueiaCamera = (x, y, z) => {
     if (celulasQuadro !== quadroAtual || celulasEdicoes !== edicoes.versaoGeral) {
       celulasCamera.clear();
@@ -1878,6 +1901,21 @@ export function criarCena(
         v = !!d && !d.liquido && !d.planta && d.forma !== 'tocha';
         cacheBloqueia[b] = v;
       } else v = c;
+    }
+    // spec 014 (T14): o ônibus e os carrinhos também seguram a câmera
+    if (!v && renderVeiculos) {
+      if (caixasCameraQuadro !== quadroAtual) {
+        caixasCameraQuadro = quadroAtual;
+        caixasCamera = renderVeiculos.caixasPerto(camera.position.x, camera.position.z, 12);
+      }
+      const cx = x + 0.5;
+      const cy = y + 0.5;
+      const cz = z + 0.5;
+      for (const q of caixasCamera)
+        if (cx > q[0] && cx < q[3] && cy > q[1] && cy < q[4] && cz > q[2] && cz < q[5]) {
+          v = true;
+          break;
+        }
     }
     celulasCamera.set(k, v);
     return v;
@@ -2669,6 +2707,7 @@ export function criarCena(
       // mundo espera)
       trilha.baixar();
       vozes.carregar();
+      somVeiculos?.carregar();
       // ícones de brinquedo desenhados dos modelos 3D, poucos por quadro
       if (!pararIcones) pararIcones = gerarIconesBrinquedo(atlas, definirIconesBrinquedo);
     }
@@ -3395,6 +3434,44 @@ export function criarCena(
       marcarMeuAlvo(id);
       enviar({ t: 'atacar', criatura: id, slot: hotbar.ativo });
     };
+    estado.gravarSom = (segundos) =>
+      new Promise((ok) => {
+        const ctx = motorAudio.contexto as unknown as AudioContext | null;
+        const saida = motorAudio.saidaFinal as unknown as AudioNode | null;
+        if (!ctx || !saida) return ok(null);
+        const n = Math.ceil(segundos * ctx.sampleRate);
+        const l = new Int16Array(n);
+        const r = new Int16Array(n);
+        let i = 0;
+        const proc = ctx.createScriptProcessor(4096, 2, 2);
+        const zero = ctx.createGain();
+        zero.gain.value = 0;
+        const q = (x: number) => Math.max(-32768, Math.min(32767, Math.round(x * 32767)));
+        const b64 = (a: Int16Array) => {
+          const u = new Uint8Array(a.buffer);
+          let t = '';
+          for (let k = 0; k < u.length; k += 0x8000)
+            t += String.fromCharCode(...u.subarray(k, k + 0x8000));
+          return btoa(t);
+        };
+        proc.onaudioprocess = (ev) => {
+          const a = ev.inputBuffer.getChannelData(0);
+          const b = ev.inputBuffer.getChannelData(ev.inputBuffer.numberOfChannels > 1 ? 1 : 0);
+          for (let k = 0; k < a.length && i < n; k++, i++) {
+            l[i] = q(a[k]);
+            r[i] = q(b[k]);
+          }
+          if (i >= n) {
+            proc.onaudioprocess = null;
+            saida.disconnect(proc);
+            proc.disconnect();
+            ok({ taxa: ctx.sampleRate, l: b64(l), r: b64(r) });
+          }
+        };
+        saida.connect(proc);
+        proc.connect(zero);
+        zero.connect(ctx.destination);
+      });
     estado.vozesGravadas = () => ({
       pronto: vozes.pronto,
       falhou: vozes.falhou,
@@ -3584,6 +3661,8 @@ export function criarCena(
     outrosJogadores.atualizar(dtQuadro, Math.max(0.2, luzJogador * (0.45 + 0.55 * luzDia)));
     quadroConstrucao?.(tempo);
     atualizarFantasmas(tempo);
+    renderVeiculos?.quadro(Math.min(dtBruto, 0.1), tempo);
+    quadroSomVeiculos();
     balanco.atualizar(tempo);
     logicaMs += (performance.now() - inicioQuadro - logicaMs) * 0.05;
     scene.render();
@@ -3710,6 +3789,7 @@ export function criarCena(
     motorAudio.definirVolume('vozes', c.volumeVozes);
     configAtual = c;
     ambiente?.definirVolumes(c.volumeMusica, c.volumeAmbiente);
+    somVeiculos?.definirVolumes(c.volumeMusica, c.volumeAmbiente);
     atualizarMusicaAudivel();
     controle.definirMouse(c.sensibilidade, c.inverterY);
     controle.definirPuloAutomatico(c.puloAutomatico);
@@ -4542,6 +4622,72 @@ export function criarCena(
   const cidadeObra = cidadeDoMundo(semente);
   const fantasmas = cidadeObra ? criarFantasmasObra(scene, (m) => glow.addExcludedMesh(m)) : null;
   if (cidadeObra) criarProgressoObra();
+  // spec 014 (T14): os carrinhos e ônibus, sólidos para o boneco e para a câmera
+  if (cidadeObra) {
+    const rv = criarRenderVeiculos(scene, cidadeObra, cliente.veiculos, (m) =>
+      glow.addExcludedMesh(m),
+    );
+    renderVeiculos = rv;
+    controle.definirSolidosExtras(() => rv.caixasPerto(controle.jogador.x, controle.jogador.z));
+    estado.veiculos = () => rv.lista();
+    estado.custoVeiculos = () => rv.custo();
+    estado.eventosVeiculos = [];
+    estado.poseVeiculo = (id, s) => rv.poseEm(id, s);
+    estado.veiculosForaDaPista = () => rv.foraDaPista();
+    // os sons: motores, buzina, freio a ar, "uí-uí" e a musiquinha do sorvete
+    const tocadosVeiculos: string[] = [];
+    somVeiculos = criarSomVeiculos({
+      motor: motorAudio,
+      base: import.meta.env.BASE_URL ?? '/',
+      aoTocar: ehTesteDeTela()
+        ? (id) => {
+            tocadosVeiculos.push(id);
+            if (tocadosVeiculos.length > 300) tocadosVeiculos.shift();
+          }
+        : undefined,
+    });
+    const cfg = configAtual as Config | null;
+    if (cfg) somVeiculos.definirVolumes(cfg.volumeMusica, cfg.volumeAmbiente);
+    if (estado.ready) somVeiculos.carregar();
+    window.addEventListener('pagehide', () => somVeiculos?.liberar());
+    if (ehTesteDeTela()) {
+      estado.somVeiculos = () => ({ ...somVeiculos!.info(), tocados: tocadosVeiculos.slice() });
+      estado.calarVeiculos = (m) => somVeiculos!.definirMudo(m);
+    }
+  }
+  /** Onde a criança ouve (o boneco) e a direita da câmera que se vê. */
+  const ouvinteVeiculos: Ouvinte = { x: 0, z: 0, rx: 1, rz: 0 };
+  const direitaCamera = new Vector3();
+  function atualizarOuvinte(): Ouvinte {
+    const cam = scene.activeCamera ?? camera;
+    cam.getDirectionToRef(Vector3.RightReadOnly, direitaCamera);
+    ouvinteVeiculos.x = controle.jogador.x;
+    ouvinteVeiculos.z = controle.jogador.z;
+    ouvinteVeiculos.rx = direitaCamera.x;
+    ouvinteVeiculos.rz = direitaCamera.z;
+    return ouvinteVeiculos;
+  }
+  let somVeiculosEm = -Infinity;
+  let encostadoAntes: number | null = null;
+  /** Os sons dos veículos, 20 vezes por segundo, e o "toc" do esbarrão. */
+  function quadroSomVeiculos(): void {
+    if (!somVeiculos || !renderVeiculos) return;
+    const agora = performance.now() / 1000;
+    const j = controle.jogador;
+    const enc = renderVeiculos.encostado(j.x, j.y, j.z);
+    if (enc !== null && enc !== encostadoAntes) {
+      const ve = renderVeiculos.lista().find((v) => v.id === enc);
+      if (ve) somVeiculos.esbarrao(ve, atualizarOuvinte(), agora);
+    }
+    encostadoAntes = enc;
+    if (agora - somVeiculosEm < 0.05) return;
+    somVeiculosEm = agora;
+    somVeiculos.quadro(
+      renderVeiculos.lista().filter((v) => v.ativo),
+      atualizarOuvinte(),
+      agora,
+    );
+  }
   /** Até onde os fantasmas aparecem (do centro da obra). */
   const RAIO_FANTASMAS = 24;
   /** Um aviso de bloco errado a cada 3 s, no máximo. */
@@ -4821,8 +4967,20 @@ export function criarCena(
       window.dispatchEvent(new CustomEvent('brumaluz:desbloqueio', { detail: { id } }));
   }
 
+  /** Spec 014 (T14): o som de um evento de veículo (buzina, freio a ar, uí-uí, musiquinha). */
+  function somDoVeiculo(e: Extract<EventoNucleo, { e: 'veiculo' }>): void {
+    if (!somVeiculos || !renderVeiculos) return;
+    const ve = renderVeiculos.lista().find((v) => v.id === e.id);
+    somVeiculos.evento(e.o, ve, atualizarOuvinte(), performance.now() / 1000);
+  }
   function tratarEvento(e: EventoNucleo): void {
     switch (e.e) {
+      case 'veiculo':
+        renderVeiculos?.evento(e.id, e.o);
+        somDoVeiculo(e);
+        estado.eventosVeiculos?.push({ id: e.id, o: e.o, t: performance.now() / 1000 });
+        if ((estado.eventosVeiculos?.length ?? 0) > 200) estado.eventosVeiculos!.splice(0, 100);
+        break;
       case 'obra':
         eventoObra(e);
         break;

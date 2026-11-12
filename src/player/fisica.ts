@@ -114,6 +114,59 @@ export function colideCorpo(
   return false;
 }
 
+/** Caixa sólida no mundo, fora dos blocos (x0, y0, z0, x1, y1, z1): os veículos da cidade. */
+export type CaixaSolida = readonly [number, number, number, number, number, number];
+
+/** O corpo do boneco (nos pés em y) já está dentro da caixa? */
+export function dentroDaCaixa(c: CaixaSolida, j: { x: number; y: number; z: number }): boolean {
+  return (
+    j.x + MEIA_LARGURA > c[0] &&
+    j.x - MEIA_LARGURA < c[3] &&
+    j.y + ALTURA_JOGADOR > c[1] &&
+    j.y < c[4] - FOLGA &&
+    j.z + MEIA_LARGURA > c[2] &&
+    j.z - MEIA_LARGURA < c[5]
+  );
+}
+
+/**
+ * Spec 014 (T14): o mundo sólido com caixas a mais (os carrinhos e ônibus). A célula que uma
+ * caixa toca vira parcial, com as caixas dela (e as do bloco, se tiver): dá para esbarrar e
+ * subir em cima como numa laje.
+ */
+export function comCaixasExtras(base: Solido, extras: () => readonly CaixaSolida[]): Solido {
+  const tocam = (x: number, y: number, z: number): CaixaSolida[] => {
+    const l = extras();
+    if (!l.length) return [];
+    const r: CaixaSolida[] = [];
+    for (const c of l)
+      if (c[0] < x + 1 && c[3] > x && c[1] < y + 1 && c[4] > y && c[2] < z + 1 && c[5] > z)
+        r.push(c);
+    return r;
+  };
+  const s = ((x: number, y: number, z: number) =>
+    base(x, y, z) || tocam(x, y, z).length > 0) as Solido;
+  s.liquido = base.liquido;
+  s.caixas = (x, y, z) => {
+    const ex = tocam(x, y, z);
+    if (!ex.length) return base.caixas ? base.caixas(x, y, z) : null;
+    const rel = ex.map(
+      (c) =>
+        [c[0] - x, c[1] - y, c[2] - z, c[3] - x, c[4] - y, c[5] - z] as [
+          number,
+          number,
+          number,
+          number,
+          number,
+          number,
+        ],
+    );
+    if (!base(x, y, z)) return rel;
+    return [...(base.caixas?.(x, y, z) ?? [[0, 0, 0, 1, 1, 1]]), ...rel];
+  };
+  return s;
+}
+
 function colide(s: Solido, x: number, y: number, z: number): boolean {
   return colideCorpo(s, x, y, z, MEIA_LARGURA, ALTURA_JOGADOR);
 }

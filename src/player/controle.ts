@@ -7,7 +7,14 @@ import {
   pontoDeNascer,
 } from '../world/chunk';
 import type { Edicoes } from '../world/edicoes';
-import { ALTURA_OLHOS, passoFisica, posicaoInicial } from './fisica';
+import {
+  ALTURA_OLHOS,
+  comCaixasExtras,
+  dentroDaCaixa,
+  passoFisica,
+  posicaoInicial,
+  type CaixaSolida,
+} from './fisica';
 import { criarMundoSolido } from '../world/solido';
 export { criarMundoSolido };
 import { acaoDaTecla, aplicarMouse, eixos, type TeclasAtivas } from './entrada';
@@ -25,7 +32,14 @@ export function criarControle(
   edicoes?: Edicoes,
   gerar: (cx: number, cz: number, semente: number) => Uint8Array = gerarChunk,
 ) {
-  const solido = criarMundoSolido(semente, gerar, edicoes);
+  const solidoMundo = criarMundoSolido(semente, gerar, edicoes);
+  /**
+   * Spec 014 (T14): caixas sólidas que não são blocos (os carrinhos e ônibus da cidade), em
+   * coordenadas do mundo. A caixa em que o boneco já está dentro não segura (nunca prende).
+   */
+  let fonteExtras: (() => readonly CaixaSolida[]) | null = null;
+  let extras: CaixaSolida[] = [];
+  const solido = comCaixasExtras(solidoMundo, () => extras);
   // nunca em cima de uma árvore (o nascimento de geração fica igual)
   const nasc = pontoDeNascer(semente);
   const jogador = posicaoInicial(nasc.x, nasc.z, (x, z) => alturaTerreno(x, z, semente));
@@ -98,6 +112,7 @@ export function criarControle(
 
   function atualizar(dtSeg: number): void {
     const dt = Math.min(dtSeg, 0.05);
+    extras = fonteExtras ? fonteExtras().filter((c) => !dentroDaCaixa(c, jogador)) : [];
     const { frente, direita } = eixos(teclas);
     const voando = !!jogador.voando;
     ultimoResultado = passoFisica(
@@ -165,6 +180,14 @@ export function criarControle(
   return {
     atualizar,
     jogador,
+    /** Spec 014 (T14): caixas sólidas além dos blocos (os veículos), lidas a cada passo. */
+    definirSolidosExtras(f: (() => readonly CaixaSolida[]) | null) {
+      fonteExtras = f;
+    },
+    /** As caixas de fora que seguraram no último passo (testes e o "toc" do carrinho). */
+    get caixasExtras(): readonly CaixaSolida[] {
+      return extras;
+    },
     apontar,
     solido,
     definirMouse,

@@ -1,0 +1,333 @@
+{
+ "onde": "public/sons/pacotes/cidade-grande-veiculos.mp3 e temas[\"cidade-grande\"].veiculos de public/sons/indice.json",
+ "scripts": "scripts-veiculos/ (rodar.sh refaz tudo)",
+ "formato": "quadros MP3 emendados, mono 22 050 Hz CBR (48 kbps; 64 na musiquinha), sem metadados e sem quadro Xing",
+ "regua": "RMS \"enquanto soa\" (janelas de 50 ms acima de -60 dBFS) no MP3 decodificado; alvo -23 dB; pico <= -1 dBFS; LUFS integrado do ebur128 do ffmpeg (null abaixo de 0,4 s)",
+ "laco": "arquivo = [P amostras do fim] + laço de L amostras + [Q = P amostras do começo]; loopStart = ini + P/22050 e loopEnd = ini + (P+L)/22050, ini = inicioSemAtraso() de src/audio/vozesGravadas.ts; com a folga de P (60 ms) o laço fecha com ou sem o atraso do codificador (1105)",
+ "segundos": "\"s\" do índice = duração do MP3 decodificado pelo ffmpeg, com o atraso (como as vozes da T09), nos sons de um toque; nos laços, a duração do som de verdade (segundosWav = (P+L+Q)/22050), para inicioSemAtraso() pular o atraso e o laço cair no meio da folga",
+ "pacoteBytes": 393609,
+ "pacoteKB": 384.4,
+ "segundosDecodificados": 54.8,
+ "segundosIndice": {
+  "lacoCarro": 6.37,
+  "lacoOnibus": 6.87,
+  "lacoSorvete": 6.37,
+  "freio": 0.758,
+  "uiui": 0.967,
+  "sorveteInteira": 24.32,
+  "sorveteFrase": 8.072,
+  "buzina": 0.679,
+  "toc": 0.235
+ },
+ "memoriaMB22k": 4.61,
+ "indiceBytes": 146388,
+ "creditosNovos": [
+  "bsb/0187.mp3",
+  "bsb/0896.mp3",
+  "bsb/1145.mp3",
+  "bsb/1490.mp3"
+ ],
+ "usos": {
+  "bsb/0187.mp3": 1,
+  "bsb/1145.mp3": 1,
+  "bsb/0896.mp3": 1,
+  "bsb/1490.mp3": 1,
+  "sintese": 3,
+  "FluidR3_GM": 2
+ },
+ "clips": {
+  "lacoCarro": {
+   "segundos": 6.426,
+   "segundosWav": 6.37,
+   "rmsAtivoDb": -23.0,
+   "picoDb": -10.4,
+   "lufs": -24.3,
+   "bytes": 38556,
+   "kbps": 48,
+   "ganhoExtraDb": 0.47,
+   "cortes": 0,
+   "laco": {
+    "P": 1323,
+    "L": 137813,
+    "Q": 1323,
+    "segundosLaco": 6.25
+   },
+   "fontes": [
+    "bsb/0187.mp3"
+   ],
+   "nota": "Citroën Saxo 1.1 em marcha lenta: laço cru de 21.0-27.5 s (laco() do esboço, cruzamento 0,25 s)"
+  },
+  "lacoOnibus": {
+   "segundos": 6.922,
+   "segundosWav": 6.87,
+   "rmsAtivoDb": -23.0,
+   "picoDb": -11.6,
+   "lufs": -25.6,
+   "bytes": 41534,
+   "kbps": 48,
+   "ganhoExtraDb": 0.47,
+   "cortes": 0,
+   "laco": {
+    "P": 1323,
+    "L": 148838,
+    "Q": 1323,
+    "segundosLaco": 6.75
+   },
+   "fontes": [
+    "bsb/1145.mp3"
+   ],
+   "nota": "diesel Iveco Daily 3.0 em marcha lenta: laço cru de 2.0-9.0 s (laco() do esboço, cruzamento 0,25 s)"
+  },
+  "lacoSorvete": {
+   "segundos": 6.426,
+   "segundosWav": 6.37,
+   "rmsAtivoDb": -23.3,
+   "picoDb": -6.9,
+   "lufs": -20.8,
+   "bytes": 38556,
+   "kbps": 48,
+   "ganhoExtraDb": 0.0,
+   "cortes": 0,
+   "laco": {
+    "P": 1323,
+    "L": 137813,
+    "Q": 1323,
+    "segundosLaco": 6.25
+   },
+   "fontes": [
+    "bsb/0896.mp3"
+   ],
+   "nota": "motor de Ford Courier em marcha lenta: laço cru de 3.0-9.5 s (laco() do esboço, cruzamento 0,25 s)"
+  },
+  "freio": {
+   "segundos": 0.758,
+   "segundosWav": 0.68,
+   "rmsAtivoDb": -23.0,
+   "picoDb": -6.8,
+   "lufs": -22.4,
+   "bytes": 4545,
+   "kbps": 48,
+   "ganhoExtraDb": 0.45,
+   "cortes": 0,
+   "fontes": [
+    "bsb/1490.mp3"
+   ],
+   "nota": "freio a ar do ônibus: o chiado útil (a gravação inteira tem 0,88 s)"
+  },
+  "uiui": {
+   "segundos": 0.967,
+   "segundosWav": 0.89,
+   "rmsAtivoDb": -23.0,
+   "picoDb": -13.2,
+   "lufs": -24.1,
+   "bytes": 5799,
+   "kbps": 48,
+   "ganhoExtraDb": 0.44,
+   "cortes": 0,
+   "fontes": [
+    "sintese"
+   ],
+   "nota": "uí-uí de brinquedo da polícia (síntese do esboço)"
+  },
+  "sorveteInteira": {
+   "segundos": 24.32,
+   "segundosWav": 24.265,
+   "rmsAtivoDb": -23.0,
+   "picoDb": -6.7,
+   "lufs": -21.7,
+   "bytes": 194560,
+   "kbps": 64,
+   "ganhoExtraDb": 0.46,
+   "cortes": 0,
+   "fontes": [
+    "FluidR3_GM"
+   ],
+   "nota": "a valsinha do sorvete inteira (16 compassos de 3/4 a 120), com a cauda do reverb"
+  },
+  "sorveteFrase": {
+   "segundos": 8.072,
+   "segundosWav": 8.0,
+   "rmsAtivoDb": -23.0,
+   "picoDb": -7.4,
+   "lufs": -21.7,
+   "bytes": 64574,
+   "kbps": 64,
+   "ganhoExtraDb": 0.47,
+   "cortes": 0,
+   "fontes": [
+    "FluidR3_GM"
+   ],
+   "nota": "os 4 primeiros compassos da valsinha (6 s) + 2 s de cauda esmaecendo"
+  },
+  "buzina": {
+   "segundos": 0.679,
+   "segundosWav": 0.62,
+   "rmsAtivoDb": -23.0,
+   "picoDb": -16.3,
+   "lufs": -23.5,
+   "bytes": 4075,
+   "kbps": 48,
+   "ganhoExtraDb": 0.44,
+   "cortes": 0,
+   "fontes": [
+    "sintese"
+   ],
+   "nota": "fom-fom de brinquedo de perto (a buzina de bulbo de ambiente.buzininha)"
+  },
+  "toc": {
+   "segundos": 0.235,
+   "segundosWav": 0.16,
+   "rmsAtivoDb": -23.0,
+   "picoDb": -8.4,
+   "lufs": null,
+   "bytes": 1410,
+   "kbps": 48,
+   "ganhoExtraDb": 0.63,
+   "cortes": 0,
+   "fontes": [
+    "sintese"
+   ],
+   "nota": "batidinha de plástico de brinquedo (síntese)"
+  }
+ },
+ "conferencia": {
+  "como": "fatias cortadas do pacote pelo índice, decodificadas pelo ffmpeg; laço tocado 3 vezes pelos pontos do índice",
+  "clips": {
+   "lacoCarro": {
+    "bytes": 38556,
+    "segundosDecodificados": 6.426,
+    "s": 6.37,
+    "confere": true,
+    "P": 1323,
+    "L": 137813,
+    "segundosLaco": 6.25,
+    "atrasoDecodificador": 1105,
+    "snrDoMp3Db": 19.8,
+    "iniPeloJogo": 1105,
+    "comIni": {
+     "agudoNaEmendaSobreP99": 0.8,
+     "saltoNaEmenda": 0.00118,
+     "passoNaturalAli": 0.0051,
+     "passoMedio": 0.01217,
+     "passoP99": 0.04066,
+     "passoMax": 0.2455,
+     "saltoSobreP99": 0.03,
+     "diferenca20msDepoisDb": -18.3
+    },
+    "outroIni": {
+     "agudoNaEmendaSobreP99": 0.72,
+     "saltoNaEmenda": 0.01347,
+     "passoNaturalAli": 0.00343,
+     "passoMedio": 0.01217,
+     "passoP99": 0.04063,
+     "passoMax": 0.2455,
+     "saltoSobreP99": 0.33,
+     "diferenca20msDepoisDb": -19.5
+    },
+    "segundosTresVoltas": 18.75
+   },
+   "lacoOnibus": {
+    "bytes": 41534,
+    "segundosDecodificados": 6.922,
+    "s": 6.87,
+    "confere": true,
+    "P": 1323,
+    "L": 148838,
+    "segundosLaco": 6.75,
+    "atrasoDecodificador": 1105,
+    "snrDoMp3Db": 20.9,
+    "iniPeloJogo": 1105,
+    "comIni": {
+     "agudoNaEmendaSobreP99": 0.88,
+     "saltoNaEmenda": 0.00849,
+     "passoNaturalAli": 0.00578,
+     "passoMedio": 0.0116,
+     "passoP99": 0.04265,
+     "passoMax": 0.09408,
+     "saltoSobreP99": 0.2,
+     "diferenca20msDepoisDb": -20.3
+    },
+    "outroIni": {
+     "agudoNaEmendaSobreP99": 0.54,
+     "saltoNaEmenda": 0.00153,
+     "passoNaturalAli": 0.00268,
+     "passoMedio": 0.0116,
+     "passoP99": 0.04265,
+     "passoMax": 0.09408,
+     "saltoSobreP99": 0.04,
+     "diferenca20msDepoisDb": -21.5
+    },
+    "segundosTresVoltas": 20.25
+   },
+   "lacoSorvete": {
+    "bytes": 38556,
+    "segundosDecodificados": 6.426,
+    "s": 6.37,
+    "confere": true,
+    "P": 1323,
+    "L": 137813,
+    "segundosLaco": 6.25,
+    "atrasoDecodificador": 1105,
+    "snrDoMp3Db": 11.3,
+    "iniPeloJogo": 1105,
+    "comIni": {
+     "agudoNaEmendaSobreP99": 0.86,
+     "saltoNaEmenda": 0.03878,
+     "passoNaturalAli": 0.03308,
+     "passoMedio": 0.05059,
+     "passoP99": 0.21115,
+     "passoMax": 0.4032,
+     "saltoSobreP99": 0.18,
+     "diferenca20msDepoisDb": -7.4
+    },
+    "outroIni": {
+     "agudoNaEmendaSobreP99": 0.79,
+     "saltoNaEmenda": 0.01418,
+     "passoNaturalAli": 0.02064,
+     "passoMedio": 0.05062,
+     "passoP99": 0.21117,
+     "passoMax": 0.4032,
+     "saltoSobreP99": 0.07,
+     "diferenca20msDepoisDb": -6.2
+    },
+    "segundosTresVoltas": 18.75
+   },
+   "freio": {
+    "bytes": 4545,
+    "segundosDecodificados": 0.758,
+    "s": 0.758,
+    "confere": true
+   },
+   "uiui": {
+    "bytes": 5799,
+    "segundosDecodificados": 0.967,
+    "s": 0.967,
+    "confere": true
+   },
+   "sorveteInteira": {
+    "bytes": 194560,
+    "segundosDecodificados": 24.32,
+    "s": 24.32,
+    "confere": true
+   },
+   "sorveteFrase": {
+    "bytes": 64574,
+    "segundosDecodificados": 8.072,
+    "s": 8.072,
+    "confere": true
+   },
+   "buzina": {
+    "bytes": 4075,
+    "segundosDecodificados": 0.679,
+    "s": 0.679,
+    "confere": true
+   },
+   "toc": {
+    "bytes": 1410,
+    "segundosDecodificados": 0.235,
+    "s": 0.235,
+    "confere": true
+   }
+  }
+ }
+}

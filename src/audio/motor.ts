@@ -59,6 +59,8 @@ export interface MotorAudio {
   readonly mudo: boolean;
   readonly vozes: number;
   readonly contexto: ContextoAudio | null;
+  /** O último nó antes da saída (o compressor): testes de tela gravam o som do jogo dele. */
+  readonly saidaFinal: NoAudio | null;
   ativar(): Promise<void>;
   /** Retoma o contexto suspenso (celular): chamar dentro de um gesto do usuário. */
   retomar(): void;
@@ -98,6 +100,7 @@ export function criarMotorAudio(fabrica: FabricaContexto, opcoes: OpcoesMotor = 
   let grupos: Record<GrupoAudio, NoAudio & { gain: ParametroAudio }> | null = null;
   let volumeGeral = 1;
   let filtroAbafado: { frequency: ParametroAudio } | null = null;
+  let saidaFinal: NoAudio | null = null;
   const volumes: Record<GrupoAudio, number> = { efeitos: 1, passos: 1, ambiente: 1, vozes: 1 };
   const vozes: Voz[] = [];
 
@@ -118,6 +121,7 @@ export function criarMotorAudio(fabrica: FabricaContexto, opcoes: OpcoesMotor = 
       m.connect(compressor);
     }
     compressor.connect(c.destination);
+    saidaFinal = compressor;
     const criar = (g: GrupoAudio) => {
       const no = c.createGain();
       no.gain.value = ganhosGrupo[g] * volumes[g];
@@ -189,6 +193,9 @@ export function criarMotorAudio(fabrica: FabricaContexto, opcoes: OpcoesMotor = 
     },
     get contexto() {
       return ctx;
+    },
+    get saidaFinal() {
+      return saidaFinal;
     },
     retomar() {
       if (!ctx) return;

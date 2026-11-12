@@ -15,6 +15,7 @@ import type { EstadoSobrevivencia } from '../jogo/sobrevivencia';
 import type { Comando, EventoNucleo, Mensagem, Quadro, SalvoNucleo } from '../nucleo/protocolo';
 import type { Conexao } from './conexao';
 import { indiceDonoDe } from '../world/edicoes';
+import { criarReplicaVeiculos } from './veiculos';
 import {
   criarReplicaCriaturas,
   criarReplicaItens,
@@ -74,6 +75,8 @@ export function criarEstadoCliente(op: OpcoesEstadoCliente) {
   const sincronia = criarSincronizadorItens(op.inventario, enviar, proximoId);
   const criaturas = criarReplicaCriaturas();
   const itens = criarReplicaItens();
+  /** Spec 014 (T14): os planos e o relógio dos veículos da cidade. */
+  const veiculos = criarReplicaVeiculos();
   let conteiner: ConteinerReplica | null = null;
   let ultimoAckTransacao = 0;
 
@@ -105,6 +108,7 @@ export function criarEstadoCliente(op: OpcoesEstadoCliente) {
     }
     if (q.criaturas) criaturas.receber(q.criaturas);
     if (q.itens) itens.receber(q.itens);
+    if (q.veiculos) veiculos.receber(q.veiculos, performance.now() / 1000, !!q.primeiro);
     if (q.inventario) {
       ultimoAckTransacao = q.inventario.ackTransacao;
       sincronia.inventario(q.inventario.slots, q.inventario.ackTransacao, q.inventario.transito);
@@ -155,6 +159,7 @@ export function criarEstadoCliente(op: OpcoesEstadoCliente) {
     sincronia,
     criaturas,
     itens,
+    veiculos,
     ambiente,
     get sobrevivencia() {
       return sobrevivencia;

@@ -336,7 +336,9 @@ export function criarTransito(op: OpcoesTransito) {
     let seguraCrianca = false;
     for (const p of perto) {
       const d = distanciaAoVeiculo(pose, m, p.x, p.z);
+      // em cima: no teto ou pulando nele (quem voa bem mais alto não segura o veículo)
       const emCima = p.y > chao + 0.6;
+      if (emCima && p.y > chao + m.altura + 1.5) continue;
       if (emCima ? d <= 0 : p.y < chao + 2.2 && d < RAIO_PESSOA + 0.05) {
         segura = true;
         if (p.crianca) seguraCrianca = true;

@@ -125,7 +125,11 @@ describe('nada da cidade em outro tema', () => {
     expect(INDICE.temas['cidade-grande']).toHaveProperty('ambiente');
     // os pacotes de som da cidade são só dela (nenhum outro tema baixa esses arquivos)
     const daCidade = Object.keys(INDICE.tamanhos).filter((a) => a.startsWith('cidade-grande-'));
-    expect(daCidade.sort()).toEqual(['cidade-grande-musica.mp3', 'cidade-grande-vozes.mp3']);
+    expect(daCidade.sort()).toEqual([
+      'cidade-grande-musica.mp3',
+      'cidade-grande-veiculos.mp3',
+      'cidade-grande-vozes.mp3',
+    ]);
     for (const t of OUTROS) expect(temaDoSom(t.id)).not.toBe('cidade-grande');
   });
 });
