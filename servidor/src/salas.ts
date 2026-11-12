@@ -437,9 +437,7 @@ export function criarGerenciador(op: OpcoesGerenciador) {
       donos: edicoes.donos.exportar(),
       semPovoado: [...s.nucleo.semPovoado],
       // spec 014: as obras do canteiro (o navegador gera a cidade com as feitas)
-      ...(Object.keys(s.nucleo.obras()).length
-        ? { obras: s.nucleo.obras() }
-        : {}),
+      ...(Object.keys(s.nucleo.obras()).length ? { obras: s.nucleo.obras() } : {}),
       pos: (() => {
         const t = s.nucleo.estado.jogadores.get(jog.id)!.tel;
         return { x: t.x, y: t.y, z: t.z, yaw: t.yaw, pitch: t.pitch };

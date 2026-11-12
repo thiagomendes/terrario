@@ -343,11 +343,7 @@ export function criarProtecaoMundo(
   const chave = (cx: number, cz: number) => (cx + 32768) * 65536 + (cz + 32768);
   function doChunk(cx: number, cz: number): MascaraProtecao | null {
     // o estilo do mundo ou as regiões sem povoado mudaram: a geração muda junto
-    if (
-      estiloMundo() !== estilo ||
-      versaoDosPovoados() !== versao ||
-      versaoDasObras() !== obras
-    ) {
+    if (estiloMundo() !== estilo || versaoDosPovoados() !== versao || versaoDasObras() !== obras) {
       estilo = estiloMundo();
       versao = versaoDosPovoados();
       obras = versaoDasObras();

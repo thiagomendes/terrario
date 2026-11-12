@@ -446,7 +446,8 @@ export function pintarCanteiro(l: LoteCidade, q: PincelLote, situacao: SituacaoC
   const D = l.profundidade;
   const def = l.canteiro ? obraDoCanteiro(l.canteiro) : undefined;
   if (situacao === 'feita' && def) {
-    for (const c of celulasDaObra(def)) q(c.s, c.f, c.y, c.bloco, c.d === SEM_DIR ? undefined : c.d);
+    for (const c of celulasDaObra(def))
+      q(c.s, c.f, c.y, c.bloco, c.d === SEM_DIR ? undefined : c.d);
     for (const [s, f, y, b, d] of def.vida) q(s, f, y, b, d);
     // a placa da obra feita (casinha) fica num poste de grade
     q(5, 0, 0, Bloco.GRADE_FERRO);

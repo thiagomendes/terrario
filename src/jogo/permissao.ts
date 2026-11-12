@@ -120,7 +120,9 @@ export function recusaColocar(
   if (p === Protecao.OBRA) {
     const pl = m.protecao.planejado?.(x, y, z) ?? null;
     if (pl && bloco === pl.bloco) return null;
-    return pl ? { motivo: 'obra', lugar: 'cidade', certo: pl.bloco } : { motivo: 'obra', lugar: 'cidade' };
+    return pl
+      ? { motivo: 'obra', lugar: 'cidade', certo: pl.bloco }
+      : { motivo: 'obra', lugar: 'cidade' };
   }
   if (naoColoca(p)) {
     // conserto: o bloco que a geração pôs volta ao buraco da estrutura

@@ -87,7 +87,10 @@ function ir(n: Nucleo, quem: string, c: { x: number; y: number; z: number }): vo
   n.comando(quem, tel(c.x + 0.5, c.y + 2, c.z + 0.5));
 }
 
-function abrir(jogo: 'criativo' | 'sobrevivencia', dados?: Parameters<typeof criarNucleo>[0]['dados']) {
+function abrir(
+  jogo: 'criativo' | 'sobrevivencia',
+  dados?: Parameters<typeof criarNucleo>[0]['dados'],
+) {
   const n = criarNucleo({
     semente: SEMENTE,
     modo: jogo,
@@ -218,7 +221,9 @@ describe('encher a obra (nuvem: tudo pelo saneamento)', () => {
     // o bloco posto já é da cidade: ninguém tira, nem quem pôs
     const i = id();
     mandar(n, 'ana', { t: 'quebrar', id: i, x: c.x, y: c.y, z: c.z, slot: 0 });
-    const r = eventos(n).get('ana')!.find((e) => e.e === 'recusa');
+    const r = eventos(n)
+      .get('ana')!
+      .find((e) => e.e === 'recusa');
     expect(r).toMatchObject({ protecao: { motivo: 'obra' } });
     expect(n.estado.mundo.bloco(c.x, c.y, c.z)).toBe(c.bloco);
   });
@@ -310,7 +315,13 @@ describe('encher a obra (nuvem: tudo pelo saneamento)', () => {
     // salvar e reabrir: continua feita (a geração lê a lista), com os ajudantes guardados
     const salvo = n.salvar();
     const obras = sanearObras(salvo.extras['obras']);
-    expect(obras['1']).toMatchObject({ feita: true, ajudantes: [['ana', 'Ana'], ['leo', 'Léo']] });
+    expect(obras['1']).toMatchObject({
+      feita: true,
+      ajudantes: [
+        ['ana', 'Ana'],
+        ['leo', 'Léo'],
+      ],
+    });
     definirObrasFeitas([]);
     const m = abrir('criativo', {
       versao: 1,
@@ -351,7 +362,9 @@ describe('o pedreiro e o mundo salvo', () => {
     ana.inventario.definir(slot, null);
     let colher: EventoNucleo | undefined;
     for (let i = 0; i < 200 && !colher; i++)
-      colher = eventos(n).get('ana')!.find((e) => e.e === 'colher');
+      colher = eventos(n)
+        .get('ana')!
+        .find((e) => e.e === 'colher');
     expect(colher).toMatchObject({ e: 'colher' });
     expect(ana.inventario.contar(COLHER_PEDREIRO)).toBe(1);
   });
@@ -360,7 +373,11 @@ describe('o pedreiro e o mundo salvo', () => {
     expect(
       sanearExtras({
         obras: {
-          '1': { cheias: [0, 1, 1, -3, 'x'], ajudantes: [['ana', 'Ana'], ['ana', 'x'], [3]], feita: true },
+          '1': {
+            cheias: [0, 1, 1, -3, 'x'],
+            ajudantes: [['ana', 'Ana'], ['ana', 'x'], [3]],
+            feita: true,
+          },
           '9': { cheias: [] },
           lixo: 2,
         },

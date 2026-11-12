@@ -3,6 +3,11 @@ import { EVENTO_ICONES, iconeDoItem } from './icones';
 import { modoToque } from './pixicones';
 
 const CSS = `
+/* spec 014: a casinha que pisca (bloco certo da obra, colher que chegou) */
+@keyframes piscar-slot { 0%, 100% { transform: scale(1); box-shadow: none; }
+  30%, 70% { transform: scale(1.14); box-shadow: 0 0 0 3px #ffd45a, 0 0 14px #ffd45a; } }
+[data-slot].piscando { animation: piscar-slot 0.6s ease-in-out 2; }
+
 /* barra de itens: bandeja creme com um poço por item; o escolhido sobe com borda amarela */
 .barra {
   position: fixed;
@@ -195,6 +200,20 @@ export function criarBarra(app: HTMLElement, hotbar: Hotbar = criarHotbar()): Ho
       if (segurando && e.pointerId === segurando.id) soltarSegurar();
     });
   barra.addEventListener('contextmenu', (e) => e.preventDefault());
+  // spec 014 (T06): o canteiro pisca a casinha do bloco certo (ou a da colher)
+  window.addEventListener('brumaluz:piscarSlot', (e) => {
+    const slot = (e as CustomEvent<number>).detail;
+    const el = barra.querySelector<HTMLElement>(`[data-slot="${slot}"]`);
+    if (!el) return;
+    el.classList.remove('piscando');
+    void el.offsetWidth;
+    el.classList.add('piscando');
+    setTimeout(() => el.classList.remove('piscando'), 1300);
+  });
+  window.addEventListener('brumaluz:selecionarSlot', (e) => {
+    hotbar.selecionar((e as CustomEvent<number>).detail);
+    atualizar();
+  });
 
   barra.addEventListener('click', (e) => {
     const alvo = (e.target as HTMLElement).closest<HTMLElement>('[data-slot]');

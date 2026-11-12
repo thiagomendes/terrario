@@ -307,7 +307,10 @@ export function criarNucleo(op: OpcoesNucleo) {
    * parte da cidade), então entram na geração antes de qualquer chunk deste mundo.
    */
   const cidade = cidadeDoMundo(semente);
-  const obras = new Map<number, { ajudantes: Map<string, string>; cheias: number[]; feita: boolean }>();
+  const obras = new Map<
+    number,
+    { ajudantes: Map<string, string>; cheias: number[]; feita: boolean }
+  >();
   if (cidade) {
     const salvas = (extras['obras'] ?? {}) as Record<string, ObraSalva>;
     for (const [k, o] of Object.entries(salvas))
@@ -901,9 +904,7 @@ export function criarNucleo(op: OpcoesNucleo) {
     const daColher = p?.item === COLHER_PEDREIRO && !!plano && plano.bloco === bloco;
     if (plano && plano.bloco === bloco) meta = plano.meta;
     const temItem =
-      modo === 'criativo' ||
-      daColher ||
-      (!!p && blocoDoItem(p.item) === bloco && p.qtd > 0);
+      modo === 'criativo' || daColher || (!!p && blocoDoItem(p.item) === bloco && p.qtd > 0);
     // a outra parte só existe para a porta (dois blocos de altura): exatamente a célula de
     // cima, que tem de estar livre. Qualquer outra "parte extra" é truque (uma semente
     // plantando três pés, uma tábua virando três blocos longe dali) e o pedido é recusado.
@@ -1155,7 +1156,10 @@ export function criarNucleo(op: OpcoesNucleo) {
       const alguem = [...jogadores.values()].some(
         (o) => Math.hypot(o.tel.x - posto[0], o.tel.z - posto[2]) < 60,
       );
-      if (!alguem || mundo.criaturas.superficie(Math.floor(posto[0]), Math.floor(posto[2])) === null)
+      if (
+        !alguem ||
+        mundo.criaturas.superficie(Math.floor(posto[0]), Math.floor(posto[2])) === null
+      )
         return;
       c = populacao.adicionar('morador', posto[0], posto[1], posto[2]);
       c.morador = {

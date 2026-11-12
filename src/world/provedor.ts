@@ -11,6 +11,8 @@ export interface ProvedorBlocos {
   /** O chunk já está na memória (sem custo para ler)? */
   tem(cx: number, cz: number): boolean;
   registrar(cx: number, cz: number, blocos: Uint8Array): void;
+  /** Spec 014 (T06): a geração do chunk mudou (obra feita): ele é gerado de novo. */
+  esquecer(cx: number, cz: number): void;
   readonly tamanho: number;
 }
 
@@ -42,6 +44,9 @@ export function criarProvedorBlocos(
     tem: (cx, cz) => mapa.has(chaveNum(cx, cz)),
     registrar(cx, cz, blocos) {
       guardar(chaveNum(cx, cz), blocos);
+    },
+    esquecer(cx, cz) {
+      mapa.delete(chaveNum(cx, cz));
     },
     get tamanho() {
       return mapa.size;

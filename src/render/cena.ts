@@ -91,7 +91,35 @@ import type { DadosMundo, MetaMundo, ModoJogo, RepositorioMundos } from '../jogo
 import { caixasDoBloco, cercaConecta, direcaoDoYaw, vetorDirecao } from '../world/formas';
 import { abreEFecha, alternado, ehPorta, ehPorteira } from '../world/portas';
 import { velocidadeMineracao } from '../jogo/ferramentas';
-import { obterItem } from '../jogo/itens';
+import { blocoDoItem, obterItem } from '../jogo/itens';
+import { COLHER_PEDREIRO } from '../jogo/exclusivos';
+import { entradaNaCaixa, fantasmaNoRaio } from '../jogo/miraObra';
+import { sanearObras } from '../nucleo/saneamento';
+import {
+  canteirosAbertos,
+  celulasPlanejadas,
+  centroDaObra,
+  chunksDoCanteiro,
+  definirObrasFeitas,
+  loteDoCanteiro,
+  mesmoBlocoDaObra,
+  noLoteObra,
+  obrasFeitas,
+  situacaoDoCanteiro,
+  versaoDasObras,
+  type CelulaPlanejada,
+} from '../world/obras';
+import { criarFantasmasObra } from './fantasmasObra';
+import { criarProgressoObra } from '../ui/progressoObra';
+import { MAO } from '../ui/dicaMira';
+import {
+  acordeDaCamada,
+  humDoPedreiro,
+  musiquinhaDoCoreto,
+  plimDaColher,
+  plimDaObra,
+  taDa,
+} from '../audio/somObra';
 import {
   AVISO_SEMENTE,
   alvoDaEnxada,
@@ -148,8 +176,19 @@ import { criarEdicoes, donoNaCelula } from '../world/edicoes';
 import { sanearDonos, sanearDonosMudados } from '../nucleo/saneamento';
 import { JOGADOR_LOCAL } from '../nucleo/anfitriao';
 import { ALTURA, alturaTerreno, indice } from '../world/chunk';
-import { mirarDaCamera, posicaoColocacao, type Vec3 } from '../player/alvo';
-import { ALCANCE_MIRA, ALCANCE_TOQUE, clienteAlcanca } from '../jogo/alcance';
+import {
+  colocacaoBloqueada,
+  mirarDaCamera,
+  posicaoColocacao,
+  type Vec3,
+} from '../player/alvo';
+import {
+  ALCANCE_MIRA,
+  ALCANCE_TOQUE,
+  MEIA_DIAGONAL,
+  alcancaDosOlhos,
+  clienteAlcanca,
+} from '../jogo/alcance';
 import { criarBarramento, type Barramento } from '../player/eventos';
 import { criarMinerador } from '../player/minerador';
 import { colocacaoPermitida, type AlvoMineracao } from '../player/mineracao';
@@ -403,6 +442,16 @@ export interface EstadoDepuracao {
   logicaQuadroMs?: number;
   atmosfera?: { noite: number; crepusculo: number };
   itensSoltos?: number;
+  /** Spec 014 (testes): fantasmas da obra desenhados, blocos postos neles, obras feitas e colheres. */
+  fantasmasObra?: number;
+  obraColocados?: number;
+  obrasFeitas?: number[];
+  colherRecebida?: number;
+  usarOuColocar?: () => void;
+  fantasmaNaMira?: () => { x: number; y: number; z: number; bloco: number } | null;
+  voar?: (v: boolean) => void;
+  /** Spec 014 (testes): as células vazias das obras abertas perto (a próxima camada primeiro). */
+  fantasmasPerto?: () => { x: number; y: number; z: number; bloco: number; canteiro: number }[];
   blocoGerado?: (x: number, y: number, z: number) => number;
   /** Solta um item no chão (dur: durabilidade restante de ferramentas). */
   soltarItem?: (item: string, qtd: number, x: number, y: number, z: number, dur?: number) => void;
@@ -789,6 +838,17 @@ export function criarCena(
         })()
       : [];
   definirRegioesSemPovoado(semPovoado);
+  /**
+   * Spec 014 (T06): as obras do canteiro (as feitas mudam a geração da cidade, como no
+   * núcleo): os nomes da placa de cada uma e a lista das feitas, antes de qualquer chunk.
+   */
+  const obrasDoMundo = new Map<number, { nomes: string[]; feita: boolean }>();
+  for (const [k, o] of Object.entries(sanearObras(dadosIniciais?.extras?.['obras'])))
+    obrasDoMundo.set(Number(k), {
+      nomes: o.ajudantes.map(([, a]) => a).filter((a) => a),
+      feita: !!o.feita,
+    });
+  definirObrasFeitas([...obrasDoMundo].filter(([, o]) => o.feita).map(([n]) => n));
   // blocos-base compartilhados (chegam do worker junto com a malha)
   const provedor = criarProvedorBlocos(semente);
   /**
@@ -836,6 +896,12 @@ export function criarCena(
    * Segurando o botão no bloco protegido, o toc repete devagar.
    */
   function avisarProtecao(r: RecusaProtecao): void {
+    // spec 014: na obra, nada de "toc": o "hum?" do pedreiro e o balão do bloco certo
+    if (r.motivo === 'obra') {
+      avisarObra(r.certo, fantasmas && podeEncherObra() ? fantasmaNaMira() : null);
+      protecaoEm = performance.now();
+      return;
+    }
     avisosProtecao.avisar(r);
     protecaoEm = performance.now();
     somEfeito('toc', 450);
@@ -1346,8 +1412,15 @@ export function criarCena(
         ? 'baixo'
         : 'alto';
   estado.detalhe = detalhe;
-  worker.postMessage({ estilo: estiloMundo(), semPovoado, coresPlantas, detalhe });
-  workerEdicao.postMessage({ estilo: estiloMundo(), semPovoado, coresPlantas, detalhe });
+  const inicioWorker = {
+    estilo: estiloMundo(),
+    semPovoado,
+    coresPlantas,
+    detalhe,
+    obrasFeitas: obrasFeitas(),
+  };
+  worker.postMessage(inicioWorker);
+  workerEdicao.postMessage(inicioWorker);
   /** Momento da edição por chunk (para medir quanto o bloco demora a aparecer). */
   const inicioEdicao = new Map<string, number>();
   const receber = (ev: MessageEvent<RespostaChunk>) => {
@@ -2078,6 +2151,13 @@ export function criarCena(
       ararNaMira(a);
       return;
     }
+    // spec 014: com a colher ou um bloco na mão, o fantasma da obra na mira (ou perto do dedo)
+    const fantasma = podeEncherObra() ? fantasmaNaMira() : null;
+    if (fantasma) {
+      encherFantasma(fantasma);
+      return;
+    }
+    if (p?.item === COLHER_PEDREIRO) return;
     interagirComEventos('colocar');
   }
 
@@ -2149,6 +2229,13 @@ export function criarCena(
   });
 
   estado.interagir = interagirComEventos;
+  /** Spec 014 (testes): o clique direito de verdade (usa, enche o fantasma ou coloca). */
+  estado.usarOuColocar = () => usarOuColocar(false);
+  estado.fantasmaNaMira = () => (podeEncherObra() ? fantasmaNaMira() : null);
+  /** Spec 014 (testes): voar parado no criativo (as capturas do alto da obra). */
+  estado.voar = (v: boolean) => {
+    controle.jogador.voando = v && modo === 'criativo';
+  };
   estado.selecionarSlot = (i: number) => {
     hotbar.selecionar(i);
     verificarSlot();
@@ -3400,6 +3487,7 @@ export function criarCena(
     quadroCriaturas?.(dtQuadro, tempo);
     outrosJogadores.atualizar(dtQuadro, Math.max(0.2, luzJogador * (0.45 + 0.55 * luzDia)));
     quadroConstrucao?.(tempo);
+    atualizarFantasmas(tempo);
     balanco.atualizar(tempo);
     logicaMs += (performance.now() - inicioQuadro - logicaMs) * 0.05;
     scene.render();
@@ -3735,6 +3823,9 @@ export function criarCena(
       t = toque ? 'Toque na raposa para dar frutinhas' : 'Clique direito (ou F): dar frutinhas';
     } else if (comidaNaMao() && cliente.sobrevivencia.fome < 20) {
       t = toque ? 'Segure o dedo na tela para comer' : 'Clique direito (ou F): comer';
+    } else if (!semDedo && podeEncherObra() && fantasmaNaMira()) {
+      // spec 014: o fantasma da obra na mira (a mãozinha para quem não lê)
+      t = `${MAO}${toque ? 'Toque no bloco azul' : 'Clique direito: pôr no bloco azul'}`;
     } else {
       t = dicaDoPlantio(alvo, toque, p?.item);
     }
@@ -4344,8 +4435,296 @@ export function criarCena(
     const meu = id === meuAlvo.id && performance.now() - meuAlvo.em < MEU_GOLPE_MS;
     return volumeDoGolpeNoBicho(c ? volumeDaDistancia(c) : null, meu);
   };
+  // ------------------------------------------------ canteiro de obras (spec 014, T06)
+
+  const cidadeObra = cidadeDoMundo(semente);
+  const fantasmas = cidadeObra ? criarFantasmasObra(scene, (m) => glow.addExcludedMesh(m)) : null;
+  if (cidadeObra) criarProgressoObra();
+  /** Até onde os fantasmas aparecem (do centro da obra). */
+  const RAIO_FANTASMAS = 24;
+  /** Um aviso de bloco errado a cada 3 s, no máximo. */
+  const ESPERA_AVISO_OBRA = 3000;
+  let avisoObraEm = -Infinity;
+  /** Fantasmas das obras abertas perto (refeitos quando o mundo muda). */
+  let listaFantasmas: (CelulaPlanejada & { pulsa: boolean })[] = [];
+  let chaveFantasmas = '';
+  let progressoVisto: number | null = null;
+  let coretoDentro = false;
+  let coretoTocouEm = -Infinity;
+  const vaziaNaObra = (c: CelulaPlanejada) => !mesmoBlocoDaObra(blocoEm(c.x, c.y, c.z), c.bloco);
+
+  function atualizarFantasmas(tempo: number): void {
+    if (!cidadeObra || !fantasmas) return;
+    const j = controle.jogador;
+    const k = `${edicoes.versaoGeral},${versaoDasObras()},${Math.floor(j.x / 4)},${Math.floor(j.z / 4)}`;
+    if (k !== chaveFantasmas) {
+      chaveFantasmas = k;
+      const lista: (CelulaPlanejada & { pulsa: boolean })[] = [];
+      let fracao: number | null = null;
+      let melhor = Infinity;
+      for (const n of canteirosAbertos()) {
+        const centro = centroDaObra(cidadeObra, n);
+        if (!centro) continue;
+        const d = Math.hypot(centro[0] - j.x, centro[2] - j.z);
+        if (d > RAIO_FANTASMAS) continue;
+        const celulas = celulasPlanejadas(cidadeObra, n);
+        const vazias = celulas.filter(vaziaNaObra);
+        const camada = Math.min(...vazias.map((c) => c.camada));
+        for (const c of vazias) lista.push({ ...c, pulsa: c.camada === camada });
+        if (d < melhor) {
+          melhor = d;
+          fracao = 1 - vazias.length / celulas.length;
+        }
+      }
+      listaFantasmas = lista;
+      fantasmas.definir(lista);
+      estado.fantasmasPerto = () =>
+        [...listaFantasmas]
+          .sort((a, b) => a.camada - b.camada)
+          .map((c) => ({ x: c.x, y: c.y, z: c.z, bloco: c.bloco, canteiro: c.canteiro }));
+      estado.fantasmasObra = lista.length;
+      if (fracao !== progressoVisto) {
+        progressoVisto = fracao;
+        window.dispatchEvent(new CustomEvent('brumaluz:progressoObra', { detail: fracao }));
+      }
+    }
+    const m = podeEncherObra() ? fantasmaNaMira() : null;
+    fantasmas.quadro(tempo, m);
+    // o coreto feito toca a musiquinha quando alguém entra nele (uma vez a cada 20 s)
+    if (situacaoDoCanteiro(6) === 'feita') {
+      const centro = centroDaObra(cidadeObra, 6);
+      const dentro = !!centro && Math.abs(centro[0] - j.x) < 2.6 && Math.abs(centro[2] - j.z) < 2.6;
+      if (dentro && !coretoDentro && tempo - coretoTocouEm > 20) {
+        coretoTocouEm = tempo;
+        musiquinhaDoCoreto(motorAudio);
+      }
+      coretoDentro = dentro;
+    }
+  }
+
+  /** Com a colher ou um bloco na mão, a mira prefere os fantasmas. */
+  function podeEncherObra(): boolean {
+    if (!listaFantasmas.length) return false;
+    const p = hotbar.pilhaAtiva();
+    return p?.item === COLHER_PEDREIRO || hotbar.blocoAtivo() !== Bloco.AR;
+  }
+
+  /** O fantasma da mira (o do dedo, com o ímã de meio bloco; o do centro, em cheio). */
+  function fantasmaNaMira(): CelulaPlanejada | null {
+    const r = raioMira();
+    const toque = raioToque !== null;
+    const olhos = { x: camera.position.x, y: camera.position.y, z: camera.position.z };
+    const s = mirarDaCamera(r.origem, r.direcao, olhos, ALCANCE_VER_LONGE, (x, y, z) =>
+      ehAlvo(blocoEm(x, y, z)),
+    );
+    const solido = s ? (entradaNaCaixa(r.origem, r.direcao, s) ?? Infinity) : Infinity;
+    return fantasmaNoRaio(r.origem, r.direcao, listaFantasmas, {
+      limite: 40,
+      ima: toque ? 0.5 : 0,
+      solido,
+      // o fantasma em que o boneco está não enche (o núcleo recusaria: o corpo ocupa a célula)
+      alcanca: (c) =>
+        !colocacaoBloqueada(c, controle.jogador) &&
+        (toque
+          ? clienteAlcanca(olhos, c.x, c.y, c.z)
+          : alcancaDosOlhos(olhos, c.x, c.y, c.z, ALCANCE_MIRA + MEIA_DIAGONAL)),
+    });
+  }
+
+  /** Bloco errado: o fantasma treme, o balão mostra o certo e pisca a casinha dele. */
+  function avisarObra(certo: number | undefined, c: { x: number; y: number; z: number } | null) {
+    const agora = performance.now();
+    if (c && certo !== undefined) fantasmas?.avisar(c.x, c.y, c.z, certo, agora / 1000);
+    if (agora - avisoObraEm < ESPERA_AVISO_OBRA) return;
+    avisoObraEm = agora;
+    avisosProtecao.avisar(
+      certo !== undefined
+        ? { motivo: 'obra', lugar: 'cidade', certo }
+        : { motivo: 'obra', lugar: 'cidade' },
+    );
+    humDoPedreiro(motorAudio);
+    if (certo === undefined) return;
+    // o pedreiro aponta para a obra
+    const ped = replicaCriaturas.lista.find((q) => q.morador?.povoado === 'cidade');
+    if (ped) gestos?.evento({ e: 'gesto', gesto: 'apontar', criatura: ped.id });
+    // a casinha do bloco certo pisca (ou a da colher)
+    let slot = -1;
+    for (let i = 0; i < 9 && slot < 0; i++)
+      if (blocoDoItem(inventario.obter(i)?.item ?? '') === certo) slot = i;
+    for (let i = 0; i < 9 && slot < 0; i++)
+      if (inventario.obter(i)?.item === COLHER_PEDREIRO) slot = i;
+    if (slot >= 0) window.dispatchEvent(new CustomEvent('brumaluz:piscarSlot', { detail: slot }));
+  }
+
+  /** Enche o fantasma (com a colher ou o bloco certo); bloco errado não vai. */
+  function encherFantasma(c: CelulaPlanejada): boolean {
+    const colher = hotbar.pilhaAtiva()?.item === COLHER_PEDREIRO;
+    if (!colher && hotbar.blocoAtivo() !== c.bloco) {
+      avisarObra(c.bloco, c);
+      barramento.emitir('recusa', { motivo: 'colocar' });
+      return true;
+    }
+    const id = proximoId();
+    prever(id, c.x, c.y, c.z, c.bloco, c.meta);
+    enviarTelemetria(true);
+    enviar({
+      t: 'colocar',
+      id,
+      x: c.x,
+      y: c.y,
+      z: c.z,
+      bloco: c.bloco,
+      meta: c.meta,
+      slot: hotbar.ativo,
+    });
+    const celulas = cidadeObra ? celulasPlanejadas(cidadeObra, c.canteiro) : [];
+    plimDaObra(motorAudio, celulas.length - celulas.filter(vaziaNaObra).length, celulas.length);
+    barramento.emitir('colocacao', { x: c.x, y: c.y, z: c.z, bloco: c.bloco });
+    estado.obraColocados = (estado.obraColocados ?? 0) + 1;
+    return true;
+  }
+
+  /** Os chunks que a obra feita (e o canteiro que abriu) mudam: gera e remalha de novo. */
+  function regerarCanteiros(canteiros: readonly number[]): void {
+    if (!cidadeObra) return;
+    const chunks = new Map<string, [number, number]>();
+    for (const n of canteiros)
+      for (const [cx, cz] of chunksDoCanteiro(cidadeObra, n)) chunks.set(chave(cx, cz), [cx, cz]);
+    const esquecer = [...chunks.keys()];
+    for (const w of [worker, workerEdicao]) w.postMessage({ obras: obrasFeitas(), esquecer });
+    for (const [cx, cz] of chunks.values()) {
+      provedor.esquecer(cx, cz);
+      edicoes.tocar?.(cx, cz);
+    }
+    const remalhar = new Map<string, { cx: number; cz: number }>();
+    for (const [cx, cz] of chunks.values())
+      for (let dx = -1; dx <= 1; dx++)
+        for (let dz = -1; dz <= 1; dz++)
+          remalhar.set(chave(cx + dx, cz + dz), { cx: cx + dx, cz: cz + dz });
+    for (const [k, c] of remalhar) {
+      if (!malhas.has(k) && !pedidos.has(k)) continue;
+      prioritarios.add(k);
+      pedidos.add(k);
+      remalhaPendente.set(k, c);
+    }
+    if (!envioAgendado) {
+      envioAgendado = true;
+      queueMicrotask(enviarRemalhas);
+    }
+  }
+
+  /** A placa "Feita por ..." de cada obra feita (em cima da placa do canteiro). */
+  function placaDaObra(n: number): void {
+    const l = cidadeObra ? loteDoCanteiro(cidadeObra, n) : undefined;
+    const o = obrasDoMundo.get(n);
+    if (!l || !o?.feita || !fantasmas || !cidadeObra) return;
+    const [x, z] = noLoteObra(l, 5, 0);
+    const fora = l.porta === 'n' ? -1 : 1;
+    fantasmas.placa(
+      n,
+      x + 0.5,
+      cidadeObra.h + 1 + 2.75,
+      z + 0.5 + fora * 0.05,
+      l.porta === 'n' ? 0 : Math.PI,
+      o.nomes,
+    );
+  }
+  for (const n of obrasDoMundo.keys()) placaDaObra(n);
+
+  /** Confete de pedacinhos de tijolo e folhas por cima da obra, em ondas (até uns 3 s). */
+  function festaDaObra(n: number, grande: boolean): void {
+    const centro = cidadeObra ? centroDaObra(cidadeObra, n) : null;
+    if (!centro) return;
+    const cores: [number, number, number][] = [
+      [0.86, 0.32, 0.26],
+      [0.95, 0.55, 0.2],
+      [0.42, 0.72, 0.25],
+      [1, 0.84, 0.35],
+      [0.4, 0.62, 1],
+    ];
+    const ondas = grande ? 8 : 5;
+    for (let w = 0; w < ondas; w++)
+      setTimeout(() => {
+        pool.emitir(
+          Array.from({ length: 14 }, (_, i) => {
+            const ang = (i / 14) * Math.PI * 2 + rngFx() * 0.6;
+            const v = 1.4 + rngFx() * 2;
+            return {
+              x: centro[0] + (rngFx() - 0.5) * 3,
+              y: centro[1] + 1.5,
+              z: centro[2] + (rngFx() - 0.5) * 3,
+              vx: Math.cos(ang) * v,
+              vy: 3 + rngFx() * 2.5,
+              vz: Math.sin(ang) * v,
+              cor: cores[(i + w) % cores.length],
+              tipo: CONFETE,
+            };
+          }),
+        );
+      }, w * 380);
+    // o tapume e o andaime somem num sopro de poeira
+    const l = cidadeObra ? loteDoCanteiro(cidadeObra, n) : undefined;
+    if (l)
+      for (let i = 0; i < 8; i++) {
+        const [x, z] = noLoteObra(l, i % 2 ? 0 : 7, i);
+        aplicarPlano('quebra', { x, y: cidadeObra!.h + 1, z, bloco: Bloco.TAPUME });
+      }
+  }
+
+  /** O evento da obra: o progresso dos outros, a camada fechada e a obra feita. */
+  function eventoObra(e: Extract<EventoNucleo, { e: 'obra' }>): void {
+    if (!cidadeObra) return;
+    const centro = centroDaObra(cidadeObra, e.canteiro);
+    const j = controle.jogador;
+    const perto = !!centro && Math.hypot(centro[0] - j.x, centro[2] - j.z) <= 32;
+    if (!e.feita) {
+      // o "plim" de quem pôs já saiu na previsão; o dos amigos sai aqui (se perto)
+      if (!e.meu && perto && e.x !== undefined) {
+        plimDaObra(motorAudio, e.cheias, e.total, 0.7);
+        aplicarPlano('colocacao', { x: e.x, y: e.y!, z: e.z!, bloco: Bloco.TIJOLOS });
+      }
+      if (e.camada && perto) acordeDaCamada(motorAudio);
+      return;
+    }
+    // a obra ficou pronta: vira parte da cidade (como no núcleo)
+    const antes = canteirosAbertos();
+    obrasDoMundo.set(e.canteiro, { nomes: e.nomes ?? [], feita: true });
+    definirObrasFeitas([...obrasDoMundo].filter(([, o]) => o.feita).map(([n]) => n));
+    const abriram = canteirosAbertos().filter((k) => !antes.includes(k));
+    for (const c of celulasPlanejadas(cidadeObra, e.canteiro)) edicoes.remover?.(c.x, c.y, c.z);
+    regerarCanteiros([e.canteiro, ...abriram]);
+    placaDaObra(e.canteiro);
+    estado.obrasFeitas = obrasFeitas();
+    const todas = obrasFeitas().length >= 6;
+    if (perto) {
+      festaDaObra(e.canteiro, todas);
+      taDa(motorAudio, todas);
+      // a criança também bate palmas (sem travar o controle)
+      gestos?.evento({ e: 'gesto', gesto: 'aplaudir', jogador: voce });
+    }
+    window.dispatchEvent(
+      new CustomEvent('brumaluz:obra', {
+        detail: { canteiro: e.canteiro, feita: true, meu: !!e.ajudou, nomes: e.nomes ?? [] },
+      }),
+    );
+    for (const id of e.recompensa ?? [])
+      window.dispatchEvent(new CustomEvent('brumaluz:desbloqueio', { detail: { id } }));
+  }
+
   function tratarEvento(e: EventoNucleo): void {
     switch (e.e) {
+      case 'obra':
+        eventoObra(e);
+        break;
+      case 'colher': {
+        // a colher do pedreiro chegou: fica na mão, com um brilho e o "plim"
+        if (e.slot < 9)
+          window.dispatchEvent(new CustomEvent('brumaluz:selecionarSlot', { detail: e.slot }));
+        window.dispatchEvent(new CustomEvent('brumaluz:piscarSlot', { detail: e.slot }));
+        plimDaColher(motorAudio);
+        estado.colherRecebida = (estado.colherRecebida ?? 0) + 1;
+        break;
+      }
       case 'gesto': // spec 015: gesto de um amigo ou de um morador que respondeu
         gestos?.evento(e);
         break;

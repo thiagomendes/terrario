@@ -4,6 +4,7 @@ import type { Buffers } from '../mesh/malha';
 import { blocoDe, criarEdicoes, metasDoChunk, type Edicoes } from '../world/edicoes';
 import { definirEstiloMundo, gerarChunk } from '../world/chunk';
 import { definirRegioesSemPovoado } from '../world/povoado';
+import { definirObrasFeitas } from '../world/obras';
 import {
   definirCoresPlantas,
   definirDetalhePlantas,
@@ -78,10 +79,25 @@ export interface PedidoEstilo {
   coresPlantas?: Record<number, CoresPlanta>;
   /** Qualidade das peças de brinquedo: 'baixo' no celular. */
   detalhe?: 'alto' | 'baixo';
+  /** Spec 014: as obras feitas do canteiro (mudam a geração da cidade). */
+  obrasFeitas?: number[];
 }
 
-self.onmessage = (ev: MessageEvent<PedidoChunk | PedidoEstilo>) => {
+/** Spec 014 (T06): uma obra terminou: a geração muda e os chunks do canteiro saem da memória. */
+export interface PedidoObras {
+  obras: number[];
+  esquecer: string[];
+}
+
+self.onmessage = (ev: MessageEvent<PedidoChunk | PedidoEstilo | PedidoObras>) => {
+  if ('obras' in ev.data) {
+    definirObrasFeitas(ev.data.obras);
+    for (const k of ev.data.esquecer)
+      for (const c of [...cache.keys()]) if (c.startsWith(`${k},`)) cache.delete(c);
+    return;
+  }
   if ('estilo' in ev.data) {
+    definirObrasFeitas(ev.data.obrasFeitas ?? []);
     definirEstiloMundo(ev.data.estilo);
     definirRegioesSemPovoado(ev.data.semPovoado ?? []);
     definirCoresPlantas(ev.data.coresPlantas);

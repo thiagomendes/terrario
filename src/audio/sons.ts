@@ -1654,3 +1654,65 @@ export function iniciarAmbiente(
     },
   };
 }
+
+/** Spec 014 (T06): uma nota de uma frase curta (segundos desde o começo, Hz, onda, volume). */
+export interface NotaCurta {
+  t: number;
+  f: number;
+  /** 'sine', 'triangle' ou 'square'; 'ruido' é um sopro (f é o filtro). */
+  tipo?: string;
+  pico?: number;
+  queda?: number;
+  /** Frequência no fim (deslize); sem ela, a nota fica parada. */
+  f1?: number;
+}
+
+/**
+ * Spec 014 (T06): toca uma frase curta de notas sintetizadas (o "plim" da obra, o acorde da
+ * camada, o "ta-dá", o "hum?" do pedreiro, a musiquinha do coreto). Sempre curta, nunca em
+ * laço, no grupo dos efeitos.
+ */
+export function tocarNotas(
+  motor: MotorAudio,
+  notas: readonly NotaCurta[],
+  ganho = 0.22,
+  grupo: GrupoAudio = 'efeitos',
+): boolean {
+  if (motor.estado !== 'ativo' || notas.length === 0) return false;
+  return motor.tocar(
+    (ctxBase, destino) => {
+      const ctx = ctxBase as ContextoSintese;
+      const t0 = ctx.currentTime;
+      const out = ctx.createGain() as GanhoSom;
+      out.gain.value = ganho;
+      out.connect(destino);
+      const pecas: Peca[] = notas.map((n) =>
+        n.tipo === 'ruido'
+          ? ruido(ctx, out, t0 + n.t, 'bandpass', n.f, 1.2, n.pico ?? 0.4, n.queda ?? 0.1, 0.004)
+          : tom(
+              ctx,
+              out,
+              t0 + n.t,
+              n.tipo ?? 'sine',
+              n.f,
+              n.f1 ?? n.f,
+              n.pico ?? 0.45,
+              n.queda ?? 0.3,
+              0.004,
+            ),
+      );
+      const ultima = pecas.reduce((a, b) => (b.fim > a.fim ? b : a));
+      for (const p of pecas)
+        if (p !== ultima)
+          p.fonte.onended = () => {
+            try {
+              p.fonte.disconnect();
+            } catch {
+              // já desconectado
+            }
+          };
+      return ultima.fonte;
+    },
+    { grupo },
+  );
+}
