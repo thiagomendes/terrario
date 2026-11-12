@@ -43,6 +43,8 @@ import { abreEFecha, alternado, ehPorta } from '../world/portas';
 import { criarConteineres, TAMANHO_BAU } from '../jogo/conteineres';
 import { criarMundoDeItens, dropsDoBloco } from '../jogo/drops';
 import { criarPopulacao } from '../jogo/populacao';
+import { criarTransito, type PessoaNaRua } from '../jogo/transito';
+import { arred } from '../jogo/veiculos';
 import {
   ATRASO_RESPOSTA,
   INTERVALO_GESTO_NUCLEO,
@@ -387,6 +389,19 @@ export function criarNucleo(op: OpcoesNucleo) {
   let blocosMudados: BlocoMudado[] = [];
   /** Eventos para todos (relâmpago, sons de criaturas). */
   let eventosGerais: EventoNucleo[] = [];
+  /**
+   * Spec 014 (T13): os carrinhos e ônibus da cidade. Não são gravados: ao abrir o mundo (ou a
+   * sala acordar), cada um começa onde o relógio do mundo dá.
+   */
+  const transito = cidade
+    ? criarTransito({
+        plano: cidade,
+        relogioMundo: (dia + hora) * DURACAO_DIA,
+        obraFeita: (n) => !!obras.get(n)?.feita,
+      })
+    : null;
+  /** Planos de veículo que mudaram neste passo (vão a todos no quadro). */
+  let veiculosMudados: ReturnType<NonNullable<typeof transito>['tirarMudados']> = [];
   const jogadores = new Map<string, Jogador>();
 
   /**
@@ -2075,6 +2090,59 @@ export function criarNucleo(op: OpcoesNucleo) {
     conferirObras();
   }
 
+  /** Bicho na faixa: segundos ali (passou de 2 s, ganha um destino fora dela). */
+  const bichosNaRua = new Map<number, number>();
+  function cuidarDoTransito(dt: number): void {
+    if (!transito || !cidade) return;
+    const pessoas: PessoaNaRua[] = [];
+    for (const o of jogadores.values()) {
+      if (o.sobrevivencia.estado.morto) continue;
+      pessoas.push({ x: o.tel.x, y: o.tel.y, z: o.tel.z, crianca: true });
+    }
+    const pl = cidade.plana;
+    for (const c of populacao.lista) {
+      if (c.dissolver > 0 || c.x < pl.x0 || c.x > pl.x1 + 1 || c.z < pl.z0 || c.z > pl.z1 + 1)
+        continue;
+      pessoas.push({ x: c.x, y: c.y, z: c.z, crianca: false });
+      if (c.morador || c.domada || c.criado || c.tipo === 'peixe') continue;
+      if (!transito.pista(c.x, c.z)) {
+        bichosNaRua.delete(c.id);
+        continue;
+      }
+      const t = (bichosNaRua.get(c.id) ?? 0) + dt;
+      bichosNaRua.set(c.id, t);
+      if (t < 2) continue;
+      bichosNaRua.delete(c.id);
+      const fora = foraDaRua(c.x, c.z);
+      if (fora) {
+        c.alvoX = fora[0];
+        c.alvoZ = fora[1];
+        // anda até lá (o passeio sorteia outro destino só quando o tempo acaba)
+        c.estado = 'vagar';
+        c.tempoEstado = 6;
+      }
+    }
+    transito.passo(dt, pessoas);
+    for (const e of transito.tirarEventos())
+      eventosGerais.push({ e: 'veiculo', id: e.id, o: e.o, x: arred(e.x, 2), z: arred(e.z, 2) });
+    const mud = transito.tirarMudados();
+    if (mud.length)
+      veiculosMudados = veiculosMudados.filter((p) => !mud.some((q) => q.id === p.id)).concat(mud);
+  }
+  /** A célula de calçada (ou grama) mais perto, fora da pista. */
+  function foraDaRua(x: number, z: number): [number, number] | null {
+    if (!transito) return null;
+    const cx = Math.floor(x);
+    const cz = Math.floor(z);
+    for (let r = 1; r <= 8; r++)
+      for (let dz = -r; dz <= r; dz++)
+        for (let dx = -r; dx <= r; dx++) {
+          if (Math.max(Math.abs(dx), Math.abs(dz)) !== r) continue;
+          if (!transito.pista(cx + dx + 0.5, cz + dz + 0.5)) return [cx + dx + 0.5, cz + dz + 0.5];
+        }
+    return null;
+  }
+
   function passo(dt = PASSO): void {
     n++;
     mundo.avancar(dt);
@@ -2141,6 +2209,8 @@ export function criarNucleo(op: OpcoesNucleo) {
     // e o cachorro da casinha
     cuidarDoPedreiro(dt);
     cuidarDaCidade(dt);
+    // spec 014 (T13): os carrinhos e ônibus, e os bichos que ficam parados na rua
+    cuidarDoTransito(dt);
 
     // a lavoura cresce com o mundo aberto (cada pé uma vez por segundo, com teto por passo)
     crescerAosPoucos(dt);
@@ -2231,8 +2301,17 @@ export function criarNucleo(op: OpcoesNucleo) {
       ? Object.fromEntries([...jogadores.values()].map((o) => [o.id, o.perfil]))
       : undefined;
     perfisSujos = false;
+    const relogioVeiculos = transito ? arred(transito.relogio) : 0;
+    const todosPlanos = transito ? transito.planos() : null;
     for (const j of jogadores.values()) {
       const q: Quadro = { t: 'quadro', n, ack: j.ack, ambiente: amb, criaturas, itens };
+      // spec 014 (T13): o relógio dos veículos sempre; os planos inteiros para quem chega
+      if (todosPlanos)
+        q.veiculos = !j.iniciado
+          ? { t: relogioVeiculos, p: todosPlanos.map((p) => ({ ...p })) }
+          : veiculosMudados.length
+            ? { t: relogioVeiculos, p: veiculosMudados }
+            : { t: relogioVeiculos };
       // na nuvem a lista vai sempre (vazia também: quem saiu some da tela)
       if (!confiar || todos.length > 1) q.jogadores = todos.filter((o) => o.id !== j.id);
       if (perfis) q.perfis = perfis;
@@ -2278,6 +2357,7 @@ export function criarNucleo(op: OpcoesNucleo) {
     }
     blocosMudados = [];
     eventosGerais = [];
+    veiculosMudados = [];
     return out;
   }
 
@@ -2407,6 +2487,8 @@ export function criarNucleo(op: OpcoesNucleo) {
         lavoura,
         /** A criatura da noite deste mundo ('assusta' ou 'mansa'). */
         noite: noiteDoMundo,
+        /** Spec 014 (T13): os veículos da cidade (null fora dela). */
+        transito,
       };
     },
   };

@@ -12,7 +12,9 @@ import type { ObraSalva } from '../nucleo/saneamento';
 /**
  * Sobe quando estas mensagens mudam de formato. 3: spec 016 (dono nos blocos e tabela de
  * donos; o navegador de antes recebe "versão nova, recarregue"). 4: spec 014 (o canteiro de
- * obras: o evento `obra`, a colher e as obras no "bem-vindo").
+ * obras: o evento `obra`, a colher e as obras no "bem-vindo"; os carrinhos e ônibus da
+ * cidade: o campo `veiculos` do quadro e o evento `veiculo`, que vêm na mesma versão porque a
+ * 014 ainda não foi publicada).
  */
 export const VERSAO_REDE = 4;
 /** Jogadores por mundo. */

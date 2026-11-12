@@ -18,12 +18,13 @@ import { tesouro } from '../../src/jogo/conteineres';
 import { dropsDoBloco } from '../../src/jogo/drops';
 import { criarGerador } from '../../src/audio/variacao';
 import type { Comando } from '../../src/nucleo/protocolo';
+import { FROTA } from '../../src/jogo/veiculos';
 
 /**
  * Spec 014, T11 ("Só na Cidade Grande" e "cada mundo é uma história", decisões do dono de
  * 12 nov 2026), as regras que o teste de tela `e2e/cidade-grande.spec.ts` confere no jogo:
- * - nenhum bloco, item, troca, receita ou som da cidade aparece em outro tema (nem no tesouro
- *   dos baús, nem no que um bloco solta);
+ * - nenhum bloco, item, troca, receita, som ou veículo da cidade aparece em outro tema (nem no
+ *   tesouro dos baús, nem no que um bloco solta, nem no núcleo e nos quadros);
  * - um mundo de outro tema abre sem nada do que a criança tinha na cidade (inventário e obras
  *   são do mundo); a fantasia ganha na obra é do personagem (o teste de tela confere).
  */
@@ -79,6 +80,17 @@ describe('nada da cidade em outro tema', () => {
       // o planejador da cidade só existe na cidade
       limparCidades();
       expect(cidadeDoMundo(1337)).toBeNull();
+      // os carrinhos e ônibus também (T13): o núcleo do outro tema não tem trânsito nenhum
+      const n = criarNucleo({
+        semente: 1337,
+        modo: 'criativo',
+        versaoMundo: 2,
+        confiarNoCliente: true,
+      });
+      n.conectar('ana');
+      n.passo();
+      expect(n.estado.transito).toBeNull();
+      expect(n.quadros().get('ana')!.veiculos).toBeUndefined();
       // sons: o pacote é o do próprio tema, sem os do canteiro nem os da rua
       expect(temaDoSom(id)).toBe(id);
       expect(t.natureza.cidade).toBeUndefined();
@@ -96,6 +108,19 @@ describe('nada da cidade em outro tema', () => {
     expect(daObra.length).toBeGreaterThan(0);
     expect(daObra.some((t) => t.receber.item === COLHER_PEDREIRO)).toBe(true);
     expect(CIDADE.natureza.cidade?.buzininha).toBeGreaterThan(0);
+    // a frota da cidade (T13)
+    definirEstiloMundo(CIDADE.mundo);
+    limparCidades();
+    const n = criarNucleo({
+      semente: 1337,
+      modo: 'criativo',
+      versaoMundo: 2,
+      confiarNoCliente: true,
+    });
+    n.conectar('ana');
+    n.passo();
+    expect(n.estado.transito?.veiculos.length).toBe(FROTA.length);
+    expect(n.quadros().get('ana')!.veiculos?.p?.length).toBe(FROTA.length);
     expect(INDICE.temas['cidade-grande']).toHaveProperty('obra');
     expect(INDICE.temas['cidade-grande']).toHaveProperty('ambiente');
     // os pacotes de som da cidade são só dela (nenhum outro tema baixa esses arquivos)

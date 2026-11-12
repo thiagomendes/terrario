@@ -17,6 +17,8 @@ import type { TipoSer } from '../jogo/criaturas';
 import type { Profissao } from '../world/povoado';
 import type { IdGesto } from '../personagem/gestos';
 import type { DonosExportados, DonosMudados } from '../world/edicoes';
+import type { PlanoVeiculo } from '../jogo/veiculos';
+import type { OcorrenciaVeiculo } from '../jogo/transito';
 
 /** Sobe quando uma mensagem muda de formato (cliente e servidor precisam concordar). */
 export const VERSAO_PROTOCOLO = 1;
@@ -341,7 +343,22 @@ export type EventoNucleo =
       recompensa?: string[];
     }
   /** Spec 014 (T05): o pedreiro deu a colher (no slot): ela fica na mão. */
-  | { e: 'colher'; slot: number };
+  | { e: 'colher'; slot: number }
+  /**
+   * Spec 014 (T13): um veículo da cidade buzinou (esperando criança), chegou ao ponto (freio a
+   * ar e porta aberta), saiu dele, o sorvete chegou à vaga, a polícia fez "uí-uí" na praça ou
+   * o veículo encalhado sumiu num sopro (x, z: onde).
+   */
+  | { e: 'veiculo'; id: number; o: OcorrenciaVeiculo; x: number; z: number };
+
+/**
+ * Spec 014 (T13): os veículos da cidade. Todo quadro da cidade leva o relógio deles (`t`); os
+ * planos (`p`) vão inteiros no primeiro quadro de quem chega e, depois, só os que mudaram.
+ */
+export interface VeiculosQuadro {
+  t: number;
+  p?: PlanoVeiculo[];
+}
 
 /** O que o núcleo manda a cada passo (só os campos que mudaram, menos o ambiente). */
 export interface Quadro {
@@ -378,6 +395,8 @@ export interface Quadro {
    * tem a tabela não recebe as 4095 entradas de novo a cada amigo novo ou apelido trocado).
    */
   donosNovos?: DonosMudados;
+  /** Spec 014 (T13): o relógio e os planos dos veículos (só na Cidade Grande). */
+  veiculos?: VeiculosQuadro;
 }
 
 /** Parte do salvamento que pertence ao núcleo (o cliente junta a câmera, o diário e o mapa). */

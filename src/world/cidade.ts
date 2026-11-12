@@ -408,7 +408,7 @@ function planejarCidade(semente: number, r: RelevoNatural): PlanoCidade {
 
   // parque: o lago, a vaga do sorvete na beira dele e a entrada do metrô
   const lago = { cx: ox + 65, cz: oz + 86, rx: 10, rz: 4.5 };
-  const vaga: Retangulo = { x0: ox + 62, z0: oz + 53, x1: ox + 67, z1: oz + 54 };
+  const vaga: Retangulo = { x0: ox + 58, z0: oz + 53, x1: ox + 71, z1: oz + 54 };
   const metro: Retangulo = { x0: ox + 52, z0: oz + 60, x1: ox + 56, z1: oz + 65 };
 
   // cruzamentos e pistas
