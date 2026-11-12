@@ -319,7 +319,29 @@ export type EventoNucleo =
    * Spec 015: alguém fez um gesto perto deste jogador: um amigo (`jogador`) ou um morador
    * respondendo (`criatura`; `voz`: este diz "oi"). Quem fez o gesto não recebe o dele.
    */
-  | { e: 'gesto'; gesto: IdGesto; jogador?: string; criatura?: number; voz?: boolean };
+  | { e: 'gesto'; gesto: IdGesto; jogador?: string; criatura?: number; voz?: boolean }
+  /**
+   * Spec 014 (T05): a obra do canteiro andou. Cada bloco que entra (x, y, z: a célula; `meu`:
+   * foi este jogador; `camada`: fechou uma camada) e, ao terminar (`feita`), os nomes da
+   * placa (até 4); quem ajudou recebe `ajudou` e as peças de fantasia ganhas (`recompensa`).
+   */
+  | {
+      e: 'obra';
+      canteiro: number;
+      cheias: number;
+      total: number;
+      x?: number;
+      y?: number;
+      z?: number;
+      meu?: boolean;
+      camada?: boolean;
+      feita?: boolean;
+      nomes?: string[];
+      ajudou?: boolean;
+      recompensa?: string[];
+    }
+  /** Spec 014 (T05): o pedreiro deu a colher (no slot): ela fica na mão. */
+  | { e: 'colher'; slot: number };
 
 /** O que o núcleo manda a cada passo (só os campos que mudaram, menos o ambiente). */
 export interface Quadro {

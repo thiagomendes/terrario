@@ -13,7 +13,7 @@
  * 5. Baú e fornalha postos por alguém: só ele e o dono do mundo abrem (a fornalha da vila é
  *    de todos). Bicho criado ou domado: só quem criou e o dono do mundo chamam e levam.
  */
-import { Bloco } from '../world/blocks';
+import { Bloco, obterBloco } from '../world/blocks';
 import { ehPorta } from '../world/portas';
 import { ehLavoura } from './plantio';
 import {
@@ -26,7 +26,15 @@ import {
 } from '../world/protecao';
 
 /** Por que não deu (o cliente escolhe o aviso). */
-export type MotivoProtecao = 'mundo' | 'amigo' | 'passagem' | 'bau' | 'fornalha' | 'bicho';
+export type MotivoProtecao =
+  | 'mundo'
+  | 'amigo'
+  | 'passagem'
+  | 'bau'
+  | 'fornalha'
+  | 'bicho'
+  /** Spec 014: célula de obra do canteiro (só o bloco da planta entra; o posto não sai). */
+  | 'obra';
 
 export interface RecusaProtecao {
   motivo: MotivoProtecao;
@@ -34,11 +42,13 @@ export interface RecusaProtecao {
   dono?: string;
   /** De quem é a construção do mundo (mundo, passagem). */
   lugar?: LugarProtecao;
+  /** Spec 014: o bloco que a célula da obra pede (o balãozinho mostra o desenho dele). */
+  certo?: number;
 }
 
 /** O que a regra precisa ler (o núcleo e o cliente dão a sua cópia do mundo). */
 export interface MundoDaRegra {
-  protecao: Pick<ProtecaoMundo, 'em' | 'lugar'>;
+  protecao: Pick<ProtecaoMundo, 'em' | 'lugar'> & Partial<Pick<ProtecaoMundo, 'planejado'>>;
   bloco(x: number, y: number, z: number): number;
   /** Bloco que a geração pôs (sem edições). */
   gerado(x: number, y: number, z: number): number;
@@ -75,6 +85,8 @@ export function recusaQuebrar(
   const p = m.protecao.em(x, y, z);
   // a lavoura do mundo é de todos: colhe e se replanta
   if (p === Protecao.LAVOURA) return null;
+  // spec 014: o bloco posto na obra já é da cidade (ninguém tira, nem quem pôs)
+  if (p === Protecao.OBRA) return { motivo: 'obra', lugar: 'cidade' };
   // por garantia: chão onde a geração deixou ar é o bloco de quem pôs (nunca fica preso)
   const chaoVazio = p === Protecao.CHAO && m.gerado(x, y, z) === Bloco.AR;
   if (naoQuebra(p) && !chaoVazio) return doMundo(m, x, z, 'mundo');
@@ -104,6 +116,12 @@ export function recusaColocar(
   bloco: number,
 ): RecusaProtecao | null {
   const p = m.protecao.em(x, y, z);
+  // spec 014: a célula da obra aberta aceita só o bloco da planta; o resto do miolo espera
+  if (p === Protecao.OBRA) {
+    const pl = m.protecao.planejado?.(x, y, z) ?? null;
+    if (pl && bloco === pl.bloco) return null;
+    return pl ? { motivo: 'obra', lugar: 'cidade', certo: pl.bloco } : { motivo: 'obra', lugar: 'cidade' };
+  }
   if (naoColoca(p)) {
     // conserto: o bloco que a geração pôs volta ao buraco da estrutura
     const conserto = p !== Protecao.PASSAGEM && bloco !== Bloco.AR && bloco === m.gerado(x, y, z);
@@ -233,6 +251,10 @@ export function avisoDaRecusa(r: RecusaProtecao): string {
               : 'Essa casa é da vila. Que tal construir a sua?';
     case 'passagem':
       return 'Aqui é passagem: deixa livre para todo mundo passar.';
+    case 'obra':
+      return r.certo !== undefined
+        ? `Aqui vai ${nomeDoBlocoCerto(r.certo)}. Use a colher!`
+        : 'Essa obra é da cidade. Que tal ajudar a construir?';
     case 'bau':
       return r.dono ? `Esse baú é${de}.` : 'Esse baú é de um amigo.';
     case 'fornalha':
@@ -243,6 +265,11 @@ export function avisoDaRecusa(r: RecusaProtecao): string {
     default:
       return r.dono ? `Essa parede é${de}.` : 'Essa parede é de um amigo.';
   }
+}
+
+/** Nome curto do bloco que a obra pede ("tijolo", "vidro"): o do tema, em minúsculas. */
+function nomeDoBlocoCerto(b: number): string {
+  return (obterBloco(b)?.nome ?? 'o bloco azul').toLowerCase();
 }
 
 /** O aviso discreto do dono do mundo ao desfazer a construção de um amigo. */

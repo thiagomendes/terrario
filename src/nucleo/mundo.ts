@@ -65,6 +65,8 @@ export interface AcessoMundo {
   luzDaCelula(x: number, y: number, z: number): number;
   /** Avança o relógio dos caches de luz e céu. */
   avancar(dt: number): void;
+  /** Spec 014 (T05): a geração do chunk mudou (obra feita): o terreno dele é gerado de novo. */
+  esquecer(cx: number, cz: number): void;
 }
 
 export function criarAcessoMundo(
@@ -201,6 +203,10 @@ export function criarAcessoMundo(
     luzDaCelula,
     avancar(dt) {
       relogio += dt;
+    },
+    esquecer(cx, cz) {
+      terreno.delete(`${cx},${cz}`);
+      edicoes.tocar?.(cx, cz);
     },
   };
 }

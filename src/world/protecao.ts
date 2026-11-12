@@ -17,6 +17,9 @@
  *   blocos abaixo da superfície): não quebra, para ninguém cavar e deixar a casa no ar.
  * - PASSAGEM: tem que ficar vazia (porta e as células na frente e logo dentro, o vão da
  *   porteira dos dois lados, a trilha da lavoura e os caminhos dos moradores).
+ * - OBRA (spec 014, T05): o miolo do canteiro que ainda não virou obra feita. Vazia, a
+ *   célula da planta aceita só o bloco da planta (`planejado`); cheia, não quebra. O resto
+ *   do miolo espera a obra (ninguém põe nada ali).
  *
  * As células da estrutura que estão vazias num mundo antigo (alguém quebrou antes desta
  * spec) continuam ESTRUTURA ou USAVEL: ninguém tapa o buraco com outra coisa. Repor o
@@ -24,7 +27,15 @@
  * T01" na spec.
  */
 import { Bloco, obterBloco } from './blocks';
-import { ALTURA, TAM_X, TAM_Z, alturaTerreno, estiloMundo, estruturaDoChunk } from './chunk';
+import {
+  ALTURA,
+  TAM_X,
+  TAM_Z,
+  alturaTerreno,
+  cidadeDoMundo,
+  estiloMundo,
+  estruturaDoChunk,
+} from './chunk';
 import {
   frenteDaPorta,
   noLote,
@@ -35,6 +46,14 @@ import {
 } from './povoado';
 import { lavouraDoBloco } from '../jogo/plantio';
 import { distanciaDaCidade, passagensDaCidade } from './cidade';
+import {
+  ALTURA_OBRA,
+  canteiroDoMiolo,
+  planejadoNaCidade,
+  situacaoDoCanteiro,
+  versaoDasObras,
+  type CelulaPlanejada,
+} from './obras';
 
 export const Protecao = {
   LIVRE: 0,
@@ -43,6 +62,7 @@ export const Protecao = {
   LAVOURA: 3,
   CHAO: 4,
   PASSAGEM: 5,
+  OBRA: 6,
 } as const;
 export type Protecao = (typeof Protecao)[keyof typeof Protecao];
 
@@ -53,6 +73,7 @@ export const NOMES_PROTECAO = [
   'lavoura',
   'chao',
   'passagem',
+  'obra',
 ] as const;
 export type NomeProtecao = (typeof NOMES_PROTECAO)[number];
 
@@ -81,7 +102,9 @@ const USAVEIS: ReadonlySet<number> = new Set([
 
 /** Ninguém quebra (o chão, a estrutura e os usáveis). A lavoura colhe. */
 export function naoQuebra(p: Protecao): boolean {
-  return p === Protecao.ESTRUTURA || p === Protecao.USAVEL || p === Protecao.CHAO;
+  return (
+    p === Protecao.ESTRUTURA || p === Protecao.USAVEL || p === Protecao.CHAO || p === Protecao.OBRA
+  );
 }
 
 /** Ninguém coloca ali (a passagem fica livre; a célula da estrutura é dela). */
@@ -197,6 +220,17 @@ export function protecaoDoChunk(
         chao(wx, wz, alturaTerreno(wx, wz, semente));
       }
     passagensDaCidade(p, cx, cz, passagem);
+    // o miolo dos canteiros que ainda não viraram obra feita é célula de obra
+    const Y = p.h + 1;
+    for (let y = Y; y < Y + ALTURA_OBRA; y++)
+      for (let z = 0; z < TAM_Z; z++)
+        for (let x = 0; x < TAM_X; x++) {
+          const n = canteiroDoMiolo(p, x0 + x, y, z0 + z);
+          if (n === null || situacaoDoCanteiro(n) === 'feita') continue;
+          const i = idx(x0 + x, y, z0 + z);
+          if (i < 0 || (pintada(i) && rascunho[i] !== Bloco.AR)) continue;
+          marcar(i, Protecao.OBRA);
+        }
   } else {
     // ruína (ou estrutura do tema): piso 7x7 no meio do chunk, mais a margem
     const { h } = e;
@@ -283,6 +317,11 @@ export interface ProtecaoMundo {
   lugar(x: number, z: number): LugarProtecao | null;
   /** Máscara do chunk (null: nada protegido nele). */
   doChunk(cx: number, cz: number): MascaraProtecao | null;
+  /**
+   * Spec 014 (T05): a célula da planta de uma obra aberta (o bloco e o meta que ela pede),
+   * ou null. O núcleo e o cliente perguntam a mesma coisa.
+   */
+  planejado(x: number, y: number, z: number): CelulaPlanejada | null;
   /** Esquece tudo (o estilo e as regiões sem povoado também esquecem sozinhos). */
   limpar(): void;
 }
@@ -298,14 +337,20 @@ export function criarProtecaoMundo(
   const rascunho = new Uint8Array(TAM_X * ALTURA * TAM_Z);
   let estilo = estiloMundo();
   let versao = versaoDosPovoados();
+  let obras = versaoDasObras();
   let ultimaChave = NaN;
   let ultima: MascaraProtecao | null = null;
   const chave = (cx: number, cz: number) => (cx + 32768) * 65536 + (cz + 32768);
   function doChunk(cx: number, cz: number): MascaraProtecao | null {
     // o estilo do mundo ou as regiões sem povoado mudaram: a geração muda junto
-    if (estiloMundo() !== estilo || versaoDosPovoados() !== versao) {
+    if (
+      estiloMundo() !== estilo ||
+      versaoDosPovoados() !== versao ||
+      versaoDasObras() !== obras
+    ) {
       estilo = estiloMundo();
       versao = versaoDosPovoados();
+      obras = versaoDasObras();
       cache.clear();
       ultimaChave = NaN;
     }
@@ -336,6 +381,12 @@ export function criarProtecaoMundo(
       return doChunk(Math.floor(x / TAM_X), Math.floor(z / TAM_Z))?.lugar ?? null;
     },
     doChunk,
+    planejado(x, y, z) {
+      const c = cidadeDoMundo(semente);
+      if (!c) return null;
+      const p = planejadoNaCidade(c, x, y, z);
+      return p && situacaoDoCanteiro(p.canteiro) === 'aberta' ? p : null;
+    },
     limpar() {
       cache.clear();
       ultimaChave = NaN;

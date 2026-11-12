@@ -33,6 +33,15 @@ export interface DadosMorador {
   rotaOficina: [number, number][];
   /** Centro da praça (o marco fica nele: os caminhos o contornam). */
   centro: [number, number];
+  /**
+   * Spec 014 (T05): o pedreiro da cidade não tem rotina de casa e oficina: fica no posto
+   * (o canteiro aberto) de dia e de noite, e anda até o próximo quando a obra termina.
+   */
+  posto?: [number, number, number];
+  /** Pontos a seguir até o posto (saindo pela entrada do canteiro, pela calçada). */
+  caminho?: [number, number][];
+  /** Vem até a criança que chegou (x, z) por uns segundos e para perto dela. */
+  ir?: { x: number; z: number; t: number };
 }
 
 export interface DefCriatura {
@@ -777,6 +786,81 @@ function contornarMarco(
 }
 
 /**
+ * Spec 014 (T05): o pedreiro no posto. Vem até a criança que chegou (uns segundos, até
+ * 2 blocos dela), segue o caminho até o posto novo quando a obra termina e, no posto, para e
+ * olha para quem está perto. Preso 10 s sem chegar mais perto, aparece no ponto seguinte.
+ */
+function rotinaDoPosto(
+  c: Criatura,
+  def: DefCriatura,
+  dt: number,
+  m: DadosMorador,
+  posto: [number, number, number],
+  distJ: number,
+  dxj: number,
+  dzj: number,
+  mundo: Mundo,
+): void {
+  if (c.pausaGesto !== undefined) {
+    c.pausaGesto -= dt;
+    if (c.pausaGesto > 0) {
+      frear(c, 0.5);
+      c.estado = 'parado';
+      return;
+    }
+    c.pausaGesto = undefined;
+  }
+  let alvo: [number, number] = [posto[0], posto[2]];
+  let chegar = 0.5;
+  if (m.ir) {
+    m.ir.t -= dt;
+    if (m.ir.t <= 0 || Math.hypot(c.x - m.ir.x, c.z - m.ir.z) < 2.2) m.ir = undefined;
+    else {
+      alvo = [m.ir.x, m.ir.z];
+      chegar = 2.2;
+    }
+  } else if (m.caminho?.length) {
+    alvo = m.caminho[0];
+    if (Math.hypot(c.x - alvo[0], c.z - alvo[1]) < 0.7) {
+      m.caminho.shift();
+      c.menorDistancia = undefined;
+      c.semProgresso = 0;
+      return;
+    }
+    chegar = 0;
+  }
+  const d = Math.hypot(c.x - alvo[0], c.z - alvo[1]);
+  if (d < chegar) {
+    frear(c, 0.5);
+    c.estado = 'parado';
+    c.semProgresso = 0;
+    c.menorDistancia = undefined;
+    // olha para a criança perto (ela pode querer a colher ou as trocas)
+    if (distJ < 8) c.yawAlvo = Math.atan2(dxj, dzj);
+    return;
+  }
+  c.estado = 'seguir';
+  andarPara(c, def, alvo[0], alvo[1], 1);
+  if (c.menorDistancia === undefined || d < c.menorDistancia - 0.3) {
+    c.menorDistancia = d;
+    c.semProgresso = 0;
+  } else c.semProgresso = (c.semProgresso ?? 0) + dt;
+  if ((c.semProgresso ?? 0) > 10) {
+    c.semProgresso = 0;
+    c.menorDistancia = undefined;
+    m.ir = undefined;
+    const [x, z] = m.caminho?.length ? m.caminho.shift()! : alvo;
+    if (colideCorpo(mundo.solido, x, posto[1], z, def.mw, def.alt)) return;
+    c.x = x;
+    c.y = posto[1];
+    c.z = z;
+    c.vx = 0;
+    c.vz = 0;
+    c.teleportes = (c.teleportes ?? 0) + 1;
+  }
+}
+
+/**
  * Rotina do morador: de dia passeia entre a praça e a oficina e para um pouco em cada
  * lugar; ao entardecer vai para a frente da porta e entra; à noite fica em casa. Se
  * passar muito tempo sem chegar mais perto do destino, aparece nele (nunca fica preso).
@@ -796,6 +880,10 @@ function rotinaMorador(
   if (!m) return;
   if (c.estado === 'fugir' && c.tempoEstado > 0) {
     andarPara(c, def, c.alvoX, c.alvoZ, 1.6);
+    return;
+  }
+  if (m.posto) {
+    rotinaDoPosto(c, def, dt, m, m.posto, distJ, dxj, dzj, mundo);
     return;
   }
   // spec 015: parado acenando de volta para quem acenou (o núcleo já o virou)

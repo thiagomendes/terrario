@@ -31,6 +31,7 @@ import {
   ALTURA,
   TAM_Z,
   alturaTerreno,
+  cidadeDoMundo,
   encontrarNascimento,
   estiloMundo,
   olharDoNascimento,
@@ -58,7 +59,20 @@ import { criarInventario, type Inventario, type Slot } from '../jogo/inventario'
 import { blocoDoItem, obterItem } from '../jogo/itens';
 import { podeColetar } from '../jogo/ferramentas';
 import { TROCAS, fazerTroca, trocasDoMundo } from '../jogo/trocas';
-import { blocoNoMundo } from '../jogo/exclusivos';
+import { COLHER_PEDREIRO, blocoNoMundo } from '../jogo/exclusivos';
+import {
+  canteirosAbertos,
+  celulasPlanejadas,
+  chunksDoCanteiro,
+  definirObrasFeitas,
+  loteDoCanteiro,
+  mesmoBlocoDaObra,
+  noLoteObra,
+  NUM_OBRAS,
+  postoDoPedreiro,
+  type CelulaPlanejada,
+} from '../world/obras';
+import { MAX_AJUDANTES_OBRA, type ObraSalva } from './saneamento';
 import {
   CHANCE_SEMENTE_GRAMA,
   SEGUNDOS_POR_ESTAGIO,
@@ -224,6 +238,10 @@ interface Jogador {
   aparenciaPendente: Record<string, unknown> | null;
   /** Spec 016: versão da tabela de donos que este jogador já recebeu (-1: nenhuma). */
   versaoDonos: number;
+  /** Spec 014: o pedreiro já veio dizer oi (uma vez por visita). */
+  pedreiroViu: boolean;
+  /** Spec 014: passo da última colher que o pedreiro deu (uma a cada ESPERA_COLHER s). */
+  passoColher: number;
   /** Para as criaturas (o mesmo objeto a cada passo: os ataques dizem em quem foi). */
   corpo: {
     x: number;
@@ -282,6 +300,25 @@ export function criarNucleo(op: OpcoesNucleo) {
         })()
       : [];
   definirRegioesSemPovoado(semPovoado);
+
+  /**
+   * Spec 014 (T05): o canteiro de obras da Cidade Grande. Por obra: os ajudantes (quem pôs
+   * pelo menos um bloco), as células cheias e se terminou. As feitas mudam a geração (viram
+   * parte da cidade), então entram na geração antes de qualquer chunk deste mundo.
+   */
+  const cidade = cidadeDoMundo(semente);
+  const obras = new Map<number, { ajudantes: Map<string, string>; cheias: number[]; feita: boolean }>();
+  if (cidade) {
+    const salvas = (extras['obras'] ?? {}) as Record<string, ObraSalva>;
+    for (const [k, o] of Object.entries(salvas))
+      obras.set(Number(k), {
+        ajudantes: new Map(o.ajudantes),
+        cheias: [...o.cheias],
+        feita: o.feita === true,
+      });
+  }
+  const feitasDoMundo = () => [...obras].filter(([, o]) => o.feita).map(([n]) => n);
+  definirObrasFeitas(feitasDoMundo());
 
   // criaturas só nascem e pisam onde algum jogador tem o terreno carregado (como antes)
   const mundo = criarAcessoMundo(semente, edicoes, (cx, cz) => {
@@ -465,6 +502,8 @@ export function criarNucleo(op: OpcoesNucleo) {
       passoAparencia: -Infinity,
       aparenciaPendente: null,
       versaoDonos: -1,
+      pedreiroViu: false,
+      passoColher: -Infinity,
       perfil: oc?.perfil ?? { apelido: 'Jogador', aparencia: {} },
       constroi: oc?.constroi ?? true,
       corpo: { x, y: y0, z, vivo: true, criativo: modo === 'criativo', mao: null, id },
@@ -554,6 +593,11 @@ export function criarNucleo(op: OpcoesNucleo) {
       return false;
     if (luzDoBloco(antes) > 0 || luzDoBloco(bloco) > 0) esquecerLuzPerto(x, y, z);
     blocosMudados.push({ x, y, z, v: edicoes.obterValor(x, y, z) ?? empacotar(bloco, meta) });
+    // spec 014: bloco posto numa célula da obra aberta (quem pôs vira ajudante)
+    if (cidade && dono !== undefined && bloco !== Bloco.AR) {
+      const pl = protecao.planejado(x, y, z);
+      if (pl && mesmoBlocoDaObra(bloco, pl.bloco)) encheuObra(pl, dono);
+    }
     // a lavoura que cresce: entra ao ser plantada, sai quando amadurece ou some
     const k = `${x},${y},${z}`;
     if (ehLavoura(bloco) && !madura(bloco)) {
@@ -840,7 +884,8 @@ export function criarNucleo(op: OpcoesNucleo) {
   }
 
   function colocar(j: Jogador, c: Extract<Comando, { t: 'colocar' }>): void {
-    const { x, y, z, bloco, meta } = c;
+    const { x, y, z, bloco } = c;
+    let { meta } = c;
     const celulas = [c, ...(c.extras ?? [])];
     const p = j.inventario.obter(c.slot);
     const def = obterBloco(bloco);
@@ -850,7 +895,15 @@ export function criarNucleo(op: OpcoesNucleo) {
     // semente só na terra arada
     const lav = lavouraDoBloco(bloco);
     const plantavel = !lav || podePlantar(mundo.bloco(x, y - 1, z), blocoAtual);
-    const temItem = modo === 'criativo' || (!!p && blocoDoItem(p.item) === bloco && p.qtd > 0);
+    // spec 014: a célula da obra aberta pede um bloco; com a colher de pedreiro, ele entra
+    // sem gastar nada (na sobrevivência também), sempre com a direção da planta
+    const plano = cidade ? protecao.planejado(x, y, z) : null;
+    const daColher = p?.item === COLHER_PEDREIRO && !!plano && plano.bloco === bloco;
+    if (plano && plano.bloco === bloco) meta = plano.meta;
+    const temItem =
+      modo === 'criativo' ||
+      daColher ||
+      (!!p && blocoDoItem(p.item) === bloco && p.qtd > 0);
     // a outra parte só existe para a porta (dois blocos de altura): exatamente a célula de
     // cima, que tem de estar livre. Qualquer outra "parte extra" é truque (uma semente
     // plantando três pés, uma tábua virando três blocos longe dali) e o pedido é recusado.
@@ -897,8 +950,9 @@ export function criarNucleo(op: OpcoesNucleo) {
     // spec 016: o bloco guarda quem o colocou
     editar(x, y, z, bloco, meta, j.id);
     // a metade de cima da porta (já conferida: ar, planta baixa ou água)
-    if (metade) editar(x, y + 1, z, bloco, meta, j.id);
-    if (modo === 'sobrevivencia') j.inventario.remover(c.slot, 1);
+    if (metade)
+      editar(x, y + 1, z, bloco, (cidade && protecao.planejado(x, y + 1, z)?.meta) || meta, j.id);
+    if (modo === 'sobrevivencia' && !daColher) j.inventario.remover(c.slot, 1);
     j.acoes[1]++;
     for (const o of jogadores.values())
       o.eventos.push({ e: 'colocacao', x, y, z, bloco, meu: o === j });
@@ -951,6 +1005,192 @@ export function criarNucleo(op: OpcoesNucleo) {
       if (mundo.bloco(e.x, e.y - 1, e.z) === Bloco.TERRA_ARADA)
         editar(e.x, e.y, e.z, e.v & 255, (e.v >> 8) & 255, j.id);
       else corrigir(j, e.x, e.y, e.z);
+    }
+  }
+
+  // ------------------------------------------------------------ canteiro (spec 014, T05)
+
+  /** Obras que ganharam bloco neste comando (conferidas no fim dele). */
+  const obrasTocadas = new Map<number, { quem: string; c: CelulaPlanejada }>();
+  function estadoObra(n: number) {
+    let o = obras.get(n);
+    if (!o) {
+      o = { ajudantes: new Map(), cheias: [], feita: false };
+      obras.set(n, o);
+    }
+    return o;
+  }
+  function encheuObra(c: CelulaPlanejada, quem: string): void {
+    const o = estadoObra(c.canteiro);
+    if (!o.ajudantes.has(quem) && o.ajudantes.size < MAX_AJUDANTES_OBRA)
+      o.ajudantes.set(quem, apelidoDe(quem) ?? '');
+    obrasTocadas.set(c.canteiro, { quem, c });
+  }
+
+  /** As obras tocadas: o progresso para todos, ou a obra feita. */
+  function conferirObras(): void {
+    if (!cidade || obrasTocadas.size === 0) return;
+    for (const [n, { quem, c }] of obrasTocadas) {
+      const celulas = celulasPlanejadas(cidade, n);
+      const o = estadoObra(n);
+      const cheia = (q: CelulaPlanejada) => mesmoBlocoDaObra(mundo.bloco(q.x, q.y, q.z), q.bloco);
+      o.cheias = celulas.filter(cheia).map((q) => q.i);
+      if (o.cheias.length >= celulas.length) {
+        concluirObra(n);
+        continue;
+      }
+      const camada = celulas.every((q) => q.camada !== c.camada || cheia(q));
+      for (const p of jogadores.values())
+        p.eventos.push({
+          e: 'obra',
+          canteiro: n,
+          cheias: o.cheias.length,
+          total: celulas.length,
+          x: c.x,
+          y: c.y,
+          z: c.z,
+          meu: p.id === quem,
+          ...(camada ? { camada: true } : {}),
+        });
+    }
+    obrasTocadas.clear();
+  }
+
+  /**
+   * A obra terminou: vira parte da cidade (a geração passa a pintá-la, as edições das células
+   * dela saem), o próximo canteiro abre, todos perto festejam e cada ajudante ganha a peça.
+   */
+  function concluirObra(n: number): void {
+    if (!cidade) return;
+    const o = estadoObra(n);
+    if (o.feita) return;
+    o.feita = true;
+    const antes = canteirosAbertos();
+    definirObrasFeitas(feitasDoMundo());
+    const abriram = canteirosAbertos().filter((k) => !antes.includes(k));
+    for (const k of [n, ...abriram])
+      for (const [cx, cz] of chunksDoCanteiro(cidade, k)) mundo.esquecer(cx, cz);
+    const celulas = celulasPlanejadas(cidade, n);
+    for (const c of celulas) edicoes.remover?.(c.x, c.y, c.z);
+    if (celulas[0]) esquecerLuzPerto(celulas[0].x, celulas[0].y, celulas[0].z);
+    const todas = feitasDoMundo().length >= NUM_OBRAS;
+    const nomes = [...o.ajudantes]
+      .slice(0, 4)
+      .map(([id, a]) => apelidoDe(id) ?? a)
+      .filter((a) => a);
+    for (const p of jogadores.values()) {
+      const ajudou = o.ajudantes.has(p.id);
+      p.eventos.push({
+        e: 'obra',
+        canteiro: n,
+        cheias: celulas.length,
+        total: celulas.length,
+        feita: true,
+        nomes,
+        ...(ajudou
+          ? { ajudou: true, recompensa: ['capacete-obra', ...(todas ? ['colete-obra'] : [])] }
+          : {}),
+      });
+    }
+    // o pedreiro bate palmas e vai para o próximo canteiro aberto
+    const ped = pedreiro();
+    if (ped) {
+      ped.yawAlvo = ped.yaw;
+      ped.pausaGesto = 2.4;
+      espalharGesto(ped.x, ped.z, { e: 'gesto', gesto: 'aplaudir', criatura: ped.id });
+      moverPedreiro(ped, n);
+    }
+  }
+
+  /** O canteiro onde o pedreiro trabalha: o primeiro aberto (todas feitas: o último). */
+  const canteiroDoPedreiro = () => canteirosAbertos()[0] ?? NUM_OBRAS;
+  const pedreiro = () =>
+    populacao.lista.find((c) => c.morador?.povoado === 'cidade' && c.morador.n === 0);
+  /** A entrada do canteiro, por dentro (f = 1) ou pela calçada (f = -1). */
+  function entradaDoCanteiro(n: number, f: number): [number, number] | null {
+    const l = cidade ? loteDoCanteiro(cidade, n) : undefined;
+    if (!l) return null;
+    const [ax, az] = noLoteObra(l, 3, f);
+    const [bx, bz] = noLoteObra(l, 4, f);
+    return [(ax + bx) / 2 + 0.5, (az + bz) / 2 + 0.5];
+  }
+  /** Do canteiro `de` para o posto do canteiro de agora: sai pela entrada e vai pela calçada. */
+  function moverPedreiro(c: NonNullable<ReturnType<typeof pedreiro>>, de: number): void {
+    const novo = canteiroDoPedreiro();
+    const posto = cidade ? postoDoPedreiro(cidade, novo) : null;
+    if (!posto || !c.morador) return;
+    c.morador.posto = posto;
+    c.morador.caminho =
+      novo === de
+        ? []
+        : ([
+            entradaDoCanteiro(de, 1),
+            entradaDoCanteiro(de, -1),
+            entradaDoCanteiro(novo, -1),
+            entradaDoCanteiro(novo, 1),
+          ].filter((p) => p) as [number, number][]);
+  }
+
+  /** Raio em que o pedreiro vê a criança chegar (acena, vem até ela e dá a colher). */
+  const RAIO_PEDREIRO = 8;
+  /** Segundos entre duas colheres para o mesmo jogador (quem perdeu ganha outra). */
+  const ESPERA_COLHER = 5;
+  let relogioPedreiro = 0;
+  const temColher = (j: Jogador) =>
+    j.inventario.contar(COLHER_PEDREIRO) > 0 || j.transito.some((p) => p?.item === COLHER_PEDREIRO);
+
+  /**
+   * O pedreiro da cidade: aparece no posto quando alguém chega perto do canteiro; acena e vem
+   * até a criança que chegou e dá a colher a quem não tem (ela entra na barra e fica na mão).
+   */
+  function cuidarDoPedreiro(dt: number): void {
+    if (!cidade) return;
+    relogioPedreiro -= dt;
+    if (relogioPedreiro > 0) return;
+    relogioPedreiro = 0.25;
+    const posto = postoDoPedreiro(cidade, canteiroDoPedreiro());
+    if (!posto) return;
+    let c = pedreiro();
+    if (!c) {
+      const alguem = [...jogadores.values()].some(
+        (o) => Math.hypot(o.tel.x - posto[0], o.tel.z - posto[2]) < 60,
+      );
+      if (!alguem || mundo.criaturas.superficie(Math.floor(posto[0]), Math.floor(posto[2])) === null)
+        return;
+      c = populacao.adicionar('morador', posto[0], posto[1], posto[2]);
+      c.morador = {
+        povoado: 'cidade',
+        n: 0,
+        profissao: 'construtor',
+        fora: posto,
+        dentro: posto,
+        oficina: posto,
+        praca: posto,
+        rotaCasa: [],
+        rotaOficina: [],
+        centro: [posto[0] + 1000, posto[2]],
+        posto,
+      };
+    }
+    for (const j of jogadores.values()) {
+      if (j.sobrevivencia.estado.morto) continue;
+      const d = Math.hypot(j.tel.x - c.x, j.tel.z - c.z);
+      if (d > RAIO_PEDREIRO || Math.abs(j.tel.y - c.y) > 4) continue;
+      if (!j.pedreiroViu) {
+        j.pedreiroViu = true;
+        c.yawAlvo = Math.atan2(j.tel.x - c.x, j.tel.z - c.z);
+        espalharGesto(c.x, c.z, { e: 'gesto', gesto: 'acenar', criatura: c.id, voz: true });
+        if (c.morador && d > 2.5) c.morador.ir = { x: j.tel.x, z: j.tel.z, t: 3 };
+      }
+      if (!j.constroi || temColher(j) || (n - j.passoColher) * PASSO < ESPERA_COLHER) continue;
+      j.passoColher = n;
+      const resto = j.inventario.adicionar(COLHER_PEDREIRO, 1);
+      if (resto > 0) {
+        mundoItens.soltar(COLHER_PEDREIRO, resto, j.tel.x, j.tel.y + 0.5, j.tel.z, rngCriacao);
+        continue;
+      }
+      const slot = j.inventario.slots.findIndex((q) => q?.item === COLHER_PEDREIRO);
+      if (slot >= 0) j.eventos.push({ e: 'colher', slot });
     }
   }
 
@@ -1679,6 +1919,8 @@ export function criarNucleo(op: OpcoesNucleo) {
         // o anfitrião responde (precisa do pedido)
         break;
     }
+    // spec 014: o bloco que entrou numa obra (o progresso, ou a obra feita)
+    conferirObras();
   }
 
   function passo(dt = PASSO): void {
@@ -1742,6 +1984,9 @@ export function criarNucleo(op: OpcoesNucleo) {
 
     // spec 015: moradores acenando de volta
     responderGestos();
+
+    // spec 014: o pedreiro do canteiro (aparece, acena e dá a colher)
+    cuidarDoPedreiro(dt);
 
     // a lavoura cresce com o mundo aberto (cada pé uma vez por segundo, com teto por passo)
     crescerAosPoucos(dt);
@@ -1896,6 +2141,8 @@ export function criarNucleo(op: OpcoesNucleo) {
     };
     // spec 016: quem colocou blocos (fora o dono); mundo sem amigos grava igual a antes
     if (edicoes.donos.tamanho > 0) out['donos'] = edicoes.donos.exportar();
+    // spec 014: as obras do canteiro (mundo sem obra começada grava igual a antes)
+    if (obras.size > 0) out['obras'] = obrasSalvas();
     // na nuvem cada jogador é salvo à parte (dadosJogador); localmente vai junto do mundo
     if (j && confiar) {
       out['sobrevivencia'] = j.sobrevivencia.salvar();
@@ -1908,9 +2155,26 @@ export function criarNucleo(op: OpcoesNucleo) {
     return { edicoes: edicoes.exportar(), hora, extras: out };
   }
 
+  function obrasSalvas(): Record<string, ObraSalva> {
+    const r: Record<string, ObraSalva> = {};
+    for (const [k, o] of obras)
+      r[String(k)] = {
+        cheias: [...o.cheias],
+        ajudantes: [...o.ajudantes],
+        ...(o.feita ? { feita: true as const } : {}),
+      };
+    return r;
+  }
+
   return {
     semente,
     modo,
+    /** Spec 014: as obras feitas deste mundo (o servidor da nuvem põe de volta ao trocar de sala). */
+    get obrasFeitas(): readonly number[] {
+      return feitasDoMundo();
+    },
+    /** Spec 014: as obras do canteiro como vão no salvamento e no "bem-vindo" da nuvem. */
+    obras: obrasSalvas,
     /** Regiões sem povoado deste mundo (o servidor da nuvem põe de volta ao trocar de sala). */
     semPovoado: semPovoado as readonly string[],
     conectar,

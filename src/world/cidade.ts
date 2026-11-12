@@ -28,6 +28,7 @@ import {
 } from './plantas';
 import { construirModelo, type ModeloPredio } from './plantas/modelos';
 import type { Profissao } from './povoado';
+import { obraDoCanteiro, pintarCanteiro, situacaoDoCanteiro } from './obras';
 
 export const AVENIDAS = 5;
 export const RUAS = 7;
@@ -820,20 +821,11 @@ function praca(l: LoteCidade, q: Q): void {
 
 /**
  * Lote do canteiro (spec 014): o tapume laranja e branco em volta, com a entrada aberta na
- * frente, e a placa com o desenho da obra. A obra (fantasmas, andaime) vem na T05.
+ * frente, a placa com o desenho da obra e, com a obra aberta, o andaime; a obra feita vira
+ * parte da cidade (T05, `src/world/obras.ts`).
  */
 function canteiro(l: LoteCidade, q: Q): void {
-  const W = l.largura;
-  const D = l.profundidade;
-  for (let s = 0; s < W; s++)
-    for (let f = 0; f < D; f++) {
-      const borda = s === 0 || s === W - 1 || f === 0 || f === D - 1;
-      if (!borda) continue;
-      if (f === 0 && (s === 3 || s === 4)) continue;
-      q(s, f, 0, Bloco.TAPUME);
-    }
-  // placa da obra (desenho do tijolo) num poste de grade junto da entrada, de frente para a rua
-  q(5, 0, 1, Bloco.PLACA, 2 | (3 << 2));
+  pintarCanteiro(l, q, situacaoDoCanteiro(l.canteiro ?? 0));
 }
 
 /** Entrada do metrô (só enfeite): escada que desce até um portão de grade fechado. */
@@ -917,6 +909,13 @@ export function passagensDaCidade(
         const [x, z] = noLoteCidade(l, s, 0);
         for (let y = 0; y < 2; y++) passagem(x, Y + y, z);
       }
+      // a obra feita: a frente e o vão da porta dela e o ar em cima do banco ficam livres
+      const def = l.canteiro ? obraDoCanteiro(l.canteiro) : undefined;
+      if (def && situacaoDoCanteiro(def.n) === 'feita')
+        for (const [s, f, y] of passagensDaPlanta(def.planta)) {
+          const [x, z] = noLoteCidade(l, def.s0 + s, def.f0 + f);
+          passagem(x, Y + y, z);
+        }
       continue;
     }
     const pl = plantaDoLote(l);

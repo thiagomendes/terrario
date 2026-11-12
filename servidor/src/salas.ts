@@ -10,6 +10,7 @@ import { definirEstiloMundo } from '../../src/world/chunk';
 import { estiloSeguro } from '../../src/world/estiloSeguro';
 import { sanearAparencia, sanearDadosMundo } from '../../src/nucleo/saneamento';
 import { definirRegioesSemPovoado } from '../../src/world/povoado';
+import { definirObrasFeitas } from '../../src/world/obras';
 import { gerarCodigo, normalizarCodigo } from '../../src/jogo/codigos';
 import type { DadosMundo } from '../../src/jogo/mundos';
 import { PASSO, type Comando, type DadosJogador, type Quadro } from '../../src/nucleo/protocolo';
@@ -149,6 +150,8 @@ export function criarGerenciador(op: OpcoesGerenciador) {
   function contexto(s: SalaAtiva): void {
     definirEstiloMundo(s.mundo.estilo);
     definirRegioesSemPovoado(s.nucleo.semPovoado);
+    // spec 014: as obras feitas mudam a geração da cidade (cada sala tem as suas)
+    definirObrasFeitas(s.nucleo.obrasFeitas);
   }
 
   function estadoSala(s: SalaAtiva): EstadoSala {
@@ -433,6 +436,10 @@ export function criarGerenciador(op: OpcoesGerenciador) {
       edicoes: edicoes.exportar(),
       donos: edicoes.donos.exportar(),
       semPovoado: [...s.nucleo.semPovoado],
+      // spec 014: as obras do canteiro (o navegador gera a cidade com as feitas)
+      ...(Object.keys(s.nucleo.obras()).length
+        ? { obras: s.nucleo.obras() }
+        : {}),
       pos: (() => {
         const t = s.nucleo.estado.jogadores.get(jog.id)!.tel;
         return { x: t.x, y: t.y, z: t.z, yaw: t.yaw, pitch: t.pitch };

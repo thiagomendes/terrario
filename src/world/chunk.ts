@@ -19,6 +19,7 @@ import {
   RAMPA_CIDADE,
   type PlanoCidade,
 } from './cidade';
+import { versaoDasObras } from './obras';
 import { Bloco } from './blocks';
 import { crista2, fbm2, hash2, hash3, ruido3 } from './noise';
 
@@ -599,12 +600,20 @@ export function estruturaDoChunk(
  */
 const metasGeradas = new Map<string, ReadonlyMap<number, number>>();
 const SEM_METAS: ReadonlyMap<number, number> = new Map();
+/** As obras feitas mudam a geração do canteiro (T05): a memória dos metadados recomeça. */
+let versaoObrasMetas = versaoDasObras();
+function conferirVersaoMetas(): void {
+  if (versaoObrasMetas === versaoDasObras()) return;
+  versaoObrasMetas = versaoDasObras();
+  metasGeradas.clear();
+}
 function guardarMetas(
   cx: number,
   cz: number,
   semente: number,
   m: ReadonlyMap<number, number>,
 ): void {
+  conferirVersaoMetas();
   const k = `${cx},${cz},${semente}`;
   metasGeradas.delete(k);
   metasGeradas.set(k, m);
@@ -619,6 +628,7 @@ export function metasGeradasDoChunk(
 ): ReadonlyMap<number, number> {
   const cidade = cidadeDoMundo(semente);
   if (!cidade || !cidadeNoChunk(cidade, cx, cz)) return SEM_METAS;
+  conferirVersaoMetas();
   const k = `${cx},${cz},${semente}`;
   const ja = metasGeradas.get(k);
   if (ja) return ja;

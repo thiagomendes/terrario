@@ -35,7 +35,10 @@ const SLOTS = 36;
 export function sanearAparencia(a: unknown): Record<string, unknown> | null {
   if (!a || typeof a !== 'object' || Array.isArray(a)) return null;
   if (JSON.stringify(a).length > 4096) return null;
-  return { ...normalizarAparencia(a) };
+  // spec 014: os desbloqueios (capacete e colete do canteiro) não viajam: são do aparelho
+  const out: Record<string, unknown> = { ...normalizarAparencia(a) };
+  delete out.desbloqueios;
+  return out;
 }
 
 const finito = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
@@ -333,6 +336,11 @@ export function sanearExtras(e: unknown): Record<string, unknown> {
     if (!(objeto(sp) && xz(sp.x) && xz(sp.z))) delete out.spawn;
   }
   if ('donos' in out) out.donos = sanearDonos(out.donos);
+  if ('obras' in out) {
+    const o = sanearObras(out.obras);
+    if (Object.keys(o).length) out.obras = o;
+    else delete out.obras;
+  }
   if ('povoados' in out) {
     const p = objeto(out.povoados) ? out.povoados : {};
     if (Array.isArray(p.semPovoado))
@@ -343,6 +351,45 @@ export function sanearExtras(e: unknown): Record<string, unknown> {
           .filter((k): k is string => typeof k === 'string' && chavePar(k, XZ_MAX / 128 + 1)),
       };
     else delete out.povoados;
+  }
+  return out;
+}
+
+/** Uma obra do canteiro como vai no salvamento (spec 014, `extras.obras`). */
+export interface ObraSalva {
+  /** Índices das células da planta já cheias. */
+  cheias: number[];
+  /** Quem pôs pelo menos um bloco: [id, apelido], na ordem em que chegaram. */
+  ajudantes: [string, string][];
+  feita?: true;
+}
+
+/** Ajudantes guardados por obra (a placa mostra 4; a recompensa vai para todos). */
+export const MAX_AJUDANTES_OBRA = 64;
+
+/**
+ * Spec 014: as obras do canteiro passadas a limpo (canteiro de 1 a 6, células com índice
+ * inteiro, ajudantes com id e apelido curtos). O resto sai.
+ */
+export function sanearObras(v: unknown): Record<string, ObraSalva> {
+  const out: Record<string, ObraSalva> = {};
+  if (!objeto(v)) return out;
+  for (const [k, o] of Object.entries(v)) {
+    const n = Number(k);
+    if (!Number.isInteger(n) || n < 1 || n > 6 || String(n) !== k || !objeto(o)) continue;
+    const cheias = Array.isArray(o.cheias)
+      ? [...new Set((o.cheias as unknown[]).filter((i): i is number => inteiro(i, 0, 255)))]
+      : [];
+    const vistos = new Set<string>();
+    const ajudantes: [string, string][] = [];
+    if (Array.isArray(o.ajudantes))
+      for (const a of (o.ajudantes as unknown[]).slice(0, MAX_AJUDANTES_OBRA)) {
+        if (!Array.isArray(a) || typeof a[0] !== 'string' || !ID_DONO.test(a[0])) continue;
+        if (vistos.has(a[0])) continue;
+        vistos.add(a[0]);
+        ajudantes.push([a[0], typeof a[1] === 'string' ? limparApelido(a[1]) : '']);
+      }
+    out[k] = { cheias, ajudantes, ...(o.feita === true ? { feita: true as const } : {}) };
   }
   return out;
 }

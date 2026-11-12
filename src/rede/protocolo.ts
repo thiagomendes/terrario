@@ -7,12 +7,14 @@ import type { DadosMundo, ModoJogo } from '../jogo/mundos';
 import type { EstiloMundo } from '../temas/tipos';
 import type { Comando, Mensagem } from '../nucleo/protocolo';
 import type { DonosExportados } from '../world/edicoes';
+import type { ObraSalva } from '../nucleo/saneamento';
 
 /**
  * Sobe quando estas mensagens mudam de formato. 3: spec 016 (dono nos blocos e tabela de
- * donos; o navegador de antes recebe "versão nova, recarregue").
+ * donos; o navegador de antes recebe "versão nova, recarregue"). 4: spec 014 (o canteiro de
+ * obras: o evento `obra`, a colher e as obras no "bem-vindo").
  */
-export const VERSAO_REDE = 3;
+export const VERSAO_REDE = 4;
 /** Jogadores por mundo. */
 export const MAX_JOGADORES = 8;
 
@@ -88,6 +90,8 @@ export type RespostaServidor =
       /** Spec 016: quem colocou os blocos ([id, apelido] na ordem dos índices das edições). */
       donos: DonosExportados;
       semPovoado: string[];
+      /** Spec 014: as obras do canteiro da cidade (só quando alguma começou). */
+      obras?: Record<string, ObraSalva>;
       /** Onde este jogador estava (ou o nascimento). */
       pos: { x: number; y: number; z: number; yaw: number; pitch: number };
     }

@@ -51,6 +51,16 @@ export interface Edicoes {
   mapaDoChunk?(cx: number, cz: number): ReadonlyMap<number, number> | undefined;
   exportar(): EdicoesExportadas;
   importar(dados: EdicoesExportadas): void;
+  /**
+   * Spec 014 (T05): tira a edição da célula (volta o que a geração pôs). A obra feita do
+   * canteiro passa a ser da geração e as edições das células dela saem.
+   */
+  remover?(x: number, y: number, z: number): boolean;
+  /**
+   * Spec 014 (T05): a geração do chunk mudou (obra feita, canteiro que abriu): sobe a versão
+   * dele e a geral, para as memórias que leem o chunk (física, câmera) relerem.
+   */
+  tocar?(cx: number, cz: number): void;
 }
 
 function chave(cx: number, cz: number): string {
@@ -232,6 +242,21 @@ export function criarEdicoes(semente?: number): Edicoes {
     },
     mapaDoChunk(cx, cz) {
       return chunks.get(chave(cx, cz));
+    },
+    remover(x, y, z) {
+      if (!valido(x, y, z)) return false;
+      const p = localizar(x, y, z);
+      const mapa = chunks.get(p.chave);
+      if (!mapa?.delete(p.i)) return false;
+      if (mapa.size === 0) chunks.delete(p.chave);
+      versoes.set(p.chave, (versoes.get(p.chave) ?? 0) + 1);
+      geral++;
+      return true;
+    },
+    tocar(cx, cz) {
+      const k = chave(cx, cz);
+      versoes.set(k, (versoes.get(k) ?? 0) + 1);
+      geral++;
     },
     exportar() {
       const saida: EdicoesExportadas = {};
