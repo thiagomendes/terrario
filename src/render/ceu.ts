@@ -167,12 +167,15 @@ void main() {
   // lua com crateras
   float l = dot(d, paraLua);
   float disco = smoothstep(luaLimiar.x, luaLimiar.y, l);
-  vec3 lt = normalize(cross(paraLua, vec3(0.0, 1.0, 0.0)));
-  vec3 lb = cross(lt, paraLua);
-  // sem lua no tema (luaEscala 0): evita dividir por zero (o céu inteiro viraria NaN)
-  vec2 lp = vec2(dot(d, lt), dot(d, lb)) * 400.0 / max(luaEscala, 0.001);
-  float cratera = fbm(lp * 0.6) * 0.5 + 0.6;
-  c = mix(c, vec3(0.86, 0.88, 0.95) * corLuaTema * cratera, disco);
+  // as crateras (cinco camadas de ruído) só no disco: antes a conta ia em todo pixel do céu
+  if (disco > 0.0) {
+    vec3 lt = normalize(cross(paraLua, vec3(0.0, 1.0, 0.0)));
+    vec3 lb = cross(lt, paraLua);
+    // sem lua no tema (luaEscala 0): evita dividir por zero (o céu inteiro viraria NaN)
+    vec2 lp = vec2(dot(d, lt), dot(d, lb)) * 400.0 / max(luaEscala, 0.001);
+    float cratera = fbm(lp * 0.6) * 0.5 + 0.6;
+    c = mix(c, vec3(0.86, 0.88, 0.95) * corLuaTema * cratera, disco);
+  }
   c += vec3(0.5, 0.6, 0.9) * corLuaTema * pow(max(l, 0.0), 300.0) * 0.35 * noite * step(0.001, luaEscala);
 
   // nuvens de brinquedo (spec 012): fofas e redondas, borda definida, miolo mais claro
