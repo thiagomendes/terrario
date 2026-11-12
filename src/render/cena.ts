@@ -1,5 +1,5 @@
 import { CRIATURAS, type TipoSer } from '../jogo/criaturas';
-import { saindoPorConta } from '../pagina';
+import { antesDeSair, saindoPorConta } from '../pagina';
 import { povoadosPerto } from '../jogo/povoados';
 import { generoDoMorador, nomeDoMorador } from '../temas/nomes';
 import { definirRegioesSemPovoado, regiaoDoChunk } from '../world/povoado';
@@ -130,6 +130,10 @@ import { criarRenderCriaturas } from './criaturas';
 import { criarCoracoes } from './coracoes';
 import { AVISO_LIMITE, COMIDA_DOS_BICHOS, comeEsse, viraCriado } from '../jogo/criacao';
 import { biomaEm, estiloMundo } from '../world/chunk';
+import { criarTrilhaMundo, type InfoTrilha } from '../audio/trilhaMundo';
+import { SinaisTrilha, RAIO_AMIGOS } from '../audio/sinaisTrilha';
+import type { EstadoTrilha } from '../audio/trilha';
+import type { ResultadoRegua } from '../audio/reguaTrilha';
 import { perfilDaQualidade, type Config, type GerenciadorConfig } from '../jogo/config';
 import { definirIconesBrinquedo, iconeDoItem } from '../ui/icones';
 import { gerarIconesBrinquedo } from './iconesBrinquedo';
@@ -507,6 +511,14 @@ export interface EstadoDepuracao {
   rachadura?: { visivel: boolean; estagio: number };
   fx?: { particulas: number };
   audio?: { estado: string; vozes: number; mudo: boolean; ambiente?: boolean };
+  /** Spec 019 (só nos testes de tela): a trilha gravada do mundo. */
+  trilha?: {
+    info(): InfoTrilha;
+    forcar(p: Partial<EstadoTrilha> | null): void;
+    abrirTudo(): Promise<void>;
+    /** Régua de volume: a trilha de hoje e a gravada, renderizadas offline no padrão. */
+    regua(contexto: 'dia' | 'noite', segundos?: number): Promise<ResultadoRegua>;
+  };
   /** A câmera de terceira pessoa (spec 015): o jogo só tem esta. */
   camera?: {
     /** Distância atual (com o desvio de paredes) e a pedida pelo zoom, em blocos. */
@@ -607,6 +619,24 @@ export function criarCena(
   const temaAtual = tema();
   const modo: ModoJogo = opcoes.mundo?.modo ?? 'criativo';
   document.body.dataset.modo = modo;
+  // Spec 019: a trilha gravada do tema (baixa quando o mundo fica pronto, toca quando o som liga)
+  const trilha = criarTrilhaMundo(temaAtual.id);
+  const sinaisTrilha = new SinaisTrilha();
+  antesDeSair(() => {
+    const antes = trilha.info().medidas;
+    trilha.soltar();
+    if (ehTesteDeTela()) {
+      try {
+        const depois = trilha.info().medidas;
+        sessionStorage.setItem(
+          'terrario:trilha-saida',
+          JSON.stringify({ tema: temaAtual.id, antes, depois }),
+        );
+      } catch {
+        // sem sessionStorage: o teste não vê, o jogo segue
+      }
+    }
+  });
   const inventario = hotbar.inventario;
   const invSalvo = opcoes.dados?.extras?.['inventario'] as { ativo?: number } | undefined;
   if (invSalvo) {
@@ -1037,6 +1067,60 @@ export function criarCena(
   let biomaX = NaN;
   let biomaZ = NaN;
   let biomaCache = biomaEm(0, 0, semente);
+  // sinais da trilha que custam olhar o mundo: medidos a cada ~1 s
+  let superficieX = NaN;
+  let superficieZ = NaN;
+  let superficie = 0;
+  let sinaisLentosEm = -Infinity;
+  let amigosPerto = false;
+  let lavouraPerto = false;
+  const rancho = temaAtual.id === 'rancho-alegre';
+  function atualizarSinaisTrilha(
+    dt: number,
+    baseHora: { noite: number; crepusculo: number },
+    chuva: number,
+    bioma: string,
+  ): EstadoTrilha {
+    const j = controle.jogador;
+    if (tetoX !== superficieX || tetoZ !== superficieZ) {
+      superficieX = tetoX;
+      superficieZ = tetoZ;
+      superficie = Number.isFinite(tetoX) ? alturaTerreno(tetoX, tetoZ, semente) : 0;
+    }
+    const agora = performance.now();
+    if (agora - sinaisLentosEm > 1000) {
+      sinaisLentosEm = agora;
+      amigosPerto = outrosJogadores.lista.some(
+        (o) => Math.hypot(o.x - j.x, o.y - j.y, o.z - j.z) < RAIO_AMIGOS,
+      );
+      lavouraPerto = false;
+      if (rancho) {
+        const px = Math.floor(j.x);
+        const py = Math.floor(j.y);
+        const pz = Math.floor(j.z);
+        for (let dx = -4; dx <= 4 && !lavouraPerto; dx++)
+          for (let dz = -4; dz <= 4 && !lavouraPerto; dz++)
+            for (let dy = -2; dy <= 2 && !lavouraPerto; dy++)
+              if (lavouraDoBloco(blocoEm(px + dx, py + dy, pz + dz))) lavouraPerto = true;
+      }
+    }
+    return sinaisTrilha.atualizar(dt, {
+      noite: baseHora.noite,
+      crepusculo: baseHora.crepusculo,
+      hora,
+      chuva,
+      chuvaMolha: temaAtual.climaVisual.chuva !== 'poeira',
+      coberto: tetoCoberto,
+      y: tetoY,
+      superficie,
+      perigo: perigoPerto,
+      velocidade: velocidadeHoriz,
+      correndo: corrida,
+      amigosPerto,
+      lavouraPerto,
+      bioma,
+    });
+  }
   function aplicarAtmosfera(tempo: number, dt = 0): void {
     const estacao = estacaoDoDia(dia);
     const baseHora = atmosferaNaHora(hora);
@@ -1074,15 +1158,19 @@ export function criarCena(
     const b = biomaCache;
     const nevando = invernoAtual > 0.5 || b === 'taiga' || b === 'montanhas';
     estado.biomaAtual = b;
-    // trilha adaptativa: perigo > caverna > bioma especial > noite > dia
-    const contextoMusica = perigoPerto
+    // trilha adaptativa (spec 019): os sinais do mundo, segurados para não trocar por um tropeço
+    const et = atualizarSinaisTrilha(dt, baseHora, clima.estado.chuva, b);
+    trilha.definirEstado(et);
+    // a de hoje (sintetizada, até a gravada entrar): perigo > caverna > noite > bioma > dia;
+    // a noite vale em todo bioma e a caverna é a de verdade (abaixo do chão)
+    const contextoMusica = et.perigo
       ? 'perigo'
-      : jogadorCoberto
+      : et.caverna
         ? 'caverna'
-        : b === 'deserto' || b === 'taiga' || b === 'pantano'
-          ? b
-          : baseHora.noite > 0.6
-            ? 'noite'
+        : et.hora === 'noite'
+          ? 'noite'
+          : et.bioma !== 'normal'
+            ? et.bioma
             : 'dia';
     ambiente?.definirContexto(contextoMusica);
     estado.musica = contextoMusica;
@@ -2346,6 +2434,8 @@ export function criarCena(
     estado.chunksCarregados = malhas.size;
     if (!estado.ready && pedidos.size === 0 && fila.tamanho === 0 && malhas.size > 0) {
       estado.ready = true;
+      // o mundo já abriu: só agora a música do tema começa a baixar (nunca o mundo espera)
+      trilha.baixar();
       // ícones de brinquedo desenhados dos modelos 3D, poucos por quadro
       if (!pararIcones) pararIcones = gerarIconesBrinquedo(atlas, definirIconesBrinquedo);
     }
@@ -3093,6 +3183,7 @@ export function criarCena(
       ambiente = iniciarAmbiente(motorAudio);
       if (configAtual)
         ambiente.definirVolumes(configAtual.volumeMusica, configAtual.volumeAmbiente);
+      trilha.ligar(ambiente);
     },
   };
   ativarNoPrimeiroGesto(document, ligarSom);
@@ -3110,6 +3201,15 @@ export function criarCena(
     }),
     enumerable: true,
   });
+  if (ehTesteDeTela())
+    estado.trilha = {
+      info: () => trilha.info(),
+      forcar: (p) => trilha.forcar(p),
+      abrirTudo: () => trilha.abrirTudo(),
+      // carregada à parte: a régua não entra no pacote do jogo
+      regua: async (contexto, segundos) =>
+        (await import('../audio/reguaTrilha')).medirRegua(temaAtual.id, contexto, segundos),
+    };
   let ultimoX = controle.jogador.x;
   let ultimoZ = controle.jogador.z;
   function atualizarSomMovimento(dt: number): void {

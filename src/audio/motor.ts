@@ -70,7 +70,7 @@ export interface MotorAudio {
   definirAbafado(abafado: boolean): void;
 }
 
-const GANHOS_PADRAO: Record<GrupoAudio, number> = {
+export const GANHOS_PADRAO: Record<GrupoAudio, number> = {
   efeitos: 1,
   passos: 0.6,
   ambiente: 0.7,

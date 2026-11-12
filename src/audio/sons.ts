@@ -10,6 +10,7 @@ import type { GrupoMaterial } from './materiais';
 import { povoadoDoTema, tema } from '../temas/ativo';
 import type { NaturezaTema, PioCriatura, VozCriatura } from '../temas/tipos';
 import type { TipoSer } from '../jogo/criaturas';
+import { GANHO_TRILHA_GRAVADA } from './trilha';
 
 export type EventoSom =
   | 'golpe'
@@ -752,6 +753,17 @@ export interface Ambiente {
   /** Troca a paleta da trilha (bioma, noite, caverna, perigo). */
   definirContexto(c: ContextoMusical): void;
   readonly contexto: ContextoMusical;
+  /**
+   * Spec 019: onde a trilha gravada se liga, na mesma cadeia da trilha de hoje (busMusica 0,6
+   * × "Música" × mestre do ambiente × grupo ambiente), sem o reverb (as camadas trazem o eco
+   * delas). Null antes de o som ligar.
+   */
+  saidaTrilha(): { contexto: ContextoSintese; destino: NoAudio } | null;
+  /**
+   * Volume da trilha sintetizada (0 a 1), em rampa de `segundos`: a gravada entra em cruz.
+   * Em 0, a sintetizada para de agendar notas (só os bichos e o vento seguem).
+   */
+  definirSintetizada(v: number, segundos: number): void;
 }
 
 interface RelogioAgenda {
@@ -936,6 +948,13 @@ export function iniciarAmbiente(
   let ctxA: ContextoSintese | null = null;
   let busNatureza: GanhoSom | null = null;
   let busMusica: GanhoSom | null = null;
+  /** A trilha sintetizada passa por aqui antes do busMusica (a troca em cruz da spec 019). */
+  let busSintetizada: GanhoSom | null = null;
+  /** A trilha gravada (spec 019): mesmo volume de "Música", sem reverb. */
+  let busGravada: GanhoSom | null = null;
+  let sintetizada = 1;
+  /** Até quando a sintetizada ainda soa (a rampa para 0 acaba aqui). */
+  let sintetizadaAte = Infinity;
   let proximoAcorde = 0;
   let proximaNota = 0;
   let proximoBicho = 0;
@@ -982,7 +1001,7 @@ export function iniciarAmbiente(
       rampa(g.gain, 0, t + dur);
       o.connect(filtro);
       filtro.connect(g);
-      g.connect(busMusica!);
+      g.connect(busSintetizada!);
       o.start(t);
       o.stop(t + dur + 0.05);
       registrar({ fonte: o, fim: t + dur });
@@ -994,9 +1013,19 @@ export function iniciarAmbiente(
     const onda = tm.sino ?? 'sine';
     // ondas ricas (quadrada, dente de serra) soam mais alto: compensa o volume
     const k = onda === 'sine' ? 1 : onda === 'triangle' ? 0.8 : 0.35;
-    registrar(tom(ctxA!, busMusica!, t, onda, f, f, ganho * k, 2.2 * tm.sustentacao, 0.004));
+    registrar(tom(ctxA!, busSintetizada!, t, onda, f, f, ganho * k, 2.2 * tm.sustentacao, 0.004));
     registrar(
-      tom(ctxA!, busMusica!, t, 'sine', f * 3, f * 3, ganho * 0.12, 0.8 * tm.sustentacao, 0.004),
+      tom(
+        ctxA!,
+        busSintetizada!,
+        t,
+        'sine',
+        f * 3,
+        f * 3,
+        ganho * 0.12,
+        0.8 * tm.sustentacao,
+        0.004,
+      ),
     );
   }
 
@@ -1115,6 +1144,11 @@ export function iniciarAmbiente(
     vigiar(agora);
     const ate = agora + 0.6;
     const p = paletaDoTema(contexto);
+    // a gravada já tomou o lugar: a sintetizada não agenda mais nada (nem CPU gasta)
+    const calada = sintetizada <= 0 && agora >= sintetizadaAte;
+    if (calada) {
+      proximoAcorde = proximaNota = proximoPulso = proximaGota = ate;
+    }
     while (proximoAcorde < ate) {
       const t = Math.max(proximoAcorde, agora + 0.05);
       const ac = p.acordes[indiceAcorde % p.acordes.length];
@@ -1139,7 +1173,17 @@ export function iniciarAmbiente(
         // 0 é pausa: o tambor respira
         if (f > 0)
           registrar(
-            tom(ctxA, busMusica, t, 'triangle', f, f * 0.98, 0.1 * (p.ganhoPulso ?? 1), 0.22, 0.01),
+            tom(
+              ctxA,
+              busSintetizada!,
+              t,
+              'triangle',
+              f,
+              f * 0.98,
+              0.1 * (p.ganhoPulso ?? 1),
+              0.22,
+              0.01,
+            ),
           );
         proximoPulso = t + 0.3;
       }
@@ -1191,6 +1235,12 @@ export function iniciarAmbiente(
         busMusica = ctx.createGain() as GanhoSom;
         busMusica.gain.value = 0.6 * volMusica;
         busMusica.connect(mestre);
+        busSintetizada = ctx.createGain() as GanhoSom;
+        busSintetizada.gain.value = sintetizada;
+        busSintetizada.connect(busMusica);
+        busGravada = ctx.createGain() as GanhoSom;
+        busGravada.gain.value = 0.6 * volMusica * GANHO_TRILHA_GRAVADA;
+        busGravada.connect(mestre);
         if (ctx.createConvolver) {
           const rev = ctx.createConvolver();
           rev.buffer = respostaReverb(ctx, 3.2);
@@ -1271,9 +1321,35 @@ export function iniciarAmbiente(
       chuva = Math.max(0, Math.min(1, i));
       if (gChuva) gChuva.gain.value = chuva * 0.55;
     },
+    saidaTrilha() {
+      return ctxA && busGravada ? { contexto: ctxA, destino: busGravada } : null;
+    },
+    definirSintetizada(v, segundos) {
+      const alvo = Math.max(0, Math.min(1, v));
+      sintetizada = alvo;
+      if (!ctxA || !busSintetizada) {
+        sintetizadaAte = alvo > 0 ? Infinity : -Infinity;
+        return;
+      }
+      const t = ctxA.currentTime;
+      const g = busSintetizada.gain;
+      const dur = Math.max(0.05, segundos);
+      if (g.setValueAtTime && g.linearRampToValueAtTime) {
+        (g as { cancelScheduledValues?: (t: number) => void }).cancelScheduledValues?.(t);
+        g.setValueAtTime(g.value, t);
+        g.linearRampToValueAtTime(alvo, t + dur);
+      } else g.value = alvo;
+      // as notas longas (acordes de até 15 s) somem na rampa; depois dela, nada mais é agendado
+      sintetizadaAte = alvo > 0 ? Infinity : t + dur;
+      if (alvo > 0) {
+        proximoAcorde = Math.min(proximoAcorde, t + 0.3);
+        proximaNota = Math.min(proximaNota, t + 1);
+      }
+    },
     definirVolumes(musica, natureza) {
       volMusica = musica;
       volNatureza = natureza;
+      if (busGravada) busGravada.gain.value = 0.6 * musica * GANHO_TRILHA_GRAVADA;
       if (busMusica) busMusica.gain.value = 0.6 * musica;
       if (busNatureza) busNatureza.gain.value = 0.8 * natureza;
     },

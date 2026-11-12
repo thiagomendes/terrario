@@ -13,6 +13,7 @@ import {
   tocarSom,
   comecarEParar,
 } from '../../src/audio/sons';
+import { GANHO_TRILHA_GRAVADA } from '../../src/audio/trilha';
 import { ContextoFalso, FonteFalsa, NoFalso } from './falso';
 
 class ContextoSom extends ContextoFalso {
@@ -265,5 +266,54 @@ describe('sons do campo (Rancho Alegre)', () => {
     await import('../../src/temas/todos');
     for (const id of temasDisponiveis())
       if (id !== 'rancho-alegre') expect(obterTema(id).natureza.roca, id).toBeUndefined();
+  });
+});
+
+describe('troca em cruz com a trilha gravada (spec 019)', () => {
+  it('dá a saída da gravada e, com a sintetizada em 0, para de agendar notas', async () => {
+    const { ctx, motor } = await motorAtivo();
+    let agendar: (() => void) | null = null;
+    const amb = iniciarAmbiente(motor, {
+      setInterval: (f: () => void) => {
+        agendar = f;
+        return 1;
+      },
+      clearInterval: () => undefined,
+    });
+    const saida = amb.saidaTrilha();
+    expect(saida).not.toBeNull();
+    amb.definirVolumes(0.6, 1);
+    // a gravada leva o mesmo volume de "Música" (0,6 × 0,6 × ganho único)
+    expect((saida!.destino as NoFalso).gain.value).toBeCloseTo(0.36 * GANHO_TRILHA_GRAVADA, 6);
+    amb.definirVolumes(0.3, 1);
+    expect((saida!.destino as NoFalso).gain.value).toBeCloseTo(0.18 * GANHO_TRILHA_GRAVADA, 6);
+    amb.definirContexto('perigo');
+    ctx.currentTime = 1;
+    agendar!();
+    const comNotas = ctx.fontes.length;
+    amb.definirSintetizada(0, 2);
+    // durante a rampa ainda toca
+    ctx.currentTime = 2;
+    agendar!();
+    expect(ctx.fontes.length).toBeGreaterThan(comNotas);
+    // depois dela, nenhuma nota nova da trilha (os bichos seguem no barramento da natureza)
+    ctx.currentTime = 4;
+    agendar!();
+    const depois = ctx.fontes.filter((f) => !('loop' in f)).length;
+    for (let t = 4; t < 30; t += 0.2) {
+      ctx.currentTime = t;
+      amb.definirNoite(0);
+      agendar!();
+    }
+    const osc = ctx.fontes.filter((f) => !('loop' in f));
+    // só pássaros (2 a 5 tons cada) entraram: nada de acordes de 2 osciladores por nota
+    expect(osc.length - depois).toBeLessThan(80);
+    // e volta se a gravada falhar
+    amb.definirSintetizada(1, 1);
+    const antesVolta = ctx.fontes.length;
+    ctx.currentTime = 31;
+    agendar!();
+    expect(ctx.fontes.length).toBeGreaterThan(antesVolta);
+    amb.parar();
   });
 });
