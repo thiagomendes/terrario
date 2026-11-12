@@ -9,7 +9,12 @@ import base from './playwright.config';
 export default defineConfig({
   ...base,
   workers: 2,
-  testMatch: ['carregando.spec.ts', 'iphone.spec.ts', 'trilha-iphone.spec.ts'],
+  testMatch: [
+    'carregando.spec.ts',
+    'iphone.spec.ts',
+    'trilha-iphone.spec.ts',
+    'nitidez-celular.spec.ts',
+  ],
   use: { baseURL: base.use?.baseURL },
   projects: [{ name: 'iphone-webkit', use: { ...devices['iPhone 13'] } }],
 });
