@@ -49,6 +49,7 @@ const CASAS: readonly FormaCasa[] = ['duas-aguas', 'cupula', 'tenda', 'redonda',
 const MARCOS: readonly FormaMarco[] = ['poco', 'fonte', 'antena', 'totem', 'esqueleto', 'moinho'];
 const PLANTAS: readonly PlantaPovoado[] = ['vila', 'sitio', 'cidade'];
 const NOITES: readonly NonNullable<EstiloMundo['noite']>[] = ['assusta', 'mansa'];
+const DOMAR: readonly NonNullable<EstiloMundo['domar']>[] = ['frutinhas', 'peixe'];
 
 const entre01 = (v: unknown, padrao: number) =>
   typeof v === 'number' && Number.isFinite(v) ? Math.min(1, Math.max(0, v)) : padrao;
@@ -91,5 +92,7 @@ export function estiloSeguro(v: unknown): EstiloMundo {
     flora: entre01(o.flora, ESTILO_PADRAO.flora),
     ...(povoado ? { povoado } : {}),
     ...(NOITES.includes(o.noite as never) ? { noite: o.noite as EstiloMundo['noite'] } : {}),
+    // spec 014: sem o campo, continua sem (frutinhas, como sempre)
+    ...(DOMAR.includes(o.domar as never) ? { domar: o.domar as EstiloMundo['domar'] } : {}),
   };
 }

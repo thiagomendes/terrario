@@ -111,6 +111,49 @@ export function caixasDoBloco(
 }
 
 /**
+ * Spec 014 (T08): o desenho (só a malha) das peças de ferro da cidade, mais fino que a caixa
+ * de colisão. A escada de incêndio é de grade delicada: o patamar é uma chapa fina na altura
+ * do pé (o mesmo topo da laje, então pisa-se igual), a escada tem degraus finos com as duas
+ * longarinas de lado, e a grade tem a haste e os corrimãos finos. A colisão e a conferência
+ * das plantas (`caixasDoBloco`) não mudam: anda-se e sobe-se do mesmo jeito.
+ */
+export function caixasDaMalha(
+  id: number,
+  meta: number,
+  conecta?: (d: number) => boolean,
+): Caixa[] | null {
+  switch (id) {
+    case Bloco.LAJE_GRADE:
+      // chapa de grade com a beirada (o topo em 0,5, como a laje)
+      return [[0, 6.5 * P, 0, 1, 8 * P, 1]];
+    case Bloco.ESCADA_GRADE: {
+      const d = direcaoDoMeta(meta);
+      return [
+        // os dois degraus finos (o de baixo e o de cima, do lado para onde se sobe)
+        girar([P, 6.5 * P, 0, 15 * P, 8 * P, 0.5], d),
+        girar([P, 14.5 * P, 0.5, 15 * P, 1, 1], d),
+        // longarinas: as duas laterais de ferro, em dois lances (sobem com os degraus)
+        girar([0, 4 * P, 0, P, 9 * P, 0.5], d),
+        girar([15 * P, 4 * P, 0, 1, 9 * P, 0.5], d),
+        girar([0, 12 * P, 0.5, P, 1, 1], d),
+        girar([15 * P, 12 * P, 0.5, 1, 1, 1], d),
+      ];
+    }
+    case Bloco.GRADE_FERRO: {
+      const cx: Caixa[] = [[7 * P, 0, 7 * P, 9 * P, 1, 9 * P]];
+      for (let k = 0; k < 4; k++) {
+        if (!conecta?.(k)) continue;
+        cx.push(girar([7.5 * P, 7 * P, 9 * P, 8.5 * P, 8 * P, 1], k));
+        cx.push(girar([7.25 * P, 14 * P, 9 * P, 8.75 * P, 15 * P, 1], k));
+      }
+      return cx;
+    }
+    default:
+      return caixasDoBloco(id, meta, conecta);
+  }
+}
+
+/**
  * Porteira de brinquedo fechada (frente em +z): dois montantes nas pontas, três travessas e
  * a mão-francesa em diagonal (degraus finos). Os mourões são as cercas vizinhas.
  */

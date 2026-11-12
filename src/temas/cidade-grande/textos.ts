@@ -1,6 +1,6 @@
 /**
- * Nomes da Cidade Grande (spec 014). Até a T08 (o tema de verdade) a cidade usa os nomes
- * do Rancho Alegre para o que é de todo tema, com os bichos da cidade e os blocos novos.
+ * Nomes da Cidade Grande (spec 014, T08): o que é de todo tema com cara de cidade (praça,
+ * parque, padaria, loja de construção), os bichos da cidade e os blocos que só ela tem.
  */
 import { Bloco } from '../../world/blocks';
 import type { TextosTema } from '../tipos';
@@ -29,14 +29,103 @@ export const NOMES_BLOCOS_CIDADE: Readonly<Record<number, string>> = {
   [Bloco.ESCADA_GRADE]: 'Escada de grade',
 };
 
+/** Ferramentas da cidade: as de sempre, nos 5 níveis. */
+const NIVEIS = {
+  madeira: 'de madeira',
+  pedra: 'de pedra',
+  cobre: 'de cobre',
+  ferro: 'de ferro',
+  cristal: 'de cristal',
+} as const;
+function ferramentas(): Record<string, string> {
+  const r: Record<string, string> = {};
+  for (const [nivel, de] of Object.entries(NIVEIS) as [keyof typeof NIVEIS, string][]) {
+    r[`picareta_${nivel}`] = `Picareta ${de}`;
+    r[`machado_${nivel}`] = `Machado ${de}`;
+    r[`pa_${nivel}`] = `Pá ${de}`;
+    r[`espada_${nivel}`] = `Espada ${de}`;
+    r[`enxada_${nivel}`] = `Enxada ${de}`;
+  }
+  return r;
+}
+
 export const TEXTOS_CIDADE: TextosTema = {
-  ...TEXTOS_RANCHO,
   blocos: {
     ...TEXTOS_RANCHO.blocos,
-    [Bloco.TERRA_MUSGOSA]: 'Grama da praça',
+    1: 'grama do parque',
+    2: 'pedra',
+    3: 'areia da praia',
+    4: 'tronco de árvore',
+    5: 'folhas da árvore',
+    6: 'cristal',
+    7: 'tábuas',
+    8: 'graminha',
+    9: 'florzinha',
+    11: 'terra',
+    12: 'paralelepípedo',
+    13: 'cascalho',
+    20: 'grama com geada',
+    22: 'gelo',
+    23: 'arenito',
+    24: 'areia do deserto',
+    25: 'cacto',
+    27: 'tronco de bétula',
+    28: 'folhas de bétula',
+    29: 'tronco de pinheiro',
+    30: 'folhas de pinheiro',
+    31: 'capim do brejo',
+    34: 'tronco de ipê',
+    35: 'ipê florido',
+    36: 'vidro',
+    37: 'tocha',
+    38: 'lanterna',
+    39: 'bloco de cristal',
+    40: 'mesa de trabalho',
+    41: 'fornalha',
+    42: 'baú',
+    43: 'tijolos',
+    45: 'pedra lisa',
+    46: 'tinta branca',
+    47: 'tinta vermelha',
+    48: 'tinta laranja',
+    49: 'tinta amarela',
+    50: 'tinta verde',
+    51: 'tinta azul',
+    52: 'tinta roxa',
+    53: 'tinta preta',
+    54: 'arbusto de amoras',
+    55: 'folhas de sibipiruna',
+    56: 'cama',
+    57: 'porta',
+    58: 'porta aberta',
+    59: 'escada',
+    60: 'laje',
+    61: 'cerca',
+    62: 'fornalha acesa',
+    63: 'tábuas de bétula',
+    64: 'tábuas de pinheiro',
+    67: 'água',
+    82: 'portãozinho',
+    83: 'portãozinho aberto',
     ...NOMES_BLOCOS_CIDADE,
   },
-  itens: { ...TEXTOS_RANCHO.itens, colher_pedreiro: 'Colher de pedreiro' },
+  itens: {
+    ...TEXTOS_RANCHO.itens,
+    luzita: 'Cristal',
+    maca: 'Maçã',
+    carne_assada: 'Espetinho',
+    peixe_cru: 'Peixe fresco',
+    peixe_assado: 'Peixe assado',
+    ensopado: 'Sopinha',
+    pao: 'Pão da padaria',
+    pipoca: 'Pipoca',
+    ovo: 'Ovo',
+    ovo_cozido: 'Ovo cozido',
+    torta_abobora: 'Torta de abóbora',
+    tijolo: 'Tijolo',
+    colher_pedreiro: 'Colher de pedreiro',
+    ...ferramentas(),
+  },
   criaturas: {
     cervo: 'Cachorro grande',
     coelho: 'Pombo da praça',
@@ -44,7 +133,74 @@ export const TEXTOS_CIDADE: TextosTema = {
     espectro: 'Guaxinim travesso',
     raposa: 'Gato de rua',
   },
+  biomas: {
+    oceano: 'Mar da cidade',
+    praia: 'Praia',
+    floresta: 'Bosque',
+    campos: 'Campo aberto',
+    deserto: 'Deserto',
+    taiga: 'Serra fria',
+    montanhas: 'Morros',
+    pantano: 'Brejo',
+  },
+  estacoes: {
+    primavera: 'Primavera',
+    verao: 'Verão',
+    outono: 'Outono',
+    inverno: 'Inverno',
+  },
+  climas: {
+    limpo: 'Céu azul',
+    nublado: 'Nublado',
+    chuva: 'Chuva',
+    tempestade: 'Temporal',
+    neblina: 'Neblina',
+  },
   diario: 'Caderno da cidade',
+  missoes: {
+    madeira: { titulo: 'Lenha do bosque', descricao: 'Quebre 4 troncos de árvore fora da cidade' },
+    tabuas: { titulo: 'Marcenaria', descricao: 'Transforme troncos em tábuas' },
+    mesa: { titulo: 'Bancada pronta', descricao: 'Monte uma mesa de trabalho' },
+    picareta: { titulo: 'Ferramenta na mão', descricao: 'Faça uma picareta de madeira' },
+    pedra: { titulo: 'Quebra-pedra', descricao: 'Tire 10 blocos de pedra dos morros' },
+    fornalha: { titulo: 'Forno aceso', descricao: 'Monte uma fornalha' },
+    tochas: { titulo: 'Luz na rua', descricao: 'Coloque 5 tochas' },
+    ferro: { titulo: 'Ferro bom', descricao: 'Tire uma barra de ferro da fornalha' },
+    luzita: { titulo: 'Pedra que brilha', descricao: 'Encontre um cristal' },
+    comer: { titulo: 'Hora do lanche', descricao: 'Coma alguma coisa gostosa' },
+    dormir: { titulo: 'Boa noite, cidade', descricao: 'Durma numa cama durante a noite' },
+    espectro: { titulo: 'Xô, guaxinim!', descricao: 'Espante um guaxinim travesso' },
+    raposa: {
+      titulo: 'Amigo de rua',
+      descricao: 'Faça amizade com um gato de rua dando peixe',
+    },
+    pantano: { titulo: 'Coro dos sapos', descricao: 'Encontre o brejo' },
+    deserto: { titulo: 'Calorão', descricao: 'Chegue ao deserto' },
+    taiga: { titulo: 'Friozinho da serra', descricao: 'Chegue à serra fria' },
+    mergulho: { titulo: 'Mergulho', descricao: 'Mergulhe debaixo d’água' },
+    marcador: { titulo: 'Mapa da cidade', descricao: 'Crie um marcador no mapa (tecla K)' },
+    construtor: { titulo: 'Mestre de obras', descricao: 'Coloque 100 blocos' },
+    foto: { titulo: 'Cartão-postal', descricao: 'Tire uma foto no modo foto (tecla P)' },
+    povoado: { titulo: 'Vizinhos da praça', descricao: 'Encontre o bairro da praça' },
+    trocas: { titulo: 'Freguês da cidade', descricao: 'Faça 3 trocas com os vizinhos' },
+    ferreiro: { titulo: 'Na oficina', descricao: 'Faça uma troca com o mecânico' },
+    arar: { titulo: 'Terra fofinha', descricao: 'Are a terra com a enxada' },
+    plantar: { titulo: 'Hortinha', descricao: 'Plante uma semente na terra arada' },
+    colher: { titulo: 'Dia de colheita', descricao: 'Colha uma planta madura' },
+    pao: { titulo: 'Pão quentinho', descricao: 'Faça um pão com 3 feixes de trigo' },
+    criar: {
+      titulo: 'Bicho amigo',
+      descricao: 'Dê trigo a um cachorro grande (ou sementes a um pombo)',
+    },
+  },
+  capitulos: {
+    'Primeiros passos': 'Chegada na cidade',
+    'Fundo da terra': 'Debaixo da cidade',
+    Sobreviver: 'Barriga cheia',
+    Explorar: 'Passeio pela cidade',
+    Criar: 'Mãos à obra',
+    Roça: 'Hortinha',
+  },
   boasVindas: 'Bem-vindo à Cidade Grande: ajude o pedreiro a construir',
   morte: 'Você cochilou no banco da praça',
   legendas: { trovao: 'Trovoada', criaturaNoturna: 'Trrr do guaxinim' },

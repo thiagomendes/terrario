@@ -14,7 +14,7 @@ import { plantaDeBrinquedo, PLANTAS_BRINQUEDO, type AlvoPlanta } from '../mesh/p
 import type { Scene } from '@babylonjs/core/scene';
 import { obterItem, todosItens } from '../jogo/itens';
 import { coresDoBloco } from '../fx/cores';
-import { caixasDoBloco, temFormaParcial, type Caixa } from '../world/formas';
+import { caixasDaMalha, temFormaParcial, type Caixa } from '../world/formas';
 import { Bloco, obterBloco } from '../world/blocks';
 import { caixaArredondada, cilindro, esfera, type Plasticos } from './formas';
 import { modeloDeBloco } from './blocosBrinquedo';
@@ -346,7 +346,7 @@ export function modeloNaMao(
     let caixas: Caixa[] =
       forma === 'cama'
         ? [[0, 0, 0, 1, 0.5, 2]]
-        : (caixasDoBloco(bloco, 0, (d) => d % 2 === 1) ?? [[0, 0, 0, 1, 1, 1]]);
+        : (caixasDaMalha(bloco, 0, (d) => d % 2 === 1) ?? [[0, 0, 0, 1, 1, 1]]);
     // cabe no mesmo espaço do bloco na mão (o maior lado com 0,26)
     let maior = 0;
     for (const [x0, y0, z0, x1, y1, z1] of caixas)

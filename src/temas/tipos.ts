@@ -225,6 +225,11 @@ export interface EstiloMundo {
    * (Rancho Alegre) só pia e foge. O comportamento vem da T04; o campo já passa pela nuvem.
    */
   noite?: 'assusta' | 'mansa';
+  /**
+   * Spec 014: a comida que doma o papel raposa. Sem o campo, frutinhas (como sempre); na
+   * Cidade Grande, 'peixe' (o gato de rua é domado com peixe fresco ou assado).
+   */
+  domar?: 'frutinhas' | 'peixe';
 }
 
 export interface TimbreMusica {
@@ -263,6 +268,11 @@ export interface NaturezaTema {
   trovao?: 'trovao' | 'pipoca' | 'estalo';
   /** Spec 019: sem chiado de chuva (no vácuo a "chuva" é de poeira e não faz barulho). */
   chuvaMuda?: boolean;
+  /**
+   * Spec 014 (Cidade Grande): sons curtos da rua. A buzininha de brinquedo ao longe (rara: uma
+   * a cada 40 a 90 s). Multiplicador da chance (0 ou ausente = nunca).
+   */
+  cidade?: { buzininha?: number };
 }
 
 /** Ajuste do som de um material no tema (mesmo motor de amostras). */

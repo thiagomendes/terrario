@@ -13,6 +13,25 @@ export const COMIDA_DOS_BICHOS: Partial<Record<TipoSer, readonly string[]>> = {
   raposa: ['frutinhas'],
 };
 
+/**
+ * Spec 014: a comida que doma o papel raposa no mundo (o tema diz, `EstiloMundo.domar`): sem o
+ * campo, frutinhas; na Cidade Grande, peixe (fresco ou assado). A mesma regra no núcleo e no
+ * cliente (dica, toque e o bicho que segue quem segura a comida).
+ */
+export function comidaDeDomar(domar?: 'frutinhas' | 'peixe'): readonly string[] {
+  return domar === 'peixe' ? COMIDA_DOMAR_PEIXE : COMIDA_DOMAR_FRUTINHAS;
+}
+const COMIDA_DOMAR_FRUTINHAS: readonly string[] = ['frutinhas'];
+const COMIDA_DOMAR_PEIXE: readonly string[] = ['peixe_cru', 'peixe_assado'];
+
+/** O item doma a raposa (o gato de rua na cidade) neste mundo? */
+export function domaCom(
+  domar: 'frutinhas' | 'peixe' | undefined,
+  item: string | null | undefined,
+): boolean {
+  return !!item && comidaDeDomar(domar).includes(item);
+}
+
 /** Papéis que viram bicho criado ao ganhar comida (a raposa é domada, à parte). */
 export const PAPEIS_CRIADOS: readonly TipoSer[] = ['cervo', 'coelho'];
 

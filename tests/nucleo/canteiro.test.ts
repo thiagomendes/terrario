@@ -353,7 +353,9 @@ describe('o pedreiro e o mundo salvo', () => {
   it('o pedreiro aparece no canteiro aberto, acena e dá a colher a quem chega', () => {
     // a criança nasce na praça, ao lado do primeiro canteiro: a colher já chega no começo
     const n = abrir('sobrevivencia');
-    const ped = n.estado.populacao.lista.find((q) => q.morador?.povoado === 'cidade');
+    const ped = n.estado.populacao.lista.find(
+      (q) => q.morador?.povoado === 'cidade' && q.morador.n === 0,
+    );
     expect(ped?.morador?.profissao).toBe('construtor');
     const ana = n.estado.jogadores.get('ana')!;
     expect(ana.inventario.contar(COLHER_PEDREIRO)).toBe(1);

@@ -9,7 +9,7 @@ type Papel = PecaCriatura['papel'];
  * escala `k`: `caixa` e `bola` recebem as medidas do esboço (bola pelo raio e pelas escalas
  * de cada eixo) e a posição dentro de um grupo (a cabeça é um grupo deslocado).
  */
-function bicho(k: number) {
+export function bicho(k: number) {
   const pecas: PecaCriatura[] = [];
   let origem: V3 = [0, 0, 0];
   let papelGrupo: Papel = undefined;
@@ -107,7 +107,7 @@ function bicho(k: number) {
 }
 
 /** Patas da frente e de trás em diagonal (uma diagonal anda junto). */
-const DIAGONAL: Record<string, Papel> = {
+export const DIAGONAL: Record<string, Papel> = {
   '1,1': 'perna0',
   '-1,1': 'perna1',
   '1,-1': 'perna1',

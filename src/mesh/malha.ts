@@ -1,7 +1,7 @@
 import { Bloco, ehCruz, obterBloco } from '../world/blocks';
 import { uvDaCelula } from '../art/atlas';
 import {
-  caixasDoBloco,
+  caixasDaMalha,
   cercaConecta,
   temFormaParcial,
   vetorDirecao,
@@ -851,7 +851,7 @@ export function gerarMalha(
         }
         if (temFormaParcial(id)) {
           const meta = metas.get(indice(x, y, z)) ?? 0;
-          const caixas = caixasDoBloco(id, meta, (d) => {
+          const caixas = caixasDaMalha(id, meta, (d) => {
             const [dx, dz] = vetorDirecao(d);
             return cercaConecta(ler(x + dx, y, z + dz));
           });

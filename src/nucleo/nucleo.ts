@@ -37,7 +37,7 @@ import {
   olharDoNascimento,
   pontoDeNascer,
 } from '../world/chunk';
-import { AVISO_LIMITE, comeEsse, viraCriado } from '../jogo/criacao';
+import { AVISO_LIMITE, comeEsse, domaCom, viraCriado } from '../jogo/criacao';
 import { definirRegioesSemPovoado, regiaoDoChunk } from '../world/povoado';
 import { abreEFecha, alternado, ehPorta } from '../world/portas';
 import { criarConteineres, TAMANHO_BAU } from '../jogo/conteineres';
@@ -73,6 +73,9 @@ import {
   type CelulaPlanejada,
 } from '../world/obras';
 import { MAX_AJUDANTES_OBRA, type ObraSalva } from './saneamento';
+import { roteiroDoMorador, type LugarCidade, type RoteiroCidade } from '../world/ruasCidade';
+
+type DadosFolga = 'casa' | 'loja' | undefined;
 import {
   CHANCE_SEMENTE_GRAMA,
   SEGUNDOS_POR_ESTAGIO,
@@ -1115,6 +1118,30 @@ export function criarNucleo(op: OpcoesNucleo) {
     const [bx, bz] = noLoteObra(l, 4, f);
     return [(ax + bx) / 2 + 0.5, (az + bz) / 2 + 0.5];
   }
+  /**
+   * Spec 014 (T08): o canteiro `n` como lugar da cidade a pé: a frente na calçada, a entrada
+   * no tapume e o posto do pedreiro.
+   */
+  function lugarDoCanteiro(n: number): LugarCidade | null {
+    const fora = entradaDoCanteiro(n, -1);
+    const dentro = entradaDoCanteiro(n, 1);
+    const posto = cidade ? postoDoPedreiro(cidade, n) : null;
+    if (!cidade || !fora || !dentro || !posto) return null;
+    return { frente: fora, passos: [[dentro[0], cidade.h + 1, dentro[1]], posto] };
+  }
+  /** Caminho a pé até o canteiro `n`, pelas calçadas (sem o posto: a rotina vai até ele). */
+  function caminhoAteCanteiro(
+    m: NonNullable<ReturnType<typeof pedreiro>>['morador'],
+    de: LugarCidade | null,
+    aqui: [number, number],
+    n: number,
+  ): [number, number][] | null {
+    const para = lugarDoCanteiro(n);
+    if (!m?.cidade || !para) return null;
+    const r = m.cidade.rota(de, aqui, para).map(([x, , z]) => [x, z] as [number, number]);
+    r.pop();
+    return r;
+  }
   /** Do canteiro `de` para o posto do canteiro de agora: sai pela entrada e vai pela calçada. */
   function moverPedreiro(c: NonNullable<ReturnType<typeof pedreiro>>, de: number): void {
     const novo = canteiroDoPedreiro();
@@ -1124,12 +1151,126 @@ export function criarNucleo(op: OpcoesNucleo) {
     c.morador.caminho =
       novo === de
         ? []
-        : ([
+        : (caminhoAteCanteiro(c.morador, lugarDoCanteiro(de), [c.x, c.z], novo) ??
+          ([
             entradaDoCanteiro(de, 1),
             entradaDoCanteiro(de, -1),
             entradaDoCanteiro(novo, -1),
             entradaDoCanteiro(novo, 1),
-          ].filter((p) => p) as [number, number][]);
+          ].filter((p) => p) as [number, number][]));
+  }
+
+  /** Alguém (acordado) a até `r` blocos de (x, z)? */
+  const alguemPerto = (x: number, z: number, r: number) =>
+    [...jogadores.values()].some(
+      (o) => !o.sobrevivencia.estado.morto && Math.hypot(o.tel.x - x, o.tel.z - z) < r,
+    );
+
+  /** Os roteiros dos moradores da cidade (casa, loja e praça), um por número. */
+  const roteiros = new Map<number, RoteiroCidade | null>();
+  const roteiro = (n: number): RoteiroCidade | null => {
+    if (!cidade) return null;
+    if (!roteiros.has(n)) {
+      const mo = cidade.moradores.find((m) => m.n === n);
+      roteiros.set(n, mo ? roteiroDoMorador(cidade, mo) : null);
+    }
+    return roteiros.get(n)!;
+  };
+
+  /**
+   * Spec 014 (T08): o dia do pedreiro. No horário do canteiro (e sempre que tem criança perto
+   * dele ou do canteiro) fica no posto; de manhãzinha passa na loja de construção; à noite vai
+   * para casa. Nunca deixa uma criança sozinha na obra: chegou alguém, ele volta.
+   */
+  function horarioDoPedreiro(c: NonNullable<ReturnType<typeof pedreiro>>): void {
+    const m = c.morador;
+    if (!m?.cidade || !m.posto) return;
+    const n = canteiroDoPedreiro();
+    const raio = m.folga ? 20 : 32;
+    const perto = alguemPerto(m.posto[0], m.posto[2], raio) || alguemPerto(c.x, c.z, raio / 2);
+    const folga: DadosFolga =
+      perto || (hora >= 0.3 && hora < 0.74)
+        ? undefined
+        : hora >= 0.24 && hora < 0.3
+          ? 'loja'
+          : 'casa';
+    if (folga === m.folga) return;
+    if (folga && !m.folga) {
+      // sai do canteiro pela entrada do tapume
+      m.lugar = lugarDoCanteiro(n);
+      m.ir = undefined;
+      m.caminho = [];
+    } else if (!folga) {
+      if (m.emCasa) {
+        c.x = m.cidade.fora[0];
+        c.y = m.cidade.fora[1];
+        c.z = m.cidade.fora[2];
+        m.emCasa = false;
+        m.lugar = m.cidade.casa;
+      }
+      m.caminho = caminhoAteCanteiro(m, m.lugar ?? null, [c.x, c.z], n) ?? [];
+    }
+    m.folga = folga;
+    m.rumo = undefined;
+    m.trilha = undefined;
+    m.pausa = undefined;
+  }
+
+  let relogioCidade = 0;
+  /**
+   * Spec 014 (T08): os moradores da cidade (os do planejador, menos o pedreiro, que cuida do
+   * canteiro) aparecem na porta de casa (ou dentro dela, de noite) quando alguém chega perto,
+   * e o cachorro vem morar na casinha da obra 1 quando ela fica pronta.
+   */
+  function cuidarDaCidade(dt: number): void {
+    if (!cidade) return;
+    relogioCidade -= dt;
+    if (relogioCidade > 0) return;
+    relogioCidade = 1;
+    const vivos = new Set<number>();
+    let cachorro = false;
+    for (const c of populacao.lista) {
+      if (c.morador?.povoado === 'cidade') vivos.add(c.morador.n);
+      if (c.lar === 1) cachorro = true;
+    }
+    const deNoite = noiteNaHora(hora) > 0.35;
+    for (const mo of cidade.moradores) {
+      if (mo.n === 0 || vivos.has(mo.n)) continue;
+      const r = roteiro(mo.n);
+      if (!r || !alguemPerto(r.fora[0], r.fora[2], 64)) continue;
+      if (mundo.criaturas.superficie(Math.floor(r.fora[0]), Math.floor(r.fora[2])) === null)
+        continue;
+      const q = deNoite ? r.dentro : r.fora;
+      const c = populacao.adicionar('morador', q[0], q[1], q[2]);
+      c.morador = {
+        povoado: 'cidade',
+        n: mo.n,
+        profissao: mo.profissao,
+        fora: r.fora,
+        dentro: r.dentro,
+        oficina: r.loja.passos[r.loja.passos.length - 1],
+        praca: r.pracas[0].passos[r.pracas[0].passos.length - 1],
+        rotaCasa: [],
+        rotaOficina: [],
+        centro: r.centro,
+        cidade: r,
+        lugar: r.casa,
+        emCasa: deNoite,
+        rumoDia: mo.n % 2 === 0 ? 'praca' : 'loja',
+      };
+    }
+    // o cachorro da casinha: mora no quintal do canteiro 1 (a obra feita)
+    if (!cachorro && obras.get(1)?.feita) {
+      const l = loteDoCanteiro(cidade, 1);
+      if (!l) return;
+      const [x, z] = noLoteObra(l, 3, 4);
+      if (!alguemPerto(x, z, 48) || mundo.criaturas.superficie(x, z) === null) return;
+      const c = populacao.adicionar('cervo', x + 0.5, cidade.h + 1, z + 0.5);
+      c.lar = 1;
+      const [ax, az] = noLoteObra(l, 1, 1);
+      const [bx, bz] = noLoteObra(l, 6, 7);
+      c.cerca = [Math.min(ax, bx), Math.min(az, bz), Math.max(ax, bx), Math.max(az, bz)];
+    }
   }
 
   /** Raio em que o pedreiro vê a criança chegar (acena, vem até ela e dá a colher). */
@@ -1162,20 +1303,24 @@ export function criarNucleo(op: OpcoesNucleo) {
       )
         return;
       c = populacao.adicionar('morador', posto[0], posto[1], posto[2]);
+      // spec 014 (T08): o pedreiro também mora num apartamento e passa na loja de construção
+      const r = roteiro(0);
       c.morador = {
         povoado: 'cidade',
         n: 0,
         profissao: 'construtor',
-        fora: posto,
-        dentro: posto,
-        oficina: posto,
+        fora: r?.fora ?? posto,
+        dentro: r?.dentro ?? posto,
+        oficina: r ? r.loja.passos[r.loja.passos.length - 1] : posto,
         praca: posto,
         rotaCasa: [],
         rotaOficina: [],
-        centro: [posto[0] + 1000, posto[2]],
+        centro: r?.centro ?? [posto[0] + 1000, posto[2]],
         posto,
+        ...(r ? { cidade: r, lugar: lugarDoCanteiro(canteiroDoPedreiro()) } : {}),
       };
     }
+    horarioDoPedreiro(c);
     for (const j of jogadores.values()) {
       if (j.sobrevivencia.estado.morto) continue;
       const d = Math.hypot(j.tel.x - c.x, j.tel.z - c.z);
@@ -1432,7 +1577,7 @@ export function criarNucleo(op: OpcoesNucleo) {
   function domar(j: Jogador, c: Extract<Comando, { t: 'domar' }>): void {
     const cr = criatura(c.criatura);
     const p = j.inventario.obter(c.slot);
-    if (!cr || cr.tipo !== 'raposa' || cr.domada || p?.item !== 'frutinhas') return;
+    if (!cr || cr.tipo !== 'raposa' || cr.domada || !domaCom(estiloMundo().domar, p?.item)) return;
     if (Math.hypot(cr.x - j.tel.x, cr.z - j.tel.z) > ALCANCE_CRIATURA) return;
     if (modo === 'sobrevivencia') j.inventario.remover(c.slot, 1);
     // spec 016: a raposa é de quem domou (o dono do mundo não entra: sem dono, é dele)
@@ -1989,8 +2134,10 @@ export function criarNucleo(op: OpcoesNucleo) {
     // spec 015: moradores acenando de volta
     responderGestos();
 
-    // spec 014: o pedreiro do canteiro (aparece, acena e dá a colher)
+    // spec 014: o pedreiro do canteiro (aparece, acena e dá a colher), os moradores da cidade
+    // e o cachorro da casinha
     cuidarDoPedreiro(dt);
+    cuidarDaCidade(dt);
 
     // a lavoura cresce com o mundo aberto (cada pé uma vez por segundo, com teto por passo)
     crescerAosPoucos(dt);

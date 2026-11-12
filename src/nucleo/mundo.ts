@@ -3,7 +3,17 @@
  * cima e as consultas que as criaturas usam (luz aproximada, céu aberto, superfície).
  * Puro: roda igual no Web Worker do servidor local e no Node do servidor da nuvem.
  */
-import { ALTURA, TAM_X, TAM_Z, gerarChunk, indice, biomaEm, NIVEL_MAR } from '../world/chunk';
+import {
+  ALTURA,
+  TAM_X,
+  TAM_Z,
+  gerarChunk,
+  indice,
+  biomaEm,
+  NIVEL_MAR,
+  cidadeDoMundo,
+} from '../world/chunk';
+import { Solo, soloDaCidade } from '../world/cidade';
 import { Bloco, obterBloco, luzDoBloco } from '../world/blocks';
 import type { Edicoes } from '../world/edicoes';
 import { criarMundoSolido } from '../world/solido';
@@ -193,6 +203,24 @@ export function criarAcessoMundo(
     },
     nivelMar: NIVEL_MAR,
     povoados: (x, z, raio) => povoadosPerto(x, z, raio, semente),
+    // spec 014 (T08): o chão da Cidade Grande, para os bichos nascerem na calçada e no parque
+    chaoDaCidade: (x, z) => {
+      const c = cidadeDoMundo(semente);
+      if (!c) return null;
+      const s = soloDaCidade(c, x, z);
+      if (s === Solo.NADA) return null;
+      const chao =
+        s === Solo.CALCADA
+          ? 'calcada'
+          : s === Solo.GRAMA || s === Solo.CAMINHO
+            ? 'parque'
+            : s === Solo.LOTE
+              ? 'lote'
+              : s === Solo.LAGO
+                ? 'lago'
+                : 'rua';
+      return { chao, y: c.h + 1 };
+    },
   };
   return {
     semente,

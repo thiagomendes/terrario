@@ -145,7 +145,7 @@ describe('diário: "Obras da cidade" (spec 014)', () => {
     expect(criarDiario(undefined, { obras: false }).missoes).toBe(MISSOES);
   });
 
-  it('na cidade: o capítulo vem no fim e cada obra feita cola a figurinha', async () => {
+  it('na cidade: o capítulo vem primeiro e cada obra feita cola a figurinha', async () => {
     await import('../../src/temas/todos');
     const { obterTema } = await import('../../src/temas/index');
     const cidade = obterTema('cidade-grande');
@@ -154,10 +154,12 @@ describe('diário: "Obras da cidade" (spec 014)', () => {
       obras: temObras(cidade),
     });
     expect(d.missoes.length).toBe(MISSOES.length + 6);
-    expect(d.missoes.slice(0, MISSOES.length)).toEqual([...MISSOES]);
-    expect(d.missoes.slice(-6).map((m) => m.id)).toEqual(MISSOES_OBRAS.map((m) => m.id));
-    expect(d.atual()?.id).toBe('madeira');
+    // a primeira missão da cidade é a casinha do cachorro, a obra do primeiro canteiro
+    expect(d.missoes.slice(0, 6).map((m) => m.id)).toEqual(MISSOES_OBRAS.map((m) => m.id));
+    expect(d.missoes.slice(6)).toEqual([...MISSOES]);
+    expect(d.atual()?.id).toBe('obra-1');
     expect(d.registrar('obra:1').map((m) => m.id)).toEqual(['obra-1']);
+    expect(d.atual()?.id).toBe('obra-2');
     expect(d.registrar('obra:1')).toEqual([]);
     expect(d.concluida('obra-1')).toBe(true);
     expect(d.registrar('obra:6').map((m) => m.id)).toEqual(['obra-6']);

@@ -159,7 +159,7 @@ import { empacotar } from '../world/edicoes';
 import { criaturaNaMira, type Criatura, type TipoCriatura } from '../jogo/criaturas';
 import { criarRenderCriaturas } from './criaturas';
 import { criarCoracoes } from './coracoes';
-import { AVISO_LIMITE, COMIDA_DOS_BICHOS, comeEsse, viraCriado } from '../jogo/criacao';
+import { AVISO_LIMITE, COMIDA_DOS_BICHOS, comeEsse, domaCom, viraCriado } from '../jogo/criacao';
 import { biomaEm, estiloMundo } from '../world/chunk';
 import { criarTrilhaMundo, type InfoTrilha } from '../audio/trilhaMundo';
 import { temaDoSom } from '../audio/somDoTema';
@@ -2132,7 +2132,12 @@ export function criarCena(
       enviar({ t: 'alimentar', criatura: naMira.id, slot: hotbar.ativo });
       return;
     }
-    if (naMira && naMira.tipo === 'raposa' && p?.item === 'frutinhas' && !naMira.domada) {
+    if (
+      naMira &&
+      naMira.tipo === 'raposa' &&
+      domaCom(temaAtual.mundo.domar, p?.item) &&
+      !naMira.domada
+    ) {
       tocarSom(motorAudio, 'comer');
       enviarTelemetria(true);
       enviar({ t: 'domar', criatura: naMira.id, slot: hotbar.ativo });
@@ -3754,7 +3759,7 @@ export function criarCena(
     if (c.morador) return true;
     const item = hotbar.pilhaAtiva()?.item;
     if (viraCriado(c.tipo) && comeEsse(c.tipo, item)) return true;
-    return c.tipo === 'raposa' && !c.domada && item === 'frutinhas';
+    return c.tipo === 'raposa' && !c.domada && domaCom(temaAtual.mundo.domar, item);
   }
   /** Comida na mão no modo sobrevivência. */
   function comidaNaMao(): boolean {
@@ -3819,8 +3824,13 @@ export function criarCena(
       const comida =
         lista.length === 1 ? minuscula(obterItem(lista[0])?.nome ?? lista[0]) : 'uma semente';
       t = `Segure ${comida} para ${bicho.o} seguir você`;
-    } else if (c && c.tipo === 'raposa' && !c.domada && p?.item === 'frutinhas') {
-      t = toque ? 'Toque na raposa para dar frutinhas' : 'Clique direito (ou F): dar frutinhas';
+    } else if (c && c.tipo === 'raposa' && !c.domada && domaCom(temaAtual.mundo.domar, p?.item)) {
+      // spec 014: o nome do bicho e da comida no tema (o gato de rua com peixe, na cidade)
+      const bicho = comArtigo(CRIATURAS[c.tipo].nome);
+      const comida = minuscula(obterItem(p!.item)?.nome ?? p!.item);
+      t = toque
+        ? `Toque para dar ${comida} ${bicho.a}`
+        : `Clique direito (ou F): dar ${comida} ${bicho.a}`;
     } else if (comidaNaMao() && cliente.sobrevivencia.fome < 20) {
       t = toque ? 'Segure o dedo na tela para comer' : 'Clique direito (ou F): comer';
     } else if (!semDedo && podeEncherObra() && fantasmaNaMira()) {
@@ -4545,7 +4555,9 @@ export function criarCena(
     humDoPedreiro(motorAudio);
     if (certo === undefined) return;
     // o pedreiro aponta para a obra
-    const ped = replicaCriaturas.lista.find((q) => q.morador?.povoado === 'cidade');
+    const ped = replicaCriaturas.lista.find(
+      (q) => q.morador?.povoado === 'cidade' && q.morador.n === 0,
+    );
     if (ped) gestos?.evento({ e: 'gesto', gesto: 'apontar', criatura: ped.id });
     // a casinha do bloco certo pisca (ou a da colher)
     let slot = -1;

@@ -40,6 +40,15 @@ export interface MundoPopulacao extends Mundo {
   nivelMar: number;
   /** Povoados a até `raio` blocos (para os moradores aparecerem). */
   povoados?(x: number, z: number, raio: number): readonly PlanoPovoado[];
+  /**
+   * Spec 014 (T08): o chão da Cidade Grande na coluna e a altura dos pés nele (null fora da
+   * cidade). Na cidade os bichos nascem só no chão (nunca num telhado nem no meio da rua): o
+   * pombo e o gato na calçada e no parque, o cachorro grande no parque.
+   */
+  chaoDaCidade?(
+    x: number,
+    z: number,
+  ): { chao: 'rua' | 'calcada' | 'parque' | 'lote' | 'lago'; y: number } | null;
 }
 
 export const LIMITES: Record<TipoSer, number> = {
@@ -312,6 +321,33 @@ export function criarPopulacao(rng: Gerador, salvo?: unknown, opcoes: OpcoesPopu
     }
   }
 
+  /**
+   * Spec 014 (T08): bichos da Cidade Grande, sem bioma: o pombo (papel coelho) em bandinho na
+   * calçada e no parque, o gato de rua (papel raposa) sozinho e o cachorro grande (papel cervo)
+   * só no parque. Só nos mundos da cidade (os outros temas sorteiam como sempre).
+   */
+  function nascerNaCidade(m: MundoPopulacao, x: number, z: number, sy: number, chao: string): void {
+    const contar = (t: TipoCriatura) => {
+      let n = 0;
+      for (const c of lista) if (c.tipo === t && !c.domada && !c.curral && !c.criado && !c.lar) n++;
+      return n;
+    };
+    const r = rng();
+    const t: TipoCriatura = r < 0.55 ? 'coelho' : r < 0.8 ? 'raposa' : 'cervo';
+    if (t === 'cervo' && chao !== 'parque') return;
+    if (contar(t) >= LIMITES[t]) return;
+    const n = t === 'coelho' ? 2 + Math.floor(rng() * 3) : 1;
+    const def = CRIATURAS[t];
+    for (let i = 0; i < n; i++) {
+      const cx = x + 0.5 + (i === 0 ? 0 : (rng() - 0.5) * 3);
+      const cz = z + 0.5 + (i === 0 ? 0 : (rng() - 0.5) * 3);
+      const ch = m.chaoDaCidade?.(Math.floor(cx), Math.floor(cz));
+      if (!ch || ch.chao === 'rua' || ch.chao === 'lote' || ch.chao === 'lago') continue;
+      if (colideCorpo(m.solido, cx, sy + 0.1, cz, def.mw, def.alt)) continue;
+      lista.push(novaCriatura(proximo++, t, cx, sy + 0.1, cz));
+    }
+  }
+
   function tentarSpawn(m: MundoPopulacao, j: Jogador, noite: number): void {
     const contar = (t: TipoCriatura) => {
       let n = 0;
@@ -333,7 +369,15 @@ export function criarPopulacao(rng: Gerador, salvo?: unknown, opcoes: OpcoesPopu
       lista.push(novaCriatura(proximo++, 'peixe', x + 0.5, y, z + 0.5));
       return;
     }
+    // spec 014: na cidade, só no chão da calçada e do parque (e a cidade escolhe os bichos);
+    // as carpas no lago do parque (ele fica acima do nível do mar)
+    const cidade = m.chaoDaCidade?.(x, z) ?? null;
+    if (cidade?.chao === 'lago' && m.agua(x, sy, z) && contar('peixe') < LIMITES.peixe) {
+      lista.push(novaCriatura(proximo++, 'peixe', x + 0.5, sy + 0.2 + rng() * 0.6, z + 0.5));
+      return;
+    }
     if (m.agua(x, sy, z)) return;
+    if (cidade && (cidade.chao === 'rua' || cidade.chao === 'lote' || sy !== cidade.y)) return;
     // espectros: noite na superfície escura ou cavernas
     if ((noite > 0.6 || subterraneo) && contar('espectro') < LIMITES.espectro && rng() < 0.6) {
       let y = sy;
@@ -347,6 +391,10 @@ export function criarPopulacao(rng: Gerador, salvo?: unknown, opcoes: OpcoesPopu
       return;
     }
     if (noite > 0.7) return;
+    if (cidade) {
+      nascerNaCidade(m, x, z, sy, cidade.chao);
+      return;
+    }
     const tipos: TipoCriatura[] = ['cervo', 'coelho', 'raposa'];
     const t = tipos[Math.floor(rng() * tipos.length)];
     if (t === 'raposa' && rng() > 0.25) return;

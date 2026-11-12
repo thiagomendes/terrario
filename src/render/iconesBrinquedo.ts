@@ -21,7 +21,7 @@ import type { Atlas } from '../art/atlas';
 import { TAM_TILE } from '../art/atlas';
 import { obterItem, todosItens } from '../jogo/itens';
 import { Bloco, obterBloco } from '../world/blocks';
-import { caixasDoBloco } from '../world/formas';
+import { caixasDaMalha } from '../world/formas';
 import { corMediaDoBloco } from '../fx/cores';
 import { plantaDeBrinquedo, PLANTAS_BRINQUEDO, type AlvoPlanta } from '../mesh/plantasBrinquedo';
 import { caixaArredondada, criarPlasticos } from './formas';
@@ -184,7 +184,7 @@ export function gerarIconesBrinquedo(
     const lado = corDaFace(atlas, bloco, 'lado') ??
       corMediaDoBloco(bloco, atlas) ?? [170, 170, 180];
     const topo = corDaFace(atlas, bloco, 'topo') ?? lado;
-    const caixas = caixasDoBloco(bloco, 0, () => false) ?? [[0, 0, 0, 1, 1, 1]];
+    const caixas = caixasDaMalha(bloco, 0, () => false) ?? [[0, 0, 0, 1, 1, 1]];
     const tampa = Math.hypot(topo[0] - lado[0], topo[1] - lado[1], topo[2] - lado[2]) > 40;
     for (const [i, c] of caixas.entries()) {
       const w = c[3] - c[0];

@@ -4,6 +4,7 @@ import type { Drop } from './drops';
 import type { Profissao } from '../world/povoado';
 import { comeEsse, PARA_SEGUINDO, RAIO_ATRAIR, RAIO_CASA, RAIO_SEGUIR } from './criacao';
 import { PARA_CHAMADO } from '../personagem/gestos';
+import type { LugarCidade, RoteiroCidade } from '../world/ruasCidade';
 
 /** Os cinco animais (cada tema dá pele, nome e voz a eles). */
 export type TipoCriatura = 'cervo' | 'coelho' | 'peixe' | 'espectro' | 'raposa';
@@ -42,6 +43,27 @@ export interface DadosMorador {
   caminho?: [number, number][];
   /** Vem até a criança que chegou (x, z) por uns segundos e para perto dela. */
   ir?: { x: number; z: number; t: number };
+  /**
+   * Spec 014 (T08): morador da Cidade Grande. Anda pelas calçadas (atravessa na faixa) por
+   * caminhos prontos: de dia entre a praça e a loja, à noite em casa (entra pela porta do
+   * apartamento de baixo). Não vai pela rede, não é salvo.
+   */
+  cidade?: RoteiroCidade;
+  /** Onde o morador da cidade está (o caminho seguinte sai por ele) e para onde vai. */
+  lugar?: LugarCidade | null;
+  rumo?: LugarCidade;
+  /** O caminho a pé de agora (pontos com a altura dos pés). */
+  trilha?: [number, number, number][];
+  /** Dentro de casa (passou pela porta). */
+  emCasa?: boolean;
+  /** De dia: o próximo lugar do passeio e quanto ainda fica parado onde chegou. */
+  rumoDia?: 'praca' | 'loja';
+  pausa?: number;
+  /**
+   * O pedreiro fora do horário do canteiro (o núcleo decide pela hora e por quem está perto):
+   * em casa ou na loja de construção. Sem o campo, fica no posto.
+   */
+  folga?: 'casa' | 'loja';
 }
 
 export interface DefCriatura {
@@ -151,6 +173,11 @@ export interface Criatura {
    * sem dono na tabela). Só ele e o dono do mundo chamam e levam com a comida.
    */
   dono?: string;
+  /**
+   * Spec 014 (T08): o cachorro que mora na casinha da obra `lar` (a casinha do cachorro
+   * terminada). Passeia no quintal do canteiro; como os moradores, não é salvo e renasce.
+   */
+  lar?: number;
   /** Onde o bicho criado mora (ganhou comida ou parou de seguir): passeia até 6 blocos dela. */
   casa?: [number, number];
   /** Galinha criada: segundos até o próximo ovo. */
@@ -860,6 +887,126 @@ function rotinaDoPosto(
   }
 }
 
+/** Põe o morador num ponto (porta de casa, anti-trava), parado. */
+function porNoPonto(c: Criatura, q: [number, number, number]): void {
+  c.x = q[0];
+  c.y = q[1];
+  c.z = q[2];
+  c.vx = 0;
+  c.vy = 0;
+  c.vz = 0;
+}
+
+/**
+ * Spec 014 (T08): o dia do morador da cidade. À noite vai para casa pelas calçadas e entra
+ * (passa pela porta do apartamento de baixo); de manhã sai pela porta e passeia entre a praça
+ * e a loja onde trabalha, parando um pouco em cada uma. O pedreiro de folga vai para casa ou
+ * para a loja e fica lá. Preso 10 s sem chegar mais perto do ponto seguinte, aparece nele.
+ */
+function rotinaCidade(
+  c: Criatura,
+  def: DefCriatura,
+  dt: number,
+  rng: Gerador,
+  noite: number,
+  distJ: number,
+  dxj: number,
+  dzj: number,
+  mundo: Mundo,
+  m: DadosMorador,
+  r: RoteiroCidade,
+): void {
+  if (c.pausaGesto !== undefined) {
+    c.pausaGesto -= dt;
+    if (c.pausaGesto > 0) {
+      frear(c, 0.5);
+      c.estado = 'parado';
+      return;
+    }
+    c.pausaGesto = undefined;
+  }
+  const casa = m.folga ? m.folga === 'casa' : noite > 0.35;
+  if (m.emCasa) {
+    if (casa) {
+      frear(c, 0.6);
+      c.estado = 'parado';
+      return;
+    }
+    // de manhã: sai pela porta (fica no alto da escadinha, na frente dela)
+    porNoPonto(c, r.fora);
+    c.yaw = c.yawAlvo = Math.atan2(r.casa.frente[0] - r.fora[0], r.casa.frente[1] - r.fora[2]);
+    m.emCasa = false;
+    m.lugar = r.casa;
+    m.rumo = undefined;
+    m.trilha = undefined;
+    return;
+  }
+  const qual = m.folga === 'loja' ? 'loja' : (m.rumoDia ?? 'praca');
+  const destino = casa ? r.casa : qual === 'loja' ? r.loja : r.pracas[m.n % r.pracas.length];
+  if (m.rumo !== destino || !m.trilha) {
+    m.rumo = destino;
+    m.trilha = m.lugar === destino ? [] : r.rota(m.lugar ?? null, [c.x, c.z], destino);
+    m.pausa = undefined;
+    c.menorDistancia = undefined;
+    c.semProgresso = 0;
+  }
+  const trilha = m.trilha;
+  if (trilha.length === 0) {
+    m.lugar = destino;
+    if (casa) {
+      // chegou na frente da porta: entra
+      porNoPonto(c, r.dentro);
+      m.emCasa = true;
+      c.estado = 'parado';
+      return;
+    }
+    frear(c, 0.6);
+    c.estado = 'parado';
+    if (distJ < 6) c.yawAlvo = Math.atan2(dxj, dzj);
+    if (m.folga) return;
+    if (m.pausa === undefined) m.pausa = 12 + rng() * 14;
+    m.pausa -= dt;
+    if (m.pausa <= 0) {
+      m.pausa = undefined;
+      m.rumoDia = qual === 'praca' ? 'loja' : 'praca';
+    }
+    return;
+  }
+  // perto do jogador: para e olha para ele (ele pode querer trocar)
+  if (distJ < 2.5) {
+    frear(c, 0.5);
+    c.estado = 'parado';
+    c.yawAlvo = Math.atan2(dxj, dzj);
+    return;
+  }
+  const alvo = trilha[0];
+  const d = Math.hypot(c.x - alvo[0], c.z - alvo[2]);
+  if (d < (trilha.length === 1 ? 0.45 : 0.6)) {
+    trilha.shift();
+    c.menorDistancia = undefined;
+    c.semProgresso = 0;
+    // a saída pelos passos deixou o lugar de antes
+    if (m.lugar && trilha.length > 0) m.lugar = null;
+    return;
+  }
+  c.estado = 'seguir';
+  c.destino = alvo;
+  andarPara(c, def, alvo[0], alvo[2], casa ? 1.2 : 1);
+  if (c.menorDistancia === undefined || d < c.menorDistancia - 0.3) {
+    c.menorDistancia = d;
+    c.semProgresso = 0;
+  } else c.semProgresso = (c.semProgresso ?? 0) + dt;
+  if ((c.semProgresso ?? 0) > 10) {
+    c.semProgresso = 0;
+    c.menorDistancia = undefined;
+    if (!colideCorpo(mundo.solido, alvo[0], alvo[1], alvo[2], def.mw, def.alt)) {
+      porNoPonto(c, alvo);
+      c.teleportes = (c.teleportes ?? 0) + 1;
+    }
+    trilha.shift();
+  }
+}
+
 /**
  * Rotina do morador: de dia passeia entre a praça e a oficina e para um pouco em cada
  * lugar; ao entardecer vai para a frente da porta e entra; à noite fica em casa. Se
@@ -882,8 +1029,12 @@ function rotinaMorador(
     andarPara(c, def, c.alvoX, c.alvoZ, 1.6);
     return;
   }
-  if (m.posto) {
+  if (m.posto && !m.folga) {
     rotinaDoPosto(c, def, dt, m, m.posto, distJ, dxj, dzj, mundo);
+    return;
+  }
+  if (m.cidade) {
+    rotinaCidade(c, def, dt, rng, noite, distJ, dxj, dzj, mundo, m, m.cidade);
     return;
   }
   // spec 015: parado acenando de volta para quem acenou (o núcleo já o virou)

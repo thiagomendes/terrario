@@ -310,7 +310,10 @@ export function ordemMissoes(primeiroCapitulo?: string): readonly Missao[] {
 export interface OpcoesDiario {
   /** Capítulo que o diário guia primeiro (dado do tema; sem ele, a ordem de sempre). */
   primeiroCapitulo?: string;
-  /** Spec 014: mundo da Cidade Grande: o capítulo "Obras da cidade" entra no fim. */
+  /**
+   * Spec 014: mundo da Cidade Grande: o capítulo "Obras da cidade" vem primeiro (a criança
+   * nasce ao lado do primeiro canteiro; "quebre troncos" não faz sentido na cidade protegida).
+   */
   obras?: boolean;
 }
 
@@ -322,7 +325,7 @@ export function temObras(t: { mundo?: { povoado?: { planta?: string } } }): bool
 export function criarDiario(salvo?: unknown, opcoes: OpcoesDiario = {}) {
   const base = ordemMissoes(opcoes.primeiroCapitulo);
   // sem obras, a mesma lista de sempre (nem uma cópia: tudo igual nos outros temas)
-  const ordem: readonly Missao[] = opcoes.obras ? [...base, ...MISSOES_OBRAS] : base;
+  const ordem: readonly Missao[] = opcoes.obras ? [...MISSOES_OBRAS, ...base] : base;
   const todas: readonly Missao[] = opcoes.obras ? [...MISSOES, ...MISSOES_OBRAS] : MISSOES;
   const s = (salvo ?? {}) as { contadores?: Contadores; concluidas?: string[] };
   const contadores: Contadores = { ...(s.contadores ?? {}) };

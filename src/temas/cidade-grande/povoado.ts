@@ -1,0 +1,115 @@
+import type { Profissao } from '../../world/povoado';
+import { corpoDeMorador } from '../bruma-e-luz/povoado';
+import type { PecaCriatura, PovoadoTema } from '../tipos';
+import { pio } from '../rancho-alegre/vozes';
+
+/**
+ * Peças acima da cabeça (capacete, boné) ficam com o centro acima de 1,93: o boneco de
+ * brinquedo trata o que fica abaixo disso, colado na cabeça, como cabelo (`moradorBoneco`).
+ */
+const ACIMA = 1.935;
+
+const MORADORES: Record<Profissao, PecaCriatura[]> = {
+  // padeira: dólmã branco, avental amarelinho, rabo de cavalo e a touca de chef (acessório)
+  cozinheiro: [
+    ...corpoDeMorador({
+      pele: '#d9a27a',
+      roupa: '#f4f1ea',
+      calca: '#4a5a8a',
+      sapato: '#3a2a22',
+      cabelo: '#5a3220',
+    }),
+    { t: [0.14, 0.22, 0.14], p: [0, 1.62, -0.25], cor: '#5a3220', forma: 'bola', papel: 'cabeca' },
+    { t: [0.44, 0.46, 0.04], p: [0, 1.0, 0.155], cor: '#ffd45a' },
+    { t: [0.16, 0.08, 0.02], p: [0, 0.94, 0.18], cor: '#f0a830' },
+  ],
+  // pedreiro: camisa branca, colete laranja, calça jeans, cinto de ferramentas e o capacete
+  // amarelo de obra (o mesmo amarelo do capacete que a criança ganha)
+  construtor: [
+    ...corpoDeMorador({
+      pele: '#b9825c',
+      roupa: '#f2f0ea',
+      calca: '#3f6fb8',
+      sapato: '#4a3426',
+      cabelo: '#2e2018',
+    }),
+    // colete laranja com as faixas claras
+    { t: [0.52, 0.5, 0.3], p: [0, 1.15, 0], cor: '#ff8a2a' },
+    { t: [0.53, 0.05, 0.31], p: [0, 1.08, 0], cor: '#fff2c4' },
+    { t: [0.53, 0.05, 0.31], p: [0, 1.24, 0], cor: '#fff2c4' },
+    // cinto com a colher de pedreiro
+    { t: [0.52, 0.06, 0.3], p: [0, 0.86, 0], cor: '#6b4a3a' },
+    { t: [0.06, 0.16, 0.03], p: [0.2, 0.8, 0.16], cor: '#9aa0a8' },
+    // capacete amarelo: a cúpula e a aba
+    {
+      t: [0.48, 0.2, 0.48],
+      p: [0, ACIMA + 0.01, 0],
+      cor: '#ffc61a',
+      forma: 'bola',
+      papel: 'cabeca',
+    },
+    { t: [0.5, 0.04, 0.56], p: [0, ACIMA - 0.005, 0.03], cor: '#ffc61a', papel: 'cabeca' },
+  ],
+  // mecânico: macacão azul, boné vermelho e a chave inglesa no bolso
+  ferreiro: [
+    ...corpoDeMorador({
+      pele: '#8a5a3c',
+      roupa: '#3a6ab0',
+      calca: '#2f5a9a',
+      sapato: '#2a2026',
+      cabelo: '#1e1612',
+    }),
+    // as alças do macacão
+    { t: [0.07, 0.5, 0.3], p: [0.13, 1.15, 0], cor: '#2a4f8e' },
+    { t: [0.07, 0.5, 0.3], p: [-0.13, 1.15, 0], cor: '#2a4f8e' },
+    { t: [0.3, 0.18, 0.04], p: [0, 1.0, 0.155], cor: '#2a4f8e' },
+    { t: [0.05, 0.2, 0.04], p: [-0.12, 1.0, 0.18], cor: '#b7bec8' },
+    // boné vermelho com a aba para a frente
+    { t: [0.46, 0.13, 0.44], p: [0, ACIMA, 0], cor: '#d8433a', papel: 'cabeca' },
+    { t: [0.32, 0.03, 0.2], p: [0, ACIMA - 0.02, 0.27], cor: '#d8433a', papel: 'cabeca' },
+  ],
+};
+
+export const POVOADO_CIDADE: PovoadoTema = {
+  nome: 'Bairro da praça',
+  profissoes: {
+    cozinheiro: 'Padeira',
+    construtor: 'Pedreiro',
+    ferreiro: 'Mecânico',
+  },
+  nomes: [
+    'Ana',
+    'Bia',
+    'Duda',
+    'Tati',
+    'Lara',
+    'Mel',
+    'Leo',
+    'Gui',
+    'Beto',
+    'Nico',
+    'Davi',
+    'Caio',
+  ],
+  moradores: MORADORES,
+  // a padeira usa a touca de chef do jogador
+  acessorios: { cozinheiro: 'touca-chef' },
+  // passo ligeiro de quem anda na calçada
+  movimento: { saltita: 0.02, flutua: 0, ginga: 0.04 },
+  vozes: {
+    // "oi, oi!"
+    chamado: pio('triangle', 340, 470, 0.13, 2, 0.08, { vibrato: 5, ganho: 0.6 }),
+    // "opa!"
+    susto: pio('triangle', 540, 380, 0.16, 1, 0, { vibrato: 7, ganho: 0.62 }),
+    // "que legal!"
+    contente: pio('sine', 360, 480, 0.2, 1, 0, { vibrato: 4, ganho: 0.6 }),
+    // "valeu!"
+    obrigado: pio('triangle', 400, 600, 0.1, 3, 0.06, { ganho: 0.6 }),
+  },
+  textos: {
+    trocas: 'Lojinhas da cidade',
+    trocar: 'Trocar',
+    faltam: 'Falta coisa pra essa troca',
+    chegou: 'Você chegou no bairro da praça!',
+  },
+};
