@@ -19,7 +19,7 @@ import { Texture } from '@babylonjs/core/Materials/Textures/texture';
 import { Mesh } from '@babylonjs/core/Meshes/mesh';
 import { VertexData } from '@babylonjs/core/Meshes/mesh.vertexData';
 import { Constants } from '@babylonjs/core/Engines/constants';
-import type { Color3 } from '@babylonjs/core/Maths/math.color';
+import { Color3 } from '@babylonjs/core/Maths/math.color';
 import { Vector3 } from '@babylonjs/core/Maths/math.vector';
 import {
   ALTURA_JANELAS,
@@ -65,12 +65,18 @@ uniform float densidade;
 uniform float luz;
 uniform float noite;
 uniform float presenca;
+uniform float kNevoa;
+uniform vec3 tinta;
+uniform float forcaTinta;
+uniform float vidro;
 void main(void) {
   vec4 t = texture2D(janelas, vUV);
-  vec3 parede = vCor.rgb * luz;
-  // de dia o vidro é só um pouco mais escuro e azulado que a parede
-  vec3 cor = mix(parede, parede * 0.72 + vec3(0.04, 0.06, 0.1) * luz, t.r);
-  float f = exp(-pow(vDist * densidade * 0.8, 2.0)) * presenca;
+  // a cor de longe (cinza-azulado) de dia; no entardecer a névoa quente manda
+  float quente = clamp((corNevoa.r - corNevoa.b) * 4.0, 0.0, 1.0);
+  vec3 parede = mix(vCor.rgb, tinta, forcaTinta * (1.0 - quente)) * luz;
+  // de dia o vidro é um pouco mais escuro e azulado que a parede
+  vec3 cor = mix(parede, parede * vidro + vec3(0.04, 0.06, 0.1) * luz, t.r);
+  float f = exp(-pow(vDist * densidade * kNevoa, 2.0)) * presenca;
   cor = mix(corNevoa, cor, f);
   // de noite: as janelas acesas (quentinhas ou brancas) brilham através da névoa
   vec3 acesa = mix(vec3(1.0, 0.78, 0.45), vec3(1.0, 0.95, 0.82), t.b);
@@ -79,6 +85,20 @@ void main(void) {
   gl_FragColor = vec4(cor, 1.0);
 }
 `;
+
+/**
+ * Névoa e cor das torres ao longe (escolha do dono, 12 nov 2026: a variante "forte"). De dia
+ * as torres puxam para um ardósia azulado com silhueta firme e as janelas à vista, sempre um
+ * pouco mais claras e azuis que os prédios de perto (para lerem como longe); no entardecer a
+ * névoa quente manda e de noite ficam as janelas acesas. `k` multiplica a névoa do mundo (antes
+ * 0,8: as torres sumiam no céu como fumaça).
+ */
+const PERFIL_HORIZONTE = {
+  k: 0.34,
+  tinta: [0.38, 0.44, 0.56] as [number, number, number],
+  forca: 0.72,
+  vidro: 0.58,
+};
 
 let registrado = false;
 function registrar(): void {
@@ -146,11 +166,20 @@ export function criarHorizonte(
         'luz',
         'noite',
         'presenca',
+        'kNevoa',
+        'tinta',
+        'forcaTinta',
+        'vidro',
       ],
       samplers: ['janelas'],
     },
   );
   mat.setTexture('janelas', tex);
+  const perfil = PERFIL_HORIZONTE;
+  mat.setFloat('kNevoa', perfil.k);
+  mat.setColor3('tinta', new Color3(...perfil.tinta));
+  mat.setFloat('forcaTinta', perfil.forca);
+  mat.setFloat('vidro', perfil.vidro);
   mat.backFaceCulling = false;
   malha.material = mat;
   malha.isPickable = false;

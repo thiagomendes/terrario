@@ -225,6 +225,7 @@ Os veículos andam só nas pistas feitas para eles. Nunca na calçada, na praça
 - **A ideia:** um anel de torres altas bem longe, que não dá para alcançar, para a cidade parecer enorme sem pesar.
 - **Como:** caixas simples de poucos triângulos, juntas numa malha só, com cor por vértice que se mistura na névoa, e janelinhas acesas de noite por uma textura pequena repetida (256 × 64). Ficam num anel de 260 a 320 blocos do centro da cidade; quem anda para fora vê o anel se afastar junto (nunca chega a menos de 120 blocos dele), e longe da cidade ele some na névoa.
 - **Custo:** 1 chamada de desenho, uns 1.500 triângulos, uma textura de 64 KB, nada de CPU por quadro. É bem mais barato que um único prédio de verdade.
+- **Cor e névoa (decisão do dono, 12 nov 2026, T12):** de três variantes, a "forte": de dia as torres puxam para um ardósia azulado, com silhueta firme e as janelas à vista, sempre um pouco mais claras e azuis que os prédios de perto; no entardecer a névoa quente manda, de noite ficam as janelas acesas. A névoa das torres caiu de 0,8 para 0,34 da do mundo (com 0,8 elas sumiam no céu como fumaça).
 - **Veredito:** vale a pena e é barato. Fica no celular sempre (não sai no alívio de efeitos). Recomendo caixas de verdade (mudam um pouco de lugar quando a criança anda, o que dá profundidade) no lugar de um desenho chapado no céu.
 
 ## Blocos novos
