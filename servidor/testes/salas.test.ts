@@ -1,7 +1,17 @@
-import { describe, expect, it } from 'vitest';
+import { afterAll, describe, expect, it } from 'vitest';
 import { criarGerenciador, type Canal } from '../src/salas';
 import { armazemMemoria } from '../src/armazem';
-import { ESTILO_PADRAO, alturaTerreno, indice } from '../../src/world/chunk';
+import {
+  ESTILO_PADRAO,
+  alturaTerreno,
+  cidadeDoMundo,
+  definirEstiloMundo,
+  indice,
+} from '../../src/world/chunk';
+import '../../src/temas/todos';
+import { obterTema } from '../../src/temas';
+import { celulasPlanejadas, definirObrasFeitas } from '../../src/world/obras';
+import { COLHER_PEDREIRO } from '../../src/jogo/exclusivos';
 import { Bloco } from '../../src/world/blocks';
 import { empacotar } from '../../src/world/edicoes';
 import { gerarCodigo } from '../../src/jogo/codigos';
@@ -1106,5 +1116,135 @@ describe('construções protegidas na sala (spec 016, três jogadores)', () => {
     const apelido = s.g.ativas.get(codigo)!.nucleo.apelidoDoDono('ana')!;
     expect(apelido).toMatch(/^[\p{L}\p{N} _-]{1,22}$/u);
     expect(apelido.startsWith('bAnab')).toBe(true);
+  });
+});
+
+describe('canteiro de obras na sala (spec 014)', () => {
+  const CIDADE = obterTema('cidade-grande');
+  afterAll(() => {
+    definirObrasFeitas([]);
+    definirEstiloMundo(ESTILO_PADRAO);
+  });
+
+  /** Em pé em cima da célula (como o canteiro.test.ts do núcleo). */
+  function tel(c: { x: number; y: number; z: number }) {
+    return {
+      t: 'jogador' as const,
+      x: c.x + 0.5,
+      y: c.y + 2,
+      z: c.z + 0.5,
+      yaw: 0,
+      pitch: 0,
+      olhos: c.y + 3.62,
+      noChao: true,
+      voando: false,
+      vel: 0,
+      correndo: false,
+      submerso: false,
+      quedas: [],
+      pulos: 0,
+      golpes: 0,
+      slot: 0,
+    };
+  }
+
+  it('a sala da cidade dorme e acorda com as mesmas obras: feitas, meio cheias e ajudantes', async () => {
+    const s = servidor();
+    const a = canal();
+    await s.g.receber(
+      a,
+      JSON.stringify({
+        t: 'entrar',
+        versao: VERSAO_REDE,
+        jogador: ident('ana'),
+        criar: {
+          ...criarMundo,
+          tema: 'cidade-grande',
+          modo: 'sobrevivencia',
+          estilo: CIDADE.mundo,
+        },
+      }),
+    );
+    const bv = a.recebidas.find((m) => m.t === 'bemvindo') as Extract<
+      RespostaServidor,
+      { t: 'bemvindo' }
+    >;
+    const codigo = bv.sala.codigo;
+    // outra sala, de outro tema, no mesmo servidor: as obras de uma não vão para a outra
+    const b = canal('5.6.7.8');
+    await s.g.receber(
+      b,
+      JSON.stringify({
+        t: 'entrar',
+        versao: VERSAO_REDE,
+        jogador: ident('bia'),
+        criar: criarMundo,
+      }),
+    );
+    const outra = (
+      b.recebidas.find((m) => m.t === 'bemvindo') as Extract<RespostaServidor, { t: 'bemvindo' }>
+    ).sala.codigo;
+    await s.avancar(300);
+    const nucleo = s.g.ativas.get(codigo)!.nucleo;
+    definirEstiloMundo(CIDADE.mundo);
+    const plano = cidadeDoMundo(criarMundo.semente)!;
+    expect(plano).not.toBeNull();
+    const ana = nucleo.estado.jogadores.get('ana')!;
+    ana.inventario.definir(0, { item: COLHER_PEDREIRO, qtd: 1 });
+    let seq = 0;
+    const por = async (c: { x: number; y: number; z: number; bloco: number }) => {
+      ana.saltoPermitido = true;
+      nucleo.comando('ana', { ...tel(c), slot: 0 } as never);
+      await s.g.receber(
+        a,
+        JSON.stringify({ t: 'colocar', id: ++seq, ...c, meta: 0, slot: 0, seq }),
+      );
+      await s.avancar(50);
+    };
+    const obra1 = celulasPlanejadas(plano, 1);
+    for (const c of obra1) await por(c);
+    expect(nucleo.obrasFeitas).toEqual([1]);
+    // a obra 2 fica pela metade (três blocos)
+    const obra2 = celulasPlanejadas(plano, 2);
+    for (const c of obra2.slice(0, 3)) await por(c);
+    const antes = nucleo.obras();
+    expect(antes['1']).toMatchObject({ feita: true, ajudantes: [['ana', 'ana']] });
+    expect(antes['2']?.cheias).toHaveLength(3);
+    expect(s.g.ativas.get(outra)!.nucleo.obrasFeitas).toEqual([]);
+
+    s.g.caiu(a);
+    s.g.caiu(b);
+    await s.avancar(95_000);
+    expect(s.g.ativas.has(codigo)).toBe(false);
+    const a2 = canal();
+    await s.g.receber(
+      a2,
+      JSON.stringify({ t: 'entrar', versao: VERSAO_REDE, jogador: ident('ana'), codigo }),
+    );
+    await s.avancar(200);
+    const novo = s.g.ativas.get(codigo)!.nucleo;
+    expect(novo).not.toBe(nucleo);
+    expect(novo.obrasFeitas).toEqual([1]);
+    expect(novo.obras()).toEqual(antes);
+    for (const c of obra1) expect(novo.estado.mundo.bloco(c.x, c.y, c.z)).toBe(c.bloco);
+    for (const c of obra2.slice(0, 3)) expect(novo.estado.mundo.bloco(c.x, c.y, c.z)).toBe(c.bloco);
+    // o "bem-vindo" de quem volta já traz as obras (o cliente pinta igual)
+    const bv2 = a2.recebidas.find((m) => m.t === 'bemvindo') as Extract<
+      RespostaServidor,
+      { t: 'bemvindo' }
+    >;
+    expect(JSON.stringify(bv2)).toContain('"obras"');
+    // e a obra 2 continua de onde parou
+    const ana2 = novo.estado.jogadores.get('ana')!;
+    if (!ana2.inventario.contar(COLHER_PEDREIRO))
+      ana2.inventario.definir(0, { item: COLHER_PEDREIRO, qtd: 1 });
+    const slot = ana2.inventario.slots.findIndex((p) => p?.item === COLHER_PEDREIRO);
+    const c = obra2[3];
+    ana2.saltoPermitido = true;
+    novo.comando('ana', { ...tel(c), slot } as never);
+    await s.g.receber(a2, JSON.stringify({ t: 'colocar', id: 1, ...c, meta: 0, slot, seq: 1 }));
+    await s.avancar(100);
+    expect(novo.estado.mundo.bloco(c.x, c.y, c.z)).toBe(c.bloco);
+    expect(novo.obras()['2']?.cheias).toHaveLength(4);
   });
 });
