@@ -114,6 +114,13 @@ async function cartaoDaCidade(page: Page) {
       const a = camera.position.clone();
       a.set(...alvo);
       camera.setTarget(a);
+      // o Babylon já recortou a cena com a vista da câmera do jogo: refaz com a da câmera fixa
+      (
+        c.getScene() as unknown as { setTransformMatrix(a: unknown, b: unknown): void }
+      ).setTransformMatrix(
+        (c as unknown as { getViewMatrix(f: boolean): unknown }).getViewMatrix(true),
+        (c as unknown as { getProjectionMatrix(f: boolean): unknown }).getProjectionMatrix(true),
+      );
     });
     const tela = document.getElementById('cena')!;
     const escondidos: HTMLElement[] = [];
