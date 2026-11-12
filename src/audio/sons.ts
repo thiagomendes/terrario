@@ -1420,10 +1420,12 @@ export function iniciarAmbiente(
     vigiar(agora);
     const ate = agora + 0.6;
     const p = paletaDoTema(contexto);
-    // a gravada já tomou o lugar: a sintetizada não agenda mais nada (nem CPU gasta)
+    // a gravada já tomou o lugar: a sintetizada não agenda mais notas (nem CPU gasta). As
+    // gotas da caverna seguem: são ambiente (barramento da natureza, régua "Ambiente"), não
+    // música, e a camada 'pingos' da gravada não substitui o pingar de perto
     const calada = sintetizada <= 0 && agora >= sintetizadaAte;
     if (calada) {
-      proximoAcorde = proximaNota = proximoPulso = proximaGota = ate;
+      proximoAcorde = proximaNota = proximoPulso = ate;
     }
     while (proximoAcorde < ate) {
       const t = Math.max(proximoAcorde, agora + 0.05);

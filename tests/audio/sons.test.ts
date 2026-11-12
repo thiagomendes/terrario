@@ -316,4 +316,32 @@ describe('troca em cruz com a trilha gravada (spec 019)', () => {
     expect(ctx.fontes.length).toBeGreaterThan(antesVolta);
     amb.parar();
   });
+
+  it('com a gravada no lugar, as gotas da caverna seguem pingando (são ambiente)', async () => {
+    const { ctx, motor } = await motorAtivo();
+    let agendar: (() => void) | null = null;
+    const amb = iniciarAmbiente(motor, {
+      setInterval: (f: () => void) => {
+        agendar = f;
+        return 1;
+      },
+      clearInterval: () => undefined,
+    });
+    amb.definirContexto('caverna');
+    amb.definirSintetizada(0, 0.1);
+    ctx.currentTime = 1;
+    agendar!();
+    const antes = ctx.fontes.length;
+    // só as gotas são senoides de 1400 a 1760 Hz (pássaros, bipes e grilos ficam acima)
+    const gota = (f: FonteFalsa) => {
+      const o = f as FonteFalsa & { type?: string; frequency?: { value: number } };
+      return o.type === 'sine' && o.frequency!.value >= 1400 && o.frequency!.value < 1760;
+    };
+    for (let t = 1; t < 60; t += 0.2) {
+      ctx.currentTime = t;
+      agendar!();
+    }
+    expect(ctx.fontes.slice(antes).filter(gota).length).toBeGreaterThan(0);
+    amb.parar();
+  });
 });
