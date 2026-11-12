@@ -4,7 +4,7 @@ import { PASTA_CAPTURAS } from '../playwright.config';
 
 /**
  * Spec 014, T06: o canteiro de obras de verdade, no jogo (cena, núcleo no trabalhador e a
- * malha). Só roda com CANTEIRO_T06=1 (na GPU: scripts/e2e-gpu.sh).
+ * malha). Na suíte de sempre desde a T11 (antes só com CANTEIRO_T06=1).
  *
  * - computador: a criança nasce ao lado do primeiro canteiro (os fantasmas à vista), o
  *   pedreiro dá a colher (ela fica na mão em até 3 s), o clique direito enche os fantasmas
@@ -14,7 +14,7 @@ import { PASTA_CAPTURAS } from '../playwright.config';
  * - capturas de dia: fantasmas, metade, pronta, festa e a fantasia, nos dois.
  */
 declare const process: { env: Record<string, string | undefined> };
-test.skip(!process.env.CANTEIRO_T06, 'só com CANTEIRO_T06');
+// T11: entra na suíte de sempre (antes só com CANTEIRO_T06)
 test.setTimeout(600_000);
 
 const PASTA = process.env.CANTEIRO_PASTA ?? `${PASTA_CAPTURAS}/canteiro`;
