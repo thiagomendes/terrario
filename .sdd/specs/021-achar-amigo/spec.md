@@ -1,7 +1,8 @@
 ---
 id: 021-achar-amigo
 title: 'Achar o amigo: a carinha na borda, a trilha de estrelinhas, pular para perto e chamar'
-status: DRAFT
+status: APPROVED
+approved_at: 2026-11-12
 base_branch: main
 branch: feat/achar-amigo
 created_at: 2026-11-12T15:00:00Z
@@ -186,7 +187,17 @@ Metas medidas nos testes de tela e na sessão em família:
 | T08 | Chamar (`chamarAmigos`): botão, limite, carinha na frente, sininho na régua da 019 |
 | T09 | Desempenho, testes de tela com 2 e com 7 jogadores, auditoria, publicação e relatório visual |
 
-## Perguntas para o dono
+## Decisões do dono (12 nov 2026)
+O dono viu o esboço (https://claude.ai/artifact/6x1RYL3e5rWfYd3MLC2eW5), aprovou a spec do jeito que está e aceitou as 8 recomendações abaixo. Nas palavras dele: "O balão não fica legal, acho que é a carinha mesmo. Tudo que você colocou ali tá perfeito."
+- O balão sai: fica só a carinha.
+- O limite de carinhas, o montinho "+N", a bandeja e o amigo escolhido ficam como no esboço.
+- O pulo não pede licença. Vale na sobrevivência, com intervalo de 10 s, fora do combate e sem itens nem cura.
+- O Chamar vai para a sala toda, no máximo 1 vez a cada 8 s.
+- A trilha para casa e para os marcadores fica para depois.
+- As setas de texto da 010 saem. A bolinha no minimapa fica.
+- Sem caminho a pé, a trilha vai até o ponto mais perto, e a carinha sugere o pulo.
+
+## Perguntas para o dono (respondidas: todas as recomendações aceitas)
 1. **Carinha ou balão?** Recomendo a **carinha**, com o balão fora. A carinha funciona atrás, dos lados e longe, custa menos e não suja o céu. O balão só ajuda quando o amigo já está na frente.
 2. **Limite de carinhas e escolher um amigo.** Recomendo **no máximo 3 coisas na borda, com montinho "+N", bandeja ao lado do minimapa e o escolhido grande com os outros em pontinhos**, como no esboço. Com 2 ou 3 amigos (o caso de casa), nada disso aparece: só as carinhas.
 3. **O pulo precisa de licença do amigo?** Recomendo que **não**. Com 3 e 4 anos, esperar um "sim" do outro trava tudo. O que protege é a regra da 016: nunca cair dentro do que o outro construiu.
