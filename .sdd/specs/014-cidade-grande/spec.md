@@ -133,14 +133,14 @@ O pedreiro mostra a planta de uma obra pequena em **blocos fantasmas**, azuis e 
 ### As plantas das obras (6, da mais fácil para a maior)
 | # | Obra | Tamanho | Blocos | Tempo de criança (1 bloco a cada 6 s) |
 |---|---|---|---|---|
-| 1 | Casinha do cachorro | 3 × 3 × 3 | ~14 | ~1,5 min |
-| 2 | Banca de frutas com toldo | 3 × 2 × 3 | ~16 | ~2 min |
-| 3 | Ponto de ônibus (banco, teto, placa) | 4 × 2 × 4 | ~18 | ~2 min |
-| 4 | Sorveteria de esquina | 4 × 4 × 4 | ~40 | ~4 min |
-| 5 | Casinha com porta e janela | 5 × 5 × 5 | ~55 | ~6 min |
+| 1 | Casinha do cachorro | 3 × 3 × 3 | 23 | ~2,5 min |
+| 2 | Banca de frutas com toldo | 3 × 2 × 3 | ~16 | ~1,5 min |
+| 3 | Ponto de ônibus (banco, teto, placa) | 4 × 2 × 4 | 20 | ~2 min |
+| 4 | Sorveteria de esquina (com toldo) | 4 × 5 × 4 | 54 | ~5,5 min |
+| 5 | Casinha com porta e janela | 5 × 5 × 5 | ~70 | ~7 min |
 | 6 | Coreto da praça (para fazer junto) | 6 × 6 × 5 | ~60 | ~6 min |
 
-As plantas usam blocos que já existem ou entram nesta spec (tijolo, tábua, vidro, laje, cerca, porta, toldo, placa). As contas exatas saem da T05.
+As plantas usam blocos que já existem ou entram nesta spec (tijolo, tábua, vidro, laje, cerca, porta, toldo, placa). As contas das obras 1, 3 e 4 são as do esboço; as outras saem da T05.
 
 ### Quem é dono da obra (regras da 016)
 - **A obra é da cidade, não de quem fez.** Enquanto está aberta, cada célula da planta é uma célula de **obra**: só aceita o bloco da planta (é o "conserto" que a 016 já prevê para a estrutura, `gerado`), e o bloco que entra já fica blindado. Ao terminar, a obra vira **estrutura do mundo**, protegida como qualquer prédio: ninguém quebra, nem quem construiu, nem o dono do mundo. As portas e o banco dela são usáveis por todos.
@@ -251,7 +251,7 @@ Também entram o item **colher de pedreiro** (ferramenta que não gasta) e os ac
 Medidas que precisam passar antes de fechar:
 - **Ver o que fazer em 10 s:** ao nascer, o canteiro, os fantasmas e o pedreiro estão à vista (20 de 20 sementes testadas; captura automática).
 - **Ganhar a colher sem ler:** a até 8 blocos do pedreiro ela chega sozinha na mão, em até 3 s (teste de tela, no computador e no toque).
-- **Primeira obra em até 2 minutos** (casinha do cachorro) num ritmo de criança (um toque a cada 6 s, 1,2 toque por bloco em média), e as três primeiras em até 15 minutos.
+- **Primeira obra em até 3 minutos** (casinha do cachorro, 23 blocos) num ritmo de criança (um toque a cada 6 s, 1,2 toque por bloco em média), e as três primeiras em até 15 minutos.
 - **Nenhum toque perdido:** no toque, 100% dos toques a até meio bloco de um fantasma alcançável enchem um fantasma (teste com toques espalhados em volta de cada célula das 6 plantas).
 - **Toda célula alcançável:** para as 6 plantas, cada célula fica ao alcance de algum lugar em pé (chão ou andaime). Teste de unidade.
 - **Bloco errado nunca é gasto,** o balão do bloco certo aparece em até 200 ms e não se repete mais que uma vez a cada 3 s.

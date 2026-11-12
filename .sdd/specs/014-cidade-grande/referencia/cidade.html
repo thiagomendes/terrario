@@ -1,0 +1,892 @@
+<title>Esboço da Cidade Grande</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@500;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: uma coluna de leitura com cenas largas; cada seção é uma etapa do que o dono aprova (canteiro, obras, prédios, rua, carrinhos, som, perguntas). Mesma família visual dos esboços da 013 e da 019. */
+:root {
+  --bg: #eef0f6;
+  --fg: #1c1b2b;
+  --suave: #55566e;
+  --linha: #cdd0de;
+  --acento: #b8650c;
+  --azul: #2f6fb5;
+  --cartao: #f8f9fc;
+  --tela: #bfe0f7;
+  --display: 'Pixelify Sans', 'Courier New', monospace;
+  --corpo: 'IBM Plex Sans', system-ui, sans-serif;
+  --mono: 'IBM Plex Mono', ui-monospace, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) { --bg: #12111c; --fg: #ecebf5; --suave: #a7a6bf; --linha: #2c2b40; --acento: #ffc96b; --azul: #7fb4f0; --cartao: #1a1928; --tela: #20304a; color-scheme: dark; }
+}
+:root[data-theme="dark"] { --bg: #12111c; --fg: #ecebf5; --suave: #a7a6bf; --linha: #2c2b40; --acento: #ffc96b; --azul: #7fb4f0; --cartao: #1a1928; --tela: #20304a; color-scheme: dark; }
+body { background: var(--bg); color: var(--fg); font: 400 16px/1.55 var(--corpo); }
+.pagina {
+  max-width: 1180px; margin: 0 auto;
+  padding-block: 28px 72px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: grid; gap: 44px;
+}
+h1, h2, h3 { font-family: var(--display); margin: 0; line-height: 1.15; text-wrap: balance; font-variant-ligatures: none; }
+h1 { font-size: clamp(1.9rem, 5vw, 2.9rem); }
+h2 { font-size: clamp(1.35rem, 3vw, 1.8rem); }
+h3 { font-size: 1.05rem; }
+p { margin: 0; }
+section { display: grid; gap: 16px; min-width: 0; }
+.olho { font: 600 0.78rem var(--corpo); letter-spacing: 0.12em; text-transform: uppercase; color: var(--acento); }
+.intro { max-width: 70ch; color: var(--suave); }
+.texto { max-width: 72ch; }
+.passos { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+@media (max-width: 900px) { .passos { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 520px) { .passos { grid-template-columns: 1fr; } }
+.tres { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+.duas { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+@media (max-width: 820px) { .tres, .duas { grid-template-columns: 1fr; } }
+.quadro { background: var(--cartao); border: 1px solid var(--linha); border-radius: 14px; padding: 12px; display: grid; gap: 8px; align-content: start; min-width: 0; }
+.quadro canvas { display: block; width: 100%; max-width: 100%; border-radius: 10px; background: var(--tela); }
+.num { font: 700 0.95rem var(--display); color: var(--acento); }
+.legenda { font-size: 0.92rem; color: var(--suave); }
+.legenda b { color: var(--fg); font-weight: 600; }
+.botoes { display: flex; flex-wrap: wrap; gap: 8px; }
+button {
+  min-height: 40px; padding: 0 14px; border-radius: 999px; border: 1px solid var(--linha); background: var(--cartao);
+  color: var(--fg); font: 500 0.92rem var(--corpo); cursor: pointer;
+}
+button[aria-pressed="true"] { border-color: var(--acento); color: var(--acento); font-weight: 600; box-shadow: inset 0 0 0 1px var(--acento); }
+button:focus-visible { outline: 3px solid var(--acento); outline-offset: 2px; }
+.larga canvas { aspect-ratio: 1200 / 440; }
+.dados { font: 400 0.85rem var(--mono); color: var(--suave); }
+ul.lista { margin: 0; padding-left: 1.2em; display: grid; gap: 6px; max-width: 72ch; }
+.sons { display: grid; gap: 10px; }
+.som { display: grid; grid-template-columns: minmax(0, 15rem) minmax(0, 1fr); gap: 6px 16px; align-items: center; padding: 10px 12px; background: var(--cartao); border: 1px solid var(--linha); border-radius: 12px; }
+.som audio { width: 100%; min-width: 0; }
+.som .nome { font-weight: 600; }
+.som .nota { grid-column: 1 / -1; font-size: 0.88rem; color: var(--suave); }
+@media (max-width: 640px) { .som { grid-template-columns: 1fr; } }
+.tabela { overflow-x: auto; border: 1px solid var(--linha); border-radius: 12px; }
+table { border-collapse: collapse; width: 100%; font-size: 0.9rem; min-width: 620px; }
+th, td { text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--linha); vertical-align: top; }
+th { font-weight: 600; background: var(--cartao); }
+tr:last-child td { border-bottom: 0; }
+ol.perguntas { margin: 0; padding-left: 1.4em; display: grid; gap: 10px; max-width: 76ch; }
+ol.perguntas li span { color: var(--suave); }
+.veredito { border-left: 4px solid var(--acento); padding: 4px 0 4px 14px; max-width: 72ch; }
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
+</style>
+
+<div class="pagina">
+  <header style="display:grid;gap:10px">
+    <div class="olho">Terrário · spec 014 · esboço para aprovar</div>
+    <h1>Cidade Grande</h1>
+    <p class="intro">Como a cidade fica e como a criança brinca nela, desenhado em blocos como no jogo. Primeiro o canteiro de obras (a atividade da cidade), depois as obras, um prédio, uma quadra vista da calçada com o horizonte ao longe, os carrinhos no cruzamento e os sons para ouvir. No fim, as perguntas que precisam de resposta antes de começar.</p>
+    <div class="botoes" role="group" aria-label="Movimento">
+      <button id="btn-movimento" aria-pressed="true">Desenhos animados</button>
+    </div>
+  </header>
+
+  <section aria-labelledby="t-canteiro">
+    <div class="olho">A atividade da cidade</div>
+    <h2 id="t-canteiro">O canteiro de obras, do jeito da criança</h2>
+    <p class="texto">O pedreiro mostra a planta de uma obra pequena em blocos azuis, meio apagados, no lugar onde ela vai ficar. A criança enche os blocos azuis, um por um. Quando termina, a obra vira parte da cidade, com festa. Tudo funciona sem ler.</p>
+    <div class="passos">
+      <div class="quadro"><span class="num">1 · Chegar</span><canvas id="p1" width="400" height="300"></canvas><p class="legenda">Ela já nasce ao lado do canteiro. <b>O pedreiro acena</b> e vem até ela. Os blocos azuis mostram a casinha do cachorro.</p></div>
+      <div class="quadro"><span class="num">2 · Ganhar a colher</span><canvas id="p2" width="400" height="300"></canvas><p class="legenda">A <b>colher de pedreiro</b> cai sozinha na mão, com brilho e "plim". Nenhum botão para entender.</p></div>
+      <div class="quadro"><span class="num">3 · Encher</span><canvas id="p3" width="400" height="300"></canvas><p class="legenda">Cada toque num bloco azul põe o bloco certo. <b>A camada de baixo pulsa</b>; a casinha lá em cima vai se enchendo.</p></div>
+      <div class="quadro"><span class="num">4 · Bloco errado</span><canvas id="p4" width="400" height="300"></canvas><p class="legenda">Com vidro na mão, onde vai tijolo: <b>o bloco não entra e não é gasto</b>. O azul treme, o balão mostra o tijolo e a colher pisca.</p></div>
+      <div class="quadro"><span class="num">5 · Festa</span><canvas id="p5" width="400" height="300"></canvas><p class="legenda">Confete, palmas e "ta-dá". O tapume some, <b>o cachorro vai morar na casinha</b> e a placa diz quem fez.</p></div>
+    </div>
+    <ul class="lista">
+      <li><b>Com amigos:</b> todos veem os mesmos blocos azuis e enchem qualquer um. O bloco posto já fica firme (ninguém tira), e quem ajudou entra na placa.</li>
+      <li><b>A obra feita é da cidade:</b> fica protegida como os outros prédios (regra da 016), com o nome das crianças na placa e uma figurinha no diário.</li>
+      <li><b>Recompensa:</b> capacete amarelo de obra na primeira; colete laranja depois das seis.</li>
+    </ul>
+  </section>
+
+  <section aria-labelledby="t-obras">
+    <div class="olho">As plantas</div>
+    <h2 id="t-obras">Três das seis obras</h2>
+    <p class="texto">Toque em "Encher" para ver a obra subir de baixo para cima, como a criança faria. As seis vão da casinha do cachorro (mais fácil) ao coreto da praça (para fazer junto).</p>
+    <div class="tres">
+      <div class="quadro"><h3>Casinha do cachorro</h3><canvas id="o1" width="360" height="280"></canvas><div class="botoes"><button data-obra="0">Encher</button></div><p class="legenda" id="o1-l"></p></div>
+      <div class="quadro"><h3>Ponto de ônibus</h3><canvas id="o2" width="360" height="280"></canvas><div class="botoes"><button data-obra="1">Encher</button></div><p class="legenda" id="o2-l"></p></div>
+      <div class="quadro"><h3>Sorveteria de esquina</h3><canvas id="o3" width="360" height="280"></canvas><div class="botoes"><button data-obra="2">Encher</button></div><p class="legenda" id="o3-l"></p></div>
+    </div>
+  </section>
+
+  <section aria-labelledby="t-predios">
+    <div class="olho">De 2 a 6 andares, tudo de visitar</div>
+    <h2 id="t-predios">Dois prédios da cidade</h2>
+    <p class="texto">À esquerda, a casa geminada de pedra marrom (4 andares) com a escadinha na frente, a escada de incêndio de grade e a caixa d'água de madeira. À direita, o prédio de esquina art déco (6 andares) com o topo em degraus. "Ver por dentro" corta a frente: escada do térreo ao terraço e apartamentos com cama, mesa e baú.</p>
+    <div class="botoes"><button id="btn-corte" aria-pressed="false">Ver por dentro</button></div>
+    <div class="duas">
+      <div class="quadro"><canvas id="pr1" width="520" height="480"></canvas><p class="legenda"><b>Casa geminada</b>, 4 andares de 4 blocos. Lojinha nenhuma: só morar.</p></div>
+      <div class="quadro"><canvas id="pr2" width="520" height="480"></canvas><p class="legenda"><b>Esquina art déco</b>, 6 andares, pedra creme e friso dourado. Padaria com toldo no térreo.</p></div>
+    </div>
+  </section>
+
+  <section aria-labelledby="t-rua" class="larga">
+    <div class="olho">Jeito de Manhattan, sem copiar nada</div>
+    <h2 id="t-rua">Uma quadra vista da calçada</h2>
+    <p class="texto">Casas de pedra marrom, prédio de tijolo com escada de incêndio e padaria de toldo, a esquina art déco, caixas d'água nos telhados, a entrada do metrô (só enfeite), poste, ipê, táxi amarelo e ônibus. Nenhum prédio famoso, marca ou nome de verdade. Ao fundo, o horizonte de torres que não dá para alcançar.</p>
+    <div class="botoes" role="group" aria-label="Rua">
+      <button id="btn-noite" aria-pressed="false">De noite</button>
+      <button id="btn-horizonte" aria-pressed="true">Horizonte ao longe</button>
+    </div>
+    <div class="quadro"><canvas id="rua" width="1200" height="440"></canvas>
+      <p class="legenda">A grade da cidade: avenidas largas num sentido, ruas no outro, quarteirões compridos, e um parque grande no meio (2 × 2 quarteirões, com lago).</p></div>
+    <div class="duas">
+      <div class="quadro"><canvas id="mapa" width="520" height="420"></canvas><p class="legenda"><b>Planta da cidade</b> vista de cima: 5 avenidas e 7 ruas (uns 168 × 150 blocos), o parque no meio, os prédios altos em volta dele, e o anel de torres ao longe (só desenho, longe demais para chegar).</p></div>
+      <div class="quadro" style="align-content:center">
+        <h3>O horizonte custa quase nada</h3>
+        <ul class="lista">
+          <li>Caixas simples numa malha só: <b>1 chamada de desenho</b>, uns 1.500 triângulos e uma textura de 64 KB para as janelinhas de noite.</li>
+          <li>Ficam a 260–320 blocos do centro. Quem anda para fora vê as torres se afastarem junto; nunca chega perto.</li>
+          <li>Um único prédio de verdade de 6 andares custa mais do que o anel inteiro.</li>
+        </ul>
+        <p class="veredito"><b>Recomendação:</b> fazer. Fica sempre no celular, mesmo quando ele tira efeitos para manter os quadros.</p>
+      </div>
+    </div>
+  </section>
+
+  <section aria-labelledby="t-carros">
+    <div class="olho">Pedido do dono · bloco que pode ser cortado</div>
+    <h2 id="t-carros">Táxis e ônibus de blocos</h2>
+    <p class="texto">Carroceria de blocos e rodas redondas, sem marca nenhuma. Ninguém quebra, ninguém leva. Andam sozinhos em voltas fixas, devagar (mais devagar que a criança correndo), param no cruzamento e para quem estiver na frente.</p>
+    <div class="duas">
+      <div class="quadro"><canvas id="taxi" width="520" height="300"></canvas><p class="legenda"><b>Táxi amarelo</b>, 4 × 2 blocos, luzinha no teto sem letra, faróis que acendem de noite.</p></div>
+      <div class="quadro"><canvas id="onibus" width="520" height="300"></canvas><p class="legenda"><b>Ônibus</b> azul e branco, 8 × 2 × 3, porta que abre na parada.</p></div>
+    </div>
+    <div class="quadro">
+      <h3>No cruzamento (vista de cima)</h3>
+      <div class="botoes" role="group" aria-label="Cruzamento">
+        <button id="btn-crianca" aria-pressed="false">Criança na rua</button>
+        <button id="btn-somcarro" aria-pressed="false">Som da buzininha</button>
+      </div>
+      <canvas id="cruz" width="600" height="600" style="max-width:600px;aspect-ratio:1;justify-self:center;touch-action:none"></canvas>
+      <p class="legenda">O cruzamento claro é de um veículo por vez, e só entra quem tem lugar do outro lado (nunca dá nó). <b>Arraste a criança</b> para a rua: o carro para a 1,5 bloco, sem encostar, dá um "fom-fom" de brinquedo (no máximo um a cada 6 s), e os de trás fazem fila. O ônibus para no ponto.</p>
+    </div>
+    <ul class="lista">
+      <li><b>Mínimo para a 014:</b> 4 táxis e 1 ônibus, voltas fixas, 3 paradas de ônibus. Depois do canteiro pronto.</li>
+      <li><b>Com amigos:</b> o servidor decide quando cada carro para ou anda e avisa só nessas horas; cada aparelho anda o carro entre um aviso e outro. Liso e igual para todos, quase nada na rede.</li>
+      <li><b>Fica para depois:</b> andar de ônibus, dirigir, semáforo, estacionar, ambulância.</li>
+    </ul>
+  </section>
+
+  <section aria-labelledby="t-som">
+    <div class="olho">Gravado pelo caminho da 019</div>
+    <h2 id="t-som">Ouvir a cidade</h2>
+    <p class="texto">Jazz leve de piano e baixo, com vassourinha bem baixinha. A trilha da cidade sai no mesmo volume das trilhas do jogo e fica um pouco abaixo do Rancho de hoje (ouça os dois com o mesmo volume do aparelho).</p>
+    <div class="sons">
+      <div class="som"><span class="nome">Cidade, de dia</span><audio controls preload="none" src="sons/cidade-dia.mp3"></audio><span class="nota">Piano, baixo andando e vassourinha, 108 por minuto, com swing. 42 s. Volume medido: -24,6 dBFS (-25,9 LUFS).</span></div>
+      <div class="som"><span class="nome">Cidade, de noite</span><audio controls preload="none" src="sons/cidade-noite.mp3"></audio><span class="nota">Mais lento (88), sem bateria; o vibrafone canta. 52 s. -27,5 dBFS (-28,6 LUFS), como as noites dos outros temas.</span></div>
+      <div class="som"><span class="nome">Rancho de hoje, de dia</span><audio controls preload="none" src="sons/rancho-dia-hoje.mp3"></audio><span class="nota">Para comparar: o dia do Rancho tirado do jogo, sem mexer no volume. 24 s. -25,5 LUFS.</span></div>
+      <div class="som"><span class="nome">Praça de dia</span><audio controls preload="none" src="sons/cidade-praca-de-dia.mp3"></audio><span class="nota">A trilha com pombos, pardal, um cachorro ao longe e a buzininha distante. 21 s.</span></div>
+      <div class="som"><span class="nome">Pombo</span><audio controls preload="none" src="sons/pombo-chamado.mp3"></audio><span class="nota">O "ruuu-cuu" de praça (e o contente, abaixo).</span></div>
+      <div class="som"><span class="nome">Pombo contente</span><audio controls preload="none" src="sons/pombo-contente.mp3"></audio></div>
+      <div class="som"><span class="nome">Gato de rua</span><audio controls preload="none" src="sons/gato-chamado.mp3"></audio><span class="nota">Miau pedindo.</span></div>
+      <div class="som"><span class="nome">Gato contente</span><audio controls preload="none" src="sons/gato-contente.mp3"></audio><span class="nota">Miau de gatinha, ao ganhar peixe.</span></div>
+      <div class="som"><span class="nome">Cachorro grande</span><audio controls preload="none" src="sons/cachorro-chamado.mp3"></audio><span class="nota">"Au-au" grave e amigo.</span></div>
+      <div class="som"><span class="nome">Guaxinim travesso</span><audio controls preload="none" src="sons/guaxinim-chamado.mp3"></audio><span class="nota">"Trrr-trrr" de noite. Não existe gravação livre de guaxinim: é um porquinho-da-índia mais grave com um trinado nosso.</span></div>
+      <div class="som"><span class="nome">Pardal da praça</span><audio controls preload="none" src="sons/pardal.mp3"></audio></div>
+      <div class="som"><span class="nome">Buzininha ao longe</span><audio controls preload="none" src="sons/buzininha-longe.mp3"></audio><span class="nota">Feita por nós, de brinquedo. Rara: uma a cada 40 a 90 s.</span></div>
+      <div class="som"><span class="nome">"Fom-fom" do carrinho</span><audio controls preload="none" src="sons/buzininha-perto.mp3"></audio><span class="nota">Quando o carrinho espera a criança sair da rua.</span></div>
+    </div>
+    <div class="tabela">
+      <table>
+        <thead><tr><th>De onde vem</th><th>Quem gravou</th><th>Licença</th><th>Usado em</th></tr></thead>
+        <tbody>
+          <tr><td>Piano, baixo, vibrafone e vassourinha: FluidR3_GM (banco de instrumentos), tocado pelo FluidSynth</td><td>Frank Wen e colaboradores</td><td>MIT</td><td>as duas trilhas</td></tr>
+          <tr><td>Partitura (jazz em Fá maior)</td><td>nossa (spec 014)</td><td>nossa</td><td>as duas trilhas</td></tr>
+          <tr><td><a href="https://commons.wikimedia.org/wiki/File:Dove_cooing.ogg">Dove cooing.ogg</a> (Wikimedia Commons)</td><td>mary905</td><td>domínio público</td><td>pombo</td></tr>
+          <tr><td><a href="https://commons.wikimedia.org/wiki/File:Meow_of_a_pleading_cat.oga">Meow of a pleading cat.oga</a> (Wikimedia Commons)</td><td>Heismark</td><td>domínio público</td><td>gato</td></tr>
+          <tr><td><a href="https://commons.wikimedia.org/wiki/File:Maullido_de_gata_hembra_joven.ogg">Maullido de gata hembra joven.ogg</a> (Wikimedia Commons)</td><td>George Miquilena</td><td>CC0</td><td>gato contente</td></tr>
+          <tr><td><a href="https://commons.wikimedia.org/wiki/File:Guinea_Pig_Chirping.ogg">Guinea Pig Chirping.ogg</a> (Wikimedia Commons)</td><td>autor do Commons</td><td>domínio público</td><td>guaxinim</td></tr>
+          <tr><td><a href="https://commons.wikimedia.org/wiki/File:Joseph_Sardin_-_Passer_domesticus_tschilp_call.oga">Passer domesticus tschilp call</a> (Wikimedia Commons)</td><td>Joseph Sardin</td><td>CC0</td><td>pardal</td></tr>
+          <tr><td><a href="https://bigsoundbank.com/barking-dog-2-s2954.html">Barking Dog #2</a> (BigSoundBank)</td><td>Joseph Sardin</td><td>CC0</td><td>cachorro</td></tr>
+          <tr><td>Buzininhas e o trinado do guaxinim</td><td>síntese nossa</td><td>nossa</td><td>buzininhas, guaxinim</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section aria-labelledby="t-perguntas">
+    <div class="olho">Para responder antes de começar</div>
+    <h2 id="t-perguntas">Perguntas ao dono</h2>
+    <ol class="perguntas">
+      <li>A obra feita é <b>da cidade</b> (protegida, com o nome das crianças na placa), e não de quem fez. <span>Recomendo: sim, ninguém desmancha por engano.</span></li>
+      <li>A colher de pedreiro enche sem gastar material, também na sobrevivência. <span>Recomendo: sim, é o caminho dos pequenos.</span></li>
+      <li>Táxis e ônibus entram na versão mínima, depois do canteiro, como bloco que pode ser cortado. <span>Recomendo: sim, a versão mínima; complexidade média para alta.</span></li>
+      <li>O horizonte de torres ao longe entra. <span>Recomendo: sim, é barato.</span></li>
+      <li>O rio com ponte fica para depois; agora, lago no parque. <span>Recomendo: depois.</span></li>
+      <li>Plantas dos prédios em texto em vez de MagicaVoxel, se o teste com uma casa confirmar. <span>Recomendo: texto, a menos que você queira desenhar.</span></li>
+      <li>Os blocos novos aparecem nos outros temas com a mesma textura (só o nome muda). <span>Recomendo: sim.</span></li>
+      <li>O gato de rua é domado com peixe (só na cidade). <span>Recomendo: sim.</span></li>
+      <li>Sem elevador nesta etapa. <span>Recomendo: depois.</span></li>
+    </ol>
+  </section>
+</div>
+
+<script>
+(() => {
+  'use strict';
+  let animar = !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const btnMov = document.getElementById('btn-movimento');
+  btnMov.setAttribute('aria-pressed', String(animar));
+  btnMov.addEventListener('click', () => { animar = !animar; btnMov.setAttribute('aria-pressed', String(animar)); });
+
+  // ---------------------------------------------------------------- cores dos blocos
+  const C = {
+    tijolo: '#b5523b', marrom: '#7b4a33', marromEsc: '#5e3826', creme: '#eadcbf', dourado: '#d6a73f', janela: '#8fcbe9', acesa: '#ffd66b',
+    grade: '#3b3f48', tabua: '#c3894a', tabuaEsc: '#9a6634', asfalto: '#43454d', calcada: '#bdb9b0', faixa: '#f1c232', grama: '#6aac4f',
+    concreto: '#a9a9a6', toldoV: '#d8433a', toldoB: '#f5f2ea', toldoVerde: '#3f8f5a', taxi: '#f4c20d', azul: '#2f6fb5', branco: '#f2f2ee',
+    pneu: '#22232a', calota: '#c9ccd2', pele: '#f1c9a0', pele2: '#c98f63', capacete: '#ffcc1a', laranja: '#f28b2c', calca: '#3d5fa8',
+    vermelho: '#d94848', verde: '#4c9a5c', porta: '#7a4b2a', sorvete: '#f7a8c4', telhado: '#7c5a3c', placa: '#f7f3e3', cachorro: '#b07a4a'
+  };
+  function tom(hex, f) {
+    const n = parseInt(hex.slice(1), 16); let r = n >> 16, g = (n >> 8) & 255, b = n & 255;
+    if (f >= 1) { r += (255 - r) * (f - 1); g += (255 - g) * (f - 1); b += (255 - b) * (f - 1); } else { r *= f; g *= f; b *= f; }
+    return `rgb(${r | 0},${g | 0},${b | 0})`;
+  }
+
+  // ---------------------------------------------------------------- modelos de blocos (z para cima)
+  function modelo() {
+    const v = new Map();
+    const k = (x, y, z) => x + ',' + y + ',' + z;
+    return {
+      set(x, y, z, c, o) { v.set(k(x, y, z), Object.assign({ x, y, z, c }, o || {})); },
+      box(x0, y0, z0, w, d, h, c, o) { for (let x = x0; x < x0 + w; x++) for (let y = y0; y < y0 + d; y++) for (let z = z0; z < z0 + h; z++) this.set(x, y, z, c, o); },
+      del(x, y, z) { v.delete(k(x, y, z)); },
+      get(x, y, z) { return v.get(k(x, y, z)); },
+      lista() { return [...v.values()]; },
+    };
+  }
+
+  // ---------------------------------------------------------------- desenho isométrico
+  function desenhar(cv, vox, op) {
+    op = op || {};
+    const ctx = cv.getContext('2d');
+    const W = cv.width, H = cv.height;
+    ctx.clearRect(0, 0, W, H);
+    if (op.fundo) { op.fundo(ctx, W, H); }
+    const mapa = new Map();
+    for (const q of vox) mapa.set(q.x + ',' + q.y + ',' + q.z, q);
+    const P0 = (x, y, z) => [(x - y) * 0.866, (x + y) * 0.5 - z];
+    let a = 1e9, b = -1e9, c = 1e9, d = -1e9;
+    for (const q of vox) for (const [dx, dy, dz] of [[0, 0, 0], [1, 0, 0], [0, 1, 0], [1, 1, 0], [0, 0, 1], [1, 1, 1], [1, 0, 1], [0, 1, 1]]) {
+      const [px, py] = P0(q.x + dx, q.y + dy, q.z + dz); a = Math.min(a, px); b = Math.max(b, px); c = Math.min(c, py); d = Math.max(d, py);
+    }
+    const pad = op.pad ?? 18;
+    const s = op.escala || Math.min((W - pad * 2) / (b - a), (H - pad * 2 - (op.folgaTopo || 0)) / (d - c));
+    const ox = W / 2 - ((a + b) / 2) * s, oy = H / 2 + (op.folgaTopo || 0) / 2 - ((c + d) / 2) * s;
+    const P = (x, y, z) => { const [px, py] = P0(x, y, z); return [ox + px * s, oy + py * s]; };
+    const solido = (x, y, z) => { const q = mapa.get(x + ',' + y + ',' + z); return q && !q.fantasma && !q.vidro && !q.h; };
+    const ocupado = (x, y, z) => mapa.has(x + ',' + y + ',' + z);
+    const ord = vox.slice().sort((p, q) => (p.x + p.y + p.z) - (q.x + q.y + q.z) || p.z - q.z);
+    const t = performance.now() / 1000;
+    const face = (pts, cor, linha) => {
+      ctx.beginPath(); pts.forEach(([x, y], i) => i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)); ctx.closePath();
+      ctx.fillStyle = cor; ctx.fill();
+      if (linha) { ctx.strokeStyle = linha; ctx.lineWidth = Math.max(1, s * 0.05); ctx.stroke(); }
+    };
+    for (const q of ord) {
+      let { x, y, z } = q;
+      if (q.treme) x += Math.sin(t * 40) * 0.06;
+      const h = q.h || 1;
+      if (q.fantasma) {
+        const al = q.pulsa ? 0.3 + 0.25 * (0.5 + 0.5 * Math.sin(t * 4)) : 0.24;
+        const cor = `rgba(90,160,255,${al})`, lin = `rgba(150,205,255,${q.pulsa ? 0.95 : 0.7})`;
+        if (!ocupado(q.x, q.y, q.z + 1)) face([P(x, y, z + h), P(x + 1, y, z + h), P(x + 1, y + 1, z + h), P(x, y + 1, z + h)], cor, lin);
+        if (!ocupado(q.x, q.y + 1, q.z)) face([P(x, y + 1, z), P(x + 1, y + 1, z), P(x + 1, y + 1, z + h), P(x, y + 1, z + h)], cor, lin);
+        if (!ocupado(q.x + 1, q.y, q.z)) face([P(x + 1, y, z), P(x + 1, y + 1, z), P(x + 1, y + 1, z + h), P(x + 1, y, z + h)], cor, lin);
+        continue;
+      }
+      const lin = op.contorno === false ? null : 'rgba(0,0,0,0.12)';
+      if (!solido(q.x, q.y, q.z + 1) || h < 1) face([P(x, y, z + h), P(x + 1, y, z + h), P(x + 1, y + 1, z + h), P(x, y + 1, z + h)], tom(q.c, 1.12), lin);
+      if (!solido(q.x, q.y + 1, q.z)) face([P(x, y + 1, z), P(x + 1, y + 1, z), P(x + 1, y + 1, z + h), P(x, y + 1, z + h)], tom(q.c, 0.82), lin);
+      if (!solido(q.x + 1, q.y, q.z)) face([P(x + 1, y, z), P(x + 1, y + 1, z), P(x + 1, y + 1, z + h), P(x + 1, y, z + h)], tom(q.c, 0.66), lin);
+    }
+    if (op.depois) op.depois(ctx, P, s, t);
+    return P;
+  }
+
+  function fundoCeu(ctx, W, H) {
+    const g = ctx.createLinearGradient(0, 0, 0, H); g.addColorStop(0, '#a9d8f7'); g.addColorStop(1, '#e3f3fc');
+    ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+  }
+
+  // ---------------------------------------------------------------- pessoas e bichos de brinquedo
+  function pessoa(m, x, y, z, o) {
+    m.set(x, y, z, o.calca || C.calca);
+    m.set(x, y, z + 1, o.camisa);
+    m.set(x, y, z + 2, o.pele || C.pele);
+    if (o.chapeu) m.set(x, y, z + 3, o.chapeu, { h: 0.35 });
+    else if (o.cabelo) m.set(x, y, z + 3, o.cabelo, { h: 0.3 });
+  }
+  function balao(ctx, x, y, s, desenho) {
+    const r = s * 1.1;
+    ctx.fillStyle = '#ffffff'; ctx.strokeStyle = 'rgba(0,0,0,0.25)'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(x, y - r, r, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(x - r * 0.3, y - r * 0.15); ctx.lineTo(x, y + r * 0.45); ctx.lineTo(x + r * 0.3, y - r * 0.15); ctx.fill();
+    desenho(ctx, x, y - r, r);
+  }
+  function blocoIcone(cor) {
+    return (ctx, x, y, r) => {
+      const u = r * 0.5;
+      const pts = (a) => { ctx.beginPath(); a.forEach(([px, py], i) => i ? ctx.lineTo(x + px * u, y + py * u) : ctx.moveTo(x + px * u, y + py * u)); ctx.closePath(); };
+      pts([[0, -1], [0.87, -0.5], [0, 0], [-0.87, -0.5]]); ctx.fillStyle = tom(cor, 1.12); ctx.fill();
+      pts([[-0.87, -0.5], [0, 0], [0, 1], [-0.87, 0.5]]); ctx.fillStyle = tom(cor, 0.82); ctx.fill();
+      pts([[0.87, -0.5], [0, 0], [0, 1], [0.87, 0.5]]); ctx.fillStyle = tom(cor, 0.66); ctx.fill();
+    };
+  }
+  function desenhaColher(ctx, x, y, r) {
+    ctx.save(); ctx.translate(x, y); ctx.rotate(-0.6);
+    ctx.fillStyle = '#c7ccd4'; ctx.beginPath(); ctx.moveTo(0, -r * 0.75); ctx.lineTo(r * 0.38, r * 0.05); ctx.lineTo(-r * 0.38, r * 0.05); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#8a5a2b'; ctx.fillRect(-r * 0.09, r * 0.05, r * 0.18, r * 0.6);
+    ctx.restore();
+  }
+
+  // ---------------------------------------------------------------- obras
+  function casinhaCachorro() {
+    // 3 x 3 x 3: paredes de tábua com porta redonda na frente (+y), telhado de laje vermelha
+    const cel = [];
+    for (let z = 0; z < 2; z++) for (let x = 0; x < 3; x++) for (let y = 0; y < 3; y++) {
+      const borda = x === 0 || x === 2 || y === 0 || y === 2;
+      if (!borda) continue;
+      if (y === 2 && x === 1) continue; // porta
+      cel.push([x, y, z, C.tabua]);
+    }
+    for (let x = 0; x < 3; x++) for (let y = 0; y < 3; y++) cel.push([x, y, 2, C.vermelho]);
+    return cel;
+  }
+  function pontoOnibus() {
+    const cel = [];
+    for (let z = 0; z < 3; z++) { cel.push([0, 0, z, C.grade]); cel.push([3, 0, z, C.grade]); }
+    for (let x = 0; x < 4; x++) cel.push([x, 0, 3, C.azul]);
+    for (let x = 0; x < 4; x++) cel.push([x, 1, 3, C.azul]);
+    for (let x = 1; x < 3; x++) { cel.push([x, 0, 1, C.vidro || C.janela]); cel.push([x, 0, 2, C.janela]); }
+    cel.push([1, 1, 0, C.tabua]); cel.push([2, 1, 0, C.tabua]);
+    return cel.map(c => c.concat([]));
+  }
+  function sorveteria() {
+    const cel = [];
+    for (let z = 0; z < 3; z++) for (let x = 0; x < 4; x++) for (let y = 0; y < 4; y++) {
+      const borda = x === 0 || x === 3 || y === 0 || y === 3;
+      if (!borda) continue;
+      let c = z === 0 ? C.sorvete : C.branco;
+      if (z === 1 && (y === 3 || x === 3) && !(x === 3 && y === 3) && !(x === 0) && !(y === 0)) c = C.janela;
+      if (y === 3 && x === 1 && z < 2) continue; // porta
+      cel.push([x, y, z, c]);
+    }
+    for (let x = -0; x < 4; x++) for (let y = 0; y < 4; y++) cel.push([x, y, 3, (x + y) % 2 ? C.sorvete : C.branco]);
+    for (let x = 0; x < 4; x++) cel.push([x, 4, 2, x % 2 ? C.toldoV : C.toldoB, 0.35]);
+    return cel;
+  }
+  const OBRAS = [casinhaCachorro(), pontoOnibus(), sorveteria()];
+  // ordem de encher: de baixo para cima
+  OBRAS.forEach(o => o.sort((p, q) => p[2] - q[2] || (p[0] + p[1]) - (q[0] + q[1])));
+
+  function chao(m, x0, y0, w, d, cor) { for (let x = x0; x < x0 + w; x++) for (let y = y0; y < y0 + d; y++) m.set(x, y, -1, cor); }
+
+  function cenaObra(obra, cheios, op) {
+    op = op || {};
+    const m = modelo();
+    chao(m, -2, -1, 8, 7, C.calcada);
+    // tapume nos fundos e de lado (laranja e branco)
+    if (!op.pronta) {
+      for (let x = -2; x < 6; x++) m.set(x, -1, 0, x % 2 ? C.laranja : C.branco, { h: 0.8 });
+      for (let y = 0; y < 6; y++) m.set(-2, y, 0, y % 2 ? C.laranja : C.branco, { h: 0.8 });
+    }
+    const zmin = Math.min(...obra.filter((c, i) => i >= cheios).map(c => c[2]), 99);
+    obra.forEach((c, i) => {
+      const [x, y, z, cor, h] = c;
+      if (i < cheios || op.pronta) m.set(x, y, z, cor, h ? { h } : null);
+      else m.set(x, y, z, cor, { fantasma: true, pulsa: z === zmin && op.pulsa !== false, treme: op.treme && op.treme[0] === x && op.treme[1] === y && op.treme[2] === z });
+    });
+    return m;
+  }
+
+  // ---------------------------------------------------------------- os 5 passos
+  const passos = [];
+  function passo(id, f) { passos.push({ cv: document.getElementById(id), f }); }
+  const obra0 = OBRAS[0];
+  passo('p1', (cv, t) => {
+    const m = cenaObra(obra0, 0, { pulsa: false });
+    pessoa(m, 4, 3, 0, { camisa: C.laranja, chapeu: C.capacete, pele: C.pele2 });
+    pessoa(m, 4, 6, 0, { camisa: C.vermelho, cabelo: C.marromEsc });
+    m.set(5, -1, 0, C.placa); m.set(5, -1, 1, C.placa);
+    desenhar(cv, m.lista(), { fundo: fundoCeu, folgaTopo: 30, depois(ctx, P, s) {
+      const [x, y] = P(4.5, 3.5, 3.4);
+      const ac = Math.sin(t * 8) * 0.35;
+      ctx.save(); ctx.translate(x + s * 0.5, y + s * 0.3); ctx.rotate(-0.9 + ac); ctx.fillStyle = C.pele2; ctx.fillRect(0, -s * 0.12, s * 0.75, s * 0.24); ctx.restore();
+      const [bx, by] = P(5.5, -0.5, 2.6); balao(ctx, bx, by, s * 0.6, (c, x2, y2, r) => { c.fillStyle = C.tabua; c.fillRect(x2 - r * 0.5, y2 - r * 0.15, r, r * 0.55); c.fillStyle = C.vermelho; c.beginPath(); c.moveTo(x2 - r * 0.65, y2 - r * 0.1); c.lineTo(x2, y2 - r * 0.6); c.lineTo(x2 + r * 0.65, y2 - r * 0.1); c.fill(); c.fillStyle = '#3b2a1e'; c.beginPath(); c.arc(x2, y2 + r * 0.4, r * 0.18, Math.PI, 0); c.fill(); });
+    } });
+  });
+  passo('p2', (cv, t) => {
+    const m = cenaObra(obra0, 0, { pulsa: false });
+    pessoa(m, 3, 4, 0, { camisa: C.laranja, chapeu: C.capacete, pele: C.pele2 });
+    pessoa(m, 4, 5, 0, { camisa: C.vermelho, cabelo: C.marromEsc });
+    desenhar(cv, m.lista(), { fundo: fundoCeu, folgaTopo: 30, depois(ctx, P, s) {
+      const [x, y] = P(5, 6, 1.6);
+      desenhaColher(ctx, x + s * 0.2, y, s * 0.9);
+      const br = 0.5 + 0.5 * Math.sin(t * 6);
+      ctx.strokeStyle = `rgba(255,230,120,${0.4 + 0.6 * br})`; ctx.lineWidth = 2;
+      for (let i = 0; i < 6; i++) { const a = i / 6 * Math.PI * 2 + t; ctx.beginPath(); ctx.moveTo(x + Math.cos(a) * s * 0.7, y + Math.sin(a) * s * 0.7); ctx.lineTo(x + Math.cos(a) * s * 1.05, y + Math.sin(a) * s * 1.05); ctx.stroke(); }
+      barra(ctx, cv, 1, t);
+    } });
+  });
+  passo('p3', (cv, t) => {
+    const n = Math.floor(obra0.length * 0.45);
+    const m = cenaObra(obra0, n);
+    pessoa(m, 4, 5, 0, { camisa: C.vermelho, cabelo: C.marromEsc });
+    desenhar(cv, m.lista(), { fundo: fundoCeu, folgaTopo: 34, depois(ctx, P, s) {
+      const [x, y] = P(5, 6, 1.6); desenhaColher(ctx, x + s * 0.2, y, s * 0.9);
+      progresso(ctx, cv, n / obra0.length);
+      const [px, py] = P(1.5, 2.5, 1.5);
+      const f = (t * 1.5) % 1;
+      ctx.fillStyle = `rgba(255,255,255,${1 - f})`; ctx.font = `700 ${Math.round(s * 0.55)}px 'Pixelify Sans', monospace`; ctx.fillText('plim', px + s * 0.6, py - f * s);
+    } });
+  });
+  passo('p4', (cv, t) => {
+    const n = 4;
+    const alvo = obra0[n];
+    const m = cenaObra(obra0, n, { treme: [alvo[0], alvo[1], alvo[2]] });
+    pessoa(m, 4, 5, 0, { camisa: C.vermelho, cabelo: C.marromEsc });
+    pessoa(m, 4, 2, 0, { camisa: C.laranja, chapeu: C.capacete, pele: C.pele2 });
+    desenhar(cv, m.lista(), { fundo: fundoCeu, folgaTopo: 30, depois(ctx, P, s) {
+      const [bx, by] = P(alvo[0] + 0.5, alvo[1] + 0.5, alvo[2] + 1.4); balao(ctx, bx, by, s * 0.65, blocoIcone(C.tabua));
+      const [x, y] = P(5, 6, 1.6); blocoIcone(C.janela)(ctx, x + s * 0.25, y, s * 0.55);
+      barra(ctx, cv, 2, t, true);
+    } });
+  });
+  const confetes = Array.from({ length: 46 }, (_, i) => ({ x: Math.random(), v: 0.2 + Math.random() * 0.5, c: ['#f4c20d', '#d94848', '#4c9a5c', '#2f6fb5', '#f28b2c', '#f7a8c4'][i % 6], f: Math.random() }));
+  passo('p5', (cv, t) => {
+    const m = cenaObra(obra0, obra0.length, { pronta: true });
+    m.set(1, 3, 0, C.cachorro, { h: 0.6 }); m.set(1, 4, 0, C.cachorro, { h: 0.85 });
+    pessoa(m, 4, 5, 0, { camisa: C.vermelho, cabelo: C.marromEsc, chapeu: C.capacete });
+    pessoa(m, 4, 2, 0, { camisa: C.laranja, chapeu: C.capacete, pele: C.pele2 });
+    m.set(5, 0, 0, C.placa); m.set(5, 0, 1, C.placa);
+    desenhar(cv, m.lista(), { fundo: fundoCeu, folgaTopo: 30, depois(ctx, P, s) {
+      const [px, py] = P(5.5, 0.5, 2.2);
+      ctx.fillStyle = '#fffaf0'; ctx.strokeStyle = 'rgba(0,0,0,0.3)'; ctx.lineWidth = 1.5; ctx.fillRect(px - 44, py - 52, 88, 40); ctx.strokeRect(px - 44, py - 52, 88, 40);
+      ctx.fillStyle = '#3b2a1e'; ctx.font = "700 13px 'IBM Plex Sans', sans-serif"; ctx.textAlign = 'center';
+      ctx.fillText('Feita por', px, py - 36); ctx.fillText('Ana e Léo', px, py - 19); ctx.textAlign = 'left';
+      for (const q of confetes) { const yy = ((q.f + t * q.v) % 1) * cv.height; ctx.fillStyle = q.c; ctx.fillRect(q.x * cv.width, yy, 5, 8); }
+    } });
+  });
+
+  function barra(ctx, cv, ativo, t, pisca) {
+    const n = 5, w = 30, g = 6, x0 = (cv.width - (n * w + (n - 1) * g)) / 2, y0 = cv.height - w - 8;
+    for (let i = 0; i < n; i++) {
+      const x = x0 + i * (w + g);
+      ctx.fillStyle = 'rgba(255,250,240,0.92)'; ctx.fillRect(x, y0, w, w);
+      ctx.strokeStyle = i === ativo ? '#b8650c' : 'rgba(0,0,0,0.2)'; ctx.lineWidth = i === ativo ? 3 : 1; ctx.strokeRect(x, y0, w, w);
+      if (i === 1) desenhaColher(ctx, x + w / 2, y0 + w / 2, w * 0.5);
+      if (i === 2) blocoIcone(C.janela)(ctx, x + w / 2, y0 + w / 2, w * 0.36);
+      if (i === 0) blocoIcone(C.tijolo)(ctx, x + w / 2, y0 + w / 2, w * 0.36);
+      if (pisca && i === 1 && Math.sin(t * 8) > 0) { ctx.strokeStyle = '#ffcc1a'; ctx.lineWidth = 4; ctx.strokeRect(x - 2, y0 - 2, w + 4, w + 4); }
+    }
+  }
+  function progresso(ctx, cv, f) {
+    const w = 120, h = 16, x = (cv.width - w) / 2, y = 10;
+    ctx.fillStyle = 'rgba(255,250,240,0.92)'; ctx.fillRect(x - 26, y - 4, w + 34, h + 8);
+    ctx.fillStyle = '#e4d7bd'; ctx.fillRect(x, y, w, h); ctx.fillStyle = '#4c9a5c'; ctx.fillRect(x, y, w * f, h);
+    ctx.fillStyle = C.vermelho; ctx.beginPath(); ctx.moveTo(x - 22, y + 8); ctx.lineTo(x - 13, y - 1); ctx.lineTo(x - 4, y + 8); ctx.fill();
+    ctx.fillStyle = C.tabua; ctx.fillRect(x - 20, y + 8, 14, 9);
+  }
+
+  // ---------------------------------------------------------------- obras com botão "Encher"
+  const obrasCv = ['o1', 'o2', 'o3'].map(id => document.getElementById(id));
+  const obraEstado = OBRAS.map(() => ({ cheios: 0, enchendo: false }));
+  const nomesBlocos = ['tábuas e laje vermelha', 'grade, vidro, laje azul e banco', 'pedra rosa, janelas, telhado e toldo'];
+  OBRAS.forEach((o, i) => { document.getElementById(obrasCv[i].id + '-l').textContent = `${o.length} blocos: ${nomesBlocos[i]}. Num ritmo de criança (um toque a cada 6 s), uns ${Math.max(1, Math.round(o.length * 6 / 60 * 10) / 10).toString().replace('.', ',')} min.`; });
+  document.querySelectorAll('[data-obra]').forEach(b => b.addEventListener('click', () => {
+    const i = +b.dataset.obra; const e = obraEstado[i];
+    if (e.cheios >= OBRAS[i].length) { e.cheios = 0; e.enchendo = false; b.textContent = 'Encher'; return; }
+    e.enchendo = true; b.textContent = 'Recomeçar';
+  }));
+  let ultimoEncher = 0;
+
+  // ---------------------------------------------------------------- prédios
+  let corte = false;
+  const btnCorte = document.getElementById('btn-corte');
+  btnCorte.addEventListener('click', () => { corte = !corte; btnCorte.setAttribute('aria-pressed', String(corte)); desenharPredios(); });
+
+  function caixaDagua(m, x, y, z) {
+    for (const [dx, dy] of [[0, 0], [2, 0], [0, 2], [2, 2]]) m.set(x + dx, y + dy, z, C.grade, { h: 1 });
+    for (let k = 1; k <= 2; k++) for (let dx = 0; dx < 3; dx++) for (let dy = 0; dy < 3; dy++) if (!(dx !== 1 && dy !== 1 && k === 2 && false)) m.set(x + dx, y + dy, z + k, (dx + dy) % 2 ? C.tabua : C.tabuaEsc);
+    m.set(x + 1, y + 1, z + 3, C.tabuaEsc, { h: 0.6 });
+  }
+  function interior(m, x0, y0, w, d, z0, andares, corEsc) {
+    // escada em dois lances encostada no fundo (x0+1..), cama, mesa e baú em cada andar
+    for (let a = 0; a < andares; a++) {
+      const z = z0 + a * 4;
+      for (let k = 0; k < 4; k++) m.set(x0 + 1 + k, y0 + d - 2, z + 1 + k, '#e07b39');
+      m.set(x0 + w - 3, y0 + 2, z + 1, '#e8e3f5', { h: 0.55 }); m.set(x0 + w - 3, y0 + 3, z + 1, C.vermelho, { h: 0.55 });
+      m.set(x0 + 2, y0 + 2, z + 1, C.tabua);
+      m.set(x0 + w - 2, y0 + d - 3, z + 1, C.tabuaEsc, { h: 0.8 });
+    }
+  }
+  function casaGeminada() {
+    const m = modelo();
+    const w = 7, d = 9, andares = 4, H = andares * 4;
+    chao(m, -1, -1, w + 2, d + 5, C.calcada);
+    for (let z = 0; z < H; z++) for (let x = 0; x < w; x++) for (let y = 0; y < d; y++) {
+      const borda = x === 0 || x === w - 1 || y === 0 || y === d - 1;
+      const piso = z % 4 === 0;
+      if (!borda && !piso) continue;
+      if (corte && (y === d - 1 || x === w - 1) && !piso) continue;
+      if (corte && piso && z > 0 && x >= 1 && x <= 4 && y === d - 2) continue;
+      if (corte && piso && z > 0 && !borda) { m.set(x, y, z, C.tabua, { h: 0.35 }); continue; }
+      if (corte && piso && (y === d - 1 || x === w - 1)) { m.set(x, y, z, C.tabua, { h: 0.35 }); continue; }
+      let c = piso ? (borda ? C.marrom : C.tabua) : C.marrom;
+      const zf = z % 4;
+      if (borda && !piso && (zf === 2 || zf === 3) && y === d - 1 && (x === 1 || x === 2 || x === 4 || x === 5) && z > 4) c = C.janela;
+      if (borda && !piso && zf === 2 && x === w - 1 && (y === 2 || y === 3 || y === 5 || y === 6)) c = C.janela;
+      m.set(x, y, z, c);
+    }
+    if (!corte) {
+      // porta no primeiro andar acima da escadinha, escadinha de pedra
+      m.set(3, d - 1, 2, C.porta); m.set(3, d - 1, 3, C.porta);
+      for (let k = 0; k < 2; k++) { m.set(3, d + k, 1 - k, C.marromEsc, { h: 1 }); m.set(4, d + k, 1 - k, C.marromEsc); }
+      m.set(3, d, 0, C.marromEsc); m.set(4, d, 0, C.marromEsc);
+      // térreo meio enterrado: janelinhas
+      m.set(1, d - 1, 1, C.janela); m.set(5, d - 1, 1, C.janela);
+      // cornija
+      for (let x = -0; x < w; x++) m.set(x, d, H - 1, C.marromEsc, { h: 0.5 });
+      // escada de incêndio na fachada lateral (+x)
+      for (let a = 1; a < andares; a++) {
+        const z = a * 4 + 1;
+        for (let y = 1; y < d - 1; y++) m.set(w, y, z, C.grade, { h: 0.25 });
+        for (let k = 0; k < 3; k++) m.set(w + 1, (a % 2 ? 2 + k : 6 - k), z - 3 + k + 1, C.grade, { h: 0.3 });
+      }
+    } else {
+      interior(m, 0, 0, w, d, 0, andares, C.marromEsc);
+    }
+    for (let x = 0; x < w; x++) for (let y = 0; y < d; y++) if (x === 0 || y === 0 || x === w - 1 || y === d - 1) m.set(x, y, H, C.grade, { h: 0.5 });
+    caixaDagua(m, 1, 2, H + 1);
+    return m.lista();
+  }
+  function esquinaDeco() {
+    const m = modelo();
+    const w = 10, d = 10, andares = 6, H = andares * 4;
+    chao(m, -1, -1, w + 3, d + 3, C.calcada);
+    for (let z = 0; z < H; z++) for (let x = 0; x < w; x++) for (let y = 0; y < d; y++) {
+      const borda = x === 0 || x === w - 1 || y === 0 || y === d - 1;
+      const piso = z % 4 === 0;
+      if (!borda && !piso) continue;
+      if (corte && (y === d - 1 || x === w - 1) && !piso) continue;
+      if (corte && piso && z > 0 && x >= 1 && x <= 4 && y === d - 2) continue;
+      const zf = z % 4;
+      let c = piso ? (borda ? C.dourado : C.concreto) : C.creme;
+      if (borda && !piso && zf >= 2 && ((y === d - 1 && x % 3 !== 0) || (x === w - 1 && y % 3 !== 0)) && z > 3) c = (x * 7 + y * 3 + z) % 5 === 0 ? C.acesa : C.janela;
+      if (z < 4 && borda && !piso && zf >= 1 && ((y === d - 1 && x > 1 && x < w - 1) || (x === w - 1 && y > 1 && y < d - 1))) c = C.janela;
+      if (corte && piso && (y === d - 1 || x === w - 1 || !borda)) { m.set(x, y, z, C.concreto, z > 0 ? { h: 0.35 } : null); continue; }
+      m.set(x, y, z, c);
+    }
+    if (!corte) {
+      m.set(w - 1, d - 1, 1, C.porta); m.set(w - 1, d - 1, 2, C.porta);
+      for (let x = 1; x < w - 1; x++) m.set(x, d, 3, x % 2 ? C.toldoV : C.toldoB, { h: 0.3 });
+      for (let y = 1; y < d - 1; y++) m.set(w, y, 3, y % 2 ? C.toldoV : C.toldoB, { h: 0.3 });
+    } else interior(m, 0, 0, w, d, 0, andares, C.concreto);
+    // topo em degraus
+    const deg = [[1, 8, 2], [2, 6, 2], [3, 4, 2]];
+    let z = H;
+    for (const [o, l, h] of deg) { for (let k = 0; k < h; k++) { for (let x = o; x < o + l; x++) for (let y = o; y < o + l; y++) if (x === o || y === o || x === o + l - 1 || y === o + l - 1 || k === h - 1) m.set(x, y, z + k, k === h - 1 ? C.dourado : C.creme); } z += h; }
+    m.set(4, 4, z, C.dourado); m.set(4, 4, z + 1, C.dourado, { h: 0.6 }); m.set(5, 5, z, C.dourado);
+    caixaDagua(m, 6, 0, H);
+    return m.lista();
+  }
+  function desenharPredios() {
+    desenhar(document.getElementById('pr1'), casaGeminada(), { fundo: fundoCeu });
+    desenhar(document.getElementById('pr2'), esquinaDeco(), { fundo: fundoCeu });
+  }
+
+  // ---------------------------------------------------------------- veículos
+  function rodas(ctx, P, s, lista, gira) {
+    for (const [x, y, z] of lista) {
+      const [cx, cy] = P(x, y, z);
+      ctx.fillStyle = C.pneu; ctx.beginPath(); ctx.ellipse(cx, cy, s * 0.42, s * 0.5, -0.5, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = C.calota; ctx.beginPath(); ctx.ellipse(cx, cy, s * 0.18, s * 0.22, -0.5, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = '#555'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx + Math.cos(gira) * s * 0.18, cy + Math.sin(gira) * s * 0.22); ctx.stroke();
+    }
+  }
+  function taxi(m, x0, y0) {
+    m.box(x0, y0, 0, 4, 2, 1, C.taxi);
+    m.box(x0 + 1, y0, 1, 2, 2, 1, C.janela, { vidro: true });
+    m.box(x0 + 1, y0, 2, 2, 2, 1, C.taxi, { h: 0.25 });
+    m.set(x0 + 3, y0, 0, C.taxi); m.set(x0 + 3, y0 + 1, 0, C.taxi);
+    return [[x0 + 0.8, y0 + 2, 0.15], [x0 + 3.2, y0 + 2, 0.15]];
+  }
+  function onibus(m, x0, y0) {
+    m.box(x0, y0, 0, 8, 2, 1, C.azul);
+    for (let x = x0; x < x0 + 8; x++) for (let y = y0; y < y0 + 2; y++) m.set(x, y, 1, (x === x0 + 7 || (x - x0) % 2 === 1) ? C.janela : C.branco);
+    m.box(x0, y0, 2, 8, 2, 1, C.branco);
+    m.set(x0 + 6, y0 + 1, 0, '#cfd8e3');
+    return [[x0 + 1.3, y0 + 2, 0.15], [x0 + 6.4, y0 + 2, 0.15]];
+  }
+  function desenharVeiculos(t) {
+    let m = modelo(); chao(m, -1, -1, 6, 4, C.asfalto); const rt = taxi(m, 0, 0);
+    desenhar(document.getElementById('taxi'), m.lista(), { fundo: fundoCeu, depois(ctx, P, s) {
+      rodas(ctx, P, s, rt, t * 3);
+      const [lx, ly] = P(2, 1, 2.6); ctx.fillStyle = '#fff6c8'; ctx.fillRect(lx - s * 0.35, ly - s * 0.2, s * 0.7, s * 0.3);
+      const [fx, fy] = P(4, 0.5, 0.6); ctx.fillStyle = '#fff1a8'; ctx.beginPath(); ctx.arc(fx, fy, s * 0.14, 0, 7); ctx.fill();
+    } });
+    m = modelo(); chao(m, -1, -1, 10, 4, C.asfalto); const ro = onibus(m, 0, 0);
+    desenhar(document.getElementById('onibus'), m.lista(), { fundo: fundoCeu, depois(ctx, P, s) { rodas(ctx, P, s, ro, t * 3); } });
+  }
+
+  // ---------------------------------------------------------------- a rua vista da calçada
+  let noite = false, horizonte = true;
+  const btnNoite = document.getElementById('btn-noite'), btnHor = document.getElementById('btn-horizonte');
+  btnNoite.addEventListener('click', () => { noite = !noite; btnNoite.setAttribute('aria-pressed', String(noite)); desenharRua(); desenharMapa(); });
+  btnHor.addEventListener('click', () => { horizonte = !horizonte; btnHor.setAttribute('aria-pressed', String(horizonte)); desenharRua(); desenharMapa(); });
+  function rnd(i) { const x = Math.sin(i * 127.1 + 311.7) * 43758.5453; return x - Math.floor(x); }
+  function desenharRua() {
+    const cv = document.getElementById('rua'), ctx = cv.getContext('2d');
+    const W = cv.width, H = cv.height, u = 6, chaoY = 352;
+    const g = ctx.createLinearGradient(0, 0, 0, chaoY);
+    if (noite) { g.addColorStop(0, '#16163a'); g.addColorStop(1, '#3b3570'); } else { g.addColorStop(0, '#8fcdf5'); g.addColorStop(1, '#e6f4fb'); }
+    ctx.fillStyle = g; ctx.fillRect(0, 0, W, chaoY);
+    if (noite) { ctx.fillStyle = '#fff8dc'; ctx.beginPath(); ctx.arc(1080, 60, 18, 0, 7); ctx.fill(); }
+    // horizonte: torres altas bem longe, na cor da névoa
+    if (horizonte) {
+      for (let i = 0; i < 34; i++) {
+        const x = i * 37 - 10 + rnd(i) * 12, w = 22 + rnd(i + 9) * 26, h = 90 + rnd(i + 3) * 210;
+        ctx.fillStyle = noite ? '#4a4682' : '#b6cfe0';
+        ctx.fillRect(x, chaoY - h, w, h);
+        if (rnd(i + 5) > 0.6) { ctx.fillRect(x + w * 0.3, chaoY - h - 18, w * 0.4, 18); ctx.fillRect(x + w * 0.47, chaoY - h - 34, w * 0.06, 16); }
+        if (noite) { ctx.fillStyle = 'rgba(255,214,107,0.55)'; for (let k = 0; k < 14; k++) if (rnd(i * 31 + k) > 0.55) ctx.fillRect(x + 3 + rnd(k + i) * (w - 6), chaoY - h + 6 + rnd(k * 7 + i) * (h - 20), 2, 2); }
+      }
+      const n = ctx.createLinearGradient(0, chaoY - 300, 0, chaoY); n.addColorStop(0, 'rgba(0,0,0,0)'); n.addColorStop(1, noite ? 'rgba(59,53,112,0.75)' : 'rgba(230,244,251,0.8)');
+      ctx.fillStyle = n; ctx.fillRect(0, chaoY - 300, W, 300);
+    }
+    // calçada e rua
+    ctx.fillStyle = noite ? '#7e7b76' : C.calcada; ctx.fillRect(0, chaoY, W, 18);
+    ctx.fillStyle = '#8f8b84'; ctx.fillRect(0, chaoY + 18, W, 4);
+    ctx.fillStyle = noite ? '#2c2d33' : C.asfalto; ctx.fillRect(0, chaoY + 22, W, H - chaoY - 22);
+    ctx.fillStyle = C.faixa; for (let x = 0; x < W; x += 60) ctx.fillRect(x, chaoY + 54, 32, 4);
+    const jan = (x, y, w, h, i) => { const acesa = noite && rnd(i) > 0.45; ctx.fillStyle = acesa ? C.acesa : (noite ? '#2e3a55' : C.janela); ctx.fillRect(x, y, w, h); ctx.fillStyle = 'rgba(255,255,255,0.65)'; ctx.fillRect(x - 1, y + h, w + 2, 2); };
+    const caixa = (x, topo) => { ctx.fillStyle = '#3b3f48'; ctx.fillRect(x + 2, topo - 10, 2, 10); ctx.fillRect(x + 16, topo - 10, 2, 10); ctx.fillStyle = noite ? '#6d4a2c' : C.tabua; ctx.fillRect(x, topo - 30, 20, 20); ctx.fillStyle = noite ? '#55391f' : C.tabuaEsc; for (let k = 0; k < 3; k++) ctx.fillRect(x, topo - 27 + k * 7, 20, 2); ctx.beginPath(); ctx.moveTo(x - 2, topo - 30); ctx.lineTo(x + 10, topo - 40); ctx.lineTo(x + 22, topo - 30); ctx.fill(); };
+    // casas de pedra marrom (4 andares)
+    let x = 20;
+    for (let i = 0; i < 3; i++) {
+      const w = 7 * u, h = 16 * u, topo = chaoY - h;
+      ctx.fillStyle = noite ? '#4b2f22' : C.marrom; ctx.fillRect(x, topo, w, h);
+      ctx.fillStyle = noite ? '#3a2318' : C.marromEsc; ctx.fillRect(x - 2, topo - 5, w + 4, 6);
+      for (let a = 1; a < 4; a++) for (let k = 0; k < 2; k++) jan(x + 6 + k * 18, chaoY - a * 24 - 18, 10, 13, i * 10 + a * 3 + k);
+      // escadinha
+      ctx.fillStyle = noite ? '#3a2318' : C.marromEsc; for (let k = 0; k < 4; k++) ctx.fillRect(x + w - 14 - k * 5, chaoY - 4 - k * 4, 18 + k * 5, 4);
+      ctx.fillStyle = noite ? '#2a170f' : C.porta; ctx.fillRect(x + w - 14, chaoY - 38, 10, 22);
+      if (i !== 1) caixa(x + 10, topo - 5);
+      x += w;
+    }
+    // prédio de tijolo com escada de incêndio e padaria (5 andares)
+    { const w = 12 * u, h = 20 * u, topo = chaoY - h;
+      ctx.fillStyle = noite ? '#6b3125' : C.tijolo; ctx.fillRect(x, topo, w, h);
+      for (let a = 1; a < 5; a++) for (let k = 0; k < 3; k++) jan(x + 8 + k * 22, chaoY - a * 24 - 18, 12, 14, 50 + a * 5 + k);
+      ctx.strokeStyle = '#25282e'; ctx.lineWidth = 2;
+      for (let a = 1; a < 5; a++) { const y = chaoY - a * 24 - 2; ctx.strokeRect(x + 4, y - 10, w - 8, 10); ctx.beginPath(); ctx.moveTo(x + (a % 2 ? 10 : w - 12), y); ctx.lineTo(x + (a % 2 ? w - 18 : 18), y + 22 > chaoY - 26 ? chaoY - 28 : y + 22); ctx.stroke(); }
+      // toldo listrado e placa da padaria (só desenho: pão)
+      for (let k = 0; k < 9; k++) { ctx.fillStyle = k % 2 ? C.toldoB : C.toldoV; ctx.beginPath(); ctx.moveTo(x + k * 8, chaoY - 30); ctx.lineTo(x + k * 8 + 8, chaoY - 30); ctx.lineTo(x + k * 8 + 10, chaoY - 20); ctx.lineTo(x + k * 8 + 2, chaoY - 20); ctx.fill(); }
+      ctx.fillStyle = noite ? C.acesa : '#f6e9c8'; ctx.fillRect(x + 6, chaoY - 18, w - 30, 18);
+      ctx.fillStyle = '#c98a3e'; ctx.beginPath(); ctx.ellipse(x + 26, chaoY - 9, 11, 5, 0, 0, 7); ctx.fill();
+      ctx.fillStyle = noite ? '#2a170f' : C.porta; ctx.fillRect(x + w - 18, chaoY - 22, 10, 22);
+      caixa(x + 40, topo); x += w; }
+    // esquina art déco (6 andares) com topo em degraus
+    { const w = 16 * u, h = 24 * u, topo = chaoY - h;
+      ctx.fillStyle = noite ? '#a69b86' : C.creme; ctx.fillRect(x, topo, w, h);
+      ctx.fillRect(x + 8, topo - 18, w - 16, 18); ctx.fillRect(x + 20, topo - 34, w - 40, 16); ctx.fillRect(x + 36, topo - 52, w - 72, 18);
+      ctx.fillStyle = C.dourado; ctx.fillRect(x, topo, w, 4); ctx.fillRect(x + 8, topo - 18, w - 16, 3); ctx.fillRect(x + 20, topo - 34, w - 40, 3); ctx.fillRect(x + w / 2 - 2, topo - 74, 4, 22);
+      for (let a = 1; a < 6; a++) { ctx.fillStyle = C.dourado; ctx.fillRect(x, chaoY - a * 24, w, 2); for (let k = 0; k < 5; k++) jan(x + 8 + k * 18, chaoY - a * 24 - 18, 9, 15, 90 + a * 7 + k); }
+      ctx.fillStyle = noite ? C.acesa : C.janela; ctx.fillRect(x + 8, chaoY - 20, w - 30, 16);
+      ctx.fillStyle = noite ? '#2a170f' : C.porta; ctx.fillRect(x + w - 16, chaoY - 22, 10, 22);
+      x += w; }
+    // entrada do metrô (enfeite): grade verde, dois globos, escada que desce
+    { const ex = x + 40; ctx.fillStyle = '#2f6b45'; ctx.fillRect(ex, chaoY - 12, 46, 3); for (let k = 0; k <= 46; k += 6) ctx.fillRect(ex + k, chaoY - 12, 2, 12);
+      for (const gx of [ex - 4, ex + 46]) { ctx.fillStyle = '#2f6b45'; ctx.fillRect(gx + 1, chaoY - 36, 3, 36); ctx.fillStyle = noite ? '#9ff0b8' : '#5fbf7f'; ctx.beginPath(); ctx.arc(gx + 2.5, chaoY - 40, 6, 0, 7); ctx.fill(); }
+      ctx.fillStyle = '#f2f2ee'; ctx.fillRect(ex + 14, chaoY - 30, 18, 12); ctx.fillStyle = '#2f6b45'; ctx.fillRect(ex + 16, chaoY - 27, 14, 5); ctx.fillStyle = '#222'; ctx.fillRect(ex + 17, chaoY - 21, 2, 2); ctx.fillRect(ex + 27, chaoY - 21, 2, 2);
+      x = ex + 70; }
+    // ipê e poste
+    { ctx.fillStyle = '#6b4a2b'; ctx.fillRect(x + 20, chaoY - 50, 6, 50); ctx.fillStyle = noite ? '#8a4d7a' : '#e889c5'; for (let k = 0; k < 7; k++) { ctx.beginPath(); ctx.arc(x + 23 + Math.cos(k) * 18, chaoY - 66 + Math.sin(k * 2) * 10, 16, 0, 7); ctx.fill(); }
+      const px = x + 80; ctx.fillStyle = '#3b3f48'; ctx.fillRect(px, chaoY - 80, 4, 80); ctx.fillRect(px - 10, chaoY - 82, 18, 4);
+      if (noite) { const lg = ctx.createRadialGradient(px - 6, chaoY - 76, 2, px - 6, chaoY - 76, 70); lg.addColorStop(0, 'rgba(255,230,150,0.7)'); lg.addColorStop(1, 'rgba(255,230,150,0)'); ctx.fillStyle = lg; ctx.fillRect(px - 80, chaoY - 150, 150, 160); }
+      ctx.fillStyle = noite ? '#fff1b0' : '#e8e3c6'; ctx.fillRect(px - 10, chaoY - 78, 8, 5);
+      x = px + 30; }
+    // segunda fileira de casas até o fim
+    while (x < W) { const w = 7 * u, h = (12 + (Math.floor(x) % 3) * 4) * u, topo = chaoY - h; ctx.fillStyle = noite ? '#4b2f22' : C.marrom; ctx.fillRect(x, topo, w, h); ctx.fillStyle = noite ? '#3a2318' : C.marromEsc; ctx.fillRect(x - 2, topo - 5, w + 4, 6); for (let a = 1; a < h / 24; a++) for (let k = 0; k < 2; k++) jan(x + 6 + k * 18, chaoY - a * 24 - 18, 10, 13, x + a * 3 + k); x += w; }
+    // táxi e ônibus na rua (de lado), rodas redondas
+    const roda = (cx, cy, r) => { ctx.fillStyle = C.pneu; ctx.beginPath(); ctx.arc(cx, cy, r, 0, 7); ctx.fill(); ctx.fillStyle = C.calota; ctx.beginPath(); ctx.arc(cx, cy, r * 0.45, 0, 7); ctx.fill(); };
+    { const tx = 170, ty = chaoY + 40; ctx.fillStyle = C.taxi; ctx.fillRect(tx, ty, 96, 22); ctx.fillRect(tx + 22, ty - 18, 50, 18); ctx.fillStyle = noite ? '#2e3a55' : C.janela; ctx.fillRect(tx + 26, ty - 14, 19, 13); ctx.fillRect(tx + 49, ty - 14, 19, 13); ctx.fillStyle = '#fff6c8'; ctx.fillRect(tx + 40, ty - 24, 14, 6); ctx.fillStyle = '#222'; for (let k = 0; k < 6; k++) ctx.fillRect(tx + 4 + k * 15, ty + 10, 7, 3);
+      if (noite) { ctx.fillStyle = 'rgba(255,240,170,0.8)'; ctx.fillRect(tx + 96, ty + 4, 6, 6); } roda(tx + 20, ty + 24, 10); roda(tx + 76, ty + 24, 10); }
+    { const bx = 640, by = chaoY + 30; ctx.fillStyle = C.azul; ctx.fillRect(bx, by, 196, 34); ctx.fillStyle = C.branco; ctx.fillRect(bx, by - 26, 196, 26); ctx.fillStyle = noite ? '#e8d37a' : C.janela; for (let k = 0; k < 7; k++) ctx.fillRect(bx + 8 + k * 26, by - 22, 20, 17); ctx.fillStyle = '#cfd8e3'; ctx.fillRect(bx + 150, by - 4, 18, 36); roda(bx + 34, by + 36, 11); roda(bx + 160, by + 36, 11); }
+  }
+
+  // ---------------------------------------------------------------- planta da cidade vista de cima
+  function desenharMapa() {
+    const cv = document.getElementById('mapa'), ctx = cv.getContext('2d');
+    const W = cv.width, H = cv.height;
+    ctx.fillStyle = noite ? '#1e2a22' : '#9fcf86'; ctx.fillRect(0, 0, W, H);
+    const cx = W / 2, cy = H / 2, k = 1.05;
+    if (horizonte) { for (let i = 0; i < 40; i++) { const a = i / 40 * Math.PI * 2, r = 195 + rnd(i) * 14; ctx.fillStyle = noite ? '#4a4682' : '#9fb3c4'; ctx.fillRect(cx + Math.cos(a) * r - 4, cy + Math.sin(a) * r * 0.95 - 4, 8, 8); } ctx.fillStyle = noite ? '#d7d3ff' : '#4d5d6e'; ctx.font = "500 12px 'IBM Plex Sans', sans-serif"; ctx.fillText('torres ao longe (só desenho)', cx + 70, cy - 196); }
+    const w = 168 * k, h = 150 * k, x0 = cx - w / 2, y0 = cy - h / 2;
+    ctx.fillStyle = noite ? '#565654' : C.calcada; ctx.fillRect(x0, y0, w, h);
+    for (let i = 0; i < 4; i++) for (let j = 0; j < 6; j++) {
+      const bx = x0 + (8 + i * 40) * k, by = y0 + (6 + j * 24) * k, bw = 32 * k, bh = 18 * k;
+      const parque = (i === 1 || i === 2) && (j === 2 || j === 3);
+      if (parque) continue;
+      const centro = (i === 1 || i === 2) && (j === 1 || j === 4) || (i === 0 || i === 3) && (j === 2 || j === 3);
+      ctx.fillStyle = centro ? (noite ? '#8e8672' : C.creme) : (noite ? '#5b3a2a' : C.marrom); ctx.fillRect(bx, by, bw, bh);
+      ctx.strokeStyle = 'rgba(0,0,0,0.25)'; ctx.lineWidth = 1; for (let l = 1; l < 4; l++) { ctx.beginPath(); ctx.moveTo(bx + l * bw / 4, by); ctx.lineTo(bx + l * bw / 4, by + bh); ctx.stroke(); } ctx.beginPath(); ctx.moveTo(bx, by + bh / 2); ctx.lineTo(bx + bw, by + bh / 2); ctx.stroke();
+    }
+    // parque grande
+    const px = x0 + 48 * k, py = y0 + 54 * k, pw = 72 * k, ph = 42 * k;
+    ctx.fillStyle = noite ? '#2c5a2c' : '#5fae4a'; ctx.fillRect(px, py, pw, ph);
+    ctx.fillStyle = noite ? '#24476b' : '#5aa9e0'; ctx.beginPath(); ctx.ellipse(px + pw * 0.62, py + ph * 0.55, pw * 0.16, ph * 0.22, 0, 0, 7); ctx.fill();
+    ctx.strokeStyle = noite ? '#7a7a6a' : '#e9dfc4'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(px, py + ph / 2); ctx.lineTo(px + pw, py + ph / 2); ctx.moveTo(px + pw * 0.3, py); ctx.lineTo(px + pw * 0.3, py + ph); ctx.stroke();
+    ctx.fillStyle = noite ? '#e6e3ff' : '#1c1b2b'; ctx.font = "600 13px 'IBM Plex Sans', sans-serif"; ctx.fillText('parque', px + 6, py + 16);
+    // avenidas e ruas
+    ctx.fillStyle = noite ? '#2c2d33' : C.asfalto;
+    for (let i = 0; i < 5; i++) ctx.fillRect(x0 + (i * 40 + 2) * k, y0, 4 * k, h);
+    for (let j = 0; j < 7; j++) ctx.fillRect(x0, y0 + (j * 24 + 1) * k, w, 4 * k);
+    ctx.fillStyle = noite ? '#e6e3ff' : '#1c1b2b'; ctx.font = "500 12px 'IBM Plex Sans', sans-serif";
+    ctx.fillText('avenidas', x0 + 2, y0 - 6); ctx.fillText('ruas', x0 + w + 6, y0 + 28);
+    // nascimento e canteiro
+    const nx = x0 + 44 * k, ny = y0 + 99 * k; ctx.fillStyle = '#ffcc1a'; ctx.beginPath(); ctx.arc(nx, ny, 6, 0, 7); ctx.fill(); ctx.strokeStyle = '#1c1b2b'; ctx.lineWidth = 1.5; ctx.stroke();
+    ctx.fillStyle = noite ? '#fff' : '#1c1b2b'; ctx.fillText('nasce aqui, junto do canteiro', nx - 10, ny + 22);
+  }
+
+  // ---------------------------------------------------------------- cruzamento (vista de cima)
+  const cz = document.getElementById('cruz');
+  const B = 12; // pixels por bloco
+  const N = 50; // blocos no quadro
+  const caixaIni = 23, caixaFim = 27;
+  const LIVRE = 3 * 1.6; // devagar (demonstração um pouco mais rápida que o jogo)
+  const ACEL = 3;
+  // pistas: eixo, sentido, coordenada fixa (centro da faixa)
+  const PISTAS = { leste: { eixo: 'h', dir: 1, fixo: 26 }, oeste: { eixo: 'h', dir: -1, fixo: 24 }, sul: { eixo: 'v', dir: 1, fixo: 24 }, norte: { eixo: 'v', dir: -1, fixo: 26 } };
+  const veic = [
+    { id: 1, pista: 'leste', p: 2, tam: 4, v: 0, cor: C.taxi },
+    { id: 2, pista: 'leste', p: 14, tam: 4, v: 0, cor: C.taxi },
+    { id: 3, pista: 'oeste', p: 40, tam: 8, v: 0, cor: C.azul, onibus: true, parada: 36, parou: 0 },
+    { id: 4, pista: 'sul', p: 6, tam: 4, v: 0, cor: C.taxi },
+    { id: 5, pista: 'norte', p: 44, tam: 4, v: 0, cor: C.taxi },
+  ];
+  // p = coordenada da frente do veículo ao longo do eixo, no sentido dele (sempre crescente: pos = dir>0 ? p : N - p)
+  const crianca = { x: 8, y: 30, naRua: false, arrastando: false };
+  window.__cruzamento = { veic, crianca, naCaixa, PISTAS };
+  let reserva = null; let esperaOutro = 0;
+  const btnCri = document.getElementById('btn-crianca');
+  btnCri.addEventListener('click', () => { crianca.naRua = !crianca.naRua; btnCri.setAttribute('aria-pressed', String(crianca.naRua)); if (crianca.naRua) { crianca.x = 19.5; crianca.y = 26; } else { crianca.x = 8; crianca.y = 30; } });
+  let somCarro = false; const btnSom = document.getElementById('btn-somcarro');
+  btnSom.addEventListener('click', () => { somCarro = !somCarro; btnSom.setAttribute('aria-pressed', String(somCarro)); });
+  const fom = new Audio('sons/buzininha-perto.mp3'); fom.preload = 'none';
+  function pontoDoCanvas(ev) { const r = cz.getBoundingClientRect(); return [(ev.clientX - r.left) / r.width * N, (ev.clientY - r.top) / r.height * N]; }
+  cz.addEventListener('pointerdown', ev => { const [x, y] = pontoDoCanvas(ev); if (Math.hypot(x - crianca.x, y - crianca.y) < 3) { crianca.arrastando = true; cz.setPointerCapture(ev.pointerId); } });
+  cz.addEventListener('pointermove', ev => { if (!crianca.arrastando) return; const [x, y] = pontoDoCanvas(ev); crianca.x = Math.max(1, Math.min(N - 1, x)); crianca.y = Math.max(1, Math.min(N - 1, y)); });
+  cz.addEventListener('pointerup', () => { crianca.arrastando = false; const naRua = (crianca.y > 22 && crianca.y < 28) || (crianca.x > 22 && crianca.x < 28); crianca.naRua = naRua; btnCri.setAttribute('aria-pressed', String(naRua)); });
+
+  function posMundo(ve, p) { const pi = PISTAS[ve.pista]; const ax = pi.dir > 0 ? p : N - p; return pi.eixo === 'h' ? [ax, pi.fixo] : [pi.fixo, ax]; }
+  function naCaixa(ve) { // trecho [p - tam, p] cruza a caixa?
+    const pi = PISTAS[ve.pista]; const a = ve.p - ve.tam, b = ve.p;
+    const ini = pi.dir > 0 ? caixaIni : N - caixaFim, fim = pi.dir > 0 ? caixaFim : N - caixaIni;
+    return b > ini && a < fim;
+  }
+  function limitesCaixa(ve) { const pi = PISTAS[ve.pista]; return pi.dir > 0 ? [caixaIni, caixaFim] : [N - caixaFim, N - caixaIni]; }
+  function passoCruz(dt, agora) {
+    // quem está na caixa
+    for (const v of veic) { const [, f] = limitesCaixa(v); if (v.reservou && v.p - v.tam > f) v.reservou = false; }
+    const dentro = veic.filter(v => naCaixa(v) || v.reservou);
+    if (!dentro.length) reserva = null; else reserva = PISTAS[dentro[0].pista].eixo;
+    for (const ve of veic) {
+      const pi = PISTAS[ve.pista];
+      let dist = Infinity;
+      // da frente na mesma pista (com volta)
+      for (const o of veic) if (o !== ve && o.pista === ve.pista) { let d = (o.p - o.tam) - ve.p; if (d < -1) d += N + 12; dist = Math.min(dist, d - 2); }
+      // criança na faixa à frente
+      const [cxm, cym] = [crianca.x, crianca.y];
+      const lateral = pi.eixo === 'h' ? Math.abs(cym - pi.fixo) : Math.abs(cxm - pi.fixo);
+      if (lateral < 1.6) { const ax = pi.eixo === 'h' ? cxm : cym; const pc = pi.dir > 0 ? ax : N - ax; const d = pc - ve.p; if (d > -0.5 && d < 12) { dist = Math.min(dist, d - 1.5); ve.porCrianca = d < 6; } else ve.porCrianca = false; } else ve.porCrianca = false;
+      // cruzamento: só entra com a caixa livre (ou do mesmo eixo) e com lugar do outro lado
+      const [ini, fim] = limitesCaixa(ve);
+      if (ve.p <= ini + 0.01 && !naCaixa(ve)) {
+        let pode = ve.reservou || reserva === null || (reserva === pi.eixo && esperaOutro < 3);
+        // lugar do outro lado
+        for (const o of veic) if (o !== ve && o.pista === ve.pista && o.p > fim && (o.p - o.tam) < fim + ve.tam + 1) pode = false;
+        if (!pode) { dist = Math.min(dist, ini - ve.p - 0.3); ve.esperando = (ve.esperando || 0) + dt; }
+        else { ve.esperando = 0; if (ini - ve.p < 2.5) { reserva = pi.eixo; ve.reservou = true; } }
+      } else ve.esperando = 0;
+      // parada do ônibus
+      if (ve.onibus) { const d = ve.parada - ve.p; if (d > -0.2 && d < 6 && ve.parou < 3) { dist = Math.min(dist, d); if (Math.abs(d) < 0.2 && ve.v < 0.1) ve.parou += dt; } if (d < -2) ve.parou = 0; }
+      const alvo = Math.min(LIVRE, Math.sqrt(2 * ACEL * Math.max(0, dist)));
+      if (ve.v < alvo) ve.v = Math.min(alvo, ve.v + ACEL * dt); else ve.v = Math.max(alvo, ve.v - ACEL * 2.5 * dt);
+      if (dist <= 0.02) ve.v = 0;
+      ve.p += ve.v * dt;
+      if (ve.p - ve.tam > N + 2) ve.p -= N + 12;
+      if (ve.porCrianca && ve.v < 0.05 && (!ve.buzinou || agora - ve.buzinou > 6)) { ve.buzinou = agora; ve.balao = agora; if (somCarro) { try { fom.currentTime = 0; fom.play().catch(() => {}); } catch (e) {} } }
+    }
+    const esperam = veic.filter(v => v.esperando > 0 && PISTAS[v.pista].eixo !== reserva);
+    esperaOutro = esperam.length ? Math.max(...esperam.map(v => v.esperando)) : 0;
+  }
+  function desenharCruz(agora) {
+    const ctx = cz.getContext('2d'), W = cz.width;
+    ctx.fillStyle = C.grama; ctx.fillRect(0, 0, W, W);
+    // calçadas
+    ctx.fillStyle = C.calcada; ctx.fillRect(0, (caixaIni - 2) * B, W, (caixaFim - caixaIni + 4) * B); ctx.fillRect((caixaIni - 2) * B, 0, (caixaFim - caixaIni + 4) * B, W);
+    ctx.fillStyle = C.asfalto; ctx.fillRect(0, caixaIni * B, W, 4 * B); ctx.fillRect(caixaIni * B, 0, 4 * B, W);
+    // linha do meio
+    ctx.fillStyle = C.faixa; for (let k = 0; k < N; k += 3) { if (k + 2 < caixaIni - 2 || k > caixaFim + 1) { ctx.fillRect(k * B, 25 * B - 1, 2 * B, 2); ctx.fillRect(25 * B - 1, k * B, 2, 2 * B); } }
+    // zebras
+    ctx.fillStyle = '#f2f2ee';
+    for (let k = 0; k < 4; k++) { ctx.fillRect((caixaIni + k) * B + 2, (caixaIni - 2) * B, B - 4, 2 * B - 2); ctx.fillRect((caixaIni + k) * B + 2, (caixaFim) * B + 2, B - 4, 2 * B - 2); ctx.fillRect((caixaIni - 2) * B, (caixaIni + k) * B + 2, 2 * B - 2, B - 4); ctx.fillRect(caixaFim * B + 2, (caixaIni + k) * B + 2, 2 * B - 2, B - 4); }
+    // cruzamento reservado
+    ctx.fillStyle = reserva ? 'rgba(255,214,107,0.35)' : 'rgba(255,255,255,0.08)'; ctx.fillRect(caixaIni * B, caixaIni * B, 4 * B, 4 * B);
+    // ponto de ônibus
+    ctx.fillStyle = C.azul; ctx.fillRect((N - 36 - 1) * B, (caixaIni - 2) * B + 2, 2 * B, B - 2); ctx.fillStyle = '#fff'; ctx.font = "700 10px 'IBM Plex Sans', sans-serif"; ctx.fillText('ponto', (N - 37) * B - 2, (caixaIni - 2) * B - 3);
+    // veículos
+    for (const ve of veic) {
+      const pi = PISTAS[ve.pista]; const [fx, fy] = posMundo(ve, ve.p); const [tx, ty] = posMundo(ve, ve.p - ve.tam);
+      const x0 = Math.min(fx, tx), y0 = Math.min(fy, ty);
+      const larg = 1.8;
+      const rx = pi.eixo === 'h' ? x0 * B : (pi.fixo - larg / 2) * B, ry = pi.eixo === 'h' ? (pi.fixo - larg / 2) * B : y0 * B;
+      const rw = pi.eixo === 'h' ? ve.tam * B : larg * B, rh = pi.eixo === 'h' ? larg * B : ve.tam * B;
+      ctx.fillStyle = 'rgba(0,0,0,0.25)'; ctx.fillRect(rx + 2, ry + 3, rw, rh);
+      ctx.fillStyle = ve.cor; ctx.fillRect(rx, ry, rw, rh);
+      ctx.fillStyle = ve.onibus ? '#f2f2ee' : '#8fcbe9';
+      if (ve.onibus) ctx.fillRect(rx + 3, ry + 3, rw - 6, rh - 6); else { if (pi.eixo === 'h') ctx.fillRect(rx + rw * 0.3, ry + 3, rw * 0.4, rh - 6); else ctx.fillRect(rx + 3, ry + rh * 0.3, rw - 6, rh * 0.4); }
+      if (!ve.onibus) { ctx.fillStyle = '#fff6c8'; ctx.fillRect(rx + rw / 2 - 3, ry + rh / 2 - 3, 6, 6); }
+      if (ve.balao && agora - ve.balao < 1.4) { const [bx, by] = posMundo(ve, ve.p - ve.tam / 2); ctx.fillStyle = '#fff'; ctx.strokeStyle = 'rgba(0,0,0,0.3)'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.roundRect ? ctx.roundRect(bx * B - 34, by * B - 44, 68, 24, 10) : ctx.rect(bx * B - 34, by * B - 44, 68, 24); ctx.fill(); ctx.stroke(); ctx.fillStyle = '#1c1b2b'; ctx.font = "700 13px 'Pixelify Sans', monospace"; ctx.textAlign = 'center'; ctx.fillText('fom-fom!', bx * B, by * B - 27); ctx.textAlign = 'left'; }
+    }
+    // criança
+    ctx.fillStyle = 'rgba(0,0,0,0.25)'; ctx.beginPath(); ctx.arc(crianca.x * B + 2, crianca.y * B + 3, B * 0.75, 0, 7); ctx.fill();
+    ctx.fillStyle = C.vermelho; ctx.beginPath(); ctx.arc(crianca.x * B, crianca.y * B, B * 0.75, 0, 7); ctx.fill();
+    ctx.fillStyle = C.pele; ctx.beginPath(); ctx.arc(crianca.x * B, crianca.y * B, B * 0.42, 0, 7); ctx.fill();
+    ctx.fillStyle = '#1c1b2b'; ctx.font = "600 12px 'IBM Plex Sans', sans-serif"; ctx.fillText('arraste', crianca.x * B + 12, crianca.y * B - 10);
+  }
+
+  // ---------------------------------------------------------------- laço
+  let antes = performance.now();
+  function quadro(agoraMs) {
+    const dt = Math.min(0.05, (agoraMs - antes) / 1000); antes = agoraMs; const t = agoraMs / 1000;
+    if (animar) {
+      for (const p of passos) p.f(p.cv, t);
+      passoCruz(dt, t); desenharCruz(t);
+      desenharVeiculos(t);
+    }
+    obraEstado.forEach((e, i) => {
+      if (e.enchendo && t - ultimoEncher > 0.18) { ultimoEncher = t; e.cheios = Math.min(OBRAS[i].length, e.cheios + 1); if (e.cheios >= OBRAS[i].length) e.enchendo = false; }
+      if (animar || e.enchendo || !e.desenhado) {
+        const m = cenaObra(OBRAS[i], e.cheios, { pronta: e.cheios >= OBRAS[i].length });
+        desenhar(obrasCv[i], m.lista(), { fundo: fundoCeu }); e.desenhado = true;
+      }
+    });
+    requestAnimationFrame(quadro);
+  }
+  // primeiro quadro parado (para a miniatura e para quem não quer movimento)
+  for (const p of passos) p.f(p.cv, 0);
+  desenharPredios(); desenharRua(); desenharMapa(); desenharVeiculos(0); desenharCruz(0);
+  requestAnimationFrame(quadro);
+})();
+</script>
