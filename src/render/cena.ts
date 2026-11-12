@@ -81,6 +81,8 @@ import {
   normalizarHora,
 } from './atmosfera';
 import { criarCeu } from './ceu';
+import { criarHorizonte } from './horizonte';
+import { LARGURA_CIDADE, PROFUNDIDADE_CIDADE } from '../world/cidade';
 import { criarAgua } from './agua';
 import { criarVagalumes } from './vagalumes';
 import { coresDasPlantas, definirCoresPlantas } from '../mesh/plantasBrinquedo';
@@ -345,6 +347,8 @@ export interface EstadoDepuracao {
   /** Povoados a até 900 blocos do jogador (centro da praça e altura do piso). */
   /** Spec 014: o plano da Cidade Grande do mundo (testes de tela), ou null. */
   cidade?: () => PlanoCidade | null;
+  /** Spec 014 (T10): o horizonte de torres (null fora da cidade). */
+  horizonte?: () => { triangulos: number; ativo: boolean } | null;
   povoados?: () => {
     id: string;
     cx: number;
@@ -1047,6 +1051,20 @@ export function criarCena(
   const ceu = criarCeu(scene);
   const agua = criarAgua(scene);
   glow.addExcludedMesh(ceu.malha);
+  // spec 014 (T10): o horizonte de torres ao longe, só na Cidade Grande
+  const planoHorizonte = cidadeDoMundo(semente);
+  const horizonte = planoHorizonte
+    ? criarHorizonte(
+        scene,
+        semente,
+        planoHorizonte.ox + LARGURA_CIDADE / 2,
+        planoHorizonte.oz + PROFUNDIDADE_CIDADE / 2,
+        planoHorizonte.h,
+      )
+    : null;
+  if (horizonte) glow.addExcludedMesh(horizonte.malha);
+  estado.horizonte = () =>
+    horizonte ? { triangulos: horizonte.triangulos, ativo: horizonte.malha.isEnabled() } : null;
   const vagalumes = criarVagalumes(scene);
 
   // Pós-processamento: HDR, tonemapping ACES, bloom suave, vinheta e FXAA.
@@ -1374,6 +1392,14 @@ export function criarCena(
     mundoPlanta.luzBlocos = mundoSolido.luzBlocos;
     mundoPlanta.definirBruma(bruma, forca);
     ceu.atualizar(a, tempo);
+    horizonte?.atualizar(
+      cameraVisao.position,
+      camera.position,
+      scene.fogColor,
+      scene.fogDensity,
+      luzDia,
+      a.noite,
+    );
     agua.atualizar(a, tempo, cameraVisao.position, {
       cor: scene.fogColor,
       densidade: scene.fogDensity,
