@@ -1,7 +1,7 @@
 ---
 id: 019-som-vivo
 title: 'Som vivo: trilhas que acompanham o mundo e vozes de verdade para os bichos'
-status: IN_PROGRESS
+status: DONE
 base_branch: main
 branch: feat/som-vivo
 created_at: 2026-11-11T12:00:00Z
