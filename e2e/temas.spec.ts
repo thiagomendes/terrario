@@ -124,6 +124,11 @@ for (const [id, nome] of TEMAS) {
     await expect(page.locator('[data-mundo-atual]')).toContainText(nome);
     // joga: quebra o bloco mirado e salva
     await page.evaluate(() => document.querySelector('.entrada')?.setAttribute('hidden', ''));
+    // spec 014: o chão da Cidade Grande é protegido (016); quebra fora dela, no mundo natural
+    await page.evaluate(() => {
+      const c = window.__brumaluz!.cidade?.();
+      if (c) window.__brumaluz!.teleportar!(c.plana.x0 - 40.5, c.nascimento.z);
+    });
     // olha para o chão até ter um bloco na mira. Com vários testes juntos o chão em volta
     // demora a chegar do worker: reaponta a cada meio segundo e, se nada aparecer em 20 s,
     // põe o jogador de novo em cima do terreno (o chão já carregado)
