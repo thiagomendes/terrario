@@ -191,6 +191,8 @@ async function iniciar(app: HTMLElement): Promise<void> {
     },
   });
   criarDicaMira();
+  // esboço da spec 014 (só com ?esboco=cidade): pedaço à parte, o jogo nunca o carrega
+  if (params.get('esboco') === 'cidade') (await import('./esboco/cidade')).prepararEsbocoCidade();
   // em prévia de outro tema nada é salvo: o mundo continua sendo do tema dele
   cena = criarCena(canvas, hotbar, {
     mundo: atual,

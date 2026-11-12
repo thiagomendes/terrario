@@ -73,6 +73,18 @@ th { font-weight: 600; background: var(--cartao); }
 tr:last-child td { border-bottom: 0; }
 ol.perguntas { margin: 0; padding-left: 1.4em; display: grid; gap: 10px; max-width: 76ch; }
 ol.perguntas li span { color: var(--suave); }
+.fotos { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); gap: 14px; }
+.fotos.duas-colunas { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+@media (max-width: 700px) { .fotos.duas-colunas { grid-template-columns: 1fr; } }
+.fotos figure, .celulares figure { margin: 0; display: grid; gap: 6px; min-width: 0; }
+.fotos img, .celulares img { display: block; width: 100%; max-width: 100%; height: auto; border-radius: 12px; border: 1px solid var(--linha); background: var(--cartao); }
+.fotos figcaption, .celulares figcaption { font-size: 0.9rem; color: var(--suave); }
+.fotos figcaption b, .celulares figcaption b { color: var(--fg); font-weight: 600; }
+.celulares { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
+@media (max-width: 760px) { .celulares { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.esquema { font: 600 0.78rem var(--corpo); letter-spacing: 0.12em; text-transform: uppercase; color: var(--suave); margin-top: 6px; }
+.aviso { background: var(--cartao); border: 1px solid var(--linha); border-radius: 12px; padding: 12px 16px; max-width: 76ch; font-size: 0.95rem; }
+.aceita { color: var(--acento); font-weight: 600; }
 .veredito { border-left: 4px solid var(--acento); padding: 4px 0 4px 14px; max-width: 72ch; }
 @media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
 </style>
@@ -81,7 +93,8 @@ ol.perguntas li span { color: var(--suave); }
   <header style="display:grid;gap:10px">
     <div class="olho">Terrário · spec 014 · esboço para aprovar</div>
     <h1>Cidade Grande</h1>
-    <p class="intro">Como a cidade fica e como a criança brinca nela, desenhado em blocos como no jogo. Primeiro o canteiro de obras (a atividade da cidade), depois as obras, um prédio, uma quadra vista da calçada com o horizonte ao longe, os carrinhos no cruzamento e os sons para ouvir. No fim, as perguntas que precisam de resposta antes de começar.</p>
+    <p class="intro">Como a cidade fica e como a criança brinca nela. As fotos são do jogo de verdade (o mesmo motor, os blocos, o plástico de brinquedo, a luz e os bonecos), num palco montado só para o esboço. Embaixo de cada foto ficam os desenhos que explicam o que a foto não mostra. Primeiro o canteiro de obras, depois as obras, os prédios, a rua com o horizonte, os carrinhos e os sons.</p>
+    <p class="aviso"><b>O que é provisório nas fotos:</b> o tema da cidade ainda não existe, então o palco usa o céu, a luz e os moradores do Rancho Alegre (o pedreiro é o carpinteiro do Rancho com um capacete; o cachorro é o do sítio). Asfalto, faixa, zebra, pedra marrom, janela, pedra creme, friso dourado e janela acesa são texturas pintadas por cima de blocos que já existem. Fantasmas, táxi, ônibus, toldos, escada de incêndio, tapume, postes, placa e horizonte são peças de brinquedo feitas para o esboço. Os blocos e peças de verdade entram nas tarefas da spec.</p>
     <div class="botoes" role="group" aria-label="Movimento">
       <button id="btn-movimento" aria-pressed="true">Desenhos animados</button>
     </div>
@@ -91,6 +104,16 @@ ol.perguntas li span { color: var(--suave); }
     <div class="olho">A atividade da cidade</div>
     <h2 id="t-canteiro">O canteiro de obras, do jeito da criança</h2>
     <p class="texto">O pedreiro mostra a planta de uma obra pequena em blocos azuis, meio apagados, no lugar onde ela vai ficar. A criança enche os blocos azuis, um por um. Quando termina, a obra vira parte da cidade, com festa. Tudo funciona sem ler.</p>
+    <div class="fotos">
+      <figure><img src="imagens/canteiro-1-fantasmas.jpg" alt="Canteiro com a planta da casinha do cachorro em blocos azuis translúcidos; a criança com a colher na mão e o pedreiro de capacete amarelo ao lado; tapume laranja e branco em volta" loading="lazy"><figcaption><b>1 · A planta em blocos fantasmas.</b> A camada de baixo pulsa; a criança tem a colher na mão; o pedreiro está do outro lado.</figcaption></figure>
+      <figure><img src="imagens/canteiro-2-metade.jpg" alt="A casinha do cachorro pela metade: paredes de tábua de verdade embaixo, fantasmas azuis em cima" loading="lazy"><figcaption><b>2 · Metade feita.</b> O que entrou é bloco de verdade; o resto continua azul.</figcaption></figure>
+      <figure><img src="imagens/canteiro-3-pronta.jpg" alt="Casinha do cachorro pronta com telhado vermelho, o cachorro na porta, confete no ar e a placa Feita por Ana e Léo" loading="lazy"><figcaption><b>3 · Pronta.</b> Confete, o cachorro vai morar lá, a placa diz quem fez, e o tapume some.</figcaption></figure>
+    </div>
+    <div class="celulares">
+      <figure><img src="imagens/celular-canteiro-fantasmas.jpg" alt="No celular em pé: o canteiro com os fantasmas" loading="lazy"><figcaption><b>Celular:</b> os fantasmas.</figcaption></figure>
+      <figure><img src="imagens/celular-canteiro-pronta.jpg" alt="No celular em pé: a casinha pronta com confete" loading="lazy"><figcaption><b>Celular:</b> pronta.</figcaption></figure>
+    </div>
+    <p class="esquema">Esquema dos passos (o que a foto não mostra: a colher chegando, o bloco errado)</p>
     <div class="passos">
       <div class="quadro"><span class="num">1 · Chegar</span><canvas id="p1" width="400" height="300"></canvas><p class="legenda">Ela já nasce ao lado do canteiro. <b>O pedreiro acena</b> e vem até ela. Os blocos azuis mostram a casinha do cachorro.</p></div>
       <div class="quadro"><span class="num">2 · Ganhar a colher</span><canvas id="p2" width="400" height="300"></canvas><p class="legenda">A <b>colher de pedreiro</b> cai sozinha na mão, com brilho e "plim". Nenhum botão para entender.</p></div>
@@ -108,7 +131,12 @@ ol.perguntas li span { color: var(--suave); }
   <section aria-labelledby="t-obras">
     <div class="olho">As plantas</div>
     <h2 id="t-obras">Três das seis obras</h2>
-    <p class="texto">Toque em "Encher" para ver a obra subir de baixo para cima, como a criança faria. As seis vão da casinha do cachorro (mais fácil) ao coreto da praça (para fazer junto).</p>
+    <p class="texto">As seis vão da casinha do cachorro (mais fácil) ao coreto da praça (para fazer junto). Abaixo, o ponto de ônibus e a sorveteria prontos no jogo; nos desenhos, toque em "Encher" para ver a obra subir de baixo para cima.</p>
+    <div class="fotos duas-colunas">
+      <figure><img src="imagens/obra-ponto-de-onibus.jpg" alt="Ponto de ônibus pronto na calçada: duas colunas, parede de vidro, teto de laje, banco e a placa azul com um ônibus desenhado" loading="lazy"><figcaption><b>Ponto de ônibus</b> (20 blocos). Pronto, o ônibus passa a parar aqui.</figcaption></figure>
+      <figure><img src="imagens/obra-sorveteria.jpg" alt="Sorveteria de esquina pronta, de tábua clara com vitrines, telhado listrado, toldo rosa e uma casquinha de sorvete em cima" loading="lazy"><figcaption><b>Sorveteria de esquina</b> (54 blocos), com toldo e a casquinha no telhado.</figcaption></figure>
+    </div>
+    <p class="esquema">Esquema das plantas</p>
     <div class="tres">
       <div class="quadro"><h3>Casinha do cachorro</h3><canvas id="o1" width="360" height="280"></canvas><div class="botoes"><button data-obra="0">Encher</button></div><p class="legenda" id="o1-l"></p></div>
       <div class="quadro"><h3>Ponto de ônibus</h3><canvas id="o2" width="360" height="280"></canvas><div class="botoes"><button data-obra="1">Encher</button></div><p class="legenda" id="o2-l"></p></div>
@@ -120,6 +148,11 @@ ol.perguntas li span { color: var(--suave); }
     <div class="olho">De 2 a 6 andares, tudo de visitar</div>
     <h2 id="t-predios">Dois prédios da cidade</h2>
     <p class="texto">À esquerda, a casa geminada de pedra marrom (4 andares) com a escadinha na frente, a escada de incêndio de grade e a caixa d'água de madeira. À direita, o prédio de esquina art déco (6 andares) com o topo em degraus. "Ver por dentro" corta a frente: escada do térreo ao terraço e apartamentos com cama, mesa e baú.</p>
+    <div class="fotos duas-colunas">
+      <figure><img src="imagens/predio-geminadas.jpg" alt="Casas geminadas de pedra marrom com escadinha de pedra na frente das portas, janelas grandes e cornija" loading="lazy"><figcaption><b>Casas geminadas</b> de pedra marrom (3 e 4 andares), escadinha e corrimão.</figcaption></figure>
+      <figure><img src="imagens/predio-art-deco.jpg" alt="Prédio de esquina art déco de 6 andares em pedra creme com frisos dourados, topo em degraus e agulha" loading="lazy"><figcaption><b>Esquina art déco</b>, 6 andares, topo em degraus e toldo verde no térreo.</figcaption></figure>
+    </div>
+    <p class="esquema">Esquema por dentro</p>
     <div class="botoes"><button id="btn-corte" aria-pressed="false">Ver por dentro</button></div>
     <div class="duas">
       <div class="quadro"><canvas id="pr1" width="520" height="480"></canvas><p class="legenda"><b>Casa geminada</b>, 4 andares de 4 blocos. Lojinha nenhuma: só morar.</p></div>
@@ -131,6 +164,20 @@ ol.perguntas li span { color: var(--suave); }
     <div class="olho">Jeito de Manhattan, sem copiar nada</div>
     <h2 id="t-rua">Uma quadra vista da calçada</h2>
     <p class="texto">Casas de pedra marrom, prédio de tijolo com escada de incêndio e padaria de toldo, a esquina art déco, caixas d'água nos telhados, a entrada do metrô (só enfeite), poste, ipê, táxi amarelo e ônibus. Nenhum prédio famoso, marca ou nome de verdade. Ao fundo, o horizonte de torres que não dá para alcançar.</p>
+    <div class="fotos duas-colunas">
+      <figure><img src="imagens/rua-dia.jpg" alt="Vista da calçada: casas de pedra marrom, prédio de tijolo com escada de incêndio de grade, toldo listrado da padaria com um pão, postes e a esquina art déco" loading="lazy"><figcaption><b>De dia.</b> Escada de incêndio, padaria de toldo (a placa é um pão), postes.</figcaption></figure>
+      <figure><img src="imagens/rua-noite.jpg" alt="A mesma quadra de noite, com janelas acesas e postes acesos" loading="lazy"><figcaption><b>De noite.</b> Janelas acesas e postes; o céu escuro do tema.</figcaption></figure>
+      <figure><img src="imagens/rua-esquina-dia.jpg" alt="Olhando pela avenida: táxi, postes, a esquina art déco e torres altas ao longe" loading="lazy"><figcaption><b>Pela avenida, de dia,</b> com as torres do horizonte ao fundo.</figcaption></figure>
+      <figure><img src="imagens/rua-esquina-noite.jpg" alt="Pela avenida de noite: torres ao longe com janelinhas acesas" loading="lazy"><figcaption><b>Pela avenida, de noite.</b> As torres viram silhuetas com janelinhas.</figcaption></figure>
+    </div>
+    <div class="celulares">
+      <figure><img src="imagens/celular-rua-dia.jpg" alt="No celular em pé: a quadra de dia" loading="lazy"><figcaption><b>Celular:</b> de dia.</figcaption></figure>
+      <figure><img src="imagens/celular-rua-noite.jpg" alt="No celular em pé: a quadra de noite" loading="lazy"><figcaption><b>Celular:</b> de noite.</figcaption></figure>
+    </div>
+    <div class="fotos">
+      <figure><img src="imagens/cidade-do-alto.jpg" alt="A cidade vista do alto: avenida e rua em grade, quarteirões, parque com lago e árvores, os prédios, o canteiro e o anel de torres ao longe" loading="lazy"><figcaption><b>Do alto:</b> avenida e rua, um pedaço do parque com lago, o canteiro, e as torres ao longe. No jogo a grade inteira tem 5 avenidas e 7 ruas; o palco montou só uma esquina.</figcaption></figure>
+    </div>
+    <p class="esquema">Esquema da quadra e da cidade inteira</p>
     <div class="botoes" role="group" aria-label="Rua">
       <button id="btn-noite" aria-pressed="false">De noite</button>
       <button id="btn-horizonte" aria-pressed="true">Horizonte ao longe</button>
@@ -155,6 +202,11 @@ ol.perguntas li span { color: var(--suave); }
     <div class="olho">Pedido do dono · bloco que pode ser cortado</div>
     <h2 id="t-carros">Táxis e ônibus de blocos</h2>
     <p class="texto">Carroceria de blocos e rodas redondas, sem marca nenhuma. Ninguém quebra, ninguém leva. Andam sozinhos em voltas fixas, devagar (mais devagar que a criança correndo), param no cruzamento e para quem estiver na frente.</p>
+    <div class="fotos duas-colunas">
+      <figure><img src="imagens/veiculos-parados.jpg" alt="Táxi amarelo de peças de brinquedo com rodas redondas e luzinha no teto, e o ônibus azul e branco parado atrás" loading="lazy"><figcaption><b>Táxi e ônibus</b> de brinquedo, rodas redondas, sem marca nenhuma.</figcaption></figure>
+      <figure><img src="imagens/veiculos-cruzamento.jpg" alt="Táxi parado antes da faixa de pedestre com uma criança atravessando" loading="lazy"><figcaption><b>O táxi espera</b> a criança atravessar na faixa, sem encostar.</figcaption></figure>
+    </div>
+    <p class="esquema">Esquema dos veículos e do cruzamento</p>
     <div class="duas">
       <div class="quadro"><canvas id="taxi" width="520" height="300"></canvas><p class="legenda"><b>Táxi amarelo</b>, 4 × 2 blocos, luzinha no teto sem letra, faróis que acendem de noite.</p></div>
       <div class="quadro"><canvas id="onibus" width="520" height="300"></canvas><p class="legenda"><b>Ônibus</b> azul e branco, 8 × 2 × 3, porta que abre na parada.</p></div>
@@ -213,18 +265,19 @@ ol.perguntas li span { color: var(--suave); }
   </section>
 
   <section aria-labelledby="t-perguntas">
-    <div class="olho">Para responder antes de começar</div>
+    <div class="olho">Respondidas em 12 nov 2026</div>
     <h2 id="t-perguntas">Perguntas ao dono</h2>
+    <p class="texto">O dono aceitou as nove recomendações como estavam. A spec continua em rascunho até ele aprovar este esboço com as fotos do jogo.</p>
     <ol class="perguntas">
-      <li>A obra feita é <b>da cidade</b> (protegida, com o nome das crianças na placa), e não de quem fez. <span>Recomendo: sim, ninguém desmancha por engano.</span></li>
-      <li>A colher de pedreiro enche sem gastar material, também na sobrevivência. <span>Recomendo: sim, é o caminho dos pequenos.</span></li>
-      <li>Táxis e ônibus entram na versão mínima, depois do canteiro, como bloco que pode ser cortado. <span>Recomendo: sim, a versão mínima; complexidade média para alta.</span></li>
-      <li>O horizonte de torres ao longe entra. <span>Recomendo: sim, é barato.</span></li>
-      <li>O rio com ponte fica para depois; agora, lago no parque. <span>Recomendo: depois.</span></li>
-      <li>Plantas dos prédios em texto em vez de MagicaVoxel, se o teste com uma casa confirmar. <span>Recomendo: texto, a menos que você queira desenhar.</span></li>
-      <li>Os blocos novos aparecem nos outros temas com a mesma textura (só o nome muda). <span>Recomendo: sim.</span></li>
-      <li>O gato de rua é domado com peixe (só na cidade). <span>Recomendo: sim.</span></li>
-      <li>Sem elevador nesta etapa. <span>Recomendo: depois.</span></li>
+      <li>A obra feita é <b>da cidade</b> (protegida, com o nome das crianças na placa), e não de quem fez. <span class="aceita">Aceito.</span> <span>Recomendação: sim, ninguém desmancha por engano.</span></li>
+      <li>A colher de pedreiro enche sem gastar material, também na sobrevivência. <span class="aceita">Aceito.</span> <span>Recomendação: sim, é o caminho dos pequenos.</span></li>
+      <li>Táxis e ônibus entram na versão mínima, depois do canteiro, como bloco que pode ser cortado. <span class="aceita">Aceito.</span> <span>Recomendação: sim, a versão mínima; complexidade média para alta.</span></li>
+      <li>O horizonte de torres ao longe entra. <span class="aceita">Aceito.</span> <span>Recomendação: sim, é barato.</span></li>
+      <li>O rio com ponte fica para depois; agora, lago no parque. <span class="aceita">Aceito.</span> <span>Recomendação: depois.</span></li>
+      <li>Plantas dos prédios em texto em vez de MagicaVoxel, se o teste com uma casa confirmar. <span class="aceita">Aceito.</span> <span>Recomendação: texto, a menos que você queira desenhar.</span></li>
+      <li>Os blocos novos aparecem nos outros temas com a mesma textura (só o nome muda). <span class="aceita">Aceito.</span> <span>Recomendação: sim.</span></li>
+      <li>O gato de rua é domado com peixe (só na cidade). <span class="aceita">Aceito.</span> <span>Recomendação: sim.</span></li>
+      <li>Sem elevador nesta etapa. <span class="aceita">Aceito.</span> <span>Recomendação: depois.</span></li>
     </ol>
   </section>
 </div>

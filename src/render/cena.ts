@@ -322,6 +322,8 @@ export interface EstadoDepuracao {
   /** Hora do dia em [0, 1): 0 meia-noite, 0.5 meio-dia. Gravável nos testes. */
   /** Leva o jogador para o topo do terreno em (x, z) (testes e capturas). */
   teleportar?: (x: number, z: number, y?: number) => void;
+  /** Esboços e testes: um lote de edições de uma vez (valor = bloco | meta << 8), em pedaços de 4096. */
+  editarLote?: (lote: { x: number; y: number; z: number; v: number }[]) => void;
   /** Pausa o relógio do dia (testes e capturas). */
   salvar?: (comMiniatura?: boolean) => Promise<boolean>;
   ultimoSalvamento?: number;
@@ -2159,6 +2161,9 @@ export function criarCena(
     // a câmera vai junto, sem atravessar o caminho, e o boneco chega de costas para ela
     orbita.encaixar();
     animador.definirYaw(camera.rotation.y);
+  };
+  estado.editarLote = (lote) => {
+    for (let i = 0; i < lote.length; i += 4096) editarLote(lote.slice(i, i + 4096));
   };
   estado.bloco = blocoEm;
   estado.meta = (x, y, z) => edicoes.obterMeta(x, y, z);

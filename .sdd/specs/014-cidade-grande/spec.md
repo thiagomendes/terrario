@@ -24,7 +24,7 @@ Separada da spec 013 em 7 nov 2026: o dono escolheu fazer o Rancho Alegre primei
 
 O dono pediu em 10 nov 2026 que a cidade já nasça com o jeito dela, em vez de herdar a roça dos outros temas (a 018 vem depois e cuida dos outros). Em 12 nov 2026 ele decidiu a atividade: **canteiro de obras**. No mesmo dia pediu o **jeito de Manhattan** (sem copiar nada de verdade) e **carrinhos e ônibus** andando sozinhos pelas ruas, "se não ficar complexo demais".
 
-**Esboço para aprovar:** `referencia/cidade.html` (o canteiro passo a passo, as plantas das obras, um prédio, uma quadra vista da calçada, o horizonte, os carrinhos no cruzamento e os sons para ouvir). Nada é implementado antes da aprovação.
+**Esboço para aprovar:** `referencia/cidade.html` (o canteiro passo a passo, as plantas das obras, um prédio, uma quadra vista da calçada, o horizonte, os carrinhos no cruzamento e os sons para ouvir). Nada é implementado antes da aprovação. As fotos do esboço são do motor de verdade, num palco só para isso: `src/esboco/cidade.ts` (carregado só com `?esboco=cidade`, num pedaço à parte que o jogo nunca baixa) e as capturas de `e2e/esboco-cidade.spec.ts` (`ESBOCO_CIDADE=1`, na GPU). Texturas e peças do palco são provisórias; as de verdade vêm da T02 em diante.
 
 ## Objetivo
 - **Cidade Grande, o 8º tema**, com cara de cidade grande de brinquedo: ruas em grade, avenidas, um parque grande no meio, prédios de 2 a 6 andares que dá para visitar, lojinhas com toldo e moradores.
@@ -308,18 +308,22 @@ Ordem: T01 primeiro (decide a ferramenta); T02 a T04 abrem a cidade; T05 a T07 s
 - **Veículos** (ver "Complexidade"): é o pedaço mais arriscado e por isso é um bloco separado.
 - **Propriedade intelectual** (020): nada de prédio famoso, marca, logotipo ou nome de verdade; conferido na auditoria.
 
-## Perguntas ao dono (antes de começar)
-1. A obra feita é da cidade (blindada, com o nome de quem fez na placa) e não da criança. Pode ser assim?
-2. A colher de pedreiro enche os fantasmas sem gastar material, também na sobrevivência. Pode?
-3. Carrinhos e ônibus: entrar na versão mínima (4 táxis e 1 ônibus em circuitos fixos, depois do canteiro, bloco cortável) ou deixar para uma spec própria?
-4. Horizonte de torres ao longe: entra?
-5. Rio com ponte fica para depois (nesta etapa, lago no parque)?
-6. Plantas em texto em vez de MagicaVoxel, se a validação da T01 confirmar?
-7. Blocos novos com a mesma textura nos outros temas (só o nome muda)?
-8. Gato domado com peixe só na cidade?
-9. Sem elevador nesta etapa?
+## Perguntas ao dono (respondidas em 12 nov 2026)
+O dono aceitou as nove recomendações do esboço, como estavam escritas:
+1. A obra feita é da cidade (blindada, com o nome de quem fez na placa), e não da criança. **Sim.**
+2. A colher de pedreiro enche os fantasmas sem gastar material, também na sobrevivência. **Sim.**
+3. Carrinhos e ônibus entram na versão mínima (4 táxis e 1 ônibus em circuitos fixos), depois do canteiro, como bloco que pode ser cortado (T12 a T14). **Sim.**
+4. O horizonte de torres ao longe entra. **Sim.**
+5. O rio com ponte fica para depois; nesta etapa, lago no parque. **Sim.**
+6. Plantas dos prédios em texto em vez de MagicaVoxel, se a validação da T01 confirmar. **Sim.**
+7. Os blocos novos aparecem nos outros temas com a mesma textura (só o nome muda). **Sim.**
+8. O gato de rua é domado com peixe, só na cidade (`EstiloMundo.domar`). **Sim.**
+9. Sem elevador nesta etapa. **Sim.**
+
+A spec continua DRAFT até o dono aprovar o esboço novo, com as capturas do motor de verdade (`referencia/cidade.html`).
 
 ## Decisões do dono
 - 7 nov 2026: os nomes "Cidade Grande" e "Rancho Alegre"; começar pelo Rancho; bichos da noite fofos que não atacam.
 - 10 nov 2026: a cidade nasce com a atividade dela; sem Blender, MagicaVoxel só se ajudar de verdade.
 - 12 nov 2026: prédios de 2 a 6 andares; atividade = canteiro de obras; jeito de Manhattan sem copiar; carrinhos e ônibus, se não ficar complexo demais.
+- 12 nov 2026: aceitou as nove recomendações do esboço (ver "Perguntas ao dono"): obra da cidade, colher sem gastar material, carrinhos na versão mínima e cortável, horizonte, rio depois, plantas em texto, mesma textura nos outros temas, gato com peixe, sem elevador. Pediu o esboço refeito no visual de brinquedo do jogo (motor de verdade) antes de aprovar a spec.
