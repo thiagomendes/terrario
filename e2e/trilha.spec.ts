@@ -147,8 +147,13 @@ test('o controle "Música" de Configurações muda o volume da gravada', async (
   await expect.poll(async () => (await info(page)).volume).toBeCloseTo(padrao / 2, 5);
   await faixa.fill('0');
   await expect.poll(async () => (await info(page)).volume).toBe(0);
+  // calada, a gravada para e solta as camadas (nada decodificado à toa)
+  await expect.poll(async () => (await info(page)).gravada).toBe(false);
+  expect((await info(page)).medidas.abertos).toBe(0);
   await faixa.fill('0.6');
   await expect.poll(async () => (await info(page)).volume).toBeCloseTo(padrao, 5);
+  // e volta a entrar
+  await esperarGravada(page);
   expect(erros, erros.join('\n')).toEqual([]);
 });
 

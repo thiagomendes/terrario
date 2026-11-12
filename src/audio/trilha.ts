@@ -554,6 +554,8 @@ export class CarregadorTrilha {
   private bytesDec = 0;
   private pico = 0;
   private geracao = 0;
+  /** Sobe a cada `soltarAbertos`: o que estava na fila de abrir não abre depois. */
+  private geracaoAbertos = 0;
   private baixando: Promise<boolean> | null = null;
   private readonly buscar: Buscar;
   private readonly decodificar: Decodificar;
@@ -623,13 +625,15 @@ export class CarregadorTrilha {
     const clip = tema?.clips.find((c) => c.id === id);
     if (!tema || !clip || !this.pacote) return Promise.resolve(null);
     const geracao = this.geracao;
+    const gAbertos = this.geracaoAbertos;
+    const valendo = () => geracao === this.geracao && gAbertos === this.geracaoAbertos;
     const p = this.fila
       .then(async () => {
-        if (geracao !== this.geracao || !this.pacote) return null;
+        if (!valendo() || !this.pacote) return null;
         const bytes = fatiarClipe(this.pacote, clip);
         if (!bytes) return null;
         const b = await this.decodificar(bytes);
-        if (geracao !== this.geracao) return null;
+        if (!valendo()) return null;
         this.abertos.set(id, b);
         this.bytesDec += bytesDoBuffer(b);
         this.pico = Math.max(this.pico, this.bytesDec);
@@ -650,6 +654,14 @@ export class CarregadorTrilha {
     if (!b) return;
     this.abertos.delete(id);
     this.bytesDec = Math.max(0, this.bytesDec - bytesDoBuffer(b));
+  }
+
+  /** Solta os clipes abertos e os pedidos na fila; o pacote baixado fica. */
+  soltarAbertos(): void {
+    this.geracaoAbertos++;
+    this.abertos.clear();
+    this.abrindo.clear();
+    this.bytesDec = 0;
   }
 
   /** Solta tudo: clipes abertos, os pedidos na fila e o pacote baixado. */

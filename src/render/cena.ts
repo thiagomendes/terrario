@@ -3254,8 +3254,17 @@ export function criarCena(
   ativarNoPrimeiroGesto(document, ligarSom);
   // entrou por "Entrar" com o som já destravado: liga sem esperar outro toque
   if (contextoPreparado()) void ligarSom.ativar().catch(() => undefined);
+  /** A música se ouve? Calada ("Música" ou "Geral" em 0, ou mudo), nem baixa nem toca. */
+  const atualizarMusicaAudivel = () =>
+    trilha.definirAudivel(
+      !motorAudio.mudo &&
+        (!configAtual || (configAtual.volumeMusica > 0 && configAtual.volumeGeral > 0)),
+    );
   window.addEventListener('keydown', (e) => {
-    if (teclaParaMudo(e.code) && !e.repeat) motorAudio.alternarMudo();
+    if (teclaParaMudo(e.code) && !e.repeat) {
+      motorAudio.alternarMudo();
+      atualizarMusicaAudivel();
+    }
   });
   Object.defineProperty(estado, 'audio', {
     get: () => ({
@@ -3428,6 +3437,7 @@ export function criarCena(
     motorAudio.definirVolume('vozes', c.volumeVozes);
     configAtual = c;
     ambiente?.definirVolumes(c.volumeMusica, c.volumeAmbiente);
+    atualizarMusicaAudivel();
     controle.definirMouse(c.sensibilidade, c.inverterY);
     controle.definirPuloAutomatico(c.puloAutomatico);
     // "Balanço ao andar": com ele desligado, a câmera não volta sozinha para trás do boneco

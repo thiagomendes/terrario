@@ -147,4 +147,31 @@ describe('trilha do mundo', () => {
     expect(t.info().gravada).toBe(false);
     t.soltar();
   });
+
+  it('com a música calada não baixa nem toca; ao voltar, baixa e entra', async () => {
+    const car = carregador();
+    const amb = ambiente();
+    const t = criarTrilhaMundo('bruma-e-luz', { carregador: car });
+    t.definirAudivel(false);
+    t.ligar(amb);
+    t.baixar();
+    await vi.advanceTimersByTimeAsync(2000);
+    expect(t.info()).toMatchObject({ fase: 'esperando', gravada: false, audivel: false });
+    expect(t.info().medidas.bytesBaixados).toBe(0);
+    t.definirAudivel(true);
+    for (let i = 0; i < 40 && !t.info().gravada; i++) await vi.advanceTimersByTimeAsync(200);
+    expect(t.info().gravada).toBe(true);
+    expect(t.info().medidas.abertos).toBeGreaterThan(0);
+    // calou de novo (mudo): para e solta as camadas; o pacote fica para voltar logo
+    t.definirAudivel(false);
+    expect(t.info()).toMatchObject({ fase: 'pronta', gravada: false });
+    expect(t.info().medidas.abertos).toBe(0);
+    expect(t.info().medidas.bytesBaixados).toBeGreaterThan(0);
+    await vi.advanceTimersByTimeAsync(2000);
+    expect(t.info().gravada).toBe(false);
+    t.definirAudivel(true);
+    for (let i = 0; i < 40 && !t.info().gravada; i++) await vi.advanceTimersByTimeAsync(200);
+    expect(t.info().gravada).toBe(true);
+    t.soltar();
+  });
 });

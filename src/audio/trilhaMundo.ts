@@ -29,6 +29,8 @@ export interface InfoTrilha {
   /** 'esperando' (nada baixado), 'baixando', 'pronta' (baixada), 'tocando', 'falhou', 'solta'. */
   fase: 'esperando' | 'baixando' | 'pronta' | 'tocando' | 'falhou' | 'solta';
   gravada: boolean;
+  /** A música se ouve (`definirAudivel`). */
+  audivel: boolean;
   estado: EstadoTrilha;
   forcado: Partial<EstadoTrilha> | null;
   medidas: MedidasTrilha;
@@ -46,6 +48,11 @@ export interface TrilhaMundo {
    * com `baixar()`, quando o mundo fica pronto (o mundo nunca disputa a rede com a música).
    */
   ligar(amb: AmbienteTrilha): void;
+  /**
+   * A música se ouve? ("Música" ou "Geral" em 0, ou o mudo da tecla M: não.) Calada, não
+   * baixa, não decodifica e não toca; volta a se ouvir e entra subindo no próximo compasso.
+   */
+  definirAudivel(sim: boolean): void;
   /** O estado do mundo de agora (chamar a cada quadro; só muda a música quando muda). */
   definirEstado(e: EstadoTrilha): void;
   /** Testes: força parte do estado por cima do mundo (null volta ao mundo). */
@@ -80,6 +87,9 @@ export function criarTrilhaMundo(temaId: string, op: OpcoesTrilhaMundo = {}): Tr
   let aplicado: EstadoTrilha | null = null;
   let timer: ReturnType<typeof setInterval> | null = null;
   let solta = false;
+  let audivel = true;
+  /** O mundo ficou pronto e pediu o pacote (baixa quando a música se ouvir). */
+  let pedido = false;
   /** A gravada falhou ao tocar: fica a de hoje até sair do mundo (sem remontar a cada passo). */
   let desistiu = false;
 
@@ -87,7 +97,8 @@ export function criarTrilhaMundo(temaId: string, op: OpcoesTrilhaMundo = {}): Tr
   const temPerigo = () => !!carregador.tema?.clips.some((c) => c.id === 'perigo');
 
   function baixar(): void {
-    if (solta || fase !== 'esperando') return;
+    pedido = true;
+    if (solta || !audivel || fase !== 'esperando') return;
     fase = 'baixando';
     void carregador.baixar(temaId).then((ok) => {
       if (solta) return;
@@ -113,7 +124,7 @@ export function criarTrilhaMundo(temaId: string, op: OpcoesTrilhaMundo = {}): Tr
   }
 
   function passo(): void {
-    if (solta || desistiu || !ambiente || !carregador.pronto) return;
+    if (solta || desistiu || !audivel || !ambiente || !carregador.pronto) return;
     try {
       const e = estado();
       if (!motor) {
@@ -162,6 +173,23 @@ export function criarTrilhaMundo(temaId: string, op: OpcoesTrilhaMundo = {}): Tr
       timer = setInterval(passo, op.intervaloMs ?? 200);
       passo();
     },
+    definirAudivel(sim) {
+      if (sim === audivel || solta) return;
+      audivel = sim;
+      if (!sim) {
+        // calou: para a gravada e solta as camadas abertas (o pacote baixado fica)
+        if (motor) {
+          motor.parar(0.3);
+          motor = null;
+          aplicado = null;
+          if (fase === 'tocando') fase = 'pronta';
+        }
+        carregador.soltarAbertos();
+        return;
+      }
+      if (pedido) baixar();
+      passo();
+    },
     definirEstado(e) {
       mundo = e;
     },
@@ -193,6 +221,7 @@ export function criarTrilhaMundo(temaId: string, op: OpcoesTrilhaMundo = {}): Tr
         tema: temaId,
         fase,
         gravada: !!motor,
+        audivel,
         estado: estado(),
         forcado,
         medidas: carregador.medidas(),
