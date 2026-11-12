@@ -101,6 +101,21 @@ export function ganhoVozGravada(temaId: string, grupo: GrupoNivelVoz): number {
   return grupo === 'bichos' || grupo === 'moradores' ? GANHO_VOZ_GRAVADA : GANHO_BAQUE;
 }
 
+/** O golpe da própria criança nunca soa abaixo disto (o bicho pode estar a uns passos). */
+export const VOLUME_MINIMO_MEU_GOLPE = 0.35;
+
+/**
+ * Volume do golpe e da derrota de um bicho. O núcleo avisa todo golpe e toda derrota do mundo
+ * (de um amigo longe, o espectro que o sol desfaz, o bicho que caiu no vazio): esses soam pela
+ * distância e, longe ou sem a criatura à vista, não soam (0). Só o golpe da própria criança tem
+ * o piso, e soa mesmo se o bicho já sumiu da lista (a derrota chega depois).
+ * `distancia`: o volume da distância (0 a 1), ou null sem a criatura.
+ */
+export function volumeDoGolpeNoBicho(distancia: number | null, meu: boolean): number {
+  const v = distancia ?? 0;
+  return meu ? Math.max(VOLUME_MINIMO_MEU_GOLPE, v) : Math.max(0, v);
+}
+
 /** O "ai" entra logo depois do baque (s), como no esboço. */
 export const ATRASO_AI = 0.06;
 

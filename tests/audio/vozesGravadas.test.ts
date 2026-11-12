@@ -10,6 +10,8 @@ import {
   inicioSemAtraso,
   somDoGolpe,
   tomVariado,
+  volumeDoGolpeNoBicho,
+  VOLUME_MINIMO_MEU_GOLPE,
   type IndiceSons,
   type ReservaVozes,
 } from '../../src/audio/vozesGravadas';
@@ -319,5 +321,22 @@ describe('tocador de vozes gravadas', () => {
     vozes.carregar();
     await esperar();
     expect(vozes.pronto).toBe(true);
+  });
+});
+
+describe('volume do golpe e da derrota de um bicho', () => {
+  it('o meu golpe tem piso, mesmo sem a criatura na lista', () => {
+    expect(volumeDoGolpeNoBicho(1, true)).toBe(1);
+    expect(volumeDoGolpeNoBicho(0.1, true)).toBe(VOLUME_MINIMO_MEU_GOLPE);
+    expect(volumeDoGolpeNoBicho(0, true)).toBe(VOLUME_MINIMO_MEU_GOLPE);
+    expect(volumeDoGolpeNoBicho(null, true)).toBe(VOLUME_MINIMO_MEU_GOLPE);
+  });
+  it('o dos outros (amigo longe, espectro no sol, bicho no vazio) soa pela distância ou nada', () => {
+    expect(volumeDoGolpeNoBicho(0.6, false)).toBe(0.6);
+    expect(volumeDoGolpeNoBicho(0.1, false)).toBe(0.1);
+    // a 200 blocos: nada (antes, 35%)
+    expect(volumeDoGolpeNoBicho(0, false)).toBe(0);
+    // criatura que não se vê: nada (antes, 100%)
+    expect(volumeDoGolpeNoBicho(null, false)).toBe(0);
   });
 });

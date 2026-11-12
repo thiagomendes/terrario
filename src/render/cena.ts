@@ -7,6 +7,7 @@ import { encontrarNascimento } from '../world/chunk';
 import { povoadoDoTema, tema } from '../temas/ativo';
 import {
   criarVozesGravadas,
+  volumeDoGolpeNoBicho,
   type GeneroVoz,
   type MomentoBicho,
   type MomentoMorador,
@@ -3174,6 +3175,13 @@ export function criarCena(
         }
       : undefined,
   });
+  /** O bicho que a criança golpeou por último (o golpe dela soa mesmo um pouco longe). */
+  const meuAlvo = { id: -1, em: -Infinity };
+  const MEU_GOLPE_MS = 3000;
+  const marcarMeuAlvo = (id: number) => {
+    meuAlvo.id = id;
+    meuAlvo.em = performance.now();
+  };
   setTimeout(() => vozes.carregar(), 2500);
   // saiu do mundo: solta o pacote e as fatias; voltou pelo histórico (cache da página): baixa de novo
   window.addEventListener('pagehide', () => vozes.liberar());
@@ -3184,6 +3192,7 @@ export function criarCena(
     estado.sonsTocados = () => sonsTocados.slice();
     estado.atacarCriatura = (id) => {
       enviarTelemetria(true);
+      marcarMeuAlvo(id);
       enviar({ t: 'atacar', criatura: id, slot: hotbar.ativo });
     };
     estado.vozesGravadas = () => ({
@@ -3564,6 +3573,7 @@ export function criarCena(
     }
     animador.evento('golpe');
     enviarTelemetria(true);
+    marcarMeuAlvo(c.id);
     enviar({ t: 'atacar', criatura: c.id, slot: hotbar.ativo });
     return true;
   }
@@ -4249,6 +4259,12 @@ export function criarCena(
   const conteinerAberto = () => cliente.conteiner;
 
   const criaturaPorId = (id: number) => replicaCriaturas.lista.find((c) => c.id === id);
+  /** O volume do golpe ou da derrota de um bicho: o meu tem piso; o dos outros, pela distância. */
+  const volumeDoGolpe = (id: number) => {
+    const c = criaturaPorId(id);
+    const meu = id === meuAlvo.id && performance.now() - meuAlvo.em < MEU_GOLPE_MS;
+    return volumeDoGolpeNoBicho(c ? volumeDaDistancia(c) : null, meu);
+  };
   function tratarEvento(e: EventoNucleo): void {
     switch (e.e) {
       case 'gesto': // spec 015: gesto de um amigo ou de um morador que respondeu
@@ -4274,9 +4290,11 @@ export function criarCena(
         toast(`${obterItem(e.item)?.nome ?? 'Ferramenta'} quebrou!`);
         break;
       case 'criaturaFerida': {
-        // spec 019: o baque do material e do porte do bicho e o "ai" dele (nada de vidro)
+        // spec 019: o baque do material e do porte do bicho e o "ai" dele (nada de vidro);
+        // o golpe dos outros (ou de longe) soa pela distância, e longe não soa
+        const v = volumeDoGolpe(e.id);
+        if (v <= 0) break;
         const c = criaturaPorId(e.id);
-        const v = c ? Math.max(0.35, volumeDaDistancia(c)) : 1;
         // o morador não se machuca: só leva um susto ("opa!")
         if (e.tipo === 'morador') vozMorador(c, 'surpresa', v);
         else vozes.golpe(e.tipo, { volume: v, quem: e.id });
@@ -4284,12 +4302,10 @@ export function criarCena(
       }
       case 'criaturaMorreu':
         // spec 019: "puf" fofo ("plop" no peixe, robô desmontando na Lua), em vez do arbusto
+        // (o espectro que o sol desfaz ao amanhecer longe daqui não soa)
         if (e.tipo !== 'morador') {
-          const c = criaturaPorId(e.id);
-          vozes.derrota(e.tipo, {
-            volume: c ? Math.max(0.35, volumeDaDistancia(c)) : 1,
-            quem: e.id,
-          });
+          const v = volumeDoGolpe(e.id);
+          if (v > 0) vozes.derrota(e.tipo, { volume: v, quem: e.id });
         }
         if (e.drops) window.dispatchEvent(new CustomEvent('brumaluz:derrotou', { detail: e.tipo }));
         break;
