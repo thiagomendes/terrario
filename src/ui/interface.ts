@@ -132,12 +132,15 @@ body[data-overlay] .coleta-area, body.tela-titulo .coleta-area { display: none; 
   box-shadow: 0 2px 0 rgba(150, 110, 60, 0.35);
 }
 .hud .fps { top: 8px; right: 8px; }
-/* correção de 12 nov: quadros e nitidez, no alto e no meio (à vista também no celular) */
+/* correção de 12 nov: quadros e nitidez, no alto e no meio (à vista também no celular).
+ * No computador fica logo abaixo da bússola (alto 10px + 28px), que senão o cobria;
+ * no celular estreito a bússola some e ele volta para o alto. */
 .hud .nitidez {
-  position: absolute; top: calc(env(safe-area-inset-top, 0px) + 4px); left: 50%; transform: translateX(-50%);
+  position: absolute; top: calc(env(safe-area-inset-top, 0px) + 44px); left: 50%; transform: translateX(-50%);
   padding: 2px 9px; border-radius: 999px; background: rgba(20, 16, 40, 0.72); color: #fff;
   font: 700 0.7rem ui-monospace, SFMono-Regular, Menlo, monospace; white-space: nowrap; z-index: 2;
 }
+@media (max-width: 560px) { .hud .nitidez { top: calc(env(safe-area-inset-top, 0px) + 4px); } }
 .hud .som { top: 8px; left: 8px; }
 .hud .chip-hud { top: 40px; left: 8px; }
 `;
