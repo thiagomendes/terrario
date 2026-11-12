@@ -1,5 +1,5 @@
 import { tema } from '../temas/ativo';
-import { MISSOES, type Diario } from '../jogo/diario';
+import type { Diario } from '../jogo/diario';
 import { criarModal } from './mundos';
 import { iconeDoItem } from './icones';
 import { icone, type NomeIcone, PIXICONES } from './pixicones';
@@ -85,7 +85,7 @@ export function criarUiDiario(
     corpo.replaceChildren();
     const r = document.createElement('p');
     r.className = 'resumo';
-    r.textContent = `${d.total} de ${MISSOES.length} conquistas`;
+    r.textContent = `${d.total} de ${d.missoes.length} conquistas`;
     corpo.appendChild(r);
     let capitulo = '';
     for (const m of d.missoes) {

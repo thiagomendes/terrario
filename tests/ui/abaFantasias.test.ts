@@ -1,7 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import {
   CHAVE_ANTERIOR,
+  CHAVE_BRILHOU,
+  TEXTO_TRANCADA,
   guardarAnterior,
+  jaBrilhou,
+  marcarBrilhou,
+  podeVestirFantasia,
   guardarSubAba,
   lerAnterior,
   lerSubAba,
@@ -10,7 +15,12 @@ import {
   secoesDaAba,
 } from '../../src/ui/abaFantasias';
 import { ABAS } from '../../src/ui/personagem';
-import { aparenciaPadrao, aplicarCorpo, vestirFantasia } from '../../src/personagem/aparencia';
+import {
+  aparenciaPadrao,
+  aplicarCorpo,
+  desbloquear,
+  vestirFantasia,
+} from '../../src/personagem/aparencia';
 import { FANTASIAS, fantasiasDoGrupo } from '../../src/personagem/fantasias';
 import type { Armazenamento } from '../../src/personagem/persistencia';
 
@@ -109,5 +119,38 @@ describe('aba Fantasias no editor', () => {
     l.setItem(CHAVE_ANTERIOR, '{quebrado');
     expect(lerAnterior(l, 'feminino')).toBeUndefined();
     expect(lerAnterior(quebrada, 'feminino')).toBeUndefined();
+  });
+
+  it('spec 014: só deixa vestir a fantasia do canteiro depois de ganhar', () => {
+    const a = aparenciaPadrao();
+    for (const id of ['capacete-obra', 'colete-obra']) {
+      expect(podeVestirFantasia(id, a)).toBe(false);
+      expect(podeVestirFantasia(id, desbloquear(a, id))).toBe(true);
+    }
+    // ganhar o capacete não libera o colete
+    expect(podeVestirFantasia('colete-obra', desbloquear(a, 'capacete-obra'))).toBe(false);
+    // as de sempre são livres; id desconhecido não se veste
+    for (const f of FANTASIAS.filter((x) => !x.desbloqueio))
+      expect(podeVestirFantasia(f, a)).toBe(true);
+    expect(podeVestirFantasia('sumiu', a)).toBe(false);
+    expect(TEXTO_TRANCADA).toBe('Ganhe no canteiro da cidade');
+    // na aba da cidade as duas aparecem (trancadas), primeiro as do mundo
+    const [meu] = secoesDaAba('temas', 'cidade-grande');
+    expect(meu.fantasias.map((f) => f.id)).toEqual(['capacete-obra', 'colete-obra']);
+  });
+
+  it('spec 014: o brilho da peça ganha é uma vez só (e aguenta sem armazenamento)', () => {
+    const l = loja();
+    expect(jaBrilhou(l, 'capacete-obra')).toBe(false);
+    marcarBrilhou(l, 'capacete-obra');
+    marcarBrilhou(l, 'capacete-obra');
+    expect(jaBrilhou(l, 'capacete-obra')).toBe(true);
+    expect(jaBrilhou(l, 'colete-obra')).toBe(false);
+    expect(JSON.parse(l.dados.get(CHAVE_BRILHOU)!)).toEqual(['capacete-obra']);
+    l.setItem(CHAVE_BRILHOU, '{quebrado');
+    expect(jaBrilhou(l, 'capacete-obra')).toBe(false);
+    expect(() => marcarBrilhou(quebrada, 'capacete-obra')).not.toThrow();
+    expect(jaBrilhou(quebrada, 'capacete-obra')).toBe(false);
+    expect(jaBrilhou(null, 'capacete-obra')).toBe(false);
   });
 });

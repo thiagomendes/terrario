@@ -73,7 +73,7 @@ export function fantasiaParaSugerir(
   aparencia: Aparencia,
 ): FantasiaDef | undefined {
   if (!novo || !idMundo || jaSugerida(loja, idMundo)) return undefined;
-  const def = fantasiaDoTema(tema ?? 'bruma-e-luz');
+  const def = fantasiaDoTema(tema ?? 'bruma-e-luz', aparencia.desbloqueios);
   if (!def || aparencia.fantasia?.id === def.id) return undefined;
   return def;
 }

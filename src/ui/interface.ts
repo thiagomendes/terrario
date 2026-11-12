@@ -10,6 +10,7 @@ import type { EstadoAudio } from '../audio/motor';
 import { rotuloDoModelo, type Aparencia } from '../personagem/aparencia';
 import { rotuloDaFantasia } from '../personagem/fantasias';
 import { festejarNoPalco } from './abaFantasias';
+import { tocarSomInterface } from '../audio/somInterface';
 import { perguntar } from './dialogo';
 import {
   CHAVE_TESTAR,
@@ -664,6 +665,24 @@ export function criarInterface(
   nomeHud.textContent = rotuloNome(painel.aparencia());
   nomePrevia.textContent = rotuloNome(painel.aparencia());
   fotografarBoneco(previa, painel.aparencia(), 'corpo', 520);
+
+  // Spec 014: prêmio do canteiro da cidade (o núcleo decidiu; a cena avisa). Grava com o
+  // personagem, faz a festa da 017 e não veste sozinho: a criança escolhe na aba Fantasias.
+  const GANHOU: Record<string, string> = {
+    'capacete-obra': 'Ganhou o capacete de obra!',
+    'colete-obra': 'Ganhou o colete laranja!',
+  };
+  window.addEventListener('brumaluz:desbloqueio', (e) => {
+    const id = (e as CustomEvent<{ id?: unknown }>).detail?.id;
+    if (typeof id !== 'string' || !GANHOU[id]) return;
+    if (!painel.desbloquear(id)) return;
+    notificar(GANHOU[id], 'trofeu');
+    tocarSomInterface('conquista');
+    festejarNoPalco(pedestal);
+  });
+  (window as unknown as { __desbloqueios?: () => string[] }).__desbloqueios = () => [
+    ...(painel.aparencia().desbloqueios ?? []),
+  ];
 
   /** Abre o editor na aba Fantasias (de dentro do jogo também: como a tecla C). */
   function abrirEditorNasFantasias(): void {

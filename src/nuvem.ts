@@ -11,7 +11,7 @@ import {
   nomeSugerido,
   urlServidor,
 } from './cliente/identidade';
-import { rotuloDoModelo } from './personagem/aparencia';
+import { rotuloDoModelo, semDesbloqueios } from './personagem/aparencia';
 import { carregarAparencia } from './personagem/persistencia';
 import { estiloMundo } from './world/chunk';
 import type { EstiloMundo } from './temas/tipos';
@@ -205,7 +205,11 @@ function jogador(apelido: string) {
   const id = identidade();
   let aparencia: Record<string, unknown> = {};
   try {
-    aparencia = carregarAparencia(window.localStorage) as unknown as Record<string, unknown>;
+    // spec 014: o que a criança ganhou (os desbloqueios) fica no aparelho, não vai à sala
+    aparencia = semDesbloqueios(carregarAparencia(window.localStorage)) as unknown as Record<
+      string,
+      unknown
+    >;
   } catch {
     // sem armazenamento: aparência padrão
   }

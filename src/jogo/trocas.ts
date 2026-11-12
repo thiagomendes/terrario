@@ -3,7 +3,7 @@ import { idDoBloco } from './itens';
 import { Bloco } from '../world/blocks';
 import type { Profissao } from '../world/povoado';
 import type { EstiloMundo } from '../temas/tipos';
-import { trocaNoMundo } from './exclusivos';
+import { COLHER_PEDREIRO, trocaNoMundo } from './exclusivos';
 
 /**
  * Trocas dos moradores (spec 008): fixas por profissão, iguais em todo tema, sem
@@ -17,6 +17,13 @@ export interface Troca {
   id: string;
   dar: ItemTroca[];
   receber: ItemTroca;
+  /**
+   * Spec 014: a troca só existe nos mundos desta planta (a do pedreiro da cidade: tijolo,
+   * escada e toldo para o canteiro). Sem o campo, em todo tema (menos o exclusivo de outro).
+   */
+  planta?: 'cidade';
+  /** Spec 014: a troca da roça que o pedreiro da cidade não faz (a lista dele cabe em 8). */
+  foraDaCidade?: true;
 }
 
 const b = idDoBloco;
@@ -89,6 +96,33 @@ export const TROCAS: Record<Profissao, readonly Troca[]> = {
     { id: 'pao', dar: [{ item: 'trigo', qtd: 5 }], receber: { item: 'pao', qtd: 2 } },
   ],
   construtor: [
+    // spec 014 (T07): o pedreiro da cidade. A colher vem de graça (quem perdeu ganha outra)
+    // e os blocos das obras saem de coisas fáceis de juntar
+    { id: 'colher', dar: [], receber: { item: COLHER_PEDREIRO, qtd: 1 }, planta: 'cidade' },
+    {
+      id: 'tijolo',
+      dar: [{ item: b(Bloco.TERRA), qtd: 4 }],
+      receber: { item: b(Bloco.TIJOLOS), qtd: 8 },
+      planta: 'cidade',
+    },
+    {
+      id: 'escada',
+      dar: [{ item: b(Bloco.TABUAS), qtd: 6 }],
+      receber: { item: b(Bloco.ESCADA), qtd: 4 },
+      planta: 'cidade',
+    },
+    {
+      id: 'toldo-vermelho',
+      dar: [{ item: b(Bloco.LA_VERMELHA), qtd: 1 }],
+      receber: { item: b(Bloco.TOLDO_VERMELHO), qtd: 6 },
+      planta: 'cidade',
+    },
+    {
+      id: 'toldo-verde',
+      dar: [{ item: b(Bloco.LA_VERDE), qtd: 1 }],
+      receber: { item: b(Bloco.TOLDO_VERDE), qtd: 6 },
+      planta: 'cidade',
+    },
     {
       id: 'tabuas',
       dar: [{ item: b(Bloco.MADEIRA_RETORCIDA), qtd: 4 }],
@@ -96,6 +130,7 @@ export const TROCAS: Record<Profissao, readonly Troca[]> = {
     },
     {
       id: 'tijolos',
+      foraDaCidade: true,
       dar: [{ item: b(Bloco.PEDREGULHO), qtd: 10 }],
       receber: { item: b(Bloco.TIJOLOS_PEDRA), qtd: 8 },
     },
@@ -106,6 +141,7 @@ export const TROCAS: Record<Profissao, readonly Troca[]> = {
     },
     {
       id: 'cama',
+      foraDaCidade: true,
       dar: [{ item: b(Bloco.LA_BRANCA), qtd: 4 }],
       receber: { item: b(Bloco.CAMA), qtd: 1 },
     },
@@ -117,16 +153,19 @@ export const TROCAS: Record<Profissao, readonly Troca[]> = {
     // spec 013: curral e celeiro
     {
       id: 'cercas',
+      foraDaCidade: true,
       dar: [{ item: b(Bloco.TABUAS), qtd: 4 }],
       receber: { item: b(Bloco.CERCA), qtd: 4 },
     },
     {
       id: 'feno',
+      foraDaCidade: true,
       dar: [{ item: 'trigo', qtd: 10 }],
       receber: { item: b(Bloco.FENO), qtd: 1 },
     },
     {
       id: 'porteira',
+      foraDaCidade: true,
       dar: [{ item: b(Bloco.TABUAS), qtd: 4 }],
       receber: { item: b(Bloco.PORTEIRA), qtd: 1 },
     },

@@ -50,6 +50,33 @@ export interface Aparencia {
    * continuam guardados como estavam: tirar a fantasia é só apagar este campo.
    */
   fantasia?: FantasiaVestida;
+  /**
+   * Spec 014: peças ganhas no canteiro da cidade (capacete, colete). Ficam com o personagem,
+   * valem em qualquer mundo e nunca vão pela rede (ver `semDesbloqueios`). Sem nenhuma, o
+   * campo não existe (as aparências de antes saem iguais).
+   */
+  desbloqueios?: IdDesbloqueio[];
+}
+
+/** Spec 014: o que se ganha no canteiro da cidade (ids das fantasias que liberam). */
+export const DESBLOQUEIOS = ['capacete-obra', 'colete-obra'] as const;
+export type IdDesbloqueio = (typeof DESBLOQUEIOS)[number];
+/** Teto da lista guardada (sobra espaço para os próximos prêmios). */
+export const MAXIMO_DESBLOQUEIOS = 16;
+
+export function ehDesbloqueio(valor: unknown): valor is IdDesbloqueio {
+  return typeof valor === 'string' && (DESBLOQUEIOS as readonly string[]).includes(valor);
+}
+
+/** Só os ids conhecidos, sem repetir, até o teto. */
+function limparDesbloqueios(valor: unknown): IdDesbloqueio[] {
+  if (!Array.isArray(valor)) return [];
+  const lista: IdDesbloqueio[] = [];
+  for (const v of valor) {
+    if (lista.length >= MAXIMO_DESBLOQUEIOS) break;
+    if (ehDesbloqueio(v) && !lista.includes(v)) lista.push(v);
+  }
+  return lista;
 }
 
 export const TAMANHO_MAXIMO_NOME = 16;
@@ -284,7 +311,10 @@ export function aparenciaPadrao(modelo: ModeloId = 'andarilho'): Aparencia {
 }
 
 export function aplicarModelo(aparencia: Aparencia, modelo: ModeloId): Aparencia {
-  return { ...aparenciaPadrao(modelo), nome: aparencia.nome };
+  const a: Aparencia = { ...aparenciaPadrao(modelo), nome: aparencia.nome };
+  // outro modelo pronto é um look novo, mas o que a criança ganhou continua com ela
+  if (aparencia.desbloqueios?.length) a.desbloqueios = [...aparencia.desbloqueios];
+  return a;
 }
 
 function limparNome(valor: unknown): string {
@@ -319,7 +349,34 @@ export function normalizarAparencia(entrada: unknown): Aparencia {
   // aparências antigas (sem fantasia) saem iguais: o campo só existe quando há fantasia
   const fantasia = normalizarFantasia(obj.fantasia, a.corpo);
   if (fantasia) a.fantasia = fantasia;
+  // spec 014: idem para os desbloqueios (só existe com algum)
+  const desbloqueios = limparDesbloqueios(obj.desbloqueios);
+  if (desbloqueios.length) a.desbloqueios = desbloqueios;
   return a;
+}
+
+/** Spec 014: a criança já ganhou esta peça? */
+export function temDesbloqueio(a: Pick<Aparencia, 'desbloqueios'>, id: string): boolean {
+  return !!a.desbloqueios?.includes(id as IdDesbloqueio);
+}
+
+/** Spec 014: a aparência com mais uma peça ganha (id desconhecido ou repetido: igual). */
+export function desbloquear(a: Aparencia, id: string): Aparencia {
+  if (!ehDesbloqueio(id) || temDesbloqueio(a, id)) return a;
+  return normalizarAparencia({ ...a, desbloqueios: [...(a.desbloqueios ?? []), id] });
+}
+
+/**
+ * Spec 014: a aparência que vai pela rede (só o que está vestido). A lista do que a criança
+ * ganhou fica no aparelho: o servidor não confere e os amigos não precisam saber.
+ */
+export function semDesbloqueios<T extends { desbloqueios?: unknown }>(
+  a: T,
+): Omit<T, 'desbloqueios'> {
+  if (!('desbloqueios' in a)) return a as Omit<T, 'desbloqueios'>;
+  const copia = { ...a };
+  delete copia.desbloqueios;
+  return copia;
 }
 
 /**

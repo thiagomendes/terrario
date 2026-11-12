@@ -2,7 +2,10 @@ import { describe, expect, it } from 'vitest';
 import { criarInventario } from '../../src/jogo/inventario';
 import { registrarBlocos, obterItem } from '../../src/jogo/itens';
 import { registrarCatalogo } from '../../src/jogo/catalogo';
-import { fazerTroca, podeTrocar, TROCAS } from '../../src/jogo/trocas';
+import { fazerTroca, podeTrocar, TROCAS, trocasDoMundo } from '../../src/jogo/trocas';
+import type { EstiloMundo } from '../../src/temas/tipos';
+import '../../src/temas/todos';
+import { obterTema } from '../../src/temas';
 import { PROFISSOES } from '../../src/world/povoado';
 import { FUNDICAO, RECEITAS, TAGS, ingredientesDe } from '../../src/jogo/receitas';
 
@@ -12,8 +15,12 @@ registrarCatalogo();
 describe('trocas dos moradores', () => {
   it('todas as profissões têm de 3 a 8 trocas com itens que existem', () => {
     for (const p of PROFISSOES) {
-      expect(TROCAS[p].length).toBeGreaterThanOrEqual(3);
-      expect(TROCAS[p].length).toBeLessThanOrEqual(8);
+      // spec 014: a lista de cada mundo (a do pedreiro da cidade é outra) cabe em 8
+      for (const planta of ['vila', 'sitio', 'cidade'] as const) {
+        const n = trocasDoMundo(p, { povoado: { planta } } as unknown as EstiloMundo).length;
+        expect(n, `${p} em ${planta}`).toBeGreaterThanOrEqual(3);
+        expect(n, `${p} em ${planta}`).toBeLessThanOrEqual(8);
+      }
       for (const t of TROCAS[p]) {
         for (const d of [...t.dar, t.receber]) {
           expect(obterItem(d.item), `${p}/${t.id}: ${d.item}`).toBeTruthy();
@@ -89,7 +96,12 @@ describe('nenhum ciclo troca ↔ receita dá item do nada (auditoria 013)', () =
       for (const [c, n] of conta)
         for (const o of c.startsWith('#') ? (TAGS[c] ?? []) : [c]) {
           const dar = new Map([[o, n]]);
-          conversoes.push({ nome: `receita ${r.id}`, dar, item: r.resultado.item, qtd: r.resultado.qtd });
+          conversoes.push({
+            nome: `receita ${r.id}`,
+            dar,
+            item: r.resultado.item,
+            qtd: r.resultado.qtd,
+          });
         }
     }
     for (const [de, para] of Object.entries(FUNDICAO))
@@ -138,5 +150,17 @@ describe('nenhum ciclo troca ↔ receita dá item do nada (auditoria 013)', () =
       inv.adicionar('trigo', volta.resultado.qtd);
     }
     expect(inv.contar('trigo')).toBeLessThan(30);
+  });
+
+  // spec 014 (T07)
+  it('as trocas do pedreiro (colher, tijolo, escada, toldo) só existem na cidade', () => {
+    const naCidade = trocasDoMundo('construtor', obterTema('cidade-grande').mundo).map((t) => t.id);
+    expect(naCidade).toEqual(
+      expect.arrayContaining(['colher', 'tijolo', 'escada', 'toldo-vermelho']),
+    );
+    expect(naCidade.length).toBeLessThanOrEqual(8);
+    const fora = trocasDoMundo('construtor', obterTema('bruma-e-luz').mundo).map((t) => t.id);
+    for (const t of ['colher', 'tijolo', 'escada', 'toldo-vermelho', 'toldo-verde'])
+      expect(fora).not.toContain(t);
   });
 });

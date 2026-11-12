@@ -82,6 +82,9 @@ export function blocoNoMundo(b: number, estilo: EstiloMundo): boolean {
 
 /** A troca existe neste mundo (nada do que ela pede ou dá é de outro tema)? */
 export function trocaNoMundo(t: Troca, estilo: EstiloMundo): boolean {
+  const planta = estilo.povoado?.planta ?? 'vila';
+  if (t.planta !== undefined && t.planta !== planta) return false;
+  if (t.foraDaCidade && planta === 'cidade') return false;
   return itemNoMundo(t.receber.item, estilo) && t.dar.every((d) => itemNoMundo(d.item, estilo));
 }
 

@@ -1594,6 +1594,82 @@ export function vestirFantasia(
         sobreCabelo('capuz');
         break;
       }
+      case 'capacete-obra': {
+        // spec 014: capacete de obra de brinquedo (o prêmio do canteiro): cúpula redonda
+        // assentada no cabelo, aba fininha em volta, bico curto na frente e o friso no meio
+        const b = m.baseChapeu;
+        cilindro('obra-aba', 'cabeca', 'cabeca', 0.045, 0.45, 0.45, [0, b + 0.075, 0], c, {
+          brilho: 0.45,
+        });
+        bola('obra-cupula', 'cabeca', 'cabeca', 0.37, [0, b + 0.08, 0], c, [1, 0.74, 1.06], {
+          brilho: 0.45,
+        });
+        bola(
+          'obra-friso',
+          'cabeca',
+          'cabeca',
+          0.37,
+          [0, b + 0.095, 0],
+          escurecer(c, 0.08),
+          [0.2, 0.76, 1.08],
+          { brilho: 0.45 },
+        );
+        caixa('obra-bico', 'cabeca', 'cabeca', [0.44, 0.04, 0.16], [0, b + 0.07, 0.44], c, 0.02, {
+          rot: [0.18, 0, 0],
+          brilho: 0.45,
+        });
+        sobreCabelo('chapeu');
+        break;
+      }
+      case 'colete-obra': {
+        // spec 014: colete laranja de obra, com duas faixas claras que brilham (sem marca)
+        const faixa = '#eef2f4';
+        const alto = troncoH * 0.92;
+        const meio = troncoH * 0.47;
+        for (const s of [-1, 1]) {
+          caixa(
+            `obra-colete${s}`,
+            'tronco',
+            'tronco',
+            [larg * 0.34, alto, prof + 0.02],
+            [s * larg * 0.33, meio, 0],
+            c,
+            0.05,
+          );
+          for (const y of [0.3, 0.6])
+            caixa(
+              `obra-faixa${s}${y}`,
+              'tronco',
+              'tronco',
+              [larg * 0.345, 0.045, prof + 0.035],
+              [s * larg * 0.33, troncoH * y, 0],
+              faixa,
+              0.012,
+              { brilho: 0.6 },
+            );
+        }
+        caixa(
+          'obra-colete-costas',
+          'tronco',
+          'tronco',
+          [larg * 0.4, alto, 0.03],
+          [0, meio, -frente - 0.005],
+          c,
+          0.012,
+        );
+        for (const y of [0.3, 0.6])
+          caixa(
+            `obra-faixa-costas${y}`,
+            'tronco',
+            'tronco',
+            [larg * 0.41, 0.045, 0.04],
+            [0, troncoH * y, -frente - 0.005],
+            faixa,
+            0.012,
+            { brilho: 0.6 },
+          );
+        break;
+      }
       case 'lanterna': {
         // a lanterna acesa na mão, um pouco à frente (aparece de frente, como no esboço);
         // tinta de sempre, sem a tinta funda da fantasia: ela é a luz

@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { MISSOES, criarDiario } from '../../src/jogo/diario';
+import {
+  CAPITULO_OBRAS,
+  MISSOES,
+  MISSOES_OBRAS,
+  criarDiario,
+  temObras,
+} from '../../src/jogo/diario';
 
 describe('diário', () => {
   it('conclui missões ao atingir a meta, uma vez só, e avança a atual', () => {
@@ -83,5 +89,82 @@ describe('diário na ordem do tema (spec 013)', () => {
 
   it('capítulo que não existe deixa a ordem de sempre', () => {
     expect(criarDiario(undefined, { primeiroCapitulo: 'Nada' }).atual()?.id).toBe('madeira');
+  });
+});
+
+describe('diário: "Obras da cidade" (spec 014)', () => {
+  it('seis figurinhas, uma por obra, na ordem das plantas', () => {
+    expect(MISSOES_OBRAS.map((m) => m.id)).toEqual([
+      'obra-1',
+      'obra-2',
+      'obra-3',
+      'obra-4',
+      'obra-5',
+      'obra-6',
+    ]);
+    expect(MISSOES_OBRAS.map((m) => m.titulo)).toEqual([
+      'Casinha do cachorro',
+      'Banca de frutas',
+      'Ponto de ônibus',
+      'Sorveteria',
+      'Casinha',
+      'Coreto da praça',
+    ]);
+    for (const [i, m] of MISSOES_OBRAS.entries()) {
+      expect(m.contador).toBe(`obra:${i + 1}`);
+      expect(m.meta).toBe(1);
+      expect(m.capitulo).toBe(CAPITULO_OBRAS);
+    }
+    // ids que não batem com as missões de sempre
+    const ids = new Set(MISSOES.map((m) => m.id));
+    for (const m of MISSOES_OBRAS) expect(ids.has(m.id)).toBe(false);
+  });
+
+  it('só a Cidade Grande tem o capítulo; os outros temas ficam iguaizinhos', async () => {
+    await import('../../src/temas/todos');
+    const { obterTema, temasDisponiveis } = await import('../../src/temas/index');
+    expect(temObras(obterTema('cidade-grande'))).toBe(true);
+    for (const id of temasDisponiveis()) {
+      if (id === 'cidade-grande') continue;
+      const t = obterTema(id);
+      expect(temObras(t), id).toBe(false);
+      const d = criarDiario(undefined, {
+        primeiroCapitulo: t.primeiroCapitulo,
+        obras: temObras(t),
+      });
+      expect(
+        d.missoes.some((m) => m.capitulo === CAPITULO_OBRAS),
+        id,
+      ).toBe(false);
+      expect(d.missoes.length, id).toBe(MISSOES.length);
+      // a obra terminada não conta nada fora da cidade
+      expect(d.registrar('obra:1')).toEqual([]);
+      expect(d.total).toBe(0);
+    }
+    // sem obras, a mesma lista de antes (nem cópia)
+    expect(criarDiario(undefined, { obras: false }).missoes).toBe(MISSOES);
+  });
+
+  it('na cidade: o capítulo vem no fim e cada obra feita cola a figurinha', async () => {
+    await import('../../src/temas/todos');
+    const { obterTema } = await import('../../src/temas/index');
+    const cidade = obterTema('cidade-grande');
+    const d = criarDiario(undefined, {
+      primeiroCapitulo: cidade.primeiroCapitulo,
+      obras: temObras(cidade),
+    });
+    expect(d.missoes.length).toBe(MISSOES.length + 6);
+    expect(d.missoes.slice(0, MISSOES.length)).toEqual([...MISSOES]);
+    expect(d.missoes.slice(-6).map((m) => m.id)).toEqual(MISSOES_OBRAS.map((m) => m.id));
+    expect(d.atual()?.id).toBe('madeira');
+    expect(d.registrar('obra:1').map((m) => m.id)).toEqual(['obra-1']);
+    expect(d.registrar('obra:1')).toEqual([]);
+    expect(d.concluida('obra-1')).toBe(true);
+    expect(d.registrar('obra:6').map((m) => m.id)).toEqual(['obra-6']);
+    expect(d.total).toBe(2);
+    // salva e volta com as figurinhas
+    const e = criarDiario(JSON.parse(JSON.stringify(d.salvar())), { obras: true });
+    expect(e.concluida('obra-6')).toBe(true);
+    expect(e.progresso(MISSOES_OBRAS[1])).toBe(0);
   });
 });

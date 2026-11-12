@@ -6,7 +6,7 @@
  * continuam os dela, e a roupa, a calça e o enfeite de baixo ficam guardados intactos.
  * "Tirar fantasia" só tira a camada, e o look de antes volta igualzinho.
  */
-import type { Corpo } from './aparencia';
+import type { Corpo, IdDesbloqueio } from './aparencia';
 import type { IdTema } from '../temas/tipos';
 
 export type GrupoFantasia = 'realeza' | 'herois' | 'temas';
@@ -53,7 +53,10 @@ export type TipoPeca =
   | 'coroa-folhas'
   | 'capa-folhas'
   | 'capuz-lanterneira'
-  | 'lanterna';
+  | 'lanterna'
+  // spec 014: prêmios do canteiro da cidade
+  | 'capacete-obra'
+  | 'colete-obra';
 
 /** Símbolos próprios (nada de letra no peito, teia ou morcego). */
 export type Simbolo = 'flor' | 'estrela' | 'concha' | 'floco' | 'raio' | 'coracao' | 'folha';
@@ -105,6 +108,11 @@ export interface FantasiaDef {
   corEmblema: string;
   /** O que veste em cada corpo (na Realeza o masculino vira príncipe, sem saia). */
   visual: Record<Corpo, Visual>;
+  /**
+   * Spec 014: só se veste depois de ganhar (no canteiro da cidade). Antes disso a aba mostra a
+   * silhueta com cadeado e a sugestão do tema nunca oferece.
+   */
+  desbloqueio?: IdDesbloqueio;
 }
 
 /** Fantasia vestida: o id do catálogo e o índice da cor principal. */
@@ -389,6 +397,43 @@ export const FANTASIAS: readonly FantasiaDef[] = [
       ],
     }),
   },
+  // spec 014: os prêmios do canteiro da Cidade Grande (ganhos uma vez, vestidos em qualquer
+  // mundo). A cor principal é a da camisa; o capacete e o colete têm a cor de obra de sempre.
+  {
+    id: 'capacete-obra',
+    grupo: 'temas',
+    tema: 'cidade-grande',
+    desbloqueio: 'capacete-obra',
+    nomes: { feminino: 'Pedreira', masculino: 'Pedreiro' },
+    cores: ['#3f6fb8', '#5a8a4a', '#a8733f', '#8a5a9a'],
+    corEmblema: '#ffc61a',
+    visual: mesmo({
+      roupa: { camisa: 'principal', manga: 'principal', calca: '#36507a', sapato: '#6a4426' },
+      cabeca: 'chapeu',
+      pecas: [
+        { tipo: 'capacete-obra', cor: '#ffc61a' },
+        { tipo: 'botas', cor: '#7a4826' },
+      ],
+    }),
+  },
+  {
+    id: 'colete-obra',
+    grupo: 'temas',
+    tema: 'cidade-grande',
+    desbloqueio: 'colete-obra',
+    nomes: { feminino: 'Mestra de obras', masculino: 'Mestre de obras' },
+    cores: ['#3f6fb8', '#f2f4f8', '#5a8a4a', '#8a5a9a'],
+    corEmblema: '#ffc61a',
+    visual: mesmo({
+      roupa: { camisa: 'principal', manga: 'principal', calca: '#36507a', sapato: '#6a4426' },
+      cabeca: 'chapeu',
+      pecas: [
+        { tipo: 'colete-obra', cor: '#ff7a1a' },
+        { tipo: 'botas', cor: '#7a4826' },
+        { tipo: 'capacete-obra', cor: '#ffc61a', opcional: true },
+      ],
+    }),
+  },
 ];
 
 const POR_ID = new Map(FANTASIAS.map((f) => [f.id, f]));
@@ -429,9 +474,25 @@ export function temasDasFantasias(temaDoMundo?: string): IdTema[] {
   return temas;
 }
 
-/** A fantasia sugerida ao criar um mundo daquele tema (a primeira dele), se houver. */
-export function fantasiaDoTema(tema: string): FantasiaDef | undefined {
-  return FANTASIAS.find((f) => f.grupo === 'temas' && f.tema === tema);
+/** Spec 014: a criança pode vestir esta fantasia (é livre, ou ela já ganhou a peça)? */
+export function fantasiaLiberada(
+  def: Pick<FantasiaDef, 'desbloqueio'>,
+  desbloqueios: readonly string[] = [],
+): boolean {
+  return !def.desbloqueio || desbloqueios.includes(def.desbloqueio);
+}
+
+/**
+ * A fantasia sugerida ao criar um mundo daquele tema (a primeira dele que a criança pode
+ * vestir), se houver: as que ainda não foram ganhas nunca são sugeridas.
+ */
+export function fantasiaDoTema(
+  tema: string,
+  desbloqueios: readonly string[] = [],
+): FantasiaDef | undefined {
+  return FANTASIAS.find(
+    (f) => f.grupo === 'temas' && f.tema === tema && fantasiaLiberada(f, desbloqueios),
+  );
 }
 
 /**

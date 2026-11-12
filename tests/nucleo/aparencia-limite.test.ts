@@ -1,6 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import { criarNucleo, INTERVALO_APARENCIA, type Nucleo } from '../../src/nucleo/nucleo';
 import { PASSO } from '../../src/nucleo/protocolo';
+import { sanear, sanearAparencia } from '../../src/nucleo/saneamento';
+import {
+  aplicarCorpo,
+  aparenciaPadrao,
+  desbloquear,
+  semDesbloqueios,
+  vestirFantasia,
+} from '../../src/personagem/aparencia';
 
 /**
  * Auditoria 017: o editor manda a aparência a cada toque. A igual à de agora não sai para
@@ -97,3 +105,48 @@ function lerPele(n: Nucleo, quem: string): unknown {
   n.passo();
   return [...n.quadros().values()][0]?.perfis?.[quem]?.aparencia?.pele;
 }
+
+describe('spec 014: o capacete e o colete do canteiro passam no saneamento e no limite', () => {
+  // a criança que ganhou as duas e veste o colete (o capacete vem junto)
+  const vestida = (corpo: 'feminino' | 'masculino') =>
+    vestirFantasia(
+      desbloquear(
+        desbloquear(
+          { ...aplicarCorpo(aparenciaPadrao('ferreiro'), corpo), nome: 'Ana Beatriz Luz' },
+          'capacete-obra',
+        ),
+        'colete-obra',
+      ),
+      'colete-obra',
+      3,
+    );
+
+  it.each(['feminino', 'masculino'] as const)('com as duas peças (%s)', (corpo) => {
+    const a = semDesbloqueios(vestida(corpo));
+    const json = JSON.stringify(a);
+    // cabe com folga no limite de 4096 caracteres
+    expect(json.length).toBeLessThan(1024);
+    const limpa = sanearAparencia(JSON.parse(json));
+    expect(limpa).not.toBeNull();
+    expect(limpa!.fantasia).toEqual({ id: 'colete-obra', cor: 3 });
+    const cmd = sanear({ t: 'aparencia', aparencia: JSON.parse(json) });
+    expect(cmd).not.toBeNull();
+    // e sem o capacete (peça opcional do colete) também
+    const semCapacete = { ...a, fantasia: { id: 'colete-obra', cor: 0, sem: ['capacete-obra'] } };
+    expect(sanearAparencia(semCapacete)!.fantasia).toEqual({
+      id: 'colete-obra',
+      cor: 0,
+      sem: ['capacete-obra'],
+    });
+  });
+
+  it.each<Modo>(['local', 'nuvem'])('os amigos veem o colete (%s)', (modo) => {
+    const { n, quem, ve } = montar(modo);
+    n.comando(quem, {
+      t: 'aparencia',
+      aparencia: semDesbloqueios(vestida('feminino')) as Record<string, unknown>,
+    });
+    const visto = passo(n, quem, ve);
+    expect(visto?.fantasia).toEqual({ id: 'colete-obra', cor: 3 });
+  });
+});

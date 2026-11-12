@@ -267,6 +267,30 @@ export const MISSOES: readonly Missao[] = [
   },
 ];
 
+/**
+ * Spec 014: o capítulo das obras do canteiro, só nos mundos da Cidade Grande (uma figurinha por
+ * obra terminada). Fica fora de MISSOES: nos outros temas o diário continua igualzinho, e os
+ * temas não precisam renomear estas missões.
+ */
+export const CAPITULO_OBRAS = 'Obras da cidade';
+const OBRAS: ReadonlyArray<[string, string, string]> = [
+  ['Casinha do cachorro', 'Ajude a construir a casinha do cachorro', 'item:bloco:43'],
+  ['Banca de frutas', 'Ajude a construir a banca de frutas', 'item:maca'],
+  ['Ponto de ônibus', 'Ajude a construir o ponto de ônibus', 'item:bloco:98'],
+  ['Sorveteria', 'Ajude a construir a sorveteria', 'item:bloco:99'],
+  ['Casinha', 'Ajude a construir a casinha', 'casa'],
+  ['Coreto da praça', 'Construa o coreto junto com os amigos', 'trofeu'],
+];
+export const MISSOES_OBRAS: readonly Missao[] = OBRAS.map(([titulo, descricao, icone], i) => ({
+  id: `obra-${i + 1}`,
+  capitulo: CAPITULO_OBRAS,
+  titulo,
+  descricao,
+  contador: `obra:${i + 1}`,
+  meta: 1,
+  icone,
+}));
+
 export type Contadores = Record<string, number>;
 
 /** Capítulo de cada missão como está aqui (o tema renomeia `capitulo` ao ativar). */
@@ -286,10 +310,20 @@ export function ordemMissoes(primeiroCapitulo?: string): readonly Missao[] {
 export interface OpcoesDiario {
   /** Capítulo que o diário guia primeiro (dado do tema; sem ele, a ordem de sempre). */
   primeiroCapitulo?: string;
+  /** Spec 014: mundo da Cidade Grande: o capítulo "Obras da cidade" entra no fim. */
+  obras?: boolean;
+}
+
+/** Spec 014: o tema tem o canteiro de obras (a cidade)? Lê a planta do povoado do tema. */
+export function temObras(t: { mundo?: { povoado?: { planta?: string } } }): boolean {
+  return t.mundo?.povoado?.planta === 'cidade';
 }
 
 export function criarDiario(salvo?: unknown, opcoes: OpcoesDiario = {}) {
-  const ordem = ordemMissoes(opcoes.primeiroCapitulo);
+  const base = ordemMissoes(opcoes.primeiroCapitulo);
+  // sem obras, a mesma lista de sempre (nem uma cópia: tudo igual nos outros temas)
+  const ordem: readonly Missao[] = opcoes.obras ? [...base, ...MISSOES_OBRAS] : base;
+  const todas: readonly Missao[] = opcoes.obras ? [...MISSOES, ...MISSOES_OBRAS] : MISSOES;
   const s = (salvo ?? {}) as { contadores?: Contadores; concluidas?: string[] };
   const contadores: Contadores = { ...(s.contadores ?? {}) };
   const concluidas = new Set<string>(s.concluidas ?? []);
@@ -303,7 +337,7 @@ export function criarDiario(salvo?: unknown, opcoes: OpcoesDiario = {}) {
         contadores['fabricou:tabuas'] = (contadores['fabricou:tabuas'] ?? 0) + qtd;
       }
       const novas: Missao[] = [];
-      for (const m of MISSOES) {
+      for (const m of todas) {
         if (concluidas.has(m.id)) continue;
         if ((contadores[m.contador] ?? 0) >= m.meta) {
           concluidas.add(m.id);

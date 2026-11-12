@@ -110,7 +110,9 @@ describe('o que é só da cidade', () => {
     for (const t of OUTROS) {
       expect(trocaNoMundo(troca, t.mundo), t.id).toBe(false);
       // as trocas de sempre continuam todas
-      for (const p of PROFISSOES) expect(trocasDoMundo(p, t.mundo)).toEqual(TROCAS[p]);
+      // (menos as do pedreiro da cidade, spec 014 T07, que só existem lá)
+      for (const p of PROFISSOES)
+        expect(trocasDoMundo(p, t.mundo)).toEqual(TROCAS[p].filter((x) => !x.planta));
       for (const r of RECEITAS) expect(receitaNoMundo(r, t.mundo), r.id).toBe(true);
     }
     const receita = {

@@ -28,7 +28,7 @@ import {
   ligarGamepad,
   bloquearZoomDoNavegador,
 } from './ui/toque';
-import { criarDiario } from './jogo/diario';
+import { criarDiario, temObras } from './jogo/diario';
 import { ativarTema } from './temas/ativar';
 import { povoadoDoTema, tema } from './temas/ativo';
 import { temaExiste } from './temas';
@@ -649,6 +649,8 @@ function ligarDiario(app: HTMLElement, cena: ReturnType<typeof criarCena>): void
   document.head.appendChild(estilo);
   const diario = criarDiario(cena.extrasSalvos('diario'), {
     primeiroCapitulo: tema().primeiroCapitulo,
+    // spec 014: "Obras da cidade" só nos mundos da Cidade Grande
+    obras: temObras(tema()),
   });
   cena.registrarSalvavel('diario', { salvar: () => diario.salvar() });
   const hud = document.querySelector<HTMLElement>('.hud') ?? app;
@@ -704,6 +706,12 @@ function ligarDiario(app: HTMLElement, cena: ReturnType<typeof criarCena>): void
   });
   // criação (spec 013): deu comida e o bicho virou criado
   ouvir('criou', () => reg('criou'));
+  // spec 014: obra do canteiro terminada. A obra é da cidade: quem estava perto festeja e
+  // ganha a figurinha, tenha posto bloco ou não (o prêmio de ajudante vem em 'desbloqueio')
+  ouvir('obra', (d) => {
+    const o = d as { canteiro?: unknown; feita?: unknown };
+    if (o?.feita === true && typeof o.canteiro === 'number') reg(`obra:${o.canteiro}`);
+  });
   // a criatura da noite mansa (a coruja do Rancho) fugiu de perto: espantar conta como a
   // missão da criatura da noite (lá ela não se derrota, se espanta)
   ouvir('espantou', (t) => {

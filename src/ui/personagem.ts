@@ -16,7 +16,9 @@ import {
   PALETAS,
   TAMANHO_MAXIMO_NOME,
   aplicarModelo,
+  desbloquear,
   normalizarAparencia,
+  temDesbloqueio,
   personalizar,
   vestirFantasia,
   type Acessorio,
@@ -177,7 +179,7 @@ const NOMES_ACESSORIO: Record<Acessorio, string> = {
   'chapeu-palha': 'Chapéu de palha',
 };
 
-type Campo = Exclude<keyof Aparencia, 'nome' | 'fantasia'>;
+type Campo = Exclude<keyof Aparencia, 'nome' | 'fantasia' | 'desbloqueios'>;
 type Valor = string | number;
 
 /** Opções em miniatura (mostram o resultado) ou em amostras de cor. */
@@ -379,6 +381,8 @@ export function sortearAparencia(
     roupaCor: escolher(indices(PALETAS.roupa.length)),
     calcaCor: escolher(indices(PALETAS.calca.length)),
     acessorio: escolher(ACESSORIOS),
+    // spec 014: o dado sorteia o visual; o que a criança ganhou continua com ela
+    desbloqueios: base.desbloqueios,
   });
 }
 
@@ -561,6 +565,19 @@ export function criarPainelPersonagem(pai: HTMLElement, opcoes: OpcoesPainel) {
     /** Veste a fantasia com festa (a sugestão do mundo novo). */
     vestir(id: string) {
       mudou(vestirFantasia(aparencia, id), true);
+    },
+    /**
+     * Spec 014: a criança ganhou uma peça no canteiro da cidade. Grava junto da aparência e a
+     * aba Fantasias passa a mostrar a peça colorida; não veste sozinha. Devolve se era nova.
+     */
+    desbloquear(id: string): boolean {
+      if (temDesbloqueio(aparencia, id)) return false;
+      const proxima = desbloquear(aparencia, id);
+      if (proxima === aparencia) return false;
+      aparencia = proxima;
+      salvarAparencia(opcoes.armazenamento, aparencia);
+      fantasias?.atualizar();
+      return true;
     },
   };
 }

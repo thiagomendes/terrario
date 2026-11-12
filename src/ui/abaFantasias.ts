@@ -21,6 +21,7 @@ import {
 import {
   GRUPOS_FANTASIA,
   ROTULOS_GRUPOS,
+  fantasiaLiberada,
   fantasiaPorId,
   fantasiasDoGrupo,
   normalizarFantasia,
@@ -70,6 +71,7 @@ export const NOMES_PECAS: Partial<Record<TipoPeca, string>> = {
   'coroa-folhas': 'Coroa',
   'capa-folhas': 'Capa',
   lanterna: 'Lanterna',
+  'capacete-obra': 'Capacete',
 };
 
 export interface SecaoFantasias {
@@ -100,11 +102,68 @@ export function pecasOpcionais(a: Aparencia): Array<{ tipo: TipoPeca; nome: stri
     .map((p) => ({ tipo: p.tipo, nome: NOMES_PECAS[p.tipo] ?? p.tipo }));
 }
 
+/**
+ * Spec 014: a criança pode vestir esta fantasia? As livres, sempre; as do canteiro da cidade
+ * (capacete, colete), só depois de ganhar. A aba nunca veste uma que esteja trancada.
+ */
+export function podeVestirFantasia(
+  def: FantasiaDef | string | undefined,
+  a: Pick<Aparencia, 'desbloqueios'>,
+): boolean {
+  const d = typeof def === 'string' ? fantasiaPorId(def) : def;
+  return !!d && fantasiaLiberada(d, a.desbloqueios);
+}
+
+/** O aviso ao tocar numa fantasia trancada (curto: o desenho do canteiro ajuda quem não lê). */
+export const TEXTO_TRANCADA = 'Ganhe no canteiro da cidade';
+
+/** Desenho do canteiro (tapume, tijolos e o capacete), em SVG próprio: nada de fora. */
+export const SVG_CANTEIRO =
+  '<svg viewBox="0 0 48 32" aria-hidden="true">' +
+  '<rect x="2" y="18" width="44" height="12" rx="2" fill="#e8a23a"/>' +
+  '<path d="M6 18 L12 30 M18 18 L24 30 M30 18 L36 30 M42 18 L46 26" stroke="#5a3a12" stroke-width="3"/>' +
+  '<rect x="14" y="8" width="9" height="5" rx="1" fill="#c8553d"/>' +
+  '<rect x="24" y="8" width="9" height="5" rx="1" fill="#c8553d"/>' +
+  '<rect x="19" y="2" width="9" height="5" rx="1" fill="#c8553d"/>' +
+  '<path d="M33 13 a6 6 0 0 1 12 0 z" fill="#ffc61a"/>' +
+  '<rect x="31" y="12" width="15" height="2.4" rx="1.2" fill="#e0a800"/>' +
+  '</svg>';
+
+/** Cadeadinho do cartão trancado. */
+const SVG_CADEADO =
+  '<svg viewBox="0 0 16 16" aria-hidden="true">' +
+  '<path d="M4.5 7 V5 a3.5 3.5 0 0 1 7 0 V7" fill="none" stroke="#5a5560" stroke-width="2"/>' +
+  '<rect x="2.5" y="7" width="11" height="8" rx="2" fill="#7a7480"/>' +
+  '<circle cx="8" cy="11" r="1.4" fill="#e8e4ea"/>' +
+  '</svg>';
+
 // ---------------------------------------------------------------------------
 // Lembranças do aparelho (conveniência: sem armazenamento, só não lembra)
 
 export const CHAVE_SUBABA = 'terrario:fantasias-aba';
 export const CHAVE_ANTERIOR = 'terrario:fantasia-anterior';
+/** Spec 014: fantasias ganhas que já brilharam na aba (o brilho é só na primeira vez). */
+export const CHAVE_BRILHOU = 'terrario:fantasias-brilhou';
+
+export function jaBrilhou(loja: Armazenamento | null, id: string): boolean {
+  try {
+    const v: unknown = JSON.parse(loja?.getItem(CHAVE_BRILHOU) ?? '[]');
+    return Array.isArray(v) && v.includes(id);
+  } catch {
+    return false;
+  }
+}
+
+export function marcarBrilhou(loja: Armazenamento | null, id: string): void {
+  try {
+    const v: unknown = JSON.parse(loja?.getItem(CHAVE_BRILHOU) ?? '[]');
+    const lista = Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : [];
+    if (!lista.includes(id)) lista.push(id);
+    loja?.setItem(CHAVE_BRILHOU, JSON.stringify(lista.slice(-32)));
+  } catch {
+    // sem armazenamento: brilha de novo na próxima vez, sem problema
+  }
+}
 
 export function lerSubAba(loja: Armazenamento | null): GrupoFantasia {
   try {
@@ -206,6 +265,32 @@ export const CSS_FANTASIAS = `
 .painel-personagem .pecas-fantasia button { min-height: 44px; padding: 0 14px; border-radius: 999px; }
 .painel-personagem button.tirar-fantasia { min-height: 46px; padding: 0 16px; border-radius: 999px; margin-left: auto; }
 @media (prefers-reduced-motion: reduce) { .painel-personagem button.carta.festa::after { animation-duration: 0.01s; } }
+/* spec 014: fantasia ainda não ganha (silhueta cinza, cadeadinho e o desenho do canteiro) */
+.painel-personagem button.carta.trancada { background: #e6e2e8; box-shadow: inset 0 3px 0 rgba(60, 50, 70, 0.14); color: #77707c; }
+.painel-personagem button.carta.trancada canvas { filter: brightness(0) opacity(0.28); }
+.painel-personagem button.carta .cadeado {
+  position: absolute; top: 34px; left: 50%; width: 30px; height: 30px; transform: translateX(-50%);
+  display: none; pointer-events: none;
+}
+.painel-personagem button.carta .canteiro-mini {
+  position: absolute; left: 6px; bottom: 30px; width: 34px; height: 23px; display: none; pointer-events: none;
+}
+.painel-personagem button.carta.trancada .cadeado, .painel-personagem button.carta.trancada .canteiro-mini { display: block; }
+.painel-personagem button.carta.estreia::after {
+  content: ''; position: absolute; inset: -2px; border-radius: inherit; pointer-events: none;
+  background: linear-gradient(115deg, rgba(255, 255, 255, 0) 30%, rgba(255, 248, 200, 0.95) 50%, rgba(255, 255, 255, 0) 70%);
+  background-size: 250% 100%; animation: carta-estreia 1.4s ease-out 2 forwards;
+  box-shadow: 0 0 0 3px #ffd45a, 0 0 16px rgba(255, 212, 90, 0.9);
+}
+@keyframes carta-estreia { from { background-position: 120% 0; } to { background-position: -120% 0; opacity: 0.6; } }
+.painel-personagem .dica-trancada {
+  grid-column: 1 / -1; display: flex; gap: 10px; align-items: center; justify-content: center;
+  padding: 8px 12px; border-radius: 16px; background: #fff3d0; box-shadow: inset 0 0 0 3px var(--amarela);
+  font: 800 0.95rem var(--jogo); color: var(--tinta);
+}
+.painel-personagem .dica-trancada[hidden] { display: none; }
+.painel-personagem .dica-trancada svg { width: 60px; height: 40px; flex: none; }
+@media (prefers-reduced-motion: reduce) { .painel-personagem button.carta.estreia::after { animation-duration: 0.01s; animation-iteration-count: 1; } }
 /* festa ao vestir: a prévia dá pulinhos e brilhos saem em volta */
 .palco-personagem .pedestal.festa canvas { animation: previa-festa 0.9s ease-out; }
 @keyframes previa-festa {
@@ -304,6 +389,23 @@ export function criarAbaFantasias(painel: HTMLElement, op: OpcoesAbaFantasias): 
     nome: HTMLElement;
   }> = [];
 
+  /** Spec 014: o aviso do cartão trancado ("Ganhe no canteiro da cidade" e o desenho). */
+  const dica = document.createElement('div');
+  dica.className = 'dica-trancada';
+  dica.setAttribute('data-dica-trancada', '');
+  dica.setAttribute('role', 'status');
+  dica.hidden = true;
+  dica.innerHTML = SVG_CANTEIRO;
+  dica.append(TEXTO_TRANCADA);
+  let fecharDica: ReturnType<typeof setTimeout> | undefined;
+  function mostrarDica(lista: HTMLElement): void {
+    // aparece no alto da lista à vista e some sozinha
+    lista.prepend(dica);
+    dica.hidden = false;
+    clearTimeout(fecharDica);
+    fecharDica = setTimeout(() => (dica.hidden = true), 3500);
+  }
+
   for (const g of GRUPOS_FANTASIA) {
     const b = document.createElement('button');
     b.type = 'button';
@@ -353,6 +455,16 @@ export function criarAbaFantasias(painel: HTMLElement, op: OpcoesAbaFantasias): 
           selo.setAttribute('aria-hidden', 'true');
           botao.appendChild(selo);
         }
+        if (def.desbloqueio) {
+          // spec 014: o cadeadinho e o canteiro só aparecem enquanto não foi ganha (CSS)
+          const cadeado = document.createElement('span');
+          cadeado.className = 'cadeado';
+          cadeado.innerHTML = SVG_CADEADO;
+          const canteiro = document.createElement('span');
+          canteiro.className = 'canteiro-mini';
+          canteiro.innerHTML = SVG_CANTEIRO;
+          botao.append(cadeado, canteiro);
+        }
         botao.addEventListener('click', () => escolher(def, botao));
         cartas.push({ def, grupo: g, botao, canvas, nome });
         lista.appendChild(botao);
@@ -382,7 +494,7 @@ export function criarAbaFantasias(painel: HTMLElement, op: OpcoesAbaFantasias): 
       anterior = a.fantasia;
       guardarAnterior(op.armazenamento, a.fantasia);
       op.mudar(tirarFantasia(a), false);
-    } else if (anterior && fantasiaPorId(anterior.id)) {
+    } else if (anterior && podeVestirFantasia(anterior.id, a)) {
       const vestida = vestirFantasia(a, anterior.id, anterior.cor);
       op.mudar(
         anterior.sem?.length && vestida.fantasia
@@ -397,6 +509,13 @@ export function criarAbaFantasias(painel: HTMLElement, op: OpcoesAbaFantasias): 
 
   function escolher(def: FantasiaDef, botao: HTMLButtonElement): void {
     const a = op.aparencia();
+    if (!podeVestirFantasia(def, a)) {
+      // trancada: não veste, só conta onde se ganha
+      tocarSomInterface('toc');
+      const lista = botao.closest<HTMLElement>('.cartas');
+      if (lista) mostrarDica(lista);
+      return;
+    }
     // tocar de novo na que já está vestida só faz a festa (nada muda)
     const proxima = a.fantasia?.id === def.id ? a : vestirFantasia(a, def.id);
     botao.classList.remove('festa');
@@ -473,14 +592,29 @@ export function criarAbaFantasias(painel: HTMLElement, op: OpcoesAbaFantasias): 
       c.botao.setAttribute('aria-pressed', String(vestida));
       const rotulo = rotuloDaFantasia(c.def, a.corpo);
       if (c.nome.textContent !== rotulo) c.nome.textContent = rotulo;
-      c.botao.setAttribute('aria-label', rotulo);
+      const trancada = !podeVestirFantasia(c.def, a);
+      c.botao.classList.toggle('trancada', trancada);
+      c.botao.setAttribute('data-trancada', String(trancada));
+      c.botao.setAttribute('aria-label', trancada ? `${rotulo}: ${TEXTO_TRANCADA}` : rotulo);
+      // ganhou: o cartão colorido brilha na primeira vez que a criança o vê
+      if (
+        c.def.desbloqueio &&
+        !trancada &&
+        visivel &&
+        c.grupo === grupo &&
+        !jaBrilhou(op.armazenamento, c.def.id)
+      ) {
+        marcarBrilhou(op.armazenamento, c.def.id);
+        c.botao.classList.add('estreia');
+        setTimeout(() => c.botao.classList.remove('estreia'), 3000);
+      }
       // só as fotos da aba à vista; as outras saem quando a criança abrir a aba
       if (visivel && c.grupo === grupo)
         fotografarBoneco(c.canvas, vestida ? a : vestirFantasia(base, c.def.id), 'corpo');
     }
     desenharCores(a);
     desenharPecas(a);
-    const podeVestir = !a.fantasia && !!anterior && !!fantasiaPorId(anterior.id);
+    const podeVestir = !a.fantasia && !!anterior && podeVestirFantasia(anterior.id, a);
     tirar.hidden = !a.fantasia && !podeVestir;
     tirar.textContent = a.fantasia ? 'Tirar fantasia' : 'Vestir de novo';
     tirar.setAttribute('data-vestir-de-novo', String(!a.fantasia));

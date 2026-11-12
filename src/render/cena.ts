@@ -120,6 +120,7 @@ import {
   plimDaObra,
   taDa,
 } from '../audio/somObra';
+import { semDesbloqueios } from '../personagem/aparencia';
 import {
   AVISO_SEMENTE,
   alvoDaEnxada,
@@ -176,12 +177,7 @@ import { criarEdicoes, donoNaCelula } from '../world/edicoes';
 import { sanearDonos, sanearDonosMudados } from '../nucleo/saneamento';
 import { JOGADOR_LOCAL } from '../nucleo/anfitriao';
 import { ALTURA, alturaTerreno, indice } from '../world/chunk';
-import {
-  colocacaoBloqueada,
-  mirarDaCamera,
-  posicaoColocacao,
-  type Vec3,
-} from '../player/alvo';
+import { colocacaoBloqueada, mirarDaCamera, posicaoColocacao, type Vec3 } from '../player/alvo';
 import {
   ALCANCE_MIRA,
   ALCANCE_TOQUE,
@@ -2508,7 +2504,11 @@ export function criarCena(
       aparencia = normalizarAparencia({ ...aparencia, ...parcial });
       personagem.aplicarAparencia(aparencia);
       // os amigos no mesmo mundo passam a ver a aparência nova
-      enviar({ t: 'aparencia', aparencia: { ...aparencia } as Record<string, unknown> });
+      // spec 014: os desbloqueios (capacete e colete do canteiro) ficam no aparelho
+      enviar({
+        t: 'aparencia',
+        aparencia: semDesbloqueios({ ...aparencia }) as Record<string, unknown>,
+      });
     },
     visivel: () => ({ corpo: personagem.raiz.isEnabled() && !estado.modoFoto?.ativo() }),
     malhas: () => personagem.contarMalhas(),
