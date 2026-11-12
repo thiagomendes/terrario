@@ -343,19 +343,24 @@ const PROXIMA_HORA: Record<HoraTrilha, HoraTrilha> = { dia: 'tarde', tarde: 'noi
 
 /**
  * Os clipes de agora e dos próximos prováveis (começar a andar e a próxima hora do dia), para
- * a troca no compasso seguinte já achar a camada aberta.
+ * a troca no compasso seguinte já achar a camada aberta. No sobrevivência, à noite, o perigo
+ * também é provável (as criaturas da noite caçam): a camada fica aberta a noite toda, e não é
+ * solta logo depois de uma perseguição.
  */
 export function clipsProvaveis(
   t: TemaTrilha,
   e: EstadoTrilha,
   temPerigo: boolean,
   rancho: boolean,
+  sobrevivencia = false,
 ): Set<string> {
   const s = clipsDaMistura(t, alvoMix(e, temPerigo, rancho).g);
   const vizinhos: EstadoTrilha[] = [
     { ...e, mov: e.mov === 0 ? 1 : e.mov },
     { ...e, hora: PROXIMA_HORA[e.hora] },
   ];
+  if (sobrevivencia && temPerigo && !rancho && e.hora === 'noite')
+    vizinhos.push({ ...e, perigo: true });
   for (const v of vizinhos)
     for (const id of clipsDaMistura(t, alvoMix(v, temPerigo, rancho).g)) s.add(id);
   return s;
@@ -715,6 +720,8 @@ export interface InfoTrilhaGravada {
 export interface OpcoesTrilhaGravada {
   temPerigo: boolean;
   rancho: boolean;
+  /** Modo sobrevivência: à noite, a camada de perigo fica aberta de antemão. */
+  sobrevivencia?: boolean;
   rng?: () => number;
   /** Segundos que a trilha leva para entrar (em cruz com a de hoje). */
   entrada?: number;
@@ -1037,7 +1044,13 @@ export class TrilhaGravada {
 
   /** Abre o que a mistura de agora e a próxima provável pedem; solta o que ficou sem tocar. */
   private manter(agora: number): void {
-    const precisa = clipsProvaveis(this.tema, this.estado, this.op.temPerigo, this.op.rancho);
+    const precisa = clipsProvaveis(
+      this.tema,
+      this.estado,
+      this.op.temPerigo,
+      this.op.rancho,
+      this.op.sobrevivencia,
+    );
     for (const id of precisa) if (!this.car.aberto(id)) void this.car.abrir(id);
     for (const k of LACOS) {
       const s = this.lacos.get(k);

@@ -640,7 +640,7 @@ export function criarCena(
   const modo: ModoJogo = opcoes.mundo?.modo ?? 'criativo';
   document.body.dataset.modo = modo;
   // Spec 019: a trilha gravada do tema (baixa quando o mundo fica pronto, toca quando o som liga)
-  const trilha = criarTrilhaMundo(temaAtual.id);
+  const trilha = criarTrilhaMundo(temaAtual.id, { sobrevivencia: modo === 'sobrevivencia' });
   const sinaisTrilha = new SinaisTrilha();
   antesDeSair(() => {
     const antes = trilha.info().medidas;

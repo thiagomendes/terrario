@@ -174,6 +174,19 @@ describe('índice e pacotes', () => {
     expect(prov.has('amigos')).toBe(false);
     expect(prov.size).toBeLessThan(t.clips.length);
   });
+
+  it('no sobrevivência, à noite, o perigo já fica aberto (menos no Rancho e de dia)', () => {
+    const t = INDICE.temas['bruma-e-luz'];
+    const noite = e({ hora: 'noite' });
+    expect(clipsProvaveis(t, noite, true, false).has('perigo')).toBe(false);
+    expect(clipsProvaveis(t, noite, true, false, true).has('perigo')).toBe(true);
+    // depois da perseguição, a noite segue: continua aberto
+    expect(clipsProvaveis(t, { ...noite, perigo: false }, true, false, true).has('perigo')).toBe(
+      true,
+    );
+    expect(clipsProvaveis(t, e(), true, false, true).has('perigo')).toBe(false);
+    expect(clipsProvaveis(t, noite, false, true, true).has('perigo')).toBe(false);
+  });
 });
 
 describe('tempo da música', () => {

@@ -68,6 +68,8 @@ export interface OpcoesTrilhaMundo {
   carregador?: CarregadorTrilha;
   /** O tema tem a camada de perigo (o Rancho não tem: a noite lá é mansa). */
   rancho?: boolean;
+  /** Modo sobrevivência (a noite tem perigo de verdade: a camada abre de antemão). */
+  sobrevivencia?: boolean;
   intervaloMs?: number;
 }
 
@@ -137,7 +139,7 @@ export function criarTrilhaMundo(temaId: string, op: OpcoesTrilhaMundo = {}): Tr
           saida.destino as AudioNode,
           tema,
           carregador,
-          { temPerigo: temPerigo(), rancho },
+          { temPerigo: temPerigo(), rancho, sobrevivencia: op.sobrevivencia },
         );
         motor.iniciar(e);
         aplicado = { ...e };
