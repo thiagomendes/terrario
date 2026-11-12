@@ -3351,6 +3351,8 @@ export function criarCena(
     if (fisicaRodou) controle.atualizar(fotoAtiva ? 0 : dtBruto);
     quadroFotoRef?.(Math.min(dtBruto, 0.1));
     quadroSobrevivencia?.(Math.min(dtBruto, 0.1));
+    // o mesmo dt da física (o controle limita o passo a 0,05 s): em fps baixo o corpo anda
+    // 0,05 s por quadro, então a velocidade (sinal da música) e o ritmo dos passos saem certos
     atualizarSomMovimento(Math.min(dtBruto, 0.05));
     // a câmera segue o boneco antes da mira: o alvo do quadro é o que a criança vê
     atualizarCameraVisao(Math.min(dtBruto, 0.1));
