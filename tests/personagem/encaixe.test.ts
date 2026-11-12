@@ -97,6 +97,7 @@ describe('encaixe dos acessórios (spec 017, T01)', () => {
             n,
             generoDoMorador('p', n, prof),
             pov.acessorios?.[prof],
+            pov.fantasias?.[prof],
           );
           const plano = m.ajustar(planoBoneco(m.aparencia));
           const rotulo = `${id} ${prof} cabelo ${m.aparencia.cabeloEstilo}`;
@@ -140,6 +141,7 @@ describe('encaixe dos acessórios (spec 017, T01)', () => {
           1,
           generoDoMorador('p', 1, prof),
           pov.acessorios?.[prof],
+          pov.fantasias?.[prof],
         );
         falhas.push(...membrosSoltos(m.ajustar(planoBoneco(m.aparencia)), `${id} ${prof}`));
       }
@@ -160,7 +162,13 @@ describe('encaixe dos acessórios (spec 017, T01)', () => {
       for (const prof of Object.keys(pov.moradores) as Profissao[])
         for (const genero of ['f', 'm'] as const)
           for (let n = 0; n < 30; n++) {
-            const m = moradorDeBrinquedo(pov.moradores[prof], n, genero, pov.acessorios?.[prof]);
+            const m = moradorDeBrinquedo(
+              pov.moradores[prof],
+              n,
+              genero,
+              pov.acessorios?.[prof],
+              pov.fantasias?.[prof],
+            );
             const plano = m.ajustar(planoBoneco(m.aparencia));
             moradores++;
             const rotulo = `${id} ${prof} ${m.aparencia.modelo}`;

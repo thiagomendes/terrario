@@ -56,7 +56,9 @@ export type TipoPeca =
   | 'lanterna'
   // spec 014: prêmios do canteiro da cidade
   | 'capacete-obra'
-  | 'colete-obra';
+  | 'colete-obra'
+  // spec 014 (T11): boné de brinquedo (copa redonda e pala curta), o do mecânico da cidade
+  | 'bone';
 
 /** Símbolos próprios (nada de letra no peito, teia ou morcego). */
 export type Simbolo = 'flor' | 'estrela' | 'concha' | 'floco' | 'raio' | 'coracao' | 'folha';
@@ -436,7 +438,27 @@ export const FANTASIAS: readonly FantasiaDef[] = [
   },
 ];
 
-const POR_ID = new Map(FANTASIAS.map((f) => [f.id, f]));
+/**
+ * Spec 014 (T11): fantasias que só os moradores vestem (o tema as dá a uma profissão em
+ * `PovoadoTema.fantasias`); não aparecem na aba Fantasias. O desenho é o mesmo do jogador.
+ */
+export const FANTASIAS_DE_MORADOR: readonly FantasiaDef[] = [
+  {
+    id: 'mecanico-cidade',
+    grupo: 'temas',
+    tema: 'cidade-grande',
+    nomes: { feminino: 'Mecânica', masculino: 'Mecânico' },
+    cores: ['#3a6ab0'],
+    corEmblema: '#d8433a',
+    visual: mesmo({
+      roupa: { camisa: 'principal', manga: 'principal', calca: '#2f5a9a', sapato: '#2a2026' },
+      cabeca: 'chapeu',
+      pecas: [{ tipo: 'bone', cor: '#d8433a' }],
+    }),
+  },
+];
+
+const POR_ID = new Map([...FANTASIAS, ...FANTASIAS_DE_MORADOR].map((f) => [f.id, f]));
 
 export function fantasiaPorId(id: unknown): FantasiaDef | undefined {
   return typeof id === 'string' ? POR_ID.get(id) : undefined;

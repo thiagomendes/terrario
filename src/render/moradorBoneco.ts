@@ -204,6 +204,9 @@ export interface Morador {
 }
 
 /** Aparência e ajuste do plano do boneco para um morador do tema. */
+/** O estilo de roupa de braços de fora (avental de ferreiro, `planoBoneco`). */
+const ESTILO_SEM_MANGA = 1;
+
 export function moradorDeBrinquedo(
   pecas: readonly PecaCriatura[],
   id: number,
@@ -278,6 +281,10 @@ export function moradorDeBrinquedo(
   const rostos = genero === 'f' ? [0, 1, 2, 3] : genero === 'm' ? [0, 2, 4, 5] : [0, 1, 2, 3, 4, 5];
   a.rosto = rostos[Math.floor(hash(id, 3) * rostos.length)];
   a.acessorio = acessorio ?? 'nenhum';
+  // T11: o modelo de braços de fora (avental de ferreiro) pinta a manga com a pele, e a troca
+  // "cor da manga -> roupa do tema" pintava a pele do morador com a roupa (o mecânico azul).
+  // O morador veste a roupa do tema: sempre com manga.
+  if (a.roupaEstilo === ESTILO_SEM_MANGA) a.roupaEstilo = 0;
   if (fantasia) a.fantasia = { ...fantasia };
   const pele = cabeca?.cor;
   const roupa = tronco?.cor;
@@ -287,13 +294,14 @@ export function moradorDeBrinquedo(
 
   const ajustar = (plano: PlanoBoneco): PlanoBoneco => {
     const troca = new Map<string, string>();
-    if (pele) troca.set(plano.cores.pele, pele);
     if (roupa) {
-      troca.set(plano.cores.roupa, roupa);
+      if (plano.cores.roupa !== plano.cores.pele) troca.set(plano.cores.roupa, roupa);
       if (plano.cores.punho !== plano.cores.pele) troca.set(plano.cores.punho, roupa);
     }
     if (calca) troca.set(plano.cores.calca, calca);
     if (cabelo) troca.set(plano.cores.cabelo, cabelo);
+    // a pele por último: nenhuma cor de roupa toma o lugar dela
+    if (pele) troca.set(plano.cores.pele, pele);
     const sapatoCor = sapato?.cor;
     const pecasNovas: Peca[] = plano.pecas.map((p) => {
       let cor = troca.get(p.cor) ?? p.cor;

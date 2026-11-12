@@ -38,7 +38,8 @@ const MORADORES: Record<Profissao, PecaCriatura[]> = {
     { t: [0.52, 0.06, 0.3], p: [0, 0.86, 0], cor: '#6b4a3a' },
     { t: [0.06, 0.16, 0.03], p: [0.2, 0.8, 0.16], cor: '#9aa0a8' },
   ],
-  // mecânico: macacão azul, boné vermelho e a chave inglesa no bolso
+  // mecânico: macacão azul e a chave inglesa no bolso; o boné vermelho de brinquedo é a peça de
+  // fantasia `bone` (`fantasias`, abaixo)
   ferreiro: [
     ...corpoDeMorador({
       pele: '#8a5a3c',
@@ -52,9 +53,6 @@ const MORADORES: Record<Profissao, PecaCriatura[]> = {
     { t: [0.07, 0.5, 0.3], p: [-0.13, 1.15, 0], cor: '#2a4f8e' },
     { t: [0.3, 0.18, 0.04], p: [0, 1.0, 0.155], cor: '#2a4f8e' },
     { t: [0.05, 0.2, 0.04], p: [-0.12, 1.0, 0.18], cor: '#b7bec8' },
-    // boné vermelho com a aba para a frente
-    { t: [0.46, 0.13, 0.44], p: [0, ACIMA, 0], cor: '#d8433a', papel: 'cabeca' },
-    { t: [0.32, 0.03, 0.2], p: [0, ACIMA - 0.02, 0.27], cor: '#d8433a', papel: 'cabeca' },
   ],
 };
 
@@ -83,7 +81,10 @@ export const POVOADO_CIDADE: PovoadoTema = {
   // a padeira usa a touca de chef do jogador
   acessorios: { cozinheiro: 'touca-chef' },
   // o pedreiro veste o capacete e o colete de obra (camisa branca: a segunda cor do colete)
-  fantasias: { construtor: { id: 'colete-obra', cor: 1 } },
+  fantasias: {
+    construtor: { id: 'colete-obra', cor: 1 },
+    ferreiro: { id: 'mecanico-cidade', cor: 0 },
+  },
   // passo ligeiro de quem anda na calçada
   movimento: { saltita: 0.02, flutua: 0, ginga: 0.04 },
   vozes: {

@@ -1621,6 +1621,32 @@ export function vestirFantasia(
         sobreCabelo('chapeu');
         break;
       }
+      case 'bone': {
+        // spec 014 (T11): boné de brinquedo: copa redonda assentada no cabelo, a faixa em
+        // volta, o botãozinho em cima e a pala curta e arredondada na frente
+        const b = m.baseChapeu;
+        bola('bone-copa', 'cabeca', 'cabeca', 0.37, [0, b + 0.07, -0.01], c, [1, 0.7, 1.06], {
+          brilho: 0.4,
+        });
+        cilindro('bone-faixa', 'cabeca', 'cabeca', 0.05, 0.375, 0.38, [0, b + 0.045, -0.01], c, {
+          brilho: 0.4,
+        });
+        bola(
+          'bone-botao',
+          'cabeca',
+          'cabeca',
+          0.05,
+          [0, b + 0.33, -0.01],
+          escurecer(c, 0.12),
+          [1, 0.6, 1],
+        );
+        caixa('bone-pala', 'cabeca', 'cabeca', [0.4, 0.035, 0.24], [0, b + 0.05, 0.45], c, 0.1, {
+          rot: [0.14, 0, 0],
+          brilho: 0.4,
+        });
+        sobreCabelo('chapeu');
+        break;
+      }
       case 'colete-obra': {
         // spec 014: colete laranja de obra, com duas faixas claras que brilham (sem marca)
         const faixa = '#eef2f4';

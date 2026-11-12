@@ -306,6 +306,7 @@ Medidas que precisam passar antes de fechar:
 - **Duas crianças na mesma célula:** um bloco só, nada pisca (`tests/nucleo/canal.test.ts`), e as duas entram na lista de ajudantes se cada uma pôs algum bloco.
 - **Carrinhos (se entrarem):** em 1 hora simulada com bots parados e andando na rua, nenhum veículo chega a menos de 1 bloco de ninguém, nenhum nó no cruzamento, nenhum fica parado sem motivo; buzina no máximo uma vez a cada 6 s por veículo.
 - **Desempenho:** 45 quadros no centro no celular (ver "Desempenho").
+  - **Medido na T11 (12 nov 2026, GPU, CPU 4× mais lenta, centro da cidade):** celular 56–59 parado e 51–58 girando; computador 53–55 parado. **Lacuna conhecida, aceita pelo coordenador:** o computador girando a câmera sem parar fica em 42 (meta 45); o que sobra em movimento é o mapa de sombras (refeito um quadro sim, um não) e o brilho de todos os chunks, e as saídas encontradas tiram algo da tela (sombra das plantas, raio de sombra menor, brilho só perto). Detalhes em `medidas.md` do relatório da T11.
 - **Rodada em família** na cidade, no computador e no celular, antes de fechar.
 
 ## Critérios de qualidade (definição de pronto)
