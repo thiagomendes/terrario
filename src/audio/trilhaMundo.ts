@@ -41,7 +41,10 @@ export interface InfoTrilha {
 export interface TrilhaMundo {
   /** Começa a baixar o pacote do tema (em segundo plano). */
   baixar(): void;
-  /** O som ligou: a trilha passa a tocar por este ambiente. */
+  /**
+   * O som ligou: a trilha passa a tocar por este ambiente. Não baixa nada: o pacote só vem
+   * com `baixar()`, quando o mundo fica pronto (o mundo nunca disputa a rede com a música).
+   */
   ligar(amb: AmbienteTrilha): void;
   /** O estado do mundo de agora (chamar a cada quadro; só muda a música quando muda). */
   definirEstado(e: EstadoTrilha): void;
@@ -153,7 +156,6 @@ export function criarTrilhaMundo(temaId: string, op: OpcoesTrilhaMundo = {}): Tr
       if (solta || ambiente) return;
       ambiente = amb;
       contexto = (amb.saidaTrilha()?.contexto as BaseAudioContext | undefined) ?? null;
-      baixar();
       timer = setInterval(passo, op.intervaloMs ?? 200);
       passo();
     },

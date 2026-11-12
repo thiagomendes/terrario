@@ -91,10 +91,27 @@ describe('trilha do mundo', () => {
     expect(t.info().fase).toBe('solta');
   });
 
+  it('o som ligar antes do mundo ficar pronto não baixa nada (o mundo não espera)', async () => {
+    const car = carregador();
+    const amb = ambiente();
+    const t = criarTrilhaMundo('bruma-e-luz', { carregador: car });
+    t.ligar(amb);
+    await vi.advanceTimersByTimeAsync(2000);
+    expect(t.info().fase).toBe('esperando');
+    expect(t.info().medidas.bytesBaixados).toBe(0);
+    expect(amb.sint).toEqual([]);
+    // o mundo ficou pronto: agora baixa e entra
+    t.baixar();
+    for (let i = 0; i < 40 && !t.info().gravada; i++) await vi.advanceTimersByTimeAsync(200);
+    expect(t.info().gravada).toBe(true);
+    t.soltar();
+  });
+
   it('sem o pacote: a de hoje segue, sem erro', async () => {
     const amb = ambiente();
     const t = criarTrilhaMundo('bruma-e-luz', { carregador: carregador(true) });
     t.ligar(amb);
+    t.baixar();
     await vi.advanceTimersByTimeAsync(1000);
     expect(t.info().fase).toBe('falhou');
     expect(t.info().gravada).toBe(false);
