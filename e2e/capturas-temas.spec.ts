@@ -18,6 +18,15 @@ const TOCHA = 37;
 test.skip(!pedido, 'capturas de tema só com CAPTURAS_TEMAS');
 
 async function abrir(page: Page, id: string) {
+  // a cidade vista do alto: o outro lado do parque precisa estar carregado no cartão
+  if (id === 'cidade-grande')
+    await page.addInitScript(() => {
+      try {
+        localStorage.setItem('terrario:config', JSON.stringify({ distancia: 5 }));
+      } catch {
+        // sem armazenamento
+      }
+    });
   await page.goto(`/?tema=${id}`);
   await page.waitForFunction(() => window.__brumaluz?.ready === true, undefined, {
     timeout: 180_000,
@@ -60,6 +69,71 @@ async function foto(page: Page, nome: string) {
   await page.screenshot({ path: `${PASTA}/${nome}.jpg`, type: 'jpeg', quality: 78 });
 }
 
+type V3 = [number, number, number];
+
+/**
+ * Spec 014 (T12): o cartão da Cidade Grande, de uma câmera parada um pouco alta na esquina de
+ * fora do parque: o gramado e as árvores, as faixas amarelas da avenida, a torre art déco da
+ * esquina e as casas de tijolo, e as torres do horizonte atrás; a criança pequena, fora do
+ * meio, com o cachorro e o pedreiro ao lado. Sem andaime, tapume nem fantasma na frente.
+ */
+async function cartaoDaCidade(page: Page) {
+  await cena(page, 0.4, 'limpo', 500);
+  await page.setViewportSize({ width: 960, height: 540 });
+  await page.evaluate(() => {
+    const e = window.__brumaluz!;
+    const p = e.cidade!()!;
+    const P = p.parque;
+    const H = p.h;
+    const cam: V3 = [P.x1 + 5, H + 11, P.z0 - 5];
+    const alvo: V3 = [P.x1 - 30, H + 6, P.z1 - 10];
+    const dx = alvo[0] - cam[0];
+    const dz = alvo[2] - cam[2];
+    const n = Math.hypot(dx, dz);
+    const bx = cam[0] + (dx / n) * 16 + (dz / n) * 4;
+    const bz = cam[2] + (dz / n) * 16 - (dx / n) * 4;
+    e.voar?.(false);
+    e.teleportar!(bx, bz, H + 1);
+    e.apontar!(Math.atan2(-dx, -dz), 0);
+    e.invocar!('cervo', bx + (dz / n) * 1.6, H + 1, bz - (dx / n) * 1.6);
+    e.estatua!(
+      'morador',
+      bx - (dz / n) * 1.8 + (dx / n) * 1.2,
+      H + 1,
+      bz + (dx / n) * 1.8 + (dz / n) * 1.2,
+      Math.atan2(-dx, -dz),
+      { profissao: 'construtor', n: 0 },
+    );
+    const w = window as unknown as { __cartao?: () => void };
+    const obs = e.cenaBabylon!().onBeforeCameraRenderObservable.add((c) => {
+      const camera = c as unknown as {
+        position: { set(...a: number[]): void; clone(): { set(...a: number[]): unknown } };
+        setTarget(v: unknown): void;
+      };
+      camera.position.set(...cam);
+      const a = camera.position.clone();
+      a.set(...alvo);
+      camera.setTarget(a);
+    });
+    const tela = document.getElementById('cena')!;
+    const escondidos: HTMLElement[] = [];
+    for (const el of Array.from(document.body.querySelectorAll<HTMLElement>('*')))
+      if (el !== tela && !el.contains(tela) && el.style.visibility !== 'hidden') {
+        el.style.visibility = 'hidden';
+        escondidos.push(el);
+      }
+    w.__cartao = () => {
+      e.cenaBabylon!().onBeforeCameraRenderObservable.remove(obs);
+      for (const el of escondidos) el.style.visibility = '';
+    };
+  });
+  // os chunks do outro lado do parque chegam
+  await page.waitForTimeout(8000);
+  await page.screenshot({ path: 'public/temas/cidade-grande.jpg', type: 'jpeg', quality: 80 });
+  await page.evaluate(() => (window as unknown as { __cartao?: () => void }).__cartao?.());
+  await page.setViewportSize({ width: 1280, height: 720 });
+}
+
 for (const id of TEMAS) {
   test(`matriz de capturas: ${id}`, async ({ page }) => {
     test.setTimeout(900_000);
@@ -76,13 +150,6 @@ for (const id of TEMAS) {
       const a = e.astro;
       // mundo de sítio (Rancho Alegre): olha para o sítio mais perto, como ao nascer
       const sitio = e.tema === 'rancho-alegre' ? e.povoados!()[0] : undefined;
-      // Cidade Grande (spec 014): no meio da avenida ao lado do parque, olhando a rua comprida
-      // entre os prédios (escada de incêndio, toldo e as torres ao longe)
-      const cidade = e.tema === 'cidade-grande' ? e.cidade?.() : null;
-      if (!a && cidade) {
-        e.teleportar!(cidade.ox + 20, cidade.parque.z0 - 4.5, cidade.h + 1);
-        return { yaw: Math.PI / 2, pitch: -0.16, ceu: -0.55 };
-      }
       if (!a && sitio) {
         const [x, , z] = e.posicao!;
         return { yaw: Math.atan2(sitio.cx - x, sitio.cz - z), pitch: -0.12, ceu: -0.55 };
@@ -96,12 +163,15 @@ for (const id of TEMAS) {
     await page.evaluate((v) => window.__brumaluz!.apontar!(v.yaw, v.pitch), vista);
 
     // prévia do cartão do tema: manhã clara, sem interface
-    await semHud(page, true);
-    await cena(page, 0.36, 'limpo', 4000);
-    await page.setViewportSize({ width: 960, height: 540 });
-    await page.waitForTimeout(1200);
-    await page.screenshot({ path: `public/temas/${id}.jpg`, type: 'jpeg', quality: 80 });
-    await page.setViewportSize({ width: 1280, height: 720 });
+    if (id === 'cidade-grande') await cartaoDaCidade(page);
+    else {
+      await semHud(page, true);
+      await cena(page, 0.36, 'limpo', 4000);
+      await page.setViewportSize({ width: 960, height: 540 });
+      await page.waitForTimeout(1200);
+      await page.screenshot({ path: `public/temas/${id}.jpg`, type: 'jpeg', quality: 80 });
+      await page.setViewportSize({ width: 1280, height: 720 });
+    }
     // o modo foto tem câmera própria (não segue teleportes): a matriz usa a câmera do jogo
     await semHud(page, false);
     await page.waitForTimeout(800);
