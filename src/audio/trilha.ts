@@ -723,6 +723,30 @@ export interface OpcoesTrilhaGravada {
 }
 
 /**
+ * Reprograma um parâmetro descrito por pontos [t, v]: segue a curva de agora até o compasso
+ * `tb` e de lá vai a `v1` em `dur` segundos. Devolve a curva nova. Uma rampa que ainda andava
+ * é cortada em `tb` no valor dela (nunca volta ao começo, como faria um cancel no meio dela).
+ */
+function rampaNoCompasso(
+  p: AudioParam,
+  pts: [number, number][],
+  agora: number,
+  tb: number,
+  v1: number,
+  dur: number,
+): [number, number][] {
+  const vb = interpolar(pts, tb);
+  const novos: [number, number][] = pts.filter((q) => q[0] < tb && q[0] > agora - 30);
+  const antes = pts.filter((q) => q[0] <= agora).pop();
+  if (antes && !novos.includes(antes)) novos.unshift(antes);
+  novos.push([tb, vb], [tb + dur, v1]);
+  p.cancelScheduledValues(agora);
+  p.setValueAtTime(interpolar(novos, agora), agora);
+  for (const [t, v] of novos) if (t > agora) p.linearRampToValueAtTime(v, t);
+  return novos;
+}
+
+/**
  * O motor da trilha gravada sobre um contexto do Web Audio (o do jogo ou um offline, na
  * régua de volume). Quem o dirige chama `agendar()` umas 5 vezes por segundo.
  */
@@ -746,6 +770,8 @@ export class TrilhaGravada {
   private saida!: GainNode;
   /** O ajuste de volume do tema no contexto de agora (`nivelTrilha`). */
   private nivel!: GainNode;
+  /** A curva do ajuste de volume, em pontos [t, v] (como `mod`), para trocar sem degrau. */
+  private nivelPts: [number, number][] = [];
   private filtro!: BiquadFilterNode;
   private envio!: GainNode;
   private atraso!: DelayNode;
@@ -799,7 +825,9 @@ export class TrilhaGravada {
     this.realim.connect(this.atraso);
     this.atraso.connect(this.saida);
     this.nivel = this.no(c.createGain());
-    this.nivel.gain.value = this.nivelDe(e);
+    const nv0 = this.nivelDe(e);
+    this.nivel.gain.value = nv0;
+    this.nivelPts = [[c.currentTime, nv0]];
     this.saida.connect(this.nivel);
     this.nivel.connect(this.destino);
     const alv = alvoMix(e, this.op.temPerigo, this.op.rancho);
@@ -826,7 +854,7 @@ export class TrilhaGravada {
 
   /** O ajuste de volume que vale agora (ganho linear). */
   get ganhoNivel(): number {
-    return this.nivel?.gain.value ?? 1;
+    return this.nivel ? interpolar(this.nivelPts, this.ctx.currentTime) : 1;
   }
 
   valor(k: Camada, t = this.ctx.currentTime): number {
@@ -961,24 +989,14 @@ export class TrilhaGravada {
       mudou = true;
       const vb = this.valor(k, tb);
       const dur = (v1 > vb ? 1 : 1.5) * this.compasso;
-      const novos: [number, number][] = pts.filter((p) => p[0] < tb && p[0] > agora - 30);
-      const antes = pts.filter((p) => p[0] <= agora).pop();
-      if (antes && !novos.includes(antes)) novos.unshift(antes);
-      novos.push([tb, vb], [tb + dur, v1]);
-      this.mod[k] = novos;
-      const p = this.ganhos[k].gain;
-      p.cancelScheduledValues(agora);
-      p.setValueAtTime(interpolar(novos, agora), agora);
-      for (const [t, v] of novos) if (t > agora) p.linearRampToValueAtTime(v, t);
+      this.mod[k] = rampaNoCompasso(this.ganhos[k].gain, pts, agora, tb, v1, dur);
     }
-    // o ajuste de volume do contexto novo acompanha as camadas, em 1,5 compasso
+    // o ajuste de volume do contexto novo acompanha as camadas, em 1,5 compasso (uma troca no
+    // meio da rampa de antes segue do valor de agora, sem degrau)
     const nv = this.nivelDe(e);
-    const pn = this.nivel.gain;
-    if (Math.abs(pn.value - nv) > 1e-4) {
-      pn.cancelScheduledValues(tb);
-      pn.setValueAtTime(pn.value, tb);
-      pn.linearRampToValueAtTime(nv, tb + 1.5 * this.compasso);
-    }
+    const np = this.nivelPts;
+    if (Math.abs(np[np.length - 1][1] - nv) > 1e-4)
+      this.nivelPts = rampaNoCompasso(this.nivel.gain, np, agora, tb, nv, 1.5 * this.compasso);
     const fx = alv.fx;
     const tc = this.compasso / 3;
     const params: [AudioParam, number][] = [

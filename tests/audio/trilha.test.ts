@@ -423,6 +423,31 @@ describe('motor da trilha gravada', () => {
     );
   });
 
+  it('troca de contexto no meio da rampa do ajuste de volume: segue de onde está, sem degrau', async () => {
+    const { ctx, m } = await montar('planeta-vivo');
+    m.iniciar(e(), 0.3);
+    const dia = nivelTrilha('planeta-vivo', 'dia');
+    const noite = nivelTrilha('planeta-vivo', 'noite');
+    ctx.currentTime = 1;
+    const tb = m.mudar(e({ hora: 'noite' }))!;
+    // no meio da rampa dia → noite, volta o dia
+    ctx.currentTime = tb + 0.75 * m.compasso;
+    const meio = m.ganhoNivel;
+    expect(meio).toBeGreaterThan(dia + 1e-4);
+    expect(meio).toBeLessThan(noite - 1e-4);
+    const tb2 = m.mudar(e())!;
+    const nivel = (m as unknown as { nivel: { gain: Param } }).nivel.gain;
+    const ultimas = nivel.chamadas.slice(-4);
+    // cancela só daqui para a frente e prende o valor de agora (o do meio da rampa)
+    expect(ultimas[0]).toEqual(['cancelar', 0, ctx.currentTime]);
+    expect(ultimas[1][0]).toBe('set');
+    expect(ultimas[1][1]).toBeCloseTo(meio, 9);
+    // segue subindo até o compasso da troca e de lá desce de volta ao dia
+    expect(m.ganhoNivel).toBeCloseTo(meio, 9);
+    ctx.currentTime = tb2 + 1.5 * m.compasso + 0.01;
+    expect(m.ganhoNivel).toBeCloseTo(dia, 9);
+  });
+
   it('começa com as camadas do contexto no compasso 0 e a frase A', async () => {
     const { ctx, car, m } = await montar();
     await car.abrir('base');
