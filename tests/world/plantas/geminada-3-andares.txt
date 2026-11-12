@@ -1,0 +1,190 @@
+y=0
+ E  }   
+ M      
+MMMMMMMM
+MMMMMMMM
+MMMMMMMM
+MMMMMMMM
+MMMMMMMM
+MMMMMMMM
+MMMMMMMM
+y=1
+     }  
+ E      
+MMMMMMMM
+MTTTTTTM
+MTTTTTTM
+MTTTTTTM
+MTTTTTTM
+MTTTTTTM
+MMMMMMMM
+y=2
+      } 
+        
+MPMLJMJM
+M......M
+M.....EM
+M......M
+M......M
+MBKX...M
+MMLLLJMM
+y=3
+       }
+        
+MPMLJMJM
+M......M
+M......M
+M.....EM
+M......M
+M..i...M
+MMLLLJMM
+y=4
+   _}   
+   _____
+MpMMMMMM
+M......M
+M......M
+M......M
+M.....EM
+M......M
+MMMMMMMM
+y=5
+     }  
+        
+MMMMMMMM
+MTTTTTTM
+MTTTTT.M
+MTTTTT.M
+MTTTTT.M
+MTTTTTEM
+MMMMMMMM
+y=6
+      } 
+        
+MJLMMJJM
+MX.....M
+M.....EM
+M......M
+MK.....M
+MB.....M
+MMJLJLMM
+y=7
+       }
+        
+MJLMMJJM
+Mi.....M
+M......M
+M.....EM
+M......M
+M......M
+MMJLJLMM
+y=8
+   _}   
+   _____
+MMMMMMMM
+M......M
+M......M
+M......M
+M.....EM
+M......M
+MMMMMMMM
+y=9
+     }  
+        
+MMMMMMMM
+MTTTTTTM
+MTTTTT.M
+MTTTTT.M
+MTTTTT.M
+MTTTTTEM
+MMMMMMMM
+y=10
+      } 
+        
+MJJMMLJM
+MX.....M
+M.....EM
+M......M
+MK.....M
+MB.....M
+MMJJLLMM
+y=11
+       }
+        
+MJJMMLJM
+Mi.....M
+M......M
+M.....EM
+M......M
+M......M
+MMJJLLMM
+y=12
+        
+      {_
+MMMMMMMM
+M......M
+M......M
+M......M
+M.....EM
+M......M
+MMMMMMMM
+y=13
+        
+DDDDD{  
+DDDDDDDD
+DDDDDDDD
+DDDDDD.D
+DDDDDD.D
+DDDDDD.D
+DDDDDDED
+DDDDDDDD
+y=14
+        
+####    
+#      #
+#      #
+## # #.#
+#    #.#
+## # #.#
+#      #
+########
+y=15
+        
+        
+        
+        
+ TTT    
+ TTT    
+ TTT    
+        
+        
+y=16
+        
+        
+        
+        
+ www    
+ www    
+ www    
+        
+        
+y=17
+        
+        
+        
+        
+        
+  _     
+        
+        
+        
+y=18
+        
+        
+        
+        
+        
+        
+        
+        
+        
