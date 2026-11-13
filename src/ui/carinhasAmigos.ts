@@ -299,10 +299,10 @@ export function criarCarinhas(acoes: AcoesCarinhas) {
     const W = window.innerWidth;
     const embaixo = ['.menu-hud.mochila', '.botao-amigos']
       .map((sel) => fel(sel))
-      .filter((x): x is HTMLElement => !!x && x.offsetParent !== null)
+      .filter((x): x is HTMLElement => !!x)
       .map((x) => x.getBoundingClientRect())
-      // só o que está na coluna da direita
-      .filter((r) => r.right > W - 140);
+      // só o que está à vista, na coluna da direita (fixo não tem offsetParent)
+      .filter((r) => r.width > 0 && r.right > W - 140);
     const fundo = Math.max(mini?.bottom ?? 200, ...embaixo.map((r) => r.bottom));
     const direita = mini && mini.width ? W - mini.right : 14;
     const x = W - direita - 48;
