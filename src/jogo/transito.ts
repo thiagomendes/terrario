@@ -20,6 +20,7 @@
  * Nada tira um veículo do caminho: ele só para e espera. Os planos mudam poucas vezes por
  * volta; o núcleo manda só os que mudaram (`mudados`), e o cliente faz a mesma conta.
  */
+import type { TipoSer } from './criaturas';
 import type { PlanoCidade } from '../world/cidade';
 import { soloDaCidade, soloDePista } from '../world/cidade';
 import {
@@ -53,6 +54,50 @@ export interface PessoaNaRua {
   z: number;
   /** Criança (jogador): conta para a buzina, o encalhe e o "uí-uí". */
   crianca: boolean;
+  /**
+   * O corpo no chão de um bicho comprido (o cachorro grande tem quase 2 blocos do focinho ao
+   * rabo): meia frente, meio lado e para onde aponta (yaw do jogo: a frente é (sen, cos)).
+   * Sem o campo, um boneco (raio 0,3).
+   */
+  corpo?: CorpoNaRua;
+}
+
+export interface CorpoNaRua {
+  frente: number;
+  lado: number;
+  yaw: number;
+}
+
+/**
+ * Meia frente e meio lado do desenho de cada bicho da cidade (do focinho ao rabo e de orelha a
+ * orelha, um pouco de folga): a caixa de colisão do jogo base é bem menor que o desenho, e é o
+ * desenho que a criança vê encostar no carro. Conferido com os desenhos no teste.
+ */
+export const CORPO_NA_RUA: Record<TipoSer, [number, number]> = {
+  cervo: [1.12, 0.44],
+  coelho: [0.4, 0.26],
+  peixe: [0.4, 0.2],
+  espectro: [0.8, 0.32],
+  raposa: [0.55, 0.24],
+  morador: [0.3, 0.3],
+};
+
+export function corpoNaRua(tipo: TipoSer, yaw: number): CorpoNaRua | undefined {
+  if (tipo === 'morador') return undefined;
+  const [frente, lado] = CORPO_NA_RUA[tipo];
+  return { frente, lado, yaw };
+}
+
+/**
+ * Até onde o corpo de quem anda vai na direção (dx, dz) (unitária) a partir do centro dele:
+ * o boneco é um círculo; o bicho, o retângulo do desenho girado.
+ */
+export function alcanceDoCorpo(p: PessoaNaRua, dx: number, dz: number): number {
+  const c = p.corpo;
+  if (!c) return RAIO_PESSOA;
+  const fx = Math.sin(c.yaw);
+  const fz = Math.cos(c.yaw);
+  return Math.abs(dx * fx + dz * fz) * c.frente + Math.abs(dx * fz - dz * fx) * c.lado;
 }
 
 export type OcorrenciaVeiculo = 'buzina' | 'ponto' | 'saiu' | 'chegou' | 'sopro' | 'uiui';
@@ -121,6 +166,96 @@ interface Veic {
   pose: Pose;
   /** Por que parou ou freou por último (depuração e testes). */
   motivo: string;
+}
+
+/** Ponto até o retângulo (centro, frente unitária, meias medidas): distância; 0 dentro. */
+function distRet(
+  cx: number,
+  cz: number,
+  hx: number,
+  hz: number,
+  mf: number,
+  ml: number,
+  x: number,
+  z: number,
+): number {
+  const dx = x - cx;
+  const dz = z - cz;
+  const f = dx * hx + dz * hz;
+  const l = -dx * hz + dz * hx;
+  return Math.hypot(Math.max(Math.abs(f) - mf, 0), Math.max(Math.abs(l) - ml, 0));
+}
+const cantosTmp: number[] = new Array(16).fill(0);
+/** Os 4 cantos de um retângulo em `out` a partir de `k` (x, z, x, z...). */
+function cantos(
+  out: number[],
+  k: number,
+  cx: number,
+  cz: number,
+  hx: number,
+  hz: number,
+  mf: number,
+  ml: number,
+): void {
+  let i = k;
+  for (const a of [-1, 1])
+    for (const b of [-1, 1]) {
+      out[i++] = cx + hx * mf * a - hz * ml * b;
+      out[i++] = cz + hz * mf * a + hx * ml * b;
+    }
+}
+
+/**
+ * Quanto falta do corpo de quem anda até o retângulo do veículo (no chão, a distância de
+ * verdade entre os dois): negativo, encostado ou dentro (quanto mais dentro, mais negativo).
+ */
+export function folgaAoVeiculo(pose: Pose, m: MedidasVeiculo, p: PessoaNaRua): number {
+  const c = p.corpo;
+  if (!c)
+    return (
+      distRet(pose.x, pose.z, pose.hx, pose.hz, m.meioComp, m.meiaLarg, p.x, p.z) - RAIO_PESSOA
+    );
+  const fx = Math.sin(c.yaw);
+  const fz = Math.cos(c.yaw);
+  const C = cantosTmp;
+  cantos(C, 0, pose.x, pose.z, pose.hx, pose.hz, m.meioComp, m.meiaLarg);
+  cantos(C, 8, p.x, p.z, fx, fz, c.frente, c.lado);
+  // separados por algum eixo (os lados dos dois)? então a distância é de canto a retângulo
+  let sobra = Infinity;
+  for (const [ax, az] of [
+    [pose.hx, pose.hz],
+    [-pose.hz, pose.hx],
+    [fx, fz],
+    [-fz, fx],
+  ]) {
+    let a0 = Infinity;
+    let a1 = -Infinity;
+    let b0 = Infinity;
+    let b1 = -Infinity;
+    for (let i = 0; i < 8; i += 2) {
+      const pa = C[i] * ax + C[i + 1] * az;
+      const pb = C[i + 8] * ax + C[i + 9] * az;
+      a0 = Math.min(a0, pa);
+      a1 = Math.max(a1, pa);
+      b0 = Math.min(b0, pb);
+      b1 = Math.max(b1, pb);
+    }
+    const sep = Math.max(b0 - a1, a0 - b1);
+    if (sep > 0) {
+      let d = Infinity;
+      for (let i = 0; i < 8; i += 2) {
+        d = Math.min(
+          d,
+          distRet(pose.x, pose.z, pose.hx, pose.hz, m.meioComp, m.meiaLarg, C[i + 8], C[i + 9]),
+          distRet(p.x, p.z, fx, fz, c.frente, c.lado, C[i], C[i + 1]),
+        );
+      }
+      return d;
+    }
+    // sobreposto neste eixo: quanto (o menor de todos é o quanto está dentro)
+    sobra = Math.min(sobra, -sep);
+  }
+  return -sobra;
 }
 
 /** Ponto até o retângulo do veículo (distância no chão; 0 dentro). */
@@ -287,8 +422,14 @@ export function criarTransito(op: OpcoesTransito) {
     return [Math.min(...xs), Math.min(...zs), Math.max(...xs), Math.max(...zs)];
   }
 
-  const dentro = (r: [number, number, number, number], x: number, z: number, folga: number) =>
-    x >= r[0] - folga && x <= r[2] + folga && z >= r[1] - folga && z <= r[3] + folga;
+  /** O corpo de quem anda (alcance fx em x e fz em z) toca o retângulo? */
+  const dentro = (
+    r: [number, number, number, number],
+    x: number,
+    z: number,
+    fx: number,
+    fz: number,
+  ) => x >= r[0] - fx && x <= r[2] + fx && z >= r[1] - fz && z <= r[3] + fz;
 
   function passo(dt: number, pessoas: readonly PessoaNaRua[]): void {
     T += dt;
@@ -339,7 +480,7 @@ export function criarTransito(op: OpcoesTransito) {
       // em cima: no teto ou pulando nele (quem voa bem mais alto não segura o veículo)
       const emCima = p.y > chao + 0.6;
       if (emCima && p.y > chao + m.altura + 1.5) continue;
-      if (emCima ? d <= 0 : p.y < chao + 2.2 && d < RAIO_PESSOA + 0.05) {
+      if (emCima ? d <= 0 : p.y < chao + 2.2 && folgaAoVeiculo(pose, m, p) < 0.05) {
         segura = true;
         if (p.crianca) seguraCrianca = true;
       }
@@ -381,7 +522,19 @@ export function criarTransito(op: OpcoesTransito) {
         for (const p of perto) {
           if (p.y > chao + 0.6 && distanciaAoVeiculo(pose, m, p.x, p.z) <= 0) continue;
           if (p.y > chao + 2.2) continue;
-          if (Math.hypot(p.x - pt.x, p.z - pt.z) < m.meiaLarg + RAIO_PESSOA + FOLGA_OLHAR) {
+          let pg: number | null = null;
+          if (p.corpo) {
+            // o bicho: o retângulo do desenho contra a faixa que o veículo varre (no rumo do
+            // caminho aqui); para a 1,5 bloco do corpo dele, não do centro
+            const dx = p.x - pt.x;
+            const dz = p.z - pt.z;
+            const f = dx * pt.hx + dz * pt.hz;
+            const l = -dx * pt.hz + dz * pt.hx;
+            const ef = alcanceDoCorpo(p, pt.hx, pt.hz);
+            const el = alcanceDoCorpo(p, -pt.hz, pt.hx);
+            if (Math.abs(f) <= ef + 0.2 && Math.abs(l) < m.meiaLarg + el + FOLGA_OLHAR)
+              pg = u + f - ef - hl - DISTANCIA_GENTE;
+          } else if (Math.hypot(p.x - pt.x, p.z - pt.z) < m.meiaLarg + RAIO_PESSOA + FOLGA_OLHAR) {
             // onde ela está ao longo do caminho (o ponto do caminho mais perto dela)
             let uMin = u;
             let dMin = Infinity;
@@ -393,7 +546,9 @@ export function criarTransito(op: OpcoesTransito) {
                 uMin = w;
               }
             }
-            const pg = uMin - hl - DISTANCIA_GENTE - RAIO_PESSOA;
+            pg = uMin - hl - DISTANCIA_GENTE - RAIO_PESSOA;
+          }
+          if (pg !== null) {
             if (pg < pare) {
               pare = pg;
               v.motivo = p.crianca ? 'crianca' : 'gente';
@@ -461,10 +616,12 @@ export function criarTransito(op: OpcoesTransito) {
           const caixa: [number, number, number, number] = [c.x0, c.z0, c.x1 + 1, c.z1 + 1];
           for (const p of perto) {
             if (p.y > chao + 2.2) continue;
+            const fx = alcanceDoCorpo(p, 1, 0);
+            const fz = alcanceDoCorpo(p, 0, 1);
             if (
-              dentro(zin, p.x, p.z, RAIO_PESSOA) ||
-              dentro(zout, p.x, p.z, RAIO_PESSOA) ||
-              dentro(caixa, p.x, p.z, RAIO_PESSOA)
+              dentro(zin, p.x, p.z, fx, fz) ||
+              dentro(zout, p.x, p.z, fx, fz) ||
+              dentro(caixa, p.x, p.z, fx, fz)
             ) {
               pode = false;
               porGente = true;
@@ -663,6 +820,26 @@ export function criarTransito(op: OpcoesTransito) {
           motivo: v.motivo,
         };
       });
+    },
+    /**
+     * Quanto falta do corpo de quem anda até o veículo mais perto (os bichos não encostam: o
+     * passo que chegaria mais perto que isto não é dado). Quem está bem acima do teto não conta.
+     */
+    folga(p: PessoaNaRua): number {
+      let menor = Infinity;
+      for (const v of veics) {
+        if (Math.abs(v.pose.x - p.x) > 8 || Math.abs(v.pose.z - p.z) > 8) continue;
+        if (p.y > chao + v.m.altura + 0.3) continue;
+        const f = folgaAoVeiculo(v.pose, v.m, p);
+        if (f < menor) menor = f;
+      }
+      return menor;
+    },
+    /** Algum veículo andando a até `raio` blocos (os bichos saem da rua na hora). */
+    andandoPerto(x: number, z: number, raio: number): boolean {
+      return veics.some(
+        (v) => noPlano(v.plano, T).v > 0.05 && Math.hypot(v.pose.x - x, v.pose.z - z) < raio,
+      );
     },
     /** A célula é de pista (os bichos saem dela). */
     pista(x: number, z: number): boolean {

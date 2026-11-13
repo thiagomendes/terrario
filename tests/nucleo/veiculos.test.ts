@@ -16,6 +16,7 @@ import {
   rotaDoVeiculo,
   type PlanoVeiculo,
 } from '../../src/jogo/veiculos';
+import { corpoNaRua } from '../../src/jogo/transito';
 
 /**
  * Spec 014 (T13): os veículos no núcleo (servidor e modo local). O quadro leva o relógio dos
@@ -233,5 +234,64 @@ describe('fora da cidade', () => {
       limparCidades();
       limparPovoados();
     }
+  });
+});
+
+describe('bichos e veículos no núcleo', () => {
+  it('cachorros soltos perto das faixas: nenhum encosta num veículo e nenhum fica na rua', () => {
+    const n = abrir();
+    n.conectar('ana');
+    n.passo();
+    const p = cidadeDoMundo(SEMENTE)!;
+    const tr = n.estado.transito!;
+    const v = tr.veiculos.find((x) => x.tipo === 'taxi')!;
+    const m = MEDIDAS[MODELO_DO_TIPO[v.tipo]];
+    const r = rotaDoVeiculo(p, FROTA[v.id]);
+    // a criança na calçada perto do táxi (os bichos longe de todo mundo somem)
+    const q0 = poseDoVeiculo(r, { ...m, apoio: 0 }, v.s + 10);
+    const cx = q0.x + q0.hz * 2.6;
+    const cz = q0.z - q0.hx * 2.6;
+    // seis cachorros grandes na frente dele, na faixa e na calçada, cada um olhando para um lado
+    const caes = [6, 9, 12, 15, 18, 22].map((d, i) => {
+      const q = poseDoVeiculo(r, { ...m, apoio: 0 }, v.s + d);
+      const lado = [0, 1.7, -0.3, 1.5, 0.4, 2.2][i];
+      const c = n.estado.populacao.adicionar(
+        'cervo',
+        q.x + q.hz * lado,
+        p.h + 1,
+        q.z - q.hx * lado,
+      );
+      c.yaw = c.yawAlvo = (i * Math.PI) / 3;
+      return c;
+    });
+    const cortes: string[] = [];
+    const naRua = new Map<number, number>();
+    let maisTempoNaRua = 0;
+    for (let i = 0; i < 90 * 20; i++) {
+      if (i % 4 === 0) n.comando('ana', tel(cx, p.h + 1, cz));
+      n.passo();
+      n.quadros();
+      for (const c of caes) {
+        if (!n.estado.populacao.lista.includes(c)) continue;
+        // o desenho do cachorro (o retângulo dele) contra a caixa de cada veículo
+        const f = tr.folga({
+          x: c.x,
+          y: c.y,
+          z: c.z,
+          crianca: false,
+          corpo: corpoNaRua('cervo', c.yaw),
+        });
+        if (f < -0.02) cortes.push(`cão ${c.id} t=${(i / 20).toFixed(1)} folga ${f.toFixed(2)}`);
+        // segundos seguidos na faixa (passear por ela pode; ficar parado nela, não)
+        const t = tr.pista(c.x, c.z) ? (naRua.get(c.id) ?? 0) + 1 / 20 : 0;
+        naRua.set(c.id, t);
+        maisTempoNaRua = Math.max(maisTempoNaRua, t);
+      }
+    }
+    expect(cortes.slice(0, 5)).toEqual([]);
+    // nenhum fica na faixa: em 2 s ganha um destino fora dela (logo, com veículo andando perto)
+    expect(maisTempoNaRua).toBeLessThan(5);
+    // e o táxi andou (ninguém o segura para sempre)
+    expect(tr.veiculos[v.id].s).toBeGreaterThan(v.s + 10);
   });
 });

@@ -244,7 +244,19 @@ export interface Mundo {
   luzBloco(x: number, y: number, z: number): number;
   /** Céu aberto acima da posição. */
   ceuAberto(x: number, y: number, z: number): boolean;
+  /**
+   * Spec 014: quanto falta do corpo do bicho (o desenho, apontando para `yaw`) até o carrinho
+   * ou ônibus mais perto; negativo, encostado. Só na Cidade Grande.
+   */
+  folgaVeiculo?(x: number, y: number, z: number, yaw: number, tipo: TipoSer): number;
 }
+
+/**
+ * Folga mínima entre o bicho e um veículo: o passo (ou o giro do corpo) que deixaria o bicho
+ * mais perto que isto, e mais perto do que já está, não é dado. Ninguém empurra ninguém: o
+ * veículo para para o bicho, e o bicho não anda para dentro do veículo.
+ */
+export const FOLGA_VEICULO = 0.15;
 
 export interface Jogador {
   x: number;
@@ -416,6 +428,14 @@ function mover(c: Criatura, def: DefCriatura, dt: number, m: Mundo, agua: number
     if (d === 0) return;
     const nx = eixo === 'x' ? c.x + d : c.x;
     const nz = eixo === 'z' ? c.z + d : c.z;
+    if (m.folgaVeiculo && !peixe) {
+      const la = m.folgaVeiculo(nx, c.y, nz, c.yaw, c.tipo);
+      if (la < FOLGA_VEICULO && la < m.folgaVeiculo(c.x, c.y, c.z, c.yaw, c.tipo)) {
+        // um carrinho ali: não anda para dentro dele (nem pula nele)
+        c[eixo === 'x' ? 'vx' : 'vz'] = 0;
+        return;
+      }
+    }
     if (livre(nx, c.y, nz)) {
       c[eixo] += d;
       return;
@@ -1493,8 +1513,13 @@ export function passoCriatura(
     }
   } else c.preso = Math.max(0, c.preso - dt);
 
-  // gira o corpo aos poucos (pelo menor arco)
-  c.yaw = embrulhar(c.yaw + embrulhar(c.yawAlvo - c.yaw) * Math.min(1, dt * 8));
+  // gira o corpo aos poucos (pelo menor arco); encostado num veículo, não gira o focinho
+  // para dentro dele
+  const novoYaw = embrulhar(c.yaw + embrulhar(c.yawAlvo - c.yaw) * Math.min(1, dt * 8));
+  if (m.folgaVeiculo && def.comportamento !== 'peixe') {
+    const la = m.folgaVeiculo(c.x, c.y, c.z, novoYaw, c.tipo);
+    if (la >= FOLGA_VEICULO || la >= m.folgaVeiculo(c.x, c.y, c.z, c.yaw, c.tipo)) c.yaw = novoYaw;
+  } else c.yaw = novoYaw;
 
   if (c.y < -10) {
     c.estado = 'morrendo';

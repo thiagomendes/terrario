@@ -43,7 +43,7 @@ import { abreEFecha, alternado, ehPorta } from '../world/portas';
 import { criarConteineres, TAMANHO_BAU } from '../jogo/conteineres';
 import { criarMundoDeItens, dropsDoBloco } from '../jogo/drops';
 import { criarPopulacao } from '../jogo/populacao';
-import { criarTransito, type PessoaNaRua } from '../jogo/transito';
+import { corpoNaRua, criarTransito, type PessoaNaRua } from '../jogo/transito';
 import { arred } from '../jogo/veiculos';
 import {
   ATRASO_RESPOSTA,
@@ -400,6 +400,10 @@ export function criarNucleo(op: OpcoesNucleo) {
         obraFeita: (n) => !!obras.get(n)?.feita,
       })
     : null;
+  // os bichos não andam para dentro dos veículos (a mesma conta no servidor e no modo local)
+  if (transito)
+    mundo.criaturas.folgaVeiculo = (x, y, z, yaw, tipo) =>
+      transito.folga({ x, y, z, crianca: false, corpo: corpoNaRua(tipo, yaw) });
   /** Planos de veículo que mudaram neste passo (vão a todos no quadro). */
   let veiculosMudados: ReturnType<NonNullable<typeof transito>['tirarMudados']> = [];
   const jogadores = new Map<string, Jogador>();
@@ -2103,7 +2107,7 @@ export function criarNucleo(op: OpcoesNucleo) {
     for (const c of populacao.lista) {
       if (c.dissolver > 0 || c.x < pl.x0 || c.x > pl.x1 + 1 || c.z < pl.z0 || c.z > pl.z1 + 1)
         continue;
-      pessoas.push({ x: c.x, y: c.y, z: c.z, crianca: false });
+      pessoas.push({ x: c.x, y: c.y, z: c.z, crianca: false, corpo: corpoNaRua(c.tipo, c.yaw) });
       if (c.morador || c.domada || c.criado || c.tipo === 'peixe') continue;
       if (!transito.pista(c.x, c.z)) {
         bichosNaRua.delete(c.id);
@@ -2111,7 +2115,8 @@ export function criarNucleo(op: OpcoesNucleo) {
       }
       const t = (bichosNaRua.get(c.id) ?? 0) + dt;
       bichosNaRua.set(c.id, t);
-      if (t < 2) continue;
+      // na rua: sai dela em 2 s, ou logo (meio segundo) com um veículo andando perto
+      if (t < 2 && !(t >= 0.5 && transito.andandoPerto(c.x, c.z, 12))) continue;
       bichosNaRua.delete(c.id);
       const fora = foraDaRua(c.x, c.z);
       if (fora) {
