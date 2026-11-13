@@ -1,27 +1,35 @@
 /**
- * Esboço 014d (segunda passada na estética dos veículos; o dono: "estamos arredondando demais;
- * não pode ser quadrado, mas também não tão redondo"): a frota de carrinho de metal fundido ou
- * de madeira bem feito. Volumes que se leem de longe (capô, cabine com colunas, teto,
- * para-choques, grade, caixas de roda recortadas), painéis planos e quinas com bisel firme, nas
- * proporções de veículos de verdade, simplificadas. Mesmas rodas (lugar e raio), luzes, cores e
- * escala do jogo de hoje: o movimento (suspensão, rolagem, esterço) não muda.
+ * Os veículos da Cidade Grande em "miniatura" (014d, escolha do dono: o estilo C do esboço; antes
+ * o 014c esculpia uma carroceria de "pão" e o dono achou redondo demais): carrinho de metal
+ * fundido bem feito. Volumes que se leem de longe (capô, cabine com colunas, teto, para-choques,
+ * grade, caixas de roda recortadas), painéis planos e quinas com bisel firme, nas proporções de
+ * veículos de verdade, simplificadas. Mesmas rodas (lugar e raio), cores e escala de antes: o
+ * movimento (suspensão, rolagem, esterço) não muda.
  *
- * Três estilos, a mesma frota:
- * - A, "Fundido": bisel leve (quinas quase vivas, como miniatura de metal);
- * - B, "Madeirinha": bisel médio (cantos de brinquedo de madeira lixado);
- * - C, "Miniatura": a escolha do esboço: a silhueta com cantos médios, as quinas dos painéis
- *   finas e firmes, mais detalhes de carro de verdade (para-lamas em aba, cabine que entra).
- * Nada disto entra no jogo (só com `?esboco=estetica`).
+ * Os estilos A ("Fundido", bisel leve) e B ("Madeirinha", médio) ficam só para o esboço
+ * (`?esboco=estetica`). Cada modelo sai em duas versões: a de perto (detalhes, luzes por
+ * instância) e a de longe (os mesmos volumes, cores e silhueta, sem bisel nem miudezas, com as
+ * rodas e as luzes pintadas nela).
  */
 import { Matrix } from '@babylonjs/core/Maths/math.vector';
 import { VertexData } from '@babylonjs/core/Meshes/mesh.vertexData';
 import { CreateSphereVertexData } from '@babylonjs/core/Meshes/Builders/sphereBuilder';
 import { CreateCylinderVertexData } from '@babylonjs/core/Meshes/Builders/cylinderBuilder';
-import { Pecas } from '../render/escultura';
 import { MEDIDAS, MODELO_DO_TIPO, type TipoVeiculo } from '../jogo/veiculos';
-import type { Luz, Roda } from '../render/veiculosModelos';
-import type { ModeloRefinado } from '../render/veiculosRefinados';
-import { caixa, deitada, noPlano, retangulo, solido, type Canto, type Item, type V2, type V3 } from './solidos';
+import type { Luz, Roda } from './veiculosModelos';
+import { Pecas, caixa, deitada, noPlano, retangulo, solido, type Canto, type Item, type V2, type V3 } from './solidos';
+
+/** Um modelo pronto (já na escala do jogo). */
+export interface ModeloMiniatura {
+  corpo: VertexData;
+  luzes: Luz[];
+  rodas: Roda[];
+  triangulos: number;
+  /** Entre-eixos (já na escala): a conta do esterço das rodas da frente. */
+  entreEixos: number;
+  /** A porta do ônibus: vértices de `ini` a `fim` (exclusivo). */
+  porta?: { ini: number; fim: number };
+}
 
 export type IdEstilo = 'A' | 'B' | 'C';
 export interface Estilo {
@@ -46,10 +54,10 @@ export interface Estilo {
 export const ESTILOS: Record<IdEstilo, Estilo> = {
   A: { id: 'A', nome: 'Fundido', b: 0.025, sb: 1, r: 0.04, rs: 1, bp: 0.01, entra: 0.1, coluna: 0.08, abas: false },
   B: { id: 'B', nome: 'Madeirinha', b: 0.14, sb: 3, r: 0.22, rs: 3, bp: 0.03, entra: 0.1, coluna: 0.11, abas: false },
-  C: { id: 'C', nome: 'Miniatura', b: 0.055, sb: 2, r: 0.12, rs: 3, bp: 0.016, entra: 0.14, coluna: 0.09, abas: true },
+  C: ESTILOS_C(),
 };
 
-export type TipoFirme = 'taxi' | 'civil' | 'policia' | 'onibusAzul' | 'sorvete' | 'ambulancia' | 'bombeiros';
+export type TipoFirme = Exclude<TipoVeiculo, never>;
 
 const VIDRO = '#9fd6ef';
 const VIDRO_ESCURO = '#7fbfe0';
@@ -64,15 +72,25 @@ interface Obra {
   luzes: Luz[];
   rodas: Roda[];
   porta?: { ini: number; fim: number };
+  /** A versão de longe: sem bisel nem miudezas, luzes e rodas pintadas na carroceria. */
+  longe: boolean;
 }
 
-const novaObra = (e: Estilo): Obra => ({ e, p: new Pecas(), luzes: [], rodas: [] });
+/** O estilo da versão de longe: o C sem bisel e com os cantos num passo só. */
+const LONGE: Estilo = { ...ESTILOS_C(), b: 0, sb: 0, rs: 1, bp: 0, abas: false };
+function ESTILOS_C(): Estilo {
+  return { id: 'C', nome: 'Miniatura', b: 0.055, sb: 2, r: 0.12, rs: 3, bp: 0.016, entra: 0.14, coluna: 0.09, abas: true };
+}
+const novaObra = (e: Estilo, longe = false): Obra => ({ e: longe ? LONGE : e, p: new Pecas(), luzes: [], rodas: [], longe });
+/** Miudezas (vincos, maçanetas, espelhos, degraus) só na versão de perto. */
+const perto = (o: Obra) => !o.longe;
 const R = (o: Obra, k: number) => o.e.r * k;
 /** Canto do contorno com o raio do estilo. */
 const k = (o: Obra, x: number, y: number, peso: number): Canto => ({ x, y, r: R(o, peso), seg: o.e.rs });
 /** Volume grande: o contorno puxado na largura com o bisel do estilo. */
 function volume(o: Obra, perfil: Item[], z1: number | ((y: number) => number), cor: string): void {
   const f = typeof z1 === 'number' ? () => z1 : z1;
+  if (o.longe) perfil = perfil.map((it) => ('roda' in it ? { roda: { ...it.roda, seg: 6 } } : it));
   o.p.add(solido({ perfil, z0: (y) => -f(y), z1: f, bisel: o.e.b, segBisel: o.e.sb, cor }));
 }
 /** Peça pequena (para-choque, espelho, placa): caixa com o bisel das peças. */
@@ -80,6 +98,10 @@ function peca(o: Obra, x0: number, x1: number, y0: number, y1: number, z0: numbe
   const menor = Math.min(x1 - x0, y1 - y0, z1 - z0);
   const b = Math.min(o.e.bp * 2, menor * 0.3);
   const r = Math.min(R(o, peso), (Math.min(x1 - x0, y1 - y0) / 2) * 0.9);
+  if (o.longe) {
+    o.p.add(caixa(x0, x1, y0, y1, z0, z1, 0, 0, cor));
+    return;
+  }
   o.p.add(caixa(x0, x1, y0, y1, z0, z1, Math.max(r, b + 0.005), b, cor, o.e.id === 'A' ? 1 : 2));
 }
 const PLACA_B = 0.006;
@@ -94,13 +116,14 @@ function lateral(
   bisel = PLACA_B,
 ): void {
   const f = typeof zs === 'number' ? () => zs : zs;
+  if (o.longe) perfil = semCantos(perfil);
   for (const s of lados)
     o.p.add(
       solido({
         perfil,
         z0: s > 0 ? (y) => f(y) - 0.01 : (y) => -f(y) - sai,
         z1: s > 0 ? (y) => f(y) + sai : (y) => -f(y) + 0.01,
-        bisel,
+        bisel: o.longe ? 0 : bisel,
         segBisel: 1,
         cor,
       }),
@@ -115,13 +138,17 @@ function naFace(o: Obra, a: V2, b: V2, perfil: Item[], cor: string, sai = 0.014)
   const l = Math.hypot(d[0], d[1]);
   const v: V3 = [d[0] / l, d[1] / l, 0];
   const n: V3 = [v[1], -v[0], 0];
-  const vd = solido({ perfil, z0: -0.01, z1: sai, bisel: PLACA_B, segBisel: 1, cor });
+  if (o.longe) perfil = semCantos(perfil);
+  const vd = solido({ perfil, z0: -0.01, z1: sai, bisel: o.longe ? 0 : PLACA_B, segBisel: 1, cor });
   o.p.add(noPlano(vd, [a[0], a[1], 0], [0, 0, 1], v, n));
 }
+/** De longe, os decalques e vidros de cantos vivos (poucos triângulos). */
+const semCantos = (perfil: Item[]): Item[] => perfil.map((it) => ('roda' in it ? it : { x: it.x, y: it.y }));
 /** Faixa que abraça um volume (vista de cima: retângulo com os cantos do bisel). */
 function faixa(o: Obra, x0: number, x1: number, hw: number, y0: number, y1: number, cor: string): void {
   const g = 0.012;
-  o.p.add(deitada(retangulo(x0 - g, -hw - g, x1 + g, hw + g, o.e.b + g, Math.max(2, o.e.sb + 1)), y0, y1, 0.006, cor));
+  const rc = o.longe ? 0 : o.e.b + g;
+  o.p.add(deitada(retangulo(x0 - g, -hw - g, x1 + g, hw + g, rc, Math.max(2, o.e.sb + 1)), y0, y1, o.longe ? 0 : 0.006, cor));
 }
 /** Retângulo trapézio (contorno com cantos `r`). */
 const trap = (pts: V2[], r: number, seg = 2): Canto[] => pts.map(([x, y]) => ({ x, y, r, seg }));
@@ -148,6 +175,7 @@ function painelSemRodas(x0: number, x1: number, y0: number, y1: number, rodas: {
 
 /** A linha que passa por cima das rodas (sobe em arco com folga), de x0 a x1, amostrada. */
 function sobreRodas(x0: number, x1: number, y: number, rodas: { x: number; y: number; R: number }[], folga: number, n = 44): Canto[] {
+  // (a de longe usa poucas amostras: quem chama passa n)
   const pts: Canto[] = [];
   for (let i = 1; i < n; i++) {
     const x = x0 + ((x1 - x0) * i) / n;
@@ -192,6 +220,7 @@ function abaDaRoda(o: Obra, x: number, y: number, R0: number, chao: number, zs: 
 
 /** Vincos (linhas das portas): risquinhos escuros no lado. */
 function vinco(o: Obra, x: number, y0: number, y1: number, zs: number | ((y: number) => number)): void {
+  if (!perto(o)) return;
   lateral(o, retangulo(x - 0.009, y0, x + 0.009, y1), zs, FRISO, [-1, 1], 0.02, 0);
 }
 
@@ -204,6 +233,14 @@ function frente(
   farol: { v: number; u: number; w: number; h: number },
 ): void {
   naFace(o, a, b, retangulo(-grade.u, grade.v0, grade.u, grade.v1, 0.03, 1), GRADE, 0.012);
+  if (o.longe) {
+    // de longe, os faróis pintados (a luz por instância é só da versão de perto)
+    for (const s of [-1, 1]) {
+      const uc = s * farol.u;
+      naFace(o, a, b, retangulo(uc - farol.w / 2, farol.v - farol.h / 2, uc + farol.w / 2, farol.v + farol.h / 2), '#fff4d6', 0.02);
+    }
+    return;
+  }
   for (let i = 1; i <= grade.frisos; i++) {
     const v = grade.v0 + ((grade.v1 - grade.v0) * i) / (grade.frisos + 1);
     naFace(o, a, b, retangulo(-grade.u * 0.92, v - 0.014, grade.u * 0.92, v + 0.014, 0.01, 1), CROMO, 0.024);
@@ -220,27 +257,57 @@ function frente(
 }
 
 function lanternas(o: Obra, x: number, y: number, z: number, w = 0.12, h = 0.075): void {
+  if (o.longe) {
+    for (const s of [-1, 1]) o.p.add(caixa(x - 0.03, x + 0.03, y - h, y + h, s * z - w, s * z + w, 0, 0, '#d8443c'));
+    return;
+  }
   for (const s of [-1, 1]) o.luzes.push({ tipo: 'lanterna', pos: [x, y, s * z], raio: [0.035, h, w] });
 }
 
 /** Barra de luzinhas no teto: base clara e as luzes (instâncias que piscam). */
 function barraDeLuz(o: Obra, x: number, y: number, larg: number, cores: Luz['tipo'][]): void {
   peca(o, x - 0.15, x + 0.15, y, y + 0.08, -larg / 2, larg / 2, '#f4f5f8', 0.3);
+  const PINTADA: Record<Luz['tipo'], string> = {
+    farol: '#fff4d6',
+    lanterna: '#d8443c',
+    giroAzul: '#6fa8ff',
+    giroBranco: '#e9f1ff',
+    giroVermelho: '#ff6a5e',
+  };
   cores.forEach((t, i) => {
     const z = (i - (cores.length - 1) / 2) * (larg / cores.length);
+    const w = (larg / cores.length) * 0.44;
+    if (o.longe) return o.p.add(caixa(x - 0.12, x + 0.12, y + 0.08, y + 0.2, z - w, z + w, 0, 0, PINTADA[t]));
     o.luzes.push({ tipo: t, pos: [x, y + 0.12, z], raio: [0.12, 0.065, (larg / cores.length) * 0.44] });
   });
 }
 
 function espelhos(o: Obra, x: number, y: number, zs: number, cor: string, alto = 0.13): void {
+  if (!perto(o)) return;
   for (const s of [-1, 1]) {
     const z0 = s > 0 ? zs - 0.02 : -zs - 0.13;
     peca(o, x - 0.06, x + 0.07, y, y + alto, z0, z0 + 0.15, cor, 0.3);
   }
 }
 
-function fechar(o: Obra, tipo: TipoVeiculo, entreEixos: number): ModeloRefinado {
+function fechar(o: Obra, tipo: TipoVeiculo, entreEixos: number): ModeloMiniatura {
   const e = MEDIDAS[MODELO_DO_TIPO[tipo]].escala;
+  if (o.longe)
+    // de longe, as rodas pintadas: um octógono escuro com o miolo claro
+    for (const r of o.rodas) {
+      const oito: Canto[] = [];
+      const meio: Canto[] = [];
+      for (let i = 0; i < 8; i++) {
+        const a = ((i + 0.5) * Math.PI) / 4;
+        oito.push({ x: r.x + Math.cos(a) * r.raio, y: r.raio + Math.sin(a) * r.raio });
+        meio.push({ x: r.x + Math.cos(a) * r.raio * 0.45, y: r.raio + Math.sin(a) * r.raio * 0.45 });
+      }
+      const s = Math.sign(r.z);
+      const z0 = r.z - r.raio * 0.3;
+      const z1 = r.z + r.raio * 0.3;
+      o.p.add(solido({ perfil: oito, z0, z1, bisel: 0, segBisel: 0, cor: '#2a2b33' }));
+      o.p.add(solido({ perfil: meio, z0: s > 0 ? z1 - 0.01 : z0 - 0.02, z1: s > 0 ? z1 + 0.02 : z0 + 0.01, bisel: 0, segBisel: 0, cor: '#eef0f4' }));
+    }
   const corpo = o.p.juntar();
   corpo.transform(Matrix.Scaling(e, e, e));
   return {
@@ -259,8 +326,9 @@ function fechar(o: Obra, tipo: TipoVeiculo, entreEixos: number): ModeloRefinado 
 
 // ------------------------------------------------------------------ sedã (táxi, carro, polícia)
 
-function seda(e: Estilo, tipo: 'taxi' | 'civil' | 'policia', cor: string): ModeloRefinado {
-  const o = novaObra(e);
+function seda(e: Estilo, tipo: 'taxi' | 'civil' | 'policia', cor: string, longe = false): ModeloMiniatura {
+  const o = novaObra(e, longe);
+  e = o.e;
   const PRETO = '#2b2d35';
   const BRANCO = '#f7f8fb';
   const corpo = tipo === 'taxi' ? '#ffc21a' : tipo === 'policia' ? PRETO : cor;
@@ -333,16 +401,17 @@ function seda(e: Estilo, tipo: 'taxi' | 'civil' | 'policia', cor: string): Model
     const pe = fundo.reduce((y, r) => (Math.abs(x - r.x) < r.R ? Math.max(y, r.y + Math.sqrt(r.R ** 2 - (x - r.x) ** 2)) : y), 0.4);
     vinco(o, x, pe, cint, W);
   }
-  for (const x of [0.36, -0.46]) lateral(o, retangulo(x - 0.07, 0.95, x + 0.07, 0.99, 0.015, 1), W, CROMO, [-1, 1], 0.03);
+  if (perto(o)) for (const x of [0.36, -0.46]) lateral(o, retangulo(x - 0.07, 0.95, x + 0.07, 0.99, 0.015, 1), W, CROMO, [-1, 1], 0.03);
   espelhos(o, 0.55, 1.12, W, corpo);
   // a frente: grade, faróis com aro e o para-choque; atrás, lanternas e para-choque
   frente(o, [1.56, CH], [1.6, 0.84], { v0: 0.2, v1: 0.38, u: 0.4, frisos: 2 }, { v: 0.39, u: 0.6, w: 0.24, h: 0.12 });
-  peca(o, 1.48, 1.65, 0.28, 0.48, -0.89, 0.89, CINZA, 0.6);
-  peca(o, -1.62, -1.44, 0.28, 0.48, -0.89, 0.89, CINZA, 0.6);
+  peca(o, 1.48, 1.63, 0.28, 0.48, -0.89, 0.89, CINZA, 0.6);
+  peca(o, -1.6, -1.44, 0.28, 0.48, -0.89, 0.89, CINZA, 0.6);
   lanternas(o, -1.535, 0.92, 0.6);
   if (tipo === 'taxi') {
-    // a faixa xadrez nas portas e a placa no teto
-    for (let i = 0; i < 16; i++) {
+    // a faixa xadrez nas portas e a placa no teto (de longe, uma faixa escura só)
+    if (o.longe) lateral(o, retangulo(-0.98, cint - 0.1, 0.62, cint - 0.02), W, FRISO, [-1, 1], 0.014);
+    else for (let i = 0; i < 16; i++) {
       const x0 = -0.98 + i * 0.1;
       lateral(o, retangulo(x0, cint - 0.12, x0 + 0.1, cint), W, i % 2 ? FRISO : '#fbf8ee', [-1, 1], 0.014, 0);
     }
@@ -356,9 +425,9 @@ function seda(e: Estilo, tipo: 'taxi' | 'civil' | 'policia', cor: string): Model
 
 // ------------------------------------------------------------------ ônibus de dois andares
 
-function onibus(e: Estilo): ModeloRefinado {
-  const o = novaObra(e);
-  const AZUL = '#2f7fd8';
+function onibus(e: Estilo, longe = false, AZUL = '#2f7fd8'): ModeloMiniatura {
+  const o = novaObra(e, longe);
+  e = o.e;
   const BRANCO = '#f7f5ef';
   const CH = 0.34;
   const rodas = [
@@ -416,8 +485,8 @@ function onibus(e: Estilo): ModeloRefinado {
   naFace(o, fa, fb, retangulo(-0.55, 1.62, 0.55, 1.74, 0.02), '#ffcf5a', 0.022);
   naFace(o, fa, fb, retangulo(-0.84, 1.84, 0.84, Math.min(2.44, L - R(o, 2.0) - 0.06), rj), VIDRO_ESCURO);
   frente(o, [2.88, CH], [2.88, 1.34], { v0: 0.28, v1: 0.56, u: 0.5, frisos: 2 }, { v: 0.72, u: 0.7, w: 0.26, h: 0.14 });
-  peca(o, 2.8, 3.0, 0.28, 0.56, -0.97, 0.97, CINZA, 0.6);
-  peca(o, -2.98, -2.76, 0.28, 0.56, -0.97, 0.97, CINZA, 0.6);
+  peca(o, 2.8, 2.96, 0.28, 0.56, -0.97, 0.97, CINZA, 0.6);
+  peca(o, -2.94, -2.76, 0.28, 0.56, -0.97, 0.97, CINZA, 0.6);
   espelhos(o, 2.84, 2.05, 0.975, FRISO, 0.3);
   // atrás: o vidro de cima e a grade do motor
   naFace(o, [-2.8, 4.0], [-2.82, 1.3], retangulo(-0.8, Math.max(0.34, R(o, 2.0) + 0.06), 0.8, 0.92, rj), VIDRO_ESCURO);
@@ -429,8 +498,9 @@ function onibus(e: Estilo): ModeloRefinado {
 
 // ------------------------------------------------------------------ bombeiros
 
-function bombeiros(e: Estilo): ModeloRefinado {
-  const o = novaObra(e);
+function bombeiros(e: Estilo, longe = false): ModeloMiniatura {
+  const o = novaObra(e, longe);
+  e = o.e;
   const VERMELHO = '#e2392f';
   const BRANCO = '#f7f5ef';
   const CH = 0.36;
@@ -462,7 +532,7 @@ function bombeiros(e: Estilo): ModeloRefinado {
   espelhos(o, 2.74, 1.86, 0.98, FRISO, 0.36);
   // a frente: grade grande, faróis e o para-choque largo
   frente(o, [2.86, CH], fa, { v0: 0.44, v1: 1.12, u: 0.5, frisos: 4 }, { v: 0.64, u: 0.76, w: 0.24, h: 0.2 });
-  peca(o, 2.8, 3.04, 0.3, 0.66, -1.0, 1.0, CINZA, 0.6);
+  peca(o, 2.8, 2.98, 0.3, 0.66, -1.0, 1.0, CINZA, 0.6);
   // os armários (portas de enrolar) dos lados, com os vincos e o puxador
   const armarios: [number, number, number, number][] = [
     [-1.08, -0.14, 0.56, 2.12],
@@ -472,17 +542,17 @@ function bombeiros(e: Estilo): ModeloRefinado {
   ];
   for (const [x0, x1, y0, y1] of armarios) {
     lateral(o, retangulo(x0, y0, x1, y1, Math.min(0.05, 0.02 + R(o, 0.2))), 0.97, '#d9dce3', [-1, 1], 0.02);
-    const n = Math.round((y1 - y0) / 0.2);
+    const n = o.longe ? 0 : Math.round((y1 - y0) / 0.2);
     for (let i = 1; i < n; i++) {
       const y = y0 + ((y1 - y0) * i) / n;
       lateral(o, retangulo(x0 + 0.04, y - 0.008, x1 - 0.04, y + 0.008), 0.97, '#aeb3bf', [-1, 1], 0.026, 0);
     }
-    lateral(o, retangulo(x0 + 0.1, y0 + 0.05, x1 - 0.1, y0 + 0.1, 0.02), 0.97, CROMO, [-1, 1], 0.036);
+    if (perto(o)) lateral(o, retangulo(x0 + 0.1, y0 + 0.05, x1 - 0.1, y0 + 0.1, 0.02), 0.97, CROMO, [-1, 1], 0.036);
   }
   // a escada em cima (trilhos e degraus), nos apoios; a barra de luzes na cabine
   const yE = 3.06;
   for (const z of [-0.36, 0.36]) peca(o, -2.8, 2.28, yE, yE + 0.1, z - 0.045, z + 0.045, CROMO, 0.2);
-  for (let i = 0; i < 13; i++) {
+  for (let i = 0; i < (o.longe ? 0 : 13); i++) {
     const x = -2.66 + i * 0.39;
     // degraus: caixinhas lisas (são muitos; o bisel não aparece nesse tamanho)
     o.p.add(caixa(x - 0.03, x + 0.03, yE + 0.02, yE + 0.08, -0.33, 0.33, 0, 0, '#c9ced8'));
@@ -498,8 +568,9 @@ function bombeiros(e: Estilo): ModeloRefinado {
 
 // ------------------------------------------------------------------ ambulância (cabine + baú)
 
-function ambulancia(e: Estilo): ModeloRefinado {
-  const o = novaObra(e);
+function ambulancia(e: Estilo, longe = false): ModeloMiniatura {
+  const o = novaObra(e, longe);
+  e = o.e;
   const BRANCO = '#f8f8fb';
   const VERMELHO = '#e8473f';
   const CH = 0.32;
@@ -552,8 +623,9 @@ function ambulancia(e: Estilo): ModeloRefinado {
 
 // ------------------------------------------------------------------ sorvete (furgão de uma peça)
 
-function sorvete(e: Estilo): ModeloRefinado {
-  const o = novaObra(e);
+function sorvete(e: Estilo, longe = false): ModeloMiniatura {
+  const o = novaObra(e, longe);
+  e = o.e;
   const ROSA = '#ffd1e0';
   const ROSA_FORTE = '#ff9ec4';
   const CH = 0.3;
@@ -568,7 +640,7 @@ function sorvete(e: Estilo): ModeloRefinado {
       { roda: { ...rF, chao: CH } },
       k(o, 1.88, CH, 0.5),
       k(o, 1.88, 0.74, 0.3),
-      ...sobreRodas(-1.74, 1.88, 0.74, [rT, rF], 0.1).reverse(),
+      ...sobreRodas(-1.74, 1.88, 0.74, [rT, rF], 0.1, o.longe ? 14 : 44).reverse(),
       k(o, -1.74, 0.74, 0.3),
     ],
     0.87,
@@ -578,7 +650,7 @@ function sorvete(e: Estilo): ModeloRefinado {
   const pa: V2 = [1.26, 1.14];
   const pb: V2 = [0.74, 1.94];
   const W = 0.855;
-  volume(o, [{ x: -1.72, y: 0.7 }, ...sobreRodas(-1.72, 1.86, 0.7, [rT, rF], 0.04), { x: 1.86, y: 0.7 }, k(o, 1.86, 1.0, 1.0), k(o, pa[0], pa[1], 0.4), k(o, pb[0], pb[1], 1.2), k(o, -1.72, 1.94, 1.2)], W, ROSA);
+  volume(o, [{ x: -1.72, y: 0.7 }, ...sobreRodas(-1.72, 1.86, 0.7, [rT, rF], 0.04, o.longe ? 14 : 44), { x: 1.86, y: 0.7 }, k(o, 1.86, 1.0, 1.0), k(o, pa[0], pa[1], 0.4), k(o, pb[0], pb[1], 1.2), k(o, -1.72, 1.94, 1.2)], W, ROSA);
   // para-brisa e as janelas da cabine
   const rj = Math.min(0.06, 0.025 + R(o, 0.25));
   const L = Math.hypot(pb[0] - pa[0], pb[1] - pa[1]);
@@ -593,7 +665,7 @@ function sorvete(e: Estilo): ModeloRefinado {
   lateral(o, retangulo(-1.25, 1.02, 0.12, 1.62, 0.04), W, '#fff6e0', [-1], 0.022);
   peca(o, -1.33, 0.2, 0.94, 1.0, -W - 0.16, -W + 0.02, '#ffffff', 0.2);
   // o toldo listrado
-  const listras = 8;
+  const listras = o.longe ? 0 : 8;
   for (let i = 0; i < listras; i++) {
     const x0 = -1.38 + (i * 1.64) / listras;
     const x1 = x0 + 1.64 / listras;
@@ -637,8 +709,8 @@ function sorvete(e: Estilo): ModeloRefinado {
     vd.transform(Matrix.Scaling(1, 0.9, 1).multiply(Matrix.Translation(...c)));
     o.p.add(vd, cor);
   };
-  bola(0.36, '#ff9ec4', [-0.4, 3.04, 0], 8);
-  bola(0.28, '#fff2c2', [-0.4, 3.42, 0], 8);
+  bola(0.36, '#ff9ec4', [-0.4, 3.04, 0], o.longe ? 4 : 8);
+  bola(0.28, '#fff2c2', [-0.4, 3.42, 0], o.longe ? 4 : 8);
   bola(0.085, '#e8473f', [-0.4, 3.72, 0], 4);
   // a frente (faróis no alto do nariz, grade na saia) e os para-choques
   frente(o, [1.88, CH], [1.88, 0.74], { v0: 0.18, v1: 0.38, u: 0.3, frisos: 1 }, { v: 0.56, u: 0.58, w: 0.22, h: 0.13 });
@@ -650,24 +722,30 @@ function sorvete(e: Estilo): ModeloRefinado {
   return fechar(o, 'sorvete', 2.15);
 }
 
-const feitos = new Map<string, ModeloRefinado>();
-/** O modelo firme do tipo no estilo (feito uma vez; quem usa copia os dados). */
-export function modeloFirme(tipo: TipoFirme, estilo: IdEstilo, cor = '#3f7fe0'): ModeloRefinado {
+function construir(tipo: TipoFirme, e: Estilo, cor: string, longe: boolean): ModeloMiniatura {
+  return tipo === 'taxi' || tipo === 'civil' || tipo === 'policia'
+    ? seda(e, tipo, cor, longe)
+    : tipo === 'onibusAzul'
+      ? onibus(e, longe)
+      : tipo === 'onibusVerde'
+        ? onibus(e, longe, '#45b56b')
+        : tipo === 'bombeiros'
+          ? bombeiros(e, longe)
+          : tipo === 'ambulancia'
+            ? ambulancia(e, longe)
+            : sorvete(e, longe);
+}
+
+const feitos = new Map<string, ModeloMiniatura>();
+/** O modelo do tipo no estilo (feito uma vez; quem usa copia os dados). */
+export function modeloFirme(tipo: TipoFirme, estilo: IdEstilo, cor = '#3f7fe0'): ModeloMiniatura {
   const chave = `${tipo}|${estilo}|${cor}`;
   let m = feitos.get(chave);
-  if (!m) {
-    const e = ESTILOS[estilo];
-    m =
-      tipo === 'taxi' || tipo === 'civil' || tipo === 'policia'
-        ? seda(e, tipo, cor)
-        : tipo === 'onibusAzul'
-          ? onibus(e)
-          : tipo === 'bombeiros'
-            ? bombeiros(e)
-            : tipo === 'ambulancia'
-              ? ambulancia(e)
-              : sorvete(e);
-    feitos.set(chave, m);
-  }
+  if (!m) feitos.set(chave, (m = construir(tipo, ESTILOS[estilo], cor, false)));
   return m;
+}
+
+/** A versão de longe do estilo C (os mesmos volumes e cores, sem miudezas; rodas e luzes pintadas). */
+export function modeloLonge(tipo: TipoFirme, cor = '#3f7fe0'): VertexData {
+  return construir(tipo, ESTILOS.C, cor, true).corpo;
 }

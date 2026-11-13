@@ -1,7 +1,7 @@
 /**
  * Esboço 014d (só com `?esboco=estetica`, na Cidade Grande de verdade): a segunda passada na
- * estética dos veículos. O de hoje (a carroceria esculpida do 014c) ao lado dos três estilos
- * firmes (`veiculosFirmes.ts`: A "Fundido", B "Madeirinha", C "Miniatura"), parados na rua, em
+ * estética dos veículos. Os três estilos firmes (`render/veiculosMiniatura.ts`: A "Fundido",
+ * B "Madeirinha" e C "Miniatura", o escolhido, que já é o do jogo) lado a lado, parados na rua, em
  * fila (a frota inteira de um estilo) e andando na volta deles com o mesmo peso de hoje
  * (suspensão que quica, deita na curva, mergulha ao frear, rodas que esterçam). Os veículos do
  * jogo somem enquanto o esboço está ligado. Nada disto muda o jogo.
@@ -29,10 +29,10 @@ import {
   type Rota,
   type TipoVeiculo,
 } from '../jogo/veiculos';
-import { dadosRodaRefinada, modeloRefinado, type ModeloRefinado } from '../render/veiculosRefinados';
-import { ESTILOS, modeloFirme, type IdEstilo } from './veiculosFirmes';
+import { dadosRoda } from '../render/veiculosModelos';
+import { ESTILOS, modeloFirme, type IdEstilo, type ModeloMiniatura } from '../render/veiculosMiniatura';
 
-type Versao = 'hoje' | IdEstilo;
+type Versao = IdEstilo;
 type Tipo = 'taxi' | 'civil' | 'civilAzul' | 'policia' | 'onibusAzul' | 'sorvete' | 'ambulancia' | 'bombeiros';
 type V3 = [number, number, number];
 
@@ -121,10 +121,8 @@ const COR_LUZ: Record<Luz['tipo'], { dia: Color3; noite: Color3 }> = {
   giroVermelho: { dia: Color3.FromHexString('#ff6a5e'), noite: new Color3(1.45, 0.4, 0.32) },
 };
 
-function modelo(tipo: Tipo, versao: Versao): ModeloRefinado {
-  const jogo = DO_JOGO[tipo];
-  if (versao === 'hoje') return modeloRefinado(jogo, 'limpa', COR[tipo] ?? '#3f7fe0');
-  return modeloFirme(jogo as Parameters<typeof modeloFirme>[0], versao, COR[tipo] ?? '#3f7fe0');
+function modelo(tipo: Tipo, versao: Versao): ModeloMiniatura {
+  return modeloFirme(DO_JOGO[tipo], versao, COR[tipo] ?? '#3f7fe0');
 }
 
 export function prepararEsbocoEstetica(): void {
@@ -144,7 +142,7 @@ function ligar(scene: Scene): void {
   // o mesmo plástico de vinil dos veículos do jogo
   const mat = pl.corVertice(0.45) ?? pl.cor('#ffffff', 0.45);
   const roda = new Mesh('estetica-roda', scene);
-  dadosRodaRefinada().applyToMesh(roda);
+  dadosRoda().applyToMesh(roda);
   roda.material = mat;
   roda.isPickable = false;
   roda.setEnabled(false);
@@ -377,7 +375,7 @@ function ligar(scene: Scene): void {
 
   const api: EsbocoEstetica = {
     pronto: true,
-    vitrine(tipo, versoes = ['hoje', 'A', 'B', 'C']) {
+    vitrine(tipo, versoes = ['A', 'B', 'C']) {
       semJogo();
       esconderTodos();
       volta = null;
@@ -398,7 +396,7 @@ function ligar(scene: Scene): void {
         c.raiz.setEnabled(true);
         c.solto = false;
         c.rotaDe = base;
-        // o primeiro da lista fica na frente (hoje, depois A, B e C para trás)
+        // o primeiro da lista fica na frente (A, depois B e C para trás)
         c.s = meio + ((versoes.length - 1) / 2 - i) * passo;
         zerar(c);
         colocar(c, 0);
@@ -491,7 +489,7 @@ function ligar(scene: Scene): void {
       const out: Record<string, Record<string, number>> = {};
       for (const tipo of ORDEM_FILA) {
         const linha: Record<string, number> = { roda: rodaTri, rodas: 0, luzes: 0 };
-        for (const v of ['hoje', 'A', 'B', 'C'] as Versao[]) {
+        for (const v of ['A', 'B', 'C'] as Versao[]) {
           const md = modelo(tipo, v);
           linha[v] = md.triangulos;
           linha[`luzes${v}`] = md.luzes.length;
@@ -502,7 +500,7 @@ function ligar(scene: Scene): void {
       return out;
     },
     nomes() {
-      return { hoje: 'Hoje (esculpido, 014c)', A: ESTILOS.A.nome, B: ESTILOS.B.nome, C: ESTILOS.C.nome };
+      return { A: ESTILOS.A.nome, B: ESTILOS.B.nome, C: ESTILOS.C.nome };
     },
   };
   window.__estetica = api;

@@ -41,8 +41,7 @@ import {
 import type { ReplicaVeiculos } from '../cliente/veiculos';
 import { criarPlasticos } from './formas';
 import { criarBalao, type BalaoGesto } from './balaoGesto';
-import { modeloDoVeiculo, type Luz, type ModeloVeiculo } from './veiculosModelos';
-import { dadosRodaRefinada } from './veiculosRefinados';
+import { dadosRoda, modeloDoVeiculo, type Luz, type ModeloVeiculo } from './veiculosModelos';
 
 /** Até onde a carroceria de verdade, as rodas e as luzes (mais longe, a versão simples). */
 export const PERTO_VEICULO = 30;
@@ -134,7 +133,7 @@ export function criarRenderVeiculos(
 
   // rodas: uma malha, instâncias
   const rodas = new Mesh('veiculos-rodas', scene);
-  dadosRodaRefinada().applyToMesh(rodas);
+  dadosRoda().applyToMesh(rodas);
   rodas.material = pl.corVertice(0.2) ?? matCorpo;
   rodas.hasVertexAlpha = false;
   rodas.isPickable = false;

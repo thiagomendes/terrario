@@ -3,8 +3,8 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import { comecarGravacao, pararGravacao } from './gravarCena';
 
 /**
- * Esboço 014d (`src/esboco/veiculosEstetica.ts`, com `?esboco=estetica`): a estética firme dos
- * veículos (A "Fundido", B "Madeirinha", C "Miniatura") ao lado da de hoje, na Cidade Grande de
+ * Esboço 014d (`src/esboco/veiculosEstetica.ts`, com `?esboco=estetica`): os três estilos da
+ * lataria firme (A "Fundido", B "Madeirinha", C "Miniatura", o do jogo) na Cidade Grande de
  * verdade, com a criança do lado: os quatro de lado (comparação), cada um de 3/4 pela frente e
  * de lado, a frota inteira de cada estilo em fila, de dia e de noite, no computador e no
  * celular; e o vídeo do estilo escolhido chegando, freando na zebra e fazendo a curva.
@@ -16,12 +16,12 @@ test.skip(!process.env.ESBOCO_ESTETICA, 'esboço só com ESBOCO_ESTETICA=1');
 const PASTA = 'capturas-014d';
 type V3 = [number, number, number];
 type Tipo = 'taxi' | 'civil' | 'civilAzul' | 'policia' | 'onibusAzul' | 'sorvete' | 'ambulancia' | 'bombeiros';
-type Versao = 'hoje' | 'A' | 'B' | 'C';
+type Versao = 'A' | 'B' | 'C';
 const TIPOS: Tipo[] = ['policia', 'taxi', 'civil', 'onibusAzul', 'sorvete', 'ambulancia', 'bombeiros'];
 const SO = process.env.ESTETICA_SO?.split(',') as Tipo[] | undefined;
 const PARTE = process.env.ESTETICA_PARTE;
 const RAPIDO = !!process.env.ESTETICA_RAPIDO;
-const VERSOES: Versao[] = (process.env.ESTETICA_VERSOES?.split(',') as Versao[] | undefined) ?? ['hoje', 'A', 'B', 'C'];
+const VERSOES: Versao[] = (process.env.ESTETICA_VERSOES?.split(',') as Versao[] | undefined) ?? ['A', 'B', 'C'];
 const grande = (t: Tipo) => t === 'onibusAzul' || t === 'bombeiros';
 
 async function abrir(browser: Browser, w: number, h: number) {
@@ -114,7 +114,7 @@ const foto = (p: Page, nome: string) =>
 async function vitrines(p: Page, disp: string, comNoite: boolean) {
   for (const tipo of SO ?? TIPOS) {
     const g = grande(tipo);
-    // os quatro de lado, um atrás do outro (hoje na frente), com a criança na calçada
+    // os três de lado, um atrás do outro (A na frente), com a criança na calçada
     const v = await p.evaluate(([t, vs]) => window.__estetica!.vitrine(t as Tipo, vs as Versao[]), [tipo, VERSOES] as const);
     const [mx, my, mz] = v.meio;
     const [rx, rz] = v.direita;

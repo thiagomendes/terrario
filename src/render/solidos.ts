@@ -1,5 +1,5 @@
 /**
- * Esboço 014d (estética dos veículos, segunda passada): peças de "lataria firme", como carrinho
+ * Peças de "lataria firme" dos veículos (014d), como carrinho
  * de metal fundido ou de madeira. Cada peça é um contorno de lado (x para a frente, y para
  * cima) puxado na largura (z), com:
  * - os cantos do contorno arredondados com o raio de cada um (ou vivos), as caixas de roda
@@ -349,4 +349,29 @@ export function mover(vd: VertexData, d: V3): VertexData {
   const P = vd.positions!;
   for (let i = 0; i < P.length; i += 3) for (let k = 0; k < 3; k++) (P as number[])[i + k] += d[k];
   return vd;
+}
+
+/** Junta pedaços de malha com cor (antes de virar uma malha só). */
+export class Pecas {
+  readonly partes: VertexData[] = [];
+  add(vd: VertexData, cor?: string): this {
+    vd.uvs = null;
+    if (cor) {
+      const n = vd.positions!.length / 3;
+      const c = Color3.FromHexString(cor).asArray();
+      const cores = new Float32Array(n * 4);
+      for (let i = 0; i < n; i++) cores.set([c[0], c[1], c[2], 1], i * 4);
+      vd.colors = cores;
+    }
+    this.partes.push(vd);
+    return this;
+  }
+  /** Quantos vértices já entraram (para marcar uma peça que mexe, como a porta do ônibus). */
+  get marca(): number {
+    return this.partes.reduce((n, v) => n + v.positions!.length / 3, 0);
+  }
+  juntar(): VertexData {
+    const [a, ...resto] = this.partes;
+    return resto.length ? a.merge(resto, true) : a;
+  }
 }
