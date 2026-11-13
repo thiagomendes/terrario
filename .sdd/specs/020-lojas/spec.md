@@ -28,7 +28,8 @@ Pergunta do dono (11 nov 2026): levar o Terrário para a App Store e o Google Pl
 - **Contas e compras saíram daqui:**
   - a etapa 4 ("Contas e compras") virou duas specs: a **024 (Conta da família)**, antes desta, e a **025 (Loja do jogo)**, depois desta;
   - os cuidados legais de todas ficam em `.sdd/cuidados-legais.md`.
-- **Ordem combinada:** 022 → 023 → 024 → **020** → 025, com os mundos 026 e 027 intercalados.
+- **O nome saiu daqui:** a etapa 0 (nome e propriedade intelectual) virou a **028 (Cubolândia)**, feita antes das contas.
+- **Ordem combinada:** 022 → 023 → 028 → 024 → **020** → 025, com os mundos 026 e 027 intercalados.
 
 ## Decisão de caminho (recomendada e aceita para estudo)
 - **Casca nativa, sem reescrever.** O mesmo jogo web vai dentro de um app.
