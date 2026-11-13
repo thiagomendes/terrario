@@ -16,6 +16,15 @@ import {
 import { corDoAmigo } from '../ui/mapa';
 import { criarCarinhas, type AmigoDaCarinha, type Carinhas } from '../ui/carinhasAmigos';
 import { obterBloco, Bloco } from '../world/blocks';
+import {
+  espalharEstrelas,
+  maisPertoDoCaminho,
+  procurarCaminho,
+  type LeitorCaminho,
+  type V3,
+} from '../jogo/caminho';
+import { DURA_TRILHA } from '../jogo/acharAmigo';
+import { criarEstrelinhas } from './estrelinhas';
 
 export interface AmigoNoMundo {
   id: string;
@@ -33,6 +42,8 @@ export interface FonteAcharAmigo {
   jogador(): { x: number; y: number; z: number };
   amigos(): readonly AmigoNoMundo[];
   bloco(x: number, y: number, z: number): number;
+  /** O aparelho tem os blocos desta coluna (o pedaço do mundo já chegou)? */
+  conhecido(x: number, z: number): boolean;
   /** A camada pode aparecer agora (sem tela por cima, sem modo foto, vivo)? */
   pode(): boolean;
 }
@@ -53,12 +64,16 @@ export function criarAcharAmigo(f: FonteAcharAmigo) {
   const ouvintes = {
     tocar: (_id: string) => {},
     pular: (_id: string) => {},
-    montinho: (_ids: string[]) => {},
   };
   const carinhas: Carinhas = criarCarinhas({
     tocar: (id) => ouvintes.tocar(id),
     pular: (id) => ouvintes.pular(id),
-    montinho: (ids) => ouvintes.montinho(ids),
+    // o montinho abre a bandeja, e lá a criança toca na cara que quer
+    montinho: () => carinhas.abrirBandeja(true),
+    // tocar de novo no escolhido, na bandeja, desfaz a escolha
+    escolher: (id) => {
+      escolhido = escolhido === id ? null : id;
+    },
   });
 
   const solido = (x: number, y: number, z: number) => {
@@ -66,6 +81,110 @@ export function criarAcharAmigo(f: FonteAcharAmigo) {
     if (b === Bloco.AR) return false;
     const d = obterBloco(b);
     return !!d && d.solido && !d.liquido;
+  };
+
+  // ------------------------------------------------------------------ a trilha de estrelinhas
+  const estrelinhas = criarEstrelinhas(scene);
+  const leitor: LeitorCaminho = { bloco: f.bloco, conhecido: f.conhecido };
+  let trilha: {
+    alvo: string;
+    brutos: V3[];
+    completo: boolean;
+    nasceu: number;
+    /** Onde o jogador e o amigo estavam quando o caminho foi procurado. */
+    ax: number;
+    az: number;
+    em: number;
+  } | null = null;
+  let ultimoCaminhoMs = 0;
+
+  function procurar(id: string): { brutos: V3[]; completo: boolean; a: AmigoNoMundo } | null {
+    const a = f.amigos().find((x) => x.id === id);
+    if (!a) return null;
+    const p = f.jogador();
+    const t0 = performance.now();
+    const c = procurarCaminho(leitor, [p.x, p.y, p.z], [a.x, a.y, a.z]);
+    ultimoCaminhoMs = performance.now() - t0;
+    return { brutos: c.pts, completo: c.completo, a };
+  }
+
+  /** Acende a trilha até o amigo. Devolve quantos passos tem o caminho (0: nenhum). */
+  function acenderTrilha(id: string): number {
+    const r = procurar(id);
+    const agora = performance.now() / 1000;
+    if (!r || !r.brutos.length) {
+      // nem um passo a pé: a carinha sugere o pulo
+      trilha = null;
+      estrelinhas.tirar();
+      carinhas.sugerirPulo(r ? id : null);
+      return 0;
+    }
+    trilha = {
+      alvo: id,
+      brutos: r.brutos,
+      completo: r.completo,
+      nasceu: agora,
+      ax: r.a.x,
+      az: r.a.z,
+      em: agora,
+    };
+    estrelinhas.trilha(espalharEstrelas(r.brutos), r.completo, agora);
+    // sem caminho inteiro (morro alto, rio): o anel pisca, "segure para pular"
+    carinhas.sugerirPulo(r.completo ? null : id);
+    return r.brutos.length;
+  }
+
+  function apagarTrilha(): void {
+    trilha = null;
+    estrelinhas.tirar();
+    carinhas.sugerirPulo(null);
+  }
+
+  function quadroTrilha(agora: number, amigos: readonly AmigoNoMundo[]): void {
+    let perto = 0;
+    if (trilha) {
+      const p = f.jogador();
+      const a = amigos.find((x) => x.id === trilha!.alvo);
+      if (!a) apagarTrilha();
+      else {
+        const estrelas = estrelinhas.pontos();
+        const mp = maisPertoDoCaminho(estrelas, p.x, p.z);
+        perto = Math.max(0, mp.i);
+        if (!estrelinhas.apagando) {
+          // chegou perto do amigo, ou o tempo acabou: apaga
+          if (Math.hypot(a.x - p.x, a.z - p.z) < 3 || agora - trilha.nasceu > DURA_TRILHA) {
+            estrelinhas.apagar(agora);
+            carinhas.sugerirPulo(null);
+          } else if (
+            agora - trilha.em > 1 &&
+            (mp.d > 6 || Math.hypot(a.x - trilha.ax, a.z - trilha.az) > 6)
+          ) {
+            // a criança saiu da trilha (ou o amigo andou): procura de novo, sem nascer outra vez
+            const r = procurar(trilha.alvo);
+            trilha.em = agora;
+            if (r && r.brutos.length) {
+              trilha.brutos = r.brutos;
+              trilha.completo = r.completo;
+              trilha.ax = r.a.x;
+              trilha.az = r.a.z;
+              estrelinhas.trocarPontos(espalharEstrelas(r.brutos), r.completo);
+              carinhas.sugerirPulo(r.completo ? null : trilha.alvo);
+            }
+          }
+        }
+      }
+    }
+    estrelinhas.quadro(agora, perto);
+    if (trilha && !estrelinhas.acesa) {
+      trilha = null;
+      // com poucos amigos, a escolha dura o tempo da trilha
+      if (mapa.size <= MAX_CARINHAS) escolhido = null;
+    }
+  }
+
+  ouvintes.tocar = (id) => {
+    escolhido = id;
+    acenderTrilha(id);
   };
 
   const pv = new Vector3();
@@ -120,6 +239,13 @@ export function criarAcharAmigo(f: FonteAcharAmigo) {
     }
     if (escolhido && !mapa.has(escolhido)) escolhido = null;
     if (chamando && (agora > chamando.ate || !mapa.has(chamando.id))) chamando = null;
+    const p = f.jogador();
+    const bandeja = amigos
+      .map((a) => ({ id: a.id, d: Math.hypot(a.x - p.x, a.z - p.z) }))
+      .sort((a, b) => a.d - b.d)
+      .map((a) => ({ id: a.id, perto: a.d < PERTO_AMIGO }));
+    carinhas.botoes(bandeja, escolhido, mapa.size > MAX_CARINHAS, mapa);
+    quadroTrilha(agora, amigos);
     if (!cam || !amigos.length || !f.pode()) {
       carinhas.desenhar([], mapa);
       return;
@@ -132,7 +258,6 @@ export function criarAcharAmigo(f: FonteAcharAmigo) {
     const vista = cam.viewport.toGlobal(larg, alt);
     const view = cam.getViewMatrix();
     const transf = scene.getTransformMatrix();
-    const p = f.jogador();
     naTela.length = 0;
     for (const a of amigos) {
       alvo.set(a.x, a.y + 1.5, a.z);
@@ -179,6 +304,20 @@ export function criarAcharAmigo(f: FonteAcharAmigo) {
     tapado: (id: string) => tapados.get(id) ?? false,
     segurar: (id: string | null, fracao?: number) => carinhas.segurar(id, fracao),
     custoMs: () => custoMs,
+    bandeja: (aberta: boolean) => carinhas.abrirBandeja(aberta),
+    /** Trilha até o amigo (null apaga). Devolve quantos passos tem o caminho. */
+    trilha: (id: string | null) => {
+      if (!id) {
+        apagarTrilha();
+        return 0;
+      }
+      escolhido = id;
+      return acenderTrilha(id);
+    },
+    caminho: () => trilha?.brutos.map((p) => [...p] as V3) ?? [],
+    trilhaCompleta: () => trilha?.completo ?? null,
+    estrelas: () => estrelinhas.medida(),
+    caminhoMs: () => ultimoCaminhoMs,
   };
 
   return {

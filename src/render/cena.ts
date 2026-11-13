@@ -605,6 +605,8 @@ export interface EstadoDepuracao {
   voltarCasa?: () => void;
   /** Spec 021: achar o amigo (carinhas, trilha, pular para perto e chamar). */
   acharAmigo?: import('./acharAmigo').ApiAcharAmigo;
+  /** Testes: os pés do jogador (a posição de depuração é a da câmera). */
+  jogadorPes?: () => [number, number, number];
   definirSpawn?: (x: number, z: number) => void;
   inventario?: import('../jogo/inventario').Inventario;
   alvo?: { x: number; y: number; z: number; normal: Vec3 } | null;
@@ -3892,6 +3894,7 @@ export function criarCena(
     jogador: () => controle.jogador,
     amigos: () => outrosJogadores.lista,
     bloco: blocoEm,
+    conhecido: (x, z) => provedor.tem(Math.floor(x / TAM_X), Math.floor(z / TAM_Z)),
     pode: () => {
       const b = document.body;
       return (
@@ -3900,6 +3903,7 @@ export function criarCena(
     },
   });
   estado.acharAmigo = acharAmigo.api;
+  estado.jogadorPes = () => [controle.jogador.x, controle.jogador.y, controle.jogador.z];
   /** Até onde o bicho apontado vale, dos olhos (o núcleo confere 7 blocos no chão). */
   const ALCANCE_BICHO = 3.6;
   function criaturaApontada() {

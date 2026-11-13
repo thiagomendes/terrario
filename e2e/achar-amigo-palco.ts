@@ -202,3 +202,50 @@ export async function foto(page: Page, nome: string, pasta = PASTA) {
   return r.vistos;
 }
 
+
+/**
+ * O robô que "vira para a trilha e anda" (controle de verdade, sem teleporte) até a fração
+ * `ate` do caminho. Devolve quanto tempo levou (s).
+ */
+export async function andarTrilha(page: Page, ate: number, limite = 40) {
+  return page.evaluate(
+    async ([ate, limite]) => {
+      const e = window.__brumaluz!;
+      const am = e.acharAmigo!;
+      const ctl = e.controleDireto!;
+      const t0 = performance.now();
+      ctl.tecla('rapido', false);
+      for (;;) {
+        const pts = am.caminho();
+        if (!pts.length) break;
+        const alvo = Math.floor((pts.length - 1) * ate);
+        const [px, py, pz] = e.posicao!;
+        void py;
+        const j = e.jogadorPes!();
+        let i = 0;
+        let dmin = Infinity;
+        for (let k = 0; k < pts.length; k++) {
+          const d = Math.hypot(pts[k][0] - j[0], pts[k][2] - j[2]);
+          if (d < dmin) {
+            dmin = d;
+            i = k;
+          }
+        }
+        void px;
+        void pz;
+        if (i >= alvo || performance.now() - t0 > limite * 1000) break;
+        const prox = pts[Math.min(pts.length - 1, i + 3)];
+        const yaw = Math.atan2(prox[0] - j[0], prox[2] - j[2]);
+        e.apontar!(yaw, 0.4);
+        ctl.mover(1, 0);
+        const sobe = pts[Math.min(pts.length - 1, i + 1)][1] > j[1] + 0.4;
+        ctl.tecla('pular', sobe);
+        await new Promise((r) => setTimeout(r, 60));
+      }
+      ctl.mover(0, 0);
+      ctl.tecla('pular', false);
+      return (performance.now() - t0) / 1000;
+    },
+    [ate, limite] as const,
+  );
+}
