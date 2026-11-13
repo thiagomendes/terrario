@@ -1,7 +1,7 @@
 ---
 id: 022-camera-apertada
 title: 'Câmera em lugar apertado: ver e mexer no mundo sem trocar de câmera'
-status: DRAFT
+status: PARKED
 base_branch: main
 created_at: 2026-11-13T17:00:00Z
 ---
@@ -32,3 +32,26 @@ Ajuda na mira fica fora, a não ser que as medidas mostrem que a câmera sozinha
 
 ## Decisões do dono
 - 13 nov 2026: só a câmera, sem solução específica da obra. Entra depois do refino da Cidade Grande. Esboço em andamento.
+
+## Resultado do esboço (13 nov 2026), parada
+- **Onde está o esboço:** branch `esboco/camera-apertada` (commits 8291550 … f94cc15). Ela só roda com `?esboco=camera` e tem os modos `hoje`, `esboco`, `esboco-perto`, `esboco-sem-afastar` e `esboco-ima`. O relatório visual está em https://claude.ai/artifact/GWW7LFkPbuwLRNs1JtSTHS.
+- **Teste:** uma criança simulada fez 224 tentativas por modo, em 4 cenas, com erro de dedo de 24 px.
+
+| Modo, no celular | Alvo à vista no início | Acerto de 1ª |
+|---|---|---|
+| Câmera de hoje | 50% | 70% |
+| Câmera afastada (3,2 blocos), com recorte, silhueta e grua | 61% | 49% |
+| Câmera afastada, mais perto (2,2 blocos) | 51% | 47% |
+| Sem afastar, só recorte e silhueta | 54% | 71% |
+| Câmera afastada com ímã no toque (28 px) | 55% | 52% |
+
+- **Conclusões:**
+  - Afastar a câmera melhora a visão, mas deixa os blocos menores que o erro do dedo. O ímã não recupera isso, porque o dedo cai dentro do bloco vizinho.
+  - Sem afastar, o recorte quase não tem o que tirar, já que a câmera de hoje para antes da parede.
+  - O recorte custa pouco: dentro do ruído no celular. O custo de quadros vem da câmera mais longe.
+  - O ímã pega bloco ao tocar no céu logo acima dele. Sem esse "pulo para o céu", o problema quase some.
+- **Limite do teste:** o boneco automático não sente a confusão da câmera colada na parede, que é a queixa do dono.
+- **Para retomar:** testar com as crianças, no aparelho de verdade, num endereço separado com `?esboco=camera`; ou pensar em alvos maiores na tela.
+
+## Decisões do dono (continuação)
+- 13 nov 2026: depois das medidas, "Vamos de WebGPU então, deixa isso aí parado." A 022 fica parada; a câmera de hoje continua.

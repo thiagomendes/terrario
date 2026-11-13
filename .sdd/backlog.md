@@ -18,13 +18,13 @@ Ideias e pedidos do dono que ainda não viraram spec. Cada item diz de onde veio
 ## Specs na fila
 
 **Ordem combinada em 13 nov 2026** (todas começam por esboço; cuidados legais em `.sdd/cuidados-legais.md`):
-1. **022, Câmera em lugar apertado** (`.sdd/specs/022-camera-apertada/spec.md`): esboço em andamento.
-1b. **029, WebGPU** (`.sdd/specs/029-webgpu/spec.md`): primeiro um teste de medida nos aparelhos da família; se positivo, a troca é feita em seguida, antes da 023 (decisão do dono, 13 nov 2026).
+1. **029, WebGPU** (`.sdd/specs/029-webgpu/spec.md`): primeiro um teste de medida nos aparelhos da família; se positivo, a troca é feita em seguida, antes da 023 (decisão do dono, 13 nov 2026).
 2. **023, Alma do jogo** (`.sdd/specs/023-alma-do-jogo/spec.md`): objetivos curtos, progresso por habilidade, moedinhas e lojinha, e o jeito de cada mundo (a antiga 018, unificada).
 2b. **028, Nome novo: Cubolândia** (`.sdd/specs/028-cubolandia/spec.md`): antes das contas e das lojas, para não renomear depois; o dono começa pela busca no INPI e pelo domínio.
 3. **024, Conta da família** (`.sdd/specs/024-conta-da-familia/spec.md`): adulto com e-mail e código, crianças como perfis, online só com conta, limites, banimento e área dos pais.
 4. **020, Nas lojas** (`.sdd/specs/020-lojas/spec.md`): casca nativa (não acelera o jogo; dá tela cheia, arquivos no aparelho e loja).
 5. **025, Loja do jogo** (`.sdd/specs/025-loja-do-jogo/spec.md`): compras pela loja, só pelos pais, sem sorteio pago.
+- Parada: **022, Câmera em lugar apertado** (`.sdd/specs/022-camera-apertada/spec.md`). O esboço afastando a câmera piorou a mira no celular; resultado na spec (dono, 13 nov 2026: "deixa isso aí parado").
 - Intercalados: **026, Anos 80** e **027, Noite das Fantasias (Halloween)**.
 
 Histórico anterior:
