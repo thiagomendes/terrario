@@ -322,8 +322,8 @@ export function criarRenderVeiculos(
     luzes.thinInstanceCount = nl;
     luzes.thinInstanceBufferUpdated('matrix');
     luzes.thinInstanceBufferUpdated('color');
-    rodas.setEnabled(nr > 0);
-    luzes.setEnabled(nl > 0);
+    // sempre ligadas (com zero instâncias não desenham nada): ligar aqui, depois do recorte,
+    // deixava o quadro seguinte sem rodas e sem olhinhos (a malha já tinha ficado de fora da lista)
   });
 
   /** Caixas sólidas dos veículos perto de (x, z), já no mundo (pedaços do retângulo girado). */
