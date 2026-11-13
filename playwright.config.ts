@@ -1,6 +1,28 @@
 import { defineConfig } from '@playwright/test';
 
 /**
+ * Spec 029 (página de medida): E2E_WEBGPU=1 tenta o WebGPU do Chromium pelo Vulkan da máquina
+ * (no contêiner não há driver Vulkan: não entrega placa); E2E_WEBGPU=gles usa o WebGPU sobre o
+ * OpenGL ES (modo de compatibilidade, com a página em `&compat=1`), que chega à placa pela
+ * ponte do WSL; E2E_WEBGPU=swiftshader usa o Vulkan por software que vem com o Chromium (lento,
+ * só para provar que o caminho funciona, nunca para medir).
+ */
+const WEBGPU = !process.env.E2E_WEBGPU
+  ? []
+  : [
+      '--enable-unsafe-webgpu',
+      '--enable-features=Vulkan',
+      ...(process.env.E2E_WEBGPU === 'swiftshader'
+        ? [
+            '--use-vulkan=swiftshader',
+            '--use-webgpu-adapter=swiftshader',
+            '--disable-vulkan-surface',
+          ]
+        : []),
+      ...(process.env.E2E_WEBGPU === 'gles' ? ['--use-webgpu-adapter=opengles'] : []),
+    ];
+
+/**
  * Como o navegador de teste desenha o 3D: por padrão por software (SwiftShader, igual em
  * qualquer máquina); com E2E_GPU=1, na placa de vídeo pela ponte do WSL (scripts/e2e-gpu.sh),
  * bem mais rápido e com muito menos CPU.
@@ -17,9 +39,10 @@ const LANCAR = process.env.E2E_GPU
         '--use-angle=gl-egl',
         // medição de desempenho: sem o teto de 60 quadros do monitor
         ...(process.env.E2E_SEM_VSYNC ? ['--disable-gpu-vsync', '--disable-frame-rate-limit'] : []),
+        ...WEBGPU,
       ],
     }
-  : { args: ['--use-gl=angle', '--use-angle=swiftshader', '--ignore-gpu-blocklist'] };
+  : { args: ['--use-gl=angle', '--use-angle=swiftshader', '--ignore-gpu-blocklist', ...WEBGPU] };
 
 export default defineConfig({
   testDir: 'e2e',
