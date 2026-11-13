@@ -120,7 +120,8 @@ export function criarRenderVeiculos(
   scene: Scene,
   plano: PlanoCidade,
   replica: ReplicaVeiculos,
-  excluirDoGlow: (m: Mesh) => void,
+  /** 014d: a malha não brilha e tapa o brilho do que fica atrás (as luzes de trás, a barra). */
+  tapaOGlow: (m: Mesh) => void,
   /**
    * 014c: o chão em (x, z) já está desenhado? O veículo só aparece em cima de chão desenhado
    * (antes vinha do nada, "voando" do horizonte até achar a rua) e surge crescendo ao entrar.
@@ -139,7 +140,7 @@ export function criarRenderVeiculos(
   rodas.isPickable = false;
   rodas.alwaysSelectAsActiveMesh = true;
   rodas.thinInstanceEnablePicking = false;
-  excluirDoGlow(rodas);
+  tapaOGlow(rodas);
   const MAX_RODAS = FROTA.length * 4;
   const matRodas = new Float32Array(MAX_RODAS * 16);
   rodas.thinInstanceSetBuffer('matrix', matRodas, 16, false);
@@ -177,7 +178,7 @@ export function criarRenderVeiculos(
     corpo.receiveShadows = false;
     corpo.parent = raiz;
     corpo.rotationQuaternion = null;
-    excluirDoGlow(corpo);
+    tapaOGlow(corpo);
     const simples = new Mesh(`veiculo-${def.id}-longe`, scene);
     modelo.simples.applyToMesh(simples);
     simples.material = matCorpo;
@@ -185,7 +186,7 @@ export function criarRenderVeiculos(
     simples.isPickable = false;
     simples.parent = raiz;
     simples.setEnabled(false);
-    excluirDoGlow(simples);
+    tapaOGlow(simples);
     const posicoesPorta = modelo.porta
       ? Float32Array.from(corpo.getVerticesData(VertexBuffer.PositionKind)!)
       : null;

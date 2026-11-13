@@ -1099,6 +1099,28 @@ export function criarCena(
     mainTextureRatio: 0.5,
   });
   glow.intensity = INTENSIDADE_GLOW;
+  // 014d: malhas que não brilham mas tapam o brilho do que fica atrás delas. Uma malha excluída
+  // do glow não entra no mapa dele nem como sombra: o brilho das lanternas e da barra de luzes
+  // atravessava a cabine e manchava o para-brisa dos bombeiros de noite. Essas entram pretas
+  // (a cor de sempre para todas as outras, igual à conta do Babylon).
+  const oclusoresGlow = new Set<number>();
+  glow.customEmissiveColorSelector = (mesh, _sub, material, cor) => {
+    if (oclusoresGlow.has(mesh.uniqueId)) return void cor.set(0, 0, 0, 1);
+    const m = material as unknown as {
+      emissiveColor?: Color3;
+      emissiveTexture?: { level: number } | null;
+      emissiveIntensity?: number;
+      alpha: number;
+    };
+    if (m?.emissiveColor) {
+      const nivel = (m.emissiveTexture?.level ?? 1) * (m.emissiveIntensity ?? 1);
+      cor.set(m.emissiveColor.r * nivel, m.emissiveColor.g * nivel, m.emissiveColor.b * nivel, m.alpha);
+    } else cor.set(glow.neutralColor.r, glow.neutralColor.g, glow.neutralColor.b, glow.neutralColor.a);
+  };
+  const tapaOGlow = (m: Mesh) => {
+    oclusoresGlow.add(m.uniqueId);
+    m.onDisposeObservable.addOnce(() => oclusoresGlow.delete(m.uniqueId));
+  };
   // personagem e item na mão nunca brilham: o piso de luz deles é emissivo,
   // mas não é fonte de luz (inclui malhas criadas depois, como ao trocar a aparência)
   const semBrilho = (nome: string) => nome.startsWith('personagem');
@@ -4748,7 +4770,8 @@ export function criarCena(
       scene,
       cidadeObra,
       cliente.veiculos,
-      (m) => glow.addExcludedMesh(m),
+      // 014d: a lataria tapa o brilho das luzes de trás (não é excluída: entra preta)
+      tapaOGlow,
       // 014c: nada de veículo em cima de chão que ainda não foi desenhado
       (x, z) => malhas.has(chave(Math.floor(x / 16), Math.floor(z / 16))),
     );
