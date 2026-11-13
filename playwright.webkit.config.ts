@@ -14,6 +14,7 @@ export default defineConfig({
     'iphone.spec.ts',
     'trilha-iphone.spec.ts',
     'nitidez-celular.spec.ts',
+    'som-veiculos.spec.ts',
   ],
   use: { baseURL: base.use?.baseURL },
   projects: [{ name: 'iphone-webkit', use: { ...devices['iPhone 13'] } }],

@@ -290,16 +290,25 @@ export function passoSorvete(
  * abaixo da trilha (o esboço: 2,4), um pouco acima dela só arrancando; o uí-uí, o freio e a
  * musiquinha subiram 3 dB sobre a conta (o lado do som divide a voz entre as duas caixas), e a
  * musiquinha fica uns 6 dB abaixo da trilha.
+ *
+ * 014c (o dono no iPhone e as crianças no tablet, na nuvem: "não sai nada, praticamente nada"):
+ * o caminho funciona (o pacote abre, os eventos chegam da nuvem, os motores tocam), mas o jogo
+ * de verdade tem a natureza e as falas que a régua calou, e no alto-falante pequeno o grave do
+ * motor some. Medido na saída do jogo publicado, num mundo da nuvem, ao lado de um carro andando:
+ * os veículos somavam ~1 dB à rua (`e2e-nuvem/som-veiculos.spec.ts`). Agora: motores +9 dB, a
+ * presença do motor mais forte, e os toques que a criança tem de ouvir bem acima da rua: uí-uí
+ * e freio a ar +15 dB, musiquinha +14 dB, buzina +8 dB, "toc" +4 dB (o compressor da saída segura
+ * os picos). `e2e/som-veiculos.spec.ts` confere que cada toque perto sobe a saída de verdade.
  */
 export const GANHO_SOM_VEICULO = {
-  lacoCarro: 0.17,
-  lacoOnibus: 0.22,
-  lacoSorvete: 0.12,
-  uiui: 0.127,
-  freio: 0.113,
-  sorvete: 0.079,
-  buzina: 0.2,
-  toc: 0.25,
+  lacoCarro: 0.48,
+  lacoOnibus: 0.62,
+  lacoSorvete: 0.34,
+  uiui: 0.75,
+  freio: 0.6,
+  sorvete: 0.4,
+  buzina: 0.5,
+  toc: 0.4,
 } as const;
 
 export type ChaveSomVeiculo =
@@ -364,7 +373,7 @@ function alvo(p: Param, v: number, t: number, tau: number): void {
  * compensação do motor inteiro (`compensa`), para o computador (fone e caixa) ficar no nível
  * aprovado: medida no jogo, a rua perto do táxi não sobe; no celular simulado, o motor sobe.
  */
-export const PRESENCA_MOTOR = { hz: 1000, q: 0.7, ganho: 2.5, compensa: 0.53 } as const;
+export const PRESENCA_MOTOR = { hz: 1000, q: 0.7, ganho: 3.5, compensa: 0.53 } as const;
 
 /**
  * Quanto da presença vale com o veículo a `d` blocos: inteira até 6 (o carrinho que a criança
@@ -886,6 +895,11 @@ export function criarSomVeiculos(op: OpcoesSomVeiculos) {
     /** Testes (a régua): toca a musiquinha agora, de onde o sorvete está, sem a regra. */
     tocarSorvete(qual: 'inteira' | 'frase'): void {
       tocarMusiquinha(qual, sorveteOuvido.vol, sorveteOuvido.lado);
+    },
+    /** Testes: um toque (uí-uí, freio, buzina) tocado agora, cheio, como se fosse perto. */
+    tocarToque(qual: 'uiui' | 'freio' | 'buzina'): void {
+      if (qual === 'buzina') toque('buzina', GANHO_SOM_VEICULO.buzina, 0, 'efeitos', 'buzina');
+      else toque(qual, GANHO_SOM_VEICULO[qual] * volumeRua, 0, 'ambiente', qual);
     },
     /** Testes: cala os veículos (para medir a rua sem eles). */
     definirMudo(m: boolean): void {
