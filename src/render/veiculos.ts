@@ -72,6 +72,8 @@ interface VeiculoVisto {
   posicoesPorta: Float32Array | null;
   pulo: number;
   surgir: number;
+  /** 014c: estava fora do chão desenhado (ao voltar, surge crescendo). */
+  foraDoChao: boolean;
   balao: BalaoGesto | null;
 }
 
@@ -106,6 +108,11 @@ export function criarRenderVeiculos(
   plano: PlanoCidade,
   replica: ReplicaVeiculos,
   excluirDoGlow: (m: Mesh) => void,
+  /**
+   * 014c: o chão em (x, z) já está desenhado? O veículo só aparece em cima de chão desenhado
+   * (antes vinha do nada, "voando" do horizonte até achar a rua) e surge crescendo ao entrar.
+   */
+  chaoDesenhado: (x: number, z: number) => boolean = () => true,
 ) {
   const pl = criarPlasticos(scene, 'veiculos');
   const matCorpo = pl.corVertice(0.45) ?? pl.cor('#ffffff', 0.45);
@@ -191,6 +198,7 @@ export function criarRenderVeiculos(
       posicoesPorta,
       pulo: 0,
       surgir: 0,
+      foraDoChao: false,
       balao: null,
     };
   });
@@ -240,6 +248,20 @@ export function criarRenderVeiculos(
       ve.a = t - pl0.t0 < fim ? pl0.a : 0;
       ve.k = pl0.k;
       poseDoVeiculo(ve.r, ve.m, e.s, ve.pose);
+      // só em cima de chão desenhado (as duas pontas); entrando, surge crescendo
+      const mc = ve.m.meioComp;
+      const noChao =
+        chaoDesenhado(ve.pose.x + ve.pose.hx * mc, ve.pose.z + ve.pose.hz * mc) &&
+        chaoDesenhado(ve.pose.x - ve.pose.hx * mc, ve.pose.z - ve.pose.hz * mc);
+      if (!noChao) {
+        ve.foraDoChao = true;
+        ve.raiz.setEnabled(false);
+        continue;
+      }
+      if (ve.foraDoChao) {
+        ve.foraDoChao = false;
+        ve.surgir = 1;
+      }
       ve.raiz.setEnabled(true);
       ve.raiz.position.set(ve.pose.x, chao + ve.pulo * 0.12, ve.pose.z);
       ve.raiz.rotation.y = ve.pose.yaw;

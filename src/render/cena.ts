@@ -335,6 +335,15 @@ const INTERATIVOS = new Set<number>([
   Bloco.PORTEIRA_ABERTA,
 ]);
 let raioChunks = RAIO_INICIAL;
+/**
+ * 014c: a névoa da cidade na ponta do chão desenhado: exp(−(d·k)²) com d·k = NEVOA_NA_PONTA na
+ * borda (sobra ~30% da cor do chão lá; a uns 60% da borda, ~85%).
+ */
+const NEVOA_NA_PONTA = 1.1;
+/** Distância da câmera até a borda do chão desenhado, no pior rumo (blocos). */
+function bordaDoChao(): number {
+  return Math.max(16, raioChunks * 16 - 4);
+}
 let fatorNevoa = 1;
 /** Chunks em volta da câmera que projetam sombra (celular usa 1: menos geometria na passada). */
 const RAIO_SOMBRA_DESKTOP = 2;
@@ -1404,7 +1413,13 @@ export function criarCena(
     // claro); ao entardecer e à noite a névoa volta à de antes
     const arDia = 0.75 + 0.25 * Math.max(a.noite, a.crepusculo);
     const densAr = a.densidadeNevoa * fatorNevoa * arDia;
-    scene.fogDensity = densAr + (0.06 - densAr) * ns;
+    // 014c: na cidade (plana, a rua comprida à vista) a névoa chega até a ponta do chão
+    // desenhado, para as ruas de longe sumirem na bruma em vez de acabarem num corte. As torres
+    // do horizonte (variante C) continuam com a névoa de antes.
+    const densMundo =
+      temaAtual.id === 'cidade-grande' ? Math.max(densAr, NEVOA_NA_PONTA / bordaDoChao()) : densAr;
+    scene.fogDensity = densMundo + (0.06 - densMundo) * ns;
+    const densHorizonte = densAr + (0.06 - densAr) * ns;
     scene.clearColor.set(a.nevoa[0], a.nevoa[1], a.nevoa[2], 1);
     scene.ambientColor.set(...a.ambiente);
     luz.diffuse.set(...a.ceuLuz);
@@ -1445,7 +1460,7 @@ export function criarCena(
       cameraVisao.position,
       camera.position,
       scene.fogColor,
-      scene.fogDensity,
+      densHorizonte,
       luzDia,
       a.noite,
     );
@@ -4704,8 +4719,13 @@ export function criarCena(
   if (cidadeObra) criarProgressoObra();
   // spec 014 (T14): os carrinhos e ônibus, sólidos para o boneco e para a câmera
   if (cidadeObra) {
-    const rv = criarRenderVeiculos(scene, cidadeObra, cliente.veiculos, (m) =>
-      glow.addExcludedMesh(m),
+    const rv = criarRenderVeiculos(
+      scene,
+      cidadeObra,
+      cliente.veiculos,
+      (m) => glow.addExcludedMesh(m),
+      // 014c: nada de veículo em cima de chão que ainda não foi desenhado
+      (x, z) => malhas.has(chave(Math.floor(x / 16), Math.floor(z / 16))),
     );
     renderVeiculos = rv;
     controle.definirSolidosExtras(() => rv.caixasPerto(controle.jogador.x, controle.jogador.z));
