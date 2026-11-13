@@ -470,6 +470,8 @@ export interface EstadoDepuracao {
   tocarSorvete?: (qual: 'inteira' | 'frase') => void;
   /** Spec 014 (T15, testes): cala os sons dos veículos (a régua da rua sem eles). */
   calarVeiculos?: (mudo: boolean) => void;
+  /** 014c (testes): um toque de veículo agora, cheio (uí-uí, freio a ar, buzina). */
+  tocarToqueVeiculo?: (qual: 'uiui' | 'freio' | 'buzina') => void;
   /** Spec 014 (T15, testes): grava o som do jogo (a saída do motor), PCM 16 bits em base64. */
   gravarSom?: (segundos: number) => Promise<{ taxa: number; l: string; r: string } | null>;
   /** Spec 014 (T14, testes): os motores que tocam, a musiquinha e os toques. */
@@ -4705,6 +4707,7 @@ export function criarCena(
       estado.somVeiculos = () => ({ ...somVeiculos!.info(), tocados: tocadosVeiculos.slice() });
       estado.calarVeiculos = (m) => somVeiculos!.definirMudo(m);
       estado.tocarSorvete = (q) => somVeiculos!.tocarSorvete(q);
+      estado.tocarToqueVeiculo = (q) => somVeiculos!.tocarToque(q);
       // a régua: o volume da trilha e da natureza (null: o das Configurações)
       estado.volumesAmbiente = (musica, natureza, falas = null) => {
         const c = configAtual as Config | null;
