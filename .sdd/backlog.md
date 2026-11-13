@@ -9,13 +9,23 @@ Ideias e pedidos do dono que ainda não viraram spec. Cada item diz de onde veio
 - **Rodada em família no Rancho Alegre** (critério 12 da 013). Pendente com o dono.
 - **Acabamento do Rancho:** refazer a foto da vitrine (um morro tapa o sítio), girar as pás do moinho, quebrar porta numa pilha de duas.
 
-- **Contas de jogador** (ideia do dono): conversar depois da spec 011.
+- **Contas de jogador:** virou a spec 024 (13 nov 2026).
 
 - **Rodada em família de 15 minutos em dois aparelhos** (critério 13 da spec 010). Pendente com o dono.
 
 - **Faixa azul embaixo no iPhone pelo ícone da tela de início** (dono, 12 nov 2026): continua aparecendo depois da correção de nitidez (90387de, que só foi testada em emulação). Ver na sequência, de preferência com captura do aparelho de verdade. A nitidez ficou aprovada ("ficou excelente").
 
 ## Specs na fila
+
+**Ordem combinada em 13 nov 2026** (todas começam por esboço; cuidados legais em `.sdd/cuidados-legais.md`):
+1. **022, Câmera em lugar apertado** (`.sdd/specs/022-camera-apertada/spec.md`): esboço em andamento.
+2. **023, Alma do jogo** (`.sdd/specs/023-alma-do-jogo/spec.md`): objetivos curtos, progresso por habilidade, moedinhas e lojinha, e o jeito de cada mundo (a antiga 018, unificada).
+3. **024, Conta da família** (`.sdd/specs/024-conta-da-familia/spec.md`): adulto com e-mail e código, crianças como perfis, online só com conta, limites, banimento e área dos pais.
+4. **020, Nas lojas** (`.sdd/specs/020-lojas/spec.md`): casca nativa (não acelera o jogo; dá tela cheia, arquivos no aparelho e loja).
+5. **025, Loja do jogo** (`.sdd/specs/025-loja-do-jogo/spec.md`): compras pela loja, só pelos pais, sem sorteio pago.
+- Intercalados: **026, Anos 80** e **027, Noite das Fantasias (Halloween)**.
+
+Histórico anterior:
 
 Ordem combinada com o dono (10 nov 2026): 013 → 015 → 017 → 016 → 014 → 018. Proposta de 11 nov 2026 (019 antes da 014): 017 → 016 → 019 → 014 → 018.
 

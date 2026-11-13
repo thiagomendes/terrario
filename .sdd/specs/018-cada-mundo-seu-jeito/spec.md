@@ -1,10 +1,12 @@
 ---
 id: 018-cada-mundo-seu-jeito
 title: 'Cada mundo com seu jeito: a atividade própria de cada tema'
-status: DRAFT
+status: MERGED_INTO_023
 base_branch: main
 created_at: 2026-11-10T23:30:00Z
 ---
+> **13 nov 2026: unificada na 023 (Alma do jogo)** por decisão do dono. Este texto fica como referência da direção de cada tema.
+
 ## Contexto
 Ideia do dono em 10 nov 2026, jogando depois da 013: "imagine montar um plantio na lua, não parece encaixar... cada mundo deve ter seus itens e suas características". Hoje a roça da 013 está nos 7 temas só com nomes e texturas trocados (canteiro hidropônico na Lua, canteiro de chocolate no Doce Reino); a mecânica é a mesma em todos.
 

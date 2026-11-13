@@ -18,6 +18,18 @@ full_test_command: npx vitest run && scripts/e2e-gpu.sh
 ## Contexto
 Pergunta do dono (11 nov 2026): levar o Terrário para a App Store e o Google Play. Abrir pelo navegador não é intuitivo para crianças. Ele não quer perder o trabalho feito na web e quer manter o computador e a web integrados no jogo online. No futuro, talvez venda coisas dentro do jogo. Por enquanto fica no backlog, como rascunho, e o esboço vem quando chegar a vez dela.
 
+## Atualização de 13 nov 2026
+- **A casca não deixa o jogo mais rápido.** Pergunta do dono: a casca nativa melhoraria desempenho e qualidade? Não: no celular ela usa o mesmo motor do navegador (o WebView do sistema). O que ela melhora:
+  - tela cheia de verdade, o que acaba com a faixa azul do iPhone aberto pelo ícone;
+  - jogo guardado no aparelho, que abre mais rápido e não some da memória do iPhone;
+  - som e memória mais estáveis em segundo plano;
+  - vibração e a presença na loja.
+- **Desempenho de verdade** vem de outros caminhos: WebGPU (o Babylon já suporta, e os iPhones novos têm) e otimização do jogo. Vale estudar o WebGPU numa etapa desta spec ou numa spec própria.
+- **Contas e compras saíram daqui:**
+  - a etapa 4 ("Contas e compras") virou duas specs: a **024 (Conta da família)**, antes desta, e a **025 (Loja do jogo)**, depois desta;
+  - os cuidados legais de todas ficam em `.sdd/cuidados-legais.md`.
+- **Ordem combinada:** 022 → 023 → 024 → **020** → 025, com os mundos 026 e 027 intercalados.
+
 ## Decisão de caminho (recomendada e aceita para estudo)
 - **Casca nativa, sem reescrever.** O mesmo jogo web vai dentro de um app.
   - **Celular:** Capacitor. O app usa o WebView do sistema (no iPhone, o mesmo motor do Safari) e tem extensões nativas para compra, vibração, notificações e tela cheia.
