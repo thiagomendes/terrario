@@ -78,12 +78,41 @@ body:has(.entrada:not([hidden])) .carinhas-amigos { display: none; }
 .montinho-amigos .seta::before { content: ''; position: absolute; left: var(--alcance); top: -8px;
   border-top: 8px solid transparent; border-bottom: 8px solid transparent; border-left: 11px solid #fbf7ee;
   filter: drop-shadow(0 2px 0 rgba(0,0,0,0.2)); }
+/* botões na coluna do minimapa: a bandeja das carinhas e o Chamar */
+.botao-bandeja, .botao-chamar { position: fixed; z-index: 7; width: 48px; height: 48px; border-radius: 50%; border: 0; padding: 0; display: grid; place-items: center;
+  background: rgba(255, 250, 240, 0.95); pointer-events: auto; cursor: pointer; touch-action: none; -webkit-touch-callout: none; user-select: none;
+  box-shadow: 0 3px 0 rgba(150, 110, 60, 0.35), 0 6px 12px rgba(40, 25, 10, 0.2), inset 0 2px 0 rgba(255, 255, 255, 0.85); }
+.botao-bandeja[hidden], .botao-chamar[hidden] { display: none; }
+.botao-bandeja svg, .botao-chamar svg { width: 30px; height: 30px; pointer-events: none; }
+.botao-bandeja:active, .botao-chamar:active { transform: translateY(2px); }
+.botao-bandeja.ativo { background: #ffe4a8; }
+.bandeja-amigos { position: fixed; z-index: 7; display: flex; gap: 10px; padding: 8px 10px; border-radius: 999px;
+  background: rgba(255, 250, 240, 0.96); pointer-events: auto;
+  box-shadow: 0 3px 0 rgba(150, 110, 60, 0.35), 0 8px 18px rgba(40, 25, 10, 0.25); }
+.bandeja-amigos[hidden] { display: none; }
+.bandeja-amigos .cara { width: 44px; height: 44px; border-radius: 50%; background: #fbf7ee; overflow: hidden; position: relative; flex: none; padding: 0; border: 0;
+  box-shadow: 0 0 0 3px var(--cor), 0 2px 0 4px rgba(0,0,0,0.08); cursor: pointer; }
+.bandeja-amigos .cara canvas { width: 100%; height: 100%; display: block; pointer-events: none; }
+.bandeja-amigos .cara.escolhido { box-shadow: 0 0 0 4px var(--cor), 0 0 0 7px #ffd45a; }
+.bandeja-amigos .cara.perto::after { content: ''; position: absolute; right: 2px; bottom: 2px; width: 10px; height: 10px; border-radius: 50%; background: #5fcf6a;
+  box-shadow: 0 0 0 2px #fff; }
+body[data-overlay] .botao-bandeja, body.tela-titulo .botao-bandeja, body.modo-foto .botao-bandeja,
+body[data-overlay] .botao-chamar, body.tela-titulo .botao-chamar, body.modo-foto .botao-chamar,
+body[data-overlay] .bandeja-amigos, body.tela-titulo .bandeja-amigos, body.modo-foto .bandeja-amigos,
+body:has(.entrada:not([hidden])) .botao-bandeja, body:has(.entrada:not([hidden])) .botao-chamar { display: none; }
+@media (max-width: 560px) {
+  .bandeja-amigos { flex-wrap: wrap; justify-content: center; border-radius: 24px; gap: 8px; }
+  .bandeja-amigos .cara { width: 40px; height: 40px; }
+}
 @media (prefers-reduced-motion: reduce) {
   .carinha-amigo.chamando .aro, .carinha-amigo.chamando::before, .carinha-amigo.chamando::after, .carinha-amigo .mao { animation: none; }
 }
 `;
 
 const ICONE_ACENO = `<svg viewBox="0 0 32 32">${ICONES_GESTOS.acenar}</svg>`;
+/** Ícone da bandeja: três carinhas (sem texto). */
+const ICONE_BANDEJA =
+  '<svg viewBox="0 0 32 32"><circle cx="9" cy="13" r="5.5" fill="#ff9db8" stroke="#3b2a1e" stroke-width="1.6"/><circle cx="23" cy="13" r="5.5" fill="#7cc6ff" stroke="#3b2a1e" stroke-width="1.6"/><circle cx="16" cy="19" r="6.5" fill="#ffd45a" stroke="#3b2a1e" stroke-width="1.8"/><circle cx="13.8" cy="18" r="1" fill="#3b2a1e"/><circle cx="18.2" cy="18" r="1" fill="#3b2a1e"/><path d="M13.5 21.5 Q16 23.8 18.5 21.5" fill="none" stroke="#3b2a1e" stroke-width="1.5" stroke-linecap="round"/></svg>';
 
 /** Os seletores do HUD que a carinha nunca tapa. */
 const SELETORES_HUD = [
@@ -143,6 +172,14 @@ export interface AcoesCarinhas {
   pular(id: string): void;
   /** Tocou no montinho. */
   montinho(ids: string[]): void;
+  /** Tocou numa cara da bandeja (o escolhido de novo desfaz a escolha). */
+  escolher(id: string): void;
+}
+
+/** Um amigo na bandeja (do mais perto ao mais longe). */
+export interface NaBandeja {
+  id: string;
+  perto: boolean;
 }
 
 /** O que a camada mostrou no último quadro (testes e capturas). */
@@ -197,11 +234,105 @@ export function criarCarinhas(acoes: AcoesCarinhas) {
   document.body.append(camada);
   const carinhas = new Map<string, Carinha>();
   const montinhos: HTMLDivElement[] = [];
+
+  // a bandeja (só com mais de 3 amigos): o botão de três carinhas e a fileira de caras
+  const bBandeja = document.createElement('button');
+  bBandeja.className = 'botao-bandeja';
+  bBandeja.innerHTML = ICONE_BANDEJA;
+  bBandeja.setAttribute('aria-label', 'Amigos');
+  bBandeja.hidden = true;
+  const fileira = document.createElement('div');
+  fileira.className = 'bandeja-amigos';
+  fileira.hidden = true;
+  document.body.append(bBandeja, fileira);
+  const parar = (ev: Event) => ev.stopPropagation();
+  for (const el of [bBandeja, fileira]) {
+    el.addEventListener('pointerdown', parar);
+    el.addEventListener('pointerup', parar);
+  }
+  bBandeja.addEventListener('click', (ev) => {
+    ev.stopPropagation();
+    abrirBandeja(fileira.hidden);
+  });
+  let chaveFileira = '';
+  let naBandeja: readonly NaBandeja[] = [];
+  let escolhidoAgora: string | null = null;
+  let amigosAgora: ReadonlyMap<string, AmigoDaCarinha> = new Map();
+  function desenharFileira(): void {
+    const chave = naBandeja.map((b) => `${b.id}:${b.perto ? 1 : 0}:${amigosAgora.get(b.id)?.aparencia}`).join('|') + '#' + escolhidoAgora;
+    if (chave === chaveFileira) return;
+    chaveFileira = chave;
+    fileira.innerHTML = '';
+    for (const b of naBandeja) {
+      const a = amigosAgora.get(b.id);
+      if (!a) continue;
+      const c = document.createElement('button');
+      c.className = 'cara' + (b.id === escolhidoAgora ? ' escolhido' : '') + (b.perto ? ' perto' : '');
+      c.style.setProperty('--cor', a.cor);
+      c.dataset.amigo = b.id;
+      const cv = document.createElement('canvas');
+      c.append(cv);
+      fotografar(cv, a.aparencia);
+      c.addEventListener('click', (ev) => {
+        ev.stopPropagation();
+        acoes.escolher(b.id);
+        abrirBandeja(false);
+      });
+      fileira.append(c);
+    }
+  }
+  function abrirBandeja(aberta: boolean): void {
+    if (aberta && bBandeja.hidden) return;
+    if (aberta) {
+      chaveFileira = '';
+      desenharFileira();
+    }
+    fileira.hidden = !aberta;
+    bBandeja.classList.toggle('ativo', aberta);
+    medidoEm = -Infinity;
+  }
+  /** Os botões ficam na coluna do minimapa, logo abaixo da mochila (e dos amigos). */
+  const botoesDaColuna: HTMLElement[] = [bBandeja];
+  function posicionarBotoes(): void {
+    const fel = (sel: string) => document.querySelector<HTMLElement>(sel);
+    const mini = fel('.minimapa')?.getBoundingClientRect();
+    const W = window.innerWidth;
+    const embaixo = ['.menu-hud.mochila', '.botao-amigos']
+      .map((sel) => fel(sel))
+      .filter((x): x is HTMLElement => !!x && x.offsetParent !== null)
+      .map((x) => x.getBoundingClientRect())
+      // só o que está na coluna da direita
+      .filter((r) => r.right > W - 140);
+    const fundo = Math.max(mini?.bottom ?? 200, ...embaixo.map((r) => r.bottom));
+    const direita = mini && mini.width ? W - mini.right : 14;
+    const x = W - direita - 48;
+    let y = fundo + 10;
+    for (const b of botoesDaColuna) {
+      if (b.hidden) continue;
+      b.style.left = `${x}px`;
+      b.style.top = `${y}px`;
+      y += 58;
+    }
+    // a bandeja abre para a esquerda do botão (no celular em pé, quebrando a linha)
+    const topo = parseFloat(bBandeja.style.top) || fundo + 10;
+    if (W <= 560) {
+      fileira.style.right = `${direita + 58}px`;
+      fileira.style.left = 'auto';
+      fileira.style.top = `${topo}px`;
+      fileira.style.maxWidth = `${W - direita - 74}px`;
+    } else {
+      fileira.style.right = `${direita + 58}px`;
+      fileira.style.left = 'auto';
+      fileira.style.top = `${topo - 6}px`;
+      fileira.style.maxWidth = `${W - direita - 74}px`;
+    }
+  }
   const vistos: VistoNaBorda[] = [];
 
   let proibidos: Caixa[] = [];
   let medidoEm = -Infinity;
   const remedir = () => {
+    posicionarBotoes();
     proibidos = medirHud();
     medidoEm = performance.now();
   };
@@ -438,6 +569,24 @@ export function criarCarinhas(acoes: AcoesCarinhas) {
       for (const [id, c] of carinhas) if (!usados.has(id) && !c.el.hidden && !c.segurando) c.el.hidden = true;
       for (let i = nMontinho; i < montinhos.length; i++) montinhos[i].hidden = true;
     },
+    /**
+     * Os botões da coluna: a bandeja aparece com mais de 3 amigos; aberta, a fileira acompanha
+     * quem está perto e quem está escolhido.
+     */
+    botoes(lista: readonly NaBandeja[], escolhido: string | null, muitos: boolean, amigos: ReadonlyMap<string, AmigoDaCarinha>): void {
+      naBandeja = lista;
+      escolhidoAgora = escolhido;
+      amigosAgora = amigos;
+      if (bBandeja.hidden === muitos) {
+        bBandeja.hidden = !muitos;
+        if (!muitos) abrirBandeja(false);
+        medidoEm = -Infinity;
+      }
+      if (!fileira.hidden) desenharFileira();
+    },
+    abrirBandeja,
+    bandejaAberta: () => !fileira.hidden,
+    botoesDaColuna,
     /** A carinha balança "não" (o pulo não achou lugar seguro) e o anel esvazia. */
     nao(id: string): void {
       const c = carinhas.get(id);

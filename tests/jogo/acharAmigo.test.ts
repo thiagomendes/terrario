@@ -260,3 +260,35 @@ describe('a borda da tela (spec 021, T02)', () => {
     expect(dois[0].ids).toEqual(['g']);
   });
 });
+
+describe('pontinhos tocáveis', () => {
+  it('os pontinhos do mesmo lado não se encostam (área de toque inteira)', async () => {
+    const { disporCarinhas, TOQUE_PONTINHO } = await import('../../src/jogo/acharAmigo');
+    const amigos = ['a', 'b', 'c', 'd', 'e'].map((id, i) => ({
+      id,
+      d: 40 + i * 5,
+      sx: -200,
+      sy: 360 + i * 4,
+      frente: true,
+      vx: -1,
+      vy: 0,
+      vz: 1,
+      tapado: false,
+    }));
+    const itens = disporCarinhas({
+      W: 1280,
+      H: 720,
+      celular: false,
+      amigos,
+      proibidos: [],
+      escolhido: 'a',
+      chamando: null,
+      total: 5,
+    });
+    const pts = itens.filter((i) => i.tipo === 'pontinho');
+    expect(pts.length).toBe(4);
+    for (let i = 0; i < pts.length; i++)
+      for (let j = i + 1; j < pts.length; j++)
+        expect(Math.hypot(pts[i].x - pts[j].x, pts[i].y - pts[j].y)).toBeGreaterThanOrEqual(TOQUE_PONTINHO - 0.5);
+  });
+});

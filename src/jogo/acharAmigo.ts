@@ -366,6 +366,30 @@ export function disporCarinhas(e: EntradaBorda): ItemBorda[] {
       if (c === escolhido || c === chamando) out.push(carinha(c));
       else if (c.borda) out.push(pontinho(e, c));
     }
+    // os pontinhos não se encostam (cada um com a área de toque inteira)
+    const fora = perimetro(e.W, e.H, 14);
+    const pts = out
+      .filter((i) => i.tipo === 'pontinho')
+      .map((p) => ({ p, s: fora.param(p.x, p.y) }))
+      .sort((u, v) => u.s - v.s);
+    const grandes = out.filter((i) => i.tipo !== 'pontinho');
+    const postos: ItemBorda[] = [];
+    const bate = (x: number, y: number) =>
+      grandes.some((o) => Math.hypot(o.x - x, o.y - y) < o.diam / 2 + TOQUE_PONTINHO / 2 + 4) ||
+      postos.some((o) => Math.hypot(o.x - x, o.y - y) < TOQUE_PONTINHO) ||
+      bateCirculo(e.proibidos, x, y, TOQUE_PONTINHO / 2);
+    for (const { p, s: s0 } of pts) {
+      // anda pela beirada (sempre no mesmo sentido) até a área de toque ficar livre
+      let s = s0;
+      let [x, y] = fora.ponto(s);
+      for (let k = 0; k < fora.P / 4 && bate(x, y); k++) {
+        s += 4;
+        [x, y] = fora.ponto(s);
+      }
+      p.x = x;
+      p.y = y;
+      postos.push(p);
+    }
     // o escolhido e quem chamou na frente (desenhados por último ficam por cima)
     return out.sort((p, q) => Number(p.tipo !== 'pontinho') - Number(q.tipo !== 'pontinho'));
   }
