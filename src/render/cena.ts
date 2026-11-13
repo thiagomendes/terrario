@@ -113,7 +113,12 @@ import {
   type CelulaPlanejada,
 } from '../world/obras';
 import { criarFantasmasObra } from './fantasmasObra';
-import { criarRenderVeiculos, type RenderVeiculos, type VeiculoNaTela } from './veiculos';
+import {
+  criarRenderVeiculos,
+  type CaixaMundo,
+  type RenderVeiculos,
+  type VeiculoNaTela,
+} from './veiculos';
 import { criarSomVeiculos, type Ouvinte, type SomVeiculos } from '../audio/somVeiculos';
 import { criarProgressoObra } from '../ui/progressoObra';
 import { MAO } from '../ui/dicaMira';
@@ -3841,6 +3846,26 @@ export function criarCena(
 
   // Criaturas: o núcleo simula; a cena desenha a cópia suavizada.
   const replicaCriaturas = cliente.criaturas;
+  /**
+   * 014c, a regra do dono (solidez): a criança não entra nos veículos nem nos moradores e bichos
+   * (cada um é uma caixa sólida perto dela; quem já está dentro não prende ninguém). O peixe e o
+   * bicho que segue a criança (o companheiro) ficam de fora, para não atrapalhar o caminho.
+   */
+  const caixasCriaturas: CaixaMundo[] = [];
+  /** 014c: as caixas dos veículos perto da criança (só na cidade). */
+  let caixasVeiculosPerto: (() => CaixaMundo[]) | null = null;
+  controle.definirSolidosExtras(() => {
+    const j = controle.jogador;
+    caixasCriaturas.length = 0;
+    for (const c of replicaCriaturas.lista) {
+      if (c.tipo === 'peixe' || c.estado === 'morrendo' || c.estado === 'seguir' || c.domada) continue;
+      if (Math.abs(c.x - j.x) > 4 || Math.abs(c.z - j.z) > 4 || Math.abs(c.y - j.y) > 3) continue;
+      const d = CRIATURAS[c.tipo];
+      caixasCriaturas.push([c.x - d.mw, c.y, c.z - d.mw, c.x + d.mw, c.y + d.alt, c.z + d.mw]);
+    }
+    const v = caixasVeiculosPerto?.();
+    return v ? caixasCriaturas.concat(v) : caixasCriaturas;
+  });
   const cacheCeu = new Map<string, { topo: number; t: number }>();
   let relogioCache = 0;
   /**
@@ -4728,7 +4753,7 @@ export function criarCena(
       (x, z) => malhas.has(chave(Math.floor(x / 16), Math.floor(z / 16))),
     );
     renderVeiculos = rv;
-    controle.definirSolidosExtras(() => rv.caixasPerto(controle.jogador.x, controle.jogador.z));
+    caixasVeiculosPerto = () => rv.caixasPerto(controle.jogador.x, controle.jogador.z);
     estado.veiculos = () => rv.lista();
     estado.custoVeiculos = () => rv.custo();
     estado.eventosVeiculos = [];
