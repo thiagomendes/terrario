@@ -13,6 +13,14 @@ import type { PecaCriatura } from '../temas/tipos';
 import { povoadoDoTema, tema } from '../temas/ativo';
 import { caixaArredondada, esfera } from './formas';
 import { bichoDeBrinquedo, type PecaBicho } from './bichoBrinquedo';
+import { encaixarBicho } from './encaixeBicho';
+import {
+  aberturaDoPasso,
+  ergueDaPata,
+  alturaDoQuadril,
+  juntasDoBicho,
+  passoSemDeslizar,
+} from './juntasBicho';
 import { criarBoneco } from './boneco';
 import { planoBoneco, type PlanoBoneco } from '../personagem/boneco';
 import { moradorDeBrinquedo } from './moradorBoneco';
@@ -50,7 +58,7 @@ const MAXIMO_PLANOS = 200;
 interface Modelo {
   raiz: TransformNode;
   /** Uma parte por grupo que se mexe junto (corpo, cabeça, cada perna...), já fundida. */
-  partes: { no: TransformNode; malhas: Mesh[]; papel: Peca['papel'] }[];
+  partes: { no: TransformNode; malhas: Mesh[]; papel: Peca['papel']; base: Vector3 }[];
   /** Material do plástico deste bicho (a luz do lugar escurece só ele). */
   plastico: StandardMaterial;
   /** Materiais próprios (descartados com o bicho). */
@@ -62,6 +70,17 @@ interface Modelo {
   /** Rapidez real suavizada e amplitude atual do balanço das pernas. */
   vel: number;
   amp: number;
+  /** Altura do quadril (a perna mais comprida): dá o ritmo do passo sem deslizar (014c). */
+  quadril: number;
+  /** Rumo no quadro anterior e a rapidez de giro suavizada (rad/s): vira dando passinhos. */
+  ultYaw: number;
+  giro: number;
+  /** Para onde a cabeça olha (rad), suavizado: puxa a curva e olha em volta parado. */
+  olhar: number;
+  /** Giro das rodas (bicho de rodinha), separado do ritmo das patas. */
+  roda: number;
+  /** 1 parado, 0 andando (suavizado): a respiração e o olhar em volta só parado. */
+  parado: number;
   /** Último quadro em que a criatura estava na lista (para descartar os modelos órfãos). */
   quadro: number;
   /**
@@ -84,6 +103,24 @@ function corBase(hex: string): Color3 {
     coresBase.set(hex, c);
   }
   return c;
+}
+
+/**
+ * As peças do bicho de brinquedo já encaixadas (014c, o padrão da 017: pata enterrada no
+ * corpo, rabo e asas encostados), feitas uma vez por desenho do tema.
+ */
+const encaixados = new WeakMap<readonly PecaCriatura[], PecaBicho[]>();
+const encaixadosNoite = new WeakMap<readonly PecaCriatura[], PecaBicho[]>();
+export function pecasEncaixadas(desenho: readonly PecaCriatura[], noite: boolean): PecaBicho[] {
+  const guarda = noite ? encaixadosNoite : encaixados;
+  let r = guarda.get(desenho);
+  if (!r) {
+    // a criatura da noite: plástico pastel e cabeção (assusta pouco, é brinquedo)
+    const pecas = bichoDeBrinquedo(desenho, noite ? { pastel: 0.32, cabeca: 1.45 } : {});
+    r = encaixarBicho(pecas, juntasDoBicho, ergueDaPata);
+    guarda.set(desenho, r);
+  }
+  return r;
 }
 
 export function criarRenderCriaturas(
@@ -232,7 +269,11 @@ export function criarRenderCriaturas(
    */
   function montarLonge(m: Modelo): Mesh[] | null {
     const giros = m.partes.map((p) => p.no.rotation.clone());
-    for (const p of m.partes) p.no.rotation.setAll(0);
+    const lugares = m.partes.map((p) => p.no.position.clone());
+    for (const p of m.partes) {
+      p.no.rotation.setAll(0);
+      p.no.position.copyFrom(p.base);
+    }
     const inversa = Matrix.Invert(m.raiz.computeWorldMatrix(true));
     const porMaterial = new Map<StandardMaterial, Mesh[]>();
     for (const p of m.partes) {
@@ -254,7 +295,10 @@ export function criarRenderCriaturas(
         l.push(copia);
       }
     }
-    m.partes.forEach((p, i) => p.no.rotation.copyFrom(giros[i]));
+    m.partes.forEach((p, i) => {
+      p.no.rotation.copyFrom(giros[i]);
+      p.no.position.copyFrom(lugares[i]);
+    });
     const feitas: Mesh[] = [];
     for (const [mat, copias] of porMaterial) {
       const f =
@@ -301,22 +345,12 @@ export function criarRenderCriaturas(
   function montar(c: Criatura): Modelo {
     const raiz = new TransformNode(`criatura-${c.id}`, scene);
     // bicho de brinquedo: cabeça maior, olhos de bolinha com brilho, patas de cápsula (A3)
-    const pecas = bichoDeBrinquedo(
+    const pecas = pecasEncaixadas(
       c.tipo === 'morador'
         ? povoadoDoTema().moradores[c.morador?.profissao ?? 'construtor']
         : tema().criaturas[c.tipo],
-      // a criatura da noite: plástico pastel e cabeção (assusta pouco, é brinquedo)
-      c.tipo === 'espectro' ? { pastel: 0.32, cabeca: 1.45 } : {},
+      c.tipo === 'espectro',
     );
-    // a cabeça acena inteira: olhos, orelhas e chifres giram juntos em volta do pescoço (a
-    // base da maior peça de cabeça), senão cada peça girava no lugar e descolava
-    const vol = (q: (typeof pecas)[number]) => q.t[0] * q.t[1] * q.t[2];
-    const cabecaMaior = pecas
-      .filter((q) => q.papel === 'cabeca')
-      .sort((a, b) => vol(b) - vol(a))[0];
-    const pescoco: [number, number, number] | null = cabecaMaior
-      ? [cabecaMaior.p[0], cabecaMaior.p[1] - cabecaMaior.t[1] * 0.4, cabecaMaior.p[2]]
-      : null;
     // desempenho (spec 012): as peças que se mexem juntas viram uma malha só, com a cor nos
     // vértices; cada bicho desenhava uma malha por peça (o dobro de chamadas com os bichos novos)
     const plastico = new StandardMaterial(`criatura-${c.id}-plastico`, scene);
@@ -332,36 +366,10 @@ export function criarRenderCriaturas(
     suave.emissiveColor = new Color3(0.45, 0.45, 0.45);
     const forte = suave.clone(`criatura-${c.id}-forte`);
     forte.emissiveColor = new Color3(0.55, 0.55, 0.55);
-    const grupos = new Map<
-      string,
-      { pivo: [number, number, number]; papel: Peca['papel']; pecas: Peca[] }
-    >();
-    for (const peca of pecas) {
-      // pivô: pernas no topo, antenas na base, asas na borda de dentro, cabeça no pescoço
-      const papel = peca.papel;
-      let pivo: [number, number, number];
-      if (!papel) pivo = [0, 0, 0];
-      else if (papel === 'cabeca' && pescoco) pivo = pescoco;
-      else if (papel.startsWith('perna')) pivo = [0, peca.p[1] + peca.t[1] / 2, peca.p[2]];
-      else if (papel === 'antena') pivo = [peca.p[0], peca.p[1] - peca.t[1] / 2, peca.p[2]];
-      else if (papel.startsWith('asa'))
-        pivo = [
-          peca.p[0] - Math.sign(peca.p[0] || (papel === 'asa0' ? 1 : -1)) * (peca.t[0] / 2),
-          peca.p[1],
-          peca.p[2],
-        ];
-      else pivo = [peca.p[0], peca.p[1], peca.p[2]];
-      // pernas do mesmo lado do passo giram juntas no eixo x: o x do pivô não importa
-      const chave = `${papel ?? ''}|${pivo.map((v) => v.toFixed(3)).join(',')}`;
-      let g = grupos.get(chave);
-      if (!g) {
-        g = { pivo, papel, pecas: [] };
-        grupos.set(chave, g);
-      }
-      g.pecas.push(peca);
-    }
+    // as juntas: cada pata gira inteira do quadril, o rabo da base, a cabeça do pescoço (014c)
+    const grupos = juntasDoBicho(pecas);
     let n = 0;
-    const partes = [...grupos.values()].map((g) => {
+    const partes = grupos.map((g) => {
       const no = new TransformNode(`criatura-${c.id}-g${n++}`, scene);
       no.parent = raiz;
       no.position.set(g.pivo[0], g.pivo[1], g.pivo[2]);
@@ -406,7 +414,7 @@ export function criarRenderCriaturas(
         else excluirDoGlow(fundida);
         malhas.push(fundida);
       }
-      return { no, malhas, papel: g.papel };
+      return { no, malhas, papel: g.papel, base: no.position.clone() };
     });
     return {
       raiz,
@@ -420,6 +428,12 @@ export function criarRenderCriaturas(
       vel: 0,
       amp: 0,
       quadro: 0,
+      quadril: alturaDoQuadril(grupos),
+      ultYaw: c.yaw ?? 0,
+      giro: 0,
+      olhar: 0,
+      roda: 0,
+      parado: 1,
     };
   }
 
@@ -590,26 +604,44 @@ export function criarRenderCriaturas(
         m.ultZ = c.z;
         const velReal = dt > 0 && desloc < 2 ? desloc / dt : 0;
         m.vel += (velReal - m.vel) * Math.min(1, dt * 12);
-        m.fase += dt * m.vel * 3.2;
-        // no ar as pernas param de balançar
-        const ampAlvo = c.noChao ? Math.min(0.7, m.vel * 0.25) : 0;
-        m.amp += (ampAlvo - m.amp) * Math.min(1, dt * 10);
-        const balanco = Math.sin(m.fase) * m.amp;
+        // o giro (rad/s): virando no lugar, o bicho dá passinhos em vez de rodar parado
+        let dYaw = c.yaw - m.ultYaw;
+        dYaw = Math.atan2(Math.sin(dYaw), Math.cos(dYaw));
+        m.ultYaw = c.yaw;
+        const giroReal = dt > 0 && Math.abs(dYaw) < 1.5 ? dYaw / dt : 0;
+        m.giro += (giroReal - m.giro) * Math.min(1, dt * 8);
+        const rapidez = c.noChao ? Math.max(m.vel, Math.abs(m.giro) * 0.22) : 0;
+        // o passo: a abertura pela rapidez e o ritmo pelo comprimento da perna, para o pé no
+        // chão acompanhar o chão (014c: os de perna curta deslizavam)
+        m.amp += (aberturaDoPasso(rapidez) - m.amp) * Math.min(1, dt * 8);
+        const passo = passoSemDeslizar(rapidez, m.quadril, m.amp);
+        m.fase += dt * passo.ritmo;
+        m.roda += dt * m.vel * 5.1;
+        const abertura = passo.abertura * (m.amp > 0.001 ? 1 : 0);
+        const seno = Math.sin(m.fase);
+        const cosseno = Math.cos(m.fase);
+        const balanco = seno * abertura;
         const mov = tema().movimento[c.tipo];
-        const andando = Math.min(1, m.amp * 2);
+        const andando = Math.min(1, m.amp * 3);
+        m.parado += ((m.vel < 0.15 && Math.abs(m.giro) < 0.6 ? 1 : 0) - m.parado) * Math.min(1, dt * 3);
         const flutua =
           mov.flutua > 0 ? mov.flutua * 1.5 + Math.sin(tempo * 2 + c.id) * mov.flutua : 0;
-        const pulinho = mov.saltita * Math.abs(Math.sin(m.fase)) * andando;
-        m.raiz.position.set(c.x, c.y + flutua + pulinho, c.z);
+        const pulinho = mov.saltita * Math.abs(seno) * andando;
+        // as patas no chão: girada, a pata sobe um tiquinho; o corpo desce o mesmo tanto para
+        // o pé de apoio continuar encostado no chão (e balança duas vezes por passo)
+        const apoio = m.quadril > 0 ? m.quadril * (1 - Math.cos(balanco)) : 0;
+        m.raiz.position.set(c.x, c.y + flutua + pulinho - apoio, c.z);
         m.raiz.rotation.y = c.yaw;
         escolherLonge(m, c.x, c.y + 0.5, c.z);
-        if (c.estado !== 'morrendo') m.raiz.rotation.z = Math.sin(m.fase) * mov.ginga * andando;
+        if (c.estado !== 'morrendo') m.raiz.rotation.z = seno * mov.ginga * andando;
         const morrer =
           c.estado === 'morrendo' ? c.dissolver : c.tipo === 'espectro' ? c.dissolver : 0;
         const escala = 1 - morrer * 0.8;
+        // parado, respira (o corpo enche e esvazia devagarinho; os pés ficam no chão)
+        const respira = 1 + Math.sin(tempo * 2.4 + c.id) * 0.018 * m.parado;
         m.raiz.scaling.set(
           escala,
-          c.estado === 'morrendo' ? Math.max(0.05, 1 - morrer) : escala,
+          (c.estado === 'morrendo' ? Math.max(0.05, 1 - morrer) : escala) * respira,
           escala,
         );
         if (c.estado === 'morrendo') m.raiz.rotation.z = morrer * 1.4;
@@ -623,6 +655,13 @@ export function criarRenderCriaturas(
           mat.emissiveColor.set(e, e, e);
           mat.specularColor.set(0.22 * l, 0.22 * l, 0.22 * l);
         }
+        // a cabeça puxa a curva e, parado, olha em volta de vez em quando
+        const olharEmVolta =
+          Math.sin(tempo * 0.47 + c.id * 1.7) * Math.max(0, Math.sin(tempo * 0.19 + c.id)) * 0.45;
+        const olharAlvo = Math.max(-0.45, Math.min(0.45, m.giro * 0.2)) + olharEmVolta * m.parado;
+        m.olhar += (olharAlvo - m.olhar) * Math.min(1, dt * 5);
+        // a pata que está no ar (indo para a frente) sobe um pouco
+        const ergue = ergueDaPata(m.quadril) * andando;
         // atrás da câmera e longe: as patas e a cabeça ficam como estão neste quadro
         // (de longe também: a pose de descanso já está na malha de longe)
         const animar = !m.emLonge && !foraDaVista(c.x, c.y + 0.5, c.z);
@@ -631,26 +670,42 @@ export function criarRenderCriaturas(
             switch (p.papel) {
               case 'perna0':
                 p.no.rotation.x = balanco;
+                p.no.position.y = p.base.y + ergue * Math.max(0, -cosseno);
                 break;
               case 'perna1':
                 p.no.rotation.x = -balanco;
+                p.no.position.y = p.base.y + ergue * Math.max(0, cosseno);
                 break;
               case 'cabeca':
+                // acena com o passo (o pombo empurra a cabeça para a frente a cada passo)
                 p.no.rotation.x =
-                  Math.sin(tempo * 1.3 + c.id) * 0.06 + (c.estado === 'parado' ? 0.25 : 0);
+                  Math.sin(tempo * 1.3 + c.id) * 0.06 +
+                  (c.estado === 'parado' ? 0.25 : 0) * m.parado +
+                  Math.sin(m.fase * 2) * 0.05 * andando;
+                p.no.rotation.y = m.olhar;
+                p.no.position.z =
+                  p.base.z + (mov.cabecada ?? 0) * (0.5 - 0.5 * Math.cos(m.fase * 2)) * andando;
                 break;
               case 'cauda':
-                p.no.rotation.y = Math.sin(tempo * (c.tipo === 'peixe' ? 9 : 4) + c.id) * 0.35;
+                // abana mais rápido andando e sacode com o passo
+                p.no.rotation.y =
+                  Math.sin(tempo * (c.tipo === 'peixe' ? 9 : 4 + Math.min(4, m.vel * 1.5)) + c.id) *
+                  0.35;
+                p.no.rotation.x = Math.sin(m.fase * 2) * 0.12 * andando;
                 break;
               case 'roda':
-                p.no.rotation.x = m.fase * 1.6;
+                p.no.rotation.x = m.roda;
                 break;
               case 'asa0':
-                p.no.rotation.z = Math.sin(tempo * 9 + c.id) * 0.6;
+              case 'asa1': {
+                // quem voa bate as asas sempre; quem anda (o pombo) só no ar ou fugindo
+                const bate = mov.flutua > 0 || !c.noChao || c.estado === 'fugir';
+                const lado = p.papel === 'asa0' ? 1 : -1;
+                p.no.rotation.z = bate
+                  ? lado * Math.sin(tempo * 9 + c.id) * 0.6
+                  : lado * Math.sin(m.fase) * 0.06 * andando;
                 break;
-              case 'asa1':
-                p.no.rotation.z = -Math.sin(tempo * 9 + c.id) * 0.6;
-                break;
+              }
               case 'antena':
                 p.no.rotation.z = Math.sin(tempo * 2.5 + c.id) * 0.16;
                 p.no.rotation.x = Math.sin(tempo * 1.7 + c.id * 2) * 0.1 + balanco * 0.3;

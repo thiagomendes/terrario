@@ -156,6 +156,8 @@ export interface MovimentoCriatura {
   flutua: number;
   /** Ginga o corpo de lado ao andar (0 a 0.3). */
   ginga: number;
+  /** Empurra a cabeça para a frente a cada passo (blocos; o pombo da praça). */
+  cabecada?: number;
 }
 
 /** Um som curto sintetizado: varredura de tom com repetições (pio, grunhido, bipe). */

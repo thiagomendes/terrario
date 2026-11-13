@@ -12,6 +12,8 @@ export interface PecaBicho extends PecaCriatura {
   forma: FormaBicho;
   /** Raio dos cantos (caixa). */
   raio: number;
+  /** 014c (encaixe): a bolinha da junta no quadril (cobre a boca da perna quando ela balança). */
+  junta?: boolean;
 }
 
 /** Quanto a cabeça cresce (proporção de brinquedo). */

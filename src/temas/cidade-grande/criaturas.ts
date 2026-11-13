@@ -57,10 +57,11 @@ function pombo(): PecaCriatura[] {
   }
   b.bola(0.17, '#9aa6b8', [1, 0.9, 1.25], [0, 0.24, 0]);
   b.bola(0.13, '#c3cad6', [0.9, 0.7, 1], [0, 0.2, 0.06]);
-  // asas cinza-escuras com duas listrinhas
+  // asas cinza-escuras com duas listrinhas (batem quando ele pula ou foge)
   for (const s of [-1, 1]) {
-    b.bola(0.1, '#7d889a', [0.35, 0.7, 1.25], [s * 0.15, 0.27, -0.03]);
-    b.caixa([0.02, 0.03, 0.12], [s * 0.185, 0.25, -0.06], '#4a5262', 0.01);
+    const papel: PecaCriatura['papel'] = s > 0 ? 'asa0' : 'asa1';
+    b.bola(0.1, '#7d889a', [0.35, 0.7, 1.25], [s * 0.15, 0.27, -0.03], { papel });
+    b.caixa([0.02, 0.03, 0.12], [s * 0.185, 0.25, -0.06], '#4a5262', 0.01, { papel });
   }
   b.bola(0.09, '#6f7a8c', [0.7, 0.4, 1.1], [0, 0.3, -0.2], { papel: 'cauda', rot: [-0.3, 0, 0] });
   b.grupo([0, 0.38, 0.12], 'cabeca');
@@ -203,8 +204,8 @@ export const CRIATURAS_CIDADE: Record<TipoCriatura, PecaCriatura[]> = {
 export const MOVIMENTO_CIDADE: Record<TipoCriatura, MovimentoCriatura> = {
   // o cachorrão trota balançando
   cervo: { saltita: 0.04, flutua: 0, ginga: 0.08 },
-  // o pombo anda balançando a cabeça (pulinhos curtos)
-  coelho: { saltita: 0.03, flutua: 0, ginga: 0.18 },
+  // o pombo anda empurrando a cabeça para a frente a cada passo (pulinhos curtos)
+  coelho: { saltita: 0.02, flutua: 0, ginga: 0.12, cabecada: 0.05 },
   peixe: { saltita: 0, flutua: 0, ginga: 0.12 },
   // o guaxinim anda de mansinho, rebolando
   espectro: { saltita: 0.01, flutua: 0, ginga: 0.14 },

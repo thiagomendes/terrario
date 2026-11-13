@@ -162,7 +162,7 @@ import {
   type Ponto,
 } from '../jogo/construcao';
 import { empacotar } from '../world/edicoes';
-import { criaturaNaMira, type Criatura, type TipoCriatura } from '../jogo/criaturas';
+import { criaturaNaMira, novaCriatura, type Criatura, type TipoCriatura } from '../jogo/criaturas';
 import { criarRenderCriaturas } from './criaturas';
 import { criarCoracoes } from './coracoes';
 import { AVISO_LIMITE, COMIDA_DOS_BICHOS, comeEsse, domaCom, viraCriado } from '../jogo/criacao';
@@ -582,6 +582,19 @@ export interface EstadoDepuracao {
    */
   protecao?: (x: number, y: number, z: number) => import('../world/protecao').NomeProtecao;
   tingirProtecao?: (raio?: number, so?: import('../world/protecao').NomeProtecao[]) => number;
+  /** 014c (testes de tela): bichos sem cérebro levados pela captura (posição a cada quadro). */
+  desfile?: (
+    lista: {
+      id: number;
+      tipo: TipoCriatura;
+      x: number;
+      y: number;
+      z: number;
+      yaw: number;
+      noChao?: boolean;
+      estado?: string;
+    }[],
+  ) => void;
   /** Vitrine dos testes: um bicho parado, sem cérebro, com o desenho do jogo. */
   estatua?: (
     tipo: TipoCriatura | 'morador',
@@ -3839,6 +3852,8 @@ export function criarCena(
     (m) => glow.addExcludedMesh(m),
     () => undefined,
   );
+  /** 014c (testes de tela): os bichos do desfile das capturas. */
+  let desfile: Criatura[] = [];
   // spec 016: a proteção do mundo à vista nas capturas (só nos testes de tela)
   if (ehTesteDeTela()) {
     const protecao = (): ProtecaoMundo => protecaoMundo;
@@ -3851,9 +3866,22 @@ export function criarCena(
     };
   }
   // só nos testes de tela (auditoria 017: num jogo de verdade não há vitrine)
-  if (ehTesteDeTela())
+  if (ehTesteDeTela()) {
     estado.estatua = (tipo, x, y, z, yaw, morador) =>
       renderCriaturas.estatua(tipo, x, y, z, yaw, morador);
+    // 014c: bichos sem cérebro que a captura leva por um caminho (o desenho e o passo do jogo)
+    estado.desfile = (lista) => {
+      desfile = lista.map(
+        (d) =>
+          ({
+            ...novaCriatura(-1000 - d.id, d.tipo, d.x, d.y, d.z),
+            yaw: d.yaw,
+            noChao: d.noChao ?? true,
+            estado: d.estado ?? 'vagar',
+          }) as Criatura,
+      );
+    };
+  }
   // spec 015 (gestos): a roda, as teclas e o que os amigos e moradores fazem
   gestos = criarGestosJogo({
     scene,
@@ -4187,7 +4215,8 @@ export function criarCena(
           c.estado === 'perseguir' &&
           Math.hypot(c.x - j.x, c.z - j.z) < 14,
       );
-    renderCriaturas.atualizar(replicaCriaturas.lista as unknown as Criatura[], dt, tempo, () =>
+    const vistos = replicaCriaturas.lista as unknown as Criatura[];
+    renderCriaturas.atualizar(desfile.length ? [...vistos, ...desfile] : vistos, dt, tempo, () =>
       Math.max(0.2, luzJogador * (0.45 + 0.55 * luzDia)),
     );
   };
