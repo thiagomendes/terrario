@@ -46,7 +46,10 @@ export type EventoSom =
   | 'criar'
   | 'conquista'
   | 'festa'
-  | 'toc';
+  | 'toc'
+  /** Spec 021: o sininho do "vem cá!" e o puf do pulo para perto. */
+  | 'sininho'
+  | 'puf';
 
 export const EVENTOS_SOM: readonly EventoSom[] = [
   'golpe',
@@ -82,6 +85,8 @@ export const EVENTOS_SOM: readonly EventoSom[] = [
   'conquista',
   'festa',
   'toc',
+  'sininho',
+  'puf',
 ];
 
 export const VARIACOES_POR_EVENTO = 4;
@@ -164,6 +169,9 @@ const BASE_EVENTO: Record<EventoSom, BaseEvento> = {
   conquista: { ganho: 0.22, duracao: 0.9, ruido: 0, escalaTom: 1, grupoAudio: 'efeitos' },
   festa: { ganho: 0.16, duracao: 0.8, ruido: 0.2, escalaTom: 1, grupoAudio: 'efeitos' },
   toc: { ganho: 0.28, duracao: 0.07, ruido: 0.4, escalaTom: 1, grupoAudio: 'efeitos' },
+  // spec 021: o sininho é mais baixo que os efeitos (régua da 019); o puf, macio
+  sininho: { ganho: 0.12, duracao: 1.3, ruido: 0, escalaTom: 1, grupoAudio: 'efeitos' },
+  puf: { ganho: 0.3, duracao: 0.45, ruido: 0.9, escalaTom: 1, grupoAudio: 'efeitos' },
 };
 
 const FIXOS: Partial<Record<EventoSom, BaseMaterial>> = {
@@ -194,6 +202,8 @@ const FIXOS: Partial<Record<EventoSom, BaseMaterial>> = {
   conquista: { frequencia: 587, filtroHz: 3000 },
   festa: { frequencia: 1500, filtroHz: 4000 },
   toc: { frequencia: 520, filtroHz: 1200 },
+  sininho: { frequencia: 784, filtroHz: 5000 },
+  puf: { frequencia: 420, filtroHz: 2400 },
 };
 
 export const AMPLITUDE_TOM = 0.12;
@@ -845,6 +855,27 @@ function desenharNovo(
       // cadeado: "toc" de madeira, baixinho e sem bronca
       pecas.push(tom(ctx, out, t0, 'sine', f, f * 0.9, 0.6, 0.05, 0.002));
       pecas.push(ruido(ctx, out, t0, 'bandpass', par.filtroHz, 3, 0.3, 0.025, 0.002));
+      break;
+    case 'sininho':
+      // "vem cá!": dois toquinhos de sino (sol e ré, uma quinta acima), macios
+      for (const [k, at] of [
+        [1, 0],
+        [1.5, 0.18],
+      ] as const)
+        for (const [mult, vol] of [
+          [1, 0.5],
+          [2.76, 0.12],
+          [5.4, 0.04],
+        ] as const)
+          pecas.push(
+            tom(ctx, out, t0 + at, 'sine', f * k * mult, f * k * mult, vol, 1.05 / mult ** 0.3, 0.008),
+          );
+      break;
+    case 'puf':
+      // pulo para perto: um sopro de poeira com o filtro descendo e um "pop" grave
+      pecas.push(ruido(ctx, out, t0, 'lowpass', par.filtroHz, 0.8, 0.7, 0.4, 0.004));
+      pecas.push(ruido(ctx, out, t0 + 0.05, 'lowpass', par.filtroHz * 0.3, 0.8, 0.5, 0.3, 0.01));
+      pecas.push(tom(ctx, out, t0, 'sine', f, f / 3, 0.4, 0.18));
       break;
     default:
       pecas.push(tom(ctx, out, t0, 'sine', f, f, 0.3, 0.05));

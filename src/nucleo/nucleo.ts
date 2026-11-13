@@ -245,7 +245,7 @@ interface Jogador {
   /** Spec 021: passo do último dano (fora a fome): em combate não há pulo. */
   passoDano: number;
   /** Spec 021: para onde o núcleo levou (a primeira posição depois do pulo vale lá). */
-  destinoSalto: { x: number; z: number } | null;
+  destinoSalto: { x: number; z: number; ate: number } | null;
   /** Auditoria 017: passo da última aparência aplicada (limite de repetição). */
   passoAparencia: number;
   /** Auditoria 017: a última aparência que chegou dentro da janela (aplicada quando ela fecha). */
@@ -1890,7 +1890,7 @@ export function criarNucleo(op: OpcoesNucleo) {
     if (!l) return void recusa();
     j.passoPulo = n;
     j.saltoPermitido = true;
-    j.destinoSalto = { x: l[0], z: l[2] };
+    j.destinoSalto = { x: l[0], z: l[2], ate: n + Math.round(3 / PASSO) };
     j.eventos.push({ e: 'teleporte', x: l[0], z: l[2], y: l[1], pulo: alvo });
   }
 
@@ -1906,22 +1906,20 @@ export function criarNucleo(op: OpcoesNucleo) {
   const VEL_MAX = modo === 'criativo' ? 40 : 14;
   function telemetria(j: Jogador, c: Telemetria): void {
     const { quedas, pulos, golpes } = c;
+    // spec 021: o pulo para perto vale por uns segundos (o cliente mostra o puf antes de ir)
+    const destino = j.destinoSalto && n <= j.destinoSalto.ate ? j.destinoSalto : null;
+    const chegouNoDestino = !!destino && Math.hypot(c.x - destino.x, c.z - destino.z) <= 8;
     // depois de entrar ou renascer, a primeira posição ainda tem que ser perto de onde
     // o núcleo sabe que o jogador está (ou do ponto de renascer)
     if (!confiar && !depuracao && j.saltoPermitido) {
       const pertoDe = (x: number, z: number) => Math.hypot(c.x - x, c.z - z) <= 80;
-      const destino = j.destinoSalto;
-      if (
-        !pertoDe(j.tel.x, j.tel.z) &&
-        !pertoDe(j.spawn.x, j.spawn.z) &&
-        !(destino && pertoDe(destino.x, destino.z))
-      ) {
+      if (!pertoDe(j.tel.x, j.tel.z) && !pertoDe(j.spawn.x, j.spawn.z) && !chegouNoDestino) {
         j.eventos.push({ e: 'teleporte', x: j.tel.x, z: j.tel.z, y: j.tel.y });
         return;
       }
     }
     // na nuvem a posição tem que ser possível: andar, correr, voar e cair, não saltar
-    if (!confiar && !depuracao && !j.saltoPermitido) {
+    if (!confiar && !depuracao && !j.saltoPermitido && !chegouNoDestino) {
       // ficar calado não dá direito a saltar mais longe depois
       const dt = Math.min((n - j.passoTelemetria) * PASSO, 1) + 0.3;
       const horiz = Math.hypot(c.x - j.tel.x, c.z - j.tel.z);
@@ -1936,7 +1934,7 @@ export function criarNucleo(op: OpcoesNucleo) {
       }
     }
     j.saltoPermitido = false;
-    j.destinoSalto = null;
+    if (chegouNoDestino || (j.destinoSalto && n > j.destinoSalto.ate)) j.destinoSalto = null;
     j.passoTelemetria = n;
     j.tel = { ...c, quedas: [], pulos: 0, golpes: 0 };
     if (golpes > 0) j.acoes[0] += Math.min(golpes, 20);

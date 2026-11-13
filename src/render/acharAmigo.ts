@@ -23,7 +23,7 @@ import {
   type LeitorCaminho,
   type V3,
 } from '../jogo/caminho';
-import { DURA_TRILHA } from '../jogo/acharAmigo';
+import { DURA_TRILHA, ESPERA_CHAMAR, ESPERA_PULO } from '../jogo/acharAmigo';
 import { criarEstrelinhas } from './estrelinhas';
 
 export interface AmigoNoMundo {
@@ -44,6 +44,17 @@ export interface FonteAcharAmigo {
   bloco(x: number, y: number, z: number): number;
   /** O aparelho tem os blocos desta coluna (o pedaço do mundo já chegou)? */
   conhecido(x: number, z: number): boolean;
+  /** Manda o pedido de pulo ao núcleo (com a posição de agora antes). */
+  pedirPulo(alvo: string): void;
+  /** Leva o jogador (pés em y) e o vira para (yaw), com a câmera de lado. */
+  levar(x: number, y: number, z: number, yaw: number): void;
+  /** Desmaiado: nada de pulo. */
+  morto(): boolean;
+  /** O jogador acena (gesto da 015). */
+  acenar(): void;
+  som(qual: 'puf' | 'sininho'): void;
+  /** O gesto "chamar" e o pedido ao núcleo ("vem cá!" para a sala toda). */
+  chamar(): void;
   /** A camada pode aparecer agora (sem tela por cima, sem modo foto, vivo)? */
   pode(): boolean;
 }
@@ -74,7 +85,19 @@ export function criarAcharAmigo(f: FonteAcharAmigo) {
     escolher: (id) => {
       escolhido = escolhido === id ? null : id;
     },
+    chamar: () => chamar(),
   });
+  let ultimoChamar = -Infinity;
+  let chamadas = 0;
+  function chamar(): void {
+    const agora = performance.now() / 1000;
+    if (f.morto() || agora - ultimoChamar < ESPERA_CHAMAR) return;
+    ultimoChamar = agora;
+    chamadas++;
+    f.chamar();
+    f.som('sininho');
+    carinhas.chamou(ESPERA_CHAMAR);
+  }
 
   const solido = (x: number, y: number, z: number) => {
     const b = f.bloco(Math.floor(x), Math.floor(y), Math.floor(z));
@@ -182,6 +205,44 @@ export function criarAcharAmigo(f: FonteAcharAmigo) {
     }
   }
 
+  // ------------------------------------------------------------------ pular para perto
+  let pedido: { id: string; em: number } | null = null;
+  let ultimoPulo = -Infinity;
+  let pulos = 0;
+  ouvintes.pular = (id) => {
+    const agora = performance.now() / 1000;
+    // o núcleo recusaria: a carinha já diz "não" (sem esperar a rede)
+    if (f.morto() || agora - ultimoPulo < ESPERA_PULO || pedido) {
+      carinhas.nao(id);
+      return;
+    }
+    pedido = { id, em: agora };
+    f.pedirPulo(id);
+  };
+  /** O núcleo levou: puf onde estava, vai, puf onde chegou, virado para o amigo, e acena. */
+  function pulou(x: number, y: number, z: number, alvo: string): void {
+    pedido = null;
+    ultimoPulo = performance.now() / 1000;
+    pulos++;
+    const p = f.jogador();
+    estrelinhas.puf(p.x, p.y, p.z, performance.now() / 1000);
+    f.som('puf');
+    carinhas.sugerirPulo(null);
+    setTimeout(() => {
+      const a = f.amigos().find((o) => o.id === alvo);
+      const yaw = a ? Math.atan2(a.x - x, a.z - z) : 0;
+      f.levar(x, y, z, yaw);
+      estrelinhas.puf(x, y, z, performance.now() / 1000);
+      apagarTrilha();
+      setTimeout(() => f.acenar(), 450);
+    }, 260);
+  }
+  /** O núcleo recusou (sem lugar seguro, intervalo, combate): a carinha balança "não". */
+  function recusado(): void {
+    if (pedido) carinhas.nao(pedido.id);
+    pedido = null;
+  }
+
   ouvintes.tocar = (id) => {
     escolhido = id;
     acenderTrilha(id);
@@ -246,6 +307,8 @@ export function criarAcharAmigo(f: FonteAcharAmigo) {
       .map((a) => ({ id: a.id, perto: a.d < PERTO_AMIGO }));
     carinhas.botoes(bandeja, escolhido, mapa.size > MAX_CARINHAS, mapa);
     quadroTrilha(agora, amigos);
+    // a resposta do núcleo sumiu (caiu a rede): solta o pedido
+    if (pedido && agora - pedido.em > 4) pedido = null;
     if (!cam || !amigos.length || !f.pode()) {
       carinhas.desenhar([], mapa);
       return;
@@ -290,6 +353,11 @@ export function criarAcharAmigo(f: FonteAcharAmigo) {
     custoMs += (performance.now() - t0 - custoMs) * 0.05;
   }
 
+  function recebeuChamado(id: string): void {
+    chamando = { id, ate: performance.now() / 1000 + DURA_CHAMADO };
+    f.som('sininho');
+  }
+
   /** Para os testes de tela e as capturas. */
   const api = {
     vistos: () => carinhas.vistos(),
@@ -298,9 +366,10 @@ export function criarAcharAmigo(f: FonteAcharAmigo) {
       escolhido = id;
     },
     escolhido: () => escolhido,
-    chamado: (id: string) => {
-      chamando = { id, ate: performance.now() / 1000 + DURA_CHAMADO };
-    },
+    chamado: (id: string) => recebeuChamado(id),
+    chamar: () => chamar(),
+    chamadas: () => chamadas,
+    chamando: () => chamando?.id ?? null,
     tapado: (id: string) => tapados.get(id) ?? false,
     segurar: (id: string | null, fracao?: number) => carinhas.segurar(id, fracao),
     custoMs: () => custoMs,
@@ -318,12 +387,23 @@ export function criarAcharAmigo(f: FonteAcharAmigo) {
     trilhaCompleta: () => trilha?.completo ?? null,
     estrelas: () => estrelinhas.medida(),
     caminhoMs: () => ultimoCaminhoMs,
+    /** Segurou até o fim (como o dedo de verdade). */
+    pular: (id: string) => ouvintes.pular(id),
+    pulos: () => pulos,
+    /** Só o puf (capturas). */
+    puf: () => {
+      const p = f.jogador();
+      estrelinhas.puf(p.x, p.y, p.z, performance.now() / 1000);
+      f.som('puf');
+    },
   };
 
   return {
     quadro,
     carinhas,
     api,
+    pulou,
+    recusado,
     ouvintes,
     get escolhido() {
       return escolhido;
@@ -335,10 +415,8 @@ export function criarAcharAmigo(f: FonteAcharAmigo) {
     get muitos() {
       return mapa.size > MAX_CARINHAS;
     },
-    /** Um amigo chamou: a carinha dele vem para a frente por DURA_CHAMADO s. */
-    chamado(id: string): void {
-      chamando = { id, ate: performance.now() / 1000 + DURA_CHAMADO };
-    },
+    /** Um amigo chamou: a carinha dele vem para a frente por DURA_CHAMADO s e o sininho toca. */
+    chamado: (id: string) => recebeuChamado(id),
     get chamandoAgora() {
       return chamando?.id ?? null;
     },

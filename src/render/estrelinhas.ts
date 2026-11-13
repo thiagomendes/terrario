@@ -50,7 +50,8 @@ function dadosEstrela(): VertexData {
 export function criarEstrelinhas(scene: Scene) {
   const matEstrela = new StandardMaterial('amigo-estrela', scene);
   matEstrela.diffuseColor = Color3.FromHexString('#ffd45a');
-  matEstrela.emissiveColor = Color3.FromHexString('#c88f10');
+  // brilho forte: a trilha tem que se ver de longe por crianças de 3 e 4 anos
+  matEstrela.emissiveColor = Color3.FromHexString('#e0a418');
   matEstrela.specularColor = new Color3(1, 1, 0.85);
   matEstrela.specularPower = 12;
   matEstrela.backFaceCulling = false;
@@ -76,6 +77,7 @@ export function criarEstrelinhas(scene: Scene) {
   /** Quadro da trilha: `perto` é o índice da estrelinha mais perto do jogador. */
   function quadroTrilha(agora: number, perto: number): void {
     if (!trilha) return;
+    const cam = scene.activeCamera?.globalPosition ?? Vector3.ZeroReadOnly;
     const t = agora - trilha.nasceu;
     const pts = trilha.pts;
     const n = pts.length;
@@ -95,11 +97,13 @@ export function criarEstrelinhas(scene: Scene) {
       const passou = i < perto - 2 ? Math.max(0, 1 - (perto - 2 - i) / 4) : 1;
       // o brilho que corre para a frente mostra o sentido
       const onda = Math.max(0, Math.cos((i * 0.35 - t * 6) % (Math.PI * 2))) ** 6;
-      let s = (0.75 + 0.55 * onda) * nascer * passou * (1 - apagar);
+      let s = (1.05 + 0.6 * onda) * nascer * passou * (1 - apagar);
       // a última: maior; sem caminho inteiro, grande e pulsando ("daqui, segure para pular")
       if (i === n - 1) s *= trilha.completo ? 1.6 : 2.4 + 0.5 * Math.sin(t * 5);
       sTmp.set(s, s, s);
-      Quaternion.RotationYawPitchRollToRef(t * 2.2 + i * 0.6, 0, 0, qTmp);
+      // de frente para a câmera, balançando um pouco (nunca de perfil, que some)
+      const yaw = Math.atan2(cam.x - x, cam.z - z) + Math.sin(t * 2.2 + i * 0.6) * 0.5;
+      Quaternion.RotationYawPitchRollToRef(yaw, 0, 0, qTmp);
       pTmp.set(x, y + 0.42 + Math.sin(t * 3 + i * 0.7) * 0.06, z);
       Matrix.ComposeToRef(sTmp, qTmp, pTmp, mTmp);
       mTmp.copyToArray(matrizes, i * 16);

@@ -79,6 +79,15 @@ body:has(.entrada:not([hidden])) .carinhas-amigos { display: none; }
   border-top: 8px solid transparent; border-bottom: 8px solid transparent; border-left: 11px solid #fbf7ee;
   filter: drop-shadow(0 2px 0 rgba(0,0,0,0.2)); }
 /* botões na coluna do minimapa: a bandeja das carinhas e o Chamar */
+.botao-chamar.tocando { animation: amg-pulso 0.5s ease-in-out 3; }
+.botao-chamar.tocando::after { content: ''; position: absolute; inset: -4px; border-radius: 50%; border: 4px solid #ffb547; animation: amg-onda 1s ease-out 2; pointer-events: none; }
+.botao-chamar .ampulheta { display: none; position: absolute; right: -8px; bottom: -8px; width: 26px; height: 26px; padding: 2px; border-radius: 50%; background: #fbf7ee;
+  box-shadow: 0 2px 0 rgba(150, 110, 60, 0.4); }
+.botao-chamar.dormindo { background: rgba(236, 228, 214, 0.95); cursor: default; }
+.botao-chamar.dormindo > svg:first-child { opacity: 0.45; }
+.botao-chamar.dormindo .ampulheta { display: block; animation: amg-vira 8s linear forwards; }
+@keyframes amg-vira { 0%, 85% { transform: rotate(0deg); } 100% { transform: rotate(180deg); } }
+
 .botao-bandeja, .botao-chamar { position: fixed; z-index: 7; width: 48px; height: 48px; border-radius: 50%; border: 0; padding: 0; display: grid; place-items: center;
   background: rgba(255, 250, 240, 0.95); pointer-events: auto; cursor: pointer; touch-action: none; -webkit-touch-callout: none; user-select: none;
   box-shadow: 0 3px 0 rgba(150, 110, 60, 0.35), 0 6px 12px rgba(40, 25, 10, 0.2), inset 0 2px 0 rgba(255, 255, 255, 0.85); }
@@ -110,6 +119,11 @@ body:has(.entrada:not([hidden])) .botao-bandeja, body:has(.entrada:not([hidden])
 `;
 
 const ICONE_ACENO = `<svg viewBox="0 0 32 32">${ICONES_GESTOS.acenar}</svg>`;
+/** Ícone do Chamar: a mão do gesto "chamar" da 015 com ondinhas de som. */
+const ICONE_CHAMAR = `<svg viewBox="0 0 32 32">${ICONES_GESTOS.chamar}<path d="M26 6 Q31 16 26 26" stroke="#a8610a" stroke-width="2" fill="none" stroke-linecap="round"/></svg>`;
+/** O Chamar dormindo: um relógio de areia desenhado (sem número). */
+const AMPULHETA =
+  '<svg class="ampulheta" viewBox="0 0 32 32"><path d="M9 4 H23 M9 28 H23" stroke="#7a4826" stroke-width="2.6" stroke-linecap="round"/><path d="M10.5 5 Q10.5 12 16 16 Q21.5 12 21.5 5 Z M10.5 27 Q10.5 20 16 16 Q21.5 20 21.5 27 Z" fill="#fff6d8" stroke="#7a4826" stroke-width="1.8" stroke-linejoin="round"/><path class="areia-cima" d="M12.5 8 Q13 12 16 14.5 Q19 12 19.5 8 Z" fill="#e6b450"/><path class="areia-baixo" d="M12 26 Q13 21.5 16 20 Q19 21.5 20 26 Z" fill="#e6b450"/></svg>';
 /** Ícone da bandeja: três carinhas (sem texto). */
 const ICONE_BANDEJA =
   '<svg viewBox="0 0 32 32"><circle cx="9" cy="13" r="5.5" fill="#ff9db8" stroke="#3b2a1e" stroke-width="1.6"/><circle cx="23" cy="13" r="5.5" fill="#7cc6ff" stroke="#3b2a1e" stroke-width="1.6"/><circle cx="16" cy="19" r="6.5" fill="#ffd45a" stroke="#3b2a1e" stroke-width="1.8"/><circle cx="13.8" cy="18" r="1" fill="#3b2a1e"/><circle cx="18.2" cy="18" r="1" fill="#3b2a1e"/><path d="M13.5 21.5 Q16 23.8 18.5 21.5" fill="none" stroke="#3b2a1e" stroke-width="1.5" stroke-linecap="round"/></svg>';
@@ -174,6 +188,8 @@ export interface AcoesCarinhas {
   montinho(ids: string[]): void;
   /** Tocou numa cara da bandeja (o escolhido de novo desfaz a escolha). */
   escolher(id: string): void;
+  /** Apertou o Chamar (acordado). */
+  chamar(): void;
 }
 
 /** Um amigo na bandeja (do mais perto ao mais longe). */
@@ -291,8 +307,23 @@ export function criarCarinhas(acoes: AcoesCarinhas) {
     bBandeja.classList.toggle('ativo', aberta);
     medidoEm = -Infinity;
   }
+  // o Chamar (com 1 amigo ou mais): a mão do gesto e ondinhas; depois de apertar, dorme
+  const bChamar = document.createElement('button');
+  bChamar.className = 'botao-chamar';
+  bChamar.innerHTML = ICONE_CHAMAR + AMPULHETA;
+  bChamar.setAttribute('aria-label', 'Chamar');
+  bChamar.hidden = true;
+  document.body.append(bChamar);
+  bChamar.addEventListener('pointerdown', parar);
+  bChamar.addEventListener('pointerup', parar);
+  bChamar.addEventListener('click', (ev) => {
+    ev.stopPropagation();
+    if (bChamar.classList.contains('dormindo')) return;
+    acoes.chamar();
+  });
+  let acordaEm = 0;
   /** Os botões ficam na coluna do minimapa, logo abaixo da mochila (e dos amigos). */
-  const botoesDaColuna: HTMLElement[] = [bBandeja];
+  const botoesDaColuna: HTMLElement[] = [bChamar, bBandeja];
   function posicionarBotoes(): void {
     const fel = (sel: string) => document.querySelector<HTMLElement>(sel);
     const mini = fel('.minimapa')?.getBoundingClientRect();
@@ -583,6 +614,23 @@ export function criarCarinhas(acoes: AcoesCarinhas) {
         medidoEm = -Infinity;
       }
       if (!fileira.hidden) desenharFileira();
+      const comAmigos = amigos.size > 0;
+      if (bChamar.hidden === comAmigos) {
+        bChamar.hidden = !comAmigos;
+        medidoEm = -Infinity;
+      }
+      if (acordaEm && performance.now() > acordaEm) {
+        acordaEm = 0;
+        bChamar.classList.remove('dormindo');
+      }
+    },
+    /** O Chamar foi: pulsa e dorme por `segundos` (o relógio de areia vira). */
+    chamou(segundos: number): void {
+      bChamar.classList.remove('tocando', 'dormindo');
+      void bChamar.offsetWidth;
+      bChamar.classList.add('tocando', 'dormindo');
+      acordaEm = performance.now() + segundos * 1000;
+      setTimeout(() => bChamar.classList.remove('tocando'), 1600);
     },
     abrirBandeja,
     bandejaAberta: () => !fileira.hidden,

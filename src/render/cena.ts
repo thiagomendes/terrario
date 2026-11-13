@@ -3895,6 +3895,25 @@ export function criarCena(
     amigos: () => outrosJogadores.lista,
     bloco: blocoEm,
     conhecido: (x, z) => provedor.tem(Math.floor(x / TAM_X), Math.floor(z / TAM_Z)),
+    pedirPulo: (alvo) => {
+      enviarTelemetria(true);
+      enviar({ t: 'pularPerto', alvo });
+    },
+    levar: (x, y, z, yaw) => {
+      estado.teleportar?.(x, z, y);
+      controle.jogador.topoQueda = undefined;
+      // a câmera de lado: os dois bonecos à vista, o jogador virado para o amigo
+      controle.apontar(yaw + 0.75, 0.2);
+      orbita.encaixar();
+      animador.definirYaw(yaw);
+    },
+    morto: () => sobrevivenciaMorto(),
+    acenar: () => gestos?.fazer('acenar'),
+    som: (qual) => somEfeito(qual, 300),
+    chamar: () => {
+      gestos?.fazer('chamar');
+      enviar({ t: 'chamarAmigos' });
+    },
     pode: () => {
       const b = document.body;
       return (
@@ -5036,6 +5055,9 @@ export function criarCena(
       case 'gesto': // spec 015: gesto de um amigo ou de um morador que respondeu
         gestos?.evento(e);
         break;
+      case 'chamado': // spec 021: um amigo chamou ("vem cá!")
+        acharAmigo?.chamado(e.de);
+        break;
       case 'quebra':
       case 'colocacao':
         // o que os outros fazem (o próprio jogador já viu e ouviu na previsão)
@@ -5150,6 +5172,12 @@ export function criarCena(
         window.dispatchEvent(new CustomEvent('brumaluz:morte', { detail: e.causa }));
         break;
       case 'teleporte':
+        // spec 021: o pulo para perto tem o puf, a câmera de lado e o aceno
+        if (e.pulo && e.y !== undefined && acharAmigo) {
+          acharAmigo.pulou(e.x, e.y, e.z, e.pulo);
+          renascerPedidoEm = -1;
+          break;
+        }
         estado.teleportar?.(e.x, e.z, e.y);
         controle.jogador.topoQueda = undefined;
         renascerPedidoEm = -1;
@@ -5205,6 +5233,7 @@ export function criarCena(
         barramento.emitir('recusa', { motivo: e.motivo === 'quebrar' ? 'quebrar' : 'colocar' });
         if (e.motivo === 'semente') toast(AVISO_SEMENTE);
         if (e.motivo === 'voltarCasa') toast(AVISO_ESPERA_CASA);
+        if (e.motivo === 'pularPerto') acharAmigo?.recusado();
         break;
       case 'arou':
         if (e.meu) window.dispatchEvent(new CustomEvent('brumaluz:arou'));

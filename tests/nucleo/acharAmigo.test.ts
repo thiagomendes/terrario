@@ -102,11 +102,18 @@ describe('pularPerto (spec 021)', () => {
     n.comando('ana', { t: 'pularPerto', alvo: 'bia' });
     const t = teleporte(eventos(n, 'ana'));
     if (t?.e !== 'teleporte') throw new Error('sem teleporte');
+    // o cliente ainda manda a posição antiga enquanto mostra o puf da saída
+    n.comando('ana', tel(X + 0.5, Z + 0.5));
+    n.passo();
+    n.quadros();
     n.comando('ana', tel(t.x, t.z, { y: t.y! }));
     const ev = eventos(n, 'ana');
     // nada de puxar de volta
     expect(teleporte(ev)).toBeUndefined();
     expect(n.estado.jogadores.get('ana')!.tel.x).toBeCloseTo(t.x);
+    // e não vira passe livre: voltar de onde veio, num salto, é puxado de volta
+    n.comando('ana', tel(X + 0.5, Z + 0.5));
+    expect(teleporte(eventos(n, 'ana'))).toBeTruthy();
   });
 
   it(`intervalo de ${ESPERA_PULO} s entre dois pulos`, () => {
