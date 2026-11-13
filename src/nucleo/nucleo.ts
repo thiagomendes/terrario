@@ -75,6 +75,8 @@ import {
   type CelulaPlanejada,
 } from '../world/obras';
 import { MAX_AJUDANTES_OBRA, type ObraSalva } from './saneamento';
+import { COMBATE_PULO, ESPERA_CHAMAR, ESPERA_PULO } from '../jogo/acharAmigo';
+import { lugarDoPulo, type MundoDoPulo } from './lugarPulo';
 import { roteiroDoMorador, type LugarCidade, type RoteiroCidade } from '../world/ruasCidade';
 
 type DadosFolga = 'casa' | 'loja' | undefined;
@@ -237,6 +239,13 @@ interface Jogador {
   passoGesto: number;
   /** Spec 016: passo da última volta para casa (intervalo entre duas). */
   passoVoltaCasa: number;
+  /** Spec 021: passo do último pulo para perto e do último "chamar" (intervalos). */
+  passoPulo: number;
+  passoChamar: number;
+  /** Spec 021: passo do último dano (fora a fome): em combate não há pulo. */
+  passoDano: number;
+  /** Spec 021: para onde o núcleo levou (a primeira posição depois do pulo vale lá). */
+  destinoSalto: { x: number; z: number } | null;
   /** Auditoria 017: passo da última aparência aplicada (limite de repetição). */
   passoAparencia: number;
   /** Auditoria 017: a última aparência que chegou dentro da janela (aplicada quando ela fecha). */
@@ -524,6 +533,10 @@ export function criarNucleo(op: OpcoesNucleo) {
       saltoPermitido: true,
       passoGesto: -Infinity,
       passoVoltaCasa: -Infinity,
+      passoPulo: -Infinity,
+      passoChamar: -Infinity,
+      passoDano: -Infinity,
+      destinoSalto: null,
       passoAparencia: -Infinity,
       aparenciaPendente: null,
       versaoDonos: -1,
@@ -537,7 +550,11 @@ export function criarNucleo(op: OpcoesNucleo) {
       j.inventarioSujo = true;
     });
     j.sobrevivencia.ouvir((ev) => {
-      if (ev.tipo === 'dano') j.eventos.push({ e: 'dano', causa: ev.causa, qtd: ev.qtd });
+      if (ev.tipo === 'dano') {
+        j.eventos.push({ e: 'dano', causa: ev.causa, qtd: ev.qtd });
+        // spec 021: em combate (ou caindo, afogando) o pulo espera; a fome não conta
+        if (ev.causa !== 'fome') j.passoDano = n;
+      }
       else if (ev.tipo === 'morte') {
         // espalha o inventário no lugar da morte
         for (let i = 0; i < j.inventario.slots.length; i++) {
@@ -1847,6 +1864,44 @@ export function criarNucleo(op: OpcoesNucleo) {
     j.eventos.push({ e: 'teleporte', x: j.spawn.x, z: j.spawn.z });
   }
 
+  /** Spec 021: o mundo como o lugar do pulo o vê (blocos, proteção da 016 e donos). */
+  const mundoDoPulo: MundoDoPulo = {
+    bloco: (x, y, z) => mundo.bloco(x, y, z),
+    protecao: (x, y, z) => protecao.em(x, y, z),
+    dono: (x, y, z) => donoNaCelula(edicoes, x, y, z, donoDoMundo),
+  };
+
+  /**
+   * Spec 021: "pular para perto" do amigo. Não pede licença; o que protege é a regra da 016
+   * (nunca cair dentro do que o mundo ou outra pessoa construiu). Não leva itens nem cura;
+   * na sobrevivência não vale para quem está caído nem em combate (dano há menos de
+   * COMBATE_PULO s); entre dois, ESPERA_PULO s. Sem lugar seguro: recusa, e a carinha
+   * balança "não" no cliente.
+   */
+  function pularPerto(j: Jogador, alvo: string): void {
+    const recusa = () => j.eventos.push({ e: 'recusa', comando: 0, motivo: 'pularPerto' });
+    const o = jogadores.get(alvo);
+    if (!o || o === j || j.sobrevivencia.estado.morto || o.sobrevivencia.estado.morto)
+      return void recusa();
+    if ((n - j.passoPulo) * PASSO < ESPERA_PULO - 1e-9) return void recusa();
+    if (modo === 'sobrevivencia' && (n - j.passoDano) * PASSO < COMBATE_PULO - 1e-9)
+      return void recusa();
+    const l = lugarDoPulo(mundoDoPulo, j.id, j.tel, o.tel);
+    if (!l) return void recusa();
+    j.passoPulo = n;
+    j.saltoPermitido = true;
+    j.destinoSalto = { x: l[0], z: l[2] };
+    j.eventos.push({ e: 'teleporte', x: l[0], z: l[2], y: l[1], pulo: alvo });
+  }
+
+  /** Spec 021: "vem cá!" para todos da sala (não só os 48 blocos do gesto). */
+  function chamarAmigos(j: Jogador): void {
+    if (j.sobrevivencia.estado.morto) return;
+    if ((n - j.passoChamar) * PASSO < ESPERA_CHAMAR - 1e-9) return;
+    j.passoChamar = n;
+    for (const o of jogadores.values()) if (o !== j) o.eventos.push({ e: 'chamado', de: j.id });
+  }
+
   /** Mais rápido que isto é teletransporte (blocos por segundo, com folga). */
   const VEL_MAX = modo === 'criativo' ? 40 : 14;
   function telemetria(j: Jogador, c: Telemetria): void {
@@ -1855,7 +1910,12 @@ export function criarNucleo(op: OpcoesNucleo) {
     // o núcleo sabe que o jogador está (ou do ponto de renascer)
     if (!confiar && !depuracao && j.saltoPermitido) {
       const pertoDe = (x: number, z: number) => Math.hypot(c.x - x, c.z - z) <= 80;
-      if (!pertoDe(j.tel.x, j.tel.z) && !pertoDe(j.spawn.x, j.spawn.z)) {
+      const destino = j.destinoSalto;
+      if (
+        !pertoDe(j.tel.x, j.tel.z) &&
+        !pertoDe(j.spawn.x, j.spawn.z) &&
+        !(destino && pertoDe(destino.x, destino.z))
+      ) {
         j.eventos.push({ e: 'teleporte', x: j.tel.x, z: j.tel.z, y: j.tel.y });
         return;
       }
@@ -1876,6 +1936,7 @@ export function criarNucleo(op: OpcoesNucleo) {
       }
     }
     j.saltoPermitido = false;
+    j.destinoSalto = null;
     j.passoTelemetria = n;
     j.tel = { ...c, quedas: [], pulos: 0, golpes: 0 };
     if (golpes > 0) j.acoes[0] += Math.min(golpes, 20);
@@ -2073,6 +2134,12 @@ export function criarNucleo(op: OpcoesNucleo) {
         break;
       case 'voltarCasa':
         voltarCasa(j);
+        break;
+      case 'pularPerto':
+        pularPerto(j, c.alvo);
+        break;
+      case 'chamarAmigos':
+        chamarAmigos(j);
         break;
       case 'conferir':
         for (const q of c.celulas.slice(0, 500)) corrigir(j, q.x, q.y, q.z);

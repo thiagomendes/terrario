@@ -185,8 +185,12 @@ export function sanear(c: unknown): Comando | null {
         : null;
     case 'comer':
       return inteiro(o.slot, 0, SLOTS - 1) ? (o as unknown as Comando) : null;
+    case 'pularPerto':
+      // spec 021: só o id de um amigo (texto curto)
+      return texto(o.alvo, 64) ? (o as unknown as Comando) : null;
     case 'renascer':
     case 'voltarCasa':
+    case 'chamarAmigos':
     case 'fecharConteiner':
       return o as unknown as Comando;
     case 'salvar':

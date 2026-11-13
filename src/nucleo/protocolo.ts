@@ -152,7 +152,14 @@ type ComandoSemSeq =
   /** O jogador trocou a aparência no meio do jogo: os amigos passam a ver a nova. */
   | { t: 'aparencia'; aparencia: Record<string, unknown> }
   /** Spec 015: um gesto da roda (os amigos veem; o morador perto responde; chamar traz bichos). */
-  | { t: 'gesto'; id: number; gesto: IdGesto };
+  | { t: 'gesto'; id: number; gesto: IdGesto }
+  /**
+   * Spec 021: pular para perto do amigo `alvo` (o id dele). O núcleo confere o intervalo, o
+   * combate e o lugar seguro (a proteção da 016) e leva; sem lugar, recusa 'pularPerto'.
+   */
+  | { t: 'pularPerto'; alvo: string }
+  /** Spec 021: "vem cá!" para a sala toda (no máximo 1 a cada ESPERA_CHAMAR s). */
+  | { t: 'chamarAmigos' };
 
 /** Atalhos de teste e captura (o servidor da nuvem só aceita em ambiente de testes). */
 export type Depuracao =
@@ -307,7 +314,16 @@ export type EventoNucleo =
   | { e: 'dano'; causa: CausaDano; qtd: number }
   | { e: 'morte'; causa: CausaDano }
   /** Levar o jogador a (x, z); y indefinido = topo livre do terreno. */
-  | { e: 'teleporte'; x: number; z: number; y?: number }
+  | {
+      e: 'teleporte';
+      x: number;
+      z: number;
+      y?: number;
+      /** Spec 021: foi o pulo para perto deste amigo (o puf, virar para ele e acenar). */
+      pulo?: string;
+    }
+  /** Spec 021: um amigo chamou ("vem cá!"); a carinha dele vem para a frente. */
+  | { e: 'chamado'; de: string }
   | { e: 'relampago'; atrasoTrovao: number }
   | { e: 'sono'; dormiu: boolean }
   | { e: 'acordou' }

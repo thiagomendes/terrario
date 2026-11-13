@@ -14,9 +14,10 @@ import type { ObraSalva } from '../nucleo/saneamento';
  * donos; o navegador de antes recebe "versão nova, recarregue"). 4: spec 014 (o canteiro de
  * obras: o evento `obra`, a colher e as obras no "bem-vindo"; os carrinhos e ônibus da
  * cidade: o campo `veiculos` do quadro e o evento `veiculo`, que vêm na mesma versão porque a
- * 014 ainda não foi publicada).
+ * 014 ainda não foi publicada). 5: spec 021 (os comandos `pularPerto` e `chamarAmigos`, o
+ * evento `chamado` e o `pulo` do teleporte).
  */
-export const VERSAO_REDE = 4;
+export const VERSAO_REDE = 5;
 /** Jogadores por mundo. */
 export const MAX_JOGADORES = 8;
 
