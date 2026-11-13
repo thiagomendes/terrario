@@ -200,6 +200,8 @@ async function iniciar(app: HTMLElement): Promise<void> {
   }
   // esboço da spec 021 (só com ?esboco=amigos): pedaço à parte, o jogo nunca o carrega
   if (esboco === 'amigos') (await import('./esboco/amigos')).prepararEsbocoAmigos();
+  // esboço 014c (só com ?esboco=refino): os veículos refinados ao lado dos de hoje
+  if (esboco === 'refino') (await import('./esboco/veiculosRefino')).prepararEsbocoRefino();
   // em prévia de outro tema nada é salvo: o mundo continua sendo do tema dele
   cena = criarCena(canvas, hotbar, {
     mundo: atual,
