@@ -88,7 +88,11 @@ export function criarEstrelinhas(scene: Scene) {
       estrela.setEnabled(false);
       return;
     }
-    if (matrizes.length < n * 16) matrizes = new Float32Array(n * 16);
+    if (matrizes.length < n * 16) {
+      // espaço para a trilha toda (até 300): o buffer é criado uma vez e só atualizado
+      matrizes = new Float32Array(Math.max(n, 300) * 16);
+      estrela.thinInstanceSetBuffer('matrix', matrizes, 16, false);
+    }
     for (let i = 0; i < n; i++) {
       const [x, y, z] = pts[i];
       // nasce em onda: do jogador até o amigo
@@ -100,6 +104,11 @@ export function criarEstrelinhas(scene: Scene) {
       let s = (1.05 + 0.6 * onda) * nascer * passou * (1 - apagar);
       // a última: maior; sem caminho inteiro, grande e pulsando ("daqui, segure para pular")
       if (i === n - 1) s *= trilha.completo ? 1.6 : 2.4 + 0.5 * Math.sin(t * 5);
+      // na tela, nunca do tamanho de uma cabeça: o tamanho tem teto pela distância da câmera,
+      // e bem perto dela a estrela some
+      const dc = Math.hypot(cam.x - x, cam.y - y - 0.42, cam.z - z);
+      s = Math.min(s, dc * 0.16);
+      if (dc < 4) s *= Math.max(0, (dc - 1.5) / 2.5);
       sTmp.set(s, s, s);
       // de frente para a câmera, balançando um pouco (nunca de perfil, que some)
       const yaw = Math.atan2(cam.x - x, cam.z - z) + Math.sin(t * 2.2 + i * 0.6) * 0.5;
@@ -108,8 +117,8 @@ export function criarEstrelinhas(scene: Scene) {
       Matrix.ComposeToRef(sTmp, qTmp, pTmp, mTmp);
       mTmp.copyToArray(matrizes, i * 16);
     }
-    estrela.thinInstanceSetBuffer('matrix', matrizes, 16, false);
     estrela.thinInstanceCount = n;
+    estrela.thinInstanceBufferUpdated('matrix');
   }
 
   // ------------------------------------------------------------------ o puf

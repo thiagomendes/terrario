@@ -322,3 +322,20 @@ describe('lugar do pulo (proteção da 016)', () => {
     expect(lugarDoPulo(w.m, 'ana', de, alvo)).toBeNull();
   });
 });
+
+describe('lugar do pulo: ver o amigo ao chegar', () => {
+  it('prefere o lugar sem bloco entre os dois e com espaço para a câmera atrás', () => {
+    const blocos = new Map<string, number>();
+    const k = (x: number, y: number, z: number) => `${x},${y},${z}`;
+    const m: MundoDoPulo = {
+      bloco: (x, y, z) => blocos.get(k(x, y, z)) ?? (y <= 9 ? Bloco.PEDRA_RACHADA : Bloco.AR),
+      protecao: () => Protecao.LIVRE as Protecao,
+      dono: () => null,
+    };
+    // um murinho de 2 entre o amigo e o lugar do lado de quem vem (x = 2)
+    for (const y of [10, 11]) blocos.set(k(1, y, 0), Bloco.PEDRA_RACHADA);
+    const l = lugarDoPulo(m, 'ana', { x: 30, z: 0.5 }, { x: 0.5, y: 10, z: 0.5 })!;
+    expect(l).not.toEqual([2.5, 10, 0.5]);
+    expect(l).not.toBeNull();
+  });
+});

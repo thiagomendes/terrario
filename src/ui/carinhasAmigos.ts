@@ -224,6 +224,8 @@ interface Carinha {
   ang: number;
   classes: string;
   segurando: number;
+  /** Balançando "não" agora. */
+  nao: boolean;
 }
 
 /** Foto da cabeça num canvas (a fila do estúdio guarda: a mesma aparência sai na hora). */
@@ -359,6 +361,8 @@ export function criarCarinhas(acoes: AcoesCarinhas) {
     }
   }
   const vistos: VistoNaBorda[] = [];
+  /** O amigo cuja carinha sugere o pulo (sem caminho a pé). */
+  let sugerido: string | null = null;
 
   let proibidos: Caixa[] = [];
   let medidoEm = -Infinity;
@@ -395,6 +399,7 @@ export function criarCarinhas(acoes: AcoesCarinhas) {
       ang: NaN,
       classes: '',
       segurando: 0,
+      nao: false,
     };
     fotografar(c.canvas, a.aparencia);
     // toque curto: escolhe e acende a trilha; segurar: o anel enche e pula
@@ -502,25 +507,30 @@ export function criarCarinhas(acoes: AcoesCarinhas) {
       seta.className = 'seta';
       m.append(seta);
     }
-    m.hidden = false;
-    m.style.setProperty('--d', `${d}px`);
-    m.style.transform = `translate(${(item.x - larg / 2).toFixed(1)}px, ${(item.y - d / 2).toFixed(1)}px)`;
-    const seta = m.querySelector<HTMLElement>('.seta');
-    if (seta) {
-      seta.style.left = `${larg / 2}px`;
-      seta.style.top = `${d / 2}px`;
-      const alc = (Math.abs(Math.cos(item.ang)) * larg) / 2 + (Math.abs(Math.sin(item.ang)) * d) / 2 + 2;
-      seta.style.setProperty('--alcance', `${alc.toFixed(0)}px`);
-      seta.style.transform = `rotate(${item.ang.toFixed(3)}rad)`;
+    if (m.hidden) m.hidden = false;
+    // só escreve o que mudou (o montinho fica quase sempre parado)
+    const alc = (Math.abs(Math.cos(item.ang)) * larg) / 2 + (Math.abs(Math.sin(item.ang)) * d) / 2 + 2;
+    const estado = `${d}|${(item.x - larg / 2).toFixed(1)}|${(item.y - d / 2).toFixed(1)}|${larg}|${alc.toFixed(0)}|${item.ang.toFixed(2)}`;
+    if (m.dataset.estado !== estado) {
+      m.dataset.estado = estado;
+      m.style.setProperty('--d', `${d}px`);
+      m.style.transform = `translate(${(item.x - larg / 2).toFixed(1)}px, ${(item.y - d / 2).toFixed(1)}px)`;
+      const seta = m.lastElementChild as HTMLElement | null;
+      if (seta) {
+        seta.style.left = `${larg / 2}px`;
+        seta.style.top = `${d / 2}px`;
+        seta.style.setProperty('--alcance', `${alc.toFixed(0)}px`);
+        seta.style.transform = `rotate(${item.ang.toFixed(2)}rad)`;
+      }
     }
     vistos.push({ tipo: 'montinho', ids: item.ids, x: item.x, y: item.y, r: larg / 2, borda: true });
   }
 
   return {
     camada,
-    /** As caixas do HUD (mede de novo a cada 2 s, ao mudar a janela ou quando pedido). */
+    /** As caixas do HUD (mede de novo a cada 5 s, ao mudar a janela, ao abrir a bandeja ou quando pedido). */
     proibidos(forcar = false): readonly Caixa[] {
-      if (forcar || performance.now() - medidoEm > 2000) remedir();
+      if (forcar || performance.now() - medidoEm > 5000) remedir();
       return proibidos;
     },
     /** Desenha o quadro: `amigos` são todos os da sala; `itens`, o que vai na borda. */
@@ -565,8 +575,8 @@ export function criarCarinhas(acoes: AcoesCarinhas) {
           (item.borda ? '' : ' sem-seta') +
           (item.escolhido ? ' escolhido' : '') +
           (item.chamando ? ' chamando' : '') +
-          (c.el.classList.contains('nao') ? ' nao' : '') +
-          (c.el.classList.contains('sugere-pulo') ? ' sugere-pulo' : '');
+          (c.nao ? ' nao' : '') +
+          (sugerido === id ? ' sugere-pulo' : '');
         if (classes !== c.classes) {
           c.classes = classes;
           c.el.className = classes;
@@ -643,21 +653,18 @@ export function criarCarinhas(acoes: AcoesCarinhas) {
       c.el.classList.remove('nao');
       void c.el.offsetWidth;
       c.el.classList.add('nao');
+      c.nao = true;
       c.classes = '';
       setTimeout(() => {
+        c.nao = false;
         c.el.classList.remove('nao');
         c.classes = '';
       }, 1100);
     },
     /** Sem caminho a pé até ele: o anel pisca, sugerindo segurar para pular. */
     sugerirPulo(id: string | null): void {
-      for (const [k, c] of carinhas) {
-        const quer = k === id;
-        if (c.el.classList.contains('sugere-pulo') !== quer) {
-          c.el.classList.toggle('sugere-pulo', quer);
-          c.classes = '';
-        }
-      }
+      // a classe entra no próximo desenho (também na carinha que ainda vai nascer)
+      sugerido = id;
     },
     /** Quadro parado do segurar (testes e capturas): fração 0 a 1, null solta. */
     segurar(id: string | null, fracao = 0): void {

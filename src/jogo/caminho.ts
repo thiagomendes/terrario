@@ -64,7 +64,27 @@ const FOLGA = 24;
 const MAX_CELULAS = 90_000;
 const MAX_PASSOS = 60_000;
 
+/** A busca inteira de uma vez (testes e o núcleo). */
 export function procurarCaminho(m: LeitorCaminho, de: V3, ate: V3): Caminho {
+  const it = buscarCaminho(m, de, ate);
+  for (;;) {
+    const r = it.next();
+    if (r.done) return r.value;
+  }
+}
+
+/** Passos da busca entre duas pausas (a tela não trava: a busca anda em fatias). */
+const PASSOS_POR_FATIA = 1500;
+
+/**
+ * A busca em fatias: a cada PASSOS_POR_FATIA passos ela devolve o controle (yield), e quem
+ * chama decide se continua agora ou no próximo quadro. No fim, devolve o caminho.
+ */
+export function* buscarCaminho(
+  m: LeitorCaminho,
+  de: V3,
+  ate: V3,
+): Generator<void, Caminho, void> {
   const x0 = Math.floor(de[0]);
   const z0 = Math.floor(de[2]);
   let x1 = Math.floor(ate[0]);
@@ -160,6 +180,7 @@ export function procurarCaminho(m: LeitorCaminho, de: V3, ate: V3): Caminho {
   let hMelhor = h(x0, z0);
   let passos = 0;
   while (heap.length && passos++ < MAX_PASSOS) {
+    if (passos % PASSOS_POR_FATIA === 0) yield;
     const i = pop();
     if (fechado[i]) continue;
     fechado[i] = 1;
@@ -196,7 +217,7 @@ export function procurarCaminho(m: LeitorCaminho, de: V3, ate: V3): Caminho {
           g[j] = ng;
           alt[j] = ny;
           veio[j] = i;
-          f[j] = ng + h(nx, nz) * 1.05;
+          f[j] = ng + h(nx, nz) * 1.15;
           push(j);
         }
       }

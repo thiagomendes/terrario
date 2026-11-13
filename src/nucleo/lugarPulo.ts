@@ -61,8 +61,48 @@ export function podeCair(m: MundoDoPulo, quem: string, x: number, y: number, z: 
 }
 
 /**
+ * Dá para ver bem dali? Nada entre a cabeça de quem chega e a do amigo, e espaço atrás para
+ * a câmera (3,5 blocos do lado oposto ao amigo, na altura da cabeça e um pouco acima).
+ */
+export function vistaLivre(
+  m: MundoDoPulo,
+  x: number,
+  y: number,
+  z: number,
+  alvo: { x: number; y: number; z: number },
+): boolean {
+  const ax = alvo.x;
+  const ay = alvo.y + 1.5;
+  const az = alvo.z;
+  const ox = x + 0.5;
+  const oy = y + 1.5;
+  const oz = z + 0.5;
+  const d = Math.hypot(ax - ox, ay - oy, az - oz);
+  for (let s = 0.5; s < d - 0.3; s += 0.5) {
+    const k = s / d;
+    const b = m.bloco(
+      Math.floor(ox + (ax - ox) * k),
+      Math.floor(oy + (ay - oy) * k),
+      Math.floor(oz + (az - oz) * k),
+    );
+    if (ehSolido(b)) return false;
+  }
+  const h = Math.hypot(ax - ox, az - oz) || 1;
+  const tx = (ox - ax) / h;
+  const tz = (oz - az) / h;
+  for (let s = 0.5; s <= 3.5; s += 0.5)
+    for (const dy of [1.5, 2.5]) {
+      const b = m.bloco(Math.floor(ox + tx * s), Math.floor(y + dy), Math.floor(oz + tz * s));
+      if (ehSolido(b)) return false;
+    }
+  return true;
+}
+
+/**
  * O lugar ao lado do amigo (os pés no centro da célula), ou null se não há lugar seguro.
- * `de`: onde o jogador está agora; `alvo`: os pés do amigo.
+ * `de`: onde o jogador está agora; `alvo`: os pés do amigo. Prefere um lugar de onde a
+ * criança vê o amigo logo ao chegar (nada no meio, a câmera atrás com espaço); sem nenhum
+ * assim, vale qualquer lugar seguro.
  */
 export function lugarDoPulo(
   m: MundoDoPulo,
@@ -72,6 +112,7 @@ export function lugarDoPulo(
 ): V3 | null {
   const yAlvo = Math.floor(alvo.y);
   const vindo = Math.atan2(de.x - alvo.x, de.z - alvo.z);
+  const seguros: V3[] = [];
   const vistos = new Set<number>();
   for (const raio of RAIOS)
     for (const da of LADOS) {
@@ -83,7 +124,11 @@ export function lugarDoPulo(
       vistos.add(k);
       // a célula dos pés: a mesma altura do amigo, um acima ou um abaixo
       for (const y of [yAlvo, yAlvo + 1, yAlvo - 1])
-        if (podeCair(m, quem, cx, y, cz)) return [cx + 0.5, y, cz + 0.5];
+        if (podeCair(m, quem, cx, y, cz)) {
+          if (vistaLivre(m, cx, y, cz, alvo)) return [cx + 0.5, y, cz + 0.5];
+          seguros.push([cx + 0.5, y, cz + 0.5]);
+          break;
+        }
     }
-  return null;
+  return seguros[0] ?? null;
 }

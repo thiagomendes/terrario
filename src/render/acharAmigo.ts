@@ -19,7 +19,8 @@ import { obterBloco, Bloco } from '../world/blocks';
 import {
   espalharEstrelas,
   maisPertoDoCaminho,
-  procurarCaminho,
+  buscarCaminho,
+  type Caminho,
   type LeitorCaminho,
   type V3,
 } from '../jogo/caminho';
@@ -72,6 +73,8 @@ export function criarAcharAmigo(f: FonteAcharAmigo) {
   const naTela: AmigoNaTela[] = [];
   /** Custo da camada por quadro (ms, média móvel), para a régua de desempenho. */
   let custoMs = 0;
+  /** As partes do custo (média móvel, ms): trilha e projeção, escondido, borda, desenho. */
+  const partes = [0, 0, 0, 0];
   const ouvintes = {
     tocar: (_id: string) => {},
     pular: (_id: string) => {},
@@ -119,51 +122,93 @@ export function criarAcharAmigo(f: FonteAcharAmigo) {
     az: number;
     em: number;
   } | null = null;
-  let ultimoCaminhoMs = 0;
 
-  function procurar(id: string): { brutos: V3[]; completo: boolean; a: AmigoNoMundo } | null {
+  /** Fatia de tempo da busca por quadro (ms): a tela nunca trava, mesmo no celular lento. */
+  const FATIA_BUSCA = 4;
+  /** Busca em andamento: anda em fatias, um pouco a cada quadro. */
+  let busca: {
+    id: string;
+    a: AmigoNoMundo;
+    it: Generator<void, Caminho, void>;
+    nova: boolean;
+    gasto: number;
+  } | null = null;
+  let ultimoCaminhoMs = 0;
+  let quadrosCaminho = 0;
+
+  /** Começa a procurar o caminho até o amigo (nova: acende do zero; senão, troca os pontos). */
+  function comecarBusca(id: string, nova: boolean): boolean {
     const a = f.amigos().find((x) => x.id === id);
-    if (!a) return null;
+    if (!a) return false;
     const p = f.jogador();
-    const t0 = performance.now();
-    const c = procurarCaminho(leitor, [p.x, p.y, p.z], [a.x, a.y, a.z]);
-    ultimoCaminhoMs = performance.now() - t0;
-    return { brutos: c.pts, completo: c.completo, a };
+    busca = { id, a: { ...a }, it: buscarCaminho(leitor, [p.x, p.y, p.z], [a.x, a.y, a.z]), nova, gasto: 0 };
+    quadrosCaminho = 0;
+    return true;
   }
 
-  /** Acende a trilha até o amigo. Devolve quantos passos tem o caminho (0: nenhum). */
-  function acenderTrilha(id: string): number {
-    const r = procurar(id);
+  /** Anda a busca por até `orcamento` ms; achou, acende (ou troca) a trilha. */
+  function andarBusca(orcamento: number): void {
+    if (!busca) return;
+    const b = busca;
+    const t0 = performance.now();
+    quadrosCaminho++;
+    let r: IteratorResult<void, Caminho>;
+    do r = b.it.next();
+    while (!r.done && performance.now() - t0 < orcamento);
+    b.gasto += performance.now() - t0;
+    if (!r.done) return;
+    busca = null;
+    ultimoCaminhoMs = b.gasto;
+    aplicar(b.id, b.a, r.value, b.nova);
+  }
+
+  function aplicar(id: string, a: AmigoNoMundo, c: Caminho, nova: boolean): number {
     const agora = performance.now() / 1000;
-    if (!r || !r.brutos.length) {
+    if (!nova) {
+      if (!trilha || trilha.alvo !== id || !c.pts.length) return 0;
+      trilha.brutos = c.pts;
+      trilha.completo = c.completo;
+      trilha.ax = a.x;
+      trilha.az = a.z;
+      estrelinhas.trocarPontos(espalharEstrelas(c.pts), c.completo);
+      carinhas.sugerirPulo(c.completo ? null : id);
+      return c.pts.length;
+    }
+    if (!c.pts.length) {
       // nem um passo a pé: a carinha sugere o pulo
       trilha = null;
       estrelinhas.tirar();
-      carinhas.sugerirPulo(r ? id : null);
+      carinhas.sugerirPulo(id);
       return 0;
     }
-    trilha = {
-      alvo: id,
-      brutos: r.brutos,
-      completo: r.completo,
-      nasceu: agora,
-      ax: r.a.x,
-      az: r.a.z,
-      em: agora,
-    };
-    estrelinhas.trilha(espalharEstrelas(r.brutos), r.completo, agora);
+    trilha = { alvo: id, brutos: c.pts, completo: c.completo, nasceu: agora, ax: a.x, az: a.z, em: agora };
+    estrelinhas.trilha(espalharEstrelas(c.pts), c.completo, agora);
     // sem caminho inteiro (morro alto, rio): o anel pisca, "segure para pular"
-    carinhas.sugerirPulo(r.completo ? null : id);
-    return r.brutos.length;
+    carinhas.sugerirPulo(c.completo ? null : id);
+    return c.pts.length;
+  }
+
+  /** Acende a trilha até o amigo: a busca começa já e termina nos próximos quadros. */
+  function acenderTrilha(id: string): void {
+    if (comecarBusca(id, true)) andarBusca(FATIA_BUSCA);
+  }
+
+  /** Testes: a busca inteira de uma vez. Devolve quantos passos tem o caminho. */
+  function acenderTrilhaJa(id: string): number {
+    if (!comecarBusca(id, true)) return 0;
+    andarBusca(Infinity);
+    return trilha?.alvo === id ? trilha.brutos.length : 0;
   }
 
   function apagarTrilha(): void {
+    busca = null;
     trilha = null;
     estrelinhas.tirar();
     carinhas.sugerirPulo(null);
   }
 
   function quadroTrilha(agora: number, amigos: readonly AmigoNoMundo[]): void {
+    andarBusca(FATIA_BUSCA);
     let perto = 0;
     if (trilha) {
       const p = f.jogador();
@@ -183,16 +228,8 @@ export function criarAcharAmigo(f: FonteAcharAmigo) {
             (mp.d > 6 || Math.hypot(a.x - trilha.ax, a.z - trilha.az) > 6)
           ) {
             // a criança saiu da trilha (ou o amigo andou): procura de novo, sem nascer outra vez
-            const r = procurar(trilha.alvo);
             trilha.em = agora;
-            if (r && r.brutos.length) {
-              trilha.brutos = r.brutos;
-              trilha.completo = r.completo;
-              trilha.ax = r.a.x;
-              trilha.az = r.a.z;
-              estrelinhas.trocarPontos(espalharEstrelas(r.brutos), r.completo);
-              carinhas.sugerirPulo(r.completo ? null : trilha.alvo);
-            }
+            if (!busca) comecarBusca(trilha.alvo, false);
           }
         }
       }
@@ -208,6 +245,8 @@ export function criarAcharAmigo(f: FonteAcharAmigo) {
   // ------------------------------------------------------------------ pular para perto
   let pedido: { id: string; em: number } | null = null;
   let ultimoPulo = -Infinity;
+  /** Medição de desempenho: a camada desligada (a mesma sessão, com e sem). */
+  let desligada = false;
   let pulos = 0;
   ouvintes.pular = (id) => {
     const agora = performance.now() / 1000;
@@ -301,15 +340,18 @@ export function criarAcharAmigo(f: FonteAcharAmigo) {
     if (escolhido && !mapa.has(escolhido)) escolhido = null;
     if (chamando && (agora > chamando.ate || !mapa.has(chamando.id))) chamando = null;
     const p = f.jogador();
-    const bandeja = amigos
-      .map((a) => ({ id: a.id, d: Math.hypot(a.x - p.x, a.z - p.z) }))
-      .sort((a, b) => a.d - b.d)
-      .map((a) => ({ id: a.id, perto: a.d < PERTO_AMIGO }));
+    // a bandeja só precisa da ordem quando está aberta
+    const bandeja = carinhas.bandejaAberta()
+      ? amigos
+          .map((a) => ({ id: a.id, d: Math.hypot(a.x - p.x, a.z - p.z) }))
+          .sort((a, b) => a.d - b.d)
+          .map((a) => ({ id: a.id, perto: a.d < PERTO_AMIGO }))
+      : [];
     carinhas.botoes(bandeja, escolhido, mapa.size > MAX_CARINHAS, mapa);
     quadroTrilha(agora, amigos);
     // a resposta do núcleo sumiu (caiu a rede): solta o pedido
     if (pedido && agora - pedido.em > 4) pedido = null;
-    if (!cam || !amigos.length || !f.pode()) {
+    if (!cam || !amigos.length || !f.pode() || desligada) {
       carinhas.desenhar([], mapa);
       return;
     }
@@ -338,7 +380,9 @@ export function criarAcharAmigo(f: FonteAcharAmigo) {
         tapado: tapados.get(a.id) ?? false,
       });
     }
+    const t1 = performance.now();
     conferirTapados(agora, naTela, amigos);
+    const t2 = performance.now();
     const itens = disporCarinhas({
       W,
       H,
@@ -349,8 +393,14 @@ export function criarAcharAmigo(f: FonteAcharAmigo) {
       chamando: chamando?.id ?? null,
       total: amigos.length,
     });
+    const t3 = performance.now();
     carinhas.desenhar(itens, mapa);
-    custoMs += (performance.now() - t0 - custoMs) * 0.05;
+    const t4 = performance.now();
+    custoMs += (t4 - t0 - custoMs) * 0.05;
+    partes[0] += (t1 - t0 - partes[0]) * 0.05;
+    partes[1] += (t2 - t1 - partes[1]) * 0.05;
+    partes[2] += (t3 - t2 - partes[2]) * 0.05;
+    partes[3] += (t4 - t3 - partes[3]) * 0.05;
   }
 
   function recebeuChamado(id: string): void {
@@ -373,6 +423,7 @@ export function criarAcharAmigo(f: FonteAcharAmigo) {
     tapado: (id: string) => tapados.get(id) ?? false,
     segurar: (id: string | null, fracao?: number) => carinhas.segurar(id, fracao),
     custoMs: () => custoMs,
+    partesMs: () => partes.map((x) => Math.round(x * 1000) / 1000),
     bandeja: (aberta: boolean) => carinhas.abrirBandeja(aberta),
     /** Trilha até o amigo (null apaga). Devolve quantos passos tem o caminho. */
     trilha: (id: string | null) => {
@@ -381,15 +432,21 @@ export function criarAcharAmigo(f: FonteAcharAmigo) {
         return 0;
       }
       escolhido = id;
-      return acenderTrilha(id);
+      return acenderTrilhaJa(id);
     },
     caminho: () => trilha?.brutos.map((p) => [...p] as V3) ?? [],
     trilhaCompleta: () => trilha?.completo ?? null,
     estrelas: () => estrelinhas.medida(),
     caminhoMs: () => ultimoCaminhoMs,
+    /** Em quantos quadros a última busca terminou. */
+    caminhoQuadros: () => quadrosCaminho,
+    procurando: () => !!busca,
     /** Segurou até o fim (como o dedo de verdade). */
     pular: (id: string) => ouvintes.pular(id),
     pulos: () => pulos,
+    ligar: (sim: boolean) => {
+      desligada = !sim;
+    },
     /** Só o puf (capturas). */
     puf: () => {
       const p = f.jogador();

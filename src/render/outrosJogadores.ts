@@ -95,6 +95,8 @@ export function criarOutrosJogadores(scene: Scene) {
   const tela = new Vector3();
   const outros = new Map<string, Outro>();
   let perfis: Record<string, PerfilJogador> = {};
+  const leves: { id: string; x: number; y: number; z: number; aparencia: string }[] = [];
+  const levesPorId = new Map<string, (typeof leves)[number]>();
 
   function criar(v: JogadorVisto): Outro {
     const perfil = perfis[v.id];
@@ -268,6 +270,27 @@ export function criarOutrosJogadores(scene: Scene) {
       if (!o) return;
       fazerGesto(o.animador, g);
       (o.balao ??= criarBalao(scene, o.personagem.raiz)).mostrar(g);
+    },
+    /**
+     * Spec 021: a lista leve para as carinhas (por quadro): os mesmos objetos reaproveitados,
+     * só posição e aparência.
+     */
+    leves(): readonly { id: string; x: number; y: number; z: number; aparencia: string }[] {
+      leves.length = 0;
+      for (const o of outros.values()) {
+        let l = levesPorId.get(o.id);
+        if (!l) {
+          l = { id: o.id, x: 0, y: 0, z: 0, aparencia: '' };
+          levesPorId.set(o.id, l);
+        }
+        l.x = o.x;
+        l.y = o.y;
+        l.z = o.z;
+        l.aparencia = o.chaveAparencia;
+        leves.push(l);
+      }
+      if (levesPorId.size > outros.size * 2 + 8) levesPorId.clear();
+      return leves;
     },
     /** Para o minimapa e a seta que aponta para os amigos. */
     get lista() {

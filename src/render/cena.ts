@@ -3892,7 +3892,7 @@ export function criarCena(
   acharAmigo = criarAcharAmigo({
     scene,
     jogador: () => controle.jogador,
-    amigos: () => outrosJogadores.lista,
+    amigos: () => outrosJogadores.leves(),
     bloco: blocoEm,
     conhecido: (x, z) => provedor.tem(Math.floor(x / TAM_X), Math.floor(z / TAM_Z)),
     pedirPulo: (alvo) => {
@@ -3902,8 +3902,11 @@ export function criarCena(
     levar: (x, y, z, yaw) => {
       estado.teleportar?.(x, z, y);
       controle.jogador.topoQueda = undefined;
-      // a câmera de lado: os dois bonecos à vista, o jogador virado para o amigo
-      controle.apontar(yaw + 0.75, 0.2);
+      // a câmera atrás do jogador, olhando para o amigo (um pouco de lado, para o boneco
+      // da criança não tapar o amigo), sem descer atrás do capim
+      // (no celular em pé a tela é estreita: quase de frente para o amigo)
+      const empe = window.innerHeight > window.innerWidth;
+      controle.apontar(yaw + (empe ? 0.16 : 0.35), 0.32);
       orbita.encaixar();
       animador.definirYaw(yaw);
     },
