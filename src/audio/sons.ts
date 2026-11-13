@@ -11,6 +11,7 @@ import { povoadoDoTema, tema } from '../temas/ativo';
 import type { NaturezaTema, PioCriatura, VozCriatura } from '../temas/tipos';
 import type { TipoSer } from '../jogo/criaturas';
 import { GANHO_TRILHA_GRAVADA } from './trilha';
+import { respostaBiquad } from './resposta';
 
 export type EventoSom =
   | 'golpe'
@@ -1060,6 +1061,21 @@ export interface Ambiente {
 export const ABAIXAR_TRILHA_DB = 4;
 /** E o vale nos graves-médios da trilha nessa hora (dB, pico em 180 Hz). */
 export const VALE_TRILHA_DB = 3;
+/**
+ * 014 (ajustes): e um vale nos médios (dB, pico em 1 kHz), onde o motor soa no alto-falante do
+ * celular (que quase não toca o vale dos graves-médios de 180 Hz).
+ */
+export const VALE_MEDIOS_TRILHA_DB = 3;
+const VALE_MEDIOS_HZ = 1000;
+
+/** Resposta (módulo) da trilha com o abaixar em `f` (0 a 1): o ganho e os dois vales. */
+export function respostaDaTrilhaAbaixada(freq: number, f: number): number {
+  const g = Math.pow(10, (-ABAIXAR_TRILHA_DB * f) / 20);
+  const v1 = respostaBiquad('peaking', 180, 0.9, freq, -VALE_TRILHA_DB * f);
+  const v2 = respostaBiquad('peaking', VALE_MEDIOS_HZ, 0.7, freq, -VALE_MEDIOS_TRILHA_DB * f);
+  return g * Math.hypot(v1[0], v1[1]) * Math.hypot(v2[0], v2[1]);
+}
+
 /** Constante de tempo da rampa (s): ~1 s até chegar. */
 const TAU_ABAIXAR = 0.33;
 
@@ -1255,6 +1271,7 @@ export function iniciarAmbiente(
   /** Spec 014 (T15): a trilha abaixada quando um carrinho anda perto (ganho e vale). */
   let abaixar: GanhoSom | null = null;
   let vale: FiltroSom | null = null;
+  let valeMedios: FiltroSom | null = null;
   let fAbaixar = 0;
   let sintetizada = 1;
   /** Até quando a sintetizada ainda soa (a rampa para 0 acaba aqui). */
@@ -1581,8 +1598,14 @@ export function iniciarAmbiente(
         vale.frequency.value = 180;
         vale.Q.value = 0.9;
         if (vale.gain) vale.gain.value = -VALE_TRILHA_DB * fAbaixar;
+        valeMedios = ctx.createBiquadFilter();
+        valeMedios.type = 'peaking';
+        valeMedios.frequency.value = VALE_MEDIOS_HZ;
+        valeMedios.Q.value = 0.7;
+        if (valeMedios.gain) valeMedios.gain.value = -VALE_MEDIOS_TRILHA_DB * fAbaixar;
         abaixar.connect(vale);
-        vale.connect(mestre);
+        vale.connect(valeMedios);
+        valeMedios.connect(mestre);
         busMusica.connect(abaixar);
         busSintetizada = ctx.createGain() as GanhoSom;
         busSintetizada.gain.value = sintetizada;
@@ -1715,6 +1738,11 @@ export function iniciarAmbiente(
         | undefined;
       if (gv?.setTargetAtTime) gv.setTargetAtTime(-VALE_TRILHA_DB * alvo, t, TAU_ABAIXAR);
       else if (gv) gv.value = -VALE_TRILHA_DB * alvo;
+      const gm = valeMedios?.gain as
+        | (ParamEnvelope & { setTargetAtTime?(v: number, t: number, k: number): void })
+        | undefined;
+      if (gm?.setTargetAtTime) gm.setTargetAtTime(-VALE_MEDIOS_TRILHA_DB * alvo, t, TAU_ABAIXAR);
+      else if (gm) gm.value = -VALE_MEDIOS_TRILHA_DB * alvo;
     },
     definirVolumes(musica, natureza) {
       volMusica = musica;

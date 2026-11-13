@@ -10,6 +10,10 @@
  * - **Carga:** a mesma gravação passa por dois caminhos, um abafado (passa-baixa de 900 Hz) e um
  *   claro (o som cheio + 0,7 de um passa-alta de 400 Hz); acelerando, o claro sobe e fica mais
  *   forte; soltando o pedal, fica o abafado. Nível: 0,5 + 0,5·carga + 0,25·(rotação − 1).
+ * - **Presença (014, ajustes):** no alto-falante do celular o motor quase sumia (a energia do laço
+ *   fica em 150 a 300 Hz, e o celular não toca quase nada abaixo de 300 a 400 Hz). Uma terceira
+ *   camada, a faixa de 1 kHz do mesmo som (segue a rotação), constante, deixa o motor se ouvir no
+ *   alto-falante pequeno; o motor inteiro desce o tanto que ela soma no computador.
  * - **No máximo 3 motores** (os mais perto da criança), cheios até 4 blocos e sumindo até 16, com
  *   esquerda e direita pela câmera. Vão no grupo "ambiente", abaixo da trilha.
  * - **Toques:** freio a ar do ônibus no ponto, "fom-fom" (esperando criança ou quando ela esbarra),
@@ -26,6 +30,7 @@ import { inicioSemAtraso } from './vozesGravadas';
 import type { ContextoAudio, FonteAudio, GrupoAudio, MotorAudio, NoAudio } from './motor';
 import { criarGerador, type Gerador } from './variacao';
 import { ABAIXAR_TRILHA_DB } from './sons';
+import { respostaBiquad as biquad } from './resposta';
 import type { TipoVeiculo } from '../jogo/veiculos';
 
 // ------------------------------------------------------------------ modelo de marchas (puro)
@@ -354,10 +359,43 @@ function alvo(p: Param, v: number, t: number, tau: number): void {
   else p.value = v;
 }
 
+/**
+ * A camada de presença do motor: passa-faixa em `hz` (Q `q`) do som cheio, no ganho `ganho`, e a
+ * compensação do motor inteiro (`compensa`), para o computador (fone e caixa) ficar no nível
+ * aprovado: medida no jogo, a rua perto do táxi não sobe; no celular simulado, o motor sobe.
+ */
+export const PRESENCA_MOTOR = { hz: 1000, q: 0.7, ganho: 2.5, compensa: 0.53 } as const;
+
+/**
+ * Quanto da presença vale com o veículo a `d` blocos: inteira até 6 (o carrinho que a criança
+ * vê de perto), 35% a partir de 16 (de longe, o motor fica grave como antes e a rua não clareia).
+ */
+export function presencaNaDistancia(d: number): number {
+  if (d <= 6) return 1;
+  if (d >= 16) return 0.35;
+  return 1 - (0.65 * (d - 6)) / 10;
+}
+
+/** Resposta do caminho do motor em f (o que `montarMotor` monta), sem o nível e a distância. */
+export function respostaDoMotor(f: number, carga: number, presenca = true): number {
+  const lp = biquad('lowpass', 900, Math.SQRT1_2, f);
+  const hp = biquad('highpass', 400, Math.SQRT1_2, f);
+  let re = lp[0] * (1 - carga) + (1 + 0.7 * hp[0]) * carga;
+  let im = lp[1] * (1 - carga) + 0.7 * hp[1] * carga;
+  if (presenca) {
+    const bp = biquad('bandpass', PRESENCA_MOTOR.hz, PRESENCA_MOTOR.q, f);
+    re = (re + PRESENCA_MOTOR.ganho * bp[0]) * PRESENCA_MOTOR.compensa;
+    im = (im + PRESENCA_MOTOR.ganho * bp[1]) * PRESENCA_MOTOR.compensa;
+  }
+  return Math.hypot(re, im);
+}
+/** A do motor aprovado (antes da presença), para comparar. */
+export const respostaDoMotorAntes = (f: number, carga: number) => respostaDoMotor(f, carga, false);
+
 export interface VozMotor {
   readonly fonte: FonteAudio;
   /** Rotação, pedal, volume (já com a distância) e lado. */
-  definir(rpm: number, carga: number, volume: number, pan: number): void;
+  definir(rpm: number, carga: number, volume: number, pan: number, presenca?: number): void;
   /** Esmaece e para. */
   parar(seg?: number): void;
 }
@@ -396,6 +434,13 @@ export function montarMotor(
   const gAlta = ctx.createGain();
   gAlta.gain.value = 0.7;
   const gClaro = ctx.createGain();
+  // presença: a faixa de 1 kHz do som cheio, constante (o celular toca daí para cima)
+  const presenca = ctx.createBiquadFilter();
+  presenca.type = 'bandpass';
+  presenca.frequency.value = PRESENCA_MOTOR.hz;
+  presenca.Q.value = PRESENCA_MOTOR.q;
+  const gPresenca = ctx.createGain();
+  gPresenca.gain.value = PRESENCA_MOTOR.ganho;
   const nivel = ctx.createGain();
   nivel.gain.value = 0;
   fonte.connect(baixa);
@@ -406,6 +451,9 @@ export function montarMotor(
   alta.connect(gAlta);
   gAlta.connect(gClaro);
   gClaro.connect(nivel);
+  fonte.connect(presenca);
+  presenca.connect(gPresenca);
+  gPresenca.connect(nivel);
   const pan = ctx.createStereoPanner?.() ?? null;
   if (pan) {
     nivel.connect(pan);
@@ -416,13 +464,14 @@ export function montarMotor(
   let parado = false;
   return {
     fonte,
-    definir(rpm, carga, volume, lado) {
+    definir(rpm, carga, volume, lado, pres = 1) {
       if (parado) return;
       const t = ctx.currentTime;
       alvo(fonte.playbackRate, rpm, t, 0.04);
       alvo(gEscuro.gain, 1 - carga, t, 0.04);
       alvo(gClaro.gain, carga, t, 0.04);
-      alvo(nivel.gain, ganho * nivelMotor(rpm, carga) * volume, t, 0.08);
+      alvo(nivel.gain, ganho * PRESENCA_MOTOR.compensa * nivelMotor(rpm, carga) * volume, t, 0.08);
+      alvo(gPresenca.gain, PRESENCA_MOTOR.ganho * pres, t, 0.15);
       if (pan) alvo(pan.pan, lado, t, 0.08);
     },
     parar(seg = 0.25) {
@@ -790,7 +839,7 @@ export function criarSomVeiculos(op: OpcoesSomVeiculos) {
       const e = motores.get(v.id)!;
       vg.estado = e;
       const lado = ladoDoSom(v.x - ouvinte.x, v.z - ouvinte.z, ouvinte.rx, ouvinte.rz);
-      vg.voz.definir(e.rpm, e.carga, volumeDistancia(d) * volumeRua, lado);
+      vg.voz.definir(e.rpm, e.carga, volumeDistancia(d) * volumeRua, lado, presencaNaDistancia(d));
     }
   }
 
