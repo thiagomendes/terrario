@@ -206,3 +206,15 @@ O dono viu o esboço (https://claude.ai/artifact/6x1RYL3e5rWfYd3MLC2eW5), aprovo
 6. **A trilha também para a casa e para os marcadores do mapa?** Recomendo **deixar para depois**, numa spec curta, reaproveitando a mesma trilha.
 7. **As setas de texto da 010 ("Léo · 48 m").** Recomendo **tirar**: a carinha as substitui, e a distância em números não ajuda quem não lê. A bolinha no minimapa fica.
 8. **Trilha quando não há caminho a pé** (morro de 2 ou mais blocos, rio). Recomendo que ela vá até o ponto mais perto e termine ali com uma estrela grande pulsando, e que a carinha mostre o anel do pulo para sugerir "segure para pular". Escada automática fica para depois.
+
+## Notas da implementação (13 nov 2026)
+- **T02–T08 feitas.** Arquivos: `src/jogo/acharAmigo.ts` (a conta da borda), `src/jogo/caminho.ts` (o caminho a pé, em fatias), `src/nucleo/lugarPulo.ts` (o lugar do pulo, usado pelo núcleo), `src/render/acharAmigo.ts` (projeção, escondido, trilha, pulo e chamado), `src/render/estrelinhas.ts` (a trilha e o puf), `src/ui/carinhasAmigos.ts` (carinhas, montinho, pontinhos, bandeja e Chamar). Saíram `src/ui/setasAmigos.ts` e o esboço continua só com `?esboco=amigos`.
+- **Protocolo:** comandos `pularPerto` e `chamarAmigos`, evento `chamado` e o campo `pulo` do `teleporte`. `VERSAO_REDE` 4 → 5: o servidor precisa ser publicado junto.
+- **Diferenças do texto da spec:**
+  - A busca do caminho não foi para um worker: anda em fatias de 4 ms por quadro (gerador), no próprio cliente. Num caminho sem saída (que explora tudo) leva ~30 ms de CPU no celular imitado (4x), espalhados em ~8 quadros; nenhum quadro passa da fatia.
+  - O combate do pulo conta qualquer dano dos últimos 5 s, menos a fome (senão quem está com fome nunca pularia).
+  - O destino do pulo vale na telemetria por 3 s (o cliente mostra o puf da saída antes de ir).
+  - O lugar do pulo prefere onde nada fica entre os dois e há espaço para a câmera atrás; ao chegar, a câmera fica atrás da criança, olhando para o amigo.
+  - Com o amigo dentro de casa, os anéis em volta dele vão até 8 blocos e acham o lado de fora (perto da porta, quando ela é o lado aberto); não há procura explícita da porta.
+  - As caixas do HUD são medidas a cada 5 s, ao mudar a janela e ao abrir a bandeja (o HUD do toque aparece depois de entrar).
+  - Com poucos amigos, tocar numa carinha também a marca como escolhida (aro creme) enquanto a trilha dura.
