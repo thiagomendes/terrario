@@ -341,6 +341,45 @@ async function medirNaEsquina(page: Page, rotulo: string) {
     await page.waitForTimeout(3000);
     await medir(page, `${rotulo}-${n ? 'noite' : 'dia'}`, pt.esquina.yaw);
   }
+  // spec 014 (T15), CIDADE_AB=1: o mesmo, de dia, com os veículos escondidos (o custo deles)
+  if (process.env.CIDADE_AB) {
+    await noite(page, false);
+    // o que está à vista, por começo de nome (as malhas ativas do quadro)
+    console.log(
+      `ATIVAS ${await page.evaluate(() => {
+        const scene = window.__brumaluz!.cenaBabylon!();
+        const n: Record<string, number> = {};
+        for (const m of scene.getActiveMeshes().data) {
+          const k = m.name.replace(/[-_]?\d.*$/, '');
+          n[k] = (n[k] ?? 0) + 1;
+        }
+        const alvos = scene.customRenderTargets.map((t) => t.name);
+        return JSON.stringify({
+          n,
+          alvos,
+          veiculos: window.__brumaluz!.veiculos?.().filter((v) => v.visivel).length,
+          custo: window.__brumaluz!.custoVeiculos?.(),
+        });
+      })}`,
+    );
+    await page.evaluate(() => {
+      const scene = window.__brumaluz!.cenaBabylon!();
+      const w = window as unknown as { __semVeiculos: boolean };
+      w.__semVeiculos = true;
+      scene.onBeforeRenderObservable.add(() => {
+        for (const m of scene.meshes)
+          if (m.name.startsWith('veiculo')) m.isVisible = !w.__semVeiculos;
+      });
+    });
+    await page.waitForTimeout(3000);
+    await medir(page, `${rotulo}-dia-sem-veiculos`, pt.esquina.yaw);
+    // e de novo com eles (a primeira medida pode ter pegado o mundo ainda assentando)
+    await page.evaluate(() => {
+      (window as unknown as { __semVeiculos: boolean }).__semVeiculos = false;
+    });
+    await page.waitForTimeout(3000);
+    await medir(page, `${rotulo}-dia-com-veiculos-de-novo`, pt.esquina.yaw);
+  }
 }
 
 test('medida na esquina do parque (computador)', async ({ page }) => {

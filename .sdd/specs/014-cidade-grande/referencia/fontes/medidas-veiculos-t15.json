@@ -1,0 +1,16 @@
+{
+ "pistas": "e2e/veiculos.spec.ts 'um minuto de veículos andando': 60 s, 3222 quadros conferidos um a um (cada canto da caixa e cada roda de cada veículo desenhado numa célula de pista): nenhum fora; 10 veículos no mundo, 9 andaram 95 a 157 blocos (o sorvete ficou na vaga); motores do sorvete e da polícia tocando, rotação até 2,05; uí-uí tocou na praça.",
+ "duasTelas": "e2e/veiculos.spec.ts 'duas crianças na nuvem' (servidor de salas de verdade, Ana no computador e Bia no celular): 10 veículos nas duas, 5 amostras ao mesmo tempo, pior diferença de posição 0,10 a 0,14 bloco.",
+ "desempenho": {
+  "como": "e2e/cidade-predios.spec.ts 'medida na esquina do parque' (CIDADE_T04=1 DESACELERAR_CPU=4 CIDADE_AB=1, GPU, com vsync), a criança na esquina do parque (os veículos param e fazem fila ali), 6 s parado e 6 s girando; CIDADE_AB esconde os veículos e mostra de novo no mesmo mundo",
+  "celular": {"dia": {"parado": 60, "girando": 59}, "noite": {"parado": 59, "girando": 59}, "diaSemVeiculos": {"parado": 60.2, "girando": 60}},
+  "computador": {
+   "dia (primeira medida, o mundo ainda assentando)": {"parado": 40.5, "girando": 48},
+   "noite": {"parado": 43.3, "girando": 52.3},
+   "diaSemVeiculos": {"parado": 52.2, "girando": 54.3},
+   "diaComVeiculosDeNovo": {"parado": 50.3, "girando": 55.3}
+  },
+  "custoDosVeiculos": "uns 2 quadros parado no computador (52,2 -> 50,3), nada girando nem no celular; 8 carrocerias à vista + 1 chamada das rodas + 1 das luzes",
+  "referenciaT11": "computador girando 42 (lacuna aceita); agora 48 a 55"
+ }
+}

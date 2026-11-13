@@ -464,6 +464,9 @@ export interface EstadoDepuracao {
   poseVeiculo?: (id: number, s: number) => { x: number; z: number; yaw: number };
   /** Spec 014 (T15, testes): veículos desenhados com roda ou canto fora da pista (vazio: ok). */
   veiculosForaDaPista?: () => string[];
+  /** Spec 014 (T15, testes): a régua da rua (volumes da trilha e da natureza; null: os de sempre). */
+  volumesAmbiente?: (musica: number | null, natureza: number | null, vozes?: number | null) => void;
+  tocarSorvete?: (qual: 'inteira' | 'frase') => void;
   /** Spec 014 (T15, testes): cala os sons dos veículos (a régua da rua sem eles). */
   calarVeiculos?: (mudo: boolean) => void;
   /** Spec 014 (T15, testes): grava o som do jogo (a saída do motor), PCM 16 bits em base64. */
@@ -4639,6 +4642,8 @@ export function criarCena(
     somVeiculos = criarSomVeiculos({
       motor: motorAudio,
       base: import.meta.env.BASE_URL ?? '/',
+      // o motor se ouve com a música: a trilha abaixa com um carrinho andando perto
+      aoAbaixarTrilha: (f) => ambiente?.definirAbaixar(f),
       aoTocar: ehTesteDeTela()
         ? (id) => {
             tocadosVeiculos.push(id);
@@ -4653,6 +4658,17 @@ export function criarCena(
     if (ehTesteDeTela()) {
       estado.somVeiculos = () => ({ ...somVeiculos!.info(), tocados: tocadosVeiculos.slice() });
       estado.calarVeiculos = (m) => somVeiculos!.definirMudo(m);
+      estado.tocarSorvete = (q) => somVeiculos!.tocarSorvete(q);
+      // a régua: o volume da trilha e da natureza (null: o das Configurações)
+      estado.volumesAmbiente = (musica, natureza, falas = null) => {
+        const c = configAtual as Config | null;
+        ambiente?.definirVolumes(
+          musica ?? c?.volumeMusica ?? 0.6,
+          natureza ?? c?.volumeAmbiente ?? 0.8,
+        );
+        // as vozes dos bichos e dos moradores (a régua mede só a rua contra a trilha)
+        motorAudio.definirVolume('vozes', falas ?? c?.volumeVozes ?? 1);
+      };
     }
   }
   /** Onde a criança ouve (o boneco) e a direita da câmera que se vê. */

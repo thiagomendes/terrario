@@ -256,6 +256,8 @@ interface FiltroSom extends NoAudio {
   type: string;
   frequency: ParamEnvelope;
   Q: ParamEnvelope;
+  /** Ganho do filtro de pico (dB). */
+  gain?: ParamEnvelope;
 }
 
 interface BufferSom {
@@ -1046,7 +1048,20 @@ export interface Ambiente {
    * buzininha sai sintetizada e os outros ficam para a próxima). Null: só sintetizados.
    */
   definirSonsDaRua(f: ((som: SomDaRua, volume: number) => boolean) | null): void;
+  /**
+   * Spec 014 (T15): abaixa a trilha (gravada e sintetizada) enquanto um carrinho anda perto,
+   * para o motor se ouvir: `f` de 0 (nada) a 1 (`ABAIXAR_TRILHA_DB` e o vale de `VALE_TRILHA_DB`
+   * nos graves-médios, onde o motor soa), em rampa macia de ~1 s.
+   */
+  definirAbaixar(f: number): void;
 }
+
+/** Spec 014 (T15): quanto a trilha abaixa com um carrinho andando perto (dB). */
+export const ABAIXAR_TRILHA_DB = 4;
+/** E o vale nos graves-médios da trilha nessa hora (dB, pico em 180 Hz). */
+export const VALE_TRILHA_DB = 3;
+/** Constante de tempo da rampa (s): ~1 s até chegar. */
+const TAU_ABAIXAR = 0.33;
 
 /** Spec 014: os sons gravados do ambiente da cidade (`ambiente` no índice de sons). */
 export type SomDaRua = 'pardal' | 'buzininha' | 'grilo';
@@ -1237,6 +1252,10 @@ export function iniciarAmbiente(
   let busSintetizada: GanhoSom | null = null;
   /** A trilha gravada (spec 019): mesmo volume de "Música", sem reverb. */
   let busGravada: GanhoSom | null = null;
+  /** Spec 014 (T15): a trilha abaixada quando um carrinho anda perto (ganho e vale). */
+  let abaixar: GanhoSom | null = null;
+  let vale: FiltroSom | null = null;
+  let fAbaixar = 0;
   let sintetizada = 1;
   /** Até quando a sintetizada ainda soa (a rampa para 0 acaba aqui). */
   let sintetizadaAte = Infinity;
@@ -1554,13 +1573,23 @@ export function iniciarAmbiente(
         busNatureza.connect(mestre);
         busMusica = ctx.createGain() as GanhoSom;
         busMusica.gain.value = 0.6 * volMusica;
-        busMusica.connect(mestre);
+        // a trilha passa pelo abaixar (ganho) e pelo vale dos graves-médios antes do mestre
+        abaixar = ctx.createGain() as GanhoSom;
+        abaixar.gain.value = Math.pow(10, (-ABAIXAR_TRILHA_DB * fAbaixar) / 20);
+        vale = ctx.createBiquadFilter();
+        vale.type = 'peaking';
+        vale.frequency.value = 180;
+        vale.Q.value = 0.9;
+        if (vale.gain) vale.gain.value = -VALE_TRILHA_DB * fAbaixar;
+        abaixar.connect(vale);
+        vale.connect(mestre);
+        busMusica.connect(abaixar);
         busSintetizada = ctx.createGain() as GanhoSom;
         busSintetizada.gain.value = sintetizada;
         busSintetizada.connect(busMusica);
         busGravada = ctx.createGain() as GanhoSom;
         busGravada.gain.value = 0.6 * volMusica * GANHO_TRILHA_GRAVADA;
-        busGravada.connect(mestre);
+        busGravada.connect(abaixar);
         if (ctx.createConvolver) {
           const rev = ctx.createConvolver();
           rev.buffer = respostaReverb(ctx, 3.2);
@@ -1668,6 +1697,24 @@ export function iniciarAmbiente(
     },
     definirSonsDaRua(f) {
       sonsDaRua = f;
+    },
+    definirAbaixar(f) {
+      const alvo = Math.max(0, Math.min(1, f));
+      if (Math.abs(alvo - fAbaixar) < 0.01) return;
+      fAbaixar = alvo;
+      if (!ctxA || !abaixar) return;
+      const t = ctxA.currentTime;
+      const g = Math.pow(10, (-ABAIXAR_TRILHA_DB * alvo) / 20);
+      const ga = abaixar.gain as ParamEnvelope & {
+        setTargetAtTime?(v: number, t: number, k: number): void;
+      };
+      if (ga.setTargetAtTime) ga.setTargetAtTime(g, t, TAU_ABAIXAR);
+      else ga.value = g;
+      const gv = vale?.gain as
+        | (ParamEnvelope & { setTargetAtTime?(v: number, t: number, k: number): void })
+        | undefined;
+      if (gv?.setTargetAtTime) gv.setTargetAtTime(-VALE_TRILHA_DB * alvo, t, TAU_ABAIXAR);
+      else if (gv) gv.value = -VALE_TRILHA_DB * alvo;
     },
     definirVolumes(musica, natureza) {
       volMusica = musica;

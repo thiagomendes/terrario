@@ -25,6 +25,7 @@ import { lerIndiceSons } from './indiceSons';
 import { inicioSemAtraso } from './vozesGravadas';
 import type { ContextoAudio, FonteAudio, GrupoAudio, MotorAudio, NoAudio } from './motor';
 import { criarGerador, type Gerador } from './variacao';
+import { ABAIXAR_TRILHA_DB } from './sons';
 import type { TipoVeiculo } from '../jogo/veiculos';
 
 // ------------------------------------------------------------------ modelo de marchas (puro)
@@ -220,6 +221,16 @@ export function ladoDoSom(dx: number, dz: number, rx: number, rz: number): numbe
   return Math.max(-1, Math.min(1, lado * 0.8 * Math.min(1, d / 1.5)));
 }
 
+/**
+ * Quanto a trilha abaixa (0 a 1) com um carrinho andando a `d` blocos: inteira até 6, nada a
+ * partir de 12 (spec 014, T15: o dono não ouvia o motor com a música por cima).
+ */
+export function pertoDeAbaixar(d: number): number {
+  if (d <= 6) return 1;
+  if (d >= 12) return 0;
+  return (12 - d) / 6;
+}
+
 // ------------------------------------------------------------------ regra da musiquinha (pura)
 
 export const FRASE_MIN_S = 90;
@@ -269,15 +280,19 @@ export function passoSorvete(
  * - "uí-uí": −26 contra −24,6; freio a ar: no nível do motor do ônibus arrancando;
  * - musiquinha do sorvete: −30 contra −24,6 (5,4 dB abaixo da trilha);
  * - buzina e "toc" de perto: no grupo dos efeitos, no nível dos toques do canteiro.
- * A régua dos veículos (`reguaVeiculos.ts`, e2e) confere a rua contra a trilha sozinha.
+ * A régua da rua (`e2e/veiculos.spec.ts`, T15) gravou a saída do jogo, com a natureza e as falas
+ * caladas, acompanhando um táxi andando: com estes ganhos o motor rodando perto fica uns 2 a 3 dB
+ * abaixo da trilha (o esboço: 2,4), um pouco acima dela só arrancando; o uí-uí, o freio e a
+ * musiquinha subiram 3 dB sobre a conta (o lado do som divide a voz entre as duas caixas), e a
+ * musiquinha fica uns 6 dB abaixo da trilha.
  */
 export const GANHO_SOM_VEICULO = {
-  lacoCarro: 0.1,
-  lacoOnibus: 0.13,
-  lacoSorvete: 0.07,
-  uiui: 0.09,
-  freio: 0.08,
-  sorvete: 0.056,
+  lacoCarro: 0.17,
+  lacoOnibus: 0.22,
+  lacoSorvete: 0.12,
+  uiui: 0.127,
+  freio: 0.113,
+  sorvete: 0.079,
   buzina: 0.2,
   toc: 0.25,
 } as const;
@@ -489,6 +504,8 @@ export interface OpcoesSomVeiculos {
   rng?: Gerador;
   /** Testes de tela: o que tocou. */
   aoTocar?: (id: string) => void;
+  /** A trilha abaixa (0 a 1) com um carrinho andando perto: o motor se ouve com a música. */
+  aoAbaixarTrilha?: (f: number) => void;
 }
 
 interface Vaga {
@@ -535,11 +552,15 @@ export function criarSomVeiculos(op: OpcoesSomVeiculos) {
   let sorvete: EstadoSorvete = { proxima: null };
   let musiquinha: Musiquinha | null = null;
   let chegouSorvete = false;
+  /** Volume e lado do sorvete no último quadro (testes: a frase forçada). */
+  let sorveteOuvido = { vol: 0, lado: 0 };
   let volumeMusica = 1;
   let volumeRua = 1;
   /** Testes (a régua da rua): os veículos calados. */
   let mudo = false;
   let ultimo = -1;
+  /** Quanto a trilha está abaixada agora (0 a 1). */
+  let abaixado = 0;
   const ultimaBuzina = new Map<number, number>();
 
   function decodificar(bytes: ArrayBuffer): Promise<BufferVeiculo> {
@@ -684,6 +705,16 @@ export function criarSomVeiculos(op: OpcoesSomVeiculos) {
     }
     const sorveteVe = lista.find((v) => v.tipo === 'sorvete');
     const dist = (v: VeiculoOuvido) => Math.hypot(v.x - ouvinte.x, v.z - ouvinte.z);
+    // a trilha abaixa com um carrinho andando perto (parado em marcha lenta não conta)
+    let f = 0;
+    if (pronto && !mudo && podeTocar())
+      for (const v of lista) if (v.v > 0.3) f = Math.max(f, pertoDeAbaixar(dist(v)));
+    if (Math.abs(f - abaixado) > 0.02 || (f === 0 && abaixado !== 0)) {
+      abaixado = f;
+      op.aoAbaixarTrilha?.(f);
+    }
+    // a musiquinha acompanha a trilha (fica sempre o mesmo tanto abaixo dela)
+    const comTrilha = Math.pow(10, (-ABAIXAR_TRILHA_DB * abaixado) / 20);
     // musiquinha do sorvete
     if (sorveteVe) {
       const d = dist(sorveteVe);
@@ -707,10 +738,16 @@ export function criarSomVeiculos(op: OpcoesSomVeiculos) {
         ouvinte.rx,
         ouvinte.rz,
       );
+      sorveteOuvido = { vol, lado };
       if (r.tocar && pronto && !mudo && vol > 0.01) tocarMusiquinha(r.tocar, vol, lado);
       if (musiquinha && motor.contexto) {
         const t = motor.contexto.currentTime;
-        alvo(musiquinha.volume.gain, GANHO_SOM_VEICULO.sorvete * vol * volumeMusica, t, 0.15);
+        alvo(
+          musiquinha.volume.gain,
+          GANHO_SOM_VEICULO.sorvete * vol * volumeMusica * comTrilha,
+          t,
+          0.15,
+        );
         if (musiquinha.pan) alvo(musiquinha.pan.pan, lado, t, 0.15);
       }
     }
@@ -797,6 +834,10 @@ export function criarSomVeiculos(op: OpcoesSomVeiculos) {
     get pronto() {
       return pronto;
     },
+    /** Testes (a régua): toca a musiquinha agora, de onde o sorvete está, sem a regra. */
+    tocarSorvete(qual: 'inteira' | 'frase'): void {
+      tocarMusiquinha(qual, sorveteOuvido.vol, sorveteOuvido.lado);
+    },
     /** Testes: cala os veículos (para medir a rua sem eles). */
     definirMudo(m: boolean): void {
       mudo = m;
@@ -825,6 +866,8 @@ export function criarSomVeiculos(op: OpcoesSomVeiculos) {
     },
     liberar(): void {
       geracao++;
+      if (abaixado !== 0) op.aoAbaixarTrilha?.(0);
+      abaixado = 0;
       for (let i = vagas.length - 1; i >= 0; i--) soltarVaga(i);
       try {
         musiquinha?.fonte.stop();

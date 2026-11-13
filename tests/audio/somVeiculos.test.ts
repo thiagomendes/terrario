@@ -10,6 +10,7 @@ import {
   passoMotor,
   passoSorvete,
   perfilDoTipo,
+  pertoDeAbaixar,
   volumeDistancia,
   type EstadoMotor,
   type EstadoSorvete,
@@ -112,6 +113,16 @@ describe('motor dos veículos (curva de rotação com marchas, do esboço)', () 
   it('o nível sobe acelerando (o pedal e a rotação), como no esboço', () => {
     expect(nivelMotor(1, 0.12)).toBeCloseTo(0.56, 2);
     expect(nivelMotor(2.35, 0.9)).toBeGreaterThan(2 * nivelMotor(1, 0.12));
+  });
+});
+
+describe('a trilha abaixa com um carrinho andando perto', () => {
+  it('inteira até 6 blocos, nada a partir de 12', () => {
+    expect(pertoDeAbaixar(2)).toBe(1);
+    expect(pertoDeAbaixar(6)).toBe(1);
+    expect(pertoDeAbaixar(9)).toBeCloseTo(0.5, 5);
+    expect(pertoDeAbaixar(12)).toBe(0);
+    expect(pertoDeAbaixar(30)).toBe(0);
   });
 });
 

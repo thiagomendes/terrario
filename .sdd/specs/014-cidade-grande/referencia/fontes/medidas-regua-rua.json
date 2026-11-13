@@ -1,0 +1,42 @@
+{
+ "como": "e2e/veiculos.spec.ts, testes 'régua da rua' e 'amostra do motor' (VEICULOS_REGUA=1 VEICULOS_REGUA_S=60, GPU): a saída do jogo de verdade gravada (o compressor do motor de áudio, estéreo 44,1 kHz), Configurações padrão (Música 60%); na régua, natureza e falas de bichos e moradores caladas nas três gravações de cada lugar: só a trilha (veículos calados), só a rua (trilha calada) e as duas. A criança acompanha o táxi voando 4,5 blocos acima (mais baixo que isso o núcleo conta como 'em cima do teto' e o táxi não anda). RMS: janelas de 100 ms, média de potência das que soam (> -65 dB) sem as 5% mais altas (scripts-veiculos/regua_rua.py). LUFS: ebur128 integrado do ffmpeg (com o portão, mede só quando soa).",
+ "esboco": "rua com veículos -24,0 LUFS contra a trilha sozinha -24,4 (+0,4); motor perto -27 dB contra a trilha -24,6 (2,4 abaixo); musiquinha -30 contra -24,6 (5,4 abaixo)",
+ "ganhos": "GANHO_SOM_VEICULO de src/audio/somVeiculos.ts: lacoCarro 0,17, lacoOnibus 0,22, lacoSorvete 0,12, uiui 0,127, freio 0,113, sorvete 0,079 (abaixa junto com a trilha), buzina 0,2, toc 0,25; a trilha abaixa 4 dB com vale de 3 dB em 180 Hz (rampa de ~1 s) com um carrinho andando a até 6 blocos, sumindo até 12 (src/audio/sons.ts, definirAbaixar)",
+ "lugares": {
+  "taxi 15 s (acompanhando um táxi andando, de perto)": {
+   "trilhaRms": -44.8,
+   "ruaRms": -44.5,
+   "ruaMenosTrilhaDb": 0.3,
+   "juntasRms": -43.3,
+   "juntasMenosTrilhaDb": 1.4,
+   "trilhaLufs": -42.6,
+   "ruaLufs": -42.1,
+   "juntasLufs": -41.1,
+   "nota": "com a trilha abaixada 4 dB, o motor fica uns 4,5 dB acima dela"
+  },
+  "praca 60 s (esquina da praça, de frente para a rua)": {
+   "trilhaRms": -44.2,
+   "ruaRmsQuandoSoa": -52.0,
+   "juntasRms": -43.9,
+   "juntasMenosTrilhaDb": 0.2,
+   "trilhaLufs": -41.9,
+   "ruaLufs": -47.7,
+   "juntasLufs": -41.7,
+   "juntasMenosTrilhaLu": 0.2
+  },
+  "sorvete 7,5 s (a frase, de perto do carrinho)": {
+   "trilhaRms": -44.3,
+   "fraseRms": -50.2,
+   "fraseMenosTrilhaDb": -5.8,
+   "trilhaLufs": -41.9,
+   "fraseLufs": -45.5,
+   "fraseMenosTrilhaLu": -3.6
+  }
+ },
+ "amostra do motor (15 s, o táxi arranca da parada e sobe as três marchas)": {
+  "jogoInteiroRms": -38.9,
+  "jogoInteiroLufs": -35.3
+ },
+ "historico": "T14 com os ganhos da conta (0,1 no carro): o táxi da régua ficou parado em marcha lenta debaixo da criança (ela pairava 3 blocos acima) e mediu 8 dB abaixo da trilha; o dono não ouviu o motor nas amostras. Corrigido o teste e o ganho.",
+ "decisao": "Depois de ouvir (12 nov 2026): no equilíbrio do esboço o dono não ouvia o motor com a música por cima no jogo inteiro; alvo novo: o motor de um carrinho andando perto se ouve com a música. A régua confere (e2e): táxi sozinho >= trilha - 1,5 dB; esquina da praça (rua + trilha) <= trilha + 0,9 dB; frase da musiquinha <= trilha - 3 dB."
+}
