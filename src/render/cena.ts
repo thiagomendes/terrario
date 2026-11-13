@@ -304,6 +304,7 @@ import { criarOutrosJogadores } from './outrosJogadores';
 // spec 015 (gestos): roda, previsão, comando e o que chega do núcleo
 import { gestoDoAnimador } from '../personagem/gestos';
 import { criarGestosJogo, type GestosJogo } from './gestosJogo';
+import { criarAcharAmigo, type AcharAmigo } from './acharAmigo';
 import { amostrarMapaChunk } from './mapaChunk';
 import { conexaoLocal, type Conexao } from '../cliente/conexao';
 import { criarEstadoCliente } from '../cliente/estado';
@@ -602,6 +603,8 @@ export interface EstadoDepuracao {
   renascer?: () => void;
   /** Spec 016: "Voltar para casa" (a cama ou o ponto de nascer). */
   voltarCasa?: () => void;
+  /** Spec 021: achar o amigo (carinhas, trilha, pular para perto e chamar). */
+  acharAmigo?: import('./acharAmigo').ApiAcharAmigo;
   definirSpawn?: (x: number, z: number) => void;
   inventario?: import('../jogo/inventario').Inventario;
   alvo?: { x: number; y: number; z: number; normal: Vec3 } | null;
@@ -1019,6 +1022,8 @@ export function criarCena(
   const personagem = criarPersonagem(scene, aparencia);
   const animador = criarAnimador(camera.rotation.y);
   let gestos: GestosJogo | undefined;
+  /** Spec 021: as carinhas dos amigos na borda, a trilha, o pulo e o chamar. */
+  let acharAmigo: AcharAmigo | undefined;
   let velocidadeHoriz = 0;
   /** Velocidade do jogador em x e z (blocos/s): o boneco vira para onde anda. */
   let velX = 0;
@@ -3662,6 +3667,7 @@ export function criarCena(
     atualizarItens(dtQuadro, tempo);
     quadroCriaturas?.(dtQuadro, tempo);
     outrosJogadores.atualizar(dtQuadro, Math.max(0.2, luzJogador * (0.45 + 0.55 * luzDia)));
+    acharAmigo?.quadro();
     quadroConstrucao?.(tempo);
     atualizarFantasmas(tempo);
     renderVeiculos?.quadro(Math.min(dtBruto, 0.1), tempo);
@@ -3880,6 +3886,20 @@ export function criarCena(
     local: () => ({ gesto: gestoDoAnimador(animador), balao: gestos!.balao.gesto }),
     moradores: () => renderCriaturas.gestosMoradores(),
   };
+  // spec 021: achar o amigo (as carinhas na borda, a trilha, o pulo e o chamar)
+  acharAmigo = criarAcharAmigo({
+    scene,
+    jogador: () => controle.jogador,
+    amigos: () => outrosJogadores.lista,
+    bloco: blocoEm,
+    pode: () => {
+      const b = document.body;
+      return (
+        !b.dataset.overlay && !b.classList.contains('modo-foto') && !b.classList.contains('tela-titulo')
+      );
+    },
+  });
+  estado.acharAmigo = acharAmigo.api;
   /** Até onde o bicho apontado vale, dos olhos (o núcleo confere 7 blocos no chão). */
   const ALCANCE_BICHO = 3.6;
   function criaturaApontada() {

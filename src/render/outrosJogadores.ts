@@ -274,6 +274,8 @@ export function criarOutrosJogadores(scene: Scene) {
       return [...outros.values()].map((o) => ({
         id: o.id,
         apelido: o.apelido,
+        /** Spec 021: a aparência passada a limpo, em texto (a foto da carinha). */
+        aparencia: o.chaveAparencia,
         x: o.x,
         y: o.y,
         z: o.z,

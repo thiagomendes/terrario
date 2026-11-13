@@ -125,10 +125,10 @@ for (const [id, nome] of TEMAS) {
     }
     await minerando;
 
-    // Bia longe: seta na borda da tela e bolinha no minimapa
+    // Bia longe: a carinha dela na borda da tela (spec 021) e a bolinha no minimapa
     await bia.evaluate(([x, z]) => window.__brumaluz!.teleportar!(x - 46, z + 20), [pa[0], pa[2]]);
     await ana.waitForTimeout(6000);
-    await foto(ana, `${id}-seta-amigo`);
+    await foto(ana, `${id}-carinha-amigo`);
     await ana.context().close();
     await bia.context().close();
   });

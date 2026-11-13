@@ -57,7 +57,6 @@ const VAZIA: PreviaMundo = {
   fechado: false,
   cheio: false,
 };
-import { CSS_SETAS, criarSetasAmigos } from './ui/setasAmigos';
 import type { criarCena } from './render/cena';
 
 type Cena = ReturnType<typeof criarCena>;
@@ -72,7 +71,6 @@ function estilo(): void {
   e.textContent =
     CSS_BRINQUEDO +
     CSS_AMIGOS +
-    CSS_SETAS +
     `
 .carregando-nuvem {
   position: fixed; inset: 0; z-index: 80; display: grid; place-items: center; padding: 24px;
@@ -532,15 +530,7 @@ export function ligarAmigos(raiz: HTMLElement, cena: Cena, op: OpcoesAmigos): vo
     setTimeout(() => recarregar(), 300);
   });
   const aviso = criarAvisoConexao(raiz);
-  // achar os amigos: seta na borda da tela para quem está longe
-  criarSetasAmigos(raiz, {
-    posicao: () => {
-      const p = cena.estado.posicao;
-      const r = cena.estado.rotacao;
-      return p && r ? { x: p[0], z: p[2], yaw: r[1] } : null;
-    },
-    amigos: () => cena.estado.outrosJogadores?.() ?? [],
-  });
+  // achar os amigos (spec 021): as carinhas na borda vêm da cena; a seta de texto saiu
   let caiu = false;
   nv.conexao.aoEstado((e, motivo) => {
     aviso.mostrar(e);
