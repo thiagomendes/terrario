@@ -4,10 +4,10 @@ import { mkdirSync } from 'node:fs';
 /**
  * O palco dos testes da spec 021 "Achar o amigo": abre o jogo, vai para o Rancho com morros,
  * põe amigos de mentirinha (o gancho `amigosDeTeste`) e tira fotos conferindo que nenhuma
- * carinha tapa o HUD. Pasta: ACHAR_PASTA (padrão test-results/achar021).
+ * carinha tapa o HUD. Pasta: ACHAR_PASTA (padrão capturas-021, fora de test-results, que o Playwright limpa).
  */
 declare const process: { env: Record<string, string | undefined> };
-export const PASTA = process.env.ACHAR_PASTA ?? 'test-results/achar021';
+export const PASTA = process.env.ACHAR_PASTA ?? 'capturas-021';
 
 /** Os 7 amigos (sala de 8): cada um com a fantasia e o cabelo dele. */
 export const AMIGOS: Record<string, Record<string, unknown>> = {
