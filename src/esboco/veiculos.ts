@@ -52,6 +52,10 @@ interface EsbocoVeiculos {
   mover(qual: Qual, x: number, z: number, yaw?: number): void;
   balao(qual: Qual, texto: string | null): void;
   custo(): Record<string, { triangulos: number; chamadas: number; pecas: number }>;
+  /** 014 (ajustes, esboço do tamanho): a escala da carroceria (`sy`: a altura, se diferente). */
+  escalar(qual: Qual, s: number, sy?: number): void;
+  /** Comprimento, largura e altura de cada veículo na cena (blocos). */
+  medir(): Record<string, { comp: number; larg: number; alt: number }>;
   pontos: Partial<Record<Qual, [number, number, number]>>;
 }
 
@@ -792,6 +796,27 @@ function ligar(scene: Scene): void {
         .copyFrom(ve.raiz.position)
         .addInPlace(new Vector3(0, ve.qual === 'onibus' ? 3.4 : 2.7, 0));
       baloes.set(qual, pl2);
+    },
+    escalar(qual, sx, sy) {
+      const ve = veiculos.get(qual);
+      if (ve) ve.raiz.scaling.set(sx, sy ?? sx, sx);
+    },
+    medir() {
+      const r: Record<string, { comp: number; larg: number; alt: number }> = {};
+      for (const [qual, ve] of veiculos) {
+        const giro = ve.raiz.rotation.y;
+        ve.raiz.rotation.y = 0;
+        ve.raiz.computeWorldMatrix(true);
+        const { min, max } = ve.raiz.getHierarchyBoundingVectors(true);
+        ve.raiz.rotation.y = giro;
+        const c = (n: number) => Math.round(n * 100) / 100;
+        r[qual] = {
+          comp: c(max.x - min.x),
+          larg: c(max.z - min.z),
+          alt: c(max.y - ve.raiz.position.y),
+        };
+      }
+      return r;
     },
     custo() {
       const r: Record<string, { triangulos: number; chamadas: number; pecas: number }> = {};
