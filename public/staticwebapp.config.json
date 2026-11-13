@@ -14,7 +14,8 @@
     }
   ],
   "mimeTypes": {
-    ".webmanifest": "application/manifest+json"
+    ".webmanifest": "application/manifest+json",
+    ".wasm": "application/wasm"
   },
   "globalHeaders": {
     "X-Content-Type-Options": "nosniff",

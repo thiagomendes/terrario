@@ -37,6 +37,7 @@ import {
   type ProtecaoMundo,
 } from '../world/protecao';
 import { Engine } from '@babylonjs/core/Engines/engine';
+import type { AbstractEngine } from '@babylonjs/core/Engines/abstractEngine';
 import { Scene } from '@babylonjs/core/scene';
 import { UniversalCamera } from '@babylonjs/core/Cameras/universalCamera';
 import { HemisphericLight } from '@babylonjs/core/Lights/hemisphericLight';
@@ -744,6 +745,11 @@ export interface OpcoesCena {
    * bloco). Padrão: o jogador local, dono de tudo o que colocou.
    */
   identidade?: { voce: string; donoDoMundo: string };
+  /**
+   * Spec 029 (só a página de medida, ?medir=webgpu): o motor já criado (WebGPU). Sem ele, o
+   * WebGL2 de sempre.
+   */
+  motor?: AbstractEngine;
 }
 
 /** Sistema que guarda estado próprio no salvamento do mundo (inventário, vida, mapa...). */
@@ -824,7 +830,8 @@ export function criarCena(
 
   // Sem preserveDrawingBuffer: GPUs de celular descartam o buffer a cada quadro (menos banda).
   // Capturas e miniaturas renderizam um quadro e leem o canvas na mesma tarefa.
-  const engine = new Engine(canvas, false, { preserveDrawingBuffer: false, stencil: true });
+  const engine: AbstractEngine =
+    opcoes.motor ?? new Engine(canvas, false, { preserveDrawingBuffer: false, stencil: true });
   const scene = new Scene(engine);
   // contador interno do Babylon (sem SceneInstrumentation ele só soma: a medição faz a conta)
   estado.cenaBabylon = () => scene;

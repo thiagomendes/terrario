@@ -1,4 +1,4 @@
-import type { Engine } from '@babylonjs/core/Engines/engine';
+import type { AbstractEngine } from '@babylonjs/core/Engines/abstractEngine';
 
 /**
  * Sair da página sem deixar a placa de vídeo presa. No iPhone (WebKit), a página nova começava
@@ -56,7 +56,7 @@ export function recarregar(): void {
 }
 
 /** Desmonta um engine do Babylon e devolve o contexto WebGL ao navegador na hora. */
-export function liberarEngine(engine: Engine): void {
+export function liberarEngine(engine: AbstractEngine): void {
   let gl: WebGLRenderingContext | null = null;
   try {
     gl = (engine as unknown as { _gl?: WebGLRenderingContext })._gl ?? null;

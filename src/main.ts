@@ -63,6 +63,9 @@ let avisoMundosNovos: string | null = null;
 
 async function iniciar(app: HTMLElement): Promise<void> {
   registrarCatalogo();
+  // spec 029: a página escondida de medida do WebGPU (só com ?medir=webgpu), pedaço à parte
+  if (new URLSearchParams(location.search).get('medir') === 'webgpu')
+    return (await import('./medida/webgpu')).medirWebGPU(app);
   const repo = criarRepositorioMundos(armazemIndexedDB());
   // spec 016 (decisão do dono, 11 nov 2026): os mundos de antes não abrem mais; apagados uma
   // vez só (o personagem e as preferências ficam). Falhando, o jogo segue com o que tiver.

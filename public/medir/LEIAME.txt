@@ -1,0 +1,7 @@
+Conversor GLSL -> WGSL do Babylon.js, usado só pela página de medida ?medir=webgpu (spec 029).
+O jogo nunca baixa estes arquivos.
+
+Origem (13 nov 2026): https://cdn.babylonjs.com/glslang/ e https://cdn.babylonjs.com/twgsl/
+- glslang.js / glslang.wasm: Khronos glslang (BSD-3-Clause e outras licenças livres do projeto).
+- twgsl.js / twgsl.wasm: twgsl (Tint, do Dawn/Google, Apache-2.0 / BSD-3-Clause).
+Servidos daqui para o aparelho não falar com outro site.
