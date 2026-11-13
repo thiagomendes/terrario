@@ -460,6 +460,14 @@ export const FANTASIAS_DE_MORADOR: readonly FantasiaDef[] = [
 
 const POR_ID = new Map([...FANTASIAS, ...FANTASIAS_DE_MORADOR].map((f) => [f.id, f]));
 
+/**
+ * Esboço da spec 023 (só com `?esboco=alma`): fantasias de prêmio feitas com as peças que já
+ * existem. Entram só na busca por id (o boneco veste), nunca na aba Fantasias.
+ */
+export function registrarFantasiaDeEsboco(def: FantasiaDef): void {
+  if (!POR_ID.has(def.id)) POR_ID.set(def.id, def);
+}
+
 export function fantasiaPorId(id: unknown): FantasiaDef | undefined {
   return typeof id === 'string' ? POR_ID.get(id) : undefined;
 }

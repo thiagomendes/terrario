@@ -15,6 +15,11 @@ function base() {
   return { atlas: atlas!, fonte: fonte! };
 }
 
+/** O atlas e o canvas dele, já gerados (o esboço da 023 desenha as obras com os mesmos tiles). */
+export function atlasDosIcones(): { atlas: Atlas; fonte: HTMLCanvasElement } {
+  return base();
+}
+
 /** Desenha o bloco em perspectiva isométrica (topo e dois lados sombreados). */
 export function desenharIsometrico(
   ctx: CanvasRenderingContext2D,

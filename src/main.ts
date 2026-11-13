@@ -205,6 +205,8 @@ async function iniciar(app: HTMLElement): Promise<void> {
   if (esboco === 'amigos') (await import('./esboco/amigos')).prepararEsbocoAmigos();
   // esboço 014d (só com ?esboco=estetica): a estética firme dos veículos ao lado da de hoje
   if (esboco === 'estetica') (await import('./esboco/veiculosEstetica')).prepararEsbocoEstetica();
+  // esboço da spec 023 (só com ?esboco=alma): missões, moedinhas, álbum, habilidades e lojinha
+  if (esboco === 'alma') (await import('./esboco/alma')).prepararEsbocoAlma();
   // em prévia de outro tema nada é salvo: o mundo continua sendo do tema dele
   cena = criarCena(canvas, hotbar, {
     mundo: atual,
