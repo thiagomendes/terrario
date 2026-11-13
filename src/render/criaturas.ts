@@ -64,6 +64,8 @@ interface Modelo {
   /** Materiais próprios (descartados com o bicho). */
   proprios: StandardMaterial[];
   fase: number;
+  /** Fase do abano do rabo (acumulada: mudar a rapidez não faz o rabo dar um pulo de fase). */
+  faseRabo: number;
   /** Posição no quadro anterior: as pernas seguem o deslocamento real, não o desejado. */
   ultX: number;
   ultZ: number;
@@ -423,6 +425,7 @@ export function criarRenderCriaturas(
       proprios: [plastico, suave, forte],
       substitui: new Set([plastico, suave]),
       fase: 0,
+      faseRabo: c.id,
       ultX: c.x,
       ultZ: c.z,
       vel: 0,
@@ -616,6 +619,7 @@ export function criarRenderCriaturas(
         m.amp += (aberturaDoPasso(rapidez) - m.amp) * Math.min(1, dt * 8);
         const passo = passoSemDeslizar(rapidez, m.quadril, m.amp);
         m.fase += dt * passo.ritmo;
+        m.faseRabo += dt * (c.tipo === 'peixe' ? 9 : 4 + Math.min(2.5, m.vel * 1.2));
         m.roda += dt * m.vel * 5.1;
         const abertura = passo.abertura * (m.amp > 0.001 ? 1 : 0);
         const seno = Math.sin(m.fase);
@@ -687,11 +691,11 @@ export function criarRenderCriaturas(
                   p.base.z + (mov.cabecada ?? 0) * (0.5 - 0.5 * Math.cos(m.fase * 2)) * andando;
                 break;
               case 'cauda':
-                // abana mais rápido andando e sacode com o passo
-                p.no.rotation.y =
-                  Math.sin(tempo * (c.tipo === 'peixe' ? 9 : 4 + Math.min(4, m.vel * 1.5)) + c.id) *
-                  0.35;
-                p.no.rotation.x = Math.sin(m.fase * 2) * 0.12 * andando;
+                // abana um pouco mais rápido andando. A fase é acumulada: com sin(tempo · ritmo),
+                // cada mudança de rapidez mudava o ritmo de um tempo já grande e o rabo saltava de
+                // fase a cada quadro (abanava rapidíssimo andando). Sem a sacudida no passo, que
+                // nos de perna curta (ritmo alto) virava um tremido.
+                p.no.rotation.y = Math.sin(m.faseRabo) * 0.35;
                 break;
               case 'roda':
                 p.no.rotation.x = m.roda;
