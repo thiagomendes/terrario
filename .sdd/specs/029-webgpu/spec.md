@@ -1,7 +1,7 @@
 ---
 id: 029-webgpu
 title: 'WebGPU: desenhar mais rápido nos aparelhos que suportam, com o modo de hoje de reserva'
-status: DRAFT
+status: PARKED
 base_branch: main
 created_at: 2026-11-13T19:00:00Z
 ---
@@ -42,3 +42,15 @@ O dono, em 13 nov 2026, perguntou quanto se aproveita e o que se ganha trocando 
 
 ## Decisões do dono
 - 13 nov 2026: teste logo depois da 022; se positivo, a spec é feita em seguida, antes da 023 e das lojas.
+- 13 nov 2026, resultado no iPhone do dono (iOS com WebGPU, tela 428×748, densidade 3):
+
+| | quadros/s | processador por quadro |
+|---|---|---|
+| WebGL2 | 59,7 | 2,86 ms |
+| WebGPU | 59,8 | 3,14 ms |
+| WebGPU + snapshot | 54,9 | 417 erros |
+
+  - Os dois modos batem no teto de 60 quadros, e o processador fica bem folgado (3 ms de 16,6 ms): nessa cena, o iPhone não é limitado pelo desenho.
+  - No Safari, água, céu, horizonte e pós-processos converteram. Partículas e brilho do Babylon falharam.
+  - Decisão do dono: "Ficou ruim no iPhone, nem vou medir nos tablets. Vamos abortar também essa spec aí." A spec fica parada.
+  - A página `?medir=webgpu` continua escondida no site para medir de novo no futuro (código em `src/medida/`).
