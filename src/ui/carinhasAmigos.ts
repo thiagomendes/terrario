@@ -32,17 +32,17 @@ body:has(.entrada:not([hidden])) .carinhas-amigos { display: none; }
   transition: width 0.25s, height 0.25s, margin 0.25s; will-change: transform; }
 .carinha-amigo[hidden] { display: none; }
 .carinha-amigo .aro { position: absolute; inset: 0; border-radius: 50%; background: #fbf7ee;
-  box-shadow: 0 0 0 4px var(--cor), 0 4px 0 4px rgba(0,0,0,0.12), 0 8px 18px rgba(20, 16, 40, 0.35); overflow: hidden; }
+  box-shadow: 0 0 0 4px var(--cor), 0 4px 0 4px rgba(0,0,0,0.12), 0 6px 10px rgba(20, 16, 40, 0.3); overflow: hidden; }
 .carinha-amigo .aro canvas { position: absolute; inset: 2px; width: calc(100% - 4px); height: calc(100% - 4px); }
 .carinha-amigo .seta { position: absolute; left: 50%; top: 50%; width: 0; height: 0; transform-origin: 0 0; }
 .carinha-amigo .seta::before { content: ''; position: absolute; left: calc(var(--d) / 2 + 3px); top: -9px;
   border-top: 9px solid transparent; border-bottom: 9px solid transparent; border-left: 12px solid var(--cor);
-  filter: drop-shadow(0 2px 0 rgba(0,0,0,0.15)); }
+}
 .carinha-amigo.sem-seta .seta { display: none; }
 .carinha-amigo .anel { position: absolute; inset: -9px; width: calc(100% + 18px); height: calc(100% + 18px); pointer-events: none; transform: rotate(-90deg); }
 .carinha-amigo .anel circle { fill: none; stroke-width: 6; stroke-linecap: round; }
 .carinha-amigo .anel .fundo { stroke: rgba(255, 250, 240, 0.75); }
-.carinha-amigo .anel .cheio { stroke: #ffd45a; filter: drop-shadow(0 0 3px #fff6c4); }
+.carinha-amigo .anel .cheio { stroke: #ffd45a; }
 /* sem caminho a pé: o anel pisca de leve, "segure para pular" */
 .carinha-amigo.sugere-pulo .anel .fundo { stroke-dasharray: 100 0; animation: amg-sugere 1.4s ease-in-out infinite; }
 .carinha-amigo.chamando .aro { animation: amg-pulso 0.9s ease-in-out infinite; }
@@ -53,7 +53,7 @@ body:has(.entrada:not([hidden])) .carinhas-amigos { display: none; }
   box-shadow: 0 2px 0 rgba(150, 110, 60, 0.4); display: none; animation: amg-aceno 0.6s ease-in-out infinite alternate; pointer-events: none; }
 .carinha-amigo.chamando .mao { display: block; }
 .carinha-amigo .mao svg { width: 30px; height: 30px; }
-.carinha-amigo.escolhido .aro { box-shadow: 0 0 0 5px var(--cor), 0 0 0 8px #fff6d8, 0 4px 0 8px rgba(0,0,0,0.12), 0 8px 18px rgba(20, 16, 40, 0.35); }
+.carinha-amigo.escolhido .aro { box-shadow: 0 0 0 5px var(--cor), 0 0 0 8px #fff6d8, 0 4px 0 8px rgba(0,0,0,0.12), 0 6px 10px rgba(20, 16, 40, 0.3); }
 /* o "não" do pulo sem lugar seguro: balança de um lado para o outro */
 .carinha-amigo.nao .aro { animation: amg-nao 0.5s ease-in-out 2; }
 /* pontinho do amigo não escolhido: o desenho de 16 px numa área de toque de 40 px */
@@ -77,7 +77,7 @@ body:has(.entrada:not([hidden])) .carinhas-amigos { display: none; }
 .montinho-amigos .seta { position: absolute; width: 0; height: 0; }
 .montinho-amigos .seta::before { content: ''; position: absolute; left: var(--alcance); top: -8px;
   border-top: 8px solid transparent; border-bottom: 8px solid transparent; border-left: 11px solid #fbf7ee;
-  filter: drop-shadow(0 2px 0 rgba(0,0,0,0.2)); }
+}
 /* botões na coluna do minimapa: a bandeja das carinhas e o Chamar */
 .botao-chamar.tocando { animation: amg-pulso 0.5s ease-in-out 3; }
 .botao-chamar.tocando::after { content: ''; position: absolute; inset: -4px; border-radius: 50%; border: 4px solid #ffb547; animation: amg-onda 1s ease-out 2; pointer-events: none; }

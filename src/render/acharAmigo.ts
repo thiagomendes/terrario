@@ -73,8 +73,9 @@ export function criarAcharAmigo(f: FonteAcharAmigo) {
   const naTela: AmigoNaTela[] = [];
   /** Custo da camada por quadro (ms, média móvel), para a régua de desempenho. */
   let custoMs = 0;
-  /** As partes do custo (média móvel, ms): trilha e projeção, escondido, borda, desenho. */
-  const partes = [0, 0, 0, 0];
+  /** As partes do custo (média móvel, ms): até a projeção, escondido, borda, desenho; e só a trilha. */
+  const partes = [0, 0, 0, 0, 0];
+  let tTrilha = 0;
   const ouvintes = {
     tocar: (_id: string) => {},
     pular: (_id: string) => {},
@@ -325,6 +326,16 @@ export function criarAcharAmigo(f: FonteAcharAmigo) {
     }
   }
 
+  /**
+   * O tamanho da janela, lido só quando ela muda (ler `innerWidth` por quadro, logo depois de
+   * mexer nas carinhas, obriga o navegador a refazer o layout na hora).
+   */
+  const tela = [window.innerWidth, window.innerHeight];
+  window.addEventListener('resize', () => {
+    tela[0] = window.innerWidth;
+    tela[1] = window.innerHeight;
+  });
+
   function quadro(): void {
     const t0 = performance.now();
     const agora = t0 / 1000;
@@ -348,15 +359,16 @@ export function criarAcharAmigo(f: FonteAcharAmigo) {
           .map((a) => ({ id: a.id, perto: a.d < PERTO_AMIGO }))
       : [];
     carinhas.botoes(bandeja, escolhido, mapa.size > MAX_CARINHAS, mapa);
+    const tA = performance.now();
     quadroTrilha(agora, amigos);
+    tTrilha = t0 + (performance.now() - tA);
     // a resposta do núcleo sumiu (caiu a rede): solta o pedido
     if (pedido && agora - pedido.em > 4) pedido = null;
     if (!cam || !amigos.length || !f.pode() || desligada) {
       carinhas.desenhar([], mapa);
       return;
     }
-    const W = window.innerWidth;
-    const H = window.innerHeight;
+    const [W, H] = tela;
     const motor = scene.getEngine();
     const larg = motor.getRenderWidth();
     const alt = motor.getRenderHeight();
@@ -398,6 +410,7 @@ export function criarAcharAmigo(f: FonteAcharAmigo) {
     const t4 = performance.now();
     custoMs += (t4 - t0 - custoMs) * 0.05;
     partes[0] += (t1 - t0 - partes[0]) * 0.05;
+    partes[4] += (tTrilha - t0 - partes[4]) * 0.05;
     partes[1] += (t2 - t1 - partes[1]) * 0.05;
     partes[2] += (t3 - t2 - partes[2]) * 0.05;
     partes[3] += (t4 - t3 - partes[3]) * 0.05;
