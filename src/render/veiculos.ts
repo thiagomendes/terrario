@@ -41,7 +41,8 @@ import {
 import type { ReplicaVeiculos } from '../cliente/veiculos';
 import { criarPlasticos } from './formas';
 import { criarBalao, type BalaoGesto } from './balaoGesto';
-import { dadosRoda, modeloDoVeiculo, type Luz, type ModeloVeiculo } from './veiculosModelos';
+import { modeloDoVeiculo, type Luz, type ModeloVeiculo } from './veiculosModelos';
+import { dadosRodaRefinada } from './veiculosRefinados';
 
 /** Até onde a carroceria de verdade, as rodas e as luzes (mais longe, a versão simples). */
 export const PERTO_VEICULO = 30;
@@ -67,6 +68,16 @@ interface VeiculoVisto {
   /** Balanço da carroceria (rad) e a velocidade dele (mola). */
   inclina: number;
   inclinaV: number;
+  /** 014c, o peso: deita na curva (rad), afunda e sobe (blocos), com as velocidades das molas. */
+  roll: number;
+  rollV: number;
+  heave: number;
+  heaveV: number;
+  /** Esterço das rodas da frente (rad) e o entre-eixos (a conta dele). */
+  esterco: number;
+  entreEixos: number;
+  /** x das rodas da frente (no modelo). */
+  eixoFrente: number;
   /** Porta do ônibus: 0 fechada, 1 aberta. */
   porta: number;
   posicoesPorta: Float32Array | null;
@@ -90,6 +101,8 @@ export interface VeiculoNaTela {
   k?: string;
   /** Está no mundo agora (o plano já chegou). */
   ativo: boolean;
+  /** 014c: desenhado agora (em cima de chão desenhado). */
+  desenhado: boolean;
   visivel: boolean;
   perto: boolean;
 }
@@ -101,6 +114,7 @@ const COR_LUZ: Record<Luz['tipo'], { dia: Color3; noite: Color3 }> = {
   lanterna: { dia: Color3.FromHexString('#d8443c'), noite: new Color3(1.3, 0.35, 0.28) },
   giroAzul: { dia: Color3.FromHexString('#6fa8ff'), noite: new Color3(0.5, 0.85, 1.5) },
   giroBranco: { dia: Color3.FromHexString('#e9f1ff'), noite: new Color3(1.3, 1.35, 1.45) },
+  giroVermelho: { dia: Color3.FromHexString('#ff6a5e'), noite: new Color3(1.45, 0.4, 0.32) },
 };
 
 export function criarRenderVeiculos(
@@ -120,7 +134,7 @@ export function criarRenderVeiculos(
 
   // rodas: uma malha, instâncias
   const rodas = new Mesh('veiculos-rodas', scene);
-  dadosRoda().applyToMesh(rodas);
+  dadosRodaRefinada().applyToMesh(rodas);
   rodas.material = pl.corVertice(0.2) ?? matCorpo;
   rodas.hasVertexAlpha = false;
   rodas.isPickable = false;
@@ -194,6 +208,13 @@ export function criarRenderVeiculos(
       perto: false,
       inclina: 0,
       inclinaV: 0,
+      roll: 0,
+      rollV: 0,
+      heave: 0,
+      heaveV: 0,
+      esterco: 0,
+      entreEixos: modelo.entreEixos,
+      eixoFrente: Math.max(...modelo.rodas.map((r) => r.x)),
       porta: 0,
       posicoesPorta,
       pulo: 0,
@@ -211,6 +232,8 @@ export function criarRenderVeiculos(
   const tmpV = new Vector3();
   const tmpS = new Vector3();
   const semGiro = Quaternion.Identity();
+  const poseA: Pose = { x: 0, z: 0, hx: 1, hz: 0, yaw: 0 };
+  const poseB: Pose = { x: 0, z: 0, hx: 1, hz: 0, yaw: 0 };
 
   /** Porta do ônibus: desliza para trás (e um tico para fora) conforme `f`. */
   function moverPorta(ve: VeiculoVisto, f: number): void {
@@ -269,13 +292,35 @@ export function criarRenderVeiculos(
       ve.raiz.scaling.set(sx, sx, sx);
       if (ve.surgir > 0) ve.surgir = Math.max(0, ve.surgir - dt * 2.5);
       if (ve.pulo > 0) ve.pulo = Math.max(0, ve.pulo - dt * 3.5);
-      // balanço: mola até o ângulo da aceleração (freando, o nariz desce)
-      const alvo = Math.max(-0.06, Math.min(0.05, ve.a * 0.028));
-      ve.inclinaV += ((alvo - ve.inclina) * 90 - ve.inclinaV * 12) * dt;
-      ve.inclina += ve.inclinaV * dt;
-      const eixo = ve.inclina < 0 ? ve.m.eixos[1] : ve.m.eixos[0];
-      ve.corpo.setPivotPoint(tmpV.set(eixo, 0.3, 0));
+      // 014c, o peso (aprovado no esboço): molas com pouco amortecimento (quica uma vez e
+      // assenta). Freando, o nariz mergulha; arrancando, agacha; na curva deita para fora; a
+      // suspensão sobe e desce de leve na rua; as rodas da frente esterçam para a curva.
+      poseDoVeiculo(ve.r, ve.m, e.s - 0.25, poseA);
+      poseDoVeiculo(ve.r, ve.m, e.s + 0.25, poseB);
+      const kEsq = ((poseB.hx - poseA.hx) * -ve.pose.hz + (poseB.hz - poseA.hz) * ve.pose.hx) / 0.5;
+      const aLado = ve.v * ve.v * kEsq;
+      const w = Math.PI * 2 * 1.7;
+      const amort = 2 * 0.34 * w;
+      const alvoPitch = Math.max(-0.075, Math.min(0.06, ve.a * 0.032));
+      const alvoRoll = Math.max(-0.085, Math.min(0.085, -aLado * 0.055));
+      const ruido = ve.v > 0.05 ? Math.sin(e.s * 2.9) * 0.004 + Math.sin(e.s * 7.3) * 0.002 : 0;
+      const alvoHeave = -Math.abs(ve.a) * 0.006 - Math.abs(aLado) * 0.004 + ruido;
+      const passos = Math.max(1, Math.ceil(dt / 0.01));
+      const h = dt / passos;
+      for (let i = 0; i < passos; i++) {
+        ve.inclinaV += ((alvoPitch - ve.inclina) * w * w - amort * ve.inclinaV) * h;
+        ve.inclina += ve.inclinaV * h;
+        ve.rollV += ((alvoRoll - ve.roll) * w * w - amort * ve.rollV) * h;
+        ve.roll += ve.rollV * h;
+        ve.heaveV += ((alvoHeave - ve.heave) * w * w - amort * ve.heaveV) * h;
+        ve.heave += ve.heaveV * h;
+      }
+      ve.corpo.setPivotPoint(tmpV.set(0, ve.m.raioRoda, 0));
+      ve.corpo.position.y = ve.heave;
       ve.corpo.rotation.z = ve.inclina;
+      ve.corpo.rotation.x = ve.roll;
+      const alvoEst = Math.max(-0.5, Math.min(0.5, -Math.atan(ve.entreEixos * kEsq)));
+      ve.esterco += (alvoEst - ve.esterco) * Math.min(1, dt * 10);
       // porta do ônibus aberta no ponto
       if (ve.modelo.porta) {
         const quer = ve.k === 'ponto' ? 1 : 0;
@@ -315,7 +360,8 @@ export function criarRenderVeiculos(
         if (nr >= MAX_RODAS) break;
         // o ângulo da roda é o caminho andado (anda para a frente = gira para trás em z)
         const ang = -ve.s / rd.raio;
-        Quaternion.RotationAxisToRef(Vector3.Forward(), ang, tmpQ);
+        // as da frente esterçam (giro em y por cima do giro da roda)
+        Quaternion.RotationYawPitchRollToRef(rd.x === ve.eixoFrente ? ve.esterco : 0, 0, ang, tmpQ);
         tmpS.set(rd.raio, rd.raio, rd.raio);
         Matrix.ComposeToRef(tmpS, tmpQ, tmpV.set(rd.x, rd.raio, rd.z), tmpM);
         tmpM.multiplyToRef(raizM, tmpM2);
@@ -332,6 +378,7 @@ export function criarRenderVeiculos(
         let f = noite;
         if (lz.tipo === 'giroAzul') f = Math.max(0.15, giro);
         if (lz.tipo === 'giroBranco') f = Math.max(0.15, 1 - giro);
+        if (lz.tipo === 'giroVermelho') f = Math.max(0.15, giro);
         corLuzes[nl * 4] = c.dia.r + (c.noite.r - c.dia.r) * f;
         corLuzes[nl * 4 + 1] = c.dia.g + (c.noite.g - c.dia.g) * f;
         corLuzes[nl * 4 + 2] = c.dia.b + (c.noite.b - c.dia.b) * f;
@@ -437,7 +484,8 @@ export function criarRenderVeiculos(
         v: ve.v,
         a: ve.a,
         k: ve.k,
-        ativo: ve.raiz.isEnabled(),
+        ativo: ve.foraDoChao || ve.raiz.isEnabled(),
+        desenhado: ve.raiz.isEnabled(),
         visivel: ve.visivel,
         perto: ve.perto,
       }));

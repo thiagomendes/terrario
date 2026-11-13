@@ -101,8 +101,8 @@ export const PERFIS_MOTOR: Record<'carro' | 'policia' | 'onibus' | 'sorvete', Pe
 
 export function perfilDoTipo(t: TipoVeiculo): PerfilMotor {
   if (t === 'policia') return PERFIS_MOTOR.policia;
-  if (t === 'onibusAzul' || t === 'onibusVerde') return PERFIS_MOTOR.onibus;
-  if (t === 'sorvete') return PERFIS_MOTOR.sorvete;
+  if (t === 'onibusAzul' || t === 'onibusVerde' || t === 'bombeiros') return PERFIS_MOTOR.onibus;
+  if (t === 'sorvete' || t === 'ambulancia') return PERFIS_MOTOR.sorvete;
   return PERFIS_MOTOR.carro;
 }
 
@@ -304,12 +304,38 @@ export const GANHO_SOM_VEICULO = {
   lacoCarro: 0.48,
   lacoOnibus: 0.62,
   lacoSorvete: 0.34,
-  uiui: 0.75,
+  uiui: 0.9,
   freio: 0.6,
   sorvete: 0.4,
   buzina: 0.5,
   toc: 0.4,
+  sirene: 0.13,
 } as const;
+
+/**
+ * 014c: a sirene macia da ambulância (fá♯–ré, 740/587 Hz) e dos bombeiros (ré–si♭, 587/466 Hz),
+ * a do esboço aprovado: quatro notas de 0,32 s, seno com um pouco da oitava (apito de brinquedo,
+ * sem aspereza), ataque e soltura macios e um vibratinho leve. Feita na hora (sem pacote).
+ */
+export function amostrasSirene(tipo: 'ambulancia' | 'bombeiros', taxa: number): Float32Array {
+  const [f1, f2] = tipo === 'ambulancia' ? [740, 587] : [587, 466];
+  const dur = 0.32;
+  const n = Math.round(dur * taxa);
+  const out = new Float32Array(n * 4);
+  let fase = 0;
+  for (let k = 0; k < 4; k++) {
+    const f = k % 2 ? f2 : f1;
+    for (let i = 0; i < n; i++) {
+      const t = i / taxa;
+      const env = Math.min(1, t / 0.04) * Math.min(1, (dur - t) / 0.08);
+      fase += (2 * Math.PI * f * (1 + 0.008 * Math.sin(2 * Math.PI * 6 * t))) / taxa;
+      out[k * n + i] = (Math.sin(fase) + 0.18 * Math.sin(2 * fase)) * env * 0.6;
+    }
+  }
+  const N = out.length;
+  for (let i = 0; i < N; i++) out[i] *= Math.min(1, i / (0.1 * taxa)) * Math.min(1, (N - i) / (0.25 * taxa));
+  return out;
+}
 
 export type ChaveSomVeiculo =
   | 'lacoCarro'
@@ -329,8 +355,8 @@ export interface ClipVeiculo {
 }
 
 export function lacoDoTipo(t: TipoVeiculo): 'lacoCarro' | 'lacoOnibus' | 'lacoSorvete' {
-  if (t === 'onibusAzul' || t === 'onibusVerde') return 'lacoOnibus';
-  if (t === 'sorvete') return 'lacoSorvete';
+  if (t === 'onibusAzul' || t === 'onibusVerde' || t === 'bombeiros') return 'lacoOnibus';
+  if (t === 'sorvete' || t === 'ambulancia') return 'lacoSorvete';
   return 'lacoCarro';
 }
 
@@ -865,6 +891,33 @@ export function criarSomVeiculos(op: OpcoesSomVeiculos) {
       toque('freio', GANHO_SOM_VEICULO.freio * vol * volumeRua, lado, 'ambiente', 'freio');
     else if (o === 'uiui')
       toque('uiui', GANHO_SOM_VEICULO.uiui * vol * volumeRua, lado, 'ambiente', 'uiui');
+    else if (o === 'sirene' && (ve.tipo === 'ambulancia' || ve.tipo === 'bombeiros'))
+      sirene(ve.tipo, GANHO_SOM_VEICULO.sirene * vol * volumeRua, lado);
+  }
+
+  const sirenes = new Map<string, unknown>();
+  function sirene(tipo: 'ambulancia' | 'bombeiros', ganho: number, lado: number): void {
+    if (!podeTocar() || ganho <= 0.002) return;
+    const ok = motor.tocar(
+      (ctx, destino) => {
+        const c = ctx as CtxVeiculo & {
+          sampleRate: number;
+          createBuffer(n: number, l: number, t: number): { getChannelData(i: number): Float32Array; duration: number };
+        };
+        type Buf = { getChannelData(i: number): Float32Array; duration: number };
+        let b = sirenes.get(tipo) as Buf | undefined;
+        if (!b) {
+          const a = amostrasSirene(tipo, c.sampleRate);
+          const nb = c.createBuffer(1, a.length, c.sampleRate) as Buf;
+          nb.getChannelData(0).set(a);
+          sirenes.set(tipo, nb);
+          b = nb;
+        }
+        return montarToque(c, destino, b, { o: [0, 0], s: b.duration }, ganho, lado).fonte;
+      },
+      { grupo: 'ambiente' },
+    );
+    if (ok) op.aoTocar?.(`sirene:${tipo}`);
   }
 
   function buzina(ve: VeiculoOuvido, vol: number, lado: number, agora: number): void {
@@ -897,8 +950,9 @@ export function criarSomVeiculos(op: OpcoesSomVeiculos) {
       tocarMusiquinha(qual, sorveteOuvido.vol, sorveteOuvido.lado);
     },
     /** Testes: um toque (uí-uí, freio, buzina) tocado agora, cheio, como se fosse perto. */
-    tocarToque(qual: 'uiui' | 'freio' | 'buzina'): void {
-      if (qual === 'buzina') toque('buzina', GANHO_SOM_VEICULO.buzina, 0, 'efeitos', 'buzina');
+    tocarToque(qual: 'uiui' | 'freio' | 'buzina' | 'ambulancia' | 'bombeiros'): void {
+      if (qual === 'ambulancia' || qual === 'bombeiros') sirene(qual, GANHO_SOM_VEICULO.sirene * volumeRua, 0);
+      else if (qual === 'buzina') toque('buzina', GANHO_SOM_VEICULO.buzina, 0, 'efeitos', 'buzina');
       else toque(qual, GANHO_SOM_VEICULO[qual] * volumeRua, 0, 'ambiente', qual);
     },
     /** Testes: cala os veículos (para medir a rua sem eles). */

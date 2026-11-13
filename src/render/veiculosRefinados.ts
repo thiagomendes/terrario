@@ -10,9 +10,9 @@ import { Matrix } from '@babylonjs/core/Maths/math.vector';
 import { VertexData } from '@babylonjs/core/Meshes/mesh.vertexData';
 import { CreateSphereVertexData } from '@babylonjs/core/Meshes/Builders/sphereBuilder';
 import { CreateCylinderVertexData } from '@babylonjs/core/Meshes/Builders/cylinderBuilder';
-import { dadosAnel, dadosCaixaArredondada } from '../render/formas';
-import { MEDIDAS, MODELO_DO_TIPO } from '../jogo/veiculos';
-import type { Luz, Roda } from '../render/veiculosModelos';
+import { dadosAnel, dadosCaixaArredondada } from './formas';
+import { MEDIDAS, MODELO_DO_TIPO, type TipoVeiculo } from '../jogo/veiculos';
+import type { Luz, Roda } from './veiculosModelos';
 import {
   Pecas,
   carroceria,
@@ -40,6 +40,8 @@ export interface ModeloRefinado {
   triangulos: number;
   /** Entre-eixos (já na escala): a conta do esterço das rodas da frente. */
   entreEixos: number;
+  /** A porta do ônibus: vértices de `ini` a `fim` (exclusivo). */
+  porta?: { ini: number; fim: number };
 }
 
 const VIDRO = '#9fd6ef';
@@ -48,6 +50,7 @@ const BOCHECHA = '#ff9aa8';
 const BOCA = '#6a3a4a';
 
 interface Obra {
+  porta?: { ini: number; fim: number };
   f: Forma;
   p: Pecas;
   luzes: Luz[];
@@ -209,7 +212,7 @@ function janelaLado(
   }
 }
 
-function fechar(o: Obra, tipo: 'taxi' | 'civil' | 'onibusAzul' | 'sorvete', entreEixos: number): ModeloRefinado {
+function fechar(o: Obra, tipo: TipoVeiculo, entreEixos: number): ModeloRefinado {
   const e = MEDIDAS[MODELO_DO_TIPO[tipo]].escala;
   const corpo = o.p.juntar();
   corpo.transform(Matrix.Scaling(e, e, e));
@@ -223,22 +226,27 @@ function fechar(o: Obra, tipo: 'taxi' | 'civil' | 'onibusAzul' | 'sorvete', entr
     rodas: o.rodas.map((r) => ({ x: r.x * e, z: r.z * e, raio: r.raio * e })),
     triangulos: tri(corpo),
     entreEixos: entreEixos * e,
+    porta: o.porta,
   };
 }
 
 // ------------------------------------------------------------------ táxi
 
-function taxi(frente: Frente, cor = '#ffc21a', ehTaxi = true): ModeloRefinado {
+/**
+ * O carro (táxi, carro comum e polícia): teto mais reto e a cintura mais marcada (014c, o dono:
+ * menos "inflado"), caixas de roda com o friso escuro em volta.
+ */
+function taxi(frente: Frente, cor = '#ffc21a', ehTaxi = true, policia = false): ModeloRefinado {
   const AMARELO = cor;
   const topo = curva([
-    [-1.5, 1.26],
-    [-1.28, 1.36],
-    [-0.9, 2.02],
-    [-0.7, 2.08],
-    [0.0, 2.08],
-    [0.58, 1.44],
-    [1.2, 1.36],
-    [1.55, 1.2],
+    [-1.5, 1.24],
+    [-1.3, 1.32],
+    [-0.98, 1.94],
+    [-0.82, 1.98],
+    [0.08, 1.98],
+    [0.6, 1.4],
+    [1.2, 1.32],
+    [1.55, 1.16],
   ]);
   const f: Forma = {
     x0: -1.5,
@@ -252,18 +260,20 @@ function taxi(frente: Frente, cor = '#ffc21a', ehTaxi = true): ModeloRefinado {
       { x: 0.9, y: 0.47, r: 0.6, dentro: 0.48 },
     ],
     topo,
-    meia: (_x, y) => 0.86 * (1 - 0.2 * suave(1.35, 2.08, y)),
-    ponta: 4.2,
-    n: 3,
+    meia: (_x, y) => 0.86 * (1 - 0.24 * suave(1.32, 1.98, y)),
+    ponta: 4.8,
+    n: 3.6,
   };
   const o: Obra = { f, p: new Pecas(), luzes: [], rodas: [] };
-  // mais anéis na altura das rodas: a borda da caixa de roda fica lisa
+  // mais anéis na altura das rodas: a borda da caixa de roda fica lisa (a polícia: preta
+  // embaixo, branca em cima, com a linha cortada na malha)
   o.p.add(
     carroceria(f, 52, [
-      { ate: 1.1, passos: 10, cor: AMARELO },
-      { ate: null, passos: 7, cor: AMARELO },
+      { ate: 1.1, passos: 10, cor: policia ? '#f7f8fb' : AMARELO },
+      { ate: null, passos: 7, cor: policia ? '#f7f8fb' : AMARELO },
     ]),
   );
+  frisosDasRodas(o);
   // janelas: a de trás e a da frente de cada lado (a coluna do meio fica amarela)
   const teto = (x: number) => topo(x) - 0.13;
   janelaLado(o, -1.02, -0.3, 1.5, 1.95, 0.12, teto);
@@ -298,8 +308,34 @@ function taxi(frente: Frente, cor = '#ffc21a', ehTaxi = true): ModeloRefinado {
       );
       if (d) o.p.add(d);
     }
-  // a placa de táxi no teto
+  // a placa de táxi no teto; a polícia: estrelinha na porta e o giroflex macio
   if (ehTaxi) taxiPlaca(o);
+  if (policia) {
+    // branca com a faixa preta na cintura (por cima das caixas de roda) e a estrelinha nela
+    for (const lado of [-1, 1]) {
+      const faixa = decalque(
+        f,
+        { u0: -1.32, u1: 1.36, v0: 1.08, v1: 1.3, r: 0.08 },
+        (u, v) => noLado(f, u, v, lado),
+        '#2b2d35',
+        14,
+        2,
+        0.012,
+      );
+      if (faixa) o.p.add(faixa);
+      const st = decalque(
+        f,
+        { u0: -0.26, u1: -0.06, v0: 1.1, v1: 1.28, r: 0.1 },
+        (u, v) => noLado(f, u, v, lado),
+        '#ffd23f',
+        4,
+        4,
+        0.02,
+      );
+      if (st) o.p.add(st);
+    }
+    giroflex(o, -0.35, topo(-0.35) - 0.02, 0.62, ['giroAzul', 'giroBranco']);
+  }
   if (frente === 'cara') {
     for (const z of [-0.42, 0.42]) olho(o, 1.06, z, 0.21);
     boca(o, 0.74, 0.86, 0.12);
@@ -311,7 +347,23 @@ function taxi(frente: Frente, cor = '#ffc21a', ehTaxi = true): ModeloRefinado {
     o.luzes.push({ tipo: 'lanterna', pos: [s[0] + 0.03, 1.12, z], raio: [0.06, 0.11, 0.11] });
   }
   for (const x of [-0.9, 0.9]) for (const z of [-0.66, 0.66]) o.rodas.push({ x, z, raio: 0.47 });
-  return fechar(o, ehTaxi ? 'taxi' : 'civil', 1.8);
+  return fechar(o, policia ? 'policia' : ehTaxi ? 'taxi' : 'civil', 1.8);
+}
+
+/** O friso escuro em volta de cada caixa de roda (cobre a borda da lataria, sem serrilhado). */
+function frisosDasRodas(o: Obra, raio = 0.035) {
+  for (const p of o.f.pocos ?? [])
+    for (const lado of [-1, 1]) {
+      const pts: V3[] = [];
+      for (let k = 0; k <= 16; k++) {
+        const a = (k / 16) * Math.PI;
+        const x = p.x + Math.cos(a) * (p.r + 0.01);
+        const y = p.y + Math.sin(a) * (p.r + 0.01);
+        const s = noLado(o.f, x, y, lado);
+        if (s) pts.push([s[0], s[1], s[2] + lado * 0.012]);
+      }
+      if (pts.length > 2) o.p.add(tubo(pts, raio, '#34353e', 6));
+    }
 }
 
 function taxiPlaca(o: Obra) {
@@ -325,8 +377,7 @@ function taxiPlaca(o: Obra) {
 
 // ------------------------------------------------------------------ ônibus
 
-function onibus(frente: Frente): ModeloRefinado {
-  const AZUL = '#2f7fd8';
+function onibus(frente: Frente, AZUL = '#2f7fd8'): ModeloRefinado {
   const BRANCO = '#f7f5ef';
   const topo = curva([
     [-2.82, 3.8],
@@ -351,6 +402,7 @@ function onibus(frente: Frente): ModeloRefinado {
     n: 4.2,
   };
   const o: Obra = { f, p: new Pecas(), luzes: [], rodas: [] };
+  frisosDasRodas(o, 0.045);
   // duas cores com a linha cortada na malha: azul embaixo, branco, a faixa azul entre os andares
   o.p.add(
     carroceria(
@@ -382,7 +434,9 @@ function onibus(frente: Frente): ModeloRefinado {
       janelaLado(o, a, b, y0, y1, 0.14, teto, VIDRO, temPorta ? [1] : [-1, 1], 5);
     }
   // a porta (do lado direito, z < 0), de vidro, com a moldura branca
+  const ini = o.p.marca;
   janelaLado(o, 1.0, 1.75, 0.5, 2.3, 0.12, teto, '#cfe8f5', [-1], 4);
+  o.porta = { ini, fim: o.p.marca };
   // para-brisas da frente (dois andares) e a janela de trás
   for (const [y0, y1, lado] of [
     [1.6, 2.36, 1],
@@ -443,6 +497,7 @@ function sorvete(frente: Frente): ModeloRefinado {
     n: 3.2,
   };
   const o: Obra = { f, p: new Pecas(), luzes: [], rodas: [] };
+  frisosDasRodas(o, 0.045);
   o.p.add(
     carroceria(f, 44, [
       { ate: 0.74, passos: 3, cor: ROSA_FORTE },
@@ -528,22 +583,30 @@ function sorvete(frente: Frente): ModeloRefinado {
 }
 
 const feitos = new Map<string, ModeloRefinado>();
-export function modeloRefinado(tipo: TipoRefinado, frente: Frente = 'limpa'): ModeloRefinado {
-  const k = `${tipo}|${frente}`;
+export function modeloRefinado(
+  tipo: TipoRefinado | TipoVeiculo,
+  frente: Frente = 'limpa',
+  cor = '#3f7fe0',
+): ModeloRefinado {
+  const k = `${tipo}|${frente}|${cor}`;
   let m = feitos.get(k);
   if (!m) {
     m =
       tipo === 'taxi'
         ? taxi(frente)
         : tipo === 'civil'
-          ? taxi(frente, '#3f7fe0', false)
-          : tipo === 'onibusAzul'
-            ? onibus(frente)
-            : tipo === 'sorvete'
-              ? sorvete(frente)
-              : tipo === 'ambulancia'
-                ? ambulancia()
-                : bombeiros();
+          ? taxi(frente, cor, false)
+          : tipo === 'policia'
+            ? taxi(frente, '#2b2d35', false, true)
+            : tipo === 'onibusAzul'
+              ? onibus(frente)
+              : tipo === 'onibusVerde'
+                ? onibus(frente, '#45b56b')
+                : tipo === 'sorvete'
+                  ? sorvete(frente)
+                  : tipo === 'ambulancia'
+                    ? ambulancia()
+                    : bombeiros();
     feitos.set(k, m);
   }
   return m;
@@ -584,6 +647,7 @@ function ambulancia(): ModeloRefinado {
     n: 3.2,
   };
   const o: Obra = { f, p: new Pecas(), luzes: [], rodas: [] };
+  frisosDasRodas(o, 0.045);
   // a faixa vermelha cortada na malha (linha limpa), o resto branco
   o.p.add(
     carroceria(f, 44, [
@@ -624,7 +688,7 @@ function ambulancia(): ModeloRefinado {
     const c = decalque(f, { u0: -0.9 - w / 2, u1: -0.9 + w / 2, v0: -h / 2, v1: h / 2, r: 0.02 }, (u, v) => emCima(f, u, v), VERMELHO, 2, 2, 0.014);
     if (c) o.p.add(c);
   }
-  giroflex(o, 0.32, topo(0.32) - 0.02, 0.9, ['lanterna', 'giroBranco', 'lanterna']);
+  giroflex(o, 0.32, topo(0.32) - 0.02, 0.9, ['giroVermelho', 'giroBranco', 'giroVermelho']);
   frenteLimpa(o, 0.98, 0.5, 0.12, { y0: 0.62, y1: 0.84, z: 0.28 }, { y0: 0.4, y1: 0.54, z: 0.66 });
   for (const z of [-0.5, 0.5]) {
     const s = naPonta(f, 1.0, z, -1)!;
@@ -671,6 +735,7 @@ function bombeiros(): ModeloRefinado {
     n: 4,
   };
   const o: Obra = { f, p: new Pecas(), luzes: [], rodas: [] };
+  frisosDasRodas(o, 0.045);
   o.p.add(
     carroceria(
       f,
@@ -678,7 +743,9 @@ function bombeiros(): ModeloRefinado {
       [
         { ate: 1.18, passos: 4, cor: VERMELHO },
         { ate: 1.34, passos: 1, cor: BRANCO },
-        { ate: null, passos: 9, cor: VERMELHO },
+        { ate: 2.5, passos: 6, cor: VERMELHO },
+        // o teto branco da cabine (só a cabine passa da caixa dos equipamentos)
+        { ate: null, passos: 3, cor: BRANCO },
       ],
       [-2.5, -2.3, -1.0, -0.95, 0.95, 1.0, 2.3, 2.5],
     ),
@@ -715,7 +782,7 @@ function bombeiros(): ModeloRefinado {
     apoio.transform(Matrix.Translation(x, yEsc - 0.02, 0));
     o.p.add(apoio, '#9aa0ab');
   }
-  giroflex(o, 1.85, topo(1.85) - 0.02, 1.1, ['lanterna', 'giroBranco', 'lanterna']);
+  giroflex(o, 1.85, topo(1.85) - 0.02, 1.1, ['giroVermelho', 'giroBranco', 'giroVermelho']);
   frenteLimpa(o, 1.05, 0.68, 0.15, { y0: 0.66, y1: 1.02, z: 0.42 }, { y0: 0.4, y1: 0.56, z: 0.88 });
   for (const z of [-0.66, 0.66]) {
     const s = naPonta(f, 1.0, z, -1)!;
@@ -745,7 +812,7 @@ export function dadosRodaRefinada(): VertexData {
     partes.add(calota, '#eef0f4');
     const parafuso = CreateSphereVertexData({ diameter: 0.18, segments: 3 });
     parafuso.transform(Matrix.Translation(0.24, 0.1, lado * esp * 0.58));
-    partes.add(parafuso, '#ff6fa8');
+    partes.add(parafuso, '#9aa0ab');
   }
   return partes.juntar();
 }

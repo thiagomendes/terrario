@@ -100,7 +100,15 @@ export function alcanceDoCorpo(p: PessoaNaRua, dx: number, dz: number): number {
   return Math.abs(dx * fx + dz * fz) * c.frente + Math.abs(dx * fz - dz * fx) * c.lado;
 }
 
-export type OcorrenciaVeiculo = 'buzina' | 'ponto' | 'saiu' | 'chegou' | 'sopro' | 'uiui';
+export type OcorrenciaVeiculo =
+  | 'buzina'
+  | 'ponto'
+  | 'saiu'
+  | 'chegou'
+  | 'sopro'
+  | 'uiui'
+  /** 014c: a sirene macia da ambulância e dos bombeiros (rara, com criança perto). */
+  | 'sirene';
 
 export interface EventoVeiculo {
   id: number;
@@ -754,6 +762,17 @@ export function criarTransito(op: OpcoesTransito) {
         v.uiuiEm = T;
         eventos.push({ id: v.def.id, o: 'uiui', x: pose.x, z: pose.z });
       }
+    }
+
+    // 014c: a sirene macia da ambulância e dos bombeiros, rara (como o uí-uí), com criança perto
+    if (
+      (v.def.tipo === 'ambulancia' || v.def.tipo === 'bombeiros') &&
+      vel > 0.5 &&
+      T - v.uiuiEm > UIUI_INTERVALO &&
+      pessoas.some((p) => p.crianca && Math.hypot(p.x - pose.x, p.z - pose.z) < 25)
+    ) {
+      v.uiuiEm = T;
+      eventos.push({ id: v.def.id, o: 'sirene', x: pose.x, z: pose.z });
     }
 
     // encalhe: parado sem criança perto, fora de ponto e vaga

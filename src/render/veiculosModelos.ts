@@ -19,8 +19,9 @@ import { CreateSphereVertexData } from '@babylonjs/core/Meshes/Builders/sphereBu
 import { CreateCylinderVertexData } from '@babylonjs/core/Meshes/Builders/cylinderBuilder';
 import { dadosAnel, dadosCaixaArredondada, dadosPlaca } from './formas';
 import { MEDIDAS, MODELO_DO_TIPO, type TipoVeiculo } from '../jogo/veiculos';
+import { modeloRefinado } from './veiculosRefinados';
 
-export type TipoLuz = 'farol' | 'lanterna' | 'giroAzul' | 'giroBranco';
+export type TipoLuz = 'farol' | 'lanterna' | 'giroAzul' | 'giroBranco' | 'giroVermelho';
 
 /** Uma luz (esfera achatada): centro, semieixos e de que tipo é. */
 export interface Luz {
@@ -346,13 +347,26 @@ function simples(tipo: TipoVeiculo, cor: string, e: number): VertexData {
     m.caixa(1.7, 0.6, 1.4, 0.2, tipo === 'policia' ? '#f7f8fb' : c, -0.25, 1.55, 0, 1);
     for (const x of [-0.9, 0.9]) m.caixa(0.8, 0.8, 1.5, 0.1, preto, x, 0.47, 0, 1);
     for (const z of [-0.45, 0.45]) m.caixa(0.1, 0.3, 0.3, 0.05, '#fffbe8', 1.42, 1.02, z, 1);
-  } else if (tipo === 'sorvete') {
-    m.caixa(3.4, 1.5, 1.7, 0.2, '#ffd1e0', 0, 1.15, 0, 1);
+  } else if (tipo === 'sorvete' || tipo === 'ambulancia') {
+    const amb = tipo === 'ambulancia';
+    m.caixa(3.4, 1.5, 1.7, 0.2, amb ? '#f8f8fb' : '#ffd1e0', 0, 1.15, 0, 1);
+    if (amb) {
+      m.caixa(3.42, 0.22, 1.72, 0.05, '#e8473f', 0, 1.1, 0, 1);
+      for (const x of [-1.05, 1.1]) m.caixa(0.8, 0.8, 1.4, 0.1, preto, x, 0.42, 0, 1);
+      return m.pronto();
+    }
     m.caixa(1.0, 0.8, 1.6, 0.2, '#ffffff', 1.25, 0.85, 0, 1);
     m.caixa(1.9, 0.2, 1.7, 0.05, '#ff6fa8', -0.4, 2.0, 0, 1);
     m.caixa(0.6, 0.9, 0.6, 0.2, '#ff9ec4', -0.4, 2.8, 0, 1);
     for (const x of [-1.05, 1.1]) m.caixa(0.8, 0.8, 1.4, 0.1, preto, x, 0.42, 0, 1);
   } else {
+    if (tipo === 'bombeiros') {
+      m.caixa(5.3, 2.0, 1.95, 0.2, '#e2392f', 0, 1.3, 0, 1);
+      m.caixa(1.3, 0.7, 1.9, 0.2, '#e2392f', 1.85, 2.5, 0, 1);
+      m.caixa(4.0, 0.12, 0.9, 0.05, '#dfe3ea', -0.75, 2.45, 0, 1);
+      for (const x of [-1.75, 1.75]) m.caixa(1.0, 1.0, 1.7, 0.1, preto, x, 0.52, 0, 1);
+      return m.pronto();
+    }
     const c = tipo === 'onibusAzul' ? '#2f7fd8' : '#45b56b';
     m.caixa(5.3, 0.92, 1.95, 0.2, c, 0, 0.9, 0, 1);
     m.caixa(5.2, 1.0 + ANDAR_ONIBUS, 1.85, 0.2, '#f7f5ef', 0, 1.82 + ANDAR_ONIBUS / 2, 0, 1);
@@ -364,15 +378,39 @@ function simples(tipo: TipoVeiculo, cor: string, e: number): VertexData {
 
 const guardados = new Map<string, ModeloVeiculo>();
 
-/** O modelo do veículo (feito uma vez por tipo e cor; quem usa copia os dados). */
-export function modeloDoVeiculo(tipo: TipoVeiculo, cor = '#ff7a6b'): ModeloVeiculo {
+/**
+ * O modelo do veículo (feito uma vez por tipo e cor; quem usa copia os dados). 014c (aprovado
+ * pelo dono): a carroceria esculpida numa peça só, sem carinha (`veiculosRefinados.ts`); a
+ * versão de longe continua a de caixas lisas.
+ */
+export function modeloDoVeiculo(tipo: TipoVeiculo, cor = '#3f7fe0'): ModeloVeiculo & { entreEixos: number } {
   const k = `${tipo}|${cor}`;
+  let r = guardados.get(k);
+  if (r) return r as ModeloVeiculo & { entreEixos: number };
+  const e = MEDIDAS[MODELO_DO_TIPO[tipo]].escala;
+  const m = modeloRefinado(tipo, 'limpa', cor);
+  r = {
+    corpo: m.corpo,
+    porta: m.porta,
+    luzes: m.luzes,
+    rodas: m.rodas,
+    simples: simples(tipo, cor, e),
+    triangulos: m.triangulos,
+    entreEixos: m.entreEixos,
+  } as ModeloVeiculo & { entreEixos: number };
+  guardados.set(k, r);
+  return r as ModeloVeiculo & { entreEixos: number };
+}
+
+/** O modelo de antes do 014c (carinha, peças fundidas): só para comparar no esboço. */
+export function modeloDoVeiculoAntigo(tipo: TipoVeiculo, cor = '#ff7a6b'): ModeloVeiculo {
+  const k = `antigo|${tipo}|${cor}`;
   let r = guardados.get(k);
   if (r) return r;
   const e = MEDIDAS[MODELO_DO_TIPO[tipo]].escala;
   const c: Construcao = { m: new Montador(e), luzes: [], rodas: [], e };
   if (tipo === 'taxi' || tipo === 'civil' || tipo === 'policia') carro(c, tipo, cor);
-  else if (tipo === 'onibusAzul') onibusAzul(c);
+  else if (tipo === 'onibusAzul' || tipo === 'bombeiros') onibusAzul(c);
   else if (tipo === 'onibusVerde') onibusVerde(c);
   else sorvete(c);
   const corpo = c.m.pronto();

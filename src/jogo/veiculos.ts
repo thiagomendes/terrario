@@ -24,7 +24,15 @@ import {
 
 // ------------------------------------------------------------------ a frota
 
-export type TipoVeiculo = 'taxi' | 'civil' | 'policia' | 'onibusAzul' | 'onibusVerde' | 'sorvete';
+export type TipoVeiculo =
+  | 'taxi'
+  | 'civil'
+  | 'policia'
+  | 'onibusAzul'
+  | 'onibusVerde'
+  | 'sorvete'
+  | 'ambulancia'
+  | 'bombeiros';
 export type ModeloVeiculo = 'carro' | 'onibus' | 'sorvete';
 
 export const MODELO_DO_TIPO: Record<TipoVeiculo, ModeloVeiculo> = {
@@ -34,6 +42,9 @@ export const MODELO_DO_TIPO: Record<TipoVeiculo, ModeloVeiculo> = {
   onibusAzul: 'onibus',
   onibusVerde: 'onibus',
   sorvete: 'sorvete',
+  // 014c: a ambulância é uma van do tamanho do sorvete; os bombeiros, do tamanho do ônibus
+  ambulancia: 'sorvete',
+  bombeiros: 'onibus',
 };
 
 /**
@@ -161,7 +172,8 @@ export interface DefVeiculo {
 }
 
 /** As quatro cores aprovadas do carro comum: coral, verde-água, lilás e laranja. */
-export const CORES_CIVIL = ['#ff7a6b', '#6fd3b0', '#b79cf2', '#ffa94d'] as const;
+/** 014c (decisão do dono): dois carros comuns, nas duas cores mais queridas, vermelho e azul. */
+export const CORES_CIVIL = ['#e8473f', '#3f7fe0'] as const;
 
 /**
  * A frota de cada cidade: 2 táxis, 4 carros comuns (um de cada cor), a polícia, os dois
@@ -198,24 +210,24 @@ export const FROTA: readonly DefVeiculo[] = [
     volta: { bi0: 3, bj0: 1, bi1: 3, bj1: 2, sentido: 'horario' },
     fase: 0.3,
   },
+  // 014c: a ambulância (van: só curvas à esquerda, como o sorvete) e os bombeiros (do tamanho do
+  // ônibus: só curvas à direita) no lugar de dois carros comuns; a frota continua com 10
   {
     id: 7,
-    tipo: 'civil',
-    cor: CORES_CIVIL[1],
+    tipo: 'ambulancia',
     volta: { bi0: 0, bj0: 3, bi1: 0, bj1: 4, sentido: 'anti' },
     fase: 0.5,
   },
   {
     id: 8,
     tipo: 'civil',
-    cor: CORES_CIVIL[2],
+    cor: CORES_CIVIL[1],
     volta: { bi0: 1, bj0: 0, bi1: 2, bj1: 0, sentido: 'horario' },
     fase: 0.8,
   },
   {
     id: 9,
-    tipo: 'civil',
-    cor: CORES_CIVIL[3],
+    tipo: 'bombeiros',
     volta: { bi0: 2, bj0: 5, bi1: 3, bj1: 5, sentido: 'horario' },
     fase: 0.15,
   },

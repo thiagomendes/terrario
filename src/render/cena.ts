@@ -485,7 +485,7 @@ export interface EstadoDepuracao {
   /** Spec 014 (T15, testes): cala os sons dos veículos (a régua da rua sem eles). */
   calarVeiculos?: (mudo: boolean) => void;
   /** 014c (testes): um toque de veículo agora, cheio (uí-uí, freio a ar, buzina). */
-  tocarToqueVeiculo?: (qual: 'uiui' | 'freio' | 'buzina') => void;
+  tocarToqueVeiculo?: (qual: 'uiui' | 'freio' | 'buzina' | 'ambulancia' | 'bombeiros') => void;
   /** Spec 014 (T15, testes): grava o som do jogo (a saída do motor), PCM 16 bits em base64. */
   gravarSom?: (segundos: number) => Promise<{ taxa: number; l: string; r: string } | null>;
   /** Spec 014 (T14, testes): os motores que tocam, a musiquinha e os toques. */

@@ -16,7 +16,7 @@ import { CreateSphereVertexData } from '@babylonjs/core/Meshes/Builders/sphereBu
 import type { Scene } from '@babylonjs/core/scene';
 import type { VertexData } from '@babylonjs/core/Meshes/mesh.vertexData';
 import { criarPlasticos } from '../render/formas';
-import { dadosRoda, modeloDoVeiculo, type Luz, type Roda } from '../render/veiculosModelos';
+import { dadosRoda, modeloDoVeiculoAntigo, type Luz, type Roda } from '../render/veiculosModelos';
 import {
   ACELERACAO,
   FREADA,
@@ -32,7 +32,7 @@ import {
   type Rota,
   type TipoVeiculo,
 } from '../jogo/veiculos';
-import { dadosRodaRefinada, modeloRefinado, type TipoRefinado } from './veiculosRefinados';
+import { dadosRodaRefinada, modeloRefinado, type TipoRefinado } from '../render/veiculosRefinados';
 
 type Versao = 'atual' | 'refinado' | 'cara';
 type V3 = [number, number, number];
@@ -112,6 +112,7 @@ const COR_LUZ: Record<Luz['tipo'], { dia: Color3; noite: Color3 }> = {
   lanterna: { dia: Color3.FromHexString('#d8443c'), noite: new Color3(1.3, 0.35, 0.28) },
   giroAzul: { dia: Color3.FromHexString('#6fa8ff'), noite: new Color3(0.5, 0.85, 1.5) },
   giroBranco: { dia: Color3.FromHexString('#e9f1ff'), noite: new Color3(1.3, 1.35, 1.45) },
+  giroVermelho: { dia: Color3.FromHexString('#ff6a5e'), noite: new Color3(1.45, 0.4, 0.32) },
 };
 
 export function prepararEsbocoRefino(): void {
@@ -147,7 +148,7 @@ function ligar(scene: Scene): void {
     const k = `${tipo}|${versao}`;
     const ja = carros.get(k);
     if (ja) return ja;
-    const hoje = modeloDoVeiculo(DO_JOGO[tipo], tipo === 'civil' ? '#3f7fe0' : undefined);
+    const hoje = modeloDoVeiculoAntigo(DO_JOGO[tipo], tipo === 'civil' ? '#3f7fe0' : undefined);
     const novo = versao === 'atual' ? null : modeloRefinado(tipo, versao === 'cara' ? 'cara' : 'limpa');
     const m = med(tipo);
     const raiz = new TransformNode(`refino-${k}`, scene);

@@ -183,6 +183,10 @@ export class Pecas {
     this.partes.push(vd);
     return this;
   }
+  /** Quantos vértices já entraram (para marcar uma peça que mexe, como a porta do ônibus). */
+  get marca(): number {
+    return this.partes.reduce((n, v) => n + v.positions!.length / 3, 0);
+  }
   juntar(): VertexData {
     const [a, ...resto] = this.partes;
     return resto.length ? a.merge(resto, true) : a;
