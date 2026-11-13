@@ -129,6 +129,8 @@ export const DISTANCIA_FILA = 2;
 /** Raio do corpo de quem anda (o boneco tem meia largura 0,3) e a folga do olhar. */
 const RAIO_PESSOA = 0.3;
 const FOLGA_OLHAR = 0.2;
+/** Quanto antes da zebra o veículo para esperando o cruzamento (era 0,25). */
+export const RECUO_LINHA = 1.4;
 /** Tempo parado no ponto, na vaga e até sumir encalhado. */
 export const TEMPO_PONTO = 6;
 export const TEMPO_VAGA = 150;
@@ -384,7 +386,7 @@ export function criarTransito(op: OpcoesTransito) {
   function proximoCruzamento(
     v: Veic,
     s: number,
-  ): { t: Trecho; s0: number; zebraIn: number; zebraOut: number } | null {
+  ): { t: Trecho; s0: number; zebraIn: number; zebraOut: number; retaIni: number } | null {
     const base = Math.floor(s / v.r.comp) * v.r.comp;
     const u = s - base;
     const ts = v.r.trechos;
@@ -397,7 +399,13 @@ export function criarTransito(op: OpcoesTransito) {
       if (s0 + t.comp < s - v.m.meioComp) continue;
       const antes = ts[(i - 1 + ts.length) % ts.length];
       const depois = ts[(i + 1) % ts.length];
-      return { t, s0, zebraIn: antes.zebra ?? 0, zebraOut: depois.zebra ?? 0 };
+      return {
+        t,
+        s0,
+        zebraIn: antes.zebra ?? 0,
+        zebraOut: depois.zebra ?? 0,
+        retaIni: s0 - antes.comp,
+      };
     }
     return null;
   }
@@ -575,7 +583,14 @@ export function criarTransito(op: OpcoesTransito) {
     }
     // o cruzamento: reserva, ou para antes da zebra
     if (cruz && v.reserva !== cruz.t.cruzamento) {
-      const linha = cruz.s0 - cruz.zebraIn - hl - 0.25;
+      // espera um pouco antes da zebra: o carro maior (014, ajustes) que vira à direita na
+      // frente dele abre a ponta por cima da faixa de lá
+      // (sem passar para trás do começo da faixa: o carro saindo de uma curva não fica parado
+      // no meio dela, segurando o cruzamento de trás)
+      const linha = Math.min(
+        cruz.s0 - cruz.zebraIn - hl - 0.25,
+        Math.max(cruz.s0 - cruz.zebraIn - hl - RECUO_LINHA, cruz.retaIni + hl + 0.3),
+      );
       if (linha - s < 9) {
         const id = cruz.t.cruzamento!;
         const dono = reservas.get(id);

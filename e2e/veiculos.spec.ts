@@ -948,3 +948,116 @@ test('vídeos do trânsito com o som do jogo', async ({ browser }) => {
     await ctx.close();
   }
 });
+
+// ------------------------------------------------------------------ tamanho (014, ajustes)
+
+/**
+ * Opção C do dono (014, ajustes): carro 1,2 vez, ônibus de dois andares e sorvete 1,1 vez. Na
+ * cidade de verdade: a criança de pé na faixa, o táxi e o ônibus param a 1,5 bloco dela (vistos
+ * de lado, do outro lado da rua); ao lado do sorvete parado na vaga; e a rua da praça. No
+ * computador e no celular. Só com VEICULOS_TAMANHO=1.
+ */
+async function aoLado(page: Page, id: number, nome: string, cel: boolean) {
+  const v0 = (await lista(page)).find((v) => v.id === id)!;
+  let parado: Na | null = null;
+  if (v0.tipo === 'sorvete') {
+    parado = await esperarVeiculo(page, (v) => v.id === id && v.k === 'vaga' && v.v === 0, 200_000);
+    if (!parado) throw new Error('o sorvete não chegou na vaga');
+    const hx = Math.cos(parado.yaw);
+    const hz = -Math.sin(parado.yaw);
+    // na vaga, logo à frente do nariz dele
+    await dePe(page, parado.x + hx * 2.6, parado.z + hz * 2.6, Math.atan2(-hz, hx));
+  } else
+    for (let tentativa = 0; tentativa < 10 && !parado; tentativa++) {
+      const alvo = await page.evaluate((id) => {
+        const e = window.__brumaluz!;
+        const ve = e.veiculos!().find((v) => v.id === id)!;
+        const a = e.poseVeiculo!(id, ve.s + 9);
+        const b = e.poseVeiculo!(id, ve.s + 11);
+        const c = e.poseVeiculo!(id, ve.s + 3);
+        return Math.abs(a.yaw - b.yaw) < 0.01 && Math.abs(a.yaw - c.yaw) < 0.01
+          ? { x: a.x, z: a.z, yaw: a.yaw }
+          : null;
+      }, id);
+      if (!alvo) {
+        await page.waitForTimeout(1500);
+        continue;
+      }
+      const hx = Math.cos(alvo.yaw);
+      const hz = -Math.sin(alvo.yaw);
+      // de frente para o lado de onde a câmera olha (a esquerda de quem anda)
+      await dePe(page, alvo.x, alvo.z, Math.atan2(-hz, hx));
+      parado = await esperarVeiculo(page, (v) => v.id === id && v.v === 0, 15_000);
+    }
+  if (!parado) throw new Error(`${nome} não parou`);
+  await page.waitForTimeout(1200);
+  const ve = (await lista(page)).find((v) => v.id === id)!;
+  const meio = await page.evaluate((id) => {
+    const e = window.__brumaluz!;
+    const t = e.veiculos!().find((v) => v.id === id)!.tipo;
+    return t === 'onibusAzul' || t === 'onibusVerde' ? 2.54 : t === 'sorvete' ? 1.68 : 1.63;
+  }, ve.id);
+  // a câmera de lado, mirando entre o veículo e a criança
+  const af = (meio + 1.5) / 2;
+  const longe = (cel ? 1.15 : 1) * (4.5 + meio * 1.4);
+  const lado = await seguir(page, id, {
+    cands: [
+      [af, longe, 1.6],
+      [af, longe + 2, 2.2],
+      [af, -longe, 1.6],
+      [af, -longe - 2, 2.2],
+    ],
+    ay: 1.3,
+    af,
+  });
+  if (lado === null) console.log(`sem lado livre para ${nome}`);
+  await page.waitForTimeout(1500);
+  await foto(page, `tamanho-${cel ? 'celular' : 'computador'}-${nome}`);
+  await soltarCamera(page);
+}
+
+async function ruaDaPraca(page: Page, cel: boolean) {
+  const p = await plano(page);
+  const pr = p.praca;
+  // a criança na calçada da praça, olhando a rua; a câmera atrás e acima dela
+  await dePe(page, pr.x, pr.z + pr.rua * 1.6, pr.yaw);
+  await esperarVeiculo(
+    page,
+    (v) => Math.hypot(v.x - pr.x, v.z - (pr.z + pr.rua * 4)) < 12 && v.v > 0.5,
+    120_000,
+  );
+  await page.evaluate(
+    ([x, z, rua, H]) => {
+      (window as unknown as { __camFixa: unknown }).__camFixa = {
+        p: [x + 5.5, H + 2.6, z - rua * 2.2],
+        a: [x - 6, H + 1.0, z + rua * 5],
+      };
+    },
+    [pr.x, pr.z, pr.rua, p.h + 1] as const,
+  );
+  await page.waitForTimeout(1200);
+  await foto(page, `tamanho-${cel ? 'celular' : 'computador'}-rua`);
+  await soltarCamera(page);
+}
+
+for (const tela of ['computador', 'celular'] as const)
+  test(`tamanho C: a criança ao lado do táxi, do ônibus e do sorvete (${tela})`, async ({
+    browser,
+  }) => {
+    test.skip(!process.env.VEICULOS_TAMANHO, 'só com VEICULOS_TAMANHO');
+    test.setTimeout(900_000);
+    const cel = tela === 'celular';
+    const ctx = await browser.newContext(cel ? IPHONE : { viewport: { width: 1280, height: 720 } });
+    const page = await ctx.newPage();
+    await abrir(page);
+    await assentar(page);
+    console.log(
+      `CUSTO ${JSON.stringify(await page.evaluate(() => window.__brumaluz!.custoVeiculos?.()))}`,
+    );
+    const todos = await lista(page);
+    await aoLado(page, todos.find((v) => v.tipo === 'taxi')!.id, 'taxi', cel);
+    await aoLado(page, todos.find((v) => v.tipo === 'onibusAzul')!.id, 'onibus', cel);
+    await aoLado(page, todos.find((v) => v.tipo === 'sorvete')!.id, 'sorvete', cel);
+    await ruaDaPraca(page, cel);
+    await ctx.close();
+  });

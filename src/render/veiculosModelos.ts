@@ -258,16 +258,24 @@ function carro(c: Construcao, tipo: 'taxi' | 'policia' | 'civil', cor: string): 
   for (const x of [-0.9, 0.9]) for (const z of [-0.66, 0.66]) roda(c, x, z, 0.47);
 }
 
+/**
+ * 014 (ajustes, opção C do dono): o ônibus tem dois andares, o dobro da altura da criança. O
+ * andar de cima repete a faixa de janelas, `ANDAR` (no desenho) acima da de baixo.
+ */
+export const ANDAR_ONIBUS = 1.45;
+
 /** Ônibus azul e branco (da versão 1, faixa longa de janelas) com a carinha da versão 3. */
 function onibusAzul(c: Construcao): void {
   const { m } = c;
+  const A = ANDAR_ONIBUS;
   m.caixa(5.4, 0.92, 1.95, 0.42, '#2f7fd8', 0, 0.9, 0, 4);
-  m.caixa(5.3, 1.0, 1.82, 0.44, '#f7f5ef', 0, 1.82, 0, 4);
-  m.caixa(4.3, 0.56, 1.98, 0.22, VIDRO, -0.35, 1.86, 0, 3);
-  for (let k = 0; k < 3; k++)
-    m.caixa(0.12, 0.6, 1.98, 0.05, '#f7f5ef', -1.4 + k * 1.05, 1.86, 0, 1);
-  m.caixa(0.22, 0.6, 1.5, 0.12, VIDRO, 2.6, 1.9, 0, 2);
-  m.caixa(4.9, 0.26, 1.7, 0.13, '#f7f5ef', 0, 2.42, 0, 3);
+  m.caixa(5.3, 1.0 + A, 1.82, 0.44, '#f7f5ef', 0, 1.82 + A / 2, 0, 4);
+  for (const y of [1.86, 1.86 + A]) {
+    m.caixa(4.3, 0.56, 1.98, 0.22, VIDRO, -0.35, y, 0, 3);
+    for (let k = 0; k < 3; k++) m.caixa(0.12, 0.6, 1.98, 0.05, '#f7f5ef', -1.4 + k * 1.05, y, 0, 1);
+    m.caixa(0.22, 0.6, 1.5, 0.12, VIDRO, 2.6, y + 0.04, 0, 2);
+  }
+  m.caixa(4.9, 0.26, 1.7, 0.13, '#f7f5ef', 0, 2.42 + A, 0, 3);
   const ini = m.marca;
   m.caixa(0.72, 1.32, 0.06, 0.05, '#cfe8f5', 1.7, 1.25, -0.97, 1);
   c.porta = { ini, fim: m.marca };
@@ -281,10 +289,13 @@ function onibusAzul(c: Construcao): void {
 /** Ônibus verde (versão 3). */
 function onibusVerde(c: Construcao): void {
   const { m } = c;
+  const A = ANDAR_ONIBUS;
   m.caixa(5.2, 0.95, 1.95, 0.46, '#45b56b', 0, 0.92, 0, 4);
-  m.caixa(5.1, 1.05, 1.88, 0.5, '#f7f5ef', 0, 1.85, 0, 4);
-  for (let k = 0; k < 4; k++) m.caixa(0.82, 0.6, 1.98, 0.28, VIDRO, -1.85 + k * 1.0, 1.9, 0, 2);
-  m.bola(0.55, VIDRO, 2.35, 1.92, 0, [0.4, 0.7, 1.45], 6);
+  m.caixa(5.1, 1.05 + A, 1.88, 0.5, '#f7f5ef', 0, 1.85 + A / 2, 0, 4);
+  for (const y of [1.9, 1.9 + A]) {
+    for (let k = 0; k < 4; k++) m.caixa(0.82, 0.6, 1.98, 0.28, VIDRO, -1.85 + k * 1.0, y, 0, 2);
+    m.bola(0.55, VIDRO, 2.35, y + 0.02, 0, [0.4, 0.7, 1.45], 6);
+  }
   for (const z of [-0.6, 0.6]) olho(c, 2.58, 1.05, z, 0.22);
   m.sorriso(2.62, 0.68, 1.1);
   const ini = m.marca;
@@ -344,8 +355,8 @@ function simples(tipo: TipoVeiculo, cor: string, e: number): VertexData {
   } else {
     const c = tipo === 'onibusAzul' ? '#2f7fd8' : '#45b56b';
     m.caixa(5.3, 0.92, 1.95, 0.2, c, 0, 0.9, 0, 1);
-    m.caixa(5.2, 1.0, 1.85, 0.2, '#f7f5ef', 0, 1.82, 0, 1);
-    m.caixa(4.3, 0.5, 1.9, 0.1, VIDRO, -0.3, 1.86, 0, 1);
+    m.caixa(5.2, 1.0 + ANDAR_ONIBUS, 1.85, 0.2, '#f7f5ef', 0, 1.82 + ANDAR_ONIBUS / 2, 0, 1);
+    for (const y of [1.86, 1.86 + ANDAR_ONIBUS]) m.caixa(4.3, 0.5, 1.9, 0.1, VIDRO, -0.3, y, 0, 1);
     for (const x of [-1.75, 1.75]) m.caixa(1.0, 1.0, 1.7, 0.1, preto, x, 0.52, 0, 1);
   }
   return m.pronto();

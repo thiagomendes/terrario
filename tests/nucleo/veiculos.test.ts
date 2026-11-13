@@ -289,8 +289,9 @@ describe('bichos e veículos no núcleo', () => {
       }
     }
     expect(cortes.slice(0, 5)).toEqual([]);
-    // nenhum fica na faixa: em 2 s ganha um destino fora dela (logo, com veículo andando perto)
-    expect(maisTempoNaRua).toBeLessThan(5);
+    // nenhum fica na faixa: em 2 s ganha um destino fora dela (logo, com veículo andando perto);
+    // um carro parado do lado pode atrasar a saída uns segundos (ele desvia, não atravessa)
+    expect(maisTempoNaRua).toBeLessThan(8);
     // e o táxi andou (ninguém o segura para sempre)
     expect(tr.veiculos[v.id].s).toBeGreaterThan(v.s + 10);
   });

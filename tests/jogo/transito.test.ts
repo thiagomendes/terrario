@@ -164,10 +164,12 @@ function simular(semente: number, segundos: number, comBonecos: boolean) {
       }
       const nx = b.x + (dx / d) * 1.3 * DT;
       const nz = b.z + (dz / d) * 1.3 * DT;
-      // não entram num carro nem se jogam na frente de um que está andando
+      // não entram num carro nem se jogam na frente de um que está andando (encostado num
+      // carro parado, pode se afastar dele: senão a criança e o carro ficam se esperando)
       if (
         antes.some((v) => {
-          if (distCaixa(v.pose, v.m, nx, nz) < 0.45) return true;
+          const dn = distCaixa(v.pose, v.m, nx, nz);
+          if (dn < 0.45 && dn <= distCaixa(v.pose, v.m, b.x, b.z)) return true;
           const f = folgaNaFrente(v.pose, v.m, nx, nz);
           return v.v > 0.1 && f !== null && f < 1.5;
         })
@@ -226,8 +228,9 @@ function simular(semente: number, segundos: number, comBonecos: boolean) {
             `${v.tipo}#${v.id} t=${(k * DT).toFixed(1)} folga ${f?.toFixed(2)} caixa ${dc.toFixed(2)}`,
           );
       }
-      // parado sem ninguém por perto (nó de verdade): conta
-      const alguem = bonecos.some((b) => Math.hypot(b.x - v.pose.x, b.z - v.pose.z) < 14);
+      // parado sem ninguém por perto (nó de verdade): conta. Perto: 22 blocos (a fila de dois
+      // veículos maiores, 014 ajustes, esperando uma criança lá na frente, não é nó)
+      const alguem = bonecos.some((b) => Math.hypot(b.x - v.pose.x, b.z - v.pose.z) < 22);
       if (!andou && !v.parada && !alguem) {
         r.paradoSemNinguem[i] += DT;
         r.maiorParadoSemNinguem[i] = Math.max(r.maiorParadoSemNinguem[i], r.paradoSemNinguem[i]);

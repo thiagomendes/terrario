@@ -64,53 +64,76 @@ export interface MedidasVeiculo {
    * da frente; no ônibus, menos que o entre-eixos: a ponta de trás não corta a quina).
    */
   apoio?: number;
+  /** O mesmo nas voltas só de curvas à esquerda (a traseira abre para fora no começo delas). */
+  apoioEsquerda?: number;
 }
 
+/**
+ * 014 (ajustes, opção C do dono): o carro 1,2 vez o de antes (escala 0,9 → 1,08, quase 1,3 vez a
+ * criança), o ônibus 1,2 vez de largura e comprimento e com dois andares (3,6 de altura, o dobro
+ * da criança) e o sorvete 1,1 vez (a casquinha já passa de 3,5). As caixas e o `apoio` saem da
+ * conta "nenhum canto fora do asfalto" em todas as voltas (testes de rota).
+ */
+const K_CARRO = 1.2;
+const K_ONIBUS = 1.2;
+const K_SORVETE = 1.1;
+const caixasEsc = (cs: [number, number, number, number][], k: number, ky = k) =>
+  cs.map(([a, b, c, d]) => [a * k, b * k, c * k, d * ky] as [number, number, number, number]);
+
 export const MEDIDAS: Record<ModeloVeiculo, MedidasVeiculo> = {
-  // carroceria 2,8 × 1,62 com os olhinhos e as lanternas: x de -1,48 a 1,5; teto 2,04
+  // carroceria 2,8 × 1,62 com os olhinhos e as lanternas: x de -1,48 a 1,5; teto 2,04 (no desenho)
   carro: {
-    escala: 0.9,
-    meioComp: 1.36,
-    meiaLarg: 0.74,
-    altura: 1.84,
-    eixos: [-0.81, 0.81],
-    bitola: 0.594,
-    raioRoda: 0.423,
-    caixas: [
-      [-1.33, 1.33, 0.72, 1.12],
-      [-1.06, 0.6, 0.6, 1.8],
-    ],
+    escala: 0.9 * K_CARRO,
+    meioComp: 1.36 * K_CARRO,
+    meiaLarg: 0.74 * K_CARRO,
+    altura: 1.84 * K_CARRO,
+    eixos: [-0.81 * K_CARRO, 0.81 * K_CARRO],
+    bitola: 0.594 * K_CARRO,
+    raioRoda: 0.423 * K_CARRO,
+    caixas: caixasEsc(
+      [
+        [-1.33, 1.33, 0.72, 1.12],
+        [-1.06, 0.6, 0.6, 1.8],
+      ],
+      K_CARRO,
+    ),
     // na curva à direita (raio 1) o meio do carro não corta a quina
-    apoio: 0.55,
-  },
-  // 5,4 × 2,0 (rodas em ±0,8): de -2,78 a 2,81; o letreiro em cima a 2,77
-  onibus: {
-    escala: 0.75,
-    meioComp: 2.12,
-    meiaLarg: 0.75,
-    altura: 2.0,
-    eixos: [-1.31, 1.31],
-    bitola: 0.6,
-    raioRoda: 0.39,
-    caixas: [[-2.05, 2.05, 0.73, 1.98]],
-    // o ônibus só faz curvas à direita (no arco de raio 1 a traseira comprida não corta a quina)
-    apoio: 0.6,
-  },
-  // 3,4 × 1,7 com o capô na frente: de -1,7 a 1,83; a casquinha em cima a 3,8
-  sorvete: {
-    escala: 0.86,
-    meioComp: 1.53,
-    meiaLarg: 0.73,
-    altura: 1.8,
-    eixos: [-0.9, 0.95],
-    bitola: 0.6,
-    raioRoda: 0.36,
-    caixas: [
-      [0.62, 1.5, 0.68, 1.06],
-      [-1.46, 0.62, 0.72, 1.62],
-    ],
+    apoio: 0.3,
     // na curva à esquerda (raio 3) a traseira não abre por cima da calçada
-    apoio: 0.7,
+    apoioEsquerda: 1.4,
+  },
+  // 5,4 × 2,0 (rodas em ±0,8): de -2,78 a 2,81; com os dois andares, o teto a 4,0 (no desenho)
+  onibus: {
+    escala: 0.75 * K_ONIBUS,
+    meioComp: 2.12 * K_ONIBUS,
+    meiaLarg: 0.75 * K_ONIBUS,
+    altura: (2.55 + 1.45) * 0.75 * K_ONIBUS,
+    eixos: [-1.31 * K_ONIBUS, 1.31 * K_ONIBUS],
+    bitola: 0.6 * K_ONIBUS,
+    raioRoda: 0.39 * K_ONIBUS,
+    caixas: [[-2.05 * K_ONIBUS, 2.05 * K_ONIBUS, 0.73 * K_ONIBUS, 3.55 * 0.75 * K_ONIBUS]],
+    // o ônibus só faz curvas à direita (no arco de raio 1 o meio não corta a quina)
+    apoio: 0.3,
+  },
+  // 3,4 × 1,7 com o capô na frente: de -1,7 a 1,83; a casquinha em cima a 3,8 (no desenho)
+  sorvete: {
+    escala: 0.86 * K_SORVETE,
+    meioComp: 1.53 * K_SORVETE,
+    meiaLarg: 0.73 * K_SORVETE,
+    altura: 1.8 * K_SORVETE,
+    eixos: [-0.9 * K_SORVETE, 0.95 * K_SORVETE],
+    bitola: 0.6 * K_SORVETE,
+    raioRoda: 0.36 * K_SORVETE,
+    caixas: caixasEsc(
+      [
+        [0.62, 1.5, 0.68, 1.06],
+        [-1.46, 0.62, 0.72, 1.62],
+      ],
+      K_SORVETE,
+    ),
+    // na curva à esquerda (raio 3) e na vaga a traseira não abre por cima da calçada
+    apoio: 1.25,
+    apoioEsquerda: 1.25,
   },
 };
 
@@ -260,6 +283,8 @@ export interface Parada {
 }
 
 export interface Rota {
+  /** Volta só de curvas à esquerda (sentido anti-horário). */
+  esquerda?: boolean;
   trechos: Trecho[];
   comp: number;
   paradas: Parada[];
@@ -352,8 +377,8 @@ export function desvioVaga(u: number, comp: number, D: number, lado: number): nu
   if (u > comp - D) return (lado * (1 - Math.cos((Math.PI * (comp - u)) / D))) / 2;
   return lado;
 }
-/** Comprimento da subida para a vaga (de cada lado). */
-export const SUBIDA_VAGA = 4.5;
+/** Comprimento da subida para a vaga (de cada lado; 5,5 com o sorvete 1,1 vez). */
+export const SUBIDA_VAGA = 5.5;
 
 const rotasGuardadas = new WeakMap<PlanoCidade, Map<number, Rota>>();
 
@@ -437,7 +462,13 @@ function montarRota(p: PlanoCidade, def: DefVeiculo): Rota {
     }
   });
   // começa na saída da curva do último canto (a volta fecha nela)
-  const rota: Rota = { trechos, comp: s, paradas: [], cruzamentos };
+  const rota: Rota = {
+    esquerda: def.volta.sentido === 'anti',
+    trechos,
+    comp: s,
+    paradas: [],
+    cruzamentos,
+  };
   if (def.tipo === 'sorvete') colocarVaga(p, rota);
   if (def.tipo === 'onibusAzul' || def.tipo === 'onibusVerde') colocarParadas(p, rota, def);
   return rota;
@@ -598,7 +629,7 @@ const poseB: Pose = { x: 0, z: 0, hx: 0, hz: 0, yaw: 0 };
  * curva o meio do carro corta um pouco por dentro do arco e as pontas quase não saem dele.
  */
 export function poseDoVeiculo(r: Rota, m: MedidasVeiculo, s: number, out?: Pose): Pose {
-  const e = m.apoio ?? (m.eixos[1] - m.eixos[0]) / 2;
+  const e = (r.esquerda ? m.apoioEsquerda : undefined) ?? m.apoio ?? (m.eixos[1] - m.eixos[0]) / 2;
   const f = poseNaRota(r, s + e, poseA);
   const t = poseNaRota(r, s - e, poseB);
   const o = out ?? { x: 0, z: 0, hx: 0, hz: 0, yaw: 0 };
