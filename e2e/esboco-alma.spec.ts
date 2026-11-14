@@ -345,7 +345,9 @@ async function semHud(page: Page, sem: boolean) {
       st.id = 'sem-hud';
       document.head.appendChild(st);
     }
-    st.textContent = sem ? 'body > *:not(canvas):not(#cena):not(.alma-festa):not(.alma-fundo) { visibility: hidden !important; } canvas { visibility: visible !important; }' : '';
+    // T00 (023): só a tela do jogo volta a aparecer. Com `canvas { visible }` toda tela escondida
+    // voltava, e a figurinha do prêmio do cartão da missão (a Caipira) "flutuava no céu"
+    st.textContent = sem ? 'body > *:not(canvas):not(#cena):not(.alma-festa):not(.alma-fundo) { visibility: hidden !important; } canvas#cena, .alma-festa canvas, .alma-fundo canvas { visibility: visible !important; }' : '';
   }, sem);
 }
 
