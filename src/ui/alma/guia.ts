@@ -11,6 +11,7 @@ import { criarRelogioConvite, CONVITE_S, type MundoDoGuia } from '../../jogo/gui
 import { Bloco } from '../../world/blocks';
 import type { AlmaUi } from './index';
 import { missaoFixada } from './hud';
+import { medirHud } from '../carinhasAmigos';
 
 /** O quadro de cortiça com as duas missões (o ícone de "Missões" na roda do menu). */
 export const QUADRO_SVG = `<svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
@@ -73,6 +74,8 @@ export function ligarGuiaMissao(e: EstadoDepuracao, ui: AlmaUi): GuiaMissao | nu
     bloco,
     conhecido: () => true,
     mundo: () => mundo,
+    tela: (x, y, z) => e.telaDoPonto?.(x, y, z) ?? null,
+    caixasHud: () => medirHud(),
     camera: {
       olhar: () => (e.rotacao ? { pitch: e.rotacao[0], yaw: e.rotacao[1] } : null),
       apontar: (yaw, pitch) => (e.camera?.virar ?? e.apontar)?.(yaw, pitch),
@@ -100,6 +103,8 @@ export function ligarGuiaMissao(e: EstadoDepuracao, ui: AlmaUi): GuiaMissao | nu
     if (missaoFixada(ui.vista())?.m.id === id) sincronizar();
   });
   ui.aoTocarSelo(() => guia.chamar());
+  // o selinho mostra o mesmo desenho da placa (o lugar de agora)
+  guia.aoTrocarFigura((fig) => ui.hud.figuraDoSelo(fig));
   sincronizar();
 
   // ---------------------------------------------------------------- o convite

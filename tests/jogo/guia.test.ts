@@ -15,6 +15,9 @@ import {
   criarRelogioConvite,
   espalharPegadas,
   ondaNaPegada,
+  afastarDe,
+  posicaoDaPlaca,
+  PASSO_PAR,
   ruimNoSitio,
   trilhaDosPes,
   type MundoDoGuia,
@@ -201,6 +204,33 @@ describe('030: a trilha', () => {
     expect(p.length).toBeGreaterThan(20);
     expect(p[0][4]).toBe(-p[1][4]);
     expect(p[0][3]).toBeCloseTo(Math.PI / 2);
+  });
+  it('pares de pegadas com um vão entre um par e o outro', () => {
+    const p = espalharPegadas(rota);
+    // o esquerdo e o direito do mesmo par lado a lado; o par seguinte PASSO_PAR adiante
+    expect(Math.abs(p[0][0] - p[1][0])).toBeLessThan(0.2);
+    expect(Math.abs(p[0][2] - p[1][2])).toBeCloseTo(0.4, 1);
+    expect(p[2][0] - p[0][0]).toBeCloseTo(PASSO_PAR, 5);
+  });
+  it('a rota passa a 1 bloco de quem está parado nela (o pedreiro)', () => {
+    const r = afastarDe(rota, [{ x: 5, z: 0.7 }], 1.1, () => true);
+    for (const q of r) expect(Math.hypot(q[0] - 5, q[2] - 0.7)).toBeGreaterThanOrEqual(1.09);
+    // sem lugar para ir: fica onde estava
+    expect(afastarDe(rota, [{ x: 5, z: 0.7 }], 1.1, () => false)).toEqual(rota);
+  });
+  it('a placa fica longe do HUD do alto e com margem; fora da tela, some', () => {
+    const caixas = [
+      { x: 0, y: 0, w: 220, h: 110 },
+      { x: 700, y: 50, w: 140, h: 140 },
+    ];
+    const a = posicaoDaPlaca({ x: 100, y: 60 }, 60, caixas, 844, 390)!;
+    expect(a.y).toBeGreaterThanOrEqual(110);
+    const b = posicaoDaPlaca({ x: 420, y: 5 }, 60, caixas, 844, 390)!;
+    expect(b.y).toBeGreaterThanOrEqual(10);
+    const c = posicaoDaPlaca({ x: 760, y: 120 }, 60, caixas, 844, 390)!;
+    expect(c.y).toBeGreaterThanOrEqual(190);
+    expect(posicaoDaPlaca(null, 60, caixas, 844, 390)).toBeNull();
+    expect(posicaoDaPlaca({ x: -300, y: 100 }, 60, caixas, 844, 390)).toBeNull();
   });
   it('a ondinha sai dos pés e corre para a frente', () => {
     const pico = (t: number) => {

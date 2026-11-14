@@ -373,45 +373,147 @@ export function alvoDaMissao(
 }
 
 // ------------------------------------------------------------------ a trilha
-/** Distância entre duas pegadas e o afastamento do meio (pé esquerdo e direito). */
-export const PASSO_PEGADA = 0.72;
-export const LADO_PEGADA = 0.17;
+/**
+ * As pegadas andam em pares (o pé esquerdo e o direito lado a lado, um pouquinho adiantado),
+ * com um vão de ~0,4 bloco entre um par e o outro: lê como "passos", não como uma nuvem.
+ */
+export const PASSO_PAR = 1.1;
+export const LADO_PEGADA = 0.2;
+/** O pé direito vai um tico adiante do esquerdo. */
+const ADIANTE = 0.12;
 export const MAX_PEGADAS = 420;
 
 /** Uma pegada: [x, y, z, yaw, lado (1 direito, -1 esquerdo)]. */
 export type Pegada = [number, number, number, number, number];
 
-/** Pegadas a cada PASSO_PEGADA, esquerda e direita, viradas para a frente. */
+/** Pares de pegadas a cada PASSO_PAR (o primeiro em `primeira`), virados para a frente. */
 export function espalharPegadas(pts: readonly V3[], primeira = 0.45): Pegada[] {
   const out: Pegada[] = [];
-  let sobra = primeira;
-  let lado = 1;
-  for (let i = 1; i < pts.length && out.length < MAX_PEGADAS; i++) {
-    const [ax, ay, az] = pts[i - 1];
-    const [bx, by, bz] = pts[i];
-    const d = Math.hypot(bx - ax, bz - az);
-    if (d < 1e-4) continue;
-    const yaw = Math.atan2(bx - ax, bz - az);
-    const nx = (bz - az) / d;
-    const nz = -(bx - ax) / d;
-    let t = sobra;
-    while (t < d && out.length < MAX_PEGADAS) {
-      const k = t / d;
-      // degrau: a pegada fica no chão de um ou do outro (nunca no ar no meio)
-      const y = by > ay ? (k > 0.5 ? by : ay) : by < ay ? (k > 0.5 ? by : ay) : ay;
-      out.push([
-        ax + (bx - ax) * k + nx * LADO_PEGADA * lado,
-        y,
-        az + (bz - az) * k + nz * LADO_PEGADA * lado,
-        yaw,
-        lado,
-      ]);
-      lado = -lado;
-      t += PASSO_PEGADA;
+  const total = comprimento(pts);
+  for (let t = primeira; t < total && out.length < MAX_PEGADAS - 1; t += PASSO_PAR) {
+    for (const lado of [-1, 1]) {
+      const u = Math.min(total, t + (lado > 0 ? ADIANTE : 0));
+      const q = pontoNaLinha(pts, u);
+      const dir = direcaoNaLinha(pts, u);
+      const nx = dir[1];
+      const nz = -dir[0];
+      out.push([q[0] + nx * LADO_PEGADA * lado, q[1], q[2] + nz * LADO_PEGADA * lado, Math.atan2(dir[0], dir[1]), lado]);
     }
-    sobra = t - d;
   }
   return out;
+}
+
+/** O ponto a uma distância u ao longo da linha (no chão; a altura é a do degrau mais perto). */
+export function pontoNaLinha(pts: readonly V3[], u: number): V3 {
+  if (!pts.length) return [0, 0, 0];
+  let resto = Math.max(0, u);
+  for (let i = 1; i < pts.length; i++) {
+    const a = pts[i - 1];
+    const b = pts[i];
+    const d = Math.hypot(b[0] - a[0], b[2] - a[2]);
+    if (resto <= d && d > 1e-6) {
+      const k = resto / d;
+      return [a[0] + (b[0] - a[0]) * k, k > 0.5 ? b[1] : a[1], a[2] + (b[2] - a[2]) * k];
+    }
+    resto -= d;
+  }
+  const u2 = pts[pts.length - 1];
+  return [u2[0], u2[1], u2[2]];
+}
+
+/** A direção (x, z) unitária da linha na distância u. */
+function direcaoNaLinha(pts: readonly V3[], u: number): [number, number] {
+  let resto = Math.max(0, u);
+  let ultima: [number, number] = [0, 1];
+  for (let i = 1; i < pts.length; i++) {
+    const a = pts[i - 1];
+    const b = pts[i];
+    const d = Math.hypot(b[0] - a[0], b[2] - a[2]);
+    if (d < 1e-6) continue;
+    ultima = [(b[0] - a[0]) / d, (b[2] - a[2]) / d];
+    if (resto <= d) return ultima;
+    resto -= d;
+  }
+  return ultima;
+}
+
+/** A distância ao longo da linha até o ponto dela mais perto de (x, z). */
+export function distanciaNaLinha(pts: readonly V3[], x: number, z: number): number {
+  const p = pertoNaLinha(pts, x, z);
+  let d = 0;
+  for (let k = 1; k <= p.i && k < pts.length; k++)
+    d += Math.hypot(pts[k][0] - pts[k - 1][0], pts[k][2] - pts[k - 1][2]);
+  const b = pts[Math.min(pts.length - 1, p.i + 1)];
+  return d + Math.hypot(b[0] - pts[p.i][0], b[2] - pts[p.i][2]) * p.k;
+}
+
+/**
+ * Afasta a rota de quem fica parado nela (o pedreiro na calçada): os pontos a menos de `raio`
+ * de um deles vão para o lado, até `raio`, se der para pisar lá (`pode`).
+ */
+export function afastarDe(
+  pts: readonly V3[],
+  quem: readonly { x: number; z: number }[],
+  raio: number,
+  pode: (x: number, z: number) => boolean,
+): V3[] {
+  return pts.map((q, i) => {
+    let [x, y, z] = q;
+    for (const o of quem) {
+      const d = Math.hypot(x - o.x, z - o.z);
+      if (d >= raio) continue;
+      // para o lado da rota (perpendicular), do lado contrário ao de quem está parado
+      const a = pts[Math.max(0, i - 1)];
+      const b = pts[Math.min(pts.length - 1, i + 1)];
+      const dl = Math.hypot(b[0] - a[0], b[2] - a[2]) || 1;
+      let nx = -(b[2] - a[2]) / dl;
+      let nz = (b[0] - a[0]) / dl;
+      if (nx * (x - o.x) + nz * (z - o.z) < 0) {
+        nx = -nx;
+        nz = -nz;
+      }
+      const ex = o.x + (x - o.x) + nx * (raio - d + 0.05);
+      const ez = o.z + (z - o.z) + nz * (raio - d + 0.05);
+      if (pode(ex, ez)) {
+        x = ex;
+        z = ez;
+      }
+    }
+    return [x, y, z] as V3;
+  });
+}
+
+/**
+ * Onde a placa fica na tela: em cima do ponto do alvo (o rabinho embaixo), com `tam` px, longe
+ * das caixas do HUD (a estrela, o selinho, a bússola, o minimapa) e com uma margem em cima. Se
+ * cair numa caixa do alto, desce para baixo dela; numa de baixo, sobe. null: fora da tela.
+ */
+export function posicaoDaPlaca(
+  ponto: { x: number; y: number } | null,
+  tam: number,
+  caixas: readonly { x: number; y: number; w: number; h: number }[],
+  W: number,
+  H: number,
+  margem = 10,
+): { x: number; y: number } | null {
+  if (!ponto) return null;
+  if (ponto.x < -tam || ponto.x > W + tam || ponto.y < -tam * 2 || ponto.y > H + tam) return null;
+  // o canto de cima da placa (o rabinho aponta para o ponto)
+  let x = Math.max(margem, Math.min(W - margem - tam, ponto.x - tam / 2));
+  let y = Math.max(margem, Math.min(H - margem - tam * 1.2, ponto.y - tam * 1.2));
+  for (let volta = 0; volta < 4; volta++) {
+    let mexeu = false;
+    for (const c of caixas) {
+      const cruza = x < c.x + c.w + 4 && x + tam > c.x - 4 && y < c.y + c.h + 4 && y + tam * 1.2 > c.y - 4;
+      if (!cruza) continue;
+      if (c.y + c.h / 2 < H / 2) y = c.y + c.h + 6;
+      else y = c.y - tam * 1.2 - 6;
+      mexeu = true;
+    }
+    if (!mexeu) break;
+  }
+  if (y < 0 || y + tam * 1.2 > H) return null;
+  return { x, y };
 }
 
 /** Um ponto a cada bloco ao longo da linha (a rota das calçadas tem só as quinas). */

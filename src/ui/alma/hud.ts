@@ -77,9 +77,9 @@ body.toque-ativo .alma-carteira kbd, body.sem-teclas .alma-carteira kbd { displa
 .alma-missao .alma-fig { width: 100%; height: 100%; }
 .alma-missao.chama { animation: alma-chama 0.5s ease-out; }
 /* o convite: o baú com "?" no lugar do selinho (brilha uma vez e fica quieto) */
-.alma-missao.convite { box-shadow: 0 0 0 3px #e0a83a, 0 3px 0 3px rgba(168, 116, 26, 0.45), 0 6px 12px rgba(40, 25, 10, 0.2); padding: 1px; }
-.alma-missao.convite.brilha { animation: alma-convite 0.9s cubic-bezier(.3,1.5,.5,1); }
-@keyframes alma-convite { 0% { transform: scale(0.2); } 45% { transform: scale(1.3); } 65% { transform: scale(0.92); } 100% { transform: scale(1); } }
+.alma-missao.convite { padding: 1px; box-shadow: 0 0 0 3px #e0a83a, 0 0 0 6px #fff, 0 4px 0 6px rgba(168, 116, 26, 0.35), 0 8px 14px rgba(40, 25, 10, 0.35); }
+.alma-missao.convite.brilha { animation: alma-convite 1.2s ease-in-out; }
+@keyframes alma-convite { 0%, 50%, 100% { transform: scale(1); } 25%, 75% { transform: scale(1.25); } }
 .alma-brilho { position: fixed; z-index: 8; width: 12px; height: 12px; margin: -6px; pointer-events: none;
   background: radial-gradient(circle, #fffbe0 0 30%, rgba(255, 226, 122, 0.9) 45%, rgba(255, 226, 122, 0) 72%);
   animation: alma-brilho 0.9s ease-out forwards; }
@@ -304,6 +304,11 @@ export function missaoDoCartao(
 }
 
 /** A missão escolhida (a fixada, se ainda aberta): a do selinho e a da trilha (030). */
+/** O desenho do selinho antes de ter alvo: um objeto só (o passeio vira o tênis). */
+export function desenhoDoSelo(m: Missao): string {
+  return m.desenho.tipo === 'lugares' ? 'tenis' : desenhoDaFigurinha(m);
+}
+
 export function missaoFixada(
   v: VistaAlmaMundo | null,
 ): { m: Missao; feito: number; meta: number; usos?: string[]; bis: boolean } | null {
@@ -392,7 +397,8 @@ export function criarHudAlma(raiz: HTMLElement, op: OpcoesHudAlma) {
     const v = op.vista();
     document.body.classList.toggle('alma-missoes', !!v);
     const c = missaoFixada(v);
-    const chave = c ? `m:${c.m.id}` : convite && v ? 'convite' : '';
+    const fig = c ? (figuraSelo ?? desenhoDoSelo(c.m)) : '';
+    const chave = c ? `m:${c.m.id}:${fig}` : convite && v ? 'convite' : '';
     cartao.hidden = !chave;
     if (chave === chaveCartao) return;
     chaveCartao = chave;
@@ -402,7 +408,8 @@ export function criarHudAlma(raiz: HTMLElement, op: OpcoesHudAlma) {
       cartao.dataset.missao = c.m.id;
       cartao.dataset.feito = String(c.feito);
       cartao.setAttribute('aria-label', `Missão: ${c.m.nome}`);
-      cartao.appendChild(figura(desenhoDaFigurinha(c.m)));
+      cartao.dataset.figura = fig;
+      cartao.appendChild(figura(fig));
       if (animar) {
         cartao.classList.remove('chama');
         void cartao.offsetWidth;
@@ -411,12 +418,21 @@ export function criarHudAlma(raiz: HTMLElement, op: OpcoesHudAlma) {
     } else {
       delete cartao.dataset.missao;
       delete cartao.dataset.feito;
+      delete cartao.dataset.figura;
       cartao.setAttribute('aria-label', 'Missões');
       if (chave === 'convite') cartao.innerHTML = CONVITE_SVG;
     }
   }
 
-  /** O convite aparece (brilha uma vez, estrelinhas e o "plim") ou some. */
+  /** O desenho da placa do alvo de agora (o selinho mostra o mesmo); null: o da missão. */
+  let figuraSelo: string | null = null;
+  function figuraDoSelo(fig: string | null): void {
+    if (fig === figuraSelo) return;
+    figuraSelo = fig;
+    renderCartao(false);
+  }
+
+  /** O convite aparece (pulsa duas vezes, estrelinhas e o "plim") ou some. */
   function definirConvite(mostra: boolean, brilha: boolean): void {
     if (mostra === convite && !brilha) return;
     convite = mostra;
@@ -426,10 +442,10 @@ export function criarHudAlma(raiz: HTMLElement, op: OpcoesHudAlma) {
     void cartao.offsetWidth;
     cartao.classList.add('brilha');
     const r = cartao.getBoundingClientRect();
-    for (let i = 0; i < 10; i++) {
+    for (let i = 0; i < 6; i++) {
       const f = document.createElement('span');
       f.className = 'alma-brilho';
-      const a = (i / 10) * Math.PI * 2 + 0.3;
+      const a = (i / 6) * Math.PI * 2 + 0.3;
       const d = 40 * (0.75 + (i % 3) * 0.18);
       f.style.left = `${r.left + r.width / 2}px`;
       f.style.top = `${r.top + r.height / 2}px`;
@@ -461,6 +477,8 @@ export function criarHudAlma(raiz: HTMLElement, op: OpcoesHudAlma) {
     fecharGaveta = window.setTimeout(() => carteira.classList.remove('contando'), seg * 1000);
   }
   function contarMoedasAte(ate: number): Promise<void> {
+    // a gaveta só abre quando moedinhas chegam (nada de abrir mostrando o mesmo número)
+    if (ate === moedasMostradas) return Promise.resolve();
     abrirGaveta(60);
     return new Promise<void>((okFim) => {
       const ok = () => {
@@ -640,6 +658,7 @@ export function criarHudAlma(raiz: HTMLElement, op: OpcoesHudAlma) {
     },
     quadro,
     definirConvite,
+    figuraDoSelo,
     abrirGaveta,
     abrirFundo,
     fechar,

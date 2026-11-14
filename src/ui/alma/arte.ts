@@ -216,6 +216,14 @@ export const ARTE: Record<string, string> = {
     <path d="M17 44 Q19 42 22 42" fill="none" stroke="#c8fff0" stroke-width="2.2" stroke-linecap="round"/>
     <g fill="#1fa889"><ellipse cx="52" cy="56" rx="2.2" ry="1.4"/><ellipse cx="58" cy="53.5" rx="2.2" ry="1.4"/></g>`),
 
+  // 030: o tênis verde-água sozinho (o selinho do passeio: um objeto só, lê em 44 px)
+  tenis: svg(`
+    <ellipse cx="32" cy="54" rx="26" ry="4" fill="#000" opacity="0.15"/>
+    <path d="M8 44 Q8 26 20 26 L31 26 Q35 38 46 40 Q58 42 58 49 Q58 54 52 54 H12 Q8 54 8 49 Z" fill="#5fe3c4" ${s(3)}/>
+    <path d="M8 47 H58" stroke="${C}" stroke-width="2.6"/>
+    <path d="M20 27 L24 37 M26 27 L30 36" stroke="#fffaf0" stroke-width="3.2" stroke-linecap="round"/>
+    <path d="M12 38 Q14 32 19 31" fill="none" stroke="#c8fff0" stroke-width="3" stroke-linecap="round"/>`),
+
   // ------------------------------------------------------------ ações (selinho no canto)
   colher: svg(`
     <path d="M10 30 H54 L48 56 H16 Z" fill="#d9a05a" ${s()}/>
