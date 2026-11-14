@@ -5387,10 +5387,6 @@ export function criarCena(
         break;
       case 'coletou':
         coletou(e.item, e.qtd);
-        // spec 031: a comida que aparece na mão (o canto das missões faz o "pop")
-        window.dispatchEvent(
-          new CustomEvent('brumaluz:coletou', { detail: { item: e.item, qtd: e.qtd } }),
-        );
         break;
       case 'ferramentaQuebrou':
         tocarSom(motorAudio, 'recusa');

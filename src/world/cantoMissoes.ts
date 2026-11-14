@@ -272,8 +272,15 @@ function notaDoLugar(
   const z0 = Math.min(...pes.map((p) => p.z)) - 3;
   const x1 = Math.max(...pes.map((p) => p.x + p.w - 1)) + 3;
   const z1 = Math.max(...pes.map((p) => p.z + p.d - 1)) + 3;
-  // longe dos pés de quem nasce (ninguém nasce em cima da mesa)
-  if (t.nascer.x >= x0 - 1 && t.nascer.x <= x1 + 1 && t.nascer.z >= z0 - 1 && t.nascer.z <= z1 + 1)
+  // longe dos pés de quem nasce: o canto (e o mato que sai em volta dele) nunca chega perto
+  // de onde a criança nasce e começa a brincar (nada muda ali nos mundos já salvos)
+  const LONGE = 5;
+  if (
+    t.nascer.x >= x0 - LONGE &&
+    t.nascer.x <= x1 + LONGE &&
+    t.nascer.z >= z0 - LONGE &&
+    t.nascer.z <= z1 + LONGE
+  )
     return null;
   // cada chunk que o canto alcança fica só para ele
   for (let xx = x0; xx <= x1 + 15; xx += 16)
