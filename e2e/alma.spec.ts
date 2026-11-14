@@ -151,7 +151,7 @@ async function caixas(page: Page) {
         nome: (el.className || el.tagName).toString().slice(0, 40),
       };
     };
-    const alma = Array.from(document.querySelectorAll('[data-alma-carteira], [data-alma-missao]'))
+    const alma = Array.from(document.querySelectorAll('[data-alma-carteira], [data-alma-missao], [data-guia-placa]'))
       .filter(vis)
       .map(caixa);
     const hud = Array.from(
@@ -181,13 +181,28 @@ function sobrepostas(c: Awaited<ReturnType<typeof caixas>>): string[] {
   return out;
 }
 
+/** Spec 030: o quadro de missões mora na roda do menu (ele nunca abre sozinho). */
+async function abrirQuadro(page: Page, toque: boolean) {
+  const clicar = async (sel: string) => {
+    const l = page.locator(sel).first();
+    await l.waitFor({ state: 'visible', timeout: 15_000 });
+    if (toque) await l.tap();
+    else await l.click();
+  };
+  // no computador a roda abre pela tecla O (o ponteiro fica preso no jogo)
+  if (toque) await clicar('.menu-hud:visible');
+  else await page.keyboard.press('KeyO');
+  await clicar('.roda.aberta button.ativo[data-item="missoes"]');
+  await page.waitForSelector('[data-alma-quadro]', { timeout: 15_000 });
+}
+
 const almaUi = (page: Page) =>
   page.evaluate(() => {
     const u = (window as unknown as { __almaUi?: { vista(): unknown } }).__almaUi;
     return u?.vista() ?? null;
   });
 
-test('HUD da alma: a carteira em todo mundo, o cartão onde há missões, nada tapa o HUD', async ({
+test('HUD da alma: a carteira em todo mundo, o selinho e a placa onde há missões, nada tapa o HUD', async ({
   browser,
 }) => {
   const falhas: string[] = [];
@@ -199,24 +214,27 @@ test('HUD da alma: a carteira em todo mundo, o cartão onde há missões, nada t
     await semAvisos(page);
     await assentar(page);
     const missoes = tema !== 'bruma-e-luz';
-    // o quadro abre sozinho na primeira visita (prévia: sempre): fecha para medir o HUD
+    // spec 030: nada abre sozinho; o quadro vem pela roda e o "brincar" acende o selinho
+    await page.waitForSelector('[data-alma-carteira]', { timeout: 20_000 });
+    await page.waitForTimeout(2500);
+    expect(await page.locator('[data-alma-quadro]').count(), tema).toBe(0);
     if (missoes) {
-      await page.waitForSelector('[data-alma-quadro]', { timeout: 20_000 });
+      await abrirQuadro(page, tamanho !== 'pc');
       await page.waitForTimeout(600);
       await foto(page, `quadro-${tema}-${tamanho}`);
-      await page.locator('[data-alma-fechar]').first().click();
-      await page.waitForTimeout(400);
-    }
-    await page.waitForSelector('[data-alma-carteira]', { timeout: 20_000 });
-    if (missoes)
+      const j = page.locator('[data-alma-jogar]').first();
+      if (tamanho === 'pc') await j.click();
+      else await j.tap();
       await page.waitForSelector('[data-alma-missao]:not([hidden])', { timeout: 20_000 });
-    await page.waitForTimeout(600);
+      await page.waitForTimeout(2500);
+    }
     const c = await caixas(page);
     const nome = `hud-${tema}-${tamanho}`;
     await foto(page, nome);
     for (const s of sobrepostas(c)) falhas.push(`${nome}: ${s}`);
-    // só a Cidade e o Rancho têm o cartão; o chip do diário sai deles
-    expect(c.alma.length, nome).toBe(missoes ? 2 : 1);
+    // só a Cidade e o Rancho têm o selinho (e a placa, se o lugar está à vista)
+    expect(c.alma.length, nome).toBeGreaterThanOrEqual(missoes ? 2 : 1);
+    expect(c.alma.length, nome).toBeLessThanOrEqual(missoes ? 3 : 1);
     if (missoes) expect(await page.locator('.missao-hud:visible').count(), nome).toBe(0);
     expect(!!(await almaUi(page)), nome).toBe(missoes);
     await page.context().close();
@@ -224,7 +242,7 @@ test('HUD da alma: a carteira em todo mundo, o cartão onde há missões, nada t
   expect(falhas).toEqual([]);
 });
 
-test('o quadro de missões aparece sozinho na primeira visita (até 3 s), e só nela', async ({
+test('030: o quadro nunca abre sozinho; vem pela roda; o selinho guarda a missão escolhida', async ({
   browser,
 }) => {
   for (const tamanho of ['pc', 'deitado', 'empe'] as Tamanho[])
@@ -232,16 +250,16 @@ test('o quadro de missões aparece sozinho na primeira visita (até 3 s), e só 
       const id = `alma-quadro-${tema}-${tamanho}`;
       const page = await abrir(browser, { mundo: { id, tema }, tamanho });
       await semAvisos(page);
-      const t0 = Date.now();
-      await page.waitForSelector('[data-alma-quadro]', { timeout: 15_000 });
-      const ms = Date.now() - t0;
-      console.log(`alma: quadro em ${ms} ms (${tema}, ${tamanho})`);
-      expect(ms).toBeLessThan(3000);
+      await page.waitForSelector('[data-alma-carteira]', { timeout: 20_000 });
+      await page.waitForTimeout(4000);
+      expect(await page.locator('[data-alma-quadro]').count()).toBe(0);
+      expect(await page.locator('[data-alma-missao]:not([hidden])').count()).toBe(0);
+      await abrirQuadro(page, tamanho !== 'pc');
       // o prêmio grande e as moedinhas à vista
       await expect(page.locator('[data-alma-quadro] .premio .alma-moedas').first()).toBeVisible();
       await page.waitForTimeout(900);
       await foto(page, `quadro-${tema}-${tamanho}`);
-      // brincar: fixa a missão e o cartão mostra ela
+      // brincar: fixa a missão e o selinho mostra ela
       const alvo = page.locator('[data-alma-jogar]').last();
       const missao = await alvo.getAttribute('data-alma-jogar');
       if (tamanho === 'pc') await alvo.click();
@@ -253,8 +271,8 @@ test('o quadro de missões aparece sozinho na primeira visita (até 3 s), e só 
       );
       expect(await page.locator('[data-alma-quadro]').count()).toBe(0);
       await page.waitForTimeout(600);
-      await foto(page, `cartao-${tema}-${tamanho}`);
-      // reabrir o mesmo mundo: o quadro não abre de novo
+      await foto(page, `selinho-${tema}-${tamanho}`);
+      // reabrir o mesmo mundo: nada abre, e a fixada continua no selinho (o núcleo guardou)
       await page.evaluate(() => window.__brumaluz!.salvar?.());
       await page.reload();
       await page.waitForFunction(() => window.__brumaluz?.ready === true, undefined, {
@@ -266,7 +284,6 @@ test('o quadro de missões aparece sozinho na primeira visita (até 3 s), e só 
       await page.waitForSelector('[data-alma-missao]:not([hidden])', { timeout: 15_000 });
       await page.waitForTimeout(3500);
       expect(await page.locator('[data-alma-quadro]').count()).toBe(0);
-      // e a fixada continua a do cartão (o núcleo guardou com o mundo)
       expect(await page.locator('[data-alma-missao]').getAttribute('data-missao')).toBe(missao);
       await page.context().close();
     }
@@ -323,10 +340,7 @@ test('o baú: álbum, nível, habilidades e a banca de verdade (com a confirmaç
       await assentar(page);
       const n = (s: string) => `bau-${tema}-${tamanho}-${s}`;
       const missoes = tema !== 'bruma-e-luz';
-      if (missoes) {
-        await page.waitForSelector('[data-alma-quadro]', { timeout: 20_000 });
-        await tocar(page, '[data-alma-fechar]', toque);
-      }
+      void missoes;
       // sem moedinha: a banca mostra o potinho e a recusa calma
       await page.waitForSelector('[data-alma-carteira]', { timeout: 20_000 });
       await abrirBau(page, toque);
@@ -530,7 +544,7 @@ test('laço da Cidade: c1 no ritmo de criança até o capacete, a festa da miss�
   await assentar(page);
   await vigiarFestas(page);
   const t0 = Date.now();
-  await page.waitForSelector('[data-alma-quadro]', { timeout: 20_000 });
+  await abrirQuadro(page, false);
   await page.waitForTimeout(1500);
   await tocar(page, '[data-alma-jogar="c1"]', false);
   // a colher do pedreiro na mão
@@ -620,7 +634,7 @@ test('laço do Rancho: r1 até a Caipira, e reabrir o jogo mantém tudo', async 
   await assentar(page);
   await vigiarFestas(page);
   const t0 = Date.now();
-  await page.waitForSelector('[data-alma-quadro]', { timeout: 20_000 });
+  await abrirQuadro(page, true);
   await page.waitForTimeout(1500);
   await tocar(page, '[data-alma-jogar="r1"]', true);
   // uma roça madura na frente da criança (5 pés de trigo maduro)
@@ -682,10 +696,12 @@ test('laço do Rancho: r1 até a Caipira, e reabrir o jogo mantém tudo', async 
   await page.evaluate(() =>
     document.querySelector<HTMLElement>('.entrada')?.setAttribute('hidden', ''),
   );
-  await page.waitForSelector('[data-alma-missao]:not([hidden])', { timeout: 20_000 });
+  await page.waitForSelector('[data-alma-carteira]', { timeout: 20_000 });
+  await page.waitForTimeout(2000);
   expect(await page.locator('[data-alma-moedas]').textContent()).toBe(moedas);
   expect(await page.locator('[data-alma-carteira]').getAttribute('data-nivel')).toBe('1');
-  expect(await page.locator('[data-alma-missao]').getAttribute('data-missao')).not.toBe('r1');
+  // a r1 acabou: nenhuma missão escolhida (o selinho só volta com outro "brincar")
+  expect(await page.locator('[data-alma-missao]:not([hidden])').count()).toBe(0);
   await abrirBau(page, true);
   await page.waitForSelector('[data-alma-painel="album"]');
   expect(await page.locator('[data-missao="r1"].feita').count()).toBe(1);

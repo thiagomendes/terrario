@@ -214,7 +214,11 @@ function criarAnel(scene: Scene) {
   matAnel.emissiveColor = Color3.FromHexString(MENTA_BRILHO);
   matAnel.specularColor = Color3.Black();
   matAnel.disableLighting = true;
-  const anel = MeshBuilder.CreateTorus('guia-anel', { diameter: 2, thickness: 0.16, tessellation: 40 }, scene);
+  const anel = MeshBuilder.CreateTorus(
+    'guia-anel',
+    { diameter: 2, thickness: 0.16, tessellation: 40 },
+    scene,
+  );
   anel.material = matAnel;
   anel.isPickable = false;
   anel.setEnabled(false);
@@ -496,7 +500,10 @@ export function criarGuiaMissao(f: FonteGuia): GuiaMissao {
   let chegouLa = false;
   let foraDesde = 0;
   let brilho: { x: number; y: number; z: number; t: number } | null = null;
-  let caixas: { em: number; lista: readonly { x: number; y: number; w: number; h: number }[] } | null = null;
+  let caixas: {
+    em: number;
+    lista: readonly { x: number; y: number; w: number; h: number }[];
+  } | null = null;
   let telaPlaca: { x: number; y: number } | null = null;
   const ouvintes: ((a: AlvoGuia) => void)[] = [];
   const ouvintesFigura: ((fig: string | null) => void)[] = [];
@@ -527,7 +534,10 @@ export function criarGuiaMissao(f: FonteGuia): GuiaMissao {
     const custo = (x: number, y: number, z: number) => (temObstaculoDoLado(x, y, z) ? 1.5 : 0);
     if (!r.length) {
       const c = yield* buscarCaminho(leitor(custo), de, [a.x, a.y, a.z]);
-      return { pts: longeDeQuem(assentar(alisar(c.pts, pisa, temObstaculoDoLado))), completo: c.completo };
+      return {
+        pts: longeDeQuem(assentar(alisar(c.pts, pisa, temObstaculoDoLado))),
+        completo: c.completo,
+      };
     }
     let antes: V3[] = [[de[0], de[1], de[2]]];
     if (Math.hypot(r[0][0] - de[0], r[0][2] - de[2]) > LONGE_DA_ROTA) {
@@ -545,7 +555,10 @@ export function criarGuiaMissao(f: FonteGuia): GuiaMissao {
   /** No sítio: a busca da 021 com a roça e a cerca custando mais, depois alisada. */
   function* buscaNoSitio(a: AlvoGuia, de: V3): Generator<void, Caminho, void> {
     const c = yield* buscarCaminho(leitor(custoNoSitio(f.bloco)), de, [a.x, a.y, a.z]);
-    return { pts: longeDeQuem(assentar(alisar(c.pts, pisa, ruimNoSitio(f.bloco)))), completo: c.completo };
+    return {
+      pts: longeDeQuem(assentar(alisar(c.pts, pisa, ruimNoSitio(f.bloco)))),
+      completo: c.completo,
+    };
   }
   /** Um ponto por bloco e cada um no chão de verdade (as pegadas nunca no ar nem enterradas). */
   function assentar(pts: readonly V3[]): V3[] {
@@ -564,7 +577,10 @@ export function criarGuiaMissao(f: FonteGuia): GuiaMissao {
     const pes = f.pes();
     const de: V3 = [pes[0], pes[1], pes[2]];
     const naCidade = !!f.mundo().cidade && (!!alvo.lugar || alvo.morador !== undefined);
-    busca = { it: naCidade ? buscaNaCidade(alvo, de) : buscaNoSitio(alvo, de), virar: virarAoNascer };
+    busca = {
+      it: naCidade ? buscaNaCidade(alvo, de) : buscaNoSitio(alvo, de),
+      virar: virarAoNascer,
+    };
     ultimaBusca = agoraS();
   }
 
@@ -622,7 +638,13 @@ export function criarGuiaMissao(f: FonteGuia): GuiaMissao {
   function resolver(manter: boolean): AlvoGuia | null {
     if (!missao) return null;
     const p = f.pes();
-    return alvoDaMissao(missao, f.mundo(), vistos, { x: p[0], z: p[2] }, manter ? (alvo?.chave ?? null) : null);
+    return alvoDaMissao(
+      missao,
+      f.mundo(),
+      vistos,
+      { x: p[0], z: p[2] },
+      manter ? (alvo?.chave ?? null) : null,
+    );
   }
   function trocarAlvo(novo: AlvoGuia | null, virarAoNascer: boolean): void {
     const figuraAntes = alvo?.figura ?? null;
@@ -636,7 +658,8 @@ export function criarGuiaMissao(f: FonteGuia): GuiaMissao {
     pegadas.tirar();
     luzes.tirar();
     placa.mostrar(null);
-    if ((novo?.figura ?? null) !== figuraAntes) for (const o of ouvintesFigura) o(novo?.figura ?? null);
+    if ((novo?.figura ?? null) !== figuraAntes)
+      for (const o of ouvintesFigura) o(novo?.figura ?? null);
     if (!novo) return;
     placa.pintar(novo.figura);
     nasceu = agoraS();
@@ -673,7 +696,10 @@ export function criarGuiaMissao(f: FonteGuia): GuiaMissao {
         ligacao = { de, marcas: espalharPegadas(linhaLig, ADIANTE_DOS_PES), ate };
       }
       const lig = ligacao;
-      const comp = Math.hypot(pontoNaLinha(rota, lig.ate)[0] - lig.de[0], pontoNaLinha(rota, lig.ate)[2] - lig.de[2]);
+      const comp = Math.hypot(
+        pontoNaLinha(rota, lig.ate)[0] - lig.de[0],
+        pontoNaLinha(rota, lig.ate)[2] - lig.de[2],
+      );
       comLigacao = lig.marcas;
       ini = lig.ate + Math.max(0, ADIANTE_DOS_PES - comp);
     } else ligacao = null;
@@ -694,7 +720,11 @@ export function criarGuiaMissao(f: FonteGuia): GuiaMissao {
     const lig = ligacao;
     const ligPts: V3[] | null = lig ? [lig.de, pontoNaLinha(rota, lig.ate)] : null;
     const compLig = ligPts ? comprimento(ligPts) : 0;
-    for (let sAdiante = ADIANTE_DOS_PES; sAdiante <= ADIANTE_DOS_PES + TRECHO_LUZ; sAdiante += PASSO_LUZ) {
+    for (
+      let sAdiante = ADIANTE_DOS_PES;
+      sAdiante <= ADIANTE_DOS_PES + TRECHO_LUZ;
+      sAdiante += PASSO_LUZ
+    ) {
       let q: V3;
       if (ligPts && sAdiante < compLig) q = pontoNaLinha(ligPts, sAdiante);
       else {
@@ -738,7 +768,8 @@ export function criarGuiaMissao(f: FonteGuia): GuiaMissao {
         // o alvo que anda: a placa vai junto; a trilha refaz depois que ela andou uns metros
         const fim = rota[rota.length - 1];
         alvo = novo;
-        if (fim && Math.hypot(fim[0] - novo.x, fim[2] - novo.z) > MORADOR_ANDOU && !busca) comecarBusca(false);
+        if (fim && Math.hypot(fim[0] - novo.x, fim[2] - novo.z) > MORADOR_ANDOU && !busca)
+          comecarBusca(false);
       }
     }
     if (!alvo) return;
@@ -757,7 +788,10 @@ export function criarGuiaMissao(f: FonteGuia): GuiaMissao {
       }
     } else foraDesde = 0;
     if (alvo.morador !== undefined) {
-      const m = f.mundo().moradores().find((q) => q.id === alvo!.morador);
+      const m = f
+        .mundo()
+        .moradores()
+        .find((q) => q.id === alvo!.morador);
       if (m) alvo.placa = [m.x, m.y + 1.6, m.z];
     }
     posicionarPlaca(agora);
@@ -776,12 +810,14 @@ export function criarGuiaMissao(f: FonteGuia): GuiaMissao {
   const api: ApiGuia = {
     virar: true,
     missao: () => missao?.id ?? null,
-    alvo: () => (alvo ? { chave: alvo.chave, x: alvo.x, y: alvo.y, z: alvo.z, figura: alvo.figura } : null),
+    alvo: () =>
+      alvo ? { chave: alvo.chave, x: alvo.x, y: alvo.y, z: alvo.z, figura: alvo.figura } : null,
     caminho: () => rota.map((p) => [...p] as V3),
     pegadas: () => pegadas.n,
     luzes: () => luzes.n,
     vistas: () => vistasAgora.map((q) => [q[0], q[1], q[2]]),
-    primeira: () => (vistasAgora[0] ? [vistasAgora[0][0], vistasAgora[0][1], vistasAgora[0][2]] : null),
+    primeira: () =>
+      vistasAgora[0] ? [vistasAgora[0][0], vistasAgora[0][1], vistasAgora[0][2]] : null,
     procurando: () => !!busca,
     chegou: () => chegouLa,
     placa: () => placa.visivel,
@@ -825,7 +861,8 @@ export function criarGuiaMissao(f: FonteGuia): GuiaMissao {
     brilhar(a) {
       brilho = { x: a.x, y: a.y, z: a.z, t: agoraS() };
     },
-    telaDoAlvo: () => (telaPlaca ? { x: telaPlaca.x + TAM_PLACA / 2, y: telaPlaca.y + TAM_PLACA / 2 } : null),
+    telaDoAlvo: () =>
+      telaPlaca ? { x: telaPlaca.x + TAM_PLACA / 2, y: telaPlaca.y + TAM_PLACA / 2 } : null,
     api,
   };
 }

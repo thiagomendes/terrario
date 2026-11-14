@@ -73,11 +73,13 @@ export function ligarGuiaMissao(e: EstadoDepuracao, ui: AlmaUi): GuiaMissao | nu
   st.textContent = CSS_CERTO;
   document.head.appendChild(st);
   /** O aparelho tem a coluna? (o chão de baixo de tudo existe) */
-  const temColuna = (x: number, z: number) => (e.bloco?.(Math.floor(x), 0, Math.floor(z)) ?? AR) !== AR;
+  const temColuna = (x: number, z: number) =>
+    (e.bloco?.(Math.floor(x), 0, Math.floor(z)) ?? AR) !== AR;
   /** Os blocos carregados (com as edições); longe, o terreno gerado. */
   const bloco = (x: number, y: number, z: number) =>
     temColuna(x, z) ? e.bloco!(x, y, z) : (e.blocoGerado?.(x, y, z) ?? AR);
-  let sitios: { em: number; lista: ReturnType<NonNullable<EstadoDepuracao['sitios']>> } | null = null;
+  let sitios: { em: number; lista: ReturnType<NonNullable<EstadoDepuracao['sitios']>> } | null =
+    null;
   const mundo: MundoDoGuia = {
     get cidade() {
       return e.cidade?.() ?? null;
@@ -191,7 +193,9 @@ export function ligarGuiaMissao(e: EstadoDepuracao, ui: AlmaUi): GuiaMissao | nu
     ultimaTela = guia.telaDoAlvo() ?? ultimaTela;
     // a mãozinha só na obra, com a criança dentro do canteiro
     const a = guia.alvo();
-    mao.definir(a && a.tipo === 'obra' && guia.chegou() ? Number(a.chave.slice('canteiro:'.length)) : null);
+    mao.definir(
+      a && a.tipo === 'obra' && guia.chegou() ? Number(a.chave.slice('canteiro:'.length)) : null,
+    );
     const r = relogio.passo(dt, { missao: !!missaoFixada(v), noJogo: noJogo() });
     if (r.mostra !== mostra || r.acendeu) ui.hud.definirConvite(r.mostra, r.acendeu);
     mostra = r.mostra;

@@ -6,8 +6,18 @@ import type { Browser, Page } from '@playwright/test';
  */
 export const TAMANHOS = {
   pc: { viewport: { width: 1280, height: 720 } },
-  deitado: { viewport: { width: 844, height: 390 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true },
-  empe: { viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true },
+  deitado: {
+    viewport: { width: 844, height: 390 },
+    deviceScaleFactor: 2,
+    isMobile: true,
+    hasTouch: true,
+  },
+  empe: {
+    viewport: { width: 390, height: 844 },
+    deviceScaleFactor: 2,
+    isMobile: true,
+    hasTouch: true,
+  },
 } as const;
 export type Tamanho = keyof typeof TAMANHOS;
 
@@ -31,7 +41,18 @@ export async function criarMundo(
           const kv = tx.objectStore('kv');
           const agora = 1_700_000_000_000;
           kv.put(
-            [{ id, nome: 'Guia', semente, modo: 'criativo', criadoEm: agora, jogadoEm: agora, versao: 2, tema }],
+            [
+              {
+                id,
+                nome: 'Guia',
+                semente,
+                modo: 'criativo',
+                criadoEm: agora,
+                jogadoEm: agora,
+                versao: 2,
+                tema,
+              },
+            ],
             'mundos',
           );
           kv.put({ versao: 1, edicoes: {}, jogador: null, hora: -1, extras }, `mundo:${id}`);
@@ -78,7 +99,9 @@ export async function abrirMundo(
   });
   await criarMundo(page, op.id, op.tema, op.extras ?? {});
   await page.goto(`/?mundo=${op.id}`);
-  await page.waitForFunction(() => window.__brumaluz?.ready === true, undefined, { timeout: 240_000 });
+  await page.waitForFunction(() => window.__brumaluz?.ready === true, undefined, {
+    timeout: 240_000,
+  });
   await page.evaluate(() => {
     document.querySelector<HTMLElement>('.entrada')?.setAttribute('hidden', '');
     const e = window.__brumaluz!;
@@ -102,7 +125,7 @@ export async function tocar(page: Page, seletor: string): Promise<void> {
 
 /** Abre a roda do menu e escolhe um item. */
 export async function escolherNaRoda(page: Page, item: string): Promise<void> {
-  await tocar(page, '.menu-hud');
+  await tocar(page, '.menu-hud:visible');
   await tocar(page, `.roda.aberta button.ativo[data-item="${item}"]`);
 }
 
@@ -110,7 +133,10 @@ export async function escolherNaRoda(page: Page, item: string): Promise<void> {
  * Anda pela trilha com o controle de verdade (joystick inteiro, sem correr, sem teleporte),
  * como uma criança que segue as pegadinhas, até chegar no alvo de agora. Devolve o tempo.
  */
-export async function andarPelaTrilha(page: Page, teto = 120_000): Promise<{ s: number; chegou: boolean; alvo: string | null }> {
+export async function andarPelaTrilha(
+  page: Page,
+  teto = 120_000,
+): Promise<{ s: number; chegou: boolean; alvo: string | null }> {
   return page.evaluate(async (teto) => {
     const e = window.__brumaluz!;
     const g = window.__guia!;
@@ -149,7 +175,12 @@ export async function andarPelaTrilha(page: Page, teto = 120_000): Promise<{ s: 
       const prox = rota[Math.min(rota.length - 1, i + 3)];
       const fim = i >= rota.length - 2;
       const [tx, tz] = fim ? [a.x, a.z] : [prox[0], prox[2]];
-      e.apontar!(Math.atan2(tx - p[0], tz - p[2]), 0.38);
+      // vira o olhar aos poucos (como o dedo de uma criança, sem tranco)
+      const quer = Math.atan2(tx - p[0], tz - p[2]);
+      const yaw = e.rotacao?.[1] ?? quer;
+      let dy = quer - yaw;
+      dy = Math.atan2(Math.sin(dy), Math.cos(dy));
+      e.apontar!(yaw + Math.max(-0.15, Math.min(0.15, dy)), 0.38);
       if (parado > 8 && desvio <= 0) {
         desvio = 12;
         lado = -lado;

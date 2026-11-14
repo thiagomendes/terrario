@@ -223,7 +223,12 @@ export function contarLavoura(
 
 /** O lote inteiro com 1 bloco de folga (chegou na beira já vale). */
 function caixaDoLoteSitio(l: Lote, folga = 1): CaixaChao {
-  return { x0: l.x0 - folga, z0: l.z0 - folga, x1: l.x0 + TAM_LOTE + folga, z1: l.z0 + TAM_LOTE + folga };
+  return {
+    x0: l.x0 - folga,
+    z0: l.z0 - folga,
+    x1: l.x0 + TAM_LOTE + folga,
+    z1: l.z0 + TAM_LOTE + folga,
+  };
 }
 
 /** O que cada missão do Rancho procura no sítio. */
@@ -249,7 +254,12 @@ function figuraNoSitio(m: Missao): string {
 }
 
 /** A altura do primeiro bloco cheio de cima para baixo (para a placa ficar em cima do telhado). */
-function topo(bloco: (x: number, y: number, z: number) => number, x: number, z: number, h: number): number {
+function topo(
+  bloco: (x: number, y: number, z: number) => number,
+  x: number,
+  z: number,
+  h: number,
+): number {
   for (let y = h + 16; y > h; y--) if (bloco(x, y, z) !== Bloco.AR) return y + 1;
   return h + 1;
 }
@@ -353,9 +363,15 @@ function alvoNoSitio(
   for (const sitio of mundo.sitios)
     for (const x of lotesQueServem(busca, sitio, mundo.bloco)) {
       const l = sitio.lotes[x.i];
-      const a: Achado = { sitio, i: x.i, forca: x.forca, d: Math.hypot(l.x0 + 3.5 - de.x, l.z0 + 3.5 - de.z) };
+      const a: Achado = {
+        sitio,
+        i: x.i,
+        forca: x.forca,
+        d: Math.hypot(l.x0 + 3.5 - de.x, l.z0 + 3.5 - de.z),
+      };
       if (`${l.uso}:${sitio.id}:${x.i}` === atual) doAtual = a;
-      if (!melhor || a.forca > melhor.forca || (a.forca === melhor.forca && a.d < melhor.d)) melhor = a;
+      if (!melhor || a.forca > melhor.forca || (a.forca === melhor.forca && a.d < melhor.d))
+        melhor = a;
     }
   // o de agora fica enquanto servir tão bem quanto o melhor (nada de pular para um vizinho)
   const e = doAtual && (!melhor || doAtual.forca >= melhor.forca) ? doAtual : melhor;
@@ -406,7 +422,13 @@ export function espalharPegadas(pts: readonly V3[], primeira = 0.45): Pegada[] {
       const dir = direcaoNaLinha(pts, u);
       const nx = dir[1];
       const nz = -dir[0];
-      out.push([q[0] + nx * LADO_PEGADA * lado, q[1], q[2] + nz * LADO_PEGADA * lado, Math.atan2(dir[0], dir[1]), lado]);
+      out.push([
+        q[0] + nx * LADO_PEGADA * lado,
+        q[1],
+        q[2] + nz * LADO_PEGADA * lado,
+        Math.atan2(dir[0], dir[1]),
+        lado,
+      ]);
     }
   }
   return out;
@@ -513,7 +535,8 @@ export function posicaoDaPlaca(
   for (let volta = 0; volta < 4; volta++) {
     let mexeu = false;
     for (const c of caixas) {
-      const cruza = x < c.x + c.w + 4 && x + tam > c.x - 4 && y < c.y + c.h + 4 && y + tam * 1.2 > c.y - 4;
+      const cruza =
+        x < c.x + c.w + 4 && x + tam > c.x - 4 && y < c.y + c.h + 4 && y + tam * 1.2 > c.y - 4;
       if (!cruza) continue;
       if (c.y + c.h / 2 < H / 2) y = c.y + c.h + 6;
       else y = c.y - tam * 1.2 - 6;
@@ -570,7 +593,11 @@ export function trilhaDosPes(rota: readonly V3[], pes: V3): V3[] {
   const p = pertoNaLinha(rota, pes[0], pes[2]);
   const a = rota[p.i];
   const b = rota[Math.min(rota.length - 1, p.i + 1)];
-  const ponto: V3 = [a[0] + (b[0] - a[0]) * p.k, p.k > 0.5 ? b[1] : a[1], a[2] + (b[2] - a[2]) * p.k];
+  const ponto: V3 = [
+    a[0] + (b[0] - a[0]) * p.k,
+    p.k > 0.5 ? b[1] : a[1],
+    a[2] + (b[2] - a[2]) * p.k,
+  ];
   const out: V3[] = [[pes[0], pes[1], pes[2]]];
   if (p.d > 0.35) out.push(ponto);
   for (let i = p.i + 1; i < rota.length; i++) out.push([rota[i][0], rota[i][1], rota[i][2]]);
@@ -685,7 +712,10 @@ export function criarRelogioConvite(limite = CONVITE_S) {
   let brincando = 0;
   let antes = false;
   return {
-    passo(dt: number, op: { missao: boolean; noJogo: boolean }): { mostra: boolean; acendeu: boolean } {
+    passo(
+      dt: number,
+      op: { missao: boolean; noJogo: boolean },
+    ): { mostra: boolean; acendeu: boolean } {
       if (op.missao) brincando = 0;
       else if (op.noJogo) brincando += Math.max(0, Math.min(0.25, dt));
       const mostra = !op.missao && brincando >= limite;

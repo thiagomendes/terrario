@@ -24,7 +24,10 @@ const sino = (t: number, f: number, pico = 0.42, queda = 0.4): NotaCurta[] => [
 export function notasDoGuia(som: SomGuia): NotaCurta[] {
   if (som === 'trilha') return [784, 1175, 1568].flatMap((f, i) => sino(i * 0.09, f, 0.36, 0.38));
   if (som === 'chegou')
-    return [...[784, 1175, 1568].flatMap((f, i) => sino(i * 0.07, f, 0.34, 0.32)), ...sino(0.24, 2349, 0.3, 0.6)];
+    return [
+      ...[784, 1175, 1568].flatMap((f, i) => sino(i * 0.07, f, 0.34, 0.32)),
+      ...sino(0.24, 2349, 0.3, 0.6),
+    ];
   return [...sino(0, 1046.5, 0.4, 0.4), ...sino(0.11, 1318.5, 0.45, 0.55)];
 }
 

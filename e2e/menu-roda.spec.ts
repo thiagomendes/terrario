@@ -65,6 +65,8 @@ const ABRE: Record<string, (p: Page) => Promise<boolean>> = {
         !!document.querySelector('.entrada:not([hidden])') &&
         !!document.querySelector('[data-painel-personagem]')?.getClientRects().length,
     ),
+  // spec 030: o baú da criança
+  bau: (p) => p.evaluate(() => !!document.querySelector('[data-alma-painel]')),
   // spec 023: a lojinha premium
   lojinha: (p) => p.evaluate(() => !!document.querySelector('[data-alma-loja]')),
   foto: (p) => p.evaluate(() => document.body.classList.contains('modo-foto')),
@@ -90,6 +92,8 @@ async function cadaItem(page: Page, tocar: boolean, nome: string) {
     'mapa',
     'diario',
     'personagem',
+    // spec 030: o baú (a carteira) mora na roda (as "Missões" só onde há missões)
+    'bau',
     'lojinha',
     'foto',
     'gestos',

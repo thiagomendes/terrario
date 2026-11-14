@@ -1,7 +1,12 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import '../../src/temas/todos';
 import { obterTema } from '../../src/temas';
-import { cidadeDoMundo, definirEstiloMundo, ESTILO_PADRAO, TERRENO_NATURAL } from '../../src/world/chunk';
+import {
+  cidadeDoMundo,
+  definirEstiloMundo,
+  ESTILO_PADRAO,
+  TERRENO_NATURAL,
+} from '../../src/world/chunk';
 import { limparCidades, type PlanoCidade } from '../../src/world/cidade';
 import { limparPovoados, noLote, planoDaRegiao, type PlanoPovoado } from '../../src/world/povoado';
 import { construirLoteDoSitio } from '../../src/world/sitio';
@@ -106,7 +111,12 @@ describe('030: alvo da missão no sítio (Rancho)', () => {
     for (const l of sitio.lotes)
       construirLoteDoSitio(sitio, l, (x, y, z, id) => blocos.set(`${x},${y},${z}`, id));
   };
-  const mundo = (): MundoDoGuia => ({ cidade: null, sitios: [sitio], bloco: ler, moradores: () => [] });
+  const mundo = (): MundoDoGuia => ({
+    cidade: null,
+    sitios: [sitio],
+    bloco: ler,
+    moradores: () => [],
+  });
   const lavouras = () => sitio.lotes.map((l, i) => ({ l, i })).filter((x) => x.l.uso === 'lavoura');
   const colherTudo = (i: number) => {
     const l = sitio.lotes[i];
@@ -164,7 +174,8 @@ describe('030: alvo da missão no sítio (Rancho)', () => {
     const [ax, az] = noLote(l, 0, 0);
     const [bx, bz] = noLote(l, 6, 6);
     const pts: V3[] = [];
-    for (let k = 0; k <= 12; k++) pts.push([ax + 0.5 + ((bx - ax) * k) / 12, l.h + 1, az + 0.5 + ((bz - az) * k) / 12]);
+    for (let k = 0; k <= 12; k++)
+      pts.push([ax + 0.5 + ((bx - ax) * k) / 12, l.h + 1, az + 0.5 + ((bz - az) * k) / 12]);
     const ruim = ruimNoSitio(ler);
     const liso = alisar(pts, () => l.h + 1, ruim);
     // o alisado só junta pontos por onde dá para ir reto: nenhum pedaço novo passa pela roça
@@ -247,9 +258,11 @@ describe('030: o convite', () => {
   it('só com o jogo à vista e sem missão; brilha uma vez; zera com missão', () => {
     const r = criarRelogioConvite(2);
     let acendeu = 0;
-    for (let i = 0; i < 30; i++) if (r.passo(0.1, { missao: false, noJogo: i % 2 === 0 }).acendeu) acendeu++;
+    for (let i = 0; i < 30; i++)
+      if (r.passo(0.1, { missao: false, noJogo: i % 2 === 0 }).acendeu) acendeu++;
     expect(acendeu).toBe(0);
-    for (let i = 0; i < 40; i++) if (r.passo(0.1, { missao: false, noJogo: true }).acendeu) acendeu++;
+    for (let i = 0; i < 40; i++)
+      if (r.passo(0.1, { missao: false, noJogo: true }).acendeu) acendeu++;
     expect(acendeu).toBe(1);
     expect(r.passo(0.1, { missao: true, noJogo: true }).mostra).toBe(false);
     expect(r.segundos).toBe(0);

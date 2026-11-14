@@ -12,7 +12,11 @@ declare const process: { env: Record<string, string | undefined> };
 const PASTA = process.env.GUIA_PASTA ?? 'test-results/guia';
 
 const MUNDOS = {
-  cidade: { tema: 'cidade-grande', missao: 'c3', extras: { alma: { local: { feitas: ['c1', 'c2'] } } } },
+  cidade: {
+    tema: 'cidade-grande',
+    missao: 'c3',
+    extras: { alma: { local: { feitas: ['c1', 'c2'] } } },
+  },
   rancho: { tema: 'rancho-alegre', missao: 'r1', extras: {} },
 } as const;
 
@@ -27,7 +31,9 @@ async function pegadasVisiveis(page: Page): Promise<number> {
     const [px, py, pz] = e.jogadorPes!();
     const c = e.camera!.posicao();
     const pts = [0, 0.9, 1.8].flatMap((dy) =>
-      [-0.45, 0.45].flatMap((dx) => [-0.45, 0.45].map((dz) => e.telaDoPonto!(px + dx, py + dy, pz + dz))),
+      [-0.45, 0.45].flatMap((dx) =>
+        [-0.45, 0.45].map((dz) => e.telaDoPonto!(px + dx, py + dy, pz + dz)),
+      ),
     );
     const ok = pts.filter((q): q is { x: number; y: number } => !!q);
     const boneco = {
@@ -36,7 +42,11 @@ async function pegadasVisiveis(page: Page): Promise<number> {
       y0: Math.min(...ok.map((q) => q.y)),
       y1: Math.max(...ok.map((q) => q.y)),
     };
-    const hud = [...document.querySelectorAll<HTMLElement>('.barra, .minimapa, .bussola, .toque .joystick, .toque .botoes > *, .alma-carteira, .alma-missao, .menu-hud')]
+    const hud = [
+      ...document.querySelectorAll<HTMLElement>(
+        '.barra, .minimapa, .bussola, .toque .joystick, .toque .botoes > *, .alma-carteira, .alma-missao, .menu-hud',
+      ),
+    ]
       .map((el) => el.getBoundingClientRect())
       .filter((r) => r.width > 4);
     let n = 0;
@@ -70,7 +80,9 @@ async function escolherMissao(page: Page, missao: string): Promise<number> {
   await escolherNaRoda(page, 'missoes');
   await page.waitForSelector('[data-alma-quadro]', { timeout: 20_000 });
   await page.waitForTimeout(500);
-  console.log(`guia: olhar antes ${JSON.stringify(await page.evaluate(() => window.__brumaluz!.rotacao))}`);
+  console.log(
+    `guia: olhar antes ${JSON.stringify(await page.evaluate(() => window.__brumaluz!.rotacao))}`,
+  );
   const t0 = await page.evaluate(() => performance.now());
   await tocar(page, `[data-alma-jogar="${missao}"]`);
   return t0;
@@ -98,7 +110,9 @@ for (const [nome, m] of Object.entries(MUNDOS))
 
       const t0 = await escolherMissao(page, m.missao);
       // a trilha nasce em até 300 ms (depois da resposta do núcleo) e começa nos pés
-      await page.waitForFunction(() => (window.__guia?.pegadas() ?? 0) > 0, undefined, { timeout: 15_000 });
+      await page.waitForFunction(() => (window.__guia?.pegadas() ?? 0) > 0, undefined, {
+        timeout: 15_000,
+      });
       const nasceu = await page.evaluate(() => performance.now());
       console.log(`guia: ${nome} ${tamanho} trilha em ${Math.round(nasceu - t0)} ms`);
       await expect(page.locator('[data-alma-missao]')).toHaveAttribute('data-missao', m.missao);
@@ -120,7 +134,9 @@ for (const [nome, m] of Object.entries(MUNDOS))
       });
       const inteiras = await pegadasVisiveis(page);
       await page.screenshot({ path: `${PASTA}/${nome}-${tamanho}-2-trilha.png` });
-      console.log(`guia: ${nome} ${tamanho} ${JSON.stringify(medida)} inteiras à vista: ${inteiras}`);
+      console.log(
+        `guia: ${nome} ${tamanho} ${JSON.stringify(medida)} inteiras à vista: ${inteiras}`,
+      );
       expect(medida.pegadas).toBeGreaterThan(5);
       expect(medida.luzes).toBeGreaterThan(2);
       // a trilha à vista começa ~1,5 bloco adiante dos pés (as de baixo dele, o boneco tapa)
@@ -146,8 +162,12 @@ for (const [nome, m] of Object.entries(MUNDOS))
         e.apontar!(a.yaw, a.pitch);
       }, antes);
       await page.waitForTimeout(800);
-      await page.locator('[data-alma-carteira]').screenshot({ path: `${PASTA}/${nome}-${tamanho}-3-estrela.png` });
-      await page.locator('[data-alma-missao]').screenshot({ path: `${PASTA}/${nome}-${tamanho}-3-selinho.png` });
+      await page
+        .locator('[data-alma-carteira]')
+        .screenshot({ path: `${PASTA}/${nome}-${tamanho}-3-estrela.png` });
+      await page
+        .locator('[data-alma-missao]')
+        .screenshot({ path: `${PASTA}/${nome}-${tamanho}-3-selinho.png` });
       // a criança anda um pouco para o lado (fora da rota): a trilha continua nascendo nos pés
       await page.evaluate(() => {
         const e = window.__brumaluz!;
@@ -187,12 +207,12 @@ test('guia: o convite (o baú com "?") e a roda com "Missões" e "Baú"', async 
   await page.screenshot({ path: `${PASTA}/convite-1-brilha.png` });
   await page.waitForTimeout(1500);
   await page.screenshot({ path: `${PASTA}/convite-2-quieto.png` });
-  await tocar(page, '.menu-hud');
+  await tocar(page, '.menu-hud:visible');
   await page.waitForTimeout(700);
   await expect(page.locator('.roda.aberta button.ativo[data-item="missoes"]')).toBeVisible();
   await expect(page.locator('.roda.aberta button.ativo[data-item="bau"]')).toBeVisible();
   await page.screenshot({ path: `${PASTA}/convite-3-roda.png` });
-  await tocar(page, '.menu-hud');
+  await tocar(page, '.menu-hud:visible');
   await page.waitForTimeout(500);
   // tocar no convite abre o quadro
   await tocar(page, '[data-alma-missao].convite');

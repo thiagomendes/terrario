@@ -4,7 +4,9 @@ import { mkdirSync } from 'node:fs';
 /**
  * 023 (depois de publicada): o passeio da Cidade (c3: padaria, escola e sorveteria) acende a
  * bolinha do lugar visitado, não a primeira. A criança vai à sorveteria primeiro: a terceira
- * bolinha (a da sorveteria) acende; depois a padaria: a primeira. Captura em PASSEIO_PASTA.
+ * bolinha (a da sorveteria) acende; depois a padaria: a primeira. Spec 030: o cartão saiu (o
+ * selinho mostra o lugar de agora), as bolinhas ficam no quadro e o ✓ pula no lugar.
+ * Captura em PASSEIO_PASTA.
  */
 declare const process: { env: Record<string, string | undefined> };
 const PASTA = process.env.PASSEIO_PASTA ?? 'test-results/passeio';
@@ -65,8 +67,6 @@ test('passeio c3: a bolinha do lugar visitado acende', async ({ page }) => {
       'terrario:config',
       JSON.stringify({ distancia: 3, mostrarFps: false, mostrarAtalhos: false }),
     );
-    // o quadro de missões não abre sozinho (já foi visto)
-    localStorage.setItem('terrario:alma-quadro-visto', JSON.stringify(['passeio']));
   });
   await page.goto('/?mundo=passeio');
   await page.waitForFunction(() => window.__brumaluz?.ready === true, undefined, {
@@ -80,16 +80,27 @@ test('passeio c3: a bolinha do lugar visitado acende', async ({ page }) => {
     e.definirClima?.('limpo');
   });
   await page.addStyleTag({ content: '.toast-area { display: none !important; }' });
-  const cartao = page.locator('[data-alma-missao]');
-  await expect(cartao).toHaveAttribute('data-missao', 'c3', { timeout: 30_000 });
-  const acesas = () =>
-    page.evaluate(() =>
-      [...document.querySelectorAll('[data-alma-missao] .alma-bolinhas .b')].map((b) =>
-        b.classList.contains('cheia'),
-      ),
-    );
+  // spec 030: o quadro mora na roda do menu; o "brincar" fixa a c3 e acende a trilha
+  const abrirQuadro = async () => {
+    // no computador a roda abre pela tecla O (o ponteiro fica preso no jogo)
+    await page.keyboard.press('KeyO');
+    await page.locator('.roda.aberta button.ativo[data-item="missoes"]').click();
+    await page.waitForSelector('[data-alma-quadro]', { timeout: 15_000 });
+  };
+  await abrirQuadro();
+  await page.locator('[data-alma-jogar="c3"]').click();
+  const selo = page.locator('[data-alma-missao]');
+  await expect(selo).toHaveAttribute('data-missao', 'c3', { timeout: 30_000 });
+  const acesas = async () => {
+    await abrirQuadro();
+    const r = await page
+      .locator('.alma-oferta[data-missao="c3"] .alma-bolinhas .b')
+      .evaluateAll((bs) => bs.map((b) => b.classList.contains('cheia')));
+    await page.keyboard.press('Escape');
+    await page.waitForTimeout(300);
+    return r;
+  };
   expect(await acesas()).toEqual([false, false, false]);
-  await page.keyboard.press('Escape');
 
   const ir = async (uso: string) => {
     await page.evaluate((uso) => {
@@ -98,26 +109,19 @@ test('passeio c3: a bolinha do lugar visitado acende', async ({ page }) => {
       e.teleportar!(l.x0 + l.largura / 2, l.z0 + l.profundidade / 2);
     }, uso);
   };
-  // a sorveteria primeiro: acende a terceira (a da sorveteria)
+  // a sorveteria primeiro: acende a terceira (a da sorveteria), e o ✓ pula no lugar
   await ir('sorveteria');
+  await expect.poll(() => page.evaluate(() => window.__guia?.certos() ?? 0), { timeout: 20_000 }).toBe(1);
+  await page.waitForTimeout(400);
+  await page.screenshot({ path: `${PASTA}/c3-sorveteria-certo.png` });
   await expect.poll(acesas, { timeout: 20_000 }).toEqual([false, false, true]);
-  await page.waitForTimeout(1500);
-  await page.screenshot({ path: `${PASTA}/c3-sorveteria-primeiro.png` });
-  await cartao.screenshot({ path: `${PASTA}/c3-sorveteria-primeiro-cartao.png` });
+  // a trilha pulou para outro lugar (o selinho mostra o desenho dele)
+  await expect(selo).not.toHaveAttribute('data-figura', 'sorveteria', { timeout: 10_000 });
+  await selo.screenshot({ path: `${PASTA}/c3-sorveteria-primeiro-selinho.png` });
   // depois a padaria: a primeira
   await ir('padaria');
   await expect.poll(acesas, { timeout: 20_000 }).toEqual([true, false, true]);
-  await page.waitForTimeout(1200);
-  await cartao.screenshot({ path: `${PASTA}/c3-padaria-depois-cartao.png` });
-  // o quadro também mostra cada bolinha no seu lugar
-  await cartao.click();
-  const oferta = page.locator('.alma-oferta[data-missao="c3"] .alma-bolinhas .b');
-  await expect(oferta).toHaveCount(3);
-  expect(await oferta.evaluateAll((bs) => bs.map((b) => b.classList.contains('cheia')))).toEqual([
-    true,
-    false,
-    true,
-  ]);
+  await abrirQuadro();
   await page.waitForTimeout(800);
   await page.screenshot({ path: `${PASTA}/c3-quadro.png` });
 });

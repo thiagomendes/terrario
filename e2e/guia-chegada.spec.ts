@@ -1,6 +1,13 @@
 import { expect, test, type Page } from '@playwright/test';
 import { mkdirSync } from 'node:fs';
-import { abrirMundo, andarPelaTrilha, assentar, escolherNaRoda, moedasNoCanto, tocar } from './guia-palco';
+import {
+  abrirMundo,
+  andarPelaTrilha,
+  assentar,
+  escolherNaRoda,
+  moedasNoCanto,
+  tocar,
+} from './guia-palco';
 
 /**
  * Spec 030, fase 2: chegar no lugar andando pelo controle de verdade (ritmo de criança, sem
@@ -12,7 +19,9 @@ declare const process: { env: Record<string, string | undefined> };
 const PASTA = process.env.GUIA_PASTA ?? 'test-results/guia-chegada';
 
 const obrasFeitas = (ns: number[]) =>
-  Object.fromEntries(ns.map((n) => [String(n), { cheias: [], ajudantes: [['local', 'Guia']], feita: true }]));
+  Object.fromEntries(
+    ns.map((n) => [String(n), { cheias: [], ajudantes: [['local', 'Guia']], feita: true }]),
+  );
 const alma = (feitas: string[]) => ({
   local: {
     feitas,
@@ -31,7 +40,9 @@ async function escolher(page: Page, missao: string): Promise<void> {
   await page.waitForSelector('[data-alma-quadro]', { timeout: 20_000 });
   await page.waitForTimeout(500);
   await tocar(page, `[data-alma-jogar="${missao}"]`);
-  await page.waitForFunction(() => (window.__guia?.pegadas() ?? 0) > 0, undefined, { timeout: 15_000 });
+  await page.waitForFunction(() => (window.__guia?.pegadas() ?? 0) > 0, undefined, {
+    timeout: 15_000,
+  });
   await page.evaluate(() => (window.__guia!.virar = false));
 }
 
@@ -63,7 +74,11 @@ test('c3 inteira andando: um ✓ por lugar, a festa e as moedinhas no canto', as
   await escolher(page, 'c3');
   await tocar(page, '[data-alma-missao]');
   await page.waitForTimeout(1200);
-  expect(await page.evaluate(() => (window as unknown as { __gaveta: { abriu: number } }).__gaveta.abriu)).toBe(0);
+  expect(
+    await page.evaluate(
+      () => (window as unknown as { __gaveta: { abriu: number } }).__gaveta.abriu,
+    ),
+  ).toBe(0);
   const t0 = Date.now();
   const trechos: { lugar: string | null; s: number }[] = [];
   for (let k = 0; k < 3; k++) {
@@ -71,16 +86,24 @@ test('c3 inteira andando: um ✓ por lugar, a festa e as moedinhas no canto', as
     trechos.push({ lugar: r.alvo, s: Math.round(r.s * 10) / 10 });
     expect(r.chegou, `chegou em ${r.alvo}`).toBe(true);
     // o ✓ vem do núcleo (o lugar visto)
-    await page.waitForFunction((n) => window.__guia!.certos() >= n, k + 1, { timeout: 15_000 }).catch(() => undefined);
+    await page
+      .waitForFunction((n) => window.__guia!.certos() >= n, k + 1, { timeout: 15_000 })
+      .catch(() => undefined);
     await page.waitForTimeout(300);
     await page.screenshot({ path: `${PASTA}/c3-${k + 1}-${r.alvo}.png` });
     if (k < 2)
-      await page.waitForFunction((c) => window.__guia!.alvo()?.chave !== c && (window.__guia!.pegadas() ?? 0) > 0, r.alvo, {
-        timeout: 15_000,
-      });
+      await page.waitForFunction(
+        (c) => window.__guia!.alvo()?.chave !== c && (window.__guia!.pegadas() ?? 0) > 0,
+        r.alvo,
+        {
+          timeout: 15_000,
+        },
+      );
   }
   const total = (Date.now() - t0) / 1000;
-  console.log(`guia: c3 ${JSON.stringify(trechos)} total ${total.toFixed(1)} s, certos ${await page.evaluate(() => window.__guia!.certos())}`);
+  console.log(
+    `guia: c3 ${JSON.stringify(trechos)} total ${total.toFixed(1)} s, certos ${await page.evaluate(() => window.__guia!.certos())}`,
+  );
   expect(await page.evaluate(() => window.__guia!.certos())).toBeGreaterThanOrEqual(2);
   // a festa: as moedinhas saem do lugar, o canto abre e conta (o mesmo total de hoje: 3)
   await page.waitForSelector('[data-alma-festa]', { timeout: 20_000 });
@@ -90,7 +113,11 @@ test('c3 inteira andando: um ✓ por lugar, a festa e as moedinhas no canto', as
   await page.waitForTimeout(900);
   await page.screenshot({ path: `${PASTA}/c3-5-canto-conta.png` });
   await expect.poll(() => moedasNoCanto(page), { timeout: 15_000 }).toBe(moedas0 + 3);
-  expect(await page.evaluate(() => (window as unknown as { __gaveta: { abriu: number } }).__gaveta.abriu)).toBeGreaterThan(0);
+  expect(
+    await page.evaluate(
+      () => (window as unknown as { __gaveta: { abriu: number } }).__gaveta.abriu,
+    ),
+  ).toBeGreaterThan(0);
   expect(total).toBeLessThan(120);
   await page.waitForTimeout(3500);
   expect(await page.locator('.alma-carteira.contando').count()).toBe(0);
@@ -98,7 +125,9 @@ test('c3 inteira andando: um ✓ por lugar, a festa e as moedinhas no canto', as
   await page.context().close();
 });
 
-test('c6 em pé: chega no canteiro 4 e a mãozinha mostra onde o toque põe o bloco', async ({ browser }) => {
+test('c6 em pé: chega no canteiro 4 e a mãozinha mostra onde o toque põe o bloco', async ({
+  browser,
+}) => {
   test.setTimeout(600_000);
   mkdirSync(PASTA, { recursive: true });
   const page = await abrirMundo(browser, {
@@ -125,7 +154,10 @@ test('c6 em pé: chega no canteiro 4 e a mãozinha mostra onde o toque põe o bl
   for (let k = 0; k < 2; k++) {
     const fm = await page.evaluate(() => window.__guia!.fantasmaDaMao());
     if (!fm) break;
-    const t = await page.evaluate((q) => window.__brumaluz!.telaDoPonto!(q.x + 0.5, q.y + 0.5, q.z + 0.5), fm);
+    const t = await page.evaluate(
+      (q) => window.__brumaluz!.telaDoPonto!(q.x + 0.5, q.y + 0.5, q.z + 0.5),
+      fm,
+    );
     if (!t) break;
     const antes = await page.evaluate(() => window.__brumaluz!.obraColocados ?? 0);
     await page.touchscreen.tap(t.x, t.y);
@@ -139,16 +171,24 @@ test('c6 em pé: chega no canteiro 4 e a mãozinha mostra onde o toque põe o bl
   await page.context().close();
 });
 
-test('r1 no Rancho: a trilha leva à lavoura madura e cada colheita ganha o ✓', async ({ browser }) => {
+test('r1 no Rancho: a trilha leva à lavoura madura e cada colheita ganha o ✓', async ({
+  browser,
+}) => {
   test.setTimeout(600_000);
   mkdirSync(PASTA, { recursive: true });
-  const page = await abrirMundo(browser, { id: 'guia-r1', tema: 'rancho-alegre', tamanho: 'deitado' });
+  const page = await abrirMundo(browser, {
+    id: 'guia-r1',
+    tema: 'rancho-alegre',
+    tamanho: 'deitado',
+  });
   await assentar(page);
   await escolher(page, 'r1');
   const r = await andarPelaTrilha(page, 90_000);
   console.log(`guia: r1 chegou em ${r.s.toFixed(1)} s (${r.chegou}) em ${r.alvo}`);
   await page.screenshot({ path: `${PASTA}/r1-0-andou.png` });
-  console.log(`guia: r1 pés ${JSON.stringify(await page.evaluate(() => window.__brumaluz!.jogadorPes!()))} alvo ${JSON.stringify(await page.evaluate(() => window.__guia!.alvo()))}`);
+  console.log(
+    `guia: r1 pés ${JSON.stringify(await page.evaluate(() => window.__brumaluz!.jogadorPes!()))} alvo ${JSON.stringify(await page.evaluate(() => window.__guia!.alvo()))}`,
+  );
   expect(r.chegou).toBe(true);
   expect(r.s).toBeLessThan(45);
   await page.waitForTimeout(600);
@@ -187,7 +227,9 @@ test('r1 no Rancho: a trilha leva à lavoura madura e cada colheita ganha o ✓'
   await page.context().close();
 });
 
-test('c5: a placa na cabeça da padeira e a trilha até ela (ela para quando a criança chega)', async ({ browser }) => {
+test('c5: a placa na cabeça da padeira e a trilha até ela (ela para quando a criança chega)', async ({
+  browser,
+}) => {
   test.setTimeout(600_000);
   mkdirSync(PASTA, { recursive: true });
   const page = await abrirMundo(browser, {

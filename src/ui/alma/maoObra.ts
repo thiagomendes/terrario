@@ -86,7 +86,12 @@ export function criarMaoObra(e: EstadoDepuracao, scene: Scene): MaoObra {
     // o primeiro bloco de verdade no caminho (o tapume, um poste): o dedo bate nele antes
     let solido = Infinity;
     for (let s = 0.3; s < 14; s += 0.1) {
-      const b = e.bloco?.(Math.floor(o.x + d.x * s), Math.floor(o.y + d.y * s), Math.floor(o.z + d.z * s)) ?? AR;
+      const b =
+        e.bloco?.(
+          Math.floor(o.x + d.x * s),
+          Math.floor(o.y + d.y * s),
+          Math.floor(o.z + d.z * s),
+        ) ?? AR;
       if (b !== AR) {
         solido = s;
         break;
@@ -182,7 +187,10 @@ export function criarMaoObra(e: EstadoDepuracao, scene: Scene): MaoObra {
     },
     tela: () =>
       mao.classList.contains('mostra')
-        ? { x: parseFloat(mao.style.getPropertyValue('--x')), y: parseFloat(mao.style.getPropertyValue('--y')) }
+        ? {
+            x: parseFloat(mao.style.getPropertyValue('--x')),
+            y: parseFloat(mao.style.getPropertyValue('--y')),
+          }
         : null,
     fantasma: () => alvo ?? escolher(),
   };

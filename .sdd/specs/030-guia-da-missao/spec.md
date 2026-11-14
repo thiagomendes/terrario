@@ -28,10 +28,10 @@ Uma criança de 3 anos, sem ler, escolhe a missão e **chega ao lugar certo e co
 O esboço (`esboco/guia-da-missao`, `?esboco=guia`) testou três jeitos e um vaga-lume guia. **O vaga-lume saiu** (decisão do dono, com a segunda opinião de acordo): fica a trilha, a placa e um canto pequeno.
 
 1. **O quadro nunca abre sozinho** ao entrar no mundo. "Missões" e o baú moram na **roda do menu**. Sem bolinha de lado (alvo fora da tela), sem vaga-lume, sem moedinha por ação (o modelo da 023 não muda).
-2. **Trilha de pegadinhas** verde-água com borda clara e escura (lê na calçada, na grama e na terra arada), pé esquerdo e pé direito. Ela **sempre nasce nos pés do boneco** (um trechinho de ligação se a criança saiu da rota) e uma **ondinha** corre dos pés para a frente, pela trilha. Na cidade vai pelas calçadas e atravessa na faixa (`caminhoNaCidade`); fora dela, a busca a pé da 021, alisada.
-3. **Placa do alvo** flutuando em cima do lugar, com o mesmo desenho da missão (rodada 1), vista por cima dos prédios.
-4. **A câmera vira devagar uma vez** quando a trilha acende (1,5 s, entra e sai macio), **só se a criança não estiver mexendo na câmera**. Nada de virar ao chegar.
-5. **O canto:** a estrela do nível e um **selinho** com o desenho da missão escolhida. Tocar no selinho repete a ondinha e a virada macia. **O convite:** sem missão escolhida, depois de ~2 min brincando com o jogo à vista (painel aberto não conta), o selinho vira o **baú com "?"**, que brilha uma vez e fica quieto; tocar abre o quadro. Zera quando uma missão acaba.
+2. **Trilha de pegadinhas** verde-água com borda clara e escura (lê na calçada, na grama e na terra arada), em **pares** (o pé esquerdo e o direito lado a lado, um vão de ~0,4 bloco entre os pares). Ela sempre parte dos pés do boneco (um trechinho de ligação se a criança saiu da rota), mas **a parte à vista começa ~1,5 bloco adiante** (as de baixo dele o boneco tapa). Uma **ondinha** corre dos pés para a frente. **Luzinhas de pé** verde-água (~0,3 bloco, a ~0,6 do chão, viradas para a câmera) a cada 2 blocos nos primeiros ~12; atrás de muro ficam a 35% em vez de sumir. Na cidade vai pelas calçadas e atravessa na faixa (`caminhoNaCidade`), com o começo alisado; fora dela, a busca a pé da 021, alisada. 1 bloco de folga de canteiro de flor e de quem está parado (o pedreiro).
+3. **Placa do alvo** (HTML, 60 px, aro verde-escuro) em cima do lugar, com o mesmo desenho do selinho; nunca em cima da estrela, do selinho, da bússola ou do minimapa (desce para baixo deles), com margem em cima; fora da tela, some (nada de bolinha de lado).
+4. **A câmera vira devagar uma vez** quando a trilha acende (1,5 s, entra e sai macio), **só de lado** (sem inclinar) e deixando a trilha um pouco à direita do boneco, **só se a criança não estiver mexendo na câmera**. Nada de virar ao chegar.
+5. **O canto:** a estrela do nível e, embaixo dela, um **selinho** com o desenho da placa de agora (um objeto só: o passeio vira o tênis antes de ter lugar). Tocar no selinho repete a ondinha, o som da trilha e a virada macia. **O convite:** sem missão escolhida, depois de ~2 min brincando com o jogo à vista (painel aberto não conta), o selinho vira o **baú com "?"** (aro branco e sombra, lê nas árvores amarelas), que pulsa duas vezes (1 → 1,25 em 1,2 s) com 6 estrelinhas e o "plim", e fica quieto; tocar abre o quadro. Zera quando uma missão acaba. A gaveta das moedinhas só abre quando elas chegam.
 6. **Ao chegar:** um brilho no lugar e um som curto nosso, pelo motor de som do jogo (segue o volume e o mudo). A **mãozinha** mostra o gesto só onde já está bem feita: **na obra**, só nos blocos da camada de baixo e só onde o raio do dedo pega aquele bloco (a conta do jogo, `fantasmaNoRaio`). Nos outros lugares: trilha e placa.
 7. **O ✓ vem do núcleo** (o evento de progresso da alma), para todo tipo de missão: andou a conta, o carimbo verde pula no lugar.
 8. **As moedinhas no fim** voam do lugar para o canto, que abre de lado e conta (a festa da 023 continua, o total é o mesmo).
@@ -46,10 +46,10 @@ Devolve **um** alvo (aonde a trilha vai, onde fica a placa e quando "chegou"), o
 
 | Missão | Alvo | Chegou |
 | --- | --- | --- |
-| obra (c1, c2, c4, c6–c8) | a entrada do tapume do canteiro, por dentro | dentro do lote do canteiro |
+| obra (c1, c2, c4, c6–c8) | a entrada do tapume do canteiro, por dentro | lá dentro, a 1,6 bloco do fim da trilha (na porta ela ainda não vê os blocos) |
 | lugares (c3) | o lugar ainda não visto (núcleo: `usos`) mais perto **pela calçada** | dentro do lote |
-| c5 troca com a padeira | a padeira (alvo que anda; a trilha refaz depois que ela andou 4 blocos) | a 3 blocos dela (ela para) |
-| r1 colher | a lavoura do sítio mais perto **com trigo maduro**; sem maduro, a com terra arada livre | na beira da lavoura |
+| c5 troca com a padeira | a padeira (alvo que anda; a trilha refaz depois que ela andou 4 blocos; a placa na cabeça dela) | a 3 blocos dela (a moradora já para e olha a 2,5, como na 014) |
+| r1 colher | a lavoura do sítio mais perto **com planta madura** (a placa mostra o que está maduro: trigo, milho ou abóbora); sem maduro, a com terra arada livre | na beira da lavoura |
 | r3 plantar | a lavoura com terra arada livre; sem nenhuma, a lavoura | na beira da lavoura |
 | r7 a sua roça | a lavoura mais perto (o dono da planta é só do núcleo) | na beira da lavoura |
 | r2 milho às galinhas, r6 ovos | o galinheiro (do lado de fora da porteira) | na porteira |
@@ -63,13 +63,14 @@ Medido no esboço (Cidade Grande, semente 1337, celular deitado, placa de vídeo
 
 Medidas que precisam passar:
 - **A trilha nasce em até 300 ms** do toque em "brincar" ou no selinho (a busca anda em fatias de 4 ms, como a 021).
-- **A primeira pegada fica a menos de 1,5 bloco dos pés** da criança, sempre.
+- **A primeira pegada à vista fica entre 1 e 2,4 blocos dos pés**, sempre (também fora da rota).
+- **Pelo menos 3 pegadas inteiras à vista** logo depois do "brincar", fora do boneco e do HUD, sem bloco na frente (cidade e Rancho, celular deitado e em pé).
 - **Tempo até o alvo** no ritmo de criança: c3 inteira em até 2 min; c6 em até 45 s; r1 até a lavoura em até 45 s.
 - **Mãozinha:** aparece em até 1,5 s depois de chegar na obra, num bloco que o dedo alcança, longe do HUD; o toque onde ela mostrou põe o bloco.
 - **Rancho:** nenhuma pegada em cima de planta da roça; a trilha alisada não muda de rumo mais que 45° entre pegadas vizinhas fora das quinas.
 - **Nada tapa o HUD:** o selinho e a mãozinha nas três telas (1280×720, 844×390, 390×844), teste de caixas como na 021 e na 023.
 - **Tela limpa:** a parte da missão no canto fica em ~1 ponto de cobertura (a estrela e o selinho), contra ~5 do cartão de hoje.
-- **Desempenho:** a trilha custa 2 chamadas de desenho (pegada e borda, instâncias finas), a placa 2; até 420 pegadas.
+- **Desempenho:** a trilha custa 2 chamadas de desenho (pegada e borda, instâncias finas) e as luzinhas 2; a placa é HTML; até 420 pegadas.
 - **Rodada em família** antes de fechar.
 
 ## Com amigos
