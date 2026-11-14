@@ -4,10 +4,11 @@ import {
   nivelDaCrianca,
   type PerfilCrianca,
 } from './personagem/almaCrianca';
-import { EVENTO_LOJINHA, ligarAlmaUi } from './ui/alma';
+import { EVENTO_BAU, EVENTO_LOJINHA, EVENTO_MISSOES, ligarAlmaUi } from './ui/alma';
+import { ligarGuiaMissao, QUADRO_SVG } from './ui/alma/guia';
 import { arte as arteAlma } from './ui/alma/arte';
 import { EXTRAS_RODA } from './ui/menuRoda';
-import { CATEGORIAS_PREMIUM, ganhoTemAlgo, nivelDoXp } from './jogo/alma';
+import { CATEGORIAS_PREMIUM, ganhoTemAlgo, mundoAlmaDaPlanta, nivelDoXp } from './jogo/alma';
 import type { EventoNucleo } from './nucleo/protocolo';
 import { medirJanela, tamanhoDoCanvas } from './ui/telaCheia';
 import { criarCena } from './render/cena';
@@ -218,6 +219,21 @@ async function iniciar(app: HTMLElement): Promise<void> {
   if (esboco === 'estetica') (await import('./esboco/veiculosEstetica')).prepararEsbocoEstetica();
   // spec 023 (T14): a lojinha premium na roda do menu, de qualquer mundo (a roda é montada
   // com a cena; a alma, que abre a lojinha, vem depois e ouve o pedido)
+  // spec 030: o quadro de missões (só onde há missões) e o baú moram na roda do menu
+  if (mundoAlmaDaPlanta(temaMundo.mundo.povoado?.planta) && !EXTRAS_RODA.some((x) => x.id === 'missoes'))
+    EXTRAS_RODA.push({
+      id: 'missoes',
+      nome: 'Missões',
+      icone: QUADRO_SVG,
+      aoEscolher: () => window.dispatchEvent(new CustomEvent(EVENTO_MISSOES)),
+    });
+  if (!EXTRAS_RODA.some((x) => x.id === 'bau'))
+    EXTRAS_RODA.push({
+      id: 'bau',
+      nome: 'Baú',
+      icone: arteAlma('bau'),
+      aoEscolher: () => window.dispatchEvent(new CustomEvent(EVENTO_BAU)),
+    });
   if (!EXTRAS_RODA.some((x) => x.id === 'lojinha'))
     EXTRAS_RODA.push({
       id: 'lojinha',
@@ -264,13 +280,7 @@ async function iniciar(app: HTMLElement): Promise<void> {
   ligarDiario(app, cena);
   // spec 023: o perfil da criança soma o que o núcleo manda e o HUD mostra (na prévia de
   // outro tema o perfil vive só na página: nada é guardado)
-  ligarAlma(emPrevia ? null : armazenamento, cena, {
-    chaveMundo: emPrevia
-      ? null
-      : nuvem
-        ? `sala:${normalizarCodigo(nuvem.bv.sala.codigo)}`
-        : atual.id,
-  });
+  ligarAlma(emPrevia ? null : armazenamento, cena);
   ligarControles(app, cena, hotbar, config);
   // a tela de título (ou a da sala) já está montada: o "Carregando" do index.html some
   tirarCarregando();
@@ -687,20 +697,14 @@ const TRONCOS = new Set<number>([
  * prêmio (pelo mesmo caminho do prêmio do canteiro da 014). O HUD e as festas (fases
  * seguintes) ouvem `brumaluz:almaPerfil` ou `window.__almaCrianca.ouvir`.
  */
-function ligarAlma(
-  armazenamento: Storage | null,
-  cena: ReturnType<typeof criarCena>,
-  op: { chaveMundo: string | null },
-): void {
+function ligarAlma(armazenamento: Storage | null, cena: ReturnType<typeof criarCena>): void {
   const perfil = criarPerfilCrianca(armazenamento);
   (window as unknown as { __almaCrianca?: PerfilCrianca }).__almaCrianca = perfil;
   // o HUD ouve o núcleo antes do perfil somar (a festa sabe qual missão acabou)
-  ligarAlmaUi({
+  const almaUi = ligarAlmaUi({
     perfil,
     // no corpo, como os botões da roda e da mochila (o .hud não recebe toque)
     raiz: document.body,
-    chaveMundo: op.chaveMundo,
-    armazenamento,
     fixar: (m) => cena.estado.alma?.fixar(m),
     comprarBanca: (item, saldo) => cena.estado.alma?.comprarBanca(item, saldo),
     aoFechar: () => {
@@ -708,6 +712,10 @@ function ligarAlma(
       travarPonteiro();
     },
   });
+  // spec 030: a trilha de pegadinhas até o lugar da missão, a placa e o convite
+  const guiar = () =>
+    cena.estado.ready && cena.estado.cenaBabylon ? ligarGuiaMissao(cena.estado, almaUi) : setTimeout(guiar, 300);
+  guiar();
   perfil.ouvir((p, aviso) =>
     window.dispatchEvent(new CustomEvent('brumaluz:almaPerfil', { detail: { perfil: p, aviso } })),
   );

@@ -3,8 +3,8 @@
  * núcleo manda (`brumaluz:alma`: o quadro de missões deste mundo e o que andou) e o HUD.
  *
  * - A carteira e o nível aparecem em todo mundo (o nível sobe brincando em qualquer um).
- * - O cartão da missão e o quadro, só onde o núcleo manda o quadro (Cidade Grande e Rancho).
- * - O quadro abre sozinho uma vez por mundo (a primeira visita), nunca de novo.
+ * - O selinho da missão e o quadro, só onde o núcleo manda o quadro (Cidade Grande e Rancho).
+ * - Spec 030: o quadro nunca abre sozinho; ele mora na roda do menu ("Missões") e no convite.
  */
 import type { EventoNucleo } from '../../nucleo/protocolo';
 import type { VistaAlmaMundo } from '../../jogo/alma';
@@ -17,42 +17,10 @@ import { CSS_LOJA, criarLoja, type LojaAlma } from './loja';
 import type { MissaoMovida } from '../../jogo/alma';
 import type { Aparencia } from '../../personagem/aparencia';
 
-/** Mundos em que o quadro já abriu sozinho (no aparelho; o quadro só abre na primeira visita). */
-export const CHAVE_QUADRO_VISTO = 'terrario:alma-quadro-visto';
-const MAX_MUNDOS_VISTOS = 200;
-
-export function quadroJaVisto(armazenamento: Storage | null, mundo: string): boolean {
-  try {
-    const l = JSON.parse(armazenamento?.getItem(CHAVE_QUADRO_VISTO) ?? '[]') as unknown;
-    return Array.isArray(l) && l.includes(mundo);
-  } catch {
-    return false;
-  }
-}
-export function marcarQuadroVisto(armazenamento: Storage | null, mundo: string): void {
-  if (!armazenamento) return;
-  let l: unknown = [];
-  try {
-    l = JSON.parse(armazenamento.getItem(CHAVE_QUADRO_VISTO) ?? '[]');
-  } catch {
-    // guardado estragado: começa de novo
-  }
-  try {
-    const lista = Array.isArray(l) ? l.filter((x): x is string => typeof x === 'string') : [];
-    if (!lista.includes(mundo)) lista.push(mundo);
-    armazenamento.setItem(CHAVE_QUADRO_VISTO, JSON.stringify(lista.slice(-MAX_MUNDOS_VISTOS)));
-  } catch {
-    // sem armazenamento: abre de novo na próxima vez, sem problema
-  }
-}
-
 export interface OpcoesAlmaUi {
   perfil: PerfilCrianca;
   /** Onde o HUD mora (o corpo da página, como os botões da roda). */
   raiz: HTMLElement;
-  /** O mundo aberto (para o quadro abrir só na primeira visita); null: sempre abre. */
-  chaveMundo: string | null;
-  armazenamento: Storage | null;
   fixar(missao: string | null): void;
   /** Compra na banca pelo núcleo (o saldo é o do aparelho, até a 024). */
   comprarBanca(item: string, saldo: number): void;
@@ -66,10 +34,19 @@ export interface AlmaUi {
   festas: FestasAlma;
   loja: LojaAlma;
   vista(): VistaAlmaMundo | null;
+  /** Spec 030: o "brincar" do quadro (a missão escolhida). */
+  aoBrincar(f: (id: string) => void): void;
+  /** Spec 030: o toque no selinho. */
+  aoTocarSelo(f: () => void): void;
+  /** Spec 030: o que o núcleo mandou (a vista já atualizada). */
+  aoMudarVista(f: (e: Extract<EventoNucleo, { e: 'alma' }>) => void): void;
 }
 
 /** A roda do menu pede a lojinha por este evento (ela é montada antes da alma). */
 export const EVENTO_LOJINHA = 'brumaluz:lojinha';
+/** Spec 030: a roda do menu pede o quadro de missões e o baú. */
+export const EVENTO_MISSOES = 'brumaluz:missoes';
+export const EVENTO_BAU = 'brumaluz:bau';
 
 export function ligarAlmaUi(op: OpcoesAlmaUi): AlmaUi {
   const estilo = document.createElement('style');
@@ -77,13 +54,23 @@ export function ligarAlmaUi(op: OpcoesAlmaUi): AlmaUi {
   document.head.appendChild(estilo);
 
   let vista: VistaAlmaMundo | null = null;
+  /** Spec 030: quem ouve o "brincar" do quadro, o toque no selinho e a vista que mudou. */
+  const ouvintes = {
+    brincar: [] as ((id: string) => void)[],
+    selo: [] as (() => void)[],
+    vista: [] as ((e: Extract<EventoNucleo, { e: 'alma' }>) => void)[],
+  };
   const hud = criarHudAlma(op.raiz, {
     perfil: () => op.perfil.perfil,
     vista: () => vista,
-    fixar: (id) => op.fixar(id),
+    fixar: (id) => {
+      op.fixar(id);
+      for (const f of ouvintes.brincar) f(id);
+    },
     aoTocarCarteira: () => bau.abrir(),
+    // spec 030: o toque no selinho repete a ondinha da trilha e a virada macia
     aoTocarCartao: () => {
-      hud.quadro();
+      for (const f of ouvintes.selo) f();
     },
     aoAbrir: () => undefined,
     aoFechar: () => op.aoFechar(),
@@ -110,6 +97,15 @@ export function ligarAlmaUi(op: OpcoesAlmaUi): AlmaUi {
   });
   // a lojinha premium (pela roda do menu, de qualquer mundo)
   const loja = criarLoja({ hud, festas, perfil: op.perfil, aoFechar: () => op.aoFechar() });
+  // spec 030: "Missões" e o baú moram na roda do menu
+  window.addEventListener(EVENTO_MISSOES, () => {
+    if (document.querySelector('.entrada:not([hidden])')) return;
+    hud.quadro();
+  });
+  window.addEventListener(EVENTO_BAU, () => {
+    if (document.querySelector('.entrada:not([hidden])')) return;
+    bau.abrir();
+  });
   window.addEventListener(EVENTO_LOJINHA, () => {
     if (document.querySelector('.entrada:not([hidden])')) return;
     loja.abrir();
@@ -118,12 +114,10 @@ export function ligarAlmaUi(op: OpcoesAlmaUi): AlmaUi {
   let concluidas: MissaoMovida[] = [];
 
   // o que o núcleo manda: o quadro inteiro (entrou, mudou a lista) e o que andou
-  let quadroPendente = false;
   window.addEventListener('brumaluz:alma', (ev) => {
     const e = (ev as CustomEvent<Extract<EventoNucleo, { e: 'alma' }>>).detail;
     if (!e || typeof e !== 'object') return;
     concluidas = (e.missoes ?? []).filter((m) => m.concluiu);
-    const primeiro = !vista && !!e.quadro;
     if (e.quadro) vista = e.quadro;
     if (vista)
       for (const m of e.missoes ?? []) {
@@ -136,10 +130,9 @@ export function ligarAlmaUi(op: OpcoesAlmaUi): AlmaUi {
         }
       }
     hud.renderHud(true);
+    for (const f of ouvintes.vista) f(e);
     // o baú da banca mudou (o pacote entrou sozinho na mochila): a aba à vista se atualiza
     if (e.quadro && bau.aba === 'banca') bau.atualizar();
-    if (primeiro) quadroPendente = true;
-    if (primeiro) abrirNaPrimeiraVisita();
   });
 
   // o ganho já foi somado ao perfil (main.ts): missão acabada ou nível novo viram festa (na
@@ -151,29 +144,6 @@ export function ligarAlmaUi(op: OpcoesAlmaUi): AlmaUi {
     } else if (!festas.festando) hud.renderHud();
   });
 
-  /** Primeira visita: o quadro aparece sozinho depois da tela de entrada (até 3 s). */
-  function abrirNaPrimeiraVisita(): void {
-    if (!quadroPendente) return;
-    if (op.chaveMundo && quadroJaVisto(op.armazenamento, op.chaveMundo)) {
-      quadroPendente = false;
-      return;
-    }
-    const tentar = () => {
-      if (!quadroPendente) return;
-      const ocupado =
-        !!document.querySelector('.entrada:not([hidden])') ||
-        !!document.body.dataset.overlay ||
-        // a sugestão de fantasia do mundo novo (017) vem primeiro
-        !!document.body.dataset.sugestaoPendente ||
-        document.body.classList.contains('tela-titulo');
-      if (ocupado) return void setTimeout(tentar, 500);
-      if (!hud.quadro()) return void setTimeout(tentar, 500);
-      quadroPendente = false;
-      if (op.chaveMundo) marcarQuadroVisto(op.armazenamento, op.chaveMundo);
-    };
-    setTimeout(tentar, 1200);
-  }
-
   // no computador: H abre e fecha o baú (com o ponteiro preso no jogo, o toque não chega)
   window.addEventListener('keydown', (e) => {
     if (e.code !== 'KeyH' || e.repeat) return;
@@ -184,7 +154,16 @@ export function ligarAlmaUi(op: OpcoesAlmaUi): AlmaUi {
     bau.abrir();
   });
 
-  const ui: AlmaUi = { hud, bau, festas, loja, vista: () => vista };
+  const ui: AlmaUi = {
+    hud,
+    bau,
+    festas,
+    loja,
+    vista: () => vista,
+    aoBrincar: (f) => void ouvintes.brincar.push(f),
+    aoTocarSelo: (f) => void ouvintes.selo.push(f),
+    aoMudarVista: (f) => void ouvintes.vista.push(f),
+  };
   (window as unknown as { __almaUi?: AlmaUi }).__almaUi = ui;
   return ui;
 }

@@ -34,8 +34,12 @@ export const OBRAS_ABERTAS = 2;
 /** Miolo do canteiro (coordenadas do lote, inclusivo) e a altura das células de obra. */
 export const MIOLO_CANTEIRO = { s0: 1, f0: 1, s1: 6, f1: 7 } as const;
 export const ALTURA_OBRA = 6;
-/** Onde o pedreiro fica no canteiro aberto (célula do lote, ao lado da entrada). */
-export const POSTO_PEDREIRO: readonly [number, number] = [2, 1];
+/**
+ * Onde o pedreiro fica no canteiro aberto (célula do lote): na calçada, do lado de fora do
+ * tapume, ao lado da entrada (esboço da 030: lá dentro ele ficava na frente dos blocos azuis e
+ * o toque da criança abria as trocas dele).
+ */
+export const POSTO_PEDREIRO: readonly [number, number] = [6, -1];
 /** Desenho da placa do canteiro (o tijolo) e da obra feita (a casinha). */
 export const PLACA_CANTEIRO = 3;
 

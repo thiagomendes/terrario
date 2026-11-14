@@ -201,6 +201,21 @@ export const ARTE: Record<string, string> = {
     <path d="M18 32 Q18 22 26 24 Q32 28 38 24 Q46 22 46 32 Z" fill="#fff6e4" ${s()}/>
     <circle cx="33" cy="9" r="4" fill="#e8402f" ${s(2)}/>`),
 
+  // c3 (030): o passeio: duas casinhas e um tênis andando na frente, com passinhos
+  passeio: svg(`
+    <ellipse cx="32" cy="58" rx="27" ry="3.5" fill="#000" opacity="0.15"/>
+    <path d="M6 30 L17 20 L28 30 V50 H6 Z" fill="#fff0d0" ${s(2.5)}/>
+    <path d="M3 31 L17 18 L31 31" fill="none" stroke="#e8402f" stroke-width="5" ${L}/>
+    <rect x="13" y="38" width="8" height="12" rx="1.5" fill="#b8692c" ${s(2)}/>
+    <path d="M33 26 L46 14 L59 26 V50 H33 Z" fill="#ffe27a" ${s(2.5)}/>
+    <path d="M30 27 L46 11 L62 27" fill="none" stroke="#2f7fe8" stroke-width="5" ${L}/>
+    <rect x="38" y="31" width="7" height="7" rx="1.2" fill="#bfe3ff" ${s(1.8)}/><rect x="48" y="31" width="7" height="7" rx="1.2" fill="#bfe3ff" ${s(1.8)}/>
+    <path d="M14 46 Q14 40 20 40 L27 40 Q30 46 38 47 Q47 48 47 53 Q47 57 42 57 H16 Q13 57 14 52 Z" fill="#5fe3c4" ${s(2.6)}/>
+    <path d="M14 53 H47" stroke="${C}" stroke-width="2"/>
+    <path d="M22 40 L25 46 M26 40 L29 45" stroke="#fffaf0" stroke-width="2.2" stroke-linecap="round"/>
+    <path d="M17 44 Q19 42 22 42" fill="none" stroke="#c8fff0" stroke-width="2.2" stroke-linecap="round"/>
+    <g fill="#1fa889"><ellipse cx="52" cy="56" rx="2.2" ry="1.4"/><ellipse cx="58" cy="53.5" rx="2.2" ry="1.4"/></g>`),
+
   // ------------------------------------------------------------ ações (selinho no canto)
   colher: svg(`
     <path d="M10 30 H54 L48 56 H16 Z" fill="#d9a05a" ${s()}/>

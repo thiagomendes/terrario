@@ -49,6 +49,8 @@ export interface LeitorCaminho {
   bloco: LerBloco;
   /** O aparelho tem os blocos desta coluna? (sem eles, o caminho segue reto) */
   conhecido(x: number, z: number): boolean;
+  /** Custo a mais de pisar na célula (spec 030: a roça e a beira da cerca no sítio). */
+  custo?(x: number, y: number, z: number): number;
 }
 
 export interface Caminho {
@@ -211,7 +213,8 @@ export function* buscarCaminho(
         if (ny === null) continue;
         // na diagonal, as duas laterais também têm que dar passagem (sem cortar quina)
         if (dx && dz && (passoY(x + dx, z, y) === null || passoY(x, z + dz, y) === null)) continue;
-        const custo = (dx && dz ? Math.SQRT2 : 1) + (ny > y ? 0.6 : ny < y ? 0.2 : 0);
+        const custo =
+          (dx && dz ? Math.SQRT2 : 1) + (ny > y ? 0.6 : ny < y ? 0.2 : 0) + (m.custo?.(nx, ny, nz) ?? 0);
         const ng = g[i] + custo;
         if (ng < g[j]) {
           g[j] = ng;

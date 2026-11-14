@@ -67,21 +67,30 @@ body.toque-ativo .alma-carteira kbd, body.sem-teclas .alma-carteira kbd { displa
 .alma-carteira .n { min-width: 1.2em; text-align: left; font-variant-numeric: tabular-nums; }
 .alma-carteira.pulou .moeda { animation: alma-pulo 0.35s ease-out; }
 
-.alma-missao { position: fixed; z-index: 7; top: calc(60px + env(safe-area-inset-top)); left: calc(8px + env(safe-area-inset-left));
-  display: flex; align-items: center; gap: 6px; padding: 5px 8px 5px 5px; border: 0; border-radius: 20px; cursor: pointer;
-  background: rgba(255, 250, 240, 0.95); box-shadow: 0 3px 0 rgba(150, 110, 60, 0.35), 0 6px 12px rgba(40, 25, 10, 0.18);
-  touch-action: manipulation; -webkit-tap-highlight-color: transparent; transform-origin: top left; animation: alma-entra 0.4s ease-out both; pointer-events: auto; }
+/* spec 030: o selinho da missão, embaixo da estrela (o desenho dela; tocar repete a ondinha) */
+.alma-missao { position: fixed; z-index: 7; top: calc(60px + env(safe-area-inset-top)); left: calc(112px + env(safe-area-inset-left));
+  width: 44px; height: 44px; padding: 4px; box-sizing: border-box; border: 0; border-radius: 50%; cursor: pointer; display: grid; place-items: center;
+  background: rgba(255, 250, 240, 0.97); box-shadow: 0 0 0 3px #5fe3c4, 0 3px 0 3px rgba(31, 168, 137, 0.45), 0 6px 12px rgba(40, 25, 10, 0.2);
+  touch-action: manipulation; -webkit-tap-highlight-color: transparent; animation: alma-entra 0.4s ease-out both; pointer-events: auto; }
 .alma-missao[hidden] { display: none; }
 .alma-missao:active { transform: translateY(2px); }
-.alma-missao .tarefa { position: relative; width: 50px; height: 50px; border-radius: 14px; background: var(--poco); box-shadow: var(--sombra-poco); display: grid; place-items: center; }
-.alma-missao .tarefa .alma-fig-missao { width: 44px; height: 44px; }
-.alma-missao .meio { display: grid; gap: 4px; min-width: 64px; }
-.alma-missao .seta { width: 22px; height: 22px; opacity: 0.9; }
-.alma-missao .premio { position: relative; width: 50px; height: 50px; border-radius: 14px; display: grid; place-items: center;
-  background: radial-gradient(circle at 50% 40%, #fff6c8, #ffe08a); box-shadow: inset 0 0 0 2.5px #f5c44a; }
-.alma-missao .premio .alma-fig { width: 44px; height: 44px; }
-.alma-missao .premio .alma-moedas { position: absolute; right: -8px; bottom: -6px; }
-.alma-missao.cresceu { animation: alma-pulo 0.4s ease-out; }
+.alma-missao .alma-fig { width: 100%; height: 100%; }
+.alma-missao.chama { animation: alma-chama 0.5s ease-out; }
+/* o convite: o baú com "?" no lugar do selinho (brilha uma vez e fica quieto) */
+.alma-missao.convite { box-shadow: 0 0 0 3px #e0a83a, 0 3px 0 3px rgba(168, 116, 26, 0.45), 0 6px 12px rgba(40, 25, 10, 0.2); padding: 1px; }
+.alma-missao.convite.brilha { animation: alma-convite 0.9s cubic-bezier(.3,1.5,.5,1); }
+@keyframes alma-convite { 0% { transform: scale(0.2); } 45% { transform: scale(1.3); } 65% { transform: scale(0.92); } 100% { transform: scale(1); } }
+.alma-brilho { position: fixed; z-index: 8; width: 12px; height: 12px; margin: -6px; pointer-events: none;
+  background: radial-gradient(circle, #fffbe0 0 30%, rgba(255, 226, 122, 0.9) 45%, rgba(255, 226, 122, 0) 72%);
+  animation: alma-brilho 0.9s ease-out forwards; }
+@keyframes alma-brilho { 0% { transform: translate(0, 0) scale(0.4); opacity: 1; } 100% { transform: translate(var(--dx), var(--dy)) scale(1.4); opacity: 0; } }
+/* o canto parado é só a estrela: as moedinhas abrem de lado quando chegam e contam */
+.alma-carteira { padding: 0 2px; gap: 0; }
+.alma-carteira .gaveta { display: flex; align-items: center; gap: 3px; max-width: 0; overflow: hidden; opacity: 0;
+  transition: max-width 0.45s cubic-bezier(.3,1.25,.5,1), opacity 0.25s, padding 0.35s; white-space: nowrap; }
+.alma-carteira.contando .gaveta { max-width: 140px; opacity: 1; padding: 0 10px 0 4px; }
+/* informações abertas (as pílulas descem): o selinho fica embaixo delas */
+body.hud-aberto .alma-missao { top: calc(156px + env(safe-area-inset-top)); }
 .alma-bolinhas { display: flex; gap: 3px; }
 .alma-bolinhas .b { width: 20px; height: 20px; border-radius: 50%; background: #efe2c6; display: grid; place-items: center; padding: 2px; box-sizing: border-box; transition: transform 0.25s, background 0.25s; }
 .alma-bolinhas .b .alma-fig { width: 100%; height: 100%; filter: grayscale(1) opacity(0.35); transition: filter 0.3s; }
@@ -97,10 +106,6 @@ body.toque-ativo .alma-carteira kbd, body.sem-teclas .alma-carteira kbd { displa
 body[data-overlay]:not([data-overlay='alma-festa']) .alma-carteira, body[data-overlay] .alma-missao, body.modo-foto .alma-carteira, body.modo-foto .alma-missao,
 body.tela-titulo .alma-carteira, body.tela-titulo .alma-missao, body:has(.entrada:not([hidden])) .alma-carteira,
 body:has(.entrada:not([hidden])) .alma-missao { display: none !important; }
-/* celular em pé: o cartão desce logo abaixo dos botões, um pouco menor */
-body.hud-compacto .alma-missao { transform: scale(0.9); }
-/* informações abertas (as pílulas descem): o cartão fica embaixo delas */
-body.hud-aberto .alma-missao { top: calc(156px + env(safe-area-inset-top)); }
 
 /* ---------------- painéis de brinquedo (o quadro de missões e o baú) ---------------- */
 .alma-fundo { position: fixed; inset: 0; z-index: 60; display: grid; place-items: center; box-sizing: border-box;
@@ -162,7 +167,7 @@ body.hud-aberto .alma-missao { top: calc(156px + env(safe-area-inset-top)); }
   .alma-cartao { padding: 14px 12px 16px; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .alma-carteira, .alma-missao, .alma-cartao, .alma-fundo { animation: none; }
+  .alma-carteira, .alma-missao, .alma-missao.convite.brilha, .alma-cartao, .alma-fundo { animation: none; }
   .alma-botao.chama .alma-svg { animation: none; }
 }
 `;
@@ -298,6 +303,23 @@ export function missaoDoCartao(
   return m ? { m, feito: a.feito, meta: a.meta, usos: a.usos, bis: !!a.bis } : null;
 }
 
+/** A missão escolhida (a fixada, se ainda aberta): a do selinho e a da trilha (030). */
+export function missaoFixada(
+  v: VistaAlmaMundo | null,
+): { m: Missao; feito: number; meta: number; usos?: string[]; bis: boolean } | null {
+  if (!v?.fixada) return null;
+  const a = v.abertas.find((x) => x.id === v.fixada);
+  const m = a && missaoPorId(a.id);
+  return m ? { m, feito: a.feito, meta: a.meta, usos: a.usos, bis: !!a.bis } : null;
+}
+
+/** O "?" do convite (desenhado, não letra) em cima do baú. */
+const CONVITE_SVG = `<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+  <g transform="translate(4 14) scale(0.78)">${arte('bau').replace(/^<svg[^>]*>/, '').replace(/<\/svg>$/, '')}</g>
+  <g transform="translate(30 -2) scale(0.5)"><circle cx="32" cy="34" r="27" fill="#1fa889"/><circle cx="32" cy="31" r="27" fill="#5fe3c4" stroke="#5a3a22" stroke-width="3.5"/>
+  <path d="M24 25 Q24 15 32 15 Q40 15 40 23 Q40 28 34 31 Q32 32.5 32 36 V38" fill="none" stroke="#fff" stroke-width="6.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="32" cy="47" r="4" fill="#fff"/></g>
+</svg>`;
+
 export function criarHudAlma(raiz: HTMLElement, op: OpcoesHudAlma) {
   // ---------------------------------------------------------------- carteira
   const carteira = document.createElement('button');
@@ -318,23 +340,30 @@ export function criarHudAlma(raiz: HTMLElement, op: OpcoesHudAlma) {
   // no computador, a tecla H abre o baú (o selinho some no toque, como os da roda)
   const tecla = document.createElement('kbd');
   tecla.textContent = 'H';
-  carteira.append(nivelEl, moedaEl, nMoedas, tecla);
+  // spec 030: parado, o canto é só a estrela; as moedinhas abrem de lado para contar
+  const gaveta = document.createElement('span');
+  gaveta.className = 'gaveta';
+  gaveta.append(moedaEl, nMoedas);
+  carteira.append(nivelEl, gaveta, tecla);
   carteira.addEventListener('click', () => {
     tocarSomInterface('toc');
     op.aoTocarCarteira();
   });
   raiz.appendChild(carteira);
 
-  // ---------------------------------------------------------------- cartão da missão
+  // ---------------------------------------------------------------- selinho da missão (030)
   const cartao = document.createElement('button');
   cartao.type = 'button';
   cartao.className = 'alma-missao';
   cartao.setAttribute('aria-label', 'Missão');
   cartao.setAttribute('data-alma-missao', '');
   cartao.hidden = true;
+  /** O convite (sem missão, depois de ~2 min brincando): o baú com "?" no lugar do selinho. */
+  let convite = false;
   cartao.addEventListener('click', () => {
     tocarSomInterface('toc');
-    op.aoTocarCartao();
+    if (convite) quadro();
+    else op.aoTocarCartao();
   });
   raiz.appendChild(cartao);
 
@@ -358,45 +387,58 @@ export function criarHudAlma(raiz: HTMLElement, op: OpcoesHudAlma) {
   }
 
   let chaveCartao = '';
+  /** O selinho: o desenho da missão escolhida (a fixada), ou o convite, ou nada. */
   function renderCartao(animar: boolean): void {
-    const c = missaoDoCartao(op.vista());
-    document.body.classList.toggle('alma-missoes', !!op.vista());
-    cartao.hidden = !c;
-    if (!c) {
-      chaveCartao = '';
-      return;
-    }
-    const chave = `${c.m.id}:${c.feito}/${c.meta}:${c.bis}:${c.usos?.join() ?? ''}`;
+    const v = op.vista();
+    document.body.classList.toggle('alma-missoes', !!v);
+    const c = missaoFixada(v);
+    const chave = c ? `m:${c.m.id}` : convite && v ? 'convite' : '';
+    cartao.hidden = !chave;
     if (chave === chaveCartao) return;
-    const mesma = chaveCartao.startsWith(`${c.m.id}:`);
-    const antes = chaveCartao;
     chaveCartao = chave;
-    cartao.dataset.missao = c.m.id;
-    cartao.dataset.feito = String(c.feito);
-    cartao.setAttribute('aria-label', `Missão: ${c.m.nome}`);
-    // as bolinhas que já estavam acesas (a que acendeu agora é a que pula)
-    const acesasAntes = [...cartao.querySelectorAll('.alma-bolinhas .b')].map((b) =>
-      b.classList.contains('cheia'),
-    );
+    cartao.classList.toggle('convite', chave === 'convite');
     cartao.replaceChildren();
-    const t = document.createElement('span');
-    t.className = 'tarefa';
-    t.appendChild(figuraMissao(c.m));
-    const meio = document.createElement('span');
-    meio.className = 'meio';
-    meio.appendChild(progressoEl(c.m, c.feito, c.meta, c.usos));
-    cartao.append(t, meio, svgEl('seta', 'seta'), premioEl(c.m, c.bis));
-    // andou: a bolinha nova pula e faz "plim" (até 300 ms do evento do núcleo)
-    if (animar && mesma && antes !== chave) {
-      cartao.classList.remove('cresceu');
-      void cartao.offsetWidth;
-      cartao.classList.add('cresceu');
-      const bolinhas = [...cartao.querySelectorAll('.alma-bolinhas .b')];
-      const novas = bolinhas.filter((b, i) => b.classList.contains('cheia') && !acesasAntes[i]);
-      const cheias = bolinhas.filter((b) => b.classList.contains('cheia'));
-      (novas[novas.length - 1] ?? cheias[cheias.length - 1])?.classList.add('agora');
-      tocarSomInterface('plim');
+    if (c) {
+      cartao.dataset.missao = c.m.id;
+      cartao.dataset.feito = String(c.feito);
+      cartao.setAttribute('aria-label', `Missão: ${c.m.nome}`);
+      cartao.appendChild(figura(desenhoDaFigurinha(c.m)));
+      if (animar) {
+        cartao.classList.remove('chama');
+        void cartao.offsetWidth;
+        cartao.classList.add('chama');
+      }
+    } else {
+      delete cartao.dataset.missao;
+      delete cartao.dataset.feito;
+      cartao.setAttribute('aria-label', 'Missões');
+      if (chave === 'convite') cartao.innerHTML = CONVITE_SVG;
     }
+  }
+
+  /** O convite aparece (brilha uma vez, estrelinhas e o "plim") ou some. */
+  function definirConvite(mostra: boolean, brilha: boolean): void {
+    if (mostra === convite && !brilha) return;
+    convite = mostra;
+    renderCartao(false);
+    if (!brilha || cartao.hidden) return;
+    cartao.classList.remove('brilha');
+    void cartao.offsetWidth;
+    cartao.classList.add('brilha');
+    const r = cartao.getBoundingClientRect();
+    for (let i = 0; i < 10; i++) {
+      const f = document.createElement('span');
+      f.className = 'alma-brilho';
+      const a = (i / 10) * Math.PI * 2 + 0.3;
+      const d = 40 * (0.75 + (i % 3) * 0.18);
+      f.style.left = `${r.left + r.width / 2}px`;
+      f.style.top = `${r.top + r.height / 2}px`;
+      f.style.setProperty('--dx', `${Math.cos(a) * d}px`);
+      f.style.setProperty('--dy', `${Math.sin(a) * d}px`);
+      document.body.appendChild(f);
+      setTimeout(() => f.remove(), 950);
+    }
+    tocarSomInterface('plim');
   }
 
   function renderHud(animar = false): void {
@@ -411,8 +453,20 @@ export function criarHudAlma(raiz: HTMLElement, op: OpcoesHudAlma) {
   }
 
   /** O número das moedas sobe de uma em uma, com o tlim de cada moeda. */
+  let fecharGaveta = 0;
+  /** A gaveta das moedinhas aberta (contando), e fecha ~2,5 s depois. */
+  function abrirGaveta(seg = 2.5): void {
+    carteira.classList.add('contando');
+    clearTimeout(fecharGaveta);
+    fecharGaveta = window.setTimeout(() => carteira.classList.remove('contando'), seg * 1000);
+  }
   function contarMoedasAte(ate: number): Promise<void> {
-    return new Promise((ok) => {
+    abrirGaveta(60);
+    return new Promise<void>((okFim) => {
+      const ok = () => {
+        abrirGaveta();
+        okFim();
+      };
       const passo = () => {
         if (moedasMostradas === ate) return ok();
         moedasMostradas += moedasMostradas < ate ? 1 : -1;
@@ -585,6 +639,8 @@ export function criarHudAlma(raiz: HTMLElement, op: OpcoesHudAlma) {
       return segurando;
     },
     quadro,
+    definirConvite,
+    abrirGaveta,
     abrirFundo,
     fechar,
     aberto,

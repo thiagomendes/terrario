@@ -1,32 +1,24 @@
 import { describe, expect, it } from 'vitest';
-import { marcarQuadroVisto, quadroJaVisto, CHAVE_QUADRO_VISTO } from '../../src/ui/alma';
-import { bolinhasCheias, missaoDoCartao } from '../../src/ui/alma/hud';
+import { bolinhasCheias, missaoDoCartao, missaoFixada } from '../../src/ui/alma/hud';
 import { missaoPorId } from '../../src/jogo/alma';
 
-function loja() {
-  const d = new Map<string, string>();
-  return {
-    d,
-    getItem: (k: string) => d.get(k) ?? null,
-    setItem: (k: string, v: string) => void d.set(k, v),
-  } as unknown as Storage & { d: Map<string, string> };
-}
-
 describe('HUD da alma (spec 023, T06)', () => {
-  it('o quadro abre sozinho só na primeira visita a cada mundo', () => {
-    const l = loja();
-    expect(quadroJaVisto(l, 'm1')).toBe(false);
-    marcarQuadroVisto(l, 'm1');
-    expect(quadroJaVisto(l, 'm1')).toBe(true);
-    expect(quadroJaVisto(l, 'sala:ABCD')).toBe(false);
-    // lixo guardado não quebra
-    l.setItem(CHAVE_QUADRO_VISTO, '{');
-    expect(quadroJaVisto(l, 'm1')).toBe(false);
-    marcarQuadroVisto(l, 'm2');
-    expect(quadroJaVisto(l, 'm2')).toBe(true);
-    // sem armazenamento: sempre abre (e não quebra)
-    expect(quadroJaVisto(null, 'm1')).toBe(false);
-    marcarQuadroVisto(null, 'm1');
+  it('030: o selinho é só da missão escolhida (a fixada, se aberta)', () => {
+    expect(missaoFixada(null)).toBeNull();
+    const v = {
+      mundo: 'rancho-alegre' as const,
+      feitas: [],
+      puladas: [],
+      abertas: [{ id: 'r1', feito: 2, meta: 5 }],
+      fixada: null as string | null,
+      bis: 0,
+      bau: [],
+    };
+    expect(missaoFixada(v)).toBeNull();
+    v.fixada = 'r2';
+    expect(missaoFixada(v)).toBeNull();
+    v.fixada = 'r1';
+    expect(missaoFixada(v)?.m.id).toBe('r1');
   });
 
   it('o cartão mostra a fixada (se aberta) ou a primeira aberta; sem quadro, nada', () => {

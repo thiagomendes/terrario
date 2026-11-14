@@ -177,7 +177,8 @@ export function desenhoDaFigurinha(m: Pick<Missao, 'desenho'>): string {
   const d = m.desenho;
   if (d.tipo === 'obra') return `obra:${d.canteiro}`;
   if (d.tipo === 'bicho') return d.bicho;
-  if (d.tipo === 'lugares') return 'sorveteria';
+  // o passeio (030): o tênis e as casinhas, nada de sorvete (a c6 é que é a sorveteria)
+  if (d.tipo === 'lugares') return 'passeio';
   return `item:${d.item}`;
 }
 

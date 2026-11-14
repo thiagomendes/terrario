@@ -326,7 +326,7 @@ import {
   type SalvoNucleo,
 } from '../nucleo/protocolo';
 import type { EstadoClima } from '../jogo/clima';
-import type { Profissao } from '../world/povoado';
+import type { PlanoPovoado, Profissao } from '../world/povoado';
 import type { Slot } from '../jogo/inventario';
 import { estadoInicial, type EstadoSobrevivencia, type CausaDano } from '../jogo/sobrevivencia';
 
@@ -369,6 +369,8 @@ export interface EstadoDepuracao {
   /** Povoados a até 900 blocos do jogador (centro da praça e altura do piso). */
   /** Spec 014: o plano da Cidade Grande do mundo (testes de tela), ou null. */
   cidade?: () => PlanoCidade | null;
+  /** Spec 030: os sítios (Rancho) a até 220 blocos do jogador, do mais perto ao mais longe. */
+  sitios?: () => PlanoPovoado[];
   /** Spec 014 (T10): o horizonte de torres (null fora da cidade). */
   horizonte?: () => { triangulos: number; ativo: boolean } | null;
   povoados?: () => {
@@ -697,6 +699,10 @@ export interface EstadoDepuracao {
     yawCorpo: () => number;
     /** Dedo arrastando a câmera (ela nunca gira sozinha enquanto isso). */
     arrastar: (ativo: boolean) => void;
+    /** Spec 030: a criança está mexendo na câmera (dedo arrastando ou mexeu há pouco)? */
+    mexendo?: (segundos?: number) => boolean;
+    /** Spec 030: a câmera vira sozinha (a virada macia; não conta como a criança mexer). */
+    virar?: (yaw: number, pitch: number) => void;
   };
   personagem?: {
     aparencia: () => Aparencia;
@@ -843,6 +849,12 @@ export function criarCena(
   estado.tema = temaAtual.id;
   if (temaAtual.ceu.planeta) estado.astro = [...temaAtual.ceu.planeta.direcao];
   estado.cidade = () => cidadeDoMundo(semente);
+  estado.sitios = () => {
+    const j = controle.jogador;
+    return povoadosPerto(j.x, j.z, 220, semente)
+      .filter((p) => p.lotes.some((l) => l.uso))
+      .sort((a, b) => Math.hypot(a.cx - j.x, a.cz - j.z) - Math.hypot(b.cx - j.x, b.cz - j.z));
+  };
   estado.povoados = () => {
     const j = controle.jogador;
     return povoadosPerto(j.x, j.z, 900, semente)
@@ -2532,6 +2544,9 @@ export function criarCena(
     arrastar: (ativo) => {
       arrastandoCamera = ativo;
     },
+    mexendo: (segundos = 0.8) =>
+      arrastandoCamera || performance.now() / 1000 - controle.mexeuEm < segundos,
+    virar: (yaw, pitch) => controle.apontar(yaw, pitch, true),
   };
   estado.alvoDoDedo = (x, y) => {
     const r = raioNaTela(x, y);

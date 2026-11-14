@@ -136,10 +136,11 @@ export function criarControle(
     camera.rotation.y = yaw;
   }
 
-  function apontar(novoYaw: number, novoPitch: number): void {
+  /** Aponta o olhar; `sozinha`: a câmera que vira sozinha (spec 030) não conta como a criança. */
+  function apontar(novoYaw: number, novoPitch: number, sozinha = false): void {
     yaw = novoYaw;
     pitch = limitarPitch(novoPitch);
-    mexeuEm = agora();
+    if (!sozinha) mexeuEm = agora();
     // a mira vale já (o alvo é calculado pela rotação da câmera), sem esperar o quadro
     camera.rotation.x = pitch;
     camera.rotation.y = yaw;
