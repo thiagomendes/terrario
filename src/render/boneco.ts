@@ -184,13 +184,27 @@ function ajustarDadosPremium(vd: VertexData, p: Peca): void {
   }
 }
 
+/**
+ * Desempenho (spec 023, T15: 4 amigos de dragão, capa e tênis no celular): o brilho de cada
+ * peça cai num de três degraus (fosco, acetinado e lustroso). Cada brilho diferente era um
+ * material, e cada material uma malha a mais por junta (o dragão ia de 10 para 39 malhas); a
+ * diferença de 0,4 para 0,45 não se vê, a de malhas, sim. Só nas tintas das fantasias e nos
+ * premium (o boneco de sempre fica igual).
+ */
+export function degrauDoBrilho(b = 0.28): number {
+  return b < 0.34 ? 0.28 : b < 0.64 ? 0.45 : 0.8;
+}
+
+/** O brilho do material: em degraus nas tintas das fantasias e nos premium; o resto, igual. */
+const brilhoDaPeca = (p: Peca): number =>
+  p.viva || p.premium ? degrauDoBrilho(p.brilho) : (p.brilho ?? 0.28);
+
 /** Spec 023: o material da peça (luz própria, listras, tinta ou cor). */
 function materialDaPeca(scene: Scene, mats: Plasticos, p: Peca): StandardMaterial {
   if (p.luz) return luzPremium(scene, p.luz);
   if (p.textura) return mats.textura(texturaListras(scene), p.brilho ?? 0.28);
-  return p.viva
-    ? mats.tinta(p.brilho ?? 0.28, p.alfa ?? 1)
-    : mats.cor(p.cor, p.brilho ?? 0.28, p.alfa ?? 1);
+  const b = brilhoDaPeca(p);
+  return p.viva ? mats.tinta(b, p.alfa ?? 1) : mats.cor(p.cor, b, p.alfa ?? 1);
 }
 
 /** As espécies de dados de vértice da peça (só junta malhas com as mesmas). */
@@ -333,7 +347,7 @@ export function criarBoneco(
      */
     const corVertice = (p: Peca) =>
       !p.viva && !p.luz && !p.textura && (p.alfa ?? 1) >= 1
-        ? mats.corVertice(p.brilho ?? 0.28)
+        ? mats.corVertice(brilhoDaPeca(p))
         : null;
     // spec 023: os nós próprios dos premium (as asas), dentro da junta deles
     const noDaPeca = (p: Peca): TransformNode => {

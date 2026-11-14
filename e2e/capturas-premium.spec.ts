@@ -353,3 +353,52 @@ test('capuz do dragão: os dois bonecos, todos os penteados, em volta', async ({
   await sairDoEstudio(page);
   expect(erros, erros.join('\n')).toEqual([]);
 });
+
+test('4 amigos de premium juntos (o dragão, a capa, o unicórnio e o pinguim)', async ({ page }) => {
+  test.skip(!!SO && SO !== 'amigos');
+  test.setTimeout(600_000);
+  mkdirSync(PASTA, { recursive: true });
+  await page.setViewportSize({ width: 1280, height: 720 });
+  const erros: string[] = [];
+  page.on('pageerror', (e) => erros.push(`pageerror: ${e.message}`));
+  await entrarNaLaje(page);
+  const l = await noMeio(page);
+  const corpo = await yawDoCorpo(page);
+  // os quatro amigos em meia-lua na frente da criança; a câmera do outro lado, olhando para eles
+  await page.evaluate(
+    ({ l, corpo }) => {
+      const e = window.__brumaluz!;
+      const fx = Math.sin(corpo);
+      const fz = Math.cos(corpo);
+      const lx = Math.cos(corpo);
+      const lz = -Math.sin(corpo);
+      const amigos = [
+        ['lia', { corpo: 'feminino', cabeloEstilo: 5, cabeloCor: 1, premium: { roupa: 'tenis-cometa', fantasia: 'dragao', bicho: 'unicornio' } }, -2.4, 4.2],
+        ['theo', { corpo: 'masculino', cabeloEstilo: 0, premium: { roupa: 'camiseta-arco-iris', costas: 'capa-estrelas', bicho: 'pinguim' } }, -0.8, 3.4],
+        ['bia', { corpo: 'feminino', cabeloEstilo: 2, premium: { roupa: 'tenis-cometa', costas: 'capa-estrelas', bicho: 'unicornio' } }, 0.8, 3.4],
+        ['gui', { corpo: 'masculino', cabeloEstilo: 1, premium: { roupa: 'camiseta-arco-iris', fantasia: 'dragao', bicho: 'pinguim' } }, 2.4, 4.2],
+      ] as const;
+      e.amigosDeTeste!(
+        amigos.map(([id, aparencia, lado, frente]) => ({
+          id,
+          aparencia: aparencia as never,
+          x: l[0] + fx * frente + lx * lado,
+          y: l[1],
+          z: l[2] + fz * frente + lz * lado,
+          // de quina para a câmera (a capa e as asas aparecem)
+          yaw: corpo + (lado < 0 ? 0.45 : -0.45),
+        })),
+      );
+    },
+    { l, corpo },
+  );
+  await page.waitForTimeout(3500);
+  await estudio(page, [l[0] + Math.sin(corpo) * 3.6, l[1] + 0.9, l[2] + Math.cos(corpo) * 3.6], corpo, 5.4, 1.5);
+  await page.waitForTimeout(1500);
+  await page.screenshot({ path: `${PASTA}/amigos-4-premium.png` });
+  await estudio(page, [l[0] + Math.sin(corpo) * 3.6, l[1] + 0.9, l[2] + Math.cos(corpo) * 3.6], corpo + 0.7, 5.4, 1.3);
+  await page.waitForTimeout(1500);
+  await page.screenshot({ path: `${PASTA}/amigos-4-premium-quina.png` });
+  await sairDoEstudio(page);
+  expect(erros, erros.join('\n')).toEqual([]);
+});

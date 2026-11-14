@@ -434,6 +434,8 @@ export function montarBichoPremium(scene: Scene, id: IdBichoPremium): BichoMonta
       m.renderOutline = true;
       m.outlineColor = Color3.FromHexString(d.contorno);
       m.outlineWidth = 0.012;
+      // o contorno some de muito longe (premiumMundo): marca quem tem
+      m.metadata = { ...(m.metadata ?? {}), contorno: true };
     }
     malhas.push(m);
   }

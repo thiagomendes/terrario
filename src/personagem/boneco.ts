@@ -35,6 +35,8 @@ export type FormaPeca = 'caixa' | 'esfera' | 'cilindro' | 'anel' | 'placa';
 
 export interface Peca {
   nome: string;
+  /** Spec 023: peça de um premium (o brilho dela cai num dos três degraus, menos malhas). */
+  premium?: true;
   junta: Junta;
   forma: FormaPeca;
   /**

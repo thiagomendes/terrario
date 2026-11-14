@@ -51,7 +51,7 @@ export function misturarCor(a: string, b: string, t: number): string {
 export class Pecas {
   constructor(readonly lista: Peca[]) {}
   por(p: Peca): void {
-    this.lista.push(p);
+    this.lista.push({ ...p, premium: true });
   }
   caixa(
     nome: string,

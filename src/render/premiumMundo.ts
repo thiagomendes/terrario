@@ -36,6 +36,15 @@ const MAX_PEGADAS = 16;
 const PASSO_PEGADA = 0.62;
 /** Longe assim da câmera, o bicho fica na versão simples. */
 const LONGE_SIMPLES = 26;
+/**
+ * Desempenho (T15: 4 amigos de premium no celular): a partir daqui, os amigos ficam sem as
+ * luzinhas miúdas (a faixa do tênis, os frisos de ouro e pérola, as estrelas da capa), que de
+ * longe são poucos pixels e custam uma chamada de desenho cada. Volta um pouco mais perto (sem
+ * piscar na divisa). O contorno do unicórnio vai até mais longe (ele se reconhece a 12 blocos).
+ */
+const LONGE_DETALHE = 11;
+const PERTO_DETALHE = 9.5;
+const LONGE_CONTORNO = 20;
 
 type LerBloco = (x: number, y: number, z: number) => number | undefined;
 
@@ -345,6 +354,10 @@ interface Bicho {
 
 interface Usuario {
   raiz: TransformNode;
+  /** As malhas de luz própria do boneco (somem de longe); null: procurar de novo. */
+  luzes: Mesh[] | null;
+  detalhes: boolean;
+  contorno: boolean;
   premium: PremiumVestido;
   nos: Record<string, TransformNode | undefined>;
   anterior: Vector3;
@@ -429,6 +442,7 @@ export function efeitosPremium(scene: Scene): EfeitosPremium {
     }
     if (!id || u.bicho) return;
     const b = montarBichoPremium(scene, id);
+    u.contorno = true;
     const r = u.raiz.position;
     const yaw = u.raiz.rotation.y;
     // nasce do lado, um pouco atrás, já num puf de brilho
@@ -452,6 +466,25 @@ export function efeitosPremium(scene: Scene): EfeitosPremium {
     b.raiz.position.set(x, r.y, z);
     b.definirLuz(u.luz);
     b.raiz.setEnabled(u.visivel);
+  }
+
+  function detalhesDeLonge(u: Usuario, d: number): void {
+    const quer = d < (u.detalhes ? LONGE_DETALHE : PERTO_DETALHE);
+    if (u.luzes === null) {
+      u.luzes = u.raiz
+        .getChildMeshes(false)
+        .filter((m): m is Mesh => m instanceof Mesh && !!m.material?.name.startsWith('premium-luz-'));
+      for (const m of u.luzes) m.isVisible = quer;
+      u.detalhes = quer;
+    } else if (quer !== u.detalhes) {
+      u.detalhes = quer;
+      for (const m of u.luzes) if (!m.isDisposed()) m.isVisible = quer;
+    }
+    const contorno = d < LONGE_CONTORNO;
+    if (u.bicho && contorno !== u.contorno) {
+      u.contorno = contorno;
+      for (const m of u.bicho.b.malhas) if (m.metadata?.contorno) m.renderOutline = contorno;
+    }
   }
 
   function quadroUsuario(u: Usuario, dt: number, camPos: Vector3 | null): void {
@@ -483,7 +516,9 @@ export function efeitosPremium(scene: Scene): EfeitosPremium {
     const pousou = u.noAr && !noAr;
     u.noAr = noAr;
     u.parado = u.vel < 0.3 ? u.parado + dt : 0;
-    const perto = !camPos || Vector3.Distance(camPos, r) < LONGE_SIMPLES;
+    const dCam = camPos ? Vector3.Distance(camPos, r) : 0;
+    const perto = dCam < LONGE_SIMPLES;
+    detalhesDeLonge(u, dCam);
     if (!u.nos.pernaE || u.nos.pernaE.isDisposed()) acharNos(u);
     // os braços para o alto: a criança está comemorando (o pinguim bate as asinhas)
     const bE = u.nos.bracoE?.rotation.z ?? 0;
@@ -794,6 +829,9 @@ export function efeitosPremium(scene: Scene): EfeitosPremium {
         raiz,
         premium: { ...(premium ?? {}) },
         nos: {},
+        luzes: null,
+        detalhes: true,
+        contorno: true,
         anterior: new Vector3(),
         temAnterior: false,
         vel: 0,
@@ -814,6 +852,8 @@ export function efeitosPremium(scene: Scene): EfeitosPremium {
         vestir(p) {
           u.premium = { ...(p ?? {}) };
           u.nos = {};
+          u.luzes = null;
+          u.contorno = true;
           arrumarBicho(u);
         },
         definirLuz(f) {
