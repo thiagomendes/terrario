@@ -7,7 +7,7 @@
 import { createHash, randomUUID } from 'node:crypto';
 import { criarNucleo, type Nucleo } from '../../src/nucleo/nucleo';
 import { JOGADOR_LOCAL } from '../../src/nucleo/anfitriao';
-import { definirEstiloMundo } from '../../src/world/chunk';
+import { definirEscolhaDoCanto, definirEstiloMundo } from '../../src/world/chunk';
 import { estiloSeguro } from '../../src/world/estiloSeguro';
 import { sanearAparencia, sanearDadosMundo } from '../../src/nucleo/saneamento';
 import { definirRegioesSemPovoado } from '../../src/world/povoado';
@@ -153,6 +153,8 @@ export function criarGerenciador(op: OpcoesGerenciador) {
     definirRegioesSemPovoado(s.nucleo.semPovoado);
     // spec 014: as obras feitas mudam a geração da cidade (cada sala tem as suas)
     definirObrasFeitas(s.nucleo.obrasFeitas);
+    // spec 031: o lugar do canto das missões (cada sala tem o seu)
+    definirEscolhaDoCanto(s.nucleo.escolhaCanto);
   }
 
   function estadoSala(s: SalaAtiva): EstadoSala {
@@ -440,6 +442,8 @@ export function criarGerenciador(op: OpcoesGerenciador) {
       edicoes: edicoes.exportar(),
       donos: edicoes.donos.exportar(),
       semPovoado: [...s.nucleo.semPovoado],
+      // spec 031: o lugar do canto das missões (o navegador gera o mesmo)
+      canto: s.nucleo.escolhaCanto,
       // spec 014: as obras do canteiro (o navegador gera a cidade com as feitas)
       ...(Object.keys(s.nucleo.obras()).length ? { obras: s.nucleo.obras() } : {}),
       pos: (() => {

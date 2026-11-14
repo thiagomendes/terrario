@@ -52,6 +52,7 @@ declare global {
       certos(): number;
       mao(): { x: number; y: number } | null;
       fantasmaDaMao(): { x: number; y: number; z: number } | null;
+      motivoMao?(): string;
     };
   }
 }
@@ -235,6 +236,7 @@ export function ligarGuiaMissao(e: EstadoDepuracao, ui: AlmaUi): GuiaMissao | nu
     certos: () => certos,
     mao: () => mao.tela(),
     fantasmaDaMao: () => mao.fantasma(),
+    motivoMao: () => mao.motivo(),
     /** Testes e vídeos: o convite em s segundos (o relógio volta a zero). */
     conviteEm(s: number) {
       limite = s;

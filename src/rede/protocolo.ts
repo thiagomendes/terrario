@@ -17,9 +17,11 @@ import type { ObraSalva } from '../nucleo/saneamento';
  * 014 ainda não foi publicada). 5: spec 021 (os comandos `pularPerto` e `chamarAmigos`, o
  * evento `chamado` e o `pulo` do teleporte). 6: spec 023 (os comandos `almaFixar` e
  * `comprarBanca`, os eventos `alma`, `almaCompra` e `almaCompraRecusada`; o campo `premium` da
- * aparência chega na mesma versão, porque a 023 ainda não foi publicada).
+ * aparência chega na mesma versão, porque a 023 ainda não foi publicada). 7: spec 031 (o canto
+ * das missões muda a geração da Era dos Dinos e do Doce Reino em volta do nascer: o navegador
+ * de antes veria outro chão que o servidor; e o campo `canto` do "bem-vindo").
  */
-export const VERSAO_REDE = 6;
+export const VERSAO_REDE = 7;
 /** Jogadores por mundo. */
 export const MAX_JOGADORES = 8;
 
@@ -95,6 +97,8 @@ export type RespostaServidor =
       /** Spec 016: quem colocou os blocos ([id, apelido] na ordem dos índices das edições). */
       donos: DonosExportados;
       semPovoado: string[];
+      /** Spec 031: o lugar do canto das missões (0 o melhor, -1 nenhum; o navegador gera igual). */
+      canto?: number;
       /** Spec 014: as obras do canteiro da cidade (só quando alguma começou). */
       obras?: Record<string, ObraSalva>;
       /** Onde este jogador estava (ou o nascimento). */

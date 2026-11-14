@@ -66,14 +66,35 @@ function ninho(cx: number, cy: number, larg = 26): string {
     <ellipse cx="${cx - a + 6}" cy="${cy - 9}" rx="4.4" ry="1.8" fill="#7cc35a" stroke="${C}" stroke-width="1.6" transform="rotate(-25 ${cx - a + 6} ${cy - 9})"/>`;
 }
 
+/** A moitinha de samambaia onde o pescoço do pescoçudo some (ele não fica cortado no ar). */
+const moita = (cx: number, cy: number) => `
+    <path d="M${cx - 6} ${cy + 8} Q${cx - 8} ${cy - 2} ${cx} ${cy - 3} Q${cx + 3} ${cy - 11} ${cx + 11} ${cy - 7} Q${cx + 19} ${cy - 10} ${cx + 21} ${cy - 2} Q${cx + 28} ${cy} ${cx + 26} ${cy + 8} Z" fill="#5aa83f" ${s()}/>
+    <path d="M${cx + 2} ${cy + 1} Q${cx + 8} ${cy - 5} ${cx + 13} ${cy - 1} M${cx + 13} ${cy + 3} Q${cx + 18} ${cy - 3} ${cx + 22} ${cy + 2}" fill="none" stroke="#86cc64" stroke-width="2.6" stroke-linecap="round"/>`;
+
+/** A metade da frente do ninho (por cima dos ovinhos, que ficam dentro). */
+function ninhoFrente(cx: number, cy: number, a: number): string {
+  let tranca = '';
+  for (let i = 0; i < 7; i++) {
+    const x = cx - a + 6 + i * ((2 * a - 12) / 6);
+    const d = i % 2 ? 1 : -1;
+    tranca += `<path d="M${(x - 4.5).toFixed(1)} ${(cy - 1 - d * 2).toFixed(1)} L${(x + 4.5).toFixed(1)} ${(cy - 1 + d * 2).toFixed(1)}" stroke="${i % 2 ? '#e2b06e' : '#5e3618'}" stroke-width="2.6" stroke-linecap="round"/>`;
+  }
+  return `
+    <ellipse cx="${cx}" cy="${cy + 13}" rx="${a + 1}" ry="3.6" fill="#7a4a22" opacity="0.3"/>
+    <path d="M${cx - a} ${cy - 6} Q${cx - a + 1} ${cy + 13} ${cx} ${cy + 13} Q${cx + a - 1} ${cy + 13} ${cx + a} ${cy - 6} Q${cx} ${cy + 1} ${cx - a} ${cy - 6} Z" fill="#9a6230" ${s()}/>
+    ${tranca}
+    <path d="M${cx - a + 6} ${cy + 7} Q${cx} ${cy + 11} ${cx + a - 6} ${cy + 7}" fill="none" stroke="#5e3618" stroke-width="2.4" stroke-linecap="round"/>
+    <path d="M${cx - a} ${cy - 6} L${cx - a - 5} ${cy - 11} M${cx + a} ${cy - 6} L${cx + a + 4} ${cy - 12}" stroke="${C}" stroke-width="2.6" stroke-linecap="round"/>`;
+}
+
 /** A cabecinha do pescoçudo (o filhote verde de placas laranja), virada para a direita. */
 function pescocudo(feliz: boolean): string {
   const olho = feliz
     ? `<path d="M31 13.5 Q34.5 10 38 13.5" fill="none" stroke="${C}" stroke-width="2.8" stroke-linecap="round"/>`
     : `<circle cx="34.5" cy="13.5" r="4.2" fill="${C}"/><circle cx="36" cy="12" r="1.5" fill="#fff"/>`;
   return `
-    <path d="M10 62 Q10 42 22 35 Q30 30 30 21" fill="none" stroke="${C}" stroke-width="15.5" stroke-linecap="round"/>
-    <path d="M10 62 Q10 42 22 35 Q30 30 30 21" fill="none" stroke="#7cc35a" stroke-width="10" stroke-linecap="round"/>
+    <path d="M10 66 Q10 42 22 35 Q30 30 30 21" fill="none" stroke="${C}" stroke-width="15.5" stroke-linecap="round"/>
+    <path d="M10 66 Q10 42 22 35 Q30 30 30 21" fill="none" stroke="#7cc35a" stroke-width="10" stroke-linecap="round"/>
     <path d="M13 58 Q13 46 20 40" fill="none" stroke="#a6e07e" stroke-width="3" stroke-linecap="round"/>
     <path d="M16 45 l-7 -3 l2 7 Z M22 37 l-5 -6 l-1.5 7.5 Z" fill="#ff9a30" ${s(2)}/>
     <ellipse cx="38" cy="19" rx="17" ry="13" fill="#86cc64" ${s()}/>
@@ -83,7 +104,8 @@ function pescocudo(feliz: boolean): string {
     <path d="M44 26 Q49 28.5 53.5 25" fill="none" stroke="${C}" stroke-width="2.2" stroke-linecap="round"/>
     <circle cx="51" cy="19" r="1.2" fill="#3e7a2e"/>
     <path d="M30 7.5 l3.5 -5 l3.5 5 Z" fill="#ff9a30" ${s(1.8)}/>
-    ${brilho('M27 12 Q30 8 35 7.5', 2.4)}`;
+    ${brilho('M27 12 Q30 8 35 7.5', 2.4)}
+    ${moita(4, 58)}`;
 }
 
 /** A ovelha de marshmallow (corpinho de travesseiro, carinha de morango). */
@@ -133,11 +155,11 @@ function bolo(fantasma: boolean): string {
     <ellipse cx="32" cy="58" rx="26" ry="4" fill="#e2c99b"/>
     <rect x="9" y="37" width="46" height="19" rx="3" ${f}/>
     <path d="M32 37 V56" stroke="#fff" stroke-width="2.2" stroke-dasharray="4 3"/>
-    <rect x="12" y="21" width="40" height="16" rx="3" ${f}/>
+    <rect x="9" y="21" width="46" height="16" rx="3" ${f}/>
     <path d="M32 21 V37" stroke="#fff" stroke-width="2.2" stroke-dasharray="4 3"/>
     <rect x="28.5" y="7" width="7" height="14" rx="2.5" ${f}/>
     <rect x="9" y="37" width="46" height="19" rx="3" fill="none" stroke="#3f9ad8" stroke-width="1.4" opacity="0.6"/>
-    <rect x="12" y="21" width="40" height="16" rx="3" fill="none" stroke="#3f9ad8" stroke-width="1.4" opacity="0.6"/>`;
+    <rect x="9" y="21" width="46" height="16" rx="3" fill="none" stroke="#3f9ad8" stroke-width="1.4" opacity="0.6"/>`;
   }
   return `
     <ellipse cx="32" cy="58" rx="27" ry="4" fill="#e2c99b"/>
@@ -145,8 +167,8 @@ function bolo(fantasma: boolean): string {
     <path d="M9 42 H55" stroke="#6a3418" stroke-width="2.4"/>
     <circle cx="18" cy="49" r="1.8" fill="#ffd9e2"/><circle cx="30" cy="47.5" r="1.8" fill="#fff3c4"/>
     <circle cx="42" cy="50" r="1.8" fill="#ffd9e2"/><circle cx="50" cy="47" r="1.6" fill="#fff3c4"/>
-    <rect x="12" y="21" width="40" height="17" rx="4" fill="#fff6f2" ${s()}/>
-    <path d="M12 27 Q16 33 20 27 Q24 33 28 27 Q32 33 36 27 Q40 33 44 27 Q48 32 52 27" fill="none" stroke="#ff9db4" stroke-width="3.4" stroke-linecap="round"/>
+    <rect x="9" y="21" width="46" height="17" rx="4" fill="#fff6f2" ${s()}/>
+    <path d="M9 27 Q13.5 33 18 27 Q22.5 33 27 27 Q31.5 33 36 27 Q40.5 33 45 27 Q50 33 55 27" fill="none" stroke="#ff9db4" stroke-width="3.4" stroke-linecap="round"/>
     ${brilho('M16 24.5 Q22 23 28 23.5', 2.4)}`;
 }
 
@@ -161,6 +183,31 @@ const vela = (acesa: boolean) => `
     <path d="M32 4.8 Q33.5 6.8 32 8.6 Q30.5 6.8 32 4.8 Z" fill="#fff6c8"/>`
         : ''
     }`;
+
+/** O saco de confeitar (o selinho de montar o bolo): cone de pano, bico e o chantilly saindo. */
+const sacoConfeitar = `
+    <g transform="rotate(38 32 32)">
+      <path d="M18 6 Q32 2 46 6 L35 44 Q32 47 29 44 Z" fill="#ff9db4" ${s()}/>
+      <path d="M17 6 Q32 0 47 6 Q48 11 46 12 Q32 8 18 12 Q16 11 17 6 Z" fill="#fff6f2" ${s(2.6)}/>
+      <path d="M22 16 Q26 30 30 40" fill="none" stroke="#ffd0da" stroke-width="3" stroke-linecap="round"/>
+      <path d="M29 44 L35 44 L34 51 L30 51 Z" fill="#c9cdd6" ${s(2.4)}/>
+    </g>
+    <path d="M8 60 Q6 55 11 54 Q10 49 16 50 Q21 48 22 53 Q27 53 25 60 Z" fill="#fff6f2" ${s(2.4)}/>
+    <path d="M12 56 Q16 54 20 56" fill="none" stroke="#ff9db4" stroke-width="2" stroke-linecap="round"/>`;
+
+/** As camadas do bolo (as bolinhas do progresso da e1): chocolate, chantilly, a vela. */
+const camadaChocolate = `
+    <rect x="8" y="22" width="48" height="24" rx="5" fill="#8a4a2a" ${s()}/>
+    <path d="M8 29 H56" stroke="#6a3418" stroke-width="2.6"/>
+    <circle cx="20" cy="38" r="2.4" fill="#ffd9e2"/><circle cx="34" cy="37" r="2.4" fill="#fff3c4"/><circle cx="46" cy="39" r="2.4" fill="#ffd9e2"/>`;
+const camadaChantilly = `
+    <rect x="8" y="22" width="48" height="24" rx="5" fill="#fff6f2" ${s()}/>
+    <path d="M8 30 Q14 38 20 30 Q26 38 32 30 Q38 38 44 30 Q50 37 56 30" fill="none" stroke="#ff9db4" stroke-width="4" stroke-linecap="round"/>`;
+const velaSo = `
+    <circle cx="32" cy="14" r="9" fill="#ffe27a" opacity="0.5"/>
+    <path d="M32 6 Q38.5 13 32 19 Q25.5 13 32 6 Z" fill="#ffc93d" stroke="#e8902a" stroke-width="2"/>
+    <rect x="26" y="22" width="12" height="32" rx="4" fill="#ff8fa8" ${s()}/>
+    <path d="M26 30 L38 26 M26 40 L38 36 M26 50 L38 46" stroke="#fff" stroke-width="2.6"/>`;
 
 /** O broto-doce: duas folhinhas cor-de-rosa brilhando num cabinho de menta (não é o capim). */
 const brotoDoce = `
@@ -224,8 +271,9 @@ export const ARTE_CANTO: Record<string, string> = {
   // ------------------------------------------------------------ Era dos Dinos
   ovoDino: svg(ovo(32, 32, 1.75)),
   // d1, o que fazer: o ninho de gravetos com os 3 ovinhos em volta, no chão
+  // d1, o que fazer: o ninho de gravetos com os 3 ovinhos dentro (um objeto só, lê pequeno)
   ninhoOvos: svg(
-    `${ninho(32, 30, 21)}${ovo(11, 48, 0.6, -14)}${ovo(32, 52, 0.62, 0)}${ovo(53, 48, 0.6, 14)}`,
+    `${ovo(19, 31, 0.78, -16)}${ovo(45, 31, 0.78, 16)}${ovo(32, 26, 0.9, 0)}${ninhoFrente(32, 46, 27)}`,
   ),
   mochilaOvos: svg(mochilaOvos),
   pescocudo: svg(pescocudo(false)),
@@ -240,4 +288,8 @@ export const ARTE_CANTO: Record<string, string> = {
   ovelha: svg(ovelha(false)),
   ovelhaCoracao: svg(`${ovelha(true)}${coracao(50, 9, 1.05)}${faisca(8, 10, 3.2)}`),
   brotoDoce: svg(brotoDoce),
+  sacoConfeitar: svg(sacoConfeitar),
+  camadaChocolate: svg(camadaChocolate),
+  camadaChantilly: svg(camadaChantilly),
+  velaAcesa: svg(velaSo),
 };

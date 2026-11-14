@@ -25,15 +25,22 @@ import {
   type RecusaProtecao,
 } from '../jogo/permissao';
 import { CANTEIRO_BOLO, Protecao, criarProtecaoMundo, replantioDaLavoura } from '../world/protecao';
-import { celulaDoBolo, ehFossilDoCanto } from '../world/cantoMissoes';
+import {
+  celulaDoBolo,
+  colunasEditadas,
+  ehFossilDoCanto,
+  escolherCanto,
+} from '../world/cantoMissoes';
 import { criarCacheGeracional } from './mundo';
 import {
   TAM_X,
   ALTURA,
   TAM_Z,
   alturaTerreno,
+  candidatosDoCanto,
   cantoDoMundo,
   cidadeDoMundo,
+  definirEscolhaDoCanto,
   encontrarNascimento,
   estiloMundo,
   olharDoNascimento,
@@ -343,6 +350,27 @@ export function criarNucleo(op: OpcoesNucleo) {
   definirRegioesSemPovoado(semPovoado);
 
   /**
+   * Spec 031: qual lugar do canto das missões vale (Era dos Dinos e Doce Reino). Gravado com o
+   * mundo; sem a gravação (mundo novo, ou salvo antes do canto), o primeiro lugar bom sem
+   * nenhuma edição na caixa dele: o canto nunca cobre o que alguém construiu ou mexeu.
+   */
+  const candidatosCanto = candidatosDoCanto(semente);
+  const salvoCanto = extras['canto'] as { escolha?: unknown } | undefined;
+  const escolhaCanto =
+    typeof salvoCanto?.escolha === 'number' &&
+    Number.isInteger(salvoCanto.escolha) &&
+    salvoCanto.escolha >= -1 &&
+    salvoCanto.escolha < candidatosCanto.length
+      ? salvoCanto.escolha
+      : candidatosCanto.length
+        ? (() => {
+            const editadas = colunasEditadas(dados?.edicoes ?? {});
+            return escolherCanto(candidatosCanto, (x, z) => editadas.has(`${x},${z}`));
+          })()
+        : 0;
+  definirEscolhaDoCanto(escolhaCanto);
+
+  /**
    * Spec 014 (T05): o canteiro de obras da Cidade Grande. Por obra: os ajudantes (quem pôs
    * pelo menos um bloco), as células cheias e se terminou. As feitas mudam a geração (viram
    * parte da cidade), então entram na geração antes de qualquer chunk deste mundo.
@@ -637,6 +665,22 @@ export function criarNucleo(op: OpcoesNucleo) {
    * (d3) e o bolo vazio (e1).
    */
   const canto = cantoDoMundo(semente);
+  // os bichos não entram na caixa de areia (nem nascem nela): a cerquinha vale para eles
+  // (a mesma conta dos veículos da cidade: o passo que entra na caixa não é dado)
+  if (canto?.caixa && !transito) {
+    const k = canto.caixa;
+    const [ax0, az0, ax1, az1] = [k.x0 - 1, k.z0 - 1, k.x1 + 2, k.z1 + 2];
+    mundo.criaturas.folgaVeiculo = (x, _y, z) => {
+      const dx = Math.max(ax0 - x, 0, x - ax1);
+      const dz = Math.max(az0 - z, 0, z - az1);
+      const fora = Math.hypot(dx, dz);
+      // dentro: negativo (quanto mais para o meio, mais negativo), para poder sair
+      return fora > 0 ? fora - 0.45 : -Math.min(x - ax0, ax1 - x, z - az0, az1 - z) - 0.45;
+    };
+    const sup = mundo.criaturas.superficie;
+    mundo.criaturas.superficie = (x, z) =>
+      x >= ax0 - 1 && x <= ax1 && z >= az0 - 1 && z <= az1 ? null : sup(x, z);
+  }
   /** Quem pôs bloco no bolo desta vez (ganha quando ele fica pronto). */
   const ajudantesBolo = new Set<string>();
   /** Os bichos do pasto que o canto chamou (o guia da criança vai até eles). */
@@ -692,6 +736,11 @@ export function criarNucleo(op: OpcoesNucleo) {
       );
       bichosDoPasto.add(c.id);
     }
+    // os do pasto moram no pasto (passeiam ali perto, não somem pelo mundo)
+    for (const id of bichosDoPasto) {
+      const c = criatura(id);
+      if (c && !c.criado) c.casa = [px, pz];
+    }
   }
   /**
    * A comida na mão ao chegar perto de um bicho do pasto ainda sem comida (d2, e2): o capim
@@ -722,14 +771,29 @@ export function criarNucleo(op: OpcoesNucleo) {
       j.eventos.push({ e: 'coletou', item: 'trigo', qtd: 2 });
     }
   }
-  /** O bolo ganhou um bloco de quem tem a e1: pronto, todos que ajudaram ganham. */
+  /**
+   * O bolo ganhou um bloco: cada camada pronta (o chocolate, o chantilly, a vela) acende uma
+   * bolinha da e1 de todos que ajudaram nesta rodada; a vela fecha a missão.
+   */
   function encheuBolo(quem: string): void {
-    if (!canto) return;
+    if (!canto || !mundoAlma) return;
     ajudantesBolo.add(quem);
     almaEvento(quem, 'bolo:bloco');
-    if (!canto.bolo.every((c) => mundo.bloco(c.x, c.y, c.z) === c.bloco)) return;
-    for (const id of ajudantesBolo) almaEvento(id, 'bolo:feito');
-    ajudantesBolo.clear();
+    let prontas = 0;
+    for (let c = 0; c < 3; c++)
+      if (
+        canto.bolo
+          .filter((q) => q.camada === c)
+          .every((q) => mundo.bloco(q.x, q.y, q.z) === q.bloco)
+      )
+        prontas = c + 1;
+      else break;
+    for (const id of ajudantesBolo) {
+      if (!missaoAberta(id, 'e1')) continue;
+      const falta = prontas - (almaDe(id).progresso['e1'] ?? 0);
+      if (falta > 0) almaEvento(id, 'bolo:camada', falta);
+    }
+    if (prontas >= 3) ajudantesBolo.clear();
   }
 
   /** Lugares novos (conferidos no passo, a cada meio segundo). */
@@ -2213,6 +2277,8 @@ export function criarNucleo(op: OpcoesNucleo) {
     }
     if (r === 'nao') return;
     ultimaComida.set(cr.id, n);
+    // spec 031: o bicho do pasto que comeu sai andando contente (a trilha vai para o outro)
+    if (r === 'novo' && bichosDoPasto.has(cr.id)) cr.satisfeito = 7;
     if (ultimaComida.size > 256) ultimaComida.delete(ultimaComida.keys().next().value as number);
     if (r === 'novo' && modo === 'sobrevivencia') j.inventario.remover(c.slot, 1);
     // spec 023: dar comida conta para o amigo dos bichos; o mesmo bicho, só depois de 1 minuto
@@ -2902,6 +2968,8 @@ export function criarNucleo(op: OpcoesNucleo) {
     const j = jogadores.values().next().value as Jogador | undefined;
     const out: Record<string, unknown> = {
       povoados: { semPovoado },
+      // spec 031: o lugar do canto das missões (só nos mundos que têm canto)
+      ...(candidatosCanto.length ? { canto: { escolha: escolhaCanto } } : {}),
       itensSoltos: mundoItens.salvar(),
       criaturas: populacao.salvar(),
       clima: clima.salvar(),
@@ -2941,6 +3009,8 @@ export function criarNucleo(op: OpcoesNucleo) {
   return {
     semente,
     modo,
+    /** Spec 031: o lugar do canto das missões (o servidor da nuvem põe de volta ao trocar de sala). */
+    escolhaCanto,
     /** Spec 014: as obras feitas deste mundo (o servidor da nuvem põe de volta ao trocar de sala). */
     get obrasFeitas(): readonly number[] {
       return feitasDoMundo();

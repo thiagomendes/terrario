@@ -394,6 +394,8 @@ export function dadosDaSala(bv: BemVindo): { mundo: MetaMundo; dados: DadosMundo
       hora: -1,
       extras: {
         povoados: { semPovoado: bv.semPovoado },
+        // spec 031: o lugar do canto das missões (a cena gera o mesmo que o servidor)
+        ...(bv.canto !== undefined ? { canto: { escolha: bv.canto } } : {}),
         // spec 014: as obras do canteiro (a cena gera a cidade com as feitas)
         ...(bv.obras ? { obras: bv.obras } : {}),
         // spec 016: quem colocou os blocos (a cena monta a cópia com os mesmos donos)

@@ -412,6 +412,8 @@ export const RAIO_OVO = 1.3;
 export const RAIO_BICHO = 3;
 /** Na caixa de areia e na mesa: dentro da caixa ou a tanto do lado de quem vem. */
 export const RAIO_LUGAR = 2.4;
+/** Na mesa e na caixa de areia a criança chega bem perto (o bolo e as rochas ao alcance do dedo). */
+export const RAIO_CHEGAR_PERTO = 1.2;
 
 /** O mais perto de `de` (o atual fica, enquanto servir: a trilha não pula de um para outro). */
 function maisPerto<T extends { chave: string; x: number; z: number }>(
@@ -479,7 +481,7 @@ function alvoNoCanto(
   if (c.chave === 'criou:cervo') {
     const [px, , pz] = p.pasto;
     const lista = (mundo.bichos?.() ?? [])
-      .filter((b) => b.tipo === 'cervo' && !b.criado && Math.hypot(b.x - px, b.z - pz) < 14)
+      .filter((b) => b.tipo === 'cervo' && !b.criado && Math.hypot(b.x - px, b.z - pz) < 20)
       .map((b) => ({ ...b, chave: `bicho:${b.id}` }));
     const b = maisPerto(lista, de, atual);
     if (!b) {
@@ -511,7 +513,7 @@ function alvoNoCanto(
   const lugar =
     c.chave === 'escavou:fossil' && p.caixa
       ? { caixa: p.caixa, y: p.caixa.y + 1, placaY: p.caixa.y }
-      : c.chave === 'bolo:feito' && p.mesa
+      : c.chave === 'bolo:camada' && p.mesa
         ? { caixa: p.mesa, y: p.mesa.y + 1, placaY: p.mesa.y + 1 }
         : null;
   if (!lugar) return null;
@@ -526,7 +528,7 @@ function alvoNoCanto(
     z,
     placa: [(k.x0 + k.x1 + 1) / 2, lugar.placaY, (k.z0 + k.z1 + 1) / 2],
     figura,
-    raio: RAIO_LUGAR,
+    raio: RAIO_CHEGAR_PERTO,
     caixa: { x0: k.x0 - 1, z0: k.z0 - 1, x1: k.x1 + 2, z1: k.z1 + 2 },
   };
 }

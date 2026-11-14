@@ -79,6 +79,8 @@ export type DesenhoMissao =
       selo: string;
       resultado: string;
       bolinha: string;
+      /** Uma figura por bolinha (a e1: chocolate, chantilly, vela); sem ela, `bolinha` em todas. */
+      bolinhas?: readonly string[];
       placa: string;
     };
 
@@ -329,12 +331,14 @@ export const MISSOES: readonly Missao[] = [
     desenho: {
       tipo: 'arte',
       principal: 'boloFantasma',
-      selo: 'construtor',
+      selo: 'sacoConfeitar',
       resultado: 'boloAceso',
       bolinha: 'boloAceso',
+      bolinhas: ['camadaChocolate', 'camadaChantilly', 'velaAcesa'],
       placa: 'boloAceso',
     },
-    conta: { tipo: 'evento', chave: 'bolo:feito', meta: 1 },
+    // uma bolinha por camada pronta (chocolate, chantilly, a vela)
+    conta: { tipo: 'evento', chave: 'bolo:camada', meta: 3 },
     moedas: 8,
     habilidade: 'construtor',
     minutos: [1, 2],
@@ -402,6 +406,7 @@ export const GANHO_DE_EVENTO: Readonly<
   'coletou:ovo:ninho': { xp: 3, hab: ['bichos', 0.5] },
   'escavou:fossil': { xp: 2, hab: ['explorador', 0.5] },
   'bolo:bloco': { xp: 1, hab: ['construtor', 0.2] },
+  'bolo:camada': { xp: 0 },
   // receita de comida (o pão e as outras): o núcleo manda a chave 'cozinhou' para o ganho
   cozinhou: { xp: 5, hab: ['cozinheiro', 1] },
   // receita que não é comida (ferramenta, bloco): pouco, e conta para o cozinheiro (pedido

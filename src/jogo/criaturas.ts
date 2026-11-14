@@ -178,6 +178,8 @@ export interface Criatura {
    * terminada). Passeia no quintal do canteiro; como os moradores, não é salvo e renasce.
    */
   lar?: number;
+  /** Spec 031: segundos de "comi, obrigado" (sai andando, não segue a comida). Não é salvo. */
+  satisfeito?: number;
   /** Onde o bicho criado mora (ganhou comida ou parou de seguir): passeia até 6 blocos dela. */
   casa?: [number, number];
   /** Galinha criada: segundos até o próximo ovo. */
@@ -1272,8 +1274,17 @@ export function passoCriatura(
           }
           break;
         }
-        // spec 013: quem segura a comida perto é seguido (para a uns 2 blocos)
         const dh = Math.hypot(dxj, dzj);
+        // spec 031: o bicho do pasto que acabou de comer fica contente e sai andando devagar
+        // (não vem atrás da comida: a criança vai até o outro)
+        if ((c.satisfeito ?? 0) > 0) {
+          c.satisfeito = Math.max(0, c.satisfeito! - dt);
+          c.estado = 'vagar';
+          if (dh < 6) andarPara(c, def, c.x - (dxj / (dh || 1)) * 3, c.z - (dzj / (dh || 1)) * 3, 0.75);
+          else frear(c, 0.6);
+          break;
+        }
+        // spec 013: quem segura a comida perto é seguido (para a uns 2 blocos)
         const raio = c.estado === 'seguir' ? RAIO_SEGUIR : RAIO_ATRAIR;
         if (j.vivo && comeEsse(c.tipo, j.mao) && dh < raio && Math.abs(j.y - c.y) < 4) {
           c.estado = 'seguir';

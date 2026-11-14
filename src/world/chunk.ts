@@ -24,7 +24,8 @@ import { Bloco } from './blocks';
 import {
   cantoNoChunk,
   naCaixaDoCanto,
-  planejarCanto,
+  CANDIDATOS_CANTO,
+  planejarCantos,
   SUBSOLO,
   SUPERFICIE,
   type PlanoCanto,
@@ -152,16 +153,39 @@ export function definirPovoados(ligado: boolean): void {
  * Spec 031: o canto das missões do mundo (Era dos Dinos e Doce Reino; null nos outros). Os
  * povoados desligados (o teste de paridade) desligam o canto também.
  */
-const cantos = new Map<string, PlanoCanto | null>();
-export function cantoDoMundo(semente: number): PlanoCanto | null {
-  if (!povoadosLigados) return null;
+const cantos = new Map<string, PlanoCanto[]>();
+/**
+ * Qual dos lugares bons vale neste mundo (0: o melhor; -1: nenhum). Num mundo salvo antes do
+ * canto, o núcleo escolhe o primeiro lugar sem nada construído (`escolherCanto`), grava com o
+ * mundo e manda no "bem-vindo"; a cena e os trabalhadores da malha recebem o mesmo.
+ */
+let escolhaCanto = 0;
+let versaoCanto = 0;
+export function definirEscolhaDoCanto(n: number): void {
+  const v = Number.isInteger(n) && n >= -1 && n < CANDIDATOS_CANTO ? n : 0;
+  if (v === escolhaCanto) return;
+  escolhaCanto = v;
+  versaoCanto++;
+  metasGeradas.clear();
+}
+export function escolhaDoCanto(): number {
+  return escolhaCanto;
+}
+/** Muda quando a escolha do canto muda (para as memórias da geração e da proteção). */
+export function versaoDoCanto(): number {
+  return versaoCanto;
+}
+/** Os lugares bons para o canto deste mundo (do melhor ao pior; vazio fora dos dois temas). */
+export function candidatosDoCanto(semente: number): readonly PlanoCanto[] {
+  if (!povoadosLigados) return [];
   const mundo = mundoAlmaDoEstilo(estilo);
   const tema = mundo === 'era-dos-dinos' ? 'dinos' : mundo === 'doce-reino' ? 'doce' : null;
-  if (!tema) return null;
+  if (!tema) return [];
   const k = `${semente},${tema},${versaoDosPovoados()}`;
-  if (cantos.has(k)) return cantos.get(k)!;
+  const ja = cantos.get(k);
+  if (ja) return ja;
   const nascer = pontoDeNascer(semente);
-  const p = planejarCanto(tema, {
+  const lista = planejarCantos(tema, {
     altura: (x, z) => alturaTerreno(x, z, semente),
     firme: (x, z, raso) => {
       const h = alturaNatural(x, z, semente);
@@ -182,9 +206,18 @@ export function cantoDoMundo(semente: number): PlanoCanto | null {
     minimo: NIVEL_MAR + 1,
     olhar: OLHAR_PADRAO,
   });
-  cantos.set(k, p);
+  cantos.set(k, lista);
   if (cantos.size > 8) cantos.delete(cantos.keys().next().value as string);
-  return p;
+  return lista;
+}
+/**
+ * Spec 031: o canto das missões do mundo (Era dos Dinos e Doce Reino; null nos outros ou
+ * quando todo lugar bom já tinha construção). Os povoados desligados (o teste de paridade)
+ * desligam o canto também.
+ */
+export function cantoDoMundo(semente: number): PlanoCanto | null {
+  if (escolhaCanto < 0) return null;
+  return candidatosDoCanto(semente)[escolhaCanto] ?? null;
 }
 /** Para onde quem nasce olha nos mundos sem sítio nem cidade (o controle usa o mesmo). */
 export const OLHAR_PADRAO = 0.8;

@@ -110,21 +110,27 @@ type Pe = { x: number; z: number; w: number; d: number };
 function pecas(tema: TemaCanto): { nome: string; s: number; f: number; w: number; d: number }[] {
   return tema === 'dinos'
     ? [
-        { nome: 'ninho', s: -4, f: 0, w: 3, d: 3 },
-        { nome: 'caixa', s: 4, f: 1, w: 5, d: 5 },
-        { nome: 'pasto', s: 0, f: 6, w: 5, d: 5 },
+        // o ninho no meio de um chão plano de 5 × 5 (os ovinhos em volta, no mesmo chão)
+        { nome: 'ninho', s: -5, f: 0, w: 5, d: 5 },
+        // a caixa: a cerquinha na volta de fora, a borda de areia e a cova de 3 × 3
+        { nome: 'caixa', s: 4, f: 1, w: 7, d: 7 },
+        { nome: 'pasto', s: 0, f: 8, w: 5, d: 5 },
       ]
     : [
-        { nome: 'mesa', s: -3, f: 0, w: 4, d: 4 },
-        { nome: 'pasto', s: 4, f: 3, w: 5, d: 5 },
+        // o prato de 4 × 4 no meio de um chão plano de 6 × 6 (rente ao chão dos quatro lados)
+        { nome: 'mesa', s: -3, f: 0, w: 6, d: 6 },
+        { nome: 'pasto', s: 5, f: 3, w: 5, d: 5 },
       ];
 }
 
-/** Os ovinhos em volta do ninho (s, f a partir do meio dele): o primeiro do lado de quem vem. */
+/**
+ * Os ovinhos em volta do ninho (s, f a partir do meio dele, a ~2,2 blocos: dentro do chão plano
+ * de 5 × 5, fora do ninho), o primeiro do lado de quem vem.
+ */
 const OVOS: readonly [number, number][] = [
-  [1, -3],
-  [3, 1],
-  [-2, 3],
+  [1, -2],
+  [2, 1],
+  [-2, 1],
 ];
 /** As rochas de osso na cova (3 × 3 do meio da caixa). */
 const FOSSEIS: readonly [number, number][] = [
@@ -133,9 +139,25 @@ const FOSSEIS: readonly [number, number][] = [
   [-1, 1],
 ];
 
+/** Quantos lugares o planejador oferece (o primeiro sem nada que a criança construiu vale). */
+export const CANDIDATOS_CANTO = 6;
+
+/** O melhor lugar (o primeiro dos candidatos). */
 export function planejarCanto(tema: TemaCanto, t: TerrenoCanto): PlanoCanto | null {
+  return planejarCantos(tema, t, 1)[0] ?? null;
+}
+
+/**
+ * Os lugares bons para o canto, do melhor para o pior, longe uns dos outros. O mundo usa o
+ * primeiro em que ninguém construiu nada (ver `escolherCanto`).
+ */
+export function planejarCantos(
+  tema: TemaCanto,
+  t: TerrenoCanto,
+  max = CANDIDATOS_CANTO,
+): PlanoCanto[] {
   const lista = pecas(tema);
-  let melhor: { nota: number; x: number; z: number; yaw: number } | null = null;
+  const achados: { nota: number; x: number; z: number; yaw: number }[] = [];
   // perto e plano primeiro; depois perto com degraus; depois mais longe; por fim, na ilha
   // pequena, a prainha (o chão da peça sobe até a altura dela)
   const tentativas = [
@@ -145,7 +167,8 @@ export function planejarCanto(tema: TemaCanto, t: TerrenoCanto): PlanoCanto | nu
     { folga: DEGRAUS + 4, longe: true, raso: true },
   ];
   for (const { folga, longe, raso } of tentativas) {
-    if (melhor) break;
+    if (achados.length >= max) break;
+    const daVez: typeof achados = [];
     for (let k = 0; k < 16; k++) {
       const giro = (k % 2 ? 1 : -1) * Math.ceil(k / 2) * (Math.PI / 8);
       const yaw = t.olhar + giro;
@@ -155,12 +178,50 @@ export function planejarCanto(tema: TemaCanto, t: TerrenoCanto): PlanoCanto | nu
         const nota = notaDoLugar(t, lista, x, z, yaw, folga, raso);
         if (nota === null) continue;
         const total = nota + Math.ceil(k / 2) * 1.5 + Math.abs(d - 12) * 0.8;
-        if (!melhor || total < melhor.nota) melhor = { nota: total, x, z, yaw };
+        daVez.push({ nota: total, x, z, yaw });
       }
     }
+    daVez.sort((a, b) => a.nota - b.nota || a.x - b.x || a.z - b.z);
+    for (const c of daVez) {
+      if (achados.length >= max) break;
+      // longe dos já escolhidos (outro lugar de verdade, não o mesmo um bloco ao lado)
+      if (achados.some((a) => Math.hypot(a.x - c.x, a.z - c.z) < 12)) continue;
+      achados.push(c);
+    }
   }
-  if (!melhor) return null;
-  return montar(tema, t, melhor.x, melhor.z, melhor.yaw);
+  return achados.map((c) => montar(tema, t, c.x, c.z, c.yaw));
+}
+
+/**
+ * Spec 031 (o pedido do dono): o canto nunca cobre nada que alguém construiu ou mexeu. Num
+ * mundo salvo antes do canto, o primeiro lugar sem nenhuma edição na caixa dele (com uma volta
+ * de 2) vale; sem nenhum, o mundo fica sem canto (-1). Tirar mato e árvore natural pode.
+ */
+export function escolherCanto(
+  candidatos: readonly PlanoCanto[],
+  editada: (x: number, z: number) => boolean,
+): number {
+  for (let i = 0; i < candidatos.length; i++) {
+    const p = candidatos[i];
+    let livre = true;
+    for (let x = p.x0 - 2; x <= p.x1 + 2 && livre; x++)
+      for (let z = p.z0 - 2; z <= p.z1 + 2 && livre; z++) if (editada(x, z)) livre = false;
+    if (livre) return i;
+  }
+  return -1;
+}
+
+/** As colunas com alguma edição, a partir das edições exportadas (chave "cx,cz"). */
+export function colunasEditadas(
+  edicoes: Readonly<Record<string, readonly (readonly [number, number])[]>>,
+): Set<string> {
+  const r = new Set<string>();
+  for (const [k, lista] of Object.entries(edicoes)) {
+    if (!lista.length) continue;
+    const [cx, cz] = k.split(',').map(Number);
+    for (const [i] of lista) r.add(`${cx * 16 + (i % 16)},${cz * 16 + (Math.floor(i / 16) % 16)}`);
+  }
+  return r;
 }
 
 /** Onde cada peça cai no mundo (a caixa no chão). */
@@ -291,79 +352,73 @@ function montar(tema: TemaCanto, t: TerrenoCanto, x: number, z: number, yaw: num
     const mz = p.z + (p.d - 1) / 2 + 0.5;
     if (p.nome === 'ninho') {
       // o fundo de folhas de ginkgo (o ninho de gravetos é da cena, por cima)
-      const c = p.x + 1;
-      const d = p.z + 1;
+      const c = p.x + 2;
+      const d = p.z + 2;
       por(c, h0, d, Bloco.FOLHAS_OUTONO);
-      for (let i = 0; i < 3; i++)
-        for (let k = 0; k < 3; k++)
-          for (const dy of [1, 2]) passagens.push([p.x + i, h0 + dy, p.z + k]);
+      for (let i = -1; i <= 1; i++)
+        for (let k = -1; k <= 1; k++)
+          for (const dy of [1, 2]) passagens.push([c + i, h0 + dy, d + k]);
       ninho = [mx, h0 + 1, mz];
+      // os ovinhos no mesmo chão plano do ninho (nada de degrau entre eles)
       for (const [s, f] of OVOS) {
         const [ox, oz] = noMundo(c, d, yaw, s, f);
-        const oh = Math.max(t.minimo, t.altura(ox, oz));
-        nivelar(ox, oz, oh);
-        ovos.push([ox + 0.5, oh + 1, oz + 0.5]);
-        ocupadas.add(`${ox},${oz}`);
-        passagens.push([ox, oh + 1, oz]);
-        protegerChao(ox, oz, oh);
+        ovos.push([ox + 0.5, h0 + 1, oz + 0.5]);
+        passagens.push([ox, h0 + 1, oz]);
       }
     } else if (p.nome === 'caixa') {
-      // a borda de areia vermelha e a cova de 3 × 3 um degrau abaixo, com as rochas
+      // a volta de fora: a cerquinha de gravetos, fechada, com 2 blocos abertos do lado de
+      // quem vem do nascer (a entrada); dentro, a borda de areia e a cova de 3 × 3 um degrau
+      // abaixo, com as 3 rochas de osso
+      const dx = t.nascer.x - mx;
+      const dz = t.nascer.z - mz;
+      const aberto = Math.abs(dx) > Math.abs(dz) ? (dx > 0 ? 'l' : 'o') : dz > 0 ? 's' : 'n';
+      const W = p.w - 1;
+      const portao = (i: number, k: number) => {
+        const lado = i === 0 ? 'o' : i === W ? 'l' : k === 0 ? 'n' : k === W ? 's' : null;
+        const ao = lado === 'o' || lado === 'l' ? k : i;
+        return lado === aberto && (ao === 3 || ao === 4);
+      };
       for (let i = 0; i < p.w; i++)
         for (let k = 0; k < p.d; k++) {
           const cx = p.x + i;
           const cz = p.z + k;
-          const borda = i === 0 || k === 0 || i === p.w - 1 || k === p.d - 1;
-          por(cx, h0, cz, borda ? Bloco.AREIA_DESERTO : Bloco.AR);
+          const fora = i === 0 || k === 0 || i === W || k === W;
+          const borda = !fora && (i === 1 || k === 1 || i === W - 1 || k === W - 1);
+          if (fora) {
+            if (!portao(i, k)) por(cx, h0 + 1, cz, Bloco.CERCA);
+            else passagens.push([cx, h0 + 1, cz], [cx, h0 + 2, cz]);
+            continue;
+          }
+          por(cx, h0, cz, borda ? Bloco.AREIA_BRUMA : Bloco.AR);
           if (!borda) {
-            por(cx, h0 - 1, cz, Bloco.AREIA_DESERTO);
+            por(cx, h0 - 1, cz, Bloco.AREIA_BRUMA);
             passagens.push([cx, h0, cz]);
           }
           passagens.push([cx, h0 + 1, cz]);
         }
-      for (const [s, f] of FOSSEIS) {
-        const fx = p.x + 2 + s;
-        const fz = p.z + 2 + f;
+      for (const [s2, f2] of FOSSEIS) {
+        const fx = p.x + 3 + s2;
+        const fz = p.z + 3 + f2;
         por(fx, h0, fz, Bloco.MINERIO_FERRO);
         fosseis.push([fx, h0, fz]);
       }
-      // a cerquinha de gravetos em volta, aberta do lado de quem vem do nascer (a entrada)
-      const dx = t.nascer.x - mx;
-      const dz = t.nascer.z - mz;
-      const aberto = Math.abs(dx) > Math.abs(dz) ? (dx > 0 ? 'l' : 'o') : dz > 0 ? 's' : 'n';
-      for (let i = -1; i <= p.w; i++)
-        for (let k = -1; k <= p.d; k++) {
-          const lado = i === -1 ? 'o' : i === p.w ? 'l' : k === -1 ? 'n' : k === p.d ? 's' : null;
-          if (!lado) continue;
-          const quina = (i === -1 || i === p.w) && (k === -1 || k === p.d);
-          const cx = p.x + i;
-          const cz = p.z + k;
-          ocupadas.add(`${cx},${cz}`);
-          if (!quina && lado === aberto) continue;
-          por(cx, t.altura(cx, cz) + 1, cz, Bloco.CERCA);
-        }
-      const meio = (p.w - 1) / 2;
+      // a entrada: o meio dos 2 blocos abertos, na volta da cerquinha
       const entrada: [number, number] =
         aberto === 'o'
-          ? [p.x - 1 + 0.5, p.z + meio + 0.5]
+          ? [p.x + 0.5, p.z + 4]
           : aberto === 'l'
-            ? [p.x + p.w + 0.5, p.z + meio + 0.5]
+            ? [p.x + W + 0.5, p.z + 4]
             : aberto === 'n'
-              ? [p.x + meio + 0.5, p.z - 1 + 0.5]
-              : [p.x + meio + 0.5, p.z + p.d + 0.5];
-      // umas pedrinhas do lado (o lugar de quem cava)
-      const [px, pz] = noMundo(mx - 0.5, mz - 0.5, yaw, 4, -1);
-      if (!ocupadas.has(`${px},${pz}`)) {
-        por(px, t.altura(px, pz) + 1, pz, Bloco.PEDREGULHO);
-        ocupadas.add(`${px},${pz}`);
-      }
-      caixa = { x0: p.x, z0: p.z, x1: p.x + p.w - 1, z1: p.z + p.d - 1, y: h0, entrada };
+              ? [p.x + 4, p.z + 0.5]
+              : [p.x + 4, p.z + W + 0.5];
+      // a caixa de areia é a parte de dentro da cerquinha
+      caixa = { x0: p.x + 1, z0: p.z + 1, x1: p.x + W - 1, z1: p.z + W - 1, y: h0, entrada };
     } else if (p.nome === 'mesa') {
-      for (let i = 0; i < p.w; i++)
-        for (let k = 0; k < p.d; k++) por(p.x + i, h0, p.z + k, Bloco.PEDRA_LISA);
+      for (let i = 1; i < p.w - 1; i++)
+        for (let k = 1; k < p.d - 1; k++) por(p.x + i, h0, p.z + k, Bloco.PEDRA_LISA);
       // o prato de caramelo no nível do chão (o bolo grandão fica da altura da criança: os
       // blocos de baixo no meio da tela, onde o dedo e a mãozinha alcançam)
-      mesa = { x0: p.x, z0: p.z, x1: p.x + p.w - 1, z1: p.z + p.d - 1, y: h0 };
+      mesa = { x0: p.x + 1, z0: p.z + 1, x1: p.x + p.w - 2, z1: p.z + p.d - 2, y: h0 };
       // o bolo: 2 × 2 de chocolate, 2 × 2 de chantilly e a vela (9 blocos)
       const camadas: [number, number][] = [
         [Bloco.LA_PRETA, 0],
@@ -372,10 +427,10 @@ function montar(tema: TemaCanto, t: TerrenoCanto, x: number, z: number, yaw: num
       let n = 0;
       for (const [b, c] of camadas)
         for (const [i, k] of [
-          [1, 1],
-          [2, 1],
-          [1, 2],
           [2, 2],
+          [3, 2],
+          [2, 3],
+          [3, 3],
         ] as const)
           bolo.push({ i: n++, x: p.x + i, y: h0 + 1 + c, z: p.z + k, bloco: b, camada: c });
       // a vela no bloco de chantilly do lado de quem vem (fica à vista de frente)

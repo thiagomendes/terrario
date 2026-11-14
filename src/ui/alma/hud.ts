@@ -14,6 +14,7 @@
  */
 import {
   MOEDAS_BIS,
+  metaDa,
   missaoPorId,
   missoesDoMundo,
   nivelDoXp,
@@ -36,6 +37,8 @@ export const CSS_ALMA_HUD = `
 .alma-fig[data-tipo='fantasia'] canvas { width: auto; height: 100%; max-width: 100%; }
 .alma-fig-missao { position: relative; display: grid; place-items: center; width: 100%; height: 100%; }
 .alma-fig-missao .principal { width: 86%; height: 86%; }
+/* spec 031: o desenho próprio sobe para o canto de cima (o selo cobre no máximo ~15% dele) */
+.alma-fig-missao[data-arte] .principal { width: 84%; height: 84%; justify-self: start; align-self: start; margin: -3% 0 0 -3%; }
 .alma-fig-missao .selo { position: absolute; right: -4%; bottom: -4%; width: 48%; height: 48%; padding: 5%; box-sizing: border-box;
   border-radius: 50%; background: #fffaf0; box-shadow: 0 0 0 2.5px #e8c98e, 0 3px 0 rgba(150,110,60,0.35); }
 .alma-trio { display: grid; grid-template-columns: repeat(3, 1fr); gap: 3%; width: 100%; height: 100%; align-items: center; }
@@ -144,6 +147,9 @@ body:has(.entrada:not([hidden])) .alma-missao { display: none !important; }
   background: radial-gradient(circle at 50% 40%, #fff6c8, #ffe08a); box-shadow: inset 0 0 0 4px #f5c44a; }
 .alma-oferta .premio .alma-fig { width: 100%; height: 100%; }
 .alma-oferta .premio .alma-moedas { position: absolute; right: -10px; bottom: -10px; font-size: 1.1rem; }
+/* spec 031: no resultado, as moedinhas ficam metade para fora (embaixo, no meio) e não tapam o desenho */
+.alma-oferta .premio[data-arte] .alma-moedas { right: 50%; bottom: 0; transform: translate(50%, 55%); }
+.alma-oferta .premio[data-arte] { margin-bottom: 8px; }
 .alma-oferta .premio .alma-moedas .moeda { width: 24px; height: 24px; }
 .alma-oferta .seta { width: 40px; height: 40px; }
 .alma-oferta .alma-bolinhas .b { width: 28px; height: 28px; }
@@ -169,16 +175,29 @@ body:has(.entrada:not([hidden])) .alma-missao { display: none !important; }
   .alma-oferta .tarefa, .alma-oferta .premio { width: 104px; height: 104px; }
   .alma-cartao { padding: 14px 12px 16px; }
 }
-/* spec 031: a próxima missão aparece só um pedacinho (~20%), apagada, com o cadeado: há mais */
+/* spec 031: a próxima missão aparece cortada, na cor de sempre, sumindo na beira; uma setinha
+   balança uma vez (há mais) */
 .alma-quadro.com-proxima { grid-auto-flow: column; grid-template-columns: none; grid-auto-columns: var(--larg-cartao, 300px);
-  overflow: hidden; }
-.alma-oferta.espera { opacity: 0.6; filter: saturate(0.55); pointer-events: none; }
-.alma-oferta.espera .cadeado { width: 54px; height: 54px; display: grid; place-items: center; border-radius: 18px; background: #efe2c6; }
-.alma-oferta.espera .cadeado .alma-svg { width: 34px; height: 34px; }
+  overflow: hidden; -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 34px), transparent);
+  mask-image: linear-gradient(to right, #000 calc(100% - 34px), transparent); }
+.alma-oferta.espera { opacity: 0.88; pointer-events: none; }
+.alma-oferta.espera .vaga { height: 64px; }
+.alma-mais { position: absolute; z-index: 3; width: 40px; height: 40px; margin: -20px 0 0 -20px; pointer-events: none; padding: 7px; box-sizing: border-box;
+  border-radius: 50%; background: #fffaf0; box-shadow: 0 0 0 3px #f0d9b0, 0 4px 0 3px #e2c99b; animation: alma-mais 1.1s ease-in-out 0.45s 1 both; }
+.alma-mais .alma-svg { width: 100%; height: 100%; display: block; }
+.alma-mais .alma-svg path { stroke: #a8743e; }
+@keyframes alma-mais { 0% { opacity: 0; transform: translateX(-6px); } 20% { opacity: 1; } 40% { transform: translateX(6px); }
+  60% { transform: translateX(-3px); } 80% { transform: translateX(3px); } 100% { opacity: 1; transform: none; } }
 @media (max-width: 560px) {
-  .alma-quadro.com-proxima { grid-auto-flow: row; grid-auto-columns: auto; grid-template-columns: minmax(0, 340px); }
-  .alma-oferta.espera > .cadeado { grid-area: jogar; }
+  .alma-quadro.com-proxima { grid-auto-flow: row; grid-auto-columns: auto; grid-template-columns: minmax(0, 340px);
+    -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 34px), transparent);
+    mask-image: linear-gradient(to bottom, #000 calc(100% - 34px), transparent); }
+  .alma-oferta.espera .vaga { grid-area: jogar; height: 52px; }
+  .alma-mais .alma-svg { transform: rotate(90deg); }
+  @keyframes alma-mais { 0% { opacity: 0; translate: 0 -6px; } 20% { opacity: 1; } 40% { translate: 0 6px; }
+    60% { translate: 0 -3px; } 80% { translate: 0 3px; } 100% { opacity: 1; translate: 0 0; } }
 }
+@media (prefers-reduced-motion: reduce) { .alma-mais { animation: none; } }
 /* com o quadro (ou o baú) aberto, nada do jogo aparece por baixo: nem a barra, nem o mapinha */
 body[data-overlay='alma'] .barra, body[data-overlay='alma'] .minimapa { visibility: hidden; }
 @media (prefers-reduced-motion: reduce) {
@@ -244,6 +263,7 @@ export function premioEl(m: Missao, bis = false): HTMLElement {
   const premio = document.createElement('div');
   premio.className = 'premio';
   premio.appendChild(figura(m.fantasia && !bis ? `fantasia:${m.fantasia}` : desenhoDaFigurinha(m)));
+  if (m.desenho.tipo === 'arte') premio.dataset.arte = '';
   premio.appendChild(pilhaDeMoedas(bis ? MOEDAS_BIS : m.moedas));
   return premio;
 }
@@ -618,7 +638,7 @@ export function criarHudAlma(raiz: HTMLElement, op: OpcoesHudAlma) {
     return true;
   }
 
-  /** A próxima missão, apagada e com o cadeado (nada de "brincar": ela espera a vez). */
+  /** A próxima missão, na cor de sempre (só sem o "brincar": ela espera a vez). */
   function emEspera(m: Missao): HTMLElement {
     const c = document.createElement('div');
     c.className = 'alma-oferta espera';
@@ -630,31 +650,58 @@ export function criarHudAlma(raiz: HTMLElement, op: OpcoesHudAlma) {
     t.className = 'tarefa';
     t.appendChild(figuraMissao(m));
     linha.append(t, svgEl('seta', 'seta'), premioEl(m));
-    const cad = document.createElement('div');
-    cad.className = 'cadeado';
-    cad.appendChild(svgEl('cadeado'));
-    c.append(linha, cad);
+    const vaga = document.createElement('div');
+    vaga.className = 'vaga';
+    c.append(linha, progressoEl(m, 0, metaDa(m)), vaga);
     return c;
   }
 
   /**
-   * A grade mostra as abertas inteiras e uns 20% da próxima (deitado, ela fica à direita; em
-   * pé, embaixo). A conta é pelo tamanho de verdade do cartão (muda com a tela).
+   * A grade mostra as abertas inteiras e um pedaço da próxima (deitado, à direita; em pé,
+   * embaixo): o bastante para ver ~64 px do desenho dela, livre do X e da beira que some. A
+   * setinha balança uma vez em cima do pedaço.
    */
   function mostrarPedacinho(grade: HTMLElement, abertas: number): void {
     const cartoes = [...grade.querySelectorAll<HTMLElement>('.alma-oferta')];
     const primeiro = cartoes[0];
-    if (!primeiro || cartoes.length <= abertas) return;
+    const proxima = cartoes[abertas];
+    if (!primeiro || !proxima) return;
     const gap = parseFloat(getComputedStyle(grade).columnGap) || 18;
     const empe = innerWidth <= 560;
+    const tarefa = proxima.querySelector<HTMLElement>('.tarefa');
+    // onde o desenho começa dentro do cartão (a conta pela tela: o offset é de outro pai)
+    const r0 = proxima.getBoundingClientRect();
+    const rt = tarefa?.getBoundingClientRect();
+    const dentroX = rt ? rt.left - r0.left : 12;
+    const dentroY = rt ? rt.top - r0.top : 10;
+    const VISTO = 64;
+    const SOME = 34;
     if (empe) {
       const h = Math.max(...cartoes.slice(0, abertas).map((c) => c.offsetHeight));
-      grade.style.maxHeight = `${Math.round(abertas * (h + gap) + h * 0.2)}px`;
+      const dentro = dentroY + VISTO + SOME;
+      grade.style.maxHeight = `${Math.round(abertas * (h + gap) + dentro)}px`;
     } else {
       const w = Math.max(...cartoes.slice(0, abertas).map((c) => c.offsetWidth));
       grade.style.setProperty('--larg-cartao', `${w}px`);
-      grade.style.maxWidth = `${Math.round(abertas * (w + gap) + w * 0.2)}px`;
+      // o X fica no canto de cima do quadro: o pedaço é mais largo que ele
+      const dentro = dentroX + VISTO + SOME + 22;
+      grade.style.maxWidth = `${Math.round(abertas * (w + gap) + dentro)}px`;
     }
+    const caixa = grade.parentElement;
+    if (!caixa) return;
+    setTimeout(() => {
+      const g = grade.getBoundingClientRect();
+      const c = caixa.getBoundingClientRect();
+      const mais = svgEl('seta');
+      const el = document.createElement('div');
+      el.className = 'alma-mais';
+      el.setAttribute('data-alma-mais', '');
+      el.appendChild(mais);
+      el.style.left = `${(empe ? g.right - 34 : g.right - 20) - c.left}px`;
+      // embaixo do pedaço (deitado: na altura do "brincar"; em pé: no meio da beira)
+      el.style.top = `${(empe ? g.bottom - 30 : g.top + g.height * 0.78) - c.top}px`;
+      caixa.appendChild(el);
+    }, 80);
   }
 
   function oferta(

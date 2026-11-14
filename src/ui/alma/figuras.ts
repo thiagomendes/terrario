@@ -165,6 +165,7 @@ export function figuraMissao(m: Pick<Missao, 'desenho'>): HTMLElement {
     caixa.appendChild(figura(`item:${d.item}`, 'selo'));
   } else if (d.tipo === 'arte') {
     // spec 031: os desenhos próprios (o que fazer e o selinho da ação)
+    caixa.dataset.arte = '';
     caixa.appendChild(figura(d.principal, 'principal'));
     caixa.appendChild(figura(d.selo, 'selo'));
   } else if (d.tipo === 'lugares') {
@@ -197,6 +198,6 @@ export function desenhoDaBolinha(m: Pick<Missao, 'desenho'>, i: number): string 
   if (d.tipo === 'lugares') return d.usos[i] ?? 'estrela';
   if (d.tipo === 'bicho') return d.bicho;
   if (d.tipo === 'item') return `item:${d.item}`;
-  if (d.tipo === 'arte') return d.bolinha;
+  if (d.tipo === 'arte') return d.bolinhas?.[i] ?? d.bolinha;
   return 'estrela';
 }

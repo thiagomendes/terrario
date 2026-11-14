@@ -2,7 +2,7 @@ import type { EstiloMundo } from '../temas/tipos';
 import { definirDetalheMalha, gerarMalha } from '../mesh/malha';
 import type { Buffers } from '../mesh/malha';
 import { blocoDe, criarEdicoes, metasDoChunk, type Edicoes } from '../world/edicoes';
-import { definirEstiloMundo, gerarChunk } from '../world/chunk';
+import { definirEscolhaDoCanto, definirEstiloMundo, gerarChunk } from '../world/chunk';
 import { definirRegioesSemPovoado } from '../world/povoado';
 import { definirObrasFeitas } from '../world/obras';
 import {
@@ -81,6 +81,8 @@ export interface PedidoEstilo {
   detalhe?: 'alto' | 'baixo';
   /** Spec 014: as obras feitas do canteiro (mudam a geração da cidade). */
   obrasFeitas?: number[];
+  /** Spec 031: o lugar do canto das missões (0 o melhor, -1 nenhum). */
+  canto?: number;
 }
 
 /** Spec 014 (T06): uma obra terminou: a geração muda e os chunks do canteiro saem da memória. */
@@ -98,6 +100,7 @@ self.onmessage = (ev: MessageEvent<PedidoChunk | PedidoEstilo | PedidoObras>) =>
   }
   if ('estilo' in ev.data) {
     definirObrasFeitas(ev.data.obrasFeitas ?? []);
+    definirEscolhaDoCanto(ev.data.canto ?? 0);
     definirEstiloMundo(ev.data.estilo);
     definirRegioesSemPovoado(ev.data.semPovoado ?? []);
     definirCoresPlantas(ev.data.coresPlantas);

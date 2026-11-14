@@ -7,8 +7,15 @@ import { antesDeSair, saindoPorConta } from '../pagina';
 import { povoadosPerto } from '../jogo/povoados';
 import { generoDoMorador, nomeDoMorador } from '../temas/nomes';
 import { definirRegioesSemPovoado, regiaoDoChunk } from '../world/povoado';
-import { cantoDoMundo, cidadeDoMundo, encontrarNascimento } from '../world/chunk';
-import type { PlanoCanto } from '../world/cantoMissoes';
+import {
+  candidatosDoCanto,
+  cantoDoMundo,
+  cidadeDoMundo,
+  definirEscolhaDoCanto,
+  encontrarNascimento,
+  escolhaDoCanto,
+} from '../world/chunk';
+import { colunasEditadas, escolherCanto, type PlanoCanto } from '../world/cantoMissoes';
 import { povoadoDoTema, tema } from '../temas/ativo';
 import {
   criarVozesGravadas,
@@ -376,6 +383,17 @@ export interface EstadoDepuracao {
   canto?: () => PlanoCanto | null;
   /** Spec 031: a criança tem a missão do bolo (os fantasmas do bolo aceitam o toque). */
   boloLiberado?: boolean;
+  /**
+   * Spec 031: os toques das missões do canto (a área de toque é do guia, generosa): pôr o
+   * bloco no fantasma do bolo, tirar a rocha de osso e dar a comida da mão ao bicho.
+   */
+  missaoToque?: {
+    encher(x: number, y: number, z: number): boolean;
+    escavar(x: number, y: number, z: number): void;
+    alimentar(id: number): boolean;
+  };
+  /** Spec 031: o boneco fica no máximo tão opaco (a mãozinha atrás dele: ~0,6). */
+  limiteOpacidade?: number;
   /** Spec 030: os sítios (Rancho) a até 220 blocos do jogador, do mais perto ao mais longe. */
   sitios?: () => PlanoPovoado[];
   /** Spec 014 (T10): o horizonte de torres (null fora da cidade). */
@@ -952,6 +970,25 @@ export function criarCena(
         })()
       : [];
   definirRegioesSemPovoado(semPovoado);
+  // spec 031: o lugar do canto das missões, a mesma conta do núcleo (gravado, ou o primeiro
+  // lugar bom sem construção de ninguém) e o que veio no "bem-vindo" da nuvem
+  {
+    const candidatos = candidatosDoCanto(semente);
+    const salvo = (dadosIniciais?.extras?.['canto'] as { escolha?: unknown } | undefined)?.escolha;
+    let escolha = 0;
+    if (
+      typeof salvo === 'number' &&
+      Number.isInteger(salvo) &&
+      salvo >= -1 &&
+      salvo < candidatos.length
+    )
+      escolha = salvo;
+    else if (candidatos.length && dadosIniciais) {
+      const editadas = colunasEditadas(dadosIniciais.edicoes);
+      escolha = escolherCanto(candidatos, (x, z) => editadas.has(`${x},${z}`));
+    }
+    definirEscolhaDoCanto(escolha);
+  }
   /**
    * Spec 014 (T06): as obras do canteiro (as feitas mudam a geração da cidade, como no
    * núcleo): os nomes da placa de cada uma e a lista das feitas, antes de qualquer chunk.
@@ -1601,6 +1638,7 @@ export function criarCena(
     coresPlantas,
     detalhe,
     obrasFeitas: obrasFeitas(),
+    canto: escolhaDoCanto(),
   };
   worker.postMessage(inicioWorker);
   workerEdicao.postMessage(inicioWorker);
@@ -2666,7 +2704,7 @@ export function criarCena(
     });
     cameraVisao.position.set(r.posicao.x, r.posicao.y, r.posicao.z);
     // perto demais: o boneco fica meio transparente (só troca quando o degrau muda)
-    const op = degrauOpacidade(r.opacidade);
+    const op = Math.min(degrauOpacidade(r.opacidade), estado.limiteOpacidade ?? 1);
     if (op !== opacidadeAplicada) {
       opacidadeAplicada = op;
       personagem.definirOpacidade(op);
@@ -3267,6 +3305,36 @@ export function criarCena(
     }
   }
   estado.respingo = (x, y, z, forca = 1) => respingo(x, y, z, forca);
+  estado.missaoToque = {
+    encher(x, y, z) {
+      const c = listaFantasmas.find((q) => q.x === x && q.y === y && q.z === z);
+      return !!c && encherFantasma(c);
+    },
+    escavar(x, y, z) {
+      const antes = blocoEm(x, y, z);
+      if (antes === Bloco.AR) return;
+      const id = proximoId();
+      cliente.prever(id, x, y, z, Bloco.AR, 0);
+      enviarTelemetria(true);
+      enviar({ t: 'quebrar', id, x, y, z, slot: hotbar.ativo });
+      aplicarPlano('quebra', { x, y, z, bloco: antes });
+      barramento.emitir('quebra', { x, y, z, bloco: antes });
+    },
+    alimentar(id) {
+      const c = criaturaPorId(id);
+      if (!c) return false;
+      // a comida da mão: a casinha que tem a comida do bicho vira a da mão
+      let slot = -1;
+      for (let i = 0; i < 9 && slot < 0; i++)
+        if (comeEsse(c.tipo, inventario.obter(i)?.item)) slot = i;
+      if (slot < 0) return false;
+      if (slot !== hotbar.ativo) estado.selecionarSlot?.(slot);
+      tocarSom(motorAudio, 'comer');
+      enviarTelemetria(true);
+      enviar({ t: 'alimentar', criatura: id, slot });
+      return true;
+    },
+  };
 
   function atualizarEfeitos(dt: number): void {
     atualizarAguaDoBoneco(dt);
@@ -5319,6 +5387,10 @@ export function criarCena(
         break;
       case 'coletou':
         coletou(e.item, e.qtd);
+        // spec 031: a comida que aparece na mão (o canto das missões faz o "pop")
+        window.dispatchEvent(
+          new CustomEvent('brumaluz:coletou', { detail: { item: e.item, qtd: e.qtd } }),
+        );
         break;
       case 'ferramentaQuebrou':
         tocarSom(motorAudio, 'recusa');
@@ -5380,6 +5452,10 @@ export function criarCena(
         coracoes.soltar(e.x, e.y + CRIATURAS[e.tipo].alt + 0.2, e.z, e.novo ? 6 : 3);
         if (e.tipo !== 'morador')
           vozes.bicho(e.tipo, 'contente', { volume: e.meu ? 1 : volumeDaDistancia(e), quem: e.id });
+        if (e.meu)
+          window.dispatchEvent(
+            new CustomEvent('brumaluz:alimentou', { detail: { id: e.id, novo: e.novo } }),
+          );
         if (e.meu && e.novo) {
           tocarSom(motorAudio, 'coleta');
           toast(`${CRIATURAS[e.tipo].nome} virou seu bichinho!`);

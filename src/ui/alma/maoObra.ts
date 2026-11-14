@@ -54,6 +54,7 @@ export interface MaoObra {
   /** Testes: onde ela mostra (tela) e o bloco. */
   tela(): { x: number; y: number } | null;
   fantasma(): Ponto | null;
+  motivo(): string;
 }
 
 export function criarMaoObra(e: EstadoDepuracao, scene: Scene): MaoObra {
@@ -108,6 +109,8 @@ export function criarMaoObra(e: EstadoDepuracao, scene: Scene): MaoObra {
     return !!p && p.x === f.x && p.y === f.y && p.z === f.z;
   }
 
+  /** Testes: por que a mãozinha do bolo não achou lugar (o último motivo). */
+  let motivo = '';
   function escolher(): Ponto | null {
     const pes = e.jogadorPes?.();
     if (!pes || canteiro === null) return null;
@@ -120,7 +123,8 @@ export function criarMaoObra(e: EstadoDepuracao, scene: Scene): MaoObra {
     const gente = (e.criaturas?.() ?? [])
       .filter((c) => Math.hypot(c.x - pes[0], c.z - pes[2]) < 10)
       .flatMap((c) => [tela(c.x, c.y + 0.7, c.z), tela(c.x, c.y + 1.5, c.z)]);
-    for (const dy of [0.5, 1.1, 1.7]) gente.push(tela(pes[0], pes[1] + dy, pes[2]));
+    // (no bolo, a mãozinha pode ficar atrás do boneco: ele fica transparente, spec 031)
+    if (!seguida) for (const dy of [0.5, 1.1, 1.7]) gente.push(tela(pes[0], pes[1] + dy, pes[2]));
     const pessoas = gente.filter((t): t is { x: number; y: number } => !!t);
     let melhor: Ponto | null = null;
     let custo = Infinity;
@@ -128,14 +132,24 @@ export function criarMaoObra(e: EstadoDepuracao, scene: Scene): MaoObra {
       if (f.y > yMin) continue;
       const t = tela(f.x + 0.5, f.y + 0.5, f.z + 0.5);
       // longe dos botões das bordas (em pé a tela é estreita: a margem encolhe)
-      const mx = Math.min(190, innerWidth * 0.2);
-      if (!t || t.x < mx || t.x > innerWidth - mx || t.y < 130 || t.y > innerHeight - 150) continue;
-      if (pessoas.some((g) => Math.hypot(g.x - t.x, g.y - t.y) < 75)) continue;
-      if (!toquePega(t.x, t.y, f, todos)) continue;
+      const mx = seguida ? 34 : Math.min(190, innerWidth * 0.2);
+      const cima = seguida ? 44 : 130;
+      const baixo = seguida ? 110 : 150;
+      if (!t || t.x < mx || t.x > innerWidth - mx || t.y < cima || t.y > innerHeight - baixo) {
+        if (seguida) motivo = `tela ${t ? `${Math.round(t.x)},${Math.round(t.y)}` : 'atras'}`;
+        continue;
+      }
+      if (!seguida && pessoas.some((g) => Math.hypot(g.x - t.x, g.y - t.y) < 75)) continue;
+      // no bolo o toque é do canto (o fantasma mais perto do dedo na tela), sem conferir o raio
+      if (!seguida && !toquePega(t.x, t.y, f, todos)) continue;
       const k = Math.hypot(f.x + 0.5 - pes[0], f.z + 0.5 - pes[2]);
       // nem colado no boneco (o corpo tapa), nem longe (o dedo não alcança)
-      if (k > 4.5) continue;
-      const c = Math.abs(k - 2.5);
+      if (k > (seguida ? 6 : 4.5)) {
+        if (seguida) motivo = `longe ${k.toFixed(1)}`;
+        continue;
+      }
+      // no bolo, o de trás primeiro (o da frente, cheio, taparia o de trás)
+      const c = seguida ? -k : Math.abs(k - 2.5);
       if (c < custo) {
         custo = c;
         melhor = { x: f.x, y: f.y, z: f.z };
@@ -221,5 +235,6 @@ export function criarMaoObra(e: EstadoDepuracao, scene: Scene): MaoObra {
           }
         : null,
     fantasma: () => alvo ?? escolher(),
+    motivo: () => motivo,
   };
 }

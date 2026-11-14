@@ -10,6 +10,9 @@
 import type { Scene } from '@babylonjs/core/scene';
 import { Mesh } from '@babylonjs/core/Meshes/mesh';
 import { MeshBuilder } from '@babylonjs/core/Meshes/meshBuilder';
+import { StandardMaterial } from '@babylonjs/core/Materials/standardMaterial';
+import { Color3 } from '@babylonjs/core/Maths/math.color';
+import { VertexData } from '@babylonjs/core/Meshes/mesh.vertexData';
 import { criarPlasticos, cilindro, esfera, type Plasticos } from './formas';
 import { hash2 } from '../world/noise';
 
@@ -101,6 +104,58 @@ export function criarNinho(scene: Scene, x: number, y: number, z: number): Ninho
     descartar() {
       for (const m of malhas) m.dispose();
       mats.descartar();
+    },
+  };
+}
+
+/**
+ * O brilhinho em cima de cada ovinho ainda no chão (estrelinha dourada que gira e pulsa,
+ * sempre de frente para a câmera): a criança vê de longe onde está cada um.
+ */
+export function criarBrilhoOvos(
+  scene: Scene,
+  ovos: readonly (readonly [number, number, number])[],
+) {
+  const mat = new StandardMaterial('brilho-ovo', scene);
+  mat.disableLighting = true;
+  mat.emissiveColor = new Color3(1, 0.86, 0.35);
+  mat.diffuseColor = Color3.Black();
+  mat.specularColor = Color3.Black();
+  mat.fogEnabled = false;
+  // estrela de 4 pontas fininha (o brilho de desenho animado), um leque de triângulos
+  const pos: number[] = [0, 0, 0];
+  const ind: number[] = [];
+  for (let i = 0; i < 8; i++) {
+    const a = (i / 8) * Math.PI * 2;
+    const r = i % 2 ? 0.05 : 0.17;
+    pos.push(Math.cos(a) * r, Math.sin(a) * r, 0);
+  }
+  for (let i = 0; i < 8; i++) ind.push(0, 1 + i, 1 + ((i + 1) % 8), 0, 1 + ((i + 1) % 8), 1 + i);
+  const vd = new VertexData();
+  vd.positions = pos;
+  vd.indices = ind;
+  const base = new Mesh('brilho-ovo', scene);
+  vd.applyToMesh(base);
+  base.material = mat;
+  base.isPickable = false;
+  base.billboardMode = Mesh.BILLBOARDMODE_ALL;
+  base.setEnabled(false);
+  const lista = ovos.map((o, i) => {
+    const m = base.clone(`brilho-ovo-${i}`);
+    m.position.set(o[0] + 0.18, o[1] + 0.62, o[2]);
+    m.setEnabled(false);
+    return m;
+  });
+  return {
+    quadro(noChao: readonly boolean[], t: number): void {
+      lista.forEach((m, i) => {
+        const v = !!noChao[i];
+        if (m.isEnabled() !== v) m.setEnabled(v);
+        if (!v) return;
+        const k = 0.8 + 0.35 * Math.max(0, Math.sin(t * 3.1 + i * 2.1));
+        m.scaling.setAll(k);
+        m.rotation.z = t * 0.9 + i;
+      });
     },
   };
 }
