@@ -1,7 +1,8 @@
 ---
 id: 023-alma-do-jogo
 title: 'Alma do jogo: missões, nível da criança, moedinhas, banca do mundo e lojinha premium'
-status: DRAFT
+status: APPROVED
+approved_at: 2026-11-13
 base_branch: main
 branch: feat/alma-do-jogo
 created_at: 2026-11-13T17:00:00Z
@@ -119,7 +120,7 @@ As mesmas do esboço. Ficam abertas 2 de cada vez, na ordem, e toda missão aber
 |---|---|---|
 | Construtor | Cidade e Rancho | blocos na obra, construções, trocas com o construtor |
 | Explorador | Cidade e Rancho | lugares novos (lojas, praça, açude, morro) |
-| Amigo dos bichos | Rancho | bicho alimentado ou criado, ovos (até 5 pontos por dia de jogo) |
+| Amigo dos bichos | Rancho | bicho alimentado ou criado, ovos (o mesmo bicho não conta de novo em menos de 1 minuto) |
 | Fazendeiro | Rancho | plantar e colher maduro |
 | Cozinheiro | Cidade e Rancho | pão, pipoca, pão da padeira |
 
@@ -177,7 +178,7 @@ Sem bicho que não exista no tema (o gato e o pônei da rodada 1 saíram).
 - a cada uma, o núcleo calcula os ganhos e manda **só para quem ganhou**: `{ e: 'alma', missoes: [...progresso e concluídas], ganho: { moedas, xp, pontos } }`;
 - o cliente soma `ganho` ao perfil do aparelho e mostra a festa. **O cliente nunca soma um ganho que não veio do núcleo.**
 - obra: todo ajudante presente ganha (como o prêmio da 014);
-- os limites ficam no núcleo: até 5 pontos de "amigo dos bichos" por dia de jogo, e o mesmo bicho alimentado de novo em menos de 1 minuto não conta.
+- o limite fica no núcleo: o mesmo bicho alimentado de novo em menos de 1 minuto não conta. Não há limite por dia (decisão do dono).
 
 **Estado do mundo no núcleo:**
 - `extras.alma[jogadorId]`: as missões feitas, a fixada, o progresso e o bis daquele jogador, naquele mundo;
@@ -304,3 +305,10 @@ Ver `tasks.md` (nesta pasta). Ordem: a regra e o núcleo primeiro, depois o HUD 
 - 13 nov 2026: junta a 018. Fica logo depois da câmera (022), na ordem 022 → 023 → 024 → 020 → 025, com os mundos novos (026 e 027) intercalados.
 - 13 nov 2026 (rodada 2 do esboço): carteira, nível, habilidades e fantasias são da criança, no aparelho até a 024; missões, prêmios especiais e banca são do mundo; lojinha premium universal, pela roda do menu, com coisas que o jogo nunca dá, só com moedinhas; escasso e único quer dizer exclusivo pela qualidade, nunca por tempo ou quantidade.
 - 13 nov 2026 (depois da rodada 2): preços de 15 a 80, com o unicórnio como sonho; **catálogo de lançamento só com o que está pronto** (camiseta arco-íris, tênis-cometa, capa de estrelas, dragãozinho, pinguinzinho e unicórnio-pônei), as outras 5 depois, poucas de cada vez; os presentes de nível mantêm as moedinhas (2 a 5); antes de lançar, acabamento no capuz do dragão e no unicórnio (maior e mais vivo de longe), e conferir o boneco que flutua no céu das capturas.
+- 13 nov 2026, ao aprovar a spec ("Manda ver"), com as recomendações aceitas:
+  - a banca funciona nos mundos da nuvem, com saldo informado pelo aparelho e os limites do núcleo, até a 024;
+  - moedinha ganha no mundo de um amigo vai para o cofrinho de quem visita;
+  - o cartão da missão substitui o chip do diário na Cidade e no Rancho, e o diário fica no menu;
+  - presentes depois do nível 10 ficam para uma rodada futura;
+  - o boneco no céu: a T00 confirma antes de consertar;
+  - sem limite diário de amigo dos bichos, só a regra de 1 minuto por bicho.
