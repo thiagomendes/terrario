@@ -1,8 +1,7 @@
 ---
 id: 023-alma-do-jogo
 title: 'Alma do jogo: missões, nível da criança, moedinhas, banca do mundo e lojinha premium'
-status: APPROVED
-approved_at: 2026-11-13
+status: DRAFT
 base_branch: main
 branch: feat/alma-do-jogo
 created_at: 2026-11-13T17:00:00Z
