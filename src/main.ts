@@ -681,10 +681,12 @@ function ligarAlma(
   // o HUD ouve o núcleo antes do perfil somar (a festa sabe qual missão acabou)
   ligarAlmaUi({
     perfil,
-    raiz: document.querySelector<HTMLElement>('.hud') ?? document.body,
+    // no corpo, como os botões da roda e da mochila (o .hud não recebe toque)
+    raiz: document.body,
     chaveMundo: op.chaveMundo,
     armazenamento,
     fixar: (m) => cena.estado.alma?.fixar(m),
+    comprarBanca: (item, saldo) => cena.estado.alma?.comprarBanca(item, saldo),
     aoFechar: () => {
       if (document.querySelector('.entrada:not([hidden])') || document.body.dataset.overlay) return;
       travarPonteiro();

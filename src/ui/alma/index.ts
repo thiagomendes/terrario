@@ -10,6 +10,8 @@ import type { EventoNucleo } from '../../nucleo/protocolo';
 import type { VistaAlmaMundo } from '../../jogo/alma';
 import type { PerfilCrianca } from '../../personagem/almaCrianca';
 import { CSS_ALMA_HUD, criarHudAlma, type HudAlma } from './hud';
+import { CSS_ALMA_BAU, criarBau, type BauAlma } from './bau';
+import type { Aparencia } from '../../personagem/aparencia';
 
 /** Mundos em que o quadro já abriu sozinho (no aparelho; o quadro só abre na primeira visita). */
 export const CHAVE_QUADRO_VISTO = 'terrario:alma-quadro-visto';
@@ -42,24 +44,27 @@ export function marcarQuadroVisto(armazenamento: Storage | null, mundo: string):
 
 export interface OpcoesAlmaUi {
   perfil: PerfilCrianca;
-  /** Onde o HUD mora (o `.hud` do jogo). */
+  /** Onde o HUD mora (o corpo da página, como os botões da roda). */
   raiz: HTMLElement;
   /** O mundo aberto (para o quadro abrir só na primeira visita); null: sempre abre. */
   chaveMundo: string | null;
   armazenamento: Storage | null;
   fixar(missao: string | null): void;
+  /** Compra na banca pelo núcleo (o saldo é o do aparelho, até a 024). */
+  comprarBanca(item: string, saldo: number): void;
   /** Um painel fechou: volta a travar o ponteiro (se nada mais estiver aberto). */
   aoFechar(): void;
 }
 
 export interface AlmaUi {
   hud: HudAlma;
+  bau: BauAlma;
   vista(): VistaAlmaMundo | null;
 }
 
 export function ligarAlmaUi(op: OpcoesAlmaUi): AlmaUi {
   const estilo = document.createElement('style');
-  estilo.textContent = CSS_ALMA_HUD;
+  estilo.textContent = CSS_ALMA_HUD + CSS_ALMA_BAU;
   document.head.appendChild(estilo);
 
   let vista: VistaAlmaMundo | null = null;
@@ -67,15 +72,24 @@ export function ligarAlmaUi(op: OpcoesAlmaUi): AlmaUi {
     perfil: () => op.perfil.perfil,
     vista: () => vista,
     fixar: (id) => op.fixar(id),
-    aoTocarCarteira: () => {
-      // o baú da criança vem na T07; até lá, o quadro (onde há missões)
-      hud.quadro();
-    },
+    aoTocarCarteira: () => bau.abrir(),
     aoTocarCartao: () => {
       hud.quadro();
     },
     aoAbrir: () => undefined,
     aoFechar: () => op.aoFechar(),
+  });
+  const bau = criarBau({
+    hud,
+    perfil: () => op.perfil.perfil,
+    vista: () => vista,
+    // as fantasias de prêmio: as das missões (perfil) e as do canteiro da 014 (aparência)
+    fantasiasGanhas: () => [
+      ...op.perfil.perfil.fantasias,
+      ...((window as unknown as { __desbloqueios?: () => string[] }).__desbloqueios?.() ?? []),
+    ],
+    comprarBanca: (item, saldo) => op.comprarBanca(item, saldo),
+    aparencia: () => (window.__brumaluz?.personagem?.aparencia?.() ?? {}) as Aparencia,
   });
 
   // o que o núcleo manda: o quadro inteiro (entrou, mudou a lista) e o que andou
@@ -95,6 +109,8 @@ export function ligarAlmaUi(op: OpcoesAlmaUi): AlmaUi {
         }
       }
     hud.renderHud(true);
+    // o baú da banca mudou (o pacote entrou sozinho na mochila): a aba à vista se atualiza
+    if (e.quadro && bau.aba === 'banca') bau.atualizar();
     if (primeiro) quadroPendente = true;
     if (primeiro) abrirNaPrimeiraVisita();
   });
@@ -126,7 +142,17 @@ export function ligarAlmaUi(op: OpcoesAlmaUi): AlmaUi {
     setTimeout(tentar, 1200);
   }
 
-  const ui: AlmaUi = { hud, vista: () => vista };
+  // no computador: H abre e fecha o baú (com o ponteiro preso no jogo, o toque não chega)
+  window.addEventListener('keydown', (e) => {
+    if (e.code !== 'KeyH' || e.repeat) return;
+    if ((e.target as HTMLElement)?.closest?.('input, textarea')) return;
+    if (document.querySelector('.entrada:not([hidden])')) return;
+    if (hud.aberto()) return bau.fechar();
+    if (document.body.dataset.overlay) return;
+    bau.abrir();
+  });
+
+  const ui: AlmaUi = { hud, bau, vista: () => vista };
   (window as unknown as { __almaUi?: AlmaUi }).__almaUi = ui;
   return ui;
 }

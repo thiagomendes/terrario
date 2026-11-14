@@ -46,3 +46,14 @@ describe('HUD da alma (spec 023, T06)', () => {
     expect(missaoDoCartao({ ...v, fixada: 'r7' })).toMatchObject({ m: { id: 'r1' }, feito: 2 });
   });
 });
+
+describe('baú da alma (spec 023, T07)', () => {
+  it('toda recusa da banca tem desenho (sem texto)', async () => {
+    const { DESENHO_RECUSA } = await import('../../src/ui/alma/bau');
+    const { ARTE } = await import('../../src/ui/alma/arte');
+    for (const d of Object.values(DESENHO_RECUSA)) expect(ARTE[d], d).toBeTruthy();
+    expect(Object.keys(DESENHO_RECUSA).sort()).toEqual(
+      ['cheio', 'espera', 'galinha', 'limite', 'saldo', 'tema'].sort(),
+    );
+  });
+});

@@ -271,3 +271,116 @@ test('o quadro de missões aparece sozinho na primeira visita (até 3 s), e só 
       await page.context().close();
     }
 });
+
+/** Ganho de mentirinha só no perfil do aparelho (prévia: nada é guardado), para as fotos. */
+async function darAoPerfil(
+  page: Page,
+  g: { moedas: number; xp: number; pontos?: Record<string, number> },
+) {
+  await page.evaluate((g) => {
+    const p = (window as unknown as { __almaCrianca: { aplicarGanho(g: unknown): unknown } })
+      .__almaCrianca;
+    p.aplicarGanho({ pontos: {}, ...g });
+  }, g);
+  await page.waitForTimeout(2600);
+}
+const tocar = async (page: Page, sel: string, toque: boolean) => {
+  const l = page.locator(sel).first();
+  if (toque) await l.tap({ timeout: 15_000 });
+  else await l.click({ timeout: 15_000 });
+  await page.waitForTimeout(500);
+};
+/** O baú: no toque, a carteira; no computador, a tecla H (o ponteiro fica preso no jogo). */
+async function abrirBau(page: Page, toque: boolean) {
+  if (toque) return tocar(page, '[data-alma-carteira]', true);
+  await page.keyboard.press('KeyH');
+  await page.waitForSelector('[data-alma-painel]', { timeout: 5000 });
+  await page.waitForTimeout(400);
+}
+const contar = (page: Page, item: string) =>
+  page.evaluate((item) => window.__brumaluz!.inventario!.contar(item), item);
+
+test('o baú: álbum, nível, habilidades e a banca de verdade (com a confirmação e as recusas)', async ({
+  browser,
+}) => {
+  test.setTimeout(1_500_000);
+  for (const tamanho of ['pc', 'deitado', 'empe'] as Tamanho[])
+    for (const tema of ['cidade-grande', 'rancho-alegre', 'bruma-e-luz']) {
+      const toque = tamanho !== 'pc';
+      const page = await abrir(browser, { tema, tamanho });
+      await semAvisos(page);
+      await assentar(page);
+      const n = (s: string) => `bau-${tema}-${tamanho}-${s}`;
+      const missoes = tema !== 'bruma-e-luz';
+      if (missoes) {
+        await page.waitForSelector('[data-alma-quadro]', { timeout: 20_000 });
+        await tocar(page, '[data-alma-fechar]', toque);
+      }
+      // sem moedinha: a banca mostra o potinho e a recusa calma
+      await page.waitForSelector('[data-alma-carteira]', { timeout: 20_000 });
+      await abrirBau(page, toque);
+      const abas = await page
+        .locator('[data-alma-aba]')
+        .evaluateAll((l) => l.map((b) => b.getAttribute('data-alma-aba')));
+      expect(abas).toEqual(
+        missoes ? ['album', 'nivel', 'habilidades', 'banca'] : ['nivel', 'habilidades'],
+      );
+      if (missoes) {
+        await foto(page, n('1-album'));
+        await tocar(page, '[data-alma-aba="banca"]', toque);
+        await tocar(page, '[data-alma-banca] [data-item]', toque);
+        await page.waitForSelector('[data-alma-recusa="saldo"]');
+        await foto(page, n('2-sem-moedas'));
+        await tocar(page, '[data-alma-ta-bom]', toque);
+        await tocar(page, '[data-alma-fechar]', toque);
+      } else await tocar(page, '[data-alma-fechar]', toque);
+      // meio de caminho: moedinhas, nível 3 e estrelas
+      await darAoPerfil(page, {
+        moedas: 20,
+        xp: 130,
+        pontos: { construtor: 21, explorador: 7, bichos: 16, fazendeiro: 33, cozinheiro: 4 },
+      });
+      await foto(page, n('3-hud'));
+      await abrirBau(page, toque);
+      await tocar(page, '[data-alma-aba="nivel"]', toque);
+      await page.waitForTimeout(400);
+      await foto(page, n('4-nivel'));
+      await tocar(page, '[data-alma-aba="habilidades"]', toque);
+      await foto(page, n('5-habilidades'));
+      expect(await page.locator('[data-hab="fazendeiro"]').getAttribute('data-estrelas')).toBe('3');
+      if (missoes) {
+        // a banca de verdade: confirmar, o núcleo entrega no inventário, a carteira desconta
+        await tocar(page, '[data-alma-aba="banca"]', toque);
+        await foto(page, n('6-banca'));
+        const item =
+          tema === 'cidade-grande'
+            ? { id: 'flores', bloco: 'bloco:9', qtd: 6 }
+            : { id: 'feno', bloco: 'bloco:81', qtd: 4 };
+        const antes = await contar(page, item.bloco);
+        const saldo = Number(await page.locator('[data-alma-saldo]').first().textContent());
+        await tocar(page, `[data-alma-banca] [data-item="${item.id}"]`, toque);
+        await page.waitForSelector(`[data-alma-confirmar="${item.id}"]`);
+        await foto(page, n('7-confirmar'));
+        await tocar(page, '[data-alma-sim]', toque);
+        await page.waitForSelector('[data-alma-painel="banca"]');
+        await page.waitForFunction(
+          ({ b, q }) => window.__brumaluz!.inventario!.contar(b) >= q,
+          { b: item.bloco, q: antes + item.qtd },
+          { timeout: 8000 },
+        );
+        // de novo, logo em seguida: a banca pede um tempinho (a ampulheta, sem bronca)
+        await tocar(page, `[data-alma-banca] [data-item="${item.id}"]`, toque);
+        await tocar(page, '[data-alma-sim]', toque);
+        await page.waitForSelector('[data-alma-recusa="espera"]', { timeout: 6000 });
+        await foto(page, n('9-espera'));
+        await tocar(page, '[data-alma-ta-bom]', toque);
+        expect((await page.locator('[data-alma-saldo]').first().textContent())?.trim()).toBe(
+          String(saldo - 3),
+        );
+        await page.waitForTimeout(800);
+        await foto(page, n('8-comprou'));
+      }
+      await tocar(page, '[data-alma-fechar]', toque);
+      await page.context().close();
+    }
+});

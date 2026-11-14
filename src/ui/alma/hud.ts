@@ -50,7 +50,7 @@ body.alma-missoes .missao-hud { display: none !important; }
   height: 44px; display: flex; align-items: center; gap: 6px; padding: 0 12px 0 2px; border: 0; border-radius: 22px; cursor: pointer;
   background: rgba(255, 250, 240, 0.95); color: var(--tinta); font: 900 1.25rem var(--display);
   box-shadow: 0 3px 0 rgba(150, 110, 60, 0.35), 0 6px 12px rgba(40, 25, 10, 0.2), inset 0 2px 0 rgba(255,255,255,0.85);
-  touch-action: manipulation; -webkit-tap-highlight-color: transparent; animation: alma-entra 0.4s ease-out both; }
+  touch-action: manipulation; -webkit-tap-highlight-color: transparent; animation: alma-entra 0.4s ease-out both; pointer-events: auto; }
 .alma-carteira:active { transform: translateY(2px); }
 .alma-carteira:focus-visible, .alma-missao:focus-visible { outline: 3px solid var(--azul, #2f7fe8); outline-offset: 2px; }
 .alma-nivel { position: relative; width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center;
@@ -60,13 +60,17 @@ body.alma-missoes .missao-hud { display: none !important; }
 .alma-nivel b { position: relative; font: 900 0.86rem var(--display); color: #8a4a00; margin-top: 2px; }
 .alma-nivel.subiu { animation: alma-pulo 0.6s ease-out; }
 .alma-carteira .moeda { width: 26px; height: 26px; }
+.alma-carteira kbd { position: absolute; bottom: -6px; right: -6px; min-width: 16px; height: 16px; padding: 0 4px; border-radius: 8px;
+  display: grid; place-items: center; font: 800 0.6rem var(--jogo, system-ui), sans-serif; color: var(--tinta, #3b2a1e);
+  background: #ffe4a8; box-shadow: 0 1px 0 #d9b56a; pointer-events: none; }
+body.toque-ativo .alma-carteira kbd, body.sem-teclas .alma-carteira kbd { display: none; }
 .alma-carteira .n { min-width: 1.2em; text-align: left; font-variant-numeric: tabular-nums; }
 .alma-carteira.pulou .moeda { animation: alma-pulo 0.35s ease-out; }
 
 .alma-missao { position: fixed; z-index: 7; top: calc(60px + env(safe-area-inset-top)); left: calc(8px + env(safe-area-inset-left));
   display: flex; align-items: center; gap: 6px; padding: 5px 8px 5px 5px; border: 0; border-radius: 20px; cursor: pointer;
   background: rgba(255, 250, 240, 0.95); box-shadow: 0 3px 0 rgba(150, 110, 60, 0.35), 0 6px 12px rgba(40, 25, 10, 0.18);
-  touch-action: manipulation; -webkit-tap-highlight-color: transparent; transform-origin: top left; animation: alma-entra 0.4s ease-out both; }
+  touch-action: manipulation; -webkit-tap-highlight-color: transparent; transform-origin: top left; animation: alma-entra 0.4s ease-out both; pointer-events: auto; }
 .alma-missao[hidden] { display: none; }
 .alma-missao:active { transform: translateY(2px); }
 .alma-missao .tarefa { position: relative; width: 50px; height: 50px; border-radius: 14px; background: var(--poco); box-shadow: var(--sombra-poco); display: grid; place-items: center; }
@@ -287,7 +291,10 @@ export function criarHudAlma(raiz: HTMLElement, op: OpcoesHudAlma) {
   const nMoedas = document.createElement('span');
   nMoedas.className = 'n';
   nMoedas.setAttribute('data-alma-moedas', '');
-  carteira.append(nivelEl, moedaEl, nMoedas);
+  // no computador, a tecla H abre o baú (o selinho some no toque, como os da roda)
+  const tecla = document.createElement('kbd');
+  tecla.textContent = 'H';
+  carteira.append(nivelEl, moedaEl, nMoedas, tecla);
   carteira.addEventListener('click', () => {
     tocarSomInterface('toc');
     op.aoTocarCarteira();
