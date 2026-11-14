@@ -224,6 +224,22 @@ export const ARTE: Record<string, string> = {
     <polygon points="${estrela5(32, 42, 8, 3.6)}" fill="#ffe27a"/>
     <circle cx="22" cy="37" r="1.6" fill="#fff"/><circle cx="42" cy="47" r="1.3" fill="#fff"/><circle cx="41" cy="36" r="1" fill="#fff"/>
     <polygon points="${estrela5(32, 17, 5, 2.2)}" fill="#ffe27a"/>`),
+  // "Meus tesouros" (o editor): o bauzinho de veludo azul-noite da lojinha, com cantos e
+  // fecho de ouro e a estrela de ouro na frente
+  tesouros: svg(`
+    <ellipse cx="32" cy="58" rx="24" ry="3.5" fill="#000" opacity="0.18"/>
+    <rect x="7" y="29" width="50" height="27" rx="5" fill="#3b2b9e" ${s()}/>
+    <path d="M7 30 Q7 11 32 11 Q57 11 57 30 Z" fill="#5b47cc" ${s()}/>
+    <path d="M13 25 Q15 16 28 14" fill="none" stroke="#9a88f4" stroke-width="3.5" stroke-linecap="round"/>
+    <g fill="#2a1f7a"><circle cx="15" cy="38" r="1.6"/><circle cx="15" cy="48" r="1.6"/><circle cx="49" cy="38" r="1.6"/><circle cx="49" cy="48" r="1.6"/>
+      <circle cx="21" cy="22" r="1.4"/><circle cx="43" cy="22" r="1.4"/></g>
+    <rect x="6" y="27" width="52" height="6" rx="2" fill="#ffc93d" ${s(2.5)}/>
+    <path d="M7 50 V56 H13 M57 50 V56 H51 M7 35 V40 M57 35 V40" fill="none" stroke="#ffc93d" stroke-width="4" stroke-linecap="round"/>
+    <circle cx="32" cy="43" r="10.5" fill="#ffe27a" stroke="#d98a14" stroke-width="2.5"/>
+    <polygon points="${estrela5(32, 43.5, 7.5, 3.4)}" fill="#f0a91c" stroke="#d98a14" stroke-width="1.4" ${L}/>
+    <path d="M27 38 Q29 35.5 32 35" fill="none" stroke="#fff6c8" stroke-width="2" stroke-linecap="round"/>
+    <polygon points="${estrela5(52, 10, 5, 2)}" fill="#fff6c8"/>
+    <polygon points="${estrela5(11, 13, 3.2, 1.3)}" fill="#fff6c8"/>`),
   mundoCidade: svg(`
     <rect x="6" y="24" width="14" height="34" rx="2" fill="#7aa8d8" ${s(2.5)}/>
     <rect x="22" y="10" width="18" height="48" rx="2" fill="#5a86c0" ${s(2.5)}/>

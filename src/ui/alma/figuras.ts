@@ -84,12 +84,26 @@ const FOTO_PREMIUM: Record<string, { recorte: RecorteBoneco; giro: number; bicho
 };
 
 /** A foto de um premium (o 3D de verdade) num canvas novo. */
-export function fotoPremium(id: string, altura = 280): HTMLCanvasElement {
+export function fotoPremium(id: string, altura = 280, base?: Aparencia): HTMLCanvasElement {
   const cv = document.createElement('canvas');
+  fotografarPremium(cv, id, altura, base);
+  return cv;
+}
+
+/**
+ * A foto de um premium num canvas que já existe (o editor refaz quando a criança muda).
+ * `base`: o boneco que veste (padrão: o do jogo).
+ */
+export function fotografarPremium(
+  cv: HTMLCanvasElement,
+  id: string,
+  altura = 280,
+  base?: Aparencia,
+): void {
   const p = premiumPorId(id);
   const f = FOTO_PREMIUM[id];
-  if (!p || !f) return cv;
-  const a = aparenciaAtual();
+  if (!p || !f) return;
+  const a = base ?? aparenciaAtual();
   fotografarBoneco(
     cv,
     normalizarAparencia({ ...a, fantasia: undefined, premium: { [p.categoria]: id } }),
@@ -97,7 +111,6 @@ export function fotoPremium(id: string, altura = 280): HTMLCanvasElement {
     altura,
     { giro: f.giro, bicho: f.bicho },
   );
-  return cv;
 }
 
 /** Uma figura pelo nome: 'item:<id>', 'fantasia:<id>', 'obra:<n>', 'premium:<id>' ou um desenho de arte.ts. */

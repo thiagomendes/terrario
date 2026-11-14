@@ -383,6 +383,8 @@ export interface OpcoesAbaFantasias {
   /** Tema do mundo aberto (vem primeiro em "Dos temas"). */
   temaDoMundo?: string;
   aparencia: () => Aparencia;
+  /** Spec 023: como a aparência aparece nas fotos (com os tesouros que ela está usando). */
+  vista?: (a: Aparencia) => Aparencia;
   /** Nova aparência escolhida aqui; `festa` quando a criança acabou de vestir. */
   mudar: (a: Aparencia, festa: boolean) => void;
 }
@@ -625,6 +627,7 @@ export function criarAbaFantasias(painel: HTMLElement, op: OpcoesAbaFantasias): 
     }
   }
 
+  const vista = (x: Aparencia) => op.vista?.(x) ?? x;
   function atualizar(): void {
     const a = op.aparencia();
     const base = tirarFantasia(a);
@@ -655,7 +658,7 @@ export function criarAbaFantasias(painel: HTMLElement, op: OpcoesAbaFantasias): 
       }
       // só as fotos da aba à vista; as outras saem quando a criança abrir a aba
       if (visivel && c.grupo === grupo)
-        fotografarBoneco(c.canvas, vestida ? a : vestirFantasia(base, c.def.id), 'corpo');
+        fotografarBoneco(c.canvas, vista(vestida ? a : vestirFantasia(base, c.def.id)), 'corpo');
     }
     desenharCores(a);
     desenharPecas(a);

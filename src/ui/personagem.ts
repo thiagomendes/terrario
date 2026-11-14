@@ -1,5 +1,12 @@
 import { fotografarBoneco } from '../render/fotoBoneco';
 import { CSS_FANTASIAS, criarAbaFantasias } from './abaFantasias';
+import {
+  CSS_TESOUROS,
+  comPremium,
+  criarMeusTesouros,
+  semTesouros,
+  type FonteTesouros,
+} from './meusTesouros';
 import type { GrupoFantasia } from '../personagem/fantasias';
 import { icone, rotuloComIcone, type NomeIcone } from './pixicones';
 import {
@@ -134,7 +141,9 @@ export const CSS_PAINEL =
   box-shadow: 0 1px 0 var(--amarela-fundo), inset 0 2px 0 rgba(255, 255, 255, 0.6),
     0 20px 0 18px var(--painel), 0 -16px 0 18px var(--painel);
 }
-` + CSS_FANTASIAS;
+` +
+  CSS_FANTASIAS +
+  CSS_TESOUROS;
 
 const NOMES_ROSTO = [
   'Clássico',
@@ -182,7 +191,7 @@ const NOMES_ACESSORIO: Record<Acessorio, string> = {
   'chapeu-palha': 'Chapéu de palha',
 };
 
-type Campo = Exclude<keyof Aparencia, 'nome' | 'fantasia' | 'desbloqueios'>;
+type Campo = Exclude<keyof Aparencia, 'nome' | 'fantasia' | 'desbloqueios' | 'premium'>;
 type Valor = string | number;
 
 /** Opções em miniatura (mostram o resultado) ou em amostras de cor. */
@@ -396,14 +405,35 @@ export interface OpcoesPainel {
   armazenamento: Armazenamento | null;
   /** Tema do mundo aberto: em "Dos temas" as fantasias dele vêm primeiro. */
   temaDoMundo?: string;
+  /**
+   * A criança escolheu algo aqui. Vem com os tesouros da lojinha que ela está usando
+   * (`premium`, do perfil da criança): o boneco do jogo nunca perde o que ela veste.
+   */
   aoMudar: (aparencia: Aparencia) => void;
   /** A criança acabou de vestir uma fantasia: brilho e pulinho na prévia. */
   aoFestejar?: () => void;
+  /** O que ela veste mudou sem ser no editor (a lojinha, "Meus tesouros"): só a prévia. */
+  aoVer?: (aparencia: Aparencia) => void;
+  /** Spec 023: os tesouros da lojinha (o que ela tem e veste). Sem fonte, sem prateleira. */
+  tesouros?: FonteTesouros;
   aoJogar: () => void;
 }
 
+/**
+ * Campos cuja escolha fica por baixo de um tesouro vestido (a camiseta cobre a roupa): as
+ * miniaturas deles mostram a opção sem o tesouro daquele lugar, senão seriam todas iguais.
+ */
+const COBERTO_PELO_TESOURO: Partial<Record<Campo, 'roupa'>> = {
+  roupaEstilo: 'roupa',
+  roupaCor: 'roupa',
+};
+
 export function criarPainelPersonagem(pai: HTMLElement, opcoes: OpcoesPainel) {
-  let aparencia = carregarAparencia(opcoes.armazenamento);
+  // os tesouros vestidos moram no perfil da criança (nunca na aparência guardada aqui)
+  let aparencia = comPremium(carregarAparencia(opcoes.armazenamento), undefined);
+  /** A aparência que se vê: a do editor com os tesouros que ela está usando agora. */
+  const vista = (a: Aparencia = aparencia): Aparencia =>
+    opcoes.tesouros ? comPremium(a, opcoes.tesouros.perfil().vestidos) : a;
   const raiz = document.createElement('section');
   raiz.className = 'painel-personagem';
   raiz.setAttribute('data-painel-personagem', '');
@@ -449,8 +479,10 @@ export function criarPainelPersonagem(pai: HTMLElement, opcoes: OpcoesPainel) {
     for (const p of paineis) p.hidden = p.dataset.abaPainel !== id;
     desenharMiniaturas();
     fantasias?.atualizar();
+    tesouros?.atualizar();
   }
   let fantasias: ReturnType<typeof criarAbaFantasias> | null = null;
+  let tesouros: ReturnType<typeof criarMeusTesouros> | null = null;
 
   for (const aba of ABAS) {
     const b = document.createElement('button');
@@ -502,8 +534,19 @@ export function criarPainelPersonagem(pai: HTMLElement, opcoes: OpcoesPainel) {
         armazenamento: opcoes.armazenamento,
         temaDoMundo: opcoes.temaDoMundo,
         aparencia: () => aparencia,
+        // os cartões mostram cada fantasia (a camiseta e o dragão cobririam todas iguais)
+        vista: (a) => semTesouros(vista(a), ['roupa', 'fantasia']),
         mudar: (a, festa) => mudou(a, festa),
       });
+      // "Meus tesouros": o que ela comprou na lojinha, no alto da aba
+      if (opcoes.tesouros) {
+        tesouros = criarMeusTesouros({
+          fonte: opcoes.tesouros,
+          aparencia: () => aparencia,
+          aoVestir: () => opcoes.aoFestejar?.(),
+        });
+        painel.prepend(tesouros.raiz);
+      }
     }
     paineis.push(painel);
   }
@@ -522,16 +565,20 @@ export function criarPainelPersonagem(pai: HTMLElement, opcoes: OpcoesPainel) {
   function desenharMiniaturas(): void {
     for (const m of miniaturas) {
       if (m.aba !== abaAtual) continue;
-      fotografarBoneco(m.canvas, variante(aparencia, m.grupo.campo, m.valor), m.grupo.recorte);
+      const opcao = variante(aparencia, m.grupo.campo, m.valor);
+      const coberto = COBERTO_PELO_TESOURO[m.grupo.campo];
+      const v = coberto ? semTesouros(vista(opcao), [coberto]) : vista(opcao);
+      fotografarBoneco(m.canvas, v, m.grupo.recorte);
     }
   }
   function mudou(proxima: Aparencia, festa = false): void {
-    aparencia = normalizarAparencia(proxima);
+    aparencia = comPremium(proxima, undefined);
     // a prévia primeiro (a foto dela entra na fila antes das miniaturas)
-    opcoes.aoMudar(aparencia);
+    opcoes.aoMudar(vista());
     if (festa) opcoes.aoFestejar?.();
     marcar();
     fantasias?.atualizar();
+    tesouros?.atualizar();
     desenharMiniaturas();
     salvarAparencia(opcoes.armazenamento, aparencia);
   }
@@ -560,6 +607,18 @@ export function criarPainelPersonagem(pai: HTMLElement, opcoes: OpcoesPainel) {
   return {
     raiz,
     aparencia: () => aparencia,
+    /** A aparência que se vê (com os tesouros que ela está usando). */
+    aparenciaVista: () => vista(),
+    /**
+     * O que ela veste mudou fora do editor (a lojinha, "Meus tesouros"): refaz a prévia, as
+     * miniaturas e a prateleira. Não manda nada ao jogo (o perfil já mandou).
+     */
+    atualizarTesouros() {
+      opcoes.aoVer?.(vista());
+      fantasias?.atualizar();
+      tesouros?.atualizar();
+      desenharMiniaturas();
+    },
     /** Abre a aba Fantasias (num grupo, se pedido: a sugestão do mundo novo abre em "Dos temas"). */
     abrirFantasias(grupo?: GrupoFantasia) {
       if (grupo) fantasias?.mostrarGrupo(grupo);

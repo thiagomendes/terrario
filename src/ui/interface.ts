@@ -20,6 +20,9 @@ import {
 } from './sugestaoFantasia';
 import type { Armazenamento } from '../personagem/persistencia';
 import { CSS_PAINEL, criarPainelPersonagem, teclaParaPainel } from './personagem';
+import type { FonteTesouros } from './meusTesouros';
+import { criarPerfilCrianca, type PerfilCrianca } from '../personagem/almaCrianca';
+import { EVENTO_LOJINHA } from './alma';
 import { CSS_MODAL, criarPainelMundos } from './mundos';
 import { CSS_PIXICONES, icone, modoToque, type NomeIcone } from './pixicones';
 import { CSS_TITULO, desenharLogo, desenharPrevia } from './titulo';
@@ -528,7 +531,11 @@ export function criarInterface(
   function mostrarTela(qual: 'menu' | 'personagem'): void {
     menu.hidden = qual !== 'menu';
     telaPersonagem.hidden = qual !== 'personagem';
+    // spec 023: o que ela veste pode ter mudado com o editor fechado (e a prateleira só tira
+    // as fotos à vista)
+    if (qual === 'personagem') aoAbrirEditor?.();
   }
+  let aoAbrirEditor: (() => void) | undefined;
   bPersonagem.addEventListener('click', () => mostrarTela('personagem'));
   voltar.addEventListener('click', () => mostrarTela('menu'));
   // Sem HUD por cima do título; volta ao menu quando o título fecha.
@@ -638,7 +645,8 @@ export function criarInterface(
   const vestir = (a: Aparencia) => {
     vestida = a;
     // `definir` junta com a aparência de antes: sem fantasia tem que ir explícito
-    window.__brumaluz?.personagem?.definir({ ...a, fantasia: a.fantasia });
+    // idem para os tesouros da lojinha: `a` já vem com os que ela veste agora (o perfil)
+    window.__brumaluz?.personagem?.definir({ ...a, fantasia: a.fantasia, premium: a.premium });
   };
   function vestirNoJogo(a: Aparencia): void {
     clearTimeout(esperaNome);
@@ -650,21 +658,53 @@ export function criarInterface(
     if (soNome) esperaNome = setTimeout(() => vestir(a), ESPERA_NOME);
     else vestir(a);
   }
+  /**
+   * Spec 023: os tesouros da lojinha moram no perfil da criança (o do jogo, quando o mundo já
+   * abriu; antes, um que lê o mesmo guardado). Vestir aqui é o mesmo caminho da lojinha: o
+   * perfil avisa, o boneco do jogo veste com o puf e os amigos recebem a aparência.
+   */
+  let perfilLocal: PerfilCrianca | null = null;
+  const perfilAlma = (): PerfilCrianca =>
+    (window as unknown as { __almaCrianca?: PerfilCrianca }).__almaCrianca ??
+    (perfilLocal ??= criarPerfilCrianca(armazenamento()));
+  const tesouros: FonteTesouros = {
+    perfil: () => perfilAlma().perfil,
+    vestir: (id, vestir) => {
+      perfilAlma().vestirPremium(id, vestir);
+      painel.atualizarTesouros();
+    },
+    temLojinha: () => !!(window as unknown as { __almaUi?: unknown }).__almaUi,
+    abrirLojinha: () => {
+      // a lojinha abre por cima do jogo: o editor sai da frente (sem prender o mouse)
+      telaCheiaAoJogar();
+      entrada.hidden = true;
+      window.dispatchEvent(new CustomEvent(EVENTO_LOJINHA));
+    },
+  };
+  const mostrarPrevia = (a: Aparencia) => {
+    nomeHud.textContent = rotuloNome(a);
+    nomePrevia.textContent = rotuloNome(a);
+    fotografarBoneco(previa, a, 'corpo', 520);
+  };
   const painel = criarPainelPersonagem(telaPersonagem, {
     armazenamento: armazenamento(),
     temaDoMundo: opMundo.mundo ? (opMundo.mundo.tema ?? 'bruma-e-luz') : undefined,
     aoFestejar: () => festejarNoPalco(pedestal),
     aoMudar: (a) => {
-      nomeHud.textContent = rotuloNome(a);
-      nomePrevia.textContent = rotuloNome(a);
-      fotografarBoneco(previa, a, 'corpo', 520);
+      mostrarPrevia(a);
       vestirNoJogo(a);
     },
+    aoVer: mostrarPrevia,
+    tesouros,
     aoJogar: entrarNoJogo,
   });
-  nomeHud.textContent = rotuloNome(painel.aparencia());
-  nomePrevia.textContent = rotuloNome(painel.aparencia());
-  fotografarBoneco(previa, painel.aparencia(), 'corpo', 520);
+  mostrarPrevia(painel.aparenciaVista());
+  aoAbrirEditor = () => painel.atualizarTesouros();
+  // comprou, vestiu ou tirou na lojinha (ou o perfil do jogo chegou): o editor mostra igual
+  window.addEventListener('brumaluz:almaPerfil', (e) => {
+    const tipo = (e as CustomEvent<{ aviso?: { tipo?: string } }>).detail?.aviso?.tipo;
+    if (tipo === 'premium') painel.atualizarTesouros();
+  });
 
   // Spec 014: prêmio do canteiro da cidade (o núcleo decidiu; a cena avisa). Grava com o
   // personagem, faz a festa da 017 e não veste sozinho: a criança escolhe na aba Fantasias.
