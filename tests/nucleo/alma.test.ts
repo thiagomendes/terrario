@@ -15,7 +15,7 @@ import { Bloco } from '../../src/world/blocks';
 import { empacotar } from '../../src/world/edicoes';
 import { celulasPlanejadas, definirObrasFeitas } from '../../src/world/obras';
 import { COLHER_PEDREIRO } from '../../src/jogo/exclusivos';
-import { ESPERA_MESMO_BICHO } from '../../src/jogo/alma';
+import { COMPRAS_POR_SESSAO, ESPERA_BANCA, ESPERA_MESMO_BICHO } from '../../src/jogo/alma';
 import { PASSO, type Comando, type EventoNucleo } from '../../src/nucleo/protocolo';
 import type { EstiloMundo } from '../../src/temas/tipos';
 
@@ -389,5 +389,119 @@ describe('alma no núcleo: os outros mundos', () => {
     for (const pe of pes) colher(n, 'local', pe, true);
     expect(almas(n).get('local')).toEqual([]);
     expect(n.salvar().extras['alma']).toBeUndefined();
+  });
+});
+
+// ---------------------------------------------------------------- banca (T04)
+type Ev = EventoNucleo;
+function passar(n: Nucleo, segundos: number): Ev[] {
+  const evs: Ev[] = [];
+  for (let i = 0; i < Math.round(segundos / PASSO); i++) {
+    n.passo();
+    evs.push(...(n.quadros().get('ana')?.eventos ?? []));
+  }
+  return evs;
+}
+function comprar(n: Nucleo, item: string, saldo: number, confiar = false): Ev[] {
+  mandar(n, 'ana', { t: 'comprarBanca', item, saldo }, confiar);
+  return passar(n, PASSO);
+}
+const daBanca = (evs: Ev[]) => evs.filter((e) => e.e === 'almaCompra' || e.e === 'almaCompraRecusada');
+
+describe('banca do mundo no núcleo (T04)', () => {
+  it('só itens do tema; sem saldo não vende; entrega de verdade na mochila; livro-razão', () => {
+    const n = abrir(CIDADE, false);
+    passar(n, PASSO);
+    expect(daBanca(comprar(n, 'feno', 99))).toEqual([{ e: 'almaCompraRecusada', item: 'feno', motivo: 'tema' }]);
+    expect(daBanca(comprar(n, 'galinha', 99))).toEqual([
+      { e: 'almaCompraRecusada', item: 'galinha', motivo: 'tema' },
+    ]);
+    expect(daBanca(comprar(n, 'flores', 2))).toEqual([{ e: 'almaCompraRecusada', item: 'flores', motivo: 'saldo' }]);
+    expect(n.estado.jogadores.get('ana')!.inventario.contar('bloco:9')).toBe(0);
+    expect(daBanca(comprar(n, 'flores', 3))).toEqual([{ e: 'almaCompra', item: 'flores', preco: 3 }]);
+    expect(n.estado.jogadores.get('ana')!.inventario.contar('bloco:9')).toBe(6);
+    const e = n.estado.almas.get('ana')!;
+    expect(e.livro.gasto).toBe(3);
+    expect(e.livro.compras).toEqual({ flores: 1 });
+    // salvo com o mundo
+    expect((n.salvar().extras['alma'] as Record<string, { livro: { gasto: number } }>).ana.livro.gasto).toBe(3);
+  });
+
+  it('1 compra a cada 2 s e 30 por sessão da sala', () => {
+    const n = abrir(CIDADE, false);
+    passar(n, PASSO);
+    expect(daBanca(comprar(n, 'poste', 99))[0].e).toBe('almaCompra');
+    expect(daBanca(comprar(n, 'poste', 99))).toEqual([{ e: 'almaCompraRecusada', item: 'poste', motivo: 'espera' }]);
+    for (let i = 1; i < COMPRAS_POR_SESSAO; i++) {
+      passar(n, ESPERA_BANCA);
+      // a mochila esvazia entre uma e outra (o teste é do limite, não da mochila)
+      n.estado.jogadores.get('ana')!.inventario.carregar(null);
+      expect(daBanca(comprar(n, 'poste', 99))[0].e, `compra ${i + 1}`).toBe('almaCompra');
+    }
+    passar(n, ESPERA_BANCA);
+    expect(daBanca(comprar(n, 'poste', 99))).toEqual([{ e: 'almaCompraRecusada', item: 'poste', motivo: 'limite' }]);
+  });
+
+  it('mochila cheia: o que não cabe espera no baú da banca e entra sozinho quando couber', () => {
+    const n = abrir(CIDADE, false);
+    passar(n, PASSO);
+    const inv = n.estado.jogadores.get('ana')!.inventario;
+    for (let i = 0; i < inv.slots.length; i++) inv.definir(i, { item: 'bloco:3', qtd: 64 });
+    expect(daBanca(comprar(n, 'janela-acesa', 5))).toEqual([
+      { e: 'almaCompra', item: 'janela-acesa', preco: 5, guardado: 6 },
+    ]);
+    passar(n, ESPERA_BANCA);
+    comprar(n, 'janela-acesa', 5);
+    expect(n.estado.almas.get('ana')!.bau).toEqual([{ item: 'bloco:94', qtd: 12 }]);
+    // o baú vai no quadro de missões (para o baú da tela mostrar)
+    inv.definir(7, null);
+    const evs = passar(n, 1.1);
+    expect(inv.contar('bloco:94')).toBe(12);
+    expect(n.estado.almas.get('ana')!.bau).toEqual([]);
+    expect(evs).toContainEqual({ e: 'coletou', item: 'bloco:94', qtd: 12 });
+    const q = evs.filter((e) => e.e === 'alma' && e.quadro).pop();
+    expect(q).toMatchObject({ quadro: { bau: [] } });
+  });
+
+  it('a galinha nasce criada, da criança, no galinheiro mais perto (ou ao lado dela)', () => {
+    const n = abrir(RANCHO, false, ['ana', 'leo']);
+    passar(n, PASSO);
+    // o Léo compra (não é o dono do mundo): a galinha é dele
+    const antes = n.estado.populacao.lista.length;
+    mandar(n, 'leo', { t: 'comprarBanca', item: 'galinha', saldo: 6 }, false);
+    n.passo();
+    const ev = n.quadros().get('leo')!.eventos ?? [];
+    expect(daBanca(ev)).toEqual([{ e: 'almaCompra', item: 'galinha', preco: 6 }]);
+    const g = n.estado.populacao.lista[n.estado.populacao.lista.length - 1];
+    expect(n.estado.populacao.lista.length).toBe(antes + 1);
+    expect(g).toMatchObject({ tipo: 'coelho', criado: true, dono: 'leo' });
+    const leo = n.estado.jogadores.get('leo')!.tel;
+    // no galinheiro a até 48 blocos, ou do lado da criança
+    expect(Math.hypot(g.x - leo.x, g.z - leo.z)).toBeLessThanOrEqual(50);
+  });
+
+  it('saneamento na nuvem: saldo e item fora do formato não passam', () => {
+    expect(sanear({ t: 'comprarBanca', item: 'flores', saldo: -1 })).toBeNull();
+    expect(sanear({ t: 'comprarBanca', item: 'flores', saldo: 1.5 })).toBeNull();
+    expect(sanear({ t: 'comprarBanca', item: 'flores', saldo: 1e9 })).toBeNull();
+    expect(sanear({ t: 'comprarBanca', item: 'x'.repeat(40), saldo: 3 })).toBeNull();
+    expect(sanear({ t: 'comprarBanca', item: 'flores' })).toBeNull();
+    expect(sanear({ t: 'comprarBanca', item: 'flores', saldo: 3 })).not.toBeNull();
+  });
+
+  it('local e nuvem: a mesma banca, os mesmos eventos', () => {
+    const rodar = (confiar: boolean) => {
+      const n = abrir(RANCHO, confiar, ['ana']);
+      passar(n, PASSO);
+      const evs: Ev[] = [];
+      for (const [item, saldo] of [['feno', 3], ['feno', 3], ['poste', 9], ['cerca', 1], ['lampiao', 4]] as const) {
+        evs.push(...daBanca(comprar(n, item, saldo, confiar)));
+        passar(n, 1);
+      }
+      return { evs, inv: n.estado.jogadores.get('ana')!.inventario.salvar(), livro: n.estado.almas.get('ana')!.livro };
+    };
+    const local = rodar(true);
+    expect(local.evs.map((e) => e.e)).toEqual(['almaCompra', 'almaCompraRecusada', 'almaCompraRecusada', 'almaCompraRecusada', 'almaCompra']);
+    expect(rodar(false)).toEqual(local);
   });
 });

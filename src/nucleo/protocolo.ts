@@ -19,7 +19,7 @@ import type { IdGesto } from '../personagem/gestos';
 import type { DonosExportados, DonosMudados } from '../world/edicoes';
 import type { PlanoVeiculo } from '../jogo/veiculos';
 import type { OcorrenciaVeiculo } from '../jogo/transito';
-import type { Ganho, MissaoMovida, VistaAlmaMundo } from '../jogo/alma';
+import type { Ganho, MissaoMovida, RecusaBanca, VistaAlmaMundo } from '../jogo/alma';
 
 /** Sobe quando uma mensagem muda de formato (cliente e servidor precisam concordar). */
 export const VERSAO_PROTOCOLO = 1;
@@ -162,7 +162,13 @@ type ComandoSemSeq =
   /** Spec 021: "vem cá!" para a sala toda (no máximo 1 a cada ESPERA_CHAMAR s). */
   | { t: 'chamarAmigos' }
   /** Spec 023: escolhe a missão do cartão do HUD (uma aberta; null: a primeira). */
-  | { t: 'almaFixar'; missao: string | null };
+  | { t: 'almaFixar'; missao: string | null }
+  /**
+   * Spec 023: comprar na banca do mundo. `saldo`: as moedinhas que o aparelho tem (a carteira
+   * mora nele até a 024); o núcleo confere o tema, o saldo, o intervalo e o limite, entrega
+   * e responde `almaCompra` (só então o aparelho desconta) ou `almaCompraRecusada`.
+   */
+  | { t: 'comprarBanca'; item: string; saldo: number };
 
 /** Atalhos de teste e captura (o servidor da nuvem só aceita em ambiente de testes). */
 export type Depuracao =
@@ -376,7 +382,14 @@ export type EventoNucleo =
    * (`concluiu`, com a `fantasia` de prêmio) ou passaram sem prêmio (`pulou`). `quadro`: o
    * quadro de missões inteiro, ao entrar e quando as abertas, a fixada ou o baú mudam.
    */
-  | { e: 'alma'; missoes: MissaoMovida[]; ganho: Ganho; quadro?: VistaAlmaMundo };
+  | { e: 'alma'; missoes: MissaoMovida[]; ganho: Ganho; quadro?: VistaAlmaMundo }
+  /**
+   * Spec 023: a compra da banca foi entregue (o aparelho desconta `preco` agora). `guardado`:
+   * quanto não coube na mochila e espera no baú da banca (entra sozinho quando couber).
+   */
+  | { e: 'almaCompra'; item: string; preco: number; guardado?: number }
+  /** Spec 023: a banca não vendeu (tema, saldo, espera, limite, cheio ou galinha). */
+  | { e: 'almaCompraRecusada'; item: string; motivo: RecusaBanca };
 
 /**
  * Spec 014 (T13): os veículos da cidade. Todo quadro da cidade leva o relógio deles (`t`); os

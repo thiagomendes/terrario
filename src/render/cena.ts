@@ -591,6 +591,8 @@ export interface EstadoDepuracao {
   alma?: {
     /** A missão do cartão do HUD (uma aberta; null: a primeira). */
     fixar: (missao: string | null) => void;
+    /** Compra na banca do mundo, com o saldo do aparelho (a resposta: almaCompra). */
+    comprarBanca: (item: string, saldo: number) => void;
   };
   /** Spec 015 (testes): gestos do jogador, roda aberta e moradores acenando. */
   gestos?: {
@@ -3992,6 +3994,8 @@ export function criarCena(
   });
   estado.alma = {
     fixar: (missao) => enviar({ t: 'almaFixar', missao }),
+    comprarBanca: (item, saldo) =>
+      enviar({ t: 'comprarBanca', item, saldo: Math.max(0, Math.floor(saldo)) }),
   };
   estado.gestos = {
     fazer: (g) => gestos!.fazer(g),
@@ -5184,6 +5188,10 @@ export function criarCena(
       case 'alma': // spec 023: o que o núcleo decidiu que este jogador ganhou (e o quadro)
         estado.almaEventos = (estado.almaEventos ?? 0) + 1;
         window.dispatchEvent(new CustomEvent('brumaluz:alma', { detail: e }));
+        break;
+      case 'almaCompra': // spec 023: a banca entregou (o aparelho desconta agora)
+      case 'almaCompraRecusada':
+        window.dispatchEvent(new CustomEvent(`brumaluz:${e.e}`, { detail: e }));
         break;
       case 'quebra':
       case 'colocacao':

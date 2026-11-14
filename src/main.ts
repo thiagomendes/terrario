@@ -677,6 +677,11 @@ function ligarAlma(armazenamento: Storage | null): void {
     for (const id of fantasias)
       window.dispatchEvent(new CustomEvent('brumaluz:desbloqueio', { detail: { id } }));
   });
+  // a banca: o aparelho só desconta depois que o núcleo entregou
+  window.addEventListener('brumaluz:almaCompra', (ev) => {
+    const e = (ev as CustomEvent<Extract<EventoNucleo, { e: 'almaCompra' }>>).detail;
+    if (e && typeof e.preco === 'number') perfil.descontarBanca(e.item, e.preco);
+  });
 }
 
 function ligarDiario(app: HTMLElement, cena: ReturnType<typeof criarCena>): void {

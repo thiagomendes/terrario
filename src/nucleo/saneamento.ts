@@ -21,6 +21,7 @@ import {
 import { ehGesto } from '../personagem/gestos';
 import { normalizarAparencia } from '../personagem/aparencia';
 import { limparApelido } from '../jogo/apelido';
+import { MAX_MOEDAS } from '../jogo/alma';
 
 /** Tamanho do mundo onde alguém pode estar (bem além de onde se joga). */
 export const XZ_MAX = 30_000_000;
@@ -188,6 +189,9 @@ export function sanear(c: unknown): Comando | null {
     case 'almaFixar':
       // spec 023: o id de uma missão (o núcleo confere que está aberta), ou null
       return o.missao === null || texto(o.missao, 16) ? (o as unknown as Comando) : null;
+    case 'comprarBanca':
+      // spec 023: o id de um item da banca e o saldo do aparelho (inteiro, com teto)
+      return texto(o.item, 32) && inteiro(o.saldo, 0, MAX_MOEDAS) ? (o as unknown as Comando) : null;
     case 'pularPerto':
       // spec 021: só o id de um amigo (texto curto)
       return texto(o.alvo, 64) ? (o as unknown as Comando) : null;

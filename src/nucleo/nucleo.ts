@@ -40,7 +40,9 @@ import {
 } from '../world/chunk';
 import {
   ESPERA_MESMO_BICHO,
+  MAX_BAU_BANCA,
   almaMundoVazia,
+  conferirBanca,
   conferirObrasFeitas,
   fixar,
   ganhoTemAlgo,
@@ -57,6 +59,8 @@ import {
 } from '../jogo/alma';
 import { AVISO_LIMITE, comeEsse, domaCom, viraCriado } from '../jogo/criacao';
 import { TAM_LOTE, definirRegioesSemPovoado, regiaoDoChunk } from '../world/povoado';
+import { povoadosPerto } from '../jogo/povoados';
+import { LIMITE_CRIADOS } from '../jogo/criacao';
 import { abreEFecha, alternado, ehPorta } from '../world/portas';
 import { criarConteineres, TAMANHO_BAU } from '../jogo/conteineres';
 import { criarMundoDeItens, dropsDoBloco } from '../jogo/drops';
@@ -518,6 +522,92 @@ export function criarNucleo(op: OpcoesNucleo) {
     );
     return l?.uso ? `sitio:${l.uso}` : null;
   }
+  /** Compras na banca de cada jogador nesta sessão da sala (o núcleo aberto) e a última. */
+  const bancaSessao = new Map<string, { compras: number; passo: number }>();
+
+  /** Onde a galinha comprada vai morar: o miolo do galinheiro mais perto (ou do lado). */
+  function lugarDaGalinha(j: Jogador): [number, number, number] {
+    let melhor: [number, number, number] | null = null;
+    let dMelhor = Infinity;
+    for (const p of povoadosPerto(j.tel.x, j.tel.z, 160, semente))
+      for (const c of p.currais ?? []) {
+        if (c.bicho !== 'coelho') continue;
+        const x = (c.x0 + c.x1) / 2 + 0.5;
+        const z = (c.z0 + c.z1) / 2 + 0.5;
+        const d = Math.hypot(x - j.tel.x, z - j.tel.z);
+        if (d < dMelhor) {
+          dMelhor = d;
+          melhor = [x, p.h + 1, z];
+        }
+      }
+    // galinheiro longe (fora do que está carregado): ela vem para perto da criança
+    if (melhor && dMelhor <= 48) return melhor;
+    return [j.tel.x + Math.sin(j.tel.yaw) * 1.5, j.tel.y + 0.5, j.tel.z + Math.cos(j.tel.yaw) * 1.5];
+  }
+
+  /**
+   * Spec 023 (T04): a banca do mundo. Só item do tema, saldo do aparelho que cubra o preço, 1
+   * compra a cada 2 s e 30 por sessão; o pacote vai de verdade para a mochila (o que não cabe
+   * espera no baú da banca); a galinha nasce criada no galinheiro mais perto. Só depois da
+   * entrega o aparelho desconta (almaCompra); o gasto fica no livro-razão.
+   */
+  function comprarBanca(j: Jogador, c: Extract<Comando, { t: 'comprarBanca' }>): void {
+    const recusar = (motivo: Extract<EventoNucleo, { e: 'almaCompraRecusada' }>['motivo']) => {
+      j.eventos.push({ e: 'almaCompraRecusada', item: String(c.item).slice(0, 32), motivo });
+    };
+    const e = almaDe(j.id);
+    if (!e || j.sobrevivencia.estado.morto) return recusar('tema');
+    const ses = bancaSessao.get(j.id) ?? { compras: 0, passo: -Infinity };
+    const r = conferirBanca(mundoAlma, c.item, c.saldo, ses.compras, (n - ses.passo) * PASSO);
+    if (!r.ok) return recusar(r.motivo);
+    const it = r.item;
+    let guardado = 0;
+    if (it.item) {
+      // cabe? o que não couber vai para o baú da banca (que também tem fim)
+      const prova = criarInventario();
+      prova.carregar(j.inventario.salvar());
+      const sobra = prova.adicionar(it.item, it.qtd);
+      const noBau = e.bau.find((p) => p.item === it.item);
+      if (sobra > 0 && !noBau && e.bau.length >= MAX_BAU_BANCA) return recusar('cheio');
+      guardado = j.inventario.adicionar(it.item, it.qtd);
+      if (guardado > 0) {
+        if (noBau) noBau.qtd += guardado;
+        else e.bau.push({ item: it.item, qtd: guardado });
+        pedirQuadroAlma(j.id);
+      }
+    } else {
+      // a galinha: já criada, de quem comprou (o limite de bichos do mundo vale)
+      if (populacao.criados >= LIMITE_CRIADOS) return recusar('galinha');
+      const [x, y, z] = lugarDaGalinha(j);
+      const g = populacao.adicionar('coelho', x, y, z);
+      populacao.criar(g, j.id === donoDoMundo ? undefined : j.id);
+    }
+    bancaSessao.set(j.id, { compras: ses.compras + 1, passo: n });
+    e.livro.gasto += it.preco;
+    e.livro.compras[it.id] = (e.livro.compras[it.id] ?? 0) + 1;
+    j.eventos.push({ e: 'almaCompra', item: it.id, preco: it.preco, ...(guardado ? { guardado } : {}) });
+  }
+
+  /** O baú da banca entrega sozinho o que agora cabe na mochila (a cada segundo). */
+  function entregarBauBanca(): void {
+    for (const j of jogadores.values()) {
+      const e = almas.get(j.id);
+      if (!e?.bau.length || j.sobrevivencia.estado.morto) continue;
+      let mudou = false;
+      for (const p of e.bau) {
+        const resto = j.inventario.adicionar(p.item, p.qtd);
+        if (resto < p.qtd) {
+          j.eventos.push({ e: 'coletou', item: p.item, qtd: p.qtd - resto });
+          p.qtd = resto;
+          mudou = true;
+        }
+      }
+      if (!mudou) continue;
+      e.bau = e.bau.filter((p) => p.qtd > 0);
+      pedirQuadroAlma(j.id);
+    }
+  }
+
   /** Lugares novos (conferidos no passo, a cada meio segundo). */
   function cuidarDosLugares(): void {
     if (!mundoAlma) return;
@@ -2330,6 +2420,9 @@ export function criarNucleo(op: OpcoesNucleo) {
       case 'aparencia':
         pedirAparencia(j, c.aparencia);
         break;
+      case 'comprarBanca':
+        comprarBanca(j, c);
+        break;
       case 'almaFixar': {
         // spec 023: a missão do cartão do HUD (só uma aberta; null volta à primeira)
         const e = almaDe(j.id);
@@ -2468,6 +2561,8 @@ export function criarNucleo(op: OpcoesNucleo) {
     responderGestos();
     // spec 023: lugares novos, a cada meio segundo
     if (mundoAlma && n % 10 === 0) cuidarDosLugares();
+    // spec 023: o baú da banca entrega o que agora cabe, a cada segundo
+    if (mundoAlma && n % 20 === 0) entregarBauBanca();
 
     // spec 014: o pedreiro do canteiro (aparece, acena e dá a colher), os moradores da cidade
     // e o cachorro da casinha

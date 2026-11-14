@@ -1249,6 +1249,12 @@ describe('canteiro de obras na sala (spec 014)', () => {
     await s.g.receber(a, JSON.stringify({ t: 'almaFixar', missao: 'c3', seq: ++seq }));
     await s.avancar(50);
     expect(nucleo.estado.almas.get('ana')!.fixada).toBe('c3');
+    // a banca pelo canal: entrega e responde almaCompra só para quem comprou
+    await s.g.receber(a, JSON.stringify({ t: 'comprarBanca', item: 'flores', saldo: 3, seq: ++seq }));
+    await s.avancar(50);
+    const compras = quadros(a).flatMap((q) => (q.eventos ?? []).filter((e) => e.e === 'almaCompra'));
+    expect(compras).toEqual([{ e: 'almaCompra', item: 'flores', preco: 3 }]);
+    expect(quadros(b).some((q) => (q.eventos ?? []).some((e) => e.e === 'almaCompra'))).toBe(false);
     // a obra 2 fica pela metade (três blocos)
     const obra2 = celulasPlanejadas(plano, 2);
     for (const c of obra2.slice(0, 3)) await por(c);

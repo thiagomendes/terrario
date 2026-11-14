@@ -15,9 +15,9 @@ import type { ObraSalva } from '../nucleo/saneamento';
  * obras: o evento `obra`, a colher e as obras no "bem-vindo"; os carrinhos e ônibus da
  * cidade: o campo `veiculos` do quadro e o evento `veiculo`, que vêm na mesma versão porque a
  * 014 ainda não foi publicada). 5: spec 021 (os comandos `pularPerto` e `chamarAmigos`, o
- * evento `chamado` e o `pulo` do teleporte). 6: spec 023 (o comando `almaFixar` e o
- * evento `alma`; a banca e o campo `premium` da aparência chegam na mesma versão, porque a 023
- * ainda não foi publicada).
+ * evento `chamado` e o `pulo` do teleporte). 6: spec 023 (os comandos `almaFixar` e
+ * `comprarBanca`, os eventos `alma`, `almaCompra` e `almaCompraRecusada`; o campo `premium` da
+ * aparência chega na mesma versão, porque a 023 ainda não foi publicada).
  */
 export const VERSAO_REDE = 6;
 /** Jogadores por mundo. */
