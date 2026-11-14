@@ -421,6 +421,8 @@ export interface ApiGuia {
   /** A primeira pegada à vista (para medir a distância dos pés). */
   primeira(): [number, number, number] | null;
   procurando(): boolean;
+  /** A criança está no alvo de agora? */
+  chegou(): boolean;
   placa(): boolean;
   /** A caixa da placa na tela (px CSS). */
   caixaPlaca(): { x: number; y: number; w: number; h: number } | null;
@@ -506,6 +508,7 @@ export function criarGuiaMissao(f: FonteGuia): GuiaMissao {
     return f
       .mundo()
       .moradores()
+      .filter((m) => m.id !== alvo?.morador)
       .map((m) => ({ x: m.x, z: m.z }));
   }
   function longeDeQuem(pts: readonly V3[]): V3[] {
@@ -726,7 +729,12 @@ export function criarGuiaMissao(f: FonteGuia): GuiaMissao {
       ultimoAlvo = agora;
       const novo = resolver(true);
       if (!novo || !alvo || novo.chave !== alvo.chave) trocarAlvo(novo, false);
-      else if (novo.morador !== undefined) {
+      else if (novo.figura !== alvo.figura) {
+        // o mesmo lugar com outro desenho (o milho maduro acabou, sobrou a abóbora)
+        alvo.figura = novo.figura;
+        placa.pintar(novo.figura);
+        for (const o of ouvintesFigura) o(novo.figura);
+      } else if (novo.morador !== undefined) {
         // o alvo que anda: a placa vai junto; a trilha refaz depois que ela andou uns metros
         const fim = rota[rota.length - 1];
         alvo = novo;
@@ -775,6 +783,7 @@ export function criarGuiaMissao(f: FonteGuia): GuiaMissao {
     vistas: () => vistasAgora.map((q) => [q[0], q[1], q[2]]),
     primeira: () => (vistasAgora[0] ? [vistasAgora[0][0], vistasAgora[0][1], vistasAgora[0][2]] : null),
     procurando: () => !!busca,
+    chegou: () => chegouLa,
     placa: () => placa.visivel,
     caixaPlaca: () => placa.caixa(),
     viradas: () => viradas,

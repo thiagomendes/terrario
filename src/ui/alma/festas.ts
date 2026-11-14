@@ -138,6 +138,7 @@ export function criarFestas(op: OpcoesFestas) {
         extra: fant
           ? { rotulo: 'Vestir agora', desenho: CAMISETA, aoTocar: () => op.vestir(fant) }
           : undefined,
+        origem: origemMoedas?.(m.id) ?? null,
         destino: () => hud.carteira.getBoundingClientRect(),
         voar: hud.voar,
         svg: svgEl,
@@ -195,7 +196,12 @@ export function criarFestas(op: OpcoesFestas) {
     });
   }
 
+  /** Spec 030: de onde vêm as moedinhas de cada missão (o lugar dela na tela). */
+  let origemMoedas: ((missao: string) => { x: number; y: number } | null) | null = null;
   return {
+    definirOrigemMoedas(f: (missao: string) => { x: number; y: number } | null) {
+      origemMoedas = f;
+    },
     /** O lote de um evento: vira festa (na fila) ou só a carteira subindo. */
     receber(l: LoteFesta): void {
       if (temFesta(l)) enfileirar({ tipo: 'lote', lote: l });

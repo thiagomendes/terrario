@@ -147,6 +147,8 @@ export interface Celebracao {
   canto?: HTMLElement;
   /** Botão a mais (vestir agora). */
   extra?: { rotulo: string; desenho: string; aoTocar(): void };
+  /** Spec 030: de onde as moedinhas vêm (o lugar da missão, na tela); sem ele, caem do alto. */
+  origem?: { x: number; y: number } | null;
   /** Para onde voam a figura e as moedas ao fechar. */
   destino(): DOMRect;
   voar(el: HTMLElement, de: DOMRect, para: DOMRect): void;
@@ -256,8 +258,25 @@ export function celebrar(c: Celebracao): Promise<void> {
       for (let i = 0; i < c.moedas; i++)
         setTimeout(
           () => {
-            chuva.appendChild(c.svg('moeda', 'moeda'));
+            const m = c.svg('moeda', 'moeda');
+            chuva.appendChild(m);
             tlim(i);
+            // spec 030: a moedinha sai do lugar da missão e voa para a festa
+            const o = c.origem;
+            if (o && typeof m.animate === 'function') {
+              const r = m.getBoundingClientRect();
+              const dx = o.x - (r.left + r.width / 2);
+              const dy = o.y - (r.top + r.height / 2);
+              m.style.animation = 'none';
+              m.animate(
+                [
+                  { transform: `translate(${dx}px, ${dy}px) scale(0.5)`, opacity: 0.6 },
+                  { transform: `translate(${dx * 0.5}px, ${dy * 0.5 - 60}px) scale(0.9)`, opacity: 1, offset: 0.5 },
+                  { transform: 'translate(0, 0) scale(1)', opacity: 1 },
+                ],
+                { duration: 520, easing: 'ease-out' },
+              );
+            }
           },
           700 + i * 260,
         );

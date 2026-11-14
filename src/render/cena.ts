@@ -275,6 +275,7 @@ import {
   tocarSomDoBloco,
 } from '../audio/ligador';
 import { EVENTO_SOM_INTERFACE, SOM_DO_GESTO, ehSomInterface } from '../audio/somInterface';
+import { EVENTO_SOM_GUIA, ehSomGuia, tocarSomGuia } from '../audio/somGuia';
 import { SOM_AGUA_INICIAL, passoSomAgua, type EstadoSomAgua } from '../audio/somAgua';
 import { grupoDoBloco, GRUPOS_MATERIAL } from '../audio/materiais';
 import {
@@ -3529,6 +3530,16 @@ export function criarCena(
   window.addEventListener(EVENTO_SOM_INTERFACE, (ev) => {
     const som = (ev as CustomEvent<unknown>).detail;
     if (ehSomInterface(som)) somEfeito(som, som === 'conquista' ? 900 : 120);
+  });
+  // spec 030: os sininhos do guia da missão (a trilha, chegou, o ✓), pelo motor do jogo
+  window.addEventListener(EVENTO_SOM_GUIA, (ev) => {
+    const som = (ev as CustomEvent<unknown>).detail;
+    if (!ehSomGuia(som)) return;
+    tocarSomGuia(motorAudio, som);
+    if (ehTesteDeTela()) {
+      sonsTocados.push(`guia:${som}`);
+      if (sonsTocados.length > 300) sonsTocados.shift();
+    }
   });
   // o gesto do próprio jogador (spec 015) ganha o som dele
   window.addEventListener('brumaluz:gesto', (ev) => {

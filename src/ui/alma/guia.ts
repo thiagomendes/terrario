@@ -11,6 +11,9 @@ import { criarRelogioConvite, CONVITE_S, type MundoDoGuia } from '../../jogo/gui
 import { Bloco } from '../../world/blocks';
 import type { AlmaUi } from './index';
 import { missaoFixada } from './hud';
+import { criarMaoObra } from './maoObra';
+import { missaoPorId } from '../../jogo/alma';
+import { pedirSomGuia } from '../../audio/somGuia';
 import { medirHud } from '../carinhasAmigos';
 
 /** O quadro de cortiça com as duas missões (o ícone de "Missões" na roda do menu). */
@@ -24,10 +27,30 @@ export const QUADRO_SVG = `<svg viewBox="0 0 32 32" xmlns="http://www.w3.org/200
   <circle cx="11" cy="9.6" r="1.4" fill="#e8402f"/><circle cx="21" cy="10" r="1.4" fill="#e8402f"/>
 </svg>`;
 
+const CERTO_SVG = `<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+  <circle cx="32" cy="34" r="27" fill="#3a9a3a"/>
+  <circle cx="32" cy="31" r="27" fill="#6fd35a" stroke="#5a3a22" stroke-width="3"/>
+  <path d="M18 32 L28 42 L46 22" fill="none" stroke="#fff" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>`;
+const CSS_CERTO = `
+.guia-certo { position: fixed; z-index: 8; width: 64px; height: 64px; margin: -32px 0 0 -32px; pointer-events: none;
+  filter: drop-shadow(0 6px 10px rgba(20, 40, 10, 0.35)); animation: guia-certo 1.5s ease-out forwards; }
+.guia-certo svg { width: 100%; height: 100%; display: block; }
+@keyframes guia-certo { 0% { transform: scale(0) rotate(-25deg); } 25% { transform: scale(1.15) rotate(0); }
+  35% { transform: scale(1); } 75% { opacity: 1; transform: scale(1) translateY(-10px); } 100% { opacity: 0; transform: scale(0.8) translateY(-30px); } }
+@media (prefers-reduced-motion: reduce) { .guia-certo { animation-duration: 2s; } }
+`;
+
 declare global {
   interface Window {
     /** Spec 030 (testes de tela): o guia da missão. */
-    __guia?: ApiGuia & { conviteEm(s: number): void; convite(): { mostra: boolean; segundos: number } };
+    __guia?: ApiGuia & {
+      conviteEm(s: number): void;
+      convite(): { mostra: boolean; segundos: number };
+      certos(): number;
+      mao(): { x: number; y: number } | null;
+      fantasmaDaMao(): { x: number; y: number; z: number } | null;
+    };
   }
 }
 
@@ -46,6 +69,9 @@ export function ligarGuiaMissao(e: EstadoDepuracao, ui: AlmaUi): GuiaMissao | nu
   const scene = e.cenaBabylon?.() as Scene | undefined;
   if (!scene) return null;
   const AR = Bloco.AR;
+  const st = document.createElement('style');
+  st.textContent = CSS_CERTO;
+  document.head.appendChild(st);
   /** O aparelho tem a coluna? (o chão de baixo de tudo existe) */
   const temColuna = (x: number, z: number) => (e.bloco?.(Math.floor(x), 0, Math.floor(z)) ?? AR) !== AR;
   /** Os blocos carregados (com as edições); longe, o terreno gerado. */
@@ -94,15 +120,59 @@ export function ligarGuiaMissao(e: EstadoDepuracao, ui: AlmaUi): GuiaMissao | nu
     if (c && pedida === c.m.id) {
       pedida = null;
       guia.chamar();
+      pedirSomGuia('trilha');
     }
   };
-  ui.aoMudarVista(() => sincronizar());
+  // ---------------------------------------------------------------- chegar, o ✓ e as moedinhas
+  const mao = criarMaoObra(e, scene);
+  /** Onde o lugar estava na tela por último (o carimbo e as moedinhas saem dali). */
+  let ultimaTela: { x: number; y: number } | null = null;
+  /** Onde cada missão acabou (as moedinhas da festa saem dali). */
+  const ondeAcabou = new Map<string, { x: number; y: number }>();
+  ui.festas.definirOrigemMoedas((id) => ondeAcabou.get(id) ?? null);
+  let chegouEm = -Infinity;
+  guia.aoChegar((a) => {
+    guia.brilhar(a);
+    chegouEm = performance.now();
+    pedirSomGuia('chegou');
+  });
+  /** O que andou de cada missão (o núcleo manda o número; o ✓ é quando ele sobe). */
+  const feitoAntes = new Map<string, number>();
+  ui.aoMudarVista((ev) => {
+    const fixada = missaoFixada(ui.vista())?.m.id ?? guia.api.missao();
+    for (const mv of ev.missoes ?? []) {
+      if (mv.pulou) continue;
+      const m = missaoPorId(mv.id);
+      const antes = feitoAntes.get(mv.id) ?? mv.feito;
+      if (mv.id !== fixada && mv.id !== guia.api.missao()) continue;
+      const tela = guia.telaDoAlvo() ?? ultimaTela;
+      if (mv.concluiu) {
+        ondeAcabou.set(mv.id, tela ?? { x: innerWidth / 2, y: innerHeight * 0.4 });
+        // o último lugar também ganha o ✓ (a festa vem logo depois)
+        if (m && m.conta.tipo !== 'obra') carimbar(tela);
+        continue;
+      }
+      // a obra tem o plim de cada bloco (014): o ✓ é dos outros
+      if (!m || m.conta.tipo === 'obra' || !(mv.feito > antes)) continue;
+      carimbar(tela);
+    }
+    lembrarFeito();
+    sincronizar();
+  });
+  /** O que cada missão aberta já andou (o próximo evento compara com isto). */
+  function lembrarFeito(): void {
+    for (const a of ui.vista()?.abertas ?? []) feitoAntes.set(a.id, a.feito);
+  }
+  lembrarFeito();
   ui.aoBrincar((id) => {
     pedida = id;
     // a mesma missão de novo (já era a fixada): o núcleo não manda nada novo
     if (missaoFixada(ui.vista())?.m.id === id) sincronizar();
   });
-  ui.aoTocarSelo(() => guia.chamar());
+  ui.aoTocarSelo(() => {
+    guia.chamar();
+    pedirSomGuia('trilha');
+  });
   // o selinho mostra o mesmo desenho da placa (o lugar de agora)
   guia.aoTrocarFigura((fig) => ui.hud.figuraDoSelo(fig));
   sincronizar();
@@ -118,12 +188,38 @@ export function ligarGuiaMissao(e: EstadoDepuracao, ui: AlmaUi): GuiaMissao | nu
     ultimo = t;
     const v = ui.vista();
     if (!v) return;
+    ultimaTela = guia.telaDoAlvo() ?? ultimaTela;
+    // a mãozinha só na obra, com a criança dentro do canteiro
+    const a = guia.alvo();
+    mao.definir(a && a.tipo === 'obra' && guia.chegou() ? Number(a.chave.slice('canteiro:'.length)) : null);
     const r = relogio.passo(dt, { missao: !!missaoFixada(v), noJogo: noJogo() });
     if (r.mostra !== mostra || r.acendeu) ui.hud.definirConvite(r.mostra, r.acendeu);
     mostra = r.mostra;
   });
 
+  /** O carimbo verde de "feito" pula no lugar (o ✓ que o núcleo confirmou) e some. */
+  function carimbar(tela: { x: number; y: number } | null): void {
+    const x = tela?.x ?? innerWidth / 2;
+    const y = tela?.y ?? innerHeight * 0.4;
+    const el = document.createElement('div');
+    el.className = 'guia-certo';
+    el.setAttribute('data-guia-certo', '');
+    el.innerHTML = CERTO_SVG;
+    el.style.left = `${x}px`;
+    el.style.top = `${y}px`;
+    document.body.appendChild(el);
+    setTimeout(() => el.remove(), 1500);
+    certos++;
+    // logo depois do "chegou", o tim-tim espera um tiquinho (os dois não se atropelam)
+    const espera = Math.max(0, 450 - (performance.now() - chegouEm));
+    setTimeout(() => pedirSomGuia('certo'), espera);
+  }
+  let certos = 0;
+
   window.__guia = Object.assign(guia.api, {
+    certos: () => certos,
+    mao: () => mao.tela(),
+    fantasmaDaMao: () => mao.fantasma(),
     /** Testes e vídeos: o convite em s segundos (o relógio volta a zero). */
     conviteEm(s: number) {
       limite = s;

@@ -141,7 +141,8 @@ function alvoNaCidade(
       placa: [l.x0 + l.largura / 2, p.h + 1, l.z0 + l.profundidade / 2],
       figura: `obra:${c.canteiro}`,
       lugar,
-      caixa: caixaDoLoteCidade(l),
+      // chegou é lá dentro, perto dos blocos azuis (na porta do tapume ela ainda não vê a obra)
+      raio: 1.6,
     };
   }
   if (c.tipo === 'lugares') {
@@ -200,18 +201,24 @@ const dist = (a: { x: number; z: number }, b: { x: number; z: number }) =>
 export function contarLavoura(
   l: Lote,
   bloco: (x: number, y: number, z: number) => number,
-): { maduras: number; livres: number } {
+): { maduras: number; livres: number; produto: string | null } {
   let maduras = 0;
   let livres = 0;
+  const conta = new Map<string, number>();
   for (let f = 1; f <= 5; f++)
     for (const s of [1, 2, 4, 5]) {
       const [x, z] = noLote(l, s, f);
       const em = bloco(x, l.h + 1, z);
       if (bloco(x, l.h, z) !== Bloco.TERRA_ARADA) continue;
-      if (madura(em)) maduras++;
-      else if (em === Bloco.AR) livres++;
+      if (madura(em)) {
+        maduras++;
+        const p = lavouraDoBloco(em)?.produto;
+        if (p) conta.set(p, (conta.get(p) ?? 0) + 1);
+      } else if (em === Bloco.AR) livres++;
     }
-  return { maduras, livres };
+  let produto: string | null = null;
+  for (const [p, n] of conta) if (!produto || n > conta.get(produto)!) produto = p;
+  return { maduras, livres, produto };
 }
 
 /** O lote inteiro com 1 bloco de folga (chegou na beira já vale). */
@@ -276,6 +283,8 @@ function alvoDoLote(
     };
   }
   if (l.uso === 'lavoura') {
+    // colher: a placa mostra o que está maduro lá (o trigo, o milho ou a abóbora)
+    const produto = buscaDaMissao(m) === 'colher' ? contarLavoura(l, bloco).produto : null;
     // no corredor do meio (s = 3), na beira da frente: nenhuma pegada em cima da roça
     const [ex, ez] = noLote(l, 3, 0);
     return {
@@ -285,7 +294,7 @@ function alvoDoLote(
       y: l.h + 1,
       z: ez + 0.5,
       placa: [cx, l.h + 1, cz],
-      figura,
+      figura: produto ? `item:${produto}` : figura,
       caixa: caixaDoLoteSitio(l),
     };
   }
