@@ -185,6 +185,9 @@ export function sanear(c: unknown): Comando | null {
         : null;
     case 'comer':
       return inteiro(o.slot, 0, SLOTS - 1) ? (o as unknown as Comando) : null;
+    case 'almaFixar':
+      // spec 023: o id de uma missão (o núcleo confere que está aberta), ou null
+      return o.missao === null || texto(o.missao, 16) ? (o as unknown as Comando) : null;
     case 'pularPerto':
       // spec 021: só o id de um amigo (texto curto)
       return texto(o.alvo, 64) ? (o as unknown as Comando) : null;
@@ -340,6 +343,12 @@ export function sanearExtras(e: unknown): Record<string, unknown> {
     if (!(objeto(sp) && xz(sp.x) && xz(sp.z))) delete out.spawn;
   }
   if ('donos' in out) out.donos = sanearDonos(out.donos);
+  if ('alma' in out) {
+    // spec 023: { [jogador]: estado } (o núcleo passa cada um a limpo com o mundo dele)
+    const a = out.alma;
+    if (!objeto(a) || Object.keys(a).length > 256 || JSON.stringify(a).length > 512_000)
+      delete out.alma;
+  }
   if ('obras' in out) {
     const o = sanearObras(out.obras);
     if (Object.keys(o).length) out.obras = o;

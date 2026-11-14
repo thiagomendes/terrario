@@ -36,9 +36,27 @@ import {
   estiloMundo,
   olharDoNascimento,
   pontoDeNascer,
+  povoadoNaColuna,
 } from '../world/chunk';
+import {
+  ESPERA_MESMO_BICHO,
+  almaMundoVazia,
+  conferirObrasFeitas,
+  fixar,
+  ganhoTemAlgo,
+  ganhoVazio,
+  juntarResultado,
+  mundoAlmaDaPlanta,
+  normalizarAlmaDoMundo,
+  progressoObra,
+  registrarEvento,
+  visitarLugar,
+  vistaAlmaMundo,
+  type AlmaMundo,
+  type ResultadoAlma,
+} from '../jogo/alma';
 import { AVISO_LIMITE, comeEsse, domaCom, viraCriado } from '../jogo/criacao';
-import { definirRegioesSemPovoado, regiaoDoChunk } from '../world/povoado';
+import { TAM_LOTE, definirRegioesSemPovoado, regiaoDoChunk } from '../world/povoado';
 import { abreEFecha, alternado, ehPorta } from '../world/portas';
 import { criarConteineres, TAMANHO_BAU } from '../jogo/conteineres';
 import { criarMundoDeItens, dropsDoBloco } from '../jogo/drops';
@@ -417,6 +435,101 @@ export function criarNucleo(op: OpcoesNucleo) {
   let veiculosMudados: ReturnType<NonNullable<typeof transito>['tirarMudados']> = [];
   const jogadores = new Map<string, Jogador>();
 
+  // ------------------------------------------------------------ alma (spec 023)
+  /**
+   * O mundo da alma (Cidade Grande ou Rancho Alegre; null nos outros temas, por enquanto). O
+   * núcleo decide todo ganho; cada jogador tem aqui as missões, o progresso, os lugares, o baú
+   * da banca e o livro-razão deste mundo (`extras.alma[id]`: cada mundo é uma história).
+   */
+  const mundoAlma = mundoAlmaDaPlanta(estiloMundo().povoado?.planta);
+  const almas = new Map<string, AlmaMundo>(
+    mundoAlma ? Object.entries(normalizarAlmaDoMundo(extras['alma'], mundoAlma)) : [],
+  );
+  /** O que vai no evento `alma` de cada jogador no próximo quadro. */
+  const almaPendente = new Map<string, { r: ResultadoAlma; quadro: boolean }>();
+  /** Passo em que cada jogador alimentou cada bicho por último (o mesmo bicho: 1 minuto). */
+  const almaBichos = new Map<string, number>();
+  /**
+   * Ovos postos pelas galinhas e pipoca saída da fornalha ainda não contados: pegar de novo o
+   * ovo que se jogou no chão (ou tirar a pipoca que se pôs na saída) não conta outra vez.
+   */
+  let ovosPostos = 0;
+  let pipocaPostaNaSaida = 0;
+  function almaDe(id: string): AlmaMundo | null {
+    if (!mundoAlma) return null;
+    let e = almas.get(id);
+    if (!e) {
+      e = almaMundoVazia();
+      almas.set(id, e);
+    }
+    return e;
+  }
+  function ganharAlma(id: string, r: ResultadoAlma, quadro = false): void {
+    if (!mundoAlma || !jogadores.has(id)) return;
+    const p = almaPendente.get(id);
+    if (p) {
+      juntarResultado(p.r, r);
+      p.quadro ||= quadro || r.mudouLista;
+    } else almaPendente.set(id, { r, quadro: quadro || r.mudouLista });
+  }
+  /** Uma ação deste jogador que conta (as chaves do diário). */
+  function almaEvento(id: string, chave: string, qtd = 1): void {
+    const e = almaDe(id);
+    if (e && mundoAlma) ganharAlma(id, registrarEvento(e, mundoAlma, chave, qtd));
+  }
+  /** O quadro de missões inteiro vai no próximo evento (entrou, fixou, o baú mudou). */
+  function pedirQuadroAlma(id: string): void {
+    ganharAlma(id, { ganho: ganhoVazio(), missoes: [], mudouLista: false }, true);
+  }
+  const totalObra = (k: number) => (cidade ? celulasPlanejadas(cidade, k).length : 0);
+  /** A obra como o cartão mostra (células cheias e o total). */
+  const vistaObra = (k: number) => {
+    const t = totalObra(k);
+    if (!t) return null;
+    const o = obras.get(k);
+    return { cheias: o?.feita ? t : (o?.cheias.length ?? 0), total: t };
+  };
+  /** As missões de obra deste jogador diante das obras feitas (ajudou: ganha; senão passa). */
+  function almaObrasFeitas(id: string): void {
+    const e = almaDe(id);
+    if (!e || !mundoAlma || !cidade) return;
+    ganharAlma(
+      id,
+      conferirObrasFeitas(
+        e,
+        mundoAlma,
+        (k) => !!obras.get(k)?.feita,
+        (k) => !!obras.get(k)?.ajudantes.has(id),
+        totalObra,
+      ),
+    );
+  }
+  /** O uso do lote em (x, z): da cidade, ou do sítio ('sitio:curral'...). */
+  function lugarEm(x: number, z: number): string | null {
+    if (cidade) {
+      const l = cidade.lotes.find(
+        (q) => x >= q.x0 && x < q.x0 + q.largura && z >= q.z0 && z < q.z0 + q.profundidade,
+      );
+      return l?.uso ?? null;
+    }
+    const p = povoadoNaColuna(Math.floor(x), Math.floor(z), semente);
+    const l = p?.lotes.find(
+      (q) => x >= q.x0 && x < q.x0 + TAM_LOTE && z >= q.z0 && z < q.z0 + TAM_LOTE,
+    );
+    return l?.uso ? `sitio:${l.uso}` : null;
+  }
+  /** Lugares novos (conferidos no passo, a cada meio segundo). */
+  function cuidarDosLugares(): void {
+    if (!mundoAlma) return;
+    for (const j of jogadores.values()) {
+      if (j.sobrevivencia.estado.morto) continue;
+      const uso = lugarEm(j.tel.x, j.tel.z);
+      const e = uso ? almaDe(j.id) : null;
+      if (!uso || !e || e.lugares.includes(uso)) continue;
+      ganharAlma(j.id, visitarLugar(e, mundoAlma, uso));
+    }
+  }
+
   /**
    * Lavoura que ainda cresce: célula → progresso no estágio atual (segundos na velocidade 1).
    * Sai das edições ao abrir o mundo; o progresso vem de `extras.lavoura` (faltando, 0).
@@ -573,6 +686,12 @@ export function criarNucleo(op: OpcoesNucleo) {
     if (id === donoDoMundo) apelidoDoMundo = j.perfil.apelido;
     jogadores.set(id, j);
     perfisSujos = true;
+    // spec 023: o quadro de missões vai no primeiro quadro; a obra feita enquanto ele estava
+    // fora dá o prêmio a quem ajudou (ou passa a missão, para quem não ajudou)
+    if (mundoAlma) {
+      almaObrasFeitas(id);
+      pedirQuadroAlma(id);
+    }
   }
 
   /** O que é do jogador neste mundo (o que estava nas mãos volta à mochila). */
@@ -596,6 +715,7 @@ export function criarNucleo(op: OpcoesNucleo) {
     const j = jogadores.get(id);
     if (!j) return d;
     jogadores.delete(id);
+    almaPendente.delete(id);
     perfisSujos = true;
     for (const o of jogadores.values())
       o.eventos.push({ e: 'saiu', id, apelido: j.perfil.apelido });
@@ -718,6 +838,12 @@ export function criarNucleo(op: OpcoesNucleo) {
     const intocado = edicoes.obter(x, y, z) === undefined;
     // quebrar meia porta leva a outra metade (a do mesmo par, do mesmo dono, se puder)
     const outraMetade = outraMetadeDaPorta(regra, j.id, x, y, z);
+    // spec 023: colheita madura; "minha" é a planta que este jogador plantou (não a do sítio)
+    const colhida = !!mundoAlma && ehLavoura(b) && madura(b);
+    const minha =
+      colhida &&
+      donoNaCelula(edicoes, x, y, z, donoDoMundo) === j.id &&
+      protecao.em(x, y, z) !== Protecao.LAVOURA;
     if (replantio !== null) {
       // entra de novo na lista da lavoura que cresce, do começo
       lavoura.delete(`${x},${y},${z}`);
@@ -763,6 +889,10 @@ export function criarNucleo(op: OpcoesNucleo) {
       o.eventos.push({ e: 'quebra', x, y, z, bloco: b, meu: o === j });
       if (ehLavoura(b))
         o.eventos.push({ e: 'colheu', x, y, z, bloco: b, madura: madura(b), meu: o === j });
+    }
+    if (colhida) {
+      almaEvento(j.id, 'colheu');
+      if (minha) almaEvento(j.id, 'colheu:minha');
     }
   }
 
@@ -997,6 +1127,9 @@ export function criarNucleo(op: OpcoesNucleo) {
     for (const o of jogadores.values())
       o.eventos.push({ e: 'colocacao', x, y, z, bloco, meu: o === j });
     if (lav) j.eventos.push({ e: 'plantou', x, y, z, bloco });
+    // spec 023: pôr bloco e plantar contam (o bloco da obra conta à parte, em encheuObra)
+    almaEvento(j.id, 'colocou');
+    if (lav) almaEvento(j.id, 'plantou');
   }
 
   function editarLote(j: Jogador, c: Extract<Comando, { t: 'editar' }>): void {
@@ -1065,6 +1198,7 @@ export function criarNucleo(op: OpcoesNucleo) {
     if (!o.ajudantes.has(quem) && o.ajudantes.size < MAX_AJUDANTES_OBRA)
       o.ajudantes.set(quem, apelidoDe(quem) ?? '');
     obrasTocadas.set(c.canteiro, { quem, c });
+    almaEvento(quem, 'obra:bloco');
   }
 
   /** As obras tocadas: o progresso para todos, ou a obra feita. */
@@ -1080,6 +1214,12 @@ export function criarNucleo(op: OpcoesNucleo) {
         continue;
       }
       const camada = celulas.every((q) => q.camada !== c.camada || cheia(q));
+      // spec 023: a bolinha do cartão de quem tem esta obra aberta
+      for (const p of jogadores.values()) {
+        const e = almaDe(p.id);
+        const mv = e && mundoAlma ? progressoObra(e, mundoAlma, n, o.cheias.length, celulas.length) : null;
+        if (mv) ganharAlma(p.id, { ganho: ganhoVazio(), missoes: [mv], mudouLista: false });
+      }
       for (const p of jogadores.values())
         p.eventos.push({
           e: 'obra',
@@ -1132,6 +1272,8 @@ export function criarNucleo(op: OpcoesNucleo) {
           : {}),
       });
     }
+    // spec 023: a missão da obra (todo ajudante ganha; quem não ajudou passa para a próxima)
+    for (const p of jogadores.values()) almaObrasFeitas(p.id);
     // o pedreiro bate palmas e vai para o próximo canteiro aberto
     const ped = pedreiro();
     if (ped) {
@@ -1539,6 +1681,7 @@ export function criarNucleo(op: OpcoesNucleo) {
     }
     for (const { m, s } of alvos) s!.gravar(m.i, m.depois ? { ...m.depois } : null);
     j.inventarioSujo = true;
+    if (mundoAlma) almaDaTransacao(j, c);
     if (c.mudancas.some((m) => m.onde === 'bau' || m.onde === 'forn')) {
       // outros jogadores com o mesmo contêiner aberto veem a mudança
       for (const o of jogadores.values())
@@ -1551,6 +1694,28 @@ export function criarNucleo(op: OpcoesNucleo) {
           o.conteiner.z === j.conteiner.z
         )
           o.conteinerSujo = true;
+    }
+  }
+
+  /**
+   * Spec 023: o que a transação fez e conta: receitas feitas (na nuvem, só com a conta dos
+   * itens fechando, também no criativo) e pipoca tirada da saída da fornalha.
+   */
+  function almaDaTransacao(j: Jogador, c: Extract<Comando, { t: 'transacao' }>): void {
+    if (c.fabricou?.length && (confiar || contaFecha(c.mudancas, c.fabricou)))
+      for (const f of c.fabricou) almaEvento(j.id, `fabricou:${f.receita}`, f.vezes);
+    for (const m of c.mudancas) {
+      if (m.onde !== 'forn' || m.i !== 2) continue;
+      const antes = m.antes?.item === 'pipoca' ? m.antes.qtd : 0;
+      const depois = m.depois?.item === 'pipoca' ? m.depois.qtd : 0;
+      // pôr pipoca na saída não é fazer pipoca: a que foi posta não conta ao sair
+      if (depois > antes) pipocaPostaNaSaida += depois - antes;
+      else if (antes > depois) {
+        const tirou = antes - depois;
+        const descontada = Math.min(tirou, pipocaPostaNaSaida);
+        pipocaPostaNaSaida -= descontada;
+        if (tirou > descontada) almaEvento(j.id, 'fundiu:pipoca', tirou - descontada);
+      }
     }
   }
 
@@ -1585,6 +1750,7 @@ export function criarNucleo(op: OpcoesNucleo) {
       } else if (ev.tipo === 'ovo') {
         // a galinha criada botou: o ovo cai do lado dela
         mundoItens.soltar('ovo', 1, c.x, c.y + 0.3, c.z, rngCriacao);
+        ovosPostos++;
         eventosGerais.push({ e: 'botouOvo', id: c.id, x: c.x, y: c.y, z: c.z });
       } else if (ev.tipo === 'espantada' && atacado) {
         // a criatura da noite mansa fugiu de quem chegou perto (o diário conta como espantar)
@@ -1800,6 +1966,18 @@ export function criarNucleo(op: OpcoesNucleo) {
     ultimaComida.set(cr.id, n);
     if (ultimaComida.size > 256) ultimaComida.delete(ultimaComida.keys().next().value as number);
     if (r === 'novo' && modo === 'sobrevivencia') j.inventario.remover(c.slot, 1);
+    // spec 023: dar comida conta para o amigo dos bichos; o mesmo bicho, só depois de 1 minuto
+    // (sem limite por dia, decisão do dono)
+    if (mundoAlma) {
+      const k = `${j.id}:${cr.id}`;
+      const ultima = almaBichos.get(k);
+      if (ultima === undefined || (n - ultima) * PASSO >= ESPERA_MESMO_BICHO - 1e-9) {
+        almaBichos.delete(k);
+        almaBichos.set(k, n);
+        if (almaBichos.size > 512) almaBichos.delete(almaBichos.keys().next().value as string);
+        almaEvento(j.id, `criou:${cr.tipo}`);
+      }
+    }
     for (const o of jogadores.values())
       o.eventos.push({
         e: 'alimentou',
@@ -1834,6 +2012,7 @@ export function criarNucleo(op: OpcoesNucleo) {
         ? { e: 'trocou', profissao: c.profissao, troca: t.id }
         : { e: 'trocaRecusada', motivo: 'faltam' },
     );
+    if (ok) almaEvento(j.id, `trocou:${c.profissao}`);
   }
 
   function comer(j: Jogador, c: Extract<Comando, { t: 'comer' }>): void {
@@ -2151,6 +2330,12 @@ export function criarNucleo(op: OpcoesNucleo) {
       case 'aparencia':
         pedirAparencia(j, c.aparencia);
         break;
+      case 'almaFixar': {
+        // spec 023: a missão do cartão do HUD (só uma aberta; null volta à primeira)
+        const e = almaDe(j.id);
+        if (e && mundoAlma && fixar(e, mundoAlma, c.missao)) pedirQuadroAlma(j.id);
+        break;
+      }
       case 'salvar':
         // o anfitrião responde (precisa do pedido)
         break;
@@ -2268,12 +2453,21 @@ export function criarNucleo(op: OpcoesNucleo) {
         lista.map((o) => ({ x: o.tel.x, y: o.tel.y, z: o.tel.z, id: o.id })),
         (item, qtd, dur, quem) => lista[quem].inventario.adicionar(item, qtd, dur),
       );
-      for (const c of coletados)
+      for (const c of coletados) {
         lista[c.quem].eventos.push({ e: 'coletou', item: c.item, qtd: c.qtd });
+        // spec 023: só o ovo que a galinha pôs (o jogado no chão e pego de novo não conta)
+        if (c.item === 'ovo' && ovosPostos > 0) {
+          const q = Math.min(c.qtd, ovosPostos);
+          ovosPostos -= q;
+          almaEvento(lista[c.quem].id, 'coletou:ovo', q);
+        }
+      }
     }
 
     // spec 015: moradores acenando de volta
     responderGestos();
+    // spec 023: lugares novos, a cada meio segundo
+    if (mundoAlma && n % 10 === 0) cuidarDosLugares();
 
     // spec 014: o pedreiro do canteiro (aparece, acena e dá a colher), os moradores da cidade
     // e o cachorro da casinha
@@ -2419,6 +2613,15 @@ export function criarNucleo(op: OpcoesNucleo) {
         j.ultimaSobrevivencia = sob;
         q.sobrevivencia = { ...j.sobrevivencia.estado };
       }
+      // spec 023: a alma deste jogador (só ele recebe o que ganhou)
+      const pa = mundoAlma ? almaPendente.get(j.id) : undefined;
+      if (pa && (ganhoTemAlgo(pa.r.ganho) || pa.r.missoes.length || pa.quadro))
+        j.eventos.push({
+          e: 'alma',
+          missoes: pa.r.missoes,
+          ganho: pa.r.ganho,
+          ...(pa.quadro ? { quadro: vistaAlmaMundo(almaDe(j.id)!, mundoAlma!, vistaObra) } : {}),
+        });
       const eventos = [...eventosGerais, ...j.eventos];
       if (eventos.length) q.eventos = eventos;
       j.eventos = [];
@@ -2428,6 +2631,7 @@ export function criarNucleo(op: OpcoesNucleo) {
     blocosMudados = [];
     eventosGerais = [];
     veiculosMudados = [];
+    almaPendente.clear();
     return out;
   }
 
@@ -2447,6 +2651,8 @@ export function criarNucleo(op: OpcoesNucleo) {
     if (edicoes.donos.tamanho > 0) out['donos'] = edicoes.donos.exportar();
     // spec 014: as obras do canteiro (mundo sem obra começada grava igual a antes)
     if (obras.size > 0) out['obras'] = obrasSalvas();
+    // spec 023: a alma de cada jogador neste mundo (mundo sem alma grava igual a antes)
+    if (almas.size > 0) out['alma'] = JSON.parse(JSON.stringify(Object.fromEntries(almas)));
     // na nuvem cada jogador é salvo à parte (dadosJogador); localmente vai junto do mundo
     if (j && confiar) {
       out['sobrevivencia'] = j.sobrevivencia.salvar();
@@ -2509,6 +2715,8 @@ export function criarNucleo(op: OpcoesNucleo) {
       // a tabela de donos vai de novo (a conexão nova pode ser outro navegador)
       j.versaoDonos = -1;
       perfisSujos = true;
+      // spec 023: o quadro de missões também
+      pedirQuadroAlma(id);
     },
     definirPerfil(id: string, perfil: PerfilJogador) {
       const j = jogadores.get(id);
@@ -2559,6 +2767,9 @@ export function criarNucleo(op: OpcoesNucleo) {
         noite: noiteDoMundo,
         /** Spec 014 (T13): os veículos da cidade (null fora dela). */
         transito,
+        /** Spec 023: o mundo da alma (null fora da Cidade e do Rancho) e a de cada jogador. */
+        mundoAlma,
+        almas,
       };
     },
   };

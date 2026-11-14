@@ -1,3 +1,6 @@
+import { criarPerfilCrianca, type PerfilCrianca } from './personagem/almaCrianca';
+import { ganhoTemAlgo } from './jogo/alma';
+import type { EventoNucleo } from './nucleo/protocolo';
 import { medirJanela, tamanhoDoCanvas } from './ui/telaCheia';
 import { criarCena } from './render/cena';
 import { criarHotbar } from './player/hotbar';
@@ -244,6 +247,8 @@ async function iniciar(app: HTMLElement): Promise<void> {
   ligarFoto(app, cena);
   ligarMapas(app, cena);
   ligarDiario(app, cena);
+  // spec 023: o perfil da criança soma o que o núcleo manda (na prévia nada é guardado)
+  if (!emPrevia) ligarAlma(armazenamento);
   ligarControles(app, cena, hotbar, config);
   // a tela de título (ou a da sala) já está montada: o "Carregando" do index.html some
   tirarCarregando();
@@ -651,6 +656,28 @@ const TRONCOS = new Set<number>([
   Bloco.TRONCO_PINHO,
   Bloco.TRONCO_LANTERNA,
 ]);
+
+/**
+ * Spec 023 (T02/T03): o perfil da criança no aparelho recebe só o que o núcleo mandou: o
+ * ganho do evento `alma` (os presentes de nível saem do XP pela regra pura) e as fantasias de
+ * prêmio (pelo mesmo caminho do prêmio do canteiro da 014). O HUD e as festas (fases
+ * seguintes) ouvem `brumaluz:almaPerfil` ou `window.__almaCrianca.ouvir`.
+ */
+function ligarAlma(armazenamento: Storage | null): void {
+  const perfil = criarPerfilCrianca(armazenamento);
+  (window as unknown as { __almaCrianca?: PerfilCrianca }).__almaCrianca = perfil;
+  perfil.ouvir((p, aviso) =>
+    window.dispatchEvent(new CustomEvent('brumaluz:almaPerfil', { detail: { perfil: p, aviso } })),
+  );
+  window.addEventListener('brumaluz:alma', (ev) => {
+    const e = (ev as CustomEvent<Extract<EventoNucleo, { e: 'alma' }>>).detail;
+    if (!e || typeof e !== 'object') return;
+    const fantasias = (e.missoes ?? []).flatMap((m) => (m.concluiu && m.fantasia ? [m.fantasia] : []));
+    if (e.ganho && (ganhoTemAlgo(e.ganho) || fantasias.length)) perfil.aplicarGanho(e.ganho, fantasias);
+    for (const id of fantasias)
+      window.dispatchEvent(new CustomEvent('brumaluz:desbloqueio', { detail: { id } }));
+  });
+}
 
 function ligarDiario(app: HTMLElement, cena: ReturnType<typeof criarCena>): void {
   const estilo = document.createElement('style');

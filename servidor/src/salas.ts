@@ -6,6 +6,7 @@
  */
 import { createHash, randomUUID } from 'node:crypto';
 import { criarNucleo, type Nucleo } from '../../src/nucleo/nucleo';
+import { JOGADOR_LOCAL } from '../../src/nucleo/anfitriao';
 import { definirEstiloMundo } from '../../src/world/chunk';
 import { estiloSeguro } from '../../src/world/estiloSeguro';
 import { sanearAparencia, sanearDadosMundo } from '../../src/nucleo/saneamento';
@@ -286,6 +287,9 @@ export function criarGerenciador(op: OpcoesGerenciador) {
     if (d) {
       const { inventario, sobrevivencia, spawn, diario, marcadores, ...doMundo } = d.extras;
       d.extras = doMundo;
+      // spec 023: a alma do jogador local (missões, progresso) passa a ser do dono na nuvem
+      d.extras.alma = trocarDonoDaAlma(d.extras.alma, JOGADOR_LOCAL, jog.id);
+      if (d.extras.alma === undefined) delete d.extras.alma;
       if (inventario || sobrevivencia)
         doDono = {
           inventario,
@@ -513,6 +517,10 @@ export function criarGerenciador(op: OpcoesGerenciador) {
       hora: salvo.hora,
       extras: {
         ...salvo.extras,
+        // spec 023: no aparelho o dono volta a ser o jogador local
+        ...(salvo.extras.alma
+          ? { alma: trocarDonoDaAlma(salvo.extras.alma, pr.id, JOGADOR_LOCAL) }
+          : {}),
         ...(dj
           ? { inventario: dj.inventario, sobrevivencia: dj.sobrevivencia, spawn: dj.spawn }
           : {}),
@@ -858,4 +866,17 @@ export function criarGerenciador(op: OpcoesGerenciador) {
     /** Para testes. */
     ativas,
   };
+}
+
+/**
+ * Spec 023: `extras.alma` com a alma de `de` passada para `para` (levar o mundo para a nuvem
+ * e devolver ao aparelho). A de `para` que já existia dá lugar à de `de`.
+ */
+export function trocarDonoDaAlma(alma: unknown, de: string, para: string): unknown {
+  if (!alma || typeof alma !== 'object' || Array.isArray(alma)) return alma;
+  const a = { ...(alma as Record<string, unknown>) };
+  if (!(de in a)) return a;
+  a[para] = a[de];
+  if (de !== para) delete a[de];
+  return a;
 }

@@ -467,6 +467,8 @@ export interface EstadoDepuracao {
   obraColocados?: number;
   obrasFeitas?: number[];
   colherRecebida?: number;
+  /** Spec 023 (testes): eventos `alma` recebidos do núcleo. */
+  almaEventos?: number;
   usarOuColocar?: () => void;
   fantasmaNaMira?: () => { x: number; y: number; z: number; bloco: number } | null;
   voar?: (v: boolean) => void;
@@ -582,6 +584,14 @@ export interface EstadoDepuracao {
   crescerLavoura?: (segundos: number) => void;
   /** Spec 013: corações na tela agora (testes da criação). */
   coracoes?: () => number;
+  /**
+   * Spec 023: os comandos da alma para o núcleo (o HUD e a banca das próximas fases usam
+   * estes; o resultado volta nos eventos `brumaluz:alma`).
+   */
+  alma?: {
+    /** A missão do cartão do HUD (uma aberta; null: a primeira). */
+    fixar: (missao: string | null) => void;
+  };
   /** Spec 015 (testes): gestos do jogador, roda aberta e moradores acenando. */
   gestos?: {
     fazer: (g: import('../personagem/gestos').IdGesto) => boolean;
@@ -3980,6 +3990,9 @@ export function criarCena(
         vozMorador(c, g === 'acenar' ? 'cumprimento' : 'contente', volumeDaDistancia(c));
     },
   });
+  estado.alma = {
+    fixar: (missao) => enviar({ t: 'almaFixar', missao }),
+  };
   estado.gestos = {
     fazer: (g) => gestos!.fazer(g),
     roda: () => gestos!.roda.aberta,
@@ -5167,6 +5180,10 @@ export function criarCena(
         break;
       case 'chamado': // spec 021: um amigo chamou ("vem cá!")
         acharAmigo?.chamado(e.de);
+        break;
+      case 'alma': // spec 023: o que o núcleo decidiu que este jogador ganhou (e o quadro)
+        estado.almaEventos = (estado.almaEventos ?? 0) + 1;
+        window.dispatchEvent(new CustomEvent('brumaluz:alma', { detail: e }));
         break;
       case 'quebra':
       case 'colocacao':

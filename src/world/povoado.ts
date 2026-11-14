@@ -13,7 +13,7 @@ import type { Bioma } from './chunk';
 export const REGIAO_POVOADO = 128;
 /** Raio máximo ocupado (lotes, caminhos e rampas) a partir do centro. */
 export const RAIO_POVOADO = 30;
-const TAM_LOTE = 7;
+export const TAM_LOTE = 7;
 /** Lado da praça: o marco ocupa o miolo (até 2 do centro), os postes os cantos. */
 export const PRACA = 9;
 /** Alcance máximo da rampa entre o piso do povoado e o terreno natural. */

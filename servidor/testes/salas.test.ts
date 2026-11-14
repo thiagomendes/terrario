@@ -543,6 +543,41 @@ describe('o servidor aguenta mensagem de quem quer estragar', () => {
     expect(Object.keys(bv2.edicoes).sort()).toEqual(['0,0', '100,100']);
   });
 
+  it('levar para a nuvem e devolver (spec 023): a alma do jogador local é da dona na nuvem e volta', async () => {
+    const s = servidor();
+    const a = canal();
+    const dados = {
+      versao: 1,
+      edicoes: {},
+      jogador: null,
+      hora: 0.3,
+      extras: { alma: { local: { feitas: ['r1'], progresso: { r2: 1 } } } },
+    };
+    await s.g.receber(
+      a,
+      entrar(ident('ana'), {
+        criar: { ...criarMundo, tema: 'rancho-alegre', estilo: obterTema('rancho-alegre').mundo, dados },
+      }),
+    );
+    await s.avancar(100);
+    const bv = a.recebidas.find((m) => m.t === 'bemvindo') as Extract<
+      RespostaServidor,
+      { t: 'bemvindo' }
+    >;
+    const n = s.g.ativas.get(bv.sala.codigo)!.nucleo;
+    expect(n.estado.almas.get('ana')).toMatchObject({ feitas: ['r1'], progresso: { r2: 1 } });
+    expect(n.estado.almas.has('local')).toBe(false);
+    await s.g.receber(a, JSON.stringify({ t: 'dono', acao: 'devolver' }));
+    const dev = a.recebidas.find((m) => m.t === 'devolvido') as Extract<
+      RespostaServidor,
+      { t: 'devolvido' }
+    >;
+    const alma = dev.dados.extras.alma as Record<string, { feitas: string[] }>;
+    expect(Object.keys(alma)).toEqual(['local']);
+    expect(alma.local.feitas).toEqual(['r1']);
+    definirEstiloMundo(ESTILO_PADRAO);
+  });
+
   it('levar para a nuvem um mundo com lixo (bicho em x = 1e12): a sala anda rápido e manda quadros', async () => {
     const s = servidor();
     const a = canal();
@@ -1204,10 +1239,22 @@ describe('canteiro de obras na sala (spec 014)', () => {
     const obra1 = celulasPlanejadas(plano, 1);
     for (const c of obra1) await por(c);
     expect(nucleo.obrasFeitas).toEqual([1]);
+    // spec 023: a missão c1 conclui para a ajudante, pelo servidor de verdade (só para ela)
+    const almaDe = (c: ReturnType<typeof canal>) =>
+      quadros(c).flatMap((q) => (q.eventos ?? []).filter((e) => e.e === 'alma'));
+    const c1 = almaDe(a).flatMap((e) => (e.e === 'alma' ? e.missoes : [])).find((m) => m.concluiu);
+    expect(c1).toMatchObject({ id: 'c1', fantasia: 'capacete-obra' });
+    expect(almaDe(b)).toEqual([]);
+    // fixar a missão do cartão pelo canal (o saneamento da nuvem deixa passar)
+    await s.g.receber(a, JSON.stringify({ t: 'almaFixar', missao: 'c3', seq: ++seq }));
+    await s.avancar(50);
+    expect(nucleo.estado.almas.get('ana')!.fixada).toBe('c3');
     // a obra 2 fica pela metade (três blocos)
     const obra2 = celulasPlanejadas(plano, 2);
     for (const c of obra2.slice(0, 3)) await por(c);
     const antes = nucleo.obras();
+    const almaAntes = JSON.parse(JSON.stringify(nucleo.estado.almas.get('ana')));
+    expect(almaAntes.feitas).toEqual(['c1']);
     expect(antes['1']).toMatchObject({ feita: true, ajudantes: [['ana', 'ana']] });
     expect(antes['2']?.cheias).toHaveLength(3);
     expect(s.g.ativas.get(outra)!.nucleo.obrasFeitas).toEqual([]);
@@ -1226,6 +1273,12 @@ describe('canteiro de obras na sala (spec 014)', () => {
     expect(novo).not.toBe(nucleo);
     expect(novo.obrasFeitas).toEqual([1]);
     expect(novo.obras()).toEqual(antes);
+    // spec 023: a alma da Ana neste mundo acorda igual, e o quadro de missões vai para ela
+    expect(JSON.parse(JSON.stringify(novo.estado.almas.get('ana')))).toEqual(almaAntes);
+    const quadroAlma = quadros(a2)
+      .flatMap((q) => q.eventos ?? [])
+      .find((e) => e.e === 'alma' && e.quadro);
+    expect(quadroAlma).toMatchObject({ quadro: { feitas: ['c1'], fixada: 'c3' } });
     for (const c of obra1) expect(novo.estado.mundo.bloco(c.x, c.y, c.z)).toBe(c.bloco);
     for (const c of obra2.slice(0, 3)) expect(novo.estado.mundo.bloco(c.x, c.y, c.z)).toBe(c.bloco);
     // o "bem-vindo" de quem volta já traz as obras (o cliente pinta igual)

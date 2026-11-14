@@ -19,6 +19,7 @@ import type { IdGesto } from '../personagem/gestos';
 import type { DonosExportados, DonosMudados } from '../world/edicoes';
 import type { PlanoVeiculo } from '../jogo/veiculos';
 import type { OcorrenciaVeiculo } from '../jogo/transito';
+import type { Ganho, MissaoMovida, VistaAlmaMundo } from '../jogo/alma';
 
 /** Sobe quando uma mensagem muda de formato (cliente e servidor precisam concordar). */
 export const VERSAO_PROTOCOLO = 1;
@@ -159,7 +160,9 @@ type ComandoSemSeq =
    */
   | { t: 'pularPerto'; alvo: string }
   /** Spec 021: "vem cá!" para a sala toda (no máximo 1 a cada ESPERA_CHAMAR s). */
-  | { t: 'chamarAmigos' };
+  | { t: 'chamarAmigos' }
+  /** Spec 023: escolhe a missão do cartão do HUD (uma aberta; null: a primeira). */
+  | { t: 'almaFixar'; missao: string | null };
 
 /** Atalhos de teste e captura (o servidor da nuvem só aceita em ambiente de testes). */
 export type Depuracao =
@@ -365,7 +368,15 @@ export type EventoNucleo =
    * ar e porta aberta), saiu dele, o sorvete chegou à vaga, a polícia fez "uí-uí" na praça ou
    * o veículo encalhado sumiu num sopro (x, z: onde).
    */
-  | { e: 'veiculo'; id: number; o: OcorrenciaVeiculo; x: number; z: number };
+  | { e: 'veiculo'; id: number; o: OcorrenciaVeiculo; x: number; z: number }
+  /**
+   * Spec 023: a alma deste jogador neste mundo, só para ele. `ganho`: o que o núcleo decidiu
+   * que ele ganhou neste quadro (o aparelho soma ao perfil da criança e faz a festa; os
+   * presentes de nível saem do XP pela regra pura). `missoes`: as que andaram, terminaram
+   * (`concluiu`, com a `fantasia` de prêmio) ou passaram sem prêmio (`pulou`). `quadro`: o
+   * quadro de missões inteiro, ao entrar e quando as abertas, a fixada ou o baú mudam.
+   */
+  | { e: 'alma'; missoes: MissaoMovida[]; ganho: Ganho; quadro?: VistaAlmaMundo };
 
 /**
  * Spec 014 (T13): os veículos da cidade. Todo quadro da cidade leva o relógio deles (`t`); os
