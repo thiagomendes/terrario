@@ -113,3 +113,34 @@ for (const [nome, m] of Object.entries(MUNDOS))
       await page.screenshot({ path: `${PASTA}/${nome}-${tamanho}-5-ondinha.png` });
       await page.context().close();
     });
+
+test('guia: o convite (o baú com "?") e a roda com "Missões" e "Baú"', async ({ browser }) => {
+  test.setTimeout(400_000);
+  mkdirSync(PASTA, { recursive: true });
+  const page = await abrirMundo(browser, {
+    id: 'guia-convite',
+    tema: 'cidade-grande',
+    extras: MUNDOS.cidade.extras,
+    tamanho: 'deitado',
+  });
+  await assentar(page);
+  await page.evaluate(() => window.__guia!.conviteEm(4));
+  await expect(page.locator('[data-alma-missao].convite')).toBeVisible({ timeout: 20_000 });
+  await page.waitForTimeout(300);
+  await page.screenshot({ path: `${PASTA}/convite-1-brilha.png` });
+  await page.waitForTimeout(1500);
+  await page.screenshot({ path: `${PASTA}/convite-2-quieto.png` });
+  await tocar(page, '.menu-hud');
+  await page.waitForTimeout(700);
+  await expect(page.locator('.roda.aberta button.ativo[data-item="missoes"]')).toBeVisible();
+  await expect(page.locator('.roda.aberta button.ativo[data-item="bau"]')).toBeVisible();
+  await page.screenshot({ path: `${PASTA}/convite-3-roda.png` });
+  await tocar(page, '.menu-hud');
+  await page.waitForTimeout(500);
+  // tocar no convite abre o quadro
+  await tocar(page, '[data-alma-missao].convite');
+  await page.waitForSelector('[data-alma-quadro]', { timeout: 10_000 });
+  await page.waitForTimeout(600);
+  await page.screenshot({ path: `${PASTA}/convite-4-quadro.png` });
+  await page.context().close();
+});
