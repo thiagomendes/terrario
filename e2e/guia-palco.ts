@@ -157,6 +157,8 @@ export async function andarPelaTrilha(
         chegou = !!chave && (g.chegou() || !a || a.chave !== chave);
         break;
       }
+      // pulo repetido no modo criativo liga o voo: a criança anda no chão
+      if (ctl.voando()) e.voar?.(false);
       const rota = g.caminho();
       const p = e.jogadorPes!();
       if (rota.length < 2) {

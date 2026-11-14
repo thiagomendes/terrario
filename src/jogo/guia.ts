@@ -6,7 +6,7 @@
  * do convite (~2 min brincando sem missão).
  */
 import type { Missao } from './alma';
-import type { V3 } from './caminho';
+import { ehSolido, type V3 } from './caminho';
 import { lavouraDoBloco, madura } from './plantio';
 import { Bloco } from '../world/blocks';
 import type { LoteCidade, PlanoCidade } from '../world/cidade';
@@ -655,7 +655,11 @@ export function alisar(
   return out;
 }
 
-/** O que a trilha do sítio evita: a roça plantada (e a terra arada) e a beira da cerca. */
+/**
+ * O que a trilha do sítio evita: a roça plantada (e a terra arada), a beira da cerca e a das
+ * paredes (o silo, o celeiro: um bloco cheio na altura da cabeça do lado). Degrau de morro não
+ * conta (ele só tem um bloco).
+ */
 export function ruimNoSitio(bloco: (x: number, y: number, z: number) => number) {
   const cerca = (b: number) =>
     b === Bloco.CERCA || b === Bloco.PORTEIRA || b === Bloco.PORTEIRA_ABERTA;
@@ -667,7 +671,7 @@ export function ruimNoSitio(bloco: (x: number, y: number, z: number) => number) 
       [0, 1],
       [0, -1],
     ])
-      if (cerca(bloco(x + dx, y, z + dz))) return true;
+      if (cerca(bloco(x + dx, y, z + dz)) || ehSolido(bloco(x + dx, y + 1, z + dz))) return true;
     return false;
   };
 }

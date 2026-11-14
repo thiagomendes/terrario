@@ -124,7 +124,7 @@ test('vídeo: r1 no Rancho, celular deitado, com som', async ({ browser }) => {
   await assentar(page);
   await page.touchscreen.tap(422, 200);
   await page.waitForTimeout(800);
-  const parar = await filmar(page, 'r1', 60);
+  const parar = await filmar(page, 'r1', 75);
   await page.waitForTimeout(1500);
   await escolherNaRoda(page, 'missoes');
   await page.waitForSelector('[data-alma-quadro]', { timeout: 20_000 });
@@ -135,37 +135,46 @@ test('vídeo: r1 no Rancho, celular deitado, com som', async ({ browser }) => {
   console.log(`guia-video: r1 ${r.alvo} ${r.s.toFixed(1)} s`);
   await page.waitForTimeout(1000);
   // colhe o que está maduro, devagar (como a criança), até a missão acabar
-  for (let k = 0; k < 7; k++) {
+  const pular: string[] = [];
+  for (let k = 0; k < 14; k++) {
     if (await page.locator('[data-alma-festa]').count()) break;
-    const ok = await page.evaluate(async () => {
+    const r = await page.evaluate(async (pular) => {
       const e = window.__brumaluz!;
       const [px, py, pz] = e.jogadorPes!();
       let melhor: [number, number, number] | null = null;
-      for (let dx = -5; dx <= 5; dx++)
-        for (let dz = -5; dz <= 5; dz++)
+      for (let dx = -7; dx <= 7; dx++)
+        for (let dz = -7; dz <= 7; dz++)
           for (let dy = -1; dy <= 1; dy++) {
             const x = Math.floor(px) + dx;
             const y = Math.floor(py) + dy;
             const z = Math.floor(pz) + dz;
-            if (![72, 76, 80].includes(e.bloco!(x, y, z))) continue;
+            if (![72, 76].includes(e.bloco!(x, y, z)) || pular.includes(`${x},${y},${z}`)) continue;
             if (!melhor || Math.hypot(x - px, z - pz) < Math.hypot(melhor[0] - px, melhor[2] - pz))
               melhor = [x, y, z];
           }
-      if (!melhor) return false;
+      if (!melhor) return 'nada';
       const [x, y, z] = melhor;
-      if (Math.hypot(x + 0.5 - px, z + 0.5 - pz) > 3) {
-        // chega perto andando
-        e.apontar!(Math.atan2(x + 0.5 - px, z + 0.5 - pz), 0.5);
+      const d = Math.hypot(x + 0.5 - px, z + 0.5 - pz);
+      // chega perto andando (pelo corredor), até uns 2 blocos
+      for (let t = 0; t < 40; t++) {
+        const q = e.jogadorPes!();
+        const dd = Math.hypot(x + 0.5 - q[0], z + 0.5 - q[2]);
+        if (dd < 2.2) break;
+        e.apontar!(Math.atan2(x + 0.5 - q[0], z + 0.5 - q[2]), 0.5);
         e.controleDireto!.mover(0.6, 0);
-        await new Promise((r) => setTimeout(r, 500));
-        e.controleDireto!.mover(0, 0);
+        await new Promise((r) => setTimeout(r, 80));
       }
+      e.controleDireto!.mover(0, 0);
+      await new Promise((r) => setTimeout(r, 250));
       e.mirarPonto!(x + 0.5, y + 0.4, z + 0.5);
       e.minerar!(0.6, true);
-      return true;
-    });
-    if (!ok) break;
-    await page.waitForTimeout(2200);
+      await new Promise((r) => setTimeout(r, 900));
+      return [72, 76].includes(e.bloco!(x, y, z)) ? `não ${x},${y},${z}` : `colheu ${d.toFixed(1)}`;
+    }, pular);
+    if (r.startsWith('não ')) pular.push(r.slice(4));
+    console.log(`guia-video: r1 ${r}`);
+    if (r === 'nada') break;
+    await page.waitForTimeout(1300);
   }
   await page.waitForSelector('[data-alma-festa]', { timeout: 20_000 }).catch(() => undefined);
   await page.waitForTimeout(2500);
