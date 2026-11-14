@@ -8,7 +8,7 @@ import { EVENTO_BAU, EVENTO_LOJINHA, EVENTO_MISSOES, ligarAlmaUi } from './ui/al
 import { ligarGuiaMissao, QUADRO_SVG } from './ui/alma/guia';
 import { arte as arteAlma } from './ui/alma/arte';
 import { EXTRAS_RODA } from './ui/menuRoda';
-import { CATEGORIAS_PREMIUM, ganhoTemAlgo, mundoAlmaDaPlanta, nivelDoXp } from './jogo/alma';
+import { CATEGORIAS_PREMIUM, ganhoTemAlgo, mundoAlmaDoEstilo, nivelDoXp } from './jogo/alma';
 import type { EventoNucleo } from './nucleo/protocolo';
 import { medirJanela, tamanhoDoCanvas } from './ui/telaCheia';
 import { criarCena } from './render/cena';
@@ -220,7 +220,7 @@ async function iniciar(app: HTMLElement): Promise<void> {
   // spec 023 (T14): a lojinha premium na roda do menu, de qualquer mundo (a roda é montada
   // com a cena; a alma, que abre a lojinha, vem depois e ouve o pedido)
   // spec 030: o quadro de missões (só onde há missões) e o baú moram na roda do menu
-  if (mundoAlmaDaPlanta(temaMundo.mundo.povoado?.planta) && !EXTRAS_RODA.some((x) => x.id === 'missoes'))
+  if (mundoAlmaDoEstilo(temaMundo.mundo) && !EXTRAS_RODA.some((x) => x.id === 'missoes'))
     EXTRAS_RODA.push({
       id: 'missoes',
       nome: 'Missões',

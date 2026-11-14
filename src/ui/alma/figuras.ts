@@ -74,7 +74,10 @@ export function desenhoDaObra(n: number): string {
  * ganha). As roupas no boneco da própria criança (sem a fantasia da 017), cada uma do jeito que
  * ela aparece melhor (a capa de costas); os bichinhos sozinhos.
  */
-const FOTO_PREMIUM: Record<string, { recorte: RecorteBoneco; giro: number; bicho?: IdBichoPremium }> = {
+const FOTO_PREMIUM: Record<
+  string,
+  { recorte: RecorteBoneco; giro: number; bicho?: IdBichoPremium }
+> = {
   'camiseta-aquario': { recorte: 'corpo', giro: 0.36 },
   'tenis-cometa': { recorte: 'corpo', giro: 0.75 },
   'capa-estrelas': { recorte: 'corpo', giro: Math.PI - 1.05 },
@@ -160,6 +163,10 @@ export function figuraMissao(m: Pick<Missao, 'desenho'>): HTMLElement {
   } else if (d.tipo === 'bicho') {
     caixa.appendChild(figura(d.bicho, 'principal'));
     caixa.appendChild(figura(`item:${d.item}`, 'selo'));
+  } else if (d.tipo === 'arte') {
+    // spec 031: os desenhos próprios (o que fazer e o selinho da ação)
+    caixa.appendChild(figura(d.principal, 'principal'));
+    caixa.appendChild(figura(d.selo, 'selo'));
   } else if (d.tipo === 'lugares') {
     const trio = document.createElement('span');
     trio.className = 'alma-trio';
@@ -179,6 +186,8 @@ export function desenhoDaFigurinha(m: Pick<Missao, 'desenho'>): string {
   if (d.tipo === 'bicho') return d.bicho;
   // o passeio (030): o tênis e as casinhas, nada de sorvete (a c6 é que é a sorveteria)
   if (d.tipo === 'lugares') return 'passeio';
+  // spec 031: o resultado (o ovinho na mochila, o bicho com coração), nunca o da esquerda
+  if (d.tipo === 'arte') return d.resultado;
   return `item:${d.item}`;
 }
 
@@ -188,5 +197,6 @@ export function desenhoDaBolinha(m: Pick<Missao, 'desenho'>, i: number): string 
   if (d.tipo === 'lugares') return d.usos[i] ?? 'estrela';
   if (d.tipo === 'bicho') return d.bicho;
   if (d.tipo === 'item') return `item:${d.item}`;
+  if (d.tipo === 'arte') return d.bolinha;
   return 'estrela';
 }

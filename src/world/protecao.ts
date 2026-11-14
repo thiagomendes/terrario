@@ -32,10 +32,12 @@ import {
   TAM_X,
   TAM_Z,
   alturaTerreno,
+  cantoDoMundo,
   cidadeDoMundo,
   estiloMundo,
   estruturaDoChunk,
 } from './chunk';
+import { celulaDoBolo, type PlanoCanto } from './cantoMissoes';
 import {
   frenteDaPorta,
   noLote,
@@ -231,6 +233,17 @@ export function protecaoDoChunk(
           if (i < 0 || (pintada(i) && rascunho[i] !== Bloco.AR)) continue;
           marcar(i, Protecao.OBRA);
         }
+  } else if (e.tipo === 'canto') {
+    // spec 031: o canto das missões. O chão das peças não se cava; o ninho, a cova da caixa
+    // de areia e o lugar dos ovinhos ficam vazios; as células do bolo são de obra (só o bloco
+    // certo entra; cheias, não quebram)
+    const p: PlanoCanto = e.plano;
+    for (const [wx, wz, h] of p.chao) chao(wx, wz, h);
+    for (const [wx, y, wz] of p.passagens) passagem(wx, y, wz);
+    for (const c of p.bolo) {
+      const i = idx(c.x, c.y, c.z);
+      if (i >= 0) marcar(i, Protecao.OBRA);
+    }
   } else {
     // ruína (ou estrutura do tema): piso 7x7 no meio do chunk, mais a margem
     const { h } = e;
@@ -252,13 +265,15 @@ export function protecaoDoChunk(
   const lugar: LugarProtecao =
     e.tipo === 'cidade'
       ? 'cidade'
-      : e.tipo === 'povoado'
-        ? e.plano.lotes.some((l) => l.uso !== undefined)
-          ? 'sitio'
-          : 'vila'
-        : e.forma === 'ruina'
-          ? 'ruina'
-          : 'estrutura';
+      : e.tipo === 'canto'
+        ? 'estrutura'
+        : e.tipo === 'povoado'
+          ? e.plano.lotes.some((l) => l.uso !== undefined)
+            ? 'sitio'
+            : 'vila'
+          : e.forma === 'ruina'
+            ? 'ruina'
+            : 'estrutura';
   return { lugar, y0, y1, dados: cls.slice(y0 * CAMADA, (y1 + 1) * CAMADA) };
 }
 
@@ -328,6 +343,11 @@ export interface ProtecaoMundo {
 
 /** Chunks guardados por padrão (cada um guarda só a faixa protegida, poucos KB). */
 export const LIMITE_CHUNKS_PROTECAO = 512;
+/**
+ * Spec 031: o "canteiro" do bolo do Doce Reino (as células planejadas dele usam o mesmo formato
+ * das obras da cidade: os fantasmas, a mira e o núcleo leem igual). Longe dos da cidade (1 a 6).
+ */
+export const CANTEIRO_BOLO = 31;
 
 export function criarProtecaoMundo(
   semente: number,
@@ -378,6 +398,9 @@ export function criarProtecaoMundo(
     },
     doChunk,
     planejado(x, y, z) {
+      // spec 031: a célula do bolo do canto das missões (sempre aberta)
+      const b = celulaDoBolo(cantoDoMundo(semente), x, y, z);
+      if (b) return { ...b, canteiro: CANTEIRO_BOLO, meta: 0 };
       const c = cidadeDoMundo(semente);
       if (!c) return null;
       const p = planejadoNaCidade(c, x, y, z);

@@ -43,6 +43,10 @@ const COR_BLOCO: Record<number, [number, number, number]> = {
   [Bloco.ESCADA]: [0.74, 0.52, 0.3],
   [Bloco.TOLDO_VERMELHO]: [0.95, 0.3, 0.3],
   [Bloco.TOLDO_VERDE]: [0.35, 0.8, 0.4],
+  // spec 031: o bolo do Doce Reino (chocolate, chantilly e a vela cor-de-rosa)
+  [Bloco.LA_PRETA]: [0.55, 0.3, 0.18],
+  [Bloco.TERRA_NEVADA]: [1, 0.88, 0.92],
+  [Bloco.TOCHA]: [1, 0.55, 0.7],
 };
 /** A base é branca: o azul vem da textura, e a cor do bloco tinge por cima. */
 const AZUL: [number, number, number] = [1, 1, 1];

@@ -24,13 +24,15 @@ import {
   type MundoDaRegra,
   type RecusaProtecao,
 } from '../jogo/permissao';
-import { Protecao, criarProtecaoMundo, replantioDaLavoura } from '../world/protecao';
+import { CANTEIRO_BOLO, Protecao, criarProtecaoMundo, replantioDaLavoura } from '../world/protecao';
+import { celulaDoBolo, ehFossilDoCanto } from '../world/cantoMissoes';
 import { criarCacheGeracional } from './mundo';
 import {
   TAM_X,
   ALTURA,
   TAM_Z,
   alturaTerreno,
+  cantoDoMundo,
   cidadeDoMundo,
   encontrarNascimento,
   estiloMundo,
@@ -48,7 +50,9 @@ import {
   ganhoTemAlgo,
   ganhoVazio,
   juntarResultado,
-  mundoAlmaDaPlanta,
+  abertas,
+  missaoDoHud,
+  mundoAlmaDoEstilo,
   normalizarAlmaDoMundo,
   progressoObra,
   registrarEvento,
@@ -449,7 +453,7 @@ export function criarNucleo(op: OpcoesNucleo) {
    * ações soltas (pôr bloco, plantar, colher, dar comida, fazer receita, lugar novo) dão XP e
    * pontos em todo tema, com os mesmos valores; missões e banca, só nos dois.
    */
-  const mundoAlma = mundoAlmaDaPlanta(estiloMundo().povoado?.planta);
+  const mundoAlma = mundoAlmaDoEstilo(estiloMundo());
   const plantaDoMundo = estiloMundo().povoado?.planta ?? 'povoado';
   const almas = new Map<string, AlmaMundo>(
     Object.entries(normalizarAlmaDoMundo(extras['alma'], mundoAlma)),
@@ -625,6 +629,109 @@ export function criarNucleo(op: OpcoesNucleo) {
     }
   }
 
+  // ------------------------------------------------------------ canto das missões (spec 031)
+  /**
+   * O canto das missões da Era dos Dinos e do Doce Reino (perto do nascer, da geração). O que é
+   * de cada missão volta quando ela é escolhida de novo (nunca sozinho, com o tempo): os 3
+   * ovinhos do ninho (d1), os dois bichos do pasto ainda sem comida (d2, e2), as rochas de osso
+   * (d3) e o bolo vazio (e1).
+   */
+  const canto = cantoDoMundo(semente);
+  /** Quem pôs bloco no bolo desta vez (ganha quando ele fica pronto). */
+  const ajudantesBolo = new Set<string>();
+  /** Os bichos do pasto que o canto chamou (o guia da criança vai até eles). */
+  const bichosDoPasto = new Set<number>();
+  /** Missões do canto que contam para o jogador agora (abertas: as duas da vez, ou o bis). */
+  const missaoAberta = (id: string, missao: string) =>
+    !!mundoAlma && abertas(almaDe(id), mundoAlma).some((m) => m.id === missao);
+  const MARCA_OVO = 'ninho:';
+  /** Perto do bicho (blocos): a comida aparece na mão. */
+  const PERTO_DO_BICHO = 3.2;
+  function prepararCanto(j: Jogador, missao: string | null): void {
+    if (!canto || !mundoAlma || !missao || !missaoAberta(j.id, missao)) return;
+    if (missao === 'd1')
+      canto.ovos.forEach(([x, y, z], i) => {
+        const marca = `${MARCA_OVO}${i}`;
+        if (mundoItens.itens.some((it) => it.marca === marca)) return;
+        mundoItens.pousar('ovo', 1, x, y + 0.13, z, marca);
+      });
+    else if (missao === 'd2' || missao === 'e2') prepararPasto();
+    else if (missao === 'd3') {
+      for (const [x, y, z] of canto.fosseis)
+        if (mundo.bloco(x, y, z) !== Bloco.MINERIO_FERRO) editar(x, y, z, Bloco.MINERIO_FERRO);
+    } else if (missao === 'e1' && canto.bolo.every((c) => mundo.bloco(c.x, c.y, c.z) === c.bloco)) {
+      // o bolo de antes já foi festejado: a mesa fica limpa para fazer outro
+      for (const c of canto.bolo) editar(c.x, c.y, c.z, Bloco.AR);
+      ajudantesBolo.clear();
+    }
+  }
+  /** Dois bichos do pasto ainda sem comida (os que faltarem nascem ali, sem dono). */
+  function prepararPasto(): void {
+    if (!canto) return;
+    const [px, py, pz] = canto.pasto;
+    for (const id of [...bichosDoPasto]) {
+      const c = criatura(id);
+      if (!c || c.estado === 'morrendo' || Math.hypot(c.x - px, c.z - pz) > 24)
+        bichosDoPasto.delete(id);
+    }
+    const semComida = populacao.lista.filter(
+      (c) =>
+        c.tipo === 'cervo' &&
+        !c.criado &&
+        c.estado !== 'morrendo' &&
+        Math.hypot(c.x - px, c.z - pz) < 10,
+    );
+    for (const c of semComida) if (bichosDoPasto.size < 2) bichosDoPasto.add(c.id);
+    for (let k = semComida.length; k < 2; k++) {
+      const a = canto.yaw + (k ? 1.4 : -1.4);
+      const c = populacao.adicionar(
+        'cervo',
+        px + Math.sin(a) * 1.6,
+        py + 0.2,
+        pz + Math.cos(a) * 1.6,
+      );
+      bichosDoPasto.add(c.id);
+    }
+  }
+  /**
+   * A comida na mão ao chegar perto de um bicho do pasto ainda sem comida (d2, e2): o capim
+   * dourado ou o broto-doce (o mesmo item, o trigo), como os blocos que a obra dá. Só para quem
+   * tem a missão no selinho.
+   */
+  function cuidarDoPasto(): void {
+    if (!canto || !mundoAlma) return;
+    for (const j of jogadores.values()) {
+      if (j.sobrevivencia.estado.morto) continue;
+      const m = missaoDoHud(almaDe(j.id), mundoAlma);
+      if (m?.id !== 'd2' && m?.id !== 'e2') continue;
+      if (j.inventario.contar('trigo') > 0) continue;
+      const perto = populacao.lista.some(
+        (c) =>
+          c.tipo === 'cervo' &&
+          !c.criado &&
+          c.estado !== 'morrendo' &&
+          Math.hypot(c.x - j.tel.x, c.z - j.tel.z) <= PERTO_DO_BICHO,
+      );
+      if (!perto) continue;
+      // na mão: a casinha de agora, se vazia; senão a primeira vazia da barra
+      const slots = j.inventario.slots;
+      let slot = slots[j.tel.slot] ? -1 : j.tel.slot;
+      for (let i = 0; i < 9 && slot < 0; i++) if (!slots[i]) slot = i;
+      if (slot >= 0) j.inventario.definir(slot, { item: 'trigo', qtd: 2 });
+      else if (j.inventario.adicionar('trigo', 2) >= 2) continue;
+      j.eventos.push({ e: 'coletou', item: 'trigo', qtd: 2 });
+    }
+  }
+  /** O bolo ganhou um bloco de quem tem a e1: pronto, todos que ajudaram ganham. */
+  function encheuBolo(quem: string): void {
+    if (!canto) return;
+    ajudantesBolo.add(quem);
+    almaEvento(quem, 'bolo:bloco');
+    if (!canto.bolo.every((c) => mundo.bloco(c.x, c.y, c.z) === c.bloco)) return;
+    for (const id of ajudantesBolo) almaEvento(id, 'bolo:feito');
+    ajudantesBolo.clear();
+  }
+
   /** Lugares novos (conferidos no passo, a cada meio segundo). */
   function cuidarDosLugares(): void {
     for (const j of jogadores.values()) {
@@ -797,6 +904,8 @@ export function criarNucleo(op: OpcoesNucleo) {
     if (mundoAlma) {
       almaObrasFeitas(id);
       pedirQuadroAlma(id);
+      // spec 031: a missão do canto que ficou no selinho (o ovinho do ninho esperando)
+      prepararCanto(j, missaoDoHud(almaDe(id), mundoAlma)?.id ?? null);
     }
   }
 
@@ -866,6 +975,11 @@ export function criarNucleo(op: OpcoesNucleo) {
       const pl = protecao.planejado(x, y, z);
       if (pl && mesmoBlocoDaObra(bloco, pl.bloco)) encheuObra(pl, dono);
     }
+    // spec 031: o bloco certo no bolo do canto
+    if (canto?.bolo.length && dono !== undefined && bloco !== Bloco.AR) {
+      const b = celulaDoBolo(canto, x, y, z);
+      if (b && b.bloco === bloco) encheuBolo(dono);
+    }
     // a lavoura que cresce: entra ao ser plantada, sai quando amadurece ou some
     const k = `${x},${y},${z}`;
     if (ehLavoura(bloco) && !madura(bloco)) {
@@ -926,6 +1040,17 @@ export function criarNucleo(op: OpcoesNucleo) {
       j.sobrevivencia.estado.morto
     ) {
       recusar(j, c.id, 'quebrar', [c, { x, y: y - 1, z }, { x, y: y + 1, z }]);
+      return;
+    }
+    // spec 031: a rocha de osso do canto sai com um toque, só para quem tem a d3
+    if (b === Bloco.MINERIO_FERRO && ehFossilDoCanto(canto, x, y, z)) {
+      if (!missaoAberta(j.id, 'd3')) {
+        recusar(j, c.id, 'quebrar', [c], { motivo: 'mundo', lugar: 'estrutura' });
+        return;
+      }
+      editar(x, y, z, Bloco.AR);
+      j.acoes[0]++;
+      almaEvento(j.id, 'escavou:fossil');
       return;
     }
     // spec 016: o que o mundo construiu não quebra; o que alguém pôs, só ele e o dono do mundo
@@ -1175,8 +1300,15 @@ export function criarNucleo(op: OpcoesNucleo) {
     const plantavel = !lav || podePlantar(mundo.bloco(x, y - 1, z), blocoAtual);
     // spec 014: a célula da obra aberta pede um bloco; com a colher de pedreiro, ele entra
     // sem gastar nada (na sobrevivência também), sempre com a direção da planta
-    const plano = cidade ? protecao.planejado(x, y, z) : null;
-    const daColher = p?.item === COLHER_PEDREIRO && !!plano && plano.bloco === bloco;
+    const plano = cidade || canto?.bolo.length ? protecao.planejado(x, y, z) : null;
+    // spec 031: no bolo do canto, quem tem a e1 põe o bloco certo de graça (a mão do guia
+    // mostra qual; sem colher, que é só da cidade)
+    const doBolo =
+      !!plano &&
+      plano.canteiro === CANTEIRO_BOLO &&
+      plano.bloco === bloco &&
+      missaoAberta(j.id, 'e1');
+    const daColher = (p?.item === COLHER_PEDREIRO && !!plano && plano.bloco === bloco) || doBolo;
     if (plano && plano.bloco === bloco) meta = plano.meta;
     const temItem =
       modo === 'criativo' || daColher || (!!p && blocoDoItem(p.item) === bloco && p.qtd > 0);
@@ -2454,6 +2586,8 @@ export function criarNucleo(op: OpcoesNucleo) {
         // spec 023: a missão do cartão do HUD (só uma aberta; null volta à primeira)
         const e = almaDe(j.id);
         if (e && mundoAlma && fixar(e, mundoAlma, c.missao)) pedirQuadroAlma(j.id);
+        // spec 031: escolheu (ou escolheu de novo) uma missão do canto: o que é dela volta
+        prepararCanto(j, c.missao);
         break;
       }
       case 'salvar':
@@ -2576,7 +2710,9 @@ export function criarNucleo(op: OpcoesNucleo) {
       for (const c of coletados) {
         lista[c.quem].eventos.push({ e: 'coletou', item: c.item, qtd: c.qtd });
         // spec 023: só o ovo que a galinha pôs (o jogado no chão e pego de novo não conta)
-        if (c.item === 'ovo' && ovosPostos > 0) {
+        // spec 031: o ovinho do ninho do canto (só o que o canto pôs; pegar de novo não conta)
+        if (c.marca?.startsWith(MARCA_OVO)) almaEvento(lista[c.quem].id, 'coletou:ovo:ninho');
+        else if (c.item === 'ovo' && ovosPostos > 0) {
           const q = Math.min(c.qtd, ovosPostos);
           ovosPostos -= q;
           almaEvento(lista[c.quem].id, 'coletou:ovo', q);
@@ -2590,6 +2726,8 @@ export function criarNucleo(op: OpcoesNucleo) {
     if (n % 10 === 0) cuidarDosLugares();
     // spec 023: o baú da banca entrega o que agora cabe, a cada segundo
     if (mundoAlma && n % 20 === 0) entregarBauBanca();
+    // spec 031: a comida na mão perto do bicho do pasto, 4 vezes por segundo
+    if (canto && n % 5 === 0) cuidarDoPasto();
 
     // spec 014: o pedreiro do canteiro (aparece, acena e dá a colher), os moradores da cidade
     // e o cachorro da casinha

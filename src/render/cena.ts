@@ -7,7 +7,8 @@ import { antesDeSair, saindoPorConta } from '../pagina';
 import { povoadosPerto } from '../jogo/povoados';
 import { generoDoMorador, nomeDoMorador } from '../temas/nomes';
 import { definirRegioesSemPovoado, regiaoDoChunk } from '../world/povoado';
-import { cidadeDoMundo, encontrarNascimento } from '../world/chunk';
+import { cantoDoMundo, cidadeDoMundo, encontrarNascimento } from '../world/chunk';
+import type { PlanoCanto } from '../world/cantoMissoes';
 import { povoadoDoTema, tema } from '../temas/ativo';
 import {
   criarVozesGravadas,
@@ -32,6 +33,7 @@ import {
 import { AVISO_ESPERA_CASA, AVISO_VOLTA_CASA, criarAvisosProtecao } from '../player/avisosProtecao';
 import { criarCadeado } from '../ui/cadeado';
 import {
+  CANTEIRO_BOLO,
   criarProtecaoMundo,
   NOMES_PROTECAO,
   nomeProtecao,
@@ -370,6 +372,10 @@ export interface EstadoDepuracao {
   /** Povoados a até 900 blocos do jogador (centro da praça e altura do piso). */
   /** Spec 014: o plano da Cidade Grande do mundo (testes de tela), ou null. */
   cidade?: () => PlanoCidade | null;
+  /** Spec 031: o canto das missões (Era dos Dinos e Doce Reino; null nos outros). */
+  canto?: () => PlanoCanto | null;
+  /** Spec 031: a criança tem a missão do bolo (os fantasmas do bolo aceitam o toque). */
+  boloLiberado?: boolean;
   /** Spec 030: os sítios (Rancho) a até 220 blocos do jogador, do mais perto ao mais longe. */
   sitios?: () => PlanoPovoado[];
   /** Spec 014 (T10): o horizonte de torres (null fora da cidade). */
@@ -850,6 +856,7 @@ export function criarCena(
   estado.tema = temaAtual.id;
   if (temaAtual.ceu.planeta) estado.astro = [...temaAtual.ceu.planeta.direcao];
   estado.cidade = () => cidadeDoMundo(semente);
+  estado.canto = () => cantoDoMundo(semente);
   estado.sitios = () => {
     const j = controle.jogador;
     return povoadosPerto(j.x, j.z, 220, semente)
@@ -1170,8 +1177,14 @@ export function criarCena(
     };
     if (m?.emissiveColor) {
       const nivel = (m.emissiveTexture?.level ?? 1) * (m.emissiveIntensity ?? 1);
-      cor.set(m.emissiveColor.r * nivel, m.emissiveColor.g * nivel, m.emissiveColor.b * nivel, m.alpha);
-    } else cor.set(glow.neutralColor.r, glow.neutralColor.g, glow.neutralColor.b, glow.neutralColor.a);
+      cor.set(
+        m.emissiveColor.r * nivel,
+        m.emissiveColor.g * nivel,
+        m.emissiveColor.b * nivel,
+        m.alpha,
+      );
+    } else
+      cor.set(glow.neutralColor.r, glow.neutralColor.g, glow.neutralColor.b, glow.neutralColor.a);
   };
   const tapaOGlow = (m: Mesh) => {
     oclusoresGlow.add(m.uniqueId);
@@ -3968,7 +3981,8 @@ export function criarCena(
     const j = controle.jogador;
     caixasCriaturas.length = 0;
     for (const c of replicaCriaturas.lista) {
-      if (c.tipo === 'peixe' || c.estado === 'morrendo' || c.estado === 'seguir' || c.domada) continue;
+      if (c.tipo === 'peixe' || c.estado === 'morrendo' || c.estado === 'seguir' || c.domada)
+        continue;
       if (Math.abs(c.x - j.x) > 4 || Math.abs(c.z - j.z) > 4 || Math.abs(c.y - j.y) > 3) continue;
       const d = CRIATURAS[c.tipo];
       caixasCriaturas.push([c.x - d.mw, c.y, c.z - d.mw, c.x + d.mw, c.y + d.alt, c.z + d.mw]);
@@ -4105,7 +4119,9 @@ export function criarCena(
     pode: () => {
       const b = document.body;
       return (
-        !b.dataset.overlay && !b.classList.contains('modo-foto') && !b.classList.contains('tela-titulo')
+        !b.dataset.overlay &&
+        !b.classList.contains('modo-foto') &&
+        !b.classList.contains('tela-titulo')
       );
     },
   });
@@ -4855,7 +4871,16 @@ export function criarCena(
   // ------------------------------------------------ canteiro de obras (spec 014, T06)
 
   const cidadeObra = cidadeDoMundo(semente);
-  const fantasmas = cidadeObra ? criarFantasmasObra(scene, (m) => glow.addExcludedMesh(m)) : null;
+  // spec 031: o bolo do canto das missões do Doce Reino (os mesmos fantasmas da obra)
+  const boloCanto: readonly CelulaPlanejada[] = (cantoDoMundo(semente)?.bolo ?? []).map((c) => ({
+    ...c,
+    canteiro: CANTEIRO_BOLO,
+    meta: 0,
+  }));
+  const fantasmas =
+    cidadeObra || boloCanto.length
+      ? criarFantasmasObra(scene, (m) => glow.addExcludedMesh(m))
+      : null;
   if (cidadeObra) criarProgressoObra();
   // spec 014 (T14): os carrinhos e ônibus, sólidos para o boneco e para a câmera
   if (cidadeObra) {
@@ -4957,7 +4982,7 @@ export function criarCena(
   const vaziaNaObra = (c: CelulaPlanejada) => !mesmoBlocoDaObra(blocoEm(c.x, c.y, c.z), c.bloco);
 
   function atualizarFantasmas(tempo: number): void {
-    if (!cidadeObra || !fantasmas) return;
+    if ((!cidadeObra && !boloCanto.length) || !fantasmas) return;
     const j = controle.jogador;
     const k = `${edicoes.versaoGeral},${versaoDasObras()},${Math.floor(j.x / 4)},${Math.floor(j.z / 4)}`;
     if (k !== chaveFantasmas) {
@@ -4965,12 +4990,21 @@ export function criarCena(
       const lista: (CelulaPlanejada & { pulsa: boolean })[] = [];
       let fracao: number | null = null;
       let melhor = Infinity;
-      for (const n of canteirosAbertos()) {
-        const centro = centroDaObra(cidadeObra, n);
+      // spec 031: o bolo (vazio ou pela metade), sempre à vista perto da mesa
+      const vaziasBolo = boloCanto.filter(vaziaNaObra);
+      if (
+        vaziasBolo.length &&
+        Math.hypot(vaziasBolo[0].x - j.x, vaziasBolo[0].z - j.z) < RAIO_FANTASMAS
+      ) {
+        const camada = Math.min(...vaziasBolo.map((c) => c.camada));
+        for (const c of vaziasBolo) lista.push({ ...c, pulsa: c.camada === camada });
+      }
+      for (const n of cidadeObra ? canteirosAbertos() : []) {
+        const centro = centroDaObra(cidadeObra!, n);
         if (!centro) continue;
         const d = Math.hypot(centro[0] - j.x, centro[2] - j.z);
         if (d > RAIO_FANTASMAS) continue;
-        const celulas = celulasPlanejadas(cidadeObra, n);
+        const celulas = celulasPlanejadas(cidadeObra!, n);
         const vazias = celulas.filter(vaziaNaObra);
         const camada = Math.min(...vazias.map((c) => c.camada));
         for (const c of vazias) lista.push({ ...c, pulsa: c.camada === camada });
@@ -4994,7 +5028,7 @@ export function criarCena(
     const m = podeEncherObra() ? fantasmaNaMira() : null;
     fantasmas.quadro(tempo, m);
     // o coreto feito toca a musiquinha quando alguém entra nele (uma vez a cada 20 s)
-    if (situacaoDoCanteiro(6) === 'feita') {
+    if (cidadeObra && situacaoDoCanteiro(6) === 'feita') {
       const centro = centroDaObra(cidadeObra, 6);
       const dentro = !!centro && Math.abs(centro[0] - j.x) < 2.6 && Math.abs(centro[2] - j.z) < 2.6;
       if (dentro && !coretoDentro && tempo - coretoTocouEm > 20) {
@@ -5008,6 +5042,9 @@ export function criarCena(
   /** Com a colher ou um bloco na mão, a mira prefere os fantasmas. */
   function podeEncherObra(): boolean {
     if (!listaFantasmas.length) return false;
+    // spec 031: no bolo, quem tem a missão põe com a mão vazia (o núcleo confere)
+    if (estado.boloLiberado && listaFantasmas.some((c) => c.canteiro === CANTEIRO_BOLO))
+      return true;
     const p = hotbar.pilhaAtiva();
     return p?.item === COLHER_PEDREIRO || hotbar.blocoAtivo() !== Bloco.AR;
   }
@@ -5064,7 +5101,8 @@ export function criarCena(
   /** Enche o fantasma (com a colher ou o bloco certo); bloco errado não vai. */
   function encherFantasma(c: CelulaPlanejada): boolean {
     const colher = hotbar.pilhaAtiva()?.item === COLHER_PEDREIRO;
-    if (!colher && hotbar.blocoAtivo() !== c.bloco) {
+    const doBolo = c.canteiro === CANTEIRO_BOLO && !!estado.boloLiberado;
+    if (!colher && !doBolo && hotbar.blocoAtivo() !== c.bloco) {
       avisarObra(c.bloco, c);
       barramento.emitir('recusa', { motivo: 'colocar' });
       return true;
@@ -5082,7 +5120,12 @@ export function criarCena(
       meta: c.meta,
       slot: hotbar.ativo,
     });
-    const celulas = cidadeObra ? celulasPlanejadas(cidadeObra, c.canteiro) : [];
+    const celulas =
+      c.canteiro === CANTEIRO_BOLO
+        ? boloCanto
+        : cidadeObra
+          ? celulasPlanejadas(cidadeObra, c.canteiro)
+          : [];
     plimDaObra(
       motorAudio,
       celulas.length - celulas.filter(vaziaNaObra).length,

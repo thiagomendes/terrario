@@ -2,6 +2,8 @@
  * Spec 023: os desenhos da alma (SVG feitos aqui, à mão, no jeito de brinquedo da 012).
  * Nada de arte de terceiros. Quadro de 64 × 64, contorno marrom macio, sombra embaixo.
  */
+import { ARTE_CANTO } from './arteCanto';
+
 const C = '#5a3a22'; // contorno
 const L = 'stroke-linejoin="round" stroke-linecap="round"';
 const s = (w = 3) => `stroke="${C}" stroke-width="${w}" ${L}`;
@@ -336,7 +338,10 @@ export const ARTE: Record<string, string> = {
       .map(
         ([x, y, c]) =>
           `<g transform="translate(${x} ${y})">${[0, 72, 144, 216, 288]
-            .map((a) => `<ellipse cx="0" cy="-3.2" rx="2.6" ry="3.2" fill="${c}" transform="rotate(${a})"/>`)
+            .map(
+              (a) =>
+                `<ellipse cx="0" cy="-3.2" rx="2.6" ry="3.2" fill="${c}" transform="rotate(${a})"/>`,
+            )
             .join('')}<circle r="2" fill="#ffc93d"/></g>`,
       )
       .join('')}`),
@@ -392,6 +397,9 @@ export const ARTE: Record<string, string> = {
     <rect x="12" y="16" width="40" height="8" rx="4" fill="#fff6e4" ${s(2.5)}/>
     <path d="M22 28 V48" stroke="#fff" stroke-width="3" stroke-linecap="round" opacity="0.7"/>`),
 };
+
+// spec 031: os desenhos das missões da Era dos Dinos e do Doce Reino
+Object.assign(ARTE, ARTE_CANTO);
 
 export function arte(nome: string): string {
   return ARTE[nome] ?? ARTE.estrela;

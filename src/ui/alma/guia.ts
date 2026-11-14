@@ -9,12 +9,14 @@ import type { EstadoDepuracao } from '../../render/cena';
 import { criarGuiaMissao, type ApiGuia, type GuiaMissao } from '../../render/guiaMissao';
 import { criarRelogioConvite, CONVITE_S, type MundoDoGuia } from '../../jogo/guia';
 import { Bloco } from '../../world/blocks';
+import { CANTEIRO_BOLO } from '../../world/protecao';
 import type { AlmaUi } from './index';
 import { missaoFixada } from './hud';
 import { criarMaoObra } from './maoObra';
 import { missaoPorId } from '../../jogo/alma';
 import { pedirSomGuia } from '../../audio/somGuia';
 import { medirHud } from '../carinhasAmigos';
+import { ligarCantoMissoes } from './canto';
 
 /** O quadro de cortiça com as duas missões (o ícone de "Missões" na roda do menu). */
 export const QUADRO_SVG = `<svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
@@ -92,6 +94,10 @@ export function ligarGuiaMissao(e: EstadoDepuracao, ui: AlmaUi): GuiaMissao | nu
     },
     bloco,
     moradores: () => (e.criaturas?.() ?? []).filter((c) => c.profissao),
+    // spec 031: o canto das missões, os bichos do pasto e os ovinhos no chão
+    canto: e.canto?.() ?? null,
+    bichos: () => e.criaturas?.() ?? [],
+    ovos: () => (e.itensNoChao?.() ?? []).filter((i) => i.item === 'ovo'),
   };
   const guia = criarGuiaMissao({
     scene,
@@ -193,8 +199,13 @@ export function ligarGuiaMissao(e: EstadoDepuracao, ui: AlmaUi): GuiaMissao | nu
     ultimaTela = guia.telaDoAlvo() ?? ultimaTela;
     // a mãozinha só na obra, com a criança dentro do canteiro
     const a = guia.alvo();
+    // spec 031: e na mesa do bolo do Doce Reino (os fantasmas do bolo são do mesmo jeito)
     mao.definir(
-      a && a.tipo === 'obra' && guia.chegou() ? Number(a.chave.slice('canteiro:'.length)) : null,
+      a && a.tipo === 'obra' && guia.chegou()
+        ? Number(a.chave.slice('canteiro:'.length))
+        : a?.chave === 'mesa' && guia.chegou()
+          ? CANTEIRO_BOLO
+          : null,
     );
     const r = relogio.passo(dt, { missao: !!missaoFixada(v), noJogo: noJogo() });
     if (r.mostra !== mostra || r.acendeu) ui.hud.definirConvite(r.mostra, r.acendeu);
@@ -231,5 +242,7 @@ export function ligarGuiaMissao(e: EstadoDepuracao, ui: AlmaUi): GuiaMissao | nu
     },
     convite: () => ({ mostra, segundos: relogio.segundos }),
   });
+  // spec 031: o canto das missões da Era dos Dinos e do Doce Reino
+  ligarCantoMissoes(e, ui, guia, scene);
   return guia;
 }

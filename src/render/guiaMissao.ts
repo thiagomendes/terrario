@@ -379,6 +379,8 @@ function criarLuzes(scene: Scene) {
 }
 
 // ------------------------------------------------------------------ o guia
+/** Spec 031: a placa some a esta distância do alvo (blocos): a mãozinha assume. */
+export const PLACA_SOME = 4;
 /** A trilha à vista começa este tanto adiante do boneco (as de baixo dele, ele tapa). */
 export const ADIANTE_DOS_PES = 1.5;
 /** As luzinhas: a cada 2 blocos, nos primeiros ~12 da trilha. */
@@ -670,6 +672,13 @@ export function criarGuiaMissao(f: FonteGuia): GuiaMissao {
   // ---------------------------------------------------------------- a placa na tela
   function posicionarPlaca(agora: number): void {
     if (!alvo) return placa.mostrar(null);
+    // spec 031 (todas as missões): perto do alvo a placa sai e a mãozinha assume (a placa
+    // tapava o bolo, a vela e o bicho bem na hora de tocar)
+    const pes = f.pes();
+    if (Math.hypot(alvo.x - pes[0], alvo.z - pes[2]) < PLACA_SOME || chegouLa) {
+      telaPlaca = null;
+      return placa.mostrar(null);
+    }
     if (!caixas || agora - caixas.em > 0.5) caixas = { em: agora, lista: f.caixasHud() };
     const [x, y, z] = alvo.placa;
     const sobe = alvo.morador !== undefined ? 0.5 : 2.2;
@@ -861,8 +870,13 @@ export function criarGuiaMissao(f: FonteGuia): GuiaMissao {
     brilhar(a) {
       brilho = { x: a.x, y: a.y, z: a.z, t: agoraS() };
     },
-    telaDoAlvo: () =>
-      telaPlaca ? { x: telaPlaca.x + TAM_PLACA / 2, y: telaPlaca.y + TAM_PLACA / 2 } : null,
+    telaDoAlvo: () => {
+      if (telaPlaca) return { x: telaPlaca.x + TAM_PLACA / 2, y: telaPlaca.y + TAM_PLACA / 2 };
+      // a placa saiu (perto do alvo): o ✓ e as moedinhas saem do próprio lugar
+      if (!alvo) return null;
+      const [x, y, z] = alvo.placa;
+      return f.tela(x, y + (alvo.morador !== undefined ? 0 : 1.2), z);
+    },
     api,
   };
 }

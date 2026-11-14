@@ -13,6 +13,7 @@ import type { LoteCidade, PlanoCidade } from '../world/cidade';
 import { frenteDaLoja, rotaPelaCidade, type LugarCidade } from '../world/ruasCidade';
 import { loteDoCanteiro, noLoteObra } from '../world/obras';
 import { frenteDaPorta, noLote, TAM_LOTE, type Lote, type PlanoPovoado } from '../world/povoado';
+import type { PlanoCanto } from '../world/cantoMissoes';
 
 // ------------------------------------------------------------------ o alvo
 /** Uma caixa no chão (inclusivo em x0/z0, exclusivo em x1/z1). */
@@ -67,6 +68,12 @@ export interface MundoDoGuia {
   sitios: readonly PlanoPovoado[];
   bloco(x: number, y: number, z: number): number;
   moradores(): readonly MoradorVisto[];
+  /** Spec 031: o canto das missões (Era dos Dinos e Doce Reino; null nos outros). */
+  canto?: PlanoCanto | null;
+  /** Spec 031: os bichos perto (o guia leva ao do pasto que ainda não comeu). */
+  bichos?(): readonly (MoradorVisto & { tipo?: string; criado?: boolean })[];
+  /** Spec 031: os ovinhos no chão (o aparelho vê os itens soltos). */
+  ovos?(): readonly { x: number; y: number; z: number }[];
 }
 
 const caixaDoLoteCidade = (l: LoteCidade): CaixaChao => ({
@@ -389,12 +396,139 @@ export function alvoDaMissao(
   de: { x: number; z: number },
   atual: string | null = null,
 ): AlvoGuia | null {
+  if (mundo.canto) return alvoNoCanto(m, mundo.canto, mundo, de, atual);
   if (mundo.cidade) {
     const a = alvoNaCidade(m, mundo.cidade, vistos, de, mundo);
     if (a) return a;
   }
   if (mundo.sitios.length) return alvoNoSitio(m, mundo, de, atual);
   return null;
+}
+
+// ------------------------------------------------------------------ o canto (spec 031)
+/** Perto do ovinho (blocos): ele já veio para a mochila sozinho (o ímã dos itens). */
+export const RAIO_OVO = 1.3;
+/** Perto do bicho do pasto: a comida aparece na mão. */
+export const RAIO_BICHO = 3;
+/** Na caixa de areia e na mesa: dentro da caixa ou a tanto do lado de quem vem. */
+export const RAIO_LUGAR = 2.4;
+
+/** O mais perto de `de` (o atual fica, enquanto servir: a trilha não pula de um para outro). */
+function maisPerto<T extends { chave: string; x: number; z: number }>(
+  lista: readonly T[],
+  de: { x: number; z: number },
+  atual: string | null,
+): T | null {
+  let melhor: T | null = null;
+  let dm = Infinity;
+  for (const q of lista) {
+    const d = q.chave === atual ? -1 : Math.hypot(q.x - de.x, q.z - de.z);
+    if (d < dm) {
+      dm = d;
+      melhor = q;
+    }
+  }
+  return melhor;
+}
+
+/** A beira da caixa (x0..x1, z0..z1 inclusiva) do lado de quem vem, a `fora` blocos dela. */
+function beiraDoLado(
+  c: { x0: number; z0: number; x1: number; z1: number },
+  de: { x: number; z: number },
+  fora: number,
+): [number, number] {
+  const mx = (c.x0 + c.x1 + 1) / 2;
+  const mz = (c.z0 + c.z1 + 1) / 2;
+  const dx = de.x - mx;
+  const dz = de.z - mz;
+  // o lado mais perto de quem vem (a trilha chega de frente, não pela quina)
+  if (Math.abs(dx) > Math.abs(dz)) return [dx > 0 ? c.x1 + 1 + fora - 0.5 : c.x0 - fora + 0.5, mz];
+  return [mx, dz > 0 ? c.z1 + 1 + fora - 0.5 : c.z0 - fora + 0.5];
+}
+
+function alvoNoCanto(
+  m: Missao,
+  p: PlanoCanto,
+  mundo: MundoDoGuia,
+  de: { x: number; z: number },
+  atual: string | null,
+): AlvoGuia | null {
+  const d = m.desenho;
+  const figura = d.tipo === 'arte' ? d.placa : 'estrela';
+  const c = m.conta;
+  if (c.tipo !== 'evento') return null;
+  if (c.chave === 'coletou:ovo:ninho') {
+    // o ovinho que ainda está no chão (o aparelho vê os itens soltos perto de cada lugar)
+    const noChao = mundo.ovos?.() ?? [];
+    const lista = p.ovos
+      .map((o, i) => ({ chave: `ovo:${i}`, x: o[0], y: o[1], z: o[2] }))
+      .filter((o) => noChao.some((q) => Math.hypot(q.x - o.x, q.z - o.z) < 1.2));
+    const o = maisPerto(lista, de, atual);
+    if (!o) return null;
+    return {
+      chave: o.chave,
+      tipo: 'sitio',
+      x: o.x,
+      y: o.y,
+      z: o.z,
+      placa: [o.x, o.y - 1, o.z],
+      figura,
+      raio: RAIO_OVO,
+    };
+  }
+  if (c.chave === 'criou:cervo') {
+    const [px, , pz] = p.pasto;
+    const lista = (mundo.bichos?.() ?? [])
+      .filter((b) => b.tipo === 'cervo' && !b.criado && Math.hypot(b.x - px, b.z - pz) < 14)
+      .map((b) => ({ ...b, chave: `bicho:${b.id}` }));
+    const b = maisPerto(lista, de, atual);
+    if (!b) {
+      // os bichos ainda vão chegar (o núcleo chama quando a missão é escolhida): o pasto
+      const [x, y, z] = p.pasto;
+      return {
+        chave: 'pasto',
+        tipo: 'sitio',
+        x,
+        y,
+        z,
+        placa: [x, y - 1, z],
+        figura,
+        raio: RAIO_BICHO,
+      };
+    }
+    return {
+      chave: b.chave,
+      tipo: 'morador',
+      x: b.x,
+      y: b.y,
+      z: b.z,
+      placa: [b.x, b.y + 1.6, b.z],
+      figura,
+      raio: RAIO_BICHO,
+      morador: b.id,
+    };
+  }
+  const lugar =
+    c.chave === 'escavou:fossil' && p.caixa
+      ? { caixa: p.caixa, y: p.caixa.y + 1, placaY: p.caixa.y }
+      : c.chave === 'bolo:feito' && p.mesa
+        ? { caixa: p.mesa, y: p.mesa.y + 1, placaY: p.mesa.y + 1 }
+        : null;
+  if (!lugar) return null;
+  const [x, z] =
+    c.chave === 'escavou:fossil' && p.caixa ? p.caixa.entrada : beiraDoLado(lugar.caixa, de, 1);
+  const k = lugar.caixa;
+  return {
+    chave: c.chave === 'escavou:fossil' ? 'caixa' : 'mesa',
+    tipo: 'sitio',
+    x,
+    y: lugar.y,
+    z,
+    placa: [(k.x0 + k.x1 + 1) / 2, lugar.placaY, (k.z0 + k.z1 + 1) / 2],
+    figura,
+    raio: RAIO_LUGAR,
+    caixa: { x0: k.x0 - 1, z0: k.z0 - 1, x1: k.x1 + 2, z1: k.z1 + 2 },
+  };
 }
 
 // ------------------------------------------------------------------ a trilha

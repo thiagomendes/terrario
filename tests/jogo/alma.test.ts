@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  mundoAlmaDoEstilo,
   BANCA,
   COMPRAS_POR_SESSAO,
   GANHO_DE_EVENTO,
@@ -50,7 +51,11 @@ registrarCatalogo();
 
 /** Faz a missão inteira com as ações do jeito que a criança faz (devolve o resultado somado). */
 function fazer(e: AlmaMundo, mundo: MundoAlma, m: Missao, obras: Set<number>): ResultadoAlma {
-  const total = { ganho: { moedas: 0, xp: 0, pontos: {} }, missoes: [], mudouLista: false } as ResultadoAlma;
+  const total = {
+    ganho: { moedas: 0, xp: 0, pontos: {} },
+    missoes: [],
+    mudouLista: false,
+  } as ResultadoAlma;
   const soma = (r: ResultadoAlma) => {
     total.ganho.moedas += r.ganho.moedas;
     total.ganho.xp += r.ganho.xp;
@@ -63,7 +68,15 @@ function fazer(e: AlmaMundo, mundo: MundoAlma, m: Missao, obras: Set<number>): R
     soma(registrarEvento(e, mundo, 'obra:bloco', blocos));
     soma(registrarEvento(e, mundo, 'colocou', blocos));
     obras.add(n);
-    soma(conferirObrasFeitas(e, mundo, (k) => obras.has(k), () => true, () => blocos));
+    soma(
+      conferirObrasFeitas(
+        e,
+        mundo,
+        (k) => obras.has(k),
+        () => true,
+        () => blocos,
+      ),
+    );
   } else if (m.conta.tipo === 'lugares') {
     for (const u of m.conta.usos) soma(visitarLugar(e, mundo, u));
   } else {
@@ -183,12 +196,24 @@ describe('alma: missões', () => {
   it('obra feita: quem ajudou ganha; quem não ajudou passa sem prêmio, e a lista anda', () => {
     const feitas = new Set([1, 2]);
     const ajudou = almaMundoVazia();
-    const r = conferirObrasFeitas(ajudou, 'cidade-grande', (n) => feitas.has(n), () => true, () => 23);
+    const r = conferirObrasFeitas(
+      ajudou,
+      'cidade-grande',
+      (n) => feitas.has(n),
+      () => true,
+      () => 23,
+    );
     expect(r.missoes.filter((m) => m.concluiu).map((m) => m.id)).toEqual(['c1', 'c2']);
     expect(r.ganho.moedas).toBe(6);
     expect(r.missoes[0].fantasia).toBe('capacete-obra');
     const visita = almaMundoVazia();
-    const v = conferirObrasFeitas(visita, 'cidade-grande', (n) => feitas.has(n), () => false, () => 23);
+    const v = conferirObrasFeitas(
+      visita,
+      'cidade-grande',
+      (n) => feitas.has(n),
+      () => false,
+      () => 23,
+    );
     expect(v.ganho.moedas).toBe(0);
     expect(visita.puladas).toEqual(['c1', 'c2']);
     expect(abertas(visita, 'cidade-grande').map((m) => m.id)).toEqual(['c3', 'c4']);
@@ -196,7 +221,13 @@ describe('alma: missões', () => {
   it('passeio: lugares diferentes, cada um uma vez', () => {
     const e = almaMundoVazia();
     // as obras 1 e 2 (as primeiras abertas) já foram
-    conferirObrasFeitas(e, 'cidade-grande', (n) => n <= 2, () => true, () => 1);
+    conferirObrasFeitas(
+      e,
+      'cidade-grande',
+      (n) => n <= 2,
+      () => true,
+      () => 1,
+    );
     expect(visitarLugar(e, 'cidade-grande', 'padaria').ganho.xp).toBe(5);
     expect(visitarLugar(e, 'cidade-grande', 'padaria').ganho.xp).toBe(0);
     visitarLugar(e, 'cidade-grande', 'praca');
@@ -206,7 +237,13 @@ describe('alma: missões', () => {
   });
   it('passeio: o núcleo diz quais lugares já foram (a bolinha certa acende)', () => {
     const e = almaMundoVazia();
-    conferirObrasFeitas(e, 'cidade-grande', (n) => n <= 2, () => true, () => 1);
+    conferirObrasFeitas(
+      e,
+      'cidade-grande',
+      (n) => n <= 2,
+      () => true,
+      () => 1,
+    );
     const r = visitarLugar(e, 'cidade-grande', 'sorveteria');
     expect(r.missoes.find((m) => m.id === 'c3')).toEqual({
       id: 'c3',
@@ -242,7 +279,9 @@ describe('alma: missões', () => {
   });
   it('a vista do quadro leva as abertas com o progresso (a obra pelo canteiro)', () => {
     const e = almaMundoVazia();
-    const v = vistaAlmaMundo(e, 'cidade-grande', (n) => (n === 1 ? { cheias: 7, total: 23 } : null));
+    const v = vistaAlmaMundo(e, 'cidade-grande', (n) =>
+      n === 1 ? { cheias: 7, total: 23 } : null,
+    );
     expect(v.abertas[0]).toEqual({ id: 'c1', feito: 7, meta: 23 });
     expect(v.abertas[1]).toEqual({ id: 'c2', feito: 0, meta: 1 });
   });
@@ -253,11 +292,23 @@ describe('alma: banca e premium', () => {
     expect(bancaDoMundo('cidade-grande').map((i) => i.preco)).toEqual([3, 4, 4, 5, 5]);
     expect(bancaDoMundo('rancho-alegre').map((i) => i.preco)).toEqual([3, 3, 4, 4, 4, 6]);
     for (const b of BANCA) if (b.item) expect(obterItem(b.item), b.id).toBeTruthy();
-    expect(conferirBanca('cidade-grande', 'feno', 99, 0, 99)).toEqual({ ok: false, motivo: 'tema' });
+    expect(conferirBanca('cidade-grande', 'feno', 99, 0, 99)).toEqual({
+      ok: false,
+      motivo: 'tema',
+    });
     expect(conferirBanca(null, 'feno', 99, 0, 99)).toEqual({ ok: false, motivo: 'tema' });
-    expect(conferirBanca('rancho-alegre', 'feno', 2, 0, 99)).toEqual({ ok: false, motivo: 'saldo' });
-    expect(conferirBanca('rancho-alegre', 'feno', 3, 0, 1.9)).toEqual({ ok: false, motivo: 'espera' });
-    expect(conferirBanca('rancho-alegre', 'feno', 3, COMPRAS_POR_SESSAO, 99)).toEqual({ ok: false, motivo: 'limite' });
+    expect(conferirBanca('rancho-alegre', 'feno', 2, 0, 99)).toEqual({
+      ok: false,
+      motivo: 'saldo',
+    });
+    expect(conferirBanca('rancho-alegre', 'feno', 3, 0, 1.9)).toEqual({
+      ok: false,
+      motivo: 'espera',
+    });
+    expect(conferirBanca('rancho-alegre', 'feno', 3, COMPRAS_POR_SESSAO, 99)).toEqual({
+      ok: false,
+      motivo: 'limite',
+    });
     expect(conferirBanca('rancho-alegre', 'feno', 3, 0, 2).ok).toBe(true);
     // sem bicho que não exista no tema
     expect(BANCA.some((b) => /gato|ponei/.test(b.id))).toBe(false);
@@ -322,7 +373,9 @@ describe('alma: perfil da criança', () => {
     expect(c.moedas).toBe(7);
     expect(m.estrelas).toEqual([{ habilidade: 'construtor', estrelas: 1 }]);
     expect(c.fantasias).toEqual(['capacete-obra']);
-    expect(aplicarGanho(c, { moedas: 0, xp: 0, pontos: {} }, ['capacete-obra']).fantasias).toEqual([]);
+    expect(aplicarGanho(c, { moedas: 0, xp: 0, pontos: {} }, ['capacete-obra']).fantasias).toEqual(
+      [],
+    );
     descontar(c, 4);
     expect(c.moedas).toBe(3);
     descontar(c, 99);
@@ -360,7 +413,10 @@ describe('alma: perfil da criança', () => {
         progresso: { c3: 99, zz: 1 },
         bis: -2,
         lugares: ['padaria', 7],
-        bau: [{ item: 'bloco:9', qtd: 6 }, { item: 'diamante', qtd: 64 }],
+        bau: [
+          { item: 'bloco:9', qtd: 6 },
+          { item: 'diamante', qtd: 64 },
+        ],
         livro: { moedas: 3, compras: { flores: 1, x: 2 } },
       },
       'cidade-grande',
@@ -373,7 +429,10 @@ describe('alma: perfil da criança', () => {
     expect(e.lugares).toEqual(['padaria']);
     expect(e.bau).toEqual([{ item: 'bloco:9', qtd: 6 }]);
     expect(e.livro.compras).toEqual({ flores: 1 });
-    const todos = normalizarAlmaDoMundo({ ana: {}, 'a b': {}, ['x'.repeat(65)]: {} }, 'cidade-grande');
+    const todos = normalizarAlmaDoMundo(
+      { ana: {}, 'a b': {}, ['x'.repeat(65)]: {} },
+      'cidade-grande',
+    );
     expect(Object.keys(todos)).toEqual(['ana']);
   });
 });
@@ -382,9 +441,15 @@ describe('alma: perfil da criança', () => {
  * O ritmo da spec: 3 missões por sessão de 15 min (a regra de verdade, com as ações soltas que
  * cada missão pede), na ordem de um mundo e depois do outro, e o bis depois das duas listas.
  */
-function simularSessoes(primeiro: MundoAlma, sessoes: number): { moedas: number[]; perfil: PerfilAlma; nivelNaSegunda: number } {
+function simularSessoes(
+  primeiro: MundoAlma,
+  sessoes: number,
+): { moedas: number[]; perfil: PerfilAlma; nivelNaSegunda: number } {
   const perfil = perfilAlmaVazio();
-  const ordem: MundoAlma[] = [primeiro, primeiro === 'cidade-grande' ? 'rancho-alegre' : 'cidade-grande'];
+  const ordem: MundoAlma[] = [
+    primeiro,
+    primeiro === 'cidade-grande' ? 'rancho-alegre' : 'cidade-grande',
+  ];
   const estados = new Map<MundoAlma, AlmaMundo>(ordem.map((m) => [m, almaMundoVazia()]));
   const obras = new Set<number>();
   const moedas: number[] = [];
@@ -392,11 +457,18 @@ function simularSessoes(primeiro: MundoAlma, sessoes: number): { moedas: number[
   let nivelNaSegunda = 0;
   for (let s = 0; s < sessoes; s++) {
     for (let k = 0; k < SESSAO.missoes; k++) {
-      const mundo = ordem.find((m) => abertas(estados.get(m)!, m).length && missaoDeBis(estados.get(m)!, m) === null) ?? ordem[0];
+      const mundo =
+        ordem.find(
+          (m) => abertas(estados.get(m)!, m).length && missaoDeBis(estados.get(m)!, m) === null,
+        ) ?? ordem[0];
       const e = estados.get(mundo)!;
       const m = missaoDoHud(e, mundo)!;
       const r = fazer(e, mundo, m, obras);
-      aplicarGanho(perfil, r.ganho, r.missoes.flatMap((x) => (x.fantasia ? [x.fantasia] : [])));
+      aplicarGanho(
+        perfil,
+        r.ganho,
+        r.missoes.flatMap((x) => (x.fantasia ? [x.fantasia] : [])),
+      );
       if (++feitas === 2) nivelNaSegunda = nivelDoXp(perfil.xp).nivel;
     }
     moedas.push(perfil.moedas);
@@ -421,7 +493,29 @@ describe('alma: o ritmo (experiência medida)', () => {
     });
   }
   it('a média por missão da lista fica perto das 3,6 da spec', () => {
-    const media = (moedasDoMundo('cidade-grande') + moedasDoMundo('rancho-alegre')) / MISSOES.length;
+    const das = MISSOES.filter((m) => m.mundo === 'cidade-grande' || m.mundo === 'rancho-alegre');
+    const media = (moedasDoMundo('cidade-grande') + moedasDoMundo('rancho-alegre')) / das.length;
     expect(Math.abs(media - SESSAO.moedasPorMissao)).toBeLessThan(0.2);
+  });
+
+  it('spec 031: a Era dos Dinos e o Doce Reino dão 15 moedinhas cada, sem fantasia', () => {
+    expect(moedasDoMundo('era-dos-dinos')).toBe(15);
+    expect(moedasDoMundo('doce-reino')).toBe(15);
+    for (const m of MISSOES.filter(
+      (x) => x.mundo === 'era-dos-dinos' || x.mundo === 'doce-reino',
+    )) {
+      expect(m.fantasia).toBeUndefined();
+      // o lado direito do cartão (o resultado) nunca é o mesmo desenho do esquerdo
+      if (m.desenho.tipo === 'arte') expect(m.desenho.resultado).not.toBe(m.desenho.principal);
+    }
+  });
+
+  it('spec 031: o núcleo sabe o mundo pelo estilo (sem campo novo)', () => {
+    expect(mundoAlmaDoEstilo({ estrutura: 'ninho' })).toBe('era-dos-dinos');
+    expect(mundoAlmaDoEstilo({ estrutura: 'casinha' })).toBe('doce-reino');
+    expect(mundoAlmaDoEstilo({ estrutura: 'ruina' })).toBeNull();
+    expect(mundoAlmaDoEstilo({ estrutura: 'espantalho', povoado: { planta: 'sitio' } })).toBe(
+      'rancho-alegre',
+    );
   });
 });

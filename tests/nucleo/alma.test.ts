@@ -444,7 +444,8 @@ describe('alma no núcleo: Cidade', () => {
 });
 
 describe('alma no núcleo: os outros mundos (o nível sobe em todo mundo)', () => {
-  const DOCE = obterTema('doce-reino').mundo;
+  // spec 031: o Doce Reino ganhou missões; a Mata Encantada continua sem
+  const DOCE = obterTema('mata-encantada').mundo;
   /** Uma tarde num mundo sem missões: põe bloco, planta, colhe, dá comida e faz receitas. */
   function tarde(estilo: EstiloMundo, confiar: boolean) {
     const n = abrir(estilo, confiar, ['ana']);

@@ -15,6 +15,7 @@
 import {
   MOEDAS_BIS,
   missaoPorId,
+  missoesDoMundo,
   nivelDoXp,
   type Missao,
   type PerfilAlma,
@@ -35,7 +36,7 @@ export const CSS_ALMA_HUD = `
 .alma-fig[data-tipo='fantasia'] canvas { width: auto; height: 100%; max-width: 100%; }
 .alma-fig-missao { position: relative; display: grid; place-items: center; width: 100%; height: 100%; }
 .alma-fig-missao .principal { width: 86%; height: 86%; }
-.alma-fig-missao .selo { position: absolute; right: -4%; bottom: -4%; width: 44%; height: 44%; padding: 6%; box-sizing: border-box;
+.alma-fig-missao .selo { position: absolute; right: -4%; bottom: -4%; width: 48%; height: 48%; padding: 5%; box-sizing: border-box;
   border-radius: 50%; background: #fffaf0; box-shadow: 0 0 0 2.5px #e8c98e, 0 3px 0 rgba(150,110,60,0.35); }
 .alma-trio { display: grid; grid-template-columns: repeat(3, 1fr); gap: 3%; width: 100%; height: 100%; align-items: center; }
 .alma-trio .alma-fig { width: 100%; aspect-ratio: 1; }
@@ -164,10 +165,22 @@ body:has(.entrada:not([hidden])) .alma-missao { display: none !important; }
   .alma-oferta { grid-template-columns: 1fr auto; grid-template-areas: 'linha linha' 'prog jogar'; align-items: center; padding: 10px 12px 12px; gap: 8px; }
   .alma-oferta .linha { grid-area: linha; }
   .alma-oferta > .alma-bolinhas, .alma-oferta > .alma-barra { grid-area: prog; justify-self: start; }
-  .alma-oferta > .alma-botao { grid-area: jogar; min-width: 92px; height: 52px; }
+  .alma-oferta > .alma-botao { grid-area: jogar; min-width: 92px; height: 52px; margin-top: 8px; }
   .alma-oferta .tarefa, .alma-oferta .premio { width: 104px; height: 104px; }
   .alma-cartao { padding: 14px 12px 16px; }
 }
+/* spec 031: a próxima missão aparece só um pedacinho (~20%), apagada, com o cadeado: há mais */
+.alma-quadro.com-proxima { grid-auto-flow: column; grid-template-columns: none; grid-auto-columns: var(--larg-cartao, 300px);
+  overflow: hidden; }
+.alma-oferta.espera { opacity: 0.6; filter: saturate(0.55); pointer-events: none; }
+.alma-oferta.espera .cadeado { width: 54px; height: 54px; display: grid; place-items: center; border-radius: 18px; background: #efe2c6; }
+.alma-oferta.espera .cadeado .alma-svg { width: 34px; height: 34px; }
+@media (max-width: 560px) {
+  .alma-quadro.com-proxima { grid-auto-flow: row; grid-auto-columns: auto; grid-template-columns: minmax(0, 340px); }
+  .alma-oferta.espera > .cadeado { grid-area: jogar; }
+}
+/* com o quadro (ou o baú) aberto, nada do jogo aparece por baixo: nem a barra, nem o mapinha */
+body[data-overlay='alma'] .barra, body[data-overlay='alma'] .minimapa { visibility: hidden; }
 @media (prefers-reduced-motion: reduce) {
   .alma-carteira, .alma-missao, .alma-missao.convite.brilha, .alma-cartao, .alma-fundo { animation: none; }
   .alma-botao.chama .alma-svg { animation: none; }
@@ -308,6 +321,7 @@ export function missaoDoCartao(
 /** A missão escolhida (a fixada, se ainda aberta): a do selinho e a da trilha (030). */
 /** O desenho do selinho antes de ter alvo: um objeto só (o passeio vira o tênis). */
 export function desenhoDoSelo(m: Missao): string {
+  if (m.desenho.tipo === 'arte') return m.desenho.placa;
   return m.desenho.tipo === 'lugares' ? 'tenis' : desenhoDaFigurinha(m);
 }
 
@@ -322,7 +336,9 @@ export function missaoFixada(
 
 /** O "?" do convite (desenhado, não letra) em cima do baú. */
 const CONVITE_SVG = `<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-  <g transform="translate(4 14) scale(0.78)">${arte('bau').replace(/^<svg[^>]*>/, '').replace(/<\/svg>$/, '')}</g>
+  <g transform="translate(4 14) scale(0.78)">${arte('bau')
+    .replace(/^<svg[^>]*>/, '')
+    .replace(/<\/svg>$/, '')}</g>
   <g transform="translate(30 -2) scale(0.5)"><circle cx="32" cy="34" r="27" fill="#1fa889"/><circle cx="32" cy="31" r="27" fill="#5fe3c4" stroke="#5a3a22" stroke-width="3.5"/>
   <path d="M24 25 Q24 15 32 15 Q40 15 40 23 Q40 28 34 31 Q32 32.5 32 36 V38" fill="none" stroke="#fff" stroke-width="6.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="32" cy="47" r="4" fill="#fff"/></g>
 </svg>`;
@@ -583,9 +599,62 @@ export function criarHudAlma(raiz: HTMLElement, op: OpcoesHudAlma) {
     grade.style.setProperty('--n', String(lista.length));
     const doCartao = missaoDoCartao(v)?.m.id;
     for (const { a, m } of lista) grade.appendChild(oferta(m, a, m.id === doCartao));
+    // spec 031: a próxima (ainda fechada) aparece só um pedacinho, para a criança ver que há mais
+    const proxima = !lista.some((x) => x.a.bis)
+      ? missoesDoMundo(v.mundo).find(
+          (m) =>
+            !v.feitas.includes(m.id) &&
+            !v.puladas.includes(m.id) &&
+            !lista.some((x) => x.m.id === m.id),
+        )
+      : undefined;
+    if (proxima) {
+      grade.classList.add('com-proxima');
+      grade.appendChild(emEspera(proxima));
+    }
     caixa.appendChild(grade);
     abrirFundo(caixa);
+    if (proxima) requestAnimationFrame(() => mostrarPedacinho(grade, lista.length));
     return true;
+  }
+
+  /** A próxima missão, apagada e com o cadeado (nada de "brincar": ela espera a vez). */
+  function emEspera(m: Missao): HTMLElement {
+    const c = document.createElement('div');
+    c.className = 'alma-oferta espera';
+    c.dataset.missaoEspera = m.id;
+    c.setAttribute('aria-hidden', 'true');
+    const linha = document.createElement('div');
+    linha.className = 'linha';
+    const t = document.createElement('div');
+    t.className = 'tarefa';
+    t.appendChild(figuraMissao(m));
+    linha.append(t, svgEl('seta', 'seta'), premioEl(m));
+    const cad = document.createElement('div');
+    cad.className = 'cadeado';
+    cad.appendChild(svgEl('cadeado'));
+    c.append(linha, cad);
+    return c;
+  }
+
+  /**
+   * A grade mostra as abertas inteiras e uns 20% da próxima (deitado, ela fica à direita; em
+   * pé, embaixo). A conta é pelo tamanho de verdade do cartão (muda com a tela).
+   */
+  function mostrarPedacinho(grade: HTMLElement, abertas: number): void {
+    const cartoes = [...grade.querySelectorAll<HTMLElement>('.alma-oferta')];
+    const primeiro = cartoes[0];
+    if (!primeiro || cartoes.length <= abertas) return;
+    const gap = parseFloat(getComputedStyle(grade).columnGap) || 18;
+    const empe = innerWidth <= 560;
+    if (empe) {
+      const h = Math.max(...cartoes.slice(0, abertas).map((c) => c.offsetHeight));
+      grade.style.maxHeight = `${Math.round(abertas * (h + gap) + h * 0.2)}px`;
+    } else {
+      const w = Math.max(...cartoes.slice(0, abertas).map((c) => c.offsetWidth));
+      grade.style.setProperty('--larg-cartao', `${w}px`);
+      grade.style.maxWidth = `${Math.round(abertas * (w + gap) + w * 0.2)}px`;
+    }
   }
 
   function oferta(

@@ -13,6 +13,7 @@ import type { Scene } from '@babylonjs/core/scene';
 import type { EstadoDepuracao } from '../../render/cena';
 import { fantasmaNoRaio } from '../../jogo/miraObra';
 import { Bloco } from '../../world/blocks';
+import { CANTEIRO_BOLO } from '../../world/protecao';
 
 const CONTORNO = '#5a3a22';
 const MENTA = '#5fe3c4';
@@ -72,6 +73,12 @@ export function criarMaoObra(e: EstadoDepuracao, scene: Scene): MaoObra {
   let ultimaObra = 0;
   let colocadosAntes = 0;
   let pausada = false;
+  /**
+   * Spec 031: no bolo, a mãozinha pula sozinha para o próximo bloco (logo depois de cada
+   * toque, até a vela), em vez de esperar a criança ficar parada.
+   */
+  let seguida = false;
+  let voltaEm = 0;
   let alvo: Ponto | null = null;
   const agoraS = () => performance.now() / 1000;
   const AR = Bloco.AR;
@@ -147,12 +154,32 @@ export function criarMaoObra(e: EstadoDepuracao, scene: Scene): MaoObra {
     const agora = agoraS();
     const colocados = e.obraColocados ?? 0;
     if (colocados > colocadosAntes) {
-      // pôs um bloco: a mãozinha sai e só volta se ela ficar parada de novo
+      // pôs um bloco: a mãozinha sai e só volta se ela ficar parada de novo (no bolo, ela
+      // pula para o próximo bloco num instantinho)
       colocadosAntes = colocados;
       ultimaObra = agora;
-      pausada = true;
+      pausada = !seguida;
+      voltaEm = agora + 0.55;
+      alvo = null;
+      esconder();
     }
     const vista = !document.body.dataset.overlay && agora - chegouEm > 1.2;
+    if (seguida) {
+      if (!vista || agora < voltaEm) {
+        esconder();
+        return;
+      }
+      if (!alvo || !mao.classList.contains('mostra')) alvo = escolher();
+      if (!alvo) return esconder();
+      const t = e.telaDoPonto?.(alvo.x + 0.5, alvo.y + 0.5, alvo.z + 0.5);
+      if (!t) return;
+      for (const el of [mao, onda]) {
+        el.style.setProperty('--x', `${t.x}px`);
+        el.style.setProperty('--y', `${t.y}px`);
+        el.classList.add('mostra');
+      }
+      return;
+    }
     // mostra duas vezes ao chegar (2 voltas de 2,6 s); depois, só com ESPERA_MAO s parada
     const mostrar =
       vista &&
@@ -179,6 +206,7 @@ export function criarMaoObra(e: EstadoDepuracao, scene: Scene): MaoObra {
       if (n === canteiro) return;
       canteiro = n;
       alvo = null;
+      seguida = n === CANTEIRO_BOLO;
       if (n === null) return esconder();
       chegouEm = agoraS();
       ultimaObra = chegouEm;

@@ -18,6 +18,7 @@ import { caixasDaMalha, temFormaParcial, type Caixa } from '../world/formas';
 import { Bloco, obterBloco } from '../world/blocks';
 import { caixaArredondada, cilindro, esfera, type Plasticos } from './formas';
 import { modeloDeBloco } from './blocosBrinquedo';
+import { tema } from '../temas/ativo';
 
 /** Cor da cabeça da ferramenta por material (as mesmas do catálogo). */
 const MATERIAL: Record<string, string> = {
@@ -199,6 +200,36 @@ export function modeloNaMao(
         break;
       }
       case 'trigo': {
+        if (tema().id === 'doce-reino') {
+          // spec 031: o broto-doce do Doce Reino (o mesmo item): um broto de bala cor-de-rosa,
+          // duas folhas gordinhas brilhando no alto de um cabinho de menta, num torrão de chocolate
+          add(bo('torrao', 0.07, '#7a4424', [1.25, 0.55, 1.1], 0.25), 0, 0.03, 0);
+          add(ci('cabinho', 0.15, 0.014, 0.018, '#7fdcb8'), 0, 0.1, 0);
+          for (const lado of [-1, 1]) {
+            const f = add(
+              bo(`folha${lado}`, 0.06, '#ff8fb8', [1.25, 0.5, 0.8], 0.55),
+              lado * 0.06,
+              0.19,
+              0,
+            );
+            f.rotation.z = lado * -0.55;
+            const b = add(
+              bo(`brilho${lado}`, 0.018, '#ffe3ef', [1.4, 0.6, 1], 0.8),
+              lado * 0.075,
+              0.215,
+              0.03,
+            );
+            b.rotation.z = lado * -0.55;
+          }
+          add(bo('miolo', 0.03, '#ff6fa3', [1, 1.2, 1], 0.6), 0, 0.2, 0);
+          for (const [x, z, c] of [
+            [-0.045, 0.04, '#fff3c4'],
+            [0.05, -0.03, '#bdf0ff'],
+            [0.02, 0.055, '#ffd0e4'],
+          ] as const)
+            add(bo(`granulo${x}`, 0.011, c, [1.6, 0.6, 0.6], 0.4), x, 0.058, z);
+          break;
+        }
         // feixe: hastes douradas amarradas com uma fitinha, espigas no alto
         for (let i = 0; i < 5; i++) {
           const a = (i - 2) * 0.12;
@@ -265,6 +296,32 @@ export function modeloNaMao(
         break;
       }
       case 'ovo':
+        if (tema().id === 'era-dos-dinos') {
+          // spec 031: o ovinho de dino (maior que o da galinha), creme com pintas verdes
+          add(bo('ovo', 0.15, '#fff1d2', [0.84, 1.08, 0.84], 0.45), 0, 0.15, 0);
+          for (const [a, y, r] of [
+            [0.3, 0.22, 0.036],
+            [2.2, 0.15, 0.042],
+            [4.1, 0.2, 0.033],
+            [1.2, 0.08, 0.038],
+            [3.2, 0.07, 0.033],
+            [5.3, 0.12, 0.038],
+            [0.8, 0.27, 0.025],
+            [3.7, 0.27, 0.023],
+          ] as const) {
+            // a pinta encosta na casca (o raio da casca naquela altura), achatada para fora
+            const yy = (y - 0.15) / (0.15 * 1.08);
+            const rr = 0.15 * 0.84 * Math.sqrt(Math.max(0, 1 - yy * yy)) - 0.005;
+            const p = add(
+              bo(`pinta${a}`, r, a > 3 ? '#5aa83f' : '#7cc35a', [1, 1, 0.35], 0.3),
+              Math.cos(a) * rr,
+              y,
+              Math.sin(a) * rr,
+            );
+            p.rotation.y = -a + Math.PI / 2;
+          }
+          break;
+        }
         add(bo('ovo', 0.075, '#f4ead6', [0.82, 1.05, 0.82], 0.45), 0, 0.07, 0);
         break;
       case 'ovo_cozido': {

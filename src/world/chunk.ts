@@ -21,6 +21,15 @@ import {
 } from './cidade';
 import { versaoDasObras } from './obras';
 import { Bloco } from './blocks';
+import {
+  cantoNoChunk,
+  naCaixaDoCanto,
+  planejarCanto,
+  SUBSOLO,
+  SUPERFICIE,
+  type PlanoCanto,
+} from './cantoMissoes';
+import { mundoAlmaDoEstilo } from '../jogo/alma';
 import { crista2, fbm2, hash2, hash3, ruido3 } from './noise';
 
 export const TAM_X = 16;
@@ -137,6 +146,64 @@ export function cidadeDoMundo(semente: number): PlanoCidade | null {
 /** Liga ou desliga os povoados (o teste de paridade com o jogo antigo desliga). */
 export function definirPovoados(ligado: boolean): void {
   povoadosLigados = ligado;
+}
+
+/**
+ * Spec 031: o canto das missões do mundo (Era dos Dinos e Doce Reino; null nos outros). Os
+ * povoados desligados (o teste de paridade) desligam o canto também.
+ */
+const cantos = new Map<string, PlanoCanto | null>();
+export function cantoDoMundo(semente: number): PlanoCanto | null {
+  if (!povoadosLigados) return null;
+  const mundo = mundoAlmaDoEstilo(estilo);
+  const tema = mundo === 'era-dos-dinos' ? 'dinos' : mundo === 'doce-reino' ? 'doce' : null;
+  if (!tema) return null;
+  const k = `${semente},${tema},${versaoDosPovoados()}`;
+  if (cantos.has(k)) return cantos.get(k)!;
+  const nascer = pontoDeNascer(semente);
+  const p = planejarCanto(tema, {
+    altura: (x, z) => alturaTerreno(x, z, semente),
+    firme: (x, z, raso) => {
+      const h = alturaNatural(x, z, semente);
+      if (raso) return h >= NIVEL_MAR - 2 && h < 88;
+      if (h <= NIVEL_MAR + 1 || h >= 88) return false;
+      const b = biomaEm(x, z, semente, h);
+      return b !== 'oceano' && b !== 'praia' && b !== 'pantano';
+    },
+    livre: (x, z) => {
+      const cx = Math.floor(x / TAM_X);
+      const cz = Math.floor(z / TAM_Z);
+      return (
+        hash2(cx, cz, semente + CHAVE_ESTRUTURA) > CHANCE_ESTRUTURA &&
+        !planoQueTocaOChunk(cx, cz, semente)
+      );
+    },
+    nascer,
+    minimo: NIVEL_MAR + 1,
+    olhar: OLHAR_PADRAO,
+  });
+  cantos.set(k, p);
+  if (cantos.size > 8) cantos.delete(cantos.keys().next().value as string);
+  return p;
+}
+/** Para onde quem nasce olha nos mundos sem sítio nem cidade (o controle usa o mesmo). */
+export const OLHAR_PADRAO = 0.8;
+
+/** Pinta no chunk a parte do canto das missões que cai nele. */
+function pintarCanto(blocos: Uint8Array, cx: number, cz: number, p: PlanoCanto, semente: number) {
+  const x0 = cx * TAM_X;
+  const z0 = cz * TAM_Z;
+  for (const c of p.celulas) {
+    const x = c.x - x0;
+    const z = c.z - z0;
+    if (x < 0 || x >= TAM_X || z < 0 || z >= TAM_Z || c.y < 1 || c.y >= ALTURA) continue;
+    let b = c.b;
+    if (b === SUPERFICIE || b === SUBSOLO) {
+      const bioma = biomaEm(c.x, c.z, semente, c.y);
+      b = superficie(bioma, c.y, b === SUPERFICIE ? c.y : c.y + 1);
+    }
+    blocos[indice(x, c.y, z)] = b;
+  }
 }
 
 /** Povoado que alcança a coluna, com memória da última região consultada (rápido por coluna). */
@@ -313,6 +380,8 @@ export function gerarChunk(cx: number, cz: number, semente: number = SEMENTE_PAD
     ruido3(x / 34, y / 18, z / 34, semente + 1003),
   );
   const cidade = cidadeDoMundo(semente);
+  // spec 031: o canto das missões (o chão dele é firme; o mato sai de perto)
+  const canto = cantoNoChunk(cantoDoMundo(semente), cx, cz, 4) ? cantoDoMundo(semente) : null;
 
   for (let z = 0; z < TAM_Z; z++) {
     for (let x = 0; x < TAM_X; x++) {
@@ -331,7 +400,7 @@ export function gerarChunk(cx: number, cz: number, semente: number = SEMENTE_PAD
           : plano
             ? 2
             : 0;
-      const firme = !!ajusteCidade?.firme;
+      const firme = !!ajusteCidade?.firme || naCaixaDoCanto(canto, wx, wz);
       const b = biomaEm(wx, wz, semente, h);
       biomas.push(b);
       const solo = b === 'deserto' ? 6 : 4;
@@ -397,9 +466,17 @@ export function gerarChunk(cx: number, cz: number, semente: number = SEMENTE_PAD
       // piso do povoado: nada nasce; na área dele (rampas), plantas sim, árvores não
       const oc = ocupadas[z * TAM_X + x];
       if (oc === 1) continue;
+      // spec 031: nada nasce no canto das missões, e árvore nem perto (a copa cobriria)
+      if (naCaixaDoCanto(canto, wx, wz, 1)) continue;
       const r = hash2(wx, wz, semente + 5);
       const r2 = hash2(wx, wz, semente + 9);
-      const margem = oc === 0 && x >= 2 && x < TAM_X - 2 && z >= 2 && z < TAM_Z - 2;
+      const margem =
+        oc === 0 &&
+        x >= 2 &&
+        x < TAM_X - 2 &&
+        z >= 2 &&
+        z < TAM_Z - 2 &&
+        !naCaixaDoCanto(canto, wx, wz, 3);
       // flora do tema: parte das plantas some (Lua: quase nada); árvores e cactos ficam
       const pos = (id: number) => {
         // só plantas de enfeite somem; comida e luz (frutinhas, abóbora, cogumelo,
@@ -486,6 +563,8 @@ export type EstruturaDoChunk =
   | { tipo: 'povoado'; plano: PlanoPovoado }
   | { tipo: 'cidade'; plano: PlanoCidade }
   | { tipo: 'ruina'; h: number; forma: EstiloMundo['estrutura'] }
+  /** Spec 031: o canto das missões (o chunk dele não tem povoado nem estrutura rara). */
+  | { tipo: 'canto'; plano: PlanoCanto }
   | null;
 
 /** O povoado da região alcança o chunk? (o mesmo teste da geração) */
@@ -540,6 +619,12 @@ export function pintarEstruturas(
     });
     return { tipo: 'cidade', plano: cidade };
   }
+  // spec 031: o canto das missões (o planejador escolheu um lugar sem povoado nem ruína)
+  const canto = cantoDoMundo(semente);
+  if (canto && cantoNoChunk(canto, cx, cz)) {
+    pintarCanto(blocos, cx, cz, canto, semente);
+    return { tipo: 'canto', plano: canto };
+  }
   // povoado da região, se alcançar este chunk (e então sem ruína)
   const plano = planoQueTocaOChunk(cx, cz, semente);
   if (plano) {
@@ -569,7 +654,13 @@ export function estruturaDoChunk(
   const cidade = cidadeDoMundo(semente);
   const naCidade = !!cidade && cidadeNoChunk(cidade, cx, cz);
   const plano = naCidade ? null : planoQueTocaOChunk(cx, cz, semente);
-  if (!plano && !naCidade && hash2(cx, cz, semente + CHAVE_ESTRUTURA) > CHANCE_ESTRUTURA)
+  const noCanto = !naCidade && cantoNoChunk(cantoDoMundo(semente), cx, cz);
+  if (
+    !plano &&
+    !naCidade &&
+    !noCanto &&
+    hash2(cx, cz, semente + CHAVE_ESTRUTURA) > CHANCE_ESTRUTURA
+  )
     return null;
   const alturas = new Int32Array(TAM_X * TAM_Z);
   const biomas: Bioma[] = [];
