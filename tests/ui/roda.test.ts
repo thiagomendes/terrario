@@ -38,11 +38,15 @@ describe('roda de botões (spec 015)', () => {
     expect(teclaDaRoda('Digit8', true, 8)).toEqual({ acao: 'escolher', i: 7 });
     expect(teclaDaRoda('Numpad3', true, 8)).toEqual({ acao: 'escolher', i: 2 });
     expect(teclaDaRoda('Digit9', true, 8)).toBeNull();
+    // spec 023: com os 10 gestos, o 9 e o 0 (o décimo)
+    expect(teclaDaRoda('Digit9', true, 10)).toEqual({ acao: 'escolher', i: 8 });
+    expect(teclaDaRoda('Digit0', true, 10)).toEqual({ acao: 'escolher', i: 9 });
+    expect(teclaDaRoda('Digit0', true, 8)).toBeNull();
     expect(teclaDaRoda('KeyW', true, 8)).toBeNull();
   });
 
-  it('a roda de gestos tem os 8 e a barra do computador tem a carinha (G, tecla livre)', () => {
-    expect(GESTOS).toHaveLength(8);
+  it('a roda de gestos tem os 8 (e os 2 de presente) e a barra do computador tem a carinha', () => {
+    expect(GESTOS).toHaveLength(10);
     const g = FUNCOES_JOGO.filter((f) => f.codigo === 'KeyG');
     expect(g).toEqual([{ codigo: 'KeyG', tecla: 'G', nome: 'Gestos', icone: 'carinha' }]);
   });

@@ -58,4 +58,7 @@ export const SOM_DO_GESTO: Readonly<Record<IdGesto, EventoSom>> = {
   dancar: 'danca',
   apontar: 'apontar',
   sentar: 'sentar',
+  // spec 023: os gestos dos presentes de nível (o brilho do pulo e o aceno da reverência)
+  'pulo-estrela': 'brilho',
+  reverencia: 'aceno',
 };

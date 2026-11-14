@@ -86,8 +86,10 @@ export function teclaDaRoda(
   if (code === tecla) return { acao: 'alternar' };
   if (!aberta) return null;
   if (code === 'Escape') return { acao: 'fechar' };
-  const m = /^(?:Digit|Numpad)([1-9])$/.exec(code);
-  if (m && Number(m[1]) <= n) return { acao: 'escolher', i: Number(m[1]) - 1 };
+  const m = /^(?:Digit|Numpad)([0-9])$/.exec(code);
+  // spec 023: com 10 gestos, o 0 é o décimo
+  const i = m ? (Number(m[1]) === 0 ? 10 : Number(m[1])) : 0;
+  if (m && i <= n) return { acao: 'escolher', i: i - 1 };
   return null;
 }
 
@@ -264,7 +266,8 @@ export function criarRoda(op: OpcoesRoda, raiz: HTMLElement = document.body): Ro
     lista = l;
     botoes = bs;
     for (const b of botoes) b.classList.remove('escolhido');
-    const r = raioDaRoda(innerWidth, innerHeight);
+    // spec 023: com mais de 8 (os gestos dos presentes de nível), a roda abre um pouco mais
+    const r = raioDaRoda(innerWidth, innerHeight) * (l.itens.length > 8 ? 1.15 : 1);
     if (r !== raio || pos.length !== l.itens.length) {
       raio = r;
       el.style.setProperty('--diam', `${r * 2 + 96}px`);

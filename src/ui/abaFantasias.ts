@@ -20,6 +20,7 @@ import {
 } from '../personagem/aparencia';
 import {
   GRUPOS_FANTASIA,
+  TINTAS_PRESENTE,
   ROTULOS_GRUPOS,
   fantasiaLiberada,
   fantasiaPorId,
@@ -32,6 +33,7 @@ import {
   type TipoPeca,
 } from '../personagem/fantasias';
 import type { Armazenamento } from '../personagem/persistencia';
+import { nivelDaCrianca } from '../personagem/almaCrianca';
 import type { IdTema } from '../temas/tipos';
 import { icone, type NomeIcone } from './pixicones';
 
@@ -562,7 +564,9 @@ export function criarAbaFantasias(painel: HTMLElement, op: OpcoesAbaFantasias): 
   let coresDe = '';
   function desenharCores(a: Aparencia): void {
     const def = a.fantasia && fantasiaPorId(a.fantasia.id);
-    const chave = def ? def.id : '';
+    // spec 023 (T09): as tintas que vieram de presente de nível (lilás no 4, menta no 9)
+    const tintas = TINTAS_PRESENTE.filter((t) => t.nivel <= nivelDaCrianca());
+    const chave = def ? `${def.id}|${tintas.length}` : '';
     if (chave !== coresDe) {
       coresDe = chave;
       cores.replaceChildren();
@@ -576,6 +580,19 @@ export function criarAbaFantasias(painel: HTMLElement, op: OpcoesAbaFantasias): 
         b.addEventListener('click', () => op.mudar(trocarCorDaFantasia(op.aparencia(), i), false));
         cores.appendChild(b);
       });
+      if (def)
+        for (const t of tintas) {
+          const b = document.createElement('button');
+          b.type = 'button';
+          b.className = 'amostra amostra-presente';
+          b.style.setProperty('--cor', t.hex);
+          b.setAttribute('data-cor-fantasia', String(t.cor));
+          b.setAttribute('aria-label', `${t.nome} (presente do nível ${t.nivel})`);
+          b.addEventListener('click', () =>
+            op.mudar(trocarCorDaFantasia(op.aparencia(), t.cor), false),
+          );
+          cores.appendChild(b);
+        }
     }
     cores.hidden = !def;
     for (const b of cores.querySelectorAll<HTMLButtonElement>('button'))

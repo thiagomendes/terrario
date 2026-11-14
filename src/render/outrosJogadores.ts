@@ -9,7 +9,7 @@ import type { Scene } from '@babylonjs/core/scene';
 import { Matrix, Vector3 } from '@babylonjs/core/Maths/math.vector';
 import { criarPersonagem } from './personagem';
 import { criarAnimador } from '../player/animacao';
-import { normalizarAparencia } from '../personagem/aparencia';
+import { normalizarAparencia, type Aparencia } from '../personagem/aparencia';
 import { blocoDoItem } from '../jogo/itens';
 import type { JogadorVisto, PerfilJogador } from '../nucleo/protocolo';
 // spec 015 (gestos): o gesto é uma camada do animador; o balão fica em cima da cabeça
@@ -24,6 +24,13 @@ const CSS_ROTULO = `
   box-shadow: 0 2px 0 rgba(150, 110, 60, 0.35), 0 4px 10px rgba(40, 25, 10, 0.2); }
 .rotulo-amigo[hidden] { display: none; }
 body[data-overlay] .rotulo-amigo, body.modo-foto .rotulo-amigo, body.tela-titulo .rotulo-amigo { display: none; }
+/* spec 023 (T09): a etiqueta colorida (nível 2) e com estrela (nível 7), presentes de nível */
+.rotulo-amigo.etiqueta-cor, .rotulo-amigo.etiqueta-estrela { color: #fff; text-shadow: 0 1px 0 rgba(90, 40, 120, 0.55);
+  background: linear-gradient(100deg, #ff7ab8 0%, #b48cff 52%, #5cc8ff 100%);
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.85), 0 2px 0 rgba(120, 60, 160, 0.4), 0 4px 12px rgba(120, 60, 160, 0.3); }
+.rotulo-amigo.etiqueta-estrela { padding-left: 30px; }
+.rotulo-amigo.etiqueta-estrela::before { content: ''; position: absolute; left: 6px; top: 50%; width: 20px; height: 20px; margin-top: -10px;
+  background: no-repeat center/contain url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'><path d='M10 1 L12.6 7 L19 7.4 L14 11.6 L15.6 18 L10 14.4 L4.4 18 L6 11.6 L1 7.4 L7.4 7 Z' fill='%23ffe066' stroke='%23b8740a' stroke-width='1.4' stroke-linejoin='round'/></svg>"); }
 `;
 let cssPosto = false;
 function criarRotulo(texto: string): HTMLDivElement {
@@ -64,6 +71,15 @@ interface Outro {
   acoes: [number, number, number] | null;
   /** Transparência do apelido já escrita (só escreve quando muda). */
   opacidadePlaca: number;
+  /** Spec 023 (T09): o balão com estrelinha (presente do nível 6 do amigo). */
+  balaoEstrela: boolean;
+}
+
+/** Spec 023 (T09): a etiqueta do nome pelo presente de nível do amigo. */
+function vestirEtiqueta(placa: HTMLDivElement, etiqueta: Aparencia['etiqueta']): void {
+  // (o apelido de mentira dos testes não tem lista de classes)
+  placa.classList?.toggle('etiqueta-cor', etiqueta === 'cor');
+  placa.classList?.toggle('etiqueta-estrela', etiqueta === 'estrela');
 }
 
 /** A caixa do canvas na página, medida de novo só quando a janela muda de tamanho ou rola. */
@@ -104,6 +120,7 @@ export function criarOutrosJogadores(scene: Scene) {
     const aparencia = normalizarAparencia(perfil?.aparencia ?? {});
     const personagem = criarPersonagem(scene, aparencia);
     const placa = criarRotulo(apelido);
+    vestirEtiqueta(placa, aparencia.etiqueta);
     return {
       id: v.id,
       personagem,
@@ -121,6 +138,7 @@ export function criarOutrosJogadores(scene: Scene) {
       apelido,
       chaveAparencia: JSON.stringify(aparencia),
       opacidadePlaca: -1,
+      balaoEstrela: aparencia.balao === 'estrela',
     };
   }
 
@@ -145,6 +163,8 @@ export function criarOutrosJogadores(scene: Scene) {
         if (chave !== o.chaveAparencia) {
           o.chaveAparencia = chave;
           o.personagem.aplicarAparencia(aparencia);
+          vestirEtiqueta(o.placa, aparencia.etiqueta);
+          o.balaoEstrela = aparencia.balao === 'estrela';
         }
         if (novo.apelido !== o.apelido) {
           o.placa.textContent = novo.apelido;
@@ -269,7 +289,8 @@ export function criarOutrosJogadores(scene: Scene) {
       const o = outros.get(id);
       if (!o) return;
       fazerGesto(o.animador, g);
-      (o.balao ??= criarBalao(scene, o.personagem.raiz)).mostrar(g);
+      // spec 023 (T09): o balão com estrelinha de quem ganhou (nível 6)
+      (o.balao ??= criarBalao(scene, o.personagem.raiz)).mostrar(g, o.balaoEstrela);
     },
     /**
      * Spec 021: a lista leve para as carinhas (por quadro): os mesmos objetos reaproveitados,

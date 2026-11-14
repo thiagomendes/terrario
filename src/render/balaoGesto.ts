@@ -21,7 +21,7 @@ import { Mesh } from '@babylonjs/core/Meshes/mesh';
 import { MeshBuilder } from '@babylonjs/core/Meshes/meshBuilder';
 import type { TransformNode } from '@babylonjs/core/Meshes/transformNode';
 import { DURACAO_BALAO, IDS_GESTOS, type IdGesto } from '../personagem/gestos';
-import { svgDoBalao } from '../ui/iconesGestos';
+import { svgDoBalao, svgDoBalaoEstrela } from '../ui/iconesGestos';
 
 const LADO = 256;
 /** Tamanho de perto (blocos) e distância a partir da qual o balão cresce com ela. */
@@ -55,6 +55,8 @@ export function medidaBalao(
 
 const porCena = new WeakMap<Scene, Record<IdGesto, StandardMaterial>>();
 const porCenaComParede = new WeakMap<Scene, Record<IdGesto, StandardMaterial>>();
+/** Spec 023 (T09): o balão com estrelinha (presente do nível 6), só para os jogadores. */
+const porCenaEstrela = new WeakMap<Scene, Record<IdGesto, StandardMaterial>>();
 
 /**
  * Os 8 materiais do balão (um por gesto), criados na primeira vez que a cena precisa.
@@ -64,11 +66,12 @@ const porCenaComParede = new WeakMap<Scene, Record<IdGesto, StandardMaterial>>()
 export function materiaisDoBalao(
   scene: Scene,
   atravessa = true,
+  estrela = false,
 ): Record<IdGesto, StandardMaterial> {
-  const cache = atravessa ? porCena : porCenaComParede;
+  const cache = estrela ? porCenaEstrela : atravessa ? porCena : porCenaComParede;
   const ja = cache.get(scene);
   if (ja) return ja;
-  const sufixo = atravessa ? '' : '-parede';
+  const sufixo = estrela ? '-estrela' : atravessa ? '' : '-parede';
   const mats = {} as Record<IdGesto, StandardMaterial>;
   for (const id of IDS_GESTOS) {
     const tex = new DynamicTexture(
@@ -85,7 +88,9 @@ export function materiaisDoBalao(
       ctx.drawImage(img, 0, 0, LADO, LADO);
       tex.update(true, true);
     };
-    img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svgDoBalao(id));
+    img.src =
+      'data:image/svg+xml;charset=utf-8,' +
+      encodeURIComponent(estrela ? svgDoBalaoEstrela(id) : svgDoBalao(id));
     const m = new StandardMaterial(`balao-gesto-${id}${sufixo}`, scene);
     // a cor vem toda do emissivo (sem luz nem sombra: o mesmo creme de dia, à noite e na
     // caverna); o difuso só dá o recorte (alfa)
@@ -109,7 +114,8 @@ export function materiaisDoBalao(
 }
 
 export interface BalaoGesto {
-  mostrar(id: IdGesto): void;
+  /** `estrela`: o balão com a borda de ouro e as estrelinhas (presente do nível 6). */
+  mostrar(id: IdGesto, estrela?: boolean): void;
   esconder(): void;
   /** Avança o tempo, some depois de 2 s e acerta o tamanho pela distância da câmera. */
   atualizar(dt: number): void;
@@ -134,6 +140,7 @@ export function criarBalao(
   atravessaParede = true,
 ): BalaoGesto {
   const mats = materiaisDoBalao(scene, atravessaParede);
+  let matsEstrela: Record<IdGesto, StandardMaterial> | null = null;
   // "personagem-": o brilho da cena não pega (como o boneco)
   const m = MeshBuilder.CreatePlane('personagem-balao-gesto', { size: 1 }, scene);
   m.parent = pai;
@@ -147,9 +154,10 @@ export function criarBalao(
   let idade = 0;
   let gesto: IdGesto | null = null;
   return {
-    mostrar(id) {
+    mostrar(id, estrela = false) {
       gesto = id;
-      m.material = mats[id];
+      if (estrela) matsEstrela ??= materiaisDoBalao(scene, true, true);
+      m.material = estrela && matsEstrela ? matsEstrela[id] : mats[id];
       resta = DURACAO_BALAO;
       idade = 0;
       m.setEnabled(true);

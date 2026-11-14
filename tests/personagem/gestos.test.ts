@@ -3,6 +3,7 @@ import { calcularPose, type Pose } from '../../src/personagem/poses';
 import {
   GESTOS,
   IDS_GESTOS,
+  gestosLiberados,
   aplicarGesto,
   criarTocadorGesto,
   duracaoDoGesto,
@@ -16,7 +17,7 @@ import {
   type EstadoGesto,
 } from '../../src/personagem/gestos';
 import { criarAnimador } from '../../src/player/animacao';
-import { ICONES_GESTOS, svgDoBalao } from '../../src/ui/iconesGestos';
+import { ICONES_GESTOS, svgDoBalao, svgDoBalaoEstrela } from '../../src/ui/iconesGestos';
 
 const parado = (): Pose =>
   calcularPose({
@@ -32,7 +33,17 @@ const quieto: EstadoGesto = { andando: false, noAr: false, ocupado: false };
 const zDireito = (p: Pose) => 0.06 + (p.bracoDireitoAbre ?? 0);
 const zEsquerdo = (p: Pose) => -0.06 - (p.bracoEsquerdoAbre ?? 0);
 
-describe('os 8 gestos do esboço', () => {
+describe('spec 023 (T09): os gestos de presente de nível', () => {
+  it('pulo de estrela no nível 3 e reverência no 8; os 8 de sempre desde o começo', () => {
+    expect(gestosLiberados(1).map((g) => g.id)).toEqual(IDS_GESTOS.slice(0, 8));
+    expect(gestosLiberados(3).map((g) => g.id)).toContain('pulo-estrela');
+    expect(gestosLiberados(7).map((g) => g.id)).not.toContain('reverencia');
+    expect(gestosLiberados(8)).toHaveLength(10);
+    expect(svgDoBalaoEstrela('reverencia')).toContain('#ffc93d');
+  });
+});
+
+describe('os 8 gestos do esboço (e os 2 de presente de nível)', () => {
   it('ids, nomes, durações e ícones', () => {
     expect(IDS_GESTOS).toEqual([
       'acenar',
@@ -43,11 +54,24 @@ describe('os 8 gestos do esboço', () => {
       'dancar',
       'apontar',
       'sentar',
+      'pulo-estrela',
+      'reverencia',
     ]);
     expect(GESTOS.map((g) => g.id)).toEqual([...IDS_GESTOS]);
-    expect(GESTOS.map((g) => g.duracao)).toEqual([1.8, 1.4, 1.8, 1.6, 1.8, 3.2, 1.8, Infinity]);
+    expect(GESTOS.map((g) => g.duracao)).toEqual([
+      1.8,
+      1.4,
+      1.8,
+      1.6,
+      1.8,
+      3.2,
+      1.8,
+      Infinity,
+      1.7,
+      2.2,
+    ]);
     for (const g of GESTOS) {
-      expect(g.nome.length).toBeLessThanOrEqual(12);
+      expect(g.nome.length).toBeLessThanOrEqual(15);
       expect(ICONES_GESTOS[g.id]).toContain('<path');
       expect(svgDoBalao(g.id)).toContain('#fff7e8');
     }

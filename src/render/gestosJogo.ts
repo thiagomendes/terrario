@@ -8,8 +8,8 @@
 import type { Scene } from '@babylonjs/core/scene';
 import type { TransformNode } from '@babylonjs/core/Meshes/transformNode';
 import {
-  GESTOS,
   INTERVALO_GESTO,
+  gestosLiberados,
   ehGesto,
   fazerGesto,
   type IdGesto,
@@ -66,15 +66,31 @@ export function criarGestosJogo(op: OpcoesGestosJogo): GestosJogo {
     ultimo = t;
     // previsão: o boneco e o balão na hora; o núcleo avisa os amigos e o mundo responde
     fazerGesto(op.animador, g);
-    balao.mostrar(g);
+    balao.mostrar(g, nivel >= 6);
     op.enviar({ t: 'gesto', id: op.proximoId(), gesto: g });
     window.dispatchEvent(new CustomEvent('brumaluz:gesto', { detail: g }));
     return true;
   }
 
+  // spec 023 (T09): o nível da criança (os gestos de presente entram na roda; do nível 6 em
+  // diante, o balão tem estrelinha)
+  let nivel = 1;
+  const itensDaRoda = () =>
+    gestosLiberados(nivel).map((g) => ({
+      id: g.id,
+      nome: g.nome,
+      icone: svgDoIcone(ICONES_GESTOS[g.id]),
+    }));
+  window.addEventListener('brumaluz:almaNivel', (e) => {
+    const n = (e as CustomEvent<{ nivel?: unknown }>).detail?.nivel;
+    if (typeof n !== 'number' || n === nivel) return;
+    nivel = n;
+    menu.definirGestos(itensDaRoda());
+  });
+
   // o menu da tela (opção C): a mesma roda tem o menu e os gestos
   const menu = criarMenuRoda({
-    gestos: GESTOS.map((g) => ({ id: g.id, nome: g.nome, icone: svgDoIcone(ICONES_GESTOS[g.id]) })),
+    gestos: itensDaRoda(),
     fazerGesto: (id) => {
       if (ehGesto(id)) fazer(id);
     },

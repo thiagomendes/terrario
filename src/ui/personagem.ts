@@ -110,6 +110,9 @@ export const CSS_PAINEL =
   box-shadow: 0 3px 0 rgba(60, 35, 10, 0.28), inset 0 -3px 0 rgba(0, 0, 0, 0.15);
 }
 @media (pointer: coarse) { .painel-personagem button.amostra { width: 44px; height: 44px; min-height: 44px; } }
+.painel-personagem button.amostra-presente { position: relative; }
+.painel-personagem button.amostra-presente::after { content: ''; position: absolute; right: -6px; top: -6px; width: 18px; height: 18px;
+  background: no-repeat center/contain url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'><path d='M10 1 L12.6 7 L19 7.4 L14 11.6 L15.6 18 L10 14.4 L4.4 18 L6 11.6 L1 7.4 L7.4 7 Z' fill='%23ffd45a' stroke='%23a8610a' stroke-width='1.4' stroke-linejoin='round'/></svg>"); }
 .painel-personagem button.amostra[aria-pressed='true'] {
   outline: 3px solid var(--amarela-fundo); outline-offset: 3px;
   box-shadow: 0 3px 0 rgba(60, 35, 10, 0.28), inset 0 -3px 0 rgba(0, 0, 0, 0.15);

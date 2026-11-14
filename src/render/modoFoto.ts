@@ -133,9 +133,21 @@ export function criarModoFoto(op: OpcoesModoFoto) {
     fov: (g: number) => {
       cameraVisao.fov = (g * Math.PI) / 180;
     },
-    capturar: () => {
+    /** `porCima`: desenha por cima da foto (a moldura de flores, presente de nível). */
+    capturar: (porCima?: (c: CanvasRenderingContext2D, w: number, h: number) => void) => {
       scene.render();
-      const url = canvas.toDataURL('image/png');
+      let url = canvas.toDataURL('image/png');
+      if (porCima) {
+        const c2 = document.createElement('canvas');
+        c2.width = canvas.width;
+        c2.height = canvas.height;
+        const ctx = c2.getContext('2d');
+        if (ctx) {
+          ctx.drawImage(canvas, 0, 0);
+          porCima(ctx, c2.width, c2.height);
+          url = c2.toDataURL('image/png');
+        }
+      }
       const a = document.createElement('a');
       const agora = new Date();
       a.download = `terrario-${agora.toISOString().slice(0, 19).replace(/[:T]/g, '-')}.png`;

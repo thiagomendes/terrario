@@ -69,6 +69,9 @@ export const CSS_ALMA_BAU = `
 .alma-grande.futura > .alma-fig { filter: brightness(0) opacity(0.22); }
 .alma-grande .cad { position: absolute; width: 38px; height: 38px; right: 8px; top: 8px; }
 .alma-grande .quando { position: absolute; left: 8px; bottom: 8px; width: 44px; height: 44px; border-radius: 12px; background: #fffaf0; padding: 3px; box-sizing: border-box; box-shadow: 0 2px 0 rgba(150,110,60,0.3); }
+.alma-trofeu .quando.nivel { display: grid; place-items: center; font: 900 20px var(--jogo, system-ui); color: #8a4a00;
+  background: radial-gradient(circle at 40% 35%, #fff3b0, #ffc93d); border-radius: 50%; }
+.alma-trofeu.tem { background: radial-gradient(circle at 50% 40%, #fff6c8, #ffe08a 70%, #ffc93d); }
 .alma-grande.tem::after { content: ''; position: absolute; right: 8px; top: 8px; width: 30px; height: 30px; border-radius: 50%;
   background: #5cbf4f url("data:image/svg+xml,%3Csvg viewBox='0 0 64 64' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M13 33 L27 47 L52 18' fill='none' stroke='white' stroke-width='10' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center/70% no-repeat; box-shadow: 0 2px 0 #3f9a3a; }
 
@@ -335,6 +338,21 @@ export function criarBau(op: OpcoesBau) {
       }
       grandes.appendChild(g);
     }
+    // spec 023 (T09): o troféu do nível 10 (presente de nível), em todo álbum
+    const nivel = nivelDoXp(op.perfil().xp).nivel;
+    const trofeu = document.createElement('div');
+    trofeu.className = `alma-grande alma-trofeu${nivel >= 10 ? ' tem' : ' futura'}`;
+    trofeu.dataset.trofeu = '10';
+    trofeu.setAttribute('aria-label', 'Troféu do nível 10');
+    trofeu.appendChild(figura('trofeu'));
+    if (nivel < 10) {
+      trofeu.appendChild(svgEl('cadeado', 'cad'));
+      const q = document.createElement('span');
+      q.className = 'quando nivel';
+      q.textContent = '10';
+      trofeu.appendChild(q);
+    }
+    grandes.appendChild(trofeu);
     caixa.append(grade, grandes);
     return caixa;
   }

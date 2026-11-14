@@ -22,6 +22,11 @@ export const ICONES_GESTOS: Record<IdGesto, string> = {
     '<path d="M4 15 H17 V12 L28 16 L17 20 V17 H4 Z" fill="#7cc6ff" stroke="#3b2a1e" stroke-width="1.8" stroke-linejoin="round"/>',
   sentar:
     '<path d="M8 6 V20 H22 V27 M8 20 V27" stroke="#7a4826" stroke-width="2.6" fill="none" stroke-linecap="round"/><path d="M8 15 H22 V20" stroke="#7a4826" stroke-width="2.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>',
+  // spec 023 (T09): o bonequinho em X pulando com a estrela, e a reverência com o floreio
+  'pulo-estrela':
+    '<circle cx="16" cy="7" r="3.6" fill="#f2c9a0" stroke="#3b2a1e" stroke-width="1.8"/><path d="M16 11 V19 M16 13 L7 6 M16 13 L25 6 M16 19 L9 28 M16 19 L23 28" stroke="#e8402f" stroke-width="3" fill="none" stroke-linecap="round"/><path d="M27 15 L28.2 18 L31 18.4 L28.8 20.3 L29.5 23.2 L27 21.6 L24.5 23.2 L25.2 20.3 L23 18.4 L25.8 18 Z" fill="#ffd45a" stroke="#3b2a1e" stroke-width="1.2" stroke-linejoin="round"/>',
+  reverencia:
+    '<circle cx="19" cy="10" r="3.6" fill="#f2c9a0" stroke="#3b2a1e" stroke-width="1.8"/><path d="M17 13 Q12 15 11 21 M11 21 L10 29 M11 21 L15 29" stroke="#8a5ad8" stroke-width="3" fill="none" stroke-linecap="round"/><path d="M14 16 Q19 19 22 17" stroke="#8a5ad8" stroke-width="2.6" fill="none" stroke-linecap="round"/><path d="M4 12 Q6 7 10 9 M5 17 Q3 14 5 11" stroke="#ffb21a" stroke-width="1.8" fill="none" stroke-linecap="round"/>',
 };
 
 /** A carinha do botão que abre a roda. */
@@ -36,4 +41,21 @@ export function svgDoIcone(miolo: string, classe = 'icone-gesto'): string {
 /** O balão do esboço: círculo creme com a pontinha embaixo e o ícone no meio (viewBox 64). */
 export function svgDoBalao(id: IdGesto): string {
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="256" height="256"><circle cx="32" cy="30" r="27" fill="#fff7e8" stroke="#e9d6b2" stroke-width="3"/><path d="M26 55 L32 63 L38 55 Z" fill="#fff7e8"/><g transform="translate(14 12) scale(1.12)">${ICONES_GESTOS[id]}</g></svg>`;
+}
+
+/**
+ * Spec 023 (T09): o balão do presente do nível 6: o mesmo balão creme com a borda de ouro e
+ * três estrelinhas brilhando em volta.
+ */
+export function svgDoBalaoEstrela(id: IdGesto): string {
+  const estrela = (x: number, y: number, r: number) => {
+    const p: string[] = [];
+    for (let i = 0; i < 10; i++) {
+      const a = -Math.PI / 2 + (i * Math.PI) / 5;
+      const rr = i % 2 ? r * 0.45 : r;
+      p.push(`${(x + Math.cos(a) * rr).toFixed(1)},${(y + Math.sin(a) * rr).toFixed(1)}`);
+    }
+    return `<polygon points="${p.join(' ')}" fill="#ffd45a" stroke="#c98a14" stroke-width="1"/>`;
+  };
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="256" height="256"><circle cx="32" cy="30" r="26" fill="#fff7e8" stroke="#ffc93d" stroke-width="4"/><circle cx="32" cy="30" r="22.5" fill="none" stroke="#fff1b8" stroke-width="1.2"/><path d="M26 54 L32 62 L38 54 Z" fill="#fff7e8" stroke="#ffc93d" stroke-width="2" stroke-linejoin="round"/><g transform="translate(15 13) scale(1.06)">${ICONES_GESTOS[id]}</g>${estrela(8, 8, 6.5)}${estrela(57, 12, 5)}${estrela(56, 49, 4)}</svg>`;
 }

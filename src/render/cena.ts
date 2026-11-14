@@ -544,7 +544,7 @@ export interface EstadoDepuracao {
     filtro: (f: string) => void;
     desfoque: (v: number) => void;
     fov: (g: number) => void;
-    capturar: () => string;
+    capturar: (porCima?: (c: CanvasRenderingContext2D, w: number, h: number) => void) => string;
     /** A câmera de frente para o boneco (selfie). */
     selfie: () => boolean;
     /** Spec 023: a câmera num lugar (provador girando, capturas). */

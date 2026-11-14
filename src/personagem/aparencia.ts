@@ -64,6 +64,13 @@ export interface Aparencia {
    * nenhum, o campo não existe (as aparências de antes saem iguais).
    */
   premium?: PremiumVestido;
+  /**
+   * Spec 023 (T09): presentes de nível que os amigos veem. A etiqueta do nome colorida (nível
+   * 2) ou com estrela (nível 7) e o balão com estrelinha (nível 6). O aparelho põe quando a
+   * criança chega ao nível; sem nenhum, os campos não existem.
+   */
+  etiqueta?: 'cor' | 'estrela';
+  balao?: 'estrela';
 }
 
 /** Spec 023: o premium vestido de cada categoria (roupa, costas, fantasia e bicho). */
@@ -349,6 +356,8 @@ export function aplicarModelo(aparencia: Aparencia, modelo: ModeloId): Aparencia
   // outro modelo pronto é um look novo, mas o que a criança ganhou continua com ela
   if (aparencia.desbloqueios?.length) a.desbloqueios = [...aparencia.desbloqueios];
   if (aparencia.premium) a.premium = { ...aparencia.premium };
+  if (aparencia.etiqueta) a.etiqueta = aparencia.etiqueta;
+  if (aparencia.balao) a.balao = aparencia.balao;
   return a;
 }
 
@@ -390,6 +399,9 @@ export function normalizarAparencia(entrada: unknown): Aparencia {
   // spec 023: idem para os premium vestidos
   const premium = normalizarPremium(obj.premium);
   if (premium) a.premium = premium;
+  // spec 023 (T09): os presentes de nível que os amigos veem
+  if (obj.etiqueta === 'cor' || obj.etiqueta === 'estrela') a.etiqueta = obj.etiqueta;
+  if (obj.balao === 'estrela') a.balao = 'estrela';
   return a;
 }
 

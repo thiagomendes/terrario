@@ -125,7 +125,7 @@ function passos(n: Nucleo, segundos: number, cada?: () => void) {
 const gesto = (g: string): Comando => ({ t: 'gesto', id: id(), gesto: g }) as Comando;
 
 describe('comando gesto: saneamento', () => {
-  it('aceita os 8 gestos e recusa o resto', () => {
+  it('aceita os 10 gestos (8 e os 2 de presente de nível) e recusa o resto', () => {
     for (const g of IDS_GESTOS) expect(sanear({ t: 'gesto', id: 1, gesto: g })).not.toBeNull();
     expect(sanear({ t: 'gesto', id: 1, gesto: 'voar' })).toBeNull();
     expect(sanear({ t: 'gesto', id: 1, gesto: 3 })).toBeNull();

@@ -1,6 +1,11 @@
-import { criarPerfilCrianca, type PerfilCrianca } from './personagem/almaCrianca';
+import {
+  criarPerfilCrianca,
+  enfeitesDoNivel,
+  nivelDaCrianca,
+  type PerfilCrianca,
+} from './personagem/almaCrianca';
 import { ligarAlmaUi } from './ui/alma';
-import { CATEGORIAS_PREMIUM, ganhoTemAlgo } from './jogo/alma';
+import { CATEGORIAS_PREMIUM, ganhoTemAlgo, nivelDoXp } from './jogo/alma';
 import type { EventoNucleo } from './nucleo/protocolo';
 import { medirJanela, tamanhoDoCanvas } from './ui/telaCheia';
 import { criarCena } from './render/cena';
@@ -22,7 +27,7 @@ import { Bloco } from './world/blocks';
 import { criarGerenciadorConfig } from './jogo/config';
 import { CSS_STATUS, criarStatus, criarTelaMorte } from './ui/status';
 import { notificar } from './ui/interface';
-import { CSS_FOTO, criarPainelFoto } from './ui/foto';
+import { CSS_FOTO, criarPainelFoto, desenharMoldura } from './ui/foto';
 import { CSS_MAPA, criarMapas } from './ui/mapa';
 import { CSS_DIARIO, criarUiDiario } from './ui/diario';
 import {
@@ -561,14 +566,16 @@ function ligarFoto(app: HTMLElement, cena: ReturnType<typeof criarCena>): void {
     hora: (h) => {
       cena.estado.hora = h;
     },
-    capturar: () => {
-      foto.capturar();
+    capturar: (moldura) => {
+      foto.capturar(moldura ? desenharMoldura : undefined);
       notificar('Foto salva', 'foto');
       window.dispatchEvent(new CustomEvent('brumaluz:foto'));
     },
     selfie: () => {
       foto.selfie();
     },
+    // spec 023 (T09): a moldura de flores é o presente do nível 5
+    temMoldura: () => nivelDaCrianca() >= 5,
     sair: () => alternar(),
   });
   // o painel e o HUD seguem o modo foto, ligado por onde for (tecla, botão ou depuração)
@@ -709,6 +716,22 @@ function ligarAlma(
   perfil.ouvir((_p, aviso) => {
     if (aviso.tipo === 'premium') vestirPremiumNoBoneco(true);
   });
+  // spec 023 (T09): os presentes de nível de verdade. A etiqueta e o balão vão na aparência
+  // (os amigos veem); a roda de gestos, as tintas, a moldura e o troféu ouvem o nível.
+  let nivelAntes = 0;
+  const sincronizarNivel = () => {
+    const nivel = nivelDoXp(perfil.perfil.xp).nivel;
+    if (nivel === nivelAntes) return;
+    nivelAntes = nivel;
+    const enf = enfeitesDoNivel(nivel);
+    const ps = cena.estado.personagem;
+    const a = ps?.aparencia();
+    if (ps && a && (a.etiqueta !== enf.etiqueta || a.balao !== enf.balao))
+      ps.definir({ etiqueta: enf.etiqueta, balao: enf.balao });
+    window.dispatchEvent(new CustomEvent('brumaluz:almaNivel', { detail: { nivel } }));
+  };
+  sincronizarNivel();
+  perfil.ouvir(() => sincronizarNivel());
   window.addEventListener('brumaluz:alma', (ev) => {
     const e = (ev as CustomEvent<Extract<EventoNucleo, { e: 'alma' }>>).detail;
     if (!e || typeof e !== 'object') return;

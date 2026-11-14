@@ -253,13 +253,17 @@ export const ARTE: Record<string, string> = {
     <rect x="4" y="24" width="56" height="8" rx="3" fill="#e0a868" ${s(2.5)}/>
     <rect x="4" y="40" width="56" height="8" rx="3" fill="#e0a868" ${s(2.5)}/>`),
   // presentes de nível
+  // spec 023 (T09): as figuras dos presentes iguais ao que o jogo mostra (a etiqueta em
+  // degradê sobre o amigo, o balão de borda de ouro, a moldura de flores)
   etiqueta: svg(`
-    <path d="M8 22 Q8 16 14 16 H50 Q56 16 56 22 V40 Q56 46 50 46 H36 L32 54 L28 46 H14 Q8 46 8 40 Z" fill="#5aa7ff" ${s()}/>
-    <rect x="16" y="27" width="32" height="8" rx="4" fill="#fff"/>`),
+    <defs><linearGradient id="fig-etq" x1="0" x2="1" y1="0" y2="0.3"><stop offset="0" stop-color="#ff7ab8"/><stop offset="0.52" stop-color="#b48cff"/><stop offset="1" stop-color="#5cc8ff"/></linearGradient></defs>
+    <rect x="6" y="20" width="52" height="24" rx="12" fill="url(#fig-etq)" ${s()}/>
+    <rect x="17" y="28.5" width="30" height="7" rx="3.5" fill="#fff"/>`),
   etiquetaEstrela: svg(`
-    <path d="M8 22 Q8 16 14 16 H50 Q56 16 56 22 V40 Q56 46 50 46 H36 L32 54 L28 46 H14 Q8 46 8 40 Z" fill="#ff7aa8" ${s()}/>
-    <rect x="22" y="27" width="26" height="8" rx="4" fill="#fff"/>
-    <polygon points="${estrela5(15, 31, 6, 2.6)}" fill="#ffe27a"/>`),
+    <defs><linearGradient id="fig-etq2" x1="0" x2="1" y1="0" y2="0.3"><stop offset="0" stop-color="#ff7ab8"/><stop offset="0.52" stop-color="#b48cff"/><stop offset="1" stop-color="#5cc8ff"/></linearGradient></defs>
+    <rect x="6" y="20" width="52" height="24" rx="12" fill="url(#fig-etq2)" ${s()}/>
+    <rect x="26" y="28.5" width="24" height="7" rx="3.5" fill="#fff"/>
+    <polygon points="${estrela5(17, 32, 8, 3.4)}" fill="#ffe066" ${s(1.8)}/>`),
   gestoEstrela: svg(`
     <polygon points="${estrela5(32, 34, 28, 12)}" fill="#ffe27a" ${s(2.5)}/>
     <circle cx="32" cy="20" r="6" fill="#ffd5a8" ${s(2.5)}/>
@@ -279,13 +283,30 @@ export const ARTE: Record<string, string> = {
     <path d="M44 24 Q54 30 52 42" fill="none" stroke="${C}" stroke-width="3"/>
     <path d="M18 22 Q20 34 26 30 Q28 40 34 32" fill="#5fd6b0"/>`),
   moldura: svg(`
-    <rect x="8" y="12" width="48" height="40" rx="6" fill="#ff9ab8" ${s()}/>
-    <rect x="16" y="20" width="32" height="24" rx="3" fill="#bfe3ff" ${s(2.5)}/>
-    <circle cx="12" cy="16" r="5" fill="#ffe27a" ${s(2)}/><circle cx="52" cy="48" r="5" fill="#ffe27a" ${s(2)}/>
-    <path d="M18 42 L26 32 L32 38 L38 30 L46 42 Z" fill="#7fd06a"/>`),
+    <rect x="6" y="10" width="52" height="44" rx="8" fill="#fff6ea" ${s()}/>
+    <rect x="14" y="18" width="36" height="28" rx="5" fill="#bfe3ff" stroke="#ffb8d4" stroke-width="2.5"/>
+    <path d="M16 44 L25 33 L31 39 L37 31 L48 44 Z" fill="#7fd06a"/>
+    ${[
+      [10, 14, '#ff7ab8'],
+      [54, 14, '#b48cff'],
+      [54, 50, '#ff7ab8'],
+      [10, 50, '#ffd45a'],
+      [32, 12, '#5cc8ff'],
+      [32, 52, '#b48cff'],
+    ]
+      .map(
+        ([x, y, c]) =>
+          `<g transform="translate(${x} ${y})">${[0, 72, 144, 216, 288]
+            .map((a) => `<ellipse cx="0" cy="-3.2" rx="2.6" ry="3.2" fill="${c}" transform="rotate(${a})"/>`)
+            .join('')}<circle r="2" fill="#ffc93d"/></g>`,
+      )
+      .join('')}`),
   balao: svg(`
-    <path d="M8 18 Q8 10 16 10 H48 Q56 10 56 18 V36 Q56 44 48 44 H26 L16 54 L18 44 H16 Q8 44 8 36 Z" fill="#fffaf0" ${s()}/>
-    <polygon points="${estrela5(32, 27, 10, 4.4)}" fill="#ffc93d" ${s(2)}/>`),
+    <circle cx="32" cy="29" r="21" fill="#fff7e8" stroke="#ffc93d" stroke-width="4"/>
+    <path d="M27 48 L32 56 L37 48 Z" fill="#fff7e8" stroke="#ffc93d" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="${estrela5(32, 29, 9, 4)}" fill="#ffc93d" ${s(2)}/>
+    <polygon points="${estrela5(10, 10, 6, 2.6)}" fill="#ffd45a" ${s(1.5)}/>
+    <polygon points="${estrela5(55, 13, 5, 2.2)}" fill="#ffd45a" ${s(1.5)}/>`),
   trofeu: svg(`
     <path d="M18 10 H46 V24 Q46 38 32 40 Q18 38 18 24 Z" fill="#ffc93d" ${s()}/>
     <path d="M18 14 Q8 14 10 24 Q12 30 19 30 M46 14 Q56 14 54 24 Q52 30 45 30" fill="none" stroke="${C}" stroke-width="3"/>

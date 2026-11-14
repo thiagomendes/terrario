@@ -135,6 +135,17 @@ export interface FantasiaDef {
   premium?: true;
 }
 
+/**
+ * Spec 023 (T09): as cores novas para as fantasias, presentes de nível (lilás no 4, menta no
+ * 9). Valem em qualquer fantasia, no lugar da cor principal: o índice delas é fixo (90 e 91),
+ * longe das cores de cada fantasia.
+ */
+export const TINTAS_PRESENTE = [
+  { cor: 90, nivel: 4, nome: 'Lilás', hex: '#b48cff' },
+  { cor: 91, nivel: 9, nome: 'Menta', hex: '#4fd8b0' },
+] as const;
+export const tintaPresente = (cor: number) => TINTAS_PRESENTE.find((t) => t.cor === cor);
+
 /** Fantasia vestida: o id do catálogo e o índice da cor principal. */
 export interface FantasiaVestida {
   id: string;
@@ -618,8 +629,7 @@ export function normalizarFantasia(entrada: unknown, corpo: Corpo): FantasiaVest
   const cor =
     typeof obj.cor === 'number' &&
     Number.isInteger(obj.cor) &&
-    obj.cor >= 0 &&
-    obj.cor < def.cores.length
+    ((obj.cor >= 0 && obj.cor < def.cores.length) || tintaPresente(obj.cor))
       ? obj.cor
       : 0;
   const saida: FantasiaVestida = { id: def.id, cor };
@@ -669,7 +679,7 @@ export function escurecer(hex: string, k: number): string {
 /** A cor "#rrggbb" de um papel na fantasia vestida. */
 export function corDaPeca(f: FantasiaVestida, cor: CorPeca): string {
   const def = fantasiaPorId(f.id);
-  const principal = def?.cores[f.cor] ?? def?.cores[0] ?? '#888888';
+  const principal = tintaPresente(f.cor)?.hex ?? def?.cores[f.cor] ?? def?.cores[0] ?? '#888888';
   switch (cor) {
     case 'principal':
       return principal;

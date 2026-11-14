@@ -12,6 +12,7 @@ import {
   aplicarGanho,
   comprarPremium,
   descontar,
+  nivelDoXp,
   normalizarPerfilAlma,
   perfilAlmaVazio,
   vestirPremium,
@@ -106,5 +107,22 @@ export function criarPerfilCrianca(armazenamento: Armazenamento | null): PerfilC
       ouvintes.add(f);
       return () => ouvintes.delete(f);
     },
+  };
+}
+
+/**
+ * O nível da criança neste aparelho (a roda de gestos, as tintas e os enfeites leem daqui, sem
+ * depender de quem criou o perfil). Sem perfil (prévia, testes), nível 1.
+ */
+export function nivelDaCrianca(): number {
+  const p = (globalThis as { __almaCrianca?: PerfilCrianca }).__almaCrianca?.perfil;
+  return p ? nivelDoXp(p.xp).nivel : 1;
+}
+
+/** Os presentes de nível que mudam a aparência (os amigos veem): etiqueta e balão. */
+export function enfeitesDoNivel(nivel: number): { etiqueta?: 'cor' | 'estrela'; balao?: 'estrela' } {
+  return {
+    etiqueta: nivel >= 7 ? 'estrela' : nivel >= 2 ? 'cor' : undefined,
+    balao: nivel >= 6 ? 'estrela' : undefined,
   };
 }

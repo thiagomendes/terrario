@@ -17,6 +17,9 @@ export const IDS_GESTOS = [
   'dancar',
   'apontar',
   'sentar',
+  // spec 023 (T09): presentes de nível (aparecem na roda quando a criança chega ao nível)
+  'pulo-estrela',
+  'reverencia',
 ] as const;
 
 export type IdGesto = (typeof IDS_GESTOS)[number];
@@ -39,7 +42,23 @@ export const GESTOS: readonly DefGesto[] = [
   { id: 'dancar', nome: 'Dançar', duracao: 3.2 },
   { id: 'apontar', nome: 'Apontar', duracao: 1.8 },
   { id: 'sentar', nome: 'Sentar', duracao: Infinity },
+  { id: 'pulo-estrela', nome: 'Pulo de estrela', duracao: 1.7 },
+  { id: 'reverencia', nome: 'Reverência', duracao: 2.2 },
 ];
+
+/**
+ * Spec 023 (T09): os gestos que são presente de nível (pulo de estrela no 3, reverência no 8).
+ * Os outros vêm desde o começo. O núcleo aceita todos (o nível mora no aparelho até a 024).
+ */
+export const NIVEL_DO_GESTO: Partial<Record<IdGesto, number>> = {
+  'pulo-estrela': 3,
+  reverencia: 8,
+};
+
+/** Os gestos da roda para quem está neste nível (na ordem da roda). */
+export function gestosLiberados(nivel: number): DefGesto[] {
+  return GESTOS.filter((g) => (NIVEL_DO_GESTO[g.id] ?? 0) <= nivel);
+}
 
 const DURACAO: Record<IdGesto, number> = Object.fromEntries(
   GESTOS.map((g) => [g.id, g.duracao]),
@@ -161,6 +180,41 @@ function juntasDoGesto(id: IdGesto, f: number): Juntas {
     }
     case 'apontar':
       return { bdX: -1.55, bdZ: 0, cabY: 0.2 };
+    case 'pulo-estrela': {
+      // dois pulos de estrela: agacha, salta abrindo os braços em V bem alto e cai junto
+      const ciclo = (f % 0.8) / 0.8;
+      const salto = Math.max(0, Math.sin(ciclo * Math.PI * 2 - 0.5));
+      const agacha = Math.max(0, -Math.sin(ciclo * Math.PI * 2 - 0.5)) * 0.1;
+      const abre = 1.2 + salto * 1.5;
+      return {
+        beZ: -abre,
+        bdZ: abre,
+        beX: 0,
+        bdX: 0,
+        corpoY: salto * 0.42 - agacha,
+        pernaD: -salto * 0.25,
+        pernaE: salto * 0.25,
+        cabX: -salto * 0.12,
+      };
+    }
+    case 'reverencia': {
+      // a reverência de princesa ou príncipe: o braço direito faz o floreio (sobe aberto e
+      // desce na frente do peito), o esquerdo abre para o lado e o corpo se curva fundo e volta
+      const floreio = Math.min(1, f / 0.55);
+      const curva =
+        f < 0.45 ? 0 : f < 1.0 ? (f - 0.45) / 0.55 : f < 1.55 ? 1 : Math.max(0, 1 - (f - 1.55) / 0.5);
+      const suave = curva * curva * (3 - 2 * curva);
+      return {
+        bdZ: 1.6 * (1 - floreio) + 0.35,
+        bdX: -1.15 * floreio,
+        beZ: -0.85 * suave - 0.15,
+        beX: 0.25 * suave,
+        troncoX: 0.62 * suave,
+        cabX: 0.12 * suave,
+        pernaD: -0.22 * suave,
+        pernaE: 0.18 * suave,
+      };
+    }
     case 'sentar': {
       // senta no chão: pernas para a frente, o corpo desce, mãos no colo
       const s = Math.min(1, f / 0.4);

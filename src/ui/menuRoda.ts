@@ -142,6 +142,8 @@ export interface MenuRoda {
   /** Abre os gestos (com Voltar no meio, para o menu). */
   abrirGestos(): void;
   fechar(): void;
+  /** Spec 023: troca os gestos da roda (os presentes de nível entram quando chegam). */
+  definirGestos(gestos: readonly ItemRoda[]): void;
 }
 
 let cssPosto = false;
@@ -235,11 +237,14 @@ export function criarMenuRoda(op: OpcoesMenuRoda, raiz: HTMLElement = document.b
       else if (it.codigo) tecla(it.codigo);
     },
   };
-  const listaGestos: ListaRoda = {
-    itens: op.gestos.map((g, i) => ({ ...g, tecla: String(i + 1) })),
+  let gestos = op.gestos;
+  const listaDeGestos = (gs: readonly ItemRoda[]): ListaRoda => ({
+    // 1 a 9 e o 0 para o décimo
+    itens: gs.map((g, i) => ({ ...g, tecla: String((i + 1) % 10) })),
     aoEscolher: (id) => op.fazerGesto(id),
     aoVoltar: () => abrirMenu(),
-  };
+  });
+  let listaGestos: ListaRoda = listaDeGestos(gestos);
   // desempenho: os botões das duas listas já ficam montados (abrir não cria nada)
   roda.preparar(listaMenu);
   roda.preparar(listaGestos);
@@ -347,7 +352,7 @@ export function criarMenuRoda(op: OpcoesMenuRoda, raiz: HTMLElement = document.b
         e.stopImmediatePropagation();
         return;
       }
-      const a = teclaDaRoda(e.code, roda.aberta, emGestos() ? op.gestos.length : 0);
+      const a = teclaDaRoda(e.code, roda.aberta, emGestos() ? gestos.length : 0);
       if (!a) return;
       if (a.acao === 'alternar') {
         if (emGestos()) roda.fechar();
@@ -368,6 +373,14 @@ export function criarMenuRoda(op: OpcoesMenuRoda, raiz: HTMLElement = document.b
     },
     abrirMenu,
     abrirGestos,
+    definirGestos(novos) {
+      if (novos.length === gestos.length && novos.every((g, i) => g.id === gestos[i].id)) return;
+      const aberta = emGestos();
+      gestos = novos;
+      listaGestos = listaDeGestos(gestos);
+      roda.preparar(listaGestos);
+      if (aberta) roda.abrir(listaGestos);
+    },
     fechar: () => roda.fechar(),
   };
 }
