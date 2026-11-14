@@ -865,6 +865,11 @@ export interface MissaoMovida {
   /** Quanto já foi feito e quanto pede (a obra: células cheias e o total). */
   feito: number;
   meta: number;
+  /**
+   * O passeio (missão de lugares): quais lugares dela já foram vistos, para cada bolinha
+   * acender no seu lugar (a sorveteria primeiro acende a da sorveteria, não a primeira).
+   */
+  usos?: string[];
   concluiu?: true;
   bis?: true;
   /** Passou sem prêmio (a obra que os outros fizeram antes). */
@@ -973,6 +978,12 @@ export function registrarEvento(
   return r;
 }
 
+/** Os lugares do passeio `m` que este jogador já viu (na ordem da missão); nada se não é passeio. */
+export function lugaresVistos(e: Pick<AlmaMundo, 'lugares'>, m: Missao): string[] | undefined {
+  if (m.conta.tipo !== 'lugares') return undefined;
+  return m.conta.usos.filter((u) => e.lugares.includes(u));
+}
+
 /** Um lugar novo (uso do lote): XP do explorador e o passeio da cidade. */
 export function visitarLugar(e: AlmaMundo, mundo: MundoAlma | null, uso: string): ResultadoAlma {
   if (e.lugares.includes(uso) || e.lugares.length >= MAX_LUGARES) return resultadoVazio();
@@ -980,10 +991,11 @@ export function visitarLugar(e: AlmaMundo, mundo: MundoAlma | null, uso: string)
   const r = registrarEvento(e, mundo, 'visitou:lugar');
   for (const m of contando(e, mundo)) {
     if (m.conta.tipo !== 'lugares' || !m.conta.usos.includes(uso)) continue;
-    const feito = m.conta.usos.filter((u) => e.lugares.includes(u)).length;
+    const usos = lugaresVistos(e, m);
+    const feito = usos?.length ?? 0;
     e.progresso[m.id] = feito;
     if (feito >= m.conta.usos.length) concluir(e, mundo, m, r, feito);
-    else r.missoes.push({ id: m.id, feito, meta: m.conta.usos.length });
+    else r.missoes.push({ id: m.id, feito, meta: m.conta.usos.length, usos });
   }
   return r;
 }
@@ -1046,7 +1058,8 @@ export interface VistaAlmaMundo {
   mundo: MundoAlma;
   feitas: string[];
   puladas: string[];
-  abertas: { id: string; feito: number; meta: number; bis?: true }[];
+  /** `usos`: no passeio, os lugares já vistos (cada bolinha no seu lugar). */
+  abertas: { id: string; feito: number; meta: number; usos?: string[]; bis?: true }[];
   fixada: string | null;
   bis: number;
   /** O que espera no baú da banca. */
@@ -1067,10 +1080,12 @@ export function vistaAlmaMundo(
         const o = obra(m.conta.canteiro);
         return { id: m.id, feito: o?.cheias ?? 0, meta: o?.total ?? 1 };
       }
+      const usos = lugaresVistos(e, m);
       return {
         id: m.id,
         feito: e.progresso[m.id] ?? 0,
         meta: metaDa(m),
+        ...(usos ? { usos } : {}),
         ...(bis ? { bis: true as const } : {}),
       };
     }),

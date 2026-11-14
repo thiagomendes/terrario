@@ -229,7 +229,31 @@ export function premioEl(m: Missao, bis = false): HTMLElement {
 }
 
 /** O progresso: bolinhas com a figura de cada vez (até 8), ou a barra (a obra, os grandes). */
-export function progressoEl(m: Missao, feito: number, meta: number): HTMLElement {
+/**
+ * Quais bolinhas acendem: no passeio, a do lugar já visto (pelos `usos` que o núcleo manda; um
+ * núcleo antigo sem eles, as primeiras pela conta); nas outras, as primeiras `feito`.
+ */
+export function bolinhasCheias(
+  m: Missao,
+  feito: number,
+  meta: number,
+  usos?: readonly unknown[],
+): boolean[] {
+  const cheias = Math.min(meta, Math.floor(feito));
+  if (m.conta.tipo === 'lugares' && Array.isArray(usos)) {
+    const vistos = new Set(usos.filter((u): u is string => typeof u === 'string'));
+    const lugares = m.conta.usos;
+    return Array.from({ length: meta }, (_, i) => vistos.has(lugares[i]));
+  }
+  return Array.from({ length: Math.max(0, meta) }, (_, i) => i < cheias);
+}
+
+export function progressoEl(
+  m: Missao,
+  feito: number,
+  meta: number,
+  usos?: readonly unknown[],
+): HTMLElement {
   const fr = meta > 0 ? Math.min(1, feito / meta) : 0;
   if (m.conta.tipo === 'obra' || meta > 8) {
     const b = document.createElement('div');
@@ -239,10 +263,10 @@ export function progressoEl(m: Missao, feito: number, meta: number): HTMLElement
   }
   const lista = document.createElement('div');
   lista.className = 'alma-bolinhas';
-  const cheias = Math.min(meta, Math.floor(feito));
+  const cheias = bolinhasCheias(m, feito, meta, usos);
   for (let i = 0; i < meta; i++) {
     const b = document.createElement('span');
-    b.className = `b${i < cheias ? ' cheia' : ''}`;
+    b.className = `b${cheias[i] ? ' cheia' : ''}`;
     b.appendChild(figura(desenhoDaBolinha(m, i)));
     lista.appendChild(b);
   }
@@ -267,11 +291,11 @@ export interface OpcoesHudAlma {
 /** A missão do cartão, como o núcleo diz: a fixada, se aberta, ou a primeira aberta. */
 export function missaoDoCartao(
   v: VistaAlmaMundo | null,
-): { m: Missao; feito: number; meta: number; bis: boolean } | null {
+): { m: Missao; feito: number; meta: number; usos?: string[]; bis: boolean } | null {
   if (!v) return null;
   const a = v.abertas.find((x) => x.id === v.fixada) ?? v.abertas[0];
   const m = a && missaoPorId(a.id);
-  return m ? { m, feito: a.feito, meta: a.meta, bis: !!a.bis } : null;
+  return m ? { m, feito: a.feito, meta: a.meta, usos: a.usos, bis: !!a.bis } : null;
 }
 
 export function criarHudAlma(raiz: HTMLElement, op: OpcoesHudAlma) {
@@ -342,7 +366,7 @@ export function criarHudAlma(raiz: HTMLElement, op: OpcoesHudAlma) {
       chaveCartao = '';
       return;
     }
-    const chave = `${c.m.id}:${c.feito}/${c.meta}:${c.bis}`;
+    const chave = `${c.m.id}:${c.feito}/${c.meta}:${c.bis}:${c.usos?.join() ?? ''}`;
     if (chave === chaveCartao) return;
     const mesma = chaveCartao.startsWith(`${c.m.id}:`);
     const antes = chaveCartao;
@@ -350,21 +374,27 @@ export function criarHudAlma(raiz: HTMLElement, op: OpcoesHudAlma) {
     cartao.dataset.missao = c.m.id;
     cartao.dataset.feito = String(c.feito);
     cartao.setAttribute('aria-label', `Missão: ${c.m.nome}`);
+    // as bolinhas que já estavam acesas (a que acendeu agora é a que pula)
+    const acesasAntes = [...cartao.querySelectorAll('.alma-bolinhas .b')].map((b) =>
+      b.classList.contains('cheia'),
+    );
     cartao.replaceChildren();
     const t = document.createElement('span');
     t.className = 'tarefa';
     t.appendChild(figuraMissao(c.m));
     const meio = document.createElement('span');
     meio.className = 'meio';
-    meio.appendChild(progressoEl(c.m, c.feito, c.meta));
+    meio.appendChild(progressoEl(c.m, c.feito, c.meta, c.usos));
     cartao.append(t, meio, svgEl('seta', 'seta'), premioEl(c.m, c.bis));
     // andou: a bolinha nova pula e faz "plim" (até 300 ms do evento do núcleo)
     if (animar && mesma && antes !== chave) {
       cartao.classList.remove('cresceu');
       void cartao.offsetWidth;
       cartao.classList.add('cresceu');
-      const cheias = cartao.querySelectorAll('.alma-bolinhas .b.cheia');
-      cheias[cheias.length - 1]?.classList.add('agora');
+      const bolinhas = [...cartao.querySelectorAll('.alma-bolinhas .b')];
+      const novas = bolinhas.filter((b, i) => b.classList.contains('cheia') && !acesasAntes[i]);
+      const cheias = bolinhas.filter((b) => b.classList.contains('cheia'));
+      (novas[novas.length - 1] ?? cheias[cheias.length - 1])?.classList.add('agora');
       tocarSomInterface('plim');
     }
   }
@@ -486,7 +516,7 @@ export function criarHudAlma(raiz: HTMLElement, op: OpcoesHudAlma) {
 
   function oferta(
     m: Missao,
-    a: { feito: number; meta: number; bis?: true },
+    a: { feito: number; meta: number; usos?: string[]; bis?: true },
     fixada: boolean,
   ): HTMLElement {
     const c = document.createElement('div');
@@ -500,7 +530,7 @@ export function criarHudAlma(raiz: HTMLElement, op: OpcoesHudAlma) {
     t.appendChild(figuraMissao(m));
     linha.append(t, svgEl('seta', 'seta'), premioEl(m, !!a.bis));
     c.appendChild(linha);
-    c.appendChild(progressoEl(m, a.feito, a.meta));
+    c.appendChild(progressoEl(m, a.feito, a.meta, a.usos));
     const jogar = botao(fixada ? '' : 'chama', 'Brincar', 'data-alma-jogar', arte('play'), () => {
       tocarSomInterface('criar');
       op.fixar(m.id);

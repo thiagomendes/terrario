@@ -132,6 +132,7 @@ export function ligarAlmaUi(op: OpcoesAlmaUi): AlmaUi {
         if (a) {
           a.feito = m.feito;
           a.meta = m.meta;
+          if (Array.isArray(m.usos)) a.usos = m.usos;
         }
       }
     hud.renderHud(true);

@@ -204,6 +204,24 @@ describe('alma: missões', () => {
     const r = visitarLugar(e, 'cidade-grande', 'sorveteria');
     expect(r.missoes.find((m) => m.id === 'c3')?.concluiu).toBe(true);
   });
+  it('passeio: o núcleo diz quais lugares já foram (a bolinha certa acende)', () => {
+    const e = almaMundoVazia();
+    conferirObrasFeitas(e, 'cidade-grande', (n) => n <= 2, () => true, () => 1);
+    const r = visitarLugar(e, 'cidade-grande', 'sorveteria');
+    expect(r.missoes.find((m) => m.id === 'c3')).toEqual({
+      id: 'c3',
+      feito: 1,
+      meta: 3,
+      usos: ['sorveteria'],
+    });
+    // a ordem é a da missão (padaria, escola, sorveteria), não a da visita
+    const r2 = visitarLugar(e, 'cidade-grande', 'padaria');
+    expect(r2.missoes.find((m) => m.id === 'c3')?.usos).toEqual(['padaria', 'sorveteria']);
+    const v = vistaAlmaMundo(e, 'cidade-grande', () => null);
+    expect(v.abertas.find((a) => a.id === 'c3')?.usos).toEqual(['padaria', 'sorveteria']);
+    // as outras missões não levam o campo
+    expect(v.abertas.find((a) => a.id !== 'c3')).not.toHaveProperty('usos');
+  });
   it('bis: depois da lista, as de ação de novo, 2 moedinhas, metade do XP, sem fantasia', () => {
     const e = almaMundoVazia();
     const obras = new Set<number>();

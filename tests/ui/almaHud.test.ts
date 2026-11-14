@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { marcarQuadroVisto, quadroJaVisto, CHAVE_QUADRO_VISTO } from '../../src/ui/alma';
-import { missaoDoCartao } from '../../src/ui/alma/hud';
+import { bolinhasCheias, missaoDoCartao } from '../../src/ui/alma/hud';
+import { missaoPorId } from '../../src/jogo/alma';
 
 function loja() {
   const d = new Map<string, string>();
@@ -44,6 +45,30 @@ describe('HUD da alma (spec 023, T06)', () => {
     };
     expect(missaoDoCartao(v)).toMatchObject({ m: { id: 'r2' }, feito: 0, meta: 2 });
     expect(missaoDoCartao({ ...v, fixada: 'r7' })).toMatchObject({ m: { id: 'r1' }, feito: 2 });
+  });
+
+  it('passeio da c3: cada bolinha acende pelo lugar visto, não pela ordem', () => {
+    const c3 = missaoPorId('c3')!;
+    // padaria, escola e sorveteria: a sorveteria primeiro acende a terceira
+    expect(bolinhasCheias(c3, 1, 3, ['sorveteria'])).toEqual([false, false, true]);
+    expect(bolinhasCheias(c3, 2, 3, ['padaria', 'sorveteria'])).toEqual([true, false, true]);
+    // lixo de fora não acende nada a mais
+    expect(bolinhasCheias(c3, 1, 3, [7, 'praca', 'sorveteria'])).toEqual([false, false, true]);
+    // núcleo antigo (sem os lugares): pela conta, como antes
+    expect(bolinhasCheias(c3, 1, 3)).toEqual([true, false, false]);
+    // as outras missões: pela conta
+    expect(bolinhasCheias(missaoPorId('r2')!, 1, 2, ['x'])).toEqual([true, false]);
+    // o cartão passa os lugares adiante
+    const v = {
+      mundo: 'cidade-grande' as const,
+      feitas: ['c1', 'c2'],
+      puladas: [],
+      abertas: [{ id: 'c3', feito: 1, meta: 3, usos: ['sorveteria'] }],
+      fixada: null,
+      bis: 0,
+      bau: [],
+    };
+    expect(missaoDoCartao(v)?.usos).toEqual(['sorveteria']);
   });
 });
 

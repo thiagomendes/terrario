@@ -407,6 +407,40 @@ describe('alma no núcleo: Cidade', () => {
     expect(xp).toBe(5);
     expect(n.estado.almas.get('ana')!.lugares).toEqual(['padaria']);
   });
+
+  it('passeio na nuvem e no local: o evento e o quadro dizem quais lugares já foram', () => {
+    const eventos = (confiar: boolean) => {
+      const n = abrir(CIDADE, confiar);
+      almas(n);
+      // c1 e c2 já feitas: a c3 (o passeio) está aberta
+      const e = n.estado.almas.get('ana')!;
+      e.feitas.push('c1', 'c2');
+      const plano = cidadeDoMundo(SEMENTE)!;
+      const l = plano.lotes.find((q) => q.uso === 'sorveteria')!;
+      ir(n, 'ana', l.x0 + 2.5, plano.h + 1, l.z0 + 2.5);
+      const evs: Extract<EventoNucleo, { e: 'alma' }>[] = [];
+      for (let i = 0; i < 30; i++) evs.push(...(almas(n).get('ana') ?? []));
+      mandar(n, 'ana', { t: 'almaFixar', missao: 'c3' }, confiar);
+      evs.push(...(almas(n).get('ana') ?? []));
+      return evs;
+    };
+    for (const confiar of [true, false]) {
+      const evs = eventos(confiar);
+      const andou = evs.flatMap((e) => e.missoes).find((m) => m.id === 'c3');
+      expect(andou, `confiar=${confiar}`).toEqual({
+        id: 'c3',
+        feito: 1,
+        meta: 3,
+        usos: ['sorveteria'],
+      });
+      const quadro = evs
+        .map((e) => e.quadro)
+        .filter(Boolean)
+        .pop()!;
+      expect(quadro.abertas.find((a) => a.id === 'c3')).toMatchObject({ usos: ['sorveteria'] });
+    }
+    expect(JSON.stringify(eventos(true))).toBe(JSON.stringify(eventos(false)));
+  });
 });
 
 describe('alma no núcleo: os outros mundos (o nível sobe em todo mundo)', () => {
