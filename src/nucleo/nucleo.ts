@@ -81,6 +81,7 @@ import { criarClima, estacaoDoDia, type EstadoClima } from '../jogo/clima';
 import { criarSobrevivencia, type Sobrevivencia } from '../jogo/sobrevivencia';
 import { criarInventario, type Inventario, type Slot } from '../jogo/inventario';
 import { blocoDoItem, obterItem } from '../jogo/itens';
+import { RECEITAS } from '../jogo/receitas';
 import { podeColetar } from '../jogo/ferramentas';
 import { TROCAS, fazerTroca, trocasDoMundo } from '../jogo/trocas';
 import { COLHER_PEDREIRO, blocoNoMundo } from '../jogo/exclusivos';
@@ -441,26 +442,29 @@ export function criarNucleo(op: OpcoesNucleo) {
 
   // ------------------------------------------------------------ alma (spec 023)
   /**
-   * O mundo da alma (Cidade Grande ou Rancho Alegre; null nos outros temas, por enquanto). O
-   * núcleo decide todo ganho; cada jogador tem aqui as missões, o progresso, os lugares, o baú
-   * da banca e o livro-razão deste mundo (`extras.alma[id]`: cada mundo é uma história).
+   * O mundo das missões (Cidade Grande ou Rancho Alegre; null nos outros temas, por enquanto).
+   * O núcleo decide todo ganho; cada jogador tem aqui as missões, o progresso, os lugares, o
+   * baú da banca e o livro-razão deste mundo (`extras.alma[id]`: cada mundo é uma história).
+   * Pedido do dono: o nível e as habilidades sobem brincando em **qualquer** mundo, então as
+   * ações soltas (pôr bloco, plantar, colher, dar comida, fazer receita, lugar novo) dão XP e
+   * pontos em todo tema, com os mesmos valores; missões e banca, só nos dois.
    */
   const mundoAlma = mundoAlmaDaPlanta(estiloMundo().povoado?.planta);
+  const plantaDoMundo = estiloMundo().povoado?.planta ?? 'povoado';
   const almas = new Map<string, AlmaMundo>(
-    mundoAlma ? Object.entries(normalizarAlmaDoMundo(extras['alma'], mundoAlma)) : [],
+    Object.entries(normalizarAlmaDoMundo(extras['alma'], mundoAlma)),
   );
   /** O que vai no evento `alma` de cada jogador no próximo quadro. */
   const almaPendente = new Map<string, { r: ResultadoAlma; quadro: boolean }>();
   /** Passo em que cada jogador alimentou cada bicho por último (o mesmo bicho: 1 minuto). */
   const almaBichos = new Map<string, number>();
   /**
-   * Ovos postos pelas galinhas e pipoca saída da fornalha ainda não contados: pegar de novo o
-   * ovo que se jogou no chão (ou tirar a pipoca que se pôs na saída) não conta outra vez.
+   * Ovos postos pelas galinhas e comida posta na saída da fornalha: pegar de novo o ovo que
+   * se jogou no chão (ou tirar a pipoca que se pôs na saída) não conta outra vez.
    */
   let ovosPostos = 0;
-  let pipocaPostaNaSaida = 0;
-  function almaDe(id: string): AlmaMundo | null {
-    if (!mundoAlma) return null;
+  const postoNaSaida = new Map<string, number>();
+  function almaDe(id: string): AlmaMundo {
     let e = almas.get(id);
     if (!e) {
       e = almaMundoVazia();
@@ -469,20 +473,24 @@ export function criarNucleo(op: OpcoesNucleo) {
     return e;
   }
   function ganharAlma(id: string, r: ResultadoAlma, quadro = false): void {
-    if (!mundoAlma || !jogadores.has(id)) return;
+    if (!jogadores.has(id)) return;
     const p = almaPendente.get(id);
     if (p) {
       juntarResultado(p.r, r);
       p.quadro ||= quadro || r.mudouLista;
     } else almaPendente.set(id, { r, quadro: quadro || r.mudouLista });
   }
-  /** Uma ação deste jogador que conta (as chaves do diário). */
-  function almaEvento(id: string, chave: string, qtd = 1): void {
-    const e = almaDe(id);
-    if (e && mundoAlma) ganharAlma(id, registrarEvento(e, mundoAlma, chave, qtd));
+  /**
+   * Uma ação deste jogador que conta (as chaves do diário). `chaveGanho`: o ganho é o de outra
+   * chave (a receita de comida conta a missão pela receita e ganha como 'cozinhou').
+   */
+  function almaEvento(id: string, chave: string, qtd = 1, chaveGanho = chave): void {
+    if (!jogadores.has(id)) return;
+    ganharAlma(id, registrarEvento(almaDe(id), mundoAlma, chave, qtd, chaveGanho));
   }
   /** O quadro de missões inteiro vai no próximo evento (entrou, fixou, o baú mudou). */
   function pedirQuadroAlma(id: string): void {
+    if (!mundoAlma) return;
     ganharAlma(id, { ganho: ganhoVazio(), missoes: [], mudouLista: false }, true);
   }
   const totalObra = (k: number) => (cidade ? celulasPlanejadas(cidade, k).length : 0);
@@ -496,7 +504,7 @@ export function criarNucleo(op: OpcoesNucleo) {
   /** As missões de obra deste jogador diante das obras feitas (ajudou: ganha; senão passa). */
   function almaObrasFeitas(id: string): void {
     const e = almaDe(id);
-    if (!e || !mundoAlma || !cidade) return;
+    if (!mundoAlma || !cidade) return;
     ganharAlma(
       id,
       conferirObrasFeitas(
@@ -520,7 +528,7 @@ export function criarNucleo(op: OpcoesNucleo) {
     const l = p?.lotes.find(
       (q) => x >= q.x0 && x < q.x0 + TAM_LOTE && z >= q.z0 && z < q.z0 + TAM_LOTE,
     );
-    return l?.uso ? `sitio:${l.uso}` : null;
+    return l?.uso ? `${plantaDoMundo}:${l.uso}` : null;
   }
   /** Compras na banca de cada jogador nesta sessão da sala (o núcleo aberto) e a última. */
   const bancaSessao = new Map<string, { compras: number; passo: number }>();
@@ -542,7 +550,11 @@ export function criarNucleo(op: OpcoesNucleo) {
       }
     // galinheiro longe (fora do que está carregado): ela vem para perto da criança
     if (melhor && dMelhor <= 48) return melhor;
-    return [j.tel.x + Math.sin(j.tel.yaw) * 1.5, j.tel.y + 0.5, j.tel.z + Math.cos(j.tel.yaw) * 1.5];
+    return [
+      j.tel.x + Math.sin(j.tel.yaw) * 1.5,
+      j.tel.y + 0.5,
+      j.tel.z + Math.cos(j.tel.yaw) * 1.5,
+    ];
   }
 
   /**
@@ -556,7 +568,7 @@ export function criarNucleo(op: OpcoesNucleo) {
       j.eventos.push({ e: 'almaCompraRecusada', item: String(c.item).slice(0, 32), motivo });
     };
     const e = almaDe(j.id);
-    if (!e || j.sobrevivencia.estado.morto) return recusar('tema');
+    if (!mundoAlma || j.sobrevivencia.estado.morto) return recusar('tema');
     const ses = bancaSessao.get(j.id) ?? { compras: 0, passo: -Infinity };
     const r = conferirBanca(mundoAlma, c.item, c.saldo, ses.compras, (n - ses.passo) * PASSO);
     if (!r.ok) return recusar(r.motivo);
@@ -585,7 +597,12 @@ export function criarNucleo(op: OpcoesNucleo) {
     bancaSessao.set(j.id, { compras: ses.compras + 1, passo: n });
     e.livro.gasto += it.preco;
     e.livro.compras[it.id] = (e.livro.compras[it.id] ?? 0) + 1;
-    j.eventos.push({ e: 'almaCompra', item: it.id, preco: it.preco, ...(guardado ? { guardado } : {}) });
+    j.eventos.push({
+      e: 'almaCompra',
+      item: it.id,
+      preco: it.preco,
+      ...(guardado ? { guardado } : {}),
+    });
   }
 
   /** O baú da banca entrega sozinho o que agora cabe na mochila (a cada segundo). */
@@ -610,12 +627,12 @@ export function criarNucleo(op: OpcoesNucleo) {
 
   /** Lugares novos (conferidos no passo, a cada meio segundo). */
   function cuidarDosLugares(): void {
-    if (!mundoAlma) return;
     for (const j of jogadores.values()) {
       if (j.sobrevivencia.estado.morto) continue;
       const uso = lugarEm(j.tel.x, j.tel.z);
-      const e = uso ? almaDe(j.id) : null;
-      if (!uso || !e || e.lugares.includes(uso)) continue;
+      if (!uso) continue;
+      const e = almaDe(j.id);
+      if (e.lugares.includes(uso)) continue;
       ganharAlma(j.id, visitarLugar(e, mundoAlma, uso));
     }
   }
@@ -757,8 +774,7 @@ export function criarNucleo(op: OpcoesNucleo) {
         j.eventos.push({ e: 'dano', causa: ev.causa, qtd: ev.qtd });
         // spec 021: em combate (ou caindo, afogando) o pulo espera; a fome não conta
         if (ev.causa !== 'fome') j.passoDano = n;
-      }
-      else if (ev.tipo === 'morte') {
+      } else if (ev.tipo === 'morte') {
         // espalha o inventário no lugar da morte
         for (let i = 0; i < j.inventario.slots.length; i++) {
           const p = j.inventario.obter(i);
@@ -929,7 +945,7 @@ export function criarNucleo(op: OpcoesNucleo) {
     // quebrar meia porta leva a outra metade (a do mesmo par, do mesmo dono, se puder)
     const outraMetade = outraMetadeDaPorta(regra, j.id, x, y, z);
     // spec 023: colheita madura; "minha" é a planta que este jogador plantou (não a do sítio)
-    const colhida = !!mundoAlma && ehLavoura(b) && madura(b);
+    const colhida = ehLavoura(b) && madura(b);
     const minha =
       colhida &&
       donoNaCelula(edicoes, x, y, z, donoDoMundo) === j.id &&
@@ -1307,7 +1323,9 @@ export function criarNucleo(op: OpcoesNucleo) {
       // spec 023: a bolinha do cartão de quem tem esta obra aberta
       for (const p of jogadores.values()) {
         const e = almaDe(p.id);
-        const mv = e && mundoAlma ? progressoObra(e, mundoAlma, n, o.cheias.length, celulas.length) : null;
+        const mv = mundoAlma
+          ? progressoObra(e, mundoAlma, n, o.cheias.length, celulas.length)
+          : null;
         if (mv) ganharAlma(p.id, { ganho: ganhoVazio(), missoes: [mv], mudouLista: false });
       }
       for (const p of jogadores.values())
@@ -1771,7 +1789,7 @@ export function criarNucleo(op: OpcoesNucleo) {
     }
     for (const { m, s } of alvos) s!.gravar(m.i, m.depois ? { ...m.depois } : null);
     j.inventarioSujo = true;
-    if (mundoAlma) almaDaTransacao(j, c);
+    almaDaTransacao(j, c);
     if (c.mudancas.some((m) => m.onde === 'bau' || m.onde === 'forn')) {
       // outros jogadores com o mesmo contêiner aberto veem a mudança
       for (const o of jogadores.values())
@@ -1792,19 +1810,28 @@ export function criarNucleo(op: OpcoesNucleo) {
    * itens fechando, também no criativo) e pipoca tirada da saída da fornalha.
    */
   function almaDaTransacao(j: Jogador, c: Extract<Comando, { t: 'transacao' }>): void {
+    // receita de comida (o pão e as outras) ganha como 'cozinhou'; as outras, como 'fabricou'
     if (c.fabricou?.length && (confiar || contaFecha(c.mudancas, c.fabricou)))
-      for (const f of c.fabricou) almaEvento(j.id, `fabricou:${f.receita}`, f.vezes);
+      for (const f of c.fabricou) {
+        const r = RECEITAS.find((x) => x.id === f.receita);
+        const comida = r?.categoria === 'comida' || !!obterItem(r?.resultado.item ?? '')?.comida;
+        almaEvento(j.id, `fabricou:${f.receita}`, f.vezes, comida ? 'cozinhou' : 'fabricou');
+      }
     for (const m of c.mudancas) {
       if (m.onde !== 'forn' || m.i !== 2) continue;
-      const antes = m.antes?.item === 'pipoca' ? m.antes.qtd : 0;
-      const depois = m.depois?.item === 'pipoca' ? m.depois.qtd : 0;
-      // pôr pipoca na saída não é fazer pipoca: a que foi posta não conta ao sair
-      if (depois > antes) pipocaPostaNaSaida += depois - antes;
+      // comida que sai da fornalha (pipoca, carne e peixe assados, ovo cozido)
+      const item = m.antes?.item ?? m.depois?.item;
+      if (!item || !obterItem(item)?.comida) continue;
+      const antes = m.antes?.item === item ? m.antes.qtd : 0;
+      const depois = m.depois?.item === item ? m.depois.qtd : 0;
+      // pôr comida na saída não é cozinhar: a que foi posta não conta ao sair
+      const posta = postoNaSaida.get(item) ?? 0;
+      if (depois > antes) postoNaSaida.set(item, posta + depois - antes);
       else if (antes > depois) {
         const tirou = antes - depois;
-        const descontada = Math.min(tirou, pipocaPostaNaSaida);
-        pipocaPostaNaSaida -= descontada;
-        if (tirou > descontada) almaEvento(j.id, 'fundiu:pipoca', tirou - descontada);
+        const descontada = Math.min(tirou, posta);
+        postoNaSaida.set(item, posta - descontada);
+        if (tirou > descontada) almaEvento(j.id, `fundiu:${item}`, tirou - descontada);
       }
     }
   }
@@ -2058,7 +2085,7 @@ export function criarNucleo(op: OpcoesNucleo) {
     if (r === 'novo' && modo === 'sobrevivencia') j.inventario.remover(c.slot, 1);
     // spec 023: dar comida conta para o amigo dos bichos; o mesmo bicho, só depois de 1 minuto
     // (sem limite por dia, decisão do dono)
-    if (mundoAlma) {
+    {
       const k = `${j.id}:${cr.id}`;
       const ultima = almaBichos.get(k);
       if (ultima === undefined || (n - ultima) * PASSO >= ESPERA_MESMO_BICHO - 1e-9) {
@@ -2560,7 +2587,7 @@ export function criarNucleo(op: OpcoesNucleo) {
     // spec 015: moradores acenando de volta
     responderGestos();
     // spec 023: lugares novos, a cada meio segundo
-    if (mundoAlma && n % 10 === 0) cuidarDosLugares();
+    if (n % 10 === 0) cuidarDosLugares();
     // spec 023: o baú da banca entrega o que agora cabe, a cada segundo
     if (mundoAlma && n % 20 === 0) entregarBauBanca();
 
@@ -2709,13 +2736,15 @@ export function criarNucleo(op: OpcoesNucleo) {
         q.sobrevivencia = { ...j.sobrevivencia.estado };
       }
       // spec 023: a alma deste jogador (só ele recebe o que ganhou)
-      const pa = mundoAlma ? almaPendente.get(j.id) : undefined;
+      const pa = almaPendente.get(j.id);
       if (pa && (ganhoTemAlgo(pa.r.ganho) || pa.r.missoes.length || pa.quadro))
         j.eventos.push({
           e: 'alma',
           missoes: pa.r.missoes,
           ganho: pa.r.ganho,
-          ...(pa.quadro ? { quadro: vistaAlmaMundo(almaDe(j.id)!, mundoAlma!, vistaObra) } : {}),
+          ...(pa.quadro && mundoAlma
+            ? { quadro: vistaAlmaMundo(almaDe(j.id), mundoAlma, vistaObra) }
+            : {}),
         });
       const eventos = [...eventosGerais, ...j.eventos];
       if (eventos.length) q.eventos = eventos;

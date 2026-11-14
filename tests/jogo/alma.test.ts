@@ -3,6 +3,7 @@ import {
   BANCA,
   COMPRAS_POR_SESSAO,
   GANHO_DE_EVENTO,
+  ganhoDaChave,
   MISSOES,
   MOEDAS_BIS,
   MUNDOS_ALMA,
@@ -119,7 +120,10 @@ describe('alma: os números da spec', () => {
     expect(GANHO_DE_EVENTO.colheu.xp).toBe(2);
     expect(GANHO_DE_EVENTO.plantou.xp).toBe(1);
     expect(GANHO_DE_EVENTO['criou:coelho'].xp).toBe(4);
-    expect(GANHO_DE_EVENTO['fabricou:pao'].xp).toBe(5);
+    expect(GANHO_DE_EVENTO.cozinhou.xp).toBe(5);
+    expect(ganhoDaChave('criou:dino')).toEqual(GANHO_DE_EVENTO['criou:coelho']);
+    expect(ganhoDaChave('fundiu:carne_assada')).toEqual(GANHO_DE_EVENTO['fundiu:pipoca']);
+    expect(ganhoDaChave('quebrou:pedra')).toBeUndefined();
     expect(GANHO_DE_EVENTO['visitou:lugar'].xp).toBe(5);
     expect(GANHO_DE_EVENTO['trocou:cozinheiro'].xp).toBe(3);
     expect(GANHO_DE_EVENTO.colocou.xp).toBe(0.2);

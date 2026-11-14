@@ -78,38 +78,183 @@ export const PONTOS_POR_MISSAO = 3;
 
 export const MISSOES: readonly Missao[] = [
   // ------------------------------------------------------------ Cidade Grande (8, 30 moedinhas)
-  { id: 'c1', mundo: 'cidade-grande', nome: 'Casinha do cachorro', desenho: { tipo: 'obra', canteiro: 1 }, conta: { tipo: 'obra', canteiro: 1 }, moedas: 3, fantasia: 'capacete-obra', habilidade: 'construtor', minutos: [2, 3] },
-  { id: 'c2', mundo: 'cidade-grande', nome: 'Banca de frutas', desenho: { tipo: 'obra', canteiro: 2 }, conta: { tipo: 'obra', canteiro: 2 }, moedas: 3, habilidade: 'construtor', minutos: [2, 3] },
-  { id: 'c3', mundo: 'cidade-grande', nome: 'Passeio: padaria, escola e sorveteria', desenho: { tipo: 'lugares', usos: ['padaria', 'escola', 'sorveteria'] }, conta: { tipo: 'lugares', usos: ['padaria', 'escola', 'sorveteria'] }, moedas: 3, habilidade: 'explorador', minutos: [3, 4] },
-  { id: 'c4', mundo: 'cidade-grande', nome: 'Ponto de ônibus', desenho: { tipo: 'obra', canteiro: 3 }, conta: { tipo: 'obra', canteiro: 3 }, moedas: 3, habilidade: 'construtor', minutos: [2, 3] },
-  { id: 'c5', mundo: 'cidade-grande', nome: 'Pão da padeira', desenho: { tipo: 'item', item: 'pao', acao: 'pegar' }, conta: { tipo: 'evento', chave: 'trocou:cozinheiro', meta: 1 }, moedas: 3, habilidade: 'cozinheiro', minutos: [2, 3] },
-  { id: 'c6', mundo: 'cidade-grande', nome: 'Sorveteria', desenho: { tipo: 'obra', canteiro: 4 }, conta: { tipo: 'obra', canteiro: 4 }, moedas: 5, habilidade: 'construtor', minutos: [5, 7] },
-  { id: 'c7', mundo: 'cidade-grande', nome: 'Casinha com porta e janela', desenho: { tipo: 'obra', canteiro: 5 }, conta: { tipo: 'obra', canteiro: 5 }, moedas: 5, habilidade: 'construtor', minutos: [6, 8] },
-  { id: 'c8', mundo: 'cidade-grande', nome: 'Coreto da praça', desenho: { tipo: 'obra', canteiro: 6 }, conta: { tipo: 'obra', canteiro: 6 }, moedas: 5, fantasia: 'colete-obra', habilidade: 'construtor', minutos: [6, 8] },
+  {
+    id: 'c1',
+    mundo: 'cidade-grande',
+    nome: 'Casinha do cachorro',
+    desenho: { tipo: 'obra', canteiro: 1 },
+    conta: { tipo: 'obra', canteiro: 1 },
+    moedas: 3,
+    fantasia: 'capacete-obra',
+    habilidade: 'construtor',
+    minutos: [2, 3],
+  },
+  {
+    id: 'c2',
+    mundo: 'cidade-grande',
+    nome: 'Banca de frutas',
+    desenho: { tipo: 'obra', canteiro: 2 },
+    conta: { tipo: 'obra', canteiro: 2 },
+    moedas: 3,
+    habilidade: 'construtor',
+    minutos: [2, 3],
+  },
+  {
+    id: 'c3',
+    mundo: 'cidade-grande',
+    nome: 'Passeio: padaria, escola e sorveteria',
+    desenho: { tipo: 'lugares', usos: ['padaria', 'escola', 'sorveteria'] },
+    conta: { tipo: 'lugares', usos: ['padaria', 'escola', 'sorveteria'] },
+    moedas: 3,
+    habilidade: 'explorador',
+    minutos: [3, 4],
+  },
+  {
+    id: 'c4',
+    mundo: 'cidade-grande',
+    nome: 'Ponto de ônibus',
+    desenho: { tipo: 'obra', canteiro: 3 },
+    conta: { tipo: 'obra', canteiro: 3 },
+    moedas: 3,
+    habilidade: 'construtor',
+    minutos: [2, 3],
+  },
+  {
+    id: 'c5',
+    mundo: 'cidade-grande',
+    nome: 'Pão da padeira',
+    desenho: { tipo: 'item', item: 'pao', acao: 'pegar' },
+    conta: { tipo: 'evento', chave: 'trocou:cozinheiro', meta: 1 },
+    moedas: 3,
+    habilidade: 'cozinheiro',
+    minutos: [2, 3],
+  },
+  {
+    id: 'c6',
+    mundo: 'cidade-grande',
+    nome: 'Sorveteria',
+    desenho: { tipo: 'obra', canteiro: 4 },
+    conta: { tipo: 'obra', canteiro: 4 },
+    moedas: 5,
+    habilidade: 'construtor',
+    minutos: [5, 7],
+  },
+  {
+    id: 'c7',
+    mundo: 'cidade-grande',
+    nome: 'Casinha com porta e janela',
+    desenho: { tipo: 'obra', canteiro: 5 },
+    conta: { tipo: 'obra', canteiro: 5 },
+    moedas: 5,
+    habilidade: 'construtor',
+    minutos: [6, 8],
+  },
+  {
+    id: 'c8',
+    mundo: 'cidade-grande',
+    nome: 'Coreto da praça',
+    desenho: { tipo: 'obra', canteiro: 6 },
+    conta: { tipo: 'obra', canteiro: 6 },
+    moedas: 5,
+    fantasia: 'colete-obra',
+    habilidade: 'construtor',
+    minutos: [6, 8],
+  },
   // ------------------------------------------------------------ Rancho Alegre (7, 25 moedinhas)
-  { id: 'r1', mundo: 'rancho-alegre', nome: 'Colheita do sítio', desenho: { tipo: 'item', item: 'trigo', acao: 'colher' }, conta: { tipo: 'evento', chave: 'colheu', meta: 5 }, moedas: 3, fantasia: 'caipira', habilidade: 'fazendeiro', minutos: [2, 3] },
-  { id: 'r2', mundo: 'rancho-alegre', nome: 'Milho para 2 galinhas', desenho: { tipo: 'bicho', bicho: 'galinha', item: 'semente_milho' }, conta: { tipo: 'evento', chave: 'criou:coelho', meta: 2 }, moedas: 3, habilidade: 'bichos', minutos: [2, 3] },
-  { id: 'r3', mundo: 'rancho-alegre', nome: 'Roça nova', desenho: { tipo: 'item', item: 'semente_trigo', acao: 'plantar' }, conta: { tipo: 'evento', chave: 'plantou', meta: 6 }, moedas: 3, habilidade: 'fazendeiro', minutos: [3, 4] },
-  { id: 'r4', mundo: 'rancho-alegre', nome: 'Trigo para 2 vacas', desenho: { tipo: 'bicho', bicho: 'vaca', item: 'trigo' }, conta: { tipo: 'evento', chave: 'criou:cervo', meta: 2 }, moedas: 3, habilidade: 'bichos', minutos: [2, 4] },
-  { id: 'r5', mundo: 'rancho-alegre', nome: 'Pão caseiro', desenho: { tipo: 'item', item: 'pao', acao: 'fazer' }, conta: { tipo: 'evento', chave: 'fabricou:pao', meta: 1 }, moedas: 4, habilidade: 'cozinheiro', minutos: [3, 4] },
-  { id: 'r6', mundo: 'rancho-alegre', nome: '2 ovos do galinheiro', desenho: { tipo: 'item', item: 'ovo', acao: 'pegar' }, conta: { tipo: 'evento', chave: 'coletou:ovo', meta: 2 }, moedas: 4, habilidade: 'bichos', minutos: [6, 10], devagar: true },
-  { id: 'r7', mundo: 'rancho-alegre', nome: 'A sua roça cresceu', desenho: { tipo: 'item', item: 'bloco:65', acao: 'colher' }, conta: { tipo: 'evento', chave: 'colheu:minha', meta: 6 }, moedas: 5, fantasia: 'peao-campeao', habilidade: 'fazendeiro', minutos: [6, 10], devagar: true },
+  {
+    id: 'r1',
+    mundo: 'rancho-alegre',
+    nome: 'Colheita do sítio',
+    desenho: { tipo: 'item', item: 'trigo', acao: 'colher' },
+    conta: { tipo: 'evento', chave: 'colheu', meta: 5 },
+    moedas: 3,
+    fantasia: 'caipira',
+    habilidade: 'fazendeiro',
+    minutos: [2, 3],
+  },
+  {
+    id: 'r2',
+    mundo: 'rancho-alegre',
+    nome: 'Milho para 2 galinhas',
+    desenho: { tipo: 'bicho', bicho: 'galinha', item: 'semente_milho' },
+    conta: { tipo: 'evento', chave: 'criou:coelho', meta: 2 },
+    moedas: 3,
+    habilidade: 'bichos',
+    minutos: [2, 3],
+  },
+  {
+    id: 'r3',
+    mundo: 'rancho-alegre',
+    nome: 'Roça nova',
+    desenho: { tipo: 'item', item: 'semente_trigo', acao: 'plantar' },
+    conta: { tipo: 'evento', chave: 'plantou', meta: 6 },
+    moedas: 3,
+    habilidade: 'fazendeiro',
+    minutos: [3, 4],
+  },
+  {
+    id: 'r4',
+    mundo: 'rancho-alegre',
+    nome: 'Trigo para 2 vacas',
+    desenho: { tipo: 'bicho', bicho: 'vaca', item: 'trigo' },
+    conta: { tipo: 'evento', chave: 'criou:cervo', meta: 2 },
+    moedas: 3,
+    habilidade: 'bichos',
+    minutos: [2, 4],
+  },
+  {
+    id: 'r5',
+    mundo: 'rancho-alegre',
+    nome: 'Pão caseiro',
+    desenho: { tipo: 'item', item: 'pao', acao: 'fazer' },
+    conta: { tipo: 'evento', chave: 'fabricou:pao', meta: 1 },
+    moedas: 4,
+    habilidade: 'cozinheiro',
+    minutos: [3, 4],
+  },
+  {
+    id: 'r6',
+    mundo: 'rancho-alegre',
+    nome: '2 ovos do galinheiro',
+    desenho: { tipo: 'item', item: 'ovo', acao: 'pegar' },
+    conta: { tipo: 'evento', chave: 'coletou:ovo', meta: 2 },
+    moedas: 4,
+    habilidade: 'bichos',
+    minutos: [6, 10],
+    devagar: true,
+  },
+  {
+    id: 'r7',
+    mundo: 'rancho-alegre',
+    nome: 'A sua roça cresceu',
+    desenho: { tipo: 'item', item: 'bloco:65', acao: 'colher' },
+    conta: { tipo: 'evento', chave: 'colheu:minha', meta: 6 },
+    moedas: 5,
+    fantasia: 'peao-campeao',
+    habilidade: 'fazendeiro',
+    minutos: [6, 10],
+    devagar: true,
+  },
 ];
 
 const POR_ID: ReadonlyMap<string, Missao> = new Map(MISSOES.map((m) => [m.id, m]));
 export const missaoPorId = (id: string): Missao | undefined => POR_ID.get(id);
-export function missoesDoMundo(mundo: MundoAlma): Missao[] {
-  return MISSOES.filter((m) => m.mundo === mundo);
+export function missoesDoMundo(mundo: MundoAlma | null): Missao[] {
+  return mundo ? MISSOES.filter((m) => m.mundo === mundo) : [];
 }
 export function moedasDoMundo(mundo: MundoAlma): number {
   return missoesDoMundo(mundo).reduce((s, m) => s + m.moedas, 0);
 }
 /** Quanto a missão pede (a obra tem a conta dela no núcleo: aqui vale 1). */
 export function metaDa(m: Missao): number {
-  return m.conta.tipo === 'evento' ? m.conta.meta : m.conta.tipo === 'lugares' ? m.conta.usos.length : 1;
+  return m.conta.tipo === 'evento'
+    ? m.conta.meta
+    : m.conta.tipo === 'lugares'
+      ? m.conta.usos.length
+      : 1;
 }
 /** As missões que podem voltar no bis (as de ação; obra e passeio só acontecem uma vez). */
-export function missoesDeBis(mundo: MundoAlma): Missao[] {
+export function missoesDeBis(mundo: MundoAlma | null): Missao[] {
   return missoesDoMundo(mundo).filter((m) => m.conta.tipo === 'evento');
 }
 
@@ -119,7 +264,9 @@ export function missoesDeBis(mundo: MundoAlma): Missao[] {
  * 1 por bloco; colher maduro 2; plantar 1; dar comida a um bicho 4; pão 5; lugar novo 5; troca
  * com morador 3; pôr bloco 0,2.
  */
-export const GANHO_DE_EVENTO: Readonly<Record<string, { xp: number; hab?: readonly [IdHabilidade, number] }>> = {
+export const GANHO_DE_EVENTO: Readonly<
+  Record<string, { xp: number; hab?: readonly [IdHabilidade, number] }>
+> = {
   'obra:bloco': { xp: 1, hab: ['construtor', 0.2] },
   colocou: { xp: 0.2, hab: ['construtor', 0.1] },
   'visitou:lugar': { xp: 5, hab: ['explorador', 1] },
@@ -130,12 +277,31 @@ export const GANHO_DE_EVENTO: Readonly<Record<string, { xp: number; hab?: readon
   'colheu:minha': { xp: 0 },
   plantou: { xp: 1, hab: ['fazendeiro', 0.25] },
   'coletou:ovo': { xp: 3, hab: ['bichos', 0.5] },
-  'fabricou:pao': { xp: 5, hab: ['cozinheiro', 1] },
+  // receita de comida (o pão e as outras): o núcleo manda a chave 'cozinhou' para o ganho
+  cozinhou: { xp: 5, hab: ['cozinheiro', 1] },
+  // receita que não é comida (ferramenta, bloco): pouco, e conta para o cozinheiro (pedido
+  // do dono: fazer coisas na bancada também é cozinhar um pouquinho)
+  fabricou: { xp: 1, hab: ['cozinheiro', 0.25] },
   'fundiu:pipoca': { xp: 4, hab: ['cozinheiro', 1] },
   'trocou:cozinheiro': { xp: 3, hab: ['cozinheiro', 1] },
   'trocou:ferreiro': { xp: 3 },
   'trocou:construtor': { xp: 3, hab: ['construtor', 0.5] },
 };
+/**
+ * O ganho de uma chave (pedido do dono: o nível e as habilidades sobem em qualquer mundo): a
+ * chave exata, ou a família dela ('criou:dino' vale como dar comida a qualquer bicho; a comida
+ * tirada da fornalha vale como a pipoca).
+ */
+export function ganhoDaChave(
+  chave: string,
+): { xp: number; hab?: readonly [IdHabilidade, number] } | undefined {
+  const g = GANHO_DE_EVENTO[chave];
+  if (g) return g;
+  if (chave.startsWith('criou:')) return GANHO_DE_EVENTO['criou:coelho'];
+  if (chave.startsWith('fundiu:')) return GANHO_DE_EVENTO['fundiu:pipoca'];
+  if (chave.startsWith('trocou:')) return GANHO_DE_EVENTO['trocou:ferreiro'];
+  return undefined;
+}
 /** Segundos em que o mesmo bicho alimentado de novo não conta (sem limite por dia). */
 export const ESPERA_MESMO_BICHO = 60;
 
@@ -151,11 +317,47 @@ export interface Habilidade {
 /** Pontos para cada estrela (1 a 5) de qualquer habilidade. */
 export const ESTRELAS_HABILIDADE = [5, 15, 30, 50, 80] as const;
 export const HABILIDADES: readonly Habilidade[] = [
-  { id: 'construtor', desenho: 'construtor', cor: '#f28b2c', nome: 'Construtor', mundos: ['cidade-grande', 'rancho-alegre'], conta: 'blocos na obra, construções, trocas com o construtor' },
-  { id: 'explorador', desenho: 'explorador', cor: '#3f9ad8', nome: 'Explorador', mundos: ['cidade-grande', 'rancho-alegre'], conta: 'lugares novos' },
-  { id: 'bichos', desenho: 'bichos', cor: '#e05a7a', nome: 'Amigo dos bichos', mundos: ['rancho-alegre'], conta: 'bicho alimentado ou criado, ovos (o mesmo bicho não conta de novo em menos de 1 minuto)' },
-  { id: 'fazendeiro', desenho: 'fazendeiro', cor: '#5cbf4f', nome: 'Fazendeiro', mundos: ['rancho-alegre'], conta: 'plantar e colher maduro' },
-  { id: 'cozinheiro', desenho: 'cozinheiro', cor: '#c9772a', nome: 'Cozinheiro', mundos: ['cidade-grande', 'rancho-alegre'], conta: 'pão, pipoca, pão da padeira' },
+  {
+    id: 'construtor',
+    desenho: 'construtor',
+    cor: '#f28b2c',
+    nome: 'Construtor',
+    mundos: ['cidade-grande', 'rancho-alegre'],
+    conta: 'blocos na obra, construções, trocas com o construtor',
+  },
+  {
+    id: 'explorador',
+    desenho: 'explorador',
+    cor: '#3f9ad8',
+    nome: 'Explorador',
+    mundos: ['cidade-grande', 'rancho-alegre'],
+    conta: 'lugares novos',
+  },
+  {
+    id: 'bichos',
+    desenho: 'bichos',
+    cor: '#e05a7a',
+    nome: 'Amigo dos bichos',
+    mundos: ['rancho-alegre'],
+    conta:
+      'bicho alimentado ou criado, ovos (o mesmo bicho não conta de novo em menos de 1 minuto)',
+  },
+  {
+    id: 'fazendeiro',
+    desenho: 'fazendeiro',
+    cor: '#5cbf4f',
+    nome: 'Fazendeiro',
+    mundos: ['rancho-alegre'],
+    conta: 'plantar e colher maduro',
+  },
+  {
+    id: 'cozinheiro',
+    desenho: 'cozinheiro',
+    cor: '#c9772a',
+    nome: 'Cozinheiro',
+    mundos: ['cidade-grande', 'rancho-alegre'],
+    conta: 'pão, pipoca, pão da padeira',
+  },
 ];
 export function estrelasDe(pontos: number): { estrelas: number; fracao: number } {
   let n = 0;
@@ -215,17 +417,105 @@ export interface ItemBanca {
   desenho: string;
 }
 export const BANCA: readonly ItemBanca[] = [
-  { id: 'flores', mundo: 'cidade-grande', nome: 'Flores para a praça', preco: 3, item: 'bloco:9', qtd: 6, desenho: 'item:bloco:9' },
-  { id: 'toldo-verde', mundo: 'cidade-grande', nome: 'Toldo verde', preco: 4, item: 'bloco:100', qtd: 8, desenho: 'item:bloco:100' },
-  { id: 'toldo-vermelho', mundo: 'cidade-grande', nome: 'Toldo vermelho', preco: 4, item: 'bloco:99', qtd: 8, desenho: 'item:bloco:99' },
-  { id: 'poste', mundo: 'cidade-grande', nome: 'Poste de luz', preco: 5, item: 'bloco:97', qtd: 4, desenho: 'item:bloco:97' },
-  { id: 'janela-acesa', mundo: 'cidade-grande', nome: 'Janela acesa', preco: 5, item: 'bloco:94', qtd: 6, desenho: 'item:bloco:94' },
-  { id: 'feno', mundo: 'rancho-alegre', nome: 'Fardos de feno', preco: 3, item: 'bloco:81', qtd: 4, desenho: 'item:bloco:81' },
-  { id: 'sementes-abobora', mundo: 'rancho-alegre', nome: 'Sementes de abóbora', preco: 3, item: 'semente_abobora', qtd: 6, desenho: 'item:semente_abobora' },
-  { id: 'lampiao', mundo: 'rancho-alegre', nome: 'Lampião de abóbora', preco: 4, item: 'bloco:66', qtd: 2, desenho: 'item:bloco:66' },
-  { id: 'porteira', mundo: 'rancho-alegre', nome: 'Porteira', preco: 4, item: 'bloco:82', qtd: 2, desenho: 'item:bloco:82' },
-  { id: 'cerca', mundo: 'rancho-alegre', nome: 'Cerca do curral', preco: 4, item: 'bloco:61', qtd: 12, desenho: 'item:bloco:61' },
-  { id: 'galinha', mundo: 'rancho-alegre', nome: 'Galinha para o galinheiro', preco: 6, item: null, qtd: 1, desenho: 'galinha' },
+  {
+    id: 'flores',
+    mundo: 'cidade-grande',
+    nome: 'Flores para a praça',
+    preco: 3,
+    item: 'bloco:9',
+    qtd: 6,
+    desenho: 'item:bloco:9',
+  },
+  {
+    id: 'toldo-verde',
+    mundo: 'cidade-grande',
+    nome: 'Toldo verde',
+    preco: 4,
+    item: 'bloco:100',
+    qtd: 8,
+    desenho: 'item:bloco:100',
+  },
+  {
+    id: 'toldo-vermelho',
+    mundo: 'cidade-grande',
+    nome: 'Toldo vermelho',
+    preco: 4,
+    item: 'bloco:99',
+    qtd: 8,
+    desenho: 'item:bloco:99',
+  },
+  {
+    id: 'poste',
+    mundo: 'cidade-grande',
+    nome: 'Poste de luz',
+    preco: 5,
+    item: 'bloco:97',
+    qtd: 4,
+    desenho: 'item:bloco:97',
+  },
+  {
+    id: 'janela-acesa',
+    mundo: 'cidade-grande',
+    nome: 'Janela acesa',
+    preco: 5,
+    item: 'bloco:94',
+    qtd: 6,
+    desenho: 'item:bloco:94',
+  },
+  {
+    id: 'feno',
+    mundo: 'rancho-alegre',
+    nome: 'Fardos de feno',
+    preco: 3,
+    item: 'bloco:81',
+    qtd: 4,
+    desenho: 'item:bloco:81',
+  },
+  {
+    id: 'sementes-abobora',
+    mundo: 'rancho-alegre',
+    nome: 'Sementes de abóbora',
+    preco: 3,
+    item: 'semente_abobora',
+    qtd: 6,
+    desenho: 'item:semente_abobora',
+  },
+  {
+    id: 'lampiao',
+    mundo: 'rancho-alegre',
+    nome: 'Lampião de abóbora',
+    preco: 4,
+    item: 'bloco:66',
+    qtd: 2,
+    desenho: 'item:bloco:66',
+  },
+  {
+    id: 'porteira',
+    mundo: 'rancho-alegre',
+    nome: 'Porteira',
+    preco: 4,
+    item: 'bloco:82',
+    qtd: 2,
+    desenho: 'item:bloco:82',
+  },
+  {
+    id: 'cerca',
+    mundo: 'rancho-alegre',
+    nome: 'Cerca do curral',
+    preco: 4,
+    item: 'bloco:61',
+    qtd: 12,
+    desenho: 'item:bloco:61',
+  },
+  {
+    id: 'galinha',
+    mundo: 'rancho-alegre',
+    nome: 'Galinha para o galinheiro',
+    preco: 6,
+    item: null,
+    qtd: 1,
+    desenho: 'galinha',
+  },
 ];
 export function bancaDoMundo(mundo: MundoAlma): ItemBanca[] {
   return BANCA.filter((i) => i.mundo === mundo);
@@ -261,7 +551,12 @@ export function conferirBanca(
 
 // ------------------------------------------------------------------ lojinha premium
 export type CategoriaPremium = 'roupa' | 'costas' | 'fantasia' | 'bicho';
-export const CATEGORIAS_PREMIUM: readonly CategoriaPremium[] = ['roupa', 'costas', 'fantasia', 'bicho'];
+export const CATEGORIAS_PREMIUM: readonly CategoriaPremium[] = [
+  'roupa',
+  'costas',
+  'fantasia',
+  'bicho',
+];
 export interface ItemPremium {
   id: string;
   categoria: CategoriaPremium;
@@ -275,14 +570,57 @@ export interface ItemPremium {
  * nada some. Nenhuma missão, nível ou habilidade dá estes itens.
  */
 export const PREMIUM: readonly ItemPremium[] = [
-  { id: 'camiseta-arco-iris', categoria: 'roupa', nome: 'Camiseta arco-íris', preco: 15, efeito: 'as listras correm devagar pela camiseta; brilho suave nas bordas', desenho: 'pCamiseta' },
-  { id: 'tenis-cometa', categoria: 'roupa', nome: 'Tênis-cometa', preco: 20, efeito: 'faixa de luz arco-íris; pegadas de luz e estrelinhas a cada passo', desenho: 'pTenis' },
-  { id: 'capa-estrelas', categoria: 'costas', nome: 'Capa de estrelas', preco: 30, efeito: 'balança com o andar e o vento; estrelas que piscam', desenho: 'pCapa' },
-  { id: 'dragao', categoria: 'fantasia', nome: 'Dragãozinho', preco: 55, efeito: 'capuz de dragão e asas que batem', desenho: 'pDragao' },
-  { id: 'pinguim', categoria: 'bicho', nome: 'Pinguinzinho', preco: 60, efeito: 'segue gingando e escorrega de barriga', desenho: 'pPinguim' },
-  { id: 'unicornio', categoria: 'bicho', nome: 'Unicórnio-pônei', preco: 80, efeito: 'trota atrás, pula junto, chifre que brilha e coraçõezinhos', desenho: 'pUnicornio' },
+  {
+    id: 'camiseta-arco-iris',
+    categoria: 'roupa',
+    nome: 'Camiseta arco-íris',
+    preco: 15,
+    efeito: 'as listras correm devagar pela camiseta; brilho suave nas bordas',
+    desenho: 'pCamiseta',
+  },
+  {
+    id: 'tenis-cometa',
+    categoria: 'roupa',
+    nome: 'Tênis-cometa',
+    preco: 20,
+    efeito: 'faixa de luz arco-íris; pegadas de luz e estrelinhas a cada passo',
+    desenho: 'pTenis',
+  },
+  {
+    id: 'capa-estrelas',
+    categoria: 'costas',
+    nome: 'Capa de estrelas',
+    preco: 30,
+    efeito: 'balança com o andar e o vento; estrelas que piscam',
+    desenho: 'pCapa',
+  },
+  {
+    id: 'dragao',
+    categoria: 'fantasia',
+    nome: 'Dragãozinho',
+    preco: 55,
+    efeito: 'capuz de dragão e asas que batem',
+    desenho: 'pDragao',
+  },
+  {
+    id: 'pinguim',
+    categoria: 'bicho',
+    nome: 'Pinguinzinho',
+    preco: 60,
+    efeito: 'segue gingando e escorrega de barriga',
+    desenho: 'pPinguim',
+  },
+  {
+    id: 'unicornio',
+    categoria: 'bicho',
+    nome: 'Unicórnio-pônei',
+    preco: 80,
+    efeito: 'trota atrás, pula junto, chifre que brilha e coraçõezinhos',
+    desenho: 'pUnicornio',
+  },
 ];
-export const premiumPorId = (id: string): ItemPremium | undefined => PREMIUM.find((p) => p.id === id);
+export const premiumPorId = (id: string): ItemPremium | undefined =>
+  PREMIUM.find((p) => p.id === id);
 
 // ------------------------------------------------------------------ ritmo
 /** O que uma sessão de 15 minutos costuma render (a conta de equilíbrio da spec). */
@@ -343,19 +681,36 @@ export interface AlmaMundo {
   bau: PilhaBau[];
   livro: LivroAlma;
 }
-export const livroVazio = (): LivroAlma => ({ moedas: 0, xp: 0, pontos: {}, gasto: 0, compras: {} });
+export const livroVazio = (): LivroAlma => ({
+  moedas: 0,
+  xp: 0,
+  pontos: {},
+  gasto: 0,
+  compras: {},
+});
 export function almaMundoVazia(): AlmaMundo {
-  return { feitas: [], puladas: [], fixada: null, progresso: {}, bis: 0, lugares: [], bau: [], livro: livroVazio() };
+  return {
+    feitas: [],
+    puladas: [],
+    fixada: null,
+    progresso: {},
+    bis: 0,
+    lugares: [],
+    bau: [],
+    livro: livroVazio(),
+  };
 }
 
 const MAX_LUGARES = 64;
 /** Passa a limpo o estado de um jogador num mundo (salvo, ou vindo de outro aparelho). */
-export function normalizarAlmaMundo(v: unknown, mundo: MundoAlma): AlmaMundo {
+export function normalizarAlmaMundo(v: unknown, mundo: MundoAlma | null): AlmaMundo {
   const e = almaMundoVazia();
   if (!objeto(v)) return e;
   const ids = new Set(missoesDoMundo(mundo).map((m) => m.id));
   const lista = (x: unknown) =>
-    Array.isArray(x) ? [...new Set(x.filter((id): id is string => typeof id === 'string' && ids.has(id)))] : [];
+    Array.isArray(x)
+      ? [...new Set(x.filter((id): id is string => typeof id === 'string' && ids.has(id)))]
+      : [];
   e.feitas = lista(v.feitas);
   e.puladas = lista(v.puladas).filter((id) => !e.feitas.includes(id));
   e.fixada = typeof v.fixada === 'string' && ids.has(v.fixada) ? v.fixada : null;
@@ -366,11 +721,18 @@ export function normalizarAlmaMundo(v: unknown, mundo: MundoAlma): AlmaMundo {
     }
   e.bis = Math.floor(numero(v.bis, 1e6));
   e.lugares = Array.isArray(v.lugares)
-    ? [...new Set(v.lugares.filter((l): l is string => typeof l === 'string' && l.length <= 32))].slice(0, MAX_LUGARES)
+    ? [
+        ...new Set(v.lugares.filter((l): l is string => typeof l === 'string' && l.length <= 32)),
+      ].slice(0, MAX_LUGARES)
     : [];
   if (Array.isArray(v.bau))
     for (const p of v.bau.slice(0, MAX_BAU_BANCA))
-      if (objeto(p) && typeof p.item === 'string' && p.item.length <= 64 && BANCA.some((b) => b.item === p.item)) {
+      if (
+        objeto(p) &&
+        typeof p.item === 'string' &&
+        p.item.length <= 64 &&
+        BANCA.some((b) => b.item === p.item)
+      ) {
         const qtd = Math.floor(numero(p.qtd, 64));
         if (qtd > 0) e.bau.push({ item: p.item, qtd });
       }
@@ -380,9 +742,12 @@ export function normalizarAlmaMundo(v: unknown, mundo: MundoAlma): AlmaMundo {
     e.livro.xp = r2(numero(l.xp));
     e.livro.gasto = Math.floor(numero(l.gasto));
     if (objeto(l.pontos))
-      for (const h of IDS_HABILIDADE) if (l.pontos[h] !== undefined) e.livro.pontos[h] = r2(numero(l.pontos[h]));
+      for (const h of IDS_HABILIDADE)
+        if (l.pontos[h] !== undefined) e.livro.pontos[h] = r2(numero(l.pontos[h]));
     if (objeto(l.compras))
-      for (const b of BANCA) if (l.compras[b.id] !== undefined) e.livro.compras[b.id] = Math.floor(numero(l.compras[b.id]));
+      for (const b of BANCA)
+        if (l.compras[b.id] !== undefined)
+          e.livro.compras[b.id] = Math.floor(numero(l.compras[b.id]));
   }
   return e;
 }
@@ -391,7 +756,10 @@ export function normalizarAlmaMundo(v: unknown, mundo: MundoAlma): AlmaMundo {
 const ID_JOGADOR = /^[A-Za-z0-9_-]{1,64}$/;
 export const MAX_JOGADORES_ALMA = 256;
 /** `extras.alma` inteiro passado a limpo: { [jogadorId]: AlmaMundo }. */
-export function normalizarAlmaDoMundo(v: unknown, mundo: MundoAlma): Record<string, AlmaMundo> {
+export function normalizarAlmaDoMundo(
+  v: unknown,
+  mundo: MundoAlma | null,
+): Record<string, AlmaMundo> {
   const out: Record<string, AlmaMundo> = {};
   if (!objeto(v)) return out;
   let n = 0;
@@ -406,11 +774,11 @@ export function normalizarAlmaDoMundo(v: unknown, mundo: MundoAlma): Record<stri
 
 const resolvida = (e: AlmaMundo, id: string) => e.feitas.includes(id) || e.puladas.includes(id);
 /** A lista toda já foi (feitas ou puladas): agora é bis. */
-export const listaAcabou = (e: AlmaMundo, mundo: MundoAlma) =>
+export const listaAcabou = (e: AlmaMundo, mundo: MundoAlma | null) =>
   missoesDoMundo(mundo).every((m) => resolvida(e, m.id));
 
 /** A missão de bis da vez (as de ação, em roda), ou null se a lista não acabou. */
-export function missaoDeBis(e: AlmaMundo, mundo: MundoAlma): Missao | null {
+export function missaoDeBis(e: AlmaMundo, mundo: MundoAlma | null): Missao | null {
   if (!listaAcabou(e, mundo)) return null;
   const roda = missoesDeBis(mundo);
   return roda.length ? roda[e.bis % roda.length] : null;
@@ -420,19 +788,22 @@ export function missaoDeBis(e: AlmaMundo, mundo: MundoAlma): Missao | null {
  * As missões abertas: as primeiras não resolvidas (MISSOES_ABERTAS) e as "devagar" já
  * começadas; acabada a lista, a de bis da vez.
  */
-export function abertas(e: AlmaMundo, mundo: MundoAlma): Missao[] {
+export function abertas(e: AlmaMundo, mundo: MundoAlma | null): Missao[] {
   const bis = missaoDeBis(e, mundo);
   if (bis) return [bis];
   const faltam = missoesDoMundo(mundo).filter((m) => !resolvida(e, m.id));
   const primeiras = faltam.slice(0, MISSOES_ABERTAS);
-  const devagar = faltam.filter((m) => m.devagar && !primeiras.includes(m) && (e.progresso[m.id] ?? 0) > 0);
+  const devagar = faltam.filter(
+    (m) => m.devagar && !primeiras.includes(m) && (e.progresso[m.id] ?? 0) > 0,
+  );
   return [...primeiras, ...devagar];
 }
 /** As que contam agora: as abertas e as "devagar" ainda não feitas (correm por baixo). */
-function contando(e: AlmaMundo, mundo: MundoAlma): Missao[] {
+function contando(e: AlmaMundo, mundo: MundoAlma | null): Missao[] {
   const lista = abertas(e, mundo);
   if (!listaAcabou(e, mundo))
-    for (const m of missoesDoMundo(mundo)) if (m.devagar && !resolvida(e, m.id) && !lista.includes(m)) lista.push(m);
+    for (const m of missoesDoMundo(mundo))
+      if (m.devagar && !resolvida(e, m.id) && !lista.includes(m)) lista.push(m);
   return lista;
 }
 
@@ -469,7 +840,11 @@ export interface ResultadoAlma {
   /** As abertas mudaram (o quadro e o cartão do HUD mudam). */
   mudouLista: boolean;
 }
-const resultadoVazio = (): ResultadoAlma => ({ ganho: ganhoVazio(), missoes: [], mudouLista: false });
+const resultadoVazio = (): ResultadoAlma => ({
+  ganho: ganhoVazio(),
+  missoes: [],
+  mudouLista: false,
+});
 
 function anotar(e: AlmaMundo, g: Ganho): void {
   e.livro.moedas += g.moedas;
@@ -478,7 +853,13 @@ function anotar(e: AlmaMundo, g: Ganho): void {
     e.livro.pontos[k] = r2((e.livro.pontos[k] ?? 0) + v);
 }
 
-function concluir(e: AlmaMundo, mundo: MundoAlma, m: Missao, r: ResultadoAlma, feito: number): void {
+function concluir(
+  e: AlmaMundo,
+  mundo: MundoAlma | null,
+  m: Missao,
+  r: ResultadoAlma,
+  feito: number,
+): void {
   const g = ganhoVazio();
   if (listaAcabou(e, mundo)) {
     // bis: 2 moedinhas e metade do XP, sem fantasia (os pontos da habilidade também)
@@ -495,7 +876,13 @@ function concluir(e: AlmaMundo, mundo: MundoAlma, m: Missao, r: ResultadoAlma, f
     g.moedas = m.moedas;
     g.xp = XP_MISSAO;
     g.pontos[m.habilidade] = PONTOS_POR_MISSAO;
-    r.missoes.push({ id: m.id, feito, meta: feito, concluiu: true, ...(m.fantasia ? { fantasia: m.fantasia } : {}) });
+    r.missoes.push({
+      id: m.id,
+      feito,
+      meta: feito,
+      concluiu: true,
+      ...(m.fantasia ? { fantasia: m.fantasia } : {}),
+    });
   }
   anotar(e, g);
   somarGanho(r.ganho, g);
@@ -504,26 +891,45 @@ function concluir(e: AlmaMundo, mundo: MundoAlma, m: Missao, r: ResultadoAlma, f
 
 /**
  * Um evento do jogo deste jogador: conta nas missões (abertas e devagar), no XP e nas
- * habilidades. Muda `e`; devolve o ganho e as missões que andaram.
+ * habilidades. Muda `e`; devolve o ganho e as missões que andaram. Num mundo sem missões
+ * (`mundo` null) só dá o XP e os pontos da ação. `chaveGanho`: o ganho de outra chave (a
+ * receita de comida conta a missão pela receita e ganha como 'cozinhou').
  */
-export function registrarEvento(e: AlmaMundo, mundo: MundoAlma, chave: string, qtd = 1): ResultadoAlma {
+export function registrarEvento(
+  e: AlmaMundo,
+  mundo: MundoAlma | null,
+  chave: string,
+  qtd = 1,
+  chaveGanho = chave,
+): ResultadoAlma {
   const r = resultadoVazio();
   if (!(qtd > 0)) return r;
   for (const m of contando(e, mundo)) {
     if (m.conta.tipo !== 'evento' || m.conta.chave !== chave) continue;
-    const antes = abertas(e, mundo).map((x) => x.id).join();
+    const antes = abertas(e, mundo)
+      .map((x) => x.id)
+      .join();
     const feito = Math.min(m.conta.meta, (e.progresso[m.id] ?? 0) + qtd);
     e.progresso[m.id] = feito;
     if (feito >= m.conta.meta) concluir(e, mundo, m, r, m.conta.meta);
     else {
       r.missoes.push({ id: m.id, feito, meta: m.conta.meta });
       // a devagar começou: entra nas abertas
-      if (abertas(e, mundo).map((x) => x.id).join() !== antes) r.mudouLista = true;
+      if (
+        abertas(e, mundo)
+          .map((x) => x.id)
+          .join() !== antes
+      )
+        r.mudouLista = true;
     }
   }
-  const g = GANHO_DE_EVENTO[chave];
+  const g = ganhoDaChave(chaveGanho);
   if (g && g.xp > 0) {
-    const solto: Ganho = { moedas: 0, xp: r2(g.xp * qtd), pontos: g.hab ? { [g.hab[0]]: r2(g.hab[1] * qtd) } : {} };
+    const solto: Ganho = {
+      moedas: 0,
+      xp: r2(g.xp * qtd),
+      pontos: g.hab ? { [g.hab[0]]: r2(g.hab[1] * qtd) } : {},
+    };
     anotar(e, solto);
     somarGanho(r.ganho, solto);
   }
@@ -531,7 +937,7 @@ export function registrarEvento(e: AlmaMundo, mundo: MundoAlma, chave: string, q
 }
 
 /** Um lugar novo (uso do lote): XP do explorador e o passeio da cidade. */
-export function visitarLugar(e: AlmaMundo, mundo: MundoAlma, uso: string): ResultadoAlma {
+export function visitarLugar(e: AlmaMundo, mundo: MundoAlma | null, uso: string): ResultadoAlma {
   if (e.lugares.includes(uso) || e.lugares.length >= MAX_LUGARES) return resultadoVazio();
   e.lugares.push(uso);
   const r = registrarEvento(e, mundo, 'visitou:lugar');
@@ -546,7 +952,13 @@ export function visitarLugar(e: AlmaMundo, mundo: MundoAlma, uso: string): Resul
 }
 
 /** Progresso da obra `canteiro` (células cheias de `total`) para quem tem a missão aberta. */
-export function progressoObra(e: AlmaMundo, mundo: MundoAlma, canteiro: number, cheias: number, total: number): MissaoMovida | null {
+export function progressoObra(
+  e: AlmaMundo,
+  mundo: MundoAlma,
+  canteiro: number,
+  cheias: number,
+  total: number,
+): MissaoMovida | null {
   const m = abertas(e, mundo).find((x) => x.conta.tipo === 'obra' && x.conta.canteiro === canteiro);
   return m ? { id: m.id, feito: cheias, meta: total } : null;
 }
@@ -618,7 +1030,12 @@ export function vistaAlmaMundo(
         const o = obra(m.conta.canteiro);
         return { id: m.id, feito: o?.cheias ?? 0, meta: o?.total ?? 1 };
       }
-      return { id: m.id, feito: e.progresso[m.id] ?? 0, meta: metaDa(m), ...(bis ? { bis: true as const } : {}) };
+      return {
+        id: m.id,
+        feito: e.progresso[m.id] ?? 0,
+        meta: metaDa(m),
+        ...(bis ? { bis: true as const } : {}),
+      };
     }),
     fixada: e.fixada,
     bis: e.bis,
@@ -644,7 +1061,17 @@ export interface PerfilAlma {
   gastou: number;
 }
 export function perfilAlmaVazio(): PerfilAlma {
-  return { versao: VERSAO_PERFIL_ALMA, moedas: 0, xp: 0, pontos: {}, premium: [], vestidos: {}, fantasias: [], ganhou: 0, gastou: 0 };
+  return {
+    versao: VERSAO_PERFIL_ALMA,
+    moedas: 0,
+    xp: 0,
+    pontos: {},
+    premium: [],
+    vestidos: {},
+    fantasias: [],
+    ganhou: 0,
+    gastou: 0,
+  };
 }
 export const MAX_MOEDAS = 99_999;
 export const MAX_FANTASIAS_ALMA = 32;
@@ -655,7 +1082,8 @@ export function normalizarPerfilAlma(v: unknown): PerfilAlma {
   c.moedas = Math.floor(numero(v.moedas, MAX_MOEDAS));
   c.xp = r2(numero(v.xp));
   if (objeto(v.pontos))
-    for (const h of IDS_HABILIDADE) if (v.pontos[h] !== undefined) c.pontos[h] = r2(numero(v.pontos[h]));
+    for (const h of IDS_HABILIDADE)
+      if (v.pontos[h] !== undefined) c.pontos[h] = r2(numero(v.pontos[h]));
   c.premium = Array.isArray(v.premium)
     ? [...new Set(v.premium.filter((p): p is string => typeof p === 'string' && !!premiumPorId(p)))]
     : [];
@@ -664,7 +1092,9 @@ export function normalizarPerfilAlma(v: unknown): PerfilAlma {
       if (typeof id === 'string' && c.premium.includes(id) && premiumPorId(id)?.categoria === cat)
         c.vestidos[cat as CategoriaPremium] = id;
   c.fantasias = Array.isArray(v.fantasias)
-    ? [...new Set(v.fantasias.filter((f): f is string => typeof f === 'string' && f.length <= 40))].slice(0, MAX_FANTASIAS_ALMA)
+    ? [
+        ...new Set(v.fantasias.filter((f): f is string => typeof f === 'string' && f.length <= 40)),
+      ].slice(0, MAX_FANTASIAS_ALMA)
     : [];
   c.ganhou = Math.floor(numero(v.ganhou, 1e9));
   c.gastou = Math.floor(numero(v.gastou, 1e9));
@@ -687,7 +1117,11 @@ export interface MudancaPerfil {
  * presentes de nível são consequência do XP que o núcleo deu (a mesma conta em todo
  * aparelho): o cliente nunca soma um ganho que não veio do núcleo. Muda `c`.
  */
-export function aplicarGanho(c: PerfilAlma, g: Ganho, fantasias: readonly string[] = []): MudancaPerfil {
+export function aplicarGanho(
+  c: PerfilAlma,
+  g: Ganho,
+  fantasias: readonly string[] = [],
+): MudancaPerfil {
   const out: MudancaPerfil = { niveis: [], estrelas: [], moedas: 0, fantasias: [] };
   const moedas = Math.max(0, Math.floor(Number(g.moedas) || 0));
   const xp = Math.max(0, Number(g.xp) || 0);
@@ -712,7 +1146,11 @@ export function aplicarGanho(c: PerfilAlma, g: Ganho, fantasias: readonly string
     for (let n = e0 + 1; n <= e1; n++) out.estrelas.push({ habilidade: h, estrelas: n });
   }
   for (const f of fantasias)
-    if (typeof f === 'string' && !c.fantasias.includes(f) && c.fantasias.length < MAX_FANTASIAS_ALMA) {
+    if (
+      typeof f === 'string' &&
+      !c.fantasias.includes(f) &&
+      c.fantasias.length < MAX_FANTASIAS_ALMA
+    ) {
       c.fantasias.push(f);
       out.fantasias.push(f);
     }
@@ -729,7 +1167,10 @@ export function descontar(c: PerfilAlma, preco: number): void {
 
 export type RecusaPremium = 'nao-existe' | 'ja-tem' | 'faltam-moedas';
 /** Premium: preço fixo, um de cada, só com a carteira; comprou, já veste. Muda `c`. */
-export function comprarPremium(c: PerfilAlma, id: string): { ok: true } | { ok: false; motivo: RecusaPremium } {
+export function comprarPremium(
+  c: PerfilAlma,
+  id: string,
+): { ok: true } | { ok: false; motivo: RecusaPremium } {
   const p = premiumPorId(id);
   if (!p) return { ok: false, motivo: 'nao-existe' };
   if (c.premium.includes(id)) return { ok: false, motivo: 'ja-tem' };
