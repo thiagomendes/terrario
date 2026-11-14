@@ -72,11 +72,11 @@ export function desenhoDaObra(n: number): string {
 /**
  * Como cada premium aparece na lojinha: desenhado do 3D de verdade (a criança vê o que
  * ganha). As roupas no boneco da própria criança (sem a fantasia da 017), cada uma do jeito que
- * ela aparece melhor (a capa de costas, o tênis de perto); os bichinhos sozinhos.
+ * ela aparece melhor (a capa de costas); os bichinhos sozinhos.
  */
 const FOTO_PREMIUM: Record<string, { recorte: RecorteBoneco; giro: number; bicho?: IdBichoPremium }> = {
   'camiseta-arco-iris': { recorte: 'corpo', giro: 0.36 },
-  'tenis-cometa': { recorte: 'pes', giro: 0.75 },
+  'tenis-cometa': { recorte: 'corpo', giro: 0.75 },
   'capa-estrelas': { recorte: 'corpo', giro: Math.PI - 1.05 },
   dragao: { recorte: 'corpo', giro: 0.62 },
   pinguim: { recorte: 'corpo', giro: 0.5, bicho: 'pinguim' },
