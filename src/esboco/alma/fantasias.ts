@@ -80,6 +80,23 @@ export const FANTASIAS_ALMA: readonly FantasiaDef[] = [
       ],
     }),
   },
+  // premium (lojinha universal): a base da fantasia do dragãozinho; as asas, a placa de escamas
+  // e os chifres são do premium3d.ts
+  {
+    id: 'dragao',
+    grupo: 'temas',
+    nomes: { feminino: 'Dragãozinho', masculino: 'Dragãozinho' },
+    cores: ['#22b597'],
+    corEmblema: '#dcfbec',
+    visual: mesmo({
+      roupa: { camisa: 'principal', manga: 'principal', calca: 'principal', sapato: '#8a6aff' },
+      cabeca: 'capuz',
+      pecas: [
+        { tipo: 'capuz-dino', cor: 'principal' },
+        { tipo: 'luvas', cor: '#8a6aff' },
+      ],
+    }),
+  },
   // Cidade
   {
     id: 'capacete-dourado',

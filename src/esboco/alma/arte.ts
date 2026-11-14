@@ -208,6 +208,178 @@ export const ARTE: Record<string, string> = {
     <polygon points="${estrela5(32, 32, 26, 10)}" fill="#ffe27a" ${s()}/>`),
   pegar: svg(`
     <path d="M14 40 V24 Q14 20 18 20 Q22 20 22 24 V34 V14 Q22 10 26 10 Q30 10 30 14 V32 V12 Q30 8 34 8 Q38 8 38 12 V32 V16 Q38 12 42 12 Q46 12 46 16 V40 Q46 58 30 58 Q20 58 14 48 Z" fill="#ffd5a8" ${s()}/>`),
+  // ------------------------------------------------------------ rodada 2: HUD, níveis, banca
+  nivel: svg(`
+    <polygon points="${estrela5(32, 34, 29, 15)}" fill="#ffc93d" ${s(3.5)}/>
+    <polygon points="${estrela5(32, 34, 20, 10)}" fill="#ffe27a"/>`),
+  vitrine: svg(`
+    <path d="M8 26 L32 8 L56 26" fill="#8a5ad8" ${s()}/>
+    <rect x="10" y="26" width="44" height="31" rx="4" fill="#fff6e4" ${s()}/>
+    <rect x="16" y="32" width="32" height="20" rx="4" fill="#3b2a6e" ${s(2.5)}/>
+    <polygon points="${estrela5(32, 42, 8, 3.6)}" fill="#ffe27a"/>
+    <circle cx="22" cy="37" r="1.6" fill="#fff"/><circle cx="42" cy="47" r="1.3" fill="#fff"/><circle cx="41" cy="36" r="1" fill="#fff"/>
+    <polygon points="${estrela5(32, 17, 5, 2.2)}" fill="#ffe27a"/>`),
+  mundoCidade: svg(`
+    <rect x="6" y="24" width="14" height="34" rx="2" fill="#7aa8d8" ${s(2.5)}/>
+    <rect x="22" y="10" width="18" height="48" rx="2" fill="#5a86c0" ${s(2.5)}/>
+    <rect x="42" y="30" width="16" height="28" rx="2" fill="#c96a4a" ${s(2.5)}/>
+    <path d="M26 16 h4 M33 16 h4 M26 24 h4 M33 24 h4 M26 32 h4 M33 32 h4 M10 30 h6 M10 38 h6 M46 36 h8 M46 44 h8" stroke="#ffe27a" stroke-width="3" stroke-linecap="round"/>`),
+  mundoRancho: svg(`
+    <path d="M8 30 L32 12 L56 30 V58 H8 Z" fill="#d9483b" ${s()}/>
+    <path d="M4 32 L32 10 L60 32" fill="none" stroke="#fff6e4" stroke-width="5" ${L}/>
+    <rect x="22" y="38" width="20" height="20" rx="2" fill="#fff6e4" ${s(2.5)}/>
+    <path d="M22 38 L42 58 M42 38 L22 58" stroke="#d9483b" stroke-width="3"/>`),
+  toldoVerde: svg(`
+    <rect x="6" y="20" width="52" height="24" rx="4" fill="#fff" ${s()}/>
+    <path d="M14 20 V44 M26 20 V44 M38 20 V44 M50 20 V44" stroke="#3fae5a" stroke-width="7"/>
+    <path d="M6 44 Q12 52 18 44 Q24 52 30 44 Q36 52 42 44 Q48 52 54 44 L58 44" fill="#3fae5a" ${s(2.5)}/>
+    <rect x="6" y="20" width="52" height="24" rx="4" fill="none" ${s()}/>
+    <rect x="4" y="14" width="56" height="8" rx="4" fill="#b8692c" ${s(2.5)}/>`),
+  toldoVermelho: svg(`
+    <rect x="6" y="20" width="52" height="24" rx="4" fill="#fff" ${s()}/>
+    <path d="M14 20 V44 M26 20 V44 M38 20 V44 M50 20 V44" stroke="#e8402f" stroke-width="7"/>
+    <path d="M6 44 Q12 52 18 44 Q24 52 30 44 Q36 52 42 44 Q48 52 54 44 L58 44" fill="#e8402f" ${s(2.5)}/>
+    <rect x="6" y="20" width="52" height="24" rx="4" fill="none" ${s()}/>
+    <rect x="4" y="14" width="56" height="8" rx="4" fill="#b8692c" ${s(2.5)}/>`),
+  cerca: svg(`
+    <rect x="8" y="14" width="10" height="44" rx="3" fill="#c9884a" ${s(2.5)}/>
+    <rect x="27" y="14" width="10" height="44" rx="3" fill="#c9884a" ${s(2.5)}/>
+    <rect x="46" y="14" width="10" height="44" rx="3" fill="#c9884a" ${s(2.5)}/>
+    <rect x="4" y="24" width="56" height="8" rx="3" fill="#e0a868" ${s(2.5)}/>
+    <rect x="4" y="40" width="56" height="8" rx="3" fill="#e0a868" ${s(2.5)}/>`),
+  // presentes de nível
+  etiqueta: svg(`
+    <path d="M8 22 Q8 16 14 16 H50 Q56 16 56 22 V40 Q56 46 50 46 H36 L32 54 L28 46 H14 Q8 46 8 40 Z" fill="#5aa7ff" ${s()}/>
+    <rect x="16" y="27" width="32" height="8" rx="4" fill="#fff"/>`),
+  etiquetaEstrela: svg(`
+    <path d="M8 22 Q8 16 14 16 H50 Q56 16 56 22 V40 Q56 46 50 46 H36 L32 54 L28 46 H14 Q8 46 8 40 Z" fill="#ff7aa8" ${s()}/>
+    <rect x="22" y="27" width="26" height="8" rx="4" fill="#fff"/>
+    <polygon points="${estrela5(15, 31, 6, 2.6)}" fill="#ffe27a"/>`),
+  gestoEstrela: svg(`
+    <polygon points="${estrela5(32, 34, 28, 12)}" fill="#ffe27a" ${s(2.5)}/>
+    <circle cx="32" cy="20" r="6" fill="#ffd5a8" ${s(2.5)}/>
+    <path d="M32 26 V40 M32 30 L18 22 M32 30 L46 22 M32 40 L22 54 M32 40 L42 54" stroke="${C}" stroke-width="4" ${L}/>`),
+  gestoReverencia: svg(`
+    <circle cx="22" cy="24" r="7" fill="#ffd5a8" ${s(2.5)}/>
+    <path d="M27 29 Q36 30 40 40 L42 56 M40 40 L30 56 M30 32 L22 44" fill="none" stroke="${C}" stroke-width="4" ${L}/>
+    <path d="M44 14 Q52 18 50 26" fill="none" stroke="#ff7aa8" stroke-width="4" ${L}/>`),
+  tinta: svg(`
+    <path d="M14 22 H46 V50 Q46 58 38 58 H22 Q14 58 14 50 Z" fill="#c9a8ff" ${s()}/>
+    <ellipse cx="30" cy="22" rx="16" ry="5" fill="#a07ae8" ${s(2.5)}/>
+    <path d="M44 24 Q54 30 52 42" fill="none" stroke="${C}" stroke-width="3"/>
+    <path d="M18 22 Q20 34 26 30 Q28 40 34 32" fill="#a07ae8"/>`),
+  tintaMenta: svg(`
+    <path d="M14 22 H46 V50 Q46 58 38 58 H22 Q14 58 14 50 Z" fill="#a8f0d6" ${s()}/>
+    <ellipse cx="30" cy="22" rx="16" ry="5" fill="#5fd6b0" ${s(2.5)}/>
+    <path d="M44 24 Q54 30 52 42" fill="none" stroke="${C}" stroke-width="3"/>
+    <path d="M18 22 Q20 34 26 30 Q28 40 34 32" fill="#5fd6b0"/>`),
+  moldura: svg(`
+    <rect x="8" y="12" width="48" height="40" rx="6" fill="#ff9ab8" ${s()}/>
+    <rect x="16" y="20" width="32" height="24" rx="3" fill="#bfe3ff" ${s(2.5)}/>
+    <circle cx="12" cy="16" r="5" fill="#ffe27a" ${s(2)}/><circle cx="52" cy="48" r="5" fill="#ffe27a" ${s(2)}/>
+    <path d="M18 42 L26 32 L32 38 L38 30 L46 42 Z" fill="#7fd06a"/>`),
+  balao: svg(`
+    <path d="M8 18 Q8 10 16 10 H48 Q56 10 56 18 V36 Q56 44 48 44 H26 L16 54 L18 44 H16 Q8 44 8 36 Z" fill="#fffaf0" ${s()}/>
+    <polygon points="${estrela5(32, 27, 10, 4.4)}" fill="#ffc93d" ${s(2)}/>`),
+  trofeu: svg(`
+    <path d="M18 10 H46 V24 Q46 38 32 40 Q18 38 18 24 Z" fill="#ffc93d" ${s()}/>
+    <path d="M18 14 Q8 14 10 24 Q12 30 19 30 M46 14 Q56 14 54 24 Q52 30 45 30" fill="none" stroke="${C}" stroke-width="3"/>
+    <rect x="28" y="40" width="8" height="8" fill="#e6a21e" ${s(2.5)}/>
+    <rect x="18" y="48" width="28" height="9" rx="2" fill="#b8692c" ${s(2.5)}/>
+    <polygon points="${estrela5(32, 24, 7, 3)}" fill="#fff6c8"/>`),
+
+  // ------------------------------------------------------------ cartões da lojinha premium
+  pCamiseta: svg(`
+    <defs><linearGradient id="arco" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ff5a6e"/><stop offset=".2" stop-color="#ffa53d"/><stop offset=".4" stop-color="#ffe14d"/>
+      <stop offset=".6" stop-color="#5fe07a"/><stop offset=".8" stop-color="#4dc3ff"/><stop offset="1" stop-color="#9a7bff"/></linearGradient></defs>
+    <path d="M22 8 Q32 14 42 8 L58 18 L52 30 L46 27 V58 H18 V27 L12 30 L6 18 Z" fill="url(#arco)" ${s()}/>
+    <path d="M22 8 Q32 16 42 8" fill="none" stroke="#fff" stroke-width="3"/>
+    <polygon points="${estrela5(32, 38, 6, 2.6)}" fill="#fff"/>`),
+  pTenis: svg(`
+    <path d="M6 40 Q6 30 14 28 L30 24 Q34 14 44 14 L52 16 Q58 18 58 30 V40 Z" fill="#6a4cff" ${s()}/>
+    <path d="M30 24 L36 32 M36 20 L42 28 M42 16 L46 24" stroke="#fff" stroke-width="3" stroke-linecap="round"/>
+    <rect x="4" y="40" width="56" height="7" rx="3.5" fill="#ff7ad9" stroke="#ffe14d" stroke-width="2"/>
+    <rect x="4" y="46" width="56" height="9" rx="4.5" fill="#fbfbff" ${s()}/>
+    <polygon points="${estrela5(46, 33, 5, 2.2)}" fill="#ffe14d"/>
+    <circle cx="10" cy="58" r="2" fill="#ffe14d"/><circle cx="20" cy="60" r="1.6" fill="#5fe07a"/><circle cx="2" cy="56" r="1.4" fill="#4dc3ff"/>`),
+  pVisor: svg(`
+    <path d="M8 30 Q8 14 32 14 Q56 14 56 30 V36 Q56 46 46 46 H18 Q8 46 8 36 Z" fill="#e6e9f5" ${s()}/>
+    <path d="M14 28 Q14 22 32 22 Q50 22 50 28 V34 Q50 40 44 40 H20 Q14 40 14 34 Z" fill="#2a3a8e" ${s(2.5)}/>
+    <circle cx="22" cy="29" r="1.6" fill="#fff"/><circle cx="38" cy="33" r="1.2" fill="#fff"/><circle cx="44" cy="27" r="1" fill="#fff"/>
+    <polygon points="${estrela5(30, 31, 4, 1.8)}" fill="#ffe14d"/>
+    <path d="M16 26 Q24 22 30 23" stroke="#8fc2ff" stroke-width="2.5" fill="none" stroke-linecap="round"/>`),
+  pCapa: svg(`
+    <path d="M20 8 H44 Q48 30 56 54 Q46 50 40 56 Q32 50 24 56 Q18 50 8 54 Q16 30 20 8 Z" fill="#3b2a8e" ${s()}/>
+    <rect x="18" y="5" width="28" height="7" rx="3.5" fill="#ffc93d" ${s(2.5)}/>
+    <polygon points="${estrela5(30, 26, 5, 2.2)}" fill="#ffe14d"/><polygon points="${estrela5(40, 38, 4, 1.8)}" fill="#ffe14d"/>
+    <polygon points="${estrela5(24, 42, 3.5, 1.5)}" fill="#fff"/><circle cx="36" cy="18" r="1.4" fill="#fff"/>`),
+  pBorboleta: svg(`
+    <path d="M32 30 Q14 4 6 18 Q2 30 30 34 Z" fill="#ff86d6" ${s()}/>
+    <path d="M32 30 Q50 4 58 18 Q62 30 34 34 Z" fill="#ff86d6" ${s()}/>
+    <path d="M30 34 Q8 40 14 54 Q22 60 32 38 Z" fill="#8fd3ff" ${s()}/>
+    <path d="M34 34 Q56 40 50 54 Q42 60 32 38 Z" fill="#8fd3ff" ${s()}/>
+    <circle cx="16" cy="20" r="4" fill="#ffe14d"/><circle cx="48" cy="20" r="4" fill="#ffe14d"/>
+    <rect x="29" y="22" width="6" height="26" rx="3" fill="#5a3a22"/>`),
+  pFoguete: svg(`
+    <rect x="16" y="10" width="14" height="36" rx="7" fill="#e8402f" ${s()}/>
+    <rect x="34" y="10" width="14" height="36" rx="7" fill="#e8402f" ${s()}/>
+    <rect x="22" y="16" width="20" height="24" rx="4" fill="#c9cdd6" ${s(2.5)}/>
+    <circle cx="32" cy="26" r="4" fill="#8fd3ff" ${s(2)}/>
+    <path d="M18 46 Q23 60 28 46 Z M36 46 Q41 60 46 46 Z" fill="#ffc93d"/>
+    <path d="M20 46 Q23 54 26 46 Z M38 46 Q41 54 44 46 Z" fill="#fff6c8"/>`),
+  pDragao: svg(`
+    <path d="M30 30 Q12 8 2 22 Q8 24 6 30 Q12 28 14 34 Q20 30 26 36 Z" fill="#8a6aff" ${s(2.5)}/>
+    <path d="M34 30 Q52 8 62 22 Q56 24 58 30 Q52 28 50 34 Q44 30 38 36 Z" fill="#8a6aff" ${s(2.5)}/>
+    <path d="M30 30 L4 22 M34 30 L60 22" stroke="#ffc93d" stroke-width="2.5" stroke-linecap="round"/>
+    <rect x="18" y="16" width="28" height="26" rx="10" fill="#22b597" ${s()}/>
+    <circle cx="25" cy="27" r="4" fill="#2a1d3a"/><circle cx="39" cy="27" r="4" fill="#2a1d3a"/>
+    <circle cx="26.5" cy="25.5" r="1.4" fill="#fff"/><circle cx="40.5" cy="25.5" r="1.4" fill="#fff"/>
+    <path d="M22 16 L20 6 L26 13 M42 16 L44 6 L38 13" fill="#ffc93d" ${s(2)}/>
+    <path d="M27 35 Q32 38 37 35" fill="none" stroke="${C}" stroke-width="2.5" stroke-linecap="round"/>
+    <rect x="22" y="42" width="20" height="16" rx="6" fill="#22b597" ${s()}/>
+    <rect x="27" y="45" width="10" height="10" rx="4" fill="#dcfbec"/>`),
+  pPinguim: svg(`
+    <ellipse cx="32" cy="36" rx="18" ry="22" fill="#2a3a5e" ${s()}/>
+    <ellipse cx="32" cy="40" rx="12" ry="16" fill="#fffaf0"/>
+    <circle cx="26" cy="26" r="3" fill="${C}"/><circle cx="38" cy="26" r="3" fill="${C}"/>
+    <circle cx="27" cy="25" r="1" fill="#fff"/><circle cx="39" cy="25" r="1" fill="#fff"/>
+    <path d="M28 31 L36 31 L32 36 Z" fill="#ffa53d" ${s(2)}/>
+    <path d="M22 58 h8 M34 58 h8" stroke="#ffa53d" stroke-width="5" stroke-linecap="round"/>
+    <path d="M14 34 Q8 44 14 48 M50 34 Q56 44 50 48" fill="none" stroke="#2a3a5e" stroke-width="6" stroke-linecap="round"/>
+    <rect x="22" y="14" width="20" height="5" rx="2.5" fill="#ff5a6e"/>`),
+  pPanda: svg(`
+    <circle cx="16" cy="16" r="8" fill="#2a2026" ${s(2.5)}/><circle cx="48" cy="16" r="8" fill="#2a2026" ${s(2.5)}/>
+    <ellipse cx="32" cy="34" rx="24" ry="22" fill="#fffaf0" ${s()}/>
+    <ellipse cx="22" cy="32" rx="7" ry="9" fill="#2a2026" transform="rotate(-25 22 32)"/>
+    <ellipse cx="42" cy="32" rx="7" ry="9" fill="#2a2026" transform="rotate(25 42 32)"/>
+    <circle cx="23" cy="31" r="2.6" fill="#fff"/><circle cx="41" cy="31" r="2.6" fill="#fff"/>
+    <ellipse cx="32" cy="42" rx="4" ry="3" fill="#2a2026"/>
+    <path d="M28 47 Q32 50 36 47" fill="none" stroke="${C}" stroke-width="2.2" stroke-linecap="round"/>
+    <circle cx="16" cy="42" r="3" fill="#ffb0c0"/><circle cx="48" cy="42" r="3" fill="#ffb0c0"/>
+    <path d="M54 48 L60 22" stroke="#7fd06a" stroke-width="5" stroke-linecap="round"/><path d="M57 34 l5 -3" stroke="#5cbf4f" stroke-width="3" stroke-linecap="round"/>`),
+  pRobo: svg(`
+    <rect x="12" y="16" width="40" height="30" rx="10" fill="#c9d6e6" ${s()}/>
+    <rect x="18" y="22" width="28" height="14" rx="7" fill="#2a3a5e"/>
+    <circle cx="26" cy="29" r="4" fill="#4dc3ff"/><circle cx="38" cy="29" r="4" fill="#4dc3ff"/>
+    <circle cx="27" cy="28" r="1.3" fill="#fff"/><circle cx="39" cy="28" r="1.3" fill="#fff"/>
+    <path d="M8 18 Q4 30 10 36 M56 18 Q60 30 54 36" fill="none" stroke="#8a9ab0" stroke-width="6" stroke-linecap="round"/>
+    <path d="M32 16 V8" stroke="${C}" stroke-width="3"/><circle cx="32" cy="7" r="3.5" fill="#ff5a6e" ${s(2)}/>
+    <rect x="22" y="46" width="20" height="10" rx="4" fill="#a8b8cc" ${s(2.5)}/>
+    <path d="M28 41 Q32 44 36 41" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"/>`),
+  pUnicornio: svg(`
+    <path d="M40 4 L35 22 L45 21 Z" fill="#ffc93d" ${s(2.5)}/>
+    <path d="M37 13 L43 12 M36 17 L44 16" stroke="#e6a21e" stroke-width="1.6"/>
+    <path d="M20 18 Q12 26 14 40 Q8 44 10 52 L20 46 Q18 34 26 24 Z" fill="#ff5a6e"/>
+    <path d="M24 16 Q16 26 18 40 L24 40 Q22 30 30 22 Z" fill="#ffa53d"/>
+    <path d="M28 16 Q20 28 22 40 L28 36 Q26 28 34 22 Z" fill="#4dc3ff"/>
+    <rect x="22" y="18" width="34" height="32" rx="14" fill="#fff8ff" ${s()}/>
+    <rect x="34" y="38" width="26" height="18" rx="9" fill="#ffd3e6" ${s()}/>
+    <circle cx="44" cy="46" r="1.8" fill="#d97a9f"/><circle cx="52" cy="46" r="1.8" fill="#d97a9f"/>
+    <ellipse cx="38" cy="31" rx="4.5" ry="6" fill="#2a1d3a"/><circle cx="39.6" cy="28.6" r="1.8" fill="#fff"/>
+    <path d="M34 24 l-3 -3 M38 23 l-1 -4" stroke="#2a1d3a" stroke-width="2" stroke-linecap="round"/>
+    <ellipse cx="30" cy="38" rx="3.4" ry="2.2" fill="#ffa8c8"/>
+    <path d="M26 18 L22 8 L32 15" fill="#fff8ff" ${s(2.5)}/>`),
 };
 
 export function arte(nome: string): string {

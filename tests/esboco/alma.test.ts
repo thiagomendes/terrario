@@ -1,107 +1,120 @@
 import { describe, expect, it } from 'vitest';
 import {
-  HABILIDADES,
-  LOJA,
+  BANCA,
   MISSOES,
-  lojaDoMundo,
+  PREMIUM,
+  PRESENTES_NIVEL,
+  SESSAO,
+  XP_DO_NIVEL,
   missoesDoMundo,
-  moedasDoMundo,
+  nivelDoXp,
   type MundoAlma,
 } from '../../src/esboco/alma/dados';
 import {
   abertas,
-  comprar,
+  comprarBanca,
+  comprarPremium,
+  criancaVazia,
   definirProgresso,
-  estadoVazio,
-  normalizarEstado,
+  mundoVazio,
+  normalizarCrianca,
+  normalizarMundo,
   registrar,
-  concluirBis,
+  vestirPremium,
 } from '../../src/esboco/alma/estado';
 
 const MUNDOS: MundoAlma[] = ['cidade-grande', 'rancho-alegre'];
 
 describe('esboço 023: os números', () => {
-  it('5 a 8 missões por mundo, de poucos minutos, com prêmio fixo', () => {
+  it('5 a 8 missões por mundo; a primeira é curta e dá a fantasia especial do mundo', () => {
     for (const mundo of MUNDOS) {
       const lista = missoesDoMundo(mundo);
       expect(lista.length).toBeGreaterThanOrEqual(5);
       expect(lista.length).toBeLessThanOrEqual(8);
-      for (const m of lista) {
-        expect(m.moedas).toBeGreaterThan(0);
-        expect(m.minutos[1]).toBeLessThanOrEqual(m.devagar ? 10 : 8);
-      }
-      // a primeira missão é curta e dá fantasia (como a casinha do cachorro, que prendeu)
       expect(lista[0].minutos[1]).toBeLessThanOrEqual(3);
       expect(lista[0].fantasia).toBeTruthy();
+      for (const m of lista) expect(m.moedas).toBeGreaterThanOrEqual(3);
     }
     expect(new Set(MISSOES.map((m) => m.id)).size).toBe(MISSOES.length);
   });
 
-  it('o que cada nível libera existe na lojinha do mesmo mundo (nada vaza de tema)', () => {
-    for (const mundo of MUNDOS) {
-      const ids = new Set(lojaDoMundo(mundo).map((i) => i.id));
-      for (const h of HABILIDADES[mundo])
-        for (const n of h.niveis.slice(0, 2)) expect(ids.has(n.libera), `${mundo} ${n.libera}`).toBe(true);
-    }
+  it('premium: preço fixo, nunca dado por missão nem por nível', () => {
+    const ids = new Set(PREMIUM.map((p) => p.id));
+    for (const m of MISSOES) expect(ids.has(m.fantasia ?? '')).toBe(false);
+    for (const p of PRESENTES_NIVEL) expect(ids.has(p.desenho)).toBe(false);
+    expect(PREMIUM.length).toBeGreaterThanOrEqual(8);
+    expect(PREMIUM.length).toBeLessThanOrEqual(12);
+    expect(PREMIUM.every((p) => Number.isInteger(p.preco) && p.preco > 0)).toBe(true);
+    expect(PREMIUM.filter((p) => p.feito).map((p) => p.categoria).sort()).toEqual(['bicho', 'fantasia', 'roupa']);
   });
 
-  it('com as missões dá para comprar uma boa parte da lojinha (e o mais barato logo)', () => {
-    for (const mundo of MUNDOS) {
-      const venda = lojaDoMundo(mundo).filter((i) => !i.presente);
-      const barato = Math.min(...venda.map((i) => i.preco));
-      const m = missoesDoMundo(mundo);
-      expect(m[0].moedas + m[1].moedas).toBeGreaterThanOrEqual(barato);
-      expect(moedasDoMundo(mundo)).toBeGreaterThanOrEqual(25);
-    }
-    expect(LOJA.every((i) => Number.isInteger(i.preco) && i.preco >= 0)).toBe(true);
+  it('equilíbrio: o primeiro premium sai em umas 2 sessões; o mais caro leva várias', () => {
+    const porSessao = SESSAO.missoes * SESSAO.moedasPorMissao;
+    const precos = PREMIUM.map((p) => p.preco).sort((a, b) => a - b);
+    const sessoesPrimeiro = precos[0] / porSessao;
+    expect(sessoesPrimeiro).toBeGreaterThan(1);
+    expect(sessoesPrimeiro).toBeLessThanOrEqual(2);
+    expect(precos[precos.length - 1] / porSessao).toBeGreaterThanOrEqual(5);
+  });
+
+  it('banca: itens do tema de cada mundo; níveis crescem', () => {
+    for (const mundo of MUNDOS) expect(BANCA.some((b) => b.mundo === mundo)).toBe(true);
+    for (let i = 1; i < XP_DO_NIVEL.length; i++) expect(XP_DO_NIVEL[i]).toBeGreaterThan(XP_DO_NIVEL[i - 1]);
+    expect(nivelDoXp(0).nivel).toBe(1);
+    expect(nivelDoXp(40).nivel).toBe(2);
   });
 });
 
 describe('esboço 023: o estado', () => {
-  it('missão por evento: progresso, prêmio igual ao mostrado e nível', () => {
-    const e = estadoVazio();
-    let ev = registrar(e, 'rancho-alegre', 'colheu', 4);
-    expect(ev.some((x) => x.tipo === 'progresso')).toBe(true);
-    ev = registrar(e, 'rancho-alegre', 'colheu');
-    const fim = ev.find((x) => x.tipo === 'concluiu');
-    expect(fim).toMatchObject({ moedas: 3, fantasia: 'caipira' });
-    expect(e.moedas).toBe(3);
-    expect(e.fantasias).toEqual(['caipira']);
+  it('missão: prêmio igual ao mostrado; carteira e XP são da criança', () => {
+    const c = criancaVazia();
+    const e = mundoVazio();
+    registrar(c, e, 'rancho-alegre', 'colheu', 4);
+    const ev = registrar(c, e, 'rancho-alegre', 'colheu');
+    expect(ev.find((x) => x.tipo === 'concluiu')).toMatchObject({ moedas: 3, fantasia: 'caipira' });
+    expect(c.moedas).toBeGreaterThanOrEqual(3);
+    expect(c.fantasias).toEqual(['caipira']);
+    expect(c.xp).toBeGreaterThan(20);
+    // a mesma carteira serve no outro mundo; o progresso de lá é outro
+    expect(abertas(mundoVazio(), 'cidade-grande').map((m) => m.id)).toEqual(['c1', 'c2']);
   });
 
-  it('toda missão aberta conta, fixada ou não', () => {
-    const e = estadoVazio();
-    e.fixada = 'c2';
-    definirProgresso(e, 'cidade-grande', 'c1', 0.5);
-    expect(e.progresso.c1).toBe(0.5);
-    expect(abertas(e, 'cidade-grande').map((m) => m.id)).toEqual(['c1', 'c2']);
+  it('subir de nível dá o presentinho conhecido e moedinhas', () => {
+    const c = criancaVazia();
+    const e = mundoVazio();
+    const ev = [...definirProgresso(c, e, 'cidade-grande', 'c1', 1), ...registrar(c, e, 'cidade-grande', 'visitou:lugar', 4)];
+    const nivel = ev.find((x) => x.tipo === 'nivel');
+    expect(nivel).toMatchObject({ nivel: 2, presente: { desenho: 'etiqueta', moedas: 2 } });
+    expect(c.moedas).toBe(3 + 2);
   });
 
-  it('lojinha: preço fixo, item trancado, sem moedas, uma fantasia só', () => {
-    const e = estadoVazio();
-    expect(comprar(e, 'cidade-grande', 'turista')).toEqual({ ok: false, motivo: 'trancado' });
-    expect(comprar(e, 'cidade-grande', 'poste')).toEqual({ ok: false, motivo: 'trancado' });
-    expect(comprar(e, 'cidade-grande', 'toldo-verde')).toEqual({ ok: false, motivo: 'faltam-moedas' });
-    e.moedas = 4;
-    expect(comprar(e, 'cidade-grande', 'toldo-verde')).toEqual({ ok: true });
-    expect(e.moedas).toBe(0);
-    expect(comprar(e, 'cidade-grande', 'capacete-dourado')).toEqual({ ok: false, motivo: 'presente' });
-    // item de outro mundo não existe aqui
-    e.moedas = 50;
-    expect(comprar(e, 'cidade-grande', 'feno')).toEqual({ ok: false, motivo: 'nao-existe' });
+  it('lojinha premium: preço fixo, um de cada, veste ao comprar', () => {
+    const c = criancaVazia();
+    expect(comprarPremium(c, 'tenis-cometa')).toEqual({ ok: false, motivo: 'faltam-moedas' });
+    c.moedas = 20;
+    expect(comprarPremium(c, 'tenis-cometa')).toEqual({ ok: true });
+    expect(c.moedas).toBe(0);
+    expect(c.vestidos.roupa).toBe('tenis-cometa');
+    c.moedas = 99;
+    expect(comprarPremium(c, 'tenis-cometa')).toEqual({ ok: false, motivo: 'ja-tem' });
+    expect(vestirPremium(c, 'tenis-cometa', false)).toBe(true);
+    expect(c.vestidos.roupa).toBeUndefined();
+    expect(vestirPremium(c, 'unicornio', true)).toBe(false);
   });
 
-  it('presente de nível chega sozinho; bis só depois da lista toda', () => {
-    const e = estadoVazio();
-    registrar(e, 'rancho-alegre', 'fabricou:pao', 2);
-    expect(e.meus).toContain('pipoca');
-    expect(concluirBis(e, 'rancho-alegre', 'r1')).toEqual([]);
+  it('banca: item de outro mundo não existe aqui', () => {
+    const c = criancaVazia();
+    c.moedas = 10;
+    expect(comprarBanca(c, 'cidade-grande', 'feno')).toEqual({ ok: false, motivo: 'nao-existe' });
+    expect(comprarBanca(c, 'rancho-alegre', 'feno')).toEqual({ ok: true });
+    expect(c.moedas).toBe(7);
   });
 
   it('o guardado estranho é limpo', () => {
-    const e = normalizarEstado({ moedas: -4, feitas: ['c1', 'r1', 'x'], meus: ['feno', 'poste'] }, 'cidade-grande');
-    expect(e.moedas).toBe(0);
-    expect(e.feitas).toEqual(['c1']);
-    expect(e.meus).toEqual(['poste']);
+    const c = normalizarCrianca({ moedas: -4, premium: ['unicornio', 'x'], vestidos: { bicho: 'unicornio', roupa: 'x' } });
+    expect(c.moedas).toBe(0);
+    expect(c.premium).toEqual(['unicornio']);
+    expect(c.vestidos).toEqual({ bicho: 'unicornio' });
+    expect(normalizarMundo({ feitas: ['c1', 'r1'] }, 'cidade-grande').feitas).toEqual(['c1']);
   });
 });

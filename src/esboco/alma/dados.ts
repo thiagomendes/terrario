@@ -1,12 +1,17 @@
 /**
- * Esboço da spec 023 "Alma do jogo": os números propostos (missões, moedinhas, preços,
- * habilidades e o que cada nível libera). Só dados, sem Babylon nem DOM: é o que o núcleo
- * levaria na implementação de verdade (uma regra só para prever e conferir).
+ * Esboço da spec 023 "Alma do jogo" (rodada 2, o modelo do dono de 13 nov 2026): os números
+ * propostos. Só dados, sem Babylon nem DOM: é o que o núcleo levaria na implementação de
+ * verdade (uma regra só para prever e conferir).
  *
- * Regras que estes dados seguem (ver `.sdd/cuidados-legais.md`):
- * - todo prêmio é conhecido antes (nada sorteado);
- * - preço fixo, mostrado antes, e a moedinha não sai do mundo nem passa a outro jogador;
- * - nada expira e nada se perde por ficar sem jogar.
+ * - **Da criança, em todo mundo:** a carteira de moedinhas, o nível (sobe com tudo o que ela
+ *   faz, em qualquer mundo, e cada nível dá um presentinho), as 5 habilidades e as fantasias.
+ * - **De cada mundo:** as missões e os prêmios especiais delas, e a banca do mundo (itens do
+ *   tema, pagos com as moedinhas da carteira).
+ * - **Lojinha premium (universal):** coisas que o jogo nunca dá, só se compram com moedinhas.
+ *
+ * Regras (ver `.sdd/cuidados-legais.md`): prêmio e preço sempre conhecidos antes, nada
+ * sorteado; nada expira, sem oferta por tempo, sem "só restam N", sem estoque que gira; a
+ * moedinha não passa a outro jogador e não vira dinheiro.
  */
 
 export type MundoAlma = 'cidade-grande' | 'rancho-alegre';
@@ -24,7 +29,7 @@ export type DesenhoMissao =
   | { tipo: 'bicho'; bicho: 'galinha' | 'vaca'; item: string }
   | { tipo: 'lugares'; usos: readonly string[] };
 
-export type IdHabilidade = 'construtor' | 'explorador' | 'bichos' | 'fazendeiro' | 'mundo';
+export type IdHabilidade = 'construtor' | 'explorador' | 'bichos' | 'fazendeiro' | 'cozinheiro';
 
 export interface Missao {
   id: string;
@@ -100,7 +105,7 @@ export const MISSOES: readonly Missao[] = [
     desenho: { tipo: 'item', item: 'pao', acao: 'pegar' },
     conta: { tipo: 'evento', chave: 'trocou:cozinheiro', meta: 1 },
     moedas: 3,
-    habilidade: 'mundo',
+    habilidade: 'cozinheiro',
     minutos: [2, 3],
   },
   {
@@ -183,7 +188,7 @@ export const MISSOES: readonly Missao[] = [
     desenho: { tipo: 'item', item: 'pao', acao: 'fazer' },
     conta: { tipo: 'evento', chave: 'fabricou:pao', meta: 1 },
     moedas: 4,
-    habilidade: 'mundo',
+    habilidade: 'cozinheiro',
     minutos: [3, 4],
   },
   {
@@ -215,133 +220,149 @@ export function missoesDoMundo(mundo: MundoAlma): Missao[] {
   return MISSOES.filter((m) => m.mundo === mundo);
 }
 
-/** Uma habilidade: o desenho e os 3 níveis (quantos pontos e o que cada nível libera). */
-export interface NivelHabilidade {
-  pontos: number;
-  /** O que aparece: id de um item da lojinha (fica liberado) ou presente direto. */
-  libera: string;
-}
+/** XP de cada missão feita (fora as ações soltas, em `XP_DE_EVENTO`). */
+export const XP_MISSAO = 20;
+
+// ------------------------------------------------------------------ habilidades (universais)
 export interface Habilidade {
   id: IdHabilidade;
   /** Desenho do distintivo (arte.ts). */
   desenho: string;
   cor: string;
   nome: string;
-  /** O que conta ponto (para os pais e para o núcleo). */
+  /** Os mundos que fazem esta habilidade subir (o desenho de cada um aparece no distintivo). */
+  mundos: readonly MundoAlma[];
   conta: string;
-  niveis: readonly [NivelHabilidade, NivelHabilidade, NivelHabilidade];
 }
 
-/** Pontos de habilidade ganhos com cada missão feita (fora as ações soltas). */
+/** Pontos para cada estrela (nível 1 a 5) de qualquer habilidade. */
+export const ESTRELAS_HABILIDADE = [5, 15, 30, 50, 80] as const;
+/** Pontos de habilidade ganhos com cada missão feita. */
 export const PONTOS_POR_MISSAO = 3;
 
-/** O que o nível 3 libera: a medalha dourada da habilidade (vai para o álbum). */
-export const MEDALHA = 'medalha';
-
-export const HABILIDADES: Readonly<Record<MundoAlma, readonly Habilidade[]>> = {
-  'cidade-grande': [
-    hab('construtor', 'construtor', '#f28b2c', 'Construtor', '1 ponto a cada 5 blocos postos na obra; 3 por obra terminada', [6, 'poste'], [18, 'capacete-dourado'], 36),
-    hab('explorador', 'explorador', '#3f9ad8', 'Explorador', '1 ponto por lugar novo (loja, terraço, parque, praça)', [3, 'bandeirinha-cidade'], [7, 'turista'], 12),
-    hab('bichos', 'bichos', '#e05a7a', 'Amigo dos bichos', '1 ponto por carinho ou comida a um bicho (até 5 por dia de jogo)', [3, 'osso'], [8, 'gatinho'], 15),
-    hab('fazendeiro', 'jardineiro', '#5cbf4f', 'Jardineiro', '1 ponto por flor ou arbusto plantado na praça ou no terraço', [4, 'flores'], [10, 'arbusto'], 20),
-    hab('mundo', 'vizinho', '#8a5ad8', 'Vizinho', '1 ponto por troca ou ajuda a um morador', [3, 'pao-presente'], [8, 'bone-cidade'], 15),
-  ],
-  'rancho-alegre': [
-    hab('construtor', 'construtor', '#f28b2c', 'Construtor', '1 ponto a cada 10 blocos postos', [5, 'porteira'], [15, 'cerca'], 30),
-    hab('explorador', 'explorador', '#3f9ad8', 'Explorador', '1 ponto por lugar novo (açude, morro, pomar, outro sítio)', [3, 'lampiao'], [7, 'lanterna'], 12),
-    hab('bichos', 'bichos', '#e05a7a', 'Amigo dos bichos', '1 ponto por bicho criado ou alimentado (até 5 por dia de jogo)', [4, 'galinha-nova'], [10, 'cavalinho'], 18),
-    hab('fazendeiro', 'fazendeiro', '#5cbf4f', 'Fazendeiro', '1 ponto a cada 2 plantas colhidas maduras', [5, 'sementes-abobora'], [12, 'espantalho'], 24),
-    hab('mundo', 'cozinheiro', '#c9772a', 'Cozinheiro da roça', '1 ponto por comida feita (pão, pipoca, doce de abóbora)', [2, 'pipoca'], [6, 'cozinheira-roca'], 12),
-  ],
-};
-
-/** Nível 1 e 2 liberam um item (ou dão um presente); o nível 3 dá a medalha dourada. */
-function hab(
-  id: IdHabilidade,
-  desenho: string,
-  cor: string,
-  nome: string,
-  conta: string,
-  n1: [number, string],
-  n2: [number, string],
-  n3: number,
-): Habilidade {
-  return {
-    id,
-    desenho,
-    cor,
-    nome,
-    conta,
-    niveis: [
-      { pontos: n1[0], libera: n1[1] },
-      { pontos: n2[0], libera: n2[1] },
-      { pontos: n3, libera: MEDALHA },
-    ],
-  };
-}
-
-/** Nível (0 a 3) com tantos pontos, e a fração até o próximo. */
-export function nivelDe(h: Habilidade, pontos: number): { nivel: number; fracao: number } {
-  let nivel = 0;
-  while (nivel < 3 && pontos >= h.niveis[nivel].pontos) nivel++;
-  if (nivel >= 3) return { nivel, fracao: 1 };
-  const de = nivel === 0 ? 0 : h.niveis[nivel - 1].pontos;
-  return { nivel, fracao: (pontos - de) / (h.niveis[nivel].pontos - de) };
-}
-
-export type TipoLoja = 'fantasia' | 'enfeite' | 'item' | 'bicho';
-
-/** Um item da lojinha: preço fixo e conhecido; o que é do mundo fica no mundo. */
-export interface ItemLoja {
-  id: string;
-  mundo: MundoAlma;
-  tipo: TipoLoja;
-  nome: string;
-  preco: number;
-  /** Desenho: 'item:<id>' (ícone do jogo), 'fantasia:<id>' (foto do boneco) ou arte.ts. */
-  desenho: string;
-  /** Quantos vêm (blocos de enfeite). */
-  qtd?: number;
-  /** Só aparece na prateleira depois deste nível de habilidade (o cadeado mostra qual). */
-  precisa?: { habilidade: IdHabilidade; nivel: 1 | 2 | 3 };
-  /** Presente do nível (não é vendido: vai direto para a criança). */
-  presente?: boolean;
-}
-
-export const LOJA: readonly ItemLoja[] = [
-  // ---------------------------------------------------------------- Cidade Grande
-  { id: 'flores', mundo: 'cidade-grande', tipo: 'enfeite', nome: 'Flores para a praça', preco: 3, desenho: 'item:bloco:9', qtd: 6, precisa: { habilidade: 'fazendeiro', nivel: 1 } },
-  { id: 'toldo-verde', mundo: 'cidade-grande', tipo: 'enfeite', nome: 'Toldo verde', preco: 4, desenho: 'item:bloco:100', qtd: 8 },
-  { id: 'poste', mundo: 'cidade-grande', tipo: 'enfeite', nome: 'Poste de luz', preco: 5, desenho: 'item:bloco:97', qtd: 4, precisa: { habilidade: 'construtor', nivel: 1 } },
-  { id: 'bandeirinha-cidade', mundo: 'cidade-grande', tipo: 'enfeite', nome: 'Bandeirinhas da praça', preco: 4, desenho: 'bandeirinhas', precisa: { habilidade: 'explorador', nivel: 1 } },
-  { id: 'osso', mundo: 'cidade-grande', tipo: 'item', nome: 'Ossinho para o cachorro', preco: 3, desenho: 'osso', precisa: { habilidade: 'bichos', nivel: 1 } },
-  { id: 'arbusto', mundo: 'cidade-grande', tipo: 'enfeite', nome: 'Arbusto de frutinhas', preco: 5, desenho: 'item:bloco:54', qtd: 4, precisa: { habilidade: 'fazendeiro', nivel: 2 } },
-  { id: 'bone-cidade', mundo: 'cidade-grande', tipo: 'fantasia', nome: 'Boné da cidade', preco: 6, desenho: 'fantasia:bone-cidade', precisa: { habilidade: 'mundo', nivel: 2 } },
-  { id: 'turista', mundo: 'cidade-grande', tipo: 'fantasia', nome: 'Turista', preco: 8, desenho: 'fantasia:turista', precisa: { habilidade: 'explorador', nivel: 2 } },
-  { id: 'gatinho', mundo: 'cidade-grande', tipo: 'bicho', nome: 'Gatinho da praça', preco: 10, desenho: 'gato', precisa: { habilidade: 'bichos', nivel: 2 } },
-  // presentes de nível (não se compram)
-  { id: 'capacete-dourado', mundo: 'cidade-grande', tipo: 'fantasia', nome: 'Capacete dourado', preco: 0, desenho: 'fantasia:capacete-dourado', presente: true, precisa: { habilidade: 'construtor', nivel: 2 } },
-  { id: 'pao-presente', mundo: 'cidade-grande', tipo: 'item', nome: 'Pão de presente', preco: 0, desenho: 'item:pao', qtd: 3, presente: true, precisa: { habilidade: 'mundo', nivel: 1 } },
-  // ---------------------------------------------------------------- Rancho Alegre
-  { id: 'feno', mundo: 'rancho-alegre', tipo: 'enfeite', nome: 'Fardos de feno', preco: 3, desenho: 'item:bloco:81', qtd: 4 },
-  { id: 'sementes-abobora', mundo: 'rancho-alegre', tipo: 'item', nome: 'Sementes de abóbora', preco: 3, desenho: 'item:semente_abobora', qtd: 6, precisa: { habilidade: 'fazendeiro', nivel: 1 } },
-  { id: 'lampiao', mundo: 'rancho-alegre', tipo: 'enfeite', nome: 'Lampião de abóbora', preco: 4, desenho: 'item:bloco:66', qtd: 2, precisa: { habilidade: 'explorador', nivel: 1 } },
-  { id: 'porteira', mundo: 'rancho-alegre', tipo: 'enfeite', nome: 'Porteira', preco: 4, desenho: 'item:bloco:82', qtd: 2, precisa: { habilidade: 'construtor', nivel: 1 } },
-  { id: 'cerca', mundo: 'rancho-alegre', tipo: 'enfeite', nome: 'Cerca do curral', preco: 4, desenho: 'item:bloco:61', qtd: 12, precisa: { habilidade: 'construtor', nivel: 2 } },
-  { id: 'lanterna', mundo: 'rancho-alegre', tipo: 'item', nome: 'Lanterna de explorar', preco: 5, desenho: 'item:bloco:38', qtd: 2, precisa: { habilidade: 'explorador', nivel: 2 } },
-  { id: 'galinha-nova', mundo: 'rancho-alegre', tipo: 'bicho', nome: 'Galinha para o galinheiro', preco: 6, desenho: 'galinha', precisa: { habilidade: 'bichos', nivel: 1 } },
-  { id: 'fazendeira-domingo', mundo: 'rancho-alegre', tipo: 'fantasia', nome: 'Roupa de domingo', preco: 8, desenho: 'fantasia:fazendeira-domingo' },
-  { id: 'espantalho', mundo: 'rancho-alegre', tipo: 'enfeite', nome: 'Espantalho', preco: 8, desenho: 'espantalho', precisa: { habilidade: 'fazendeiro', nivel: 2 } },
-  { id: 'cavalinho', mundo: 'rancho-alegre', tipo: 'bicho', nome: 'Cavalinho', preco: 12, desenho: 'cavalo', precisa: { habilidade: 'bichos', nivel: 2 } },
-  { id: 'pipoca', mundo: 'rancho-alegre', tipo: 'item', nome: 'Pipoca de presente', preco: 0, desenho: 'item:pipoca', qtd: 3, presente: true, precisa: { habilidade: 'mundo', nivel: 1 } },
-  { id: 'cozinheira-roca', mundo: 'rancho-alegre', tipo: 'fantasia', nome: 'Cozinheira da roça', preco: 0, desenho: 'fantasia:cozinheira-roca', presente: true, precisa: { habilidade: 'mundo', nivel: 2 } },
+export const HABILIDADES: readonly Habilidade[] = [
+  { id: 'construtor', desenho: 'construtor', cor: '#f28b2c', nome: 'Construtor', mundos: ['cidade-grande', 'rancho-alegre'], conta: 'blocos postos na obra (cidade) e construções (rancho)' },
+  { id: 'explorador', desenho: 'explorador', cor: '#3f9ad8', nome: 'Explorador', mundos: ['cidade-grande', 'rancho-alegre'], conta: 'lugares novos (lojas, praça, açude, morro)' },
+  { id: 'bichos', desenho: 'bichos', cor: '#e05a7a', nome: 'Amigo dos bichos', mundos: ['rancho-alegre'], conta: 'bicho alimentado ou criado (até 5 por dia de jogo)' },
+  { id: 'fazendeiro', desenho: 'fazendeiro', cor: '#5cbf4f', nome: 'Fazendeiro', mundos: ['rancho-alegre'], conta: 'plantar e colher maduro' },
+  { id: 'cozinheiro', desenho: 'cozinheiro', cor: '#c9772a', nome: 'Cozinheiro', mundos: ['cidade-grande', 'rancho-alegre'], conta: 'comida feita (pão, pipoca) e pão da padeira' },
 ];
 
-export function lojaDoMundo(mundo: MundoAlma): ItemLoja[] {
-  return LOJA.filter((i) => i.mundo === mundo);
+export function estrelasDe(pontos: number): { estrelas: number; fracao: number } {
+  let n = 0;
+  while (n < 5 && pontos >= ESTRELAS_HABILIDADE[n]) n++;
+  if (n >= 5) return { estrelas: 5, fracao: 1 };
+  const de = n === 0 ? 0 : ESTRELAS_HABILIDADE[n - 1];
+  return { estrelas: n, fracao: (pontos - de) / (ESTRELAS_HABILIDADE[n] - de) };
 }
 
-/** O total de moedinhas que as missões de um mundo dão (sem as de bis). */
+// ------------------------------------------------------------------ nível da criança
+/** XP total para chegar a cada nível (o nível 1 é o começo). */
+export const XP_DO_NIVEL = [0, 40, 100, 180, 280, 400, 540, 700, 880, 1080] as const;
+export const NIVEL_MAXIMO_ESBOCO = XP_DO_NIVEL.length;
+
+export interface PresenteNivel {
+  nivel: number;
+  /** Desenho do presente (arte.ts). */
+  desenho: string;
+  nome: string;
+  moedas: number;
+}
+
+/**
+ * O presentinho de cada nível: pequeno, visível, nunca premium (o premium só se compra).
+ * Todos conhecidos antes (o caminho dos níveis mostra os próximos).
+ */
+export const PRESENTES_NIVEL: readonly PresenteNivel[] = [
+  { nivel: 2, desenho: 'etiqueta', nome: 'Etiqueta do nome colorida', moedas: 2 },
+  { nivel: 3, desenho: 'gestoEstrela', nome: 'Gesto novo: pulo de estrela', moedas: 2 },
+  { nivel: 4, desenho: 'tinta', nome: 'Cor nova para as fantasias: lilás', moedas: 2 },
+  { nivel: 5, desenho: 'moldura', nome: 'Moldura de foto de flores', moedas: 3 },
+  { nivel: 6, desenho: 'balao', nome: 'Balão de fala com estrelinha', moedas: 3 },
+  { nivel: 7, desenho: 'etiquetaEstrela', nome: 'Etiqueta do nome com estrela', moedas: 3 },
+  { nivel: 8, desenho: 'gestoReverencia', nome: 'Gesto novo: reverência', moedas: 3 },
+  { nivel: 9, desenho: 'tintaMenta', nome: 'Cor nova para as fantasias: menta', moedas: 3 },
+  { nivel: 10, desenho: 'trofeu', nome: 'Troféu do nível 10 no álbum', moedas: 5 },
+];
+
+export function nivelDoXp(xp: number): { nivel: number; fracao: number; falta: number } {
+  let n = 1;
+  while (n < XP_DO_NIVEL.length && xp >= XP_DO_NIVEL[n]) n++;
+  if (n >= XP_DO_NIVEL.length) return { nivel: n, fracao: 1, falta: 0 };
+  const de = XP_DO_NIVEL[n - 1];
+  const ate = XP_DO_NIVEL[n];
+  return { nivel: n, fracao: (xp - de) / (ate - de), falta: ate - xp };
+}
+
+// ------------------------------------------------------------------ banca do mundo
+/** Item da banca: só do tema do mundo, pago com as moedinhas da carteira, preço fixo. */
+export interface ItemBanca {
+  id: string;
+  mundo: MundoAlma;
+  nome: string;
+  preco: number;
+  /** 'item:<id>' (ícone do jogo) ou um desenho de arte.ts. */
+  desenho: string;
+  qtd: number;
+}
+
+export const BANCA: readonly ItemBanca[] = [
+  { id: 'flores', mundo: 'cidade-grande', nome: 'Flores para a praça', preco: 3, desenho: 'item:bloco:9', qtd: 6 },
+  { id: 'toldo-verde', mundo: 'cidade-grande', nome: 'Toldo verde', preco: 4, desenho: 'toldoVerde', qtd: 8 },
+  { id: 'toldo-vermelho', mundo: 'cidade-grande', nome: 'Toldo vermelho', preco: 4, desenho: 'toldoVermelho', qtd: 8 },
+  { id: 'poste', mundo: 'cidade-grande', nome: 'Poste de luz', preco: 5, desenho: 'item:bloco:97', qtd: 4 },
+  { id: 'janela-acesa', mundo: 'cidade-grande', nome: 'Janela acesa', preco: 5, desenho: 'item:bloco:94', qtd: 6 },
+  { id: 'feno', mundo: 'rancho-alegre', nome: 'Fardos de feno', preco: 3, desenho: 'item:bloco:81', qtd: 4 },
+  { id: 'sementes-abobora', mundo: 'rancho-alegre', nome: 'Sementes de abóbora', preco: 3, desenho: 'item:semente_abobora', qtd: 6 },
+  { id: 'lampiao', mundo: 'rancho-alegre', nome: 'Lampião de abóbora', preco: 4, desenho: 'item:bloco:66', qtd: 2 },
+  { id: 'porteira', mundo: 'rancho-alegre', nome: 'Porteira', preco: 4, desenho: 'item:bloco:82', qtd: 2 },
+  { id: 'cerca', mundo: 'rancho-alegre', nome: 'Cerca do curral', preco: 4, desenho: 'cerca', qtd: 12 },
+  // a galinha já existe no jogo (bicho do Rancho): vem criada para o galinheiro
+  { id: 'galinha', mundo: 'rancho-alegre', nome: 'Galinha para o galinheiro', preco: 6, desenho: 'galinha', qtd: 1 },
+];
+
+export function bancaDoMundo(mundo: MundoAlma): ItemBanca[] {
+  return BANCA.filter((i) => i.mundo === mundo);
+}
+
+// ------------------------------------------------------------------ lojinha premium (universal)
+export type CategoriaPremium = 'roupa' | 'costas' | 'fantasia' | 'bicho';
+
+export interface ItemPremium {
+  id: string;
+  categoria: CategoriaPremium;
+  nome: string;
+  preco: number;
+  /** O efeito que o faz premium (movimento, luz, acabamento). */
+  efeito: string;
+  /** Desenho do cartão (arte.ts). */
+  desenho: string;
+  /** Feito em 3D neste esboço (dá para experimentar no provador). */
+  feito?: boolean;
+}
+
+/**
+ * Coisas que o jogo nunca dá: nenhuma missão, nível ou habilidade libera. Preço fixo, sempre o
+ * mesmo, sempre à venda (nada some, nada gira, nada acaba). Exclusivo pela qualidade.
+ */
+export const PREMIUM: readonly ItemPremium[] = [
+  { id: 'camiseta-arco-iris', categoria: 'roupa', nome: 'Camiseta arco-íris', preco: 15, efeito: 'as listras correm devagar pela camiseta', desenho: 'pCamiseta' },
+  { id: 'tenis-cometa', categoria: 'roupa', nome: 'Tênis-cometa', preco: 20, efeito: 'faixa de luz arco-íris; pegadas de luz e estrelinhas a cada passo', desenho: 'pTenis', feito: true },
+  { id: 'visor-estelar', categoria: 'roupa', nome: 'Visor estelar', preco: 25, efeito: 'visor que brilha e reflete um céu de estrelas', desenho: 'pVisor' },
+  { id: 'capa-estrelas', categoria: 'costas', nome: 'Capa de estrelas', preco: 30, efeito: 'balança com o vento e as estrelas piscam', desenho: 'pCapa' },
+  { id: 'asas-borboleta', categoria: 'costas', nome: 'Asas de borboleta', preco: 40, efeito: 'batem devagar e brilham nas bordas', desenho: 'pBorboleta' },
+  { id: 'mochila-foguete', categoria: 'costas', nome: 'Mochila-foguete', preco: 45, efeito: 'soltam baforadas de fumacinha colorida ao pular', desenho: 'pFoguete' },
+  { id: 'dragao', categoria: 'fantasia', nome: 'Dragãozinho', preco: 55, efeito: 'asas que batem (mais forte correndo e no ar), chifres que brilham', desenho: 'pDragao', feito: true },
+  { id: 'pinguim', categoria: 'bicho', nome: 'Pinguinzinho', preco: 60, efeito: 'segue gingando e escorrega de barriga nas descidas', desenho: 'pPinguim' },
+  { id: 'panda', categoria: 'bicho', nome: 'Pandinha', preco: 65, efeito: 'segue rolando, senta e come bambu quando você para', desenho: 'pPanda' },
+  { id: 'cao-robo', categoria: 'bicho', nome: 'Cãozinho-robô', preco: 70, efeito: 'olhos de luz, rabo-antena e pulinhos com faísca', desenho: 'pRobo' },
+  { id: 'unicornio', categoria: 'bicho', nome: 'Unicórnio-pônei', preco: 80, efeito: 'trota atrás de você, pula junto, chifre que solta brilho e coraçõezinhos', desenho: 'pUnicornio', feito: true },
+];
+
+// ------------------------------------------------------------------ moedinhas: o ritmo
+/** O que uma sessão de 15 minutos costuma render (para a conta de equilíbrio). */
+export const SESSAO = { minutos: 15, missoes: 3, moedasPorMissao: 3.6 } as const;
+
 export function moedasDoMundo(mundo: MundoAlma): number {
   return missoesDoMundo(mundo).reduce((s, m) => s + m.moedas, 0);
 }

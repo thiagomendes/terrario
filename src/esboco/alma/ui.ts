@@ -1,30 +1,43 @@
 /**
- * Esboço da spec 023: as telas, por cima do HUD de verdade. Tudo com figura, cor, gesto e som;
- * o texto que aparece é só o número das moedinhas e o `aria-label` (para os pais e o leitor de
- * tela). Peças de brinquedo da 012 (creme, degrau embaixo, brilho em cima).
+ * Esboço da spec 023 (rodada 2): as telas, por cima do HUD de verdade. Tudo com figura, cor,
+ * gesto e som; o texto que aparece é só número (moedinhas, nível) e o `aria-label` (para os
+ * pais e o leitor de tela). Peças de brinquedo da 012 (creme, degrau embaixo, brilho em cima);
+ * a lojinha premium tem a cara dela: vitrine de veludo azul-noite, ouro e holofote.
  */
 import { arte } from './arte';
 import { figura, figuraMissao, desenhoDaFigurinha, desenhoDaBolinha } from './figuras';
 import {
   HABILIDADES,
-  MEDALHA,
-  lojaDoMundo,
+  PREMIUM,
+  PRESENTES_NIVEL,
+  XP_DO_NIVEL,
+  bancaDoMundo,
+  estrelasDe,
   missoesDoMundo,
-  type Habilidade,
-  type ItemLoja,
+  nivelDoXp,
+  type ItemBanca,
+  type ItemPremium,
   type Missao,
   type MundoAlma,
 } from './dados';
 import {
   abertas,
   fracaoDa,
-  liberado,
   metaDa,
   missaoDoHud,
-  nivelDaHabilidade,
-  type EstadoAlma,
+  type EstadoCrianca,
+  type EstadoMundo,
 } from './estado';
 import { tocarSomInterface } from '../../audio/somInterface';
+import { fotografarBoneco } from '../../render/fotoBoneco';
+import { normalizarAparencia, type Aparencia } from '../../personagem/aparencia';
+import { CSS_FESTA } from './festa';
+
+const ESPELHO = `<svg viewBox="0 0 64 64"><ellipse cx="32" cy="28" rx="18" ry="22" fill="#bfe3ff" stroke="#fff" stroke-width="5"/><path d="M22 20 Q26 12 34 12" stroke="#fff" stroke-width="4" fill="none" stroke-linecap="round"/><path d="M26 50 L22 60 M38 50 L42 60" stroke="#fff" stroke-width="5" stroke-linecap="round"/></svg>`;
+const VOLTAR = `<svg viewBox="0 0 64 64"><path d="M40 12 L20 32 L40 52" fill="none" stroke="#fff" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+const FECHAR = `<svg viewBox="0 0 24 24"><path d="M5 5 L19 19 M19 5 L5 19" stroke="#5a3a22" stroke-width="4" stroke-linecap="round"/></svg>`;
+const TIRAR = `<svg viewBox="0 0 64 64"><path d="M22 8 L32 14 L42 8 L58 18 L52 30 L46 27 L46 58 L18 58 L18 27 L12 30 L6 18 Z" fill="none" stroke="#fff" stroke-width="5" stroke-linejoin="round"/><path d="M14 14 L50 52" stroke="#fff" stroke-width="6" stroke-linecap="round"/></svg>`;
+const VESTIR = `<svg viewBox="0 0 64 64"><path d="M22 8 L32 14 L42 8 L58 18 L52 30 L46 27 L46 58 L18 58 L18 27 L12 30 L6 18 Z" fill="#fff" stroke="#fff" stroke-width="3" stroke-linejoin="round"/></svg>`;
 
 export const CSS_ALMA = `
 body.esboco-alma .missao-hud { display: none !important; }
@@ -33,28 +46,33 @@ body.esboco-alma .missao-hud { display: none !important; }
 .alma-fig > * { min-width: 0; min-height: 0; }
 .alma-fig img, .alma-fig canvas { width: 100%; height: 100%; object-fit: contain; display: block; }
 .alma-fig[data-tipo='fantasia'] { overflow: hidden; }
-.alma-fig[data-tipo='fantasia'] canvas { width: auto; height: 100%; max-width: 100%; object-fit: contain; }
+.alma-fig[data-tipo='fantasia'] canvas { width: auto; height: 100%; max-width: 100%; }
 .alma-fig-missao { position: relative; display: grid; place-items: center; width: 100%; height: 100%; }
 .alma-fig-missao .principal { width: 86%; height: 86%; }
 .alma-fig-missao .selo { position: absolute; right: -4%; bottom: -4%; width: 44%; height: 44%; padding: 6%; box-sizing: border-box;
   border-radius: 50%; background: #fffaf0; box-shadow: 0 0 0 2.5px #e8c98e, 0 3px 0 rgba(150,110,60,0.35); }
 .alma-trio { display: grid; grid-template-columns: repeat(3, 1fr); gap: 3%; width: 100%; height: 100%; align-items: center; }
 .alma-trio .alma-fig { width: 100%; aspect-ratio: 1; }
+@keyframes alma-pulo { 40% { transform: scale(1.18); } }
+@keyframes alma-chama { 50% { transform: scale(1.12); } }
+@keyframes alma-flutuar { 50% { transform: translateY(-5px); } }
 
-/* ---------------- HUD: o baú com as moedinhas e o cartão da missão ---------------- */
-.alma-bau { position: fixed; z-index: 7; top: calc(8px + env(safe-area-inset-top)); left: calc(112px + env(safe-area-inset-left));
-  height: 44px; display: flex; align-items: center; gap: 4px; padding: 0 12px 0 4px; border: 0; border-radius: 22px; cursor: pointer;
+/* ---------------- HUD: a carteira (nível + moedinhas) e o cartão da missão ---------------- */
+.alma-carteira { position: fixed; z-index: 7; top: calc(8px + env(safe-area-inset-top)); left: calc(112px + env(safe-area-inset-left));
+  height: 44px; display: flex; align-items: center; gap: 6px; padding: 0 12px 0 2px; border: 0; border-radius: 22px; cursor: pointer;
   background: rgba(255, 250, 240, 0.95); color: var(--tinta); font: 900 1.25rem var(--display);
   box-shadow: 0 3px 0 rgba(150, 110, 60, 0.35), 0 6px 12px rgba(40, 25, 10, 0.2), inset 0 2px 0 rgba(255,255,255,0.85);
   touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
-.alma-bau:active { transform: translateY(2px); }
-.alma-bau .bau { width: 36px; height: 36px; }
-.alma-bau .moeda { width: 24px; height: 24px; margin-left: 2px; }
-.alma-bau .n { min-width: 1.2em; text-align: left; font-variant-numeric: tabular-nums; }
-.alma-bau.pulou { animation: alma-pulo 0.45s ease-out; }
-.alma-bau.novidade::after { content: ''; position: absolute; top: -3px; right: -3px; width: 14px; height: 14px; border-radius: 50%;
-  background: #ff5a5a; box-shadow: 0 0 0 3px #fffaf0; }
-@keyframes alma-pulo { 40% { transform: scale(1.18); } }
+.alma-carteira:active { transform: translateY(2px); }
+.alma-nivel { position: relative; width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center;
+  background: conic-gradient(#ffb21a calc(var(--f, 0) * 1turn), #f0e2c4 0); }
+.alma-nivel::before { content: ''; position: absolute; inset: 4px; border-radius: 50%; background: #fffaf0; }
+.alma-nivel .alma-svg { position: absolute; inset: 5px; }
+.alma-nivel b { position: relative; font: 900 0.86rem var(--display); color: #8a4a00; margin-top: 2px; }
+.alma-carteira .moeda { width: 26px; height: 26px; }
+.alma-carteira .n { min-width: 1.2em; text-align: left; font-variant-numeric: tabular-nums; }
+.alma-carteira.pulou { animation: alma-pulo 0.45s ease-out; }
+.alma-carteira .barrinha { position: absolute; left: 44px; right: 12px; bottom: 4px; height: 0; }
 
 .alma-missao { position: fixed; z-index: 7; top: calc(60px + env(safe-area-inset-top)); left: calc(8px + env(safe-area-inset-left));
   display: flex; align-items: center; gap: 6px; padding: 5px 8px 5px 5px; border: 0; border-radius: 20px; cursor: pointer;
@@ -69,140 +87,199 @@ body.esboco-alma .missao-hud { display: none !important; }
 .alma-missao .premio { position: relative; width: 50px; height: 50px; border-radius: 14px; display: grid; place-items: center;
   background: radial-gradient(circle at 50% 40%, #fff6c8, #ffe08a); box-shadow: inset 0 0 0 2.5px #f5c44a; }
 .alma-missao .premio .alma-fig { width: 44px; height: 44px; }
-.alma-missao .premio .moedas { position: absolute; right: -8px; bottom: -6px; }
+.alma-missao .premio .alma-moedas { position: absolute; right: -8px; bottom: -6px; }
 .alma-missao.cresceu { animation: alma-pulo 0.4s ease-out; }
-/* as bolinhas (cada vez é uma figura que fica colorida) e a barra da obra */
 .alma-bolinhas { display: flex; gap: 3px; }
-.alma-bolinhas .b { width: 20px; height: 20px; border-radius: 50%; background: #efe2c6; display: grid; place-items: center; padding: 2px; box-sizing: border-box;
-  transition: transform 0.25s, background 0.25s; }
+.alma-bolinhas .b { width: 20px; height: 20px; border-radius: 50%; background: #efe2c6; display: grid; place-items: center; padding: 2px; box-sizing: border-box; transition: transform 0.25s, background 0.25s; }
 .alma-bolinhas .b .alma-fig { width: 100%; height: 100%; filter: grayscale(1) opacity(0.35); transition: filter 0.3s; }
 .alma-bolinhas .b.cheia { background: #c9f0b0; box-shadow: 0 0 0 2px #5cbf4f; }
 .alma-bolinhas .b.cheia .alma-fig { filter: none; }
-.alma-bolinhas .b.agora { animation: alma-bolinha 0.5s ease-out; }
-@keyframes alma-bolinha { 40% { transform: scale(1.5); } }
+.alma-bolinhas .b.agora { animation: alma-pulo 0.5s ease-out; }
 .alma-barra { height: 14px; border-radius: 7px; background: #efe2c6; box-shadow: var(--sombra-poco); overflow: hidden; min-width: 70px; }
 .alma-barra i { display: block; height: 100%; border-radius: 7px; background: linear-gradient(180deg, #a6e88a, #5cbf4f); transition: width 0.4s ease-out; }
-/* moedinhas do prêmio: uma pilha de moedas com o número (o número ajuda os pais) */
 .alma-moedas { display: inline-flex; align-items: center; gap: 1px; padding: 1px 6px 1px 2px; border-radius: 999px; background: #fffaf0;
   box-shadow: 0 0 0 2px #f5c44a, 0 2px 0 rgba(150,110,60,0.35); font: 900 0.85rem var(--display); color: #8a5a10; white-space: nowrap; }
 .alma-moedas .moeda { width: 18px; height: 18px; }
 
-/* ---------------- painéis (quadro de missões e baú) ---------------- */
-.alma-fundo { position: fixed; inset: 0; z-index: 60; display: grid; place-items: center; padding: max(10px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) max(10px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
-  background: rgba(40, 25, 10, 0.42); box-sizing: border-box; }
+/* ---------------- painéis de brinquedo (quadro de missões e baú) ---------------- */
+.alma-fundo { position: fixed; inset: 0; z-index: 60; display: grid; place-items: center; box-sizing: border-box;
+  padding: max(10px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) max(10px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
+  background: rgba(40, 25, 10, 0.42); }
 .alma-fundo[hidden] { display: none; }
-.alma-painel { position: relative; width: min(980px, 100%); max-height: 100%; box-sizing: border-box; overflow: hidden; display: grid; grid-template-rows: auto 1fr;
+.alma-painel { position: relative; width: min(1000px, 100%); max-height: 100%; box-sizing: border-box; overflow: hidden; display: grid; grid-template-rows: auto 1fr;
   border-radius: 28px; background: var(--painel); box-shadow: 0 0 0 4px var(--painel-borda), 0 10px 0 #d9b77a, 0 22px 40px rgba(40,25,10,0.4); }
 .alma-cabeca { display: flex; align-items: center; gap: 10px; padding: 12px 14px 8px; }
 .alma-cabeca .espaco { flex: 1; }
-.alma-aba { width: 64px; height: 58px; border: 0; border-radius: 18px; padding: 6px; cursor: pointer; background: var(--poco); box-shadow: var(--sombra-poco);
-  -webkit-tap-highlight-color: transparent; }
+.alma-aba { width: 64px; height: 58px; border: 0; border-radius: 18px; padding: 6px; cursor: pointer; background: var(--poco); box-shadow: var(--sombra-poco); -webkit-tap-highlight-color: transparent; }
 .alma-aba .alma-svg { display: block; width: 100%; height: 100%; }
 .alma-aba[aria-selected='true'] { background: linear-gradient(#fff3c4, #ffd76a); box-shadow: 0 4px 0 #d9a21a, inset 0 2px 0 #fff; transform: translateY(-2px); }
 .alma-saldo { display: inline-flex; align-items: center; gap: 4px; padding: 4px 14px 4px 6px; border-radius: 999px; background: #fff3c4;
   box-shadow: inset 0 0 0 3px #f5c44a; font: 900 1.5rem var(--display); color: #8a5a10; }
 .alma-saldo .moeda { width: 34px; height: 34px; }
-.alma-fechar { width: 52px; height: 52px; border: 0; border-radius: 50%; cursor: pointer; background: var(--creme);
-  box-shadow: 0 4px 0 var(--creme-fundo), inset 0 2px 0 #fff; display: grid; place-items: center; }
+.alma-fechar { width: 52px; height: 52px; border: 0; border-radius: 50%; cursor: pointer; background: var(--creme); box-shadow: 0 4px 0 var(--creme-fundo), inset 0 2px 0 #fff; display: grid; place-items: center; }
 .alma-fechar svg { width: 24px; height: 24px; }
 .alma-corpo { overflow: auto; padding: 4px 16px 16px; min-height: 0; }
 
-/* álbum */
+/* álbum de missões do mundo */
 .alma-album { display: grid; grid-template-columns: 1fr auto; gap: 16px; align-items: start; }
 .alma-figurinhas { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; padding: 14px; border-radius: 20px;
   background: repeating-linear-gradient(0deg, #f7ecd6 0 2px, transparent 2px 26px), #fbf3e2; box-shadow: var(--sombra-poco); }
 .alma-fig-slot { position: relative; aspect-ratio: 1; border-radius: 16px; border: 3px dashed #e3cfa6; display: grid; place-items: center; padding: 8px;
   box-sizing: border-box; cursor: pointer; background: transparent; -webkit-tap-highlight-color: transparent; }
 .alma-fig-slot .alma-fig { width: 100%; height: 100%; }
-.alma-fig-slot.futura .alma-fig { filter: brightness(0) opacity(0.16); }
+.alma-fig-slot.futura .alma-fig { opacity: 0.35; filter: saturate(0.4); }
 .alma-fig-slot.feita { border: 0; background: #fff; box-shadow: 0 0 0 4px #fff, 0 4px 0 6px rgba(150,110,60,0.25); transform: rotate(var(--giro, -3deg)); }
 .alma-fig-slot.feita::after { content: ''; position: absolute; inset: 0; border-radius: 14px; background: linear-gradient(130deg, rgba(255,255,255,0.55), transparent 40%); pointer-events: none; }
 .alma-fig-slot.aberta { border: 3px solid #5cbf4f; background: #effbe6; }
-.alma-fig-slot.aberta .alma-fig { filter: saturate(0.5) opacity(0.7); }
-.alma-fig-slot .anel { position: absolute; inset: -5px; border-radius: 19px; pointer-events: none; }
+.alma-fig-slot .anel { position: absolute; inset: -5px; border-radius: 50%; pointer-events: none; }
 .alma-fig-slot .jogar { position: absolute; right: -8px; bottom: -8px; width: 34px; height: 34px; border-radius: 50%; padding: 6px; box-sizing: border-box;
   background: #5cbf4f; box-shadow: 0 3px 0 #3f9a3a; animation: alma-chama 1.6s ease-in-out infinite; }
 .alma-fig-slot .moedas-canto { position: absolute; left: -6px; top: -8px; }
-@keyframes alma-chama { 50% { transform: scale(1.12); } }
 .alma-grandes { display: grid; gap: 12px; }
 .alma-grande { position: relative; width: 150px; height: 170px; border-radius: 20px; display: grid; place-items: center; overflow: hidden;
   background: radial-gradient(circle at 50% 35%, #fff6c8, #ffe08a 70%); box-shadow: inset 0 0 0 4px #f5c44a; }
 .alma-grande .alma-fig { height: 92%; }
 .alma-grande.futura .alma-fig { filter: brightness(0) opacity(0.22); }
 .alma-grande .cad { position: absolute; width: 38px; height: 38px; right: 8px; top: 8px; }
-.alma-grande .quando { position: absolute; left: 8px; bottom: 8px; width: 44px; height: 44px; border-radius: 12px; background: #fffaf0; padding: 3px; box-sizing: border-box;
-  box-shadow: 0 2px 0 rgba(150,110,60,0.3); }
-.alma-medalhas { display: flex; gap: 8px; justify-content: center; margin-top: 12px; }
-.alma-medalhas .m { width: 52px; height: 52px; border-radius: 50%; display: grid; place-items: center; background: var(--poco); }
-.alma-medalhas .m .alma-fig { width: 70%; height: 70%; filter: brightness(0) opacity(0.18); }
-.alma-medalhas .m.ouro { background: radial-gradient(circle at 40% 35%, #fff3b0, #ffc93d); box-shadow: 0 0 0 3px #d98a14; }
-.alma-medalhas .m.ouro .alma-fig { filter: none; }
+.alma-grande .quando { position: absolute; left: 8px; bottom: 8px; width: 44px; height: 44px; border-radius: 12px; background: #fffaf0; padding: 3px; box-sizing: border-box; box-shadow: 0 2px 0 rgba(150,110,60,0.3); }
 
-/* habilidades */
-.alma-habs { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; }
-.alma-hab { display: grid; justify-items: center; gap: 6px; padding: 10px 4px 8px; border: 0; border-radius: 20px; background: transparent; cursor: pointer;
-  -webkit-tap-highlight-color: transparent; }
-.alma-hab[aria-pressed='true'] { background: var(--poco); box-shadow: var(--sombra-poco); }
-.alma-hab .distintivo { position: relative; width: 96px; height: 96px; border-radius: 50%; display: grid; place-items: center;
+/* caminho dos níveis */
+.alma-niveis { position: relative; display: grid; grid-auto-flow: column; grid-auto-columns: 104px; gap: 6px; overflow-x: auto; padding: 10px 6px 18px; scroll-snap-type: x mandatory; }
+.alma-niveis::before { content: ''; position: absolute; left: 50px; right: 50px; top: 154px; border-top: 6px dotted #e3cfa6; }
+.alma-nivel-passo { position: relative; display: grid; justify-items: center; gap: 10px; scroll-snap-align: center; }
+.alma-nivel-passo .presente { width: 86px; height: 86px; border-radius: 20px; display: grid; place-items: center; padding: 8px; box-sizing: border-box; background: #fffaf0;
+  box-shadow: 0 0 0 3px #f0d9b0, 0 5px 0 3px #e2c99b; position: relative; }
+.alma-nivel-passo .presente .alma-fig { width: 100%; height: 100%; }
+.alma-nivel-passo .presente .alma-moedas { position: absolute; right: -10px; bottom: -8px; }
+.alma-nivel-passo.ja .presente { background: #effbe6; box-shadow: 0 0 0 3px #5cbf4f, 0 5px 0 3px #3f9a3a; }
+.alma-nivel-passo.ja .presente::after { content: ''; position: absolute; right: -6px; top: -6px; width: 26px; height: 26px; border-radius: 50%;
+  background: #5cbf4f url("data:image/svg+xml,%3Csvg viewBox='0 0 64 64' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M13 33 L27 47 L52 18' fill='none' stroke='white' stroke-width='10' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center/70% no-repeat; }
+.alma-nivel-passo.futuro .presente { opacity: 0.6; }
+.alma-nivel-passo .bola { position: relative; width: 56px; height: 56px; border-radius: 50%; display: grid; place-items: center; z-index: 1;
+  background: #ecdcbc; font: 900 1.3rem var(--display); color: #8a6a3a; box-shadow: 0 4px 0 #d9c39a; }
+.alma-nivel-passo.ja .bola { background: radial-gradient(circle at 40% 35%, #fff3b0, #ffc93d); color: #8a4a00; box-shadow: 0 4px 0 #d98a14; }
+.alma-nivel-passo.agora .bola { width: 72px; height: 72px; margin-top: -8px; background: conic-gradient(#ffb21a calc(var(--f) * 1turn), #ecdcbc 0); box-shadow: 0 0 0 6px rgba(255, 201, 61, 0.35); animation: alma-chama 1.8s ease-in-out infinite; }
+.alma-nivel-passo.agora .bola canvas { position: absolute; inset: 6px; width: calc(100% - 12px); height: calc(100% - 12px); border-radius: 50%; background: #fffaf0; object-fit: cover; }
+.alma-nivel-passo.agora .bola b { position: absolute; right: -6px; bottom: -6px; min-width: 26px; height: 26px; border-radius: 13px; background: #ffc93d; color: #8a4a00;
+  font: 900 0.95rem var(--display); display: grid; place-items: center; box-shadow: 0 2px 0 #d98a14; }
+
+/* habilidades (universais) */
+.alma-habs { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; }
+.alma-hab { display: grid; justify-items: center; gap: 8px; padding: 14px 6px 12px; border-radius: 22px; background: #fffaf0; box-shadow: 0 0 0 3px #f0d9b0, 0 5px 0 3px #e2c99b; }
+.alma-hab .distintivo { position: relative; width: 104px; height: 104px; border-radius: 50%; display: grid; place-items: center;
   background: conic-gradient(var(--cor) calc(var(--f) * 1turn), #ecdcbc 0); }
 .alma-hab .distintivo::before { content: ''; position: absolute; inset: 9px; border-radius: 50%; background: #fffaf0; box-shadow: inset 0 3px 0 rgba(120,80,30,0.12); }
-.alma-hab .distintivo .alma-fig { position: relative; width: 58px; height: 58px; }
-.alma-hab .distintivo .coroa { position: absolute; top: -10px; width: 36px; height: 36px; }
-.alma-estrelas { display: flex; gap: 2px; }
-.alma-estrelas .alma-svg { width: 24px; height: 24px; }
-.alma-caminho { display: grid; grid-template-columns: auto 1fr auto 1fr auto 1fr auto; align-items: center; gap: 6px; margin-top: 12px; padding: 12px 18px;
-  border-radius: 20px; background: var(--poco); box-shadow: var(--sombra-poco); }
-.alma-caminho .passo { position: relative; width: 84px; height: 84px; border-radius: 18px; display: grid; place-items: center; background: #fffaf0; padding: 6px; box-sizing: border-box; }
-.alma-caminho .passo .alma-fig { width: 100%; height: 100%; }
-.alma-caminho .passo.longe .alma-fig { filter: brightness(0) opacity(0.18); }
-.alma-caminho .passo.longe .cad { position: absolute; right: -8px; top: -8px; width: 30px; height: 30px; }
-.alma-caminho .passo.ja { box-shadow: 0 0 0 4px #5cbf4f; }
-.alma-caminho .passo .nivel { position: absolute; left: 50%; bottom: -12px; transform: translateX(-50%); display: flex; }
-.alma-caminho .passo .nivel .alma-svg { width: 18px; height: 18px; }
-.alma-caminho .trilha { height: 10px; border-radius: 5px; background: #e3cfa6; overflow: hidden; }
-.alma-caminho .trilha i { display: block; height: 100%; background: var(--cor); }
-.alma-caminho .eu { width: 64px; height: 64px; }
+.alma-hab .distintivo .alma-fig { position: relative; width: 62px; height: 62px; }
+.alma-estrelas { display: flex; gap: 1px; }
+.alma-estrelas .alma-svg { width: 20px; height: 20px; }
+.alma-hab .mundos { display: flex; gap: 6px; }
+.alma-hab .mundos .alma-svg { width: 30px; height: 30px; padding: 3px; border-radius: 10px; background: var(--poco); }
 
-/* lojinha */
-.alma-loja { display: grid; grid-template-columns: repeat(auto-fill, minmax(124px, 1fr)); gap: 12px; }
-.alma-item { position: relative; display: grid; grid-template-rows: 1fr auto; justify-items: center; gap: 6px; padding: 10px 8px 10px; border: 0; border-radius: 20px; cursor: pointer;
-  background: #fffaf0; box-shadow: 0 0 0 3px #f0d9b0, 0 5px 0 3px #e2c99b; -webkit-tap-highlight-color: transparent; min-height: 150px; }
-.alma-item .alma-fig { width: 84px; height: 84px; }
-.alma-item .alma-fig[data-tipo='fantasia'] { height: 96px; }
+/* banca do mundo: um balcão de feira com toldo */
+.alma-banca { position: relative; border-radius: 22px; padding: 30px 14px 14px; background: linear-gradient(#f3e0bd, #e9cf9f); box-shadow: inset 0 0 0 4px #c9955a; }
+.alma-banca .toldo { position: absolute; left: -6px; right: -6px; top: -14px; height: 36px; border-radius: 12px 12px 18px 18px;
+  background: repeating-linear-gradient(90deg, var(--toldo, #e8402f) 0 34px, #fff 34px 68px); box-shadow: 0 5px 0 rgba(90,50,20,0.25), inset 0 -6px 0 rgba(0,0,0,0.08);
+  -webkit-mask: radial-gradient(circle 17px at 17px 100%, transparent 98%, #000) 0 0 / 34px 100% repeat-x; }
+.alma-banca .grade { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 12px; }
+.alma-item { position: relative; display: grid; grid-template-rows: 1fr auto; justify-items: center; gap: 6px; padding: 10px 8px; border: 0; border-radius: 20px; cursor: pointer;
+  background: #fffaf0; box-shadow: 0 0 0 3px #f0d9b0, 0 5px 0 3px #e2c99b; -webkit-tap-highlight-color: transparent; min-height: 140px; }
+.alma-item .alma-fig { width: 80px; height: 80px; }
 .alma-item .preco { display: inline-flex; align-items: center; gap: 3px; font: 900 1.15rem var(--display); color: #8a5a10; }
 .alma-item .preco .moeda { width: 24px; height: 24px; }
 .alma-item .pote { width: 80%; height: 8px; border-radius: 4px; background: #efe2c6; overflow: hidden; }
 .alma-item .pote i { display: block; height: 100%; background: linear-gradient(90deg, #ffd96a, #f0a91c); }
 .alma-item.pode { box-shadow: 0 0 0 4px #5cbf4f, 0 5px 0 4px #3f9a3a; }
-.alma-item.pode .alma-fig { animation: alma-chama 1.8s ease-in-out infinite; }
-.alma-item.trancado .alma-fig { filter: brightness(0) opacity(0.16); }
-.alma-item.trancado .quem { position: absolute; top: 8px; right: 8px; width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center;
-  background: conic-gradient(var(--cor) calc(var(--f) * 1turn), #ecdcbc 0); }
-.alma-item.trancado .quem::before { content: ''; position: absolute; inset: 4px; border-radius: 50%; background: #fffaf0; }
-.alma-item.trancado .quem .alma-fig { position: relative; width: 24px; height: 24px; filter: none; animation: none; }
-.alma-item.trancado .cad { position: absolute; left: 8px; top: 8px; width: 28px; height: 28px; }
-.alma-item.meu { box-shadow: 0 0 0 4px #8fd3ff, 0 5px 0 4px #2f7fe8; }
-.alma-item .marca { position: absolute; top: -8px; right: -8px; width: 38px; height: 38px; border-radius: 50%; padding: 6px; box-sizing: border-box;
-  background: #2f7fe8; box-shadow: 0 3px 0 #1d58b0; }
-.alma-item .presente { width: 30px; height: 30px; }
-.alma-item .qtd { position: absolute; left: 10px; bottom: 44px; font: 900 0.9rem var(--display); color: var(--tinta); background: #fff3c4; padding: 0 6px; border-radius: 8px; }
+.alma-item .qtd { position: absolute; left: 10px; top: 10px; font: 900 0.9rem var(--display); color: var(--tinta); background: #fff3c4; padding: 0 6px; border-radius: 8px; }
 
-/* confirmar compra, oferta de missão, festa */
+/* ---------------- a lojinha premium (vitrine) ---------------- */
+.alma-vitrine { position: fixed; inset: 0; z-index: 62; display: grid; grid-template-rows: auto 1fr; overflow: hidden; box-sizing: border-box;
+  padding: max(10px, env(safe-area-inset-top)) max(14px, env(safe-area-inset-right)) max(8px, env(safe-area-inset-bottom)) max(14px, env(safe-area-inset-left));
+  background: radial-gradient(ellipse at 50% 0%, #5a48c8 0%, #2a1f72 42%, #120c36 100%); color: #fff; }
+.alma-vitrine[hidden] { display: none; }
+.alma-vitrine .feixe { position: absolute; top: -10%; width: 34vw; height: 130%; pointer-events: none; opacity: 0.5;
+  background: linear-gradient(180deg, rgba(255,236,170,0.32), rgba(255,236,170,0) 70%); clip-path: polygon(40% 0, 60% 0, 100% 100%, 0 100%); }
+.alma-vitrine .feixe.e { left: 8%; transform: rotate(14deg); }
+.alma-vitrine .feixe.d { right: 8%; transform: rotate(-14deg); }
+.alma-vitrine .ceu i { position: absolute; width: 3px; height: 3px; border-radius: 50%; background: #fff; animation: alma-pisca 2.6s ease-in-out infinite; pointer-events: none; }
+@keyframes alma-pisca { 50% { opacity: 0.15; transform: scale(0.5); } }
+.alma-vitrine .topo { position: relative; display: flex; align-items: center; gap: 12px; padding: 2px 2px 8px; }
+.alma-vitrine .placa { display: flex; align-items: center; gap: 10px; padding: 6px 20px 6px 8px; border-radius: 999px;
+  background: linear-gradient(#ffe9a8, #e6b23e); box-shadow: 0 4px 0 #a8741a, inset 0 2px 0 #fff6d0; }
+.alma-vitrine .placa .alma-svg { width: 46px; height: 46px; }
+.alma-vitrine .placa .coroa { display: flex; gap: 2px; }
+.alma-vitrine .placa .coroa .alma-svg { width: 22px; height: 22px; }
+.alma-vitrine .espaco { flex: 1; }
+.alma-vitrine .alma-saldo { background: #241a5e; color: #ffe27a; box-shadow: inset 0 0 0 3px #e6b23e; }
+.alma-vitrine .alma-fechar { background: #3a2c8e; box-shadow: 0 4px 0 #1a1250, inset 0 2px 0 rgba(255,255,255,0.3); }
+.alma-vitrine .alma-fechar svg path { stroke: #fff; }
+.alma-prateleira { position: relative; display: grid; grid-auto-flow: column; grid-template-rows: repeat(var(--linhas, 2), auto); grid-auto-columns: 168px;
+  gap: 18px 16px; align-content: center; overflow-x: auto; overflow-y: hidden; padding: 12px 8px 16px; scroll-snap-type: x proximity; scrollbar-width: none; }
+.alma-prateleira::-webkit-scrollbar { display: none; }
+.alma-pcard { position: relative; height: 196px; border: 0; border-radius: 26px; cursor: pointer; padding: 0; scroll-snap-align: start; overflow: visible;
+  background: radial-gradient(ellipse at 50% 30%, #6a52d8 0%, #3a2a9a 60%, #241a6e 100%);
+  box-shadow: 0 0 0 3px #e6b23e, 0 0 0 6px rgba(255, 226, 140, 0.25), 0 10px 0 2px #120c36, 0 16px 24px rgba(0,0,0,0.45);
+  -webkit-tap-highlight-color: transparent; transition: transform 0.15s; }
+.alma-pcard:active { transform: scale(0.97); }
+.alma-pcard .arte { position: absolute; left: 14px; right: 14px; top: 14px; height: 116px; display: grid; place-items: center; animation: alma-flutuar 3.2s ease-in-out infinite; }
+.alma-pcard .arte .alma-fig { width: 108px; height: 108px; filter: drop-shadow(0 8px 0 rgba(0,0,0,0.28)) drop-shadow(0 0 14px rgba(255,230,160,0.35)); }
+.alma-pcard .chao { position: absolute; left: 30px; right: 30px; top: 124px; height: 14px; border-radius: 50%; background: radial-gradient(ellipse, rgba(255,226,140,0.45), transparent 70%); }
+.alma-pcard .brilho { position: absolute; inset: 0; overflow: hidden; border-radius: 26px; pointer-events: none; }
+.alma-pcard .brilho::after { content: ''; position: absolute; top: -20%; bottom: -20%; width: 26%; left: -40%; transform: skewX(-18deg);
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.28), transparent); animation: alma-varre 5s ease-in-out infinite; animation-delay: var(--d, 0s); }
+@keyframes alma-varre { 30%, 100% { left: 130%; } }
+.alma-pcard .preco { position: absolute; left: 50%; bottom: 12px; transform: translateX(-50%); display: inline-flex; align-items: center; gap: 4px;
+  padding: 3px 14px 3px 5px; border-radius: 999px; background: linear-gradient(#fff3c4, #ffd76a); box-shadow: 0 3px 0 #a8741a; font: 900 1.3rem var(--display); color: #7a4a00; white-space: nowrap; }
+.alma-pcard .preco .moeda { width: 30px; height: 30px; }
+.alma-pcard .pote { position: absolute; left: 26px; right: 26px; bottom: 4px; height: 6px; border-radius: 3px; background: rgba(255,255,255,0.18); overflow: hidden; }
+.alma-pcard .pote i { display: block; height: 100%; background: linear-gradient(90deg, #ffe27a, #ffb21a); }
+.alma-pcard .prova { position: absolute; left: -8px; top: -8px; width: 40px; height: 40px; border-radius: 50%; padding: 6px; box-sizing: border-box;
+  background: linear-gradient(#8fc2ff, #2f7fe8); box-shadow: 0 3px 0 #1d58b0, 0 0 0 3px #e6b23e; }
+.alma-pcard .meu { position: absolute; right: -8px; top: -8px; width: 40px; height: 40px; border-radius: 50%; padding: 7px; box-sizing: border-box; background: #5cbf4f; box-shadow: 0 3px 0 #3f9a3a, 0 0 0 3px #fff; }
+.alma-pcard.vestido { box-shadow: 0 0 0 4px #7fe0ff, 0 0 26px 6px rgba(127, 224, 255, 0.55), 0 10px 0 2px #120c36; }
+.alma-pdet { position: absolute; inset: 0; z-index: 3; display: grid; place-items: center; background: rgba(10, 6, 30, 0.6); }
+.alma-pdet[hidden] { display: none; }
+.alma-pdet .caixa { position: relative; display: grid; grid-template-columns: auto auto; align-items: center; gap: 22px; padding: 22px 26px; border-radius: 30px;
+  background: radial-gradient(ellipse at 30% 30%, #5a46c8, #2a1f78 70%); box-shadow: 0 0 0 4px #e6b23e, 0 14px 0 4px #0e0a2a, 0 26px 40px rgba(0,0,0,0.5); }
+.alma-pdet .grande { position: relative; width: 230px; height: 230px; display: grid; place-items: center; }
+.alma-pdet .grande .alma-fig { width: 200px; height: 200px; animation: alma-flutuar 3s ease-in-out infinite; filter: drop-shadow(0 10px 0 rgba(0,0,0,0.3)) drop-shadow(0 0 22px rgba(255,230,160,0.5)); }
+.alma-pdet .grande::after { content: ''; position: absolute; left: 20px; right: 20px; bottom: 6px; height: 22px; border-radius: 50%; background: radial-gradient(ellipse, #ffe9a8, #c9902a 60%, transparent 72%); }
+.alma-pdet .lado { display: grid; justify-items: center; gap: 14px; }
+.alma-pdet .alma-saldo { font-size: 2rem; }
+.alma-pdet .alma-saldo .moeda { width: 42px; height: 42px; }
+.alma-pdet .botoes { display: flex; gap: 14px; }
+.alma-pdet .alma-fechar { position: absolute; top: -14px; right: -14px; }
+.alma-pdet .pote-grande { width: 220px; height: 14px; border-radius: 7px; background: rgba(255,255,255,0.18); overflow: hidden; box-shadow: inset 0 2px 0 rgba(0,0,0,0.25); }
+.alma-pdet .pote-grande i { display: block; height: 100%; border-radius: 7px; background: linear-gradient(90deg, #ffe27a, #ffb21a); }
+.alma-pdet .efeito { display: flex; gap: 8px; }
+.alma-pdet .efeito i { width: 10px; height: 10px; border-radius: 50%; background: #ffe27a; box-shadow: 0 0 10px #ffe27a; animation: alma-pisca 1.2s ease-in-out infinite; }
+.alma-pdet .efeito i:nth-child(2) { animation-delay: 0.3s; background: #ff86d6; box-shadow: 0 0 10px #ff86d6; }
+.alma-pdet .efeito i:nth-child(3) { animation-delay: 0.6s; background: #7fe0ff; box-shadow: 0 0 10px #7fe0ff; }
+
+/* provador: a criança no mundo, a câmera gira em volta; embaixo, voltar e comprar */
+body.alma-provando > *:not(canvas):not(.alma-provador):not(.alma-festa):not(.alma-fundo):not(.alma-voo) { visibility: hidden !important; }
+body.alma-provando canvas { visibility: visible !important; }
+.alma-provador { position: fixed; z-index: 64; left: 50%; bottom: max(14px, env(safe-area-inset-bottom)); transform: translateX(-50%); display: flex; align-items: center; gap: 14px;
+  padding: 10px 14px; border-radius: 999px; background: linear-gradient(#3a2c8e, #241a5e); box-shadow: 0 0 0 3px #e6b23e, 0 8px 0 2px #0e0a2a, 0 14px 24px rgba(0,0,0,0.4); }
+.alma-provador[hidden] { display: none; }
+.alma-provador .alma-saldo { background: #241a5e; color: #ffe27a; box-shadow: inset 0 0 0 3px #e6b23e; }
+
+/* botões grandes */
 .alma-cartao { position: relative; display: grid; justify-items: center; gap: 12px; padding: 18px 22px 22px; border-radius: 28px; background: var(--painel);
   box-shadow: 0 0 0 4px var(--painel-borda), 0 10px 0 #d9b77a, 0 22px 40px rgba(40,25,10,0.4); max-height: 100%; box-sizing: border-box; }
 .alma-cartao .alma-fechar { position: absolute; top: -12px; right: -12px; width: 50px; height: 50px; z-index: 2; box-shadow: 0 0 0 4px var(--painel-borda), 0 5px 0 4px #d9b77a; }
 .alma-cartao[data-alma-quadro] { margin-top: 10px; }
+.alma-cartao.premium { background: radial-gradient(ellipse at 50% 30%, #5a46c8, #2a1f78 70%); box-shadow: 0 0 0 4px #e6b23e, 0 14px 0 4px #0e0a2a, 0 26px 40px rgba(0,0,0,0.5); }
 .alma-botao { min-width: 120px; height: 64px; border: 0; border-radius: 22px; cursor: pointer; display: inline-grid; place-items: center; padding: 8px 22px;
-  background: linear-gradient(#a6e88a, #5cbf4f); box-shadow: 0 6px 0 #3f9a3a, 0 10px 16px rgba(40,25,10,0.25), inset 0 2px 0 rgba(255,255,255,0.7);
-  -webkit-tap-highlight-color: transparent; }
+  background: linear-gradient(#a6e88a, #5cbf4f); box-shadow: 0 6px 0 #3f9a3a, 0 10px 16px rgba(40,25,10,0.25), inset 0 2px 0 rgba(255,255,255,0.7); -webkit-tap-highlight-color: transparent; }
 .alma-botao .alma-svg { width: 40px; height: 40px; }
 .alma-botao:active { transform: translateY(4px); box-shadow: 0 2px 0 #3f9a3a; }
 .alma-botao.azul { background: linear-gradient(#8fc2ff, #2f7fe8); box-shadow: 0 6px 0 #1d58b0, 0 10px 16px rgba(40,25,10,0.25), inset 0 2px 0 rgba(255,255,255,0.7); }
+.alma-botao.ouro { background: linear-gradient(#fff3c4, #ffc93d); box-shadow: 0 6px 0 #a8741a, 0 10px 16px rgba(0,0,0,0.3), inset 0 2px 0 #fff; }
+.alma-botao.ouro .alma-svg { width: auto; display: flex; align-items: center; gap: 4px; }
 .alma-botao.chama .alma-svg { animation: alma-chama 1.4s ease-in-out infinite; }
-
+.alma-botao[disabled] { filter: saturate(0.3) opacity(0.6); }
 .alma-quadro { display: grid; grid-template-columns: repeat(var(--n, 2), minmax(0, 360px)); gap: 18px; }
-.alma-oferta { display: grid; justify-items: center; gap: 10px; padding: 14px 16px 18px; border-radius: 24px; background: #fffaf0;
-  box-shadow: 0 0 0 4px #f0d9b0, 0 6px 0 4px #e2c99b; }
+.alma-oferta { display: grid; justify-items: center; gap: 10px; padding: 14px 16px 18px; border-radius: 24px; background: #fffaf0; box-shadow: 0 0 0 4px #f0d9b0, 0 6px 0 4px #e2c99b; }
 .alma-oferta.fixada { box-shadow: 0 0 0 5px #5cbf4f, 0 6px 0 5px #3f9a3a; }
 .alma-oferta .linha { display: flex; align-items: center; gap: 8px; }
 .alma-oferta .tarefa { width: 120px; height: 120px; border-radius: 20px; background: var(--poco); box-shadow: var(--sombra-poco); display: grid; place-items: center; padding: 8px; box-sizing: border-box; }
@@ -213,31 +290,9 @@ body.esboco-alma .missao-hud { display: none !important; }
 .alma-oferta .premio .alma-moedas .moeda { width: 24px; height: 24px; }
 .alma-oferta .seta { width: 40px; height: 40px; }
 .alma-oferta .alma-bolinhas .b { width: 28px; height: 28px; }
-.alma-oferta .tempo { display: flex; gap: 3px; opacity: 0.85; }
-
-.alma-festa { position: fixed; inset: 0; z-index: 70; display: grid; place-items: center; overflow: hidden;
-  background: radial-gradient(circle at 50% 45%, rgba(255, 236, 160, 0.92), rgba(255, 170, 60, 0.85) 45%, rgba(120, 50, 20, 0.85)); }
-.alma-festa[hidden] { display: none; }
-.alma-festa .raios { position: absolute; left: 50%; top: 45%; width: 180vmax; height: 180vmax; margin: -90vmax 0 0 -90vmax; border-radius: 50%;
-  background: repeating-conic-gradient(rgba(255,255,255,0.22) 0 10deg, transparent 10deg 20deg); animation: alma-gira 14s linear infinite; }
-@keyframes alma-gira { to { transform: rotate(1turn); } }
-.alma-festa canvas.confete { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
-.alma-festa .meio { position: relative; display: grid; justify-items: center; gap: 10px; }
-.alma-festa .premio { position: relative; width: min(42vh, 280px); height: min(42vh, 280px); display: grid; place-items: center;
-  animation: alma-chega 0.7s cubic-bezier(.2,1.6,.4,1) both; }
-.alma-festa .premio .alma-fig { width: 100%; height: 100%; filter: drop-shadow(0 8px 0 rgba(120,60,10,0.25)); }
-.alma-festa .premio .figurinha { position: absolute; left: -18%; bottom: -4%; width: 44%; height: 44%; padding: 8px; box-sizing: border-box; border-radius: 18px; background: #fff;
-  box-shadow: 0 0 0 4px #fff, 0 5px 0 6px rgba(150,110,60,0.3); transform: rotate(-8deg); animation: alma-chega 0.6s 0.35s cubic-bezier(.2,1.6,.4,1) both; }
-@keyframes alma-chega { from { transform: scale(0.1) rotate(-20deg); opacity: 0; } }
-.alma-festa .chuva { display: flex; gap: 6px; min-height: 52px; }
-.alma-festa .chuva .moeda { width: 52px; height: 52px; animation: alma-chega 0.45s cubic-bezier(.2,1.6,.4,1) both; }
-.alma-festa .botoes { display: flex; gap: 18px; min-height: 70px; }
-.alma-festa .botoes > * { animation: alma-chega 0.4s cubic-bezier(.2,1.6,.4,1) both; }
-.alma-festa .nivel { position: absolute; right: 6%; top: 10%; display: grid; justify-items: center; gap: 4px; animation: alma-chega 0.6s 1.2s both; }
-
 .alma-voo { position: fixed; z-index: 90; pointer-events: none; transition: transform 0.75s cubic-bezier(.5,-0.3,.6,1), opacity 0.75s; }
 
-/* celular deitado (390 de altura): tudo um pouco menor, nada desce até o joystick */
+/* celular deitado (390 de altura): tudo um pouco menor */
 @media (max-height: 500px) {
   .alma-cabeca { padding: 8px 10px 4px; gap: 8px; }
   .alma-aba { width: 54px; height: 48px; }
@@ -248,28 +303,35 @@ body.esboco-alma .missao-hud { display: none !important; }
   .alma-figurinhas { gap: 8px; padding: 8px; grid-template-columns: repeat(4, 84px); }
   .alma-grandes { grid-template-columns: repeat(2, 104px); gap: 8px; }
   .alma-grande { width: 104px; height: 128px; }
-  .alma-medalhas { margin-top: 8px; gap: 6px; }
-  .alma-medalhas .m { width: 40px; height: 40px; }
-  .alma-hab { padding: 4px 2px; gap: 3px; }
-  .alma-hab .distintivo { width: 76px; height: 76px; }
-  .alma-hab .distintivo .alma-fig { width: 46px; height: 46px; }
-  .alma-estrelas .alma-svg { width: 20px; height: 20px; }
-  .alma-caminho { margin-top: 6px; padding: 8px 14px 14px; }
-  .alma-caminho .passo { width: 66px; height: 66px; }
-  .alma-caminho .eu { width: 50px; height: 50px; }
-  .alma-loja { grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 10px; }
+  .alma-niveis { grid-auto-columns: 88px; padding: 6px 4px 10px; }
+  .alma-niveis::before { top: 112px; }
+  .alma-nivel-passo { gap: 8px; }
+  .alma-nivel-passo .presente { width: 70px; height: 70px; }
+  .alma-hab { padding: 8px 4px 8px; gap: 5px; }
+  .alma-hab .distintivo { width: 80px; height: 80px; }
+  .alma-hab .distintivo .alma-fig { width: 48px; height: 48px; }
+  .alma-hab .mundos .alma-svg { width: 26px; height: 26px; }
+  .alma-estrelas .alma-svg { width: 16px; height: 16px; }
+  .alma-banca { padding: 26px 10px 10px; }
+  .alma-banca .grade { grid-template-columns: repeat(auto-fill, minmax(98px, 1fr)); gap: 10px; }
   .alma-item { min-height: 0; padding: 8px 6px; }
-  .alma-item .alma-fig { width: 64px; height: 64px; }
-  .alma-item .alma-fig[data-tipo='fantasia'] { height: 74px; }
+  .alma-item .alma-fig { width: 60px; height: 60px; }
   .alma-cartao { padding: 12px 16px 16px; gap: 8px; }
   .alma-oferta { padding: 10px 12px 14px; gap: 8px; }
   .alma-oferta .tarefa, .alma-oferta .premio { width: 104px; height: 104px; }
   .alma-botao { height: 54px; }
-  .alma-festa .chuva .moeda { width: 40px; height: 40px; }
-  .alma-festa .meio { gap: 6px; }
-  .alma-festa .botoes { min-height: 60px; }
+  .alma-vitrine .placa .alma-svg { width: 36px; height: 36px; }
+  .alma-vitrine .topo { padding-bottom: 2px; }
+  .alma-prateleira { --linhas: 1 !important; grid-auto-columns: 176px; padding: 10px 8px 16px; }
+  .alma-pcard { height: 236px; }
+  .alma-pcard .arte { height: 150px; top: 18px; }
+  .alma-pcard .arte .alma-fig { width: 136px; height: 136px; }
+  .alma-pcard .chao { top: 160px; }
+  .alma-pdet .caixa { padding: 14px 18px; gap: 14px; }
+  .alma-pdet .grande { width: 190px; height: 190px; }
+  .alma-pdet .grande .alma-fig { width: 165px; height: 165px; }
 }
-`;
+` + CSS_FESTA;
 
 const svgEl = (nome: string, classe = '') => {
   const s = document.createElement('span');
@@ -277,8 +339,6 @@ const svgEl = (nome: string, classe = '') => {
   s.innerHTML = arte(nome);
   return s;
 };
-
-const FECHAR = `<svg viewBox="0 0 24 24"><path d="M5 5 L19 19 M19 5 L5 19" stroke="#5a3a22" stroke-width="4" stroke-linecap="round"/></svg>`;
 
 function botaoFechar(aoFechar: () => void): HTMLButtonElement {
   const b = document.createElement('button');
@@ -295,6 +355,21 @@ function botaoFechar(aoFechar: () => void): HTMLButtonElement {
   return b;
 }
 
+function botao(classe: string, rotulo: string, dado: string, miolo: string | HTMLElement, aoTocar: () => void): HTMLButtonElement {
+  const b = document.createElement('button');
+  b.type = 'button';
+  b.className = `alma-botao ${classe}`;
+  b.setAttribute('aria-label', rotulo);
+  b.setAttribute(dado, '');
+  if (typeof miolo === 'string') b.innerHTML = `<span class="alma-svg">${miolo}</span>`;
+  else b.appendChild(miolo);
+  b.addEventListener('click', (e) => {
+    e.stopPropagation();
+    aoTocar();
+  });
+  return b;
+}
+
 export function pilhaDeMoedas(n: number, classe = 'alma-moedas'): HTMLElement {
   const el = document.createElement('span');
   el.className = classe;
@@ -303,8 +378,7 @@ export function pilhaDeMoedas(n: number, classe = 'alma-moedas'): HTMLElement {
   return el;
 }
 
-/** As bolinhas do progresso (até 8) ou a barra (obra). */
-export function progressoEl(m: Missao, e: EstadoAlma): HTMLElement {
+export function progressoEl(m: Missao, e: EstadoMundo): HTMLElement {
   const meta = metaDa(m);
   const fr = fracaoDa(e, m);
   if (m.conta.tipo === 'obra' || meta > 8) {
@@ -334,11 +408,15 @@ function premioEl(m: Missao): HTMLElement {
 }
 
 export interface AcoesUi {
-  estado(): EstadoAlma;
+  crianca(): EstadoCrianca;
+  mundoEst(): EstadoMundo;
   mundo: MundoAlma;
   fixar(id: string): void;
-  comprar(id: string): boolean;
-  vestir(fantasia: string): void;
+  comprarPremium(id: string): boolean;
+  comprarBanca(id: string): boolean;
+  vestirPremium(id: string, vestir: boolean): void;
+  /** Provador: veste o item só para ver (null: tira e volta). */
+  experimentar(id: string | null): void;
   aoAbrir(): void;
   aoFechar(): void;
 }
@@ -350,17 +428,23 @@ export function criarUiAlma(a: AcoesUi) {
   document.body.classList.add('esboco-alma');
 
   // ---------------------------------------------------------------- HUD
-  const bau = document.createElement('button');
-  bau.type = 'button';
-  bau.className = 'alma-bau';
-  bau.setAttribute('aria-label', 'Baú de prêmios');
-  bau.setAttribute('data-alma-bau', '');
-  bau.appendChild(svgEl('bau', 'bau'));
-  bau.appendChild(svgEl('moeda', 'moeda'));
+  const carteira = document.createElement('button');
+  carteira.type = 'button';
+  carteira.className = 'alma-carteira';
+  carteira.setAttribute('aria-label', 'Meu nível e minhas moedinhas');
+  carteira.setAttribute('data-alma-carteira', '');
+  const nivelEl = document.createElement('span');
+  nivelEl.className = 'alma-nivel';
+  nivelEl.setAttribute('data-alma-nivel', '');
+  nivelEl.appendChild(svgEl('nivel'));
+  const nNivel = document.createElement('b');
+  nivelEl.appendChild(nNivel);
+  carteira.appendChild(nivelEl);
+  carteira.appendChild(svgEl('moeda', 'moeda'));
   const nMoedas = document.createElement('span');
   nMoedas.className = 'n';
-  bau.appendChild(nMoedas);
-  document.body.appendChild(bau);
+  carteira.appendChild(nMoedas);
+  document.body.appendChild(carteira);
 
   const cartao = document.createElement('button');
   cartao.type = 'button';
@@ -369,12 +453,22 @@ export function criarUiAlma(a: AcoesUi) {
   cartao.setAttribute('data-alma-missao', '');
   document.body.appendChild(cartao);
 
-  let moedasMostradas = a.estado().moedas;
-  function renderHud(animarMoedas = false): void {
-    const e = a.estado();
-    if (!animarMoedas) moedasMostradas = e.moedas;
+  let moedasMostradas = a.crianca().moedas;
+  let xpMostrado = a.crianca().xp;
+  function pintarNivel(xp: number): void {
+    const { nivel, fracao } = nivelDoXp(xp);
+    nNivel.textContent = String(nivel);
+    nivelEl.style.setProperty('--f', String(fracao));
+  }
+  function renderHud(animar = false): void {
+    const c = a.crianca();
+    if (!animar) {
+      moedasMostradas = c.moedas;
+      xpMostrado = c.xp;
+    }
     nMoedas.textContent = String(moedasMostradas);
-    const m = missaoDoHud(e, a.mundo);
+    pintarNivel(xpMostrado);
+    const m = missaoDoHud(a.mundoEst(), a.mundo);
     cartao.hidden = !m;
     if (!m) return;
     cartao.dataset.missao = m.id;
@@ -384,26 +478,45 @@ export function criarUiAlma(a: AcoesUi) {
     t.appendChild(figuraMissao(m));
     const meio = document.createElement('span');
     meio.className = 'meio';
-    meio.appendChild(progressoEl(m, e));
+    meio.appendChild(progressoEl(m, a.mundoEst()));
     cartao.append(t, meio, svgEl('seta', 'seta'), premioEl(m));
   }
 
-  /** O número do baú sobe de uma em uma (com o tlim de cada moeda). */
-  function contarMoedas(ate: number, som: (i: number) => void): Promise<void> {
+  /** O número das moedas sobe de uma em uma (com o tlim de cada moeda). */
+  function contarMoedasAte(ate: number, som: (i: number) => void): Promise<void> {
     return new Promise((ok) => {
       let i = 0;
       const passo = () => {
         if (moedasMostradas >= ate) {
+          moedasMostradas = ate;
+          nMoedas.textContent = String(ate);
           ok();
           return;
         }
         moedasMostradas++;
         nMoedas.textContent = String(moedasMostradas);
-        bau.classList.remove('pulou');
-        void bau.offsetWidth;
-        bau.classList.add('pulou');
+        carteira.classList.remove('pulou');
+        void carteira.offsetWidth;
+        carteira.classList.add('pulou');
         som(i++);
         setTimeout(passo, 140);
+      };
+      passo();
+    });
+  }
+
+  /** O anel do nível enche devagar até o XP de agora. */
+  function encherXp(ate = a.crianca().xp): Promise<void> {
+    return new Promise((ok) => {
+      const de = xpMostrado;
+      const t0 = performance.now();
+      const dur = 700;
+      const passo = () => {
+        const f = Math.min(1, (performance.now() - t0) / dur);
+        xpMostrado = de + (ate - de) * (1 - Math.pow(1 - f, 3));
+        pintarNivel(xpMostrado);
+        if (f < 1) requestAnimationFrame(passo);
+        else ok();
       };
       passo();
     });
@@ -413,8 +526,8 @@ export function criarUiAlma(a: AcoesUi) {
     cartao.classList.remove('cresceu');
     void cartao.offsetWidth;
     cartao.classList.add('cresceu');
-    const nova = cartao.querySelectorAll('.alma-bolinhas .b.cheia');
-    nova[nova.length - 1]?.classList.add('agora');
+    const cheias = cartao.querySelectorAll('.alma-bolinhas .b.cheia');
+    cheias[cheias.length - 1]?.classList.add('agora');
   }
 
   // ---------------------------------------------------------------- fundo dos painéis
@@ -425,7 +538,6 @@ export function criarUiAlma(a: AcoesUi) {
     if (ev.target === fundo) fechar();
   });
   document.body.appendChild(fundo);
-  let aberto: 'quadro' | 'album' | 'habilidades' | 'loja' | null = null;
 
   function abrirFundo(conteudo: HTMLElement): void {
     fundo.replaceChildren(conteudo);
@@ -437,18 +549,18 @@ export function criarUiAlma(a: AcoesUi) {
     }
   }
   function fechar(): void {
-    if (fundo.hidden) return;
-    fundo.hidden = true;
-    fundo.replaceChildren();
-    aberto = null;
+    if (!fundo.hidden) {
+      fundo.hidden = true;
+      fundo.replaceChildren();
+    }
+    if (!vitrine.hidden) vitrine.hidden = true;
     if (document.body.dataset.overlay === 'alma') delete document.body.dataset.overlay;
     a.aoFechar();
   }
 
   // ---------------------------------------------------------------- quadro de missões
   function quadro(): void {
-    aberto = 'quadro';
-    const e = a.estado();
+    const e = a.mundoEst();
     const lista = abertas(e, a.mundo).slice(0, 3);
     const caixa = document.createElement('div');
     caixa.className = 'alma-cartao';
@@ -463,9 +575,7 @@ export function criarUiAlma(a: AcoesUi) {
     abrirFundo(caixa);
   }
 
-  /** Um cartão de missão: o que fazer → o prêmio; quantas vezes; o botão de brincar. */
   function oferta(m: Missao, fixada: boolean): HTMLElement {
-    const e = a.estado();
     const c = document.createElement('div');
     c.className = `alma-oferta${fixada ? ' fixada' : ''}`;
     c.dataset.missao = m.id;
@@ -476,7 +586,7 @@ export function criarUiAlma(a: AcoesUi) {
     t.appendChild(figuraMissao(m));
     linha.append(t, svgEl('seta', 'seta'), premioEl(m));
     c.appendChild(linha);
-    c.appendChild(progressoEl(m, e));
+    c.appendChild(progressoEl(m, a.mundoEst()));
     const jogar = document.createElement('button');
     jogar.type = 'button';
     jogar.className = `alma-botao${fixada ? '' : ' chama'}`;
@@ -486,7 +596,6 @@ export function criarUiAlma(a: AcoesUi) {
     jogar.addEventListener('click', () => {
       tocarSomInterface('criar');
       a.fixar(m.id);
-      // o cartão "voa" para o canto do HUD
       const de = c.getBoundingClientRect();
       fechar();
       renderHud();
@@ -496,19 +605,21 @@ export function criarUiAlma(a: AcoesUi) {
     return c;
   }
 
-  // ---------------------------------------------------------------- o baú (3 abas)
-  function bauAberto(aba: 'album' | 'habilidades' | 'loja', habSel?: string): void {
-    aberto = aba;
+  // ---------------------------------------------------------------- o baú (4 abas)
+  type Aba = 'album' | 'nivel' | 'habilidades' | 'banca';
+  function bau(aba: Aba): void {
     const painel = document.createElement('div');
     painel.className = 'alma-painel';
     painel.setAttribute('data-alma-painel', aba);
     const cab = document.createElement('div');
     cab.className = 'alma-cabeca';
-    for (const [id, desenho, rotulo] of [
-      ['album', 'album', 'Álbum'],
+    const abas: Array<[Aba, string, string]> = [
+      ['album', 'album', 'Missões do mundo'],
+      ['nivel', 'nivel', 'Meu nível'],
       ['habilidades', 'medalha', 'Habilidades'],
-      ['loja', 'loja', 'Lojinha'],
-    ] as const) {
+      ['banca', a.mundo === 'cidade-grande' ? 'toldoVerde' : 'toldoVermelho', 'Banca do mundo'],
+    ];
+    for (const [id, desenho, rotulo] of abas) {
       const b = document.createElement('button');
       b.type = 'button';
       b.className = 'alma-aba';
@@ -519,26 +630,30 @@ export function criarUiAlma(a: AcoesUi) {
       b.appendChild(svgEl(desenho));
       b.addEventListener('click', () => {
         tocarSomInterface('toc');
-        bauAberto(id);
+        bau(id);
       });
       cab.appendChild(b);
     }
     const esp = document.createElement('span');
     esp.className = 'espaco';
-    const saldo = pilhaDeMoedas(a.estado().moedas, 'alma-saldo');
+    const saldo = pilhaDeMoedas(a.crianca().moedas, 'alma-saldo');
     saldo.setAttribute('data-alma-saldo', '');
     cab.append(esp, saldo, botaoFechar(fechar));
     const corpo = document.createElement('div');
     corpo.className = 'alma-corpo';
     if (aba === 'album') corpo.appendChild(album());
-    else if (aba === 'habilidades') corpo.appendChild(habilidades(habSel));
-    else corpo.appendChild(loja());
+    else if (aba === 'nivel') corpo.appendChild(niveis());
+    else if (aba === 'habilidades') corpo.appendChild(habilidades());
+    else corpo.appendChild(banca());
     painel.append(cab, corpo);
     abrirFundo(painel);
+    // o caminho dos níveis abre no nível de agora
+    corpo.querySelector('.alma-nivel-passo.agora')?.scrollIntoView({ inline: 'center', block: 'nearest' });
   }
 
   function album(): HTMLElement {
-    const e = a.estado();
+    const e = a.mundoEst();
+    const c = a.crianca();
     const caixa = document.createElement('div');
     caixa.className = 'alma-album';
     const grade = document.createElement('div');
@@ -560,32 +675,26 @@ export function criarUiAlma(a: AcoesUi) {
         anel.className = 'anel';
         anel.style.background = `conic-gradient(#5cbf4f ${fr}turn, transparent 0)`;
         anel.style.mask = 'radial-gradient(farthest-side, transparent calc(100% - 6px), #000 calc(100% - 5px))';
-        anel.style.borderRadius = '50%';
         slot.appendChild(anel);
         slot.appendChild(svgEl('play', 'jogar'));
       }
-      if (!feita) {
-        const mc = pilhaDeMoedas(m.moedas, 'alma-moedas moedas-canto');
-        slot.appendChild(mc);
-      }
+      if (!feita) slot.appendChild(pilhaDeMoedas(m.moedas, 'alma-moedas moedas-canto'));
       slot.addEventListener('click', () => {
         tocarSomInterface('toc');
         if (aberta) quadro();
       });
       grade.appendChild(slot);
     });
-    const lado = document.createElement('div');
     const grandes = document.createElement('div');
     grandes.className = 'alma-grandes';
     for (const m of missoesDoMundo(a.mundo).filter((x) => x.fantasia)) {
       const g = document.createElement('div');
-      const tem = e.fantasias.includes(m.fantasia!);
+      const tem = c.fantasias.includes(m.fantasia!);
       g.className = `alma-grande${tem ? '' : ' futura'}`;
       g.dataset.fantasia = m.fantasia;
       g.appendChild(figura(`fantasia:${m.fantasia}`));
       if (!tem) {
         g.appendChild(svgEl('cadeado', 'cad'));
-        // de onde vem: a figurinha da missão que dá
         const q = document.createElement('span');
         q.className = 'quando';
         q.appendChild(figura(desenhoDaFigurinha(m)));
@@ -593,148 +702,123 @@ export function criarUiAlma(a: AcoesUi) {
       }
       grandes.appendChild(g);
     }
-    const med = document.createElement('div');
-    med.className = 'alma-medalhas';
-    for (const h of HABILIDADES[a.mundo]) {
-      const n = nivelDaHabilidade(e, a.mundo, h.id).nivel;
-      const m = document.createElement('span');
-      m.className = `m${n >= 3 ? ' ouro' : ''}`;
-      m.appendChild(figura(h.desenho));
-      med.appendChild(m);
-    }
-    lado.append(grandes, med);
-    caixa.append(grade, lado);
+    caixa.append(grade, grandes);
     return caixa;
   }
 
-  function figuraDoLibera(libera: string, h: Habilidade): string {
-    if (libera === MEDALHA) return 'medalha';
-    const item = lojaDoMundo(a.mundo).find((i) => i.id === libera);
-    return item?.desenho ?? h.desenho;
+  function aparencia(): Aparencia {
+    return normalizarAparencia((window.__brumaluz?.personagem?.aparencia?.() ?? {}) as Aparencia);
   }
 
-  function habilidades(sel?: string): HTMLElement {
-    const e = a.estado();
-    const caixa = document.createElement('div');
+  function niveis(): HTMLElement {
+    const c = a.crianca();
+    const { nivel, fracao } = nivelDoXp(c.xp);
     const linha = document.createElement('div');
-    linha.className = 'alma-habs';
-    const lista = HABILIDADES[a.mundo];
-    const atual = lista.find((h) => h.id === sel) ?? lista[0];
-    for (const h of lista) {
-      const { nivel, fracao } = nivelDaHabilidade(e, a.mundo, h.id);
-      const b = document.createElement('button');
-      b.type = 'button';
-      b.className = 'alma-hab';
-      b.setAttribute('aria-pressed', String(h === atual));
-      b.setAttribute('aria-label', h.nome);
-      b.dataset.hab = h.id;
+    linha.className = 'alma-niveis';
+    for (let n = 1; n <= XP_DO_NIVEL.length; n++) {
+      const p = document.createElement('div');
+      p.className = `alma-nivel-passo ${n < nivel ? 'ja' : n === nivel ? 'agora' : 'futuro'}`;
+      p.dataset.nivel = String(n);
+      const presente = PRESENTES_NIVEL.find((x) => x.nivel === n);
+      const caixa = document.createElement('div');
+      caixa.className = 'presente';
+      if (presente) {
+        caixa.appendChild(figura(presente.desenho));
+        caixa.appendChild(pilhaDeMoedas(presente.moedas));
+        caixa.setAttribute('aria-label', presente.nome);
+        if (n <= nivel) p.classList.add('ja');
+      } else {
+        caixa.appendChild(figura('estrela'));
+      }
+      const bola = document.createElement('div');
+      bola.className = 'bola';
+      if (n === nivel) {
+        bola.style.setProperty('--f', String(fracao));
+        p.style.setProperty('--f', String(fracao));
+        const cv = document.createElement('canvas');
+        fotografarBoneco(cv, aparencia(), 'cabeca', 160);
+        const b = document.createElement('b');
+        b.textContent = String(n);
+        bola.append(cv, b);
+        p.classList.remove('ja');
+      } else bola.textContent = String(n);
+      p.append(caixa, bola);
+      linha.appendChild(p);
+    }
+    return linha;
+  }
+
+  function habilidades(): HTMLElement {
+    const c = a.crianca();
+    const grade = document.createElement('div');
+    grade.className = 'alma-habs';
+    for (const h of HABILIDADES) {
+      const { estrelas, fracao } = estrelasDe(c.pontos[h.id] ?? 0);
+      const card = document.createElement('div');
+      card.className = 'alma-hab';
+      card.dataset.hab = h.id;
+      card.setAttribute('aria-label', h.nome);
       const d = document.createElement('span');
       d.className = 'distintivo';
       d.style.setProperty('--cor', h.cor);
-      d.style.setProperty('--f', String(nivel >= 3 ? 1 : fracao));
+      d.style.setProperty('--f', String(estrelas >= 5 ? 1 : fracao));
       d.appendChild(figura(h.desenho));
-      if (nivel >= 3) d.appendChild(svgEl('estrela', 'coroa'));
       const est = document.createElement('span');
       est.className = 'alma-estrelas';
-      for (let i = 0; i < 3; i++) est.appendChild(svgEl(i < nivel ? 'estrela' : 'estrelaVazia'));
-      b.append(d, est);
-      b.addEventListener('click', () => {
-        tocarSomInterface('toc');
-        bauAberto('habilidades', h.id);
-      });
-      linha.appendChild(b);
+      for (let i = 0; i < 5; i++) est.appendChild(svgEl(i < estrelas ? 'estrela' : 'estrelaVazia'));
+      const mundos = document.createElement('span');
+      mundos.className = 'mundos';
+      for (const m of h.mundos) mundos.appendChild(svgEl(m === 'cidade-grande' ? 'mundoCidade' : 'mundoRancho'));
+      card.append(d, est, mundos);
+      grade.appendChild(card);
     }
-    // o caminho da habilidade escolhida: eu → nível 1 → nível 2 → medalha
-    const { nivel, fracao } = nivelDaHabilidade(e, a.mundo, atual.id);
-    const cam = document.createElement('div');
-    cam.className = 'alma-caminho';
-    cam.style.setProperty('--cor', atual.cor);
-    cam.setAttribute('data-alma-caminho', atual.id);
-    const eu = figura(atual.desenho, 'eu');
-    cam.appendChild(eu);
-    atual.niveis.forEach((n, i) => {
-      const tr = document.createElement('span');
-      tr.className = 'trilha';
-      const f = nivel > i ? 1 : nivel === i ? fracao : 0;
-      tr.innerHTML = `<i style="width:${f * 100}%"></i>`;
-      const p = document.createElement('span');
-      p.className = `passo ${nivel > i ? 'ja' : 'longe'}`;
-      p.appendChild(figura(figuraDoLibera(n.libera, atual)));
-      if (nivel <= i) p.appendChild(svgEl('cadeado', 'cad'));
-      const nv = document.createElement('span');
-      nv.className = 'nivel';
-      for (let k = 0; k <= i; k++) nv.appendChild(svgEl('estrela'));
-      p.appendChild(nv);
-      cam.append(tr, p);
-    });
-    caixa.append(linha, cam);
-    return caixa;
+    return grade;
   }
 
-  function loja(): HTMLElement {
-    const e = a.estado();
+  function banca(): HTMLElement {
+    const c = a.crianca();
+    const caixa = document.createElement('div');
+    caixa.className = 'alma-banca';
+    caixa.style.setProperty('--toldo', a.mundo === 'cidade-grande' ? '#3fae5a' : '#e8402f');
+    const toldo = document.createElement('div');
+    toldo.className = 'toldo';
     const grade = document.createElement('div');
-    grade.className = 'alma-loja';
-    const itens = lojaDoMundo(a.mundo).sort((x, y) => Number(!!x.presente) - Number(!!y.presente) || x.preco - y.preco);
-    for (const it of itens) {
+    grade.className = 'grade';
+    for (const it of bancaDoMundo(a.mundo)) {
       const b = document.createElement('button');
       b.type = 'button';
       b.dataset.item = it.id;
       b.setAttribute('aria-label', it.nome);
-      const lib = liberado(e, a.mundo, it);
-      const meu = e.meus.includes(it.id) && (it.tipo === 'fantasia' || it.tipo === 'bicho' || !!it.presente);
-      const pode = lib && !meu && !it.presente && e.moedas >= it.preco;
-      b.className = `alma-item${!lib ? ' trancado' : meu ? ' meu' : pode ? ' pode' : ''}`;
+      const pode = c.moedas >= it.preco;
+      b.className = `alma-item${pode ? ' pode' : ''}`;
       b.appendChild(figura(it.desenho));
-      if (it.qtd && lib) {
-        const q = document.createElement('span');
-        q.className = 'qtd';
-        q.textContent = `×${it.qtd}`;
-        b.appendChild(q);
-      }
+      const q = document.createElement('span');
+      q.className = 'qtd';
+      q.textContent = `×${it.qtd}`;
+      b.appendChild(q);
       const pe = document.createElement('span');
-      pe.style.display = 'grid';
-      pe.style.justifyItems = 'center';
-      pe.style.gap = '4px';
-      pe.style.width = '100%';
-      if (it.presente) {
-        pe.appendChild(svgEl('coracao', 'presente'));
-      } else {
-        const preco = document.createElement('span');
-        preco.className = 'preco';
-        preco.appendChild(svgEl('moeda', 'moeda'));
-        preco.append(String(it.preco));
-        pe.appendChild(preco);
-        if (lib && !meu) {
-          const pote = document.createElement('span');
-          pote.className = 'pote';
-          pote.innerHTML = `<i style="width:${Math.min(1, e.moedas / it.preco) * 100}%"></i>`;
-          pe.appendChild(pote);
-        }
+      pe.style.cssText = 'display:grid;justify-items:center;gap:4px;width:100%';
+      const preco = document.createElement('span');
+      preco.className = 'preco';
+      preco.appendChild(svgEl('moeda', 'moeda'));
+      preco.append(String(it.preco));
+      pe.appendChild(preco);
+      if (!pode) {
+        const pote = document.createElement('span');
+        pote.className = 'pote';
+        pote.innerHTML = `<i style="width:${Math.min(1, c.moedas / it.preco) * 100}%"></i>`;
+        pe.appendChild(pote);
       }
       b.appendChild(pe);
-      if (meu) b.appendChild(svgEl('ok', 'marca'));
-      if (!lib && it.precisa) {
-        const h = HABILIDADES[a.mundo].find((x) => x.id === it.precisa!.habilidade)!;
-        const { nivel, fracao } = nivelDaHabilidade(e, a.mundo, h.id);
-        const quem = document.createElement('span');
-        quem.className = 'quem';
-        quem.style.setProperty('--cor', h.cor);
-        quem.style.setProperty('--f', String(nivel >= it.precisa.nivel - 1 ? fracao : 0));
-        quem.appendChild(figura(h.desenho));
-        b.appendChild(quem);
-        b.appendChild(svgEl('cadeado', 'cad'));
-      }
       b.addEventListener('click', () => {
         tocarSomInterface('toc');
-        if (!lib && it.precisa) bauAberto('habilidades', it.precisa.habilidade);
-        else if (pode) confirmar(it);
-        else if (meu && it.tipo === 'fantasia') a.vestir(it.desenho.slice(9));
+        if (pode) confirmarBanca(it);
         else balancar(b);
       });
       grade.appendChild(b);
     }
-    return grade;
+    caixa.append(toldo, grade);
+    return caixa;
   }
 
   function balancar(el: HTMLElement): void {
@@ -744,46 +828,245 @@ export function criarUiAlma(a: AcoesUi) {
     );
   }
 
-  /** Confirmar a compra: a figura grande, o preço, e os dois botões (sim e não). */
-  function confirmar(it: ItemLoja): void {
+  /** Confirmar (os dois botões grandes: não e sim) — banca e premium usam a mesma peça. */
+  function cartaoConfirmar(fig: HTMLElement, preco: number, premium: boolean, sim: () => void, nao: () => void): HTMLElement {
     const c = document.createElement('div');
-    c.className = 'alma-cartao';
-    c.setAttribute('data-alma-confirmar', it.id);
-    const fig = figura(it.desenho);
+    c.className = `alma-cartao${premium ? ' premium' : ''}`;
+    c.setAttribute('data-alma-confirmar', '');
     fig.style.width = '150px';
     fig.style.height = '150px';
-    const preco = pilhaDeMoedas(it.preco, 'alma-saldo');
     const linha = document.createElement('div');
-    linha.style.display = 'flex';
-    linha.style.gap = '18px';
-    const nao = document.createElement('button');
-    nao.type = 'button';
-    nao.className = 'alma-botao azul';
-    nao.setAttribute('aria-label', 'Agora não');
-    nao.setAttribute('data-alma-nao', '');
-    nao.innerHTML = `<span class="alma-svg">${FECHAR.replace('#5a3a22', '#fff')}</span>`;
-    nao.addEventListener('click', () => bauAberto('loja'));
-    const sim = document.createElement('button');
-    sim.type = 'button';
-    sim.className = 'alma-botao chama';
-    sim.setAttribute('aria-label', 'Comprar');
-    sim.setAttribute('data-alma-sim', '');
-    sim.appendChild(svgEl('ok'));
-    sim.addEventListener('click', () => {
-      if (!a.comprar(it.id)) return;
-      const de = fig.getBoundingClientRect();
-      bauAberto('loja');
-      const alvo = document.querySelector<HTMLElement>(`.alma-item[data-item='${it.id}']`);
-      // as moedas voam do saldo para o item, e o item ganha o "é seu"
-      const saldo = document.querySelector<HTMLElement>('[data-alma-saldo]');
-      if (saldo && alvo) for (let i = 0; i < Math.min(it.preco, 6); i++) setTimeout(() => voar(svgEl('moeda'), saldo.getBoundingClientRect(), alvo.getBoundingClientRect(), 40), i * 90);
-      void de;
-      tocarSomInterface('conquista');
-      alvo?.animate([{ transform: 'scale(1)' }, { transform: 'scale(1.15)' }, { transform: 'scale(1)' }], { duration: 500, delay: 500 });
+    linha.style.cssText = 'display:flex;gap:18px';
+    linha.append(
+      botao('azul', 'Agora não', 'data-alma-nao', FECHAR.replace('#5a3a22', '#fff'), nao),
+      botao('chama', 'Comprar', 'data-alma-sim', arte('ok'), sim),
+    );
+    c.append(fig, pilhaDeMoedas(preco, 'alma-saldo'), linha);
+    return c;
+  }
+
+  function confirmarBanca(it: ItemBanca): void {
+    const fig = figura(it.desenho);
+    abrirFundo(
+      cartaoConfirmar(fig, it.preco, false, () => {
+        if (!a.comprarBanca(it.id)) return;
+        tocarSomInterface('conquista');
+        const de = fig.getBoundingClientRect();
+        bau('banca');
+        // o pacote voa para a mochila
+        const mochila = document.querySelector<HTMLElement>('[data-botao-mochila]');
+        if (mochila) voar(figura(it.desenho), de, mochila.getBoundingClientRect(), 120);
+        renderHud();
+      }, () => bau('banca')),
+    );
+  }
+
+  // ---------------------------------------------------------------- a lojinha premium
+  const vitrine = document.createElement('div');
+  vitrine.className = 'alma-vitrine';
+  vitrine.hidden = true;
+  vitrine.setAttribute('data-alma-vitrine', '');
+  document.body.appendChild(vitrine);
+
+  function abrirVitrine(): void {
+    vitrine.replaceChildren();
+    for (const lado of ['e', 'd']) {
+      const f = document.createElement('div');
+      f.className = `feixe ${lado}`;
+      vitrine.appendChild(f);
+    }
+    const ceu = document.createElement('div');
+    ceu.className = 'ceu';
+    for (let i = 0; i < 46; i++) {
+      const s = document.createElement('i');
+      s.style.left = `${(i * 37.7) % 100}%`;
+      s.style.top = `${(i * 53.3) % 100}%`;
+      s.style.animationDelay = `${(i % 9) * 0.29}s`;
+      ceu.appendChild(s);
+    }
+    vitrine.appendChild(ceu);
+    const topo = document.createElement('div');
+    topo.className = 'topo';
+    const placa = document.createElement('div');
+    placa.className = 'placa';
+    placa.appendChild(svgEl('vitrine'));
+    const coroa = document.createElement('span');
+    coroa.className = 'coroa';
+    for (let i = 0; i < 3; i++) coroa.appendChild(svgEl('estrela'));
+    placa.appendChild(coroa);
+    const esp = document.createElement('span');
+    esp.className = 'espaco';
+    const saldo = pilhaDeMoedas(a.crianca().moedas, 'alma-saldo');
+    saldo.setAttribute('data-alma-saldo', '');
+    topo.append(placa, esp, saldo, botaoFechar(fechar));
+    const prat = document.createElement('div');
+    prat.className = 'alma-prateleira';
+    prat.style.setProperty('--linhas', innerHeight > 600 ? '2' : '1');
+    PREMIUM.forEach((p, i) => prat.appendChild(cartaoPremium(p, i)));
+    const det = document.createElement('div');
+    det.className = 'alma-pdet';
+    det.hidden = true;
+    det.setAttribute('data-alma-detalhe', '');
+    vitrine.append(topo, prat, det);
+    if (vitrine.hidden) {
+      vitrine.hidden = false;
+      document.body.dataset.overlay = 'alma';
+      document.exitPointerLock?.();
+      a.aoAbrir();
+    }
+  }
+
+  function cartaoPremium(p: ItemPremium, i: number): HTMLElement {
+    const c = a.crianca();
+    const b = document.createElement('button');
+    b.type = 'button';
+    const tem = c.premium.includes(p.id);
+    const vestido = Object.values(c.vestidos).includes(p.id);
+    b.className = `alma-pcard${vestido ? ' vestido' : ''}`;
+    b.dataset.premium = p.id;
+    b.setAttribute('aria-label', p.nome);
+    b.style.setProperty('--d', `${(i % 5) * 0.9}s`);
+    const arteEl = document.createElement('div');
+    arteEl.className = 'arte';
+    arteEl.style.animationDelay = `${(i % 4) * -0.7}s`;
+    arteEl.appendChild(figura(p.desenho));
+    const chao = document.createElement('div');
+    chao.className = 'chao';
+    const brilho = document.createElement('div');
+    brilho.className = 'brilho';
+    b.append(chao, arteEl, brilho);
+    if (tem) b.appendChild(svgEl('ok', 'meu'));
+    else {
+      b.appendChild(pilhaDeMoedas(p.preco, 'preco'));
+      if (c.moedas < p.preco) {
+        const pote = document.createElement('span');
+        pote.className = 'pote';
+        pote.innerHTML = `<i style="width:${Math.min(1, c.moedas / p.preco) * 100}%"></i>`;
+        b.appendChild(pote);
+      }
+    }
+    if (p.feito) {
+      const pr = document.createElement('span');
+      pr.className = 'prova alma-svg';
+      pr.innerHTML = ESPELHO;
+      b.appendChild(pr);
+    }
+    b.addEventListener('click', () => {
+      tocarSomInterface('toc');
+      detalhe(p);
     });
-    linha.append(nao, sim);
-    c.append(fig, preco, linha);
-    abrirFundo(c);
+    return b;
+  }
+
+  function detalhe(p: ItemPremium): void {
+    const det = vitrine.querySelector<HTMLElement>('[data-alma-detalhe]');
+    if (!det) return;
+    const c = a.crianca();
+    const tem = c.premium.includes(p.id);
+    const vestido = Object.values(c.vestidos).includes(p.id);
+    det.replaceChildren();
+    det.hidden = false;
+    det.onclick = (e) => {
+      if (e.target === det) det.hidden = true;
+    };
+    const caixa = document.createElement('div');
+    caixa.className = 'caixa';
+    caixa.dataset.premium = p.id;
+    const grande = document.createElement('div');
+    grande.className = 'grande';
+    grande.appendChild(figura(p.desenho));
+    const lado = document.createElement('div');
+    lado.className = 'lado';
+    lado.setAttribute('aria-label', p.efeito);
+    const botoes = document.createElement('div');
+    botoes.className = 'botoes';
+    if (p.feito)
+      botoes.appendChild(
+        botao('azul', 'Experimentar', 'data-alma-experimentar', ESPELHO, () => provar(p)),
+      );
+    if (tem) {
+      botoes.appendChild(
+        botao(vestido ? 'azul' : 'chama', vestido ? 'Tirar' : 'Vestir', 'data-alma-vestir-premium', vestido ? TIRAR : VESTIR, () => {
+          a.vestirPremium(p.id, !vestido);
+          tocarSomInterface('criar');
+          abrirVitrine();
+        }),
+      );
+    } else {
+      lado.appendChild(pilhaDeMoedas(p.preco, 'alma-saldo'));
+      const pode = c.moedas >= p.preco;
+      if (!pode) {
+        // o potinho: quanto da carteira já dá (sem pressa: nada some da lojinha)
+        const pote = document.createElement('div');
+        pote.className = 'pote-grande';
+        pote.innerHTML = `<i style="width:${Math.min(1, c.moedas / p.preco) * 100}%"></i>`;
+        lado.appendChild(pote);
+      }
+      const comprar = botao(`ouro${pode ? ' chama' : ''}`, 'Comprar', 'data-alma-comprar', arte('ok'), () => {
+        if (!pode) return balancar(comprar);
+        confirmarPremium(p);
+      });
+      if (!pode) comprar.setAttribute('disabled', '');
+      botoes.appendChild(comprar);
+    }
+    lado.appendChild(botoes);
+    caixa.append(grande, lado, botaoFechar(() => (det.hidden = true)));
+    det.appendChild(caixa);
+  }
+
+  function confirmarPremium(p: ItemPremium): void {
+    const det = vitrine.querySelector<HTMLElement>('[data-alma-detalhe]');
+    if (!det) return;
+    det.replaceChildren(
+      cartaoConfirmar(figura(p.desenho), p.preco, true, () => {
+        if (!a.comprarPremium(p.id)) return;
+        det.hidden = true;
+      }, () => detalhe(p)),
+    );
+    det.hidden = false;
+  }
+
+  // ---------------------------------------------------------------- provador
+  const provador = document.createElement('div');
+  provador.className = 'alma-provador';
+  provador.hidden = true;
+  provador.setAttribute('data-alma-provador', '');
+  document.body.appendChild(provador);
+  let provando: ItemPremium | null = null;
+
+  function provar(p: ItemPremium): void {
+    provando = p;
+    vitrine.hidden = true;
+    document.body.classList.add('alma-provando');
+    a.experimentar(p.id);
+    provador.replaceChildren(
+      botao('azul', 'Voltar para a lojinha', 'data-alma-provador-voltar', VOLTAR, () => sairProvador(true)),
+    );
+    if (!a.crianca().premium.includes(p.id)) {
+      provador.appendChild(pilhaDeMoedas(p.preco, 'alma-saldo'));
+      const pode = a.crianca().moedas >= p.preco;
+      const b = botao(`ouro${pode ? ' chama' : ''}`, 'Comprar', 'data-alma-provador-comprar', arte('ok'), () => {
+        if (!pode) return balancar(b);
+        sairProvador(true);
+        confirmarPremium(p);
+      });
+      if (!pode) b.setAttribute('disabled', '');
+      provador.appendChild(b);
+    }
+    provador.hidden = false;
+  }
+
+  function sairProvador(voltarAVitrine: boolean): void {
+    if (!provando) return;
+    const p = provando;
+    provando = null;
+    provador.hidden = true;
+    document.body.classList.remove('alma-provando');
+    a.experimentar(null);
+    if (voltarAVitrine) {
+      abrirVitrine();
+      detalhe(p);
+    }
   }
 
   // ---------------------------------------------------------------- voo
@@ -809,18 +1092,26 @@ export function criarUiAlma(a: AcoesUi) {
   return {
     renderHud,
     pulsarCartao,
-    contarMoedas,
+    contarMoedasAte,
+    encherXp,
     quadro,
-    abrir: (aba: 'album' | 'habilidades' | 'loja', hab?: string) => bauAberto(aba, hab),
-    fechar,
-    get aberto() {
-      return aberto;
+    abrir: (aba: Aba) => bau(aba),
+    vitrine: abrirVitrine,
+    detalhe: (id: string) => {
+      const p = PREMIUM.find((x) => x.id === id);
+      if (p) detalhe(p);
     },
-    bau,
+    provar: (id: string) => {
+      const p = PREMIUM.find((x) => x.id === id);
+      if (p) provar(p);
+    },
+    sairProvador,
+    fechar,
+    carteira,
+    nivelEl,
     cartao,
     voar,
     svgEl,
   };
 }
 export type UiAlma = ReturnType<typeof criarUiAlma>;
-
