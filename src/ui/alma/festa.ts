@@ -129,6 +129,8 @@ export const CSS_FESTA = `
 
 export interface Celebracao {
   tipo: 'missao' | 'nivel' | 'premium';
+  /** A missão da festa (testes e leitor de tela). */
+  missao?: string;
   /** O que chega no meio (a figura grande). */
   premio: HTMLElement;
   /** Figurinha que vai junto (missão com fantasia). */
@@ -156,6 +158,16 @@ export function celebrar(c: Celebracao): Promise<void> {
     const el = document.createElement('div');
     el.className = `alma-festa ${c.tipo}`;
     el.setAttribute('data-alma-festa', c.tipo);
+    el.setAttribute('role', 'dialog');
+    el.setAttribute(
+      'aria-label',
+      c.tipo === 'nivel'
+        ? `Nível ${c.nivel ?? ''}`
+        : c.tipo === 'premium'
+          ? 'Comprou'
+          : 'Missão feita',
+    );
+    if (c.missao) el.dataset.missao = c.missao;
     const raios = document.createElement('div');
     raios.className = 'raios';
     el.appendChild(raios);
@@ -247,7 +259,10 @@ export function celebrar(c: Celebracao): Promise<void> {
           },
           700 + i * 260,
         );
+    let fechou = false;
     const fim = () => {
+      if (fechou) return;
+      fechou = true;
       parar();
       const alvo = c.destino();
       const voa =

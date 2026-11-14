@@ -282,7 +282,18 @@ async function darAoPerfil(
       .__almaCrianca;
     p.aplicarGanho({ pontos: {}, ...g });
   }, g);
-  await page.waitForTimeout(2600);
+  // os níveis novos fazem festa (uma de cada vez): fecha cada uma com o "oba"
+  for (let i = 0; i < 12; i++) {
+    const oba = page.locator('[data-alma-festa] [data-alma-oba]');
+    try {
+      await oba.first().waitFor({ timeout: 6000 });
+    } catch {
+      break;
+    }
+    await oba.first().click({ force: true });
+    await page.waitForTimeout(900);
+  }
+  await page.waitForTimeout(1500);
 }
 const tocar = async (page: Page, sel: string, toque: boolean) => {
   const l = page.locator(sel).first();
@@ -383,4 +394,302 @@ test('o baú: álbum, nível, habilidades e a banca de verdade (com a confirmaç
       await tocar(page, '[data-alma-fechar]', toque);
       await page.context().close();
     }
+});
+
+// ---------------------------------------------------------------- T08: o laço até a festa
+const RITMO = Number(process.env.ALMA_RITMO ?? 6000);
+type Fantasma = { x: number; y: number; z: number; bloco: number; canteiro: number };
+
+/** Nunca duas festas por cima uma da outra; quanto o botão de cada uma demora (a cada 50 ms). */
+async function vigiarFestas(page: Page) {
+  await page.evaluate(() => {
+    const w = window as unknown as {
+      __festasJuntas: number;
+      __festaBotao: Record<string, number>;
+    };
+    w.__festasJuntas = 0;
+    w.__festaBotao = {};
+    let atual: Element | null = null;
+    let t0 = 0;
+    setInterval(() => {
+      const f = document.querySelectorAll('[data-alma-festa]');
+      w.__festasJuntas = Math.max(w.__festasJuntas, f.length);
+      const el = f[0] ?? null;
+      if (el !== atual) {
+        atual = el;
+        t0 = performance.now();
+      }
+      const tipo = el?.getAttribute('data-alma-festa');
+      if (el && tipo && !(tipo in w.__festaBotao) && el.querySelector('[data-alma-oba]'))
+        w.__festaBotao[tipo] = performance.now() - t0;
+    }, 50);
+  });
+}
+
+/** Espera a festa e o botão, confere quanto ele demorou, fotografa e fecha com um toque. */
+async function festa(
+  page: Page,
+  tipo: string,
+  nome: string,
+  toque: boolean,
+  botao = '[data-alma-oba]',
+) {
+  await page.waitForSelector(`[data-alma-festa="${tipo}"] [data-alma-oba]`, { timeout: 30_000 });
+  const ms = await page.evaluate(
+    (t) => (window as unknown as { __festaBotao: Record<string, number> }).__festaBotao[t],
+    tipo,
+  );
+  console.log(`alma: botões da festa ${tipo} em ${Math.round(ms)} ms`);
+  // spec: até 2,5 s (missão com até 5 moedas) e 1,7 s (nível), com a folga da amostragem
+  expect(ms).toBeLessThan(tipo === 'missao' ? 2600 : 1850);
+  await page.waitForTimeout(500);
+  await foto(page, nome);
+  await tocar(page, `[data-alma-festa="${tipo}"] ${botao}`, toque);
+  await page.waitForSelector(`[data-alma-festa="${tipo}"]`, { state: 'detached', timeout: 5000 });
+}
+
+/**
+ * Vídeo para o relatório (ALMA_VIDEO=1): quadros da tela em sequência (o vídeo do Playwright
+ * corta a parte de baixo na placa de vídeo). Devolve o "parar".
+ */
+function filmar(page: Page, nome: string): () => Promise<void> {
+  if (!process.env.ALMA_VIDEO) return async () => undefined;
+  const dir = `${PASTA}/quadros-${nome}`;
+  mkdirSync(dir, { recursive: true });
+  let vivo = true;
+  let i = 0;
+  const laco = (async () => {
+    while (vivo) {
+      const t = Date.now();
+      await page
+        .screenshot({
+          path: `${dir}/${String(i++).padStart(5, '0')}.jpg`,
+          type: 'jpeg',
+          quality: 80,
+        })
+        .catch(() => undefined);
+      await page.waitForTimeout(Math.max(0, 100 - (Date.now() - t))).catch(() => undefined);
+    }
+  })();
+  return async () => {
+    vivo = false;
+    await laco;
+  };
+}
+
+/** Enche um fantasma da obra pela mira (como no teste do canteiro, spec 014). */
+async function encherUm(page: Page, lista: Fantasma[]): Promise<boolean> {
+  for (const f of lista.slice(0, 6))
+    for (const [dx, dz, dy] of [
+      [0, -2.6, 1.2],
+      [0, 2.6, 1.2],
+      [-2.6, 0, 1.2],
+      [2.6, 0, 1.2],
+      [0, -1.8, 2.8],
+      [0, 1.8, 2.8],
+    ]) {
+      const ok = await page.evaluate(
+        ([f, dx, dz, dy]) => {
+          const e = window.__brumaluz!;
+          e.voar?.(true);
+          e.teleportar!(f.x + 0.5 + dx, f.z + 0.5 + dz, f.y + dy);
+          e.mirarPonto!(f.x + 0.5, f.y + 0.5, f.z + 0.5);
+          return !!e.fantasmaNaMira?.();
+        },
+        [f, dx, dz, dy] as const,
+      );
+      if (!ok) continue;
+      const antes = await page.evaluate(() => window.__brumaluz!.obraColocados ?? 0);
+      await page.evaluate(() => window.__brumaluz!.usarOuColocar!());
+      await page.waitForTimeout(140);
+      if ((await page.evaluate(() => window.__brumaluz!.obraColocados ?? 0)) > antes) return true;
+    }
+  return false;
+}
+
+test('laço da Cidade: c1 no ritmo de criança até o capacete, a festa da missão e a do nível', async ({
+  browser,
+}) => {
+  test.setTimeout(900_000);
+  const ctx = await browser.newContext({
+    ...TAMANHOS.pc,
+  });
+  const page = await ctx.newPage();
+  await page.goto('/?tema=cidade-grande');
+  await page.waitForFunction(() => window.__brumaluz?.ready === true, undefined, {
+    timeout: 240_000,
+  });
+  await page.evaluate(() => {
+    document.querySelector<HTMLElement>('.entrada')?.setAttribute('hidden', '');
+    const e = window.__brumaluz!;
+    e.pausarDia = true;
+    e.hora = 0.42;
+    e.definirClima?.('limpo');
+  });
+  await semAvisos(page);
+  await assentar(page);
+  await vigiarFestas(page);
+  const t0 = Date.now();
+  await page.waitForSelector('[data-alma-quadro]', { timeout: 20_000 });
+  await page.waitForTimeout(1500);
+  await tocar(page, '[data-alma-jogar="c1"]', false);
+  // a colher do pedreiro na mão
+  await page.waitForFunction(() => (window.__brumaluz!.colherRecebida ?? 0) > 0, undefined, {
+    timeout: 30_000,
+  });
+  const mao = await page.evaluate(() => {
+    const i = window.__brumaluz!.inventario as unknown as {
+      obter(i: number): { item: string } | null;
+    };
+    for (let k = 0; k < 9; k++) if (i.obter(k)?.item === 'colher_pedreiro') return k;
+    return 0;
+  });
+  await page.evaluate((k) => window.__brumaluz!.selecionarSlot!(k), mao);
+  let postos = 0;
+  let parar = async () => undefined as void;
+  const obraTotal = (
+    await page.evaluate(() =>
+      (window.__brumaluz!.fantasmasPerto?.() ?? []).filter((f) => f.canteiro === 1),
+    )
+  ).length;
+  for (let volta = 0; volta < 80; volta++) {
+    const lista = await page.evaluate(() =>
+      (window.__brumaluz!.fantasmasPerto?.() ?? []).filter((f) => f.canteiro === 1),
+    );
+    if (!lista.length) break;
+    // a mira pegou um morador e abriu as trocas: fecha (a criança fecharia)
+    if (
+      await page.evaluate(
+        () => !!document.body.dataset.overlay && !document.querySelector('[data-alma-festa]'),
+      )
+    ) {
+      await page.keyboard.press('Escape');
+      await page.waitForTimeout(300);
+    }
+    if (await encherUm(page, lista)) {
+      postos++;
+      // a bolinha do cartão andou (o núcleo mandou) e faz o plim
+      if (postos === 5) await foto(page, 'laco-cidade-1-cartao-andando');
+      if (postos === obraTotal - 3) parar = filmar(page, 'cidade');
+      await page.waitForTimeout(RITMO);
+    }
+  }
+  await festa(page, 'missao', 'laco-cidade-2-festa-missao', false, '[data-alma-vestir]');
+  const minutos = (Date.now() - t0) / 60_000;
+  console.log(`alma: c1 em ${minutos.toFixed(1)} min (${postos} blocos, um a cada ${RITMO} ms)`);
+  if (RITMO >= 6000) expect(minutos).toBeLessThan(3);
+  // o nível 2 vem logo depois (na fila, sem sobrepor)
+  await festa(page, 'nivel', 'laco-cidade-3-festa-nivel', false);
+  await page.waitForTimeout(2500);
+  await parar();
+  await foto(page, 'laco-cidade-4-depois');
+  const juntas = await page.evaluate(
+    () => (window as unknown as { __festasJuntas: number }).__festasJuntas,
+  );
+  expect(juntas).toBe(1);
+  // c1 dá 3 e o nível 2 dá 2; o capacete vestido
+  expect(await page.locator('[data-alma-moedas]').textContent()).toBe('5');
+  expect(await page.locator('[data-alma-carteira]').getAttribute('data-nivel')).toBe('2');
+  const vestida = await page.evaluate(
+    () => window.__brumaluz!.personagem!.aparencia().fantasia?.id,
+  );
+  expect(vestida).toBe('capacete-obra');
+  await ctx.close();
+});
+
+test('laço do Rancho: r1 até a Caipira, e reabrir o jogo mantém tudo', async ({ browser }) => {
+  test.setTimeout(900_000);
+  const id = 'alma-laco-rancho';
+  const ctx = await browser.newContext({
+    ...TAMANHOS.deitado,
+  });
+  const page = await ctx.newPage();
+  await criarMundo(page, id, 'rancho-alegre');
+  await page.goto(`/?mundo=${id}`);
+  await page.waitForFunction(() => window.__brumaluz?.ready === true, undefined, {
+    timeout: 240_000,
+  });
+  await page.evaluate(() => {
+    document.querySelector<HTMLElement>('.entrada')?.setAttribute('hidden', '');
+    const e = window.__brumaluz!;
+    e.pausarDia = true;
+    e.hora = 0.42;
+    e.definirClima?.('limpo');
+  });
+  await semAvisos(page);
+  await assentar(page);
+  await vigiarFestas(page);
+  const t0 = Date.now();
+  await page.waitForSelector('[data-alma-quadro]', { timeout: 20_000 });
+  await page.waitForTimeout(1500);
+  await tocar(page, '[data-alma-jogar="r1"]', true);
+  // uma roça madura na frente da criança (5 pés de trigo maduro)
+  const pes = await page.evaluate(() => {
+    const e = window.__brumaluz!;
+    const [x0, y0, z0] = e.posicao!;
+    const x = Math.floor(x0);
+    const y = Math.floor(y0);
+    const z = Math.floor(z0) + 3;
+    const out: [number, number, number][] = [];
+    for (let i = -2; i <= 2; i++) {
+      for (let dz = 0; dz < 2; dz++)
+        for (let dy = 0; dy < 4; dy++) e.definirBloco!(x + i, y + dy, z + dz - 1, 0);
+      e.definirBloco!(x + i, y - 1, z, 68);
+      e.definirBloco!(x + i, y, z, 0);
+      out.push([x + i, y, z]);
+    }
+    return out;
+  });
+  await page.waitForTimeout(1000);
+  await page.evaluate((pes) => {
+    const e = window.__brumaluz!;
+    for (const [x, y, z] of pes) e.definirBloco!(x, y, z, 72);
+  }, pes);
+  await page.waitForTimeout(1500);
+  await foto(page, 'laco-rancho-1-roca');
+  const pararR = filmar(page, 'rancho');
+  for (const [x, y, z] of pes) {
+    await page.evaluate(
+      ([x, y, z]) => {
+        const e = window.__brumaluz!;
+        e.mirarPonto!(x + 0.5, y + 0.4, z + 0.5);
+        e.minerar!(0.6, true);
+      },
+      [x, y, z] as const,
+    );
+    await page.waitForTimeout(RITMO);
+  }
+  await festa(page, 'missao', 'laco-rancho-2-festa-caipira', true, '[data-alma-vestir]');
+  const minutos = (Date.now() - t0) / 60_000;
+  console.log(`alma: r1 em ${minutos.toFixed(1)} min`);
+  expect(minutos).toBeLessThan(3);
+  // r1 dá 20 XP e as 5 colheitas 10: ainda no nível 1 (o 2 vem com 40), sem festa de nível
+  await page.waitForTimeout(2500);
+  await pararR();
+  expect(await page.locator('[data-alma-festa]').count()).toBe(0);
+  await foto(page, 'laco-rancho-4-depois');
+  expect(await page.evaluate(() => window.__brumaluz!.personagem!.aparencia().fantasia?.id)).toBe(
+    'caipira',
+  );
+  const moedas = await page.locator('[data-alma-moedas]').textContent();
+  expect(Number(moedas)).toBe(3);
+  // reabrir: a carteira, o nível, a fantasia e a missão feita continuam
+  await page.evaluate(() => window.__brumaluz!.salvar?.());
+  await page.reload();
+  await page.waitForFunction(() => window.__brumaluz?.ready === true, undefined, {
+    timeout: 240_000,
+  });
+  await page.evaluate(() =>
+    document.querySelector<HTMLElement>('.entrada')?.setAttribute('hidden', ''),
+  );
+  await page.waitForSelector('[data-alma-missao]:not([hidden])', { timeout: 20_000 });
+  expect(await page.locator('[data-alma-moedas]').textContent()).toBe(moedas);
+  expect(await page.locator('[data-alma-carteira]').getAttribute('data-nivel')).toBe('1');
+  expect(await page.locator('[data-alma-missao]').getAttribute('data-missao')).not.toBe('r1');
+  await abrirBau(page, true);
+  await page.waitForSelector('[data-alma-painel="album"]');
+  expect(await page.locator('[data-missao="r1"].feita').count()).toBe(1);
+  expect(await page.locator('[data-fantasia="caipira"].tem').count()).toBe(1);
+  await foto(page, 'laco-rancho-5-reaberto-album');
+  await ctx.close();
 });

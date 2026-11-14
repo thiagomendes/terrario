@@ -209,8 +209,6 @@ async function iniciar(app: HTMLElement): Promise<void> {
   if (esboco === 'amigos') (await import('./esboco/amigos')).prepararEsbocoAmigos();
   // esboço 014d (só com ?esboco=estetica): a estética firme dos veículos ao lado da de hoje
   if (esboco === 'estetica') (await import('./esboco/veiculosEstetica')).prepararEsbocoEstetica();
-  // esboço da spec 023 (só com ?esboco=alma): missões, moedinhas, álbum, habilidades e lojinha
-  if (esboco === 'alma') (await import('./esboco/alma')).prepararEsbocoAlma();
   // em prévia de outro tema nada é salvo: o mundo continua sendo do tema dele
   cena = criarCena(canvas, hotbar, {
     mundo: atual,
@@ -704,7 +702,9 @@ function ligarAlma(
     if (e.ganho && (ganhoTemAlgo(e.ganho) || fantasias.length))
       perfil.aplicarGanho(e.ganho, fantasias);
     for (const id of fantasias)
-      window.dispatchEvent(new CustomEvent('brumaluz:desbloqueio', { detail: { id } }));
+      window.dispatchEvent(
+        new CustomEvent('brumaluz:desbloqueio', { detail: { id, festa: true } }),
+      );
   });
   // a banca: o aparelho só desconta depois que o núcleo entregou
   window.addEventListener('brumaluz:almaCompra', (ev) => {

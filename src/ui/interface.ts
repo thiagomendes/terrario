@@ -9,7 +9,7 @@ import { textoIndicador } from '../audio/ligador';
 import type { EstadoAudio } from '../audio/motor';
 import { rotuloDoModelo, type Aparencia } from '../personagem/aparencia';
 import { rotuloDaFantasia } from '../personagem/fantasias';
-import { festejarNoPalco } from './abaFantasias';
+import { festejarNoPalco, podeVestirFantasia } from './abaFantasias';
 import { tocarSomInterface } from '../audio/somInterface';
 import { perguntar } from './dialogo';
 import {
@@ -676,12 +676,21 @@ export function criarInterface(
     'peao-campeao': 'Ganhou a roupa de peão campeão!',
   };
   window.addEventListener('brumaluz:desbloqueio', (e) => {
-    const id = (e as CustomEvent<{ id?: unknown }>).detail?.id;
+    const d = (e as CustomEvent<{ id?: unknown; festa?: unknown }>).detail;
+    const id = d?.id;
     if (typeof id !== 'string' || !GANHOU[id]) return;
     if (!painel.desbloquear(id)) return;
+    festejarNoPalco(pedestal);
+    // spec 023: o prêmio da missão já tem a festa da alma (com a fantasia no boneco)
+    if (d.festa === true) return;
     notificar(GANHOU[id], 'trofeu');
     tocarSomInterface('conquista');
-    festejarNoPalco(pedestal);
+  });
+  // spec 023: "vestir agora" na festa da missão (só a que já foi ganha; grava com a aparência)
+  window.addEventListener('brumaluz:vestirFantasia', (e) => {
+    const id = (e as CustomEvent<{ id?: unknown }>).detail?.id;
+    if (typeof id !== 'string' || !podeVestirFantasia(id, painel.aparencia())) return;
+    painel.vestir(id);
   });
   (window as unknown as { __desbloqueios?: () => string[] }).__desbloqueios = () => [
     ...(painel.aparencia().desbloqueios ?? []),
@@ -710,6 +719,8 @@ export function criarInterface(
       ? undefined
       : fantasiaParaSugerir(loja, idSugestao, true, tema, painel.aparencia());
     if (!def && !testando) marcarSugerida(loja, idSugestao);
+    // spec 023: o quadro de missões (primeira visita) espera a sugestão passar
+    if (def) document.body.dataset.sugestaoPendente = '1';
     // espera o mundo aberto e jogável: pronto, sem título, editor, carregamento, pausa ou
     // outro diálogo por cima (o convite só aparece com a criança já dentro do mundo)
     const livre = () =>
@@ -757,6 +768,7 @@ export function criarInterface(
       });
       if (document.body.dataset.overlay === 'sugestao-fantasia')
         delete document.body.dataset.overlay;
+      delete document.body.dataset.sugestaoPendente;
       if (sim !== true) {
         // dentro do clique do botão: volta a jogar com o mouse preso, como estava
         if (estavaPreso) {

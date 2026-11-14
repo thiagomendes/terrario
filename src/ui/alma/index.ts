@@ -11,6 +11,9 @@ import type { VistaAlmaMundo } from '../../jogo/alma';
 import type { PerfilCrianca } from '../../personagem/almaCrianca';
 import { CSS_ALMA_HUD, criarHudAlma, type HudAlma } from './hud';
 import { CSS_ALMA_BAU, criarBau, type BauAlma } from './bau';
+import { CSS_FESTA } from './festa';
+import { criarFestas, type FestasAlma } from './festas';
+import type { MissaoMovida } from '../../jogo/alma';
 import type { Aparencia } from '../../personagem/aparencia';
 
 /** Mundos em que o quadro já abriu sozinho (no aparelho; o quadro só abre na primeira visita). */
@@ -59,12 +62,13 @@ export interface OpcoesAlmaUi {
 export interface AlmaUi {
   hud: HudAlma;
   bau: BauAlma;
+  festas: FestasAlma;
   vista(): VistaAlmaMundo | null;
 }
 
 export function ligarAlmaUi(op: OpcoesAlmaUi): AlmaUi {
   const estilo = document.createElement('style');
-  estilo.textContent = CSS_ALMA_HUD + CSS_ALMA_BAU;
+  estilo.textContent = CSS_ALMA_HUD + CSS_ALMA_BAU + CSS_FESTA;
   document.head.appendChild(estilo);
 
   let vista: VistaAlmaMundo | null = null;
@@ -92,11 +96,22 @@ export function ligarAlmaUi(op: OpcoesAlmaUi): AlmaUi {
     aparencia: () => (window.__brumaluz?.personagem?.aparencia?.() ?? {}) as Aparencia,
   });
 
+  const festas = criarFestas({
+    hud,
+    perfil: () => op.perfil.perfil,
+    vestir: (id) =>
+      window.dispatchEvent(new CustomEvent('brumaluz:vestirFantasia', { detail: { id } })),
+    aoFechar: () => op.aoFechar(),
+  });
+  /** As missões que acabaram no evento de agora (o perfil soma o ganho logo depois). */
+  let concluidas: MissaoMovida[] = [];
+
   // o que o núcleo manda: o quadro inteiro (entrou, mudou a lista) e o que andou
   let quadroPendente = false;
   window.addEventListener('brumaluz:alma', (ev) => {
     const e = (ev as CustomEvent<Extract<EventoNucleo, { e: 'alma' }>>).detail;
     if (!e || typeof e !== 'object') return;
+    concluidas = (e.missoes ?? []).filter((m) => m.concluiu);
     const primeiro = !vista && !!e.quadro;
     if (e.quadro) vista = e.quadro;
     if (vista)
@@ -115,10 +130,13 @@ export function ligarAlmaUi(op: OpcoesAlmaUi): AlmaUi {
     if (primeiro) abrirNaPrimeiraVisita();
   });
 
-  // o ganho já foi somado ao perfil (main.ts): a carteira mostra (a T08 põe a festa na frente)
+  // o ganho já foi somado ao perfil (main.ts): missão acabada ou nível novo viram festa (na
+  // fila, uma depois da outra); o resto só sobe na carteira
   op.perfil.ouvir((_p, aviso) => {
-    if (aviso.tipo === 'ganho') void hud.mostrarGanho();
-    else hud.renderHud();
+    if (aviso.tipo === 'ganho') {
+      festas.receber({ missoes: concluidas, mudanca: aviso.mudanca });
+      concluidas = [];
+    } else if (!festas.festando) hud.renderHud();
   });
 
   /** Primeira visita: o quadro aparece sozinho depois da tela de entrada (até 3 s). */
@@ -133,6 +151,8 @@ export function ligarAlmaUi(op: OpcoesAlmaUi): AlmaUi {
       const ocupado =
         !!document.querySelector('.entrada:not([hidden])') ||
         !!document.body.dataset.overlay ||
+        // a sugestão de fantasia do mundo novo (017) vem primeiro
+        !!document.body.dataset.sugestaoPendente ||
         document.body.classList.contains('tela-titulo');
       if (ocupado) return void setTimeout(tentar, 500);
       if (!hud.quadro()) return void setTimeout(tentar, 500);
@@ -152,7 +172,7 @@ export function ligarAlmaUi(op: OpcoesAlmaUi): AlmaUi {
     bau.abrir();
   });
 
-  const ui: AlmaUi = { hud, bau, vista: () => vista };
+  const ui: AlmaUi = { hud, bau, festas, vista: () => vista };
   (window as unknown as { __almaUi?: AlmaUi }).__almaUi = ui;
   return ui;
 }

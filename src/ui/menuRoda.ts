@@ -60,8 +60,8 @@ export function itensDoMenu(telaCheia: boolean): ItemMenu[] {
 }
 
 /**
- * Itens a mais na roda do menu (esboço da 023, só com `?esboco=alma`: a lojinha). Vazio no
- * jogo de sempre: a roda sai igual. Entram logo depois de "Personagem" e sempre abrem uma tela.
+ * Itens a mais na roda do menu (a lojinha premium da 023 entra aqui na fase D). Vazio hoje:
+ * a roda sai igual. Entram logo depois de "Personagem" e sempre abrem uma tela.
  */
 export const EXTRAS_RODA: { id: string; nome: string; icone: string; aoEscolher(): void }[] = [];
 
@@ -198,10 +198,19 @@ export function criarMenuRoda(op: OpcoesMenuRoda, raiz: HTMLElement = document.b
   }
 
   const itens = itensDoMenu(podeAlternarTelaCheia());
-  const itensRoda = itens.map((i) => ({ id: i.id as string, nome: i.nome, icone: svg(IC[i.id]), tecla: i.tecla }));
+  const itensRoda = itens.map((i) => ({
+    id: i.id as string,
+    nome: i.nome,
+    icone: svg(IC[i.id]),
+    tecla: i.tecla,
+  }));
   if (EXTRAS_RODA.length) {
     const k = itensRoda.findIndex((i) => i.id === 'personagem') + 1;
-    itensRoda.splice(k, 0, ...EXTRAS_RODA.map((x) => ({ id: x.id, nome: x.nome, icone: x.icone, tecla: undefined })));
+    itensRoda.splice(
+      k,
+      0,
+      ...EXTRAS_RODA.map((x) => ({ id: x.id, nome: x.nome, icone: x.icone, tecla: undefined })),
+    );
   }
   const listaMenu: ListaRoda = {
     itens: itensRoda,

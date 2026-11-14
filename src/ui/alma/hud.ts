@@ -94,7 +94,7 @@ body.toque-ativo .alma-carteira kbd, body.sem-teclas .alma-carteira kbd { displa
   box-shadow: 0 0 0 2px #f5c44a, 0 2px 0 rgba(150,110,60,0.35); font: 900 0.85rem var(--display); color: #8a5a10; white-space: nowrap; }
 .alma-moedas .moeda { width: 18px; height: 18px; }
 /* o que esconde o HUD esconde a alma também */
-body[data-overlay] .alma-carteira, body[data-overlay] .alma-missao, body.modo-foto .alma-carteira, body.modo-foto .alma-missao,
+body[data-overlay]:not([data-overlay='alma-festa']) .alma-carteira, body[data-overlay] .alma-missao, body.modo-foto .alma-carteira, body.modo-foto .alma-missao,
 body.tela-titulo .alma-carteira, body.tela-titulo .alma-missao, body:has(.entrada:not([hidden])) .alma-carteira,
 body:has(.entrada:not([hidden])) .alma-missao { display: none !important; }
 /* celular em pé: o cartão desce logo abaixo dos botões, um pouco menor */
@@ -451,7 +451,7 @@ export function criarHudAlma(raiz: HTMLElement, op: OpcoesHudAlma) {
     fundo.hidden = true;
     fundo.replaceChildren();
     if (document.body.dataset.overlay === 'alma') delete document.body.dataset.overlay;
-    op.aoFechar();
+    if (!document.body.dataset.overlay) op.aoFechar();
   }
   const aberto = () => !fundo.hidden;
   window.addEventListener('keydown', (e) => {

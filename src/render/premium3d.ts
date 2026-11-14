@@ -1,5 +1,7 @@
 /**
- * Esboço da spec 023 (rodada 2): os três itens premium feitos de verdade, no motor do jogo.
+ * Spec 023: os três premium do esboço (rodada 2), guardados aqui para a fase C (T10 a T13),
+ * que os liga à aparência e à rede e faz o acabamento pedido pelo dono. Ainda ninguém usa.
+ * Tudo procedural, feito aqui (peças de plástico da 012, desenho das texturas em canvas):
  * Tudo procedural, feito aqui (peças de plástico da 012, desenho das texturas em canvas):
  *
  * - **Tênis-cometa:** tênis de brinquedo com a faixa de luz que corre o arco-íris e, andando,
@@ -25,14 +27,26 @@ import { TransformNode } from '@babylonjs/core/Meshes/transformNode';
 import { StandardMaterial } from '@babylonjs/core/Materials/standardMaterial';
 import { DynamicTexture } from '@babylonjs/core/Materials/Textures/dynamicTexture';
 import type { Scene } from '@babylonjs/core/scene';
-import { caixaArredondada, cilindro, corViva, criarPlasticos, dadosPlaca, esfera, type Plasticos } from '../../render/formas';
+import {
+  caixaArredondada,
+  cilindro,
+  corViva,
+  criarPlasticos,
+  dadosPlaca,
+  esfera,
+  type Plasticos,
+} from './formas';
 
 export type ItemPremium3d = 'tenis-cometa' | 'dragao' | 'unicornio';
 
 const ARCO = ['#ff5a6e', '#ffa53d', '#ffe14d', '#5fe07a', '#4dc3ff', '#9a7bff', '#ff7ad9'];
 
 // ------------------------------------------------------------------ texturas (canvas)
-function texturaBrilho(scene: Scene, nome: string, desenhar: (c: CanvasRenderingContext2D, t: number) => void): DynamicTexture {
+function texturaBrilho(
+  scene: Scene,
+  nome: string,
+  desenhar: (c: CanvasRenderingContext2D, t: number) => void,
+): DynamicTexture {
   const t = new DynamicTexture(nome, { width: 128, height: 128 }, scene, true);
   const c = t.getContext() as unknown as CanvasRenderingContext2D;
   c.clearRect(0, 0, 128, 128);
@@ -129,12 +143,29 @@ function criarBrilhos(scene: Scene, quantos = 70) {
     livres.push({ m, vida: 0, dura: 1, v: new Vector3(), tam: 0.2, gira: 0, gravidade: 0 });
   }
   return {
-    soltar(p: Vector3, op: { cor?: string; v?: Vector3; tam?: number; dura?: number; coracao?: boolean; gravidade?: number } = {}) {
+    soltar(
+      p: Vector3,
+      op: {
+        cor?: string;
+        v?: Vector3;
+        tam?: number;
+        dura?: number;
+        coracao?: boolean;
+        gravidade?: number;
+      } = {},
+    ) {
       const s = livres.pop() ?? vivos.shift();
       if (!s) return;
       s.m.material = mat(op.cor ?? ARCO[Math.floor(Math.random() * ARCO.length)], !!op.coracao);
       s.m.position.copyFrom(p);
-      s.v.copyFrom(op.v ?? new Vector3((Math.random() - 0.5) * 0.6, 0.6 + Math.random() * 0.6, (Math.random() - 0.5) * 0.6));
+      s.v.copyFrom(
+        op.v ??
+          new Vector3(
+            (Math.random() - 0.5) * 0.6,
+            0.6 + Math.random() * 0.6,
+            (Math.random() - 0.5) * 0.6,
+          ),
+      );
       s.tam = op.tam ?? 0.16 + Math.random() * 0.1;
       s.dura = op.dura ?? 0.9 + Math.random() * 0.5;
       s.vida = 0;
@@ -157,7 +188,8 @@ function criarBrilhos(scene: Scene, quantos = 70) {
         s.v.y += s.gravidade * dt;
         s.m.position.addInPlace(s.v.scale(dt));
         // nasce crescendo, cintila e some
-        const k = (f < 0.15 ? f / 0.15 : 1 - (f - 0.15) / 0.85) * (0.85 + 0.15 * Math.sin(s.vida * 30));
+        const k =
+          (f < 0.15 ? f / 0.15 : 1 - (f - 0.15) / 0.85) * (0.85 + 0.15 * Math.sin(s.vida * 30));
         s.m.scaling.setAll(Math.max(0.001, s.tam * k));
         s.m.rotation.z += s.gira * dt;
       }
@@ -241,25 +273,65 @@ function montarTenis(scene: Scene, mats: Plasticos, perna: TransformNode, lado: 
   const no = new TransformNode(`premium-tenis-${lado}`, scene);
   no.parent = perna;
   no.position.set(0, -quadril + 0.07, 0.035);
-  const sola = caixaArredondada('premium-tenis-sola', scene, 0.26, 0.065, 0.35, 0.03, mats.cor('#fbfbff', 0.5));
+  const sola = caixaArredondada(
+    'premium-tenis-sola',
+    scene,
+    0.26,
+    0.065,
+    0.35,
+    0.03,
+    mats.cor('#fbfbff', 0.5),
+  );
   sola.parent = no;
   sola.position.y = -0.04;
-  const cano = caixaArredondada('premium-tenis-cano', scene, 0.24, 0.12, 0.3, 0.06, mats.cor('#6a4cff', 0.55));
+  const cano = caixaArredondada(
+    'premium-tenis-cano',
+    scene,
+    0.24,
+    0.12,
+    0.3,
+    0.06,
+    mats.cor('#6a4cff', 0.55),
+  );
   cano.parent = no;
   cano.position.set(0, 0.06, -0.015);
   const bico = esfera('premium-tenis-bico', scene, 0.12, mats.cor('#fbfbff', 0.5), [1, 0.55, 0.75]);
   bico.parent = no;
   bico.position.set(0, 0.02, 0.12);
-  const lingua = caixaArredondada('premium-tenis-lingua', scene, 0.12, 0.08, 0.05, 0.02, mats.cor('#ff5aa8', 0.5));
+  const lingua = caixaArredondada(
+    'premium-tenis-lingua',
+    scene,
+    0.12,
+    0.08,
+    0.05,
+    0.02,
+    mats.cor('#ff5aa8', 0.5),
+  );
   lingua.parent = no;
   lingua.position.set(0, 0.125, -0.03);
   for (let i = 0; i < 3; i++) {
-    const c = caixaArredondada('premium-tenis-cadarco', scene, 0.15, 0.02, 0.03, 0.01, mats.cor('#ffffff', 0.3));
+    const c = caixaArredondada(
+      'premium-tenis-cadarco',
+      scene,
+      0.15,
+      0.02,
+      0.03,
+      0.01,
+      mats.cor('#ffffff', 0.3),
+    );
     c.parent = no;
     c.position.set(0, 0.123 - i * 0.008, 0.02 + i * 0.045);
   }
   // a faixa de luz em volta da sola (a cor corre o arco-íris) e a estrela do lado
-  const faixa = caixaArredondada('premium-tenis-luz', scene, 0.278, 0.04, 0.372, 0.018, luz(scene, `premium-tenis-luz-${lado}`, '#ff5a6e'));
+  const faixa = caixaArredondada(
+    'premium-tenis-luz',
+    scene,
+    0.278,
+    0.04,
+    0.372,
+    0.018,
+    luz(scene, `premium-tenis-luz-${lado}`, '#ff5a6e'),
+  );
   faixa.parent = no;
   faixa.position.y = -0.002;
   const pontas: Array<[number, number]> = [];
@@ -285,7 +357,11 @@ function montarTenis(scene: Scene, mats: Plasticos, perna: TransformNode, lado: 
 // ------------------------------------------------------------------ dragãozinho
 /** A asa (a raiz no 0,0; a ponta para +x): o pulso, a ponta e os dois dedos, e o contorno. */
 const PULSO: [number, number] = [0.3, 0.36];
-const PONTAS: Array<[number, number]> = [[0.78, 0.52], [0.74, 0.16], [0.5, -0.04]];
+const PONTAS: Array<[number, number]> = [
+  [0.78, 0.52],
+  [0.74, 0.16],
+  [0.5, -0.04],
+];
 const RAIZ_BAIXO: [number, number] = [0.06, -0.12];
 
 /** Contorno da membrana: do ombro ao pulso, às pontas (com o recorte entre elas) e de volta. */
@@ -309,7 +385,15 @@ function contornoAsa(): Array<[number, number]> {
 }
 
 /** Um osso arredondado de a até b (cilindro com bolinhas nas pontas). */
-function osso(scene: Scene, pai: TransformNode, mat: StandardMaterial, a: [number, number], b: [number, number], r: number, s: number): void {
+function osso(
+  scene: Scene,
+  pai: TransformNode,
+  mat: StandardMaterial,
+  a: [number, number],
+  b: [number, number],
+  r: number,
+  s: number,
+): void {
   const dx = (b[0] - a[0]) * s;
   const dy = b[1] - a[1];
   const comp = Math.hypot(dx, dy);
@@ -317,7 +401,10 @@ function osso(scene: Scene, pai: TransformNode, mat: StandardMaterial, a: [numbe
   c.parent = pai;
   c.position.set(a[0] * s + dx / 2, a[1] + dy / 2, 0);
   c.rotation.z = -Math.atan2(dx, dy);
-  for (const [px, py, rr] of [[a[0], a[1], r * 1.15], [b[0], b[1], r * 1.05]] as const) {
+  for (const [px, py, rr] of [
+    [a[0], a[1], r * 1.15],
+    [b[0], b[1], r * 1.05],
+  ] as const) {
     const bola = esfera('premium-asa-junta', scene, rr, mat);
     bola.parent = pai;
     bola.position.set(px * s, py, 0);
@@ -340,7 +427,9 @@ function montarDragao(scene: Scene, mats: Plasticos, juntas: Record<string, Tran
     // a membrana: verde-água perto do corpo, violeta no meio e rosa nas pontas
     pintarDegrade(asa, (x, y) => {
       const d = Math.hypot(x, y - 0.1) / 0.8;
-      return d < 0.5 ? misturar('#34d6b4', '#8a6aff', d / 0.5) : misturar('#8a6aff', '#ff86d6', (d - 0.5) / 0.5);
+      return d < 0.5
+        ? misturar('#34d6b4', '#8a6aff', d / 0.5)
+        : misturar('#8a6aff', '#ff86d6', (d - 0.5) / 0.5);
     });
     asa.material = mats.tinta(0.75);
     asa.parent = pivo;
@@ -353,7 +442,15 @@ function montarDragao(scene: Scene, mats: Plasticos, juntas: Record<string, Tran
   // barriga clara com as dobrinhas de escama (macia, sem brilho: o brilho é das asas)
   const tronco = juntas.tronco;
   for (let i = 0; i < 3; i++) {
-    const d = caixaArredondada('premium-dragao-dobra', scene, 0.2 - i * 0.03, 0.016, 0.02, 0.008, mats.cor('#8fe0c6', 0.4));
+    const d = caixaArredondada(
+      'premium-dragao-dobra',
+      scene,
+      0.2 - i * 0.03,
+      0.016,
+      0.02,
+      0.008,
+      mats.cor('#8fe0c6', 0.4),
+    );
     d.parent = tronco;
     d.position.set(0, 0.29 - i * 0.07, 0.2);
   }
@@ -388,7 +485,12 @@ function montarUnicornio(scene: Scene, mats: Plasticos) {
   barriga.position.y = 0.27;
   // pernas (pivô no alto) com cascos de ouro
   const pernas: TransformNode[] = [];
-  for (const [x, z] of [[-0.12, 0.2], [0.12, 0.2], [-0.12, -0.2], [0.12, -0.2]] as const) {
+  for (const [x, z] of [
+    [-0.12, 0.2],
+    [0.12, 0.2],
+    [-0.12, -0.2],
+    [0.12, -0.2],
+  ] as const) {
     const p = new TransformNode('premium-uni-pivo-perna', scene);
     p.parent = corpo;
     p.position.set(x * 1.1, 0.34, z * 0.95);
@@ -413,7 +515,15 @@ function montarUnicornio(scene: Scene, mats: Plasticos) {
   cab.position.set(0, 0.3, 0.12);
   const cabeca = caixaArredondada('premium-uni-cabeca-m', scene, 0.4, 0.37, 0.38, 0.16, branco);
   cabeca.parent = cab;
-  const focinho = caixaArredondada('premium-uni-focinho', scene, 0.28, 0.2, 0.18, 0.09, mats.cor('#ffd3e6', 0.4));
+  const focinho = caixaArredondada(
+    'premium-uni-focinho',
+    scene,
+    0.28,
+    0.2,
+    0.18,
+    0.09,
+    mats.cor('#ffd3e6', 0.4),
+  );
   focinho.parent = cab;
   focinho.position.set(0, -0.09, 0.21);
   for (const s of [-1, 1]) {
@@ -428,14 +538,33 @@ function montarUnicornio(scene: Scene, mats: Plasticos) {
     olho.parent = cab;
     olho.position.set(s * 0.145, 0.04, 0.165);
     olhos.push(olho);
-    const b1 = esfera('premium-uni-brilho', scene, 0.02, luz(scene, 'premium-uni-brilho', '#ffffff'));
+    const b1 = esfera(
+      'premium-uni-brilho',
+      scene,
+      0.02,
+      luz(scene, 'premium-uni-brilho', '#ffffff'),
+    );
     b1.parent = olho;
     b1.position.set(s * 0.014, 0.028, 0.035);
-    const cilio = caixaArredondada('premium-uni-cilio', scene, 0.06, 0.012, 0.012, 0.005, mats.cor('#2a1d3a', 0.3));
+    const cilio = caixaArredondada(
+      'premium-uni-cilio',
+      scene,
+      0.06,
+      0.012,
+      0.012,
+      0.005,
+      mats.cor('#2a1d3a', 0.3),
+    );
     cilio.parent = cab;
     cilio.position.set(s * 0.185, 0.11, 0.15);
     cilio.rotation.z = s * 0.5;
-    const boch = esfera('premium-uni-bochecha', scene, 0.04, mats.cor('#ffa8c8', 0.2), [1, 0.6, 0.3]);
+    const boch = esfera(
+      'premium-uni-bochecha',
+      scene,
+      0.04,
+      mats.cor('#ffa8c8', 0.2),
+      [1, 0.6, 0.3],
+    );
     boch.parent = cab;
     boch.position.set(s * 0.17, -0.07, 0.16);
   }
@@ -454,7 +583,11 @@ function montarUnicornio(scene: Scene, mats: Plasticos) {
   chifre.rotation.x = 0.35;
   const brilhoChifre = luz(scene, 'premium-uni-chifre-luz', '#fff1a8');
   for (let i = 0; i < 3; i++) {
-    const anel = MeshBuilder.CreateTorus('premium-uni-espiral', { diameter: 0.095 - i * 0.026, thickness: 0.014, tessellation: 18 }, scene);
+    const anel = MeshBuilder.CreateTorus(
+      'premium-uni-espiral',
+      { diameter: 0.095 - i * 0.026, thickness: 0.014, tessellation: 18 },
+      scene,
+    );
     anel.material = brilhoChifre;
     anel.parent = chifre;
     anel.position.y = -0.09 + i * 0.07;
@@ -464,7 +597,15 @@ function montarUnicornio(scene: Scene, mats: Plasticos) {
   // a crina de arco-íris (do topete às costas) e o rabo em mechas
   const crina: Mesh[] = [];
   for (let i = 0; i < 6; i++) {
-    const m = caixaArredondada('premium-uni-crina', scene, 0.09, 0.15, 0.1, 0.045, mats.cor(ARCO[i], 0.45));
+    const m = caixaArredondada(
+      'premium-uni-crina',
+      scene,
+      0.09,
+      0.15,
+      0.1,
+      0.045,
+      mats.cor(ARCO[i], 0.45),
+    );
     if (i === 0) {
       m.parent = cab;
       m.position.set(0, 0.2, 0.13);
@@ -483,7 +624,15 @@ function montarUnicornio(scene: Scene, mats: Plasticos) {
     n.parent = pai;
     if (i === 0) n.position.set(0, 0.52, -0.3);
     else n.position.set(0, -0.11, -0.03);
-    const mecha = caixaArredondada('premium-uni-mecha', scene, 0.12 - i * 0.012, 0.14, 0.1, 0.05, mats.cor(ARCO[(i * 2) % ARCO.length], 0.45));
+    const mecha = caixaArredondada(
+      'premium-uni-mecha',
+      scene,
+      0.12 - i * 0.012,
+      0.14,
+      0.1,
+      0.05,
+      mats.cor(ARCO[(i * 2) % ARCO.length], 0.45),
+    );
     mecha.parent = n;
     mecha.position.y = -0.05;
     rabo.push(n);
@@ -501,7 +650,15 @@ interface Usuario {
   juntas: Record<string, TransformNode>;
   tenis?: ReturnType<typeof montarTenis>[];
   dragao?: ReturnType<typeof montarDragao>;
-  pet?: ReturnType<typeof montarUnicornio> & { x: number; y: number; z: number; yaw: number; vy: number; noAr: boolean; fase: number };
+  pet?: ReturnType<typeof montarUnicornio> & {
+    x: number;
+    y: number;
+    z: number;
+    yaw: number;
+    vy: number;
+    noAr: boolean;
+    fase: number;
+  };
   anterior: Vector3;
   vel: number;
   vy: number;
@@ -513,7 +670,9 @@ interface Usuario {
   coracaoFeito: boolean;
 }
 
-const SOLIDO_NAO = new Set([0, 8, 9, 10, 33, 37, 54, 67, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80]);
+const SOLIDO_NAO = new Set([
+  0, 8, 9, 10, 33, 37, 54, 67, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80,
+]);
 
 export function criarPremium3d(scene: Scene) {
   const mats = criarPlasticos(scene, 'premium');
@@ -544,7 +703,10 @@ export function criarPremium3d(scene: Scene) {
   function montar(u: Usuario): void {
     u.juntas = juntasDe(u.raiz);
     if (u.itens.has('tenis-cometa') && u.juntas.pernaE && u.juntas.pernaD)
-      u.tenis = [montarTenis(scene, mats, u.juntas.pernaE, -1), montarTenis(scene, mats, u.juntas.pernaD, 1)];
+      u.tenis = [
+        montarTenis(scene, mats, u.juntas.pernaE, -1),
+        montarTenis(scene, mats, u.juntas.pernaD, 1),
+      ];
     if (u.itens.has('dragao') && u.juntas.tronco) u.dragao = montarDragao(scene, mats, u.juntas);
     if (u.itens.has('unicornio') && !u.pet) {
       const p = montarUnicornio(scene, mats);
@@ -562,7 +724,8 @@ export function criarPremium3d(scene: Scene) {
       for (const a of u.dragao.asas) a.dispose(false, false);
       // placa, escamas e chifres ficam presos nas juntas: some com elas
       for (const n of [u.juntas.tronco, u.juntas.cabeca])
-        for (const m of n?.getChildMeshes(true) ?? []) if (m.name.startsWith('premium-')) m.dispose();
+        for (const m of n?.getChildMeshes(true) ?? [])
+          if (m.name.startsWith('premium-')) m.dispose();
     }
     u.dragao = undefined;
     if (tudo && u.pet) {
@@ -576,8 +739,19 @@ export function criarPremium3d(scene: Scene) {
     if (u) desmontar(u, !itens.includes('unicornio'));
     else {
       u = {
-        id, raiz, itens: new Set(), juntas: {}, anterior: raiz.position.clone(), vel: 0, vy: 0, andado: 0, pe: 0,
-        noAr: false, parado: 0, proximaGraca: 4, coracaoFeito: true,
+        id,
+        raiz,
+        itens: new Set(),
+        juntas: {},
+        anterior: raiz.position.clone(),
+        vel: 0,
+        vy: 0,
+        andado: 0,
+        pe: 0,
+        noAr: false,
+        parado: 0,
+        proximaGraca: 4,
+        coracaoFeito: true,
       };
       usuarios.set(id, u);
     }
@@ -624,12 +798,19 @@ export function criarPremium3d(scene: Scene) {
         const p = u.tenis[u.pe].no.getAbsolutePosition();
         pegadas.marcar(p.x, chaoAqui, p.z, yaw);
         for (let i = 0; i < 3; i++)
-          brilhos.soltar(new Vector3(p.x, chaoAqui + 0.1, p.z), { tam: 0.14 + Math.random() * 0.08, dura: 0.8 });
+          brilhos.soltar(new Vector3(p.x, chaoAqui + 0.1, p.z), {
+            tam: 0.14 + Math.random() * 0.08,
+            dura: 0.8,
+          });
       }
       if (pousou)
         for (let i = 0; i < 14; i++) {
           const a = (i / 14) * Math.PI * 2;
-          brilhos.soltar(new Vector3(r.x, chaoAqui + 0.08, r.z), { v: new Vector3(Math.cos(a) * 1.6, 0.6, Math.sin(a) * 1.6), dura: 0.7, tam: 0.18 });
+          brilhos.soltar(new Vector3(r.x, chaoAqui + 0.08, r.z), {
+            v: new Vector3(Math.cos(a) * 1.6, 0.6, Math.sin(a) * 1.6),
+            dura: 0.7,
+            tam: 0.18,
+          });
         }
     }
 
@@ -649,7 +830,11 @@ export function criarPremium3d(scene: Scene) {
       const pulso = 0.55 + 0.45 * Math.sin(t * 2.4);
       u.dragao.brilhoPlaca.emissiveColor.set(1 * pulso, 0.83 * pulso, 0.35 * pulso);
       if (noAr && Math.sin(fase) > 0.95)
-        brilhos.soltar(new Vector3(r.x, r.y + 0.8, r.z), { cor: ARCO[(Math.random() * 3 + 3) | 0], v: new Vector3(0, -0.6, 0), tam: 0.12 });
+        brilhos.soltar(new Vector3(r.x, r.y + 0.8, r.z), {
+          cor: ARCO[(Math.random() * 3 + 3) | 0],
+          v: new Vector3(0, -0.6, 0),
+          tam: 0.12,
+        });
     }
 
     // ---------------------------------------------------- unicórnio
@@ -705,14 +890,18 @@ export function criarPremium3d(scene: Scene) {
       pet.corpo.position.y = andando ? Math.abs(Math.sin(pet.fase * Math.PI * 2)) * 0.06 : 0;
       const resp = 1 + Math.sin(t * 2.6) * 0.018;
       pet.corpo.scaling.set(resp, 1 / resp, resp);
-      pet.pesco.rotation.x = andando ? Math.sin(pet.fase * Math.PI * 4) * 0.08 : Math.sin(t * 1.3) * 0.05;
+      pet.pesco.rotation.x = andando
+        ? Math.sin(pet.fase * Math.PI * 4) * 0.08
+        : Math.sin(t * 1.3) * 0.05;
       pet.cab.rotation.z = andando ? 0 : Math.sin(t * 0.9) * 0.12;
       pet.rabo.forEach((n, i) => {
         n.rotation.y = Math.sin(t * (andando ? 7 : 3) - i * 0.6) * (0.25 + i * 0.08);
         n.rotation.x = 0.35 + (andando ? 0.5 : 0.1);
       });
-      pet.orelhas.forEach((o, i) => (o.rotation.x = Math.max(0, Math.sin(t * 1.7 + i * 2) - 0.85) * 3));
-      const pisca = (t % 3.4) < 0.12 ? 0.15 : 1;
+      pet.orelhas.forEach(
+        (o, i) => (o.rotation.x = Math.max(0, Math.sin(t * 1.7 + i * 2) - 0.85) * 3),
+      );
+      const pisca = t % 3.4 < 0.12 ? 0.15 : 1;
       for (const o of pet.olhos) o.scaling.y = pisca;
       const brilho = 0.75 + 0.25 * Math.sin(t * 4);
       pet.brilhoChifre.emissiveColor.set(brilho, brilho * 0.94, brilho * 0.66);
@@ -721,14 +910,29 @@ export function criarPremium3d(scene: Scene) {
       if (u.proximaGraca <= 0 && !andando) {
         u.proximaGraca = 5 + Math.random() * 3;
         const c = pet.chifre.getAbsolutePosition();
-        for (let i = 0; i < 9; i++) brilhos.soltar(c.add(new Vector3(0, 0.08, 0)), { v: new Vector3((Math.random() - 0.5) * 0.8, 0.9, (Math.random() - 0.5) * 0.8), tam: 0.13 });
+        for (let i = 0; i < 9; i++)
+          brilhos.soltar(c.add(new Vector3(0, 0.08, 0)), {
+            v: new Vector3((Math.random() - 0.5) * 0.8, 0.9, (Math.random() - 0.5) * 0.8),
+            tam: 0.13,
+          });
       }
       // a criança parou pertinho: ele olha e solta coraçõezinhos (uma vez a cada parada)
       if (u.parado > 0.6 && dist < 3 && !u.coracaoFeito) {
         u.coracaoFeito = true;
         const c = pet.cab.getAbsolutePosition();
         for (let i = 0; i < 5; i++)
-          setTimeout(() => brilhos.soltar(c.add(new Vector3(0, 0.25, 0)), { coracao: true, cor: '#ff5a9a', v: new Vector3((Math.random() - 0.5) * 0.4, 0.7, (Math.random() - 0.5) * 0.4), gravidade: 0, dura: 1.4, tam: 0.2 }), i * 140);
+          setTimeout(
+            () =>
+              brilhos.soltar(c.add(new Vector3(0, 0.25, 0)), {
+                coracao: true,
+                cor: '#ff5a9a',
+                v: new Vector3((Math.random() - 0.5) * 0.4, 0.7, (Math.random() - 0.5) * 0.4),
+                gravidade: 0,
+                dura: 1.4,
+                tam: 0.2,
+              }),
+            i * 140,
+          );
       }
       if (u.parado === 0) u.coracaoFeito = false;
     }
@@ -764,7 +968,10 @@ export function criarPremium3d(scene: Scene) {
     festa(raiz: TransformNode) {
       const p = raiz.getAbsolutePosition();
       for (let i = 0; i < 22; i++)
-        brilhos.soltar(new Vector3(p.x, p.y + 0.9, p.z), { v: new Vector3((Math.random() - 0.5) * 3, Math.random() * 2.2, (Math.random() - 0.5) * 3), tam: 0.2 });
+        brilhos.soltar(new Vector3(p.x, p.y + 0.9, p.z), {
+          v: new Vector3((Math.random() - 0.5) * 3, Math.random() * 2.2, (Math.random() - 0.5) * 3),
+          tam: 0.2,
+        });
     },
     descartar() {
       scene.onBeforeRenderObservable.remove(obs);

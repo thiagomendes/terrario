@@ -341,7 +341,8 @@ for (const tela of TELAS) {
     await expect(cartas.first()).toHaveAttribute('data-fantasia', 'fazendeira');
     await expect(cartas.nth(1)).toHaveAttribute('data-fantasia', 'vaqueira');
     await expect(cartas.first().locator('.selo')).toHaveClass(/meu/);
-    await expect(cartas.nth(2).locator('.selo')).not.toHaveClass(/meu/);
+    // spec 023: o Rancho tem 4 (fazendeira, vaqueira e os prêmios Caipira e Peão campeão)
+    await expect(cartas.nth(4).locator('.selo')).not.toHaveClass(/meu/);
     await expect(painel(page).locator('[data-cartas="temas"] .secao').first()).toHaveText(
       'Do seu mundo · Rancho Alegre',
     );

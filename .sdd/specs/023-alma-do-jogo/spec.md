@@ -35,7 +35,7 @@ A criança sempre tem um prêmio à vista e chegando, e enxerga isso sem ler:
 Medida de sucesso: o tempo de sessão das crianças antes e depois (o dono observa a rodada em família).
 
 ## Esboço (aprovado em 13 nov 2026)
-O esboço roda no jogo de verdade com `?esboco=alma` (`src/esboco/alma/`, e2e `e2e/esboco-alma.spec.ts` com `ESBOCO_ALMA=1`), na Cidade Grande e no Rancho Alegre. Teve duas rodadas.
+O esboço rodou no jogo de verdade com `?esboco=alma` (`src/esboco/alma/`), na Cidade Grande e no Rancho Alegre, e teve duas rodadas. Saiu na T08: a arte, as figuras e as festas viraram `src/ui/alma/`, e os três premium do esboço esperam a fase C em `src/render/premium3d.ts`.
 - **Rodada 1:** missões, álbum, habilidades e lojinha, tudo por mundo.
 - **Rodada 2 (o modelo do dono):** carteira, nível, habilidades e fantasias são da criança; missões, prêmios especiais e a banca são do mundo; a lojinha premium é universal. Três premium foram feitos de verdade no motor: o tênis-cometa, o dragãozinho e o unicórnio-pônei.
 
