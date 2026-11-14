@@ -60,8 +60,8 @@ export function itensDoMenu(telaCheia: boolean): ItemMenu[] {
 }
 
 /**
- * Itens a mais na roda do menu (a lojinha premium da 023 entra aqui na fase D). Vazio hoje:
- * a roda sai igual. Entram logo depois de "Personagem" e sempre abrem uma tela.
+ * Itens a mais na roda do menu: a lojinha premium da 023 (o main.ts põe antes da cena montar a
+ * roda). Entram logo depois de "Personagem" e sempre abrem uma tela.
  */
 export const EXTRAS_RODA: { id: string; nome: string; icone: string; aoEscolher(): void }[] = [];
 

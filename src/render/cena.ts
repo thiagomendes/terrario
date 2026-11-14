@@ -727,6 +727,11 @@ export interface EstadoDepuracao {
      * provador e capturas); null tira.
      */
     vitrineBicho?: (id: string | null, x?: number, y?: number, z?: number, yaw?: number) => void;
+    /**
+     * Spec 023 (provador da lojinha): o boneco veste estes premium só nesta tela (nada vai pela
+     * rede nem fica guardado); null volta ao que a criança veste de verdade.
+     */
+    provar?: (premium: import('../personagem/aparencia').PremiumVestido | null) => void;
   };
   /**
    * Testes: o que o dedo pegaria no ponto da tela (coordenadas CSS do canvas): o bloco, a
@@ -2745,6 +2750,11 @@ export function criarCena(
     bichoPremium: () => personagem.bichoPremium?.() ?? null,
     efeitosPremium: () => efeitosPremium(scene).contar(),
     festaPremium: () => personagem.festaPremium?.(),
+    provar: (premium) => {
+      personagem.aplicarAparencia(
+        premium === null ? aparencia : normalizarAparencia({ ...aparencia, premium }),
+      );
+    },
     vitrineBicho: (id, x = 0, y = 0, z = 0, yaw = 0) => {
       vitrine?.soltar();
       vitrineNo?.dispose();

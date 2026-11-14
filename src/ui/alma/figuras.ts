@@ -9,7 +9,9 @@ import { celulasDaObra, obraDoCanteiro } from '../../world/obras';
 import { fotografarBoneco } from '../../render/fotoBoneco';
 import { normalizarAparencia, type Aparencia } from '../../personagem/aparencia';
 import { arte } from './arte';
-import type { Missao } from '../../jogo/alma';
+import { premiumPorId, type Missao } from '../../jogo/alma';
+import type { IdBichoPremium } from '../../render/bichoPremium';
+import type { RecorteBoneco } from '../../render/fotoBoneco';
 
 function aparenciaAtual(): Aparencia {
   const a = window.__brumaluz?.personagem?.aparencia?.() as Aparencia | undefined;
@@ -67,7 +69,38 @@ export function desenhoDaObra(n: number): string {
   return url;
 }
 
-/** Uma figura pelo nome: 'item:<id>', 'fantasia:<id>', 'obra:<n>' ou um desenho de arte.ts. */
+/**
+ * Como cada premium aparece na lojinha: desenhado do 3D de verdade (a criança vê o que
+ * ganha). As roupas no boneco da própria criança (sem a fantasia da 017), cada uma do jeito que
+ * ela aparece melhor (a capa de costas, o tênis de perto); os bichinhos sozinhos.
+ */
+const FOTO_PREMIUM: Record<string, { recorte: RecorteBoneco; giro: number; bicho?: IdBichoPremium }> = {
+  'camiseta-arco-iris': { recorte: 'corpo', giro: 0.36 },
+  'tenis-cometa': { recorte: 'pes', giro: 0.75 },
+  'capa-estrelas': { recorte: 'corpo', giro: Math.PI - 1.05 },
+  dragao: { recorte: 'corpo', giro: 0.62 },
+  pinguim: { recorte: 'corpo', giro: 0.5, bicho: 'pinguim' },
+  unicornio: { recorte: 'corpo', giro: 0.62, bicho: 'unicornio' },
+};
+
+/** A foto de um premium (o 3D de verdade) num canvas novo. */
+export function fotoPremium(id: string, altura = 280): HTMLCanvasElement {
+  const cv = document.createElement('canvas');
+  const p = premiumPorId(id);
+  const f = FOTO_PREMIUM[id];
+  if (!p || !f) return cv;
+  const a = aparenciaAtual();
+  fotografarBoneco(
+    cv,
+    normalizarAparencia({ ...a, fantasia: undefined, premium: { [p.categoria]: id } }),
+    f.recorte,
+    altura,
+    { giro: f.giro, bicho: f.bicho },
+  );
+  return cv;
+}
+
+/** Uma figura pelo nome: 'item:<id>', 'fantasia:<id>', 'obra:<n>', 'premium:<id>' ou um desenho de arte.ts. */
 export function figura(desenho: string, classe = ''): HTMLElement {
   const el = document.createElement('span');
   el.className = `alma-fig ${classe}`.trim();
@@ -86,6 +119,9 @@ export function figura(desenho: string, classe = ''): HTMLElement {
     fotografarBoneco(cv, { ...aparenciaAtual(), fantasia: { id, cor: 0 } }, 'corpo', 260);
     el.appendChild(cv);
     el.dataset.tipo = 'fantasia';
+  } else if (desenho.startsWith('premium:')) {
+    el.appendChild(fotoPremium(desenho.slice(8)));
+    el.dataset.tipo = 'premium';
   } else if (desenho.startsWith('obra:')) {
     const img = document.createElement('img');
     img.alt = '';

@@ -576,7 +576,7 @@ export const PREMIUM: readonly ItemPremium[] = [
     nome: 'Camiseta arco-íris',
     preco: 15,
     efeito: 'as listras correm devagar pela camiseta; brilho suave nas bordas',
-    desenho: 'pCamiseta',
+    desenho: 'premium:camiseta-arco-iris',
   },
   {
     id: 'tenis-cometa',
@@ -584,7 +584,7 @@ export const PREMIUM: readonly ItemPremium[] = [
     nome: 'Tênis-cometa',
     preco: 20,
     efeito: 'faixa de luz arco-íris; pegadas de luz e estrelinhas a cada passo',
-    desenho: 'pTenis',
+    desenho: 'premium:tenis-cometa',
   },
   {
     id: 'capa-estrelas',
@@ -592,7 +592,7 @@ export const PREMIUM: readonly ItemPremium[] = [
     nome: 'Capa de estrelas',
     preco: 30,
     efeito: 'balança com o andar e o vento; estrelas que piscam',
-    desenho: 'pCapa',
+    desenho: 'premium:capa-estrelas',
   },
   {
     id: 'dragao',
@@ -600,7 +600,7 @@ export const PREMIUM: readonly ItemPremium[] = [
     nome: 'Dragãozinho',
     preco: 55,
     efeito: 'capuz de dragão e asas que batem',
-    desenho: 'pDragao',
+    desenho: 'premium:dragao',
   },
   {
     id: 'pinguim',
@@ -608,7 +608,7 @@ export const PREMIUM: readonly ItemPremium[] = [
     nome: 'Pinguinzinho',
     preco: 60,
     efeito: 'segue gingando e escorrega de barriga',
-    desenho: 'pPinguim',
+    desenho: 'premium:pinguim',
   },
   {
     id: 'unicornio',
@@ -616,11 +616,34 @@ export const PREMIUM: readonly ItemPremium[] = [
     nome: 'Unicórnio-pônei',
     preco: 80,
     efeito: 'trota atrás, pula junto, chifre que brilha e coraçõezinhos',
-    desenho: 'pUnicornio',
+    desenho: 'premium:unicornio',
   },
 ];
 export const premiumPorId = (id: string): ItemPremium | undefined =>
   PREMIUM.find((p) => p.id === id);
+
+/**
+ * Categorias que dividem o mesmo lugar no boneco: as asas do dragãozinho (fantasia) ficam nas
+ * costas, onde vai a capa. Vestir uma tira a outra (às claras, na lojinha), nunca as duas
+ * vestidas com uma escondida.
+ */
+export const LUGAR_DIVIDIDO: Readonly<Partial<Record<CategoriaPremium, CategoriaPremium>>> = {
+  fantasia: 'costas',
+  costas: 'fantasia',
+};
+
+/** O que sai do boneco ao vestir `id`: o da mesma categoria e o que divide o lugar com ele. */
+export function saiAoVestir(
+  vestidos: Readonly<Partial<Record<CategoriaPremium, string>>>,
+  id: string,
+): string[] {
+  const p = premiumPorId(id);
+  if (!p) return [];
+  const out: string[] = [];
+  for (const cat of [p.categoria, LUGAR_DIVIDIDO[p.categoria]])
+    if (cat && vestidos[cat] && vestidos[cat] !== id) out.push(vestidos[cat]!);
+  return out;
+}
 
 // ------------------------------------------------------------------ ritmo
 /** O que uma sessão de 15 minutos costuma render (a conta de equilíbrio da spec). */
@@ -1091,6 +1114,8 @@ export function normalizarPerfilAlma(v: unknown): PerfilAlma {
     for (const [cat, id] of Object.entries(v.vestidos))
       if (typeof id === 'string' && c.premium.includes(id) && premiumPorId(id)?.categoria === cat)
         c.vestidos[cat as CategoriaPremium] = id;
+  // guardado de antes da regra do lugar dividido: a fantasia (as asas) fica, a capa sai
+  if (c.vestidos.fantasia) delete c.vestidos.costas;
   c.fantasias = Array.isArray(v.fantasias)
     ? [
         ...new Set(v.fantasias.filter((f): f is string => typeof f === 'string' && f.length <= 40)),
@@ -1178,14 +1203,19 @@ export function comprarPremium(
   c.moedas -= p.preco;
   c.gastou += p.preco;
   c.premium.push(id);
-  c.vestidos[p.categoria] = id;
+  vestirPeca(c, p);
   return { ok: true };
+}
+function vestirPeca(c: PerfilAlma, p: ItemPremium): void {
+  const outra = LUGAR_DIVIDIDO[p.categoria];
+  if (outra) delete c.vestidos[outra];
+  c.vestidos[p.categoria] = p.id;
 }
 /** Veste ou tira um premium já comprado (um por categoria). */
 export function vestirPremium(c: PerfilAlma, id: string, vestir: boolean): boolean {
   const p = premiumPorId(id);
   if (!p || !c.premium.includes(id)) return false;
-  if (vestir) c.vestidos[p.categoria] = id;
+  if (vestir) vestirPeca(c, p);
   else if (c.vestidos[p.categoria] === id) delete c.vestidos[p.categoria];
   return true;
 }

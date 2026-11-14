@@ -4,7 +4,9 @@ import {
   nivelDaCrianca,
   type PerfilCrianca,
 } from './personagem/almaCrianca';
-import { ligarAlmaUi } from './ui/alma';
+import { EVENTO_LOJINHA, ligarAlmaUi } from './ui/alma';
+import { arte as arteAlma } from './ui/alma/arte';
+import { EXTRAS_RODA } from './ui/menuRoda';
 import { CATEGORIAS_PREMIUM, ganhoTemAlgo, nivelDoXp } from './jogo/alma';
 import type { EventoNucleo } from './nucleo/protocolo';
 import { medirJanela, tamanhoDoCanvas } from './ui/telaCheia';
@@ -214,6 +216,15 @@ async function iniciar(app: HTMLElement): Promise<void> {
   if (esboco === 'amigos') (await import('./esboco/amigos')).prepararEsbocoAmigos();
   // esboço 014d (só com ?esboco=estetica): a estética firme dos veículos ao lado da de hoje
   if (esboco === 'estetica') (await import('./esboco/veiculosEstetica')).prepararEsbocoEstetica();
+  // spec 023 (T14): a lojinha premium na roda do menu, de qualquer mundo (a roda é montada
+  // com a cena; a alma, que abre a lojinha, vem depois e ouve o pedido)
+  if (!EXTRAS_RODA.some((x) => x.id === 'lojinha'))
+    EXTRAS_RODA.push({
+      id: 'lojinha',
+      nome: 'Lojinha',
+      icone: arteAlma('vitrine'),
+      aoEscolher: () => window.dispatchEvent(new CustomEvent(EVENTO_LOJINHA)),
+    });
   // em prévia de outro tema nada é salvo: o mundo continua sendo do tema dele
   cena = criarCena(canvas, hotbar, {
     mundo: atual,

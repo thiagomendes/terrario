@@ -101,10 +101,12 @@ export const CSS_FESTA = `
 .alma-festa.premium .premio .alma-fig { filter: drop-shadow(0 0 22px rgba(255, 220, 120, 0.55)) drop-shadow(0 10px 0 rgba(0,0,0,0.25)); animation: alma-flutua 3s ease-in-out 1s infinite; }
 .alma-festa.premium .pedestal { width: min(46vh, 300px); height: 34px; margin-top: -26px; border-radius: 50%;
   background: radial-gradient(ellipse at 50% 30%, #ffe9a8, #c9902a 60%, #7a5214); box-shadow: 0 10px 30px rgba(255,200,90,0.35); }
-.alma-festa.premium .brilho { position: absolute; inset: 0; overflow: hidden; border-radius: 30px; pointer-events: none; }
-.alma-festa.premium .brilho::after { content: ''; position: absolute; top: -20%; bottom: -20%; width: 30%; left: -40%; transform: skewX(-18deg);
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.55), transparent); animation: alma-varre 2.6s ease-in-out 1.1s infinite; }
-@keyframes alma-varre { to { left: 130%; } }
+.alma-festa.premium .brilho { position: absolute; inset: -14%; z-index: -1; border-radius: 50%; pointer-events: none;
+  background: radial-gradient(circle, rgba(255, 238, 170, 0.62), rgba(255, 210, 120, 0.18) 45%, transparent 66%); animation: alma-aura 2.4s ease-in-out 1s infinite; }
+.alma-festa.premium .brilho::after { content: ''; position: absolute; inset: 8%; border-radius: 50%;
+  background: repeating-conic-gradient(rgba(255,246,200,0.26) 0 8deg, transparent 8deg 30deg); animation: alma-gira 9s linear infinite;
+  -webkit-mask: radial-gradient(circle, #000 30%, transparent 70%); mask: radial-gradient(circle, #000 30%, transparent 70%); }
+@keyframes alma-aura { 50% { transform: scale(1.08); opacity: 0.8; } }
 @keyframes alma-sobe { from { transform: translateY(40%) scale(0.6); opacity: 0; } }
 @keyframes alma-flutua { 50% { transform: translateY(-8px); } }
 @keyframes alma-chega { from { transform: scale(0.1) rotate(-20deg); opacity: 0; } }

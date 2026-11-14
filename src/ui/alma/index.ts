@@ -13,6 +13,7 @@ import { CSS_ALMA_HUD, criarHudAlma, type HudAlma } from './hud';
 import { CSS_ALMA_BAU, criarBau, type BauAlma } from './bau';
 import { CSS_FESTA } from './festa';
 import { criarFestas, type FestasAlma } from './festas';
+import { CSS_LOJA, criarLoja, type LojaAlma } from './loja';
 import type { MissaoMovida } from '../../jogo/alma';
 import type { Aparencia } from '../../personagem/aparencia';
 
@@ -63,12 +64,16 @@ export interface AlmaUi {
   hud: HudAlma;
   bau: BauAlma;
   festas: FestasAlma;
+  loja: LojaAlma;
   vista(): VistaAlmaMundo | null;
 }
 
+/** A roda do menu pede a lojinha por este evento (ela é montada antes da alma). */
+export const EVENTO_LOJINHA = 'brumaluz:lojinha';
+
 export function ligarAlmaUi(op: OpcoesAlmaUi): AlmaUi {
   const estilo = document.createElement('style');
-  estilo.textContent = CSS_ALMA_HUD + CSS_ALMA_BAU + CSS_FESTA;
+  estilo.textContent = CSS_ALMA_HUD + CSS_ALMA_BAU + CSS_FESTA + CSS_LOJA;
   document.head.appendChild(estilo);
 
   let vista: VistaAlmaMundo | null = null;
@@ -102,6 +107,12 @@ export function ligarAlmaUi(op: OpcoesAlmaUi): AlmaUi {
     vestir: (id) =>
       window.dispatchEvent(new CustomEvent('brumaluz:vestirFantasia', { detail: { id } })),
     aoFechar: () => op.aoFechar(),
+  });
+  // a lojinha premium (pela roda do menu, de qualquer mundo)
+  const loja = criarLoja({ hud, festas, perfil: op.perfil, aoFechar: () => op.aoFechar() });
+  window.addEventListener(EVENTO_LOJINHA, () => {
+    if (document.querySelector('.entrada:not([hidden])')) return;
+    loja.abrir();
   });
   /** As missões que acabaram no evento de agora (o perfil soma o ganho logo depois). */
   let concluidas: MissaoMovida[] = [];
@@ -172,7 +183,7 @@ export function ligarAlmaUi(op: OpcoesAlmaUi): AlmaUi {
     bau.abrir();
   });
 
-  const ui: AlmaUi = { hud, bau, festas, vista: () => vista };
+  const ui: AlmaUi = { hud, bau, festas, loja, vista: () => vista };
   (window as unknown as { __almaUi?: AlmaUi }).__almaUi = ui;
   return ui;
 }

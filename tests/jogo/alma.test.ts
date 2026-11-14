@@ -33,6 +33,7 @@ import {
   perfilAlmaVazio,
   registrarEvento,
   vestirPremium,
+  saiAoVestir,
   visitarLugar,
   vistaAlmaMundo,
   type AlmaMundo,
@@ -270,6 +271,27 @@ describe('alma: banca e premium', () => {
     expect(vestirPremium(c, 'camiseta-arco-iris', false)).toBe(true);
     expect(c.vestidos.roupa).toBeUndefined();
     expect(vestirPremium(c, 'dragao', true)).toBe(false);
+  });
+  it('o dragãozinho e a capa dividem as costas: vestir um tira o outro, às claras', () => {
+    const c = perfilAlmaVazio();
+    c.moedas = 200;
+    expect(comprarPremium(c, 'capa-estrelas')).toEqual({ ok: true });
+    expect(comprarPremium(c, 'tenis-cometa')).toEqual({ ok: true });
+    expect(saiAoVestir(c.vestidos, 'dragao')).toEqual(['capa-estrelas']);
+    expect(saiAoVestir(c.vestidos, 'camiseta-arco-iris')).toEqual(['tenis-cometa']);
+    expect(saiAoVestir(c.vestidos, 'unicornio')).toEqual([]);
+    expect(comprarPremium(c, 'dragao')).toEqual({ ok: true });
+    expect(c.vestidos).toEqual({ roupa: 'tenis-cometa', fantasia: 'dragao' });
+    expect(saiAoVestir(c.vestidos, 'capa-estrelas')).toEqual(['dragao']);
+    expect(vestirPremium(c, 'capa-estrelas', true)).toBe(true);
+    expect(c.vestidos).toEqual({ roupa: 'tenis-cometa', costas: 'capa-estrelas' });
+    // guardado antigo com as duas: fica a fantasia
+    const n = normalizarPerfilAlma({
+      ...c,
+      vestidos: { costas: 'capa-estrelas', fantasia: 'dragao' },
+    });
+    expect(n.vestidos).toEqual({ fantasia: 'dragao' });
+    for (const p of PREMIUM) expect(p.desenho).toBe(`premium:${p.id}`);
   });
 });
 

@@ -17,9 +17,10 @@ import { aparenciaPadrao, type Aparencia } from '../personagem/aparencia';
 import { alturaBoneco, topoBoneco } from '../personagem/boneco';
 import { criarBoneco } from './boneco';
 import type { Personagem } from './personagem';
+import { montarBichoPremium, type BichoMontado, type IdBichoPremium } from './bichoPremium';
 
 /** Faixa da altura do boneco que cada recorte mostra (0 = pés, 1 = topo da cabeça). */
-export type RecorteBoneco = 'corpo' | 'cabeca' | 'tronco' | 'pernas' | 'busto';
+export type RecorteBoneco = 'corpo' | 'cabeca' | 'tronco' | 'pernas' | 'busto' | 'pes';
 /** Largura sobre altura de cada recorte (o canvas ganha esse formato). */
 const FORMATO: Record<RecorteBoneco, number> = {
   corpo: 0.72,
@@ -27,6 +28,7 @@ const FORMATO: Record<RecorteBoneco, number> = {
   tronco: 1.15,
   pernas: 0.85,
   busto: 0.9,
+  pes: 1.5,
 };
 const FAIXAS: Record<RecorteBoneco, [number, number]> = {
   corpo: [-0.02, 1.04],
@@ -34,6 +36,7 @@ const FAIXAS: Record<RecorteBoneco, [number, number]> = {
   tronco: [0.24, 0.72],
   pernas: [-0.02, 0.5],
   busto: [0.24, 1.05],
+  pes: [-0.03, 0.155],
 };
 
 interface Pedido {
@@ -41,7 +44,14 @@ interface Pedido {
   aparencia: Aparencia;
   recorte: RecorteBoneco;
   chave: string;
+  /** Para onde o boneco olha (rad; padrão: de quina, um pouco para a direita). */
+  giro?: number;
+  /** Spec 023: só o bichinho premium (a vitrine da lojinha), sem o boneco. */
+  bicho?: IdBichoPremium;
 }
+
+/** O giro padrão do boneco no estúdio: de quina, um pouco virado para a direita. */
+const GIRO_PADRAO = 0.42;
 
 let estudio: {
   canvas: HTMLCanvasElement;
@@ -49,6 +59,7 @@ let estudio: {
   scene: Scene;
   camera: FreeCamera;
   boneco: Personagem;
+  bichos: Partial<Record<IdBichoPremium, BichoMontado>>;
 } | null = null;
 let falhou = false;
 const fila: Pedido[] = [];
@@ -89,8 +100,8 @@ function abrirEstudio(): typeof estudio {
     sol.specular = new Color3(0.32, 0.31, 0.3);
     const boneco = criarBoneco(scene, aparenciaPadrao(), 'foto');
     // de quina, um pouco virado para a direita (como no esboço)
-    boneco.posicionar(0, 0, 0, Math.PI + 0.42);
-    estudio = { canvas, engine, scene, camera, boneco };
+    boneco.posicionar(0, 0, 0, Math.PI + GIRO_PADRAO);
+    estudio = { canvas, engine, scene, camera, boneco, bichos: {} };
     // sair da página solta também o contexto do estúdio (no iPhone cada contexto pesa)
     antesDeSair(() => {
       liberarEngine(engine);
@@ -110,20 +121,25 @@ export function fotografarBoneco(
   recorte: RecorteBoneco = 'corpo',
   /** Altura da foto em pixels (o palco usa uma maior que as miniaturas). */
   altura = 200,
+  /** Spec 023: o giro do boneco (a capa se vê de costas) ou só o bichinho premium. */
+  extra: { giro?: number; bicho?: IdBichoPremium } = {},
 ): void {
   // o canvas ganha o formato do recorte (o CSS cuida do tamanho na tela)
-  const larg = Math.round(altura * FORMATO[recorte]);
+  // o bichinho é mais comprido que alto: quadro mais largo
+  const larg = Math.round(altura * (extra.bicho ? 1.2 : FORMATO[recorte]));
   if (alvo.width !== larg || alvo.height !== altura) {
     alvo.width = larg;
     alvo.height = altura;
     ultimoPedido.delete(alvo);
   }
-  const chave = `${JSON.stringify(aparencia)}|${recorte}|${alvo.width}x${alvo.height}`;
+  const chave = extra.bicho
+    ? `bicho:${extra.bicho}|${extra.giro ?? GIRO_PADRAO}|${alvo.width}x${alvo.height}`
+    : `${JSON.stringify(aparencia)}|${recorte}|${extra.giro ?? GIRO_PADRAO}|${alvo.width}x${alvo.height}`;
   if (ultimoPedido.get(alvo) === chave) return;
   ultimoPedido.set(alvo, chave);
   // um canvas só precisa da foto mais nova
   for (let i = fila.length - 1; i >= 0; i--) if (fila[i].alvo === alvo) fila.splice(i, 1);
-  fila.push({ alvo, aparencia, recorte, chave });
+  fila.push({ alvo, aparencia, recorte, chave, giro: extra.giro, bicho: extra.bicho });
   if (!andando) {
     andando = true;
     // fila parada: tira a foto logo depois do toque, sem esperar o próximo quadro (spec 017:
@@ -161,7 +177,19 @@ function passo(): void {
         copiar(pronta, p.alvo);
         continue;
       }
-      e.boneco.aplicarAparencia(p.aparencia);
+      const giro = p.giro ?? GIRO_PADRAO;
+      for (const b of Object.values(e.bichos)) b?.raiz.setEnabled(false);
+      if (p.bicho) {
+        e.boneco.definirVisivel(false);
+        const b = (e.bichos[p.bicho] ??= montarBichoPremium(e.scene, p.bicho));
+        b.raiz.setEnabled(true);
+        b.raiz.position.set(0, 0, 0);
+        b.raiz.rotation.y = Math.PI + giro;
+      } else {
+        e.boneco.definirVisivel(true);
+        e.boneco.aplicarAparencia(p.aparencia);
+        e.boneco.posicionar(0, 0, 0, Math.PI + giro);
+      }
       esperando = { pedido: p, tentativas: 0 };
     }
     const { pedido } = esperando;
@@ -175,16 +203,35 @@ function passo(): void {
       e.canvas.height = alt;
       e.engine.resize();
     }
-    const h = alturaBoneco(pedido.aparencia);
-    const [f0, f1] = FAIXAS[pedido.recorte];
-    const y0 = h * f0;
-    // a faixa vai até o alto do chapéu ou do penteado (a copa não sai cortada)
-    const y1 = f1 >= 1 ? Math.max(h * f1, topoBoneco(pedido.aparencia) + h * (f1 - 1)) : h * f1;
-    const meiaAlt = (y1 - y0) / 2 / 0.92;
-    const meiaLarg = meiaAlt * (larg / alt);
+    let y0: number;
+    let y1: number;
+    let cx = 0;
+    let meiaAlt: number;
+    let meiaLarg: number;
+    const bicho = pedido.bicho ? e.bichos[pedido.bicho] : undefined;
+    if (bicho) {
+      // o bichinho inteiro no quadro (chifre, crina e rabo), visto um pouco de cima
+      bicho.raiz.computeWorldMatrix(true);
+      for (const m of bicho.malhas) m.computeWorldMatrix(true);
+      const { min, max } = bicho.raiz.getHierarchyBoundingVectors(true);
+      y0 = min.y;
+      y1 = max.y;
+      cx = (min.x + max.x) / 2;
+      const meiaL = (max.x - min.x) / 2;
+      meiaAlt = Math.max((y1 - y0) / 2, meiaL * (alt / larg)) / 0.86;
+      meiaLarg = meiaAlt * (larg / alt);
+    } else {
+      const h = alturaBoneco(pedido.aparencia);
+      const [f0, f1] = FAIXAS[pedido.recorte];
+      y0 = h * f0;
+      // a faixa vai até o alto do chapéu ou do penteado (a copa não sai cortada)
+      y1 = f1 >= 1 ? Math.max(h * f1, topoBoneco(pedido.aparencia) + h * (f1 - 1)) : h * f1;
+      meiaAlt = (y1 - y0) / 2 / 0.92;
+      meiaLarg = meiaAlt * (larg / alt);
+    }
     const cy = (y0 + y1) / 2;
-    e.camera.position.set(0, cy + 0.6, -10);
-    e.camera.setTarget(new Vector3(0, cy, 0));
+    e.camera.position.set(cx, cy + 0.6, -10);
+    e.camera.setTarget(new Vector3(cx, cy, 0));
     e.camera.orthoTop = meiaAlt;
     e.camera.orthoBottom = -meiaAlt;
     e.camera.orthoLeft = -meiaLarg;

@@ -4,7 +4,7 @@ import { mkdirSync } from 'node:fs';
 /**
  * Spec 015 (decisão do dono: opção C do esboço dos menus, em todo aparelho). Em cima à
  * esquerda, informações e o botão da roda; embaixo do minimapa, só a mochila; o minimapa abre
- * o mapa grande. A roda tem Mapa, Diário, Personagem, Foto, Gestos, Tela cheia e Pausa;
+ * o mapa grande. A roda tem Mapa, Diário, Personagem, Lojinha (023), Foto, Gestos, Tela cheia e Pausa;
  * "Gestos" troca pela roda de gestos com "Voltar" no meio; segurar o botão abre os gestos.
  */
 const PASTA = 'test-results/gestos015';
@@ -65,6 +65,8 @@ const ABRE: Record<string, (p: Page) => Promise<boolean>> = {
         !!document.querySelector('.entrada:not([hidden])') &&
         !!document.querySelector('[data-painel-personagem]')?.getClientRects().length,
     ),
+  // spec 023: a lojinha premium
+  lojinha: (p) => p.evaluate(() => !!document.querySelector('[data-alma-loja]')),
   foto: (p) => p.evaluate(() => document.body.classList.contains('modo-foto')),
   pausa: (p) => p.evaluate(() => document.body.dataset.overlay === 'pausa'),
 };
@@ -88,6 +90,7 @@ async function cadaItem(page: Page, tocar: boolean, nome: string) {
     'mapa',
     'diario',
     'personagem',
+    'lojinha',
     'foto',
     'gestos',
     'casa',
