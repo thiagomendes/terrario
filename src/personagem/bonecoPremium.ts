@@ -324,8 +324,467 @@ function tenisCometa(P: Pecas, m: MedidasBoneco): void {
   }
 }
 
+// ------------------------------------------------------------------ capa de estrelas
+/** Pano da capa (como o da 017): estreito em cima, largo embaixo, pontas redondas. */
+function perfilPano(cima: number, baixo: number, comprimento: number): P2[] {
+  const r = Math.min(0.08, baixo / 6);
+  const pts: P2[] = [
+    [-cima / 2, 0],
+    [cima / 2, 0],
+  ];
+  const meio = baixo / 2;
+  pts.push([meio, -comprimento + r]);
+  for (let i = 1; i <= 3; i++) {
+    const a = (i / 4) * (Math.PI / 2);
+    pts.push([meio - r + Math.cos(a) * r, -comprimento + r - Math.sin(a) * r]);
+  }
+  // a barra de baixo em três ondinhas (o veludo cai em dobras)
+  for (let i = 1; i < 12; i++) {
+    const x = meio - r - (i / 12) * (baixo - 2 * r);
+    pts.push([x, -comprimento - Math.sin((i / 12) * Math.PI * 3) * 0.018]);
+  }
+  for (let i = 3; i >= 1; i--) {
+    const a = (i / 4) * (Math.PI / 2);
+    pts.push([-meio + r - Math.cos(a) * r, -comprimento + r - Math.sin(a) * r]);
+  }
+  pts.push([-meio, -comprimento + r]);
+  return pts.reverse();
+}
+
+/**
+ * A lua crescente: o arco de fora (do círculo de raio r) e o de dentro (de um círculo
+ * deslocado para a direita que passa pelas duas pontas), sem cruzar.
+ */
+function perfilLua(r: number): P2[] {
+  const pts: P2[] = [];
+  const graus = Math.PI / 180;
+  for (let i = 0; i <= 16; i++) {
+    const a = (60 + (i / 16) * 240) * graus;
+    pts.push([Math.cos(a) * r, Math.sin(a) * r]);
+  }
+  const c = 0.5 * r;
+  const q = Math.sqrt(0.75) * r;
+  for (let i = 15; i >= 1; i--) {
+    const a = (90 + (i / 16) * 180) * graus;
+    pts.push([c + Math.cos(a) * q, Math.sin(a) * q]);
+  }
+  return pts;
+}
+
+function capaDeEstrelas(P: Pecas, m: MedidasBoneco): void {
+  const { quadril, troncoH } = m;
+  // a capa da fantasia (se houver) dá lugar à de estrelas
+  P.tirar(/^capa-/);
+  const comp = Math.min(0.72, quadril + troncoH - 0.08);
+  const cima = 0.36;
+  const baixo = 0.74;
+  const esp = 0.035;
+  const zPano = -0.025 - esp / 2;
+  const noite = '#1d2a78';
+  const violeta = '#5a2aa8';
+  // o veludo: azul-noite em cima que vira violeta na barra
+  P.placa('capa-veludo', 'capa', 'tronco', perfilPano(cima, baixo, comp), esp, [0, -0.005, zPano], noite, {
+    viva: true,
+    brilho: 0.55,
+    pintar: (_x, y) => misturarCor(noite, violeta, -y / comp),
+  });
+  // a barra de ouro: o mesmo pano um pouco maior, na frente (aparece em volta)
+  P.placa(
+    'capa-barra',
+    'capa',
+    'tronco',
+    perfilPano(cima + 0.02, baixo + 0.045, comp + 0.03),
+    0.02,
+    [0, -0.0, zPano + esp / 2 + 0.002],
+    OURO_FUNDO,
+    { brilho: 0.8 },
+  );
+  // as estrelas por fora do veludo (nas costas), em três tempos de piscar, e a lua
+  const zFora = zPano - esp / 2 - 0.006;
+  const largura = (y: number) => cima + ((baixo - cima) * -y) / comp;
+  const estrelas: Array<[number, number, number, 0 | 1 | 2]> = [
+    // [fração de x na largura, fração do comprimento, raio, tempo]
+    [-0.28, 0.2, 0.05, 0],
+    [0.22, 0.3, 0.038, 1],
+    [-0.05, 0.42, 0.06, 2],
+    [0.33, 0.55, 0.045, 0],
+    [-0.34, 0.62, 0.04, 1],
+    [0.06, 0.72, 0.035, 0],
+    [-0.15, 0.86, 0.05, 2],
+    [0.25, 0.86, 0.042, 1],
+    [0.38, 0.18, 0.028, 2],
+  ];
+  estrelas.forEach(([fx, fy, r, tempo], i) => {
+    const y = -fy * comp;
+    P.placa(`capa-estrela${i}`, 'capa', 'tronco', perfilEstrela(r), 0.012, [fx * largura(y), y, zFora], '#fff3b0', {
+      luz: `estrela${tempo}` as const,
+      rot: [0, Math.PI, 0.3 * i],
+    });
+  });
+  // pontinhos de poeira de estrela
+  const pontos: Array<[number, number]> = [
+    [0.1, 0.14],
+    [-0.4, 0.4],
+    [0.4, 0.4],
+    [-0.22, 0.5],
+    [0.16, 0.6],
+    [-0.02, 0.92],
+    [0.42, 0.72],
+    [-0.42, 0.8],
+  ];
+  pontos.forEach(([fx, fy], i) => {
+    const y = -fy * comp;
+    P.bola(`capa-poeira${i}`, 'capa', 'tronco', 0.012, [fx * largura(y), y, zFora], '#fff3b0', [1, 1, 0.5], {
+      luz: `estrela${(i % 3) as 0 | 1 | 2}` as const,
+    });
+  });
+  const yLua = -0.36 * comp;
+  P.placa('capa-lua', 'capa', 'tronco', perfilLua(0.075), 0.014, [0.2 * largura(yLua) + 0.1, yLua + 0.1, zFora], '#ffe9a0', {
+    luz: 'ouro',
+    rot: [0, Math.PI, -0.35],
+  });
+  // a gola de ouro e os broches de estrela na frente dos ombros
+  P.caixa('capa-gola', 'capa', 'tronco', [0.42, 0.07, 0.13], [0, 0.015, -0.035], OURO, 0.033, { brilho: 0.85 });
+  for (const s of [-1, 1])
+    P.placa(`capa-broche${s}`, 'capa', 'tronco', perfilEstrela(0.052), 0.024, [s * 0.16, 0.03, 0.09], OURO, {
+      luz: 'ouro',
+    });
+}
+
+// ------------------------------------------------------------------ dragãozinho (a fantasia)
+/** As cores do dragão (a principal vem do catálogo; o resto combina com ela). */
+const DRAGAO = {
+  escuro: '#1f8f7a',
+  claro: '#5fe0be',
+  asa1: '#34d6b4',
+  asa2: '#8a6aff',
+  asa3: '#ff86d6',
+  espinho: '#9a7bff',
+  espinhoPonta: '#ff9ad8',
+  barriga: '#fff1c4',
+  barriga2: '#ffe08a',
+  garra: '#fffaf0',
+};
+
+/** O capuz refeito: a cabeça de dragão de pelúcia, com o rosto da criança aparecendo embaixo. */
+export function capuzDragao(lista: Peca[], m: MedidasBoneco, c: string): void {
+  const P = new Pecas(lista);
+  const { cab } = m;
+  const capH = 0.34;
+  const capY = m.topoTampa + 0.04 - capH / 2;
+  const capW = cab.w + 0.15;
+  const capD = cab.d + 0.12;
+  const baixo = capY - capH / 2;
+  const cima = capY + capH / 2;
+  const frente = capD / 2 - 0.03;
+  const claro = DRAGAO.claro;
+  // a cúpula do capuz e a nuca descendo atrás (capuz de verdade, não uma caixa em cima)
+  P.caixa('dragao-capuz', 'cabeca', 'cabeca', [capW, capH, capD], [0, capY, -0.03], c, 0.14, {
+    viva: true,
+    brilho: 0.4,
+    pintar: (_x, y) => misturarCor(c, claro, (y - baixo) / capH - 0.35),
+  });
+  // o capuz de verdade: desce pelos lados e pela nuca até o queixo, com o rosto de fora
+  const baixoLado = -0.3;
+  const hLado = baixo - baixoLado + 0.08;
+  const yLado = baixoLado + hLado / 2;
+  // a nuca é uma peça só do alto ao queixo (sem a dobra entre a cúpula e a nuca)
+  const hNuca = cima - baixoLado;
+  P.caixa('dragao-nuca', 'cabeca', 'cabeca', [capW, hNuca, 0.34], [0, baixoLado + hNuca / 2, -capD / 2 + 0.14], c, 0.14, {
+    brilho: 0.4,
+  });
+  for (const s of [-1, 1])
+    P.caixa(`dragao-lado${s}`, 'cabeca', 'cabeca', [0.12, hLado, capD * 0.66], [s * (capW / 2 - 0.06), yLado, -capD / 2 + capD * 0.33 - 0.01], c, 0.06, {
+      brilho: 0.4,
+    });
+  // a borda do capuz em volta do rosto (mais clara, como pelúcia virada)
+  for (const s of [-1, 1])
+    P.caixa(`dragao-borda${s}`, 'cabeca', 'cabeca', [0.07, hLado - 0.04, 0.07], [s * (capW / 2 - 0.07), yLado + 0.01, capD * 0.16 - 0.015], claro, 0.03, {
+      brilho: 0.4,
+    });
+  // o focinho por cima da testa, mais claro, com as narinas e o sorrisinho
+  const fz = frente + 0.07;
+  const fy = baixo + 0.075;
+  P.caixa('dragao-focinho', 'cabeca', 'cabeca', [0.5, 0.15, 0.22], [0, fy, fz], c, 0.07, {
+    viva: true,
+    brilho: 0.4,
+    pintar: (_x, y, z) => misturarCor(c, claro, 0.25 + (z - fz) * 2.2 + (y - fy) * 1.5),
+  });
+  P.bola('dragao-focinho-ponta', 'cabeca', 'cabeca', 0.1, [0, fy + 0.005, fz + 0.09], claro, [2.3, 0.72, 0.9], {
+    brilho: 0.4,
+  });
+  for (const s of [-1, 1]) {
+    P.bola(`dragao-narina${s}`, 'cabeca', 'cabeca', 0.026, [s * 0.075, fy + 0.06, fz + 0.135], DRAGAO.escuro, [1.3, 0.75, 0.9], {
+      brilho: 0.2,
+    });
+    // os dentinhos de pelúcia (dois caninos e um do meio de cada lado)
+    P.cone(`dragao-dente${s}`, 'cabeca', 'cabeca', 0.07, 0.034, 0.004, [s * 0.17, fy - 0.1, fz + 0.04], '#ffffff', {
+      rot: [Math.PI, 0, 0],
+      brilho: 0.4,
+    });
+    P.cone(`dragao-dentinho${s}`, 'cabeca', 'cabeca', 0.045, 0.024, 0.004, [s * 0.06, fy - 0.09, fz + 0.06], '#ffffff', {
+      rot: [Math.PI, 0, 0],
+      brilho: 0.4,
+    });
+  }
+  // os olhos grandes em cima, nos montinhos, com a sobrancelha de escama
+  for (const s of [-1, 1]) {
+    const ox = s * 0.19;
+    const oy = cima - 0.03;
+    const oz = capD / 2 - 0.13;
+    P.bola(`dragao-montinho${s}`, 'cabeca', 'cabeca', 0.11, [ox, oy - 0.02, oz - 0.02], c, [1, 0.9, 1], { brilho: 0.4 });
+    P.bola(`dragao-olho${s}`, 'cabeca', 'cabeca', 0.088, [ox, oy + 0.01, oz + 0.04], '#ffffff', [1, 1.05, 0.75], {
+      brilho: 0.5,
+    });
+    P.bola(`dragao-pupila${s}`, 'cabeca', 'cabeca', 0.048, [ox + s * 0.005, oy + 0.0, oz + 0.095], '#22163a', [0.9, 1.15, 0.5], {
+      brilho: 0.7,
+    });
+    P.bola(`dragao-brilhinho${s}`, 'cabeca', 'cabeca', 0.017, [ox + s * 0.018, oy + 0.025, oz + 0.118], '#ffffff', [1, 1, 0.5], {
+      brilho: 0.2,
+    });
+    for (let k = -1; k <= 1; k++)
+      P.bola(
+        `dragao-sobrancelha${s}${k}`,
+        'cabeca',
+        'cabeca',
+        0.036 - Math.abs(k) * 0.005,
+        [ox + s * k * 0.055, oy + 0.095 - Math.abs(k) * 0.022, oz + 0.035],
+        DRAGAO.escuro,
+        [1, 0.62, 0.8],
+        { brilho: 0.45, rot: [0, 0, -s * k * 0.4] },
+      );
+  }
+  // os chifres de ouro grandes, curvando para trás e para fora, com a pontinha acesa
+  for (const s of [-1, 1]) {
+    const ponta = chifreCurvo(
+      P,
+      `dragao-chifre${s}`,
+      'cabeca',
+      'cabeca',
+      [s * 0.25, cima - 0.04, -0.1],
+      [-0.55, 0, -s * 0.42],
+      [-0.34, 0, -s * 0.07],
+      4,
+      0.4,
+      0.068,
+      (i) => (i === 0 ? OURO_FUNDO : OURO),
+      { brilho: 0.85 },
+    );
+    P.bola(`dragao-chifre-ponta${s}`, 'cabeca', 'cabeca', 0.018, ponta, '#fff1a8', [1, 1, 1], { luz: 'ouro' });
+    // a barbatana de lado (orelha de dragão), na cor das asas
+    P.placa(`dragao-barbatana${s}`, 'cabeca', 'cabeca', perfilFolha(0.2), 0.022, [s * (capW / 2 + 0.005), capY + 0.0, -0.12], DRAGAO.asa2, {
+      viva: true,
+      brilho: 0.45,
+      rot: [0, (s * Math.PI) / 2, -0.95],
+      pintar: (_x, y) => misturarCor(DRAGAO.asa2, DRAGAO.asa3, (y - capY + 0.1) / 0.2),
+    });
+  }
+  // os espinhos do alto do capuz, descendo pela nuca até o queixo
+  const costas = -capD / 2 - 0.03;
+  const espinhos: Array<[number, number, number, number]> = [
+    // y, z, giro, altura
+    [cima + 0.01, 0.0, -0.25, 0.17],
+    [cima - 0.01, -0.16, -0.55, 0.17],
+    [cima - 0.06, costas + 0.03, -0.85, 0.16],
+    [capY - 0.04, costas, -1.0, 0.14],
+    [capY - 0.2, costas, -1.1, 0.12],
+    [baixoLado + 0.1, costas + 0.01, -1.2, 0.1],
+  ];
+  espinhos.forEach(([y, z, g, h], i) => {
+    const meio = girar([0, h / 2, 0], [g, 0, 0]);
+    P.cone(`dragao-espinho${i}`, 'cabeca', 'cabeca', h, h * 0.42, 0.004, [0, y + meio[1] * 0.7, z + meio[2] * 0.7], DRAGAO.espinho, {
+      viva: true,
+      brilho: 0.5,
+      rot: [g, 0, 0],
+      pintar: (_x, yy, zz) =>
+        misturarCor(DRAGAO.espinho, DRAGAO.espinhoPonta, Math.hypot(yy - y, zz - z) / h + 0.2),
+    });
+  });
+}
+
+/** A barriga de escamas, os espinhos das costas e o rabo de dragão com a ponta de espada. */
+export function corpoDragao(lista: Peca[], m: MedidasBoneco, c: string, barriga: string): void {
+  const P = new Pecas(lista);
+  const { troncoH, prof, frente, larg } = m;
+  // a placa da barriga (creme) e as escamas em fileiras desencontradas por cima
+  P.caixa('dragao-barriga', 'tronco', 'tronco', [larg * 0.66, troncoH * 0.92, 0.03], [0, troncoH * 0.47, frente - 0.004], barriga, 0.07, {
+    brilho: 0.4,
+  });
+  const fileiras: Array<[number, number[]]> = [
+    [troncoH * 0.82, [-0.06, 0.06]],
+    [troncoH * 0.64, [-0.11, 0, 0.11]],
+    [troncoH * 0.46, [-0.06, 0.06]],
+    [troncoH * 0.28, [-0.11, 0, 0.11]],
+    [troncoH * 0.11, [-0.06, 0.06]],
+  ];
+  fileiras.forEach(([y, xs], f) =>
+    xs.forEach((x, i) =>
+      P.bola(
+        `dragao-escama${f}-${i}`,
+        'tronco',
+        'tronco',
+        0.06,
+        [x * (larg / 0.46), y, frente + 0.012 + (fileiras.length - f) * 0.002],
+        (f + i) % 2 ? '#fff6d8' : DRAGAO.barriga2,
+        [1.1, 0.7, 0.22],
+        { brilho: 0.45 },
+      ),
+    ),
+  );
+  // os espinhos das costas, do pescoço à cintura (entre as asas)
+  for (let i = 0; i < 4; i++) {
+    const y = troncoH - 0.04 - i * 0.11;
+    const h = 0.1 - i * 0.008;
+    P.cone(`dragao-costas${i}`, 'tronco', 'tronco', h, h * 0.45, 0.004, [0, y, -prof / 2 - h * 0.32], DRAGAO.espinho, {
+      viva: true,
+      brilho: 0.5,
+      rot: [-Math.PI / 2 + 0.35, 0, 0],
+    });
+  }
+  // o rabo: gomos que afinam, com espinho em cada um, e a ponta de espada
+  const gomos = 5;
+  let ultimo: V3 = [0, 0, 0];
+  for (let i = 0; i < gomos; i++) {
+    const r = 0.11 - i * 0.014;
+    const z = -0.06 - i * 0.095;
+    const y = -0.02 - i * 0.03 + (i >= 3 ? (i - 2) * 0.035 : 0);
+    P.bola(`dragao-rabo${i}`, 'rabo', 'tronco', r, [0, y, z], c, [1, 0.92, 1.15], {
+      viva: true,
+      brilho: 0.4,
+      pintar: (_x, yy) => misturarCor(c, DRAGAO.barriga, yy < y - r * 0.4 ? 0.7 : 0),
+    });
+    P.cone(`dragao-rabo-espinho${i}`, 'rabo', 'tronco', 0.075 - i * 0.008, 0.032 - i * 0.003, 0.003, [0, y + r * 0.9, z], DRAGAO.espinho, {
+      brilho: 0.5,
+      rot: [-0.45, 0, 0],
+    });
+    ultimo = [0, y + 0.02, z - r];
+  }
+  // a ponta de espada (coração de cabeça para baixo), de frente para quem vem atrás
+  P.placa('dragao-rabo-ponta', 'rabo', 'tronco', perfilCoracao(0.15), 0.03, [ultimo[0], ultimo[1] + 0.04, ultimo[2] - 0.03], DRAGAO.espinho, {
+    viva: true,
+    brilho: 0.55,
+    rot: [-0.5, 0, Math.PI],
+    pintar: (_x, y) => misturarCor(DRAGAO.espinhoPonta, DRAGAO.espinho, (y - ultimo[1]) / 0.12 + 0.5),
+  });
+}
+
+/** A asa (a raiz no 0,0; a ponta para +x): o pulso, as pontas dos dedos e o contorno. */
+const PULSO: P2 = [0.3, 0.36];
+const PONTAS: P2[] = [
+  [0.78, 0.52],
+  [0.74, 0.16],
+  [0.5, -0.04],
+];
+const RAIZ_BAIXO: P2 = [0.06, -0.12];
+
+function contornoAsa(): P2[] {
+  const pts: P2[] = [[0, 0.06], PULSO, PONTAS[0]];
+  const recorte = (a: P2, b: P2) => {
+    // entre duas pontas, a membrana faz a curva para dentro (puxada para o pulso)
+    for (let i = 1; i < 6; i++) {
+      const t = i / 6;
+      const x = a[0] + (b[0] - a[0]) * t;
+      const y = a[1] + (b[1] - a[1]) * t;
+      const k = Math.sin(t * Math.PI) * 0.28;
+      pts.push([x + (PULSO[0] - x) * k, y + (PULSO[1] - y) * k]);
+    }
+    pts.push(b);
+  };
+  recorte(PONTAS[0], PONTAS[1]);
+  recorte(PONTAS[1], PONTAS[2]);
+  recorte(PONTAS[2], RAIZ_BAIXO);
+  return pts;
+}
+
+/** As asas: membrana em degradê (verde-água, violeta, rosa) e os ossos de ouro. */
+export function asasDragao(lista: Peca[], m: MedidasBoneco): void {
+  const P = new Pecas(lista);
+  const { troncoH, prof } = m;
+  const K = 1.25;
+  const contorno = contornoAsa().map(([x, y]) => [x * K, y * K] as P2);
+  for (const s of [-1, 1]) {
+    const nome: SubjuntaPremium = s < 0 ? 'asaE' : 'asaD';
+    const sub = { nome, pivo: [s * 0.06, troncoH - 0.07, -prof / 2 - 0.015] as V3 };
+    const perfil = contorno.map(([x, y]) => [x * s, y] as P2);
+    P.placa(`dragao-asa${s}`, 'tronco', undefined, s < 0 ? [...perfil].reverse() : perfil, 0.018, [0, 0, 0], DRAGAO.asa2, {
+      subjunta: sub,
+      viva: true,
+      brilho: 0.6,
+      pintar: (x, y) => {
+        const d = Math.hypot(x, y - 0.1 * K) / (0.8 * K);
+        return d < 0.5
+          ? misturarCor(DRAGAO.asa1, DRAGAO.asa2, d / 0.5)
+          : misturarCor(DRAGAO.asa2, DRAGAO.asa3, (d - 0.5) / 0.5);
+      },
+    });
+    // os ossos de ouro: do ombro ao pulso, e do pulso a cada ponta (com as bolinhas das juntas)
+    const osso = (a: P2, b: P2, r: number, i: number) => {
+      const ax = a[0] * K * s;
+      const ay = a[1] * K;
+      const bx = b[0] * K * s;
+      const by = b[1] * K;
+      const dx = bx - ax;
+      const dy = by - ay;
+      const comp = Math.hypot(dx, dy);
+      P.cone(`dragao-asa-osso${s}${i}`, 'tronco', undefined, comp, r, r * 0.75, [ax + dx / 2, ay + dy / 2, 0], OURO, {
+        subjunta: sub,
+        rot: [0, 0, -Math.atan2(dx, dy)],
+        brilho: 0.85,
+      });
+      P.bola(`dragao-asa-junta${s}${i}`, 'tronco', undefined, r * 1.15, [bx, by, 0], OURO, [1, 1, 1], {
+        subjunta: sub,
+        brilho: 0.85,
+      });
+    };
+    osso([0, 0.06], PULSO, 0.032, 0);
+    PONTAS.forEach((p, i) => osso(PULSO, p, i === 0 ? 0.024 : 0.018, i + 1));
+    P.bola(`dragao-asa-ombro${s}`, 'tronco', undefined, 0.045, [0, 0.06 * K, 0], OURO, [1, 1, 1], {
+      subjunta: sub,
+      brilho: 0.85,
+    });
+    // a garrinha de ouro no pulso, acesa
+    P.cone(`dragao-asa-garra${s}`, 'tronco', undefined, 0.06, 0.02, 0.003, [PULSO[0] * K * s, PULSO[1] * K + 0.045, 0], '#fff1a8', {
+      subjunta: sub,
+      luz: 'ouro',
+      rot: [0, 0, -s * 0.3],
+    });
+  }
+}
+
+/** As patinhas: as mãos na cor do dragão com garrinhas, e os pés de pelúcia com três garras. */
+export function patasDragao(lista: Peca[], m: MedidasBoneco, c: string): void {
+  const P = new Pecas(lista);
+  const { quadril } = m;
+  for (const p of lista)
+    if (/^braco[ED]-mao$/.test(p.nome)) {
+      p.cor = c;
+      p.brilho = 0.4;
+    }
+  for (const mao of ['maoE', 'maoD'] as const)
+    for (let i = -1; i <= 1; i++)
+      P.bola(`${mao}-garra${i}`, mao, 'mao', 0.024, [i * 0.04, -0.06, 0.06], DRAGAO.garra, [0.9, 1.25, 0.9], {
+        brilho: 0.45,
+      });
+  P.tirar(/^perna[ED]-sapato$/);
+  for (const lado of ['pernaE', 'pernaD'] as const) {
+    P.caixa(`${lado}-sapato`, lado, 'perna', [0.23, 0.15, 0.3], [0, -quadril + 0.075, 0.035], c, 0.07, { brilho: 0.4 });
+    P.caixa(`${lado}-sapato-sola`, lado, 'perna', [0.225, 0.03, 0.29], [0, -quadril + 0.015, 0.035], DRAGAO.barriga2, 0.014, {
+      brilho: 0.35,
+    });
+    for (let i = -1; i <= 1; i++)
+      P.cone(`${lado}-sapato-garra${i}`, lado, 'perna', 0.06, 0.026, 0.004, [i * 0.065, -quadril + 0.05, 0.2], DRAGAO.garra, {
+        rot: [Math.PI / 2, 0, 0],
+        brilho: 0.45,
+      });
+  }
+}
+
 // ------------------------------------------------------------------ o premium no plano
-/** Acrescenta os premium de roupa ao plano (por cima do look e da fantasia). */
+/**
+ * Acrescenta os premium de roupa e de costas ao plano (por cima do look e da fantasia). O
+ * dragãozinho veste pela fantasia (bonecoFantasia.ts); com ele, a capa fica guardada (uma coisa
+ * só nas costas: as asas).
+ */
 export function vestirPremiumNoPlano(
   premium: PremiumVestido,
   lista: Peca[],
@@ -335,4 +794,15 @@ export function vestirPremiumNoPlano(
   const P = new Pecas(lista);
   if (premium.roupa === 'camiseta-arco-iris') camisetaArcoIris(P, m);
   if (premium.roupa === 'tenis-cometa') tenisCometa(P, m);
+  if (premium.costas === 'capa-estrelas' && !premium.fantasia) {
+    capaDeEstrelas(P, m);
+    // o cabelo comprido das costas cai por cima da gola (termina acima do pano), como na 017
+    for (const p of lista)
+      if (p.junta === 'cabeca' && p.nome === 'costas' && p.forma === 'caixa') {
+        const topo = p.pos[1] + p.tamanho[1] / 2;
+        const baixo = -0.2;
+        p.tamanho = [p.tamanho[0], topo - baixo, p.tamanho[2]];
+        p.pos = [p.pos[0], (topo + baixo) / 2, p.pos[2] - 0.01];
+      }
+  }
 }

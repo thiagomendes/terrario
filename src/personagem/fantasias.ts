@@ -66,7 +66,12 @@ export type TipoPeca =
   | 'chapeu-peao'
   | 'estrela-peao'
   | 'fivela-campeao'
-  | 'franjas';
+  | 'franjas'
+  // spec 023: o dragãozinho da lojinha premium (capuz refeito, corpo de escamas, asas e patas)
+  | 'capuz-dragao'
+  | 'corpo-dragao'
+  | 'asas-dragao'
+  | 'patas-dragao';
 
 /** Símbolos próprios (nada de letra no peito, teia ou morcego). */
 export type Simbolo = 'flor' | 'estrela' | 'concha' | 'floco' | 'raio' | 'coracao' | 'folha';
@@ -123,6 +128,11 @@ export interface FantasiaDef {
    * silhueta com cadeado e a sugestão do tema nunca oferece.
    */
   desbloqueio?: IdDesbloqueio;
+  /**
+   * Spec 023: fantasia da lojinha premium. Não aparece na aba Fantasias e nunca vem no campo
+   * `fantasia`: veste pelo `premium.fantasia` da aparência (o que a criança comprou).
+   */
+  premium?: true;
 }
 
 /** Fantasia vestida: o id do catálogo e o índice da cor principal. */
@@ -508,7 +518,35 @@ export const FANTASIAS_DE_MORADOR: readonly FantasiaDef[] = [
   },
 ];
 
-const POR_ID = new Map([...FANTASIAS, ...FANTASIAS_DE_MORADOR].map((f) => [f.id, f]));
+/**
+ * Spec 023: as fantasias da lojinha premium (o boneco as veste pelo `premium.fantasia`). O
+ * dragãozinho: verde-água com barriga de escamas, capuz com focinho, chifres de ouro, espinhos
+ * das costas ao rabo, asas que batem e patinhas com garras.
+ */
+export const FANTASIAS_PREMIUM: readonly FantasiaDef[] = [
+  {
+    id: 'dragao',
+    grupo: 'temas',
+    premium: true,
+    nomes: { feminino: 'Dragãozinho', masculino: 'Dragãozinho' },
+    cores: ['#2ec4a0'],
+    corEmblema: '#fff1c4',
+    visual: mesmo({
+      roupa: { camisa: 'principal', manga: 'principal', calca: 'principal', sapato: '#2ec4a0' },
+      cabeca: 'capuz',
+      pecas: [
+        { tipo: 'capuz-dragao', cor: 'principal' },
+        { tipo: 'corpo-dragao', cor: 'emblema' },
+        { tipo: 'asas-dragao', cor: '#8a6aff' },
+        { tipo: 'patas-dragao', cor: 'principal' },
+      ],
+    }),
+  },
+];
+
+const POR_ID = new Map(
+  [...FANTASIAS, ...FANTASIAS_DE_MORADOR, ...FANTASIAS_PREMIUM].map((f) => [f.id, f]),
+);
 
 export function fantasiaPorId(id: unknown): FantasiaDef | undefined {
   return typeof id === 'string' ? POR_ID.get(id) : undefined;
@@ -575,7 +613,8 @@ export function normalizarFantasia(entrada: unknown, corpo: Corpo): FantasiaVest
   if (typeof entrada !== 'object' || entrada === null || Array.isArray(entrada)) return undefined;
   const obj = entrada as Record<string, unknown>;
   const def = fantasiaPorId(obj.id);
-  if (!def) return undefined;
+  // spec 023: a fantasia premium só veste pelo campo `premium` (o que foi comprado)
+  if (!def || def.premium) return undefined;
   const cor =
     typeof obj.cor === 'number' &&
     Number.isInteger(obj.cor) &&

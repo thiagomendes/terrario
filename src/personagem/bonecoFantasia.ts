@@ -10,6 +10,7 @@
  * olhos para a frente dela, e o que vai na cabeça diz como o cabelo fica por baixo.
  */
 import type { Corpo } from './aparencia';
+import { asasDragao, capuzDragao, corpoDragao, patasDragao } from './bonecoPremium';
 import type { ModoCabelo, Peca } from './boneco';
 import {
   clarear,
@@ -1253,6 +1254,21 @@ export function vestirFantasia(
           brilho: 0.9,
         });
         sobreCabelo('bolha');
+        break;
+      // spec 023: o dragãozinho da lojinha premium (peças em bonecoPremium.ts)
+      case 'capuz-dragao':
+        capuzDragao(pecas, m, c);
+        // o capuz desce até a nuca: o rabo de cavalo fica guardado dentro dele
+        sobreCabelo('capuz');
+        break;
+      case 'corpo-dragao':
+        corpoDragao(pecas, m, principal, c);
+        break;
+      case 'asas-dragao':
+        asasDragao(pecas, m);
+        break;
+      case 'patas-dragao':
+        patasDragao(pecas, m, c);
         break;
       case 'capuz-dino': {
         // capuz em cima da cabeça (o rosto e o cabelo de baixo ficam de fora), com olhinhos,
