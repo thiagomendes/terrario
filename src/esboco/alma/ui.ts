@@ -215,6 +215,7 @@ body.esboco-alma .missao-hud { display: none !important; }
 .alma-prateleira { position: relative; display: grid; grid-auto-flow: column; grid-template-rows: repeat(var(--linhas, 2), auto); grid-auto-columns: 168px;
   gap: 18px 16px; align-content: center; overflow-x: auto; overflow-y: hidden; padding: 12px 8px 16px; scroll-snap-type: x proximity; scrollbar-width: none; }
 .alma-prateleira::-webkit-scrollbar { display: none; }
+.alma-prateleira.duas { grid-auto-flow: row; grid-template-rows: none; grid-template-columns: repeat(6, 168px); justify-content: center; }
 .alma-pcard { position: relative; height: 196px; border: 0; border-radius: 26px; cursor: pointer; padding: 0; scroll-snap-align: start; overflow: visible;
   background: radial-gradient(ellipse at 50% 30%, #6a52d8 0%, #3a2a9a 60%, #241a6e 100%);
   box-shadow: 0 0 0 3px #e6b23e, 0 0 0 6px rgba(255, 226, 140, 0.25), 0 10px 0 2px #120c36, 0 16px 24px rgba(0,0,0,0.45);
@@ -322,7 +323,7 @@ body.alma-provando canvas { visibility: visible !important; }
   .alma-botao { height: 54px; }
   .alma-vitrine .placa .alma-svg { width: 36px; height: 36px; }
   .alma-vitrine .topo { padding-bottom: 2px; }
-  .alma-prateleira { --linhas: 1 !important; grid-auto-columns: 176px; padding: 10px 8px 16px; }
+  .alma-prateleira, .alma-prateleira.duas { --linhas: 1 !important; grid-auto-flow: column; grid-template-columns: none; grid-template-rows: repeat(1, auto); justify-content: start; grid-auto-columns: 176px; padding: 10px 8px 16px; }
   .alma-pcard { height: 236px; }
   .alma-pcard .arte { height: 150px; top: 18px; }
   .alma-pcard .arte .alma-fig { width: 136px; height: 136px; }
@@ -901,7 +902,7 @@ export function criarUiAlma(a: AcoesUi) {
     topo.append(placa, esp, saldo, botaoFechar(fechar));
     const prat = document.createElement('div');
     prat.className = 'alma-prateleira';
-    prat.style.setProperty('--linhas', innerHeight > 600 ? '2' : '1');
+    if (innerHeight > 600) prat.classList.add('duas');
     PREMIUM.forEach((p, i) => prat.appendChild(cartaoPremium(p, i)));
     const det = document.createElement('div');
     det.className = 'alma-pdet';

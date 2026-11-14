@@ -258,10 +258,19 @@ async function encherUm(page: Page, lista: Fantasma[]): Promise<boolean> {
 async function camFixa(page: Page, n: number | null, dist = 10) {
   await page.evaluate(
     ([n, dist]) => {
-      const w = window as unknown as { __camFixa?: { p: V3; a: V3 } | null; __camLigada?: boolean };
+      const w = window as unknown as {
+        __camFixa?: { p: V3; a: V3 } | null;
+        __camLigada?: boolean;
+        __camOrbita?: { c: V3; r: number; h: number; a0: number; vel: number; t0: number; alvo: V3 } | null;
+      };
       if (!w.__camLigada) {
         w.__camLigada = true;
         window.__brumaluz!.cenaBabylon!().onBeforeCameraRenderObservable.add((c) => {
+          const o = w.__camOrbita;
+          if (o) {
+            const a = o.a0 + ((performance.now() - o.t0) / 1000) * o.vel;
+            w.__camFixa = { p: [o.c[0] + Math.sin(a) * o.r, o.c[1] + o.h, o.c[2] + Math.cos(a) * o.r], a: o.alvo };
+          }
           const f = w.__camFixa;
           if (!f) return;
           const cam = c as unknown as { position: { set(...a: number[]): void; clone(): { set(...a: number[]): unknown } }; setTarget(v: unknown): void };
@@ -295,10 +304,19 @@ async function camFixa(page: Page, n: number | null, dist = 10) {
 async function camEm(page: Page, p: V3 | null, a?: V3) {
   await page.evaluate(
     ([p, a]) => {
-      const w = window as unknown as { __camFixa?: { p: V3; a: V3 } | null; __camLigada?: boolean };
+      const w = window as unknown as {
+        __camFixa?: { p: V3; a: V3 } | null;
+        __camLigada?: boolean;
+        __camOrbita?: { c: V3; r: number; h: number; a0: number; vel: number; t0: number; alvo: V3 } | null;
+      };
       if (!w.__camLigada) {
         w.__camLigada = true;
         window.__brumaluz!.cenaBabylon!().onBeforeCameraRenderObservable.add((c) => {
+          const o = w.__camOrbita;
+          if (o) {
+            const a = o.a0 + ((performance.now() - o.t0) / 1000) * o.vel;
+            w.__camFixa = { p: [o.c[0] + Math.sin(a) * o.r, o.c[1] + o.h, o.c[2] + Math.cos(a) * o.r], a: o.alvo };
+          }
           const f = w.__camFixa;
           if (!f) return;
           const cam = c as unknown as { position: { set(...a: number[]): void; clone(): { set(...a: number[]): unknown } }; setTarget(v: unknown): void };
@@ -440,8 +458,10 @@ export async function clareira(page: Page): Promise<V3> {
       const l = Math.hypot(ux, uz) || 1;
       ux /= l;
       uz /= l;
-      // entre o bichinho e a criança, de lado: ele olha para ela, então mostra a cara
-      await camEm(page, [pet[0] - ux * 1.9 + uz * 1.1, pet[1] + 0.9, pet[2] - uz * 1.9 - ux * 1.1], [pet[0], pet[1] + 0.55, pet[2]]);
+      // de lado, um pouco à frente do bichinho (ele olha para a criança): a cara de três quartos
+      const vx = -ux;
+      const vz = -uz;
+      await camEm(page, [pet[0] + vx * 1.1 - vz * 2.1, pet[1] + 0.85, pet[2] + vz * 1.1 + vx * 2.1], [pet[0] + vx * 0.25, pet[1] + 0.5, pet[2] + vz * 0.25]);
     }
     await page.waitForTimeout(300);
     await foto(page, `prova-${ap}-4-unicornio`);
@@ -471,7 +491,22 @@ export async function clareira(page: Page): Promise<V3> {
       c.tecla('pular', false);
       c.mover(0, 0);
     });
-    await page.waitForTimeout(1300);
+    await page.waitForTimeout(400);
+    {
+      // parou: a câmera à frente da criança (o unicórnio chega e solta coraçõezinhos)
+      const r = await page.evaluate(() => {
+        const e = window.__brumaluz!;
+        const [x, , z] = e.posicao!;
+        const n = e.cenaBabylon!().transformNodes
+          .filter((t) => t.name === 'personagem' && !t.parent)
+          .sort((a, b) => Math.hypot(a.position.x - x, a.position.z - z) - Math.hypot(b.position.x - x, b.position.z - z))[0];
+        return [n.position.x, n.position.y, n.position.z, n.rotation.y] as [number, number, number, number];
+      });
+      const gx = Math.sin(r[3]);
+      const gz = Math.cos(r[3]);
+      await camEm(page, [r[0] + gx * 3.4 - gz * 1.6, r[1] + 1.5, r[2] + gz * 3.4 + gx * 1.6], [r[0] - gx * 0.6, r[1] + 0.7, r[2] - gz * 0.6]);
+    }
+    await page.waitForTimeout(1100);
     await foto(page, `prova-${ap}-8-parou`);
     await semHud(page, false);
     await page.context().close();
@@ -500,12 +535,25 @@ export async function clareira(page: Page): Promise<V3> {
   await page.evaluate(() => window.__brumaluz!.controleDireto!.mover(0, 0));
   await page.waitForTimeout(2200);
   // a câmera dá a volta devagar (asas batendo parado, o unicórnio olhando e fazendo charme)
-  const p = await page.evaluate(() => window.__brumaluz!.posicao!);
-  for (let i = 0; i <= 90; i++) {
-    const a = yaw + 0.9 + (i / 90) * Math.PI * 1.1;
-    await camEm(page, [p[0] + Math.sin(a) * 3.6, p[1] + 1.4, p[2] + Math.cos(a) * 3.6], [p[0] - fx * 0.5, p[1] + 0.7, p[2] - fz * 0.5]);
-    await page.waitForTimeout(40);
-  }
+  // os pés da criança: a raiz do boneco mais perto da posição
+  const p = await page.evaluate(() => {
+    const e = window.__brumaluz!;
+    const [x, , z] = e.posicao!;
+    const r = e.cenaBabylon!().transformNodes
+      .filter((n) => n.name === 'personagem' && !n.parent)
+      .sort((a, b) => Math.hypot(a.position.x - x, a.position.z - z) - Math.hypot(b.position.x - x, b.position.z - z))[0];
+    return [r.position.x, r.position.y, r.position.z] as V3;
+  });
+  await page.evaluate(
+    ([p, yaw, fx, fz]) => {
+      (window as unknown as { __camOrbita: unknown }).__camOrbita = {
+        c: p, r: 3.8, h: 1.5, a0: (yaw as number) + 0.9, vel: 0.42, t0: performance.now(),
+        alvo: [p[0] - (fx as number) * 0.6, p[1] + 0.75, p[2] - (fz as number) * 0.6],
+      };
+    },
+    [p, yaw, fx, fz] as const,
+  );
+  await page.waitForTimeout(7000);
   await page.context().close();
 });
 
