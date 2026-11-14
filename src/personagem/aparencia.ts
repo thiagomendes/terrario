@@ -58,11 +58,14 @@ export interface Aparencia {
   desbloqueios?: IdDesbloqueio[];
 }
 
-/** Spec 014: o que se ganha no canteiro da cidade (ids das fantasias que liberam). */
-export const DESBLOQUEIOS = ['capacete-obra', 'colete-obra'] as const;
+/**
+ * O que se ganha nas missões (ids das fantasias que liberam): o canteiro da cidade (spec 014)
+ * e as missões do Rancho Alegre (spec 023: a Caipira da festa e o Peão campeão).
+ */
+export const DESBLOQUEIOS = ['capacete-obra', 'colete-obra', 'caipira', 'peao-campeao'] as const;
 export type IdDesbloqueio = (typeof DESBLOQUEIOS)[number];
-/** Teto da lista guardada (sobra espaço para os próximos prêmios). */
-export const MAXIMO_DESBLOQUEIOS = 16;
+/** Teto da lista guardada (sobra espaço para os próximos prêmios; spec 023: 16 → 32). */
+export const MAXIMO_DESBLOQUEIOS = 32;
 
 export function ehDesbloqueio(valor: unknown): valor is IdDesbloqueio {
   return typeof valor === 'string' && (DESBLOQUEIOS as readonly string[]).includes(valor);

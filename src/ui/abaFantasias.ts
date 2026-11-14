@@ -72,6 +72,8 @@ export const NOMES_PECAS: Partial<Record<TipoPeca, string>> = {
   'capa-folhas': 'Capa',
   lanterna: 'Lanterna',
   'capacete-obra': 'Capacete',
+  'chapeu-festa': 'Chapéu',
+  'chapeu-peao': 'Chapéu',
 };
 
 export interface SecaoFantasias {
@@ -116,6 +118,15 @@ export function podeVestirFantasia(
 
 /** O aviso ao tocar numa fantasia trancada (curto: o desenho do canteiro ajuda quem não lê). */
 export const TEXTO_TRANCADA = 'Ganhe no canteiro da cidade';
+/** Spec 023: os prêmios do Rancho Alegre saem das missões da roça. */
+export const TEXTO_TRANCADA_RANCHO = 'Ganhe nas missões do Rancho';
+
+/** Onde se ganha a fantasia trancada: o texto (para os pais) e o desenho (para a criança). */
+export function ondeSeGanha(def: Pick<FantasiaDef, 'tema'>): { texto: string; svg: string } {
+  return def.tema === 'rancho-alegre'
+    ? { texto: TEXTO_TRANCADA_RANCHO, svg: SVG_ROCA }
+    : { texto: TEXTO_TRANCADA, svg: SVG_CANTEIRO };
+}
 
 /** Desenho do canteiro (tapume, tijolos e o capacete), em SVG próprio: nada de fora. */
 export const SVG_CANTEIRO =
@@ -127,6 +138,18 @@ export const SVG_CANTEIRO =
   '<rect x="19" y="2" width="9" height="5" rx="1" fill="#c8553d"/>' +
   '<path d="M33 13 a6 6 0 0 1 12 0 z" fill="#ffc61a"/>' +
   '<rect x="31" y="12" width="15" height="2.4" rx="1.2" fill="#e0a800"/>' +
+  '</svg>';
+
+/** Spec 023: a roça do Rancho (terra arada, trigo maduro e a cerquinha), em SVG próprio. */
+export const SVG_ROCA =
+  '<svg viewBox="0 0 48 32" aria-hidden="true">' +
+  '<rect x="2" y="20" width="44" height="10" rx="2" fill="#8a5a32"/>' +
+  '<path d="M4 24 H44 M4 28 H44" stroke="#6a4226" stroke-width="1.6"/>' +
+  '<path d="M9 21 V9 M17 21 V7 M25 21 V9 M33 21 V7" stroke="#6a9a2a" stroke-width="2"/>' +
+  '<g fill="#f2c64a" stroke="#c9952a" stroke-width="0.8">' +
+  '<ellipse cx="9" cy="8" rx="2.4" ry="4.4"/><ellipse cx="17" cy="6" rx="2.4" ry="4.4"/>' +
+  '<ellipse cx="25" cy="8" rx="2.4" ry="4.4"/><ellipse cx="33" cy="6" rx="2.4" ry="4.4"/></g>' +
+  '<path d="M38 22 V10 M45 22 V10 M37 13 H46 M37 18 H46" stroke="#f5f0e0" stroke-width="2.2" stroke-linecap="round"/>' +
   '</svg>';
 
 /** Cadeadinho do cartão trancado. */
@@ -395,10 +418,12 @@ export function criarAbaFantasias(painel: HTMLElement, op: OpcoesAbaFantasias): 
   dica.setAttribute('data-dica-trancada', '');
   dica.setAttribute('role', 'status');
   dica.hidden = true;
-  dica.innerHTML = SVG_CANTEIRO;
-  dica.append(TEXTO_TRANCADA);
   let fecharDica: ReturnType<typeof setTimeout> | undefined;
-  function mostrarDica(lista: HTMLElement): void {
+  function mostrarDica(lista: HTMLElement, def: FantasiaDef): void {
+    const onde = ondeSeGanha(def);
+    dica.innerHTML = onde.svg;
+    dica.append(onde.texto);
+    dica.setAttribute('data-dica-onde', def.tema ?? '');
     // aparece no alto da lista à vista e some sozinha
     lista.prepend(dica);
     dica.hidden = false;
@@ -462,7 +487,7 @@ export function criarAbaFantasias(painel: HTMLElement, op: OpcoesAbaFantasias): 
           cadeado.innerHTML = SVG_CADEADO;
           const canteiro = document.createElement('span');
           canteiro.className = 'canteiro-mini';
-          canteiro.innerHTML = SVG_CANTEIRO;
+          canteiro.innerHTML = ondeSeGanha(def).svg;
           botao.append(cadeado, canteiro);
         }
         botao.addEventListener('click', () => escolher(def, botao));
@@ -513,7 +538,7 @@ export function criarAbaFantasias(painel: HTMLElement, op: OpcoesAbaFantasias): 
       // trancada: não veste, só conta onde se ganha
       tocarSomInterface('toc');
       const lista = botao.closest<HTMLElement>('.cartas');
-      if (lista) mostrarDica(lista);
+      if (lista) mostrarDica(lista, def);
       return;
     }
     // tocar de novo na que já está vestida só faz a festa (nada muda)
@@ -595,7 +620,10 @@ export function criarAbaFantasias(painel: HTMLElement, op: OpcoesAbaFantasias): 
       const trancada = !podeVestirFantasia(c.def, a);
       c.botao.classList.toggle('trancada', trancada);
       c.botao.setAttribute('data-trancada', String(trancada));
-      c.botao.setAttribute('aria-label', trancada ? `${rotulo}: ${TEXTO_TRANCADA}` : rotulo);
+      c.botao.setAttribute(
+        'aria-label',
+        trancada ? `${rotulo}: ${ondeSeGanha(c.def).texto}` : rotulo,
+      );
       // ganhou: o cartão colorido brilha na primeira vez que a criança o vê
       if (
         c.def.desbloqueio &&

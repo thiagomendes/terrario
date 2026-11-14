@@ -40,7 +40,7 @@ describe('desbloqueios do canteiro na aparência (spec 014)', () => {
       desbloqueios: ['colete-obra', 'foguete', 7, null, 'colete-obra', 'capacete-obra'],
     });
     expect(a.desbloqueios).toEqual(['colete-obra', 'capacete-obra']);
-    expect(DESBLOQUEIOS).toEqual(['capacete-obra', 'colete-obra']);
+    expect(DESBLOQUEIOS).toEqual(['capacete-obra', 'colete-obra', 'caipira', 'peao-campeao']);
   });
 
   it('lista enorme fica no teto e o que não é lista vira nada', () => {
@@ -131,8 +131,13 @@ describe('capacete e colete no catálogo da 017 (spec 014)', () => {
     expect(capacete.desbloqueio).toBe('capacete-obra');
     expect(colete.desbloqueio).toBe('colete-obra');
     // as outras são livres
-    for (const f of FANTASIAS.filter((x) => x !== capacete && x !== colete))
-      expect(fantasiaLiberada(f)).toBe(true);
+    for (const f of FANTASIAS.filter((x) => !x.desbloqueio)) expect(fantasiaLiberada(f)).toBe(true);
+    expect(FANTASIAS.filter((x) => x.desbloqueio).map((x) => x.id)).toEqual([
+      'capacete-obra',
+      'colete-obra',
+      'caipira',
+      'peao-campeao',
+    ]);
   });
 
   it('o colete vem com as duas peças (capacete e colete laranja)', () => {
@@ -157,5 +162,31 @@ describe('capacete e colete no catálogo da 017 (spec 014)', () => {
     // os outros temas continuam iguais
     expect(fantasiaDoTema('rancho-alegre')?.id).toBe('fazendeira');
     expect(fantasiaParaSugerir(l, 'm1', true, 'bruma-e-luz', a)?.id).toBe('lanterneira');
+  });
+});
+
+describe('os prêmios do Rancho no catálogo da 017 (spec 023, T05)', () => {
+  it('a Caipira da festa e o Peão campeão são do Rancho, trancados até a missão', () => {
+    for (const id of ['caipira', 'peao-campeao'] as const) {
+      const f = FANTASIAS.find((x) => x.id === id)!;
+      expect(f.tema).toBe('rancho-alegre');
+      expect(f.desbloqueio).toBe(id);
+      expect(fantasiaLiberada(f)).toBe(false);
+      expect(fantasiaLiberada(f, [id])).toBe(true);
+    }
+    // o acabamento: a camisa bordada, o chapéu da festa e a estrela do peão
+    const caipira = pecasVestidas({ id: 'caipira', cor: 0 }, 'feminino').map((p) => p.tipo);
+    expect(caipira).toEqual(expect.arrayContaining(['camisa-festa', 'chapeu-festa', 'remendos']));
+    const peao = pecasVestidas({ id: 'peao-campeao', cor: 0 }, 'masculino').map((p) => p.tipo);
+    expect(peao).toEqual(expect.arrayContaining(['estrela-peao', 'chapeu-peao', 'fivela-campeao']));
+    // a sugestão do Rancho continua a fazendeira (livre), nunca um prêmio trancado
+    expect(fantasiaDoTema('rancho-alegre')?.id).toBe('fazendeira');
+  });
+
+  it('cabem todos os prêmios (teto 32) e a aparência guarda os do Rancho', () => {
+    expect(MAXIMO_DESBLOQUEIOS).toBe(32);
+    const a = desbloquear(desbloquear(aparenciaPadrao(), 'caipira'), 'peao-campeao');
+    expect(temDesbloqueio(a, 'caipira')).toBe(true);
+    expect(normalizarAparencia(a).desbloqueios).toEqual(['caipira', 'peao-campeao']);
   });
 });

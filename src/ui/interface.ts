@@ -671,6 +671,9 @@ export function criarInterface(
   const GANHOU: Record<string, string> = {
     'capacete-obra': 'Ganhou o capacete de obra!',
     'colete-obra': 'Ganhou o colete laranja!',
+    // spec 023: os prêmios das missões do Rancho Alegre
+    caipira: 'Ganhou a roupa caipira da festa!',
+    'peao-campeao': 'Ganhou a roupa de peão campeão!',
   };
   window.addEventListener('brumaluz:desbloqueio', (e) => {
     const id = (e as CustomEvent<{ id?: unknown }>).detail?.id;

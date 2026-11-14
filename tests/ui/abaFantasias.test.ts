@@ -3,6 +3,8 @@ import {
   CHAVE_ANTERIOR,
   CHAVE_BRILHOU,
   TEXTO_TRANCADA,
+  TEXTO_TRANCADA_RANCHO,
+  ondeSeGanha,
   guardarAnterior,
   jaBrilhou,
   marcarBrilhou,
@@ -134,6 +136,10 @@ describe('aba Fantasias no editor', () => {
       expect(podeVestirFantasia(f, a)).toBe(true);
     expect(podeVestirFantasia('sumiu', a)).toBe(false);
     expect(TEXTO_TRANCADA).toBe('Ganhe no canteiro da cidade');
+    // spec 023: os prêmios do Rancho mostram a roça (onde se ganham)
+    expect(ondeSeGanha({ tema: 'rancho-alegre' }).texto).toBe(TEXTO_TRANCADA_RANCHO);
+    expect(ondeSeGanha({ tema: 'rancho-alegre' }).svg).toContain('<svg');
+    expect(ondeSeGanha({ tema: 'cidade-grande' }).texto).toBe(TEXTO_TRANCADA);
     // na aba da cidade as duas aparecem (trancadas), primeiro as do mundo
     const [meu] = secoesDaAba('temas', 'cidade-grande');
     expect(meu.fantasias.map((f) => f.id)).toEqual(['capacete-obra', 'colete-obra']);

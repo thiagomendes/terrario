@@ -58,7 +58,15 @@ export type TipoPeca =
   | 'capacete-obra'
   | 'colete-obra'
   // spec 014 (T11): boné de brinquedo (copa redonda e pala curta), o do mecânico da cidade
-  | 'bone';
+  | 'bone'
+  // spec 023: prêmios das missões do Rancho Alegre (a Caipira da festa e o Peão campeão)
+  | 'camisa-festa'
+  | 'chapeu-festa'
+  | 'remendos'
+  | 'chapeu-peao'
+  | 'estrela-peao'
+  | 'fivela-campeao'
+  | 'franjas';
 
 /** Símbolos próprios (nada de letra no peito, teia ou morcego). */
 export type Simbolo = 'flor' | 'estrela' | 'concha' | 'floco' | 'raio' | 'coracao' | 'folha';
@@ -433,6 +441,48 @@ export const FANTASIAS: readonly FantasiaDef[] = [
         { tipo: 'colete-obra', cor: '#ff7a1a' },
         { tipo: 'botas', cor: '#7a4826' },
         { tipo: 'capacete-obra', cor: '#ffc61a', opcional: true },
+      ],
+    }),
+  },
+  // spec 023: os prêmios das missões do Rancho Alegre (só saem de lá; vestidos em qualquer
+  // mundo). A Caipira da festa vem na primeira colheita (r1); o Peão campeão, na roça que a
+  // criança plantou e colheu (r7).
+  {
+    id: 'caipira',
+    grupo: 'temas',
+    tema: 'rancho-alegre',
+    desbloqueio: 'caipira',
+    nomes: { feminino: 'Caipira da festa', masculino: 'Caipira da festa' },
+    cores: ['#e8402f', '#2f7fe8', '#f2a31a', '#8a5ad8'],
+    corEmblema: '#ffd45a',
+    visual: mesmo({
+      roupa: { camisa: 'principal', manga: 'principal', calca: '#3f6fb8', sapato: '#6a4426' },
+      cabeca: 'chapeu',
+      pecas: [
+        { tipo: 'camisa-festa', cor: BRANCO },
+        { tipo: 'remendos', cor: 'emblema' },
+        { tipo: 'chapeu-festa', cor: '#f2d07a', opcional: true },
+      ],
+    }),
+  },
+  {
+    id: 'peao-campeao',
+    grupo: 'temas',
+    tema: 'rancho-alegre',
+    desbloqueio: 'peao-campeao',
+    nomes: { feminino: 'Peoa campeã', masculino: 'Peão campeão' },
+    cores: ['#b8322f', '#2f5a9a', '#6a3f9a'],
+    corEmblema: OURO,
+    visual: mesmo({
+      roupa: { camisa: '#fff3d6', manga: '#fff3d6', calca: '#2f4f86', sapato: '#7a4826' },
+      cabeca: 'chapeu',
+      pecas: [
+        { tipo: 'colete-lenco', cor: 'principal' },
+        { tipo: 'franjas', cor: '#e2b25a' },
+        { tipo: 'estrela-peao', cor: 'emblema' },
+        { tipo: 'fivela-campeao', cor: '#5a3a26' },
+        { tipo: 'botas', cor: '#7a4826' },
+        { tipo: 'chapeu-peao', cor: '#f2e6c8', opcional: true },
       ],
     }),
   },

@@ -1696,6 +1696,292 @@ export function vestirFantasia(
           );
         break;
       }
+      // ------------------------------------------------------------ spec 023 (Rancho)
+      case 'camisa-festa': {
+        // camisa xadrez de festa junina: o xadrez em duas cores (branco e o dourado do
+        // emblema), a sianinha em zigue-zague no peito e nos punhos e florzinhas bordadas
+        const ouro = corDaPeca(f, 'emblema');
+        for (let i = 0; i < 3; i++)
+          caixa(
+            `festa-xadrez${i}`,
+            'tronco',
+            'tronco',
+            [larg + 0.01, 0.026, prof + 0.01],
+            [0, 0.07 + i * 0.12, 0],
+            c,
+            0.012,
+          );
+        for (const x of [-0.3, 0.3])
+          caixa(
+            `festa-xadrez-v${x}`,
+            'tronco',
+            'tronco',
+            [0.026, troncoH - 0.04, prof + 0.012],
+            [x * larg, troncoH / 2, 0],
+            c,
+            0.012,
+          );
+        // a sianinha atravessa o peito (frente) em zigue-zague
+        const ySia = troncoH * 0.66;
+        const n = 10;
+        const largSia = larg * 0.84;
+        const passo = largSia / n;
+        for (let i = 0; i < n; i++) {
+          const x = -largSia / 2 + passo * (i + 0.5);
+          caixa(
+            `festa-sianinha${i}`,
+            'tronco',
+            'tronco',
+            [passo * 1.35, 0.024, 0.016],
+            [x, ySia, frente + 0.012],
+            i % 2 ? ouro : '#5cbf4f',
+            0.006,
+            { rot: [0, 0, i % 2 ? 0.75 : -0.75], brilho: 0.3 },
+          );
+        }
+        // florzinhas bordadas acima da sianinha (rosa, branca, rosa)
+        for (const [x, cf] of [
+          [-0.2, '#ff8fc8'],
+          [0, BRANCO],
+          [0.2, '#ff8fc8'],
+        ] as const)
+          flor(
+            `festa-bordado${x}`,
+            'tronco',
+            'tronco',
+            [x * larg * 1.1, troncoH * 0.82, frente + 0.016],
+            cf,
+            0.022,
+          );
+        for (const lado of ['bracoE', 'bracoD'] as const) {
+          for (const y of [-0.06, -0.15])
+            caixa(
+              `${lado}-festa-xadrez${y}`,
+              lado,
+              'braco',
+              [0.142, 0.024, 0.152],
+              [0, y, 0],
+              c,
+              0.01,
+            );
+          caixa(
+            `${lado}-festa-punho`,
+            lado,
+            'braco',
+            [0.146, 0.03, 0.156],
+            [0, -0.22, 0],
+            ouro,
+            0.012,
+            { brilho: 0.3 },
+          );
+        }
+        break;
+      }
+      case 'remendos': {
+        // os remendos coloridos nos joelhos da calça (com a borda costurada mais escura)
+        const cores = [c, '#5cbf4f'];
+        (['pernaE', 'pernaD'] as const).forEach((lado, i) => {
+          const y = -m.pernaH * (i ? 0.56 : 0.5);
+          const giro = i ? -0.22 : 0.18;
+          caixa(
+            `${lado}-remendo-borda`,
+            lado,
+            'perna',
+            [0.105, 0.105, 0.016],
+            [0.005, y, 0.094],
+            escurecer(cores[i], 0.35),
+            0.012,
+            { rot: [0, 0, giro] },
+          );
+          caixa(
+            `${lado}-remendo`,
+            lado,
+            'perna',
+            [0.085, 0.085, 0.02],
+            [0.005, y, 0.098],
+            cores[i],
+            0.01,
+            { rot: [0, 0, giro] },
+          );
+        });
+        break;
+      }
+      case 'chapeu-festa': {
+        // o chapéu de palha da festa: aba larga com a palha desfiada em volta, a fita da cor
+        // da camisa com uma flor e um remendo azul na copa
+        const b = m.baseChapeu;
+        const palhaEscura = escurecer(c, 0.2);
+        cilindro('festa-aba', 'cabeca', 'cabeca', 0.045, 0.66, 0.66, [0, b + 0.08, 0], c);
+        for (let i = 0; i < 20; i++) {
+          const a = (i / 20) * Math.PI * 2;
+          caixa(
+            `festa-palha${i}`,
+            'cabeca',
+            'cabeca',
+            [0.05, 0.02, 0.07],
+            [Math.sin(a) * 0.675, b + 0.075 - (i % 2) * 0.008, Math.cos(a) * 0.675],
+            i % 2 ? palhaEscura : c,
+            0.008,
+            { rot: [i % 2 ? 0.25 : -0.15, a, 0] },
+          );
+        }
+        cilindro('festa-copa', 'cabeca', 'cabeca', 0.26, 0.36, 0.3, [0, b + 0.21, 0], c);
+        cilindro(
+          'festa-fita',
+          'cabeca',
+          'cabeca',
+          0.075,
+          0.366,
+          0.358,
+          [0, b + 0.13, 0],
+          principal,
+        );
+        const af = 0.55;
+        flor(
+          'festa-flor',
+          'cabeca',
+          'cabeca',
+          [Math.sin(af) * 0.375, b + 0.135, Math.cos(af) * 0.375],
+          '#ff8fc8',
+          0.04,
+          af,
+        );
+        const ar = -0.7;
+        caixa(
+          'festa-remendo',
+          'cabeca',
+          'cabeca',
+          [0.12, 0.1, 0.02],
+          [Math.sin(ar) * 0.335, b + 0.25, Math.cos(ar) * 0.335],
+          '#5aa8e8',
+          0.012,
+          { rot: [-0.18, ar, 0.15] },
+        );
+        sobreCabelo('chapeu');
+        break;
+      }
+      case 'franjas': {
+        // franjas de couro penduradas na barra do colete do peão
+        for (const s of [-1, 1])
+          for (let i = 0; i < 4; i++)
+            caixa(
+              `franja${s}${i}`,
+              'tronco',
+              'tronco',
+              [0.024, 0.085, 0.018],
+              [s * larg * 0.33 + (i - 1.5) * 0.045, -0.02 - (i % 2) * 0.01, frente + 0.012],
+              i % 2 ? c : escurecer(c, 0.15),
+              0.008,
+              { rot: [0, 0, (i - 1.5) * 0.08] },
+            );
+        break;
+      }
+      case 'estrela-peao': {
+        // a estrela de campeão no peito (dourada, brilhante, com o rebite no meio)
+        const x = larg * 0.33;
+        const y = troncoH * 0.64;
+        placa(
+          'peao-estrela-fundo',
+          'tronco',
+          'tronco',
+          perfilEstrela(0.1),
+          0.02,
+          [x, y, frente + 0.02],
+          escurecer(c, 0.3),
+          { brilho: 0.4 },
+        );
+        placa(
+          'peao-estrela',
+          'tronco',
+          'tronco',
+          perfilEstrela(0.085),
+          0.025,
+          [x, y + 0.004, frente + 0.035],
+          c,
+          { brilho: 0.7 },
+        );
+        bola(
+          'peao-estrela-rebite',
+          'tronco',
+          'tronco',
+          0.022,
+          [x, y, frente + 0.05],
+          clarear(c, 0.5),
+          [1, 1, 0.6],
+          { brilho: 0.8 },
+        );
+        break;
+      }
+      case 'fivela-campeao': {
+        // o cinto de couro com a fivela grande de campeão (ouro e a estrela no meio)
+        const ouro = corDaPeca(f, 'emblema');
+        caixa(
+          'campeao-cinto',
+          'tronco',
+          'tronco',
+          [larg + 0.015, 0.07, prof + 0.015],
+          [0, 0.04, 0],
+          c,
+          0.03,
+        );
+        caixa(
+          'campeao-fivela',
+          'tronco',
+          'tronco',
+          [0.17, 0.115, 0.03],
+          [0, 0.045, frente + 0.015],
+          ouro,
+          0.04,
+          { brilho: 0.7 },
+        );
+        placa(
+          'campeao-fivela-estrela',
+          'tronco',
+          'tronco',
+          perfilEstrela(0.04),
+          0.012,
+          [0, 0.047, frente + 0.034],
+          principal,
+          { brilho: 0.4 },
+        );
+        break;
+      }
+      case 'chapeu-peao': {
+        // o chapéu de peão claro, de abas viradas, com a faixa dourada e a estrela na frente
+        const b = m.baseChapeu;
+        const ouro = corDaPeca(f, 'emblema');
+        cilindro('peao-aba', 'cabeca', 'cabeca', 0.045, 0.58, 0.58, [0, b + 0.09, 0], c, {
+          rot: [0.1, 0, 0],
+        });
+        for (const s of [-1, 1])
+          caixa(
+            `peao-aba-lado${s}`,
+            'cabeca',
+            'cabeca',
+            [0.2, 0.04, 0.52],
+            [s * 0.52, b + 0.15, 0],
+            c,
+            0.02,
+            { rot: [0, 0, s * 0.75] },
+          );
+        cilindro('peao-copa', 'cabeca', 'cabeca', 0.28, 0.33, 0.28, [0, b + 0.23, 0], c);
+        bola('peao-copa-topo', 'cabeca', 'cabeca', 0.28, [0, b + 0.365, 0], c, [1, 0.22, 1]);
+        cilindro('peao-faixa', 'cabeca', 'cabeca', 0.055, 0.334, 0.326, [0, b + 0.14, 0], ouro, {
+          brilho: 0.6,
+        });
+        placa(
+          'peao-chapeu-estrela',
+          'cabeca',
+          'cabeca',
+          perfilEstrela(0.065),
+          0.03,
+          [0, b + 0.25, 0.305],
+          ouro,
+          { rot: [-0.18, 0, 0], brilho: 0.7 },
+        );
+        sobreCabelo('chapeu');
+        break;
+      }
       case 'lanterna': {
         // a lanterna acesa na mão, um pouco à frente (aparece de frente, como no esboço);
         // tinta de sempre, sem a tinta funda da fantasia: ela é a luz
