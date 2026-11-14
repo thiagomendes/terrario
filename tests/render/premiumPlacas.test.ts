@@ -41,7 +41,7 @@ function conferir(pecas: Array<Pick<Peca, 'nome' | 'forma' | 'perfil'>>): string
 
 describe('placas dos premium (spec 023)', () => {
   const vestidos: PremiumVestido[] = [
-    { roupa: 'camiseta-arco-iris' },
+    { roupa: 'camiseta-aquario' },
     { roupa: 'tenis-cometa', costas: 'capa-estrelas' },
     { fantasia: 'dragao' },
   ];

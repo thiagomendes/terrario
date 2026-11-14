@@ -6,7 +6,7 @@ import {
   salvarPerfilAlma,
   type AvisoPerfil,
 } from '../../src/personagem/almaCrianca';
-import { CHAVE_APARENCIA } from '../../src/personagem/persistencia';
+import { CHAVE_APARENCIA, carregarAparencia } from '../../src/personagem/persistencia';
 import { perfilAlmaVazio, VERSAO_PERFIL_ALMA } from '../../src/jogo/alma';
 
 function memoria() {
@@ -76,5 +76,55 @@ describe('perfil da criança no aparelho (023, T02)', () => {
     const pc = criarPerfilCrianca(null);
     pc.aplicarGanho({ moedas: 2, xp: 0, pontos: {} });
     expect(pc.perfil.moedas).toBe(2);
+  });
+});
+
+describe('a camiseta arco-íris virou a camiseta aquário (o site já vendia a de antes)', () => {
+  it('o guardado de antes continua com a camiseta comprada e vestida, com o nome novo', () => {
+    const a = memoria();
+    // o perfil como o site de antes guardava (comprou a camiseta e o unicórnio, veste os dois)
+    a.m.set(
+      CHAVE_ALMA_CRIANCA,
+      JSON.stringify({
+        versao: 1,
+        moedas: 3,
+        xp: 120,
+        pontos: {},
+        premium: ['camiseta-arco-iris', 'unicornio'],
+        vestidos: { roupa: 'camiseta-arco-iris', bicho: 'unicornio' },
+        fantasias: [],
+        ganhou: 98,
+        gastou: 95,
+      }),
+    );
+    const p = carregarPerfilAlma(a);
+    expect(p.premium).toEqual(['camiseta-aquario', 'unicornio']);
+    expect(p.vestidos).toEqual({ roupa: 'camiseta-aquario', bicho: 'unicornio' });
+    expect(p.moedas).toBe(3);
+    // a criança não paga de novo, e tirar e vestir pelo id de antes também vale
+    const pc = criarPerfilCrianca(a);
+    expect(pc.comprarPremium('camiseta-aquario')).toEqual({ ok: false, motivo: 'ja-tem' });
+    expect(pc.comprarPremium('camiseta-arco-iris')).toEqual({ ok: false, motivo: 'ja-tem' });
+    expect(pc.vestirPremium('camiseta-arco-iris', false)).toBe(true);
+    expect(pc.perfil.vestidos.roupa).toBeUndefined();
+    expect(pc.vestirPremium('camiseta-aquario', true)).toBe(true);
+    // relido do aparelho, já sai com o id novo (o antigo não volta)
+    const guardado = a.m.get(CHAVE_ALMA_CRIANCA)!;
+    expect(guardado).not.toContain('arco-iris');
+    expect(JSON.parse(guardado).vestidos.roupa).toBe('camiseta-aquario');
+    // as duas no guardado (não deveria acontecer, mas não vira duas camisetas)
+    a.m.set(
+      CHAVE_ALMA_CRIANCA,
+      JSON.stringify({ ...JSON.parse(guardado), premium: ['camiseta-arco-iris', 'camiseta-aquario'] }),
+    );
+    expect(carregarPerfilAlma(a).premium).toEqual(['camiseta-aquario']);
+  });
+  it('a aparência guardada de antes (vestindo a de antes) veste a nova', () => {
+    const a = memoria();
+    a.m.set(
+      CHAVE_APARENCIA,
+      JSON.stringify({ versao: 1, aparencia: { premium: { roupa: 'camiseta-arco-iris', bicho: 'pinguim' } } }),
+    );
+    expect(carregarAparencia(a).premium).toEqual({ roupa: 'camiseta-aquario', bicho: 'pinguim' });
   });
 });

@@ -23,8 +23,9 @@ import {
   type Peca,
   type PlanoBoneco,
   type SubjuntaPremium,
+  type TexturaPremium,
 } from '../personagem/boneco';
-import { luzPremium, texturaListras } from './premiumLuzes';
+import { luzPremium, texturaAquario } from './premiumLuzes';
 import type { Pose } from '../personagem/poses';
 import {
   caixaArredondada,
@@ -47,7 +48,7 @@ export const MAXIMO_MALHAS_BONECO = 90;
 /** Uma peça em 3D a partir do plano. */
 export function montarPeca(scene: Scene, mats: Plasticos, p: Peca, prefixo: string): Mesh {
   if (p.luz || p.textura || p.pintar) {
-    // spec 023: os premium montam pelos dados (o degradê e as listras vão nos vértices)
+    // spec 023: os premium montam pelos dados (o degradê e o aquário vão nos vértices)
     const m = new Mesh(`${prefixo}-${p.nome}`, scene);
     dadosDaPeca(p, undefined, false).applyToMesh(m);
     m.material = materialDaPeca(scene, mats, p);
@@ -160,7 +161,7 @@ export function dadosDaPeca(
 
 /**
  * Spec 023: o que os premium pedem nos vértices, já no lugar da peça na junta: o degradê
- * (`pintar`, na tinta) e a coordenada das listras que correm (`textura`: sobem pela altura).
+ * (`pintar`, na tinta) e a coordenada da textura que se mexe (`textura`: o aquário).
  */
 function ajustarDadosPremium(vd: VertexData, p: Peca): void {
   const pos = vd.positions!;
@@ -173,15 +174,78 @@ function ajustarDadosPremium(vd: VertexData, p: Peca): void {
     }
     vd.colors = cores;
   }
-  if (p.textura) {
-    const uv = new Float32Array(n * 2);
-    // uma volta inteira das 7 listras a cada 0,42 (a altura do tronco)
-    for (let i = 0; i < n; i++) {
-      uv[i * 2] = 0.5;
-      uv[i * 2 + 1] = pos[i * 3 + 1] / 0.42;
-    }
-    vd.uvs = uv;
+  if (p.textura) mapearTextura(vd, p.textura);
+}
+
+/**
+ * Spec 023: o caminho em volta de uma caixa (meia largura `a`, meia profundidade `b`) até o
+ * ponto (x, z), olhando do eixo dela: 0 no meio da frente, crescendo para +x; uma volta
+ * inteira mede 4a + 4b.
+ */
+export function contornoDaCaixa(x: number, z: number, a: number, b: number): number {
+  const ax = Math.abs(x) / a;
+  const az = Math.abs(z) / b;
+  if (ax < 1e-6 && az < 1e-6) return 0;
+  let s: number;
+  if (az >= ax) s = z > 0 ? (x / az) : a + 2 * b + (a - x / az);
+  else s = x > 0 ? a + (b - z / ax) : 3 * a + 2 * b + (z / ax + b);
+  const volta = 4 * a + 4 * b;
+  return ((s % volta) + volta) % volta;
+}
+
+/**
+ * Spec 023: a coordenada da textura que se mexe (o aquário): a largura dá a volta na peça e a
+ * altura sobe por ela. O triângulo que cruza a costura ganha cópias dos vértices do outro
+ * lado (senão a textura inteira passaria espremida dentro dele).
+ */
+function mapearTextura(vd: VertexData, t: TexturaPremium): void {
+  const pos = vd.positions!;
+  const n = pos.length / 3;
+  const volta = 4 * t.a + 4 * t.b;
+  const vao = volta / t.volta;
+  const uv: number[] = [];
+  for (let i = 0; i < n; i++) {
+    const s = contornoDaCaixa(pos[i * 3], pos[i * 3 + 2], t.a, t.b);
+    const d = (((s - t.costura) % volta) + volta) % volta;
+    uv.push(t.u0 + d / t.volta, (pos[i * 3 + 1] - t.y0) / t.altura);
   }
+  const ind = vd.indices!;
+  const novos = new Map<number, number>();
+  const outros: Array<[string, number]> = [];
+  const extra: Record<string, number[]> = {};
+  for (const [nome, passo] of [
+    ['positions', 3],
+    ['normals', 3],
+    ['colors', 4],
+  ] as const) {
+    const arr = vd[nome];
+    if (arr) {
+      outros.push([nome, passo]);
+      extra[nome] = Array.from(arr);
+    }
+  }
+  let total = n;
+  for (let k = 0; k < ind.length; k += 3) {
+    const tri = [ind[k], ind[k + 1], ind[k + 2]];
+    const us = tri.map((i) => uv[i * 2]);
+    const min = Math.min(...us);
+    if (Math.max(...us) - min <= vao / 2) continue;
+    tri.forEach((i, j) => {
+      if (us[j] >= min + vao / 2) return;
+      let novo = novos.get(i);
+      if (novo === undefined) {
+        novo = total++;
+        novos.set(i, novo);
+        uv.push(uv[i * 2] + vao, uv[i * 2 + 1]);
+        for (const [nome, passo] of outros)
+          for (let c = 0; c < passo; c++) extra[nome].push(extra[nome][i * passo + c]);
+      }
+      ind[k + j] = novo;
+    });
+  }
+  if (total > n)
+    for (const [nome] of outros) (vd as unknown as Record<string, unknown>)[nome] = extra[nome];
+  vd.uvs = uv;
 }
 
 /**
@@ -199,10 +263,10 @@ export function degrauDoBrilho(b = 0.28): number {
 const brilhoDaPeca = (p: Peca): number =>
   p.viva || p.premium ? degrauDoBrilho(p.brilho) : (p.brilho ?? 0.28);
 
-/** Spec 023: o material da peça (luz própria, listras, tinta ou cor). */
+/** Spec 023: o material da peça (luz própria, aquário, tinta ou cor). */
 function materialDaPeca(scene: Scene, mats: Plasticos, p: Peca): StandardMaterial {
   if (p.luz) return luzPremium(scene, p.luz);
-  if (p.textura) return mats.textura(texturaListras(scene), p.brilho ?? 0.28);
+  if (p.textura) return mats.textura(texturaAquario(scene), p.brilho ?? 0.28);
   const b = brilhoDaPeca(p);
   return p.viva ? mats.tinta(b, p.alfa ?? 1) : mats.cor(p.cor, b, p.alfa ?? 1);
 }

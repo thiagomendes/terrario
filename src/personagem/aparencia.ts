@@ -1,4 +1,9 @@
-import { CATEGORIAS_PREMIUM, premiumPorId, type CategoriaPremium } from '../jogo/alma';
+import {
+  CATEGORIAS_PREMIUM,
+  idPremiumAtual,
+  premiumPorId,
+  type CategoriaPremium,
+} from '../jogo/alma';
 import {
   fantasiaPorId,
   normalizarFantasia,
@@ -76,14 +81,20 @@ export interface Aparencia {
 /** Spec 023: o premium vestido de cada categoria (roupa, costas, fantasia e bicho). */
 export type PremiumVestido = Partial<Record<CategoriaPremium, string>>;
 
-/** Só ids do catálogo, cada um na categoria dele (um por categoria). Nenhum: undefined. */
+/**
+ * Só ids do catálogo, cada um na categoria dele (um por categoria). Nenhum: undefined. O id
+ * que trocou de nome (a camiseta arco-íris de antes, guardada ou vinda de um amigo com o jogo
+ * antigo) vira o de agora.
+ */
 export function normalizarPremium(valor: unknown): PremiumVestido | undefined {
   if (typeof valor !== 'object' || valor === null || Array.isArray(valor)) return undefined;
   const v = valor as Record<string, unknown>;
   const out: PremiumVestido = {};
   for (const cat of CATEGORIAS_PREMIUM) {
-    const id = v[cat];
-    if (typeof id === 'string' && premiumPorId(id)?.categoria === cat) out[cat] = id;
+    const bruto = v[cat];
+    if (typeof bruto !== 'string') continue;
+    const id = idPremiumAtual(bruto);
+    if (premiumPorId(id)?.categoria === cat) out[cat] = id;
   }
   return Object.keys(out).length ? out : undefined;
 }

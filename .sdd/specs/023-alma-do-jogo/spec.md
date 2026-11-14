@@ -149,12 +149,12 @@ Sem bicho que não exista no tema (o gato e o pônei da rodada 1 saíram).
 **Catálogo de lançamento: só o que está pronto de verdade** (decisão do dono). Nada de cartão "em breve". As outras 5 do esboço (visor estelar, asas de borboleta, mochila-foguete, pandinha, cãozinho-robô) vêm em rodadas seguintes, poucas de cada vez, cada uma com o mesmo capricho.
 | Item | Categoria | Preço | O que o faz premium |
 |---|---|---|---|
-| Camiseta arco-íris | roupa | 15 | as listras correm devagar pela camiseta; brilho suave nas bordas |
-| Tênis-cometa | roupa | 20 | faixa de luz que corre o arco-íris; pegadas de luz que somem devagar e estrelinhas a cada passo; anel de estrelinhas ao cair de um pulo |
+| Camiseta aquário | roupa | 15 | água azul-mar com peixinhos (laranja, amarelo, coral e branco) nadando em volta do corpo e das mangas, o rabinho abanando; bolhas subindo, areia e algas na barra; gola, punhos e barra de pérola acesa e a estrela-do-mar de ouro na areia |
+| Tênis-cometa | roupa | 20 | faixa de luz que vai do ouro ao azul; o cometa de ouro com a cauda de ouro e azul; pegadas de luz de ouro e de azul que somem devagar e estrelinhas a cada passo; anel de estrelinhas ao cair de um pulo |
 | Capa de estrelas | costas | 30 | balança com o andar e o vento; estrelas que piscam; rastro de brilho correndo |
 | Dragãozinho | fantasia | 55 | capuz de dragão com focinho, chifres de ouro e espinhos; asas que batem (devagar parado, rápido correndo, forte no ar) |
 | Pinguinzinho | bicho | 60 | segue gingando, escorrega de barriga nas descidas, bate as asinhas quando a criança comemora |
-| Unicórnio-pônei | bicho | 80 | trota atrás, pula junto, chifre que solta brilho, coraçõezinhos quando a criança para perto; o sonho da lojinha |
+| Unicórnio-pônei | bicho | 80 | crina e rabo de rosa e lilás com brilhinhos; trota atrás, pula junto, chifre que solta brilho, coraçõezinhos quando a criança para perto; o sonho da lojinha |
 
 **Como a criança compra, sem ler:**
 - **Vitrine:** fundo de veludo azul-noite, holofotes, estrelas piscando. Cartões com borda de ouro, a arte flutuando e um brilho que passa. Preço numa fita dourada. Um potinho mostra quanto da carteira já dá.
@@ -305,7 +305,7 @@ Ver `tasks.md` (nesta pasta). Ordem: a regra e o núcleo primeiro, depois o HUD 
 ## Decisões do dono
 - 13 nov 2026: junta a 018. Fica logo depois da câmera (022), na ordem 022 → 023 → 024 → 020 → 025, com os mundos novos (026 e 027) intercalados.
 - 13 nov 2026 (rodada 2 do esboço): carteira, nível, habilidades e fantasias são da criança, no aparelho até a 024; missões, prêmios especiais e banca são do mundo; lojinha premium universal, pela roda do menu, com coisas que o jogo nunca dá, só com moedinhas; escasso e único quer dizer exclusivo pela qualidade, nunca por tempo ou quantidade.
-- 13 nov 2026 (depois da rodada 2): preços de 15 a 80, com o unicórnio como sonho; **catálogo de lançamento só com o que está pronto** (camiseta arco-íris, tênis-cometa, capa de estrelas, dragãozinho, pinguinzinho e unicórnio-pônei), as outras 5 depois, poucas de cada vez; os presentes de nível mantêm as moedinhas (2 a 5); antes de lançar, acabamento no capuz do dragão e no unicórnio (maior e mais vivo de longe), e conferir o boneco que flutua no céu das capturas.
+- 13 nov 2026 (depois da rodada 2): preços de 15 a 80, com o unicórnio como sonho; **catálogo de lançamento só com o que está pronto** (camiseta arco-íris, depois trocada pela camiseta aquário; tênis-cometa, capa de estrelas, dragãozinho, pinguinzinho e unicórnio-pônei), as outras 5 depois, poucas de cada vez; os presentes de nível mantêm as moedinhas (2 a 5); antes de lançar, acabamento no capuz do dragão e no unicórnio (maior e mais vivo de longe), e conferir o boneco que flutua no céu das capturas.
 - 13 nov 2026, ao aprovar a spec ("Manda ver"), com as recomendações aceitas:
   - a banca funciona nos mundos da nuvem, com saldo informado pelo aparelho e os limites do núcleo, até a 024;
   - moedinha ganha no mundo de um amigo vai para o cofrinho de quem visita;
@@ -313,3 +313,4 @@ Ver `tasks.md` (nesta pasta). Ordem: a regra e o núcleo primeiro, depois o HUD 
   - presentes depois do nível 10 ficam para uma rodada futura;
   - o boneco no céu: a T00 confirma antes de consertar;
   - sem limite diário de amigo dos bichos, só a regra de 1 minuto por bicho.
+- 14 nov 2026 (depois de publicada): **nada de arco-íris nos premium.** A camiseta arco-íris vira a **camiseta aquário** (mesmo preço e lugar no catálogo; o id `camiseta-arco-iris` passa a `camiseta-aquario`, e quem já tinha comprado ou vestia a de antes, guardado no aparelho ou chegando de um amigo com o jogo antigo, fica com a nova sem pagar de novo); a crina e o rabo do unicórnio ficam rosa e lilás com brilhinhos; a faixa e a cauda do tênis-cometa ficam de ouro e azul; os brilhos de cada premium nas cores dele. O arco-íris do céu depois da chuva fica como está, até o dono decidir.

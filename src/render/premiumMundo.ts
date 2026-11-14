@@ -24,7 +24,7 @@ import '@babylonjs/core/Meshes/thinInstanceMesh';
 import type { Scene } from '@babylonjs/core/scene';
 import type { PremiumVestido } from '../personagem/aparencia';
 import { ehSolido } from '../jogo/caminho';
-import { ARCO_PREMIUM } from './premiumLuzes';
+import { BRILHOS, umaDe } from './premiumLuzes';
 import { montarBichoPremium, type BichoMontado, type IdBichoPremium } from './bichoPremium';
 
 /** Teto do pool de brilhos (spec: no máximo 80 sprites). */
@@ -45,6 +45,8 @@ const LONGE_SIMPLES = 26;
 const LONGE_DETALHE = 11;
 const PERTO_DETALHE = 9.5;
 const LONGE_CONTORNO = 20;
+/** O puf do pinguim (o gelinho dele). */
+const PINGUIM = ['#bfefff', '#ffffff'] as const;
 
 type LerBloco = (x: number, y: number, z: number) => number | undefined;
 
@@ -196,7 +198,7 @@ function criarPoolBrilhos(scene: Scene) {
     b.giro = (Math.random() - 0.5) * 6;
     b.ang = Math.random() * Math.PI;
     b.gravidade = op.gravidade ?? -0.8;
-    Color3.FromHexString(op.cor ?? ARCO_PREMIUM[Math.floor(Math.random() * ARCO_PREMIUM.length)]).toLinearSpaceToRef(b.cor);
+    Color3.FromHexString(op.cor ?? umaDe(BRILHOS.festa)).toLinearSpaceToRef(b.cor);
     b.cor.set(Math.sqrt(b.cor.r), Math.sqrt(b.cor.g), Math.sqrt(b.cor.b));
   }
 
@@ -300,7 +302,8 @@ function criarPegadas(scene: Scene) {
       p.z = z;
       p.yaw = yaw;
       p.vida = 0;
-      Color3.FromHexString(ARCO_PREMIUM[corN++ % ARCO_PREMIUM.length]).toLinearSpaceToRef(p.cor);
+      // as pegadas de ouro e de azul, uma de cada
+      Color3.FromHexString(corN++ % 2 ? '#7fd4ff' : '#ffd84a').toLinearSpaceToRef(p.cor);
       p.cor.set(Math.sqrt(p.cor.r), Math.sqrt(p.cor.g), Math.sqrt(p.cor.b));
     },
     quadro(dt: number) {
@@ -349,6 +352,8 @@ interface Bicho {
   barriga: number;
   /** Pinguim: bate as asinhas (segundos que faltam). */
   bate: number;
+  /** Unicórnio: o próximo brilhinho da crina ou do rabo (segundos que faltam). */
+  cintila: number;
   t: number;
 }
 
@@ -461,6 +466,7 @@ export function efeitosPremium(scene: Scene): EfeitosPremium {
       coracaoFeito: true,
       barriga: 0,
       bate: 0,
+      cintila: 0,
       t: Math.random() * 10,
     };
     b.raiz.position.set(x, r.y, z);
@@ -536,12 +542,18 @@ export function efeitosPremium(scene: Scene): EfeitosPremium {
         marcas().marcar(p.x, piso, p.z, yaw);
         nPegadas++;
         for (let i = 0; i < 3; i++)
-          pool().soltar(aux.set(p.x, piso + 0.12, p.z), { tam: 0.19 + Math.random() * 0.1, dura: 0.85 });
+          pool().soltar(aux.set(p.x, piso + 0.12, p.z), {
+            cor: umaDe(BRILHOS.cometa),
+            tam: 0.19 + Math.random() * 0.1,
+            dura: 0.85,
+          });
       }
       if (pousou)
         for (let i = 0; i < 14; i++) {
           const a = (i / 14) * Math.PI * 2;
           pool().soltar(aux.set(r.x, piso + 0.08, r.z), {
+            // o anel do pouso: ouro e azul alternados
+            cor: i % 2 ? '#7fd4ff' : '#ffd84a',
             v: new Vector3(Math.cos(a) * 1.7, 0.6, Math.sin(a) * 1.7),
             dura: 0.7,
             tam: 0.19,
@@ -577,7 +589,7 @@ export function efeitosPremium(scene: Scene): EfeitosPremium {
     // ---------------------------------------------------- dragãozinho no ar
     if (u.premium.fantasia === 'dragao' && u.visivel && perto && noAr && Math.random() < dt * 5)
       pool().soltar(aux.set(r.x, r.y + 0.9, r.z), {
-        cor: ARCO_PREMIUM[(Math.random() * 3 + 3) | 0],
+        cor: umaDe(BRILHOS.dragao),
         v: new Vector3(0, -0.6, 0),
         tam: 0.12,
       });
@@ -594,7 +606,9 @@ export function efeitosPremium(scene: Scene): EfeitosPremium {
     b.y = chao(b.x, r.y + 0.5, b.z);
     b.vy = 0;
     b.noAr = false;
-    if (u.visivel) for (let i = 0; i < 16; i++) pool().soltar(aux.set(b.x, b.y + 0.6, b.z), { tam: 0.2 });
+    const cores = b.b.id === 'unicornio' ? BRILHOS.unicornio : PINGUIM;
+    if (u.visivel)
+      for (let i = 0; i < 16; i++) pool().soltar(aux.set(b.x, b.y + 0.6, b.z), { cor: umaDe(cores), tam: 0.2 });
   }
 
   function quadroBicho(u: Usuario, pet: Bicho, dt: number, perto: boolean): void {
@@ -646,7 +660,11 @@ export function efeitosPremium(scene: Scene): EfeitosPremium {
       pet.vy = vy;
       pet.noAr = true;
       if (u.visivel && perto)
-        for (let i = 0; i < 6; i++) pool().soltar(aux.set(pet.x, pet.y + 0.2, pet.z), { tam: 0.15 });
+        for (let i = 0; i < 6; i++)
+          pool().soltar(aux.set(pet.x, pet.y + 0.2, pet.z), {
+            cor: umaDe(uni ? BRILHOS.unicornio : PINGUIM),
+            tam: 0.15,
+          });
     };
     if (!pet.noAr && u.vy > 3 && dist < 6) pular(uni ? 4.8 : 4.2);
     else if (!pet.noAr && piso > pet.y + 0.4) pular(5.2);
@@ -704,6 +722,35 @@ export function efeitosPremium(scene: Scene): EfeitosPremium {
     n.orelhaE.rotation.x = Math.max(0, Math.sin(t * 1.7) - 0.85) * 3;
     n.orelhaD.rotation.x = Math.max(0, Math.sin(t * 1.7 + 2) - 0.85) * 3;
     n.olhos.scaling.y = t % 3.4 < 0.12 ? 0.12 : 1;
+    // a crina e o rabo cintilam de leve: um brilhinho rosa, lilás ou perolado de cada vez,
+    // mais amiúde trotando (o rastro de sonho)
+    pet.cintila -= dt;
+    if (pet.cintila <= 0 && u.visivel) {
+      pet.cintila = andando ? 0.12 + Math.random() * 0.08 : 0.3 + Math.random() * 0.25;
+      const doRabo = Math.random() < 0.35;
+      const o = (doRabo ? n.rabo3 : n.pescoco).getAbsolutePosition();
+      // por fora da crina (ela é grossa: dentro, o brilhinho sumiria), de um lado ou do outro
+      const lado = (Math.random() < 0.5 ? -1 : 1) * (0.17 + Math.random() * 0.08);
+      const atras = (doRabo ? 0.02 : 0.1) + Math.random() * 0.12;
+      const cx = Math.cos(pet.yaw);
+      const sx = Math.sin(pet.yaw);
+      pool().soltar(
+        o.add(
+          new Vector3(
+            cx * lado - sx * atras,
+            (doRabo ? -0.12 : 0.15) + Math.random() * 0.3,
+            -sx * lado - cx * atras,
+          ),
+        ),
+        {
+          cor: umaDe(BRILHOS.unicornio),
+          v: new Vector3(0, 0.22, 0),
+          gravidade: 0,
+          dura: 0.7 + Math.random() * 0.4,
+          tam: 0.13 + Math.random() * 0.08,
+        },
+      );
+    }
     // o chifre solta uma estrelinha de vez em quando, andando ou parado (lê de longe)
     pet.bate -= dt;
     if (pet.bate <= 0 && u.visivel) {
@@ -722,6 +769,7 @@ export function efeitosPremium(scene: Scene): EfeitosPremium {
       if (u.visivel)
         for (let i = 0; i < 10; i++)
           pool().soltar(c.add(new Vector3(0, 0.55, 0.1)), {
+            cor: umaDe(BRILHOS.unicornio),
             v: new Vector3((Math.random() - 0.5) * 0.9, 1, (Math.random() - 0.5) * 0.9),
             tam: 0.14,
           });

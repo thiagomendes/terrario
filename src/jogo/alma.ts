@@ -571,19 +571,19 @@ export interface ItemPremium {
  */
 export const PREMIUM: readonly ItemPremium[] = [
   {
-    id: 'camiseta-arco-iris',
+    id: 'camiseta-aquario',
     categoria: 'roupa',
-    nome: 'Camiseta arco-íris',
+    nome: 'Camiseta aquário',
     preco: 15,
-    efeito: 'as listras correm devagar pela camiseta; brilho suave nas bordas',
-    desenho: 'premium:camiseta-arco-iris',
+    efeito: 'peixinhos nadando em volta do corpo e bolhas subindo; brilho de pérola nas bordas',
+    desenho: 'premium:camiseta-aquario',
   },
   {
     id: 'tenis-cometa',
     categoria: 'roupa',
     nome: 'Tênis-cometa',
     preco: 20,
-    efeito: 'faixa de luz arco-íris; pegadas de luz e estrelinhas a cada passo',
+    efeito: 'faixa de luz de ouro e azul; pegadas de luz e estrelinhas a cada passo',
     desenho: 'premium:tenis-cometa',
   },
   {
@@ -621,6 +621,20 @@ export const PREMIUM: readonly ItemPremium[] = [
 ];
 export const premiumPorId = (id: string): ItemPremium | undefined =>
   PREMIUM.find((p) => p.id === id);
+
+/**
+ * Premium que trocaram de nome depois de o site já estar no ar (o id antigo pode estar guardado
+ * no aparelho da criança ou chegar de um amigo com o jogo de antes). Quem lê id de fora passa
+ * por `idPremiumAtual`: a criança continua com o que comprou e vestiu.
+ *
+ * - `camiseta-arco-iris` → `camiseta-aquario` (decisão do dono: nada de arco-íris nos premium;
+ *   o mesmo lugar no catálogo e o mesmo preço).
+ */
+export const PREMIUM_RENOMEADOS: Readonly<Record<string, string>> = {
+  'camiseta-arco-iris': 'camiseta-aquario',
+};
+export const idPremiumAtual = (id: string): string =>
+  Object.hasOwn(PREMIUM_RENOMEADOS, id) ? PREMIUM_RENOMEADOS[id] : id;
 
 /**
  * Categorias que dividem o mesmo lugar no boneco: as asas do dragãozinho (fantasia) ficam nas
@@ -1107,13 +1121,24 @@ export function normalizarPerfilAlma(v: unknown): PerfilAlma {
   if (objeto(v.pontos))
     for (const h of IDS_HABILIDADE)
       if (v.pontos[h] !== undefined) c.pontos[h] = r2(numero(v.pontos[h]));
+  // os ids que trocaram de nome viram o de agora (o guardado de antes continua valendo)
   c.premium = Array.isArray(v.premium)
-    ? [...new Set(v.premium.filter((p): p is string => typeof p === 'string' && !!premiumPorId(p)))]
+    ? [
+        ...new Set(
+          v.premium
+            .filter((p): p is string => typeof p === 'string')
+            .map(idPremiumAtual)
+            .filter((p) => !!premiumPorId(p)),
+        ),
+      ]
     : [];
   if (objeto(v.vestidos))
-    for (const [cat, id] of Object.entries(v.vestidos))
-      if (typeof id === 'string' && c.premium.includes(id) && premiumPorId(id)?.categoria === cat)
+    for (const [cat, bruto] of Object.entries(v.vestidos)) {
+      if (typeof bruto !== 'string') continue;
+      const id = idPremiumAtual(bruto);
+      if (c.premium.includes(id) && premiumPorId(id)?.categoria === cat)
         c.vestidos[cat as CategoriaPremium] = id;
+    }
   // guardado de antes da regra do lugar dividido: a fantasia (as asas) fica, a capa sai
   if (c.vestidos.fantasia) delete c.vestidos.costas;
   c.fantasias = Array.isArray(v.fantasias)
@@ -1194,8 +1219,9 @@ export type RecusaPremium = 'nao-existe' | 'ja-tem' | 'faltam-moedas';
 /** Premium: preço fixo, um de cada, só com a carteira; comprou, já veste. Muda `c`. */
 export function comprarPremium(
   c: PerfilAlma,
-  id: string,
+  bruto: string,
 ): { ok: true } | { ok: false; motivo: RecusaPremium } {
+  const id = idPremiumAtual(bruto);
   const p = premiumPorId(id);
   if (!p) return { ok: false, motivo: 'nao-existe' };
   if (c.premium.includes(id)) return { ok: false, motivo: 'ja-tem' };
@@ -1212,7 +1238,8 @@ function vestirPeca(c: PerfilAlma, p: ItemPremium): void {
   c.vestidos[p.categoria] = p.id;
 }
 /** Veste ou tira um premium já comprado (um por categoria). */
-export function vestirPremium(c: PerfilAlma, id: string, vestir: boolean): boolean {
+export function vestirPremium(c: PerfilAlma, bruto: string, vestir: boolean): boolean {
+  const id = idPremiumAtual(bruto);
   const p = premiumPorId(id);
   if (!p || !c.premium.includes(id)) return false;
   if (vestir) vestirPeca(c, p);

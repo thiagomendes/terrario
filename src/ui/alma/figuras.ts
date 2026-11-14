@@ -75,7 +75,7 @@ export function desenhoDaObra(n: number): string {
  * ela aparece melhor (a capa de costas); os bichinhos sozinhos.
  */
 const FOTO_PREMIUM: Record<string, { recorte: RecorteBoneco; giro: number; bicho?: IdBichoPremium }> = {
-  'camiseta-arco-iris': { recorte: 'corpo', giro: 0.36 },
+  'camiseta-aquario': { recorte: 'corpo', giro: 0.36 },
   'tenis-cometa': { recorte: 'corpo', giro: 0.75 },
   'capa-estrelas': { recorte: 'corpo', giro: Math.PI - 1.05 },
   dragao: { recorte: 'corpo', giro: 0.62 },

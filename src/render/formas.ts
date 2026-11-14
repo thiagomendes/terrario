@@ -408,7 +408,7 @@ export interface Plasticos {
    */
   corVertice(brilho?: number): StandardMaterial | null;
   /**
-   * Spec 023: plástico com a cor de uma textura que se mexe (as listras da camiseta arco-íris).
+   * Spec 023: plástico com a cor de uma textura que se mexe (o aquário da camiseta).
    * Nunca fica congelado (o deslocamento da textura muda a cada quadro).
    */
   textura(tex: BaseTexture, brilho?: number): StandardMaterial;

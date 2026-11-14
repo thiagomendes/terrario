@@ -246,7 +246,7 @@ describe('alma: banca e premium', () => {
   });
   it('lojinha: só os 6 de lançamento, de 15 a 80, nada de missão nem de nível', () => {
     expect(PREMIUM.map((p) => [p.id, p.preco])).toEqual([
-      ['camiseta-arco-iris', 15],
+      ['camiseta-aquario', 15],
       ['tenis-cometa', 20],
       ['capa-estrelas', 30],
       ['dragao', 55],
@@ -266,9 +266,9 @@ describe('alma: banca e premium', () => {
     expect(c.moedas).toBe(20);
     expect(c.vestidos.roupa).toBe('tenis-cometa');
     expect(comprarPremium(c, 'tenis-cometa')).toEqual({ ok: false, motivo: 'ja-tem' });
-    expect(comprarPremium(c, 'camiseta-arco-iris')).toEqual({ ok: true });
-    expect(c.vestidos.roupa).toBe('camiseta-arco-iris');
-    expect(vestirPremium(c, 'camiseta-arco-iris', false)).toBe(true);
+    expect(comprarPremium(c, 'camiseta-aquario')).toEqual({ ok: true });
+    expect(c.vestidos.roupa).toBe('camiseta-aquario');
+    expect(vestirPremium(c, 'camiseta-aquario', false)).toBe(true);
     expect(c.vestidos.roupa).toBeUndefined();
     expect(vestirPremium(c, 'dragao', true)).toBe(false);
   });
@@ -278,7 +278,7 @@ describe('alma: banca e premium', () => {
     expect(comprarPremium(c, 'capa-estrelas')).toEqual({ ok: true });
     expect(comprarPremium(c, 'tenis-cometa')).toEqual({ ok: true });
     expect(saiAoVestir(c.vestidos, 'dragao')).toEqual(['capa-estrelas']);
-    expect(saiAoVestir(c.vestidos, 'camiseta-arco-iris')).toEqual(['tenis-cometa']);
+    expect(saiAoVestir(c.vestidos, 'camiseta-aquario')).toEqual(['tenis-cometa']);
     expect(saiAoVestir(c.vestidos, 'unicornio')).toEqual([]);
     expect(comprarPremium(c, 'dragao')).toEqual({ ok: true });
     expect(c.vestidos).toEqual({ roupa: 'tenis-cometa', fantasia: 'dragao' });

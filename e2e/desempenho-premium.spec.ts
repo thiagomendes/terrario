@@ -19,9 +19,9 @@ const BASE: Record<string, Record<string, unknown>> = {
 };
 const PREMIUM: Record<string, Record<string, string>> = {
   lia: { roupa: 'tenis-cometa', fantasia: 'dragao', bicho: 'unicornio' },
-  theo: { roupa: 'camiseta-arco-iris', costas: 'capa-estrelas', bicho: 'pinguim' },
+  theo: { roupa: 'camiseta-aquario', costas: 'capa-estrelas', bicho: 'pinguim' },
   bia: { roupa: 'tenis-cometa', costas: 'capa-estrelas', bicho: 'unicornio' },
-  gui: { roupa: 'camiseta-arco-iris', fantasia: 'dragao', bicho: 'pinguim' },
+  gui: { roupa: 'camiseta-aquario', fantasia: 'dragao', bicho: 'pinguim' },
 };
 /** [id, ângulo em relação ao olhar, distância]: os quatro à vista, de perto a média distância. */
 const LUGARES: [string, number, number][] = [

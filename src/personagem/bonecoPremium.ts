@@ -1,17 +1,18 @@
 /**
  * Spec 023 (T11 e T12): as peças dos premium vestidos no boneco de brinquedo. Só dados, como o
  * resto do plano (boneco.ts e bonecoFantasia.ts): forma, tamanho, cor, a junta, e o que é só
- * dos premium (a luz própria que se anima, as listras que correm, o degradê e as asas num nó
+ * dos premium (a luz própria que se anima, o aquário que se mexe, o degradê e as asas num nó
  * próprio). A montagem e a animação ficam em render/boneco.ts, render/premiumLuzes.ts e
  * render/premiumMundo.ts.
  *
  * O premium tem que se ver além de tudo que se ganha no jogo: cada peça leva luz própria, um
  * degradê, ouro de verdade e um detalhe que só ele tem. Nada de modelo pronto: tudo feito aqui.
  *
- * - **Camiseta arco-íris:** as sete listras correm devagar pela camiseta e pelas mangas; a gola,
- *   os punhos e a barra são de pérola acesa; a estrelinha de ouro no peito.
- * - **Tênis-cometa:** sola branca grossa com a faixa de luz que corre o arco-íris, o cano
- *   violeta, a biqueira, a língua rosa, os cadarços e o cometa de ouro com a cauda colorida dos
+ * - **Camiseta aquário:** a água azul-mar com os peixinhos dando a volta no corpo e nas mangas
+ *   (o rabinho abanando), as bolhas subindo, a areia e as algas na barra; a gola, os punhos e a
+ *   barra são de pérola acesa; a estrela-do-mar de ouro deitada na areia.
+ * - **Tênis-cometa:** sola branca grossa com a faixa de luz que vai do ouro ao azul, o cano
+ *   violeta, a biqueira, a língua, os cadarços e o cometa de ouro com a cauda de ouro e azul dos
  *   dois lados.
  * - **Capa de estrelas:** veludo azul-noite que vira violeta embaixo, a barra de ouro, a lua e
  *   as estrelas que piscam em três tempos, a gola e os broches de estrela.
@@ -210,14 +211,36 @@ function chifreCurvo(
   return p;
 }
 
-// ------------------------------------------------------------------ camiseta arco-íris
-function camisetaArcoIris(P: Pecas, m: MedidasBoneco): void {
+// ------------------------------------------------------------------ camiseta aquário
+function camisetaAquario(P: Pecas, m: MedidasBoneco): void {
   const { larg, troncoH, prof, frente } = m;
   // a roupa de baixo sai (os enfeites do estilo); a camiseta cobre o peito e as mangas
   P.tirar(/^(tunica-barra|cinto|fivela|avental|camiseta|gola|listra\d|colete-?1|colete1|bandoleira|bolso)$/);
+  // o aquário dá uma volta inteira no tronco (a frente no meio da textura, a costura nas
+  // costas); as mangas continuam o lado do tronco (a costura delas fica para dentro, no corpo)
+  const a = larg / 2;
+  const b = prof / 2;
+  const volta = 4 * a + 4 * b;
+  const manga = P.lista.find((p) => p.nome === 'bracoD-manga')?.tamanho ?? [0.13, 0.26, 0.14];
+  const am = manga[0] / 2;
+  const bm = manga[2] / 2;
+  const yBraco = troncoH - 0.08;
   for (const p of P.lista) {
-    if (p.nome === 'peito' || /^braco[ED]-(manga|ombro)$/.test(p.nome)) {
-      p.textura = 'arco-iris';
+    const lado = /^braco([ED])-(manga|ombro)$/.exec(p.nome)?.[1];
+    if (p.nome === 'peito' || lado) {
+      p.textura = lado
+        ? {
+            id: 'aquario',
+            a: am,
+            b: bm,
+            volta,
+            // o braço D fica no +x: o lado de fora dele continua o lado direito do tronco
+            costura: lado === 'D' ? 3 * am + 3 * bm : am + bm,
+            u0: (lado === 'D' ? 0.75 : 0.25) - (2 * am + 2 * bm) / volta,
+            y0: -yBraco,
+            altura: troncoH,
+          }
+        : { id: 'aquario', a, b, volta, costura: 2 * a + 2 * b, u0: 0, y0: 0, altura: troncoH };
       // a cor vem só da textura (sem tinta nos vértices por cima)
       p.viva = false;
       p.brilho = 0.42;
@@ -228,7 +251,7 @@ function camisetaArcoIris(P: Pecas, m: MedidasBoneco): void {
       p.viva = undefined;
     }
   }
-  // a gola, a barra e a estrelinha do peito (pérola e ouro acesos)
+  // a gola e a barra de pérola acesa
   P.anel('camiseta-gola', 'tronco', 'tronco', larg * 0.78, 0.045, [0, troncoH - 0.01, 0.005], PEROLA, {
     luz: 'perola',
   });
@@ -242,8 +265,10 @@ function camisetaArcoIris(P: Pecas, m: MedidasBoneco): void {
     0.03,
     { luz: 'perola' },
   );
-  P.placa('camiseta-estrela', 'tronco', 'tronco', perfilEstrela(0.05), 0.016, [-larg * 0.22, troncoH * 0.7, frente + 0.006], OURO, {
+  // a estrela-do-mar de ouro acesa, deitada na areia da barra (os peixinhos passam por cima)
+  P.placa('camiseta-estrela', 'tronco', 'tronco', perfilEstrela(0.042), 0.016, [larg * 0.24, 0.072, frente + 0.006], OURO, {
     luz: 'ouro',
+    rot: [0, 0, 0.3],
   });
 }
 
@@ -257,13 +282,13 @@ function tenisCometa(P: Pecas, m: MedidasBoneco): void {
   for (const lado of ['pernaE', 'pernaD'] as const) {
     const y0 = -quadril;
     const z0 = 0.04;
-    // tênis gordinho de brinquedo: a sola branca grossa com a faixa de luz que corre o
-    // arco-íris em volta dela, por inteiro
+    // tênis gordinho de brinquedo: a sola branca grossa com a faixa de luz (do ouro ao azul)
+    // em volta dela, por inteiro
     P.caixa(`${lado}-tenis-sola`, lado, 'perna', [0.25, 0.05, 0.35], [0, y0 + 0.026, z0], BRANCO, 0.024, {
       brilho: 0.45,
     });
-    P.caixa(`${lado}-tenis-luz`, lado, 'perna', [0.266, 0.04, 0.366], [0, y0 + 0.068, z0], '#ff4f6d', 0.018, {
-      luz: 'arco',
+    P.caixa(`${lado}-tenis-luz`, lado, 'perna', [0.266, 0.04, 0.366], [0, y0 + 0.068, z0], '#ffd84a', 0.018, {
+      luz: 'cometa',
     });
     P.caixa(`${lado}-tenis-sola2`, lado, 'perna', [0.25, 0.026, 0.35], [0, y0 + 0.098, z0], BRANCO, 0.012, {
       brilho: 0.45,
@@ -300,14 +325,15 @@ function tenisCometa(P: Pecas, m: MedidasBoneco): void {
       luz: 'perola',
       rot: [0, Math.PI, 0],
     });
-    // o cometa dos dois lados: a estrela de ouro acesa e a cauda em três fitas para trás
+    // o cometa dos dois lados: a estrela de ouro acesa e a cauda em três fitas para trás (o
+    // ouro perto da estrela, virando azul na ponta)
     for (const s of [-1, 1]) {
       const x = s * 0.119;
       P.placa(`${lado}-tenis-cometa${s}`, lado, 'perna', perfilEstrela(0.058), 0.016, [x, y0 + 0.185, z0 + 0.05], OURO, {
         luz: 'ouro',
         rot: [0, (s * Math.PI) / 2, 0],
       });
-      const fitas = ['#ff6fb5', '#ffd93d', '#3cc4ff'];
+      const fitas = ['#ffd23f', '#7fd4ff', '#3f8cff'];
       fitas.forEach((cor, i) =>
         P.caixa(
           `${lado}-tenis-cauda${s}${i}`,
@@ -798,7 +824,7 @@ export function vestirPremiumNoPlano(
   _comFantasia: boolean,
 ): void {
   const P = new Pecas(lista);
-  if (premium.roupa === 'camiseta-arco-iris') camisetaArcoIris(P, m);
+  if (premium.roupa === 'camiseta-aquario') camisetaAquario(P, m);
   if (premium.roupa === 'tenis-cometa') tenisCometa(P, m);
   if (premium.costas === 'capa-estrelas' && !premium.fantasia) {
     capaDeEstrelas(P, m);

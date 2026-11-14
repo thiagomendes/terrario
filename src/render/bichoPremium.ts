@@ -24,7 +24,7 @@ import type { Scene } from '@babylonjs/core/scene';
 import type { IdLuzPremium, Junta, Peca } from '../personagem/boneco';
 import { dadosDaPeca } from './boneco';
 import { criarPlasticos, type Plasticos } from './formas';
-import { ARCO_PREMIUM, luzPremium } from './premiumLuzes';
+import { luzPremium } from './premiumLuzes';
 
 type V3 = [number, number, number];
 
@@ -59,15 +59,34 @@ export interface BichoMontado {
   descartar(): void;
 }
 
-/** O arco-íris contínuo (t de 0 a 1, do rosa ao violeta), para os degradês da crina e do rabo. */
-function arcoIris(t: number): string {
-  const A = ARCO_PREMIUM;
+/**
+ * O degradê de sonho da crina e do rabo (t de 0 a 1): rosa-chiclete, rosa-claro, lilás e
+ * lavanda. Só rosa e lilás (decisão do dono: nada de arco-íris nos premium).
+ */
+const CRINA = ['#ff4fae', '#ff7cc6', '#d98cff', '#a46bff'] as const;
+function degradeCrina(t: number): string {
+  const A = CRINA;
   const k = Math.max(0, Math.min(0.9999, t)) * (A.length - 1);
   const i = Math.floor(k);
   const f = k - i;
   const a = parseInt(A[i].slice(1), 16);
   const b = parseInt(A[i + 1].slice(1), 16);
   const c = [16, 8, 0].map((s) => Math.round(((a >> s) & 255) * (1 - f) + ((b >> s) & 255) * f));
+  return `#${c.map((v) => v.toString(16).padStart(2, '0')).join('')}`;
+}
+
+/**
+ * O quanto o ponto da crina está longe do pescoço (0 na borda de dentro, 1 na ponta das
+ * mechas). A placa da crina gira um quarto de volta: o "para trás" do perfil vira o -z.
+ */
+const beiradaCrina = (y: number, z: number): number => (-z - (0.2 - (y + 0.08) * 0.34)) / 0.2;
+
+/** A crina com o fio de cetim: o miolo no degradê e a beirada das mechas clarinha. */
+function corDaMecha(t: number, beirada: number): string {
+  const base = degradeCrina(t);
+  const k = Math.max(0, Math.min(1, beirada)) * 0.42;
+  const a = parseInt(base.slice(1), 16);
+  const c = [16, 8, 0].map((s) => Math.round(((a >> s) & 255) * (1 - k) + 255 * k));
   return `#${c.map((v) => v.toString(16).padStart(2, '0')).join('')}`;
 }
 
@@ -152,14 +171,13 @@ function olho(osso: string, s: number, x: number, y: number, z: number, r: numbe
 }
 
 // --------------------------------------------------------------------------- unicórnio
-/** O unicórnio-pônei: branco perolado, crina e rabo cheios do arco-íris, chifre de luz. */
+/** O unicórnio-pônei: branco perolado, crina e rabo de rosa e lilás, chifre de luz. */
 function desenhoUnicornio(): Desenho {
   const branco = '#fffbff';
   const sombra = '#f3e6ff';
   const rosa = '#ffd3e8';
   const focinho = '#ffeaf4';
   const ouro = '#ffb81f';
-  const A = ARCO_PREMIUM;
   const ossos: Osso[] = [
     { nome: 'corpo', pai: null, pos: [0, 0, 0] },
     { nome: 'pernaFE', pai: 'corpo', pos: [-0.13, 0.36, 0.2] },
@@ -229,8 +247,8 @@ function desenhoUnicornio(): Desenho {
       brilho: 0.85,
     });
   }
-  // a crina: uma onda só de arco-íris pelo pescoço (o degradê corre do rosa da testa ao violeta
-  // da cernelha), com mechas de volume dos dois lados e o topete caindo na testa
+  // a crina: uma onda só pelo pescoço (o degradê corre do rosa-chiclete da testa ao lilás da
+  // cernelha, a beirada das mechas clarinha), com o topete rosa e lilás caindo na testa
   const crina = perfilMecha(
     [
       [-0.02, 0.56],
@@ -250,12 +268,13 @@ function desenhoUnicornio(): Desenho {
     perfil: crina,
     pos: [0, 0, 0],
     rot: [0, Math.PI / 2, 0],
-    cor: A[0],
-    pintar: (_x, y) => arcoIris((0.58 - y) / 0.66),
+    cor: CRINA[0],
+    pintar: (_x, y, z) => corDaMecha((0.58 - y) / 0.66, beiradaCrina(y, z)),
   });
-  p.push(bola('cabeca', 'topete1', 0.042, [0.035, 0.2, 0.135], A[0], [0.6, 1.5, 0.85], { rot: [1.15, 0, 0.35] }));
-  p.push(bola('cabeca', 'topete2', 0.038, [-0.03, 0.2, 0.125], A[6], [0.6, 1.5, 0.85], { rot: [1.2, 0, -0.3] }));
-  // o rabo: três ondas de arco-íris (uma em cada osso, balançando em cadeia) com o miolo cheio
+  p.push(bola('cabeca', 'topete1', 0.042, [0.035, 0.2, 0.135], CRINA[0], [0.6, 1.5, 0.85], { rot: [1.15, 0, 0.35] }));
+  p.push(bola('cabeca', 'topete2', 0.038, [-0.03, 0.2, 0.125], CRINA[2], [0.6, 1.5, 0.85], { rot: [1.2, 0, -0.3] }));
+  // o rabo: três ondas de rosa e lilás (uma em cada osso, balançando em cadeia) com o miolo
+  // cheio; começa no lilás da cernelha e volta ao rosa na ponta
   const raboPerfil = (comp: number, larg: number) =>
     perfilMecha(
       [
@@ -281,10 +300,11 @@ function desenhoUnicornio(): Desenho {
       perfil: raboPerfil(comp, larg),
       pos: [0, 0, -0.02],
       rot: [0, Math.PI / 2, 0],
-      cor: A[0],
-      pintar: (_x, y) => arcoIris(c0 + (c1 - c0) * Math.min(1, Math.max(0, -y / comp))),
+      cor: CRINA[3],
+      pintar: (_x, y, z) =>
+        corDaMecha(1 - (c0 + (c1 - c0) * Math.min(1, Math.max(0, -y / comp))), (-z - larg * 0.1) / (larg * 0.9)),
     });
-    p.push(bola(n, 'miolo', larg * 0.5, [0, -comp * 0.45, -0.02], arcoIris((c0 + c1) / 2), [0.95, 1.6, 0.95]));
+    p.push(bola(n, 'miolo', larg * 0.5, [0, -comp * 0.45, -0.02], degradeCrina(1 - (c0 + c1) / 2), [0.95, 1.6, 0.95]));
   }
   return { ossos, pecas: p, escala: 1.4, contorno: '#fff6ff' };
 }

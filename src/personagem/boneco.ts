@@ -69,12 +69,12 @@ export interface Peca {
   viva?: boolean;
   /**
    * Spec 023 (premium): luz própria, num material da cena que se anima sozinho (a faixa do
-   * tênis que corre o arco-íris, as estrelas da capa piscando, o ouro que pulsa). Não segue a
-   * luz do lugar: é luz.
+   * tênis do ouro ao azul, as estrelas da capa piscando, o ouro que pulsa). Não segue a luz do
+   * lugar: é luz.
    */
   luz?: IdLuzPremium;
-  /** Spec 023: a tinta que corre (as listras da camiseta arco-íris), na textura da cena. */
-  textura?: 'arco-iris';
+  /** Spec 023: a tinta que se mexe (o aquário da camiseta), na textura da cena. */
+  textura?: TexturaPremium;
   /**
    * Spec 023: a cor de cada vértice (degradê da asa, da capa), pela posição na peça já no
    * lugar (antes da junta). Só com `viva`.
@@ -87,9 +87,30 @@ export interface Peca {
   subjunta?: { nome: SubjuntaPremium; pivo: [number, number, number] };
 }
 
+/**
+ * Spec 023: como a textura que se mexe veste a peça. A largura da textura dá a volta em torno
+ * da peça (medida como numa caixa de meia largura `a` e meia profundidade `b` em volta do eixo
+ * da junta, a partir da frente e com a costura em `costura`, no mesmo comprimento), e a altura
+ * sobe pela peça.
+ */
+export interface TexturaPremium {
+  id: 'aquario';
+  a: number;
+  b: number;
+  /** O comprimento de uma volta inteira da textura (o contorno do tronco). */
+  volta: number;
+  /** Onde a costura fica no contorno da peça (0 na frente, crescendo para +x). */
+  costura: number;
+  /** Onde a peça começa na textura (0 a 1), depois da costura. */
+  u0: number;
+  /** A base da textura (y na junta) e a altura dela. */
+  y0: number;
+  altura: number;
+}
+
 /** Spec 023: as luzes dos premium (materiais da cena, animados uma vez para todos). */
 export type IdLuzPremium =
-  | 'arco'
+  | 'cometa'
   | 'ouro'
   | 'perola'
   | 'estrela0'

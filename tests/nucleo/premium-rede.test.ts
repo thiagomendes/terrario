@@ -59,6 +59,12 @@ describe('premium na aparência (normalizar)', () => {
     const a = normalizarAparencia({ ...aparenciaPadrao(), fantasia: { id: 'dragao', cor: 0 } });
     expect(a.fantasia).toBeUndefined();
   });
+  it('a camiseta arco-íris de antes (de um amigo com o jogo antigo) chega como a aquário', () => {
+    const velha = { ...aparenciaPadrao(), premium: { roupa: 'camiseta-arco-iris', bicho: 'unicornio' } };
+    expect(normalizarAparencia(velha).premium).toEqual({ roupa: 'camiseta-aquario', bicho: 'unicornio' });
+    // o servidor passa a limpo com o id novo (quem tem o jogo de agora desenha a aquário)
+    expect(sanearAparencia(velha)?.premium).toEqual({ roupa: 'camiseta-aquario', bicho: 'unicornio' });
+  });
   it('o saneamento guarda o premium e continua com o limite de 4096', () => {
     const s = sanearAparencia({ ...aparenciaPadrao(), premium: { bicho: 'pinguim', x: 1 } });
     expect(s?.premium).toEqual({ bicho: 'pinguim' });
@@ -69,9 +75,18 @@ describe('premium na aparência (normalizar)', () => {
 describe.each<Modo>(['local', 'nuvem'])('premium pela rede (%s)', (modo) => {
   it('o amigo vê o premium vestido', () => {
     const { n, quem, ve, confiar } = montar(modo);
-    const premium = { roupa: 'camiseta-arco-iris', costas: 'capa-estrelas', bicho: 'unicornio' };
+    const premium = { roupa: 'camiseta-aquario', costas: 'capa-estrelas', bicho: 'unicornio' };
     mandar(n, quem, { t: 'aparencia', aparencia: { ...aparenciaPadrao(), premium } }, confiar);
     expect(vistaPor(n, quem, ve)?.premium).toEqual(premium);
+  });
+  it('o amigo com o jogo de antes (camiseta arco-íris) aparece de camiseta aquário', () => {
+    const { n, quem, ve, confiar } = montar(modo);
+    const premium = { roupa: 'camiseta-arco-iris', costas: 'capa-estrelas' };
+    mandar(n, quem, { t: 'aparencia', aparencia: { ...aparenciaPadrao(), premium } }, confiar);
+    // no aparelho, o amigo desenha a aparência passada a limpo; na nuvem, já chega limpa
+    const a = vistaPor(n, quem, ve);
+    if (modo === 'nuvem') expect(a?.premium).toEqual({ roupa: 'camiseta-aquario', costas: 'capa-estrelas' });
+    expect(normalizarAparencia(a).premium).toEqual({ roupa: 'camiseta-aquario', costas: 'capa-estrelas' });
   });
   it('o que não é do catálogo não chega ao amigo', () => {
     const { n, quem, ve, confiar } = montar(modo);

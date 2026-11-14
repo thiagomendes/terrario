@@ -275,7 +275,7 @@ test('dois na nuvem: cada uma vê o premium da outra em até 1 s', async ({ brow
   console.log('a Bia viu o premium da Ana em', tBia.toFixed(0), 'ms');
   expect(tBia).toBeLessThan(1000);
   const [, tAna] = await Promise.all([
-    vestirE(bia, ['capa-estrelas', 'pinguim', 'camiseta-arco-iris']),
+    vestirE(bia, ['capa-estrelas', 'pinguim', 'camiseta-aquario']),
     ateVer(ana, 'Bia', 'capa-estrelas'),
   ]);
   console.log('a Ana viu o premium da Bia em', tAna.toFixed(0), 'ms');
