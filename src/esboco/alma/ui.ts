@@ -30,8 +30,10 @@ export const CSS_ALMA = `
 body.esboco-alma .missao-hud { display: none !important; }
 .alma-svg svg, .alma-fig svg { width: 100%; height: 100%; display: block; }
 .alma-fig { display: inline-grid; place-items: center; }
+.alma-fig > * { min-width: 0; min-height: 0; }
 .alma-fig img, .alma-fig canvas { width: 100%; height: 100%; object-fit: contain; display: block; }
-.alma-fig[data-tipo='item'] img { image-rendering: auto; }
+.alma-fig[data-tipo='fantasia'] { overflow: hidden; }
+.alma-fig[data-tipo='fantasia'] canvas { width: auto; height: 100%; max-width: 100%; object-fit: contain; }
 .alma-fig-missao { position: relative; display: grid; place-items: center; width: 100%; height: 100%; }
 .alma-fig-missao .principal { width: 86%; height: 86%; }
 .alma-fig-missao .selo { position: absolute; right: -4%; bottom: -4%; width: 44%; height: 44%; padding: 6%; box-sizing: border-box;

@@ -80,9 +80,10 @@ describe('esboço 023: o estado', () => {
   it('lojinha: preço fixo, item trancado, sem moedas, uma fantasia só', () => {
     const e = estadoVazio();
     expect(comprar(e, 'cidade-grande', 'turista')).toEqual({ ok: false, motivo: 'trancado' });
-    expect(comprar(e, 'cidade-grande', 'poste')).toEqual({ ok: false, motivo: 'faltam-moedas' });
-    e.moedas = 5;
-    expect(comprar(e, 'cidade-grande', 'poste')).toEqual({ ok: true });
+    expect(comprar(e, 'cidade-grande', 'poste')).toEqual({ ok: false, motivo: 'trancado' });
+    expect(comprar(e, 'cidade-grande', 'toldo-verde')).toEqual({ ok: false, motivo: 'faltam-moedas' });
+    e.moedas = 4;
+    expect(comprar(e, 'cidade-grande', 'toldo-verde')).toEqual({ ok: true });
     expect(e.moedas).toBe(0);
     expect(comprar(e, 'cidade-grande', 'capacete-dourado')).toEqual({ ok: false, motivo: 'presente' });
     // item de outro mundo não existe aqui

@@ -240,7 +240,7 @@ export const MEDALHA = 'medalha';
 
 export const HABILIDADES: Readonly<Record<MundoAlma, readonly Habilidade[]>> = {
   'cidade-grande': [
-    hab('construtor', 'construtor', '#f28b2c', 'Construtor', '1 ponto a cada 5 blocos postos na obra; 3 por obra terminada', [6, 'toldo-verde'], [18, 'capacete-dourado'], 36),
+    hab('construtor', 'construtor', '#f28b2c', 'Construtor', '1 ponto a cada 5 blocos postos na obra; 3 por obra terminada', [6, 'poste'], [18, 'capacete-dourado'], 36),
     hab('explorador', 'explorador', '#3f9ad8', 'Explorador', '1 ponto por lugar novo (loja, terraço, parque, praça)', [3, 'bandeirinha-cidade'], [7, 'turista'], 12),
     hab('bichos', 'bichos', '#e05a7a', 'Amigo dos bichos', '1 ponto por carinho ou comida a um bicho (até 5 por dia de jogo)', [3, 'osso'], [8, 'gatinho'], 15),
     hab('fazendeiro', 'jardineiro', '#5cbf4f', 'Jardineiro', '1 ponto por flor ou arbusto plantado na praça ou no terraço', [4, 'flores'], [10, 'arbusto'], 20),
@@ -311,8 +311,8 @@ export interface ItemLoja {
 export const LOJA: readonly ItemLoja[] = [
   // ---------------------------------------------------------------- Cidade Grande
   { id: 'flores', mundo: 'cidade-grande', tipo: 'enfeite', nome: 'Flores para a praça', preco: 3, desenho: 'item:bloco:9', qtd: 6, precisa: { habilidade: 'fazendeiro', nivel: 1 } },
-  { id: 'toldo-verde', mundo: 'cidade-grande', tipo: 'enfeite', nome: 'Toldo verde', preco: 4, desenho: 'item:bloco:100', qtd: 8, precisa: { habilidade: 'construtor', nivel: 1 } },
-  { id: 'poste', mundo: 'cidade-grande', tipo: 'enfeite', nome: 'Poste de luz', preco: 5, desenho: 'item:bloco:97', qtd: 4 },
+  { id: 'toldo-verde', mundo: 'cidade-grande', tipo: 'enfeite', nome: 'Toldo verde', preco: 4, desenho: 'item:bloco:100', qtd: 8 },
+  { id: 'poste', mundo: 'cidade-grande', tipo: 'enfeite', nome: 'Poste de luz', preco: 5, desenho: 'item:bloco:97', qtd: 4, precisa: { habilidade: 'construtor', nivel: 1 } },
   { id: 'bandeirinha-cidade', mundo: 'cidade-grande', tipo: 'enfeite', nome: 'Bandeirinhas da praça', preco: 4, desenho: 'bandeirinhas', precisa: { habilidade: 'explorador', nivel: 1 } },
   { id: 'osso', mundo: 'cidade-grande', tipo: 'item', nome: 'Ossinho para o cachorro', preco: 3, desenho: 'osso', precisa: { habilidade: 'bichos', nivel: 1 } },
   { id: 'arbusto', mundo: 'cidade-grande', tipo: 'enfeite', nome: 'Arbusto de frutinhas', preco: 5, desenho: 'item:bloco:54', qtd: 4, precisa: { habilidade: 'fazendeiro', nivel: 2 } },

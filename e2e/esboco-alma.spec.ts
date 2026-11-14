@@ -8,7 +8,6 @@ import { mkdirSync } from 'node:fs';
 declare const process: { env: Record<string, string | undefined> };
 const PASTA = process.env.ESBOCO_PASTA ?? 'test-results/esboco023';
 test.skip(!process.env.ESBOCO_ALMA, 'esboço: só com ESBOCO_ALMA=1');
-test.describe.configure({ mode: 'serial' });
 test.setTimeout(900_000);
 
 export const CELULAR = {
@@ -199,6 +198,9 @@ async function abrirComVideo(browser: Browser, tema: string, celular: boolean) {
   });
   const page = await ctx.newPage();
   page.on('pageerror', (e) => console.log(`erro na página: ${String(e)}`));
+  page.on('console', (m) => {
+    if (m.text().startsWith('alma')) console.log(m.text());
+  });
   await page.addInitScript(() => {
     try {
       localStorage.setItem('terrario:config', JSON.stringify({ distancia: 4, mostrarFps: false, mostrarAtalhos: false }));
@@ -293,12 +295,19 @@ async function camFixa(page: Page, n: number | null, dist = 10) {
   await page.locator('[data-alma-jogar]').first().tap();
   await page.waitForTimeout(1600);
   await camFixa(page, 1);
-  for (let i = 0; i < 40; i++) {
+  await page.evaluate(() => {
+    const e = window.__brumaluz!;
+    const i = e.inventario as unknown as { obter(i: number): { item: string } | null };
+    for (let k = 0; k < 9; k++) if (i.obter(k)?.item === 'colher_pedreiro') e.selecionarSlot!(k);
+  });
+  let feitos = 0;
+  for (let i = 0; i < 80; i++) {
     const lista = (await page.evaluate(() => window.__brumaluz!.fantasmasPerto?.() ?? [])).filter((f) => f.canteiro === 1);
     if (!lista.length) break;
-    if (!(await encherUm(page, lista))) break;
+    if (await encherUm(page, lista)) feitos++;
     await page.waitForTimeout(160);
   }
+  console.log('alma obra feitos', feitos);
   await page.waitForSelector('[data-alma-festa]', { timeout: 20_000 });
   await camFixa(page, null);
   await page.waitForSelector('[data-alma-vestir]', { timeout: 15_000 });
@@ -345,15 +354,21 @@ async function camFixa(page: Page, n: number | null, dist = 10) {
   await page.waitForTimeout(1600);
   let colhidos = 0;
   for (const [x, y, z] of maduros.slice(0, 12)) {
-    if (colhidos >= 5) break;
     await page.evaluate(([x, y, z]) => {
       const e = window.__brumaluz!;
       e.teleportar!(x + 0.5, z - 2.2, y);
       e.mirarPonto!(x + 0.5, y + 0.4, z + 0.5);
     }, [x, y, z] as const);
     await page.waitForTimeout(500);
-    const ok = await page.evaluate(() => window.__brumaluz!.minerar!(1.2).quebrou);
-    if (ok) colhidos++;
+    const r = await page.evaluate(([x, y, z]) => {
+      const e = window.__brumaluz!;
+      const alvo = e.alvo;
+      const q = e.minerar!(1.2).quebrou;
+      return { q, alvo, depois: e.bloco!(x, y, z), prog: JSON.stringify(window.__alma!.estado().progresso) };
+    }, [x, y, z] as const);
+    console.log('alma colher', x, y, z, JSON.stringify(r));
+    if (r.q) colhidos++;
+    if (await page.evaluate(() => window.__alma!.estado().feitas.includes('r1'))) break;
     await page.waitForTimeout(900);
   }
   console.log('alma colhidos', colhidos);

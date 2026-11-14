@@ -46,16 +46,20 @@ export function desenhoDaObra(n: number): string {
     Math.round(uv.u0 * atlas.largura),
     Math.round(uv.v0 * atlas.altura),
   ];
+  const cuboCv = document.createElement('canvas');
+  cuboCv.width = T;
+  cuboCv.height = T;
+  const cubo = cuboCv.getContext('2d')!;
   // de trás para a frente, de baixo para cima
   const ordem = [...pts].sort((p, q) => p.s + p.f - (q.s + q.f) || p.y - q.y || p.s - q.s);
   for (const p of ordem) {
     const lado = atlas.uvDaFace(p.bloco, 'lado');
     const topo = atlas.uvDaFace(p.bloco, 'topo');
     if (!lado || !topo) continue;
-    ctx.save();
-    ctx.translate((p.s - p.f) * a - minX - a + m, (p.s + p.f) * q4 - p.y * a - minY + m);
-    desenharIsometrico(ctx, fonte, { topo: px(topo), lado: px(lado) }, T);
-    ctx.restore();
+    // desenharIsometrico usa setTransform (absoluto): desenha num quadrinho e cola no lugar
+    cubo.clearRect(0, 0, T, T);
+    desenharIsometrico(cubo, fonte, { topo: px(topo), lado: px(lado) }, T);
+    ctx.drawImage(cuboCv, (p.s - p.f) * a - minX - a + m, (p.s + p.f) * q4 - p.y * a - minY + m);
   }
   void TAM_TILE;
   const url = c.toDataURL();
