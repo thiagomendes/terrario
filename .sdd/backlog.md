@@ -19,7 +19,7 @@ Ideias e pedidos do dono que ainda não viraram spec. Cada item diz de onde veio
 
 **Ordem combinada em 13 nov 2026** (todas começam por esboço; cuidados legais em `.sdd/cuidados-legais.md`):
 - (parada) **029, WebGPU** (`.sdd/specs/029-webgpu/spec.md`): primeiro um teste de medida nos aparelhos da família; se positivo, a troca é feita em seguida, antes da 023 (decisão do dono, 13 nov 2026).
-2. **023, Alma do jogo** (`.sdd/specs/023-alma-do-jogo/spec.md`): objetivos curtos, progresso por habilidade, moedinhas e lojinha, e o jeito de cada mundo (a antiga 018, unificada).
+- (publicada 14 nov 2026) **023, Alma do jogo** (`.sdd/specs/023-alma-do-jogo/spec.md`): missões, nível e habilidades, moedinhas, banca do mundo e lojinha premium. Falta o teste do dono nos aparelhos: fps com 4 amigos de premium, o provador girando, se a criança de 3–4 anos entende a troca dragão↔capa e o pote de moedas.
 2b. **028, Nome novo: Cubolândia** (`.sdd/specs/028-cubolandia/spec.md`): antes das contas e das lojas, para não renomear depois; o dono começa pela busca no INPI e pelo domínio.
 3. **024, Conta da família** (`.sdd/specs/024-conta-da-familia/spec.md`): adulto com e-mail e código, crianças como perfis, online só com conta, limites, banimento e área dos pais.
 4. **020, Nas lojas** (`.sdd/specs/020-lojas/spec.md`): casca nativa (não acelera o jogo; dá tela cheia, arquivos no aparelho e loja).
