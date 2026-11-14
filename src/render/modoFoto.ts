@@ -99,6 +99,12 @@ export function criarModoFoto(op: OpcoesModoFoto) {
       return modoFoto;
     },
     filtro: definirFiltro,
+    /** Põe a câmera do modo foto num lugar (provador e capturas: a câmera girando em volta). */
+    posicionar: (x: number, y: number, z: number) => {
+      if (!modoFoto) return false;
+      fotoPos.set(x, y, z);
+      return true;
+    },
     /** Põe a câmera na frente do boneco, olhando para ele. */
     selfie: () => {
       const b = op.boneco?.();

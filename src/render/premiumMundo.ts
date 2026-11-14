@@ -25,6 +25,7 @@ import type { Scene } from '@babylonjs/core/scene';
 import type { PremiumVestido } from '../personagem/aparencia';
 import { ehSolido } from '../jogo/caminho';
 import { ARCO_PREMIUM } from './premiumLuzes';
+import { montarBichoPremium, type BichoMontado, type IdBichoPremium } from './bichoPremium';
 
 /** Teto do pool de brilhos (spec: no máximo 80 sprites). */
 export const MAXIMO_BRILHOS = 80;
@@ -33,7 +34,7 @@ const MAX_ESTRELAS = MAXIMO_BRILHOS - MAX_CORACOES;
 const MAX_PEGADAS = 16;
 /** Passo do tênis (blocos andados entre uma pegada e outra). */
 const PASSO_PEGADA = 0.62;
-/** Longe assim da câmera, os efeitos ficam de fora (versão simples). */
+/** Longe assim da câmera, o bicho fica na versão simples. */
 const LONGE_SIMPLES = 26;
 
 type LerBloco = (x: number, y: number, z: number) => number | undefined;
@@ -324,6 +325,24 @@ function criarPegadas(scene: Scene) {
 }
 
 // ------------------------------------------------------------------ os bonecos com premium
+interface Bicho {
+  b: BichoMontado;
+  x: number;
+  y: number;
+  z: number;
+  yaw: number;
+  vy: number;
+  noAr: boolean;
+  fase: number;
+  graca: number;
+  coracaoFeito: boolean;
+  /** Pinguim: escorregando de barriga (0..1, suavizado). */
+  barriga: number;
+  /** Pinguim: bate as asinhas (segundos que faltam). */
+  bate: number;
+  t: number;
+}
+
 interface Usuario {
   raiz: TransformNode;
   premium: PremiumVestido;
@@ -337,9 +356,12 @@ interface Usuario {
   noAr: boolean;
   parado: number;
   rastro: number;
+  bicho: Bicho | null;
   visivel: boolean;
   luz: number;
   comemorando: number;
+  /** Vitrine (lojinha, provador, capturas): o bicho fica no lugar da raiz, virado como ela. */
+  vitrine?: boolean;
 }
 
 export interface RegistroPremium {
@@ -349,13 +371,20 @@ export interface RegistroPremium {
   /** Um puf de brilho no boneco (vestiu, comprou). */
   festa(): void;
   soltar(): void;
+  /** Testes: o bicho que segue (posição e o que está fazendo). */
+  bicho(): { id: IdBichoPremium; x: number; y: number; z: number; barriga: number; chamadas: number } | null;
 }
 
 export interface EfeitosPremium {
-  registrar(raiz: TransformNode, premium: PremiumVestido | undefined): RegistroPremium;
+  registrar(
+    raiz: TransformNode,
+    premium: PremiumVestido | undefined,
+    /** Vitrine: o bicho fica parado no lugar da raiz (lojinha, provador, capturas). */
+    vitrine?: boolean,
+  ): RegistroPremium;
   definirChao(ler: LerBloco): void;
   /** Testes e diagnóstico. */
-  contar(): { brilhos: number; pegadas: number; usuarios: number };
+  contar(): { brilhos: number; pegadas: number; bichos: number; usuarios: number };
 }
 
 const porCena = new WeakMap<Scene, EfeitosPremium>();
@@ -392,8 +421,45 @@ export function efeitosPremium(scene: Scene): EfeitosPremium {
     }
   }
 
+  function arrumarBicho(u: Usuario): void {
+    const id = u.premium.bicho as IdBichoPremium | undefined;
+    if (u.bicho && u.bicho.b.id !== id) {
+      u.bicho.b.descartar();
+      u.bicho = null;
+    }
+    if (!id || u.bicho) return;
+    const b = montarBichoPremium(scene, id);
+    const r = u.raiz.position;
+    const yaw = u.raiz.rotation.y;
+    // nasce do lado, um pouco atrás, já num puf de brilho
+    const x = r.x - Math.sin(yaw) * 1.3 + Math.cos(yaw) * 1.1;
+    const z = r.z - Math.cos(yaw) * 1.3 - Math.sin(yaw) * 1.1;
+    u.bicho = {
+      b,
+      x,
+      y: r.y,
+      z,
+      yaw,
+      vy: 0,
+      noAr: false,
+      fase: 0,
+      graca: 3 + Math.random() * 2,
+      coracaoFeito: true,
+      barriga: 0,
+      bate: 0,
+      t: Math.random() * 10,
+    };
+    b.raiz.position.set(x, r.y, z);
+    b.definirLuz(u.luz);
+    b.raiz.setEnabled(u.visivel);
+  }
+
   function quadroUsuario(u: Usuario, dt: number, camPos: Vector3 | null): void {
     const r = u.raiz.position;
+    if (u.vitrine) {
+      if (u.bicho) quadroBicho(u, u.bicho, dt, true);
+      return;
+    }
     if (!u.temAnterior) {
       u.anterior.copyFrom(r);
       u.temAnterior = true;
@@ -404,7 +470,11 @@ export function efeitosPremium(scene: Scene): EfeitosPremium {
     u.anterior.copyFrom(r);
     if (dt <= 0) return;
     const passo = Math.hypot(dx, dz);
-    if (passo / dt > 30) return; // teleporte
+    if (passo / dt > 30) {
+      // teleporte: o bicho vem junto num puf
+      if (u.bicho) aparecerPerto(u);
+      return;
+    }
     u.vel += (passo / dt - u.vel) * Math.min(1, dt * 8);
     u.vy = dy / dt;
     const yaw = u.raiz.rotation.y;
@@ -476,6 +546,225 @@ export function efeitosPremium(scene: Scene): EfeitosPremium {
         v: new Vector3(0, -0.6, 0),
         tam: 0.12,
       });
+
+    if (u.bicho) quadroBicho(u, u.bicho, dt, perto);
+  }
+
+  function aparecerPerto(u: Usuario): void {
+    const b = u.bicho!;
+    const r = u.raiz.position;
+    const yaw = u.raiz.rotation.y;
+    b.x = r.x - Math.sin(yaw) * 1.4 + Math.cos(yaw) * 1.1;
+    b.z = r.z - Math.cos(yaw) * 1.4 - Math.sin(yaw) * 1.1;
+    b.y = chao(b.x, r.y + 0.5, b.z);
+    b.vy = 0;
+    b.noAr = false;
+    if (u.visivel) for (let i = 0; i < 16; i++) pool().soltar(aux.set(b.x, b.y + 0.6, b.z), { tam: 0.2 });
+  }
+
+  function quadroBicho(u: Usuario, pet: Bicho, dt: number, perto: boolean): void {
+    const r = u.raiz.position;
+    const yaw = u.raiz.rotation.y;
+    const uni = pet.b.id === 'unicornio';
+    pet.t += dt;
+    const t = pet.t;
+    if (u.vitrine) {
+      // na vitrine: parado no pedestal, virado como a raiz, só a graça de bicho parado
+      pet.x = r.x;
+      pet.y = r.y;
+      pet.z = r.z;
+      pet.yaw = yaw;
+      pet.b.raiz.position.set(r.x, r.y, r.z);
+      pet.b.raiz.rotation.y = yaw;
+      if (uni) animarUnicornio(u, pet, dt, t, false, 0, 99, true);
+      else animarPinguim(u, pet, dt, t, false, 0, false, true);
+      return;
+    }
+    // o lugar dele: atrás e ao lado da criança
+    const atras = uni ? 1.5 : 1.15;
+    const lado = uni ? 1.15 : 0.95;
+    const lx = r.x - Math.sin(yaw) * atras + Math.cos(yaw) * lado;
+    const lz = r.z - Math.cos(yaw) * atras - Math.sin(yaw) * lado;
+    let ddx = lx - pet.x;
+    let ddz = lz - pet.z;
+    const dist = Math.hypot(ddx, ddz);
+    if (dist > 14 || Math.abs(r.y - pet.y) > 8) {
+      aparecerPerto(u);
+      ddx = ddz = 0;
+    }
+    const rapidez = uni ? 6.5 : 5;
+    const quer = dist > 0.4 ? Math.min(rapidez, dist * 2.2) : 0;
+    const vx = dist > 0.01 ? (ddx / Math.max(dist, 0.01)) * quer : 0;
+    const vz = dist > 0.01 ? (ddz / Math.max(dist, 0.01)) * quer : 0;
+    pet.x += vx * dt;
+    pet.z += vz * dt;
+    const andando = quer > 0.35;
+    // vira para onde anda; parado, olha para a criança
+    const alvoYaw = andando ? Math.atan2(vx, vz) : Math.atan2(r.x - pet.x, r.z - pet.z);
+    let d = alvoYaw - pet.yaw;
+    while (d > Math.PI) d -= Math.PI * 2;
+    while (d < -Math.PI) d += Math.PI * 2;
+    pet.yaw += d * Math.min(1, dt * 6);
+    // o chão: pula junto quando a criança pula e sobe o degrau com um pulinho
+    const piso = chao(pet.x, Math.max(pet.y, r.y) + 0.5, pet.z);
+    const pular = (vy: number) => {
+      pet.vy = vy;
+      pet.noAr = true;
+      if (u.visivel && perto)
+        for (let i = 0; i < 6; i++) pool().soltar(aux.set(pet.x, pet.y + 0.2, pet.z), { tam: 0.15 });
+    };
+    if (!pet.noAr && u.vy > 3 && dist < 6) pular(uni ? 4.8 : 4.2);
+    else if (!pet.noAr && piso > pet.y + 0.4) pular(5.2);
+    const desceu = piso < pet.y - 0.3;
+    if (pet.noAr || pet.y > piso + 0.01) {
+      pet.vy -= 14 * dt;
+      pet.y += pet.vy * dt;
+      if (pet.y <= piso) {
+        pet.y = piso;
+        pet.vy = 0;
+        pet.noAr = false;
+      }
+    } else pet.y += (piso - pet.y) * Math.min(1, dt * 10);
+    const raiz = pet.b.raiz;
+    raiz.position.set(pet.x, pet.y, pet.z);
+    raiz.rotation.y = pet.yaw;
+    if (uni) animarUnicornio(u, pet, dt, t, andando, quer, dist, perto);
+    else animarPinguim(u, pet, dt, t, andando, quer, desceu, perto);
+  }
+
+  function animarUnicornio(
+    u: Usuario,
+    pet: Bicho,
+    dt: number,
+    t: number,
+    andando: boolean,
+    quer: number,
+    dist: number,
+    perto: boolean,
+  ): void {
+    const n = pet.b.nos;
+    pet.fase += dt * (andando ? 1.9 + quer * 0.55 : 0);
+    const ciclo = pet.fase * Math.PI * 2;
+    const passo = andando ? Math.sin(ciclo) : 0;
+    // trote: as pernas em diagonal juntas, o corpo sobe e desce
+    n.pernaFE.rotation.x = passo * 0.7;
+    n.pernaTD.rotation.x = passo * 0.7;
+    n.pernaFD.rotation.x = -passo * 0.7;
+    n.pernaTE.rotation.x = -passo * 0.7;
+    n.corpo.position.y = andando ? Math.abs(Math.sin(ciclo)) * 0.06 : 0;
+    n.corpo.rotation.x = pet.noAr ? -Math.max(-0.3, Math.min(0.3, pet.vy * 0.06)) : 0;
+    const resp = 1 + Math.sin(t * 2.6) * 0.018;
+    n.corpo.scaling.set(resp, 1 / resp, resp);
+    // a cabeça balança no trote; parada, olha em volta e faz charme
+    n.pescoco.rotation.x = andando ? Math.sin(ciclo * 2) * 0.08 : Math.sin(t * 1.3) * 0.05;
+    n.cabeca.rotation.z = andando ? 0 : Math.sin(t * 0.9) * 0.12;
+    n.cabeca.rotation.x = 0;
+    if (!perto) return;
+    n.rabo1.rotation.x = 0.35 + (andando ? 0.5 : 0.1);
+    n.rabo1.rotation.y = Math.sin(t * (andando ? 7 : 3)) * 0.25;
+    n.rabo2.rotation.y = Math.sin(t * (andando ? 7 : 3) - 0.6) * 0.33;
+    n.rabo3.rotation.y = Math.sin(t * (andando ? 7 : 3) - 1.2) * 0.41;
+    n.rabo2.rotation.x = 0.15;
+    n.rabo3.rotation.x = 0.15;
+    n.orelhaE.rotation.x = Math.max(0, Math.sin(t * 1.7) - 0.85) * 3;
+    n.orelhaD.rotation.x = Math.max(0, Math.sin(t * 1.7 + 2) - 0.85) * 3;
+    n.olhos.scaling.y = t % 3.4 < 0.12 ? 0.12 : 1;
+    // o chifre solta uma estrelinha de vez em quando, andando ou parado (lê de longe)
+    pet.bate -= dt;
+    if (pet.bate <= 0 && u.visivel) {
+      pet.bate = 0.9 + Math.random() * 0.8;
+      const c = n.cabeca.getAbsolutePosition();
+      pool().soltar(
+        c.add(new Vector3(Math.sin(pet.yaw) * 0.2, 0.62, Math.cos(pet.yaw) * 0.2)),
+        { cor: '#fff3b0', v: new Vector3(0, 0.5, 0), gravidade: 0, dura: 0.8, tam: 0.16 },
+      );
+    }
+    // charme de tempos em tempos: joga a cabeça e o chifre solta brilho
+    pet.graca -= dt;
+    if (pet.graca <= 0 && !andando) {
+      pet.graca = 5 + Math.random() * 3;
+      const c = n.cabeca.getAbsolutePosition();
+      if (u.visivel)
+        for (let i = 0; i < 10; i++)
+          pool().soltar(c.add(new Vector3(0, 0.55, 0.1)), {
+            v: new Vector3((Math.random() - 0.5) * 0.9, 1, (Math.random() - 0.5) * 0.9),
+            tam: 0.14,
+          });
+    }
+    if (pet.graca > 4.4 && !andando) n.cabeca.rotation.x = -Math.sin((5.6 - pet.graca) * 4) * 0.25;
+    // a criança parou pertinho: ele olha e solta coraçõezinhos (uma vez a cada parada)
+    if (u.parado > 0.6 && dist < 3 && !pet.coracaoFeito) {
+      pet.coracaoFeito = true;
+      const c = n.cabeca.getAbsolutePosition();
+      if (u.visivel)
+        for (let i = 0; i < 5; i++)
+          setTimeout(
+            () =>
+              pool().coracao(c.add(new Vector3(0, 0.45, 0)), {
+                cor: i % 2 ? '#ff7ab8' : '#ff4f8b',
+                v: new Vector3((Math.random() - 0.5) * 0.4, 0.75, (Math.random() - 0.5) * 0.4),
+                gravidade: 0,
+                dura: 1.5,
+                tam: 0.24,
+              }),
+            i * 150,
+          );
+    }
+    if (u.parado === 0) pet.coracaoFeito = false;
+  }
+
+  function animarPinguim(
+    u: Usuario,
+    pet: Bicho,
+    dt: number,
+    t: number,
+    andando: boolean,
+    quer: number,
+    desceu: boolean,
+    perto: boolean,
+  ): void {
+    const n = pet.b.nos;
+    // escorrega de barriga nas descidas (e quando corre muito atrás da criança)
+    const quer_barriga = andando && (desceu || pet.vy < -1.5 || quer > 4.6) ? 1 : 0;
+    pet.barriga += (quer_barriga - pet.barriga) * Math.min(1, dt * (quer_barriga ? 8 : 3));
+    const b = pet.barriga;
+    pet.fase += dt * (andando ? 2.4 + quer * 0.4 : 0) * (1 - b);
+    const ciclo = pet.fase * Math.PI * 2;
+    // a ginga: balança de um lado para o outro, um pezinho de cada vez
+    const ginga = andando ? Math.sin(ciclo) : Math.sin(t * 1.4) * 0.15;
+    n.tronco.rotation.z = ginga * 0.2 * (1 - b);
+    n.tronco.rotation.x = b * 1.35;
+    n.tronco.position.y = 0.06 + (1 - b) * (andando ? Math.abs(Math.sin(ciclo)) * 0.035 : 0) - b * 0.02;
+    n.cabeca.rotation.x = -b * 1.1;
+    n.peE.position.y = 0.03 + (andando ? Math.max(0, Math.sin(ciclo)) * 0.05 : 0) * (1 - b);
+    n.peD.position.y = 0.03 + (andando ? Math.max(0, -Math.sin(ciclo)) * 0.05 : 0) * (1 - b);
+    const resp = 1 + Math.sin(t * 3) * 0.02;
+    n.corpo.scaling.set(resp, 1 / resp, resp);
+    if (!perto) return;
+    // bate as asinhas quando a criança comemora (e um pouquinho para equilibrar andando)
+    if (u.comemorando > 0.05 && pet.bate <= 0) pet.bate = 1.6;
+    pet.bate = Math.max(0, pet.bate - dt);
+    const bate = pet.bate > 0 ? Math.sin(t * 22) * 0.6 + 0.9 : 0;
+    const asa = b > 0.5 ? -0.25 : (andando ? 0.25 + ginga * 0.15 : 0.1) + bate;
+    n.asaE.rotation.z = -asa;
+    n.asaD.rotation.z = asa;
+    n.asaE.rotation.x = b * 0.9;
+    n.asaD.rotation.x = b * 0.9;
+    n.ponta.rotation.z = Math.sin(t * (andando ? 9 : 2.5)) * 0.25;
+    n.ponta.rotation.x = andando ? -0.4 - b * 0.4 : 0;
+    n.olhos.scaling.y = (t + 1.3) % 3.8 < 0.12 ? 0.12 : 1;
+    if (pet.bate > 0 && pet.bate < 1.55 && Math.random() < dt * 6 && u.visivel)
+      pool().soltar(n.cabeca.getAbsolutePosition().add(new Vector3(0, 0.3, 0)), {
+        cor: '#bfefff',
+        tam: 0.13,
+      });
+    if (b > 0.6 && Math.random() < dt * 14 && u.visivel)
+      pool().soltar(aux.set(pet.x, pet.y + 0.08, pet.z), {
+        cor: Math.random() < 0.5 ? '#bfefff' : '#ffffff',
+        v: new Vector3((Math.random() - 0.5) * 0.8, 0.5, (Math.random() - 0.5) * 0.8),
+        dura: 0.6,
+        tam: 0.12,
+      });
   }
 
   const obs = scene.onBeforeRenderObservable.add(() => {
@@ -484,6 +773,7 @@ export function efeitosPremium(scene: Scene): EfeitosPremium {
     const camPos = scene.activeCamera?.globalPosition ?? null;
     for (const u of usuarios) {
       if (u.raiz.isDisposed()) {
+        u.bicho?.b.descartar();
         usuarios.delete(u);
         continue;
       }
@@ -498,8 +788,9 @@ export function efeitosPremium(scene: Scene): EfeitosPremium {
   });
 
   const efeitos: EfeitosPremium = {
-    registrar(raiz, premium) {
+    registrar(raiz, premium, vitrine) {
       const u: Usuario = {
+        vitrine,
         raiz,
         premium: { ...(premium ?? {}) },
         nos: {},
@@ -512,21 +803,26 @@ export function efeitosPremium(scene: Scene): EfeitosPremium {
         noAr: false,
         parado: 0,
         rastro: 0,
+        bicho: null,
         visivel: true,
         luz: 1,
         comemorando: 0,
       };
       usuarios.add(u);
+      arrumarBicho(u);
       return {
         vestir(p) {
           u.premium = { ...(p ?? {}) };
           u.nos = {};
+          arrumarBicho(u);
         },
         definirLuz(f) {
           u.luz = f;
+          u.bicho?.b.definirLuz(f);
         },
         definirVisivel(v) {
           u.visivel = v;
+          u.bicho?.b.raiz.setEnabled(v);
         },
         festa() {
           const p = raiz.position;
@@ -537,7 +833,21 @@ export function efeitosPremium(scene: Scene): EfeitosPremium {
             });
         },
         soltar() {
+          u.bicho?.b.descartar();
+          u.bicho = null;
           usuarios.delete(u);
+        },
+        bicho() {
+          const b = u.bicho;
+          if (!b) return null;
+          return {
+            id: b.b.id,
+            x: b.x,
+            y: b.y,
+            z: b.z,
+            barriga: b.barriga,
+            chamadas: b.b.malhas.reduce((s, m) => s + 1 + (m.renderOutline ? 1 : 0), 0),
+          };
         },
       };
     },
@@ -547,6 +857,7 @@ export function efeitosPremium(scene: Scene): EfeitosPremium {
     contar: () => ({
       brilhos: brilhos?.vivos() ?? 0,
       pegadas: nPegadas,
+      bichos: [...usuarios].filter((u) => u.bicho).length,
       usuarios: usuarios.size,
     }),
   };

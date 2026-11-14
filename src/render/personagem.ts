@@ -4,7 +4,7 @@ import type { Aparencia } from '../personagem/aparencia';
 import type { Pose } from '../personagem/poses';
 import type { Vista } from '../player/animacao';
 import { criarBoneco } from './boneco';
-import { efeitosPremium } from './premiumMundo';
+import { efeitosPremium, type RegistroPremium } from './premiumMundo';
 
 /** Dados extras para suavizar a pose do corpo. */
 export interface ExtrasPose {
@@ -38,6 +38,8 @@ export interface Personagem {
   descartar(): void;
   /** Spec 023: o puf de brilho ao vestir um premium (só no personagem do jogo). */
   festaPremium?(): void;
+  /** Spec 023: o bichinho premium que segue (testes). */
+  bichoPremium?(): ReturnType<RegistroPremium['bicho']>;
 }
 
 /**
@@ -47,7 +49,7 @@ export interface Personagem {
  */
 export function criarPersonagem(scene: Scene, aparencia: Aparencia): Personagem {
   const p = criarBoneco(scene, aparencia, 'personagem', undefined, true, true);
-  // spec 023: o que os premium fazem no mundo (pegadas e brilhos)
+  // spec 023: o que os premium fazem no mundo (pegadas, brilhos, o bichinho que segue)
   const efeitos = efeitosPremium(scene).registrar(p.raiz, aparencia.premium);
   return {
     ...p,
@@ -64,6 +66,7 @@ export function criarPersonagem(scene: Scene, aparencia: Aparencia): Personagem 
       efeitos.definirVisivel(v);
     },
     festaPremium: () => efeitos.festa(),
+    bichoPremium: () => efeitos.bicho(),
     descartar() {
       efeitos.soltar();
       p.descartar();

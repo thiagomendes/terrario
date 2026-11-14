@@ -1,4 +1,6 @@
+import { TransformNode } from '@babylonjs/core/Meshes/transformNode';
 import { efeitosPremium, type EfeitosPremium } from './premiumMundo';
+import type { Personagem } from './personagem';
 import type { PlanoCidade } from '../world/cidade';
 import { CRIATURAS, type TipoSer } from '../jogo/criaturas';
 import { antesDeSair, saindoPorConta } from '../pagina';
@@ -545,6 +547,8 @@ export interface EstadoDepuracao {
     capturar: () => string;
     /** A câmera de frente para o boneco (selfie). */
     selfie: () => boolean;
+    /** Spec 023: a câmera num lugar (provador girando, capturas). */
+    posicionar?: (x: number, y: number, z: number) => boolean;
   };
   infoMundo?: string;
   definirClima?: (t: TipoClima) => void;
@@ -713,10 +717,16 @@ export interface EstadoDepuracao {
      * a menor visibilidade.
      */
     desenho?: () => { malhas: number; transparentes: number; menorVisibilidade: number };
-    /** Spec 023 (testes): os efeitos dos premium na cena. */
+    /** Spec 023 (testes): o bichinho premium que segue e os efeitos da cena. */
+    bichoPremium?: () => ReturnType<NonNullable<Personagem['bichoPremium']>> | null;
     efeitosPremium?: () => ReturnType<EfeitosPremium['contar']>;
     /** Spec 023: o puf de brilho no boneco (vestiu um premium). */
     festaPremium?: () => void;
+    /**
+     * Spec 023: o bichinho premium sozinho num lugar, virado para `yaw` (vitrine da lojinha,
+     * provador e capturas); null tira.
+     */
+    vitrineBicho?: (id: string | null, x?: number, y?: number, z?: number, yaw?: number) => void;
   };
   /**
    * Testes: o que o dedo pegaria no ponto da tela (coordenadas CSS do canvas): o bloco, a
@@ -1075,6 +1085,8 @@ export function criarCena(
   }
   let aparencia: Aparencia = carregarAparencia(armazenamentoLocal());
   const personagem = criarPersonagem(scene, aparencia);
+  let vitrine: ReturnType<EfeitosPremium['registrar']> | null = null;
+  let vitrineNo: TransformNode | null = null;
   // spec 023: o chão dos bichinhos e das pegadas dos premium (a cópia do mundo do aparelho)
   efeitosPremium(scene).definirChao((x, y, z) => blocoEm(x, y, z));
   const animador = criarAnimador(camera.rotation.y);
@@ -2730,8 +2742,20 @@ export function criarCena(
     },
     visivel: () => ({ corpo: personagem.raiz.isEnabled() && !estado.modoFoto?.ativo() }),
     malhas: () => personagem.contarMalhas(),
+    bichoPremium: () => personagem.bichoPremium?.() ?? null,
     efeitosPremium: () => efeitosPremium(scene).contar(),
     festaPremium: () => personagem.festaPremium?.(),
+    vitrineBicho: (id, x = 0, y = 0, z = 0, yaw = 0) => {
+      vitrine?.soltar();
+      vitrineNo?.dispose();
+      vitrine = null;
+      vitrineNo = null;
+      if (!id) return;
+      vitrineNo = new TransformNode('vitrine-bicho', scene);
+      vitrineNo.position.set(x, y, z);
+      vitrineNo.rotation.y = yaw;
+      vitrine = efeitosPremium(scene).registrar(vitrineNo, { bicho: id }, true);
+    },
     malhasMao: () => personagem.contarMalhasMao(),
     pose: () => animador.pose(),
     maoBloco: () => hotbar.blocoAtivo() || null,
