@@ -179,6 +179,10 @@ for (const t of TAMANHOS) {
       await foto('loja-4-detalhe-dragao');
       await tocar('[data-alma-detalhe] [data-alma-experimentar]');
       await page.waitForTimeout(1800);
+      // a barra do provador cabe na tela (o comprar não sai pela borda)
+      const barra = await page.locator('[data-alma-provador]').boundingBox();
+      expect(barra!.x).toBeGreaterThanOrEqual(0);
+      expect(barra!.x + barra!.width).toBeLessThanOrEqual(t.w);
       await foto('loja-5-provador-dragao');
       await page.waitForTimeout(2500);
       await foto('loja-5b-provador-dragao');

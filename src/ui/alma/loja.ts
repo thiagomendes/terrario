@@ -220,7 +220,12 @@ body.alma-provando .painel-foto, body.alma-provando .grade-foto, body.alma-prova
   .alma-prateleira { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px 14px; padding: 8px 12px 14px; --h: min(250px, calc((100vh - 160px) / 3)); }
   .alma-ldet .caixa { grid-template-columns: auto; justify-items: center; gap: 10px; padding: 16px 14px 18px; }
   .alma-palco { width: min(250px, 66vw); height: min(270px, 34vh); }
-  .alma-provador { gap: 8px; padding: 8px 10px; }
+  .alma-provador { gap: 6px; padding: 7px 8px; }
+  .alma-provador .alma-botao { min-width: 74px; height: 56px; padding: 6px 12px; }
+  .alma-provador .alma-botao .alma-svg { width: 34px; height: 34px; }
+  .alma-provador .mini { width: 44px; height: 44px; }
+  .alma-provador .alma-saldo { font-size: 1.15rem; padding: 2px 10px 2px 4px; }
+  .alma-provador .alma-saldo .moeda { width: 26px; height: 26px; }
   .alma-provador .alma-falta .enche { width: 60px; }
 }
 @media (prefers-reduced-motion: reduce) {
@@ -753,7 +758,9 @@ function orbitar(p: ItemPremium): () => void {
   const pes = p.id === 'tenis-cometa';
   // começa de quina e passa pela frente (a capa: pelas costas) nos primeiros segundos
   const inicio = p.categoria === 'costas' ? Math.PI - 0.6 : -0.6;
-  const dist = bicho ? 3.9 : pes ? 1.9 : 2.7;
+  // celular em pé: a tela é estreita, a câmera fica mais longe (a criança e o bicho cabem)
+  const emPe = innerWidth < innerHeight ? (bicho ? 1.5 : 1.2) : 1;
+  const dist = (bicho ? 3.9 : pes ? 1.9 : 2.7) * emPe;
   const alt = bicho ? 0.9 : pes ? 0.35 : 0.45;
   const altAlvo = bicho ? 0.6 : pes ? 0.3 : 0.8;
   const t0 = performance.now();
