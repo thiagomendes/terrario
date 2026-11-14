@@ -26,3 +26,8 @@ Tamanho: **P** (até meio dia), **M** (1 a 2 dias), **G** (3 dias ou mais). Uma 
 | T11 | **Vídeos** de ~1 min no celular deitado com som, um por mundo; relatório visual | M |
 
 **Ordem:** T01 → T02 → T03 → T04 → T05 → T06 (parada) → T07 → T08 → T09 → T10 → T11.
+
+## Situação (14 nov 2026)
+- Fase 1 feita (b7ba8b5); revisão de UX aplicada e fase 2 feita (a404a55, c6bd71e).
+- Fase 3: `tsc` limpo; Vitest 1696/1696; e2e `missoes-dinos-doce` 12/12 (as 5 missões deitado e em pé, com moedinhas de verdade); alma, guia-missao, menu-roda, passeio-c3 e guia-chegada passam, menos o c6 em pé do guia-chegada, que também falha no `main` (2a8eff3) do mesmo jeito; paridade 36/36; `npm run build` ok.
+- Falta: rodada em família antes de publicar.
