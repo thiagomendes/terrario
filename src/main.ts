@@ -716,11 +716,9 @@ function ligarAlma(armazenamento: Storage | null, cena: ReturnType<typeof criarC
   const guiar = () =>
     cena.estado.ready && cena.estado.cenaBabylon ? ligarGuiaMissao(cena.estado, almaUi) : setTimeout(guiar, 300);
   guiar();
-  perfil.ouvir((p, aviso) =>
-    window.dispatchEvent(new CustomEvent('brumaluz:almaPerfil', { detail: { perfil: p, aviso } })),
-  );
   // spec 023 (T10): o que a criança veste da lojinha vai na aparência (e pela rede, como a
-  // fantasia: os amigos veem). Ao vestir, o puf de brilho.
+  // fantasia: os amigos veem). Ao vestir, o puf de brilho. Ouve antes do aviso ao editor: o
+  // editor tira a fantasia que brigaria com o tesouro e manda a aparência inteira depois.
   const vestirPremiumNoBoneco = (festa: boolean) => {
     const ps = cena.estado.personagem;
     if (!ps) return;
@@ -735,6 +733,9 @@ function ligarAlma(armazenamento: Storage | null, cena: ReturnType<typeof criarC
   perfil.ouvir((_p, aviso) => {
     if (aviso.tipo === 'premium') vestirPremiumNoBoneco(true);
   });
+  perfil.ouvir((p, aviso) =>
+    window.dispatchEvent(new CustomEvent('brumaluz:almaPerfil', { detail: { perfil: p, aviso } })),
+  );
   // spec 023 (T09): os presentes de nível de verdade. A etiqueta e o balão vão na aparência
   // (os amigos veem); a roda de gestos, as tintas, a moldura e o troféu ouvem o nível.
   let nivelAntes = 0;

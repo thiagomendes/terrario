@@ -671,6 +671,8 @@ export function criarInterface(
     perfil: () => perfilAlma().perfil,
     vestir: (id, vestir) => {
       perfilAlma().vestirPremium(id, vestir);
+      // a última escolha ganha: o tesouro tira a fantasia (ou a capa dela) que brigaria com ele
+      if (vestir) painel.tesouroVestido(id);
       painel.atualizarTesouros();
     },
     temLojinha: () => !!(window as unknown as { __almaUi?: unknown }).__almaUi,
@@ -698,12 +700,18 @@ export function criarInterface(
     tesouros,
     aoJogar: entrarNoJogo,
   });
+  // guardado de antes (fantasia com um tesouro desenhado por cima): fica a fantasia
+  painel.arrumarTesouros();
   mostrarPrevia(painel.aparenciaVista());
   aoAbrirEditor = () => painel.atualizarTesouros();
-  // comprou, vestiu ou tirou na lojinha (ou o perfil do jogo chegou): o editor mostra igual
+  // comprou, vestiu ou tirou na lojinha (ou o perfil do jogo chegou): o editor mostra igual,
+  // e o que ela vestiu agora tira a fantasia que brigaria com ele
   window.addEventListener('brumaluz:almaPerfil', (e) => {
-    const tipo = (e as CustomEvent<{ aviso?: { tipo?: string } }>).detail?.aviso?.tipo;
-    if (tipo === 'premium') painel.atualizarTesouros();
+    const aviso = (e as CustomEvent<{ aviso?: { tipo?: string; id?: string } }>).detail?.aviso;
+    if (aviso?.tipo !== 'premium') return;
+    const id = aviso.id;
+    if (id && Object.values(perfilAlma().perfil.vestidos).includes(id)) painel.tesouroVestido(id);
+    painel.atualizarTesouros();
   });
 
   // Spec 014: prêmio do canteiro da cidade (o núcleo decidiu; a cena avisa). Grava com o

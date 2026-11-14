@@ -7,6 +7,7 @@ import {
   semTesouros,
   type FonteTesouros,
 } from './meusTesouros';
+import { aoVestirTesouro, semOsQueSaem, tesourosQueSaem } from '../personagem/tesouroEFantasia';
 import type { GrupoFantasia } from '../personagem/fantasias';
 import { icone, rotuloComIcone, type NomeIcone } from './pixicones';
 import {
@@ -534,8 +535,9 @@ export function criarPainelPersonagem(pai: HTMLElement, opcoes: OpcoesPainel) {
         armazenamento: opcoes.armazenamento,
         temaDoMundo: opcoes.temaDoMundo,
         aparencia: () => aparencia,
-        // os cartões mostram cada fantasia (a camiseta e o dragão cobririam todas iguais)
-        vista: (a) => semTesouros(vista(a), ['roupa', 'fantasia']),
+        // os cartões mostram cada fantasia como ela fica ao escolher: sem os tesouros que
+        // saem com ela (a camiseta, o tênis, o dragão e a capa onde a fantasia usa as costas)
+        vista: (a) => semOsQueSaem(vista(a)),
         mudar: (a, festa) => mudou(a, festa),
       });
       // "Meus tesouros": o que ela comprou na lojinha, no alto da aba
@@ -572,7 +574,11 @@ export function criarPainelPersonagem(pai: HTMLElement, opcoes: OpcoesPainel) {
     }
   }
   function mudou(proxima: Aparencia, festa = false): void {
+    const antes = aparencia.fantasia;
     aparencia = comPremium(proxima, undefined);
+    // escolheu fantasia (ou peça dela): os tesouros que brigam com ela saem do boneco e
+    // ficam guardados em "Meus tesouros" (a última escolha ganha)
+    if (JSON.stringify(antes) !== JSON.stringify(aparencia.fantasia)) tirarOsQueSaem();
     // a prévia primeiro (a foto dela entra na fila antes das miniaturas)
     opcoes.aoMudar(vista());
     if (festa) opcoes.aoFestejar?.();
@@ -581,6 +587,15 @@ export function criarPainelPersonagem(pai: HTMLElement, opcoes: OpcoesPainel) {
     tesouros?.atualizar();
     desenharMiniaturas();
     salvarAparencia(opcoes.armazenamento, aparencia);
+  }
+
+  /** Tira os tesouros vestidos que brigam com a fantasia de agora (continuam dela). */
+  function tirarOsQueSaem(): boolean {
+    const fonte = opcoes.tesouros;
+    if (!fonte) return false;
+    const sai = tesourosQueSaem(aparencia, fonte.perfil().vestidos);
+    for (const id of sai) fonte.vestir(id, false);
+    return sai.length > 0;
   }
 
   campoNome.addEventListener('input', () => mudou({ ...aparencia, nome: campoNome.value }));
@@ -618,6 +633,21 @@ export function criarPainelPersonagem(pai: HTMLElement, opcoes: OpcoesPainel) {
       fantasias?.atualizar();
       tesouros?.atualizar();
       desenharMiniaturas();
+    },
+    /**
+     * Vestiu o tesouro `id` (aqui ou na lojinha): a fantasia sai, ou só a peça das costas
+     * (a última escolha ganha). O boneco do jogo e os amigos recebem igual.
+     */
+    tesouroVestido(id: string) {
+      const proxima = aoVestirTesouro(aparencia, id);
+      if (proxima !== aparencia) mudou(proxima);
+    },
+    /**
+     * Arruma o guardado de antes desta regra (fantasia e tesouro desenhados um por cima do
+     * outro): fica a fantasia, que foi escolhida por último; o tesouro volta à prateleira.
+     */
+    arrumarTesouros() {
+      if (tirarOsQueSaem()) opcoes.aoMudar(vista());
     },
     /** Abre a aba Fantasias (num grupo, se pedido: a sugestão do mundo novo abre em "Dos temas"). */
     abrirFantasias(grupo?: GrupoFantasia) {

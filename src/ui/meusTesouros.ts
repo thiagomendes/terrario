@@ -94,7 +94,7 @@ export const CSS_TESOUROS = `
 .painel-personagem .tesouros .lista-t { position: relative; display: grid; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); gap: 10px; }
 .painel-personagem .tesouros .lista-t[hidden] { display: none; }
 .painel-personagem .tesouros button.tesouro {
-  position: relative; aspect-ratio: 5 / 6; min-height: 0; padding: 0; border-radius: 18px; overflow: visible;
+  position: relative; aspect-ratio: 5 / 6; min-height: 0; padding: 0; border-radius: 18px; overflow: hidden; isolation: isolate;
   background: linear-gradient(180deg, rgba(255,255,255,0.13), rgba(255,255,255,0.02) 38%, rgba(0,0,0,0.12)),
     radial-gradient(ellipse at 50% 30%, #6e56e0 0%, #3b2b9e 58%, #231870 100%);
   box-shadow: 0 0 0 3px #e9b949, inset 0 -14px 20px rgba(10, 5, 40, 0.35), 0 5px 0 2px #120c36;
@@ -107,19 +107,21 @@ export const CSS_TESOUROS = `
     radial-gradient(ellipse at 50% 30%, #6e56e0 0%, #3b2b9e 58%, #231870 100%);
   box-shadow: 0 0 0 4px #7fe0ff, 0 0 22px 6px rgba(127, 224, 255, 0.5), inset 0 -14px 20px rgba(10, 5, 40, 0.35), 0 5px 0 2px #120c36;
 }
-.painel-personagem .tesouros .pedestal-t { position: absolute; left: 50%; bottom: 9%; width: 70%; height: 12%; transform: translateX(-50%); border-radius: 50%;
+/* tudo mora dentro do cartão (o iPhone em pé estourava o selo e os pés para fora): o boneco
+   numa caixa posta por inset, sem depender da altura em % de item de grade */
+.painel-personagem .tesouros .pedestal-t { position: absolute; left: 50%; bottom: 8%; width: 68%; height: 11%; transform: translateX(-50%); border-radius: 50%;
   background: radial-gradient(ellipse at 50% 35%, #fff4c2, #e9b949 55%, #a8741a 100%); box-shadow: 0 4px 0 #7a5214, 0 0 18px 4px rgba(255, 214, 120, 0.35); }
-.painel-personagem .tesouros .arte-t { position: absolute; inset: 6% 6% 14%; display: grid; place-items: end center; pointer-events: none;
+.painel-personagem .tesouros .arte-t { position: absolute; inset: 10% 8% 14%; display: block; pointer-events: none;
   animation: tesouro-flutua 3.4s ease-in-out infinite; animation-delay: var(--f, 0s); }
 @keyframes tesouro-flutua { 50% { transform: translateY(-4%); } }
-.painel-personagem .tesouros .arte-t canvas { width: 100%; height: 100%; object-fit: contain; object-position: 50% 100%;
+.painel-personagem .tesouros .arte-t canvas { position: absolute; inset: 0; width: 100%; height: 100%; max-width: 100%; max-height: 100%; object-fit: contain; object-position: 50% 100%;
   filter: drop-shadow(0 5px 0 rgba(10,5,40,0.32)) drop-shadow(0 0 10px rgba(255,230,160,0.3)); }
-.painel-personagem .tesouros .vestindo { position: absolute; left: -8px; top: -8px; width: 34px; height: 34px; padding: 6px; box-sizing: border-box; border-radius: 50%;
-  background: linear-gradient(#bff0ff, #39b8e8); box-shadow: 0 3px 0 #1d7aa8, 0 0 0 3px #fff; display: none; pointer-events: none; }
+.painel-personagem .tesouros .vestindo { position: absolute; z-index: 1; left: 7px; top: 7px; width: 28px; height: 28px; padding: 5px; box-sizing: border-box; border-radius: 50%;
+  background: linear-gradient(#bff0ff, #39b8e8); box-shadow: 0 0 0 2px #fff, 0 3px 0 2px #1d7aa8; display: none; pointer-events: none; }
 .painel-personagem .tesouros .vestindo svg { width: 100%; height: 100%; display: block; }
 .painel-personagem .tesouros button.tesouro[aria-pressed='true'] .vestindo { display: block; }
 .painel-personagem .tesouros button.tesouro.puf::after {
-  content: ''; position: absolute; inset: -6px; border-radius: inherit; pointer-events: none;
+  content: ''; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
   background: radial-gradient(circle at 50% 45%, rgba(255, 246, 190, 0.95), rgba(255, 246, 190, 0) 62%);
   animation: tesouro-puf 0.7s ease-out forwards;
 }
@@ -154,6 +156,7 @@ export const CSS_TESOUROS = `
 @media (max-width: 420px) {
   .painel-personagem .tesouros .lista-t { grid-template-columns: repeat(auto-fill, minmax(66px, 1fr)); gap: 9px; }
   .painel-personagem .tesouros .titulo-t { font-size: 0.98rem; }
+  .painel-personagem .tesouros .vestindo { left: 5px; top: 5px; width: 24px; height: 24px; padding: 4px; }
   .painel-personagem .tesouros[data-vazio='true'] .titulo-t { flex-direction: column; gap: 2px; font-size: 0.86rem; }
   .painel-personagem .tesouros .vazio-t .pontinhos i:nth-child(3) { display: none; }
 }
@@ -163,6 +166,7 @@ export const CSS_TESOUROS = `
   .painel-personagem .tesouros .titulo-t { flex-direction: column; gap: 2px; font-size: 0.86rem; text-align: center; }
   .painel-personagem .tesouros .lista-t { grid-template-columns: repeat(auto-fill, minmax(66px, 1fr)); }
   .painel-personagem .tesouros button.tesouro { aspect-ratio: 1; }
+  .painel-personagem .tesouros .vestindo { left: 5px; top: 5px; width: 24px; height: 24px; padding: 4px; }
   .painel-personagem .tesouros .troca-t { top: 50%; right: auto; left: 6px; transform: translateY(-50%); animation: none; }
 }
 @media (prefers-reduced-motion: reduce) {
