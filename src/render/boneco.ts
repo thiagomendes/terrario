@@ -490,13 +490,17 @@ export function criarBoneco(
       const forte = Math.max(v?.noAr ?? 0, Math.min(1, (v?.passada ?? 0) / 1.5));
       faseAsa += dt * (1.15 + forte * 2.9) * Math.PI * 2;
       const amp = 0.34 + forte * 0.5;
+      // parado, a batida sobe menos do que desce: de frente, as pontas não espetam acima do
+      // capuz (o vaivém continua bem maior que 15°)
+      const sobe = 0.55 + forte * 0.45;
+      const bate = Math.sin(faseAsa);
       for (const [no, s] of [
         [subjuntas.asaE, -1],
         [subjuntas.asaD, 1],
       ] as const) {
         if (!no) continue;
         no.rotation.y = s * (0.42 + Math.sin(faseAsa + 0.9) * amp * 0.45);
-        no.rotation.z = s * (0.16 + Math.sin(faseAsa) * amp);
+        no.rotation.z = s * (-0.06 + forte * 0.2 + (bate > 0 ? bate * sobe : bate) * amp);
         no.rotation.x = -0.12;
       }
     }

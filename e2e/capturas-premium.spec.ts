@@ -321,3 +321,35 @@ test('bichinhos premium: vitrine, seguindo e de longe', async ({ page }) => {
   }
   expect(erros, erros.join('\n')).toEqual([]);
 });
+
+test('capuz do dragão: os dois bonecos, todos os penteados, em volta', async ({ page }) => {
+  test.skip(!!SO && SO !== 'capuz');
+  test.setTimeout(900_000);
+  mkdirSync(`${PASTA}/capuz`, { recursive: true });
+  await page.setViewportSize({ width: 1280, height: 720 });
+  const erros: string[] = [];
+  page.on('pageerror', (e) => erros.push(`pageerror: ${e.message}`));
+  await entrarNaLaje(page);
+  const l = await noMeio(page);
+  await page.waitForTimeout(1000);
+  const corpo = await yawDoCorpo(page);
+  for (const [quem, base] of Object.entries(QUEM))
+    for (let cabelo = 0; cabelo < 9; cabelo++) {
+      await vestir(page, { ...base, cabeloEstilo: cabelo }, { fantasia: 'dragao' });
+      for (const [vista, giro] of [
+        ['frente', 0],
+        ['quina', 0.8],
+        ['lado', Math.PI / 2],
+        ['costas', Math.PI],
+      ] as const) {
+        await estudio(page, [l[0], l[1] + 1.35, l[2]], corpo + giro, 2.0, 0.35);
+        await page.waitForTimeout(250);
+        await page.screenshot({
+          path: `${PASTA}/capuz/${quem}-cabelo${cabelo}-${vista}.png`,
+          clip: { x: 440, y: 110, width: 400, height: 400 },
+        });
+      }
+    }
+  await sairDoEstudio(page);
+  expect(erros, erros.join('\n')).toEqual([]);
+});

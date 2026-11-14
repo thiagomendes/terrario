@@ -486,7 +486,10 @@ export function capuzDragao(lista: Peca[], m: MedidasBoneco, c: string): void {
   });
   // o capuz de verdade: desce pelos lados e pela nuca até o queixo, com o rosto de fora
   const baixoLado = -0.3;
-  const hLado = baixo - baixoLado + 0.08;
+  // os lados sobem até onde a cúpula começa a arredondar em cima, com a face de fora um fio
+  // por fora da dela: a quina arredondada de baixo da cúpula some (era a emenda da fase C)
+  const topoLado = capY + capH / 2 - 0.14;
+  const hLado = topoLado - baixoLado;
   const yLado = baixoLado + hLado / 2;
   // a nuca é uma peça só do alto ao queixo (sem a dobra entre a cúpula e a nuca)
   const hNuca = cima - baixoLado;
@@ -494,7 +497,7 @@ export function capuzDragao(lista: Peca[], m: MedidasBoneco, c: string): void {
     brilho: 0.4,
   });
   for (const s of [-1, 1])
-    P.caixa(`dragao-lado${s}`, 'cabeca', 'cabeca', [0.12, hLado, capD * 0.66], [s * (capW / 2 - 0.06), yLado, -capD / 2 + capD * 0.33 - 0.01], c, 0.06, {
+    P.caixa(`dragao-lado${s}`, 'cabeca', 'cabeca', [0.12, hLado, capD * 0.66], [s * (capW / 2 - 0.057), yLado, -capD / 2 + capD * 0.33 - 0.01], c, 0.035, {
       brilho: 0.4,
     });
   // a borda do capuz em volta do rosto (mais clara, como pelúcia virada)
@@ -583,8 +586,9 @@ export function capuzDragao(lista: Peca[], m: MedidasBoneco, c: string): void {
   const costas = -capD / 2 - 0.03;
   const espinhos: Array<[number, number, number, number]> = [
     // y, z, giro, altura
-    [cima + 0.01, 0.0, -0.25, 0.17],
-    [cima - 0.01, -0.16, -0.55, 0.17],
+    // a crista começa atrás dos olhos (de frente, não espeta no meio dos chifres)
+    [cima - 0.01, -0.16, -0.55, 0.12],
+    [cima - 0.03, -0.26, -0.75, 0.15],
     [cima - 0.06, costas + 0.03, -0.85, 0.16],
     [capY - 0.04, costas, -1.0, 0.14],
     [capY - 0.2, costas, -1.1, 0.12],
@@ -704,7 +708,9 @@ export function asasDragao(lista: Peca[], m: MedidasBoneco): void {
   const contorno = contornoAsa().map(([x, y]) => [x * K, y * K] as P2);
   for (const s of [-1, 1]) {
     const nome: SubjuntaPremium = s < 0 ? 'asaE' : 'asaD';
-    const sub = { nome, pivo: [s * 0.06, troncoH - 0.07, -prof / 2 - 0.015] as V3 };
+    // a raiz nas omoplatas (não no meio das costas): de frente, os ossos não sobem juntos
+    // atrás do capuz, como uma ponta espetando no alto da cabeça
+    const sub = { nome, pivo: [s * 0.15, troncoH - 0.2, -prof / 2 - 0.015] as V3 };
     const perfil = contorno.map(([x, y]) => [x * s, y] as P2);
     P.placa(`dragao-asa${s}`, 'tronco', undefined, s < 0 ? [...perfil].reverse() : perfil, 0.018, [0, 0, 0], DRAGAO.asa2, {
       subjunta: sub,
