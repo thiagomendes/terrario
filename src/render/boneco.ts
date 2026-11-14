@@ -22,7 +22,9 @@ import {
   type Junta,
   type Peca,
   type PlanoBoneco,
+  type SubjuntaPremium,
 } from '../personagem/boneco';
+import { luzPremium, texturaListras } from './premiumLuzes';
 import type { Pose } from '../personagem/poses';
 import {
   caixaArredondada,
@@ -44,6 +46,15 @@ export const MAXIMO_MALHAS_BONECO = 90;
 
 /** Uma peça em 3D a partir do plano. */
 export function montarPeca(scene: Scene, mats: Plasticos, p: Peca, prefixo: string): Mesh {
+  if (p.luz || p.textura || p.pintar) {
+    // spec 023: os premium montam pelos dados (o degradê e as listras vão nos vértices)
+    const m = new Mesh(`${prefixo}-${p.nome}`, scene);
+    dadosDaPeca(p, undefined, false).applyToMesh(m);
+    m.material = materialDaPeca(scene, mats, p);
+    m.isPickable = false;
+    m.receiveShadows = false;
+    return m;
+  }
   // a tinta da fantasia vai nos vértices, num material só por brilho (spec 017)
   const mat = p.viva
     ? mats.tinta(p.brilho ?? 0.28, p.alfa ?? 1)
@@ -128,7 +139,7 @@ export function dadosDaPeca(
       thickness: p.tamanho[1],
       tessellation: 20,
     });
-  if (p.viva || corNoVertice) {
+  if ((p.viva || corNoVertice) && !p.pintar) {
     const n = vd.positions!.length / 3;
     const [r, g, b] = corNoVertice ? Color3.FromHexString(p.cor).asArray() : corViva(p.cor);
     const cores = new Float32Array(n * 4);
@@ -143,7 +154,43 @@ export function dadosDaPeca(
     new Vector3(p.pos[0] + d[0], p.pos[1] + d[1], p.pos[2] + d[2]),
   );
   vd.transform(m);
+  ajustarDadosPremium(vd, p);
   return vd;
+}
+
+/**
+ * Spec 023: o que os premium pedem nos vértices, já no lugar da peça na junta: o degradê
+ * (`pintar`, na tinta) e a coordenada das listras que correm (`textura`: sobem pela altura).
+ */
+function ajustarDadosPremium(vd: VertexData, p: Peca): void {
+  const pos = vd.positions!;
+  const n = pos.length / 3;
+  if (p.pintar) {
+    const cores = new Float32Array(n * 4);
+    for (let i = 0; i < n; i++) {
+      const [r, g, b] = corViva(p.pintar(pos[i * 3], pos[i * 3 + 1], pos[i * 3 + 2]));
+      cores.set([r, g, b, 1], i * 4);
+    }
+    vd.colors = cores;
+  }
+  if (p.textura) {
+    const uv = new Float32Array(n * 2);
+    // uma volta inteira das 7 listras a cada 0,42 (a altura do tronco)
+    for (let i = 0; i < n; i++) {
+      uv[i * 2] = 0.5;
+      uv[i * 2 + 1] = pos[i * 3 + 1] / 0.42;
+    }
+    vd.uvs = uv;
+  }
+}
+
+/** Spec 023: o material da peça (luz própria, listras, tinta ou cor). */
+function materialDaPeca(scene: Scene, mats: Plasticos, p: Peca): StandardMaterial {
+  if (p.luz) return luzPremium(scene, p.luz);
+  if (p.textura) return mats.textura(texturaListras(scene), p.brilho ?? 0.28);
+  return p.viva
+    ? mats.tinta(p.brilho ?? 0.28, p.alfa ?? 1)
+    : mats.cor(p.cor, p.brilho ?? 0.28, p.alfa ?? 1);
 }
 
 /** As espécies de dados de vértice da peça (só junta malhas com as mesmas). */
@@ -181,6 +228,8 @@ export function criarBoneco(
   escalar.parent = raiz;
   const mats = criarPlasticos(scene, prefixo);
   let juntas = {} as Record<Junta, TransformNode>;
+  /** Spec 023: os nós próprios dos premium (as asas do dragão). */
+  let subjuntas: Partial<Record<SubjuntaPremium, TransformNode>> = {};
   let malhas: Mesh[] = [];
   let visivel = true;
   let luz = 1;
@@ -238,7 +287,9 @@ export function criarBoneco(
   function limpar(): void {
     pega.parent = null;
     for (const m of malhas) m.dispose();
+    for (const j of Object.values(subjuntas)) j.dispose();
     for (const j of Object.values(juntas)) j.dispose();
+    subjuntas = {};
     malhas = [];
     juntas = {} as Record<Junta, TransformNode>;
   }
@@ -270,19 +321,33 @@ export function criarBoneco(
         nome: string;
         pivo?: [number, number, number];
         n: number;
+        /** Spec 023: o nó próprio (as asas), quando não é a junta. */
+        no?: TransformNode;
       }
     >();
-    const materialDe = (p: Peca) =>
-      p.viva
-        ? mats.tinta(p.brilho ?? 0.28, p.alfa ?? 1)
-        : mats.cor(p.cor, p.brilho ?? 0.28, p.alfa ?? 1);
+    const materialDe = (p: Peca) => materialDaPeca(scene, mats, p);
     /**
      * Spec 014 (T11, desempenho da cidade: 12 moradores à vista na praça): a peça opaca de cor
      * lisa vai com a cor nos vértices num material por brilho, desenhado igual ao da cor; as
      * peças da mesma junta viram uma malha só (de ~22 para ~9 malhas por morador).
      */
     const corVertice = (p: Peca) =>
-      !p.viva && (p.alfa ?? 1) >= 1 ? mats.corVertice(p.brilho ?? 0.28) : null;
+      !p.viva && !p.luz && !p.textura && (p.alfa ?? 1) >= 1
+        ? mats.corVertice(p.brilho ?? 0.28)
+        : null;
+    // spec 023: os nós próprios dos premium (as asas), dentro da junta deles
+    const noDaPeca = (p: Peca): TransformNode => {
+      const sj = p.subjunta;
+      if (!sj) return juntas[p.junta];
+      let no = subjuntas[sj.nome];
+      if (!no) {
+        no = new TransformNode(`${prefixo}-junta-${sj.nome}`, scene);
+        no.parent = juntas[p.junta];
+        no.position.set(sj.pivo[0], sj.pivo[1], sj.pivo[2]);
+        subjuntas[sj.nome] = no;
+      }
+      return no;
+    };
     for (const p of plano.pecas) {
       // os dois olhos (e os dois brilhos) piscam juntos e ficam na mesma altura: viram uma
       // malha só, que pisca em volta do meio deles
@@ -297,14 +362,23 @@ export function criarBoneco(
           deslocar = plano.juntas[junta].pos;
           junta = junta === 'maoE' ? 'bracoE' : 'bracoD';
         }
-        const k = `${par ?? ''}|${junta}|${material.uniqueId}|${tiposDaPeca(p, !!cv)}`;
+        const sub = p.subjunta?.nome ?? '';
+        const k = `${par ?? ''}|${junta}|${sub}|${material.uniqueId}|${tiposDaPeca(p, !!cv)}`;
         let g = paraFundir.get(k);
         if (!g)
           paraFundir.set(
             k,
             (g = par
               ? { junta, material, dados: [], nome: `${par}s`, pivo: [0, 0, 0], n: 0 }
-              : { junta, material, dados: [], nome: junta, n: 0 }),
+              : {
+                  junta,
+                  material,
+                  dados: [],
+                  nome: sub || junta,
+                  n: 0,
+                  // a mão já foi para a junta do braço (deslocada): o nó próprio é só das asas
+                  no: p.subjunta ? noDaPeca(p) : undefined,
+                }),
           );
         g.dados.push(dadosDaPeca(p, deslocar, !!cv));
         if (g.pivo) {
@@ -316,12 +390,12 @@ export function criarBoneco(
         continue;
       }
       const m = montarPeca(scene, mats, p, prefixo);
-      m.parent = juntas[p.junta];
+      m.parent = noDaPeca(p);
       m.setEnabled(visivel);
       m.visibility = opacidade;
       malhas.push(m);
     }
-    for (const { junta, material, dados, nome, pivo, n } of paraFundir.values()) {
+    for (const { junta, material, dados, nome, pivo, n, no } of paraFundir.values()) {
       const vd = dados.length === 1 ? dados[0] : dados[0].merge(dados.slice(1), true);
       const f = new Mesh(`${prefixo}-${nome}-fundida`, scene);
       vd.applyToMesh(f);
@@ -332,7 +406,7 @@ export function criarBoneco(
       f.hasVertexAlpha = false;
       f.isPickable = false;
       f.receiveShadows = false;
-      f.parent = juntas[junta];
+      f.parent = no ?? juntas[junta];
       f.setEnabled(visivel);
       f.visibility = opacidade;
       malhas.push(f);
@@ -349,6 +423,7 @@ export function criarBoneco(
   }
   let olhos: Mesh[] = [];
   let boca: Mesh | null = null;
+  let faseAsa = 0;
   const baseY = new Map<Mesh, number>();
 
   /** Valores suavizados entre quadros (nada salta de uma pose para outra). */
@@ -408,6 +483,23 @@ export function criarBoneco(
     j.saia.scaling.set(abre, suave('saiaY', alvo.saiaEscala[1], k), abre);
     j.rabo.rotation.x = subirJunto('raboX', alvo.rabo[0], kLento);
     j.rabo.rotation.y = suave('raboY', alvo.rabo[1], k);
+    // spec 023: as asas do dragão batem: devagar parado (mas sempre se vê), rápido correndo e
+    // forte no ar; a fase anda com o tempo (mudar o ritmo não dá tranco)
+    if (subjuntas.asaE || subjuntas.asaD) {
+      const v = extras?.vista;
+      const forte = Math.max(v?.noAr ?? 0, Math.min(1, (v?.passada ?? 0) / 1.5));
+      faseAsa += dt * (1.15 + forte * 2.9) * Math.PI * 2;
+      const amp = 0.34 + forte * 0.5;
+      for (const [no, s] of [
+        [subjuntas.asaE, -1],
+        [subjuntas.asaD, 1],
+      ] as const) {
+        if (!no) continue;
+        no.rotation.y = s * (0.42 + Math.sin(faseAsa + 0.9) * amp * 0.45);
+        no.rotation.z = s * (0.16 + Math.sin(faseAsa) * amp);
+        no.rotation.x = -0.12;
+      }
+    }
     const pisca = pose.piscar ? 0.1 : 1;
     for (const o of olhos) o.scaling.y = (baseY.get(o) ?? 1) * pisca;
     if (boca) boca.scaling.y = (baseY.get(boca) ?? 1) * (1 + (pose.boca ?? 0) * 1.1);

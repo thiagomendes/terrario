@@ -1,6 +1,6 @@
 import { criarPerfilCrianca, type PerfilCrianca } from './personagem/almaCrianca';
 import { ligarAlmaUi } from './ui/alma';
-import { ganhoTemAlgo } from './jogo/alma';
+import { CATEGORIAS_PREMIUM, ganhoTemAlgo } from './jogo/alma';
 import type { EventoNucleo } from './nucleo/protocolo';
 import { medirJanela, tamanhoDoCanvas } from './ui/telaCheia';
 import { criarCena } from './render/cena';
@@ -693,6 +693,22 @@ function ligarAlma(
   perfil.ouvir((p, aviso) =>
     window.dispatchEvent(new CustomEvent('brumaluz:almaPerfil', { detail: { perfil: p, aviso } })),
   );
+  // spec 023 (T10): o que a criança veste da lojinha vai na aparência (e pela rede, como a
+  // fantasia: os amigos veem). Ao vestir, o puf de brilho.
+  const vestirPremiumNoBoneco = (festa: boolean) => {
+    const ps = cena.estado.personagem;
+    if (!ps) return;
+    const v = perfil.perfil.vestidos;
+    const atual = ps.aparencia().premium ?? {};
+    const igual = CATEGORIAS_PREMIUM.every((c) => v[c] === atual[c]);
+    if (igual) return;
+    ps.definir({ premium: Object.keys(v).length ? { ...v } : undefined });
+    if (festa) ps.festaPremium?.();
+  };
+  vestirPremiumNoBoneco(false);
+  perfil.ouvir((_p, aviso) => {
+    if (aviso.tipo === 'premium') vestirPremiumNoBoneco(true);
+  });
   window.addEventListener('brumaluz:alma', (ev) => {
     const e = (ev as CustomEvent<Extract<EventoNucleo, { e: 'alma' }>>).detail;
     if (!e || typeof e !== 'object') return;

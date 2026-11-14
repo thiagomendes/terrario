@@ -7,7 +7,9 @@
  */
 import { MODELOS, PALETAS, type Aparencia } from './aparencia';
 import type { Pose } from './poses';
-import { roupaDaFantasia, vestirFantasia } from './bonecoFantasia';
+import { roupaDaFantasia, vestirFantasia, type MedidasBoneco } from './bonecoFantasia';
+import { vestirPremiumNoPlano } from './bonecoPremium';
+import type { FantasiaVestida } from './fantasias';
 
 export type Junta =
   | 'corpo'
@@ -63,7 +65,37 @@ export interface Peca {
    * como no esboço aprovado. O resto do boneco (pele, cabelo, rosto, roupas de sempre) não muda.
    */
   viva?: boolean;
+  /**
+   * Spec 023 (premium): luz própria, num material da cena que se anima sozinho (a faixa do
+   * tênis que corre o arco-íris, as estrelas da capa piscando, o ouro que pulsa). Não segue a
+   * luz do lugar: é luz.
+   */
+  luz?: IdLuzPremium;
+  /** Spec 023: a tinta que corre (as listras da camiseta arco-íris), na textura da cena. */
+  textura?: 'arco-iris';
+  /**
+   * Spec 023: a cor de cada vértice (degradê da asa, da capa), pela posição na peça já no
+   * lugar (antes da junta). Só com `viva`.
+   */
+  pintar?: (x: number, y: number, z: number) => string;
+  /**
+   * Spec 023: a peça mora num nó próprio dentro da junta (as asas do dragão batem sozinhas):
+   * `pivo` é onde o nó fica na junta, e `pos` passa a ser relativo a ele.
+   */
+  subjunta?: { nome: SubjuntaPremium; pivo: [number, number, number] };
 }
+
+/** Spec 023: as luzes dos premium (materiais da cena, animados uma vez para todos). */
+export type IdLuzPremium =
+  | 'arco'
+  | 'ouro'
+  | 'perola'
+  | 'estrela0'
+  | 'estrela1'
+  | 'estrela2'
+  | 'chifre';
+/** Spec 023: os nós que só os premium têm (as asas batem; o resto segue a junta). */
+export type SubjuntaPremium = 'asaE' | 'asaD';
 
 export interface PlanoBoneco {
   juntas: Record<Junta, { pai: Junta | null; pos: [number, number, number] }>;
@@ -103,13 +135,20 @@ export function planoBoneco(a: Aparencia): PlanoBoneco {
   // spec 017: a fantasia pinta a roupa de baixo (camisa, manga, calça e sapato) e tira o
   // estilo da roupa e o enfeite de baixo da vista; quem a criança é (corpo, pele, rosto e
   // cabelo) continua igual
-  const fantasia = a.fantasia ? roupaDaFantasia(a.fantasia, a.corpo) : null;
+  // spec 023: o premium de fantasia (o dragãozinho) veste como uma fantasia da 017, por cima
+  // da que estiver escolhida (que continua guardada embaixo)
+  const vestidaAgora: FantasiaVestida | undefined = a.premium?.fantasia
+    ? { id: a.premium.fantasia, cor: 0 }
+    : a.fantasia;
+  const fantasia = vestidaAgora ? roupaDaFantasia(vestidaAgora, a.corpo) : null;
   const roupa = fantasia?.camisa ?? PALETAS.roupa[a.roupaCor] ?? PALETAS.roupa[0];
   const calca = fantasia?.calca ?? PALETAS.calca[a.calcaCor] ?? PALETAS.calca[0];
   const sapato = fantasia?.sapato ?? escurecer(misturar(calca, '#5a3a22', 0.5), 0.25);
   const detalhe = clarear(roupa, 0.45);
   const punho = escurecer(fantasia?.manga ?? roupa, 0.22);
-  const acessorio = fantasia ? 'nenhum' : a.acessorio;
+  // spec 023: a capa de estrelas nas costas tira a mochila de baixo (não atravessa)
+  const acessorio =
+    fantasia || (a.premium?.costas && a.acessorio === 'mochila') ? 'nenhum' : a.acessorio;
 
   // proporções: o modelo e o corpo variam um pouco a largura e o comprimento das pernas
   const larg = Math.max(
@@ -784,31 +823,32 @@ export function planoBoneco(a: Aparencia): PlanoBoneco {
         ? 'chapeu'
         : null;
   let rabo: 'guardar' | 'baixo' = 'guardar';
-  if (a.fantasia) {
+  const medidas: MedidasBoneco = {
+    feminino,
+    larg,
+    troncoH,
+    prof,
+    frente,
+    pernaH,
+    quadril,
+    xBraco,
+    cab,
+    topo,
+    topoTampa,
+    baseChapeu,
+    zRosto,
+    raspado: e === 3,
+    tampa: {
+      w: cab.w + (e === 3 ? 0.02 : 0.05),
+      h: tampaH,
+      d: cab.d + (e === 3 ? 0.02 : 0.05),
+      y: topo - tampaH / 2 + (e === 3 ? 0.03 : 0.07),
+      raio: e === 3 ? 0.06 : 0.15,
+    },
+  };
+  if (vestidaAgora) {
     const antes = pecas.length;
-    const vestida = vestirFantasia(a.fantasia, a.corpo, pecas, {
-      feminino,
-      larg,
-      troncoH,
-      prof,
-      frente,
-      pernaH,
-      quadril,
-      xBraco,
-      cab,
-      topo,
-      topoTampa,
-      baseChapeu,
-      zRosto,
-      raspado: e === 3,
-      tampa: {
-        w: cab.w + (e === 3 ? 0.02 : 0.05),
-        h: tampaH,
-        d: cab.d + (e === 3 ? 0.02 : 0.05),
-        y: topo - tampaH / 2 + (e === 3 ? 0.03 : 0.07),
-        raio: e === 3 ? 0.06 : 0.15,
-      },
-    });
+    const vestida = vestirFantasia(vestidaAgora, a.corpo, pecas, medidas);
     modo = vestida.cabelo;
     rabo = vestida.rabo;
     marcarTintaDaFantasia(
@@ -818,6 +858,8 @@ export function planoBoneco(a: Aparencia): PlanoBoneco {
       [pele, cabelo],
     );
   }
+  // spec 023: os premium de roupa e de costas, por cima do look e da fantasia
+  if (a.premium) vestirPremiumNoPlano(a.premium, pecas, medidas, !!vestidaAgora);
   if (modo) ajeitarCabeloDebaixo(pecas, modo, topoTampa, cab, rabo);
 
   return {
@@ -1015,6 +1057,8 @@ export function topoBoneco(a: Aparencia): number {
   const p = planoBoneco(a);
   let topo = 0;
   for (const peca of p.pecas) {
+    // spec 023: as asas (subjunta) batem acima dos ombros, não são o alto da cabeça
+    if (peca.subjunta) continue;
     let y = peca.pos[1];
     for (let j: Junta | null = peca.junta; j; j = p.juntas[j].pai) y += p.juntas[j].pos[1];
     const meiaAltura =

@@ -4,6 +4,7 @@ import type { Aparencia } from '../personagem/aparencia';
 import type { Pose } from '../personagem/poses';
 import type { Vista } from '../player/animacao';
 import { criarBoneco } from './boneco';
+import { efeitosPremium } from './premiumMundo';
 
 /** Dados extras para suavizar a pose do corpo. */
 export interface ExtrasPose {
@@ -35,6 +36,8 @@ export interface Personagem {
   /** Peças do item na mão (0 com a mão vazia). */
   contarMalhasMao(): number;
   descartar(): void;
+  /** Spec 023: o puf de brilho ao vestir um premium (só no personagem do jogo). */
+  festaPremium?(): void;
 }
 
 /**
@@ -43,5 +46,27 @@ export interface Personagem {
  * numa malha só, como nos moradores (menos desenhos por quadro; trocar a aparência remonta).
  */
 export function criarPersonagem(scene: Scene, aparencia: Aparencia): Personagem {
-  return criarBoneco(scene, aparencia, 'personagem', undefined, true, true);
+  const p = criarBoneco(scene, aparencia, 'personagem', undefined, true, true);
+  // spec 023: o que os premium fazem no mundo (pegadas e brilhos)
+  const efeitos = efeitosPremium(scene).registrar(p.raiz, aparencia.premium);
+  return {
+    ...p,
+    aplicarAparencia(a) {
+      p.aplicarAparencia(a);
+      efeitos.vestir(a.premium);
+    },
+    definirLuz(f) {
+      p.definirLuz(f);
+      efeitos.definirLuz(f);
+    },
+    definirVisivel(v) {
+      p.definirVisivel(v);
+      efeitos.definirVisivel(v);
+    },
+    festaPremium: () => efeitos.festa(),
+    descartar() {
+      efeitos.soltar();
+      p.descartar();
+    },
+  };
 }

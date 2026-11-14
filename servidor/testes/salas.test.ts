@@ -178,6 +178,41 @@ describe('salas do servidor', () => {
     expect(gestos(a)).toEqual([]);
   });
 
+  it('premium na aparência (spec 023): a amiga vê o que a outra veste; o lixo não passa', async () => {
+    const { g, a, codigo, avancar } = await criarSala();
+    const b = canal('5.6.7.8');
+    await g.receber(
+      b,
+      JSON.stringify({ t: 'entrar', versao: VERSAO_REDE, jogador: ident('bia'), codigo }),
+    );
+    await avancar(300);
+    const premiumDaAna = (c: ReturnType<typeof canal>) => {
+      const q = quadros(c).filter((x) => x.perfis?.ana);
+      return q.length ? (q[q.length - 1].perfis!.ana.aparencia as { premium?: unknown }).premium : null;
+    };
+    await g.receber(
+      a,
+      JSON.stringify({
+        t: 'aparencia',
+        aparencia: { modelo: 'andarilho', premium: { roupa: 'tenis-cometa', bicho: 'unicornio' } },
+        seq: 1,
+      }),
+    );
+    await avancar(300);
+    expect(premiumDaAna(b)).toEqual({ roupa: 'tenis-cometa', bicho: 'unicornio' });
+    await avancar(1200);
+    await g.receber(
+      a,
+      JSON.stringify({
+        t: 'aparencia',
+        aparencia: { modelo: 'andarilho', premium: { roupa: 'unicornio', costas: { x: 1 } } },
+        seq: 2,
+      }),
+    );
+    await avancar(300);
+    expect(premiumDaAna(b)).toBeUndefined();
+  });
+
   it('prévia do mundo: nome, tema, dono e quem está lá (sem id nem chave)', async () => {
     const { g, codigo } = await criarSala();
     const b = canal('5.6.7.8');

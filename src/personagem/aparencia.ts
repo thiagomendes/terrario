@@ -1,3 +1,4 @@
+import { CATEGORIAS_PREMIUM, premiumPorId, type CategoriaPremium } from '../jogo/alma';
 import {
   fantasiaPorId,
   normalizarFantasia,
@@ -56,6 +57,36 @@ export interface Aparencia {
    * campo não existe (as aparências de antes saem iguais).
    */
   desbloqueios?: IdDesbloqueio[];
+  /**
+   * Spec 023 (T10): os premium vestidos (uma peça por categoria, ids do catálogo da lojinha).
+   * Vão pela rede como a fantasia: cada aparelho desenha o mesmo nos amigos. O que a criança
+   * comprou mora no perfil dela (`terrario:alma-crianca`); aqui só o que está vestido. Sem
+   * nenhum, o campo não existe (as aparências de antes saem iguais).
+   */
+  premium?: PremiumVestido;
+}
+
+/** Spec 023: o premium vestido de cada categoria (roupa, costas, fantasia e bicho). */
+export type PremiumVestido = Partial<Record<CategoriaPremium, string>>;
+
+/** Só ids do catálogo, cada um na categoria dele (um por categoria). Nenhum: undefined. */
+export function normalizarPremium(valor: unknown): PremiumVestido | undefined {
+  if (typeof valor !== 'object' || valor === null || Array.isArray(valor)) return undefined;
+  const v = valor as Record<string, unknown>;
+  const out: PremiumVestido = {};
+  for (const cat of CATEGORIAS_PREMIUM) {
+    const id = v[cat];
+    if (typeof id === 'string' && premiumPorId(id)?.categoria === cat) out[cat] = id;
+  }
+  return Object.keys(out).length ? out : undefined;
+}
+
+/** O premium vestido daquela categoria (ou undefined). */
+export function premiumVestido(
+  a: Pick<Aparencia, 'premium'>,
+  cat: CategoriaPremium,
+): string | undefined {
+  return a.premium?.[cat];
 }
 
 /**
@@ -317,6 +348,7 @@ export function aplicarModelo(aparencia: Aparencia, modelo: ModeloId): Aparencia
   const a: Aparencia = { ...aparenciaPadrao(modelo), nome: aparencia.nome };
   // outro modelo pronto é um look novo, mas o que a criança ganhou continua com ela
   if (aparencia.desbloqueios?.length) a.desbloqueios = [...aparencia.desbloqueios];
+  if (aparencia.premium) a.premium = { ...aparencia.premium };
   return a;
 }
 
@@ -355,6 +387,9 @@ export function normalizarAparencia(entrada: unknown): Aparencia {
   // spec 014: idem para os desbloqueios (só existe com algum)
   const desbloqueios = limparDesbloqueios(obj.desbloqueios);
   if (desbloqueios.length) a.desbloqueios = desbloqueios;
+  // spec 023: idem para os premium vestidos
+  const premium = normalizarPremium(obj.premium);
+  if (premium) a.premium = premium;
   return a;
 }
 

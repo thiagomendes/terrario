@@ -1,3 +1,4 @@
+import { efeitosPremium, type EfeitosPremium } from './premiumMundo';
 import type { PlanoCidade } from '../world/cidade';
 import { CRIATURAS, type TipoSer } from '../jogo/criaturas';
 import { antesDeSair, saindoPorConta } from '../pagina';
@@ -712,6 +713,10 @@ export interface EstadoDepuracao {
      * a menor visibilidade.
      */
     desenho?: () => { malhas: number; transparentes: number; menorVisibilidade: number };
+    /** Spec 023 (testes): os efeitos dos premium na cena. */
+    efeitosPremium?: () => ReturnType<EfeitosPremium['contar']>;
+    /** Spec 023: o puf de brilho no boneco (vestiu um premium). */
+    festaPremium?: () => void;
   };
   /**
    * Testes: o que o dedo pegaria no ponto da tela (coordenadas CSS do canvas): o bloco, a
@@ -1070,6 +1075,8 @@ export function criarCena(
   }
   let aparencia: Aparencia = carregarAparencia(armazenamentoLocal());
   const personagem = criarPersonagem(scene, aparencia);
+  // spec 023: o chão dos bichinhos e das pegadas dos premium (a cópia do mundo do aparelho)
+  efeitosPremium(scene).definirChao((x, y, z) => blocoEm(x, y, z));
   const animador = criarAnimador(camera.rotation.y);
   let gestos: GestosJogo | undefined;
   /** Spec 021: as carinhas dos amigos na borda, a trilha, o pulo e o chamar. */
@@ -2723,6 +2730,8 @@ export function criarCena(
     },
     visivel: () => ({ corpo: personagem.raiz.isEnabled() && !estado.modoFoto?.ativo() }),
     malhas: () => personagem.contarMalhas(),
+    efeitosPremium: () => efeitosPremium(scene).contar(),
+    festaPremium: () => personagem.festaPremium?.(),
     malhasMao: () => personagem.contarMalhasMao(),
     pose: () => animador.pose(),
     maoBloco: () => hotbar.blocoAtivo() || null,

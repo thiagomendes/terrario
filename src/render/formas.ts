@@ -12,6 +12,7 @@ import { CreateSphereVertexData } from '@babylonjs/core/Meshes/Builders/sphereBu
 import { StandardMaterial } from '@babylonjs/core/Materials/standardMaterial';
 import { MaterialPluginBase } from '@babylonjs/core/Materials/materialPluginBase';
 import type { Material } from '@babylonjs/core/Materials/material';
+import type { BaseTexture } from '@babylonjs/core/Materials/Textures/baseTexture';
 import { Color3 } from '@babylonjs/core/Maths/math.color';
 import type { Scene } from '@babylonjs/core/scene';
 
@@ -406,6 +407,11 @@ export interface Plasticos {
    * desenhado igual ao `cor` daquela cor. Null no perfil clássico (sem a conta do plástico).
    */
   corVertice(brilho?: number): StandardMaterial | null;
+  /**
+   * Spec 023: plástico com a cor de uma textura que se mexe (as listras da camiseta arco-íris).
+   * Nunca fica congelado (o deslocamento da textura muda a cada quadro).
+   */
+  textura(tex: BaseTexture, brilho?: number): StandardMaterial;
   /** Luz do ambiente (1 ao ar livre, baixa em cavernas). */
   definirLuz(f: number): void;
   /**
@@ -425,6 +431,8 @@ interface Plastico {
   plugin: PluginPlastico | null;
   /** Já espera o próximo desenho para congelar. */
   esperando: boolean;
+  /** Spec 023: nunca congela (a textura dele anda). */
+  solto?: boolean;
 }
 
 /**
@@ -455,7 +463,7 @@ export function criarPlasticos(
    */
   const congelarDepoisDeDesenhar = (e: Plastico) => {
     e.m.checkReadyOnlyOnce = false;
-    if (soFrente || e.esperando) return;
+    if (soFrente || e.esperando || e.solto) return;
     e.esperando = true;
     e.m.onBindObservable.addOnce(() => {
       scene.onAfterRenderObservable.addOnce(() => {
@@ -524,6 +532,28 @@ export function criarPlasticos(
         viva: false,
         plugin: new PluginPlastico(m, true),
         esperando: false,
+      };
+      mats.set(chave, e);
+      m.needDepthPrePass = soFrente;
+      aplicar(e);
+      return m;
+    },
+    textura(tex, brilho = 0.28) {
+      const chave = `tx|${tex.uniqueId}|${brilho}`;
+      const ja = mats.get(chave);
+      if (ja) return ja.m;
+      const m = new StandardMaterial(`${prefixo}-plastico-tx`, scene);
+      m.specularPower = classico ? 42 : POTENCIA_REFLEXO;
+      m.ambientColor = classico ? Color3.White() : Color3.Black();
+      m.diffuseTexture = tex;
+      const e: Plastico = {
+        m,
+        base: Color3.White(),
+        brilho,
+        viva: true,
+        plugin: classico ? null : new PluginPlastico(m),
+        esperando: false,
+        solto: true,
       };
       mats.set(chave, e);
       m.needDepthPrePass = soFrente;
