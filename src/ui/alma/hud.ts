@@ -123,7 +123,9 @@ body:has(.entrada:not([hidden])) .alma-missao { display: none !important; }
   animation: alma-cartao-entra 0.35s cubic-bezier(.2,1.4,.4,1) both; }
 @keyframes alma-cartao-entra { from { transform: scale(0.85); opacity: 0; } }
 .alma-cartao > .alma-fechar { position: absolute; top: -12px; right: -12px; width: 50px; height: 50px; z-index: 2; box-shadow: 0 0 0 4px var(--painel-borda), 0 5px 0 4px #d9b77a; }
-.alma-cartao[data-alma-quadro] { margin-top: 10px; overflow: auto; }
+.alma-cartao[data-alma-quadro] { margin-top: 10px; display: flex; flex-direction: column; min-height: 0; }
+/* quem rola é a grade, não o cartão: o X fica para fora do cartão e não pode ser cortado */
+.alma-cartao[data-alma-quadro] > .alma-quadro { overflow: auto; min-height: 0; padding: 6px 6px 12px; margin: -6px -6px -12px; }
 .alma-botao { min-width: 120px; height: 64px; border: 0; border-radius: 22px; cursor: pointer; display: inline-grid; place-items: center; padding: 8px 22px;
   background: linear-gradient(#a6e88a, #5cbf4f); box-shadow: 0 6px 0 #3f9a3a, 0 10px 16px rgba(40,25,10,0.25), inset 0 2px 0 rgba(255,255,255,0.7); -webkit-tap-highlight-color: transparent; }
 .alma-botao .alma-svg { width: 40px; height: 40px; }
