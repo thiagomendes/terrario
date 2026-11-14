@@ -1,5 +1,5 @@
 /**
- * Esboço da spec 023: as festas. Uma só peça para os três momentos, cada um com a sua cara:
+ * Spec 023 (T08): as festas, promovidas do esboço aprovado. Uma só peça para os três momentos, cada um com a sua cara:
  *
  * - **missão:** raios dourados girando, confete, o prêmio chega pulando (a fantasia no boneco
  *   de verdade da criança, ou a figurinha), as moedinhas caem uma a uma com um tlim que sobe;
@@ -12,44 +12,9 @@
 import { tocarSomInterface } from '../../audio/somInterface';
 import { arte } from './arte';
 
-let ctxAudio: AudioContext | null = null;
-function ctx(): AudioContext | null {
-  try {
-    ctxAudio ??= new AudioContext();
-    return ctxAudio;
-  } catch {
-    return null;
-  }
-}
-
-function nota(f: number, t0: number, dur: number, ganho: number, tipo: OscillatorType = 'sine'): void {
-  const c = ctx();
-  if (!c) return;
-  const t = c.currentTime + t0;
-  const o = c.createOscillator();
-  const v = c.createGain();
-  o.type = tipo;
-  o.frequency.value = f;
-  v.gain.setValueAtTime(0.0001, t);
-  v.gain.exponentialRampToValueAtTime(ganho, t + 0.008);
-  v.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-  o.connect(v).connect(c.destination);
-  o.start(t);
-  o.stop(t + dur + 0.02);
-}
-
-/** Tlim de moedinha (duas notas de sino bem curtas, subindo a cada moeda). */
-export function tlim(i: number): void {
-  const base = 1318.5 * Math.pow(2, (Math.min(i, 10) * 2) / 12);
-  nota(base, 0, 0.25, 0.11);
-  nota(base * 2.01, 0, 0.12, 0.045);
-}
-
-/** Arpejo de caixinha de música (nível e premium): sobe em cinco notas e brilha no fim. */
-export function arpejo(alto = false): void {
-  const base = alto ? 783.99 : 523.25;
-  [0, 4, 7, 12, 16].forEach((st, i) => nota(base * Math.pow(2, st / 12), i * 0.09, 0.6, 0.07, 'triangle'));
-  nota(base * 4, 0.5, 0.9, 0.035);
+/** Tlim da moedinha (régua da 019: pelo motor de som do jogo, com o volume dos efeitos). */
+export function tlim(_i = 0): void {
+  tocarSomInterface('moeda');
 }
 
 const CORES = ['#ff5a5a', '#ffc93d', '#5cbf4f', '#2f7fe8', '#ff7aa8', '#8a5ad8', '#ff9a3a'];
@@ -270,14 +235,18 @@ export function celebrar(c: Celebracao): Promise<void> {
     document.body.appendChild(el);
     document.exitPointerLock?.();
     const parar = confete(cv, c.tipo !== 'missao');
-    if (c.tipo === 'missao') tocarSomInterface('festa');
-    else arpejo(c.tipo === 'premium');
+    // os sons na régua da 019 (pelo motor do jogo): o confete da missão, a caixinha de música
+    // do nível e a da vitrine (mais alta, com o fundo macio)
+    tocarSomInterface(c.tipo === 'missao' ? 'festa' : c.tipo === 'nivel' ? 'nivel' : 'vitrine');
     if (c.tipo === 'missao')
       for (let i = 0; i < c.moedas; i++)
-        setTimeout(() => {
-          chuva.appendChild(c.svg('moeda', 'moeda'));
-          tlim(i);
-        }, 700 + i * 260);
+        setTimeout(
+          () => {
+            chuva.appendChild(c.svg('moeda', 'moeda'));
+            tlim(i);
+          },
+          700 + i * 260,
+        );
     const fim = () => {
       parar();
       const alvo = c.destino();
@@ -286,9 +255,9 @@ export function celebrar(c: Celebracao): Promise<void> {
           ? meio.querySelector<HTMLElement>('.estrelao')
           : (c.figurinha ?? meio.querySelector<HTMLElement>('.premio'));
       if (voa && c.tipo !== 'premium') c.voar(voa, voa.getBoundingClientRect(), alvo);
-      chuva.querySelectorAll<HTMLElement>('.moeda').forEach((m, i) =>
-        setTimeout(() => c.voar(m, m.getBoundingClientRect(), alvo), 80 * i),
-      );
+      chuva
+        .querySelectorAll<HTMLElement>('.moeda')
+        .forEach((m, i) => setTimeout(() => c.voar(m, m.getBoundingClientRect(), alvo), 80 * i));
       el.style.transition = 'opacity 0.4s';
       el.style.opacity = '0';
       setTimeout(() => el.remove(), 420);

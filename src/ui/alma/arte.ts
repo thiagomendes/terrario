@@ -1,5 +1,5 @@
 /**
- * Esboço da spec 023: os desenhos (SVG feitos aqui, à mão, no jeito de brinquedo da 012).
+ * Spec 023: os desenhos da alma (SVG feitos aqui, à mão, no jeito de brinquedo da 012).
  * Nada de arte de terceiros. Quadro de 64 × 64, contorno marrom macio, sombra embaixo.
  */
 const C = '#5a3a22'; // contorno
@@ -66,10 +66,15 @@ export const ARTE: Record<string, string> = {
   ok: svg(`<path d="M13 33 L27 47 L52 18" fill="none" stroke="#fff" stroke-width="10" ${L}/>`),
   estrela: svg(`<polygon points="${estrela5(32, 34, 27)}" fill="#ffc93d" ${s()}/>
     <path d="M24 23 L28 19" stroke="#fff6c8" stroke-width="3.5" stroke-linecap="round"/>`),
-  estrelaVazia: svg(`<polygon points="${estrela5(32, 34, 27)}" fill="#e9dcc2" stroke="#cdb894" stroke-width="3" ${L}/>`),
-  coracao: svg(`<path d="M32 54 C10 40 6 28 12 19 C18 11 28 13 32 21 C36 13 46 11 52 19 C58 28 54 40 32 54 Z" fill="#ff5a7a" ${s()}/>
+  estrelaVazia: svg(
+    `<polygon points="${estrela5(32, 34, 27)}" fill="#e9dcc2" stroke="#cdb894" stroke-width="3" ${L}/>`,
+  ),
+  coracao:
+    svg(`<path d="M32 54 C10 40 6 28 12 19 C18 11 28 13 32 21 C36 13 46 11 52 19 C58 28 54 40 32 54 Z" fill="#ff5a7a" ${s()}/>
     <path d="M17 22 Q20 18 25 18" stroke="#ffd0da" stroke-width="3.5" fill="none" stroke-linecap="round"/>`),
-  seta: svg(`<path d="M10 32 H46 M34 18 L50 32 L34 46" fill="none" stroke="#c9a77a" stroke-width="8" ${L}/>`),
+  seta: svg(
+    `<path d="M10 32 H46 M34 18 L50 32 L34 46" fill="none" stroke="#c9a77a" stroke-width="8" ${L}/>`,
+  ),
 
   // ------------------------------------------------------------ habilidades
   construtor: svg(`
@@ -380,6 +385,44 @@ export const ARTE: Record<string, string> = {
     <path d="M34 24 l-3 -3 M38 23 l-1 -4" stroke="#2a1d3a" stroke-width="2" stroke-linecap="round"/>
     <ellipse cx="30" cy="38" rx="3.4" ry="2.2" fill="#ffa8c8"/>
     <path d="M26 18 L22 8 L32 15" fill="#fff8ff" ${s(2.5)}/>`),
+  // ------------------------------------------------------------ fase B: todo mundo e a banca
+  // o mundo inteiro (o nível e as habilidades sobem em qualquer mundo)
+  mundoTodos: svg(`
+    <circle cx="32" cy="33" r="24" fill="#5aa7ff" ${s()}/>
+    <path d="M14 26 Q20 20 26 24 Q30 30 24 34 Q18 38 20 46 Q14 40 14 26 Z" fill="#6cc65a" ${s(2.5)}/>
+    <path d="M36 12 Q46 14 50 24 Q44 26 40 22 Q34 20 36 12 Z M38 36 Q46 32 52 38 Q50 48 42 54 Q40 46 36 44 Q34 40 38 36 Z" fill="#6cc65a" ${s(2.5)}/>
+    <path d="M18 16 Q24 11 31 10" fill="none" stroke="#d8eeff" stroke-width="3.5" stroke-linecap="round"/>`),
+  // espera um pouquinho (a banca entrega uma coisa de cada vez): ampulheta macia
+  ampulheta: svg(`
+    <path d="M16 8 H48 M16 56 H48" stroke="${C}" stroke-width="5" stroke-linecap="round"/>
+    <path d="M19 10 Q19 26 32 32 Q45 26 45 10 Z M19 54 Q19 38 32 32 Q45 38 45 54 Z" fill="#fff6e4" ${s()}/>
+    <path d="M24 16 Q26 25 32 28 Q38 25 40 16 Z" fill="#ffc93d"/>
+    <path d="M23 52 Q25 44 32 41 Q39 44 41 52 Z" fill="#ffc93d"/>`),
+  // a banca descansando (o limite da sessão): lua com zzz
+  lua: svg(`
+    <path d="M40 8 Q22 12 22 32 Q22 52 42 56 Q20 62 10 44 Q2 26 18 12 Q28 4 40 8 Z" fill="#ffe27a" ${s()}/>
+    <path d="M40 18 h10 l-10 10 h10 M48 34 h7 l-7 7 h7" fill="none" stroke="#8a5ad8" stroke-width="3.5" ${L}/>`),
+  // a mochila cheia (e o baú da banca também)
+  mochilaCheia: svg(`
+    <path d="M22 16 Q22 8 32 8 Q42 8 42 16" fill="none" stroke="${C}" stroke-width="4"/>
+    <rect x="12" y="16" width="40" height="42" rx="10" fill="#e8a23a" ${s()}/>
+    <rect x="18" y="34" width="28" height="16" rx="5" fill="#c9852a" ${s(2.5)}/>
+    <rect x="16" y="6" width="10" height="10" rx="2" fill="#7fc65a" ${s(2.5)} transform="rotate(-14 21 11)"/>
+    <rect x="36" y="4" width="10" height="10" rx="2" fill="#5aa7ff" ${s(2.5)} transform="rotate(12 41 9)"/>
+    <rect x="27" y="2" width="10" height="10" rx="2" fill="#ff7aa8" ${s(2.5)}/>`),
+  // o galinheiro já tem galinha demais (o limite de bichos do mundo)
+  galinheiroCheio: svg(`
+    <path d="M6 30 L32 12 L58 30 V58 H6 Z" fill="#e0a868" ${s()}/>
+    <circle cx="20" cy="44" r="8" fill="#fff" ${s(2.5)}/><path d="M18 35 l2 -4 l2 4" fill="#e8402f"/><circle cx="17" cy="43" r="1.4" fill="${C}"/>
+    <circle cx="32" cy="40" r="8" fill="#fff" ${s(2.5)}/><path d="M30 31 l2 -4 l2 4" fill="#e8402f"/><circle cx="29" cy="39" r="1.4" fill="${C}"/>
+    <circle cx="44" cy="44" r="8" fill="#fff" ${s(2.5)}/><path d="M42 35 l2 -4 l2 4" fill="#e8402f"/><circle cx="41" cy="43" r="1.4" fill="${C}"/>`),
+  // o potinho de moedas ainda não cheio (falta pouco)
+  potinho: svg(`
+    <path d="M14 22 H50 L46 56 Q32 60 18 56 Z" fill="#bfe3ff" fill-opacity="0.7" ${s()}/>
+    <path d="M17 42 H47 L46 56 Q32 60 18 56 Z" fill="#ffc93d"/>
+    <path d="M14 22 H50 L46 56 Q32 60 18 56 Z" fill="none" ${s()}/>
+    <rect x="12" y="16" width="40" height="8" rx="4" fill="#fff6e4" ${s(2.5)}/>
+    <path d="M22 28 V48" stroke="#fff" stroke-width="3" stroke-linecap="round" opacity="0.7"/>`),
 };
 
 export function arte(nome: string): string {

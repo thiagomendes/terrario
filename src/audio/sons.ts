@@ -49,7 +49,12 @@ export type EventoSom =
   | 'toc'
   /** Spec 021: o sininho do "vem cá!" e o puf do pulo para perto. */
   | 'sininho'
-  | 'puf';
+  | 'puf'
+  /** Spec 023: a moedinha (tlim), a bolinha da missão (plim), o nível e a vitrine premium. */
+  | 'moeda'
+  | 'plim'
+  | 'nivel'
+  | 'vitrine';
 
 export const EVENTOS_SOM: readonly EventoSom[] = [
   'golpe',
@@ -87,6 +92,10 @@ export const EVENTOS_SOM: readonly EventoSom[] = [
   'toc',
   'sininho',
   'puf',
+  'moeda',
+  'plim',
+  'nivel',
+  'vitrine',
 ];
 
 export const VARIACOES_POR_EVENTO = 4;
@@ -172,6 +181,12 @@ const BASE_EVENTO: Record<EventoSom, BaseEvento> = {
   // spec 021: o sininho é mais baixo que os efeitos (régua da 019); o puf, macio
   sininho: { ganho: 0.12, duracao: 1.3, ruido: 0, escalaTom: 1, grupoAudio: 'efeitos' },
   puf: { ganho: 0.3, duracao: 0.45, ruido: 0.9, escalaTom: 1, grupoAudio: 'efeitos' },
+  // spec 023 (régua da 019): a moedinha e a bolinha são sininhos curtos, abaixo dos efeitos;
+  // o nível e a vitrine, uma caixinha de música do tamanho da conquista
+  moeda: { ganho: 0.13, duracao: 0.28, ruido: 0, escalaTom: 1, grupoAudio: 'efeitos' },
+  plim: { ganho: 0.12, duracao: 0.32, ruido: 0, escalaTom: 1, grupoAudio: 'efeitos' },
+  nivel: { ganho: 0.18, duracao: 1.4, ruido: 0, escalaTom: 1, grupoAudio: 'efeitos' },
+  vitrine: { ganho: 0.18, duracao: 1.7, ruido: 0, escalaTom: 1, grupoAudio: 'efeitos' },
 };
 
 const FIXOS: Partial<Record<EventoSom, BaseMaterial>> = {
@@ -204,6 +219,10 @@ const FIXOS: Partial<Record<EventoSom, BaseMaterial>> = {
   toc: { frequencia: 520, filtroHz: 1200 },
   sininho: { frequencia: 784, filtroHz: 5000 },
   puf: { frequencia: 420, filtroHz: 2400 },
+  moeda: { frequencia: 1318.5, filtroHz: 6000 },
+  plim: { frequencia: 1046.5, filtroHz: 5000 },
+  nivel: { frequencia: 523.25, filtroHz: 5000 },
+  vitrine: { frequencia: 783.99, filtroHz: 5000 },
 };
 
 export const AMPLITUDE_TOM = 0.12;
@@ -868,7 +887,17 @@ function desenharNovo(
           [5.4, 0.04],
         ] as const)
           pecas.push(
-            tom(ctx, out, t0 + at, 'sine', f * k * mult, f * k * mult, vol, 1.05 / mult ** 0.3, 0.008),
+            tom(
+              ctx,
+              out,
+              t0 + at,
+              'sine',
+              f * k * mult,
+              f * k * mult,
+              vol,
+              1.05 / mult ** 0.3,
+              0.008,
+            ),
           );
       break;
     case 'puf':
@@ -877,6 +906,31 @@ function desenharNovo(
       pecas.push(ruido(ctx, out, t0 + 0.05, 'lowpass', par.filtroHz * 0.3, 0.8, 0.5, 0.3, 0.01));
       pecas.push(tom(ctx, out, t0, 'sine', f, f / 3, 0.4, 0.18));
       break;
+    case 'moeda':
+      // tlim da moedinha: duas notas de sino bem curtas (a segunda, a oitava brilhante)
+      pecas.push(tom(ctx, out, t0, 'sine', f, f, 0.55, 0.25, 0.003));
+      pecas.push(tom(ctx, out, t0, 'sine', f * 2.01, f * 2.01, 0.2, 0.12, 0.003));
+      pecas.push(tom(ctx, out, t0 + 0.06, 'sine', f * 1.5, f * 1.5, 0.25, 0.2, 0.003));
+      break;
+    case 'plim':
+      // a bolinha da missão encheu: um "plim" de sino macio
+      pecas.push(tom(ctx, out, t0, 'sine', f, f, 0.5, 0.3, 0.004));
+      pecas.push(tom(ctx, out, t0, 'sine', f * 2.76, f * 2.76, 0.1, 0.15, 0.004));
+      break;
+    case 'nivel':
+    case 'vitrine': {
+      // caixinha de música: o arpejo sobe em cinco notas e brilha no fim (a vitrine, mais
+      // alta e com um fundo macio)
+      [0, 4, 7, 12, 16].forEach((st, i) => {
+        const k = 2 ** (st / 12);
+        pecas.push(tom(ctx, out, t0 + i * 0.09, 'triangle', f * k, f * k, 0.32, 0.6, 0.004));
+        pecas.push(tom(ctx, out, t0 + i * 0.09, 'sine', f * k * 2, f * k * 2, 0.08, 0.3, 0.004));
+      });
+      pecas.push(tom(ctx, out, t0 + 0.5, 'sine', f * 4, f * 4, 0.16, 0.85, 0.005));
+      if (evento === 'vitrine')
+        pecas.push(tom(ctx, out, t0, 'sine', f / 2, f / 2, 0.18, 1.5, 0.08));
+      break;
+    }
     default:
       pecas.push(tom(ctx, out, t0, 'sine', f, f, 0.3, 0.05));
   }
@@ -925,6 +979,10 @@ export const SONS_NOVOS_019: readonly EventoSom[] = [
   'conquista',
   'festa',
   'toc',
+  'moeda',
+  'plim',
+  'nivel',
+  'vitrine',
 ];
 
 let observador: ((evento: EventoSom) => void) | null = null;

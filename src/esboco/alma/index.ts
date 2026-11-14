@@ -35,9 +35,9 @@ import {
   type EventoAlma,
 } from './estado';
 import { criarUiAlma } from './ui';
-import { CAMISETA, celebrar, tlim } from './festa';
-import { figura, desenhoDaFigurinha } from './figuras';
-import { arte } from './arte';
+import { CAMISETA, celebrar, tlim } from '../../ui/alma/festa';
+import { figura, desenhoDaFigurinha } from '../../ui/alma/figuras';
+import { arte } from '../../ui/alma/arte';
 import { registrarFantasiasAlma } from './fantasias';
 import { criarPremium3d, type ItemPremium3d, type Premium3d } from './premium3d';
 import type { TransformNode } from '@babylonjs/core/Meshes/transformNode';

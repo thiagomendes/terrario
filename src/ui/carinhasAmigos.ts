@@ -13,12 +13,7 @@
  * As caixas do HUD (que a carinha nunca tapa) são medidas ao mudar o tamanho da janela, ao
  * abrir a bandeja e de tempos em tempos (o HUD do toque aparece depois), nunca por quadro.
  */
-import {
-  SEGURAR_PULO,
-  TOQUE_CARINHA,
-  type Caixa,
-  type ItemBorda,
-} from '../jogo/acharAmigo';
+import { SEGURAR_PULO, TOQUE_CARINHA, type Caixa, type ItemBorda } from '../jogo/acharAmigo';
 import { fotografarBoneco } from '../render/fotoBoneco';
 import { normalizarAparencia } from '../personagem/aparencia';
 import { ICONES_GESTOS } from './iconesGestos';
@@ -143,6 +138,9 @@ const SELETORES_HUD = [
   '.botao-chamar',
   '.bandeja-amigos',
   '.missao-hud',
+  // spec 023: a carteira e o cartão da missão
+  '.alma-carteira',
+  '.alma-missao',
   '.status .linha-icones',
   '.toque .joystick',
   '.toque .botoes > *',
@@ -277,7 +275,12 @@ export function criarCarinhas(acoes: AcoesCarinhas) {
   let escolhidoAgora: string | null = null;
   let amigosAgora: ReadonlyMap<string, AmigoDaCarinha> = new Map();
   function desenharFileira(): void {
-    const chave = naBandeja.map((b) => `${b.id}:${b.perto ? 1 : 0}:${amigosAgora.get(b.id)?.aparencia}`).join('|') + '#' + escolhidoAgora;
+    const chave =
+      naBandeja
+        .map((b) => `${b.id}:${b.perto ? 1 : 0}:${amigosAgora.get(b.id)?.aparencia}`)
+        .join('|') +
+      '#' +
+      escolhidoAgora;
     if (chave === chaveFileira) return;
     chaveFileira = chave;
     fileira.innerHTML = '';
@@ -285,7 +288,8 @@ export function criarCarinhas(acoes: AcoesCarinhas) {
       const a = amigosAgora.get(b.id);
       if (!a) continue;
       const c = document.createElement('button');
-      c.className = 'cara' + (b.id === escolhidoAgora ? ' escolhido' : '') + (b.perto ? ' perto' : '');
+      c.className =
+        'cara' + (b.id === escolhidoAgora ? ' escolhido' : '') + (b.perto ? ' perto' : '');
       c.style.setProperty('--cor', a.cor);
       c.dataset.amigo = b.id;
       const cv = document.createElement('canvas');
@@ -509,7 +513,8 @@ export function criarCarinhas(acoes: AcoesCarinhas) {
     }
     if (m.hidden) m.hidden = false;
     // só escreve o que mudou (o montinho fica quase sempre parado)
-    const alc = (Math.abs(Math.cos(item.ang)) * larg) / 2 + (Math.abs(Math.sin(item.ang)) * d) / 2 + 2;
+    const alc =
+      (Math.abs(Math.cos(item.ang)) * larg) / 2 + (Math.abs(Math.sin(item.ang)) * d) / 2 + 2;
     const estado = `${d}|${(item.x - larg / 2).toFixed(1)}|${(item.y - d / 2).toFixed(1)}|${larg}|${alc.toFixed(0)}|${item.ang.toFixed(2)}`;
     if (m.dataset.estado !== estado) {
       m.dataset.estado = estado;
@@ -523,7 +528,14 @@ export function criarCarinhas(acoes: AcoesCarinhas) {
         seta.style.transform = `rotate(${item.ang.toFixed(2)}rad)`;
       }
     }
-    vistos.push({ tipo: 'montinho', ids: item.ids, x: item.x, y: item.y, r: larg / 2, borda: true });
+    vistos.push({
+      tipo: 'montinho',
+      ids: item.ids,
+      x: item.x,
+      y: item.y,
+      r: larg / 2,
+      borda: true,
+    });
   }
 
   return {
@@ -607,14 +619,20 @@ export function criarCarinhas(acoes: AcoesCarinhas) {
           ...(item.chamando ? { chamando: true } : {}),
         });
       }
-      for (const [id, c] of carinhas) if (!usados.has(id) && !c.el.hidden && !c.segurando) c.el.hidden = true;
+      for (const [id, c] of carinhas)
+        if (!usados.has(id) && !c.el.hidden && !c.segurando) c.el.hidden = true;
       for (let i = nMontinho; i < montinhos.length; i++) montinhos[i].hidden = true;
     },
     /**
      * Os botões da coluna: a bandeja aparece com mais de 3 amigos; aberta, a fileira acompanha
      * quem está perto e quem está escolhido.
      */
-    botoes(lista: readonly NaBandeja[], escolhido: string | null, muitos: boolean, amigos: ReadonlyMap<string, AmigoDaCarinha>): void {
+    botoes(
+      lista: readonly NaBandeja[],
+      escolhido: string | null,
+      muitos: boolean,
+      amigos: ReadonlyMap<string, AmigoDaCarinha>,
+    ): void {
       naBandeja = lista;
       escolhidoAgora = escolhido;
       amigosAgora = amigos;

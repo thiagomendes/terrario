@@ -4,8 +4,8 @@
  * pais e o leitor de tela). Peças de brinquedo da 012 (creme, degrau embaixo, brilho em cima);
  * a lojinha premium tem a cara dela: vitrine de veludo azul-noite, ouro e holofote.
  */
-import { arte } from './arte';
-import { figura, figuraMissao, desenhoDaFigurinha, desenhoDaBolinha } from './figuras';
+import { arte } from '../../ui/alma/arte';
+import { figura, figuraMissao, desenhoDaFigurinha, desenhoDaBolinha } from '../../ui/alma/figuras';
 import {
   HABILIDADES,
   PREMIUM,
@@ -31,7 +31,7 @@ import {
 import { tocarSomInterface } from '../../audio/somInterface';
 import { fotografarBoneco } from '../../render/fotoBoneco';
 import { normalizarAparencia, type Aparencia } from '../../personagem/aparencia';
-import { CSS_FESTA } from './festa';
+import { CSS_FESTA } from '../../ui/alma/festa';
 
 const ESPELHO = `<svg viewBox="0 0 64 64"><ellipse cx="32" cy="28" rx="18" ry="22" fill="#bfe3ff" stroke="#fff" stroke-width="5"/><path d="M22 20 Q26 12 34 12" stroke="#fff" stroke-width="4" fill="none" stroke-linecap="round"/><path d="M26 50 L22 60 M38 50 L42 60" stroke="#fff" stroke-width="5" stroke-linecap="round"/></svg>`;
 const VOLTAR = `<svg viewBox="0 0 64 64"><path d="M40 12 L20 32 L40 52" fill="none" stroke="#fff" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/></svg>`;

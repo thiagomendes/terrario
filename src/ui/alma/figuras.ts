@@ -1,15 +1,15 @@
 /**
- * Esboço da spec 023: as figuras (tudo desenhado no projeto): o ícone de brinquedo dos itens
+ * Spec 023: as figuras da alma (tudo desenhado no projeto): o ícone de brinquedo dos itens
  * (012), a foto do boneco de verdade com a fantasia (017), a obra em isométrico com as
  * texturas do jogo (014) e os desenhos de `arte.ts`.
  */
-import { atlasDosIcones, desenharIsometrico, iconeDoItem, EVENTO_ICONES } from '../../ui/icones';
+import { atlasDosIcones, desenharIsometrico, iconeDoItem, EVENTO_ICONES } from '../icones';
 import { TAM_TILE } from '../../art/atlas';
 import { celulasDaObra, obraDoCanteiro } from '../../world/obras';
 import { fotografarBoneco } from '../../render/fotoBoneco';
 import { normalizarAparencia, type Aparencia } from '../../personagem/aparencia';
 import { arte } from './arte';
-import type { Missao } from './dados';
+import type { Missao } from '../../jogo/alma';
 
 function aparenciaAtual(): Aparencia {
   const a = window.__brumaluz?.personagem?.aparencia?.() as Aparencia | undefined;
@@ -100,12 +100,15 @@ export function figura(desenho: string, classe = ''): HTMLElement {
 }
 
 /** O desenho principal da missão (o que fazer) e o selinho da ação. */
-export function figuraMissao(m: Missao): HTMLElement {
+export function figuraMissao(m: Pick<Missao, 'desenho'>): HTMLElement {
   const caixa = document.createElement('span');
   caixa.className = 'alma-fig-missao';
   const d = m.desenho;
-  if (d.tipo === 'obra') caixa.appendChild(figura(`obra:${d.canteiro}`, 'principal'));
-  else if (d.tipo === 'bicho') {
+  if (d.tipo === 'obra') {
+    // a obra (com as texturas de verdade) e o selinho da colher de pedreiro: "construir isto"
+    caixa.appendChild(figura(`obra:${d.canteiro}`, 'principal'));
+    caixa.appendChild(figura('construtor', 'selo'));
+  } else if (d.tipo === 'bicho') {
     caixa.appendChild(figura(d.bicho, 'principal'));
     caixa.appendChild(figura(`item:${d.item}`, 'selo'));
   } else if (d.tipo === 'lugares') {
@@ -121,7 +124,7 @@ export function figuraMissao(m: Missao): HTMLElement {
 }
 
 /** O desenho que vira figurinha no álbum (a obra, o bicho, o item). */
-export function desenhoDaFigurinha(m: Missao): string {
+export function desenhoDaFigurinha(m: Pick<Missao, 'desenho'>): string {
   const d = m.desenho;
   if (d.tipo === 'obra') return `obra:${d.canteiro}`;
   if (d.tipo === 'bicho') return d.bicho;
@@ -130,7 +133,7 @@ export function desenhoDaFigurinha(m: Missao): string {
 }
 
 /** As bolinhas do progresso: a figura de cada vez (cinza → colorida). */
-export function desenhoDaBolinha(m: Missao, i: number): string {
+export function desenhoDaBolinha(m: Pick<Missao, 'desenho'>, i: number): string {
   const d = m.desenho;
   if (d.tipo === 'lugares') return d.usos[i] ?? 'estrela';
   if (d.tipo === 'bicho') return d.bicho;

@@ -8,7 +8,17 @@ import type { EventoSom } from './sons';
  */
 export type SomInterface = Extract<
   EventoSom,
-  'rodaAbrir' | 'rodaFechar' | 'mochila' | 'criar' | 'conquista' | 'festa' | 'toc'
+  | 'rodaAbrir'
+  | 'rodaFechar'
+  | 'mochila'
+  | 'criar'
+  | 'conquista'
+  | 'festa'
+  | 'toc'
+  | 'moeda'
+  | 'plim'
+  | 'nivel'
+  | 'vitrine'
 >;
 
 export const EVENTO_SOM_INTERFACE = 'terrario:som';
@@ -21,6 +31,11 @@ export const SONS_INTERFACE: readonly SomInterface[] = [
   'conquista',
   'festa',
   'toc',
+  // spec 023: a moedinha, a bolinha da missão, o nível e a vitrine premium
+  'moeda',
+  'plim',
+  'nivel',
+  'vitrine',
 ];
 
 export function ehSomInterface(v: unknown): v is SomInterface {
