@@ -7,8 +7,11 @@ import {
   pontoDeNascer,
 } from '../world/chunk';
 import type { Edicoes } from '../world/edicoes';
+import { desencostar, type CorpoNoChao } from '../jogo/contato';
 import {
+  ALTURA_JOGADOR,
   ALTURA_OLHOS,
+  MEIA_LARGURA,
   comCaixasExtras,
   dentroDaCaixa,
   passoFisica,
@@ -16,6 +19,7 @@ import {
   type CaixaSolida,
 } from './fisica';
 import { criarMundoSolido } from '../world/solido';
+import { caixasDaVilaPerto, comPecasDaVila } from '../world/vilaSolidos';
 export { criarMundoSolido };
 import { acaoDaTecla, aplicarMouse, eixos, type TeclasAtivas } from './entrada';
 import { limitarPitch } from './camera';
@@ -32,12 +36,23 @@ export function criarControle(
   edicoes?: Edicoes,
   gerar: (cx: number, cz: number, semente: number) => Uint8Array = gerarChunk,
 ) {
-  const solidoMundo = criarMundoSolido(semente, gerar, edicoes);
+  /**
+   * Spec 026: as peças da Vila Neon seguram (a mesma conta do núcleo). A peça em que o boneco
+   * já está dentro (mundo salvo antes, pulo para perto) não segura: ele sai andando.
+   */
+  const dentroDasPecas = new Set<CaixaSolida>();
+  const solidoMundo = comPecasDaVila(
+    criarMundoSolido(semente, gerar, edicoes),
+    semente,
+    () => dentroDasPecas,
+  );
   /**
    * Spec 014 (T14): caixas sólidas que não são blocos (os carrinhos e ônibus da cidade), em
    * coordenadas do mundo. A caixa em que o boneco já está dentro não segura (nunca prende).
    */
   let fonteExtras: (() => readonly CaixaSolida[]) | null = null;
+  /** Spec 026: os corpos dos bichos e moradores perto (macios: o boneco sai de dentro de lado). */
+  let fonteCorpos: (() => readonly CorpoNoChao[]) | null = null;
   let extras: CaixaSolida[] = [];
   const solido = comCaixasExtras(solidoMundo, () => extras);
   // nunca em cima de uma árvore (o nascimento de geração fica igual)
@@ -116,6 +131,9 @@ export function criarControle(
   function atualizar(dtSeg: number): void {
     const dt = Math.min(dtSeg, 0.05);
     extras = fonteExtras ? fonteExtras().filter((c) => !dentroDaCaixa(c, jogador)) : [];
+    dentroDasPecas.clear();
+    for (const c of caixasDaVilaPerto(semente, jogador.x, jogador.y, jogador.z))
+      if (dentroDaCaixa(c, jogador)) dentroDasPecas.add(c);
     const { frente, direita } = eixos(teclas);
     const voando = !!jogador.voando;
     ultimoResultado = passoFisica(
@@ -133,6 +151,11 @@ export function criarControle(
       dt,
       solido,
     );
+    if (fonteCorpos && !voando) {
+      const mx = direita * Math.cos(yaw) + frente * Math.sin(yaw);
+      const mz = -direita * Math.sin(yaw) + frente * Math.cos(yaw);
+      desencostar(jogador, fonteCorpos(), dt, solido, MEIA_LARGURA, ALTURA_JOGADOR, mx, mz);
+    }
     camera.position.x = jogador.x;
     camera.position.y = jogador.y + ALTURA_OLHOS;
     camera.position.z = jogador.z;
@@ -188,6 +211,13 @@ export function criarControle(
     /** Spec 014 (T14): caixas sólidas além dos blocos (os veículos), lidas a cada passo. */
     definirSolidosExtras(f: (() => readonly CaixaSolida[]) | null) {
       fonteExtras = f;
+    },
+    /**
+     * Spec 026: os corpos dos bichos e moradores perto, lidos a cada passo. O boneco não entra
+     * neles: o que entrou sai de lado, devagarinho (nunca uma parede que prende).
+     */
+    definirCorpos(f: (() => readonly CorpoNoChao[]) | null) {
+      fonteCorpos = f;
     },
     /** As caixas de fora que seguraram no último passo (testes e o "toc" do carrinho). */
     get caixasExtras(): readonly CaixaSolida[] {

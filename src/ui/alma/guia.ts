@@ -9,6 +9,7 @@ import type { EstadoDepuracao } from '../../render/cena';
 import { criarGuiaMissao, type ApiGuia, type GuiaMissao } from '../../render/guiaMissao';
 import { criarRelogioConvite, CONVITE_S, type MundoDoGuia } from '../../jogo/guia';
 import { Bloco } from '../../world/blocks';
+import { celulaTomadaPelaVila } from '../../world/vilaSolidos';
 import { CANTEIRO_BOLO } from '../../world/protecao';
 import type { AlmaUi } from './index';
 import { missaoFixada } from './hud';
@@ -118,6 +119,8 @@ export function ligarGuiaMissao(e: EstadoDepuracao, ui: AlmaUi): GuiaMissao | nu
       return [p[0], p[1], p[2]];
     },
     bloco,
+    // spec 026: os carros, bancos e brinquedos da Vila Neon (a trilha dá a volta)
+    peca: (x, y, z) => celulaTomadaPelaVila(mundo.vila ?? null, x, y, z),
     conhecido: () => true,
     mundo: () => mundo,
     tela: (x, y, z) => e.telaDoPonto?.(x, y, z) ?? null,

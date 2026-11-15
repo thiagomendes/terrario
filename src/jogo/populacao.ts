@@ -1,9 +1,11 @@
 import type { Gerador } from '../audio/variacao';
 import type { Bioma } from '../world/chunk';
-import { colideCorpo } from '../player/fisica';
+import { ALTURA_JOGADOR, colideCorpo, MEIA_LARGURA } from '../player/fisica';
+import { contatoComCorpo, CORPO_DO_SER, FOLGA_PASSAGEM, VEL_DAR_PASSAGEM } from './contato';
 import {
   assentarCriatura,
   CRIATURAS,
+  FOLGA_VEICULO,
   ferir,
   novaCriatura,
   passoCriatura,
@@ -281,6 +283,51 @@ export function criarPopulacao(rng: Gerador, salvo?: unknown, opcoes: OpcoesPopu
     }
   }
 
+  /**
+   * Spec 026 (o dono: "o personagem atravessando bichos"): o bicho ou morador encostado numa
+   * criança dá passagem, saindo devagar para o lado de lá (se o chão deixa). Ninguém atravessa
+   * ninguém e ninguém prende ninguém: a tela tira o boneco de dentro e o bicho abre espaço.
+   */
+  function darPassagem(m: MundoPopulacao, js: readonly Jogador[], dt: number): void {
+    for (const c of lista) {
+      if (c.estado === 'morrendo' || c.tipo === 'peixe') continue;
+      const def = CRIATURAS[c.tipo];
+      const [frente, lado] = CORPO_DO_SER[c.tipo];
+      for (const j of js) {
+        if (!j.vivo || Math.abs(j.x - c.x) > 2.5 || Math.abs(j.z - c.z) > 2.5) continue;
+        if (j.y >= c.y + def.alt || j.y + ALTURA_JOGADOR <= c.y) continue;
+        const k = contatoComCorpo(j.x, j.z, MEIA_LARGURA, {
+          x: c.x,
+          y: c.y,
+          z: c.z,
+          alt: def.alt,
+          frente: frente + FOLGA_PASSAGEM,
+          lado: lado + FOLGA_PASSAGEM,
+          yaw: c.yaw,
+        });
+        if (!k) continue;
+        const passo = Math.min(k.pen, VEL_DAR_PASSAGEM * dt);
+        const nx = c.x - k.nx * passo;
+        const nz = c.z - k.nz * passo;
+        // encostado numa parede, escorrega ao longo dela (o pedaço que não entra na parede),
+        // nunca para perto de um carrinho da cidade (a mesma folga do passo do bicho)
+        const antes = m.folgaVeiculo?.(c.x, c.y, c.z, c.yaw, c.tipo) ?? Infinity;
+        // (nem cai da beirada: do palco, da calçada alta, no lago)
+        const livre = (x: number, z: number) => {
+          if (colideCorpo(m.solido, x, c.y, z, def.mw, def.alt)) return false;
+          if (!colideCorpo(m.solido, x, c.y - 0.3, z, def.mw * 0.5, 0.25)) return false;
+          const la = m.folgaVeiculo?.(x, c.y, z, c.yaw, c.tipo) ?? Infinity;
+          return la >= FOLGA_VEICULO || la >= antes;
+        };
+        if (livre(nx, nz)) {
+          c.x = nx;
+          c.z = nz;
+        } else if (livre(nx, c.z)) c.x = nx;
+        else if (livre(c.x, nz)) c.z = nz;
+      }
+    }
+  }
+
   /** Repulsão simples entre criaturas sobrepostas: não se atravessam nem se empilham. */
   function separar(m: MundoPopulacao, dt: number): void {
     const k = Math.min(1, dt * 10);
@@ -532,6 +579,7 @@ export function criarPopulacao(rng: Gerador, salvo?: unknown, opcoes: OpcoesPopu
         }
       }
       separar(m, dt);
+      darPassagem(m, js, dt);
       // remove as dissolvidas e as que ficaram longe de todos, compactando no lugar
       let n = 0;
       for (const c of lista) {

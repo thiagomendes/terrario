@@ -98,6 +98,13 @@ import {
 import { criarCeu } from './ceu';
 import { criarHorizonte } from './horizonte';
 import { criarRenderVila } from './vila';
+import { comPecas } from '../jogo/caminho';
+import {
+  contatoComCorpo,
+  corpoDoDesenho as corpoNoDesenho,
+  type CorpoNoChao,
+} from '../jogo/contato';
+import { celulaTomadaPelaVila, indiceDoMundo } from '../world/vilaSolidos';
 import { criarBrinquedosVila } from './vila/brinquedos';
 import { criarShowVila } from './vila/show';
 import type { PlanoVila } from '../world/vilaNeon';
@@ -582,6 +589,10 @@ export interface EstadoDepuracao {
   /** Itens no chão como esta tela vê (testes). */
   itensNoChao?: () => { item: string; qtd: number; x: number; y: number; z: number }[];
   modo?: ModoJogo;
+  /** Spec 026 (testes): as caixas das peças da Vila Neon (x0, y0, z0, x1, y1, z1). */
+  caixasDasPecas?: () => readonly (readonly number[])[];
+  /** Spec 026 (testes): quanto o boneco está dentro do bicho ou morador mais encostado (0: nada). */
+  dentroDeBicho?: () => { pen: number; tipo: string | null };
   controleDireto?: {
     olhar: (dx: number, dy: number) => void;
     mover: (frente: number, direita: number) => void;
@@ -4290,25 +4301,47 @@ export function criarCena(
   // Criaturas: o núcleo simula; a cena desenha a cópia suavizada.
   const replicaCriaturas = cliente.criaturas;
   /**
-   * 014c, a regra do dono (solidez): a criança não entra nos veículos nem nos moradores e bichos
-   * (cada um é uma caixa sólida perto dela; quem já está dentro não prende ninguém). O peixe e o
-   * bicho que segue a criança (o companheiro) ficam de fora, para não atrapalhar o caminho.
+   * 014c e 026, a regra do dono (solidez): a criança não entra nos veículos (caixas duras, só na
+   * cidade) nem nos moradores e bichos. Bicho e morador são corpos macios: o boneco que entra
+   * sai de lado, devagarinho (contorna, nunca fica preso), e no núcleo o bicho dá passagem. O
+   * corpo é o desenho do bicho no tema (do focinho ao rabo), girado para onde ele olha.
    */
-  const caixasCriaturas: CaixaMundo[] = [];
-  /** 014c: as caixas dos veículos perto da criança (só na cidade). */
   let caixasVeiculosPerto: (() => CaixaMundo[]) | null = null;
-  controle.definirSolidosExtras(() => {
-    const j = controle.jogador;
-    caixasCriaturas.length = 0;
-    for (const c of replicaCriaturas.lista) {
-      if (c.tipo === 'peixe' || c.estado === 'morrendo' || c.estado === 'seguir' || c.domada)
-        continue;
-      if (Math.abs(c.x - j.x) > 4 || Math.abs(c.z - j.z) > 4 || Math.abs(c.y - j.y) > 3) continue;
-      const d = CRIATURAS[c.tipo];
-      caixasCriaturas.push([c.x - d.mw, c.y, c.z - d.mw, c.x + d.mw, c.y + d.alt, c.z + d.mw]);
+  controle.definirSolidosExtras(() => caixasVeiculosPerto?.() ?? []);
+  const corposPerto: CorpoNoChao[] = [];
+  const corpoDoDesenho = new Map<string, [number, number, number]>();
+  function medidasDoCorpo(tipo: TipoSer, profissao?: string): [number, number, number] {
+    const k = `${tipo}:${profissao ?? ''}`;
+    let r = corpoDoDesenho.get(k);
+    if (!r) {
+      const pecas =
+        tipo === 'morador'
+          ? povoadoDoTema().moradores[(profissao ?? 'construtor') as Profissao]
+          : tema().criaturas[tipo];
+      r = corpoNoDesenho(pecas, CRIATURAS[tipo].mw);
+      corpoDoDesenho.set(k, r);
     }
-    const v = caixasVeiculosPerto?.();
-    return v ? caixasCriaturas.concat(v) : caixasCriaturas;
+    return r;
+  }
+  controle.definirCorpos(() => {
+    const j = controle.jogador;
+    corposPerto.length = 0;
+    for (const c of replicaCriaturas.lista) {
+      if (c.tipo === 'peixe' || c.estado === 'morrendo') continue;
+      if (Math.abs(c.x - j.x) > 4 || Math.abs(c.z - j.z) > 4 || Math.abs(c.y - j.y) > 3) continue;
+      const [frente, lado, meio] = medidasDoCorpo(c.tipo, c.morador?.profissao);
+      corposPerto.push({
+        x: c.x,
+        y: c.y,
+        z: c.z,
+        alt: CRIATURAS[c.tipo].alt,
+        frente,
+        lado,
+        meio,
+        yaw: c.yaw,
+      });
+    }
+    return corposPerto;
   });
   const cacheCeu = new Map<string, { topo: number; t: number }>();
   let relogioCache = 0;
@@ -4418,7 +4451,11 @@ export function criarCena(
     scene,
     jogador: () => controle.jogador,
     amigos: () => outrosJogadores.leves(),
-    bloco: blocoEm,
+    // spec 026: a trilha até o amigo dá a volta nos carros e brinquedos da Vila Neon
+    bloco: comPecas(
+      blocoEm,
+      planoVila ? (x, y, z) => celulaTomadaPelaVila(planoVila, x, y, z) : null,
+    ),
     conhecido: (x, z) => provedor.tem(Math.floor(x / TAM_X), Math.floor(z / TAM_Z)),
     pedirPulo: (alvo) => {
       enviarTelemetria(true);
@@ -4453,6 +4490,30 @@ export function criarCena(
   });
   estado.acharAmigo = acharAmigo.api;
   estado.jogadorPes = () => [controle.jogador.x, controle.jogador.y, controle.jogador.z];
+  estado.caixasDasPecas = () => indiceDoMundo(semente)?.caixas ?? [];
+  estado.dentroDeBicho = () => {
+    const j = controle.jogador;
+    let pior = { pen: 0, tipo: null as string | null };
+    for (const c of replicaCriaturas.lista) {
+      if (c.tipo === 'peixe' || c.estado === 'morrendo') continue;
+      if (Math.abs(c.x - j.x) > 4 || Math.abs(c.z - j.z) > 4) continue;
+      const alt = CRIATURAS[c.tipo].alt;
+      if (j.y >= c.y + alt || j.y + 1.8 <= c.y) continue;
+      const [frente, lado, meio] = medidasDoCorpo(c.tipo, c.morador?.profissao);
+      const k = contatoComCorpo(j.x, j.z, 0.3, {
+        x: c.x,
+        y: c.y,
+        z: c.z,
+        alt,
+        frente,
+        lado,
+        meio,
+        yaw: c.yaw,
+      });
+      if (k && k.pen > pior.pen) pior = { pen: k.pen, tipo: c.tipo };
+    }
+    return pior;
+  };
   /** Até onde o bicho apontado vale, dos olhos (o núcleo confere 7 blocos no chão). */
   const ALCANCE_BICHO = 3.6;
   function criaturaApontada() {

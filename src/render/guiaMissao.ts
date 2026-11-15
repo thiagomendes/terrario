@@ -21,6 +21,7 @@ import type { Missao } from '../jogo/alma';
 import {
   buscarCaminho,
   chaoNaColuna,
+  comPecas,
   ehSolido,
   type Caminho,
   type LeitorCaminho,
@@ -394,6 +395,11 @@ export interface FonteGuia {
   /** Os pés do jogador. */
   pes(): V3;
   bloco(x: number, y: number, z: number): number;
+  /**
+   * Spec 026: a célula tomada por uma peça que não é bloco (os carros e o rádio da Vila Neon):
+   * a trilha dá a volta e nenhuma pegada fica em cima dela.
+   */
+  peca?(x: number, y: number, z: number): boolean;
   /** O aparelho tem os blocos desta coluna? */
   conhecido(x: number, z: number): boolean;
   /** O mundo para o resolvedor (a cidade, os sítios, os moradores). */
@@ -463,12 +469,17 @@ export function criarGuiaMissao(f: FonteGuia): GuiaMissao {
   const placa = criarPlaca();
   const anel = criarAnel(scene);
 
+  /** Os blocos para andar: com as peças da Vila Neon (o caminho dá a volta nelas). */
+  const bloco = comPecas(
+    (x, y, z) => f.bloco(x, y, z),
+    f.peca ? (x, y, z) => f.peca!(x, y, z) : null,
+  );
   const leitor = (custo?: (x: number, y: number, z: number) => number): LeitorCaminho => ({
-    bloco: (x, y, z) => f.bloco(x, y, z),
+    bloco,
     conhecido: (x, z) => f.conhecido(x, z),
     custo,
   });
-  const pisa = (x: number, z: number, y: number) => chaoNaColuna(f.bloco, x, z, y + 1, y - 3);
+  const pisa = (x: number, z: number, y: number) => chaoNaColuna(bloco, x, z, y + 1, y - 3);
   /** Na cidade: o que tem do lado (o canteiro de flor, o banco, o poste) custa e é evitado. */
   const temObstaculoDoLado = (x: number, y: number, z: number): boolean => {
     for (const [dx, dz] of [
@@ -477,7 +488,7 @@ export function criarGuiaMissao(f: FonteGuia): GuiaMissao {
       [0, 1],
       [0, -1],
     ])
-      if (ehSolido(f.bloco(x + dx, y, z + dz))) return true;
+      if (ehSolido(bloco(x + dx, y, z + dz))) return true;
     return false;
   };
 
@@ -556,9 +567,9 @@ export function criarGuiaMissao(f: FonteGuia): GuiaMissao {
   }
   /** No sítio: a busca da 021 com a roça e a cerca custando mais, depois alisada. */
   function* buscaNoSitio(a: AlvoGuia, de: V3): Generator<void, Caminho, void> {
-    const c = yield* buscarCaminho(leitor(custoNoSitio(f.bloco)), de, [a.x, a.y, a.z]);
+    const c = yield* buscarCaminho(leitor(custoNoSitio(bloco)), de, [a.x, a.y, a.z]);
     return {
-      pts: longeDeQuem(assentar(alisar(c.pts, pisa, ruimNoSitio(f.bloco)))),
+      pts: longeDeQuem(assentar(alisar(c.pts, pisa, ruimNoSitio(bloco)))),
       completo: c.completo,
     };
   }

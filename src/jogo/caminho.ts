@@ -14,7 +14,24 @@ export type V3 = [number, number, number];
 /** Lê os blocos (o núcleo e o cliente dão a sua cópia do mundo). */
 export type LerBloco = (x: number, y: number, z: number) => number;
 
+/**
+ * Spec 026: a célula tomada por uma peça da Vila Neon (carro, banco, rádio...), que não é
+ * bloco. Quem lê os blocos para andar (o guia, o pulo para perto) devolve isto: segura como
+ * bloco, mas ninguém fica de pé em cima (o caminho dá a volta).
+ */
+export const PECA = -1;
+
+/** O leitor de blocos com as peças: a célula tomada vira `PECA`. */
+export function comPecas(
+  bloco: LerBloco,
+  tomada: ((x: number, y: number, z: number) => boolean) | null | undefined,
+): LerBloco {
+  if (!tomada) return bloco;
+  return (x, y, z) => (tomada(x, y, z) ? PECA : bloco(x, y, z));
+}
+
 export function ehSolido(b: number): boolean {
+  if (b === PECA) return true;
   if (b === Bloco.AR) return false;
   const d = obterBloco(b);
   return !!d && d.solido && !d.liquido;
@@ -32,7 +49,7 @@ export function ehFolha(b: number): boolean {
  */
 export function dePe(bloco: LerBloco, x: number, y: number, z: number): boolean {
   const chao = bloco(x, y - 1, z);
-  if (!ehSolido(chao) || ehFolha(chao)) return false;
+  if (!ehSolido(chao) || ehFolha(chao) || chao === PECA) return false;
   const pes = bloco(x, y, z);
   if (ehSolido(pes) || ehAgua(pes)) return false;
   return !ehSolido(bloco(x, y + 1, z));

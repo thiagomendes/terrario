@@ -17,6 +17,7 @@ import { Solo, soloDaCidade } from '../world/cidade';
 import { Bloco, obterBloco, luzDoBloco } from '../world/blocks';
 import type { Edicoes } from '../world/edicoes';
 import { criarMundoSolido } from '../world/solido';
+import { comPecasDaVila } from '../world/vilaSolidos';
 import type { MundoPopulacao } from '../jogo/populacao';
 import { povoadosPerto } from '../jogo/povoados';
 import type { Solido } from '../player/fisica';
@@ -111,7 +112,11 @@ export function criarAcessoMundo(
     const e = edicoes.obter(x, y, z);
     return e !== undefined ? e : gerado(x, y, z);
   }
-  const solido = criarMundoSolido(semente, (cx, cz) => base(cx, cz), edicoes);
+  // spec 026: as peças da Vila Neon (carros, rádio, bancos...) seguram as criaturas também
+  const solido = comPecasDaVila(
+    criarMundoSolido(semente, (cx, cz) => base(cx, cz), edicoes),
+    semente,
+  );
 
   // as mesmas aproximações que a cena usava (luz de fontes num raio e topo opaco da coluna)
   let relogio = 0;

@@ -1,4 +1,18 @@
-import { describe, expect, it } from 'vitest';
+import { afterAll, describe, expect, it } from 'vitest';
+import '../../src/temas/todos';
+import { obterTema } from '../../src/temas';
+import {
+  ALTURA,
+  definirEstiloMundo,
+  ESTILO_PADRAO,
+  gerarChunk,
+  indice,
+  TAM_X,
+  TAM_Z,
+  vilaDoMundo,
+} from '../../src/world/chunk';
+import { comPecas, procurarCaminho, type V3 as P3 } from '../../src/jogo/caminho';
+import { celulaTomadaPelaVila } from '../../src/world/vilaSolidos';
 import { alvoDaMissao, chegouAoAlvo, type MundoDoGuia } from '../../src/jogo/guia';
 import { missaoPorId } from '../../src/jogo/alma';
 import { planoDaVila } from '../../src/world/vilaNeon';
@@ -79,5 +93,61 @@ describe('o guia na Vila Neon (spec 026)', () => {
       noPalco,
     )!;
     expect(c.chave).toBe('passarela');
+  });
+});
+
+describe('a trilha do guia dá a volta nas peças da Vila Neon (o dono: nada atravessa)', () => {
+  afterAll(() => definirEstiloMundo(ESTILO_PADRAO));
+  it('do nascimento a cada lugar das missões, nenhuma pegada cai numa peça', () => {
+    definirEstiloMundo(obterTema('vila-neon').mundo);
+    const semente = 4242;
+    const vila = vilaDoMundo(semente)!;
+    const chunks = new Map<string, Uint8Array>();
+    const blocos = (x: number, y: number, z: number) => {
+      if (y < 0 || y >= ALTURA) return 0;
+      const cx = Math.floor(x / TAM_X);
+      const cz = Math.floor(z / TAM_Z);
+      const k = `${cx},${cz}`;
+      let c = chunks.get(k);
+      if (!c) chunks.set(k, (c = gerarChunk(cx, cz, semente)));
+      return c[indice(x - cx * TAM_X, y, z - cz * TAM_Z)];
+    };
+    const tomada = (x: number, y: number, z: number) => celulaTomadaPelaVila(vila, x, y, z);
+    const leitor = { bloco: comPecas(blocos, tomada), conhecido: () => true };
+    const q = vila.pontos;
+    const de: P3 = [vila.nascimento.x, vila.h + 1, vila.nascimento.z];
+    const alvos: [string, readonly number[]][] = [
+      ...q.estojos.map((e, i) => [`estojo ${i}`, e] as [string, number[]]),
+      ['escadinha', q.escadinha],
+      ['cercado', q.portaoCercado],
+      ['patins', q.patins],
+      ['mural', q.mural],
+      // perto dos brinquedos de tocar (a trilha passa na frente deles)
+      ['rádio', [q.radio[0] + 3, q.radio[1], q.radio[2]]],
+      ['fita', [q.fita[0], q.fita[1], q.fita[2] - 2.5]],
+    ];
+    let pecasPerto = 0;
+    for (const [nome, a] of alvos) {
+      const c = procurarCaminho(leitor, de, [a[0], a[1], a[2]]);
+      expect(c.completo, nome).toBe(true);
+      for (const [x, y, z] of c.pts) {
+        expect(
+          tomada(Math.floor(x), Math.floor(y), Math.floor(z)),
+          `${nome} em ${x},${y},${z}`,
+        ).toBe(false);
+        expect(tomada(Math.floor(x), Math.floor(y) + 1, Math.floor(z)), `${nome} cabeça`).toBe(
+          false,
+        );
+        for (const [dx, dz] of [
+          [1, 0],
+          [-1, 0],
+          [0, 1],
+          [0, -1],
+        ])
+          if (tomada(Math.floor(x) + dx, Math.floor(y), Math.floor(z) + dz)) pecasPerto++;
+      }
+    }
+    // a trilha passou rente a peças de verdade (a volta foi dada, não por sorte)
+    expect(pecasPerto).toBeGreaterThan(0);
   });
 });

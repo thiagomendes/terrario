@@ -113,6 +113,8 @@ import {
 import { MAX_AJUDANTES_OBRA, type ObraSalva } from './saneamento';
 import { COMBATE_PULO, ESPERA_CHAMAR, ESPERA_PULO } from '../jogo/acharAmigo';
 import { lugarDoPulo, type MundoDoPulo } from './lugarPulo';
+import { comPecas } from '../jogo/caminho';
+import { celulaTomadaPelaVila } from '../world/vilaSolidos';
 import { roteiroDoMorador, type LugarCidade, type RoteiroCidade } from '../world/ruasCidade';
 
 type DadosFolga = 'casa' | 'loja' | undefined;
@@ -2412,7 +2414,11 @@ export function criarNucleo(op: OpcoesNucleo) {
 
   /** Spec 021: o mundo como o lugar do pulo o vê (blocos, proteção da 016 e donos). */
   const mundoDoPulo: MundoDoPulo = {
-    bloco: (x, y, z) => mundo.bloco(x, y, z),
+    // spec 026: nunca cair dentro de um carro ou banco da Vila Neon
+    bloco: comPecas(
+      (x, y, z) => mundo.bloco(x, y, z),
+      planoVila ? (x, y, z) => celulaTomadaPelaVila(planoVila, x, y, z) : null,
+    ),
     protecao: (x, y, z) => protecao.em(x, y, z),
     dono: (x, y, z) => donoNaCelula(edicoes, x, y, z, donoDoMundo),
   };
