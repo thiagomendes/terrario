@@ -82,9 +82,27 @@ export async function assentar(page: Page, minimo = 12): Promise<void> {
 /** Abre um mundo gravado no tamanho pedido, sem a tela de entrada, de dia e sem avisos. */
 export async function abrirMundo(
   browser: Browser,
-  op: { id: string; tema: string; extras?: Record<string, unknown>; tamanho: Tamanho },
+  op: {
+    id: string;
+    tema: string;
+    extras?: Record<string, unknown>;
+    tamanho: Tamanho;
+    /** Grava o vídeo da página (com a interface) nesta pasta, no dobro do tamanho da tela. */
+    video?: string;
+  },
 ): Promise<Page> {
-  const ctx = await browser.newContext(TAMANHOS[op.tamanho]);
+  const t = TAMANHOS[op.tamanho];
+  const ctx = await browser.newContext(
+    op.video
+      ? {
+          ...t,
+          recordVideo: {
+            dir: op.video,
+            size: { width: t.viewport.width * 2, height: t.viewport.height * 2 },
+          },
+        }
+      : t,
+  );
   const page = await ctx.newPage();
   page.on('pageerror', (e) => console.log(`erro na página: ${String(e)}`));
   await page.addInitScript(() => {

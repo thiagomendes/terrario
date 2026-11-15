@@ -23,8 +23,18 @@ const PASTA = process.env.VILA_PASTA ?? 'test-results/vila-neon';
 const VIDEO = !!process.env.VILA_VIDEO;
 mkdirSync(PASTA, { recursive: true });
 
+/** Quando cada página nasceu (o vídeo do Playwright começa ali). */
+const nasceu = new WeakMap<Page, number>();
+
 async function abrir(browser: Browser, id: string, tamanho: Tamanho): Promise<Page> {
-  const page = await abrirMundo(browser, { id, tema: 'vila-neon', tamanho });
+  const t0 = Date.now();
+  const page = await abrirMundo(browser, {
+    id,
+    tema: 'vila-neon',
+    tamanho,
+    video: VIDEO ? `${PASTA}/video-${id}` : undefined,
+  });
+  nasceu.set(page, t0);
   await page.addStyleTag({ content: '.dica-mira { display: none !important; }' });
   await assentar(page);
   await page.waitForFunction(() => !!window.__guia && !!window.__vila, undefined, {
@@ -82,25 +92,38 @@ async function filmar(page: Page, nome: string) {
   if (!VIDEO) return async () => undefined;
   const dir = `${PASTA}/quadros-${nome}`;
   mkdirSync(dir, { recursive: true });
-  const t0 = Date.now();
-  let vivo = true;
-  let i = 0;
-  const tempos: number[] = [];
-  const laco = (async () => {
-    while (vivo) {
-      const t = Date.now();
-      await page
-        .screenshot({ path: `${dir}/${String(i).padStart(5, '0')}.jpg`, type: 'jpeg', quality: 82 })
-        .then(() => tempos.push(Date.now() - t0))
-        .then(() => i++)
-        .catch(() => undefined);
-      await page.waitForTimeout(Math.max(0, 125 - (Date.now() - t))).catch(() => undefined);
-    }
-  })();
+  // o vídeo é o da página (o Playwright grava com a interface); aqui vai o som do jogo de
+  // verdade e onde o trecho começa no vídeo
+  const som = page.evaluate(() => window.__brumaluz!.gravarSom?.(900) ?? null).catch(() => null);
+  const inicio = (Date.now() - (nasceu.get(page) ?? Date.now())) / 1000;
   return async () => {
-    vivo = false;
-    await laco;
-    writeFileSync(`${dir}/tempos.json`, JSON.stringify(tempos));
+    const fim = (Date.now() - (nasceu.get(page) ?? Date.now())) / 1000;
+    writeFileSync(`${dir}/trecho.json`, JSON.stringify({ inicio, fim }));
+    await page.evaluate(() => window.__brumaluz!.pararSom?.()).catch(() => undefined);
+    const r = await som;
+    if (!r) return void console.log(`vila: ${nome} sem som`);
+    const l = Buffer.from(r.l, 'base64');
+    const rr = Buffer.from(r.r, 'base64');
+    const n = Math.min(l.length, rr.length) / 2;
+    const b = Buffer.alloc(44 + n * 4);
+    b.write('RIFF', 0);
+    b.writeUInt32LE(36 + n * 4, 4);
+    b.write('WAVE', 8);
+    b.write('fmt ', 12);
+    b.writeUInt32LE(16, 16);
+    b.writeUInt16LE(1, 20);
+    b.writeUInt16LE(2, 22);
+    b.writeUInt32LE(r.taxa, 24);
+    b.writeUInt32LE(r.taxa * 4, 28);
+    b.writeUInt16LE(4, 32);
+    b.writeUInt16LE(16, 34);
+    b.write('data', 36);
+    b.writeUInt32LE(n * 4, 40);
+    for (let k = 0; k < n; k++) {
+      b.writeInt16LE(l.readInt16LE(k * 2), 44 + k * 4);
+      b.writeInt16LE(rr.readInt16LE(k * 2), 46 + k * 4);
+    }
+    writeFileSync(`${dir}/som.wav`, b as unknown as string);
   };
 }
 

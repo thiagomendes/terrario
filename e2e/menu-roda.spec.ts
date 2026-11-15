@@ -371,3 +371,32 @@ test('computador: O abre e fecha a roda do menu, soltando o mouse sem a pausa', 
   expect(await page.inputValue('#campo-teste')).toBe('o');
   expect(erros).toEqual([]);
 });
+
+test('Vila Neon: a roda de gestos ganha o roqueiro (só neste mundo)', async ({ page }) => {
+  await page.addInitScript(() => {
+    HTMLElement.prototype.requestPointerLock = function () {
+      return Promise.resolve();
+    } as typeof HTMLElement.prototype.requestPointerLock;
+  });
+  await page.goto('/?tema=vila-neon');
+  await page.waitForFunction(() => window.__brumaluz?.ready === true, undefined, {
+    timeout: 180_000,
+  });
+  await page.evaluate(() => document.querySelector('.entrada')?.setAttribute('hidden', ''));
+  await page.waitForTimeout(1500);
+  await voltarAoJogo(page);
+  await page.locator('[data-botao-roda]').click();
+  await expect.poll(() => menu(page)).toBe('menu');
+  await page.waitForTimeout(350);
+  await page.locator('.roda.aberta button.ativo[data-item="gestos"]').click();
+  await expect.poll(() => menu(page)).toBe('gestos');
+  await page.waitForTimeout(450);
+  const itens = await page
+    .locator('.roda.aberta button.ativo')
+    .evaluateAll((bs) => bs.map((b) => b.getAttribute('data-item')));
+  console.log(`roda da Vila Neon: ${itens.length} itens: ${itens.join(', ')}`);
+  // os de sempre (9 com o Voltar) e o roqueiro
+  expect(itens).toContain('roqueiro');
+  expect(itens).toHaveLength(10);
+  await page.screenshot({ path: `${PASTA}/menu-gestos-vila-neon.png` });
+});

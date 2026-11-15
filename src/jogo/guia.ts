@@ -8,7 +8,7 @@
 import type { Missao } from './alma';
 import { ehSolido, type V3 } from './caminho';
 import { lavouraDoBloco, madura } from './plantio';
-import { Bloco } from '../world/blocks';
+import { Bloco, obterBloco } from '../world/blocks';
 import type { LoteCidade, PlanoCidade } from '../world/cidade';
 import { frenteDaLoja, rotaPelaCidade, type LugarCidade } from '../world/ruasCidade';
 import { loteDoCanteiro, noLoteObra } from '../world/obras';
@@ -935,6 +935,8 @@ export function ruimNoSitio(bloco: (x: number, y: number, z: number) => number) 
   const cerca = (b: number) =>
     b === Bloco.CERCA || b === Bloco.PORTEIRA || b === Bloco.PORTEIRA_ABERTA;
   return (x: number, y: number, z: number): boolean => {
+    // spec 026: a trilha alisada também nunca passa por cima de cerca ou grade
+    if (obterBloco(bloco(x, y - 1, z))?.forma === 'cerca') return true;
     if (lavouraDoBloco(bloco(x, y, z)) || bloco(x, y - 1, z) === Bloco.TERRA_ARADA) return true;
     for (const [dx, dz] of [
       [1, 0],
@@ -951,6 +953,9 @@ export function ruimNoSitio(bloco: (x: number, y: number, z: number) => number) 
 export function custoNoSitio(bloco: (x: number, y: number, z: number) => number) {
   const ruim = ruimNoSitio(bloco);
   return (x: number, y: number, z: number): number => {
+    // spec 026: em cima de cerca ou grade não se anda (a busca subia na mureta do rinque, de
+    // um bloco, e a criança ficava presa em cima dela): a trilha dá a volta pela entrada
+    if (obterBloco(bloco(x, y - 1, z))?.forma === 'cerca') return 80;
     if (lavouraDoBloco(bloco(x, y, z)) || bloco(x, y - 1, z) === Bloco.TERRA_ARADA) return 25;
     return ruim(x, y, z) ? 2 : 0;
   };
