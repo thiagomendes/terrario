@@ -33,7 +33,7 @@ Tamanho: **P** (até meio dia), **M** (1 a 2 dias), **G** (3 dias ou mais). Uma 
 |---|---|---|
 | T10 | **Regras puras** (`show.ts`): o tempo da música, o encaixe do toque em 1/8 de compasso, o chamado do fim e o acorde final (sozinho em 4 s) | P |
 | T11 | **Núcleo:** estojos no chão, instrumentos no palco, caixas, show, toque no palco, acorde final, caixas como brinquedo depois; comando `vila` com saneamento e limite por segundo; teste no modo nuvem; `extras.vila`; `VERSAO_REDE` 8 | G |
-| T12 | **Na tela:** holofotes que varrem, siga-me, caixas que acendem, estrelinhas frias, fumaça branca rente ao chão, confete só no acorde final, a plateia que pula, o palco que pisca chamando | G |
+| T12 | **Na tela:** holofotes que varrem, siga-me, caixas que acendem, estrelinhas frias, confete só no acorde final, a plateia que pula, o palco que pisca chamando | G |
 
 ## Fase 4: missões e banca
 | # | Tarefa | Tamanho |
@@ -62,3 +62,16 @@ Tamanho: **P** (até meio dia), **M** (1 a 2 dias), **G** (3 dias ou mais). Uma 
 | T22 | Vídeos: o bairro deitado; cada missão em pé; relatório visual | M |
 
 **Ordem:** uma fase por vez, na ordem acima.
+
+## Situação (15 nov 2026)
+| Fase | Estado |
+|---|---|
+| 1. Terreno e bairro (T01–T07) | feito: tema, blocos, planejador, campo de visão sem buracos, peças do bairro (rodadas 1 e 2 do visual) |
+| 2. Gente e bichos (T08–T09) | feito: moradores com posto e o look de cada um (vocalista de cabelo preto e liso, roadie de boné para trás e fone, guitarrista com a guitarra-raio na frente, dançarina de rosa, patinador de patins), trocas, pôster do vocalista |
+| 3. O show (T10–T12) | feito: regras, núcleo (VERSAO_REDE 8), na tela (feixes que pousam no chão, siga-me, estrelinhas frias (sem fumaça, decisão do dono), clarão e estouro no acorde final, confete; a banda de frente para a plateia batendo cabeça) |
+| 4. Missões e banca (T13–T15) | feito: f1 a f3 (4 + 5 + 6), banca, guia, desenhos; e2e das três missões deitado e em pé |
+| 5. Fantasias e patins (T16–T17) | feito: Roqueira/Roqueiro do Palco (cabelão liso ligado, sai com um toque), Dançarina/Dançarino do Neon, Patinadora/Patinador (na Vila Neon já calça os patins); patins no boneco; encaixe em todos os modelos, corpos e cabelos |
+| 6. Som e brinquedos (T18–T19) | feito: trilha e show gravados; fliperama (tela que anima), rádio (liga a batida, notinhas), fita (o lápis rebobina), ladrilho que acende sob o pé, rodinhas dos patins |
+| 7. Fechamento (T20–T22) | ver o relatório da parte 1 (medidas, paridade, vídeos) |
+
+Carros parados: modelos novos só deste mundo (`src/render/vila/carros.ts`): hatch em cunha, carrinho bolha, van pão de forma (a da banda grafite com o raio) e picape.

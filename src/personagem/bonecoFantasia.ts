@@ -546,6 +546,17 @@ export function vestirFantasia(
         p.pos = [p.pos[0], p.pos[1], p.pos[2] + 0.04];
   }
 
+  if (tem('cabelo-liso') || tem('colete-brim')) {
+    // spec 026: o liso comprido do palco cai só até o meio das costas e não passa da largura
+    // da cabeça (o colete, a correia da guitarra e a jaqueta aparecem por trás)
+    for (const p of pecas)
+      if (p.junta === 'cabeca' && p.nome === 'costas' && p.forma === 'caixa') {
+        const cima = p.pos[1] + p.tamanho[1] / 2;
+        const baixo = tem('colete-brim') ? -0.4 : -0.45;
+        p.tamanho = [Math.min(p.tamanho[0], cab.w), cima - baixo, p.tamanho[2]];
+        p.pos = [p.pos[0], (cima + baixo) / 2, p.pos[2]];
+      }
+  }
   if (tem('capa') || tem('capa-curta') || tem('capa-folhas')) {
     // com capa, o cabelo comprido das costas cai por cima da gola dela (termina acima do pano,
     // que levanta andando e correndo sem cortar o cabelo)
@@ -2399,6 +2410,16 @@ export function vestirFantasia(
           '#2e2d36',
           0.006,
           { rot: [0, 0, 0.72] },
+        );
+        caixa(
+          'guitarra-correia-costas',
+          'tronco',
+          'tronco',
+          [0.045, troncoH * 1.05, 0.012],
+          [0, troncoH * 0.5, -prof / 2 - 0.03],
+          '#2e2d36',
+          0.006,
+          { rot: [0, 0, -0.72] },
         );
         break;
       }

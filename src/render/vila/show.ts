@@ -8,14 +8,14 @@
  * - o palco de noite: o reflexo do cromo na treliça, as lampadinhas da grade, metade dos
  *   holofotes acesos e a parede de amplificadores com o friso dourado e as luzinhas;
  * - o show: os holofotes varrem no tempo da música e pousam no chão escuro, o siga-me branco
- *   fica no vocalista, a fumaça branco-gelo rola no tablado, os chafarizes soltam estrelinhas
+ *   fica no vocalista (sem fumaça: decisão do dono, ela só atrapalhava), os chafarizes soltam estrelinhas
  *   frias douradas (sempre para cima e longe de gente), o raio da logo e a beira do palco
  *   pulsam com a batida; no chamado o palco pisca na passarela; no acorde final, todos os
  *   feixes ficam brancos e sobem, um clarão macio, a explosão de estrelinhas douradas e brancas
  *   da passarela e o confete de seis cores (só agora).
  *
  * Tudo só com o chão do palco desenhado (a regra do campo de visão): nada aparece antes do
- * chunk onde fica. Os feixes, as estrelinhas, o confete e a fumaça são quatro malhas (uma
+ * chunk onde fica. Os feixes, as estrelinhas e o confete são três malhas (uma
  * chamada de desenho cada), com um número fixo de pedaços (nada é criado durante o show).
  */
 import type { Scene } from '@babylonjs/core/scene';
@@ -39,9 +39,9 @@ export interface OpcoesShowVila {
   temMalha(cx: number, cz: number): boolean;
   brilha?(m: Mesh): void;
   tapaOGlow?(m: Mesh): void;
-  /** A malha fica fora do brilho (os feixes, a fumaça, as estrelinhas: transparentes). */
+  /** A malha fica fora do brilho (os feixes e as estrelinhas: transparentes). */
   semBrilho?(m: Mesh): void;
-  /** Celular: menos estrelinhas, confete e fumaça. */
+  /** Celular: menos estrelinhas e confete. */
   leve?: boolean;
 }
 
@@ -149,8 +149,6 @@ export function criarShowVila(scene: Scene, plano: PlanoVila, opcoes: OpcoesShow
     return m;
   };
   const matFeixe = semLuz('vila-show-feixe', true);
-  const matFumaca = semLuz('vila-show-fumaca', false);
-  matFumaca.disableDepthWrite = true;
   const matConfete = semLuz('vila-show-confete', false);
   const todas: Mesh[] = [];
 
@@ -566,28 +564,6 @@ export function criarShowVila(scene: Scene, plano: PlanoVila, opcoes: OpcoesShow
       );
     }
   };
-
-  // a fumaça branco-gelo: nuvenzinhas macias rente ao tablado
-  const N_FUMACA = leve ? 8 : 14;
-  const LADOS_FUMACA = 8;
-  const idxF: number[] = [];
-  for (let i = 0; i < N_FUMACA; i++) {
-    const b = i * (LADOS_FUMACA + 1);
-    for (let j = 0; j < LADOS_FUMACA; j++) idxF.push(b, b + 1 + j, b + 1 + ((j + 1) % LADOS_FUMACA));
-  }
-  const fumaca = dinamica('vila-show-fumaca', N_FUMACA * (LADOS_FUMACA + 1), idxF, matFumaca);
-  const nuvens = Array.from({ length: N_FUMACA }, (_, i) => {
-    const naPassarela = i % 5 === 4;
-    return {
-      x0: naPassarela
-        ? pass[0] + rnd(-2, 2)
-        : palco.x0 + 2 + ((palco.x1 - palco.x0 - 3) * (i + 0.5)) / N_FUMACA,
-      z: naPassarela ? rnd(palco.z0 + 1, zFrente) : zFrente + rnd(0.2, 2.6),
-      r: rnd(1.5, 2.4),
-      v: rnd(0.25, 0.6) * (i % 2 ? 1 : -1),
-      f: rnd(0, 6.28),
-    };
-  });
 
   /** Os quatro chafarizes de estrelinhas: os cantos da frente do tablado e os pés da passarela. */
   const chafarizes: V3[] = [
@@ -1065,44 +1041,6 @@ export function criarShowVila(scene: Scene, plano: PlanoVila, opcoes: OpcoesShow
         ligar(confete.m, ver);
       }
 
-      // ---- a fumaça
-      const verFumaca = pronto && forca > 0.03;
-      ligar(fumaca.m, verFumaca);
-      if (verFumaca) {
-        const P = fumaca.pos;
-        const C = fumaca.cor;
-        const claro = 0.55 + 0.45 * (1 - noite);
-        nuvens.forEach((n, i) => {
-          const b = i * (LADOS_FUMACA + 1);
-          const x = n.x0 + Math.sin(t * 0.21 * n.v + n.f) * 2.6;
-          const y = topo + 0.42 + Math.sin(t * 0.5 + n.f) * 0.12;
-          const z = n.z + Math.cos(t * 0.17 + n.f) * 0.4;
-          const r = n.r * (0.9 + 0.12 * Math.sin(t * 0.6 + n.f * 2));
-          P[b * 3] = x;
-          P[b * 3 + 1] = y;
-          P[b * 3 + 2] = z;
-          C[b * 4] = 0.88 * claro + 0.06;
-          C[b * 4 + 1] = 0.94 * claro + 0.06;
-          C[b * 4 + 2] = claro + 0.06;
-          C[b * 4 + 3] = 0.3 * forca;
-          for (let j = 0; j < LADOS_FUMACA; j++) {
-            const a = (j * 6.283) / LADOS_FUMACA;
-            const c = Math.cos(a) * r;
-            // nuvem baixa e larga (a metade de baixo achatada no tablado)
-            const s = Math.sin(a) * r * (Math.sin(a) > 0 ? 0.5 : 0.22);
-            const o = (b + 1 + j) * 3;
-            P[o] = x + rx * c + ux * s;
-            P[o + 1] = y + ry * c + uy * s;
-            P[o + 2] = z + rz * c + uz * s;
-            const k = (b + 1 + j) * 4;
-            C[k] = C[b * 4];
-            C[k + 1] = C[b * 4 + 1];
-            C[k + 2] = C[b * 4 + 2];
-            C[k + 3] = 0;
-          }
-        });
-        fumaca.enviar();
-      }
     },
     evento(e) {
       if (e.e === 'vilaAcorde') acordes.push(e.quando);
@@ -1161,7 +1099,6 @@ export function criarShowVila(scene: Scene, plano: PlanoVila, opcoes: OpcoesShow
     descartar() {
       for (const m of todas) m.dispose();
       matFeixe.dispose();
-      matFumaca.dispose();
       matConfete.dispose();
       paleta.descartar();
       paletaPulso.descartar();

@@ -62,7 +62,7 @@ De memória da época e da imagem que ficou dos grandes festivais de rock dos an
 
 | O que marcava | Como fica no jogo, de brinquedo |
 | --- | --- |
-| **Palco gigante ao ar livre:** torres de andaime e treliça de metal dos lados, a grade de luzes por cima, paredes de caixas de som, fumaça, a passarela no meio do povo | O **Palco Trovão**, o prédio-símbolo do mundo: tablado grafite com fita no chão e beira vermelha, a **passarela** que entra na plateia (onde o vocalista canta), fundo grafite com o **raio de neon da logo** (cromo, vermelho e amarelo) e um arco de lâmpadas de cubinho de uma cor só, torres de treliça cromada com flâmulas do raio, 8 holofotes coloridos que varrem e o **siga-me** branco quente no vocalista, caixas de som penduradas (2 × 4 de cada lado). A fumaça vira nuvenzinha macia, rente ao chão. |
+| **Palco gigante ao ar livre:** torres de andaime e treliça de metal dos lados, a grade de luzes por cima, paredes de caixas de som, fumaça, a passarela no meio do povo | O **Palco Trovão**, o prédio-símbolo do mundo: tablado grafite com fita no chão e beira vermelha, a **passarela** que entra na plateia (onde o vocalista canta), fundo grafite com o **raio de neon da logo** (cromo, vermelho e amarelo) e um arco de lâmpadas de cubinho de uma cor só, torres de treliça cromada com flâmulas do raio, 8 holofotes coloridos que varrem e o **siga-me** branco quente no vocalista, caixas de som penduradas (2 × 4 de cada lado). Sem fumaça no palco (decisão do dono, 15 nov: "só atrapalha a qualidade gráfica do jogo"); os feixes pousam no chão escuro. |
 | **Pirotecnia e chuva de papel** | **Faíscas de brinquedo:** chafarizes de estrelinhas frias que sobem e caem, sempre para cima e longe de gente. Confete de seis cores, sem ordem de arco-íris. Nada de fogo apontado para ninguém. |
 | **O campo da plateia,** a multidão de braços para o alto, a lama e a chuva | Um gramado com caminho de cascalho do portão ao palco e a grade da plateia. Os moradores pulam com os braços em V. Sem lama nem chuva no show. |
 | **O portão do festival,** faixas, bandeiras e barracas | Portão de duas torres azul-elétrico e vermelho com o raio no alto, cordões de bandeirinhas (vermelho, azul, amarelo e branco) e duas barracas: a do lanche (pipoca e refresco) e a das camisetas com estrela, raio e coração. Nenhum nome, nenhuma letra. |
@@ -481,7 +481,7 @@ Muitas cores dos anos 80 continuam valendo; o que não pode é o espectro em ord
    - torres de treliça cromada com flâmulas do raio, a grade de luzes por cima, 8 holofotes (vermelho, azul, branco quente e amarelo) de feixe que some na ponta e o siga-me no vocalista;
    - parede de amplificadores grafite, caixas de som penduradas 2 × 4 de cada lado, a bateria no praticável alto vermelho, o teclado e o pedestal do microfone;
    - escadinha para a criança subir.
-   - **No show:** os holofotes acendem e varrem, as caixas acendem, cai confete (sem rosa), os chafarizes soltam estrelinhas frias e a fumaça cobre o chão. **No acorde final**, uma explosão de estrelinhas sai da passarela e a plateia pula de braços para o alto.
+   - **No show:** os holofotes acendem e varrem, as caixas acendem, cai confete (sem rosa), os chafarizes soltam estrelinhas frias e os feixes pousam no chão escuro (sem fumaça). **No acorde final**, uma explosão de estrelinhas sai da passarela e a plateia pula de braços para o alto.
 2. **Fliperama:** caixa grafite com friso vermelho e azul, frente aberta com colunas, tubos de neon no teto, cinco máquinas com telas de jogos inventados por nós, o letreiro de neon do controle e a parede de pôsteres.
 3. **Pista quadriculada** rosa e grafite que acende **sob os pés**, com o globo de espelhos num arco de treliça com luzinhas. É onde moram a dançarina e o patinador, e onde fica o **suporte dos patins**.
 4. **Portão do festival** com o raio e as bandeirinhas, e **duas barracas** (lanche e camisetas).
@@ -591,7 +591,7 @@ Os patins **não** estão à venda: são de graça no suporte da pista.
 - **Vocalista:** pernas bem abertas e o microfone mais alto e para fora; as mechas da frente foram para trás dos ombros (a jaqueta e as tachinhas aparecem); as pontas do cabelão afinam em três mechas com um reflexo claro (antes formavam um monte no chão).
 - **Brim com remendos nas costas** do vocalista e da guitarrista (raio, estrela e coração), que é o que a plateia vê.
 - **Acorde final inconfundível:** estrelinhas maiores, douradas e brancas, todos os feixes brancos por um instante e a plateia pulando de braços para cima; o confete fica só para o acorde final (o show normal fica mais limpo, e o fim se destaca).
-- **Sem rosa no palco:** fumaça branco-gelo, faíscas douradas, a logo só com contorno cromado e o raio vermelho (o miolo amarelo deslocado lembrava capa de disco famosa).
+- **Sem rosa no palco:** faíscas douradas, a logo só com contorno cromado e o raio vermelho (o miolo amarelo deslocado lembrava capa de disco famosa).
 - **Globo de espelhos** com facetas que contrastam e pontinhos de luz no chão da pista.
 - **Suporte dos patins** com botas maiores, listra colorida e o patins de neon em cima (o desenho diz o que é).
 - **Lhamas** na ponta da grade, sem atravessar a plateia, com notinhas no ar, e a foto de noite.
@@ -660,7 +660,7 @@ Uma fase por vez (o computador do dono é um só).
 - **O acorde final** sai em até 100 ms do toque; sem toque, vem sozinho em 4 s.
 - **Patins:** velocidade máxima igual à de andar (medida); deslize de 0,5 ± 0,1 s só na pista; nenhum tombo; degrau e escada como andando.
 - **A lhama** segue o feno até a grade sem se perder (no máximo 25 blocos do pastinho à grade, caminho livre).
-- **Desempenho:** 45 quadros no celular de noite no meio do show (8 holofotes, confete, faíscas, 12 moradores, 2 lhamas); se não couber, primeiro saem a fumaça e metade do confete.
+- **Desempenho:** 45 quadros no celular de noite no meio do show (8 holofotes, confete, faíscas, 12 moradores, 2 lhamas); se não couber, primeiro sai metade do confete (a fumaça já saiu: decisão do dono).
 - **Volume:** a música do show abaixo dos efeitos e das vozes (régua da 019).
 - **Nada tapa o HUD** com o quadro, a banca e a festa abertos (1280×720, 844×390 e 390×844); o quadro em pé mostra as três missões inteiras.
 - **Rodada em família** antes de publicar.
@@ -705,6 +705,7 @@ Respondidas em 14 e 15 nov 2026 (ver "Decisões do dono"):
 3. **O quadro em pé sem o corte da próxima vale para todos os mundos?** Recomendo que sim: a mudança é pequena e tira o selo cortado também na Cidade, no Rancho, nos Dinos e no Doce.
 
 ## Decisões do dono
+- **15 nov 2026 (na implementação):** **sem fumaça no show** ("só atrapalha a qualidade gráfica do jogo"). Ficam os feixes que pousam no chão escuro, o siga-me, as estrelinhas frias, o confete e o estouro do acorde final.
 - **15 nov 2026 (rodada 4, aprovação): "Manda ver, vamos com suas recomendações".**
   1. **Três partes,** cada uma publicada inteira e caprichada. A **parte 1** (esta implementação) traz o bairro, a Rua anos 80, a pracinha onde a criança nasce (parquinho, letreiro VILA NEON e o mural de recados), o rinque com os patins, o fliperama e o Festival Trovão com o Show da Vila. A **parte 2** é o parque de diversões com o "sentar no brinquedo". A **parte 3** é a casa por dentro e a rampa de skate. Os lugares das partes 2 e 3 ficam reservados no mapa como um pedaço de bairro acabado e cercado (gramado, cerca-viva, árvores, canteiros), **sem placa de obra, sem "em breve" e sem texto**.
   2. **Nomes escritos nos letreiros das lojas: sim** (nomes inventados, em português), só nos letreiros do mundo, nunca na interface. Nenhuma marca de verdade.

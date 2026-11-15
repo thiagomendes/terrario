@@ -1707,7 +1707,7 @@ export function criarCena(
         temMalha: (cx, cz) => malhas.has(chave(cx, cz)),
         brilha: brilhaNaVila,
         tapaOGlow,
-        // os feixes, as estrelinhas, o confete e a fumaça ficam fora do brilho
+        // os feixes, as estrelinhas e o confete ficam fora do brilho
         semBrilho: (m) => glow.addExcludedMesh(m),
         leve: toqueGrosso,
       })

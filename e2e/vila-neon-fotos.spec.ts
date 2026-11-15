@@ -683,6 +683,30 @@ test('fotos dos brinquedos', async ({ browser }) => {
     await page.waitForTimeout(2000);
     await foto(page, `brinq-tela-${h}`);
   }
+  // o toque de verdade (o dedo na tela da máquina, pelo caminho da interface): a tela mexe
+  await camera(page, null);
+  await page.evaluate(([x, z, y]) => window.__brumaluz!.teleportar!(x, z, y), [
+    mx,
+    mz - 3,
+    H + 0.2,
+  ] as const);
+  await page.waitForTimeout(800);
+  await page.evaluate(([x, y, z]) => window.__brumaluz!.mirarPonto?.(x, y, z), [
+    mx,
+    H + 1.9,
+    mz,
+  ] as const);
+  await page.waitForTimeout(3600);
+  const naTela = await page.evaluate(
+    ([x, y, z]) => window.__brumaluz!.telaDoPonto?.(x, y, z) ?? null,
+    [mx, H + 1.9, mz] as const,
+  );
+  console.log(`BRINQ toque-tela ${JSON.stringify(naTela)}`);
+  if (naTela) await page.mouse.click(naTela.x, naTela.y);
+  await page.waitForTimeout(400);
+  const depois = await page.evaluate(() => window.__brumaluz!.brinquedosVila?.()?.telas ?? 0);
+  console.log(`BRINQ toque-tela telas=${depois}`);
+  if (depois < 1) throw new Error('o toque na máquina não fez a tela mexer');
   // o rádio gigante ligado (as notinhas) e a fita rebobinando
   const [rx, , rz] = p.pontos.radio;
   await ir(page, rx, rz, H + 0.2);
