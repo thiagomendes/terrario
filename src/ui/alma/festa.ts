@@ -116,11 +116,16 @@ export const CSS_FESTA = `
 .alma-festa .presente { display: flex; align-items: center; gap: 12px; padding: 8px 16px 8px 8px; border-radius: 22px; background: #fffaf0;
   box-shadow: 0 0 0 4px #ffe27a, 0 8px 0 4px rgba(30,40,90,0.3); animation: alma-chega 0.6s 0.9s cubic-bezier(.2,1.6,.4,1) both; }
 .alma-festa .presente .alma-fig { width: 64px; height: 64px; }
-.alma-festa .chuva { display: flex; gap: 6px; min-height: 52px; }
+.alma-festa .chuva { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; min-height: 52px; max-width: min(92vw, 560px); }
 .alma-festa .chuva .moeda { width: 52px; height: 52px; animation: alma-chega 0.45s cubic-bezier(.2,1.6,.4,1) both; }
 .alma-festa .botoes { display: flex; gap: 18px; min-height: 70px; }
 .alma-festa .botoes > * { animation: alma-chega 0.4s cubic-bezier(.2,1.6,.4,1) both; }
 .alma-festa .canto { position: absolute; right: 6%; top: 10%; display: grid; justify-items: center; gap: 4px; animation: alma-chega 0.6s 1.2s both; }
+/* celular em pé (estreito): moedinhas menores, em duas fileiras se precisar (nunca cortadas) */
+@media (max-width: 560px) {
+  .alma-festa .chuva { gap: 4px; max-width: calc(100vw - 32px); }
+  .alma-festa .chuva .moeda { width: 40px; height: 40px; }
+}
 @media (max-height: 500px) {
   .alma-festa .chuva .moeda { width: 40px; height: 40px; }
   .alma-festa .meio { gap: 6px; }
@@ -271,7 +276,11 @@ export function celebrar(c: Celebracao): Promise<void> {
               m.animate(
                 [
                   { transform: `translate(${dx}px, ${dy}px) scale(0.5)`, opacity: 0.6 },
-                  { transform: `translate(${dx * 0.5}px, ${dy * 0.5 - 60}px) scale(0.9)`, opacity: 1, offset: 0.5 },
+                  {
+                    transform: `translate(${dx * 0.5}px, ${dy * 0.5 - 60}px) scale(0.9)`,
+                    opacity: 1,
+                    offset: 0.5,
+                  },
                   { transform: 'translate(0, 0) scale(1)', opacity: 1 },
                 ],
                 { duration: 520, easing: 'ease-out' },

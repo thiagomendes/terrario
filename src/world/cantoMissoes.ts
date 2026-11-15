@@ -373,8 +373,8 @@ function montar(tema: TemaCanto, t: TerrenoCanto, x: number, z: number, yaw: num
         passagens.push([ox, h0 + 1, oz]);
       }
     } else if (p.nome === 'caixa') {
-      // a volta de fora: a cerquinha de gravetos, fechada, com 2 blocos abertos do lado de
-      // quem vem do nascer (a entrada); dentro, a borda de areia e a cova de 3 × 3 um degrau
+      // a volta de fora: a cerquinha de gravetos nos três lados de trás e os postes das quinas
+      // na frente, aberta do lado de quem vem do nascer (a entrada); dentro, a borda de areia e a cova de 3 × 3 um degrau
       // abaixo, com as 3 rochas de osso
       const dx = t.nascer.x - mx;
       const dz = t.nascer.z - mz;
@@ -383,7 +383,10 @@ function montar(tema: TemaCanto, t: TerrenoCanto, x: number, z: number, yaw: num
       const portao = (i: number, k: number) => {
         const lado = i === 0 ? 'o' : i === W ? 'l' : k === 0 ? 'n' : k === W ? 's' : null;
         const ao = lado === 'o' || lado === 'l' ? k : i;
-        return lado === aberto && (ao === 3 || ao === 4);
+        // o lado de quem chega fica aberto (só os postes das quinas): a cerquinha da frente
+        // tapava a cova e as rochas bem na hora de tocar (revisão de UX); os outros três lados
+        // seguram a caixa (e os bichos não entram: o núcleo confere)
+        return lado === aberto && ao > 0 && ao < W;
       };
       for (let i = 0; i < p.w; i++)
         for (let k = 0; k < p.d; k++) {
@@ -412,12 +415,12 @@ function montar(tema: TemaCanto, t: TerrenoCanto, x: number, z: number, yaw: num
       // a entrada: o meio dos 2 blocos abertos, na volta da cerquinha
       const entrada: [number, number] =
         aberto === 'o'
-          ? [p.x + 0.5, p.z + 4]
+          ? [p.x + 0.5, p.z + 3.5]
           : aberto === 'l'
-            ? [p.x + W + 0.5, p.z + 4]
+            ? [p.x + W + 0.5, p.z + 3.5]
             : aberto === 'n'
-              ? [p.x + 4, p.z + 0.5]
-              : [p.x + 4, p.z + W + 0.5];
+              ? [p.x + 3.5, p.z + 0.5]
+              : [p.x + 3.5, p.z + W + 0.5];
       // a caixa de areia é a parte de dentro da cerquinha
       caixa = { x0: p.x + 1, z0: p.z + 1, x1: p.x + W - 1, z1: p.z + W - 1, y: h0, entrada };
     } else if (p.nome === 'mesa') {

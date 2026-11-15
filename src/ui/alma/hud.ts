@@ -697,9 +697,10 @@ export function criarHudAlma(raiz: HTMLElement, op: OpcoesHudAlma) {
       el.className = 'alma-mais';
       el.setAttribute('data-alma-mais', '');
       el.appendChild(mais);
-      el.style.left = `${(empe ? g.right - 34 : g.right - 20) - c.left}px`;
+      // em pé, na beira de fora do cartão (nunca em cima do desenho do resultado)
+      el.style.left = `${(empe ? g.right + 6 : g.right - 20) - c.left}px`;
       // embaixo do pedaço (deitado: na altura do "brincar"; em pé: no meio da beira)
-      el.style.top = `${(empe ? g.bottom - 30 : g.top + g.height * 0.78) - c.top}px`;
+      el.style.top = `${(empe ? g.bottom - 52 : g.top + g.height * 0.78) - c.top}px`;
       caixa.appendChild(el);
     }, 80);
   }

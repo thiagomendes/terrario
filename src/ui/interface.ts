@@ -116,8 +116,10 @@ body[data-overlay] .coleta-area, body.tela-titulo .coleta-area { display: none; 
 /* no computador e no celular deitado, duas à vista (logo abaixo ficam os outros avisos) */
 .coleta-area > :nth-last-child(n + 3) { display: none; }
 @media (max-width: 560px) {
-  /* retrato: no alto, entre os botões da esquerda e o minimapa */
-  .coleta-area { top: calc(env(safe-area-inset-top, 0px) + 12px); max-width: calc(100vw - 250px); }
+  /* retrato: embaixo dos botões do alto e do minimapa, no meio, com o nome inteiro (entre os
+     botões não cabia: o nome era cortado e a pílula ficava em cima da estrela) */
+  .coleta-area { top: calc(env(safe-area-inset-top, 0px) + 158px); max-width: calc(100vw - 32px); }
+  .toast.coleta { white-space: normal; text-overflow: clip; text-align: center; }
   .coleta-area > :nth-last-child(n + 3) { display: block; }
 }
 .toast.conquista { background: #fff3c4; box-shadow: 0 3px 0 var(--amarela-fundo), 0 8px 18px rgba(40, 25, 10, 0.2); }

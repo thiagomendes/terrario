@@ -297,11 +297,11 @@ export const ARTE: Record<string, string> = {
   // spec 023 (T09): as figuras dos presentes iguais ao que o jogo mostra (a etiqueta em
   // degradê sobre o amigo, o balão de borda de ouro, a moldura de flores)
   etiqueta: svg(`
-    <defs><linearGradient id="fig-etq" x1="0" x2="1" y1="0" y2="0.3"><stop offset="0" stop-color="#ff7ab8"/><stop offset="0.52" stop-color="#b48cff"/><stop offset="1" stop-color="#5cc8ff"/></linearGradient></defs>
+    <defs><linearGradient id="fig-etq" x1="0" x2="1" y1="0" y2="0.3"><stop offset="0" stop-color="#ff8a5c"/><stop offset="1" stop-color="#ffb347"/></linearGradient></defs>
     <rect x="6" y="20" width="52" height="24" rx="12" fill="url(#fig-etq)" ${s()}/>
     <rect x="17" y="28.5" width="30" height="7" rx="3.5" fill="#fff"/>`),
   etiquetaEstrela: svg(`
-    <defs><linearGradient id="fig-etq2" x1="0" x2="1" y1="0" y2="0.3"><stop offset="0" stop-color="#ff7ab8"/><stop offset="0.52" stop-color="#b48cff"/><stop offset="1" stop-color="#5cc8ff"/></linearGradient></defs>
+    <defs><linearGradient id="fig-etq2" x1="0" x2="1" y1="0" y2="0.3"><stop offset="0" stop-color="#ff8a5c"/><stop offset="1" stop-color="#ffb347"/></linearGradient></defs>
     <rect x="6" y="20" width="52" height="24" rx="12" fill="url(#fig-etq2)" ${s()}/>
     <rect x="26" y="28.5" width="24" height="7" rx="3.5" fill="#fff"/>
     <polygon points="${estrela5(17, 32, 8, 3.4)}" fill="#ffe066" ${s(1.8)}/>`),

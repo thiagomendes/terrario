@@ -118,7 +118,9 @@ export function criarFestas(op: OpcoesFestas) {
         const h = HABILIDADES.find((x) => x.id === estrela.habilidade)!;
         canto = document.createElement('div');
         canto.setAttribute('data-alma-estrela', h.id);
-        const d = figura(h.desenho);
+        // spec 031: as missões com desenho próprio mostram o selo delas (o saco de confeitar, o
+        // pincel...), na cor da habilidade; as de antes, o desenho da habilidade
+        const d = figura(m.desenho.tipo === 'arte' ? m.desenho.selo : h.desenho);
         d.style.cssText = `width:84px;height:84px;padding:10px;box-sizing:border-box;border-radius:50%;background:#fffaf0;box-shadow:0 0 0 6px ${h.cor},0 6px 0 6px rgba(120,60,10,0.3)`;
         const est = document.createElement('span');
         est.className = 'alma-estrelas';

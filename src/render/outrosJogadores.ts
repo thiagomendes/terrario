@@ -24,10 +24,11 @@ const CSS_ROTULO = `
   box-shadow: 0 2px 0 rgba(150, 110, 60, 0.35), 0 4px 10px rgba(40, 25, 10, 0.2); }
 .rotulo-amigo[hidden] { display: none; }
 body[data-overlay] .rotulo-amigo, body.modo-foto .rotulo-amigo, body.tela-titulo .rotulo-amigo { display: none; }
-/* spec 023 (T09): a etiqueta colorida (nível 2) e com estrela (nível 7), presentes de nível */
-.rotulo-amigo.etiqueta-cor, .rotulo-amigo.etiqueta-estrela { color: #fff; text-shadow: 0 1px 0 rgba(90, 40, 120, 0.55);
-  background: linear-gradient(100deg, #ff7ab8 0%, #b48cff 52%, #5cc8ff 100%);
-  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.85), 0 2px 0 rgba(120, 60, 160, 0.4), 0 4px 12px rgba(120, 60, 160, 0.3); }
+/* spec 023 (T09): a etiqueta colorida (nível 2) e com estrela (nível 7), presentes de nível.
+   Uma cor quente só (coral para laranja), nada de arco-íris (regra do dono) */
+.rotulo-amigo.etiqueta-cor, .rotulo-amigo.etiqueta-estrela { color: #fff; text-shadow: 0 1px 0 rgba(140, 60, 20, 0.55);
+  background: linear-gradient(100deg, #ff8a5c 0%, #ffb347 100%);
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.85), 0 2px 0 rgba(160, 80, 30, 0.4), 0 4px 12px rgba(160, 80, 30, 0.3); }
 .rotulo-amigo.etiqueta-estrela { padding-left: 30px; }
 .rotulo-amigo.etiqueta-estrela::before { content: ''; position: absolute; left: 6px; top: 50%; width: 20px; height: 20px; margin-top: -10px;
   background: no-repeat center/contain url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'><path d='M10 1 L12.6 7 L19 7.4 L14 11.6 L15.6 18 L10 14.4 L4.4 18 L6 11.6 L1 7.4 L7.4 7 Z' fill='%23ffe066' stroke='%23b8740a' stroke-width='1.4' stroke-linejoin='round'/></svg>"); }
