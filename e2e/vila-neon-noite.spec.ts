@@ -50,7 +50,8 @@ async function abrir(
   }, distancia);
   // a f1 já feita: a f3 está aberta no quadro
   await criarMundo(page, id, 'vila-neon', { alma: { local: { feitas: ['f1'] } } }, 1337);
-  await page.goto(`/?mundo=${id}`);
+  // no computador, a resolução cheia (as fotos e o vídeo); no celular, a política de verdade
+  await page.goto(`/?mundo=${id}${tamanho === 'pc' ? '&escala=1' : ''}`);
   await page.waitForFunction(() => window.__brumaluz?.ready === true, undefined, {
     timeout: 240_000,
   });
@@ -373,12 +374,12 @@ test('o show só de noite e o público (fotos e vídeo)', async ({ browser }) =>
     await camera(page, o(63.6, 1.55, 98.6), [pass[0] - 9, topo + 1.4, pass[2] + 3]);
     await page.waitForTimeout(600);
     await foto(page, 'noite-show-grade');
-    // atrás da turma da grade, na altura de um adulto: as costas da turma, o palco e os feixes
-    await camera(page, o(55.5, 2.3, 94.8), [pass[0] + 1, topo + 1.6, pass[2] + 6]);
+    // por cima do povo, atrás da turma da grade: as costas, a grade, o palco e os feixes
+    await camera(page, o(51, 3.6, 93.8), [pass[0] - 2, topo + 1, pass[2] + 4]);
     await page.waitForTimeout(600);
     await foto(page, 'noite-show-grade-palco');
     // da grade, virado para o povo: a festa de frente, até o portão
-    await camera(page, o(61.2, 2.1, 99.0), [p.ox + 53, H + 0.9, p.oz + 84]);
+    await camera(page, o(62.5, 2.2, 99.0), [p.ox + 51, H + 0.8, p.oz + 87]);
     await page.waitForTimeout(600);
     await foto(page, 'noite-show-grade-povo');
     // o povo visto de trás (a criança chegando pelo campo)
@@ -415,11 +416,11 @@ test('o show só de noite e o público (fotos e vídeo)', async ({ browser }) =>
     await esconderJogador(page, true);
     const largo = { p: o(61, 8.5, 73.5), a: [pass[0], topo + 1.5, pass[2] + 5] as V3 };
     const costas = { p: o(50, 2.4, 82), a: [pass[0] - 2, topo + 0.8, pass[2] + 2] as V3 };
-    const costas2 = { p: o(57.5, 2.0, 92.5), a: [pass[0] - 1, topo + 1, pass[2] + 3] as V3 };
+    const costas2 = { p: o(60.2, 2.2, 92.5), a: [pass[0] - 1, topo + 1, pass[2] + 3] as V3 };
     // atrás da turma da grade (as costas, o palco) e da grade virado para o povo (a festa de
     // frente); nada de câmera atravessando o palco
-    const atras = { p: o(55.5, 2.3, 94.8), a: [pass[0] + 1, topo + 1.6, pass[2] + 6] as V3 };
-    const povo = { p: o(61.2, 2.1, 99.0), a: [p.ox + 53, H + 0.9, p.oz + 84] as V3 };
+    const atras = { p: o(51, 3.6, 93.8), a: [pass[0] - 2, topo + 1, pass[2] + 4] as V3 };
+    const povo = { p: o(62.5, 2.2, 99.0), a: [p.ox + 51, H + 0.8, p.oz + 87] as V3 };
     await camera(page, largo.p, largo.a);
     await acender(page);
     await ir(page, p.ox + 60.5, p.oz + 97.6, H + 0.2);
