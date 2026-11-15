@@ -57,6 +57,34 @@ export interface RenderVila {
 
 const chave = (cx: number, cz: number) => `${cx},${cz}`;
 
+/**
+ * Os chunks de uma peça. Quase todas cabem no chunk onde pisam; as compridas (o varal de
+ * lâmpadas, as bandeirolas, o arco de lâmpadas do palco) entram em todos os que atravessam, e
+ * cada chunk desenha só o pedaço dele (`Desenho.recorte`): nada passa por cima de chunk sem
+ * malha.
+ */
+function chunksDaPeca(p: PecaVila): string[] {
+  let x0 = p.x;
+  let x1 = p.x;
+  let z0 = p.z;
+  let z1 = p.z;
+  if (p.ate) {
+    x0 = Math.min(p.x, p.ate[0]);
+    x1 = Math.max(p.x, p.ate[0]);
+    z0 = Math.min(p.z, p.ate[2]);
+    z1 = Math.max(p.z, p.ate[2]);
+  } else if (p.tipo === 'arco-lampadas') {
+    // o arco abre 7,4 para cada lado, ao longo da parede
+    const emX = (p.dir & 1) === 0;
+    if (emX) [x0, x1] = [p.x - 7.6, p.x + 7.6];
+    else [z0, z1] = [p.z - 7.6, p.z + 7.6];
+  } else return [chave(Math.floor(p.x / 16), Math.floor(p.z / 16))];
+  const out: string[] = [];
+  for (let cx = Math.floor(x0 / 16); cx <= Math.floor(x1 / 16); cx++)
+    for (let cz = Math.floor(z0 / 16); cz <= Math.floor(z1 / 16); cz++) out.push(chave(cx, cz));
+  return out;
+}
+
 export function criarRenderVila(
   scene: Scene,
   plano: PlanoVila,
@@ -67,14 +95,18 @@ export function criarRenderVila(
   // as luzes (neon, lâmpadas, telas): acesas, a cor na paleta, sem luz de cena
   const paleta = criarPaletaLuz(scene, 'vila-luz');
   const matLuz = paleta.material;
+  // o vidro dos carros: azulado, meio transparente, com reflexo (o interior aparece)
+  const matVidro = pl.cor('#bfe6f6', 0.75, 0.42);
+  /** As luzes da noite (faróis, lanternas) estão acesas? Acendem ao escurecer, como os postes. */
+  let acesoDeNoite = false;
   /** As peças agrupadas por chunk (fixas: o plano não muda). */
   const porChunk = new Map<string, PecaVila[]>();
-  for (const p of plano.pecas) {
-    const k = chave(Math.floor(p.x / 16), Math.floor(p.z / 16));
-    const l = porChunk.get(k);
-    if (l) l.push(p);
-    else porChunk.set(k, [p]);
-  }
+  for (const p of plano.pecas)
+    for (const k of chunksDaPeca(p)) {
+      const l = porChunk.get(k);
+      if (l) l.push(p);
+      else porChunk.set(k, [p]);
+    }
   const vivos = new Map<string, ChunkVivo>();
   const porQuadro = opcoes.porQuadro ?? 1;
 
@@ -84,9 +116,12 @@ export function criarRenderVila(
     const oz = cz * 16;
     const corpo = new Pecas();
     const luz = new Pecas();
+    const noite = new Pecas();
+    const vidro = new Pecas();
     const quadros: QuadroDesenhado[] = [];
+    const recorte = { x0: ox, z0: oz, x1: ox + 16, z1: oz + 16 };
     for (const p of lista) {
-      const d: Desenho = { corpo, luz, quadros, ox, oz, chao: plano.h + 1 };
+      const d: Desenho = { corpo, luz, noite, vidro, quadros, ox, oz, chao: plano.h + 1, recorte };
       desenharPeca(p, d);
     }
     const malhas: Mesh[] = [];
@@ -112,6 +147,15 @@ export function criarRenderVila(
     }
     const ml = fazer(luz, `vila-luzes-${cx},${cz}`, matLuz);
     if (ml) opcoes.brilha?.(ml);
+    // os faróis e as lanternas dos carros: a mesma tinta acesa, só de noite
+    const mn = fazer(noite, `vila-farois-${cx},${cz}`, matLuz);
+    if (mn) {
+      opcoes.brilha?.(mn);
+      mn.setEnabled(acesoDeNoite);
+    }
+    // os vidros dos carros (uma malha meio transparente: o interior aparece)
+    const mv = fazer(vidro, `vila-vidros-${cx},${cz}`, matVidro);
+    if (mv) opcoes.tapaOGlow?.(mv);
     for (const q of quadros) {
       // a textura em potência de 2 (com os níveis de longe: o letreiro não cintila); o desenho
       // é feito no tamanho de sempre e esticado na altura
@@ -169,7 +213,7 @@ export function criarRenderVila(
     for (const m of v.malhas) {
       const mat = m.material;
       m.dispose();
-      if (mat && mat !== matCorpo && mat !== matLuz) mat.dispose();
+      if (mat && mat !== matCorpo && mat !== matLuz && mat !== matVidro) mat.dispose();
     }
     for (const t of v.texturas) t.dispose();
   }
@@ -207,9 +251,16 @@ export function criarRenderVila(
         for (const v of vivos.values())
           for (const m of v.malhas) {
             const mat = m.material as StandardMaterial | null;
-            if (mat && mat !== matCorpo && mat !== matLuz && !mat.disableLighting)
+            if (mat && mat !== matCorpo && mat !== matLuz && mat !== matVidro && !mat.disableLighting)
               mat.emissiveColor.set(0.34 * luzPecas, 0.34 * luzPecas, 0.34 * luzPecas);
           }
+      }
+      // os faróis e as lanternas acendem ao escurecer e apagam de manhã (com folga: sem pisca)
+      const acender = acesoDeNoite ? noite > 0.3 : noite > 0.42;
+      if (acender !== acesoDeNoite) {
+        acesoDeNoite = acender;
+        for (const v of vivos.values())
+          for (const m of v.malhas) if (m.name.startsWith('vila-farois-')) m.setEnabled(acender);
       }
       semChao = 0;
       for (const v of vivos.values())

@@ -70,6 +70,8 @@ export type TipoPecaVila =
   | 'bicicleta'
   | 'carro'
   | 'van'
+  | 'picape'
+  | 'posteres'
   | 'hidrante'
   | 'caixa-correio'
   | 'varal-lampadas'
@@ -801,9 +803,11 @@ function montarVila(semente: number, r: RelevoVila): Montado {
         chao(u, v, Bloco.PISTA_NEON);
         const borda = u === u0 || u === u0 + w - 1 || v === v0 || v === v0 + d - 1;
         if (!borda) {
-          // o teto, com duas fileiras de tubo de neon (iluminam o salão)
+          // o teto, com duas fileiras de tubo de neon e as claraboias de vidro (de dia o salão
+          // fica claro: a luz do céu entra por elas até a parede do fundo)
           const neon = (v - v0 === 3 || v - v0 === 8) && (u - u0) % 4 !== 0;
-          b(u, H, v, neon ? Bloco.FAIXA_NEON : Bloco.CONCRETO);
+          const claraboia = [2, 5, 6, 10].includes(v - v0) && (u - u0) % 5 !== 0;
+          b(u, H, v, neon ? Bloco.FAIXA_NEON : claraboia ? Bloco.VIDRO : Bloco.CONCRETO);
           continue;
         }
         for (let y = 1; y <= H + 1; y++) {
@@ -820,9 +824,9 @@ function montarVila(semente: number, r: RelevoVila): Montado {
     for (let u = u0 + 1; u < u0 + w - 1; u++)
       for (let v = v0 + 1; v < v0 + d - 1; v++)
         chao(u, v, u - u0 > 3 && u - u0 < w - 4 && v - v0 < 7 ? Bloco.PISTA_NEON : Bloco.CALCADA);
-    // a parede de pôsteres do fundo e as máquinas encostadas nas paredes
-    for (let u = u0 + 1; u < u0 + w - 1; u++)
-      for (let y = 2; y <= 4; y++) b(u, y, v0 + d - 1, Bloco.PAREDE_POSTER);
+    // o painel de pôsteres do fundo (um painel claro com seis cartazes diferentes: nada de
+    // ladrilho repetido) e as máquinas encostadas nas paredes
+    peca('posteres', u0 + 7.5, v0 + d - 2, DIR.n, 0, 1.3);
     // as luminárias penduradas no teto do salão
     for (const du of [3, 8, 12]) b(u0 + du, H - 1, v0 + 5, Bloco.LANTERNA);
     const maquinas: [number, number][] = [
@@ -1096,16 +1100,17 @@ function montarVila(semente: number, r: RelevoVila): Montado {
   peca('lixeira', 68, 58, DIR.s, 4);
   peca('caixa-correio', 39, 59, DIR.s, 9);
   // carros parados junto do meio-fio (só cenário)
+  // (o carro: par é o hatch em cunha, ímpar o carrinho bolha; a van 0 e 2 são as da rua)
   peca('carro', 8, 61, DIR.l, 0);
   peca('carro', 34, 61, DIR.l, 1);
   peca('van', 76, 61, DIR.l, 0);
   peca('carro', 120, 68, DIR.o, 2);
-  peca('carro', 160, 68, DIR.o, 3);
-  peca('carro', 20, 29, DIR.l, 2);
-  peca('carro', 60, 32, DIR.o, 3);
-  peca('carro', 94, 40, DIR.n, 1);
-  peca('carro', 101, 122, DIR.s, 0);
-  peca('van', 101, 18, DIR.s, 0);
+  peca('picape', 160, 68, DIR.o, 0);
+  peca('carro', 20, 29, DIR.l, 3);
+  peca('carro', 60, 32, DIR.o, 4);
+  peca('picape', 94, 40, DIR.n, 1);
+  peca('carro', 101, 122, DIR.s, 5);
+  peca('van', 101, 18, DIR.s, 2);
   // bancos, bicicletas e floreiras nas calçadas (a cada ~10 blocos algo novo para olhar)
   peca('banco', 112, 59, DIR.s, 6);
   peca('banco', 136, 59, DIR.s, 7);
@@ -1318,6 +1323,8 @@ function montarVila(semente: number, r: RelevoVila): Montado {
   // os 8 holofotes pendurados na grade da frente e as flâmulas do raio nas torres
   for (let i = 0; i < 8; i++)
     peca('holofote', PU0 + 2 + Math.round((i * (PU1 - PU0 - 4)) / 7), PV0 - 1, DIR.n, i, TORRE - 1);
+  // o siga-me: o holofote branco do meio da grade, apontado para a ponta da passarela
+  peca('holofote', MEIO, PV0 - 1, DIR.n, 10, TORRE - 1);
   peca('flamula', PU0 - 2, PV0 - 1, DIR.n, 0, TORRE - 4);
   peca('flamula', PU1 + 2, PV0 - 1, DIR.n, 1, TORRE - 4);
   // as caixas de som penduradas (2 × 4 de cada lado), presas na torre da frente

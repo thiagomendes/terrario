@@ -139,4 +139,6 @@ export const CEU_VILA: CeuTema = {
   corCrepusculo: [1, 0.42, 0.5],
   // o chão escurece de verdade de noite (o festival brilha no escuro)
   pisoNoite: 0.09,
+  // de noite o gramado apaga (roxo-escuro, não verde aceso): os feixes do palco pousam nele
+  verdeNoite: 0.9,
 };

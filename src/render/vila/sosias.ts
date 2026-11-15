@@ -150,7 +150,7 @@ export function criarSosias(scene: Scene, plano: PlanoVila, opcoes: OpcoesRender
   // fundo e as abas), as torres e a grade de luzes, as caixas penduradas, os raios e as lâmpadas
   fazer(
     'palco',
-    { x0: palco.x0 - 6, z0: palco.z0 - 2, x1: palco.x1 + 6, z1: palco.z1 + 3 },
+    { x0: palco.x0 - 8, z0: palco.z0 - 8, x1: palco.x1 + 8, z1: palco.z1 + 3 },
     (c, l) => {
       const x0 = palco.x0;
       const x1 = palco.x1 + 1;
@@ -158,9 +158,22 @@ export function criarSosias(scene: Scene, plano: PlanoVila, opcoes: OpcoesRender
       const zf = palco.z0 + 5;
       const zb = palco.z1 + 1;
       const yp = palco.y + 1;
-      c(x0 - 6, x1 + 6, Y - 1, Y, palco.z0 - 2, zb + 3, '#4a9a3c');
+      // o chão: o gramado aparado em faixas, o caminho de cascalho e a grade da plateia
+      for (let z = palco.z0 - 8; z < zb + 3; z += 4)
+        c(x0 - 8, x1 + 8, Y - 1, Y, z, Math.min(zb + 3, z + 4), ((z - palco.z0) >> 2) & 1 ? '#3f9a34' : '#58b848');
+      c((x0 + x1) / 2 - 1.5, (x0 + x1) / 2 + 2.5, Y - 0.02, Y + 0.03, palco.z0 - 8, palco.z0 - 3, '#b08a5c');
+      c(x0 - 8, x1 + 8, Y, Y + 0.7, palco.z0 - 3.2, palco.z0 - 2.9, '#e2e6ee');
+      c(x0 - 8, x1 + 8, Y + 0.7, Y + 0.95, palco.z0 - 3.25, palco.z0 - 2.85, '#e8302a');
+      // a saia do tablado: grafite e azul alternados, a beira vermelha
       c(x0, x1, Y, yp - 1, zf, zb, GRAFITE);
-      c(x0, x1, yp - 1, yp, zf, zb, '#c8302a');
+      for (let x = x0; x < x1; x += 4) {
+        c(x + 2, Math.min(x1, x + 4), Y, yp - 1, zf - 0.04, zf, '#2f6fd0');
+        c(x1 - 0.02, x1 + 0.04, Y, yp - 1, zf + (x - x0) / 2 + 1, zf + (x - x0) / 2 + 2, '#2f6fd0');
+        c(x0 - 0.04, x0 + 0.02, Y, yp - 1, zf + (x - x0) / 2 + 1, zf + (x - x0) / 2 + 2, '#2f6fd0');
+      }
+      c(x0, x1, yp - 1, yp, zf, zb, '#e8302a');
+      // a escadinha do lado leste
+      for (let i = 0; i < 3; i++) c(x1 + i, x1 + i + 1, Y, yp - i - 0.02, zf + 2, zf + 4, '#8e8a86');
       c(x0 + 0.2, x1 - 0.2, yp - 0.02, yp + 0.02, zf + 0.2, zb, '#34333d');
       const mx = (x0 + x1) / 2 + 0.5;
       c(mx - 3, mx + 3, Y, yp - 1, palco.z0, zf, '#2f6fd0');
@@ -179,17 +192,30 @@ export function criarSosias(scene: Scene, plano: PlanoVila, opcoes: OpcoesRender
       c(mx - 4, mx + 4, yp, yp + 1, zb - 4, zb - 1, '#c8302a');
       c(mx - 1.6, mx + 1.6, yp + 1, yp + 2.4, zb - 3, zb - 2, '#e8e4dc');
       // as torres de treliça, a grade de luzes e as travessas
+      // (em gomos claros e escuros: de longe lê como treliça, não como viga lisa)
       const g = Y + 16;
+      const GOMO = ['#eef1f6', '#b4bac6'];
       for (const tx of [x0 - 2, x1 + 1])
-        for (const tz of [zf - 1, zb - 1]) c(tx, tx + 1, Y, g + 1, tz, tz + 1, CROMO);
-      c(x0 - 2, x1 + 2, g, g + 1, zf - 1, zf, CROMO);
-      c(x0 - 2, x1 + 2, g, g + 1, zb - 1, zb, CROMO);
-      c(x0 - 2, x1 + 2, g, g + 1, zf + 6, zf + 7, CROMO);
+        for (const tz of [zf - 1, zb - 1])
+          for (let y = Y; y < g + 1; y += 2) c(tx, tx + 1, y, Math.min(g + 1, y + 2), tz, tz + 1, GOMO[((y - Y) >> 1) & 1]);
+      for (const tz of [zf - 1, zb - 1, zf + 6])
+        for (let x = x0 - 2; x < x1 + 2; x += 2) c(x, Math.min(x1 + 2, x + 2), g, g + 1, tz, tz + 1, GOMO[((x - x0 + 2) >> 1) & 1]);
       for (const tx of [x0 - 2, x0 + 8, mx - 1, x1 - 9, x1 + 1])
-        c(tx, tx + 1, g, g + 1, zf, zb - 1, CROMO);
+        for (let z = zf; z < zb - 1; z += 2) c(tx, tx + 1, g, g + 1, z, Math.min(zb - 1, z + 2), GOMO[((z - zf) >> 1) & 1]);
       // as caixas de som penduradas e as flâmulas
       c(x0 - 5, x0 - 3, g - 7, g - 3, zf - 1, zf, '#2a2932');
       c(x1 + 2, x1 + 4, g - 7, g - 3, zf - 1, zf, '#2a2932');
+      // os cones das caixas (penduradas e dos amplificadores): quadradinhos mais claros
+      for (const sx of [x0 - 5, x1 + 2])
+        for (let i = 0; i < 2; i++)
+          for (let j = 0; j < 4; j++) {
+            c(sx + i + 0.22, sx + i + 0.78, g - 7 + j + 0.22, g - 7 + j + 0.78, zf - 1.05, zf - 1, '#6a6976');
+            if (sx > x0) c(sx + 2, sx + 2.05, g - 7 + j + 0.22, g - 7 + j + 0.78, zf - 0.78, zf - 0.22, '#6a6976');
+          }
+      for (const ax of [x0 + 1, x1 - 5])
+        for (let i = 0; i < 4; i++)
+          for (let j = 0; j < 3; j++)
+            c(ax + i + 0.22, ax + i + 0.78, yp + j + 0.22, yp + j + 0.78, zb - 2.05, zb - 2, '#6a6976');
       c(x0 - 5, x0 - 2, g - 3, g - 2, zf - 1, zf, CROMO);
       c(x1 + 1, x1 + 4, g - 3, g - 2, zf - 1, zf, CROMO);
       c(x0 - 2.1, x0 - 0.9, g - 6.2, g - 4, zf - 2.3, zf - 2.1, '#c8302a');
@@ -282,9 +308,10 @@ export function criarSosias(scene: Scene, plano: PlanoVila, opcoes: OpcoesRender
         }
       // a silhueta puxa para a cor da névoa (mais de dia), e escurece de noite
       fog.copyFrom(scene.fogColor);
-      const k = 0.55 - 0.25 * noite;
+      // (de dia com mais cor e contraste: o palco de longe não fica uma mancha lavada)
+      const k = 0.36 - 0.06 * noite;
       mat.emissiveColor.set(fog.r * k, fog.g * k, fog.b * k);
-      const d = 0.45 * (1 - noite) + 0.1;
+      const d = 0.68 * (1 - noite) + 0.1;
       mat.diffuseColor.set(d, d, d * 1.06);
     },
     visiveis: () =>

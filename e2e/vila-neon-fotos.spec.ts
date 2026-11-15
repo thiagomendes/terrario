@@ -1,5 +1,6 @@
 import { test, type Page } from '@playwright/test';
-import { mkdirSync } from 'node:fs';
+import { mkdirSync, writeFileSync } from 'node:fs';
+import { comecarGravacao, pararGravacao } from './gravarCena';
 import { PASTA_CAPTURAS } from '../playwright.config';
 
 /**
@@ -258,7 +259,7 @@ test('fotos do bairro (computador)', async ({ browser }) => {
       ir: meio(z.festival),
       cam: [p.pontos.passarela[0] - 1, H + 3, p.oz + 85],
       alvo: [p.pontos.passarela[0], H + 6.5, p.oz + 115],
-      horas: ['dia', 'noite'],
+      horas: ['dia', 'entardecer', 'noite'],
     },
     {
       nome: 'portao',
@@ -338,6 +339,65 @@ test('fotos do bairro (computador)', async ({ browser }) => {
   det('quintal', 101, 2.6, 96.5, 106, 0.6, 101.5);
   det('mural', 112, 1.7, 79, 112.5, 1.7, 83.5);
   det('globo', 139, 3, 92.5, 139, 8, 99.5);
+  // o salão do fliperama por dentro (o painel de pôsteres do fundo) e a rua com os carros
+  tomadas.push({
+    nome: 'fliperama-dentro',
+    ir: meio(z.fliperama),
+    cam: [p.ox + 137.2, H + 1.9, p.oz + 74.6],
+    alvo: [p.ox + 138.4, H + 2.1, p.oz + 84],
+    horas: ['dia', 'noite'],
+  });
+  tomadas.push({
+    nome: 'rua-carros',
+    ir: [p.ox + 60, p.oz + 64],
+    cam: [p.ox + 86, H + 1.9, p.oz + 66.6],
+    alvo: [p.ox + 60, H + 1.6, p.oz + 60.5],
+    horas: ['dia', 'noite'],
+  });
+  // os três estojos dos instrumentos (um por zona)
+  p.pontos.estojos.forEach(([x, , zz], i) =>
+    tomadas.push({
+      nome: `estojo-${i}`,
+      ir: [x, zz],
+      cam: [x + 2.6, H + 1.7, zz + 3.4],
+      alvo: [x, H + 1.0, zz],
+      horas: ['dia', 'noite'],
+    }),
+  );
+  // os carros parados (rodada 2): cada modelo de perto, de três quartos, de dia e de noite
+  const FRENTE: Record<number, [number, number]> = { 0: [0, 1], 1: [1, 0], 2: [0, -1], 3: [-1, 0] };
+  const veic = (nome: string, u: number, v: number, dir: number, lado: number, tras = false) => {
+    const [fu, fv] = FRENTE[dir];
+    // o lado da rua (para onde a câmera fica): perpendicular à frente
+    const [lu, lv] = [-fv * lado, fu * lado];
+    const k = tras ? -1 : 1;
+    tomadas.push({
+      nome: `veic-${nome}${tras ? '-tras' : ''}`,
+      ir: [p.ox + u, p.oz + v],
+      cam: [
+        p.ox + u + 0.5 + fu * 2.7 * k + lu * 3.0,
+        H + 1.45,
+        p.oz + v + 0.5 + fv * 2.7 * k + lv * 3.0,
+      ],
+      alvo: [p.ox + u + 0.5 + fu * 0.2 * k, H + 0.8, p.oz + v + 0.5 + fv * 0.2 * k],
+      horas: ['dia', 'noite'],
+    });
+  };
+  veic('hatch-bege', 8, 61, 1, 1);
+  veic('bolha-azul', 34, 61, 1, 1);
+  veic('van-rua', 76, 61, 1, 1);
+  veic('hatch-vinho', 120, 68, 3, 1);
+  veic('picape-branca', 160, 68, 3, 1);
+  veic('bolha-mostarda', 20, 29, 1, 1);
+  veic('hatch-branco', 60, 32, 3, 1);
+  veic('picape-verde', 94, 40, 2, 1);
+  veic('bolha-creme', 101, 122, 0, 1);
+  veic('van-vinho', 101, 18, 0, 1);
+  veic('van-banda', 82, 128, 3, 1);
+  veic('hatch-vinho', 120, 68, 3, 1, true);
+  veic('bolha-azul', 34, 61, 1, 1, true);
+  veic('van-rua', 76, 61, 1, 1, true);
+  veic('picape-branca', 160, 68, 3, 1, true);
   for (const t of tomadas) {
     if (!quer(t.nome)) continue;
     await ir(p2, t.ir[0], t.ir[1], H + 30);
@@ -359,6 +419,277 @@ test('fotos do bairro (celular em pé)', async ({ browser }) => {
   for (const h of ['dia', 'noite'] as Hora[]) {
     await hora(page, h);
     await foto(page, `celular-nascer-${h}`);
+  }
+  await ctx.close();
+});
+
+// ------------------------------------------------------------------ o Show da Vila (rodada 2)
+
+/** Segundos desde o começo do show (−1 sem show). */
+const decorrido = (page: Page) =>
+  page.evaluate(() => {
+    const e = window.__brumaluz!;
+    const v = e.vilaEstado!();
+    return v?.show ? e.vilaTempo!() - v.show.inicio : -1;
+  });
+
+async function ate(page: Page, seg: number) {
+  for (let i = 0; i < 4000; i++) {
+    const d = await decorrido(page);
+    if (d < 0 || d >= seg) return d;
+    await page.waitForTimeout(30);
+  }
+  return -1;
+}
+
+/** Vai até cada caixa do palco e deixa as três acesas (ou apagadas). */
+async function caixas(page: Page, acesas: boolean) {
+  for (let i = 0; i < 3; i++) {
+    await page.evaluate((i) => {
+      const e = window.__brumaluz!;
+      const p = e.vila!()!;
+      const c = p.pontos.caixas[i];
+      e.voar?.(true);
+      e.teleportar!(c[0] + 0.5, c[2] - 1.2, p.pontos.palco.y + 1.3);
+    }, i);
+    await page.waitForTimeout(450);
+    const ja = await page.evaluate((i) => window.__brumaluz!.vilaEstado!()?.cx[i] ?? false, i);
+    if (ja !== acesas)
+      await page.evaluate((i) => window.__brumaluz!.vilaComando!({ a: 'caixa', i }), i);
+    await page.waitForTimeout(350);
+  }
+}
+
+/** As contas do quadro (triângulos, chamadas de desenho, o que o show tem à vista). */
+async function medir(page: Page, nome: string) {
+  const m = await page.evaluate(() => {
+    const e = window.__brumaluz!;
+    const scene = e.cenaBabylon!() as unknown as {
+      getActiveIndices(): number;
+      getActiveMeshes(): { length: number };
+      getEngine(): { getFps(): number; _drawCalls?: { current: number; lastSecAverage: number } };
+    };
+    const eng = scene.getEngine();
+    return {
+      triangulos: Math.round(scene.getActiveIndices() / 3),
+      malhas: scene.getActiveMeshes().length,
+      desenhos: eng._drawCalls?.current ?? -1,
+      fps: Math.round(eng.getFps()),
+      show: e.showVila?.() ?? null,
+      pecas: e.vilaPecas?.()?.triangulos ?? -1,
+    };
+  });
+  console.log(`SHOW ${nome} ${JSON.stringify(m)}`);
+}
+
+test('fotos e vídeo do show', async ({ browser }) => {
+  // VILA_SO=show (tudo), show-noite, show-entardecer, show-dia ou show-video
+  const querShow = (qual: string) =>
+    !SO.length || SO.includes('show') || SO.includes(`show-${qual}`);
+  test.skip(!!SO.length && !SO.some((x) => x.startsWith('show')), 'só com show');
+  const ctx = await browser.newContext({ viewport: { width: 1280, height: 720 } });
+  const page = await ctx.newPage();
+  await abrir(page, 8);
+  const p = await plano(page);
+  const H = p.h + 1;
+  const pal = p.pontos.palco;
+  const pass = p.pontos.passarela;
+  const topo = pal.y + 1;
+  await esconderJogador(page, true);
+  await ir(page, pass[0], pal.z0 + 8, topo + 0.3);
+  // o primeiro toque liga o som
+  await page.mouse.click(640, 420);
+  await page.waitForTimeout(500);
+  // (de um lado do caminho: o poste das bandeirolas não fica na frente do palco)
+  const plateia: [V3, V3] = [
+    [pass[0] - 6.5, H + 3.4, pal.z0 - 13],
+    [pass[0], H + 7.2, pal.z0 + 9],
+  ];
+  const perto: [V3, V3] = [
+    [pass[0] + 5.5, topo + 1.5, pal.z0 - 5.5],
+    [pass[0] - 0.4, topo + 1.5, pal.z0 + 2.5],
+  ];
+  const doPalco: [V3, V3] = [
+    [pal.x0 + 7, topo + 3.4, pal.z1 - 3],
+    [pass[0] + 2, topo + 0.4, pal.z0 - 6],
+  ];
+  const lado: [V3, V3] = [
+    [pal.x1 + 16, H + 5, pal.z0 - 12],
+    [pass[0] + 2, H + 7, pal.z0 + 8],
+  ];
+  const clique = async (nome: string) => {
+    await foto(page, nome);
+    await medir(page, nome);
+  };
+  /** Um show inteiro com as fotos de uma hora. */
+  const umShow = async (h: Hora, completo: boolean) => {
+    await hora(page, h);
+    await caixas(page, false);
+    await camera(page, ...plateia);
+    if (completo) await clique(`show-antes-${h}`);
+    await caixas(page, true);
+    await camera(page, ...plateia);
+    await ate(page, 10.7);
+    await clique(`show-meio-${h}`);
+    if (completo) {
+      await ate(page, 14.7);
+      await clique(`show-meio2-${h}`);
+      await camera(page, ...perto);
+      await ate(page, 18.2);
+      await clique(`show-vocalista-${h}`);
+      await camera(page, ...doPalco);
+      await ate(page, 22.7);
+      await clique(`show-do-palco-${h}`);
+      await camera(page, ...lado);
+      await ate(page, 28.7);
+      await clique(`show-de-lado-${h}`);
+      await camera(page, ...plateia);
+    }
+    await ate(page, 37.2);
+    await clique(`show-chamado-${h}`);
+    await ate(page, 37.9);
+    // o toque da criança dispara o acorde final
+    await page.evaluate(() => window.__brumaluz!.vilaComando!({ a: 'palco' }));
+    await page.waitForTimeout(140);
+    await foto(page, `show-final-1-${h}`);
+    await foto(page, `show-final-2-${h}`);
+    await medir(page, `show-final-2-${h}`);
+    await page.waitForTimeout(500);
+    await foto(page, `show-final-3-${h}`);
+    await page.waitForTimeout(1200);
+    await foto(page, `show-final-4-${h}`);
+    // espera o show acabar (o aplauso)
+    for (let i = 0; i < 300 && (await decorrido(page)) >= 0; i++) await page.waitForTimeout(100);
+    await clique(`show-depois-${h}`);
+  };
+  if (querShow('noite')) await umShow('noite', true);
+  if (querShow('entardecer')) await umShow('entardecer', false);
+  if (querShow('dia')) await umShow('dia', false);
+  if (!querShow('video')) return void (await ctx.close());
+
+  // o vídeo: o fim do show de noite (a música, o chamado, o acorde final e o aplauso), com o
+  // som do jogo de verdade (a saída do motor) e o desenho da cena
+  await hora(page, 'noite');
+  await caixas(page, false);
+  await camera(page, ...plateia);
+  await caixas(page, true);
+  await camera(page, ...plateia);
+  await ate(page, 27.5);
+  mkdirSync(PASTA, { recursive: true });
+  const som = page.evaluate((s) => window.__brumaluz!.gravarSom?.(s) ?? null, 16);
+  await comecarGravacao(page, 30);
+  await ate(page, 37.4);
+  await page.evaluate(() => window.__brumaluz!.vilaComando!({ a: 'palco' }));
+  await page.waitForTimeout(6200);
+  await pararGravacao(page, `${PASTA}/show.webm`);
+  const r = await som;
+  if (r) {
+    const l = Buffer.from(r.l, 'base64');
+    const rr = Buffer.from(r.r, 'base64');
+    const n = Math.min(l.length, rr.length) / 2;
+    const b = Buffer.alloc(44 + n * 4);
+    b.write('RIFF', 0);
+    b.writeUInt32LE(36 + n * 4, 4);
+    b.write('WAVE', 8);
+    b.write('fmt ', 12);
+    b.writeUInt32LE(16, 16);
+    b.writeUInt16LE(1, 20);
+    b.writeUInt16LE(2, 22);
+    b.writeUInt32LE(r.taxa, 24);
+    b.writeUInt32LE(r.taxa * 4, 28);
+    b.writeUInt16LE(4, 32);
+    b.writeUInt16LE(16, 34);
+    b.write('data', 36);
+    b.writeUInt32LE(n * 4, 40);
+    for (let k = 0; k < n; k++) {
+      b.writeInt16LE(l.readInt16LE(k * 2), 44 + k * 4);
+      b.writeInt16LE(rr.readInt16LE(k * 2), 46 + k * 4);
+    }
+    writeFileSync(`${PASTA}/show.wav`, b as unknown as string);
+  } else console.log('SHOW sem som');
+  await ctx.close();
+});
+
+// ------------------------------------------------------------------ os brinquedos de tocar (T19)
+
+test('fotos dos brinquedos', async ({ browser }) => {
+  test.skip(!!SO.length && !SO.some((x) => x.startsWith('brinq')), 'só com brinq');
+  const ctx = await browser.newContext({ viewport: { width: 1280, height: 720 } });
+  const page = await ctx.newPage();
+  await abrir(page, 6);
+  const p = await plano(page);
+  const H = p.h + 1;
+  await page.mouse.click(640, 420);
+  const maquinas = await page.evaluate(() =>
+    window.__brumaluz!.vila!()!
+      .pecas.filter((q) => q.tipo === 'maquina')
+      .sort((a, b) => (a.n ?? 0) - (b.n ?? 0))
+      .map((q) => [q.x, q.y, q.z] as V3),
+  );
+  const toca = (qual: 'fliperama' | 'radio' | 'fita', i = 0) =>
+    page.evaluate(([q, i]) => window.__brumaluz!.vilaBrinquedo!(q, i), [qual, i] as const);
+  const estado = async (nome: string) =>
+    console.log(
+      `BRINQ ${nome} ${JSON.stringify(await page.evaluate(() => window.__brumaluz!.brinquedosVila?.()))}`,
+    );
+  await esconderJogador(page, true);
+  // o fliperama: três máquinas tocadas, de perto
+  const [mx, , mz] = maquinas[2];
+  await ir(page, mx, mz - 3, H + 0.2);
+  for (const h of ['dia', 'noite'] as Hora[]) {
+    await hora(page, h);
+    await camera(page, [mx + 0.3, H + 2.1, mz - 3.2], [mx, H + 1.7, mz]);
+    await toca('fliperama', 1);
+    await toca('fliperama', 2);
+    await toca('fliperama', 3);
+    await page.waitForTimeout(900);
+    await foto(page, `brinq-fliperama-${h}`);
+    await estado(`fliperama-${h}`);
+    await camera(page, [maquinas[2][0], H + 1.95, mz - 1.6], [maquinas[2][0], H + 1.9, mz]);
+    await toca('fliperama', 2);
+    await page.waitForTimeout(2000);
+    await foto(page, `brinq-tela-${h}`);
+  }
+  // o rádio gigante ligado (as notinhas) e a fita rebobinando
+  const [rx, , rz] = p.pontos.radio;
+  await ir(page, rx, rz, H + 0.2);
+  for (const h of ['dia', 'noite'] as Hora[]) {
+    await hora(page, h);
+    await camera(page, [rx + 6.5, H + 2.4, rz + 1.2], [rx, H + 1.6, rz]);
+    await toca('radio');
+    await page.waitForTimeout(2600);
+    await foto(page, `brinq-radio-${h}`);
+    await estado(`radio-${h}`);
+    await toca('radio');
+  }
+  const [fx, , fz] = p.pontos.fita;
+  await ir(page, fx, fz, H + 0.2);
+  for (const h of ['dia', 'noite'] as Hora[]) {
+    await hora(page, h);
+    await camera(page, [fx - 2.6, H + 2.6, fz - 4.6], [fx - 0.4, H + 1.6, fz - 0.6]);
+    await toca('fita');
+    await page.waitForTimeout(600);
+    await foto(page, `brinq-fita-${h}`);
+    await estado(`fita-${h}`);
+  }
+  // o ladrilho da pista acende sob os pés (a criança à vista, andando)
+  await esconderJogador(page, false);
+  const r = p.pontos.rinque;
+  const cxR = Math.floor((r.x0 + r.x1) / 2) + 0.5;
+  const czR = Math.floor((r.z0 + r.z1) / 2) + 0.5;
+  await page.evaluate(() => window.__brumaluz!.voar?.(false));
+  for (const h of ['noite'] as Hora[]) {
+    await hora(page, h);
+    await camera(page, [cxR + 4, H + 3.2, czR - 4], [cxR, H + 0.3, czR]);
+    for (let k = 0; k < 4; k++) {
+      await page.evaluate(([x, z]) => window.__brumaluz!.teleportar!(x, z), [
+        cxR - 2 + k,
+        czR,
+      ] as const);
+      await page.waitForTimeout(120);
+    }
+    await foto(page, `brinq-ladrilho-${h}`);
+    await estado(`ladrilho-${h}`);
   }
   await ctx.close();
 });

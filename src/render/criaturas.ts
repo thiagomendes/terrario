@@ -27,6 +27,7 @@ import { moradorDeBrinquedo } from './moradorBoneco';
 import { generoDoMorador } from '../temas/nomes';
 import type { Profissao } from '../world/povoado';
 import { criarAnimador } from '../player/animacao';
+import type { Pose } from '../personagem/poses';
 // spec 015 (gestos): o morador acena de volta; o balão fica em cima da cabeça
 import { fazerGesto, gestoDoAnimador, type IdGesto } from '../personagem/gestos';
 import { criarBalao, type BalaoGesto } from './balaoGesto';
@@ -461,6 +462,8 @@ export function criarRenderCriaturas(
     (mb.balao ??= criarBalao(scene, mb.boneco.raiz, undefined, false)).mostrar(g);
   }
 
+  /** Spec 026: a pose do show por cima da do morador (null fora da Vila Neon). */
+  let poseDeMorador: ((povoado: string, n: number, pose: Pose) => Pose) | null = null;
   let proximaEstatua = -1;
   /**
    * Estátuas da vitrine por lugar: a nova no mesmo lugar descarta a de antes (auditoria 017:
@@ -521,6 +524,12 @@ export function criarRenderCriaturas(
       acenar(mb, g);
       return true;
     },
+    /**
+     * Spec 026: uma pose por cima da do morador (a banda no Show da Vila); null tira.
+     */
+    definirPoseDeMorador(f: ((povoado: string, n: number, pose: Pose) => Pose) | null): void {
+      poseDeMorador = f;
+    },
     /** Spec 015: gesto em curso e balão de cada morador desenhado (testes). */
     gestosMoradores(): { id: number; gesto: IdGesto | null; balao: IdGesto | null }[] {
       return [...moradores].map(([id, mb]) => ({
@@ -568,12 +577,17 @@ export function criarRenderCriaturas(
           mb.ultZ = c.z;
           const velReal = dt > 0 && desloc < 2 ? desloc / dt : 0;
           mb.vel += (velReal - mb.vel) * Math.min(1, dt * 10);
-          const pose = mb.animador.atualizar(dt, {
+          const poseBase = mb.animador.atualizar(dt, {
             velocidadeHoriz: mb.vel,
             correndo: c.estado === 'fugir',
             noChao: c.noChao,
             voando: false,
           });
+          // spec 026: a banda da Vila Neon bate cabeça no tempo do show (sem balão de gesto)
+          const pose =
+            poseDeMorador && c.morador
+              ? poseDeMorador(c.morador.povoado, c.morador.n, poseBase)
+              : poseBase;
           // o animador anda sempre (o passo segue de onde estava); as juntas só na vista
           if (!foraDaVista(c.x, c.y + 1, c.z))
             mb.boneco.aplicarPose(pose, { dt, olhar: 0, vista: mb.animador.vista() });

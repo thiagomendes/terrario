@@ -31,6 +31,7 @@ import {
   type G,
 } from './neon';
 import { desenharPecaFestival } from './pecasFestival';
+import { carroVila, picapeVila, vanVila } from './carros';
 
 export { COR, Ref, perfilRaio };
 export type { Desenho, QuadroDesenhado } from './ref';
@@ -70,9 +71,13 @@ export function desenharPeca(p: PecaVila, d: Desenho): void {
     case 'bicicleta':
       return bicicleta(r, n);
     case 'carro':
-      return carro(r, n);
+      return carroVila(r, n);
     case 'van':
-      return van(r, n);
+      return vanVila(r, n);
+    case 'picape':
+      return picapeVila(r, n);
+    case 'posteres':
+      return posteres(r, n);
     case 'hidrante':
       return hidrante(r);
     case 'caixa-correio':
@@ -494,223 +499,49 @@ function bicicleta(r: Ref, n: number): void {
   r.caixa(0.67, 0.07, 0.07, 0, 0.78, -0.16, COR.cromo, 0);
 }
 
-const CORES_CARRO: [string, string][] = [
-  [COR.vermelho, COR.branco],
-  ['#3f9be8', COR.branco],
-  ['#f2b632', COR.grafite],
-  ['#f4ecdc', COR.vermelho],
-];
-
-/** Painel de vidro sobre uma face inclinada do contorno (para-brisa, vidro de trás). */
-function vidroInclinado(
-  r: Ref,
-  a: [number, number],
-  b: [number, number],
-  hw: number,
-  f0 = 0.12,
-  f1 = 0.88,
-): void {
-  const dz = b[0] - a[0];
-  const dy = b[1] - a[1];
-  const L = Math.hypot(dz, dy);
-  // a normal para fora (a que aponta para cima)
-  let nz = dy / L;
-  let ny = -dz / L;
-  if (ny < 0) {
-    nz = -nz;
-    ny = -ny;
-  }
-  const p = (t: number, o: number): Item => ({
-    x: a[0] + dz * t + nz * o,
-    y: a[1] + dy * t + ny * o,
-  });
-  r.perfil([p(f0, -0.02), p(f1, -0.02), p(f1, 0.02), p(f0, 0.02)], -hw, hw, 0, VIDRO_ESC);
-}
-
-/** Carrinho de dois volumes dos anos 80 (forma genérica, sem marca), de metal fundido. */
-function carro(r: Ref, n: number): void {
-  const [cor, friso] = CORES_CARRO[n % CORES_CARRO.length];
-  const W = 0.78;
-  const CH = 0.26;
-  const rodas = [
-    { x: -1.02, y: 0.33, R: 0.43 },
-    { x: 1.02, y: 0.33, R: 0.43 },
-  ];
-  // o corpo de baixo, com as caixas de roda recortadas
-  r.perfil(
-    [
-      { x: -1.66, y: CH, r: 0.05, seg: 1 },
-      { roda: { ...rodas[0], chao: CH, seg: 8 } },
-      { roda: { ...rodas[1], chao: CH, seg: 8 } },
-      { x: 1.7, y: CH, r: 0.05, seg: 1 },
-      { x: 1.72, y: 0.74, r: 0.1, seg: 2 },
-      { x: 0.8, y: 0.86, r: 0.04, seg: 1 },
-      { x: -1.66, y: 0.88, r: 0.08, seg: 2 },
-    ],
-    -W,
-    W,
-    0.05,
-    cor,
-  );
-  // a cabine: para-brisa deitado, teto reto e a traseira caída (dois volumes)
-  const A: [number, number] = [0.78, 0.86];
-  const Ab: [number, number] = [0.3, 1.44];
-  const Cb: [number, number] = [-1.2, 1.44];
-  const C: [number, number] = [-1.6, 0.87];
-  const WC = W - 0.08;
-  r.perfil(
-    [
-      { x: C[0], y: C[1] },
-      { x: A[0], y: A[1] },
-      { x: Ab[0], y: Ab[1], r: 0.08, seg: 2 },
-      { x: Cb[0], y: Cb[1], r: 0.1, seg: 2 },
-    ],
-    -WC,
-    WC,
-    0.05,
-    cor,
-  );
-  // as janelas do lado (uma peça que atravessa a cabine e sai um fio de cada lado)
-  r.perfil(
-    [
-      { x: -0.38, y: 0.95 },
-      { x: 0.56, y: 0.95 },
-      { x: 0.24, y: 1.34 },
-      { x: -0.38, y: 1.34 },
-    ],
-    -WC - 0.012,
-    WC + 0.012,
-    0,
-    VIDRO,
-  );
-  r.perfil(
-    [
-      { x: -1.36, y: 0.95 },
-      { x: -0.5, y: 0.95 },
-      { x: -0.5, y: 1.34 },
-      { x: -1.1, y: 1.34 },
-    ],
-    -WC - 0.012,
-    WC + 0.012,
-    0,
-    VIDRO,
-  );
-  vidroInclinado(r, A, Ab, WC - 0.12);
-  vidroInclinado(r, C, Cb, WC - 0.12);
-  // o friso dos anos 80 no meio da porta, os para-choques e as luzes
-  r.caixa(W * 2 + 0.03, 0.09, 3.0, 0, 0.56, 0, friso, 0);
-  r.caixa(W * 2 + 0.1, 0.17, 0.14, 0, 0.27, 1.72, '#c9ced8', 0.03);
-  r.caixa(W * 2 + 0.1, 0.17, 0.14, 0, 0.27, -1.68, '#c9ced8', 0.03);
-  r.caixa(0.9, 0.16, 0.03, 0, 0.5, 1.73, COR.grafite, 0);
-  for (const x of [-0.55, 0.55]) {
-    r.luz(0.26, 0.17, 0.04, x, 0.5, 1.735, '#fff3c0');
-    r.caixa(0.3, 0.14, 0.04, x, 0.56, -1.67, '#c81e1e', 0);
-    r.caixa(0.1, 0.14, 0.045, x - Math.sign(x) * 0.22, 0.56, -1.67, '#ff9a2a', 0);
-  }
-  r.caixa(0.36, 0.14, 0.03, 0, 0.36, -1.69, COR.branco, 0);
-  // as rodas (o jogo já usa roda redonda) e as calotas
-  for (const z of [-1.02, 1.02])
-    for (const x of [-0.66, 0.66]) {
-      r.roda(0.33, 0.22, x, 0.33, z, PNEU);
-      r.roda(0.19, 0.24, x, 0.33, z, CALOTA);
-    }
-  // os retrovisores e as maçanetas
-  for (const s of [-1, 1]) {
-    r.caixa(0.1, 0.1, 0.14, s * (W + 0.03), 0.9, 0.6, cor, 0.02);
-    r.caixa(0.03, 0.04, 0.14, s * (W + 0.005), 0.74, 0.1, '#c9ced8', 0);
-  }
-}
-
-/** A van: a da rua (cor alegre) e a da banda (grafite com o raio vermelho). */
-function van(r: Ref, n: number): void {
-  const banda = n === 1;
-  const cor = banda ? COR.grafite2 : COR.turquesa;
-  const baixo = banda ? COR.grafite : COR.branco;
-  const W = 0.9;
-  const CH = 0.3;
-  const rodas = [
-    { x: -1.3, y: 0.36, R: 0.46 },
-    { x: 1.35, y: 0.36, R: 0.46 },
-  ];
-  r.perfil(
-    [
-      { x: -2.05, y: CH, r: 0.05, seg: 1 },
-      { roda: { ...rodas[0], chao: CH, seg: 8 } },
-      { roda: { ...rodas[1], chao: CH, seg: 8 } },
-      { x: 2.05, y: CH, r: 0.05, seg: 1 },
-      { x: 2.1, y: 1.02, r: 0.1, seg: 2 },
-      { x: -2.05, y: 1.02 },
-    ],
-    -W,
-    W,
-    0.05,
-    baixo,
-  );
-  const A: [number, number] = [2.08, 1.0];
-  const Ab: [number, number] = [1.72, 2.02];
-  r.perfil(
-    [
-      { x: -2.05, y: 1.0 },
-      { x: A[0], y: A[1] },
-      { x: Ab[0], y: Ab[1], r: 0.16, seg: 2 },
-      { x: -2.05, y: 2.02, r: 0.12, seg: 2 },
-    ],
-    -W,
-    W,
-    0.06,
-    cor,
-  );
-  vidroInclinado(r, A, Ab, W - 0.14, 0.14, 0.8);
-  // a janela da cabine dos dois lados e, na van da rua, as de trás
-  const janela = (z0: number, z1: number, inclina = 0) =>
-    r.perfil(
-      [
-        { x: z0, y: 1.2 },
-        { x: z1, y: 1.2 },
-        { x: z1 - inclina, y: 1.78 },
-        { x: z0, y: 1.78 },
-      ],
-      -W - 0.012,
-      W + 0.012,
-      0,
-      VIDRO,
+/**
+ * O painel de pôsteres do fliperama: um quadro claro de moldura cromada, do tamanho da parede
+ * do fundo, com seis cartazes inventados diferentes (sem palavra), presos com fita, cada um do
+ * seu tamanho e um tico torto. Claro de propósito: o fundo do salão não fica um buraco escuro.
+ */
+function posteres(r: Ref, n: number): void {
+  const L = 13.6;
+  const A = 2.7;
+  r.caixa(L + 0.24, A + 0.24, 0.08, 0, -0.12, -0.46, COR.cromo, 0.03);
+  for (const s of [-1, 1])
+    r.quadro(
+      L / 2,
+      A,
+      (s * L) / 4,
+      A / 2,
+      -0.41,
+      (g, w, h) => {
+        g.fillStyle = '#f4ecdc';
+        g.fillRect(0, 0, w, h);
+        // o feltro do painel: pontinhos de leve
+        g.fillStyle = '#e8dcc4';
+        for (let i = 0; i < 90; i++) g.fillRect((i * 97) % w, (i * 53) % h, 2, 2);
+        for (let i = 0; i < 3; i++) {
+          const k = (s > 0 ? 3 : 0) + i;
+          const ph = h * (0.74 + ((k * 7) % 3) * 0.06);
+          const pw = ph * (k % 2 ? 0.62 : 0.74);
+          g.save();
+          g.translate(w * ((i + 0.5) / 3), h * (0.5 + ((k % 3) - 1) * 0.02));
+          g.rotate((((k * 5) % 7) - 3) * 0.012);
+          g.fillStyle = 'rgba(60, 40, 30, 0.22)';
+          g.fillRect(-pw / 2 + 3, -ph / 2 + 4, pw, ph);
+          g.translate(-pw / 2, -ph / 2);
+          pintarCartaz(g, pw, ph, k + n);
+          // a fita nos cantos de cima
+          g.fillStyle = '#ffe14a';
+          g.fillRect(-4, -3, 16, 7);
+          g.fillRect(pw - 12, -3, 16, 7);
+          g.restore();
+        }
+      },
+      false,
+      512,
     );
-  janela(1.05, 1.86, 0.2);
-  if (!banda) {
-    janela(0.0, 0.85);
-    janela(-1.05, -0.2);
-  }
-  // a faixa da cintura, os para-choques de cromo e as luzes
-  r.caixa(W * 2 + 0.03, 0.1, 4.0, 0, 0.98, 0, banda ? COR.vermelho : COR.amarelo, 0);
-  r.caixa(W * 2 + 0.1, 0.2, 0.16, 0, 0.3, 2.08, COR.cromo, 0.03);
-  r.caixa(W * 2 + 0.1, 0.2, 0.16, 0, 0.3, -2.06, COR.cromo, 0.03);
-  r.caixa(1.0, 0.2, 0.03, 0, 0.6, 2.105, COR.grafite, 0);
-  for (const x of [-0.62, 0.62]) {
-    r.luz(0.28, 0.22, 0.04, x, 0.6, 2.11, '#fff3c0');
-    r.caixa(0.16, 0.4, 0.04, x * 1.2, 0.62, -2.06, '#c81e1e', 0);
-  }
-  for (const z of [-1.3, 1.35])
-    for (const x of [-0.76, 0.76]) {
-      r.roda(0.36, 0.24, x, 0.36, z, PNEU);
-      r.roda(0.2, 0.26, x, 0.36, z, CALOTA);
-    }
-  for (const s of [-1, 1]) r.caixa(0.1, 0.16, 0.16, s * (W + 0.04), 1.24, 1.92, cor, 0.02);
-  for (const z of [-1.5, 0.3]) r.caixa(1.5, 0.06, 0.06, 0, 2.04, z, COR.cromo, 0);
-  if (banda) {
-    // o raio vermelho dos dois lados (com a beira amarela) e o bagageiro com os estojos
-    for (const q of [1, 3]) {
-      const s = r.sub(q === 1 ? W + 0.012 : -W - 0.012, 1.5, -0.5, q);
-      s.placa(perfilRaio(0.95), 0.03, 0, 0, 0, COR.amarelo);
-      s.placa(perfilRaio(0.74), 0.03, 0.015, 0, 0.012, COR.vermelho);
-    }
-    r.caixa(1.1, 0.3, 0.6, -0.05, 2.1, -1.1, COR.grafite, 0.04);
-    r.caixa(0.5, 0.36, 0.7, 0.3, 2.1, -0.3, COR.vermelho, 0.04);
-    r.caixa(0.5, 0.24, 0.6, -0.36, 2.1, -0.3, MADEIRA2, 0.04);
-  } else {
-    // a van da rua: o bagageiro com a prancha e a mala
-    r.caixa(0.5, 0.08, 2.4, -0.3, 2.1, -0.5, COR.amarelo, 0.03);
-    r.caixa(0.5, 0.2, 0.9, 0.4, 2.1, -0.6, COR.vermelho, 0.06);
-  }
 }
 
 function hidrante(r: Ref): void {
@@ -767,9 +598,14 @@ function fio(r: Ref, n: number, barriga: number, poste = 3): V3[] {
     const t = i / n;
     pts.push([fim[0] * t, fim[1] * t - barriga * 4 * t * (1 - t), fim[2] * t]);
   }
-  for (let i = 0; i < n; i++) r.barra(pts[i], pts[i + 1], 0.035, COR.grafite);
+  // (cada chunk desenha só o pedaço do fio que passa por cima dele)
+  for (let i = 0; i < n; i++) {
+    const seg = r.recortar(pts[i], pts[i + 1]);
+    if (seg) r.barra(seg[0], seg[1], 0.035, COR.grafite);
+  }
   const H = r.altura;
   const pe = (q: V3) => {
+    if (!r.dentro(q[0], 0, q[2])) return;
     r.caixa(0.34, 0.2, 0.34, q[0], -H, q[2], COR.grafite, 0.04);
     r.caixa(0.14, H + q[1] + 0.12, 0.14, q[0], -H, q[2], COR.grafite2, 0.03);
     r.caixa(0.2, 0.08, 0.2, q[0], q[1] + 0.1, q[2], COR.cromo, 0.02);
@@ -794,6 +630,7 @@ function varalLampadas(r: Ref, n: number): void {
   const q = Math.max(4, Math.round(L / 0.85));
   for (let i = 1; i < q; i++) {
     const [x, y, z] = noFio(pts, i / q);
+    if (!r.dentro(x, y, z)) continue;
     r.caixa(0.07, 0.08, 0.07, x, y - 0.09, z, COR.grafite, 0);
     r.luz(0.17, 0.17, 0.17, x, y - 0.26, z, LAMPADAS[(i + n) % LAMPADAS.length]);
   }
@@ -816,6 +653,7 @@ function bandeirolas(r: Ref, n: number): void {
   const aoLongoDeX = Math.abs(lx) > Math.abs(lz);
   for (let i = 0; i < q; i++) {
     const [x, y, z] = noFio(pts, (i + 0.5) / q);
+    if (!r.dentro(x, y, z)) continue;
     const s = r.sub(x, y, z, aoLongoDeX ? 0 : 1);
     s.placa(
       [

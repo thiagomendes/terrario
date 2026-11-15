@@ -98,6 +98,7 @@ import {
 import { criarCeu } from './ceu';
 import { criarHorizonte } from './horizonte';
 import { criarRenderVila } from './vila';
+import { criarBrinquedosVila } from './vila/brinquedos';
 import { criarShowVila } from './vila/show';
 import type { PlanoVila } from '../world/vilaNeon';
 import { LARGURA_CIDADE, PROFUNDIDADE_CIDADE } from '../world/cidade';
@@ -426,6 +427,10 @@ export interface EstadoDepuracao {
   tocarBrinquedoVila?: (qual: BrinquedoVila, i?: number) => boolean;
   /** Spec 026: calça ou tira os patins (o suporte da pista). */
   vilaPatins?: (calcar: boolean) => void;
+  /** Spec 026: toca um brinquedo do bairro (a tela da máquina mexe, o rádio liga, a fita rebobina). */
+  vilaBrinquedo?: (qual: import('./vila/brinquedos').ToqueVila, i?: number) => void;
+  /** Spec 026 (testes): o que os brinquedos do bairro mostram agora. */
+  brinquedosVila?: () => ReturnType<import('./vila/brinquedos').BrinquedosVila['estado']> | null;
   /** Spec 026: as peças da Vila Neon vivas, as sem chão (sempre 0) e os sósias. */
   vilaPecas?: () => {
     chunks: number;
@@ -1400,6 +1405,8 @@ export function criarCena(
 
   // spec 026: o piso de luz da noite do tema (1 = o de sempre: o chão nunca escurece)
   const pisoNoite = Math.min(1, Math.max(0, temaAtual.ceu.pisoNoite ?? 1));
+  // spec 026: quanto o verde apaga de noite (0 = o de sempre: os outros temas não mudam)
+  const verdeNoite = Math.min(1, Math.max(0, temaAtual.ceu.verdeNoite ?? 0));
   const matSolido = new StandardMaterial('atlas', scene);
   matSolido.diffuseTexture = textura;
   matSolido.emissiveTexture = texEmissiva;
@@ -1643,6 +1650,10 @@ export function criarCena(
     mundoSolido.luzBlocos = 0.8 + 0.4 * a.noite;
     // spec 026: o piso de luz dos blocos baixa conforme a noite (só no tema que pede; com o
     // padrão 1 o material nem é tocado e os outros temas ficam iguais)
+    if (verdeNoite > 0) {
+      mundoSolido.verdeNoite = verdeNoite * a.noite;
+      mundoPlanta.verdeNoite = mundoSolido.verdeNoite;
+    }
     if (pisoNoite < 1) {
       const piso = 1 + (pisoNoite - 1) * a.noite;
       matSolido.emissiveColor.set(piso, piso, piso);
@@ -1694,8 +1705,20 @@ export function criarCena(
         temMalha: (cx, cz) => malhas.has(chave(cx, cz)),
         brilha: brilhaNaVila,
         tapaOGlow,
+        // os feixes, as estrelinhas, o confete e a fumaça ficam fora do brilho
+        semBrilho: (m) => glow.addExcludedMesh(m),
+        leve: toqueGrosso,
       })
     : null;
+  const brinquedosVila = planoVila
+    ? criarBrinquedosVila(scene, planoVila, {
+        temMalha: (cx, cz) => malhas.has(chave(cx, cz)),
+        brilha: brilhaNaVila,
+        tapaOGlow,
+        semBrilho: (m) => glow.addExcludedMesh(m),
+      })
+    : null;
+  estado.brinquedosVila = () => brinquedosVila?.estado() ?? null;
   estado.eventosVila = planoVila ? [] : undefined;
   estado.showVila = () => showVila?.estado() ?? null;
   /** Spec 026: a pista onde os patins deslizam (o bloco embaixo dos pés é a pista quadriculada). */
@@ -3830,6 +3853,43 @@ export function criarCena(
     estado.somVila = () => somVila.info();
     estado.tocarBrinquedoVila = (q, i) => somVila.tocarBrinquedo(q, i);
   }
+  if (brinquedosVila)
+    estado.vilaBrinquedo = (q, i) => {
+      brinquedosVila.tocar(q, i);
+      somVila?.tocarBrinquedo(q, i);
+    };
+  /** Spec 026: o ladrilho da pista onde o pé pisou por último e o caminho andado de patins. */
+  let ladrilhoPisado = '';
+  let rodouPatins = 0;
+  let ultPosPatins: [number, number] | null = null;
+  function quadroPistaVila(): void {
+    if (!brinquedosVila) return;
+    const j = controle.jogador;
+    const naPista = j.noChao && pistaDosPatins(j.x, j.z);
+    if (!naPista) {
+      ladrilhoPisado = '';
+      ultPosPatins = null;
+      return;
+    }
+    // o ladrilho novo acende (com o plim subindo a escala)
+    const k = `${Math.floor(j.x)},${Math.floor(j.z)}`;
+    if (k !== ladrilhoPisado) {
+      if (ladrilhoPisado) {
+        brinquedosVila.pisar(j.x, Math.floor(j.y - 0.05) + 1, j.z);
+        somVila?.tocarBrinquedo('ladrilho');
+      }
+      ladrilhoPisado = k;
+    }
+    // de patins, as rodinhas rolam (um rolar a cada um bloco e meio andado)
+    if (aparencia.patins) {
+      if (ultPosPatins) rodouPatins += Math.hypot(j.x - ultPosPatins[0], j.z - ultPosPatins[1]);
+      ultPosPatins = [j.x, j.z];
+      if (rodouPatins >= 1.5) {
+        rodouPatins = 0;
+        somVila?.tocarBrinquedo('rodinhas');
+      }
+    }
+  }
   if (ehTesteDeTela()) {
     estado.sonsTocados = () => sonsTocados.slice();
     estado.atacarCriatura = (id) => {
@@ -4068,6 +4128,10 @@ export function criarCena(
     renderVeiculos?.quadro(Math.min(dtBruto, 0.1), tempo);
     renderVila?.quadro(tempo, controle.jogador.x, controle.jogador.z, noiteVila);
     showVila?.quadro(tempo, cliente.vila.estado, cliente.vila.tempo(tempo), noiteVila);
+    if (brinquedosVila) {
+      quadroPistaVila();
+      brinquedosVila.quadro(tempo);
+    }
     if (somVila) {
       if (estado.ready) somVila.carregar();
       somVila.quadro(cliente.vila.estado, cliente.vila.tempo(tempo), controle.jogador, noiteVila);
@@ -4257,6 +4321,11 @@ export function criarCena(
     (m) => glow.addExcludedMesh(m),
     () => undefined,
   );
+  // spec 026: no Show da Vila a banda bate cabeça no tempo e pula no acorde final
+  if (showVila)
+    renderCriaturas.definirPoseDeMorador((povoado, n, pose) =>
+      showVila.poseDoMorador(povoado, n, pose),
+    );
   /** 014c (testes de tela): os bichos do desfile das capturas. */
   let desfile: Criatura[] = [];
   // spec 016: a proteção do mundo à vista nas capturas (só nos testes de tela)

@@ -38,7 +38,17 @@ export interface QuadroDesenhado {
 export interface Desenho {
   corpo: Pecas;
   luz: Pecas;
+  /** Luzes que só acendem de noite (os faróis e as lanternas dos carros parados). */
+  noite: Pecas;
+  /** Vidro de verdade (meio transparente): as janelas dos carros, com o interior à vista. */
+  vidro: Pecas;
   quadros: QuadroDesenhado[];
+  /**
+   * O chão do chunk (mundo): a peça comprida (o varal de lâmpadas, as bandeirolas) é desenhada
+   * por todos os chunks que ela atravessa, e cada um só faz o pedaço que fica em cima dele
+   * (nada passa por cima de um chunk sem malha).
+   */
+  recorte: { x0: number; z0: number; x1: number; z1: number };
   /** Canto do chunk (as malhas ficam nele). */
   ox: number;
   oz: number;
@@ -78,8 +88,49 @@ export class Ref {
     const [a, b, c] = this.ponto(x, y, z);
     return [a + this.d.ox, b, c + this.d.oz];
   }
+  /** O ponto local fica em cima do chão deste chunk? */
+  dentro(x: number, y: number, z: number): boolean {
+    const [a, , c] = this.mundo(x, y, z);
+    const q = this.d.recorte;
+    return a >= q.x0 && a < q.x1 && c >= q.z0 && c < q.z1;
+  }
+  /**
+   * O pedaço do segmento local (a, b) que fica em cima do chão deste chunk (null se nenhum).
+   */
+  recortar(a: V3, b: V3): [V3, V3] | null {
+    const A = this.mundo(a[0], a[1], a[2]);
+    const B = this.mundo(b[0], b[1], b[2]);
+    const q = this.d.recorte;
+    let t0 = 0;
+    let t1 = 1;
+    for (const [p0, p1, lo, hi] of [
+      [A[0], B[0], q.x0, q.x1],
+      [A[2], B[2], q.z0, q.z1],
+    ]) {
+      const d = p1 - p0;
+      if (Math.abs(d) < 1e-9) {
+        if (p0 < lo || p0 >= hi) return null;
+        continue;
+      }
+      const ta = (lo - p0) / d;
+      const tb = (hi - p0) / d;
+      t0 = Math.max(t0, Math.min(ta, tb));
+      t1 = Math.min(t1, Math.max(ta, tb));
+    }
+    if (t1 - t0 < 1e-4) return null;
+    const em = (t: number): V3 => [
+      a[0] + (b[0] - a[0]) * t,
+      a[1] + (b[1] - a[1]) * t,
+      a[2] + (b[2] - a[2]) * t,
+    ];
+    return [em(t0), em(t1)];
+  }
   /** Leva a peça feita em coordenadas locais para a malha do chunk. */
   por(vd: VertexData, luz = false, cor?: string): void {
+    this.levar(vd, luz ? this.d.luz : this.d.corpo, cor);
+  }
+  /** Leva a peça local para uma das malhas do chunk (corpo, luzes, luzes da noite, vidro). */
+  levar(vd: VertexData, destino: Pecas, cor?: string): void {
     const P = vd.positions as number[] | Float32Array;
     const N = vd.normals as number[] | Float32Array;
     for (let i = 0; i < P.length; i += 3) {
@@ -95,7 +146,7 @@ export class Ref {
         N[i + 2] = -a * this.s + c * this.c;
       }
     }
-    (luz ? this.d.luz : this.d.corpo).add(vd, cor);
+    destino.add(vd, cor);
   }
   /** Caixa w × h × d com a base no meio (x, y, z), bisel `b` (quinas de brinquedo). */
   caixa(

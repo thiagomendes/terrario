@@ -26,6 +26,12 @@ export class PluginMundo extends MaterialPluginBase {
   readonly ocultos = new Float32Array(32);
   /** Piso da luz do céu (debaixo d'água de brinquedo nunca fica escuro). */
   pisoCeu = 0;
+  /**
+   * Spec 026 (Vila Neon): quanto o verde apaga de noite (0 = nada, o de sempre nos outros
+   * temas). O gramado ficava verde aceso no escuro; com isto ele vira um roxo-escuro e os
+   * feixes do palco pousam num chão escuro de verdade.
+   */
+  verdeNoite = 0;
 
   /** Desenha as juntas entre blocos (quina macia e um friso), só no material sólido. */
   private readonly juntas: boolean;
@@ -75,12 +81,13 @@ export class PluginMundo extends MaterialPluginBase {
         { name: 'ventoFolhas', size: 1, type: 'float' },
         { name: 'tempoMundo', size: 1, type: 'float' },
         { name: 'pisoCeu', size: 1, type: 'float' },
+        { name: 'verdeNoite', size: 1, type: 'float' },
         { name: 'blocosOcultos', size: 4, type: 'vec4', arraySize: 8 },
       ],
       vertex:
         'uniform float ventoFolhas;\nuniform float tempoMundo;\nuniform vec4 blocosOcultos[8];',
       fragment:
-        'uniform float pisoCeu;\nuniform vec3 corBruma;\nuniform float forcaBruma;\nuniform float luzBlocos;\nuniform float outono;\nuniform float inverno;\nuniform float molhado;',
+        'uniform float pisoCeu;\nuniform float verdeNoite;\nuniform vec3 corBruma;\nuniform float forcaBruma;\nuniform float luzBlocos;\nuniform float outono;\nuniform float inverno;\nuniform float molhado;',
     };
   }
 
@@ -98,6 +105,7 @@ export class PluginMundo extends MaterialPluginBase {
     uniformBuffer.updateFloat('ventoFolhas', this.ventoFolhas);
     uniformBuffer.updateFloat('tempoMundo', this.tempoMundo);
     uniformBuffer.updateFloat('pisoCeu', this.pisoCeu);
+    uniformBuffer.updateFloat('verdeNoite', this.verdeNoite);
     uniformBuffer.updateFloatArray('blocosOcultos', this.ocultos);
   }
 
@@ -212,6 +220,15 @@ export class PluginMundo extends MaterialPluginBase {
           float fBloco = blocoL > 0.001 ? pow(0.86, (1.0 - blocoL) * 15.0) * smoothstep(0.15, 0.55, blocoL) : 0.0;
           vec3 corTocha = vec3(1.0, 0.72, 0.42) * fBloco * 2.4 * luzBlocos;
           color.rgb = color.rgb * fCeu + baseColor.rgb * corTocha * (1.0 - fCeu * 0.6) + baseColor.rgb * 0.03;
+          // spec 026: de noite o verde apaga (o gramado vira roxo-escuro); onde a lâmpada bate
+          // ele fica um pouco, e o neon (claro) não muda
+          if (verdeNoite > 0.0) {
+            // (o tom vem da cor do bloco, não da já escurecida: no escuro a diferença some)
+            float verdeV = clamp(((baseColor.g - max(baseColor.r, baseColor.b)) / max(baseColor.g, 0.02) - 0.06) * 4.0, 0.0, 1.0);
+            verdeV *= 1.0 - smoothstep(0.4, 0.62, color.g);
+            float lumV = dot(color.rgb, vec3(0.3, 0.59, 0.11));
+            color.rgb = mix(color.rgb, lumV * vec3(0.66, 0.52, 0.98), verdeV * verdeNoite * (1.0 - 0.4 * fBloco));
+          }
           // bruma rente ao chao nos vales, so onde ha ceu
           float distM = length(vPositionW - vEyePosition.xyz);
           float alturaM = clamp((67.0 - vPositionW.y) / 9.0, 0.0, 1.0);

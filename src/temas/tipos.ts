@@ -91,6 +91,11 @@ export interface CeuTema {
    * o chão fica escuro e a luz vem do palco, do neon e das janelas).
    */
   pisoNoite?: number;
+  /**
+   * Spec 026: quanto o verde dos blocos apaga de noite (0 a 1; padrão 0, o de sempre). Na Vila
+   * Neon o gramado ficava verde aceso no escuro; com isto ele vira um roxo-escuro.
+   */
+  verdeNoite?: number;
 }
 
 export interface AguaTema {

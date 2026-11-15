@@ -95,6 +95,50 @@ export function ligarVilaNeon(
     return r;
   }
 
+  /**
+   * O brinquedo de tocar perto do dedo: as máquinas (a tela), o rádio e a fita gigantes (o meio
+   * da peça, com o alvo do tamanho dela). Só com a criança perto (nada toca do outro lado da rua).
+   */
+  type QualBrinquedo = 'fliperama' | 'radio' | 'fita';
+  const BRINQUEDOS: {
+    qual: QualBrinquedo;
+    i: number;
+    p: [number, number, number];
+    alt: number;
+    perto: number;
+    raio: number;
+  }[] = [
+    ...plano.pecas
+      .filter((q) => q.tipo === 'maquina')
+      .sort((a, b) => (a.n ?? 0) - (b.n ?? 0))
+      .map((q, i) => ({
+        qual: 'fliperama' as const,
+        i,
+        p: [q.x, q.y, q.z] as [number, number, number],
+        alt: 1.9,
+        perto: 6,
+        raio: RAIO_TOQUE * 1.2,
+      })),
+    { qual: 'radio', i: 0, p: p.radio, alt: 1.4, perto: 9, raio: RAIO_TOQUE * 2.6 },
+    { qual: 'fita', i: 0, p: p.fita, alt: 1.6, perto: 9, raio: RAIO_TOQUE * 2.4 },
+  ];
+  function brinquedoNoDedo(x: number, y: number): { qual: QualBrinquedo; i: number } | null {
+    const pes = e.jogadorPes?.();
+    if (!pes) return null;
+    let melhor: { d: number; qual: QualBrinquedo; i: number } | null = null;
+    for (const b of BRINQUEDOS) {
+      const dist = Math.hypot(pes[0] - b.p[0], pes[2] - b.p[2]);
+      if (dist > b.perto) continue;
+      const t = tela(b.p[0], b.p[1] + b.alt, b.p[2]);
+      if (!t) continue;
+      // de perto a peça fica grande na tela: o alvo cresce junto
+      const raio = b.raio * Math.max(1, 4 / Math.max(1, dist));
+      const d = Math.hypot(t.x - x, t.y - y);
+      if (d <= raio && (!melhor || d < melhor.d)) melhor = { d, qual: b.qual, i: b.i };
+    }
+    return melhor;
+  }
+
   // ---------------------------------------------------------------- o toque generoso
   let engoliuAte = 0;
   let tocouEm = -Infinity;
@@ -121,7 +165,12 @@ export function ligarVilaNeon(
       const pes = e.jogadorPes?.();
       const [sx, sy, sz] = p.patins;
       const ts = pes && Math.hypot(pes[0] - sx, pes[2] - sz) < 4 ? tela(sx, sy + 1, sz) : null;
-      if (ts && Math.hypot(ts.x - x, ts.y - y) <= RAIO_TOQUE * 1.5) {
+      // os brinquedos de tocar (fliperama, rádio e fita): perto deles, o dedo na peça toca
+      const brinquedo = showTocando() ? null : brinquedoNoDedo(x, y);
+      if (brinquedo) {
+        e.vilaBrinquedo?.(brinquedo.qual, brinquedo.i);
+        feito = true;
+      } else if (ts && Math.hypot(ts.x - x, ts.y - y) <= RAIO_TOQUE * 1.5) {
         const calcados = !!e.personagem?.aparencia().patins;
         e.vilaPatins?.(!calcados);
         tocarSomInterface(calcados ? 'mochila' : 'plim');

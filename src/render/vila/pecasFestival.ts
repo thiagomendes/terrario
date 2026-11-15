@@ -272,6 +272,8 @@ function arcoLampadas(r: Ref): void {
     const a = (16 + (i * 148) / 22) * (Math.PI / 180);
     const x = Math.cos(a) * R;
     const y = cy + Math.sin(a) * R;
+    // (o arco é largo: cada chunk desenha só as lâmpadas que ficam em cima dele)
+    if (!r.dentro(x, y, -0.4)) continue;
     r.caixa(0.2, 0.2, 0.1, x, y - 0.1, -0.45, COR.grafite, 0);
     r.luz(0.24, 0.24, 0.16, x, y - 0.12, -0.36, '#fff1c4');
   }
