@@ -695,6 +695,8 @@ export const PINTORES: Record<string, Pintor> = {
   feno_topo: fenoTopoDe(['#c9a03c', '#d8b04a', '#e4c05c', '#eed070'], '#6e4220'),
   // spec 014: a Cidade Grande (só aparecem no tema da cidade; este é o desenho de verdade)
   ...pintoresDaCidade(),
+  // spec 026: a Vila Neon (só aparecem no tema do bairro; este é o desenho de verdade)
+  ...pintoresDaVila(),
 };
 
 /** Tiles da Cidade Grande (spec 014), no jeito do atlas: tons de rampa e o tremor de pixel. */
@@ -834,6 +836,177 @@ function pintoresDaCidade(): Record<string, Pintor> {
       ((x + y) >> 2) % 2 === 0
         ? rampa(['#e8742a', '#ee8236'], hash2(x, y, s), x, y, s)
         : rampa(['#f4f1ea', '#f8f6f0'], hash2(x, y, s), x, y, s),
+  };
+}
+
+/**
+ * Desenho em letras (16 linhas de 16): cada letra é uma cor da paleta, '.' é o fundo. Para os
+ * desenhos pequenos que não saem bem de conta (o raio do letreiro, os pôsteres).
+ */
+function desenhoDe(linhas: readonly string[]): (x: number, y: number) => string {
+  return (x, y) => linhas[y]?.[x] ?? '.';
+}
+
+/** O raio da logo do Festival Trovão, em tubo de neon: miolo amarelo, contorno vermelho. */
+const RAIO_NEON = desenhoDe([
+  '................',
+  '........kkkkk...',
+  '.......kYYYYk...',
+  '......kYYYYk....',
+  '.....kYYYYk.....',
+  '....kYYYYkkkk...',
+  '...kYYYYYYYYk...',
+  '...kkkkYYYYk....',
+  '......kYYYk.....',
+  '.....kYYYk......',
+  '....kYYYk.......',
+  '...kYYk.........',
+  '...kYk..........',
+  '...kk...........',
+  '................',
+  '................',
+]);
+
+/**
+ * Pôsteres inventados (spec 026): o raio no vermelho, a estrela no azul e a guitarra-raio no
+ * amarelo, com a borda branca. Nenhuma letra, nenhuma banda de verdade.
+ */
+const POSTERES = desenhoDe([
+  '................',
+  '.wwwwww.........',
+  '.wrrrrw..wwwwww.',
+  '.wrryrw..wbbbbw.',
+  '.wryyrw..wbybbw.',
+  '.wryyyw..wyyyyw.',
+  '.wrryrw..wbyybw.',
+  '.wryrrw..wybbyw.',
+  '.wwwwww..wwwwww.',
+  '................',
+  '..wwwwwwwwwwww..',
+  '..wyyyyyyyyyyw..',
+  '..wyrrryyyyyyw..',
+  '..wyrrrkkkkkkw..',
+  '..wyrrryyyyyyw..',
+  '..wwwwwwwwwwww..',
+]);
+
+/** Tiles da Vila Neon (spec 026), no jeito do atlas: tons de rampa e o tremor de pixel. */
+function pintoresDaVila(): Record<string, Pintor> {
+  const cor = (c: string) => (x: number, y: number, s: number) => rampa([c], 0, x, y, s);
+  const GRAFITE = ['#34333d', '#3a3944', '#403f4a'];
+  const CROMO = ['#aeb3be', '#c2c7d2', '#d4d8e2', '#e6e9f0'];
+  /** Reboco pastel: liso, com as marcas largas da desempenadeira. */
+  const reboco =
+    (cores: string[]): Pintor =>
+    (x, y, s) => {
+      const f = fbmT(x, y, 2, s);
+      const arco = Math.sin((x + y * 0.55) * 0.8 + f * 5);
+      const t = f * 0.5 + hash2(x, y, s) * 0.2 + (arco > 0.82 ? 0.3 : 0);
+      return rampa(cores, t, x, y, s);
+    };
+  return {
+    // piso de palco: tábuas grafite, juntas desencontradas e as marcas de fita no chão
+    piso_palco: (x, y, s) => {
+      const fila = y >> 2;
+      if ((y & 3) === 3 || x === (fila * 5 + 3) % T) return cor('#25242c')(x, y, s);
+      if (y === 6 && x >= 2 && x <= 6) return cor('#ffe14a')(x, y, s);
+      if ((x === 11 || x === 13) && (y === 9 || y === 11)) return cor('#f2f0ea')(x, y, s);
+      if (x === 12 && y === 10) return cor('#f2f0ea')(x, y, s);
+      return rampa(GRAFITE, hash2(x >> 2, fila, s) * 0.5 + hash2(x, y, s) * 0.5, x, y, s);
+    },
+    // caixa de som: caixa grafite, o cone grande na frente e os cantos de cromo
+    caixa_som: (x, y, s) => {
+      const canto = (x <= 1 || x >= T - 2) && (y <= 1 || y >= T - 2);
+      if (canto) return rampa(CROMO, (x + y) / 30, x, y, s);
+      if (x === 0 || y === 0 || x === T - 1 || y === T - 1) return cor('#1f1e25')(x, y, s);
+      const d = Math.hypot(x - 7.5, y - 7.5);
+      if (d < 1.6) return rampa(['#7a7984', '#8a8994'], hash2(x, y, s), x, y, s);
+      if (d < 5.2) {
+        // o cone: mais claro de um lado, como a luz batendo
+        const t = 0.3 + (x - y) / 24 + (d / 5.2) * 0.2;
+        return rampa(['#3e3d48', '#484752', '#53525d', '#5e5d68'], t, x, y, s);
+      }
+      if (d < 6.3) return cor('#18171d')(x, y, s);
+      return rampa(GRAFITE, hash2(x, y, s), x, y, s);
+    },
+    // treliça cromada: o quadro e a diagonal de tubo, o resto vazado
+    trelica: (x, y, s) => {
+      const quadro = x <= 1 || y <= 1 || x >= T - 2 || y >= T - 2;
+      const diagonal = Math.abs(x - y) <= 1;
+      if (!quadro && !diagonal) return VAZIO;
+      // brilho do tubo: a beira de cima/esquerda mais clara
+      const t = quadro
+        ? x === 0 || y === 0 || x === T - 2 || y === T - 2
+          ? 0.8
+          : 0.35
+        : x > y
+          ? 0.3
+          : 0.75;
+      return rampa(CROMO, t + hash2(x, y, s) * 0.2, x, y, s);
+    },
+    // pista quadriculada: rosa e grafite em quadrados de 8, com o rejunte escuro
+    pista_neon: (x, y, s) => {
+      if ((x & 7) === 7 || (y & 7) === 7) return cor('#24232b')(x, y, s);
+      return ((x >> 3) + (y >> 3)) % 2 === 0
+        ? rampa(['#ff5fa8', '#ff6fb4', '#ff80be'], hash2(x, y, s), x, y, s)
+        : rampa(GRAFITE, hash2(x, y, s), x, y, s);
+    },
+    // letreiro de neon: o raio em tubo de neon numa placa escura com a moldura de cromo
+    letreiro_neon: (x, y, s) => {
+      if (x === 0 || y === 0 || x === T - 1 || y === T - 1) return rampa(CROMO, 0.4, x, y, s);
+      const c = RAIO_NEON(x, y);
+      if (c === 'Y') return rampa(['#ffe14a', '#fff07a'], hash2(x, y, s), x, y, s);
+      if (c === 'k') return rampa(['#e8302a', '#f04a3a'], hash2(x, y, s), x, y, s);
+      return rampa(['#1e1d25', '#24232b', '#2a2932'], hash2(x, y, s), x, y, s);
+    },
+    // parede de pôster: a parede grafite com três pôsteres colados
+    parede_poster: (x, y, s) => {
+      const c = POSTERES(x, y);
+      const cores: Record<string, string> = {
+        w: '#f4f1ea',
+        r: '#e8302a',
+        y: '#ffe14a',
+        b: '#2f8cff',
+        k: '#2e2d36',
+      };
+      if (c !== '.') return rampa([cores[c]], 0, x, y, s);
+      return rampa(['#4a4954', '#504f5a', '#565560'], fbmT(x, y, 4, s), x, y, s);
+    },
+    reboco_rosa: reboco(['#eeaabd', '#f2b4c6', '#f5bfcd', '#f8c9d6']),
+    reboco_azul: reboco(['#9ec0e8', '#a8c8ec', '#b2d0f0', '#bcd8f4']),
+    reboco_amarelo: reboco(['#f2d878', '#f5df88', '#f8e698', '#faeca6']),
+    reboco_menta: reboco(['#9cd8ba', '#a8e0c4', '#b2e6cc', '#bcecd4']),
+    // telha colonial: fileiras de canudos de barro, a sombra de uma fileira sobre a outra
+    telha_colonial: (x, y, s) => {
+      const fila = y >> 2;
+      const ly = y & 3;
+      const cx = (x + (fila & 1) * 2) & 3;
+      if (ly === 3) return cor('#8a3a1c')(x, y, s);
+      const t = cx === 0 ? 0.05 : cx === 3 ? 0.35 : 0.7 + hash2(x, y, s) * 0.3;
+      return rampa(['#b8542a', '#c8622e', '#d67238', '#e08444'], t - ly * 0.08, x, y, s);
+    },
+    // grade da plateia: aço galvanizado com as barras em pé
+    grade_plateia: (x, y, s) =>
+      x % 4 === 1
+        ? rampa(['#d8dce4', '#e2e6ee'], hash2(x, y, s), x, y, s)
+        : rampa(['#8e949e', '#9aa0aa', '#a6acb6'], hash2(x, y, s), x, y, s),
+    // faixa de neon: a faixa grafite da fachada com um tubo turquesa e um rosa
+    faixa_neon: (x, y, s) => {
+      if (y === 0 || y === T - 1) return rampa(CROMO, 0.5, x, y, s);
+      if (x >= 1 && x <= T - 2) {
+        if (y === 4 || y === 5) return rampa(['#2ee0d0', '#5af0e2'], y === 4 ? 0.7 : 0.2, x, y, s);
+        if (y === 10 || y === 11)
+          return rampa(['#ff5fa8', '#ff8cc4'], y === 10 ? 0.7 : 0.2, x, y, s);
+      }
+      if ((x === 3 || x === 12) && (y === 6 || y === 9)) return cor('#9aa0aa')(x, y, s);
+      return rampa(['#2a2932', '#2e2d36', '#33323c'], hash2(x, y, s), x, y, s);
+    },
+    // alambrado: a tela de arame em losangos (vazada) e o arame galvanizado
+    alambrado: (x, y, s) => {
+      const arame = (x + y) % 4 === 0 || (x - y + 16) % 4 === 0;
+      if (!arame) return VAZIO;
+      return rampa(['#8c929c', '#a2a8b2', '#b8bec8'], hash2(x, y, s), x, y, s);
+    },
   };
 }
 

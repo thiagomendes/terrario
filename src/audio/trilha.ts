@@ -62,6 +62,8 @@ export const NIVEL_TRILHA: Readonly<Record<string, Partial<Record<ContextoNivel,
   // spec 014: no volume do Rancho gravado (o som da cidade antes da T09) e de 0 a 1,5 dB
   // abaixo da reserva sintetizada da cidade
   'cidade-grande': { dia: 0, tarde: 0.2, noite: 2.6, caverna: 2.9 },
+  // spec 026: os números da cidade até a trilha do bairro ser gravada e medida na régua (T18)
+  'vila-neon': { dia: 0, tarde: 0.2, noite: 2.6, caverna: 2.9 },
 };
 
 /** O ajuste do tema no contexto, em ganho linear. */

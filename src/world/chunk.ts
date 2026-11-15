@@ -20,6 +20,15 @@ import {
   type PlanoCidade,
 } from './cidade';
 import { versaoDasObras } from './obras';
+import {
+  ajusteDaVila,
+  construirVila,
+  distanciaDaVila,
+  planoDaVila,
+  RAMPA_VILA,
+  vilaNoChunk,
+  type PlanoVila,
+} from './vilaNeon';
 import { Bloco } from './blocks';
 import {
   cantoNoChunk,
@@ -112,6 +121,9 @@ export function alturaTerreno(wx: number, wz: number, semente: number): number {
   // spec 014: a Cidade Grande (o chão plano e o relevo amaciado em volta)
   const cidade = cidadeDoMundo(semente);
   if (cidade) return ajusteDaCidade(cidade, wx, wz, natural)?.h ?? natural;
+  // spec 026: a Vila Neon (o mesmo jeito: chão plano e o relevo amaciado em volta)
+  const vila = vilaDoMundo(semente);
+  if (vila) return ajusteDaVila(vila, wx, wz, natural)?.h ?? natural;
   const p = povoadosLigados ? povoadoNaColuna(wx, wz, semente) : null;
   if (!p) return natural;
   return ajusteDaColuna(p, wx, wz, natural)?.h ?? natural;
@@ -143,6 +155,18 @@ const RELEVO = {
 export function cidadeDoMundo(semente: number): PlanoCidade | null {
   if (!povoadosLigados || estilo.povoado?.planta !== 'cidade') return null;
   return planoDaCidade(semente, RELEVO, String(estilo.crateras));
+}
+/**
+ * Spec 026: o bairro do mundo, se o tema for a Vila Neon (`planta: 'bairro'`); senão null. Os
+ * povoados desligados (teste de paridade) desligam o bairro também.
+ */
+export function vilaDoMundo(semente: number): PlanoVila | null {
+  if (!povoadosLigados || estilo.povoado?.planta !== 'bairro') return null;
+  return planoDaVila(semente, RELEVO, String(estilo.crateras));
+}
+/** Mundo com planejador próprio (cidade ou bairro): sem povoados, canto nem ruína por perto. */
+function urbanoDoMundo(semente: number): boolean {
+  return !!cidadeDoMundo(semente) || !!vilaDoMundo(semente);
 }
 /** Liga ou desliga os povoados (o teste de paridade com o jogo antigo desliga). */
 export function definirPovoados(ligado: boolean): void {
@@ -413,6 +437,7 @@ export function gerarChunk(cx: number, cz: number, semente: number = SEMENTE_PAD
     ruido3(x / 34, y / 18, z / 34, semente + 1003),
   );
   const cidade = cidadeDoMundo(semente);
+  const vila = vilaDoMundo(semente);
   // spec 031: o canto das missões (o chão dele é firme; o mato sai de perto)
   const canto = cantoNoChunk(cantoDoMundo(semente), cx, cz, 4) ? cantoDoMundo(semente) : null;
 
@@ -421,8 +446,12 @@ export function gerarChunk(cx: number, cz: number, semente: number = SEMENTE_PAD
       const wx = cx * TAM_X + x;
       const wz = cz * TAM_Z + z;
       const natural = alturaNatural(wx, wz, semente);
-      const plano = povoadosLigados && !cidade ? povoadoNaColuna(wx, wz, semente) : null;
-      const ajusteCidade = cidade ? ajusteDaCidade(cidade, wx, wz, natural) : null;
+      const plano = povoadosLigados && !cidade && !vila ? povoadoNaColuna(wx, wz, semente) : null;
+      const ajusteCidade = cidade
+        ? ajusteDaCidade(cidade, wx, wz, natural)
+        : vila
+          ? ajusteDaVila(vila, wx, wz, natural)
+          : null;
       const ajuste = plano ? ajusteDaColuna(plano, wx, wz, natural) : ajusteCidade;
       const h = ajuste?.h ?? natural;
       alturas[z * TAM_X + x] = h;
@@ -585,7 +614,7 @@ export function gerarChunk(cx: number, cz: number, semente: number = SEMENTE_PAD
       }
     }
   }
-  const metas = cidade ? new Map<number, number>() : undefined;
+  const metas = cidade || vila ? new Map<number, number>() : undefined;
   pintarEstruturas(blocos, cx, cz, semente, alturas, biomas, metas);
   if (metas) guardarMetas(cx, cz, semente, metas);
   return blocos;
@@ -595,6 +624,8 @@ export function gerarChunk(cx: number, cz: number, semente: number = SEMENTE_PAD
 export type EstruturaDoChunk =
   | { tipo: 'povoado'; plano: PlanoPovoado }
   | { tipo: 'cidade'; plano: PlanoCidade }
+  /** Spec 026: o bairro da Vila Neon. */
+  | { tipo: 'vila'; plano: PlanoVila }
   | { tipo: 'ruina'; h: number; forma: EstiloMundo['estrutura'] }
   /** Spec 031: o canto das missões (o chunk dele não tem povoado nem estrutura rara). */
   | { tipo: 'canto'; plano: PlanoCanto }
@@ -652,6 +683,22 @@ export function pintarEstruturas(
     });
     return { tipo: 'cidade', plano: cidade };
   }
+  // spec 026: o bairro da Vila Neon (e então nem povoado nem ruína)
+  const vila = vilaDoMundo(semente);
+  if (vila && vilaNoChunk(vila, cx, cz)) {
+    construirVila(vila, cx, cz, (wx, y, wz, id, meta) => {
+      const x = wx - x0;
+      const z = wz - z0;
+      if (x < 0 || x >= TAM_X || z < 0 || z >= TAM_Z || y < 1 || y >= ALTURA) return;
+      const i = indice(x, y, z);
+      blocos[i] = id;
+      if (metas) {
+        if (meta) metas.set(i, meta);
+        else metas.delete(i);
+      }
+    });
+    return { tipo: 'vila', plano: vila };
+  }
   // spec 031: o canto das missões (o planejador escolheu um lugar sem povoado nem ruína)
   const canto = cantoDoMundo(semente);
   if (canto && cantoNoChunk(canto, cx, cz)) {
@@ -685,7 +732,9 @@ export function estruturaDoChunk(
   metas?: Map<number, number>,
 ): EstruturaDoChunk {
   const cidade = cidadeDoMundo(semente);
-  const naCidade = !!cidade && cidadeNoChunk(cidade, cx, cz);
+  const vilaP = vilaDoMundo(semente);
+  const naCidade =
+    (!!cidade && cidadeNoChunk(cidade, cx, cz)) || (!!vilaP && vilaNoChunk(vilaP, cx, cz));
   const plano = naCidade ? null : planoQueTocaOChunk(cx, cz, semente);
   const noCanto = !naCidade && cantoNoChunk(cantoDoMundo(semente), cx, cz);
   if (
@@ -751,7 +800,9 @@ export function metasGeradasDoChunk(
   semente: number,
 ): ReadonlyMap<number, number> {
   const cidade = cidadeDoMundo(semente);
-  if (!cidade || !cidadeNoChunk(cidade, cx, cz)) return SEM_METAS;
+  const vila = vilaDoMundo(semente);
+  if (!(cidade && cidadeNoChunk(cidade, cx, cz)) && !(vila && vilaNoChunk(vila, cx, cz)))
+    return SEM_METAS;
   conferirVersaoMetas();
   const k = `${cx},${cz},${semente}`;
   const ja = metasGeradas.get(k);
@@ -764,7 +815,8 @@ export function metasGeradasDoChunk(
 
 /** Metadado que a geração deu à célula (0 se nenhum). */
 export function metaGerada(x: number, y: number, z: number, semente: number): number {
-  if (estilo.povoado?.planta !== 'cidade' || y < 0 || y >= ALTURA) return 0;
+  const planta = estilo.povoado?.planta;
+  if ((planta !== 'cidade' && planta !== 'bairro') || y < 0 || y >= ALTURA) return 0;
   const cx = Math.floor(x / TAM_X);
   const cz = Math.floor(z / TAM_Z);
   return metasGeradasDoChunk(cx, cz, semente).get(indice(x - cx * TAM_X, y, z - cz * TAM_Z)) ?? 0;
@@ -788,6 +840,8 @@ function construirRuina(
   const cidade = cidadeDoMundo(semente);
   if (cidade && distanciaDaCidade(cidade, cx * TAM_X + 8, cz * TAM_Z + 8) <= RAMPA_CIDADE + 12)
     return null;
+  const vila = vilaDoMundo(semente);
+  if (vila && distanciaDaVila(vila, cx * TAM_X + 8, cz * TAM_Z + 8) <= RAMPA_VILA + 12) return null;
   const c = 8 * TAM_X + 8;
   const b = biomas[c];
   if (b === 'oceano' || b === 'praia' || b === 'pantano' || b === 'montanhas') return null;
@@ -1147,8 +1201,8 @@ function podeTerEstrutura(x: number, z: number, semente: number): boolean {
  */
 export function pontoDeNascer(semente: number): { x: number; z: number } {
   const n = encontrarNascimento(semente);
-  // a cidade já escolheu um lugar livre (a praça)
-  if (cidadeDoMundo(semente)) return n;
+  // a cidade e o bairro já escolheram um lugar livre (a praça e a pracinha)
+  if (urbanoDoMundo(semente)) return n;
   const x0 = Math.floor(n.x);
   const z0 = Math.floor(n.z);
   const livre = (x: number, z: number) =>
@@ -1354,6 +1408,9 @@ export function encontrarNascimento(semente: number): { x: number; z: number } {
   // spec 014: na calçada da praça, ao lado do primeiro canteiro
   const cidade = cidadeDoMundo(semente);
   if (cidade) return { x: cidade.nascimento.x, z: cidade.nascimento.z };
+  // spec 026: na pracinha da Vila Neon, olhando para o palco
+  const vila = vilaDoMundo(semente);
+  if (vila) return { x: vila.nascimento.x, z: vila.nascimento.z };
   const sitio = TERRENO_NATURAL.planta === 'sitio';
   const k = sitio ? `${semente},sitio` : `${semente}`;
   let n = nascimentos.get(k);
@@ -1375,6 +1432,8 @@ export function encontrarNascimento(semente: number): { x: number; z: number } {
 export function olharDoNascimento(semente: number): number | undefined {
   const cidade = cidadeDoMundo(semente);
   if (cidade) return cidade.nascimento.olhar;
+  const vila = vilaDoMundo(semente);
+  if (vila) return vila.nascimento.olhar;
   if (TERRENO_NATURAL.planta !== 'sitio') return undefined;
   encontrarNascimento(semente);
   return olhares.get(semente);

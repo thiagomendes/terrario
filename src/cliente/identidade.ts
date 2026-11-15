@@ -62,6 +62,7 @@ const DO_TEMA: Record<string, string> = {
   'mata-encantada': 'da Mata',
   'rancho-alegre': 'do Rancho',
   'cidade-grande': 'da Cidade',
+  'vila-neon': 'da Vila',
 };
 
 /**

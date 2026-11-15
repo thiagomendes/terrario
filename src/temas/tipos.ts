@@ -21,7 +21,8 @@ export type IdTema =
   | 'era-dos-dinos'
   | 'exploracao-lunar'
   | 'rancho-alegre'
-  | 'cidade-grande';
+  | 'cidade-grande'
+  | 'vila-neon';
 
 export type Rgb = readonly [number, number, number];
 /** Pixel RGBA 0..255 de um tile. */
@@ -83,6 +84,13 @@ export interface CeuTema {
   faixaCrepusculo: number;
   /** Cor da faixa do crepúsculo (padrão: laranja). */
   corCrepusculo?: Rgb;
+  /**
+   * Spec 026: o piso de luz dos blocos de noite (0 a 1; padrão 1, o de sempre). O material
+   * dos blocos tem um piso de luz próprio do visual de brinquedo, e com ele o chão nunca
+   * escurece de verdade. Abaixo de 1, o piso baixa conforme a noite chega (na Vila Neon, 0,3:
+   * o chão fica escuro e a luz vem do palco, do neon e das janelas).
+   */
+  pisoNoite?: number;
 }
 
 export interface AguaTema {

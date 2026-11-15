@@ -10,6 +10,7 @@ import { construirEraDosDinos } from './era-dos-dinos';
 import { construirExploracaoLunar } from './exploracao-lunar';
 import { construirRanchoAlegre } from './rancho-alegre';
 import { construirCidadeGrande } from './cidade-grande';
+import { construirVilaNeon } from './vila-neon';
 
 registrarTema('planeta-vivo', construirPlanetaVivo);
 registrarTema('mata-encantada', construirMataEncantada);
@@ -18,3 +19,4 @@ registrarTema('era-dos-dinos', construirEraDosDinos);
 registrarTema('exploracao-lunar', construirExploracaoLunar);
 registrarTema('rancho-alegre', construirRanchoAlegre);
 registrarTema('cidade-grande', construirCidadeGrande);
+registrarTema('vila-neon', construirVilaNeon);

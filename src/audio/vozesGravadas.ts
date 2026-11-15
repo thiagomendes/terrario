@@ -109,6 +109,8 @@ export const NIVEL_VOZES: Readonly<Record<string, Partial<Record<GrupoNivelVoz, 
   'exploracao-lunar': { bichos: -8.5, moradores: -9.8, baque: -3.8, derrota: -1.1 },
   'rancho-alegre': { bichos: -5.9, moradores: -3.0, baque: -1.3, derrota: 0.4 },
   'cidade-grande': { bichos: -7.7, moradores: -3.2, baque: -0.6, derrota: 0.45 },
+  // spec 026: os números da cidade até as vozes do bairro serem gravadas e medidas (T18)
+  'vila-neon': { bichos: -7.7, moradores: -3.2, baque: -0.6, derrota: 0.45 },
 };
 
 /**

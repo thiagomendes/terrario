@@ -29,6 +29,9 @@ const NOMES_GENERO: Record<string, Genero> = {
   Vega: 'f',
   Zara: 'f',
   Zefa: 'f',
+  // spec 026: a turma da Vila Neon
+  Kika: 'f',
+  Lili: 'f',
   Teo: 'm',
   Davi: 'm',
   Caio: 'm',
@@ -49,6 +52,8 @@ const NOMES_GENERO: Record<string, Genero> = {
   Rex: 'm',
   Kiko: 'm',
   Tunico: 'm',
+  Dudu: 'm',
+  Zeca: 'm',
 };
 
 export function generoDoNome(nome: string): Genero {

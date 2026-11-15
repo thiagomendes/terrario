@@ -49,6 +49,15 @@ import {
 } from './povoado';
 import { lavouraDoBloco } from '../jogo/plantio';
 import { distanciaDaCidade, passagensDaCidade } from './cidade';
+import { construirVila, distanciaDaVila } from './vilaNeon';
+
+/** Passo de cada direção do metadado (0 +z, 1 +x, 2 -z, 3 -x). */
+const DIRS: readonly (readonly [number, number])[] = [
+  [0, 1],
+  [1, 0],
+  [0, -1],
+  [-1, 0],
+];
 import {
   ALTURA_OBRA,
   canteiroDoMiolo,
@@ -124,7 +133,7 @@ export function replantioDaLavoura(colhido: number): number | null {
  * De quem é a construção do chunk, para o aviso (spec 016, T03): a vila, o sítio, a ruína ou
  * a estrutura rara do tema.
  */
-export type LugarProtecao = 'vila' | 'sitio' | 'ruina' | 'estrutura' | 'cidade';
+export type LugarProtecao = 'vila' | 'sitio' | 'ruina' | 'estrutura' | 'cidade' | 'bairro';
 
 /** Proteção de um chunk: só a faixa de altura [y0, y1] com algo protegido. */
 export interface MascaraProtecao {
@@ -234,6 +243,28 @@ export function protecaoDoChunk(
           if (i < 0 || (pintada(i) && rascunho[i] !== Bloco.AR)) continue;
           marcar(i, Protecao.OBRA);
         }
+  } else if (e.tipo === 'vila') {
+    // spec 026: o chão do bairro inteiro e a margem não se cavam; a frente das portas e o ar
+    // em cima de cada degrau ficam livres (ninguém fecha a escadinha do palco)
+    const p = e.plano;
+    for (let z = 0; z < TAM_Z; z++)
+      for (let x = 0; x < TAM_X; x++) {
+        const wx = x0 + x;
+        const wz = z0 + z;
+        if (distanciaDaVila(p, wx, wz) > MARGEM_CHAO) continue;
+        chao(wx, wz, alturaTerreno(wx, wz, semente));
+      }
+    construirVila(p, cx, cz, (wx, y, wz, id, meta) => {
+      if (wx < x0 || wx >= x0 + TAM_X || wz < z0 || wz >= z0 + TAM_Z) return;
+      const d = DIRS[(meta ?? 0) & 3];
+      if (id === Bloco.PORTA) {
+        passagem(wx + d[0], y, wz + d[1]);
+        passagem(wx + d[0], y + 1, wz + d[1]);
+      } else if (id === Bloco.ESCADINHA_PEDRA) {
+        passagem(wx, y + 1, wz);
+        passagem(wx, y + 2, wz);
+      }
+    });
   } else if (e.tipo === 'canto') {
     // spec 031: o canto das missões. O chão das peças não se cava; o ninho, a cova da caixa
     // de areia e o lugar dos ovinhos ficam vazios; as células do bolo são de obra (só o bloco
@@ -266,15 +297,17 @@ export function protecaoDoChunk(
   const lugar: LugarProtecao =
     e.tipo === 'cidade'
       ? 'cidade'
-      : e.tipo === 'canto'
-        ? 'estrutura'
-        : e.tipo === 'povoado'
-          ? e.plano.lotes.some((l) => l.uso !== undefined)
-            ? 'sitio'
-            : 'vila'
-          : e.forma === 'ruina'
-            ? 'ruina'
-            : 'estrutura';
+      : e.tipo === 'vila'
+        ? 'bairro'
+        : e.tipo === 'canto'
+          ? 'estrutura'
+          : e.tipo === 'povoado'
+            ? e.plano.lotes.some((l) => l.uso !== undefined)
+              ? 'sitio'
+              : 'vila'
+            : e.forma === 'ruina'
+              ? 'ruina'
+              : 'estrutura';
   return { lugar, y0, y1, dados: cls.slice(y0 * CAMADA, (y1 + 1) * CAMADA) };
 }
 

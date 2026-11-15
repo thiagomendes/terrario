@@ -105,6 +105,21 @@ export const Bloco = {
   TOLDO_VERDE: 100,
   TAPUME: 101,
   ESCADA_GRADE: 102,
+  // spec 026: a Vila Neon (só existem no tema do bairro: `TemaDef.exclusivos`)
+  PISO_PALCO: 103,
+  CAIXA_SOM: 104,
+  TRELICA: 105,
+  PISTA_NEON: 106,
+  LETREIRO_NEON: 107,
+  PAREDE_POSTER: 108,
+  REBOCO_ROSA: 109,
+  REBOCO_AZUL: 110,
+  REBOCO_AMARELO: 111,
+  REBOCO_MENTA: 112,
+  TELHA_COLONIAL: 113,
+  GRADE_PLATEIA: 114,
+  FAIXA_NEON: 115,
+  ALAMBRADO: 116,
 } as const;
 
 export type Ferramenta = 'picareta' | 'machado' | 'pa' | 'espada';
@@ -603,6 +618,51 @@ export const REGISTRO_BLOCOS: readonly DefinicaoBloco[] = [
     'escada de grade',
     'laje_grade',
     pedra({ opaco: false, forma: 'escada', dureza: 1.2 }),
+  ),
+  // spec 026: a Vila Neon. O palco e a caixa de som são de madeira pintada; a pista, o letreiro
+  // e a faixa de neon brilham sem espalhar luz (luz 0, como a janela acesa: não pesam na conta
+  // da luz); a treliça e o alambrado são recorte (vê-se através); a grade da plateia é cerca
+  def(Bloco.PISO_PALCO, 'piso de palco', 'piso_palco', madeira({ dureza: 1 })),
+  def(Bloco.CAIXA_SOM, 'caixa de som', 'caixa_som', madeira({ dureza: 1 })),
+  def(
+    Bloco.TRELICA,
+    'treliça cromada',
+    'trelica',
+    pedra({ opaco: false, recorte: true, dureza: 1.2 }),
+  ),
+  def(Bloco.PISTA_NEON, 'pista quadriculada', 'pista_neon', {
+    emissivo: true,
+    dureza: 1,
+    ferramenta: 'picareta',
+    som: 'pedra',
+  }),
+  def(Bloco.LETREIRO_NEON, 'letreiro de neon', 'letreiro_neon', {
+    emissivo: true,
+    dureza: 0.6,
+    som: 'cristal',
+  }),
+  def(Bloco.PAREDE_POSTER, 'parede de pôster', 'parede_poster', pedra({ dureza: 1.4 })),
+  def(Bloco.REBOCO_ROSA, 'reboco rosa', 'reboco_rosa', pedra({ dureza: 1.4 })),
+  def(Bloco.REBOCO_AZUL, 'reboco azul', 'reboco_azul', pedra({ dureza: 1.4 })),
+  def(Bloco.REBOCO_AMARELO, 'reboco amarelo', 'reboco_amarelo', pedra({ dureza: 1.4 })),
+  def(Bloco.REBOCO_MENTA, 'reboco menta', 'reboco_menta', pedra({ dureza: 1.4 })),
+  def(Bloco.TELHA_COLONIAL, 'telha colonial', 'telha_colonial', pedra({ dureza: 1.2 })),
+  def(
+    Bloco.GRADE_PLATEIA,
+    'grade da plateia',
+    'grade_plateia',
+    pedra({ opaco: false, forma: 'cerca', dureza: 1.2 }),
+  ),
+  def(Bloco.FAIXA_NEON, 'faixa de neon', 'faixa_neon', {
+    emissivo: true,
+    dureza: 0.6,
+    som: 'cristal',
+  }),
+  def(
+    Bloco.ALAMBRADO,
+    'alambrado',
+    'alambrado',
+    pedra({ opaco: false, recorte: true, dureza: 1.2 }),
   ),
 ];
 

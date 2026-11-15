@@ -14,6 +14,7 @@ import {
   definirEscolhaDoCanto,
   encontrarNascimento,
   escolhaDoCanto,
+  vilaDoMundo,
 } from '../world/chunk';
 import { colunasEditadas, escolherCanto, type PlanoCanto } from '../world/cantoMissoes';
 import { povoadoDoTema, tema } from '../temas/ativo';
@@ -96,6 +97,8 @@ import {
 } from './atmosfera';
 import { criarCeu } from './ceu';
 import { criarHorizonte } from './horizonte';
+import { criarRenderVila } from './vila';
+import type { PlanoVila } from '../world/vilaNeon';
 import { LARGURA_CIDADE, PROFUNDIDADE_CIDADE } from '../world/cidade';
 import { criarAgua } from './agua';
 import { criarVagalumes } from './vagalumes';
@@ -398,6 +401,21 @@ export interface EstadoDepuracao {
   sitios?: () => PlanoPovoado[];
   /** Spec 014 (T10): o horizonte de torres (null fora da cidade). */
   horizonte?: () => { triangulos: number; ativo: boolean } | null;
+  /** Spec 026: o plano da Vila Neon (null nos outros temas). */
+  vila?: () => PlanoVila | null;
+  /** Spec 026: as peças da Vila Neon vivas, as sem chão (sempre 0) e os sósias. */
+  vilaPecas?: () => {
+    chunks: number;
+    malhas: number;
+    triangulos: number;
+    semChao: number;
+    sosias: {
+      nome: string;
+      caixa: { x0: number; z0: number; x1: number; z1: number };
+      visivel: boolean;
+    }[];
+    sosiaEmDobro: string[];
+  } | null;
   povoados?: () => {
     id: string;
     cx: number;
@@ -1190,6 +1208,8 @@ export function criarCena(
 
   /** Claridade do dia para o boneco (1 ao meio-dia, ~0.4 à noite). */
   let luzDia = 1;
+  /** Spec 026: quanto é noite para as peças da Vila Neon (o neon, as lâmpadas, os sósias). */
+  let noiteVila = 0;
   /** Spec 014 (T14): os carrinhos e ônibus (só na Cidade Grande) e os sons deles. */
   let renderVeiculos: RenderVeiculos | null = null;
   let somVeiculos: SomVeiculos | null = null;
@@ -1214,6 +1234,10 @@ export function criarCena(
     };
     if (m?.emissiveColor) {
       const nivel = (m.emissiveTexture?.level ?? 1) * (m.emissiveIntensity ?? 1);
+      // spec 026: o piso de luz da noite (`ceu.pisoNoite`) escurece o chão, não o neon: os
+      // blocos brilham no glow com o branco de sempre
+      if (material === matSolido || material === matPlanta)
+        return void cor.set(nivel, nivel, nivel, m.alpha);
       cor.set(
         m.emissiveColor.r * nivel,
         m.emissiveColor.g * nivel,
@@ -1340,6 +1364,8 @@ export function criarCena(
     Texture.NEAREST_SAMPLINGMODE,
   );
 
+  // spec 026: o piso de luz da noite do tema (1 = o de sempre: o chão nunca escurece)
+  const pisoNoite = Math.min(1, Math.max(0, temaAtual.ceu.pisoNoite ?? 1));
   const matSolido = new StandardMaterial('atlas', scene);
   matSolido.diffuseTexture = textura;
   matSolido.emissiveTexture = texEmissiva;
@@ -1550,7 +1576,9 @@ export function criarCena(
     // desenhado, para as ruas de longe sumirem na bruma em vez de acabarem num corte. As torres
     // do horizonte (variante C) continuam com a névoa de antes.
     const densMundo =
-      temaAtual.id === 'cidade-grande' ? Math.max(densAr, NEVOA_NA_PONTA / bordaDoChao()) : densAr;
+      temaAtual.id === 'cidade-grande' || temaAtual.id === 'vila-neon'
+        ? Math.max(densAr, NEVOA_NA_PONTA / bordaDoChao())
+        : densAr;
     scene.fogDensity = densMundo + (0.06 - densMundo) * ns;
     const densHorizonte = densAr + (0.06 - densAr) * ns;
     scene.clearColor.set(a.nevoa[0], a.nevoa[1], a.nevoa[2], 1);
@@ -1579,6 +1607,13 @@ export function criarCena(
     const forca = (0.08 + 0.62 * Math.max(a.crepusculo, a.noite)) * tb.forca;
     mundoSolido.definirBruma(bruma, forca);
     mundoSolido.luzBlocos = 0.8 + 0.4 * a.noite;
+    // spec 026: o piso de luz dos blocos baixa conforme a noite (só no tema que pede; com o
+    // padrão 1 o material nem é tocado e os outros temas ficam iguais)
+    if (pisoNoite < 1) {
+      const piso = 1 + (pisoNoite - 1) * a.noite;
+      matSolido.emissiveColor.set(piso, piso, piso);
+      matPlanta.emissiveColor.set(piso, piso, piso);
+    }
     // flores, cogumelos e lanternas brilham de verdade ao entardecer e à noite; sob o sol, quase nada
     const escuroAlvo = jogadorCoberto ? 1 : Math.max(a.noite, a.crepusculo * 0.7);
     escuroSuave += (escuroAlvo - escuroSuave) * Math.min(1, dt / 0.5);
@@ -1586,6 +1621,7 @@ export function criarCena(
     luzDia = 0.38 + 0.62 * (1 - a.noite) * Math.min(1, a.intensidadeCeu + 0.4);
     renderVeiculos?.definirLuz(Math.max(0.3, 0.45 + 0.55 * luzDia));
     renderVeiculos?.definirNoite(Math.max(a.noite, a.crepusculo * 0.6));
+    noiteVila = Math.max(a.noite, a.crepusculo * 0.6);
     mundoPlanta.luzBlocos = mundoSolido.luzBlocos;
     mundoPlanta.definirBruma(bruma, forca);
     ceu.atualizar(a, tempo);
@@ -1607,6 +1643,30 @@ export function criarCena(
   }
 
   const malhas = new Map<string, Mesh[]>();
+  // spec 026: as peças da Vila Neon (letreiros, parquinho, palco...) e os sósias de longe, só
+  // em cima de chão desenhado
+  const planoVila = vilaDoMundo(semente);
+  const renderVila = planoVila
+    ? criarRenderVila(scene, planoVila, {
+        temMalha: (cx, cz) => malhas.has(chave(cx, cz)),
+        tapaOGlow,
+        porQuadro: toqueGrosso ? 1 : 2,
+      })
+    : null;
+  estado.vila = () => planoVila;
+  estado.vilaPecas = () =>
+    renderVila
+      ? {
+          ...renderVila.contagem(),
+          semChao: renderVila.semChao(),
+          sosias: renderVila.sosias.lista(),
+          // pedaço de sósia à vista com o chunk de verdade desenhado (sempre vazio)
+          sosiaEmDobro: renderVila.sosias
+            .pedacos()
+            .filter((q) => q.visivel && malhas.has(chave(q.cx, q.cz)))
+            .map((q) => `${q.nome}@${q.cx},${q.cz}`),
+        }
+      : null;
   const fila = criarFilaRemalha<RespostaChunk>();
   const pedidos = new Set<string>();
   const prioritarios = new Set<string>();
@@ -2856,7 +2916,15 @@ export function criarCena(
     enviarRemalhas();
     const cx = Math.floor(camera.position.x / TAM_X);
     const cz = Math.floor(camera.position.z / TAM_Z);
-    const desejados = chunksDesejados(cx, cz, raioChunks);
+    // spec 026: na Vila Neon, o que está na frente da câmera chega antes
+    const desejados = chunksDesejados(
+      cx,
+      cz,
+      raioChunks,
+      planoVila
+        ? { x: Math.sin(cameraVisao.rotation.y), z: Math.cos(cameraVisao.rotation.y) }
+        : undefined,
+    );
     const plano = planejar([...malhas.keys(), ...pedidos], desejados);
     for (const k of plano.descartar) {
       malhas.get(k)?.forEach((m) => {
@@ -3899,6 +3967,7 @@ export function criarCena(
     quadroConstrucao?.(tempo);
     atualizarFantasmas(tempo);
     renderVeiculos?.quadro(Math.min(dtBruto, 0.1), tempo);
+    renderVila?.quadro(tempo, controle.jogador.x, controle.jogador.z, noiteVila);
     quadroSomVeiculos();
     balanco.atualizar(tempo);
     logicaMs += (performance.now() - inicioQuadro - logicaMs) * 0.05;

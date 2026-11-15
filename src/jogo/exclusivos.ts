@@ -1,6 +1,6 @@
 /**
- * Só na Cidade Grande (spec 014, decisão do dono de 12 nov 2026): o que um tema cria fica
- * nele. O tema diz o que é só dele (`Tema.exclusivos`); a regra mora aqui, pura, para o
+ * Só na Cidade Grande (spec 014, decisão do dono de 12 nov 2026) e só na Vila Neon (spec 026):
+ * o que um tema cria fica nele. O tema diz o que é só dele (`Tema.exclusivos`); a regra mora aqui, pura, para o
  * núcleo (que só conhece o estilo do mundo) e o cliente decidirem igual:
  * - geração: só o planejador da cidade põe os blocos da cidade;
  * - trocas, criativo e receitas: um mundo que não é da cidade não mostra (nem aceita) nada
@@ -22,57 +22,96 @@ export interface Exclusivos {
 /** Spec 014: a colher de pedreiro (ferramenta que não gasta). */
 export const COLHER_PEDREIRO = 'colher_pedreiro';
 
-/** Os blocos 84 em diante e a colher de pedreiro: só da Cidade Grande. */
+/**
+ * Os blocos de rua (spec 014): a Cidade Grande e a Vila Neon (spec 026) têm os dois. Cada tema
+ * pinta do seu jeito; o id é o mesmo.
+ */
+const BLOCOS_DE_RUA: readonly number[] = [
+  Bloco.ASFALTO,
+  Bloco.FAIXA_RUA,
+  Bloco.FAIXA_PEDESTRE,
+  Bloco.CALCADA,
+  Bloco.CONCRETO,
+  Bloco.PEDRA_MARROM,
+  Bloco.ESCADINHA_PEDRA,
+  Bloco.PEDRA_CREME,
+  Bloco.FRISO_DOURADO,
+  Bloco.JANELA,
+  Bloco.JANELA_ACESA,
+  Bloco.GRADE_FERRO,
+  Bloco.LAJE_GRADE,
+  Bloco.POSTE,
+  Bloco.TOLDO_VERMELHO,
+  Bloco.TOLDO_VERDE,
+];
+
+/**
+ * Os blocos 84 em diante e a colher de pedreiro: só da Cidade Grande (os de rua também da
+ * Vila Neon; a placa, o tapume, a escada de grade e a colher, só da cidade).
+ */
 export const EXCLUSIVOS_CIDADE: Exclusivos = {
-  blocos: [
-    Bloco.ASFALTO,
-    Bloco.FAIXA_RUA,
-    Bloco.FAIXA_PEDESTRE,
-    Bloco.CALCADA,
-    Bloco.CONCRETO,
-    Bloco.PEDRA_MARROM,
-    Bloco.ESCADINHA_PEDRA,
-    Bloco.PEDRA_CREME,
-    Bloco.FRISO_DOURADO,
-    Bloco.JANELA,
-    Bloco.JANELA_ACESA,
-    Bloco.GRADE_FERRO,
-    Bloco.LAJE_GRADE,
-    Bloco.POSTE,
-    Bloco.PLACA,
-    Bloco.TOLDO_VERMELHO,
-    Bloco.TOLDO_VERDE,
-    Bloco.TAPUME,
-    Bloco.ESCADA_GRADE,
-  ],
+  blocos: [...BLOCOS_DE_RUA, Bloco.PLACA, Bloco.TAPUME, Bloco.ESCADA_GRADE].sort((a, b) => a - b),
   itens: [COLHER_PEDREIRO],
+};
+
+/** Spec 026: os blocos 103 em diante, só da Vila Neon. */
+export const BLOCOS_SO_DA_VILA: readonly number[] = [
+  Bloco.PISO_PALCO,
+  Bloco.CAIXA_SOM,
+  Bloco.TRELICA,
+  Bloco.PISTA_NEON,
+  Bloco.LETREIRO_NEON,
+  Bloco.PAREDE_POSTER,
+  Bloco.REBOCO_ROSA,
+  Bloco.REBOCO_AZUL,
+  Bloco.REBOCO_AMARELO,
+  Bloco.REBOCO_MENTA,
+  Bloco.TELHA_COLONIAL,
+  Bloco.GRADE_PLATEIA,
+  Bloco.FAIXA_NEON,
+  Bloco.ALAMBRADO,
+];
+
+/** Spec 026: o que a Vila Neon tem: os blocos de rua da cidade e os seus (103 em diante). */
+export const EXCLUSIVOS_VILA: Exclusivos = {
+  blocos: [...BLOCOS_DE_RUA, ...BLOCOS_SO_DA_VILA],
+  itens: [],
 };
 
 /**
  * Exclusivos por planta do povoado (o núcleo e o servidor só conhecem o estilo do mundo):
- * a planta 'cidade' é a Cidade Grande.
+ * a planta 'cidade' é a Cidade Grande; a 'bairro', a Vila Neon. Um item pode ser de mais de uma
+ * planta (os blocos de rua).
  */
-const POR_PLANTA: Readonly<Record<string, Exclusivos>> = { cidade: EXCLUSIVOS_CIDADE };
+const POR_PLANTA: Readonly<Record<string, Exclusivos>> = {
+  cidade: EXCLUSIVOS_CIDADE,
+  bairro: EXCLUSIVOS_VILA,
+};
 
-/** Item -> planta do mundo dono dele. */
-const DONO: ReadonlyMap<string, string> = (() => {
-  const m = new Map<string, string>();
+/** Item -> plantas dos mundos donos dele. */
+const DONOS: ReadonlyMap<string, ReadonlySet<string>> = (() => {
+  const m = new Map<string, Set<string>>();
+  const marcar = (item: string, planta: string) => {
+    let donos = m.get(item);
+    if (!donos) m.set(item, (donos = new Set()));
+    donos.add(planta);
+  };
   for (const [planta, ex] of Object.entries(POR_PLANTA)) {
-    for (const b of ex.blocos) m.set(idDoBloco(b), planta);
-    for (const i of ex.itens) m.set(i, planta);
+    for (const b of ex.blocos) marcar(idDoBloco(b), planta);
+    for (const i of ex.itens) marcar(i, planta);
   }
   return m;
 })();
 
-/** Bloco exclusivo de algum tema? (ids 84 em diante, por enquanto só a cidade) */
+/** Bloco exclusivo de algum tema? (ids 84 em diante: a cidade e o bairro) */
 export function blocoExclusivo(b: number): boolean {
-  return DONO.has(idDoBloco(b));
+  return DONOS.has(idDoBloco(b));
 }
 
-/** O item existe neste mundo? Exclusivo só no mundo do tema dele. */
+/** O item existe neste mundo? Exclusivo só nos mundos dos temas donos dele. */
 export function itemNoMundo(item: string, estilo: EstiloMundo): boolean {
-  const dono = DONO.get(item);
-  return dono === undefined || dono === (estilo.povoado?.planta ?? 'vila');
+  const donos = DONOS.get(item);
+  return donos === undefined || donos.has(estilo.povoado?.planta ?? 'vila');
 }
 
 /** O bloco existe neste mundo? */
@@ -84,7 +123,8 @@ export function blocoNoMundo(b: number, estilo: EstiloMundo): boolean {
 export function trocaNoMundo(t: Troca, estilo: EstiloMundo): boolean {
   const planta = estilo.povoado?.planta ?? 'vila';
   if (t.planta !== undefined && t.planta !== planta) return false;
-  if (t.foraDaCidade && planta === 'cidade') return false;
+  // a roça que o pedreiro da cidade não faz também não entra no bairro (sem roça na Vila Neon)
+  if (t.foraDaCidade && (planta === 'cidade' || planta === 'bairro')) return false;
   return itemNoMundo(t.receber.item, estilo) && t.dar.every((d) => itemNoMundo(d.item, estilo));
 }
 

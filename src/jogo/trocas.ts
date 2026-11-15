@@ -21,7 +21,7 @@ export interface Troca {
    * Spec 014: a troca só existe nos mundos desta planta (a do pedreiro da cidade: tijolo,
    * escada e toldo para o canteiro). Sem o campo, em todo tema (menos o exclusivo de outro).
    */
-  planta?: 'cidade';
+  planta?: 'cidade' | 'bairro';
   /** Spec 014: a troca da roça que o pedreiro da cidade não faz (a lista dele cabe em 8). */
   foraDaCidade?: true;
 }

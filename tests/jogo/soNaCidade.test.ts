@@ -33,6 +33,22 @@ const OUTROS = temasDisponiveis()
   .filter((id) => id !== 'cidade-grande')
   .map((id) => obterTema(id));
 const DA_CIDADE = new Set([...EXCLUSIVOS_CIDADE.blocos.map(idDoBloco), ...EXCLUSIVOS_CIDADE.itens]);
+/**
+ * Spec 026: o que é da cidade e não é do tema (a Vila Neon tem os blocos de rua da cidade, com
+ * a pintura dela; a placa, o tapume, a escada de grade e a colher continuam só da cidade).
+ */
+function daCidadeSemSerDe(t: (typeof OUTROS)[number]): ReadonlySet<string> {
+  const meus = new Set([
+    ...(t.exclusivos?.blocos ?? []).map(idDoBloco),
+    ...(t.exclusivos?.itens ?? []),
+  ]);
+  return new Set([...DA_CIDADE].filter((i) => !meus.has(i)));
+}
+/**
+ * Temas ainda sem o pacote de som gravado (caem na reserva sintetizada, sem erro): a Vila
+ * Neon até a trilha e as vozes do bairro serem gravadas (spec 026, T18).
+ */
+const SEM_PACOTE_AINDA: readonly string[] = ['vila-neon'];
 const INDICE = JSON.parse(lerTexto('public/sons/indice.json')) as {
   temas: Record<string, Record<string, unknown>>;
   tamanhos: Record<string, number>;
@@ -50,6 +66,7 @@ describe('nada da cidade em outro tema', () => {
   it.each(OUTROS.map((t) => [t.id, t] as const))(
     '%s: sem bloco, item, troca, receita, tesouro nem som da cidade',
     (id, t) => {
+      const DA_CIDADE = daCidadeSemSerDe(t);
       // criativo e livro de receitas
       const catalogo = itensDoCatalogo(t.mundo).map((d) => d.id);
       expect(catalogo.filter((i) => DA_CIDADE.has(i))).toEqual([]);
@@ -94,9 +111,12 @@ describe('nada da cidade em outro tema', () => {
       // sons: o pacote é o do próprio tema, sem os do canteiro nem os da rua
       expect(temaDoSom(id)).toBe(id);
       expect(t.natureza.cidade).toBeUndefined();
-      expect(INDICE.temas[id], id).toBeDefined();
-      expect(INDICE.temas[id]).not.toHaveProperty('obra');
-      expect(INDICE.temas[id]).not.toHaveProperty('ambiente');
+      if (SEM_PACOTE_AINDA.includes(id)) expect(INDICE.temas[id], id).toBeUndefined();
+      else {
+        expect(INDICE.temas[id], id).toBeDefined();
+        expect(INDICE.temas[id]).not.toHaveProperty('obra');
+        expect(INDICE.temas[id]).not.toHaveProperty('ambiente');
+      }
     },
   );
 
@@ -208,7 +228,8 @@ describe('cada mundo é uma história', () => {
     for (const t of OUTROS) {
       const outro = abrir(t.mundo);
       const j = outro.estado.jogadores.get('ana')!;
-      const tem = j.inventario.slots.filter((p) => p && DA_CIDADE.has(p.item));
+      const daCidade = daCidadeSemSerDe(t);
+      const tem = j.inventario.slots.filter((p) => p && daCidade.has(p.item));
       expect(tem, t.id).toEqual([]);
       expect(j.inventario.contar(idDoBloco(Bloco.TIJOLOS)), t.id).toBe(0);
       expect(outro.obrasFeitas, t.id).toEqual([]);

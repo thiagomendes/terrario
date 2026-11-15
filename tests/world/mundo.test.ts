@@ -16,11 +16,21 @@ describe('registro', () => {
     expect(REGISTRO_BLOCOS.filter((b) => b.planta).length).toBeGreaterThanOrEqual(3);
     for (const b of REGISTRO_BLOCOS.filter((x) => x.planta)) expect(b.forma).toBe('cruz');
     expect(REGISTRO_BLOCOS[Bloco.CRISTAL_LUZ].emissivo).toBe(true);
-    // a janela acesa da cidade (spec 014) brilha sem espalhar luz: é a única
-    for (const b of REGISTRO_BLOCOS.filter((x) => x.emissivo && x.id !== Bloco.JANELA_ACESA)) {
+    // a janela acesa da cidade (spec 014) e os neons do bairro (spec 026) brilham sem espalhar
+    // luz: são os únicos
+    const semLuz: number[] = [
+      Bloco.JANELA_ACESA,
+      Bloco.PISTA_NEON,
+      Bloco.LETREIRO_NEON,
+      Bloco.FAIXA_NEON,
+    ];
+    for (const b of REGISTRO_BLOCOS.filter((x) => x.emissivo && !semLuz.includes(x.id))) {
       expect(b.luz ?? 0, b.nome).toBeGreaterThan(0);
     }
-    expect(REGISTRO_BLOCOS[Bloco.JANELA_ACESA].luz ?? 0).toBe(0);
+    for (const id of semLuz) {
+      expect(REGISTRO_BLOCOS[id].emissivo, REGISTRO_BLOCOS[id].nome).toBe(true);
+      expect(REGISTRO_BLOCOS[id].luz ?? 0, REGISTRO_BLOCOS[id].nome).toBe(0);
+    }
     expect(REGISTRO_BLOCOS[Bloco.TOCHA].luz).toBe(14);
   });
 });

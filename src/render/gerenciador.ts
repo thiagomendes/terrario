@@ -7,13 +7,32 @@ export function chave(cx: number, cz: number): string {
   return `${cx},${cz}`;
 }
 
-/** Chunks dentro do raio (em chunks) ao redor do centro, do mais próximo ao mais distante. */
-export function chunksDesejados(cx: number, cz: number, raio: number): ChaveChunk[] {
+/**
+ * Chunks dentro do raio (em chunks) ao redor do centro, do mais próximo ao mais distante. Com
+ * `rumo` (a frente da câmera, x e z; spec 026), os da frente vêm antes dos de trás na mesma
+ * distância: o que a criança está olhando chega primeiro (o vizinho de trás mais perto ainda
+ * chega antes do longe da frente).
+ */
+export function chunksDesejados(
+  cx: number,
+  cz: number,
+  raio: number,
+  rumo?: { x: number; z: number },
+): ChaveChunk[] {
   const lista: (ChaveChunk & { d: number })[] = [];
+  const rl = rumo ? Math.hypot(rumo.x, rumo.z) || 1 : 1;
   for (let dz = -raio; dz <= raio; dz++) {
     for (let dx = -raio; dx <= raio; dx++) {
       const d = dx * dx + dz * dz;
-      if (d <= raio * raio) lista.push({ cx: cx + dx, cz: cz + dz, d });
+      if (d > raio * raio) continue;
+      let k = d;
+      if (rumo && d > 0) {
+        const cos = (dx * rumo.x + dz * rumo.z) / (rl * Math.sqrt(d));
+        // de frente: conta como 1,6 chunk mais perto; de costas, 1,6 mais longe
+        const r = Math.sqrt(d) - 1.6 * cos;
+        k = r * Math.abs(r);
+      }
+      lista.push({ cx: cx + dx, cz: cz + dz, d: k });
     }
   }
   lista.sort((a, b) => a.d - b.d);
