@@ -298,16 +298,18 @@ export function criarPlateiaVila(
   });
 
   // ---------------------------------------------------------------- as malhas
+  // sem luz de cena: a cor sai só do emissivo (vezes a cor do vértice e a da instância); com o
+  // difuso, sem luz, o boneco saía preto
   const mat = new StandardMaterial('vila-plateia', scene);
   mat.disableLighting = true;
   mat.specularColor = Color3.Black();
-  mat.diffuseColor = Color3.White();
-  mat.emissiveColor = Color3.Black();
+  mat.diffuseColor = Color3.Black();
+  mat.emissiveColor = Color3.White();
   const matLuz = new StandardMaterial('vila-plateia-luz', scene);
   matLuz.disableLighting = true;
   matLuz.specularColor = Color3.Black();
-  matLuz.diffuseColor = Color3.White();
-  matLuz.emissiveColor = Color3.Black();
+  matLuz.diffuseColor = Color3.Black();
+  matLuz.emissiveColor = Color3.White();
 
   interface Parte {
     m: Mesh;
@@ -450,8 +452,8 @@ export function criarPlateiaVila(
         return;
       }
       // de noite, o povo fica na luz do palco e dos postes (nunca preto: a criança vê a festa)
-      const luz = (1 - 0.42 * noite) * (tocando ? 1.08 : 1);
-      mat.diffuseColor.set(luz, luz, luz);
+      const luz = (1 - 0.47 * noite) * (tocando ? 1.08 : 1);
+      mat.emissiveColor.set(luz, luz, luz);
       mat.alpha = alfa;
       matLuz.alpha = alfa;
       const transp = alfa < 0.999;
