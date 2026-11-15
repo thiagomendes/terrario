@@ -7,6 +7,9 @@ import {
   AMPLITUDE_VOLUME,
   DURACAO_MAXIMA_SOM,
   GANHO_MAXIMO_AMBIENTE,
+  CALAR_NATUREZA_DB,
+  ganhoCalar,
+  ganhoCalarNatureza,
   iniciarAmbiente,
   perfilDoSom,
   reiniciarVariacao,
@@ -151,6 +154,32 @@ describe('iniciarAmbiente', () => {
     expect(agendar).toBeNull();
     expect(motor.vozes).toBe(0);
     expect(ctx.fontes.every((f) => f.parada)).toBe(true);
+  });
+
+  it('o show da Vila Neon cala a trilha e baixa a natureza (vento e bichos), sem tocar no "Natureza"', async () => {
+    const { ctx, motor } = await motorAtivo();
+    const antes = ctx.gains.length;
+    const amb = iniciarAmbiente(motor, { setInterval: () => 1, clearInterval: () => {} });
+    const mestre = ctx.gains[antes];
+    const busNatureza = ctx.gains[antes + 1];
+    // a natureza passa por um nó só dela antes do mestre (o eco dela também)
+    const nat = busNatureza.conectados[0] as NoFalso;
+    expect(nat).not.toBe(mestre);
+    expect(nat.conectados).toContain(mestre);
+    expect(nat.gain.value).toBe(1);
+    amb.definirCalarNatureza(1);
+    expect(nat.gain.value).toBeCloseTo(ganhoCalarNatureza(1), 9);
+    expect(20 * Math.log10(nat.gain.value)).toBeCloseTo(-CALAR_NATUREZA_DB, 9);
+    // o volume da natureza (Configurações) segue valendo por cima
+    amb.definirVolumes(0.6, 0.5);
+    expect(busNatureza.gain.value).toBeCloseTo(0.8 * 0.5, 9);
+    amb.definirCalarNatureza(0);
+    expect(nat.gain.value).toBe(1);
+    // a trilha: o calar de sempre (e a natureza não junto)
+    amb.definirCalar(1);
+    expect(ctx.gains.some((g) => Math.abs(g.gain.value - ganhoCalar(1)) < 1e-9)).toBe(true);
+    expect(nat.gain.value).toBe(1);
+    amb.parar();
   });
 
   it('sobrevive ao estouro do limite de vozes (prioridade alta)', async () => {

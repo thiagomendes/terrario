@@ -4,7 +4,11 @@ import {
   ATRASO_APLAUSO,
   ESCALA_LADRILHO,
   GANHO_BRINQUEDO,
+  GANHO_CAIXAS,
   GANHO_SHOW,
+  REFORCO_APLAUSO_DB,
+  REFORCO_FINAL_DB,
+  REFORCO_SHOW_DB,
   PALCO_CHEIO,
   PALCO_SOME,
   RelogioVila,
@@ -22,8 +26,14 @@ import {
   type BufferVila,
 } from '../../src/audio/somVila';
 import { criarMotorAudio } from '../../src/audio/motor';
-import { CALAR_TRILHA_DB, GANHO_MAXIMO_AMBIENTE, ganhoCalar } from '../../src/audio/sons';
-import { GANHO_TRILHA_GRAVADA } from '../../src/audio/trilha';
+import {
+  CALAR_NATUREZA_DB,
+  CALAR_TRILHA_DB,
+  GANHO_MAXIMO_AMBIENTE,
+  ganhoCalar,
+  ganhoCalarNatureza,
+} from '../../src/audio/sons';
+import { GANHO_TRILHA_GRAVADA, nivelTrilha } from '../../src/audio/trilha';
 import { criarVozesGravadas } from '../../src/audio/vozesGravadas';
 import {
   ACORDES_SHOW,
@@ -133,8 +143,21 @@ describe('o pacote do show no índice', () => {
     for (const v of Object.values(GANHO_BRINQUEDO)) expect(v).toBeLessThanOrEqual(-4);
     expect(GANHO_BRINQUEDO.rodinhas).toBeLessThan(GANHO_BRINQUEDO.estojo);
     expect(GANHO_BRINQUEDO.ladrilho).toBeLessThan(GANHO_BRINQUEDO.estojo);
-    // o show segue o caminho da trilha gravada
-    expect(GANHO_SHOW).toBeCloseTo(GANHO_MAXIMO_AMBIENTE * 0.6 * GANHO_TRILHA_GRAVADA, 9);
+    // as caixas soltas seguem o caminho da trilha gravada (o ambiente da zona)
+    expect(GANHO_CAIXAS).toBeCloseTo(GANHO_MAXIMO_AMBIENTE * 0.6 * GANHO_TRILHA_GRAVADA, 9);
+    // o show é a música mais alta do jogo (o dono: "até o passarinho tá saindo mais alto"):
+    // medido na grade, 6 a 9 dB acima da trilha e da natureza de sempre
+    expect(20 * Math.log10(GANHO_SHOW / GANHO_CAIXAS)).toBeCloseTo(REFORCO_SHOW_DB, 9);
+    expect(REFORCO_SHOW_DB).toBeGreaterThanOrEqual(9);
+    expect(REFORCO_SHOW_DB).toBeLessThanOrEqual(15);
+    // o acorde final e o aplauso por cima: o pico
+    expect(REFORCO_FINAL_DB).toBeGreaterThan(0);
+    expect(REFORCO_APLAUSO_DB).toBeGreaterThan(0);
+    // e a natureza (passarinhos, grilos, vento) baixa uns 12 dB no show, e volta inteira
+    expect(ganhoCalarNatureza(0)).toBe(1);
+    expect(20 * Math.log10(ganhoCalarNatureza(1))).toBeCloseTo(-CALAR_NATUREZA_DB, 9);
+    expect(CALAR_NATUREZA_DB).toBeGreaterThanOrEqual(10);
+    expect(CALAR_NATUREZA_DB).toBeLessThanOrEqual(15);
     // uma música por vez: com o show perto, a trilha do bairro some (e volta inteira)
     expect(ganhoCalar(0)).toBe(1);
     expect(20 * Math.log10(ganhoCalar(1))).toBeCloseTo(-CALAR_TRILHA_DB, 9);
@@ -209,7 +232,13 @@ describe('o tempo do show (puro)', () => {
   it('distância do palco, laço, grade, zonas e a escala do ladrilho', () => {
     expect(volumeNaDistancia(0, PALCO_CHEIO, PALCO_SOME)).toBe(1);
     expect(volumeNaDistancia(PALCO_CHEIO, PALCO_CHEIO, PALCO_SOME)).toBe(1);
-    expect(volumeNaDistancia(30, PALCO_CHEIO, PALCO_SOME)).toBeGreaterThan(0);
+    // cheio em toda a plateia: da grade (12,5 blocos do meio do palco) ao portão do festival (40,5)
+    expect(volumeNaDistancia(12.5, PALCO_CHEIO, PALCO_SOME)).toBe(1);
+    expect(volumeNaDistancia(40.5, PALCO_CHEIO, PALCO_SOME)).toBe(1);
+    // e some só depois, fora do alambrado
+    const fora = volumeNaDistancia(55, PALCO_CHEIO, PALCO_SOME);
+    expect(fora).toBeGreaterThan(0);
+    expect(fora).toBeLessThan(0.5);
     expect(volumeNaDistancia(PALCO_SOME, PALCO_CHEIO, PALCO_SOME)).toBe(0);
     expect(posicaoNoLaco(9, 0, 8)).toBe(1);
     expect(posicaoNoLaco(-1, 0, 8)).toBe(7);
@@ -304,13 +333,14 @@ const PLANO = {
 const PERTO = { x: 5, z: 5 };
 const IDS = Object.keys(IND.clips);
 
-async function montar() {
+async function montar(volumes?: () => { musica: number; natureza: number }) {
   const ctx = new Ctx();
   const motor = criarMotorAudio(() => ctx as never, { maxVozes: 40 });
   await motor.ativar();
   ctx.fontes.length = 0;
   const pedidos: string[] = [];
   const calar: number[] = [];
+  const calarNatureza: number[] = [];
   const tocados: string[] = [];
   const som = criarSomVila({
     motor,
@@ -333,6 +363,8 @@ async function montar() {
       return { duration: IND.clips[id].arquivo / IND.taxa, id } as BufferVila;
     },
     aoCalarTrilha: (f) => calar.push(f),
+    aoCalarNatureza: (f) => calarNatureza.push(f),
+    volumes,
     aoTocar: (id) => tocados.push(id),
     rng: () => 0.5,
   });
@@ -355,7 +387,7 @@ async function montar() {
   };
   const fonteDe = (id: string) =>
     ctx.fontes.filter((f) => (f.buffer as { id?: string } | null)?.id === id && f.inicio !== null);
-  return { ctx, som, pedidos, calar, tocados, vista, passo, fonteDe, D };
+  return { ctx, som, pedidos, calar, calarNatureza, tocados, vista, passo, fonteDe, D };
 }
 
 describe('o tocador do show (contexto falso)', () => {
@@ -487,6 +519,53 @@ describe('o tocador do show (contexto falso)', () => {
     expect(tocados.filter((x) => x === 'ladrilho').length).toBe(antes + 2);
     const taxas = fonteDe('ladrilho').map((f) => f.playbackRate.value);
     expect(new Set(taxas).size).toBeGreaterThan(1);
+  });
+
+  it('a mistura do show: mais alto que as caixas soltas, a natureza baixa e volta, o "Música" vale', async () => {
+    const v = { musica: 0.6, natureza: 0.8 };
+    const { ctx, som, calarNatureza, vista, passo, fonteDe, D } = await montar(() => v);
+    const nivel = nivelTrilha('vila-neon', 'dia');
+    // as caixas soltas: o barramento no show, cada laço com GANHO_CAIXAS / GANHO_SHOW; a
+    // natureza segue (as caixas são o ambiente da zona)
+    await passo(10.1, vista({ cx: [true, false, false] }));
+    await passo(10.15, vista({ cx: [true, false, false] }));
+    expect(som.info().ganhoShow).toBeCloseTo(GANHO_SHOW * 0.6 * nivel, 9);
+    const [solta] = fonteDe('bateria_verso');
+    const g = (solta.ligados[0] as No).gain;
+    const alvo = g.pontos.find((x) => x.t === 'alvo')?.v ?? g.value;
+    expect(alvo * GANHO_SHOW).toBeCloseTo(GANHO_CAIXAS, 9);
+    expect(som.info().calarNatureza).toBe(0);
+    // o show: a natureza baixa inteira em toda a plateia (até o portão)
+    const show = { inicio: 20 + D, final: null as number | null };
+    for (let t = 19.95; t < 30; t += 0.5) await passo(t, vista({ cx: [true, true, true], show }));
+    expect(som.info().calarNatureza).toBe(1);
+    expect(calarNatureza.at(-1)).toBe(1);
+    const camada = fonteDe('bateria_verso').at(-1)!;
+    expect((camada.ligados[0] as No).gain.pontos.find((x) => x.t === 'alvo')?.v ?? 1).toBe(1);
+    await passo(30.5, vista({ cx: [true, true, true], show }), { x: 5, z: 5 - 40 });
+    expect(som.info().calarNatureza).toBe(1);
+    expect(som.info().festival).toBe(1);
+    // o "Música" das Configurações vale para o show
+    v.musica = 0.3;
+    await passo(31, vista({ cx: [true, true, true], show }));
+    expect(som.info().ganhoShow).toBeCloseTo(GANHO_SHOW * 0.3 * nivel, 9);
+    v.musica = 0.6;
+    // o acorde final e o aplauso entram por cima
+    await passo(57.0, vista({ cx: [true, true, true], show }));
+    ctx.currentTime = 57.28;
+    som.evento({ e: 'vilaFinal', quando: 57.2 + D, quem: 'ana' }, 57.28 + D);
+    const fin = fonteDe('final')[0];
+    const apl = fonteDe('aplauso')[0];
+    expect((fin.ligados[0] as No).gain.value).toBeCloseTo(10 ** (REFORCO_FINAL_DB / 20), 9);
+    expect((apl.ligados[0] as No).gain.value).toBeCloseTo(10 ** (REFORCO_APLAUSO_DB / 20), 9);
+    // durante o aplauso a natureza segue baixa; depois dele, volta (as caixas seguem acesas)
+    const fim = { inicio: 20 + D, final: 57.2 + D };
+    await passo(60, vista({ cx: [true, true, true], show: fim }));
+    expect(som.info().calarNatureza).toBe(1);
+    await passo(62.4, vista({ cx: [true, true, true], show: fim }));
+    await passo(62.6, vista({ cx: [true, true, true], show: fim }));
+    expect(som.info().calarNatureza).toBe(0);
+    expect(calarNatureza.at(-1)).toBe(0);
   });
 
   it('o ambiente da zona: a batida no rinque, o neon na rua de noite, um por vez', async () => {

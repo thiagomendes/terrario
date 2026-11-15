@@ -3847,6 +3847,7 @@ export function criarCena(
           natureza: configAtual?.volumeAmbiente ?? 0.8,
         }),
         aoCalarTrilha: (f) => ambiente?.definirCalar(f),
+        aoCalarNatureza: (f) => ambiente?.definirCalarNatureza(f),
         gradeTrilha: () => {
           const m = trilha.info().motor;
           return m ? { t0: m.t0, compasso: m.compasso } : null;

@@ -1150,6 +1150,12 @@ export interface Ambiente {
    * da 019). Os bichos e o vento seguem.
    */
   definirCalar(f: number): void;
+  /**
+   * Spec 026 (a mistura do show): baixa a natureza (passarinhos, grilos, vento, chuva) enquanto o
+   * show da Vila Neon toca perto: `f` de 0 (nada) a 1 (`CALAR_NATUREZA_DB`); desce em ~1,5 s e
+   * volta devagar (~3 s) depois do aplauso.
+   */
+  definirCalarNatureza(f: number): void;
 }
 
 /** Spec 014 (T15): quanto a trilha abaixa com um carrinho andando perto (dB). */
@@ -1182,6 +1188,17 @@ const TAU_CALAR = 0.5;
 /** O ganho da trilha calada pelo show (f de 0 a 1). */
 export function ganhoCalar(f: number): number {
   return Math.pow(10, (-CALAR_TRILHA_DB * Math.max(0, Math.min(1, f))) / 20);
+}
+
+/** Spec 026: quanto a natureza baixa com o show da Vila Neon tocando perto (dB). */
+export const CALAR_NATUREZA_DB = 12;
+/** E as rampas (s): desce em ~1,5 s, volta em ~3 s. */
+const TAU_CALAR_NATUREZA_DESCE = 0.5;
+const TAU_CALAR_NATUREZA_VOLTA = 1;
+
+/** O ganho da natureza baixada pelo show (f de 0 a 1). */
+export function ganhoCalarNatureza(f: number): number {
+  return Math.pow(10, (-CALAR_NATUREZA_DB * Math.max(0, Math.min(1, f))) / 20);
 }
 
 /** Spec 014: os sons gravados do ambiente da cidade (`ambiente` no índice de sons). */
@@ -1380,6 +1397,8 @@ export function iniciarAmbiente(
   let fAbaixar = 0;
   let calar: GanhoSom | null = null;
   let fCalar = 0;
+  let calarNatureza: GanhoSom | null = null;
+  let fCalarNatureza = 0;
   let sintetizada = 1;
   /** Até quando a sintetizada ainda soa (a rampa para 0 acaba aqui). */
   let sintetizadaAte = Infinity;
@@ -1694,7 +1713,11 @@ export function iniciarAmbiente(
         mestre.connect(destino);
         busNatureza = ctx.createGain() as GanhoSom;
         busNatureza.gain.value = 0.8 * volNatureza;
-        busNatureza.connect(mestre);
+        // spec 026: a natureza passa pelo calar do show da Vila Neon (e o eco dela também)
+        calarNatureza = ctx.createGain() as GanhoSom;
+        calarNatureza.gain.value = ganhoCalarNatureza(fCalarNatureza);
+        busNatureza.connect(calarNatureza);
+        calarNatureza.connect(mestre);
         busMusica = ctx.createGain() as GanhoSom;
         busMusica.gain.value = 0.6 * volMusica;
         // a trilha passa pelo abaixar (ganho) e pelo vale dos graves-médios antes do mestre
@@ -1730,7 +1753,7 @@ export function iniciarAmbiente(
           const envio = ctx.createGain();
           envio.gain.value = 0.55;
           busMusica.connect(envio);
-          busNatureza.connect(envio);
+          calarNatureza.connect(envio);
           envio.connect(rev);
           rev.connect(mestre);
         }
@@ -1865,6 +1888,18 @@ export function iniciarAmbiente(
       };
       if (g.setTargetAtTime) g.setTargetAtTime(ganhoCalar(alvo), ctxA.currentTime, TAU_CALAR);
       else g.value = ganhoCalar(alvo);
+    },
+    definirCalarNatureza(f) {
+      const alvo = Math.max(0, Math.min(1, f));
+      if (Math.abs(alvo - fCalarNatureza) < 0.01) return;
+      const tau = alvo > fCalarNatureza ? TAU_CALAR_NATUREZA_DESCE : TAU_CALAR_NATUREZA_VOLTA;
+      fCalarNatureza = alvo;
+      if (!ctxA || !calarNatureza) return;
+      const g = calarNatureza.gain as ParamEnvelope & {
+        setTargetAtTime?(v: number, t: number, k: number): void;
+      };
+      if (g.setTargetAtTime) g.setTargetAtTime(ganhoCalarNatureza(alvo), ctxA.currentTime, tau);
+      else g.value = ganhoCalarNatureza(alvo);
     },
     definirVolumes(musica, natureza) {
       volMusica = musica;

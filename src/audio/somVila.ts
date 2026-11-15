@@ -15,7 +15,9 @@
  *   som" da f3 e, depois do show, o brinquedo livre), no compasso do relógio do núcleo, só com a
  *   criança perto do palco. É o ambiente da zona do festival.
  * - **Uma música por vez (019):** com o show ou as caixas tocando perto, a trilha do bairro é calada
- *   (`aoCalarTrilha`), em rampa. No máximo um ambiente de zona por vez (o zumbido do neon na rua de
+ *   (`aoCalarTrilha`), em rampa; no show, os passarinhos, os grilos e o vento também baixam
+ *   (`aoCalarNatureza`) e voltam devagar depois do aplauso. O show é a música mais alta do jogo
+ *   (`REFORCO_SHOW_DB` acima das caixas soltas), cheio em toda a plateia. No máximo um ambiente de zona por vez (o zumbido do neon na rua de
  *   noite ou a batida do rinque), em cruz de ~1,5 s ao trocar de zona; com o vento de sempre, dois.
  *   Nada mais fica em laço: o rádio toca a batida por 8 compassos e para sozinho.
  * - **Toques:** `tocarBrinquedo('fliperama', i)` (três musiquinhas de 8 bits nossas), 'radio' (liga e
@@ -242,17 +244,31 @@ export function volumeNaDistancia(d: number, cheio: number, some: number): numbe
   return (1 - x) * (1 - x);
 }
 
-/** O show e as caixas: cheio até 16 blocos do meio do palco, some até 56. */
-export const PALCO_CHEIO = 16;
-export const PALCO_SOME = 56;
+/**
+ * O show e as caixas: cheio em toda a área da plateia, da grade (12 blocos do meio do palco) até
+ * o portão do festival (40), e some até 72 (fora do alambrado, já na avenida).
+ */
+export const PALCO_CHEIO = 42;
+export const PALCO_SOME = 72;
 
 /**
- * O ganho do show: o mesmo caminho da trilha gravada (mestre do ambiente 0,5 × música 0,6 ×
- * `GANHO_TRILHA_GRAVADA`), no nível do dia do bairro. As camadas foram gravadas com o refrão em
- * -23,6 dBFS (1 dB acima da mistura "dia" da trilha): o show soa um tico mais cheio que a música do
- * bairro e sempre abaixo dos efeitos e das vozes.
+ * As caixas tocando soltas (fora do show): o mesmo caminho da trilha gravada (mestre do ambiente
+ * 0,5 × música 0,6 × `GANHO_TRILHA_GRAVADA`), no nível do dia do bairro. As camadas foram gravadas
+ * com o refrão em -23,6 dBFS (1 dB acima da mistura "dia" da trilha): são o ambiente da zona.
  */
-export const GANHO_SHOW = 0.5 * 0.6 * GANHO_TRILHA_GRAVADA;
+export const GANHO_CAIXAS = 0.5 * 0.6 * GANHO_TRILHA_GRAVADA;
+/**
+ * Quanto o show soa acima das caixas soltas (dB). O dono (15 nov 2026): "ficou bem baixinha a
+ * música da banda, até o passarinho tá saindo mais alto". O show é a música mais alta do jogo
+ * enquanto toca: medido na grade da plateia (ebur128), de 6 a 9 dB acima da trilha e da natureza
+ * nos níveis de sempre, que baixam enquanto ele toca (`CALAR_TRILHA_DB`, `CALAR_NATUREZA_DB`).
+ */
+export const REFORCO_SHOW_DB = 12;
+/** O barramento do palco no show (as caixas soltas tocam nele com `GANHO_CAIXAS / GANHO_SHOW`). */
+export const GANHO_SHOW = GANHO_CAIXAS * Math.pow(10, REFORCO_SHOW_DB / 20);
+/** O acorde final e o aplauso por cima do show (dB): o pico da música. */
+export const REFORCO_FINAL_DB = 2;
+export const REFORCO_APLAUSO_DB = 4;
 
 /**
  * Ganho (dB) de cada toque (sobre o clipe gravado em -23 dB "enquanto soa", como as vozes da 019),
@@ -362,6 +378,8 @@ export interface OpcoesSomVila {
   volumes?: () => { musica: number; natureza: number };
   /** A trilha do bairro cala (0 a 1) com o show ou as caixas tocando perto. */
   aoCalarTrilha?: (f: number) => void;
+  /** Os passarinhos, os grilos e o vento baixam (0 a 1) com o show tocando perto. */
+  aoCalarNatureza?: (f: number) => void;
   /** A grade da trilha do bairro (relógio do AudioContext), para a batida entrar no compasso dela. */
   gradeTrilha?: () => { t0: number; compasso: number } | null;
   /** Testes de tela: o que tocou. */
@@ -420,6 +438,9 @@ export function criarSomVila(op: OpcoesSomVila) {
   /** Fim do show, do aplauso e das caixas tocando: até quando a trilha fica calada. */
   let caladoAte = -Infinity;
   let calar = 0;
+  /** Fim do aplauso do show: até quando a natureza fica baixinha. */
+  let showAte = -Infinity;
+  let calarNat = 0;
   let gFestival = 0;
   let zonaAgora: string | null = null;
   let amb: { id: Exclude<AmbienteZona, null>; t: Tocando } | null = null;
@@ -661,12 +682,16 @@ export function criarSomVila(op: OpcoesSomVila) {
     }
     cortarCamadas(t);
     const fontes: Tocando[] = [];
-    const f = tocar('final', t, { ganho: 1, bus: 'show' });
+    const f = tocar('final', t, { ganho: dbLin(REFORCO_FINAL_DB), bus: 'show' });
     if (f) fontes.push(f);
-    const a = tocar('aplauso', t + ATRASO_APLAUSO, { ganho: 1, bus: 'show' });
+    const a = tocar('aplauso', t + ATRASO_APLAUSO, {
+      ganho: dbLin(REFORCO_APLAUSO_DB),
+      bus: 'show',
+    });
     if (a) fontes.push(a);
     finalAgendado = { t, fontes, sozinho };
     caladoAte = Math.max(caladoAte, t + APLAUSO);
+    showAte = t + APLAUSO;
     if (showAtual) showAtual.final = relogio.nucleo(t);
   }
 
@@ -719,7 +744,7 @@ export function criarSomVila(op: OpcoesSomVila) {
         const tN = proximoTempo(relogio.nucleo(ag + 0.05), 0);
         const t = relogio.audio(tN);
         livres[i] = tocar(id, t, {
-          ganho: 1,
+          ganho: GANHO_CAIXAS / GANHO_SHOW,
           bus: 'show',
           laco: true,
           dentro: posicaoNoLaco(tN, 0, c.laco / ind.taxa),
@@ -829,10 +854,9 @@ export function criarSomVila(op: OpcoesSomVila) {
           else finalAgendado = { t, fontes: [], sozinho: false };
         }
         agendarShow(ag);
-        caladoAte = Math.max(
-          caladoAte,
-          relogio.audio(corteDoShow(show.inicio, show.final) + APLAUSO),
-        );
+        const fim = relogio.audio(corteDoShow(show.inicio, show.final) + APLAUSO);
+        caladoAte = Math.max(caladoAte, fim);
+        showAte = fim;
       } else if (showAtual) {
         acabarShow(ag);
         descansoAte = ag + DESCANSO_DEPOIS_DO_SHOW;
@@ -846,8 +870,11 @@ export function criarSomVila(op: OpcoesSomVila) {
         prontos.has('final')
       ) {
         const t = Math.max(finalAgendado.t, ag + 0.01);
-        const f = tocar('final', t, { ganho: 1, bus: 'show' });
-        const a = tocar('aplauso', t + ATRASO_APLAUSO, { ganho: 1, bus: 'show' });
+        const f = tocar('final', t, { ganho: dbLin(REFORCO_FINAL_DB), bus: 'show' });
+        const a = tocar('aplauso', t + ATRASO_APLAUSO, {
+          ganho: dbLin(REFORCO_APLAUSO_DB),
+          bus: 'show',
+        });
         finalAgendado.fontes = [f, a].filter((x): x is Tocando => !!x);
       }
     }
@@ -868,6 +895,13 @@ export function criarSomVila(op: OpcoesSomVila) {
     if (Math.abs(f - calar) > 0.02 || (f === 0 && calar !== 0)) {
       calar = f;
       op.aoCalarTrilha?.(f);
+    }
+    // e com o show tocando perto, os passarinhos, os grilos e o vento baixam (as caixas soltas
+    // são o ambiente da zona: a natureza segue)
+    const fn = (!!showAtual || ag < showAte) && pronto ? gFestival : 0;
+    if (Math.abs(fn - calarNat) > 0.02 || (fn === 0 && calarNat !== 0)) {
+      calarNat = fn;
+      op.aoCalarNatureza?.(fn);
     }
     // o rádio para sozinho no fim dos compassos dele
     if (radio && (radio.parado || ag >= radio.fim)) radio = null;
@@ -1046,6 +1080,9 @@ export function criarSomVila(op: OpcoesSomVila) {
         relogio: relogio.dif,
         festival: Math.round(gFestival * 1000) / 1000,
         calar: Math.round(calar * 1000) / 1000,
+        calarNatureza: Math.round(calarNat * 1000) / 1000,
+        /** O ganho do barramento do palco agora (show, "Música" e distância). */
+        ganhoShow: ganhoBus,
         zona: zonaAgora,
         ambiente: amb?.id ?? null,
         radio: !!radio && !radio.parado && ag < radio.fim,
@@ -1082,6 +1119,9 @@ export function criarSomVila(op: OpcoesSomVila) {
       radio = null;
       if (calar !== 0) op.aoCalarTrilha?.(0);
       calar = 0;
+      if (calarNat !== 0) op.aoCalarNatureza?.(0);
+      calarNat = 0;
+      showAte = -Infinity;
       buffers.clear();
       prontos.clear();
       pacote = null;

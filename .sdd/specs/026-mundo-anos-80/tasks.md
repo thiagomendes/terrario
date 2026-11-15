@@ -76,4 +76,6 @@ Tamanho: **P** (até meio dia), **M** (1 a 2 dias), **G** (3 dias ou mais). Uma 
 
 Medidas: peças no nascer, no celular, 39 826 triângulos (37 270 depois da rodada 1; os carros têm três versões, de perto, de longe e bem de longe). Sem fumaça no show (decisão do dono).
 
+Mistura do show (dono, 15 nov: "a música da banda bem baixinha, até o passarinho mais alto"): o show soa 12 dB acima das caixas soltas (`REFORCO_SHOW_DB`), cheio em toda a plateia, da grade ao portão (`PALCO_CHEIO` 42, some em 72), e a natureza baixa 12 dB enquanto ele toca (`CALAR_NATUREZA_DB`, volta em ~3 s depois do aplauso); o acorde final +2 dB e o aplauso +4 dB. Medido na grade (ebur128, `VILA_SO=grade`): antes, meio do show -35,1 LUFS, igual à trilha e à natureza (-35,4 e -34,3); agora -27,6 LUFS (verso -29,4, refrão -26,1), 6,7 a 7,8 dB acima, e o acorde final -20,3 LUFS no pico. Os "Música" e "Natureza" das Configurações seguem valendo.
+
 Carros parados: modelos novos só deste mundo (`src/render/vila/carros.ts`): hatch em cunha, carrinho bolha, van pão de forma (a da banda grafite com o raio) e picape.

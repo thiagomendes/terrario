@@ -976,3 +976,119 @@ test('vídeo do passeio e do show', async ({ browser }) => {
   } else console.log('PASSEIO sem som');
   await ctx.close();
 });
+
+// ------------------------------------------------------------------ a mistura do show na grade
+
+/** O som gravado da página (`gravarSom`) num .wav estéreo de 16 bits. */
+function salvarWav(r: { taxa: number; l: string; r: string }, caminho: string) {
+  const l = Buffer.from(r.l, 'base64');
+  const rr = Buffer.from(r.r, 'base64');
+  const n = Math.min(l.length, rr.length) / 2;
+  const b = Buffer.alloc(44 + n * 4);
+  b.write('RIFF', 0);
+  b.writeUInt32LE(36 + n * 4, 4);
+  b.write('WAVE', 8);
+  b.write('fmt ', 12);
+  b.writeUInt32LE(16, 16);
+  b.writeUInt16LE(1, 20);
+  b.writeUInt16LE(2, 22);
+  b.writeUInt32LE(r.taxa, 24);
+  b.writeUInt32LE(r.taxa * 4, 28);
+  b.writeUInt16LE(4, 32);
+  b.writeUInt16LE(16, 34);
+  b.write('data', 36);
+  b.writeUInt32LE(n * 4, 40);
+  for (let k = 0; k < n; k++) {
+    b.writeInt16LE(l.readInt16LE(k * 2), 44 + k * 4);
+    b.writeInt16LE(rr.readInt16LE(k * 2), 46 + k * 4);
+  }
+  writeFileSync(caminho, b as unknown as string);
+}
+
+/**
+ * A régua da mistura do show (o dono: "a música da banda bem baixinha, até o passarinho mais
+ * alto"): a criança na grade da plateia, de dia (com os passarinhos). Grava `antes.wav` (7 s de
+ * cada: tudo, só a trilha, só a natureza; de dia e de noite) e `show.wav` + `show.webm` (o show
+ * inteiro na câmera do jogo, o acorde final pelo toque e a volta da natureza). `marcas.json` diz
+ * onde cada trecho começa, para medir com o ebur128 do ffmpeg.
+ */
+test('som do show na grade', async ({ browser }) => {
+  test.skip(!SO.includes('grade'), 'só com grade');
+  const ctx = await browser.newContext({ viewport: { width: 1280, height: 720 } });
+  const page = await ctx.newPage();
+  await abrir(page, 8);
+  const p = await plano(page);
+  const H = p.h + 1;
+  const pal = p.pontos.palco;
+  const pass = p.pontos.passarela;
+  const topo = pal.y + 1;
+  const naGrade = async () => {
+    await page.evaluate(
+      ([x, z, y]) => {
+        const e = window.__brumaluz!;
+        e.voar?.(false);
+        e.teleportar!(x, z, y);
+      },
+      [pass[0] - 2.6, p.pontos.plateia.z1 - 3, H + 0.2] as const,
+    );
+    await page.waitForTimeout(900);
+    await page.evaluate(([x, y, z]) => window.__brumaluz!.mirarPonto?.(x, y, z), [
+      pass[0] - 3.4,
+      topo + 1.6,
+      pass[2],
+    ] as const);
+  };
+  await ir(page, pass[0], pal.z0 + 8, topo + 0.3);
+  await page.mouse.click(640, 420);
+  await page.waitForTimeout(500);
+  await caixas(page, false);
+  await naGrade();
+  await page.waitForTimeout(4000);
+  mkdirSync(PASTA, { recursive: true });
+  const vol = (m: number | null, n: number | null) =>
+    page.evaluate(([m, n]) => window.__brumaluz!.volumesAmbiente?.(m, n), [m, n] as const);
+  // 1. antes do show: 6 trechos de 7 s
+  const somA = page.evaluate(() => window.__brumaluz!.gravarSom?.(44) ?? null);
+  for (const h of ['dia', 'noite'] as Hora[]) {
+    await page.evaluate((v) => (window.__brumaluz!.hora = v), HORAS[h]);
+    await vol(null, null);
+    await page.waitForTimeout(7000);
+    await vol(null, 0);
+    await page.waitForTimeout(7000);
+    await vol(0, null);
+    await page.waitForTimeout(7000);
+  }
+  await vol(null, null);
+  await page.evaluate(() => window.__brumaluz!.pararSom?.());
+  const ra = await somA;
+  if (ra) salvarWav(ra, `${PASTA}/antes.wav`);
+  else console.log('GRADE sem som');
+  // 2. o show de dia, com a criança na grade
+  await page.evaluate((v) => (window.__brumaluz!.hora = v), HORAS.dia);
+  await page.waitForTimeout(3000);
+  await caixas(page, true);
+  await naGrade();
+  const somB = page.evaluate(() => window.__brumaluz!.gravarSom?.(70) ?? null);
+  const d0 = await decorrido(page);
+  await comecarGravacao(page, 30);
+  // dois toques no palco no refrão (o acorde da criança tem de se ouvir por cima da banda)
+  const toques: number[] = [];
+  for (const t of [24, 28]) {
+    toques.push(await ate(page, t));
+    await page.evaluate(() => window.__brumaluz!.vilaComando!({ a: 'palco' }));
+  }
+  const tapa = await ate(page, 37.9);
+  await page.evaluate(() => window.__brumaluz!.vilaComando!({ a: 'palco' }));
+  for (let i = 0; i < 300 && (await decorrido(page)) >= 0; i++) await page.waitForTimeout(100);
+  await page.waitForTimeout(9000);
+  await pararGravacao(page, `${PASTA}/show.webm`);
+  await page.evaluate(() => window.__brumaluz!.pararSom?.());
+  const rb = await somB;
+  if (rb) salvarWav(rb, `${PASTA}/show.wav`);
+  writeFileSync(
+    `${PASTA}/marcas.json`,
+    JSON.stringify({ showNoInicioDaGravacao: d0, toques, toque: tapa }),
+  );
+  console.log(`GRADE show em ${d0} s quando a gravação começou; toque em ${tapa}`);
+  await ctx.close();
+});
