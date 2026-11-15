@@ -335,6 +335,24 @@ export interface PovoadoTema {
    * pedreiro da cidade usa o capacete e o colete de obra que a criança ganha no canteiro.
    */
   fantasias?: Partial<Record<Profissao, FantasiaVestida>>;
+  /**
+   * Spec 026: moradores de posto com nome, corpo e roupa próprios (o vocalista, a dançarina,
+   * o patinador da Vila Neon), pela chave "povoado:n". Sem a entrada, vale a profissão.
+   */
+  porMorador?: Record<
+    string,
+    {
+      nome: string;
+      genero: 'f' | 'm';
+      /** O que ele faz (a etiqueta das trocas): "Vocalista", "Dançarina". */
+      titulo?: string;
+      /** Sem trocas (o vocalista dá o pôster; a dançarina e o patinador só acenam). */
+      semTrocas?: true;
+      pecas?: PecaCriatura[];
+      acessorio?: Acessorio;
+      fantasia?: FantasiaVestida;
+    }
+  >;
   movimento: MovimentoCriatura;
   vozes: VozCriatura & { obrigado: PioCriatura };
   textos: {

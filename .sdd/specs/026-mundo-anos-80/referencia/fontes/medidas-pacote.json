@@ -1,0 +1,656 @@
+{
+ "musica": {
+  "pacoteBytes": 1269951,
+  "pacoteKB": 1240.2,
+  "segundosDecodificados": 157.4,
+  "memoriaMB24k": 14.41,
+  "memoriaMBTaxaDoArquivo": 13.24,
+  "memoriaMB48k": 28.83,
+  "metas": {
+   "downloadMenorQue2MB": true,
+   "memoria24kMenorQue15MB": true
+  },
+  "andamento": 120,
+  "compassos": 16,
+  "segundosVolta": 32.0,
+  "ganhosDb": {
+   "base": 1.26,
+   "dia": 6.46,
+   "entardecer": 5.05,
+   "noite": -0.21,
+   "mov": 16.59,
+   "amigos": 11.46,
+   "pingos": 8.89
+  },
+  "mixes": {
+   "dia": {
+    "rmsDb": -24.6,
+    "picoDb": -11.85,
+    "cortes": 0,
+    "ganhos": {
+     "base": 1,
+     "frases dia": 1
+    }
+   },
+   "entardecer": {
+    "rmsDb": -25.08,
+    "picoDb": -10.65,
+    "cortes": 0,
+    "ganhos": {
+     "base": 1,
+     "frases entardecer": 1
+    }
+   },
+   "noite": {
+    "rmsDb": -27.5,
+    "picoDb": -14.36,
+    "cortes": 0,
+    "ganhos": {
+     "base": 0.65,
+     "noite": 1
+    }
+   },
+   "chuva (dia, sem o filtro)": {
+    "rmsDb": -24.45,
+    "picoDb": -11.05,
+    "cortes": 0,
+    "ganhos": {
+     "base": 1,
+     "frases dia": 1,
+     "pingos": 1
+    }
+   },
+   "caverna (sem o filtro)": {
+    "rmsDb": -27.64,
+    "picoDb": -13.18,
+    "cortes": 0,
+    "ganhos": {
+     "base": 0.6,
+     "noite": 1,
+     "pingos": 1
+    }
+   },
+   "andando": {
+    "rmsDb": -24.24,
+    "picoDb": -9.07,
+    "cortes": 0,
+    "ganhos": {
+     "base": 1,
+     "frases dia": 1,
+     "movimento": 0.6
+    }
+   },
+   "correndo": {
+    "rmsDb": -23.65,
+    "picoDb": -6.98,
+    "cortes": 0,
+    "ganhos": {
+     "base": 1,
+     "frases dia": 1,
+     "movimento": 1
+    }
+   },
+   "amigos (parado)": {
+    "rmsDb": -23.61,
+    "picoDb": -6.35,
+    "cortes": 0,
+    "ganhos": {
+     "base": 1,
+     "frases dia": 1,
+     "amigos": 1
+    }
+   },
+   "correndo + amigos": {
+    "rmsDb": -22.84,
+    "picoDb": -5.76,
+    "cortes": 0,
+    "ganhos": {
+     "base": 1,
+     "frases dia": 1,
+     "movimento": 1,
+     "amigos": 1
+    }
+   },
+   "tudo ligado (pior caso)": {
+    "rmsDb": -21.88,
+    "picoDb": -4.89,
+    "cortes": 0,
+    "ganhos": {}
+   }
+  },
+  "clips": {
+   "base": {
+    "segundos": 32.12,
+    "rmsDb": -25.79,
+    "kb": 251.6,
+    "picoDb": -13.68,
+    "cortes": 0,
+    "desvioCodificador": 0,
+    "naEscala": 0.932,
+    "centsMedio": 24.4,
+    "silencio": 0.0,
+    "emenda": {
+     "saltoDb": -51.07,
+     "passoTipicoDb": -56.72,
+     "erroPeriodicoDb": -50.05,
+     "saltoWav": 0.00281
+    }
+   },
+   "noite": {
+    "segundos": 32.12,
+    "rmsDb": -34.43,
+    "kb": 251.6,
+    "picoDb": -22.46,
+    "cortes": 0,
+    "desvioCodificador": 0,
+    "naEscala": 0.998,
+    "centsMedio": 4.3,
+    "silencio": 0.0,
+    "emenda": {
+     "saltoDb": -62.71,
+     "passoTipicoDb": -55.84,
+     "erroPeriodicoDb": -71.88,
+     "saltoWav": 0.00082
+    }
+   },
+   "amigos": {
+    "segundos": 4.12,
+    "rmsDb": -30.54,
+    "kb": 32.9,
+    "picoDb": -9.35,
+    "cortes": 0,
+    "desvioCodificador": 0,
+    "naEscala": null,
+    "centsMedio": null,
+    "silencio": 0.0,
+    "emenda": {
+     "saltoDb": -56.03,
+     "passoTipicoDb": -51.24,
+     "erroPeriodicoDb": -53.41,
+     "saltoWav": 0.00084
+    }
+   },
+   "mov": {
+    "segundos": 2.12,
+    "rmsDb": -30.75,
+    "kb": 17.3,
+    "picoDb": -10.84,
+    "cortes": 0,
+    "desvioCodificador": 0,
+    "naEscala": null,
+    "centsMedio": null,
+    "silencio": 0.0,
+    "emenda": {
+     "saltoDb": -57.07,
+     "passoTipicoDb": -39.94,
+     "erroPeriodicoDb": -17.15,
+     "saltoWav": 0.00585
+    }
+   },
+   "pingos": {
+    "segundos": 8.12,
+    "rmsDb": -38.8,
+    "kb": 64.1,
+    "picoDb": -21.94,
+    "cortes": 0,
+    "desvioCodificador": 0,
+    "naEscala": 0.999,
+    "centsMedio": 2.8,
+    "silencio": 0.544,
+    "emenda": {
+     "saltoDb": -39.02,
+     "passoTipicoDb": -77.32,
+     "erroPeriodicoDb": -55.59,
+     "saltoWav": 0.01112
+    }
+   },
+   "dia_a_1": {
+    "segundos": 8.76,
+    "rmsDb": -31.27,
+    "kb": 69.2,
+    "picoDb": -23.2,
+    "cortes": 0,
+    "desvioCodificador": 0,
+    "naEscala": 0.992,
+    "centsMedio": 5.4,
+    "silencio": 0.0
+   },
+   "dia_a_2": {
+    "segundos": 8.76,
+    "rmsDb": -31.26,
+    "kb": 69.2,
+    "picoDb": -20.56,
+    "cortes": 0,
+    "desvioCodificador": 0,
+    "naEscala": 0.993,
+    "centsMedio": 5.6,
+    "silencio": 0.0
+   },
+   "tarde_a_1": {
+    "segundos": 8.76,
+    "rmsDb": -33.68,
+    "kb": 69.2,
+    "picoDb": -16.71,
+    "cortes": 0,
+    "desvioCodificador": 0,
+    "naEscala": 0.873,
+    "centsMedio": 8.8,
+    "silencio": 0.0
+   },
+   "dia_a2_1": {
+    "segundos": 8.76,
+    "rmsDb": -31.09,
+    "kb": 69.2,
+    "picoDb": -22.81,
+    "cortes": 0,
+    "desvioCodificador": 0,
+    "naEscala": 0.995,
+    "centsMedio": 5.5,
+    "silencio": 0.0
+   },
+   "tarde_a2_1": {
+    "segundos": 8.76,
+    "rmsDb": -33.93,
+    "kb": 69.2,
+    "picoDb": -17.12,
+    "cortes": 0,
+    "desvioCodificador": 0,
+    "naEscala": 0.88,
+    "centsMedio": 9.3,
+    "silencio": 0.006
+   },
+   "dia_bx_1": {
+    "segundos": 8.76,
+    "rmsDb": -30.92,
+    "kb": 69.2,
+    "picoDb": -22.69,
+    "cortes": 0,
+    "desvioCodificador": 0,
+    "naEscala": 0.992,
+    "centsMedio": 5.9,
+    "silencio": 0.0
+   },
+   "tarde_bx_1": {
+    "segundos": 8.76,
+    "rmsDb": -33.61,
+    "kb": 69.2,
+    "picoDb": -17.0,
+    "cortes": 0,
+    "desvioCodificador": 0,
+    "naEscala": 0.837,
+    "centsMedio": 11.1,
+    "silencio": 0.0
+   },
+   "dia_by_1": {
+    "segundos": 8.76,
+    "rmsDb": -31.34,
+    "kb": 69.2,
+    "picoDb": -22.79,
+    "cortes": 0,
+    "desvioCodificador": 0,
+    "naEscala": 0.988,
+    "centsMedio": 6.1,
+    "silencio": 0.031
+   },
+   "tarde_by_1": {
+    "segundos": 8.76,
+    "rmsDb": -33.35,
+    "kb": 69.2,
+    "picoDb": -16.95,
+    "cortes": 0,
+    "desvioCodificador": 0,
+    "naEscala": 0.907,
+    "centsMedio": 9.0,
+    "silencio": 0.0
+   }
+  }
+ },
+ "show": {
+  "pacoteBytes": 1015807,
+  "pacoteKB": 992.0,
+  "segundosDecodificados": 124.2,
+  "memoriaMB22kTudoAberto": 10.44,
+  "mix": {
+   "refraoRmsDb": -23.6,
+   "versoRmsDb": -24.82,
+   "subidaRmsDb": -24.42,
+   "showRmsDb": -24.22,
+   "picoDb": -8.37,
+   "sozinha": {
+    "bateria": -28.52,
+    "guitarra": -28.52,
+    "teclado": -29.47
+   },
+   "ganhosDb": {
+    "bateria": 0.26,
+    "guitarra": -0.75,
+    "teclado": 10.55
+   }
+  },
+  "clips": {
+   "bateria_verso": {
+    "segundos": 8.0,
+    "rmsDb": -28.22,
+    "ativoDb": -28.08,
+    "picoDb": -11.22,
+    "cortes": 0,
+    "desvioCodificador": 0,
+    "kb": 64.1,
+    "emendaSaltoDb": -39.93
+   },
+   "bateria_refrao": {
+    "segundos": 8.7,
+    "rmsDb": -29.16,
+    "ativoDb": -29.08,
+    "picoDb": -11.76,
+    "cortes": 0,
+    "desvioCodificador": 0,
+    "kb": 69.2
+   },
+   "bateria_subida": {
+    "segundos": 8.7,
+    "rmsDb": -28.91,
+    "ativoDb": -28.76,
+    "picoDb": -11.77,
+    "cortes": 0,
+    "desvioCodificador": 0,
+    "kb": 69.2
+   },
+   "guitarra_verso": {
+    "segundos": 8.0,
+    "rmsDb": -28.89,
+    "ativoDb": -28.89,
+    "picoDb": -16.71,
+    "cortes": 0,
+    "desvioCodificador": 0,
+    "kb": 64.1,
+    "emendaSaltoDb": -56.16
+   },
+   "guitarra_refrao": {
+    "segundos": 8.7,
+    "rmsDb": -28.12,
+    "ativoDb": -27.86,
+    "picoDb": -15.08,
+    "cortes": 0,
+    "desvioCodificador": 0,
+    "kb": 69.2
+   },
+   "guitarra_subida": {
+    "segundos": 8.7,
+    "rmsDb": -29.99,
+    "ativoDb": -29.65,
+    "picoDb": -16.99,
+    "cortes": 0,
+    "desvioCodificador": 0,
+    "kb": 69.2
+   },
+   "teclado_verso": {
+    "segundos": 8.0,
+    "rmsDb": -31.7,
+    "ativoDb": -31.7,
+    "picoDb": -22.08,
+    "cortes": 0,
+    "desvioCodificador": 0,
+    "kb": 64.1,
+    "emendaSaltoDb": -47.42
+   },
+   "teclado_refrao": {
+    "segundos": 8.7,
+    "rmsDb": -28.55,
+    "ativoDb": -28.37,
+    "picoDb": -15.14,
+    "cortes": 0,
+    "desvioCodificador": 0,
+    "kb": 69.2
+   },
+   "teclado_subida": {
+    "segundos": 8.7,
+    "rmsDb": -29.4,
+    "ativoDb": -29.22,
+    "picoDb": -16.36,
+    "cortes": 0,
+    "desvioCodificador": 0,
+    "kb": 69.2
+   },
+   "contagem": {
+    "segundos": 2.7,
+    "rmsDb": -27.18,
+    "ativoDb": -27.02,
+    "picoDb": -9.72,
+    "cortes": 0,
+    "desvioCodificador": 0,
+    "kb": 22.2
+   },
+   "acorde_0": {
+    "segundos": 2.2,
+    "rmsDb": -25.0,
+    "ativoDb": -21.99,
+    "picoDb": -9.12,
+    "cortes": 0,
+    "desvioCodificador": 0,
+    "kb": 18.4
+   },
+   "acorde_1": {
+    "segundos": 2.2,
+    "rmsDb": -25.01,
+    "ativoDb": -22.0,
+    "picoDb": -7.75,
+    "cortes": 0,
+    "desvioCodificador": 0,
+    "kb": 18.4
+   },
+   "acorde_2": {
+    "segundos": 2.2,
+    "rmsDb": -24.98,
+    "ativoDb": -21.97,
+    "picoDb": -9.19,
+    "cortes": 0,
+    "desvioCodificador": 0,
+    "kb": 18.4
+   },
+   "final": {
+    "segundos": 5.6,
+    "rmsDb": -21.85,
+    "ativoDb": -20.5,
+    "picoDb": -4.54,
+    "cortes": 0,
+    "desvioCodificador": 0,
+    "kb": 44.9
+   },
+   "aplauso": {
+    "segundos": 4.6,
+    "rmsDb": -27.89,
+    "ativoDb": -27.0,
+    "picoDb": -9.43,
+    "cortes": 0,
+    "desvioCodificador": 0,
+    "kb": 37.1
+   },
+   "uhuu": {
+    "segundos": 1.4,
+    "rmsDb": -26.87,
+    "ativoDb": -26.01,
+    "picoDb": -14.78,
+    "cortes": 0,
+    "desvioCodificador": 0,
+    "kb": 12.0
+   },
+   "batida": {
+    "segundos": 4.0,
+    "rmsDb": -28.01,
+    "ativoDb": -27.55,
+    "picoDb": -12.83,
+    "cortes": 0,
+    "desvioCodificador": 0,
+    "kb": 32.9,
+    "emendaSaltoDb": -34.57
+   },
+   "estojo": {
+    "segundos": 1.7,
+    "rmsDb": -23.96,
+    "ativoDb": -23.12,
+    "picoDb": -6.8,
+    "cortes": 0,
+    "desvioCodificador": 0,
+    "kb": 14.5
+   },
+   "ladrilho": {
+    "segundos": 1.7,
+    "rmsDb": -25.53,
+    "ativoDb": -23.01,
+    "picoDb": -8.59,
+    "cortes": 0,
+    "desvioCodificador": 0,
+    "kb": 14.5
+   },
+   "tum": {
+    "segundos": 1.7,
+    "rmsDb": -28.32,
+    "ativoDb": -23.01,
+    "picoDb": -9.41,
+    "cortes": 0,
+    "desvioCodificador": 0,
+    "kb": 14.5
+   },
+   "fliperama_0": {
+    "segundos": 2.275,
+    "rmsDb": -23.35,
+    "ativoDb": -23.0,
+    "picoDb": -12.21,
+    "cortes": 0,
+    "desvioCodificador": 0,
+    "kb": 19.0
+   },
+   "fliperama_1": {
+    "segundos": 2.087,
+    "rmsDb": -23.3,
+    "ativoDb": -23.01,
+    "picoDb": -11.55,
+    "cortes": 0,
+    "desvioCodificador": 0,
+    "kb": 17.5
+   },
+   "fliperama_2": {
+    "segundos": 2.181,
+    "rmsDb": -23.27,
+    "ativoDb": -23.0,
+    "picoDb": -9.11,
+    "cortes": 0,
+    "desvioCodificador": 0,
+    "kb": 18.2
+   },
+   "fita": {
+    "segundos": 1.05,
+    "rmsDb": -23.67,
+    "ativoDb": -23.0,
+    "picoDb": -14.62,
+    "cortes": 0,
+    "desvioCodificador": 0,
+    "kb": 9.4
+   },
+   "rodinhas": {
+    "segundos": 0.5,
+    "rmsDb": -23.01,
+    "ativoDb": -23.0,
+    "picoDb": -9.76,
+    "cortes": 0,
+    "desvioCodificador": 0,
+    "kb": 5.1
+   },
+   "campainha": {
+    "segundos": 1.0,
+    "rmsDb": -23.01,
+    "ativoDb": -23.0,
+    "picoDb": -13.3,
+    "cortes": 0,
+    "desvioCodificador": 0,
+    "kb": 9.0
+   },
+   "orelhao": {
+    "segundos": 1.3,
+    "rmsDb": -24.15,
+    "ativoDb": -23.01,
+    "picoDb": -12.87,
+    "cortes": 0,
+    "desvioCodificador": 0,
+    "kb": 11.4
+   },
+   "lhama": {
+    "segundos": 0.95,
+    "rmsDb": -23.49,
+    "ativoDb": -23.0,
+    "picoDb": -13.41,
+    "cortes": 0,
+    "desvioCodificador": 0,
+    "kb": 8.6
+   },
+   "radio_liga": {
+    "segundos": 0.26,
+    "rmsDb": -23.17,
+    "ativoDb": -23.0,
+    "picoDb": -11.05,
+    "cortes": 0,
+    "desvioCodificador": 0,
+    "kb": 3.3
+   },
+   "radio_desliga": {
+    "segundos": 0.2,
+    "rmsDb": -23.01,
+    "ativoDb": -23.01,
+    "picoDb": -10.26,
+    "cortes": 0,
+    "desvioCodificador": 0,
+    "kb": 2.7
+   },
+   "neon": {
+    "segundos": 4.0,
+    "rmsDb": -36.01,
+    "ativoDb": -36.01,
+    "picoDb": -31.01,
+    "cortes": 0,
+    "desvioCodificador": 0,
+    "kb": 32.9,
+    "emendaSaltoDb": -81.49
+   }
+  },
+  "regua": "RMS no MP3 decodificado; \"ativo\" = janelas de 50 ms acima de -40 dB do pico; pico <= -1 dBFS"
+ },
+ "indice": {
+  "bytes": 156387
+ },
+ "nivel": {
+  "lufs": {
+   "rancho-alegre": {
+    "dia": -25.29,
+    "tarde": -25.87,
+    "noite": -28.4,
+    "caverna": -28.91
+   },
+   "cidade-grande": {
+    "dia": -25.95,
+    "tarde": -26.72,
+    "noite": -28.83,
+    "caverna": -29.3
+   },
+   "vila-neon": {
+    "dia": -26.33,
+    "tarde": -26.48,
+    "noite": -30.7,
+    "caverna": -31.05
+   },
+   "show": {
+    "inteiro": -24.29,
+    "refrao": -23.22,
+    "verso": -25.93
+   }
+  },
+  "nivelTrilhaVila": {
+   "dia": 0.7,
+   "tarde": 0.4,
+   "noite": 4.6,
+   "caverna": 4.9
+  },
+  "como": "nivel = média(LUFS_ref + NIVEL_TRILHA_ref) - LUFS_vila, com ref = Rancho e Cidade (afinados na régua da 019 e da 014)",
+  "showAcimaDaTrilhaDiaDb": 2.04
+ }
+}

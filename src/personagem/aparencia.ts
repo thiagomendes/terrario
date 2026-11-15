@@ -70,6 +70,11 @@ export interface Aparencia {
    */
   premium?: PremiumVestido;
   /**
+   * Spec 026: de patins (só na Vila Neon: o aparelho põe neste mundo e tira nos outros; nunca
+   * vai salvo com a aparência). Sem patins, o campo não existe.
+   */
+  patins?: true;
+  /**
    * Spec 023 (T09): presentes de nível que os amigos veem. A etiqueta do nome colorida (nível
    * 2) ou com estrela (nível 7) e o balão com estrelinha (nível 6). O aparelho põe quando a
    * criança chega ao nível; sem nenhum, os campos não existem.
@@ -410,6 +415,8 @@ export function normalizarAparencia(entrada: unknown): Aparencia {
   // spec 023: idem para os premium vestidos
   const premium = normalizarPremium(obj.premium);
   if (premium) a.premium = premium;
+  // spec 026: os patins da Vila Neon (só o sim; qualquer outra coisa some)
+  if (obj.patins === true) a.patins = true;
   // spec 023 (T09): os presentes de nível que os amigos veem
   if (obj.etiqueta === 'cor' || obj.etiqueta === 'estrela') a.etiqueta = obj.etiqueta;
   if (obj.balao === 'estrela') a.balao = 'estrela';

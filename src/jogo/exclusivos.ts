@@ -73,9 +73,12 @@ export const BLOCOS_SO_DA_VILA: readonly number[] = [
 ];
 
 /** Spec 026: o que a Vila Neon tem: os blocos de rua da cidade e os seus (103 em diante). */
+/** Spec 026: a comida da barraca do lanche da Vila Neon (só daqui). */
+export const CACHORRO_QUENTE = 'cachorro_quente';
+export const SUCO = 'suco';
 export const EXCLUSIVOS_VILA: Exclusivos = {
   blocos: [...BLOCOS_DE_RUA, ...BLOCOS_SO_DA_VILA],
-  itens: [],
+  itens: [CACHORRO_QUENTE, SUCO],
 };
 
 /**

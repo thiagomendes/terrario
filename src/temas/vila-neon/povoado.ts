@@ -86,6 +86,41 @@ export const POVOADO_VILA: PovoadoTema = {
     'Gui',
   ],
   moradores: MORADORES,
+  // spec 026 (T08): os moradores de posto do bairro, cada um com nome e roupa própria; a roupa
+  // do vocalista, da dançarina e do patinador vem das fantasias do tema (F5)
+  porMorador: {
+    'vila:0': {
+      nome: 'Rafa',
+      genero: 'm',
+      titulo: 'Vocalista',
+      pecas: MORADORES.ferreiro,
+      semTrocas: true,
+    },
+    'vila:1': { nome: 'Kika', genero: 'f', titulo: 'Roadie', pecas: MORADORES.construtor },
+    'vila:2': { nome: 'Lili', genero: 'f', titulo: 'Guitarrista', pecas: MORADORES.ferreiro },
+    'vila:3': { nome: 'Bia', genero: 'f', titulo: 'Moça do lanche', pecas: MORADORES.cozinheiro },
+    'vila:4': {
+      nome: 'Mel',
+      genero: 'f',
+      titulo: 'Dançarina',
+      pecas: MORADORES.cozinheiro,
+      semTrocas: true,
+    },
+    'vila:5': {
+      nome: 'Zeca',
+      genero: 'm',
+      titulo: 'Patinador',
+      pecas: MORADORES.construtor,
+      semTrocas: true,
+    },
+    'vila:6': {
+      nome: 'Tati',
+      genero: 'f',
+      titulo: 'Moça da lanchonete',
+      pecas: MORADORES.cozinheiro,
+    },
+    'vila:7': { nome: 'Beto', genero: 'm', titulo: 'Moço da banca', pecas: MORADORES.construtor },
+  },
   // passo animado de quem anda ouvindo música
   movimento: { saltita: 0.03, flutua: 0, ginga: 0.06 },
   vozes: {

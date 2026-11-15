@@ -1144,6 +1144,12 @@ export interface Ambiente {
    * nos graves-médios, onde o motor soa), em rampa macia de ~1 s.
    */
   definirAbaixar(f: number): void;
+  /**
+   * Spec 026: cala a trilha (gravada e sintetizada) enquanto o show da Vila Neon toca perto: `f`
+   * de 0 (nada) a 1 (`CALAR_TRILHA_DB`), em rampa macia de ~1,5 s (uma música por vez, a regra
+   * da 019). Os bichos e o vento seguem.
+   */
+  definirCalar(f: number): void;
 }
 
 /** Spec 014 (T15): quanto a trilha abaixa com um carrinho andando perto (dB). */
@@ -1167,6 +1173,16 @@ export function respostaDaTrilhaAbaixada(freq: number, f: number): number {
 
 /** Constante de tempo da rampa (s): ~1 s até chegar. */
 const TAU_ABAIXAR = 0.33;
+
+/** Spec 026: quanto a trilha some com o show da Vila Neon tocando perto (dB). */
+export const CALAR_TRILHA_DB = 24;
+/** E a rampa (s): ~1,5 s até chegar. */
+const TAU_CALAR = 0.5;
+
+/** O ganho da trilha calada pelo show (f de 0 a 1). */
+export function ganhoCalar(f: number): number {
+  return Math.pow(10, (-CALAR_TRILHA_DB * Math.max(0, Math.min(1, f))) / 20);
+}
 
 /** Spec 014: os sons gravados do ambiente da cidade (`ambiente` no índice de sons). */
 export type SomDaRua = 'pardal' | 'buzininha' | 'grilo';
@@ -1362,6 +1378,8 @@ export function iniciarAmbiente(
   let vale: FiltroSom | null = null;
   let valeMedios: FiltroSom | null = null;
   let fAbaixar = 0;
+  let calar: GanhoSom | null = null;
+  let fCalar = 0;
   let sintetizada = 1;
   /** Até quando a sintetizada ainda soa (a rampa para 0 acaba aqui). */
   let sintetizadaAte = Infinity;
@@ -1694,7 +1712,11 @@ export function iniciarAmbiente(
         if (valeMedios.gain) valeMedios.gain.value = -VALE_MEDIOS_TRILHA_DB * fAbaixar;
         abaixar.connect(vale);
         vale.connect(valeMedios);
-        valeMedios.connect(mestre);
+        // spec 026: e pelo calar do show da Vila Neon
+        calar = ctx.createGain() as GanhoSom;
+        calar.gain.value = ganhoCalar(fCalar);
+        valeMedios.connect(calar);
+        calar.connect(mestre);
         busMusica.connect(abaixar);
         busSintetizada = ctx.createGain() as GanhoSom;
         busSintetizada.gain.value = sintetizada;
@@ -1832,6 +1854,17 @@ export function iniciarAmbiente(
         | undefined;
       if (gm?.setTargetAtTime) gm.setTargetAtTime(-VALE_MEDIOS_TRILHA_DB * alvo, t, TAU_ABAIXAR);
       else if (gm) gm.value = -VALE_MEDIOS_TRILHA_DB * alvo;
+    },
+    definirCalar(f) {
+      const alvo = Math.max(0, Math.min(1, f));
+      if (Math.abs(alvo - fCalar) < 0.01) return;
+      fCalar = alvo;
+      if (!ctxA || !calar) return;
+      const g = calar.gain as ParamEnvelope & {
+        setTargetAtTime?(v: number, t: number, k: number): void;
+      };
+      if (g.setTargetAtTime) g.setTargetAtTime(ganhoCalar(alvo), ctxA.currentTime, TAU_CALAR);
+      else g.value = ganhoCalar(alvo);
     },
     definirVolumes(musica, natureza) {
       volMusica = musica;

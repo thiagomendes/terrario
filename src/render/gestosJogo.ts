@@ -15,6 +15,7 @@ import {
   type IdGesto,
 } from '../personagem/gestos';
 import type { Animador } from '../player/animacao';
+import { tema } from '../temas/ativo';
 import type { Comando, EventoNucleo } from '../nucleo/protocolo';
 import { criarBalao, type BalaoGesto } from './balaoGesto';
 import type { Roda } from '../ui/roda';
@@ -76,7 +77,7 @@ export function criarGestosJogo(op: OpcoesGestosJogo): GestosJogo {
   // diante, o balão tem estrelinha)
   let nivel = 1;
   const itensDaRoda = () =>
-    gestosLiberados(nivel).map((g) => ({
+    gestosLiberados(nivel, tema().id).map((g) => ({
       id: g.id,
       nome: g.nome,
       icone: svgDoIcone(ICONES_GESTOS[g.id]),

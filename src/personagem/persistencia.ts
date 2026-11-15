@@ -16,7 +16,10 @@ export function salvarAparencia(
 ): boolean {
   if (!armazenamento) return false;
   try {
-    const dado = { versao: VERSAO_APARENCIA, aparencia: normalizarAparencia(aparencia) };
+    // spec 026: os patins são da Vila Neon (do mundo), nunca da aparência guardada
+    const limpa = normalizarAparencia(aparencia);
+    delete limpa.patins;
+    const dado = { versao: VERSAO_APARENCIA, aparencia: limpa };
     armazenamento.setItem(CHAVE_APARENCIA, JSON.stringify(dado));
     return true;
   } catch {
@@ -34,7 +37,9 @@ export function carregarAparencia(armazenamento: Armazenamento | null): Aparenci
     if (typeof dado !== 'object' || dado === null) return aparenciaPadrao();
     const obj = dado as Record<string, unknown>;
     if (obj.versao !== VERSAO_APARENCIA) return aparenciaPadrao();
-    return normalizarAparencia(obj.aparencia);
+    const a = normalizarAparencia(obj.aparencia);
+    delete a.patins;
+    return a;
   } catch {
     return aparenciaPadrao();
   }

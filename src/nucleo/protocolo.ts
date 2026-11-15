@@ -20,6 +20,7 @@ import type { DonosExportados, DonosMudados } from '../world/edicoes';
 import type { PlanoVeiculo } from '../jogo/veiculos';
 import type { OcorrenciaVeiculo } from '../jogo/transito';
 import type { Ganho, MissaoMovida, RecusaBanca, VistaAlmaMundo } from '../jogo/alma';
+import type { EventoVila, VilaVista } from './vila';
 
 /** Sobe quando uma mensagem muda de formato (cliente e servidor precisam concordar). */
 export const VERSAO_PROTOCOLO = 1;
@@ -168,7 +169,13 @@ type ComandoSemSeq =
    * mora nele até a 024); o núcleo confere o tema, o saldo, o intervalo e o limite, entrega
    * e responde `almaCompra` (só então o aparelho desconta) ou `almaCompraRecusada`.
    */
-  | { t: 'comprarBanca'; item: string; saldo: number };
+  | { t: 'comprarBanca'; item: string; saldo: number }
+  /**
+   * Spec 026 (Vila Neon): tocar numa caixa do palco (`i`, 0 a 2) ou no palco (um acorde no
+   * show). O núcleo confere o lugar, o show e o limite de toques por segundo.
+   */
+  | { t: 'vila'; a: 'caixa'; i: number }
+  | { t: 'vila'; a: 'palco' };
 
 /** Atalhos de teste e captura (o servidor da nuvem só aceita em ambiente de testes). */
 export type Depuracao =
@@ -281,6 +288,8 @@ export type ConteinerVisto =
 
 /** Fatos do mundo para som, efeitos, avisos e diário. */
 export type EventoNucleo =
+  /** Spec 026: o acorde no palco, o acorde final, o estojo achado, a caixa, a lhama, o pôster. */
+  | EventoVila
   | { e: 'quebra'; x: number; y: number; z: number; bloco: number; meu: boolean }
   | { e: 'colocacao'; x: number; y: number; z: number; bloco: number; meu: boolean }
   /**
@@ -437,6 +446,8 @@ export interface Quadro {
   donosNovos?: DonosMudados;
   /** Spec 014 (T13): o relógio e os planos dos veículos (só na Cidade Grande). */
   veiculos?: VeiculosQuadro;
+  /** Spec 026: o estado da Vila Neon (o show, os instrumentos, as caixas, as lhamas). */
+  vila?: VilaVista;
 }
 
 /** Parte do salvamento que pertence ao núcleo (o cliente junta a câmera, o diário e o mapa). */

@@ -198,10 +198,11 @@ describe('o que é só da cidade', () => {
     const pista: Troca = { ...troca, receber: { item: idDoBloco(Bloco.PISTA_NEON), qtd: 4 } };
     expect(trocaNoMundo(pista, VILA.mundo)).toBe(true);
     expect(trocaNoMundo(pista, estiloCidade)).toBe(false);
-    // no bairro não há roça: as trocas de fora da cidade (curral, feno, cama) também não entram
+    // no bairro não há roça: as trocas de fora da cidade (curral, feno, cama) também não entram;
+    // as do bairro (a roadie e a moça do lanche, T08) sim
     for (const p of PROFISSOES)
       expect(trocasDoMundo(p, VILA.mundo)).toEqual(
-        TROCAS[p].filter((x) => !x.planta && !x.foraDaCidade),
+        TROCAS[p].filter((x) => (!x.planta || x.planta === 'bairro') && !x.foraDaCidade),
       );
   });
 

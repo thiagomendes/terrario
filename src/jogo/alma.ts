@@ -15,12 +15,18 @@
  * nada expira, sem limite por dia, sem oferta por tempo; a moedinha não passa a outro jogador.
  */
 
-export type MundoAlma = 'cidade-grande' | 'rancho-alegre' | 'era-dos-dinos' | 'doce-reino';
+export type MundoAlma =
+  | 'cidade-grande'
+  | 'rancho-alegre'
+  | 'era-dos-dinos'
+  | 'doce-reino'
+  | 'vila-neon';
 export const MUNDOS_ALMA: readonly MundoAlma[] = [
   'cidade-grande',
   'rancho-alegre',
   'era-dos-dinos',
   'doce-reino',
+  'vila-neon',
 ];
 
 /**
@@ -28,6 +34,7 @@ export const MUNDOS_ALMA: readonly MundoAlma[] = [
  * a Cidade Grande, o sítio é o Rancho Alegre.
  */
 export function mundoAlmaDaPlanta(planta: string | undefined): MundoAlma | null {
+  if (planta === 'bairro') return 'vila-neon';
   return planta === 'cidade' ? 'cidade-grande' : planta === 'sitio' ? 'rancho-alegre' : null;
 }
 
@@ -360,6 +367,61 @@ export const MISSOES: readonly Missao[] = [
     habilidade: 'bichos',
     minutos: [1, 2],
   },
+  // ------------------------------------------------------------ Vila Neon (3, 15 moedinhas)
+  // spec 026 (parte 1, rodada 4): um estojo em cada zona, as lhamas do cercadinho da beira do
+  // campo até a grade, e o grande show; moedinhas só no fim de cada missão
+  {
+    id: 'f1',
+    mundo: 'vila-neon',
+    nome: 'Os instrumentos da banda',
+    desenho: {
+      tipo: 'arte',
+      principal: 'estojoRaio',
+      selo: 'lupa',
+      resultado: 'palcoInstrumentos',
+      bolinha: 'estojoRaio',
+      bolinhas: ['teclado', 'guitarraRaio', 'baquetas'],
+      placa: 'estojoRaio',
+    },
+    conta: { tipo: 'evento', chave: 'achou:instrumento', meta: 3 },
+    moedas: 4,
+    habilidade: 'explorador',
+    minutos: [1, 2],
+  },
+  {
+    id: 'f2',
+    mundo: 'vila-neon',
+    nome: 'Levar as lhamas para o show',
+    desenho: {
+      tipo: 'arte',
+      principal: 'lhama',
+      selo: 'feno',
+      resultado: 'lhamaNotinhas',
+      bolinha: 'lhama',
+      placa: 'lhama',
+    },
+    conta: { tipo: 'evento', chave: 'levou:lhama', meta: 2 },
+    moedas: 5,
+    habilidade: 'bichos',
+    minutos: [1, 2],
+  },
+  {
+    id: 'f3',
+    mundo: 'vila-neon',
+    nome: 'O grande show',
+    desenho: {
+      tipo: 'arte',
+      principal: 'caixaApagada',
+      selo: 'dedinho',
+      resultado: 'palcoAceso',
+      bolinha: 'caixaAcesa',
+      placa: 'caixaAcesa',
+    },
+    conta: { tipo: 'evento', chave: 'show:caixa', meta: 3 },
+    moedas: 6,
+    habilidade: 'construtor',
+    minutos: [1, 2],
+  },
 ];
 
 const POR_ID: ReadonlyMap<string, Missao> = new Map(MISSOES.map((m) => [m.id, m]));
@@ -407,6 +469,10 @@ export const GANHO_DE_EVENTO: Readonly<
   'escavou:fossil': { xp: 2, hab: ['explorador', 0.5] },
   'bolo:bloco': { xp: 1, hab: ['construtor', 0.2] },
   'bolo:camada': { xp: 0 },
+  // spec 026: o estojo achado, a lhama levada até a grade e a caixa do show acesa
+  'achou:instrumento': { xp: 3, hab: ['explorador', 0.5] },
+  'levou:lhama': { xp: 4, hab: ['bichos', 1] },
+  'show:caixa': { xp: 2, hab: ['construtor', 0.3] },
   // receita de comida (o pão e as outras): o núcleo manda a chave 'cozinhou' para o ganho
   cozinhou: { xp: 5, hab: ['cozinheiro', 1] },
   // receita que não é comida (ferramenta, bloco): pouco, e conta para o cozinheiro (pedido
@@ -452,7 +518,7 @@ export const HABILIDADES: readonly Habilidade[] = [
     desenho: 'construtor',
     cor: '#f28b2c',
     nome: 'Construtor',
-    mundos: ['cidade-grande', 'rancho-alegre', 'doce-reino'],
+    mundos: ['cidade-grande', 'rancho-alegre', 'doce-reino', 'vila-neon'],
     conta: 'blocos na obra, construções, trocas com o construtor',
   },
   {
@@ -460,7 +526,7 @@ export const HABILIDADES: readonly Habilidade[] = [
     desenho: 'explorador',
     cor: '#3f9ad8',
     nome: 'Explorador',
-    mundos: ['cidade-grande', 'rancho-alegre', 'era-dos-dinos'],
+    mundos: ['cidade-grande', 'rancho-alegre', 'era-dos-dinos', 'vila-neon'],
     conta: 'lugares novos, fósseis escavados',
   },
   {
@@ -468,7 +534,7 @@ export const HABILIDADES: readonly Habilidade[] = [
     desenho: 'bichos',
     cor: '#e05a7a',
     nome: 'Amigo dos bichos',
-    mundos: ['rancho-alegre', 'era-dos-dinos', 'doce-reino'],
+    mundos: ['rancho-alegre', 'era-dos-dinos', 'doce-reino', 'vila-neon'],
     conta:
       'bicho alimentado ou criado, ovos (o mesmo bicho não conta de novo em menos de 1 minuto)',
   },
@@ -736,6 +802,61 @@ export const BANCA: readonly ItemBanca[] = [
     item: 'bloco:38',
     qtd: 4,
     desenho: 'item:bloco:38',
+  },
+  // spec 026: a banca da Vila Neon (blocos do bairro; patins nunca: são de graça no suporte)
+  {
+    id: 'pista-neon',
+    mundo: 'vila-neon',
+    nome: 'Piso de pista que acende',
+    preco: 3,
+    item: 'bloco:106',
+    qtd: 12,
+    desenho: 'item:bloco:106',
+  },
+  {
+    id: 'poster',
+    mundo: 'vila-neon',
+    nome: 'Parede de pôster',
+    preco: 3,
+    item: 'bloco:108',
+    qtd: 4,
+    desenho: 'item:bloco:108',
+  },
+  {
+    id: 'letreiro-neon',
+    mundo: 'vila-neon',
+    nome: 'Letreiro de neon',
+    preco: 4,
+    item: 'bloco:107',
+    qtd: 4,
+    desenho: 'item:bloco:107',
+  },
+  {
+    id: 'faixa-neon',
+    mundo: 'vila-neon',
+    nome: 'Faixa de neon',
+    preco: 4,
+    item: 'bloco:115',
+    qtd: 6,
+    desenho: 'item:bloco:115',
+  },
+  {
+    id: 'caixa-som',
+    mundo: 'vila-neon',
+    nome: 'Caixa de som',
+    preco: 5,
+    item: 'bloco:104',
+    qtd: 2,
+    desenho: 'item:bloco:104',
+  },
+  {
+    id: 'trelica',
+    mundo: 'vila-neon',
+    nome: 'Treliça cromada',
+    preco: 5,
+    item: 'bloco:105',
+    qtd: 8,
+    desenho: 'item:bloco:105',
   },
 ];
 export function bancaDoMundo(mundo: MundoAlma): ItemBanca[] {

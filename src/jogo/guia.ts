@@ -14,6 +14,7 @@ import { frenteDaLoja, rotaPelaCidade, type LugarCidade } from '../world/ruasCid
 import { loteDoCanteiro, noLoteObra } from '../world/obras';
 import { frenteDaPorta, noLote, TAM_LOTE, type Lote, type PlanoPovoado } from '../world/povoado';
 import type { PlanoCanto } from '../world/cantoMissoes';
+import type { PlanoVila } from '../world/vilaNeon';
 
 // ------------------------------------------------------------------ o alvo
 /** Uma caixa no chão (inclusivo em x0/z0, exclusivo em x1/z1). */
@@ -74,6 +75,19 @@ export interface MundoDoGuia {
   bichos?(): readonly (MoradorVisto & { tipo?: string; criado?: boolean })[];
   /** Spec 031: os ovinhos no chão (o aparelho vê os itens soltos). */
   ovos?(): readonly { x: number; y: number; z: number }[];
+  /** Spec 026: a Vila Neon (null nos outros mundos). */
+  vila?: PlanoVila | null;
+  /** Spec 026: o estado do bairro (estojos achados, caixas acesas, lhamas na grade). */
+  estadoVila?(): {
+    ins: readonly boolean[];
+    cx: readonly boolean[];
+    show: unknown;
+    lhamas: readonly number[];
+  } | null;
+  /** Spec 026: a criança está com o feno na mão (a lhama já vem atrás). */
+  comFeno?(): boolean;
+  /** Spec 026: a altura dos pés da criança (no palco ou no chão). */
+  pesY?(): number;
 }
 
 const caixaDoLoteCidade = (l: LoteCidade): CaixaChao => ({
@@ -397,6 +411,7 @@ export function alvoDaMissao(
   atual: string | null = null,
 ): AlvoGuia | null {
   if (mundo.canto) return alvoNoCanto(m, mundo.canto, mundo, de, atual);
+  if (mundo.vila) return alvoNaVila(m, mundo.vila, mundo, de, atual);
   if (mundo.cidade) {
     const a = alvoNaCidade(m, mundo.cidade, vistos, de, mundo);
     if (a) return a;
@@ -531,6 +546,126 @@ function alvoNoCanto(
     raio: RAIO_CHEGAR_PERTO,
     caixa: { x0: k.x0 - 1, z0: k.z0 - 1, x1: k.x1 + 2, z1: k.z1 + 2 },
   };
+}
+
+// ------------------------------------------------------------------ a Vila Neon (spec 026)
+/** Perto do estojo: ele já foi achado (o núcleo confere a 1,6). */
+export const RAIO_ESTOJO = 1.3;
+/** Perto da lhama: o feno aparece na mão (o núcleo dá a 4). */
+export const RAIO_LHAMA = 3.2;
+
+function alvoNaVila(
+  m: Missao,
+  p: PlanoVila,
+  mundo: MundoDoGuia,
+  de: { x: number; z: number },
+  atual: string | null,
+): AlvoGuia | null {
+  const d = m.desenho;
+  const figura = d.tipo === 'arte' ? d.placa : 'estrela';
+  const c = m.conta;
+  if (c.tipo !== 'evento') return null;
+  const v = mundo.estadoVila?.() ?? null;
+  const pt = p.pontos;
+  if (c.chave === 'achou:instrumento') {
+    // o estojo mais perto que ainda está no chão (um em cada zona)
+    const lista = pt.estojos
+      .map((o, i) => ({ chave: `estojo:${i}`, x: o[0], y: o[1], z: o[2], i }))
+      .filter((o) => !v?.ins[o.i]);
+    const o = maisPerto(lista, de, atual);
+    if (!o) return null;
+    return {
+      chave: o.chave,
+      tipo: 'sitio',
+      x: o.x,
+      y: o.y,
+      z: o.z,
+      placa: [o.x, o.y - 1, o.z],
+      figura,
+      raio: RAIO_ESTOJO,
+    };
+  }
+  if (c.chave === 'levou:lhama') {
+    const g = pt.plateia;
+    const ce = pt.cercado;
+    const mx = (ce.x0 + ce.x1 + 1) / 2;
+    // com o feno na mão: a grade da plateia, de frente para o cercadinho (as lhamas vêm atrás)
+    if (mundo.comFeno?.()) {
+      const x = Math.max(g.x0 + 2, Math.min(g.x1 - 1, mx));
+      const z = g.z1 - 0.5;
+      return {
+        chave: 'grade',
+        tipo: 'sitio',
+        x,
+        y: p.h + 1,
+        z,
+        placa: [x, p.h + 1, g.z1 + 1],
+        figura,
+        raio: 1.6,
+      };
+    }
+    // sem feno: a lhama mais perto ainda no cercadinho (o feno aparece na mão perto dela)
+    const naGrade = new Set(v?.lhamas ?? []);
+    const lista = (mundo.bichos?.() ?? [])
+      .filter((b) => b.tipo === 'cervo' && !naGrade.has(b.id))
+      .filter((b) => b.x >= ce.x0 - 4 && b.x <= ce.x1 + 5 && b.z >= ce.z0 - 4 && b.z <= ce.z1 + 5)
+      .map((b) => ({ ...b, chave: `lhama:${b.id}` }));
+    const b = maisPerto(lista, de, atual);
+    if (!b) {
+      const [x, y, z] = pt.portaoCercado;
+      return {
+        chave: 'cercado',
+        tipo: 'sitio',
+        x,
+        y,
+        z,
+        placa: [x, y - 1, z],
+        figura,
+        raio: RAIO_LHAMA,
+      };
+    }
+    return {
+      chave: b.chave,
+      tipo: 'morador',
+      x: b.x,
+      y: b.y,
+      z: b.z,
+      placa: [b.x, b.y + 1.6, b.z],
+      figura,
+      raio: RAIO_LHAMA,
+      morador: b.id,
+    };
+  }
+  if (c.chave === 'show:caixa') {
+    // no palco ou já no pé da escadinha: as caixas (a trilha sobe a escadinha)
+    const noPalco =
+      (mundo.pesY?.() ?? 0) >= pt.palco.y + 0.9 ||
+      Math.hypot(de.x - pt.escadinha[0], de.z - pt.escadinha[2]) < 2.5;
+    // no palco: a próxima caixa apagada (o dedinho acende); com o show, a ponta da passarela
+    if (noPalco) {
+      const lista = pt.caixas
+        .map((q, i) => ({ chave: `caixa:${i}`, x: q[0] + 0.5, y: q[1], z: q[2] - 1, i }))
+        .filter((q) => !v?.cx[q.i]);
+      const q = maisPerto(lista, de, atual);
+      if (q)
+        return {
+          chave: q.chave,
+          tipo: 'sitio',
+          x: q.x,
+          y: q.y,
+          z: q.z,
+          placa: [q.x, q.y + 1, q.z + 1],
+          figura,
+          raio: 2.2,
+        };
+      const [x, y, z] = pt.passarela;
+      return { chave: 'passarela', tipo: 'sitio', x, y, z, placa: [x, y - 1, z], figura, raio: 3 };
+    }
+    // no chão: o pé da escadinha do palco
+    const [x, y, z] = pt.escadinha;
+    return { chave: 'escadinha', tipo: 'sitio', x, y, z, placa: [x, y - 1, z], figura, raio: 1.4 };
+  }
+  return null;
 }
 
 // ------------------------------------------------------------------ a trilha

@@ -7,16 +7,17 @@ import type { CeuTema, QuadroCeu } from '../tipos';
  * nunca preto: o roxo da noite continua bonito para quem tem 3 anos.
  */
 const NOITE: Omit<QuadroCeu, 'h'> = {
-  zen: [0.09, 0.03, 0.2],
-  meio: [0.2, 0.07, 0.36],
+  zen: [0.07, 0.025, 0.17],
+  meio: [0.17, 0.06, 0.32],
   // o horizonte da noite: um roxo mais aceso, com um fio de magenta
-  hor: [0.38, 0.13, 0.46],
-  luz: [0.62, 0.56, 1],
-  il: 0.2,
-  ceu: [0.34, 0.24, 0.56],
-  chao: [0.06, 0.04, 0.08],
-  ic: 0.17,
-  amb: [0.06, 0.04, 0.1],
+  hor: [0.36, 0.12, 0.44],
+  luz: [0.56, 0.5, 1],
+  il: 0.1,
+  // a luz do céu da noite é roxa: o gramado fica roxo-escuro, não verde aceso
+  ceu: [0.3, 0.19, 0.6],
+  chao: [0.05, 0.03, 0.1],
+  ic: 0.2,
+  amb: [0.05, 0.03, 0.1],
   dens: 0.009,
 };
 
@@ -137,5 +138,5 @@ export const CEU_VILA: CeuTema = {
   // a faixa do pôr: magenta puxando para o laranja
   corCrepusculo: [1, 0.42, 0.5],
   // o chão escurece de verdade de noite (o festival brilha no escuro)
-  pisoNoite: 0.3,
+  pisoNoite: 0.09,
 };

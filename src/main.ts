@@ -388,9 +388,11 @@ function ligarInventario(
     fazer: (profissao, t) => cena.trocar(moradorAtual, profissao, t.id),
   });
   window.addEventListener('brumaluz:trocar', (e) => {
-    const d = (e as CustomEvent<{ profissao: Profissao; nome: string; criatura: number }>).detail;
+    const d = (
+      e as CustomEvent<{ profissao: Profissao; nome: string; criatura: number; titulo?: string }>
+    ).detail;
     moradorAtual = d.criatura;
-    abrirConteiner(() => painelTrocas.abrir(d.profissao, d.nome));
+    abrirConteiner(() => painelTrocas.abrir(d.profissao, d.nome, d.titulo));
   });
   window.addEventListener('brumaluz:trocaRecusada', (e) => {
     if ((e as CustomEvent<string>).detail === 'faltam')
@@ -714,7 +716,9 @@ function ligarAlma(armazenamento: Storage | null, cena: ReturnType<typeof criarC
   });
   // spec 030: a trilha de pegadinhas até o lugar da missão, a placa e o convite
   const guiar = () =>
-    cena.estado.ready && cena.estado.cenaBabylon ? ligarGuiaMissao(cena.estado, almaUi) : setTimeout(guiar, 300);
+    cena.estado.ready && cena.estado.cenaBabylon
+      ? ligarGuiaMissao(cena.estado, almaUi)
+      : setTimeout(guiar, 300);
   guiar();
   // spec 023 (T10): o que a criança veste da lojinha vai na aparência (e pela rede, como a
   // fantasia: os amigos veem). Ao vestir, o puf de brilho. Ouve antes do aviso ao editor: o

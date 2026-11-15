@@ -16,6 +16,7 @@ import type { Comando, EventoNucleo, Mensagem, Quadro, SalvoNucleo } from '../nu
 import type { Conexao } from './conexao';
 import { indiceDonoDe } from '../world/edicoes';
 import { criarReplicaVeiculos } from './veiculos';
+import { criarReplicaVila } from './vila';
 import {
   criarReplicaCriaturas,
   criarReplicaItens,
@@ -77,6 +78,8 @@ export function criarEstadoCliente(op: OpcoesEstadoCliente) {
   const itens = criarReplicaItens();
   /** Spec 014 (T14): os planos e o relógio dos veículos da cidade. */
   const veiculos = criarReplicaVeiculos();
+  /** Spec 026: o estado da Vila Neon e o relógio do núcleo. */
+  const vila = criarReplicaVila();
   let conteiner: ConteinerReplica | null = null;
   let ultimoAckTransacao = 0;
 
@@ -109,6 +112,7 @@ export function criarEstadoCliente(op: OpcoesEstadoCliente) {
     if (q.criaturas) criaturas.receber(q.criaturas);
     if (q.itens) itens.receber(q.itens);
     if (q.veiculos) veiculos.receber(q.veiculos, performance.now() / 1000, !!q.primeiro);
+    if (q.vila) vila.receber(q.vila, performance.now() / 1000);
     if (q.inventario) {
       ultimoAckTransacao = q.inventario.ackTransacao;
       sincronia.inventario(q.inventario.slots, q.inventario.ackTransacao, q.inventario.transito);
@@ -160,6 +164,7 @@ export function criarEstadoCliente(op: OpcoesEstadoCliente) {
     criaturas,
     itens,
     veiculos,
+    vila,
     ambiente,
     get sobrevivencia() {
       return sobrevivencia;

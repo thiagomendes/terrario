@@ -22,7 +22,7 @@ import { figura } from './figuras';
 import { tocarSomInterface } from '../../audio/somInterface';
 import { Bloco } from '../../world/blocks';
 
-const CSS = `
+export const CSS_CANTO = `
 .canto-pop { position: fixed; z-index: 9; width: 74px; height: 74px; margin: -37px 0 0 -37px; pointer-events: none;
   border-radius: 50%; background: radial-gradient(circle, #fffbe8 0 52%, rgba(255, 233, 160, 0.9) 60%, rgba(255, 233, 160, 0) 72%);
   display: grid; place-items: center; animation: canto-pop 1.25s cubic-bezier(.2,1.5,.4,1) forwards; }
@@ -60,7 +60,7 @@ export function ligarCantoMissoes(
   if (!p) return;
   const plano = p;
   const st = document.createElement('style');
-  st.textContent = CSS;
+  st.textContent = CSS_CANTO;
   document.head.appendChild(st);
   if (p.ninho) criarNinho(scene, p.ninho[0], p.ninho[1], p.ninho[2]);
   const brilhos = p.ovos.length ? criarBrilhoOvos(scene, p.ovos) : null;

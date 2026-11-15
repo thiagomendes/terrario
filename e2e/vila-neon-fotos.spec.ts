@@ -130,6 +130,61 @@ async function foto(page: Page, nome: string) {
       el.style.visibility = '';
   });
   const pecas = await page.evaluate(() => window.__brumaluz!.vilaPecas?.() ?? null);
+  const cam = await page.evaluate(() => {
+    const c = window.__brumaluz!.cenaBabylon!().activeCamera as unknown as {
+      globalPosition: { x: number; y: number; z: number };
+      getForwardRay(): { direction: { x: number; y: number; z: number } };
+      fov: number;
+    };
+    const d = c.getForwardRay().direction;
+    const r = (n: number) => Math.round(n * 100) / 100;
+    const p = window.__brumaluz!.vila!()!;
+    return `cam(u,alt,v)=${r(c.globalPosition.x - p.ox)},${r(c.globalPosition.y - p.h - 1)},${r(c.globalPosition.z - p.oz)} dir=${r(d.x)},${r(d.y)},${r(d.z)} fov=${r(c.fov)}`;
+  });
+  console.log(`CAM ${nome} ${cam}`);
+  if (process.env.VILA_DEBUG) {
+    const d = await page.evaluate(() => {
+      const scene = window.__brumaluz!.cenaBabylon!();
+      const m = scene.meshes.find((x) => x.name.startsWith('vila-quadro-')) as unknown as {
+        name: string;
+        getVerticesData(k: string): number[] | null;
+        material: {
+          emissiveTexture?: {
+            getSize(): unknown;
+            isReady(): boolean;
+            getContext(): CanvasRenderingContext2D;
+          } | null;
+          diffuseTexture?: {
+            getSize(): unknown;
+            isReady(): boolean;
+            getContext(): CanvasRenderingContext2D;
+          } | null;
+        };
+      };
+      if (!m) return 'sem quadro';
+      const t = m.material.emissiveTexture ?? m.material.diffuseTexture;
+      const c = t?.getContext();
+      const w = c?.canvas.width ?? 0;
+      const h = c?.canvas.height ?? 0;
+      const px = c ? Array.from(c.getImageData(w >> 1, h >> 1, 1, 1).data) : null;
+      let dif = 0;
+      if (c) {
+        const im = c.getImageData(0, 0, w, h).data;
+        for (let i = 4; i < im.length; i += 4) if (im[i] !== im[0] || im[i + 1] !== im[1]) dif++;
+      }
+      return JSON.stringify({
+        n: m.name,
+        uv: m.getVerticesData('uv'),
+        tam: t?.getSize(),
+        pronto: t?.isReady(),
+        w,
+        h,
+        px,
+        dif,
+      });
+    });
+    console.log(`DEBUG ${d}`);
+  }
   console.log(
     `FOTO ${nome} pecas=${JSON.stringify(pecas && { ...pecas, sosias: pecas.sosias.map((s) => `${s.nome}:${s.visivel}`) })}`,
   );
@@ -187,8 +242,8 @@ test('fotos do bairro (computador)', async ({ browser }) => {
     {
       nome: 'alto',
       ir: [p.ox + 95, p.oz + 75],
-      cam: [p.ox + 190, H + 70, p.oz + 165],
-      alvo: [p.ox + 80, H, p.oz + 60],
+      cam: [p.ox + 150, H + 46, p.oz + 128],
+      alvo: [p.ox + 98, H, p.oz + 76],
       horas: ['dia', 'entardecer', 'noite'],
     },
     {
@@ -201,15 +256,15 @@ test('fotos do bairro (computador)', async ({ browser }) => {
     {
       nome: 'palco',
       ir: meio(z.festival),
-      cam: [p.pontos.passarela[0], H + 3, p.oz + 86],
-      alvo: [p.pontos.passarela[0], H + 6, p.oz + 115],
+      cam: [p.pontos.passarela[0] - 1, H + 3, p.oz + 85],
+      alvo: [p.pontos.passarela[0], H + 6.5, p.oz + 115],
       horas: ['dia', 'noite'],
     },
     {
       nome: 'portao',
       ir: [p.ox + 60, p.oz + 66],
-      cam: [p.ox + 66, H + 2.2, p.oz + 64],
-      alvo: [p.ox + 58, H + 4, p.oz + 90],
+      cam: [p.ox + 66, H + 2.2, p.oz + 62],
+      alvo: [p.ox + 59, H + 5, p.oz + 90],
       horas: ['dia', 'entardecer'],
     },
     {
@@ -222,15 +277,15 @@ test('fotos do bairro (computador)', async ({ browser }) => {
     {
       nome: 'rinque',
       ir: meio(z.rinque),
-      cam: [p.ox + 126, H + 5, p.oz + 86],
-      alvo: [p.ox + 140, H, p.oz + 100],
+      cam: [p.ox + 127, H + 7, p.oz + 87],
+      alvo: [p.ox + 141, H + 1, p.oz + 100],
       horas: ['dia', 'noite'],
     },
     {
       nome: 'pracinha',
       ir: meio(z.pracinha),
-      cam: [p.ox + 128, H + 6, p.oz + 94],
-      alvo: [p.ox + 112, H, p.oz + 80],
+      cam: [p.ox + 126, H + 7, p.oz + 70],
+      alvo: [p.ox + 111, H + 1, p.oz + 82],
       horas: ['dia'],
     },
     {
@@ -248,6 +303,41 @@ test('fotos do bairro (computador)', async ({ browser }) => {
       horas: ['dia'],
     },
   ];
+  // os detalhes de perto (uma peça ou um canto por foto), de dia
+  const det = (
+    nome: string,
+    cu: number,
+    ca: number,
+    cv: number,
+    au: number,
+    aa: number,
+    av: number,
+  ) =>
+    tomadas.push({
+      nome: `det-${nome}`,
+      ir: [p.ox + au, p.oz + av],
+      cam: [p.ox + cu, H + ca, p.oz + cv],
+      alvo: [p.ox + au, H + aa, p.oz + av],
+      horas: ['dia'],
+    });
+  det('banca', 22, 2, 63, 19, 2, 56);
+  det('locadora', 33, 2.2, 66, 32.5, 3, 57);
+  det('orelhao', 27.5, 1.6, 63, 24.5, 1.2, 59.5);
+  det('carro', 38, 1.7, 65.5, 34.5, 0.8, 61.5);
+  det('ponto', 45, 1.9, 65, 47, 1.4, 59);
+  det('van', 80, 1.9, 66.5, 76.5, 1, 61.5);
+  det('lanchonete', 80, 1.8, 62, 80, 1.5, 52);
+  det('bateria', 61, 5.6, 108, 61, 5.4, 121);
+  det('radio', 49, 2.6, 93.5, 42.5, 1.6, 92.5);
+  det('fita', 63, 2.4, 80, 65.5, 1.7, 86.5);
+  det('mesa', 70.5, 2.6, 92, 70.5, 1, 86.5);
+  det('barracas', 38.5, 2.2, 83.5, 34.5, 1.5, 79);
+  det('maquinas', 138, 1.9, 76.5, 138, 1.3, 83);
+  det('patins', 135.5, 1.8, 85, 134.5, 1.2, 89.5);
+  det('parquinho', 112.5, 3.2, 83.5, 119, 0.6, 88.5);
+  det('quintal', 101, 2.6, 96.5, 106, 0.6, 101.5);
+  det('mural', 112, 1.7, 79, 112.5, 1.7, 83.5);
+  det('globo', 139, 3, 92.5, 139, 8, 99.5);
   for (const t of tomadas) {
     if (!quer(t.nome)) continue;
     await ir(p2, t.ir[0], t.ir[1], H + 30);

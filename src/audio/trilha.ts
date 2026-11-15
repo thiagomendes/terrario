@@ -62,8 +62,10 @@ export const NIVEL_TRILHA: Readonly<Record<string, Partial<Record<ContextoNivel,
   // spec 014: no volume do Rancho gravado (o som da cidade antes da T09) e de 0 a 1,5 dB
   // abaixo da reserva sintetizada da cidade
   'cidade-grande': { dia: 0, tarde: 0.2, noite: 2.6, caverna: 2.9 },
-  // spec 026: os números da cidade até a trilha do bairro ser gravada e medida na régua (T18)
-  'vila-neon': { dia: 0, tarde: 0.2, noite: 2.6, caverna: 2.9 },
+  // spec 026 (T18): o volume percebido (LUFS, BS.1770) de cada mistura do bairro igual à média do
+  // Rancho e da Cidade com o ajuste deles (026/referencia/fontes/medidas-pacote.json, "nivel"): o
+  // synth-pop tem mais grave que a viola e o jazz, e a noite (pad sem bateria) é a mais baixa
+  'vila-neon': { dia: 0.7, tarde: 0.4, noite: 4.6, caverna: 4.9 },
 };
 
 /** O ajuste do tema no contexto, em ganho linear. */

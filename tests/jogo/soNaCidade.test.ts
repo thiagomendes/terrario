@@ -45,10 +45,11 @@ function daCidadeSemSerDe(t: (typeof OUTROS)[number]): ReadonlySet<string> {
   return new Set([...DA_CIDADE].filter((i) => !meus.has(i)));
 }
 /**
- * Temas ainda sem o pacote de som gravado (caem na reserva sintetizada, sem erro): a Vila
- * Neon até a trilha e as vozes do bairro serem gravadas (spec 026, T18).
+ * Temas ainda sem o pacote de som gravado (caem na reserva sintetizada, sem erro). Desde a T18
+ * da spec 026 nenhum: a Vila Neon tem a trilha do bairro e o pacote do show (as vozes do bairro
+ * são as sintetizadas do tema, sem pacote).
  */
-const SEM_PACOTE_AINDA: readonly string[] = ['vila-neon'];
+const SEM_PACOTE_AINDA: readonly string[] = [];
 const INDICE = JSON.parse(lerTexto('public/sons/indice.json')) as {
   temas: Record<string, Record<string, unknown>>;
   tamanhos: Record<string, number>;

@@ -7,9 +7,10 @@ import { NOMES_BIOMA } from '../../src/world/chunk';
 import { obterTema, temasDisponiveis, TEMA_PADRAO } from '../../src/temas';
 import { ativarTemaPuro } from '../../src/temas/ativarPuro';
 import { textosOriginais } from '../../src/temas/originais';
-import { blocoExclusivo, EXCLUSIVOS_CIDADE } from '../../src/jogo/exclusivos';
+import { blocoExclusivo, EXCLUSIVOS_CIDADE, EXCLUSIVOS_VILA } from '../../src/jogo/exclusivos';
 
-const exclusivo = (item: string) => EXCLUSIVOS_CIDADE.itens.includes(item);
+const exclusivo = (item: string) =>
+  EXCLUSIVOS_CIDADE.itens.includes(item) || EXCLUSIVOS_VILA.itens.includes(item);
 
 describe('renomear pelo tema', () => {
   it('cada tema renomeia blocos, itens de bloco, itens, criaturas e biomas', () => {

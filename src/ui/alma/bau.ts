@@ -418,7 +418,11 @@ export function criarBau(op: OpcoesBau) {
       const mundos = document.createElement('span');
       mundos.className = 'mundos';
       for (const m of h.mundos)
-        mundos.appendChild(svgEl(m === 'cidade-grande' ? 'mundoCidade' : 'mundoRancho'));
+        mundos.appendChild(
+          svgEl(
+            m === 'cidade-grande' ? 'mundoCidade' : m === 'vila-neon' ? 'mundoVila' : 'mundoRancho',
+          ),
+        );
       mundos.appendChild(svgEl('mundoTodos'));
       card.append(d, est, mundos);
       grade.appendChild(card);
@@ -434,7 +438,10 @@ export function criarBau(op: OpcoesBau) {
     const caixa = document.createElement('div');
     caixa.className = 'alma-banca';
     caixa.setAttribute('data-alma-banca', m0);
-    caixa.style.setProperty('--toldo', m0 === 'cidade-grande' ? '#3fae5a' : '#e8402f');
+    caixa.style.setProperty(
+      '--toldo',
+      m0 === 'cidade-grande' ? '#3fae5a' : m0 === 'vila-neon' ? '#2f8cff' : '#e8402f',
+    );
     const toldo = document.createElement('div');
     toldo.className = 'toldo';
     const grade = document.createElement('div');

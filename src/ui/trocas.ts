@@ -132,12 +132,12 @@ export function criarPainelTrocas(ui: InventarioUI, inv: Inventario, op: OpcoesT
 
   return {
     elemento: raiz,
-    abrir(p: Profissao, nome: string) {
+    abrir(p: Profissao, nome: string, titulo?: string) {
       profissao = p;
       const tp = povoadoDoTema();
       quem.replaceChildren(nome);
       const sub = document.createElement('small');
-      sub.textContent = `${tp.profissoes[p]} · ${tp.textos.trocas}`;
+      sub.textContent = `${titulo ?? tp.profissoes[p]} · ${tp.textos.trocas}`;
       quem.appendChild(sub);
       montar(p);
       atualizar();

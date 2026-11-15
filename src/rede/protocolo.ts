@@ -19,9 +19,11 @@ import type { ObraSalva } from '../nucleo/saneamento';
  * `comprarBanca`, os eventos `alma`, `almaCompra` e `almaCompraRecusada`; o campo `premium` da
  * aparência chega na mesma versão, porque a 023 ainda não foi publicada). 7: spec 031 (o canto
  * das missões muda a geração da Era dos Dinos e do Doce Reino em volta do nascer: o navegador
- * de antes veria outro chão que o servidor; e o campo `canto` do "bem-vindo").
+ * de antes veria outro chão que o servidor; e o campo `canto` do "bem-vindo"). 8: spec 026 (a
+ * Vila Neon: o planejador do bairro e os blocos 103 a 116 mudam a geração; o comando `vila`, o
+ * campo `vila` do quadro e os eventos do show; os patins na aparência).
  */
-export const VERSAO_REDE = 7;
+export const VERSAO_REDE = 8;
 /** Jogadores por mundo. */
 export const MAX_JOGADORES = 8;
 

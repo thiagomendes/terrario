@@ -20,6 +20,8 @@ export const IDS_GESTOS = [
   // spec 023 (T09): presentes de nível (aparecem na roda quando a criança chega ao nível)
   'pulo-estrela',
   'reverencia',
+  // spec 026: bater cabeça no show (só na Vila Neon)
+  'roqueiro',
 ] as const;
 
 export type IdGesto = (typeof IDS_GESTOS)[number];
@@ -44,7 +46,14 @@ export const GESTOS: readonly DefGesto[] = [
   { id: 'sentar', nome: 'Sentar', duracao: Infinity },
   { id: 'pulo-estrela', nome: 'Pulo de estrela', duracao: 1.7 },
   { id: 'reverencia', nome: 'Reverência', duracao: 2.2 },
+  { id: 'roqueiro', nome: 'Roqueiro', duracao: 2.4 },
 ];
+
+/**
+ * Spec 026: os gestos que só aparecem na roda de um mundo (o "roqueiro", bater cabeça no tempo
+ * com a guitarra no ar, só na Vila Neon). O núcleo aceita em qualquer mundo (é só um gesto).
+ */
+export const TEMA_DO_GESTO: Partial<Record<IdGesto, string>> = { roqueiro: 'vila-neon' };
 
 /**
  * Spec 023 (T09): os gestos que são presente de nível (pulo de estrela no 3, reverência no 8).
@@ -56,8 +65,12 @@ export const NIVEL_DO_GESTO: Partial<Record<IdGesto, number>> = {
 };
 
 /** Os gestos da roda para quem está neste nível (na ordem da roda). */
-export function gestosLiberados(nivel: number): DefGesto[] {
-  return GESTOS.filter((g) => (NIVEL_DO_GESTO[g.id] ?? 0) <= nivel);
+export function gestosLiberados(nivel: number, tema?: string): DefGesto[] {
+  return GESTOS.filter(
+    (g) =>
+      (NIVEL_DO_GESTO[g.id] ?? 0) <= nivel &&
+      (TEMA_DO_GESTO[g.id] === undefined || TEMA_DO_GESTO[g.id] === tema),
+  );
 }
 
 const DURACAO: Record<IdGesto, number> = Object.fromEntries(
@@ -202,7 +215,13 @@ function juntasDoGesto(id: IdGesto, f: number): Juntas {
       // desce na frente do peito), o esquerdo abre para o lado e o corpo se curva fundo e volta
       const floreio = Math.min(1, f / 0.55);
       const curva =
-        f < 0.45 ? 0 : f < 1.0 ? (f - 0.45) / 0.55 : f < 1.55 ? 1 : Math.max(0, 1 - (f - 1.55) / 0.5);
+        f < 0.45
+          ? 0
+          : f < 1.0
+            ? (f - 0.45) / 0.55
+            : f < 1.55
+              ? 1
+              : Math.max(0, 1 - (f - 1.55) / 0.5);
       const suave = curva * curva * (3 - 2 * curva);
       return {
         bdZ: 1.6 * (1 - floreio) + 0.35,
@@ -213,6 +232,23 @@ function juntasDoGesto(id: IdGesto, f: number): Juntas {
         cabX: 0.12 * suave,
         pernaD: -0.22 * suave,
         pernaE: 0.18 * suave,
+      };
+    }
+    case 'roqueiro': {
+      // bate cabeça no tempo (120 batidas: 2 por segundo), a guitarra no ar: a mão esquerda no
+      // braço dela, a direita tocando; os joelhos acompanham. Nada de chifrinho com a mão.
+      const bate = Math.max(0, Math.sin(f * Math.PI * 4));
+      const toca = Math.sin(f * Math.PI * 8);
+      return {
+        cabX: 0.05 + bate * 0.42,
+        troncoX: 0.08 + bate * 0.12,
+        beX: -1.15,
+        beZ: -0.55,
+        bdX: -0.55 + toca * 0.28,
+        bdZ: 0.35,
+        corpoY: -bate * 0.06,
+        pernaD: -0.12,
+        pernaE: 0.12,
       };
     }
     case 'sentar': {

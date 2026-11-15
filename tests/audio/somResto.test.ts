@@ -115,8 +115,15 @@ describe('volume da trilha por tema (NIVEL_TRILHA)', () => {
 });
 
 describe('volume das vozes por tema (NIVEL_VOZES)', () => {
-  it('todo tema tem os 4 grupos, e o ganho sai da tabela', () => {
-    for (const id of Object.keys(INDICE.temas)) {
+  it('todo tema com vozes gravadas tem os 4 grupos, e o ganho sai da tabela', () => {
+    const comVozes = Object.keys(INDICE.temas).filter(
+      (id) => !!(INDICE.temas[id] as { vozes?: unknown }).vozes,
+    );
+    expect(comVozes.length).toBe(8);
+    // spec 026: a Vila Neon fica com a voz sintetizada do tema (sem pacote de vozes nem tabela)
+    expect((INDICE.temas['vila-neon'] as { vozes?: unknown }).vozes).toBeUndefined();
+    expect(NIVEL_VOZES['vila-neon']).toBeUndefined();
+    for (const id of comVozes) {
       for (const g of ['bichos', 'moradores', 'baque', 'derrota'] as const) {
         const db = NIVEL_VOZES[id]?.[g];
         expect(db, `${id} ${g}`).toBeDefined();

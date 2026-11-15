@@ -98,6 +98,7 @@ import {
 import { criarCeu } from './ceu';
 import { criarHorizonte } from './horizonte';
 import { criarRenderVila } from './vila';
+import { criarShowVila } from './vila/show';
 import type { PlanoVila } from '../world/vilaNeon';
 import { LARGURA_CIDADE, PROFUNDIDADE_CIDADE } from '../world/cidade';
 import { criarAgua } from './agua';
@@ -136,6 +137,13 @@ import {
   type VeiculoNaTela,
 } from './veiculos';
 import { criarSomVeiculos, type Ouvinte, type SomVeiculos } from '../audio/somVeiculos';
+import {
+  criarSomVila,
+  ehPedidoBrinquedoVila,
+  EVENTO_BRINQUEDO_VILA,
+  type SomVila,
+  type BrinquedoVila,
+} from '../audio/somVila';
 import { criarProgressoObra } from '../ui/progressoObra';
 import { MAO } from '../ui/dicaMira';
 import {
@@ -403,6 +411,21 @@ export interface EstadoDepuracao {
   horizonte?: () => { triangulos: number; ativo: boolean } | null;
   /** Spec 026: o plano da Vila Neon (null nos outros temas). */
   vila?: () => PlanoVila | null;
+  /** Spec 026: o estado do bairro que o núcleo mandou (show, estojos, caixas, lhamas). */
+  vilaEstado?: () => import('../nucleo/vila').VilaVista | null;
+  /** Spec 026: manda a caixa do palco ou o toque no palco ao núcleo. */
+  vilaComando?: (c: { a: 'caixa'; i: number } | { a: 'palco' }) => void;
+  /** Spec 026: o relógio do núcleo agora (s). */
+  vilaTempo?: () => number;
+  /** Spec 026: os eventos do show que chegaram (testes) e o que o show mostra. */
+  eventosVila?: (import('../nucleo/vila').EventoVila & { recebido: number })[];
+  showVila?: () => ReturnType<import('./vila/show').ShowVila['estado']> | null;
+  /** Spec 026 (T18/T19, testes): o que o som do show e do bairro agendou e toca. */
+  somVila?: () => ReturnType<SomVila['info']> | null;
+  /** Spec 026 (T19, testes): o som de um brinquedo do bairro agora. */
+  tocarBrinquedoVila?: (qual: BrinquedoVila, i?: number) => boolean;
+  /** Spec 026: calça ou tira os patins (o suporte da pista). */
+  vilaPatins?: (calcar: boolean) => void;
   /** Spec 026: as peças da Vila Neon vivas, as sem chão (sempre 0) e os sósias. */
   vilaPecas?: () => {
     chunks: number;
@@ -1164,6 +1187,9 @@ export function criarCena(
     }
   }
   let aparencia: Aparencia = carregarAparencia(armazenamentoLocal());
+  // spec 026: os patins ficam na Vila Neon (calçados de novo ao voltar a ela; nunca nos outros)
+  if (vilaDoMundo(semente) && dadosIniciais?.extras?.['patins'] === true) aparencia.patins = true;
+  else delete aparencia.patins;
   const personagem = criarPersonagem(scene, aparencia);
   let vitrine: ReturnType<EfeitosPremium['registrar']> | null = null;
   let vitrineNo: TransformNode | null = null;
@@ -1224,8 +1250,16 @@ export function criarCena(
   // atravessava a cabine e manchava o para-brisa dos bombeiros de noite. Essas entram pretas
   // (a cor de sempre para todas as outras, igual à conta do Babylon).
   const oclusoresGlow = new Set<number>();
+  /** Spec 026: malhas de luz da Vila Neon (neon, lâmpadas, letreiros acesos). */
+  const luzesDaVila = new Set<number>();
+  const brilhaNaVila = (m: Mesh) => {
+    luzesDaVila.add(m.uniqueId);
+    m.onDisposeObservable.addOnce(() => luzesDaVila.delete(m.uniqueId));
+  };
   glow.customEmissiveColorSelector = (mesh, _sub, material, cor) => {
     if (oclusoresGlow.has(mesh.uniqueId)) return void cor.set(0, 0, 0, 1);
+    // spec 026: as luzes das peças da Vila Neon brilham com a cor da textura acesa delas
+    if (luzesDaVila.has(mesh.uniqueId)) return void cor.set(1, 1, 1, 1);
     const m = material as unknown as {
       emissiveColor?: Color3;
       emissiveTexture?: { level: number } | null;
@@ -1650,10 +1684,44 @@ export function criarCena(
     ? criarRenderVila(scene, planoVila, {
         temMalha: (cx, cz) => malhas.has(chave(cx, cz)),
         tapaOGlow,
+        brilha: brilhaNaVila,
         porQuadro: toqueGrosso ? 1 : 2,
       })
     : null;
   estado.vila = () => planoVila;
+  const showVila = planoVila
+    ? criarShowVila(scene, planoVila, {
+        temMalha: (cx, cz) => malhas.has(chave(cx, cz)),
+        brilha: brilhaNaVila,
+        tapaOGlow,
+      })
+    : null;
+  estado.eventosVila = planoVila ? [] : undefined;
+  estado.showVila = () => showVila?.estado() ?? null;
+  /** Spec 026: a pista onde os patins deslizam (o bloco embaixo dos pés é a pista quadriculada). */
+  const pistaDosPatins = (x: number, z: number) =>
+    blocoEm(Math.floor(x), Math.floor(controle.jogador.y - 0.05), Math.floor(z)) ===
+    Bloco.PISTA_NEON;
+  if (planoVila && aparencia.patins) controle.definirPatins(pistaDosPatins);
+  salvaveis.set('patins', { salvar: () => (planoVila && aparencia.patins ? true : undefined) });
+  estado.vilaPatins = (calcar) => {
+    if (!planoVila) return;
+    aparencia = normalizarAparencia({ ...aparencia, patins: calcar ? true : undefined });
+    if (!calcar) delete aparencia.patins;
+    personagem.aplicarAparencia(aparencia);
+    controle.definirPatins(calcar ? pistaDosPatins : null);
+    enviar({
+      t: 'aparencia',
+      aparencia: semDesbloqueios({ ...aparencia }) as Record<string, unknown>,
+    });
+  };
+  estado.vilaEstado = () => (planoVila ? cliente.vila.estado : null);
+  estado.vilaComando = (c) => {
+    if (!planoVila) return;
+    enviarTelemetria(true);
+    enviar(c.a === 'caixa' ? { t: 'vila', a: 'caixa', i: c.i } : { t: 'vila', a: 'palco' });
+  };
+  estado.vilaTempo = () => cliente.vila.tempo(performance.now() / 1000);
   estado.vilaPecas = () =>
     renderVila
       ? {
@@ -2462,16 +2530,20 @@ export function criarCena(
     if (naMira?.morador) {
       // morador: abre as trocas da profissão dele (e ele vira para o jogador)
       const m = naMira.morador;
-      window.dispatchEvent(
-        new CustomEvent('brumaluz:trocar', {
-          detail: {
-            profissao: m.profissao,
-            nome: nomeDoMorador(m.povoado, m.n, m.profissao),
-            povoado: m.povoado,
-            criatura: naMira.id,
-          },
-        }),
-      );
+      // spec 026: o morador de posto da Vila Neon com nome e título próprios (e sem trocas)
+      const fixo = povoadoDoTema().porMorador?.[`${m.povoado}:${m.n}`];
+      if (!fixo?.semTrocas)
+        window.dispatchEvent(
+          new CustomEvent('brumaluz:trocar', {
+            detail: {
+              profissao: m.profissao,
+              nome: nomeDoMorador(m.povoado, m.n, m.profissao),
+              titulo: fixo?.titulo,
+              povoado: m.povoado,
+              criatura: naMira.id,
+            },
+          }),
+        );
       enviarTelemetria(true);
       enviar({ t: 'falar', criatura: naMira.id });
       moradorDaTroca = naMira.id;
@@ -3731,6 +3803,33 @@ export function criarCena(
   // saiu do mundo: solta o pacote e as fatias (voltou pelo histórico: a página recarrega
   // inteira, em ligarSaida, e as vozes baixam de novo quando o mundo fica pronto)
   window.addEventListener('pagehide', () => vozes.liberar());
+  // spec 026 (T18/T19): o som do show, dos brinquedos e das zonas da Vila Neon (o pacote só baixa
+  // neste mundo, depois de ele abrir). Fica aqui, e não junto do showVila, porque precisa do motor.
+  const somVila = planoVila
+    ? criarSomVila({
+        motor: motorAudio,
+        plano: planoVila,
+        base: import.meta.env.BASE_URL ?? '/',
+        volumes: () => ({
+          musica: configAtual?.volumeMusica ?? 0.6,
+          natureza: configAtual?.volumeAmbiente ?? 0.8,
+        }),
+        aoCalarTrilha: (f) => ambiente?.definirCalar(f),
+        gradeTrilha: () => {
+          const m = trilha.info().motor;
+          return m ? { t0: m.t0, compasso: m.compasso } : null;
+        },
+      })
+    : null;
+  if (somVila) {
+    window.addEventListener('pagehide', () => somVila.liberar());
+    window.addEventListener(EVENTO_BRINQUEDO_VILA, (ev) => {
+      const p = (ev as CustomEvent<unknown>).detail;
+      if (ehPedidoBrinquedoVila(p)) somVila.tocarBrinquedo(p.qual, p.i);
+    });
+    estado.somVila = () => somVila.info();
+    estado.tocarBrinquedoVila = (q, i) => somVila.tocarBrinquedo(q, i);
+  }
   if (ehTesteDeTela()) {
     estado.sonsTocados = () => sonsTocados.slice();
     estado.atacarCriatura = (id) => {
@@ -3968,6 +4067,11 @@ export function criarCena(
     atualizarFantasmas(tempo);
     renderVeiculos?.quadro(Math.min(dtBruto, 0.1), tempo);
     renderVila?.quadro(tempo, controle.jogador.x, controle.jogador.z, noiteVila);
+    showVila?.quadro(tempo, cliente.vila.estado, cliente.vila.tempo(tempo), noiteVila);
+    if (somVila) {
+      if (estado.ready) somVila.carregar();
+      somVila.quadro(cliente.vila.estado, cliente.vila.tempo(tempo), controle.jogador, noiteVila);
+    }
     quadroSomVeiculos();
     balanco.atualizar(tempo);
     logicaMs += (performance.now() - inicioQuadro - logicaMs) * 0.05;
@@ -5410,6 +5514,18 @@ export function criarCena(
   }
   function tratarEvento(e: EventoNucleo): void {
     switch (e.e) {
+      // spec 026: o show da Vila Neon (o acorde, o final, o estojo, a caixa, a lhama, o pôster)
+      case 'vilaAcorde':
+      case 'vilaFinal':
+      case 'vilaEstojo':
+      case 'vilaCaixa':
+      case 'vilaLhama':
+      case 'vilaPresente':
+        showVila?.evento(e);
+        somVila?.evento(e, cliente.vila.tempo(performance.now() / 1000));
+        estado.eventosVila?.push({ ...e, recebido: performance.now() / 1000 });
+        if ((estado.eventosVila?.length ?? 0) > 200) estado.eventosVila!.splice(0, 100);
+        break;
       case 'veiculo':
         renderVeiculos?.evento(e.id, e.o);
         somDoVeiculo(e);

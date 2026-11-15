@@ -110,6 +110,9 @@ export function criarControle(
     if (e.movementX !== 0 || e.movementY !== 0) mexeuEm = agora();
   });
 
+  /** Spec 026: calçado de patins (a pista onde o embalo desliza), ou null. */
+  let pistaPatins: ((x: number, z: number) => boolean) | null = null;
+
   function atualizar(dtSeg: number): void {
     const dt = Math.min(dtSeg, 0.05);
     extras = fonteExtras ? fonteExtras().filter((c) => !dentroDaCaixa(c, jogador)) : [];
@@ -125,6 +128,7 @@ export function criarControle(
         descer: voando && !!teclas.correr,
         puloAutomatico,
         yaw,
+        ...(pistaPatins ? { patins: { pista: pistaPatins } } : {}),
       },
       dt,
       solido,
@@ -194,6 +198,13 @@ export function criarControle(
     definirMouse,
     definirPuloAutomatico,
     definirVoo,
+    /** Spec 026: patins (a pista onde desliza) ou null (descalço dos patins). */
+    definirPatins(pista: ((x: number, z: number) => boolean) | null) {
+      pistaPatins = pista;
+    },
+    get patins() {
+      return !!pistaPatins;
+    },
     girar,
     recentrar,
     /** Quando a criança mexeu na câmera pela última vez (s, relógio da página). */

@@ -188,10 +188,11 @@ body:has(.entrada:not([hidden])) .alma-missao { display: none !important; }
 .alma-mais .alma-svg path { stroke: #a8743e; }
 @keyframes alma-mais { 0% { opacity: 0; transform: translateX(-6px); } 20% { opacity: 1; } 40% { transform: translateX(6px); }
   60% { transform: translateX(-3px); } 80% { transform: translateX(3px); } 100% { opacity: 1; transform: none; } }
+/* spec 026 (decisão do dono, 15 nov 2026): em pé, as missões aparecem inteiras, sem o corte da
+   próxima (o corte escondia o selo das moedinhas); numa tela menor, a lista rola */
 @media (max-width: 560px) {
   .alma-quadro.com-proxima { grid-auto-flow: row; grid-auto-columns: auto; grid-template-columns: minmax(0, 340px);
-    -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 34px), transparent);
-    mask-image: linear-gradient(to bottom, #000 calc(100% - 34px), transparent); }
+    overflow: auto; -webkit-mask-image: none; mask-image: none; }
   .alma-oferta.espera .vaga { grid-area: jogar; height: 52px; }
   .alma-mais .alma-svg { transform: rotate(90deg); }
   @keyframes alma-mais { 0% { opacity: 0; translate: 0 -6px; } 20% { opacity: 1; } 40% { translate: 0 6px; }
@@ -676,10 +677,10 @@ export function criarHudAlma(raiz: HTMLElement, op: OpcoesHudAlma) {
     const dentroY = rt ? rt.top - r0.top : 10;
     const VISTO = 64;
     const SOME = 34;
+    // spec 026 (decisão do dono): em pé, todas inteiras (sem pedaço nem setinha); a lista rola
     if (empe) {
-      const h = Math.max(...cartoes.slice(0, abertas).map((c) => c.offsetHeight));
-      const dentro = dentroY + VISTO + SOME;
-      grade.style.maxHeight = `${Math.round(abertas * (h + gap) + dentro)}px`;
+      grade.style.maxHeight = '';
+      return;
     } else {
       const w = Math.max(...cartoes.slice(0, abertas).map((c) => c.offsetWidth));
       grade.style.setProperty('--larg-cartao', `${w}px`);

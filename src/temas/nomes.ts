@@ -71,6 +71,9 @@ export function generoDaProfissao(rotulo: string): Genero {
 /** Nome do morador no tema: estável para o povoado e o número da casa, e no gênero da profissão. */
 export function nomeDoMorador(povoado: string, n: number, profissao?: Profissao): string {
   const tema = povoadoDoTema();
+  // spec 026: o morador de posto com nome próprio (a Vila Neon)
+  const fixo = tema.porMorador?.[`${povoado}:${n}`];
+  if (fixo) return fixo.nome;
   const genero = profissao ? generoDaProfissao(tema.profissoes[profissao]) : 'n';
   const todos = tema.nomes;
   const nomes =
@@ -85,6 +88,8 @@ export function nomeDoMorador(povoado: string, n: number, profissao?: Profissao)
 
 /** Gênero do morador (do nome e da profissão): o boneco dele usa o corpo que combina. */
 export function generoDoMorador(povoado: string, n: number, profissao: Profissao): 'f' | 'm' {
+  const fixo = povoadoDoTema().porMorador?.[`${povoado}:${n}`];
+  if (fixo) return fixo.genero;
   const g = generoDaProfissao(povoadoDoTema().profissoes[profissao]);
   if (g !== 'n') return g;
   const pelo = generoDoNome(nomeDoMorador(povoado, n, profissao));

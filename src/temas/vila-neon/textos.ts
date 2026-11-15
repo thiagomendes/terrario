@@ -141,6 +141,8 @@ export const TEXTOS_VILA: TextosTema = {
     peixe_assado: 'Peixe assado',
     ensopado: 'Sopinha',
     pao: 'Pão de forma',
+    cachorro_quente: 'Cachorro-quente',
+    suco: 'Suco de laranja',
     pipoca: 'Pipoca do festival',
     ovo: 'Ovo',
     ovo_cozido: 'Ovo cozido',

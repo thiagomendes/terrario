@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { focoDaSeta, posicoesDaRoda, raioDaRoda, teclaDaRoda } from '../../src/ui/roda';
-import { GESTOS } from '../../src/personagem/gestos';
+import { GESTOS, gestosLiberados } from '../../src/personagem/gestos';
 import { FUNCOES_JOGO } from '../../src/ui/atalhos';
 import { SEGURAR_GESTOS, itensDoMenu } from '../../src/ui/menuRoda';
 
@@ -46,7 +46,11 @@ describe('roda de botões (spec 015)', () => {
   });
 
   it('a roda de gestos tem os 8 (e os 2 de presente) e a barra do computador tem a carinha', () => {
-    expect(GESTOS).toHaveLength(10);
+    // spec 026: o "roqueiro" é o 11º, mas só entra na roda da Vila Neon
+    expect(GESTOS).toHaveLength(11);
+    expect(gestosLiberados(10)).toHaveLength(10);
+    expect(gestosLiberados(10, 'vila-neon').map((x) => x.id)).toContain('roqueiro');
+    expect(gestosLiberados(1, 'vila-neon').map((x) => x.id)).toContain('roqueiro');
     const g = FUNCOES_JOGO.filter((f) => f.codigo === 'KeyG');
     expect(g).toEqual([{ codigo: 'KeyG', tecla: 'G', nome: 'Gestos', icone: 'carinha' }]);
   });

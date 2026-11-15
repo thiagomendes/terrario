@@ -39,7 +39,15 @@ export interface EstadoJogador {
   topoQueda?: number;
   /** Corpo dentro da água (nadando). */
   naAgua?: boolean;
+  /**
+   * Spec 026 (patins): o último embalo (blocos por segundo) e quanto do deslize ainda resta (s).
+   * Só no aparelho: a posição continua indo ao núcleo como sempre.
+   */
+  embalo?: { vx: number; vz: number; t: number };
 }
+
+/** Spec 026: soltando o controle de patins na pista, o embalo dura este tanto (s). */
+export const DESLIZE_PATINS = 0.5;
 
 export interface ResultadoFisica {
   /** Encostou no chão neste passo vindo do ar. */
@@ -58,6 +66,12 @@ export interface ComandoMovimento {
   descer?: boolean;
   /** Pulo automático: andando contra um degrau de um bloco, pula sozinho. */
   puloAutomatico?: boolean;
+  /**
+   * Spec 026: de patins. A velocidade máxima é a de andar (nunca mais rápido); ao soltar o
+   * controle, desliza meio segundo só na pista (`pista(x, z)`); fora dela, para na hora.
+   * Virar é direto (nada de gelo) e nunca cai.
+   */
+  patins?: { pista(x: number, z: number): boolean };
 }
 
 export function criarJogador(x: number, y: number, z: number): EstadoJogador {
@@ -283,6 +297,8 @@ export function passoFisica(
       ? VEL_CORRER
       : VEL_ANDAR;
   if (agua) vel *= 0.55;
+  const patins = !!cmd.patins && !e.voando && !agua;
+  if (patins) vel = Math.min(vel, VEL_ANDAR);
   let mx = cmd.direita * Math.cos(cmd.yaw) + cmd.frente * Math.sin(cmd.yaw);
   let mz = -cmd.direita * Math.sin(cmd.yaw) + cmd.frente * Math.cos(cmd.yaw);
   const norma = Math.hypot(mx, mz);
@@ -290,8 +306,21 @@ export function passoFisica(
     mx /= norma;
     mz /= norma;
   }
-  const bateuX = moverHorizontal(e, 'x', mx * vel * dt, s);
-  const bateuZ = moverHorizontal(e, 'z', mz * vel * dt, s);
+  let px = mx * vel;
+  let pz = mz * vel;
+  if (!patins) e.embalo = undefined;
+  else if (norma > 0.05) e.embalo = { vx: px, vz: pz, t: DESLIZE_PATINS };
+  else if (e.embalo && e.embalo.t > 0 && cmd.patins!.pista(e.x, e.z)) {
+    // o embalo some aos poucos (linear até parar), só nos ladrilhos da pista
+    const k = e.embalo.t / DESLIZE_PATINS;
+    px = e.embalo.vx * k;
+    pz = e.embalo.vz * k;
+    e.embalo.t = Math.max(0, e.embalo.t - dt);
+  } else e.embalo = undefined;
+  const bateuX = moverHorizontal(e, 'x', px * dt, s);
+  const bateuZ = moverHorizontal(e, 'z', pz * dt, s);
+  // bateu de lado: o embalo para (nada de escorregar encostado na mureta)
+  if (e.embalo && (bateuX || bateuZ)) e.embalo = undefined;
   /** Encostado numa parede tentando andar (para sair da água pela borda). */
   const encostado = (bateuX && Math.abs(mx) > 0.1) || (bateuZ && Math.abs(mz) > 0.1);
   // pulo automático: no chão, empurrando contra um degrau de UM bloco com espaço em

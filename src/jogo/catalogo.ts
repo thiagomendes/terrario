@@ -1,4 +1,4 @@
-import { COLHER_PEDREIRO, itemNoMundo } from './exclusivos';
+import { CACHORRO_QUENTE, COLHER_PEDREIRO, SUCO, itemNoMundo } from './exclusivos';
 import type { EstiloMundo } from '../temas/tipos';
 import { registrarItem, todosItens, type DefItem, type TipoFerramenta } from './itens';
 import { Bloco } from '../world/blocks';
@@ -792,6 +792,63 @@ export function registrarCatalogo(): void {
       '...kCck.........',
       '...kck..........',
       '....k...........',
+    ],
+  });
+  // spec 026: o cachorro-quente e o suco da barraca do lanche da Vila Neon (só de lá)
+  registrarItem({
+    id: CACHORRO_QUENTE,
+    nome: 'Cachorro-quente',
+    tipo: 'comida',
+    pilha: 16,
+    comida: { fome: 6, saturacao: 4 },
+  });
+  registrarDesenho(CACHORRO_QUENTE, {
+    paleta: { k: '#3a2416', p: '#e8b067', P: '#f6cf8c', s: '#c8452c', S: '#e46a46', m: '#ffd23d' },
+    linhas: [
+      '................',
+      '................',
+      '................',
+      '................',
+      '..kkkkkkkkkkkk..',
+      '.kPPPPPPPPPPPPk.',
+      'kSsSsSsSsSsSsSsk',
+      'ksmsmsmsmsmsmssk',
+      'kSsSsSsSsSsSsSsk',
+      '.kpppppppppppk..',
+      '..kpppppppppk...',
+      '...kkkkkkkkk....',
+      '................',
+      '................',
+      '................',
+      '................',
+    ],
+  });
+  registrarItem({
+    id: SUCO,
+    nome: 'Suco',
+    tipo: 'comida',
+    pilha: 16,
+    comida: { fome: 3, saturacao: 2 },
+  });
+  registrarDesenho(SUCO, {
+    paleta: { k: '#2a2a34', c: '#ff8a2a', C: '#ffb05a', w: '#f4f8ff', r: '#e8302a', y: '#ffe14a' },
+    linhas: [
+      '..........r.....',
+      '.........r......',
+      '........r.......',
+      '.....kkkrkkk....',
+      '.....kwwrwwk....',
+      '.....kCCrCCk....',
+      '.....kCcrccy....',
+      '.....kCcccck....',
+      '.....kCcccck....',
+      '.....kCcccck....',
+      '.....kCcccck....',
+      '.....kCcccck....',
+      '.....kccccck....',
+      '......kkkkk.....',
+      '................',
+      '................',
     ],
   });
   const metais: [string, string, string, string, string][] = [

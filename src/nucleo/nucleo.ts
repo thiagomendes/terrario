@@ -40,6 +40,7 @@ import {
   candidatosDoCanto,
   cantoDoMundo,
   cidadeDoMundo,
+  vilaDoMundo,
   definirEscolhaDoCanto,
   encontrarNascimento,
   estiloMundo,
@@ -78,6 +79,7 @@ import { criarMundoDeItens, dropsDoBloco } from '../jogo/drops';
 import { criarPopulacao } from '../jogo/populacao';
 import { corpoNaRua, criarTransito, type PessoaNaRua } from '../jogo/transito';
 import { arred } from '../jogo/veiculos';
+import { criarVila, FENO, type VilaNucleo, type VilaVista } from './vila';
 import {
   ATRASO_RESPOSTA,
   INTERVALO_GESTO_NUCLEO,
@@ -795,6 +797,56 @@ export function criarNucleo(op: OpcoesNucleo) {
     }
     if (prontas >= 3) ajudantesBolo.clear();
   }
+
+  // ------------------------------------------------------------ a Vila Neon (spec 026)
+  /** O bairro da Vila Neon (o show, os estojos, as lhamas e os moradores com posto). */
+  const planoVila = vilaDoMundo(semente);
+  /** Quem precisa do estado da vila no próximo quadro (todos, quando muda). */
+  let vilaSuja = true;
+  const jogadorDaVila = (o: Jogador) => ({
+    id: o.id,
+    x: o.tel.x,
+    y: o.tel.y,
+    z: o.tel.z,
+    morto: o.sobrevivencia.estado.morto,
+    missao: mundoAlma ? (missaoDoHud(almaDe(o.id), mundoAlma)?.id ?? null) : null,
+    aberta: (m: string) => missaoAberta(o.id, m),
+    contar: (item: string) => o.inventario.contar(item),
+    darNaMao(item: string, qtd: number) {
+      const slots = o.inventario.slots;
+      let slot = slots[o.tel.slot] ? -1 : o.tel.slot;
+      for (let i = 0; i < 9 && slot < 0; i++) if (!slots[i]) slot = i;
+      if (slot >= 0) o.inventario.definir(slot, { item, qtd });
+      else if (o.inventario.adicionar(item, qtd) >= qtd) return;
+      o.eventos.push({ e: 'coletou', item, qtd });
+    },
+    dar(item: string, qtd: number) {
+      const resto = o.inventario.adicionar(item, qtd);
+      if (resto < qtd) o.eventos.push({ e: 'coletou', item, qtd: qtd - resto });
+      return resto;
+    },
+  });
+  const vila: VilaNucleo | null = planoVila
+    ? criarVila({
+        plano: planoVila,
+        salvo: extras['vila'],
+        agora: () => n * PASSO,
+        jogadores: () => [...jogadores.values()].map(jogadorDaVila),
+        jogador: (id) => {
+          const o = jogadores.get(id);
+          return o ? jogadorDaVila(o) : undefined;
+        },
+        adicionar: (tipo, x, y, z) => populacao.adicionar(tipo, x, y, z),
+        criaturas: () => populacao.lista,
+        carregado: (x, z) => mundo.criaturas.superficie(Math.floor(x), Math.floor(z)) !== null,
+        evento: (id, chave, qtd) => almaEvento(id, chave, qtd),
+        espalhar: (e) => eventosGerais.push(e),
+        sujar: () => {
+          vilaSuja = true;
+        },
+      })
+    : null;
+  void FENO;
 
   /** Lugares novos (conferidos no passo, a cada meio segundo). */
   function cuidarDosLugares(): void {
@@ -2609,6 +2661,8 @@ export function criarNucleo(op: OpcoesNucleo) {
       case 'falar': {
         const cr = criatura(c.criatura);
         if (cr?.morador) cr.yawAlvo = Math.atan2(j.tel.x - cr.x, j.tel.z - cr.z);
+        // spec 026: o vocalista dá o pôster da banda (uma vez por mundo a cada criança)
+        if (cr && vila) vila.falou(j.id, cr);
         break;
       }
       case 'trocar':
@@ -2654,6 +2708,13 @@ export function criarNucleo(op: OpcoesNucleo) {
         if (e && mundoAlma && fixar(e, mundoAlma, c.missao)) pedirQuadroAlma(j.id);
         // spec 031: escolheu (ou escolheu de novo) uma missão do canto: o que é dela volta
         prepararCanto(j, c.missao);
+        // spec 026: a missão da Vila Neon escolhida de novo: o que é dela volta ao lugar
+        if (e && mundoAlma && missaoAberta(j.id, c.missao ?? '')) vila?.preparar(c.missao);
+        break;
+      }
+      case 'vila': {
+        // spec 026: a caixa do palco ou o toque no palco (o módulo confere o lugar e o limite)
+        vila?.comando(j.id, c.a === 'caixa' ? { a: 'caixa', i: c.i } : { a: 'palco' });
         break;
       }
       case 'salvar':
@@ -2794,6 +2855,8 @@ export function criarNucleo(op: OpcoesNucleo) {
     if (mundoAlma && n % 20 === 0) entregarBauBanca();
     // spec 031: a comida na mão perto do bicho do pasto, 4 vezes por segundo
     if (canto && n % 5 === 0) cuidarDoPasto();
+    // spec 026: a Vila Neon (estojos, show, lhamas e moradores com posto)
+    vila?.passo(n);
 
     // spec 014: o pedreiro do canteiro (aparece, acena e dá a colher), os moradores da cidade
     // e o cachorro da casinha
@@ -2892,9 +2955,12 @@ export function criarNucleo(op: OpcoesNucleo) {
       : undefined;
     perfisSujos = false;
     const relogioVeiculos = transito ? arred(transito.relogio) : 0;
+    const vistaVila: VilaVista | null = vila ? vila.vista() : null;
     const todosPlanos = transito ? transito.planos() : null;
     for (const j of jogadores.values()) {
       const q: Quadro = { t: 'quadro', n, ack: j.ack, ambiente: amb, criaturas, itens };
+      // spec 026: o estado da Vila Neon quando muda (e o relógio a cada segundo)
+      if (vistaVila && (vilaSuja || !j.iniciado || n % 20 === 0)) q.vila = vistaVila;
       // spec 014 (T13): o relógio dos veículos sempre; os planos inteiros para quem chega
       if (todosPlanos)
         q.veiculos = !j.iniciado
@@ -2960,6 +3026,7 @@ export function criarNucleo(op: OpcoesNucleo) {
     eventosGerais = [];
     veiculosMudados = [];
     almaPendente.clear();
+    vilaSuja = false;
     return out;
   }
 
@@ -2983,6 +3050,8 @@ export function criarNucleo(op: OpcoesNucleo) {
     if (obras.size > 0) out['obras'] = obrasSalvas();
     // spec 023: a alma de cada jogador neste mundo (mundo sem alma grava igual a antes)
     if (almas.size > 0) out['alma'] = JSON.parse(JSON.stringify(Object.fromEntries(almas)));
+    // spec 026: a Vila Neon (instrumentos no palco, caixas acesas, quem já ganhou o pôster)
+    if (vila) out['vila'] = vila.salvar();
     // na nuvem cada jogador é salvo à parte (dadosJogador); localmente vai junto do mundo
     if (j && confiar) {
       out['sobrevivencia'] = j.sobrevivencia.salvar();
@@ -3102,6 +3171,8 @@ export function criarNucleo(op: OpcoesNucleo) {
         /** Spec 023: o mundo da alma (null fora da Cidade e do Rancho) e a de cada jogador. */
         mundoAlma,
         almas,
+        /** Spec 026: a Vila Neon (null fora dela). */
+        vila,
       };
     },
   };

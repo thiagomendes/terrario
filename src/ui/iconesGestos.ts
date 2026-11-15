@@ -27,6 +27,9 @@ export const ICONES_GESTOS: Record<IdGesto, string> = {
     '<circle cx="16" cy="7" r="3.6" fill="#f2c9a0" stroke="#3b2a1e" stroke-width="1.8"/><path d="M16 11 V19 M16 13 L7 6 M16 13 L25 6 M16 19 L9 28 M16 19 L23 28" stroke="#e8402f" stroke-width="3" fill="none" stroke-linecap="round"/><path d="M27 15 L28.2 18 L31 18.4 L28.8 20.3 L29.5 23.2 L27 21.6 L24.5 23.2 L25.2 20.3 L23 18.4 L25.8 18 Z" fill="#ffd45a" stroke="#3b2a1e" stroke-width="1.2" stroke-linejoin="round"/>',
   reverencia:
     '<circle cx="19" cy="10" r="3.6" fill="#f2c9a0" stroke="#3b2a1e" stroke-width="1.8"/><path d="M17 13 Q12 15 11 21 M11 21 L10 29 M11 21 L15 29" stroke="#8a5ad8" stroke-width="3" fill="none" stroke-linecap="round"/><path d="M14 16 Q19 19 22 17" stroke="#8a5ad8" stroke-width="2.6" fill="none" stroke-linecap="round"/><path d="M4 12 Q6 7 10 9 M5 17 Q3 14 5 11" stroke="#ffb21a" stroke-width="1.8" fill="none" stroke-linecap="round"/>',
+  // spec 026: o roqueiro (bater cabeça): a cabeça inclinada com o cabelo voando e o raio
+  roqueiro:
+    '<circle cx="13" cy="14" r="4.2" fill="#f2c9a0" stroke="#3b2a1e" stroke-width="1.8"/><path d="M9 11 Q6 18 4 22 M11 10 Q9 18 8 24 M15 10 Q15 17 14 22" stroke="#2e2d36" stroke-width="2.4" fill="none" stroke-linecap="round"/><path d="M22 3 L18 13 H23 L19 24 L28 10 H23 L26 3 Z" fill="#ffd45a" stroke="#e8302a" stroke-width="1.6" stroke-linejoin="round"/>',
 };
 
 /** A carinha do botão que abre a roda. */

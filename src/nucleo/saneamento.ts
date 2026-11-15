@@ -191,7 +191,16 @@ export function sanear(c: unknown): Comando | null {
       return o.missao === null || texto(o.missao, 16) ? (o as unknown as Comando) : null;
     case 'comprarBanca':
       // spec 023: o id de um item da banca e o saldo do aparelho (inteiro, com teto)
-      return texto(o.item, 32) && inteiro(o.saldo, 0, MAX_MOEDAS) ? (o as unknown as Comando) : null;
+      return texto(o.item, 32) && inteiro(o.saldo, 0, MAX_MOEDAS)
+        ? (o as unknown as Comando)
+        : null;
+    case 'vila':
+      // spec 026: a caixa do palco (0 a 2) ou o toque no palco; nada mais vai junto
+      if (o.a === 'caixa')
+        return inteiro(o.i, 0, 2)
+          ? ({ t: 'vila', a: 'caixa', i: o.i } as unknown as Comando)
+          : null;
+      return o.a === 'palco' ? ({ t: 'vila', a: 'palco' } as unknown as Comando) : null;
     case 'pularPerto':
       // spec 021: só o id de um amigo (texto curto)
       return texto(o.alvo, 64) ? (o as unknown as Comando) : null;

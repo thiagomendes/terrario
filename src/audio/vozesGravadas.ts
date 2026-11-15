@@ -109,8 +109,8 @@ export const NIVEL_VOZES: Readonly<Record<string, Partial<Record<GrupoNivelVoz, 
   'exploracao-lunar': { bichos: -8.5, moradores: -9.8, baque: -3.8, derrota: -1.1 },
   'rancho-alegre': { bichos: -5.9, moradores: -3.0, baque: -1.3, derrota: 0.4 },
   'cidade-grande': { bichos: -7.7, moradores: -3.2, baque: -0.6, derrota: 0.45 },
-  // spec 026: os números da cidade até as vozes do bairro serem gravadas e medidas (T18)
-  'vila-neon': { bichos: -7.7, moradores: -3.2, baque: -0.6, derrota: 0.45 },
+  // spec 026: a Vila Neon não tem vozes gravadas (os bichos e os moradores do bairro usam a voz
+  // sintetizada do tema, src/temas/vila-neon/vozes.ts): o carregador nem baixa pacote de vozes
 };
 
 /**
@@ -433,8 +433,11 @@ export function criarVozesGravadas(op: OpcoesVozesGravadas): VozesGravadas {
     const sinal = abortar?.signal;
     carregando = (async () => {
       try {
-        const [indice, tema, com] = await Promise.all([
-          carregarIndice(`${base}sons/indice.json`, sinal),
+        // spec 026: o índice primeiro; tema sem vozes gravadas (a Vila Neon) nem baixa os pacotes
+        const indice = await carregarIndice(`${base}sons/indice.json`, sinal);
+        if (minha !== geracao) return;
+        if (!indice.temas[op.tema]?.vozes) throw new Error('tema sem vozes no índice');
+        const [tema, com] = await Promise.all([
           baixar(`${base}sons/pacotes/${op.tema}-vozes.mp3`, sinal),
           baixar(`${base}sons/pacotes/comum-vozes.mp3`, sinal),
         ]);

@@ -212,15 +212,19 @@ export function criarRenderCriaturas(
   const planosFeitos = new Map<string, PlanoBoneco>();
   function prepararMorador(c: Criatura) {
     const prof = c.morador?.profissao ?? 'construtor';
-    const acessorio = povoadoDoTema().acessorios?.[prof];
+    // spec 026: o morador de posto com roupa própria (o vocalista, a dançarina, o patinador)
+    const fixo = c.morador
+      ? povoadoDoTema().porMorador?.[`${c.morador.povoado}:${c.morador.n}`]
+      : undefined;
+    const acessorio = fixo ? fixo.acessorio : povoadoDoTema().acessorios?.[prof];
     const m = moradorDeBrinquedo(
-      povoadoDoTema().moradores[prof],
+      fixo?.pecas ?? povoadoDoTema().moradores[prof],
       c.id,
       c.morador ? generoDoMorador(c.morador.povoado, c.morador.n, prof) : undefined,
       acessorio,
-      povoadoDoTema().fantasias?.[prof],
+      fixo ? fixo.fantasia : povoadoDoTema().fantasias?.[prof],
     );
-    const chave = `${tema().id}|${prof}|${acessorio ?? ''}|${JSON.stringify(m.aparencia)}`;
+    const chave = `${tema().id}|${prof}|${fixo && c.morador ? `${c.morador.povoado}:${c.morador.n}` : ''}|${acessorio ?? ''}|${JSON.stringify(m.aparencia)}`;
     return { m, chave };
   }
   /** O plano encaixado do morador (feito agora, ou o guardado). */
@@ -627,7 +631,8 @@ export function criarRenderCriaturas(
         const balanco = seno * abertura;
         const mov = tema().movimento[c.tipo];
         const andando = Math.min(1, m.amp * 3);
-        m.parado += ((m.vel < 0.15 && Math.abs(m.giro) < 0.6 ? 1 : 0) - m.parado) * Math.min(1, dt * 3);
+        m.parado +=
+          ((m.vel < 0.15 && Math.abs(m.giro) < 0.6 ? 1 : 0) - m.parado) * Math.min(1, dt * 3);
         const flutua =
           mov.flutua > 0 ? mov.flutua * 1.5 + Math.sin(tempo * 2 + c.id) * mov.flutua : 0;
         const pulinho = mov.saltita * Math.abs(seno) * andando;

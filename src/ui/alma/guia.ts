@@ -17,6 +17,7 @@ import { missaoPorId } from '../../jogo/alma';
 import { pedirSomGuia } from '../../audio/somGuia';
 import { medirHud } from '../carinhasAmigos';
 import { ligarCantoMissoes } from './canto';
+import { ligarVilaNeon } from './vila';
 
 /** O quadro de cortiça com as duas missões (o ícone de "Missões" na roda do menu). */
 export const QUADRO_SVG = `<svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
@@ -99,6 +100,16 @@ export function ligarGuiaMissao(e: EstadoDepuracao, ui: AlmaUi): GuiaMissao | nu
     canto: e.canto?.() ?? null,
     bichos: () => e.criaturas?.() ?? [],
     ovos: () => (e.itensNoChao?.() ?? []).filter((i) => i.item === 'ovo'),
+    // spec 026: a Vila Neon (estojos, lhamas e o palco)
+    vila: e.vila?.() ?? null,
+    estadoVila: () => e.vilaEstado?.() ?? null,
+    comFeno: () => {
+      const inv = e.inventario;
+      if (!inv) return false;
+      for (let i = 0; i < 36; i++) if (inv.obter(i)?.item === 'trigo') return true;
+      return false;
+    },
+    pesY: () => e.jogadorPes?.()[1] ?? 0,
   };
   const guia = criarGuiaMissao({
     scene,
@@ -246,5 +257,7 @@ export function ligarGuiaMissao(e: EstadoDepuracao, ui: AlmaUi): GuiaMissao | nu
   });
   // spec 031: o canto das missões da Era dos Dinos e do Doce Reino
   ligarCantoMissoes(e, ui, guia, scene);
+  // spec 026: as caixas do palco, o toque no show e o feno na mão da Vila Neon
+  ligarVilaNeon(e, ui, guia, scene);
   return guia;
 }

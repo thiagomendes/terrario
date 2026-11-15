@@ -15,6 +15,7 @@ import { Color3 } from '@babylonjs/core/Maths/math.color';
 import { caixa, Pecas } from '../solidos';
 import type { PlanoVila, RetanguloVila } from '../../world/vilaNeon';
 import type { OpcoesRenderVila } from './index';
+import { criarPaletaLuz } from './luzes';
 
 export interface Sosias {
   quadro(t: number, x: number, z: number, noite: number): void;
@@ -60,12 +61,9 @@ export function criarSosias(scene: Scene, plano: PlanoVila, opcoes: OpcoesRender
   mat.emissiveColor = new Color3(0.35, 0.35, 0.38);
   // a névoa do mundo apagaria tudo além da borda do chão: a cor puxa para a névoa à mão
   mat.fogEnabled = false;
-  const matLuz = new StandardMaterial('vila-sosia-luz', scene);
-  matLuz.disableLighting = true;
-  matLuz.emissiveColor = Color3.White();
-  matLuz.diffuseColor = Color3.Black();
-  matLuz.specularColor = Color3.Black();
-  matLuz.fogEnabled = false;
+  // as luzes (as lâmpadas da grade, os raios, a placa do rinque): acesas, a cor na paleta
+  const paleta = criarPaletaLuz(scene, 'vila-sosia-luz', false);
+  const matLuz = paleta.material;
   const lista: Sosia[] = [];
 
   /**
@@ -106,7 +104,9 @@ export function criarSosias(scene: Scene, plano: PlanoVila, opcoes: OpcoesRender
       let luzes: Mesh | null = null;
       if (e.l.partes.length) {
         luzes = new Mesh(`vila-sosia-${nome}-luz-${e.cx},${e.cz}`, scene);
-        e.l.juntar().applyToMesh(luzes);
+        const vd = e.l.juntar();
+        paleta.aplicar(vd);
+        vd.applyToMesh(luzes);
         luzes.material = matLuz;
         luzes.isPickable = false;
         luzes.setEnabled(false);
@@ -120,49 +120,154 @@ export function criarSosias(scene: Scene, plano: PlanoVila, opcoes: OpcoesRender
 
   const Y = plano.h + 1;
   const { palco } = plano.pontos;
-  // o palco: o chão (grama e o tablado), as torres, a grade de luzes, o fundo e o raio
+  const GRAFITE = '#3a3944';
+  const CROMO = '#d4d8e2';
+  /** O raio da logo em degraus (5 caixas), no plano x-y (`emX`) ou z-y, com a altura `k`. */
+  const raio = (
+    cx: Caixa,
+    emX: boolean,
+    m: number,
+    y0: number,
+    k: number,
+    f0: number,
+    f1: number,
+    cor: string,
+  ) => {
+    for (const [a0, a1, b0, b1] of [
+      [0.12, 0.42, 0.3, 0.5],
+      [0.0, 0.3, 0.1, 0.3],
+      [-0.24, 0.36, -0.08, 0.1],
+      [-0.05, 0.22, -0.28, -0.08],
+      [-0.16, 0.06, -0.5, -0.28],
+    ]) {
+      const ya = y0 + (b0 + 0.5) * k;
+      const yb = y0 + (b1 + 0.5) * k;
+      if (emX) cx(m + a0 * k, m + a1 * k, ya, yb, f0, f1, cor);
+      else cx(f0, f1, ya, yb, m + a0 * k, m + a1 * k, cor);
+    }
+  };
+  // o palco: o chão (grama), o tablado de beira vermelha com a passarela, a concha grafite (o
+  // fundo e as abas), as torres e a grade de luzes, as caixas penduradas, os raios e as lâmpadas
   fazer(
     'palco',
-    { x0: palco.x0 - 4, z0: palco.z0 - 4, x1: palco.x1 + 4, z1: palco.z1 + 2 },
+    { x0: palco.x0 - 6, z0: palco.z0 - 2, x1: palco.x1 + 6, z1: palco.z1 + 3 },
     (c, l) => {
-      const x0 = palco.x0 - 4;
-      const x1 = palco.x1 + 5;
-      const z0 = palco.z0 - 4;
-      const z1 = palco.z1 + 3;
-      c(x0, x1, Y - 1, Y, z0, z1, '#4f8f3e');
-      c(palco.x0, palco.x1 + 1, Y, palco.y + 1, palco.z0 + 5, palco.z1 + 1, '#2e2d36');
-      c(palco.x0, palco.x1 + 1, palco.y + 1, Y + 12, palco.z1, palco.z1 + 1, '#2e2d36');
-      const topo = Y + 16;
-      for (const tx of [palco.x0 - 2, palco.x1 + 2])
-        for (const tz of [palco.z0 + 4, palco.z1])
-          c(tx, tx + 1, Y, topo + 1, tz, tz + 1, '#d4d8e2');
-      c(palco.x0 - 2, palco.x1 + 3, topo, topo + 1, palco.z0 + 4, palco.z0 + 5, '#d4d8e2');
-      c(palco.x0 - 2, palco.x1 + 3, topo, topo + 1, palco.z1, palco.z1 + 1, '#d4d8e2');
-      // as lâmpadas da grade e o raio do fundo (acesos)
+      const x0 = palco.x0;
+      const x1 = palco.x1 + 1;
+      // a frente do tablado (a passarela entra 5 na plateia) e o fundo
+      const zf = palco.z0 + 5;
+      const zb = palco.z1 + 1;
+      const yp = palco.y + 1;
+      c(x0 - 6, x1 + 6, Y - 1, Y, palco.z0 - 2, zb + 3, '#4a9a3c');
+      c(x0, x1, Y, yp - 1, zf, zb, GRAFITE);
+      c(x0, x1, yp - 1, yp, zf, zb, '#c8302a');
+      c(x0 + 0.2, x1 - 0.2, yp - 0.02, yp + 0.02, zf + 0.2, zb, '#34333d');
+      const mx = (x0 + x1) / 2 + 0.5;
+      c(mx - 3, mx + 3, Y, yp - 1, palco.z0, zf, '#2f6fd0');
+      c(mx - 3, mx + 3, yp - 1, yp, palco.z0, zf, '#c8302a');
+      // a concha: o fundo e as abas, com o fio de neon em cima
+      const topo = Y + 12;
+      c(x0, x1, yp, topo, zb - 1, zb, GRAFITE);
+      c(x0, x0 + 1, yp, topo, zb - 7, zb - 1, GRAFITE);
+      c(x1 - 1, x1, yp, topo, zb - 7, zb - 1, GRAFITE);
+      l(x0, x1, topo, topo + 0.5, zb - 1, zb, '#2ee0d0');
+      l(x0, x0 + 1, topo, topo + 0.5, zb - 7, zb - 1, '#2ee0d0');
+      l(x1 - 1, x1, topo, topo + 0.5, zb - 7, zb - 1, '#2ee0d0');
+      // os amplificadores e o praticável vermelho da bateria
+      c(x0 + 1, x0 + 5, yp, yp + 3, zb - 2, zb - 1, '#2a2932');
+      c(x1 - 5, x1 - 1, yp, yp + 3, zb - 2, zb - 1, '#2a2932');
+      c(mx - 4, mx + 4, yp, yp + 1, zb - 4, zb - 1, '#c8302a');
+      c(mx - 1.6, mx + 1.6, yp + 1, yp + 2.4, zb - 3, zb - 2, '#e8e4dc');
+      // as torres de treliça, a grade de luzes e as travessas
+      const g = Y + 16;
+      for (const tx of [x0 - 2, x1 + 1])
+        for (const tz of [zf - 1, zb - 1]) c(tx, tx + 1, Y, g + 1, tz, tz + 1, CROMO);
+      c(x0 - 2, x1 + 2, g, g + 1, zf - 1, zf, CROMO);
+      c(x0 - 2, x1 + 2, g, g + 1, zb - 1, zb, CROMO);
+      c(x0 - 2, x1 + 2, g, g + 1, zf + 6, zf + 7, CROMO);
+      for (const tx of [x0 - 2, x0 + 8, mx - 1, x1 - 9, x1 + 1])
+        c(tx, tx + 1, g, g + 1, zf, zb - 1, CROMO);
+      // as caixas de som penduradas e as flâmulas
+      c(x0 - 5, x0 - 3, g - 7, g - 3, zf - 1, zf, '#2a2932');
+      c(x1 + 2, x1 + 4, g - 7, g - 3, zf - 1, zf, '#2a2932');
+      c(x0 - 5, x0 - 2, g - 3, g - 2, zf - 1, zf, CROMO);
+      c(x1 + 1, x1 + 4, g - 3, g - 2, zf - 1, zf, CROMO);
+      c(x0 - 2.1, x0 - 0.9, g - 6.2, g - 4, zf - 2.3, zf - 2.1, '#c8302a');
+      c(x1 + 0.9, x1 + 2.1, g - 6.2, g - 4, zf - 2.3, zf - 2.1, '#2f6fd0');
+      // os holofotes da grade (lâmpadas), os raios acesos e o arco de lâmpadas
+      const cores = ['#e8302a', '#2f8cff', '#fff1c4', '#ffe14a'];
       for (let i = 0; i < 8; i++) {
-        const x = palco.x0 + 2 + (i * (palco.x1 - palco.x0 - 4)) / 7;
-        l(
-          x,
-          x + 0.8,
-          topo - 0.8,
-          topo,
-          palco.z0 + 4,
-          palco.z0 + 4.8,
-          i % 2 ? '#ffe14a' : '#2f8cff',
+        const x = x0 + 2 + (i * (x1 - x0 - 5)) / 7;
+        c(x, x + 0.7, g - 1.2, g, zf - 1, zf - 0.3, '#2a2932');
+        l(x + 0.1, x + 0.6, g - 1.1, g - 0.6, zf - 1.2, zf - 1, cores[i % 4]);
+      }
+      raio(c, true, mx, yp + 1.9, 7.2, zb - 1.3, zb - 1.1, CROMO);
+      raio(l, true, mx, yp + 2.3, 6.4, zb - 1.5, zb - 1.3, '#e8302a');
+      raio(l, true, mx + 0.1, yp + 3.0, 5.0, zb - 1.7, zb - 1.5, '#ffe14a');
+      raio(l, true, x0 + 8.5, yp + 4.2, 3, zb - 1.4, zb - 1.1, '#2f8cff');
+      raio(l, true, x1 - 8.5, yp + 4.2, 3, zb - 1.4, zb - 1.1, '#ffe14a');
+      for (const [f0, f1] of [
+        [x1, x1 + 0.3],
+        [x0 - 0.3, x0],
+      ]) {
+        raio(l, false, zb - 4, yp + 1.2, 7.6, f0, f1, '#e8302a');
+        raio(
+          l,
+          false,
+          zb - 3.9,
+          yp + 2.2,
+          5.6,
+          f0 < x0 ? f0 - 0.2 : f1,
+          f0 < x0 ? f0 : f1 + 0.2,
+          '#ffe14a',
         );
       }
-      const mx = (palco.x0 + palco.x1) / 2;
-      l(mx - 1.5, mx + 1.5, Y + 5, Y + 11, palco.z1 - 0.4, palco.z1, '#ffe14a');
+      for (let i = 0; i <= 10; i++) {
+        const a = ((16 + i * 14.8) * Math.PI) / 180;
+        const x = mx + Math.cos(a) * 7.6;
+        const y = yp + 1.6 + Math.sin(a) * 7.6;
+        l(x - 0.25, x + 0.25, y - 0.25, y + 0.25, zb - 1.4, zb - 1.1, '#fff1c4');
+      }
     },
   );
-  // a placa do rinque
+  // o rinque: a pista quadriculada, a mureta, o arco de treliça com o globo e o pórtico aceso
   const rq = plano.pontos.rinque;
   fazer('rinque', { x0: rq.x0, z0: rq.z0 - 4, x1: rq.x1, z1: rq.z1 }, (c, l) => {
-    c(rq.x0 - 1, rq.x1 + 2, Y - 1, Y, rq.z0 - 4, rq.z1 + 2, '#c9c4bb');
-    c(rq.x0, rq.x1 + 1, Y - 0.98, Y - 0.9, rq.z0, rq.z1 + 1, '#ff6fb4');
-    const mx = (rq.x0 + rq.x1) / 2;
-    c(mx - 0.2, mx + 0.2, Y, Y + 6, rq.z0 - 3, rq.z0 - 2.6, '#2e2d36');
-    l(mx - 3, mx + 3, Y + 5, Y + 7, rq.z0 - 3.2, rq.z0 - 2.8, '#ff6fb4');
+    const x0 = rq.x0;
+    const x1 = rq.x1 + 1;
+    const z0 = rq.z0;
+    const z1 = rq.z1 + 1;
+    c(x0 - 2, x1 + 2, Y - 1, Y, z0 - 5, z1 + 2, '#c9c4bb');
+    for (let x = x0; x < x1; x += 4)
+      for (let z = z0; z < z1; z += 4)
+        c(
+          x,
+          Math.min(x1, x + 4),
+          Y - 0.02,
+          Y + 0.04,
+          z,
+          Math.min(z1, z + 4),
+          ((x - x0) / 4 + (z - z0) / 4) % 2 ? '#3a3944' : '#ff6fb4',
+        );
+    for (const z of [z0 - 1, z1]) c(x0 - 1, x1 + 1, Y, Y + 0.8, z + 0.35, z + 0.65, '#4a4954');
+    for (const x of [x0 - 1, x1]) c(x + 0.35, x + 0.65, Y, Y + 0.8, z0 - 1, z1 + 1, '#4a4954');
+    for (const x of [x0 - 1, x1])
+      for (const z of [z0 - 1, z1]) {
+        c(x + 0.3, x + 0.7, Y, Y + 3, z + 0.3, z + 0.7, '#3a3944');
+        l(x + 0.15, x + 0.85, Y + 3, Y + 3.7, z + 0.15, z + 0.85, '#ffe08e');
+      }
+    // o arco de treliça e o globo
+    const za = z0 + 7;
+    c(x0 + 1, x0 + 2, Y, Y + 10, za, za + 1, CROMO);
+    c(x1 - 2, x1 - 1, Y, Y + 10, za, za + 1, CROMO);
+    c(x0 + 1, x1 - 1, Y + 9, Y + 10, za, za + 1, CROMO);
+    const mx = (x0 + x1) / 2;
+    c(mx - 0.8, mx + 0.8, Y + 7.1, Y + 8.7, za - 0.3, za + 1.3, '#c2c7d2');
+    // o pórtico da entrada
+    for (const x of [mx - 2.2, mx + 1.96]) c(x, x + 0.24, Y, Y + 4.6, z0 - 1.62, z0 - 1.38, CROMO);
+    c(mx - 2.4, mx + 2.4, Y + 4.3, Y + 6.4, z0 - 1.7, z0 - 1.3, '#2e2d36');
+    l(mx - 1.9, mx + 1.9, Y + 4.8, Y + 5.9, z0 - 1.78, z0 - 1.7, '#ff6fb4');
+    l(mx - 1.9, mx + 1.9, Y + 4.8, Y + 5.9, z0 - 1.3, z0 - 1.22, '#ff6fb4');
   });
 
   const fog = new Color3();
@@ -201,7 +306,7 @@ export function criarSosias(scene: Scene, plano: PlanoVila, opcoes: OpcoesRender
           p.luzes?.dispose();
         }
       mat.dispose();
-      matLuz.dispose();
+      paleta.descartar();
     },
   };
 }

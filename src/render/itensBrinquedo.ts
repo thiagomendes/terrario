@@ -268,6 +268,22 @@ export function modeloNaMao(
         }
         break;
       }
+      case 'cachorro_quente': {
+        // spec 026: o pão comprido aberto, a salsicha e a mostarda em zigue-zague
+        add(bo('pao-cq', 0.07, '#e8b067', [2.6, 0.75, 1.05], 0.45), 0, 0.045, 0);
+        add(bo('salsicha', 0.045, '#c8452c', [3.6, 0.9, 0.9], 0.6), 0, 0.085, 0);
+        for (const x of [-0.08, -0.03, 0.02, 0.07])
+          add(bo(`mostarda${x}`, 0.014, '#ffd23d', [1.6, 0.6, 0.6], 0.5), x, 0.122, 0);
+        break;
+      }
+      case 'suco': {
+        // spec 026: o copo com o suco de laranja e o canudo vermelho
+        add(ci('copo', 0.15, 0.06, 0.05, '#f4f8ff'), 0, 0.075, 0);
+        add(ci('suco', 0.12, 0.054, 0.046, '#ff8a2a'), 0, 0.066, 0);
+        const canudo = add(ci('canudo', 0.16, 0.009, 0.009, '#e8302a'), 0.02, 0.16, 0);
+        canudo.rotation.z = -0.25;
+        break;
+      }
       case 'pipoca': {
         // balde listrado de vermelho e branco, cheio de pipoca
         add(ci('balde', 0.13, 0.085, 0.06, '#f6f2ea'), 0, 0.065, 0);

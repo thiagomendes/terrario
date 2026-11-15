@@ -24,6 +24,7 @@ import { Pecas } from '../solidos';
 import type { PecaVila, PlanoVila } from '../../world/vilaNeon';
 import { desenharPeca, type Desenho, type QuadroDesenhado } from './pecas';
 import { criarSosias, type Sosias } from './sosias';
+import { criarPaletaLuz } from './luzes';
 
 export interface OpcoesRenderVila {
   /** A malha do chunk está desenhada? */
@@ -63,12 +64,9 @@ export function criarRenderVila(
 ): RenderVila {
   const pl = criarPlasticos(scene, 'vila');
   const matCorpo = pl.corVertice(0.3) ?? pl.cor('#ffffff', 0.3);
-  // as luzes (neon, lâmpadas, telas): acesas, a cor no vértice, sem luz de cena
-  const matLuz = new StandardMaterial('vila-luz', scene);
-  matLuz.disableLighting = true;
-  matLuz.emissiveColor = Color3.White();
-  matLuz.diffuseColor = Color3.Black();
-  matLuz.specularColor = Color3.Black();
+  // as luzes (neon, lâmpadas, telas): acesas, a cor na paleta, sem luz de cena
+  const paleta = criarPaletaLuz(scene, 'vila-luz');
+  const matLuz = paleta.material;
   /** As peças agrupadas por chunk (fixas: o plano não muda). */
   const porChunk = new Map<string, PecaVila[]>();
   for (const p of plano.pecas) {
@@ -88,7 +86,7 @@ export function criarRenderVila(
     const luz = new Pecas();
     const quadros: QuadroDesenhado[] = [];
     for (const p of lista) {
-      const d: Desenho = { corpo, luz, quadros, ox, oz };
+      const d: Desenho = { corpo, luz, quadros, ox, oz, chao: plano.h + 1 };
       desenharPeca(p, d);
     }
     const malhas: Mesh[] = [];
@@ -96,7 +94,9 @@ export function criarRenderVila(
     const fazer = (pecas: Pecas, nome: string, mat: StandardMaterial) => {
       if (!pecas.partes.length) return null;
       const m = new Mesh(nome, scene);
-      pecas.juntar().applyToMesh(m);
+      const vd = pecas.juntar();
+      if (mat === matLuz) paleta.aplicar(vd);
+      vd.applyToMesh(m);
       m.material = mat;
       m.position.set(ox, 0, oz);
       m.isPickable = false;
@@ -113,26 +113,35 @@ export function criarRenderVila(
     const ml = fazer(luz, `vila-luzes-${cx},${cz}`, matLuz);
     if (ml) opcoes.brilha?.(ml);
     for (const q of quadros) {
+      // a textura em potência de 2 (com os níveis de longe: o letreiro não cintila); o desenho
+      // é feito no tamanho de sempre e esticado na altura
+      let alturaTex = 16;
+      while (alturaTex < q.altura) alturaTex *= 2;
       const tex = new DynamicTexture(
         `vila-quadro-${cx},${cz}-${malhas.length}`,
-        { width: q.largura, height: q.altura },
+        { width: q.largura, height: alturaTex },
         scene,
         true,
       );
       const g = tex.getContext() as unknown as CanvasRenderingContext2D;
+      g.save();
+      g.scale(1, alturaTex / q.altura);
       q.pintar(g);
+      g.restore();
       tex.update(true);
       tex.wrapU = Texture.CLAMP_ADDRESSMODE;
       tex.wrapV = Texture.CLAMP_ADDRESSMODE;
       const mat = new StandardMaterial(`vila-quadro-mat`, scene);
       mat.specularColor = Color3.Black();
+      // (o quadro fica colado numa caixa: o verso nunca aparece)
+      mat.backFaceCulling = false;
       if (q.aceso) {
         mat.disableLighting = true;
         mat.emissiveTexture = tex;
         mat.diffuseColor = Color3.Black();
       } else {
         mat.diffuseTexture = tex;
-        mat.emissiveColor = new Color3(0.32, 0.32, 0.32);
+        mat.emissiveColor = new Color3(0.34 * luzAtual, 0.34 * luzAtual, 0.34 * luzAtual);
       }
       const m = new Mesh(`vila-quadro-${cx},${cz}`, scene);
       const vd = new VertexData();
@@ -141,14 +150,15 @@ export function criarRenderVila(
       vd.positions = [-w, -h, 0, w, -h, 0, w, h, 0, -w, h, 0];
       vd.normals = [0, 0, -1, 0, 0, -1, 0, 0, -1, 0, 0, -1];
       vd.uvs = [0, 0, 1, 0, 1, 1, 0, 1];
-      vd.indices = [0, 2, 1, 0, 3, 2];
+      vd.indices = [0, 1, 2, 0, 2, 3];
       vd.applyToMesh(m);
       m.material = mat;
-      m.position.set(q.x, q.y, q.z);
+      m.position.set(ox + q.x, q.y, oz + q.z);
       m.rotation.y = q.giro;
       m.isPickable = false;
       m.freezeWorldMatrix();
       if (q.aceso) opcoes.brilha?.(m);
+      else opcoes.tapaOGlow?.(m);
       malhas.push(m);
       texturas.push(tex);
     }
@@ -166,6 +176,7 @@ export function criarRenderVila(
 
   const sosias = criarSosias(scene, plano, opcoes);
   let semChao = 0;
+  let luzAtual = 1;
 
   return {
     sosias,
@@ -188,6 +199,18 @@ export function criarRenderVila(
       for (const [, k, cx, cz] of faltam.slice(0, porQuadro))
         vivos.set(k, montar(cx, cz, porChunk.get(k)!));
       sosias.quadro(t, x, z, noite);
+      // de noite o plástico das peças escurece com o chão (a luz fica com o neon e as lâmpadas)
+      const luzPecas = 1 - 0.62 * noite;
+      if (Math.abs(luzPecas - luzAtual) > 0.01) {
+        luzAtual = luzPecas;
+        pl.definirLuz(luzPecas);
+        for (const v of vivos.values())
+          for (const m of v.malhas) {
+            const mat = m.material as StandardMaterial | null;
+            if (mat && mat !== matCorpo && mat !== matLuz && !mat.disableLighting)
+              mat.emissiveColor.set(0.34 * luzPecas, 0.34 * luzPecas, 0.34 * luzPecas);
+          }
+      }
       semChao = 0;
       for (const v of vivos.values())
         if (!opcoes.temMalha(v.cx, v.cz)) semChao += v.malhas.filter((m) => m.isEnabled()).length;
@@ -207,7 +230,7 @@ export function criarRenderVila(
       for (const v of vivos.values()) soltar(v);
       vivos.clear();
       sosias.descartar();
-      matLuz.dispose();
+      paleta.descartar();
       pl.descartar();
     },
   };

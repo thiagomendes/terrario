@@ -63,6 +63,16 @@ export const TROCAS: Record<Profissao, readonly Troca[]> = {
     },
   ],
   cozinheiro: [
+    // spec 026 (T08): a moça do lanche da Vila Neon (sem roça no bairro: o pão sai do balcão)
+    // a barraca do lanche: pipoca, cachorro-quente e suco (de graça: sem roça e sem dinheiro)
+    { id: 'pipoca', dar: [], receber: { item: 'pipoca', qtd: 2 }, planta: 'bairro' },
+    {
+      id: 'cachorro-quente',
+      dar: [],
+      receber: { item: 'cachorro_quente', qtd: 1 },
+      planta: 'bairro',
+    },
+    { id: 'suco', dar: [], receber: { item: 'suco', qtd: 1 }, planta: 'bairro' },
     {
       id: 'peixe',
       dar: [{ item: 'peixe_cru', qtd: 3 }],
@@ -96,6 +106,25 @@ export const TROCAS: Record<Profissao, readonly Troca[]> = {
     { id: 'pao', dar: [{ item: 'trigo', qtd: 5 }], receber: { item: 'pao', qtd: 2 } },
   ],
   construtor: [
+    // spec 026 (T08): a roadie do palco da Vila Neon troca peças de palco
+    {
+      id: 'caixa-som',
+      dar: [{ item: b(Bloco.TABUAS), qtd: 4 }],
+      receber: { item: b(Bloco.CAIXA_SOM), qtd: 2 },
+      planta: 'bairro',
+    },
+    {
+      id: 'trelica',
+      dar: [{ item: b(Bloco.PEDREGULHO), qtd: 4 }],
+      receber: { item: b(Bloco.TRELICA), qtd: 8 },
+      planta: 'bairro',
+    },
+    {
+      id: 'pista-neon',
+      dar: [{ item: b(Bloco.PEDREGULHO), qtd: 2 }],
+      receber: { item: b(Bloco.PISTA_NEON), qtd: 8 },
+      planta: 'bairro',
+    },
     // spec 014 (T07): o pedreiro da cidade. A colher vem de graça (quem perdeu ganha outra)
     // e os blocos das obras saem de coisas fáceis de juntar
     { id: 'colher', dar: [], receber: { item: COLHER_PEDREIRO, qtd: 1 }, planta: 'cidade' },

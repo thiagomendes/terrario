@@ -90,7 +90,14 @@ export type TipoPecaVila =
   | 'casinha-cachorro'
   | 'piscininha'
   | 'vitrine'
-  | 'balcao';
+  | 'balcao'
+  | 'bandeirolas'
+  | 'pipoca'
+  | 'mesinha'
+  | 'floreira'
+  | 'toalha'
+  | 'raio-palco'
+  | 'arco-lampadas';
 
 /** Nomes dos letreiros (em português, inventados; só no mundo, nunca na interface). */
 export const LETREIROS = [
@@ -429,11 +436,11 @@ function montarVila(semente: number, r: RelevoVila): Montado {
 
   // ============================================================== peças pequenas de blocos
   /** Árvore do gerador do jogo (o carvalho e a bétula da geração; verde ou ipê amarelo). */
-  const arvore = (u: number, v: number, k = 0) => {
+  const arvore = (u: number, v: number, k = 0, alta = 0) => {
     const t = s(u, v, 11 + k);
     const betula = t > 0.78;
     const ipe = !betula && t < 0.3;
-    const tronco = (betula ? 5 : 4) + Math.floor(s(u, v, 12) * 2);
+    const tronco = (betula ? 5 : 4) + Math.floor(s(u, v, 12) * 2) + alta;
     const madeira = betula ? Bloco.TRONCO_BETULA : Bloco.MADEIRA_RETORCIDA;
     const folha = betula ? Bloco.FOLHAS_BETULA : ipe ? Bloco.FOLHAS_OUTONO : Bloco.FOLHAGEM;
     for (let y = 1; y <= tronco; y++) b(u, y, v, madeira);
@@ -491,9 +498,9 @@ function montarVila(semente: number, r: RelevoVila): Montado {
   const TELHADOS = [
     Bloco.TELHA_COLONIAL,
     Bloco.PEDRA_MARROM,
-    Bloco.TELHA_COLONIAL,
     Bloco.LA_AZUL,
-    Bloco.TIJOLOS,
+    Bloco.TELHA_COLONIAL,
+    Bloco.CONCRETO,
   ];
 
   /**
@@ -543,9 +550,9 @@ function montarVila(semente: number, r: RelevoVila): Montado {
           let id: number = y === 1 ? Bloco.TIJOLOS_PEDRA : parede;
           const frente = f === QUINTAL;
           if (frente && (y === 2 || y === 3) && sx >= 5 && sx < w - 1 && sx % 3 !== 1)
-            id = Bloco.JANELA;
+            id = (sx + k) % 4 < 2 ? Bloco.JANELA_ACESA : Bloco.JANELA;
           if ((sx === 0 || sx === w - 1) && (y === 2 || y === 3) && (f - QUINTAL) % 3 === 2)
-            id = Bloco.JANELA;
+            id = (f + k + sx) % 3 === 0 ? Bloco.JANELA_ACESA : Bloco.JANELA;
           if (frente && y <= 2 && sx === 2) id = Bloco.PORTA;
           if (frente && y === 3 && sx === 2) id = parede;
           b(u, y, v, id, id === Bloco.PORTA ? dir : 0);
@@ -567,13 +574,22 @@ function montarVila(semente: number, r: RelevoVila): Montado {
         const alt = Math.min(f - QUINTAL + 1, fundo - f + 1);
         for (let y = H + 1; y <= H + alt - 1; y++) b(u, y, v, parede);
       }
+    // a chaminé de tijolo num canto do telhado e a cerca-viva baixa de um lado do quintal
+    {
+      const [u, v] = q(w - 3, fundo - 1);
+      for (let y = H + 2; y <= H + meio + 1; y++) b(u, y, v, Bloco.TIJOLOS);
+      for (let f = 1; f < QUINTAL; f++) {
+        const [hu, hv] = q(w - 2, f);
+        if (k % 2) b(hu, 1, hv, Bloco.FOLHAGEM);
+      }
+    }
     // enfeites do quintal: casinha de cachorro, varal ou piscininha (um por casa)
     const [eu, ev] = q(w - 3, 2);
     const enfeite = k % 3;
     if (enfeite === 0) peca('casinha-cachorro', eu, ev, dir, k);
     else if (enfeite === 1) peca('piscininha', eu, ev, dir, k);
     else peca('varal-roupa', eu, ev, dir, k);
-    const [cu, cv] = q(1, -1);
+    const [cu, cv] = q(4, -1);
     if (k % 2 === 0) peca('caixa-correio', cu, cv, dir, k);
   };
 
@@ -610,7 +626,8 @@ function montarVila(semente: number, r: RelevoVila): Montado {
             id = porta ? Bloco.AR : y === 1 ? Bloco.PEDRA_CREME : Bloco.VIDRO;
           }
           if (frente && y === 4) id = Bloco.FAIXA_NEON;
-          if (andares === 2 && frente && (y === 6 || y === 7) && sx % 3 === 1) id = Bloco.JANELA;
+          if (andares === 2 && frente && (y === 6 || y === 7) && sx % 3 === 1)
+            id = sx % 2 ? Bloco.JANELA_ACESA : Bloco.JANELA;
           if (
             andares === 2 &&
             !frente &&
@@ -637,15 +654,30 @@ function montarVila(semente: number, r: RelevoVila): Montado {
         const [u, v] = q(sx, f);
         b(u, H + 1, v, f === 0 ? Bloco.FRISO_DOURADO : parede);
       }
-    // o toldo de blocos na frente (uma fileira saindo da parede) e a sacada do sobrado
+    // o toldo de blocos na frente (uma fileira saindo da parede) e a sacada do sobrado (o piso
+    // preso na parede, por cima do toldo, e a grade em volta)
     for (let sx = 1; sx < w - 1; sx++) {
       const [u, v] = q(sx, -1);
       b(u, 4, v, toldo);
-      if (andares === 2) b(u, 6, v, sx === 1 || sx === w - 2 ? Bloco.GRADE_FERRO : Bloco.AR);
+      if (andares === 2 && sx >= 3 && sx <= w - 4) {
+        b(u, 5, v, Bloco.PEDRA_CREME);
+        b(u, 6, v, Bloco.GRADE_FERRO);
+      }
     }
-    // o letreiro em cima do toldo
-    const [lu, lv] = q(w >> 1, -1);
-    peca('letreiro', lu, lv, dir, letreiro, andares === 2 ? 5 : 5);
+    // a luz de dentro (a loja acesa de noite ilumina a calçada pela vitrine)
+    for (const sx of [3, w - 4]) {
+      const [u, v] = q(sx, d >> 1);
+      b(u, 4, v, Bloco.LANTERNA);
+    }
+    // o letreiro: o da loja térrea na fachada, por cima do toldo; o do sobrado no telhado
+    if (andares === 2) {
+      const [a0, a1] = q(0, 0);
+      const [b0, b1] = q(w - 1, 0);
+      peca('letreiro', (a0 + b0) / 2, (a1 + b1) / 2, dir, letreiro, H + 1);
+    } else {
+      const [lu, lv] = q(w >> 1, -1);
+      peca('letreiro', lu, lv, dir, letreiro, 4);
+    }
     return q;
   };
 
@@ -707,30 +739,54 @@ function montarVila(semente: number, r: RelevoVila): Montado {
     for (let v = 71; v <= 92; v++)
       chao(u, v, ((u >> 1) + (v >> 1)) % 2 ? Bloco.CALCADA : Bloco.PEDRA_CREME);
   // canteiros de flor nos cantos, árvores, bancos e postes
-  canteiro(105, 89, 3, 3);
+  canteiro(105, 89, 2, 3);
   canteiro(124, 89, 3, 3);
-  arvore(125, 73);
-  arvore(125, 84);
+  arvore(125, 73, 0, 1);
+  arvore(125, 84, 0, 1);
   poste(104, 73);
   poste(127, 91);
-  peca('banco', 109, 91, DIR.n, 0);
-  peca('banco', 113, 91, DIR.n, 1);
+  poste(118, 72);
+  peca('banco', 111, 91, DIR.n, 0);
+  peca('banco', 116, 72, DIR.s, 1);
   peca('banco', 126, 80, DIR.o, 2);
-  peca('lixeira', 104, 80, DIR.l, 0);
-  peca('lixeira', 120, 72, DIR.s, 1);
-  // o letreiro VILA NEON (arco de dois postes) na beira da avenida, de cara para ela
-  peca('letreiro', 112, 72, DIR.n, LETREIRO.vila, 0);
+  peca('lixeira', 105, 76, DIR.l, 0);
+  peca('lixeira', 123, 72, DIR.s, 1);
+  peca('floreira', 111, 72, DIR.s, 0);
+  peca('floreira', 120, 72, DIR.s, 1);
+  peca('floreira', 126, 77, DIR.o, 2);
+  // o portal da pracinha: duas torres de treliça, a travessa e o letreiro VILA NEON pendurado
+  // (lido dos dois lados). Fica na frente de quem nasce, no rumo do palco: a criança vê o
+  // letreiro em cima e o palco lá longe, por baixo dele
+  const PORTAL_U = 107;
+  const PORTAL_V0 = 78;
+  const PORTAL_V1 = 85;
+  for (let y = 1; y <= 8; y++) {
+    b(PORTAL_U, y, PORTAL_V0, Bloco.TRELICA);
+    b(PORTAL_U, y, PORTAL_V1, Bloco.TRELICA);
+  }
+  for (let v = PORTAL_V0; v <= PORTAL_V1; v++) b(PORTAL_U, 8, v, Bloco.TRELICA);
+  peca('letreiro', PORTAL_U, (PORTAL_V0 + PORTAL_V1) / 2, DIR.l, LETREIRO.vila, 5.4);
+  // a cerca-viva baixa dos dois lados do portal, com as flores na frente
+  cercaViva(PORTAL_U, 72, PORTAL_U, PORTAL_V0 - 1);
+  cercaViva(PORTAL_U, PORTAL_V1 + 1, PORTAL_U + 4, PORTAL_V1 + 1);
+  for (let v = 72; v <= PORTAL_V0 - 2; v++) {
+    chao(PORTAL_U + 1, v, Bloco.TERRA);
+    b(PORTAL_U + 1, 1, v, Bloco.FLOR);
+  }
   // o parquinho: areia, gangorra, balanço e escorregador
-  encher(115, 84, 123, 91, Bloco.AREIA_BRUMA);
+  encher(115, 85, 123, 91, Bloco.AREIA_BRUMA);
   peca('gangorra', 117, 87, DIR.l);
-  peca('balanco', 121, 86, DIR.n);
-  peca('escorregador', 117, 90, DIR.l);
-  // o mural de recados (o canto das missões): de cara para quem nasce
-  peca('mural', 106, 77, DIR.l);
-  const mural: [number, number, number] = [X(107) + 0.5, Y, Z(77) + 0.5];
-  // onde a criança nasce: no meio da pracinha, olhando para o palco (oeste-sudoeste)
-  const nasceX = X(113) + 0.5;
-  const nasceZ = Z(79) + 0.5;
+  peca('balanco', 121, 87, DIR.n);
+  peca('escorregador', 118, 90, DIR.l);
+  // o carrinho de pipoca e o mural de recados (o canto das missões), ao lado do portal, de
+  // cara para quem nasce
+  peca('pipoca', 112, 74, DIR.l);
+  peca('mural', 112, 83, DIR.n);
+  canteiro(111, 84, 3, 1);
+  const mural: [number, number, number] = [X(112) + 0.5, Y, Z(82) + 0.5];
+  // onde a criança nasce: na pracinha, olhando para o portal e o palco (oeste-sudoeste)
+  const nasceX = X(115) + 0.5;
+  const nasceZ = Z(76) + 0.5;
 
   // ============================================================== sudeste: o fliperama
   // caixa grafite com friso vermelho e azul, frente aberta para a avenida
@@ -745,7 +801,9 @@ function montarVila(semente: number, r: RelevoVila): Montado {
         chao(u, v, Bloco.PISTA_NEON);
         const borda = u === u0 || u === u0 + w - 1 || v === v0 || v === v0 + d - 1;
         if (!borda) {
-          b(u, H, v, Bloco.CONCRETO);
+          // o teto, com duas fileiras de tubo de neon (iluminam o salão)
+          const neon = (v - v0 === 3 || v - v0 === 8) && (u - u0) % 4 !== 0;
+          b(u, H, v, neon ? Bloco.FAIXA_NEON : Bloco.CONCRETO);
           continue;
         }
         for (let y = 1; y <= H + 1; y++) {
@@ -765,6 +823,8 @@ function montarVila(semente: number, r: RelevoVila): Montado {
     // a parede de pôsteres do fundo e as máquinas encostadas nas paredes
     for (let u = u0 + 1; u < u0 + w - 1; u++)
       for (let y = 2; y <= 4; y++) b(u, y, v0 + d - 1, Bloco.PAREDE_POSTER);
+    // as luminárias penduradas no teto do salão
+    for (const du of [3, 8, 12]) b(u0 + du, H - 1, v0 + 5, Bloco.LANTERNA);
     const maquinas: [number, number][] = [
       [u0 + 2, v0 + 9],
       [u0 + 5, v0 + 10],
@@ -773,10 +833,15 @@ function montarVila(semente: number, r: RelevoVila): Montado {
       [u0 + 13, v0 + 9],
     ];
     maquinas.forEach(([u, v], i) => peca('maquina', u, v, DIR.n, i));
-    peca('letreiro', u0 + 8, v0 - 1, DIR.n, LETREIRO.fliperama, 5);
+    peca('letreiro', u0 + 7.5, v0, DIR.n, LETREIRO.fliperama, H + 1);
     peca('lixeira', u0 - 1, v0 - 1, DIR.n, 2);
-    peca('bicicleta', u0 + w, v0 - 1, DIR.n, 0);
-    peca('bicicleta', u0 + w + 1, v0 - 1, DIR.n, 1);
+    peca('bicicleta', u0 + w + 1, v0 - 1, DIR.n, 0);
+    peca('bicicleta', u0 + w + 3, v0 - 1, DIR.n, 1);
+    peca('floreira', u0 + 2, v0 - 1, DIR.n, 0);
+    peca('floreira', u0 + 13, v0 - 1, DIR.n, 2);
+    peca('banco', u0 + 7, v0 - 2, DIR.n, 5);
+    // a calçada da frente do fliperama até a avenida
+    encher(u0 - 2, 71, u0 + w + 4, v0 - 1, Bloco.CALCADA);
   }
 
   // ============================================================== sudeste: o rinque
@@ -807,20 +872,49 @@ function montarVila(semente: number, r: RelevoVila): Montado {
     }
     for (let u = rinqueU0 + 1; u <= rinqueU0 + rinqueW - 2; u++)
       b(u, 10, rinqueV0 + 7, Bloco.TRELICA);
-    peca('globo', mu, rinqueV0 + 7, DIR.n, 0, 7);
-    // a placa do rinque (alta, vista de longe) e o suporte dos patins na entrada
-    peca('letreiro', mu, rinqueV0 - 3, DIR.n, LETREIRO.rinque, 0);
-    peca('suporte-patins', rinqueU0 + 6, rinqueV0 - 3, DIR.n);
-    peca('banco', rinqueU0 + 2, rinqueV0 - 3, DIR.n, 3);
-    peca('banco', rinqueU0 + 14, rinqueV0 - 3, DIR.n, 4);
+    peca('globo', mu - 0.5, rinqueV0 + 7, DIR.n, 0, 7);
+    // os postes de luz nos quatro cantos da mureta
+    for (const u of [rinqueU0 - 1, rinqueU0 + rinqueW])
+      for (const v of [rinqueV0 - 1, rinqueV0 + 8, rinqueV0 + rinqueD]) poste(u, v);
+    // o pórtico do rinque (alto, visto de longe) na entrada e o suporte dos patins ao lado
+    peca('letreiro', mu - 0.5, rinqueV0 - 2, DIR.n, LETREIRO.rinque, 0);
+    peca('suporte-patins', rinqueU0 + 5, rinqueV0 - 3, DIR.n);
+    peca('banco', rinqueU0 + 1, rinqueV0 - 3, DIR.n, 3);
+    peca('banco', rinqueU0 + 15, rinqueV0 - 3, DIR.n, 4);
+    peca('floreira', rinqueU0 + 18, rinqueV0 - 3, DIR.n, 1);
+    peca('lixeira', rinqueU0 + 13, rinqueV0 - 3, DIR.n, 5);
     // o caminho de calçada da pracinha até a entrada do rinque e do fliperama
     encher(128, 86, 131, 90, Bloco.CALCADA);
     encher(rinqueU0, 86, rinqueU0 + rinqueW, 90, Bloco.CALCADA);
     arvore(150, 88);
     arvore(150, 78);
   }
+  // o jardim do lado do fliperama e do rinque (a leste): cerca-viva, ipês, canteiros e bancos
+  {
+    const u0 = 153;
+    const u1 = 177;
+    const v0 = 73;
+    const v1 = 106;
+    cercaViva(u0, v0, u1, v0);
+    cercaViva(u0, v1, u1, v1);
+    cercaViva(u1, v0, u1, v1);
+    encher(u0, 86, u1 - 1, 90, Bloco.CALCADA);
+    for (let u = u0 + 3; u < u1 - 1; u += 6)
+      for (let v = v0 + 3; v < v1 - 1; v += 6) {
+        if (v >= 84 && v <= 92) continue;
+        if (((u - u0) / 6 + (v - v0) / 6) % 2 < 1) arvore(u, v, 7);
+        else canteiro(u, v, 2, 2);
+      }
+    peca('banco', 160, 85, DIR.s, 17);
+    peca('banco', 170, 91, DIR.n, 18);
+    peca('floreira', 165, 85, DIR.s, 1);
+    poste(156, 85);
+    poste(174, 91);
+    // e a faixa entre a pracinha e o rinque, com canteiros
+    for (let u = 106; u <= 124; u += 6) canteiro(u, 94, 2, 1);
+  }
   const rinque = ret(rinqueU0, rinqueV0, rinqueU0 + rinqueW - 1, rinqueV0 + rinqueD - 1);
-  const patins: [number, number, number] = [X(rinqueU0 + 6) + 0.5, Y, Z(rinqueV0 - 2) + 0.5];
+  const patins: [number, number, number] = [X(rinqueU0 + 5) + 0.5, Y, Z(rinqueV0 - 4) + 0.5];
 
   // ============================================================== sudeste: casas da rua
   // casas de frente para a rua da pracinha (oeste), do sul da pracinha até o fim
@@ -861,12 +955,28 @@ function montarVila(semente: number, r: RelevoVila): Montado {
     encher(mu, v0, mu + 1, v1, Bloco.PEDRA_CREME);
     encher(u0, mv, u1, mv + 1, Bloco.PEDRA_CREME);
     // bosques nos quatro quartos e canteiros na volta da cruz
-    for (let u = u0 + 4; u < u1 - 2; u += 7)
-      for (let v = v0 + 4; v < v1 - 2; v += 7) {
+    for (let u = u0 + 4; u < u1 - 3; u += 6)
+      for (let v = v0 + 4; v < v1 - 3; v += 6) {
         if (Math.abs(u - mu) < 4 || Math.abs(v - mv) < 4) continue;
-        if (s(u, v, 30 + k) < 0.75)
+        // o laguinho do lote do parque fica livre
+        if (k === 1 && u >= 152 && u <= 172 && v >= 8 && v <= 24) continue;
+        if (s(u, v, 30 + k) < 0.82)
           arvore(u + Math.floor(s(u, v, 31) * 2), v + Math.floor(s(u, v, 32) * 2), k);
+        else canteiro(u, v, 2, 2);
       }
+    // canteiros de flor ao longo da cruz de caminhos, de 6 em 6
+    for (let u = u0 + 3; u < u1 - 2; u += 6) {
+      if (Math.abs(u - mu) < 5) continue;
+      canteiro(u, mv - 1, 2, 1);
+      canteiro(u, mv + 2, 2, 1);
+    }
+    for (let v = v0 + 3; v < v1 - 2; v += 6) {
+      if (Math.abs(v - mv) < 5) continue;
+      canteiro(mu - 1, v, 1, 2);
+      canteiro(mu + 2, v, 1, 2);
+    }
+    peca('banco', mu - 7, mv - 2, DIR.s, 12 + k);
+    peca('banco', mu + 8, mv + 3, DIR.n, 13 + k);
     canteiro(mu - 3, mv - 3, 2, 2);
     canteiro(mu + 3, mv - 3, 2, 2);
     canteiro(mu - 3, mv + 3, 2, 2);
@@ -877,6 +987,17 @@ function montarVila(semente: number, r: RelevoVila): Montado {
     poste(mu + 2, mv + 2);
   };
   jardim(150, 110, 178, 147, 0);
+  // o chafariz de pedra num dos quartos do jardim
+  for (let u = 168; u <= 172; u++)
+    for (let v = 118; v <= 122; v++) {
+      const beira = u === 168 || u === 172 || v === 118 || v === 122;
+      chao(u, v, Bloco.PEDRA_LISA);
+      if (beira) b(u, 1, v, Bloco.PEDRA_LISA);
+      else b(u, 1, v, Bloco.AGUA);
+    }
+  b(170, 1, 120, Bloco.PEDRA_LISA);
+  b(170, 2, 120, Bloco.PEDRA_LISA);
+  b(170, 3, 120, Bloco.FLOR);
 
   // ============================================================== nordeste: casas e o parque
   {
@@ -885,6 +1006,34 @@ function montarVila(semente: number, r: RelevoVila): Montado {
   }
   // o lote do parque (parte 2): jardim grande cercado, com laguinho de peixinhos
   jardim(122, 2, 178, 56, 1);
+  // o coreto num dos quartos do jardim: o piso de pedra creme, as colunas de grade e o telhado
+  // de telha em degraus (a praça de cidade pequena; nada escrito)
+  {
+    const cu = 134;
+    const cv = 40;
+    for (let u = cu - 3; u <= cu + 3; u++)
+      for (let v = cv - 3; v <= cv + 3; v++) {
+        chao(u, v, Bloco.PEDRA_CREME);
+        const du = Math.abs(u - cu);
+        const dv = Math.abs(v - cv);
+        const canto = du === 3 && dv === 3;
+        const beira = du === 3 || dv === 3;
+        b(u, 1, v, Bloco.PEDRA_CREME);
+        if (canto) coluna(u, v, 2, 4, Bloco.GRADE_FERRO);
+        else if (beira && du > 0 && dv > 0) b(u, 2, v, Bloco.GRADE_FERRO);
+        const anel = Math.max(du, dv);
+        b(u, 5 + (3 - anel), v, anel === 0 ? Bloco.FRISO_DOURADO : Bloco.TELHA_COLONIAL);
+      }
+    // os degraus de cada lado
+    for (const [u, v] of [
+      [cu, cv - 4],
+      [cu, cv + 4],
+      [cu - 4, cv],
+      [cu + 4, cv],
+    ])
+      chao(u, v, Bloco.PEDRA_CREME);
+    b(cu, 2, cv, Bloco.LANTERNA);
+  }
   const lago = ret(156, 12, 168, 20);
   for (let u = 156; u <= 168; u++)
     for (let v = 12; v <= 20; v++) {
@@ -914,7 +1063,8 @@ function montarVila(semente: number, r: RelevoVila): Montado {
         b(u, 4, v, Bloco.TOLDO_VERDE);
       }
     for (let u = u0 - 1; u <= u0 + 6; u++) b(u, 4, v0 + 4, Bloco.TOLDO_VERDE);
-    peca('letreiro', u0 + 3, v0 + 4, DIR.s, LETREIRO.banca, 4);
+    peca('letreiro', u0 + 2.5, v0 + 3, DIR.s, LETREIRO.banca, 3.5);
+    b(u0 + 2, 3, v0 + 1, Bloco.LANTERNA);
     peca('balcao', u0 + 2, v0 + 2, DIR.s, 0);
     encher(u0 - 2, 50, u0 + 7, 58, Bloco.CALCADA);
   }
@@ -927,7 +1077,14 @@ function montarVila(semente: number, r: RelevoVila): Montado {
   arvore(60, 52);
   // a lanchonete na esquina, com sobrado e sacada
   loja(70, 45, 20, 13, 's', Bloco.REBOCO_ROSA, Bloco.TOLDO_VERMELHO, LETREIRO.lanchonete, 2);
-  peca('balcao', 80, 49, DIR.s, 1);
+  peca('balcao', 79.5, 50, DIR.s, 1);
+  peca('mesinha', 81, 59, DIR.s, 0);
+  peca('mesinha', 86, 59, DIR.s, 1);
+  peca('floreira', 72, 58, DIR.s, 0);
+  peca('floreira', 76, 58, DIR.s, 1);
+  peca('floreira', 84, 58, DIR.s, 2);
+  peca('floreira', 28, 58, DIR.s, 1);
+  peca('floreira', 36, 58, DIR.s, 0);
   // a calçada larga da rua (mesas, orelhão, ponto, bicicletas, hidrante, lixeiras)
   encher(0, 57, 91, 58, Bloco.CALCADA);
   peca('orelhao', 24, 59, DIR.s);
@@ -944,11 +1101,46 @@ function montarVila(semente: number, r: RelevoVila): Montado {
   peca('van', 76, 61, DIR.l, 0);
   peca('carro', 120, 68, DIR.o, 2);
   peca('carro', 160, 68, DIR.o, 3);
+  peca('carro', 20, 29, DIR.l, 2);
+  peca('carro', 60, 32, DIR.o, 3);
+  peca('carro', 94, 40, DIR.n, 1);
+  peca('carro', 101, 122, DIR.s, 0);
+  peca('van', 101, 18, DIR.s, 0);
+  // bancos, bicicletas e floreiras nas calçadas (a cada ~10 blocos algo novo para olhar)
+  peca('banco', 112, 59, DIR.s, 6);
+  peca('banco', 136, 59, DIR.s, 7);
+  peca('banco', 162, 59, DIR.s, 8);
+  peca('floreira', 124, 59, DIR.s, 0);
+  peca('floreira', 150, 59, DIR.s, 1);
+  peca('bicicleta', 148, 59, DIR.s, 1);
+  peca('lixeira', 172, 59, DIR.s, 6);
+  peca('banco', 40, 70, DIR.n, 9);
+  peca('banco', 72, 70, DIR.n, 10);
+  peca('bicicleta', 51, 70, DIR.n, 0);
+  peca('bicicleta', 53, 70, DIR.n, 3);
+  peca('lixeira', 67, 70, DIR.n, 7);
+  peca('floreira', 46, 70, DIR.n, 2);
+  peca('floreira', 78, 70, DIR.n, 0);
+  peca('hidrante', 108, 70, DIR.n);
+  // as árvores de rua (tronco alto) entre os postes, fora das esquinas, do portão e dos fios
+  for (let u = 8; u < LARGURA_VILA - 2; u += 12) {
+    if (u >= 86 && u <= 108) continue;
+    if (![20, 32, 56, 80].includes(u)) arvore(u, u < 92 ? 60 : 59, 2, 2);
+    const us = u + 6;
+    if (us >= 44 && us <= 150) continue;
+    arvore(us, 70, 3, 2);
+  }
+  for (let v = 8; v < PROFUNDIDADE_VILA - 2; v += 12) {
+    // (do lado da pracinha a vista do palco fica livre)
+    if (v >= 52 && v <= 100) continue;
+    arvore(92, v, 4, 2);
+    arvore(103, v + 6 > 52 && v + 6 < 100 ? v : v + 6, 5, 2);
+  }
   // o varal de lâmpadas atravessando a avenida e a pipa enroscada no fio
   peca('varal-lampadas', 30, 59, DIR.s, 0, 7, [30, 7, 70]);
   peca('varal-lampadas', 52, 59, DIR.s, 1, 7, [52, 7, 70]);
   peca('varal-lampadas', 76, 59, DIR.s, 2, 7, [76, 7, 70]);
-  peca('pipa', 45, 64, DIR.s, 0, 7);
+  peca('pipa', 52, 64, DIR.l, 0, 6.11);
 
   // ============================================================== noroeste: casas de trás
   {
@@ -980,12 +1172,38 @@ function montarVila(semente: number, r: RelevoVila): Montado {
   alambrado(F.u0, F.v0, F.u0, F.v1);
   alambrado(F.u1, F.v0, F.u1, F.v1);
   // o portão: duas torres azul-elétrico e vermelho com o raio em cima
+  // (a faixa de letreiro de neon em cada torre acende o portão de noite)
   for (const u of [portaoU0 - 2, portaoU0 - 1, portaoU1 + 1, portaoU1 + 2])
     for (let y = 1; y <= 7; y++)
-      b(u, y, F.v0, (y + (u < portaoU0 ? 0 : 1)) % 2 ? Bloco.LA_AZUL : Bloco.LA_VERMELHA);
-  for (let u = portaoU0 - 2; u <= portaoU1 + 2; u++) b(u, 8, F.v0, Bloco.LA_PRETA);
-  peca('raio-portao', (portaoU0 + portaoU1 + 1) >> 1, F.v0, DIR.n, 0, 9);
-  peca('letreiro', (portaoU0 + portaoU1 + 1) >> 1, F.v0 - 1, DIR.n, LETREIRO.festival, 5);
+      b(
+        u,
+        y,
+        F.v0,
+        y === 6
+          ? Bloco.LETREIRO_NEON
+          : y === 1 || y === 7
+            ? Bloco.CONCRETO
+            : y % 2
+              ? Bloco.LA_AZUL
+              : Bloco.LA_VERMELHA,
+      );
+  for (let u = portaoU0 - 3; u <= portaoU1 + 3; u++) b(u, 8, F.v0, Bloco.CONCRETO);
+  // o raio em cima da travessa e a placa do festival pendurada nela (lida dos dois lados)
+  peca('raio-portao', (portaoU0 + portaoU1) / 2, F.v0, DIR.n, 0, 8);
+  peca('letreiro', (portaoU0 + portaoU1) / 2, F.v0, DIR.n, LETREIRO.festival, 5.1);
+  // as bandeirolas dos dois lados do caminho, do portão até a grade
+  {
+    const vs = [74, 82.5, 91, 99];
+    for (const u of [58, 63])
+      for (let i = 0; i < 3; i++)
+        peca('bandeirolas', u, vs[i], DIR.s, (i ? 2 : 3) | ((i + (u > 60 ? 2 : 0)) % 4 << 2), 4.4, [
+          u,
+          4.4,
+          vs[i + 1],
+        ]);
+  }
+  canteiro(54, 75, 3, 2);
+  canteiro(65, 75, 3, 2);
   // o caminho de cascalho do portão até a grade
   encher(59, F.v0, 62, 100, Bloco.CASCALHO);
   // a calçada da frente do festival (na avenida)
@@ -1004,46 +1222,58 @@ function montarVila(semente: number, r: RelevoVila): Montado {
     for (let v = PV0; v <= PV1; v++) {
       for (let y = 1; y < PH; y++) {
         const beira = v === PV0 || u === PU0 || u === PU1;
-        b(u, y, v, beira ? (y === PH - 1 ? Bloco.LA_VERMELHA : Bloco.LA_PRETA) : Bloco.LA_PRETA);
+        let id: number = Bloco.LA_PRETA;
+        if (beira && y === PH - 1)
+          id = v === PV0 && (u - PU0) % 4 === 2 ? Bloco.LETREIRO_NEON : Bloco.LA_VERMELHA;
+        else if (beira) id = v === PV0 && ((u - PU0) >> 1) % 2 ? Bloco.LA_AZUL : Bloco.CONCRETO;
+        b(u, y, v, id);
       }
       b(u, PH, v, Bloco.PISO_PALCO);
     }
   for (let u = MU0; u <= MU1; u++)
     for (let v = MV0; v < PV0; v++) {
-      for (let y = 1; y < PH; y++) b(u, y, v, y === PH - 1 ? Bloco.LA_VERMELHA : Bloco.LA_AZUL);
+      for (let y = 1; y < PH; y++) {
+        const ponta = v === MV0 && (u === MU0 + 2 || u === MU0 + 3);
+        b(
+          u,
+          y,
+          v,
+          y === PH - 1
+            ? ponta
+              ? Bloco.LETREIRO_NEON
+              : Bloco.LA_VERMELHA
+            : (u + v) % 2
+              ? Bloco.LA_AZUL
+              : Bloco.CONCRETO,
+        );
+      }
       b(u, PH, v, Bloco.PISO_PALCO);
     }
   // a escadinha (no lado leste do tablado, fora da grade, subindo para o oeste)
   for (let i = 0; i < PH; i++)
     for (const v of [PV0 + 2, PV0 + 3]) {
       b(PU1 + PH - i, 1 + i, v, Bloco.ESCADINHA_PEDRA, DIR.o);
-      for (let y = 1; y <= i; y++) b(PU1 + PH - i, y, v, Bloco.LA_PRETA);
+      for (let y = 1; y <= i; y++) b(PU1 + PH - i, y, v, Bloco.CONCRETO);
     }
-  // o fundo do palco: parede grafite alta com o raio de neon da logo no meio
+  // o fundo do palco: parede grafite alta com a faixa de neon em cima, e as duas abas dos lados
+  // (a concha do palco: de lado, cada aba mostra um raio grande)
   const FUNDO = 13;
   for (let u = PU0; u <= PU1; u++)
-    for (let y = PH + 1; y <= FUNDO; y++) b(u, y, PV1, Bloco.LA_PRETA);
-  // o raio da logo em letreiro de neon (desenhado em blocos: um raio gordinho)
-  const raio: [number, number][] = [
-    [2, 8],
-    [3, 8],
-    [1, 7],
-    [2, 7],
-    [0, 6],
-    [1, 6],
-    [0, 5],
-    [1, 5],
-    [2, 5],
-    [3, 5],
-    [2, 4],
-    [3, 4],
-    [1, 3],
-    [2, 3],
-    [0, 2],
-    [1, 2],
-    [0, 1],
-  ];
-  for (const [du, dy] of raio) b(58 + du * 1 + 1, PH + 2 + dy, PV1 - 1, Bloco.LETREIRO_NEON);
+    for (let y = PH + 1; y <= FUNDO; y++)
+      b(u, y, PV1, y === FUNDO ? Bloco.FAIXA_NEON : Bloco.CONCRETO);
+  for (const u of [PU0, PU1])
+    for (let v = PV1 - 6; v < PV1; v++)
+      for (let y = PH + 1; y <= FUNDO; y++)
+        b(u, y, v, y === FUNDO ? Bloco.FAIXA_NEON : Bloco.CONCRETO);
+  // o raio de neon da logo (cromo, vermelho e amarelo) com o arco de lâmpadas em volta, os
+  // raios menores azul e amarelo, e os raios grandes das abas (peças presas na parede)
+  const MEIO = (PU0 + PU1) / 2 + 0.5;
+  peca('raio-palco', MEIO, PV1 - 1, DIR.n, 0, PH);
+  peca('arco-lampadas', MEIO, PV1 - 1, DIR.n, 0, PH);
+  peca('raio-palco', PU0 + 8, PV1 - 1, DIR.n, 1, PH + 4);
+  peca('raio-palco', PU1 - 8, PV1 - 1, DIR.n, 2, PH + 4);
+  peca('raio-palco', PU1 + 1, PV1 - 3.5, DIR.l, 3, PH + 1);
+  peca('raio-palco', PU0 - 1, PV1 - 3.5, DIR.o, 4, PH + 1);
   // a parede de amplificadores dos lados, com as pilhas de caixas
   for (const u0 of [PU0 + 1, PU1 - 4])
     for (let u = u0; u < u0 + 4; u++)
@@ -1056,12 +1286,20 @@ function montarVila(semente: number, r: RelevoVila): Montado {
     b(u, PH + 2, v, Bloco.CAIXA_SOM, DIR.n);
     caixas.push([X(u), h + PH + 1, Z(v)]);
   }
+  // as luminárias do palco (a luz de noite vem daqui): em cima dos amplificadores, nos cantos
+  // da frente do tablado e no fosso, dos lados da ponta da passarela
+  b(PU0 + 2, PH + 4, PV1 - 1, Bloco.LANTERNA);
+  b(PU1 - 3, PH + 4, PV1 - 1, Bloco.LANTERNA);
+  b(PU0, PH + 1, PV0, Bloco.LANTERNA);
+  b(PU1, PH + 1, PV0, Bloco.LANTERNA);
+  b(MU0 - 2, 1, MV0, Bloco.LANTERNA);
+  b(MU1 + 2, 1, MV0, Bloco.LANTERNA);
   // o praticável vermelho da bateria, no fundo do meio
   for (let u = 57; u <= 64; u++)
     for (let v = PV1 - 3; v <= PV1 - 1; v++) b(u, PH + 1, v, Bloco.LA_VERMELHA);
-  peca('bateria', 60, PV1 - 2, DIR.n, 0, PH + 2);
-  peca('teclado', 70, PV1 - 5, DIR.n, 0, PH + 1);
-  peca('pedestal', 60, MV0 + 1, DIR.n, 0, PH + 1);
+  peca('bateria', MEIO, PV1 - 2, DIR.n, 0, PH + 1);
+  peca('teclado', 70, PV1 - 5, DIR.n, 0, PH);
+  peca('pedestal', MEIO, MV0 + 1, DIR.n, 0, PH);
   // as torres de treliça e a grade de luzes por cima
   const TORRE = 17;
   for (const u of [PU0 - 2, PU1 + 2])
@@ -1073,7 +1311,10 @@ function montarVila(semente: number, r: RelevoVila): Montado {
   for (let v = PV0 - 1; v <= PV1; v++) {
     b(PU0 - 2, TORRE, v, Bloco.TRELICA);
     b(PU1 + 2, TORRE, v, Bloco.TRELICA);
+    // as travessas da grade de luzes
+    for (const u of [PU0 + 8, (PU0 + PU1) >> 1, PU1 - 8]) b(u, TORRE, v, Bloco.TRELICA);
   }
+  for (let u = PU0 - 2; u <= PU1 + 2; u++) b(u, TORRE, PV0 + 6, Bloco.TRELICA);
   // os 8 holofotes pendurados na grade da frente e as flâmulas do raio nas torres
   for (let i = 0; i < 8; i++)
     peca('holofote', PU0 + 2 + Math.round((i * (PU1 - PU0 - 4)) / 7), PV0 - 1, DIR.n, i, TORRE - 1);
@@ -1103,9 +1344,10 @@ function montarVila(semente: number, r: RelevoVila): Montado {
       for (let v = v0; v < v0 + 4; v++) {
         const canto = (u === u0 || u === u0 + 4) && (v === v0 || v === v0 + 3);
         if (canto) coluna(u, v, 1, 4, Bloco.TRELICA);
-        b(u, 5, v, Bloco.LA_PRETA);
+        b(u, 5, v, Bloco.CONCRETO);
       }
     for (let u = u0; u < u0 + 5; u++) b(u, 1, v0, Bloco.GRADE_FERRO);
+    b(u0 + 2, 4, v0 + 1, Bloco.LANTERNA);
     peca('mesa-som', u0 + 2, v0 + 2, DIR.s, 0);
   }
   // as barracas do lanche e das camisetas, do lado de dentro do portão
@@ -1118,53 +1360,111 @@ function montarVila(semente: number, r: RelevoVila): Montado {
         if (v === v0 + 3 && u > u0 && u < u0 + 5) b(u, 1, v, Bloco.TABUAS);
         b(u, 3, v, toldo);
       }
-    peca('balcao', u0 + 3, v0 + 2, DIR.l, 2 + n);
+    // a aba do toldo na frente, a lanterna pendurada e o que se vende em cima do balcão
+    for (let u = u0; u < u0 + 6; u++) b(u, 3, v0 + 4, toldo);
+    b(u0 + 2, 2, v0 + 1, Bloco.LANTERNA);
+    peca('balcao', u0 + 2.5, v0 + 3, DIR.s, 2 + n, 1);
   };
   barraca(32, 76, Bloco.TOLDO_VERMELHO, 0);
   barraca(32, 84, Bloco.TOLDO_VERDE, 1);
   // o rádio gigante, a fita cassete gigante e a parede de pôsteres
   peca('radio-gigante', 42, 92, DIR.l, 0);
-  peca('fita-gigante', 78, 94, DIR.o, 0);
+  // (a fita fica ao lado da mesa de som: o corredor do cercadinho até a grade fica livre)
+  peca('fita-gigante', 65, 86, DIR.n, 0);
   for (let v = 104; v <= 116; v++) for (let y = 1; y <= 3; y++) b(27, y, v, Bloco.PAREDE_POSTER);
-  // o cercadinho das lhamas (na beira do campo, perto da avenida) com feno e o portãozinho
+  // o cercadinho das lhamas (na beira do campo, perto da avenida): cerca nos três lados de
+  // trás e aberto para o sul, de frente para a grade (a lhama segue o feno em linha reta)
   const CU0 = 76;
   const CU1 = 86;
   const CV0 = 76;
   const CV1 = 84;
   for (let u = CU0; u <= CU1; u++)
     for (let v = CV0; v <= CV1; v++) {
-      const borda = u === CU0 || u === CU1 || v === CV0 || v === CV1;
-      if (borda)
-        b(
-          u,
-          1,
-          v,
-          u === 81 && v === CV1 ? Bloco.PORTEIRA_ABERTA : Bloco.CERCA,
-          u === 81 && v === CV1 ? DIR.s : 0,
-        );
+      const borda = u === CU0 || u === CU1 || v === CV0;
+      if (borda) b(u, 1, v, Bloco.CERCA);
     }
   b(84, 1, 78, Bloco.FENO);
   b(85, 1, 78, Bloco.FENO);
   b(85, 2, 78, Bloco.FENO);
   b(78, 1, 82, Bloco.FENO);
-  // árvores, bancos e postes pelo campo (nada no caminho nem na frente do palco)
+  // árvores, bancos e postes pelo campo (nada no caminho, na frente do palco nem no corredor
+  // do cercadinho até a grade; do lado leste do palco tudo baixo, para a vista da pracinha)
   for (const [u, v] of [
-    [28, 74],
-    [28, 140],
-    [88, 140],
+    [28, 75],
+    [29, 142],
+    [86, 142],
     [88, 100],
-    [28, 96],
+    [29, 96],
     [46, 78],
-    [74, 74],
+    [73, 75],
+    [34, 128],
+    [44, 138],
+    [58, 142],
+    [70, 136],
+    [33, 120],
+    [40, 76],
   ])
-    arvore(u, v);
+    arvore(u, v, 6);
   for (const [u, v] of [
     [52, 74],
     [68, 74],
     [40, 98],
-    [80, 98],
+    [87, 98],
+    [35, 101],
+    [87, 118],
+    [30, 126],
+    [64, 126],
   ])
     poste(u, v);
+  // a cerca-viva por dentro do alambrado (o campo fica com moldura verde)
+  for (let u = F.u0 + 1; u < F.u1; u++) {
+    if ((u < portaoU0 - 3 || u > portaoU1 + 3) && (u < CU0 - 1 || u > CU1 + 1))
+      b(u, 1, F.v0 + 1, Bloco.FOLHAGEM);
+    b(u, 1, F.v1 - 1, Bloco.FOLHAGEM);
+  }
+  for (let v = F.v0 + 2; v < F.v1 - 1; v++) {
+    b(F.u0 + 1, 1, v, Bloco.FOLHAGEM);
+    if (v > CV1 + 2) b(F.u1 - 1, 1, v, Bloco.FOLHAGEM);
+  }
+  // os fardos de feno de sentar e as toalhas de piquenique (fora da plateia e do caminho)
+  for (const [u, v, y] of [
+    [50, 80, 1],
+    [51, 80, 1],
+    [51, 81, 1],
+    [51, 80, 2],
+    [66, 78, 1],
+    [67, 78, 1],
+    [40, 82, 1],
+    [41, 82, 1],
+    [40, 83, 1],
+    [30, 118, 1],
+    [31, 118, 1],
+    [86, 110, 1],
+    [87, 110, 1],
+    [87, 111, 1],
+    [87, 110, 2],
+    [44, 128, 1],
+    [45, 128, 1],
+  ])
+    b(u, y, v, Bloco.FENO);
+  peca('toalha', 54, 83, DIR.s, 0);
+  peca('toalha', 70, 80, DIR.l, 1);
+  peca('toalha', 43, 80, DIR.n, 1);
+  peca('toalha', 38, 126, DIR.s, 0);
+  peca('banco', 30, 110, DIR.o, 14);
+  peca('banco', 47, 74, DIR.s, 15);
+  peca('lixeira', 56, 74, DIR.s, 8);
+  peca('lixeira', 38, 82, DIR.s, 9);
+  // a tenda dos bastidores, atrás do palco: quatro pés de grade e o toldo listrado
+  for (let u = 50; u <= 56; u++)
+    for (let v = 127; v <= 132; v++) {
+      const canto = (u === 50 || u === 56) && (v === 127 || v === 132);
+      if (canto) coluna(u, v, 1, 3, Bloco.GRADE_FERRO);
+      b(u, 4, v, Bloco.TOLDO_VERMELHO);
+    }
+  b(53, 3, 129, Bloco.LANTERNA);
+  peca('mesinha', 53, 130, DIR.s, 1);
+  peca('banco', 52, 128, DIR.s, 16);
 
   // ============================================================== a moldura de árvores
   // na margem: árvores do jogo, de duas em duas fileiras, e cerca-viva baixa por dentro
@@ -1194,7 +1494,7 @@ function montarVila(semente: number, r: RelevoVila): Montado {
     passarela: [X(MU0 + 3), h + PH + 1, Z(MV0) + 0.5],
     plateia: ret(37, 88, 83, GV - 1),
     cercado: ret(CU0 + 1, CV0 + 1, CU1 - 1, CV1 - 1),
-    portaoCercado: [X(81) + 0.5, Y, Z(CV1) + 0.5],
+    portaoCercado: [X(81) + 0.5, Y, Z(CV1 + 1) + 0.5],
     patins,
     rinque,
     maquinas: [
@@ -1205,7 +1505,7 @@ function montarVila(semente: number, r: RelevoVila): Montado {
       [130 + 13, 73 + 8],
     ].map(([u, v]) => [X(u) + 0.5, Y, Z(v) + 0.5] as [number, number, number]),
     radio: [X(42) + 0.5, Y, Z(92) + 0.5],
-    fita: [X(78) + 0.5, Y, Z(94) + 0.5],
+    fita: [X(65) + 0.5, Y, Z(86) + 0.5],
     postos: {
       vocalista: [X(MU0 + 3), h + PH + 1, Z(MV0) + 0.5],
       roadie: [X(PU1 - 3) + 0.5, h + PH + 1, Z(PV0 + 4) + 0.5],
@@ -1217,8 +1517,10 @@ function montarVila(semente: number, r: RelevoVila): Montado {
       banca: [X(19) + 0.5, Y, Z(56) + 0.5],
     },
   };
-  // o olhar de quem nasce: para o oeste, com o palco à esquerda e o mural à direita
-  const olhar = Math.atan2(X(61) - nasceX, Z(84) - nasceZ);
+  // o olhar de quem nasce: para o oeste-sudoeste, no rumo do palco
+  // (34° ao sul do oeste: o portal da pracinha na frente, o palco inteiro lá longe por baixo do
+  // letreiro e o mural à direita)
+  const olhar = Math.atan2(-0.829, 0.559);
 
   const plano: PlanoVila = {
     semente,

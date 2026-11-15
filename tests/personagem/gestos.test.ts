@@ -56,6 +56,7 @@ describe('os 8 gestos do esboço (e os 2 de presente de nível)', () => {
       'sentar',
       'pulo-estrela',
       'reverencia',
+      'roqueiro',
     ]);
     expect(GESTOS.map((g) => g.id)).toEqual([...IDS_GESTOS]);
     expect(GESTOS.map((g) => g.duracao)).toEqual([
@@ -69,6 +70,7 @@ describe('os 8 gestos do esboço (e os 2 de presente de nível)', () => {
       Infinity,
       1.7,
       2.2,
+      2.4,
     ]);
     for (const g of GESTOS) {
       expect(g.nome.length).toBeLessThanOrEqual(15);
