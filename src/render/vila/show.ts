@@ -30,6 +30,8 @@ import { Pecas } from '../solidos';
 import type { PecaVila, PlanoVila } from '../../world/vilaNeon';
 import type { VilaVista, EventoVila } from '../../nucleo/vila';
 import { CONTAGEM, faseDoShow, type FaseShow } from '../../jogo/show';
+import { N0_PUBLICO } from '../../nucleo/vila';
+import { lugarDoPublico, publicoDaVila } from '../../world/publicoVila';
 import { aplicarGesto } from '../../personagem/gestos';
 import type { Pose } from '../../personagem/poses';
 import { COR, Ref, perfilRaio, type Desenho } from './ref';
@@ -78,9 +80,12 @@ export interface ShowVila {
    * A pose de um morador do palco no show: o vocalista e a guitarrista batem cabeça no tempo
    * (o gesto "roqueiro", com a cabeça embaixo em cada batida) e a banda pula no acorde final.
    */
-  poseDoMorador(povoado: string, n: number, pose: Pose): Pose;
-  /** O giro da banda no show (de frente para a plateia), ou null fora dele. */
-  giroDoMorador(povoado: string, n: number): number | null;
+  poseDoMorador(povoado: string, n: number, pose: Pose, onde?: { x: number; z: number }): Pose;
+  /**
+   * O giro fixo do morador: a banda no show (de frente para a plateia), a turma da grade (de
+   * frente para o palco no show, para o meio da rodinha de papo), ou null (o giro dele).
+   */
+  giroDoMorador(povoado: string, n: number, onde?: { x: number; z: number }): number | null;
   descartar(): void;
 }
 
@@ -616,6 +621,7 @@ export function criarShowVila(scene: Scene, plano: PlanoVila, opcoes: OpcoesShow
     const k = (t - aquecerDesde) / AQUECER_S;
     return k > 0 && k < 1 ? Math.sin(Math.PI * k) : 0;
   };
+  const pub = publicoDaVila(plano);
 
   /** A festa do acorde final: a explosão da passarela e o confete. */
   function festaFinal(): void {
@@ -779,6 +785,41 @@ export function criarShowVila(scene: Scene, plano: PlanoVila, opcoes: OpcoesShow
     if (n === 0) return deVezEmQuando(pose, 'apontar', 11, 1.8, 4.1);
     return deVezEmQuando(pose, 'apontar', 9, 1.8, 0.4);
   }
+  /**
+   * A turma da grade. No show, cada um do seu jeito e no tempo da música: pula de braços em V,
+   * bate cabeça, bate palma, ou braços para o alto balançando; no acorde final, todos pulam.
+   * De papo (sem show), de vez em quando um acena, cumprimenta, bate palma ou dança.
+   */
+  function poseDoPublico(
+    k: number,
+    pose: Pose,
+    onde: { x: number; z: number } | undefined,
+    show: VilaVista['show'],
+  ): Pose {
+    const l = lugarDoPublico(pub, k, { noite: noiteShowAtual, show: !!show, t: tempoAtual });
+    // andando para o lugar: o passo de sempre
+    if (!l.alvo || !onde || Math.hypot(onde.x - l.alvo[0], onde.z - l.alvo[2]) > 0.9) return pose;
+    if (!show) {
+      const gestos = ['acenar', 'cumprimentar', 'aplaudir', 'dancar'] as const;
+      const g = gestos[(k + Math.floor((tempoAtual + k * 2.3) / 9)) % gestos.length];
+      return deVezEmQuando(pose, g, 9, g === 'dancar' ? 3.2 : 1.6, k * 2.3);
+    }
+    if (show.final !== null) {
+      const idade = tempoAtual - show.final;
+      return idade >= -0.1 && idade < 2.5
+        ? aplicarGesto(pose, 'pulo-estrela', Math.max(0, idade) + 0.05 + (k % 3) * 0.04)
+        : aplicarGesto(pose, 'aplaudir', 0.3 + ((tempoAtual + k * 0.13) % 1));
+    }
+    const d = tempoAtual - show.inicio - CONTAGEM;
+    if (d < 0) return aplicarGesto(pose, 'aplaudir', 0.3 + ((((tempoAtual * 2) % 1) + 1) % 1));
+    const jeito = (k * 7 + 3) % 4;
+    if (jeito === 0) return aplicarGesto(pose, 'pulo-estrela', 0.25 + (((d % 2) + 2) % 2) * 0.6);
+    if (jeito === 1) return aplicarGesto(pose, 'roqueiro', 1 + ((((d + 0.125) % 0.5) + 0.5) % 0.5));
+    if (jeito === 2) return aplicarGesto(pose, 'aplaudir', 0.3 + (((d % 1) + 1) % 1));
+    // braços para o alto, balançando de um lado para o outro a cada compasso
+    return aplicarGesto(pose, 'comemorar', 0.45 + 0.35 * (0.5 + 0.5 * Math.sin(d * Math.PI)));
+  }
+
   const mistura = (a: V3, b: V3, k: number, out: V3): V3 => {
     out[0] = a[0] + (b[0] - a[0]) * k;
     out[1] = a[1] + (b[1] - a[1]) * k;
@@ -1140,10 +1181,11 @@ export function criarShowVila(scene: Scene, plano: PlanoVila, opcoes: OpcoesShow
       aquecendo: aquecimento(ultimoT) > 0,
       aquecimentos,
     }),
-    poseDoMorador(povoado, n, pose) {
+    poseDoMorador(povoado, n, pose, onde) {
       if (povoado !== 'vila') return pose;
       const show = vistaAtual?.show ?? null;
       const ativo = !!show && faseDoShow(show, tempoAtual) !== 'acabou';
+      if (n >= N0_PUBLICO) return poseDoPublico(n - N0_PUBLICO, pose, onde, ativo ? show : null);
       // sem show: a passagem de som (a banda afina, testa o microfone, confere as caixas)
       if (!ativo || !show) return n <= 2 ? passagemDeSom(n, pose) : pose;
       // a banda (0 a 2) e a moça do lanche (3, dentro do festival, a plateia de casa)
@@ -1162,10 +1204,21 @@ export function criarShowVila(scene: Scene, plano: PlanoVila, opcoes: OpcoesShow
       // o vocalista e a guitarrista batem cabeça no tempo: a cabeça embaixo em cada batida
       return aplicarGesto(pose, 'roqueiro', 1 + ((((d + 0.125) % 0.5) + 0.5) % 0.5));
     },
-    giroDoMorador(povoado, n) {
+    giroDoMorador(povoado, n, onde) {
       if (povoado !== 'vila') return null;
       const show = vistaAtual?.show;
       const ativo = !!show && faseDoShow(show, tempoAtual) !== 'acabou';
+      if (n >= N0_PUBLICO) {
+        // a turma: parada no lugar, de frente para o palco (no show) ou para a rodinha
+        const l = lugarDoPublico(pub, n - N0_PUBLICO, {
+          noite: noiteShowAtual,
+          show: ativo,
+          t: tempoAtual,
+        });
+        if (!l.alvo || !l.olhar || !onde) return null;
+        if (Math.hypot(onde.x - l.alvo[0], onde.z - l.alvo[2]) > 0.9) return null;
+        return Math.atan2(l.olhar[0] - onde.x, l.olhar[1] - onde.z);
+      }
       if (!ativo || n > 2) return null;
       // a plateia fica do lado da ponta da passarela (z menor que o fundo do palco)
       return Math.PI;

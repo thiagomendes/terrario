@@ -29,6 +29,12 @@ import {
   TOQUES_POR_SEGUNDO,
   type Show,
 } from '../jogo/show';
+import {
+  caminhoNoFestival,
+  lugarDoPublico,
+  publicoDaVila,
+  PUBLICO_GRADE,
+} from '../world/publicoVila';
 
 /** Os postos e quem mora em cada um (o número é o `n` do morador). */
 export const MORADORES_VILA: readonly { posto: PostoVila; profissao: Profissao }[] = [
@@ -41,6 +47,8 @@ export const MORADORES_VILA: readonly { posto: PostoVila; profissao: Profissao }
   { posto: 'lanchonete', profissao: 'cozinheiro' },
   { posto: 'banca', profissao: 'construtor' },
 ];
+/** A turma da grade (o público do show) vem depois dos de posto: n de N0_PUBLICO em diante. */
+export const N0_PUBLICO = MORADORES_VILA.length;
 /** O povoado dos moradores do bairro (o nome que vai na criatura). */
 export const POVOADO_VILA = 'vila';
 /** O vocalista (n = 0): um toque nele dá o pôster da banda, uma vez por mundo a cada criança. */
@@ -380,6 +388,72 @@ export function criarVila(ctx: CtxVila) {
     }
   }
 
+  // ------------------------------------------------------------------ o público do show
+  /**
+   * A turma da grade (12 moradores de verdade, corpo macio): no show, na grade de frente para o
+   * palco; de noite sem show, de papo em quatro rodinhas que mudam de lugar; de dia só quatro
+   * ficam, e quem não fica sai pelo portão do festival e some lá. Vem quando alguém chega perto
+   * do festival (nunca do nascer), aparece no portão se alguém está vendo o lugar dela, e anda
+   * pelo campo por um caminho que dá a volta nas peças (o corredor das lhamas e o caminho de
+   * cascalho ficam livres). Como os outros moradores, não vai salva.
+   */
+  const pub = publicoDaVila(plano);
+  function cuidarDoPublico(): void {
+    const t = ctx.agora();
+    const noite = noiteDeShow(ctx.hora());
+    const tocando = !!show && faseDoShow(show, t) !== 'acabou';
+    const js = ctx.jogadores().filter((j) => !j.morto);
+    const perto = js.some((j) => Math.hypot(j.x - pub.meio[0], j.z - pub.meio[1]) < 52);
+    const vivos = new Map<number, Criatura>();
+    for (const c of ctx.criaturas())
+      if (c.morador?.povoado === POVOADO_VILA && c.morador.n >= N0_PUBLICO && c.estado !== 'morrendo')
+        vivos.set(c.morador.n - N0_PUBLICO, c);
+    for (let k = 0; k < PUBLICO_GRADE; k++) {
+      const l = lugarDoPublico(pub, k, { noite, show: tocando, t });
+      let c = vivos.get(k);
+      if (!c) {
+        if (!l.alvo || !perto || !ctx.carregado(l.alvo[0], l.alvo[2])) continue;
+        // ninguém aparece do nada na frente da criança: quem está vendo o lugar vê a pessoa
+        // chegar pelo portão
+        const vendo = js.some((j) => Math.hypot(j.x - l.alvo![0], j.z - l.alvo![2]) < 24);
+        const q = vendo ? pub.portao : l.alvo;
+        if (!ctx.carregado(q[0], q[2])) continue;
+        c = ctx.adicionar('morador', q[0], q[1], q[2]);
+        const posto: [number, number, number] = [q[0], q[1], q[2]];
+        c.morador = {
+          povoado: POVOADO_VILA,
+          n: N0_PUBLICO + k,
+          profissao: 'cozinheiro',
+          fora: posto,
+          dentro: posto,
+          oficina: posto,
+          praca: posto,
+          rotaCasa: [],
+          rotaOficina: [],
+          centro: [posto[0] + 1000, posto[2]],
+          posto,
+        };
+      }
+      const m = c.morador!;
+      const alvo = l.alvo ?? pub.portao;
+      if (!l.alvo && (!perto || Math.hypot(c.x - alvo[0], c.z - alvo[2]) < 1.6)) {
+        // saiu pelo portão: some lá (ou de vez, se ninguém está perto do festival)
+        c.estado = 'morrendo';
+        c.dissolver = 1;
+        continue;
+      }
+      const posto = m.posto!;
+      if (Math.hypot(posto[0] - alvo[0], posto[2] - alvo[2]) > 0.25) {
+        m.posto = [alvo[0], alvo[1], alvo[2]];
+        m.caminho = caminhoNoFestival(pub, [c.x, c.z], [alvo[0], alvo[2]]);
+        c.menorDistancia = undefined;
+        c.semProgresso = 0;
+      } else if (l.olhar && !m.caminho?.length && Math.hypot(c.x - alvo[0], c.z - alvo[2]) < 0.7)
+        // chegou: olha para o palco (na grade) ou para o meio da rodinha (de papo)
+        c.yawAlvo = Math.atan2(l.olhar[0] - c.x, l.olhar[1] - c.z);
+    }
+  }
+
   // ------------------------------------------------------------------ o que volta
   /** A missão foi escolhida (ou escolhida de novo): o que é dela volta ao lugar. */
   function preparar(missao: string | null): void {
@@ -417,6 +491,7 @@ export function criarVila(ctx: CtxVila) {
       }
       if (n % 10 === 0) cuidarDasLhamas();
       if (n % 20 === 0) cuidarDosMoradores();
+      if (n % 5 === 2) cuidarDoPublico();
     },
     comando(id: string, c: ComandoVila): void {
       const j = ctx.jogador(id);
@@ -433,6 +508,16 @@ export function criarVila(ctx: CtxVila) {
       poster: [...poster],
       ...(!rodadaNova && !show ? { tocou: true } : {}),
     }),
+    /** Testes: a turma da grade (o público do show) à vista no núcleo. */
+    publico: () =>
+      ctx
+        .criaturas()
+        .filter(
+          (c) =>
+            c.morador?.povoado === POVOADO_VILA &&
+            c.morador.n >= N0_PUBLICO &&
+            c.estado !== 'morrendo',
+        ),
     /** Testes: as lhamas da vila e as que estão na grade. */
     lhamas: () => ({ todas: [...lhamas], naGrade: [...naGrade] }),
   };

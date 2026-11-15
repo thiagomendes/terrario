@@ -74,6 +74,42 @@ const MORADORES: Record<Profissao, PecaCriatura[]> = {
   }),
 };
 
+/**
+ * A turma da grade do show (spec 026, o público): 12 fãs da época, cada um com cabelo, pele,
+ * roupa e chapéu próprios. Vistos de trás na plateia não podem virar um bolo de cabelo: metade de
+ * boné ou faixa colorida, cabelos curtos e médios (só dois compridos), e as cores da camiseta, do
+ * colete e da jaqueta trocando de um para o outro. Sem trocas: acenam e curtem o show.
+ */
+const FAS: readonly [string, 'f' | 'm', string, string, string, number, number][] = [
+  // nome, gênero, pele, cabelo, fantasia, cor da fantasia, corte
+  ['Duda', 'f', '#e0a882', '#5a3422', 'plateia-colete', 0, 1],
+  ['Léo', 'm', '#c99064', '#1e1a22', 'plateia-bone', 0, 0],
+  ['Nina', 'f', '#f4d2b4', '#e8c070', 'plateia-jaqueta', 0, 4],
+  ['Caio', 'm', '#f0c8a0', '#b8541e', 'plateia-faixa', 0, 3],
+  ['Jô', 'f', '#9a6844', '#1e1a22', 'plateia-bone-tras', 0, 6],
+  ['Téo', 'm', '#e8b896', '#d8b060', 'plateia-colete', 1, 5],
+  ['Lia', 'f', '#c99064', '#3a2418', 'plateia-jaqueta', 1, 7],
+  ['Davi', 'm', '#6e4a2e', '#1e1a22', 'plateia-faixa', 1, 0],
+  ['Malu', 'f', '#f0c8a0', '#a8401a', 'plateia-colete', 2, 3],
+  ['Bento', 'm', '#b9825c', '#2e2018', 'plateia-bone', 2, 1],
+  ['Isa', 'f', '#e0a882', '#4a2a1a', 'plateia-faixa', 2, 8],
+  ['Nico', 'm', '#f4d2b4', '#6a4426', 'plateia-jaqueta', 2, 5],
+];
+const TURMA: NonNullable<PovoadoTema['porMorador']> = Object.fromEntries(
+  FAS.map(([nome, genero, pele, cabelo, id, cor, corte], k) => [
+    `vila:${8 + k}`,
+    {
+      nome,
+      genero,
+      titulo: 'Fã do show',
+      pecas: corpoDe(pele, cabelo, '#3a3944', '#2a3350'),
+      fantasia: { id, cor },
+      cabelo: corte,
+      semTrocas: true as const,
+    },
+  ]),
+);
+
 export const POVOADO_VILA: PovoadoTema = {
   nome: 'Turma do bairro',
   profissoes: {
@@ -151,6 +187,8 @@ export const POVOADO_VILA: PovoadoTema = {
       pecas: MORADORES.cozinheiro,
     },
     'vila:7': { nome: 'Beto', genero: 'm', titulo: 'Moço da banca', pecas: MORADORES.construtor },
+    // spec 026 (o público do show): a turma da grade (vila:8 a vila:19), cada um de um jeito
+    ...TURMA,
   },
   // passo animado de quem anda ouvindo música
   movimento: { saltita: 0.03, flutua: 0, ginga: 0.06 },

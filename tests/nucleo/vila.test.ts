@@ -8,9 +8,10 @@ import { sanear as sanearComando } from '../../src/nucleo/saneamento';
 import type { Comando, EventoNucleo } from '../../src/nucleo/protocolo';
 import { CHAMADO, ESPERA_FINAL, APLAUSO } from '../../src/jogo/show';
 import { PASSO } from '../../src/nucleo/protocolo';
-import { MORADORES_VILA, POVOADO_VILA } from '../../src/nucleo/vila';
+import { MORADORES_VILA, N0_PUBLICO, POVOADO_VILA } from '../../src/nucleo/vila';
 import { noiteDeShow } from '../../src/jogo/show';
 import { HORA_INICIAL } from '../../src/jogo/tempo';
+import { FICAM_DE_DIA, PUBLICO_GRADE, publicoDaVila } from '../../src/world/publicoVila';
 
 /**
  * Spec 026: a Vila Neon no núcleo. As três missões de ponta a ponta com as moedinhas de
@@ -411,5 +412,39 @@ describe('spec 026: a Vila Neon no núcleo', () => {
     passos(m, Math.ceil((CHAMADO + ESPERA_FINAL + APLAUSO + 2) / PASSO));
     const s2 = m.salvar();
     expect((s2.extras as { vila: { tocou?: boolean } }).vila.tocou).toBe(true);
+  });
+
+  // ------------------------------------------------------------------ o público do show
+  it('a turma da grade: de noite 12, de dia só 4; no show, todos na grade de frente para o palco', () => {
+    const n = abrir();
+    const p = vilaDoMundo(SEMENTE)!;
+    const pub = publicoDaVila(p);
+    hora(n, NOITE);
+    // no nascer, ninguém (o público é do festival)
+    passos(n, 100);
+    expect(n.estado.vila!.publico()).toHaveLength(0);
+    ir(n, 'ana', pub.portao[0], p.h + 1, pub.portao[2] - 3);
+    passos(n, 40 * 20);
+    const noite = n.estado.vila!.publico();
+    expect(noite).toHaveLength(PUBLICO_GRADE);
+    // de papo nas rodinhas, ninguém no caminho de cascalho nem no corredor das lhamas
+    for (const c of noite) expect(pub.livre(c.x, c.z)).toBe(true);
+    // o show: todos na grade
+    acenderAsTres(n, p);
+    ir(n, 'ana', pub.portao[0], p.h + 1, pub.portao[2] - 3);
+    passos(n, 22 * 20);
+    const naGrade = n.estado.vila!.publico();
+    expect(naGrade).toHaveLength(PUBLICO_GRADE);
+    for (const c of naGrade) {
+      const k = c.morador!.n - N0_PUBLICO;
+      expect(Math.hypot(c.x - pub.grade[k][0], c.z - pub.grade[k][2]), `morador ${k}`).toBeLessThan(1.2);
+    }
+    // ninguém teleportou para chegar (o caminho dá a volta nas peças)
+    expect(naGrade.every((c) => !c.teleportes)).toBe(true);
+    // de dia (depois do show): quatro ficam, os outros saem pelo portão
+    passos(n, Math.ceil((CHAMADO + ESPERA_FINAL + APLAUSO) / PASSO));
+    hora(n, DIA);
+    passos(n, 60 * 20);
+    expect(n.estado.vila!.publico()).toHaveLength(FICAM_DE_DIA.length);
   });
 });

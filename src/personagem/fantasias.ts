@@ -633,6 +633,83 @@ export const FANTASIAS_DE_MORADOR: readonly FantasiaDef[] = [
       ],
     }),
   },
+  // spec 026 (o público do show): a turma da grade, quatro jeitos da época, só nos moradores.
+  // Vistos de trás na plateia: o colete de brim com remendos, o boné (para a frente ou para
+  // trás), a jaqueta de tachinhas e a faixa na testa; nada de rosa (é da dançarina)
+  {
+    id: 'plateia-colete',
+    grupo: 'temas',
+    tema: 'vila-neon',
+    nomes: { feminino: 'Fã do show', masculino: 'Fã do show' },
+    cores: ['#e8302a', '#f6f4ee', '#ffd23d'],
+    corEmblema: '#ffe14a',
+    visual: mesmo({
+      roupa: { camisa: 'principal', manga: 'principal', calca: '#2a3350', sapato: '#f6f4ee' },
+      cabeca: 'livre',
+      pecas: [
+        { tipo: 'colete-brim', cor: '#3d5f8f' },
+        { tipo: 'faixa-testa', cor: 'emblema' },
+      ],
+    }),
+  },
+  {
+    id: 'plateia-bone',
+    grupo: 'temas',
+    tema: 'vila-neon',
+    nomes: { feminino: 'Fã do show', masculino: 'Fã do show' },
+    cores: ['#f6f4ee', '#22c2b0', '#e8302a'],
+    corEmblema: '#2f8cff',
+    visual: mesmo({
+      roupa: { camisa: 'principal', manga: 'principal', calca: '#3a6fb8', sapato: '#2e2d36' },
+      cabeca: 'chapeu',
+      pecas: [{ tipo: 'bone', cor: 'emblema' }],
+    }),
+  },
+  {
+    id: 'plateia-bone-tras',
+    grupo: 'temas',
+    tema: 'vila-neon',
+    nomes: { feminino: 'Fã do show', masculino: 'Fã do show' },
+    cores: ['#22c2b0', '#2f8cff', '#3a3944'],
+    corEmblema: '#e8302a',
+    visual: mesmo({
+      roupa: { camisa: 'principal', manga: 'principal', calca: '#2a3350', sapato: '#f6f4ee' },
+      cabeca: 'chapeu',
+      pecas: [{ tipo: 'bone-tras', cor: 'emblema' }],
+    }),
+  },
+  {
+    id: 'plateia-jaqueta',
+    grupo: 'temas',
+    tema: 'vila-neon',
+    nomes: { feminino: 'Fã do show', masculino: 'Fã do show' },
+    cores: ['#3d5f8f', '#2e2d36', '#7a4422'],
+    corEmblema: '#ffe14a',
+    visual: mesmo({
+      roupa: { camisa: '#f6f4ee', manga: 'principal', calca: '#24232a', sapato: '#2e2d36' },
+      cabeca: 'livre',
+      pecas: [
+        { tipo: 'jaqueta-tachas', cor: 'principal' },
+        { tipo: 'munhequeira', cor: '#24232a' },
+      ],
+    }),
+  },
+  {
+    id: 'plateia-faixa',
+    grupo: 'temas',
+    tema: 'vila-neon',
+    nomes: { feminino: 'Fã do show', masculino: 'Fã do show' },
+    cores: ['#ff8a2a', '#3a3944', '#2f8cff'],
+    corEmblema: '#ffe14a',
+    visual: mesmo({
+      roupa: { camisa: 'principal', manga: 'principal', calca: '#2a3350', sapato: '#e8302a' },
+      cabeca: 'livre',
+      pecas: [
+        { tipo: 'faixa-testa', cor: 'emblema' },
+        { tipo: 'faixa-braco', cor: 'emblema' },
+      ],
+    }),
+  },
 ];
 
 /**

@@ -326,6 +326,28 @@ export function vilaNoChunk(p: PlanoVila, cx: number, cz: number): boolean {
 /** Pincel com metadado (direção nos bits 0 e 1: 0 +z, 1 +x, 2 -z, 3 -x). */
 export type PincelVila = (wx: number, y: number, wz: number, id: number, meta?: number) => void;
 
+const tomadas = new WeakMap<PlanoVila, Set<number>>();
+/**
+ * Spec 026 (o público do show): a coluna (wx, wz) tem bloco do bairro logo acima do chão (no
+ * primeiro ou no segundo bloco, onde um boneco esbarra)? Lido do plano, nunca da malha.
+ */
+export function colunaTomadaNaVila(p: PlanoVila, wx: number, wz: number): boolean {
+  if (!dentro(p.plana, wx, wz)) return false;
+  let t = tomadas.get(p);
+  if (!t) {
+    const m = montado(p);
+    t = new Set<number>();
+    for (const l of m.porChunk.values())
+      for (let i = 0; i < l.length; i += 4) {
+        const y = l[i + 1];
+        if (y !== p.h + 1 && y !== p.h + 2) continue;
+        t.add((l[i + 2] - p.plana.z0) * m.largura + (l[i] - p.plana.x0));
+      }
+    tomadas.set(p, t);
+  }
+  return t.has((wz - p.plana.z0) * montado(p).largura + (wx - p.plana.x0));
+}
+
 /** Monta no chunk (cx, cz) os blocos do bairro que caem nele. */
 export function construirVila(p: PlanoVila, cx: number, cz: number, em: PincelVila): void {
   const lista = montado(p).porChunk.get(`${cx},${cz}`);

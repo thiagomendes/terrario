@@ -106,6 +106,7 @@ import {
 } from '../jogo/contato';
 import { celulaTomadaPelaVila, indiceDoMundo } from '../world/vilaSolidos';
 import { criarBrinquedosVila } from './vila/brinquedos';
+import { criarPlateiaVila } from './vila/plateia';
 import { noiteDeShow } from '../jogo/show';
 import { criarShowVila } from './vila/show';
 import type { PlanoVila } from '../world/vilaNeon';
@@ -429,6 +430,8 @@ export interface EstadoDepuracao {
   /** Spec 026: os eventos do show que chegaram (testes) e o que o show mostra. */
   eventosVila?: (import('../nucleo/vila').EventoVila & { recebido: number })[];
   showVila?: () => ReturnType<import('./vila/show').ShowVila['estado']> | null;
+  /** Spec 026: o povo de longe do show (só de noite). */
+  plateiaVila?: () => ReturnType<import('./vila/plateia').PlateiaVila['estado']> | null;
   /** Spec 026 (T18/T19, testes): o que o som do show e do bairro agendou e toca. */
   somVila?: () => ReturnType<SomVila['info']> | null;
   /** Spec 026 (T19, testes): o som de um brinquedo do bairro agora. */
@@ -1733,6 +1736,15 @@ export function criarCena(
       })
     : null;
   estado.brinquedosVila = () => brinquedosVila?.estado() ?? null;
+  // spec 026: o povo de longe do show (atrás da turma da grade, só de noite, só com chão)
+  const plateiaVila = planoVila
+    ? criarPlateiaVila(scene, planoVila, {
+        temMalha: (cx, cz) => malhas.has(chave(cx, cz)),
+        brilha: brilhaNaVila,
+        tapaOGlow,
+      })
+    : null;
+  estado.plateiaVila = () => plateiaVila?.estado() ?? null;
   estado.eventosVila = planoVila ? [] : undefined;
   estado.showVila = () => showVila?.estado() ?? null;
   /** Spec 026: a pista onde os patins deslizam (o bloco embaixo dos pés é a pista quadriculada). */
@@ -4154,9 +4166,17 @@ export function criarCena(
     atualizarFantasmas(tempo);
     renderVeiculos?.quadro(Math.min(dtBruto, 0.1), tempo);
     renderVila?.quadro(tempo, controle.jogador.x, controle.jogador.z, noiteVila);
-    // spec 026: o show é só de noite (a noite do show acende o palco)
+    // spec 026: o show é só de noite (a noite do show acende o palco e traz o povo)
     const noiteShow = noiteDeShow(hora);
     showVila?.quadro(tempo, cliente.vila.estado, cliente.vila.tempo(tempo), noiteVila, noiteShow);
+    plateiaVila?.quadro(
+      tempo,
+      cliente.vila.estado,
+      cliente.vila.tempo(tempo),
+      noiteVila,
+      noiteShow,
+      controle.jogador,
+    );
     if (brinquedosVila) {
       quadroPistaVila();
       brinquedosVila.quadro(tempo);
@@ -4381,8 +4401,8 @@ export function criarCena(
   // spec 026: no Show da Vila a banda bate cabeça no tempo e pula no acorde final
   if (showVila)
     renderCriaturas.definirPoseDeMorador(
-      (povoado, n, pose) => showVila.poseDoMorador(povoado, n, pose),
-      (povoado, n) => showVila.giroDoMorador(povoado, n),
+      (povoado, n, pose, onde) => showVila.poseDoMorador(povoado, n, pose, onde),
+      (povoado, n, onde) => showVila.giroDoMorador(povoado, n, onde),
     );
   /** 014c (testes de tela): os bichos do desfile das capturas. */
   let desfile: Criatura[] = [];
