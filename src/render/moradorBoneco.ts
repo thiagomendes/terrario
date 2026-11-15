@@ -216,6 +216,8 @@ export function moradorDeBrinquedo(
   acessorio?: Aparencia['acessorio'],
   /** Spec 014 (T11): a fantasia que o tema dá à profissão (o capacete de obra do pedreiro). */
   fantasia?: Aparencia['fantasia'],
+  /** Spec 026: o corte de cabelo fixo do morador de posto (o liso comprido do vocalista). */
+  cabeloEstilo?: number,
 ): Morador {
   const cabecas = pecas.filter((p) => p.papel === 'cabeca');
   const cabeca = [...cabecas].sort((a, b) => volume(b) - volume(a))[0];
@@ -276,7 +278,7 @@ export function moradorDeBrinquedo(
 
   const modelos = MODELOS.filter((m) => !genero || (genero === 'f') === FEMININOS.includes(m));
   const a = aparenciaPadrao(modelos[Math.floor(hash(id, 1) * modelos.length)]);
-  a.cabeloEstilo = Math.floor(hash(id, 2) * ESTILOS_CABELO);
+  a.cabeloEstilo = cabeloEstilo ?? Math.floor(hash(id, 2) * ESTILOS_CABELO);
   // rosto no gênero do morador: cílios e sardas para elas; barba e bigode só para eles
   const rostos = genero === 'f' ? [0, 1, 2, 3] : genero === 'm' ? [0, 2, 4, 5] : [0, 1, 2, 3, 4, 5];
   a.rosto = rostos[Math.floor(hash(id, 3) * rostos.length)];
@@ -286,6 +288,8 @@ export function moradorDeBrinquedo(
   // O morador veste a roupa do tema: sempre com manga.
   if (a.roupaEstilo === ESTILO_SEM_MANGA) a.roupaEstilo = 0;
   if (fantasia) a.fantasia = { ...fantasia };
+  // spec 026: o patinador da pista anda de patins
+  if (fantasia?.id === 'patinadora') a.patins = true;
   const pele = cabeca?.cor;
   const roupa = tronco?.cor;
   const calca = perna?.cor;

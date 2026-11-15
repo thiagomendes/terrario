@@ -71,7 +71,22 @@ export type TipoPeca =
   | 'capuz-dragao'
   | 'corpo-dragao'
   | 'asas-dragao'
-  | 'patas-dragao';
+  | 'patas-dragao'
+  // spec 026: as fantasias da Vila Neon (o vocalista, a dançarina e a patinadora) e o
+  // guitarrista do palco
+  | 'jaqueta-tachas'
+  | 'faixa-braco'
+  | 'munhequeira'
+  | 'faixa-testa'
+  | 'tenis-cano'
+  | 'cabelo-liso'
+  | 'moletom-ombro'
+  | 'polainas'
+  | 'viseira'
+  | 'joelheiras'
+  | 'colete-brim'
+  | 'guitarra-raio'
+  | 'bone-tras';
 
 /** Símbolos próprios (nada de letra no peito, teia ou morcego). */
 export type Simbolo = 'flor' | 'estrela' | 'concha' | 'floco' | 'raio' | 'coracao' | 'folha';
@@ -507,6 +522,62 @@ export const FANTASIAS: readonly FantasiaDef[] = [
       ],
     }),
   },
+  // spec 026: as fantasias da Vila Neon (livres, como as da 017). A Roqueira do Palco é o
+  // look do vocalista ajustado à criança, com o cabelo comprido e liso ligado (sai com um
+  // toque); a Dançarina do Neon é a única de rosa; a Patinadora calça os patins na Vila Neon.
+  {
+    id: 'roqueira-palco',
+    grupo: 'temas',
+    tema: 'vila-neon',
+    nomes: { feminino: 'Roqueira do Palco', masculino: 'Roqueiro do Palco' },
+    cores: ['#3a3944', '#2c3a6a', '#5a2a36'],
+    corEmblema: '#2f6fd0',
+    visual: mesmo({
+      roupa: { camisa: '#e8302a', manga: 'principal', calca: '#2a3350', sapato: '#e8302a' },
+      cabeca: 'livre',
+      pecas: [
+        { tipo: 'jaqueta-tachas', cor: 'principal' },
+        { tipo: 'faixa-braco', cor: '#e8302a' },
+        { tipo: 'munhequeira', cor: '#24232a' },
+        { tipo: 'tenis-cano', cor: '#e8302a' },
+        { tipo: 'faixa-testa', cor: '#e8302a', opcional: true },
+        { tipo: 'cabelo-liso', cor: 'escura', opcional: true },
+      ],
+    }),
+  },
+  {
+    id: 'danca-neon',
+    grupo: 'temas',
+    tema: 'vila-neon',
+    nomes: { feminino: 'Dançarina do Neon', masculino: 'Dançarino do Neon' },
+    cores: ['#ff6fb4', '#8a5ad8', '#ff8a2a'],
+    corEmblema: '#2ee0d0',
+    visual: mesmo({
+      roupa: { camisa: 'principal', manga: 'principal', calca: '#2e2a48', sapato: '#f6f4ee' },
+      cabeca: 'livre',
+      pecas: [
+        { tipo: 'moletom-ombro', cor: 'principal' },
+        { tipo: 'polainas', cor: 'emblema' },
+        { tipo: 'faixa-testa', cor: 'emblema', opcional: true },
+      ],
+    }),
+  },
+  {
+    id: 'patinadora',
+    grupo: 'temas',
+    tema: 'vila-neon',
+    nomes: { feminino: 'Patinadora', masculino: 'Patinador' },
+    cores: ['#2f8cff', '#e8302a', '#22c2b0'],
+    corEmblema: '#ff8a2a',
+    visual: mesmo({
+      roupa: { camisa: 'principal', manga: '#f6f4ee', calca: '#f6f4ee', sapato: '#f6f4ee' },
+      cabeca: 'livre',
+      pecas: [
+        { tipo: 'joelheiras', cor: 'principal' },
+        { tipo: 'viseira', cor: 'emblema', opcional: true },
+      ],
+    }),
+  },
 ];
 
 /**
@@ -525,6 +596,41 @@ export const FANTASIAS_DE_MORADOR: readonly FantasiaDef[] = [
       roupa: { camisa: 'principal', manga: 'principal', calca: '#2f5a9a', sapato: '#2a2026' },
       cabeca: 'chapeu',
       pecas: [{ tipo: 'bone', cor: '#d8433a' }],
+    }),
+  },
+  // spec 026: a roadie do palco (o boné amarelo virado para trás, camiseta grafite e bermuda
+  // verde-oliva; o fone e a fita crepe vêm das peças do tema)
+  {
+    id: 'roadie-vila',
+    grupo: 'temas',
+    tema: 'vila-neon',
+    nomes: { feminino: 'Roadie', masculino: 'Roadie' },
+    cores: ['#3a3944'],
+    corEmblema: '#ffe14a',
+    visual: mesmo({
+      roupa: { camisa: 'principal', manga: 'principal', calca: '#6b7a3a', sapato: '#2e2d36' },
+      cabeca: 'chapeu',
+      pecas: [{ tipo: 'bone-tras', cor: 'emblema' }],
+    }),
+  },
+  // spec 026: a guitarrista da Vila Neon (colete de brim com remendos, a faixa azul no braço e
+  // a guitarra-raio vermelha nas costas: um raio gordinho inventado aqui, nunca um V)
+  {
+    id: 'guitarrista-vila',
+    grupo: 'temas',
+    tema: 'vila-neon',
+    nomes: { feminino: 'Guitarrista', masculino: 'Guitarrista' },
+    cores: ['#2f8cff'],
+    corEmblema: '#e8302a',
+    visual: mesmo({
+      roupa: { camisa: 'principal', manga: 'principal', calca: '#e8302a', sapato: '#2e2d36' },
+      cabeca: 'livre',
+      pecas: [
+        { tipo: 'colete-brim', cor: '#3d5f8f' },
+        { tipo: 'faixa-braco', cor: '#2f8cff' },
+        { tipo: 'guitarra-raio', cor: 'emblema' },
+        { tipo: 'tenis-cano', cor: '#2e2d36' },
+      ],
     }),
   },
 ];

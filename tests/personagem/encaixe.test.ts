@@ -120,6 +120,51 @@ describe('encaixe dos acessórios (spec 017, T01)', () => {
     expect(falhas).toEqual([]);
   });
 
+  it('spec 026: os moradores de posto (fantasia, cabelo fixo e patins) ficam inteiros', () => {
+    const falhas: string[] = [];
+    let vistos = 0;
+    for (const id of temasDisponiveis()) {
+      const pov = obterTema(id).povoado;
+      for (const [chave, fixo] of Object.entries(pov?.porMorador ?? {})) {
+        const m = moradorDeBrinquedo(
+          fixo.pecas ?? pov!.moradores.construtor,
+          7,
+          fixo.genero,
+          fixo.acessorio,
+          fixo.fantasia,
+          fixo.cabelo,
+        );
+        const plano = m.ajustar(planoBoneco(m.aparencia));
+        vistos++;
+        for (const p of conferirEncaixe(plano))
+          falhas.push(
+            `${id} ${chave}: ${p.tipo} ${p.peca}${p.outra ? `/${p.outra}` : ''} ${p.medida.toFixed(3)}`,
+          );
+        falhas.push(...membrosSoltos(plano, `${id} ${chave}`));
+      }
+    }
+    expect(vistos).toBeGreaterThan(0);
+    expect(falhas).toEqual([]);
+  });
+
+  it('spec 026: de patins, em todos os modelos e corpos, nada fica solto', () => {
+    const falhas: string[] = [];
+    for (const modelo of IDS_MODELOS)
+      for (const corpo of CORPOS) {
+        const plano = planoBoneco({
+          ...aplicarCorpo(aparenciaPadrao(modelo), corpo),
+          patins: true,
+        });
+        expect(plano.pecas.some((p) => p.nome.includes('patins-roda'))).toBe(true);
+        for (const p of conferirEncaixe(plano))
+          falhas.push(
+            `${modelo} ${corpo}: ${p.tipo} ${p.peca}${p.outra ? `/${p.outra}` : ''} ${p.medida.toFixed(3)}`,
+          );
+        falhas.push(...membrosSoltos(plano, `${modelo} ${corpo} patins`));
+      }
+    expect(falhas).toEqual([]);
+  });
+
   it('braços, pernas e cabeça ficam presos no tronco em todas as poses e gestos', () => {
     const falhas: string[] = [];
     for (const modelo of IDS_MODELOS)

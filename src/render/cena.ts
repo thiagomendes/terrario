@@ -567,6 +567,8 @@ export interface EstadoDepuracao {
   tocarToqueVeiculo?: (qual: 'uiui' | 'freio' | 'buzina' | 'ambulancia' | 'bombeiros') => void;
   /** Spec 014 (T15, testes): grava o som do jogo (a saída do motor), PCM 16 bits em base64. */
   gravarSom?: (segundos: number) => Promise<{ taxa: number; l: string; r: string } | null>;
+  /** Spec 026 (testes): termina a gravação do som agora. */
+  pararSom?: () => void;
   /** Spec 014 (T14, testes): os motores que tocam, a musiquinha e os toques. */
   somVeiculos?: () => ReturnType<SomVeiculos['info']> & { tocados: string[] };
   blocoGerado?: (x: number, y: number, z: number) => number;
@@ -2958,7 +2960,14 @@ export function criarCena(
   estado.personagem = {
     aparencia: () => ({ ...aparencia }),
     definir: (parcial) => {
+      const antes = aparencia.fantasia?.id;
       aparencia = normalizarAparencia({ ...aparencia, ...parcial });
+      // spec 026: na Vila Neon a fantasia Patinadora já vem com os patins calçados (fora dela
+      // os patins nunca vão: decisão 7 do dono)
+      if (planoVila && aparencia.fantasia?.id === 'patinadora' && antes !== 'patinadora') {
+        aparencia.patins = true;
+        controle.definirPatins(pistaDosPatins);
+      } else if (!planoVila) delete aparencia.patins;
       personagem.aplicarAparencia(aparencia);
       // os amigos no mesmo mundo passam a ver a aparência nova
       // spec 014: os desbloqueios (capacete e colete do canteiro) ficam no aparelho
@@ -3911,24 +3920,29 @@ export function criarCena(
         zero.gain.value = 0;
         const q = (x: number) => Math.max(-32768, Math.min(32767, Math.round(x * 32767)));
         const b64 = (a: Int16Array) => {
-          const u = new Uint8Array(a.buffer);
+          const u = new Uint8Array(a.buffer, a.byteOffset, a.byteLength);
           let t = '';
           for (let k = 0; k < u.length; k += 0x8000)
             t += String.fromCharCode(...u.subarray(k, k + 0x8000));
           return btoa(t);
         };
+        let fim = n;
+        // spec 026 (vídeos das missões): parar antes do fim (o que foi gravado até ali)
+        estado.pararSom = () => {
+          fim = Math.min(fim, i);
+        };
         proc.onaudioprocess = (ev) => {
           const a = ev.inputBuffer.getChannelData(0);
           const b = ev.inputBuffer.getChannelData(ev.inputBuffer.numberOfChannels > 1 ? 1 : 0);
-          for (let k = 0; k < a.length && i < n; k++, i++) {
+          for (let k = 0; k < a.length && i < fim; k++, i++) {
             l[i] = q(a[k]);
             r[i] = q(b[k]);
           }
-          if (i >= n) {
+          if (i >= fim) {
             proc.onaudioprocess = null;
             saida.disconnect(proc);
             proc.disconnect();
-            ok({ taxa: ctx.sampleRate, l: b64(l), r: b64(r) });
+            ok({ taxa: ctx.sampleRate, l: b64(l.subarray(0, fim)), r: b64(r.subarray(0, fim)) });
           }
         };
         saida.connect(proc);
@@ -4323,8 +4337,9 @@ export function criarCena(
   );
   // spec 026: no Show da Vila a banda bate cabeça no tempo e pula no acorde final
   if (showVila)
-    renderCriaturas.definirPoseDeMorador((povoado, n, pose) =>
-      showVila.poseDoMorador(povoado, n, pose),
+    renderCriaturas.definirPoseDeMorador(
+      (povoado, n, pose) => showVila.poseDoMorador(povoado, n, pose),
+      (povoado, n) => showVila.giroDoMorador(povoado, n),
     );
   /** 014c (testes de tela): os bichos do desfile das capturas. */
   let desfile: Criatura[] = [];

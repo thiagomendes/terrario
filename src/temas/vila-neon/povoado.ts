@@ -12,8 +12,27 @@ const ACIMA = 1.935;
 /**
  * Os moradores da Vila Neon (spec 026, "Os moradores"): a roadie do palco (construtor), o
  * guitarrista (ferreiro) e a moça do lanche (cozinheiro). Arquétipos da época, de brinquedo:
- * nenhum é pessoa de verdade. O vocalista, a dançarina e o patinador chegam na T08.
+ * nenhum é pessoa de verdade. O vocalista, a dançarina e o patinador vestem as fantasias do tema.
  */
+/** O corpo liso de quem veste uma fantasia do tema (a roupa vem dela; o cabelo e a pele, daqui). */
+const corpoDe = (pele: string, cabelo: string, roupa: string, calca: string) =>
+  corpoDeMorador({ pele, roupa, calca, sapato: '#2e2d36', cabelo });
+
+/** A roadie: o corpo e o fone de técnico com a fita crepe (o boné vem da fantasia dela). */
+const ROADIE: PecaCriatura[] = [
+  ...corpoDeMorador({
+    pele: '#b9825c',
+    roupa: '#3a3944',
+    calca: '#6b7a3a',
+    sapato: '#2e2d36',
+    cabelo: '#2e2018',
+  }),
+  { t: [0.52, 0.06, 0.3], p: [0, 0.86, 0], cor: '#2e2d36' },
+  { t: [0.12, 0.12, 0.05], p: [0.19, 0.84, 0.17], cor: '#efe6c8', forma: 'bola' },
+  { t: [0.06, 0.15, 0.15], p: [0.235, 1.66, 0], cor: '#2e2d36', papel: 'cabeca' },
+  { t: [0.06, 0.15, 0.15], p: [-0.235, 1.66, 0], cor: '#2e2d36', papel: 'cabeca' },
+];
+
 const MORADORES: Record<Profissao, PecaCriatura[]> = {
   // moça do lanche: camiseta vermelha, avental branco e a viseira vermelha
   cozinheiro: [
@@ -44,24 +63,15 @@ const MORADORES: Record<Profissao, PecaCriatura[]> = {
     { t: [0.52, 0.06, 0.3], p: [0, 0.86, 0], cor: '#2e2d36' },
     { t: [0.12, 0.12, 0.05], p: [0.19, 0.84, 0.17], cor: '#efe6c8', forma: 'bola' },
   ],
-  // guitarrista: camiseta azul lisa, colete de brim com remendos de estrela e raio, calça
-  // vermelha, faixa azul no braço e a guitarra-raio vermelha nas costas
-  ferreiro: [
-    ...corpoDeMorador({
-      pele: '#f0c8a0',
-      roupa: '#2f8cff',
-      calca: '#e8302a',
-      sapato: '#2e2d36',
-      cabelo: '#f2d27a',
-    }),
-    { t: [0.17, 0.6, 0.04], p: [0.165, 1.12, 0.155], cor: '#3a6fb8' },
-    { t: [0.17, 0.6, 0.04], p: [-0.165, 1.12, 0.155], cor: '#3a6fb8' },
-    { t: [0.08, 0.08, 0.02], p: [0.17, 1.2, 0.18], cor: '#ffe14a' },
-    { t: [0.06, 0.1, 0.02], p: [-0.17, 1.02, 0.18], cor: '#e8302a' },
-    { t: [0.18, 0.07, 0.2], p: [0.34, 1.3, 0], cor: '#2f8cff', papel: 'perna1' },
-    { t: [0.34, 0.3, 0.06], p: [0, 1.0, -0.18], cor: '#e8302a' },
-    { t: [0.06, 0.42, 0.04], p: [0.1, 1.34, -0.18], cor: '#2e2d36' },
-  ],
+  // guitarrista: camiseta azul lisa e calça vermelha; o colete de brim com os remendos, a faixa
+  // azul no braço e a guitarra-raio nas costas vêm da fantasia dela (guitarrista-vila)
+  ferreiro: corpoDeMorador({
+    pele: '#f0c8a0',
+    roupa: '#2f8cff',
+    calca: '#e8302a',
+    sapato: '#2e2d36',
+    cabelo: '#f2d27a',
+  }),
 };
 
 export const POVOADO_VILA: PovoadoTema = {
@@ -93,24 +103,45 @@ export const POVOADO_VILA: PovoadoTema = {
       nome: 'Rafa',
       genero: 'm',
       titulo: 'Vocalista',
-      pecas: MORADORES.ferreiro,
+      // cabelo preto, liso e comprido (nunca maior que o boneco), a faixa fina na testa, a
+      // jaqueta de tachinhas, a faixa no braço, a munhequeira e o tênis de cano alto
+      pecas: corpoDe('#e0b090', '#1e1a22', '#3a3944', '#2a3350'),
+      fantasia: { id: 'roqueira-palco', cor: 0 },
+      cabelo: 2,
       semTrocas: true,
     },
-    'vila:1': { nome: 'Kika', genero: 'f', titulo: 'Roadie', pecas: MORADORES.construtor },
-    'vila:2': { nome: 'Lili', genero: 'f', titulo: 'Guitarrista', pecas: MORADORES.ferreiro },
+    'vila:1': {
+      nome: 'Kika',
+      genero: 'f',
+      titulo: 'Roadie',
+      pecas: ROADIE,
+      fantasia: { id: 'roadie-vila', cor: 0 },
+    },
+    'vila:2': {
+      nome: 'Lili',
+      genero: 'f',
+      titulo: 'Guitarrista',
+      pecas: MORADORES.ferreiro,
+      fantasia: { id: 'guitarrista-vila', cor: 0 },
+      cabelo: 2,
+    },
     'vila:3': { nome: 'Bia', genero: 'f', titulo: 'Moça do lanche', pecas: MORADORES.cozinheiro },
     'vila:4': {
       nome: 'Mel',
       genero: 'f',
       titulo: 'Dançarina',
-      pecas: MORADORES.cozinheiro,
+      pecas: corpoDe('#c99064', '#4a3326', '#ff6fb4', '#2e2a48'),
+      fantasia: { id: 'danca-neon', cor: 0 },
       semTrocas: true,
     },
     'vila:5': {
       nome: 'Zeca',
       genero: 'm',
       titulo: 'Patinador',
-      pecas: MORADORES.construtor,
+      // de azul e branco, a viseira laranja, as joelheiras e os patins
+      pecas: corpoDe('#9a6844', '#2e2018', '#2f8cff', '#f6f4ee'),
+      fantasia: { id: 'patinadora', cor: 0 },
+      cabelo: 0,
       semTrocas: true,
     },
     'vila:6': {

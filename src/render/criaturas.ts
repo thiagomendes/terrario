@@ -224,6 +224,7 @@ export function criarRenderCriaturas(
       c.morador ? generoDoMorador(c.morador.povoado, c.morador.n, prof) : undefined,
       acessorio,
       fixo ? fixo.fantasia : povoadoDoTema().fantasias?.[prof],
+      fixo?.cabelo,
     );
     const chave = `${tema().id}|${prof}|${fixo && c.morador ? `${c.morador.povoado}:${c.morador.n}` : ''}|${acessorio ?? ''}|${JSON.stringify(m.aparencia)}`;
     return { m, chave };
@@ -464,6 +465,8 @@ export function criarRenderCriaturas(
 
   /** Spec 026: a pose do show por cima da do morador (null fora da Vila Neon). */
   let poseDeMorador: ((povoado: string, n: number, pose: Pose) => Pose) | null = null;
+  /** Spec 026: o giro fixo do morador (a banda de frente para a plateia no show), ou null. */
+  let giroDeMorador: ((povoado: string, n: number) => number | null) | null = null;
   let proximaEstatua = -1;
   /**
    * Estátuas da vitrine por lugar: a nova no mesmo lugar descarta a de antes (auditoria 017:
@@ -527,8 +530,12 @@ export function criarRenderCriaturas(
     /**
      * Spec 026: uma pose por cima da do morador (a banda no Show da Vila); null tira.
      */
-    definirPoseDeMorador(f: ((povoado: string, n: number, pose: Pose) => Pose) | null): void {
+    definirPoseDeMorador(
+      f: ((povoado: string, n: number, pose: Pose) => Pose) | null,
+      giro: ((povoado: string, n: number) => number | null) | null = null,
+    ): void {
       poseDeMorador = f;
+      giroDeMorador = giro;
     },
     /** Spec 015: gesto em curso e balão de cada morador desenhado (testes). */
     gestosMoradores(): { id: number; gesto: IdGesto | null; balao: IdGesto | null }[] {
@@ -591,7 +598,10 @@ export function criarRenderCriaturas(
           // o animador anda sempre (o passo segue de onde estava); as juntas só na vista
           if (!foraDaVista(c.x, c.y + 1, c.z))
             mb.boneco.aplicarPose(pose, { dt, olhar: 0, vista: mb.animador.vista() });
-          mb.boneco.posicionar(c.x, c.y, c.z, c.yaw);
+          // spec 026: no show a banda fica de frente para a plateia
+          const giro =
+            giroDeMorador && c.morador ? giroDeMorador(c.morador.povoado, c.morador.n) : null;
+          mb.boneco.posicionar(c.x, c.y, c.z, giro ?? c.yaw);
           mb.balao?.atualizar(dt);
           const l = luz(c);
           if (Math.abs(l - mb.luz) > 0.002) {

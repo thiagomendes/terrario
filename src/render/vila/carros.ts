@@ -53,6 +53,16 @@ const LANTERNA_NOITE = '#ff3a2e';
 const PISCA = '#f0962a';
 const PLACA = '#f2d24a';
 
+/**
+ * A versão de longe (a do celular a mais de ~24 blocos, como os veículos da cidade): bisel de
+ * um gomo, rodas de menos lados, sem o interior e sem as pecinhas (placa, antena, dadinhos,
+ * retrovisor, vincos), e o vidro vira uma lâmina escura do corpo (um material a menos).
+ */
+let longe = false;
+/** Bem longe (a ~36 blocos): só o volume, as rodas e as luzes (um brinquedo pequenino na tela). */
+let muitoLonge = false;
+const VIDRO_LONGE = '#3e5266';
+
 type Fz = number | ((y: number) => number);
 const fz = (f: Fz) => (typeof f === 'number' ? () => f : f);
 
@@ -69,7 +79,16 @@ const k = (x: number, y: number, r = 0, seg = 2): Canto => ({ x, y, r, seg });
 /** Volume grande: o contorno de lado puxado na largura (dos dois lados), com bisel. */
 function vol(dst: Pecas, perfil: Item[], z: Fz, cor: string, b = 0.045, sb = 2): void {
   const f = fz(z);
-  dst.add(solido({ perfil, z0: (y) => -f(y), z1: f, bisel: b, segBisel: sb, cor }));
+  dst.add(
+    solido({
+      perfil,
+      z0: (y) => -f(y),
+      z1: f,
+      bisel: muitoLonge ? 0 : b,
+      segBisel: muitoLonge ? 0 : longe ? 1 : sb,
+      cor,
+    }),
+  );
 }
 
 /** Peça colada no lado (z = ±zs), saindo `sai` para fora e `entra` para dentro. */
@@ -83,6 +102,7 @@ function lateral(
   entra = 0.01,
   bisel = 0.004,
 ): void {
+  if (muitoLonge) return;
   const f = fz(zs);
   for (const s of lados)
     dst.add(
@@ -90,8 +110,8 @@ function lateral(
         perfil,
         z0: s > 0 ? (y) => f(y) - entra : (y) => -f(y) - sai,
         z1: s > 0 ? (y) => f(y) + sai : (y) => -f(y) + entra,
-        bisel: Math.min(bisel, (sai + entra) / 3),
-        segBisel: 1,
+        bisel: longe ? 0 : Math.min(bisel, (sai + entra) / 3),
+        segBisel: longe ? 0 : 1,
         cor,
       }),
     );
@@ -110,11 +130,13 @@ function naFace(
   sai = 0.014,
   entra = 0.01,
 ): void {
+  // bem longe só ficam as lentes acesas (o resto da face some no tamanho da tela)
+  if (muitoLonge && cor !== FAROL_NOITE) return;
   const d = [b[0] - a[0], b[1] - a[1]];
   const l = Math.hypot(d[0], d[1]);
   const v: V3 = [d[0] / l, d[1] / l, 0];
   const n: V3 = [v[1], -v[0], 0];
-  const bis = Math.min(0.004, (sai + entra) / 3);
+  const bis = longe ? 0 : Math.min(0.004, (sai + entra) / 3);
   const vd = solido({ perfil, z0: -entra, z1: sai, bisel: bis, segBisel: bis > 0 ? 1 : 0, cor });
   dst.add(noPlano(vd, [a[0], a[1], 0], [0, 0, 1], v, n));
 }
@@ -133,13 +155,17 @@ function cx(
   b = 0.012,
 ): void {
   const menor = Math.min(x1 - x0, y1 - y0, z1 - z0);
+  // de longe as pecinhas somem (placa, frisos miúdos, fechos)
+  if (longe && Math.max(x1 - x0, y1 - y0, z1 - z0) < (muitoLonge ? 0.4 : 0.13)) return;
   const bb = Math.min(b, menor * 0.3);
   const rr = Math.min(Math.max(r, bb + 0.005), (Math.min(x1 - x0, y1 - y0) / 2) * 0.9);
-  dst.add(caixa(x0, x1, y0, y1, z0, z1, bb > 0 ? rr : 0, bb, cor, 1));
+  if (longe) dst.add(caixa(x0, x1, y0, y1, z0, z1, 0, 0, cor, 1));
+  else dst.add(caixa(x0, x1, y0, y1, z0, z1, bb > 0 ? rr : 0, bb, cor, 1));
 }
 
 /** Barra fina de a até b (a antena, o cordão dos dadinhos). */
 function vareta(dst: Pecas, a: V3, b: V3, lado: number, cor: string): void {
+  if (longe) return;
   const d: V3 = [b[0] - a[0], b[1] - a[1], b[2] - a[2]];
   const L = Math.hypot(d[0], d[1], d[2]) || 1e-6;
   const u: V3 = [d[0] / L, d[1] / L, d[2] / L];
@@ -164,6 +190,8 @@ function cilZ(
   cor: string,
   lados = 14,
 ): void {
+  if (longe && R < (muitoLonge ? 0.25 : 0.1)) return;
+  if (longe) lados = muitoLonge ? 6 : Math.max(6, (lados * 0.6) | 0);
   const vd = CreateCylinderVertexData({ height: larg, diameter: R * 2, tessellation: lados });
   const P = vd.positions as number[];
   const N = vd.normals as number[];
@@ -241,7 +269,7 @@ function abaDaRoda(
   const a0 = Math.asin(Math.max(-0.99, (chao - y) / R1));
   const b0 = Math.asin(Math.max(-0.99, (chao - y) / R0));
   const pts: Canto[] = [];
-  const n = 8;
+  const n = longe ? 4 : 8;
   for (let i = 0; i <= n; i++) {
     const a = a0 + ((Math.PI - 2 * a0) * i) / n;
     pts.push({ x: x + Math.cos(a) * R1, y: y + Math.sin(a) * R1 });
@@ -266,6 +294,7 @@ function peDaPorta(x: number, y0: number, arcos: { x: number; y: number; R: numb
 
 /** Vinco (a linha da porta): um risquinho escuro no lado. */
 function vinco(o: Obra, x: number, y0: number, y1: number, zs: Fz): void {
+  if (longe) return;
   lateral(o.c, retangulo(x - 0.009, y0, x + 0.009, y1), zs, FRISO, 0.016, [-1, 1], 0.01, 0);
 }
 
@@ -339,6 +368,7 @@ function lanterna(
 
 /** Retrovisor de fora: a haste e o espelho (cromado atrás). */
 function retrovisores(o: Obra, x: number, y: number, zs: number, cor: string): void {
+  if (longe) return;
   for (const s of [-1, 1]) {
     const z0 = s > 0 ? zs - 0.01 : -zs - 0.16;
     cx(o.c, x - 0.02, x + 0.03, y + 0.02, y + 0.06, z0, z0 + 0.17, PRETO, 0, 0);
@@ -350,6 +380,7 @@ function retrovisores(o: Obra, x: number, y: number, zs: number, cor: string): v
 
 /** Antena de vareta no para-lama, com a pontinha. */
 function antena(o: Obra, x: number, y: number, z: number, alt = 0.82): void {
+  if (longe) return;
   cx(o.c, x - 0.025, x + 0.025, y, y + 0.03, z - 0.025, z + 0.025, CROMO, 0, 0);
   vareta(o.c, [x, y + 0.02, z], [x - alt * 0.22, y + alt, z], 0.016, CROMO);
   cx(o.c, x - alt * 0.22 - 0.022, x - alt * 0.22 + 0.022, y + alt - 0.01, y + alt + 0.034, z - 0.022, z + 0.022, COR.vermelho, 0, 0);
@@ -357,6 +388,7 @@ function antena(o: Obra, x: number, y: number, z: number, alt = 0.82): void {
 
 /** Os dadinhos de pelúcia pendurados no retrovisor de dentro. */
 function dadinhos(o: Obra, x: number, y: number, cor: string): void {
+  if (longe) return;
   cx(o.c, x - 0.02, x + 0.02, y - 0.04, y, -0.09, 0.09, PRETO, 0, 0);
   vareta(o.c, [x, y - 0.03, 0], [x - 0.02, y - 0.17, -0.035], 0.012, '#f4f1ea');
   vareta(o.c, [x, y - 0.03, 0], [x - 0.01, y - 0.21, 0.04], 0.012, '#f4f1ea');
@@ -378,6 +410,7 @@ function banco(
   alt = 0.4,
   apoio = true,
 ): void {
+  if (longe) return;
   cx(o.c, x - 0.02, x + 0.4, y, y + 0.1, z0, z1, cor, 0.03, 0.02);
   cx(o.c, x - 0.1, x + 0.04, y, y + alt, z0, z1, cor, 0.04, 0.025);
   if (apoio) {
@@ -389,6 +422,7 @@ function banco(
 
 /** O volante (oito lados, de brinquedo) com a coluna, do lado do motorista. */
 function volante(o: Obra, x: number, y: number, z: number, r = 0.15): void {
+  if (longe) return;
   vareta(o.c, [x + 0.2, y - 0.14, z], [x, y, z], 0.04, PRETO);
   const aro = poligono(8, r, 0, 0);
   const vd = solido({ perfil: aro, z0: -0.02, z1: 0.02, bisel: 0.008, segBisel: 1, cor: PRETO });
@@ -418,14 +452,14 @@ function coluna(o: Obra, perfil: Item[], zc: Fz, cor: string, esp = 0.07): void 
 function vidroLado(o: Obra, perfil: Item[], zc: Fz): void {
   const f = fz(zc);
   for (const s of [-1, 1])
-    o.v.add(
+    (longe ? o.c : o.v).add(
       solido({
         perfil,
         z0: s > 0 ? (y) => f(y) - 0.04 : (y) => -f(y) + 0.02,
         z1: s > 0 ? (y) => f(y) - 0.02 : (y) => -f(y) + 0.04,
         bisel: 0,
         segBisel: 0,
-        cor: '#ffffff',
+        cor: longe ? VIDRO_LONGE : '#ffffff',
       }),
     );
 }
@@ -434,7 +468,7 @@ function vidroLado(o: Obra, perfil: Item[], zc: Fz): void {
 function vidroFace(o: Obra, a: V2, b: V2, hw0: number, hw1: number, v0: number, v1: number): void {
   const l = Math.hypot(b[0] - a[0], b[1] - a[1]);
   naFace(
-    o.v,
+    longe ? o.c : o.v,
     a,
     b,
     [
@@ -443,7 +477,7 @@ function vidroFace(o: Obra, a: V2, b: V2, hw0: number, hw1: number, v0: number, 
       { x: hw1, y: l - v1 },
       { x: -hw1, y: l - v1 },
     ],
-    '#ffffff',
+    longe ? VIDRO_LONGE : '#ffffff',
     -0.02,
     0.04,
   );
@@ -451,6 +485,7 @@ function vidroFace(o: Obra, a: V2, b: V2, hw0: number, hw1: number, v0: number, 
 
 /** Os limpadores deitados no pé do para-brisa. */
 function limpadores(o: Obra, a: V2, b: V2, hw: number): void {
+  if (longe) return;
   for (const s of [-1, 1]) {
     const u0 = s > 0 ? 0.04 : -hw * 0.86;
     naFace(o.c, a, b, retangulo(u0, 0.03, u0 + hw * 0.82, 0.05), PRETO, 0.012, 0);
@@ -1082,19 +1117,33 @@ function entregar(r: Ref, o: Obra): void {
 }
 
 /** O carro parado: `n` par é o hatch em cunha, ímpar o carrinho bolha (três pinturas cada). */
-export function carroVila(r: Ref, n: number): void {
+export function carroVila(r: Ref, n: number, deLonge: boolean | 2 = false): void {
   const o = novaObra();
   const qual = (n >> 1) % 3;
-  if (n % 2 === 0) hatch(o, PINTURAS_HATCH[qual]);
-  else bolha(o, PINTURAS_BOLHA[qual]);
+  longe = !!deLonge;
+  muitoLonge = deLonge === 2;
+  try {
+    if (n % 2 === 0) hatch(o, PINTURAS_HATCH[qual]);
+    else bolha(o, PINTURAS_BOLHA[qual]);
+  } finally {
+    longe = false;
+    muitoLonge = false;
+  }
   entregar(r, o);
 }
 
 /** A van pão de forma: 0 e 2 as da rua, 1 a da banda (grafite, com o raio vermelho). */
-export function vanVila(r: Ref, n: number): void {
+export function vanVila(r: Ref, n: number, deLonge: boolean | 2 = false): void {
   const o = novaObra();
   const p = PINTURAS_VAN[n % PINTURAS_VAN.length];
-  van(o, p);
+  longe = !!deLonge;
+  muitoLonge = deLonge === 2;
+  try {
+    van(o, p);
+  } finally {
+    longe = false;
+    muitoLonge = false;
+  }
   entregar(r, o);
   if (p.banda)
     // o raio vermelho de beira amarela dos dois lados do baú
@@ -1106,17 +1155,30 @@ export function vanVila(r: Ref, n: number): void {
 }
 
 /** A picape de caçamba aberta (duas pinturas). */
-export function picapeVila(r: Ref, n: number): void {
+export function picapeVila(r: Ref, n: number, deLonge: boolean | 2 = false): void {
   const o = novaObra();
-  picape(o, PINTURAS_PICAPE[n % PINTURAS_PICAPE.length]);
+  longe = !!deLonge;
+  muitoLonge = deLonge === 2;
+  try {
+    picape(o, PINTURAS_PICAPE[n % PINTURAS_PICAPE.length]);
+  } finally {
+    longe = false;
+    muitoLonge = false;
+  }
   entregar(r, o);
 }
 
 /** Triângulos de cada modelo (medida para o orçamento do celular). */
-export function triangulosDosCarros(): Record<string, number> {
+export function triangulosDosCarros(deLonge: boolean | 2 = false): Record<string, number> {
   const conta = (f: (o: Obra) => void) => {
     const o = novaObra();
-    f(o);
+    longe = !!deLonge;
+    muitoLonge = deLonge === 2;
+    try {
+      f(o);
+    } finally {
+      longe = false;
+    }
     return [o.c, o.n, o.v].reduce(
       (t, p) => t + p.partes.reduce((s, vd: VertexData) => s + vd.indices!.length / 3, 0),
       0,

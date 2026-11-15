@@ -7,9 +7,16 @@
  */
 import { MODELOS, PALETAS, type Aparencia } from './aparencia';
 import type { Pose } from './poses';
-import { roupaDaFantasia, vestirFantasia, type MedidasBoneco } from './bonecoFantasia';
+import {
+  roupaDaFantasia,
+  vestirFantasia,
+  vestirPatins,
+  type MedidasBoneco,
+} from './bonecoFantasia';
 import { vestirPremiumNoPlano } from './bonecoPremium';
-import type { FantasiaVestida } from './fantasias';
+import { pecasVestidas, type FantasiaVestida } from './fantasias';
+/** Spec 026: o corte liso até os ombros (o do vocalista e da Roqueira do Palco). */
+export const CABELO_LISO = 2;
 
 export type Junta =
   | 'corpo'
@@ -465,7 +472,11 @@ export function planoBoneco(a: Aparencia): PlanoBoneco {
     caixa('bigode', 'cabeca', [0.2, 0.05, 0.05], [0, -0.13, zRosto + 0.01], cabelo, 0.022);
 
   // cabelo: uma tampa por cima e a forma de cada corte
-  const e = a.cabeloEstilo;
+  // spec 026: a Roqueira do Palco vem com o cabelo comprido e liso (sai com um toque)
+  const e =
+    vestidaAgora && pecasVestidas(vestidaAgora, a.corpo).some((p) => p.tipo === 'cabelo-liso')
+      ? CABELO_LISO
+      : a.cabeloEstilo;
   const topo = cab.h / 2;
   const tampaH = e === 3 ? 0.14 : 0.3;
   /** Alto da tampa de cabelo (o raspado é bem mais baixo que os outros cortes). */
@@ -883,6 +894,8 @@ export function planoBoneco(a: Aparencia): PlanoBoneco {
   }
   // spec 023: os premium de roupa e de costas, por cima do look e da fantasia
   if (a.premium) vestirPremiumNoPlano(a.premium, pecas, medidas, !!vestidaAgora);
+  // spec 026: de patins (só na Vila Neon), por cima do sapato, das botas e do tênis
+  if (a.patins) vestirPatins(pecas, medidas);
   if (modo) ajeitarCabeloDebaixo(pecas, modo, topoTampa, cab, rabo);
 
   return {

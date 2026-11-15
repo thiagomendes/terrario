@@ -25,6 +25,8 @@ import type { PecaVila, PlanoVila } from '../../world/vilaNeon';
 import { desenharPeca, type Desenho, type QuadroDesenhado } from './pecas';
 import { criarSosias, type Sosias } from './sosias';
 import { criarPaletaLuz } from './luzes';
+import { Ref } from './ref';
+import { carroVila, picapeVila, vanVila } from './carros';
 
 export interface OpcoesRenderVila {
   /** A malha do chunk está desenhada? */
@@ -56,6 +58,9 @@ export interface RenderVila {
 }
 
 const chave = (cx: number, cz: number) => `${cx},${cz}`;
+/** A partir daqui (blocos) o carro parado troca para a versão de longe. */
+const LONGE_CARRO = 24;
+const MUITO_LONGE_CARRO = 36;
 
 /**
  * Os chunks de uma peça. Quase todas cabem no chunk onde pisam; as compridas (o varal de
@@ -120,7 +125,25 @@ export function criarRenderVila(
     const vidro = new Pecas();
     const quadros: QuadroDesenhado[] = [];
     const recorte = { x0: ox, z0: oz, x1: ox + 16, z1: oz + 16 };
+    // os carros vão em malhas à parte, com a versão de longe (a ~24 blocos troca sozinha)
+    const carro = { corpo: new Pecas(), noite: new Pecas(), vidro: new Pecas() };
+    const carroLonge = { corpo: new Pecas(), noite: new Pecas(), vidro: new Pecas() };
+    const carroMuito = { corpo: new Pecas(), noite: new Pecas(), vidro: new Pecas() };
     for (const p of lista) {
+      if (p.tipo === 'carro' || p.tipo === 'van' || p.tipo === 'picape') {
+        for (const [alvo, deLonge] of [
+          [carro, false],
+          [carroLonge, true],
+          [carroMuito, 2],
+        ] as const) {
+          const d: Desenho = { ...alvo, luz, quadros, ox, oz, chao: plano.h + 1, recorte };
+          const r = new Ref(d, p);
+          if (p.tipo === 'carro') carroVila(r, p.n ?? 0, deLonge);
+          else if (p.tipo === 'van') vanVila(r, p.n ?? 0, deLonge);
+          else picapeVila(r, p.n ?? 0, deLonge);
+        }
+        continue;
+      }
       const d: Desenho = { corpo, luz, noite, vidro, quadros, ox, oz, chao: plano.h + 1, recorte };
       desenharPeca(p, d);
     }
@@ -156,6 +179,32 @@ export function criarRenderVila(
     // os vidros dos carros (uma malha meio transparente: o interior aparece)
     const mv = fazer(vidro, `vila-vidros-${cx},${cz}`, matVidro);
     if (mv) opcoes.tapaOGlow?.(mv);
+    // os carros de perto e de longe (a de longe só desenha passado o LONGE_CARRO)
+    const cc = fazer(carro.corpo, `vila-carros-${cx},${cz}`, matCorpo);
+    const cl = fazer(carroLonge.corpo, `vila-carros-longe-${cx},${cz}`, matCorpo);
+    const cm = fazer(carroMuito.corpo, `vila-carros-longe2-${cx},${cz}`, matCorpo);
+    if (cc && cl && cm) {
+      cc.receiveShadows = true;
+      for (const m of [cc, cl, cm]) opcoes.tapaOGlow?.(m);
+      cc.addLODLevel(LONGE_CARRO, cl);
+      cc.addLODLevel(MUITO_LONGE_CARRO, cm);
+    }
+    const cn = fazer(carro.noite, `vila-farois-carros-${cx},${cz}`, matLuz);
+    const cnl = fazer(carroLonge.noite, `vila-farois-longe-${cx},${cz}`, matLuz);
+    const cnm = fazer(carroMuito.noite, `vila-farois-longe2-${cx},${cz}`, matLuz);
+    if (cn && cnl && cnm) {
+      for (const m of [cn, cnl, cnm]) {
+        opcoes.brilha?.(m);
+        m.setEnabled(acesoDeNoite);
+      }
+      cn.addLODLevel(LONGE_CARRO, cnl);
+      cn.addLODLevel(MUITO_LONGE_CARRO, cnm);
+    }
+    const cv = fazer(carro.vidro, `vila-vidros-carros-${cx},${cz}`, matVidro);
+    if (cv) {
+      opcoes.tapaOGlow?.(cv);
+      cv.addLODLevel(LONGE_CARRO, null);
+    }
     for (const q of quadros) {
       // a textura em potência de 2 (com os níveis de longe: o letreiro não cintila); o desenho
       // é feito no tamanho de sempre e esticado na altura
@@ -270,10 +319,15 @@ export function criarRenderVila(
     contagem() {
       let malhas = 0;
       let triangulos = 0;
+      const cam = scene.activeCamera;
       for (const v of vivos.values())
         for (const m of v.malhas) {
+          // os carros contam pela versão que está desenhando agora (a de perto ou a de longe)
+          if (m.name.includes('-longe')) continue;
+          const sel = cam && m.hasLODLevels ? m.getLOD(cam) : m;
+          if (!sel) continue;
           malhas++;
-          triangulos += (m.getTotalIndices() / 3) | 0;
+          triangulos += (sel.getTotalIndices() / 3) | 0;
         }
       return { chunks: vivos.size, malhas, triangulos, sosias: sosias.visiveis() };
     },

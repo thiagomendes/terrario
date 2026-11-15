@@ -356,6 +356,8 @@ export interface PovoadoTema {
       pecas?: PecaCriatura[];
       acessorio?: Acessorio;
       fantasia?: FantasiaVestida;
+      /** O corte de cabelo do boneco (sem ele, sorteado): o liso comprido do vocalista. */
+      cabelo?: number;
     }
   >;
   movimento: MovimentoCriatura;

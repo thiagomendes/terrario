@@ -491,6 +491,54 @@ export function vestirFantasia(
       );
     }
   }
+  if (tem('tenis-cano')) {
+    // spec 026: o tênis de cano alto no lugar do sapato (sola branca, biqueira e cadarço)
+    const c = cor(vestidas.find((p) => p.tipo === 'tenis-cano')!);
+    for (let i = pecas.length - 1; i >= 0; i--)
+      if (/^perna[ED]-sapato$/.test(pecas[i].nome)) pecas.splice(i, 1);
+    const y0 = -quadril;
+    for (const lado of ['pernaE', 'pernaD'] as const) {
+      caixa(`${lado}-tenis`, lado, 'perna', [0.21, 0.11, 0.28], [0, y0 + 0.085, 0.03], c, 0.05);
+      caixa(
+        `${lado}-tenis-sola`,
+        lado,
+        'perna',
+        [0.22, 0.045, 0.29],
+        [0, y0 + 0.0225, 0.03],
+        BRANCO,
+        0.02,
+      );
+      caixa(
+        `${lado}-tenis-bico`,
+        lado,
+        'perna',
+        [0.2, 0.07, 0.07],
+        [0, y0 + 0.075, 0.145],
+        BRANCO,
+        0.03,
+      );
+      caixa(`${lado}-tenis-cano`, lado, 'perna', [0.2, 0.14, 0.21], [0, y0 + 0.19, 0.005], c, 0.05);
+      caixa(
+        `${lado}-tenis-borda`,
+        lado,
+        'perna',
+        [0.205, 0.03, 0.215],
+        [0, y0 + 0.255, 0.005],
+        BRANCO,
+        0.012,
+      );
+      for (const k of [0, 1])
+        caixa(
+          `${lado}-tenis-cadarco${k}`,
+          lado,
+          'perna',
+          [0.09, 0.018, 0.02],
+          [0, y0 + 0.15 + k * 0.05, 0.113],
+          BRANCO,
+          0.006,
+        );
+    }
+  }
   if (tem('mascara')) {
     // os olhos (com os cílios e o brilho) vêm para a frente da máscara, como no esboço
     for (const p of pecas)
@@ -1637,6 +1685,7 @@ export function vestirFantasia(
         sobreCabelo('chapeu');
         break;
       }
+      case 'bone-tras':
       case 'bone': {
         // spec 014 (T11): boné de brinquedo: copa redonda assentada no cabelo, a faixa em
         // volta, o botãozinho em cima e a pala curta e arredondada na frente
@@ -1656,10 +1705,21 @@ export function vestirFantasia(
           escurecer(c, 0.12),
           [1, 0.6, 1],
         );
-        caixa('bone-pala', 'cabeca', 'cabeca', [0.4, 0.035, 0.24], [0, b + 0.05, 0.45], c, 0.1, {
-          rot: [0.14, 0, 0],
-          brilho: 0.4,
-        });
+        // (spec 026: o da roadie, virado para trás: a pala nas costas)
+        const tras = p.tipo === 'bone-tras' ? -1 : 1;
+        caixa(
+          'bone-pala',
+          'cabeca',
+          'cabeca',
+          [0.4, 0.035, 0.24],
+          [0, b + 0.05, 0.45 * tras],
+          c,
+          0.1,
+          {
+            rot: [0.14 * tras, 0, 0],
+            brilho: 0.4,
+          },
+        );
         sobreCabelo('chapeu');
         break;
       }
@@ -1998,6 +2058,350 @@ export function vestirFantasia(
         sobreCabelo('chapeu');
         break;
       }
+      // ------------------------------------------------------------ spec 026: Vila Neon
+      case 'jaqueta-tachas': {
+        // jaqueta aberta: a camiseta aparece no meio, lapelas e gola azuis, tachinhas
+        // redondas de prata (nunca espeto) nas lapelas e nos ombros
+        const fundo = -0.08;
+        const h = troncoH - fundo;
+        const yc = (troncoH + fundo) / 2;
+        const azul = corDaPeca(f, 'emblema');
+        const tachinha = '#e2e6ee';
+        caixa('jaqueta', 'tronco', 'tronco', [larg + 0.03, h, prof + 0.03], [0, yc, 0], c, 0.12);
+        caixa(
+          'jaqueta-barra',
+          'tronco',
+          'tronco',
+          [larg + 0.04, 0.05, prof + 0.04],
+          [0, fundo + 0.025, 0],
+          escurecer(c, 0.3),
+          0.03,
+        );
+        caixa(
+          'jaqueta-camiseta',
+          'tronco',
+          'tronco',
+          [0.16, h - 0.07, 0.012],
+          [0, yc + 0.03, frente + 0.02],
+          roupaDaFantasia(f, corpo)?.camisa ?? '#e8302a',
+          0.005,
+        );
+        for (const s of [-1, 1]) {
+          caixa(
+            `jaqueta-lapela${s}`,
+            'tronco',
+            'tronco',
+            [0.08, 0.22, 0.02],
+            [s * 0.12, troncoH - 0.12, frente + 0.022],
+            azul,
+            0.012,
+            { rot: [0, 0, -s * 0.28] },
+          );
+          caixa(
+            `jaqueta-gola${s}`,
+            'tronco',
+            'tronco',
+            [0.11, 0.06, 0.13],
+            [s * 0.15, troncoH + 0.005, frente - 0.06],
+            azul,
+            0.025,
+          );
+          for (let k = 0; k < 3; k++)
+            bola(
+              `jaqueta-tacha${s}-${k}`,
+              'tronco',
+              'tronco',
+              0.022,
+              [s * (0.105 + k * 0.026), troncoH - 0.05 - k * 0.07, frente + 0.036],
+              tachinha,
+              [1, 1, 0.6],
+              { brilho: 0.6 },
+            );
+        }
+        for (const lado of ['bracoE', 'bracoD'] as const) {
+          const sx = lado === 'bracoE' ? -1 : 1;
+          for (let k = 0; k < 3; k++)
+            bola(
+              `${lado}-tacha${k}`,
+              lado,
+              'braco',
+              0.02,
+              [sx * 0.071, -0.01 - k * 0.055, 0],
+              tachinha,
+              [0.6, 1, 1],
+              { brilho: 0.6 },
+            );
+        }
+        break;
+      }
+      case 'faixa-braco':
+        caixa('faixa-braco', 'bracoD', 'braco', [0.15, 0.05, 0.16], [0, -0.07, 0], c, 0.02);
+        break;
+      case 'munhequeira':
+        caixa('munhequeira', 'bracoE', 'braco', [0.16, 0.07, 0.17], [0, -0.2, 0], c, 0.025);
+        for (const z of [-0.045, 0, 0.045])
+          bola(
+            `munhequeira-tacha${z}`,
+            'bracoE',
+            'braco',
+            0.017,
+            [-0.081, -0.2, z],
+            '#e2e6ee',
+            [0.6, 1, 1],
+            { brilho: 0.6 },
+          );
+        break;
+      case 'faixa-testa':
+        // a faixa fina e lisa na testa, logo abaixo do cabelo (o cabelo dos lados cobre o resto)
+        caixa(
+          'faixa-testa',
+          'cabeca',
+          'cabeca',
+          [cab.w + 0.025, 0.05, cab.d + 0.025],
+          [0, 0.085, 0],
+          c,
+          0.19,
+        );
+        break;
+      case 'cabelo-liso': {
+        // o comprido e liso (o boneco usa o corte liso até os ombros, que nunca passa do
+        // boneco): a franja reta na frente, na cor do cabelo da criança
+        const tampa = pecas.find((q) => q.nome === 'cabelo' && q.junta === 'cabeca');
+        const corCabelo = tampa?.cor ?? '#1e1a22';
+        const t = m.tampa;
+        caixa(
+          'liso-franja',
+          'cabeca',
+          'cabeca',
+          [cab.w * 0.8, 0.09, 0.05],
+          [0, t.y - t.h / 2 + 0.065, t.d / 2 + 0.005],
+          corCabelo,
+          0.03,
+        );
+        break;
+      }
+      case 'moletom-ombro': {
+        // o moletom largo de ombro caído: gola canoa torta, a alcinha branca no ombro de fora,
+        // a listra branca no peito e a barra canelada
+        const fundo = -0.08;
+        const topoM = troncoH + 0.02;
+        caixa(
+          'moletom',
+          'tronco',
+          'tronco',
+          [larg + 0.06, topoM - fundo, prof + 0.06],
+          [0, (topoM + fundo) / 2, 0],
+          c,
+          0.13,
+        );
+        caixa(
+          'moletom-barra',
+          'tronco',
+          'tronco',
+          [larg + 0.07, 0.07, prof + 0.07],
+          [0, fundo + 0.035, 0],
+          escurecer(c, 0.14),
+          0.03,
+        );
+        caixa(
+          'moletom-listra',
+          'tronco',
+          'tronco',
+          [larg + 0.065, 0.06, prof + 0.065],
+          [0, troncoH * 0.55, 0],
+          BRANCO,
+          0.03,
+        );
+        caixa(
+          'moletom-gola',
+          'tronco',
+          'tronco',
+          [larg * 0.72, 0.035, prof * 0.72],
+          [0.03, topoM + 0.005, 0],
+          escurecer(c, 0.16),
+          0.03,
+          { rot: [0, 0, 0.12] },
+        );
+        caixa(
+          'moletom-alca',
+          'tronco',
+          'tronco',
+          [0.05, 0.03, 0.13],
+          [-larg * 0.3, topoM + 0.01, 0],
+          BRANCO,
+          0.01,
+        );
+        break;
+      }
+      case 'polainas':
+        for (const lado of ['pernaE', 'pernaD'] as const)
+          for (let k = 0; k < 3; k++)
+            caixa(
+              `${lado}-polaina${k}`,
+              lado,
+              'perna',
+              [0.215 - k * 0.008, 0.055, 0.225 - k * 0.008],
+              [0, -quadril + 0.15 + k * 0.05, 0.005],
+              k % 2 ? escurecer(c, 0.12) : c,
+              0.03,
+            );
+        break;
+      case 'viseira': {
+        // a viseira: a faixa em volta do cabelo e a aba na frente
+        const t = m.tampa;
+        const y = t.y - t.h / 2 + 0.06;
+        caixa(
+          'viseira-faixa',
+          'cabeca',
+          'cabeca',
+          [t.w + 0.03, 0.07, t.d + 0.03],
+          [0, y, 0],
+          c,
+          Math.min(0.17, t.raio + 0.015),
+        );
+        caixa(
+          'viseira-aba',
+          'cabeca',
+          'cabeca',
+          [0.46, 0.03, 0.24],
+          [0, y - 0.01, t.d / 2 + 0.11],
+          c,
+          0.08,
+          { rot: [0.12, 0, 0], brilho: 0.4 },
+        );
+        break;
+      }
+      case 'joelheiras':
+        for (const lado of ['pernaE', 'pernaD'] as const) {
+          const y = -m.pernaH * 0.5;
+          caixa(
+            `${lado}-joelheira-tira`,
+            lado,
+            'perna',
+            [0.18, 0.035, 0.19],
+            [0, y, 0],
+            '#2e2d36',
+            0.012,
+          );
+          caixa(`${lado}-joelheira`, lado, 'perna', [0.19, 0.12, 0.06], [0, y, 0.105], c, 0.03);
+          caixa(
+            `${lado}-joelheira-capa`,
+            lado,
+            'perna',
+            [0.13, 0.07, 0.03],
+            [0, y, 0.14],
+            BRANCO,
+            0.015,
+          );
+        }
+        break;
+      case 'colete-brim': {
+        // o colete de brim aberto, com os remendos de estrela e de raio
+        const fundo = -0.06;
+        const h = troncoH - fundo;
+        const yc = (troncoH + fundo) / 2;
+        caixa(
+          'colete-brim',
+          'tronco',
+          'tronco',
+          [larg + 0.035, h, prof + 0.035],
+          [0, yc, 0],
+          c,
+          0.12,
+        );
+        caixa(
+          'colete-brim-meio',
+          'tronco',
+          'tronco',
+          [0.14, h - 0.04, 0.012],
+          [0, yc + 0.02, frente + 0.022],
+          roupaDaFantasia(f, corpo)?.camisa ?? principal,
+          0.005,
+        );
+        caixa(
+          'colete-brim-costura',
+          'tronco',
+          'tronco',
+          [larg + 0.04, 0.02, prof + 0.04],
+          [0, fundo + 0.04, 0],
+          escurecer(c, 0.25),
+          0.008,
+        );
+        placa(
+          'colete-remendo-estrela',
+          'tronco',
+          'tronco',
+          perfilEstrela(0.055),
+          0.02,
+          [-0.13, troncoH * 0.62, frente + 0.03],
+          '#ffe14a',
+          { brilho: 0.28 },
+        );
+        placa(
+          'colete-remendo-raio',
+          'tronco',
+          'tronco',
+          perfilRaio(0.11),
+          0.02,
+          [0.13, troncoH * 0.3, frente + 0.03],
+          '#e8302a',
+          { brilho: 0.28 },
+        );
+        break;
+      }
+      case 'guitarra-raio': {
+        // a guitarra-raio pendurada na frente, atravessada (o cabelo comprido escondia ela nas
+        // costas): o corpo é um raio gordinho (forma inventada, nunca um V), braço grosso
+        // subindo para a esquerda, a mão com as tarraxas e a correia cruzando o peito
+        const zc = frente + 0.05;
+        const gordo = perfilRaio(0.34).map(([x, y]): P2 => [x * 1.45, y]);
+        placa(
+          'guitarra-borda',
+          'tronco',
+          'tronco',
+          gordo.map(([x, y]): P2 => [x * 1.12, y * 1.12]),
+          0.04,
+          [0.03, troncoH * 0.16, zc - 0.005],
+          '#ffe14a',
+          { brilho: 0.3 },
+        );
+        placa(
+          'guitarra-corpo',
+          'tronco',
+          'tronco',
+          gordo,
+          0.06,
+          [0.03, troncoH * 0.16, zc + 0.005],
+          c,
+          { brilho: 0.4 },
+        );
+        const a = 1.0;
+        const comp = 0.36;
+        const base: V3 = [-0.02, troncoH * 0.16 + 0.1, zc];
+        const meio: V3 = [
+          base[0] - Math.sin(a) * comp * 0.5,
+          base[1] + Math.cos(a) * comp * 0.5,
+          zc,
+        ];
+        const ponta: V3 = [base[0] - Math.sin(a) * comp, base[1] + Math.cos(a) * comp, zc];
+        caixa('guitarra-braco', 'tronco', 'tronco', [0.07, comp, 0.04], meio, '#c58a4c', 0.015, {
+          rot: [0, 0, a],
+        });
+        caixa('guitarra-mao', 'tronco', 'tronco', [0.11, 0.12, 0.05], ponta, c, 0.02, {
+          rot: [0, 0, a],
+        });
+        caixa(
+          'guitarra-correia',
+          'tronco',
+          'tronco',
+          [0.045, troncoH * 1.05, 0.012],
+          [0, troncoH * 0.5, frente + 0.03],
+          '#2e2d36',
+          0.006,
+          { rot: [0, 0, 0.72] },
+        );
+        break;
+      }
       case 'lanterna': {
         // a lanterna acesa na mão, um pouco à frente (aparece de frente, como no esboço);
         // tinta de sempre, sem a tinta funda da fantasia: ela é a luz
@@ -2016,4 +2420,70 @@ export function vestirFantasia(
     }
   }
   return { cabelo, rabo };
+}
+
+/**
+ * Spec 026: os patins de quatro rodas nos pés (os do suporte da pista, na Vila Neon): a bota
+ * branca de cano alto no lugar do sapato, a base, as quatro rodinhas e o freio da frente. As
+ * rodinhas ficam por baixo da bota, no chão (o boneco não sobe).
+ */
+export function vestirPatins(pecas: Peca[], m: MedidasBoneco, corRodas = '#ff6fb4'): void {
+  for (let i = pecas.length - 1; i >= 0; i--)
+    if (/^perna[ED]-(sapato|bota|tenis)/.test(pecas[i].nome)) pecas.splice(i, 1);
+  const y0 = -m.quadril;
+  for (const lado of ['pernaE', 'pernaD'] as const) {
+    const por = (p: Omit<Peca, 'junta' | 'apoio'>) =>
+      pecas.push({ ...p, junta: lado, apoio: 'perna' });
+    por({
+      nome: `${lado}-patins-bota`,
+      forma: 'caixa',
+      tamanho: [0.21, 0.12, 0.27],
+      raio: 0.05,
+      pos: [0, y0 + 0.155, 0.03],
+      cor: BRANCO,
+    });
+    por({
+      nome: `${lado}-patins-cano`,
+      forma: 'caixa',
+      tamanho: [0.2, 0.14, 0.21],
+      raio: 0.05,
+      pos: [0, y0 + 0.26, 0.005],
+      cor: BRANCO,
+    });
+    por({
+      nome: `${lado}-patins-borda`,
+      forma: 'caixa',
+      tamanho: [0.205, 0.03, 0.215],
+      raio: 0.012,
+      pos: [0, y0 + 0.325, 0.005],
+      cor: corRodas,
+    });
+    por({
+      nome: `${lado}-patins-base`,
+      forma: 'caixa',
+      tamanho: [0.17, 0.03, 0.29],
+      raio: 0.01,
+      pos: [0, y0 + 0.085, 0.03],
+      cor: '#b8bcc8',
+    });
+    por({
+      nome: `${lado}-patins-freio`,
+      forma: 'caixa',
+      tamanho: [0.07, 0.06, 0.06],
+      raio: 0.02,
+      pos: [0, y0 + 0.06, 0.19],
+      cor: '#2e2d36',
+    });
+    for (const z of [-0.07, 0.13])
+      for (const x of [-0.075, 0.075])
+        por({
+          nome: `${lado}-patins-roda${x}${z}`,
+          forma: 'cilindro',
+          tamanho: [0.045, 0.045, 0.045],
+          pos: [x, y0 + 0.045, z],
+          cor: corRodas,
+          rot: [0, 0, Math.PI / 2],
+          brilho: 0.3,
+        });
+  }
 }

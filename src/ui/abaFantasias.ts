@@ -77,6 +77,9 @@ export const NOMES_PECAS: Partial<Record<TipoPeca, string>> = {
   'capacete-obra': 'Capacete',
   'chapeu-festa': 'Chapéu',
   'chapeu-peao': 'Chapéu',
+  'faixa-testa': 'Faixa',
+  'cabelo-liso': 'Cabelão',
+  viseira: 'Viseira',
 };
 
 export interface SecaoFantasias {

@@ -40,6 +40,7 @@ const TEMAS: IdTema[] = [
   'exploracao-lunar',
   'rancho-alegre',
   'cidade-grande',
+  'vila-neon',
 ];
 
 function memoria(): Armazenamento & { dados: Map<string, string> } {
@@ -100,7 +101,7 @@ describe('catálogo das fantasias', () => {
     expect(rotuloDaFantasia('nao-existe', 'feminino')).toBe('');
   });
 
-  it('fantasias dos temas: tema real e todos os 8 temas cobertos', () => {
+  it('fantasias dos temas: tema real e todos os 9 temas cobertos', () => {
     const temas = fantasiasDoGrupo('temas');
     for (const f of temas) expect(TEMAS).toContain(f.tema);
     for (const f of FANTASIAS.filter((x) => x.grupo !== 'temas')) expect(f.tema).toBeUndefined();
@@ -115,7 +116,7 @@ describe('catálogo das fantasias', () => {
     const rancho = fantasiasDoGrupo('temas', 'rancho-alegre').map((f) => f.id);
     expect(rancho.slice(0, 2)).toEqual(['fazendeira', 'vaqueira']);
     expect(temasDasFantasias('doce-reino')[0]).toBe('doce-reino');
-    expect(new Set(temasDasFantasias()).size).toBe(8);
+    expect(new Set(temasDasFantasias()).size).toBe(9);
     // as outras abas não mudam de ordem
     expect(fantasiasDoGrupo('herois', 'rancho-alegre')).toEqual(fantasiasDoGrupo('herois'));
   });

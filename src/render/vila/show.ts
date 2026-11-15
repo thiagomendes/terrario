@@ -65,6 +65,8 @@ export interface ShowVila {
    * (o gesto "roqueiro", com a cabeça embaixo em cada batida) e a banda pula no acorde final.
    */
   poseDoMorador(povoado: string, n: number, pose: Pose): Pose;
+  /** O giro da banda no show (de frente para a plateia), ou null fora dele. */
+  giroDoMorador(povoado: string, n: number): number | null;
   descartar(): void;
 }
 
@@ -1148,6 +1150,13 @@ export function criarShowVila(scene: Scene, plano: PlanoVila, opcoes: OpcoesShow
       if (n === 1) return aplicarGesto(pose, 'aplaudir', 0.3 + (((d % 1) + 1) % 1));
       // o vocalista e a guitarrista batem cabeça no tempo: a cabeça embaixo em cada batida
       return aplicarGesto(pose, 'roqueiro', 1 + ((((d + 0.125) % 0.5) + 0.5) % 0.5));
+    },
+    giroDoMorador(povoado, n) {
+      const show = vistaAtual?.show;
+      if (!show || povoado !== 'vila' || n > 2) return null;
+      if (faseDoShow(show, tempoAtual) === 'acabou') return null;
+      // a plateia fica do lado da ponta da passarela (z menor que o fundo do palco)
+      return Math.PI;
     },
     descartar() {
       for (const m of todas) m.dispose();
