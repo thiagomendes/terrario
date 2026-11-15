@@ -11,6 +11,8 @@ import { PASSO } from '../../src/nucleo/protocolo';
 import { MORADORES_VILA, N0_PUBLICO, POVOADO_VILA } from '../../src/nucleo/vila';
 import { noiteDeShow } from '../../src/jogo/show';
 import { HORA_INICIAL } from '../../src/jogo/tempo';
+import { VEL_ANDAR } from '../../src/player/fisica';
+import { RAIO_SEGUIR } from '../../src/jogo/criacao';
 import { FICAM_DE_DIA, PUBLICO_GRADE, publicoDaVila } from '../../src/world/publicoVila';
 
 /**
@@ -412,6 +414,41 @@ describe('spec 026: a Vila Neon no núcleo', () => {
     passos(m, Math.ceil((CHAMADO + ESPERA_FINAL + APLAUSO + 2) / PASSO));
     const s2 = m.salvar();
     expect((s2.extras as { vila: { tocou?: boolean } }).vila.tocou).toBe(true);
+  });
+
+  it('f2 a passo de criança, do canto mais longe do cercadinho: as duas lhamas alcançam e chegam à grade', () => {
+    const n = abrir();
+    const p = vilaDoMundo(SEMENTE)!;
+    passos(n);
+    n.comando('ana', { t: 'almaFixar', missao: 'f2' });
+    const c = p.pontos.cercado;
+    const sx = c.x0 + 0.6;
+    const sz = c.z0 + 0.6;
+    ir(n, 'ana', sx, p.h + 1, sz);
+    passos(n, 60);
+    expect(n.estado.jogadores.get('ana')!.inventario.contar('trigo')).toBeGreaterThan(0);
+    const g = p.pontos.plateia;
+    const mx = (c.x0 + c.x1 + 1) / 2;
+    const gx = Math.max(g.x0 + 2, Math.min(g.x1 - 1, mx));
+    const gz = g.z1 - 0.5;
+    // anda no passo de verdade da criança (4,3 blocos por segundo, o joystick todo)
+    const D = Math.hypot(gx - sx, gz - sz);
+    const k = Math.ceil(D / VEL_ANDAR / PASSO);
+    let maior = 0;
+    for (let i = 1; i <= k; i++) {
+      const t = i / k;
+      ir(n, 'ana', sx + (gx - sx) * t, p.h + 1, sz + (gz - sz) * t);
+      passos(n, 1);
+      const j = n.estado.jogadores.get('ana')!;
+      for (const id of n.estado.vila!.lhamas().todas) {
+        const l = n.estado.populacao.lista.find((q) => q.id === id)!;
+        maior = Math.max(maior, Math.hypot(l.x - j.tel.x, l.z - j.tel.z));
+      }
+    }
+    passos(n, 200);
+    // nunca ficou para trás o bastante para desistir (12 blocos)
+    expect(maior).toBeLessThan(RAIO_SEGUIR - 1.5);
+    expect(n.estado.vila!.lhamas().naGrade).toHaveLength(2);
   });
 
   // ------------------------------------------------------------------ o público do show

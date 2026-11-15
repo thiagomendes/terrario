@@ -505,6 +505,18 @@ function andarPara(c: Criatura, def: DefCriatura, tx: number, tz: number, fator 
   return d;
 }
 
+/**
+ * O passo de quem segue a comida, pela distância: devagar perto (para a ~2 blocos), o passo
+ * dele a 5, e apressado quando fica para trás (até `ALCANCAR` vezes, a ~9,4 blocos), o bastante
+ * para o bicho mais lento (a lhama, 2,2 b/s) alcançar a criança andando (4,3 b/s) bem antes do
+ * `RAIO_SEGUIR`, onde ele desistiria.
+ */
+export const ALCANCAR = 2.1;
+export function fatorSeguindo(dh: number): number {
+  if (dh <= 5) return 0.7;
+  return Math.min(ALCANCAR, 1 + (dh - 5) / 4);
+}
+
 function frear(c: Criatura, k: number): void {
   c.vx *= k;
   c.vz *= k;
@@ -1290,7 +1302,10 @@ export function passoCriatura(
           c.estado = 'seguir';
           if (dh > PARA_SEGUINDO + 0.3) {
             const k = dh > 0.01 ? PARA_SEGUINDO / dh : 0;
-            andarPara(c, def, j.x - dxj * k, j.z - dzj * k, dh > 5 ? 1 : 0.7);
+            // spec 026 (a f2 que falhava de vez em quando): ficando para trás, o bicho apressa o
+            // passo (até ~2x) e alcança quem anda; antes ele ia sempre no passo dele (a lhama a
+            // 2,2 b/s, a criança a 4,3) e, a 12 blocos, desistia e voltava para o cercadinho
+            andarPara(c, def, j.x - dxj * k, j.z - dzj * k, fatorSeguindo(dh));
           } else {
             frear(c, 0.6);
             c.yawAlvo = Math.atan2(dxj, dzj);
