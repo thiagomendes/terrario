@@ -1,0 +1,97 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1180 700" width="1180" height="700" font-family="system-ui, sans-serif">
+<!-- Mapa da Vila Neon (spec 026, rodada 3, bairro compacto). 1 bloco = 4 px; norte para cima. -->
+<rect width="1180" height="700" fill="#f4efe6"/>
+<rect x="40" y="40" width="720" height="600" fill="#9fd08a" />
+<rect x="40" y="276" width="720" height="48" fill="#cfcac0" />
+<rect x="40" y="284" width="720" height="32" fill="#4a4a52" />
+<rect x="408" y="40" width="48" height="600" fill="#cfcac0" />
+<rect x="416" y="40" width="32" height="600" fill="#4a4a52" />
+<line x1="40" y1="300" x2="760" y2="300" stroke="#ffd23d" stroke-width="2" stroke-dasharray="8 8"/>
+<rect x="40" y="164" width="368" height="12" fill="#4a4a52" />
+<rect x="160" y="328" width="248" height="312" fill="#3a3944" opacity="0.92" rx="6"/>
+<rect x="216" y="468" width="132" height="60" fill="#e8302a" />
+<rect x="272" y="448" width="24" height="20" fill="#e8302a" />
+<rect x="268" y="324" width="32" height="124" fill="#b8ad98" />
+<text x="284" y="376" font-size="14" font-weight="700" fill="#fff" text-anchor="middle">FESTIVAL TROVÃO</text>
+<text x="284" y="544" font-size="11" font-weight="500" fill="#fff" text-anchor="middle">palco + passarela</text>
+<text x="284" y="340" font-size="10" font-weight="500" fill="#ffe14a" text-anchor="middle">portão</text>
+<rect x="276" y="360" width="12" height="12" fill="#3d3c48"/>
+<rect x="64" y="552" width="64" height="48" fill="#f6c6a0" rx="3"/>
+<rect x="64" y="456" width="64" height="48" fill="#f6c6a0" rx="3"/>
+<rect x="64" y="360" width="64" height="48" fill="#f6c6a0" rx="3"/>
+<text x="96" y="344" font-size="10" font-weight="500" fill="#1c1830" text-anchor="middle">casas</text>
+<rect x="120" y="260" width="24" height="12" fill="#1e6a4a" />
+<text x="132" y="252" font-size="9" font-weight="500" fill="#1c1830" text-anchor="middle">banca</text>
+<circle cx="148" cy="280" r="5" fill="#ff8a2a"/>
+<rect x="160" y="232" width="56" height="40" fill="#2a5ad8" rx="3"/>
+<text x="188" y="252" font-size="10" font-weight="700" fill="#fff" text-anchor="middle">locadora</text>
+<rect x="344" y="232" width="60" height="40" fill="#e8302a" rx="3"/>
+<text x="374.0" y="252" font-size="10" font-weight="700" fill="#fff" text-anchor="middle">lanchonete</text>
+<text x="260" y="216" font-size="13" font-weight="700" fill="#1c1830" text-anchor="middle">RUA ANOS 80</text>
+<rect x="56" y="104" width="64" height="48" fill="#a8d8e8" rx="3"/>
+<rect x="144" y="104" width="64" height="48" fill="#a8d8e8" rx="3"/>
+<rect x="232" y="104" width="64" height="48" fill="#a8d8e8" rx="3"/>
+<rect x="56" y="204" width="56" height="48" fill="#f2e08a" rx="3"/>
+<rect x="240" y="176" width="96" height="80" fill="#f2e08a" stroke="#c8643c" stroke-width="4" rx="3"/>
+<line x1="296" y1="180" x2="296" y2="252" stroke="#c8643c" stroke-width="2"/>
+<text x="268" y="208" font-size="10" font-weight="700" fill="#1c1830" text-anchor="middle">sala</text>
+<text x="316" y="208" font-size="9" font-weight="700" fill="#1c1830" text-anchor="middle">brinquedos</text>
+<text x="288" y="160" font-size="12" font-weight="700" fill="#1c1830" text-anchor="middle">CASA ANOS 80</text>
+<rect x="456" y="40" width="304" height="232" fill="#f7d6a8" rx="6"/>
+<circle cx="680" cy="128" r="44" fill="none" stroke="#e8302a" stroke-width="5"/>
+<text x="680" y="132" font-size="11" font-weight="700" fill="#1c1830" text-anchor="middle">roda-gigante</text>
+<circle cx="552" cy="168" r="28" fill="#ffd23d" stroke="#e8302a" stroke-width="3"/>
+<text x="552" y="172" font-size="10" font-weight="700" fill="#1c1830" text-anchor="middle">carrossel</text>
+<rect x="468" y="64" width="72" height="48" fill="#3a3a48" rx="3"/>
+<text x="504" y="92" font-size="10" font-weight="700" fill="#fff" text-anchor="middle">bate-bate</text>
+<rect x="704" y="160" width="48" height="56" fill="#c8e6a8" stroke="#f4f1e6" stroke-width="2"/>
+<text x="728" y="192" font-size="9" font-weight="500" fill="#1c1830" text-anchor="middle">lhamas</text>
+<text x="600" y="48" font-size="13" font-weight="700" fill="#1c1830" text-anchor="middle">PARQUE DE DIVERSÕES</text>
+<text x="504" y="248" font-size="9" font-weight="500" fill="#1c1830" text-anchor="middle">entrada</text>
+<rect x="552" y="336" width="64" height="48" fill="#2e2d36" rx="3"/>
+<text x="584" y="364" font-size="10" font-weight="700" fill="#fff" text-anchor="middle">fliperama</text>
+<rect x="556" y="420" width="60" height="40" fill="#ff6fc4" rx="3"/>
+<text x="586.0" y="444" font-size="10" font-weight="700" fill="#1c1830" text-anchor="middle">rinque</text>
+<rect x="624" y="472" width="120" height="152" fill="#a8b2c6" rx="6"/>
+<text x="684" y="552" font-size="12" font-weight="700" fill="#1c1830" text-anchor="middle">rampa em U</text>
+<text x="648" y="400" font-size="13" font-weight="700" fill="#1c1830" text-anchor="middle">PATINS E SKATE</text>
+<rect x="456" y="328" width="80" height="72" fill="#d8d0c0" rx="4"/>
+<circle cx="488" cy="352" r="96" fill="none" stroke="#2e2d36" stroke-dasharray="4 6" opacity="0.45"/>
+<circle cx="488" cy="352" r="192" fill="none" stroke="#2e2d36" stroke-dasharray="4 6" opacity="0.45"/>
+<circle cx="488" cy="352" r="288" fill="none" stroke="#2e2d36" stroke-dasharray="4 6" opacity="0.45"/>
+<text x="558" y="282" font-size="9" fill="#2e2d36">24</text>
+<text x="626" y="214" font-size="9" fill="#2e2d36">48 (padrão)</text>
+<text x="694" y="146" font-size="9" fill="#2e2d36">72</text>
+<polygon transform="translate(488 352)" points="0,-16 5,-5 17,-4 8,4 11,16 0,10 -11,16 -8,4 -17,-4 -5,-5" fill="#ffd23d" stroke="#2e2d36" stroke-width="1.5"/>
+<text x="488" y="374.0" font-size="11" font-weight="700" fill="#1c1830" text-anchor="middle">nasce aqui</text>
+<rect x="500" y="332" width="16" height="10" fill="#c88a5a" stroke="#2e2d36"/>
+<text x="540" y="330.0" font-size="10" font-weight="500" fill="#1c1830" text-anchor="start">mural</text>
+<text x="476" y="319.2" font-size="9" font-weight="700" fill="#ff4fb4" text-anchor="middle">VILA NEON</text>
+<circle cx="616" cy="464" r="5" fill="#e8302a" stroke="#fff" stroke-width="2"/>
+<circle cx="576" cy="216" r="5" fill="#e8302a" stroke="#fff" stroke-width="2"/>
+<circle cx="304" cy="376" r="5" fill="#e8302a" stroke="#fff" stroke-width="2"/>
+<path d="M728 208 L728 300 L284 300 L284 440" fill="none" stroke="#2f8cff" stroke-width="3" stroke-dasharray="6 5"/>
+<g transform="translate(790 56)" font-size="13">
+<text font-size="18" font-weight="700">Vila Neon</text>
+<text y="20" fill="#5b5670">bairro anos 80 · 1 bloco = 4 px</text>
+<text y="50" font-weight="700">Do nascer, andando (~4 blocos/s)</text>
+<text y="70">mural: 6 · entrada do parque: 24</text>
+<text y="88">fliperama: 20 · rinque: 35</text>
+<text y="106">lanchonete: 49 · portão do festival: 52</text>
+<text y="124">carrossel: 50 · rampa de skate: 70</text>
+<text y="142">bate-bate: 66 · roda-gigante: 75</text>
+<text y="160">casa anos 80: 81 · passarela: 84</text>
+<text y="178">locadora: 95 · banca: 109</text>
+<text y="200" fill="#5b5670">toda entrada de zona a até ~15 s;</text>
+<text y="218" fill="#5b5670">o ponto mais longe (a banca) a ~25 s</text>
+<text y="250" font-weight="700">Campo de visão</text>
+<text y="270">círculos: 24, 48 e 72 blocos do nascer</text>
+<text y="288">no padrão do jogo (3 pedaços),</text>
+<text y="306">o chão desenhado vai a ~48 blocos;</text>
+<text y="324">roda, palco e placa do rinque têm</text>
+<text y="342">sósia de longe com o próprio chão</text>
+<circle cx="6" cy="372" r="5" fill="#e8302a" stroke="#fff" stroke-width="2"/><text x="18" y="376">estojo da f1 (um por zona)</text>
+<line x1="0" y1="396" x2="14" y2="396" stroke="#2f8cff" stroke-width="3" stroke-dasharray="6 5"/><text x="18" y="400">f2: lhamas da fazendinha até a grade</text>
+<polygon transform="translate(6 424) scale(0.6)" points="0,-16 5,-5 17,-4 8,4 11,16 0,10 -11,16 -8,4 -17,-4 -5,-5" fill="#ffd23d" stroke="#2e2d36"/><text x="18" y="428">onde a criança nasce</text>
+</g>
+</svg>

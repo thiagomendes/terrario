@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Vila Neon</title>
+<style>
+:root { --bg: #f4efe6; --fg: #1c1830; --suave: #5b5670; --linha: #d9d2c4; --acento: #c2187a; --cartao: #fffaf2; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) { --bg: #14111f; --fg: #efeaf6; --suave: #aaa3bd; --linha: #2e2944; --acento: #ff6fc0; --cartao: #1c1830; color-scheme: dark; }
+}
+:root[data-theme="dark"] { --bg: #14111f; --fg: #efeaf6; --suave: #aaa3bd; --linha: #2e2944; --acento: #ff6fc0; --cartao: #1c1830; color-scheme: dark; }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--fg); font: 400 16px/1.55 system-ui, sans-serif; }
+.pagina { max-width: 1180px; margin: 0 auto; padding: 28px 16px 64px; display: grid; gap: 34px; }
+h1, h2 { margin: 0; line-height: 1.15; text-wrap: balance; }
+h1 { font-size: clamp(1.8rem, 5vw, 2.6rem); }
+h2 { font-size: clamp(1.25rem, 3vw, 1.6rem); }
+.olho { font: 700 0.78rem system-ui; letter-spacing: 0.12em; text-transform: uppercase; color: var(--acento); }
+p { margin: 6px 0 0; max-width: 72ch; color: var(--suave); }
+.grade { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr)); gap: 14px; }
+.grade.larga { grid-template-columns: repeat(auto-fill, minmax(min(100%, 520px), 1fr)); }
+figure { margin: 0; background: var(--cartao); border: 1px solid var(--linha); border-radius: 14px; overflow: hidden; }
+figure img, figure video { display: block; width: 100%; height: auto; }
+figcaption { padding: 8px 12px 10px; font-size: 0.9rem; color: var(--suave); }
+.celular { display: flex; flex-wrap: wrap; gap: 14px; align-items: flex-start; }
+.celular figure { flex: 0 1 220px; }
+.celular figure.deitado { flex: 1 1 420px; }
+audio { width: 100%; max-width: 520px; }
+</style>
+</head>
+<body>
+<main class="pagina">
+  <header>
+    <div class="olho">Esboço da spec 026 · rodada 3 · motor de verdade</div>
+    <h1>Vila Neon</h1>
+    <p>A Vila Neon é um bairro inteiro dos anos 80, de brinquedo, feito com os blocos do jogo, em cinco zonas: a Rua anos 80, a Casa anos 80 por dentro, o Parque de diversões, a Pista de patins e skate e o Festival Trovão como o marco. No festival, o raio é a logo: o palco gigante, o vocalista cabeludo, o fliperama, a pista que acende, os patins, a fita com o lápis e o rádio gigante. Tudo feito aqui, sem pessoa, marca ou música de verdade.</p>
+  </header>
+
+  <section>
+    <h2>O mapa do bairro</h2>
+    <div class="grade larga">
+      <figure><img src="imagens/mapa.png" alt="Mapa do bairro" loading="lazy"><figcaption>As cinco zonas, as ruas, onde a criança nasce, o mural (canto das missões) e as distâncias andando.</figcaption></figure>
+      <figure><img src="imagens/30-bairro-do-alto-entardecer.jpg" alt="O bairro do alto" loading="lazy"><figcaption>O bairro do alto, no entardecer.</figcaption></figure>
+    </div>
+  </section>
+
+  <section>
+    <h2>As zonas, na altura dos olhos</h2>
+    <div class="grade">
+      <figure><img src="imagens/39-ao-nascer.jpg" alt="Ao nascer" loading="lazy"><figcaption>O que a criança vê ao nascer: o letreiro VILA NEON, o parquinho, a roda-gigante e o rinque.</figcaption></figure>
+      <figure><img src="imagens/39b-ao-nascer-olhando-o-palco.jpg" alt="Olhando o palco" loading="lazy"><figcaption>Virando para a esquerda: a grade de luzes do palco por cima das casas.</figcaption></figure>
+      <figure><img src="imagens/31-rua-anos80.jpg" alt="Rua anos 80" loading="lazy"><figcaption>Rua anos 80: a lanchonete com sobrado, toldo e letreiro; atrás, a roda-gigante.</figcaption></figure>
+      <figure><img src="imagens/36-rua-de-noite.jpg" alt="Rua de noite" loading="lazy"><figcaption>A rua de noite, com os letreiros e os postes acesos.</figcaption></figure>
+      <figure><img src="imagens/32-casa-por-dentro.jpg" alt="Casa por dentro" loading="lazy"><figcaption>A Casa anos 80 por dentro: TV de tubo, console, toca-discos, sofá xadrez.</figcaption></figure>
+      <figure><img src="imagens/32b-quarto-de-brinquedos.jpg" alt="Quarto de brinquedos" loading="lazy"><figcaption>O quarto de brinquedos.</figcaption></figure>
+      <figure><img src="imagens/33-parque.jpg" alt="Parque" loading="lazy"><figcaption>O Parque de diversões: carrossel, roda-gigante, algodão-doce.</figcaption></figure>
+      <figure><img src="imagens/33b-parque-de-noite.jpg" alt="Parque de noite" loading="lazy"><figcaption>A roda-gigante de noite.</figcaption></figure>
+      <figure><img src="imagens/37-passeio-na-roda-gigante.jpg" alt="Roda-gigante" loading="lazy"><figcaption>Andando na roda-gigante (duas crianças na cadeirinha).</figcaption></figure>
+      <figure><img src="imagens/38-carrinho-bate-bate.jpg" alt="Bate-bate" loading="lazy"><figcaption>O carrinho bate-bate, com a estrelinha do "tum".</figcaption></figure>
+      <figure><img src="imagens/34-pista-e-rampa.jpg" alt="Rampa" loading="lazy"><figcaption>A rampa em U de blocos de concreto.</figcaption></figure>
+      <figure><img src="imagens/35-festival.jpg" alt="Festival" loading="lazy"><figcaption>O Festival Trovão, o marco do bairro.</figcaption></figure>
+      <figure><img src="imagens/30c-bairro-do-alto-noite.jpg" alt="Bairro de noite" loading="lazy"><figcaption>O bairro do alto, de noite.</figcaption></figure>
+    </div>
+  </section>
+
+  <section>
+    <h2>O show (vídeo, com a amostra de música)</h2>
+    <div class="grade larga">
+      <figure><video src="imagens/show.mp4" controls playsinline preload="metadata" poster="imagens/02-palco-noite-show.jpg"></video><figcaption>Da plateia até o vocalista, de noite; no fim, o acorde final com a explosão de estrelinhas.</figcaption></figure>
+    </div>
+    <p>A música só: <audio src="sons/festival-demo.mp3" controls preload="none"></audio></p>
+  </section>
+
+  <section>
+    <h2>O palco e o vocalista</h2>
+    <div class="grade">
+      <figure><img src="imagens/02-palco-noite-show.jpg" alt="Palco de noite no show" loading="lazy"><figcaption>O Palco Trovão no show, de noite.</figcaption></figure>
+      <figure><img src="imagens/24-acorde-final.jpg" alt="Acorde final" loading="lazy"><figcaption>O acorde final: estrelinhas e a plateia vibrando.</figcaption></figure>
+      <figure><img src="imagens/03-vocalista-perto-noite.jpg" alt="O vocalista de perto, de noite" loading="lazy"><figcaption>O vocalista, o morador-símbolo, na ponta da passarela.</figcaption></figure>
+      <figure><img src="imagens/04-vocalista-perto-entardecer.jpg" alt="O vocalista no entardecer" loading="lazy"><figcaption>O vocalista no fim de tarde.</figcaption></figure>
+      <figure><img src="imagens/01-festival-entardecer.jpg" alt="O festival no entardecer" loading="lazy"><figcaption>O festival no entardecer.</figcaption></figure>
+      <figure><img src="imagens/05-guitarrista-e-bateria.jpg" alt="Guitarrista e bateria" loading="lazy"><figcaption>A guitarrista com a guitarra-raio e a bateria de dois bumbos.</figcaption></figure>
+      <figure><img src="imagens/19-no-meio-da-plateia.jpg" alt="No meio da plateia" loading="lazy"><figcaption>No meio da plateia.</figcaption></figure>
+      <figure><img src="imagens/07-palco-dia-vazio.jpg" alt="Palco de dia" loading="lazy"><figcaption>De dia, antes da missão dos instrumentos.</figcaption></figure>
+      <figure><img src="imagens/09-banda-montada-dia.jpg" alt="Banda montada" loading="lazy"><figcaption>Depois da missão: os instrumentos no palco.</figcaption></figure>
+    </div>
+  </section>
+
+  <section>
+    <h2>O resto do festival</h2>
+    <div class="grade">
+      <figure><img src="imagens/10-fliperama-e-pista-noite.jpg" alt="Fliperama e pista" loading="lazy"><figcaption>O fliperama e a pista que acende, de noite.</figcaption></figure>
+      <figure><img src="imagens/23-patins-na-pista.jpg" alt="Patins" loading="lazy"><figcaption>Os patins na pista: remada, faíscas e o ladrilho aceso sob os pés.</figcaption></figure>
+      <figure><img src="imagens/25-suporte-dos-patins.jpg" alt="Suporte dos patins" loading="lazy"><figcaption>O suporte dos patins (de graça, um toque calça).</figcaption></figure>
+      <figure><img src="imagens/11-fliperama-por-dentro.jpg" alt="Fliperama por dentro" loading="lazy"><figcaption>As máquinas com jogos inventados.</figcaption></figure>
+      <figure><img src="imagens/20-posteres.jpg" alt="Pôsteres" loading="lazy"><figcaption>Pôsteres nossos na parede do fliperama.</figcaption></figure>
+      <figure><img src="imagens/14-fita-com-lapis.jpg" alt="Fita cassete gigante" loading="lazy"><figcaption>A fita cassete gigante com o lápis.</figcaption></figure>
+      <figure><img src="imagens/13-radio-gigante.jpg" alt="Rádio gigante" loading="lazy"><figcaption>O rádio gigante.</figcaption></figure>
+      <figure><img src="imagens/21-barraca-do-lanche.jpg" alt="Barraca do lanche" loading="lazy"><figcaption>A barraca do lanche.</figcaption></figure>
+      <figure><img src="imagens/18-portao-e-barracas.jpg" alt="Portão" loading="lazy"><figcaption>O portão do festival.</figcaption></figure>
+      <figure><img src="imagens/17-festival-de-cima-noite.jpg" alt="Festival de cima" loading="lazy"><figcaption>O festival de cima, de noite.</figcaption></figure>
+    </div>
+  </section>
+
+  <section>
+    <h2>Fantasias e bichos</h2>
+    <div class="grade">
+      <figure><img src="imagens/22-fantasias.jpg" alt="As três fantasias" loading="lazy"><figcaption>Roqueira do Palco, Dançarina do Neon e Patinadora.</figcaption></figure>
+      <figure><img src="imagens/15-lhamas.jpg" alt="Lhamas" loading="lazy"><figcaption>As lhamas levadas até a grade do show (a missão f2).</figcaption></figure>
+      <figure><img src="imagens/16-ourico-noite.jpg" alt="Ouricinho" loading="lazy"><figcaption>O ouricinho do moicano, o bicho manso da noite.</figcaption></figure>
+    </div>
+  </section>
+
+  <section>
+    <h2>Missões, banca e festa (as telas de verdade da 023 e da 031)</h2>
+    <div class="celular">
+      <figure><img src="imagens/ui-em-pe-1-quadro.jpg" alt="Quadro em pé" loading="lazy"><figcaption>Quadro, celular em pé.</figcaption></figure>
+      <figure><img src="imagens/ui-em-pe-2-banca.jpg" alt="Banca em pé" loading="lazy"><figcaption>Banca, celular em pé.</figcaption></figure>
+      <figure class="deitado"><img src="imagens/ui-deitado-1-quadro.jpg" alt="Quadro deitado" loading="lazy"><figcaption>Quadro, celular deitado.</figcaption></figure>
+      <figure class="deitado"><img src="imagens/ui-deitado-2-banca.jpg" alt="Banca deitado" loading="lazy"><figcaption>Banca, celular deitado.</figcaption></figure>
+      <figure class="deitado"><img src="imagens/ui-computador-3-festa.jpg" alt="Festa" loading="lazy"><figcaption>A festa do fim do show (6 moedinhas).</figcaption></figure>
+      <figure class="deitado"><img src="imagens/desenhos-folha.jpg" alt="Folha de desenhos" loading="lazy"><figcaption>Os desenhos novos a 96, 48 e 28 px.</figcaption></figure>
+    </div>
+  </section>
+</main>
+</body>
+</html>
