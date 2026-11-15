@@ -433,6 +433,8 @@ export interface ApiGuia {
   /** A primeira pegada à vista (para medir a distância dos pés). */
   primeira(): [number, number, number] | null;
   procurando(): boolean;
+  /** Spec 026: o alvo de agora espera (a f3 de dia: a lua, sem trilha). */
+  esperando(): boolean;
   /** A criança está no alvo de agora? */
   chegou(): boolean;
   placa(): boolean;
@@ -455,6 +457,8 @@ export interface GuiaMissao {
   /** Ouve a chegada ao alvo (uma vez por alvo) e a troca do desenho do alvo. */
   aoChegar(f: (a: AlvoGuia) => void): void;
   aoTrocarFigura(f: (figura: string | null) => void): void;
+  /** Spec 026: a espera acabou (a noite chegou e a trilha da f3 acendeu). */
+  aoFimDaEspera(f: (a: AlvoGuia) => void): void;
   /** O brilho de chegar no lugar. */
   brilhar(a: AlvoGuia): void;
   /** Onde a placa está na tela (o carimbo e as moedinhas saem dali). */
@@ -520,6 +524,7 @@ export function criarGuiaMissao(f: FonteGuia): GuiaMissao {
   let telaPlaca: { x: number; y: number } | null = null;
   const ouvintes: ((a: AlvoGuia) => void)[] = [];
   const ouvintesFigura: ((fig: string | null) => void)[] = [];
+  const ouvintesEspera: ((a: AlvoGuia) => void)[] = [];
   const agoraS = () => performance.now() / 1000;
 
   // ---------------------------------------------------------------- a busca
@@ -661,6 +666,7 @@ export function criarGuiaMissao(f: FonteGuia): GuiaMissao {
   }
   function trocarAlvo(novo: AlvoGuia | null, virarAoNascer: boolean): void {
     const figuraAntes = alvo?.figura ?? null;
+    const esperava = !!alvo?.espera;
     alvo = novo;
     rota = [];
     marcas = [];
@@ -676,6 +682,13 @@ export function criarGuiaMissao(f: FonteGuia): GuiaMissao {
     if (!novo) return;
     placa.pintar(novo.figura);
     nasceu = agoraS();
+    // spec 026: o alvo que espera (a f3 de dia) não tem trilha nem vira a câmera
+    if (novo.espera) return;
+    // a espera acabou (a noite chegou): a trilha nasce com a ondinha forte e o aviso macio
+    if (esperava) {
+      forteDesde = nasceu;
+      for (const o of ouvintesEspera) o(novo);
+    }
     comecarBusca(virarAoNascer);
     andarBusca();
   }
@@ -839,6 +852,7 @@ export function criarGuiaMissao(f: FonteGuia): GuiaMissao {
     primeira: () =>
       vistasAgora[0] ? [vistasAgora[0][0], vistasAgora[0][1], vistasAgora[0][2]] : null,
     procurando: () => !!busca,
+    esperando: () => !!alvo?.espera,
     chegou: () => chegouLa,
     placa: () => placa.visivel,
     caixaPlaca: () => placa.caixa(),
@@ -863,6 +877,8 @@ export function criarGuiaMissao(f: FonteGuia): GuiaMissao {
     },
     chamar() {
       if (!missao) return;
+      // spec 026: esperando a noite, chamar só faz a placa (a lua) nascer de novo
+      if (alvo?.espera) return void placa.pintar(alvo.figura);
       if (!alvo) trocarAlvo(resolver(false), true);
       else if (busca) busca.virar = true;
       else if (!rota.length || chegouLa) {
@@ -878,6 +894,7 @@ export function criarGuiaMissao(f: FonteGuia): GuiaMissao {
     chegou: () => chegouLa,
     aoChegar: (fn) => void ouvintes.push(fn),
     aoTrocarFigura: (fn) => void ouvintesFigura.push(fn),
+    aoFimDaEspera: (fn) => void ouvintesEspera.push(fn),
     brilhar(a) {
       brilho = { x: a.x, y: a.y, z: a.z, t: agoraS() };
     },

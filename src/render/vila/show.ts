@@ -46,7 +46,17 @@ export interface OpcoesShowVila {
 }
 
 export interface ShowVila {
-  quadro(t: number, vista: VilaVista | null, tempoNucleo: number, noite: number): void;
+  /**
+   * `noiteShow`: a hora é noite de show (`noiteDeShow`). Quando ela chega (e não há show), o
+   * palco "aquece": a beira e o raio acendem devagar e os holofotes sobem num leque macio.
+   */
+  quadro(
+    t: number,
+    vista: VilaVista | null,
+    tempoNucleo: number,
+    noite: number,
+    noiteShow?: boolean,
+  ): void;
   evento(e: EventoVila): void;
   /** Testes: o que está à vista (estojos no chão, instrumentos e caixas acesas). */
   estado(): {
@@ -59,6 +69,10 @@ export interface ShowVila {
     estrelinhas: number;
     confetes: number;
     triangulos: number;
+    /** O palco aquecendo agora (a noite acabou de chegar). */
+    aquecendo: boolean;
+    /** Quantas vezes o palco aqueceu (a noite chegou). */
+    aquecimentos: number;
   };
   /**
    * A pose de um morador do palco no show: o vocalista e a guitarrista batem cabeça no tempo
@@ -591,6 +605,17 @@ export function criarShowVila(scene: Scene, plano: PlanoVila, opcoes: OpcoesShow
   let feixesAcesos = 0;
   let tinhaVista = false;
   const feito = [false, false, false];
+  /** A noite do show (a hora): quando chega, o palco aquece (o aviso macio, sem texto). */
+  let noiteShowAtual = false;
+  let primeiroQuadro = true;
+  let aquecerDesde = -Infinity;
+  let aquecimentos = 0;
+  /** Quanto dura o aquecimento (s): os holofotes sobem do chão ao céu e somem. */
+  const AQUECER_S = 6;
+  const aquecimento = (t: number) => {
+    const k = (t - aquecerDesde) / AQUECER_S;
+    return k > 0 && k < 1 ? Math.sin(Math.PI * k) : 0;
+  };
 
   /** A festa do acorde final: a explosão da passarela e o confete. */
   function festaFinal(): void {
@@ -732,6 +757,28 @@ export function criarShowVila(scene: Scene, plano: PlanoVila, opcoes: OpcoesShow
     }
   }
 
+  /** Um gesto que se repete: `dur` s de gesto a cada `periodo` s (fase própria de cada um). */
+  const deVezEmQuando = (
+    pose: Pose,
+    g: Parameters<typeof aplicarGesto>[1],
+    periodo: number,
+    dur: number,
+    fase0: number,
+    lento = 1,
+  ): Pose => {
+    const f = (((tempoAtual + fase0) % periodo) + periodo) % periodo;
+    return f < dur ? aplicarGesto(pose, g, f * lento) : pose;
+  };
+  /**
+   * A passagem de som (sem show, de dia ou à espera da noite): a guitarrista balança a cabeça
+   * devagar afinando, o vocalista testa o microfone (aponta para a frente) e a roadie confere as
+   * caixas. Calmo, de vez em quando: o palco está vivo, mas o show é de noite.
+   */
+  function passagemDeSom(n: number, pose: Pose): Pose {
+    if (n === 2) return deVezEmQuando(pose, 'roqueiro', 7, 3.2, 1.3, 0.55);
+    if (n === 0) return deVezEmQuando(pose, 'apontar', 11, 1.8, 4.1);
+    return deVezEmQuando(pose, 'apontar', 9, 1.8, 0.4);
+  }
   const mistura = (a: V3, b: V3, k: number, out: V3): V3 => {
     out[0] = a[0] + (b[0] - a[0]) * k;
     out[1] = a[1] + (b[1] - a[1]) * k;
@@ -740,11 +787,19 @@ export function criarShowVila(scene: Scene, plano: PlanoVila, opcoes: OpcoesShow
   };
 
   return {
-    quadro(t, vista, tempoNucleo, noite) {
+    quadro(t, vista, tempoNucleo, noite, noiteShow = noite > 0.5) {
       const dt = ultimoT < 0 ? 0 : Math.min(0.1, Math.max(0, t - ultimoT));
       ultimoT = t;
       vistaAtual = vista;
       tempoAtual = tempoNucleo;
+      // a noite do show chegou (não na abertura do mundo, nem no meio de um show): o palco aquece
+      if (noiteShow && !noiteShowAtual && !primeiroQuadro && !vista?.show && palcoPronto()) {
+        aquecerDesde = t;
+        aquecimentos++;
+      }
+      noiteShowAtual = noiteShow;
+      primeiroQuadro = false;
+      const aq = aquecimento(t);
       pl.definirLuz(1 - 0.5 * noite);
       const pronto = palcoPronto();
       const show = vista?.show ?? null;
@@ -786,9 +841,9 @@ export function criarShowVila(scene: Scene, plano: PlanoVila, opcoes: OpcoesShow
       // ---- as caixas e as luzes do palco
       const cx = vista?.cx ?? [false, false, false];
       acesas.forEach((m, i) => ligar(m, pronto && cx[i]));
-      ligar(noiteBase, pronto && (noite > 0.3 || forca > 0.05));
+      ligar(noiteBase, pronto && (noite > 0.3 || forca > 0.05 || aq > 0.05));
       ligar(showLuz, pronto && forca > 0.3);
-      ligar(pulso, pronto && forca > 0.3);
+      ligar(pulso, pronto && (forca > 0.3 || aq > 0.04));
       // o chamado: a ponta da passarela pisca no tempo (aceso meio tempo, apagado meio tempo)
       ligar(chamado, noShow && fase === 'chamando' && naBatida < 0.5);
       golpe = Math.max(0, golpe - dt * 4);
@@ -796,7 +851,9 @@ export function criarShowVila(scene: Scene, plano: PlanoVila, opcoes: OpcoesShow
       if (tex)
         tex.level = noShow
           ? 0.5 + 0.5 * Math.max(pulsoBatida, golpe)
-          : 0.72 + 0.1 * Math.sin(t * 2.4);
+          : aq > 0 && forca < 0.3
+            ? 0.25 + 0.75 * aq
+            : 0.72 + 0.1 * Math.sin(t * 2.4);
 
       // ---- os acordes de cada toque (no instante do núcleo) e o acorde final
       if (acordes.length) {
@@ -851,7 +908,7 @@ export function criarShowVila(scene: Scene, plano: PlanoVila, opcoes: OpcoesShow
       const uz = mm ? mm[6] : 0;
 
       // ---- os feixes
-      const verFeixes = pronto && forca > 0.02;
+      const verFeixes = pronto && (forca > 0.02 || aq > 0.02);
       if (scene.activeCamera) {
         const g = scene.activeCamera.globalPosition;
         cam[0] = g.x;
@@ -862,11 +919,16 @@ export function criarShowVila(scene: Scene, plano: PlanoVila, opcoes: OpcoesShow
       feixesAcesos = 0;
       if (verFeixes) {
         // de dia o feixe some no claro: fica mais fraco; de noite ele pousa no chão escuro
-        const base = forca * (0.15 + 0.13 * noite) * (0.8 + 0.25 * pulsoBatida + 0.35 * golpe);
-        // no acorde final: brancos e para o céu por um instante, depois voltam
+        const base =
+          forca * (0.15 + 0.13 * noite) * (0.8 + 0.25 * pulsoBatida + 0.35 * golpe) +
+          aq * (1 - forca) * 0.16;
+        // no acorde final: brancos e para o céu por um instante, depois voltam; no aquecimento
+        // (a noite chegou), sobem devagar do chão ao céu num leque macio e somem
         const sobe = noFinal
           ? Math.min(1, idadeFinal / 0.2) * Math.max(0, Math.min(1, (2.4 - idadeFinal) / 0.8))
-          : 0;
+          : forca < 0.3 && aq > 0
+            ? Math.min(1, (t - aquecerDesde) / AQUECER_S + 0.15)
+            : 0;
         const branco = noFinal ? Math.max(0, Math.min(1, (1.6 - idadeFinal) / 0.7)) : 0;
         const ceu = sobe * sobe * (3 - 2 * sobe);
         varredores.forEach((q, i) => {
@@ -1075,12 +1137,17 @@ export function criarShowVila(scene: Scene, plano: PlanoVila, opcoes: OpcoesShow
         (n, m) => n + (m.isEnabled() ? (m.getTotalIndices() / 3) | 0 : 0),
         0,
       ),
+      aquecendo: aquecimento(ultimoT) > 0,
+      aquecimentos,
     }),
     poseDoMorador(povoado, n, pose) {
-      const show = vistaAtual?.show;
+      if (povoado !== 'vila') return pose;
+      const show = vistaAtual?.show ?? null;
+      const ativo = !!show && faseDoShow(show, tempoAtual) !== 'acabou';
+      // sem show: a passagem de som (a banda afina, testa o microfone, confere as caixas)
+      if (!ativo || !show) return n <= 2 ? passagemDeSom(n, pose) : pose;
       // a banda (0 a 2) e a moça do lanche (3, dentro do festival, a plateia de casa)
-      if (!show || povoado !== 'vila' || n > 3) return pose;
-      if (faseDoShow(show, tempoAtual) === 'acabou') return pose;
+      if (n > 3) return pose;
       if (show.final !== null) {
         // o acorde final: todo mundo pula de braços para o alto
         const idade = tempoAtual - show.final;
@@ -1096,9 +1163,10 @@ export function criarShowVila(scene: Scene, plano: PlanoVila, opcoes: OpcoesShow
       return aplicarGesto(pose, 'roqueiro', 1 + ((((d + 0.125) % 0.5) + 0.5) % 0.5));
     },
     giroDoMorador(povoado, n) {
+      if (povoado !== 'vila') return null;
       const show = vistaAtual?.show;
-      if (!show || povoado !== 'vila' || n > 2) return null;
-      if (faseDoShow(show, tempoAtual) === 'acabou') return null;
+      const ativo = !!show && faseDoShow(show, tempoAtual) !== 'acabou';
+      if (!ativo || n > 2) return null;
       // a plateia fica do lado da ponta da passarela (z menor que o fundo do palco)
       return Math.PI;
     },

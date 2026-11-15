@@ -181,6 +181,10 @@ body:has(.entrada:not([hidden])) .alma-missao { display: none !important; }
   overflow: hidden; -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 34px), transparent);
   mask-image: linear-gradient(to right, #000 calc(100% - 34px), transparent); }
 .alma-oferta.espera { opacity: 0.88; pointer-events: none; }
+/* spec 026: a lua da f3 de dia (o show é só de noite), no canto de cima do desenho */
+.alma-oferta .tarefa { position: relative; }
+.alma-oferta .tarefa .alma-lua { position: absolute; top: -12px; right: -12px; width: 46px; height: 46px; border-radius: 50%;
+  background: #fffaf0; padding: 3px; box-sizing: border-box; box-shadow: 0 0 0 3px #8f80e8, 0 3px 0 3px rgba(60, 40, 120, 0.35); }
 .alma-oferta.espera .vaga { height: 64px; }
 .alma-mais { position: absolute; z-index: 3; width: 40px; height: 40px; margin: -20px 0 0 -20px; pointer-events: none; padding: 7px; box-sizing: border-box;
   border-radius: 50%; background: #fffaf0; box-shadow: 0 0 0 3px #f0d9b0, 0 4px 0 3px #e2c99b; animation: alma-mais 1.1s ease-in-out 0.45s 1 both; }
@@ -327,6 +331,11 @@ export interface OpcoesHudAlma {
   /** Um painel abriu ou fechou (trava e solta o ponteiro). */
   aoAbrir(): void;
   aoFechar(): void;
+  /**
+   * Spec 026: a missão espera a noite (a f3 da Vila Neon de dia): o cartão ganha a lua no canto
+   * (o show é só de noite; nada de texto nem relógio).
+   */
+  esperaNoite?(id: string): boolean;
 }
 
 /** A missão do cartão, como o núcleo diz: a fixada, se aberta, ou a primeira aberta. */
@@ -720,6 +729,12 @@ export function criarHudAlma(raiz: HTMLElement, op: OpcoesHudAlma) {
     const t = document.createElement('div');
     t.className = 'tarefa';
     t.appendChild(figuraMissao(m));
+    // spec 026: de dia a f3 da Vila Neon espera a noite (a lua no canto do desenho)
+    if (op.esperaNoite?.(m.id)) {
+      const lua = figura('luaShow', 'alma-lua');
+      lua.setAttribute('data-alma-lua', '');
+      t.appendChild(lua);
+    }
     linha.append(t, svgEl('seta', 'seta'), premioEl(m, !!a.bis));
     c.appendChild(linha);
     c.appendChild(progressoEl(m, a.feito, a.meta, a.usos));

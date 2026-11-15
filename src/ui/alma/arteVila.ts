@@ -114,6 +114,20 @@ const palco = (show: boolean) => `
       : `<circle cx="14" cy="10" r="3" fill="#5a5470" ${s(1.8)}/><circle cx="50" cy="10" r="3" fill="#5a5470" ${s(1.8)}/>`
   }`;
 
+/**
+ * A lua da noite do show (decisão do dono: o show é só de noite). O céu roxo da Vila Neon, a
+ * lua crescente gorda e dormindo, duas estrelinhas: lê como "de noite" a 28 px, sem texto.
+ */
+const lua = () => `
+  <circle cx="32" cy="35" r="27" fill="#241a4a"/>
+  <circle cx="32" cy="32" r="27" fill="#4a3c98" ${s()}/>
+  <path d="M13 24 Q16 14 25 9.5" fill="none" stroke="#7d6fdc" stroke-width="3" stroke-linecap="round"/>
+  <path d="M28.7 17 A17 17 0 1 0 45.15 39.32 A14 14 0 0 1 28.7 17 Z" fill="#ffe28a" ${s(2.8)}/>
+  <path d="M19.5 35.5 q3 3 6.2 0" fill="none" stroke="${C}" stroke-width="2.4" stroke-linecap="round"/>
+  <ellipse cx="21.5" cy="41.5" rx="3" ry="1.8" fill="#ffab7a"/>
+  <polygon points="${estrela5(46, 17, 5.4)}" fill="#fff6c8" ${s(1.6)}/>
+  <circle cx="51" cy="30" r="2" fill="#fff6c8"/><circle cx="40" cy="50" r="1.6" fill="#fff6c8"/>`;
+
 const BASE: Record<string, string> = {
   // ------------------------------------------------------------ a1: os instrumentos
   a80Guitarra: svg(guitarra(33, 37, 0.92)),
@@ -177,6 +191,7 @@ const BASE: Record<string, string> = {
     <path d="M23 16 h18 M21 21 h22 M23 26 h18" stroke="#8a8ea0" stroke-width="2"/>
     <path d="M24 13 Q27 9 32 9" stroke="#fff" stroke-width="2.6" fill="none" stroke-linecap="round"/>`),
   a80Palco: svg(palco(false)),
+  a80Lua: svg(lua()),
   a80Show: svg(palco(true)),
   // ------------------------------------------------------------ banca do festival
   a80Globo: svg(`
@@ -285,6 +300,8 @@ export const ARTE_VILA: Record<string, string> = {
   caixaAcesa: BASE.a80CaixaSomAcesa,
   dedinho: BASE.a80Pegar,
   palcoAceso: BASE.a80Show,
+  /** A f3 espera a noite (o selinho, a placa do guia e o selo do cartão de dia). */
+  luaShow: BASE.a80Lua,
   /** O mundo no baú (as habilidades que a Vila Neon alimenta): o raio sobre o grafite. */
   mundoVila: svg(`
     <rect x="6" y="6" width="52" height="52" rx="12" fill="#2e2d36" ${s()}/>

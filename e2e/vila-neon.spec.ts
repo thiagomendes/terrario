@@ -14,8 +14,9 @@ import {
  * quadro, segue as pegadinhas com o joystick de verdade e toca onde a mãozinha mostra.
  * - f1: os três estojos (rua, pista, festival) → 4 moedinhas;
  * - f2: o feno aparece na mão perto das lhamas, e elas seguem até a grade → 5;
- * - f3: sobe a escadinha, acende as três caixas, o show começa e o toque do chamado dispara o
- *   acorde final → 6, com a festa depois do acorde.
+ * - f3: de dia espera a noite (a lua no cartão e no selinho, sem trilha: o show é só de noite);
+ *   a noite chega, sobe a escadinha, acende as três caixas, o show começa e o toque do chamado
+ *   dispara o acorde final → 6, com a festa depois do acorde.
  * Fotos (e quadros de vídeo com VILA_VIDEO=1) em VILA_PASTA.
  */
 declare const process: { env: Record<string, string | undefined> };
@@ -51,15 +52,45 @@ const moedasReais = (page: Page) =>
         .moedas,
   );
 
-async function escolher(page: Page, id: string): Promise<void> {
+async function escolher(page: Page, id: string, foto?: string): Promise<void> {
   await page
     .waitForFunction(() => !document.body.dataset.overlay, undefined, { timeout: 15_000 })
     .catch(() => undefined);
   await escolherNaRoda(page, 'missoes');
   await page.waitForSelector('[data-alma-quadro]', { timeout: 20_000 });
   await page.waitForTimeout(800);
+  if (id === 'f3') {
+    // de dia (o relógio dos testes fica em 0,42) a f3 espera a noite: a lua no cartão dela
+    const lua = page.locator('[data-missao="f3"] [data-alma-lua]');
+    expect(await lua.count()).toBe(1);
+    expect(await page.locator('[data-missao="f1"] [data-alma-lua]').count()).toBe(0);
+    await lua.scrollIntoViewIfNeeded().catch(() => undefined);
+    await page.waitForTimeout(300);
+    if (foto) await page.screenshot({ path: `${PASTA}/${foto}` });
+  }
   await tocar(page, `[data-alma-jogar="${id}"]`);
   await page.waitForTimeout(2500);
+}
+
+/**
+ * A f3 de dia (decisão do dono: o show é só de noite): o selinho e a placa mostram a lua, nada
+ * de trilha nem mãozinha; a noite chega (o relógio dos testes) e a trilha acende sozinha.
+ */
+async function esperarANoite(page: Page, pre: string): Promise<void> {
+  await page.waitForFunction(() => window.__guia!.esperando(), undefined, { timeout: 15_000 });
+  await page.waitForTimeout(1500);
+  expect(await page.locator('[data-alma-missao]').getAttribute('data-figura')).toBe('luaShow');
+  expect(await page.evaluate(() => window.__guia!.pegadas())).toBe(0);
+  await page.screenshot({ path: `${PASTA}/${pre}-f3-dia-lua.png` });
+  await page.evaluate(() => {
+    window.__brumaluz!.hora = 0.9;
+  });
+  await page.waitForFunction(
+    () => !window.__guia!.esperando() && window.__guia!.pegadas() > 0,
+    undefined,
+    { timeout: 20_000 },
+  );
+  expect(await page.locator('[data-alma-missao]').getAttribute('data-figura')).not.toBe('luaShow');
 }
 
 async function festa(page: Page, foto?: string, teto = 40_000): Promise<void> {
@@ -247,7 +278,8 @@ test('Vila Neon, deitado: as três missões de ponta a ponta, com moedinhas de v
   await festa(page, 'deitado-f2-festa.png');
   console.log(`vila: f2 em ${((Date.now() - t0) / 1000).toFixed(0)} s`);
   t0 = Date.now();
-  await escolher(page, 'f3');
+  await escolher(page, 'f3', 'deitado-f3-quadro-dia.png');
+  await esperarANoite(page, 'deitado');
   const r = await f3(page, 'deitado');
   expect(r.finalQuem).not.toBe('auto');
   await festa(page, 'deitado-f3-festa.png');
@@ -270,10 +302,13 @@ for (const id of ['f1', 'f2', 'f3'] as const)
       await festa(page);
     }
     const parar = await filmar(page, `empe-${id}`);
-    await escolher(page, id);
+    await escolher(page, id, `empe-${id}-quadro-dia.png`);
     if (id === 'f1') await f1(page, 'empe');
     else if (id === 'f2') await f2(page, 'empe');
-    else await f3(page, 'empe');
+    else {
+      await esperarANoite(page, 'empe');
+      await f3(page, 'empe');
+    }
     await festa(page, `empe-${id}-festa.png`);
     await parar();
     await page.context().close();

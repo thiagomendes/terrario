@@ -9,6 +9,8 @@ import type { Comando, EventoNucleo } from '../../src/nucleo/protocolo';
 import { CHAMADO, ESPERA_FINAL, APLAUSO } from '../../src/jogo/show';
 import { PASSO } from '../../src/nucleo/protocolo';
 import { MORADORES_VILA, POVOADO_VILA } from '../../src/nucleo/vila';
+import { noiteDeShow } from '../../src/jogo/show';
+import { HORA_INICIAL } from '../../src/jogo/tempo';
 
 /**
  * Spec 026: a Vila Neon no núcleo. As três missões de ponta a ponta com as moedinhas de
@@ -75,6 +77,12 @@ function passos(n: Nucleo, k = 1, quem = 'ana'): Ev[] {
   }
   return r;
 }
+/** O relógio do mundo (o comando de depuração dos testes de tela). */
+function hora(n: Nucleo, h: number): void {
+  n.comando('ana', { t: 'depurar', d: { f: 'hora', hora: h } } as Comando);
+}
+const NOITE = 0.9;
+const DIA = 0.42;
 const moedas = (evs: Ev[]) => evs.reduce((s, e) => s + (e.e === 'alma' ? e.ganho.moedas : 0), 0);
 
 describe('spec 026: a Vila Neon no núcleo', () => {
@@ -119,6 +127,7 @@ describe('spec 026: a Vila Neon no núcleo', () => {
       passos(n, 10);
     }
     n.comando('ana', { t: 'almaFixar', missao: 'f3' });
+    hora(n, NOITE);
     passos(n);
     const [cx, cy, cz] = p.pontos.caixas[0];
     ir(n, 'ana', cx + 0.5, cy, cz - 1.5);
@@ -161,6 +170,7 @@ describe('spec 026: a Vila Neon no núcleo', () => {
   it('o toque do chamado dispara o acorde final na hora', () => {
     const n = abrir();
     const p = vilaDoMundo(SEMENTE)!;
+    hora(n, NOITE);
     passos(n);
     for (let i = 0; i < 3; i++) {
       const [x, y, z] = p.pontos.caixas[i];
@@ -273,5 +283,133 @@ describe('spec 026: a Vila Neon no núcleo', () => {
     const s = n.salvar();
     const m = abrir(['ana'], true, { edicoes: s.edicoes, hora: s.hora, extras: s.extras } as never);
     expect(m.estado.vila!.vista().ins).toEqual([false, true, false]);
+  });
+
+  // ------------------------------------------------------------------ o show só de noite
+  /** Acende as três caixas (a criança vai a cada uma e toca). */
+  function acenderAsTres(n: Nucleo, p: NonNullable<ReturnType<typeof vilaDoMundo>>): Ev[] {
+    const evs: Ev[] = [];
+    for (let i = 0; i < 3; i++) {
+      const [x, y, z] = p.pontos.caixas[i];
+      ir(n, 'ana', x + 0.5, y, z - 1.5);
+      n.comando('ana', { t: 'vila', a: 'caixa', i });
+      evs.push(...passos(n, 3));
+    }
+    return evs;
+  }
+  /** Faz a f1 (a f3 abre depois de uma das duas primeiras). */
+  function fazerF1(n: Nucleo, p: NonNullable<ReturnType<typeof vilaDoMundo>>): void {
+    for (const [x, y, z] of p.pontos.estojos) {
+      ir(n, 'ana', x, y, z);
+      passos(n, 10);
+    }
+  }
+
+  it('o show é só de noite (decisão do dono): de dia as caixas são brinquedo e não começam o show nem contam a f3', () => {
+    expect(noiteDeShow(DIA)).toBe(false);
+    expect(noiteDeShow(HORA_INICIAL)).toBe(false);
+    expect(noiteDeShow(NOITE)).toBe(true);
+    expect(noiteDeShow(0.05)).toBe(true);
+    // a janela abre no fim do entardecer e fecha antes de clarear (o show acaba no escuro)
+    expect(noiteDeShow(0.74)).toBe(true);
+    expect(noiteDeShow(0.7)).toBe(false);
+    expect(noiteDeShow(0.23)).toBe(false);
+    const n = abrir();
+    const p = vilaDoMundo(SEMENTE)!;
+    hora(n, DIA);
+    passos(n);
+    fazerF1(n, p);
+    n.comando('ana', { t: 'almaFixar', missao: 'f3' });
+    passos(n);
+    const dia = acenderAsTres(n, p);
+    expect(n.estado.vila!.vista().cx).toEqual([true, true, true]);
+    expect(n.estado.vila!.vista().show).toBeNull();
+    expect(dia.filter((e) => e.e === 'vilaCaixa').every((e) => 'dia' in e && e.dia)).toBe(true);
+    // nenhuma bolinha da f3 de dia
+    const f3 = () => n.estado.almas.get('ana')!.progresso['f3'] ?? 0;
+    expect(f3()).toBe(0);
+    // a passagem de som segue: um minuto de dia, nada de show
+    passos(n, 60 * 20);
+    expect(n.estado.vila!.vista().show).toBeNull();
+    // a noite chega: o primeiro toque numa caixa (já acesa de dia) conta, e o show começa
+    hora(n, NOITE);
+    passos(n);
+    const [x, y, z] = p.pontos.caixas[1];
+    ir(n, 'ana', x + 0.5, y, z - 1.5);
+    n.comando('ana', { t: 'vila', a: 'caixa', i: 1 });
+    passos(n, 3);
+    expect(n.estado.vila!.vista().cx).toEqual([true, true, true]);
+    expect(n.estado.vila!.vista().show).not.toBeNull();
+    expect(f3()).toBe(1);
+    // e o show vai até o fim: a f3 fecha (6 moedinhas)
+    const fim = passos(n, Math.ceil((CHAMADO + ESPERA_FINAL + 1) / PASSO));
+    expect(moedas(fim)).toBe(6);
+    expect(n.estado.almas.get('ana')!.feitas).toContain('f3');
+  });
+
+  it('de noite, a caixa acesa antes do show fica acesa (o toque não apaga sem querer)', () => {
+    const n = abrir();
+    const p = vilaDoMundo(SEMENTE)!;
+    hora(n, NOITE);
+    passos(n);
+    const [x, y, z] = p.pontos.caixas[0];
+    ir(n, 'ana', x + 0.5, y, z - 1.5);
+    n.comando('ana', { t: 'vila', a: 'caixa', i: 0 });
+    passos(n, 30);
+    n.comando('ana', { t: 'vila', a: 'caixa', i: 0 });
+    passos(n, 3);
+    expect(n.estado.vila!.vista().cx[0]).toBe(true);
+    expect(n.estado.vila!.vista().show).toBeNull();
+  });
+
+  it('a noite acaba no meio do show: o show termina normal, nunca é cortado', () => {
+    const n = abrir();
+    const p = vilaDoMundo(SEMENTE)!;
+    hora(n, NOITE);
+    passos(n);
+    acenderAsTres(n, p);
+    const inicio = n.estado.vila!.vista().show!.inicio;
+    passos(n, 5 * 20);
+    hora(n, DIA);
+    const evs = passos(n, Math.ceil((CHAMADO + ESPERA_FINAL + 1) / PASSO));
+    expect(evs.some((e) => e.e === 'vilaFinal')).toBe(true);
+    expect(n.estado.vila!.vista().show?.inicio ?? inicio).toBe(inicio);
+    passos(n, Math.ceil((APLAUSO + 1) / PASSO));
+    expect(n.estado.vila!.vista().show).toBeNull();
+  });
+
+  it('salvo no meio do show (ou de dia com as caixas acesas): na noite seguinte a f3 ainda fecha', () => {
+    const n = abrir();
+    const p = vilaDoMundo(SEMENTE)!;
+    hora(n, NOITE);
+    passos(n);
+    fazerF1(n, p);
+    n.comando('ana', { t: 'almaFixar', missao: 'f3' });
+    passos(n);
+    acenderAsTres(n, p);
+    passos(n, 5 * 20);
+    expect(n.estado.vila!.vista().show).not.toBeNull();
+    // fecha o mundo no meio da música; abre de dia
+    const s = n.salvar();
+    const m = abrir(['ana'], true, {
+      edicoes: s.edicoes,
+      hora: DIA,
+      extras: s.extras,
+    } as never);
+    passos(m);
+    expect(m.estado.vila!.vista().cx).toEqual([true, true, true]);
+    expect(m.estado.vila!.vista().show).toBeNull();
+    // a noite chega: um toque e o show começa de novo
+    hora(m, NOITE);
+    passos(m);
+    const [x, y, z] = p.pontos.caixas[2];
+    ir(m, 'ana', x + 0.5, y, z - 1.5);
+    m.comando('ana', { t: 'vila', a: 'caixa', i: 2 });
+    passos(m, 3);
+    expect(m.estado.vila!.vista().show).not.toBeNull();
+    // e depois do show, salvo de novo, as caixas voltam como brinquedo livre (sem show)
+    passos(m, Math.ceil((CHAMADO + ESPERA_FINAL + APLAUSO + 2) / PASSO));
+    const s2 = m.salvar();
+    expect((s2.extras as { vila: { tocou?: boolean } }).vila.tocou).toBe(true);
   });
 });

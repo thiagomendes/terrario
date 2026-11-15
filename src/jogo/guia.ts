@@ -15,6 +15,7 @@ import { loteDoCanteiro, noLoteObra } from '../world/obras';
 import { frenteDaPorta, noLote, TAM_LOTE, type Lote, type PlanoPovoado } from '../world/povoado';
 import type { PlanoCanto } from '../world/cantoMissoes';
 import type { PlanoVila } from '../world/vilaNeon';
+import { noiteDeShow } from './show';
 
 // ------------------------------------------------------------------ o alvo
 /** Uma caixa no chão (inclusivo em x0/z0, exclusivo em x1/z1). */
@@ -44,6 +45,12 @@ export interface AlvoGuia {
   raio?: number;
   /** Morador que anda (c5): o id da criatura. */
   morador?: number;
+  /**
+   * Spec 026: o alvo espera (a f3 da Vila Neon de dia: o show é só de noite). Sem trilha, sem
+   * virar a câmera, sem chegar: a placa (a lua) fica em cima do palco quando ele está à vista, o
+   * selinho mostra a lua, e quando a noite chega o alvo de verdade acende a trilha sozinho.
+   */
+  espera?: true;
 }
 
 export function chegouAoAlvo(a: AlvoGuia, x: number, z: number): boolean {
@@ -88,6 +95,8 @@ export interface MundoDoGuia {
   comFeno?(): boolean;
   /** Spec 026: a altura dos pés da criança (no palco ou no chão). */
   pesY?(): number;
+  /** Spec 026: a hora do dia (0 a 1): a f3 da Vila Neon espera a noite do show. */
+  hora?(): number;
 }
 
 const caixaDoLoteCidade = (l: LoteCidade): CaixaChao => ({
@@ -637,6 +646,22 @@ function alvoNaVila(
     };
   }
   if (c.chave === 'show:caixa') {
+    // de dia (sem show tocando) a f3 espera a noite: a lua em cima do palco, nada de trilha
+    if (mundo.hora && !v?.show && !noiteDeShow(mundo.hora())) {
+      const [x, y, z] = pt.passarela;
+      const meio = (pt.palco.x0 + pt.palco.x1 + 1) / 2;
+      return {
+        chave: 'noite',
+        tipo: 'sitio',
+        x,
+        y,
+        z,
+        // a lua flutua em cima do meio do palco (o arco de luzes), visto de longe
+        placa: [meio, pt.palco.y + 6, pt.palco.z0 + 9],
+        figura: 'luaShow',
+        espera: true,
+      };
+    }
     // no palco ou já no pé da escadinha: as caixas (a trilha sobe a escadinha)
     const noPalco =
       (mundo.pesY?.() ?? 0) >= pt.palco.y + 0.9 ||

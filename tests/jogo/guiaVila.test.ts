@@ -31,6 +31,7 @@ function mundo(o: {
   feno?: boolean;
   y?: number;
   bichos?: { id: number; tipo: string; x: number; y: number; z: number }[];
+  hora?: number;
 }): MundoDoGuia {
   return {
     cidade: null,
@@ -47,6 +48,7 @@ function mundo(o: {
     comFeno: () => !!o.feno,
     pesY: () => o.y ?? plano.h + 1,
     bichos: () => o.bichos ?? [],
+    ...(o.hora === undefined ? {} : { hora: () => o.hora! }),
   } as unknown as MundoDoGuia;
 }
 const de = { x: plano.nascimento.x, z: plano.nascimento.z };
@@ -93,6 +95,34 @@ describe('o guia na Vila Neon (spec 026)', () => {
       noPalco,
     )!;
     expect(c.chave).toBe('passarela');
+  });
+
+  it('f3 de dia espera a noite (decisão do dono): a lua em cima do palco, sem trilha; de noite, a escadinha', () => {
+    const m = missaoPorId('f3')!;
+    const dia = alvoDaMissao(m, mundo({ hora: 0.42 }), new Set(), de)!;
+    expect(dia.chave).toBe('noite');
+    expect(dia.espera).toBe(true);
+    expect(dia.figura).toBe('luaShow');
+    // nunca "chega" (a espera não dá o ✓ nem some a placa por chegar)
+    expect(chegouAoAlvo(dia, dia.x, dia.z)).toBe(false);
+    // a lua fica em cima do palco
+    expect(dia.placa[1]).toBeGreaterThan(p.palco.y + 3);
+    // de noite: a trilha de sempre
+    const noite = alvoDaMissao(m, mundo({ hora: 0.9 }), new Set(), de)!;
+    expect(noite.chave).toBe('escadinha');
+    expect(noite.espera).toBeUndefined();
+    // o show que começou de noite e entrou no dia continua guiando (a passarela)
+    const noPalco = { x: p.escadinha[0] - 4, z: p.escadinha[2] };
+    const show = alvoDaMissao(
+      m,
+      mundo({ hora: 0.3, y: p.palco.y + 1, cx: [true, true, true], show: { inicio: 0, final: null } }),
+      new Set(),
+      noPalco,
+    )!;
+    expect(show.chave).toBe('passarela');
+    // f1 e f2 não esperam nada
+    expect(alvoDaMissao(missaoPorId('f1')!, mundo({ hora: 0.42 }), new Set(), de)!.espera).toBeUndefined();
+    expect(alvoDaMissao(missaoPorId('f2')!, mundo({ hora: 0.42 }), new Set(), de)!.espera).toBeUndefined();
   });
 });
 

@@ -487,7 +487,7 @@ async function medir(page: Page, nome: string) {
 }
 
 test('fotos e vídeo do show', async ({ browser }) => {
-  // VILA_SO=show (tudo), show-noite, show-entardecer, show-dia ou show-video
+  // VILA_SO=show (tudo), show-noite, show-entardecer ou show-video
   const querShow = (qual: string) =>
     !SO.length || SO.includes('show') || SO.includes(`show-${qual}`);
   test.skip(!!SO.length && !SO.some((x) => x.startsWith('show')), 'só com show');
@@ -597,7 +597,7 @@ test('fotos e vídeo do show', async ({ browser }) => {
   };
   if (querShow('noite')) await umShow('noite', true);
   if (querShow('entardecer')) await umShow('entardecer', false);
-  if (querShow('dia')) await umShow('dia', false);
+  // (de dia não tem show: decisão do dono, o show é só de noite; ver vila-neon-noite.spec.ts)
   if (!querShow('video')) return void (await ctx.close());
 
   // o vídeo: o fim do show de noite (a música, o chamado, o acorde final e o aplauso), com o
@@ -1063,8 +1063,9 @@ test('som do show na grade', async ({ browser }) => {
   const ra = await somA;
   if (ra) salvarWav(ra, `${PASTA}/antes.wav`);
   else console.log('GRADE sem som');
-  // 2. o show de dia, com a criança na grade
-  await page.evaluate((v) => (window.__brumaluz!.hora = v), HORAS.dia);
+  // 2. o show no fim do entardecer (o show é só de noite, decisão do dono; o entardecer roxo já
+  // vale), com a criança na grade
+  await page.evaluate((v) => (window.__brumaluz!.hora = v), HORAS.entardecer);
   await page.waitForTimeout(3000);
   await caixas(page, true);
   await naGrade();

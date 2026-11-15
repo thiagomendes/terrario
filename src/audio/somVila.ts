@@ -268,6 +268,12 @@ export const REFORCO_SHOW_DB = 12;
 export const GANHO_SHOW = GANHO_CAIXAS * Math.pow(10, REFORCO_SHOW_DB / 20);
 /** O acorde final e o aplauso por cima do show (dB): o pico da música. */
 export const REFORCO_FINAL_DB = 2;
+/**
+ * A passagem de som (de dia, sem show) e o acorde do aquecimento (a noite chegou), no barramento
+ * do palco: baixinhos, abaixo de uma caixa solta (que vai a GANHO_CAIXAS / GANHO_SHOW, ~0,25).
+ */
+export const GANHO_PASSAGEM = 0.13;
+export const GANHO_AQUECER = 0.22;
 export const REFORCO_APLAUSO_DB = 4;
 
 /**
@@ -757,6 +763,50 @@ export function criarSomVila(op: OpcoesSomVila) {
     }
   }
 
+  // ------------------------------------------------------------------ a passagem de som
+  /**
+   * Sem show (o show é só de noite, decisão do dono): de vez em quando, baixinho, a banda passa o
+   * som do palco (um toque de bateria, uma batida de guitarra), do próprio material do show e no
+   * barramento do palco (some com a distância). Quando a noite chega, o palco aquece: um acorde
+   * que cresce devagar, macio (o aviso, sem texto nem relógio).
+   */
+  let proximaPassagem = -Infinity;
+  let noiteAntes: boolean | null = null;
+  let passagens = 0;
+  let aquecimentosSom = 0;
+  function quadroPassagem(vista: VilaVista | null, noiteShow: boolean, ag: number): void {
+    if (!ind) return;
+    const quieto = !showAtual && !vista?.show && !vista?.cx.some(Boolean) && ag >= descansoAte;
+    if (noiteAntes === false && noiteShow && quieto && gFestival > 0.01) {
+      const id = ind.acordes[0];
+      if (id && tocar(id, ag + 0.05, { ganho: GANHO_AQUECER, bus: 'show', entrada: 1.4 }))
+        aquecimentosSom++;
+      proximaPassagem = ag + 14;
+    }
+    noiteAntes = noiteShow;
+    if (!quieto || gFestival <= 0.01) {
+      if (gFestival <= 0.01) proximaPassagem = -Infinity;
+      return;
+    }
+    if (proximaPassagem === -Infinity) {
+      proximaPassagem = ag + 6 + rng() * 8;
+      for (const k of ['tum', ...ind.acordes.slice(0, 2)]) void abrir(k);
+      return;
+    }
+    if (ag < proximaPassagem) return;
+    proximaPassagem = ag + 11 + rng() * 9;
+    passagens++;
+    if (rng() < 0.5) {
+      // "tum... tum": a bateria testando o bumbo
+      tocar('tum', ag + 0.02, { ganho: GANHO_PASSAGEM, bus: 'show', taxa: 0.92 });
+      tocar('tum', ag + 0.62, { ganho: GANHO_PASSAGEM * 0.8, bus: 'show', taxa: 0.92 });
+    } else {
+      // uma batida de guitarra (um acorde do show), solta
+      const id = ind.acordes[Math.floor(rng() * Math.min(2, ind.acordes.length))];
+      if (id) tocar(id, ag + 0.02, { ganho: GANHO_PASSAGEM * 0.8, bus: 'show' });
+    }
+  }
+
   // ------------------------------------------------------------------ o ambiente da zona
   /** A grade para a batida: a da trilha do bairro (mesmo andamento) ou a do núcleo. */
   function gradeBatida(): number {
@@ -831,10 +881,12 @@ export function criarSomVila(op: OpcoesSomVila) {
     tNucleo: number,
     ouvinte: OuvinteVila,
     noite: number,
+    noiteShow?: boolean,
   ): void {
     if (!motor.contexto) return;
     const ag = agora();
     relogio.medir(ag, tNucleo);
+    const noiteAgora = noiteShow ?? noite > 0.5;
     vistaAgora = vista;
     gFestival = volumeNaDistancia(
       Math.hypot(ouvinte.x - meioPalco.x, ouvinte.z - meioPalco.z),
@@ -862,6 +914,7 @@ export function criarSomVila(op: OpcoesSomVila) {
         descansoAte = ag + DESCANSO_DEPOIS_DO_SHOW;
       }
       quadroLivre(vista, ag);
+      quadroPassagem(vista, noiteAgora, ag);
       // o acorde final agendado sem o som aberto (decodificação atrasou): entra assim que abrir
       if (
         finalAgendado &&
@@ -1099,6 +1152,9 @@ export function criarSomVila(op: OpcoesSomVila) {
           .map((x) => ({ id: x.id, ini: x.ini, fim: Number.isFinite(x.fim) ? x.fim : null })),
         acordes: acordes.slice(),
         final: finalAgendado ? { quando: finalAgendado.t, sozinho: finalAgendado.sozinho } : null,
+        /** A passagem de som (sem show) e o aquecimento do palco (a noite chegou). */
+        passagens,
+        aquecimentos: aquecimentosSom,
         abertos: prontos.size,
         agora: ag,
         destino: !!destinoAmbiente,

@@ -25,6 +25,7 @@ import {
   faseDoShow,
   finalSozinho,
   momentoFinalSozinho,
+  noiteDeShow,
   TOQUES_POR_SEGUNDO,
   type Show,
 } from '../jogo/show';
@@ -76,6 +77,8 @@ interface VilaSalva {
   ins?: unknown;
   cx?: unknown;
   poster?: unknown;
+  /** O show desta rodada já tocou até o fim (as caixas acesas são brinquedo livre). */
+  tocou?: unknown;
 }
 
 /** Um jogador, como o módulo o vê. */
@@ -101,6 +104,8 @@ export interface CtxVila {
   plano: PlanoVila;
   salvo: unknown;
   agora(): number;
+  /** A hora do dia (0 a 1): o show só começa de noite (`noiteDeShow`). */
+  hora(): number;
   jogadores(): JogadorVila[];
   jogador(id: string): JogadorVila | undefined;
   adicionar(tipo: TipoSer, x: number, y: number, z: number): Criatura;
@@ -119,7 +124,7 @@ export type EventoVila =
   | { e: 'vilaAcorde'; quando: number; acorde: number; quem: string }
   | { e: 'vilaFinal'; quando: number; quem: string }
   | { e: 'vilaEstojo'; i: number; quem: string }
-  | { e: 'vilaCaixa'; i: number; acesa: boolean; quem: string }
+  | { e: 'vilaCaixa'; i: number; acesa: boolean; quem: string; dia?: true }
   | { e: 'vilaLhama'; criatura: number; quem: string }
   | { e: 'vilaPresente'; quem: string };
 
@@ -306,27 +311,40 @@ export function criarVila(ctx: CtxVila) {
       tocarPalco(j);
       return;
     }
-    // sem show: acende (e, com as três acesas da f3, o show começa); depois do show, cada
-    // toque liga e desliga a camada dela (brinquedo livre, sem moedinha)
+    const noite = noiteDeShow(ctx.hora());
+    if (noite && rodadaNova) {
+      // de noite, antes do show desta rodada: a caixa acende (e a acesa fica acesa: nada de
+      // apagar sem querer); o toque conta para a f3, e com as três acesas o show começa
+      caixas[i] = true;
+      ctx.espalhar({ e: 'vilaCaixa', i, acesa: true, quem: j.id });
+      if (j.aberta('f3') && !acendeu.has(`${j.id}:${i}`)) {
+        acendeu.add(`${j.id}:${i}`);
+        const minhas = [0, 1, 2].filter((k) => acendeu.has(`${j.id}:${k}`)).length;
+        // as duas primeiras bolinhas agora; a terceira com o acorde final (a festa vem depois)
+        if (minhas <= 2) ctx.evento(j.id, 'show:caixa');
+      }
+      if (caixas.every(Boolean) && !show) {
+        show = { inicio: ctx.agora(), final: null };
+        rodadaNova = false;
+      }
+      ctx.sujar();
+      return;
+    }
+    // de dia (a passagem de som) e depois do show: cada toque liga e desliga a camada dela
+    // (brinquedo livre, sem moedinha, sem show: o show é só de noite, decisão do dono)
     const acesa = !caixas[i];
     caixas[i] = acesa;
-    ctx.espalhar({ e: 'vilaCaixa', i, acesa, quem: j.id });
-    // apagou as três: a próxima vez que acenderem, o show começa de novo
+    ctx.espalhar({ e: 'vilaCaixa', i, acesa, quem: j.id, ...(noite ? {} : { dia: true as const }) });
+    // apagou as três: a próxima vez que acenderem (de noite), o show começa de novo
     if (caixas.every((x) => !x)) rodadaNova = true;
-    if (acesa && j.aberta('f3') && !acendeu.has(`${j.id}:${i}`)) {
-      acendeu.add(`${j.id}:${i}`);
-      const minhas = [0, 1, 2].filter((k) => acendeu.has(`${j.id}:${k}`)).length;
-      // as duas primeiras bolinhas agora; a terceira com o acorde final (a festa vem depois)
-      if (minhas <= 2) ctx.evento(j.id, 'show:caixa');
-    }
-    if (caixas.every(Boolean) && !show && rodadaNova) {
-      show = { inicio: ctx.agora(), final: null };
-      rodadaNova = false;
-    }
     ctx.sujar();
   }
-  /** O show só começa uma vez a cada vez que as caixas se apagam (escolher a f3 de novo). */
-  let rodadaNova = !caixas.every(Boolean);
+  /**
+   * O show desta rodada ainda não tocou (ele começa com as três acesas, de noite). Volta a valer
+   * quando as caixas se apagam ou a f3 é escolhida de novo. Um mundo salvo no meio do show (ou de
+   * antes desta regra) volta com a rodada aberta: ninguém fica preso sem show.
+   */
+  let rodadaNova = salvo.tocou !== true || !caixas.every(Boolean);
 
   function tocarPalco(j: JogadorVila): void {
     if (!show || !pertoDoPalco(j)) return;
@@ -382,7 +400,7 @@ export function criarVila(ctx: CtxVila) {
         }
       naGrade.clear();
       ctx.sujar();
-    } else if (missao === 'f3' && caixas.every(Boolean) && !show) {
+    } else if (missao === 'f3' && !show) {
       caixas.fill(false);
       for (const k of [...acendeu]) acendeu.delete(k);
       rodadaNova = true;
@@ -409,7 +427,12 @@ export function criarVila(ctx: CtxVila) {
     falou,
     preparar,
     vista,
-    salvar: () => ({ ins: [...ins], cx: [...caixas], poster: [...poster] }),
+    salvar: () => ({
+      ins: [...ins],
+      cx: [...caixas],
+      poster: [...poster],
+      ...(!rodadaNova && !show ? { tocou: true } : {}),
+    }),
     /** Testes: as lhamas da vila e as que estão na grade. */
     lhamas: () => ({ todas: [...lhamas], naGrade: [...naGrade] }),
   };

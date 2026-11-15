@@ -17,7 +17,7 @@ import type { AlmaUi } from './index';
 import { missaoFixada } from './hud';
 import { figura } from './figuras';
 import { tocarSomInterface } from '../../audio/somInterface';
-import { faseDoShow } from '../../jogo/show';
+import { faseDoShow, noiteDeShow } from '../../jogo/show';
 import { CSS_CANTO } from './canto';
 
 declare global {
@@ -247,10 +247,12 @@ export function ligarVilaNeon(
     estava = perto;
     const v = e.vilaEstado?.();
     let escolha: Tela | null = null;
+    // (de dia a f3 espera a noite: a mãozinha não chama para as caixas)
     if (
       missao() === 'f3' &&
       v &&
       !v.show &&
+      noiteDeShow(e.hora ?? 0.5) &&
       agora - chegouEm > MAO_CHEGA &&
       agora - tocouEm > MAO_VOLTA
     ) {

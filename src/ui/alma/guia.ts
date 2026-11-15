@@ -111,6 +111,8 @@ export function ligarGuiaMissao(e: EstadoDepuracao, ui: AlmaUi): GuiaMissao | nu
       return false;
     },
     pesY: () => e.jogadorPes?.()[1] ?? 0,
+    // spec 026: a f3 da Vila Neon espera a noite (o show é só de noite)
+    hora: () => e.hora ?? 0.5,
   };
   const guia = criarGuiaMissao({
     scene,
@@ -194,8 +196,11 @@ export function ligarGuiaMissao(e: EstadoDepuracao, ui: AlmaUi): GuiaMissao | nu
   });
   ui.aoTocarSelo(() => {
     guia.chamar();
-    pedirSomGuia('trilha');
+    // esperando a noite (a lua): nada de trilha para chamar
+    if (!guia.api.esperando()) pedirSomGuia('trilha');
   });
+  // spec 026: a noite chegou com a f3 escolhida: a trilha acende com o aviso macio
+  guia.aoFimDaEspera(() => pedirSomGuia('trilha'));
   // o selinho mostra o mesmo desenho da placa (o lugar de agora)
   guia.aoTrocarFigura((fig) => ui.hud.figuraDoSelo(fig));
   sincronizar();

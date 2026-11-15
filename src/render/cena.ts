@@ -106,6 +106,7 @@ import {
 } from '../jogo/contato';
 import { celulaTomadaPelaVila, indiceDoMundo } from '../world/vilaSolidos';
 import { criarBrinquedosVila } from './vila/brinquedos';
+import { noiteDeShow } from '../jogo/show';
 import { criarShowVila } from './vila/show';
 import type { PlanoVila } from '../world/vilaNeon';
 import { LARGURA_CIDADE, PROFUNDIDADE_CIDADE } from '../world/cidade';
@@ -4153,14 +4154,22 @@ export function criarCena(
     atualizarFantasmas(tempo);
     renderVeiculos?.quadro(Math.min(dtBruto, 0.1), tempo);
     renderVila?.quadro(tempo, controle.jogador.x, controle.jogador.z, noiteVila);
-    showVila?.quadro(tempo, cliente.vila.estado, cliente.vila.tempo(tempo), noiteVila);
+    // spec 026: o show é só de noite (a noite do show acende o palco)
+    const noiteShow = noiteDeShow(hora);
+    showVila?.quadro(tempo, cliente.vila.estado, cliente.vila.tempo(tempo), noiteVila, noiteShow);
     if (brinquedosVila) {
       quadroPistaVila();
       brinquedosVila.quadro(tempo);
     }
     if (somVila) {
       if (estado.ready) somVila.carregar();
-      somVila.quadro(cliente.vila.estado, cliente.vila.tempo(tempo), controle.jogador, noiteVila);
+      somVila.quadro(
+        cliente.vila.estado,
+        cliente.vila.tempo(tempo),
+        controle.jogador,
+        noiteVila,
+        noiteShow,
+      );
     }
     quadroSomVeiculos();
     balanco.atualizar(tempo);

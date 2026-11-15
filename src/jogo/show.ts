@@ -13,6 +13,8 @@
  *   camada dela), sem moedinha.
  */
 
+import { noiteNaHora, normalizarHora } from './tempo';
+
 export const BPM = 120;
 /** Um compasso de 4 tempos (s). */
 export const COMPASSO = (60 / BPM) * 4;
@@ -96,3 +98,36 @@ export type CamadaCaixa = (typeof CAMADAS_CAIXAS)[number];
 
 /** Toques por segundo que o núcleo aceita de um jogador no palco (o resto é ignorado). */
 export const TOQUES_POR_SEGUNDO = 6;
+
+// ------------------------------------------------------------------ o show é de noite
+/**
+ * O show só começa de noite (decisão do dono, 15 nov 2026: "o show acontece só na noite do
+ * jogo", em vez de o show trazer a noite). A janela abre um tico antes de escurecer de vez (o
+ * entardecer roxo já vale) e fecha um tico antes de clarear, para o show que começa no fim da
+ * noite ainda acabar no escuro. O show que já começou nunca é cortado: termina mesmo que o dia
+ * chegue no meio. De dia a banda faz a passagem de som e as caixas são brinquedo livre.
+ *
+ * Conta em cima de `noiteNaHora` adiantada de `ANTECIPA_SHOW` (fração do dia): com o dia de
+ * 20 min, abre perto de 0,734 (uns 30 s antes da noite começar a cair) e fecha perto de 0,216.
+ */
+export const ANTECIPA_SHOW = 0.025;
+/** O quanto de noite (adiantada) que já vale como "noite de show". */
+export const NOITE_DO_SHOW = 0.15;
+
+/** Esta hora (0 a 1) é noite de show? */
+export function noiteDeShow(hora: number): boolean {
+  return noiteNaHora(normalizarHora(hora + ANTECIPA_SHOW)) > NOITE_DO_SHOW;
+}
+
+/**
+ * A missão espera a noite (a f3 da Vila Neon, de dia, sem show tocando): o quadro e o guia
+ * mostram a lua e a trilha não chama; quando a noite chega, a trilha acende sozinha.
+ */
+export function missaoEsperaNoite(
+  mundo: string | null | undefined,
+  id: string,
+  hora: number,
+  showTocando = false,
+): boolean {
+  return mundo === 'vila-neon' && id === 'f3' && !showTocando && !noiteDeShow(hora);
+}
