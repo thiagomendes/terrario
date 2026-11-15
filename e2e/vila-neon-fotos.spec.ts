@@ -906,11 +906,7 @@ test('vídeo do passeio e do show', async ({ browser }) => {
   await comecarGravacao(page, 30);
   await voo(page, pontos, 24);
   // o show de noite: as três caixas acendem e a banda toca
-  await page.evaluate(() => window.__brumaluz!.voar?.(true));
-  for (let i = 0; i < 3; i++) {
-    await page.evaluate((i) => window.__brumaluz!.vilaComando!({ a: 'caixa', i }), i);
-    await page.waitForTimeout(500);
-  }
+  await caixas(page, true);
   await page.evaluate(([x, z, y]) => window.__brumaluz!.teleportar!(x, z, y), [
     pass[0],
     pal.z0 - 6,
@@ -922,8 +918,8 @@ test('vídeo do passeio e do show', async ({ browser }) => {
     h: noite,
   };
   const medio = {
-    p: [pass[0] + 2.4, topo + 1.7, pal.z0 - 4.2] as V3,
-    a: [pass[0], topo + 1.25, pal.z0 + 0.6] as V3,
+    p: [pass[0] + 1.5, topo + 1.45, pass[2] - 3.1] as V3,
+    a: [pass[0], topo + 1.15, pass[2]] as V3,
     h: noite,
   };
   const lado = {
@@ -942,9 +938,15 @@ test('vídeo do passeio e do show', async ({ browser }) => {
   await voo(page, [plateia, medio, medio], 9);
   await voo(page, [medio, lado], 7);
   await voo(page, [lado, plateia], 6);
+  // a criança na plateia (o toque dela é que dispara o acorde final)
+  await page.evaluate(([x, z, y]) => window.__brumaluz!.teleportar!(x, z, y), [
+    pass[0] - 3,
+    p.pontos.plateia.z1 - 2,
+    H + 0.3,
+  ] as const);
   await ate(page, 37.3);
   await page.evaluate(() => window.__brumaluz!.vilaComando!({ a: 'palco' }));
-  await page.waitForTimeout(6500);
+  await page.waitForTimeout(8000);
   await pararGravacao(page, `${PASTA}/passeio.webm`);
   await page.evaluate(() => window.__brumaluz!.pararSom?.());
   const r = await som;

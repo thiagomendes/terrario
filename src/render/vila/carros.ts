@@ -339,9 +339,24 @@ function placa(o: Obra, x: number, y: number, frente: boolean): void {
 
 /** Farol quadrado com aro cromado na face da frente (a lente acende de noite). */
 function farolQuadrado(o: Obra, a: V2, b: V2, u: number, v: number, w: number, h: number): void {
-  naFace(o.c, a, b, retangulo(u - w / 2 - 0.025, v - h / 2 - 0.025, u + w / 2 + 0.025, v + h / 2 + 0.025, 0.02, 1), CROMO, 0.02);
+  naFace(
+    o.c,
+    a,
+    b,
+    retangulo(u - w / 2 - 0.025, v - h / 2 - 0.025, u + w / 2 + 0.025, v + h / 2 + 0.025, 0.02, 1),
+    CROMO,
+    0.02,
+  );
   naFace(o.c, a, b, retangulo(u - w / 2, v - h / 2, u + w / 2, v + h / 2), FAROL_DIA, 0.03);
-  naFace(o.n, a, b, retangulo(u - w / 2, v - h / 2, u + w / 2, v + h / 2), FAROL_NOITE, 0.034, -0.03);
+  naFace(
+    o.n,
+    a,
+    b,
+    retangulo(u - w / 2, v - h / 2, u + w / 2, v + h / 2),
+    FAROL_NOITE,
+    0.034,
+    -0.03,
+  );
 }
 
 /** Farol redondo (oito lados) com aro cromado. */
@@ -383,7 +398,18 @@ function antena(o: Obra, x: number, y: number, z: number, alt = 0.82): void {
   if (longe) return;
   cx(o.c, x - 0.025, x + 0.025, y, y + 0.03, z - 0.025, z + 0.025, CROMO, 0, 0);
   vareta(o.c, [x, y + 0.02, z], [x - alt * 0.22, y + alt, z], 0.016, CROMO);
-  cx(o.c, x - alt * 0.22 - 0.022, x - alt * 0.22 + 0.022, y + alt - 0.01, y + alt + 0.034, z - 0.022, z + 0.022, COR.vermelho, 0, 0);
+  cx(
+    o.c,
+    x - alt * 0.22 - 0.022,
+    x - alt * 0.22 + 0.022,
+    y + alt - 0.01,
+    y + alt + 0.034,
+    z - 0.022,
+    z + 0.022,
+    COR.vermelho,
+    0,
+    0,
+  );
 }
 
 /** Os dadinhos de pelúcia pendurados no retrovisor de dentro. */
@@ -415,8 +441,30 @@ function banco(
   cx(o.c, x - 0.1, x + 0.04, y, y + alt, z0, z1, cor, 0.04, 0.025);
   if (apoio) {
     const m = (z0 + z1) / 2;
-    cx(o.c, x - 0.085, x + 0.025, y + alt + 0.02, y + alt + 0.14, m - 0.12, m + 0.12, cor, 0.03, 0.02);
-    cx(o.c, x - 0.04, x - 0.02, y + alt - 0.01, y + alt + 0.03, m - 0.03, m + 0.03, CROMO_ESC, 0, 0);
+    cx(
+      o.c,
+      x - 0.085,
+      x + 0.025,
+      y + alt + 0.02,
+      y + alt + 0.14,
+      m - 0.12,
+      m + 0.12,
+      cor,
+      0.03,
+      0.02,
+    );
+    cx(
+      o.c,
+      x - 0.04,
+      x - 0.02,
+      y + alt - 0.01,
+      y + alt + 0.03,
+      m - 0.03,
+      m + 0.03,
+      CROMO_ESC,
+      0,
+      0,
+    );
   }
 }
 
@@ -428,7 +476,14 @@ function volante(o: Obra, x: number, y: number, z: number, r = 0.15): void {
   const vd = solido({ perfil: aro, z0: -0.02, z1: 0.02, bisel: 0.008, segBisel: 1, cor: PRETO });
   // o aro no plano (z, y) do carro, virado para o banco e um pouco deitado
   o.c.add(noPlano(vd, [x, y, z], [0, 0, 1], [0.34, 0.94, 0], [-0.94, 0.34, 0]));
-  const miolo = solido({ perfil: poligono(8, r * 0.36, 0, 0), z0: -0.03, z1: 0.03, bisel: 0, segBisel: 0, cor: CROMO_ESC });
+  const miolo = solido({
+    perfil: poligono(8, r * 0.36, 0, 0),
+    z0: -0.03,
+    z1: 0.03,
+    bisel: 0,
+    segBisel: 0,
+    cor: CROMO_ESC,
+  });
   o.c.add(noPlano(miolo, [x, y, z], [0, 0, 1], [0.34, 0.94, 0], [-0.94, 0.34, 0]));
 }
 
@@ -522,7 +577,18 @@ function bagageiro(o: Obra, x0: number, x1: number, y: number, hw: number, trave
   for (const s of [-1, 1]) {
     cx(o.c, x0, x1, y + 0.07, y + 0.105, s * hw - 0.018, s * hw + 0.018, CROMO, 0, 0);
     for (const x of [x0 + 0.06, (x0 + x1) / 2, x1 - 0.06])
-      cx(o.c, x - 0.02, x + 0.02, y - 0.01, y + 0.08, s * hw - 0.02, s * hw + 0.02, CROMO_ESC, 0, 0);
+      cx(
+        o.c,
+        x - 0.02,
+        x + 0.02,
+        y - 0.01,
+        y + 0.08,
+        s * hw - 0.02,
+        s * hw + 0.02,
+        CROMO_ESC,
+        0,
+        0,
+      );
   }
   for (let i = 0; i < travessas; i++) {
     const x = x0 + 0.04 + ((x1 - x0 - 0.08) * i) / (travessas - 1);
@@ -547,11 +613,30 @@ interface Pintura {
 
 const PINTURAS_HATCH: Pintura[] = [
   // bege com frisos marrons, bancos caramelo
-  { cor: '#dcc79c', friso: ['#7a4a2a', '#b5682e'], banco: '#b9783e', forro: '#6e4a30', dado: '#f4f1ea' },
+  {
+    cor: '#dcc79c',
+    friso: ['#7a4a2a', '#b5682e'],
+    banco: '#b9783e',
+    forro: '#6e4a30',
+    dado: '#f4f1ea',
+  },
   // vinho com frisos dourados e a persiana (o esportivo)
-  { cor: '#8e2433', friso: ['#e8c040', '#f4ecdc'], banco: '#3a3540', forro: '#2c2a32', dado: '#f4f1ea', esporte: true },
+  {
+    cor: '#8e2433',
+    friso: ['#e8c040', '#f4ecdc'],
+    banco: '#3a3540',
+    forro: '#2c2a32',
+    dado: '#f4f1ea',
+    esporte: true,
+  },
   // branco com a faixa azul e vermelha
-  { cor: '#f2efe6', friso: ['#2f6fd0', '#d8342c'], banco: '#5f7fa8', forro: '#3c4658', dado: '#e8302a' },
+  {
+    cor: '#f2efe6',
+    friso: ['#2f6fd0', '#d8342c'],
+    banco: '#5f7fa8',
+    forro: '#3c4658',
+    dado: '#e8302a',
+  },
 ];
 
 function hatch(o: Obra, p: Pintura): void {
@@ -592,12 +677,18 @@ function hatch(o: Obra, p: Pintura): void {
   const Ab: V2 = [0.14, yt];
   const Cb: V2 = [-1.04, yt];
   const C: V2 = [-1.66, yb + 0.01];
-  const naLinha = (a: V2, b: V2, y: number): number => a[0] + ((b[0] - a[0]) * (y - a[1])) / (b[1] - a[1]);
+  const naLinha = (a: V2, b: V2, y: number): number =>
+    a[0] + ((b[0] - a[0]) * (y - a[1])) / (b[1] - a[1]);
   const yf = yt - 0.075;
   // o teto
   vol(
     o.c,
-    [k(naLinha(A, Ab, yf), yf), k(Ab[0], yt, 0.06, 2), k(Cb[0], yt, 0.07, 2), k(naLinha(C, Cb, yf), yf)],
+    [
+      k(naLinha(A, Ab, yf), yf),
+      k(Ab[0], yt, 0.06, 2),
+      k(Cb[0], yt, 0.07, 2),
+      k(naLinha(C, Cb, yf), yf),
+    ],
     zc,
     p.teto ?? p.cor,
     0.04,
@@ -605,17 +696,68 @@ function hatch(o: Obra, p: Pintura): void {
   );
   // as colunas: a do para-brisa, a do meio e a de trás (larga, de hatch)
   const colA = 0.085;
-  coluna(o, [k(A[0], yb), k(naLinha(A, Ab, yf), yf), k(naLinha(A, Ab, yf) - colA, yf), k(A[0] - colA, yb)], zc, p.cor);
+  coluna(
+    o,
+    [k(A[0], yb), k(naLinha(A, Ab, yf), yf), k(naLinha(A, Ab, yf) - colA, yf), k(A[0] - colA, yb)],
+    zc,
+    p.cor,
+  );
   coluna(o, [k(-0.26, yb), k(-0.26, yf), k(-0.35, yf), k(-0.35, yb)], zc, PRETO);
   const colC = 0.2;
-  coluna(o, [k(C[0], C[1]), k(C[0] + colC, C[1]), k(naLinha(C, Cb, yf) + colC, yf), k(naLinha(C, Cb, yf), yf)], zc, p.cor);
+  coluna(
+    o,
+    [
+      k(C[0], C[1]),
+      k(C[0] + colC, C[1]),
+      k(naLinha(C, Cb, yf) + colC, yf),
+      k(naLinha(C, Cb, yf), yf),
+    ],
+    zc,
+    p.cor,
+  );
   // a travessa de baixo do vidro de trás e a do para-brisa (a moldura)
   const jy0 = yb + 0.03;
-  vidroLado(o, [k(A[0] - colA, jy0), k(naLinha(A, Ab, yf) - colA, yf), k(-0.26, yf), k(-0.26, jy0)], zc);
-  vidroLado(o, [k(-0.35, jy0), k(-0.35, yf), k(naLinha(C, Cb, yf) + colC, yf), k(C[0] + colC, jy0)], zc);
+  vidroLado(
+    o,
+    [k(A[0] - colA, jy0), k(naLinha(A, Ab, yf) - colA, yf), k(-0.26, yf), k(-0.26, jy0)],
+    zc,
+  );
+  vidroLado(
+    o,
+    [k(-0.35, jy0), k(-0.35, yf), k(naLinha(C, Cb, yf) + colC, yf), k(C[0] + colC, jy0)],
+    zc,
+  );
   // a moldura fina preta dos vidros (o friso de borracha) e a calha cromada do teto
-  lateral(o.c, [k(A[0] - 0.02, yb - 0.005), k(C[0] + 0.1, yb + 0.005), k(C[0] + 0.1, yb + 0.035), k(A[0] - 0.02, yb + 0.03)], zc, PRETO, 0.012, [-1, 1], 0.01, 0);
-  lateral(o.c, [k(naLinha(A, Ab, yf) - 0.02, yf - 0.012), k(naLinha(C, Cb, yf) + 0.05, yf - 0.012), k(naLinha(C, Cb, yf) + 0.05, yf + 0.012), k(naLinha(A, Ab, yf) - 0.02, yf + 0.012)], zc, CROMO, 0.014, [-1, 1], 0.01, 0);
+  lateral(
+    o.c,
+    [
+      k(A[0] - 0.02, yb - 0.005),
+      k(C[0] + 0.1, yb + 0.005),
+      k(C[0] + 0.1, yb + 0.035),
+      k(A[0] - 0.02, yb + 0.03),
+    ],
+    zc,
+    PRETO,
+    0.012,
+    [-1, 1],
+    0.01,
+    0,
+  );
+  lateral(
+    o.c,
+    [
+      k(naLinha(A, Ab, yf) - 0.02, yf - 0.012),
+      k(naLinha(C, Cb, yf) + 0.05, yf - 0.012),
+      k(naLinha(C, Cb, yf) + 0.05, yf + 0.012),
+      k(naLinha(A, Ab, yf) - 0.02, yf + 0.012),
+    ],
+    zc,
+    CROMO,
+    0.014,
+    [-1, 1],
+    0.01,
+    0,
+  );
   const lA = Math.hypot(Ab[0] - A[0], Ab[1] - A[1]);
   vidroFace(o, A, Ab, zc(yb) - 0.09, zc(yf) - 0.09, 0.03, lA * 0.14);
   limpadores(o, A, Ab, zc(yb) - 0.12);
@@ -625,7 +767,15 @@ function hatch(o: Obra, p: Pintura): void {
     // a persiana do vidro de trás (a cara do esportivo dos anos 80) e o aerofólio
     for (let i = 0; i < 5; i++) {
       const v = lC * (0.16 + i * 0.16);
-      naFace(o.c, Cb, C, retangulo(-zc(yb) + 0.12, v, zc(yb) - 0.12, v + lC * 0.085), PRETO, 0.045, -0.02);
+      naFace(
+        o.c,
+        Cb,
+        C,
+        retangulo(-zc(yb) + 0.12, v, zc(yb) - 0.12, v + lC * 0.085),
+        PRETO,
+        0.045,
+        -0.02,
+      );
     }
     cx(o.c, -1.76, -1.6, yb + 0.02, yb + 0.07, -W + 0.06, W - 0.06, PRETO, 0.02, 0.012);
   }
@@ -633,7 +783,8 @@ function hatch(o: Obra, p: Pintura): void {
   cx(o.c, -1.58, 0.6, yb - 0.01, yb + 0.012, -0.66, 0.66, p.forro, 0, 0);
   cx(o.c, 0.36, 0.62, yb, yb + 0.13, -0.64, 0.64, p.forro, 0.03, 0.02);
   volante(o, 0.24, yb + 0.2, 0.34, 0.13);
-  for (const s of [-1, 1]) banco(o, -0.2, yb - 0.02, s > 0 ? 0.1 : -0.58, s > 0 ? 0.58 : -0.1, p.banco, 0.34);
+  for (const s of [-1, 1])
+    banco(o, -0.2, yb - 0.02, s > 0 ? 0.1 : -0.58, s > 0 ? 0.58 : -0.1, p.banco, 0.34);
   banco(o, -0.98, yb - 0.02, -0.6, 0.6, p.banco, 0.28, false);
   // a tampa do porta-malas por dentro (o bagagito)
   cx(o.c, -1.4, -1.02, yb, yb + 0.15, -0.62, 0.62, p.forro, 0.02, 0.012);
@@ -650,10 +801,24 @@ function hatch(o: Obra, p: Pintura): void {
   // a frente: a grade preta de frisos, os faróis quadrados com o pisca do lado e o para-choque
   naFace(o.c, frenteA, frenteB, retangulo(-0.36, 0.2, 0.36, 0.42, 0.02, 1), PRETO, 0.012);
   for (let i = 0; i < 3; i++)
-    naFace(o.c, frenteA, frenteB, retangulo(-0.33, 0.235 + i * 0.065, 0.33, 0.255 + i * 0.065), CROMO_ESC, 0.02);
+    naFace(
+      o.c,
+      frenteA,
+      frenteB,
+      retangulo(-0.33, 0.235 + i * 0.065, 0.33, 0.255 + i * 0.065),
+      CROMO_ESC,
+      0.02,
+    );
   for (const s of [-1, 1]) {
     farolQuadrado(o, frenteA, frenteB, s * 0.54, 0.31, 0.26, 0.15);
-    naFace(o.c, frenteA, frenteB, retangulo(s > 0 ? 0.7 : -0.76, 0.24, s > 0 ? 0.76 : -0.7, 0.38), PISCA, 0.024);
+    naFace(
+      o.c,
+      frenteA,
+      frenteB,
+      retangulo(s > 0 ? 0.7 : -0.76, 0.24, s > 0 ? 0.76 : -0.7, 0.38),
+      PISCA,
+      0.024,
+    );
   }
   cx(o.c, 1.7, 1.86, 0.27, 0.45, -W - 0.03, W + 0.03, PRETO, 0.05, 0.03);
   cx(o.c, 1.84, 1.87, 0.37, 0.4, -W + 0.02, W - 0.02, CROMO, 0, 0);
@@ -676,11 +841,30 @@ function hatch(o: Obra, p: Pintura): void {
 
 const PINTURAS_BOLHA: Pintura[] = [
   // azul-céu com o friso branco
-  { cor: '#7ec0ea', friso: ['#f6f4ee', '#2f6fd0'], banco: '#f1e6cf', forro: '#55708e', dado: '#f4f1ea' },
+  {
+    cor: '#7ec0ea',
+    friso: ['#f6f4ee', '#2f6fd0'],
+    banco: '#f1e6cf',
+    forro: '#55708e',
+    dado: '#f4f1ea',
+  },
   // mostarda com o teto creme
-  { cor: '#dba628', friso: ['#f4ecdc', '#7a4a2a'], banco: '#6e4a30', forro: '#4a3424', dado: '#e8302a', teto: '#f4ecdc' },
+  {
+    cor: '#dba628',
+    friso: ['#f4ecdc', '#7a4a2a'],
+    banco: '#6e4a30',
+    forro: '#4a3424',
+    dado: '#e8302a',
+    teto: '#f4ecdc',
+  },
   // creme com o friso vinho
-  { cor: '#f0e6cc', friso: ['#8e2433', '#dba628'], banco: '#9a3442', forro: '#5a2a32', dado: '#2f6fd0' },
+  {
+    cor: '#f0e6cc',
+    friso: ['#8e2433', '#dba628'],
+    banco: '#9a3442',
+    forro: '#5a2a32',
+    dado: '#2f6fd0',
+  },
 ];
 
 function bolha(o: Obra, p: Pintura): void {
@@ -725,20 +909,56 @@ function bolha(o: Obra, p: Pintura): void {
   const cTeto = p.teto ?? p.cor;
   vol(
     o.c,
-    [k(A1[0], A1[1]), k(0.22, 1.53, 0.1, 2), k(-0.22, yt, 0.2, 3), k(-0.72, 1.53, 0.12, 2), k(C1[0], C1[1])],
+    [
+      k(A1[0], A1[1]),
+      k(0.22, 1.53, 0.1, 2),
+      k(-0.22, yt, 0.2, 3),
+      k(-0.72, 1.53, 0.12, 2),
+      k(C1[0], C1[1]),
+    ],
     zc,
     cTeto,
     0.06,
     3,
   );
-  coluna(o, [k(A[0], yb), k(A1[0], A1[1]), k(A1[0] - 0.075, A1[1]), k(A[0] - 0.075, yb)], zc, p.cor, 0.065);
+  coluna(
+    o,
+    [k(A[0], yb), k(A1[0], A1[1]), k(A1[0] - 0.075, A1[1]), k(A[0] - 0.075, yb)],
+    zc,
+    p.cor,
+    0.065,
+  );
   coluna(o, [k(-0.24, yb), k(-0.24, 1.36), k(-0.32, 1.355), k(-0.32, yb)], zc, p.cor, 0.065);
-  coluna(o, [k(C[0], yb), k(C[0] + 0.085, yb), k(C1[0] + 0.085, C1[1]), k(C1[0], C1[1])], zc, p.cor, 0.065);
+  coluna(
+    o,
+    [k(C[0], yb), k(C[0] + 0.085, yb), k(C1[0] + 0.085, C1[1]), k(C1[0], C1[1])],
+    zc,
+    p.cor,
+    0.065,
+  );
   const jy0 = yb + 0.03;
-  vidroLado(o, [k(A[0] - 0.075, jy0), k(A1[0] - 0.075, A1[1] - 0.005), k(-0.24, 1.36), k(-0.24, jy0)], zc);
+  vidroLado(
+    o,
+    [k(A[0] - 0.075, jy0), k(A1[0] - 0.075, A1[1] - 0.005), k(-0.24, 1.36), k(-0.24, jy0)],
+    zc,
+  );
   vidroLado(o, [k(-0.32, jy0), k(-0.32, 1.355), k(C1[0] + 0.085, C1[1]), k(C[0] + 0.085, jy0)], zc);
   // a moldura cromada da linha das janelas
-  lateral(o.c, [k(A[0] - 0.02, yb - 0.005), k(C[0] + 0.04, yb - 0.005), k(C[0] + 0.04, yb + 0.03), k(A[0] - 0.02, yb + 0.03)], zc, CROMO, 0.012, [-1, 1], 0.01, 0);
+  lateral(
+    o.c,
+    [
+      k(A[0] - 0.02, yb - 0.005),
+      k(C[0] + 0.04, yb - 0.005),
+      k(C[0] + 0.04, yb + 0.03),
+      k(A[0] - 0.02, yb + 0.03),
+    ],
+    zc,
+    CROMO,
+    0.012,
+    [-1, 1],
+    0.01,
+    0,
+  );
   vidroFace(o, A, A1, zc(yb) - 0.08, zc(A1[1]) - 0.08, 0.03, 0.01);
   limpadores(o, A, A1, zc(yb) - 0.12);
   vidroFace(o, C1, C, zc(C1[1]) - 0.09, zc(yb) - 0.09, 0.01, 0.04);
@@ -746,7 +966,8 @@ function bolha(o: Obra, p: Pintura): void {
   cx(o.c, -1.08, 0.56, yb - 0.01, yb + 0.012, -0.64, 0.64, p.forro, 0, 0);
   cx(o.c, 0.36, 0.58, yb, yb + 0.12, -0.62, 0.62, p.forro, 0.03, 0.02);
   volante(o, 0.24, yb + 0.2, 0.32, 0.135);
-  for (const s of [-1, 1]) banco(o, -0.16, yb - 0.02, s > 0 ? 0.08 : -0.56, s > 0 ? 0.56 : -0.08, p.banco, 0.32);
+  for (const s of [-1, 1])
+    banco(o, -0.16, yb - 0.02, s > 0 ? 0.08 : -0.56, s > 0 ? 0.56 : -0.08, p.banco, 0.32);
   banco(o, -0.86, yb - 0.02, -0.58, 0.58, p.banco, 0.26, false);
   dadinhos(o, 0.3, 1.4, p.dado);
   // o lado: o friso cromado na cintura, o friso fino de cor, a porta e a maçaneta
@@ -759,11 +980,25 @@ function bolha(o: Obra, p: Pintura): void {
   // a frente: os faróis redondos altos, a gradinha baixa de três frisos e o pisca
   for (const s of [-1, 1]) {
     farolRedondo(o, frenteA, frenteB, s * 0.5, 0.27, 0.115);
-    naFace(o.c, frenteA, frenteB, retangulo(s > 0 ? 0.42 : -0.58, 0.02, s > 0 ? 0.58 : -0.42, 0.075, 0.015, 1), PISCA, 0.022);
+    naFace(
+      o.c,
+      frenteA,
+      frenteB,
+      retangulo(s > 0 ? 0.42 : -0.58, 0.02, s > 0 ? 0.58 : -0.42, 0.075, 0.015, 1),
+      PISCA,
+      0.022,
+    );
   }
   naFace(o.c, frenteA, frenteB, retangulo(-0.26, 0.12, 0.26, 0.34, 0.03, 1), PRETO, 0.012);
   for (let i = 0; i < 3; i++)
-    naFace(o.c, frenteA, frenteB, retangulo(-0.23, 0.15 + i * 0.062, 0.23, 0.172 + i * 0.062), CROMO, 0.02);
+    naFace(
+      o.c,
+      frenteA,
+      frenteB,
+      retangulo(-0.23, 0.15 + i * 0.062, 0.23, 0.172 + i * 0.062),
+      CROMO,
+      0.02,
+    );
   // o para-choque de lâmina cromada com as duas garras
   cx(o.c, 1.46, 1.58, 0.29, 0.39, -W - 0.02, W + 0.02, CROMO, 0.04, 0.025);
   cx(o.c, -1.6, -1.48, 0.29, 0.39, -W - 0.02, W + 0.02, CROMO, 0.04, 0.025);
@@ -802,7 +1037,14 @@ const PINTURAS_VAN: PinturaVan[] = [
   // a da rua: azul-céu embaixo e creme em cima
   { baixo: '#6fb2e2', cima: '#f4ecdc', friso: '#f6f4ee', banco: '#b9783e', forro: '#5a4636' },
   // a da banda: grafite com a faixa vermelha e o raio
-  { baixo: COR.grafite, cima: COR.grafite2, friso: COR.vermelho, banco: '#8e2433', forro: '#24232a', banda: true },
+  {
+    baixo: COR.grafite,
+    cima: COR.grafite2,
+    friso: COR.vermelho,
+    banco: '#8e2433',
+    forro: '#24232a',
+    banda: true,
+  },
   // a outra da rua: vinho embaixo e creme em cima
   { baixo: '#8e2433', cima: '#f4ecdc', friso: '#e8c040', banco: '#d8c8a8', forro: '#4a3424' },
 ];
@@ -872,7 +1114,18 @@ function van(o: Obra, p: PinturaVan): void {
   colunas.forEach(([x0, x1], i) => {
     if (i === 0) {
       // a coluna do para-brisa acompanha a inclinação
-      coluna(o, [k(naFrente(yj0) - 0.1, yj0), k(naFrente(yj0), yj0), k(naFrente(yj1), yj1), k(naFrente(yj1) - 0.1, yj1)], zc, p.cima, 0.08);
+      coluna(
+        o,
+        [
+          k(naFrente(yj0) - 0.1, yj0),
+          k(naFrente(yj0), yj0),
+          k(naFrente(yj1), yj1),
+          k(naFrente(yj1) - 0.1, yj1),
+        ],
+        zc,
+        p.cima,
+        0.08,
+      );
     } else if (p.banda && i === 1) {
       // o baú fechado da van da banda (a lataria inteira)
       vol(o.c, [k(x0, yj0), k(x1, yj0), k(x1, yj1), k(x0, yj1)], zc, p.cima, 0.04, 1);
@@ -890,7 +1143,16 @@ function van(o: Obra, p: PinturaVan): void {
     const topo = i === 0 ? naFrente(yj1) - 0.1 : x1;
     vidroLado(o, [k(x0, yj0), k(x1, yj0), k(topo, yj1), k(x0, yj1)], zc);
     // a moldura de borracha embaixo de cada janela
-    lateral(o.c, retangulo(x0 - 0.02, yj0 - 0.012, x1 + 0.02, yj0 + 0.014), zc, PRETO, 0.012, [-1, 1], 0.01, 0);
+    lateral(
+      o.c,
+      retangulo(x0 - 0.02, yj0 - 0.012, x1 + 0.02, yj0 + 0.014),
+      zc,
+      PRETO,
+      0.012,
+      [-1, 1],
+      0.01,
+      0,
+    );
   });
   // o para-brisa e o vidro de trás
   const lF = Math.hypot(F1[0] - F0[0], F1[1] - F0[1]);
@@ -928,11 +1190,25 @@ function van(o: Obra, p: PinturaVan): void {
   // a frente: os faróis redondos, o pisca em cima, a gradinha baixa e o para-choque cromado
   for (const s of [-1, 1]) {
     farolRedondo(o, frenteA, frenteB, s * 0.58, 0.42, 0.13);
-    naFace(o.c, frenteA, frenteB, retangulo(s > 0 ? 0.5 : -0.66, 0.6, s > 0 ? 0.66 : -0.5, 0.655, 0.015, 1), PISCA, 0.022);
+    naFace(
+      o.c,
+      frenteA,
+      frenteB,
+      retangulo(s > 0 ? 0.5 : -0.66, 0.6, s > 0 ? 0.66 : -0.5, 0.655, 0.015, 1),
+      PISCA,
+      0.022,
+    );
   }
   naFace(o.c, frenteA, frenteB, retangulo(-0.3, 0.3, 0.3, 0.52, 0.03, 1), PRETO, 0.012);
   for (let i = 0; i < 3; i++)
-    naFace(o.c, frenteA, frenteB, retangulo(-0.27, 0.33 + i * 0.062, 0.27, 0.352 + i * 0.062), CROMO, 0.02);
+    naFace(
+      o.c,
+      frenteA,
+      frenteB,
+      retangulo(-0.27, 0.33 + i * 0.062, 0.27, 0.352 + i * 0.062),
+      CROMO,
+      0.02,
+    );
   cx(o.c, 2.06, 2.2, 0.26, 0.4, -W - 0.03, W + 0.03, CROMO, 0.05, 0.03);
   cx(o.c, -2.18, -2.04, 0.26, 0.4, -W - 0.03, W + 0.03, CROMO, 0.05, 0.03);
   placa(o, 2.2, 0.33, true);
@@ -959,7 +1235,8 @@ function van(o: Obra, p: PinturaVan): void {
     mala(o, -1.55, -0.6, yr, 0.3, -0.5, 0.2, '#9a5a32', '#5a3418');
     mala(o, -0.45, 0.4, yr, 0.2, -0.1, 0.5, '#c8a45a', '#7a4a2a');
     cx(o.c, -1.5, -0.7, yr, yr + 0.24, 0.26, 0.5, '#2f8a4a', 0.1, 0.04);
-    for (const x of [-1.34, -0.9]) cx(o.c, x - 0.03, x + 0.03, yr - 0.004, yr + 0.25, 0.25, 0.51, '#f4ecdc', 0, 0);
+    for (const x of [-1.34, -0.9])
+      cx(o.c, x - 0.03, x + 0.03, yr - 0.004, yr + 0.25, 0.25, 0.51, '#f4ecdc', 0, 0);
   }
 }
 
@@ -1014,15 +1291,80 @@ function picape(o: Obra, p: PinturaPicape): void {
   const Ab: V2 = [0.22, yt];
   const Cb: V2 = [-0.46, yt];
   const C: V2 = [-0.54, yb];
-  const naLinha = (a: V2, b: V2, y: number): number => a[0] + ((b[0] - a[0]) * (y - a[1])) / (b[1] - a[1]);
+  const naLinha = (a: V2, b: V2, y: number): number =>
+    a[0] + ((b[0] - a[0]) * (y - a[1])) / (b[1] - a[1]);
   const yf = yt - 0.08;
-  vol(o.c, [k(naLinha(A, Ab, yf), yf), k(Ab[0], yt, 0.06, 2), k(Cb[0], yt, 0.06, 2), k(naLinha(C, Cb, yf), yf)], zc, p.cor, 0.04, 2);
-  coluna(o, [k(A[0], yb), k(naLinha(A, Ab, yf), yf), k(naLinha(A, Ab, yf) - 0.085, yf), k(A[0] - 0.085, yb)], zc, p.cor);
-  coluna(o, [k(C[0], yb), k(C[0] + 0.12, yb), k(naLinha(C, Cb, yf) + 0.12, yf), k(naLinha(C, Cb, yf), yf)], zc, p.cor);
+  vol(
+    o.c,
+    [
+      k(naLinha(A, Ab, yf), yf),
+      k(Ab[0], yt, 0.06, 2),
+      k(Cb[0], yt, 0.06, 2),
+      k(naLinha(C, Cb, yf), yf),
+    ],
+    zc,
+    p.cor,
+    0.04,
+    2,
+  );
+  coluna(
+    o,
+    [
+      k(A[0], yb),
+      k(naLinha(A, Ab, yf), yf),
+      k(naLinha(A, Ab, yf) - 0.085, yf),
+      k(A[0] - 0.085, yb),
+    ],
+    zc,
+    p.cor,
+  );
+  coluna(
+    o,
+    [k(C[0], yb), k(C[0] + 0.12, yb), k(naLinha(C, Cb, yf) + 0.12, yf), k(naLinha(C, Cb, yf), yf)],
+    zc,
+    p.cor,
+  );
   const jy0 = yb + 0.03;
-  vidroLado(o, [k(A[0] - 0.085, jy0), k(naLinha(A, Ab, yf) - 0.085, yf), k(naLinha(C, Cb, yf) + 0.12, yf), k(C[0] + 0.12, jy0)], zc);
-  lateral(o.c, [k(A[0] - 0.02, yb - 0.005), k(C[0] + 0.02, yb - 0.005), k(C[0] + 0.02, yb + 0.03), k(A[0] - 0.02, yb + 0.03)], zc, PRETO, 0.012, [-1, 1], 0.01, 0);
-  lateral(o.c, [k(naLinha(A, Ab, yf) - 0.02, yf - 0.012), k(naLinha(C, Cb, yf) + 0.02, yf - 0.012), k(naLinha(C, Cb, yf) + 0.02, yf + 0.012), k(naLinha(A, Ab, yf) - 0.02, yf + 0.012)], zc, CROMO, 0.014, [-1, 1], 0.01, 0);
+  vidroLado(
+    o,
+    [
+      k(A[0] - 0.085, jy0),
+      k(naLinha(A, Ab, yf) - 0.085, yf),
+      k(naLinha(C, Cb, yf) + 0.12, yf),
+      k(C[0] + 0.12, jy0),
+    ],
+    zc,
+  );
+  lateral(
+    o.c,
+    [
+      k(A[0] - 0.02, yb - 0.005),
+      k(C[0] + 0.02, yb - 0.005),
+      k(C[0] + 0.02, yb + 0.03),
+      k(A[0] - 0.02, yb + 0.03),
+    ],
+    zc,
+    PRETO,
+    0.012,
+    [-1, 1],
+    0.01,
+    0,
+  );
+  lateral(
+    o.c,
+    [
+      k(naLinha(A, Ab, yf) - 0.02, yf - 0.012),
+      k(naLinha(C, Cb, yf) + 0.02, yf - 0.012),
+      k(naLinha(C, Cb, yf) + 0.02, yf + 0.012),
+      k(naLinha(A, Ab, yf) - 0.02, yf + 0.012),
+    ],
+    zc,
+    CROMO,
+    0.014,
+    [-1, 1],
+    0.01,
+    0,
+  );
   const lA = Math.hypot(Ab[0] - A[0], Ab[1] - A[1]);
   vidroFace(o, A, Ab, zc(yb) - 0.09, zc(yf) - 0.09, 0.03, lA * 0.15);
   limpadores(o, A, Ab, zc(yb) - 0.12);
@@ -1038,7 +1380,19 @@ function picape(o: Obra, p: PinturaPicape): void {
   const cx0 = -1.8;
   const cx1 = -0.62;
   cx(o.c, cx0, cx1, yb - 0.005, yb + 0.01, -W + 0.09, W - 0.09, '#3a3b44', 0, 0);
-  for (const s of [-1, 1]) cx(o.c, cx0 - 0.03, cx1 + 0.03, yb - 0.01, yb + 0.1, s > 0 ? W - 0.1 : -W + 0.01, s > 0 ? W - 0.01 : -W + 0.1, p.cor, 0.02, 0.012);
+  for (const s of [-1, 1])
+    cx(
+      o.c,
+      cx0 - 0.03,
+      cx1 + 0.03,
+      yb - 0.01,
+      yb + 0.1,
+      s > 0 ? W - 0.1 : -W + 0.01,
+      s > 0 ? W - 0.01 : -W + 0.1,
+      p.cor,
+      0.02,
+      0.012,
+    );
   cx(o.c, cx1 - 0.03, cx1 + 0.06, yb - 0.01, yb + 0.1, -W + 0.02, W - 0.02, p.cor, 0.02, 0.012);
   cx(o.c, cx0 - 0.05, cx0 + 0.04, yb - 0.01, yb + 0.1, -W + 0.02, W - 0.02, p.cor, 0.02, 0.012);
   for (let i = 0; i < 5; i++) {
@@ -1047,7 +1401,8 @@ function picape(o: Obra, p: PinturaPicape): void {
   }
   // o caixote de feira com as frutas
   cx(o.c, -1.66, -1.16, yb + 0.01, yb + 0.3, -0.56, -0.02, '#b8823e', 0.02, 0.012);
-  for (const y of [0.08, 0.2]) cx(o.c, -1.67, -1.15, yb + y, yb + y + 0.035, -0.57, -0.01, '#8a5a30', 0, 0);
+  for (const y of [0.08, 0.2])
+    cx(o.c, -1.67, -1.15, yb + y, yb + y + 0.035, -0.57, -0.01, '#8a5a30', 0, 0);
   for (const [x, z, c] of [
     [-1.56, -0.44, '#e8302a'],
     [-1.4, -0.42, '#f0962a'],
@@ -1069,15 +1424,30 @@ function picape(o: Obra, p: PinturaPicape): void {
   for (const x of [0.6, -0.56]) vinco(o, x, peDaPorta(x, CH + 0.07, arcos), cint, W);
   lateral(o.c, retangulo(-0.46, 0.84, -0.3, 0.88, 0.012, 1), W, CROMO, 0.028);
   lateral(o.c, retangulo(-0.86, 0.78, -0.74, 0.9, 0.02, 1), W, p.cor, 0.014, [1]);
-  for (const x of [-1.6, -0.9]) lateral(o.c, retangulo(x - 0.03, yb - 0.1, x + 0.03, yb - 0.06), W, CROMO, 0.03);
+  for (const x of [-1.6, -0.9])
+    lateral(o.c, retangulo(x - 0.03, yb - 0.1, x + 0.03, yb - 0.06), W, CROMO, 0.03);
   retrovisores(o, 0.5, yb + 0.02, W - 0.05, CROMO);
   // a frente: a grade cromada de frisos, os faróis quadrados e o para-choque de cromo
   naFace(o.c, frenteA, frenteB, retangulo(-0.4, 0.24, 0.4, 0.5, 0.02, 1), PRETO, 0.012);
   for (let i = 0; i < 4; i++)
-    naFace(o.c, frenteA, frenteB, retangulo(-0.37, 0.265 + i * 0.058, 0.37, 0.287 + i * 0.058), CROMO, 0.02);
+    naFace(
+      o.c,
+      frenteA,
+      frenteB,
+      retangulo(-0.37, 0.265 + i * 0.058, 0.37, 0.287 + i * 0.058),
+      CROMO,
+      0.02,
+    );
   for (const s of [-1, 1]) {
     farolQuadrado(o, frenteA, frenteB, s * 0.57, 0.39, 0.22, 0.2);
-    naFace(o.c, frenteA, frenteB, retangulo(s > 0 ? 0.46 : -0.68, 0.19, s > 0 ? 0.68 : -0.46, 0.235), PISCA, 0.022);
+    naFace(
+      o.c,
+      frenteA,
+      frenteB,
+      retangulo(s > 0 ? 0.46 : -0.68, 0.19, s > 0 ? 0.68 : -0.46, 0.235),
+      PISCA,
+      0.022,
+    );
   }
   cx(o.c, 1.78, 1.94, 0.27, 0.42, -W - 0.03, W + 0.03, CROMO, 0.04, 0.025);
   placa(o, 1.94, 0.345, true);

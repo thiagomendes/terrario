@@ -20,6 +20,9 @@ export const TAMANHOS = {
   },
 } as const;
 export type Tamanho = keyof typeof TAMANHOS;
+declare const process: { env: Record<string, string | undefined> };
+/** Tamanho do vídeo da página (vezes a tela): menor pesa menos na gravação. */
+const ESCALA_VIDEO = Number(process.env.VIDEO_ESCALA ?? 2);
 
 export async function criarMundo(
   page: Page,
@@ -98,7 +101,10 @@ export async function abrirMundo(
           ...t,
           recordVideo: {
             dir: op.video,
-            size: { width: t.viewport.width * 2, height: t.viewport.height * 2 },
+            size: {
+              width: Math.round(t.viewport.width * ESCALA_VIDEO),
+              height: Math.round(t.viewport.height * ESCALA_VIDEO),
+            },
           },
         }
       : t,

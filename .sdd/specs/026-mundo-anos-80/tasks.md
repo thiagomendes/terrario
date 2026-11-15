@@ -72,6 +72,8 @@ Tamanho: **P** (até meio dia), **M** (1 a 2 dias), **G** (3 dias ou mais). Uma 
 | 4. Missões e banca (T13–T15) | feito: f1 a f3 (4 + 5 + 6), banca, guia, desenhos; e2e das três missões deitado e em pé |
 | 5. Fantasias e patins (T16–T17) | feito: Roqueira/Roqueiro do Palco (cabelão liso ligado, sai com um toque), Dançarina/Dançarino do Neon, Patinadora/Patinador (na Vila Neon já calça os patins); patins no boneco; encaixe em todos os modelos, corpos e cabelos |
 | 6. Som e brinquedos (T18–T19) | feito: trilha e show gravados; fliperama (tela que anima), rádio (liga a batida, notinhas), fita (o lápis rebobina), ladrilho que acende sob o pé, rodinhas dos patins |
-| 7. Fechamento (T20–T22) | ver o relatório da parte 1 (medidas, paridade, vídeos) |
+| 7. Fechamento (T20–T22) | feito: tsc limpo; Vitest 1777 de 1778 (o tempo da busca de 150 blocos só passa com a máquina quieta); e2e das três missões deitado e em pé (4 de 4, 15 moedinhas ou mais), alma, guia-missao, missoes-dinos-doce, menu-roda (o roqueiro na roda da Vila Neon) e o campo de visão; paridade 36 de 36; build; vídeos do passeio com o show e de cada missão em pé, com o som do jogo |
+
+Medidas: peças no nascer, no celular, 39 826 triângulos (37 270 depois da rodada 1; os carros têm três versões, de perto, de longe e bem de longe). Sem fumaça no show (decisão do dono).
 
 Carros parados: modelos novos só deste mundo (`src/render/vila/carros.ts`): hatch em cunha, carrinho bolha, van pão de forma (a da banda grafite com o raio) e picape.

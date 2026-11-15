@@ -300,7 +300,13 @@ export function criarRenderVila(
         for (const v of vivos.values())
           for (const m of v.malhas) {
             const mat = m.material as StandardMaterial | null;
-            if (mat && mat !== matCorpo && mat !== matLuz && mat !== matVidro && !mat.disableLighting)
+            if (
+              mat &&
+              mat !== matCorpo &&
+              mat !== matLuz &&
+              mat !== matVidro &&
+              !mat.disableLighting
+            )
               mat.emissiveColor.set(0.34 * luzPecas, 0.34 * luzPecas, 0.34 * luzPecas);
           }
       }

@@ -414,7 +414,8 @@ export function criarShowVila(scene: Scene, plano: PlanoVila, opcoes: OpcoesShow
       [palco.x1 - 4, '#4aa0ff'],
     ] as const) {
       r.luz(4, 0.08, 0.06, ax + 2, topo + 0.02, face - 0.04, cor);
-      for (const x of [ax + 0.03, ax + 3.97]) r.luz(0.06, 2.9, 0.06, x, topo + 0.05, face - 0.04, cor);
+      for (const x of [ax + 0.03, ax + 3.97])
+        r.luz(0.06, 2.9, 0.06, x, topo + 0.05, face - 0.04, cor);
     }
     // as caixas penduradas (2 × 4 de cada lado): a moldura de neon
     for (const [sx, cor] of [
@@ -601,7 +602,11 @@ export function criarShowVila(scene: Scene, plano: PlanoVila, opcoes: OpcoesShow
       const v = rnd(5.5, 8);
       estrelinha(
         [pass[0], topo + 8.5, zFrente - 1],
-        [Math.cos(a) * Math.sin(e) * v, Math.cos(e) * v * 0.8 + 2, Math.sin(a) * Math.sin(e) * v * 0.6],
+        [
+          Math.cos(a) * Math.sin(e) * v,
+          Math.cos(e) * v * 0.8 + 2,
+          Math.sin(a) * Math.sin(e) * v * 0.6,
+        ],
         rnd(1.0, 1.6),
         rnd(0.3, 0.5),
         i % 3 === 0 ? BRANCO : OURO,
@@ -772,7 +777,8 @@ export function criarShowVila(scene: Scene, plano: PlanoVila, opcoes: OpcoesShow
       // o instrumento que acabou de chegar: um punhado de estrelinhas no lugar dele no palco
       ins.forEach((tem, i) => {
         const l = lugarDoInstrumento[i];
-        if (tem && !feito[i] && tinhaVista && pronto && l) punhado(l[0], l[1] + 0.4, l[2], 16, 4, 0.22);
+        if (tem && !feito[i] && tinhaVista && pronto && l)
+          punhado(l[0], l[1] + 0.4, l[2], 16, 4, 0.22);
         feito[i] = tem;
       });
       tinhaVista = !!vista;
@@ -881,7 +887,8 @@ export function criarShowVila(scene: Scene, plano: PlanoVila, opcoes: OpcoesShow
           tmpA[2] = az;
           // para o céu: em leque, para a frente e para cima
           // (fora do acorde final a idade é infinita: o seno daria NaN e apagaria o feixe)
-          tmpB[0] = de[0] + (de[0] - meioX) * 1.1 + (noFinal ? Math.sin(idadeFinal * 2 + i) * 2 : 0);
+          tmpB[0] =
+            de[0] + (de[0] - meioX) * 1.1 + (noFinal ? Math.sin(idadeFinal * 2 + i) * 2 : 0);
           tmpB[1] = de[1] + 13;
           tmpB[2] = de[2] - 22;
           const fim = mistura(tmpA, tmpB, ceu, tmpA);
@@ -1040,7 +1047,6 @@ export function criarShowVila(scene: Scene, plano: PlanoVila, opcoes: OpcoesShow
         if (ver || confete.m.isEnabled()) confete.enviar();
         ligar(confete.m, ver);
       }
-
     },
     evento(e) {
       if (e.e === 'vilaAcorde') acordes.push(e.quando);

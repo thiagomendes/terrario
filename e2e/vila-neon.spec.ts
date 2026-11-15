@@ -94,11 +94,40 @@ async function filmar(page: Page, nome: string) {
   mkdirSync(dir, { recursive: true });
   // o vídeo é o da página (o Playwright grava com a interface); aqui vai o som do jogo de
   // verdade e onde o trecho começa no vídeo
-  const som = page.evaluate(() => window.__brumaluz!.gravarSom?.(900) ?? null).catch(() => null);
+  // (o som do jogo só existe depois do primeiro toque: espera ele nascer e anota quando a
+  // gravação começou de verdade, para casar com o vídeo)
+  const som = page
+    .evaluate(async () => {
+      const e = window.__brumaluz!;
+      const w = window as unknown as { __somInicio?: number };
+      for (let i = 0; i < 1500; i++) {
+        const t = Date.now();
+        const p = e.gravarSom?.(900) ?? Promise.resolve(null);
+        const r = await Promise.race([
+          p,
+          new Promise((ok) => setTimeout(() => ok('gravando'), 250)),
+        ]);
+        if (r === 'gravando') {
+          w.__somInicio = t;
+          return await p;
+        }
+        if (r) return r as Awaited<typeof p>;
+        await new Promise((ok) => setTimeout(ok, 200));
+      }
+      return null;
+    })
+    .catch(() => null);
   const inicio = (Date.now() - (nasceu.get(page) ?? Date.now())) / 1000;
   return async () => {
-    const fim = (Date.now() - (nasceu.get(page) ?? Date.now())) / 1000;
-    writeFileSync(`${dir}/trecho.json`, JSON.stringify({ inicio, fim }));
+    const t0 = nasceu.get(page) ?? Date.now();
+    const fim = (Date.now() - t0) / 1000;
+    const somT = await page.evaluate(
+      () => (window as unknown as { __somInicio?: number }).__somInicio ?? 0,
+    );
+    writeFileSync(
+      `${dir}/trecho.json`,
+      JSON.stringify({ inicio, fim, som: somT ? (somT - t0) / 1000 : inicio }),
+    );
     await page.evaluate(() => window.__brumaluz!.pararSom?.()).catch(() => undefined);
     const r = await som;
     if (!r) return void console.log(`vila: ${nome} sem som`);
