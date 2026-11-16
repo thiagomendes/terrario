@@ -11,6 +11,7 @@ import { EXTRAS_RODA } from './ui/menuRoda';
 import { CATEGORIAS_PREMIUM, ganhoTemAlgo, mundoAlmaDoEstilo, nivelDoXp } from './jogo/alma';
 import type { EventoNucleo } from './nucleo/protocolo';
 import { medirJanela, tamanhoDoCanvas } from './ui/telaCheia';
+import { manterTelaLigada } from './ui/telaLigada';
 import { criarCena } from './render/cena';
 import { criarHotbar } from './player/hotbar';
 import { tocarSomInterface } from './audio/somInterface';
@@ -265,6 +266,8 @@ async function iniciar(app: HTMLElement): Promise<void> {
   // sair da página solta a placa de vídeo antes (no iPhone a página nova pode não ter memória)
   const engine = cena.engine;
   antesDeSair(() => liberarEngine(engine));
+  // dentro do mundo a tela do celular não apaga sozinha (o aparelho não bloqueia no meio)
+  antesDeSair(manterTelaLigada());
   ligarSaida();
   const cenaPronta = cena;
   ligarContextoPerdido(canvas, () => cenaPronta.salvar());
