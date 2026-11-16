@@ -12,7 +12,9 @@ import {
   biomaEm,
   NIVEL_MAR,
   cidadeDoMundo,
+  vilaDoMundo,
 } from '../world/chunk';
+import { zonaSemBichos } from '../world/publicoVila';
 import { Solo, soloDaCidade } from '../world/cidade';
 import { Bloco, obterBloco, luzDoBloco } from '../world/blocks';
 import type { Edicoes } from '../world/edicoes';
@@ -191,6 +193,7 @@ export function criarAcessoMundo(
     cacheCeu.guardar(k, { topo, t: relogio });
     return y > topo;
   }
+  const vila = vilaDoMundo(semente);
   const criaturas: MundoPopulacao = {
     solido,
     agua: (x, y, z) => bloco(x, y, z) === Bloco.AGUA,
@@ -208,6 +211,8 @@ export function criarAcessoMundo(
     },
     nivelMar: NIVEL_MAR,
     povoados: (x, z, raio) => povoadosPerto(x, z, raio, semente),
+    // spec 026: o festival da Vila Neon sem bichos soltos (o show sem passarinho por cima)
+    ...(vila ? { semBichos: zonaSemBichos(vila) } : {}),
     // spec 014 (T08): o chão da Cidade Grande, para os bichos nascerem na calçada e no parque
     chaoDaCidade: (x, z) => {
       const c = cidadeDoMundo(semente);

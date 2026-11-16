@@ -178,11 +178,12 @@ describe('o pacote do show no índice', () => {
     // o acorde final e o aplauso por cima: o pico
     expect(REFORCO_FINAL_DB).toBeGreaterThan(0);
     expect(REFORCO_APLAUSO_DB).toBeGreaterThan(0);
-    // e a natureza (passarinhos, grilos, vento) baixa uns 12 dB no show, e volta inteira
+    // e a natureza (passarinhos, grilos, vento) praticamente some no show, e volta inteira
     expect(ganhoCalarNatureza(0)).toBe(1);
     expect(20 * Math.log10(ganhoCalarNatureza(1))).toBeCloseTo(-CALAR_NATUREZA_DB, 9);
-    expect(CALAR_NATUREZA_DB).toBeGreaterThanOrEqual(10);
-    expect(CALAR_NATUREZA_DB).toBeLessThanOrEqual(15);
+    // (16 nov 2026: o passarinho não pode passar por cima da música: quase mudo)
+    expect(CALAR_NATUREZA_DB).toBeGreaterThanOrEqual(24);
+    expect(CALAR_NATUREZA_DB).toBeLessThanOrEqual(36);
     // uma música por vez: com o show perto, a trilha do bairro some (e volta inteira)
     expect(ganhoCalar(0)).toBe(1);
     expect(20 * Math.log10(ganhoCalar(1))).toBeCloseTo(-CALAR_TRILHA_DB, 9);

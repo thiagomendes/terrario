@@ -251,6 +251,32 @@ export interface Mundo {
    * ou ônibus mais perto; negativo, encostado. Só na Cidade Grande.
    */
   folgaVeiculo?(x: number, y: number, z: number, yaw: number, tipo: TipoSer): number;
+  /**
+   * Spec 026: onde os bichos soltos não entram (o festival da Vila Neon) e por onde saem a pé.
+   * Só na Vila Neon (sem o campo, nada muda).
+   */
+  semBichos?: {
+    dentro(x: number, z: number): boolean;
+    saida(x: number, z: number): [number, number][];
+  };
+}
+
+/**
+ * Spec 026: o bicho é solto (nem morador, nem criado, nem domado, nem bicho que mora num lugar,
+ * nem chamado)? Só o solto fica fora do festival da Vila Neon.
+ */
+export function bichoSolto(c: Criatura): boolean {
+  return (
+    c.tipo !== 'morador' &&
+    c.tipo !== 'peixe' &&
+    !c.criado &&
+    !c.domada &&
+    !c.casa &&
+    !c.cerca &&
+    !c.curral &&
+    !c.chamado &&
+    c.estado !== 'morrendo'
+  );
 }
 
 /**
@@ -529,6 +555,8 @@ function sortearAlvo(c: Criatura, m: Mundo, rng: Gerador, raio: number): void {
     const ax = c.x + (rng() - 0.5) * raio;
     const az = c.z + (rng() - 0.5) * raio;
     if (peixe && !m.agua(Math.floor(ax), Math.floor(c.y + 0.15), Math.floor(az))) continue;
+    // spec 026: o bicho solto não escolhe passear dentro do festival
+    if (m.semBichos?.dentro(ax, az) && bichoSolto(c)) continue;
     c.alvoX = ax;
     c.alvoZ = az;
     return;
@@ -1292,7 +1320,8 @@ export function passoCriatura(
         if ((c.satisfeito ?? 0) > 0) {
           c.satisfeito = Math.max(0, c.satisfeito! - dt);
           c.estado = 'vagar';
-          if (dh < 6) andarPara(c, def, c.x - (dxj / (dh || 1)) * 3, c.z - (dzj / (dh || 1)) * 3, 0.75);
+          if (dh < 6)
+            andarPara(c, def, c.x - (dxj / (dh || 1)) * 3, c.z - (dzj / (dh || 1)) * 3, 0.75);
           else frear(c, 0.6);
           break;
         }

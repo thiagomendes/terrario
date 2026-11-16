@@ -345,3 +345,52 @@ export function caminhoNoFestival(pub: PublicoVila, de: V2, para: V2): V2[] {
   }
   return out;
 }
+
+// ------------------------------------------------------------------ o festival sem bichos
+/**
+ * O festival sem bichos soltos (o dono, 16 nov 2026: "os bichos invadem o show e o passarinho
+ * canta por cima da música"): o campo, a plateia, o palco e os bastidores, dentro do alambrado.
+ * Nenhum bicho solto entra (o portão também fica fechado para eles) e quem já está dentro sai a
+ * pé pelo portão. As lhamas do cercadinho (que moram ali), quem segue a comida na mão de alguém,
+ * os bichos criados e os moradores não contam (`populacao.ts` decide quem é solto).
+ */
+export interface ZonaSemBichos {
+  /** O ponto (mundo) fica no festival? */
+  dentro(x: number, z: number): boolean;
+  /** O caminho a pé de (x, z) até fora do festival, pelo portão (os pontos, o último já fora). */
+  saida(x: number, z: number): V2[];
+}
+
+const zonas = new WeakMap<PlanoVila, ZonaSemBichos>();
+
+export function zonaSemBichos(p: PlanoVila): ZonaSemBichos {
+  let z0 = zonas.get(p);
+  if (z0) return z0;
+  const f = p.zonas.festival;
+  const pub = publicoDaVila(p);
+  const dentro = (x: number, z: number) =>
+    x >= f.x0 - 1 && x < f.x1 + 2 && z >= f.z0 - 1 && z < f.z1 + 2;
+  // o portão: o meio dele por dentro e um ponto na calçada da avenida, fora
+  const portao: V2 = [pub.portao[0], pub.portao[2]];
+  const fora: V2 = [pub.portao[0], f.z0 - 3.5];
+  // atrás da grade (o palco e os bastidores) primeiro vai para o corredor do lado dele
+  const grade = p.oz + 99.5;
+  const oeste: V2 = [p.ox + 30.5, p.oz + 97.5];
+  const leste: V2 = [p.ox + 86.5, p.oz + 97.5];
+  z0 = {
+    dentro,
+    saida(x, z) {
+      const pts: V2[] = [];
+      let de: V2 = [x, z];
+      if (z > grade) {
+        const lado = x - p.ox < 60 ? oeste : leste;
+        pts.push([lado[0], Math.min(z, p.oz + 106)], lado);
+        de = lado;
+      }
+      pts.push(...caminhoNoFestival(pub, de, portao), portao, fora);
+      return pts;
+    },
+  };
+  zonas.set(p, z0);
+  return z0;
+}

@@ -1151,9 +1151,9 @@ export interface Ambiente {
    */
   definirCalar(f: number): void;
   /**
-   * Spec 026 (a mistura do show): baixa a natureza (passarinhos, grilos, vento, chuva) enquanto o
-   * show da Vila Neon toca perto: `f` de 0 (nada) a 1 (`CALAR_NATUREZA_DB`); desce em ~1,5 s e
-   * volta devagar (~3 s) depois do aplauso.
+   * Spec 026 (a mistura do show): cala a natureza (passarinhos, grilos, vento, chuva) enquanto o
+   * show da Vila Neon toca perto: `f` de 0 (nada) a 1 (`CALAR_NATUREZA_DB`, quase mudo); desce em
+   * ~1,5 s e volta devagar (~3 s) depois do aplauso.
    */
   definirCalarNatureza(f: number): void;
 }
@@ -1190,8 +1190,12 @@ export function ganhoCalar(f: number): number {
   return Math.pow(10, (-CALAR_TRILHA_DB * Math.max(0, Math.min(1, f))) / 20);
 }
 
-/** Spec 026: quanto a natureza baixa com o show da Vila Neon tocando perto (dB). */
-export const CALAR_NATUREZA_DB = 12;
+/**
+ * Spec 026: quanto a natureza baixa com o show da Vila Neon tocando perto (dB). Era 12 (15 nov);
+ * o dono ainda ouvia passarinho por cima da música (16 nov): agora ela praticamente some (o show é
+ * o único som perto do palco; volta devagar depois do aplauso).
+ */
+export const CALAR_NATUREZA_DB = 30;
 /** E as rampas (s): desce em ~1,5 s, volta em ~3 s. */
 const TAU_CALAR_NATUREZA_DESCE = 0.5;
 const TAU_CALAR_NATUREZA_VOLTA = 1;

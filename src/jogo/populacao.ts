@@ -4,6 +4,7 @@ import { ALTURA_JOGADOR, colideCorpo, MEIA_LARGURA } from '../player/fisica';
 import { contatoComCorpo, CORPO_DO_SER, FOLGA_PASSAGEM, VEL_DAR_PASSAGEM } from './contato';
 import {
   assentarCriatura,
+  bichoSolto,
   CRIATURAS,
   FOLGA_VEICULO,
   ferir,
@@ -166,6 +167,42 @@ export function criarPopulacao(rng: Gerador, salvo?: unknown, opcoes: OpcoesPopu
     }
 
   const hostis: Criatura[] = [];
+
+  /** Spec 026: o caminho de saída do festival de cada bicho solto que está dentro dele. */
+  const saidas = new Map<number, [number, number][]>();
+  const antes = new Map<number, [number, number]>();
+  /**
+   * Spec 026 (o festival da Vila Neon sem bichos): o bicho solto que acabou de entrar volta para
+   * onde estava (o portão e o alambrado ficam fechados para ele, como uma cerca); o que já estava
+   * dentro (o bicho que seguia a comida e parou ali) sai andando pelo portão, sem pressa. Quem
+   * segue a comida de alguém agora passa (a criança pode levar o coelhinho ao show).
+   */
+  function foraDoFestival(m: MundoPopulacao, c: Criatura, antesX: number, antesZ: number): void {
+    const z = m.semBichos;
+    if (!z) return;
+    const seguindo = c.estado === 'seguir' && COMEM.has(c.tipo);
+    if (!bichoSolto(c) || seguindo || !z.dentro(c.x, c.z)) {
+      saidas.delete(c.id);
+      return;
+    }
+    if (!z.dentro(antesX, antesZ)) {
+      c.x = antesX;
+      c.z = antesZ;
+      c.vx = 0;
+      c.vz = 0;
+      c.tempoEstado = 0;
+      saidas.delete(c.id);
+      return;
+    }
+    let pts = saidas.get(c.id);
+    if (!pts) saidas.set(c.id, (pts = z.saida(c.x, c.z)));
+    while (pts.length > 1 && Math.hypot(pts[0][0] - c.x, pts[0][1] - c.z) < 0.9) pts.shift();
+    c.estado = 'vagar';
+    c.alvoX = pts[0][0];
+    c.alvoZ = pts[0][1];
+    c.tempoEstado = Math.max(c.tempoEstado, 1);
+    c.satisfeito = undefined;
+  }
 
   let tempoPovoado = 0;
   /** De quem é a vez de ganhar uma tentativa de nascer criatura por perto. */
@@ -405,6 +442,8 @@ export function criarPopulacao(rng: Gerador, salvo?: unknown, opcoes: OpcoesPopu
     const r = 18 + rng() * 22;
     const x = Math.floor(j.x + Math.cos(a) * r);
     const z = Math.floor(j.z + Math.sin(a) * r);
+    // spec 026: nenhum bicho nasce dentro do festival da Vila Neon
+    if (m.semBichos?.dentro(x + 0.5, z + 0.5)) return;
     const sy = m.superficie(x, z);
     if (sy === null) return;
     const bioma = m.bioma(x, z);
@@ -453,6 +492,7 @@ export function criarPopulacao(rng: Gerador, salvo?: unknown, opcoes: OpcoesPopu
       // (antes todos ficavam na altura do centro e nasciam dentro de barrancos e árvores)
       const cx = x + 0.5 + (rng() - 0.5) * 3;
       const cz = z + 0.5 + (rng() - 0.5) * 3;
+      if (m.semBichos?.dentro(cx, cz)) continue;
       const syi = m.superficie(Math.floor(cx), Math.floor(cz));
       if (syi === null || m.agua(Math.floor(cx), syi, Math.floor(cz))) continue;
       if (colideCorpo(m.solido, cx, syi + 0.1, cz, def.mw, def.alt)) continue;
@@ -509,6 +549,11 @@ export function criarPopulacao(rng: Gerador, salvo?: unknown, opcoes: OpcoesPopu
         }
         return [melhor, d];
       };
+      // spec 026: onde cada um estava antes do passo (a cerca do festival da Vila Neon)
+      if (m.semBichos) {
+        antes.clear();
+        for (const c of lista) antes.set(c.id, [c.x, c.z]);
+      }
       for (const c of lista) {
         let [j, dist] = maisPerto(c);
         // o bicho criado longe de todos (onde o bicho de sempre já teria sumido) fica parado
@@ -580,6 +625,11 @@ export function criarPopulacao(rng: Gerador, salvo?: unknown, opcoes: OpcoesPopu
       }
       separar(m, dt);
       darPassagem(m, js, dt);
+      if (m.semBichos)
+        for (const c of lista) {
+          const a = antes.get(c.id);
+          if (a) foraDoFestival(m, c, a[0], a[1]);
+        }
       // remove as dissolvidas e as que ficaram longe de todos, compactando no lugar
       let n = 0;
       for (const c of lista) {

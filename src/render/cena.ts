@@ -106,7 +106,7 @@ import {
 } from '../jogo/contato';
 import { celulaTomadaPelaVila, indiceDoMundo } from '../world/vilaSolidos';
 import { criarBrinquedosVila } from './vila/brinquedos';
-import { noiteDeShow } from '../jogo/show';
+import { faseDoShow, noiteDeShow } from '../jogo/show';
 import { noiteDosBichos } from '../jogo/tempo';
 import { criarShowVila } from './vila/show';
 import type { PlanoVila } from '../world/vilaNeon';
@@ -427,6 +427,8 @@ export interface EstadoDepuracao {
   vilaComando?: (c: { a: 'caixa'; i: number }) => void;
   /** Spec 026: o relógio do núcleo agora (s). */
   vilaTempo?: () => number;
+  /** Spec 026: o show da Vila Neon toca perto da câmera (os bichos e moradores não chamam). */
+  silencioDoShow?: () => boolean;
   /** Spec 026 (testes e vídeos): o show tocando pula para `s` s desde o começo. */
   pularShow?: (s: number) => void;
   /** Spec 026: os eventos do show que chegaram (testes) e o que o show mostra. */
@@ -4752,6 +4754,22 @@ export function criarCena(
   let silencioMoradores = 0;
   window.addEventListener('brumaluz:trocar', () => (silencioMoradores = 20));
   let painelTrocas: HTMLElement | null = null;
+  /**
+   * Spec 026 (o dono, 16 nov 2026: "o passarinho canta por cima da música"): com o show da Vila
+   * Neon tocando, nenhum bicho nem morador chama de perto do festival (nem a lhama da grade): a
+   * música é a única coisa que se ouve lá.
+   */
+  const MARGEM_SILENCIO = 24;
+  const silencioDoShow = (x: number, z: number): boolean => {
+    if (!planoVila) return false;
+    const v = cliente.vila.estado;
+    if (!v?.show || faseDoShow(v.show, cliente.vila.tempo(performance.now() / 1000)) === 'acabou')
+      return false;
+    const f = planoVila.zonas.festival;
+    const m = MARGEM_SILENCIO;
+    return x >= f.x0 - m && x <= f.x1 + 1 + m && z >= f.z0 - m && z <= f.z1 + 1 + m;
+  };
+  estado.silencioDoShow = () => silencioDoShow(camera.position.x, camera.position.z);
   const chamadosCriaturas = (dt: number) => {
     esperaChamado -= dt;
     // o painel é criado uma vez: procura até achar e depois só olha se está aberto (sem
@@ -4762,11 +4780,15 @@ export function criarCena(
     else silencioMoradores = Math.max(0, silencioMoradores - dt);
     if (esperaChamado > 0) return;
     esperaChamado = 5 + rngVozes() * 9;
+    // (no show, perto do festival: só a música; o sorteio segue o mesmo)
+    const calado = silencioDoShow(camera.position.x, camera.position.z);
     const perto = replicaCriaturas.lista.filter(
       (c) =>
         c.estado !== 'morrendo' &&
         c.tipo !== 'espectro' &&
         volumeDaDistancia(c) > 0.25 &&
+        !calado &&
+        !silencioDoShow(c.x, c.z) &&
         // moradores chamam bem menos que os bichos, e nunca logo depois de uma conversa
         (c.tipo !== 'morador' || (silencioMoradores <= 0 && rngVozes() < 0.35)),
     );
@@ -5766,6 +5788,9 @@ export function criarCena(
       case 'criaturaSom': {
         const c = criaturaPorId(e.id);
         if (!c || Math.hypot(c.x - camera.position.x, c.z - camera.position.z) >= 20) break;
+        // spec 026: no show da Vila Neon, perto do festival, nenhum bicho canta por cima
+        if (silencioDoShow(c.x, c.z) || silencioDoShow(camera.position.x, camera.position.z))
+          break;
         // a voz gravada da noturna do tema (o Espectro da bruma também: o "uuuh" dele); sem o
         // pacote, o gemido de sempre no Bruma e Luz e a voz sintetizada nos outros
         if (temaAtual.id === 'bruma-e-luz' && !vozes.pronto) tocarSom(motorAudio, 'espectro');
