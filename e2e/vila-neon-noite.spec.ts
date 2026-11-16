@@ -197,6 +197,7 @@ async function medir(page: Page, nome: string) {
       fps: Math.round(eng.getFps()),
       pecas: e.vilaPecas?.()?.triangulos ?? -1,
       moradores: turma.length,
+      turma: e.showVila?.()?.turma ?? null,
     };
   });
   console.log(`MEDIDA ${nome} ${JSON.stringify(m)}`);
@@ -391,6 +392,15 @@ test('o show só de noite e o público (fotos e vídeo)', async ({ browser }) =>
     await ate(page, 20);
     await camera(page, o(61, 8.5, 74.5), [pass[0], topo + 1.5, pass[2] + 5]);
     await medir(page, 'show-largo');
+    // a turma dança (de verdade, nas juntas): quantos de braço para o alto agora
+    const bracos = await page.evaluate(() => {
+      const nos = window.__brumaluz!.cenaBabylon!().transformNodes.filter((n) =>
+        /^morador-\d+-junta-bracoD$/.test(n.name),
+      );
+      return nos.map((n) => Math.round(Math.abs(n.rotation.z) * 100) / 100);
+    });
+    console.log(`BRACOS ${JSON.stringify(bracos)}`);
+    expect(bracos.filter((b) => b > 2).length).toBeGreaterThanOrEqual(5);
     // espera o show acabar sozinho (o acorde final vem em 4 s)
     for (let i = 0; i < 600 && (await decorrido(page)) >= 0; i++) await page.waitForTimeout(100);
   }

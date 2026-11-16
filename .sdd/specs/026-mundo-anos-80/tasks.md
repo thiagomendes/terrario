@@ -88,7 +88,7 @@ Mistura do show (dono, 15 nov: "a música da banda bem baixinha, até o passarin
 | N5 | **A f2 em pé que falhava:** a lhama ficava para trás (2,2 b/s contra 4,3 da criança) e passava do `RAIO_SEGUIR` (12); agora apressa o passo quando fica para trás (`fatorSeguindo`, até 2,1x) | feito |
 | N6 | Testes: núcleo (dia recusa, noite aceita, noite acaba no meio, mundo salvo, turma, f2 no passo da criança), guia (espera de dia), e2e da f3 com o relógio na noite, `e2e/vila-neon-noite.spec.ts` (fotos, medidas, vídeo) | feito |
 
-Medidas no celular (em pé, placa de vídeo, `VILA_SO=medida`): no nascer, peças 39 826 triângulos e 148 chamadas de desenho de dia, 156 de noite (o povo não aparece ali); na grade no meio do show, peças 44 738 + povo 8 868 triângulos (12 malhas), 268 mil triângulos na cena, 157 chamadas, 60 quadros. No computador, de cima do campo no meio do show: peças 87 214 + povo 8 868, 588 chamadas.
+Medidas no celular (em pé, placa de vídeo, `VILA_SO=medida`, com os 20 de verdade): no nascer, peças 39 826 triângulos e 148 chamadas de desenho de dia, 156 de noite (o público é do festival: ninguém ali); na grade no meio do show, de frente para o palco, peças 44 738 triângulos, 250 mil na cena, 133 chamadas, 60 quadros; na grade virado para o público (os 20 à vista, o pior caso), peças 45 802, 360 mil na cena, 185 chamadas, 59 quadros. No computador, de cima do campo no meio do show: peças 87 214, 681 chamadas.
 
 Carros parados: modelos novos só deste mundo (`src/render/vila/carros.ts`): hatch em cunha, carrinho bolha, van pão de forma (a da banda grafite com o raio) e picape.
 

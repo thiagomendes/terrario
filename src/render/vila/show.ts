@@ -47,6 +47,15 @@ export interface OpcoesShowVila {
   leve?: boolean;
 }
 
+/**
+ * Perto assim do lugar dele, o morador da turma já chegou (o núcleo para o morador a até ~1,2
+ * bloco do posto): dança no show e fica de frente para o palco.
+ */
+const CHEGOU_AO_LUGAR = 1.6;
+
+/** Quem da turma do show segura um bastão de luz (oito dos 20). */
+const BASTAO: readonly number[] = [0, 3, 5, 8, 11, 13, 16, 19];
+
 /** O neon dos bastões de luz da turma do show (sorteado por pessoa; nunca isqueiro nem fogo). */
 const NEON_BASTAO = ['#4df07a', '#3aa8ff', '#ffe44a', '#2ee8d8', '#ff9a3a'];
 
@@ -78,6 +87,8 @@ export interface ShowVila {
     aquecendo: boolean;
     /** Quantas vezes o palco aqueceu (a noite chegou). */
     aquecimentos: number;
+    /** A turma do show: quantos no lugar e quantos longe dele (andando), no último quadro. */
+    turma: { noLugar: number; andando: number; longe: number[] };
   };
   /**
    * A pose de um morador do palco no show: o vocalista e a guitarrista batem cabeça no tempo
@@ -797,6 +808,8 @@ export function criarShowVila(scene: Scene, plano: PlanoVila, opcoes: OpcoesShow
    * bate cabeça, bate palma, ou braços para o alto balançando; no acorde final, todos pulam.
    * De papo (sem show), de vez em quando um acena, cumprimenta, bate palma ou dança.
    */
+  /** A distância de cada um da turma ao lugar dele (testes). */
+  const turmaAgora = new Map<number, number>();
   function poseDoPublico(
     k: number,
     pose: Pose,
@@ -805,7 +818,9 @@ export function criarShowVila(scene: Scene, plano: PlanoVila, opcoes: OpcoesShow
   ): Pose {
     const l = lugarDoPublico(pub, k, { noite: noiteShowAtual, show: !!show, t: tempoAtual });
     // andando para o lugar: o passo de sempre
-    if (!l.alvo || !onde || Math.hypot(onde.x - l.alvo[0], onde.z - l.alvo[2]) > 0.9) return pose;
+    const longe = !l.alvo || !onde ? Infinity : Math.hypot(onde.x - l.alvo[0], onde.z - l.alvo[2]);
+    turmaAgora.set(k, longe);
+    if (longe > CHEGOU_AO_LUGAR) return pose;
     if (!show) {
       const gestos = ['acenar', 'cumprimentar', 'aplaudir', 'dancar'] as const;
       const g = gestos[(k + Math.floor((tempoAtual + k * 2.3) / 9)) % gestos.length];
@@ -819,12 +834,23 @@ export function criarShowVila(scene: Scene, plano: PlanoVila, opcoes: OpcoesShow
     }
     const d = tempoAtual - show.inicio - CONTAGEM;
     if (d < 0) return aplicarGesto(pose, 'aplaudir', 0.3 + ((((tempoAtual * 2) % 1) + 1) % 1));
-    const jeito = (k * 7 + 3) % 4;
-    if (jeito === 0) return aplicarGesto(pose, 'pulo-estrela', 0.25 + (((d % 2) + 2) % 2) * 0.6);
+    // de costas tem de ler como festa: quase todo mundo de braços para o alto (quem tem o
+    // bastão, sempre), e os outros batendo cabeça no tempo
+    const jeito = BASTAO.includes(k) ? (k % 2 ? 2 : 0) : [0, 1, 2, 1, 0, 2][k % 6];
+    // pulo de estrela, uma vez por compasso de dois tempos (braços em V)
+    if (jeito === 0) {
+      const q = aplicarGesto(pose, 'pulo-estrela', 0.15 + (((d % 1) + 1) % 1) * 0.8);
+      q.bracoDireitoAbre = Math.min(q.bracoDireitoAbre ?? 0, 2.3);
+      q.bracoEsquerdoAbre = Math.min(q.bracoEsquerdoAbre ?? 0, 2.3);
+      return q;
+    }
     if (jeito === 1) return aplicarGesto(pose, 'roqueiro', 1 + ((((d + 0.125) % 0.5) + 0.5) % 0.5));
-    if (jeito === 2) return aplicarGesto(pose, 'aplaudir', 0.3 + (((d % 1) + 1) % 1));
-    // braços para o alto, balançando de um lado para o outro a cada compasso
-    return aplicarGesto(pose, 'comemorar', 0.45 + 0.35 * (0.5 + 0.5 * Math.sin(d * Math.PI)));
+    // braços para o alto em V, quicando no tempo (bem abertos: de costas, o braço reto para
+    // cima some atrás da cabeça grande do boneco)
+    const q = aplicarGesto(pose, 'comemorar', 0.25 + (((d % 1) + 1) % 1));
+    q.bracoDireitoAbre = Math.min(q.bracoDireitoAbre ?? 0, 2.3);
+    q.bracoEsquerdoAbre = Math.min(q.bracoEsquerdoAbre ?? 0, 2.3);
+    return q;
   }
 
   const mistura = (a: V3, b: V3, k: number, out: V3): V3 => {
@@ -1187,12 +1213,17 @@ export function criarShowVila(scene: Scene, plano: PlanoVila, opcoes: OpcoesShow
       ),
       aquecendo: aquecimento(ultimoT) > 0,
       aquecimentos,
+      turma: {
+        noLugar: [...turmaAgora.values()].filter((d) => d <= CHEGOU_AO_LUGAR).length,
+        andando: [...turmaAgora.values()].filter((d) => d > CHEGOU_AO_LUGAR).length,
+        longe: [...turmaAgora.values()].map((d) => Math.round(d * 10) / 10).filter((d) => d > CHEGOU_AO_LUGAR),
+      },
     }),
     luzNaMao(povoado, n) {
       if (povoado !== 'vila' || n < N0_PUBLICO) return null;
       const k = n - N0_PUBLICO;
       // uns oito da turma seguram um bastão de luz, em neon sorteado (nunca na ordem do arco-íris)
-      if (![0, 3, 5, 8, 11, 13, 16, 19].includes(k)) return null;
+      if (!BASTAO.includes(k)) return null;
       return NEON_BASTAO[(k * 3) % NEON_BASTAO.length];
     },
     mostrarLuzNaMao: () =>
@@ -1233,7 +1264,7 @@ export function criarShowVila(scene: Scene, plano: PlanoVila, opcoes: OpcoesShow
           t: tempoAtual,
         });
         if (!l.alvo || !l.olhar || !onde) return null;
-        if (Math.hypot(onde.x - l.alvo[0], onde.z - l.alvo[2]) > 0.9) return null;
+        if (Math.hypot(onde.x - l.alvo[0], onde.z - l.alvo[2]) > CHEGOU_AO_LUGAR) return null;
         return Math.atan2(l.olhar[0] - onde.x, l.olhar[1] - onde.z);
       }
       if (!ativo || n > 2) return null;
