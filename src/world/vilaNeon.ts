@@ -341,13 +341,18 @@ export function colunaTomadaNaVila(p: PlanoVila, wx: number, wz: number): boolea
   let t = tomadas.get(p);
   if (!t) {
     const m = montado(p);
-    t = new Set<number>();
+    // vale o último bloco posto em cada célula: o portão aberto de um quintal é uma grade
+    // trocada por ar (a coluna fica livre), não uma coluna tomada
+    const ultimo = new Map<number, number>();
     for (const l of m.porChunk.values())
       for (let i = 0; i < l.length; i += 4) {
         const y = l[i + 1];
         if (y !== p.h + 1 && y !== p.h + 2) continue;
-        t.add((l[i + 2] - p.plana.z0) * m.largura + (l[i] - p.plana.x0));
+        const coluna = (l[i + 2] - p.plana.z0) * m.largura + (l[i] - p.plana.x0);
+        ultimo.set(coluna * 2 + (y - p.h - 1), l[i + 3] & 255);
       }
+    t = new Set<number>();
+    for (const [k, id] of ultimo) if (id !== Bloco.AR) t.add(k >> 1);
     tomadas.set(p, t);
   }
   return t.has((wz - p.plana.z0) * montado(p).largura + (wx - p.plana.x0));

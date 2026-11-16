@@ -59,9 +59,11 @@ import {
 } from '../jogo/coreografia';
 import { dentroDoArco, F_RINQUE, CHAVE_ARCO } from '../jogo/rinque';
 import {
-  caminhoNoFestival,
+  alguemVe,
+  caminhoDoPublico,
   lugarDoPublico,
   publicoDaVila,
+  retoDoPublico,
   PUBLICO_GRADE,
 } from '../world/publicoVila';
 
@@ -150,6 +152,8 @@ export interface JogadorVila {
   y: number;
   z: number;
   morto: boolean;
+  /** Para onde olha (o yaw da câmera dele): ninguém da turma some nem nasce à vista. */
+  olhar?: number;
   /** Está de patins (a aparência: só na Vila Neon)? */
   patins: boolean;
   /** A missão do selinho deste jogador neste mundo (ou null). */
@@ -730,14 +734,57 @@ export function criarVila(ctx: CtxVila) {
 
   // ------------------------------------------------------------------ o público do show
   /**
-   * A turma da grade (12 moradores de verdade, corpo macio): no show, na grade de frente para o
-   * palco; de noite sem show, de papo em quatro rodinhas que mudam de lugar; de dia só quatro
-   * ficam, e quem não fica sai pelo portão do festival e some lá. Vem quando alguém chega perto
-   * do festival (nunca do nascer), aparece no portão se alguém está vendo o lugar dela, e anda
-   * pelo campo por um caminho que dá a volta nas peças (o corredor das lhamas e o caminho de
-   * cascalho ficam livres). Como os outros moradores, não vai salva.
+   * A turma da grade (40 moradores de verdade, corpo macio): no show, na grade de frente para o
+   * palco; de noite sem show, de papo em rodinhas que mudam de lugar; de dia só quatro ficam.
+   *
+   * Ninguém some nem aparece à vista (dono, 16 nov 2026): quem não fica vai embora a pé, pelo
+   * portão, pela calçada da avenida e pela calçada das casas, até o quintal de casa, e só sai do
+   * mundo quando ninguém pode estar vendo (`alguemVe`: longe de todos ou bem atrás de quem está
+   * perto), já em casa ou longe de todo mundo. Quem chega nasce onde ninguém vê (no lugar dele,
+   * ou numa parada do caminho de casa) e vem andando. Vem quando alguém chega perto do festival
+   * (nunca do nascer) e anda por um caminho que dá a volta nas peças (o corredor das lhamas e o
+   * caminho de cascalho ficam livres). Como os outros moradores, não vai salva.
    */
+  /** Quem vai embora e já está a tantos blocos de todo mundo pode sair do mundo sem chegar em casa. */
+  const LONGE_DA_TURMA = 44;
+  /** Entre um e outro que nasce numa parada do caminho (s): chegam em fila. */
+  const ENTRE_CHEGADAS = 0.5;
+  let chegouEm = -1e9;
+  /** Quem já refez o caminho nesta trava (fora da vista, a segunda vez é do anti-trava). */
+  const refez = new Set<number>();
   const pub = publicoDaVila(plano);
+  /**
+   * A criança parada bem no caminho de alguém da turma (no meio do portão, por exemplo): em vez
+   * de ficar encostado nela esperando, ele dá a volta, um passo e meio para o lado em que já
+   * está. Devolve se pôs o desvio no caminho.
+   */
+  function desviarDaCrianca(
+    c: Criatura,
+    m: NonNullable<Criatura['morador']>,
+    alvo: readonly [number, number, number],
+    js: readonly JogadorVila[],
+  ): boolean {
+    if ((c.semProgresso ?? 0) < 1.2) return false;
+    const j = js.find((q) => Math.hypot(q.x - c.x, q.z - c.z) < 1.6);
+    if (!j) return false;
+    const [px, pz] = m.caminho?.[0] ?? [alvo[0], alvo[2]];
+    const d = Math.hypot(px - c.x, pz - c.z);
+    if (d < 0.3) return false;
+    const fx = (px - c.x) / d;
+    const fz = (pz - c.z) / d;
+    // (só se ela está na frente, no rumo do ponto seguinte)
+    if ((j.x - c.x) * fx + (j.z - c.z) * fz <= 0) return false;
+    const lado = (c.x - j.x) * -fz + (c.z - j.z) * fx >= 0 ? 1 : -1;
+    for (const s of [lado, -lado]) {
+      const q: [number, number] = [j.x - fz * s * 1.7 + fx * 0.5, j.z + fx * s * 1.7 + fz * 0.5];
+      if (!retoDoPublico(pub, [c.x, c.z], q)) continue;
+      m.caminho = [q, ...(m.caminho ?? [])];
+      c.menorDistancia = undefined;
+      c.semProgresso = 0;
+      return true;
+    }
+    return false;
+  }
   function cuidarDoPublico(): void {
     const t = ctx.agora();
     const noite = noiteDeShow(ctx.hora());
@@ -748,16 +795,26 @@ export function criarVila(ctx: CtxVila) {
     for (const c of ctx.criaturas())
       if (c.morador?.povoado === POVOADO_VILA && daTurma(c.morador.n) && c.estado !== 'morrendo')
         vivos.set(c.morador.n - N0_PUBLICO, c);
+    const vendo = (x: number, z: number) => alguemVe(js, x, z);
+    if (refez.size > 200) refez.clear();
     for (let k = 0; k < PUBLICO_GRADE; k++) {
       const l = lugarDoPublico(pub, k, { noite, show: tocando, t });
       let c = vivos.get(k);
       if (!c) {
         if (!l.alvo || !perto || !ctx.carregado(l.alvo[0], l.alvo[2])) continue;
-        // ninguém aparece do nada na frente da criança: quem está vendo o lugar vê a pessoa
-        // chegar pelo portão
-        const vendo = js.some((j) => Math.hypot(j.x - l.alvo![0], j.z - l.alvo![2]) < 24);
-        const q = vendo ? pub.portao : l.alvo;
-        if (!ctx.carregado(q[0], q[2])) continue;
+        // ninguém aparece do nada na frente da criança: a pessoa nasce no lugar dela se ninguém
+        // está vendo; senão, na parada do caminho de casa mais perto do festival que ninguém vê
+        // (fora do portão, na calçada da avenida, no quintal de casa) e vem andando. Com todas
+        // à vista, espera (ninguém nasce à vista)
+        const q = [l.alvo, ...pub.paradas(k)].find(
+          (r) => ctx.carregado(r[0], r[2]) && !vendo(r[0], r[2]),
+        );
+        if (!q) continue;
+        // (numa parada, um de cada vez: a turma chega em fila, não num monte)
+        if (q !== l.alvo) {
+          if (t - chegouEm < ENTRE_CHEGADAS) continue;
+          chegouEm = t;
+        }
         c = ctx.adicionar('morador', q[0], q[1], q[2]);
         const posto: [number, number, number] = [q[0], q[1], q[2]];
         c.morador = {
@@ -775,22 +832,54 @@ export function criarVila(ctx: CtxVila) {
         };
       }
       const m = c.morador!;
-      const alvo = l.alvo ?? pub.portao;
-      if (!l.alvo && (!perto || Math.hypot(c.x - alvo[0], c.z - alvo[2]) < 1.6)) {
-        // saiu pelo portão: some lá (ou de vez, se ninguém está perto do festival)
-        c.estado = 'morrendo';
-        c.dissolver = 1;
-        continue;
+      // quem não fica vai para casa: sai pelo portão, pega a calçada da avenida e a das casas e
+      // entra no quintal (dono, 16 nov 2026: "a turma some no portão, na frente da gente")
+      const alvo = l.alvo ?? pub.casa(k);
+      const olhar = l.alvo ? l.olhar : pub.olharEmCasa(k);
+      if (!l.alvo) {
+        // só some quem ninguém pode estar vendo, e já em casa ou longe de todo mundo; quem está
+        // à vista continua andando, e em casa fica de papo no quintal até ninguém olhar
+        const emCasa = Math.hypot(c.x - alvo[0], c.z - alvo[2]) < 1.2;
+        const longe = js.every((j) => Math.hypot(j.x - c.x, j.z - c.z) > LONGE_DA_TURMA);
+        if ((emCasa || longe) && !vendo(c.x, c.z)) {
+          c.estado = 'morrendo';
+          c.dissolver = 1;
+          continue;
+        }
       }
       const posto = m.posto!;
       if (Math.hypot(posto[0] - alvo[0], posto[2] - alvo[2]) > 0.25) {
         m.posto = [alvo[0], alvo[1], alvo[2]];
-        m.caminho = caminhoNoFestival(pub, [c.x, c.z], [alvo[0], alvo[2]]);
+        m.caminho = caminhoDoPublico(pub, [c.x, c.z], [alvo[0], alvo[2]]);
         c.menorDistancia = undefined;
         c.semProgresso = 0;
-      } else if (l.olhar && !m.caminho?.length && Math.hypot(c.x - alvo[0], c.z - alvo[2]) < 0.7)
-        // chegou: olha para o palco (na grade) ou para o meio da rodinha (de papo)
-        c.yawAlvo = Math.atan2(l.olhar[0] - c.x, l.olhar[1] - c.z);
+      } else if (desviarDaCrianca(c, m, alvo, js)) {
+        // (a criança parada bem no caminho: dá a volta nela)
+      } else if (m.caminho?.length) {
+        const [px, pz] = m.caminho[0];
+        const seguinte = m.caminho[1] ?? [alvo[0], alvo[2]];
+        if (
+          Math.hypot(c.x - px, c.z - pz) < 3 &&
+          retoDoPublico(pub, [c.x, c.z], [seguinte[0], seguinte[1]])
+        ) {
+          // a turma anda junta: quem já vê o ponto seguinte em linha reta corta para ele
+          // (ninguém fica brigando para pisar no mesmo ponto da esquina)
+          m.caminho.shift();
+          c.menorDistancia = undefined;
+          c.semProgresso = 0;
+        } else if ((c.semProgresso ?? 0) > 6 && !refez.has(c.id)) {
+          // travado (empurrado para o lado errado de uma cerca, alguém parado na frente): refaz
+          // o caminho de onde está. À vista, espera e tenta de novo quantas vezes for preciso; o
+          // anti-trava de sempre (aparecer no ponto seguinte) só vale onde ninguém vê
+          m.caminho = caminhoDoPublico(pub, [c.x, c.z], [alvo[0], alvo[2]]);
+          c.menorDistancia = undefined;
+          if (vendo(c.x, c.z)) c.semProgresso = 0;
+          else refez.add(c.id);
+        } else if ((c.semProgresso ?? 0) < 1) refez.delete(c.id);
+      } else if (olhar && Math.hypot(c.x - alvo[0], c.z - alvo[2]) < 0.7)
+        // chegou: olha para o palco (na grade) ou para o meio da rodinha (de papo, em casa)
+        c.yawAlvo = Math.atan2(olhar[0] - c.x, olhar[1] - c.z);
+      else if (!l.alvo && (c.semProgresso ?? 0) > 6 && vendo(c.x, c.z)) c.semProgresso = 0;
     }
   }
 

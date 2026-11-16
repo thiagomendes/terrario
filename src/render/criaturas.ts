@@ -201,6 +201,48 @@ export function criarRenderCriaturas(
     return d > 8 && (dx * frente.x + dy * frente.y + dz * frente.z) / d < -0.42;
   }
   /**
+   * Ninguém pisca (spec 026, dono, 16 nov 2026: "a turma some na frente da gente"): quem chega
+   * entra crescendo e quem sai do mundo de repente (o núcleo tira quando acha que ninguém vê,
+   * mas não conhece a câmera) encolhe até sumir, em vez de aparecer e desaparecer de um quadro
+   * para o outro. Quem se desfaz do jeito de sempre (o bicho da noite, o fim de uma vida) já
+   * chega pequeno e some como antes.
+   */
+  const ENTRADA_S = 0.3;
+  const SAIDA_S = 0.3;
+  const nascendo = new Map<number, number>();
+  const saindo = new Map<number, { t: number; x: number; y: number; z: number }>();
+  /** O tamanho de quem acabou de chegar (de 0,3 a 1, macio); 1 para quem já estava. */
+  function crescer(id: number, dt: number): number {
+    const t0 = nascendo.get(id);
+    if (t0 === undefined) return 1;
+    const t = dt > 0 ? t0 + dt / ENTRADA_S : 1;
+    if (t >= 1) {
+      nascendo.delete(id);
+      return 1;
+    }
+    nascendo.set(id, t);
+    return 0.3 + 0.7 * t * (2 - t);
+  }
+  /** Quem saiu da lista encolhe mais um pouco; devolve se ainda está encolhendo. */
+  function encolher(id: number, raiz: TransformNode, dt: number): boolean {
+    let g = saindo.get(id);
+    if (!g) {
+      const s = raiz.scaling;
+      // já se desfez (pequeno) ou o relógio está parado: some na hora, como sempre
+      if (s.x < 0.35 || dt <= 0) return false;
+      g = { t: 0, x: s.x, y: s.y, z: s.z };
+      saindo.set(id, g);
+    }
+    g.t += dt / SAIDA_S;
+    if (g.t >= 1) {
+      saindo.delete(id);
+      return false;
+    }
+    const f = (1 - g.t) * (1 - g.t);
+    raiz.scaling.set(g.x * f, g.y * f, g.z * f);
+    return true;
+  }
+  /**
    * Desempenho (spec 014, T11: a praça da cidade com 12 moradores): o boneco do morador entra
    * ou sai da vista inteiro, por uma esfera em volta dele (com folga para o balão e o braço
    * esticado), no lugar de cada peça passar pelo teste e refazer a caixa a cada quadro.
@@ -842,6 +884,7 @@ export function criarRenderCriaturas(
             }
             mb = montarMorador(c, prep);
             moradores.set(c.id, mb);
+            nascendo.set(c.id, 0);
             const pendente = gestosPendentes.get(c.id);
             if (pendente) {
               gestosPendentes.delete(c.id);
@@ -890,7 +933,7 @@ export function criarRenderCriaturas(
             if (mb.keytar) plasticoKeytar?.definirLuz(l);
           }
           const morrer = c.estado === 'morrendo' ? c.dissolver : 0;
-          mb.boneco.raiz.scaling.setAll(1 - morrer * 0.8);
+          mb.boneco.raiz.scaling.setAll((1 - morrer * 0.8) * crescer(c.id, dt));
           const ferido = c.ferida > 0;
           if (ferido !== mb.ferido) {
             mb.ferido = ferido;
@@ -908,6 +951,7 @@ export function criarRenderCriaturas(
         if (!m) {
           m = montar(c);
           modelos.set(c.id, m);
+          nascendo.set(c.id, 0);
         }
         m.quadro = quadro;
         // rapidez pelo deslocamento real (parada contra a parede não "anda" no lugar)
@@ -950,7 +994,7 @@ export function criarRenderCriaturas(
         if (c.estado !== 'morrendo') m.raiz.rotation.z = seno * mov.ginga * andando;
         const morrer =
           c.estado === 'morrendo' ? c.dissolver : c.tipo === 'espectro' ? c.dissolver : 0;
-        const escala = 1 - morrer * 0.8;
+        const escala = (1 - morrer * 0.8) * crescer(c.id, dt);
         // parado, respira (o corpo enche e esvazia devagarinho; os pés ficam no chão)
         const respira = 1 + Math.sin(tempo * 2.4 + c.id) * 0.018 * m.parado;
         m.raiz.scaling.set(
@@ -1046,14 +1090,19 @@ export function criarRenderCriaturas(
       }
       for (const [id, mb] of moradores) {
         if (mb.quadro === quadro) continue;
+        // (saiu do mundo de repente: encolhe até sumir, nunca pisca)
+        if (encolher(id, mb.boneco.raiz, dt)) continue;
         mb.balao?.descartar();
         mb.boneco.descartar();
         moradores.delete(id);
+        nascendo.delete(id);
       }
       for (const [id, m] of modelos) {
         if (m.quadro === quadro) continue;
+        if (encolher(id, m.raiz, dt)) continue;
         descartarModelo(m);
         modelos.delete(id);
+        nascendo.delete(id);
       }
       for (const [id, p] of gestosPendentes)
         if (relogio - p.quando > VALIDADE_GESTO_PENDENTE) gestosPendentes.delete(id);

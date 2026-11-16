@@ -647,16 +647,18 @@ describe('spec 026: a Vila Neon no núcleo', () => {
     passos(n, 100);
     expect(n.estado.vila!.publico()).toHaveLength(0);
     ir(n, 'ana', pub.portao[0], p.h + 1, pub.portao[2] - 3);
+    // (16 nov 2026: ninguém nasce à vista; com a criança no portão olhando para dentro, a turma
+    // vem andando de onde ela não vê, pelas calçadas, e entra pelo portão)
     passos(n, 14 * 20);
     expect(n.estado.vila!.vista().show).toBeNull();
     const noite = n.estado.vila!.publico();
     expect(noite).toHaveLength(PUBLICO_DA_NOITE);
-    // de papo nas rodinhas, ninguém no caminho de cascalho nem no corredor das lhamas
-    for (const c of noite) expect(pub.livre(c.x, c.z)).toBe(true);
     // o show (sozinho): todos na grade, com os que vieram só para ele
     ateOShow(n, 120);
     expect(n.estado.vila!.vista().show).not.toBeNull();
-    passos(n, 30 * 20);
+    // (os que vêm só para o show chegam em fila, atravessam na faixa e dão a volta na criança
+    // parada no meio do portão)
+    passos(n, 75 * 20);
     const naGrade = n.estado.vila!.publico();
     expect(naGrade).toHaveLength(PUBLICO_GRADE);
     for (const c of naGrade) {
@@ -672,10 +674,22 @@ describe('spec 026: a Vila Neon no núcleo', () => {
     passos(n, Math.ceil((APLAUSO + 2) / PASSO));
     expect(n.estado.vila!.vista().show).toBeNull();
     passos(n, 60 * 20);
-    expect(n.estado.vila!.publico()).toHaveLength(PUBLICO_DA_NOITE);
+    // (quem foi embora anda até em casa e só sai do mundo onde ninguém vê: aqui conta quem
+    // ficou no festival; a saída tem os testes dela em vilaSaida.test.ts)
+    const F = p.zonas.festival;
+    const noFestival = () =>
+      n.estado.vila!.publico().filter((c) => c.x >= F.x0 && c.z >= F.z0 && c.z <= F.z1);
+    expect(noFestival()).toHaveLength(PUBLICO_DA_NOITE);
+    // de papo nas rodinhas, ninguém no caminho de cascalho nem no corredor das lhamas
+    for (const c of noFestival()) expect(pub.livre(c.x, c.z)).toBe(true);
     // de dia: quatro ficam, os outros saem pelo portão
     hora(n, DIA);
     passos(n, 60 * 20);
+    expect(noFestival()).toHaveLength(FICAM_DE_DIA.length);
+    // e quando a criança vai embora olhando para o outro lado, só os quatro continuam no mundo
+    ir(n, 'ana', pub.portao[0] + 30, p.h + 1, pub.portao[2] - 5);
+    n.estado.jogadores.get('ana')!.tel.yaw = Math.PI / 2;
+    passos(n, 5 * 20);
     expect(n.estado.vila!.publico()).toHaveLength(FICAM_DE_DIA.length);
   });
 

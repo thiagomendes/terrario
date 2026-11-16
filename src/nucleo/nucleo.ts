@@ -811,6 +811,7 @@ export function criarNucleo(op: OpcoesNucleo) {
     y: o.tel.y,
     z: o.tel.z,
     morto: o.sobrevivencia.estado.morto,
+    olhar: o.tel.yaw,
     patins: (o.perfil.aparencia as { patins?: unknown } | undefined)?.patins === true,
     missao: mundoAlma ? (missaoDoHud(almaDe(o.id), mundoAlma)?.id ?? null) : null,
     aberta: (m: string) => missaoAberta(o.id, m),
