@@ -216,22 +216,22 @@ export async function ir(page: Page, x: number, z: number, y?: number, voar = fa
   );
 }
 
-/** As três caixas acesas, como a criança (no palco, perto de cada uma). */
+/**
+ * O show desta noite (spec 026, 16 nov 2026: o show é do bairro, sozinho, toda noite): a criança
+ * na grade, de noite, espera as caixas acenderem sozinhas e o show começar. Precisa já ser noite.
+ */
 export async function acender(page: Page) {
-  for (let i = 0; i < 3; i++) {
-    await page.evaluate((i) => {
-      const e = window.__brumaluz!;
-      const p = e.vila!()!;
-      const c = p.pontos.caixas[i];
-      e.voar?.(true);
-      e.teleportar!(c[0] + 0.5, c[2] - 1.2, p.pontos.palco.y + 1.3);
-    }, i);
-    await page.waitForTimeout(450);
-    const ja = await page.evaluate((i) => window.__brumaluz!.vilaEstado!()?.cx[i] ?? false, i);
-    if (!ja || i === 2)
-      await page.evaluate((i) => window.__brumaluz!.vilaComando!({ a: 'caixa', i }), i);
-    await page.waitForTimeout(350);
-  }
+  await page.evaluate(() => {
+    const e = window.__brumaluz!;
+    const p = e.vila!()!;
+    const g = p.pontos.plateia;
+    e.voar?.(false);
+    e.teleportar!((g.x0 + g.x1) / 2 + 0.5, g.z1 - 1.5, p.h + 1.2);
+  });
+  await page.waitForFunction(() => !!window.__brumaluz!.vilaEstado!()?.show, undefined, {
+    timeout: 90_000,
+    polling: 250,
+  });
 }
 
 export async function voo(page: Page, pontos: { p: V3; a: V3 }[], seg: number) {

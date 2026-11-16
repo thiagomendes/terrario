@@ -8,17 +8,15 @@ import {
   tocar,
   type Tamanho,
 } from './guia-palco';
-import { CHAMADO, ROTEIRO } from '../src/jogo/show';
+import { ROTEIRO } from '../src/jogo/show';
 
 /**
  * Spec 026 (Vila Neon, parte 1): as três missões de ponta a ponta, como uma criança: escolhe no
- * quadro, segue as pegadinhas com o joystick de verdade e toca onde a mãozinha mostra.
+ * quadro, segue as pegadinhas com o joystick de verdade e toca onde precisa.
  * - f1: os três estojos (rua, pista, festival) → 4 moedinhas;
  * - f2: o feno aparece na mão perto das lhamas, e elas seguem até a grade → 5;
- * - f3: de dia espera a noite (a lua no cartão e no selinho, sem trilha: o show é só de noite);
- *   a noite chega, sobe a escadinha, acende as três caixas → 6, com a festa na hora (o dono, 16
- *   nov 2026); o show começa, a criança toca nas músicas e o toque do chamado dispara o acorde
- *   final (o relógio do show é pulado com o atalho dos testes: o show tem uns 6 min).
+ * - f4 (a volta no rinque, 16 nov 2026): as pegadinhas levam ao suporte dos patins, um toque
+ *   calça, e depois a cada arco de neon da pista; passar por dentro dos três → 6, com a festa.
  * Fotos (e quadros de vídeo com VILA_VIDEO=1) em VILA_PASTA.
  */
 declare const process: { env: Record<string, string | undefined> };
@@ -61,38 +59,16 @@ async function escolher(page: Page, id: string, foto?: string): Promise<void> {
   await escolherNaRoda(page, 'missoes');
   await page.waitForSelector('[data-alma-quadro]', { timeout: 20_000 });
   await page.waitForTimeout(800);
-  if (id === 'f3') {
-    // de dia (o relógio dos testes fica em 0,42) a f3 espera a noite: a lua no cartão dela
-    const lua = page.locator('[data-missao="f3"] [data-alma-lua]');
-    expect(await lua.count()).toBe(1);
-    expect(await page.locator('[data-missao="f1"] [data-alma-lua]').count()).toBe(0);
-    await lua.scrollIntoViewIfNeeded().catch(() => undefined);
+  if (foto) {
+    await page
+      .locator(`[data-missao="${id}"]`)
+      .scrollIntoViewIfNeeded()
+      .catch(() => undefined);
     await page.waitForTimeout(300);
-    if (foto) await page.screenshot({ path: `${PASTA}/${foto}` });
+    await page.screenshot({ path: `${PASTA}/${foto}` });
   }
   await tocar(page, `[data-alma-jogar="${id}"]`);
   await page.waitForTimeout(2500);
-}
-
-/**
- * A f3 de dia (decisão do dono: o show é só de noite): o selinho e a placa mostram a lua, nada
- * de trilha nem mãozinha; a noite chega (o relógio dos testes) e a trilha acende sozinha.
- */
-async function esperarANoite(page: Page, pre: string): Promise<void> {
-  await page.waitForFunction(() => window.__guia!.esperando(), undefined, { timeout: 15_000 });
-  await page.waitForTimeout(1500);
-  expect(await page.locator('[data-alma-missao]').getAttribute('data-figura')).toBe('luaShow');
-  expect(await page.evaluate(() => window.__guia!.pegadas())).toBe(0);
-  await page.screenshot({ path: `${PASTA}/${pre}-f3-dia-lua.png` });
-  await page.evaluate(() => {
-    window.__brumaluz!.hora = 0.9;
-  });
-  await page.waitForFunction(
-    () => !window.__guia!.esperando() && window.__guia!.pegadas() > 0,
-    undefined,
-    { timeout: 20_000 },
-  );
-  expect(await page.locator('[data-alma-missao]').getAttribute('data-figura')).not.toBe('luaShow');
 }
 
 async function festa(page: Page, foto?: string, teto = 40_000): Promise<void> {
@@ -212,58 +188,42 @@ async function f2(page: Page, pre: string): Promise<void> {
   }
 }
 
-/** f3: sobe ao palco, acende as caixas pela mãozinha; no show, toca; no chamado, o final. */
-async function f3(page: Page, pre: string): Promise<{ toques: number; finalQuem: string }> {
-  let toques = 0;
-  for (let volta = 0; volta < 10; volta++) {
-    const acesas = await page.evaluate(() => window.__brumaluz!.vilaEstado?.()?.cx ?? []);
-    if (acesas.every(Boolean) && acesas.length === 3) break;
+/**
+ * f4: as pegadinhas levam ao suporte dos patins; a criança toca nele (calça); depois a cada arco
+ * apagado, até a festa. Devolve quantas vezes os arcos piscaram (passou por dentro).
+ */
+async function f4(page: Page, pre: string): Promise<{ arcos: number }> {
+  for (let volta = 0; volta < 10 && !(await temFesta(page)); volta++) {
     const r = await andarPelaTrilha(page, 60_000);
-    console.log(`vila: f3 trilha ${r.alvo} chegou=${r.chegou} ${r.s.toFixed(1)} s`);
-    // a mãozinha aponta a caixa apagada; a criança toca nela
-    const m = await page
-      .waitForFunction(() => window.__vila!.mao(), undefined, { timeout: 4000 })
-      .then((h) => h.jsonValue() as Promise<{ x: number; y: number } | null>)
-      .catch(() => null);
-    if (!m) continue;
-    if (toques === 0) await page.screenshot({ path: `${PASTA}/${pre}-f3-mao.png` });
-    await page.touchscreen.tap(m.x, m.y);
-    toques++;
-    await page.waitForTimeout(1200);
+    console.log(`vila: f4 trilha ${r.alvo} chegou=${r.chegou} ${r.s.toFixed(1)} s`);
+    if (r.alvo === 'patins') {
+      // o toque no suporte calça os patins (como a criança: o dedo em cima dele)
+      await page.waitForTimeout(800);
+      const t = await page.evaluate(() => {
+        const e = window.__brumaluz!;
+        const [x, y, z] = e.vila!()!.pontos.patins;
+        return e.telaDoPonto!(x, y + 1, z);
+      });
+      expect(t).not.toBeNull();
+      await page.touchscreen.tap(t!.x, t!.y);
+      await page.waitForFunction(
+        () => !!window.__brumaluz!.personagem?.aparencia().patins,
+        undefined,
+        {
+          timeout: 8000,
+        },
+      );
+      await page.waitForTimeout(1200);
+      await page.screenshot({ path: `${PASTA}/${pre}-f4-patins.png` });
+    } else {
+      await page.waitForTimeout(900);
+      if (volta === 1) await page.screenshot({ path: `${PASTA}/${pre}-f4-arco.png` });
+    }
   }
-  // a terceira caixa fecha a missão na hora: a festa (o show começa atrás dela)
-  await festa(page, `${pre}-f3-festa.png`);
-  // o show: na primeira música a criança toca algumas vezes (qualquer toque toca um acorde)
-  const v = page.viewportSize()!;
-  await page.evaluate((s) => window.__brumaluz!.pularShow!(s), ROTEIRO[0].inicio + 4);
-  await page.waitForTimeout(3000);
-  await page.screenshot({ path: `${PASTA}/${pre}-f3-show.png` });
-  for (let k = 0; k < 6; k++) {
-    await page.touchscreen.tap(v.width * 0.5, v.height * 0.4);
-    await page.waitForTimeout(700);
-  }
-  const acordes = await page.evaluate(
-    () => (window.__brumaluz!.eventosVila ?? []).filter((e) => e.e === 'vilaAcorde').length,
+  const arcos = await page.evaluate(
+    () => (window.__brumaluz!.eventosVila ?? []).filter((e) => e.e === 'vilaArco').length,
   );
-  console.log(`vila: acordes tocados ${acordes}`);
-  expect(acordes).toBeGreaterThanOrEqual(3);
-  // o chamado (o relógio do show pulado): espera o palco chamar e toca
-  await page.evaluate((s) => window.__brumaluz!.pularShow!(s), CHAMADO - 1);
-  await page.waitForFunction(() => window.__vila!.show() === 'chamando', undefined, {
-    timeout: 60_000,
-  });
-  await page.waitForTimeout(800);
-  await page.touchscreen.tap(v.width * 0.5, v.height * 0.4);
-  const fim = await page
-    .waitForFunction(
-      () => (window.__brumaluz!.eventosVila ?? []).find((e) => e.e === 'vilaFinal'),
-      undefined,
-      { timeout: 8000 },
-    )
-    .then((h) => h.jsonValue() as Promise<{ quem: string }>);
-  await page.waitForTimeout(600);
-  await page.screenshot({ path: `${PASTA}/${pre}-f3-acorde-final.png` });
-  return { toques, finalQuem: fim.quem };
+  return { arcos };
 }
 
 test('Vila Neon, deitado: as três missões de ponta a ponta, com moedinhas de verdade', async ({
@@ -284,11 +244,11 @@ test('Vila Neon, deitado: as três missões de ponta a ponta, com moedinhas de v
   await festa(page, 'deitado-f2-festa.png');
   console.log(`vila: f2 em ${((Date.now() - t0) / 1000).toFixed(0)} s`);
   t0 = Date.now();
-  await escolher(page, 'f3', 'deitado-f3-quadro-dia.png');
-  await esperarANoite(page, 'deitado');
-  const r = await f3(page, 'deitado');
-  expect(r.finalQuem).not.toBe('auto');
-  console.log(`vila: f3 em ${((Date.now() - t0) / 1000).toFixed(0)} s, toques ${r.toques}`);
+  await escolher(page, 'f4', 'deitado-f4-quadro.png');
+  const r = await f4(page, 'deitado');
+  await festa(page, 'deitado-f4-festa.png');
+  expect(r.arcos).toBeGreaterThanOrEqual(3);
+  console.log(`vila: f4 em ${((Date.now() - t0) / 1000).toFixed(0)} s, arcos ${r.arcos}`);
   await parar();
   const depois = await moedasReais(page);
   console.log(`vila: moedinhas ${antes} -> ${depois}`);
@@ -296,25 +256,22 @@ test('Vila Neon, deitado: as três missões de ponta a ponta, com moedinhas de v
   await page.context().close();
 });
 
-for (const id of ['f1', 'f2', 'f3'] as const)
+for (const id of ['f1', 'f2', 'f4'] as const)
   test(`Vila Neon, em pé: ${id} do brincar à festa`, async ({ browser }) => {
     test.setTimeout(600_000);
     const page = await abrir(browser, `vila-empe-${id}`, 'empe');
-    // a f3 abre depois de uma das duas primeiras
-    if (id === 'f3') {
+    // a f4 abre depois de uma das duas primeiras
+    if (id === 'f4') {
       await escolher(page, 'f1');
       await f1(page, 'empe-antes');
       await festa(page);
     }
     const parar = await filmar(page, `empe-${id}`);
-    await escolher(page, id, `empe-${id}-quadro-dia.png`);
+    await escolher(page, id, `empe-${id}-quadro.png`);
     if (id === 'f1') await f1(page, 'empe');
     else if (id === 'f2') await f2(page, 'empe');
-    else {
-      await esperarANoite(page, 'empe');
-      await f3(page, 'empe');
-    }
-    if (id !== 'f3') await festa(page, `empe-${id}-festa.png`);
+    else await f4(page, 'empe');
+    await festa(page, `empe-${id}-festa.png`);
     await parar();
     await page.context().close();
   });
@@ -352,7 +309,7 @@ test('Vila Neon, deitado: de noite no festival, sem tocar em nada, o show começ
   await page.waitForTimeout(4000);
   await page.screenshot({ path: `${PASTA}/sozinho-entardecer.png` });
   expect(await page.evaluate(() => window.__brumaluz!.vilaEstado!()?.show ?? null)).toBeNull();
-  // a noite chega; nenhum toque: espera o show (no máximo a espera da f3 aberta e uma folga)
+  // a noite chega; nenhum toque: espera o show (a noite aberta há uns 20 s, e uma folga)
   const t0 = Date.now();
   await page.waitForFunction(() => !!window.__brumaluz!.vilaEstado!()?.show, undefined, {
     timeout: 120_000,
@@ -389,5 +346,21 @@ test('Vila Neon, deitado: de noite no festival, sem tocar em nada, o show começ
     expect(r.som.show).toBe(true);
     expect(r.som.calarNatureza).toBeGreaterThan(0.5);
   }
+  // nenhum bicho solto no festival, e ninguém chama por cima da música
+  const bichos = await page.evaluate(() => {
+    const e = window.__brumaluz!;
+    const f = e.vila!()!.zonas.festival;
+    return (e.criaturas?.() ?? []).filter(
+      (c) =>
+        !(c as { profissao?: string }).profissao &&
+        (c as { tipo?: string }).tipo !== 'cervo' &&
+        c.x >= f.x0 &&
+        c.x <= f.x1 + 1 &&
+        c.z >= f.z0 &&
+        c.z <= f.z1 + 1,
+    ).length;
+  });
+  expect(bichos).toBe(0);
+  expect(await page.evaluate(() => window.__brumaluz!.silencioDoShow?.() ?? false)).toBe(true);
   await page.context().close();
 });

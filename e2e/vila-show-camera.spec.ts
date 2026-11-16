@@ -8,10 +8,10 @@ import { CHAMADO, INTRO, ROTEIRO, faseDoShow } from '../src/jogo/show';
  * toque de quem estava no palco ou na plateia virava acorde e o `pointerdown` era engolido, então
  * o arrastar nunca chegava à câmera (e, no computador, o clique que prende o mouse também não).
  *
- * Aqui, como a criança: a f3 no selinho, de noite no palco, acende as três caixas com o dedo (ou
- * o mouse); a missão fecha na hora (a festa); fechada a festa, o arrastar gira a câmera já, e
- * continua girando a cada momento do show (a abertura, a entrada da banda, as músicas, a pausa,
- * o chamado e o fim). O toque curto nas músicas continua tocando o acorde, sem colocar bloco.
+ * Agora (16 nov 2026) o show é do bairro e só para ver: a criança fica na grade de noite, sem
+ * tocar em nada, o show começa sozinho; o arrastar gira a câmera em cada momento do show (a
+ * abertura, a entrada da banda, as músicas, a pausa, o chamado e o fim) e o toque curto não toca
+ * acorde nem dispara o fim (o acorde final vem sozinho).
  */
 declare const process: { env: Record<string, string | undefined> };
 const PASTA = process.env.VILA_PASTA ?? 'test-results/vila-show-camera';
@@ -26,14 +26,14 @@ const fase = (page: Page) =>
     })
     .then((r) => (r.show ? faseDoShow(r.show, r.t) : null));
 
-async function escolherF3(page: Page): Promise<void> {
+async function escolherF4(page: Page): Promise<void> {
   await page
     .waitForFunction(() => !document.body.dataset.overlay, undefined, { timeout: 15_000 })
     .catch(() => undefined);
   await escolherNaRoda(page, 'missoes');
   await page.waitForSelector('[data-alma-quadro]', { timeout: 20_000 });
   await page.waitForTimeout(800);
-  await tocar(page, '[data-alma-jogar="f3"]');
+  await tocar(page, '[data-alma-jogar="f4"]');
   await page.waitForTimeout(1500);
 }
 
@@ -81,7 +81,7 @@ async function arrastar(page: Page, tamanho: Tamanho, cdp: CDPSession | null): P
 }
 
 for (const tamanho of ['deitado', 'pc'] as const)
-  test(`Vila Neon (${tamanho}): depois das três caixas a câmera gira já e no show inteiro`, async ({
+  test(`Vila Neon (${tamanho}): no show, a câmera gira o tempo todo e o toque não muda nada`, async ({
     browser,
   }) => {
     test.setTimeout(600_000);
@@ -96,86 +96,18 @@ for (const tamanho of ['deitado', 'pc'] as const)
       timeout: 30_000,
     });
     const cdp = tamanho === 'pc' ? null : await page.context().newCDPSession(page);
-    await escolherF3(page);
+    // a f4 no selinho (qualquer missão: o show é do bairro), de noite, a criança na grade
+    await escolherF4(page);
     await page.evaluate(() => {
-      window.__brumaluz!.hora = 0.9;
+      const e = window.__brumaluz!;
+      e.hora = 0.9;
+      const g = e.vila!()!.pontos.plateia;
+      e.teleportar!((g.x0 + g.x1) / 2 + 0.5, g.z1 - 1.5);
+      e.apontar!(0, 0.15);
     });
-    const plano = await page.evaluate(() => {
-      const p = window.__brumaluz!.vila!()!;
-      return { palco: p.pontos.palco, caixas: p.pontos.caixas };
-    });
-    if (process.env.CAMERA_DEPURAR) {
-      page.on('console', (m) => console.log(`pagina: ${m.text()}`));
-      await page.evaluate(() =>
-        window.addEventListener(
-          'pointerdown',
-          (e) =>
-            console.log(
-              `pd ${e.clientX},${e.clientY} lock=${!!document.pointerLockElement} overlay=${document.body.dataset.overlay ?? ''} alvo=${(e.target as HTMLElement).className} caixas=${JSON.stringify(window.__vila!.caixas())}`,
-            ),
-          { capture: true },
-        ),
-      );
-    }
-    // as três caixas: a criança fica na frente de cada uma, de frente para ela, e toca
-    for (let i = 0; i < 3; i++) {
-      const [x, , z] = plano.caixas[i];
-      await page.evaluate(
-        ([x, z]) => {
-          const e = window.__brumaluz!;
-          e.teleportar!(x + 0.5, z - 1.35);
-          e.apontar!(0, 0.25);
-        },
-        [x, z],
-      );
-      await page.waitForTimeout(1200);
-      const alvo = await page
-        .waitForFunction((i) => window.__vila!.caixas().find((c) => c.i === i)?.t ?? null, i, {
-          timeout: 10_000,
-        })
-        .then((h) => h.jsonValue() as Promise<{ x: number; y: number }>);
-      if (cdp) await page.touchscreen.tap(alvo.x, alvo.y);
-      else {
-        // no computador o mouse fica preso no jogo: a criança mira a caixa com o centro da tela
-        const v = page.viewportSize()!;
-        for (let k = 0; k < 10; k++) {
-          const t = await page.evaluate(
-            (i) => window.__vila!.caixas().find((c) => c.i === i)?.t ?? null,
-            i,
-          );
-          if (!t) break;
-          const dx = t.x - v.width / 2;
-          const dy = t.y - v.height / 2;
-          if (Math.hypot(dx, dy) < 12) break;
-          await page.evaluate(
-            ([dx, dy]) => {
-              const e = window.__brumaluz!;
-              const [p, y] = e.rotacao!;
-              e.apontar!(y + dx * 0.0011, p + dy * 0.0011);
-            },
-            [dx, dy],
-          );
-          await page.waitForTimeout(250);
-        }
-        await page.mouse.click(v.width / 2, v.height / 2);
-      }
-      await page.waitForTimeout(900);
-      const cx = await page.evaluate(() => window.__brumaluz!.vilaEstado!()?.cx);
-      console.log(
-        `câmera: ${tamanho} caixa ${i} em ${Math.round(alvo.x)},${Math.round(alvo.y)}: ${JSON.stringify(cx)}`,
-      );
-      if (i === 0) await page.screenshot({ path: `${PASTA}/${tamanho}-caixa.png` });
-    }
+    // ninguém toca em nada: o show começa sozinho
     await page.waitForFunction(() => !!window.__brumaluz!.vilaEstado!()?.show, undefined, {
-      timeout: 10_000,
-    });
-    // a missão fecha na hora: a festa aparece (com o show já começando atrás)
-    await page.waitForSelector('[data-alma-festa]', { timeout: 15_000 });
-    await page.screenshot({ path: `${PASTA}/${tamanho}-festa.png` });
-    await fecharFesta(page);
-    // a festa some e o jogo volta (os controles do toque reaparecem com o painel fechado)
-    await page.waitForFunction(() => !document.body.dataset.overlay, undefined, {
-      timeout: 10_000,
+      timeout: 90_000,
     });
     // no computador, a câmera gira com o mouse preso: o navegador de teste não prende, então
     // o teste finge que prendeu (e conta quem pediu para prender)
@@ -205,9 +137,9 @@ for (const tamanho of ['deitado', 'pc'] as const)
       musica2: ROTEIRO[1].inicio + 30,
       chamado: CHAMADO + 0.5,
     };
-    const acordes = () =>
+    const eventos = () =>
       page.evaluate(
-        () => (window.__brumaluz!.eventosVila ?? []).filter((e) => e.e === 'vilaAcorde').length,
+        () => (window.__brumaluz!.eventosVila ?? []).filter((e) => e.e !== 'vilaArco').length,
       );
     for (const [nome, s] of Object.entries(R)) {
       await page.evaluate((s) => window.__brumaluz!.pularShow!(s), s);
@@ -215,21 +147,27 @@ for (const tamanho of ['deitado', 'pc'] as const)
       const f = await fase(page);
       const giro = await arrastar(page, tamanho, cdp);
       console.log(`câmera: ${tamanho} ${nome} (${f}) girou ${giro.toFixed(2)} rad`);
-      if (nome.startsWith('musica')) {
-        // o toque curto toca o acorde (e não coloca bloco no palco)
-        const a0 = await acordes();
+      if (nome.startsWith('musica') || nome === 'chamado') {
+        // o toque curto não toca nada nem dispara o fim (o show é só para ver)
+        const e0 = await eventos();
         const v = page.viewportSize()!;
         if (cdp) await page.touchscreen.tap(v.width * 0.6, v.height * 0.4);
         else await page.mouse.click(v.width * 0.6, v.height * 0.4);
-        await expect.poll(acordes, { timeout: 3000 }).toBeGreaterThan(a0);
+        await page.waitForTimeout(1500);
+        expect(await eventos()).toBe(e0);
+        expect(await fase(page)).not.toBe('final');
         await page.screenshot({ path: `${PASTA}/${tamanho}-${nome}.png` });
       }
     }
-    // o chamado: o toque dispara o acorde final; o fim do show, e a câmera ainda gira
-    const v = page.viewportSize()!;
-    if (cdp) await page.touchscreen.tap(v.width * 0.6, v.height * 0.4);
-    else await page.mouse.click(v.width * 0.6, v.height * 0.4);
-    await expect.poll(() => fase(page), { timeout: 8000 }).toBe('final');
+    // o acorde final vem sozinho no fim do chamado; e a câmera ainda gira
+    await expect.poll(() => fase(page), { timeout: 30_000 }).toBe('final');
+    const fim = await page.evaluate(
+      () =>
+        (window.__brumaluz!.eventosVila ?? []).find((e) => e.e === 'vilaFinal') as
+          | { quem: string }
+          | undefined,
+    );
+    expect(fim?.quem).toBe('auto');
     await page.waitForTimeout(4000);
     await arrastar(page, tamanho, cdp);
     if (tamanho === 'pc') {

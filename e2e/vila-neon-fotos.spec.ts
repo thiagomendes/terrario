@@ -582,7 +582,8 @@ test('fotos e vídeo do show', async ({ browser }) => {
     await clique(`show-chamado-${h}`);
     await ate(page, 37.9);
     // o toque da criança dispara o acorde final
-    await page.evaluate(() => window.__brumaluz!.vilaComando!({ a: 'palco' }));
+    // (o acorde final vem sozinho: o relógio do show pula até ele)
+    await page.evaluate(() => window.__brumaluz!.pularShow!(1e4));
     await page.waitForTimeout(140);
     await foto(page, `show-final-1-${h}`);
     await foto(page, `show-final-2-${h}`);
@@ -612,7 +613,8 @@ test('fotos e vídeo do show', async ({ browser }) => {
   const som = page.evaluate((s) => window.__brumaluz!.gravarSom?.(s) ?? null, 16);
   await comecarGravacao(page, 30);
   await ate(page, 37.4);
-  await page.evaluate(() => window.__brumaluz!.vilaComando!({ a: 'palco' }));
+  // (o acorde final vem sozinho: o relógio do show pula até ele)
+  await page.evaluate(() => window.__brumaluz!.pularShow!(1e4));
   await page.waitForTimeout(6200);
   await pararGravacao(page, `${PASTA}/show.webm`);
   const r = await som;
@@ -945,7 +947,8 @@ test('vídeo do passeio e do show', async ({ browser }) => {
     H + 0.3,
   ] as const);
   await ate(page, 37.3);
-  await page.evaluate(() => window.__brumaluz!.vilaComando!({ a: 'palco' }));
+  // (o acorde final vem sozinho: o relógio do show pula até ele)
+  await page.evaluate(() => window.__brumaluz!.pularShow!(1e4));
   await page.waitForTimeout(8000);
   await pararGravacao(page, `${PASTA}/passeio.webm`);
   await page.evaluate(() => window.__brumaluz!.pararSom?.());
@@ -1076,10 +1079,12 @@ test('som do show na grade', async ({ browser }) => {
   const toques: number[] = [];
   for (const t of [24, 28]) {
     toques.push(await ate(page, t));
-    await page.evaluate(() => window.__brumaluz!.vilaComando!({ a: 'palco' }));
+    // (o acorde final vem sozinho: o relógio do show pula até ele)
+    await page.evaluate(() => window.__brumaluz!.pularShow!(1e4));
   }
   const tapa = await ate(page, 37.9);
-  await page.evaluate(() => window.__brumaluz!.vilaComando!({ a: 'palco' }));
+  // (o acorde final vem sozinho: o relógio do show pula até ele)
+  await page.evaluate(() => window.__brumaluz!.pularShow!(1e4));
   for (let i = 0; i < 300 && (await decorrido(page)) >= 0; i++) await page.waitForTimeout(100);
   await page.waitForTimeout(9000);
   await pararGravacao(page, `${PASTA}/show.webm`);

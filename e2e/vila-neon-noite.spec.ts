@@ -28,14 +28,14 @@ import { CHAMADO, ESPERA_FINAL } from '../src/jogo/show';
  * medidas do celular e o vídeo da noite do show (só com VILA_FOTOS=1, na placa de vídeo:
  * scripts/e2e-gpu.sh). `VILA_SO=dia,noite,medida,video` escolhe as partes.
  *
- * - de dia: a passagem de som no palco, a lua no cartão da f3, no selinho e em cima do palco;
- * - a noite chega: o palco aquece; o show com a turma (uns 20, espalhados pelo campo; de longe, da
- *   grade, por trás e da grade virado para o povo);
+ * - de dia: o palco vazio (a banda de papo na frente da van, atrás do palco: 16 nov 2026);
+ * - a noite chega: o palco aquece; o show sozinho com a turma (uns 40, espalhados pelo campo; de
+ *   longe, da grade, por trás e da grade virado para o povo);
  * - as medidas (peças, moradores, chamadas de desenho) no nascer e na grade no meio do show;
  * - o vídeo (~30 s, deitado) da noite do show com o público, com o som do jogo.
  *
  * (O show de verdade, de uns 6 min, tem os vídeos e as fotos dele em vila-show-real.spec.ts;
- * aqui o relógio do show é pulado com o atalho dos testes para chegar ao chamado.)
+ * aqui o relógio do show é pulado com o atalho dos testes para chegar ao fim.)
  */
 declare const process: { env: Record<string, string | undefined> };
 test.skip(!process.env.VILA_FOTOS, 'só com VILA_FOTOS');
@@ -64,26 +64,34 @@ test('o show só de noite e o público (fotos e vídeo)', async ({ browser }) =>
 
   if (quer('dia')) {
     passo('dia');
-    // o quadro de dia: a f3 com a lua
-    await escolherNaRoda(page, 'missoes');
-    await page.waitForSelector('[data-alma-quadro]', { timeout: 20_000 });
-    await page.waitForTimeout(900);
-    expect(await page.locator('[data-missao="f3"] [data-alma-lua]').count()).toBe(1);
-    await foto(page, 'dia-quadro-lua', true);
-    await tocar(page, '[data-alma-jogar="f3"]');
-    await page.waitForTimeout(1500);
-    // a criança no campo, olhando o palco: a passagem de som, a lua no selinho e no palco
+    // a criança no campo, olhando o palco: de dia o palco fica vazio (a banda está na van)
     await ir(page, p.ox + 60.5, p.oz + 86.5, H + 0.2);
     await assentar(page, 20);
     await page.evaluate(() => window.__brumaluz!.apontar!(0, -0.02));
     await page.waitForTimeout(9000);
-    expect(await page.evaluate(() => window.__guia!.esperando())).toBe(true);
-    await foto(page, 'dia-palco-passagem-lua', true);
-    // de perto: a banda afinando e a turma de dia (só quatro)
+    await foto(page, 'dia-palco-vazio', true);
+    const naBanda = await page.evaluate(() => {
+      const e = window.__brumaluz!;
+      const pal = e.vila!()!.pontos.palco;
+      return (e.criaturas?.() ?? []).filter(
+        (c) =>
+          (c as { profissao?: string }).profissao &&
+          c.y > pal.y + 0.5 &&
+          c.x >= pal.x0 &&
+          c.x <= pal.x1 + 1 &&
+          c.z >= pal.z0 &&
+          c.z <= pal.z1 + 1,
+      ).length;
+    });
+    expect(naBanda).toBe(0);
+    // de perto: o palco vazio e a turma de dia (só quatro); atrás do palco, a banda na van
     await esconderJogador(page, true);
     await camera(page, o(54, 3.2, 92), [pass[0], topo + 1.2, pass[2] + 4]);
     await page.waitForTimeout(2500);
-    await foto(page, 'dia-passagem-banda');
+    await foto(page, 'dia-palco-vazio-perto');
+    await camera(page, o(88, 4.5, 118), o(82, 1.2, 124.5));
+    await page.waitForTimeout(2500);
+    await foto(page, 'dia-banda-na-van');
     await medir(page, 'campo-dia');
     await camera(page, null);
     await esconderJogador(page, false);
@@ -151,14 +159,14 @@ test('o show só de noite e o público (fotos e vídeo)', async ({ browser }) =>
     });
     console.log(`BRACOS ${JSON.stringify(bracos)}`);
     expect(bracos.filter((b) => b > 2).length).toBeGreaterThanOrEqual(5);
-    // espera o show acabar sozinho (pulando para o chamado: o acorde final vem no fim dele)
+    // espera o show acabar sozinho (pulando para o chamado: o acorde final vem sozinho no fim dele)
     await page.evaluate((s) => window.__brumaluz!.pularShow!(s), CHAMADO - 1);
     for (let i = 0; i < 600 && (await decorrido(page)) >= 0; i++) await page.waitForTimeout(100);
   }
 
   if (quer('video')) {
     passo('video');
-    // um show por noite: a noite seguinte (o dia do mundo vira), e as caixas acendem de novo
+    // um show por noite: a noite seguinte (o dia do mundo vira), e o show vem de novo, sozinho
     await page.evaluate(() => {
       const e = window.__brumaluz!;
       e.definirDia!(e.dia!() + 1);
@@ -167,20 +175,6 @@ test('o show só de noite e o público (fotos e vídeo)', async ({ browser }) =>
     await page.waitForTimeout(1500);
     await hora(page, NOITE);
     await page.waitForTimeout(1500);
-    for (let i = 0; i < 3; i++) {
-      const ja = await page.evaluate((i) => window.__brumaluz!.vilaEstado!()?.cx[i] ?? false, i);
-      if (!ja) continue;
-      await page.evaluate((i) => {
-        const e = window.__brumaluz!;
-        const p = e.vila!()!;
-        const c = p.pontos.caixas[i];
-        e.voar?.(true);
-        e.teleportar!(c[0] + 0.5, c[2] - 1.2, p.pontos.palco.y + 1.3);
-      }, i);
-      await page.waitForTimeout(450);
-      await page.evaluate((i) => window.__brumaluz!.vilaComando!({ a: 'caixa', i }), i);
-      await page.waitForTimeout(350);
-    }
     await esconderJogador(page, true);
     const largo = { p: o(61, 8.5, 73.5), a: [pass[0], topo + 1.5, pass[2] + 5] as V3 };
     const costas = { p: o(50, 2.4, 82), a: [pass[0] - 2, topo + 0.8, pass[2] + 2] as V3 };
@@ -203,10 +197,8 @@ test('o show só de noite e o público (fotos e vídeo)', async ({ browser }) =>
     await voo(page, [atras, povo], 6);
     await page.waitForTimeout(1500);
     await voo(page, [povo, atras], 5);
-    // o acorde final pelo toque da criança (no chamado)
-    await page.evaluate((s) => window.__brumaluz!.pularShow!(s), CHAMADO + ESPERA_FINAL * 0.3);
-    await ate(page, CHAMADO + ESPERA_FINAL * 0.3 + 0.2);
-    await page.evaluate(() => window.__brumaluz!.vilaComando!({ a: 'palco' }));
+    // o acorde final, que vem sozinho no fim do chamado
+    await page.evaluate((s) => window.__brumaluz!.pularShow!(s), CHAMADO + ESPERA_FINAL - 1.5);
     await voo(page, [atras, largo], Math.max(2, 32 - (Date.now() - t0) / 1000));
     await pararGravacao(page, `${PASTA}/noite-show.webm`);
     await page.evaluate(() => window.__brumaluz!.pararSom?.());
@@ -217,23 +209,21 @@ test('o show só de noite e o público (fotos e vídeo)', async ({ browser }) =>
   await page.context().close();
 });
 
-test('celular: o quadro em pé de dia (a lua) e as medidas no nascer e na grade', async ({
-  browser,
-}) => {
+test('celular: o quadro em pé (a f4) e as medidas no nascer e na grade', async ({ browser }) => {
   test.skip(!quer('medida'), 'só com medida');
   const page = await abrir(browser, 'vila-noite-celular', 'empe', 3);
   const p = await plano(page);
   const H = p.h + 1;
-  // o quadro em pé, de dia: a f3 com a lua
+  // o quadro em pé, de dia: a f4 (a volta no rinque) inteira, sem lua nem espera
   await escolherNaRoda(page, 'missoes');
   await page.waitForSelector('[data-alma-quadro]', { timeout: 20_000 });
   await page.waitForTimeout(900);
-  await page.locator('[data-missao="f3"]').scrollIntoViewIfNeeded();
+  await page.locator('[data-missao="f4"]').scrollIntoViewIfNeeded();
   await page.waitForTimeout(500);
-  await foto(page, 'celular-quadro-dia-lua', true);
-  await tocar(page, '[data-alma-jogar="f3"]');
+  await foto(page, 'celular-quadro-dia-f4', true);
+  await tocar(page, '[data-alma-jogar="f4"]');
   await page.waitForTimeout(2500);
-  await foto(page, 'celular-nascer-dia-lua', true);
+  await foto(page, 'celular-nascer-dia-f4', true);
   // no nascer: as peças de dia e de noite (o povo é do festival: nada aqui)
   await medir(page, 'celular-nascer-dia');
   await hora(page, NOITE);
@@ -252,7 +242,7 @@ test('celular: o quadro em pé de dia (a lua) e as medidas no nascer e na grade'
   await page.waitForTimeout(3000);
   await medir(page, 'celular-grade-show');
   await foto(page, 'celular-grade-show', true);
-  // o pior caso: do meio do campo, olhando o palco por cima do público (os 20 e o palco à vista)
+  // o pior caso: do meio do campo, olhando o palco por cima do público (os 40 e o palco à vista)
   await ir(page, p.ox + 60.5, p.oz + 84, H + 0.2);
   await page.evaluate(() => window.__brumaluz!.apontar!(0, 0.02));
   await page.waitForTimeout(2500);

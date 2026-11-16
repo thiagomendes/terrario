@@ -103,7 +103,8 @@ test('o show de verdade: as fotos de cada momento', async ({ browser }) => {
   await camera(page, grade.p, grade.a);
   await ate(page, CHAMADO + 1.5);
   await foto(page, 'chamado');
-  await page.evaluate(() => window.__brumaluz!.vilaComando!({ a: 'palco' }));
+  // (o acorde final vem sozinho: o relógio do show pula até ele)
+  await page.evaluate(() => window.__brumaluz!.pularShow!(1e4));
   const F = await page.evaluate(() => window.__brumaluz!.vilaEstado!()!.show!.final ?? 0);
   void F;
   const desde = async (s: number) => {
@@ -182,7 +183,8 @@ test('analise: a banda de perto, sem os feixes', async ({ browser }) => {
     await page.waitForTimeout(100);
     await foto(page, `analise-${nome}-alto`);
   }
-  await page.evaluate(() => window.__brumaluz!.vilaComando!({ a: 'palco' }));
+  // (o acorde final vem sozinho: o relógio do show pula até ele)
+  await page.evaluate(() => window.__brumaluz!.pularShow!(1e4));
   for (const [nome, s] of [
     ['fim-pulo', 1],
     ['fim-fila', REVERENCIA - 0.4],
@@ -386,7 +388,8 @@ test('video2: a pausa entre as músicas e o fim do show', async ({ browser }) =>
   som = page.evaluate((s) => window.__brumaluz!.gravarSom?.(s) ?? null, 30);
   await comecarGravacao(page, 30);
   await ate(page, CHAMADO + 1.6);
-  await page.evaluate(() => window.__brumaluz!.vilaComando!({ a: 'palco' }));
+  // (o acorde final vem sozinho: o relógio do show pula até ele)
+  await page.evaluate(() => window.__brumaluz!.pularShow!(1e4));
   await voo(page, [largo, ceu], 1.2);
   await voo(page, [ceu, ceu], 5.4);
   await voo(page, [ceu, grade], 4.4);
