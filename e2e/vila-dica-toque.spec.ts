@@ -81,14 +81,22 @@ for (const tamanho of ['deitado', 'empe'] as const)
           ax: q.carrossel.x,
           az: q.carrossel.z,
         },
-        { b: 2, x: q.bate.saida[0], z: q.bate.saida[2], ax: q.bate.x, az: q.bate.z },
+        // (o bate-bate é de guiar: a dica é do carrinho livre, na beira da pista)
+        {
+          b: 2,
+          x: q.bate.vagas[5][0],
+          z: q.bate.z1 + 3.2,
+          ax: q.bate.vagas[5][0],
+          az: q.bate.vagas[5][1],
+          olhar: 0.25,
+        },
       ];
     });
     for (const l of lugares) {
       await page.evaluate((l) => {
         const e = window.__brumaluz!;
         e.teleportar!(l.x, l.z, e.vila!()!.h + 1.2);
-        e.apontar!(Math.atan2(l.ax - l.x, l.az - l.z), -0.1);
+        e.apontar!(Math.atan2(l.ax - l.x, l.az - l.z), (l as { olhar?: number }).olhar ?? -0.1);
       }, l);
       await assentar(page, 9);
       await esperarDica(page, `sentar-${l.b}`);
@@ -96,11 +104,12 @@ for (const tamanho of ['deitado', 'empe'] as const)
       await page.waitForTimeout(1300);
       await page.screenshot({ path: `${PASTA}/${tamanho}-dica-brinquedo-${l.b}.png` });
     }
-    // o toque na dica do bate-bate senta, e sentada a dica some
+    // o toque na dica do bate-bate senta, e sentada a dica de tocar vira a de guiar (sem a mãozinha)
     const t3 = (await dica(page))!.t;
     await page.touchscreen.tap(t3.x, t3.y);
     await page.waitForFunction(() => window.__brumaluz!.vilaParque!.sentado()?.b === 'bate');
-    await esperarDica(page, null);
+    await esperarDica(page, 'bate-guiar');
+    expect((await dica(page))!.texto).toBe('Empurre o controle para guiar');
     // desceu ali mesmo: a dica não volta até ela se afastar
     await page.evaluate(() => window.__brumaluz!.vilaParque!.sair());
     await page.waitForFunction(() => !window.__brumaluz!.vilaParque!.sentado());

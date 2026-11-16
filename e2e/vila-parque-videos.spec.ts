@@ -79,7 +79,7 @@ async function gravar(page: Page, nome: string, seg: number, cena: () => Promise
 test('o parque: os vídeos dos três brinquedos (deitado, com o som do jogo)', async ({
   browser,
 }) => {
-  test.skip(!quer('roda') && !quer('carrossel') && !quer('bate'), 'só os vídeos');
+  test.skip(!quer('roda') && !quer('carrossel'), 'só os vídeos');
   const page = await abrir(browser, 'vila-parque-videos', 'deitado', 4, ['f1', 'f2', 'f4']);
   const p = await plano(page);
   const pq = p.pontos.parque;
@@ -119,31 +119,7 @@ test('o parque: os vídeos dos três brinquedos (deitado, com o som do jogo)', a
     });
   }
 
-  if (quer('bate')) {
-    passo('bate-bate');
-    await hora(page, 0.78);
-    await ir(page, pq.bate.saida[0], pq.bate.saida[2] + 2.5, Y + 0.2);
-    await olhar(page, pq.bate.x, pq.bate.z, 0.05);
-    await assentar(page, 20);
-    await page.waitForTimeout(3000);
-    await gravar(page, 'bate-bate', 30, async () => {
-      await page.waitForTimeout(1500);
-      await sentar(page, 2, 'bate');
-      await page.waitForTimeout(3500);
-      // cinco "tum", sem pressa
-      for (let i = 0; i < 5; i++) {
-        await page.touchscreen.tap(422, 150);
-        await page.waitForTimeout(i === 2 ? 1400 : 2200);
-        if (i === 2) await foto(page, 'bate-bate-tum', true);
-      }
-      const yaw = await page.evaluate(() => window.__brumaluz!.rotacao![1]);
-      await girar(page, yaw, yaw - 1.2, 0.16, 6);
-      // sai andando
-      await page.evaluate(() => window.__brumaluz!.controleDireto!.mover(1, 0));
-      await page.waitForFunction(() => !window.__brumaluz!.vilaParque!.sentado());
-      await page.evaluate(() => window.__brumaluz!.controleDireto!.mover(0, 0));
-    });
-  }
+  // (o vídeo do bate-bate, que agora é de guiar, é do `vila-bate-provas.spec.ts`)
 
   if (quer('roda')) {
     passo('roda-gigante');

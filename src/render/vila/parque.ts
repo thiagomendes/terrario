@@ -43,6 +43,7 @@ import { criarPaletaLuz, type PaletaLuz } from './luzes';
 import {
   BALCAO_BARRACA,
   CARROSSEL,
+  HASTE_DO_CARRINHO,
   CUBA_ALGODAO,
   MESA_ARGOLA,
   PINOS_ARGOLA,
@@ -578,9 +579,9 @@ export function criarParqueVila(
           por(
             bufFaisca,
             i,
-            px - fx * 0.86,
+            px + fx * HASTE_DO_CARRINHO.z + fz * HASTE_DO_CARRINHO.x,
             B.y + haste - 0.02,
-            pz - fz * 0.86,
+            pz + fz * HASTE_DO_CARRINHO.z - fx * HASTE_DO_CARRINHO.x,
             t * 9 + i,
             0,
             0,

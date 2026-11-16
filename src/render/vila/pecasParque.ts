@@ -355,9 +355,11 @@ export function carrosselQueGira(r: Ref): void {
 }
 
 /** O mastro do cavalinho fica este tanto à frente do assento (blocos): no pescoço dele. */
-export const FRENTE_DO_MASTRO = 0.58;
+export const FRENTE_DO_MASTRO = 0.8;
 /** Quanto o cavalinho é mais comprido na frente (o pescoço e a cabeça vão depois do mastro). */
-const FRENTE_DO_CAVALINHO = 0.36;
+const FRENTE_DO_CAVALINHO = 0.58;
+/** A alça da sela (onde as mãos seguram): quanto à frente do assento e a que altura. */
+export const ALCA_DO_CAVALINHO = { z: 0.4, y: 0.3 } as const;
 
 /** As lâmpadas do carrossel (giram com ele): a volta da barra do toldo e a coluna. */
 export function luzesDoCarrossel(r: Ref): void {
@@ -409,6 +411,11 @@ export function cavalinho(r: Ref, v: number): void {
   r.caixa(0.33, 0.06, 0.06, 0, 0.28, 0.8 + F, sela, 0);
   // a argola do mastro, no lombo, na frente da sela (o mastro passa por ali)
   r.caixa(0.18, 0.1, 0.18, 0, -0.06, FRENTE_DO_MASTRO, COR.amarelo, 0.03);
+  // a alça da sela: é nela que a criança segura com as duas mãos (o mastro fica mais à frente,
+  // longe do rosto, do boné e do cabelo: a cabeça do boneco é grande e o braço é curto)
+  const A = ALCA_DO_CAVALINHO;
+  r.barra([0, -0.06, A.z], [0, A.y, A.z], 0.07, COR.cromo);
+  r.caixa(0.5, 0.08, 0.08, 0, A.y - 0.02, A.z, COR.amarelo, 0.03);
 }
 
 // ------------------------------------------------------------------ o bate-bate
@@ -501,10 +508,14 @@ export function carrinho(r: Ref, v: number, haste: number): void {
   r.prisma(8, 0.2, 0.06, 0, 0.44, 0.06, '#24232a', 'z');
   // o número de estrela no capô e o farolzinho
   r.placa(perfilEstrela(0.2), 0.04, 0, 0.34, 0.6, friso);
-  // a haste até a malha e a sapata
-  r.barra([0, 0.4, -0.86], [0, haste - 0.12, -0.86], 0.07, COR.cromo);
-  r.caixa(0.34, 0.08, 0.14, 0, haste - 0.14, -0.86, COR.cromo, 0);
+  // a haste até a malha e a sapata, no canto de trás do encosto (fora da frente da câmera, que
+  // vai atrás do carrinho: no meio, a haste cortava a tela do celular em pé de alto a baixo)
+  const H = HASTE_DO_CARRINHO;
+  r.barra([H.x, 0.4, H.z], [H.x, haste - 0.12, H.z], 0.07, COR.cromo);
+  r.caixa(0.34, 0.08, 0.14, H.x, haste - 0.14, H.z, COR.cromo, 0);
 }
+/** Onde a haste sai do carrinho (para o lado direito e para trás do assento). */
+export const HASTE_DO_CARRINHO = { x: 0.58, z: -0.86 } as const;
 
 /** O farol do carrinho (aceso) e a ponta da haste. */
 export function luzesDoCarrinho(r: Ref): void {

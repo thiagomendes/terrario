@@ -43,8 +43,10 @@ export const SEGURAR_PARA_SAIR = 0.5;
 /** No bate-bate: o carrinho parado no tapete da saída por este tempo desce (s). */
 export const PARAR_NO_TAPETE = 1;
 /** No bate-bate: a câmera se afasta até aqui, olha um pouco de cima e segue o carrinho. */
-export const ZOOM_NO_BATE = 5.6;
-export const PITCH_NO_BATE = 0.42;
+// (o mais longe que a câmera vai: no celular em pé a tela é estreita, e de perto o carrinho
+// tomava metade dela; a altura cabe debaixo do teto de malha)
+export const ZOOM_NO_BATE = 7;
+export const PITCH_NO_BATE = 0.38;
 /** Quanto da diferença para o rumo do carrinho a câmera tira por segundo. */
 export const SEGUE_NO_BATE = 1.25;
 /** Depois de a criança mexer na câmera, ela só volta a seguir o carrinho passado este tempo (s). */
@@ -66,15 +68,16 @@ export const JUNTAS_SENTADO: Readonly<Record<Brinquedo, Juntas>> = {
     bdZ: 0.2,
     beZ: -0.2,
   },
-  // no cavalinho: as pernas abertas para baixo, as mãos no mastro
+  // no cavalinho: as pernas abertas para baixo, as duas mãos na alça da sela (o mastro passa
+  // mais à frente, longe do rosto)
   carrossel: {
     pernaD: -0.5,
     pernaE: -0.5,
     corpoY: -0.3,
-    bdX: -1.25,
-    beX: -1.25,
-    bdZ: -0.12,
-    beZ: 0.12,
+    bdX: -1.3,
+    beX: -1.3,
+    bdZ: 0,
+    beZ: 0,
   },
   // no carrinho: as pernas para a frente, as mãos no volante
   bate: {

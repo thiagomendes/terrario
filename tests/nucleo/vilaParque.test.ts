@@ -303,6 +303,35 @@ describe('spec 026 (parte 2): o parque no núcleo', () => {
     expect(Object.keys(parque(n).s)).toHaveLength(0);
   });
 
+  it('bate-bate no modo nuvem: guiar pela pista e bater na mureta nunca vira "volta para onde estava"', () => {
+    const n = abrir(['ana'], false);
+    const B = plano().pontos.parque.bate;
+    ir(n, 'ana', B.vagas[5][0], Y(), B.z1 + 2);
+    passos(n, 2);
+    sentar(n, 'ana', 2);
+    passos(n, 12);
+    const s = sentadoNaVista(parque(n), 'ana')!;
+    expect(s.b).toBe('bate');
+    const evs: Ev[] = [];
+    // dez segundos com o controle todo empurrado, mudando de rumo (e batendo na mureta do norte)
+    for (let k = 1; k <= 200; k++) {
+      const a = k < 60 ? Math.PI : Math.PI + (k - 60) * 0.04;
+      n.comando('ana', {
+        t: 'vila',
+        a: 'guiar',
+        x: Math.round(Math.sin(a) * 100),
+        z: Math.round(Math.cos(a) * 100),
+        n: k,
+      });
+      evs.push(...passos(n, 1));
+    }
+    expect(evs.some((e) => e.e === 'teleporte')).toBe(false);
+    expect(evs.some((e) => e.e === 'parqueTum')).toBe(true);
+    expect(sentadoNaVista(parque(n), 'ana')).toEqual(s);
+    const c = n.estado.vila!.parque.carros()[s.i];
+    expect(Math.hypot(c.x - B.vagas[5][0], c.z - B.vagas[5][1])).toBeGreaterThan(2);
+  });
+
   it('bate-bate: os moradores guiam os quatro primeiros carrinhos, sentados neles; longe da pista o quadro não leva carrinho nenhum', () => {
     const n = abrir();
     const pq = plano().pontos.parque;
