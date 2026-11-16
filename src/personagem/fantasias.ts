@@ -530,7 +530,8 @@ export const FANTASIAS: readonly FantasiaDef[] = [
   },
   // spec 026: as fantasias da Vila Neon (livres, como as da 017). A Roqueira do Palco é o
   // look do vocalista ajustado à criança, com o cabelo comprido e liso ligado (sai com um
-  // toque); a Dançarina do Neon é a única de rosa; a Patinadora calça os patins na Vila Neon.
+  // toque); a Dançarina do Neon é a única de rosa; a Patinadora é só a roupa (os patins a
+  // criança calça no suporte do rinque, por escolha dela: dono, 16 nov 2026).
   {
     id: 'roqueira-palco',
     grupo: 'temas',

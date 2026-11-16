@@ -409,7 +409,7 @@ export const MISSOES: readonly Missao[] = [
   {
     // spec 026 (o dono, 16 nov 2026): a volta no rinque, no lugar do grande show (o show agora é
     // do bairro, toda noite, sem missão). Id novo: quem fez a f3 de antes faz esta também (as
-    // moedinhas de antes ficam). Os patins vêm do suporte do rinque (ou da Patinadora)
+    // moedinhas de antes ficam). Os patins vêm do suporte do rinque (um toque nele, sempre)
     id: 'f4',
     mundo: 'vila-neon',
     nome: 'Volta no rinque',

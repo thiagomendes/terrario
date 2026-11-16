@@ -137,9 +137,18 @@ for (const tamanho of ['deitado', 'pc'] as const)
       musica2: ROTEIRO[1].inicio + 30,
       chamado: CHAMADO + 0.5,
     };
+    // (o acorde final que vem sozinho, 4,8 s depois do chamado, não é coisa do toque: fica fora
+    // da conta; um acorde final de outro jeito conta e reprova)
     const eventos = () =>
       page.evaluate(
-        () => (window.__brumaluz!.eventosVila ?? []).filter((e) => e.e !== 'vilaArco').length,
+        () =>
+          (window.__brumaluz!.eventosVila ?? []).filter(
+            (e) => e.e !== 'vilaArco' && !(e.e === 'vilaFinal' && e.quem === 'auto'),
+          ).length,
+      );
+    const finalSozinho = () =>
+      page.evaluate(() =>
+        (window.__brumaluz!.eventosVila ?? []).some((e) => e.e === 'vilaFinal' && e.quem === 'auto'),
       );
     for (const [nome, s] of Object.entries(R)) {
       await page.evaluate((s) => window.__brumaluz!.pularShow!(s), s);
@@ -154,8 +163,18 @@ for (const tamanho of ['deitado', 'pc'] as const)
         if (cdp) await page.touchscreen.tap(v.width * 0.6, v.height * 0.4);
         else await page.mouse.click(v.width * 0.6, v.height * 0.4);
         await page.waitForTimeout(1500);
-        expect(await eventos()).toBe(e0);
-        expect(await fase(page)).not.toBe('final');
+        const depois = await eventos();
+        if (depois !== e0)
+          console.log(
+            `câmera: ${tamanho} ${nome} eventos ${await page.evaluate(() => {
+              const e = window.__brumaluz!;
+              const v = e.vilaEstado!();
+              const s = v?.show ? e.vilaTempo!() - v.show.inicio : -1;
+              return `${JSON.stringify((e.eventosVila ?? []).slice(-3))} aos ${s.toFixed(1)} s`;
+            })}`,
+          );
+        expect(depois).toBe(e0);
+        if (!(await finalSozinho())) expect(await fase(page)).not.toBe('final');
         await page.screenshot({ path: `${PASTA}/${tamanho}-${nome}.png` });
       }
     }
