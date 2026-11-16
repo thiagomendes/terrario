@@ -21,9 +21,13 @@ import type { ObraSalva } from '../nucleo/saneamento';
  * das missões muda a geração da Era dos Dinos e do Doce Reino em volta do nascer: o navegador
  * de antes veria outro chão que o servidor; e o campo `canto` do "bem-vindo"). 8: spec 026 (a
  * Vila Neon: o planejador do bairro e os blocos 103 a 116 mudam a geração; o comando `vila`, o
- * campo `vila` do quadro e os eventos do show; os patins na aparência).
+ * campo `vila` do quadro e os eventos do show; os patins na aparência). 9: spec 026, o show de
+ * verdade (o formato das mensagens é o mesmo, mas o sentido mudou: o show de 6 min com a abertura,
+ * a entrada e três músicas, a banda que anda pela coreografia, o acorde do toque com a música no
+ * número e o atalho de teste `pularShow`; o navegador de antes desenharia e tocaria o show de 40 s
+ * em cima do relógio do novo, então recebe "versão nova, recarregue").
  */
-export const VERSAO_REDE = 8;
+export const VERSAO_REDE = 9;
 /** Jogadores por mundo. */
 export const MAX_JOGADORES = 8;
 
