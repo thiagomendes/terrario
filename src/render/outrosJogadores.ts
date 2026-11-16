@@ -13,7 +13,22 @@ import { normalizarAparencia, type Aparencia } from '../personagem/aparencia';
 import { blocoDoItem } from '../jogo/itens';
 import type { JogadorVisto, PerfilJogador } from '../nucleo/protocolo';
 // spec 015 (gestos): o gesto é uma camada do animador; o balão fica em cima da cabeça
-import { fazerGesto, gestoDoAnimador, type IdGesto } from '../personagem/gestos';
+import {
+  aplicarJuntas,
+  fazerGesto,
+  gestoDoAnimador,
+  type IdGesto,
+  type Juntas,
+} from '../personagem/gestos';
+
+/** Spec 026 (parte 2): a cadeira de um amigo sentado (o lugar, o rumo e a pose). */
+export interface AssentoDoAmigo {
+  x: number;
+  y: number;
+  z: number;
+  yaw: number;
+  juntas: Juntas;
+}
 import { criarBalao, type BalaoGesto } from './balaoGesto';
 
 /** Apelido em HTML por cima do jogo: nítido em qualquer tela (sem desfoque do 3D). */
@@ -114,6 +129,7 @@ export function criarOutrosJogadores(scene: Scene) {
   let perfis: Record<string, PerfilJogador> = {};
   const leves: { id: string; x: number; y: number; z: number; aparencia: string }[] = [];
   const levesPorId = new Map<string, (typeof leves)[number]>();
+  let assento: ((id: string) => AssentoDoAmigo | null) | null = null;
 
   function criar(v: JogadorVisto): Outro {
     const perfil = perfis[v.id];
@@ -188,6 +204,13 @@ export function criarOutrosJogadores(scene: Scene) {
           outros.delete(id);
         }
     },
+    /**
+     * Spec 026 (parte 2): onde está a cadeira de cada amigo sentado num brinquedo do parque
+     * (null: em pé) e a pose de sentado dele.
+     */
+    definirAssento(f: ((id: string) => AssentoDoAmigo | null) | null) {
+      assento = f;
+    },
     atualizar(dt: number, luz: number) {
       const k = Math.min(1, dt * 14);
       const cam = scene.activeCamera;
@@ -227,6 +250,19 @@ export function criarOutrosJogadores(scene: Scene) {
           o.vx *= 0.8;
           o.vz *= 0.8;
         }
+        // spec 026 (parte 2): o amigo sentado num brinquedo do parque fica onde a cadeira está
+        // (a mesma conta do relógio do mundo que move o brinquedo: nada de atraso de rede)
+        const cadeira = assento?.(o.id) ?? null;
+        if (cadeira) {
+          const ks = Math.min(1, dt * 9);
+          const longe = Math.hypot(cadeira.x - o.x, cadeira.y - o.y, cadeira.z - o.z) > 0.6;
+          o.x = longe ? o.x + (cadeira.x - o.x) * ks : cadeira.x;
+          o.y = longe ? o.y + (cadeira.y - o.y) * ks : cadeira.y;
+          o.z = longe ? o.z + (cadeira.z - o.z) * ks : cadeira.z;
+          o.vx = 0;
+          o.vz = 0;
+          o.animador.definirYaw(cadeira.yaw);
+        }
         let dy = a.yaw - o.yaw;
         dy = Math.atan2(Math.sin(dy), Math.cos(dy));
         o.yaw += dy * k;
@@ -247,17 +283,18 @@ export function criarOutrosJogadores(scene: Scene) {
         }
         const va = o.animador.vista();
         const agindo = va.golpe !== null || va.colocar !== null;
-        const pose = o.animador.atualizar(dt, {
-          velocidadeHoriz: a.vel,
-          correndo: a.correndo,
-          noChao: a.noChao,
-          voando: a.voando,
+        let pose = o.animador.atualizar(dt, {
+          velocidadeHoriz: cadeira ? 0 : a.vel,
+          correndo: cadeira ? false : a.correndo,
+          noChao: cadeira ? true : a.noChao,
+          voando: cadeira ? false : a.voando,
           vx: o.vx,
           vz: o.vz,
           // minerando ou construindo, vira para onde o amigo olha (o bloco dele)
-          alvoYaw: agindo ? o.yaw : null,
+          alvoYaw: agindo && !cadeira ? o.yaw : null,
           olharYaw: o.yaw,
         });
+        if (cadeira) pose = aplicarJuntas(pose, cadeira.juntas, 1);
         o.personagem.aplicarPose(pose, { dt, olhar: a.pitch, vista: o.animador.vista() });
         o.personagem.posicionar(o.x, o.y, o.z, o.animador.yaw());
         o.personagem.definirLuz(luz);

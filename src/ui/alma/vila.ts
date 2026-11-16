@@ -19,6 +19,7 @@ import { figura } from './figuras';
 import { tocarSomInterface } from '../../audio/somInterface';
 import { alcancaOPalco, faseDoShow, type FaseShow } from '../../jogo/show';
 import { foiToque } from '../../jogo/rinque';
+import { alcancaOBrinquedo, distanciaDoBrinquedo, type Brinquedo } from '../../jogo/parque';
 import { CSS_CANTO } from './canto';
 
 declare global {
@@ -28,6 +29,11 @@ declare global {
       plano(): unknown;
       caixas(): { i: number; t: { x: number; y: number } }[];
       show(): FaseShow | null;
+      /** Spec 026 (parte 2): onde ficam na tela os brinquedos do parque (null: fora da tela). */
+      parque(): {
+        sentar: { b: number; t: { x: number; y: number } | null }[];
+        tocar: { qual: string; i: number; t: { x: number; y: number } | null }[];
+      };
     };
   }
 }
@@ -136,6 +142,121 @@ export function ligarVilaNeon(
     return melhor;
   }
 
+  // ---------------------------------------------------------------- o parque (parte 2)
+  const pq = p.parque;
+  const chaoVila = plano.h + 1;
+  /**
+   * Os três brinquedos de sentar: onde o dedo pega cada um (a cadeirinha de baixo e o miolo da
+   * roda; o meio do carrossel; o meio da pista), com o alvo grande de quem tem 3 anos.
+   */
+  const DE_SENTAR: {
+    b: number;
+    nome: Brinquedo;
+    alvos: [number, number, number][];
+    raio: number;
+  }[] = [
+    {
+      b: 0,
+      nome: 'roda',
+      alvos: [
+        [pq.roda.x, chaoVila + 1.6, pq.roda.z],
+        [pq.roda.x, pq.roda.y, pq.roda.z],
+        [pq.roda.x, pq.roda.y - pq.roda.raio * 0.5, pq.roda.z],
+      ],
+      raio: RAIO_TOQUE * 2.2,
+    },
+    {
+      b: 1,
+      nome: 'carrossel',
+      alvos: [[pq.carrossel.x, chaoVila + 3, pq.carrossel.z]],
+      raio: RAIO_TOQUE * 2.8,
+    },
+    {
+      b: 2,
+      nome: 'bate',
+      alvos: [[pq.bate.x, chaoVila + 1.2, pq.bate.z]],
+      raio: RAIO_TOQUE * 2.8,
+    },
+  ];
+  /** Até onde (blocos) o toque num brinquedo de sentar ainda faz alguma coisa (a roda pisca). */
+  const LONGE_DE_SENTAR = 14;
+  function brinquedoDeSentarNoDedo(x: number, y: number): (typeof DE_SENTAR)[number] | null {
+    const pes = e.jogadorPes?.();
+    if (!pes) return null;
+    let melhor: { d: number; q: (typeof DE_SENTAR)[number] } | null = null;
+    for (const q of DE_SENTAR) {
+      const dist = distanciaDoBrinquedo(pq, q.nome, pes[0], pes[2]);
+      if (dist > LONGE_DE_SENTAR) continue;
+      for (const a of q.alvos) {
+        const t = tela(a[0], a[1], a[2]);
+        if (!t) continue;
+        const raio = q.raio * Math.max(1, 5 / Math.max(1, dist + 2));
+        const d = Math.hypot(t.x - x, t.y - y);
+        if (d <= raio && (!melhor || d < melhor.d)) melhor = { d, q };
+      }
+    }
+    return melhor?.q ?? null;
+  }
+  /** Os brinquedos de tocar do parque (os balões, as barracas, a pipoca, o algodão-doce). */
+  const DE_TOCAR: {
+    qual: 'baloes' | 'argola' | 'pescaria' | 'pipoca' | 'algodao';
+    i: number;
+    p: [number, number, number];
+    alt: number;
+    perto: number;
+    raio: number;
+  }[] = [
+    { qual: 'baloes', i: 0, p: pq.baloes, alt: 3.3, perto: 9, raio: RAIO_TOQUE * 1.7 },
+    { qual: 'argola', i: 0, p: pq.argola, alt: 1.5, perto: 8, raio: RAIO_TOQUE * 2.2 },
+    { qual: 'pescaria', i: 0, p: pq.pescaria, alt: 1.3, perto: 8, raio: RAIO_TOQUE * 2.2 },
+    { qual: 'algodao', i: 0, p: pq.algodao, alt: 1.4, perto: 7, raio: RAIO_TOQUE * 1.5 },
+    ...plano.pecas
+      .filter((q) => q.tipo === 'pipoca')
+      .map((q, i) => ({
+        qual: 'pipoca' as const,
+        i,
+        p: [q.x, q.y, q.z] as [number, number, number],
+        alt: 1.4,
+        perto: 7,
+        raio: RAIO_TOQUE * 1.5,
+      })),
+  ];
+  function brinquedoDoParqueNoDedo(x: number, y: number): (typeof DE_TOCAR)[number] | null {
+    const pes = e.jogadorPes?.();
+    if (!pes) return null;
+    let melhor: { d: number; q: (typeof DE_TOCAR)[number] } | null = null;
+    for (const b of DE_TOCAR) {
+      const dist = Math.hypot(pes[0] - b.p[0], pes[2] - b.p[2]);
+      if (dist > b.perto) continue;
+      const t = tela(b.p[0], b.p[1] + b.alt, b.p[2]);
+      if (!t) continue;
+      const raio = b.raio * Math.max(1, 4 / Math.max(1, dist));
+      const d = Math.hypot(t.x - x, t.y - y);
+      if (d <= raio && (!melhor || d < melhor.d)) melhor = { d, q: b };
+    }
+    return melhor?.q ?? null;
+  }
+  /**
+   * O dedo que desceu em cima de um brinquedo de sentar: como no suporte dos patins, só o toque
+   * de verdade vale (desce e sobe no mesmo lugar); arrastar por cima continua da câmera.
+   */
+  let noBrinquedo: { id: number; x: number; y: number; t: number; b: number } | null = null;
+  function soltouNoBrinquedo(ev: PointerEvent): void {
+    const d = noBrinquedo;
+    if (!d || ev.pointerId !== d.id) return;
+    noBrinquedo = null;
+    if (ev.type !== 'pointerup' || !noJogo()) return;
+    if (!foiToque(ev.clientX - d.x, ev.clientY - d.y, performance.now() - d.t)) return;
+    const q = DE_SENTAR[d.b];
+    const pes = e.jogadorPes?.();
+    if (!q || !pes) return;
+    if (alcancaOBrinquedo(pq, q.nome, pes[0], pes[2])) e.vilaParque?.sentar(q.b);
+    // de mais longe (ou com tudo ocupado) a roda pisca e o carrossel toca o realejo
+    else if (q.nome !== 'bate') e.vilaParque?.tocar(q.nome);
+  }
+  window.addEventListener('pointerup', soltouNoBrinquedo, { capture: true });
+  window.addEventListener('pointercancel', soltouNoBrinquedo, { capture: true });
+
   // ---------------------------------------------------------------- o toque generoso
   let engoliuAte = 0;
   /**
@@ -169,6 +290,46 @@ export function ligarVilaNeon(
       const x = preso ? innerWidth / 2 : ev.clientX;
       const y = preso ? innerHeight / 2 : ev.clientY;
       let feito = false;
+      // sentado num brinquedo do parque, o dedo é do brinquedo. No toque da tela quem cuida é o
+      // controle (o toque dá o "tum"; o arrastar continua girando a câmera); com o mouse preso,
+      // o clique vale aqui
+      if (e.vilaParque?.sentado()) {
+        if (!preso || ev.button !== 0) return;
+        e.vilaParque.toqueSentado();
+        engoliuAte = performance.now() + 300;
+        ev.stopImmediatePropagation();
+        ev.preventDefault();
+        return;
+      }
+      // os brinquedos do parque: os de tocar respondem na hora; os de sentar, quando o dedo sobe
+      const doParque = brinquedoDoParqueNoDedo(x, y);
+      const deSentar = doParque ? null : brinquedoDeSentarNoDedo(x, y);
+      if (doParque) {
+        e.vilaParque?.tocar(doParque.qual, doParque.i);
+        feito = true;
+      } else if (deSentar) {
+        if (preso) {
+          // (com o mouse preso não há arrastar: o clique já vale)
+          const pes = e.jogadorPes?.();
+          if (pes && alcancaOBrinquedo(pq, deSentar.nome, pes[0], pes[2]))
+            e.vilaParque?.sentar(deSentar.b);
+          else if (deSentar.nome !== 'bate') e.vilaParque?.tocar(deSentar.nome);
+        } else
+          noBrinquedo = {
+            id: ev.pointerId,
+            x: ev.clientX,
+            y: ev.clientY,
+            t: performance.now(),
+            b: deSentar.b,
+          };
+        feito = true;
+      }
+      if (feito) {
+        engoliuAte = performance.now() + 300;
+        ev.stopImmediatePropagation();
+        ev.preventDefault();
+        return;
+      }
       // a caixa perto do dedo (fora do show: acende e apaga)
       let melhor: { d: number; i: number } | null = null;
       for (const c of caixasNaTela()) {
@@ -246,5 +407,16 @@ export function ligarVilaNeon(
     plano: () => plano,
     caixas: () => caixasNaTela(),
     show: () => showTocando(),
+    parque: () => ({
+      sentar: DE_SENTAR.map((q) => ({
+        b: q.b,
+        t: tela(q.alvos[0][0], q.alvos[0][1], q.alvos[0][2]),
+      })),
+      tocar: DE_TOCAR.map((q) => ({
+        qual: q.qual,
+        i: q.i,
+        t: tela(q.p[0], q.p[1] + q.alt, q.p[2]),
+      })),
+    }),
   };
 }

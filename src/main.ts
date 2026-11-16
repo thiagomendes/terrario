@@ -252,6 +252,17 @@ async function iniciar(app: HTMLElement): Promise<void> {
       semTela: true,
       aoEscolher: () => window.__brumaluz?.vilaPatins?.(false),
     });
+  // spec 026 (parte 2): "Sair do brinquedo" na roda, só enquanto a criança está sentada num
+  // brinquedo do parque (a mesma regra dos patins: o item só aparece quando serve)
+  if (temaMundo.id === 'vila-neon' && !EXTRAS_RODA.some((x) => x.id === 'sair-brinquedo'))
+    EXTRAS_RODA.push({
+      id: 'sair-brinquedo',
+      nome: 'Sair do brinquedo',
+      icone: arteAlma('sairBrinquedo'),
+      visivel: () => !!window.__brumaluz?.vilaParque?.sentado(),
+      semTela: true,
+      aoEscolher: () => window.__brumaluz?.vilaParque?.sair(),
+    });
   // em prévia de outro tema nada é salvo: o mundo continua sendo do tema dele
   cena = criarCena(canvas, hotbar, {
     mundo: atual,

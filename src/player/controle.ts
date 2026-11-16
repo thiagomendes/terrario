@@ -127,9 +127,32 @@ export function criarControle(
 
   /** Spec 026: calçado de patins (a pista onde o embalo desliza), ou null. */
   let pistaPatins: ((x: number, z: number) => boolean) | null = null;
+  /**
+   * Spec 026 (parte 2): sentado num brinquedo do parque, o boneco fica onde a cadeira está (a
+   * física descansa: não anda, não cai, não esbarra). A câmera continua da criança.
+   */
+  let assento: (() => { x: number; y: number; z: number } | null) | null = null;
 
   function atualizar(dtSeg: number): void {
     const dt = Math.min(dtSeg, 0.05);
+    const lugar = assento?.();
+    if (lugar) {
+      jogador.x = lugar.x;
+      jogador.y = lugar.y;
+      jogador.z = lugar.z;
+      jogador.vy = 0;
+      jogador.embalo = undefined;
+      jogador.noChao = true;
+      jogador.voando = false;
+      jogador.topoQueda = undefined;
+      ultimoResultado = { aterrissou: false, queda: 0 };
+      camera.position.x = jogador.x;
+      camera.position.y = jogador.y + ALTURA_OLHOS;
+      camera.position.z = jogador.z;
+      camera.rotation.x = pitch;
+      camera.rotation.y = yaw;
+      return;
+    }
     extras = fonteExtras ? fonteExtras().filter((c) => !dentroDaCaixa(c, jogador)) : [];
     dentroDasPecas.clear();
     for (const c of caixasDaVilaPerto(semente, jogador.x, jogador.y, jogador.z))
@@ -234,6 +257,10 @@ export function criarControle(
     },
     get patins() {
       return !!pistaPatins;
+    },
+    /** Spec 026 (parte 2): o lugar da cadeira onde o boneco está sentado (null: em pé). */
+    definirAssento(f: (() => { x: number; y: number; z: number } | null) | null) {
+      assento = f;
     },
     girar,
     recentrar,

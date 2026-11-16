@@ -106,6 +106,10 @@ import {
 } from '../jogo/contato';
 import { celulaTomadaPelaVila, indiceDoMundo } from '../world/vilaSolidos';
 import { criarBrinquedosVila } from './vila/brinquedos';
+import { criarParqueVila, type ToqueParque } from './vila/parque';
+import { criarPasseio, lugarDoAmigo, JUNTAS_SENTADO } from './vila/passeio';
+import { carrinhoDaFrente, lugarDaCadeira, sentadoNaVista } from '../jogo/parque';
+import { criarSomParque, type SomParque } from '../audio/somParque';
 import { faseDoShow, noiteDeShow } from '../jogo/show';
 import { noiteDosBichos } from '../jogo/tempo';
 import { criarShowVila } from './vila/show';
@@ -451,6 +455,26 @@ export interface EstadoDepuracao {
   vilaBrinquedo?: (qual: import('./vila/brinquedos').ToqueVila, i?: number) => void;
   /** Spec 026 (testes): o que os brinquedos do bairro mostram agora. */
   brinquedosVila?: () => ReturnType<import('./vila/brinquedos').BrinquedosVila['estado']> | null;
+  /**
+   * Spec 026 (parte 2): o passeio nos brinquedos do parque (sentar, sair, o toque de quem está
+   * sentado) e os brinquedos de tocar.
+   */
+  vilaParque?: {
+    sentado(): import('../jogo/parque').Sentado | null;
+    lugar(): import('../jogo/parque').Lugar | null;
+    progresso(): number;
+    sentar(b: number): void;
+    sair(): void;
+    tocar(qual: ToqueParque, i?: number): void;
+    /** O toque de quem está sentado (o "tum", o empurrão da roda, o realejo); false se em pé. */
+    toqueSentado(): boolean;
+  };
+  /** Testes: quantas vezes a criança sentou e quantos toques de brinquedo do parque. */
+  parqueSentou?: number;
+  parqueToques?: number;
+  somParque?: () => ReturnType<SomParque['info']> | null;
+  /** Spec 026 (parte 2): o que o parque mostra agora (testes de tela). */
+  parqueVila?: () => ReturnType<import('./vila/parque').RenderParque['estado']> | null;
   /** Spec 026: as peças da Vila Neon vivas, as sem chão (sempre 0) e os sósias. */
   vilaPecas?: () => {
     chunks: number;
@@ -1746,6 +1770,17 @@ export function criarCena(
       })
     : null;
   estado.brinquedosVila = () => brinquedosVila?.estado() ?? null;
+  // spec 026 (parte 2): o Parque de diversões (o que gira e o que responde ao toque)
+  const parqueVila = planoVila
+    ? criarParqueVila(scene, planoVila, {
+        temMalha: (cx, cz) => malhas.has(chave(cx, cz)),
+        brilha: brilhaNaVila,
+        tapaOGlow,
+        emitir: (lista, tipo) =>
+          pool.emitir(lista.map((p) => ({ ...p, tipo: tipo === 'gota' ? GOTA : CONFETE }))),
+      })
+    : null;
+  estado.parqueVila = () => parqueVila?.estado() ?? null;
   estado.eventosVila = planoVila ? [] : undefined;
   estado.showVila = () => showVila?.estado() ?? null;
   /** Spec 026: a pista onde os patins deslizam (o bloco embaixo dos pés é a pista quadriculada). */
@@ -1817,6 +1852,109 @@ export function criarCena(
     enviar({ t: 'vila', a: 'caixa', i: c.i });
   };
   estado.vilaTempo = () => cliente.vila.tempo(performance.now() / 1000);
+  // spec 026 (parte 2): o passeio nos brinquedos do parque (sentar e ser levado). O núcleo é
+  // dono da cadeira; aqui o boneco fica onde ela está, com a pose de sentado
+  const vistaParque = () => cliente.vila.estado?.parque ?? null;
+  const passeio = planoVila
+    ? criarPasseio({
+        parque: planoVila.pontos.parque,
+        chao: planoVila.h + 1,
+        voce,
+        vista: vistaParque,
+        tempoNucleo: () => cliente.vila.tempo(performance.now() / 1000),
+        jogador: controle.jogador,
+        andando: () => {
+          const t = controle.teclas;
+          return !!(t.frente || t.tras || t.esquerda || t.direita);
+        },
+        sair: () => estado.vilaParque?.sair(),
+        camera: {
+          yaw: () => camera.rotation.y,
+          pitch: () => camera.rotation.x,
+          apontar: (y, p) => controle.apontar(y, p, true),
+          mexeuEm: () => controle.mexeuEm,
+          zoom: () => orbita.zoom(),
+          definirZoom: (d) => void orbita.definirZoom(d),
+        },
+        // a vista da roda-gigante: o cruzamento da avenida com a rua da pracinha
+        vistaDoBairro: [planoVila.ox + 97, planoVila.oz + 66],
+        aoSentar: () => {
+          somEfeito('sentar');
+          estado.parqueSentou = (estado.parqueSentou ?? 0) + 1;
+        },
+        aoDescer: () => somEfeito('sentar'),
+      })
+    : null;
+  if (passeio) controle.definirAssento(() => passeio.lugar());
+  if (planoVila) {
+    const pq = planoVila.pontos.parque;
+    outrosJogadores.definirAssento((id) => {
+      const l = lugarDoAmigo(pq, vistaParque(), id, cliente.vila.tempo(performance.now() / 1000));
+      return l ? { ...l, juntas: JUNTAS_SENTADO[l.b] } : null;
+    });
+  }
+  /** O som do parque (criado mais abaixo, com o motor do áudio). */
+  let somParque: SomParque | null = null;
+  /** Onde fica cada brinquedo de tocar do parque (para o som vir de lá). */
+  const lugarDoToque = (qual: ToqueParque, i = 0): { x: number; z: number } | null => {
+    if (!planoVila) return null;
+    const q = planoVila.pontos.parque;
+    if (qual === 'roda') return { x: q.roda.x, z: q.roda.z };
+    if (qual === 'carrossel') return { x: q.carrossel.x, z: q.carrossel.z };
+    if (qual === 'pipoca') {
+      const l = planoVila.pecas.filter((p) => p.tipo === 'pipoca');
+      const p = l[((i % l.length) + l.length) % l.length];
+      return p ? { x: p.x, z: p.z } : null;
+    }
+    const p = q[qual];
+    return { x: p[0], z: p[2] };
+  };
+  const SOM_DO_TOQUE: Record<ToqueParque, import('../audio/somParque').ToqueParque> = {
+    roda: 'roda',
+    carrossel: 'floreio',
+    baloes: 'balao',
+    argola: 'argola',
+    pescaria: 'agua',
+    pipoca: 'estouro',
+    algodao: 'algodao',
+  };
+  if (planoVila && parqueVila)
+    estado.vilaParque = {
+      sentado: () => passeio?.sentado() ?? null,
+      lugar: () => passeio?.lugar() ?? null,
+      progresso: () => passeio?.progresso() ?? 0,
+      sentar: (b) => {
+        if (passeio?.sentado()) return;
+        enviarTelemetria(true);
+        enviar({ t: 'vila', a: 'sentar', b });
+      },
+      sair: () => {
+        if (passeio?.sentado()) enviar({ t: 'vila', a: 'sair' });
+      },
+      tocar: (qual, i = 0) => {
+        parqueVila.tocar(qual, i);
+        const onde = lugarDoToque(qual, i) ?? undefined;
+        somParque?.tocar(SOM_DO_TOQUE[qual], onde);
+        // o carrinho de pipoca toca o sininho antes de estourar
+        if (qual === 'pipoca') somParque?.tocar('sininho', onde);
+        // a roda-gigante: o empurrãozinho vale para todos (o núcleo guarda)
+        if (qual === 'roda') enviar({ t: 'vila', a: 'roda' });
+        estado.parqueToques = (estado.parqueToques ?? 0) + 1;
+      },
+      toqueSentado: () => {
+        const s = passeio?.sentado();
+        if (!s) return false;
+        if (s.b === 'bate') {
+          // o "tum" na hora, na tela de quem bateu (o núcleo conta para os amigos)
+          const alvo = carrinhoDaFrente(s.i);
+          parqueVila.tum(alvo, s.i);
+          const l = passeio!.lugar();
+          somParque?.tocar('tum', l ?? undefined);
+          enviar({ t: 'vila', a: 'tum' });
+        } else estado.vilaParque?.tocar(s.b === 'roda' ? 'roda' : 'carrossel');
+        return true;
+      },
+    };
   estado.vilaPecas = () =>
     renderVila
       ? {
@@ -2968,7 +3106,10 @@ export function criarCena(
     // na tela de título (o panorama gira a câmera), o boneco fica de costas para ela: ao
     // começar a jogar, ele já está olhando para onde a criança olha
     if (document.body.classList.contains('tela-titulo')) animador.definirYaw(camera.rotation.y);
-    const pose = animador.atualizar(dt, {
+    // spec 026 (parte 2): sentado num brinquedo do parque, o corpo olha para onde a cadeira vai
+    const cadeira = passeio?.lugar();
+    if (cadeira) animador.definirYaw(cadeira.yaw);
+    let pose = animador.atualizar(dt, {
       velocidadeHoriz,
       correndo: corrida,
       noChao: j.noChao,
@@ -2976,9 +3117,10 @@ export function criarCena(
       // movimento com vida (spec 015): o corpo vira para onde anda, solto da câmera
       vx: velX,
       vz: velZ,
-      alvoYaw: yawDaAcao(),
+      alvoYaw: cadeira ? null : yawDaAcao(),
       olharYaw: camera.rotation.y,
     });
+    if (passeio) pose = passeio.pose(pose);
     const foto = !!estado.modoFoto?.ativo();
     // no modo foto o corpo aparece quando a câmera livre se afasta dos olhos
     const longeDosOlhos = foto && Vector3.Distance(fotoPosRef(), camera.position) > 1.2;
@@ -3904,6 +4046,30 @@ export function criarCena(
   // saiu do mundo: solta o pacote e as fatias (voltou pelo histórico: a página recarrega
   // inteira, em ligarSaida, e as vozes baixam de novo quando o mundo fica pronto)
   window.addEventListener('pagehide', () => vozes.liberar());
+  // uma música por vez (019): a trilha do bairro cala com o show ou as caixas (somVila) e com o
+  // realejo do carrossel (somParque); vale quem pede mais
+  let calarDaVila = 0;
+  let calarDoParque = 0;
+  const calarTrilha = () => ambiente?.definirCalar(Math.max(calarDaVila, calarDoParque));
+  // spec 026 (parte 2): os sons do parque, feitos na hora (nada no pacote): o realejo que cresce
+  // perto do carrossel, o "tum", as risadas, o sininho da pipoca e o zumbido das lâmpadas
+  if (planoVila) {
+    somParque = criarSomParque({
+      motor: motorAudio,
+      parque: planoVila.pontos.parque,
+      volumes: () => ({
+        musica: configAtual?.volumeMusica ?? 0.6,
+        natureza: configAtual?.volumeAmbiente ?? 0.8,
+      }),
+      aoCalarTrilha: (f) => {
+        calarDoParque = f;
+        calarTrilha();
+      },
+    });
+    const sp = somParque;
+    window.addEventListener('pagehide', () => sp.liberar());
+    estado.somParque = () => sp.info();
+  }
   // spec 026 (T18/T19): o som do show, dos brinquedos e das zonas da Vila Neon (o pacote só baixa
   // neste mundo, depois de ele abrir). Fica aqui, e não junto do showVila, porque precisa do motor.
   const somVila = planoVila
@@ -3915,7 +4081,10 @@ export function criarCena(
           musica: configAtual?.volumeMusica ?? 0.6,
           natureza: configAtual?.volumeAmbiente ?? 0.8,
         }),
-        aoCalarTrilha: (f) => ambiente?.definirCalar(f),
+        aoCalarTrilha: (f) => {
+          calarDaVila = f;
+          calarTrilha();
+        },
         aoCalarNatureza: (f) => ambiente?.definirCalarNatureza(f),
         gradeTrilha: () => {
           const m = trilha.info().motor;
@@ -4141,10 +4310,13 @@ export function criarCena(
   let somAgua: EstadoSomAgua = { ...SOM_AGUA_INICIAL };
   function atualizarSomMovimento(dt: number): void {
     const j = controle.jogador;
-    const vel = dt > 0 ? Math.hypot(j.x - ultimoX, j.z - ultimoZ) / dt : 0;
+    // spec 026 (parte 2): levado pela cadeira de um brinquedo do parque não é andar (sem passos,
+    // sem o corpo virar, sem a câmera voltar sozinha para trás dele)
+    const levado = !!passeio?.lugar();
+    const vel = !levado && dt > 0 ? Math.hypot(j.x - ultimoX, j.z - ultimoZ) / dt : 0;
     velocidadeHoriz = vel;
-    velX = dt > 0 ? (j.x - ultimoX) / dt : 0;
-    velZ = dt > 0 ? (j.z - ultimoZ) / dt : 0;
+    velX = !levado && dt > 0 ? (j.x - ultimoX) / dt : 0;
+    velZ = !levado && dt > 0 ? (j.z - ultimoZ) / dt : 0;
     // teleporte não é andar
     if (vel > 40) velX = velZ = 0;
     corrida = vel > (VEL_ANDAR + VEL_CORRER) / 2;
@@ -4186,6 +4358,8 @@ export function criarCena(
     const fotoAtiva = !!estado.modoFoto?.ativo();
     // desmaiado (ou esperando o teletransporte do renascer): o corpo não anda
     fisicaRodou = !(modo === 'sobrevivencia' && (sobrevivenciaMorto() || esperandoRenascer()));
+    // spec 026 (parte 2): sentado num brinquedo do parque, o boneco vai com a cadeira
+    passeio?.quadro(performance.now() / 1000, Math.min(dtBruto, 0.1));
     if (fisicaRodou) controle.atualizar(fotoAtiva ? 0 : dtBruto);
     quadroFotoRef?.(Math.min(dtBruto, 0.1));
     quadroSobrevivencia?.(Math.min(dtBruto, 0.1));
@@ -4227,6 +4401,20 @@ export function criarCena(
       quadroPistaVila();
       brinquedosVila.quadro(tempo);
     }
+    parqueVila?.quadro(
+      tempo,
+      cliente.vila.tempo(tempo),
+      cliente.vila.estado?.parque ?? null,
+      controle.jogador.x,
+      controle.jogador.z,
+    );
+    // (o parque não toca música com o show ou as caixas tocando perto: uma música por vez)
+    somParque?.quadro(
+      controle.jogador,
+      cliente.vila.tempo(tempo),
+      noiteVila,
+      (somVila?.info().calar ?? 0) > 0,
+    );
     if (somVila) {
       if (estado.ready) somVila.carregar();
       somVila.quadro(
@@ -5138,6 +5326,8 @@ export function criarCena(
       else controle.teclas[acao] = ativo;
     },
     quebrar: (ativo) => {
+      // spec 026 (parte 2): sentado num brinquedo do parque, o dedo é do brinquedo
+      if (ativo && passeio?.sentado()) return;
       if (ativo) {
         // no toque, segurar com comida na mão (sobrevivência) come em vez de quebrar
         if (comidaNaMao()) {
@@ -5151,7 +5341,10 @@ export function criarCena(
         minerador.soltar();
       }
     },
-    usar: () => usarOuColocar(false),
+    usar: () => {
+      if (estado.vilaParque?.toqueSentado()) return;
+      usarOuColocar(false);
+    },
     mirar: (x, y) => {
       pontoToque = { x, y };
       alvoDoToque = null;
@@ -5169,6 +5362,9 @@ export function criarCena(
       arrastandoCamera = ativo;
     },
     tocar: () => {
+      // spec 026 (parte 2): sentado num brinquedo do parque, o toque é o "tum" (bate-bate), o
+      // empurrãozinho (roda-gigante) ou o realejo (carrossel); o arrastar continua da câmera
+      if (estado.vilaParque?.toqueSentado()) return;
       // o corpo vira para o bloco tocado durante a animação (a mira do dedo solta já)
       const a = raioToque ? calcularAlvo() : null;
       const agora = performance.now();
@@ -5795,6 +5991,58 @@ export function criarCena(
       case 'gesto': // spec 015: gesto de um amigo ou de um morador que respondeu
         gestos?.evento(e);
         break;
+      // spec 026 (parte 2): o parque (o que a criança mesma fez já apareceu na hora)
+      case 'parqueSentou':
+        estado.eventosVila?.push({ ...e, recebido: performance.now() / 1000 });
+        break;
+      case 'parqueDesceu': {
+        estado.eventosVila?.push({ ...e, recebido: performance.now() / 1000 });
+        if (e.quem === voce) passeio?.desceu(e.x, e.y, e.z);
+        // o fim da volta na roda-gigante: uma festinha de estrelinhas onde ela pisa
+        if (e.fim) {
+          pool.emitir(
+            Array.from({ length: 12 }, (_, i) => {
+              const ang = (i / 12) * Math.PI * 2;
+              return {
+                x: e.x + Math.cos(ang) * 0.3,
+                y: e.y + 0.4,
+                z: e.z + Math.sin(ang) * 0.3,
+                vx: Math.cos(ang) * 1.6,
+                vy: 2.6 + (i % 3) * 0.5,
+                vz: Math.sin(ang) * 1.6,
+                cor: (i % 2 ? [1, 0.88, 0.3] : [1, 1, 1]) as [number, number, number],
+                tipo: CONFETE,
+              };
+            }),
+          );
+          if (e.quem === voce) tocarSomInterface('plim');
+        }
+        break;
+      }
+      case 'parqueTum': {
+        estado.eventosVila?.push({ ...e, recebido: performance.now() / 1000 });
+        const pq = planoVila?.pontos.parque;
+        if (!pq) break;
+        const l = lugarDaCadeira(pq, 'bate', e.alvo, cliente.vila.tempo(performance.now() / 1000));
+        if (e.quem !== voce) {
+          parqueVila?.tum(e.alvo, e.de);
+          somParque?.tocar('tum', l);
+        }
+        // com alguém no carrinho que levou o "tum", os dois riem
+        const v = vistaParque();
+        const temGente = Object.keys(v?.s ?? {}).some((id) => {
+          const s = sentadoNaVista(v, id);
+          return s?.b === 'bate' && s.i === e.alvo;
+        });
+        if (temGente) setTimeout(() => somParque?.tocar('risada', l), 220);
+        break;
+      }
+      case 'parqueRoda':
+        if (e.quem !== voce) {
+          parqueVila?.tocar('roda');
+          somParque?.tocar('roda', lugarDoToque('roda') ?? undefined);
+        }
+        break;
       case 'chamado': // spec 021: um amigo chamou ("vem cá!")
         acharAmigo?.chamado(e.de);
         break;
@@ -5849,8 +6097,7 @@ export function criarCena(
         const c = criaturaPorId(e.id);
         if (!c || Math.hypot(c.x - camera.position.x, c.z - camera.position.z) >= 20) break;
         // spec 026: no show da Vila Neon, perto do festival, nenhum bicho canta por cima
-        if (silencioDoShow(c.x, c.z) || silencioDoShow(camera.position.x, camera.position.z))
-          break;
+        if (silencioDoShow(c.x, c.z) || silencioDoShow(camera.position.x, camera.position.z)) break;
         // a voz gravada da noturna do tema (o Espectro da bruma também: o "uuuh" dele); sem o
         // pacote, o gemido de sempre no Bruma e Luz e a voz sintetizada nos outros
         if (temaAtual.id === 'bruma-e-luz' && !vozes.pronto) tocarSom(motorAudio, 'espectro');

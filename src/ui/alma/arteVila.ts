@@ -242,6 +242,22 @@ const BASE: Record<string, string> = {
     <path d="M47 2 L57 9.5 L46.5 15.5" fill="none" stroke="${C}" stroke-width="8" ${L}/>
     <path d="M36 21 Q40 8 53 9" fill="none" stroke="#ff8a2a" stroke-width="4" stroke-linecap="round"/>
     <path d="M47 2 L57 9.5 L46.5 15.5" fill="none" stroke="#ff8a2a" stroke-width="4" ${L}/>`),
+  /**
+   * "Sair do brinquedo" (a roda do menu, só sentado num brinquedo do parque): a cadeirinha
+   * vermelha de toldinho creme e a setinha laranja que sai dela.
+   */
+  a80SairBrinquedo: svg(`
+    <path d="M12 18 V30 M36 18 V30" stroke="${C}" stroke-width="3" stroke-linecap="round"/>
+    <rect x="6" y="11" width="36" height="9" rx="3" fill="#fff1d6" ${s()}/>
+    <rect x="15" y="11" width="9" height="9" fill="#e8302a"/><rect x="33" y="11" width="6" height="9" fill="#e8302a"/>
+    <rect x="6" y="11" width="36" height="9" rx="3" fill="none" ${s()}/>
+    <path d="M6 30 H42 V50 Q42 56 36 56 H12 Q6 56 6 50 Z" fill="#e8302a" ${s()}/>
+    <rect x="6" y="36" width="36" height="6" fill="#fff1d6"/>
+    <path d="M6 30 H42 V50 Q42 56 36 56 H12 Q6 56 6 50 Z" fill="none" ${s()}/>
+    <path d="M40 27 Q46 14 57 16" fill="none" stroke="${C}" stroke-width="8" stroke-linecap="round"/>
+    <path d="M51 8 L60 16.5 L49.5 22" fill="none" stroke="${C}" stroke-width="8" ${L}/>
+    <path d="M40 27 Q46 14 57 16" fill="none" stroke="#ff8a2a" stroke-width="4" stroke-linecap="round"/>
+    <path d="M51 8 L60 16.5 L49.5 22" fill="none" stroke="#ff8a2a" stroke-width="4" ${L}/>`),
   a80ArcoNeon: svg(arcoNeon(false)),
   a80ArcoAceso: svg(arcoNeon(true)),
   /** O resultado da f4: o patins passando por dentro do arco aceso, com o rastro de vento. */
@@ -355,6 +371,7 @@ export const ARTE_VILA: Record<string, string> = {
   arcoNeon: BASE.a80ArcoNeon,
   patins: BASE.a80PatinsRinque,
   tirarPatins: BASE.a80TirarPatins,
+  sairBrinquedo: BASE.a80SairBrinquedo,
   arcoAceso: BASE.a80ArcoAceso,
   patinsArco: BASE.a80PatinsArco,
   /** O mundo no baú (as habilidades que a Vila Neon alimenta): o raio sobre o grafite. */

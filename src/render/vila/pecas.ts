@@ -31,6 +31,7 @@ import {
   type G,
 } from './neon';
 import { desenharPecaFestival } from './pecasFestival';
+import { desenharPecaParque } from './pecasParque';
 import { carroVila, picapeVila, vanVila } from './carros';
 
 export { COR, Ref, perfilRaio };
@@ -107,6 +108,7 @@ export function desenharPeca(p: PecaVila, d: Desenho): void {
     case 'toalha':
       return toalha(r, n);
     default:
+      if (desenharPecaParque(r, p.tipo, n)) return;
       return desenharPecaFestival(r, p.tipo, n);
   }
 }
