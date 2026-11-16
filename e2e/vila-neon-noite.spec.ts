@@ -34,6 +34,7 @@ async function abrir(
   id: string,
   tamanho: Tamanho,
   distancia: number,
+  feitas: string[] = ['f1'],
 ): Promise<Page> {
   const ctx = await browser.newContext(TAMANHOS[tamanho]);
   const page = await ctx.newPage();
@@ -49,7 +50,7 @@ async function abrir(
     }
   }, distancia);
   // a f1 já feita: a f3 está aberta no quadro
-  await criarMundo(page, id, 'vila-neon', { alma: { local: { feitas: ['f1'] } } }, 1337);
+  await criarMundo(page, id, 'vila-neon', { alma: { local: { feitas } } }, 1337);
   // no computador, a resolução cheia (as fotos e o vídeo); no celular, a política de verdade
   await page.goto(`/?mundo=${id}${tamanho === 'pc' ? '&escala=1' : ''}`);
   await page.waitForFunction(() => window.__brumaluz?.ready === true, undefined, {
@@ -407,7 +408,15 @@ test('o show só de noite e o público (fotos e vídeo)', async ({ browser }) =>
 
   if (quer('video')) {
     passo('video');
-    // um show novo (as caixas apagam e acendem: brinquedo livre depois do show)
+    // um show por noite: a noite seguinte (o dia do mundo vira), e as caixas acendem de novo
+    await page.evaluate(() => {
+      const e = window.__brumaluz!;
+      e.definirDia!(e.dia!() + 1);
+      e.hora = 0.42;
+    });
+    await page.waitForTimeout(1500);
+    await hora(page, NOITE);
+    await page.waitForTimeout(1500);
     for (let i = 0; i < 3; i++) {
       const ja = await page.evaluate((i) => window.__brumaluz!.vilaEstado!()?.cx[i] ?? false, i);
       if (!ja) continue;
@@ -494,5 +503,93 @@ test('celular: o quadro em pé de dia (a lua) e as medidas no nascer e na grade'
   const povo = await medir(page, 'celular-grade-povo');
   await foto(page, 'celular-grade-povo', true);
   expect(povo.fps).toBeGreaterThanOrEqual(45);
+  await page.context().close();
+});
+
+/**
+ * O vídeo do show sozinho (decisão do dono, 15 nov 2026): todas as missões feitas, a noite já
+ * aberta, a criança chega pela avenida, entra pelo portão e vai até a grade sem tocar em nada; as
+ * caixas acendem uma a uma, a banda toca e a turma vai dançar na grade. ~30 s da cena (celular
+ * deitado), com o som do jogo à parte (.wav); fotos com a interface. `VILA_SO=sozinho`.
+ */
+test('o show começa sozinho: a criança chega de noite e não toca em nada (vídeo)', async ({
+  browser,
+}) => {
+  test.skip(!quer('sozinho'), 'só com VILA_SO=sozinho');
+  const page = await abrir(browser, 'vila-show-sozinho', 'deitado', 4, ['f1', 'f2', 'f3']);
+  const p = await plano(page);
+  // o primeiro toque liga o som (no céu)
+  await page.touchscreen.tap(420, 60);
+  await page.waitForTimeout(500);
+  // a criança na avenida, de frente para o portão do festival; a noite já aberta há um tempo
+  await ir(page, p.ox + 60.5, p.oz + 62.5, p.h + 1.2);
+  await page.evaluate(() => window.__brumaluz!.apontar!(0, 0.3));
+  await hora(page, 0.82);
+  await assentar(page, 20);
+  await page.waitForTimeout(24_000);
+  expect(await page.evaluate(() => window.__brumaluz!.vilaEstado!()?.show ?? null)).toBeNull();
+  mkdirSync(PASTA, { recursive: true });
+  const som = page.evaluate((s) => window.__brumaluz!.gravarSom?.(s) ?? null, 32);
+  const t0 = Date.now();
+  await comecarGravacao(page, 30);
+  await page.waitForTimeout(1200);
+  // anda até a grade (o joystick de verdade), sem tocar em nada
+  await page.evaluate(
+    (zAlvo) =>
+      new Promise<void>((ok) => {
+        const e = window.__brumaluz!;
+        const ctl = e.controleDireto!;
+        ctl.tecla('rapido', false);
+        const passo = () => {
+          const pes = e.jogadorPes!();
+          if (pes[2] >= zAlvo) {
+            ctl.mover(0, 0);
+            ok();
+            return;
+          }
+          e.apontar!(0, 0.3);
+          ctl.mover(1, 0);
+          setTimeout(passo, 60);
+        };
+        passo();
+      }),
+    p.oz + 97.2,
+  );
+  passo('chegou à grade');
+  await page.waitForFunction(() => !!window.__brumaluz!.vilaEstado!()?.show, undefined, {
+    timeout: 30_000,
+  });
+  passo('o show começou');
+  await page.waitForTimeout(3000);
+  await foto(page, 'sozinho-show-comecou', true);
+  // olha devagar para a turma dançando e volta para o palco
+  await page.evaluate(
+    () =>
+      new Promise<void>((ok) => {
+        const e = window.__brumaluz!;
+        const t0 = performance.now();
+        const giro = () => {
+          const u = Math.min(1, (performance.now() - t0) / 9000);
+          e.apontar!(Math.sin(u * Math.PI) * 1.9, 0.22);
+          if (u < 1) requestAnimationFrame(giro);
+          else ok();
+        };
+        giro();
+      }),
+  );
+  await foto(page, 'sozinho-show-turma', true);
+  await page.waitForTimeout(Math.max(0, 31_000 - (Date.now() - t0)));
+  await pararGravacao(page, `${PASTA}/sozinho.webm`);
+  await page.evaluate(() => window.__brumaluz!.pararSom?.());
+  const r = await som;
+  if (r) salvarWav(r, `${PASTA}/sozinho.wav`);
+  else console.log('VIDEO sem som');
+  const acesas = await page.evaluate(() =>
+    (window.__brumaluz!.eventosVila ?? [])
+      .filter((e) => e.e === 'vilaCaixa')
+      .map((e) => `${(e as { i: number }).i}:${e.quem}`),
+  );
+  console.log(`SOZINHO caixas ${JSON.stringify(acesas)}`);
+  expect(acesas).toEqual(['0:auto', '1:auto', '2:auto']);
   await page.context().close();
 });
