@@ -14,6 +14,13 @@
  *   feixes ficam brancos e sobem, um clarão macio, a explosão de estrelinhas douradas e brancas
  *   da passarela e o confete de seis cores (só agora).
  *
+ * O show de verdade (o dono, 16 nov 2026): na abertura o palco escurece, os feixes varrem a
+ * plateia, as caixas pulsam em cada batida, os chafarizes soltam estrelinhas, o raio da logo
+ * acende piscando como neon e as quatro batidas da contagem piscam o palco até o estouro (tudo
+ * aceso de uma vez); na entrada o siga-me acha o vocalista; nas músicas os feixes andam no tempo
+ * de cada uma e os chafarizes são do refrão; nas pausas os feixes sobem devagar; no fim, os fogos
+ * de estrelinhas por cima do palco.
+ *
  * Tudo só com o chão do palco desenhado (a regra do campo de visão): nada aparece antes do
  * chunk onde fica. Os feixes, as estrelinhas e o confete são três malhas (uma
  * chamada de desenho cada), com um número fixo de pedaços (nada é criado durante o show).
@@ -29,8 +36,19 @@ import { criarPlasticos } from '../formas';
 import { Pecas } from '../solidos';
 import type { PecaVila, PlanoVila } from '../../world/vilaNeon';
 import type { VilaVista, EventoVila } from '../../nucleo/vila';
-import { CONTAGEM, faseDoShow, type FaseShow } from '../../jogo/show';
-import { N0_PUBLICO } from '../../nucleo/vila';
+import {
+  CONTA_INTRO,
+  ESCURO_INTRO,
+  INTRO,
+  RAIO_ACENDE,
+  faseDoShow,
+  momentoDoShow,
+  type FaseShow,
+  type MomentoShow,
+} from '../../jogo/show';
+import { N0_PUBLICO, daTurma, papelNaBanda } from '../../nucleo/vila';
+import { noPalco, paraOMundo, posturaNaBanda, REVERENCIA } from '../../jogo/coreografia';
+import { poseDaBanda } from './banda';
 import { lugarDoPublico, publicoDaVila } from '../../world/publicoVila';
 import { aplicarGesto } from '../../personagem/gestos';
 import type { Pose } from '../../personagem/poses';
@@ -104,6 +122,11 @@ export interface ShowVila {
   luzNaMao(povoado: string, n: number): string | null;
   /** O bastão aparece agora (a noite do show, ou com o show tocando)? */
   mostrarLuzNaMao(): boolean;
+  /**
+   * O neon do palco agora (0 a 1): na abertura ele apaga no escuro e acende piscando com o raio
+   * da logo, inteiro no estouro.
+   */
+  luzDoPalco(): number;
   descartar(): void;
 }
 
@@ -544,7 +567,7 @@ export function criarShowVila(scene: Scene, plano: PlanoVila, opcoes: OpcoesShow
   const feixes = dinamica('vila-show-feixes', baseClarao + LADOS_CLARAO + 1, idxFeixes, matFeixe);
 
   // as estrelinhas (losangos que somam luz) e o confete (papeizinhos que giram)
-  const MAX_E = leve ? 180 : 340;
+  const MAX_E = leve ? 340 : 640;
   const MAX_C = leve ? 90 : 170;
   const idxE: number[] = [];
   for (let i = 0; i < MAX_E; i++) {
@@ -558,8 +581,8 @@ export function criarShowVila(scene: Scene, plano: PlanoVila, opcoes: OpcoesShow
     idxC.push(b, b + 1, b + 2, b, b + 2, b + 3);
   }
   const confete = dinamica('vila-show-confete', MAX_C * 4, idxC, matConfete);
-  /** x, y, z, vx, vy, vz, vida, vidaTotal, tamanho, r, g, b, fase (13 por pedaço). */
-  const CAMPOS = 13;
+  /** x, y, z, vx, vy, vz, vida, vidaTotal, tamanho, r, g, b, fase, peso (14 por pedaço). */
+  const CAMPOS = 14;
   const dadosE = new Float32Array(MAX_E * CAMPOS);
   const dadosC = new Float32Array(MAX_C * CAMPOS);
   let proxE = 0;
@@ -582,9 +605,12 @@ export function criarShowVila(scene: Scene, plano: PlanoVila, opcoes: OpcoesShow
     dados[o + 8] = tam;
     dados.set(cor, o + 9);
     dados[o + 12] = Math.random() * 6.28;
+    dados[o + 13] = 1;
   };
-  const estrelinha = (pos: V3, vel: V3, vida: number, tam: number, cor: V3) => {
+  /** `peso`: o quanto a gravidade puxa (os fogos caem devagar, como faísca no ar). */
+  const estrelinha = (pos: V3, vel: V3, vida: number, tam: number, cor: V3, peso = 1) => {
     soltar(dadosE, proxE, pos, vel, vida, tam, cor);
+    dadosE[proxE * CAMPOS + 13] = peso;
     proxE = (proxE + 1) % MAX_E;
   };
   const rnd = (a: number, b: number) => a + Math.random() * (b - a);
@@ -614,6 +640,18 @@ export function criarShowVila(scene: Scene, plano: PlanoVila, opcoes: OpcoesShow
 
   // ------------------------------------------------------------------ o estado
   let fase: FaseShow | null = null;
+  let momentoAtual: MomentoShow | null = null;
+  /** Os fogos do fim já soltos (pelo índice da explosão) e o show deles. */
+  let fogosDoShow = -1;
+  let fogosSoltos = 0;
+  /** As batidas da contagem da abertura e o estouro já piscados (no show de `introDoShow`). */
+  let introDoShow = -1;
+  let introBatidas = 0;
+  /** O siga-me aceso (sobe e desce macio) e onde ele está. */
+  let forcaSiga = 0;
+  /** O neon do palco (o raio da logo e o arco): a abertura apaga e acende. */
+  let nivelNeonPalco = 1;
+  const sigaPos: V3 = [0, 0, 0];
   let insVistos = 0;
   let ultimoT = -1;
   /** 0 apagado, 1 no show (sobe e desce macio). */
@@ -685,6 +723,66 @@ export function criarShowVila(scene: Scene, plano: PlanoVila, opcoes: OpcoesShow
       );
   }
 
+  /**
+   * Os fogos do fim (s depois do acorde final, x relativo ao meio da passarela, altura e cor):
+   * cada um sobe um rastro curto da beira do palco e abre uma roda de estrelinhas que cai devagar.
+   */
+  const FOGOS: readonly [number, number, number, V3][] = [
+    [0.25, -8, 15, CORES_CONFETE[1]],
+    [0.95, 7.5, 16.2, CORES_CONFETE[2]],
+    [1.65, -1.5, 17.2, CORES_CONFETE[0]],
+    [2.4, 11, 15.2, CORES_CONFETE[4]],
+    [3.2, -11.5, 15.8, CORES_CONFETE[5]],
+    [4.0, 3, 16.8, CORES_CONFETE[1]],
+    [5.0, -5, 15.5, CORES_CONFETE[2]],
+    [5.7, 8.5, 16.9, CORES_CONFETE[0]],
+  ];
+  const SUBIDA_FOGO = 0.7;
+  /** Os fogos sobem por trás da treliça da frente (de longe, abrem no céu por cima do palco). */
+  const zFogo = palco.z0 + 9;
+  function rastro(x: number, h: number): void {
+    // o rastro: uns poucos pontinhos dourados subindo do fundo do palco até a altura da roda
+    // (peso baixo: sobem quase retos e chegam lá na hora da roda)
+    const peso = 0.3;
+    const v = h / SUBIDA_FOGO + 9.5 * peso * SUBIDA_FOGO * 0.5;
+    for (let i = 0; i < (leve ? 3 : 5); i++)
+      estrelinha(
+        [x + rnd(-0.1, 0.1), topo + 0.4 - i * 0.25, zFogo],
+        [rnd(-0.15, 0.15), v * (1 + i * 0.02), rnd(-0.15, 0.15)],
+        SUBIDA_FOGO,
+        0.2 - i * 0.02,
+        OURO,
+        peso,
+      );
+  }
+  function fogo(x: number, y: number, cor: V3): void {
+    const n = leve ? 34 : 56;
+    for (let i = 0; i < n; i++) {
+      // uma roda quase redonda (de frente para a plateia), as faíscas caindo devagar
+      const a = (i / n) * 6.283 + rnd(-0.06, 0.06);
+      const v = rnd(7, 8.4);
+      const fora = rnd(-0.35, 0.35);
+      estrelinha(
+        [x, y, zFogo],
+        [Math.cos(a) * v, Math.sin(a) * v + 1.2, fora * v],
+        rnd(1.6, 2.2),
+        rnd(0.42, 0.62),
+        i % 4 === 0 ? BRANCO : i % 4 === 1 ? OURO : cor,
+        0.22,
+      );
+    }
+    // o miolo branco do estouro
+    for (let i = 0; i < (leve ? 6 : 10); i++)
+      estrelinha(
+        [x, y, zFogo],
+        [rnd(-1, 1), rnd(-1, 1), rnd(-0.5, 0.5)],
+        rnd(0.3, 0.5),
+        0.7,
+        BRANCO,
+        0,
+      );
+  }
+
   /** Onde a câmera está (o feixe some perto dela: não vira uma parede de cor na cara). */
   const cam: V3 = [0, 0, 0];
   const pertoDaCamera = (x: number, y: number, z: number) => {
@@ -714,6 +812,21 @@ export function criarShowVila(scene: Scene, plano: PlanoVila, opcoes: OpcoesShow
     ux /= L;
     uy /= L;
     uz /= L;
+    // a câmera dentro do cone (no meio do povo, onde o feixe varre): o feixe inteiro fica mais
+    // leve, para não virar uma parede de cor na cara de quem assiste
+    {
+      const k = Math.max(
+        0,
+        Math.min(L, (cam[0] - de[0]) * ux + (cam[1] - de[1]) * uy + (cam[2] - de[2]) * uz),
+      );
+      const d = Math.hypot(
+        de[0] + ux * k - cam[0],
+        de[1] + uy * k - cam[1],
+        de[2] + uz * k - cam[2],
+      );
+      const raio = 0.2 + (rp - 0.2) * (k / L);
+      alfa *= 0.18 + 0.82 * Math.min(1, Math.max(0, (d - raio * 0.6) / (raio * 2.2 + 2)));
+    }
     // dois eixos de lado (e1 horizontal)
     let e1x = -uz;
     let e1z = ux;
@@ -826,31 +939,89 @@ export function criarShowVila(scene: Scene, plano: PlanoVila, opcoes: OpcoesShow
       const g = gestos[(k + Math.floor((tempoAtual + k * 2.3) / 9)) % gestos.length];
       return deVezEmQuando(pose, g, 9, g === 'dancar' ? 3.2 : 1.6, k * 2.3);
     }
-    if (show.final !== null) {
-      const idade = tempoAtual - show.final;
-      return idade >= -0.1 && idade < 2.5
-        ? aplicarGesto(pose, 'pulo-estrela', Math.max(0, idade) + 0.05 + (k % 3) * 0.04)
-        : aplicarGesto(pose, 'aplaudir', 0.3 + ((tempoAtual + k * 0.13) % 1));
-    }
-    const d = tempoAtual - show.inicio - CONTAGEM;
-    if (d < 0) return aplicarGesto(pose, 'aplaudir', 0.3 + ((((tempoAtual * 2) % 1) + 1) % 1));
-    // de costas tem de ler como festa: quase todo mundo de braços para o alto (quem tem o
-    // bastão, sempre), e os outros batendo cabeça no tempo
-    const jeito = BASTAO.includes(k) ? (k % 2 ? 2 : 0) : [0, 1, 2, 1, 0, 2][k % 6];
-    // pulo de estrela, uma vez por compasso de dois tempos (braços em V)
-    if (jeito === 0) {
-      const q = aplicarGesto(pose, 'pulo-estrela', 0.15 + (((d % 1) + 1) % 1) * 0.8);
+    const m = momentoAtual;
+    const fr = (x: number) => x - Math.floor(x);
+    /** Os braços em V não sobem retos (de costas, o braço reto some atrás da cabeça grande). */
+    const emV = (q: Pose) => {
       q.bracoDireitoAbre = Math.min(q.bracoDireitoAbre ?? 0, 2.3);
       q.bracoEsquerdoAbre = Math.min(q.bracoEsquerdoAbre ?? 0, 2.3);
       return q;
+    };
+    const pula = (b: number) => emV(aplicarGesto(pose, 'pulo-estrela', 0.15 + fr(b / 2) * 0.8));
+    const vibra = (b: number) => emV(aplicarGesto(pose, 'comemorar', 0.25 + fr(b / 2) * 0.838));
+    const palma = (b: number) => aplicarGesto(pose, 'aplaudir', 0.3 + fr(b) * 0.393);
+    const bastao = BASTAO.includes(k);
+    if (!m) return pose;
+    if (show.final !== null && m.idadeFinal >= -0.1) {
+      const idade = m.idadeFinal;
+      if (idade < 2.5)
+        return aplicarGesto(pose, 'pulo-estrela', Math.max(0, idade) + 0.05 + (k % 3) * 0.04);
+      // a reverência da banda: o povo vibra de braços para o alto; quando ela sai, acena
+      if (idade >= REVERENCIA && idade < REVERENCIA + 2.6) return vibra(tempoAtual * 2.2 + k * 0.3);
+      if (idade >= REVERENCIA + 2.6 && (bastao || k % 3 === 0))
+        return aplicarGesto(pose, 'acenar', 0.4 + fr((tempoAtual + k * 0.37) / 1.2) * 1.2);
+      return palma(tempoAtual * 2.6 + k * 0.13);
     }
-    if (jeito === 1) return aplicarGesto(pose, 'roqueiro', 1 + ((((d + 0.125) % 0.5) + 0.5) % 0.5));
-    // braços para o alto em V, quicando no tempo (bem abertos: de costas, o braço reto para
-    // cima some atrás da cabeça grande do boneco)
-    const q = aplicarGesto(pose, 'comemorar', 0.25 + (((d % 1) + 1) % 1));
-    q.bracoDireitoAbre = Math.min(q.bracoDireitoAbre ?? 0, 2.3);
-    q.bracoEsquerdoAbre = Math.min(q.bracoEsquerdoAbre ?? 0, 2.3);
-    return q;
+    const dS = m.d;
+    if (m.fase === 'intro') {
+      // o escuro: todo mundo quieto, olhando; as varreduras: os bastões no alto, palmas no tempo;
+      // as quatro batidas: um pulo em cada
+      if (dS < ESCURO_INTRO) return pose;
+      if (dS >= CONTA_INTRO[0]) return pula(dS * 2 + 0.6);
+      return bastao ? vibra(dS * 1.0 + k * 0.2) : palma(dS * 2);
+    }
+    if (m.fase === 'entrada') {
+      // a banda entrando: o povo vibra (uns de braços para o alto, outros batendo palma rápido)
+      const vez = Math.floor((tempoAtual + k * 1.7) / 3) % 2;
+      return bastao || vez ? vibra(tempoAtual * 2.4 + k * 0.4) : palma(tempoAtual * 2.8 + k * 0.2);
+    }
+    if (m.fase === 'pausa')
+      return k % 2 ? vibra(tempoAtual * 2.4 + k * 0.4) : palma(tempoAtual * 2.8);
+    if (m.fase === 'contagem') return palma(m.batida);
+    const b = m.batida;
+    if (m.fase === 'chamando') return vibra(b);
+    // nas músicas, cada um do seu jeito, no andamento de cada uma
+    if (m.musica === 2) {
+      // o hino: palmas no 2 e no 4 (quem não tem bastão) e os bastões balançando no alto
+      if (!bastao) return k % 3 === 2 ? pula(b) : palma((b - 1) / 2);
+      return vibra(b * 0.5 + k * 0.1);
+    }
+    // a rápida: quase todo mundo pulando; a primeira: pulos, cabeça batendo e braços no alto
+    const jeito =
+      m.musica === 1
+        ? [0, 0, 2, 0, 1, 0][k % 6]
+        : bastao
+          ? k % 2
+            ? 2
+            : 0
+          : [0, 1, 2, 1, 0, 2][k % 6];
+    if (jeito === 0) return pula(b);
+    if (jeito === 1) return aplicarGesto(pose, 'roqueiro', 1 + fr(b + 0.25) * 0.5);
+    return vibra(b);
+  }
+
+  /**
+   * O raio da logo na abertura: apagado até `RAIO_ACENDE`, depois acende piscando como neon
+   * pegando (uns piscos curtos) e fica aceso.
+   */
+  function raioDaIntro(d: number): boolean {
+    const x = d - RAIO_ACENDE;
+    if (x < 0) return false;
+    if (x > 1.25) return true;
+    // aceso nestes pedacinhos (s depois de começar): o neon pegando
+    return x < 0.08 || (x > 0.3 && x < 0.36) || (x > 0.45 && x < 0.62) || x > 1.0;
+  }
+
+  /** Onde o siga-me pousa (o vocalista, ou a guitarrista no solo), se a pessoa está no palco. */
+  function quemOSigaMeSegue(
+    show: { inicio: number; final: number | null },
+    t: number,
+    m: MomentoShow | null,
+  ): V3 | null {
+    const papel = m?.pedaco === 'solo' && m.fase === 'tocando' ? 'guitarrista' : 'vocalista';
+    const q = posturaNaBanda(papel, show, t);
+    if (!noPalco(q.a, q.b)) return null;
+    return paraOMundo(palco, q.a, q.b, q.altura) as V3;
   }
 
   const mistura = (a: V3, b: V3, k: number, out: V3): V3 => {
@@ -877,14 +1048,61 @@ export function criarShowVila(scene: Scene, plano: PlanoVila, opcoes: OpcoesShow
       pl.definirLuz(1 - 0.5 * noite);
       const pronto = palcoPronto();
       const show = vista?.show ?? null;
-      fase = show ? faseDoShow(show, tempoNucleo) : null;
+      const mom = show ? momentoDoShow(show, tempoNucleo) : null;
+      momentoAtual = mom;
+      fase = mom?.fase ?? null;
       const noShow = pronto && !!show && fase !== 'acabou';
-      forca += ((noShow ? 1 : 0) - forca) * Math.min(1, dt * (noShow ? 1.6 : 1.1));
-      // as batidas desde o primeiro tempo (a contagem das baquetas vem antes)
-      const d = show ? tempoNucleo - show.inicio - CONTAGEM : 0;
-      const batidas = d / 0.5;
+      /** s desde o começo do show. */
+      const dS = mom?.d ?? 0;
+      const naIntro = noShow && fase === 'intro';
+      const comMusica =
+        noShow && (fase === 'tocando' || fase === 'chamando' || fase === 'contagem');
+      // a abertura: o palco apaga (as luzes de sempre só voltam no estouro)
+      const alvoForca = noShow ? (naIntro ? (dS < ESCURO_INTRO ? 0 : 0.85) : 1) : 0;
+      forca += (alvoForca - forca) * Math.min(1, dt * (naIntro ? 3.5 : noShow ? 1.6 : 1.1));
+      // as batidas: as da música de agora (no andamento dela); na abertura, a grade de 120
+      const batidas = comMusica && mom ? mom.batida : naIntro ? dS / 0.5 : 0;
       const naBatida = batidas - Math.floor(batidas);
-      const pulsoBatida = noShow && d >= 0 ? Math.exp(-naBatida * 4.5) : 0;
+      const pulsoBatida =
+        (comMusica && mom && mom.dm >= 0) || (naIntro && dS >= ESCURO_INTRO)
+          ? Math.exp(-naBatida * 4.5)
+          : 0;
+      // a contagem da abertura e o estouro: cada batida pisca o palco inteiro
+      if (show && naIntro && introDoShow !== show.inicio) {
+        introDoShow = show.inicio;
+        introBatidas = CONTA_INTRO.filter((b) => b <= dS).length + (dS >= INTRO ? 1 : 0);
+      }
+      if (show && noShow && introDoShow === show.inicio) {
+        const marcas = [...CONTA_INTRO, INTRO];
+        while (introBatidas < marcas.length && dS >= marcas[introBatidas]) {
+          const estouro = introBatidas === marcas.length - 1;
+          if (dS - marcas[introBatidas] < 0.5) {
+            golpe = 1;
+            if (estouro) {
+              // o estouro: tudo acende e as quatro beiradas soltam estrelinhas
+              for (const c of chafarizes) punhado(c[0], c[1], c[2], leve ? 14 : 24, 9, 0.24);
+            } else {
+              const c = chafarizes[introBatidas % 4];
+              punhado(c[0], c[1], c[2], leve ? 6 : 10, 6.5, 0.2);
+            }
+          }
+          introBatidas++;
+        }
+      }
+      // o neon do palco: apaga no escuro da abertura, acende piscando com o raio, inteiro no estouro
+      {
+        const alvo = !naIntro
+          ? 1
+          : dS < ESCURO_INTRO
+            ? 1 - 0.88 * Math.min(1, dS / 1.2)
+            : raioDaIntro(dS)
+              ? 0.55 + 0.45 * Math.min(1, Math.max(0, (dS - RAIO_ACENDE - 1.2) / 2.8))
+              : 0.12;
+        nivelNeonPalco = alvo;
+      }
+      /** O estouro acabou de acontecer (a abertura virou entrada): a luz sobe por um instante. */
+      const idadeEstouro = noShow && dS >= INTRO ? dS - INTRO : Infinity;
+      const noEstouro = idadeEstouro < 2.2;
 
       // ---- os estojos e os instrumentos
       const ins = vista?.ins ?? [false, false, false];
@@ -915,16 +1133,21 @@ export function criarShowVila(scene: Scene, plano: PlanoVila, opcoes: OpcoesShow
       // ---- as caixas e as luzes do palco
       const cx = vista?.cx ?? [false, false, false];
       acesas.forEach((m, i) => ligar(m, pronto && cx[i]));
-      ligar(noiteBase, pronto && (noite > 0.3 || forca > 0.05 || aq > 0.05));
-      ligar(showLuz, pronto && forca > 0.3);
-      ligar(pulso, pronto && (forca > 0.3 || aq > 0.04));
+      // na abertura o palco fica escuro: só as caixas, os feixes e o raio (que acende piscando)
+      ligar(noiteBase, pronto && !naIntro && (noite > 0.3 || forca > 0.05 || aq > 0.05));
+      ligar(showLuz, pronto && !naIntro && forca > 0.3);
+      ligar(pulso, pronto && (naIntro ? raioDaIntro(dS) : forca > 0.3 || aq > 0.04));
       // o chamado: a ponta da passarela pisca no tempo (aceso meio tempo, apagado meio tempo)
       ligar(chamado, noShow && fase === 'chamando' && naBatida < 0.5);
       golpe = Math.max(0, golpe - dt * 4);
       const tex = paletaPulso.material.emissiveTexture;
+      // nas pausas e na entrada o palco respira devagar (sem batida)
+      const respira = 0.62 + 0.14 * Math.sin(t * 2.2);
       if (tex)
         tex.level = noShow
-          ? 0.5 + 0.5 * Math.max(pulsoBatida, golpe)
+          ? comMusica || naIntro
+            ? (naIntro && dS < ESCURO_INTRO ? 0.35 : 0.45) + 0.55 * Math.max(pulsoBatida, golpe)
+            : Math.max(respira, golpe)
           : aq > 0 && forca < 0.3
             ? 0.25 + 0.75 * aq
             : 0.72 + 0.1 * Math.sin(t * 2.4);
@@ -947,16 +1170,45 @@ export function criarShowVila(scene: Scene, plano: PlanoVila, opcoes: OpcoesShow
         if (pronto && idadeFinal < 1.5) festaFinal();
       }
       const noFinal = noShow && idadeFinal >= 0 && idadeFinal < 5;
+      // os fogos de estrelinhas por cima do palco, um depois do outro (quem chega no meio vê os
+      // que faltam)
+      if (show && noShow && show.final !== null && idadeFinal >= -SUBIDA_FOGO) {
+        if (fogosDoShow !== show.inicio) {
+          fogosDoShow = show.inicio;
+          fogosSoltos = FOGOS.filter((f) => f[0] < idadeFinal - 0.6).length * 2;
+        }
+        // dois passos por fogo: o rastro (antes) e a roda
+        while (fogosSoltos < FOGOS.length * 2) {
+          const [quando, dx, h, cor] = FOGOS[fogosSoltos >> 1];
+          const roda = fogosSoltos % 2 === 1;
+          if (idadeFinal < quando - (roda ? 0 : SUBIDA_FOGO)) break;
+          if (roda) fogo(pass[0] + dx, topo + 0.4 + h, cor);
+          else rastro(pass[0] + dx, h);
+          fogosSoltos++;
+        }
+      }
 
-      // ---- os chafarizes de estrelinhas (de dois em dois, a cada quatro compassos)
-      if (noShow && d >= 0 && dt > 0) {
-        const compasso = Math.floor(d / 2);
-        const noCompasso = d / 2 - compasso;
+      // ---- os chafarizes de estrelinhas: nos refrões (de dois em dois, um compasso sim, outro
+      // não), na ponta durante o solo, no fim da música e no acorde final; na abertura, um par por
+      // compasso a partir das varreduras
+      if (noShow && dt > 0) {
+        const compasso = Math.floor(batidas / 4);
+        const noCompasso = batidas / 4 - compasso;
+        const parte = mom?.pedaco ?? null;
         chafarizes.forEach((c, i) => {
-          const par = i < 2 ? 2 : 0;
+          const par = i < 2 ? 0 : 1;
           const ligado =
-            (noFinal && idadeFinal < 2.6) ||
-            (fase === 'tocando' && compasso >= 2 && compasso % 4 === par && noCompasso < 0.62);
+            (noFinal && idadeFinal < 1.3) ||
+            (noEstouro && idadeEstouro < 1.4) ||
+            (naIntro &&
+              dS >= 6 &&
+              dS < CONTA_INTRO[0] &&
+              compasso % 2 === par &&
+              noCompasso < 0.3) ||
+            (comMusica &&
+              ((parte === 'refrao' && compasso % 2 === par && noCompasso < 0.55) ||
+                (parte === 'solo' && i >= 2 && noCompasso < 0.3) ||
+                (parte === 'fim' && noCompasso < 0.5)));
           if (!ligado) return;
           acumulado[i] += dt * (leve ? 16 : 30);
           while (acumulado[i] >= 1) {
@@ -996,27 +1248,51 @@ export function criarShowVila(scene: Scene, plano: PlanoVila, opcoes: OpcoesShow
         const base =
           forca * (0.15 + 0.13 * noite) * (0.8 + 0.25 * pulsoBatida + 0.35 * golpe) +
           aq * (1 - forca) * 0.16;
-        // no acorde final: brancos e para o céu por um instante, depois voltam; no aquecimento
-        // (a noite chegou), sobem devagar do chão ao céu num leque macio e somem
+        // no acorde final e no estouro da abertura: brancos e para o céu por um instante, depois
+        // voltam; nas pausas, sobem devagar até o meio; no aquecimento (a noite chegou), sobem
+        // devagar do chão ao céu num leque macio e somem
+        const pausa = noShow && (fase === 'pausa' || fase === 'entrada');
         const sobe = noFinal
           ? Math.min(1, idadeFinal / 0.2) * Math.max(0, Math.min(1, (2.4 - idadeFinal) / 0.8))
-          : forca < 0.3 && aq > 0
-            ? Math.min(1, (t - aquecerDesde) / AQUECER_S + 0.15)
+          : noEstouro
+            ? Math.min(1, idadeEstouro / 0.15) *
+              Math.max(0, Math.min(1, (2.2 - idadeEstouro) / 0.9))
+            : pausa
+              ? 0.4 + 0.12 * Math.sin(t * 0.6)
+              : forca < 0.3 && aq > 0
+                ? Math.min(1, (t - aquecerDesde) / AQUECER_S + 0.15)
+                : 0;
+        const branco = noFinal
+          ? Math.max(0, Math.min(1, (1.6 - idadeFinal) / 0.7))
+          : noEstouro
+            ? Math.max(0, Math.min(1, (1.2 - idadeEstouro) / 0.6))
             : 0;
-        const branco = noFinal ? Math.max(0, Math.min(1, (1.6 - idadeFinal) / 0.7)) : 0;
         const ceu = sobe * sobe * (3 - 2 * sobe);
+        // as quatro batidas da contagem da abertura juntam os feixes na ponta da passarela
+        const naConta = naIntro && dS >= CONTA_INTRO[0];
         varredores.forEach((q, i) => {
           const de = lente(q);
           // o alvo no chão: varrendo a plateia no tempo; no chamado, em roda na ponta da passarela
           let ax: number;
           let az: number;
-          if (fase === 'chamando') {
-            const a = (i / varredores.length) * 6.283 + batidas * 0.785;
-            ax = pass[0] + Math.cos(a) * 3.6;
-            az = pass[2] + 0.8 + Math.sin(a) * 2.6;
+          if (fase === 'chamando' || naConta) {
+            const a = (i / varredores.length) * 6.283 + batidas * (naConta ? 1.6 : 0.785);
+            const r = naConta ? 1.8 + 1.8 * Math.exp(-naBatida * 3) : 3.6;
+            ax = pass[0] + Math.cos(a) * r;
+            az = pass[2] + 0.8 + Math.sin(a) * r * 0.72;
+          } else if (naIntro) {
+            // a abertura: os feixes varrem a plateia inteira, rápido, cruzando uns com os outros
+            const k = Math.max(0, (dS - ESCURO_INTRO) / 4);
+            ax = meioX + 15 * Math.sin(dS * (1.25 + (i % 3) * 0.22) + i * 2.1) * Math.min(1, k);
+            az = palco.z0 - 8 + 7 * Math.sin(dS * 0.9 + i * 1.3);
           } else {
             ax = de[0] * 0.5 + meioX * 0.5 + 7 * Math.sin((batidas / 16) * 6.283 + i * 1.7);
             az = palco.z0 - 6.5 + 4.6 * Math.sin((batidas / 8) * 6.283 + i * 0.9);
+            if (pausa && !comMusica) {
+              // sem música: varre devagar, no relógio
+              ax = de[0] * 0.5 + meioX * 0.5 + 7 * Math.sin(t * 0.35 + i * 1.7);
+              az = palco.z0 - 6.5 + 4.6 * Math.sin(t * 0.5 + i * 0.9);
+            }
           }
           tmpA[0] = ax;
           tmpA[1] = chaoEm(ax, az) + 0.05;
@@ -1028,17 +1304,32 @@ export function criarShowVila(scene: Scene, plano: PlanoVila, opcoes: OpcoesShow
           tmpB[1] = de[1] + 13;
           tmpB[2] = de[2] - 22;
           const fim = mistura(tmpA, tmpB, ceu, tmpA);
-          const cor = mistura(CORES_FEIXE[(q.n ?? 0) % 4], BRANCO, branco, tmpC);
+          // na abertura as cores trocam a cada dois compassos (a mesma ordem, nunca arco-íris)
+          const corBase = naIntro
+            ? CORES_FEIXE[((q.n ?? 0) + Math.floor(dS / 4)) % 4]
+            : CORES_FEIXE[(q.n ?? 0) % 4];
+          const cor = mistura(corBase, BRANCO, branco, tmpC);
           const poca = base * 1.5 * (1 - ceu) ** 3;
           escreverFeixe(i, de, fim, 1.2 + 1.2 * ceu, cor, base * (1 + 0.8 * branco), poca);
           feixesAcesos++;
         });
         if (sigaMe) {
+          // o siga-me acha quem canta (ou a guitarrista no solo) quando está no palco
+          const alvo = show && noShow && !naIntro ? quemOSigaMeSegue(show, tempoNucleo, mom) : null;
+          forcaSiga += ((alvo ? 1 : 0) - forcaSiga) * Math.min(1, dt * 2.5);
+          if (alvo) {
+            const k = Math.min(1, dt * 6);
+            sigaPos[0] += (alvo[0] - sigaPos[0]) * k;
+            sigaPos[1] += (alvo[1] - sigaPos[1]) * k;
+            sigaPos[2] += (alvo[2] - sigaPos[2]) * k;
+            if (forcaSiga < 0.05) sigaPos.splice(0, 3, ...alvo);
+          }
           const de = lente(sigaMe);
-          tmpA[0] = pass[0] + Math.sin(t * 0.7) * 0.15;
-          tmpA[1] = topo + 0.05;
-          tmpA[2] = pass[2] + 0.1;
-          escreverFeixe(varredores.length, de, tmpA, 1.15, BRANCO, base * 1.25, base * 1.7);
+          tmpA[0] = sigaPos[0];
+          tmpA[1] = sigaPos[1] + 0.05;
+          tmpA[2] = sigaPos[2];
+          const b = base * forcaSiga;
+          escreverFeixe(varredores.length, de, tmpA, 1.15, BRANCO, b * 1.25, b * 1.7);
           feixesAcesos++;
         }
         // o clarão macio do acorde final (um disco de luz por cima do palco, some em meio segundo)
@@ -1090,8 +1381,8 @@ export function criarShowVila(scene: Scene, plano: PlanoVila, opcoes: OpcoesShow
           }
           vida -= dt;
           dadosE[o + 6] = vida;
-          dadosE[o + 4] -= 9.5 * dt;
-          const ar = Math.exp(-dt * 0.9);
+          dadosE[o + 4] -= 9.5 * dadosE[o + 13] * dt;
+          const ar = Math.exp(-dt * (dadosE[o + 13] < 1 ? 1.6 : 0.9));
           dadosE[o + 3] *= ar;
           dadosE[o + 5] *= ar;
           dadosE[o] += dadosE[o + 3] * dt;
@@ -1216,16 +1507,21 @@ export function criarShowVila(scene: Scene, plano: PlanoVila, opcoes: OpcoesShow
       turma: {
         noLugar: [...turmaAgora.values()].filter((d) => d <= CHEGOU_AO_LUGAR).length,
         andando: [...turmaAgora.values()].filter((d) => d > CHEGOU_AO_LUGAR).length,
-        longe: [...turmaAgora.values()].map((d) => Math.round(d * 10) / 10).filter((d) => d > CHEGOU_AO_LUGAR),
+        longe: [...turmaAgora.values()]
+          .map((d) => Math.round(d * 10) / 10)
+          .filter((d) => d > CHEGOU_AO_LUGAR),
       },
     }),
     luzNaMao(povoado, n) {
-      if (povoado !== 'vila' || n < N0_PUBLICO) return null;
+      // o vocalista segura o microfone
+      if (povoado === 'vila' && n === 0) return 'microfone';
+      if (povoado !== 'vila' || !daTurma(n)) return null;
       const k = n - N0_PUBLICO;
       // uns oito da turma seguram um bastão de luz, em neon sorteado (nunca na ordem do arco-íris)
       if (!BASTAO.includes(k)) return null;
       return NEON_BASTAO[(k * 3) % NEON_BASTAO.length];
     },
+    luzDoPalco: () => nivelNeonPalco,
     mostrarLuzNaMao: () =>
       noiteShowAtual ||
       (!!vistaAtual?.show && faseDoShow(vistaAtual.show, tempoAtual) !== 'acabou'),
@@ -1233,30 +1529,67 @@ export function criarShowVila(scene: Scene, plano: PlanoVila, opcoes: OpcoesShow
       if (povoado !== 'vila') return pose;
       const show = vistaAtual?.show ?? null;
       const ativo = !!show && faseDoShow(show, tempoAtual) !== 'acabou';
-      if (n >= N0_PUBLICO) return poseDoPublico(n - N0_PUBLICO, pose, onde, ativo ? show : null);
-      // sem show: a passagem de som (a banda afina, testa o microfone, confere as caixas)
-      if (!ativo || !show) return n <= 2 ? passagemDeSom(n, pose) : pose;
-      // a banda (0 a 2) e a moça do lanche (3, dentro do festival, a plateia de casa)
-      if (n > 3) return pose;
-      if (show.final !== null) {
-        // o acorde final: todo mundo pula de braços para o alto
-        const idade = tempoAtual - show.final;
-        return idade >= 0 && idade < 1.5 ? aplicarGesto(pose, 'pulo-estrela', idade + 0.05) : pose;
+      if (daTurma(n)) return poseDoPublico(n - N0_PUBLICO, pose, onde, ativo ? show : null);
+      const papel = papelNaBanda(n);
+      if (papel && ativo && show) {
+        // a banda no show: o que a coreografia manda, no tempo da música de agora
+        const q = posturaNaBanda(papel, show, tempoAtual);
+        const m = momentoAtual;
+        const comMusica =
+          m && (m.fase === 'tocando' || m.fase === 'chamando' || m.fase === 'contagem');
+        const batida =
+          comMusica && m
+            ? { batida: m.batida, seg: m.segBatida }
+            : { batida: tempoAtual * 2, seg: 0.5 };
+        return poseDaBanda(papel, q.acao, q.desde, q.andando, batida, pose);
       }
-      const d = tempoAtual - show.inicio - CONTAGEM;
-      if (d < 0) return pose;
-      // a moça do lanche pula de braços em V no tempo (um pulo a cada compasso)
-      if (n === 3) return aplicarGesto(pose, 'pulo-estrela', 0.25 + (((d % 2) + 2) % 2) * 0.6);
-      // o roadie bate palma no tempo
-      if (n === 1) return aplicarGesto(pose, 'aplaudir', 0.3 + (((d % 1) + 1) % 1));
-      // o vocalista e a guitarrista batem cabeça no tempo: a cabeça embaixo em cada batida
-      return aplicarGesto(pose, 'roqueiro', 1 + ((((d + 0.125) % 0.5) + 0.5) % 0.5));
+      if (papel && !ativo) {
+        // sem show: a passagem de som (a banda afina, testa o microfone, confere as caixas; o
+        // baterista no banquinho testa o bumbo e a baixista acompanha); de noite, na coxia, só
+        // a espera
+        const local = onde ? [onde.x - palco.x0, onde.z - palco.z0] : null;
+        const noPalcoAgora = !!local && noPalco(local[0], local[1]);
+        if (!noPalcoAgora) return pose;
+        if (papel === 'baterista')
+          return poseDaBanda(
+            papel,
+            tempoAtual % 9 < 2.4 ? 'bateria' : 'sentado',
+            1,
+            false,
+            { batida: tempoAtual * 1.6, seg: 0.6 },
+            pose,
+          );
+        if (papel === 'baixista')
+          return tempoAtual % 10 < 3.4
+            ? poseDaBanda(
+                papel,
+                'tocar',
+                1,
+                false,
+                { batida: tempoAtual * 1.5 + 0.3, seg: 0.66 },
+                pose,
+              )
+            : pose;
+        return n <= 2 ? passagemDeSom(n, pose) : pose;
+      }
+      // a moça do lanche (3, dentro do festival, a plateia de casa) pula no tempo das músicas
+      if (n !== 3 || !ativo || !show) return pose;
+      const m = momentoAtual;
+      if (!m) return pose;
+      if (show.final !== null && m.idadeFinal >= 0)
+        return m.idadeFinal < 2.5 ? aplicarGesto(pose, 'pulo-estrela', m.idadeFinal + 0.05) : pose;
+      if (m.fase !== 'tocando' && m.fase !== 'chamando') return pose;
+      return aplicarGesto(
+        pose,
+        'pulo-estrela',
+        0.25 + (m.batida / 2 - Math.floor(m.batida / 2)) * 0.6,
+      );
     },
     giroDoMorador(povoado, n, onde) {
       if (povoado !== 'vila') return null;
       const show = vistaAtual?.show;
       const ativo = !!show && faseDoShow(show, tempoAtual) !== 'acabou';
-      if (n >= N0_PUBLICO) {
+      if (daTurma(n)) {
         // a turma: parada no lugar, de frente para o palco (no show) ou para a rodinha
         const l = lugarDoPublico(pub, n - N0_PUBLICO, {
           noite: noiteShowAtual,
@@ -1267,9 +1600,8 @@ export function criarShowVila(scene: Scene, plano: PlanoVila, opcoes: OpcoesShow
         if (Math.hypot(onde.x - l.alvo[0], onde.z - l.alvo[2]) > CHEGOU_AO_LUGAR) return null;
         return Math.atan2(l.olhar[0] - onde.x, l.olhar[1] - onde.z);
       }
-      if (!ativo || n > 2) return null;
-      // a plateia fica do lado da ponta da passarela (z menor que o fundo do palco)
-      return Math.PI;
+      // a banda: o giro vem do núcleo (a coreografia), igual para todos
+      return null;
     },
     descartar() {
       for (const m of todas) m.dispose();

@@ -70,7 +70,7 @@ export interface PosturaBanda {
 export const ALTURA_PALCO = 3;
 const ALTURA_PRATICAVEL = 4;
 /** O baterista sentado no banquinho (os pés ficam no praticável; o corpo, na altura do banco). */
-export const ALTURA_BANCO = ALTURA_PRATICAVEL + 0.42;
+export const ALTURA_BANCO = ALTURA_PRATICAVEL + 0.95;
 
 /** De frente para o povo (−z). */
 export const PARA_O_POVO = Math.PI;
@@ -291,7 +291,10 @@ function roteiroBase(papel: PapelBanda): Passo[] {
           } else if (p.pedaco === 'solo')
             // a ponta é da guitarrista: ele vai para o lado e puxa as palmas do povo
             passo({ t: p.ini, para: [7.5, 6.6], vel: 2.8, acao: 'palmas', giro: PARA_O_POVO });
-          else if (p.pedaco === 'ponte' || p.pedaco === 'subida')
+          else if (p.pedaco === 'ponte')
+            // a ponte é das duas (de costas no meio): ele vai para o lado e puxa as palmas
+            passo({ t: p.ini, para: FRENTE_DIR, vel: 2.8, acao: 'palmas', giro: PARA_O_POVO });
+          else if (p.pedaco === 'subida')
             passo({
               t: p.ini,
               para: PONTA,
@@ -305,7 +308,7 @@ function roteiroBase(papel: PapelBanda): Passo[] {
           else if (p.pedaco === 'fim')
             passo({ t: p.ini, para: FRENTE, vel: 2.8, acao: 'pulo', giro: PARA_O_POVO });
           else if (p.pedaco === 'chamado')
-            passo({ t: p.ini - 1.2, para: PONTA, vel: 3, acao: 'apontar', giro: PARA_O_POVO });
+            passo({ t: p.ini - 3.6, para: PONTA, vel: 3, acao: 'apontar', giro: PARA_O_POVO });
           break;
         case 'guitarrista':
           if (p.pedaco === 'solo')

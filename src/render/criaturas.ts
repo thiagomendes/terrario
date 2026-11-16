@@ -148,6 +148,8 @@ export function criarRenderCriaturas(
       balao?: BalaoGesto;
       /** Spec 026: o bastão de luz na mão (a turma do show). */
       bastao?: Mesh | null;
+      /** Spec 026: o bastão é o microfone do vocalista (sempre na mão). */
+      microfone?: boolean;
       ultX: number;
       ultZ: number;
       vel: number;
@@ -223,9 +225,7 @@ export function criarRenderCriaturas(
    * longo do braço (com o braço para o alto, ele aponta para o céu). Luz própria, no brilho.
    */
   function montarBastao(boneco: Personagem, cor: string, id: number): Mesh | null {
-    const pega = boneco.raiz
-      .getChildTransformNodes(false)
-      .find((n) => n.name.endsWith('-pega'));
+    const pega = boneco.raiz.getChildTransformNodes(false).find((n) => n.name.endsWith('-pega'));
     if (!pega) return null;
     let mat = matsBastao.get(cor);
     if (!mat) {
@@ -249,6 +249,47 @@ export function criarRenderCriaturas(
     incluirNoGlow(m);
     m.setEnabled(false);
     return m;
+  }
+  /**
+   * O microfone do vocalista da Vila Neon (spec 026, o show de verdade): o cabo grafite e a
+   * cabeça de cromo na mão direita, sempre na mão (ele canta, cumprimenta e passa o som).
+   */
+  let matMicro: StandardMaterial | null = null;
+  let matMicroCabeca: StandardMaterial | null = null;
+  function montarMicrofone(boneco: Personagem, id: number): Mesh | null {
+    const pega = boneco.raiz.getChildTransformNodes(false).find((n) => n.name.endsWith('-pega'));
+    if (!pega) return null;
+    if (!matMicro) {
+      matMicro = new StandardMaterial('morador-microfone', scene);
+      matMicro.diffuseColor = Color3.FromHexString('#24232a');
+      matMicro.specularColor = new Color3(0.25, 0.25, 0.25);
+      matMicroCabeca = new StandardMaterial('morador-microfone-cabeca', scene);
+      matMicroCabeca.diffuseColor = Color3.FromHexString('#c8ccd6');
+      matMicroCabeca.emissiveColor = new Color3(0.18, 0.18, 0.2);
+      matMicroCabeca.specularColor = new Color3(0.6, 0.6, 0.6);
+    }
+    const cabo = MeshBuilder.CreateCylinder(
+      `morador-${id}-microfone`,
+      { height: 0.26, diameterTop: 0.08, diameterBottom: 0.055, tessellation: 8 },
+      scene,
+    );
+    cabo.material = matMicro;
+    cabo.parent = pega;
+    cabo.position.set(0, -0.06, 0.04);
+    cabo.rotation.x = 0.35;
+    const cabeca = MeshBuilder.CreateSphere(
+      `morador-${id}-microfone-cabeca`,
+      { diameter: 0.13, segments: 6 },
+      scene,
+    );
+    cabeca.material = matMicroCabeca;
+    cabeca.parent = cabo;
+    cabeca.position.set(0, 0.16, 0);
+    for (const m of [cabo, cabeca]) {
+      m.isPickable = false;
+      excluirDoGlow(m);
+    }
+    return cabo;
   }
   function prepararMorador(c: Criatura) {
     const prof = c.morador?.profissao ?? 'construtor';
@@ -294,10 +335,17 @@ export function criarRenderCriaturas(
     }
     // spec 026: o bastão de luz na mão de quem da turma do show tem um (só aparece no show)
     const corLuz = c.morador && luzNaMaoDeMorador?.(c.morador.povoado, c.morador.n);
-    const bastao = corLuz ? montarBastao(boneco, corLuz, c.id) : null;
+    // ('microfone': o vocalista do show segura o microfone, sempre)
+    const microfone = corLuz === 'microfone';
+    const bastao = microfone
+      ? montarMicrofone(boneco, c.id)
+      : corLuz
+        ? montarBastao(boneco, corLuz, c.id)
+        : null;
     return {
       boneco,
       bastao,
+      microfone,
       animador: criarAnimador(),
       ultX: c.x,
       ultZ: c.z,
@@ -581,13 +629,18 @@ export function criarRenderCriaturas(
      * Spec 026: quem da turma do show segura um bastão de luz (a cor, ou null) e quando ele
      * aparece (a noite do show).
      */
-    definirLuzNaMao(cor: (povoado: string, n: number) => string | null, mostrar: () => boolean): void {
+    definirLuzNaMao(
+      cor: (povoado: string, n: number) => string | null,
+      mostrar: () => boolean,
+    ): void {
       luzNaMaoDeMorador = cor;
       mostrarLuzNaMao = mostrar;
     },
     definirPoseDeMorador(
       f: ((povoado: string, n: number, pose: Pose, onde: { x: number; z: number }) => Pose) | null,
-      giro: ((povoado: string, n: number, onde: { x: number; z: number }) => number | null) | null = null,
+      giro:
+        | ((povoado: string, n: number, onde: { x: number; z: number }) => number | null)
+        | null = null,
     ): void {
       poseDeMorador = f;
       giroDeMorador = giro;
@@ -657,7 +710,7 @@ export function criarRenderCriaturas(
           const giro =
             giroDeMorador && c.morador ? giroDeMorador(c.morador.povoado, c.morador.n, c) : null;
           mb.boneco.posicionar(c.x, c.y, c.z, giro ?? c.yaw);
-          if (mb.bastao) {
+          if (mb.bastao && !mb.microfone) {
             const ver = mostrarLuzNaMao();
             if (mb.bastao.isEnabled(false) !== ver) mb.bastao.setEnabled(ver);
           }

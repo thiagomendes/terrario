@@ -198,6 +198,25 @@ export const POVOADO_VILA: PovoadoTema = {
     'vila:7': { nome: 'Beto', genero: 'm', titulo: 'Moço da banca', pecas: MORADORES.construtor },
     // spec 026 (o público do show): a turma (vila:8 a vila:27), cada um de um jeito
     ...TURMA,
+    // spec 026 (o show de verdade): o baterista e a baixista, que entram com a banda
+    'vila:40': {
+      nome: 'Gui',
+      genero: 'm',
+      titulo: 'Baterista',
+      pecas: corpoDe('#c99064', '#1e1a22', '#2e2d36', '#3a6fb8'),
+      fantasia: { id: 'baterista-vila', cor: 0 },
+      cabelo: 1,
+      semTrocas: true,
+    },
+    'vila:41': {
+      nome: 'Dani',
+      genero: 'f',
+      titulo: 'Baixista',
+      pecas: corpoDe('#9a6844', '#2e2018', '#22c2b0', '#24232a'),
+      fantasia: { id: 'baixista-vila', cor: 0 },
+      cabelo: 4,
+      semTrocas: true,
+    },
   },
   // passo animado de quem anda ouvindo música
   movimento: { saltita: 0.03, flutua: 0, ginga: 0.06 },

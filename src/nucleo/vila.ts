@@ -297,6 +297,8 @@ export function criarVila(ctx: CtxVila) {
   }
   /** Quem da banda ainda está indo para o lugar da coreografia (chegou atrasado ao show). */
   const atrasados = new Set<number>();
+  /** O relógio do show pulou (o atalho dos testes): a banda vai direto para o lugar. */
+  let saltou = false;
   /** Velocidade de quem anda fora da coreografia (para o descanso, ou alcançando o show). */
   const VEL_DESCANSO = 1.9;
   const VEL_ALCANCAR = 3.2;
@@ -356,7 +358,8 @@ export function criarVila(ctx: CtxVila) {
       if (noShow && show) {
         const q = posturaNaBanda(papel, show, t);
         const longe = Math.hypot(q.a - aqui[0], q.b - aqui[1]);
-        if (longe > 1.2) atrasados.add(c.id);
+        if (saltou) atrasados.delete(c.id);
+        else if (longe > 1.2) atrasados.add(c.id);
         if (atrasados.has(c.id)) {
           // chegou atrasado ao show (a noite caiu com ele no palco): vai a pé até o lugar
           const r = andarAte(aqui, [q.a, q.b], VEL_ALCANCAR * dt);
@@ -389,6 +392,7 @@ export function criarVila(ctx: CtxVila) {
       const [x, y, z] = mundoDe(r.q, alturaEm(r.q[0], r.q[1]));
       porNoLugar(c, x, y, z, r.dir);
     }
+    saltou = false;
   }
 
   // ------------------------------------------------------------------ f1: os estojos
@@ -773,6 +777,8 @@ export function criarVila(ctx: CtxVila) {
     pularShow(s: number): void {
       if (!show || show.final !== null || !(s >= 0)) return;
       show.inicio = ctx.agora() - Math.min(s, CHAMADO + ESPERA_FINAL - 0.05);
+      // o pulo é do relógio: a banda vai junto (direto para o lugar, sem andar até lá)
+      saltou = true;
       ctx.sujar();
     },
     salvar: () => ({

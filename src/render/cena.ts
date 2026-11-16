@@ -4161,6 +4161,7 @@ export function criarCena(
     // spec 026: o show é só de noite (a noite do show acende o palco)
     const noiteShow = noiteDeShow(hora);
     showVila?.quadro(tempo, cliente.vila.estado, cliente.vila.tempo(tempo), noiteVila, noiteShow);
+    if (showVila) renderVila?.luzDoPalco(showVila.luzDoPalco());
     if (brinquedosVila) {
       quadroPistaVila();
       brinquedosVila.quadro(tempo);

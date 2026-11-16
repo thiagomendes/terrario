@@ -633,6 +633,43 @@ export const FANTASIAS_DE_MORADOR: readonly FantasiaDef[] = [
       ],
     }),
   },
+  // spec 026 (o show de verdade): o baterista (camiseta grafite, a bandana vermelha na testa e as
+  // munhequeiras) e a baixista (camiseta verde-água, colete grafite, o baixo-raio azul no peito)
+  {
+    id: 'baterista-vila',
+    grupo: 'temas',
+    tema: 'vila-neon',
+    nomes: { feminino: 'Baterista', masculino: 'Baterista' },
+    cores: ['#2e2d36'],
+    corEmblema: '#e8302a',
+    visual: mesmo({
+      roupa: { camisa: 'principal', manga: 'principal', calca: '#3a6fb8', sapato: '#f6f4ee' },
+      cabeca: 'livre',
+      pecas: [
+        { tipo: 'faixa-testa', cor: 'emblema' },
+        { tipo: 'munhequeira', cor: 'emblema' },
+        { tipo: 'faixa-braco', cor: '#ffe14a' },
+      ],
+    }),
+  },
+  {
+    id: 'baixista-vila',
+    grupo: 'temas',
+    tema: 'vila-neon',
+    nomes: { feminino: 'Baixista', masculino: 'Baixista' },
+    cores: ['#22c2b0'],
+    corEmblema: '#2f8cff',
+    visual: mesmo({
+      roupa: { camisa: 'principal', manga: 'principal', calca: '#24232a', sapato: '#f6f4ee' },
+      cabeca: 'livre',
+      pecas: [
+        { tipo: 'colete-brim', cor: '#2e2d36' },
+        { tipo: 'guitarra-raio', cor: 'emblema' },
+        { tipo: 'faixa-braco', cor: '#ffe14a' },
+        { tipo: 'tenis-cano', cor: '#f6f4ee' },
+      ],
+    }),
+  },
   // spec 026 (o público do show): a turma da grade, quatro jeitos da época, só nos moradores.
   // Vistos de trás na plateia: o colete de brim com remendos, o boné (para a frente ou para
   // trás), a jaqueta de tachinhas e a faixa na testa; nada de rosa (é da dançarina)

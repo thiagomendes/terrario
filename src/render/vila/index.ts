@@ -54,8 +54,16 @@ export interface RenderVila {
   /** Quantos chunks e malhas vivos (medida). */
   contagem(): { chunks: number; malhas: number; triangulos: number; sosias: number };
   sosias: Sosias;
+  /**
+   * Spec 026 (o show de verdade): o neon do palco (o raio da logo, os raios das abas e o arco de
+   * lâmpadas), de 0 (apagado, a abertura no escuro) a 1 (aceso, como sempre).
+   */
+  luzDoPalco(nivel: number): void;
   descartar(): void;
 }
+
+/** As peças do neon do palco (a abertura do show apaga e acende só elas). */
+const NEON_DO_PALCO = new Set(['raio-palco', 'arco-lampadas']);
 
 const chave = (cx: number, cz: number) => `${cx},${cz}`;
 /** A partir daqui (blocos) o carro parado troca para a versão de longe. */
@@ -100,6 +108,10 @@ export function criarRenderVila(
   // as luzes (neon, lâmpadas, telas): acesas, a cor na paleta, sem luz de cena
   const paleta = criarPaletaLuz(scene, 'vila-luz');
   const matLuz = paleta.material;
+  // o neon do palco num material só dele (o show apaga e acende a logo na abertura)
+  const paletaPalco = criarPaletaLuz(scene, 'vila-luz-palco');
+  const matLuzPalco = paletaPalco.material;
+  let nivelPalco = 1;
   // o vidro dos carros: azulado, meio transparente, com reflexo (o interior aparece)
   const matVidro = pl.cor('#bfe6f6', 0.75, 0.42);
   /** As luzes da noite (faróis, lanternas) estão acesas? Acendem ao escurecer, como os postes. */
@@ -121,6 +133,7 @@ export function criarRenderVila(
     const oz = cz * 16;
     const corpo = new Pecas();
     const luz = new Pecas();
+    const luzPalco = new Pecas();
     const noite = new Pecas();
     const vidro = new Pecas();
     const quadros: QuadroDesenhado[] = [];
@@ -144,7 +157,17 @@ export function criarRenderVila(
         }
         continue;
       }
-      const d: Desenho = { corpo, luz, noite, vidro, quadros, ox, oz, chao: plano.h + 1, recorte };
+      const d: Desenho = {
+        corpo,
+        luz: NEON_DO_PALCO.has(p.tipo) ? luzPalco : luz,
+        noite,
+        vidro,
+        quadros,
+        ox,
+        oz,
+        chao: plano.h + 1,
+        recorte,
+      };
       desenharPeca(p, d);
     }
     const malhas: Mesh[] = [];
@@ -154,6 +177,7 @@ export function criarRenderVila(
       const m = new Mesh(nome, scene);
       const vd = pecas.juntar();
       if (mat === matLuz) paleta.aplicar(vd);
+      else if (mat === matLuzPalco) paletaPalco.aplicar(vd);
       vd.applyToMesh(m);
       m.material = mat;
       m.position.set(ox, 0, oz);
@@ -170,6 +194,8 @@ export function criarRenderVila(
     }
     const ml = fazer(luz, `vila-luzes-${cx},${cz}`, matLuz);
     if (ml) opcoes.brilha?.(ml);
+    const mlp = fazer(luzPalco, `vila-luzes-palco-${cx},${cz}`, matLuzPalco);
+    if (mlp) opcoes.brilha?.(mlp);
     // os faróis e as lanternas dos carros: a mesma tinta acesa, só de noite
     const mn = fazer(noite, `vila-farois-${cx},${cz}`, matLuz);
     if (mn) {
@@ -337,11 +363,19 @@ export function criarRenderVila(
         }
       return { chunks: vivos.size, malhas, triangulos, sosias: sosias.visiveis() };
     },
+    luzDoPalco(nivel: number) {
+      const n = Math.max(0, Math.min(1, nivel));
+      if (Math.abs(n - nivelPalco) < 0.004) return;
+      nivelPalco = n;
+      const tex = matLuzPalco.emissiveTexture;
+      if (tex) tex.level = n;
+    },
     descartar() {
       for (const v of vivos.values()) soltar(v);
       vivos.clear();
       sosias.descartar();
       paleta.descartar();
+      paletaPalco.descartar();
       pl.descartar();
     },
   };

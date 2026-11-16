@@ -135,7 +135,7 @@ export function interrompeGesto(e: EstadoGesto): boolean {
  * +x; z positivo levanta o braço direito para o lado, negativo levanta o esquerdo; x negativo
  * leva o braço ou a perna para a frente).
  */
-interface Juntas {
+export interface Juntas {
   bdX?: number;
   bdZ?: number;
   beX?: number;
@@ -274,7 +274,20 @@ const mistura = (base: number, alvo: number, p: number) => base + (alvo - base) 
 export function aplicarGesto(pose: Pose, id: IdGesto, f: number): Pose {
   const p = pesoDoGesto(id, f);
   if (p <= 0) return pose;
-  const j = juntasDoGesto(id, f);
+  return aplicarJuntas(pose, juntasDoGesto(id, f), p);
+}
+
+/** As juntas de um gesto num instante (spec 026: a banda mistura gestos e poses próprias). */
+export function juntasDe(id: IdGesto, f: number): Juntas {
+  return juntasDoGesto(id, f);
+}
+
+/**
+ * Põe juntas (no referencial dos gestos) em cima da pose, com peso `p` (0..1). Spec 026: a banda
+ * do show toca, canta e bate cabeça com poses que não são gestos da roda.
+ */
+export function aplicarJuntas(pose: Pose, j: Juntas, p: number): Pose {
+  if (p <= 0) return pose;
   pose.pesoGesto = Math.max(pose.pesoGesto ?? 0, p);
   // braços: o boneco usa "abre" (z = 0,06 + abre no direito, −0,06 − abre no esquerdo)
   if (j.bdX !== undefined) pose.bracoDireito = mistura(pose.bracoDireito, j.bdX, p);
