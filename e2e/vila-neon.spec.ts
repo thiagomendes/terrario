@@ -313,3 +313,73 @@ for (const id of ['f1', 'f2', 'f3'] as const)
     await parar();
     await page.context().close();
   });
+
+/**
+ * O que o dono viu (15 nov 2026, iPhone): "fiz todas as missões, mas o show não começou; a galera
+ * só ficava ali em rodas, só saía som de passarinho". Agora: a f1 e a f2 feitas, a criança na
+ * grade da plateia, o relógio de verdade correndo até a noite, e ninguém toca em nada: as caixas
+ * acendem uma a uma, a banda toca, a turma vai para a grade e dança, a natureza baixa.
+ */
+test('Vila Neon, deitado: de noite no festival, sem tocar em nada, o show começa sozinho', async ({
+  browser,
+}) => {
+  test.setTimeout(600_000);
+  const page = await abrirMundo(browser, {
+    id: 'vila-show-sozinho',
+    tema: 'vila-neon',
+    tamanho: 'deitado',
+    extras: { alma: { local: { feitas: ['f1', 'f2'] } } },
+  });
+  await page.addStyleTag({ content: '.dica-mira { display: none !important; }' });
+  await assentar(page);
+  await page.waitForFunction(() => !!window.__vila, undefined, { timeout: 30_000 });
+  // o primeiro toque liga o som (no céu, longe de tudo)
+  await page.touchscreen.tap(420, 60);
+  const pl = await page.evaluate(() => window.__brumaluz!.vila!()!.pontos.plateia);
+  await page.evaluate((g) => {
+    const e = window.__brumaluz!;
+    e.teleportar!((g.x0 + g.x1) / 2 + 0.5, g.z1 - 1.5);
+    e.apontar!(0, 0.12);
+    // o fim da tarde, e o relógio de verdade correndo (a noite chega sozinha)
+    e.hora = 0.725;
+    e.pausarDia = false;
+  }, pl);
+  await page.waitForTimeout(4000);
+  await page.screenshot({ path: `${PASTA}/sozinho-entardecer.png` });
+  expect(await page.evaluate(() => window.__brumaluz!.vilaEstado!()?.show ?? null)).toBeNull();
+  // a noite chega; nenhum toque: espera o show (no máximo a espera da f3 aberta e uma folga)
+  const t0 = Date.now();
+  await page.waitForFunction(() => !!window.__brumaluz!.vilaEstado!()?.show, undefined, {
+    timeout: 120_000,
+  });
+  console.log(`vila: show sozinho depois de ${((Date.now() - t0) / 1000).toFixed(0)} s`);
+  const acesas = await page.evaluate(() =>
+    (window.__brumaluz!.eventosVila ?? [])
+      .filter((e) => e.e === 'vilaCaixa')
+      .map((e) => `${(e as { i: number }).i}:${e.quem}`),
+  );
+  expect(acesas).toEqual(['0:auto', '1:auto', '2:auto']);
+  await page.waitForTimeout(16_000);
+  await page.screenshot({ path: `${PASTA}/sozinho-show.png` });
+  const r = await page.evaluate(() => {
+    const e = window.__brumaluz!;
+    const som = e.somVila?.();
+    const nos = e
+      .cenaBabylon!()
+      .transformNodes.filter((n) => /^morador-\d+-junta-bracoD$/.test(n.name));
+    return {
+      fase: window.__vila!.show(),
+      som: som ? { show: !!som.show, calarNatureza: som.calarNatureza, pronto: som.pronto } : null,
+      bracos: nos.map((n) => Math.round(Math.abs(n.rotation.z) * 100) / 100),
+    };
+  });
+  console.log(`vila: show sozinho ${JSON.stringify(r)}`);
+  expect(r.fase).toBe('tocando');
+  // a turma dança (de verdade, nas juntas): uns de braço para o alto
+  expect(r.bracos.filter((b) => b > 2).length).toBeGreaterThanOrEqual(5);
+  if (r.som?.pronto) {
+    expect(r.som.show).toBe(true);
+    expect(r.som.calarNatureza).toBeGreaterThan(0.5);
+  }
+  await page.context().close();
+});
