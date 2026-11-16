@@ -186,13 +186,17 @@ test('três amigos na nuvem: casa da vila, parede do amigo, passagem, baú, forn
     motivo: 'mundo',
     lugar: 'vila',
   });
-  await expect.poll(() => ana.evaluate(() => window.__brumaluz!.cadeado!.visivel)).toBe(true);
-  await ana.screenshot({ path: `${PASTA}/1-ana-cadeado-casa-da-vila.png` });
+  // no computador só mirar não mostra o cadeado (o dono: ficava o tempo todo na tela); ele
+  // aparece logo depois do clique no que não quebra
+  await ana.waitForTimeout(400);
+  expect(await ana.evaluate(() => window.__brumaluz!.cadeado!.visivel)).toBe(false);
   const paredeAntes = await blocoEm(ana, L.parede);
   // medida: o custo de mirar e minerar no bloco protegido (a conta da regra por quadro)
   const r = await ana.evaluate(() => window.__brumaluz!.minerar!(1.5));
   expect(r.quebrou).toBe(false);
   expect(r.estagio).toBe(0);
+  await expect.poll(() => ana.evaluate(() => window.__brumaluz!.cadeado!.visivel)).toBe(true);
+  await ana.screenshot({ path: `${PASTA}/1-ana-cadeado-casa-da-vila.png` });
   await expect(aviso(ana, 'Essa casa é da vila. Que tal construir a sua?')).toBeVisible();
   await ana.screenshot({ path: `${PASTA}/2-ana-aviso-casa-da-vila.png` });
   await ana.waitForTimeout(1200);
@@ -268,10 +272,11 @@ test('três amigos na nuvem: casa da vila, parede do amigo, passagem, baú, forn
     motivo: 'amigo',
     dono: 'Bia',
   });
-  await expect.poll(() => leo.evaluate(() => window.__brumaluz!.cadeado!.visivel)).toBe(true);
-  await leo.screenshot({ path: `${PASTA}/4-leo-cadeado-parede-da-bia.png` });
+  expect(await leo.evaluate(() => window.__brumaluz!.cadeado!.visivel)).toBe(false);
   const rl = await leo.evaluate(() => window.__brumaluz!.minerar!(1.5));
   expect(rl).toMatchObject({ quebrou: false, estagio: 0 });
+  await expect.poll(() => leo.evaluate(() => window.__brumaluz!.cadeado!.visivel)).toBe(true);
+  await leo.screenshot({ path: `${PASTA}/4-leo-cadeado-parede-da-bia.png` });
   await expect(aviso(leo, 'Essa parede é da Bia.')).toBeVisible();
   await leo.screenshot({ path: `${PASTA}/5-leo-aviso-parede-da-bia.png` });
   await leo.waitForTimeout(1200);
@@ -302,8 +307,8 @@ test('três amigos na nuvem: casa da vila, parede do amigo, passagem, baú, forn
 
   // 4b. a fornalha da Bia segue o baú (decisão do dono): cadeado e aviso para o Léo; a dona abre
   await mirarAte(leo, F, { x: -1, y: 0, z: 0 });
-  await expect.poll(() => leo.evaluate(() => window.__brumaluz!.cadeado!.visivel)).toBe(true);
   await leo.evaluate(() => window.__brumaluz!.controleDireto!.usar());
+  await expect.poll(() => leo.evaluate(() => window.__brumaluz!.cadeado!.visivel)).toBe(true);
   await expect(aviso(leo, 'Essa fornalha é da Bia.')).toBeVisible();
   await leo.waitForTimeout(1500);
   expect(await leo.evaluate(() => document.body.dataset.overlay ?? '')).toBe('');

@@ -400,6 +400,8 @@ const RAIO_SOMBRA_DESKTOP = 2;
 const RAIO_SOMBRA_CELULAR = 1;
 /** Raio do toque que procura um bloco além do alcance (para avisar "longe demais"). */
 const ALCANCE_VER_LONGE = 48;
+/** No computador, quanto tempo o cadeado fica depois do clique no que não quebra (ms). */
+const CADEADO_DEPOIS_DO_CLIQUE_MS = 1500;
 
 export interface EstadoDepuracao {
   ready: boolean;
@@ -3973,7 +3975,12 @@ export function criarCena(
         contorno = l;
       }
     }
-    const trancado = !!alvo && contorno !== null && trancadoNaMira(alvo);
+    // no computador o cadeado só aparece logo depois de tentar (o clique no que não quebra):
+    // só mirar não mostra nada (o dono: o cadeado ficava o tempo todo no meio da tela, na vila
+    // inteira). No toque o dedo na tela já é a tentativa.
+    const tentouAgora = performance.now() - protecaoEm < CADEADO_DEPOIS_DO_CLIQUE_MS;
+    const trancado =
+      !!alvo && contorno !== null && (toqueAtivo || tentouAgora) && trancadoNaMira(alvo);
     if (contorno)
       contorno.material = toqueAtivo
         ? trancado
