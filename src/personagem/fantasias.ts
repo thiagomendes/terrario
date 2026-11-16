@@ -86,7 +86,13 @@ export type TipoPeca =
   | 'joelheiras'
   | 'colete-brim'
   | 'guitarra-raio'
-  | 'bone-tras';
+  | 'bone-tras'
+  // spec 026 (a tecladista, 16 nov 2026): o paletó de ombreiras, as mangas arregaçadas, a
+  // gravata fina e os óculos escuros de armação quadrada
+  | 'paleto-ombreiras'
+  | 'mangas-arregacadas'
+  | 'gravata-fina'
+  | 'oculos-quadrados';
 
 /** Símbolos próprios (nada de letra no peito, teia ou morcego). */
 export type Simbolo = 'flor' | 'estrela' | 'concha' | 'floco' | 'raio' | 'coracao' | 'folha';
@@ -670,22 +676,26 @@ export const FANTASIAS_DE_MORADOR: readonly FantasiaDef[] = [
       ],
     }),
   },
-  // spec 026 (a tecladista, 16 nov 2026): o paletó de manga arregaçada sobre a camiseta branca,
-  // a gravata fina e os óculos escuros de armação quadrada (o sintetizador da época); o
-  // cabelo médio, nunca maior que o boneco
+  // spec 026 (a tecladista, 16 nov 2026): a do sintetizador, diferente de todo o resto da
+  // banda (jaqueta preta, colete de brim, camiseta verde-água; o rosa é só da dançarina): o
+  // paletó amarelo de ombreiras com as mangas arregaçadas sobre a camiseta branca, a gravata
+  // fina e o lencinho no bolso verde-água, os óculos escuros de armação quadrada (as lentes
+  // deixam ver os olhos) e o tênis branco; o cabelo de franja de lado, nunca maior que o boneco
   {
     id: 'tecladista-vila',
     grupo: 'temas',
     tema: 'vila-neon',
     nomes: { feminino: 'Tecladista', masculino: 'Tecladista' },
-    cores: ['#22c2b0'],
-    corEmblema: '#ffe14a',
+    cores: ['#f4d03f'],
+    corEmblema: '#1fbfae',
     visual: mesmo({
-      roupa: { camisa: '#f6f4ee', manga: 'principal', calca: '#24232a', sapato: '#f6f4ee' },
+      roupa: { camisa: '#f6f4ee', manga: 'principal', calca: '#2b2a33', sapato: '#f6f4ee' },
       cabeca: 'livre',
       pecas: [
-        { tipo: 'jaqueta-tachas', cor: 'principal' },
-        { tipo: 'munhequeira', cor: 'emblema' },
+        { tipo: 'paleto-ombreiras', cor: 'principal' },
+        { tipo: 'mangas-arregacadas', cor: 'principal' },
+        { tipo: 'gravata-fina', cor: 'emblema' },
+        { tipo: 'oculos-quadrados', cor: 'emblema' },
         { tipo: 'tenis-cano', cor: '#f6f4ee' },
       ],
     }),
@@ -758,7 +768,8 @@ export const FANTASIAS_DE_MORADOR: readonly FantasiaDef[] = [
     grupo: 'temas',
     tema: 'vila-neon',
     nomes: { feminino: 'Fã do show', masculino: 'Fã do show' },
-    cores: ['#f6f4ee', '#ffd23d', '#22c2b0'],
+    // (a quarta, laranja, para a turma de trás não repetir a cor de quem está do lado)
+    cores: ['#f6f4ee', '#ffd23d', '#22c2b0', '#ff8a2a'],
     corEmblema: '#2f8cff',
     visual: mesmo({
       roupa: { camisa: 'principal', manga: 'principal', calca: '#3a3944', sapato: '#f6f4ee' },
@@ -774,7 +785,8 @@ export const FANTASIAS_DE_MORADOR: readonly FantasiaDef[] = [
     grupo: 'temas',
     tema: 'vila-neon',
     nomes: { feminino: 'Fã do show', masculino: 'Fã do show' },
-    cores: ['#22c2b0', '#ffd23d', '#2f8cff'],
+    // (a quarta, lilás: nunca rosa)
+    cores: ['#22c2b0', '#ffd23d', '#2f8cff', '#9a6cf0'],
     corEmblema: '#e8302a',
     visual: mesmo({
       roupa: { camisa: 'principal', manga: 'principal', calca: '#2a3350', sapato: '#f6f4ee' },

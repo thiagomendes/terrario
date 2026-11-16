@@ -2423,6 +2423,239 @@ export function vestirFantasia(
         );
         break;
       }
+      case 'paleto-ombreiras': {
+        // spec 026 (a tecladista): o paletó aberto em V até o botão (a camiseta aparece em
+        // cima), as lapelas um tom mais fundo pela beira do V, a gola atrás, o bolso do peito com
+        // o lencinho na cor do emblema e as ombreiras quadradas (os ombros largos da época), que
+        // vão com o braço
+        const fundo = -0.09;
+        const h = troncoH - fundo;
+        const yc = (troncoH + fundo) / 2;
+        const lapela = escurecer(c, 0.16);
+        const yBotao = troncoH * 0.34;
+        const hV = troncoH - yBotao;
+        const meiaV = 0.12;
+        caixa('paleto', 'tronco', 'tronco', [larg + 0.035, h, prof + 0.035], [0, yc, 0], c, 0.12);
+        placa(
+          'paleto-camiseta',
+          'tronco',
+          'tronco',
+          [
+            [-meiaV, hV / 2],
+            [0, -hV / 2],
+            [meiaV, hV / 2],
+          ],
+          0.012,
+          [0, yBotao + hV / 2, frente + 0.022],
+          roupaDaFantasia(f, corpo)?.camisa ?? BRANCO,
+        );
+        // a beira do V: cada lapela desce do ombro até o botão
+        const inclina = Math.atan2(meiaV, hV);
+        const comp = Math.hypot(meiaV, hV);
+        for (const s of [-1, 1]) {
+          caixa(
+            `paleto-lapela${s}`,
+            'tronco',
+            'tronco',
+            [0.06, comp + 0.02, 0.02],
+            [
+              s * (meiaV / 2 + 0.03 * Math.cos(inclina)),
+              yBotao + hV / 2 + 0.03 * Math.sin(inclina),
+              frente + 0.025,
+            ],
+            lapela,
+            0.01,
+            { rot: [0, 0, -s * inclina] },
+          );
+          caixa(
+            `paleto-gola${s}`,
+            'tronco',
+            'tronco',
+            [0.11, 0.06, 0.13],
+            [s * 0.15, troncoH + 0.005, frente - 0.06],
+            lapela,
+            0.025,
+          );
+        }
+        bola(
+          'paleto-botao',
+          'tronco',
+          'tronco',
+          0.022,
+          [0, yBotao - 0.025, frente + 0.026],
+          escurecer(c, 0.5),
+          [1, 1, 0.6],
+          { brilho: 0.5 },
+        );
+        // o bolso do peito (do lado esquerdo) com o lencinho
+        caixa(
+          'paleto-bolso',
+          'tronco',
+          'tronco',
+          [0.1, 0.014, 0.014],
+          [-0.135, troncoH * 0.52, frente + 0.024],
+          lapela,
+          0.005,
+        );
+        for (const k of [-1, 1])
+          caixa(
+            `paleto-lenco${k}`,
+            'tronco',
+            'tronco',
+            [0.04, 0.04, 0.012],
+            [-0.135 + k * 0.022, troncoH * 0.52 + 0.012, frente + 0.022],
+            corDaPeca(f, 'emblema'),
+            0.004,
+            { rot: [0, 0, Math.PI / 4], brilho: 0.4 },
+          );
+        for (const lado of ['bracoE', 'bracoD'] as const)
+          caixa(
+            `${lado}-ombreira`,
+            lado,
+            'braco',
+            [0.17, 0.075, 0.17],
+            [(lado === 'bracoE' ? -1 : 1) * 0.008, 0.035, 0],
+            c,
+            0.03,
+          );
+        break;
+      }
+      case 'mangas-arregacadas': {
+        // as mangas do paletó dobradas até o meio do braço: a dobra mais clara e o antebraço de
+        // fora (no lugar do punho)
+        const pele = pecas.find((q) => q.nome === 'bracoD-mao')?.cor ?? '#e8b896';
+        for (let i = pecas.length - 1; i >= 0; i--)
+          if (/^braco[ED]-punho$/.test(pecas[i].nome)) pecas.splice(i, 1);
+        for (const lado of ['bracoE', 'bracoD'] as const) {
+          const manga = pecas.find((q) => q.nome === `${lado}-manga`);
+          if (manga) {
+            manga.tamanho = [0.13, 0.15, 0.14];
+            manga.pos = [0, -0.045, 0];
+          }
+          caixa(
+            `${lado}-antebraco`,
+            lado,
+            'braco',
+            [0.112, 0.13, 0.122],
+            [0, -0.17, 0],
+            pele,
+            0.05,
+          );
+          caixa(
+            `${lado}-arregaco`,
+            lado,
+            'braco',
+            [0.152, 0.06, 0.162],
+            [0, -0.125, 0],
+            clarear(c, 0.4),
+            0.025,
+          );
+        }
+        break;
+      }
+      case 'gravata-fina': {
+        // a gravata fina por cima da camiseta: o nó no colarinho e a ponta em losango
+        const yNo = troncoH - 0.04;
+        const yFim = troncoH * 0.34 + 0.07;
+        const L = yNo - 0.015 - yFim;
+        caixa(
+          'gravata-no',
+          'tronco',
+          'tronco',
+          [0.056, 0.046, 0.028],
+          [0, yNo, frente + 0.036],
+          c,
+          0.012,
+        );
+        caixa(
+          'gravata',
+          'tronco',
+          'tronco',
+          [0.036, L, 0.014],
+          [0, yFim + L / 2, frente + 0.035],
+          c,
+          0.006,
+        );
+        caixa(
+          'gravata-ponta',
+          'tronco',
+          'tronco',
+          [0.034, 0.034, 0.014],
+          [0, yFim, frente + 0.035],
+          c,
+          0.006,
+          { rot: [0, 0, Math.PI / 4] },
+        );
+        break;
+      }
+      case 'oculos-quadrados': {
+        // os óculos escuros grandes de armação quadrada (a armação na cor da peça), com as
+        // lentes escuras de vidro (os olhos aparecem através delas), a ponte e as hastes
+        const z = zRosto + 0.035;
+        const y = -0.038;
+        const lente = '#101822';
+        for (const s of [-1, 1]) {
+          const x = s * 0.15;
+          caixa(
+            `oculos-q-cima${s}`,
+            'cabeca',
+            'cabeca',
+            [0.235, 0.04, 0.03],
+            [x, y + 0.104, z],
+            c,
+            0.012,
+          );
+          caixa(
+            `oculos-q-baixo${s}`,
+            'cabeca',
+            'cabeca',
+            [0.235, 0.028, 0.03],
+            [x, y - 0.104, z],
+            c,
+            0.01,
+          );
+          for (const k of [-1, 1])
+            caixa(
+              `oculos-q-lado${s}${k}`,
+              'cabeca',
+              'cabeca',
+              [0.028, 0.22, 0.03],
+              [x + k * 0.1035, y, z],
+              c,
+              0.01,
+            );
+          caixa(
+            `oculos-q-lente${s}`,
+            'cabeca',
+            'cabeca',
+            [0.19, 0.19, 0.01],
+            [x, y, z],
+            lente,
+            0.004,
+            { alfa: 0.74, brilho: 0.25 },
+          );
+          caixa(
+            `oculos-q-dobra${s}`,
+            'cabeca',
+            'cabeca',
+            [0.11, 0.03, 0.03],
+            [s * (cab.w / 2 - 0.045), y + 0.085, z - 0.006],
+            c,
+            0.01,
+          );
+          caixa(
+            `oculos-q-haste${s}`,
+            'cabeca',
+            'cabeca',
+            [0.026, 0.026, 0.3],
+            [s * (cab.w / 2 + 0.008), y + 0.085, zRosto - 0.13],
+            c,
+            0.008,
+          );
+        }
+        caixa('oculos-q-ponte', 'cabeca', 'cabeca', [0.07, 0.03, 0.03], [0, y + 0.065, z], c, 0.01);
+        break;
+      }
       case 'lanterna': {
         // a lanterna acesa na mão, um pouco à frente (aparece de frente, como no esboço);
         // tinta de sempre, sem a tinta funda da fantasia: ela é a luz

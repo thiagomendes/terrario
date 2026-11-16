@@ -126,7 +126,7 @@ export const LUGAR: Record<PapelBanda, Ponto> = {
   guitarrista: [10.5, 9.8],
   baixista: [24.4, 10.2],
   baterista: BANCO,
-  tecladista: [TECLADO[0], 15.35],
+  tecladista: [TECLADO[0], 15.15],
   roadie: [30.8, 14.6],
 };
 /**

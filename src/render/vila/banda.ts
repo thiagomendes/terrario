@@ -28,6 +28,86 @@ export interface Batida {
 /** As pernas e o corpo de quem está sentado no banquinho da bateria. */
 const SENTADO: Juntas = { pernaD: -1.35, pernaE: -1.35, corpoY: -0.12, troncoX: 0.08 };
 
+// ------------------------------------------------------------------ a tecladista
+/**
+ * O teclado do palco (`teclado()` em `pecasFestival.ts`, escala 1,3): o alto do pé em X, o tampo
+ * e as teclas (local, antes da escala). As mãos da tecladista e as teclas que acendem
+ * (`show.ts`) saem daqui: mudou o teclado, muda aqui junto.
+ */
+export const TECLADO_DO_PALCO = { escala: 1.3, pe: 0.42, tampo: 0.16, tecla: 0.03 } as const;
+
+/** Uma tecla do teclado do palco: a branca `i` (0 a 14) ou a preta logo à direita da branca `i`. */
+export interface TeclaTocada {
+  i: number;
+  preta: boolean;
+}
+/** O meio da tecla no teclado (x local, antes da escala; as brancas têm 0,12 de largura). */
+export const xDaTecla = (t: TeclaTocada) => -0.84 + t.i * 0.12 + (t.preta ? 0.06 : 0);
+
+/** O arpejo da mão direita (uma tecla por colcheia) e os acordes da esquerda (um a cada 2 tempos). */
+const ARPEJO: readonly TeclaTocada[] = [
+  { i: 8, preta: false },
+  { i: 9, preta: false },
+  { i: 10, preta: false },
+  { i: 9, preta: false },
+  { i: 8, preta: false },
+  { i: 9, preta: false },
+  { i: 10, preta: false },
+  { i: 8, preta: true },
+];
+const ACORDES: readonly (readonly TeclaTocada[])[] = [
+  [
+    { i: 4, preta: false },
+    { i: 6, preta: false },
+  ],
+  [
+    { i: 3, preta: false },
+    { i: 5, preta: false },
+  ],
+];
+
+/**
+ * O que a tecladista toca agora (a batida da música de agora): a tecla da direita (o arpejo,
+ * uma por colcheia) e o acorde da esquerda (troca a cada dois tempos). As mãos da pose e as
+ * teclas acesas do palco usam o mesmo arpejo: a tecla acende embaixo da mão que desce.
+ */
+export function arpejoDoTeclado(batida: number): {
+  direita: TeclaTocada;
+  esquerda: readonly TeclaTocada[];
+  /** A colcheia de agora (para saber quando o desenho muda). */
+  colcheia: number;
+} {
+  const col = Math.floor(batida * 2);
+  const m = (v: number, n: number) => ((v % n) + n) % n;
+  return {
+    direita: ARPEJO[m(col, ARPEJO.length)],
+    esquerda: ACORDES[m(Math.floor(batida / 2), ACORDES.length)],
+    colcheia: col,
+  };
+}
+
+/** O boneco da banda (escala 1,15): o ombro acima dos pés, o lado do ombro e o braço até a mão. */
+const OMBRO_Y = 0.78;
+const OMBRO_X = 0.31;
+const BRACO = 0.31;
+/** O tronco inclinado para as teclas. */
+const INCLINA_TECLADO = 0.1;
+/**
+ * O braço para a frente até as mãos pousarem nas teclas (o ângulo a partir do braço caído):
+ * a mão (raio 0,1) em cima do alto das teclas. Se o teclado fica alto demais para o boneco, o
+ * braço vai ao máximo (quase para o alto).
+ */
+const BRACO_NO_TECLADO = (() => {
+  const { escala, pe, tampo, tecla } = TECLADO_DO_PALCO;
+  const alvo = (pe + tampo + tecla) * escala + 0.07;
+  return Math.acos(Math.min(0.98, Math.max(-0.86, (OMBRO_Y - alvo) / BRACO)));
+})();
+/** O giro do braço (z) que leva a mão até a tecla, de lado (+1 o direito, −1 o esquerdo). */
+function ladoDaMao(x: number, s: 1 | -1): number {
+  const lateral = (x * TECLADO_DO_PALCO.escala - s * OMBRO_X) / BRACO;
+  return Math.asin(Math.min(0.9, Math.max(-0.9, lateral)));
+}
+
 function juntasDaAcao(papel: PapelBanda, acao: AcaoBanda, desde: number, b: Batida): Juntas | null {
   const fb = frac(b.batida);
   /** A cabeça embaixo em cada batida (0 a 1). */
@@ -172,20 +252,22 @@ function juntasDaAcao(papel: PapelBanda, acao: AcaoBanda, desde: number, b: Bati
     }
     case 'teclado':
     case 'tecladoMao': {
-      // as mãos nas teclas (os dedos descem nas colcheias, uma mão de cada vez), o corpo
-      // balançando de um lado ao outro no tempo e a cabeça acompanhando
-      const col = b.batida * 2;
-      const dedo = Math.pow(1 - frac(col), 3) * 0.12;
-      const mao = Math.floor(col) % 2;
+      // as mãos pousadas nas teclas: a direita no arpejo (desce em cada colcheia e anda de
+      // tecla em tecla), a esquerda no acorde (desce em cada tempo); o corpo inclinado para o
+      // teclado, balançando de um lado ao outro no tempo, e a cabeça acompanhando
+      const toca = arpejoDoTeclado(b.batida);
+      const dedoD = Math.pow(1 - frac(b.batida * 2), 3) * 0.12;
+      const dedoE = Math.pow(1 - fb, 3) * 0.1;
+      const xE = (xDaTecla(toca.esquerda[0]) + xDaTecla(toca.esquerda[1])) / 2;
       const lado = Math.sin(b.batida * Math.PI * 0.5);
       const j: Juntas = {
-        bdX: -1.0 - (mao ? dedo : 0),
-        bdZ: 0.28,
-        beX: -1.0 - (mao ? 0 : dedo),
-        beZ: -0.28,
-        troncoX: 0.1,
-        troncoZ: lado * 0.09,
-        cabX: 0.04 + bate * 0.16,
+        bdX: -(BRACO_NO_TECLADO - INCLINA_TECLADO) + dedoD,
+        bdZ: ladoDaMao(xDaTecla(toca.direita), 1),
+        beX: -(BRACO_NO_TECLADO - INCLINA_TECLADO) + dedoE,
+        beZ: ladoDaMao(xE, -1),
+        troncoX: INCLINA_TECLADO,
+        troncoZ: lado * 0.07,
+        cabX: 0.02 + bate * 0.14,
         cabZ: lado * 0.08,
         corpoY: quica,
       };
@@ -198,15 +280,17 @@ function juntasDaAcao(papel: PapelBanda, acao: AcaoBanda, desde: number, b: Bati
       return j;
     }
     case 'keytar': {
-      // o teclado de pendurar no peito: a esquerda no braço dele (para cima e para o lado), a
-      // direita nas teclas com os dedos rápidos; joelhos dobrados e balançando
+      // o teclado de pendurar no peito (`criaturas.ts`, preso no tronco): a esquerda segura o
+      // braço dele (que sobe para a esquerda), a direita nas teclas com os dedos rápidos,
+      // andando de leve pelas teclas; joelhos dobrados, balançando de um lado ao outro
       const lado = Math.sin(b.batida * Math.PI * 0.5);
+      const dedo = Math.pow(1 - frac(b.batida * 4), 2) * 0.1;
       return {
-        beX: -1.15,
-        beZ: -0.7,
-        bdX: -0.62 + Math.sin(b.batida * Math.PI * 4) * 0.08,
-        bdZ: 0.55,
-        troncoX: -0.08 + bate * 0.06,
+        beX: -1.31,
+        beZ: 0.1,
+        bdX: -1.085 + dedo,
+        bdZ: -0.33 + Math.sin(b.batida * Math.PI * 0.5) * 0.09,
+        troncoX: -0.06 + bate * 0.05,
         troncoZ: lado * 0.1,
         cabX: -0.1 + bate * 0.18,
         cabZ: lado * 0.08,

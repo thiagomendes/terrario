@@ -62,38 +62,58 @@ export const ARCO = {
 /** O tubo de neon apagado (azul fundo: de noite, a criança ainda vê onde fica o arco). */
 export const NEON_APAGADO = '#2c4c86';
 
+/** O ladrilho de cada cubo dos postes do arco (verde-água e amarelo, um cubo de cada). */
+const LADRILHO_ARCO = [COR.turquesa, COR.amarelo] as const;
+
 /**
  * Um arco de neon da volta no rinque (f4), no jeito dos blocos do jogo: cada poste é uma pilha de
- * quatro cubos grafite (o vão entre eles marca os blocos), com a base de cromo; a trave em cima
- * com as lampadinhas de cubo; a estrela na trave; e o tubo de neon por dentro do vão (o poste de
- * um lado, a trave e o outro poste), apagado até a criança passar de patins (a tela acende por
- * cima, `show.ts`).
+ * quatro cubos grafite (o vão entre eles marca os blocos) com um ladrilho verde-água ou amarelo
+ * em cada face de fora (um cubo de cada cor, como as caixas de som do palco), a base e o chapéu
+ * de cromo; a trave grafite com o friso verde-água, as lampadinhas de cubo (creme, apagadas) e o
+ * cromo embaixo; a estrela amarela em cima; e o tubo de neon por dentro do vão (o poste de um
+ * lado, a trave e o outro poste), azul fundo até a criança passar de patins (a tela acende por
+ * cima, `show.ts`). De dia o arco já se vê de longe na pista rosa; de noite, o tubo apagado.
  */
 function arcoRinque(r: Ref): void {
   const { meia, poste, vao, alto } = ARCO;
   const cubo = vao / 4;
+  const ld = poste * 0.6;
   for (const s of [-1, 1]) {
     const x = s * meia;
     r.caixa(poste + 0.12, 0.14, poste + 0.12, x, 0, 0, COR.cromo, 0.03);
-    for (let k = 0; k < 4; k++)
-      r.caixa(
-        poste,
-        cubo - 0.05,
-        poste,
-        x,
-        0.14 + k * cubo,
-        0,
-        k % 2 ? COR.grafite2 : COR.grafite,
-        0.05,
-      );
+    for (let k = 0; k < 4; k++) {
+      const y = 0.14 + k * cubo;
+      const h = cubo - 0.05;
+      r.caixa(poste, h, poste, x, y, 0, k % 2 ? COR.grafite2 : COR.grafite, 0.05);
+      // o ladrilho na frente, atrás e do lado de fora (por dentro corre o tubo de neon)
+      const cor = LADRILHO_ARCO[k % 2];
+      const yl = y + (h - h * 0.6) / 2;
+      for (const z of [-1, 1])
+        r.caixa(ld, h * 0.6, 0.03, x, yl, z * (poste / 2 + 0.005), cor, 0.012);
+      r.caixa(0.03, h * 0.6, ld, x + s * (poste / 2 + 0.005), yl, 0, cor, 0.012);
+    }
+    // o chapéu de cromo do poste, embaixo da trave
+    r.caixa(poste + 0.06, 0.06, poste + 0.06, x, vao - 0.06, 0, COR.cromo, 0.02);
     // o tubo apagado, por dentro do poste (de frente e de trás ele aparece como uma faixa)
     r.luz(0.09, vao - 0.3, 0.16, x - s * (poste / 2 + 0.03), 0.25, 0, NEON_APAGADO);
   }
-  // a trave: grafite, com a faixa de cromo embaixo e as lampadinhas de cubo nas duas faces
+  // a trave: grafite, com a faixa de cromo embaixo, o friso verde-água nas duas faces e as
+  // lampadinhas de cubo (creme: apagadas de dia)
   r.caixa(2 * meia + poste, alto - vao, poste, 0, vao, 0, COR.grafite, 0.05);
   r.caixa(2 * meia - poste + 0.02, 0.06, poste + 0.04, 0, vao - 0.02, 0, COR.cromo, 0);
+  r.caixa(2 * meia + poste + 0.04, 0.05, poste + 0.04, 0, alto - 0.05, 0, COR.cromo, 0.015);
   r.luz(2 * meia - poste - 0.1, 0.09, 0.16, 0, vao - 0.11, 0, NEON_APAGADO);
-  for (const z of [-1, 1])
+  for (const z of [-1, 1]) {
+    r.caixa(
+      2 * meia + poste - 0.1,
+      0.05,
+      0.03,
+      0,
+      vao + 0.09,
+      z * (poste / 2 + 0.005),
+      COR.turquesa,
+      0.01,
+    );
     for (let i = 0; i < 7; i++)
       r.caixa(
         0.16,
@@ -102,13 +122,14 @@ function arcoRinque(r: Ref): void {
         -2.4 + i * 0.8,
         vao + 0.27,
         z * (poste / 2 + 0.02),
-        '#6a6458',
+        '#e6dcc0',
         0.02,
       );
-  // a estrela em cima (de frente e de trás), sobre um pezinho
-  r.caixa(0.22, 0.25, 0.22, 0, alto, 0, COR.grafite2, 0.03);
+  }
+  // a estrela amarela em cima (de frente e de trás), sobre um pezinho de cromo
+  r.caixa(0.22, 0.25, 0.22, 0, alto, 0, COR.cromo, 0.03);
   for (const z of [-0.09, 0.09])
-    r.placa(perfilEstrela(0.5), 0.08, 0, alto + 0.7, z - 0.04, '#7a7460');
+    r.placa(perfilEstrela(0.5), 0.08, 0, alto + 0.7, z - 0.04, '#f0c43a');
 }
 
 // ------------------------------------------------------------------ o fliperama
@@ -299,25 +320,32 @@ function bateria(r: Ref): void {
   r.caixa(0.44, 0.12, 0.44, 0, 0.5, -0.75, COR.grafite, 0.05);
 }
 
-/** O teclado azul-elétrico no pé em X. */
+/**
+ * O teclado azul-elétrico no pé em X. O pé é baixo (spec 026, a tecladista): as teclas ficam na
+ * altura das mãos do boneco, um pouco abaixo do peito, e quem está na plateia vê a tecladista do
+ * peito para cima (no pé alto de antes, as teclas ficavam na altura dos olhos dela e o teclado
+ * tapava o rosto). A pose (`banda.ts`, `TECLADO_DO_PALCO`) e as teclas acesas (`show.ts`) usam
+ * estas medidas.
+ */
 function teclado(r: Ref): void {
+  const pe = 0.42;
   for (const z of [-0.2, 0.2]) {
-    r.barra([-0.75, 0, z], [0.75, 0.86, z], 0.06, COR.cromo);
-    r.barra([0.75, 0, z], [-0.75, 0.86, z], 0.06, COR.cromo);
+    r.barra([-0.45, 0, z], [0.45, pe, z], 0.06, COR.cromo);
+    r.barra([0.45, 0, z], [-0.45, pe, z], 0.06, COR.cromo);
   }
-  r.caixa(2.0, 0.16, 0.6, 0, 0.86, 0, COR.azul, 0.04);
-  r.caixa(2.02, 0.05, 0.02, 0, 0.92, 0.305, COR.amarelo, 0);
-  r.placa(perfilRaio(0.16), 0.02, -0.8, 0.94, 0.31, COR.amarelo);
+  r.caixa(2.0, 0.16, 0.6, 0, pe, 0, COR.azul, 0.04);
+  r.caixa(2.02, 0.05, 0.02, 0, pe + 0.06, 0.305, COR.amarelo, 0);
+  r.placa(perfilRaio(0.16), 0.02, -0.8, pe + 0.08, 0.31, COR.amarelo);
   // as teclas (do lado de quem toca, atrás) e os botões
-  r.caixa(1.8, 0.03, 0.26, 0, 1.02, -0.14, COR.branco, 0);
+  r.caixa(1.8, 0.03, 0.26, 0, pe + 0.16, -0.14, COR.branco, 0);
   for (let i = 0; i < 15; i++) {
     if (i % 7 === 2 || i % 7 === 6) continue;
-    r.caixa(0.06, 0.03, 0.15, -0.84 + i * 0.12, 1.05, -0.08, COR.grafite, 0);
+    r.caixa(0.06, 0.03, 0.15, -0.84 + i * 0.12, pe + 0.19, -0.08, COR.grafite, 0);
   }
   for (let i = 0; i < 6; i++)
-    r.caixa(0.07, 0.04, 0.07, -0.8 + i * 0.14, 1.02, 0.16, i % 2 ? COR.branco : COR.grafite, 0);
-  r.luz(0.3, 0.03, 0.1, 0.5, 1.02, 0.16, '#ff9a2a');
-  r.luz(0.06, 0.03, 0.06, 0.8, 1.02, 0.16, COR.vermelho);
+    r.caixa(0.07, 0.04, 0.07, -0.8 + i * 0.14, pe + 0.16, 0.16, i % 2 ? COR.branco : COR.grafite, 0);
+  r.luz(0.3, 0.03, 0.1, 0.5, pe + 0.16, 0.16, '#ff9a2a');
+  r.luz(0.06, 0.03, 0.06, 0.8, pe + 0.16, 0.16, COR.vermelho);
 }
 
 function pedestal(r: Ref): void {

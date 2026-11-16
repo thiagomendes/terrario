@@ -11,7 +11,11 @@ import type { Scene } from '@babylonjs/core/scene';
 import type { Criatura } from '../jogo/criaturas';
 import type { PecaCriatura } from '../temas/tipos';
 import { povoadoDoTema, tema } from '../temas/ativo';
-import { caixaArredondada, esfera } from './formas';
+import { caixaArredondada, criarPlasticos, esfera } from './formas';
+// spec 026: o teclado de pendurar da tecladista, desenhado com as ferramentas das peças da vila
+import { Ref, type Desenho } from './vila/ref';
+import { Pecas } from './solidos';
+import type { PecaVila } from '../world/vilaNeon';
 import { bichoDeBrinquedo, type PecaBicho } from './bichoBrinquedo';
 import { encaixarBicho } from './encaixeBicho';
 import {
@@ -150,6 +154,8 @@ export function criarRenderCriaturas(
       bastao?: Mesh | null;
       /** Spec 026: o bastão é o microfone do vocalista (sempre na mão). */
       microfone?: boolean;
+      /** Spec 026: o teclado de pendurar da tecladista (só aparece quando ela toca nele). */
+      keytar?: Mesh[] | null;
       ultX: number;
       ultZ: number;
       vel: number;
@@ -291,6 +297,113 @@ export function criarRenderCriaturas(
     }
     return cabo;
   }
+  /**
+   * O teclado de pendurar da tecladista da Vila Neon (spec 026, o último refrão da segunda
+   * música): desenho nosso, de blocos (nada de silhueta de marca). O corpo verde-água comprido e
+   * fino, atravessado na frente do corpo dela (a ponta da direita mais baixa), com as teclas
+   * brancas e pretas em cima, a barbatana embaixo da ponta, os botõezinhos e o friso de neon
+   * amarelo; o braço grafite subindo para a esquerda (a mão esquerda segura nele), com a tira de
+   * tocar e a cabeça verde-água; e a correia grafite que cruza o peito e sobe pelo ombro
+   * esquerdo. Preso no tronco (vai junto quando ela balança); as mãos da pose `keytar`
+   * (`vila/banda.ts`) caem no braço e nas teclas. Duas malhas (o plástico e o neon).
+   */
+  let plasticoKeytar: ReturnType<typeof criarPlasticos> | null = null;
+  let matNeonKeytar: StandardMaterial | null = null;
+  function montarKeytar(boneco: Personagem, id: number): Mesh[] | null {
+    const tronco = boneco.raiz
+      .getChildTransformNodes(false)
+      .find((n) => n.name.endsWith('-junta-tronco'));
+    if (!tronco) return null;
+    if (!plasticoKeytar) {
+      plasticoKeytar = criarPlasticos(scene, 'morador-keytar');
+      matNeonKeytar = new StandardMaterial('morador-keytar-neon', scene);
+      matNeonKeytar.disableLighting = true;
+      matNeonKeytar.diffuseColor = Color3.Black();
+      matNeonKeytar.specularColor = Color3.Black();
+      matNeonKeytar.emissiveColor = Color3.FromHexString('#ffe14a');
+    }
+    // o referencial do teclado: x ao longo do corpo (para a direita dela), y para cima dele, z
+    // para a frente; o meio do corpo no tronco (medidas do plano do boneco, antes da escala)
+    const GIRO = 0.38;
+    const MEIO: [number, number, number] = [0.08, 0.15, 0.235];
+    const d: Desenho = {
+      corpo: new Pecas(),
+      luz: new Pecas(),
+      noite: new Pecas(),
+      vidro: new Pecas(),
+      quadros: [],
+      ox: 0,
+      oz: 0,
+      chao: 0,
+      recorte: { x0: -Infinity, z0: -Infinity, x1: Infinity, z1: Infinity },
+    };
+    const r = new Ref(d, { tipo: 'banco', x: 0, y: 0, z: 0, dir: 0 } as PecaVila);
+    const VERDE = '#1fbfae';
+    const VERDE_FUNDO = '#138a7f';
+    const GRAFITE = '#2b2a33';
+    // o corpo, a barbatana embaixo da ponta da direita e o friso de neon embaixo da frente
+    r.caixa(0.4, 0.13, 0.055, 0, -0.065, 0, VERDE, 0.022);
+    r.caixa(0.13, 0.06, 0.05, 0.13, -0.115, 0, VERDE_FUNDO, 0.018);
+    r.luz(0.34, 0.018, 0.012, -0.015, -0.058, 0.031, '#ffe14a');
+    // as teclas: as brancas (com o risquinho entre elas) e as pretas, na beira de cima da frente
+    r.caixa(0.3, 0.05, 0.014, -0.02, 0.004, 0.033, '#f4f4f0', 0.004);
+    for (let i = 1; i < 10; i++)
+      r.caixa(0.004, 0.05, 0.004, -0.17 + i * 0.03, 0.004, 0.041, '#9aa0ac', 0);
+    for (let i = 0; i < 9; i++) {
+      if (i % 7 === 2 || i % 7 === 6) continue;
+      r.caixa(0.016, 0.026, 0.008, -0.14 + i * 0.03, 0.028, 0.043, GRAFITE, 0.002);
+    }
+    // os botõezinhos na ponta da direita
+    for (let i = 0; i < 3; i++)
+      r.caixa(
+        0.022,
+        0.022,
+        0.01,
+        0.155 + (i % 2) * 0.028,
+        -0.04 + i * 0.028,
+        0.031,
+        i === 1 ? '#ffe14a' : '#f4f4f0',
+        0.004,
+      );
+    // o braço (sobe para a esquerda), a tira de tocar e a cabeça
+    r.caixa(0.27, 0.055, 0.045, -0.33, -0.0275, 0, GRAFITE, 0.015);
+    r.caixa(0.17, 0.018, 0.006, -0.34, -0.009, 0.025, '#c8ccd6', 0.002);
+    r.caixa(0.07, 0.095, 0.052, -0.495, -0.05, 0, VERDE, 0.018);
+    r.caixa(0.03, 0.03, 0.01, -0.495, 0.0, 0.028, '#ffe14a', 0.006);
+    // a correia: da ponta da direita, cruzando o peito até o ombro esquerdo, por cima dele e
+    // descendo pelas costas (pontos do tronco levados para o referencial do teclado)
+    const cg = Math.cos(GIRO);
+    const sg = Math.sin(GIRO);
+    const local = (x: number, y: number, z: number): [number, number, number] => {
+      const dx = x - MEIO[0];
+      const dy = y - MEIO[1];
+      return [dx * cg - dy * sg, dx * sg + dy * cg, z - MEIO[2]];
+    };
+    const correia: [number, number, number][] = [
+      local(0.27, 0.12, 0.222),
+      local(-0.14, 0.43, 0.222),
+      local(-0.14, 0.448, 0),
+      local(-0.14, 0.43, -0.205),
+      local(0.22, 0.06, -0.205),
+    ];
+    for (let i = 0; i + 1 < correia.length; i++) r.barra(correia[i], correia[i + 1], 0.03, GRAFITE);
+    const corpo = new Mesh(`morador-${id}-keytar`, scene);
+    d.corpo.juntar().applyToMesh(corpo);
+    corpo.material = plasticoKeytar.corVertice(0.35) ?? plasticoKeytar.cor('#ffffff', 0.35);
+    const neon = new Mesh(`morador-${id}-keytar-neon`, scene);
+    d.luz.juntar().applyToMesh(neon);
+    neon.material = matNeonKeytar;
+    for (const m of [corpo, neon]) {
+      m.parent = tronco;
+      m.position.set(MEIO[0], MEIO[1], MEIO[2]);
+      m.rotation.z = -GIRO;
+      m.isPickable = false;
+      m.setEnabled(false);
+    }
+    excluirDoGlow(corpo);
+    incluirNoGlow(neon);
+    return [corpo, neon];
+  }
   function prepararMorador(c: Criatura) {
     const prof = c.morador?.profissao ?? 'construtor';
     // spec 026: o morador de posto com roupa própria (o vocalista, a dançarina, o patinador)
@@ -324,7 +437,8 @@ export function criarRenderCriaturas(
     const ajustar = (p: PlanoBoneco) => planoDoMorador(prep, p);
     // spec 014 (T11): as peças não passam pelo teste de vista uma por uma (o boneco inteiro
     // passa, em `naVistaDoQuadro`) nem refazem a caixa a cada quadro
-    const boneco = criarBoneco(scene, m.aparencia, `morador-${c.id}`, ajustar, true, true);
+    // spec 026: com esqueleto (o público de 40 no show cabe no celular)
+    const boneco = criarBoneco(scene, m.aparencia, `morador-${c.id}`, ajustar, true, true, true);
     for (const malha of boneco.raiz.getChildMeshes()) {
       const mat = malha.material as StandardMaterial | null;
       // só a lanterna e o que o tema marcou como brilhante entram no brilho
@@ -337,15 +451,18 @@ export function criarRenderCriaturas(
     const corLuz = c.morador && luzNaMaoDeMorador?.(c.morador.povoado, c.morador.n);
     // ('microfone': o vocalista do show segura o microfone, sempre)
     const microfone = corLuz === 'microfone';
+    // ('keytar…': a tecladista tem o teclado de pendurar, que aparece só quando ela toca nele)
+    const keytar = corLuz?.startsWith('keytar') ? montarKeytar(boneco, c.id) : null;
     const bastao = microfone
       ? montarMicrofone(boneco, c.id)
-      : corLuz
+      : corLuz && !keytar
         ? montarBastao(boneco, corLuz, c.id)
         : null;
     return {
       boneco,
       bastao,
       microfone,
+      keytar,
       animador: criarAnimador(),
       ultX: c.x,
       ultZ: c.z,
@@ -714,11 +831,18 @@ export function criarRenderCriaturas(
             const ver = mostrarLuzNaMao();
             if (mb.bastao.isEnabled(false) !== ver) mb.bastao.setEnabled(ver);
           }
+          // spec 026: o teclado de pendurar aparece quando a tecladista toca nele (a tela do
+          // show diz: 'keytar' agora, 'keytar-guardado' no resto do tempo)
+          if (mb.keytar && c.morador) {
+            const ver = luzNaMaoDeMorador?.(c.morador.povoado, c.morador.n) === 'keytar';
+            for (const k of mb.keytar) if (k.isEnabled(false) !== ver) k.setEnabled(ver);
+          }
           mb.balao?.atualizar(dt);
           const l = luz(c);
           if (Math.abs(l - mb.luz) > 0.002) {
             mb.luz = l;
             mb.boneco.definirLuz(l);
+            if (mb.keytar) plasticoKeytar?.definirLuz(l);
           }
           const morrer = c.estado === 'morrendo' ? c.dissolver : 0;
           mb.boneco.raiz.scaling.setAll(1 - morrer * 0.8);

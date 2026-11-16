@@ -131,7 +131,7 @@ function caixasLocais(tipo: TipoPecaVila, n: number): readonly Local[] {
     case 'bateria':
       return [B(-2.7, 2.85, 0, 2.2, -1.45, 0.75)];
     case 'teclado':
-      return [B(-1.31, 1.31, 0, 1.4, -0.39, 0.42)];
+      return [B(-1.31, 1.31, 0, 0.83, -0.39, 0.42)];
     case 'radio-gigante':
       return [B(-2.5, 2.5, 0, 2.75, -0.65, 0.72)];
     case 'fita-gigante':

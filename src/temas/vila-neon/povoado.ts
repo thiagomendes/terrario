@@ -2,6 +2,7 @@ import type { Profissao } from '../../world/povoado';
 import { corpoDeMorador } from '../bruma-e-luz/povoado';
 import type { PecaCriatura, PovoadoTema } from '../tipos';
 import { pio } from '../rancho-alegre/vozes';
+import { corDaPeca, fantasiaPorId } from '../../personagem/fantasias';
 
 /**
  * Peças acima da cabeça (boné, viseira) ficam com o centro acima de 1,93: o boneco de
@@ -103,28 +104,38 @@ const FAS: readonly [string, 'f' | 'm', string, string, string, number, number][
   ['Lara', 'f', '#c99064', '#3a2418', 'plateia-colete', 0, 7],
   ['Juca', 'm', '#e8b896', '#5a3422', 'plateia-faixa', 2, 3],
   ['Mari', 'f', '#b9825c', '#1e1a22', 'plateia-bone-tras', 1, 0],
-  // os que vêm só para o show (16 nov 2026: o dobro na hora do show)
+  // os que vêm só para o show (16 nov 2026: o dobro na hora do show). Vistos de trás, da grade:
+  // quase todos de camiseta ou moletom claros e vivos (o colete de brim e a jaqueta escura, que
+  // de costas viram uma mancha azul-escura, ficam com os 20 de sempre), com viseira, boné ou
+  // faixa colorida, e só dois de cabelo volumoso
   ['Pipo', 'm', '#e0a882', '#2e2018', 'plateia-viseira', 0, 1],
   ['Lulu', 'f', '#9a6844', '#1e1a22', 'plateia-moletom', 0, 3],
   ['Dedé', 'm', '#f4d2b4', '#b8541e', 'plateia-bone', 0, 5],
   ['Cacá', 'f', '#c99064', '#5a3422', 'plateia-faixa', 0, 6],
-  ['Biel', 'm', '#6e4a2e', '#1e1a22', 'plateia-jaqueta', 1, 0],
+  ['Biel', 'm', '#6e4a2e', '#1e1a22', 'plateia-moletom', 1, 0],
   ['Tina', 'f', '#f0c8a0', '#d8b060', 'plateia-viseira', 1, 4],
-  ['Nanda', 'f', '#b9825c', '#3a2418', 'plateia-bone-tras', 2, 8],
-  ['Lipe', 'm', '#e8b896', '#4a2a1a', 'plateia-moletom', 1, 1],
+  ['Nanda', 'f', '#b9825c', '#3a2418', 'plateia-bone-tras', 1, 8],
+  ['Lipe', 'm', '#e8b896', '#4a2a1a', 'plateia-moletom', 3, 1],
   ['Gabi', 'f', '#e0a882', '#a8401a', 'plateia-colete', 1, 5],
-  ['Tom', 'm', '#c99064', '#1e1a22', 'plateia-faixa', 1, 3],
+  ['Tom', 'm', '#c99064', '#1e1a22', 'plateia-faixa', 2, 3],
   ['Vivi', 'f', '#f4d2b4', '#6a4426', 'plateia-bone', 2, 0],
   ['Joca', 'm', '#9a6844', '#2e2018', 'plateia-viseira', 2, 5],
   ['Lelê', 'f', '#6e4a2e', '#1e1a22', 'plateia-jaqueta', 2, 6],
   ['Fefê', 'm', '#f0c8a0', '#e8c070', 'plateia-moletom', 2, 0],
-  ['Zuzu', 'f', '#e8b896', '#5a3422', 'plateia-colete', 2, 1],
-  ['Teca', 'f', '#c99064', '#2e2018', 'plateia-faixa', 2, 4],
+  ['Zuzu', 'f', '#e8b896', '#5a3422', 'plateia-viseira', 3, 1],
+  ['Teca', 'f', '#c99064', '#2e2018', 'plateia-bone', 1, 5],
   ['Neco', 'm', '#b9825c', '#3a2418', 'plateia-bone-tras', 0, 3],
-  ['Babi', 'f', '#f4d2b4', '#b8541e', 'plateia-viseira', 0, 3],
-  ['Dinho', 'm', '#e0a882', '#1e1a22', 'plateia-jaqueta', 0, 5],
+  ['Babi', 'f', '#f4d2b4', '#b8541e', 'plateia-faixa', 0, 7],
+  ['Dinho', 'm', '#e0a882', '#1e1a22', 'plateia-viseira', 1, 5],
   ['Lalá', 'f', '#9a6844', '#3a2418', 'plateia-moletom', 0, 8],
 ];
+/** A cor da manga (a principal) ou da calça da fantasia de um fã. */
+function roupaDoFa(id: string, cor: number, parte: 'manga' | 'calca'): string {
+  const def = fantasiaPorId(id);
+  const r = def?.visual.feminino.roupa;
+  const c = parte === 'manga' ? (r?.manga ?? r?.camisa) : r?.calca;
+  return c ? corDaPeca({ id, cor }, c) : parte === 'manga' ? '#3a3944' : '#2a3350';
+}
 const TURMA: NonNullable<PovoadoTema['porMorador']> = Object.fromEntries(
   FAS.map(([nome, genero, pele, cabelo, id, cor, corte], k) => [
     `vila:${8 + k}`,
@@ -132,7 +143,10 @@ const TURMA: NonNullable<PovoadoTema['porMorador']> = Object.fromEntries(
       nome,
       genero,
       titulo: 'Fã do show',
-      pecas: corpoDe(pele, cabelo, '#3a3944', '#2a3350'),
+      // a roupa do corpo é a da fantasia (16 nov 2026): o boneco do morador troca a cor da
+      // manga e da calça pelas do corpo, e com o grafite fixo de antes a camiseta, o moletom e a
+      // jaqueta de toda a turma saíam grafite (de costas, a plateia era uma mancha escura)
+      pecas: corpoDe(pele, cabelo, roupaDoFa(id, cor, 'manga'), roupaDoFa(id, cor, 'calca')),
       fantasia: { id, cor },
       cabelo: corte,
       semTrocas: true as const,
@@ -242,9 +256,12 @@ export const POVOADO_VILA: PovoadoTema = {
       nome: 'Nina Lua',
       genero: 'f',
       titulo: 'Tecladista',
-      pecas: corpoDe('#e8b896', '#2e2018', '#f6f4ee', '#24232a'),
+      // o paletó amarelo de ombreiras, a gravata fina e os óculos escuros quadrados; o cabelo
+      // castanho-escuro de franja de lado (o corte da época, rente à cabeça). A roupa do corpo é
+      // o amarelo do paletó (o boneco troca a cor da manga pela do corpo)
+      pecas: corpoDe('#e8b896', '#3a2418', '#f4d03f', '#2b2a33'),
       fantasia: { id: 'tecladista-vila', cor: 0 },
-      cabelo: 3,
+      cabelo: 1,
       semTrocas: true,
     },
   },

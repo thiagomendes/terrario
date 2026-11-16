@@ -48,7 +48,13 @@ import {
 } from '../../jogo/show';
 import { N0_PUBLICO, daTurma, papelNaBanda } from '../../nucleo/vila';
 import { noPalco, paraOMundo, posturaNaBanda, REVERENCIA } from '../../jogo/coreografia';
-import { poseDaBanda } from './banda';
+import {
+  TECLADO_DO_PALCO,
+  arpejoDoTeclado,
+  poseDaBanda,
+  xDaTecla,
+  type TeclaTocada,
+} from './banda';
 import { lugarDoPublico, publicoDaVila } from '../../world/publicoVila';
 import { aplicarGesto } from '../../personagem/gestos';
 import type { Pose } from '../../personagem/poses';
@@ -361,10 +367,10 @@ export function criarShowVila(scene: Scene, plano: PlanoVila, opcoes: OpcoesShow
     if (t) {
       const d = mundo();
       const r = new Ref(d, t, 1.3);
-      r.luz(2.0, 0.035, 0.03, 0, 0.845, 0.32, '#6fb8ff');
-      r.luz(0.34, 0.035, 0.12, 0.5, 1.02, 0.16, '#ffb24a');
+      r.luz(2.0, 0.035, 0.03, 0, 0.405, 0.32, '#6fb8ff');
+      r.luz(0.34, 0.035, 0.12, 0.5, 0.58, 0.16, '#ffb24a');
       for (let i = 0; i < 5; i++)
-        r.luz(0.05, 0.035, 0.05, -0.78 + i * 0.14, 1.025, 0.16, '#ff5a4a');
+        r.luz(0.05, 0.035, 0.05, -0.78 + i * 0.14, 0.585, 0.16, '#ff5a4a');
       instrumentos[0] = malhaLuz('vila-show-teclado', d.luz);
     }
     // 1: a guitarra-raio no apoio, ao lado da guitarrista (o corpo é um raio gordinho vermelho:
@@ -419,6 +425,72 @@ export function criarShowVila(scene: Scene, plano: PlanoVila, opcoes: OpcoesShow
       instrumentos[2] = malhaCorpo('vila-show-baquetas', d.corpo);
     }
   }
+
+  // ------------------------------------------------------------------ as teclas que acendem
+  /**
+   * A tecladista tocando (o teclado toca de verdade): a tecla do arpejo da mão direita acende
+   * verde-água em cada colcheia e o acorde da esquerda acende dourado a cada dois tempos, embaixo
+   * das mãos dela (`arpejoDoTeclado`, o mesmo das mãos da pose). Uma malha só, de três teclas de
+   * luz que mudam de lugar quando a nota muda (nada é criado no quadro; brilha no glow).
+   */
+  const TECLAS_ACESAS = 3;
+  const teclas = (() => {
+    const t = pecaDe('teclado');
+    if (!t) return null;
+    const { escala, pe, tampo, tecla } = TECLADO_DO_PALCO;
+    const alto = pe + tampo + tecla;
+    /** A luz em cima de uma tecla (as brancas inteiras; as pretas por cima delas). */
+    const caixaDa = (d: Desenho, tt: TeclaTocada) => {
+      const r = new Ref(d, t, escala);
+      if (tt.preta) r.luz(0.07, 0.012, 0.16, xDaTecla(tt), alto + tecla, -0.08, '#ffffff');
+      else r.luz(0.104, 0.01, 0.25, xDaTecla(tt), alto, -0.14, '#ffffff');
+    };
+    const formas = new Map<string, Float32Array>();
+    const formaDe = (tt: TeclaTocada): Float32Array => {
+      const k = `${tt.i}${tt.preta ? 'p' : ''}`;
+      let f = formas.get(k);
+      if (!f) {
+        const d = mundo();
+        caixaDa(d, tt);
+        formas.set(k, (f = new Float32Array(d.luz.juntar().positions as number[])));
+      }
+      return f;
+    };
+    const base = mundo();
+    caixaDa(base, { i: 0, preta: false });
+    const vb = base.luz.juntar();
+    const nv = (vb.positions as number[]).length / 3;
+    const idx: number[] = [];
+    for (let k = 0; k < TECLAS_ACESAS; k++)
+      for (const i of vb.indices as number[]) idx.push(i + k * nv);
+    const m = new Mesh('vila-show-teclas', scene);
+    const pos = new Float32Array(nv * TECLAS_ACESAS * 3);
+    const cor = new Float32Array(nv * TECLAS_ACESAS * 4);
+    const vd = new VertexData();
+    vd.positions = pos;
+    vd.colors = cor;
+    vd.indices = idx;
+    vd.applyToMesh(m, true);
+    m.material = matConfete;
+    m.isPickable = false;
+    m.alwaysSelectAsActiveMesh = true;
+    m.setEnabled(false);
+    opcoes.brilha?.(m);
+    todas.push(m);
+    return {
+      m,
+      nv,
+      pos,
+      cor,
+      formaDe,
+      /** O que está desenhado (a colcheia e a mão direita no alto): só refaz quando muda. */
+      desenhado: '',
+    };
+  })();
+  /** A cor de cada mão nas teclas acesas: o arpejo verde-água, o acorde dourado. */
+  const LUZ_DIREITA: V3 = [0.15, 1, 0.82];
+  const LUZ_ESQUERDA: V3 = [1, 0.7, 0.12];
+
   /** Onde cada instrumento fica no palco (para as estrelinhas da chegada). */
   const lugarDoInstrumento = instrumentos.map((m): V3 | null => {
     if (!m) return null;
@@ -1148,6 +1220,46 @@ export function criarShowVila(scene: Scene, plano: PlanoVila, opcoes: OpcoesShow
         e.estrela.position.y = e.y + 1.62 + sobe;
       });
       instrumentos.forEach((m, i) => ligar(m, pronto && ins[i]));
+
+      // ---- as teclas que acendem embaixo das mãos da tecladista (só tocando no teclado)
+      if (teclas) {
+        const tocandoMusica =
+          noShow && !!show && !!mom && (fase === 'tocando' || fase === 'chamando') && mom.dm >= 0;
+        const q = tocandoMusica && show ? posturaNaBanda('tecladista', show, tempoNucleo) : null;
+        const noTeclado =
+          !!q && !q.andando && (q.acao === 'teclado' || q.acao === 'tecladoMao') && q.desde > 0.2;
+        ligar(teclas.m, noTeclado);
+        if (noTeclado && q && mom) {
+          const a = arpejoDoTeclado(mom.batida);
+          // com a mão direita no alto, só o acorde da esquerda
+          const maoNoAlto = q.acao === 'tecladoMao';
+          const notas = maoNoAlto ? a.esquerda : [a.direita, ...a.esquerda];
+          const chave = `${a.colcheia}|${maoNoAlto}`;
+          if (chave !== teclas.desenhado) {
+            teclas.desenhado = chave;
+            teclas.pos.fill(0);
+            notas.forEach((n, k) => teclas.pos.set(teclas.formaDe(n), k * teclas.nv * 3));
+            teclas.m.updateVerticesData(VertexBuffer.PositionKind, teclas.pos, false, false);
+          }
+          // a tecla acende forte quando a mão desce e fica acesa mais fraca até a próxima
+          const fr = (x: number) => x - Math.floor(x);
+          const fD = 0.5 + 0.5 * Math.pow(1 - fr(mom.batida * 2), 2);
+          const fE = 0.45 + 0.4 * Math.pow(1 - fr(mom.batida), 2);
+          notas.forEach((n, k) => {
+            const direita = !maoNoAlto && k === 0;
+            const c = direita ? LUZ_DIREITA : LUZ_ESQUERDA;
+            const f = direita ? fD : fE;
+            for (let v = 0; v < teclas.nv; v++) {
+              const o = (k * teclas.nv + v) * 4;
+              teclas.cor[o] = c[0] * f;
+              teclas.cor[o + 1] = c[1] * f;
+              teclas.cor[o + 2] = c[2] * f;
+              teclas.cor[o + 3] = 1;
+            }
+          });
+          teclas.m.updateVerticesData(VertexBuffer.ColorKind, teclas.cor, false, false);
+        }
+      }
       // o instrumento que acabou de chegar: um punhado de estrelinhas no lugar dele no palco
       ins.forEach((tem, i) => {
         const l = lugarDoInstrumento[i];
@@ -1544,6 +1656,15 @@ export function criarShowVila(scene: Scene, plano: PlanoVila, opcoes: OpcoesShow
     luzNaMao(povoado, n) {
       // o vocalista segura o microfone
       if (povoado === 'vila' && n === 0) return 'microfone';
+      // a tecladista tem o teclado de pendurar: aparece só enquanto ela toca nele (e anda com
+      // ele até a frente do palco e de volta), no último refrão da segunda música
+      if (povoado === 'vila' && papelNaBanda(n) === 'tecladista') {
+        const show = vistaAtual?.show ?? null;
+        const ativo = !!show && faseDoShow(show, tempoAtual) !== 'acabou';
+        return ativo && show && posturaNaBanda('tecladista', show, tempoAtual).acao === 'keytar'
+          ? 'keytar'
+          : 'keytar-guardado';
+      }
       if (povoado !== 'vila' || !daTurma(n)) return null;
       const k = n - N0_PUBLICO;
       // uns oito da turma seguram um bastão de luz, em neon sorteado (nunca na ordem do arco-íris)
