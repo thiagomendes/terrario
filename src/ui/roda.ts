@@ -40,6 +40,8 @@ export interface Roda {
   readonly aberta: boolean;
   /** A lista na roda agora. */
   readonly lista: ListaRoda | null;
+  /** O desenho da última vez que abriu (os raios, o botão e se nada encosta em nada). */
+  readonly desenho: DesenhoRoda | null;
   /**
    * Abre (ou troca, se já aberta) com esta lista. `focar`: aberta pelo teclado (Enter no
    * botão), o foco entra no primeiro item e volta para quem tinha ao fechar.
@@ -58,15 +60,169 @@ export function raioDaRoda(largura: number, altura: number): number {
   return Math.max(92, Math.min(130, Math.min(largura, altura) * 0.3));
 }
 
-/** Onde fica cada botão, a partir do centro (px): o primeiro no alto, em sentido horário. */
-export function posicoesDaRoda(n: number, raio: number): [number, number][] {
+/**
+ * Onde fica cada botão, a partir do centro (px): o primeiro no alto, em sentido horário. Com
+ * `raioY`, a roda é oval (mais alta que larga no celular em pé, mais larga que alta deitado).
+ */
+export function posicoesDaRoda(n: number, raio: number, raioY = raio): [number, number][] {
   const out: [number, number][] = [];
   for (let i = 0; i < n; i++) {
     const a = -Math.PI / 2 + (i / n) * Math.PI * 2;
-    out.push([Math.cos(a) * raio, Math.sin(a) * raio]);
+    out.push([Math.cos(a) * raio, Math.sin(a) * raioY]);
   }
   return out;
 }
+
+// ------------------------------------------------------------------ o desenho sem encosto
+/**
+ * Dono, 16 nov 2026: "na Vila Neon os ícones e os nomes da roda ficam um em cima do outro" (a
+ * roda cresceu: 11 gestos com os presentes de nível e o roqueiro, 11 itens no menu com as
+ * missões, o baú e a lojinha). A roda agora mede os nomes e escolhe o tamanho do botão e os
+ * dois raios (oval, quando a tela é estreita) para nada encostar em nada, com qualquer número
+ * de itens, e nada sair da tela.
+ */
+export interface CaixaRotulo {
+  w: number;
+  h: number;
+}
+export interface DesenhoRoda {
+  /** Os raios (px) na horizontal e na vertical, e o lado do botão (px). */
+  rx: number;
+  ry: number;
+  botao: number;
+  pos: [number, number][];
+  /** Nada encosta em nada e tudo cabe na tela. */
+  livre: boolean;
+}
+type Caixa = [x0: number, y0: number, x1: number, y1: number];
+
+/** Do botão ao nome dele (px) e a folga mínima entre duas coisas da roda (px). */
+export const VAO_NOME = 4;
+export const FOLGA_RODA = 3;
+/** Da roda à beira da tela (px) e o menor botão que um dedo pequeno ainda acerta (px). */
+const MARGEM_RODA = 6;
+export const BOTAO_MINIMO = 46;
+
+/** As caixas de cada item (px, a partir do centro): o botão e o nome embaixo dele. */
+export function caixasDaRoda(
+  pos: readonly [number, number][],
+  botao: number,
+  rotulos: readonly CaixaRotulo[],
+): [Caixa, Caixa][] {
+  return pos.map(([x, y], i) => {
+    const r = rotulos[i] ?? { w: 0, h: 0 };
+    const b = botao / 2;
+    return [
+      [x - b, y - b, x + b, y + b],
+      [x - r.w / 2, y + b + VAO_NOME, x + r.w / 2, y + b + VAO_NOME + r.h],
+    ];
+  });
+}
+
+const encosta = (a: Caixa, b: Caixa, folga: number) =>
+  a[0] < b[2] + folga && b[0] < a[2] + folga && a[1] < b[3] + folga && b[1] < a[3] + folga;
+
+/** Algum botão ou nome encosta no botão ou no nome de outro item? */
+export function rodaEncosta(caixas: readonly [Caixa, Caixa][], folga = FOLGA_RODA): boolean {
+  for (let i = 0; i < caixas.length; i++)
+    for (let j = i + 1; j < caixas.length; j++)
+      for (const a of caixas[i]) for (const b of caixas[j]) if (encosta(a, b, folga)) return true;
+  return false;
+}
+
+/**
+ * O desenho da roda para `rotulos.length` itens numa tela de `largura` × `altura`: começa do
+ * botão e do raio de sempre (`raio0`) e abre a roda (oval, se uma das medidas da tela acabar
+ * antes) até nada encostar; se a tela acabar, o botão diminui (até `BOTAO_MINIMO`).
+ */
+export function desenharRoda(
+  largura: number,
+  altura: number,
+  botaoBase: number,
+  rotulos: readonly CaixaRotulo[],
+  raio0 = raioDaRoda(largura, altura),
+): DesenhoRoda {
+  const n = rotulos.length;
+  const maiorW = Math.max(0, ...rotulos.map((r) => r.w));
+  const maiorH = Math.max(0, ...rotulos.map((r) => r.h));
+  let ultimo: DesenhoRoda | null = null;
+  for (let botao = botaoBase; botao >= BOTAO_MINIMO; botao -= 2) {
+    const rxLim = largura / 2 - MARGEM_RODA - Math.max(botao, maiorW) / 2;
+    const ryLim = altura / 2 - MARGEM_RODA - botao / 2 - VAO_NOME - maiorH;
+    for (let r = raio0; ; r += 3) {
+      const rx = Math.max(40, Math.min(r, rxLim));
+      const ry = Math.max(40, Math.min(r, ryLim));
+      // a roda de sempre (o primeiro no alto, de ângulo em ângulo); oval, os botões se apertam
+      // nas pontas: aí eles vão de passo em passo pela beira (com e sem um botão bem na ponta)
+      const jeitos =
+        rx === ry
+          ? [posicoesDaRoda(n, rx, ry)]
+          : [posicoesDaRoda(n, rx, ry), posicoesNaBeira(n, rx, ry, 0), posicoesNaBeira(n, rx, ry, 0.5)];
+      for (const pos of jeitos) {
+        const livre = !rodaEncosta(caixasDaRoda(pos, botao, rotulos));
+        ultimo = { rx, ry, botao, pos, livre: livre && rxLim >= 40 && ryLim >= 40 };
+        if (ultimo.livre) return ultimo;
+      }
+      if (r >= rxLim && r >= ryLim) break;
+    }
+  }
+  return (
+    ultimo ?? {
+      rx: raio0,
+      ry: raio0,
+      botao: botaoBase,
+      pos: posicoesDaRoda(n, raio0),
+      livre: false,
+    }
+  );
+}
+
+/**
+ * Os botões pela beira de uma roda oval, de passo em passo (o mesmo tanto de beira entre um e o
+ * outro), em sentido horário a partir do alto; `fase` (0 a 1) adianta todos uma fração do passo
+ * (com 0,5 nenhum botão cai bem na ponta da oval, onde a curva é mais fechada).
+ */
+export function posicoesNaBeira(n: number, rx: number, ry: number, fase = 0): [number, number][] {
+  const N = 720;
+  const pts: [number, number][] = [];
+  const soma: number[] = [0];
+  for (let i = 0; i <= N; i++) {
+    const a = -Math.PI / 2 + (i / N) * Math.PI * 2;
+    pts.push([Math.cos(a) * rx, Math.sin(a) * ry]);
+    if (i) soma.push(soma[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]));
+  }
+  const total = soma[N];
+  const out: [number, number][] = [];
+  let k = 0;
+  for (let i = 0; i < n; i++) {
+    const s = ((i + fase) / n) * total;
+    while (k < N - 1 && soma[k + 1] < s) k++;
+    const f = (s - soma[k]) / Math.max(1e-9, soma[k + 1] - soma[k]);
+    out.push([pts[k][0] + (pts[k + 1][0] - pts[k][0]) * f, pts[k][1] + (pts[k + 1][1] - pts[k][1]) * f]);
+  }
+  return out;
+}
+
+/**
+ * O tamanho do nome sem a tela (testes, e o aparelho antes de desenhar): letras gordinhas de
+ * `fonte` px, quebrando nas palavras quando passa de `maximo` px.
+ */
+export function estimarRotulo(nome: string, fonte: number, maximo: number): CaixaRotulo {
+  const larg = (s: string) => s.length * fonte * 0.62;
+  const linhas: string[] = [];
+  for (const p of nome.split(' ')) {
+    const ult = linhas[linhas.length - 1];
+    if (ult !== undefined && larg(`${ult} ${p}`) <= maximo) linhas[linhas.length - 1] = `${ult} ${p}`;
+    else linhas.push(p);
+  }
+  return { w: Math.max(...linhas.map(larg)), h: linhas.length * fonte * 1.12 };
+}
+
+/** O nome na roda: a letra (px) e a largura em que ele quebra (px), folgado ou apertado. */
+export const ROTULO_RODA = {
+  normal: { fonte: 11.84, maximo: 84 },
+  aperto: { fonte: 10.4, maximo: 62 },
+} as const;
 
 export type AcaoTeclaRoda =
   | { acao: 'alternar' }
@@ -108,13 +264,14 @@ export function focoDaSeta(code: string, i: number, n: number): number | null {
 
 export const CSS_RODA = `
 .roda { position: fixed; inset: 0; z-index: 55; pointer-events: none; touch-action: none; user-select: none; -webkit-user-select: none; }
-.roda::before { content: ""; position: absolute; left: 50%; top: 50%; width: var(--diam, 300px); height: var(--diam, 300px); margin: calc(var(--diam, 300px) / -2); border-radius: 50%;
+.roda::before { content: ""; position: absolute; left: 50%; top: 50%; width: var(--diam, 300px); height: var(--diam-y, var(--diam, 300px));
+  margin: calc(var(--diam-y, var(--diam, 300px)) / -2) calc(var(--diam, 300px) / -2); border-radius: 50%;
   background: radial-gradient(circle, rgba(255, 247, 232, 0) 34%, rgba(255, 247, 232, 0.42) 36%, rgba(255, 247, 232, 0.42) 100%);
   opacity: 0; transform: scale(0.6); transition: transform 0.22s, opacity 0.15s; }
 .roda.aberta { pointer-events: auto; }
 .roda.aberta::before { opacity: 1; transform: scale(1); }
 .roda button {
-  position: absolute; left: 50%; top: 50%; width: 60px; height: 60px; margin: -30px; padding: 0; border: 0; border-radius: 999px;
+  position: absolute; left: 50%; top: 50%; width: var(--botao, 60px); height: var(--botao, 60px); margin: calc(var(--botao, 60px) / -2); padding: 0; border: 0; border-radius: 999px;
   display: grid; place-items: center; cursor: pointer; color: var(--tinta, #3b2a1e); background: var(--creme, #fff7e8);
   box-shadow: 0 4px 0 #e9d6b2, 0 8px 14px rgba(60, 35, 10, 0.22), inset 0 2px 0 rgba(255, 255, 255, 0.85);
   opacity: 0; transform: translate(0, 0) scale(0.4); transition: transform 0.22s cubic-bezier(0.3, 1.4, 0.5, 1), opacity 0.15s;
@@ -124,15 +281,18 @@ export const CSS_RODA = `
 /* desempenho: cada botão já nasce na sua camada (abrir só move e acende, sem pintar nada) */
 .roda button, .roda::before { will-change: transform, opacity; }
 .roda button:focus-visible { outline: 3px solid #ffb547; outline-offset: 2px; }
-.roda button svg { width: 32px; height: 32px; pointer-events: none; }
-.roda button .nome { position: absolute; top: 100%; margin-top: 4px; font: 800 0.74rem var(--jogo, system-ui), sans-serif; color: #fff;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6), 0 0 6px rgba(0, 0, 0, 0.35); white-space: nowrap; pointer-events: none; }
+.roda button svg { width: calc(var(--botao, 60px) * 0.533); height: calc(var(--botao, 60px) * 0.533); pointer-events: none; }
+/* o nome embaixo do botão, no meio dele; nome comprido quebra em duas linhas nas palavras (a
+   roda mede o nome e abre até nenhum encostar em nada: desenharRoda) */
+.roda button .nome { position: absolute; top: 100%; left: 50%; transform: translateX(-50%); margin-top: 4px; width: max-content; max-width: 84px;
+  font: 800 0.74rem/1.12 var(--jogo, system-ui), sans-serif; color: #fff; text-align: center;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6), 0 0 6px rgba(0, 0, 0, 0.35); white-space: normal; pointer-events: none; }
+.roda.aperto button .nome { max-width: 62px; font-size: 0.65rem; }
 .roda button kbd { position: absolute; top: -4px; right: -4px; min-width: 18px; height: 18px; padding: 0 4px; border-radius: 9px;
   display: grid; place-items: center; font: 800 0.66rem var(--jogo, system-ui), sans-serif; color: var(--tinta, #3b2a1e);
   background: #ffe4a8; box-shadow: 0 1px 0 #d9b56a; pointer-events: none; }
 .roda button.escolhido, .roda button.voltar { background: #ffe4a8; }
-body.toque-ativo .roda button { width: 64px; height: 64px; margin: -32px; }
-body.toque-ativo .roda button svg { width: 34px; height: 34px; }
+/* (no toque o botão é de 64 px: a roda põe a medida em --botao quando abre) */
 body.toque-ativo .roda button kbd { display: none; }
 body[data-overlay] .roda, body.modo-foto .roda, body.tela-titulo .roda { display: none; }
 /* roda aberta: os avisos dão licença (voltam quando ela fecha) */
@@ -245,7 +405,7 @@ export function criarRoda(op: OpcoesRoda, raiz: HTMLElement = document.body): Ro
       a.classList.toggle('sob-roda', sob);
   }
 
-  let raio = 0;
+  let desenho: DesenhoRoda | null = null;
   let pos: [number, number][] = [];
   function abrir(l: ListaRoda, focar = false): void {
     clearTimeout(timerEscolha);
@@ -267,12 +427,28 @@ export function criarRoda(op: OpcoesRoda, raiz: HTMLElement = document.body): Ro
     botoes = bs;
     for (const b of botoes) b.classList.remove('escolhido');
     // spec 023: com mais de 8 (os gestos dos presentes de nível), a roda abre um pouco mais
-    const r = raioDaRoda(innerWidth, innerHeight) * (l.itens.length > 8 ? 1.15 : 1);
-    if (r !== raio || pos.length !== l.itens.length) {
-      raio = r;
-      el.style.setProperty('--diam', `${r * 2 + 96}px`);
+    const r0 = raioDaRoda(innerWidth, innerHeight) * (l.itens.length > 8 ? 1.15 : 1);
+    // spec 026 (dono, 16 nov 2026): nada encosta em nada. A roda mede os nomes e abre (oval, se
+    // a tela for estreita) até caber; se nem assim, os nomes apertam (letra menor, duas linhas)
+    const base = document.body.classList.contains('toque-ativo') ? 64 : 60;
+    const medir = (modo: keyof typeof ROTULO_RODA) =>
+      l.itens.map((it, i) => {
+        const nome = botoes[i]?.querySelector<HTMLElement>('.nome');
+        return nome && nome.offsetWidth > 0
+          ? { w: nome.offsetWidth, h: nome.offsetHeight }
+          : estimarRotulo(it.nome, ROTULO_RODA[modo].fonte, ROTULO_RODA[modo].maximo);
+      });
+    el.classList.remove('aperto');
+    let d = desenharRoda(innerWidth, innerHeight, base, medir('normal'), r0);
+    if (!d.livre) {
+      el.classList.add('aperto');
+      d = desenharRoda(innerWidth, innerHeight, base, medir('aperto'), r0);
     }
-    pos = posicoesDaRoda(l.itens.length, r);
+    desenho = d;
+    el.style.setProperty('--botao', `${d.botao}px`);
+    el.style.setProperty('--diam', `${d.rx * 2 + 96}px`);
+    el.style.setProperty('--diam-y', `${d.ry * 2 + 96}px`);
+    pos = d.pos;
     const colocar = () =>
       botoes.forEach((b, i) => {
         b.classList.add('ativo');
@@ -351,6 +527,9 @@ export function criarRoda(op: OpcoesRoda, raiz: HTMLElement = document.body): Ro
     },
     get lista() {
       return lista;
+    },
+    get desenho() {
+      return desenho;
     },
     abrir,
     preparar: (l) => void montar(l),
