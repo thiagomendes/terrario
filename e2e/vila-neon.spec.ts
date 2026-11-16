@@ -199,6 +199,7 @@ async function f4(page: Page, pre: string): Promise<{ arcos: number }> {
     if (r.alvo === 'patins') {
       // o toque no suporte calça os patins (como a criança: o dedo em cima dele)
       await page.waitForTimeout(800);
+      if (await page.evaluate(() => !!window.__brumaluz!.personagem?.aparencia().patins)) continue;
       const t = await page.evaluate(() => {
         const e = window.__brumaluz!;
         const [x, y, z] = e.vila!()!.pontos.patins;
