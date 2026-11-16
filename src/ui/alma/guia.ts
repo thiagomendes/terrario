@@ -14,7 +14,7 @@ import { CANTEIRO_BOLO } from '../../world/protecao';
 import type { AlmaUi } from './index';
 import { missaoFixada } from './hud';
 import { criarMaoObra } from './maoObra';
-import { missaoPorId } from '../../jogo/alma';
+import { missaoPorId, temMissaoNova } from '../../jogo/alma';
 import { pedirSomGuia } from '../../audio/somGuia';
 import { medirHud } from '../carinhasAmigos';
 import { ligarCantoMissoes } from './canto';
@@ -223,7 +223,12 @@ export function ligarGuiaMissao(e: EstadoDepuracao, ui: AlmaUi): GuiaMissao | nu
           ? CANTEIRO_BOLO
           : null,
     );
-    const r = relogio.passo(dt, { missao: !!missaoFixada(v), noJogo: noJogo() });
+    // (só convida para missão que a criança ainda não fez: com tudo feito, não oferece nada)
+    const r = relogio.passo(dt, {
+      missao: !!missaoFixada(v),
+      noJogo: noJogo(),
+      nova: temMissaoNova(v),
+    });
     if (r.mostra !== mostra || r.acendeu) ui.hud.definirConvite(r.mostra, r.acendeu);
     mostra = r.mostra;
   });

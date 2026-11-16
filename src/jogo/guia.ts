@@ -994,6 +994,10 @@ export const CONVITE_S = 120;
  * O relógio do convite: conta só com o jogo à vista e sem missão; com missão volta a zero (e
  * quando a missão acaba, recomeça do zero). `passo` devolve se o convite está à vista e se
  * acabou de aparecer (o brilho é uma vez só).
+ *
+ * `nova` (dono, 16 nov 2026: "o jogo ficou oferecendo as missões que eu já tinha feito"): há
+ * missão que a criança ainda não fez neste mundo (`temMissaoNova`)? Sem missão nova o convite
+ * nunca aparece e o relógio fica em zero: com tudo feito, o jogo não oferece nada.
  */
 export function criarRelogioConvite(limite = CONVITE_S) {
   let brincando = 0;
@@ -1001,11 +1005,12 @@ export function criarRelogioConvite(limite = CONVITE_S) {
   return {
     passo(
       dt: number,
-      op: { missao: boolean; noJogo: boolean },
+      op: { missao: boolean; noJogo: boolean; nova?: boolean },
     ): { mostra: boolean; acendeu: boolean } {
-      if (op.missao) brincando = 0;
+      const nova = op.nova !== false;
+      if (op.missao || !nova) brincando = 0;
       else if (op.noJogo) brincando += Math.max(0, Math.min(0.25, dt));
-      const mostra = !op.missao && brincando >= limite;
+      const mostra = !op.missao && nova && brincando >= limite;
       const acendeu = mostra && !antes;
       antes = mostra;
       return { mostra, acendeu };

@@ -22,6 +22,7 @@ import {
   descontar,
   estrelasDe,
   fixar,
+  listaAcabou,
   missaoDeBis,
   missaoDoHud,
   missoesDoMundo,
@@ -35,6 +36,7 @@ import {
   registrarEvento,
   vestirPremium,
   saiAoVestir,
+  temMissaoNova,
   visitarLugar,
   vistaAlmaMundo,
   type AlmaMundo,
@@ -43,6 +45,7 @@ import {
   type PerfilAlma,
   type ResultadoAlma,
 } from '../../src/jogo/alma';
+import { criarRelogioConvite } from '../../src/jogo/guia';
 import { celulasDaObra, obraDoCanteiro } from '../../src/world/obras';
 import { obterItem } from '../../src/jogo/itens';
 import { registrarCatalogo } from '../../src/jogo/catalogo';
@@ -276,6 +279,66 @@ describe('alma: missões', () => {
     expect(r!.ganho.moedas).toBe(MOEDAS_BIS);
     expect(r!.ganho.xp).toBe(XP_MISSAO / 2 + 2);
     expect(missaoDeBis(e, 'rancho-alegre')!.id).toBe('r2');
+  });
+  // dono, 16 nov 2026 (Vila Neon): "o jogo ficou oferecendo as missões que eu já tinha feito"
+  for (const mundo of MUNDOS_ALMA)
+    it(`${mundo}: o convite nunca é para missão já feita; com tudo feito, não convida para nada`, () => {
+      const e = almaMundoVazia();
+      const obras = new Set<number>();
+      const vista = () => vistaAlmaMundo(e, mundo, () => null);
+      const total = missoesDoMundo(mundo).length;
+      expect(total).toBeGreaterThan(0);
+      for (let k = 0; k < total + 2 && !listaAcabou(e, mundo); k++) {
+        // enquanto falta alguma, há o que oferecer, e nada do que se oferece já foi feito
+        const v = vista();
+        expect(temMissaoNova(v)).toBe(true);
+        for (const a of v.abertas) {
+          expect(a.bis).toBeUndefined();
+          expect(v.feitas).not.toContain(a.id);
+        }
+        // a criança escolhe pela estrela (o quadro) e faz
+        const m = abertas(e, mundo)[0];
+        fixar(e, mundo, m.id);
+        fazer(e, mundo, m, obras);
+        expect(e.fixada).toBeNull();
+      }
+      expect(listaAcabou(e, mundo)).toBe(true);
+      // tudo feito: nada a oferecer, agora e depois de cada bis que ela quiser repetir
+      for (let k = 0; k < 6; k++) {
+        const v = vista();
+        expect(temMissaoNova(v)).toBe(false);
+        expect(v.abertas.every((a) => a.bis)).toBe(true);
+        const bis = missaoDeBis(e, mundo);
+        if (!bis) break;
+        fixar(e, mundo, bis.id);
+        fazer(e, mundo, bis, obras);
+        // a que acabou sai do selinho (não volta sozinha)
+        expect(e.fixada).toBeNull();
+      }
+      // e o relógio do convite, sem missão nova, nunca acende (nem depois de muito tempo)
+      const relogio = criarRelogioConvite(2);
+      let mostrou = 0;
+      for (let i = 0; i < 600; i++)
+        if (relogio.passo(0.1, { missao: false, noJogo: true, nova: temMissaoNova(vista()) }).mostra)
+          mostrou++;
+      expect(mostrou).toBe(0);
+      expect(relogio.segundos).toBe(0);
+    });
+  it('o convite volta quando aparece missão nova (e só então)', () => {
+    const relogio = criarRelogioConvite(2);
+    for (let i = 0; i < 100; i++)
+      expect(relogio.passo(0.1, { missao: false, noJogo: true, nova: false }).mostra).toBe(false);
+    let acendeu = 0;
+    for (let i = 0; i < 40; i++)
+      if (relogio.passo(0.1, { missao: false, noJogo: true, nova: true }).acendeu) acendeu++;
+    expect(acendeu).toBe(1);
+    expect(temMissaoNova(null)).toBe(false);
+    expect(temMissaoNova({ abertas: [{ id: 'r1', feito: 0, meta: 3 }], feitas: [] })).toBe(true);
+    // (um quadro que chegue com uma feita entre as abertas também não vira convite)
+    expect(temMissaoNova({ abertas: [{ id: 'r1', feito: 0, meta: 3 }], feitas: ['r1'] })).toBe(false);
+    expect(
+      temMissaoNova({ abertas: [{ id: 'r1', feito: 0, meta: 3, bis: true }], feitas: ['r1'] }),
+    ).toBe(false);
   });
   it('a vista do quadro leva as abertas com o progresso (a obra pelo canteiro)', () => {
     const e = almaMundoVazia();

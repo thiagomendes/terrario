@@ -1254,6 +1254,9 @@ function concluir(
     // bis: 2 moedinhas e metade do XP, sem fantasia (os pontos da habilidade também)
     e.bis++;
     delete e.progresso[m.id];
+    // (como na lista: a missão que acabou sai do selinho; num mundo com um bis só, ela ficava
+    // escolhida para sempre e voltava sozinha ao selinho)
+    if (e.fixada === m.id) e.fixada = null;
     g.moedas = MOEDAS_BIS;
     g.xp = XP_MISSAO / 2;
     g.pontos[m.habilidade] = PONTOS_POR_MISSAO;
@@ -1412,6 +1415,17 @@ export interface VistaAlmaMundo {
   /** O que espera no baú da banca. */
   bau: PilhaBau[];
 }
+
+/**
+ * Há missão nova para convidar a criança (dono, 16 nov 2026: "o jogo ficou oferecendo as mesmas
+ * missões que eu já tinha feito")? Só conta a missão aberta que ela ainda não fez neste mundo: o
+ * bis (as mesmas, de novo) nunca é oferecido. Com tudo feito, o jogo não convida para nada (o
+ * bis continua no quadro para quem abrir "Missões" na roda por conta própria).
+ */
+export function temMissaoNova(v: Pick<VistaAlmaMundo, 'abertas' | 'feitas'> | null): boolean {
+  return !!v && v.abertas.some((a) => !a.bis && !v.feitas.includes(a.id));
+}
+
 export function vistaAlmaMundo(
   e: AlmaMundo,
   mundo: MundoAlma,
