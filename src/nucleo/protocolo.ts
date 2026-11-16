@@ -174,7 +174,14 @@ type ComandoSemSeq =
    * Spec 026 (Vila Neon): tocar numa caixa do palco (`i`, 0 a 2), o brinquedo fora do show. O
    * núcleo confere o lugar, o show e o limite de toques por segundo.
    */
-  | { t: 'vila'; a: 'caixa'; i: number };
+  | { t: 'vila'; a: 'caixa'; i: number }
+  /**
+   * Spec 026 (parte 2, o parque): sentar num brinquedo (`b`: 0 a roda-gigante, 1 o carrossel, 2 o
+   * bate-bate; o núcleo escolhe a cadeira livre), sair dele, o "tum" no carrinho da frente e o
+   * empurrãozinho na roda-gigante. O núcleo confere o alcance e o limite de toques por segundo.
+   */
+  | { t: 'vila'; a: 'sentar'; b: number }
+  | { t: 'vila'; a: 'sair' | 'tum' | 'roda' };
 
 /** Atalhos de teste e captura (o servidor da nuvem só aceita em ambiente de testes). */
 export type Depuracao =

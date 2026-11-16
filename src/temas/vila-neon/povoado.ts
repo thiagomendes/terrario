@@ -264,6 +264,70 @@ export const POVOADO_VILA: PovoadoTema = {
       cabelo: 1,
       semTrocas: true,
     },
+    // spec 026 (parte 2): os moradores do Parque de diversões
+    'vila:63': {
+      nome: 'Seu Chico',
+      genero: 'm',
+      titulo: 'Pipoqueiro',
+      // camisa branca, o avental de listras vermelhas, a gravatinha e o chapéu de papel
+      pecas: [
+        ...corpoDeMorador({
+          pele: '#d9a47c',
+          roupa: '#f6f4ee',
+          calca: '#3a3944',
+          sapato: '#2e2d36',
+          cabelo: '#b8b4ae',
+        }),
+        { t: [0.44, 0.5, 0.04], p: [0, 1.0, 0.155], cor: '#fbfaf4' },
+        { t: [0.07, 0.5, 0.02], p: [-0.13, 1.0, 0.178], cor: '#e8302a' },
+        { t: [0.07, 0.5, 0.02], p: [0.13, 1.0, 0.178], cor: '#e8302a' },
+        { t: [0.14, 0.07, 0.03], p: [0, 1.3, 0.17], cor: '#e8302a' },
+        { t: [0.4, 0.16, 0.36], p: [0, ACIMA + 0.04, 0], cor: '#fbfaf4', papel: 'cabeca' },
+        { t: [0.42, 0.05, 0.38], p: [0, ACIMA - 0.02, 0], cor: '#e8302a', papel: 'cabeca' },
+      ],
+      cabelo: 0,
+    },
+    'vila:64': {
+      nome: 'Duda',
+      genero: 'm',
+      titulo: 'Moço do bate-bate',
+      // camiseta turquesa, bermuda grafite, o boné amarelo de aba para a frente e o apito
+      pecas: [
+        ...corpoDeMorador({
+          pele: '#9a6844',
+          roupa: '#22c2b0',
+          calca: '#3a3944',
+          sapato: '#f4f1ea',
+          cabelo: '#1e1a22',
+        }),
+        { t: [0.46, 0.1, 0.44], p: [0, ACIMA, 0], cor: '#ffe14a', papel: 'cabeca' },
+        { t: [0.34, 0.03, 0.2], p: [0, ACIMA - 0.02, 0.28], cor: '#f0c81e', papel: 'cabeca' },
+        { t: [0.07, 0.07, 0.04], p: [0, 1.12, 0.17], cor: '#d4d8e2' },
+        { t: [0.03, 0.2, 0.02], p: [0, 1.24, 0.16], cor: '#e8302a' },
+      ],
+      cabelo: 0,
+    },
+    'vila:65': {
+      nome: 'Dona Flor',
+      genero: 'f',
+      titulo: 'Vendedora de balões',
+      // blusa amarela, saia azul, o chapéu de palha de fita vermelha e o avental curto
+      pecas: [
+        ...corpoDeMorador({
+          pele: '#c99064',
+          roupa: '#ffd23d',
+          calca: '#2f6fd0',
+          sapato: '#f4f1ea',
+          cabelo: '#4a2a1a',
+        }),
+        { t: [0.62, 0.04, 0.6], p: [0, ACIMA - 0.01, 0], cor: '#e8cf8e', papel: 'cabeca' },
+        { t: [0.4, 0.14, 0.38], p: [0, ACIMA + 0.03, 0], cor: '#e8cf8e', papel: 'cabeca' },
+        { t: [0.42, 0.05, 0.4], p: [0, ACIMA + 0.02, 0], cor: '#e8302a', papel: 'cabeca' },
+        { t: [0.42, 0.22, 0.04], p: [0, 0.82, 0.155], cor: '#fbfaf4' },
+      ],
+      cabelo: 4,
+      semTrocas: true,
+    },
   },
   // passo animado de quem anda ouvindo música
   movimento: { saltita: 0.03, flutua: 0, ginga: 0.06 },

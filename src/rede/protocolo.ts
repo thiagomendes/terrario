@@ -29,9 +29,13 @@ import type { ObraSalva } from '../nucleo/saneamento';
  * separado das missões (o comando `vila` só aceita a caixa: o toque no palco saiu; o evento
  * `vilaAcorde` saiu e o `vilaArco` entrou; o quadro `vila` ganhou os `arcos` de cada jogador; a
  * banda ganhou a tecladista e mudou de número; o público dobrou; os arcos do rinque entram nas
- * peças sólidas do bairro; a f3 do show virou a f4 da volta no rinque).
+ * peças sólidas do bairro; a f3 do show virou a f4 da volta no rinque). 11: spec 026, parte 2 (o
+ * Parque de diversões: o lote do nordeste muda a geração do bairro, e as peças sólidas dele; o
+ * comando `vila` ganhou `sentar`, `sair`, `tum` e `roda`; o quadro `vila` ganhou o `parque` (quem
+ * está sentado em qual cadeira e o empurrão da roda-gigante); os eventos `parqueSentou`,
+ * `parqueDesceu`, `parqueTum` e `parqueRoda`; três moradores novos e as lhamas da fazendinha).
  */
-export const VERSAO_REDE = 10;
+export const VERSAO_REDE = 11;
 /** Jogadores por mundo. */
 export const MAX_JOGADORES = 8;
 

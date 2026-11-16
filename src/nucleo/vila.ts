@@ -66,6 +66,8 @@ import {
   retoDoPublico,
   PUBLICO_GRADE,
 } from '../world/publicoVila';
+import type { ParqueVista } from '../jogo/parque';
+import { criarParqueNucleo, type ComandoParque, type EventoParque } from './parque';
 
 /** Os postos e quem mora em cada um (o número é o `n` do morador). */
 export const MORADORES_VILA: readonly { posto: PostoVila; profissao: Profissao }[] = [
@@ -95,6 +97,18 @@ export const BANDA: readonly { n: number; papel: PapelBanda; profissao: Profissa
   { n: BATERISTA, papel: 'baterista', profissao: 'ferreiro' },
   { n: BAIXISTA, papel: 'baixista', profissao: 'ferreiro' },
   { n: TECLADISTA, papel: 'tecladista', profissao: 'ferreiro' },
+];
+/**
+ * Os moradores do parque (spec 026, parte 2), com números depois dos da banda: o pipoqueiro
+ * (cozinheiro: a pipoca), o moço do bate-bate (construtor) e a vendedora de balões.
+ */
+export const PIPOQUEIRO = 63;
+export const MOCO_DO_BATE = 64;
+export const VENDEDORA_DE_BALOES = 65;
+export const MORADORES_PARQUE: readonly { n: number; posto: PostoVila; profissao: Profissao }[] = [
+  { n: PIPOQUEIRO, posto: 'pipoqueiro', profissao: 'cozinheiro' },
+  { n: MOCO_DO_BATE, posto: 'bate', profissao: 'construtor' },
+  { n: VENDEDORA_DE_BALOES, posto: 'baloes', profissao: 'cozinheiro' },
 ];
 /** O n é da turma da grade (o público do show)? */
 export const daTurma = (n: number) => n >= N0_PUBLICO && n < N0_PUBLICO + PUBLICO_GRADE;
@@ -132,6 +146,8 @@ export interface VilaVista {
   lhamas: number[];
   /** Os arcos do rinque que quem recebe o quadro já acendeu (f4), por arco. */
   arcos?: [boolean, boolean, boolean];
+  /** Spec 026 (parte 2): o parque (quem está sentado em qual cadeira e o empurrão da roda). */
+  parque?: ParqueVista;
 }
 
 /** O que vai salvo com o mundo (`extras.vila`). */
@@ -166,6 +182,8 @@ export interface JogadorVila {
   darNaMao(item: string, qtd: number): void;
   /** Põe na mochila (presente); devolve o que não coube. */
   dar(item: string, qtd: number): number;
+  /** Spec 026 (parte 2): o próximo lugar que ele mandar vale (desceu de um brinquedo do parque). */
+  soltar?(): void;
 }
 
 export interface CtxVila {
@@ -197,10 +215,15 @@ export type EventoVila =
   | { e: 'vilaLhama'; criatura: number; quem: string }
   | { e: 'vilaPresente'; quem: string }
   /** Alguém de patins passou por dentro de um arco do rinque (o brilho e o som, para todos). */
-  | { e: 'vilaArco'; i: number; quem: string };
+  | { e: 'vilaArco'; i: number; quem: string }
+  /** Spec 026 (parte 2): o parque (sentou, desceu, o "tum" e o empurrão da roda). */
+  | EventoParque;
 
-/** O toque numa caixa do palco (fora do show: brinquedo livre). */
-export type ComandoVila = { a: 'caixa'; i: number };
+/**
+ * O toque numa caixa do palco (fora do show: brinquedo livre) e, no parque (parte 2), sentar
+ * num brinquedo, sair dele, o "tum" do bate-bate e o empurrãozinho da roda-gigante.
+ */
+export type ComandoVila = { a: 'caixa'; i: number } | ComandoParque;
 
 const tres = (v: unknown): [boolean, boolean, boolean] =>
   Array.isArray(v) && v.length === 3
@@ -232,12 +255,26 @@ export function criarVila(ctx: CtxVila) {
   const meioCercado: [number, number] = [(cerc.x0 + cerc.x1 + 1) / 2, (cerc.z0 + cerc.z1 + 1) / 2];
   const grade = p.plateia;
 
+  // o parque (parte 2): o núcleo é dono das cadeiras dos brinquedos
+  const parque = criarParqueNucleo({
+    parque: p.parque,
+    chao: plano.h + 1,
+    agora: ctx.agora,
+    jogadores: ctx.jogadores,
+    jogador: ctx.jogador,
+    soltar: (id) => ctx.jogador(id)?.soltar?.(),
+    evento: ctx.evento,
+    espalhar: ctx.espalhar,
+    sujar: ctx.sujar,
+  });
+
   const vista = (): VilaVista => ({
     t: Math.round(ctx.agora() * 1000) / 1000,
     ins: [...ins] as VilaVista['ins'],
     cx: [...caixas] as VilaVista['cx'],
     show: show ? { ...show } : null,
     lhamas: [...naGrade],
+    parque: parque.vista(),
   });
   /** Os arcos que este jogador já acendeu. */
   const arcosDe = (id: string): [boolean, boolean, boolean] => [
@@ -257,6 +294,11 @@ export function criarVila(ctx: CtxVila) {
         n: b.n,
         profissao: b.profissao,
         posto: ondeDescansa(b.papel),
+      })),
+      ...MORADORES_PARQUE.map((m) => ({
+        n: m.n,
+        profissao: m.profissao,
+        posto: p.postos[m.posto],
       })),
     ];
     // quem é da banda aparece onde a coreografia (ou o descanso, fora do palco) o põe agora
@@ -580,6 +622,35 @@ export function criarVila(ctx: CtxVila) {
         (c) => !naGrade.has(c.id) && Math.hypot(c.x - j.x, c.z - j.z) <= PERTO_DA_LHAMA,
       );
       if (perto) j.darNaMao(FENO, 2);
+    }
+  }
+
+  // ------------------------------------------------------------------ a fazendinha do parque
+  /**
+   * As duas lhamas da fazendinha do parque (parte 2): moram no cercado de madeira e não saem
+   * dele (a entrada é aberta para a criança entrar). As da f2 continuam no cercadinho da beira
+   * do campo do festival, de frente para a grade: a missão não mudou de lugar.
+   */
+  const daFazendinha = new Set<number>();
+  function cuidarDaFazendinha(): void {
+    const f = p.parque.fazendinha;
+    const meio: [number, number] = [(f.x0 + f.x1 + 1) / 2, (f.z0 + f.z1 + 1) / 2];
+    for (const id of [...daFazendinha])
+      if (!ctx.criaturas().some((c) => c.id === id && c.estado !== 'morrendo'))
+        daFazendinha.delete(id);
+    if (daFazendinha.size >= 2) return;
+    const perto = ctx.jogadores().some((j) => Math.hypot(j.x - meio[0], j.z - meio[1]) < 48);
+    if (!perto || !ctx.carregado(meio[0], meio[1])) return;
+    for (let k = daFazendinha.size; k < 2; k++) {
+      const c = ctx.adicionar(
+        'cervo',
+        meio[0] + (k ? 2 : -2),
+        plano.h + 1.2,
+        meio[1] + (k ? 1 : -1),
+      );
+      c.casa = [meio[0], meio[1]];
+      c.cerca = [f.x0, f.z0, f.x1, f.z1];
+      daFazendinha.add(c.id);
     }
   }
 
@@ -924,12 +995,17 @@ export function criarVila(ctx: CtxVila) {
       if (n % 10 === 0) cuidarDasLhamas();
       if (n % 20 === 0) cuidarDosMoradores();
       if (n % 5 === 2) cuidarDoPublico();
+      if (n % 5 === 3) parque.passo();
+      if (n % 20 === 7) cuidarDaFazendinha();
     },
     comando(id: string, c: ComandoVila): void {
       const j = ctx.jogador(id);
       if (!j || j.morto || !podeTocar(id)) return;
       if (c.a === 'caixa') tocarCaixa(j, c.i);
+      else parque.comando(id, c);
     },
+    /** Spec 026 (parte 2): as cadeiras do parque (testes). */
+    parque,
     falou,
     /** A missão foi escolhida (ou escolhida de novo) por `id`: o que é dela volta ao lugar. */
     preparar(missao: string | null, id?: string): void {
@@ -968,7 +1044,7 @@ export function criarVila(ctx: CtxVila) {
             c.morador?.povoado === POVOADO_VILA && daTurma(c.morador.n) && c.estado !== 'morrendo',
         ),
     /** Testes: as lhamas da vila e as que estão na grade. */
-    lhamas: () => ({ todas: [...lhamas], naGrade: [...naGrade] }),
+    lhamas: () => ({ todas: [...lhamas], naGrade: [...naGrade], fazendinha: [...daFazendinha] }),
   };
 }
 

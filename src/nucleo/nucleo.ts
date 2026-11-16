@@ -829,6 +829,10 @@ export function criarNucleo(op: OpcoesNucleo) {
       if (resto < qtd) o.eventos.push({ e: 'coletou', item, qtd: qtd - resto });
       return resto;
     },
+    // spec 026 (parte 2): desceu de um brinquedo do parque (o lugar seguinte vale, mesmo longe)
+    soltar() {
+      o.saltoPermitido = true;
+    },
   });
   const vila: VilaNucleo | null = planoVila
     ? criarVila({
@@ -2727,7 +2731,10 @@ export function criarNucleo(op: OpcoesNucleo) {
       }
       case 'vila': {
         // spec 026: a caixa do palco (brinquedo fora do show; o módulo confere o lugar e o limite)
-        vila?.comando(j.id, { a: 'caixa', i: c.i });
+        // e, no parque (parte 2), sentar no brinquedo, sair, o "tum" e o empurrão da roda
+        if (c.a === 'caixa') vila?.comando(j.id, { a: 'caixa', i: c.i });
+        else if (c.a === 'sentar') vila?.comando(j.id, { a: 'sentar', b: c.b });
+        else vila?.comando(j.id, { a: c.a });
         break;
       }
       case 'salvar':

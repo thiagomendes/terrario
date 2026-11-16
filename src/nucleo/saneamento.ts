@@ -197,9 +197,14 @@ export function sanear(c: unknown): Comando | null {
     case 'vila':
       // spec 026: a caixa do palco (0 a 2); nada mais vai junto (o show é só para ver: o toque
       // no palco de antes não existe mais)
-      return o.a === 'caixa' && inteiro(o.i, 0, 2)
-        ? ({ t: 'vila', a: 'caixa', i: o.i } as unknown as Comando)
-        : null;
+      if (o.a === 'caixa' && inteiro(o.i, 0, 2))
+        return { t: 'vila', a: 'caixa', i: o.i } as unknown as Comando;
+      // spec 026 (parte 2): o parque (sentar no brinquedo 0 a 2, sair, o "tum", o empurrão)
+      if (o.a === 'sentar' && inteiro(o.b, 0, 2))
+        return { t: 'vila', a: 'sentar', b: o.b } as unknown as Comando;
+      if (o.a === 'sair' || o.a === 'tum' || o.a === 'roda')
+        return { t: 'vila', a: o.a } as unknown as Comando;
+      return null;
     case 'pularPerto':
       // spec 021: só o id de um amigo (texto curto)
       return texto(o.alvo, 64) ? (o as unknown as Comando) : null;
