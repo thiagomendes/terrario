@@ -487,8 +487,9 @@ test('celular: o quadro em pé de dia (a lua) e as medidas no nascer e na grade'
   await page.waitForTimeout(3000);
   await medir(page, 'celular-grade-show');
   await foto(page, 'celular-grade-show', true);
-  // o pior caso: da grade, virado para o público (os 20 à vista)
-  await page.evaluate(() => window.__brumaluz!.apontar!(Math.PI, 0.05));
+  // o pior caso: do meio do campo, olhando o palco por cima do público (os 20 e o palco à vista)
+  await ir(page, p.ox + 60.5, p.oz + 84, H + 0.2);
+  await page.evaluate(() => window.__brumaluz!.apontar!(0, 0.02));
   await page.waitForTimeout(2500);
   const povo = await medir(page, 'celular-grade-povo');
   await foto(page, 'celular-grade-povo', true);
