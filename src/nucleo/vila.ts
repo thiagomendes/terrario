@@ -9,7 +9,8 @@
  * - **O Show da Vila:** os três estojos (f1) no chão de cada zona; os instrumentos aparecem no
  *   palco quando a criança passa por eles; as três caixas do palco (f3); o show no tempo da
  *   música (`src/jogo/show.ts`), o toque no palco, o acorde final (sozinho em 4 s), e depois as
- *   caixas como brinquedo livre.
+ *   caixas como brinquedo livre. Toda noite, com alguém no festival, o show começa sozinho (as
+ *   caixas acendem uma a uma); tocar nas caixas antes acende mais cedo.
  * - **As lhamas (f2):** duas no cercadinho da beira do campo; o feno aparece na mão de quem tem
  *   a missão ao chegar perto; a lhama segue o feno (a regra da 013) e, ao chegar à grade da
  *   plateia, fica ali balançando no ritmo.
@@ -21,11 +22,17 @@ import type { PlanoVila, PostoVila } from '../world/vilaNeon';
 import type { Profissao } from '../world/povoado';
 import type { Criatura, TipoSer } from '../jogo/criaturas';
 import {
+  ACENDE_SOZINHA,
+  alcancaOPalco,
   encaixarToque,
   faseDoShow,
   finalSozinho,
+  idDaNoite,
   momentoFinalSozinho,
+  NOITE_ANTES,
   noiteDeShow,
+  PERTO_ANTES,
+  PERTO_ANTES_F3,
   TOQUES_POR_SEGUNDO,
   type Show,
 } from '../jogo/show';
@@ -58,8 +65,8 @@ export const VOCALISTA = 0;
 export const INSTRUMENTOS = ['teclado', 'guitarra', 'baquetas'] as const;
 /** Chega a tantos blocos do estojo e ele é achado. */
 export const PERTO_DO_ESTOJO = 1.6;
-/** Perto da caixa do palco (blocos) para o toque valer. */
-export const PERTO_DA_CAIXA = 7;
+/** Até onde, fora do festival, ainda é "perto do festival" (blocos): o show começa sozinho. */
+export const PERTO_DO_FESTIVAL = 6;
 /** Perto da lhama (blocos): o feno aparece na mão. */
 export const PERTO_DA_LHAMA = 4;
 /** O presente do vocalista: a parede de pôster (bloco 108) da banda inventada. */
@@ -85,7 +92,9 @@ interface VilaSalva {
   ins?: unknown;
   cx?: unknown;
   poster?: unknown;
-  /** O show desta rodada já tocou até o fim (as caixas acesas são brinquedo livre). */
+  /** A noite (`idDaNoite`) do último show: uma vez por noite. */
+  noite?: unknown;
+  /** (de antes do show sozinho: o show da rodada já tinha tocado; agora não vale mais nada) */
   tocou?: unknown;
 }
 
@@ -114,6 +123,8 @@ export interface CtxVila {
   agora(): number;
   /** A hora do dia (0 a 1): o show só começa de noite (`noiteDeShow`). */
   hora(): number;
+  /** O dia do mundo (conta as noites: um show por noite). */
+  dia(): number;
   jogadores(): JogadorVila[];
   jogador(id: string): JogadorVila | undefined;
   adicionar(tipo: TipoSer, x: number, y: number, z: number): Criatura;
@@ -305,24 +316,67 @@ export function criarVila(ctx: CtxVila) {
     return true;
   }
 
-  const pertoDoPalco = (j: JogadorVila) => {
-    const r = p.palco;
-    return j.x >= r.x0 - 8 && j.x <= r.x1 + 9 && j.z >= r.z0 - 16 && j.z <= r.z1 + 4;
-  };
+  const pertoDoPalco = (j: JogadorVila) => alcancaOPalco(p.palco, j.x, j.z);
+  const fest = plano.zonas.festival;
+  const noFestival = (j: JogadorVila) =>
+    !j.morto &&
+    j.x >= fest.x0 - PERTO_DO_FESTIVAL &&
+    j.x <= fest.x1 + 1 + PERTO_DO_FESTIVAL &&
+    j.z >= fest.z0 - PERTO_DO_FESTIVAL &&
+    j.z <= fest.z1 + 1 + PERTO_DO_FESTIVAL;
+
+  // ------------------------------------------------------------------ uma vez por noite
+  /** A noite (`idDaNoite`) em que o último show começou (null: nenhum ainda). */
+  let showDaNoite: number | null = typeof salvo.noite === 'number' ? salvo.noite : null;
+  const noiteAgora = () => idDaNoite(ctx.dia(), ctx.hora());
+  /** A noite de agora ainda não teve show (e nenhum toca agora). */
+  const rodadaAberta = () => !show && noiteDeShow(ctx.hora()) && showDaNoite !== noiteAgora();
+  /** A hora era de show no último olhar (para ver a noite chegar). */
+  let eraNoite = noiteDeShow(ctx.hora());
+  /** Quando a noite de show abriu, quando alguém chegou ao festival (e alguém com a f3). */
+  let noiteDesde: number | null = null;
+  let pertoDesde: number | null = null;
+  let f3Desde: number | null = null;
+  /** As caixas acendendo sozinhas: quando acende a próxima (null: parado). */
+  let sozinha: number | null = null;
+
+  /**
+   * A noite chegou com a rodada aberta: as caixas acesas na passagem de som (ou no brinquedo
+   * livre do show de ontem) se apagam, para acender de novo uma a uma (pela criança ou sozinhas).
+   */
+  function verNoite(): void {
+    const noite = noiteDeShow(ctx.hora());
+    if (noite && !eraNoite && rodadaAberta() && caixas.some(Boolean)) {
+      caixas.fill(false);
+      ctx.sujar();
+    }
+    eraNoite = noite;
+  }
+
+  /** A noite do show de antes deste (o que vai salvo enquanto este toca). */
+  let noiteAntesDoShow: number | null = showDaNoite;
+  function comecarShow(): void {
+    show = { inicio: ctx.agora(), final: null };
+    noiteAntesDoShow = showDaNoite;
+    showDaNoite = noiteAgora();
+    sozinha = null;
+    ctx.sujar();
+  }
 
   function tocarCaixa(j: JogadorVila, i: number): void {
     const c = p.caixas[i];
-    if (!c || Math.hypot(j.x - (c[0] + 0.5), j.z - (c[2] + 0.5)) > PERTO_DA_CAIXA) return;
+    if (!c || !pertoDoPalco(j)) return;
     const fase = show ? faseDoShow(show, ctx.agora()) : null;
     if (fase === 'tocando' || fase === 'chamando' || fase === 'final') {
       // no meio do show a caixa é palco: o toque toca um acorde
       tocarPalco(j);
       return;
     }
+    verNoite();
     const noite = noiteDeShow(ctx.hora());
-    if (noite && rodadaNova) {
-      // de noite, antes do show desta rodada: a caixa acende (e a acesa fica acesa: nada de
-      // apagar sem querer); o toque conta para a f3, e com as três acesas o show começa
+    if (rodadaAberta()) {
+      // de noite, antes do show desta noite: a caixa acende (e a acesa fica acesa: nada de
+      // apagar sem querer); o toque conta para a f3, e com as três acesas o show começa já
       caixas[i] = true;
       ctx.espalhar({ e: 'vilaCaixa', i, acesa: true, quem: j.id });
       if (j.aberta('f3') && !acendeu.has(`${j.id}:${i}`)) {
@@ -331,28 +385,55 @@ export function criarVila(ctx: CtxVila) {
         // as duas primeiras bolinhas agora; a terceira com o acorde final (a festa vem depois)
         if (minhas <= 2) ctx.evento(j.id, 'show:caixa');
       }
-      if (caixas.every(Boolean) && !show) {
-        show = { inicio: ctx.agora(), final: null };
-        rodadaNova = false;
-      }
+      if (caixas.every(Boolean)) comecarShow();
       ctx.sujar();
       return;
     }
-    // de dia (a passagem de som) e depois do show: cada toque liga e desliga a camada dela
-    // (brinquedo livre, sem moedinha, sem show: o show é só de noite, decisão do dono)
+    // de dia (a passagem de som) e depois do show desta noite: cada toque liga e desliga a
+    // camada dela (brinquedo livre, sem moedinha, sem show: o show é só de noite)
     const acesa = !caixas[i];
     caixas[i] = acesa;
     ctx.espalhar({ e: 'vilaCaixa', i, acesa, quem: j.id, ...(noite ? {} : { dia: true as const }) });
-    // apagou as três: a próxima vez que acenderem (de noite), o show começa de novo
-    if (caixas.every((x) => !x)) rodadaNova = true;
     ctx.sujar();
   }
+
   /**
-   * O show desta rodada ainda não tocou (ele começa com as três acesas, de noite). Volta a valer
-   * quando as caixas se apagam ou a f3 é escolhida de novo. Um mundo salvo no meio do show (ou de
-   * antes desta regra) volta com a rodada aberta: ninguém fica preso sem show.
+   * O show sozinho: de noite, com alguém no festival, depois das esperas (`NOITE_ANTES`,
+   * `PERTO_ANTES` e, com a f3 aberta para alguém perto, `PERTO_ANTES_F3`), as caixas apagadas
+   * acendem uma a uma (com o "tum" e o acorde de cada uma) e o show começa.
    */
-  let rodadaNova = salvo.tocou !== true || !caixas.every(Boolean);
+  function showSozinho(): void {
+    const t = ctx.agora();
+    verNoite();
+    if (!noiteDeShow(ctx.hora())) {
+      noiteDesde = pertoDesde = f3Desde = sozinha = null;
+      return;
+    }
+    noiteDesde ??= t;
+    if (!rodadaAberta()) {
+      sozinha = null;
+      return;
+    }
+    const perto = ctx.jogadores().filter(noFestival);
+    pertoDesde = perto.length ? (pertoDesde ?? t) : null;
+    f3Desde = perto.some((j) => j.aberta('f3')) ? (f3Desde ?? t) : null;
+    if (sozinha === null) {
+      if (pertoDesde === null || t - noiteDesde < NOITE_ANTES || t - pertoDesde < PERTO_ANTES)
+        return;
+      if (f3Desde !== null && t - f3Desde < PERTO_ANTES_F3) return;
+      sozinha = t;
+    }
+    if (t < sozinha) return;
+    const k = caixas.findIndex((x) => !x);
+    if (k < 0) {
+      comecarShow();
+      return;
+    }
+    caixas[k] = true;
+    ctx.espalhar({ e: 'vilaCaixa', i: k, acesa: true, quem: 'auto' });
+    sozinha = t + ACENDE_SOZINHA;
+    ctx.sujar();
+  }
 
   function tocarPalco(j: JogadorVila): void {
     if (!show || !pertoDoPalco(j)) return;
@@ -369,16 +450,21 @@ export function criarVila(ctx: CtxVila) {
     show.final = t;
     show.quem = quem;
     ctx.espalhar({ e: 'vilaFinal', quando: t, quem });
-    // a terceira bolinha da f3 (e a festa) para quem acendeu caixa nesta rodada
+    // a terceira bolinha da f3 (e a festa) para quem acendeu caixa nesta rodada, e para quem
+    // estava no show com a f3 aberta (as caixas podem ter acendido sozinhas: a f3 fecha igual)
     for (const j of ctx.jogadores()) {
       if (!j.aberta('f3')) continue;
       const minhas = [0, 1, 2].filter((k) => acendeu.has(`${j.id}:${k}`)).length;
-      if (minhas > 0 || pertoDoPalco(j)) ctx.evento(j.id, 'show:caixa', 3 - Math.min(2, minhas));
+      if (minhas > 0 || pertoDoPalco(j) || noFestival(j))
+        ctx.evento(j.id, 'show:caixa', 3 - Math.min(2, minhas));
     }
+    // a rodada acabou: na próxima noite, cada caixa conta de novo
+    acendeu.clear();
     ctx.sujar();
   }
 
   function cuidarDoShow(): void {
+    showSozinho();
     if (!show) return;
     const t = ctx.agora();
     if (finalSozinho(show, t)) fecharShow(momentoFinalSozinho(show), 'auto');
@@ -475,9 +561,11 @@ export function criarVila(ctx: CtxVila) {
       naGrade.clear();
       ctx.sujar();
     } else if (missao === 'f3' && !show) {
+      // escolhida de novo: as caixas se apagam e o show desta noite pode tocar outra vez
       caixas.fill(false);
       for (const k of [...acendeu]) acendeu.delete(k);
-      rodadaNova = true;
+      showDaNoite = null;
+      sozinha = null;
       ctx.sujar();
     }
   }
@@ -506,7 +594,10 @@ export function criarVila(ctx: CtxVila) {
       ins: [...ins],
       cx: [...caixas],
       poster: [...poster],
-      ...(!rodadaNova && !show ? { tocou: true } : {}),
+      // salvo no meio do show (que não vai salvo), a noite fica aberta: ele toca de novo
+      ...((show ? noiteAntesDoShow : showDaNoite) !== null
+        ? { noite: show ? noiteAntesDoShow : showDaNoite }
+        : {}),
     }),
     /** Testes: a turma da grade (o público do show) à vista no núcleo. */
     publico: () =>

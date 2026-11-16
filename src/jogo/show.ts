@@ -120,6 +120,41 @@ export function noiteDeShow(hora: number): boolean {
 }
 
 /**
+ * A noite de cada show (decisão do dono, 15 nov 2026: "o show acontece só à noite", e toda noite):
+ * o número da noite que começa no fim do dia `dia` (a madrugada ainda é da noite de antes).
+ */
+export function idDaNoite(dia: number, hora: number): number {
+  return normalizarHora(hora) >= 0.5 ? dia : dia - 1;
+}
+
+/**
+ * O show começa sozinho (decisão do dono, 15 nov 2026): de noite, com alguém no festival, as
+ * caixas acendem uma a uma e a banda toca, uma vez por noite. Tocar nas caixas antes acende
+ * mais cedo (e é assim que a f3 conta). As esperas (s):
+ * - `NOITE_ANTES`: a noite de show já aberta há tanto tempo (a noite chegando com a criança lá);
+ * - `PERTO_ANTES`: alguém no festival há tanto tempo (quem chega de noite vê começar logo);
+ * - `PERTO_ANTES_F3`: com a f3 aberta para alguém perto, a criança tem tempo de acender as caixas
+ *   ela mesma (sem pressa nenhuma: se não der, elas acendem sozinhas e a f3 fecha igual no show);
+ * - `ACENDE_SOZINHA`: entre uma caixa e a outra (e da última até a contagem das baquetas).
+ */
+export const NOITE_ANTES = 20;
+export const PERTO_ANTES = 6;
+export const PERTO_ANTES_F3 = 35;
+export const ACENDE_SOZINHA = 1.2;
+
+/**
+ * Onde a criança alcança as caixas e o palco: no palco, no pé dele e na plateia inteira (a
+ * criança na grade vê as caixas e toca nelas de lá; a caixa do fundo fica a uns 20 blocos).
+ */
+export function alcancaOPalco(
+  palco: { x0: number; z0: number; x1: number; z1: number },
+  x: number,
+  z: number,
+): boolean {
+  return x >= palco.x0 - 8 && x <= palco.x1 + 9 && z >= palco.z0 - 16 && z <= palco.z1 + 4;
+}
+
+/**
  * A missão espera a noite (a f3 da Vila Neon, de dia, sem show tocando): o quadro e o guia
  * mostram a lua e a trilha não chama; quando a noite chega, a trilha acende sozinha.
  */

@@ -2,7 +2,7 @@
  * Spec 026: a Vila Neon no aparelho (o que a criança toca). O núcleo decide tudo (estojos,
  * caixas, show, lhamas, moedinhas); aqui fica o toque generoso e a mãozinha:
  *
- * - **as três caixas do palco:** com a criança perto (no palco ou no pé dele), o dedo pega a
+ * - **as três caixas do palco:** com a criança perto (no palco, no pé dele ou na plateia), o dedo pega a
  *   caixa que estiver perto dele (alvo de 80 px, como a 031); a mãozinha aponta a próxima
  *   apagada com a f3 no selinho;
  * - **o show:** enquanto a música toca, qualquer toque na tela de quem está no palco ou na
@@ -17,7 +17,7 @@ import type { AlmaUi } from './index';
 import { missaoFixada } from './hud';
 import { figura } from './figuras';
 import { tocarSomInterface } from '../../audio/somInterface';
-import { faseDoShow, noiteDeShow } from '../../jogo/show';
+import { alcancaOPalco, faseDoShow, noiteDeShow } from '../../jogo/show';
 import { CSS_CANTO } from './canto';
 
 declare global {
@@ -63,12 +63,13 @@ export function ligarVilaNeon(
       !b.classList.contains('tela-titulo')
     );
   };
-  /** A criança está no palco ou bem perto dele (as caixas ao alcance do dedo). */
+  /**
+   * A criança está no palco, no pé dele ou na plateia (as caixas ao alcance do dedo): a mesma
+   * conta do núcleo (`alcancaOPalco`), para todo toque que a tela aceita valer lá também.
+   */
   const pertoDoPalco = () => {
     const pes = e.jogadorPes?.();
-    if (!pes) return false;
-    const r = p.palco;
-    return pes[0] >= r.x0 - 4 && pes[0] <= r.x1 + 5 && pes[2] >= r.z0 - 3 && pes[2] <= r.z1 + 2;
+    return !!pes && alcancaOPalco(p.palco, pes[0], pes[2]);
   };
   /** O show tocando agora (ou chamando o acorde final), e a criança perto o bastante. */
   const showTocando = () => {

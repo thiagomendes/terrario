@@ -834,6 +834,7 @@ export function criarNucleo(op: OpcoesNucleo) {
         salvo: extras['vila'],
         agora: () => n * PASSO,
         hora: () => hora,
+        dia: () => dia,
         jogadores: () => [...jogadores.values()].map(jogadorDaVila),
         jogador: (id) => {
           const o = jogadores.get(id);
