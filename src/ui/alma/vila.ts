@@ -1,16 +1,12 @@
 /**
  * Spec 026: a Vila Neon no aparelho (o que a criança toca). O núcleo decide tudo (estojos,
- * caixas, show, lhamas, moedinhas); aqui fica o toque generoso e a mãozinha:
+ * caixas, show, lhamas, arcos, moedinhas); aqui fica o toque generoso:
  *
- * - **as três caixas do palco:** com a criança perto (no palco, no pé dele ou na plateia), o dedo pega a
- *   caixa que estiver perto dele (alvo de 80 px, como a 031); a mãozinha aponta a próxima
- *   apagada com a f3 no selinho;
- * - **o show:** enquanto a música toca, qualquer toque na tela de quem está no palco ou na
- *   plateia toca um acorde (fora os botões, a barra e o controle); no chamado do fim, o toque
- *   dispara o acorde final. **O arrastar sempre gira a câmera** (o dono, 16 nov 2026: "depois de
- *   acender as 3 caixas a câmera parou"): o toque do show nunca segura o `pointerdown`; o acorde
- *   sai no soltar de um toque curto (no dedo) ou no clique (no mouse), e só o que vem depois do
- *   toque curto deixa de chegar ao jogo (para o toque não colocar bloco no palco);
+ * - **as três caixas do palco** (brinquedo livre fora do show): com a criança perto (no palco, no
+ *   pé dele ou na plateia), o dedo pega a caixa que estiver perto dele (alvo de 80 px, como a 031);
+ * - **o show é só para ver e dançar** (o dono, 16 nov 2026): nenhum toque toca acorde nem
+ *   dispara o fim; o dedo é todo do jogo (o arrastar gira a câmera o show inteiro);
+ * - **o suporte dos patins** (um toque calça, outro tira) e os brinquedos de tocar;
  * - **o feno na mão (f2):** o "pop" do feno que aparece perto das lhamas, já selecionado.
  */
 import type { Scene } from '@babylonjs/core/scene';
@@ -20,23 +16,15 @@ import type { AlmaUi } from './index';
 import { missaoFixada } from './hud';
 import { figura } from './figuras';
 import { tocarSomInterface } from '../../audio/somInterface';
-import {
-  alcancaOPalco,
-  faseComMusica,
-  faseDoShow,
-  noiteDeShow,
-  type FaseShow,
-} from '../../jogo/show';
-import { FOLGA_TOQUE, TEMPO_SEGURAR } from '../toque';
+import { alcancaOPalco, faseDoShow, type FaseShow } from '../../jogo/show';
 import { CSS_CANTO } from './canto';
 
 declare global {
   interface Window {
-    /** Spec 026 (testes de tela): as caixas na tela, a mãozinha e a fase do show. */
+    /** Spec 026 (testes de tela): as caixas na tela e a fase do show. */
     __vila?: {
       plano(): unknown;
       caixas(): { i: number; t: { x: number; y: number } }[];
-      mao(): { x: number; y: number } | null;
       show(): FaseShow | null;
     };
   }
@@ -44,9 +32,6 @@ declare global {
 
 /** Raio do toque na caixa (px): o alvo generoso da 031 (80 px de diâmetro). */
 const RAIO_TOQUE = 40;
-/** A mãozinha aparece este tanto depois de chegar ao palco (s) e volta depois do toque. */
-const MAO_CHEGA = 1.2;
-const MAO_VOLTA = 0.55;
 
 type Tela = { x: number; y: number };
 
@@ -62,7 +47,6 @@ export function ligarVilaNeon(
   const st = document.createElement('style');
   st.textContent = CSS_CANTO;
   document.head.appendChild(st);
-  const agoraS = () => performance.now() / 1000;
   const tela = (x: number, y: number, z: number) => e.telaDoPonto?.(x, y, z) ?? null;
   const missao = () => missaoFixada(ui.vista())?.m.id ?? null;
   const noJogo = () => {
@@ -81,10 +65,7 @@ export function ligarVilaNeon(
     const pes = e.jogadorPes?.();
     return !!pes && alcancaOPalco(p.palco, pes[0], pes[2]);
   };
-  /**
-   * O show acontecendo agora (da abertura ao aplauso), e a criança perto o bastante: a fase (a
-   * música toca nas fases de `faseComMusica`).
-   */
+  /** O show acontecendo agora (da abertura ao aplauso), e a criança perto o bastante: a fase. */
   const showTocando = (): FaseShow | null => {
     const v = e.vilaEstado?.();
     if (!v?.show) return null;
@@ -155,71 +136,6 @@ export function ligarVilaNeon(
 
   // ---------------------------------------------------------------- o toque generoso
   let engoliuAte = 0;
-  let tocouEm = -Infinity;
-  /** O dedo que encostou no show (o acorde sai no soltar, se for um toque curto). */
-  let toqueDoShow: { id: number; x: number; y: number; t0: number } | null = null;
-  /** Depois do toque curto do show, os eventos de compatibilidade (mouse, clique) não chegam. */
-  let engoliuShowAte = 0;
-  window.addEventListener(
-    'pointermove',
-    (ev) => {
-      const g = toqueDoShow;
-      if (
-        g &&
-        ev.pointerId === g.id &&
-        Math.hypot(ev.clientX - g.x, ev.clientY - g.y) > FOLGA_TOQUE
-      )
-        toqueDoShow = null;
-    },
-    { capture: true, passive: true },
-  );
-  window.addEventListener(
-    'pointercancel',
-    (ev) => {
-      if (toqueDoShow?.id === ev.pointerId) toqueDoShow = null;
-    },
-    { capture: true },
-  );
-  window.addEventListener(
-    'pointerup',
-    (ev) => {
-      const g = toqueDoShow;
-      if (!g || ev.pointerId !== g.id) return;
-      toqueDoShow = null;
-      const curto =
-        Math.hypot(ev.clientX - g.x, ev.clientY - g.y) <= FOLGA_TOQUE &&
-        performance.now() - g.t0 < TEMPO_SEGURAR;
-      const fase = showTocando();
-      if (!curto || !fase) return;
-      if (faseComMusica(fase)) e.vilaComando?.({ a: 'palco' });
-      tocouEm = agoraS();
-      // o toque curto é do show: o controle do jogo solta o dedo sem agir (nada de bloco no palco)
-      ev.stopImmediatePropagation();
-      engoliuShowAte = performance.now() + 350;
-      const alvo = ev.target as EventTarget | null;
-      alvo?.dispatchEvent(
-        new PointerEvent('pointercancel', {
-          pointerId: ev.pointerId,
-          pointerType: ev.pointerType,
-          bubbles: true,
-          clientX: ev.clientX,
-          clientY: ev.clientY,
-        }),
-      );
-    },
-    { capture: true },
-  );
-  for (const tipo of ['mousedown', 'mouseup', 'touchend', 'click'])
-    window.addEventListener(
-      tipo,
-      (ev) => {
-        if (performance.now() < engoliuShowAte) {
-          ev.stopImmediatePropagation();
-          if (ev.cancelable) ev.preventDefault();
-        }
-      },
-      { capture: true, passive: false },
-    );
   window.addEventListener(
     'pointerdown',
     (ev) => {
@@ -257,18 +173,9 @@ export function ligarVilaNeon(
         e.vilaComando?.({ a: 'caixa', i: melhor.i });
         tocarSomInterface('plim');
         feito = true;
-      } else if (showTocando()) {
-        // no show, o toque toca um acorde (o núcleo encaixa no tempo e sempre na nota certa), mas
-        // o dedo segue para o jogo: arrastar gira a câmera. No mouse o clique toca já; no dedo,
-        // o acorde sai no soltar, se foi um toque curto (o arrastar nunca toca)
-        if (ev.pointerType === 'mouse') {
-          if (faseComMusica(showTocando())) e.vilaComando?.({ a: 'palco' });
-        } else
-          toqueDoShow = { id: ev.pointerId, x: ev.clientX, y: ev.clientY, t0: performance.now() };
-        return;
       }
+      // (no show o dedo é todo do jogo: nenhum toque muda o show, e o arrastar gira a câmera)
       if (!feito) return;
-      tocouEm = agoraS();
       engoliuAte = performance.now() + 300;
       ev.stopImmediatePropagation();
       ev.preventDefault();
@@ -312,59 +219,13 @@ export function ligarVilaNeon(
     setTimeout(() => tocarSomInterface('plim'), 180);
   });
 
-  // ---------------------------------------------------------------- a mãozinha da caixa
-  const mao = document.createElement('div');
-  mao.className = 'guia-mao';
-  mao.innerHTML = document.querySelector<HTMLElement>('[data-guia-mao]')?.innerHTML ?? '';
-  mao.setAttribute('data-vila-mao', '');
-  const onda = document.createElement('div');
-  onda.className = 'guia-onda';
-  document.body.append(onda, mao);
-  let maoTela: Tela | null = null;
-  let chegouEm = -Infinity;
-  let estava = false;
-  scene.onBeforeRenderObservable.add(() => {
-    const agora = agoraS();
-    const perto = pertoDoPalco();
-    if (perto && !estava) chegouEm = agora;
-    estava = perto;
-    const v = e.vilaEstado?.();
-    let escolha: Tela | null = null;
-    // (de dia a f3 espera a noite: a mãozinha não chama para as caixas)
-    if (
-      missao() === 'f3' &&
-      v &&
-      !v.show &&
-      noiteDeShow(e.hora ?? 0.5) &&
-      agora - chegouEm > MAO_CHEGA &&
-      agora - tocouEm > MAO_VOLTA
-    ) {
-      const lista = caixasNaTela().filter((c) => !v.cx[c.i]);
-      escolha =
-        lista.sort(
-          (a, b) =>
-            Math.hypot(a.t.x - innerWidth / 2, a.t.y - innerHeight * 0.6) -
-            Math.hypot(b.t.x - innerWidth / 2, b.t.y - innerHeight * 0.6),
-        )[0]?.t ?? null;
-    }
-    maoTela = escolha;
-    for (const el of [mao, onda]) {
-      if (!escolha) {
-        el.classList.remove('mostra');
-        continue;
-      }
-      el.style.setProperty('--x', `${escolha.x}px`);
-      el.style.setProperty('--y', `${escolha.y}px`);
-      el.classList.add('mostra');
-    }
-  });
   void guia;
+  void scene;
 
-  // testes: as caixas na tela, a mãozinha e o show
+  // testes: as caixas na tela e o show
   window.__vila = {
     plano: () => plano,
     caixas: () => caixasNaTela(),
-    mao: () => maoTela,
     show: () => showTocando(),
   };
 }

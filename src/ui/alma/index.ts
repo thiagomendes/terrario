@@ -15,7 +15,6 @@ import { CSS_FESTA } from './festa';
 import { criarFestas, type FestasAlma } from './festas';
 import { CSS_LOJA, criarLoja, type LojaAlma } from './loja';
 import type { MissaoMovida } from '../../jogo/alma';
-import { missaoEsperaNoite } from '../../jogo/show';
 import type { Aparencia } from '../../personagem/aparencia';
 
 export interface OpcoesAlmaUi {
@@ -75,11 +74,6 @@ export function ligarAlmaUi(op: OpcoesAlmaUi): AlmaUi {
     },
     aoAbrir: () => undefined,
     aoFechar: () => op.aoFechar(),
-    // spec 026: a f3 da Vila Neon espera a noite (a lua no cartão)
-    esperaNoite: (id) => {
-      const e = window.__brumaluz;
-      return missaoEsperaNoite(vista?.mundo, id, e?.hora ?? 0.5, !!e?.vilaEstado?.()?.show);
-    },
   });
   const bau = criarBau({
     hud,

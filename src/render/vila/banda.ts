@@ -170,6 +170,51 @@ function juntasDaAcao(papel: PapelBanda, acao: AcaoBanda, desde: number, b: Bati
         cabX: -0.12,
       };
     }
+    case 'teclado':
+    case 'tecladoMao': {
+      // as mãos nas teclas (os dedos descem nas colcheias, uma mão de cada vez), o corpo
+      // balançando de um lado ao outro no tempo e a cabeça acompanhando
+      const col = b.batida * 2;
+      const dedo = Math.pow(1 - frac(col), 3) * 0.12;
+      const mao = Math.floor(col) % 2;
+      const lado = Math.sin(b.batida * Math.PI * 0.5);
+      const j: Juntas = {
+        bdX: -1.0 - (mao ? dedo : 0),
+        bdZ: 0.28,
+        beX: -1.0 - (mao ? 0 : dedo),
+        beZ: -0.28,
+        troncoX: 0.1,
+        troncoZ: lado * 0.09,
+        cabX: 0.04 + bate * 0.16,
+        cabZ: lado * 0.08,
+        corpoY: quica,
+      };
+      if (acao === 'tecladoMao') {
+        // a mão direita no alto (o punho chamando o povo, quicando na batida)
+        j.bdX = -0.2;
+        j.bdZ = 2.6 + Math.sin(b.batida * Math.PI * 2) * 0.14;
+        j.cabX = -0.14;
+      }
+      return j;
+    }
+    case 'keytar': {
+      // o teclado de pendurar no peito: a esquerda no braço dele (para cima e para o lado), a
+      // direita nas teclas com os dedos rápidos; joelhos dobrados e balançando
+      const lado = Math.sin(b.batida * Math.PI * 0.5);
+      return {
+        beX: -1.15,
+        beZ: -0.7,
+        bdX: -0.62 + Math.sin(b.batida * Math.PI * 4) * 0.08,
+        bdZ: 0.55,
+        troncoX: -0.08 + bate * 0.06,
+        troncoZ: lado * 0.1,
+        cabX: -0.1 + bate * 0.18,
+        cabZ: lado * 0.08,
+        corpoY: -0.06 + quica,
+        pernaD: -0.22,
+        pernaE: 0.2,
+      };
+    }
     case 'baquetasAlto':
       return {
         ...SENTADO,

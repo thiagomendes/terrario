@@ -369,7 +369,8 @@ export const MISSOES: readonly Missao[] = [
   },
   // ------------------------------------------------------------ Vila Neon (3, 15 moedinhas)
   // spec 026 (parte 1, rodada 4): um estojo em cada zona, as lhamas do cercadinho da beira do
-  // campo até a grade, e o grande show; moedinhas só no fim de cada missão
+  // campo até a grade, e a volta no rinque de patins (16 nov 2026); moedinhas só no fim de cada
+  // missão
   {
     id: 'f1',
     mundo: 'vila-neon',
@@ -406,20 +407,24 @@ export const MISSOES: readonly Missao[] = [
     minutos: [1, 2],
   },
   {
-    id: 'f3',
+    // spec 026 (o dono, 16 nov 2026): a volta no rinque, no lugar do grande show (o show agora é
+    // do bairro, toda noite, sem missão). Id novo: quem fez a f3 de antes faz esta também (as
+    // moedinhas de antes ficam). Os patins vêm do suporte do rinque (ou da Patinadora)
+    id: 'f4',
     mundo: 'vila-neon',
-    nome: 'O grande show',
+    nome: 'Volta no rinque',
     desenho: {
       tipo: 'arte',
-      principal: 'caixaApagada',
-      selo: 'dedinho',
-      resultado: 'palcoAceso',
-      bolinha: 'caixaAcesa',
-      placa: 'caixaAcesa',
+      principal: 'arcoNeon',
+      selo: 'patins',
+      resultado: 'patinsArco',
+      bolinha: 'arcoAceso',
+      placa: 'arcoAceso',
     },
-    conta: { tipo: 'evento', chave: 'show:caixa', meta: 3 },
+    // um arco por bolinha, só de patins (o núcleo confere)
+    conta: { tipo: 'evento', chave: 'rinque:arco', meta: 3 },
     moedas: 6,
-    habilidade: 'construtor',
+    habilidade: 'explorador',
     minutos: [1, 2],
   },
 ];

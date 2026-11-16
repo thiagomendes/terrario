@@ -195,12 +195,11 @@ export function sanear(c: unknown): Comando | null {
         ? (o as unknown as Comando)
         : null;
     case 'vila':
-      // spec 026: a caixa do palco (0 a 2) ou o toque no palco; nada mais vai junto
-      if (o.a === 'caixa')
-        return inteiro(o.i, 0, 2)
-          ? ({ t: 'vila', a: 'caixa', i: o.i } as unknown as Comando)
-          : null;
-      return o.a === 'palco' ? ({ t: 'vila', a: 'palco' } as unknown as Comando) : null;
+      // spec 026: a caixa do palco (0 a 2); nada mais vai junto (o show é só para ver: o toque
+      // no palco de antes não existe mais)
+      return o.a === 'caixa' && inteiro(o.i, 0, 2)
+        ? ({ t: 'vila', a: 'caixa', i: o.i } as unknown as Comando)
+        : null;
     case 'pularPerto':
       // spec 021: só o id de um amigo (texto curto)
       return texto(o.alvo, 64) ? (o as unknown as Comando) : null;

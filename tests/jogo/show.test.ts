@@ -11,9 +11,6 @@ import {
   PAUSA,
   ROTEIRO,
   SETLIST,
-  acordeDoToque,
-  encaixarToque,
-  faltaParaOFinal,
   faseDoShow,
   finalSozinho,
   momentoDoShow,
@@ -80,40 +77,10 @@ describe('o Show da Vila: o roteiro do show de verdade (spec 026, 16 nov 2026)',
     expect(m.batida).toBeCloseTo((p.ini - r.inicio + r.compasso * 2.5) / (60 / 140), 6);
   });
 
-  it('todo toque nas músicas encaixa no próximo oitavo da música de agora, sempre no acorde do compasso', () => {
-    ROTEIRO.forEach((r, k) => {
-      const oitavo = r.compasso / 8;
-      for (let t = 100 + r.inicio; t < 100 + Math.min(r.fim, CHAMADO) - oitavo; t += 0.137) {
-        const e = encaixarToque(s, t)!;
-        expect(e).not.toBeNull();
-        expect(e.quando).toBeGreaterThanOrEqual(t - 1e-9);
-        expect(e.quando - t).toBeLessThanOrEqual(oitavo + 1e-9);
-        const q = (e.quando - 100 - r.inicio) / oitavo;
-        expect(Math.abs(q - Math.round(q))).toBeLessThan(1e-6);
-        const compasso = Math.floor((e.quando - 100 - r.inicio) / r.compasso + 1e-9);
-        const { musica, acorde } = acordeDoToque(e.acorde);
-        expect(musica).toBe(k);
-        expect(acorde).toBe(r.musica.giro[compasso % r.musica.giro.length]);
-      }
-    });
-  });
-
-  it('na contagem o toque cai no primeiro tempo; na abertura, na entrada e nas pausas, não toca', () => {
-    expect(encaixarToque(s, 100 + ROTEIRO[1].contagem + 0.3)!.quando).toBeCloseTo(
-      100 + ROTEIRO[1].inicio,
-      9,
-    );
-    expect(encaixarToque(s, 105)).toBeNull();
-    expect(encaixarToque(s, 100 + INTRO + 3)).toBeNull();
-    expect(encaixarToque(s, 100 + ROTEIRO[0].fim + 2)).toBeNull();
-  });
-
-  it('sem toque, o acorde final vem sozinho no fim do chamado', () => {
+  it('o acorde final vem sozinho no fim do chamado (o show é só para ver)', () => {
     expect(finalSozinho(s, 100 + CHAMADO + ESPERA_FINAL - 0.05)).toBe(false);
     expect(finalSozinho(s, 100 + CHAMADO + ESPERA_FINAL)).toBe(true);
     expect(momentoFinalSozinho(s)).toBeCloseTo(100 + CHAMADO + ESPERA_FINAL, 9);
-    expect(faltaParaOFinal(s, 100 + CHAMADO + 1)).toBeCloseTo(ESPERA_FINAL - 1, 9);
-    expect(faltaParaOFinal(s, 100 + 5)).toBeNull();
   });
 
   it('depois do acorde final vem o fim (a banda sai), e o show acaba', () => {

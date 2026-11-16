@@ -424,7 +424,7 @@ export interface EstadoDepuracao {
   /** Spec 026: o estado do bairro que o núcleo mandou (show, estojos, caixas, lhamas). */
   vilaEstado?: () => import('../nucleo/vila').VilaVista | null;
   /** Spec 026: manda a caixa do palco ou o toque no palco ao núcleo. */
-  vilaComando?: (c: { a: 'caixa'; i: number } | { a: 'palco' }) => void;
+  vilaComando?: (c: { a: 'caixa'; i: number }) => void;
   /** Spec 026: o relógio do núcleo agora (s). */
   vilaTempo?: () => number;
   /** Spec 026 (testes e vídeos): o show tocando pula para `s` s desde o começo. */
@@ -1760,7 +1760,7 @@ export function criarCena(
   estado.vilaComando = (c) => {
     if (!planoVila) return;
     enviarTelemetria(true);
-    enviar(c.a === 'caixa' ? { t: 'vila', a: 'caixa', i: c.i } : { t: 'vila', a: 'palco' });
+    enviar({ t: 'vila', a: 'caixa', i: c.i });
   };
   estado.vilaTempo = () => cliente.vila.tempo(performance.now() / 1000);
   estado.vilaPecas = () =>
@@ -5680,8 +5680,8 @@ export function criarCena(
   }
   function tratarEvento(e: EventoNucleo): void {
     switch (e.e) {
-      // spec 026: o show da Vila Neon (o acorde, o final, o estojo, a caixa, a lhama, o pôster)
-      case 'vilaAcorde':
+      // spec 026: a Vila Neon (o final do show, o estojo, a caixa, a lhama, o pôster, o arco)
+      case 'vilaArco':
       case 'vilaFinal':
       case 'vilaEstojo':
       case 'vilaCaixa':

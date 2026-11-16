@@ -670,6 +670,26 @@ export const FANTASIAS_DE_MORADOR: readonly FantasiaDef[] = [
       ],
     }),
   },
+  // spec 026 (a tecladista, 16 nov 2026): o paletó de manga arregaçada sobre a camiseta branca,
+  // a gravata fina e os óculos escuros de armação quadrada (o sintetizador da época); o
+  // cabelo médio, nunca maior que o boneco
+  {
+    id: 'tecladista-vila',
+    grupo: 'temas',
+    tema: 'vila-neon',
+    nomes: { feminino: 'Tecladista', masculino: 'Tecladista' },
+    cores: ['#22c2b0'],
+    corEmblema: '#ffe14a',
+    visual: mesmo({
+      roupa: { camisa: '#f6f4ee', manga: 'principal', calca: '#24232a', sapato: '#f6f4ee' },
+      cabeca: 'livre',
+      pecas: [
+        { tipo: 'jaqueta-tachas', cor: 'principal' },
+        { tipo: 'munhequeira', cor: 'emblema' },
+        { tipo: 'tenis-cano', cor: '#f6f4ee' },
+      ],
+    }),
+  },
   // spec 026 (o público do show): a turma da grade, quatro jeitos da época, só nos moradores.
   // Vistos de trás na plateia: o colete de brim com remendos, o boné (para a frente ou para
   // trás), a jaqueta de tachinhas e a faixa na testa; nada de rosa (é da dançarina)
@@ -728,6 +748,40 @@ export const FANTASIAS_DE_MORADOR: readonly FantasiaDef[] = [
       pecas: [
         { tipo: 'jaqueta-tachas', cor: 'principal' },
         { tipo: 'munhequeira', cor: '#24232a' },
+      ],
+    }),
+  },
+  // (16 nov 2026, o dobro no show) a viseira e as polainas, e o moletom largo de ombro caído
+  // (nunca rosa: o rosa é da dançarina)
+  {
+    id: 'plateia-viseira',
+    grupo: 'temas',
+    tema: 'vila-neon',
+    nomes: { feminino: 'Fã do show', masculino: 'Fã do show' },
+    cores: ['#f6f4ee', '#ffd23d', '#22c2b0'],
+    corEmblema: '#2f8cff',
+    visual: mesmo({
+      roupa: { camisa: 'principal', manga: 'principal', calca: '#3a3944', sapato: '#f6f4ee' },
+      cabeca: 'livre',
+      pecas: [
+        { tipo: 'viseira', cor: 'emblema' },
+        { tipo: 'munhequeira', cor: 'emblema' },
+      ],
+    }),
+  },
+  {
+    id: 'plateia-moletom',
+    grupo: 'temas',
+    tema: 'vila-neon',
+    nomes: { feminino: 'Fã do show', masculino: 'Fã do show' },
+    cores: ['#22c2b0', '#ffd23d', '#2f8cff'],
+    corEmblema: '#e8302a',
+    visual: mesmo({
+      roupa: { camisa: 'principal', manga: 'principal', calca: '#2a3350', sapato: '#f6f4ee' },
+      cabeca: 'livre',
+      pecas: [
+        { tipo: 'moletom-ombro', cor: 'principal' },
+        { tipo: 'faixa-testa', cor: 'emblema' },
       ],
     }),
   },

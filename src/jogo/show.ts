@@ -13,14 +13,14 @@
  * 3. **As três músicas** (`SETLIST`), cada uma com a contagem das baquetas no andamento dela, com
  *    andamento, tom e balanço próprios, e uma pausa (`PAUSA` s) entre elas: a banda acena e o povo
  *    aplaude.
- * 4. **O chamado e o acorde final:** a última parte da última música chama; o primeiro toque
- *    dispara o acorde final (em até 100 ms); sem toque, ele vem sozinho no fim do chamado. Depois
- *    (`APLAUSO` s): os fogos de estrelinhas, a reverência, o aceno, e a banda sai pela escadinha.
+ * 4. **O chamado e o acorde final:** a última parte da última música é a banda chamando o povo
+ *    (o vocalista aponta a plateia), e o acorde final vem sozinho no fim dela. Depois (`APLAUSO`
+ *    s): os fogos de estrelinhas, a reverência, o aceno, e a banda sai pela escadinha.
  *
- * - **Nenhum toque perdido:** nas músicas, qualquer toque no palco toca o acorde do compasso em que
- *   cai, encaixado no próximo oitavo de compasso da música, sempre na nota certa.
- * - Depois do show, as três caixas ficam como brinquedo livre (cada toque liga e desliga a camada
- *   dela), sem moedinha.
+ * - **O show é só para ver e dançar** (o dono, 16 nov 2026: o toque do acorde final "não ficava
+ *   claro e não fazia sentido"): nenhum toque muda o show, ninguém toca acorde no palco.
+ * - Fora do show, as três caixas são brinquedo livre (cada toque liga e desliga a camada dela),
+ *   sem moedinha.
  */
 
 import { noiteNaHora, normalizarHora } from './tempo';
@@ -65,9 +65,9 @@ export interface Musica {
   bpm: number;
   /** As partes, em ordem (compassos de 4 tempos). */
   forma: readonly ParteMusica[];
-  /** Os acordes do toque no palco (notas MIDI): três por música. */
+  /** Os acordes da música (notas MIDI): três por música (o pacote grava um de cada). */
   acordes: readonly (readonly number[])[];
-  /** O acorde do toque em cada compasso (índice em `acordes`), em laço de quatro. */
+  /** O acorde de cada compasso (índice em `acordes`), em laço de quatro. */
   giro: readonly number[];
 }
 
@@ -290,56 +290,14 @@ export function faseDoShow(s: Show, t: number): FaseShow {
   return momentoDoShow(s, t).fase;
 }
 
-/** A música toca agora (a contagem, as partes ou o chamado): o toque no palco toca um acorde. */
-export function faseComMusica(f: FaseShow | null): boolean {
-  return f === 'contagem' || f === 'tocando' || f === 'chamando';
-}
-
-/** O acorde final veio sozinho? (o chamado esperou ESPERA_FINAL sem toque) */
+/** Chegou a hora do acorde final? (ele vem sozinho no fim do chamado) */
 export function finalSozinho(s: Show, t: number): boolean {
   return s.final === null && t - s.inicio >= CHAMADO + ESPERA_FINAL;
 }
 
-/** O momento do acorde final se ele vier sozinho (para a tela e o som). */
+/** O momento do acorde final (para a tela e o som). */
 export function momentoFinalSozinho(s: Show): number {
   return s.inicio + CHAMADO + ESPERA_FINAL;
-}
-
-/** O acorde de um toque: a música e o acorde dela (o índice que vai no evento: 3 por música). */
-export const ACORDES_POR_MUSICA = 3;
-export function acordeDoToque(indice: number): { musica: number; acorde: number } {
-  const k = Math.max(0, Math.floor(indice));
-  return {
-    musica: Math.floor(k / ACORDES_POR_MUSICA) % SETLIST.length,
-    acorde: k % ACORDES_POR_MUSICA,
-  };
-}
-
-/**
- * O toque no palco no tempo `t`: quando o acorde soa (o próximo oitavo da música, no máximo um
- * oitavo de compasso depois) e qual acorde (o do compasso em que ele soa, na música de agora:
- * `musica * 3 + acorde`). Na contagem, o toque cai no primeiro tempo. Fora das músicas: null.
- */
-export function encaixarToque(s: Show, t: number): { quando: number; acorde: number } | null {
-  const m = momentoDoShow(s, t);
-  if (!faseComMusica(m.fase) || m.musica < 0) return null;
-  const r = ROTEIRO[m.musica];
-  const oitavo = r.compasso / 8;
-  const d = Math.max(0, m.dm);
-  const k = Math.ceil(d / oitavo - 1e-9);
-  const quando = s.inicio + r.inicio + k * oitavo;
-  const compasso = Math.min(
-    Math.floor((k * oitavo) / r.compasso + 1e-9),
-    Math.round((r.fim - r.inicio) / r.compasso) - 1,
-  );
-  const g = r.musica.giro;
-  return { quando, acorde: m.musica * ACORDES_POR_MUSICA + g[compasso % g.length] };
-}
-
-/** Quanto falta para o acorde final vir sozinho (0 a ESPERA_FINAL; null fora do chamado). */
-export function faltaParaOFinal(s: Show, t: number): number | null {
-  if (faseDoShow(s, t) !== 'chamando') return null;
-  return Math.max(0, s.inicio + CHAMADO + ESPERA_FINAL - t);
 }
 
 // ------------------------------------------------------------------ o palco e as caixas
@@ -348,7 +306,7 @@ export function faltaParaOFinal(s: Show, t: number): number | null {
 export const CAMADAS_CAIXAS = ['bateria', 'guitarra', 'teclado'] as const;
 export type CamadaCaixa = (typeof CAMADAS_CAIXAS)[number];
 
-/** Toques por segundo que o núcleo aceita de um jogador no palco (o resto é ignorado). */
+/** Toques por segundo que o núcleo aceita de um jogador nas caixas (o resto é ignorado). */
 export const TOQUES_POR_SEGUNDO = 6;
 
 // ------------------------------------------------------------------ o show é de noite
@@ -380,18 +338,15 @@ export function idDaNoite(dia: number, hora: number): number {
 }
 
 /**
- * O show começa sozinho (decisão do dono, 15 nov 2026): de noite, com alguém no festival, as
- * caixas acendem uma a uma e a banda toca, uma vez por noite. Tocar nas caixas antes acende
- * mais cedo (e é assim que a f3 conta). As esperas (s):
+ * O show começa sozinho, toda noite (decisões do dono, 15 e 16 nov 2026): com alguém no
+ * festival, as caixas acendem uma a uma e a banda toca, uma vez por noite. É um acontecimento do
+ * bairro, sem missão: tocar nas caixas não começa nem adianta o show. As esperas (s):
  * - `NOITE_ANTES`: a noite de show já aberta há tanto tempo (a noite chegando com a criança lá);
  * - `PERTO_ANTES`: alguém no festival há tanto tempo (quem chega de noite vê começar logo);
- * - `PERTO_ANTES_F3`: com a f3 aberta para alguém perto, a criança tem tempo de acender as caixas
- *   ela mesma (sem pressa nenhuma: se não der, elas acendem sozinhas e a f3 fecha igual no show);
- * - `ACENDE_SOZINHA`: entre uma caixa e a outra (e da última até a contagem das baquetas).
+ * - `ACENDE_SOZINHA`: entre uma caixa e a outra (e da última até a abertura).
  */
 export const NOITE_ANTES = 20;
 export const PERTO_ANTES = 6;
-export const PERTO_ANTES_F3 = 35;
 export const ACENDE_SOZINHA = 1.2;
 
 /**
@@ -404,17 +359,4 @@ export function alcancaOPalco(
   z: number,
 ): boolean {
   return x >= palco.x0 - 8 && x <= palco.x1 + 9 && z >= palco.z0 - 16 && z <= palco.z1 + 4;
-}
-
-/**
- * A missão espera a noite (a f3 da Vila Neon, de dia, sem show tocando): o quadro e o guia
- * mostram a lua e a trilha não chama; quando a noite chega, a trilha acende sozinha.
- */
-export function missaoEsperaNoite(
-  mundo: string | null | undefined,
-  id: string,
-  hora: number,
-  showTocando = false,
-): boolean {
-  return mundo === 'vila-neon' && id === 'f3' && !showTocando && !noiteDeShow(hora);
 }

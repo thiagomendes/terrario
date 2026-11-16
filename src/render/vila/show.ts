@@ -10,7 +10,7 @@
  * - o show: os holofotes varrem no tempo da música e pousam no chão escuro, o siga-me branco
  *   fica no vocalista (sem fumaça: decisão do dono, ela só atrapalhava), os chafarizes soltam estrelinhas
  *   frias douradas (sempre para cima e longe de gente), o raio da logo e a beira do palco
- *   pulsam com a batida; no chamado o palco pisca na passarela; no acorde final, todos os
+ *   pulsam com a batida; no acorde final (que vem sozinho), todos os
  *   feixes ficam brancos e sobem, um clarão macio, a explosão de estrelinhas douradas e brancas
  *   da passarela e o confete de seis cores (só agora).
  *
@@ -52,7 +52,8 @@ import { poseDaBanda } from './banda';
 import { lugarDoPublico, publicoDaVila } from '../../world/publicoVila';
 import { aplicarGesto } from '../../personagem/gestos';
 import type { Pose } from '../../personagem/poses';
-import { COR, Ref, perfilRaio, type Desenho } from './ref';
+import { COR, Ref, perfilEstrela, perfilRaio, type Desenho } from './ref';
+import { ARCO } from './pecasFestival';
 import { criarPaletaLuz, type PaletaLuz } from './luzes';
 
 export interface OpcoesShowVila {
@@ -71,8 +72,8 @@ export interface OpcoesShowVila {
  */
 const CHEGOU_AO_LUGAR = 1.6;
 
-/** Quem da turma do show segura um bastão de luz (oito dos 20). */
-const BASTAO: readonly number[] = [0, 3, 5, 8, 11, 13, 16, 19];
+/** Quem da turma do show segura um bastão de luz (oito dos 20 de sempre e sete dos que vêm). */
+const BASTAO: readonly number[] = [0, 3, 5, 8, 11, 13, 16, 19, 21, 24, 27, 30, 33, 36, 38];
 
 /** O neon dos bastões de luz da turma do show (sorteado por pessoa; nunca isqueiro nem fogo). */
 const NEON_BASTAO = ['#4df07a', '#3aa8ff', '#ffe44a', '#2ee8d8', '#ff9a3a'];
@@ -94,6 +95,9 @@ export interface ShowVila {
   estado(): {
     estojos: number;
     instrumentos: number;
+    /** Os arcos do rinque acesos agora e quantas vezes algum piscou (alguém passou). */
+    arcosAcesos: number;
+    arcosPiscados: number;
     caixasAcesas: number;
     fase: string | null;
     /** Feixes acesos, estrelinhas e confetes no ar e triângulos das malhas do show. */
@@ -151,6 +155,8 @@ const CORES_CONFETE: V3[] = [
   [1, 0.54, 0.16],
 ];
 const OURO: V3 = [1, 0.8, 0.34];
+/** O neon dos arcos do rinque aceso (branco-azul, do tubo que acende). */
+const NEON_ACESO = '#9fe6ff';
 const BRANCO: V3 = [1, 0.97, 0.9];
 
 const LADOS_FEIXE = 8;
@@ -317,6 +323,34 @@ export function criarShowVila(scene: Scene, plano: PlanoVila, opcoes: OpcoesShow
     return { corpo, estrela, facho, x, y, z };
   });
 
+  // ------------------------------------------------------------------ os arcos do rinque (f4)
+  /**
+   * O neon aceso de cada arco da volta no rinque, por cima do tubo apagado da peça: o tubo
+   * branco-azul por dentro do vão, as lampadinhas de cubo e a estrela. Fica aceso para quem já
+   * passou por ele de patins nesta volta (o quadro de cada um diz quais); quem passa (qualquer
+   * um) faz o arco piscar e soltar estrelinhas.
+   */
+  const arcos = p.arcos.map((a, i) => {
+    const peca = plano.pecas.find((q) => q.tipo === 'arco-rinque' && (q.n ?? 0) === i);
+    const d = mundo();
+    if (peca) {
+      const r = new Ref(d, peca, 1);
+      const { meia, poste, vao, alto } = ARCO;
+      for (const sx of [-1, 1])
+        r.luz(0.13, vao - 0.26, 0.21, sx * meia - sx * (poste / 2 + 0.035), 0.23, 0, NEON_ACESO);
+      r.luz(2 * meia - poste - 0.06, 0.13, 0.21, 0, vao - 0.13, 0, NEON_ACESO);
+      for (const z of [-1, 1])
+        for (let k = 0; k < 7; k++)
+          r.luz(0.17, 0.17, 0.065, -2.4 + k * 0.8, vao + 0.265, z * (poste / 2 + 0.025), '#fff1c4');
+      for (const z of [-0.09, 0.09])
+        r.placa(perfilEstrela(0.52), 0.09, 0, alto + 0.7, z - 0.045, COR.amarelo, true);
+    }
+    const m = malhaLuz(`vila-arco-aceso-${i}`, d.luz);
+    return { a, m, piscou: -Infinity };
+  });
+  /** Os arcos que piscaram (alguém passou) e quando, para os testes. */
+  let arcosPiscados = 0;
+
   // ------------------------------------------------------------------ os instrumentos no palco
   const pecaDe = (tipo: string, n?: number) =>
     plano.pecas.find((q) => q.tipo === tipo && (n === undefined || (q.n ?? 0) === n));
@@ -427,7 +461,6 @@ export function criarShowVila(scene: Scene, plano: PlanoVila, opcoes: OpcoesShow
   let noiteBase: Mesh;
   let showLuz: Mesh;
   let pulso: Mesh;
-  let chamado: Mesh;
   {
     // de noite: o reflexo do cromo na treliça da frente e nas torres, as lampadinhas da grade,
     // metade dos holofotes acesos e o friso dourado com as luzinhas dos amplificadores
@@ -506,18 +539,6 @@ export function criarShowVila(scene: Scene, plano: PlanoVila, opcoes: OpcoesShow
       r.luz(0.05, 0.07, 5, pass[0] + s * 3.035, y, (zFrente + palco.z0) / 2, BEIRA);
     r.luz(6, 0.07, 0.05, pass[0], y, palco.z0 - 0.035, BEIRA);
     pulso = malhaLuz('vila-palco-pulso', d.luz, paletaPulso);
-  }
-  {
-    // o chamado do acorde final: a ponta da passarela acende inteira, com as lampadinhas
-    const d = mundo();
-    const r = ref(d, 0, 0, 0);
-    const COR_CHAMA = '#fff1a0';
-    r.luz(6.1, 0.22, 0.06, pass[0], topo - 0.3, palco.z0 - 0.05, COR_CHAMA);
-    for (const s of [-1, 1])
-      r.luz(0.06, 0.22, 5, pass[0] + s * 3.05, topo - 0.3, (zFrente + palco.z0) / 2, COR_CHAMA);
-    for (let i = 0; i < 7; i++)
-      r.luz(0.2, 0.2, 0.2, pass[0] - 2.7 + i * 0.9, topo + 0.02, palco.z0 + 0.14, '#ffffff');
-    chamado = malhaLuz('vila-palco-chamado', d.luz);
   }
 
   // ------------------------------------------------------------------ as malhas que mexem
@@ -656,7 +677,6 @@ export function criarShowVila(scene: Scene, plano: PlanoVila, opcoes: OpcoesShow
   let ultimoT = -1;
   /** 0 apagado, 1 no show (sobe e desce macio). */
   let forca = 0;
-  let acordes: number[] = [];
   let golpe = 0;
   /** O show (pelo começo dele) que já teve a festa do acorde final. */
   let finalFeito = -1;
@@ -1104,6 +1124,13 @@ export function criarShowVila(scene: Scene, plano: PlanoVila, opcoes: OpcoesShow
       const idadeEstouro = noShow && dS >= INTRO ? dS - INTRO : Infinity;
       const noEstouro = idadeEstouro < 2.2;
 
+      // ---- os arcos do rinque: acesos para quem já passou; piscando quando alguém passa
+      arcos.forEach((q, i) => {
+        const idade = t - q.piscou;
+        const pisca = idade < 1.3 && Math.floor(idade / 0.18) % 2 === 0;
+        ligar(q.m, chunkTem(q.a.x, q.a.z) && (!!vista?.arcos?.[i] || pisca));
+      });
+
       // ---- os estojos e os instrumentos
       const ins = vista?.ins ?? [false, false, false];
       insVistos = ins.filter(Boolean).length;
@@ -1137,8 +1164,6 @@ export function criarShowVila(scene: Scene, plano: PlanoVila, opcoes: OpcoesShow
       ligar(noiteBase, pronto && !naIntro && (noite > 0.3 || forca > 0.05 || aq > 0.05));
       ligar(showLuz, pronto && !naIntro && forca > 0.3);
       ligar(pulso, pronto && (naIntro ? raioDaIntro(dS) : forca > 0.3 || aq > 0.04));
-      // o chamado: a ponta da passarela pisca no tempo (aceso meio tempo, apagado meio tempo)
-      ligar(chamado, noShow && fase === 'chamando' && naBatida < 0.5);
       golpe = Math.max(0, golpe - dt * 4);
       const tex = paletaPulso.material.emissiveTexture;
       // nas pausas e na entrada o palco respira devagar (sem batida)
@@ -1152,18 +1177,7 @@ export function criarShowVila(scene: Scene, plano: PlanoVila, opcoes: OpcoesShow
             ? 0.25 + 0.75 * aq
             : 0.72 + 0.1 * Math.sin(t * 2.4);
 
-      // ---- os acordes de cada toque (no instante do núcleo) e o acorde final
-      if (acordes.length) {
-        const fica: number[] = [];
-        for (const q of acordes) {
-          if (tempoNucleo < q) fica.push(q);
-          else if (tempoNucleo - q < 1 && pronto) {
-            golpe = 1;
-            for (const c of chafarizes.slice(2)) punhado(c[0], c[1], c[2], leve ? 5 : 9, 6.5, 0.2);
-          }
-        }
-        acordes = fica;
-      }
+      // ---- o acorde final
       idadeFinal = show && show.final !== null ? tempoNucleo - show.final : Infinity;
       if (show && show.final !== null && finalFeito !== show.inicio && idadeFinal >= 0) {
         finalFeito = show.inicio;
@@ -1476,8 +1490,21 @@ export function criarShowVila(scene: Scene, plano: PlanoVila, opcoes: OpcoesShow
       }
     },
     evento(e) {
-      if (e.e === 'vilaAcorde') acordes.push(e.quando);
-      else if (e.e === 'vilaEstojo') {
+      if (e.e === 'vilaArco') {
+        // o arco pisca e solta estrelinhas da estrela e dos dois postes
+        const q = arcos[e.i];
+        if (q && chunkTem(q.a.x, q.a.z)) {
+          q.piscou = ultimoT;
+          arcosPiscados++;
+          const { meia, alto } = ARCO;
+          punhado(q.a.x, q.a.y + alto + 0.8, q.a.z, leve ? 10 : 18, 4.5, 0.22);
+          for (const sx of [-1, 1]) {
+            const dx = q.a.eixo === 'x' ? sx * meia : 0;
+            const dz = q.a.eixo === 'z' ? sx * meia : 0;
+            punhado(q.a.x + dx, q.a.y + 2.4, q.a.z + dz, leve ? 4 : 7, 3, 0.18);
+          }
+        }
+      } else if (e.e === 'vilaEstojo') {
         // o plim: as estrelinhas sobem de onde o estojo estava
         const q = estojos[e.i];
         if (q && chunkTem(q.x, q.z)) punhado(q.x, q.y + 0.6, q.z, leve ? 14 : 24, 5.5, 0.24);
@@ -1493,6 +1520,8 @@ export function criarShowVila(scene: Scene, plano: PlanoVila, opcoes: OpcoesShow
     estado: () => ({
       estojos: estojos.filter((e) => e.corpo.isEnabled()).length,
       instrumentos: insVistos,
+      arcosAcesos: arcos.filter((q) => q.m.isEnabled()).length,
+      arcosPiscados,
       caixasAcesas: acesas.filter((m) => m.isEnabled()).length,
       fase,
       feixes: feixes.m.isEnabled() ? feixesAcesos : 0,

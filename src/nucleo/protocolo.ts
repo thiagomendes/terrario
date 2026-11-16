@@ -171,11 +171,10 @@ type ComandoSemSeq =
    */
   | { t: 'comprarBanca'; item: string; saldo: number }
   /**
-   * Spec 026 (Vila Neon): tocar numa caixa do palco (`i`, 0 a 2) ou no palco (um acorde no
-   * show). O núcleo confere o lugar, o show e o limite de toques por segundo.
+   * Spec 026 (Vila Neon): tocar numa caixa do palco (`i`, 0 a 2), o brinquedo fora do show. O
+   * núcleo confere o lugar, o show e o limite de toques por segundo.
    */
-  | { t: 'vila'; a: 'caixa'; i: number }
-  | { t: 'vila'; a: 'palco' };
+  | { t: 'vila'; a: 'caixa'; i: number };
 
 /** Atalhos de teste e captura (o servidor da nuvem só aceita em ambiente de testes). */
 export type Depuracao =

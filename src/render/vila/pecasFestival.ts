@@ -42,9 +42,73 @@ export function desenharPecaFestival(r: Ref, tipo: TipoPecaVila, n: number): voi
       return raioPalco(r, n);
     case 'arco-lampadas':
       return arcoLampadas(r);
+    case 'arco-rinque':
+      return arcoRinque(r);
     default:
       return;
   }
+}
+
+// ------------------------------------------------------------------ o rinque: os arcos da f4
+
+/** As medidas do arco (o meio de cada poste a 2,5 do meio; vão de uns 4,2 blocos). */
+export const ARCO = {
+  meia: 2.5,
+  poste: 0.8,
+  /** Onde a trave começa (o vão vai do chão até aqui) e o alto dela. */
+  vao: 3.9,
+  alto: 4.6,
+} as const;
+/** O tubo de neon apagado (azul fundo: de noite, a criança ainda vê onde fica o arco). */
+export const NEON_APAGADO = '#2c4c86';
+
+/**
+ * Um arco de neon da volta no rinque (f4), no jeito dos blocos do jogo: cada poste é uma pilha de
+ * quatro cubos grafite (o vão entre eles marca os blocos), com a base de cromo; a trave em cima
+ * com as lampadinhas de cubo; a estrela na trave; e o tubo de neon por dentro do vão (o poste de
+ * um lado, a trave e o outro poste), apagado até a criança passar de patins (a tela acende por
+ * cima, `show.ts`).
+ */
+function arcoRinque(r: Ref): void {
+  const { meia, poste, vao, alto } = ARCO;
+  const cubo = vao / 4;
+  for (const s of [-1, 1]) {
+    const x = s * meia;
+    r.caixa(poste + 0.12, 0.14, poste + 0.12, x, 0, 0, COR.cromo, 0.03);
+    for (let k = 0; k < 4; k++)
+      r.caixa(
+        poste,
+        cubo - 0.05,
+        poste,
+        x,
+        0.14 + k * cubo,
+        0,
+        k % 2 ? COR.grafite2 : COR.grafite,
+        0.05,
+      );
+    // o tubo apagado, por dentro do poste (de frente e de trás ele aparece como uma faixa)
+    r.luz(0.09, vao - 0.3, 0.16, x - s * (poste / 2 + 0.03), 0.25, 0, NEON_APAGADO);
+  }
+  // a trave: grafite, com a faixa de cromo embaixo e as lampadinhas de cubo nas duas faces
+  r.caixa(2 * meia + poste, alto - vao, poste, 0, vao, 0, COR.grafite, 0.05);
+  r.caixa(2 * meia - poste + 0.02, 0.06, poste + 0.04, 0, vao - 0.02, 0, COR.cromo, 0);
+  r.luz(2 * meia - poste - 0.1, 0.09, 0.16, 0, vao - 0.11, 0, NEON_APAGADO);
+  for (const z of [-1, 1])
+    for (let i = 0; i < 7; i++)
+      r.caixa(
+        0.16,
+        0.16,
+        0.06,
+        -2.4 + i * 0.8,
+        vao + 0.27,
+        z * (poste / 2 + 0.02),
+        '#6a6458',
+        0.02,
+      );
+  // a estrela em cima (de frente e de trás), sobre um pezinho
+  r.caixa(0.22, 0.25, 0.22, 0, alto, 0, COR.grafite2, 0.03);
+  for (const z of [-0.09, 0.09])
+    r.placa(perfilEstrela(0.5), 0.08, 0, alto + 0.7, z - 0.04, '#7a7460');
 }
 
 // ------------------------------------------------------------------ o fliperama

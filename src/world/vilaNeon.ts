@@ -24,6 +24,7 @@
  */
 import { Bloco } from './blocks';
 import { hash2 } from './noise';
+import type { ArcoRinque } from '../jogo/rinque';
 
 /** Tamanho do bairro (o mapa). */
 export const LARGURA_VILA = 180;
@@ -99,7 +100,9 @@ export type TipoPecaVila =
   | 'floreira'
   | 'toalha'
   | 'raio-palco'
-  | 'arco-lampadas';
+  | 'arco-lampadas'
+  /** Spec 026 (f4): os arcos de neon da pista do rinque (n: qual arco, 0 a 2). */
+  | 'arco-rinque';
 
 /** Nomes dos letreiros (em português, inventados; só no mundo, nunca na interface). */
 export const LETREIROS = [
@@ -154,6 +157,8 @@ export interface PontosVila {
   patins: [number, number, number];
   /** O piso do rinque (onde os patins deslizam). */
   rinque: RetanguloVila;
+  /** Os três arcos de neon da pista (a volta no rinque, f4). */
+  arcos: ArcoRinque[];
   /** As cinco máquinas do fliperama (a frente de cada uma). */
   maquinas: [number, number, number][];
   /** O rádio gigante e o lápis da fita gigante (brinquedos de tocar). */
@@ -905,6 +910,11 @@ function montarVila(semente: number, r: RelevoVila): Montado {
     // o pórtico do rinque (alto, visto de longe) na entrada e o suporte dos patins ao lado
     peca('letreiro', mu - 0.5, rinqueV0 - 2, DIR.n, LETREIRO.rinque, 0);
     peca('suporte-patins', rinqueU0 + 5, rinqueV0 - 3, DIR.n);
+    // os três arcos de neon da volta no rinque (f4): um em cada pista em volta do globo (a do
+    // oeste e a do leste passam-se andando para o sul e para o norte; a do fundo, para o leste)
+    peca('arco-rinque', rinqueU0 + 3.5, rinqueV0 + 4, DIR.n, 0);
+    peca('arco-rinque', rinqueU0 + 10, rinqueV0 + 12, DIR.l, 1);
+    peca('arco-rinque', rinqueU0 + 16.5, rinqueV0 + 4, DIR.n, 2);
     peca('banco', rinqueU0 + 1, rinqueV0 - 3, DIR.n, 3);
     peca('banco', rinqueU0 + 15, rinqueV0 - 3, DIR.n, 4);
     peca('floreira', rinqueU0 + 18, rinqueV0 - 3, DIR.n, 1);
@@ -941,6 +951,10 @@ function montarVila(semente: number, r: RelevoVila): Montado {
   }
   const rinque = ret(rinqueU0, rinqueV0, rinqueU0 + rinqueW - 1, rinqueV0 + rinqueD - 1);
   const patins: [number, number, number] = [X(rinqueU0 + 5) + 0.5, Y, Z(rinqueV0 - 4) + 0.5];
+  const arcos: ArcoRinque[] = pecas
+    .filter((q) => q.tipo === 'arco-rinque')
+    .sort((a, b) => (a.n ?? 0) - (b.n ?? 0))
+    .map((q) => ({ x: q.x, y: q.y, z: q.z, eixo: q.dir % 2 === 0 ? 'x' : 'z', meia: 2.5 }));
 
   // ============================================================== sudeste: casas da rua
   // casas de frente para a rua da pracinha (oeste), do sul da pracinha até o fim
@@ -1526,6 +1540,7 @@ function montarVila(semente: number, r: RelevoVila): Montado {
     portaoCercado: [X(81) + 0.5, Y, Z(CV1 + 1) + 0.5],
     patins,
     rinque,
+    arcos,
     maquinas: [
       [130 + 2, 73 + 8],
       [130 + 5, 73 + 9],
@@ -1540,7 +1555,8 @@ function montarVila(semente: number, r: RelevoVila): Montado {
       roadie: [X(PU1 - 3) + 0.5, h + PH + 1, Z(PV0 + 4) + 0.5],
       guitarrista: [X(PU0 + 10) + 0.5, h + PH + 1, Z(PV0 + 4) + 0.5],
       lanche: [X(35) + 0.5, Y, Z(78) + 0.5],
-      danca: [X(rinqueU0 + 5) + 0.5, Y, Z(rinqueV0 + 5) + 0.5],
+      // (debaixo do globo, no meio da volta: o arco do oeste fica onde ela dançava)
+      danca: [X(rinqueU0 + 9) + 0.5, Y, Z(rinqueV0 + 8) + 0.5],
       patinador: [X(rinqueU0 + 13) + 0.5, Y, Z(rinqueV0 + 9) + 0.5],
       lanchonete: [X(80) + 0.5, Y, Z(51) + 0.5],
       banca: [X(19) + 0.5, Y, Z(56) + 0.5],

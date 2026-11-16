@@ -8,13 +8,12 @@
  *   a entrada da banda (`entrada`), e as três músicas da `setlist` do índice, cada uma com a contagem
  *   dela e as partes no compasso dela (a parte em laço toca a parte inteira; a que não é laço se
  *   repete a cada `c` compassos), a torcida nas pausas; tudo encadeado no relógio do núcleo
- *   convertido para o do AudioContext. Todo mundo ouve o mesmo compasso. O toque no palco
- *   (`vilaAcorde`) toca o acorde da música de agora exatamente em `quando`; o acorde final
- *   (`vilaFinal`) entra em até 100 ms, ou na hora certa quando vem sozinho (agendado de antemão), corta
- *   as músicas e chama o aplauso, a torcida e os fogos.
- * - **As caixas fora do show:** cada caixa acesa toca o verso da camada dela em laço (é o "ligar o
- *   som" da f3 e, depois do show, o brinquedo livre), no compasso do relógio do núcleo, só com a
- *   criança perto do palco. É o ambiente da zona do festival.
+ *   convertido para o do AudioContext. Todo mundo ouve o mesmo compasso. O acorde final
+ *   (`vilaFinal`) vem sozinho no fim do chamado (agendado de antemão, na hora certa), corta as
+ *   músicas e chama o aplauso, a torcida e os fogos. Ninguém toca acorde no show (16 nov 2026).
+ * - **As caixas fora do show:** cada caixa acesa toca o verso da camada dela em laço (o brinquedo
+ *   livre), no compasso do relógio do núcleo, só com a criança perto do palco. É o ambiente da
+ *   zona do festival.
  * - **Uma música por vez (019):** com o show ou as caixas tocando perto, a trilha do bairro é calada
  *   (`aoCalarTrilha`), em rampa; no show, os passarinhos, os grilos e o vento também baixam
  *   (`aoCalarNatureza`) e voltam devagar depois do aplauso. O show é a música mais alta do jogo
@@ -38,7 +37,6 @@ import {
   OITAVO,
   ROTEIRO,
   SETLIST,
-  acordeDoToque,
   faseDoShow,
   momentoFinalSozinho,
 } from '../jogo/show';
@@ -303,28 +301,6 @@ export function segmentosDoShow(
   return out.sort((a, b) => a.ini - b.ini);
 }
 
-/** A grade do toque da música `k` (o primeiro tempo, no relógio do núcleo) e o oitavo dela. */
-export function gradeDaMusica(inicio: number, k: number): { t0: number; oitavo: number } {
-  const r = ROTEIRO[Math.max(0, Math.min(ROTEIRO.length - 1, k))];
-  return { t0: inicio + r.inicio, oitavo: r.compasso / 8 };
-}
-
-/**
- * Quando o acorde do toque soa (relógio do AudioContext): em `quando`, que o núcleo já encaixou no
- * oitavo de compasso; se o evento chegou atrasado, no próximo oitavo da grade do show (nunca fora do
- * tempo).
- */
-export function momentoDoAcorde(
-  quandoAudio: number,
-  agoraAudio: number,
-  gradeAudio: number,
-  oitavo = OITAVO,
-): number {
-  const minimo = agoraAudio + 0.01;
-  if (quandoAudio >= minimo) return quandoAudio;
-  return gradeAudio + Math.ceil((minimo - gradeAudio) / oitavo - 1e-9) * oitavo;
-}
-
 /**
  * Quando o acorde final soa (relógio do AudioContext): o toque que disparou já passou (o evento vem
  * pela rede), então soa agora, em 10 ms; o que vem sozinho, agendado, soa na hora dele.
@@ -376,10 +352,9 @@ export const GANHO_SHOW = GANHO_CAIXAS * Math.pow(10, REFORCO_SHOW_DB / 20);
 /** O acorde final e o aplauso por cima do show (dB): o pico da música. */
 export const REFORCO_FINAL_DB = 2;
 /**
- * A passagem de som (de dia, sem show) e o acorde do aquecimento (a noite chegou), no barramento
- * do palco: baixinhos, abaixo de uma caixa solta (que vai a GANHO_CAIXAS / GANHO_SHOW, ~0,25).
+ * O acorde do aquecimento (a noite do show chegou), no barramento do palco: baixinho, abaixo de
+ * uma caixa solta (que vai a GANHO_CAIXAS / GANHO_SHOW, ~0,25).
  */
-export const GANHO_PASSAGEM = 0.13;
 export const GANHO_AQUECER = 0.22;
 /** O acorde de cada caixa que acende de noite (relativo ao show). */
 export const GANHO_ACENDE = 0.4;
@@ -399,6 +374,8 @@ export const GANHO_BRINQUEDO: Readonly<Record<string, number>> = {
   ladrilho: -12,
   rodinhas: -16,
   estojo: -6,
+  /** O arco do rinque que acende (f4): o plim do estojo, mais agudo e um tico mais baixo. */
+  arco: -8,
   tum: -8,
   lhama: -8,
   campainha: -16,
@@ -546,7 +523,6 @@ export function criarSomVila(op: OpcoesSomVila) {
   /** Os pedaços do show já começados (null: passou sem tocar), por `clip@ini`. */
   const agendados = new Map<string, Tocando | null>();
   let finalAgendado: { t: number; fontes: Tocando[]; sozinho: boolean } | null = null;
-  const acordes: { acorde: number; quando: number }[] = [];
   /** O laço livre de cada caixa (fora do show). */
   const livres: (Tocando | null)[] = [null, null, null];
   let descansoAte = -Infinity;
@@ -780,13 +756,7 @@ export function criarSomVila(op: OpcoesSomVila) {
       if (x) agendados.set(chave, x);
       else if (relogio.audio(s.fim) <= ag + 0.05) agendados.set(chave, null);
     }
-    // os acordes do toque de cada música abrem antes da contagem dela (o primeiro toque já soa)
-    ROTEIRO.forEach((r, k) => {
-      const ini = relogio.audio(showAtual!.inicio + r.contagem);
-      const fim = relogio.audio(showAtual!.inicio + r.fim);
-      if (ini < ag + 8 && fim > ag) for (const id of ind!.setlist[k]?.acordes ?? []) void abrir(id);
-    });
-    // o acorde final (e o que vem com ele) abre antes do chamado: o toque pode chegar a qualquer hora
+    // o acorde final (e o que vem com ele) abre antes do chamado
     const tChamado = relogio.audio(showAtual.inicio + CHAMADO);
     if (tChamado < ag + 8)
       for (const k of [clipeFinal(ind), 'aplauso', ind.torcida, ind.fogos]) if (k) void abrir(k);
@@ -869,7 +839,6 @@ export function criarSomVila(op: OpcoesSomVila) {
     if (!showAtual) return;
     for (const x of agendados.values()) if (x && x.fim > ag + 0.2) parar(x, ag, 0.2);
     agendados.clear();
-    acordes.length = 0;
     showAtual = null;
   }
 
@@ -911,16 +880,13 @@ export function criarSomVila(op: OpcoesSomVila) {
     }
   }
 
-  // ------------------------------------------------------------------ a passagem de som
+  // ------------------------------------------------------------------ o palco aquece
   /**
-   * Sem show (o show é só de noite, decisão do dono): de vez em quando, baixinho, a banda passa o
-   * som do palco (um toque de bateria, uma batida de guitarra), do próprio material do show e no
-   * barramento do palco (some com a distância). Quando a noite chega, o palco aquece: um acorde
-   * que cresce devagar, macio (o aviso, sem texto nem relógio).
+   * Quando a noite do show chega, o palco aquece: um acorde que cresce devagar, macio (o aviso,
+   * sem texto nem relógio). De dia o palco fica quieto: a banda está de papo na van (16 nov 2026:
+   * a passagem de som de dia saiu junto com a banda do palco).
    */
-  let proximaPassagem = -Infinity;
   let noiteAntes: boolean | null = null;
-  let passagens = 0;
   let aquecimentosSom = 0;
   function quadroPassagem(vista: VilaVista | null, noiteShow: boolean, ag: number): void {
     if (!ind) return;
@@ -929,30 +895,10 @@ export function criarSomVila(op: OpcoesSomVila) {
       const id = ind.acordes[0];
       if (id && tocar(id, ag + 0.05, { ganho: GANHO_AQUECER, bus: 'show', entrada: 1.4 }))
         aquecimentosSom++;
-      proximaPassagem = ag + 14;
     }
     noiteAntes = noiteShow;
-    if (!quieto || gFestival <= 0.01) {
-      if (gFestival <= 0.01) proximaPassagem = -Infinity;
-      return;
-    }
-    if (proximaPassagem === -Infinity) {
-      proximaPassagem = ag + 6 + rng() * 8;
-      for (const k of ['tum', ...ind.acordes]) void abrir(k);
-      return;
-    }
-    if (ag < proximaPassagem) return;
-    proximaPassagem = ag + 11 + rng() * 9;
-    passagens++;
-    if (rng() < 0.5) {
-      // "tum... tum": a bateria testando o bumbo
-      tocar('tum', ag + 0.02, { ganho: GANHO_PASSAGEM, bus: 'show', taxa: 0.92 });
-      tocar('tum', ag + 0.62, { ganho: GANHO_PASSAGEM * 0.8, bus: 'show', taxa: 0.92 });
-    } else {
-      // uma batida de guitarra (um acorde do show), solta
-      const id = ind.acordes[Math.floor(rng() * Math.min(2, ind.acordes.length))];
-      if (id) tocar(id, ag + 0.02, { ganho: GANHO_PASSAGEM * 0.8, bus: 'show' });
-    }
+    const id0 = ind.acordes[0];
+    if (noiteShow && gFestival > 0.01 && id0) void abrir(id0);
   }
 
   // ------------------------------------------------------------------ o ambiente da zona
@@ -1127,24 +1073,6 @@ export function criarSomVila(op: OpcoesSomVila) {
     const ag = agora();
     relogio.medir(ag, tNucleo);
     switch (e.e) {
-      case 'vilaAcorde': {
-        if (!ind || !showAtual) return;
-        // o acorde da música de agora (três por música)
-        const { musica, acorde } = acordeDoToque(e.acorde);
-        const lista = ind.setlist[musica]?.acordes.length
-          ? ind.setlist[musica].acordes
-          : ind.acordes;
-        const id = lista[acorde % lista.length] ?? lista[0];
-        if (!id) return;
-        const g = gradeDaMusica(showAtual.inicio, musica);
-        const t = momentoDoAcorde(relogio.audio(e.quando), ag, relogio.audio(g.t0), g.oitavo);
-        if (finalAgendado && t >= finalAgendado.t) return;
-        if (tocar(id, t, { ganho: 1, bus: 'show' })) {
-          acordes.push({ acorde: e.acorde, quando: t });
-          if (acordes.length > 40) acordes.splice(0, 20);
-        }
-        return;
-      }
       case 'vilaFinal': {
         if (!ind) return;
         const q = relogio.audio(e.quando);
@@ -1170,6 +1098,10 @@ export function criarSomVila(op: OpcoesSomVila) {
       }
       case 'vilaLhama':
         tocarBrinquedo('lhama');
+        return;
+      case 'vilaArco':
+        // o arco do rinque acende: o "plim" brilhante do estojo, um tico mais agudo
+        tocarToque('estojo', { taxa: 1.26, chave: 'arco' });
         return;
       default:
         return;
@@ -1305,10 +1237,8 @@ export function criarSomVila(op: OpcoesSomVila) {
         agendados: [...agendados.values()]
           .filter((x): x is Tocando => !!x)
           .map((x) => ({ id: x.id, ini: x.ini, fim: Number.isFinite(x.fim) ? x.fim : null })),
-        acordes: acordes.slice(),
         final: finalAgendado ? { quando: finalAgendado.t, sozinho: finalAgendado.sozinho } : null,
-        /** A passagem de som (sem show) e o aquecimento do palco (a noite chegou). */
-        passagens,
+        /** O aquecimento do palco (a noite do show chegou). */
         aquecimentos: aquecimentosSom,
         abertos: prontos.size,
         agora: ag,

@@ -75,7 +75,7 @@ const MORADORES: Record<Profissao, PecaCriatura[]> = {
 };
 
 /**
- * A turma do show (spec 026, o público): 20 fãs da época, cada um com cabelo, pele,
+ * A turma do show (spec 026, o público): 40 fãs da época, cada um com cabelo, pele,
  * roupa e chapéu próprios. Vistos de trás na plateia não podem virar um bolo de cabelo: metade de
  * boné ou faixa colorida, cabelos curtos e médios (só dois compridos), e as cores da camiseta, do
  * colete e da jaqueta trocando de um para o outro. Sem trocas: acenam e curtem o show.
@@ -103,6 +103,27 @@ const FAS: readonly [string, 'f' | 'm', string, string, string, number, number][
   ['Lara', 'f', '#c99064', '#3a2418', 'plateia-colete', 0, 7],
   ['Juca', 'm', '#e8b896', '#5a3422', 'plateia-faixa', 2, 3],
   ['Mari', 'f', '#b9825c', '#1e1a22', 'plateia-bone-tras', 1, 0],
+  // os que vêm só para o show (16 nov 2026: o dobro na hora do show)
+  ['Pipo', 'm', '#e0a882', '#2e2018', 'plateia-viseira', 0, 1],
+  ['Lulu', 'f', '#9a6844', '#1e1a22', 'plateia-moletom', 0, 3],
+  ['Dedé', 'm', '#f4d2b4', '#b8541e', 'plateia-bone', 0, 5],
+  ['Cacá', 'f', '#c99064', '#5a3422', 'plateia-faixa', 0, 6],
+  ['Biel', 'm', '#6e4a2e', '#1e1a22', 'plateia-jaqueta', 1, 0],
+  ['Tina', 'f', '#f0c8a0', '#d8b060', 'plateia-viseira', 1, 4],
+  ['Nanda', 'f', '#b9825c', '#3a2418', 'plateia-bone-tras', 2, 8],
+  ['Lipe', 'm', '#e8b896', '#4a2a1a', 'plateia-moletom', 1, 1],
+  ['Gabi', 'f', '#e0a882', '#a8401a', 'plateia-colete', 1, 5],
+  ['Tom', 'm', '#c99064', '#1e1a22', 'plateia-faixa', 1, 3],
+  ['Vivi', 'f', '#f4d2b4', '#6a4426', 'plateia-bone', 2, 0],
+  ['Joca', 'm', '#9a6844', '#2e2018', 'plateia-viseira', 2, 5],
+  ['Lelê', 'f', '#6e4a2e', '#1e1a22', 'plateia-jaqueta', 2, 6],
+  ['Fefê', 'm', '#f0c8a0', '#e8c070', 'plateia-moletom', 2, 0],
+  ['Zuzu', 'f', '#e8b896', '#5a3422', 'plateia-colete', 2, 1],
+  ['Teca', 'f', '#c99064', '#2e2018', 'plateia-faixa', 2, 4],
+  ['Neco', 'm', '#b9825c', '#3a2418', 'plateia-bone-tras', 0, 3],
+  ['Babi', 'f', '#f4d2b4', '#b8541e', 'plateia-viseira', 0, 3],
+  ['Dinho', 'm', '#e0a882', '#1e1a22', 'plateia-jaqueta', 0, 5],
+  ['Lalá', 'f', '#9a6844', '#3a2418', 'plateia-moletom', 0, 8],
 ];
 const TURMA: NonNullable<PovoadoTema['porMorador']> = Object.fromEntries(
   FAS.map(([nome, genero, pele, cabelo, id, cor, corte], k) => [
@@ -196,10 +217,10 @@ export const POVOADO_VILA: PovoadoTema = {
       pecas: MORADORES.cozinheiro,
     },
     'vila:7': { nome: 'Beto', genero: 'm', titulo: 'Moço da banca', pecas: MORADORES.construtor },
-    // spec 026 (o público do show): a turma (vila:8 a vila:27), cada um de um jeito
+    // spec 026 (o público do show): a turma (vila:8 a vila:47), cada um de um jeito
     ...TURMA,
-    // spec 026 (o show de verdade): o baterista e a baixista, que entram com a banda
-    'vila:40': {
+    // spec 026 (o show de verdade): o baterista, a baixista e a tecladista, que entram com a banda
+    'vila:60': {
       nome: 'Gui',
       genero: 'm',
       titulo: 'Baterista',
@@ -208,13 +229,22 @@ export const POVOADO_VILA: PovoadoTema = {
       cabelo: 1,
       semTrocas: true,
     },
-    'vila:41': {
+    'vila:61': {
       nome: 'Dani',
       genero: 'f',
       titulo: 'Baixista',
       pecas: corpoDe('#9a6844', '#2e2018', '#22c2b0', '#24232a'),
       fantasia: { id: 'baixista-vila', cor: 0 },
       cabelo: 4,
+      semTrocas: true,
+    },
+    'vila:62': {
+      nome: 'Nina Lua',
+      genero: 'f',
+      titulo: 'Tecladista',
+      pecas: corpoDe('#e8b896', '#2e2018', '#f6f4ee', '#24232a'),
+      fantasia: { id: 'tecladista-vila', cor: 0 },
+      cabelo: 3,
       semTrocas: true,
     },
   },

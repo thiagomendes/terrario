@@ -811,6 +811,7 @@ export function criarNucleo(op: OpcoesNucleo) {
     y: o.tel.y,
     z: o.tel.z,
     morto: o.sobrevivencia.estado.morto,
+    patins: (o.perfil.aparencia as { patins?: unknown } | undefined)?.patins === true,
     missao: mundoAlma ? (missaoDoHud(almaDe(o.id), mundoAlma)?.id ?? null) : null,
     aberta: (m: string) => missaoAberta(o.id, m),
     contar: (item: string) => o.inventario.contar(item),
@@ -2720,12 +2721,12 @@ export function criarNucleo(op: OpcoesNucleo) {
         // spec 031: escolheu (ou escolheu de novo) uma missão do canto: o que é dela volta
         prepararCanto(j, c.missao);
         // spec 026: a missão da Vila Neon escolhida de novo: o que é dela volta ao lugar
-        if (e && mundoAlma && missaoAberta(j.id, c.missao ?? '')) vila?.preparar(c.missao);
+        if (e && mundoAlma && missaoAberta(j.id, c.missao ?? '')) vila?.preparar(c.missao, j.id);
         break;
       }
       case 'vila': {
-        // spec 026: a caixa do palco ou o toque no palco (o módulo confere o lugar e o limite)
-        vila?.comando(j.id, c.a === 'caixa' ? { a: 'caixa', i: c.i } : { a: 'palco' });
+        // spec 026: a caixa do palco (brinquedo fora do show; o módulo confere o lugar e o limite)
+        vila?.comando(j.id, { a: 'caixa', i: c.i });
         break;
       }
       case 'salvar':
@@ -2971,7 +2972,9 @@ export function criarNucleo(op: OpcoesNucleo) {
     for (const j of jogadores.values()) {
       const q: Quadro = { t: 'quadro', n, ack: j.ack, ambiente: amb, criaturas, itens };
       // spec 026: o estado da Vila Neon quando muda (e o relógio a cada segundo)
-      if (vistaVila && (vilaSuja || !j.iniciado || n % 20 === 0)) q.vila = vistaVila;
+      // (com os arcos do rinque que este jogador já acendeu: a f4 é de cada um)
+      if (vila && vistaVila && (vilaSuja || !j.iniciado || n % 20 === 0))
+        q.vila = vila.vistaDe(j.id, vistaVila);
       // spec 014 (T13): o relógio dos veículos sempre; os planos inteiros para quem chega
       if (todosPlanos)
         q.veiculos = !j.iniciado

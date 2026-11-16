@@ -128,6 +128,47 @@ const lua = () => `
   <polygon points="${estrela5(46, 17, 5.4)}" fill="#fff6c8" ${s(1.6)}/>
   <circle cx="51" cy="30" r="2" fill="#fff6c8"/><circle cx="40" cy="50" r="1.6" fill="#fff6c8"/>`;
 
+/**
+ * O patins de quatro rodas (o do suporte do rinque): a bota branca de cano alto com a faixa
+ * azul, o freio grafite na ponta e as quatro rodas rosa da pista.
+ */
+const patins = (cx: number, cy: number, k = 1, rot = -8) => `
+  <g transform="translate(${cx} ${cy}) rotate(${rot}) scale(${k})">
+    <path d="M-14 -24 H2 V-2 Q14 -2 20 4 Q24 8 22 12 H-16 Q-18 12 -18 8 V-20 Q-18 -24 -14 -24 Z" fill="#dcd8e4" transform="translate(1.5 2.5)"/>
+    <path d="M-14 -24 H2 V-2 Q14 -2 20 4 Q24 8 22 12 H-16 Q-18 12 -18 8 V-20 Q-18 -24 -14 -24 Z" fill="#fbfaf6" ${s(2.6)}/>
+    <path d="M-18 -16 H2" stroke="#2f8cff" stroke-width="4.4"/>
+    <path d="M-6 -2 l4 4 M-1 -2 l4 4" stroke="${C}" stroke-width="1.8" stroke-linecap="round"/>
+    <rect x="-20" y="11" width="44" height="5" rx="2.5" fill="#b8bcc8" ${s(2)}/>
+    <path d="M22 8 q5 1 5 6 q-3 2 -6 0 Z" fill="#3d3c48" ${s(1.8)}/>
+    <circle cx="-13" cy="20" r="5.2" fill="#ff6fb4" ${s(2.2)}/><circle cx="-13" cy="20" r="1.6" fill="#fff"/>
+    <circle cx="15" cy="20" r="5.2" fill="#ff6fb4" ${s(2.2)}/><circle cx="15" cy="20" r="1.6" fill="#fff"/>
+  </g>`;
+
+/**
+ * O arco de neon do rinque (do jeito dos blocos do jogo: dois pilares quadrados grafite e a trave
+ * em cima, o tubo de neon azul por dentro e a estrela na trave). Aceso, o neon fica branco-azul,
+ * brilha em volta e a estrela acende.
+ */
+const arcoNeon = (aceso: boolean) => `
+  <path d="M4 60 H60" stroke="${C}" stroke-width="3" stroke-linecap="round"/>
+  <path d="M8 58 h6 M20 58 h6 M32 58 h6 M44 58 h6" stroke="#ff6fb4" stroke-width="3"/>
+  ${aceso ? `<path d="M15 56 V24 Q15 18 21 18 H43 Q49 18 49 24 V56" fill="none" stroke="#8fd0ff" stroke-width="13" opacity="0.38" stroke-linejoin="round"/>` : ''}
+  <rect x="7" y="16" width="9" height="42" fill="#3d3c48" ${s(2.6)}/>
+  <rect x="48" y="16" width="9" height="42" fill="#3d3c48" ${s(2.6)}/>
+  <rect x="5" y="9" width="54" height="10" rx="1.5" fill="#3d3c48" ${s(2.6)}/>
+  <path d="M8.5 22 v4 M8.5 32 v4 M8.5 42 v4 M55.5 22 v4 M55.5 32 v4 M55.5 42 v4" stroke="#24232b" stroke-width="1.6"/>
+  <path d="M18 56 V24 Q18 21 21 21 H43 Q46 21 46 24 V56" fill="none" stroke="${C}" stroke-width="5.6" stroke-linejoin="round"/>
+  <path d="M18 56 V24 Q18 21 21 21 H43 Q46 21 46 24 V56" fill="none" stroke="${aceso ? '#e8f6ff' : '#4a6a9a'}" stroke-width="3" stroke-linejoin="round"/>
+  ${aceso ? `<path d="M18 56 V24 Q18 21 21 21 H43 Q46 21 46 24 V56" fill="none" stroke="#3aa8ff" stroke-width="1.2" stroke-linejoin="round"/>` : ''}
+  <polygon points="${estrela5(32, 9, 7.6)}" fill="${aceso ? '#ffe14a' : '#6a6878'}" ${s(2)}/>
+  ${
+    aceso
+      ? `<path d="M10 4 l1.2 -3 l1.2 3 l3 1.2 l-3 1.2 l-1.2 3 l-1.2 -3 l-3 -1.2 Z" fill="#fff6c8" ${s(1)}/>
+  <path d="M52 3 l1 -2.6 l1 2.6 l2.6 1 l-2.6 1 l-1 2.6 l-1 -2.6 l-2.6 -1 Z" fill="#fff6c8" ${s(1)}/>
+  <path d="M2 30 h3 M59 30 h3 M2 42 h3 M59 42 h3" stroke="#8fd0ff" stroke-width="2.4" stroke-linecap="round"/>`
+      : ''
+  }`;
+
 const BASE: Record<string, string> = {
   // ------------------------------------------------------------ a1: os instrumentos
   a80Guitarra: svg(guitarra(33, 37, 0.92)),
@@ -193,6 +234,14 @@ const BASE: Record<string, string> = {
   a80Palco: svg(palco(false)),
   a80Lua: svg(lua()),
   a80Show: svg(palco(true)),
+  // ------------------------------------------------------------ f4: a volta no rinque
+  a80PatinsRinque: svg(patins(31, 34, 1.15)),
+  a80ArcoNeon: svg(arcoNeon(false)),
+  a80ArcoAceso: svg(arcoNeon(true)),
+  /** O resultado da f4: o patins passando por dentro do arco aceso, com o rastro de vento. */
+  a80PatinsArco: svg(`${arcoNeon(true)}
+    <path d="M4 40 h10 M2 47 h9 M5 33 h7" stroke="#8fd0ff" stroke-width="2.6" stroke-linecap="round"/>
+    ${patins(34, 40, 0.62, -4)}`),
   // ------------------------------------------------------------ banca do festival
   a80Globo: svg(`
     <path d="M32 2 V12" stroke="${C}" stroke-width="3"/>
@@ -284,7 +333,7 @@ const BASE: Record<string, string> = {
 
 /** Os 3 da festa de cada missão (o trio de instrumentos da a1, na ordem das bolinhas). */
 
-/** Os nomes que as missões usam (`src/jogo/alma.ts`, f1 a f3) e os do esboço. */
+/** Os nomes que as missões usam (`src/jogo/alma.ts`, f1, f2 e f4) e os do esboço. */
 export const ARTE_VILA: Record<string, string> = {
   ...BASE,
   estojoRaio: BASE.a80Estojo,
@@ -296,12 +345,11 @@ export const ARTE_VILA: Record<string, string> = {
   lhama: BASE.a80Lhama,
   feno: BASE.a80Feno,
   lhamaNotinhas: BASE.a80LhamaShow,
-  caixaApagada: BASE.a80CaixaSom,
-  caixaAcesa: BASE.a80CaixaSomAcesa,
-  dedinho: BASE.a80Pegar,
-  palcoAceso: BASE.a80Show,
-  /** A f3 espera a noite (o selinho, a placa do guia e o selo do cartão de dia). */
-  luaShow: BASE.a80Lua,
+  /** A f4, a volta no rinque: o arco apagado, os patins, o arco aceso e os patins passando nele. */
+  arcoNeon: BASE.a80ArcoNeon,
+  patins: BASE.a80PatinsRinque,
+  arcoAceso: BASE.a80ArcoAceso,
+  patinsArco: BASE.a80PatinsArco,
   /** O mundo no baú (as habilidades que a Vila Neon alimenta): o raio sobre o grafite. */
   mundoVila: svg(`
     <rect x="6" y="6" width="52" height="52" rx="12" fill="#2e2d36" ${s()}/>

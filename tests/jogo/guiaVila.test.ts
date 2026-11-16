@@ -15,23 +15,22 @@ import { comPecas, procurarCaminho, type V3 as P3 } from '../../src/jogo/caminho
 import { celulaTomadaPelaVila } from '../../src/world/vilaSolidos';
 import { alvoDaMissao, chegouAoAlvo, type MundoDoGuia } from '../../src/jogo/guia';
 import { missaoPorId } from '../../src/jogo/alma';
+import { F_RINQUE } from '../../src/jogo/rinque';
 import { planoDaVila } from '../../src/world/vilaNeon';
 
 /**
  * Spec 026: o guia da 030 na Vila Neon. f1: o estojo mais perto ainda no chão; f2: a lhama do
- * cercadinho e, com o feno na mão, a grade da plateia; f3: a escadinha e, no palco, a caixa
- * apagada mais perto (com o show, a ponta da passarela).
+ * cercadinho e, com o feno na mão, a grade da plateia; f4 (a volta no rinque): sem patins, o
+ * suporte deles; de patins, o arco mais perto ainda apagado.
  */
 const plano = planoDaVila(77, { altura: () => 70, nivelMar: 62 });
 const p = plano.pontos;
 function mundo(o: {
   ins?: boolean[];
-  cx?: boolean[];
-  show?: unknown;
+  arcos?: boolean[];
   feno?: boolean;
-  y?: number;
+  patins?: boolean;
   bichos?: { id: number; tipo: string; x: number; y: number; z: number }[];
-  hora?: number;
 }): MundoDoGuia {
   return {
     cidade: null,
@@ -41,14 +40,12 @@ function mundo(o: {
     vila: plano,
     estadoVila: () => ({
       ins: o.ins ?? [false, false, false],
-      cx: o.cx ?? [false, false, false],
-      show: o.show ?? null,
       lhamas: [],
+      arcos: o.arcos ?? [false, false, false],
     }),
     comFeno: () => !!o.feno,
-    pesY: () => o.y ?? plano.h + 1,
+    comPatins: () => !!o.patins,
     bichos: () => o.bichos ?? [],
-    ...(o.hora === undefined ? {} : { hora: () => o.hora! }),
   } as unknown as MundoDoGuia;
 }
 const de = { x: plano.nascimento.x, z: plano.nascimento.z };
@@ -81,48 +78,27 @@ describe('o guia na Vila Neon (spec 026)', () => {
     expect(g.z).toBeLessThanOrEqual(p.plateia.z1 + 1);
   });
 
-  it('f3: a escadinha; no palco, a caixa apagada mais perto; com tudo aceso, a passarela', () => {
-    const m = missaoPorId('f3')!;
+  it('f4: sem patins, o suporte do rinque; de patins, o arco apagado mais perto, um depois do outro', () => {
+    const m = missaoPorId(F_RINQUE)!;
     const a = alvoDaMissao(m, mundo({}), new Set(), de)!;
-    expect(a.chave).toBe('escadinha');
-    const noPalco = { x: p.escadinha[0] - 4, z: p.escadinha[2] };
-    const b = alvoDaMissao(m, mundo({ y: p.palco.y + 1 }), new Set(), noPalco)!;
-    expect(b.chave.startsWith('caixa:')).toBe(true);
-    const c = alvoDaMissao(
-      m,
-      mundo({ y: p.palco.y + 1, cx: [true, true, true] }),
-      new Set(),
-      noPalco,
-    )!;
-    expect(c.chave).toBe('passarela');
-  });
-
-  it('f3 de dia espera a noite (decisão do dono): a lua em cima do palco, sem trilha; de noite, a escadinha', () => {
-    const m = missaoPorId('f3')!;
-    const dia = alvoDaMissao(m, mundo({ hora: 0.42 }), new Set(), de)!;
-    expect(dia.chave).toBe('noite');
-    expect(dia.espera).toBe(true);
-    expect(dia.figura).toBe('luaShow');
-    // nunca "chega" (a espera não dá o ✓ nem some a placa por chegar)
-    expect(chegouAoAlvo(dia, dia.x, dia.z)).toBe(false);
-    // a lua fica em cima do palco
-    expect(dia.placa[1]).toBeGreaterThan(p.palco.y + 3);
-    // de noite: a trilha de sempre
-    const noite = alvoDaMissao(m, mundo({ hora: 0.9 }), new Set(), de)!;
-    expect(noite.chave).toBe('escadinha');
-    expect(noite.espera).toBeUndefined();
-    // o show que começou de noite e entrou no dia continua guiando (a passarela)
-    const noPalco = { x: p.escadinha[0] - 4, z: p.escadinha[2] };
-    const show = alvoDaMissao(
-      m,
-      mundo({ hora: 0.3, y: p.palco.y + 1, cx: [true, true, true], show: { inicio: 0, final: null } }),
-      new Set(),
-      noPalco,
-    )!;
-    expect(show.chave).toBe('passarela');
-    // f1 e f2 não esperam nada
-    expect(alvoDaMissao(missaoPorId('f1')!, mundo({ hora: 0.42 }), new Set(), de)!.espera).toBeUndefined();
-    expect(alvoDaMissao(missaoPorId('f2')!, mundo({ hora: 0.42 }), new Set(), de)!.espera).toBeUndefined();
+    expect(a.chave).toBe('patins');
+    expect(a.figura).toBe('patins');
+    expect(chegouAoAlvo(a, p.patins[0], p.patins[2])).toBe(true);
+    // de patins: o arco mais perto; aceso, o seguinte; os três acesos, nada
+    const d = (q: { x: number; z: number }) => Math.hypot(q.x - de.x, q.z - de.z);
+    const perto = [...p.arcos].sort((x, y) => d(x) - d(y))[0];
+    const b = alvoDaMissao(m, mundo({ patins: true }), new Set(), de)!;
+    expect([b.x, b.z]).toEqual([perto.x, perto.z]);
+    expect(b.figura).toBe('arcoAceso');
+    // a placa flutua em cima da trave do arco
+    expect(b.placa[1]).toBeGreaterThan(perto.y + 3);
+    const arcos = [false, false, false];
+    arcos[p.arcos.indexOf(perto)] = true;
+    const c = alvoDaMissao(m, mundo({ patins: true, arcos }), new Set(), de)!;
+    expect(c.chave).not.toBe(b.chave);
+    expect(
+      alvoDaMissao(m, mundo({ patins: true, arcos: [true, true, true] }), new Set(), de),
+    ).toBeNull();
   });
 });
 
@@ -151,6 +127,8 @@ describe('a trilha do guia dá a volta nas peças da Vila Neon (o dono: nada atr
       ['escadinha', q.escadinha],
       ['cercado', q.portaoCercado],
       ['patins', q.patins],
+      // a volta no rinque: os três arcos (a trilha entra pelo vão, nunca pelo poste)
+      ...q.arcos.map((a, i) => [`arco ${i}`, [a.x, a.y, a.z]] as [string, number[]]),
       ['mural', q.mural],
       // perto dos brinquedos de tocar (a trilha passa na frente deles)
       ['rádio', [q.radio[0] + 3, q.radio[1], q.radio[2]]],

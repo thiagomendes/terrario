@@ -7,28 +7,41 @@
  * Tudo no referencial do palco: `a` = x − `palco.x0` e `b` = z − `palco.z0` (blocos). O tablado vai
  * de a 0 a 33 e de b 5 a 20; a passarela, de a 14 a 20 e de b 0 a 5 (a ponta, onde o vocalista
  * canta, fica em b ≈ 1); a escadinha, no lado leste (a 33 a 36, b 7 a 9), sobe para o oeste; o
- * praticável da bateria, de a 13 a 21 e de b 16 a 19, um bloco acima do tablado; a coxia (onde a
- * banda espera de noite) é o chão do lado leste do palco.
+ * praticável da bateria, de a 13 a 21 e de b 16 a 19, um bloco acima do tablado; o teclado, em
+ * a ≈ 26,5 e b ≈ 14,5 (quem toca fica atrás dele, de frente para o povo); a coxia (onde a banda
+ * espera de noite) é o chão do lado leste do palco, e a van da banda fica atrás dele.
  *
- * - **Antes do show (de noite)** a banda espera na coxia; de dia passa o som no palco.
+ * - **Fora do show a banda nunca fica no palco** (o dono, 16 nov 2026: "a banda estava em pé no
+ *   palco e, quando o show começou, desceu para subir de novo e ficou presa"): de dia ela fica de
+ *   papo na frente da van; quando a noite do show chega, vai a pé para a coxia e espera ali.
  * - **Na entrada** cada um sobe a escadinha (um depois do outro) e vai para o lugar; o vocalista
- *   chega na ponta da passarela e acena.
+ *   chega na ponta da passarela e acena; a tecladista vai para trás do teclado.
  * - **Nas músicas** o vocalista anda pela frente do palco de um lado ao outro no refrão, levanta o
  *   braço do microfone e bate cabeça; a guitarrista vai para a ponta no solo; guitarrista e
  *   baixista tocam de costas uma para o outro na ponte, e andam juntas no refrão da última; o
  *   baterista toca sentado.
+ * - **A tecladista** balança tocando o teclado (as camadas do sintetizador da música), levanta a
+ *   mão no começo dos refrões e, no último refrão da segunda música (a do gancho no
+ *   sintetizador), pega o teclado de pendurar e vai para a frente do palco.
  * - **Nas pausas** a banda acena; o baterista levanta as baquetas e conta a próxima.
  * - **No fim** todos pulam no acorde final, vêm para a frente, fazem a reverência, acenam e saem
  *   pela escadinha de volta para a coxia.
  */
 import { APLAUSO, INTRO, PAUSA, ROTEIRO, type MusicaNoShow, type Show } from './show';
 
-export type PapelBanda = 'vocalista' | 'guitarrista' | 'baixista' | 'baterista' | 'roadie';
+export type PapelBanda =
+  | 'vocalista'
+  | 'guitarrista'
+  | 'baixista'
+  | 'baterista'
+  | 'tecladista'
+  | 'roadie';
 export const PAPEIS_BANDA: readonly PapelBanda[] = [
   'vocalista',
   'guitarrista',
   'baixista',
   'baterista',
+  'tecladista',
   'roadie',
 ];
 
@@ -49,7 +62,13 @@ export type AcaoBanda =
   | 'bateria'
   | 'contagem'
   | 'baquetasAlto'
-  | 'sentado';
+  | 'sentado'
+  /** A tecladista: as duas mãos nas teclas, balançando no tempo. */
+  | 'teclado'
+  /** Uma mão nas teclas e a outra no alto, chamando o povo. */
+  | 'tecladoMao'
+  /** O teclado de pendurar (o keytar) no peito, tocando e balançando na frente do palco. */
+  | 'keytar';
 
 export type Ponto = readonly [number, number];
 
@@ -93,6 +112,13 @@ export const TOPO_ESCADA: Ponto = [32.4, 8.0];
 const ENTRA_FRENTE: Ponto = [28.4, 6.3];
 const ENTRA_MEIO: Ponto = [29.6, 8.7];
 export const PE_ESCADA: Ponto = [37.0, 8.0];
+/** O teclado (o meio dele) e o canto de trás dele, onde a tecladista toca. */
+export const TECLADO: Ponto = [26.5, 14.5];
+/** Os dois lados de trás do teclado (para chegar ao lugar de quem toca sem passar por ele). */
+const TECLADO_LESTE: Ponto = [28.7, 15.4];
+const TECLADO_OESTE: Ponto = [24.3, 15.4];
+/** A frente do palco no momento do teclado de pendurar (um pouco atrás da linha do vocalista). */
+export const FRENTE_KEYTAR: Ponto = [17, 7.7];
 
 /** Onde cada um fica na banda (o lugar de tocar). */
 export const LUGAR: Record<PapelBanda, Ponto> = {
@@ -100,23 +126,34 @@ export const LUGAR: Record<PapelBanda, Ponto> = {
   guitarrista: [10.5, 9.8],
   baixista: [24.4, 10.2],
   baterista: BANCO,
+  tecladista: [TECLADO[0], 15.35],
   roadie: [30.8, 14.6],
 };
-/** A coxia: de noite, antes e depois do show, a banda espera no chão do lado leste do palco. */
+/**
+ * A coxia: de noite, antes e depois do show, a banda espera no chão do lado leste do palco, perto
+ * do pé da escadinha (a roadie fica ali sempre: é onde ela cuida do palco e faz as trocas).
+ */
 export const COXIA: Record<PapelBanda, Ponto> = {
   vocalista: [37.7, 13.4],
   guitarrista: [38.7, 11.9],
   baixista: [38.7, 15.1],
   baterista: [37.7, 16.6],
-  roadie: [29.5, 9.5],
+  tecladista: [40.0, 13.6],
+  roadie: [36.4, 10.6],
 };
-/** De dia, a passagem de som: cada um no posto do palco (a roadie confere as caixas). */
-export const POSTO_DIA: Record<PapelBanda, Ponto> = {
-  vocalista: [17, 0.5],
-  guitarrista: [10.5, 9.5],
-  baixista: [24.4, 10.2],
-  baterista: BANCO,
-  roadie: [29.5, 9.5],
+/** O meio da roda da banda na frente da van (de dia). */
+export const RODA_VAN: Ponto = [38.6, 21.5];
+/**
+ * De dia a banda fica de papo na frente da van, atrás do palco (o palco fica vazio: o show é de
+ * noite); a roadie, na coxia.
+ */
+export const VAN: Record<PapelBanda, Ponto> = {
+  vocalista: [37.0, 20.5],
+  guitarrista: [38.7, 19.9],
+  baixista: [40.3, 20.6],
+  baterista: [40.3, 22.5],
+  tecladista: [36.9, 22.5],
+  roadie: COXIA.roadie,
 };
 
 // ------------------------------------------------------------------ o chão do palco
@@ -124,6 +161,11 @@ const noTablado = (a: number, b: number) => a >= 0 && a <= 33 && b >= 5 && b <= 
 const naPassarela = (a: number, b: number) => a >= 14 && a <= 20 && b >= 0 && b <= 5;
 export const noPalco = (a: number, b: number) => noTablado(a, b) || naPassarela(a, b);
 const noPraticavel = (a: number, b: number) => a >= 13 && a < 21 && b >= 16 && b < 19;
+/** Na escadinha (os degraus, do pé ao topo). */
+const naEscada = (a: number, b: number) => b >= 6.4 && b <= 9.6 && a > 32.4 && a < 37.4;
+/** Atrás do teclado, no canto de quem toca. */
+const noCantoDoTeclado = (a: number, b: number) =>
+  Math.abs(a - TECLADO[0]) < 2 && b > 14.85 && b < 16.6;
 
 /** A altura dos pés em (a, b): o chão, a escadinha (rampa), o tablado ou o praticável. */
 export function alturaEm(a: number, b: number): number {
@@ -152,8 +194,15 @@ export function rota(de: Ponto, para: Ponto): Ponto[] {
     out.push(p);
     atual = p;
   };
-  const deChao = !noPalco(de[0], de[1]);
-  const paraChao = !noPalco(para[0], para[1]);
+  // na escadinha conta como chão quem vai descer e como palco quem vai subir: segue nos degraus
+  // para o lado de onde vai (antes, quem estava nos degraus subindo voltava ao pé dela a cada
+  // passo e ficava preso entre o pé e o primeiro degrau)
+  const paraChao = !noPalco(para[0], para[1]) && !naEscada(para[0], para[1]);
+  const deEscada = naEscada(de[0], de[1]);
+  const deChao = deEscada ? !paraChao : !noPalco(de[0], de[1]);
+  // sai do canto do teclado pelo lado de onde vai
+  if (noCantoDoTeclado(atual[0], atual[1]) && !noCantoDoTeclado(para[0], para[1]))
+    ir(para[0] < TECLADO[0] && !paraChao ? TECLADO_OESTE : TECLADO_LESTE);
   // sai do banquinho pela beira do praticável
   if (noPraticavel(atual[0], atual[1]) && !noPraticavel(para[0], para[1])) {
     ir(SAIDA_PRATICAVEL);
@@ -163,14 +212,16 @@ export function rota(de: Ponto, para: Ponto): Ponto[] {
   // sai da ponta pelo lado do pedestal
   if (atual[1] < 2.6 && para[1] >= 2.6 && naPassarela(atual[0], atual[1])) ir(DESVIO_PONTA);
   if (deChao && !paraChao) {
-    ir(PE_ESCADA);
+    if (!deEscada) ir(PE_ESCADA);
     ir(TOPO_ESCADA);
     // da escadinha, pela frente ou por trás da caixa do lado leste
     ir(para[1] < 7.5 ? ENTRA_FRENTE : ENTRA_MEIO);
   } else if (!deChao && paraChao) {
-    if (atual[0] < 24 && atual[1] > 11) ir(DESVIO_TECLADO);
-    ir(atual[1] < 7.5 ? ENTRA_FRENTE : ENTRA_MEIO);
-    ir(TOPO_ESCADA);
+    if (!deEscada) {
+      if (atual[0] < 24 && atual[1] > 11) ir(DESVIO_TECLADO);
+      ir(atual[1] < 7.5 ? ENTRA_FRENTE : ENTRA_MEIO);
+      ir(TOPO_ESCADA);
+    }
     ir(PE_ESCADA);
   }
   if (noPraticavel(para[0], para[1]) && !noPraticavel(atual[0], atual[1])) {
@@ -181,6 +232,11 @@ export function rota(de: Ponto, para: Ponto): Ponto[] {
   if (para[1] < 2.6 && atual[1] >= 2.6 && naPassarela(para[0], para[1])) {
     if (Math.abs(atual[0] - FRENTE[0]) > 1 || atual[1] > 7) ir(FRENTE);
     ir(DESVIO_PONTA);
+  }
+  // entra no canto do teclado pelo lado de onde vem (nunca através dele)
+  if (noCantoDoTeclado(para[0], para[1]) && !noCantoDoTeclado(atual[0], atual[1])) {
+    if (atual[0] < TECLADO[0] && atual[1] < 14.85) ir(DESVIO_TECLADO);
+    ir(atual[0] < TECLADO[0] ? TECLADO_OESTE : TECLADO_LESTE);
   }
   ir(para);
   return out;
@@ -227,10 +283,13 @@ const PARTES: ParteNoShow[] = ROTEIRO.flatMap((m) =>
 const SAI_NA_ENTRADA: Record<PapelBanda, number> = {
   baterista: INTRO + 0.4,
   baixista: INTRO + 2.0,
+  tecladista: INTRO + 3.0,
   guitarrista: INTRO + 4.0,
   vocalista: INTRO + 5.4,
   roadie: 0.5,
 };
+/** A tecladista levanta a mão por tanto tempo no começo de cada refrão (compassos). */
+const MAO_NO_REFRAO = 2;
 
 function roteiroBase(papel: PapelBanda): Passo[] {
   const ps: Passo[] = [];
@@ -246,6 +305,8 @@ function roteiroBase(papel: PapelBanda): Passo[] {
   else if (papel === 'baterista')
     passo({ t: sai, para: casa, vel: VEL_ENTRADA, acao: 'sentado', giro: PARA_O_POVO });
   else if (papel === 'roadie') passo({ t: sai, para: casa, vel: 2, acao: 'palmas', giro: -2.4 });
+  else if (papel === 'tecladista')
+    passo({ t: sai, para: casa, vel: VEL_ENTRADA, acao: 'teclado', giro: PARA_O_POVO });
   else passo({ t: sai, para: casa, vel: VEL_ENTRADA, acao: 'tocar', giro: PARA_O_POVO });
 
   let lado = 0;
@@ -386,6 +447,39 @@ function roteiroBase(papel: PapelBanda): Passo[] {
             passo({ t: p.ini, acao: 'palmas' });
           else passo({ t: p.ini, acao: 'balancar' });
           break;
+        case 'tecladista': {
+          const keytar = k === 1 && p.pedaco === 'refrao' && p.vez === 2;
+          if (keytar) {
+            // o gancho da segunda no último refrão: pega o teclado de pendurar e vai para a
+            // frente do palco; volta para o teclado no fim da música
+            passo({
+              t: p.ini - 2.2,
+              para: FRENTE_KEYTAR,
+              vel: 3,
+              andar: 'keytar',
+              acao: 'keytar',
+              giro: PARA_O_POVO,
+            });
+            passo({
+              t: p.ini + p.compassos * m.compasso,
+              para: casa,
+              vel: 3,
+              andar: 'keytar',
+              acao: 'teclado',
+              giro: PARA_O_POVO,
+            });
+          } else if (p.pedaco === 'fim' && k === 1) {
+            // (voltando do teclado de pendurar: o passo de antes segue)
+          } else if (p.pedaco === 'refrao' || p.pedaco === 'subida') {
+            // a mão no alto no começo do refrão (chamando o povo), depois as duas nas teclas
+            passo({ t: p.ini, para: casa, vel: VEL, acao: 'tecladoMao', giro: PARA_O_POVO });
+            if (p.compassos > MAO_NO_REFRAO)
+              passo({ t: p.ini + MAO_NO_REFRAO * m.compasso, acao: 'teclado' });
+          } else if (p.pedaco === 'chamado')
+            passo({ t: p.ini, para: casa, vel: VEL, acao: 'tecladoMao', giro: PARA_O_POVO });
+          else passo({ t: p.ini, para: casa, vel: VEL, acao: 'teclado', giro: PARA_O_POVO });
+          break;
+        }
       }
     }
     // a pausa depois da música: todos acenam; o baterista levanta as baquetas
@@ -397,7 +491,10 @@ function roteiroBase(papel: PapelBanda): Passo[] {
         passo({ t: m.fim + 0.3, para: FRENTE, vel: 2.6, acao: 'acenar', giro: PARA_O_POVO });
         passo({ t: m.fim + PAUSA - 2.5, acao: 'esperar' });
       } else if (papel === 'roadie') passo({ t: m.fim, acao: 'acenar' });
-      else {
+      else if (papel === 'tecladista') {
+        passo({ t: m.fim, acao: 'acenar' });
+        passo({ t: m.fim + PAUSA - 2.5, acao: 'teclado' });
+      } else {
         passo({ t: m.fim, para: casa, vel: VEL, acao: 'acenar', giro: PARA_O_POVO });
         passo({ t: m.fim + PAUSA - 2.5, acao: 'tocar' });
       }
@@ -412,6 +509,7 @@ const FILA: Record<PapelBanda, Ponto> = {
   guitarrista: [13.6, 6.0],
   baixista: [20.4, 6.0],
   baterista: [23.8, 6.1],
+  tecladista: [27.2, 6.1],
   roadie: [30.8, 14.6],
 };
 export const VEM_PARA_A_FRENTE = 3;
@@ -425,6 +523,14 @@ function roteiroFinal(papel: PapelBanda, f: number): Passo[] {
   if (papel === 'roadie') {
     ps.push({ t: f + VEM_PARA_A_FRENTE, acao: 'palmas' });
     ps.push({ t: f + ACENO_FINAL, acao: 'acenar' });
+    // e desce para a coxia logo depois da banda (o palco fica vazio)
+    ps.push({
+      t: f + SAI_DO_PALCO + 2.2,
+      para: COXIA.roadie,
+      vel: 2.8,
+      acao: 'esperar',
+      giro: PARA_OESTE,
+    });
     return ps;
   }
   ps.push({
@@ -439,6 +545,7 @@ function roteiroFinal(papel: PapelBanda, f: number): Passo[] {
   // saem um depois do outro, do que está mais perto da escadinha ao vocalista
   const ordem: Record<PapelBanda, number> = {
     baterista: 0,
+    tecladista: 0.2,
     baixista: 0.5,
     vocalista: 1.1,
     guitarrista: 1.6,
@@ -459,7 +566,7 @@ const BASE: Record<PapelBanda, Passo[]> = Object.fromEntries(
   PAPEIS_BANDA.map((p) => [p, roteiroBase(p)]),
 ) as Record<PapelBanda, Passo[]>;
 
-/** Onde cada um começa o show (de noite, na coxia; a roadie, no posto dela). */
+/** Onde cada um começa o show (de noite, na coxia). */
 export const INICIO_DO_SHOW: Record<PapelBanda, Ponto> = COXIA;
 
 /** O caminho de um passo já com os pontos de passagem e o tempo de cada trecho. */
@@ -586,9 +693,18 @@ export function posturaNaBanda(papel: PapelBanda, s: Show, t: number): PosturaBa
 /** Quanto o fim leva até a banda chegar na coxia (s depois do acorde final). */
 export const FIM_DA_SAIDA = APLAUSO;
 
-/** O lugar de descanso fora do show: de dia o posto da passagem de som; de noite, a coxia. */
+/**
+ * O lugar de descanso fora do show, sempre fora do palco: de dia de papo na frente da van; de
+ * noite (a noite do show) na coxia, pronta para subir.
+ */
 export function lugarDeDescanso(papel: PapelBanda, dia: boolean): Ponto {
-  return dia ? POSTO_DIA[papel] : COXIA[papel];
+  return dia ? VAN[papel] : COXIA[papel];
+}
+/** Para onde olha quem está no descanso: de dia para o meio da roda, de noite para o palco. */
+export function giroDoDescanso(papel: PapelBanda, dia: boolean): number {
+  if (!dia || papel === 'roadie') return PARA_OESTE;
+  const q = VAN[papel];
+  return Math.atan2(RODA_VAN[0] - q[0], RODA_VAN[1] - q[1]);
 }
 
 /** Para o mundo: (a, b) → (x, z), e a altura dos pés. */

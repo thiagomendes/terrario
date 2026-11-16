@@ -121,6 +121,9 @@ function caixasLocais(tipo: TipoPecaVila, n: number): readonly Local[] {
       return [B(-0.59, 0.59, 0, 2.78, -0.59, 0.7)];
     case 'suporte-patins':
       return [B(-1.55, 1.55, 0, 2.62, -0.3, 0.3)];
+    case 'arco-rinque':
+      // os dois postes e a trave em cima (o vão de uns 4 blocos fica livre para passar)
+      return [...par(2.02, 2.96, 0, 4.6, -0.43, 0.43), B(-2.02, 2.02, 3.9, 4.6, -0.43, 0.43)];
     case 'letreiro':
       // só o pórtico do rinque pisa no chão (os dois postes); os outros ficam no alto
       return n === LETREIRO.rinque ? par(1.85, 2.35, 0, 4.4, -0.25, 0.25) : [];

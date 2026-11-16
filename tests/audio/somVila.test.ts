@@ -17,7 +17,6 @@ import {
   criarSomVila,
   ehPedidoBrinquedoVila,
   lerIndiceShow,
-  momentoDoAcorde,
   momentoDoFinal,
   posicaoNoLaco,
   proximoTempo,
@@ -49,8 +48,6 @@ import {
   PAUSA,
   ROTEIRO,
   SETLIST,
-  acordeDoToque,
-  encaixarToque,
 } from '../../src/jogo/show';
 import type { VilaVista } from '../../src/nucleo/vila';
 import type { PlanoVila } from '../../src/world/vilaNeon';
@@ -247,27 +244,6 @@ describe('o tempo do show (puro)', () => {
     const s = segmentosDoShow(IND, T, fim);
     expect(Math.max(...s.map((x) => x.fim))).toBeLessThanOrEqual(fim);
     expect(s.every((x) => x.ini < fim)).toBe(true);
-  });
-
-  it('o acorde do toque soa em `quando` (encaixado pelo núcleo), ou no próximo oitavo da música se chegou tarde', () => {
-    const show = { inicio: 10, final: null };
-    for (const r of ROTEIRO) {
-      const t = 10 + r.inicio + 5.3;
-      const { quando, acorde } = encaixarToque(show, t)!;
-      expect(acordeDoToque(acorde).musica).toBe(r.i);
-      const oitavo = r.compasso / 8;
-      const g0 = 10 + r.inicio + 2;
-      // relógios: AudioContext = núcleo + 2
-      const qa = quando + 2;
-      expect(momentoDoAcorde(qa, t + 2 + 0.01, g0, oitavo)).toBe(qa);
-      const tarde = momentoDoAcorde(qa, qa + 0.03, g0, oitavo);
-      expect(tarde).toBeGreaterThan(qa + 0.03);
-      expect(tarde - qa).toBeCloseTo(oitavo, 9);
-      // sempre na grade da música
-      const k = (tarde - g0) / oitavo;
-      expect(Math.abs(k - Math.round(k))).toBeLessThan(1e-9);
-    }
-    void OITAVO;
   });
 
   it('o acorde final entra em até 100 ms do evento (e na hora certa quando vem sozinho)', () => {
@@ -482,15 +458,7 @@ describe('o tocador do show (contexto falso)', () => {
       expect(f.inicio![0]).toBeCloseTo(20 + CONTAGEM, 6);
       expect(f.inicio![1]).toBeCloseTo(IND.folga / IND.taxa, 6);
     }
-    // um toque no palco: o núcleo encaixou em `quando`; o acorde da primeira soa ali
     await passo(20 + CONTAGEM + 3, vista({ cx: [true, true, true], show }));
-    const { quando, acorde } = encaixarToque(show, 20 + CONTAGEM + 3.05 + D)!;
-    ctx.currentTime = 20 + CONTAGEM + 3.1;
-    som.evento({ e: 'vilaAcorde', quando, acorde, quem: 'ana' }, ctx.currentTime + D);
-    await new Promise((r) => setTimeout(r, 0));
-    const ac = som.info().acordes;
-    expect(ac).toHaveLength(1);
-    expect(ac[0].quando).toBeCloseTo(quando - D, 6);
     // o refrão entra no compasso 8 (16 s depois do primeiro tempo)
     for (let t = 20 + CONTAGEM + 3.5; t <= 20 + CONTAGEM + 15.5; t += 0.5)
       await passo(t, vista({ cx: [true, true, true], show }));

@@ -15,7 +15,7 @@ import { loteDoCanteiro, noLoteObra } from '../world/obras';
 import { frenteDaPorta, noLote, TAM_LOTE, type Lote, type PlanoPovoado } from '../world/povoado';
 import type { PlanoCanto } from '../world/cantoMissoes';
 import type { PlanoVila } from '../world/vilaNeon';
-import { noiteDeShow } from './show';
+import { ALTURA_ARCO, CHAVE_ARCO } from './rinque';
 
 // ------------------------------------------------------------------ o alvo
 /** Uma caixa no chão (inclusivo em x0/z0, exclusivo em x1/z1). */
@@ -45,12 +45,6 @@ export interface AlvoGuia {
   raio?: number;
   /** Morador que anda (c5): o id da criatura. */
   morador?: number;
-  /**
-   * Spec 026: o alvo espera (a f3 da Vila Neon de dia: o show é só de noite). Sem trilha, sem
-   * virar a câmera, sem chegar: a placa (a lua) fica em cima do palco quando ele está à vista, o
-   * selinho mostra a lua, e quando a noite chega o alvo de verdade acende a trilha sozinho.
-   */
-  espera?: true;
 }
 
 export function chegouAoAlvo(a: AlvoGuia, x: number, z: number): boolean {
@@ -84,19 +78,16 @@ export interface MundoDoGuia {
   ovos?(): readonly { x: number; y: number; z: number }[];
   /** Spec 026: a Vila Neon (null nos outros mundos). */
   vila?: PlanoVila | null;
-  /** Spec 026: o estado do bairro (estojos achados, caixas acesas, lhamas na grade). */
+  /** Spec 026: o estado do bairro (estojos achados, lhamas na grade, os arcos acesos da f4). */
   estadoVila?(): {
     ins: readonly boolean[];
-    cx: readonly boolean[];
-    show: unknown;
     lhamas: readonly number[];
+    arcos?: readonly boolean[];
   } | null;
   /** Spec 026: a criança está com o feno na mão (a lhama já vem atrás). */
   comFeno?(): boolean;
-  /** Spec 026: a altura dos pés da criança (no palco ou no chão). */
-  pesY?(): number;
-  /** Spec 026: a hora do dia (0 a 1): a f3 da Vila Neon espera a noite do show. */
-  hora?(): number;
+  /** Spec 026: a criança está de patins (a f4: primeiro o suporte, depois os arcos). */
+  comPatins?(): boolean;
 }
 
 const caixaDoLoteCidade = (l: LoteCidade): CaixaChao => ({
@@ -562,6 +553,10 @@ function alvoNoCanto(
 export const RAIO_ESTOJO = 1.3;
 /** Perto da lhama: o feno aparece na mão (o núcleo dá a 4). */
 export const RAIO_LHAMA = 3.2;
+/** Perto do suporte dos patins: o toque nele calça (a tela aceita a 4). */
+export const RAIO_PATINS = 2.2;
+/** Dentro do arco (o núcleo conta no vão, a uns 0,75 do meio). */
+export const RAIO_ARCO = 0.7;
 
 function alvoNaVila(
   m: Missao,
@@ -645,50 +640,37 @@ function alvoNaVila(
       morador: b.id,
     };
   }
-  if (c.chave === 'show:caixa') {
-    // de dia (sem show tocando) a f3 espera a noite: a lua em cima do palco, nada de trilha
-    if (mundo.hora && !v?.show && !noiteDeShow(mundo.hora())) {
-      const [x, y, z] = pt.passarela;
-      const meio = (pt.palco.x0 + pt.palco.x1 + 1) / 2;
+  if (c.chave === CHAVE_ARCO) {
+    // sem patins: o suporte do rinque (um toque nele calça); de patins: o arco mais perto ainda
+    // apagado (a trilha passa por dentro dele: o vão fica livre, os postes seguram)
+    if (!mundo.comPatins?.()) {
+      const [x, y, z] = pt.patins;
       return {
-        chave: 'noite',
+        chave: 'patins',
         tipo: 'sitio',
         x,
         y,
         z,
-        // a lua flutua em cima do meio do palco (o arco de luzes), visto de longe
-        placa: [meio, pt.palco.y + 6, pt.palco.z0 + 9],
-        figura: 'luaShow',
-        espera: true,
+        placa: [x, y + 2.9, z + 1],
+        figura: 'patins',
+        raio: RAIO_PATINS,
       };
     }
-    // no palco ou já no pé da escadinha: as caixas (a trilha sobe a escadinha)
-    const noPalco =
-      (mundo.pesY?.() ?? 0) >= pt.palco.y + 0.9 ||
-      Math.hypot(de.x - pt.escadinha[0], de.z - pt.escadinha[2]) < 2.5;
-    // no palco: a próxima caixa apagada (o dedinho acende); com o show, a ponta da passarela
-    if (noPalco) {
-      const lista = pt.caixas
-        .map((q, i) => ({ chave: `caixa:${i}`, x: q[0] + 0.5, y: q[1], z: q[2] - 1, i }))
-        .filter((q) => !v?.cx[q.i]);
-      const q = maisPerto(lista, de, atual);
-      if (q)
-        return {
-          chave: q.chave,
-          tipo: 'sitio',
-          x: q.x,
-          y: q.y,
-          z: q.z,
-          placa: [q.x, q.y + 1, q.z + 1],
-          figura,
-          raio: 2.2,
-        };
-      const [x, y, z] = pt.passarela;
-      return { chave: 'passarela', tipo: 'sitio', x, y, z, placa: [x, y - 1, z], figura, raio: 3 };
-    }
-    // no chão: o pé da escadinha do palco
-    const [x, y, z] = pt.escadinha;
-    return { chave: 'escadinha', tipo: 'sitio', x, y, z, placa: [x, y - 1, z], figura, raio: 1.4 };
+    const lista = pt.arcos
+      .map((a, i) => ({ chave: `arco:${i}`, x: a.x, y: a.y, z: a.z, i }))
+      .filter((a) => !v?.arcos?.[a.i]);
+    const a = maisPerto(lista, de, atual);
+    if (!a) return null;
+    return {
+      chave: a.chave,
+      tipo: 'sitio',
+      x: a.x,
+      y: a.y,
+      z: a.z,
+      placa: [a.x, a.y + ALTURA_ARCO - 0.4, a.z],
+      figura,
+      raio: RAIO_ARCO,
+    };
   }
   return null;
 }

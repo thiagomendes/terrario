@@ -1,12 +1,13 @@
 /**
- * O público do Show da Vila (spec 026, dono: uns 20 bonecos no show, espalhados pelo campo,
- * todos com a cara dos bonecos do jogo). Puro: o núcleo e a tela leem daqui onde cada um fica.
+ * O público do Show da Vila (spec 026, dono: todos com a cara dos bonecos do jogo; 16 nov 2026: o
+ * dobro na hora do show). Puro: o núcleo e a tela leem daqui onde cada um fica.
  *
- * - **A turma:** 20 moradores de verdade (núcleo, corpo macio). No show, uns na grade e os
- *   outros espalhados pelo campo atrás, de frente para o palco (nada de bloco apertado); de
- *   noite sem show conversam em cinco rodinhas pelo campo (a rodinha muda de lugar de tempos em
- *   tempos); de dia só 4 ficam (dois na grade vendo a passagem de som, dois de papo), e os outros
- *   saem pelo portão do festival.
+ * - **A turma:** 40 moradores de verdade (núcleo, corpo macio). No show, uns na grade e os
+ *   outros espalhados pelo campo atrás, de frente para o palco (nada de bloco apertado); os 20
+ *   de sempre ficam pelo festival de noite, conversando em cinco rodinhas pelo campo (a rodinha
+ *   muda de lugar de tempos em tempos), e os outros 20 só chegam para o show (pelo portão) e vão
+ *   embora depois dele; de dia só 4 ficam (dois na grade, dois de papo), e os outros saem pelo
+ *   portão do festival.
  * - **Nada no caminho:** o caminho de cascalho do portão até a grade (e uma folga de cada lado),
  *   o corredor do cercadinho das lhamas até a grade, a volta até a escadinha do palco, o estojo
  *   do festival (f1) e o pé de cada peça ficam livres. Os lugares vêm do plano, nunca da malha.
@@ -19,7 +20,9 @@ type V3 = [number, number, number];
 type V2 = [number, number];
 
 /** Quantos moradores na turma do show (os números deles vêm depois dos de posto). */
-export const PUBLICO_GRADE = 20;
+export const PUBLICO_GRADE = 40;
+/** Os primeiros tantos da turma ficam pelo festival de noite; os outros vêm só para o show. */
+export const PUBLICO_DA_NOITE = 20;
 /** A rodinha muda de lugar a cada tanto (s), cada uma na sua vez. */
 export const VOLTA_RODINHA = 26;
 /** Quantos em cada rodinha de papo (e quantas rodinhas). */
@@ -58,6 +61,28 @@ const GRADE_UV: readonly V2[] = [
   [72.8, 92.6],
   [67.4, 91.4],
   [70.6, 89.2],
+  // os que vêm só para o show (16 nov 2026: o dobro), nos vãos entre os de sempre, mais perto
+  // da grade, sem tapar o caminho, o corredor das lhamas, o estojo e o rádio
+  [37.7, 99.3],
+  [55.5, 98.1],
+  [45.2, 97.6],
+  [51.9, 97.5],
+  [68.9, 97.6],
+  [37.4, 96.8],
+  [42.5, 96.8],
+  [66.2, 96.8],
+  [53.7, 96.4],
+  [47.1, 95.5],
+  [71.1, 95.5],
+  [73.5, 95.5],
+  [39.3, 94.8],
+  [55.5, 95.0],
+  [66.3, 94.4],
+  [53.2, 93.6],
+  [37.4, 93.1],
+  [70.0, 93.1],
+  [55.5, 92.6],
+  [50.6, 91.9],
 ];
 /** As rodinhas da noite sem show: dois lugares cada (vão de um para o outro). */
 const RODAS_UV: readonly [V2, V2][] = [
@@ -197,6 +222,8 @@ export const rodaDe = (k: number): [number, number] => [
 export function lugarDoPublico(pub: PublicoVila, k: number, m: MomentoPublico): LugarPublico {
   const g = pub.grade[k];
   if (m.show) return { alvo: g, olhar: [g[0], g[2] + 20], modo: 'grade' };
+  // os que vêm só para o show vão embora depois dele (e nem chegam antes)
+  if (k >= PUBLICO_DA_NOITE) return { alvo: null, olhar: null, modo: 'fora' };
   const dia = !m.noite;
   if (dia && !FICAM_DE_DIA.includes(k)) return { alvo: null, olhar: null, modo: 'fora' };
   // de dia, dois na grade vendo a passagem de som
@@ -247,7 +274,8 @@ export function caminhoNoFestival(pub: PublicoVila, de: V2, para: V2): V2[] {
     const v = Math.floor(z) - p.oz - v0;
     return u < 0 || v < 0 || u >= nu || v >= nv ? -1 : v * nu + u;
   };
-  const livreI = (i: number) => pub.livre(p.ox + u0 + (i % nu) + 0.5, p.oz + v0 + ((i / nu) | 0) + 0.5);
+  const livreI = (i: number) =>
+    pub.livre(p.ox + u0 + (i % nu) + 0.5, p.oz + v0 + ((i / nu) | 0) + 0.5);
   /** A célula livre mais perto (o lugar pode cair colado numa peça). */
   const perto = (x: number, z: number) => {
     let i = idx(x, z);
