@@ -25,9 +25,13 @@ import type { ObraSalva } from '../nucleo/saneamento';
  * verdade (o formato das mensagens é o mesmo, mas o sentido mudou: o show de 6 min com a abertura,
  * a entrada e três músicas, a banda que anda pela coreografia, o acorde do toque com a música no
  * número e o atalho de teste `pularShow`; o navegador de antes desenharia e tocaria o show de 40 s
- * em cima do relógio do novo, então recebe "versão nova, recarregue").
+ * em cima do relógio do novo, então recebe "versão nova, recarregue"). 10: spec 026, o show
+ * separado das missões (o comando `vila` só aceita a caixa: o toque no palco saiu; o evento
+ * `vilaAcorde` saiu e o `vilaArco` entrou; o quadro `vila` ganhou os `arcos` de cada jogador; a
+ * banda ganhou a tecladista e mudou de número; o público dobrou; os arcos do rinque entram nas
+ * peças sólidas do bairro; a f3 do show virou a f4 da volta no rinque).
  */
-export const VERSAO_REDE = 9;
+export const VERSAO_REDE = 10;
 /** Jogadores por mundo. */
 export const MAX_JOGADORES = 8;
 
