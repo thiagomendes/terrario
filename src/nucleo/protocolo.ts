@@ -199,7 +199,9 @@ export type Depuracao =
   /** Põe o kit de blocos na barra (os testes que constroem; o jogo começa com ela vazia). */
   | { f: 'kit' }
   /** A lavoura avança como se tantos segundos tivessem passado (até 1 hora). */
-  | { f: 'crescer'; segundos: number };
+  | { f: 'crescer'; segundos: number }
+  /** Spec 026 (testes e vídeos): o show tocando pula para `s` s desde o começo dele. */
+  | { f: 'pularShow'; s: number };
 
 /** O que é de cada jogador num mundo de vários (salvo à parte do mundo). */
 export interface DadosJogador {

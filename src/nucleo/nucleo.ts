@@ -2537,6 +2537,9 @@ export function criarNucleo(op: OpcoesNucleo) {
         preencherKit(j.inventario, [...SLOTS.map((s) => s.bloco), ...KIT_EXTRA]);
         j.inventarioSujo = true;
         break;
+      case 'pularShow':
+        vila?.pularShow(Number(d.s) || 0);
+        break;
     }
   }
 

@@ -4,13 +4,14 @@
  * `temas['vila-neon'].show` do índice) só existe neste mundo e desce em segundo plano depois de o
  * mundo abrir; sem ele, o bairro fica só com a trilha (nada vai para o console).
  *
- * - **O show** (regras em `src/jogo/show.ts`): a contagem nas baquetas em `show.inicio` e, um compasso
- *   depois, as três camadas (bateria; baixo e guitarras; teclado e glockenspiel), cada uma uma
- *   sequência de pedaços (o verso em laço nos compassos 0 a 7, o refrão duas vezes, a subida com o
- *   chamado) encadeada no relógio do núcleo convertido para o do AudioContext. Todo mundo ouve o mesmo
- *   compasso. O toque no palco (`vilaAcorde`) toca o acorde exatamente em `quando`; o acorde final
+ * - **O show** (o roteiro em `src/jogo/show.ts`, uns 6 min): a abertura (`abertura`) em `show.inicio`,
+ *   a entrada da banda (`entrada`), e as três músicas da `setlist` do índice, cada uma com a contagem
+ *   dela e as partes no compasso dela (a parte em laço toca a parte inteira; a que não é laço se
+ *   repete a cada `c` compassos), a torcida nas pausas; tudo encadeado no relógio do núcleo
+ *   convertido para o do AudioContext. Todo mundo ouve o mesmo compasso. O toque no palco
+ *   (`vilaAcorde`) toca o acorde da música de agora exatamente em `quando`; o acorde final
  *   (`vilaFinal`) entra em até 100 ms, ou na hora certa quando vem sozinho (agendado de antemão), corta
- *   as camadas e chama o aplauso.
+ *   as músicas e chama o aplauso, a torcida e os fogos.
  * - **As caixas fora do show:** cada caixa acesa toca o verso da camada dela em laço (é o "ligar o
  *   som" da f3 e, depois do show, o brinquedo livre), no compasso do relógio do núcleo, só com a
  *   criança perto do palco. É o ambiente da zona do festival.
@@ -32,10 +33,12 @@ import {
   APLAUSO,
   CHAMADO,
   COMPASSO,
-  COMPASSOS_SHOW,
-  CONTAGEM,
   ESPERA_FINAL,
+  INTRO,
   OITAVO,
+  ROTEIRO,
+  SETLIST,
+  acordeDoToque,
   faseDoShow,
   momentoFinalSozinho,
 } from '../jogo/show';
@@ -52,6 +55,17 @@ export interface ClipShow {
   arquivo: number;
   /** Laço: o tamanho do laço (amostras), na janela [folga, folga + laco]. */
   laco?: number;
+  /** Compassos da música (o pedaço que não é laço se repete a cada `c` compassos na parte). */
+  c?: number;
+}
+
+/** Uma música da setlist no índice: os pedaços de cada parte, a contagem, os acordes do toque. */
+export interface MusicaIndice {
+  id: string;
+  contagem: string | null;
+  partes: Record<string, string[]>;
+  acordes: string[];
+  final: string | null;
 }
 
 export interface PedacoForma {
@@ -72,6 +86,13 @@ export interface IndiceShow {
   acordes: string[];
   fliperama: string[];
   clips: Record<string, ClipShow>;
+  /** As músicas do show, na ordem da `SETLIST`. */
+  setlist: MusicaIndice[];
+  /** A abertura, a entrada da banda, a torcida (laço) e os fogos do fim. */
+  abertura: string | null;
+  entrada: string | null;
+  torcida: string | null;
+  fogos: string | null;
 }
 
 const num = (v: unknown): number | null => (typeof v === 'number' && Number.isFinite(v) ? v : null);
@@ -97,6 +118,7 @@ export function lerIndiceShow(json: unknown): IndiceShow | null {
       n,
       arquivo: num(c.arquivo) ?? n + folga,
       laco: num(c.laco) ?? undefined,
+      c: num(c.c) ?? undefined,
     };
   }
   const lista = (v: unknown) =>
@@ -112,18 +134,55 @@ export function lerIndiceShow(json: unknown): IndiceShow | null {
     ? s.camadas.filter((x): x is string => typeof x === 'string')
     : [];
   if (camadas.length !== 3 || !forma.length) return null;
+  const clip = (v: unknown) => (typeof v === 'string' && v in clips ? v : null);
+  const setlist: MusicaIndice[] = [];
+  for (const m of (Array.isArray(s.setlist) ? s.setlist : []) as Record<string, unknown>[]) {
+    if (!m || typeof m !== 'object' || typeof m.id !== 'string') continue;
+    const partes: Record<string, string[]> = {};
+    for (const [k, v] of Object.entries((m.partes ?? {}) as Record<string, unknown>)) {
+      const l = lista(v);
+      if (l.length) partes[k] = l;
+    }
+    setlist.push({
+      id: m.id,
+      contagem: clip(m.contagem),
+      partes,
+      acordes: lista(m.acordes),
+      final: clip(m.final),
+    });
+  }
+  // o índice de antes da setlist: a primeira música com as camadas que ele tem
+  if (!setlist.length) {
+    const partes: Record<string, string[]> = {};
+    for (const p of ['verso', 'refrao', 'subida']) {
+      const l = camadas.map((c) => `${c}_${p}`).filter((id) => id in clips);
+      if (l.length) partes[p] = l;
+    }
+    setlist.push({
+      id: 'm1',
+      contagem: clip('contagem'),
+      partes,
+      acordes: lista(s.acordes).slice(0, 3),
+      final: null,
+    });
+  }
   return {
     pacote: s.pacote,
     taxa,
     folga,
     amostrasCompasso,
     tempo: num(s.tempo) ?? 120,
-    compassos: num(s.compassos) ?? COMPASSOS_SHOW,
+    compassos: num(s.compassos) ?? 20,
     forma,
     camadas,
     acordes: lista(s.acordes),
     fliperama: lista(s.fliperama),
     clips,
+    setlist,
+    abertura: clip(s.abertura),
+    entrada: clip(s.entrada),
+    torcida: clip(s.torcida),
+    fogos: clip(s.fogos),
   };
 }
 
@@ -151,7 +210,7 @@ export class RelogioVila {
   }
 }
 
-/** Um pedaço de uma camada (ou a contagem, camada -1) no relógio do núcleo. */
+/** Um pedaço do show no relógio do núcleo (`camada`: a das caixas, ou -1). */
 export interface SegmentoShow {
   camada: number;
   clip: string;
@@ -162,45 +221,92 @@ export interface SegmentoShow {
 
 /** O aplauso entra este tanto depois do acorde final (s), com o acorde ainda soando. */
 export const ATRASO_APLAUSO = 1;
+/** A torcida das pausas entra um pouco antes do fim da música e sai sobre a contagem (s). */
+const TORCIDA_ANTES = 0.4;
+const TORCIDA_DEPOIS = 0.6;
 
-/** Onde as camadas param: no acorde final (o tocado ou o que vem sozinho). */
+/** Onde as músicas param: no acorde final (o tocado ou o que vem sozinho). */
 export function corteDoShow(inicio: number, final: number | null): number {
   return final ?? inicio + CHAMADO + ESPERA_FINAL;
 }
 
+/** O acorde final do show (o da última música, ou o de antes). */
+export function clipeFinal(ind: Pick<IndiceShow, 'setlist'>): string {
+  return ind.setlist[ind.setlist.length - 1]?.final ?? 'final';
+}
+
 /**
- * Os pedaços do show (tempo do núcleo): a contagem em `inicio`; cada camada, a partir do primeiro
- * tempo (`inicio + CONTAGEM`), na forma do índice; tudo cortado no acorde final.
+ * Os pedaços do show (tempo do núcleo): a abertura em `inicio`, a entrada, e cada música do
+ * `ROTEIRO` (a contagem dela e as partes, com os pedaços da `setlist` do índice), a torcida nas
+ * pausas; tudo o que é música cortado no acorde final.
  */
 export function segmentosDoShow(
-  ind: Pick<IndiceShow, 'taxa' | 'forma' | 'camadas' | 'clips'>,
+  ind: Pick<
+    IndiceShow,
+    'taxa' | 'camadas' | 'clips' | 'setlist' | 'abertura' | 'entrada' | 'torcida'
+  >,
   inicio: number,
   final: number | null,
 ): SegmentoShow[] {
   const corte = corteDoShow(inicio, final);
   const out: SegmentoShow[] = [];
-  const cont = ind.clips.contagem;
-  if (cont)
-    out.push({
-      camada: -1,
-      clip: 'contagem',
-      ini: inicio,
-      fim: Math.min(corte, inicio + cont.n / ind.taxa),
-      laco: false,
-    });
-  const t0 = inicio + CONTAGEM;
-  ind.camadas.forEach((cam, i) => {
-    for (const f of ind.forma) {
-      const id = `${cam}_${f.pedaco}`;
-      const c = ind.clips[id];
-      if (!c) continue;
-      const ini = t0 + f.compassoInicio * COMPASSO;
-      if (ini >= corte) continue;
-      const fim = c.laco ? ini + f.compassos * COMPASSO : ini + c.n / ind.taxa;
-      out.push({ camada: i, clip: id, ini, fim: Math.min(fim, corte), laco: !!c.laco });
+  const dur = (id: string) => ind.clips[id].n / ind.taxa;
+  const camada = (id: string) => ind.camadas.findIndex((c) => id.startsWith(`${c}_`));
+  const solto = (id: string | null, ini: number) => {
+    if (!id || !ind.clips[id] || ini >= corte) return;
+    out.push({ camada: -1, clip: id, ini, fim: Math.min(corte, ini + dur(id)), laco: false });
+  };
+  solto(ind.abertura, inicio);
+  solto(ind.entrada, inicio + INTRO);
+  ROTEIRO.forEach((r, k) => {
+    const m = ind.setlist[k];
+    if (!m) return;
+    solto(m.contagem, inicio + r.contagem);
+    for (const p of r.partes) {
+      const ini = inicio + p.ini;
+      const fimParte = ini + p.compassos * r.compasso;
+      for (const id of m.partes[p.pedaco] ?? []) {
+        const c = ind.clips[id];
+        if (!c) continue;
+        if (c.laco) {
+          if (ini < corte)
+            out.push({
+              camada: camada(id),
+              clip: id,
+              ini,
+              fim: Math.min(fimParte, corte),
+              laco: true,
+            });
+          continue;
+        }
+        // o pedaço que não é laço se repete a cada `c` compassos dentro da parte
+        const passo = (c.c ?? p.compassos) * r.compasso;
+        for (let t = ini; t < fimParte - 1e-6 && t < corte; t += passo)
+          out.push({
+            camada: camada(id),
+            clip: id,
+            ini: t,
+            fim: Math.min(corte, t + dur(id)),
+            laco: false,
+          });
+      }
+    }
+    // a pausa depois da música: a torcida (em laço) até a contagem da próxima
+    const prox = ROTEIRO[k + 1];
+    const tc = ind.torcida ? ind.clips[ind.torcida] : null;
+    if (prox && tc && ind.torcida) {
+      const a = inicio + r.fim - TORCIDA_ANTES;
+      const b = Math.min(corte, inicio + prox.contagem + TORCIDA_DEPOIS);
+      if (a < b) out.push({ camada: -1, clip: ind.torcida, ini: a, fim: b, laco: !!tc.laco });
     }
   });
-  return out;
+  return out.sort((a, b) => a.ini - b.ini);
+}
+
+/** A grade do toque da música `k` (o primeiro tempo, no relógio do núcleo) e o oitavo dela. */
+export function gradeDaMusica(inicio: number, k: number): { t0: number; oitavo: number } {
+  const r = ROTEIRO[Math.max(0, Math.min(ROTEIRO.length - 1, k))];
+  return { t0: inicio + r.inicio, oitavo: r.compasso / 8 };
 }
 
 /**
@@ -212,10 +318,11 @@ export function momentoDoAcorde(
   quandoAudio: number,
   agoraAudio: number,
   gradeAudio: number,
+  oitavo = OITAVO,
 ): number {
   const minimo = agoraAudio + 0.01;
   if (quandoAudio >= minimo) return quandoAudio;
-  return gradeAudio + Math.ceil((minimo - gradeAudio) / OITAVO - 1e-9) * OITAVO;
+  return gradeAudio + Math.ceil((minimo - gradeAudio) / oitavo - 1e-9) * oitavo;
 }
 
 /**
@@ -673,6 +780,10 @@ export function criarSomVila(op: OpcoesSomVila) {
       if (x) agendados.set(chave, x);
       else if (relogio.audio(s.fim) <= ag + 0.05) agendados.set(chave, null);
     }
+    // o acorde final (e o que vem com ele) abre antes do chamado: o toque pode chegar a qualquer hora
+    const tChamado = relogio.audio(showAtual.inicio + CHAMADO);
+    if (tChamado < ag + 8)
+      for (const k of [clipeFinal(ind), 'aplauso', ind.torcida, ind.fogos]) if (k) void abrir(k);
     // o acorde final que vem sozinho: agendado de antemão, na hora certa
     if (showAtual.final === null && !finalAgendado) {
       const tAuto = relogio.audio(momentoFinalSozinho({ inicio: showAtual.inicio, final: null }));
@@ -684,19 +795,48 @@ export function criarSomVila(op: OpcoesSomVila) {
     for (const x of agendados.values()) if (x && !x.parado && x.fim > t) parar(x, t, 0.1);
   }
 
-  function agendarFinal(t: number, sozinho: boolean): void {
-    if (finalAgendado) {
-      for (const x of finalAgendado.fontes) parar(x, agora(), 0.02);
-    }
-    cortarCamadas(t);
+  /** O acorde final e o que vem com ele: o aplauso, a torcida até a banda sair e os fogos. */
+  function somDoFinal(t: number): Tocando[] {
+    if (!ind) return [];
     const fontes: Tocando[] = [];
-    const f = tocar('final', t, { ganho: dbLin(REFORCO_FINAL_DB), bus: 'show' });
+    const f = tocar(clipeFinal(ind), t, { ganho: dbLin(REFORCO_FINAL_DB), bus: 'show' });
     if (f) fontes.push(f);
     const a = tocar('aplauso', t + ATRASO_APLAUSO, {
       ganho: dbLin(REFORCO_APLAUSO_DB),
       bus: 'show',
     });
     if (a) fontes.push(a);
+    const tc = ind.torcida;
+    if (tc && ind.clips[tc]) {
+      // a torcida segue enquanto a banda faz a reverência e sai, e some devagar no fim
+      const x = tocar(tc, t + ATRASO_APLAUSO + 1.5, {
+        ganho: dbLin(REFORCO_APLAUSO_DB - 2),
+        bus: 'show',
+        laco: !!ind.clips[tc].laco,
+        fim: t + APLAUSO - 0.5,
+        entrada: 1.2,
+      });
+      if (x) {
+        const g = x.ganho.gain;
+        g.setValueAtTime?.(dbLin(REFORCO_APLAUSO_DB - 2), t + APLAUSO - 5);
+        g.linearRampToValueAtTime?.(0.0001, t + APLAUSO - 0.5);
+        fontes.push(x);
+      }
+    }
+    if (ind.fogos)
+      for (const q of [0.15, 1.6]) {
+        const x = tocar(ind.fogos, t + q, { ganho: dbLin(REFORCO_APLAUSO_DB - 3), bus: 'show' });
+        if (x) fontes.push(x);
+      }
+    return fontes;
+  }
+
+  function agendarFinal(t: number, sozinho: boolean): void {
+    if (finalAgendado) {
+      for (const x of finalAgendado.fontes) parar(x, agora(), 0.02);
+    }
+    cortarCamadas(t);
+    const fontes = somDoFinal(t);
     finalAgendado = { t, fontes, sozinho };
     caladoAte = Math.max(caladoAte, t + APLAUSO);
     showAte = t + APLAUSO;
@@ -714,9 +854,8 @@ export function criarSomVila(op: OpcoesSomVila) {
       livres[i] = null;
     }
     if (ind) {
-      for (const cam of ind.camadas)
-        for (const p of ['verso', 'refrao', 'subida']) void abrir(`${cam}_${p}`);
-      for (const k of ['contagem', 'final', 'aplauso', ...ind.acordes]) void abrir(k);
+      // o que vem logo (o resto abre uns segundos antes de tocar, em agendarShow)
+      for (const k of [ind.abertura, ind.entrada, ind.torcida, 'aplauso']) if (k) void abrir(k);
     }
   }
 
@@ -922,15 +1061,11 @@ export function criarSomVila(op: OpcoesSomVila) {
         finalAgendado &&
         !finalAgendado.fontes.length &&
         ag < finalAgendado.t + 0.3 &&
-        prontos.has('final')
+        ind &&
+        prontos.has(clipeFinal(ind))
       ) {
         const t = Math.max(finalAgendado.t, ag + 0.01);
-        const f = tocar('final', t, { ganho: dbLin(REFORCO_FINAL_DB), bus: 'show' });
-        const a = tocar('aplauso', t + ATRASO_APLAUSO, {
-          ganho: dbLin(REFORCO_APLAUSO_DB),
-          bus: 'show',
-        });
-        finalAgendado.fontes = [f, a].filter((x): x is Tocando => !!x);
+        finalAgendado.fontes = somDoFinal(t);
       }
     }
     if (busShow) {
@@ -987,10 +1122,15 @@ export function criarSomVila(op: OpcoesSomVila) {
     switch (e.e) {
       case 'vilaAcorde': {
         if (!ind || !showAtual) return;
-        const id = ind.acordes[e.acorde % ind.acordes.length] ?? ind.acordes[0];
+        // o acorde da música de agora (três por música)
+        const { musica, acorde } = acordeDoToque(e.acorde);
+        const lista = ind.setlist[musica]?.acordes.length
+          ? ind.setlist[musica].acordes
+          : ind.acordes;
+        const id = lista[acorde % lista.length] ?? lista[0];
         if (!id) return;
-        const grade = relogio.audio(showAtual.inicio + CONTAGEM);
-        const t = momentoDoAcorde(relogio.audio(e.quando), ag, grade);
+        const g = gradeDaMusica(showAtual.inicio, musica);
+        const t = momentoDoAcorde(relogio.audio(e.quando), ag, relogio.audio(g.t0), g.oitavo);
         if (finalAgendado && t >= finalAgendado.t) return;
         if (tocar(id, t, { ganho: 1, bus: 'show' })) {
           acordes.push({ acorde: e.acorde, quando: t });
@@ -1199,6 +1339,8 @@ export function criarSomVila(op: OpcoesSomVila) {
 
 /** Os acordes do show (para os testes conferirem que o índice tem um por acorde). */
 export const QUANTOS_ACORDES = ACORDES_SHOW.length;
+/** As músicas do show (para os testes conferirem que o índice tem a setlist inteira). */
+export const QUANTAS_MUSICAS = SETLIST.length;
 
 /**
  * A interface (`src/ui/*`) não conhece o motor de som: pede o toque de um brinquedo da Vila Neon

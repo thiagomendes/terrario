@@ -427,6 +427,8 @@ export interface EstadoDepuracao {
   vilaComando?: (c: { a: 'caixa'; i: number } | { a: 'palco' }) => void;
   /** Spec 026: o relógio do núcleo agora (s). */
   vilaTempo?: () => number;
+  /** Spec 026 (testes e vídeos): o show tocando pula para `s` s desde o começo. */
+  pularShow?: (s: number) => void;
   /** Spec 026: os eventos do show que chegaram (testes) e o que o show mostra. */
   eventosVila?: (import('../nucleo/vila').EventoVila & { recebido: number })[];
   showVila?: () => ReturnType<import('./vila/show').ShowVila['estado']> | null;
@@ -4811,6 +4813,7 @@ export function criarCena(
     enviar({ t: 'depurar', d: { f: 'invocar', tipo, x, y, z, ...extra } });
   estado.darKit = () => enviar({ t: 'depurar', d: { f: 'kit' } });
   estado.crescerLavoura = (segundos) => enviar({ t: 'depurar', d: { f: 'crescer', segundos } });
+  estado.pularShow = (s) => enviar({ t: 'depurar', d: { f: 'pularShow', s } });
 
   // Modo construção (criativo): ferramentas de forma, copiar/colar e espelho.
   const visualConstrucao = criarVisualConstrucao(scene, atlas, textura, (m) =>

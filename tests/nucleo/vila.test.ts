@@ -6,7 +6,9 @@ import { definirEstiloMundo, ESTILO_PADRAO, vilaDoMundo } from '../../src/world/
 import { limparPovoados } from '../../src/world/povoado';
 import { sanear as sanearComando } from '../../src/nucleo/saneamento';
 import type { Comando, EventoNucleo } from '../../src/nucleo/protocolo';
-import { CHAMADO, ESPERA_FINAL, APLAUSO } from '../../src/jogo/show';
+import { CHAMADO, CONTAGEM, ESPERA_FINAL, APLAUSO, INTRO, ROTEIRO } from '../../src/jogo/show';
+import { BAIXISTA, BATERISTA, papelNaBanda } from '../../src/nucleo/vila';
+import { COXIA, LUGAR, doMundo, noPalco } from '../../src/jogo/coreografia';
 import { PASSO } from '../../src/nucleo/protocolo';
 import { MORADORES_VILA, N0_PUBLICO, POVOADO_VILA } from '../../src/nucleo/vila';
 import {
@@ -87,6 +89,10 @@ function passos(n: Nucleo, k = 1, quem = 'ana'): Ev[] {
   }
   return r;
 }
+/** O show tocando pula para `s` s desde o começo (o atalho dos testes). */
+function pularShow(n: Nucleo, seg: number): void {
+  n.comando('ana', { t: 'depurar', d: { f: 'pularShow', s: seg } } as Comando);
+}
 /** O relógio do mundo (o comando de depuração dos testes de tela). */
 function hora(n: Nucleo, h: number): void {
   n.comando('ana', { t: 'depurar', d: { f: 'hora', hora: h } } as Comando);
@@ -127,7 +133,7 @@ describe('spec 026: a Vila Neon no núcleo', () => {
     expect(n.estado.vila!.vista().ins).toEqual([false, false, false]);
   });
 
-  it('f3 e o show: três caixas acendem e o show começa; o toque toca no tempo; o acorde final vem sozinho; 6 moedinhas depois do acorde', () => {
+  it('f3 e o show: a terceira caixa fecha a f3 na hora (6 moedinhas) e o show começa; o toque toca no tempo; o acorde final vem sozinho', () => {
     const n = abrir();
     const p = vilaDoMundo(SEMENTE)!;
     passos(n);
@@ -141,33 +147,39 @@ describe('spec 026: a Vila Neon no núcleo', () => {
     passos(n);
     const [cx, cy, cz] = p.pontos.caixas[0];
     ir(n, 'ana', cx + 0.5, cy, cz - 1.5);
-    let ganho = 0;
+    const porCaixa: number[] = [];
     for (let i = 0; i < 3; i++) {
       const [x, y, z] = p.pontos.caixas[i];
       ir(n, 'ana', x + 0.5, y, z - 1.5);
       n.comando('ana', { t: 'vila', a: 'caixa', i });
-      ganho += moedas(passos(n, 3));
+      porCaixa.push(moedas(passos(n, 3)));
     }
-    expect(ganho).toBe(0);
+    // o dono (16 nov 2026): acender as três fecha a missão na hora, com a festa
+    expect(porCaixa).toEqual([0, 0, 6]);
+    expect(n.estado.almas.get('ana')!.feitas).toContain('f3');
     const v = n.estado.vila!.vista();
     expect(v.cx).toEqual([true, true, true]);
     expect(v.show).not.toBeNull();
-    // um toque no palco: o acorde encaixa no próximo oitavo (no máximo 0,25 s)
+    // na abertura o toque não toca (a música ainda não começou)
     passos(n, 60);
+    n.comando('ana', { t: 'vila', a: 'palco' });
+    expect(passos(n, 1).some((e) => e.e === 'vilaAcorde')).toBe(false);
+    // na primeira música, o acorde encaixa no próximo oitavo (no máximo 0,25 s)
+    pularShow(n, CONTAGEM + 3);
+    passos(n, 2);
     const antes = n.estado.n * PASSO;
     n.comando('ana', { t: 'vila', a: 'palco' });
     const evs = passos(n, 1);
     const ac = evs.find((e) => e.e === 'vilaAcorde') as Extract<Ev, { e: 'vilaAcorde' }>;
     expect(ac).toBeDefined();
     expect(ac.quando - antes).toBeLessThanOrEqual(0.25 + PASSO);
-    // ninguém toca no chamado: o acorde final vem sozinho em 4 s
-    const ate = Math.ceil((CHAMADO + ESPERA_FINAL + 0.5) / PASSO);
-    const fim = passos(n, ate);
+    // ninguém toca no chamado: o acorde final vem sozinho, sem moedinha nova
+    pularShow(n, CHAMADO - 1);
+    const fim = passos(n, Math.ceil((ESPERA_FINAL + 1.5) / PASSO));
     const final = fim.find((e) => e.e === 'vilaFinal') as Extract<Ev, { e: 'vilaFinal' }>;
     expect(final?.quem).toBe('auto');
-    expect(moedas(fim)).toBe(6);
-    expect(n.estado.almas.get('ana')!.feitas).toContain('f3');
-    // depois do aplauso, o show acaba e as caixas ficam como brinquedo livre (sem moedinha)
+    expect(moedas(fim)).toBe(0);
+    // depois do fim, o show acaba e as caixas ficam como brinquedo livre (sem moedinha)
     const depois = passos(n, Math.ceil((APLAUSO + 1) / PASSO));
     expect(n.estado.vila!.vista().show).toBeNull();
     ir(n, 'ana', cx + 0.5, cy, cz - 1.5);
@@ -175,6 +187,57 @@ describe('spec 026: a Vila Neon no núcleo', () => {
     const brinca = passos(n, 3);
     expect(moedas([...depois, ...brinca])).toBe(0);
     expect(n.estado.vila!.vista().cx[0]).toBe(false);
+  });
+
+  it('a banda: espera na coxia, entra pela escadinha na entrada, toca no lugar e sai no fim (todos veem o mesmo)', () => {
+    const n = abrir();
+    const p = vilaDoMundo(SEMENTE)!;
+    hora(n, NOITE);
+    const [x, y, z] = p.pontos.caixas[0];
+    ir(n, 'ana', x + 0.5, y, z - 1.5);
+    passos(n, 30 * 20);
+    const banda = () =>
+      n.estado.populacao.lista.filter(
+        (c) => c.morador?.povoado === POVOADO_VILA && papelNaBanda(c.morador.n) !== null,
+      );
+    // os cinco da banda (com o baterista e a baixista) existem e, de noite, esperam na coxia
+    expect(new Set(banda().map((c) => c.morador!.n))).toEqual(
+      new Set([0, 1, 2, BATERISTA, BAIXISTA]),
+    );
+    const local = (c: { x: number; z: number }) => doMundo(p.pontos.palco, c.x, c.z);
+    for (const c of banda()) {
+      const papel = papelNaBanda(c.morador!.n)!;
+      if (papel === 'roadie') continue;
+      const [a, b] = local(c);
+      expect(Math.hypot(a - COXIA[papel][0], b - COXIA[papel][1]), papel).toBeLessThan(0.3);
+    }
+    acenderAsTres(n, p);
+    expect(n.estado.vila!.vista().show).not.toBeNull();
+    // na abertura, ninguém no palco
+    passos(n, 10 * 20);
+    for (const c of banda()) {
+      const papel = papelNaBanda(c.morador!.n)!;
+      if (papel === 'roadie') continue;
+      expect(noPalco(...local(c)), papel).toBe(false);
+    }
+    // quando a música começa, cada um no lugar dele no palco
+    passos(n, Math.ceil((CONTAGEM - 10) / PASSO));
+    for (const c of banda()) {
+      const papel = papelNaBanda(c.morador!.n)!;
+      const [a, b] = local(c);
+      expect(Math.hypot(a - LUGAR[papel][0], b - LUGAR[papel][1]), papel).toBeLessThan(0.5);
+    }
+    // no fim do show, de volta para a coxia
+    pularShow(n, CHAMADO + ESPERA_FINAL - 0.1);
+    passos(n, Math.ceil((APLAUSO + 4) / PASSO));
+    for (const c of banda()) {
+      const papel = papelNaBanda(c.morador!.n)!;
+      if (papel === 'roadie') continue;
+      const [a, b] = local(c);
+      expect(Math.hypot(a - COXIA[papel][0], b - COXIA[papel][1]), papel).toBeLessThan(0.5);
+    }
+    void INTRO;
+    void ROTEIRO;
   });
 
   it('o toque do chamado dispara o acorde final na hora', () => {
@@ -188,7 +251,8 @@ describe('spec 026: a Vila Neon no núcleo', () => {
       n.comando('ana', { t: 'vila', a: 'caixa', i });
       passos(n, 2);
     }
-    passos(n, Math.ceil((CHAMADO + 0.5) / PASSO));
+    pularShow(n, CHAMADO + 0.5);
+    passos(n, 2);
     const t = n.estado.n * PASSO;
     n.comando('ana', { t: 'vila', a: 'palco' });
     const evs = passos(n, 1);
@@ -342,17 +406,14 @@ describe('spec 026: a Vila Neon no núcleo', () => {
     passos(n, 60 * 20);
     expect(n.estado.vila!.vista().show).toBeNull();
     // a noite chega: as caixas da passagem de som se apagam (a banda prepara o show); a
-    // criança acende as três, as duas primeiras bolinhas vêm já, e o show começa
+    // criança acende as três, a f3 fecha na terceira (6 moedinhas) e o show começa
     hora(n, NOITE);
     passos(n, 5);
     expect(n.estado.vila!.vista().cx).toEqual([false, false, false]);
-    acenderAsTres(n, p);
+    const noite = acenderAsTres(n, p);
     expect(n.estado.vila!.vista().cx).toEqual([true, true, true]);
     expect(n.estado.vila!.vista().show).not.toBeNull();
-    expect(f3()).toBe(2);
-    // e o show vai até o fim: a f3 fecha (6 moedinhas)
-    const fim = passos(n, Math.ceil((CHAMADO + ESPERA_FINAL + 1) / PASSO));
-    expect(moedas(fim)).toBe(6);
+    expect(moedas(noite)).toBe(6);
     expect(n.estado.almas.get('ana')!.feitas).toContain('f3');
   });
 
@@ -377,10 +438,12 @@ describe('spec 026: a Vila Neon no núcleo', () => {
     hora(n, NOITE);
     passos(n);
     acenderAsTres(n, p);
-    const inicio = n.estado.vila!.vista().show!.inicio;
     passos(n, 5 * 20);
+    pularShow(n, CHAMADO - 2);
+    passos(n);
+    const inicio = n.estado.vila!.vista().show!.inicio;
     hora(n, DIA);
-    const evs = passos(n, Math.ceil((CHAMADO + ESPERA_FINAL + 1) / PASSO));
+    const evs = passos(n, Math.ceil((ESPERA_FINAL + 3) / PASSO));
     expect(evs.some((e) => e.e === 'vilaFinal')).toBe(true);
     expect(n.estado.vila!.vista().show?.inicio ?? inicio).toBe(inicio);
     passos(n, Math.ceil((APLAUSO + 1) / PASSO));
@@ -414,11 +477,16 @@ describe('spec 026: a Vila Neon no núcleo', () => {
     acenderAsTres(m, p);
     expect(m.estado.vila!.vista().show).not.toBeNull();
     // e depois do show, salvo de novo, a noite dele vai junto (as caixas são brinquedo livre)
-    const fim = passos(m, Math.ceil((CHAMADO + ESPERA_FINAL + APLAUSO + 2) / PASSO));
+    pularShow(m, CHAMADO + ESPERA_FINAL - 1);
+    const fim = passos(m, Math.ceil((APLAUSO + 3) / PASSO));
     expect(fim.some((e) => e.e === 'vilaFinal')).toBe(true);
     const s2 = m.salvar();
     expect(typeof (s2.extras as { vila: { noite?: number } }).vila.noite).toBe('number');
-    const k = abrir(['ana'], true, { edicoes: s2.edicoes, hora: NOITE, extras: s2.extras } as never);
+    const k = abrir(['ana'], true, {
+      edicoes: s2.edicoes,
+      hora: NOITE,
+      extras: s2.extras,
+    } as never);
     passos(k, 5);
     acenderAsTres(k, p);
     expect(k.estado.vila!.vista().show).toBeNull();
@@ -474,7 +542,9 @@ describe('spec 026: a Vila Neon no núcleo', () => {
       // ninguém colado em ninguém, e o povo vai da grade até o meio do campo
       for (let a = 0; a < pub.grade.length; a++)
         for (let b = a + 1; b < pub.grade.length; b++)
-          expect(Math.hypot(pub.grade[a][0] - pub.grade[b][0], pub.grade[a][2] - pub.grade[b][2])).toBeGreaterThan(1.5);
+          expect(
+            Math.hypot(pub.grade[a][0] - pub.grade[b][0], pub.grade[a][2] - pub.grade[b][2]),
+          ).toBeGreaterThan(1.5);
       const vs = pub.grade.map((g) => g[2]);
       expect(Math.max(...vs) - Math.min(...vs)).toBeGreaterThan(10);
       // as rodinhas também ficam em chão livre, fora das faixas
@@ -505,7 +575,9 @@ describe('spec 026: a Vila Neon no núcleo', () => {
     expect(naGrade).toHaveLength(PUBLICO_GRADE);
     for (const c of naGrade) {
       const k = c.morador!.n - N0_PUBLICO;
-      expect(Math.hypot(c.x - pub.grade[k][0], c.z - pub.grade[k][2]), `morador ${k}`).toBeLessThan(1.2);
+      expect(Math.hypot(c.x - pub.grade[k][0], c.z - pub.grade[k][2]), `morador ${k}`).toBeLessThan(
+        1.2,
+      );
     }
     // ninguém teleportou para chegar (o caminho dá a volta nas peças)
     expect(naGrade.every((c) => !c.teleportes)).toBe(true);
@@ -567,7 +639,8 @@ describe('spec 026: a Vila Neon no núcleo', () => {
     });
     expect(naGrade.length).toBe(PUBLICO_GRADE);
     // e o show vai até o fim sozinho (o acorde final vem sozinho)
-    const fim = passos(n, Math.ceil((CHAMADO + ESPERA_FINAL + APLAUSO + 1) / PASSO));
+    pularShow(n, CHAMADO - 1);
+    const fim = passos(n, Math.ceil((ESPERA_FINAL + APLAUSO + 2) / PASSO));
     expect(fim.some((e) => e.e === 'vilaFinal' && e.quem === 'auto')).toBe(true);
     expect(n.estado.vila!.vista().show).toBeNull();
   });
@@ -611,7 +684,9 @@ describe('spec 026: a Vila Neon no núcleo', () => {
     ir(n, 'ana', gx, p.h + 1, gz);
     ateOShow(n, 120);
     expect(n.estado.vila!.vista().show).not.toBeNull();
-    passos(n, Math.ceil((CHAMADO + ESPERA_FINAL + APLAUSO + 2) / PASSO));
+    passos(n, 2);
+    pularShow(n, CHAMADO + ESPERA_FINAL - 1);
+    passos(n, Math.ceil((APLAUSO + 3) / PASSO));
     expect(n.estado.vila!.vista().show).toBeNull();
     // a mesma noite: um minuto ali, nada; as caixas viram brinquedo livre (liga e desliga)
     passos(n, 60 * 20);
@@ -658,13 +733,12 @@ describe('spec 026: a Vila Neon no núcleo', () => {
     expect(n.estado.vila!.vista().cx[0]).toBe(true);
     const f3 = () => n.estado.almas.get('ana')!.progresso['f3'] ?? 0;
     expect(f3()).toBe(1);
-    // e se distrai: as outras acendem sozinhas e o show vem
-    const { s } = ateOShow(n, PERTO_ANTES_F3 + 10);
+    // e se distrai: as outras acendem sozinhas e o show vem; a f3 fecha quando ele começa
+    // (estava no festival), com as 6 moedinhas
+    const { s, evs } = ateOShow(n, PERTO_ANTES_F3 + 10);
     expect(n.estado.vila!.vista().show).not.toBeNull();
     expect(s).toBeGreaterThan(0);
-    // a f3 fecha no acorde final (estava no show), com as 6 moedinhas
-    const fim = passos(n, Math.ceil((CHAMADO + ESPERA_FINAL + 1) / PASSO));
-    expect(moedas(fim)).toBe(6);
+    expect(moedas([...evs, ...passos(n, 2)])).toBe(6);
     expect(n.estado.almas.get('ana')!.feitas).toContain('f3');
   });
 

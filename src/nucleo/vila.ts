@@ -7,10 +7,15 @@
  *   banca): aparecem quando alguém chega perto, ficam no posto e olham para a criança. Como os
  *   da cidade, não vão salvos.
  * - **O Show da Vila:** os três estojos (f1) no chão de cada zona; os instrumentos aparecem no
- *   palco quando a criança passa por eles; as três caixas do palco (f3); o show no tempo da
- *   música (`src/jogo/show.ts`), o toque no palco, o acorde final (sozinho em 4 s), e depois as
- *   caixas como brinquedo livre. Toda noite, com alguém no festival, o show começa sozinho (as
- *   caixas acendem uma a uma); tocar nas caixas antes acende mais cedo.
+ *   palco quando a criança passa por eles; as três caixas do palco (f3: a missão fecha quando a
+ *   terceira acende); o show no roteiro de `src/jogo/show.ts` (a abertura, a entrada da banda, as
+ *   três músicas, o chamado e o acorde final), o toque no palco, e depois as caixas como
+ *   brinquedo livre. Toda noite, com alguém no festival, o show começa sozinho (as caixas acendem
+ *   uma a uma); tocar nas caixas antes acende mais cedo.
+ * - **A banda** (o vocalista, a guitarrista, a baixista, o baterista e a roadie) anda pela
+ *   coreografia de `src/jogo/coreografia.ts`: o núcleo põe cada um onde ela manda, a cada passo
+ *   (todos veem o mesmo). Fora do show, de dia passa o som no palco e de noite espera na coxia;
+ *   entre um e outro, vai a pé pela escadinha.
  * - **As lhamas (f2):** duas no cercadinho da beira do campo; o feno aparece na mão de quem tem
  *   a missão ao chegar perto; a lhama segue o feno (a regra da 013) e, ao chegar à grade da
  *   plateia, fica ali balançando no ritmo.
@@ -34,8 +39,22 @@ import {
   PERTO_ANTES,
   PERTO_ANTES_F3,
   TOQUES_POR_SEGUNDO,
+  CHAMADO,
+  ESPERA_FINAL,
   type Show,
 } from '../jogo/show';
+import {
+  doMundo,
+  lugarDeDescanso,
+  paraOMundo,
+  posturaNaBanda,
+  rota,
+  alturaEm,
+  BANCO,
+  ALTURA_BANCO,
+  type PapelBanda,
+  type Ponto,
+} from '../jogo/coreografia';
 import {
   caminhoNoFestival,
   lugarDoPublico,
@@ -56,6 +75,25 @@ export const MORADORES_VILA: readonly { posto: PostoVila; profissao: Profissao }
 ];
 /** A turma da grade (o público do show) vem depois dos de posto: n de N0_PUBLICO em diante. */
 export const N0_PUBLICO = MORADORES_VILA.length;
+/**
+ * O resto da banda (o dono, 16 nov 2026: "a banda entra no palco"): o baterista e a baixista,
+ * com números depois dos da turma (o n da turma e dos de posto não muda).
+ */
+export const BATERISTA = 40;
+export const BAIXISTA = 41;
+/** Quem é da banda (o n do morador e o papel na coreografia). */
+export const BANDA: readonly { n: number; papel: PapelBanda; profissao: Profissao }[] = [
+  { n: 0, papel: 'vocalista', profissao: 'ferreiro' },
+  { n: 1, papel: 'roadie', profissao: 'construtor' },
+  { n: 2, papel: 'guitarrista', profissao: 'ferreiro' },
+  { n: BATERISTA, papel: 'baterista', profissao: 'ferreiro' },
+  { n: BAIXISTA, papel: 'baixista', profissao: 'ferreiro' },
+];
+/** O n é da turma da grade (o público do show)? */
+export const daTurma = (n: number) => n >= N0_PUBLICO && n < N0_PUBLICO + PUBLICO_GRADE;
+/** O papel na banda de um morador da vila (null: não é da banda). */
+export const papelNaBanda = (n: number): PapelBanda | null =>
+  BANDA.find((m) => m.n === n)?.papel ?? null;
 /** O povoado dos moradores do bairro (o nome que vai na criatura). */
 export const POVOADO_VILA = 'vila';
 /** O vocalista (n = 0): um toque nele dá o pôster da banda, uma vez por mundo a cada criança. */
@@ -192,9 +230,23 @@ export function criarVila(ctx: CtxVila) {
     const vivos = new Set<number>();
     for (const c of ctx.criaturas())
       if (c.morador?.povoado === POVOADO_VILA && c.estado !== 'morrendo') vivos.add(c.morador.n);
-    MORADORES_VILA.forEach((m, n) => {
+    const lista: { n: number; profissao: Profissao; posto: [number, number, number] }[] = [
+      ...MORADORES_VILA.map((m, n) => ({ n, profissao: m.profissao, posto: p.postos[m.posto] })),
+      ...BANDA.filter((b) => b.n >= N0_PUBLICO).map((b) => ({
+        n: b.n,
+        profissao: b.profissao,
+        posto: ondeDescansa(b.papel),
+      })),
+    ];
+    // quem é da banda aparece onde a coreografia (ou o descanso) o põe agora
+    for (const m of lista) {
+      const papel = papelNaBanda(m.n);
+      if (papel && papel !== 'roadie') m.posto = ondeDescansa(papel);
+    }
+    lista.forEach((m) => {
+      const n = m.n;
       if (vivos.has(n)) return;
-      const posto = p.postos[m.posto];
+      const posto = m.posto;
       const perto = ctx.jogadores().some((j) => Math.hypot(j.x - posto[0], j.z - posto[2]) < 56);
       if (!perto || !ctx.carregado(posto[0], posto[2])) return;
       const c = ctx.adicionar('morador', posto[0], posto[1], posto[2]);
@@ -223,6 +275,120 @@ export function criarVila(ctx: CtxVila) {
     poster.add(id);
     ctx.espalhar({ e: 'vilaPresente', quem: id });
     ctx.sujar();
+  }
+
+  // ------------------------------------------------------------------ a banda
+  const palcoP = p.palco;
+  const mundoDe = (q: Ponto, altura: number) => paraOMundo(palcoP, q[0], q[1], altura);
+  /** O descanso da banda fora do show: de dia o palco (a passagem de som), de noite a coxia. */
+  const descanso = (papel: PapelBanda): Ponto => lugarDeDescanso(papel, !noiteDeShow(ctx.hora()));
+  const alturaDoDescanso = (papel: PapelBanda, q: Ponto) =>
+    papel === 'baterista' && Math.hypot(q[0] - BANCO[0], q[1] - BANCO[1]) < 0.3
+      ? ALTURA_BANCO
+      : alturaEm(q[0], q[1]);
+  /** Onde o músico deve estar agora (no mundo): o lugar da coreografia, ou o do descanso. */
+  function ondeDescansa(papel: PapelBanda): [number, number, number] {
+    if (show && faseDoShow(show, ctx.agora()) !== 'acabou') {
+      const q = posturaNaBanda(papel, show, ctx.agora());
+      return mundoDe([q.a, q.b], q.altura);
+    }
+    const q = descanso(papel);
+    return mundoDe(q, alturaDoDescanso(papel, q));
+  }
+  /** Quem da banda ainda está indo para o lugar da coreografia (chegou atrasado ao show). */
+  const atrasados = new Set<number>();
+  /** Velocidade de quem anda fora da coreografia (para o descanso, ou alcançando o show). */
+  const VEL_DESCANSO = 1.9;
+  const VEL_ALCANCAR = 3.2;
+
+  /** Anda um passo de `dt` s pelo caminho de `de` até `para` (no palco): devolve onde chegou. */
+  function andarAte(de: Ponto, para: Ponto, dist: number): { q: Ponto; dir: number | null } {
+    const r = rota(de, para);
+    let atual = de;
+    let resta = dist;
+    let dir: number | null = null;
+    for (const alvo of r) {
+      const d = Math.hypot(alvo[0] - atual[0], alvo[1] - atual[1]);
+      if (d < 1e-6) continue;
+      dir = Math.atan2(alvo[0] - atual[0], alvo[1] - atual[1]);
+      if (d >= resta) {
+        const k = resta / d;
+        return {
+          q: [atual[0] + (alvo[0] - atual[0]) * k, atual[1] + (alvo[1] - atual[1]) * k],
+          dir,
+        };
+      }
+      resta -= d;
+      atual = alvo;
+    }
+    return { q: para, dir: null };
+  }
+
+  /** Põe o músico no lugar (e deixa a rotina dele parada ali). */
+  function porNoLugar(c: Criatura, x: number, y: number, z: number, giro: number | null): void {
+    c.x = x;
+    c.y = y;
+    c.z = z;
+    c.vx = 0;
+    c.vy = 0;
+    c.vz = 0;
+    c.noChao = true;
+    if (giro !== null) c.yaw = c.yawAlvo = giro;
+    const m = c.morador!;
+    m.posto = [x, y, z];
+    m.caminho = undefined;
+    m.ir = undefined;
+  }
+
+  /**
+   * A banda, a cada passo: no show, onde a coreografia manda (quem chegou atrasado anda até lá);
+   * fora dele, vai a pé até o lugar de descanso (de dia o palco, de noite a coxia) e fica lá
+   * olhando para quem chega (a rotina do posto). A roadie fora do show é como os de posto.
+   */
+  function cuidarDaBanda(dt: number): void {
+    const t = ctx.agora();
+    const noShow = !!show && faseDoShow(show, t) !== 'acabou';
+    for (const c of ctx.criaturas()) {
+      const n = c.morador?.povoado === POVOADO_VILA ? c.morador.n : -1;
+      const papel = n >= 0 ? papelNaBanda(n) : null;
+      if (!papel || c.estado === 'morrendo') continue;
+      const aqui = doMundo(palcoP, c.x, c.z);
+      if (noShow && show) {
+        const q = posturaNaBanda(papel, show, t);
+        const longe = Math.hypot(q.a - aqui[0], q.b - aqui[1]);
+        if (longe > 1.2) atrasados.add(c.id);
+        if (atrasados.has(c.id)) {
+          // chegou atrasado ao show (a noite caiu com ele no palco): vai a pé até o lugar
+          const r = andarAte(aqui, [q.a, q.b], VEL_ALCANCAR * dt);
+          if (Math.hypot(q.a - r.q[0], q.b - r.q[1]) < 0.15 || longe < 0.15) atrasados.delete(c.id);
+          const [x, y, z] = mundoDe(r.q, alturaEm(r.q[0], r.q[1]));
+          porNoLugar(c, x, y, z, r.dir);
+          continue;
+        }
+        const [x, y, z] = mundoDe([q.a, q.b], q.altura);
+        porNoLugar(c, x, y, z, q.giro);
+        continue;
+      }
+      atrasados.delete(c.id);
+      if (papel === 'roadie') continue;
+      const alvo = descanso(papel);
+      const longe = Math.hypot(alvo[0] - aqui[0], alvo[1] - aqui[1]);
+      if (longe < 0.05) {
+        // no lugar: parado (o baterista sentado no banquinho), olhando para quem chega
+        const [x, y, z] = mundoDe(alvo, alturaDoDescanso(papel, alvo));
+        porNoLugar(c, x, y, z, papel === 'baterista' ? Math.PI : null);
+        continue;
+      }
+      if (longe > 60) {
+        // nasceu longe do lugar (o núcleo acabou de criar): aparece nele
+        const [x, y, z] = mundoDe(alvo, alturaDoDescanso(papel, alvo));
+        porNoLugar(c, x, y, z, null);
+        continue;
+      }
+      const r = andarAte(aqui, alvo, VEL_DESCANSO * dt);
+      const [x, y, z] = mundoDe(r.q, alturaEm(r.q[0], r.q[1]));
+      porNoLugar(c, x, y, z, r.dir);
+    }
   }
 
   // ------------------------------------------------------------------ f1: os estojos
@@ -360,6 +526,16 @@ export function criarVila(ctx: CtxVila) {
     noiteAntesDoShow = showDaNoite;
     showDaNoite = noiteAgora();
     sozinha = null;
+    // a f3 fecha agora para quem acendeu caixa nesta rodada e para quem está no festival com ela
+    // aberta (as caixas podem ter acendido sozinhas: ninguém fica sem a missão)
+    for (const j of ctx.jogadores()) {
+      if (!j.aberta('f3')) continue;
+      const minhas = [0, 1, 2].filter((k) => acendeu.has(`${j.id}:${k}`)).length;
+      if (minhas < 3 && (minhas > 0 || pertoDoPalco(j) || noFestival(j)))
+        ctx.evento(j.id, 'show:caixa', 3 - minhas);
+    }
+    // a rodada acabou: na próxima noite, cada caixa conta de novo
+    acendeu.clear();
     ctx.sujar();
   }
 
@@ -367,7 +543,7 @@ export function criarVila(ctx: CtxVila) {
     const c = p.caixas[i];
     if (!c || !pertoDoPalco(j)) return;
     const fase = show ? faseDoShow(show, ctx.agora()) : null;
-    if (fase === 'tocando' || fase === 'chamando' || fase === 'final') {
+    if (fase && fase !== 'acabou') {
       // no meio do show a caixa é palco: o toque toca um acorde
       tocarPalco(j);
       return;
@@ -381,9 +557,9 @@ export function criarVila(ctx: CtxVila) {
       ctx.espalhar({ e: 'vilaCaixa', i, acesa: true, quem: j.id });
       if (j.aberta('f3') && !acendeu.has(`${j.id}:${i}`)) {
         acendeu.add(`${j.id}:${i}`);
-        const minhas = [0, 1, 2].filter((k) => acendeu.has(`${j.id}:${k}`)).length;
-        // as duas primeiras bolinhas agora; a terceira com o acorde final (a festa vem depois)
-        if (minhas <= 2) ctx.evento(j.id, 'show:caixa');
+        // uma bolinha por caixa: a terceira fecha a f3 (o dono, 16 nov 2026: as moedinhas e a
+        // festa vêm na hora, e o show começa)
+        ctx.evento(j.id, 'show:caixa');
       }
       if (caixas.every(Boolean)) comecarShow();
       ctx.sujar();
@@ -393,7 +569,13 @@ export function criarVila(ctx: CtxVila) {
     // camada dela (brinquedo livre, sem moedinha, sem show: o show é só de noite)
     const acesa = !caixas[i];
     caixas[i] = acesa;
-    ctx.espalhar({ e: 'vilaCaixa', i, acesa, quem: j.id, ...(noite ? {} : { dia: true as const }) });
+    ctx.espalhar({
+      e: 'vilaCaixa',
+      i,
+      acesa,
+      quem: j.id,
+      ...(noite ? {} : { dia: true as const }),
+    });
     ctx.sujar();
   }
 
@@ -439,10 +621,13 @@ export function criarVila(ctx: CtxVila) {
     if (!show || !pertoDoPalco(j)) return;
     const t = ctx.agora();
     const fase = faseDoShow(show, t);
-    if (fase === 'tocando') {
-      const { quando, acorde } = encaixarToque(show, t);
-      ctx.espalhar({ e: 'vilaAcorde', quando, acorde, quem: j.id });
-    } else if (fase === 'chamando') fecharShow(t, j.id);
+    if (fase === 'chamando') fecharShow(t, j.id);
+    else {
+      // nas músicas (e na contagem delas) o toque toca o acorde do compasso; fora delas, nada
+      const toque = encaixarToque(show, t);
+      if (toque)
+        ctx.espalhar({ e: 'vilaAcorde', quando: toque.quando, acorde: toque.acorde, quem: j.id });
+    }
   }
 
   function fecharShow(t: number, quem: string): void {
@@ -450,16 +635,6 @@ export function criarVila(ctx: CtxVila) {
     show.final = t;
     show.quem = quem;
     ctx.espalhar({ e: 'vilaFinal', quando: t, quem });
-    // a terceira bolinha da f3 (e a festa) para quem acendeu caixa nesta rodada, e para quem
-    // estava no show com a f3 aberta (as caixas podem ter acendido sozinhas: a f3 fecha igual)
-    for (const j of ctx.jogadores()) {
-      if (!j.aberta('f3')) continue;
-      const minhas = [0, 1, 2].filter((k) => acendeu.has(`${j.id}:${k}`)).length;
-      if (minhas > 0 || pertoDoPalco(j) || noFestival(j))
-        ctx.evento(j.id, 'show:caixa', 3 - Math.min(2, minhas));
-    }
-    // a rodada acabou: na próxima noite, cada caixa conta de novo
-    acendeu.clear();
     ctx.sujar();
   }
 
@@ -492,7 +667,7 @@ export function criarVila(ctx: CtxVila) {
     const perto = js.some((j) => Math.hypot(j.x - pub.meio[0], j.z - pub.meio[1]) < 52);
     const vivos = new Map<number, Criatura>();
     for (const c of ctx.criaturas())
-      if (c.morador?.povoado === POVOADO_VILA && c.morador.n >= N0_PUBLICO && c.estado !== 'morrendo')
+      if (c.morador?.povoado === POVOADO_VILA && daTurma(c.morador.n) && c.estado !== 'morrendo')
         vivos.set(c.morador.n - N0_PUBLICO, c);
     for (let k = 0; k < PUBLICO_GRADE; k++) {
       const l = lugarDoPublico(pub, k, { noite, show: tocando, t });
@@ -572,11 +747,12 @@ export function criarVila(ctx: CtxVila) {
 
   return {
     /** A cada passo (o núcleo chama com o número do passo). */
-    passo(n: number): void {
+    passo(n: number, dt = 0.05): void {
       if (n % 5 === 0) {
         cuidarDosEstojos();
         cuidarDoShow();
       }
+      cuidarDaBanda(dt);
       if (n % 10 === 0) cuidarDasLhamas();
       if (n % 20 === 0) cuidarDosMoradores();
       if (n % 5 === 2) cuidarDoPublico();
@@ -590,6 +766,15 @@ export function criarVila(ctx: CtxVila) {
     falou,
     preparar,
     vista,
+    /**
+     * Testes e vídeos: o show tocando pula para `s` s desde o começo (antes do acorde final; a
+     * banda vai junto, pela coreografia).
+     */
+    pularShow(s: number): void {
+      if (!show || show.final !== null || !(s >= 0)) return;
+      show.inicio = ctx.agora() - Math.min(s, CHAMADO + ESPERA_FINAL - 0.05);
+      ctx.sujar();
+    },
     salvar: () => ({
       ins: [...ins],
       cx: [...caixas],
@@ -605,9 +790,7 @@ export function criarVila(ctx: CtxVila) {
         .criaturas()
         .filter(
           (c) =>
-            c.morador?.povoado === POVOADO_VILA &&
-            c.morador.n >= N0_PUBLICO &&
-            c.estado !== 'morrendo',
+            c.morador?.povoado === POVOADO_VILA && daTurma(c.morador.n) && c.estado !== 'morrendo',
         ),
     /** Testes: as lhamas da vila e as que estão na grade. */
     lhamas: () => ({ todas: [...lhamas], naGrade: [...naGrade] }),
