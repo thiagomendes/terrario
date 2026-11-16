@@ -25,6 +25,7 @@
 import { Bloco } from './blocks';
 import { hash2 } from './noise';
 import type { ArcoRinque } from '../jogo/rinque';
+import { montarParque, type PontosParque } from './vilaParque';
 
 /** Tamanho do bairro (o mapa). */
 export const LARGURA_VILA = 180;
@@ -102,7 +103,21 @@ export type TipoPecaVila =
   | 'raio-palco'
   | 'arco-lampadas'
   /** Spec 026 (f4): os arcos de neon da pista do rinque (n: qual arco, 0 a 2). */
-  | 'arco-rinque';
+  | 'arco-rinque'
+  /**
+   * Spec 026 (parte 2, o parque): o arco de lâmpadas da entrada; o que não gira da roda-gigante
+   * (os pés e o eixo), do carrossel e do bate-bate; as prendas das barracas (argola e
+   * pescaria); o algodão-doce; o poste dos balões; o cocho da fazendinha.
+   */
+  | 'arco-parque'
+  | 'roda-gigante'
+  | 'carrossel'
+  | 'bate-bate'
+  | 'barraca-argola'
+  | 'barraca-pesca'
+  | 'algodao'
+  | 'baloes'
+  | 'cocho';
 
 /** Nomes dos letreiros (em português, inventados; só no mundo, nunca na interface). */
 export const LETREIROS = [
@@ -113,6 +128,7 @@ export const LETREIROS = [
   'FLIPERAMA',
   'RINQUE',
   'FESTIVAL TROVÃO',
+  'PARQUE ALEGRIA',
 ] as const;
 export const LETREIRO = {
   vila: 0,
@@ -122,6 +138,7 @@ export const LETREIRO = {
   fliperama: 4,
   rinque: 5,
   festival: 6,
+  parque: 7,
 } as const;
 
 /** Postos dos moradores do bairro (o núcleo põe cada um no seu; fase 2). */
@@ -133,7 +150,11 @@ export type PostoVila =
   | 'danca'
   | 'patinador'
   | 'lanchonete'
-  | 'banca';
+  | 'banca'
+  /** Spec 026 (parte 2): o pipoqueiro, o moço do bate-bate e a vendedora de balões do parque. */
+  | 'pipoqueiro'
+  | 'bate'
+  | 'baloes';
 
 export interface PontosVila {
   /** O mural de recados (o canto das missões): o meio da frente, onde a criança para. */
@@ -166,6 +187,8 @@ export interface PontosVila {
   fita: [number, number, number];
   /** Onde cada morador fica. */
   postos: Record<PostoVila, [number, number, number]>;
+  /** Spec 026 (parte 2): o Parque de diversões (os brinquedos de sentar e os de tocar). */
+  parque: PontosParque;
 }
 
 export interface PlanoVila {
@@ -1049,47 +1072,24 @@ function montarVila(semente: number, r: RelevoVila): Montado {
     let k = 3;
     for (let v = 2; v + 10 <= 56; v += 11) casa(104, v, 10, 14, 'o', k++);
   }
-  // o lote do parque (parte 2): jardim grande cercado, com laguinho de peixinhos
-  jardim(122, 2, 178, 56, 1);
-  // o coreto num dos quartos do jardim: o piso de pedra creme, as colunas de grade e o telhado
-  // de telha em degraus (a praça de cidade pequena; nada escrito)
-  {
-    const cu = 134;
-    const cv = 40;
-    for (let u = cu - 3; u <= cu + 3; u++)
-      for (let v = cv - 3; v <= cv + 3; v++) {
-        chao(u, v, Bloco.PEDRA_CREME);
-        const du = Math.abs(u - cu);
-        const dv = Math.abs(v - cv);
-        const canto = du === 3 && dv === 3;
-        const beira = du === 3 || dv === 3;
-        b(u, 1, v, Bloco.PEDRA_CREME);
-        if (canto) coluna(u, v, 2, 4, Bloco.GRADE_FERRO);
-        else if (beira && du > 0 && dv > 0) b(u, 2, v, Bloco.GRADE_FERRO);
-        const anel = Math.max(du, dv);
-        b(u, 5 + (3 - anel), v, anel === 0 ? Bloco.FRISO_DOURADO : Bloco.TELHA_COLONIAL);
-      }
-    // os degraus de cada lado
-    for (const [u, v] of [
-      [cu, cv - 4],
-      [cu, cv + 4],
-      [cu - 4, cv],
-      [cu + 4, cv],
-    ])
-      chao(u, v, Bloco.PEDRA_CREME);
-    b(cu, 2, cv, Bloco.LANTERNA);
-  }
-  const lago = ret(156, 12, 168, 20);
-  for (let u = 156; u <= 168; u++)
-    for (let v = 12; v <= 20; v++) {
-      const dx = (u - 162) / 6.5;
-      const dz = (v - 16) / 4.5;
-      if (dx * dx + dz * dz <= 1) {
-        chao(u, v, Bloco.AREIA_BRUMA);
-        b(u, -1, v, Bloco.AGUA);
-        b(u, 0, v, Bloco.AGUA);
-      } else if (dx * dx + dz * dz <= 1.45) chao(u, v, Bloco.PEDRA_LISA);
-    }
+  // o Parque de diversões (parte 2), no lote que nasceu como jardim: `vilaParque.ts`
+  const parque = montarParque({
+    X,
+    Z,
+    Y,
+    chao,
+    b,
+    encher,
+    coluna,
+    peca,
+    arvore,
+    poste,
+    cercaViva,
+    canteiro,
+    ret,
+    s,
+  });
+  const lago = parque.lago;
 
   // ============================================================== noroeste: a Rua anos 80
   // a banca de jornal (quiosque verde) na calçada da avenida
@@ -1565,7 +1565,9 @@ function montarVila(semente: number, r: RelevoVila): Montado {
       patinador: [X(rinqueU0 + 13) + 0.5, Y, Z(rinqueV0 + 9) + 0.5],
       lanchonete: [X(80) + 0.5, Y, Z(51) + 0.5],
       banca: [X(19) + 0.5, Y, Z(56) + 0.5],
+      ...parque.postos,
     },
+    parque: parque.pontos,
   };
   // o olhar de quem nasce: para o oeste-sudoeste, no rumo do palco
   // (34° ao sul do oeste: o portal da pracinha na frente, o palco inteiro lá longe por baixo do

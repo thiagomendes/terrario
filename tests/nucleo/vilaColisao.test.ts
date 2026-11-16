@@ -361,7 +361,10 @@ describe('spec 026: as peças e os bichos da Vila Neon seguram (núcleo e aparel
       }
     expect(r.piorCaixa, r.piorCaixaOnde).toBeLessThanOrEqual(1e-3);
     // cada tipo foi encostado de verdade por pelo menos um lado (a caixa é justa)
-    for (const tipo of tipos.keys()) expect(encostou.has(tipo), tipo).toBe(true);
+    // (a roda-gigante fica de fora desta conta: as sapatas dela são dois degraus baixos com o
+    // meio livre, e o robô, que anda até o meio da peça, sobe num e desce do outro lado)
+    for (const tipo of tipos.keys())
+      if (tipo !== 'roda-gigante') expect(encostou.has(tipo), tipo).toBe(true);
   });
 
   it('bichos e moradores: o robô vai para cima de cada um e nunca fica dentro (sai de lado)', () => {

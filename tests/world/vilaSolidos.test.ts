@@ -73,7 +73,11 @@ describe('as peças da Vila Neon seguram (spec 026)', () => {
       if (DE_PASSAGEM.includes(t)) expect(algumaSolida, t).toBe(false);
       else if (!algumaSolida)
         // o letreiro alto, o balcão da banca e o das barracas (cercados de blocos)
-        expect(['letreiro', 'balcao'], t).toContain(t);
+        // (e, no parque, a pista do bate-bate dentro da grade e as prendas atrás do balcão)
+        expect(
+          ['letreiro', 'balcao', 'bate-bate', 'barraca-argola', 'barraca-pesca'],
+          t,
+        ).toContain(t);
     }
     // os que o dono viu atravessar
     for (const t of [
@@ -117,6 +121,9 @@ describe('as peças da Vila Neon seguram (spec 026)', () => {
     const vistos = new Set<string>();
     for (const p of plano.pecas) {
       if (!pecaSolida(p)) continue;
+      // os três brinquedos do parque giram (o desenho deles é de `render/vila/parque.ts`): as
+      // caixas são conferidas contra o plano em `tests/world/vilaParque.test.ts`
+      if (['roda-gigante', 'carrossel'].includes(p.tipo)) continue;
       const k = `${p.tipo}:${p.n ?? 0}:${p.dir & 1}`;
       if (vistos.has(k)) continue;
       vistos.add(k);

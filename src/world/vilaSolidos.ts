@@ -143,6 +143,29 @@ function caixasLocais(tipo: TipoPecaVila, n: number): readonly Local[] {
       ];
     case 'mesa-som':
       return [B(-2.36, 2.36, 0, 1.55, -0.52, 0.5), B(-0.22, 0.22, 0, 0.62, 0.73, 1.17)];
+    // ---------------------------------------------------------------- o parque (parte 2)
+    case 'arco-parque':
+      // os dois postes (passa-se por baixo do arco)
+      return par(2.3, 3.2, 0, 4.36, -0.45, 0.45);
+    case 'roda-gigante':
+      // as duas sapatas compridas dos cavaletes, baixas como um degrau (a roda gira por cima)
+      return par(4.15, 5.25, 0, 0.4, -2.2, 2.2);
+    case 'carrossel':
+      // o carrossel inteiro, do pedestal ao toldo (um octógono em três caixas): sobe-se pelo
+      // toque, nunca andando para cima do deque que gira
+      return [
+        B(-5.6, 5.6, 0, 4, -2.3, 2.3),
+        B(-2.3, 2.3, 0, 4, -5.6, 5.6),
+        B(-4, 4, 0, 4, -4, 4),
+      ];
+    // (a pista do bate-bate é cercada de grade e as prendas das barracas ficam atrás do balcão:
+    // já cercadas de blocos, como o balcão da banca)
+    case 'algodao':
+      return [B(-0.9, 0.9, 0, 2.4, -0.89, 0.53)];
+    case 'baloes':
+      return [B(-0.31, 0.31, 0, 1.56, -0.31, 0.31)];
+    case 'cocho':
+      return [B(-0.94, 0.94, 0, 0.76, -0.34, 0.34)];
     default:
       return [];
   }
