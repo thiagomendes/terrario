@@ -15,6 +15,8 @@ import { CreateCylinderVertexData } from '@babylonjs/core/Meshes/Builders/cylind
 import { CreateTorusVertexData } from '@babylonjs/core/Meshes/Builders/torusBuilder';
 import type { Scene } from '@babylonjs/core/scene';
 import type { StandardMaterial } from '@babylonjs/core/Materials/standardMaterial';
+import { Skeleton } from '@babylonjs/core/Bones/skeleton';
+import { Bone } from '@babylonjs/core/Bones/bone';
 import type { Aparencia } from '../personagem/aparencia';
 import {
   planoBoneco,
@@ -34,6 +36,7 @@ import {
   criarPlasticos,
   caixaFeita,
   dadosEsfera,
+  segmentosDaBolinha,
   dadosAnel,
   dadosPlaca,
   esfera,
@@ -116,6 +119,8 @@ export function dadosDaPeca(
   deslocar?: [number, number, number],
   /** Spec 014 (T11): a cor da peça nos vértices, sem a gama da tinta (material `corVertice`). */
   corNoVertice = false,
+  /** Spec 026: as bolinhas com os gomos pelo tamanho (os moradores com esqueleto). */
+  leve = false,
 ): VertexData {
   let vd: VertexData;
   let escala: [number, number, number] = [1, 1, 1];
@@ -123,7 +128,7 @@ export function dadosDaPeca(
     vd = caixaFeita(p.tamanho[0], p.tamanho[1], p.tamanho[2], p.raio ?? 0.05, 3);
   else if (p.forma === 'esfera') {
     const r = Math.max(p.tamanho[0], p.tamanho[1], p.tamanho[2]);
-    vd = dadosEsfera(r);
+    vd = dadosEsfera(r, leve ? segmentosDaBolinha(r) : 12);
     escala = [p.tamanho[0] / r, p.tamanho[1] / r, p.tamanho[2] / r];
   } else if (p.forma === 'cilindro')
     vd = CreateCylinderVertexData({
@@ -187,7 +192,7 @@ export function contornoDaCaixa(x: number, z: number, a: number, b: number): num
   const az = Math.abs(z) / b;
   if (ax < 1e-6 && az < 1e-6) return 0;
   let s: number;
-  if (az >= ax) s = z > 0 ? (x / az) : a + 2 * b + (a - x / az);
+  if (az >= ax) s = z > 0 ? x / az : a + 2 * b + (a - x / az);
   else s = x > 0 ? a + (b - z / ax) : 3 * a + 2 * b + (z / ax + b);
   const volta = 4 * a + 4 * b;
   return ((s % volta) + volta) % volta;
@@ -300,6 +305,14 @@ export function criarBoneco(
    * quadro (não projetam sombra e não são clicáveis).
    */
   sempreNaVista = false,
+  /**
+   * Desempenho (spec 026, o público de 40 no show): as peças do mesmo material, de todas as
+   * juntas, viram uma malha só com esqueleto (cada vértice preso à junta dele, como os bichos
+   * da lojinha da 023): a placa de vídeo dobra a malha e o boneco sai em 2 ou 3 chamadas de
+   * desenho em vez de ~14. O desenho é o mesmo, peça por peça (olhos, brilho e boca ganham um
+   * nó próprio para piscar e falar). Só com `fundir`.
+   */
+  comEsqueleto = false,
 ): Personagem {
   const raiz = new TransformNode(prefixo, scene);
   const escalar = new TransformNode(`${prefixo}-escala`, scene);
@@ -309,6 +322,9 @@ export function criarBoneco(
   /** Spec 023: os nós próprios dos premium (as asas do dragão). */
   let subjuntas: Partial<Record<SubjuntaPremium, TransformNode>> = {};
   let malhas: Mesh[] = [];
+  /** Spec 026: o esqueleto do boneco fundido e os nós próprios (olhos, brilho, boca). */
+  let esqueleto: Skeleton | null = null;
+  let nosProprios: TransformNode[] = [];
   let visivel = true;
   let luz = 1;
   /** Meio transparente quando a câmera chega perto demais (spec 015); 1 = normal. */
@@ -365,6 +381,10 @@ export function criarBoneco(
   function limpar(): void {
     pega.parent = null;
     for (const m of malhas) m.dispose();
+    for (const n of nosProprios) n.dispose();
+    nosProprios = [];
+    esqueleto?.dispose();
+    esqueleto = null;
     for (const j of Object.values(subjuntas)) j.dispose();
     for (const j of Object.values(juntas)) j.dispose();
     subjuntas = {};
@@ -426,6 +446,8 @@ export function criarBoneco(
       }
       return no;
     };
+    /** Spec 026: a boca do boneco com esqueleto (vai na malha fundida, num nó próprio). */
+    const bocas: Peca[] = [];
     for (const p of plano.pecas) {
       // os dois olhos (e os dois brilhos) piscam juntos e ficam na mesma altura: viram uma
       // malha só, que pisca em volta do meio deles
@@ -458,7 +480,7 @@ export function criarBoneco(
                   no: p.subjunta ? noDaPeca(p) : undefined,
                 }),
           );
-        g.dados.push(dadosDaPeca(p, deslocar, !!cv));
+        g.dados.push(dadosDaPeca(p, deslocar, !!cv, comEsqueleto));
         if (g.pivo) {
           g.pivo[0] += p.pos[0];
           g.pivo[1] += p.pos[1];
@@ -467,42 +489,184 @@ export function criarBoneco(
         g.n++;
         continue;
       }
+      if (comEsqueleto && fundir && p.nome === 'boca' && !p.subjunta) {
+        bocas.push(p);
+        continue;
+      }
       const m = montarPeca(scene, mats, p, prefixo);
       m.parent = noDaPeca(p);
       m.setEnabled(visivel);
       m.visibility = opacidade;
       malhas.push(m);
     }
-    for (const { junta, material, dados, nome, pivo, n, no } of paraFundir.values()) {
-      const vd = dados.length === 1 ? dados[0] : dados[0].merge(dados.slice(1), true);
-      const f = new Mesh(`${prefixo}-${nome}-fundida`, scene);
-      vd.applyToMesh(f);
-      // pisca em volta do meio dos olhos (não do meio da cabeça)
-      if (pivo) f.setPivotPoint(new Vector3(pivo[0] / n, pivo[1] / n, pivo[2] / n));
-      f.material = material;
-      // a cor nos vértices é opaca (o alfa do vértice não vale nada)
-      f.hasVertexAlpha = false;
-      f.isPickable = false;
-      f.receiveShadows = false;
-      f.parent = no ?? juntas[junta];
-      f.setEnabled(visivel);
-      f.visibility = opacidade;
-      malhas.push(f);
-    }
+    const esq = comEsqueleto && fundir && Object.keys(subjuntas).length === 0;
+    /** Os nós que piscam e falam (com esqueleto: nós próprios; sem ele: as malhas). */
+    let olhosNos: TransformNode[] = [];
+    let bocaNo: TransformNode | null = null;
+    if (esq) {
+      const r = montarComEsqueleto(paraFundir.values(), bocas);
+      olhosNos = r.olhos;
+      bocaNo = r.boca;
+    } else
+      for (const { junta, material, dados, nome, pivo, n, no } of paraFundir.values()) {
+        const vd = dados.length === 1 ? dados[0] : dados[0].merge(dados.slice(1), true);
+        const f = new Mesh(`${prefixo}-${nome}-fundida`, scene);
+        vd.applyToMesh(f);
+        // pisca em volta do meio dos olhos (não do meio da cabeça)
+        if (pivo) f.setPivotPoint(new Vector3(pivo[0] / n, pivo[1] / n, pivo[2] / n));
+        f.material = material;
+        // a cor nos vértices é opaca (o alfa do vértice não vale nada)
+        f.hasVertexAlpha = false;
+        f.isPickable = false;
+        f.receiveShadows = false;
+        f.parent = no ?? juntas[junta];
+        f.setEnabled(visivel);
+        f.visibility = opacidade;
+        malhas.push(f);
+      }
     pega.parent = juntas.maoD;
     pega.position.set(0, 0, 0);
     if (sempreNaVista) for (const m of malhas) naVista(m);
-    olhos = malhas.filter((m) => /-(olho|brilho)/.test(m.name));
-    boca = malhas.find((m) => m.name.endsWith('-boca')) ?? null;
+    olhos = esq ? olhosNos : malhas.filter((m) => /-(olho|brilho)/.test(m.name));
+    boca = esq ? bocaNo : (malhas.find((m) => m.name.endsWith('-boca')) ?? null);
     // a escala é a forma oval de cada peça: o piscar e a boca multiplicam sobre ela
     baseY.clear();
     for (const m of [...olhos, ...(boca ? [boca] : [])]) baseY.set(m, m.scaling.y);
     mats.definirLuz(luz);
   }
-  let olhos: Mesh[] = [];
-  let boca: Mesh | null = null;
+  let olhos: TransformNode[] = [];
+  let boca: TransformNode | null = null;
   let faseAsa = 0;
-  const baseY = new Map<Mesh, number>();
+  const baseY = new Map<TransformNode, number>();
+
+  /**
+   * Spec 026: monta as malhas fundidas por material com o esqueleto. Cada junta (e o nó dos
+   * olhos, do brilho e da boca) vira um osso ligado ao nó dela: a pose gira os nós como sempre e
+   * a placa de vídeo dobra a malha. Os vértices vão para o espaço do boneco no repouso (as juntas
+   * do repouso só têm posição).
+   */
+  function montarComEsqueleto(
+    grupos: Iterable<{
+      junta: Junta;
+      material: StandardMaterial;
+      dados: VertexData[];
+      nome: string;
+      pivo?: [number, number, number];
+      n: number;
+      no?: TransformNode;
+    }>,
+    bocas: Peca[],
+  ): { olhos: TransformNode[]; boca: TransformNode | null } {
+    const sk = new Skeleton(`${raiz.name}-esqueleto`, `${raiz.name}-esqueleto`, scene);
+    esqueleto = sk;
+    const ossos: Bone[] = [];
+    const indice = new Map<TransformNode, number>();
+    const osso = (no: TransformNode): number => {
+      const ja = indice.get(no);
+      if (ja !== undefined) return ja;
+      const pai =
+        no.parent instanceof TransformNode && no.parent !== escalar ? osso(no.parent) : -1;
+      const b = new Bone(
+        no.name,
+        sk,
+        pai >= 0 ? ossos[pai] : null,
+        Matrix.Translation(no.position.x, no.position.y, no.position.z),
+      );
+      b.linkTransformNode(no);
+      const i = ossos.length;
+      ossos.push(b);
+      indice.set(no, i);
+      return i;
+    };
+    /** A posição do nó no repouso, no espaço do boneco (a soma das posições até a escala). */
+    const absoluta = (no: TransformNode): [number, number, number] => {
+      let x = 0;
+      let y = 0;
+      let z = 0;
+      for (let q: unknown = no; q instanceof TransformNode && q !== escalar; q = q.parent) {
+        x += q.position.x;
+        y += q.position.y;
+        z += q.position.z;
+      }
+      return [x, y, z];
+    };
+    const noProprio = (nome: string, pai: TransformNode, pos: [number, number, number]) => {
+      const t = new TransformNode(`${prefixo}-${nome}`, scene);
+      t.parent = pai;
+      t.position.set(pos[0], pos[1], pos[2]);
+      nosProprios.push(t);
+      return t;
+    };
+    const porMaterial = new Map<string, { material: StandardMaterial; dados: VertexData[] }>();
+    const juntar = (
+      no: TransformNode,
+      material: StandardMaterial,
+      vds: VertexData[],
+      menos?: number[],
+    ) => {
+      const i = osso(no);
+      const [ax, ay, az] = absoluta(no);
+      for (const vd of vds) {
+        const P = vd.positions as number[] | Float32Array;
+        const n = P.length / 3;
+        for (let k = 0; k < n; k++) {
+          P[k * 3] += ax - (menos?.[0] ?? 0);
+          P[k * 3 + 1] += ay - (menos?.[1] ?? 0);
+          P[k * 3 + 2] += az - (menos?.[2] ?? 0);
+        }
+        const idx = new Float32Array(n * 4);
+        const pes = new Float32Array(n * 4);
+        for (let k = 0; k < n; k++) {
+          idx[k * 4] = i;
+          pes[k * 4] = 1;
+        }
+        vd.matricesIndices = idx;
+        vd.matricesWeights = pes;
+        const chave = `${material.uniqueId}|${vd.colors ? 'cor' : ''}|${vd.uvs ? 'uv' : ''}`;
+        let g = porMaterial.get(chave);
+        if (!g) porMaterial.set(chave, (g = { material, dados: [] }));
+        g.dados.push(vd);
+      }
+    };
+    const olhosNos: TransformNode[] = [];
+    for (const g of grupos) {
+      const dono = g.no ?? juntas[g.junta];
+      if (g.pivo) {
+        // os olhos (ou o brilho) num nó no meio deles: pisca em volta dali
+        const c: [number, number, number] = [g.pivo[0] / g.n, g.pivo[1] / g.n, g.pivo[2] / g.n];
+        const t = noProprio(g.nome, dono, c);
+        olhosNos.push(t);
+        juntar(t, g.material, g.dados, c);
+      } else juntar(dono, g.material, g.dados);
+    }
+    let bocaNo: TransformNode | null = null;
+    for (const p of bocas) {
+      const cv =
+        !p.viva && !p.luz && !p.textura && (p.alfa ?? 1) >= 1
+          ? mats.corVertice(brilhoDaPeca(p))
+          : null;
+      const material = cv ?? materialDaPeca(scene, mats, p);
+      const t = noProprio('boca', juntas[p.junta], [p.pos[0], p.pos[1], p.pos[2]]);
+      bocaNo = t;
+      juntar(t, material, [dadosDaPeca(p, undefined, !!cv, true)], p.pos);
+    }
+    for (const { material, dados } of porMaterial.values()) {
+      const vd = dados.length === 1 ? dados[0] : dados[0].merge(dados.slice(1), true);
+      const f = new Mesh(`${prefixo}-fundida`, scene);
+      vd.applyToMesh(f);
+      f.material = material;
+      f.skeleton = sk;
+      f.numBoneInfluencers = 1;
+      f.hasVertexAlpha = false;
+      f.isPickable = false;
+      f.receiveShadows = false;
+      f.parent = escalar;
+      f.setEnabled(visivel);
+      f.visibility = opacidade;
+      malhas.push(f);
+    }
+    return { olhos: olhosNos, boca: bocaNo };
+  }
 
   /** Valores suavizados entre quadros (nada salta de uma pose para outra). */
   const atual = new Map<string, number>();

@@ -638,9 +638,37 @@ export function caixaFeita(w: number, h: number, d: number, r: number, seg: numb
 }
 
 /** A mesma esfera do MeshBuilder (12 segmentos), feita uma vez e copiada no tamanho. */
-export function dadosEsfera(raio: number): VertexData {
-  esferaFeita ??= CreateSphereVertexData({ diameter: 2, segments: 12 });
-  return copiaDe(esferaFeita, raio);
+export function dadosEsfera(raio: number, segmentos = 12): VertexData {
+  if (segmentos === 12) {
+    esferaFeita ??= CreateSphereVertexData({ diameter: 2, segments: 12 });
+    return copiaDe(esferaFeita, raio);
+  }
+  let vd = esferasFeitas.get(segmentos);
+  if (!vd)
+    esferasFeitas.set(
+      segmentos,
+      (vd = CreateSphereVertexData({ diameter: 2, segments: segmentos })),
+    );
+  return copiaDe(vd, raio);
+}
+const esferasFeitas = new Map<number, VertexData>();
+/**
+ * Spec 026 (o público de 40 no show): os gomos da bolinha pelo tamanho dela, nos moradores. A
+ * bolinha pequena (o brilho do olho, a boca, o botão do boné) não precisa de 784 triângulos:
+ * de perto ela continua redonda (a luz é macia), e o boneco cai para menos da metade.
+ */
+export function segmentosDaBolinha(raio: number): number {
+  return raio < 0.035
+    ? 4
+    : raio < 0.06
+      ? 5
+      : raio < 0.075
+        ? 7
+        : raio < 0.12
+          ? 8
+          : raio < 0.25
+            ? 10
+            : 12;
 }
 
 export function esfera(
