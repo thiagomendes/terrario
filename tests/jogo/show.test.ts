@@ -65,3 +65,22 @@ describe('o Show da Vila: o tempo da música (spec 026)', () => {
     expect(faseDoShow(f, 137 + APLAUSO)).toBe('acabou');
   });
 });
+
+describe('a noite dos bichos: passarinho não canta de noite (o dono, 15 nov 2026)', () => {
+  it('quando a noite do show abre, só grilo; de dia, passarinho; no amanhecer, eles voltam', async () => {
+    const { noiteDosBichos, noiteNaHora } = await import('../../src/jogo/tempo');
+    const { noiteDeShow } = await import('../../src/jogo/show');
+    // a primeira hora de show já é noite fechada para os bichos (a do sol ainda é dia)
+    let abre = 0.6;
+    while (!noiteDeShow(abre)) abre += 0.001;
+    expect(noiteNaHora(abre)).toBe(0);
+    expect(noiteDosBichos(abre)).toBe(1);
+    // e a noite inteira de show também
+    for (let h = abre; h < abre + 0.45; h += 0.005)
+      if (noiteDeShow(h)) expect(noiteDosBichos(h)).toBe(1);
+    // de dia, passarinho
+    for (const h of [0.3, 0.42, 0.5, 0.6]) expect(noiteDosBichos(h)).toBe(0);
+    // no amanhecer, como o sol (os passarinhos acordam com a luz)
+    for (const h of [0.2, 0.23, 0.26]) expect(noiteDosBichos(h)).toBe(noiteNaHora(h));
+  });
+});

@@ -107,6 +107,7 @@ import {
 import { celulaTomadaPelaVila, indiceDoMundo } from '../world/vilaSolidos';
 import { criarBrinquedosVila } from './vila/brinquedos';
 import { noiteDeShow } from '../jogo/show';
+import { noiteDosBichos } from '../jogo/tempo';
 import { criarShowVila } from './vila/show';
 import type { PlanoVila } from '../world/vilaNeon';
 import { LARGURA_CIDADE, PROFUNDIDADE_CIDADE } from '../world/cidade';
@@ -1697,7 +1698,8 @@ export function criarCena(
       densidade: scene.fogDensity,
     });
     vagalumes.atualizar(camera.position, a.noite, jogadorCoberto || cameraSubmersa ? 0 : 1);
-    ambiente?.definirNoite(a.noite);
+    // os bichos (passarinho ou grilo): o passarinho se cala no pôr do sol, nunca canta de noite
+    ambiente?.definirNoite(noiteDosBichos(hora));
     ambiente?.definirHora(hora);
   }
 

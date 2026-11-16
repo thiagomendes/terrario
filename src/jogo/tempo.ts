@@ -30,3 +30,15 @@ export function noiteNaHora(hora: number): number {
   const paraSol = direcaoParaSol(hora);
   return Math.min(1, Math.max(0, (-paraSol[1] - 0.02) / 0.2));
 }
+
+/**
+ * O quanto os bichos já estão na noite (0: passarinhos; 1: só grilos). De manhã é a noite do
+ * sol (os passarinhos acordam com a luz); à tarde ela vem adiantada de `ANTECIPA_BICHOS`: o
+ * passarinho se cala no pôr do sol, quando o céu fica roxo, e não canta mais de noite. O dono
+ * (15 nov 2026): "só saía som de passarinho" na noite do show (a noite do sol só fecha em 0,79).
+ */
+export const ANTECIPA_BICHOS = 0.06;
+export function noiteDosBichos(hora: number): number {
+  const h = normalizarHora(hora);
+  return h >= 0.5 ? noiteNaHora(normalizarHora(h + ANTECIPA_BICHOS)) : noiteNaHora(h);
+}
