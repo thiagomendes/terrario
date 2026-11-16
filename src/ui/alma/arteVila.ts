@@ -236,6 +236,12 @@ const BASE: Record<string, string> = {
   a80Show: svg(palco(true)),
   // ------------------------------------------------------------ f4: a volta no rinque
   a80PatinsRinque: svg(patins(31, 34, 1.15)),
+  /** "Tirar patins" (a roda do menu, só de patins): o patins e a setinha laranja que sai dele. */
+  a80TirarPatins: svg(`${patins(27, 40, 0.92, -8)}
+    <path d="M36 21 Q40 8 53 9" fill="none" stroke="${C}" stroke-width="8" stroke-linecap="round"/>
+    <path d="M47 2 L57 9.5 L46.5 15.5" fill="none" stroke="${C}" stroke-width="8" ${L}/>
+    <path d="M36 21 Q40 8 53 9" fill="none" stroke="#ff8a2a" stroke-width="4" stroke-linecap="round"/>
+    <path d="M47 2 L57 9.5 L46.5 15.5" fill="none" stroke="#ff8a2a" stroke-width="4" ${L}/>`),
   a80ArcoNeon: svg(arcoNeon(false)),
   a80ArcoAceso: svg(arcoNeon(true)),
   /** O resultado da f4: o patins passando por dentro do arco aceso, com o rastro de vento. */
@@ -348,6 +354,7 @@ export const ARTE_VILA: Record<string, string> = {
   /** A f4, a volta no rinque: o arco apagado, os patins, o arco aceso e os patins passando nele. */
   arcoNeon: BASE.a80ArcoNeon,
   patins: BASE.a80PatinsRinque,
+  tirarPatins: BASE.a80TirarPatins,
   arcoAceso: BASE.a80ArcoAceso,
   patinsArco: BASE.a80PatinsArco,
   /** O mundo no baú (as habilidades que a Vila Neon alimenta): o raio sobre o grafite. */

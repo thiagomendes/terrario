@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   DESLIZE_PATINS,
   VEL_ANDAR,
+  VEL_CORRER,
   criarJogador,
   passoFisica,
   type ComandoMovimento,
@@ -34,7 +35,7 @@ function soltar(patins?: ComandoMovimento['patins'], correr = false) {
 }
 
 describe('os patins (spec 026)', () => {
-  it('a velocidade máxima é a de andar, mesmo correndo', () => {
+  it('na pista, a velocidade máxima é a de andar, mesmo correndo', () => {
     const { zAndou } = soltar(naPista, true);
     expect(zAndou - 0.5).toBeCloseTo(VEL_ANDAR, 1);
   });
@@ -49,6 +50,14 @@ describe('os patins (spec 026)', () => {
   it('fora da pista (e sem patins) para na hora', () => {
     expect(soltar(foraDaPista).mexendo).toBe(0);
     expect(soltar(undefined).mexendo).toBe(0);
+  });
+
+  it('fora da pista, de patins, anda e corre como sempre (dono, 16 nov 2026)', () => {
+    // andando: igual a sem patins; correndo: corre de verdade (na pista, nunca mais que andar)
+    expect(soltar(foraDaPista).zAndou).toBeCloseTo(soltar(undefined).zAndou, 6);
+    expect(soltar(foraDaPista, true).zAndou).toBeCloseTo(soltar(undefined, true).zAndou, 6);
+    expect(soltar(foraDaPista, true).zAndou - 0.5).toBeCloseTo(VEL_CORRER, 1);
+    expect(soltar(foraDaPista, true).zAndou).toBeGreaterThan(soltar(naPista, true).zAndou + 1);
   });
 
   it('virar é direto: o embalo novo segue o controle, sem escorregar de lado', () => {

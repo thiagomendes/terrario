@@ -241,6 +241,17 @@ async function iniciar(app: HTMLElement): Promise<void> {
       icone: arteAlma('vitrine'),
       aoEscolher: () => window.dispatchEvent(new CustomEvent(EVENTO_LOJINHA)),
     });
+  // spec 026 (dono, 16 nov 2026): "Tirar patins" na roda, só enquanto a criança está de patins
+  // (longe do suporte do rinque ela tira aqui; calçar é só no suporte)
+  if (temaMundo.id === 'vila-neon' && !EXTRAS_RODA.some((x) => x.id === 'tirar-patins'))
+    EXTRAS_RODA.push({
+      id: 'tirar-patins',
+      nome: 'Tirar patins',
+      icone: arteAlma('tirarPatins'),
+      visivel: () => !!window.__brumaluz?.personagem?.aparencia().patins,
+      semTela: true,
+      aoEscolher: () => window.__brumaluz?.vilaPatins?.(false),
+    });
   // em prévia de outro tema nada é salvo: o mundo continua sendo do tema dele
   cena = criarCena(canvas, hotbar, {
     mundo: atual,

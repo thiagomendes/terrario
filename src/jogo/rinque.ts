@@ -1,11 +1,24 @@
 /**
  * A volta no rinque (spec 026, a nova f4 da Vila Neon, escolhida pelo dono em 16 nov 2026): a
- * criança calça os patins (de graça no suporte do rinque, ou com a fantasia Patinadora) e passa
- * por dentro dos três arcos de neon da pista. Puro: o núcleo conta (`rinque:arco`, um por arco,
- * só de patins), a tela acende o arco e o guia leva primeiro ao suporte e depois aos arcos.
+ * criança calça os patins (de graça, com um toque no suporte do rinque: é sempre uma escolha
+ * dela) e passa por dentro dos três arcos de neon da pista. Puro: o núcleo conta (`rinque:arco`,
+ * um por arco, só de patins), a tela acende o arco e o guia leva primeiro ao suporte e depois
+ * aos arcos.
  *
  * Sem pressa nenhuma (nada de tempo, nada de ordem) e com arco largo: o vão tem uns 4 blocos.
  */
+
+/** O toque no suporte dos patins: o dedo sobe a até tantos px de onde desceu, em até tanto tempo. */
+export const TOQUE_SUPORTE_PX = 18;
+export const TOQUE_SUPORTE_MS = 700;
+
+/**
+ * Foi um toque (o dedo desceu e subiu no mesmo lugar, rápido)? Arrastar o dedo para virar a
+ * câmera ou deixar o dedo parado em cima do suporte não calça os patins.
+ */
+export function foiToque(dx: number, dy: number, ms: number): boolean {
+  return Math.hypot(dx, dy) <= TOQUE_SUPORTE_PX && ms >= 0 && ms <= TOQUE_SUPORTE_MS;
+}
 
 /** A missão nova (id novo: quem fez a f3 de antes, do show, faz esta também). */
 export const F_RINQUE = 'f4';

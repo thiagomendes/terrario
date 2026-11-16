@@ -67,9 +67,10 @@ export interface ComandoMovimento {
   /** Pulo automático: andando contra um degrau de um bloco, pula sozinho. */
   puloAutomatico?: boolean;
   /**
-   * Spec 026: de patins. A velocidade máxima é a de andar (nunca mais rápido); ao soltar o
-   * controle, desliza meio segundo só na pista (`pista(x, z)`); fora dela, para na hora.
-   * Virar é direto (nada de gelo) e nunca cai.
+   * Spec 026: de patins. Na pista (`pista(x, z)`), a velocidade máxima é a de andar (nunca mais
+   * rápido) e, ao soltar o controle, desliza meio segundo. Fora da pista (dono, 16 nov 2026:
+   * "andar e correr de patins fora do rinque é ruim") os patins não mudam nada: anda e corre
+   * como sempre e para na hora. Virar é direto (nada de gelo) e nunca cai.
    */
   patins?: { pista(x: number, z: number): boolean };
 }
@@ -298,7 +299,8 @@ export function passoFisica(
       : VEL_ANDAR;
   if (agua) vel *= 0.55;
   const patins = !!cmd.patins && !e.voando && !agua;
-  if (patins) vel = Math.min(vel, VEL_ANDAR);
+  // (só na pista: fora dela, de patins, a criança anda e corre como sempre)
+  if (patins && cmd.patins!.pista(e.x, e.z)) vel = Math.min(vel, VEL_ANDAR);
   let mx = cmd.direita * Math.cos(cmd.yaw) + cmd.frente * Math.sin(cmd.yaw);
   let mz = -cmd.direita * Math.sin(cmd.yaw) + cmd.frente * Math.cos(cmd.yaw);
   const norma = Math.hypot(mx, mz);

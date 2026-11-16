@@ -6,7 +6,8 @@
  *   pé dele ou na plateia), o dedo pega a caixa que estiver perto dele (alvo de 80 px, como a 031);
  * - **o show é só para ver e dançar** (o dono, 16 nov 2026): nenhum toque toca acorde nem
  *   dispara o fim; o dedo é todo do jogo (o arrastar gira a câmera o show inteiro);
- * - **o suporte dos patins** (um toque calça, outro tira) e os brinquedos de tocar;
+ * - **o suporte dos patins** (um toque calça, outro tira; arrastar o dedo por cima dele não
+ *   calça) e os brinquedos de tocar;
  * - **o feno na mão (f2):** o "pop" do feno que aparece perto das lhamas, já selecionado.
  */
 import type { Scene } from '@babylonjs/core/scene';
@@ -17,6 +18,7 @@ import { missaoFixada } from './hud';
 import { figura } from './figuras';
 import { tocarSomInterface } from '../../audio/somInterface';
 import { alcancaOPalco, faseDoShow, type FaseShow } from '../../jogo/show';
+import { foiToque } from '../../jogo/rinque';
 import { CSS_CANTO } from './canto';
 
 declare global {
@@ -136,6 +138,24 @@ export function ligarVilaNeon(
 
   // ---------------------------------------------------------------- o toque generoso
   let engoliuAte = 0;
+  /**
+   * O dedo que desceu em cima do suporte dos patins (dono, 16 nov 2026: "entrar no rinque calça
+   * os patins sozinho"): antes, qualquer dedo que descia perto do suporte calçava, e o suporte
+   * fica na entrada do rinque, onde a criança arrasta o dedo para virar a câmera. Agora só o
+   * toque de verdade vale: o dedo desce e sobe no mesmo lugar, sem arrastar e sem demorar.
+   */
+  let noSuporte: { id: number; x: number; y: number; t: number } | null = null;
+  function soltouNoSuporte(ev: PointerEvent): void {
+    const d = noSuporte;
+    if (!d || ev.pointerId !== d.id) return;
+    noSuporte = null;
+    if (ev.type !== 'pointerup' || !noJogo()) return;
+    if (!foiToque(ev.clientX - d.x, ev.clientY - d.y, performance.now() - d.t)) return;
+    e.vilaPatins?.(!e.personagem?.aparencia().patins);
+  }
+  // (antes dos que engolem o resto do toque, logo abaixo)
+  window.addEventListener('pointerup', soltouNoSuporte, { capture: true });
+  window.addEventListener('pointercancel', soltouNoSuporte, { capture: true });
   window.addEventListener(
     'pointerdown',
     (ev) => {
@@ -165,9 +185,8 @@ export function ligarVilaNeon(
         e.vilaBrinquedo?.(brinquedo.qual, brinquedo.i);
         feito = true;
       } else if (ts && Math.hypot(ts.x - x, ts.y - y) <= RAIO_TOQUE * 1.5) {
-        const calcados = !!e.personagem?.aparencia().patins;
-        e.vilaPatins?.(!calcados);
-        tocarSomInterface(calcados ? 'mochila' : 'plim');
+        // (calçar é uma escolha: só vale quando o dedo sobe no mesmo lugar; ver `soltouNoSuporte`)
+        noSuporte = { id: ev.pointerId, x: ev.clientX, y: ev.clientY, t: performance.now() };
         feito = true;
       } else if (melhor && !showTocando()) {
         e.vilaComando?.({ a: 'caixa', i: melhor.i });

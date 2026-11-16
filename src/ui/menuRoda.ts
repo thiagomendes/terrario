@@ -61,9 +61,22 @@ export function itensDoMenu(telaCheia: boolean): ItemMenu[] {
 
 /**
  * Itens a mais na roda do menu: a lojinha premium da 023 (o main.ts põe antes da cena montar a
- * roda). Entram logo depois de "Personagem" e sempre abrem uma tela.
+ * roda). Entram logo depois de "Personagem" e abrem uma tela (a não ser os `semTela`).
+ *
+ * Spec 026 (dono, 16 nov 2026): um item pode aparecer só quando serve (`visivel`): "Tirar
+ * patins" só existe na roda enquanto a criança está de patins (a roda não ganha item à toa).
  */
-export const EXTRAS_RODA: { id: string; nome: string; icone: string; aoEscolher(): void }[] = [];
+export interface ExtraRoda {
+  id: string;
+  nome: string;
+  icone: string;
+  aoEscolher(): void;
+  /** O item aparece agora? (conferido cada vez que a roda abre; sem a função, sempre) */
+  visivel?(): boolean;
+  /** Escolher não abre tela nenhuma (o mouse volta para a câmera). */
+  semTela?: true;
+}
+export const EXTRAS_RODA: ExtraRoda[] = [];
 
 /** Tecla que abre e fecha a roda do menu no computador (O de "opções"). */
 export const TECLA_MENU = 'KeyO';
@@ -200,43 +213,53 @@ export function criarMenuRoda(op: OpcoesMenuRoda, raiz: HTMLElement = document.b
   }
 
   const itens = itensDoMenu(podeAlternarTelaCheia());
-  const itensRoda = itens.map((i) => ({
-    id: i.id as string,
-    nome: i.nome,
-    icone: svg(IC[i.id]),
-    tecla: i.tecla,
-  }));
-  if (EXTRAS_RODA.length) {
-    const k = itensRoda.findIndex((i) => i.id === 'personagem') + 1;
-    itensRoda.splice(
-      k,
-      0,
-      ...EXTRAS_RODA.map((x) => ({ id: x.id, nome: x.nome, icone: x.icone, tecla: undefined })),
-    );
+  /**
+   * A lista do menu de agora: os itens de sempre e os extras que aparecem neste momento (cada
+   * conjunto de extras tem a sua lista, montada uma vez; abrir de novo não cria nada).
+   */
+  const listasMenu = new Map<string, ListaRoda>();
+  function listaDoMenu(): ListaRoda {
+    const extras = EXTRAS_RODA.filter((x) => !x.visivel || x.visivel());
+    const chave = extras.map((x) => x.id).join(',');
+    let l = listasMenu.get(chave);
+    if (l) return l;
+    const itensRoda = itens.map((i) => ({
+      id: i.id as string,
+      nome: i.nome,
+      icone: svg(IC[i.id]),
+      tecla: i.tecla,
+    }));
+    if (extras.length) {
+      const k = itensRoda.findIndex((i) => i.id === 'personagem') + 1;
+      itensRoda.splice(
+        k,
+        0,
+        ...extras.map((x) => ({ id: x.id, nome: x.nome, icone: x.icone, tecla: undefined })),
+      );
+    }
+    l = { itens: itensRoda, manter: (id) => id === 'gestos', aoEscolher: escolherDoMenu };
+    listasMenu.set(chave, l);
+    return l;
   }
-  const listaMenu: ListaRoda = {
-    itens: itensRoda,
-    manter: (id) => id === 'gestos',
-    aoEscolher: (id) => {
-      const extra = EXTRAS_RODA.find((x) => x.id === id);
-      if (extra) {
-        abriuTela = true;
-        roda.fechar();
-        extra.aoEscolher();
-        return;
-      }
-      const it = itens.find((i) => i.id === id);
-      if (!it) return;
-      if (id === 'gestos') return abrirGestos();
-      abriuTela = ABREM_TELA.has(it.id);
-      // a roda fecha antes (o painel que abre não fica embaixo dela)
+  function escolherDoMenu(id: string): void {
+    const extra = EXTRAS_RODA.find((x) => x.id === id);
+    if (extra) {
+      abriuTela = !extra.semTela;
       roda.fechar();
-      if (id === 'tela') alternarTelaCheia();
-      else if (id === 'casa') window.dispatchEvent(new CustomEvent('brumaluz:voltarCasa'));
-      else if (id === 'pausa') pausar();
-      else if (it.codigo) tecla(it.codigo);
-    },
-  };
+      extra.aoEscolher();
+      return;
+    }
+    const it = itens.find((i) => i.id === id);
+    if (!it) return;
+    if (id === 'gestos') return abrirGestos();
+    abriuTela = ABREM_TELA.has(it.id);
+    // a roda fecha antes (o painel que abre não fica embaixo dela)
+    roda.fechar();
+    if (id === 'tela') alternarTelaCheia();
+    else if (id === 'casa') window.dispatchEvent(new CustomEvent('brumaluz:voltarCasa'));
+    else if (id === 'pausa') pausar();
+    else if (it.codigo) tecla(it.codigo);
+  }
   let gestos = op.gestos;
   const listaDeGestos = (gs: readonly ItemRoda[]): ListaRoda => ({
     // 1 a 9 e o 0 para o décimo
@@ -246,12 +269,12 @@ export function criarMenuRoda(op: OpcoesMenuRoda, raiz: HTMLElement = document.b
   });
   let listaGestos: ListaRoda = listaDeGestos(gestos);
   // desempenho: os botões das duas listas já ficam montados (abrir não cria nada)
-  roda.preparar(listaMenu);
+  roda.preparar(listaDoMenu());
   roda.preparar(listaGestos);
 
   function abrirMenu(focar = false): void {
     if (!roda.aberta && !op.pode()) return;
-    roda.abrir(listaMenu, focar);
+    roda.abrir(listaDoMenu(), focar);
   }
   function abrirGestos(): void {
     if (!roda.aberta && !op.pode()) return;
@@ -330,7 +353,7 @@ export function criarMenuRoda(op: OpcoesMenuRoda, raiz: HTMLElement = document.b
       document.body.dataset.solto = SOLTO_PELA_RODA;
       document.exitPointerLock?.();
     }
-    roda.abrir(listaMenu);
+    roda.abrir(listaDoMenu());
     return true;
   }
 

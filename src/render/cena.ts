@@ -304,7 +304,12 @@ import {
   teclaParaMudo,
   tocarSomDoBloco,
 } from '../audio/ligador';
-import { EVENTO_SOM_INTERFACE, SOM_DO_GESTO, ehSomInterface } from '../audio/somInterface';
+import {
+  EVENTO_SOM_INTERFACE,
+  SOM_DO_GESTO,
+  ehSomInterface,
+  tocarSomInterface,
+} from '../audio/somInterface';
 import { EVENTO_SOM_GUIA, ehSomGuia, tocarSomGuia } from '../audio/somGuia';
 import { SOM_AGUA_INICIAL, passoSomAgua, type EstadoSomAgua } from '../audio/somAgua';
 import { grupoDoBloco, GRUPOS_MATERIAL } from '../audio/materiais';
@@ -438,8 +443,10 @@ export interface EstadoDepuracao {
   somVila?: () => ReturnType<SomVila['info']> | null;
   /** Spec 026 (T19, testes): o som de um brinquedo do bairro agora. */
   tocarBrinquedoVila?: (qual: BrinquedoVila, i?: number) => boolean;
-  /** Spec 026: calça ou tira os patins (o suporte da pista). */
+  /** Spec 026: calça ou tira os patins (o suporte da pista e o "Tirar patins" da roda). */
   vilaPatins?: (calcar: boolean) => void;
+  /** Spec 026 (testes): quantas vezes os patins foram calçados ou tirados (com a festinha). */
+  patinsTrocas?: number;
   /** Spec 026: toca um brinquedo do bairro (a tela da máquina mexe, o rádio liga, a fita rebobina). */
   vilaBrinquedo?: (qual: import('./vila/brinquedos').ToqueVila, i?: number) => void;
   /** Spec 026 (testes): o que os brinquedos do bairro mostram agora. */
@@ -1211,9 +1218,9 @@ export function criarCena(
     }
   }
   let aparencia: Aparencia = carregarAparencia(armazenamentoLocal());
-  // spec 026: os patins ficam na Vila Neon (calçados de novo ao voltar a ela; nunca nos outros)
-  if (vilaDoMundo(semente) && dadosIniciais?.extras?.['patins'] === true) aparencia.patins = true;
-  else delete aparencia.patins;
+  // spec 026 (dono, 16 nov 2026): a criança ESCOLHE calçar os patins, no suporte do rinque.
+  // Ninguém entra no mundo já de patins (nem quem saiu dele calçado, nem em outro mundo)
+  delete aparencia.patins;
   const personagem = criarPersonagem(scene, aparencia);
   let vitrine: ReturnType<EfeitosPremium['registrar']> | null = null;
   let vitrineNo: TransformNode | null = null;
@@ -1745,10 +1752,16 @@ export function criarCena(
   const pistaDosPatins = (x: number, z: number) =>
     blocoEm(Math.floor(x), Math.floor(controle.jogador.y - 0.05), Math.floor(z)) ===
     Bloco.PISTA_NEON;
-  if (planoVila && aparencia.patins) controle.definirPatins(pistaDosPatins);
-  salvaveis.set('patins', { salvar: () => (planoVila && aparencia.patins ? true : undefined) });
+  // (os patins não vão mais salvos com o mundo: o que estava salvo antes some no próximo salvar)
+  salvaveis.set('patins', { salvar: () => undefined });
+  /**
+   * Calçar e tirar os patins (dono, 16 nov 2026): só quando a criança escolhe (o toque no
+   * suporte do rinque calça e tira; "Tirar patins" na roda tira em qualquer lugar), e com
+   * resposta na hora: calçando, um pulinho, as rodinhas rolando, o "plim" e as faíscas de neon
+   * nos pés; tirando, o som de guardar e um sopro de poeirinha.
+   */
   estado.vilaPatins = (calcar) => {
-    if (!planoVila) return;
+    if (!planoVila || calcar === !!aparencia.patins) return;
     aparencia = normalizarAparencia({ ...aparencia, patins: calcar ? true : undefined });
     if (!calcar) delete aparencia.patins;
     personagem.aplicarAparencia(aparencia);
@@ -1757,6 +1770,45 @@ export function criarCena(
       t: 'aparencia',
       aparencia: semDesbloqueios({ ...aparencia }) as Record<string, unknown>,
     });
+    const j = controle.jogador;
+    if (calcar) {
+      if (j.noChao && !j.voando) {
+        j.vy = 4.6;
+        j.noChao = false;
+      }
+      tocarSomInterface('plim');
+      somVila?.tocarBrinquedo('rodinhas');
+    } else tocarSomInterface('mochila');
+    // faíscas de neon em roda nos pés (calçou) ou poeirinha clara (tirou)
+    const cores: [number, number, number][] = calcar
+      ? [
+          [0.3, 0.95, 1],
+          [1, 0.9, 0.35],
+          [1, 1, 1],
+        ]
+      : [
+          [0.92, 0.9, 0.86],
+          [0.8, 0.78, 0.76],
+        ];
+    const n = calcar ? 18 : 8;
+    pool.emitir(
+      Array.from({ length: n }, (_, i) => {
+        const ang = (i / n) * Math.PI * 2 + rngFx() * 0.4;
+        const v = calcar ? 1.6 + rngFx() * 1.2 : 0.7 + rngFx() * 0.5;
+        return {
+          x: j.x + Math.cos(ang) * 0.25,
+          y: j.y + 0.12,
+          z: j.z + Math.sin(ang) * 0.25,
+          vx: Math.cos(ang) * v,
+          vy: calcar ? 2 + rngFx() * 1.6 : 0.8 + rngFx() * 0.5,
+          vz: Math.sin(ang) * v,
+          cor: cores[i % cores.length],
+          tipo: CONFETE,
+        };
+      }),
+    );
+    estado.patinsTrocas = (estado.patinsTrocas ?? 0) + 1;
+    window.dispatchEvent(new CustomEvent('brumaluz:patins', { detail: { calcados: calcar } }));
   };
   estado.vilaEstado = () => (planoVila ? cliente.vila.estado : null);
   estado.vilaComando = (c) => {
@@ -2978,14 +3030,13 @@ export function criarCena(
   estado.personagem = {
     aparencia: () => ({ ...aparencia }),
     definir: (parcial) => {
-      const antes = aparencia.fantasia?.id;
+      // spec 026: quem está de patins continua (a tela do personagem não sabe deles); a
+      // fantasia Patinadora não calça mais sozinha (dono, 16 nov 2026: calçar é uma escolha, no
+      // suporte do rinque); fora da Vila Neon os patins nunca vão (decisão 7 do dono)
+      const dePatins = !!planoVila && !!aparencia.patins;
       aparencia = normalizarAparencia({ ...aparencia, ...parcial });
-      // spec 026: na Vila Neon a fantasia Patinadora já vem com os patins calçados (fora dela
-      // os patins nunca vão: decisão 7 do dono)
-      if (planoVila && aparencia.fantasia?.id === 'patinadora' && antes !== 'patinadora') {
-        aparencia.patins = true;
-        controle.definirPatins(pistaDosPatins);
-      } else if (!planoVila) delete aparencia.patins;
+      if (dePatins) aparencia.patins = true;
+      else delete aparencia.patins;
       personagem.aplicarAparencia(aparencia);
       // os amigos no mesmo mundo passam a ver a aparência nova
       // spec 014: os desbloqueios (capacete e colete do canteiro) ficam no aparelho
@@ -3896,7 +3947,15 @@ export function criarCena(
     const naPista = j.noChao && pistaDosPatins(j.x, j.z);
     if (!naPista) {
       ladrilhoPisado = '';
-      ultPosPatins = null;
+      // fora da pista, de patins, as rodinhas rolam mais de vez em quando (a calçada é áspera)
+      if (aparencia.patins && j.noChao) {
+        if (ultPosPatins) rodouPatins += Math.hypot(j.x - ultPosPatins[0], j.z - ultPosPatins[1]);
+        ultPosPatins = [j.x, j.z];
+        if (rodouPatins >= 2.6) {
+          rodouPatins = 0;
+          somVila?.tocarBrinquedo('rodinhas');
+        }
+      } else ultPosPatins = null;
       return;
     }
     // o ladrilho novo acende (com o plim subindo a escala)
