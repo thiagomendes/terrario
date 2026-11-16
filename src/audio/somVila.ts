@@ -274,6 +274,8 @@ export const REFORCO_FINAL_DB = 2;
  */
 export const GANHO_PASSAGEM = 0.13;
 export const GANHO_AQUECER = 0.22;
+/** O acorde de cada caixa que acende de noite (relativo ao show). */
+export const GANHO_ACENDE = 0.4;
 export const REFORCO_APLAUSO_DB = 4;
 
 /**
@@ -790,7 +792,7 @@ export function criarSomVila(op: OpcoesSomVila) {
     }
     if (proximaPassagem === -Infinity) {
       proximaPassagem = ag + 6 + rng() * 8;
-      for (const k of ['tum', ...ind.acordes.slice(0, 2)]) void abrir(k);
+      for (const k of ['tum', ...ind.acordes]) void abrir(k);
       return;
     }
     if (ag < proximaPassagem) return;
@@ -1010,9 +1012,15 @@ export function criarSomVila(op: OpcoesSomVila) {
       case 'vilaEstojo':
         tocarBrinquedo('estojo');
         return;
-      case 'vilaCaixa':
+      case 'vilaCaixa': {
         tocarToque('tum', { taxa: e.acesa ? 1 : 0.84, ganho: e.acesa ? 1 : 0.6 });
+        // de noite, a caixa que acende (pela criança ou sozinha, antes do show) soa um acorde
+        // do show: uma a uma, as três chamam a banda
+        const id = ind?.acordes[e.i % ind.acordes.length];
+        if (e.acesa && !e.dia && id && !showAtual)
+          tocar(id, ag + 0.06, { ganho: GANHO_ACENDE, bus: 'show' });
         return;
+      }
       case 'vilaLhama':
         tocarBrinquedo('lhama');
         return;
