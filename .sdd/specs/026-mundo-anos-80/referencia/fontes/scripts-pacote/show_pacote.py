@@ -20,6 +20,20 @@ Régua: as três camadas juntas no refrão em -23,6 dBFS (1 dB acima da mistura 
 camada sozinha no mesmo nível (o teclado 1,5 dB abaixo); o acorde do toque em -22 "enquanto soa" (sobe por cima do show),
 o acorde final em -20,5, a contagem em -27, o aplauso em -27; os brinquedos em -23 "enquanto soa" como as vozes da 019;
 a batida em -28 e o neon em -36. Pico sempre <= -1 dBFS. O volume de cada um no jogo é o do src/audio/somVila.ts.
+
+O show de verdade (16 nov 2026, uns 6 min): tudo o que vem acima fica igual (o pacote antigo sai byte a byte, os pedaços
+novos entram depois dele no MP3). Os pedaços novos chegam em trilhas (show_compor.py) e são juntados na régua das camadas
+da m1 (cada trilha no mesmo RMS "ativo", o teclado 1,5 dB abaixo, a cama de cordas 7 dB abaixo, o solo 4 dB acima) e
+postos em LUFS (BS.1770, a conta de amostras.py; o ebur128 do ffmpeg confere em show_previa.py) contra o refrão da m1 com
+as três camadas juntas, medidos como o jogo toca a parte (o laço repetido, a frase de novo a cada "c" compassos): refrões
+e fins no nível do refrão da m1, solos 0,5 LU abaixo, versos e introduções 1,5 abaixo, a ponte 2,5 e o chamado 2,5. As
+contagens e os acordes do toque no volume percebido dos da m1, o acorde final m3_final 2 dB abaixo do "final" (o jogo soma
+REFORCO_FINAL_DB e o aplauso por cima). Síntese nossa (gerador próprio, o sorteio dos sons antigos não muda): na abertura,
+o drone de Mi abrindo o filtro, o "oooh" da plateia no escuro, o "fffuu" das varreduras (2,5 e 6,5 s), o "zzt" do raio
+(10,0, 10,3, 10,45, 11,0 s), o zumbido do neon e a subida até o estouro (18 s, no nível do refrão da m1); na entrada, a
+plateia vibrando (some antes da contagem da m1); a torcida (8 s em laço, no volume do aplauso) e os fogos de estrelinhas
+(o "fiuuu", um "pof" abafado e o crepitar, 3 LU abaixo do aplauso). No índice: "c" (compassos) em cada pedaço de música,
+"laco" nos laços, a "setlist" das três músicas e abertura, entrada, torcida e fogos.
 """
 import sys, os, json, subprocess
 import numpy as np
@@ -58,27 +72,35 @@ def pico_ok(x, teto=-1.0):
 
 # ------------------------------------------------------------------ os pedaços do FluidSynth
 pedacos = {}
+trilhas = {}   # as trilhas dos pedaços novos (show_compor.py: show_novos), juntadas mais abaixo
 for p in plano['pedacos']:
     x, sr = ler(os.path.join(rend, p['arq'] + '.wav'))
     assert sr == SR0
     x = x.mean(axis=1)
-    nom = round(p['compassos'] * CPS)
+    nom = round(p['compassos'] * p.get('amostrasCompasso', CPS))
+    parcial = p.get('parcial', False)
     if p['tipo'] == 'laco':
         n0 = nom * 2
         y = np.zeros(n0)
         np.add.at(y, np.arange(len(x)) % n0, x)
         y = meia_periodica(y)
         assert len(y) == nom
-        pedacos[p['id']] = dict(y=limitar(y, laco=True), laco=True, nom=nom, p=p)
+        if parcial:
+            trilhas[p['id']] = dict(y=y, laco=True, nom=nom, p=p)
+        else:
+            pedacos[p['id']] = dict(y=limitar(y, laco=True), laco=True, nom=nom, p=p)
     else:
-        cauda = round(1.6 * SR) if p['id'] == 'final' else CAUDA
+        cauda = round(1.6 * SR) if p['id'] == 'final' else (round(p['caudaS'] * SR) if 'caudaS' in p else CAUDA)
         n0 = 2 * (nom + cauda) + 2 * SR0
         z = np.zeros(n0)
         z[:min(n0, len(x))] = x[:n0]
         y = meia_periodica(z)[:nom + cauda]
         fade = int(0.25 * SR)
         y[-fade:] *= 0.5 * (1 + np.cos(np.linspace(0, np.pi, fade)))
-        pedacos[p['id']] = dict(y=limitar(y, laco=False), laco=False, nom=nom, cauda=cauda, p=p)
+        if parcial:
+            trilhas[p['id']] = dict(y=y, laco=False, nom=nom, cauda=cauda, p=p)
+        else:
+            pedacos[p['id']] = dict(y=limitar(y, laco=False), laco=False, nom=nom, cauda=cauda, p=p)
 
 # ------------------------------------------------------------------ a régua das camadas (pela forma do show)
 FORMA = [('verso', 0, 8), ('refrao', 8, 4), ('refrao', 12, 4), ('subida', 16, 4)]
@@ -365,12 +387,415 @@ for k, x in sint.items():
     x = ate(x, alvo, f=(lambda v: db(rms(v))) if modo == 'rms' else rms_ativo)
     pedacos[k] = dict(y=x, laco=(k == 'neon'), nom=len(x), sint=True)
 
+
+# ================================================================== o show de verdade (16 nov 2026): os pedaços novos
+# Tudo o que está acima fica como era (o pacote antigo sai igual, byte a byte). Daqui para baixo: as trilhas novas
+# juntadas, a régua em LUFS (BS.1770, como amostras.py e o ebur128) contra o refrão da m1 com as três camadas, e a
+# síntese nossa da abertura, da entrada, da torcida e dos fogos (gerador próprio: o sorteio do pacote antigo não muda).
+rng2 = np.random.default_rng(20261116)
+
+
+def lufs(x):
+    """LUFS integrado (BS.1770-4) mono a 22 050 Hz: filtro K e as portas -70 e -10 (a mesma conta de amostras.py)."""
+    G, Qs, fc = 3.99984385397, 0.7071752369554193, 1681.9744509555319
+    A = 10 ** (G / 40)
+    w0 = 2 * np.pi * fc / SR
+    al = np.sin(w0) / (2 * Qs)
+    c = np.cos(w0)
+    b = [A * ((A + 1) + (A - 1) * c + 2 * np.sqrt(A) * al), -2 * A * ((A - 1) + (A + 1) * c), A * ((A + 1) + (A - 1) * c - 2 * np.sqrt(A) * al)]
+    a = [(A + 1) - (A - 1) * c + 2 * np.sqrt(A) * al, 2 * ((A - 1) - (A + 1) * c), (A + 1) - (A - 1) * c - 2 * np.sqrt(A) * al]
+    y = lfilter(b, a, x)
+    fh, Qh = 38.13547087613982, 0.5003270373253953
+    w0 = 2 * np.pi * fh / SR
+    al = np.sin(w0) / (2 * Qh)
+    c = np.cos(w0)
+    y = lfilter([(1 + c) / 2, -(1 + c), (1 + c) / 2], [1 + al, -2 * c, 1 - al], y)
+    blk, passo = int(0.4 * SR), int(0.1 * SR)
+    z = np.array([np.mean(y[i:i + blk] ** 2) for i in range(0, max(1, len(y) - blk), passo)])
+    lz = -0.691 + 10 * np.log10(z + 1e-20)
+    z1 = z[lz > -70]
+    if not len(z1):
+        return -99.0
+    rel = -0.691 + 10 * np.log10(np.mean(z1)) - 10
+    z2 = z1[(-0.691 + 10 * np.log10(z1)) > rel]
+    return round(float(-0.691 + 10 * np.log10(np.mean(z2))), 2)
+
+
+def janela(x, t0, t1):
+    return x[int(t0 * SR):int(t1 * SR)]
+
+
+def ganho_lufs(x, medido, alvo):
+    return x * 10 ** ((alvo - medido) / 20)
+
+
+def teto(x, laco, db_teto=-1.5):
+    """o limitador do pacote (musica_processar.limitar) com teto absoluto: só pega o pico que passaria de db_teto."""
+    return limitar(x, laco=laco, folga=db_teto - db(rms(x)))
+
+
+REF = lufs(mix_show[8 * CPS:16 * CPS])            # o refrão da m1, as três camadas juntas: a régua das músicas novas
+REF_VERSO = lufs(mix_show[:8 * CPS])
+novos = {d['id']: d for d in plano['novos']}
+
+# ---- juntar as trilhas: bateria, guitarra (com o baixo) e teclado no mesmo nível, o teclado 1,5 dB abaixo (a régua das
+# camadas da m1); a cama de cordas 7 dB abaixo; o solo 4 dB por cima, e nos solos a guitarra base e o teclado mais atrás
+NIVEL_TRILHA = {'bateria': 0.0, 'guitarra': 0.0, 'teclado': -1.5, 'solo': 4.0, 'cama': -7.0}
+AJUSTE_TRILHA = {('m1_solo', 'teclado'): -4.0, ('m1_solo', 'guitarra'): -2.0, ('m3_solo', 'guitarra'): -2.0,
+                 ('m3_chamado', 'bateria'): -2.0, ('m3_final', 'teclado'): 1.0, ('m2_ponte', 'teclado'): 1.0,
+                 ('m2_ponte', 'cama'): 2.0}
+
+
+def juntar(cid):
+    d = novos[cid]
+    nomn = round(d['compassos'] * d['amostrasCompasso'])
+    ys = {tr: trilhas[f'{cid}__{tr}']['y'] for tr in d['trilhas']}
+    if len(ys) == 1:
+        return next(iter(ys.values())), {}
+    out, g = 0, {}
+    for tr, y in ys.items():
+        alvo = -30 + NIVEL_TRILHA.get(tr, 0.0) + AJUSTE_TRILHA.get((cid, tr), 0.0)
+        g[tr] = 10 ** ((alvo - rms_ativo(y[:nomn])) / 20)
+        out = out + y * g[tr]
+    return out, {tr: db(v) for tr, v in g.items()}
+
+
+def na_parte(y, laco, cps, c, npar):
+    """o que o jogo toca numa parte de npar compassos: o laço repetido, ou a frase de novo a cada c compassos (a cauda soa por
+    cima da próxima vez)."""
+    if laco:
+        return np.tile(y, npar // c)
+    out = np.zeros(npar * cps + len(y))
+    for k in range(max(1, npar // c)):
+        out[k * c * cps:k * c * cps + len(y)] += y
+    return out[:npar * cps]
+
+
+# a régua das partes: LU em relação ao refrão da m1 (REF), medido como o jogo toca a parte (tamanho dela no SETLIST)
+ALVO_PARTE = {
+    'm1_solo': (8, -0.5), 'm1_fim': (None, 0.0),
+    'm2_intro': (2, -1.5), 'm2_verso': (8, -1.5), 'm2_refrao': (8, 0.0), 'm2_ponte': (8, -2.5), 'm2_fim': (None, 0.0),
+    'm3_intro': (2, -1.5), 'm3_verso': (8, -1.5), 'm3_refrao': (8, 0.0), 'm3_solo': (4, -0.5), 'm3_chamado': (2, -2.5),
+}
+medidas_novas = {'refM1': REF, 'versoM1': REF_VERSO, 'partes': {}, 'trilhasDb': {}}
+for cid, (npar, lu) in ALVO_PARTE.items():
+    d = novos[cid]
+    laco = d['tipo'] == 'laco'
+    y, gtr = juntar(cid)
+    y = limitar(y, laco=laco)
+    cps, c = d['amostrasCompasso'], round(d['compassos'])
+    if npar is None:
+        med = lufs(y[:c * cps + SR])     # o fim: os dois compassos e o primeiro segundo do acorde segurado
+    else:
+        med = lufs(na_parte(y, laco, cps, c, npar))
+    y = teto(ganho_lufs(y, med, REF + lu), laco)
+    final_med = lufs(y[:c * cps + SR]) if npar is None else lufs(na_parte(y, laco, cps, c, npar))
+    medidas_novas['partes'][cid] = dict(alvoLU=lu, lufs=final_med, relRefLU=round(final_med - REF, 2))
+    medidas_novas['trilhasDb'][cid] = gtr
+    pedacos[cid] = dict(y=y, laco=laco, nom=len(y), novo=True)
+
+# a contagem, os acordes do toque e o acorde final das músicas novas: no volume percebido dos da m1
+L_CONTAGEM, L_ACORDE, L_FINAL = lufs(pedacos['contagem']['y']), lufs(pedacos['acorde_0']['y']), lufs(pedacos['final']['y'])
+# o acorde final do show fica 2 dB abaixo do da m1: o jogo já soma REFORCO_FINAL_DB e o aplauso por cima
+for cid, alvo in ([('m2_contagem', L_CONTAGEM), ('m3_contagem', L_CONTAGEM), ('m3_final', L_FINAL - 2.0)] +
+                  [(f'{m}_acorde_{k}', lufs(pedacos[f'acorde_{k}']['y'])) for m in ('m2', 'm3') for k in range(3)]):
+    y, gtr = juntar(cid)
+    y = limitar(y, laco=False)
+    y = teto(ganho_lufs(y, lufs(y), alvo), False)
+    medidas_novas['partes'][cid] = dict(lufs=lufs(y), alvo=alvo)
+    if gtr:
+        medidas_novas['trilhasDb'][cid] = gtr
+    pedacos[cid] = dict(y=y, laco=False, nom=len(y), novo=True)
+
+
+# ---- síntese nossa: ferramentas
+def banda_movel(x, centro, largura_oit, ganho_t=None):
+    """filtra x com uma banda (gaussiana em oitavas) cujo centro anda no tempo: centro(t) em Hz; STFT de 1024."""
+    from scipy.signal import stft, istft
+    f, tt, Z = stft(x, fs=SR, nperseg=1024, noverlap=768)
+    fc = np.maximum(centro(tt), 30.0)
+    H = np.exp(-0.5 * (np.log2(np.maximum(f, 1.0)[:, None] / fc[None, :]) / largura_oit) ** 2)
+    if ganho_t is not None:
+        H = H * ganho_t(tt)[None, :]
+    _, y = istft(Z * H, fs=SR, nperseg=1024, noverlap=768)
+    out = np.zeros(len(x))
+    out[:min(len(x), len(y))] = y[:len(x)]
+    return out
+
+
+def passa_baixa(x, fc, laco=False):
+    n = len(x)
+    X = np.fft.rfft(x)
+    fq = np.fft.rfftfreq(n, 1 / SR)
+    return np.fft.irfft(X / np.sqrt(1 + (fq / fc) ** 4), n)
+
+
+def norm(x):
+    return x / (np.max(np.abs(x)) + 1e-12)
+
+
+def ruido_colorido(n, centro, largura_oit, periodico=True):
+    """ruído com espectro em banda (gaussiana em oitavas); feito pela FFT, já é periódico em n (laço sem emenda)."""
+    X = np.fft.rfft(rng2.standard_normal(n))
+    fq = np.fft.rfftfreq(n, 1 / SR)
+    X *= np.exp(-0.5 * (np.log2(np.maximum(fq, 1) / centro) / largura_oit) ** 2)
+    return norm(np.fft.irfft(X, n))
+
+
+VOGAIS = {'a': ([800, 1250, 2600], [110, 130, 180], [1, 0.7, 0.25]), 'e': ([520, 1850, 2600], [90, 130, 180], [1, 0.55, 0.3]),
+          'o': ([520, 880, 2500], [90, 110, 170], [1, 0.5, 0.15]), 'u': ([420, 980, 2700], [80, 110, 180], [1, 0.45, 0.12]),
+          'i': ([330, 2300, 3000], [70, 140, 200], [1, 0.35, 0.3])}
+
+
+def voz2(f0, dur, v0, v1, vib=(5.5, 0.012), sopro=0.12, troca=None, escala=1.0, tremido=0.0):
+    """uma voz da plateia (sem palavra): fonte de pulso + formantes, passando da vogal v0 para a v1. escala: o tamanho
+    da voz (criança ~1,2: formantes mais altos); tremido: a afinação passeando devagar, como voz de gente."""
+    t = t_(dur)
+    f = f0(t) * (1 + vib[1] * np.sin(2 * np.pi * vib[0] * t + rng2.uniform(0, 6.28)))
+    if tremido:
+        passeio = np.cumsum(rng2.standard_normal(len(t) // 200 + 2))
+        passeio = np.interp(np.arange(len(t)) / 200, np.arange(len(passeio)), passeio - passeio.mean())
+        f = f * (1 + tremido * passeio / (np.max(np.abs(passeio)) + 1e-9))
+    fase = 2 * np.pi * np.cumsum(f) / SR
+    fonte = harmonicos(fase, float(np.max(f)), 30, lambda k: 1 / k ** 1.15) + sopro * rng2.standard_normal(len(t))
+    def vg(v):
+        fs, bs, gs = VOGAIS[v]
+        return [x * escala for x in fs], [x * escala for x in bs], gs
+    a = formantes(fonte, *vg(v0))
+    b = formantes(fonte, *vg(v1)) if v1 != v0 else a
+    m = troca(t) if troca is not None else np.clip((t - 0.15 * dur) / (0.5 * dur), 0, 1)
+    return norm((1 - m) * a + m * b)
+
+
+def por_em(out, x, t0, ganho=1.0, laco=False):
+    i = int(round(t0 * SR))
+    if laco:
+        np.add.at(out, (np.arange(len(x)) + i) % len(out), ganho * x)
+    else:
+        i0 = max(0, i)
+        x = x[i0 - i:]
+        out[i0:i0 + len(x)] += ganho * x[:max(0, len(out) - i0)]
+
+
+def palma():
+    k = chiado(0.03, rng2.uniform(900, 2100), 1.0)
+    return k * np.exp(-np.arange(len(k)) / SR / 0.006)
+
+
+def plateia(dur, laco, dens_vozes=11.0, dens_uhuu=1.0, n_palmas=22, assobios=3, pesos=(0.7, 1.0, 0.55, 0.14)):
+    """Uma plateia feliz inventada: o "rumor" (ruído em banda, respirando), vozes gritando "aaah", "êêê", "uuu" (crianças e
+    adultos, sem palavra), "uhuu" subindo, palmas de muita gente e uns assobios compridos (nada do "fiu-fiu"). Em laço:
+    tudo cai numa volta só (o que passa do fim continua no começo) e o rumor é periódico: a emenda não aparece."""
+    n = int(dur * SR)
+    t = np.arange(n) / SR
+    # o rumor: duas bandas (o grave da multidão e o brilho das vozes), respirando em ciclos inteiros da volta
+    rum = 0.75 * ruido_colorido(n, 650, 0.9) + 0.35 * ruido_colorido(n, 1700, 0.7)
+    resp = 1 + 0.12 * np.sin(2 * np.pi * 2 * t / dur) + 0.08 * np.sin(2 * np.pi * 5 * t / dur + 1.3)
+    rum = norm(rum * resp)
+    vozes = np.zeros(n)
+    # muita gente (umas 11 vozes começando por segundo), cada uma do seu jeito: o grito que sobe e cai, o "aaaah" reto,
+    # o "êêê!" subindo, o "ôôô" descendo; poucas perto (mais fortes), a maioria longe (baixinho)
+    formas = [lambda u: 0.9 + 0.22 * np.minimum(1, u / 0.3) - 0.3 * np.maximum(0, (u - 0.55) / 0.45),
+              lambda u: 1.0 - 0.06 * u,
+              lambda u: 0.88 + 0.3 * u ** 0.7,
+              lambda u: 1.08 - 0.25 * u ** 1.3]
+    for _ in range(int(dens_vozes * dur)):
+        crianca = rng2.random() < 0.6
+        fb = rng2.uniform(260, 460) if crianca else rng2.uniform(140, 270)
+        d = rng2.uniform(0.5, 2.2)
+        v0, v1 = [('a', 'a'), ('e', 'e'), ('a', 'e'), ('o', 'a'), ('e', 'i'), ('a', 'o'), ('u', 'a'), ('o', 'o')][rng2.integers(8)]
+        forma = formas[rng2.integers(len(formas))]
+        def f0(tt, fb=fb, d=d, forma=forma):
+            return fb * forma(tt / d)
+        x = voz2(f0, d, v0, v1, vib=(rng2.uniform(4.5, 6.5), rng2.uniform(0.005, 0.02)), sopro=rng2.uniform(0.2, 0.45),
+                 escala=rng2.uniform(1.12, 1.28) if crianca else rng2.uniform(0.95, 1.05), tremido=0.025)
+        tt = np.arange(len(x)) / SR
+        x *= np.minimum(1, tt / rng2.uniform(0.03, 0.15)) * np.minimum(1, (d - tt) / (0.35 * d)) * min(1.0, rng2.exponential(0.3) + 0.08)
+        por_em(vozes, x, rng2.uniform(0, dur if laco else dur - 0.5), laco=laco)
+    for _ in range(int(dens_uhuu * dur)):
+        fb = rng2.uniform(300, 440)
+        d = rng2.uniform(0.8, 1.2)
+        def f0(tt, fb=fb, d=d):
+            return fb * np.where(tt < 0.12, 0.9, 1 + 0.45 * np.minimum(1, (tt - 0.12) / 0.2) - 0.25 * np.maximum(0, (tt - 0.55 * d) / (0.45 * d)))
+        x = voz2(f0, d, 'u', 'u', vib=(5.5, 0.012), sopro=0.14)
+        tt = np.arange(len(x)) / SR
+        x *= np.minimum(1, tt / 0.03) * np.minimum(1, (d - tt) / 0.3) * np.where((tt > 0.1) & (tt < 0.15), 0.35, 1.0) * rng2.uniform(0.5, 1.0)
+        por_em(vozes, x, rng2.uniform(0, dur if laco else dur - 1.0), laco=laco)
+    palmas = np.zeros(n)
+    for _ in range(n_palmas):
+        taxa = rng2.uniform(3.4, 4.6)
+        if laco:
+            taxa = max(1, round(taxa * dur)) / dur
+        k = palma()
+        tk = rng2.uniform(0, 1 / taxa)
+        while tk < dur:
+            por_em(palmas, k * rng2.uniform(0.6, 1.0), tk + rng2.normal(0, 0.01), laco=laco)
+            tk += 1 / taxa
+    ass = np.zeros(n)
+    for _ in range(assobios):
+        d = rng2.uniform(0.5, 0.9)
+        tt = t_(d)
+        f1 = rng2.uniform(1900, 2300)
+        f = f1 * (1 + 0.18 * np.minimum(1, tt / (0.3 * d))) * (1 + 0.01 * np.sin(2 * np.pi * 6 * tt))
+        x = np.sin(2 * np.pi * np.cumsum(f) / SR) + 0.08 * np.sin(4 * np.pi * np.cumsum(f) / SR)
+        x *= np.minimum(1, tt / 0.05) * np.minimum(1, (d - tt) / 0.15)
+        por_em(ass, x, rng2.uniform(0, dur if laco else dur - 1.0), laco=laco)
+    partes = [rum, vozes, palmas, ass]
+    out = sum(p_ * w / (rms(p_) + 1e-12) for p_, w in zip(partes, pesos))
+    return passa_baixa(out, 7000)
+
+
+def soma_em(n, *itens):
+    out = np.zeros(n)
+    for x, t0 in itens:
+        por_em(out, x, t0)
+    return out
+
+
+def nivelar(x, t0, t1, alvo):
+    """põe x no nível alvo (LUFS) medido na janela t0..t1 (s)."""
+    return ganho_lufs(x, lufs(janela(x, t0, t1)), alvo)
+
+
+def tr_(cid, nome):
+    return trilhas[f'{cid}__{nome}']['y']
+
+
+# ---- a abertura (0 a 18 s e a cauda do estouro): os instrumentos das trilhas e a síntese, no volume de cada momento
+NA = len(tr_('abertura', 'boom'))
+ta = np.arange(NA) / SR
+# o drone: Mi grave (Mi1, Mi2 e Si2, três osciladores levemente desafinados), o filtro abrindo devagar até o estouro
+corte = np.interp(ta, [0, 2.5, 10, 14, 18], [150, 210, 420, 900, 2000])
+drone = np.zeros(NA)
+for f0, a0 in ((41.2, 1.0), (82.41, 0.8), (123.47, 0.45)):
+    for det in (-0.0012, 0.0, 0.0013):
+        f = f0 * (1 + det)
+        ph = rng2.uniform(0, 6.28)
+        for k in range(1, int(6000 / f) + 1):
+            if a0 / k / np.sqrt(1 + (k * f / 2000) ** 4) < 4e-4:
+                break
+            drone += (a0 / k) / np.sqrt(1 + (k * f / corte) ** 4) * np.sin(2 * np.pi * k * f * ta + k * ph)
+drone *= np.interp(ta, [0, 2.5, 9.5, 11, 14, 17.95, 18.1, 18.6], [0, 0.6, 0.75, 1.3, 1.5, 1.7, 0.7, 0]) ** 1.2
+# o "oooh" da plateia esperando no escuro: 14 vozes baixinhas, de "u" para "o", subindo um tiquinho
+oooh = np.zeros(NA)
+for _ in range(14):
+    fb = rng2.uniform(170, 340)
+    d = rng2.uniform(2.6, 3.4)
+    x = voz2(lambda tt, fb=fb, d=d: fb * (1 + 0.08 * tt / d), d, 'u', 'o', vib=(5, 0.01), sopro=0.3)
+    tt = np.arange(len(x)) / SR
+    x *= np.minimum(1, tt / 0.6) * np.minimum(1, (d - tt) / 0.9) * rng2.uniform(0.5, 1.0)
+    por_em(oooh, x, rng2.uniform(0.1, 0.6))
+oooh += 0.25 * norm(ruido_colorido(NA, 600, 0.8)) * np.interp(ta, [0, 0.5, 3.0, 4.2], [0, 1, 1, 0]) * rms(oooh) / 0.05
+# o "fffuu" das varreduras: a cada 2 compassos desde o fim do escuro (2,5 e 6,5 s), o ruído numa banda que sobe e desce
+whoosh = np.zeros(NA)
+for t0 in (2.5, 6.5):
+    d = 3.0
+    x = rng2.standard_normal(int(d * SR))
+    x = banda_movel(x, lambda tt: 350 * (2600 / 350) ** np.sin(np.pi * np.clip(tt / d, 0, 1)), 0.55,
+                    lambda tt: np.sin(np.pi * np.clip(tt / d, 0, 1)) ** 2)
+    por_em(whoosh, x, t0)
+# o raio acendendo: "zzt" macio em 10,0, 10,3, 10,45 e 11,0 s (zumbido elétrico com chiado, cortado em pedacinhos)
+zzt = np.zeros(NA)
+for t0, d in ((10.0, 0.09), (10.3, 0.06), (10.45, 0.11), (11.0, 0.16)):
+    tt = t_(d)
+    fase = 2 * np.pi * 100 * tt
+    x = sum((1 / k) * np.sin(k * fase + rng2.uniform(0, 6.28)) for k in range(1, 40))
+    x = x * (0.55 + 0.45 * np.sign(np.sin(2 * np.pi * rng2.uniform(28, 44) * tt))) + 0.6 * rng2.standard_normal(len(tt))
+    x = banda_movel(np.concatenate([x, np.zeros(1024)]), lambda q: 1800 + 0 * q, 1.1)[:len(tt)]
+    x *= np.minimum(1, tt / 0.003) * np.minimum(1, (d - tt) / 0.02)
+    por_em(zzt, norm(x), t0)
+# o zumbido do neon aceso (como o do bairro, mais macio) de 11 s até o estouro
+zumbido = sum((1 / k ** 1.6) * np.sin(2 * np.pi * 120 * k * ta + k) for k in range(1, 7))
+zumbido *= np.interp(ta, [0, 11.0, 11.4, 17.9, 18.4], [0, 0, 1, 1.15, 0])
+# a subida: o ruído numa banda subindo de 250 Hz a 6 kHz e um tom subindo de Mi2 a Mi4, crescendo até o estouro
+dsub = 8.0
+x = rng2.standard_normal(int(dsub * SR))
+sub = banda_movel(x, lambda tt: 250 * (6000 / 250) ** np.clip(tt / dsub, 0, 1), 0.7)
+tt = t_(dsub)
+f = 82.41 * 4 ** (tt / dsub)
+fase = 2 * np.pi * np.cumsum(f) / SR
+tom = sum((1 / k) * np.sin(k * fase) for k in range(1, 9))
+sub = norm(sub) + 0.35 * norm(tom)
+sub *= (0.08 + 0.92 * (tt / dsub) ** 1.3) * np.minimum(1, (dsub - 0.05 - tt) / 0.03).clip(0, 1)
+subida_s = soma_em(NA, (sub, 10.0))
+elementos_ab = [  # (sinal, janela de medida, LU em relação ao refrão da m1)
+    (tr_('abertura', 'boom'), (18, 21), 0.0), (tr_('abertura', 'conta'), (14, 18), -4.5), (tr_('abertura', 'pulso'), (2.5, 10), -14.0),
+    (drone, (0, 2.5), -26.0), (oooh, (0.3, 3.3), -21.0), (whoosh, (2.5, 9.5), -19.0), (zzt, (10.0, 11.2), -15.0),
+    (zumbido, (11.4, 14), -19.0), (subida_s, (16, 18), -10.0),
+]
+ab = sum(nivelar(x, a_, b_, REF + lu) for x, (a_, b_), lu in elementos_ab)
+ab = teto(nivelar(ab, 18, 21, REF), False)
+pedacos['abertura'] = dict(y=ab, laco=False, nom=len(ab), novo=True)
+
+# ---- a entrada (18 a 38 s do show): a plateia vibrando, o pad, a guitarra, o baixo e o baterista
+NE = len(tr_('entrada', 'pad'))
+te = np.arange(NE) / SR
+povo = plateia(NE / SR, False, dens_vozes=4.5, dens_uhuu=0.9, n_palmas=22, assobios=5)
+povo *= np.interp(te, [0, 0.4, 3.0, 6.0, 16, 17.5, 19, 19.8, 20.6, NE / SR], [0.6, 1.0, 1.0, 0.72, 0.68, 1.0, 1.0, 0.55, 0.15, 0])
+elementos_en = [
+    (povo, (1, 16), -6.5), (tr_('entrada', 'pad'), (3, 18), -17.0), (tr_('entrada', 'guitarra'), (8, 15.5), -13.0),
+    (tr_('entrada', 'baixo'), (10, 12), -11.0), (tr_('entrada', 'bateria'), (14, 20), -10.0),
+]
+en = teto(sum(nivelar(x, a_, b_, REF + lu) for x, (a_, b_), lu in elementos_en), False)
+pedacos['entrada'] = dict(y=en, laco=False, nom=len(en), novo=True)
+
+# ---- a torcida (8 s em laço, nas pausas e por baixo do fim) no volume do aplauso; os fogos um pouco abaixo
+L_APLAUSO = lufs(pedacos['aplauso']['y'])
+torc = plateia(8.0, True)
+pedacos['torcida'] = dict(y=teto(ganho_lufs(torc, lufs(torc), L_APLAUSO), True), laco=True, nom=len(torc), novo=True)
+# os fogos de estrelinhas: o "fiuuu" subindo baixinho, um "pof" abafado (nada de estouro) e o crepitar brilhando e sumindo
+df = 3.1
+nf_ = int(df * SR)
+tf = np.arange(nf_) / SR
+fogo = np.zeros(nf_)
+x = banda_movel(rng2.standard_normal(int(0.85 * SR)), lambda tt: 600 * (2800 / 600) ** np.clip(tt / 0.85, 0, 1), 0.5)
+tt = t_(0.85)
+x = norm(x) * (tt / 0.85) ** 1.5 * np.minimum(1, (0.85 - tt) / 0.05)
+x += 0.12 * np.sin(2 * np.pi * np.cumsum(900 * 2 ** (tt / 0.85)) / SR) * (tt / 0.85)
+por_em(fogo, 0.35 * x, 0.0)
+tt = t_(0.35)
+pof = passa_baixa(rng2.standard_normal(len(tt)), 450) * np.exp(-tt / 0.05) + 0.8 * np.sin(2 * np.pi * 85 * tt) * np.exp(-tt / 0.07)
+por_em(fogo, 0.25 * norm(pof), 0.86)
+crepita = np.zeros(nf_)
+for _ in range(360):
+    t0 = 0.9 + rng2.exponential(0.8)
+    if t0 > df - 0.15:
+        continue
+    d = rng2.uniform(0.0015, 0.005)
+    g_ = chiado(d + 0.004, rng2.uniform(1500, 4500), 1.0) * np.exp(-np.arange(int((d + 0.004) * SR)) / SR / d)
+    por_em(crepita, g_ * rng2.uniform(0.3, 1.0) * np.exp(-(t0 - 0.9) / 1.3), t0)
+brilho = np.zeros(nf_)
+for _ in range(26):
+    t0 = rng2.uniform(1.0, 2.9)
+    tt = t_(0.09)
+    brilho_x = np.sin(2 * np.pi * rng2.uniform(2400, 4200) * tt) * np.exp(-tt / 0.025) * np.minimum(1, tt / 0.002)
+    por_em(brilho, brilho_x * rng2.uniform(0.3, 1.0), t0)
+chia = passa_baixa(rng2.standard_normal(nf_), 7500)
+chia = (chia - passa_baixa(chia, 3000)) * np.interp(tf, [0, 0.9, 1.1, 2.6, df], [0, 0, 1, 0.3, 0]) * (0.6 + 0.4 * rng2.random(nf_))
+fogo += 0.9 * norm(crepita) + 0.25 * norm(brilho) + 0.12 * norm(chia)
+fogo = passa_baixa(fogo, 8000)
+fogo *= np.minimum(1, (df - tf) / 0.3).clip(0, 1)
+pedacos['fogos'] = dict(y=teto(ganho_lufs(fogo, lufs(fogo), L_APLAUSO - 3.0), False), laco=False, nom=nf_, novo=True)
+for cid in ('abertura', 'entrada', 'torcida', 'fogos'):
+    medidas_novas['partes'][cid] = dict(lufs=lufs(pedacos[cid]['y']))
+medidas_novas['partes']['abertura'].update(estouroLufs=lufs(janela(pedacos['abertura']['y'], 18, 21)))
+medidas_novas['aplausoLufs'] = L_APLAUSO
+
 # ------------------------------------------------------------------ WAV com folga, MP3, decodifica, mede, emenda
+NOVOS = ['m1_solo', 'm1_fim',
+         'm2_contagem', 'm2_intro', 'm2_verso', 'm2_refrao', 'm2_ponte', 'm2_fim', 'm2_acorde_0', 'm2_acorde_1', 'm2_acorde_2',
+         'm3_contagem', 'm3_intro', 'm3_verso', 'm3_refrao', 'm3_solo', 'm3_chamado', 'm3_final', 'm3_acorde_0', 'm3_acorde_1',
+         'm3_acorde_2', 'abertura', 'entrada', 'torcida', 'fogos']
 ORDEM = ([f'{c}_{p}' for c in ('bateria', 'guitarra', 'teclado') for p in ('verso', 'refrao', 'subida')] +
          ['contagem', 'acorde_0', 'acorde_1', 'acorde_2', 'final', 'aplauso', 'uhuu', 'batida', 'estojo', 'ladrilho', 'tum',
           'fliperama_0', 'fliperama_1', 'fliperama_2', 'fita', 'rodinhas', 'campainha', 'orelhao', 'lhama', 'radio_liga',
-          'radio_desliga', 'neon'])
+          'radio_desliga', 'neon'] + NOVOS)
 assert set(ORDEM) == set(pedacos), set(pedacos) ^ set(ORDEM)
+# o tamanho de cada pedaço de música em compassos (o jogo repete a frase a cada "c" compassos dentro da parte)
+COMPASSOS_CLIP = {f'{c}_{p}': 4 for c in ('bateria', 'guitarra', 'teclado') for p in ('verso', 'refrao', 'subida')}
+COMPASSOS_CLIP['contagem'] = 1
+COMPASSOS_CLIP.update({k: round(d['compassos']) for k, d in novos.items() if k in ALVO_PARTE or k.endswith('_contagem')})
+COMPASSOS_CLIP.update(abertura=9, entrada=10)
 
 
 def dec(p_):
@@ -413,8 +838,12 @@ for cid in ORDEM:
     c = {'o': o, 'n': int(len(y)), 'arquivo': int(len(z)), 'kb': round(len(b) / 1024, 1)}
     if d['laco']:
         c['laco'] = int(len(y))
+    if cid in COMPASSOS_CLIP:
+        c['c'] = COMPASSOS_CLIP[cid]
     medidas[cid] = dict(segundos=round(len(y) / SR, 3), rmsDb=db(rms(corpo)), ativoDb=rms_ativo(corpo), picoDb=db(float(np.max(np.abs(z)))),
                         cortes=int(np.sum(np.abs(z) >= 0.999)), desvioCodificador=int(lag), kb=c['kb'])
+    if d.get('novo') or cid in ('contagem', 'acorde_0', 'final', 'aplauso'):
+        medidas[cid]['lufs'] = lufs(corpo)
     if d['laco']:
         medidas[cid]['emendaSaltoDb'] = db(abs(float(z[P + lag + len(y) - 1] - z[P + lag])))
     clips[cid] = c
@@ -428,9 +857,24 @@ show = {
     'fliperama': ['fliperama_0', 'fliperama_1', 'fliperama_2'],
     'clips': clips,
     'totalKB': round(len(buf) / 1024, 1), 'segundosDecodificados': round(seg, 1), 'memoriaMB22k': round(tot * 4 / 1048576, 2),
-    'carater': 'rock de brinquedo dos anos 80 em Mi (mais metal que pop): o riff galopando, o refrão com o sintetizador e o glockenspiel dobrados pela guitarra com distorção, bumbo duplo macio, a subida e o acorde final com a caixinha de música',
-    'regua': {'refraoRmsDb': medidas_show['refraoRmsDb'], 'acorde': -22, 'final': -20.5, 'contagem': -27, 'aplauso': -27, 'brinquedos': -23, 'batida': -28, 'neon': -36},
+    'carater': 'rock de brinquedo dos anos 80 (mais metal que pop): m1 em Mi a 120, o riff galopando, o refrão com o sintetizador e o glockenspiel dobrados pela guitarra com distorção, bumbo duplo macio, o solo e a subida; m2 em Lá a 140, reto, com o gancho no sintetizador e a ponte; m3 em Ré a 100, o hino de meio tempo com palmas, o solo, o chamado e o acorde final com a caixinha de música',
+    'regua': {'refraoRmsDb': medidas_show['refraoRmsDb'], 'acorde': -22, 'final': -20.5, 'contagem': -27, 'aplauso': -27, 'brinquedos': -23, 'batida': -28, 'neon': -36,
+              'refraoM1Lufs': REF, 'partesLU': {k: v[1] for k, v in ALVO_PARTE.items()}},
+    'setlist': [
+        {'id': 'm1', 'contagem': 'contagem',
+         'partes': {'verso': ['bateria_verso', 'guitarra_verso', 'teclado_verso'], 'refrao': ['bateria_refrao', 'guitarra_refrao', 'teclado_refrao'],
+                    'subida': ['bateria_subida', 'guitarra_subida', 'teclado_subida'], 'solo': ['m1_solo'], 'fim': ['m1_fim']},
+         'acordes': ['acorde_0', 'acorde_1', 'acorde_2']},
+        {'id': 'm2', 'contagem': 'm2_contagem',
+         'partes': {'intro': ['m2_intro'], 'verso': ['m2_verso'], 'refrao': ['m2_refrao'], 'ponte': ['m2_ponte'], 'fim': ['m2_fim']},
+         'acordes': ['m2_acorde_0', 'm2_acorde_1', 'm2_acorde_2']},
+        {'id': 'm3', 'contagem': 'm3_contagem',
+         'partes': {'intro': ['m3_intro'], 'verso': ['m3_verso'], 'refrao': ['m3_refrao'], 'solo': ['m3_solo'], 'chamado': ['m3_chamado']},
+         'acordes': ['m3_acorde_0', 'm3_acorde_1', 'm3_acorde_2'], 'final': 'm3_final'},
+    ],
+    'abertura': 'abertura', 'entrada': 'entrada', 'torcida': 'torcida', 'fogos': 'fogos',
 }
+medidas_show['novos'] = medidas_novas
 json.dump(dict(show=show, medidas=medidas, mixShow=medidas_show), open(saida_p, 'w'), ensure_ascii=False, indent=1)
 print(f"show: {len(buf) / 1024:.1f} KB, {seg:.1f} s ({show['memoriaMB22k']} MB a 22 kHz); refrão {medidas_show['refraoRmsDb']} verso "
       f"{medidas_show['versoRmsDb']} subida {medidas_show['subidaRmsDb']} pico {medidas_show['picoDb']}; sozinhas {medidas_show['sozinha']}; "

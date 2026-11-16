@@ -1,5 +1,6 @@
 #!/bin/sh
-# Refaz os pacotes de som da Vila Neon (spec 026, T18 e T19) e a entrada dela em public/sons/indice.json.
+# Refaz os pacotes de som da Vila Neon (spec 026, T18 e T19, e o show de verdade de 6 min) e a entrada dela em
+# public/sons/indice.json. Só o show:  passos 2, 3 (empacotar precisa do passo 1 no mesmo <trabalho>), 4 e 5.
 # Uso (na raiz do repositório):  sh .sdd/specs/026-mundo-anos-80/referencia/fontes/scripts-pacote/rodar.sh <trabalho> [amostras]
 #   <trabalho>  pasta vazia para os arquivos intermediários (MIDI, renders, WAV, MP3)
 #   [amostras]  onde gravar as amostras para ouvir (padrão: <trabalho>/amostras)
@@ -28,3 +29,6 @@ run python3 -I /s/show_pacote.py /o/show_render /o/show_midi/show_plano.json /o 
 run python3 -I /s/empacotar.py /o /r
 # 4. conferência das fatias pelo índice, o volume percebido (NIVEL_TRILHA) e as amostras para ouvir
 run python3 -I /s/amostras.py /r /a /o
+# 5. o show de verdade inteiro (uns 6 min) montado pelo roteiro de src/jogo/show.ts, medido (LUFS e ebur128) e as amostras
+#    de cada parte nova, em <amostras>/show-real
+run python3 -I /s/show_previa.py /r/public/sons/indice.json /r/public/sons/pacotes/vila-neon-show.mp3 /r/src/jogo/show.ts /a/show-real /o/previa

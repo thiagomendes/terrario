@@ -780,6 +780,12 @@ export function criarSomVila(op: OpcoesSomVila) {
       if (x) agendados.set(chave, x);
       else if (relogio.audio(s.fim) <= ag + 0.05) agendados.set(chave, null);
     }
+    // os acordes do toque de cada música abrem antes da contagem dela (o primeiro toque já soa)
+    ROTEIRO.forEach((r, k) => {
+      const ini = relogio.audio(showAtual!.inicio + r.contagem);
+      const fim = relogio.audio(showAtual!.inicio + r.fim);
+      if (ini < ag + 8 && fim > ag) for (const id of ind!.setlist[k]?.acordes ?? []) void abrir(id);
+    });
     // o acorde final (e o que vem com ele) abre antes do chamado: o toque pode chegar a qualquer hora
     const tChamado = relogio.audio(showAtual.inicio + CHAMADO);
     if (tChamado < ag + 8)
@@ -874,6 +880,7 @@ export function criarSomVila(op: OpcoesSomVila) {
     // com caixa acesa perto, a contagem e os versos ficam abertos: o show pode começar já
     if (ind && gFestival > 0.001 && vista?.cx.some(Boolean)) {
       void abrir('contagem');
+      if (ind.abertura) void abrir(ind.abertura);
       for (const cam of ind.camadas) void abrir(`${cam}_verso`);
     }
     for (let i = 0; i < 3; i++) {

@@ -38,13 +38,18 @@ import { criarVozesGravadas } from '../../src/audio/vozesGravadas';
 import {
   ACORDES_SHOW,
   ACORDE_FINAL,
+  APLAUSO,
   BPM,
   CHAMADO,
   COMPASSO,
-  COMPASSOS_SHOW,
   CONTAGEM,
   ESPERA_FINAL,
+  INTRO,
   OITAVO,
+  PAUSA,
+  ROTEIRO,
+  SETLIST,
+  acordeDoToque,
   encaixarToque,
 } from '../../src/jogo/show';
 import type { VilaVista } from '../../src/nucleo/vila';
@@ -76,24 +81,47 @@ describe('o pacote do show no índice', () => {
     expect(fim).toBe(pacote.byteLength);
   });
 
-  it('metas: baixa < 1,5 MB e, tudo aberto a 22 050 Hz, < 12 MB (o jogo só abre o que toca)', () => {
-    expect(JSON_INDICE.tamanhos[IND.pacote]).toBeLessThan(1.5 * 1024 * 1024);
+  it('metas: baixa < 2,4 MB (o show de 6 min em laços e pedaços, não 6 min gravados); aberto, só o que toca', () => {
+    expect(JSON_INDICE.tamanhos[IND.pacote]).toBeLessThan(2.4 * 1024 * 1024);
     const amostras = Object.values(IND.clips).reduce((s, c) => s + c.arquivo, 0);
-    expect((amostras * 4) / 1048576).toBeLessThan(12);
+    expect((amostras * 4) / 1048576).toBeLessThan(30);
+    // o show inteiro tem uns 6 min, mas o pacote guarda bem menos que isso de som
+    const segundos = Object.values(IND.clips).reduce((s, c) => s + c.n / IND.taxa, 0);
+    expect(segundos).toBeLessThan(CHAMADO + ESPERA_FINAL);
     // a música do bairro continua na meta da 019
     expect(JSON_INDICE.tamanhos['vila-neon-musica.mp3']).toBeLessThan(2 * 1024 * 1024);
   });
 
-  it('no tempo das regras do show: 120 batidas, compasso de 2 s, 20 compassos sem buraco', () => {
+  it('a setlist do índice cobre cada parte de cada música, no compasso dela', () => {
+    expect(IND.setlist.map((m) => m.id)).toEqual(SETLIST.map((m) => m.id));
+    ROTEIRO.forEach((r, k) => {
+      const m = IND.setlist[k];
+      const taxaCompasso = IND.taxa * r.compasso;
+      expect(m.contagem, r.musica.id).not.toBeNull();
+      expect(m.acordes).toHaveLength(3);
+      for (const p of r.partes) {
+        const ids = m.partes[p.pedaco];
+        expect(ids?.length, `${r.musica.id} ${p.pedaco}`).toBeGreaterThan(0);
+        for (const id of ids) {
+          const c = IND.clips[id];
+          expect(c.c, id).toBeDefined();
+          // o laço tem compassos inteiros da música; o que não é laço tem a parte (ou um pedaço dela que se repete) e a cauda
+          if (c.laco) expect(c.laco / taxaCompasso, id).toBeCloseTo(c.c!, 3);
+          else expect(c.n / taxaCompasso, id).toBeGreaterThanOrEqual(c.c! - 0.01);
+          expect(p.compassos % c.c!, id).toBe(0);
+        }
+      }
+    });
+    expect(IND.setlist[2].final).not.toBeNull();
+    for (const k of [IND.abertura, IND.entrada, IND.torcida, IND.fogos]) expect(k).not.toBeNull();
+    // a abertura dura a abertura (com a cauda) e a entrada, a entrada
+    expect(IND.clips[IND.abertura!].n / IND.taxa).toBeGreaterThanOrEqual(INTRO);
+    expect(IND.clips[IND.torcida!].laco).toBeDefined();
+  });
+
+  it('a primeira música e o brinquedo das caixas: 120 batidas, compasso de 2 s, as camadas de sempre', () => {
     expect(IND.tempo).toBe(BPM);
     expect(IND.amostrasCompasso / IND.taxa).toBeCloseTo(COMPASSO, 9);
-    expect(IND.compassos).toBe(COMPASSOS_SHOW);
-    let c = 0;
-    for (const f of IND.forma) {
-      expect(f.compassoInicio).toBe(c);
-      c += f.compassos;
-    }
-    expect(c).toBe(COMPASSOS_SHOW);
     for (const cam of IND.camadas)
       for (const f of IND.forma) {
         const clip = IND.clips[`${cam}_${f.pedaco}`];
@@ -179,23 +207,37 @@ describe('o tempo do show (puro)', () => {
     expect(r.dif).toBe(-93);
   });
 
-  it('a contagem em `inicio`; as camadas a partir do primeiro tempo; tudo para no final sozinho', () => {
+  it('a abertura em `inicio`, a entrada, cada música na contagem e nas partes dela; a torcida nas pausas; tudo para no final sozinho', () => {
     const T = 1000;
     const s = segmentosDoShow(IND, T, null);
-    const cont = s.find((x) => x.clip === 'contagem')!;
-    expect(cont.ini).toBe(T);
-    for (let i = 0; i < 3; i++) {
-      const cam = s.filter((x) => x.camada === i);
-      expect(cam.map((x) => x.clip.split('_')[1])).toEqual(['verso', 'refrao', 'refrao', 'subida']);
-      expect(cam[0].ini).toBe(T + CONTAGEM);
-      expect(cam[0].laco).toBe(true);
-      expect(cam[0].fim).toBe(T + CONTAGEM + 8 * COMPASSO);
-      expect(cam[1].ini).toBe(T + CONTAGEM + 8 * COMPASSO);
-      expect(cam[2].ini).toBe(T + CONTAGEM + 12 * COMPASSO);
-      expect(cam[3].ini).toBe(T + CONTAGEM + 16 * COMPASSO);
-      // o acorde final sozinho vem no último compasso: as camadas param ali
-      expect(cam[3].fim).toBe(T + CHAMADO + ESPERA_FINAL);
-    }
+    expect(s.find((x) => x.clip === IND.abertura)!.ini).toBe(T);
+    expect(s.find((x) => x.clip === IND.entrada)!.ini).toBe(T + INTRO);
+    ROTEIRO.forEach((r, k) => {
+      const m = IND.setlist[k];
+      expect(s.find((x) => x.clip === m.contagem)!.ini).toBeCloseTo(T + r.contagem, 9);
+      // a primeira parte entra no primeiro tempo
+      const p0 = m.partes[r.partes[0].pedaco];
+      for (const id of p0)
+        expect(s.find((x) => x.clip === id)!.ini, id).toBeCloseTo(T + r.inicio, 9);
+      // cada parte começa na hora dela (o pedaço que não é laço se repete a cada `c` compassos)
+      for (const p of r.partes)
+        for (const id of m.partes[p.pedaco])
+          expect(
+            s.some((x) => x.clip === id && Math.abs(x.ini - (T + p.ini)) < 1e-6),
+            `${id}@${p.ini}`,
+          ).toBe(true);
+    });
+    // a primeira música são as camadas das caixas (verso em laço por 8 compassos)
+    const v = s.filter((x) => x.camada === 0 && x.clip === 'bateria_verso');
+    expect(v[0].laco).toBe(true);
+    expect(v[0].fim).toBeCloseTo(T + CONTAGEM + 8 * COMPASSO, 9);
+    // a torcida nas duas pausas
+    const tor = s.filter((x) => x.clip === IND.torcida);
+    expect(tor).toHaveLength(2);
+    expect(tor[0].ini).toBeLessThan(T + ROTEIRO[0].fim);
+    expect(tor[0].fim).toBeGreaterThan(T + ROTEIRO[0].fim + PAUSA);
+    // o acorde final sozinho vem no fim do chamado: tudo para ali
+    expect(Math.max(...s.map((x) => x.fim))).toBeLessThanOrEqual(T + CHAMADO + ESPERA_FINAL + 1e-9);
     expect(corteDoShow(T, null)).toBe(T + CHAMADO + ESPERA_FINAL);
   });
 
@@ -207,18 +249,25 @@ describe('o tempo do show (puro)', () => {
     expect(s.every((x) => x.ini < fim)).toBe(true);
   });
 
-  it('o acorde do toque soa em `quando` (encaixado pelo núcleo), ou no próximo oitavo se chegou tarde', () => {
+  it('o acorde do toque soa em `quando` (encaixado pelo núcleo), ou no próximo oitavo da música se chegou tarde', () => {
     const show = { inicio: 10, final: null };
-    const { quando } = encaixarToque(show, 15.3);
-    // relógios: AudioContext = núcleo + 2
-    const qa = quando + 2;
-    expect(momentoDoAcorde(qa, 15.3 + 2 + 0.08, 12 + 2)).toBe(qa);
-    const tarde = momentoDoAcorde(qa, qa + 0.03, 12 + 2);
-    expect(tarde).toBeGreaterThan(qa + 0.03);
-    expect(tarde - qa).toBeCloseTo(OITAVO, 9);
-    // sempre na grade do show
-    const k = (tarde - 14) / OITAVO;
-    expect(Math.abs(k - Math.round(k))).toBeLessThan(1e-9);
+    for (const r of ROTEIRO) {
+      const t = 10 + r.inicio + 5.3;
+      const { quando, acorde } = encaixarToque(show, t)!;
+      expect(acordeDoToque(acorde).musica).toBe(r.i);
+      const oitavo = r.compasso / 8;
+      const g0 = 10 + r.inicio + 2;
+      // relógios: AudioContext = núcleo + 2
+      const qa = quando + 2;
+      expect(momentoDoAcorde(qa, t + 2 + 0.01, g0, oitavo)).toBe(qa);
+      const tarde = momentoDoAcorde(qa, qa + 0.03, g0, oitavo);
+      expect(tarde).toBeGreaterThan(qa + 0.03);
+      expect(tarde - qa).toBeCloseTo(oitavo, 9);
+      // sempre na grade da música
+      const k = (tarde - g0) / oitavo;
+      expect(Math.abs(k - Math.round(k))).toBeLessThan(1e-9);
+    }
+    void OITAVO;
   });
 
   it('o acorde final entra em até 100 ms do evento (e na hora certa quando vem sozinho)', () => {
@@ -412,71 +461,81 @@ describe('o tocador do show (contexto falso)', () => {
     expect(calar[calar.length - 1]).toBe(0);
   });
 
-  it('o show: contagem em `inicio`, camadas no primeiro tempo, acorde no `quando` e o final na hora', async () => {
+  it('o show: abertura em `inicio`, camadas no primeiro tempo, acorde no `quando` e o final na hora', async () => {
     const { ctx, som, vista, passo, fonteDe, D } = await montar();
     const T = 20 + D; // o show começa no núcleo em 120 (AudioContext 20)
     const show = { inicio: T, final: null as number | null };
-    // duas caixas acesas: a contagem e os versos já ficam abertos
     await passo(19.0, vista({ cx: [true, true, false] }));
-    await passo(19.5, vista({ cx: [true, true, false] }));
     await passo(19.95, vista({ cx: [true, true, true], show }));
     await passo(20.0, vista({ cx: [true, true, true], show }));
-    const cont = fonteDe('contagem');
-    expect(cont).toHaveLength(1);
-    expect(cont[0].inicio![0]).toBeCloseTo(20, 6);
-    // as camadas são agendadas antes (até 0,8 s antes do primeiro tempo)
-    await passo(21.4, vista({ cx: [true, true, true], show }));
+    const ab = fonteDe(IND.abertura!);
+    expect(ab).toHaveLength(1);
+    expect(ab[0].inicio![0]).toBeCloseTo(20, 6);
+    // a entrada e a contagem da primeira (as camadas são agendadas até 0,8 s antes do tempo)
+    for (let t = 20.5; t <= 20 + CONTAGEM - 0.3; t += 0.5)
+      await passo(t, vista({ cx: [true, true, true], show }));
+    expect(fonteDe(IND.entrada!)[0].inicio![0]).toBeCloseTo(20 + INTRO, 6);
+    expect(fonteDe('contagem')[0].inicio![0]).toBeCloseTo(20 + ROTEIRO[0].contagem, 6);
     for (const cam of ['bateria', 'guitarra', 'teclado']) {
       const f = fonteDe(`${cam}_verso`).at(-1)!;
       expect(f, cam).toBeDefined();
-      expect(f.inicio![0]).toBeCloseTo(22, 6);
+      expect(f.inicio![0]).toBeCloseTo(20 + CONTAGEM, 6);
       expect(f.inicio![1]).toBeCloseTo(IND.folga / IND.taxa, 6);
     }
-    // um toque no palco: o núcleo encaixou em `quando`; o acorde soa ali (mesmo compasso)
-    await passo(25.0, vista({ cx: [true, true, true], show }));
-    const { quando, acorde } = encaixarToque(show, 25.05 + D);
-    ctx.currentTime = 25.1;
-    som.evento({ e: 'vilaAcorde', quando, acorde, quem: 'ana' }, 25.1 + D);
+    // um toque no palco: o núcleo encaixou em `quando`; o acorde da primeira soa ali
+    await passo(20 + CONTAGEM + 3, vista({ cx: [true, true, true], show }));
+    const { quando, acorde } = encaixarToque(show, 20 + CONTAGEM + 3.05 + D)!;
+    ctx.currentTime = 20 + CONTAGEM + 3.1;
+    som.evento({ e: 'vilaAcorde', quando, acorde, quem: 'ana' }, ctx.currentTime + D);
     await new Promise((r) => setTimeout(r, 0));
     const ac = som.info().acordes;
     expect(ac).toHaveLength(1);
     expect(ac[0].quando).toBeCloseTo(quando - D, 6);
-    // o refrão entra no compasso 8 (2 + 16 s)
-    await passo(37.5, vista({ cx: [true, true, true], show }));
-    expect(fonteDe('guitarra_refrao')[0].inicio![0]).toBeCloseTo(38, 6);
-    // o chamado; a criança toca em 57,2 (núcleo 157,2) e o evento chega 80 ms depois
-    await passo(57.0, vista({ cx: [true, true, true], show }));
-    ctx.currentTime = 57.28;
-    som.evento({ e: 'vilaFinal', quando: 57.2 + D, quem: 'ana' }, 57.28 + D);
-    const fin = fonteDe('final');
+    // o refrão entra no compasso 8 (16 s depois do primeiro tempo)
+    for (let t = 20 + CONTAGEM + 3.5; t <= 20 + CONTAGEM + 15.5; t += 0.5)
+      await passo(t, vista({ cx: [true, true, true], show }));
+    expect(fonteDe('guitarra_refrao')[0].inicio![0]).toBeCloseTo(20 + CONTAGEM + 16, 6);
+    // o chamado: a criança toca (núcleo) e o evento chega 80 ms depois
+    const tc = 20 + CHAMADO + 1;
+    for (let t = tc - 9; t <= tc; t += 0.5) await passo(t, vista({ cx: [true, true, true], show }));
+    ctx.currentTime = tc + 0.08;
+    som.evento({ e: 'vilaFinal', quando: tc + D, quem: 'ana' }, tc + 0.08 + D);
+    const fin = fonteDe(IND.setlist[2].final!);
     expect(fin).toHaveLength(1);
-    expect(fin[0].inicio![0] - 57.28).toBeLessThanOrEqual(0.1);
-    expect(fin[0].inicio![0]).toBeGreaterThanOrEqual(57.28);
+    expect(fin[0].inicio![0] - (tc + 0.08)).toBeLessThanOrEqual(0.1);
+    expect(fin[0].inicio![0]).toBeGreaterThanOrEqual(tc + 0.08);
     const apl = fonteDe('aplauso');
     expect(apl[0].inicio![0]).toBeCloseTo(fin[0].inicio![0] + ATRASO_APLAUSO, 6);
-    // as camadas param no acorde final
-    for (const cam of ['bateria', 'guitarra', 'teclado'])
-      for (const f of fonteDe(`${cam}_subida`))
-        expect(f.paradaEm!).toBeLessThanOrEqual(fin[0].inicio![0] + 0.2);
+    // e a torcida e os fogos vêm com ele
+    expect(fonteDe(IND.fogos!).length).toBeGreaterThan(0);
+    expect(fonteDe(IND.torcida!).some((f) => f.inicio![0] > tc)).toBe(true);
+    // a música para no acorde final
+    for (const f of fonteDe('m3_chamado'))
+      expect(f.paradaEm!).toBeLessThanOrEqual(fin[0].inicio![0] + 0.2);
     // o mesmo final pelo estado: não toca de novo
-    await passo(57.4, vista({ cx: [true, true, true], show: { inicio: T, final: 57.2 + D } }));
-    expect(fonteDe('final')).toHaveLength(1);
+    await passo(tc + 0.2, vista({ cx: [true, true, true], show: { inicio: T, final: tc + D } }));
+    expect(fonteDe(IND.setlist[2].final!)).toHaveLength(1);
     expect(som.info().calar).toBe(1);
   });
 
-  it('sem toque, o acorde final vem sozinho exatamente no último compasso, e o evento não repete', async () => {
+  it('sem toque, o acorde final vem sozinho exatamente no fim do chamado, e o evento não repete', async () => {
     const { ctx, som, vista, passo, fonteDe, D } = await montar();
-    const show = { inicio: 30 + D, final: null };
+    // (quem chega no fim do show entra no compasso certo)
+    const show = { inicio: 30 + D - (CHAMADO - 6), final: null };
     await passo(29.5, vista({ cx: [true, true, false] }));
-    for (let t = 29.9; t < 69.9; t += 0.25) await passo(t, vista({ cx: [true, true, true], show }));
-    const fin = fonteDe('final');
+    for (let t = 29.9; t < 30 + 6 + ESPERA_FINAL + 0.6; t += 0.25)
+      await passo(t, vista({ cx: [true, true, true], show }));
+    const fin = fonteDe(IND.setlist[2].final!);
     expect(fin).toHaveLength(1);
-    expect(fin[0].inicio![0]).toBeCloseTo(30 + CHAMADO + ESPERA_FINAL, 6);
+    expect(fin[0].inicio![0]).toBeCloseTo(30 + 6 + ESPERA_FINAL, 6);
     expect(som.info().final?.sozinho).toBe(true);
     // o evento do núcleo chega depois: é o mesmo final
-    ctx.currentTime = 70.1;
-    som.evento({ e: 'vilaFinal', quando: 70 + D, quem: 'auto' }, 70.1 + D);
-    expect(fonteDe('final')).toHaveLength(1);
+    ctx.currentTime = 30 + 6 + ESPERA_FINAL + 0.1;
+    som.evento(
+      { e: 'vilaFinal', quando: 30 + 6 + ESPERA_FINAL + D, quem: 'auto' },
+      ctx.currentTime + D,
+    );
+    expect(fonteDe(IND.setlist[2].final!)).toHaveLength(1);
   });
 
   it('eventos e brinquedos: plim, tum, bé, fliperama, rádio que para sozinho, ladrilho subindo', async () => {
@@ -537,33 +596,37 @@ describe('o tocador do show (contexto falso)', () => {
     expect(som.info().calarNatureza).toBe(0);
     // o show: a natureza baixa inteira em toda a plateia (até o portão)
     const show = { inicio: 20 + D, final: null as number | null };
-    for (let t = 19.95; t < 30; t += 0.5) await passo(t, vista({ cx: [true, true, true], show }));
+    const M = 20 + CONTAGEM;
+    for (let t = 19.95; t < M + 1; t += 0.5)
+      await passo(t, vista({ cx: [true, true, true], show }));
     expect(som.info().calarNatureza).toBe(1);
     expect(calarNatureza.at(-1)).toBe(1);
     const camada = fonteDe('bateria_verso').at(-1)!;
     expect((camada.ligados[0] as No).gain.pontos.find((x) => x.t === 'alvo')?.v ?? 1).toBe(1);
-    await passo(30.5, vista({ cx: [true, true, true], show }), { x: 5, z: 5 - 40 });
+    await passo(M + 1.5, vista({ cx: [true, true, true], show }), { x: 5, z: 5 - 40 });
     expect(som.info().calarNatureza).toBe(1);
     expect(som.info().festival).toBe(1);
     // o "Música" das Configurações vale para o show
     v.musica = 0.3;
-    await passo(31, vista({ cx: [true, true, true], show }));
+    await passo(M + 2, vista({ cx: [true, true, true], show }));
     expect(som.info().ganhoShow).toBeCloseTo(GANHO_SHOW * 0.3 * nivel, 9);
     v.musica = 0.6;
-    // o acorde final e o aplauso entram por cima
-    await passo(57.0, vista({ cx: [true, true, true], show }));
-    ctx.currentTime = 57.28;
-    som.evento({ e: 'vilaFinal', quando: 57.2 + D, quem: 'ana' }, 57.28 + D);
-    const fin = fonteDe('final')[0];
+    // o acorde final e o aplauso entram por cima (o show pula para o chamado)
+    const F = M + 10;
+    const show2 = { inicio: F - 0.2 + D - CHAMADO - 0.5, final: null as number | null };
+    await passo(F - 0.2, vista({ cx: [true, true, true], show: show2 }));
+    ctx.currentTime = F + 0.08;
+    som.evento({ e: 'vilaFinal', quando: F + D, quem: 'ana' }, F + 0.08 + D);
+    const fin = fonteDe(IND.setlist[2].final!)[0];
     const apl = fonteDe('aplauso')[0];
     expect((fin.ligados[0] as No).gain.value).toBeCloseTo(10 ** (REFORCO_FINAL_DB / 20), 9);
     expect((apl.ligados[0] as No).gain.value).toBeCloseTo(10 ** (REFORCO_APLAUSO_DB / 20), 9);
-    // durante o aplauso a natureza segue baixa; depois dele, volta (as caixas seguem acesas)
-    const fim = { inicio: 20 + D, final: 57.2 + D };
-    await passo(60, vista({ cx: [true, true, true], show: fim }));
+    // durante o fim a natureza segue baixa; depois dele, volta (as caixas seguem acesas)
+    const fim = { inicio: show2.inicio, final: F + D };
+    await passo(F + 3, vista({ cx: [true, true, true], show: fim }));
     expect(som.info().calarNatureza).toBe(1);
-    await passo(62.4, vista({ cx: [true, true, true], show: fim }));
-    await passo(62.6, vista({ cx: [true, true, true], show: fim }));
+    await passo(F + APLAUSO + 0.2, vista({ cx: [true, true, true], show: fim }));
+    await passo(F + APLAUSO + 0.4, vista({ cx: [true, true, true], show: fim }));
     expect(som.info().calarNatureza).toBe(0);
     expect(calarNatureza.at(-1)).toBe(0);
   });
