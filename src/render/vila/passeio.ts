@@ -33,7 +33,7 @@ export const DURA_DESCER = 0.5;
 /** Empurrar o controle por este tempo desce do carrossel e do bate-bate (s). */
 export const SEGURAR_PARA_SAIR = 0.5;
 /** Na roda-gigante: a câmera se afasta até aqui e leva este tempo para virar (s). */
-export const ZOOM_NA_RODA = 6.5;
+export const ZOOM_NA_RODA = 5;
 export const VIRA_NA_RODA = 1.6;
 export const PITCH_NA_RODA = 0.32;
 
@@ -92,8 +92,6 @@ export interface DepsPasseio {
     zoom(): number;
     definirZoom(d: number): void;
   };
-  /** Para onde olhar da roda-gigante (o meio do bairro, no chão). */
-  vistaDoBairro: [number, number];
   aoSentar?(s: Sentado): void;
   aoDescer?(s: Sentado): void;
 }
@@ -209,15 +207,14 @@ export function criarPasseio(d: DepsPasseio) {
           }
         }
       }
-      // na roda-gigante a câmera vira devagar para o bairro (até a criança mexer nela)
+      // na roda-gigante a câmera vai devagar para trás da cadeirinha (até a criança mexer nela):
+      // a cadeirinha olha para o bairro, ao longo da roda, e a câmera fica entre os dois aros
+      // (nada na frente da vista)
       if (atual?.b === 'roda' && viraDesde) {
         if (d.camera.mexeuEm() > viraDesde.em) viraDesde = null;
         else {
           const k = suave((t - viraDesde.em) / VIRA_NA_RODA);
-          const alvo = Math.atan2(
-            d.vistaDoBairro[0] - d.jogador.x,
-            d.vistaDoBairro[1] - d.jogador.z,
-          );
+          const alvo = lugarDaVez()?.yaw ?? viraDesde.yaw;
           d.camera.apontar(
             viraDesde.yaw + dif(alvo, viraDesde.yaw) * k,
             viraDesde.pitch + (PITCH_NA_RODA - viraDesde.pitch) * k,

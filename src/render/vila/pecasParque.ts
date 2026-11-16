@@ -23,10 +23,10 @@ export const RODA = {
   /** A altura do eixo acima do chão. */
   eixo: 9.55,
   /** Os dois aros (de um lado e do outro das cadeirinhas). */
-  aro: 0.95,
+  aro: 1.25,
   /** Onde os pés pisam (para cada lado do meio) e a que distância do plano da roda. */
   pe: 4.7,
-  cavalete: 1.65,
+  cavalete: 1.95,
 } as const;
 
 /** As medidas do carrossel (do alto do pedestal de blocos para cima). */
@@ -135,7 +135,7 @@ export function arcoParque(r: Ref): void {
 export function pesDaRoda(r: Ref): void {
   const { eixo: E, pe: P, cavalete: Z } = RODA;
   // as duas sapatas compridas (uma de cada lado), de onde sobem as pernas dos cavaletes
-  for (const s of [-1, 1]) r.caixa(1.1, 0.4, 4.4, s * P, 0, 0, COR.grafite2, 0.06);
+  for (const s of [-1, 1]) r.caixa(1.1, 0.4, 5.0, s * P, 0, 0, COR.grafite2, 0.06);
   for (const z of [Z, -Z]) {
     for (const s of [-1, 1]) r.barra([s * P, 0.3, z], [0, E, z], 0.46, COR.azul);
     // as travessas do cavalete e as lâmpadas subindo pelas pernas

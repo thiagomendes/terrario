@@ -149,7 +149,7 @@ function caixasLocais(tipo: TipoPecaVila, n: number): readonly Local[] {
       return par(2.3, 3.2, 0, 4.36, -0.45, 0.45);
     case 'roda-gigante':
       // as duas sapatas compridas dos cavaletes, baixas como um degrau (a roda gira por cima)
-      return par(4.15, 5.25, 0, 0.4, -2.2, 2.2);
+      return par(4.15, 5.25, 0, 0.4, -2.5, 2.5);
     case 'carrossel':
       // o carrossel inteiro, do pedestal ao toldo (um octógono em três caixas): sobe-se pelo
       // toque, nunca andando para cima do deque que gira

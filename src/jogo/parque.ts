@@ -207,8 +207,9 @@ export function lugarDaCadeira(
   const k = Number.isInteger(i) && i >= 0 && i < n ? i : 0;
   if (b === 'roda') {
     const [x, y, z] = eixoDaCadeirinha(p.roda, k, t, imp);
-    // de frente para a frente da roda (de cara para o bairro)
-    return { x, y: y - PENDURA_RODA, z, yaw: p.roda.eixo === 'x' ? 0 : Math.PI / 2 };
+    // olhando ao longo da roda, para o lado do bairro (o oeste, ou o norte): de trás da
+    // cadeirinha, entre os dois aros, a vista fica livre
+    return { x, y: y - PENDURA_RODA, z, yaw: p.roda.eixo === 'x' ? -Math.PI / 2 : Math.PI };
   }
   if (b === 'carrossel') {
     const c = p.carrossel;

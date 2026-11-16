@@ -472,8 +472,8 @@ export function criarParqueVila(
           // a cadeirinha pende sempre em pé e balança de leve
           const balanca = Math.sin(t * 1.4 + i * 1.9) * 0.05;
           const c = cadeirinhas[i % 2];
-          if (R.eixo === 'x') por(c.buf, i >> 1, px, py, pz, 0, balanca, 0);
-          else por(c.buf, i >> 1, px, py, pz, Math.PI / 2, balanca, 0);
+          // (o banco olha ao longo da roda: o balanço é em torno do eixo dela)
+          por(c.buf, i >> 1, px, py, pz, R.eixo === 'x' ? -Math.PI / 2 : Math.PI, 0, balanca);
         }
         for (const c of cadeirinhas) c.m.thinInstanceBufferUpdated('matrix');
         // as lâmpadas piscam no toque

@@ -781,7 +781,8 @@ function montarVila(semente: number, r: RelevoVila): Montado {
   // postes e árvores nas calçadas (a cada 10 blocos algo novo para olhar)
   for (let u = 2; u < LARGURA_VILA - 1; u += 12) {
     if (u >= 88 && u <= 106) continue;
-    poste(u, 59);
+    // (a frente do arco do parque fica livre: o poste dali vai para o lado)
+    poste(u === 134 ? 138 : u, 59);
     poste(u + 6, 70);
   }
   for (let v = 2; v < PROFUNDIDADE_VILA - 1; v += 12) {
@@ -1154,7 +1155,7 @@ function montarVila(semente: number, r: RelevoVila): Montado {
   peca('van', 101, 18, DIR.s, 2);
   // bancos, bicicletas e floreiras nas calçadas (a cada ~10 blocos algo novo para olhar)
   peca('banco', 112, 59, DIR.s, 6);
-  peca('banco', 136, 59, DIR.s, 7);
+  peca('banco', 142, 59, DIR.s, 7);
   peca('banco', 162, 59, DIR.s, 8);
   peca('floreira', 124, 59, DIR.s, 0);
   peca('floreira', 150, 59, DIR.s, 1);
@@ -1171,7 +1172,8 @@ function montarVila(semente: number, r: RelevoVila): Montado {
   // as árvores de rua (tronco alto) entre os postes, fora das esquinas, do portão e dos fios
   for (let u = 8; u < LARGURA_VILA - 2; u += 12) {
     if (u >= 86 && u <= 108) continue;
-    if (![20, 32, 56, 80].includes(u)) arvore(u, u < 92 ? 60 : 59, 2, 2);
+    // (e nenhuma árvore em cima do arco do parque)
+    if (![20, 32, 56, 80, 128].includes(u)) arvore(u, u < 92 ? 60 : 59, 2, 2);
     const us = u + 6;
     if (us >= 44 && us <= 150) continue;
     arvore(us, 70, 3, 2);

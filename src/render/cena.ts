@@ -1876,8 +1876,6 @@ export function criarCena(
           zoom: () => orbita.zoom(),
           definirZoom: (d) => void orbita.definirZoom(d),
         },
-        // a vista da roda-gigante: o cruzamento da avenida com a rua da pracinha
-        vistaDoBairro: [planoVila.ox + 97, planoVila.oz + 66],
         aoSentar: () => {
           somEfeito('sentar');
           estado.parqueSentou = (estado.parqueSentou ?? 0) + 1;
@@ -5372,6 +5370,8 @@ export function criarCena(
       if (amigoNaMira() || !atacarNaMira()) usarOuColocar(false);
     },
     dedoLonge: () =>
+      // (sentado num brinquedo do parque nada está "longe": o toque é do brinquedo)
+      !passeio?.sentado() &&
       raioToque !== null &&
       !alvoComDistancia() &&
       !criaturaApontada() &&
