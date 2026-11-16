@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { mkdirSync, renameSync } from 'node:fs';
+import { mkdirSync, writeFileSync } from 'node:fs';
 import { comecarGravacao, pararGravacao } from './gravarCena';
 import { abrirMundo, andarPelaTrilha, assentar, escolherNaRoda, tocar } from './guia-palco';
 import { APLAUSO, CHAMADO, ESPERA_FINAL } from '../src/jogo/show';
@@ -110,8 +110,8 @@ test('o bastão de luz visto por trás (fotos)', async ({ browser }) => {
 /**
  * O vídeo dos patins (celular deitado, com a interface): a criança escolhe a volta no rinque, as
  * pegadinhas levam ao suporte, o toque nele calça (o pulinho, as faíscas), as pegadinhas passam
- * por dentro dos três arcos, e fora do rinque ela tira os patins pela roda. O vídeo é o da
- * página inteira (`patins.webm`); as marcas de tempo saem no registro para o corte.
+ * por dentro dos três arcos, e fora do rinque ela tira os patins pela roda. O vídeo sai das
+ * fotos da página inteira (`patins-quadros/`, com a `lista.txt` para o ffmpeg).
  */
 test('patins: calçar no suporte, a volta nos arcos e tirar pela roda (vídeo)', async ({
   browser,
@@ -125,7 +125,6 @@ test('patins: calçar no suporte, a volta nos arcos e tirar pela roda (vídeo)',
     tema: 'vila-neon',
     tamanho: 'deitado',
     extras: { alma: { local: { feitas: ['f1', 'f2'] } } },
-    video: `${PASTA}/video-patins`,
   });
   await page.addStyleTag({ content: '.dica-mira { display: none !important; }' });
   await assentar(page);
@@ -145,6 +144,23 @@ test('patins: calçar no suporte, a volta nos arcos e tirar pela roda (vídeo)',
   await escolherNaRoda(page, 'missoes');
   await page.waitForSelector('[data-alma-quadro]', { timeout: 20_000 });
   await page.waitForTimeout(600);
+  // o vídeo com a interface: uma foto da página atrás da outra, cada uma com a hora dela (o
+  // vídeo de página do navegador de teste corta a parte de baixo da tela na placa de vídeo)
+  const pastaQuadros = `${PASTA}/patins-quadros`;
+  mkdirSync(pastaQuadros, { recursive: true });
+  const quadros: { f: string; t: number }[] = [];
+  let gravando = true;
+  const laco = (async () => {
+    for (let i = 0; gravando; i++) {
+      const f = `q${String(i).padStart(5, '0')}.jpg`;
+      const t = Date.now();
+      const ok = await page
+        .screenshot({ path: `${pastaQuadros}/${f}`, type: 'jpeg', quality: 74, scale: 'css' })
+        .then(() => true)
+        .catch(() => false);
+      if (ok) quadros.push({ f, t });
+    }
+  })();
   console.log(`MARCA patins inicio ${s()}`);
   await page.waitForTimeout(1000);
   await tocar(page, '[data-alma-jogar="f4"]');
@@ -229,9 +245,19 @@ test('patins: calçar no suporte, a volta nos arcos e tirar pela roda (vídeo)',
   await page.waitForTimeout(2200);
   console.log(`MARCA patins fim ${s()}`);
   expect(arcos).toBeGreaterThanOrEqual(3);
-  const video = page.video();
+  gravando = false;
+  await laco;
+  // a lista para o ffmpeg (cada foto dura até a seguinte)
+  const lista = quadros
+    .map((q, i) => {
+      const dur = ((quadros[i + 1]?.t ?? q.t + 100) - q.t) / 1000;
+      return `file '${q.f}'\nduration ${dur.toFixed(3)}`;
+    })
+    .join('\n');
+  writeFileSync(`${pastaQuadros}/lista.txt`, `ffconcat version 1.0\n${lista}\n`);
+  const seg = (quadros[quadros.length - 1].t - quadros[0].t) / 1000;
+  console.log(`VIDEO patins ${quadros.length} fotos em ${seg.toFixed(1)} s`);
   await page.context().close();
-  if (video) renameSync(await video.path(), `${PASTA}/patins.webm`);
 });
 
 /**
@@ -315,25 +341,36 @@ test('saída: depois do show a turma vai para casa a pé, sem sumir à vista (v�
     timeout: (APLAUSO + 20) * 1000,
     polling: 100,
   });
-  await page.waitForTimeout(3000);
+  const fim = Date.now();
+  const desdeOFim = () => (Date.now() - fim) / 1000;
+  const aos = async (seg: number) => page.waitForTimeout(Math.max(0, seg - desdeOFim()) * 1000);
+  const gravador = (o: 'pause' | 'resume') =>
+    page.evaluate(
+      (o) => (window as unknown as { __gravacao: { rec: MediaRecorder } }).__gravacao.rec[o](),
+      o,
+    );
+  await aos(5);
   await comecarGravacao(page, 30);
-  const t0 = Date.now();
-  // 1: do fundo do campo, a turma vai para o portão e sai por ele
-  await page.waitForTimeout(9_000);
+  // 1 (8 s): do fundo do campo, a turma vai para o portão e sai por ele
+  await aos(13);
   await foto(page, 'saida-1-campo');
-  // 2: da calçada da avenida, olhando o portão e a calçada por onde eles vão
+  // 2 (13 s): da calçada da avenida, olhando o portão e a calçada por onde eles vão
   await cena(67.5, 66.5, 3.4, o(44, 0.4, 70.5));
-  await page.waitForTimeout(13_000);
+  await aos(26);
   await foto(page, 'saida-2-avenida');
-  // 3: da calçada das casas, eles viram a esquina, descem a calçada e entram nos quintais
+  // (um corte no vídeo: a caminhada pela avenida até a esquina das casas leva uns 15 s)
+  await gravador('pause');
+  // 3 (18 s): da calçada das casas, eles viram a esquina, descem a calçada e entram nos quintais
   await cena(23.2, 91.5, 4.6, o(21.5, 0.4, 73));
-  await page.waitForTimeout(17_000);
+  await aos(43);
+  await gravador('resume');
+  await aos(61);
   await foto(page, 'saida-3-casas');
   await pararGravacao(page, `${PASTA}/saida.webm`);
-  console.log(`SAIDA video ${((Date.now() - t0) / 1000).toFixed(0)} s`);
+  console.log(`SAIDA video até ${desdeOFim().toFixed(0)} s depois do show`);
   // de perto, os que chegaram em casa: de papo no quintal (ninguém some com a criança olhando)
   await cena(22.8, 83.5, 3.4, o(17.5, 0.6, 79));
-  await page.waitForTimeout(14_000);
+  await aos(72);
   await foto(page, 'saida-4-quintal');
   const v = await page.evaluate(
     () =>

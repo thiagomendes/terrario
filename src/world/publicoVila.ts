@@ -304,7 +304,10 @@ function montar(p: PlanoVila): PublicoVila {
       [passagem.filter(([u]) => u < QUINTAL.u1), 1],
     ] as const)
       for (const q of lista)
-        if (out.length < POR_CASA && out.every((o) => Math.hypot(o[0] - q[0], o[1] - q[1]) >= folga))
+        if (
+          out.length < POR_CASA &&
+          out.every((o) => Math.hypot(o[0] - q[0], o[1] - q[1]) >= folga)
+        )
           out.push(q);
     return out;
   };
@@ -398,12 +401,7 @@ export function lugarDoPublico(pub: PublicoVila, k: number, m: MomentoPublico): 
 
 // ------------------------------------------------------------------ o caminho a pé
 /** O segmento de a até b passa só por chão livre (com a folga do corpo)? */
-function retoLivre(
-  livre: (x: number, z: number) => boolean,
-  a: V2,
-  b: V2,
-  folga = 0.34,
-): boolean {
+function retoLivre(livre: (x: number, z: number) => boolean, a: V2, b: V2, folga = 0.34): boolean {
   const d = Math.hypot(b[0] - a[0], b[1] - a[1]);
   const n = Math.max(1, Math.ceil(d / 0.2));
   for (let i = 0; i <= n; i++) {
@@ -485,8 +483,7 @@ export function caminhoDoPublico(pub: PublicoVila, de: V2, para: V2): V2[] {
   const dentro = (q: V2) => pub.livre(q[0], q[1]) || noCampo(pub.plano, q);
   const portao: V2 = [pub.portao[0], pub.portao[2]];
   const fora: V2 = [pub.foraDoPortao[0], pub.foraDoPortao[2]];
-  const rua = (a: V2, b: V2) =>
-    caminhoNaGrade(pub.plano, { ...RUA, livre: pub.livreNaRua }, a, b);
+  const rua = (a: V2, b: V2) => caminhoNaGrade(pub.plano, { ...RUA, livre: pub.livreNaRua }, a, b);
   const deDentro = dentro(de);
   const paraDentro = dentro(para);
   if (deDentro && paraDentro) return caminhoNoFestival(pub, de, para);

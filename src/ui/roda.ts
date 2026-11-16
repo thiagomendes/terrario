@@ -157,7 +157,11 @@ export function desenharRoda(
       const jeitos =
         rx === ry
           ? [posicoesDaRoda(n, rx, ry)]
-          : [posicoesDaRoda(n, rx, ry), posicoesNaBeira(n, rx, ry, 0), posicoesNaBeira(n, rx, ry, 0.5)];
+          : [
+              posicoesDaRoda(n, rx, ry),
+              posicoesNaBeira(n, rx, ry, 0),
+              posicoesNaBeira(n, rx, ry, 0.5),
+            ];
       for (const pos of jeitos) {
         const livre = !rodaEncosta(caixasDaRoda(pos, botao, rotulos));
         ultimo = { rx, ry, botao, pos, livre: livre && rxLim >= 40 && ryLim >= 40 };
@@ -189,7 +193,8 @@ export function posicoesNaBeira(n: number, rx: number, ry: number, fase = 0): [n
   for (let i = 0; i <= N; i++) {
     const a = -Math.PI / 2 + (i / N) * Math.PI * 2;
     pts.push([Math.cos(a) * rx, Math.sin(a) * ry]);
-    if (i) soma.push(soma[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]));
+    if (i)
+      soma.push(soma[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]));
   }
   const total = soma[N];
   const out: [number, number][] = [];
@@ -198,7 +203,10 @@ export function posicoesNaBeira(n: number, rx: number, ry: number, fase = 0): [n
     const s = ((i + fase) / n) * total;
     while (k < N - 1 && soma[k + 1] < s) k++;
     const f = (s - soma[k]) / Math.max(1e-9, soma[k + 1] - soma[k]);
-    out.push([pts[k][0] + (pts[k + 1][0] - pts[k][0]) * f, pts[k][1] + (pts[k + 1][1] - pts[k][1]) * f]);
+    out.push([
+      pts[k][0] + (pts[k + 1][0] - pts[k][0]) * f,
+      pts[k][1] + (pts[k + 1][1] - pts[k][1]) * f,
+    ]);
   }
   return out;
 }
@@ -212,7 +220,8 @@ export function estimarRotulo(nome: string, fonte: number, maximo: number): Caix
   const linhas: string[] = [];
   for (const p of nome.split(' ')) {
     const ult = linhas[linhas.length - 1];
-    if (ult !== undefined && larg(`${ult} ${p}`) <= maximo) linhas[linhas.length - 1] = `${ult} ${p}`;
+    if (ult !== undefined && larg(`${ult} ${p}`) <= maximo)
+      linhas[linhas.length - 1] = `${ult} ${p}`;
     else linhas.push(p);
   }
   return { w: Math.max(...linhas.map(larg)), h: linhas.length * fonte * 1.12 };
