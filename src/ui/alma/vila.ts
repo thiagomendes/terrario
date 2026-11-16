@@ -7,7 +7,10 @@
  *   apagada com a f3 no selinho;
  * - **o show:** enquanto a música toca, qualquer toque na tela de quem está no palco ou na
  *   plateia toca um acorde (fora os botões, a barra e o controle); no chamado do fim, o toque
- *   dispara o acorde final;
+ *   dispara o acorde final. **O arrastar sempre gira a câmera** (o dono, 16 nov 2026: "depois de
+ *   acender as 3 caixas a câmera parou"): o toque do show nunca segura o `pointerdown`; o acorde
+ *   sai no soltar de um toque curto (no dedo) ou no clique (no mouse), e só o que vem depois do
+ *   toque curto deixa de chegar ao jogo (para o toque não colocar bloco no palco);
  * - **o feno na mão (f2):** o "pop" do feno que aparece perto das lhamas, já selecionado.
  */
 import type { Scene } from '@babylonjs/core/scene';
@@ -17,7 +20,14 @@ import type { AlmaUi } from './index';
 import { missaoFixada } from './hud';
 import { figura } from './figuras';
 import { tocarSomInterface } from '../../audio/somInterface';
-import { alcancaOPalco, faseDoShow, noiteDeShow } from '../../jogo/show';
+import {
+  alcancaOPalco,
+  faseComMusica,
+  faseDoShow,
+  noiteDeShow,
+  type FaseShow,
+} from '../../jogo/show';
+import { FOLGA_TOQUE, TEMPO_SEGURAR } from '../toque';
 import { CSS_CANTO } from './canto';
 
 declare global {
@@ -27,7 +37,7 @@ declare global {
       plano(): unknown;
       caixas(): { i: number; t: { x: number; y: number } }[];
       mao(): { x: number; y: number } | null;
-      show(): 'tocando' | 'chamando' | null;
+      show(): FaseShow | null;
     };
   }
 }
@@ -71,12 +81,15 @@ export function ligarVilaNeon(
     const pes = e.jogadorPes?.();
     return !!pes && alcancaOPalco(p.palco, pes[0], pes[2]);
   };
-  /** O show tocando agora (ou chamando o acorde final), e a criança perto o bastante. */
-  const showTocando = () => {
+  /**
+   * O show acontecendo agora (da abertura ao aplauso), e a criança perto o bastante: a fase (a
+   * música toca nas fases de `faseComMusica`).
+   */
+  const showTocando = (): FaseShow | null => {
     const v = e.vilaEstado?.();
     if (!v?.show) return null;
     const fase = faseDoShow(v.show, e.vilaTempo?.() ?? v.t);
-    if (fase !== 'tocando' && fase !== 'chamando') return null;
+    if (fase === 'acabou') return null;
     const pes = e.jogadorPes?.();
     if (!pes) return null;
     const r = p.palco;
@@ -143,6 +156,70 @@ export function ligarVilaNeon(
   // ---------------------------------------------------------------- o toque generoso
   let engoliuAte = 0;
   let tocouEm = -Infinity;
+  /** O dedo que encostou no show (o acorde sai no soltar, se for um toque curto). */
+  let toqueDoShow: { id: number; x: number; y: number; t0: number } | null = null;
+  /** Depois do toque curto do show, os eventos de compatibilidade (mouse, clique) não chegam. */
+  let engoliuShowAte = 0;
+  window.addEventListener(
+    'pointermove',
+    (ev) => {
+      const g = toqueDoShow;
+      if (
+        g &&
+        ev.pointerId === g.id &&
+        Math.hypot(ev.clientX - g.x, ev.clientY - g.y) > FOLGA_TOQUE
+      )
+        toqueDoShow = null;
+    },
+    { capture: true, passive: true },
+  );
+  window.addEventListener(
+    'pointercancel',
+    (ev) => {
+      if (toqueDoShow?.id === ev.pointerId) toqueDoShow = null;
+    },
+    { capture: true },
+  );
+  window.addEventListener(
+    'pointerup',
+    (ev) => {
+      const g = toqueDoShow;
+      if (!g || ev.pointerId !== g.id) return;
+      toqueDoShow = null;
+      const curto =
+        Math.hypot(ev.clientX - g.x, ev.clientY - g.y) <= FOLGA_TOQUE &&
+        performance.now() - g.t0 < TEMPO_SEGURAR;
+      const fase = showTocando();
+      if (!curto || !fase) return;
+      if (faseComMusica(fase)) e.vilaComando?.({ a: 'palco' });
+      tocouEm = agoraS();
+      // o toque curto é do show: o controle do jogo solta o dedo sem agir (nada de bloco no palco)
+      ev.stopImmediatePropagation();
+      engoliuShowAte = performance.now() + 350;
+      const alvo = ev.target as EventTarget | null;
+      alvo?.dispatchEvent(
+        new PointerEvent('pointercancel', {
+          pointerId: ev.pointerId,
+          pointerType: ev.pointerType,
+          bubbles: true,
+          clientX: ev.clientX,
+          clientY: ev.clientY,
+        }),
+      );
+    },
+    { capture: true },
+  );
+  for (const tipo of ['mousedown', 'mouseup', 'touchend', 'click'])
+    window.addEventListener(
+      tipo,
+      (ev) => {
+        if (performance.now() < engoliuShowAte) {
+          ev.stopImmediatePropagation();
+          if (ev.cancelable) ev.preventDefault();
+        }
+      },
+      { capture: true, passive: false },
+    );
   window.addEventListener(
     'pointerdown',
     (ev) => {
@@ -181,9 +258,14 @@ export function ligarVilaNeon(
         tocarSomInterface('plim');
         feito = true;
       } else if (showTocando()) {
-        // no show, qualquer toque toca (o núcleo encaixa no tempo e sempre na nota certa)
-        e.vilaComando?.({ a: 'palco' });
-        feito = true;
+        // no show, o toque toca um acorde (o núcleo encaixa no tempo e sempre na nota certa), mas
+        // o dedo segue para o jogo: arrastar gira a câmera. No mouse o clique toca já; no dedo,
+        // o acorde sai no soltar, se foi um toque curto (o arrastar nunca toca)
+        if (ev.pointerType === 'mouse') {
+          if (faseComMusica(showTocando())) e.vilaComando?.({ a: 'palco' });
+        } else
+          toqueDoShow = { id: ev.pointerId, x: ev.clientX, y: ev.clientY, t0: performance.now() };
+        return;
       }
       if (!feito) return;
       tocouEm = agoraS();
