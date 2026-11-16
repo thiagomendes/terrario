@@ -258,6 +258,27 @@ const BASE: Record<string, string> = {
     <path d="M51 8 L60 16.5 L49.5 22" fill="none" stroke="${C}" stroke-width="8" ${L}/>
     <path d="M40 27 Q46 14 57 16" fill="none" stroke="#ff8a2a" stroke-width="4" stroke-linecap="round"/>
     <path d="M51 8 L60 16.5 L49.5 22" fill="none" stroke="#ff8a2a" stroke-width="4" ${L}/>`),
+  /**
+   * As dicas de toque (o suporte dos patins e os brinquedos do parque): os patins com a setinha
+   * verde que entra ("calçar") e a cadeirinha com a setinha verde que entra ("andar").
+   */
+  a80CalcarPatins: svg(`${patins(27, 40, 0.92, -8)}
+    <path d="M56 5 Q44 6 39 21" fill="none" stroke="${C}" stroke-width="8" stroke-linecap="round"/>
+    <path d="M33 12 L38.5 22.5 L49 18.5" fill="none" stroke="${C}" stroke-width="8" ${L}/>
+    <path d="M56 5 Q44 6 39 21" fill="none" stroke="#3ccf7a" stroke-width="4" stroke-linecap="round"/>
+    <path d="M33 12 L38.5 22.5 L49 18.5" fill="none" stroke="#3ccf7a" stroke-width="4" ${L}/>`),
+  a80SentarBrinquedo: svg(`
+    <path d="M12 22 V32 M36 22 V32" stroke="${C}" stroke-width="3" stroke-linecap="round"/>
+    <rect x="6" y="15" width="36" height="9" rx="3" fill="#fff1d6" ${s()}/>
+    <rect x="15" y="15" width="9" height="9" fill="#e8302a"/><rect x="33" y="15" width="6" height="9" fill="#e8302a"/>
+    <rect x="6" y="15" width="36" height="9" rx="3" fill="none" ${s()}/>
+    <path d="M6 32 H42 V52 Q42 58 36 58 H12 Q6 58 6 52 Z" fill="#e8302a" ${s()}/>
+    <rect x="6" y="38" width="36" height="6" fill="#fff1d6"/>
+    <path d="M6 32 H42 V52 Q42 58 36 58 H12 Q6 58 6 52 Z" fill="none" ${s()}/>
+    <path d="M60 8 Q50 9 46 24" fill="none" stroke="${C}" stroke-width="8" stroke-linecap="round"/>
+    <path d="M40 15 L45.5 25.5 L56 21.5" fill="none" stroke="${C}" stroke-width="8" ${L}/>
+    <path d="M60 8 Q50 9 46 24" fill="none" stroke="#3ccf7a" stroke-width="4" stroke-linecap="round"/>
+    <path d="M40 15 L45.5 25.5 L56 21.5" fill="none" stroke="#3ccf7a" stroke-width="4" ${L}/>`),
   a80ArcoNeon: svg(arcoNeon(false)),
   a80ArcoAceso: svg(arcoNeon(true)),
   /** O resultado da f4: o patins passando por dentro do arco aceso, com o rastro de vento. */
@@ -372,6 +393,8 @@ export const ARTE_VILA: Record<string, string> = {
   patins: BASE.a80PatinsRinque,
   tirarPatins: BASE.a80TirarPatins,
   sairBrinquedo: BASE.a80SairBrinquedo,
+  calcarPatins: BASE.a80CalcarPatins,
+  sentarBrinquedo: BASE.a80SentarBrinquedo,
   arcoAceso: BASE.a80ArcoAceso,
   patinsArco: BASE.a80PatinsArco,
   /** O mundo no baú (as habilidades que a Vila Neon alimenta): o raio sobre o grafite. */

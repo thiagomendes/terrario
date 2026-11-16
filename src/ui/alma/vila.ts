@@ -20,6 +20,8 @@ import { tocarSomInterface } from '../../audio/somInterface';
 import { alcancaOPalco, faseDoShow, type FaseShow } from '../../jogo/show';
 import { foiToque } from '../../jogo/rinque';
 import { alcancaOBrinquedo, distanciaDoBrinquedo, type Brinquedo } from '../../jogo/parque';
+import { boaParaDica, criarDicaToque } from './dicaToque';
+import { arte as arteAlma } from './arte';
 import { CSS_CANTO } from './canto';
 
 declare global {
@@ -29,6 +31,8 @@ declare global {
       plano(): unknown;
       caixas(): { i: number; t: { x: number; y: number } }[];
       show(): FaseShow | null;
+      /** A dica de toque à vista (o suporte dos patins, um brinquedo de sentar), ou null. */
+      dica(): { chave: string; texto: string; t: { x: number; y: number } } | null;
       /** Spec 026 (parte 2): onde ficam na tela os brinquedos do parque (null: fora da tela). */
       parque(): {
         sentar: { b: number; t: { x: number; y: number } | null }[];
@@ -142,6 +146,8 @@ export function ligarVilaNeon(
     return melhor;
   }
 
+  /** A dica de toque que a criança já usou (o suporte dos patins, um brinquedo): some até ela se afastar. */
+  let dicaUsada: string | null = null;
   // ---------------------------------------------------------------- o parque (parte 2)
   const pq = p.parque;
   const chaoVila = plano.h + 1;
@@ -273,6 +279,7 @@ export function ligarVilaNeon(
     if (ev.type !== 'pointerup' || !noJogo()) return;
     if (!foiToque(ev.clientX - d.x, ev.clientY - d.y, performance.now() - d.t)) return;
     e.vilaPatins?.(!e.personagem?.aparencia().patins);
+    dicaUsada = 'patins';
   }
   // (antes dos que engolem o resto do toque, logo abaixo)
   window.addEventListener('pointerup', soltouNoSuporte, { capture: true });
@@ -400,11 +407,73 @@ export function ligarVilaNeon(
   });
 
   void guia;
-  void scene;
+
+  // ---------------------------------------------------------------- a dica de toque
+  // (dono, 16 nov 2026: no suporte dos patins "tem que adivinhar") perto do suporte dos patins
+  // ou de um brinquedo de sentar, a mãozinha toca nele e o balãozinho mostra o que o toque faz
+  const dica = criarDicaToque();
+  /** Até onde (blocos) a dica aparece, e quanto a criança tem de se afastar para ela voltar. */
+  const PERTO_DA_DICA = 4;
+  const LONGE_DA_DICA = 7;
+  /** Chegou perto há este tanto (s): quem só passa andando não vê a dica piscar. */
+  const ESPERA_DA_DICA = 0.5;
+  let pertoDe: { base: string; desde: number } | null = null;
+  scene.onBeforeRenderObservable.add(() => {
+    const pes = e.jogadorPes?.();
+    const sentada = e.vilaParque?.sentado();
+    if (sentada) dicaUsada = `sentar-${DE_SENTAR.find((q) => q.nome === sentada.b)?.b}`;
+    if (!pes || !noJogo() || sentada || showTocando()) {
+      pertoDe = null;
+      return dica.mostrar(null);
+    }
+    const [sx, sy, sz] = p.patins;
+    const lugares: { base: string; dist: number; ponto: [number, number, number] }[] = [
+      { base: 'patins', dist: Math.hypot(pes[0] - sx, pes[2] - sz), ponto: [sx, sy + 1, sz] },
+      ...DE_SENTAR.map((q) => ({
+        base: `sentar-${q.b}`,
+        dist: distanciaDoBrinquedo(pq, q.nome, pes[0], pes[2]),
+        ponto: q.alvos[0],
+      })),
+    ];
+    // usou (calçou, tirou, andou no brinquedo): a dica só volta depois de ela se afastar
+    if (dicaUsada && (lugares.find((l) => l.base === dicaUsada)?.dist ?? 99) > LONGE_DA_DICA)
+      dicaUsada = null;
+    const perto = lugares
+      // (os brinquedos são grandes: a dica vem um pouco antes)
+      .filter(
+        (l) => l.dist <= PERTO_DA_DICA + (l.base === 'patins' ? 0 : 1) && l.base !== dicaUsada,
+      )
+      .sort((a, b) => a.dist - b.dist)[0];
+    const agora = performance.now() / 1000;
+    if (!perto) {
+      pertoDe = null;
+      return dica.mostrar(null);
+    }
+    if (pertoDe?.base !== perto.base) pertoDe = { base: perto.base, desde: agora };
+    const t = tela(perto.ponto[0], perto.ponto[1], perto.ponto[2]);
+    if (!t || agora - pertoDe.desde < ESPERA_DA_DICA || !boaParaDica(t, innerWidth, innerHeight))
+      return dica.mostrar(null);
+    if (perto.base === 'patins') {
+      const calcada = !!e.personagem?.aparencia().patins;
+      dica.mostrar({
+        chave: calcada ? 'patins-tirar' : 'patins-calcar',
+        t,
+        figura: arteAlma(calcada ? 'tirarPatins' : 'calcarPatins'),
+        texto: calcada ? 'Toque para tirar' : 'Toque para calçar',
+      });
+    } else
+      dica.mostrar({
+        chave: perto.base,
+        t,
+        figura: arteAlma('sentarBrinquedo'),
+        texto: 'Toque para andar',
+      });
+  });
 
   // testes: as caixas na tela e o show
   window.__vila = {
     plano: () => plano,
+    dica: () => dica.estado(),
     caixas: () => caixasNaTela(),
     show: () => showTocando(),
     parque: () => ({

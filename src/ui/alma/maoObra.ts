@@ -20,7 +20,8 @@ const MENTA = '#5fe3c4';
 /** Parada sem pôr bloco: a mãozinha mostra de novo (s). */
 const ESPERA_MAO = 8;
 
-const MAO_SVG = `<svg viewBox="0 0 80 96" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+/** A mãozinha (desenho nosso); também a da dica de toque (`dicaToque.ts`). */
+export const MAO_SVG = `<svg viewBox="0 0 80 96" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
   <g stroke="${CONTORNO}" stroke-width="3.2" stroke-linejoin="round" stroke-linecap="round">
     <path d="M30 8 Q30 2 36 2 Q42 2 42 8 L42 44 L46 42 Q52 38 56 42 L58 44 Q64 40 68 45 L70 48 Q76 46 78 52 L78 70 Q78 92 54 94 L44 94 Q26 92 20 76 L10 60 Q6 52 12 50 Q18 48 22 54 L30 64 Z" fill="#ffd9b5"/>
     <path d="M46 44 L46 58 M58 46 L58 60 M70 50 L70 62" fill="none" stroke-width="2.6"/>
@@ -45,6 +46,8 @@ const CSS = `
   48% { opacity: 1; } 75%, 100% { opacity: 0; transform: translate(var(--x), var(--y)) scale(1.6); } }
 @media (prefers-reduced-motion: reduce) { .guia-mao.mostra, .guia-mao.mostra svg, .guia-onda.mostra { animation-duration: 5s; } }
 `;
+/** O estilo da mãozinha e da ondinha (a dica de toque usa o mesmo). */
+export const CSS_MAO = CSS;
 
 type Ponto = { x: number; y: number; z: number };
 
