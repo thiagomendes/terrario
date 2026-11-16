@@ -207,7 +207,6 @@ export function montarParque(f: FerramentasVila): ParqueMontado {
       }
     // a aba do toldo na frente
     for (let u = bu; u < bu + 6; u++) b(u, 4, bv - 1, (u - bu) & 1 ? Bloco.LA_BRANCA : toldo);
-    b(bu + 2, 3, bv + 2, Bloco.LANTERNA);
     peca(tipo, bu + 2.5, bv + 1.5, DIR.n, 0);
   };
   barraca(149, 35, Bloco.LA_VERMELHA, 'barraca-argola');
@@ -342,8 +341,8 @@ export function montarParque(f: FerramentasVila): ParqueMontado {
     [125, 37, 0],
     [126, 44, 1],
     [125, 50, 0],
-    [139, 53, 0],
-    [146, 53, 1],
+    [142, 53, 0],
+    [148, 53, 1],
     [151, 49, 0],
     [160, 53, 0],
     [152, 42, 0],

@@ -87,19 +87,21 @@ for (const tamanho of ['deitado', 'empe'] as const) {
     const meio = { x: tamanho === 'deitado' ? 422 : 195, y: tamanho === 'deitado' ? 150 : 300 };
 
     // ---------------------------------------------------------------- o carrossel
-    await irPara(page, [pq.carrossel.x, Y, pq.carrossel.z], [
-      pq.carrossel.x,
-      pq.carrossel.z - pq.carrossel.beira - 4,
-    ]);
+    await irPara(
+      page,
+      [pq.carrossel.x, Y, pq.carrossel.z],
+      [pq.carrossel.x, pq.carrossel.z - pq.carrossel.beira - 4],
+    );
     await assentar(page, 9);
     // arrastar o dedo por cima do carrossel (virar a câmera) não senta
     let t = await alvoDeSentar(page, 1);
     await dedo(page, t.x, t.y, 80, 6, 260);
     expect(await sentado(page)).toBeNull();
-    await irPara(page, [pq.carrossel.x, Y, pq.carrossel.z], [
-      pq.carrossel.x,
-      pq.carrossel.z - pq.carrossel.beira - 4,
-    ]);
+    await irPara(
+      page,
+      [pq.carrossel.x, Y, pq.carrossel.z],
+      [pq.carrossel.x, pq.carrossel.z - pq.carrossel.beira - 4],
+    );
     t = await alvoDeSentar(page, 1);
     await page.touchscreen.tap(t.x, t.y);
     await page.waitForFunction(() => window.__brumaluz!.vilaParque!.sentado()?.b === 'carrossel');
@@ -210,26 +212,27 @@ for (const tamanho of ['deitado', 'empe'] as const) {
     await tocar('pescaria', [0, -4.5], () => window.__brumaluz!.parqueVila!()!.peixePulando);
 
     // ---------------------------------------------------------------- a roda-gigante
-    await irPara(page, [pq.roda.x, Y + 3, pq.roda.z], [pq.roda.saida[0], pq.roda.saida[2] + 1.5], -0.2);
+    await irPara(
+      page,
+      [pq.roda.x, Y + 3, pq.roda.z],
+      [pq.roda.saida[0], pq.roda.saida[2] + 1.5],
+      -0.2,
+    );
     await assentar(page, 9);
     t = await alvoDeSentar(page, 0);
     await page.touchscreen.tap(t.x, t.y);
     await page.waitForFunction(() => window.__brumaluz!.vilaParque!.sentado()?.b === 'roda');
     const inicio = Date.now();
     // sobe com a cadeirinha
-    await page.waitForFunction(
-      (y) => window.__brumaluz!.jogadorPes!()[1] > y + 6,
-      Y,
-      { timeout: 20_000 },
-    );
+    await page.waitForFunction((y) => window.__brumaluz!.jogadorPes!()[1] > y + 6, Y, {
+      timeout: 20_000,
+    });
     // o toque dá o empurrãozinho e as lâmpadas piscam
     await page.touchscreen.tap(meio.x, meio.y);
     await page.waitForFunction(() => window.__brumaluz!.parqueVila!()!.piscando);
-    await page.waitForFunction(
-      (y) => window.__brumaluz!.jogadorPes!()[1] > y + 13.5,
-      Y,
-      { timeout: 20_000 },
-    );
+    await page.waitForFunction((y) => window.__brumaluz!.jogadorPes!()[1] > y + 13.5, Y, {
+      timeout: 20_000,
+    });
     await page.screenshot({ path: `${PASTA}/${tamanho}-roda-no-alto.png` });
     // a câmera continua dela lá em cima
     const r0 = await page.evaluate(() => window.__brumaluz!.rotacao![1]);
@@ -245,7 +248,9 @@ for (const tamanho of ['deitado', 'empe'] as const) {
     expect(dur).toBeLessThan(32);
     await page.waitForTimeout(1200);
     const noChao = await pes(page);
-    expect(Math.hypot(noChao[0] - pq.roda.saida[0], noChao[2] - pq.roda.saida[2])).toBeLessThan(1.5);
+    expect(Math.hypot(noChao[0] - pq.roda.saida[0], noChao[2] - pq.roda.saida[2])).toBeLessThan(
+      1.5,
+    );
     expect(Math.abs(noChao[1] - Y)).toBeLessThan(0.3);
     await page.screenshot({ path: `${PASTA}/${tamanho}-roda-desceu.png` });
     await page.close();

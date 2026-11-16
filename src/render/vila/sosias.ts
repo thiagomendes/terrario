@@ -340,6 +340,56 @@ export function criarSosias(scene: Scene, plano: PlanoVila, opcoes: OpcoesRender
     l(mx - 1.9, mx + 1.9, Y + 4.8, Y + 5.9, z0 - 1.78, z0 - 1.7, '#ff6fb4');
     l(mx - 1.9, mx + 1.9, Y + 4.8, Y + 5.9, z0 - 1.3, z0 - 1.22, '#ff6fb4');
   });
+  // a roda-gigante do parque (parte 2), o segundo marco do bairro: de longe, parada e sem os
+  // raios finos (o aro de cubos vermelhos e creme, as cadeirinhas, os cavaletes e as lâmpadas)
+  const rg = plano.pontos.parque.roda;
+  if (rg.eixo === 'x') {
+    const R = rg.raio;
+    fazer('roda', { x0: rg.x - R - 2, z0: rg.z - 4, x1: rg.x + R + 2, z1: rg.z + 4 }, (c, l) => {
+      c(rg.x - R - 2, rg.x + R + 2, Y - 1, Y, rg.z - 4, rg.z + 4, '#58b848');
+      c(rg.x - R - 1, rg.x + R + 1, Y - 0.02, Y + 0.03, rg.z - 3, rg.z + 3, '#e6d2a4');
+      for (let k = 0; k < 24; k++) {
+        const a = (k / 24) * Math.PI * 2;
+        const x = rg.x + Math.sin(a) * R;
+        const y = rg.y - Math.cos(a) * R;
+        c(
+          x - 0.55,
+          x + 0.55,
+          y - 0.55,
+          y + 0.55,
+          rg.z - 1.5,
+          rg.z + 1.5,
+          k % 2 ? '#f6ecd8' : '#e8302a',
+        );
+        if (k % 2 === 0) l(x - 0.2, x + 0.2, y - 0.2, y + 0.2, rg.z + 1.5, rg.z + 1.7, '#fff1c4');
+        if (k % 2 === 0) l(x - 0.2, x + 0.2, y - 0.2, y + 0.2, rg.z - 1.7, rg.z - 1.5, '#fff1c4');
+      }
+      for (let k = 0; k < 8; k++) {
+        const a = (k / 8) * Math.PI * 2;
+        const x = rg.x + Math.sin(a) * R;
+        const y = rg.y - Math.cos(a) * R - 1.5;
+        c(
+          x - 0.8,
+          x + 0.8,
+          y - 0.7,
+          y + 0.5,
+          rg.z - 0.8,
+          rg.z + 0.8,
+          k % 2 ? '#2f8cff' : '#e8302a',
+        );
+      }
+      // os cavaletes em degraus e o miolo
+      for (let k = 0; k < 10; k++)
+        for (const s of [-1, 1]) {
+          const x = rg.x + s * 4.7 * (1 - (k + 0.5) / 10);
+          const y0 = Y + ((rg.y - Y) * k) / 10;
+          const y1 = Y + ((rg.y - Y) * (k + 1)) / 10;
+          for (const z of [rg.z - 2.2, rg.z + 1.7])
+            c(x - 0.3, x + 0.3, y0, y1, z, z + 0.5, '#2f8cff');
+        }
+      c(rg.x - 0.9, rg.x + 0.9, rg.y - 0.9, rg.y + 0.9, rg.z - 2.2, rg.z + 2.2, '#ffe14a');
+    });
+  }
 
   const fog = new Color3();
   return {

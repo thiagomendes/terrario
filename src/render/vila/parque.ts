@@ -583,7 +583,8 @@ export function criarParqueVila(
         if (ver) {
           const f = t - baloesDesde;
           const sobe = f >= 0 && f < DURA_BALOES ? Math.sin((f / DURA_BALOES) * Math.PI) : 0;
-          baloes.scaling.y = 1 + sobe * 0.24;
+          // (o maço é grande, de brinquedo: vê-se da entrada)
+          baloes.scaling.set(1.4, 1.4 * (1 + sobe * 0.24), 1.4);
           baloes.rotation.z =
             Math.sin(t * 0.9) * 0.05 + (sobe > 0 ? Math.sin(f * 9) * 0.07 * sobe : 0);
           baloes.rotation.x = Math.sin(t * 0.7 + 1) * 0.04;
