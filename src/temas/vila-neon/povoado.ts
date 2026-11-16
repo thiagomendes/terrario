@@ -75,7 +75,7 @@ const MORADORES: Record<Profissao, PecaCriatura[]> = {
 };
 
 /**
- * A turma da grade do show (spec 026, o público): 12 fãs da época, cada um com cabelo, pele,
+ * A turma do show (spec 026, o público): 20 fãs da época, cada um com cabelo, pele,
  * roupa e chapéu próprios. Vistos de trás na plateia não podem virar um bolo de cabelo: metade de
  * boné ou faixa colorida, cabelos curtos e médios (só dois compridos), e as cores da camiseta, do
  * colete e da jaqueta trocando de um para o outro. Sem trocas: acenam e curtem o show.
@@ -94,6 +94,15 @@ const FAS: readonly [string, 'f' | 'm', string, string, string, number, number][
   ['Bento', 'm', '#b9825c', '#2e2018', 'plateia-bone', 2, 1],
   ['Isa', 'f', '#e0a882', '#4a2a1a', 'plateia-faixa', 2, 8],
   ['Nico', 'm', '#f4d2b4', '#6a4426', 'plateia-jaqueta', 2, 5],
+  // os que se espalham pelo campo, atrás da grade (o público é de uns 20)
+  ['Bela', 'f', '#f0c8a0', '#2e2018', 'plateia-bone', 1, 3],
+  ['Vavá', 'm', '#9a6844', '#1e1a22', 'plateia-colete', 2, 0],
+  ['Clara', 'f', '#e0a882', '#d8b060', 'plateia-faixa', 1, 6],
+  ['Tuca', 'm', '#f4d2b4', '#a8401a', 'plateia-jaqueta', 0, 1],
+  ['Tito', 'm', '#6e4a2e', '#1e1a22', 'plateia-bone-tras', 2, 5],
+  ['Lara', 'f', '#c99064', '#3a2418', 'plateia-colete', 0, 7],
+  ['Juca', 'm', '#e8b896', '#5a3422', 'plateia-faixa', 2, 3],
+  ['Mari', 'f', '#b9825c', '#1e1a22', 'plateia-bone-tras', 1, 0],
 ];
 const TURMA: NonNullable<PovoadoTema['porMorador']> = Object.fromEntries(
   FAS.map(([nome, genero, pele, cabelo, id, cor, corte], k) => [
@@ -187,7 +196,7 @@ export const POVOADO_VILA: PovoadoTema = {
       pecas: MORADORES.cozinheiro,
     },
     'vila:7': { nome: 'Beto', genero: 'm', titulo: 'Moço da banca', pecas: MORADORES.construtor },
-    // spec 026 (o público do show): a turma da grade (vila:8 a vila:19), cada um de um jeito
+    // spec 026 (o público do show): a turma (vila:8 a vila:27), cada um de um jeito
     ...TURMA,
   },
   // passo animado de quem anda ouvindo música

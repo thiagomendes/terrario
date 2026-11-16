@@ -1,13 +1,12 @@
 /**
- * O público do Show da Vila (spec 026, pedido do dono: "uma multidão de 40 a 60 pessoas no
- * show"). Puro: o núcleo (onde cada morador da grade fica) e a tela (o povo de longe) leem daqui.
+ * O público do Show da Vila (spec 026, dono: uns 20 bonecos no show, espalhados pelo campo,
+ * todos com a cara dos bonecos do jogo). Puro: o núcleo e a tela leem daqui onde cada um fica.
  *
- * - **A turma da grade:** 12 moradores de verdade (núcleo, corpo macio). No show ficam na grade
- *   da plateia, de frente para o palco; de noite sem show conversam em quatro rodinhas pelo campo
- *   (a rodinha muda de lugar de tempos em tempos); de dia só 4 ficam (dois na grade vendo a
- *   passagem de som, dois de papo), e os outros saem pelo portão do festival.
- * - **O povo de longe:** ~40 bonecos só da tela (`render/vila/plateia.ts`), atrás da turma,
- *   enchendo o campo até perto do portão. Só de noite.
+ * - **A turma:** 20 moradores de verdade (núcleo, corpo macio). No show, uns na grade e os
+ *   outros espalhados pelo campo atrás, de frente para o palco (nada de bloco apertado); de
+ *   noite sem show conversam em cinco rodinhas pelo campo (a rodinha muda de lugar de tempos em
+ *   tempos); de dia só 4 ficam (dois na grade vendo a passagem de som, dois de papo), e os outros
+ *   saem pelo portão do festival.
  * - **Nada no caminho:** o caminho de cascalho do portão até a grade (e uma folga de cada lado),
  *   o corredor do cercadinho das lhamas até a grade, a volta até a escadinha do palco, o estojo
  *   do festival (f1) e o pé de cada peça ficam livres. Os lugares vêm do plano, nunca da malha.
@@ -15,40 +14,50 @@
 import type { PlanoVila } from './vilaNeon';
 import { colunaTomadaNaVila } from './vilaNeon';
 import { celulaTomadaPelaVila } from './vilaSolidos';
-import { hash2 } from './noise';
 
 type V3 = [number, number, number];
 type V2 = [number, number];
 
-/** Quantos moradores na turma da grade (os números deles vêm depois dos de posto). */
-export const PUBLICO_GRADE = 12;
+/** Quantos moradores na turma do show (os números deles vêm depois dos de posto). */
+export const PUBLICO_GRADE = 20;
 /** A rodinha muda de lugar a cada tanto (s), cada uma na sua vez. */
 export const VOLTA_RODINHA = 26;
-/** O povo de longe: no máximo tantos bonecos (o celular aguenta, a multidão lê cheia). */
-export const MAX_FUNDO = 44;
+/** Quantos em cada rodinha de papo (e quantas rodinhas). */
+const NA_RODA = 4;
 /** Raio da rodinha de conversa (blocos). */
-const RAIO_RODA = 1.05;
+const RAIO_RODA = 1.2;
 /** Quem fica de dia (vendo a passagem de som ou de papo). */
-export const FICAM_DE_DIA: readonly number[] = [1, 4, 8, 10];
+export const FICAM_DE_DIA: readonly number[] = [1, 4, 9, 10];
 
-/** Os lugares da grade, no mapa (u, v): duas fileiras à esquerda do caminho, uma à direita. */
+/**
+ * Os lugares no show, no mapa (u, v): seis na grade (dos dois lados do caminho), dois logo
+ * atrás, e o resto espalhado pelo campo até perto do meio, com folga de um para o outro.
+ */
 const GRADE_UV: readonly V2[] = [
-  // rodinha 0 (no meio da esquerda)
-  [47.2, 99.3],
-  [49.6, 99.3],
-  [48.4, 97.7],
-  // rodinha 1 (perto do caminho)
-  [52.0, 99.3],
-  [54.4, 99.3],
-  [53.2, 97.7],
-  // rodinha 2 (à direita do caminho, antes do corredor das lhamas)
-  [66.8, 99.3],
-  [69.2, 99.3],
-  [71.6, 99.3],
-  // rodinha 3 (na ponta da esquerda)
-  [42.4, 99.3],
-  [44.8, 99.3],
-  [43.6, 97.7],
+  // na grade
+  [43.4, 99.2],
+  [46.6, 99.2],
+  [50.0, 99.2],
+  [53.6, 99.2],
+  [67.4, 99.2],
+  [70.8, 99.2],
+  // logo atrás
+  [48.4, 97.4],
+  [72.6, 97.6],
+  // espalhados à esquerda do caminho
+  [44.4, 95.4],
+  [51.6, 95.0],
+  [40.2, 97.0],
+  [48.8, 93.0],
+  [53.6, 91.4],
+  [50.2, 88.4],
+  [41.2, 88.6],
+  [54.8, 86.2],
+  // espalhados à direita (antes do corredor das lhamas)
+  [69.0, 95.2],
+  [72.8, 92.6],
+  [67.4, 91.4],
+  [70.6, 89.2],
 ];
 /** As rodinhas da noite sem show: dois lugares cada (vão de um para o outro). */
 const RODAS_UV: readonly [V2, V2][] = [
@@ -68,13 +77,17 @@ const RODAS_UV: readonly [V2, V2][] = [
     [38.6, 96.2],
     [44.6, 96.6],
   ],
+  [
+    [41.5, 84.5],
+    [44.5, 86.5],
+  ],
 ];
 /** O portão do festival (onde quem sai some e quem chega aparece), no mapa. */
 const PORTAO_UV: V2 = [60.5, 74.5];
 
 /** O campo do festival antes da grade (u0, v0, u1, v1, inclusivo): onde o público anda. */
 const CAMPO = { u0: 26, v0: 73, u1: 89, v1: 99 } as const;
-/** Ninguém fica (nem o povo de longe) nestas faixas: o caminho, as lhamas, a escadinha. */
+/** Ninguém fica nestas faixas: o caminho, as lhamas, a escadinha e as barracas. */
 const LIVRES: readonly { u0: number; v0: number; u1: number; v1: number }[] = [
   // o caminho de cascalho do portão até a grade, com uma folga de cada lado
   { u0: 56.4, v0: 72, u1: 65.6, v1: 101 },
@@ -91,17 +104,17 @@ const RODAS_LIVRES: readonly [number, number, number][] = [
 
 export interface PublicoVila {
   plano: PlanoVila;
-  /** Os lugares da grade (pés) de cada morador da turma. */
+  /** Os lugares do show (pés) de cada morador da turma. */
   grade: readonly V3[];
   /** As rodinhas (dois lugares cada) e o portão. */
   rodas: readonly [V3, V3][];
   portao: V3;
   /** O meio do campo (quem está a ~52 blocos daqui traz a turma). */
   meio: V2;
-  /** O povo de longe: [x, z, giro, semente] de cada boneco (só na tela). */
-  fundo: readonly [number, number, number, number][];
   /** A célula (do mundo) é livre para pisar no campo do festival? */
   livre(x: number, z: number): boolean;
+  /** O ponto (do mundo) cai numa faixa que fica sempre livre (o caminho, as lhamas, o estojo)? */
+  naFaixaLivre(x: number, z: number): boolean;
 }
 
 const cache = new WeakMap<PlanoVila, PublicoVila>();
@@ -137,52 +150,21 @@ function montar(p: PlanoVila): PublicoVila {
     return livreCel[(v - CAMPO.v0) * nu + (u - CAMPO.u0)] === 1;
   };
 
-  // o povo de longe: uma grade com sorteio de leve, fora das faixas livres e longe de peças
-  const fundo: [number, number, number, number][] = [];
-  const longeDe = (u: number, v: number) => {
-    for (const r of LIVRES) if (u >= r.u0 && u <= r.u1 && v >= r.v0 && v <= r.v1) return false;
-    for (const [cu, cv, raio] of RODAS_LIVRES) if (Math.hypot(u - cu, v - cv) < raio) return false;
-    // nem em cima das rodinhas e da grade da turma
-    for (const [gu, gv] of GRADE_UV) if (Math.hypot(u - gu, v - gv) < 1.3) return false;
-    for (const [a, b] of RODAS_UV)
-      for (const [cu, cv] of [a, b]) if (Math.hypot(u - cu, v - cv) < RAIO_RODA + 0.75) return false;
-    // a folga do corpo: nada sólido na célula nem colado nela
-    for (const [du, dv] of [
-      [0, 0],
-      [0.45, 0],
-      [-0.45, 0],
-      [0, 0.45],
-      [0, -0.45],
-    ])
-      if (!livre(p.ox + u + du, p.oz + v + dv)) return false;
-    return true;
-  };
-  for (let v = 96.2; v >= 79; v -= 1.6)
-    for (let u = 40.2; u <= 73; u += 1.55) {
-      const k = fundo.length;
-      const j = hash2(Math.round(u * 10), Math.round(v * 10), p.semente + 7310);
-      const ju = u + (j - 0.5) * 0.6 + ((Math.round(v * 10) / 15.5) % 2) * 0.7;
-      const jv = v + (hash2(Math.round(v * 10), Math.round(u * 10), p.semente + 7311) - 0.5) * 0.5;
-      if (!longeDe(ju, jv)) continue;
-      // mais gente perto da grade, mais espaçado perto do portão
-      const fica = 0.95 - ((96.5 - jv) / 18) * 0.8;
-      if (hash2(Math.round(ju * 10), Math.round(jv * 10), p.semente + 7312) > fica) continue;
-      // virados para o palco, com um tiquinho de giro cada um
-      const giro = (hash2(k, 3, p.semente + 7313) - 0.5) * 0.5;
-      fundo.push([p.ox + ju, p.oz + jv, giro, hash2(k, 4, p.semente + 7314)]);
-    }
-  // no máximo MAX_FUNDO (sobram os de perto da grade)
-  fundo.sort((a, b) => b[1] - a[1] || a[0] - b[0]);
-  fundo.length = Math.min(fundo.length, MAX_FUNDO);
-
   return {
     plano: p,
     grade: GRADE_UV.map(([u, v]) => W(u, v)),
     rodas: RODAS_UV.map(([a, b]) => [W(a[0], a[1]), W(b[0], b[1])] as [V3, V3]),
     portao: W(PORTAO_UV[0], PORTAO_UV[1]),
     meio: [p.ox + 57, p.oz + 92],
-    fundo,
     livre,
+    naFaixaLivre: (x, z) => {
+      const u = x - p.ox;
+      const v = z - p.oz;
+      return (
+        LIVRES.some((r) => u >= r.u0 && u <= r.u1 && v >= r.v0 && v <= r.v1) ||
+        RODAS_LIVRES.some(([cu, cv, raio]) => Math.hypot(u - cu, v - cv) < raio)
+      );
+    },
   };
 }
 
@@ -205,8 +187,11 @@ export interface LugarPublico {
   modo: 'grade' | 'roda' | 'fora';
 }
 
-/** Qual rodinha (0 a 3) e qual lugar dela (0 a 2) é o morador k da turma. */
-export const rodaDe = (k: number): [number, number] => [Math.floor(k / 3) % 4, k % 3];
+/** Qual rodinha (0 a 4) e qual lugar dela (0 a 3) é o morador k da turma. */
+export const rodaDe = (k: number): [number, number] => [
+  Math.floor(k / NA_RODA) % RODAS_UV.length,
+  k % NA_RODA,
+];
 
 /** Onde o morador k da turma fica agora. */
 export function lugarDoPublico(pub: PublicoVila, k: number, m: MomentoPublico): LugarPublico {
@@ -221,7 +206,7 @@ export function lugarDoPublico(pub: PublicoVila, k: number, m: MomentoPublico): 
   // a rodinha vai de um lugar para o outro, cada uma na sua vez (de dia, fica parada)
   const vez = dia ? 0 : Math.floor((m.t + r * (VOLTA_RODINHA / 4)) / VOLTA_RODINHA) % 2;
   const c = pub.rodas[r][vez];
-  const a = (s / 3) * Math.PI * 2 + r * 0.7;
+  const a = (s / NA_RODA) * Math.PI * 2 + r * 0.7;
   const alvo: V3 = [c[0] + Math.sin(a) * RAIO_RODA, c[1], c[2] + Math.cos(a) * RAIO_RODA];
   return { alvo, olhar: [c[0], c[2]], modo: 'roda' };
 }

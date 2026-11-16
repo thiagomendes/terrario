@@ -9,10 +9,10 @@ import { criarMundo, escolherNaRoda, tocar, TAMANHOS, type Tamanho } from './gui
  * scripts/e2e-gpu.sh). `VILA_SO=dia,noite,medida,video` escolhe as partes.
  *
  * - de dia: a passagem de som no palco, a lua no cartão da f3, no selinho e em cima do palco;
- * - a noite chega: o palco aquece; o show com a turma da grade e o povo de longe (de longe, da
+ * - a noite chega: o palco aquece; o show com a turma (uns 20, espalhados pelo campo; de longe, da
  *   grade, por trás e da grade virado para o povo);
- * - as medidas (peças, povo, chamadas de desenho) no nascer e na grade no meio do show;
- * - o vídeo (~30 s, deitado) da noite do show com o povo, com o som do jogo.
+ * - as medidas (peças, moradores, chamadas de desenho) no nascer e na grade no meio do show;
+ * - o vídeo (~30 s, deitado) da noite do show com o público, com o som do jogo.
  */
 declare const process: { env: Record<string, string | undefined> };
 test.skip(!process.env.VILA_FOTOS, 'só com VILA_FOTOS');
@@ -196,7 +196,6 @@ async function medir(page: Page, nome: string) {
       desenhos: medidas[2],
       fps: Math.round(eng.getFps()),
       pecas: e.vilaPecas?.()?.triangulos ?? -1,
-      povo: e.plateiaVila?.() ?? null,
       moradores: turma.length,
     };
   });
@@ -353,7 +352,7 @@ test('o show só de noite e o público (fotos e vídeo)', async ({ browser }) =>
     const aq = await page.evaluate(() => window.__brumaluz!.showVila?.()?.aquecimentos ?? 0);
     console.log(`AQUECEU ${aq}`);
     expect(aq).toBeGreaterThanOrEqual(1);
-    await page.waitForTimeout(12_000);
+    await page.waitForTimeout(24_000);
     await esconderJogador(page, true);
     await camera(page, o(60, 9, 76), [pass[0], topo + 2, pass[2] + 6]);
     await page.waitForTimeout(1500);
@@ -365,7 +364,7 @@ test('o show só de noite e o público (fotos e vídeo)', async ({ browser }) =>
     passo('show');
     await acender(page);
     await ir(page, p.ox + 60.5, p.oz + 97.5, H + 0.2);
-    await ate(page, 11);
+    await ate(page, 15);
     // de longe (de cima, atrás do campo)
     await camera(page, o(61, 8.5, 74.5), [pass[0], topo + 1.5, pass[2] + 5]);
     await page.waitForTimeout(800);
@@ -379,7 +378,7 @@ test('o show só de noite e o público (fotos e vídeo)', async ({ browser }) =>
     await page.waitForTimeout(600);
     await foto(page, 'noite-show-grade-palco');
     // da grade, virado para o povo: a festa de frente, até o portão
-    await camera(page, o(62.5, 2.2, 99.0), [p.ox + 51, H + 0.8, p.oz + 87]);
+    await camera(page, o(61.5, 2.3, 99.2), [p.ox + 46, H + 0.9, p.oz + 92]);
     await page.waitForTimeout(600);
     await foto(page, 'noite-show-grade-povo');
     // o povo visto de trás (a criança chegando pelo campo)
@@ -420,7 +419,7 @@ test('o show só de noite e o público (fotos e vídeo)', async ({ browser }) =>
     // atrás da turma da grade (as costas, o palco) e da grade virado para o povo (a festa de
     // frente); nada de câmera atravessando o palco
     const atras = { p: o(51, 3.6, 93.8), a: [pass[0] - 2, topo + 1, pass[2] + 4] as V3 };
-    const povo = { p: o(62.5, 2.2, 99.0), a: [p.ox + 51, H + 0.8, p.oz + 87] as V3 };
+    const povo = { p: o(61.5, 2.3, 99.2), a: [p.ox + 46, H + 0.9, p.oz + 92] as V3 };
     await camera(page, largo.p, largo.a);
     await acender(page);
     await ir(page, p.ox + 60.5, p.oz + 97.6, H + 0.2);
@@ -478,5 +477,11 @@ test('celular: o quadro em pé de dia (a lua) e as medidas no nascer e na grade'
   await page.waitForTimeout(3000);
   await medir(page, 'celular-grade-show');
   await foto(page, 'celular-grade-show', true);
+  // o pior caso: da grade, virado para o público (os 20 à vista)
+  await page.evaluate(() => window.__brumaluz!.apontar!(Math.PI, 0.05));
+  await page.waitForTimeout(2500);
+  const povo = await medir(page, 'celular-grade-povo');
+  await foto(page, 'celular-grade-povo', true);
+  expect(povo.fps).toBeGreaterThanOrEqual(45);
   await page.context().close();
 });

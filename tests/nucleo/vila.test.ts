@@ -452,7 +452,30 @@ describe('spec 026: a Vila Neon no núcleo', () => {
   });
 
   // ------------------------------------------------------------------ o público do show
-  it('a turma da grade: de noite 12, de dia só 4; no show, todos na grade de frente para o palco', () => {
+  it('o público é de uns 20, espalhado pelo campo (nada de bloco) e fora do caminho, do corredor das lhamas e do estojo', () => {
+    for (const sem of [SEMENTE, 1, 77, 1337]) {
+      const p = vilaDoMundo(sem)!;
+      const pub = publicoDaVila(p);
+      expect(pub.grade).toHaveLength(PUBLICO_GRADE);
+      expect(PUBLICO_GRADE).toBeGreaterThanOrEqual(18);
+      expect(PUBLICO_GRADE).toBeLessThanOrEqual(22);
+      for (const [x, , z] of pub.grade) {
+        expect(pub.livre(x, z), `${sem} ${x - p.ox},${z - p.oz}`).toBe(true);
+        expect(pub.naFaixaLivre(x, z), `${sem} ${x - p.ox},${z - p.oz}`).toBe(false);
+      }
+      // ninguém colado em ninguém, e o povo vai da grade até o meio do campo
+      for (let a = 0; a < pub.grade.length; a++)
+        for (let b = a + 1; b < pub.grade.length; b++)
+          expect(Math.hypot(pub.grade[a][0] - pub.grade[b][0], pub.grade[a][2] - pub.grade[b][2])).toBeGreaterThan(1.5);
+      const vs = pub.grade.map((g) => g[2]);
+      expect(Math.max(...vs) - Math.min(...vs)).toBeGreaterThan(10);
+      // as rodinhas também ficam em chão livre, fora das faixas
+      for (const [a, b] of pub.rodas)
+        for (const [x, , z] of [a, b]) expect(pub.naFaixaLivre(x, z)).toBe(false);
+    }
+  });
+
+  it('a turma do show: de noite os 20, de dia só 4; no show, cada um no lugar dele de frente para o palco', () => {
     const n = abrir();
     const p = vilaDoMundo(SEMENTE)!;
     const pub = publicoDaVila(p);

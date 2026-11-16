@@ -47,6 +47,9 @@ export interface OpcoesShowVila {
   leve?: boolean;
 }
 
+/** O neon dos bastões de luz da turma do show (sorteado por pessoa; nunca isqueiro nem fogo). */
+const NEON_BASTAO = ['#4df07a', '#3aa8ff', '#ffe44a', '#2ee8d8', '#ff9a3a'];
+
 export interface ShowVila {
   /**
    * `noiteShow`: a hora é noite de show (`noiteDeShow`). Quando ela chega (e não há show), o
@@ -86,6 +89,10 @@ export interface ShowVila {
    * frente para o palco no show, para o meio da rodinha de papo), ou null (o giro dele).
    */
   giroDoMorador(povoado: string, n: number, onde?: { x: number; z: number }): number | null;
+  /** A cor do bastão de luz na mão de um morador da turma (null: mão vazia). */
+  luzNaMao(povoado: string, n: number): string | null;
+  /** O bastão aparece agora (a noite do show, ou com o show tocando)? */
+  mostrarLuzNaMao(): boolean;
   descartar(): void;
 }
 
@@ -1181,6 +1188,16 @@ export function criarShowVila(scene: Scene, plano: PlanoVila, opcoes: OpcoesShow
       aquecendo: aquecimento(ultimoT) > 0,
       aquecimentos,
     }),
+    luzNaMao(povoado, n) {
+      if (povoado !== 'vila' || n < N0_PUBLICO) return null;
+      const k = n - N0_PUBLICO;
+      // uns oito da turma seguram um bastão de luz, em neon sorteado (nunca na ordem do arco-íris)
+      if (![0, 3, 5, 8, 11, 13, 16, 19].includes(k)) return null;
+      return NEON_BASTAO[(k * 3) % NEON_BASTAO.length];
+    },
+    mostrarLuzNaMao: () =>
+      noiteShowAtual ||
+      (!!vistaAtual?.show && faseDoShow(vistaAtual.show, tempoAtual) !== 'acabou'),
     poseDoMorador(povoado, n, pose, onde) {
       if (povoado !== 'vila') return pose;
       const show = vistaAtual?.show ?? null;

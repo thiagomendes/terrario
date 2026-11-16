@@ -78,6 +78,18 @@ Medidas: peças no nascer, no celular, 39 826 triângulos (37 270 depois da roda
 
 Mistura do show (dono, 15 nov: "a música da banda bem baixinha, até o passarinho mais alto"): o show soa 12 dB acima das caixas soltas (`REFORCO_SHOW_DB`), cheio em toda a plateia, da grade ao portão (`PALCO_CHEIO` 42, some em 72), e a natureza baixa 12 dB enquanto ele toca (`CALAR_NATUREZA_DB`, volta em ~3 s depois do aplauso); o acorde final +2 dB e o aplauso +4 dB. Medido na grade (ebur128, `VILA_SO=grade`): antes, meio do show -35,1 LUFS, igual à trilha e à natureza (-35,4 e -34,3); agora -27,6 LUFS (verso -29,4, refrão -26,1), 6,7 a 7,8 dB acima, e o acorde final -20,3 LUFS no pico. Os "Música" e "Natureza" das Configurações seguem valendo.
 
+## O show só de noite e o público (dono, 15 nov, depois do fechamento)
+| # | Tarefa | Estado |
+|---|---|---|
+| N1 | **Show só de noite no núcleo** (`noiteDeShow` em `src/jogo/show.ts`, `hora` no `CtxVila`): de dia as caixas são brinquedo e não contam a f3; o show que começou termina no dia; `tocou` opcional em `extras.vila` (mundo salvo no meio do show volta com a rodada aberta) | feito |
+| N2 | **De dia:** passagem de som (banda afinando, toques baixinhos de bateria e guitarra, `GANHO_PASSAGEM`); a lua da f3 (`luaShow`) no cartão, no selinho e em cima do palco, sem trilha nem mãozinha; **a noite chega:** o palco aquece (6 s), o acorde macio (`GANHO_AQUECER`) e a trilha acende | feito |
+| N3 | **O público, uns 20** (decisão do dono: todos com a cara dos bonecos do jogo; os 44 bonecos simplificados saíram): 20 moradores de verdade (`publicoVila.ts` + `cuidarDoPublico`), seis na grade, dois logo atrás e doze espalhados pelo campo no show, cinco rodinhas de noite, 4 de dia; chegam pelo portão quando alguém vê o lugar; caminho que dá a volta nas peças; oito com bastão de luz na mão (só de noite) | feito |
+| N4 | ~~O povo de longe em instâncias~~ (44 bonecos simplificados): feito e tirado no mesmo dia (o dono: "cara de remendo"; ou todo mundo tem a cara dos bonecos do jogo, ou não existe). Os sósias de longe (`render/vila/sosias.ts`) são só o palco e a placa do rinque, sem gente | tirado |
+| N5 | **A f2 em pé que falhava:** a lhama ficava para trás (2,2 b/s contra 4,3 da criança) e passava do `RAIO_SEGUIR` (12); agora apressa o passo quando fica para trás (`fatorSeguindo`, até 2,1x) | feito |
+| N6 | Testes: núcleo (dia recusa, noite aceita, noite acaba no meio, mundo salvo, turma, f2 no passo da criança), guia (espera de dia), e2e da f3 com o relógio na noite, `e2e/vila-neon-noite.spec.ts` (fotos, medidas, vídeo) | feito |
+
+Medidas no celular (em pé, placa de vídeo, `VILA_SO=medida`): no nascer, peças 39 826 triângulos e 148 chamadas de desenho de dia, 156 de noite (o povo não aparece ali); na grade no meio do show, peças 44 738 + povo 8 868 triângulos (12 malhas), 268 mil triângulos na cena, 157 chamadas, 60 quadros. No computador, de cima do campo no meio do show: peças 87 214 + povo 8 868, 588 chamadas.
+
 Carros parados: modelos novos só deste mundo (`src/render/vila/carros.ts`): hatch em cunha, carrinho bolha, van pão de forma (a da banda grafite com o raio) e picape.
 
 Colisão (dono, 15 nov: "o personagem atravessando objetos e bichos"):

@@ -146,6 +146,8 @@ export function criarRenderCriaturas(
       animador: ReturnType<typeof criarAnimador>;
       /** Spec 015: balão do gesto (criado no primeiro aceno). */
       balao?: BalaoGesto;
+      /** Spec 026: o bastão de luz na mão (a turma do show). */
+      bastao?: Mesh | null;
       ultX: number;
       ultZ: number;
       vel: number;
@@ -211,6 +213,43 @@ export function criarRenderCriaturas(
    * encaixa os enfeites uma vez só; quem sai da vista e volta não refaz a conta.
    */
   const planosFeitos = new Map<string, PlanoBoneco>();
+  /** Spec 026: a cor do bastão de luz na mão do morador (null: mão vazia). */
+  let luzNaMaoDeMorador: ((povoado: string, n: number) => string | null) | null = null;
+  /** Spec 026: o bastão aparece agora (a noite do show)? */
+  let mostrarLuzNaMao: () => boolean = () => false;
+  const matsBastao = new Map<string, StandardMaterial>();
+  /**
+   * O bastão de luz (spec 026): um tubinho de neon preso no ponto de pega da mão direita, ao
+   * longo do braço (com o braço para o alto, ele aponta para o céu). Luz própria, no brilho.
+   */
+  function montarBastao(boneco: Personagem, cor: string, id: number): Mesh | null {
+    const pega = boneco.raiz
+      .getChildTransformNodes(false)
+      .find((n) => n.name.endsWith('-pega'));
+    if (!pega) return null;
+    let mat = matsBastao.get(cor);
+    if (!mat) {
+      mat = new StandardMaterial(`morador-bastao-${cor}`, scene);
+      mat.disableLighting = true;
+      mat.diffuseColor = Color3.Black();
+      mat.specularColor = Color3.Black();
+      mat.emissiveColor = Color3.FromHexString(cor);
+      matsBastao.set(cor, mat);
+    }
+    const m = MeshBuilder.CreateCylinder(
+      `morador-${id}-bastao`,
+      { height: 0.42, diameter: 0.075, tessellation: 10 },
+      scene,
+    );
+    m.material = mat;
+    m.parent = pega;
+    m.position.set(0, -0.15, 0.05);
+    m.rotation.x = 0.35;
+    m.isPickable = false;
+    incluirNoGlow(m);
+    m.setEnabled(false);
+    return m;
+  }
   function prepararMorador(c: Criatura) {
     const prof = c.morador?.profissao ?? 'construtor';
     // spec 026: o morador de posto com roupa própria (o vocalista, a dançarina, o patinador)
@@ -253,8 +292,12 @@ export function criarRenderCriaturas(
       else excluirDoGlow(malha as Mesh);
       malha.isPickable = false;
     }
+    // spec 026: o bastão de luz na mão de quem da turma do show tem um (só aparece no show)
+    const corLuz = c.morador && luzNaMaoDeMorador?.(c.morador.povoado, c.morador.n);
+    const bastao = corLuz ? montarBastao(boneco, corLuz, c.id) : null;
     return {
       boneco,
+      bastao,
       animador: criarAnimador(),
       ultX: c.x,
       ultZ: c.z,
@@ -534,6 +577,14 @@ export function criarRenderCriaturas(
     /**
      * Spec 026: uma pose por cima da do morador (a banda no Show da Vila); null tira.
      */
+    /**
+     * Spec 026: quem da turma do show segura um bastão de luz (a cor, ou null) e quando ele
+     * aparece (a noite do show).
+     */
+    definirLuzNaMao(cor: (povoado: string, n: number) => string | null, mostrar: () => boolean): void {
+      luzNaMaoDeMorador = cor;
+      mostrarLuzNaMao = mostrar;
+    },
     definirPoseDeMorador(
       f: ((povoado: string, n: number, pose: Pose, onde: { x: number; z: number }) => Pose) | null,
       giro: ((povoado: string, n: number, onde: { x: number; z: number }) => number | null) | null = null,
@@ -606,6 +657,10 @@ export function criarRenderCriaturas(
           const giro =
             giroDeMorador && c.morador ? giroDeMorador(c.morador.povoado, c.morador.n, c) : null;
           mb.boneco.posicionar(c.x, c.y, c.z, giro ?? c.yaw);
+          if (mb.bastao) {
+            const ver = mostrarLuzNaMao();
+            if (mb.bastao.isEnabled(false) !== ver) mb.bastao.setEnabled(ver);
+          }
           mb.balao?.atualizar(dt);
           const l = luz(c);
           if (Math.abs(l - mb.luz) > 0.002) {
