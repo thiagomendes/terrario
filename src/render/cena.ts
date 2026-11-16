@@ -4384,6 +4384,7 @@ export function criarCena(
     scene,
     (m) => glow.addExcludedMesh(m),
     () => undefined,
+    tapaOGlow,
   );
   // spec 026: no Show da Vila a banda bate cabeça no tempo e pula no acorde final
   if (showVila)

@@ -1,6 +1,8 @@
 import '@babylonjs/core/Rendering/outlineRenderer';
 import { Color3 } from '@babylonjs/core/Maths/math.color';
 import { StandardMaterial } from '@babylonjs/core/Materials/standardMaterial';
+import { FresnelParameters } from '@babylonjs/core/Materials/fresnelParameters';
+import { Constants } from '@babylonjs/core/Engines/constants';
 import { MeshBuilder } from '@babylonjs/core/Meshes/meshBuilder';
 import { TransformNode } from '@babylonjs/core/Meshes/transformNode';
 import { Mesh } from '@babylonjs/core/Meshes/mesh';
@@ -134,6 +136,11 @@ export function criarRenderCriaturas(
   scene: Scene,
   excluirDoGlow: (m: Mesh) => void,
   incluirNoGlow: (m: Mesh) => void,
+  /**
+   * Spec 026: a malha não brilha, mas tapa o brilho do que fica atrás dela (o corpo de quem
+   * segura uma peça de neon de verdade: a tecladista e o vocalista na frente dela).
+   */
+  taparOGlow: (m: Mesh) => void = excluirDoGlow,
 ) {
   const modelos = new Map<number, Modelo>();
   /**
@@ -225,21 +232,45 @@ export function criarRenderCriaturas(
   let luzNaMaoDeMorador: ((povoado: string, n: number) => string | null) | null = null;
   /** Spec 026: o bastão aparece agora (a noite do show)? */
   let mostrarLuzNaMao: () => boolean = () => false;
-  const matsBastao = new Map<string, StandardMaterial>();
+  const matsBastao = new Map<string, { tubo: StandardMaterial; halo: StandardMaterial }>();
   /**
    * O bastão de luz (spec 026): um tubinho de neon preso no ponto de pega da mão direita, ao
-   * longo do braço (com o braço para o alto, ele aponta para o céu). Luz própria, no brilho.
+   * longo do braço (com o braço para o alto, ele aponta para o céu).
+   *
+   * A luz dele é uma casquinha em volta do tubo (somada à cena, forte no meio e sumindo na
+   * beira), e não o brilho da cena (dono, 16 nov 2026: "o bastão aparece através do corpo"): os
+   * bonecos ficam fora do mapa do brilho, então nada ali tapava o bastão, e a luz dele era
+   * somada por cima de quem estava na frente. A casquinha é desenhada na cena, com a
+   * profundidade de sempre: o corpo (o dele e o dos outros) tapa o bastão e a luz dele.
    */
   function montarBastao(boneco: Personagem, cor: string, id: number): Mesh | null {
     const pega = boneco.raiz.getChildTransformNodes(false).find((n) => n.name.endsWith('-pega'));
     if (!pega) return null;
     let mat = matsBastao.get(cor);
     if (!mat) {
-      mat = new StandardMaterial(`morador-bastao-${cor}`, scene);
-      mat.disableLighting = true;
-      mat.diffuseColor = Color3.Black();
-      mat.specularColor = Color3.Black();
-      mat.emissiveColor = Color3.FromHexString(cor);
+      const neon = Color3.FromHexString(cor);
+      // o tubo: a cor puxada para o branco (o miolo quente de uma lâmpada de neon)
+      const tubo = new StandardMaterial(`morador-bastao-${cor}`, scene);
+      tubo.disableLighting = true;
+      tubo.diffuseColor = Color3.Black();
+      tubo.specularColor = Color3.Black();
+      tubo.emissiveColor = Color3.Lerp(neon, Color3.White(), 0.45);
+      // a casquinha de luz: a cor do neon, cheia de frente e nada na beira
+      const halo = new StandardMaterial(`morador-bastao-halo-${cor}`, scene);
+      halo.disableLighting = true;
+      halo.diffuseColor = Color3.Black();
+      halo.specularColor = Color3.Black();
+      halo.emissiveColor = neon;
+      halo.alpha = 0.02;
+      halo.alphaMode = Constants.ALPHA_ADD;
+      halo.disableDepthWrite = true;
+      const beira = new FresnelParameters();
+      beira.leftColor = Color3.Black();
+      beira.rightColor = new Color3(0.5, 0.5, 0.5);
+      beira.bias = 0;
+      beira.power = 3;
+      halo.opacityFresnelParameters = beira;
+      mat = { tubo, halo };
       matsBastao.set(cor, mat);
     }
     const m = MeshBuilder.CreateCylinder(
@@ -247,12 +278,21 @@ export function criarRenderCriaturas(
       { height: 0.42, diameter: 0.075, tessellation: 10 },
       scene,
     );
-    m.material = mat;
+    m.material = mat.tubo;
     m.parent = pega;
     m.position.set(0, -0.15, 0.05);
     m.rotation.x = 0.35;
     m.isPickable = false;
-    incluirNoGlow(m);
+    excluirDoGlow(m);
+    const halo = MeshBuilder.CreateCapsule(
+      `morador-${id}-bastao-halo`,
+      { height: 0.56, radius: 0.09, tessellation: 12, capSubdivisions: 4 },
+      scene,
+    );
+    halo.material = mat.halo;
+    halo.parent = m;
+    halo.isPickable = false;
+    excluirDoGlow(halo);
     m.setEnabled(false);
     return m;
   }
@@ -400,7 +440,8 @@ export function criarRenderCriaturas(
       m.isPickable = false;
       m.setEnabled(false);
     }
-    excluirDoGlow(corpo);
+    // (o corpo do teclado tapa o friso de neon de quem olha por trás)
+    taparOGlow(corpo);
     incluirNoGlow(neon);
     return [corpo, neon];
   }
@@ -439,16 +480,20 @@ export function criarRenderCriaturas(
     // passa, em `naVistaDoQuadro`) nem refazem a caixa a cada quadro
     // spec 026: com esqueleto (o público de 40 no show cabe no celular)
     const boneco = criarBoneco(scene, m.aparencia, `morador-${c.id}`, ajustar, true, true, true);
+    // spec 026: o bastão de luz na mão de quem da turma do show tem um (só aparece no show)
+    const corLuz = c.morador && luzNaMaoDeMorador?.(c.morador.povoado, c.morador.n);
+    // a tecladista (o friso de neon do teclado de pendurar brilha de verdade) e o vocalista, que
+    // canta na frente dela: o corpo dos dois tapa esse brilho (visto por trás e pela frente)
+    const tapa = corLuz === 'microfone' || !!corLuz?.startsWith('keytar');
     for (const malha of boneco.raiz.getChildMeshes()) {
       const mat = malha.material as StandardMaterial | null;
       // só a lanterna e o que o tema marcou como brilhante entram no brilho
       if (mat && mat.emissiveColor.r + mat.emissiveColor.g + mat.emissiveColor.b > 1.6)
         incluirNoGlow(malha as Mesh);
+      else if (tapa) taparOGlow(malha as Mesh);
       else excluirDoGlow(malha as Mesh);
       malha.isPickable = false;
     }
-    // spec 026: o bastão de luz na mão de quem da turma do show tem um (só aparece no show)
-    const corLuz = c.morador && luzNaMaoDeMorador?.(c.morador.povoado, c.morador.n);
     // ('microfone': o vocalista do show segura o microfone, sempre)
     const microfone = corLuz === 'microfone';
     // ('keytar…': a tecladista tem o teclado de pendurar, que aparece só quando ela toca nele)
