@@ -34,8 +34,12 @@ import type { ObraSalva } from '../nucleo/saneamento';
  * comando `vila` ganhou `sentar`, `sair`, `tum` e `roda`; o quadro `vila` ganhou o `parque` (quem
  * está sentado em qual cadeira e o empurrão da roda-gigante); os eventos `parqueSentou`,
  * `parqueDesceu`, `parqueTum` e `parqueRoda`; três moradores novos e as lhamas da fazendinha).
+ * 12: spec 026, o bate-bate de guiar (a pista maior muda a geração do lote do parque; o comando
+ * `vila` perdeu o `tum` e ganhou o `guiar`; o quadro ganhou o `bate`, os carrinhos que o núcleo
+ * simula; o evento `parqueTum` agora é a batida de verdade, com o lugar e a força; quatro
+ * moradores novos guiam carrinhos).
  */
-export const VERSAO_REDE = 11;
+export const VERSAO_REDE = 12;
 /** Jogadores por mundo. */
 export const MAX_JOGADORES = 8;
 

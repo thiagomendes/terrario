@@ -2731,9 +2731,11 @@ export function criarNucleo(op: OpcoesNucleo) {
       }
       case 'vila': {
         // spec 026: a caixa do palco (brinquedo fora do show; o módulo confere o lugar e o limite)
-        // e, no parque (parte 2), sentar no brinquedo, sair, o "tum" e o empurrão da roda
+        // e, no parque (parte 2), sentar no brinquedo, sair, o empurrão da roda e o controle do
+        // carrinho do bate-bate
         if (c.a === 'caixa') vila?.comando(j.id, { a: 'caixa', i: c.i });
         else if (c.a === 'sentar') vila?.comando(j.id, { a: 'sentar', b: c.b });
+        else if (c.a === 'guiar') vila?.comando(j.id, { a: 'guiar', x: c.x, z: c.z, n: c.n });
         else vila?.comando(j.id, { a: c.a });
         break;
       }
@@ -2983,6 +2985,9 @@ export function criarNucleo(op: OpcoesNucleo) {
       // (com os arcos do rinque que este jogador já acendeu: a f4 é de cada um)
       if (vila && vistaVila && (vilaSuja || !j.iniciado || n % 20 === 0))
         q.vila = vila.vistaDe(j.id, vistaVila);
+      // spec 026 (parte 2): os carrinhos do bate-bate, só para quem está perto da pista
+      const carrinhos = vila?.bateDe(j.id, n);
+      if (carrinhos) q.bate = carrinhos;
       // spec 014 (T13): o relógio dos veículos sempre; os planos inteiros para quem chega
       if (todosPlanos)
         q.veiculos = !j.iniciado

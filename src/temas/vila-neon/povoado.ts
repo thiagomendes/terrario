@@ -136,6 +136,35 @@ function roupaDoFa(id: string, cor: number, parte: 'manga' | 'calca'): string {
   const c = parte === 'manga' ? (r?.manga ?? r?.camisa) : r?.calca;
   return c ? corDaPeca({ id, cor }, c) : parte === 'manga' ? '#3a3944' : '#2a3350';
 }
+/**
+ * Quem guia os carrinhos do bate-bate (spec 026, parte 2: a criança sozinha sempre tem com quem
+ * bater): quatro da turma do bairro, de roupa clara e viva, cada um de um jeito (vila:66 a 69).
+ */
+const PILOTOS: typeof FAS = [
+  ['Rafa', 'm', '#c99064', '#1e1a22', 'plateia-bone', 0, 0],
+  ['Mel', 'f', '#f4d2b4', '#a8401a', 'plateia-moletom', 0, 3],
+  ['Dudu', 'm', '#6e4a2e', '#1e1a22', 'plateia-viseira', 2, 5],
+  ['Bia', 'f', '#e0a882', '#3a2418', 'plateia-moletom', 3, 6],
+];
+const turma = (
+  lista: typeof FAS,
+  n0: number,
+  titulo: string,
+): NonNullable<PovoadoTema['porMorador']> =>
+  Object.fromEntries(
+    lista.map(([nome, genero, pele, cabelo, id, cor, corte], k) => [
+      `vila:${n0 + k}`,
+      {
+        nome,
+        genero,
+        titulo,
+        pecas: corpoDe(pele, cabelo, roupaDoFa(id, cor, 'manga'), roupaDoFa(id, cor, 'calca')),
+        fantasia: { id, cor },
+        cabelo: corte,
+        semTrocas: true as const,
+      },
+    ]),
+  );
 const TURMA: NonNullable<PovoadoTema['porMorador']> = Object.fromEntries(
   FAS.map(([nome, genero, pele, cabelo, id, cor, corte], k) => [
     `vila:${8 + k}`,
@@ -233,6 +262,8 @@ export const POVOADO_VILA: PovoadoTema = {
     'vila:7': { nome: 'Beto', genero: 'm', titulo: 'Moço da banca', pecas: MORADORES.construtor },
     // spec 026 (o público do show): a turma (vila:8 a vila:47), cada um de um jeito
     ...TURMA,
+    // spec 026 (parte 2): quem guia os carrinhos do bate-bate (vila:66 a vila:69)
+    ...turma(PILOTOS, 66, 'Piloto do bate-bate'),
     // spec 026 (o show de verdade): o baterista, a baixista e a tecladista, que entram com a banda
     'vila:60': {
       nome: 'Gui',

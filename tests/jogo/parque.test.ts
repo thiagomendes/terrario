@@ -6,14 +6,13 @@ import {
   EMPURRAO_RODA,
   PENDURA_RODA,
   SEM_IMPULSO,
-  VEL_BATE,
   VOLTA_CARROSSEL,
   VOLTA_RODA,
   alcancaOBrinquedo,
   anguloDaCadeirinha,
   anguloDaRoda,
   cadeirinhaDeBaixo,
-  carrinhoDaFrente,
+  carrinhoLivrePerto,
   distanciaDoBrinquedo,
   empurrarRoda,
   escolherCadeira,
@@ -22,8 +21,9 @@ import {
   lugarDaCadeira,
   progressoDoPasseio,
   saidaDaCadeira,
+  noTapete,
+  saidaDoBate,
   sentadoNaVista,
-  voltaDoBate,
   type ParqueVila,
 } from '../../src/jogo/parque';
 
@@ -31,7 +31,27 @@ import {
 const P: ParqueVila = {
   roda: { x: 100, y: 80, z: 50, raio: 7.5, eixo: 'x', saida: [100, 70, 55] },
   carrossel: { x: 60, y: 72, z: 60, raio: 3.7, beira: 6.1 },
-  bate: { x: 30, y: 70.4, z: 20, meia: 3.2, raio: 2.9, saida: [29, 70, 27] },
+  bate: {
+    x: 30,
+    y: 70.4,
+    z: 20,
+    x0: 18,
+    z0: 13.5,
+    x1: 42,
+    z1: 26.5,
+    vagas: [
+      [22, 16, 0],
+      [30, 18, 0],
+      [36, 16, 0],
+      [38, 22, 0],
+      [20, 25.4, Math.PI],
+      [22.4, 25.4, Math.PI],
+      [33, 25.4, Math.PI],
+      [35.4, 25.4, Math.PI],
+    ],
+    tapete: { x0: 26, z0: 24.5, x1: 30, z1: 26.5 },
+    saida: [29, 70, 28.5],
+  },
 };
 const DUAS_PI = Math.PI * 2;
 
@@ -111,27 +131,19 @@ describe('o parque: o carrossel e o bate-bate', () => {
     expect(Math.hypot(a.x - b.x, a.z - b.z)).toBeLessThan(1e-6);
   });
 
-  it('os carrinhos andam devagar em volta da pista, sem pulo, cada um atrás do outro', () => {
-    const volta = voltaDoBate(P.bate);
-    for (let i = 0; i < CADEIRAS.bate; i++) {
-      let antes = lugarDaCadeira(P, 'bate', i, 0);
-      for (let t = 0.05; t < volta / VEL_BATE + 1; t += 0.05) {
-        const l = lugarDaCadeira(P, 'bate', i, t);
-        const d = Math.hypot(l.x - antes.x, l.z - antes.z);
-        expect(d).toBeLessThan(VEL_BATE * 0.05 + 1e-6);
-        expect(d).toBeGreaterThan(VEL_BATE * 0.05 * 0.6);
-        // dentro da pista
-        expect(Math.abs(l.x - P.bate.x)).toBeLessThanOrEqual(P.bate.meia + P.bate.raio + 1e-6);
-        expect(Math.abs(l.z - P.bate.z)).toBeLessThanOrEqual(P.bate.raio + 1e-6);
-        antes = l;
-      }
-      // o da frente está mesmo na frente (um sexto de volta adiante)
-      const eu = lugarDaCadeira(P, 'bate', i, 3);
-      const frente = lugarDaCadeira(P, 'bate', carrinhoDaFrente(i), 3);
-      const depois = lugarDaCadeira(P, 'bate', i, 3 + volta / CADEIRAS.bate / VEL_BATE);
-      expect(Math.hypot(frente.x - depois.x, frente.z - depois.z)).toBeLessThan(1e-6);
-      expect(Math.hypot(frente.x - eu.x, frente.z - eu.z)).toBeGreaterThan(2.2);
-    }
+  it('no bate-bate o lugar da cadeira é o do carrinho de agora (sem os carrinhos, a vaga dele)', () => {
+    expect(CADEIRAS.bate).toBe(8);
+    // o relógio não mexe o carrinho: quem guia é a criança (ou o morador), no núcleo
+    expect(lugarDaCadeira(P, 'bate', 5, 0)).toEqual(lugarDaCadeira(P, 'bate', 5, 99));
+    expect(lugarDaCadeira(P, 'bate', 5, 0)).toEqual({ x: 22.4, y: 70.4, z: 25.4, yaw: Math.PI });
+    const carros = P.bate.vagas.map(([x, z, yaw]) => ({ x, z, yaw }));
+    carros[5] = { x: 31, z: 19, yaw: 0.5 };
+    expect(lugarDaCadeira(P, 'bate', 5, 0, SEM_IMPULSO, carros)).toEqual({
+      x: 31,
+      y: 70.4,
+      z: 19,
+      yaw: 0.5,
+    });
   });
 });
 
@@ -142,8 +154,35 @@ describe('o parque: sentar e descer', () => {
     expect(alcancaOBrinquedo(P, 'carrossel', 60 + 6.1 + ALCANCE_SENTAR + 0.5, 60)).toBe(false);
     expect(alcancaOBrinquedo(P, 'roda', 100, 55)).toBe(true);
     expect(alcancaOBrinquedo(P, 'roda', 100, 70)).toBe(false);
-    expect(alcancaOBrinquedo(P, 'bate', 30, 27)).toBe(true);
+    expect(alcancaOBrinquedo(P, 'bate', 30, 28)).toBe(true);
     expect(alcancaOBrinquedo(P, 'bate', 30, 40)).toBe(false);
+    expect(distanciaDoBrinquedo(P, 'bate', 30, 20)).toBe(0);
+    expect(distanciaDoBrinquedo(P, 'bate', 45, 20)).toBe(2);
+  });
+
+  it('no bate-bate a criança pega o carrinho livre das crianças mais perto dela, se o alcança', () => {
+    const livre = () => false;
+    // na ponta do caminho (o sul): o da beira mais perto; nunca um dos moradores (0 a 3)
+    expect(carrinhoLivrePerto(P.bate, 24, 28, livre)).toBe(5);
+    expect(carrinhoLivrePerto(P.bate, 24, 28, (i) => i === 5)).toBe(4);
+    expect(carrinhoLivrePerto(P.bate, 30, 19, livre)).toBeGreaterThanOrEqual(4);
+    // do outro lado da pista, longe dos carrinhos da beira: nenhum
+    expect(carrinhoLivrePerto(P.bate, 30, 12, livre)).toBe(-1);
+    // o carrinho livre andou até perto dela: agora alcança
+    const carros = P.bate.vagas.map(([x, z, yaw]) => ({ x, z, yaw }));
+    carros[7] = { x: 30, z: 15, yaw: 0 };
+    expect(carrinhoLivrePerto(P.bate, 30, 12, livre, carros)).toBe(7);
+    expect(escolherCadeira(P, 'bate', 30, 12, 0, livre, SEM_IMPULSO, carros)).toBe(7);
+  });
+
+  it('do bate-bate desce-se do lado de fora da mureta: no tapete, o caminho; no resto, a calçadinha mais perto', () => {
+    expect(noTapete(P.bate, 28, 25.5)).toBe(true);
+    expect(noTapete(P.bate, 31, 25.5)).toBe(false);
+    expect(saidaDoBate(P.bate, 28, 25.5, 70)).toEqual([29, 70, 28.5]);
+    expect(saidaDoBate(P.bate, 36, 25, 70)).toEqual([36, 70, 28]);
+    expect(saidaDoBate(P.bate, 36, 15, 70)).toEqual([36, 70, 12]);
+    expect(saidaDoBate(P.bate, 19.5, 20, 70)).toEqual([16.5, 70, 20]);
+    expect(saidaDoBate(P.bate, 40.5, 20, 70)).toEqual([43.5, 70, 20]);
   });
 
   it('a cadeira livre: a mais perto no carrossel e no bate-bate; na roda, a de baixo ou a vizinha', () => {
@@ -167,7 +206,8 @@ describe('o parque: sentar e descer', () => {
 
   it('desce no chão, do lado de fora: nunca dentro do brinquedo', () => {
     expect(saidaDaCadeira(P, 'roda', 3, 9, 70)).toEqual([100, 70, 55]);
-    expect(saidaDaCadeira(P, 'bate', 2, 9, 70)).toEqual([29, 70, 27]);
+    // (o carrinho 5 na vaga dele, na beira do sul: a calçadinha logo ali)
+    expect(saidaDaCadeira(P, 'bate', 5, 9, 70)).toEqual([22.4, 70, 28]);
     for (let i = 0; i < CADEIRAS.carrossel; i++) {
       const [x, y, z] = saidaDaCadeira(P, 'carrossel', i, 4.2, 70);
       expect(y).toBe(70);

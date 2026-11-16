@@ -7,18 +7,26 @@
  *   cadeira está (a conta é a do relógio do mundo, a mesma dos amigos);
  * - **a pose:** sentado, as mãos na barra (cadeirinha), no mastro (cavalinho) ou no volante;
  * - **descer:** um pulinho da cadeira até o chão do lado de fora (o lugar que o núcleo deu);
- * - **sair andando:** no carrossel e no bate-bate, empurrar o controle para andar por meio
- *   segundo também desce (além do "Sair" da roda do menu); na roda-gigante ela desce sozinha;
+ * - **sair andando:** no carrossel, empurrar o controle para andar por meio segundo também desce
+ *   (além do "Sair" da roda do menu); na roda-gigante ela desce sozinha;
+ * - **o bate-bate é de guiar** (dono, 16 nov 2026): o controle é do carrinho, então empurrá-lo
+ *   nunca desce. A regra de descer é uma só e clara: **parar o carrinho no tapete verde da saída**
+ *   (o controle solto por um segundo em cima dele), ou o "Sair do brinquedo" da roda do menu, que
+ *   vale em qualquer lugar da pista. O lugar do boneco é o do carrinho que a tela prevê;
  * - **a câmera** continua da criança (arrastar gira como sempre). Na roda-gigante, ao sentar, ela
- *   se afasta e vira devagar para o bairro (a vista lá de cima); se a criança mexer, é dela.
+ *   se afasta e vira devagar para o bairro (a vista lá de cima); no bate-bate ela vai atrás do
+ *   carrinho, devagar. Se a criança mexer, é dela (no bate-bate, volta a seguir depois de uns
+ *   segundos sem mexer).
  */
 import {
   lugarDaCadeira,
+  noTapete,
   saidaDaCadeira,
   sentadoNaVista,
   impulsoDaVista,
   progressoDoPasseio,
   type Brinquedo,
+  type CarrinhosAgora,
   type Lugar,
   type ParqueVila,
   type ParqueVista,
@@ -30,8 +38,17 @@ import type { Pose } from '../../personagem/poses';
 /** O pulinho de sentar e o de descer (s). */
 export const DURA_SENTAR = 0.45;
 export const DURA_DESCER = 0.5;
-/** Empurrar o controle por este tempo desce do carrossel e do bate-bate (s). */
+/** Empurrar o controle por este tempo desce do carrossel (s). */
 export const SEGURAR_PARA_SAIR = 0.5;
+/** No bate-bate: o carrinho parado no tapete da saída por este tempo desce (s). */
+export const PARAR_NO_TAPETE = 1;
+/** No bate-bate: a câmera se afasta até aqui, olha um pouco de cima e segue o carrinho. */
+export const ZOOM_NO_BATE = 5.6;
+export const PITCH_NO_BATE = 0.42;
+/** Quanto da diferença para o rumo do carrinho a câmera tira por segundo. */
+export const SEGUE_NO_BATE = 1.25;
+/** Depois de a criança mexer na câmera, ela só volta a seguir o carrinho passado este tempo (s). */
+export const ESPERA_SEGUIR = 2.5;
 /** Na roda-gigante: a câmera se afasta até aqui e leva este tempo para virar (s). */
 export const ZOOM_NA_RODA = 5;
 export const VIRA_NA_RODA = 1.6;
@@ -81,6 +98,8 @@ export interface DepsPasseio {
   jogador: { x: number; y: number; z: number };
   /** O controle de andar está empurrado agora? */
   andando(): boolean;
+  /** Os carrinhos do bate-bate na tela agora (a previsão da criança; sem eles, nas vagas). */
+  carros?(): CarrinhosAgora;
   sair(): void;
   camera: {
     yaw(): number;
@@ -118,6 +137,10 @@ export function criarPasseio(d: DepsPasseio) {
   let viraDesde: { em: number; yaw: number; pitch: number } | null = null;
   let agora = 0;
   let largou = false;
+  /** No bate-bate: há quanto tempo o carrinho está parado no tapete, e se ela já guiou. */
+  let noTapeteHa = 0;
+  let guiou = false;
+  let lugarAntes: Lugar | null = null;
 
   const lugarDaVez = (): Lugar | null => {
     if (atual) {
@@ -127,6 +150,7 @@ export function criarPasseio(d: DepsPasseio) {
         atual.i,
         d.tempoNucleo(),
         impulsoDaVista(d.vista()),
+        d.carros?.(),
       );
       const k = suave((agora - sentouEm) / DURA_SENTAR);
       if (k >= 1) return l;
@@ -171,16 +195,20 @@ export function criarPasseio(d: DepsPasseio) {
         sentouEm = t;
         empurrando = 0;
         soltouDepoisDeSentar = !d.andando();
-        if (s.b === 'roda') {
+        if (s.b === 'roda' || s.b === 'bate') {
           zoomAntes = d.camera.zoom();
-          d.camera.definirZoom(Math.max(zoomAntes, ZOOM_NA_RODA));
+          d.camera.definirZoom(Math.max(zoomAntes, s.b === 'roda' ? ZOOM_NA_RODA : ZOOM_NO_BATE));
           viraDesde = { em: t, yaw: d.camera.yaw(), pitch: d.camera.pitch() };
         }
+        noTapeteHa = 0;
+        guiou = false;
         d.aoSentar?.(s);
       } else if (!s && atual) {
         // desceu: o pulinho até o chão do lado de fora (o lugar do núcleo; sem ele, a mesma conta)
         const fim = atual;
-        const ate = saidaDada ?? saidaDaCadeira(d.parque, fim.b, fim.i, d.tempoNucleo(), d.chao);
+        const ate =
+          saidaDada ??
+          saidaDaCadeira(d.parque, fim.b, fim.i, d.tempoNucleo(), d.chao, d.carros?.());
         descendo = {
           de: ultimo ?? { x: d.jogador.x, y: d.jogador.y, z: d.jogador.z, yaw: 0 },
           ate,
@@ -200,8 +228,41 @@ export function criarPasseio(d: DepsPasseio) {
         d.jogador.z = descendo.ate[2];
         descendo = null;
       }
-      // sair andando (carrossel e bate-bate): o controle solto depois de sentar e empurrado de novo
-      if (atual && atual.b !== 'roda' && t - sentouEm > DURA_SENTAR) {
+      // o bate-bate é de guiar: o controle nunca desce. Desce quem para o carrinho no tapete da
+      // saída (o controle solto por um segundo em cima dele), depois de ter guiado
+      if (atual?.b === 'bate' && t - sentouEm > DURA_SENTAR) {
+        const anda = d.andando();
+        if (anda) guiou = true;
+        const l = ultimo;
+        const antes = lugarAntes;
+        const vel = l && antes && dt > 0 ? Math.hypot(l.x - antes.x, l.z - antes.z) / dt : 0;
+        const parado = !anda && vel < 0.4 && !!l && noTapete(d.parque.bate, l.x, l.z);
+        noTapeteHa = parado && guiou ? noTapeteHa + dt : 0;
+        if (noTapeteHa >= PARAR_NO_TAPETE) {
+          noTapeteHa = -1e9;
+          d.sair();
+        }
+        // a câmera vai atrás do carrinho, devagar; se a criança mexeu nela, espera um pouco
+        const carro = lugarDaVez();
+        if (carro) {
+          // (logo ao sentar ela chega mais depressa atrás do carrinho e olha um pouco de cima)
+          if (viraDesde && (t - viraDesde.em > VIRA_NA_RODA || d.camera.mexeuEm() > viraDesde.em))
+            viraDesde = null;
+          if (t - d.camera.mexeuEm() > ESPERA_SEGUIR) {
+            const yaw = d.camera.yaw();
+            const pitch = d.camera.pitch();
+            const k = Math.min(1, dt * SEGUE_NO_BATE * (viraDesde ? 2.4 : 1));
+            d.camera.apontar(
+              yaw + dif(carro.yaw, yaw) * k,
+              // (o olhar um pouco de cima só ao sentar: depois a altura é da criança)
+              viraDesde ? pitch + (PITCH_NO_BATE - pitch) * Math.min(1, dt * 3) : pitch,
+            );
+          }
+        }
+      }
+      lugarAntes = ultimo;
+      // sair andando (carrossel): o controle solto depois de sentar e empurrado de novo
+      if (atual?.b === 'carrossel' && t - sentouEm > DURA_SENTAR) {
         const anda = d.andando();
         if (!anda) {
           soltouDepoisDeSentar = true;
@@ -279,8 +340,9 @@ export function lugarDoAmigo(
   vista: ParqueVista | null | undefined,
   id: string,
   tNucleo: number,
+  carros?: CarrinhosAgora,
 ): (Lugar & { b: Brinquedo }) | null {
   const s = sentadoNaVista(vista, id);
   if (!s) return null;
-  return { ...lugarDaCadeira(parque, s.b, s.i, tNucleo, impulsoDaVista(vista)), b: s.b };
+  return { ...lugarDaCadeira(parque, s.b, s.i, tNucleo, impulsoDaVista(vista), carros), b: s.b };
 }

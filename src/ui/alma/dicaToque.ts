@@ -33,6 +33,8 @@ export interface Dica {
   /** O desenho (SVG) e as palavras. */
   figura: string;
   texto: string;
+  /** Só o balãozinho, sem a mãozinha que toca (a dica não é de tocar: guiar, parar no tapete). */
+  semMao?: boolean;
 }
 
 export interface DicaToque {
@@ -80,7 +82,7 @@ export function criarDicaToque(): DicaToque {
       for (const el of [mao, onda]) {
         el.style.setProperty('--x', `${d.t.x.toFixed(1)}px`);
         el.style.setProperty('--y', `${d.t.y.toFixed(1)}px`);
-        el.classList.add('mostra');
+        el.classList.toggle('mostra', !d.semMao);
       }
       // o balãozinho fica em cima da coisa (a mãozinha vem por baixo)
       balao.style.setProperty('--x', `${d.t.x.toFixed(1)}px`);

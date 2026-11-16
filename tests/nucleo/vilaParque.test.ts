@@ -10,12 +10,18 @@ import {
   CADEIRAS,
   VOLTA_RODA,
   anguloDaRoda,
-  carrinhoDaFrente,
   impulsoDaVista,
   lugarDaCadeira,
   sentadoNaVista,
   type ParqueVista,
 } from '../../src/jogo/parque';
+import {
+  N0_PILOTOS,
+  N_CARRINHOS,
+  N_MORADORES_BATE,
+  RAIO_CARRINHO,
+  carrosDaVista,
+} from '../../src/jogo/bate';
 import {
   MOCO_DO_BATE,
   MORADORES_PARQUE,
@@ -82,14 +88,20 @@ function passos(n: Nucleo, k = 1, quem = 'ana'): Ev[] {
     const t = n.estado.vila!.vista().t;
     for (const id of Object.keys(v.s)) {
       const s = sentadoNaVista(v, id)!;
-      const l = lugarDaCadeira(pq, s.b, s.i, t, impulsoDaVista(v));
+      const l = lugarDaCadeira(pq, s.b, s.i, t, impulsoDaVista(v), n.estado.vila!.parque.carros());
       n.comando(id, tel(l.x, l.y, l.z));
     }
     n.passo();
-    for (const [q, f] of n.quadros()) if (q === quem) r.push(...(f.eventos ?? []));
+    for (const [q, f] of n.quadros()) {
+      if (q === quem) r.push(...(f.eventos ?? []));
+      if (f.bate) ultimoBate.set(q, f.bate);
+      else ultimoBate.delete(q);
+    }
   }
   return r;
 }
+/** Os carrinhos do bate-bate no último quadro de cada jogador (sem a chave: não vieram). */
+const ultimoBate = new Map<string, number[]>();
 function ir(n: Nucleo, quem: string, x: number, y: number, z: number): void {
   n.estado.jogadores.get(quem)!.saltoPermitido = true;
   n.comando(quem, tel(x, y, z));
@@ -102,7 +114,7 @@ const sentar = (n: Nucleo, quem: string, b: number) =>
 
 describe('spec 026 (parte 2): o parque no núcleo', () => {
   it('a versão da rede subiu e o comando do parque passa a limpo (o resto não entra)', () => {
-    expect(VERSAO_REDE).toBe(11);
+    expect(VERSAO_REDE).toBe(12);
     expect(sanear({ t: 'vila', a: 'sentar', b: 2, lixo: 1 })).toEqual({
       t: 'vila',
       a: 'sentar',
@@ -110,9 +122,29 @@ describe('spec 026 (parte 2): o parque no núcleo', () => {
     });
     expect(sanear({ t: 'vila', a: 'sentar', b: 3 })).toBeNull();
     expect(sanear({ t: 'vila', a: 'sentar', b: 'roda' })).toBeNull();
-    for (const a of ['sair', 'tum', 'roda'])
+    for (const a of ['sair', 'roda'])
       expect(sanear({ t: 'vila', a, x: 9 })).toEqual({ t: 'vila', a });
     expect(sanear({ t: 'vila', a: 'voar' })).toBeNull();
+    // o "tum" de tocar não existe mais (a batida é de verdade); o controle do carrinho passa a
+    // limpo: inteiros de -100 a 100 e o número dele
+    expect(sanear({ t: 'vila', a: 'tum' })).toBeNull();
+    expect(sanear({ t: 'vila', a: 'guiar', x: 100, z: -37, n: 5, lixo: 1 })).toEqual({
+      t: 'vila',
+      a: 'guiar',
+      x: 100,
+      z: -37,
+      n: 5,
+    });
+    for (const ruim of [
+      { x: 101, z: 0, n: 1 },
+      { x: 0.5, z: 0, n: 1 },
+      { x: 0, z: 0, n: 0 },
+      { x: 0, z: 0, n: 1.5 },
+      { x: '1', z: 0, n: 1 },
+      { x: 0, z: NaN, n: 1 },
+      { x: 0, z: 0 },
+    ])
+      expect(sanear({ t: 'vila', a: 'guiar', ...ruim })).toBeNull();
   });
 
   it('roda-gigante: senta na cadeirinha de baixo, dá a volta inteira e desce sozinha no chão', () => {
@@ -188,12 +220,13 @@ describe('spec 026 (parte 2): o parque no núcleo', () => {
     expect(sentadoNaVista(parque(n), 'ana')).toBeNull();
   });
 
-  it('dois amigos: cada um na sua cadeira; o "tum" balança o carrinho da frente; quem sai do mundo solta a cadeira', () => {
+  it('bate-bate: dois amigos, cada um no seu carrinho, guiam de verdade e batem um no outro; o quadro leva os carrinhos; quem sai do mundo solta o dele', () => {
     const n = abrir(['ana', 'leo']);
     const pq = plano().pontos.parque;
-    const [sx, , sz] = pq.bate.saida;
-    ir(n, 'ana', sx, Y(), sz);
-    ir(n, 'leo', sx + 1, Y(), sz);
+    const B = pq.bate;
+    const [sx, , sz] = B.saida;
+    ir(n, 'ana', sx - 3, Y(), sz);
+    ir(n, 'leo', sx + 3, Y(), sz);
     passos(n, 2);
     sentar(n, 'ana', 2);
     sentar(n, 'leo', 2);
@@ -202,24 +235,114 @@ describe('spec 026 (parte 2): o parque no núcleo', () => {
     const l = sentadoNaVista(parque(n), 'leo')!;
     expect(a.b).toBe('bate');
     expect(l.b).toBe('bate');
+    // cada um num carrinho das crianças (os quatro primeiros são dos moradores)
     expect(a.i).not.toBe(l.i);
-    // o "tum": o carrinho da frente da Ana
-    n.comando('ana', { t: 'vila', a: 'tum' });
-    const evs = passos(n, 2, 'leo');
-    expect(evs.find((e) => e.e === 'parqueTum')).toMatchObject({
-      quem: 'ana',
-      de: a.i,
-      alvo: carrinhoDaFrente(a.i),
-    });
-    // em pé, o "tum" não é de ninguém
+    expect(a.i).toBeGreaterThanOrEqual(N_MORADORES_BATE);
+    expect(l.i).toBeGreaterThanOrEqual(N_MORADORES_BATE);
+    const carros = () => n.estado.vila!.parque.carros();
+    const onde = carros().map((c) => ({ x: c.x, z: c.z }));
+    // a Ana guia para cima do carrinho do Léo (que fica parado) até os dois baterem
+    let seq = 0;
+    let tum: Ev | undefined;
+    let menor = Infinity;
+    for (let k = 0; k < 300 && !tum; k++) {
+      const eu = carros()[a.i];
+      const ele = carros()[l.i];
+      const d = Math.hypot(ele.x - eu.x, ele.z - eu.z);
+      menor = Math.min(menor, d);
+      n.comando('ana', {
+        t: 'vila',
+        a: 'guiar',
+        x: Math.round(((ele.x - eu.x) / d) * 100),
+        z: Math.round(((ele.z - eu.z) / d) * 100),
+        n: ++seq,
+      });
+      tum = passos(n, 1, 'leo').find(
+        (e) => e.e === 'parqueTum' && [e.de, e.alvo].includes(a.i) && [e.de, e.alvo].includes(l.i),
+      );
+      // o quadro de quem guia leva os oito carrinhos e o número do controle que o núcleo já usou
+      const q = carrosDaVista(ultimoBate.get('ana'))!;
+      expect(q.carros).toHaveLength(N_CARRINHOS);
+      expect(q.ack).toBe(seq);
+      expect(q.carros[a.i].x).toBeCloseTo(carros()[a.i].x, 2);
+    }
+    if (tum?.e !== 'parqueTum') throw new Error('não bateram');
+    // bateu de verdade: os para-choques se tocaram, o do Léo saiu do lugar e a batida tem força
+    expect(['ana', 'leo']).toContain(tum.quem);
+    expect(tum.f).toBeGreaterThan(1.2);
+    expect(menor).toBeGreaterThanOrEqual(2 * RAIO_CARRINHO - 0.01);
+    expect(menor).toBeLessThan(2 * RAIO_CARRINHO + 0.4);
+    passos(n, 6);
+    expect(Math.hypot(carros()[l.i].x - onde[l.i].x, carros()[l.i].z - onde[l.i].z)).toBeGreaterThan(
+      0.15,
+    );
+    // ninguém saiu da pista (nem os dos moradores, que andam sozinhos)
+    for (const c of carros()) {
+      expect(c.x).toBeGreaterThanOrEqual(B.x0 + RAIO_CARRINHO - 1e-6);
+      expect(c.x).toBeLessThanOrEqual(B.x1 - RAIO_CARRINHO + 1e-6);
+      expect(c.z).toBeGreaterThanOrEqual(B.z0 + RAIO_CARRINHO - 1e-6);
+      expect(c.z).toBeLessThanOrEqual(B.z1 - RAIO_CARRINHO + 1e-6);
+    }
+    // em pé, o controle não é de ninguém (o carrinho do Léo, vazio, volta sozinho para a vaga)
     n.comando('leo', { t: 'vila', a: 'sair' });
-    passos(n, 2);
-    n.comando('leo', { t: 'vila', a: 'tum' });
-    expect(passos(n, 2).some((e) => e.e === 'parqueTum')).toBe(false);
+    const desceu = passos(n, 2, 'leo').find((e) => e.e === 'parqueDesceu');
+    if (desceu?.e !== 'parqueDesceu') throw new Error('sem evento');
+    // desceu do lado de fora da mureta, pertinho de onde o carrinho estava
+    const fora =
+      desceu.x < B.x0 - 1 || desceu.x > B.x1 + 1 || desceu.z < B.z0 - 1 || desceu.z > B.z1 + 1;
+    expect(fora).toBe(true);
+    for (let k = 0; k < 400; k++) {
+      n.comando('leo', { t: 'vila', a: 'guiar', x: 100, z: 0, n: 1000 + k });
+      passos(n, 1);
+    }
+    const vaga = B.vagas[l.i];
+    expect(Math.hypot(carros()[l.i].x - vaga[0], carros()[l.i].z - vaga[1])).toBeLessThan(0.3);
     // a Ana sai do mundo: o carrinho dela fica livre
     n.desconectar('ana');
     for (let i = 0; i < 6; i++) n.passo();
     expect(Object.keys(parque(n).s)).toHaveLength(0);
+  });
+
+  it('bate-bate: os moradores guiam os quatro primeiros carrinhos, sentados neles; longe da pista o quadro não leva carrinho nenhum', () => {
+    const n = abrir();
+    const pq = plano().pontos.parque;
+    const [sx, , sz] = pq.bate.saida;
+    ir(n, 'ana', sx, Y(), sz);
+    passos(n, 80);
+    const carros = n.estado.vila!.parque.carros();
+    const pilotos = n.estado.populacao.lista.filter(
+      (q) =>
+        q.morador?.povoado === POVOADO_VILA &&
+        q.morador.n >= N0_PILOTOS &&
+        q.morador.n < N0_PILOTOS + N_MORADORES_BATE,
+    );
+    expect(pilotos).toHaveLength(N_MORADORES_BATE);
+    for (const m of pilotos) {
+      const c = carros[m.morador!.n - N0_PILOTOS];
+      expect(m.x).toBeCloseTo(c.x, 6);
+      expect(m.z).toBeCloseTo(c.z, 6);
+      expect(m.y).toBeCloseTo(pq.bate.y, 6);
+      expect(m.yaw).toBeCloseTo(c.yaw, 6);
+    }
+    // eles andam (a pista está viva) e quem só olha recebe os carrinhos passo sim, passo não
+    const antes = carros.map((c) => ({ x: c.x, z: c.z }));
+    let vieram = 0;
+    for (let k = 0; k < 40; k++) {
+      passos(n, 1);
+      if (ultimoBate.has('ana')) vieram++;
+    }
+    expect(vieram).toBe(20);
+    const andou = carros
+      .slice(0, N_MORADORES_BATE)
+      .filter((c, i) => Math.hypot(c.x - antes[i].x, c.z - antes[i].z) > 1);
+    expect(andou.length).toBeGreaterThanOrEqual(3);
+    // do outro lado do bairro a pista descansa: nenhum carrinho no quadro, nenhum passo
+    ir(n, 'ana', pq.bate.x - 200, Y(), pq.bate.z);
+    passos(n, 12);
+    const parado = carros.map((c) => ({ x: c.x, z: c.z }));
+    passos(n, 20);
+    expect(ultimoBate.has('ana')).toBe(false);
+    carros.forEach((c, i) => expect([c.x, c.z]).toEqual([parado[i].x, parado[i].z]));
   });
 
   it('as cadeiras acabam: com as oito ocupadas o nono não senta (e nada quebra)', () => {

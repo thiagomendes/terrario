@@ -199,11 +199,13 @@ export function sanear(c: unknown): Comando | null {
       // no palco de antes não existe mais)
       if (o.a === 'caixa' && inteiro(o.i, 0, 2))
         return { t: 'vila', a: 'caixa', i: o.i } as unknown as Comando;
-      // spec 026 (parte 2): o parque (sentar no brinquedo 0 a 2, sair, o "tum", o empurrão)
+      // spec 026 (parte 2): o parque (sentar no brinquedo 0 a 2, sair, o empurrão)
       if (o.a === 'sentar' && inteiro(o.b, 0, 2))
         return { t: 'vila', a: 'sentar', b: o.b } as unknown as Comando;
-      if (o.a === 'sair' || o.a === 'tum' || o.a === 'roda')
-        return { t: 'vila', a: o.a } as unknown as Comando;
+      if (o.a === 'sair' || o.a === 'roda') return { t: 'vila', a: o.a } as unknown as Comando;
+      // o controle do carrinho do bate-bate: o rumo (-100 a 100) e o número dele
+      if (o.a === 'guiar' && inteiro(o.x, -100, 100) && inteiro(o.z, -100, 100) && inteiro(o.n, 1, 2 ** 31))
+        return { t: 'vila', a: 'guiar', x: o.x, z: o.z, n: o.n } as unknown as Comando;
       return null;
     case 'pularPerto':
       // spec 021: só o id de um amigo (texto curto)

@@ -21,6 +21,7 @@ import type { PlanoVeiculo } from '../jogo/veiculos';
 import type { OcorrenciaVeiculo } from '../jogo/transito';
 import type { Ganho, MissaoMovida, RecusaBanca, VistaAlmaMundo } from '../jogo/alma';
 import type { EventoVila, VilaVista } from './vila';
+import type { BateVista } from '../jogo/bate';
 
 /** Sobe quando uma mensagem muda de formato (cliente e servidor precisam concordar). */
 export const VERSAO_PROTOCOLO = 1;
@@ -177,11 +178,18 @@ type ComandoSemSeq =
   | { t: 'vila'; a: 'caixa'; i: number }
   /**
    * Spec 026 (parte 2, o parque): sentar num brinquedo (`b`: 0 a roda-gigante, 1 o carrossel, 2 o
-   * bate-bate; o núcleo escolhe a cadeira livre), sair dele, o "tum" no carrinho da frente e o
-   * empurrãozinho na roda-gigante. O núcleo confere o alcance e o limite de toques por segundo.
+   * bate-bate; o núcleo escolhe a cadeira livre), sair dele e o empurrãozinho na roda-gigante. O
+   * núcleo confere o alcance e o limite de toques por segundo.
    */
   | { t: 'vila'; a: 'sentar'; b: number }
-  | { t: 'vila'; a: 'sair' | 'tum' | 'roda' };
+  | { t: 'vila'; a: 'sair' | 'roda' }
+  /**
+   * Spec 026 (parte 2, o bate-bate de guiar): o controle do carrinho da criança, a cada passo
+   * enquanto ela guia. `x` e `z` são o rumo no mundo (inteiros de -100 a 100: a força do
+   * controle) e `n` o número do controle (só cresce; volta no quadro `bate`, para a tela acertar
+   * a previsão). O núcleo confere que ela está num carrinho, o limite por segundo e a fila.
+   */
+  | { t: 'vila'; a: 'guiar'; x: number; z: number; n: number };
 
 /** Atalhos de teste e captura (o servidor da nuvem só aceita em ambiente de testes). */
 export type Depuracao =
@@ -456,6 +464,12 @@ export interface Quadro {
   veiculos?: VeiculosQuadro;
   /** Spec 026: o estado da Vila Neon (o show, os instrumentos, as caixas, as lhamas). */
   vila?: VilaVista;
+  /**
+   * Spec 026 (parte 2): os carrinhos do bate-bate que o núcleo simula, só para quem está perto
+   * da pista (quem guia, a cada passo; quem olha, passo sim, passo não). O primeiro número é o
+   * último controle `guiar` deste jogador que o núcleo já usou.
+   */
+  bate?: BateVista;
 }
 
 /** Parte do salvamento que pertence ao núcleo (o cliente junta a câmera, o diário e o mapa). */

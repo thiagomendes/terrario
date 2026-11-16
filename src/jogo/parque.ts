@@ -2,24 +2,29 @@
  * O Parque de diversões da Vila Neon (spec 026, parte 2): o "sentar e ser levado". Puro: o
  * núcleo, a tela e os testes fazem a mesma conta.
  *
- * - **Os três brinquedos giram sempre, no relógio do mundo** (o do núcleo): a roda-gigante dá uma
- *   volta a cada 25 s, o carrossel a cada 18 s e os carrinhos do bate-bate rodam a pista, devagar.
- *   Onde está cada cadeira é uma conta do tempo: todo mundo vê a mesma coisa, sem mensagem
- *   nenhuma por quadro.
+ * - **A roda-gigante e o carrossel giram sempre, no relógio do mundo** (o do núcleo): a roda dá
+ *   uma volta a cada 25 s e o carrossel a cada 18 s. Onde está cada cadeira deles é uma conta do
+ *   tempo: todo mundo vê a mesma coisa, sem mensagem nenhuma por quadro.
  * - **O núcleo é dono das cadeiras:** quem senta, em qual, e quando desce. A criança sentada fica
  *   onde a cadeira está (a física dela descansa).
  * - **Roda-gigante:** senta na cadeirinha de baixo, dá uma volta inteira e desce sozinha. Um toque
  *   na roda dá um empurrãozinho (ela adianta meia cadeira em 2,5 s, para todos) e as lâmpadas piscam.
  * - **Carrossel:** o cavalinho sobe e desce enquanto gira; desce quando a criança escolhe.
- * - **Bate-bate:** o carrinho anda sozinho em volta da pista; o toque dá um "tum" no da frente.
- *   Nunca vira, nunca empurra ninguém para fora (o "tum" é só balanço, estrelinha e som).
+ * - **Bate-bate:** a criança guia o carrinho e bate de verdade nos outros (a conta dos carrinhos é
+ *   de `src/jogo/bate.ts`, simulada no núcleo): aqui o lugar da cadeira é o do carrinho que o
+ *   núcleo (ou a previsão da tela) diz.
  */
+import { N_CARRINHOS, N_MORADORES_BATE } from './bate';
 
 export type Brinquedo = 'roda' | 'carrossel' | 'bate';
 export const BRINQUEDOS: readonly Brinquedo[] = ['roda', 'carrossel', 'bate'];
 
 /** Quantas cadeiras tem cada brinquedo (cadeirinhas, cavalinhos, carrinhos). */
-export const CADEIRAS: Readonly<Record<Brinquedo, number>> = { roda: 8, carrossel: 8, bate: 6 };
+export const CADEIRAS: Readonly<Record<Brinquedo, number>> = {
+  roda: 8,
+  carrossel: 8,
+  bate: N_CARRINHOS,
+};
 
 /** A roda-gigante: uma volta a cada tantos segundos. */
 export const VOLTA_RODA = 25;
@@ -32,8 +37,6 @@ export const PENDURA_RODA = 1.3;
 export const VOLTA_CARROSSEL = 18;
 export const SOBE_DESCE = 3.2;
 export const ALTURA_SOBE_DESCE = 0.32;
-/** O bate-bate: a velocidade do carrinho (blocos/s). */
-export const VEL_BATE = 1.3;
 /** O "tum": quanto dura o balanço do carrinho (s). */
 export const DURA_TUM = 0.9;
 
@@ -72,11 +75,40 @@ export interface BateBate {
   x: number;
   y: number;
   z: number;
-  /** A pista é um estádio: duas retas de 2 × `meia` (ao longo de x) e duas curvas de raio `raio`. */
-  meia: number;
-  raio: number;
-  /** Onde a criança desce (fora da cerca). */
+  /** A pista por dentro: as faces da mureta (o para-choque encosta nelas). */
+  x0: number;
+  z0: number;
+  x1: number;
+  z1: number;
+  /** Onde cada carrinho começa (e, os das crianças, a vaga para onde voltam vazios): x, z, rumo. */
+  vagas: [number, number, number][];
+  /** O tapete da saída (dentro da pista, na beira): parar nele é descer. */
+  tapete: { x0: number; z0: number; x1: number; z1: number };
+  /** Onde a criança desce quando para no tapete (fora da cerca, no caminho). */
   saida: [number, number, number];
+}
+
+/** Um carrinho do bate-bate, para quem só quer saber onde ele está. */
+export interface CarrinhoNoLugar {
+  x: number;
+  z: number;
+  yaw: number;
+}
+/** Os carrinhos de agora (do núcleo, ou da previsão da tela); sem eles, cada um na vaga. */
+export type CarrinhosAgora = readonly CarrinhoNoLugar[] | null | undefined;
+
+/** O carrinho `i` agora (sem a lista: parado na vaga dele). */
+export function carrinhoAgora(b: BateBate, i: number, carros?: CarrinhosAgora): CarrinhoNoLugar {
+  const c = carros?.[i];
+  if (c) return c;
+  const v = b.vagas[i] ?? [b.x, b.z, 0];
+  return { x: v[0], z: v[1], yaw: v[2] };
+}
+
+/** O carrinho está no tapete da saída? */
+export function noTapete(b: BateBate, x: number, z: number): boolean {
+  const t = b.tapete;
+  return x >= t.x0 && x <= t.x1 && z >= t.z0 && z <= t.z1;
 }
 
 export interface ParqueVila {
@@ -157,44 +189,10 @@ export function progressoDoPasseio(
   return Math.max(0, Math.min(1, 1 - (fim - anguloDaCadeirinha(i, t, imp)) / DUAS_PI));
 }
 
-/** O carrinho `i` do bate-bate: onde está na pista (o meio do carrinho, no chão dela). */
-function naPista(b: BateBate, s: number): { x: number; z: number; yaw: number } {
-  const reta = 2 * b.meia;
-  const curva = Math.PI * b.raio;
-  const P = 2 * reta + 2 * curva;
-  let q = ((s % P) + P) % P;
-  // reta de baixo (z = +raio), indo para +x
-  if (q < reta) return { x: b.x - b.meia + q, z: b.z + b.raio, yaw: Math.PI / 2 };
-  q -= reta;
-  if (q < curva) {
-    const a = q / b.raio;
-    return {
-      x: b.x + b.meia + Math.sin(a) * b.raio,
-      z: b.z + Math.cos(a) * b.raio,
-      yaw: Math.PI / 2 + a,
-    };
-  }
-  q -= curva;
-  // reta de cima (z = -raio), voltando para -x
-  if (q < reta) return { x: b.x + b.meia - q, z: b.z - b.raio, yaw: -Math.PI / 2 };
-  q -= reta;
-  const a = q / b.raio;
-  return {
-    x: b.x - b.meia - Math.sin(a) * b.raio,
-    z: b.z - Math.cos(a) * b.raio,
-    yaw: -Math.PI / 2 + a,
-  };
-}
-
-/** A volta inteira da pista do bate-bate (blocos). */
-export const voltaDoBate = (b: BateBate): number => 4 * b.meia + 2 * Math.PI * b.raio;
-
-/** O carrinho da frente do carrinho `i` (o que leva o "tum"). */
-export const carrinhoDaFrente = (i: number): number => (i + 1) % CADEIRAS.bate;
-
 /**
  * Onde está a cadeira `i` do brinquedo no instante `t` do relógio do mundo: os pés de quem está
- * sentado e para onde o corpo olha. Fora da lista de cadeiras, a cadeira 0.
+ * sentado e para onde o corpo olha. Fora da lista de cadeiras, a cadeira 0. No bate-bate o lugar
+ * é o do carrinho (`carros`: os de agora).
  */
 export function lugarDaCadeira(
   p: ParqueVila,
@@ -202,6 +200,7 @@ export function lugarDaCadeira(
   i: number,
   t: number,
   imp: ImpulsoRoda = SEM_IMPULSO,
+  carros?: CarrinhosAgora,
 ): Lugar {
   const n = CADEIRAS[b];
   const k = Number.isInteger(i) && i >= 0 && i < n ? i : 0;
@@ -223,9 +222,29 @@ export function lugarDaCadeira(
       yaw: a + Math.PI / 2,
     };
   }
-  const q = naPista(p.bate, VEL_BATE * t + (k * voltaDoBate(p.bate)) / n);
+  const q = carrinhoAgora(p.bate, k, carros);
   return { x: q.x, y: p.bate.y, z: q.z, yaw: q.yaw };
 }
+
+/** Do lado de fora da mureta do bate-bate: o meio da calçadinha (blocos, da face de dentro). */
+const FORA_DA_MURETA = 1.5;
+
+/**
+ * Onde a criança desce do carrinho que está em (x, z): no tapete da saída, o caminho da frente;
+ * no resto da pista, a calçadinha do lado de fora mais perto (um pulinho curto, nunca dentro).
+ */
+export function saidaDoBate(b: BateBate, x: number, z: number, chao: number): P3 {
+  if (noTapete(b, x, z)) return [...b.saida];
+  const lados: [number, P3][] = [
+    [z - b.z0, [x, chao, b.z0 - FORA_DA_MURETA]],
+    [b.z1 - z, [x, chao, b.z1 + FORA_DA_MURETA]],
+    [x - b.x0, [b.x0 - FORA_DA_MURETA, chao, z]],
+    [b.x1 - x, [b.x1 + FORA_DA_MURETA, chao, z]],
+  ];
+  lados.sort((p, q) => p[0] - q[0]);
+  return lados[0][1];
+}
+type P3 = [number, number, number];
 
 /** Onde a criança desce da cadeira `i` (no chão, do lado de fora, nunca dentro do brinquedo). */
 export function saidaDaCadeira(
@@ -234,9 +253,13 @@ export function saidaDaCadeira(
   i: number,
   t: number,
   chao: number,
+  carros?: CarrinhosAgora,
 ): [number, number, number] {
   if (b === 'roda') return [...p.roda.saida];
-  if (b === 'bate') return [...p.bate.saida];
+  if (b === 'bate') {
+    const c = carrinhoAgora(p.bate, i, carros);
+    return saidaDoBate(p.bate, c.x, c.z, chao);
+  }
   // do carrossel: para fora, no rumo do cavalinho
   const c = p.carrossel;
   const l = lugarDaCadeira(p, b, i, t);
@@ -260,11 +283,40 @@ export function distanciaDoBrinquedo(p: ParqueVila, b: Brinquedo, x: number, z: 
     const c = p.carrossel;
     return Math.max(0, Math.hypot(x - c.x, z - c.z) - c.beira);
   }
+  // (a pista com a mureta em volta)
   const q = p.bate;
   return Math.hypot(
-    Math.max(0, Math.abs(x - q.x) - (q.meia + q.raio + 1.5)),
-    Math.max(0, Math.abs(z - q.z) - (q.raio + 1.5)),
+    Math.max(0, q.x0 - 1 - x, x - q.x1 - 1),
+    Math.max(0, q.z0 - 1 - z, z - q.z1 - 1),
   );
+}
+
+/** Até onde (blocos) a criança alcança um carrinho livre do bate-bate para subir nele. */
+export const ALCANCE_CARRINHO = 8;
+
+/**
+ * O carrinho livre do bate-bate que a criança em (x, z) pega: o das crianças mais perto dela, se
+ * ela o alcança. -1: nenhum (todos com gente, ou longe).
+ */
+export function carrinhoLivrePerto(
+  b: BateBate,
+  x: number,
+  z: number,
+  ocupada: (i: number) => boolean,
+  carros?: CarrinhosAgora,
+): number {
+  let melhor = -1;
+  let dist = ALCANCE_CARRINHO;
+  for (let i = N_MORADORES_BATE; i < N_CARRINHOS; i++) {
+    if (ocupada(i)) continue;
+    const c = carrinhoAgora(b, i, carros);
+    const d = Math.hypot(c.x - x, c.z - z);
+    if (d <= dist) {
+      dist = d;
+      melhor = i;
+    }
+  }
+  return melhor;
 }
 
 /** A criança em (x, z) alcança o brinquedo para sentar? (A mesma conta na tela e no núcleo.) */
@@ -284,8 +336,10 @@ export function escolherCadeira(
   t: number,
   ocupada: (i: number) => boolean,
   imp: ImpulsoRoda = SEM_IMPULSO,
+  carros?: CarrinhosAgora,
 ): number {
   const n = CADEIRAS[b];
+  if (b === 'bate') return carrinhoLivrePerto(p.bate, x, z, ocupada, carros);
   if (b === 'roda') {
     const baixo = cadeirinhaDeBaixo(t, imp);
     // a de baixo; ocupada, a que vem chegando atrás dela; depois a que acabou de passar

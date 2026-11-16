@@ -766,6 +766,10 @@ export function criarRenderCriaturas(
   let giroDeMorador:
     | ((povoado: string, n: number, onde: { x: number; z: number }) => number | null)
     | null = null;
+  /** Spec 026 (parte 2): o lugar do morador levado por um brinquedo, ou null. */
+  let lugarDeMorador:
+    | ((povoado: string, n: number) => { x: number; y: number; z: number; yaw: number } | null)
+    | null = null;
   let proximaEstatua = -1;
   /**
    * Estátuas da vitrine por lugar: a nova no mesmo lugar descarta a de antes (auditoria 017:
@@ -849,6 +853,17 @@ export function criarRenderCriaturas(
       poseDeMorador = f;
       giroDeMorador = giro;
     },
+    /**
+     * Spec 026 (parte 2): onde fica na tela o morador levado por um brinquedo (o piloto do
+     * bate-bate no carrinho dele), ou null (o lugar é o da criatura).
+     */
+    definirLugarDeMorador(
+      f:
+        | ((povoado: string, n: number) => { x: number; y: number; z: number; yaw: number } | null)
+        | null,
+    ): void {
+      lugarDeMorador = f;
+    },
     /** Spec 015: gesto em curso e balão de cada morador desenhado (testes). */
     gestosMoradores(): { id: number; gesto: IdGesto | null; balao: IdGesto | null }[] {
       return [...moradores].map(([id, mb]) => ({
@@ -897,8 +912,12 @@ export function criarRenderCriaturas(
           mb.ultZ = c.z;
           const velReal = dt > 0 && desloc < 2 ? desloc / dt : 0;
           mb.vel += (velReal - mb.vel) * Math.min(1, dt * 10);
+          // spec 026 (parte 2): o morador levado por um brinquedo (o piloto do bate-bate) fica
+          // onde o carrinho está na tela, sentado (não é andar)
+          const levado =
+            lugarDeMorador && c.morador ? lugarDeMorador(c.morador.povoado, c.morador.n) : null;
           const poseBase = mb.animador.atualizar(dt, {
-            velocidadeHoriz: mb.vel,
+            velocidadeHoriz: levado ? 0 : mb.vel,
             correndo: c.estado === 'fugir',
             noChao: c.noChao,
             voando: false,
@@ -914,7 +933,8 @@ export function criarRenderCriaturas(
           // spec 026: no show a banda fica de frente para a plateia
           const giro =
             giroDeMorador && c.morador ? giroDeMorador(c.morador.povoado, c.morador.n, c) : null;
-          mb.boneco.posicionar(c.x, c.y, c.z, giro ?? c.yaw);
+          if (levado) mb.boneco.posicionar(levado.x, levado.y, levado.z, levado.yaw);
+          else mb.boneco.posicionar(c.x, c.y, c.z, giro ?? c.yaw);
           if (mb.bastao && !mb.microfone) {
             const ver = mostrarLuzNaMao();
             if (mb.bastao.isEnabled(false) !== ver) mb.bastao.setEnabled(ver);

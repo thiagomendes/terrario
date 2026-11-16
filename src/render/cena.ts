@@ -108,7 +108,10 @@ import { celulaTomadaPelaVila, indiceDoMundo } from '../world/vilaSolidos';
 import { criarBrinquedosVila } from './vila/brinquedos';
 import { criarParqueVila, type ToqueParque } from './vila/parque';
 import { criarPasseio, lugarDoAmigo, JUNTAS_SENTADO } from './vila/passeio';
-import { carrinhoDaFrente, lugarDaCadeira, sentadoNaVista } from '../jogo/parque';
+import { carrinhoLivrePerto } from '../jogo/parque';
+import { pilotoDoBate, type Batida } from '../jogo/bate';
+import { criarReplicaBate } from '../cliente/bate';
+import { aplicarJuntas } from '../personagem/gestos';
 import { PIPOQUEIRO, VENDEDORA_DE_BALOES } from '../nucleo/vila';
 import { criarSomParque, type SomParque } from '../audio/somParque';
 import { faseDoShow, noiteDeShow } from '../jogo/show';
@@ -469,12 +472,20 @@ export interface EstadoDepuracao {
     sentar(b: number): void;
     sair(): void;
     tocar(qual: ToqueParque, i?: number): void;
-    /** O toque de quem está sentado (o "tum", o empurrão da roda, o realejo); false se em pé. */
+    /** O toque de quem está sentado (o empurrão da roda, o realejo); false se em pé. */
     toqueSentado(): boolean;
+    /** Os carrinhos do bate-bate na tela agora (null: longe da pista). */
+    carros(): readonly import('../cliente/bate').CarrinhoNaTela[] | null;
+    /** O carrinho livre que a criança pegaria agora (-1: nenhum ao alcance). */
+    carrinhoLivre(): number;
+    /** Testes e medidas: a previsão do carrinho da criança e as batidas que ela já viu. */
+    bate(): { pendentes: number; refeitos: number; maiorErro: number; seq: number; batidas: number };
   };
   /** Testes: quantas vezes a criança sentou e quantos toques de brinquedo do parque. */
   parqueSentou?: number;
   parqueToques?: number;
+  /** Testes: quantas batidas do bate-bate apareceram na tela. */
+  parqueBatidas?: number;
   somParque?: () => ReturnType<SomParque['info']> | null;
   /** Spec 026 (parte 2): o que o parque mostra agora (testes de tela). */
   parqueVila?: () => ReturnType<import('./vila/parque').RenderParque['estado']> | null;
@@ -1858,6 +1869,19 @@ export function criarCena(
   // spec 026 (parte 2): o passeio nos brinquedos do parque (sentar e ser levado). O núcleo é
   // dono da cadeira; aqui o boneco fica onde ela está, com a pose de sentado
   const vistaParque = () => cliente.vila.estado?.parque ?? null;
+  // o bate-bate de guiar: o núcleo simula os carrinhos; aqui a tela prevê o da criança
+  const analogico = { frente: 0, direita: 0 };
+  const replicaBate = planoVila ? criarReplicaBate(planoVila.pontos.parque.bate) : null;
+  if (replicaBate) cliente.ouvirBate((v, t, agora) => replicaBate.receber(v, t, agora));
+  const carrosDoBate = () => replicaBate?.carros(performance.now() / 1000) ?? null;
+  /** O controle de andar de agora, de -1 a 1 (o do toque é macio; o das teclas, tudo ou nada). */
+  const controleDeAndar = (): { frente: number; direita: number } => {
+    const t = controle.teclas;
+    const frente = (t.frente ? 1 : 0) - (t.tras ? 1 : 0);
+    const direita = (t.direita ? 1 : 0) - (t.esquerda ? 1 : 0);
+    if (!frente && !direita) return { frente: 0, direita: 0 };
+    return Math.hypot(analogico.frente, analogico.direita) > 0.2 ? analogico : { frente, direita };
+  };
   const passeio = planoVila
     ? criarPasseio({
         parque: planoVila.pontos.parque,
@@ -1870,6 +1894,7 @@ export function criarCena(
           const t = controle.teclas;
           return !!(t.frente || t.tras || t.esquerda || t.direita);
         },
+        carros: carrosDoBate,
         sair: () => estado.vilaParque?.sair(),
         camera: {
           yaw: () => camera.rotation.y,
@@ -1879,24 +1904,52 @@ export function criarCena(
           zoom: () => orbita.zoom(),
           definirZoom: (d) => void orbita.definirZoom(d),
         },
-        aoSentar: () => {
+        aoSentar: (s) => {
           somEfeito('sentar');
           estado.parqueSentou = (estado.parqueSentou ?? 0) + 1;
+          if (s.b === 'bate') replicaBate?.definirMeu(s.i);
         },
-        aoDescer: () => somEfeito('sentar'),
+        aoDescer: () => {
+          somEfeito('sentar');
+          replicaBate?.definirMeu(-1);
+        },
       })
     : null;
   if (passeio) controle.definirAssento(() => passeio.lugar());
   if (planoVila) {
     const pq = planoVila.pontos.parque;
     outrosJogadores.definirAssento((id) => {
-      const l = lugarDoAmigo(pq, vistaParque(), id, cliente.vila.tempo(performance.now() / 1000));
+      const l = lugarDoAmigo(
+        pq,
+        vistaParque(),
+        id,
+        cliente.vila.tempo(performance.now() / 1000),
+        carrosDoBate(),
+      );
       return l ? { ...l, juntas: JUNTAS_SENTADO[l.b] } : null;
     });
   }
   /** O som do parque (criado mais abaixo, com o motor do áudio). */
   let somParque: SomParque | null = null;
   let tumDados = 0;
+  /** Quando cada dupla de carrinhos fez "tum" na tela pela última vez (s): um por batida. */
+  const tumNaTela = new Map<number, number>();
+  /**
+   * A batida do bate-bate na tela: o balanço, as estrelinhas, a faísca e o "tum". A do carrinho
+   * da criança aparece na hora (a previsão); o núcleo conta de novo logo depois, e essa não repete.
+   */
+  function batidaNaTela(b: Batida, minha: boolean): void {
+    const agora = performance.now() / 1000;
+    const dupla = Math.min(b.a, b.b) * 16 + Math.max(b.a, b.b) + 16;
+    if (agora - (tumNaTela.get(dupla) ?? -1e9) < 0.45) return;
+    tumNaTela.set(dupla, agora);
+    parqueVila?.tum(b.a, b.b, b.x, b.z, b.f);
+    somParque?.tocar('tum', { x: b.x, z: b.z });
+    estado.parqueBatidas = (estado.parqueBatidas ?? 0) + 1;
+    // a criança ri de vez em quando (uma batida em outro carrinho sim, uma não)
+    if (minha && b.b >= 0 && ++tumDados % 2 === 0)
+      setTimeout(() => somParque?.tocar('risada', { x: b.x, z: b.z }), 240);
+  }
   /** A distância (no chão) de um ponto até o meio do carrossel (o carrinho de pipoca do parque). */
   const distParque = (q: { x: number; z: number }) =>
     planoVila
@@ -1968,18 +2021,31 @@ export function criarCena(
       toqueSentado: () => {
         const s = passeio?.sentado();
         if (!s) return false;
-        if (s.b === 'bate') {
-          // o "tum" na hora, na tela de quem bateu (o núcleo conta para os amigos)
-          const alvo = carrinhoDaFrente(s.i);
-          parqueVila.tum(alvo, s.i);
-          const l = passeio!.lugar();
-          somParque?.tocar('tum', l ?? undefined);
-          // a criança ri de vez em quando (um "tum" sim, um não)
-          if (++tumDados % 2 === 0) setTimeout(() => somParque?.tocar('risada', l ?? undefined), 240);
-          enviar({ t: 'vila', a: 'tum' });
-        } else estado.vilaParque?.tocar(s.b === 'roda' ? 'roda' : 'carrossel');
+        // (no bate-bate o toque não faz nada: a batida é de verdade, guiando)
+        if (s.b !== 'bate') estado.vilaParque?.tocar(s.b === 'roda' ? 'roda' : 'carrossel');
         return true;
       },
+      carros: carrosDoBate,
+      carrinhoLivre: () => {
+        const v = vistaParque();
+        const ocupados = new Set(
+          Object.values(v?.s ?? {})
+            .filter((q) => q[0] === 2)
+            .map((q) => q[1]),
+        );
+        const j = controle.jogador;
+        return carrinhoLivrePerto(
+          planoVila.pontos.parque.bate,
+          j.x,
+          j.z,
+          (i) => ocupados.has(i),
+          carrosDoBate(),
+        );
+      },
+      bate: () => ({
+        ...(replicaBate?.info() ?? { pendentes: 0, refeitos: 0, maiorErro: 0, seq: 0, quadros: 0 }),
+        batidas: estado.parqueBatidas ?? 0,
+      }),
     };
   estado.vilaPecas = () =>
     renderVila
@@ -4389,6 +4455,26 @@ export function criarCena(
     const fotoAtiva = !!estado.modoFoto?.ativo();
     // desmaiado (ou esperando o teletransporte do renascer): o corpo não anda
     fisicaRodou = !(modo === 'sobrevivencia' && (sobrevivenciaMorto() || esperandoRenascer()));
+    // spec 026 (parte 2): o bate-bate de guiar. O controle de andar é do carrinho (o rumo no
+    // mundo, pela câmera); a previsão anda e manda o controle ao núcleo a cada passo
+    if (replicaBate) {
+      // (largou o carrinho por outro caminho: foi para casa, pulou para um amigo)
+      if (replicaBate.meu >= 0 && passeio?.sentado()?.b !== 'bate') replicaBate.definirMeu(-1);
+      if (replicaBate.meu >= 0) {
+        const c = controleDeAndar();
+        const yaw = camera.rotation.y;
+        replicaBate.guiar(
+          c.direita * Math.cos(yaw) + c.frente * Math.sin(yaw),
+          -c.direita * Math.sin(yaw) + c.frente * Math.cos(yaw),
+        );
+      }
+      replicaBate.quadro(
+        Math.min(dtBruto, 0.1),
+        performance.now() / 1000,
+        (x, z, n) => enviar({ t: 'vila', a: 'guiar', x, z, n }),
+        (b) => batidaNaTela(b, true),
+      );
+    }
     // spec 026 (parte 2): sentado num brinquedo do parque, o boneco vai com a cadeira
     passeio?.quadro(performance.now() / 1000, Math.min(dtBruto, 0.1));
     if (fisicaRodou) controle.atualizar(fotoAtiva ? 0 : dtBruto);
@@ -4444,6 +4530,7 @@ export function criarCena(
       cliente.vila.estado?.parque ?? null,
       controle.jogador.x,
       controle.jogador.z,
+      replicaBate?.carros(tempo),
     );
     // (o parque não toca música com o show ou as caixas tocando perto: uma música por vez)
     somParque?.quadro(
@@ -4678,9 +4765,22 @@ export function criarCena(
     );
   if (showVila)
     renderCriaturas.definirPoseDeMorador(
-      (povoado, n, pose, onde) => showVila.poseDoMorador(povoado, n, pose, onde),
+      // spec 026 (parte 2): quem guia um carrinho do bate-bate vai sentado, as mãos no volante
+      (povoado, n, pose, onde) =>
+        povoado === 'vila' && pilotoDoBate(n) >= 0
+          ? aplicarJuntas(pose, JUNTAS_SENTADO.bate, 1)
+          : showVila.poseDoMorador(povoado, n, pose, onde),
       (povoado, n, onde) => showVila.giroDoMorador(povoado, n, onde),
     );
+  // os pilotos ficam onde o carrinho deles está na tela (o mesmo lugar do desenho do carrinho)
+  if (planoVila && replicaBate) {
+    const yBate = planoVila.pontos.parque.bate.y;
+    renderCriaturas.definirLugarDeMorador((povoado, n) => {
+      const i = povoado === 'vila' ? pilotoDoBate(n) : -1;
+      const c = i >= 0 ? carrosDoBate()?.[i] : null;
+      return c ? { x: c.x, y: yBate, z: c.z, yaw: c.yaw } : null;
+    });
+  }
   /** 014c (testes de tela): os bichos do desfile das capturas. */
   let desfile: Criatura[] = [];
   // spec 016: a proteção do mundo à vista nas capturas (só nos testes de tela)
@@ -5352,6 +5452,9 @@ export function criarCena(
     olhar: (dx, dy) => controle.girar(dx, dy),
     mover: (frente, direita) => {
       const t = controle.teclas;
+      // (o controle macio, para guiar o carrinho do bate-bate devagar ou depressa)
+      analogico.frente = frente;
+      analogico.direita = direita;
       t.frente = frente > 0.25;
       t.tras = frente < -0.25;
       t.direita = direita > 0.25;
@@ -6060,20 +6163,14 @@ export function criarCena(
       }
       case 'parqueTum': {
         estado.eventosVila?.push({ ...e, recebido: performance.now() / 1000 });
-        const pq = planoVila?.pontos.parque;
-        if (!pq) break;
-        const l = lugarDaCadeira(pq, 'bate', e.alvo, cliente.vila.tempo(performance.now() / 1000));
-        if (e.quem !== voce) {
-          parqueVila?.tum(e.alvo, e.de);
-          somParque?.tocar('tum', l);
-        }
-        // com alguém no carrinho que levou o "tum", os dois riem
-        const v = vistaParque();
-        const temGente = Object.keys(v?.s ?? {}).some((id) => {
-          const s = sentadoNaVista(v, id);
-          return s?.b === 'bate' && s.i === e.alvo;
-        });
-        if (temGente) setTimeout(() => somParque?.tocar('risada', l), 220);
+        if ((estado.eventosVila?.length ?? 0) > 200) estado.eventosVila!.splice(0, 100);
+        if (!planoVila) break;
+        // (a batida do carrinho da criança já apareceu na hora, pela previsão: não repete)
+        const meu = replicaBate?.meu ?? -1;
+        batidaNaTela(
+          { a: e.de, b: e.alvo, x: e.x, z: e.z, f: e.f },
+          meu >= 0 && (e.de === meu || e.alvo === meu),
+        );
         break;
       }
       case 'parqueRoda':

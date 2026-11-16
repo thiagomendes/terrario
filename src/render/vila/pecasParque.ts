@@ -13,6 +13,7 @@
  */
 import { VertexData } from '@babylonjs/core/Meshes/mesh.vertexData';
 import { LETREIROS, LETREIRO, type TipoPecaVila } from '../../world/vilaNeon';
+import { PISTA_BATE } from '../../world/vilaParque';
 import { CADEIRAS, PENDURA_RODA } from '../../jogo/parque';
 import { COR, LAMPADAS, Ref, perfilEstrela } from './ref';
 import { estrelaNeon, fundoPlaca, textoNeon } from './neon';
@@ -341,17 +342,22 @@ export function carrosselQueGira(r: Ref): void {
   r.prisma(8, 0.34, 0.5, 0, T + 2.35, 0, COR.amarelo, 'y');
   r.caixa(0.1, 0.5, 0.1, 0, T + 2.6, 0, COR.cromo, 0);
   r.placa(perfilEstrela(0.36), 0.1, 0, T + 3.4, 0, COR.amarelo);
-  // os mastros dos cavalinhos (do deque ao toldo)
+  // os mastros dos cavalinhos (do deque ao toldo). Como no carrossel de verdade, o mastro passa
+  // pelo pescoço do cavalinho, na frente da sela (dono, 16 nov 2026: "como se estivesse entrando
+  // na cabeça dele"): a criança senta atrás dele e segura com as duas mãos
   for (let k = 0; k < CADEIRAS.carrossel; k++) {
     const a = (k / CADEIRAS.carrossel) * Math.PI * 2;
-    r.barra(
-      [Math.sin(a) * RC, AD, Math.cos(a) * RC],
-      [Math.sin(a) * RC, T + 0.2, Math.cos(a) * RC],
-      0.1,
-      COR.amarelo,
-    );
+    // (o cavalinho olha ao longo da volta: a frente dele é (cos a, -sen a))
+    const x = Math.sin(a) * RC + Math.cos(a) * FRENTE_DO_MASTRO;
+    const z = Math.cos(a) * RC - Math.sin(a) * FRENTE_DO_MASTRO;
+    r.barra([x, AD, z], [x, T + 0.2, z], 0.1, COR.amarelo);
   }
 }
+
+/** O mastro do cavalinho fica este tanto à frente do assento (blocos): no pescoço dele. */
+export const FRENTE_DO_MASTRO = 0.58;
+/** Quanto o cavalinho é mais comprido na frente (o pescoço e a cabeça vão depois do mastro). */
+const FRENTE_DO_CAVALINHO = 0.36;
 
 /** As lâmpadas do carrossel (giram com ele): a volta da barra do toldo e a coluna. */
 export function luzesDoCarrossel(r: Ref): void {
@@ -375,52 +381,101 @@ export function cavalinho(r: Ref, v: number): void {
   const pelo = v ? '#e0a860' : '#f6f4ee';
   const crina = v ? '#6a4326' : '#ffd23d';
   const sela = v ? COR.azul : COR.vermelho;
+  // (o cavalinho é comprido na frente: entre a sela e o pescoço fica o lugar do mastro, bem à
+  // frente da cabeça e do cabelo de quem senta, por maior que seja)
+  const F = FRENTE_DO_CAVALINHO;
   // o corpo, o pescoço e a cabeça
-  r.caixa(0.46, 0.46, 1.12, 0, -0.5, 0, pelo, 0.08);
-  r.barra([0, -0.28, 0.42], [0, 0.34, 0.7], 0.34, pelo);
-  r.caixa(0.3, 0.3, 0.56, 0, 0.2, 0.62, pelo, 0.06);
-  r.caixa(0.24, 0.2, 0.16, 0, 0.2, 0.92, '#f0c8b0', 0.04);
+  r.caixa(0.46, 0.46, 1.12 + F, 0, -0.5, F / 2, pelo, 0.08);
+  r.barra([0, -0.28, 0.42 + F], [0, 0.34, 0.7 + F], 0.34, pelo);
+  r.caixa(0.3, 0.3, 0.56, 0, 0.2, 0.62 + F, pelo, 0.06);
+  r.caixa(0.24, 0.2, 0.16, 0, 0.2, 0.92 + F, '#f0c8b0', 0.04);
   for (const x of [-0.1, 0.1]) {
-    r.caixa(0.08, 0.16, 0.08, x, 0.48, 0.58, pelo, 0.02);
-    r.caixa(0.05, 0.07, 0.02, x * 1.5, 0.34, 0.9, '#24232a', 0);
+    r.caixa(0.08, 0.16, 0.08, x, 0.48, 0.58 + F, pelo, 0.02);
+    r.caixa(0.05, 0.07, 0.02, x * 1.5, 0.34, 0.9 + F, '#24232a', 0);
   }
   // a crina e o rabo
-  r.barra([0, -0.02, 0.34], [0, 0.52, 0.56], 0.12, crina);
+  r.barra([0, -0.02, 0.36 + F], [0, 0.52, 0.56 + F], 0.12, crina);
   r.barra([0, -0.14, -0.56], [0, -0.62, -0.78], 0.14, crina);
   // as pernas (as da frente dobradas, de galope)
   for (const x of [-0.15, 0.15]) {
-    r.barra([x, -0.46, 0.4], [x, -0.74, 0.62], 0.13, pelo);
-    r.barra([x, -0.74, 0.62], [x, -0.9, 0.46], 0.12, pelo);
+    r.barra([x, -0.46, 0.4 + F], [x, -0.74, 0.62 + F], 0.13, pelo);
+    r.barra([x, -0.74, 0.62 + F], [x, -0.9, 0.46 + F], 0.12, pelo);
     r.barra([x, -0.46, -0.4], [x, -0.92, -0.56], 0.13, pelo);
     r.caixa(0.14, 0.07, 0.14, x, -0.97, -0.58, '#3a2a20', 0);
   }
   // a sela, a manta e a rédea
   r.caixa(0.52, 0.09, 0.56, 0, -0.07, -0.06, sela, 0.03);
   r.caixa(0.5, 0.3, 0.44, 0, -0.34, -0.06, v ? '#f6f4ee' : '#ffd23d', 0.02);
-  r.caixa(0.33, 0.06, 0.06, 0, 0.28, 0.8, sela, 0);
-  r.caixa(0.12, 0.12, 0.12, 0, -0.02, 0.2, COR.amarelo, 0.03);
+  r.caixa(0.33, 0.06, 0.06, 0, 0.28, 0.8 + F, sela, 0);
+  // a argola do mastro, no lombo, na frente da sela (o mastro passa por ali)
+  r.caixa(0.18, 0.1, 0.18, 0, -0.06, FRENTE_DO_MASTRO, COR.amarelo, 0.03);
 }
 
 // ------------------------------------------------------------------ o bate-bate
 
 /** As lâmpadas da barra do teto do bate-bate (penduradas por baixo da malha, na volta toda). */
 export function luzesDoBate(r: Ref): void {
-  // (a peça fica no meio da pista: a barra do teto vai de -9 a 8 em x e de -7 a 6 em z)
+  // (a peça fica no meio de um bloco da pista; a barra do teto dá a volta um bloco para fora da
+  // mureta)
+  const { u0, u1, v0, v1, pu, pv } = PISTA_BATE;
   const y = 4.74;
-  for (let k = 0; k < 18; k++)
-    for (const z of [-7, 6]) r.luz(0.22, 0.22, 0.22, -9 + k, y, z, LAMPADAS[k % 2]);
-  for (let k = 0; k < 12; k++)
-    for (const x of [-9, 8]) r.luz(0.22, 0.22, 0.22, x, y, -6 + k, LAMPADAS[(k + 1) % 2]);
+  for (let u = u0 - 1; u <= u1 + 1; u++)
+    for (const v of [v0 - 1, v1 + 1]) r.luz(0.22, 0.22, 0.22, u - pu, y, v - pv, LAMPADAS[u & 1]);
+  for (let v = v0; v <= v1; v++)
+    for (const u of [u0 - 1, u1 + 1])
+      r.luz(0.22, 0.22, 0.22, u - pu, y, v - pv, LAMPADAS[(v + 1) & 1]);
+  // as lampadinhas verdes da saída, em cima da mureta, na frente do tapete
+  const t = TAPETE_LOCAL();
+  for (let x = t.x0 + 0.5; x < t.x1; x += 1)
+    r.luz(0.2, 0.1, 0.12, x, ALTURA_MURETA, t.z1 + 0.1, '#6dff9a');
 }
 
-/** As cores dos carrinhos (o corpo e o friso). */
+/** A mureta de borracha: quanto entra no bloco da grade (da face da pista para fora) e a altura. */
+const FUNDO_MURETA = 0.22;
+const ALTURA_MURETA = 0.4;
+/** A pista por dentro e o tapete da saída, nas medidas da peça (a origem no meio do bloco dela). */
+const PISTA_LOCAL = () => {
+  const { u0, u1, v0, v1, pu, pv } = PISTA_BATE;
+  return { x0: u0 + 0.5 - pu, x1: u1 - 0.5 - pu, z0: v0 + 0.5 - pv, z1: v1 - 0.5 - pv };
+};
+const TAPETE_LOCAL = () => {
+  const { v1, pu, pv } = PISTA_BATE;
+  return { x0: 131 - 0.5 - pu, x1: 134 + 0.5 - pu, z1: v1 - 0.5 - pv };
+};
+
+/**
+ * A mureta de borracha da pista do bate-bate: uma faixa baixa, de gomos vermelhos e brancos, na
+ * volta toda, encostada por dentro na grade. É nela que o para-choque do carrinho bate (a face de
+ * dentro é a beira da pista da conta); na frente do tapete da saída os gomos são verdes.
+ */
+export function muretaDoBate(r: Ref): void {
+  const p = PISTA_LOCAL();
+  const t = TAPETE_LOCAL();
+  const F = FUNDO_MURETA;
+  for (let x = p.x0; x < p.x1 - 1e-6; x += 1) {
+    const gomo = Math.round(x - p.x0) & 1;
+    const cor = gomo ? CREME : COR.vermelho;
+    r.caixa(1, ALTURA_MURETA, F, x + 0.5, 0, p.z0 - F / 2, cor, 0.04);
+    const saida = x + 0.5 > t.x0 && x + 0.5 < t.x1;
+    r.caixa(1, ALTURA_MURETA, F, x + 0.5, 0, p.z1 + F / 2, saida ? (gomo ? CREME : '#35b85c') : cor, 0.04);
+  }
+  for (let z = p.z0; z < p.z1 - 1e-6; z += 1) {
+    const cor = Math.round(z - p.z0) & 1 ? COR.vermelho : CREME;
+    r.caixa(F, ALTURA_MURETA, 1, p.x0 - F / 2, 0, z + 0.5, cor, 0.04);
+    r.caixa(F, ALTURA_MURETA, 1, p.x1 + F / 2, 0, z + 0.5, cor, 0.04);
+  }
+}
+
+/** As cores dos carrinhos (o corpo e o friso): os quatro dos moradores e os quatro das crianças. */
 export const CORES_CARRINHO: readonly [string, string][] = [
-  [COR.vermelho, CREME],
-  [COR.azul, COR.amarelo],
-  [COR.amarelo, COR.vermelho],
   [COR.turquesa, CREME],
   [COR.laranja, COR.azul],
   ['#f6f4ee', COR.vermelho],
+  ['#8a5ad8', COR.amarelo],
+  [COR.vermelho, CREME],
+  [COR.azul, COR.amarelo],
+  [COR.amarelo, COR.vermelho],
+  [COR.rosa, CREME],
 ];
 
 /**
@@ -431,7 +486,8 @@ export function carrinho(r: Ref, v: number, haste: number): void {
   const [cor, friso] = CORES_CARRINHO[v % CORES_CARRINHO.length];
   const y0 = -0.36;
   // o para-choque em volta e as rodinhas escondidas
-  r.caixa(1.6, 0.3, 2.16, 0, y0, 0, BORRACHA, 0.12);
+  // (quase redondo, do tamanho da roda de borracha da conta: é ele que encosta nos outros)
+  r.caixa(1.86, 0.3, 1.96, 0, y0, 0, BORRACHA, 0.36);
   // o corpo: o capô, as laterais e o encosto
   r.caixa(1.34, 0.42, 0.76, 0, y0 + 0.22, 0.56, cor, 0.1);
   for (const x of [-0.56, 0.56]) r.caixa(0.22, 0.46, 0.8, x, y0 + 0.22, -0.2, cor, 0.06);

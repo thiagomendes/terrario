@@ -4,10 +4,18 @@ import {
   DURA_DESCER,
   DURA_SENTAR,
   lugarDoAmigo,
+  ESPERA_SEGUIR,
+  PARAR_NO_TAPETE,
   SEGURAR_PARA_SAIR,
   ZOOM_NA_RODA,
+  ZOOM_NO_BATE,
 } from '../../src/render/vila/passeio';
-import { lugarDaCadeira, type ParqueVila, type ParqueVista } from '../../src/jogo/parque';
+import {
+  lugarDaCadeira,
+  type CarrinhoNoLugar,
+  type ParqueVila,
+  type ParqueVista,
+} from '../../src/jogo/parque';
 import { calcularPose } from '../../src/personagem/poses';
 
 /**
@@ -18,11 +26,32 @@ import { calcularPose } from '../../src/personagem/poses';
 const P: ParqueVila = {
   roda: { x: 100, y: 80, z: 50, raio: 7.5, eixo: 'x', saida: [100, 70, 55] },
   carrossel: { x: 60, y: 72, z: 60, raio: 3.7, beira: 6.1 },
-  bate: { x: 30, y: 70.4, z: 20, meia: 3.2, raio: 2.9, saida: [29, 70, 27] },
+  bate: {
+    x: 30,
+    y: 70.4,
+    z: 20,
+    x0: 18,
+    z0: 13.5,
+    x1: 42,
+    z1: 26.5,
+    vagas: [
+      [22, 16, 0],
+      [30, 18, 0],
+      [36, 16, 0],
+      [38, 22, 0],
+      [20, 25.4, Math.PI],
+      [22.4, 25.4, Math.PI],
+      [33, 25.4, Math.PI],
+      [35.4, 25.4, Math.PI],
+    ],
+    tapete: { x0: 26, z0: 24.5, x1: 30, z1: 26.5 },
+    saida: [29, 70, 28.5],
+  },
 };
 
 function montar() {
   const m = {
+    carros: null as CarrinhoNoLugar[] | null,
     vista: null as ParqueVista | null,
     t: 100,
     jogador: { x: 66, y: 70, z: 68 },
@@ -43,6 +72,7 @@ function montar() {
     tempoNucleo: () => m.t,
     jogador: m.jogador,
     andando: () => m.andando,
+    carros: () => m.carros,
     sair: () => void m.saiu++,
     camera: {
       yaw: () => m.yaw,
@@ -124,11 +154,11 @@ describe('spec 026 (parte 2): o passeio no parque, no aparelho', () => {
     expect([m.jogador.x, m.jogador.y, m.jogador.z]).toEqual([67, 70, 61]);
   });
 
-  it('empurrar o controle desce do carrossel e do bate-bate (depois de soltar), nunca da roda', () => {
+  it('empurrar o controle desce do carrossel (depois de soltar), nunca da roda', () => {
     const { m, p, andar } = montar();
     // sentou com o controle ainda empurrado: não desce por isso
     m.andando = true;
-    m.vista = sentada(2, 1, m.t);
+    m.vista = sentada(1, 1, m.t);
     andar(2);
     expect(m.saiu).toBe(0);
     m.andando = false;
@@ -141,7 +171,7 @@ describe('spec 026 (parte 2): o passeio no parque, no aparelho', () => {
     // segurando mais, não pede de novo
     andar(1);
     expect(m.saiu).toBe(1);
-    expect(p.sentado()?.b).toBe('bate');
+    expect(p.sentado()?.b).toBe('carrossel');
 
     const r = montar();
     r.m.vista = sentada(0, 0, r.m.t, 99);
@@ -196,11 +226,108 @@ describe('spec 026 (parte 2): o passeio no parque, no aparelho', () => {
     expect(montar().p.largar()).toBe(false);
   });
 
-  it('o amigo sentado fica na cadeira dele (a mesma conta)', () => {
+  it('o amigo sentado fica na cadeira dele: no bate-bate, no carrinho que a tela mostra', () => {
     const v: ParqueVista = { r: [0, -1e9], s: { leo: [2, 4, 3, 0] } };
-    const l = lugarDoAmigo(P, v, 'leo', 50)!;
+    const carros = P.bate.vagas.map(([x, z, yaw]) => ({ x, z, yaw }));
+    carros[4] = { x: 31, z: 19, yaw: 0.7 };
+    const l = lugarDoAmigo(P, v, 'leo', 50, carros)!;
     expect(l.b).toBe('bate');
-    expect(l.x).toBeCloseTo(lugarDaCadeira(P, 'bate', 4, 50).x, 9);
+    expect([l.x, l.y, l.z, l.yaw]).toEqual([31, 70.4, 19, 0.7]);
+    // (sem os carrinhos ainda: na vaga dele)
+    expect(lugarDoAmigo(P, v, 'leo', 50)!.x).toBe(20);
     expect(lugarDoAmigo(P, v, 'ana', 50)).toBeNull();
+  });
+
+  /** Os carrinhos nas vagas, com o da criança (o 5) onde o teste puser. */
+  const pista = (x: number, z: number, yaw = Math.PI) => {
+    const carros = P.bate.vagas.map(([vx, vz, vy]) => ({ x: vx, z: vz, yaw: vy }));
+    carros[5] = { x, z, yaw };
+    return carros;
+  };
+
+  it('no bate-bate o boneco vai com o carrinho que ela guia, e empurrar o controle nunca desce', () => {
+    const { m, p, andar } = montar();
+    m.jogador.x = 22;
+    m.jogador.z = 28;
+    m.carros = pista(22.4, 25.4);
+    m.vista = sentada(2, 5, m.t);
+    andar(DURA_SENTAR + 0.1);
+    expect(p.lugar()).toMatchObject({ x: 22.4, y: 70.4, z: 25.4, yaw: Math.PI });
+    // guia pela pista por dez segundos com o controle empurrado: continua no carrinho
+    m.andando = true;
+    for (let k = 0; k < 200; k++) {
+      m.carros = pista(22.4 + k * 0.05, 25.4 - k * 0.04, 2);
+      andar(0.05);
+    }
+    expect(m.saiu).toBe(0);
+    expect(p.sentado()?.b).toBe('bate');
+    expect(p.lugar()!.x).toBeCloseTo(22.4 + 199 * 0.05, 6);
+    // soltar o controle no meio da pista também não desce (só o tapete da saída)
+    m.andando = false;
+    andar(5);
+    expect(m.saiu).toBe(0);
+  });
+
+  it('no bate-bate desce quem para o carrinho no tapete verde por um segundo (passar por cima não desce)', () => {
+    const { m, andar } = montar();
+    m.carros = pista(22.4, 25.4);
+    m.vista = sentada(2, 5, m.t);
+    andar(1);
+    // parada na vaga, sem nunca ter guiado: não é o tapete, não desce
+    andar(3);
+    expect(m.saiu).toBe(0);
+    // guia e passa por cima do tapete sem parar
+    m.andando = true;
+    for (let k = 0; k < 60; k++) {
+      m.carros = pista(24 + k * 0.15, 25.4, Math.PI / 2);
+      andar(0.05);
+    }
+    expect(m.saiu).toBe(0);
+    // volta e para em cima dele, o controle solto
+    m.carros = pista(28, 25.4, Math.PI / 2);
+    andar(0.1);
+    m.andando = false;
+    andar(PARAR_NO_TAPETE - 0.3);
+    expect(m.saiu).toBe(0);
+    andar(0.5);
+    expect(m.saiu).toBe(1);
+    // esperando o núcleo, não pede de novo
+    andar(2);
+    expect(m.saiu).toBe(1);
+  });
+
+  it('no bate-bate a câmera se afasta e vai atrás do carrinho; se a criança arrasta, é dela por uns segundos', () => {
+    const { m, andar, tela } = montar();
+    m.yaw = 0.2;
+    m.carros = pista(22.4, 25.4, Math.PI);
+    m.vista = sentada(2, 5, m.t);
+    andar(0.05);
+    expect(m.zoom).toBe(ZOOM_NO_BATE);
+    andar(4);
+    // atrás do carrinho (olhando para onde ele vai), um pouco de cima
+    expect(Math.cos(m.yaw - Math.PI)).toBeGreaterThan(0.98);
+    expect(m.pitch).toBeGreaterThan(0.25);
+    // o carrinho vira: a câmera vai atrás devagar (nunca de uma vez)
+    m.carros = pista(22.4, 25.4, Math.PI / 2);
+    const antes = m.yaw;
+    andar(0.05);
+    expect(Math.abs(m.yaw - antes)).toBeLessThan(0.15);
+    andar(4);
+    expect(Math.cos(m.yaw - Math.PI / 2)).toBeGreaterThan(0.98);
+    // a criança arrasta a câmera: fica onde ela pôs; depois de uns segundos volta a seguir
+    m.mexeuEm = tela();
+    m.yaw = -1;
+    m.pitch = 0.1;
+    andar(ESPERA_SEGUIR - 0.3);
+    expect(m.yaw).toBe(-1);
+    expect(m.pitch).toBe(0.1);
+    andar(4);
+    expect(Math.cos(m.yaw - Math.PI / 2)).toBeGreaterThan(0.95);
+    // (a altura do olhar, depois de sentar, é sempre dela)
+    expect(m.pitch).toBe(0.1);
+    // desceu: o zoom de antes volta
+    m.vista = { r: [0, -1e9], s: {} };
+    andar(0.1);
+    expect(m.zoom).toBe(3.8);
   });
 });

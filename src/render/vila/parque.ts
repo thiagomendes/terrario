@@ -7,8 +7,9 @@
  *   as oito cadeirinhas sempre em pé, balançando de leve; no toque, as lâmpadas piscam;
  * - **o carrossel:** o deque, a coluna, o toldo de duas cores e os oito cavalinhos subindo e
  *   descendo nos mastros; no toque, as lâmpadas correm em volta;
- * - **o bate-bate:** os seis carrinhos rodando a pista, a faísca na ponta da haste, o "tum" (o
- *   carrinho da frente balança e solta estrelinhas; quem bateu dá um tranquinho);
+ * - **o bate-bate:** os oito carrinhos onde o núcleo (ou a previsão de quem guia) diz, a mureta
+ *   de borracha, a faísca na ponta da haste e o "tum" da batida de verdade (os dois carrinhos
+ *   balançam, as estrelinhas saem de onde os para-choques se tocaram, as hastes faíscam);
  * - **os brinquedos de tocar:** os balões sobem um pouco, a argola voa e cai no pino (sempre
  *   acerta), o peixinho pula da tina, a pipoca estoura, a cuba do algodão-doce gira e a nuvem
  *   cresce no palito.
@@ -31,8 +32,10 @@ import {
   anguloDaRoda,
   eixoDaCadeirinha,
   impulsoDaVista,
+  carrinhoAgora,
   lugarDaCadeira,
   VOLTA_CARROSSEL,
+  type CarrinhosAgora,
   type ParqueVista,
 } from '../../jogo/parque';
 import { COR, Ref, perfilEstrela, type Desenho } from './ref';
@@ -55,6 +58,7 @@ import {
   luzesDoCarrinho,
   luzesDoCarrossel,
   macoDeBaloes,
+  muretaDoBate,
   mioloAlgodao,
   nuvemAlgodao,
   peixinho,
@@ -93,11 +97,22 @@ export interface OpcoesParqueVila {
 
 export interface RenderParque {
   /** Uma vez por quadro: `t` é o relógio da tela (s) e `tNucleo` o do mundo. */
-  quadro(t: number, tNucleo: number, vista: ParqueVista | null, x: number, z: number): void;
+  quadro(
+    t: number,
+    tNucleo: number,
+    vista: ParqueVista | null,
+    x: number,
+    z: number,
+    carros?: CarrinhosAgora,
+  ): void;
   /** O toque num brinquedo (a resposta na tela; o som é do `somParque`). */
   tocar(qual: ToqueParque, i?: number): void;
-  /** O "tum" do bate-bate: o carrinho `alvo` balança e solta estrelinhas; o `de` dá o tranco. */
-  tum(alvo: number, de: number): void;
+  /**
+   * O "tum" do bate-bate: o carrinho `de` bateu no `alvo` (-1: na mureta) em (x, z), com a força
+   * `f` (blocos/s). Os dois balançam, as estrelinhas saem de onde os para-choques se tocaram e
+   * as hastes faíscam.
+   */
+  tum(de: number, alvo: number, x: number, z: number, f: number): void;
   /** Testes: o que está à vista e mexendo. */
   estado(): {
     roda: boolean;
@@ -280,13 +295,25 @@ export function criarParqueVila(
   const bateLuz = pecaBate
     ? malhaLuz('vila-bate-lampadas', noMundo(pecaBate, luzesDoBate).luz)
     : null;
+  // a mureta de borracha, na volta toda (é nela que o para-choque bate)
+  const bateMureta = pecaBate
+    ? malhaCorpo('vila-bate-mureta', noMundo(pecaBate, muretaDoBate).corpo)
+    : null;
   const haste = Y + 5 - B.y;
+  /** A caixa da pista inteira (os carrinhos andam por ela toda). */
+  const RAIO_PISTA = Math.max(B.x1 - B.x0, B.z1 - B.z0) / 2 + 2;
   const carrinhos = Array.from({ length: CADEIRAS.bate }, (_, i) => {
     const m = malhaCorpo(`vila-bate-carrinho-${i}`, molde((r) => carrinho(r, i, haste)).corpo);
-    return { m, buf: instancias(m, 1, B.x, B.z, 9, 7), tum: -Infinity, tranco: -Infinity };
+    return {
+      m,
+      buf: instancias(m, 1, B.x, B.z, RAIO_PISTA, 7),
+      tum: -Infinity,
+      forca: 1,
+      lado: 1,
+    };
   });
   const farois = malhaLuz('vila-bate-farois', molde(luzesDoCarrinho).luz);
-  const bufFarois = instancias(farois, CADEIRAS.bate, B.x, B.z, 9, 7);
+  const bufFarois = instancias(farois, CADEIRAS.bate, B.x, B.z, RAIO_PISTA, 7);
   // a faísca na ponta da haste (uma cruzinha branca-azulada que pisca)
   const faisca = malhaLuz(
     'vila-bate-faisca',
@@ -296,13 +323,13 @@ export function criarParqueVila(
       r.luz(0.08, 0.08, 0.34, 0, -0.04, 0, '#8fd8ff');
     }).luz,
   );
-  const bufFaisca = instancias(faisca, CADEIRAS.bate, B.x, B.z, 9, 7);
+  const bufFaisca = instancias(faisca, CADEIRAS.bate, B.x, B.z, RAIO_PISTA, 7);
   // as estrelinhas do "tum"
   const estrela = malhaLuz(
     'vila-bate-estrelinhas',
     molde((r) => r.placa(perfilEstrela(0.2), 0.06, 0, 0, 0, COR.amarelo, true)).luz,
   );
-  const bufEstrela = instancias(estrela, N_ESTRELAS, B.x, B.z, 10, 8);
+  const bufEstrela = instancias(estrela, N_ESTRELAS, B.x, B.z, RAIO_PISTA + 1, 8);
   const estrelas = Array.from({ length: N_ESTRELAS }, () => ({
     x: 0,
     y: 0,
@@ -436,28 +463,31 @@ export function criarParqueVila(
         if (agora - algodaoDesde > DURA_ALGODAO + FICA_ALGODAO) algodaoDesde = agora;
       }
     },
-    tum(alvo, de) {
-      const a = carrinhos[alvo];
-      const d = carrinhos[de];
-      if (a) a.tum = agora;
-      if (d) d.tranco = agora;
-      if (!a) return;
-      // seis estrelinhas saem do carrinho que levou o "tum"
-      const l = lugarDaCadeira(pq, 'bate', alvo, ultimoNucleo);
-      for (let k = 0; k < 6; k++) {
+    tum(de, alvo, bx, bz, f) {
+      // os dois balançam (mais forte quanto mais forte a batida; cada um para um lado)
+      const forca = Math.max(0.4, Math.min(1, f / 4.5));
+      [carrinhos[de], carrinhos[alvo]].forEach((c, k) => {
+        if (!c) return;
+        c.tum = agora;
+        c.forca = forca;
+        c.lado = k ? -1 : 1;
+      });
+      // as estrelinhas saem de onde os para-choques se tocaram (na mureta, menos)
+      const n = alvo < 0 ? 3 : forca > 0.7 ? 6 : 4;
+      for (let k = 0; k < n; k++) {
         const e = estrelas[proxEstrela];
         proxEstrela = (proxEstrela + 1) % N_ESTRELAS;
-        const ang = (k / 6) * Math.PI * 2 + alvo;
-        e.x = l.x;
-        e.y = l.y + 0.5;
-        e.z = l.z;
+        const ang = (k / n) * Math.PI * 2 + de;
+        e.x = bx;
+        e.y = B.y + 0.1;
+        e.z = bz;
         e.vx = Math.cos(ang) * 1.5;
         e.vy = 2.4 + (k % 2) * 0.7;
         e.vz = Math.sin(ang) * 1.5;
         e.desde = agora;
       }
     },
-    quadro(t, tNucleo, vista, x, z) {
+    quadro(t, tNucleo, vista, x, z, carros) {
       const dt = agora > 0 ? Math.min(0.1, Math.max(0, t - agora)) : 0;
       agora = t;
       ultimoNucleo = tNucleo;
@@ -515,34 +545,32 @@ export function criarParqueVila(
       }
 
       // ---- o bate-bate
-      const alcance = B.meia + B.raio + 3;
       const verBate =
-        perto(B.x, B.z) &&
-        temChao(B.x - alcance, B.z - B.raio - 3, B.x + alcance, B.z + B.raio + 3);
+        perto(B.x, B.z) && temChao(B.x0 - 2, B.z0 - 2, B.x1 + 2, B.z1 + 2);
       vendo.bate = verBate;
       ligar(bateLuz, verBate);
+      ligar(bateMureta, verBate);
       ligar(farois, verBate);
       ligar(faisca, verBate);
       for (const c of carrinhos) ligar(c.m, verBate);
       let vivas = 0;
       if (verBate) {
         carrinhos.forEach((c, i) => {
-          const l = lugarDaCadeira(pq, 'bate', i, tNucleo);
-          // o "tum": balança de lado e dá um pulinho (nunca vira); quem bateu, um tranquinho
+          // o lugar é o de verdade (o do núcleo, ou a previsão de quem guia): a batida já afasta
+          // os carrinhos; aqui é só o balanço (de lado, com um pulinho: nunca vira)
+          const l = carrinhoAgora(B, i, carros);
           const f = t - c.tum;
-          const k = f >= 0 && f < DURA_TUM ? Math.exp(-f * 4.5) : 0;
-          const rolar = k > 0 ? Math.sin(f * 24) * 0.17 * k : 0;
+          const k = f >= 0 && f < DURA_TUM ? Math.exp(-f * 4.5) * c.forca : 0;
+          const rolar = k > 0 ? Math.sin(f * 24) * 0.17 * k * c.lado : 0;
           const pulo = k > 0 ? Math.abs(Math.sin(f * 12)) * 0.07 * k : 0;
-          const g = t - c.tranco;
-          const tranco = g >= 0 && g < 0.36 ? Math.sin((g / 0.36) * Math.PI) * 0.32 : 0;
-          const empurrao = k * 0.22;
+          const arfar = k > 0 ? Math.sin(f * 17) * 0.06 * k : 0;
           const fx = Math.sin(l.yaw);
           const fz = Math.cos(l.yaw);
-          const px = l.x + fx * (tranco + empurrao);
-          const pz = l.z + fz * (tranco + empurrao);
-          por(c.buf, 0, px, l.y + pulo, pz, l.yaw, rolar, -tranco * 0.18);
+          const px = l.x;
+          const pz = l.z;
+          por(c.buf, 0, px, B.y + pulo, pz, l.yaw, rolar, arfar);
           c.m.thinInstanceBufferUpdated('matrix');
-          por(bufFarois, i, px, l.y + pulo, pz, l.yaw, rolar, -tranco * 0.18);
+          por(bufFarois, i, px, B.y + pulo, pz, l.yaw, rolar, arfar);
           // a faísca pisca na ponta da haste (um chuvisco de vez em quando, mais no "tum")
           const sorte =
             Math.abs(Math.sin(Math.floor(t * 11) * 12.9898 + i * 78.233) * 43758.5453) % 1;
@@ -551,7 +579,7 @@ export function criarParqueVila(
             bufFaisca,
             i,
             px - fx * 0.86,
-            l.y + haste - 0.02,
+            B.y + haste - 0.02,
             pz - fz * 0.86,
             t * 9 + i,
             0,

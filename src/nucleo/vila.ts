@@ -67,6 +67,7 @@ import {
   PUBLICO_GRADE,
 } from '../world/publicoVila';
 import type { ParqueVista } from '../jogo/parque';
+import { N0_PILOTOS, N_MORADORES_BATE, pilotoDoBate } from '../jogo/bate';
 import { criarParqueNucleo, type ComandoParque, type EventoParque } from './parque';
 
 /** Os postos e quem mora em cada um (o número é o `n` do morador). */
@@ -300,6 +301,12 @@ export function criarVila(ctx: CtxVila) {
         profissao: m.profissao,
         posto: p.postos[m.posto],
       })),
+      // quem guia os carrinhos do bate-bate: cada um no carrinho dele
+      ...parque.carros().slice(0, N_MORADORES_BATE).map((c, i) => ({
+        n: N0_PILOTOS + i,
+        profissao: 'construtor' as Profissao,
+        posto: [c.x, p.parque.bate.y, c.z] as [number, number, number],
+      })),
     ];
     // quem é da banda aparece onde a coreografia (ou o descanso, fora do palco) o põe agora
     for (const m of lista) {
@@ -327,6 +334,19 @@ export function criarVila(ctx: CtxVila) {
         posto,
       };
     });
+  }
+
+  /**
+   * Os moradores que guiam os carrinhos do bate-bate (parte 2): a cada passo, cada um fica no
+   * carrinho dele (o lugar e o rumo são os do carrinho que o núcleo simula).
+   */
+  function cuidarDosPilotos(): void {
+    const carros = parque.carros();
+    for (const c of ctx.criaturas()) {
+      if (c.morador?.povoado !== POVOADO_VILA || c.estado === 'morrendo') continue;
+      const carro = carros[pilotoDoBate(c.morador.n)];
+      if (carro) porNoLugar(c, carro.x, p.parque.bate.y, carro.z, carro.yaw);
+    }
   }
 
   /** Um toque no vocalista: o pôster da banda, uma vez por mundo para cada criança. */
@@ -996,16 +1016,24 @@ export function criarVila(ctx: CtxVila) {
       if (n % 20 === 0) cuidarDosMoradores();
       if (n % 5 === 2) cuidarDoPublico();
       if (n % 5 === 3) parque.passo();
+      // o bate-bate anda a cada passo (com gente perto), e os moradores que guiam vão juntos
+      parque.passoDoBate();
+      cuidarDosPilotos();
       if (n % 20 === 7) cuidarDaFazendinha();
     },
     comando(id: string, c: ComandoVila): void {
       const j = ctx.jogador(id);
-      if (!j || j.morto || !podeTocar(id)) return;
+      if (!j || j.morto) return;
+      // o controle do carrinho vem a cada passo: fora do limite de toques, com o limite dele
+      if (c.a === 'guiar') return parque.guiar(id, c);
+      if (!podeTocar(id)) return;
       if (c.a === 'caixa') tocarCaixa(j, c.i);
       else parque.comando(id, c);
     },
     /** Spec 026 (parte 2): as cadeiras do parque (testes). */
     parque,
+    /** Spec 026 (parte 2): os carrinhos do bate-bate para o quadro deste jogador (ou null). */
+    bateDe: (id: string, n: number) => parque.bateDe(id, n),
     falou,
     /** A missão foi escolhida (ou escolhida de novo) por `id`: o que é dela volta ao lugar. */
     preparar(missao: string | null, id?: string): void {

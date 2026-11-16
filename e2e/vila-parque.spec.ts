@@ -10,8 +10,8 @@ import { abrirMundo, assentar } from './guia-palco';
  *   continua dela (arrastar gira), e ela desce sozinha no chão depois da volta;
  * - **carrossel:** o toque senta; o cavalinho sobe e desce girando; o toque toca o realejo;
  *   "Sair do brinquedo" aparece na roda só sentada, e desce do lado de fora;
- * - **bate-bate:** o toque senta; cada toque dá o "tum" (o carrinho da frente solta
- *   estrelinhas); empurrar o controle para andar desce;
+ * - **bate-bate:** o toque no carrinho livre senta; o carrinho espera parado; "Sair do brinquedo"
+ *   desce do lado de fora (guiar e bater de verdade: `vila-bate.spec.ts`);
  * - **os de tocar:** os balões, a argola, a pescaria, a pipoca e o algodão-doce respondem.
  */
 declare const process: { env: Record<string, string | undefined> };
@@ -151,7 +151,10 @@ for (const tamanho of ['deitado', 'empe'] as const) {
     await page.waitForTimeout(400);
 
     // ---------------------------------------------------------------- o bate-bate
-    await irPara(page, [pq.bate.x, Y, pq.bate.z], [pq.bate.saida[0], pq.bate.saida[2] + 2]);
+    // (guiar e bater de verdade, com o dedo no controle, é do `vila-bate.spec.ts`; aqui, o
+    // subir no carrinho livre, o carrinho que espera parado e o "Sair do brinquedo" da roda)
+    const vaga = pq.bate.vagas[5];
+    await irPara(page, [vaga[0], Y, vaga[1]], [vaga[0], pq.bate.z1 + 3.2], 0.25);
     await assentar(page, 9);
     t = await alvoDeSentar(page, 2);
     await page.touchscreen.tap(t.x, t.y);
@@ -160,27 +163,25 @@ for (const tamanho of ['deitado', 'empe'] as const) {
     const c0 = await pes(page);
     await page.waitForTimeout(1500);
     const c1 = await pes(page);
-    // o carrinho anda sozinho, devagar
-    const andou = Math.hypot(c0[0] - c1[0], c0[2] - c1[2]);
-    expect(andou).toBeGreaterThan(1);
-    expect(andou).toBeLessThan(3);
-    // cada toque é um "tum": estrelinhas no carrinho da frente, e o núcleo conta para os amigos
+    // o carrinho espera por ela: sem o controle, não sai do lugar (nada de andar sozinho)
+    expect(Math.hypot(c0[0] - c1[0], c0[2] - c1[2])).toBeLessThan(0.2);
+    expect(Math.hypot(c0[0] - vaga[0], c0[2] - vaga[1])).toBeLessThan(1.2);
+    await page.screenshot({ path: `${PASTA}/${tamanho}-bate-no-carrinho.png` });
+    // o toque não faz "tum" de mentira nem a tira do carrinho
     await page.touchscreen.tap(meio.x, meio.y);
-    await page.waitForFunction(() => window.__brumaluz!.parqueVila!()!.estrelinhas > 0);
-    await page.waitForTimeout(250);
-    await page.screenshot({ path: `${PASTA}/${tamanho}-bate-tum.png` });
-    await page.waitForFunction(() =>
-      (window.__brumaluz!.eventosVila ?? []).some((e) => e.e === 'parqueTum'),
-    );
-    // nunca empurra para fora: continua sentada, dentro da pista
+    await page.waitForTimeout(400);
     expect((await sentado(page))?.b).toBe('bate');
-    // empurrar o controle para andar desce (fora da cerca)
-    await page.evaluate(() => window.__brumaluz!.controleDireto!.mover(1, 0));
+    // "Sair do brinquedo" na roda desce do lado de fora da mureta
+    await page.locator('.menu-hud.botao-roda').tap();
+    const sairDoBate = page.locator('.roda.aberta button.ativo[data-item="sair-brinquedo"]');
+    await sairDoBate.waitFor({ state: 'visible' });
+    await page.waitForTimeout(400);
+    await sairDoBate.tap();
     await page.waitForFunction(() => !window.__brumaluz!.vilaParque!.sentado());
-    await page.evaluate(() => window.__brumaluz!.controleDireto!.mover(0, 0));
     await page.waitForTimeout(1200);
     const saiu = await pes(page);
-    expect(Math.abs(saiu[2] - pq.bate.z)).toBeGreaterThan(pq.bate.raio + 2);
+    expect(saiu[2]).toBeGreaterThan(pq.bate.z1 + 1);
+    expect(Math.abs(saiu[1] - Y)).toBeLessThan(0.3);
 
     // ---------------------------------------------------------------- os brinquedos de tocar
     const tocar = async (qual: string, de: [number, number], pronto: () => boolean | number) => {

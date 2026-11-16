@@ -47,6 +47,12 @@ export interface FerramentasVila {
 
 /** O lote do parque no mapa. */
 export const LOTE_PARQUE = { u0: 122, v0: 2, u1: 178, v1: 56 } as const;
+/**
+ * A pista do bate-bate no mapa: a mureta (de `u0` a `u1`, de `v0` a `v1`; a pista é o que fica
+ * dentro) e onde fica a peça dela (as lâmpadas do teto e a mureta de borracha são desenhadas em
+ * volta desse ponto).
+ */
+export const PISTA_BATE = { u0: 125, u1: 150, v0: 5, v1: 19, pu: 137, pv: 12 } as const;
 
 type P3 = [number, number, number];
 
@@ -98,27 +104,23 @@ export function montarParque(f: FerramentasVila): ParqueMontado {
 
   // ============================================================== o bate-bate (noroeste)
   // a pista escura cercada de grade, as colunas e o teto de malha com a barra de duas cores
-  const BU0 = 126;
-  const BU1 = 141;
-  const BV0 = 8;
-  const BV1 = 19;
+  // (dono, 16 nov 2026: "aumentar a pista do bate-bate, deixar maior para o usuário poder guiar o
+  // carrinho e bater no outro de fato": 24 por 13 blocos por dentro, do canto do lote até perto
+  // do laguinho; a beira do sul fica onde estava, na ponta do caminho)
+  const { u0: BU0, u1: BU1, v0: BV0, v1: BV1 } = PISTA_BATE;
   for (let u = BU0; u <= BU1; u++)
     for (let v = BV0; v <= BV1; v++) {
       chao(u, v, Bloco.PISO_PALCO);
       const beira = u === BU0 || u === BU1 || v === BV0 || v === BV1;
       if (beira) b(u, 1, v, Bloco.GRADE_FERRO);
     }
-  for (const [u, v] of [
-    [BU0, BV0],
-    [BU1, BV0],
-    [BU0, BV1],
-    [BU1, BV1],
-    [131, BV0],
-    [136, BV0],
-    [131, BV1],
-    [136, BV1],
-  ])
-    coluna(u, v, 2, 5, Bloco.GRADE_FERRO);
+  // o tapete verde da saída, por dentro, na ponta do caminho (parar nele é descer)
+  const TU0 = 131;
+  const TU1 = 134;
+  for (let u = TU0; u <= TU1; u++) for (let v = BV1 - 2; v < BV1; v++) chao(u, v, Bloco.LA_VERDE);
+  // as colunas: os cantos, uma a cada cinco blocos nas beiras compridas e uma no meio das curtas
+  for (let u = BU0; u <= BU1; u += 5) for (const v of [BV0, BV1]) coluna(u, v, 2, 5, Bloco.GRADE_FERRO);
+  for (const u of [BU0, BU1]) coluna(u, (BV0 + BV1) >> 1, 2, 5, Bloco.GRADE_FERRO);
   for (let u = BU0 - 1; u <= BU1 + 1; u++)
     for (let v = BV0 - 1; v <= BV1 + 1; v++) {
       const beira = u === BU0 - 1 || u === BU1 + 1 || v === BV0 - 1 || v === BV1 + 1;
@@ -135,13 +137,30 @@ export function montarParque(f: FerramentasVila): ParqueMontado {
     chao(BU0 - 1, v, C);
     chao(BU1 + 1, v, C);
   }
-  peca('bate-bate', 134, 14, DIR.s, 0);
+  peca('bate-bate', PISTA_BATE.pu, PISTA_BATE.pv, DIR.s, 0);
+  // os carrinhos: os dos moradores espalhados pela pista; os das crianças estacionados na beira
+  // do sul, dois de cada lado do tapete da saída, de frente para a pista
+  const NA_BEIRA = Z(BV1) - 1.12;
   const bate: ParqueVila['bate'] = {
-    x: X(134),
+    x: (X(BU0 + 1) + X(BU1)) / 2,
     y: Y + 0.42,
-    z: Z(14),
-    meia: 3.2,
-    raio: 2.9,
+    z: (Z(BV0 + 1) + Z(BV1)) / 2,
+    x0: X(BU0 + 1),
+    z0: Z(BV0 + 1),
+    x1: X(BU1),
+    z1: Z(BV1),
+    vagas: [
+      [X(130), Z(9), 1.2],
+      [X(139), Z(12) + 0.5, -2.2],
+      [X(145) + 0.5, Z(8) + 0.5, 2.6],
+      [X(144), Z(15), -0.6],
+      // (entre as colunas da beira, nunca atrás de uma: a câmera fica atrás do carrinho)
+      [X(127) + 0.2, NA_BEIRA, Math.PI],
+      [X(129) + 0.3, NA_BEIRA, Math.PI],
+      [X(136) + 0.8, NA_BEIRA, Math.PI],
+      [X(138) + 0.9, NA_BEIRA, Math.PI],
+    ],
+    tapete: { x0: X(TU0), z0: Z(BV1 - 2), x1: X(TU1 + 1), z1: Z(BV1) },
     saida: [X(133), Y, Z(21) + 0.5],
   };
 
@@ -291,8 +310,9 @@ export function montarParque(f: FerramentasVila): ParqueMontado {
   canteiro(125, 28, 2, 1);
   canteiro(170, 36, 3, 1);
   canteiro(166, 34, 3, 1);
-  canteiro(136, 20, 1, 1);
-  canteiro(129, 20, 1, 1);
+  // (fora da calçadinha da pista: é nela que a criança pisa ao descer do carrinho)
+  canteiro(136, 21, 1, 1);
+  canteiro(129, 21, 1, 1);
   // os postes de luz do passeio e do caminho da entrada
   for (const [u, v] of [
     [130, 46],
@@ -320,14 +340,9 @@ export function montarParque(f: FerramentasVila): ParqueMontado {
 
   // ============================================================== as árvores do jogo
   // nos gramados (longe dos caminhos, dos brinquedos e da frente da roda: a vista do bairro)
+  // (o canto do noroeste é todo da pista do bate-bate)
   for (const [u, v, alta] of [
-    [125, 5, 0],
-    [131, 4, 1],
-    [138, 5, 0],
-    [145, 5, 1],
-    [146, 12, 0],
-    [146, 19, 0],
-    [151, 6, 0],
+    [154, 5, 0],
     [158, 6, 1],
     [166, 6, 0],
     [172, 8, 1],

@@ -19,7 +19,12 @@ import { figura } from './figuras';
 import { tocarSomInterface } from '../../audio/somInterface';
 import { alcancaOPalco, faseDoShow, type FaseShow } from '../../jogo/show';
 import { foiToque } from '../../jogo/rinque';
-import { alcancaOBrinquedo, distanciaDoBrinquedo, type Brinquedo } from '../../jogo/parque';
+import {
+  alcancaOBrinquedo,
+  distanciaDoBrinquedo,
+  noTapete,
+  type Brinquedo,
+} from '../../jogo/parque';
 import { boaParaDica, criarDicaToque } from './dicaToque';
 import { arte as arteAlma } from './arte';
 import { CSS_CANTO } from './canto';
@@ -155,16 +160,24 @@ export function ligarVilaNeon(
    * Os três brinquedos de sentar: onde o dedo pega cada um (a cadeirinha de baixo e o miolo da
    * roda; o meio do carrossel; o meio da pista), com o alvo grande de quem tem 3 anos.
    */
+  /** O carrinho livre do bate-bate que a criança pegaria agora (null: nenhum ao alcance). */
+  const carrinhoLivre = (): [number, number, number] | null => {
+    const i = e.vilaParque?.carrinhoLivre() ?? -1;
+    if (i < 0) return null;
+    const c = e.vilaParque?.carros()?.[i];
+    const v = pq.bate.vagas[i];
+    return c ? [c.x, chaoVila + 0.9, c.z] : v ? [v[0], chaoVila + 0.9, v[1]] : null;
+  };
   const DE_SENTAR: {
     b: number;
     nome: Brinquedo;
-    alvos: [number, number, number][];
+    alvos(): [number, number, number][];
     raio: number;
   }[] = [
     {
       b: 0,
       nome: 'roda',
-      alvos: [
+      alvos: () => [
         [pq.roda.x, chaoVila + 1.6, pq.roda.z],
         [pq.roda.x, pq.roda.y, pq.roda.z],
         [pq.roda.x, pq.roda.y - pq.roda.raio * 0.5, pq.roda.z],
@@ -174,16 +187,23 @@ export function ligarVilaNeon(
     {
       b: 1,
       nome: 'carrossel',
-      alvos: [[pq.carrossel.x, chaoVila + 3, pq.carrossel.z]],
+      alvos: () => [[pq.carrossel.x, chaoVila + 3, pq.carrossel.z]],
       raio: RAIO_TOQUE * 2.8,
     },
     {
+      // (o bate-bate é de guiar: o dedo pega o carrinho livre mais perto da criança)
       b: 2,
       nome: 'bate',
-      alvos: [[pq.bate.x, chaoVila + 1.2, pq.bate.z]],
-      raio: RAIO_TOQUE * 2.8,
+      alvos: () => {
+        const c = carrinhoLivre();
+        return c ? [c] : [];
+      },
+      raio: RAIO_TOQUE * 2.2,
     },
   ];
+  /** A criança alcança o brinquedo para sentar? (No bate-bate: há um carrinho livre ao alcance.) */
+  const alcanca = (nome: Brinquedo, x: number, z: number) =>
+    nome === 'bate' ? !!carrinhoLivre() : alcancaOBrinquedo(pq, nome, x, z);
   /** Até onde (blocos) o toque num brinquedo de sentar ainda faz alguma coisa (a roda pisca). */
   const LONGE_DE_SENTAR = 14;
   function brinquedoDeSentarNoDedo(x: number, y: number): (typeof DE_SENTAR)[number] | null {
@@ -193,7 +213,7 @@ export function ligarVilaNeon(
     for (const q of DE_SENTAR) {
       const dist = distanciaDoBrinquedo(pq, q.nome, pes[0], pes[2]);
       if (dist > LONGE_DE_SENTAR) continue;
-      for (const a of q.alvos) {
+      for (const a of q.alvos()) {
         const t = tela(a[0], a[1], a[2]);
         if (!t) continue;
         const raio = q.raio * Math.max(1, 5 / Math.max(1, dist + 2));
@@ -256,7 +276,7 @@ export function ligarVilaNeon(
     const q = DE_SENTAR[d.b];
     const pes = e.jogadorPes?.();
     if (!q || !pes) return;
-    if (alcancaOBrinquedo(pq, q.nome, pes[0], pes[2])) e.vilaParque?.sentar(q.b);
+    if (alcanca(q.nome, pes[0], pes[2])) e.vilaParque?.sentar(q.b);
     // de mais longe (ou com tudo ocupado) a roda pisca e o carrossel toca o realejo
     else if (q.nome !== 'bate') e.vilaParque?.tocar(q.nome);
   }
@@ -318,7 +338,7 @@ export function ligarVilaNeon(
         if (preso) {
           // (com o mouse preso não há arrastar: o clique já vale)
           const pes = e.jogadorPes?.();
-          if (pes && alcancaOBrinquedo(pq, deSentar.nome, pes[0], pes[2]))
+          if (pes && alcanca(deSentar.nome, pes[0], pes[2]))
             e.vilaParque?.sentar(deSentar.b);
           else if (deSentar.nome !== 'bate') e.vilaParque?.tocar(deSentar.nome);
         } else
@@ -418,22 +438,64 @@ export function ligarVilaNeon(
   /** Chegou perto há este tanto (s): quem só passa andando não vê a dica piscar. */
   const ESPERA_DA_DICA = 0.5;
   let pertoDe: { base: string; desde: number } | null = null;
+  /** No carrinho do bate-bate: de onde ela saiu e se já guiou (a dica de guiar some). */
+  let saiuDe: { x: number; z: number; guiou: boolean } | null = null;
   scene.onBeforeRenderObservable.add(() => {
     const pes = e.jogadorPes?.();
     const sentada = e.vilaParque?.sentado();
     if (sentada) dicaUsada = `sentar-${DE_SENTAR.find((q) => q.nome === sentada.b)?.b}`;
+    // no carrinho do bate-bate: como guiar (até ela sair do lugar) e, em cima do tapete verde,
+    // como descer. Somem sozinhas: nada fica na tela enquanto ela brinca
+    const noCarrinho =
+      sentada?.b === 'bate' ? (e.vilaParque?.carros()?.[sentada.i] ?? null) : null;
+    if (!noCarrinho) saiuDe = null;
+    else if (pes && noJogo()) {
+      saiuDe ??= { x: noCarrinho.x, z: noCarrinho.z, guiou: false };
+      if (Math.hypot(noCarrinho.x - saiuDe.x, noCarrinho.z - saiuDe.z) > 1.5) saiuDe.guiou = true;
+      const t = tela(noCarrinho.x, chaoVila + 2.3, noCarrinho.z);
+      pertoDe = null;
+      if (!t || !boaParaDica(t, innerWidth, innerHeight)) return dica.mostrar(null);
+      if (!saiuDe.guiou)
+        return dica.mostrar({
+          chave: 'bate-guiar',
+          t,
+          semMao: true,
+          figura: arteAlma('sentarBrinquedo'),
+          texto: document.body.classList.contains('toque-ativo')
+            ? 'Empurre o controle para guiar'
+            : 'Use W, A, S e D para guiar',
+        });
+      if (noTapete(pq.bate, noCarrinho.x, noCarrinho.z))
+        return dica.mostrar({
+          chave: 'bate-sair',
+          t,
+          semMao: true,
+          figura: arteAlma('sairBrinquedo'),
+          texto: 'Pare aqui para sair',
+        });
+      return dica.mostrar(null);
+    }
     if (!pes || !noJogo() || sentada || showTocando()) {
       pertoDe = null;
       return dica.mostrar(null);
     }
     const [sx, sy, sz] = p.patins;
-    const lugares: { base: string; dist: number; ponto: [number, number, number] }[] = [
+    const lugares: { base: string; dist: number; ponto: [number, number, number] | undefined }[] = [
       { base: 'patins', dist: Math.hypot(pes[0] - sx, pes[2] - sz), ponto: [sx, sy + 1, sz] },
-      ...DE_SENTAR.map((q) => ({
-        base: `sentar-${q.b}`,
-        dist: distanciaDoBrinquedo(pq, q.nome, pes[0], pes[2]),
-        ponto: q.alvos[0],
-      })),
+      ...DE_SENTAR.map((q) => {
+        const ponto = q.alvos()[0] as [number, number, number] | undefined;
+        return {
+          base: `sentar-${q.b}`,
+          // (no bate-bate a dica é do carrinho livre: perto dele, não da pista inteira)
+          dist:
+            q.nome !== 'bate'
+              ? distanciaDoBrinquedo(pq, q.nome, pes[0], pes[2])
+              : ponto
+                ? Math.max(0, Math.hypot(pes[0] - ponto[0], pes[2] - ponto[2]) - 2.5)
+                : 99,
+          ponto,
+        };
+      }),
     ];
     // usou (calçou, tirou, andou no brinquedo): a dica só volta depois de ela se afastar
     if (dicaUsada && (lugares.find((l) => l.base === dicaUsada)?.dist ?? 99) > LONGE_DA_DICA)
@@ -450,7 +512,7 @@ export function ligarVilaNeon(
       return dica.mostrar(null);
     }
     if (pertoDe?.base !== perto.base) pertoDe = { base: perto.base, desde: agora };
-    const t = tela(perto.ponto[0], perto.ponto[1], perto.ponto[2]);
+    const t = perto.ponto ? tela(perto.ponto[0], perto.ponto[1], perto.ponto[2]) : null;
     if (!t || agora - pertoDe.desde < ESPERA_DA_DICA || !boaParaDica(t, innerWidth, innerHeight))
       return dica.mostrar(null);
     if (perto.base === 'patins') {
@@ -477,10 +539,10 @@ export function ligarVilaNeon(
     caixas: () => caixasNaTela(),
     show: () => showTocando(),
     parque: () => ({
-      sentar: DE_SENTAR.map((q) => ({
-        b: q.b,
-        t: tela(q.alvos[0][0], q.alvos[0][1], q.alvos[0][2]),
-      })),
+      sentar: DE_SENTAR.map((q) => {
+        const a = q.alvos()[0] as [number, number, number] | undefined;
+        return { b: q.b, t: a ? tela(a[0], a[1], a[2]) : null };
+      }),
       tocar: DE_TOCAR.map((q) => ({
         qual: q.qual,
         i: q.i,
