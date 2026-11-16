@@ -8,6 +8,7 @@ import {
   tocar,
   type Tamanho,
 } from './guia-palco';
+import { CHAMADO, ROTEIRO } from '../src/jogo/show';
 
 /**
  * Spec 026 (Vila Neon, parte 1): as três missões de ponta a ponta, como uma criança: escolhe no
@@ -15,8 +16,9 @@ import {
  * - f1: os três estojos (rua, pista, festival) → 4 moedinhas;
  * - f2: o feno aparece na mão perto das lhamas, e elas seguem até a grade → 5;
  * - f3: de dia espera a noite (a lua no cartão e no selinho, sem trilha: o show é só de noite);
- *   a noite chega, sobe a escadinha, acende as três caixas, o show começa e o toque do chamado
- *   dispara o acorde final → 6, com a festa depois do acorde.
+ *   a noite chega, sobe a escadinha, acende as três caixas → 6, com a festa na hora (o dono, 16
+ *   nov 2026); o show começa, a criança toca nas músicas e o toque do chamado dispara o acorde
+ *   final (o relógio do show é pulado com o atalho dos testes: o show tem uns 6 min).
  * Fotos (e quadros de vídeo com VILA_VIDEO=1) em VILA_PASTA.
  */
 declare const process: { env: Record<string, string | undefined> };
@@ -229,8 +231,11 @@ async function f3(page: Page, pre: string): Promise<{ toques: number; finalQuem:
     toques++;
     await page.waitForTimeout(1200);
   }
-  // o show: a criança toca algumas vezes (qualquer toque toca um acorde)
+  // a terceira caixa fecha a missão na hora: a festa (o show começa atrás dela)
+  await festa(page, `${pre}-f3-festa.png`);
+  // o show: na primeira música a criança toca algumas vezes (qualquer toque toca um acorde)
   const v = page.viewportSize()!;
+  await page.evaluate((s) => window.__brumaluz!.pularShow!(s), ROTEIRO[0].inicio + 4);
   await page.waitForTimeout(3000);
   await page.screenshot({ path: `${PASTA}/${pre}-f3-show.png` });
   for (let k = 0; k < 6; k++) {
@@ -242,7 +247,8 @@ async function f3(page: Page, pre: string): Promise<{ toques: number; finalQuem:
   );
   console.log(`vila: acordes tocados ${acordes}`);
   expect(acordes).toBeGreaterThanOrEqual(3);
-  // o chamado: espera o palco chamar e toca
+  // o chamado (o relógio do show pulado): espera o palco chamar e toca
+  await page.evaluate((s) => window.__brumaluz!.pularShow!(s), CHAMADO - 1);
   await page.waitForFunction(() => window.__vila!.show() === 'chamando', undefined, {
     timeout: 60_000,
   });
@@ -282,7 +288,6 @@ test('Vila Neon, deitado: as três missões de ponta a ponta, com moedinhas de v
   await esperarANoite(page, 'deitado');
   const r = await f3(page, 'deitado');
   expect(r.finalQuem).not.toBe('auto');
-  await festa(page, 'deitado-f3-festa.png');
   console.log(`vila: f3 em ${((Date.now() - t0) / 1000).toFixed(0)} s, toques ${r.toques}`);
   await parar();
   const depois = await moedasReais(page);
@@ -309,7 +314,7 @@ for (const id of ['f1', 'f2', 'f3'] as const)
       await esperarANoite(page, 'empe');
       await f3(page, 'empe');
     }
-    await festa(page, `empe-${id}-festa.png`);
+    if (id !== 'f3') await festa(page, `empe-${id}-festa.png`);
     await parar();
     await page.context().close();
   });
@@ -359,14 +364,17 @@ test('Vila Neon, deitado: de noite no festival, sem tocar em nada, o show começ
       .map((e) => `${(e as { i: number }).i}:${e.quem}`),
   );
   expect(acesas).toEqual(['0:auto', '1:auto', '2:auto']);
+  // a abertura e a entrada (uns 38 s); a turma vai para a grade; depois, a primeira música
   await page.waitForTimeout(16_000);
+  await page.evaluate((s) => window.__brumaluz!.pularShow!(s), ROTEIRO[0].inicio + 4);
+  await page.waitForTimeout(3000);
   await page.screenshot({ path: `${PASTA}/sozinho-show.png` });
   const r = await page.evaluate(() => {
     const e = window.__brumaluz!;
     const som = e.somVila?.();
-    const nos = e
-      .cenaBabylon!()
-      .transformNodes.filter((n) => /^morador-\d+-junta-bracoD$/.test(n.name));
+    const nos = e.cenaBabylon!().transformNodes.filter((n) =>
+      /^morador-\d+-junta-bracoD$/.test(n.name),
+    );
     return {
       fase: window.__vila!.show(),
       som: som ? { show: !!som.show, calarNatureza: som.calarNatureza, pronto: som.pronto } : null,
