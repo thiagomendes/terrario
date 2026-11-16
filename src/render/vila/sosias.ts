@@ -18,7 +18,8 @@ import type { OpcoesRenderVila } from './index';
 import { criarPaletaLuz } from './luzes';
 
 export interface Sosias {
-  quadro(t: number, x: number, z: number, noite: number): void;
+  /** `alto`: quantos blocos acima do chão do bairro a criança está (de cima, os sósias somem). */
+  quadro(t: number, x: number, z: number, noite: number, alto?: number): void;
   /** Quantos sósias estão à vista agora. */
   visiveis(): number;
   /** Os sósias (teste do campo de visão): a caixa de cada um e se está à vista. */
@@ -392,12 +393,17 @@ export function criarSosias(scene: Scene, plano: PlanoVila, opcoes: OpcoesRender
   }
 
   const fog = new Color3();
+  let doAlto = false;
   return {
-    quadro(_t, x, z, noite) {
+    quadro(_t, x, z, noite, alto = 0) {
+      // de cima (no alto da roda-gigante, voando no criativo) o sósia some: visto de lá, o
+      // pedaço de chão dele fica solto no ar, longe do chão desenhado (nada flutuando, regra do
+      // dono). Com folga para não piscar na subida e na descida
+      doAlto = doAlto ? alto > 4.5 : alto > 6;
       for (const s of lista)
         for (const p of s.pedacos) {
           const longe = Math.hypot(p.cx * 16 + 8 - x, p.cz * 16 + 8 - z) > PERTO;
-          const ver = longe && !opcoes.temMalha(p.cx, p.cz);
+          const ver = longe && !doAlto && !opcoes.temMalha(p.cx, p.cz);
           if (p.malha.isEnabled() !== ver) p.malha.setEnabled(ver);
           if (p.luzes && p.luzes.isEnabled() !== ver) p.luzes.setEnabled(ver);
         }

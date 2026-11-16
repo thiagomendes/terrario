@@ -20,6 +20,7 @@
 import type { Scene } from '@babylonjs/core/scene';
 import { Mesh } from '@babylonjs/core/Meshes/mesh';
 import { Matrix, Quaternion, Vector3 } from '@babylonjs/core/Maths/math.vector';
+import { BoundingInfo } from '@babylonjs/core/Culling/boundingInfo';
 import '@babylonjs/core/Meshes/thinInstanceMesh';
 import { criarPlasticos } from '../formas';
 import { Pecas } from '../solidos';
@@ -194,12 +195,20 @@ export function criarParqueVila(
     return d;
   };
   /** Instâncias finas: `n` cópias do molde, cada uma com a matriz dela (atualizada por quadro). */
-  const instancias = (m: Mesh, n: number) => {
+  const instancias = (m: Mesh, n: number, cx: number, cz: number, raio: number, alto: number) => {
     const buf = new Float32Array(16 * n);
     Matrix.Identity().copyToArray(buf, 0);
     for (let i = 1; i < n; i++) buf.copyWithin(i * 16, 0, 16);
     m.thinInstanceSetBuffer('matrix', buf, 16, false);
-    m.alwaysSelectAsActiveMesh = true;
+    // a caixa do brinquedo inteiro (as cópias andam dentro dela): fora da vista da câmera a
+    // malha não é desenhada, como qualquer outra
+    m.doNotSyncBoundingInfo = true;
+    m.setBoundingInfo(
+      new BoundingInfo(
+        new Vector3(cx - raio, Y - 1, cz - raio),
+        new Vector3(cx + raio, Y + alto, cz + raio),
+      ),
+    );
     return buf;
   };
   const q = new Quaternion();
@@ -249,7 +258,7 @@ export function criarParqueVila(
   }
   const cadeirinhas = [0, 1].map((v) => {
     const m = malhaCorpo(`vila-roda-cadeirinha-${v}`, molde((r) => cadeirinha(r, v)).corpo);
-    return { m, buf: instancias(m, CADEIRAS.roda / 2) };
+    return { m, buf: instancias(m, CADEIRAS.roda / 2, R.x, R.z, R.raio + 2, 20) };
   });
   let piscaDesde = -Infinity;
   let anguloRoda = 0;
@@ -261,7 +270,7 @@ export function criarParqueVila(
   for (const m of [carrosselGira, carrosselLuz]) m.position.set(C.x, Y + 1, C.z);
   const cavalinhos = [0, 1].map((v) => {
     const m = malhaCorpo(`vila-carrossel-cavalinho-${v}`, molde((r) => cavalinho(r, v)).corpo);
-    return { m, buf: instancias(m, CADEIRAS.carrossel / 2) };
+    return { m, buf: instancias(m, CADEIRAS.carrossel / 2, C.x, C.z, C.beira, 5) };
   });
   let correDesde = -Infinity;
 
@@ -274,10 +283,10 @@ export function criarParqueVila(
   const haste = Y + 5 - B.y;
   const carrinhos = Array.from({ length: CADEIRAS.bate }, (_, i) => {
     const m = malhaCorpo(`vila-bate-carrinho-${i}`, molde((r) => carrinho(r, i, haste)).corpo);
-    return { m, buf: instancias(m, 1), tum: -Infinity, tranco: -Infinity };
+    return { m, buf: instancias(m, 1, B.x, B.z, 9, 7), tum: -Infinity, tranco: -Infinity };
   });
   const farois = malhaLuz('vila-bate-farois', molde(luzesDoCarrinho).luz);
-  const bufFarois = instancias(farois, CADEIRAS.bate);
+  const bufFarois = instancias(farois, CADEIRAS.bate, B.x, B.z, 9, 7);
   // a faísca na ponta da haste (uma cruzinha branca-azulada que pisca)
   const faisca = malhaLuz(
     'vila-bate-faisca',
@@ -287,13 +296,13 @@ export function criarParqueVila(
       r.luz(0.08, 0.08, 0.34, 0, -0.04, 0, '#8fd8ff');
     }).luz,
   );
-  const bufFaisca = instancias(faisca, CADEIRAS.bate);
+  const bufFaisca = instancias(faisca, CADEIRAS.bate, B.x, B.z, 9, 7);
   // as estrelinhas do "tum"
   const estrela = malhaLuz(
     'vila-bate-estrelinhas',
     molde((r) => r.placa(perfilEstrela(0.2), 0.06, 0, 0, 0, COR.amarelo, true)).luz,
   );
-  const bufEstrela = instancias(estrela, N_ESTRELAS);
+  const bufEstrela = instancias(estrela, N_ESTRELAS, B.x, B.z, 10, 8);
   const estrelas = Array.from({ length: N_ESTRELAS }, () => ({
     x: 0,
     y: 0,

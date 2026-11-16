@@ -117,6 +117,7 @@ export function criarPasseio(d: DepsPasseio) {
   let zoomAntes: number | null = null;
   let viraDesde: { em: number; yaw: number; pitch: number } | null = null;
   let agora = 0;
+  let largou = false;
 
   const lugarDaVez = (): Lugar | null => {
     if (atual) {
@@ -154,7 +155,13 @@ export function criarPasseio(d: DepsPasseio) {
     /** Uma vez por quadro, antes da física: `t` é o relógio da tela (s). */
     quadro(t: number, dt: number): void {
       agora = t;
-      const s = sentadoNaVista(d.vista(), d.voce);
+      let s = sentadoNaVista(d.vista(), d.voce);
+      // largou a cadeira por outro caminho (foi para casa, pulou para um amigo): a cadeira não
+      // vale mais, mesmo antes de o núcleo confirmar
+      if (largou) {
+        if (!s) largou = false;
+        s = null;
+      }
       if (s && (!atual || atual.b !== s.b || atual.i !== s.i)) {
         // sentou: o pulinho sai de onde ela está
         atual = s;
@@ -228,6 +235,24 @@ export function criarPasseio(d: DepsPasseio) {
     lugar: (): Lugar | null => ultimo,
     /** Em qual cadeira está (null: em pé ou descendo). */
     sentado: (): Sentado | null => atual,
+    /**
+     * A criança vai para outro lugar de uma vez (para casa, para perto de um amigo): larga a
+     * cadeira já, sem o pulinho de descer. Devolve se estava sentada (para avisar o núcleo).
+     */
+    largar(): boolean {
+      const estava = !!atual;
+      if (atual || descendo) {
+        largou = !!atual;
+        atual = null;
+        descendo = null;
+        saidaDada = null;
+        viraDesde = null;
+        ultimo = null;
+        if (zoomAntes !== null) d.camera.definirZoom(zoomAntes);
+        zoomAntes = null;
+      }
+      return estava;
+    },
     /** O núcleo disse onde pisar ao descer. */
     desceu(x: number, y: number, z: number): void {
       saidaDada = [x, y, z];

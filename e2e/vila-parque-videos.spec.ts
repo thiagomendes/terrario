@@ -149,7 +149,7 @@ test('o parque: os vídeos dos três brinquedos (deitado, com o som do jogo)', a
     passo('roda-gigante');
     await hora(page, 0.42);
     await ir(page, pq.roda.saida[0] + 1, pq.roda.saida[2] + 4, Y + 0.2);
-    await olhar(page, pq.roda.x, pq.roda.z - 6, -0.42);
+    await olhar(page, pq.roda.x, pq.roda.z - 6, -0.24);
     await assentar(page, 20);
     await page.waitForTimeout(3000);
     await gravar(page, 'roda-gigante', 38, async () => {

@@ -109,6 +109,7 @@ import { criarBrinquedosVila } from './vila/brinquedos';
 import { criarParqueVila, type ToqueParque } from './vila/parque';
 import { criarPasseio, lugarDoAmigo, JUNTAS_SENTADO } from './vila/passeio';
 import { carrinhoDaFrente, lugarDaCadeira, sentadoNaVista } from '../jogo/parque';
+import { PIPOQUEIRO, VENDEDORA_DE_BALOES } from '../nucleo/vila';
 import { criarSomParque, type SomParque } from '../audio/somParque';
 import { faseDoShow, noiteDeShow } from '../jogo/show';
 import { noiteDosBichos } from '../jogo/tempo';
@@ -1893,6 +1894,15 @@ export function criarCena(
   }
   /** O som do parque (criado mais abaixo, com o motor do áudio). */
   let somParque: SomParque | null = null;
+  let tumDados = 0;
+  /** A distância (no chão) de um ponto até o meio do carrossel (o carrinho de pipoca do parque). */
+  const distParque = (q: { x: number; z: number }) =>
+    planoVila
+      ? Math.hypot(
+          q.x - planoVila.pontos.parque.carrossel.x,
+          q.z - planoVila.pontos.parque.carrossel.z,
+        )
+      : Infinity;
   /** Onde fica cada brinquedo de tocar do parque (para o som vir de lá). */
   const lugarDoToque = (qual: ToqueParque, i = 0): { x: number; z: number } | null => {
     if (!planoVila) return null;
@@ -1937,6 +1947,20 @@ export function criarCena(
         if (qual === 'pipoca') somParque?.tocar('sininho', onde);
         // a roda-gigante: o empurrãozinho vale para todos (o núcleo guarda)
         if (qual === 'roda') enviar({ t: 'vila', a: 'roda' });
+        // quem cuida do brinquedo acena para a criança (o pipoqueiro, a vendedora de balões)
+        const dono =
+          qual === 'baloes'
+            ? VENDEDORA_DE_BALOES
+            : qual === 'algodao' || (qual === 'pipoca' && onde && distParque(onde) < 40)
+              ? PIPOQUEIRO
+              : -1;
+        const quem =
+          dono < 0
+            ? undefined
+            : replicaCriaturas.lista.find(
+                (q) => q.morador?.povoado === 'vila' && q.morador.n === dono,
+              );
+        if (quem) gestos?.evento({ e: 'gesto', gesto: 'acenar', criatura: quem.id });
         estado.parqueToques = (estado.parqueToques ?? 0) + 1;
       },
       toqueSentado: () => {
@@ -1948,6 +1972,8 @@ export function criarCena(
           parqueVila.tum(alvo, s.i);
           const l = passeio!.lugar();
           somParque?.tocar('tum', l ?? undefined);
+          // a criança ri de vez em quando (um "tum" sim, um não)
+          if (++tumDados % 2 === 0) setTimeout(() => somParque?.tocar('risada', l ?? undefined), 240);
           enviar({ t: 'vila', a: 'tum' });
         } else estado.vilaParque?.tocar(s.b === 'roda' ? 'roda' : 'carrossel');
         return true;
@@ -4390,7 +4416,13 @@ export function criarCena(
     quadroConstrucao?.(tempo);
     atualizarFantasmas(tempo);
     renderVeiculos?.quadro(Math.min(dtBruto, 0.1), tempo);
-    renderVila?.quadro(tempo, controle.jogador.x, controle.jogador.z, noiteVila);
+    renderVila?.quadro(
+      tempo,
+      controle.jogador.x,
+      controle.jogador.z,
+      noiteVila,
+      planoVila ? controle.jogador.y - (planoVila.h + 1) : 0,
+    );
     // spec 026: o show é só de noite (a noite do show acende o palco)
     const noiteShow = noiteDeShow(hora);
     showVila?.quadro(tempo, cliente.vila.estado, cliente.vila.tempo(tempo), noiteVila, noiteShow);
@@ -4411,7 +4443,7 @@ export function criarCena(
       controle.jogador,
       cliente.vila.tempo(tempo),
       noiteVila,
-      (somVila?.info().calar ?? 0) > 0,
+      calarDaVila > 0,
     );
     if (somVila) {
       if (estado.ready) somVila.carregar();
@@ -6174,6 +6206,8 @@ export function criarCena(
         window.dispatchEvent(new CustomEvent('brumaluz:morte', { detail: e.causa }));
         break;
       case 'teleporte':
+        // spec 026 (parte 2): quem vai para outro lugar de uma vez larga a cadeira do parque
+        if (passeio?.largar()) enviar({ t: 'vila', a: 'sair' });
         // spec 021: o pulo para perto tem o puf, a câmera de lado e o aceno
         if (e.pulo && e.y !== undefined && acharAmigo) {
           acharAmigo.pulou(e.x, e.y, e.z, e.pulo);

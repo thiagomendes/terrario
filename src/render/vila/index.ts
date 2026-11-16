@@ -48,7 +48,7 @@ interface ChunkVivo {
 
 export interface RenderVila {
   /** Uma vez por quadro: nasce ou some o que mudou, e anima. */
-  quadro(t: number, x: number, z: number, noite: number): void;
+  quadro(t: number, x: number, z: number, noite: number, alto?: number): void;
   /** Peças visíveis em chunk sem malha (teste do campo de visão; sempre 0). */
   semChao(): number;
   /** Quantos chunks e malhas vivos (medida). */
@@ -299,7 +299,7 @@ export function criarRenderVila(
 
   return {
     sosias,
-    quadro(t, x, z, noite) {
+    quadro(t, x, z, noite, alto = 0) {
       // some o que perdeu o chão (sempre, no mesmo quadro: nada fica sem chão embaixo)
       for (const [k, v] of vivos)
         if (!opcoes.temMalha(v.cx, v.cz)) {
@@ -317,7 +317,7 @@ export function criarRenderVila(
       faltam.sort((a, b) => a[0] - b[0]);
       for (const [, k, cx, cz] of faltam.slice(0, porQuadro))
         vivos.set(k, montar(cx, cz, porChunk.get(k)!));
-      sosias.quadro(t, x, z, noite);
+      sosias.quadro(t, x, z, noite, alto);
       // de noite o plástico das peças escurece com o chão (a luz fica com o neon e as lâmpadas)
       const luzPecas = 1 - 0.62 * noite;
       if (Math.abs(luzPecas - luzAtual) > 0.01) {
