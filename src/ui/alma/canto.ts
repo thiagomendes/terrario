@@ -50,6 +50,32 @@ interface Alvo {
   tocar(): void;
 }
 
+/**
+ * A mãozinha (a ponta do dedo em `t`) cai em cima do boneco na tela? Então o boneco fica meio
+ * transparente: a coisa para tocar aparece através dele (o canto das missões e as dicas de
+ * toque da Vila Neon).
+ */
+export function maoAtrasDoBoneco(e: EstadoDepuracao, t: { x: number; y: number }): boolean {
+  const pes = e.jogadorPes?.();
+  if (!pes) return false;
+  let x0 = Infinity;
+  let x1 = -Infinity;
+  let y0 = Infinity;
+  let y1 = -Infinity;
+  for (const dx of [-0.4, 0.4])
+    for (const dz of [-0.4, 0.4])
+      for (const dy of [0, 1.9]) {
+        const q = e.telaDoPonto?.(pes[0] + dx, pes[1] + dy, pes[2] + dz) ?? null;
+        if (!q) continue;
+        x0 = Math.min(x0, q.x);
+        x1 = Math.max(x1, q.x);
+        y0 = Math.min(y0, q.y);
+        y1 = Math.max(y1, q.y);
+      }
+  // a mãozinha toda (o dedo e a palma, uns 80 px abaixo da ponta) conta
+  return t.x > x0 - 30 && t.x < x1 + 30 && t.y + 80 > y0 && t.y < y1;
+}
+
 export function ligarCantoMissoes(
   e: EstadoDepuracao,
   ui: AlmaUi,
@@ -267,30 +293,8 @@ export function ligarCantoMissoes(
     } else esconderMao();
     // o boneco fica transparente quando a mãozinha (esta ou a do bolo) fica atrás dele
     const ponta = maoTela ?? window.__guia?.mao?.() ?? null;
-    e.limiteOpacidade = ponta && atrasDoBoneco(ponta) ? 0.6 : 1;
+    e.limiteOpacidade = ponta && maoAtrasDoBoneco(e, ponta) ? 0.6 : 1;
   });
-
-  /** A mãozinha cai em cima do boneco na tela? */
-  function atrasDoBoneco(t: Tela): boolean {
-    const pes = e.jogadorPes?.();
-    if (!pes) return false;
-    let x0 = Infinity;
-    let x1 = -Infinity;
-    let y0 = Infinity;
-    let y1 = -Infinity;
-    for (const dx of [-0.4, 0.4])
-      for (const dz of [-0.4, 0.4])
-        for (const dy of [0, 1.9]) {
-          const q = tela(pes[0] + dx, pes[1] + dy, pes[2] + dz);
-          if (!q) continue;
-          x0 = Math.min(x0, q.x);
-          x1 = Math.max(x1, q.x);
-          y0 = Math.min(y0, q.y);
-          y1 = Math.max(y1, q.y);
-        }
-    // a mãozinha toda (o dedo e a palma, uns 80 px abaixo da ponta) conta
-    return t.x > x0 - 30 && t.x < x1 + 30 && t.y + 80 > y0 && t.y < y1;
-  }
 
   // testes: a mãozinha do canto e os alvos de agora
   (window as unknown as { __canto?: unknown }).__canto = {

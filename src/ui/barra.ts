@@ -132,6 +132,8 @@ export function criarBarra(app: HTMLElement, hotbar: Hotbar = criarHotbar()): Ho
   });
 
   let ultimoAtivo = -1;
+  /** O espaço mudou sozinho com o "+1" do item já na tela: sem o nome de novo embaixo. */
+  let semNome = false;
   let timerNome: ReturnType<typeof setTimeout> | null = null;
   const atualizar = () => {
     const slots = hotbar.slots;
@@ -152,7 +154,7 @@ export function criarBarra(app: HTMLElement, hotbar: Hotbar = criarHotbar()): Ho
     if (hotbar.ativo !== ultimoAtivo) {
       ultimoAtivo = hotbar.ativo;
       const p = hotbar.pilhaAtiva();
-      if (p) {
+      if (p && !semNome) {
         nomeItem.textContent = slots[hotbar.ativo].nome;
         nomeItem.classList.add('visivel');
         if (timerNome) clearTimeout(timerNome);
@@ -249,7 +251,11 @@ export function criarBarra(app: HTMLElement, hotbar: Hotbar = criarHotbar()): Ho
   hotbar.inventario.ouvir(atualizar);
   // os ícones de brinquedo chegam aos poucos depois que o jogo abre
   window.addEventListener(EVENTO_ICONES, atualizar);
-  window.addEventListener('brumaluz:slot', atualizar);
+  window.addEventListener('brumaluz:slot', (ev) => {
+    semNome = !!(ev as CustomEvent<{ semNome?: boolean } | null>).detail?.semNome;
+    atualizar();
+    semNome = false;
+  });
   atualizar();
   app.append(barra, nomeItem);
   return hotbar;

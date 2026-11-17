@@ -88,9 +88,11 @@ describe('as missões do parque na tela (spec 026, parte 2, etapa B)', () => {
     a.r.quadro({ ...a.base, t: 1.6, fugidos: [true, true, false] });
     expect(a.r.estado()).toMatchObject({ fugidos: 2, descendo: 1 });
     expect(m.position.y).toBeLessThan(y0);
-    // na mão: do lado direito do corpo, o fio na altura da mão
+    // na mão: do lado direito do corpo, o fio na altura da mão, puxando para fora (o balão
+    // 0,6 para fora da mão, que fica 0,42 para a direita do corpo)
     a.r.quadro({ ...a.base, t: 2.6, fugidos: [true, true, false] });
-    expect(m.position.x).toBeCloseTo(a.base.eu!.x + 0.42, 2);
+    expect(m.position.x).toBeCloseTo(a.base.eu!.x + 0.42 + 0.6, 2);
+    expect(m.rotationQuaternion).not.toBeNull();
     expect(m.position.y - chao).toBeGreaterThan(2);
     expect(m.position.y - chao).toBeLessThan(3);
     // sobe embora, e depois some
@@ -150,7 +152,12 @@ describe('as missões do parque na tela (spec 026, parte 2, etapa B)', () => {
     a.r.quadro({ ...a.base, t: 4.5, fugidos: [false, false, false] });
     expect(a.malha('vila-missoes-coracoes').isEnabled()).toBe(true);
     expect(a.malha('vila-missoes-estrelinhas').isEnabled()).toBe(true);
+    // a vovó fica com a pelúcia nos braços um tempo; depois, nada à vista
     a.r.quadro({ ...a.base, t: 9, fugidos: [false, false, false] });
+    expect(a.scene.meshes.filter((m) => m.isEnabled()).map((m) => m.name)).toEqual([
+      'vila-pelucia-vovo',
+    ]);
+    a.r.quadro({ ...a.base, t: 30, fugidos: [false, false, false] });
     expect(a.scene.meshes.filter((m) => m.isEnabled()).length).toBe(0);
     a.r.descartar();
     expect(a.scene.meshes.length).toBe(0);

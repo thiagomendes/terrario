@@ -65,7 +65,7 @@ export interface RenderMissoesParque {
   /** A lhama de pelúcia aparece no balcão `de` da barraca e voa em arco até a criança (~1 s). */
   pelucia(de: readonly [number, number, number]): void;
   /** Corações e estrelinhas em volta da vovó (os pés dela em x, y, z). */
-  vovo(x: number, y: number, z: number): void;
+  vovo(x: number, y: number, z: number, yaw?: number): void;
   /** O feno caiu no cocho: a nuvenzinha de palha. */
   lanche(): void;
   /** Testes: o que está à vista. */
@@ -92,6 +92,8 @@ const ALTURA_PRESENTE = 1.7;
  * cabeça (com o balão bem em cima, a câmera atrás via só um balão solto no ar).
  */
 const DERIVA_PRESENTE = 0.42;
+/** O balão fugido na mão também puxa para fora (o fio dele é mais comprido: puxa mais). */
+const DERIVA_FUGIDO = 0.6;
 /** O toque no balão fugido: desce, fica na mão, sobe embora (s). */
 const DESCE = 1.2;
 const NA_MAO = 1.5;
@@ -100,6 +102,8 @@ const SOBE = 1.6;
 const PELUCIA_SURGE = 0.45;
 const PELUCIA_ESPERA = 0.35;
 const PELUCIA_VOA = 1.0;
+/** A vovó fica com a pelúcia nos braços este tanto (s) depois da entrega. */
+const PELUCIA_COM_A_VOVO = 20;
 /** Mais longe que isto (blocos) nada daqui é desenhado. */
 const LONGE = 96;
 const N_ESTRELAS = 16;
@@ -124,15 +128,17 @@ const CREME2 = '#fff7e6';
 /** O balão fugido (o meio do balão em 0, 0, 0): o balão do maço e o fio solto pendurado. */
 function balaoFugido(r: Ref, cor: string): void {
   balao(r, 0, 0, 0, cor);
-  // o fio cai quase reto, com duas dobrinhas (fio solto de balão)
-  r.barra([0, -0.44, 0], [0.04, -0.44 - FIO_FUGIDO * 0.4, 0.02], 0.03, COR.branco);
+  // o fio cai quase reto, com duas dobrinhas (fio solto de balão; fino: de perto, mais grosso
+  // parecia uma vareta)
+  const fio = 0.018;
+  r.barra([0, -0.44, 0], [0.04, -0.44 - FIO_FUGIDO * 0.4, 0.02], fio, COR.branco);
   r.barra(
     [0.04, -0.44 - FIO_FUGIDO * 0.4, 0.02],
     [-0.03, -0.44 - FIO_FUGIDO * 0.75, -0.01],
-    0.03,
+    fio,
     COR.branco,
   );
-  r.barra([-0.03, -0.44 - FIO_FUGIDO * 0.75, -0.01], [0, -0.44 - FIO_FUGIDO, 0], 0.03, COR.branco);
+  r.barra([-0.03, -0.44 - FIO_FUGIDO * 0.75, -0.01], [0, -0.44 - FIO_FUGIDO, 0], fio, COR.branco);
 }
 
 /** O balão de presente (a mão em 0, 0, 0): o fio esticado, o lacinho e o balão lá em cima. */
@@ -350,6 +356,10 @@ export function criarMissoesParque(scene: Scene, op: OpcoesMissoesParque): Rende
   let peluciaDesde = -Infinity;
   let peluciaDe: [number, number, number] = [0, 0, 0];
   let peluciaVoando = false;
+  /** A pelúcia nos braços da vovó, depois da entrega (a vovó com a prenda: x, y, z, giro). */
+  const peluciaVovo = malhaCorpo('vila-pelucia-vovo', molde(peluciaDePrenda).corpo);
+  let vovoDesde = -Infinity;
+  let vovoEm: [number, number, number, number] = [0, 0, 0, 0];
 
   // ------------------------------------------------------------------ estrelinhas e corações
   const estrela = malhaLuz(
@@ -457,7 +467,9 @@ export function criarMissoesParque(scene: Scene, op: OpcoesMissoesParque): Rende
       peluciaDe = [de[0], de[1], de[2]];
       leque(de[0], de[1] + 0.5, de[2], 6);
     },
-    vovo(x, y, z) {
+    vovo(x, y, z, yaw = 0) {
+      vovoDesde = agora;
+      vovoEm = [x, y, z, yaw];
       for (let k = 0; k < 6; k++) {
         const a = (k / 6) * Math.PI * 2 + 0.4;
         soltar(coracoes, {
@@ -512,10 +524,28 @@ export function criarMissoesParque(scene: Scene, op: OpcoesMissoesParque): Rende
           descendo++;
           ligar(f.m, true);
           if (!f.de) f.de = [f.x, f.y, f.z];
-          // a ponta do fio na mão: o meio do balão fica este tanto acima dela
+          // a ponta do fio na mão: o meio do balão fica este tanto acima dela, puxando para o
+          // lado da mão (o fio inclina para fora: nunca passa pela cabeça do boneco)
           const alto = (0.44 + FIO_FUGIDO) * TAM_FUGIDO;
           const m = eu ? mao(eu) : [f.de[0], chao + MAO.y, f.de[2]];
-          const alvo: [number, number, number] = [m[0], m[1] + alto, m[2]];
+          const lado: [number, number] = eu ? [Math.cos(eu.yaw), -Math.sin(eu.yaw)] : [0, 0];
+          const fora = Math.min(DERIVA_FUGIDO, alto * 0.5);
+          const alvo: [number, number, number] = [
+            m[0] + lado[0] * fora,
+            m[1] + Math.sqrt(alto * alto - fora * fora),
+            m[2] + lado[1] * fora,
+          ];
+          /** Inclina o balão (o fio aponta para a mão) por `k` (0 a 1) da inclinação toda. */
+          const inclinar = (k: number) => {
+            const ang = Math.asin(fora / alto) * k;
+            if (ang < 1e-4 || !eu) {
+              f.m.rotationQuaternion = null;
+              return;
+            }
+            eixo.set(lado[1], 0, -lado[0]).normalize();
+            f.m.rotationQuaternion ??= new Quaternion();
+            Quaternion.RotationAxisToRef(eixo, ang, f.m.rotationQuaternion);
+          };
           if (g < DESCE) {
             // desce flutuando, num vaivém de folha (nunca cai reto)
             const u = suave(g / DESCE);
@@ -527,16 +557,17 @@ export function criarMissoesParque(scene: Scene, op: OpcoesMissoesParque): Rende
             );
             f.m.rotation.z = -vai * 0.6;
             f.m.rotation.x = 0;
+            inclinar(u);
             f.m.scaling.setAll(TAM_FUGIDO);
             if (f.presente) presenteChegando = true;
           } else if (g < DESCE + NA_MAO) {
             // na mão: o fio preso nela, o balão puxando para cima
             f.m.position.set(alvo[0], alvo[1] + Math.sin(t * 2.4) * 0.04, alvo[2]);
-            f.m.rotation.z = Math.sin(t * 1.9) * 0.06;
-            f.m.rotation.x = Math.sin(t * 1.5 + 1) * 0.05;
+            inclinar(1);
             f.m.scaling.setAll(TAM_FUGIDO);
             if (f.presente) presenteChegando = true;
           } else {
+            f.m.rotationQuaternion = null;
             // sobe embora (voltou para a Dona Flor), com as estrelinhas na saída
             if (!f.sobeDe) {
               const de = alvo;
@@ -683,6 +714,20 @@ export function criarMissoesParque(scene: Scene, op: OpcoesMissoesParque): Rende
           pelucia.scaling.setAll(0.9 * (u > 0.7 ? 1 - suave((u - 0.7) / 0.3) * 0.85 : 1));
           pelucia.rotation.set(Math.sin(u * Math.PI) * -0.5, yaw + s * Math.PI * 2, 0);
         }
+      }
+
+      // ---- a pelúcia nos braços da vovó (um tempo depois da entrega: ela mostra a prenda)
+      const gv = t - vovoDesde;
+      const comVovo = gv >= 0 && gv < PELUCIA_COM_A_VOVO && (!eu || perto(vovoEm[0], vovoEm[2]));
+      ligar(peluciaVovo, comVovo);
+      if (comVovo) {
+        const [x, y, z, yaw] = vovoEm;
+        // na frente do peito, na altura das mãos, olhando para onde ela olha
+        peluciaVovo.position.set(x + Math.sin(yaw) * 0.34, y + 0.62, z + Math.cos(yaw) * 0.34);
+        peluciaVovo.rotation.set(0, yaw, 0);
+        const k = gv < 0.35 ? pulo(gv / 0.35) : 1;
+        const fim = gv > PELUCIA_COM_A_VOVO - 0.4 ? (PELUCIA_COM_A_VOVO - gv) / 0.4 : 1;
+        peluciaVovo.scaling.setAll(Math.max(0.001, 0.62 * k * fim));
       }
 
       animar(estrelas, t);

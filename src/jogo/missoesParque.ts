@@ -110,7 +110,8 @@ export function lugarDoBalao(pq: PontosParque, chao: number, i: number, t: numbe
  * ao lado da árvore, na beira do calçamento do carrossel).
  */
 export function chaoDoBalao(pq: PontosParque, chao: number, i: number): P3 {
-  if (i === 0) return [pq.roda.x + 2.4, chao, pq.roda.z + 5.2];
+  // (do pé da roda, um pouco mais para fora: de perto, a câmera ficava presa embaixo da roda)
+  if (i === 0) return [pq.roda.x + 3.0, chao, pq.roda.z + 7.4];
   if (i === 1) {
     // (a uns três blocos e meio: embaixo do balão ele ficava em cima da cabeça, fora da tela)
     const [x, , z] = pq.arvoreDoBalao;

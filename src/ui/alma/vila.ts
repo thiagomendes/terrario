@@ -35,7 +35,7 @@ import {
 } from '../../jogo/parque';
 import { boaParaDica, criarDicaToque } from './dicaToque';
 import { arte as arteAlma } from './arte';
-import { CSS_CANTO } from './canto';
+import { CSS_CANTO, maoAtrasDoBoneco } from './canto';
 import { criarRevista } from './revista';
 import {
   ALCANCE_COCHO,
@@ -377,14 +377,15 @@ export function ligarVilaNeon(
       chave: `balao-${i}`,
       ativo: () => aberta(F_BALOES) && !e.vilaEstado?.()?.bal?.[i],
       ponto: () => {
+        // (a ponta do dedo embaixo do balão: a mãozinha da dica não o cobre)
         const b = lugarDoBalao(pq, chaoVila, i, tNucleo());
-        return [b.x, b.y, b.z];
+        return [b.x, b.y - 0.55, b.z];
       },
       alcanca: (x, z) => alcancaOBalao(pq, chaoVila, i, tNucleo(), x, z),
       raio: RAIO_TOQUE * 2.4,
       naHora: true,
       tocar: () => comando({ a: 'balao', i }),
-      dica: { figura: 'dicaPegarBalao', texto: 'Toque para pegar', ate: 6.5 },
+      dica: { figura: 'dicaPegarBalao', texto: 'Toque para pegar', ate: 7.5 },
     })),
     // f7: o fardo (sem feno na mão) e o cocho (com o feno)
     {
@@ -818,6 +819,17 @@ export function ligarVilaNeon(
         figura: arteAlma('sentarBrinquedo'),
         texto: 'Toque para andar',
       });
+  });
+
+  // a coisa da dica atrás do boneco (o fardo, o cocho, a barraca bem na frente dela): o boneco
+  // fica meio transparente e a coisa aparece através dele, como no canto das missões
+  let transparente = false;
+  scene.onBeforeRenderObservable.add(() => {
+    const d = dica.estado();
+    const quer = !!d && !d.chave.startsWith('bate-') && maoAtrasDoBoneco(e, d.t);
+    if (quer === transparente) return;
+    transparente = quer;
+    e.limiteOpacidade = quer ? 0.6 : 1;
   });
 
   // testes: as caixas na tela e o show

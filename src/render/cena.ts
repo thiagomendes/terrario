@@ -1965,7 +1965,7 @@ export function criarCena(
         (q) => q.morador?.povoado === 'vila' && q.morador.n === AVO,
       );
       const [x, y, z] = quem ? [quem.x, quem.y, quem.z] : a;
-      missoesVila.vovo(x, y, z);
+      missoesVila.vovo(x, y, z, quem?.yaw ?? 0);
       coracoes.soltar(x, y + 2.1, z, 6);
       somRua?.tocar('vovo', { x, z });
       if (quem) gestos?.evento({ e: 'gesto', gesto: 'comemorar', criatura: quem.id });
@@ -1976,8 +1976,18 @@ export function criarCena(
       const onde = { x: pq.cocho[0], z: pq.cocho[2] };
       somRua?.tocar('cocho', onde);
       // as lhamas chegam e pulam um pouco depois (o núcleo marca os pulinhos a partir de 2,4 s)
+      // (o som e os coraçõezinhos em cima das lhamas que chegaram no cocho: comem felizes)
       for (const ms of e.fim ? [2400, 3300, 4300] : [2400, 3400])
-        setTimeout(() => somRua?.tocar('lhamaFeliz', onde), ms);
+        setTimeout(() => {
+          somRua?.tocar('lhamaFeliz', onde);
+          for (const c of replicaCriaturas.lista)
+            if (
+              !c.morador &&
+              c.tipo in CRIATURAS &&
+              Math.hypot(c.x - onde.x, c.z - onde.z) < 3.2
+            )
+              coracoes.soltar(c.x, c.y + CRIATURAS[c.tipo].alt + 0.2, c.z, 3);
+        }, ms);
     }
   }
   estado.eventosVila = planoVila ? [] : undefined;
@@ -3176,8 +3186,9 @@ export function criarCena(
   estado.selecionarSlot = (i: number) => {
     hotbar.selecionar(i);
     verificarSlot();
-    // (a barra de baixo acende o espaço novo: o que chega na mão aparece selecionado)
-    window.dispatchEvent(new CustomEvent('brumaluz:slot'));
+    // (a barra de baixo acende o espaço novo: o que chega na mão aparece selecionado; o nome
+    // não aparece de novo embaixo, o "+1" do item já está na tela)
+    window.dispatchEvent(new CustomEvent('brumaluz:slot', { detail: { semNome: true } }));
   };
   estado.apontar = (yaw, pitch) => controle.apontar(yaw, pitch);
   estado.teleportar = (x, z, yFixo) => {
