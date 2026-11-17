@@ -33,6 +33,7 @@ import {
   duracaoDoTrilho,
   lugarNoTrilho,
   podeEntrar,
+  trilhoDaRede,
   trilhoParaARede,
   type Trilho,
   type TrilhoNaRede,
@@ -87,7 +88,11 @@ export function criarCasaNucleo(ctx: CtxCasa) {
     if (!j.skate || trilhos.has(j.id)) return;
     if (!podeEntrar(rampa, j.x, j.y, j.z, l)) return;
     const s0 = Math.max(-rampa.meia, Math.min(rampa.meia, j.x - rampa.x));
-    trilhos.set(j.id, { lado: l > 0 ? 1 : -1, s0, z: j.z, desde: ctx.agora() });
+    // (na medida da rede: o núcleo e a tela fazem a conta com os mesmos números)
+    trilhos.set(
+      j.id,
+      trilhoDaRede(trilhoParaARede({ lado: l > 0 ? 1 : -1, s0, z: j.z, desde: ctx.agora() }))!,
+    );
     ctx.sujar();
   }
 

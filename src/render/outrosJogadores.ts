@@ -28,6 +28,8 @@ export interface AssentoDoAmigo {
   z: number;
   yaw: number;
   juntas: Juntas;
+  /** Parte 3: no trilho da rampa de skate, a inclinação da prancha (o boneco deita junto). */
+  inclina?: number;
 }
 import { criarBalao, type BalaoGesto } from './balaoGesto';
 
@@ -297,6 +299,8 @@ export function criarOutrosJogadores(scene: Scene) {
         if (cadeira) pose = aplicarJuntas(pose, cadeira.juntas, 1);
         o.personagem.aplicarPose(pose, { dt, olhar: a.pitch, vista: o.animador.vista() });
         o.personagem.posicionar(o.x, o.y, o.z, o.animador.yaw());
+        // parte 3: na curva da rampa o boneco deita junto com a prancha
+        o.personagem.raiz.rotation.x = -(cadeira?.inclina ?? 0) * 0.85;
         o.personagem.definirLuz(luz);
         o.balao?.atualizar(dt);
         // apelido acima da cabeça, projetado na tela (some atrás da câmera e muito longe)

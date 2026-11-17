@@ -60,6 +60,11 @@ export interface PontosCasa {
    * Tudo o que fica ali dentro, desta altura para cima, é do telhado da casa.
    */
   corte: RetanguloVila & { y: number };
+  /**
+   * As paredes que somem entre a câmera e a criança, lá dentro: a da frente (sul), a do fundo
+   * (norte), a do oeste, a do leste e a do meio (as células de cada uma, no chão).
+   */
+  paredes: [RetanguloVila, RetanguloVila, RetanguloVila, RetanguloVila, RetanguloVila];
   /** A TV (o pé do móvel, no chão) e o meio da tela. */
   tv: P3;
   tela: P3;
@@ -238,8 +243,8 @@ export function montarCasa80(f: FerramentasVila): CasaMontada {
   const assentos: AssentoSofa[] = [1, 0, -1].map((k) => ({
     x: sx + k * SOFA.passo,
     y: Y + ALTURA_ASSENTO,
-    // (um tico para a frente do meio: as costas do sofá ficam atrás)
-    z: sz - 0.08,
+    // (para a frente do meio: as costas e as almofadas do encosto ficam atrás)
+    z: sz - 0.2,
   }));
   const tv = P(SX, 36.82);
   const discos = P(43.85, 41.2);
@@ -253,6 +258,13 @@ export function montarCasa80(f: FerramentasVila): CasaMontada {
     quarto: ret(U_MEIO + 1, V_FUNDO + 1, U1 - 1, V_FRENTE - 1),
     y: Y,
     corte: { ...ret(U0 - 1, V_FUNDO - 1, U1 + 1, V_FRENTE + 1), y: Y + H },
+    paredes: [
+      ret(U0, V_FRENTE, U1, V_FRENTE),
+      ret(U0, V_FUNDO, U1, V_FUNDO),
+      ret(U0, V_FUNDO, U0, V_FRENTE),
+      ret(U1, V_FUNDO, U1, V_FRENTE),
+      ret(U_MEIO, V_FUNDO + 1, U_MEIO, V_FRENTE - 1),
+    ],
     tv,
     // (a tela da TV: no alto do móvel, na frente da caixa de madeira; o mesmo desenho da tela)
     tela: local(tv, DIR.s, TELA_TV[0], TELA_TV[1], TELA_TV[2]),

@@ -173,7 +173,13 @@ function caixasLocais(tipo: TipoPecaVila, n: number): readonly Local[] {
     // cima do pião; o tapete, o relógio, as cortinas e o capacho ficam de passagem)
     case 'casa-tv':
       // o móvel baixo e a TV de tubo em cima, mais funda que ele
-      return [B(-1.1, 1.1, 0, 0.62, -0.31, 0.31), B(-0.79, 0.55, 0, 1.72, -0.33, 0.44)];
+      // (os fios dos controles descem na frente do móvel)
+      return [
+        B(-1.1, 1.1, 0, 0.62, -0.31, 0.45),
+        B(-0.79, 0.55, 0, 1.72, -0.33, 0.52),
+        // o console em cima do móvel, do lado da TV
+        B(0.54, 1.06, 0.62, 0.88, -0.15, 0.24),
+      ];
     case 'casa-fitas':
       return [B(-0.72, 0.72, 0, 2.12, -0.21, 0.21)];
     case 'casa-planta':
@@ -182,16 +188,16 @@ function caixasLocais(tipo: TipoPecaVila, n: number): readonly Local[] {
       // o assento (onde se senta, de 0,5), o encosto atrás e os dois braços
       return [
         B(-1.65, 1.65, 0, 0.5, -0.5, 0.5),
-        B(-1.65, 1.65, 0, 1.12, -0.5, -0.24),
+        B(-1.65, 1.65, 0, 1.12, -0.5, -0.11),
         ...par(1.36, 1.65, 0, 0.8, -0.5, 0.5),
       ];
     case 'casa-abajur':
-      return [B(-0.24, 0.24, 0, 1.7, -0.24, 0.24)];
+      return [B(-0.24, 0.24, 0, 1.62, -0.24, 0.24)];
     case 'casa-telefone':
-      return [B(-0.31, 0.31, 0, 0.66, -0.31, 0.31)];
+      return [B(-0.31, 0.31, 0, 0.8, -0.31, 0.31)];
     case 'casa-discos':
       // o móvel do toca-discos e as duas caixinhas de som no chão, dos lados
-      return [B(-0.8, 0.8, 0, 0.74, -0.3, 0.3), ...par(0.9, 1.38, 0, 0.82, -0.22, 0.22)];
+      return [B(-0.8, 0.8, 0, 0.86, -0.3, 0.3), ...par(0.9, 1.38, 0, 0.82, -0.22, 0.22)];
     case 'casa-ioio':
       return [B(-0.26, 0.26, 0, 1.3, -0.26, 0.26)];
     case 'casa-piao':
@@ -209,9 +215,9 @@ function caixasLocais(tipo: TipoPecaVila, n: number): readonly Local[] {
     case 'rampa-skate':
       return CAIXAS_DA_RAMPA;
     case 'suporte-skate':
-      return [B(-0.85, 0.85, 0, 1.35, -0.28, 0.28)];
+      return [B(-0.83, 0.83, 0, 1.32, -0.26, 0.26)];
     case 'bmx':
-      return [B(-0.82, 0.82, 0, 1.0, -0.25, 0.25)];
+      return [B(-0.84, 0.84, 0, 1.08, -0.3, 0.3)];
     default:
       return [];
   }

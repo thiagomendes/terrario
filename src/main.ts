@@ -253,6 +253,17 @@ async function iniciar(app: HTMLElement): Promise<void> {
       semTela: true,
       aoEscolher: () => window.__brumaluz?.vilaPatins?.(false),
     });
+  // spec 026 (parte 3): "Guardar skate" na roda, só enquanto a criança está de skate (como os
+  // patins: longe do suporte da pista ela guarda aqui; pegar é só no suporte)
+  if (temaMundo.id === 'vila-neon' && !EXTRAS_RODA.some((x) => x.id === 'guardar-skate'))
+    EXTRAS_RODA.push({
+      id: 'guardar-skate',
+      nome: 'Guardar skate',
+      icone: arteAlma('guardarSkate'),
+      visivel: () => !!window.__brumaluz?.personagem?.aparencia().skate,
+      semTela: true,
+      aoEscolher: () => window.__brumaluz?.vilaSkate?.(false),
+    });
   // spec 026 (parte 2): "Sair do brinquedo" na roda, só enquanto a criança está sentada num
   // brinquedo do parque (a mesma regra dos patins: o item só aparece quando serve)
   if (temaMundo.id === 'vila-neon' && !EXTRAS_RODA.some((x) => x.id === 'sair-brinquedo'))

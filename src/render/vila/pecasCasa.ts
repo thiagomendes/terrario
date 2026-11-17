@@ -428,8 +428,8 @@ export function desenharPecaRampa(r: Ref, tipo: TipoPecaVila, n: number): boolea
   }
 }
 
-const CONCRETO = '#cbc7bf';
-const CONCRETO_LADO = '#b4afa6';
+const CONCRETO = '#aeaba4';
+const CONCRETO_LADO = '#94908a';
 /** O grafite de formas (sem palavra): duas ou três cores por desenho. */
 const GRAFITE = { rosa: '#ff5fa8', turquesa: '#22c2b0', amarelo: '#ffd23a', roxo: '#7a4ad8' };
 
@@ -458,6 +458,9 @@ function rampa(r: Ref): void {
   const L = COMPRIMENTO_RAMPA;
   const H = alturaDoDeck(m);
   const fora = m.meia + m.curva + m.deck;
+  // o fundo de concreto (a mesma cor das curvas), com as juntas de través
+  r.caixa(m.meia * 2 + 0.04, 0.02, L, 0, 0, 0, CONCRETO, 0);
+  for (let k = -1; k <= 1; k++) r.caixa(m.meia * 2, 0.008, 0.05, 0, 0.02, k * 3, CONCRETO_LADO, 0);
   for (const s of [-1, 1]) {
     // a curva e o deck: o contorno no plano (de lado, altura), puxado ao longo da rampa
     // (`sub` girado: o z dele é o lado da rampa, o x dele corre ao longo)

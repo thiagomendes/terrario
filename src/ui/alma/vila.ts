@@ -51,7 +51,16 @@ import {
   alcancaOBalao,
   lugarDoBalao,
 } from '../../jogo/missoesParque';
-import { FITA_VIDEO, PELUCIA, VITAMINA } from '../../jogo/exclusivos';
+import { CUBO_CORES, FITA_VIDEO, IOIO, PELUCIA, PIAO, VITAMINA } from '../../jogo/exclusivos';
+import {
+  ALCANCE_DISCOS,
+  alcancaATv,
+  alcancaOBau,
+  dentroDaCasa,
+  naSala,
+  passaFilme,
+  proximoDoBau,
+} from '../../jogo/casa';
 
 declare global {
   interface Window {
@@ -483,7 +492,131 @@ export function ligarVilaNeon(
         tocar: () => e.vilaMissoes?.rua('campainha', i),
       }),
     ),
+    ...toquesDaCasa(),
   ];
+  /**
+   * Parte 3: o que se toca na Casa anos 80 (a TV, o videocassete com a fita da locadora, o
+   * toca-discos, o telefone de disco, o sofá, os brinquedos do quarto e o baú) e o suporte dos
+   * skates da pista. Só o toque de verdade vale (arrastar o dedo por cima é da câmera).
+   */
+  function toquesDaCasa(): ToqueB[] {
+    const c = p.casa;
+    const Yc = c.y;
+    const sala = () => e.vilaCasa?.sala() ?? null;
+    const filme = () => {
+      const s = sala();
+      return !!s && passaFilme(s, tNucleo());
+    };
+    const naSalaPerto = (q: readonly number[], alcance: number) => (x: number, z: number) =>
+      naSala(c, x, z) && Math.hypot(q[0] - x, q[2] - z) <= alcance;
+    /** A criança já está sentada num assento do sofá? */
+    const noSofa = () => {
+      const pes = e.jogadorPes?.();
+      return (
+        !!pes &&
+        c.sofa.assentos.some(
+          (a) => Math.hypot(a.x - pes[0], a.z - pes[2]) < 0.45 && Math.abs(a.y - pes[1]) < 0.3,
+        )
+      );
+    };
+    const vcr: [number, number, number] = [c.tv[0] - 0.5, Yc + 0.27, c.tv[2] + 0.34];
+    const assento = c.sofa.assentos[1];
+    const brinquedo = (
+      chave: 'ioio' | 'piao' | 'cubo' | 'robo' | 'bola',
+      q: readonly number[],
+      alt: number,
+      figura?: string,
+    ): ToqueB => ({
+      chave,
+      ativo: () => true,
+      ponto: () => [q[0], q[1] + alt, q[2]],
+      alcanca: (x, z) => dentroDaCasa(c, x, z) && Math.hypot(q[0] - x, q[2] - z) <= 3.6,
+      raio: RAIO_TOQUE * 1.7,
+      tocar: () => e.vilaCasa?.tocar(chave),
+      ...(figura ? { dica: { figura, texto: 'Toque para brincar', ate: 3.2 } } : {}),
+    });
+    const sk = p.skate.suporte;
+    const deSkate = () => !!e.personagem?.aparencia().skate;
+    return [
+      {
+        chave: 'tv',
+        ativo: () => !filme(),
+        ponto: () => [c.tela[0], c.tela[1], c.tela[2]],
+        alcanca: (x, z) => alcancaATv(c, x, z),
+        raio: RAIO_TOQUE * 2.4,
+        tocar: () => e.vilaCasa?.tocar('tv'),
+        dica: { figura: 'dicaTv', texto: 'Toque para trocar o canal', ate: 5.5 },
+        // (com a fita na mochila, a dica é a do videocassete)
+        comDica: () => tem(FITA_VIDEO) < 1,
+      },
+      {
+        chave: 'videocassete',
+        ativo: () => tem(FITA_VIDEO) > 0 && !filme(),
+        ponto: () => vcr,
+        alcanca: (x, z) => alcancaATv(c, x, z),
+        raio: RAIO_TOQUE * 1.8,
+        tocar: () => e.vilaCasa?.tocar('videocassete'),
+        dica: { figura: 'dicaVideocassete', texto: 'Toque para pôr a fita', ate: 5.5 },
+      },
+      {
+        chave: 'disco',
+        ativo: () => true,
+        ponto: () => [c.prato[0], c.prato[1] + 0.05, c.prato[2]],
+        alcanca: naSalaPerto(c.discos, ALCANCE_DISCOS),
+        raio: RAIO_TOQUE * 2,
+        tocar: () => e.vilaCasa?.tocar('disco'),
+        dica: { figura: 'dicaDisco', texto: 'Toque para ouvir', ate: 4.2 },
+        // (tocando, a dica sai: quem quiser parar toca de novo)
+        comDica: () => (sala()?.disco ?? -1) < 0,
+      },
+      {
+        chave: 'telefone',
+        ativo: () => true,
+        ponto: () => [c.fone[0], c.fone[1] + 0.05, c.fone[2]],
+        alcanca: naSalaPerto(c.telefone, 4),
+        raio: RAIO_TOQUE * 1.8,
+        tocar: () => e.vilaCasa?.tocar('telefone'),
+        dica: { figura: 'dicaTelefone', texto: 'Toque para ligar', ate: 3.2 },
+      },
+      {
+        chave: 'sofa',
+        ativo: () => !noSofa(),
+        ponto: () => [assento.x, assento.y + 0.35, assento.z],
+        alcanca: naSalaPerto([c.sofa.x, 0, c.sofa.z], 3.6),
+        raio: RAIO_TOQUE * 2.4,
+        tocar: () => void e.vilaCasa?.sentar(),
+        dica: { figura: 'dicaSofa', texto: 'Toque para sentar', ate: 3.2 },
+      },
+      brinquedo('ioio', c.ioio, 0.95, 'dicaIoio'),
+      brinquedo('piao', c.piao, 0.22, 'dicaPiao'),
+      brinquedo('cubo', c.cubo, 0.3, 'dicaCubo'),
+      brinquedo('robo', c.robo, 0.6, 'dicaRobo'),
+      brinquedo('bola', c.bola, 0.3),
+      {
+        chave: 'bau',
+        ativo: () => proximoDoBau(tem) !== null,
+        ponto: () => [c.bau[0], c.bau[1] + 0.62, c.bau[2]],
+        alcanca: (x, z) => alcancaOBau(c, x, z),
+        raio: RAIO_TOQUE * 2,
+        tocar: () => e.vilaCasa?.tocar('bau'),
+        dica: { figura: 'dicaBau', texto: 'Toque para pegar', ate: 3.4 },
+      },
+      // o suporte dos skates: um toque pega (ou guarda, de skate)
+      ...[false, true].map(
+        (guardar): ToqueB => ({
+          chave: guardar ? 'skate-guardar' : 'skate',
+          ativo: () => deSkate() === guardar,
+          ponto: () => [sk[0], sk[1] + 0.95, sk[2]],
+          alcanca: pertoDoPonto(sk, 4),
+          raio: RAIO_TOQUE * 1.9,
+          tocar: () => e.vilaSkate?.(!guardar),
+          dica: guardar
+            ? { figura: 'guardarSkate', texto: 'Toque para guardar', ate: 4 }
+            : { figura: 'pegarSkate', texto: 'Toque para pegar', ate: 4 },
+        }),
+      ),
+    ];
+  }
   /** O toque da etapa B perto do dedo (o mais perto, entre os que valem e que ela alcança). */
   function toqueBNoDedo(x: number, y: number): ToqueB | null {
     const pes = e.jogadorPes?.();
@@ -662,7 +795,9 @@ export function ligarVilaNeon(
     const d = (ev as CustomEvent<{ item: string; qtd: number }>).detail;
     // (etapa B: o feno do fardo, a pelúcia de prenda, a fita e a vitamina também vêm para a mão)
     const feno = d.item === 'trigo' && (missao() === 'f2' || aberta(F_LANCHE));
-    if (!feno && d.item !== PELUCIA && d.item !== FITA_VIDEO && d.item !== VITAMINA) return;
+    // (parte 3: os brinquedos do baú da Casa anos 80 também)
+    const naMao = [PELUCIA, FITA_VIDEO, VITAMINA, IOIO, PIAO, CUBO_CORES];
+    if (!feno && !naMao.includes(d.item)) return;
     for (let i = 0; i < 9; i++)
       if (e.inventario?.obter(i)?.item === d.item) {
         e.selecionarSlot?.(i);

@@ -679,6 +679,88 @@ const BASE: Record<string, string> = {
       <polygon points="${estrela5(32.5, 33.5, 10.5)}" fill="#fff6e0" ${s(2)}/>
       <rect x="18" y="47.4" width="12" height="4" rx="2" fill="#e8302a"/><rect x="33" y="47.4" width="14" height="4" rx="2" fill="#fff6e0"/>
     </g>`),
+  // ------------------------------------------------------------ as dicas da Casa anos 80 (parte 3)
+  /** "Toque para trocar o canal": a TV de madeira com antena, o sol na tela e a setinha que gira. */
+  dicaTv: svg(`
+    <path d="M26 15 L18 4 M38 15 L46 4" stroke="${C}" stroke-width="2.6" stroke-linecap="round"/>
+    <circle cx="18" cy="4" r="2.4" fill="#d4d8e2" ${s(1.6)}/><circle cx="46" cy="4" r="2.4" fill="#d4d8e2" ${s(1.6)}/>
+    <rect x="6" y="14" width="52" height="40" rx="6" fill="#8a5530" ${s()}/>
+    <rect x="11" y="19" width="33" height="30" rx="5" fill="#5ec8ff" ${s(2.2)}/>
+    <circle cx="27.5" cy="31" r="6.5" fill="#ffd23a" ${s(1.8)}/>
+    <path d="M11 43 Q20 37 28 42 T44 41 V49 H11 Z" fill="#4cb84a"/>
+    <circle cx="51" cy="25" r="3" fill="#d4d8e2" ${s(1.6)}/><circle cx="51" cy="35" r="3" fill="#d4d8e2" ${s(1.6)}/>
+    <path d="M48 44 h6 M48 47 h6" stroke="${C}" stroke-width="1.6" stroke-linecap="round"/>
+    <rect x="14" y="54" width="6" height="4" fill="#5e3820"/><rect x="44" y="54" width="6" height="4" fill="#5e3820"/>`),
+  /** "Toque para pôr a fita": a fita de vídeo e a setinha verde para dentro da boca do aparelho. */
+  dicaVideocassete: svg(`
+    <g transform="translate(14 -6) scale(0.56)">${fitaVideo()}</g>
+    ${seta('M32 26 V40', 'M25 34 L32 42 L39 34')}
+    <rect x="6" y="42" width="52" height="16" rx="3" fill="#c9ccd4" ${s()}/>
+    <rect x="13" y="47" width="22" height="4" rx="1.5" fill="#24232a"/>
+    <rect x="42" y="47" width="9" height="4" rx="1" fill="#5aff8a"/>`),
+  /** O disco: o vinil preto de rótulo vermelho e as notinhas. */
+  dicaDisco: svg(`
+    <circle cx="28" cy="36" r="22" fill="#1c1c22" ${s()}/>
+    <circle cx="28" cy="36" r="16" fill="none" stroke="#3a3a44" stroke-width="1.6"/>
+    <circle cx="28" cy="36" r="10.5" fill="none" stroke="#3a3a44" stroke-width="1.6"/>
+    <circle cx="28" cy="36" r="7" fill="#e8302a" ${s(1.8)}/><circle cx="28" cy="36" r="1.6" fill="#f6f4ee"/>
+    <path d="M46 8 V22 M46 8 L56 6 V19" stroke="${C}" stroke-width="2.6" stroke-linecap="round" fill="none"/>
+    <ellipse cx="43" cy="22" rx="4" ry="3" fill="#ffd23a" ${s(1.8)}/><ellipse cx="53" cy="19" rx="4" ry="3" fill="#ffd23a" ${s(1.8)}/>`),
+  /** "Toque para sentar": o sofá xadrez de três lugares. */
+  dicaSofa: svg(`
+    <rect x="8" y="16" width="48" height="22" rx="6" fill="#b8562e" ${s()}/>
+    <rect x="4" y="30" width="56" height="20" rx="6" fill="#b8562e" ${s()}/>
+    <path d="M20 18 V48 M44 18 V48 M8 40 H56" stroke="#6a3a20" stroke-width="3"/>
+    <path d="M23 18 V48 M47 18 V48 M8 43.5 H56" stroke="#f2e2bd" stroke-width="1.2"/>
+    <rect x="9" y="50" width="5" height="6" fill="#5e3820"/><rect x="50" y="50" width="5" height="6" fill="#5e3820"/>`),
+  /** O ioiô vermelho no fio, descendo. */
+  dicaIoio: svg(`
+    <path d="M32 3 V30" stroke="${C}" stroke-width="2.2" stroke-linecap="round"/>
+    <circle cx="32" cy="42" r="15" fill="#e8302a" ${s()}/>
+    <circle cx="32" cy="42" r="9" fill="#ff6a5a"/><path d="M17 42 H47" stroke="#f6f4ee" stroke-width="3.2"/>
+    <circle cx="32" cy="42" r="3" fill="#f6f4ee" ${s(1.6)}/>
+    <path d="M51 30 a10 10 0 0 1 0 22" stroke="#3ccf7a" stroke-width="3" fill="none" stroke-linecap="round"/>`),
+  /** O pião de listras, rodando (os risquinhos em volta). */
+  dicaPiao: svg(`
+    <path d="M32 6 V14" stroke="#8a5530" stroke-width="5" stroke-linecap="round"/>
+    <path d="M10 22 Q32 12 54 22 L34 54 Q32 58 30 54 Z" fill="#e8302a" ${s()}/>
+    <path d="M14 28 Q32 21 50 28 M19 36 Q32 31 45 36" stroke="#f2e2bd" stroke-width="3.4" fill="none"/>
+    <path d="M4 40 q4 -4 8 0 M52 40 q4 -4 8 0" stroke="#3ccf7a" stroke-width="2.6" fill="none" stroke-linecap="round"/>`),
+  /** O cubo de cores 2 × 2 (três cores), com a face de cima girando. */
+  dicaCubo: svg(`
+    <path d="M12 22 L32 12 L52 22 L32 32 Z" fill="#ffd23a" ${s(2.4)}/>
+    <path d="M12 22 L32 32 V56 L12 46 Z" fill="#e8302a" ${s(2.4)}/>
+    <path d="M52 22 L32 32 V56 L52 46 Z" fill="#2f6fd8" ${s(2.4)}/>
+    <path d="M22 17 L42 27 M42 17 L22 27 M22 27 V51 M12 34 L32 44 L52 34 M42 27 V51" stroke="${C}" stroke-width="1.8"/>
+    <path d="M6 14 q6 -9 16 -9" stroke="#3ccf7a" stroke-width="3" fill="none" stroke-linecap="round"/>
+    <path d="M18 2 L23 5 L18 9" stroke="#3ccf7a" stroke-width="3" fill="none" stroke-linecap="round"/>`),
+  /** O robô de lata andando (prateado, o painel vermelho e os olhos amarelos). */
+  dicaRobo: svg(`
+    <path d="M32 6 V13" stroke="${C}" stroke-width="2.4"/><circle cx="32" cy="5" r="3" fill="#e8302a" ${s(1.6)}/>
+    <rect x="20" y="13" width="24" height="17" rx="3" fill="#d4d8e2" ${s()}/>
+    <rect x="25" y="18" width="5" height="4" fill="#ffe14a"/><rect x="34" y="18" width="5" height="4" fill="#ffe14a"/>
+    <rect x="16" y="30" width="32" height="18" rx="3" fill="#c8ccd6" ${s()}/>
+    <rect x="23" y="34" width="18" height="8" rx="2" fill="#e8302a"/>
+    <rect x="21" y="48" width="8" height="10" fill="#9aa0ae" ${s(2)}/><rect x="35" y="46" width="8" height="10" fill="#9aa0ae" ${s(2)}/>
+    <path d="M8 58 h6 M50 56 h6" stroke="#3ccf7a" stroke-width="3" stroke-linecap="round"/>`),
+  /** "Toque para pegar": o baú azul de tampa amarela, com o ioiô e o pião saindo. */
+  dicaBau: svg(`
+    <circle cx="23" cy="20" r="8" fill="#e8302a" ${s(2.2)}/><path d="M15 20 H31" stroke="#f6f4ee" stroke-width="2"/>
+    <path d="M36 12 Q45 8 54 12 L46 28 Z" fill="#ffd23a" ${s(2.2)}/>
+    <rect x="8" y="30" width="48" height="26" rx="4" fill="#4a8ad8" ${s()}/>
+    <rect x="6" y="25" width="52" height="8" rx="3" fill="#f2c230" ${s()}/>
+    <polygon points="${estrela5(32, 44, 7)}" fill="#f2c230" ${s(1.6)}/>`),
+  /** "Toque para pegar": o skate turquesa e a setinha verde que sobe para a mão. */
+  pegarSkate: svg(`
+    <rect x="6" y="38" width="52" height="9" rx="4.5" fill="#22c2b0" ${s()}/>
+    <circle cx="16" cy="52" r="4.2" fill="#ffd23a" ${s(2)}/><circle cx="48" cy="52" r="4.2" fill="#ffd23a" ${s(2)}/>
+    <path d="M10 40 L6 34 M54 40 L58 34" stroke="${C}" stroke-width="2.6" stroke-linecap="round"/>
+    ${seta('M32 32 V10', 'M24 17 L32 7 L40 17')}`),
+  /** "Toque para guardar": o skate e a setinha laranja que desce para o suporte. */
+  guardarSkate: svg(`
+    <rect x="6" y="20" width="52" height="9" rx="4.5" fill="#22c2b0" ${s()}/>
+    <circle cx="16" cy="34" r="4.2" fill="#ffd23a" ${s(2)}/><circle cx="48" cy="34" r="4.2" fill="#ffd23a" ${s(2)}/>
+    ${seta('M32 40 V58', 'M24 51 L32 60 L40 51', '#ff8a2a')}`),
 };
 
 /** Os 3 da festa de cada missão (o trio de instrumentos da a1, na ordem das bolinhas). */

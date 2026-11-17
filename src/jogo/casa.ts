@@ -23,8 +23,11 @@ export const ESPERA_CANAL = 1.2;
 export const ESPERA_DISCO = 1.5;
 /** O filme da fita da locadora (s). */
 export const DURA_FILME = 20;
-/** Até onde (blocos, no chão) a criança alcança a TV, o videocassete, o toca-discos e o baú. */
-export const ALCANCE_TV = 7;
+/**
+ * Até onde (blocos, no chão) a criança alcança a TV (e o videocassete: do sofá também, como
+ * quem tem o controle remoto), o toca-discos e o baú.
+ */
+export const ALCANCE_TV = 9.5;
 export const ALCANCE_DISCOS = 5;
 export const ALCANCE_BAU = 3.6;
 /** O que o baú dá, na ordem (um de cada, para levar e usar neste mundo). */

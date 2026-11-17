@@ -384,6 +384,56 @@ export const POVOADO_VILA: PovoadoTema = {
       cabelo: 6,
       semTrocas: true,
     },
+    // spec 026 (parte 3): a turma da pista de skate
+    'vila:71': {
+      nome: 'Lelê',
+      genero: 'f',
+      titulo: 'Skatista',
+      // a camiseta larga rosa, o short jeans, as joelheiras grafite, o boné turquesa de aba para
+      // trás e o skate debaixo do braço (turquesa, de rodinhas amarelas)
+      pecas: [
+        ...corpoDeMorador({
+          pele: '#c99064',
+          roupa: '#ff6fb4',
+          calca: '#3a6ad0',
+          sapato: '#f4f1ea',
+          cabelo: '#3a2416',
+        }),
+        { t: [0.46, 0.1, 0.44], p: [0, ACIMA, 0], cor: '#22c2b0', papel: 'cabeca' },
+        { t: [0.34, 0.03, 0.2], p: [0, ACIMA - 0.02, -0.28], cor: '#1aa898', papel: 'cabeca' },
+        { t: [0.16, 0.1, 0.06], p: [-0.1, 0.24, 0.12], cor: '#3a3944' },
+        { t: [0.16, 0.1, 0.06], p: [0.1, 0.24, 0.12], cor: '#3a3944' },
+        { t: [0.06, 0.62, 0.24], p: [0.36, 0.98, 0.02], cor: '#22c2b0' },
+        { t: [0.02, 0.5, 0.06], p: [0.395, 0.98, 0.02], cor: '#ffd23a' },
+        { t: [0.06, 0.06, 0.06], p: [0.42, 1.25, 0.08], cor: '#ffd23a' },
+        { t: [0.06, 0.06, 0.06], p: [0.42, 1.25, -0.04], cor: '#ffd23a' },
+        { t: [0.06, 0.06, 0.06], p: [0.42, 0.72, 0.08], cor: '#ffd23a' },
+        { t: [0.06, 0.06, 0.06], p: [0.42, 0.72, -0.04], cor: '#ffd23a' },
+      ],
+      cabelo: 4,
+      semTrocas: true,
+    },
+    'vila:72': {
+      nome: 'Tito',
+      genero: 'm',
+      titulo: 'Menino da BMX',
+      // a camiseta azul de manga curta, a bermuda grafite, o capacete amarelo com a viseira e as
+      // luvinhas vermelhas (a BMX dele fica parada do lado: é de enfeite)
+      pecas: [
+        ...corpoDeMorador({
+          pele: '#9a6844',
+          roupa: '#2f8cff',
+          calca: '#3a3944',
+          sapato: '#e8302a',
+          cabelo: '#1e1a22',
+        }),
+        { t: [0.62, 0.3, 0.6], p: [0, ACIMA - 0.06, 0], cor: '#ffd23a', papel: 'cabeca' },
+        { t: [0.5, 0.05, 0.12], p: [0, ACIMA - 0.08, 0.33], cor: '#f0c81e', papel: 'cabeca' },
+        { t: [0.07, 0.3, 0.02], p: [0, ACIMA + 0.02, 0.29], cor: '#e8302a', papel: 'cabeca' },
+      ],
+      cabelo: 0,
+      semTrocas: true,
+    },
   },
   // passo animado de quem anda ouvindo música
   movimento: { saltita: 0.03, flutua: 0, ginga: 0.06 },

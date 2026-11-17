@@ -631,8 +631,10 @@ function alvoNaVila(
     const bolinhas = d.tipo === 'arte' ? (d.bolinhas ?? []) : [];
     if (b) return sitio(b.chave, b.x, b.z, 1.6, bolinhas[b.i] ?? figura, 1.4);
     if (vistos.has(PRENDAS[2])) return null;
-    const [ax, , az] = pt.postos.avo;
-    return sitio('vovo', ax + 0.8, az + 1.5, 1.6, bolinhas[2] ?? figura, 2.6);
+    // (parte 3) a vovó mora no sofá da sala da Casa anos 80: a trilha entra pela porta e acaba
+    // na frente dela, entre o sofá e o tapete
+    const [ax, , az] = pt.casa.vovo;
+    return sitio('vovo', ax, az, 1.6, bolinhas[2] ?? figura, 2.2);
   }
   if (c.tipo !== 'evento') return null;
   const v = mundo.estadoVila?.() ?? null;

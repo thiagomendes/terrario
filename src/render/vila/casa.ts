@@ -58,6 +58,8 @@ export interface QuadroCasa {
 
 export interface CasaVila {
   quadro(q: QuadroCasa): void;
+  /** Quanto cada parede já sumiu (sul, norte, oeste, leste, meio): o que fica nela some junto. */
+  paredes(k: readonly number[]): void;
   tocar(qual: ToqueCasa): void;
   /** Testes: o que a casa mostra agora. */
   estado(): {
@@ -162,13 +164,24 @@ export function criarCasaVila(
   const giroDe = (p: PecaVila) => (p.dir & 3) * (Math.PI / 2);
 
   // ------------------------------------------------------------------ as peças paradas
+  // (o que fica pendurado numa parede, o relógio e as cortinas, vai à parte: some com ela quando
+  // a parede sai da frente da câmera)
+  const naParede = (p: PecaVila): number =>
+    p.tipo === 'casa-relogio' ? 1 : p.tipo === 'casa-cortina' ? (p.n === 2 ? 2 : 0) : -1;
   const parado = desenhoNoMundo();
-  for (const p of pecas) desenharPecaCasa(new Ref(parado, p), p.tipo, p.n ?? 0);
+  const daParede = [0, 1, 2].map(() => desenhoNoMundo());
+  for (const p of pecas) {
+    const i = naParede(p);
+    desenharPecaCasa(new Ref(i >= 0 ? daParede[i] : parado, p), p.tipo, p.n ?? 0);
+  }
   const mParado = malha('casa-pecas', parado.corpo)!;
   mParado.receiveShadows = true;
   mParado.freezeWorldMatrix();
   const mParadoLuz = malha('casa-pecas-luz', parado.luz, true);
   mParadoLuz?.freezeWorldMatrix();
+  const mParedes = daParede.map((d, i) => malha(`casa-parede-${i}`, d.corpo));
+  /** Quanto cada parede já sumiu (a do sul, a do norte, a do oeste, a do leste, a do meio). */
+  let kParedes: readonly number[] = [0, 0, 0, 0, 0];
 
   // ------------------------------------------------------------------ a tela da TV
   const pTv = achar('casa-tv');
@@ -468,6 +481,15 @@ export function criarCasaVila(
         mostrar(ver);
       }
       if (!ver) return;
+      // o que fica pendurado numa parede que saiu da frente da câmera some junto com ela
+      mParedes.forEach((m, i) => {
+        const v = kParedes[i] < 0.3;
+        if (m && m.isEnabled() !== v) m.setEnabled(v);
+      });
+      if (mPonteiros) {
+        const v = kParedes[1] < 0.3;
+        if (mPonteiros.isEnabled() !== v) mPonteiros.setEnabled(v);
+      }
       // a luz de dentro: de noite o abajur acende e a sala fica morna (nunca a escuridão da rua)
       const l = 1 - 0.32 * q.noite;
       if (Math.abs(l - luzDentro) > 0.01) {
@@ -640,6 +662,9 @@ export function criarCasaVila(
         }
         bola.position.y = lugarBola[1] + y;
       }
+    },
+    paredes(k) {
+      kParedes = k;
     },
     tocar(qual) {
       const t = agora;

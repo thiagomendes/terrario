@@ -43,6 +43,13 @@ export class PluginMundo extends MaterialPluginBase {
   readonly casaDentro = new Float32Array([1e9, 1e9, -1e9, -1e9]);
   readonly casaCorte = new Float32Array([1e9, 1e9, -1e9, -1e9]);
   readonly casaY = new Float32Array([1e9, -1e9, 0, 0]);
+  /**
+   * As paredes da casa que somem entre a câmera e a criança (até 5: as quatro de fora e a do
+   * meio), cada uma uma caixa no chão (x0, z0, x1, z1), e quanto cada uma já sumiu (0 a 1). A
+   * fileira de pedra de baixo fica (a planta da casa continua desenhada no chão).
+   */
+  readonly casaParede = new Float32Array(20).fill(0);
+  readonly casaParedeK = new Float32Array(8);
 
   /** Desenha as juntas entre blocos (quina macia e um friso), só no material sólido. */
   private readonly juntas: boolean;
@@ -97,9 +104,11 @@ export class PluginMundo extends MaterialPluginBase {
         { name: 'casaDentro', size: 4, type: 'vec4' },
         { name: 'casaCorte', size: 4, type: 'vec4' },
         { name: 'casaY', size: 4, type: 'vec4' },
+        { name: 'casaParede', size: 4, type: 'vec4', arraySize: 5 },
+        { name: 'casaParedeK', size: 4, type: 'vec4', arraySize: 2 },
       ],
       vertex:
-        'uniform float ventoFolhas;\nuniform float tempoMundo;\nuniform vec4 blocosOcultos[8];\nuniform vec4 casaCorte;\nuniform vec4 casaY;',
+        'uniform float ventoFolhas;\nuniform float tempoMundo;\nuniform vec4 blocosOcultos[8];\nuniform vec4 casaCorte;\nuniform vec4 casaY;\nuniform vec4 casaParede[5];\nuniform vec4 casaParedeK[2];',
       fragment:
         'uniform float pisoCeu;\nuniform float verdeNoite;\nuniform vec3 corBruma;\nuniform float forcaBruma;\nuniform float luzBlocos;\nuniform float outono;\nuniform float inverno;\nuniform float molhado;\nuniform vec4 casaDentro;\nuniform vec4 casaY;',
     };
@@ -137,6 +146,8 @@ export class PluginMundo extends MaterialPluginBase {
       this.casaCorte[3],
     );
     uniformBuffer.updateFloat4('casaY', this.casaY[0], this.casaY[1], this.casaY[2], this.casaY[3]);
+    uniformBuffer.updateFloatArray('casaParede', this.casaParede);
+    uniformBuffer.updateFloatArray('casaParedeK', this.casaParedeK);
   }
 
   override getCustomCode(shaderType: string): Record<string, string> | null {
@@ -165,9 +176,20 @@ export class PluginMundo extends MaterialPluginBase {
             }
             // spec 026 (parte 3): o telhado da Casa anos 80 com a criança lá dentro: cada bloco
             // encolhe para o meio dele até sumir (o corte vai de 0 a 1)
+            float kC = 0.0;
             if (casaY.z > 0.0 && donoO.y >= casaY.y && donoO.x >= casaCorte.x && donoO.x < casaCorte.z
                 && donoO.z >= casaCorte.y && donoO.z < casaCorte.w)
-              positionUpdated = position + (donoO + vec3(0.5) - pmO) * casaY.z;
+              kC = casaY.z;
+            // e as paredes entre a câmera e a criança (a fileira de pedra de baixo fica)
+            if (donoO.y >= casaY.x + 1.02 && donoO.y < casaY.y) {
+              for (int iC = 0; iC < 5; iC++) {
+                float kP = iC < 4 ? casaParedeK[0][iC] : casaParedeK[1].x;
+                vec4 cP = casaParede[iC];
+                if (kP > 0.0 && donoO.x >= cP.x && donoO.x < cP.z && donoO.z >= cP.y && donoO.z < cP.w)
+                  kC = max(kC, kP);
+              }
+            }
+            if (kC > 0.0) positionUpdated = position + (donoO + vec3(0.5) - pmO) * kC;
           }
           #ifdef VERTEXCOLOR
           if (ventoFolhas > 0.0 && color.a < 0.99) {

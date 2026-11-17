@@ -118,8 +118,8 @@ const movidas = (evs: Ev[]) => evs.flatMap((e) => (e.e === 'alma' ? e.missoes : 
 const moedas = (evs: Ev[]) => evs.reduce((s, e) => s + (e.e === 'alma' ? e.ganho.moedas : 0), 0);
 
 describe('spec 026 (parte 2, etapa B): as missões do parque no núcleo', () => {
-  it('a rede subiu para 13 e os comandos novos passam a limpo', () => {
-    expect(VERSAO_REDE).toBe(13);
+  it('a rede subiu (13 na etapa B; 14 na parte 3) e os comandos novos passam a limpo', () => {
+    expect(VERSAO_REDE).toBeGreaterThanOrEqual(13);
     expect(sanear({ t: 'vila', a: 'balao', i: 2, lixo: 1 })).toEqual({ t: 'vila', a: 'balao', i: 2 });
     expect(sanear({ t: 'vila', a: 'balao', i: 3 })).toBeNull();
     expect(sanear({ t: 'vila', a: 'balao' })).toBeNull();

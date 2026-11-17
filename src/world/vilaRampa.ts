@@ -66,7 +66,7 @@ export function montarPistaDeSkate(f: FerramentasVila): RampaMontada {
 
   // ============================================================== o piso de concreto da rampa
   // (o fundo da rampa é o próprio chão: as curvas, os decks e a borda são a peça)
-  encher(RU - 8, RV0 - 3, RU + 9, RV1 + 4, Bloco.CONCRETO);
+  encher(RU - 8, RV0 - 3, RU + 9, RV1 + 4, Bloco.PEDRA_LISA);
   peca('rampa-skate', RU, (RV0 + RV1) / 2, DIR.s);
 
   // ============================================================== o suporte, os bancos, a BMX

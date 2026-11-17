@@ -115,6 +115,8 @@ import { aplicarJuntas } from '../personagem/gestos';
 import { PIPOQUEIRO, VENDEDORA_DE_BALOES } from '../nucleo/vila';
 import { criarSomParque, type SomParque } from '../audio/somParque';
 import { criarSomRua, type SomRua } from '../audio/somRua';
+import { criarSomCasa, type SomCasa } from '../audio/somCasa';
+import { ligarCasaNaCena, JUNTAS_SOFA } from './vila/casaNaCena';
 import { criarMissoesParque } from './vila/missoesParque';
 import { FALAS_DO_ORELHAO, N_BALOES, lugarDoBalao } from '../jogo/missoesParque';
 import { AVO } from '../nucleo/vila';
@@ -461,6 +463,28 @@ export interface EstadoDepuracao {
   vilaPatins?: (calcar: boolean) => void;
   /** Spec 026 (testes): quantas vezes os patins foram calçados ou tirados (com a festinha). */
   patinsTrocas?: number;
+  /** Spec 026 (parte 3): pega ou guarda o skate (o suporte da pista e o "Guardar skate" da roda). */
+  vilaSkate?: (pegar: boolean) => void;
+  skateTrocas?: number;
+  /**
+   * Spec 026 (parte 3): a Casa anos 80 (os toques da sala e do quarto, o sofá, se a criança está
+   * lá dentro, a sala do núcleo) e o trilho da rampa de skate.
+   */
+  vilaCasa?: {
+    tocar(
+      qual: 'tv' | 'videocassete' | 'disco' | 'bau' | 'telefone' | import('./vila/casa').ToqueCasa,
+    ): void;
+    sentar(): boolean;
+    dentro(): boolean;
+    sala(): import('../jogo/casa').EstadoCasa;
+    estado(): ReturnType<import('./vila/casa').CasaVila['estado']> & {
+      corte: boolean;
+      trilho: ReturnType<import('./vila/trilhoSkate').TrilhoSkate['estado']>;
+      camLivre: boolean;
+      camDist: number;
+    };
+  };
+  somCasa?: () => ReturnType<SomCasa['info']> | null;
   /** Spec 026: toca um brinquedo do bairro (a tela da máquina mexe, o rádio liga, a fita rebobina). */
   vilaBrinquedo?: (qual: import('./vila/brinquedos').ToqueVila, i?: number) => void;
   /** Spec 026 (testes): o que os brinquedos do bairro mostram agora. */
@@ -1286,6 +1310,7 @@ export function criarCena(
   // spec 026 (dono, 16 nov 2026): a criança ESCOLHE calçar os patins, no suporte do rinque.
   // Ninguém entra no mundo já de patins (nem quem saiu dele calçado, nem em outro mundo)
   delete aparencia.patins;
+  delete aparencia.skate;
   const personagem = criarPersonagem(scene, aparencia);
   let vitrine: ReturnType<EfeitosPremium['registrar']> | null = null;
   let vitrineNo: TransformNode | null = null;
@@ -2055,6 +2080,31 @@ export function criarCena(
     estado.patinsTrocas = (estado.patinsTrocas ?? 0) + 1;
     window.dispatchEvent(new CustomEvent('brumaluz:patins', { detail: { calcados: calcar } }));
   };
+  /**
+   * Spec 026 (parte 3): pegar e guardar o skate do suporte da pista de skate (como os patins: só
+   * quando a criança escolhe, nunca junto deles). Pegando, o pulinho para cima da prancha e o som
+   * das rodinhas; guardando, o "toc" de pôr de volta no suporte.
+   */
+  estado.vilaSkate = (pegar) => {
+    if (!planoVila || pegar === !!aparencia.skate) return;
+    if (pegar && aparencia.patins) estado.vilaPatins?.(false);
+    aparencia = normalizarAparencia({ ...aparencia, skate: pegar ? true : undefined });
+    if (!pegar) delete aparencia.skate;
+    personagem.aplicarAparencia(aparencia);
+    enviar({
+      t: 'aparencia',
+      aparencia: semDesbloqueios({ ...aparencia }) as Record<string, unknown>,
+    });
+    const j = controle.jogador;
+    if (pegar && j.noChao && !j.voando) {
+      j.vy = 4.2;
+      j.noChao = false;
+    }
+    somCasa?.tocar(pegar ? 'skate' : 'guardarSkate');
+    tocarSomInterface(pegar ? 'plim' : 'mochila');
+    estado.skateTrocas = (estado.skateTrocas ?? 0) + 1;
+    window.dispatchEvent(new CustomEvent('brumaluz:skate', { detail: { pegou: pegar } }));
+  };
   estado.vilaEstado = () => (planoVila ? cliente.vila.estado : null);
   estado.vilaComando = (c) => {
     if (!planoVila) return;
@@ -2111,18 +2161,87 @@ export function criarCena(
         },
       })
     : null;
-  if (passeio) controle.definirAssento(() => passeio.lugar());
+  // spec 026 (parte 3): a Casa anos 80 por dentro (o telhado que some, a câmera de cima, a TV, o
+  // disco, os brinquedos, o sofá) e o trilho da rampa de skate
+  /** O som da casa e da pista (criado mais abaixo, com o motor do áudio). */
+  let somCasa: SomCasa | null = null;
+  const casaCena = planoVila
+    ? ligarCasaNaCena({
+        scene,
+        plano: planoVila,
+        voce,
+        temMalha: (cx, cz) => malhas.has(chave(cx, cz)),
+        brilha: brilhaNaVila,
+        tapaOGlow,
+        vista: () => cliente.vila.estado,
+        tempoNucleo: () => cliente.vila.tempo(performance.now() / 1000),
+        jogador: controle.jogador,
+        rumo: () => {
+          const c = controleDeAndar();
+          const yaw = camera.rotation.y;
+          return {
+            x: c.direita * Math.cos(yaw) + c.frente * Math.sin(yaw),
+            z: -c.direita * Math.sin(yaw) + c.frente * Math.cos(yaw),
+          };
+        },
+        deSkate: () => !!aparencia.skate,
+        enviar: (c) => {
+          enviarTelemetria(true);
+          enviar({ t: 'vila', ...c } as Comando);
+        },
+        camera: {
+          yaw: () => camera.rotation.y,
+          pitch: () => camera.rotation.x,
+          apontar: (y, p) => controle.apontar(y, p, true),
+          mexeuEm: () => controle.mexeuEm,
+          zoom: () => orbita.zoom(),
+          definirZoom: (d) => void orbita.definirZoom(d),
+        },
+        plugins: [mundoSolido, mundoPlanta],
+        sentar: () => void gestos?.fazer('sentar'),
+        outros: () => outrosJogadores.lista,
+        som: () => somCasa,
+        telefone: () => estado.vilaMissoes?.rua('orelhao'),
+      })
+    : null;
+  if (passeio || casaCena)
+    controle.definirAssento(() => passeio?.lugar() ?? casaCena?.lugar() ?? null);
+  if (casaCena)
+    estado.vilaCasa = {
+      tocar: (qual) => casaCena.tocar(qual),
+      sentar: () => casaCena.sentar(),
+      dentro: () => casaCena.dentro(),
+      sala: () => casaCena.sala(),
+      estado: () => ({
+        ...casaCena.render.estado(),
+        corte: casaCena.cortado(
+          planoVila!.pontos.casa.corte.x0 + 3,
+          planoVila!.pontos.casa.corte.y + 1,
+          planoVila!.pontos.casa.corte.z0 + 3,
+        ),
+        trilho: casaCena.trilho.estado(),
+        // a câmera nunca dentro de um bloco (nem de parede, nem de telhado que não sumiu) e a
+        // distância dela até os olhos da criança
+        camLivre: !bloqueiaCamera(
+          Math.floor(cameraVisao.position.x),
+          Math.floor(cameraVisao.position.y),
+          Math.floor(cameraVisao.position.z),
+        ),
+        camDist: Math.hypot(
+          cameraVisao.position.x - camera.position.x,
+          cameraVisao.position.y - camera.position.y,
+          cameraVisao.position.z - camera.position.z,
+        ),
+      }),
+    };
   if (planoVila) {
     const pq = planoVila.pontos.parque;
     outrosJogadores.definirAssento((id) => {
-      const l = lugarDoAmigo(
-        pq,
-        vistaParque(),
-        id,
-        cliente.vila.tempo(performance.now() / 1000),
-        carrosDoBate(),
-      );
-      return l ? { ...l, juntas: JUNTAS_SENTADO[l.b] } : null;
+      const tn = cliente.vila.tempo(performance.now() / 1000);
+      const l = lugarDoAmigo(pq, vistaParque(), id, tn, carrosDoBate());
+      if (l) return { ...l, juntas: JUNTAS_SENTADO[l.b] };
+      // parte 3: o amigo no trilho da rampa de skate
+      return casaCena?.amigo(id) ?? null;
     });
   }
   /** O som do parque (criado mais abaixo, com o motor do áudio). */
@@ -2712,6 +2831,8 @@ export function criarCena(
       celulasQuadro = quadroAtual;
       celulasEdicoes = edicoes.versaoGeral;
     }
+    // parte 3: o telhado cortado da Casa anos 80 (a criança lá dentro) não segura a câmera
+    if (casaCena?.cortado(x, y, z)) return false;
     const k = ((x + 131072) * 1024 + (y + 512)) * 262144 + (z + 131072);
     const ja = celulasCamera.get(k);
     if (ja !== undefined) return ja;
@@ -2824,7 +2945,8 @@ export function criarCena(
       r.direcao,
       olhos,
       toque ? ALCANCE_TOQUE : ALCANCE_MIRA,
-      (x, y, z) => ehAlvo(blocoEm(x, y, z)),
+      // (o telhado cortado da Casa anos 80 não é alvo: o dedo passa por ele)
+      (x, y, z) => !casaCena?.cortado(x, y, z) && ehAlvo(blocoEm(x, y, z)),
     );
     if (a && toque && !clienteAlcanca(olhos, a.x, a.y, a.z)) return null;
     return a;
@@ -2835,8 +2957,12 @@ export function criarCena(
   /** Fora do alcance, o raio do dedo bate num bloco que a criança vê? */
   function blocoLongeNoRaio(r: { origem: Vec3; direcao: Vec3 }): boolean {
     const olhos = { x: camera.position.x, y: camera.position.y, z: camera.position.z };
-    return !!mirarDaCamera(r.origem, r.direcao, olhos, ALCANCE_VER_LONGE, (x, y, z) =>
-      ehAlvo(blocoEm(x, y, z)),
+    return !!mirarDaCamera(
+      r.origem,
+      r.direcao,
+      olhos,
+      ALCANCE_VER_LONGE,
+      (x, y, z) => !casaCena?.cortado(x, y, z) && ehAlvo(blocoEm(x, y, z)),
     );
   }
 
@@ -3398,7 +3524,8 @@ export function criarCena(
     // começar a jogar, ele já está olhando para onde a criança olha
     if (document.body.classList.contains('tela-titulo')) animador.definirYaw(camera.rotation.y);
     // spec 026 (parte 2): sentado num brinquedo do parque, o corpo olha para onde a cadeira vai
-    const cadeira = passeio?.lugar();
+    // (parte 3: no trilho da rampa de skate, o corpo olha para onde o skate vai)
+    const cadeira = passeio?.lugar() ?? casaCena?.noTrilho() ?? null;
     if (cadeira) animador.definirYaw(cadeira.yaw);
     let pose = animador.atualizar(dt, {
       velocidadeHoriz,
@@ -3412,6 +3539,7 @@ export function criarCena(
       olharYaw: camera.rotation.y,
     });
     if (passeio) pose = passeio.pose(pose);
+    if (casaCena) pose = casaCena.pose(pose);
     const foto = !!estado.modoFoto?.ativo();
     // no modo foto o corpo aparece quando a câmera livre se afasta dos olhos
     const longeDosOlhos = foto && Vector3.Distance(fotoPosRef(), camera.position) > 1.2;
@@ -3432,6 +3560,8 @@ export function criarCena(
       vista: animador.vista(),
     });
     personagem.posicionar(j.x, j.y, j.z, animador.yaw() + giroCorpo);
+    // parte 3: na curva da rampa o boneco deita junto com a prancha
+    personagem.raiz.rotation.x = -(casaCena?.noTrilho()?.inclina ?? 0) * 0.85;
     gestos?.atualizar(dt); // spec 015: balão do gesto
     // estimativa de luz no jogador: teto opaco acima = caverna (escurece braço e corpo)
     const ex = Math.floor(camera.position.x);
@@ -3449,7 +3579,8 @@ export function criarCena(
         if (obterBlocoDef(blocoEm(ex, y, ez))?.opaco) tetoCoberto = true;
       }
     }
-    const coberto = tetoCoberto;
+    // (parte 3: dentro da Casa anos 80 a sala tem a luz do dia, como lá fora)
+    const coberto = tetoCoberto && !casaCena?.dentro();
     jogadorCoberto = coberto && ey < 55;
     const alvoLuz = coberto ? (ey < 55 ? 0.22 : 0.55) : 1;
     luzJogador += (alvoLuz - luzJogador) * Math.min(1, dt * 3);
@@ -3467,9 +3598,13 @@ export function criarCena(
       // fantasia Patinadora não calça mais sozinha (dono, 16 nov 2026: calçar é uma escolha, no
       // suporte do rinque); fora da Vila Neon os patins nunca vão (decisão 7 do dono)
       const dePatins = !!planoVila && !!aparencia.patins;
+      const deSkate = !!planoVila && !!aparencia.skate;
       aparencia = normalizarAparencia({ ...aparencia, ...parcial });
       if (dePatins) aparencia.patins = true;
       else delete aparencia.patins;
+      // (parte 3: o skate também continua, e nunca vem de outro lugar)
+      if (deSkate && !dePatins) aparencia.skate = true;
+      else delete aparencia.skate;
       personagem.aplicarAparencia(aparencia);
       // os amigos no mesmo mundo passam a ver a aparência nova
       // spec 014: os desbloqueios (capacete e colete do canteiro) ficam no aparelho
@@ -4346,7 +4481,9 @@ export function criarCena(
   // realejo do carrossel (somParque); vale quem pede mais
   let calarDaVila = 0;
   let calarDoParque = 0;
-  const calarTrilha = () => ambiente?.definirCalar(Math.max(calarDaVila, calarDoParque));
+  let calarDaCasa = 0;
+  const calarTrilha = () =>
+    ambiente?.definirCalar(Math.max(calarDaVila, calarDoParque, calarDaCasa));
   // spec 026 (parte 2): os sons do parque, feitos na hora (nada no pacote): o realejo que cresce
   // perto do carrossel, o "tum", as risadas, o sininho da pipoca e o zumbido das lâmpadas
   if (planoVila) {
@@ -4378,6 +4515,23 @@ export function criarCena(
     somRua = sr;
     window.addEventListener('pagehide', () => sr.liberar());
     estado.somRua = () => sr.info();
+    // parte 3: a TV, o disco e os brinquedos da Casa anos 80 e o "clac" da rampa (feitos na hora;
+    // os laços da sala abafados do lado de fora da casa)
+    const pc = planoVila.pontos.casa;
+    const sc = criarSomCasa({
+      motor: motorAudio,
+      tv: { x: pc.tv[0], z: pc.tv[2] },
+      discos: { x: pc.discos[0], z: pc.discos[2] },
+      pista: { x: planoVila.pontos.skate.rampa.x, z: planoVila.pontos.skate.rampa.z },
+      musica: () => configAtual?.volumeMusica ?? 0.6,
+      aoCalarTrilha: (f) => {
+        calarDaCasa = f;
+        calarTrilha();
+      },
+    });
+    somCasa = sc;
+    window.addEventListener('pagehide', () => sc.liberar());
+    estado.somCasa = () => sc.info();
   }
   // spec 026 (T18/T19): o som do show, dos brinquedos e das zonas da Vila Neon (o pacote só baixa
   // neste mundo, depois de ele abrir). Fica aqui, e não junto do showVila, porque precisa do motor.
@@ -4621,7 +4775,7 @@ export function criarCena(
     const j = controle.jogador;
     // spec 026 (parte 2): levado pela cadeira de um brinquedo do parque não é andar (sem passos,
     // sem o corpo virar, sem a câmera voltar sozinha para trás dele)
-    const levado = !!passeio?.lugar();
+    const levado = !!passeio?.lugar() || !!casaCena?.lugar();
     const vel = !levado && dt > 0 ? Math.hypot(j.x - ultimoX, j.z - ultimoZ) / dt : 0;
     velocidadeHoriz = vel;
     velX = !levado && dt > 0 ? (j.x - ultimoX) / dt : 0;
@@ -4689,6 +4843,8 @@ export function criarCena(
     }
     // spec 026 (parte 2): sentado num brinquedo do parque, o boneco vai com a cadeira
     passeio?.quadro(performance.now() / 1000, Math.min(dtBruto, 0.1));
+    // parte 3: o trilho da rampa de skate e o pulinho até o sofá
+    casaCena?.antesDaFisica(performance.now() / 1000, Math.min(dtBruto, 0.1));
     if (fisicaRodou) controle.atualizar(fotoAtiva ? 0 : dtBruto);
     quadroFotoRef?.(Math.min(dtBruto, 0.1));
     quadroSobrevivencia?.(Math.min(dtBruto, 0.1));
@@ -4746,6 +4902,14 @@ export function criarCena(
       replicaBate?.meu ?? -1,
     );
     quadroMissoesVila(tempo);
+    // parte 3: dentro ou fora da casa (o telhado e a câmera), a sala na tela e o som dela
+    casaCena?.depois({
+      t: tempo,
+      dt: Math.min(dtBruto, 0.1),
+      noite: noiteVila,
+      hora,
+      cam: { x: cameraVisao.position.x, z: cameraVisao.position.z },
+    });
     somRua?.quadro(controle.jogador);
     // (o parque não toca música com o show ou as caixas tocando perto: uma música por vez)
     somParque?.quadro(
@@ -4984,13 +5148,20 @@ export function criarCena(
       (povoado, n, pose, onde) =>
         povoado === 'vila' && pilotoDoBate(n) >= 0
           ? aplicarJuntas(pose, JUNTAS_SENTADO.bate, 1)
-          : showVila.poseDoMorador(povoado, n, pose, onde),
+          : // parte 3: a vovó sentada no sofá da sala, de frente para a TV
+            povoado === 'vila' && n === AVO
+            ? aplicarJuntas(pose, JUNTAS_SOFA, 1)
+            : showVila.poseDoMorador(povoado, n, pose, onde),
       (povoado, n, onde) => showVila.giroDoMorador(povoado, n, onde),
     );
-  // os pilotos ficam onde o carrinho deles está na tela (o mesmo lugar do desenho do carrinho)
+  // os pilotos ficam onde o carrinho deles está na tela (o mesmo lugar do desenho do carrinho);
+  // a vovó, no assento dela do sofá (parte 3)
   if (planoVila && replicaBate) {
     const yBate = planoVila.pontos.parque.bate.y;
+    const avo = planoVila.pontos.postos.avo;
+    const yawSofa = planoVila.pontos.casa.sofa.yaw;
     renderCriaturas.definirLugarDeMorador((povoado, n) => {
+      if (povoado === 'vila' && n === AVO) return { x: avo[0], y: avo[1], z: avo[2], yaw: yawSofa };
       const i = povoado === 'vila' ? pilotoDoBate(n) : -1;
       const c = i >= 0 ? carrosDoBate()?.[i] : null;
       return c ? { x: c.x, y: yBate, z: c.z, yaw: c.yaw } : null;

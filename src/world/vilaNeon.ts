@@ -836,8 +836,9 @@ function montarVila(semente: number, r: RelevoVila): Montado {
   // postes e árvores nas calçadas (a cada 10 blocos algo novo para olhar)
   for (let u = 2; u < LARGURA_VILA - 1; u += 12) {
     if (u >= 88 && u <= 106) continue;
-    // (a frente do arco do parque fica livre: o poste dali vai para o lado)
-    poste(u === 134 ? 138 : u, 59);
+    // (a frente do arco do parque fica livre: o poste dali vai para o lado; e a frente do
+    // portãozinho da Casa anos 80 também, parte 3)
+    poste(u === 134 ? 138 : u === 50 ? 56 : u, 59);
     poste(u + 6, 70);
   }
   for (let v = 2; v < PROFUNDIDADE_VILA - 1; v += 12) {

@@ -42,8 +42,13 @@ import type { ObraSalva } from '../nucleo/saneamento';
  * `balao`, a `prenda`, o `feno`, o `cocho`, a `fita` e a `vitamina`; os eventos `vilaBalao`,
  * `vilaPrenda`, `vilaVovo` e `vilaLanche`; o quadro da vila ganhou o `bal` e o `balao`; as
  * missões f5 a f8; a vovó; os itens `vitamina`, `fita_video` e `pelucia`).
+ * 14: spec 026, parte 3 (a Casa anos 80 por dentro e a pista de skate: o lote da casa e o do
+ * sudeste mudam a geração do bairro e as peças sólidas dele; o comando `vila` ganhou a `tv`, o
+ * `videocassete`, o `disco`, o `bau` e a `rampa`; o quadro da vila ganhou a `casa` (o canal, o
+ * filme e o disco da sala) e a `rampa` (quem está no trilho); o `skate` na aparência; a vovó no
+ * sofá; a menina do skate e o menino da BMX; os itens `ioio`, `piao` e `cubo_cores`).
  */
-export const VERSAO_REDE = 13;
+export const VERSAO_REDE = 14;
 /** Jogadores por mundo. */
 export const MAX_JOGADORES = 8;
 

@@ -2,6 +2,9 @@ import { afterAll, describe, expect, it } from 'vitest';
 import '../../src/temas/todos';
 import { obterTema } from '../../src/temas';
 import { desenharPeca } from '../../src/render/vila/pecas';
+import { desenharPecaCasa } from '../../src/render/vila/pecasCasa';
+import { Ref } from '../../src/render/vila/ref';
+import { MEDIDA_RAMPA, alturaNaRampa } from '../../src/jogo/rampa';
 import { Pecas } from '../../src/render/solidos';
 import type { Desenho } from '../../src/render/vila/ref';
 import { definirEstiloMundo, ESTILO_PADRAO } from '../../src/world/chunk';
@@ -40,6 +43,12 @@ const DE_PASSAGEM: TipoPecaVila[] = [
   'arco-lampadas',
   'pedestal',
   'toalha',
+  // parte 3: o que fica na parede ou no chão da Casa anos 80 (passa-se por cima ou do lado)
+  'casa-relogio',
+  'casa-tapete',
+  'casa-cortina',
+  'casa-capacho',
+  'casa-quebra-cabeca',
 ];
 
 function desenho(p: PecaVila) {
@@ -54,7 +63,9 @@ function desenho(p: PecaVila) {
     oz: 0,
     chao: p.y,
   } as unknown as Desenho;
-  desenharPeca(p, d);
+  // (a Casa anos 80 por dentro vai na malha dela, `render/vila/casa.ts`: o mesmo desenho)
+  if (p.tipo.startsWith('casa-')) desenharPecaCasa(new Ref(d, p), p.tipo, p.n ?? 0);
+  else desenharPeca(p, d);
   return [d.corpo, d.luz, d.noite, d.vidro].flatMap((q) => q.partes);
 }
 const fora = (cx: readonly CaixaSolida[], q: readonly number[]) =>
@@ -117,6 +128,8 @@ describe('as peças da Vila Neon seguram (spec 026)', () => {
       // a antena fina do hatch
       carro: 0.5,
       picape: 0.5,
+      // parte 3: as folhas compridas da planta da sala (macias: passa-se rente a elas)
+      'casa-planta': 0.8,
     };
     const vistos = new Set<string>();
     for (const p of plano.pecas) {
@@ -124,6 +137,11 @@ describe('as peças da Vila Neon seguram (spec 026)', () => {
       // os três brinquedos do parque giram (o desenho deles é de `render/vila/parque.ts`): as
       // caixas são conferidas contra o plano em `tests/world/vilaParque.test.ts`
       if (['roda-gigante', 'carrossel'].includes(p.tipo)) continue;
+      // parte 3: os brinquedos do quarto que mexem (o pião, o cubo, o robô e a bola são de
+      // `render/vila/casa.ts`, cada um com a caixa um pouco maior que ele, para a criança esbarrar
+      // e nunca subir em cima) e a rampa de skate (curva lisa em degrauzinhos: conferida abaixo)
+      if (['casa-piao', 'casa-cubo', 'casa-robo', 'casa-bola', 'rampa-skate'].includes(p.tipo))
+        continue;
       const k = `${p.tipo}:${p.n ?? 0}:${p.dir & 1}`;
       if (vistos.has(k)) continue;
       vistos.add(k);
@@ -230,5 +248,23 @@ describe('as peças da Vila Neon seguram (spec 026)', () => {
     expect(celulaTomadaPelaVila(plano, x, y, z)).toBe(true);
     expect(celulaTomadaPelaVila(plano, x, y + 3, z)).toBe(false);
     expect(celulaTomadaPelaVila(null, x, y, z)).toBe(false);
+  });
+});
+
+describe('a rampa de skate segura (spec 026, parte 3)', () => {
+  it('as curvas são degrauzinhos rentes à superfície (o pé não afunda nem flutua muito, a câmera não entra embaixo)', () => {
+    const p = plano.pecas.find((q) => q.tipo === 'rampa-skate')!;
+    const r = plano.pontos.skate.rampa;
+    expect(p).toBeTruthy();
+    const cx = caixasDaPeca(p);
+    // o fundo é livre (o chão): nenhuma caixa no meio
+    for (const c of cx) expect(Math.min(Math.abs(c[0] - r.x), Math.abs(c[3] - r.x))).toBeGreaterThanOrEqual(MEDIDA_RAMPA.meia - 1e-6);
+    // de 0,05 em 0,05 bloco de lado, a caixa mais alta ali fica a até 0,35 da superfície
+    for (let s = MEDIDA_RAMPA.meia + 0.05; s < MEDIDA_RAMPA.meia + MEDIDA_RAMPA.curva + MEDIDA_RAMPA.deck; s += 0.05)
+      for (const lado of [-1, 1]) {
+        const x = r.x + lado * s;
+        const topo = Math.max(...cx.filter((c) => x >= c[0] && x <= c[3]).map((c) => c[4] - p.y));
+        expect(Math.abs(topo - alturaNaRampa(MEDIDA_RAMPA, s)), `s ${s.toFixed(2)}`).toBeLessThanOrEqual(0.35);
+      }
   });
 });
