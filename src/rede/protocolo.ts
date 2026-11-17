@@ -38,8 +38,12 @@ import type { ObraSalva } from '../nucleo/saneamento';
  * `vila` perdeu o `tum` e ganhou o `guiar`; o quadro ganhou o `bate`, os carrinhos que o núcleo
  * simula; o evento `parqueTum` agora é a batida de verdade, com o lugar e a força; quatro
  * moradores novos guiam carrinhos).
+ * 13: spec 026, as missões do parque e os toques da Rua anos 80 (o comando `vila` ganhou o
+ * `balao`, a `prenda`, o `feno`, o `cocho`, a `fita` e a `vitamina`; os eventos `vilaBalao`,
+ * `vilaPrenda`, `vilaVovo` e `vilaLanche`; o quadro da vila ganhou o `bal` e o `balao`; as
+ * missões f5 a f8; a vovó; os itens `vitamina`, `fita_video` e `pelucia`).
  */
-export const VERSAO_REDE = 12;
+export const VERSAO_REDE = 13;
 /** Jogadores por mundo. */
 export const MAX_JOGADORES = 8;
 

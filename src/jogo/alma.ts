@@ -427,6 +427,86 @@ export const MISSOES: readonly Missao[] = [
     habilidade: 'explorador',
     minutos: [1, 2],
   },
+  // spec 026 (parte 2, etapa B): as quatro missões do parque (5 + 4 + 4 + 5 = 18 moedinhas; o
+  // mundo dá 33: com mais do que isso o unicórnio da lojinha chegava antes da 6ª sessão, e o
+  // ritmo da 023 pede entre a 6ª e a 8ª). As regras e os lugares estão em `missoesParque.ts`
+  {
+    // o bilhete de três carimbos: o passeio inteiro em cada brinquedo carimba o dele (cada
+    // carimbo é um "lugar": a bolinha de cada brinquedo acende no lugar dela)
+    id: 'f5',
+    mundo: 'vila-neon',
+    nome: 'Bilhete do parque',
+    desenho: {
+      tipo: 'arte',
+      principal: 'bilhete',
+      selo: 'sentarBrinquedo',
+      resultado: 'bilheteCarimbado',
+      bolinha: 'carimbo',
+      bolinhas: ['carimboRoda', 'carimboCavalinho', 'carimboCarrinho'],
+      placa: 'bilhete',
+    },
+    conta: { tipo: 'lugares', usos: ['bilhete:roda', 'bilhete:carrossel', 'bilhete:bate'] },
+    moedas: 5,
+    habilidade: 'explorador',
+    minutos: [2, 4],
+  },
+  {
+    // os três balões da Dona Flor presos no parque: um toque de perto e o balão desce até a mão
+    id: 'f6',
+    mundo: 'vila-neon',
+    nome: 'Balões fugidos',
+    desenho: {
+      tipo: 'arte',
+      principal: 'balaoPreso',
+      selo: 'pegar',
+      resultado: 'balaoNaMao',
+      // ('balao' já é o balão de fala do presente de nível: o do parque tem nome próprio)
+      bolinha: 'balaoParque',
+      placa: 'balaoParque',
+    },
+    conta: { tipo: 'evento', chave: 'pegou:balao', meta: 3 },
+    moedas: 4,
+    habilidade: 'explorador',
+    minutos: [1, 2],
+  },
+  {
+    // o feno do fardo no cocho da fazendinha, uma braçada para cada lhama
+    id: 'f7',
+    mundo: 'vila-neon',
+    nome: 'Lanche das lhamas',
+    desenho: {
+      tipo: 'arte',
+      principal: 'cocho',
+      selo: 'feno',
+      resultado: 'lhamaComendo',
+      bolinha: 'feno',
+      placa: 'cocho',
+    },
+    conta: { tipo: 'evento', chave: 'lanche:feno', meta: 2 },
+    moedas: 4,
+    habilidade: 'bichos',
+    minutos: [1, 2],
+  },
+  {
+    // a argola e a pescaria (sempre acerta), a lhama de pelúcia de prenda e a entrega à vovó, na
+    // porta da Casa anos 80 (cada passo é um "lugar")
+    id: 'f8',
+    mundo: 'vila-neon',
+    nome: 'Prenda para a vovó',
+    desenho: {
+      tipo: 'arte',
+      principal: 'pelucia',
+      selo: 'argola',
+      resultado: 'vovoPresente',
+      bolinha: 'pelucia',
+      bolinhas: ['argola', 'peixinho', 'vovo'],
+      placa: 'pelucia',
+    },
+    conta: { tipo: 'lugares', usos: ['prenda:argola', 'prenda:pescaria', 'prenda:vovo'] },
+    moedas: 5,
+    habilidade: 'bichos',
+    minutos: [2, 4],
+  },
 ];
 
 const POR_ID: ReadonlyMap<string, Missao> = new Map(MISSOES.map((m) => [m.id, m]));

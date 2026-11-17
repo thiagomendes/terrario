@@ -833,6 +833,16 @@ export function criarNucleo(op: OpcoesNucleo) {
     soltar() {
       o.saltoPermitido = true;
     },
+    // spec 026 (parte 2, etapa B): o feno no cocho e a pelúcia para a vovó saem da mochila; o
+    // carimbo do bilhete e os passos da prenda são "lugares" das missões de lugares
+    tirar(item: string, qtd: number) {
+      const n = Math.min(Math.floor(qtd), o.inventario.contar(item));
+      return n > 0 && o.inventario.consumir(item, n) ? n : 0;
+    },
+    visitar(uso: string) {
+      ganharAlma(o.id, visitarLugar(almaDe(o.id), mundoAlma, uso));
+    },
+    visitou: (uso: string) => almaDe(o.id).lugares.includes(uso),
   });
   const vila: VilaNucleo | null = planoVila
     ? criarVila({
@@ -2736,6 +2746,8 @@ export function criarNucleo(op: OpcoesNucleo) {
         if (c.a === 'caixa') vila?.comando(j.id, { a: 'caixa', i: c.i });
         else if (c.a === 'sentar') vila?.comando(j.id, { a: 'sentar', b: c.b });
         else if (c.a === 'guiar') vila?.comando(j.id, { a: 'guiar', x: c.x, z: c.z, n: c.n });
+        // (etapa B: o balão fugido, a barraca de prendas, o feno, o cocho, a fita e a vitamina)
+        else if (c.a === 'balao' || c.a === 'prenda') vila?.comando(j.id, { a: c.a, i: c.i });
         else vila?.comando(j.id, { a: c.a });
         break;
       }

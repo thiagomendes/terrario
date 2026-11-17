@@ -70,7 +70,15 @@ export interface PontosParque extends ParqueVila {
   fazendinha: RetanguloVila;
   fardo: P3;
   cocho: P3;
+  /**
+   * Etapa B (f6): onde fica o balão fugido preso na árvore (o meio do balão, no vão do canto da
+   * copa, do lado do caminho).
+   */
+  arvoreDoBalao: P3;
 }
+
+/** A árvore do balão fugido (entre o carrossel, as barracas e o caminho da fazendinha). */
+const ARVORE_DO_BALAO = [152, 42] as const;
 
 export interface ParqueMontado {
   pontos: PontosParque;
@@ -380,6 +388,13 @@ export function montarParque(f: FerramentasVila): ParqueMontado {
       fazendinha: ret(FU0 + 1, FV0 + 1, FU1 - 1, FV1 - 1),
       fardo: p3(163, 45, 2),
       cocho: p3(167, 51),
+      // (a mesma conta do tronco de `arvore` com k = 1: o balão fica no vão do canto de baixo da
+      // copa, do lado do caminho)
+      arvoreDoBalao: (() => {
+        const [u, v] = ARVORE_DO_BALAO;
+        const tronco = (s(u, v, 12) > 0.78 ? 5 : 4) + Math.floor(s(u, v, 12) * 2);
+        return [X(u) + 0.5 + 2.1, Y + tronco - 1.2, Z(v) + 0.5 + 2.1] as P3;
+      })(),
     },
     postos: {
       pipoqueiro: p3(141, 28),

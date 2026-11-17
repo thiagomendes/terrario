@@ -69,6 +69,8 @@ import {
 import type { ParqueVista } from '../jogo/parque';
 import { N0_PILOTOS, N_MORADORES_BATE, pilotoDoBate } from '../jogo/bate';
 import { criarParqueNucleo, type ComandoParque, type EventoParque } from './parque';
+import { criarMissoesDoParque, type ComandoMissoes, type EventoMissoes } from './vilaMissoes';
+import { F_BALOES } from '../jogo/missoesParque';
 
 /** Os postos e quem mora em cada um (o número é o `n` do morador). */
 export const MORADORES_VILA: readonly { posto: PostoVila; profissao: Profissao }[] = [
@@ -111,6 +113,11 @@ export const MORADORES_PARQUE: readonly { n: number; posto: PostoVila; profissao
   { n: MOCO_DO_BATE, posto: 'bate', profissao: 'construtor' },
   { n: VENDEDORA_DE_BALOES, posto: 'baloes', profissao: 'cozinheiro' },
 ];
+/**
+ * A vovó (spec 026, parte 2, etapa B), com o número depois dos pilotos do bate-bate (66 a 69):
+ * espera na porta da Casa anos 80 a prenda da f8. A parte 3 a leva para o sofá da sala.
+ */
+export const AVO = 70;
 /** O n é da turma da grade (o público do show)? */
 export const daTurma = (n: number) => n >= N0_PUBLICO && n < N0_PUBLICO + PUBLICO_GRADE;
 /** O papel na banda de um morador da vila (null: não é da banda). */
@@ -149,6 +156,10 @@ export interface VilaVista {
   arcos?: [boolean, boolean, boolean];
   /** Spec 026 (parte 2): o parque (quem está sentado em qual cadeira e o empurrão da roda). */
   parque?: ParqueVista;
+  /** Etapa B (f6): os balões fugidos que quem recebe o quadro já pegou nesta rodada. */
+  bal?: [boolean, boolean, boolean];
+  /** Etapa B (f6): quem, no mundo, leva o balão de presente da Dona Flor (ids dos jogadores). */
+  balao?: string[];
 }
 
 /** O que vai salvo com o mundo (`extras.vila`). */
@@ -160,6 +171,8 @@ interface VilaSalva {
   noite?: unknown;
   /** (de antes do show sozinho: o show da rodada já tinha tocado; agora não vale mais nada) */
   tocou?: unknown;
+  /** Etapa B: quem ganhou o balão de presente da Dona Flor. */
+  balao?: unknown;
 }
 
 /** Um jogador, como o módulo o vê. */
@@ -185,6 +198,11 @@ export interface JogadorVila {
   dar(item: string, qtd: number): number;
   /** Spec 026 (parte 2): o próximo lugar que ele mandar vale (desceu de um brinquedo do parque). */
   soltar?(): void;
+  /** Etapa B: tira da mochila (o feno no cocho, a pelúcia para a vovó); devolve quantos tirou. */
+  tirar?(item: string, qtd: number): number;
+  /** Etapa B: um "lugar" das missões de lugares (o carimbo do bilhete, o passo da prenda). */
+  visitar?(uso: string): void;
+  visitou?(uso: string): boolean;
 }
 
 export interface CtxVila {
@@ -218,13 +236,15 @@ export type EventoVila =
   /** Alguém de patins passou por dentro de um arco do rinque (o brilho e o som, para todos). */
   | { e: 'vilaArco'; i: number; quem: string }
   /** Spec 026 (parte 2): o parque (sentou, desceu, o "tum" e o empurrão da roda). */
-  | EventoParque;
+  | EventoParque
+  /** Etapa B: as missões do parque (o balão que desce, a prenda, a vovó, o lanche das lhamas). */
+  | EventoMissoes;
 
 /**
  * O toque numa caixa do palco (fora do show: brinquedo livre) e, no parque (parte 2), sentar
  * num brinquedo, sair dele, o "tum" do bate-bate e o empurrãozinho da roda-gigante.
  */
-export type ComandoVila = { a: 'caixa'; i: number } | ComandoParque;
+export type ComandoVila = { a: 'caixa'; i: number } | ComandoParque | ComandoMissoes;
 
 const tres = (v: unknown): [boolean, boolean, boolean] =>
   Array.isArray(v) && v.length === 3
@@ -264,19 +284,46 @@ export function criarVila(ctx: CtxVila) {
     jogadores: ctx.jogadores,
     jogador: ctx.jogador,
     soltar: (id) => ctx.jogador(id)?.soltar?.(),
+    // (o passeio inteiro também carimba o bilhete de quem tem a f5 aberta)
+    evento: (id, chave, qtd) => {
+      ctx.evento(id, chave, qtd);
+      missoes.passeio(id, chave);
+    },
+    espalhar: ctx.espalhar,
+    sujar: ctx.sujar,
+  });
+
+  /** As duas lhamas da fazendinha do parque (ids das criaturas). */
+  const daFazendinha = new Set<number>();
+  // as missões do parque e os toques da rua (etapa B)
+  const missoes = criarMissoesDoParque({
+    parque: p.parque,
+    rua: p.rua,
+    avo: p.postos.avo,
+    chao: plano.h + 1,
+    salvo: salvo.balao,
+    agora: ctx.agora,
+    jogadores: ctx.jogadores,
+    jogador: ctx.jogador,
+    criaturas: ctx.criaturas,
+    lhamas: () => [...daFazendinha],
     evento: ctx.evento,
     espalhar: ctx.espalhar,
     sujar: ctx.sujar,
   });
 
-  const vista = (): VilaVista => ({
-    t: Math.round(ctx.agora() * 1000) / 1000,
-    ins: [...ins] as VilaVista['ins'],
-    cx: [...caixas] as VilaVista['cx'],
-    show: show ? { ...show } : null,
-    lhamas: [...naGrade],
-    parque: parque.vista(),
-  });
+  const vista = (): VilaVista => {
+    const balao = missoes.comBalao();
+    return {
+      t: Math.round(ctx.agora() * 1000) / 1000,
+      ins: [...ins] as VilaVista['ins'],
+      cx: [...caixas] as VilaVista['cx'],
+      show: show ? { ...show } : null,
+      lhamas: [...naGrade],
+      parque: parque.vista(),
+      ...(balao.length ? { balao } : {}),
+    };
+  };
   /** Os arcos que este jogador já acendeu. */
   const arcosDe = (id: string): [boolean, boolean, boolean] => [
     arcos.has(`${id}:0`),
@@ -301,6 +348,8 @@ export function criarVila(ctx: CtxVila) {
         profissao: m.profissao,
         posto: p.postos[m.posto],
       })),
+      // a vovó, na porta da Casa anos 80
+      { n: AVO, profissao: 'cozinheiro' as Profissao, posto: p.postos.avo },
       // quem guia os carrinhos do bate-bate: cada um no carrinho dele
       ...parque.carros().slice(0, N_MORADORES_BATE).map((c, i) => ({
         n: N0_PILOTOS + i,
@@ -651,7 +700,6 @@ export function criarVila(ctx: CtxVila) {
    * dele (a entrada é aberta para a criança entrar). As da f2 continuam no cercadinho da beira
    * do campo do festival, de frente para a grade: a missão não mudou de lugar.
    */
-  const daFazendinha = new Set<number>();
   function cuidarDaFazendinha(): void {
     const f = p.parque.fazendinha;
     const meio: [number, number] = [(f.x0 + f.x1 + 1) / 2, (f.z0 + f.z1 + 1) / 2];
@@ -1020,6 +1068,7 @@ export function criarVila(ctx: CtxVila) {
       parque.passoDoBate();
       cuidarDosPilotos();
       if (n % 20 === 7) cuidarDaFazendinha();
+      missoes.passo(n);
     },
     comando(id: string, c: ComandoVila): void {
       const j = ctx.jogador(id);
@@ -1028,8 +1077,11 @@ export function criarVila(ctx: CtxVila) {
       if (c.a === 'guiar') return parque.guiar(id, c);
       if (!podeTocar(id)) return;
       if (c.a === 'caixa') tocarCaixa(j, c.i);
-      else parque.comando(id, c);
+      else if (c.a === 'sentar' || c.a === 'sair' || c.a === 'roda') parque.comando(id, c);
+      else missoes.comando(id, c);
     },
+    /** Etapa B: as missões do parque (testes). */
+    missoes,
     /** Spec 026 (parte 2): as cadeiras do parque (testes). */
     parque,
     /** Spec 026 (parte 2): os carrinhos do bate-bate para o quadro deste jogador (ou null). */
@@ -1038,11 +1090,16 @@ export function criarVila(ctx: CtxVila) {
     /** A missão foi escolhida (ou escolhida de novo) por `id`: o que é dela volta ao lugar. */
     preparar(missao: string | null, id?: string): void {
       if (missao === F_RINQUE && id !== undefined) prepararArcos(id);
+      else if (missao === F_BALOES && id !== undefined) missoes.preparar(id);
       else preparar(missao);
     },
     vista,
-    /** O quadro da vila para um jogador (com os arcos que ele já acendeu). */
-    vistaDe: (id: string, v: VilaVista = vista()): VilaVista => ({ ...v, arcos: arcosDe(id) }),
+    /** O quadro da vila para um jogador (com os arcos que ele acendeu e os balões que pegou). */
+    vistaDe: (id: string, v: VilaVista = vista()): VilaVista => ({
+      ...v,
+      arcos: arcosDe(id),
+      bal: missoes.pegosDe(id),
+    }),
     /**
      * Testes e vídeos: o show tocando pula para `s` s desde o começo (antes do acorde final; a
      * banda vai junto, pela coreografia).
@@ -1058,6 +1115,7 @@ export function criarVila(ctx: CtxVila) {
       ins: [...ins],
       cx: [...caixas],
       poster: [...poster],
+      ...(missoes.salvar().length ? { balao: missoes.salvar() } : {}),
       // salvo no meio do show (que não vai salvo), a noite fica aberta: ele toca de novo
       ...((show ? noiteAntesDoShow : showDaNoite) !== null
         ? { noite: show ? noiteAntesDoShow : showDaNoite }

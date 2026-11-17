@@ -359,6 +359,31 @@ export const POVOADO_VILA: PovoadoTema = {
       cabelo: 4,
       semTrocas: true,
     },
+    // spec 026 (parte 2, etapa B): a vovó que espera a prenda na porta da Casa anos 80
+    'vila:70': {
+      nome: 'Vó Zezé',
+      genero: 'f',
+      titulo: 'Vovó',
+      // o cabelo grisalho de coque, os óculos redondos, o casaquinho lilás aberto na blusa
+      // creme com dois botõezinhos, a saia comprida azul-petróleo e o aventalzinho creme
+      pecas: [
+        ...corpoDeMorador({
+          pele: '#e8b896',
+          roupa: '#b9a2e6',
+          calca: '#1f8a8c',
+          sapato: '#6a4a3a',
+          cabelo: '#c9c6cf',
+        }),
+        { t: [0.2, 0.6, 0.03], p: [0, 1.13, 0.15], cor: '#fbf3e0' },
+        { t: [0.05, 0.05, 0.02], p: [0, 1.22, 0.172], cor: '#b9a2e6' },
+        { t: [0.05, 0.05, 0.02], p: [0, 1.04, 0.172], cor: '#b9a2e6' },
+        { t: [0.56, 0.5, 0.36], p: [0, 0.55, 0], cor: '#1f8a8c' },
+        { t: [0.32, 0.3, 0.03], p: [0, 0.6, 0.19], cor: '#fbf3e0' },
+      ],
+      acessorio: 'oculos',
+      cabelo: 6,
+      semTrocas: true,
+    },
   },
   // passo animado de quem anda ouvindo música
   movimento: { saltita: 0.03, flutua: 0, ginga: 0.06 },

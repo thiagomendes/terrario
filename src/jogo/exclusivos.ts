@@ -76,9 +76,16 @@ export const BLOCOS_SO_DA_VILA: readonly number[] = [
 /** Spec 026: a comida da barraca do lanche da Vila Neon (só daqui). */
 export const CACHORRO_QUENTE = 'cachorro_quente';
 export const SUCO = 'suco';
+/**
+ * Spec 026 (parte 2, etapa B): a vitamina da lanchonete (comida), a fita de vídeo da locadora
+ * (na parte 3 ela passa na TV da casa) e a lhama de pelúcia, a prenda das barracas do parque.
+ */
+export const VITAMINA = 'vitamina';
+export const FITA_VIDEO = 'fita_video';
+export const PELUCIA = 'pelucia';
 export const EXCLUSIVOS_VILA: Exclusivos = {
   blocos: [...BLOCOS_DE_RUA, ...BLOCOS_SO_DA_VILA],
-  itens: [CACHORRO_QUENTE, SUCO],
+  itens: [CACHORRO_QUENTE, SUCO, VITAMINA, FITA_VIDEO, PELUCIA],
 };
 
 /**

@@ -154,7 +154,25 @@ export type PostoVila =
   /** Spec 026 (parte 2): o pipoqueiro, o moço do bate-bate e a vendedora de balões do parque. */
   | 'pipoqueiro'
   | 'bate'
-  | 'baloes';
+  | 'baloes'
+  /** Spec 026 (parte 2, etapa B): a vovó, na porta da Casa anos 80 (a parte 3 a leva para dentro). */
+  | 'avo';
+
+/** Spec 026 (parte 2, etapa B): o que se toca na Rua anos 80. */
+export interface PontosRua {
+  /** O orelhão (os pés). */
+  orelhao: [number, number, number];
+  /** A parede de fitas da locadora (o pé da estante, atrás da vitrine). */
+  fitas: [number, number, number];
+  /** O balcão da lanchonete (o meio, no chão). */
+  balcao: [number, number, number];
+  /** O expositor de revistas da banca (o meio, no chão). */
+  revistas: [number, number, number];
+  /** As bicicletas paradas (a campainha). */
+  bicicletas: [number, number, number][];
+  /** Os letreiros das lojas da rua que piscam ao toque (o meio de cada um, no alto). */
+  letreiros: [number, number, number][];
+}
 
 export interface PontosVila {
   /** O mural de recados (o canto das missões): o meio da frente, onde a criança para. */
@@ -189,6 +207,8 @@ export interface PontosVila {
   postos: Record<PostoVila, [number, number, number]>;
   /** Spec 026 (parte 2): o Parque de diversões (os brinquedos de sentar e os de tocar). */
   parque: PontosParque;
+  /** Spec 026 (parte 2, etapa B): os toques da Rua anos 80. */
+  rua: PontosRua;
 }
 
 export interface PlanoVila {
@@ -1568,8 +1588,27 @@ function montarVila(semente: number, r: RelevoVila): Montado {
       lanchonete: [X(80) + 0.5, Y, Z(51) + 0.5],
       banca: [X(19) + 0.5, Y, Z(56) + 0.5],
       ...parque.postos,
+      // a vovó espera na porta da Casa anos 80, debaixo do beiral, ao lado da porta (o caminho
+      // do portão chega nela); a parte 3 a leva para o sofá
+      avo: [X(53) + 0.2, Y, Z(54) + 0.5],
     },
     parque: parque.pontos,
+    rua: {
+      orelhao: [X(24) + 0.5, Y, Z(59) + 0.5],
+      fitas: [X(32) + 0.5, Y, Z(56) + 0.5],
+      balcao: [X(79.5) + 0.5, Y, Z(50) + 0.5],
+      revistas: [X(18) + 0.5, Y, Z(56) + 0.5],
+      bicicletas: pecas
+        .filter((q) => q.tipo === 'bicicleta')
+        .map((q) => [q.x, q.y, q.z] as [number, number, number]),
+      letreiros: pecas
+        .filter(
+          (q) =>
+            q.tipo === 'letreiro' &&
+            (q.n === LETREIRO.locadora || q.n === LETREIRO.banca || q.n === LETREIRO.lanchonete),
+        )
+        .map((q) => [q.x, q.y, q.z] as [number, number, number]),
+    },
   };
   // o olhar de quem nasce: para o oeste-sudoeste, no rumo do palco
   // (34° ao sul do oeste: o portal da pracinha na frente, o palco inteiro lá longe por baixo do

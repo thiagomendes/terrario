@@ -206,6 +206,14 @@ export function sanear(c: unknown): Comando | null {
       // o controle do carrinho do bate-bate: o rumo (-100 a 100) e o número dele
       if (o.a === 'guiar' && inteiro(o.x, -100, 100) && inteiro(o.z, -100, 100) && inteiro(o.n, 1, 2 ** 31))
         return { t: 'vila', a: 'guiar', x: o.x, z: o.z, n: o.n } as unknown as Comando;
+      // spec 026 (parte 2, etapa B): o balão fugido (0 a 2), a barraca de prendas (0 a argola, 1
+      // a pescaria), o feno do fardo, o cocho, a fita da locadora e a vitamina da lanchonete
+      if (o.a === 'balao' && inteiro(o.i, 0, 2))
+        return { t: 'vila', a: 'balao', i: o.i } as unknown as Comando;
+      if (o.a === 'prenda' && inteiro(o.i, 0, 1))
+        return { t: 'vila', a: 'prenda', i: o.i } as unknown as Comando;
+      if (o.a === 'feno' || o.a === 'cocho' || o.a === 'fita' || o.a === 'vitamina')
+        return { t: 'vila', a: o.a } as unknown as Comando;
       return null;
     case 'pularPerto':
       // spec 021: só o id de um amigo (texto curto)

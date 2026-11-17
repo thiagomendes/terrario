@@ -189,7 +189,15 @@ type ComandoSemSeq =
    * controle) e `n` o número do controle (só cresce; volta no quadro `bate`, para a tela acertar
    * a previsão). O núcleo confere que ela está num carrinho, o limite por segundo e a fila.
    */
-  | { t: 'vila'; a: 'guiar'; x: number; z: number; n: number };
+  | { t: 'vila'; a: 'guiar'; x: number; z: number; n: number }
+  /**
+   * Spec 026 (parte 2, etapa B): as missões do parque e os toques da Rua anos 80. O toque num
+   * balão fugido (`i`, 0 a 2), numa barraca de prendas (`i`: 0 a argola, 1 a pescaria), no fardo
+   * de feno, no cocho da fazendinha, na parede de fitas da locadora e no balcão da lanchonete. O
+   * núcleo confere a missão aberta, o alcance e o limite de toques por segundo.
+   */
+  | { t: 'vila'; a: 'balao' | 'prenda'; i: number }
+  | { t: 'vila'; a: 'feno' | 'cocho' | 'fita' | 'vitamina' };
 
 /** Atalhos de teste e captura (o servidor da nuvem só aceita em ambiente de testes). */
 export type Depuracao =

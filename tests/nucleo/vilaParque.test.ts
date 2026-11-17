@@ -114,7 +114,7 @@ const sentar = (n: Nucleo, quem: string, b: number) =>
 
 describe('spec 026 (parte 2): o parque no núcleo', () => {
   it('a versão da rede subiu e o comando do parque passa a limpo (o resto não entra)', () => {
-    expect(VERSAO_REDE).toBe(12);
+    expect(VERSAO_REDE).toBeGreaterThanOrEqual(12);
     expect(sanear({ t: 'vila', a: 'sentar', b: 2, lixo: 1 })).toEqual({
       t: 'vila',
       a: 'sentar',

@@ -1,4 +1,12 @@
-import { CACHORRO_QUENTE, COLHER_PEDREIRO, SUCO, itemNoMundo } from './exclusivos';
+import {
+  CACHORRO_QUENTE,
+  COLHER_PEDREIRO,
+  FITA_VIDEO,
+  PELUCIA,
+  SUCO,
+  VITAMINA,
+  itemNoMundo,
+} from './exclusivos';
 import type { EstiloMundo } from '../temas/tipos';
 import { registrarItem, todosItens, type DefItem, type TipoFerramenta } from './itens';
 import { Bloco } from '../world/blocks';
@@ -848,6 +856,80 @@ export function registrarCatalogo(): void {
       '.....kccccck....',
       '......kkkkk.....',
       '................',
+      '................',
+    ],
+  });
+  // spec 026 (parte 2, etapa B): a vitamina da lanchonete, a fita de vídeo da locadora e a
+  // lhama de pelúcia das barracas do parque (só da Vila Neon)
+  registrarItem({
+    id: VITAMINA,
+    nome: 'Vitamina',
+    tipo: 'comida',
+    pilha: 16,
+    comida: { fome: 4, saturacao: 3 },
+  });
+  registrarDesenho(VITAMINA, {
+    paleta: { k: '#2a2a34', P: '#ffb0cc', p: '#ff8fb4', w: '#fff6ee', r: '#e8302a', b: '#2f8cff' },
+    linhas: [
+      '.....r....b.....',
+      '.....r...b......',
+      '......r..b......',
+      '....kkkrkbkk....',
+      '....kwwrwbwk....',
+      '....kPPPPPPk....',
+      '....kPpPPpPk....',
+      '.....kPpppk.....',
+      '.....kPpppk.....',
+      '.....kPpppk.....',
+      '......kppk......',
+      '......kkkk......',
+      '.......kk.......',
+      '.....kkkkkk.....',
+      '................',
+      '................',
+    ],
+  });
+  registrarItem({ id: FITA_VIDEO, nome: 'Fita de vídeo', tipo: 'material', pilha: 16 });
+  registrarDesenho(FITA_VIDEO, {
+    paleta: { k: '#1c1c24', g: '#3a3944', w: '#f4ecdc', r: '#e8302a', b: '#2f8cff' },
+    linhas: [
+      '................',
+      '................',
+      '................',
+      '.kkkkkkkkkkkkkk.',
+      '.kggggggggggggk.',
+      '.kgwwwwwwwwwwgk.',
+      '.kgwrrrrbbbbwgk.',
+      '.kgwwwwwwwwwwgk.',
+      '.kggggggggggggk.',
+      '.kgkkkggggkkkgk.',
+      '.kgkwkggggkwkgk.',
+      '.kgkkkggggkkkgk.',
+      '.kggggggggggggk.',
+      '.kkkkkkkkkkkkkk.',
+      '................',
+      '................',
+    ],
+  });
+  registrarItem({ id: PELUCIA, nome: 'Lhama de pelúcia', tipo: 'material', pilha: 1 });
+  registrarDesenho(PELUCIA, {
+    paleta: { k: '#4a3626', c: '#fff0d2', w: '#ffffff', r: '#e8302a', b: '#2f8cff' },
+    linhas: [
+      '..k...k.........',
+      '.kck.kck........',
+      '.kcckcck........',
+      '.kcccccck.......',
+      '.kckccwwk.......',
+      '.kcccccck.......',
+      '..krrrrk........',
+      '..kcccckkkkkk...',
+      '..kcccbbbbbccck.',
+      '..kcccbbbbbccck.',
+      '..kccccccccccck.',
+      '...kcckkkkkcck..',
+      '...kck.....kck..',
+      '...kck.....kck..',
+      '...kkk.....kkk..',
       '................',
     ],
   });
