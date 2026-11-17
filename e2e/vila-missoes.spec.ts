@@ -174,7 +174,8 @@ async function fotoDeFrente(page: Page, nome: string): Promise<void> {
   const antes = await page.evaluate(() => window.__brumaluz!.rotacao ?? [0, 0]);
   // (de cima: a câmera passa por cima das barracas e das cercas em volta)
   await page.evaluate((yaw) => window.__brumaluz!.apontar!(yaw + Math.PI - 0.6, 0.42), antes[1]);
-  await page.waitForTimeout(1300);
+  // (logo: parado, o boneco acaba virando para onde a câmera olha)
+  await page.waitForTimeout(450);
   await foto(page, nome);
   await page.evaluate(([p, y]) => window.__brumaluz!.apontar!(y, p), [antes[0], antes[1]] as const);
   await page.waitForTimeout(400);
@@ -353,12 +354,15 @@ async function baloes(page: Page, t: Tamanho): Promise<void> {
     e.controleDireto!.mover(0, 0);
     await new Promise((r) => setTimeout(r, 400));
     e.apontar!(-0.65, 0.2);
+    // (a câmera um pouco mais longe: o balão inteiro no quadro)
+    e.controleDireto!.zoom(1.6);
   });
-  await page.waitForTimeout(2600);
+  await page.waitForTimeout(900);
   expect(
     await page.evaluate(() => window.__brumaluz!.vilaMissoes!.estado().comBalao.length),
   ).toBe(1);
   await foto(page, `${t}-f6-5-balao-de-presente`);
+  await page.evaluate(() => window.__brumaluz!.controleDireto!.zoom(1 / 1.6));
 }
 
 // ------------------------------------------------------------------ f7: o lanche das lhamas
