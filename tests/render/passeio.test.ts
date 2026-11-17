@@ -6,6 +6,7 @@ import {
   lugarDoAmigo,
   ESPERA_SEGUIR,
   PARAR_NO_TAPETE,
+  RAIO_DA_COLUNA,
   SEGURAR_PARA_SAIR,
   ZOOM_NA_RODA,
   ZOOM_NO_BATE,
@@ -204,6 +205,66 @@ describe('spec 026 (parte 2): o passeio no parque, no aparelho', () => {
     andar(2);
     expect(m.yaw).toBe(0.4);
     expect(p.progresso()).toBeGreaterThanOrEqual(0);
+  });
+
+  it('no carrossel a câmera vai junto do cavalinho, do lado de fora, a volta inteira; a dela nunca entra na coluna do meio', () => {
+    const { m, p, andar, tela } = montar();
+    const C = P.carrossel;
+    /** Onde a câmera está (o olho da criança menos o olhar vezes a distância). */
+    const camera = () => {
+      const l = p.lugar()!;
+      const cp = Math.cos(m.pitch);
+      return {
+        x: l.x - Math.sin(m.yaw) * cp * m.zoom,
+        z: l.z - Math.cos(m.yaw) * cp * m.zoom,
+      };
+    };
+    const doMeio = (q: { x: number; z: number }) => Math.hypot(q.x - C.x, q.z - C.z);
+    m.yaw = 2.5;
+    m.vista = sentada(1, 3, m.t);
+    andar(2.5);
+    // uma volta e meia (27 s): sempre fora da roda dos cavalinhos e fora do toldo, sem pulo
+    let menor = Infinity;
+    let antes = m.yaw;
+    let maiorGiro = 0;
+    for (let k = 0; k < 540; k++) {
+      andar(0.05);
+      menor = Math.min(menor, doMeio(camera()));
+      maiorGiro = Math.max(maiorGiro, Math.abs(Math.atan2(Math.sin(m.yaw - antes), Math.cos(m.yaw - antes))));
+      antes = m.yaw;
+      // olha para a frente do cavalinho, um pouco para dentro (a criança e o parque adiante)
+      const l = p.lugar()!;
+      expect(Math.cos(m.yaw - l.yaw)).toBeGreaterThan(0.7);
+    }
+    expect(menor).toBeGreaterThan(C.beira - 0.2);
+    expect(maiorGiro).toBeLessThan(0.05);
+    expect(m.pitch).toBeGreaterThan(0.05);
+    expect(m.pitch).toBeLessThan(0.25);
+    // a criança arrasta a câmera para olhar para fora (a câmera iria para dentro, até a coluna):
+    // é dela, mas a distância encurta e a câmera fica na frente da coluna
+    for (const giro of [0, 0.3, -0.3]) {
+      m.mexeuEm = tela();
+      const l = p.lugar()!;
+      m.yaw = Math.atan2(l.x - C.x, l.z - C.z) + giro;
+      m.pitch = 0.1;
+      const pedida = m.yaw;
+      andar(0.1);
+      expect(m.yaw).toBe(pedida);
+      expect(doMeio(camera())).toBeGreaterThan(RAIO_DA_COLUNA - 0.01);
+      expect(m.zoom).toBeLessThan(3);
+    }
+    // vira para outro lado: a distância dela volta
+    m.mexeuEm = tela();
+    const l = p.lugar()!;
+    m.yaw = Math.atan2(C.x - l.x, C.z - l.z);
+    andar(0.1);
+    expect(m.zoom).toBe(4);
+    // sem mexer, a câmera volta a seguir o cavalinho; ao descer, a distância de antes volta
+    andar(ESPERA_SEGUIR + 3);
+    expect(doMeio(camera())).toBeGreaterThan(C.beira - 0.2);
+    m.vista = { r: [0, -1e9], s: {} };
+    andar(0.1);
+    expect(m.zoom).toBe(3.8);
   });
 
   it('ir para outro lugar de uma vez larga a cadeira na hora (a física vale já)', () => {

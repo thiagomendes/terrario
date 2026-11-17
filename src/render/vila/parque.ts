@@ -55,6 +55,7 @@ import {
   cadeirinha,
   carrinho,
   carrosselQueGira,
+  colunaDoCarrossel,
   cavalinho,
   luzesDaRoda,
   luzesDoBate,
@@ -134,6 +135,8 @@ export interface RenderParque {
     /** As hastes do bate-bate e as lâmpadas do carrossel encolhidas agora (coladas na câmera). */
     hastesSumidas: number;
     lampadasPerto: number;
+    /** A coluna do carrossel escondida agora (a câmera colada nela). */
+    colunaSumiu: boolean;
     malhas: number;
     triangulos: number;
   };
@@ -290,7 +293,9 @@ export function criarParqueVila(
   // ------------------------------------------------------------------ o carrossel
   const C = pq.carrossel;
   const carrosselGira = malhaCorpo('vila-carrossel', molde(carrosselQueGira).corpo);
-  carrosselGira.position.set(C.x, Y + 1, C.z);
+  const carrosselColuna = malhaCorpo('vila-carrossel-coluna', molde(colunaDoCarrossel).corpo);
+  for (const m of [carrosselGira, carrosselColuna]) m.position.set(C.x, Y + 1, C.z);
+  let colunaSumiu = false;
   // as lâmpadas do carrossel (a volta da barra do toldo e a coluna), uma cópia cada, em duas
   // cores: giram com ele, e a que fica colada na câmera de quem anda no cavalinho encolhe até
   // sumir (de perto um cubinho aceso vira uma bola amarela na frente da tela)
@@ -561,10 +566,14 @@ export function criarParqueVila(
         ...lampadasToldo.map((c) => c.m),
       ])
         ligar(m, verCarrossel);
+      // a coluna do meio some se a câmera chegar colada nela (como as paredes do jogo)
+      // (a câmera encurtada pela coluna para a 1,75 do meio: com folga, para não piscar na beira)
+      colunaSumiu = !!cam && Math.hypot(cam.x - C.x, cam.z - C.z) < 2.15;
+      ligar(carrosselColuna, verCarrossel && !colunaSumiu);
       lampadasPerto = 0;
       if (verCarrossel) {
         const giro = ((Math.PI * 2 * tNucleo) / VOLTA_CARROSSEL) % (Math.PI * 2);
-        carrosselGira.rotation.y = giro;
+        carrosselGira.rotation.y = carrosselColuna.rotation.y = giro;
         // as lâmpadas giram junto; a que fica a menos de uns três blocos da câmera encolhe
         for (const c of lampadasToldo) c.n = 0;
         for (const l of lampadasDoCarrossel) {
@@ -785,6 +794,7 @@ export function criarParqueVila(
       estrelinhas: estrelasVivas,
       hastesSumidas,
       lampadasPerto,
+      colunaSumiu,
       malhas: todas.filter((m) => m.isEnabled()).length,
       triangulos: todas
         .filter((m) => m.isEnabled())

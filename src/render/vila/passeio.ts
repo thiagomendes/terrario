@@ -51,6 +51,17 @@ export const PITCH_NO_BATE = 0.4;
 export const SEGUE_NO_BATE = 1.25;
 /** Depois de a criança mexer na câmera, ela só volta a seguir o carrinho passado este tempo (s). */
 export const ESPERA_SEGUIR = 2.5;
+/**
+ * No carrossel: a câmera fica atrás e do lado de fora da criança. O olhar vai ao longo da volta,
+ * virado este tanto para dentro (rad); a distância, o olhar um pouco de cima (baixo o bastante
+ * para a vista passar por baixo da barra do toldo) e quanto da diferença ela tira por segundo.
+ */
+export const INCLINA_NO_CARROSSEL = 0.62;
+export const ZOOM_NO_CARROSSEL = 4;
+export const PITCH_NO_CARROSSEL = 0.14;
+export const SEGUE_NO_CARROSSEL = 3;
+/** A coluna do meio do carrossel, com folga (blocos): a câmera não entra aqui. */
+export const RAIO_DA_COLUNA = 1.9;
 /** Na roda-gigante: a câmera se afasta até aqui e leva este tempo para virar (s). */
 export const ZOOM_NA_RODA = 5;
 export const VIRA_NA_RODA = 1.6;
@@ -137,6 +148,9 @@ export function criarPasseio(d: DepsPasseio) {
   let empurrando = 0;
   let soltouDepoisDeSentar = false;
   let zoomAntes: number | null = null;
+  /** No carrossel: a distância que a criança quer e a que está posta (encurtada pela coluna). */
+  let zoomQuer = 0;
+  let zoomPosto = 0;
   let viraDesde: { em: number; yaw: number; pitch: number } | null = null;
   let agora = 0;
   let largou = false;
@@ -198,11 +212,14 @@ export function criarPasseio(d: DepsPasseio) {
         sentouEm = t;
         empurrando = 0;
         soltouDepoisDeSentar = !d.andando();
-        if (s.b === 'roda' || s.b === 'bate') {
-          zoomAntes = d.camera.zoom();
-          d.camera.definirZoom(Math.max(zoomAntes, s.b === 'roda' ? ZOOM_NA_RODA : ZOOM_NO_BATE));
-          viraDesde = { em: t, yaw: d.camera.yaw(), pitch: d.camera.pitch() };
-        }
+        zoomAntes = d.camera.zoom();
+        zoomQuer = Math.max(
+          zoomAntes,
+          s.b === 'roda' ? ZOOM_NA_RODA : s.b === 'bate' ? ZOOM_NO_BATE : ZOOM_NO_CARROSSEL,
+        );
+        d.camera.definirZoom(zoomQuer);
+        zoomPosto = d.camera.zoom();
+        viraDesde = { em: t, yaw: d.camera.yaw(), pitch: d.camera.pitch() };
         noTapeteHa = 0;
         guiou = false;
         d.aoSentar?.(s);
@@ -264,6 +281,51 @@ export function criarPasseio(d: DepsPasseio) {
         }
       }
       lugarAntes = ultimo;
+      // no carrossel a câmera vai junto do cavalinho, do lado de fora (atrás e para fora da
+      // criança, olhando ao longo da volta e um pouco para dentro): nunca passa pela coluna do
+      // meio nem pelo toldo. Se a criança arrasta o dedo, é dela, e volta a seguir depois
+      if (atual?.b === 'carrossel') {
+        const cav = lugarDaVez();
+        const c = d.parque.carrossel;
+        if (cav) {
+          if (viraDesde && (t - viraDesde.em > VIRA_NA_RODA || d.camera.mexeuEm() > viraDesde.em))
+            viraDesde = null;
+          if (t - d.camera.mexeuEm() > ESPERA_SEGUIR) {
+            const yaw = d.camera.yaw();
+            const pitch = d.camera.pitch();
+            const k = Math.min(1, dt * SEGUE_NO_CARROSSEL);
+            d.camera.apontar(
+              yaw + dif(cav.yaw + INCLINA_NO_CARROSSEL, yaw) * k,
+              viraDesde ? pitch + (PITCH_NO_CARROSSEL - pitch) * Math.min(1, dt * 3) : pitch,
+            );
+          }
+          // a câmera dela (depois de arrastar) também não entra na coluna: se a linha para trás
+          // da criança chega nela, a câmera fica mais perto, na frente da coluna
+          const agoraZoom = d.camera.zoom();
+          if (Math.abs(agoraZoom - zoomPosto) > 1e-6) zoomQuer = agoraZoom;
+          const yaw = d.camera.yaw();
+          const cp = Math.cos(d.camera.pitch());
+          const bx = -Math.sin(yaw) * cp;
+          const bz = -Math.cos(yaw) * cp;
+          const px = cav.x - c.x;
+          const pz = cav.z - c.z;
+          // |p + b·s| = raio: o primeiro s positivo (onde a linha para trás entra na coluna)
+          const A = bx * bx + bz * bz;
+          const Bq = 2 * (px * bx + pz * bz);
+          const Cq = px * px + pz * pz - RAIO_DA_COLUNA * RAIO_DA_COLUNA;
+          const delta = Bq * Bq - 4 * A * Cq;
+          let cabe = Infinity;
+          if (A > 1e-6 && delta > 0) {
+            const s = (-Bq - Math.sqrt(delta)) / (2 * A);
+            if (s > 0) cabe = s - 0.15;
+          }
+          const zoom = Math.min(zoomQuer, cabe);
+          if (Math.abs(zoom - zoomPosto) > 1e-3) {
+            d.camera.definirZoom(zoom);
+            zoomPosto = d.camera.zoom();
+          }
+        }
+      }
       // sair andando (carrossel): o controle solto depois de sentar e empurrado de novo
       if (atual?.b === 'carrossel' && t - sentouEm > DURA_SENTAR) {
         const anda = d.andando();

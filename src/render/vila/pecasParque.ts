@@ -311,7 +311,22 @@ function dobrar(vd: VertexData): VertexData {
   return out;
 }
 
-/** O carrossel que gira (o meio do alto do pedestal em 0, 0, 0): deque, coluna, toldo e mastros. */
+/**
+ * A coluna do meio do carrossel (gira com ele): oito lados creme, as cintas vermelhas e os
+ * espelhinhos. É uma malha à parte: some se a câmera da criança chegar colada nela (como as
+ * paredes do jogo, em vez de tapar a tela).
+ */
+export function colunaDoCarrossel(r: Ref): void {
+  const { alturaDeque: AD, toldo: T } = CARROSSEL;
+  r.prisma(8, 1.0, T - AD, 0, AD + (T - AD) / 2, 0, CREME, 'y');
+  for (const y of [AD + 0.2, 2.3, T - 0.5]) r.prisma(8, 1.12, 0.3, 0, y, 0, COR.vermelho, 'y');
+  for (let k = 0; k < 8; k++) {
+    const a = (k / 8) * Math.PI * 2 + Math.PI / 8;
+    r.caixa(0.34, 0.7, 0.06, Math.sin(a) * 0.98, 1.1, Math.cos(a) * 0.98, '#bfe6f6', 0.02);
+  }
+}
+
+/** O carrossel que gira (o meio do alto do pedestal em 0, 0, 0): deque, toldo e mastros. */
 export function carrosselQueGira(r: Ref): void {
   const { deque: D, alturaDeque: AD, toldo: T, cavalos: RC } = CARROSSEL;
   const N = 12;
@@ -320,13 +335,6 @@ export function carrosselQueGira(r: Ref): void {
   for (let k = 0; k < N; k++) {
     gomo(r, 0, D - 0.3, 0, AD, AD, k * passo, (k + 1) * passo, k % 2 ? '#efe2c6' : CREME);
     gomo(r, D - 0.3, D, 0, AD + 0.06, AD + 0.06, k * passo, (k + 1) * passo, COR.vermelho);
-  }
-  // a coluna do meio: oito lados creme, as cintas vermelhas e os espelhinhos
-  r.prisma(8, 1.0, T - AD, 0, AD + (T - AD) / 2, 0, CREME, 'y');
-  for (const y of [AD + 0.2, 2.3, T - 0.5]) r.prisma(8, 1.12, 0.3, 0, y, 0, COR.vermelho, 'y');
-  for (let k = 0; k < 8; k++) {
-    const a = (k / 8) * Math.PI * 2 + Math.PI / 8;
-    r.caixa(0.34, 0.7, 0.06, Math.sin(a) * 0.98, 1.1, Math.cos(a) * 0.98, '#bfe6f6', 0.02);
   }
   // o toldo de DUAS cores (vermelho e creme), em três degraus de gomos, e a barra pendurada
   for (let k = 0; k < N; k++) {

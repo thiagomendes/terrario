@@ -333,6 +333,61 @@ test('celular em pé: a câmera de cada brinquedo (os retratos)', async ({ brows
   await page.context().close();
 });
 
+for (const tamanho of ['empe', 'deitado'] as const)
+  test(`o carrossel, ${tamanho}: a câmera a volta inteira (quatro pontos) e a câmera da criança virada para a coluna`, async ({
+    browser,
+  }) => {
+    test.skip(!quer('volta'), 'só com volta');
+    const page = await abrir(browser, `vila-bate-volta-${tamanho}`, tamanho, 4, ['f1', 'f2', 'f4']);
+    const p = await plano(page);
+    const c = p.pontos.parque.carrossel;
+    const Y = p.h + 1;
+    await ir(page, c.x, c.z - c.beira - 4, Y + 0.2);
+    await olhar(page, c.x, c.z, -0.05);
+    await assentar(page, 12);
+    await sentar(page, 1, 'carrossel');
+    const medida = () =>
+      page.evaluate(() => {
+        const e = window.__brumaluz!;
+        const q = e.vila!()!.pontos.parque.carrossel;
+        const cam = e.cenaBabylon!().activeCamera!.position;
+        const v = e.parqueVila!()!;
+        return {
+          camDoMeio: Math.round(Math.hypot(cam.x - q.x, cam.z - q.z) * 100) / 100,
+          camAltura: Math.round((cam.y - e.vila!()!.h - 2) * 100) / 100,
+          colunaSumiu: v.colunaSumiu,
+          lampadasPerto: v.lampadasPerto,
+        };
+      });
+    await page.waitForTimeout(3000);
+    // a volta inteira (18 s), em quatro pontos: sempre do lado de fora, nunca pela coluna
+    let menor = Infinity;
+    for (let k = 1; k <= 4; k++) {
+      for (let i = 0; i < 9; i++) {
+        await page.waitForTimeout(500);
+        menor = Math.min(menor, (await medida()).camDoMeio);
+      }
+      await foto(page, `volta-${tamanho}-${k}`, true);
+      console.log(`VOLTA ${tamanho} ${k} ${JSON.stringify(await medida())}`);
+    }
+    console.log(`VOLTA ${tamanho} a câmera mais perto do meio: ${menor}`);
+    expect(menor).toBeGreaterThan(c.beira - 0.6);
+    // a criança vira a câmera para olhar para fora (a câmera iria para dentro do carrossel): a
+    // distância encurta na frente da coluna; se ainda assim colar nela, a coluna some
+    await page.evaluate(() => {
+      const e = window.__brumaluz!;
+      const q = e.vila!()!.pontos.parque.carrossel;
+      const pes = e.jogadorPes!();
+      e.apontar!(Math.atan2(pes[0] - q.x, pes[2] - q.z), 0.1);
+    });
+    await page.waitForTimeout(700);
+    await foto(page, `volta-${tamanho}-para-fora`, true);
+    const m = await medida();
+    console.log(`VOLTA ${tamanho} para fora ${JSON.stringify(m)}`);
+    expect(m.camDoMeio > 1.75 || m.colunaSumiu).toBe(true);
+    await page.context().close();
+  });
+
 test('o carrossel: o mastro na frente de quem senta (de lado, de frente e de cima, com cabelos e fantasias)', async ({
   browser,
 }) => {
