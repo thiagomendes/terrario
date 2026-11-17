@@ -4531,6 +4531,7 @@ export function criarCena(
       controle.jogador.x,
       controle.jogador.z,
       replicaBate?.carros(tempo),
+      replicaBate?.meu ?? -1,
     );
     // (o parque não toca música com o show ou as caixas tocando perto: uma música por vez)
     somParque?.quadro(

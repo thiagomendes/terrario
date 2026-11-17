@@ -276,6 +276,20 @@ test('celular em pé: a câmera de cada brinquedo (os retratos)', async ({ brows
   await foto(page, 'retrato-carrossel', true);
   await page.waitForTimeout(4500);
   await foto(page, 'retrato-carrossel-2', true);
+  // (as lâmpadas coladas na câmera encolhem: quantas, e a que distância a câmera está do meio)
+  console.log(
+    `RETRATO carrossel ${JSON.stringify(
+      await page.evaluate(() => {
+        const e = window.__brumaluz!;
+        const c = e.vila!()!.pontos.parque.carrossel;
+        const cam = e.cenaBabylon!().activeCamera!.position;
+        return {
+          lampadasPerto: e.parqueVila!()!.lampadasPerto,
+          camDoMeio: Math.round(Math.hypot(cam.x - c.x, cam.z - c.z) * 100) / 100,
+        };
+      }),
+    )}`,
+  );
   await page.evaluate(() => window.__brumaluz!.vilaParque!.sair());
   await page.waitForFunction(() => !window.__brumaluz!.vilaParque!.sentado());
   await page.waitForTimeout(1200);
@@ -292,6 +306,14 @@ test('celular em pé: a câmera de cada brinquedo (os retratos)', async ({ brows
   await guiar(page, { x: B.x, z: B.z }, 6000);
   await page.waitForTimeout(600);
   await foto(page, 'retrato-bate-guiando', true);
+  console.log(
+    `RETRATO bate ${JSON.stringify(
+      await page.evaluate(() => ({ hastesSumidas: window.__brumaluz!.parqueVila!()!.hastesSumidas })),
+    )}`,
+  );
+  await guiar(page, { x: B.x1 - 5, z: B.z0 + 4 }, 8000);
+  await page.waitForTimeout(600);
+  await foto(page, 'retrato-bate-guiando-2', true);
   await page.evaluate(() => window.__brumaluz!.vilaParque!.sair());
   await page.waitForFunction(() => !window.__brumaluz!.vilaParque!.sentado());
   await page.waitForTimeout(1200);

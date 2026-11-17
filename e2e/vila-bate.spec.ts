@@ -155,6 +155,10 @@ for (const tamanho of ['deitado', 'empe'] as const) {
     expect(maiorVel).toBeLessThan(3.6);
     // a dica de guiar some sozinha (nada fica na tela enquanto ela brinca)
     expect(await page.evaluate(() => window.__vila!.dica())).toBeNull();
+    // a haste do carrinho dela não é desenhada enquanto ela guia (a câmera vai atrás dele)
+    expect(
+      await page.evaluate(() => window.__brumaluz!.parqueVila!()!.hastesSumidas),
+    ).toBeGreaterThanOrEqual(1);
     await page.screenshot({ path: `${PASTA}/${tamanho}-3-guiando.png` });
 
     // ---------------------------------------------------------------- a batida de verdade

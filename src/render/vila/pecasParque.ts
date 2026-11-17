@@ -361,18 +361,34 @@ const FRENTE_DO_CAVALINHO = 0.58;
 /** A alça da sela (onde as mãos seguram): quanto à frente do assento e a que altura. */
 export const ALCA_DO_CAVALINHO = { z: 0.4, y: 0.3 } as const;
 
-/** As lâmpadas do carrossel (giram com ele): a volta da barra do toldo e a coluna. */
-export function luzesDoCarrossel(r: Ref): void {
+/** Uma lâmpada do carrossel: o ângulo e o raio em volta do meio, a altura, a cor e o tamanho. */
+export interface LampadaDoCarrossel {
+  a: number;
+  raio: number;
+  y: number;
+  /** 0 ou 1: a cor (`LAMPADAS`). */
+  v: number;
+  /** O tamanho, em relação à lâmpada da barra do toldo. */
+  tam: number;
+}
+/**
+ * As lâmpadas do carrossel (giram com ele): a volta da barra do toldo e a coluna. Cada uma é uma
+ * cópia solta de `lampadaDoToldo`: a que fica colada na câmera de quem anda no cavalinho encolhe
+ * até sumir, em vez de virar uma bola amarela na frente da tela.
+ */
+export function luzesDoCarrossel(): LampadaDoCarrossel[] {
   const T = CARROSSEL.toldo;
-  for (let k = 0; k < 36; k++) {
-    const a = ((k + 0.5) / 36) * Math.PI * 2;
-    r.luz(0.17, 0.17, 0.17, Math.sin(a) * 5.86, T - 0.3, Math.cos(a) * 5.86, LAMPADAS[k % 2]);
-  }
-  for (let k = 0; k < 8; k++) {
-    const a = (k / 8) * Math.PI * 2;
+  const l: LampadaDoCarrossel[] = [];
+  for (let k = 0; k < 36; k++)
+    l.push({ a: ((k + 0.5) / 36) * Math.PI * 2, raio: 5.86, y: T - 0.3, v: k % 2, tam: 1 });
+  for (let k = 0; k < 8; k++)
     for (const y of [1.95, 2.75, 3.4])
-      r.luz(0.13, 0.13, 0.13, Math.sin(a) * 1.12, y, Math.cos(a) * 1.12, '#ffd76a');
-  }
+      l.push({ a: (k / 8) * Math.PI * 2, raio: 1.12, y, v: 1, tam: 0.13 / 0.17 });
+  return l;
+}
+/** Uma lâmpada do carrossel (a base em 0, 0, 0), numa das duas cores. */
+export function lampadaDoToldo(r: Ref, v: number): void {
+  r.luz(0.17, 0.17, 0.17, 0, 0, 0, LAMPADAS[v % 2]);
 }
 
 /**
@@ -487,9 +503,9 @@ export const CORES_CARRINHO: readonly [string, string][] = [
 
 /**
  * O carrinho do bate-bate (o assento em 0, 0, 0; anda para +z): o para-choque de borracha, o
- * corpo de duas cores, o volante e a haste até a malha do teto (`haste`: do assento até o teto).
+ * corpo de duas cores e o volante (a haste até o teto é à parte: `hasteDoCarrinho`).
  */
-export function carrinho(r: Ref, v: number, haste: number): void {
+export function carrinho(r: Ref, v: number): void {
   const [cor, friso] = CORES_CARRINHO[v % CORES_CARRINHO.length];
   const y0 = -0.36;
   // o para-choque em volta e as rodinhas escondidas
@@ -508,14 +524,19 @@ export function carrinho(r: Ref, v: number, haste: number): void {
   r.prisma(8, 0.2, 0.06, 0, 0.44, 0.06, '#24232a', 'z');
   // o número de estrela no capô e o farolzinho
   r.placa(perfilEstrela(0.2), 0.04, 0, 0.34, 0.6, friso);
-  // a haste até a malha e a sapata, no canto de trás do encosto (fora da frente da câmera, que
-  // vai atrás do carrinho: no meio, a haste cortava a tela do celular em pé de alto a baixo)
-  const H = HASTE_DO_CARRINHO;
-  r.barra([H.x, 0.4, H.z], [H.x, haste - 0.12, H.z], 0.07, COR.cromo);
-  r.caixa(0.34, 0.08, 0.14, H.x, haste - 0.14, H.z, COR.cromo, 0);
 }
 /** Onde a haste sai do carrinho (para o lado direito e para trás do assento). */
 export const HASTE_DO_CARRINHO = { x: 0.58, z: -0.86 } as const;
+
+/**
+ * A haste do carrinho até a malha do teto e a sapata (o pé dela em 0, 0, 0; `haste`: do assento
+ * até o teto). É uma cópia solta, fora do carrinho: a do carrinho da criança que guia não é
+ * desenhada, e a de um carrinho colado na câmera afina até sumir (nenhuma haste corta a tela).
+ */
+export function hasteDoCarrinho(r: Ref, haste: number): void {
+  r.barra([0, 0.4, 0], [0, haste - 0.12, 0], 0.07, COR.cromo);
+  r.caixa(0.34, 0.08, 0.14, 0, haste - 0.14, 0, COR.cromo, 0);
+}
 
 /** O farol do carrinho (aceso) e a ponta da haste. */
 export function luzesDoCarrinho(r: Ref): void {

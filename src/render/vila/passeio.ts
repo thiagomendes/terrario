@@ -46,7 +46,7 @@ export const PARAR_NO_TAPETE = 1;
 // (o mais longe que a câmera vai: no celular em pé a tela é estreita, e de perto o carrinho
 // tomava metade dela; a altura cabe debaixo do teto de malha)
 export const ZOOM_NO_BATE = 7;
-export const PITCH_NO_BATE = 0.38;
+export const PITCH_NO_BATE = 0.4;
 /** Quanto da diferença para o rumo do carrinho a câmera tira por segundo. */
 export const SEGUE_NO_BATE = 1.25;
 /** Depois de a criança mexer na câmera, ela só volta a seguir o carrinho passado este tempo (s). */

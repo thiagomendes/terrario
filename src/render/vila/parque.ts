@@ -44,6 +44,8 @@ import {
   BALCAO_BARRACA,
   CARROSSEL,
   HASTE_DO_CARRINHO,
+  hasteDoCarrinho,
+  lampadaDoToldo,
   CUBA_ALGODAO,
   MESA_ARGOLA,
   PINOS_ARGOLA,
@@ -105,6 +107,8 @@ export interface RenderParque {
     x: number,
     z: number,
     carros?: CarrinhosAgora,
+    /** O carrinho que a criança guia (-1: nenhum): a haste dele não é desenhada. */
+    meu?: number,
   ): void;
   /** O toque num brinquedo (a resposta na tela; o som é do `somParque`). */
   tocar(qual: ToqueParque, i?: number): void;
@@ -127,6 +131,9 @@ export interface RenderParque {
     peixePulando: boolean;
     algodao: number;
     estrelinhas: number;
+    /** As hastes do bate-bate e as lâmpadas do carrossel encolhidas agora (coladas na câmera). */
+    hastesSumidas: number;
+    lampadasPerto: number;
     malhas: number;
     triangulos: number;
   };
@@ -242,10 +249,11 @@ export function criarParqueVila(
     rolar = 0,
     arfar = 0,
     escala = 1,
+    escalaY = escala,
   ) => {
     Quaternion.RotationYawPitchRollToRef(yaw, arfar, rolar, q);
     pos.set(x, y, z);
-    esc.setAll(escala);
+    esc.set(escala, escalaY, escala);
     Matrix.ComposeToRef(esc, q, pos, mat);
     mat.copyToArray(buf, i * 16);
   };
@@ -282,8 +290,20 @@ export function criarParqueVila(
   // ------------------------------------------------------------------ o carrossel
   const C = pq.carrossel;
   const carrosselGira = malhaCorpo('vila-carrossel', molde(carrosselQueGira).corpo);
-  const carrosselLuz = malhaLuz('vila-carrossel-luz', molde(luzesDoCarrossel).luz, paletaCarrossel);
-  for (const m of [carrosselGira, carrosselLuz]) m.position.set(C.x, Y + 1, C.z);
+  carrosselGira.position.set(C.x, Y + 1, C.z);
+  // as lâmpadas do carrossel (a volta da barra do toldo e a coluna), uma cópia cada, em duas
+  // cores: giram com ele, e a que fica colada na câmera de quem anda no cavalinho encolhe até
+  // sumir (de perto um cubinho aceso vira uma bola amarela na frente da tela)
+  const lampadasDoCarrossel = luzesDoCarrossel();
+  const lampadasToldo = [0, 1].map((v) => {
+    const m = malhaLuz(
+      `vila-carrossel-lampadas-${v}`,
+      molde((r) => lampadaDoToldo(r, v)).luz,
+      paletaCarrossel,
+    );
+    const n = lampadasDoCarrossel.filter((l) => l.v === v).length;
+    return { m, buf: instancias(m, n, C.x, C.z, C.beira + 1, 7), n: 0 };
+  });
   const cavalinhos = [0, 1].map((v) => {
     const m = malhaCorpo(`vila-carrossel-cavalinho-${v}`, molde((r) => cavalinho(r, v)).corpo);
     return { m, buf: instancias(m, CADEIRAS.carrossel / 2, C.x, C.z, C.beira, 5) };
@@ -304,7 +324,7 @@ export function criarParqueVila(
   /** A caixa da pista inteira (os carrinhos andam por ela toda). */
   const RAIO_PISTA = Math.max(B.x1 - B.x0, B.z1 - B.z0) / 2 + 2;
   const carrinhos = Array.from({ length: CADEIRAS.bate }, (_, i) => {
-    const m = malhaCorpo(`vila-bate-carrinho-${i}`, molde((r) => carrinho(r, i, haste)).corpo);
+    const m = malhaCorpo(`vila-bate-carrinho-${i}`, molde((r) => carrinho(r, i)).corpo);
     return {
       m,
       buf: instancias(m, 1, B.x, B.z, RAIO_PISTA, 7),
@@ -315,6 +335,10 @@ export function criarParqueVila(
   });
   const farois = malhaLuz('vila-bate-farois', molde(luzesDoCarrinho).luz);
   const bufFarois = instancias(farois, CADEIRAS.bate, B.x, B.z, RAIO_PISTA, 7);
+  // as hastes até a malha do teto, uma cópia por carrinho (fora do carrinho: a de quem guia some
+  // e a de um carrinho colado na câmera afina, para nenhuma cortar a tela)
+  const hastes = malhaCorpo('vila-bate-hastes', molde((r) => hasteDoCarrinho(r, haste)).corpo);
+  const bufHastes = instancias(hastes, CADEIRAS.bate, B.x, B.z, RAIO_PISTA, 7);
   // a faísca na ponta da haste (uma cruzinha branca-azulada que pisca)
   const faisca = malhaLuz(
     'vila-bate-faisca',
@@ -397,6 +421,8 @@ export function criarParqueVila(
   let peixePulando = false;
   let algodaoTam = 0;
   let estrelasVivas = 0;
+  let hastesSumidas = 0;
+  let lampadasPerto = 0;
   const vendo = { roda: false, carrossel: false, bate: false };
   const cor = (h: string): [number, number, number] => [
     parseInt(h.slice(1, 3), 16) / 255,
@@ -488,7 +514,9 @@ export function criarParqueVila(
         e.desde = agora;
       }
     },
-    quadro(t, tNucleo, vista, x, z, carros) {
+    quadro(t, tNucleo, vista, x, z, carros, meu = -1) {
+      // (onde a câmera está: o que fica colado nela some, em vez de tapar a tela)
+      const cam = scene.activeCamera?.position ?? null;
       const dt = agora > 0 ? Math.min(0.1, Math.max(0, t - agora)) : 0;
       agora = t;
       ultimoNucleo = tNucleo;
@@ -527,11 +555,31 @@ export function criarParqueVila(
       const verCarrossel =
         perto(C.x, C.z) && temChao(C.x - C.beira, C.z - C.beira, C.x + C.beira, C.z + C.beira);
       vendo.carrossel = verCarrossel;
-      for (const m of [carrosselGira, carrosselLuz, ...cavalinhos.map((c) => c.m)])
+      for (const m of [
+        carrosselGira,
+        ...cavalinhos.map((c) => c.m),
+        ...lampadasToldo.map((c) => c.m),
+      ])
         ligar(m, verCarrossel);
+      lampadasPerto = 0;
       if (verCarrossel) {
-        carrosselGira.rotation.y = carrosselLuz.rotation.y =
-          ((Math.PI * 2 * tNucleo) / VOLTA_CARROSSEL) % (Math.PI * 2);
+        const giro = ((Math.PI * 2 * tNucleo) / VOLTA_CARROSSEL) % (Math.PI * 2);
+        carrosselGira.rotation.y = giro;
+        // as lâmpadas giram junto; a que fica a menos de uns três blocos da câmera encolhe
+        for (const c of lampadasToldo) c.n = 0;
+        for (const l of lampadasDoCarrossel) {
+          const a = l.a + giro;
+          const lx = C.x + Math.sin(a) * l.raio;
+          const ly = Y + 1 + l.y;
+          const lz = C.z + Math.cos(a) * l.raio;
+          const longe = cam ? Math.hypot(lx - cam.x, ly - cam.y, lz - cam.z) : 99;
+          const k = Math.max(0, Math.min(1, (longe - 3) / 1.4));
+          if (k < 1) lampadasPerto++;
+          const tam = Math.max(0.001, k * l.tam);
+          const c = lampadasToldo[l.v];
+          por(c.buf, c.n++, lx, ly + ((l.tam - tam) * 0.17) / 2, lz, a, 0, 0, tam);
+        }
+        for (const c of lampadasToldo) c.m.thinInstanceBufferUpdated('matrix');
         for (let i = 0; i < CADEIRAS.carrossel; i++) {
           const l = lugarDaCadeira(pq, 'carrossel', i, tNucleo);
           const c = cavalinhos[i % 2];
@@ -552,9 +600,11 @@ export function criarParqueVila(
       ligar(bateLuz, verBate);
       ligar(bateMureta, verBate);
       ligar(farois, verBate);
+      ligar(hastes, verBate);
       ligar(faisca, verBate);
       for (const c of carrinhos) ligar(c.m, verBate);
       let vivas = 0;
+      hastesSumidas = 0;
       if (verBate) {
         carrinhos.forEach((c, i) => {
           // o lugar é o de verdade (o do núcleo, ou a previsão de quem guia): a batida já afasta
@@ -572,16 +622,24 @@ export function criarParqueVila(
           por(c.buf, 0, px, B.y + pulo, pz, l.yaw, rolar, arfar);
           c.m.thinInstanceBufferUpdated('matrix');
           por(bufFarois, i, px, B.y + pulo, pz, l.yaw, rolar, arfar);
+          // a haste: a do carrinho de quem guia não aparece (a câmera vai atrás dele), e a de um
+          // carrinho a menos de uns três blocos da câmera afina até sumir
+          const hx = px + fx * HASTE_DO_CARRINHO.z + fz * HASTE_DO_CARRINHO.x;
+          const hz = pz + fz * HASTE_DO_CARRINHO.z - fx * HASTE_DO_CARRINHO.x;
+          const longe = cam ? Math.hypot(hx - cam.x, hz - cam.z) : 99;
+          const grossura = i === meu ? 0 : Math.max(0, Math.min(1, (longe - 3.4) / 1.4));
+          if (grossura < 1) hastesSumidas++;
+          por(bufHastes, i, hx, B.y + pulo, hz, l.yaw, rolar, 0, Math.max(0.001, grossura), 1);
           // a faísca pisca na ponta da haste (um chuvisco de vez em quando, mais no "tum")
           const sorte =
             Math.abs(Math.sin(Math.floor(t * 11) * 12.9898 + i * 78.233) * 43758.5453) % 1;
-          const acesa = sorte < 0.16 || k > 0.25;
+          const acesa = grossura > 0.5 && (sorte < 0.16 || k > 0.25);
           por(
             bufFaisca,
             i,
-            px + fx * HASTE_DO_CARRINHO.z + fz * HASTE_DO_CARRINHO.x,
+            hx,
             B.y + haste - 0.02,
-            pz + fz * HASTE_DO_CARRINHO.z - fx * HASTE_DO_CARRINHO.x,
+            hz,
             t * 9 + i,
             0,
             0,
@@ -589,6 +647,7 @@ export function criarParqueVila(
           );
         });
         farois.thinInstanceBufferUpdated('matrix');
+        hastes.thinInstanceBufferUpdated('matrix');
         faisca.thinInstanceBufferUpdated('matrix');
         // as estrelinhas sobem em leque, giram e somem
         estrelas.forEach((e, i) => {
@@ -724,6 +783,8 @@ export function criarParqueVila(
       peixePulando,
       algodao: algodaoTam,
       estrelinhas: estrelasVivas,
+      hastesSumidas,
+      lampadasPerto,
       malhas: todas.filter((m) => m.isEnabled()).length,
       triangulos: todas
         .filter((m) => m.isEnabled())
