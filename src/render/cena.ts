@@ -1798,7 +1798,9 @@ export function criarCena(
       cor: scene.fogColor,
       densidade: scene.fogDensity,
     });
-    vagalumes.atualizar(camera.position, a.noite, jogadorCoberto || cameraSubmersa ? 0 : 1);
+    // (dentro da Casa anos 80, sem telhado na tela, também nada de vagalume na sala)
+    const semVagalume = jogadorCoberto || cameraSubmersa || !!casaCena?.dentro();
+    vagalumes.atualizar(camera.position, a.noite, semVagalume ? 0 : 1);
     // os bichos (passarinho ou grilo): o passarinho se cala no pôr do sol, nunca canta de noite
     ambiente?.definirNoite(noiteDosBichos(hora));
     ambiente?.definirHora(hora);
@@ -1992,7 +1994,11 @@ export function criarCena(
       );
       const [x, y, z] = quem ? [quem.x, quem.y, quem.z] : a;
       // (os corações dela são os da roda das missões: seis, em volta, sem amontoar)
-      missoesVila.vovo(x, y, z, quem?.yaw ?? 0);
+      // (sentada no sofá da Casa anos 80, a prenda vai no colo dela: na altura do peito,
+      // sentada, ela tapava o rosto)
+      const cv = planoVila.pontos.casa.sofa.assentos[0];
+      const sentada = Math.hypot(x - cv.x, z - cv.z) < 0.8;
+      missoesVila.vovo(x, y, z, quem?.yaw ?? 0, sentada);
       somRua?.tocar('vovo', { x, z });
       if (quem) gestos?.evento({ e: 'gesto', gesto: 'comemorar', criatura: quem.id });
     } else {
@@ -2220,6 +2226,7 @@ export function criarCena(
           planoVila!.pontos.casa.corte.z0 + 3,
         ),
         trilho: casaCena.trilho.estado(),
+        paredes: casaCena.paredesK(),
         // a câmera nunca dentro de um bloco (nem de parede, nem de telhado que não sumiu) e a
         // distância dela até os olhos da criança
         camLivre: !bloqueiaCamera(
@@ -3487,6 +3494,8 @@ export function criarCena(
       bloqueia: bloqueiaCamera,
     });
     cameraVisao.position.set(r.posicao.x, r.posicao.y, r.posicao.z);
+    // spec 026 (parte 3): dentro da Casa anos 80 o campo de visão abre (a sala inteira na tela)
+    cameraVisao.fov = camera.fov * (casaCena ? casaCena.abertura() : 1);
     // perto demais: o boneco fica meio transparente (só troca quando o degrau muda)
     const op = Math.min(degrauOpacidade(r.opacidade), estado.limiteOpacidade ?? 1);
     if (op !== opacidadeAplicada) {

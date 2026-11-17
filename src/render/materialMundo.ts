@@ -37,8 +37,8 @@ export class PluginMundo extends MaterialPluginBase {
    * chão (x0, z0, x1, z1, mundo): ali a luz do dia entra como lá fora (o telhado é de blocos e
    * escureceria a sala) e, de noite, o abajur deixa a sala morna. `casaCorte` é a caixa do
    * telhado (com o beiral) e `casaY` = (o chão, a altura do primeiro bloco do telhado, quanto do
-   * corte já valeu de 0 a 1, a noite de 0 a 1): com a criança lá dentro, os blocos do telhado
-   * encolhem até sumir (a câmera olha a casa de cima, como uma casinha de bonecas).
+   * corte já valeu de 0 a 1, a noite de 0 a 1): com a criança lá dentro, o telhado some aos
+   * pedacinhos no desenho (a câmera olha a casa de cima, como uma casinha de bonecas).
    */
   readonly casaDentro = new Float32Array([1e9, 1e9, -1e9, -1e9]);
   readonly casaCorte = new Float32Array([1e9, 1e9, -1e9, -1e9]);
@@ -108,9 +108,9 @@ export class PluginMundo extends MaterialPluginBase {
         { name: 'casaParedeK', size: 4, type: 'vec4', arraySize: 2 },
       ],
       vertex:
-        'uniform float ventoFolhas;\nuniform float tempoMundo;\nuniform vec4 blocosOcultos[8];\nuniform vec4 casaCorte;\nuniform vec4 casaY;\nuniform vec4 casaParede[5];\nuniform vec4 casaParedeK[2];',
+        'uniform float ventoFolhas;\nuniform float tempoMundo;\nuniform vec4 blocosOcultos[8];',
       fragment:
-        'uniform float pisoCeu;\nuniform float verdeNoite;\nuniform vec3 corBruma;\nuniform float forcaBruma;\nuniform float luzBlocos;\nuniform float outono;\nuniform float inverno;\nuniform float molhado;\nuniform vec4 casaDentro;\nuniform vec4 casaY;',
+        'uniform float pisoCeu;\nuniform float verdeNoite;\nuniform vec3 corBruma;\nuniform float forcaBruma;\nuniform float luzBlocos;\nuniform float outono;\nuniform float inverno;\nuniform float molhado;\nuniform vec4 casaDentro;\nuniform vec4 casaY;\nuniform vec4 casaCorte;\nuniform vec4 casaParede[5];\nuniform vec4 casaParedeK[2];',
     };
   }
 
@@ -174,22 +174,6 @@ export class PluginMundo extends MaterialPluginBase {
               vec4 bO = blocosOcultos[iO];
               if (bO.w > 0.5 && all(equal(donoO, bO.xyz))) positionUpdated = position + (bO.xyz + vec3(0.5) - pmO);
             }
-            // spec 026 (parte 3): o telhado da Casa anos 80 com a criança lá dentro: cada bloco
-            // encolhe para o meio dele até sumir (o corte vai de 0 a 1)
-            float kC = 0.0;
-            if (casaY.z > 0.0 && donoO.y >= casaY.y && donoO.x >= casaCorte.x && donoO.x < casaCorte.z
-                && donoO.z >= casaCorte.y && donoO.z < casaCorte.w)
-              kC = casaY.z;
-            // e as paredes entre a câmera e a criança (a fileira de pedra de baixo fica)
-            if (donoO.y >= casaY.x + 1.02 && donoO.y < casaY.y) {
-              for (int iC = 0; iC < 5; iC++) {
-                float kP = iC < 4 ? casaParedeK[0][iC] : casaParedeK[1].x;
-                vec4 cP = casaParede[iC];
-                if (kP > 0.0 && donoO.x >= cP.x && donoO.x < cP.z && donoO.z >= cP.y && donoO.z < cP.w)
-                  kC = max(kC, kP);
-              }
-            }
-            if (kC > 0.0) positionUpdated = position + (donoO + vec3(0.5) - pmO) * kC;
           }
           #ifdef VERTEXCOLOR
           if (ventoFolhas > 0.0 && color.a < 0.99) {
@@ -217,6 +201,27 @@ export class PluginMundo extends MaterialPluginBase {
       `,
       CUSTOM_FRAGMENT_UPDATE_DIFFUSE: `
         {
+          // spec 026 (parte 3): a Casa anos 80 com a criança lá dentro: o telhado (com as
+          // empenas) e as paredes entre a câmera e a criança somem aos pedacinhos (o corte vai de
+          // 0 a 1); a fileira de pedra de baixo fica. É aqui, por ponto da tela, e não nos
+          // vértices: o vértice na divisa de dois blocos é dos dois, e encolher os blocos
+          // entortava a parede em rampa.
+          vec3 dC = floor(vBlocoMundo - normalize(vNormalW) * 0.45);
+          if (dC.y >= casaY.x + 1.02 && dC.x >= casaCorte.x && dC.x < casaCorte.z && dC.z >= casaCorte.y
+              && dC.z < casaCorte.w) {
+            float hC = hashMundo(floor(vBlocoMundo * 6.0)) * 0.98 + 0.01;
+            float kC = dC.y >= casaY.y ? casaY.z : 0.0;
+            if (dC.y < casaY.y) {
+              vec4 kA = casaParedeK[0];
+              for (int iC = 0; iC < 5; iC++) {
+                // (sem índice variável no vec4: no ANGLE isso nem sempre vale)
+                float kP = iC == 0 ? kA.x : iC == 1 ? kA.y : iC == 2 ? kA.z : iC == 3 ? kA.w : casaParedeK[1].x;
+                vec4 cP = casaParede[iC];
+                if (dC.x >= cP.x && dC.x < cP.z && dC.z >= cP.y && dC.z < cP.w) kC = max(kC, kP);
+              }
+            }
+            if (kC > hC) discard;
+          }
           vec3 blocoM = floor(vBlocoMundo - normalize(vNormalW) * 0.02);
           float hM = hashMundo(blocoM);
           baseColor.rgb *= 0.94 + 0.1 * hM;

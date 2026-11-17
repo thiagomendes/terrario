@@ -70,7 +70,7 @@ export interface RenderMissoesParque {
   /** A lhama de pelúcia aparece no balcão `de` da barraca e voa em arco até a criança (~1 s). */
   pelucia(de: readonly [number, number, number]): void;
   /** Corações e estrelinhas em volta da vovó (os pés dela em x, y, z). */
-  vovo(x: number, y: number, z: number, yaw?: number): void;
+  vovo(x: number, y: number, z: number, yaw?: number, sentada?: boolean): void;
   /** O feno caiu no cocho: a nuvenzinha de palha. */
   lanche(): void;
   /** Testes: o que está à vista. */
@@ -365,6 +365,8 @@ export function criarMissoesParque(scene: Scene, op: OpcoesMissoesParque): Rende
   const peluciaVovo = malhaCorpo('vila-pelucia-vovo', molde(peluciaDePrenda).corpo);
   let vovoDesde = -Infinity;
   let vovoEm: [number, number, number, number] = [0, 0, 0, 0];
+  /** A vovó está sentada (a pelúcia vai no colo, não na frente do peito). */
+  let vovoNoColo = false;
 
   // ------------------------------------------------------------------ estrelinhas e corações
   const estrela = malhaLuz(
@@ -485,9 +487,10 @@ export function criarMissoesParque(scene: Scene, op: OpcoesMissoesParque): Rende
       peluciaDe = [de[0], de[1], de[2]];
       leque(de[0], de[1] + 0.5, de[2], 6);
     },
-    vovo(x, y, z, yaw = 0) {
+    vovo(x, y, z, yaw = 0, sentada = false) {
       vovoDesde = agora;
       vovoEm = [x, y, z, yaw];
+      vovoNoColo = sentada;
       for (let k = 0; k < 6; k++) {
         const a = (k / 6) * Math.PI * 2 + 0.4;
         soltar(coracoes, {
@@ -745,8 +748,13 @@ export function criarMissoesParque(scene: Scene, op: OpcoesMissoesParque): Rende
       ligar(peluciaVovo, comVovo);
       if (comVovo) {
         const [x, y, z, yaw] = vovoEm;
-        // na frente do peito, na altura das mãos, olhando para onde ela olha
-        peluciaVovo.position.set(x + Math.sin(yaw) * 0.34, y + 0.62, z + Math.cos(yaw) * 0.34);
+        // na frente do peito, na altura das mãos, olhando para onde ela olha (sentada: no colo)
+        const frente = vovoNoColo ? 0.4 : 0.34;
+        peluciaVovo.position.set(
+          x + Math.sin(yaw) * frente,
+          y + (vovoNoColo ? 0.1 : 0.62),
+          z + Math.cos(yaw) * frente,
+        );
         peluciaVovo.rotation.set(0, yaw, 0);
         const k = gv < 0.35 ? pulo(gv / 0.35) : 1;
         const fim = gv > PELUCIA_COM_A_VOVO - 0.4 ? (PELUCIA_COM_A_VOVO - gv) / 0.4 : 1;

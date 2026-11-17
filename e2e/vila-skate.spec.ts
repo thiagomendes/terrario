@@ -134,6 +134,58 @@ for (const tamanho of ['empe', 'deitado'] as const) {
       timeout: 6000,
     });
     await foto('8-la-em-cima-do-outro-lado');
+    // de lado (olhando ao longo da rampa, de fora da ponta dela): o U, a borda de cromo, o
+    // grafite da parede da ponta e a criança no meio do vai e vem
+    // (a câmera atrás da criança, na linha de quem olha do meio da ponta da rampa, de longe)
+    const deLado = () =>
+      page.evaluate(
+        ([R]) => {
+          const e = window.__brumaluz!;
+          const p = e.jogadorPes!();
+          e.apontar!(Math.atan2(p[0] - R.x, p[2] - (R.z0 - 7)), 0.22);
+        },
+        [R] as const,
+      );
+    for (const [f, nome] of [
+      ['sobe', 'de-lado-subindo'],
+      ['alto', 'de-lado-la-em-cima'],
+      ['desce', 'de-lado-descendo'],
+    ] as const) {
+      await page.waitForFunction((f) => window.__brumaluz!.vilaCasa!.estado().trilho.fase === f, f, {
+        timeout: 12_000,
+      });
+      await deLado();
+      await page.waitForTimeout(f === 'alto' ? 120 : 200);
+      await deLado();
+      await foto(nome);
+    }
+    // e de longe, de fora da ponta da rampa (a câmera de foto, parada no meio do U): o U inteiro,
+    // a borda de cromo, o grafite e a criança subindo e lá em cima (sem o painel da foto)
+    await page.addStyleTag({ content: '.painel-foto { display: none !important; }' });
+    // (o trilho que começou vai até o fim sozinho: solta o controle, que no modo foto andaria
+    // com a câmera)
+    await page.waitForFunction(() => window.__brumaluz!.vilaCasa!.estado().trilho.fase === 'sobe', undefined, {
+      timeout: 12_000,
+    });
+    await page.evaluate(
+      ([R]) => {
+        const e = window.__brumaluz!;
+        e.controleDireto!.mover(0, 0);
+        e.modoFoto!.alternar();
+        e.modoFoto!.fov(85);
+        e.modoFoto!.posicionar!(R.x, R.y + 5.2, R.z0 - 14);
+        e.apontar!(0, Math.atan2(4.4, R.z - R.z0 + 14));
+      },
+      [R] as const,
+    );
+    await page.waitForTimeout(150);
+    await foto('u-subindo');
+    await page.waitForFunction(() => window.__brumaluz!.vilaCasa!.estado().trilho.fase === 'alto', undefined, {
+      timeout: 6000,
+    });
+    await page.waitForTimeout(120);
+    await foto('u-la-em-cima');
+    await page.evaluate(() => window.__brumaluz!.modoFoto!.alternar());
     // soltou: para no fundo, de pé no skate
     await page.evaluate(() => window.__brumaluz!.controleDireto!.mover(0, 0));
     await page.waitForFunction(() => window.__brumaluz!.vilaCasa!.estado().trilho.trilho === null, undefined, {

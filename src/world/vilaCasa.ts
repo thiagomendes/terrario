@@ -65,6 +65,11 @@ export interface PontosCasa {
    * (norte), a do oeste, a do leste e a do meio (as células de cada uma, no chão).
    */
   paredes: [RetanguloVila, RetanguloVila, RetanguloVila, RetanguloVila, RetanguloVila];
+  /**
+   * Os vãos sem a fileira de pedra (a porta e a passagem do meio): a parede cortada ali deita
+   * até o chão, não até a pedra.
+   */
+  vaos: [RetanguloVila, RetanguloVila];
   /** A TV (o pé do móvel, no chão) e o meio da tela. */
   tv: P3;
   tela: P3;
@@ -183,7 +188,9 @@ export function montarCasa80(f: FerramentasVila): CasaMontada {
       } else if (u === U_MEIO) {
         // a parede do meio, com a passagem larga (quatro de altura)
         const passa = v >= PASSAGEM[0] && v <= PASSAGEM[1];
-        for (let y = passa ? 5 : 1; y <= H; y++) b(u, y, v, MEIO);
+        // (a fileira de baixo de pedra, como a das paredes de fora: lá dentro a de cima some e
+        // a de pedra fica, a mesma "parede cortada" em toda a casa)
+        for (let y = passa ? 5 : 1; y <= H; y++) b(u, y, v, y === 1 ? Bloco.TIJOLOS_PEDRA : MEIO);
       }
     }
   // o telhado de duas águas em degraus (um degrau a cada dois blocos: baixo, para o corte)
@@ -265,6 +272,7 @@ export function montarCasa80(f: FerramentasVila): CasaMontada {
       ret(U1, V_FUNDO, U1, V_FRENTE),
       ret(U_MEIO, V_FUNDO + 1, U_MEIO, V_FRENTE - 1),
     ],
+    vaos: [ret(PORTA[0], V_FRENTE, PORTA[1], V_FRENTE), ret(U_MEIO, PASSAGEM[0], U_MEIO, PASSAGEM[1])],
     tv,
     // (a tela da TV: no alto do móvel, na frente da caixa de madeira; o mesmo desenho da tela)
     tela: local(tv, DIR.s, TELA_TV[0], TELA_TV[1], TELA_TV[2]),

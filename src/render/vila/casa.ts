@@ -18,6 +18,7 @@
  */
 import type { Scene } from '@babylonjs/core/scene';
 import { Mesh } from '@babylonjs/core/Meshes/mesh';
+import { MeshBuilder } from '@babylonjs/core/Meshes/meshBuilder';
 import { TransformNode } from '@babylonjs/core/Meshes/transformNode';
 import { VertexData } from '@babylonjs/core/Meshes/mesh.vertexData';
 import { StandardMaterial } from '@babylonjs/core/Materials/standardMaterial';
@@ -59,7 +60,7 @@ export interface QuadroCasa {
 export interface CasaVila {
   quadro(q: QuadroCasa): void;
   /** Quanto cada parede já sumiu (sul, norte, oeste, leste, meio): o que fica nela some junto. */
-  paredes(k: readonly number[]): void;
+  paredes(k: readonly number[], telhado?: number): void;
   tocar(qual: ToqueCasa): void;
   /** Testes: o que a casa mostra agora. */
   estado(): {
@@ -182,8 +183,55 @@ export function criarCasaVila(
   const mParadoLuz = malha('casa-pecas-luz', parado.luz, true);
   mParadoLuz?.freezeWorldMatrix();
   const mParedes = daParede.map((d, i) => malha(`casa-parede-${i}`, d.corpo));
+  // a tampa da parede cortada: em cima da fileira de pedra que fica (o bloco de cima deita até
+  // ela e a face de cima da pedra não existe na malha dos blocos: sem a tampa, de cima, via-se
+  // o vão até o vazio). Fora dos vãos da porta e da passagem.
+  const matTampa = pl.cor('#a8a298', 0.2);
+  const noVao = (x: number, z: number) =>
+    pc.vaos.some((r) => x >= r.x0 && x <= r.x1 && z >= r.z0 && z <= r.z1);
+  // e, com o telhado cortado, a tampa do alto das paredes que ficam em pé (o telhado em cima
+  // delas tirava a face de cima dos blocos: de cima via-se o vazio dentro da parede)
+  const tampa = (r: RetanguloVila, i: number, y: number, comVao: boolean): Mesh => {
+    const caixas: Mesh[] = [];
+    const ao = r.x1 > r.x0;
+    const n = ao ? r.x1 - r.x0 + 1 : r.z1 - r.z0 + 1;
+    let ini = -1;
+    for (let k = 0; k <= n; k++) {
+      const x = ao ? r.x0 + k : r.x0;
+      const z = ao ? r.z0 : r.z0 + k;
+      const livre = k < n && (comVao || !noVao(x, z));
+      if (livre && ini < 0) ini = k;
+      if (!livre && ini >= 0) {
+        const len = k - ini;
+        const b = MeshBuilder.CreateBox(
+          `casa-tampa-${i}-${ini}`,
+          { width: ao ? len : 1, height: 0.03, depth: ao ? 1 : len },
+          scene,
+        );
+        b.position.set(
+          ao ? r.x0 + ini + len / 2 : r.x0 + 0.5,
+          y + 0.015,
+          ao ? r.z0 + 0.5 : r.z0 + ini + len / 2,
+        );
+        caixas.push(b);
+        ini = -1;
+      }
+    }
+    const m = caixas.length > 1 ? Mesh.MergeMeshes(caixas, true)! : caixas[0];
+    m.name = `casa-tampa-${i}-${y}`;
+    m.material = matTampa;
+    m.isPickable = false;
+    m.freezeWorldMatrix();
+    opcoes.tapaOGlow?.(m);
+    todas.push(m);
+    return m;
+  };
+  const mTampas = pc.paredes.map((r, i) => tampa(r, i, pc.y + 1, false));
+  const mTopos = pc.paredes.slice(0, 4).map((r, i) => tampa(r, i, pc.corte.y, true));
   /** Quanto cada parede já sumiu (a do sul, a do norte, a do oeste, a do leste, a do meio). */
   let kParedes: readonly number[] = [0, 0, 0, 0, 0];
+  /** Quanto o telhado já sumiu. */
+  let kTelhado = 0;
 
   // ------------------------------------------------------------------ a tela da TV
   const pTv = achar('casa-tv');
@@ -492,6 +540,14 @@ export function criarCasaVila(
         const v = kParedes[i] < 0.3;
         if (m && m.isEnabled() !== v) m.setEnabled(v);
       });
+      mTampas.forEach((m, i) => {
+        const v = kParedes[i] > 0.6;
+        if (m.isEnabled() !== v) m.setEnabled(v);
+      });
+      mTopos.forEach((m, i) => {
+        const v = kTelhado > 0.6 && kParedes[i] < 0.4;
+        if (m.isEnabled() !== v) m.setEnabled(v);
+      });
       if (mPonteiros) {
         const v = kParedes[1] < 0.3;
         if (mPonteiros.isEnabled() !== v) mPonteiros.setEnabled(v);
@@ -550,7 +606,8 @@ export function criarCasaVila(
         if (!vivo) continue;
         const idade = 2 - n.vida;
         n.m.position.set(n.x + Math.sin(idade * 3) * 0.12, n.y + idade * 0.45, n.z);
-        n.m.scaling.setAll(Math.min(1, idade * 4) * Math.min(1, n.vida * 1.5));
+        // (do tamanho de uma mão: de cima, na tela do celular, a notinha pequena não lia)
+        n.m.scaling.setAll(2.2 * Math.min(1, idade * 4) * Math.min(1, n.vida * 1.5));
       }
 
       // ---- o telefone: pula tocando, levanta quando atende, volta
@@ -559,12 +616,13 @@ export function criarCasaVila(
         let dy = 0;
         let inclina = 0;
         if (f >= 0 && f < TOQUE_TELEFONE) {
-          dy = Math.abs(Math.sin(f * 38)) * 0.025;
-          inclina = Math.sin(f * 41) * 0.06;
+          // (o fone pula bem no gancho: tocando, de cima, ele precisa se ver tremer)
+          dy = Math.abs(Math.sin(f * 30)) * 0.07;
+          inclina = Math.sin(f * 33) * 0.16;
         } else if (f >= TOQUE_TELEFONE && f < DURA_TOQUE_CASA.telefone) {
           const k = suave((f - TOQUE_TELEFONE) / 0.25) * suave((DURA_TOQUE_CASA.telefone - f) / 0.3);
-          dy = k * 0.16;
-          inclina = k * 0.35;
+          dy = k * 0.3;
+          inclina = k * 0.45;
         }
         fone.position.y = lugarFone[1] + dy;
         fone.rotation.z = inclina;
@@ -669,8 +727,9 @@ export function criarCasaVila(
         bola.position.y = lugarBola[1] + y;
       }
     },
-    paredes(k) {
+    paredes(k, telhado = 0) {
       kParedes = k;
+      kTelhado = telhado;
     },
     tocar(qual) {
       const t = agora;

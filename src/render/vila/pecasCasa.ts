@@ -434,6 +434,10 @@ export function desenharPecaRampa(r: Ref, tipo: TipoPecaVila, n: number): boolea
 
 const CONCRETO = '#9d9a93';
 const CONCRETO_LADO = '#837f78';
+/** O fundo plano, um tom abaixo das curvas (a divisa do U lê de longe). */
+const CONCRETO_FUNDO = '#8b8780';
+/** As pontas da rampa pintadas (o contorno do U). */
+const PONTA_PINTADA = '#4f6f9a';
 /** O grafite de formas (sem palavra): duas ou três cores por desenho. */
 const GRAFITE = { rosa: '#ff5fa8', turquesa: '#22c2b0', amarelo: '#ffd23a', roxo: '#7a4ad8' };
 
@@ -463,7 +467,7 @@ function rampa(r: Ref): void {
   const H = alturaDoDeck(m);
   const fora = m.meia + m.curva + m.deck;
   // o fundo de concreto (a mesma cor das curvas), com as juntas de través
-  r.caixa(m.meia * 2 + 0.04, 0.02, L, 0, 0, 0, CONCRETO, 0);
+  r.caixa(m.meia * 2 + 0.04, 0.02, L, 0, 0, 0, CONCRETO_FUNDO, 0);
   for (let k = -1; k <= 1; k++) r.caixa(m.meia * 2, 0.008, 0.05, 0, 0.02, k * 3, CONCRETO_LADO, 0);
   for (const s of [-1, 1]) {
     // a curva e o deck: o contorno no plano (de lado, altura), puxado ao longo da rampa
@@ -493,10 +497,27 @@ function rampa(r: Ref): void {
     parede.placa(perfilOndas(4.4, 0.55), 0.03, 0.4, H * 0.5, 0.005, GRAFITE.amarelo);
     parede.placa(perfilEstrela(0.32), 0.035, s > 0 ? -3.6 : 3.6, H * 0.52, 0.01, GRAFITE.amarelo);
   }
+  // o contorno da curva, de lado (do pé ao deck), para pintar as pontas
+  const contorno: Array<[number, number]> = [[m.meia, 0]];
+  for (let i = 1; i <= 14; i++) {
+    const d = (i / 14) * m.curva;
+    contorno.push([m.meia + d, alturaNaRampa(m, m.meia + d)]);
+  }
+  contorno.push([fora, H], [fora, 0]);
   for (const pz of [-1, 1]) {
     for (const s of [-1, 1]) {
-      // a ponta da rampa: o desenho no meio do contorno da curva (de frente para quem chega)
+      // a ponta da rampa: pintada de azul (de longe, o U lê pelo contorno) e o desenho no meio
+      // dele (de frente para quem chega)
       const ponta = r.sub(0, 0, pz * (L / 2 + 0.015), pz > 0 ? 0 : 2);
+      const sg = s * pz;
+      ponta.placa(
+        contorno.map(([x, y]) => [sg * x, y] as [number, number]),
+        0.012,
+        0,
+        0,
+        -0.008,
+        PONTA_PINTADA,
+      );
       const x = s * pz * (m.meia + m.curva + 0.6);
       if (s * pz > 0) {
         ponta.placa(perfilRaio(0.95), 0.02, x, H * 0.55, 0, GRAFITE.amarelo);

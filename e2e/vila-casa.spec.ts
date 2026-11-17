@@ -221,6 +221,22 @@ for (const tamanho of ['empe', 'deitado'] as const) {
       );
       await page.waitForTimeout(ms);
       await foto(`13-${chave}-brincando`);
+      console.log(
+        `casa: ${chave}`,
+        JSON.stringify(
+          await page.evaluate(() => {
+            const e = window.__brumaluz!;
+            const c = e.vilaCasa!.estado() as unknown as Record<string, unknown>;
+            return {
+              paredes: c.paredes,
+              pes: e.jogadorPes!(),
+              rot: e.rotacao,
+              cam: e.camera!.posicao(),
+              r: e.vila!()!.pontos.casa.paredes,
+            };
+          }),
+        ),
+      );
       await page.waitForTimeout(chave === 'piao' ? 3200 : 2000);
     }
 

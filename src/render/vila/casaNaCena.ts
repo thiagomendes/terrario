@@ -35,7 +35,9 @@ import type { Pose } from '../../personagem/poses';
 
 /** Dentro da casa: a câmera de cima (a distância e a inclinação) e quanto ela leva para chegar. */
 export const ZOOM_NA_CASA = 6.2;
-export const PITCH_NA_CASA = 0.92;
+export const PITCH_NA_CASA = 0.74;
+/** O campo de visão lá dentro (vezes o de fora): mais aberto, a sala lê inteira. */
+export const ABERTURA_NA_CASA = 1.3;
 /** A inclinação mais baixa lá dentro (mais baixo que isso a câmera bateria nas paredes). */
 export const PITCH_MINIMO_NA_CASA = 0.55;
 const VIRA_NA_CASA = 2.4;
@@ -116,8 +118,7 @@ export function ligarCasaNaCena(d: DepsCasaNaCena) {
     p.casaCorte.set([corte.x0, corte.z0, corte.x1 + 1, corte.z1 + 1]);
     p.casaY[0] = Y - 0.02;
     p.casaY[1] = corte.y;
-    pc.paredes.forEach((r, i) => p.casaParede.set([r.x0, r.z0, r.x1 + 1, r.z1 + 1], i * 4));
-  }
+    pc.paredes.forEach((r, i) => p.casaParede.set([r.x0, r.z0, r.x1 + 1, r.z1 + 1], i * 4));  }
   /** Quanto do corte já valeu (0 o telhado inteiro, 1 sumido). */
   let k = 0;
   /** Quanto cada parede já sumiu (sul, norte, oeste, leste, meio). */
@@ -156,8 +157,8 @@ export function ligarCasaNaCena(d: DepsCasaNaCena) {
   }
   /**
    * Quais paredes ficam entre a câmera e a criança (somem): a câmera de cima fica atrás dela, a
-   * uns blocos; a parede de fora que fica desse lado (ou perto dele) sai, e a do meio sai quando
-   * a câmera está do outro lado dela.
+   * uns blocos; a parede de fora que fica desse lado (ou perto dele) sai, e a do meio sai sempre
+   * (fica a fileira de pedra de baixo).
    */
   function paredesNaFrente(): boolean[] {
     const j = d.jogador;
@@ -165,15 +166,18 @@ export function ligarCasaNaCena(d: DepsCasaNaCena) {
     const atras = Math.cos(d.camera.pitch()) * d.camera.zoom() + 1.2;
     const cx = j.x - Math.sin(yaw) * atras;
     const cz = j.z - Math.cos(yaw) * atras;
-    const [S, N, W, E, M] = pc.paredes;
-    const meio = M.x0 + 0.5;
+    const [S, N, W, E] = pc.paredes;
+    // a parede da frente da câmera e também a do lado quando a câmera chega perto dela (no
+    // quarto estreito, colada na parede, ela enchia meia tela e mostrava o vazio por cima)
+    const PERTO = 2.6;
     return [
-      cz > S.z0 - 0.4,
-      cz < N.z1 + 1.4,
-      cx < W.x1 + 1.4,
-      cx > E.x0 - 0.4,
-      // (perto dela a câmera também a tiraria de vista: colada na parede, ela enchia meia tela)
-      j.x < meio !== cx < meio || Math.abs(cx - meio) < 2.2,
+      cz > S.z0 - PERTO,
+      cz < N.z1 + PERTO,
+      cx < W.x1 + PERTO,
+      cx > E.x0 - PERTO,
+      // a parede do meio fica só na fileira de pedra lá dentro: de cima, alta e perto da
+      // câmera, ela virava um paredão torto no canto da tela
+      true,
     ];
   }
 
@@ -219,6 +223,13 @@ export function ligarCasaNaCena(d: DepsCasaNaCena) {
     seguraCamera,
     /** Está dentro da casa agora? */
     dentro: () => naCasa,
+    /**
+     * Quanto o campo de visão abre lá dentro (1 fora): a sala inteira cabe na tela logo na
+     * porta (a câmera não sai da casa e fica perto da criança).
+     */
+    abertura: () => 1 + (ABERTURA_NA_CASA - 1) * k,
+    /** Testes: quanto cada parede já sumiu (sul, norte, oeste, leste, meio). */
+    paredesK: (): number[] => [...kParede],
     /** O lugar do boneco agora (o trilho da rampa ou o pulinho do sofá), ou null. */
     lugar(): { x: number; y: number; z: number; yaw?: number } | null {
       const l = trilho.lugar();
@@ -317,7 +328,7 @@ export function ligarCasaNaCena(d: DepsCasaNaCena) {
         p.casaParedeK.set(kParede.slice(0, 4), 0);
         p.casaParedeK[4] = kParede[4];
       }
-      render.paredes(kParede);
+      render.paredes(kParede, k);
       // a câmera de cima: chega devagar logo depois de entrar; depois, nunca mais baixa que o
       // mínimo (abaixo disso ela bateria nas paredes e ficaria colada na criança)
       if (naCasa) {
