@@ -284,6 +284,54 @@ export function modeloNaMao(
         canudo.rotation.z = -0.25;
         break;
       }
+      case 'vitamina': {
+        // spec 026 (etapa B): o copo alto da lanchonete, de pé cromado, a vitamina rosa, a
+        // espuma branca e os dois canudos (um vermelho e um azul)
+        add(ci('pe-v', 0.012, 0.046, 0.042, '#d4d8e2'), 0, 0.006, 0);
+        add(ci('haste-v', 0.03, 0.013, 0.013, '#d4d8e2'), 0, 0.026, 0);
+        add(ci('vitamina', 0.16, 0.044, 0.06, '#ff9ec4'), 0, 0.12, 0);
+        add(bo('espuma', 0.063, '#fff6ee', [1, 0.42, 1], 0.4), 0, 0.203, 0);
+        add(bo('espuma2', 0.032, '#fff6ee', [1, 0.7, 1], 0.4), 0.012, 0.222, 0.008);
+        const vermelho = add(ci('canudo-r', 0.15, 0.008, 0.008, '#e8302a'), -0.034, 0.27, 0);
+        vermelho.rotation.z = 0.3;
+        const azul = add(ci('canudo-a', 0.14, 0.008, 0.008, '#2f8cff'), 0.036, 0.266, 0);
+        azul.rotation.z = -0.34;
+        break;
+      }
+      case 'fita_video': {
+        // spec 026 (etapa B): a fita de vídeo da locadora (genérica, sem marca): o corpo grafite,
+        // o rótulo creme com um risco vermelho e um azul e a janelinha dos dois carretéis
+        add(cx('fita', 0.26, 0.15, 0.042, 0.014, '#2e2d36', 0.35), 0, 0.075, 0);
+        add(cx('rotulo', 0.2, 0.046, 0.006, 0.002, '#f4ecdc'), 0, 0.114, 0.021);
+        add(cx('risco-r', 0.11, 0.011, 0.004, 0.001, '#e8302a'), -0.035, 0.123, 0.0245);
+        add(cx('risco-a', 0.075, 0.011, 0.004, 0.001, '#2f8cff'), -0.0525, 0.106, 0.0245);
+        add(cx('janela', 0.17, 0.05, 0.006, 0.002, '#1c1c24'), 0, 0.05, 0.021);
+        for (const x of [-0.045, 0.045])
+          add(bo(`carretel${x}`, 0.019, '#f4ecdc', [1, 1, 0.22], 0.4), x, 0.05, 0.0245);
+        add(cx('rotulo-costas', 0.2, 0.1, 0.006, 0.002, '#f4ecdc'), 0, 0.085, -0.021);
+        break;
+      }
+      case 'pelucia': {
+        // spec 026 (etapa B): a lhama de pelúcia (a prenda das barracas): creme, as orelhinhas
+        // em pé, o cachecol vermelho e a mantinha azul
+        const creme = '#f6ecd8';
+        const claro = '#fff7e6';
+        for (const z of [-0.06, 0.06])
+          add(cx(`patas${z}`, 0.115, 0.06, 0.042, 0.016, '#ecdcc0'), 0, 0.03, z);
+        add(cx('corpo-p', 0.13, 0.1, 0.19, 0.042, creme), 0, 0.09, 0);
+        add(cx('mantinha', 0.138, 0.075, 0.1, 0.022, '#2f8cff'), 0, 0.112, -0.02);
+        add(cx('pescoco', 0.066, 0.13, 0.066, 0.026, creme), 0, 0.175, 0.062);
+        add(cx('cachecol', 0.086, 0.03, 0.086, 0.013, '#e8302a'), 0, 0.196, 0.062);
+        add(cx('cachecol-ponta', 0.03, 0.062, 0.014, 0.006, '#e8302a'), 0.024, 0.162, 0.103);
+        add(cx('cabeca-p', 0.088, 0.074, 0.1, 0.032, creme), 0, 0.25, 0.078);
+        add(cx('focinho', 0.056, 0.04, 0.036, 0.015, claro), 0, 0.238, 0.132);
+        add(bo('topete', 0.021, claro, [1, 0.7, 1]), 0, 0.288, 0.084);
+        for (const x of [-0.026, 0.026]) {
+          add(cx(`orelha${x}`, 0.023, 0.052, 0.02, 0.009, creme), x, 0.3, 0.052);
+          add(bo(`olho${x}`, 0.009, '#3a2a22'), x * 1.1, 0.262, 0.127);
+        }
+        break;
+      }
       case 'pipoca': {
         // balde listrado de vermelho e branco, cheio de pipoca
         add(ci('balde', 0.13, 0.085, 0.06, '#f6f2ea'), 0, 0.065, 0);

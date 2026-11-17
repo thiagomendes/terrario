@@ -30,6 +30,8 @@ import { criarPaletaLuz } from './luzes';
 import { pintarTela, sorteio } from './neon';
 
 export type ToqueVila = 'fliperama' | 'radio' | 'fita';
+/** Os toques da Rua anos 80 (etapa B) que respondem na tela com os risquinhos de "trim". */
+export type ToqueRua = 'orelhao' | 'bicicleta' | 'liquidificador';
 
 export interface OpcoesBrinquedosVila {
   temMalha(cx: number, cz: number): boolean;
@@ -39,15 +41,18 @@ export interface OpcoesBrinquedosVila {
 }
 
 export interface BrinquedosVila {
-  /** O toque num brinquedo (a máquina `i` do fliperama). */
-  tocar(qual: ToqueVila, i?: number): void;
+  /** O toque num brinquedo (a máquina `i` do fliperama, a bicicleta `i` da rua). */
+  tocar(qual: ToqueVila | ToqueRua, i?: number): void;
   /** O pé pisou num ladrilho novo da pista (o quadradinho acende). */
   pisar(x: number, y: number, z: number): void;
   quadro(t: number): void;
   /** Testes: o que está mexendo agora. */
-  estado(): { telas: number; radio: boolean; fita: boolean; ladrilhos: number };
+  estado(): { telas: number; radio: boolean; fita: boolean; ladrilhos: number; trins: number };
   descartar(): void;
 }
+
+/** Quanto duram os risquinhos de "trim" de cada toque da rua (s). */
+const TRIM_DURA: Record<ToqueRua, number> = { orelhao: 1.2, bicicleta: 0.7, liquidificador: 1.0 };
 
 /** Quanto a tela do fliperama mexe depois do toque (s). */
 const TELA_DURA = 3.4;
@@ -419,6 +424,43 @@ export function criarBrinquedosVila(
     return { m, desde: -Infinity };
   });
   let proxLadrilho = 0;
+
+  // ------------------------------------------------------------------ os toques da rua (etapa B)
+  // O orelhão, a campainha da bicicleta e o liquidificador são peças da malha do pedaço (não
+  // mexem). A resposta ao toque é o leque de risquinhos amarelos do "trim" (o mesmo dos
+  // desenhos das missões), pulsando em cima da coisa tocada, sempre de frente para a câmera.
+  const moldeTrim = () => {
+    const d = desenhoMundo();
+    const r = new Ref(d, { tipo: 'banco', x: 0, y: 0, z: 0, dir: 0 } as PecaVila);
+    for (const g of [-76, -38, 0, 38, 76]) {
+      const a = ((90 + g) * Math.PI) / 180;
+      const c = Math.cos(a);
+      const s = Math.sin(a);
+      r.barra([c * 0.3, s * 0.3, 0], [c * 0.52, s * 0.52, 0], 0.075, COR.amarelo, true);
+    }
+    return d.luz;
+  };
+  /** Os risquinhos de um toque: a peça, onde ficam nela (local) e o tamanho. */
+  const trim = (
+    nome: ToqueRua,
+    peca: PecaVila | undefined,
+    local: readonly [number, number, number],
+    tam: number,
+  ) => {
+    if (!peca) return null;
+    const m = malhaLuz(`vila-trim-${nome}`, moldeTrim());
+    m.billboardMode = Mesh.BILLBOARDMODE_Y;
+    return { m, peca, local, tam, desde: -Infinity, dura: 1, pulsos: 4 };
+  };
+  const bicicletas = plano.pecas.filter((q) => q.tipo === 'bicicleta');
+  const pecaOrelhao = plano.pecas.find((q) => q.tipo === 'orelhao');
+  const pecaLanchonete = plano.pecas.find((q) => q.tipo === 'balcao' && q.n === 1);
+  // (o fone vermelho fica dentro da cúpula; a campainha no guidão; o copo em cima do balcão)
+  const trins = {
+    orelhao: trim('orelhao', pecaOrelhao, [0, 1.5, 0.78], 1),
+    bicicleta: trim('bicicleta', bicicletas[0], [0.27, 1.1, 0.12], 0.62),
+    liquidificador: trim('liquidificador', pecaLanchonete, [2.4, 1.86, -0.1], 0.72),
+  };
   let agora = 0;
 
   return {
@@ -433,6 +475,16 @@ export function criarBrinquedosVila(
           radioDesde = agora;
         }
       } else if (qual === 'fita') fitaDesde = agora;
+      else {
+        const tr = trins[qual];
+        if (!tr) return;
+        if (qual === 'bicicleta')
+          tr.peca = bicicletas[((i % bicicletas.length) + bicicletas.length) % bicicletas.length];
+        tr.desde = agora;
+        tr.dura = TRIM_DURA[qual];
+        // o orelhão chama quatro vezes; a campainha faz "trim-trim"; o liquidificador treme
+        tr.pulsos = qual === 'orelhao' ? 4 : qual === 'bicicleta' ? 2 : 7;
+      }
     },
     pisar(x, y, z) {
       const l = ladrilhos[proxLadrilho];
@@ -507,6 +559,21 @@ export function criarBrinquedosVila(
           for (const c of carreteis) c.rotation.z = giroFita;
         }
       }
+      // ---- os risquinhos de "trim" dos toques da rua: pulsam e somem
+      for (const tr of Object.values(trins)) {
+        if (!tr) continue;
+        const f = t - tr.desde;
+        const vivo = f >= 0 && f < tr.dura && chao(tr.peca.x, tr.peca.z);
+        ligar(tr.m, vivo);
+        if (!vivo) continue;
+        const [x, y, z] = new Ref(desenhoMundo(), tr.peca).mundo(...tr.local);
+        const u = f / tr.dura;
+        // abre num pulinho, pulsa com a chamada e fecha no fim
+        const pulso = 0.78 + 0.34 * Math.abs(Math.sin(u * Math.PI * tr.pulsos));
+        const borda = Math.min(1, u * 9, (1 - u) * 6);
+        tr.m.position.set(x, y, z);
+        tr.m.scaling.setAll(Math.max(0.001, tr.tam * pulso * borda));
+      }
       // ---- os ladrilhos
       for (const l of ladrilhos) {
         const f = t - l.desde;
@@ -522,6 +589,7 @@ export function criarBrinquedosVila(
       radio: !!radioLuz?.isEnabled(),
       fita: agora - fitaDesde >= 0 && agora - fitaDesde < FITA_DURA,
       ladrilhos: ladrilhos.filter((l) => l.m.isEnabled()).length,
+      trins: Object.values(trins).filter((tr) => tr?.m.isEnabled()).length,
     }),
     descartar() {
       for (const m of todas) m.dispose();

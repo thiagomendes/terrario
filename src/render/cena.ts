@@ -114,6 +114,10 @@ import { criarReplicaBate } from '../cliente/bate';
 import { aplicarJuntas } from '../personagem/gestos';
 import { PIPOQUEIRO, VENDEDORA_DE_BALOES } from '../nucleo/vila';
 import { criarSomParque, type SomParque } from '../audio/somParque';
+import { criarSomRua, type SomRua } from '../audio/somRua';
+import { criarMissoesParque } from './vila/missoesParque';
+import { FALAS_DO_ORELHAO, N_BALOES, lugarDoBalao } from '../jogo/missoesParque';
+import { AVO } from '../nucleo/vila';
 import { faseDoShow, noiteDeShow } from '../jogo/show';
 import { noiteDosBichos } from '../jogo/tempo';
 import { criarShowVila } from './vila/show';
@@ -489,6 +493,29 @@ export interface EstadoDepuracao {
   somParque?: () => ReturnType<SomParque['info']> | null;
   /** Spec 026 (parte 2): o que o parque mostra agora (testes de tela). */
   parqueVila?: () => ReturnType<import('./vila/parque').RenderParque['estado']> | null;
+  /**
+   * Spec 026 (parte 2, etapa B): as missões do parque e os toques da Rua anos 80. `comando` vai
+   * ao núcleo (ele confere a missão e o alcance); `rua` é a resposta da tela (o som, o aceno de
+   * quem atende); `baloesAVista`: a missão dos balões está aberta para a criança.
+   */
+  vilaMissoes?: {
+    comando(
+      c:
+        | { a: 'balao' | 'prenda'; i: number }
+        | { a: 'feno' | 'cocho' | 'fita' | 'vitamina' },
+    ): void;
+    rua(qual: 'orelhao' | 'fita' | 'vitamina' | 'revista' | 'campainha', i?: number): void;
+    baloesAVista(sim: boolean): void;
+    /** Testes: o que as missões mostram e quantos toques da rua soaram. */
+    estado(): ReturnType<import('./vila/missoesParque').RenderMissoesParque['estado']> & {
+      toquesDaRua: number;
+      falaDoOrelhao: number;
+      comBalao: string[];
+    };
+  };
+  /** Etapa B (testes): onde está agora o balão fugido `i` (mundo). */
+  balaoFugido?: (i: number) => [number, number, number];
+  somRua?: () => ReturnType<SomRua['info']> | null;
   /** Spec 026: as peças da Vila Neon vivas, as sem chão (sempre 0) e os sósias. */
   vilaPecas?: () => {
     chunks: number;
@@ -1795,6 +1822,164 @@ export function criarCena(
       })
     : null;
   estado.parqueVila = () => parqueVila?.estado() ?? null;
+  // spec 026 (parte 2, etapa B): as missões do parque na tela (os balões fugidos, o balão de
+  // presente na mão, o feno no cocho, a pelúcia que voa da barraca, os corações da vovó)
+  const missoesVila = planoVila
+    ? criarMissoesParque(scene, {
+        plano: planoVila,
+        temMalha: (cx, cz) => malhas.has(chave(cx, cz)),
+        brilha: brilhaNaVila,
+        tapaOGlow,
+        emitir: (lista, tipo) =>
+          pool.emitir(lista.map((p) => ({ ...p, tipo: tipo === 'gota' ? GOTA : CONFETE }))),
+      })
+    : null;
+  /** O som da rua e das missões (criado mais abaixo, com o motor do áudio). */
+  let somRua: SomRua | null = null;
+  /** A missão dos balões está aberta para a criança (a interface diz): os fugidos aparecem. */
+  let baloesAVista = false;
+  /** Os balões que estão descendo até a mão agora (o núcleo já contou; a tela ainda mostra). */
+  const balaoDescendo = new Map<number, number>();
+  /** O feno à vista no cocho (0 a 2) e quando as lhamas acabam de comer (s da tela). */
+  let fenoNoCocho = 0;
+  let fenoAte = 0;
+  let toquesDaRua = 0;
+  let falaDoOrelhao = -1;
+  let ligacoes = 0;
+  /** Um morador do bairro (pelo número dele) acena para a criança. */
+  const acenar = (n: number) => {
+    const quem = replicaCriaturas.lista.find(
+      (q) => q.morador?.povoado === 'vila' && q.morador.n === n,
+    );
+    if (quem) gestos?.evento({ e: 'gesto', gesto: 'acenar', criatura: quem.id });
+  };
+  if (planoVila && missoesVila) {
+    const rua = planoVila.pontos.rua;
+    const em = (q: readonly number[]) => ({ x: q[0], z: q[2] });
+    estado.vilaMissoes = {
+      comando: (c) => {
+        enviarTelemetria(true);
+        enviar({ t: 'vila', ...c });
+        if (c.a === 'feno') somRua?.tocar('feno', em(planoVila.pontos.parque.fardo));
+      },
+      rua: (qual, i = 0) => {
+        toquesDaRua++;
+        if (qual === 'orelhao') {
+          // as seis falas em roda, numa ordem que não é a da lista (nunca a mesma duas vezes)
+          falaDoOrelhao = (ligacoes++ * 5 + 2) % FALAS_DO_ORELHAO;
+          somRua?.tocar('orelhao', em(rua.orelhao), falaDoOrelhao);
+          brinquedosVila?.tocar('orelhao', 0);
+        } else if (qual === 'fita') somRua?.tocar('fita', em(rua.fitas));
+        else if (qual === 'vitamina') {
+          somRua?.tocar('liquidificador', em(rua.balcao));
+          brinquedosVila?.tocar('liquidificador', 0);
+          // a moça da lanchonete acena (o posto 6 do bairro)
+          acenar(6);
+        } else if (qual === 'revista') {
+          somRua?.tocar('revista', em(rua.revistas));
+          // o moço da banca (o posto 7)
+          acenar(7);
+        } else if (qual === 'campainha') {
+          const b = rua.bicicletas[i];
+          if (b) somRua?.tocar('campainha', em(b));
+          brinquedosVila?.tocar('bicicleta', i);
+        }
+      },
+      baloesAVista: (sim) => {
+        baloesAVista = sim;
+      },
+      estado: () => ({
+        ...missoesVila.estado(),
+        toquesDaRua,
+        falaDoOrelhao,
+        comBalao: [...(cliente.vila.estado?.balao ?? [])],
+      }),
+    };
+    estado.balaoFugido = (i) => {
+      const b = lugarDoBalao(
+        planoVila.pontos.parque,
+        planoVila.h + 1,
+        i,
+        cliente.vila.tempo(performance.now() / 1000),
+      );
+      return [b.x, b.y, b.z];
+    };
+  }
+  /** As missões do parque na tela, uma vez por quadro. */
+  function quadroMissoesVila(tempo: number): void {
+    if (!planoVila || !missoesVila) return;
+    const v = cliente.vila.estado;
+    for (const [i, ate] of balaoDescendo) if (tempo > ate) balaoDescendo.delete(i);
+    const fugidos: [boolean, boolean, boolean] = [false, false, false];
+    for (let i = 0; i < N_BALOES; i++)
+      fugidos[i] = baloesAVista && !v?.bal?.[i] && !balaoDescendo.has(i);
+    if (fenoNoCocho && tempo > fenoAte) fenoNoCocho = 0;
+    const j = controle.jogador;
+    const comBalao: { id: string; x: number; y: number; z: number; yaw: number }[] = [];
+    const ids = v?.balao;
+    if (ids?.length) {
+      if (ids.includes(voce))
+        comBalao.push({ id: voce, x: j.x, y: j.y, z: j.z, yaw: animador.yaw() });
+      if (ids.length > comBalao.length)
+        for (const o of outrosJogadores.lista)
+          if (ids.includes(o.id))
+            comBalao.push({ id: o.id, x: o.x, y: o.y, z: o.z, yaw: o.yawCorpo });
+    }
+    missoesVila.quadro({
+      t: tempo,
+      tNucleo: cliente.vila.tempo(tempo),
+      fugidos,
+      eu: { x: j.x, y: j.y, z: j.z, yaw: animador.yaw() },
+      comBalao,
+      feno: fenoNoCocho,
+    });
+  }
+  /** Os eventos das missões do parque (o que a criança fez e o que os amigos veem). */
+  function eventoDasMissoes(
+    e: Extract<EventoNucleo, { e: 'vilaBalao' | 'vilaPrenda' | 'vilaVovo' | 'vilaLanche' }>,
+  ): void {
+    if (!planoVila || !missoesVila) return;
+    const pq = planoVila.pontos.parque;
+    const agora = performance.now() / 1000;
+    const meu = e.quem === voce;
+    const j = controle.jogador;
+    if (e.e === 'vilaBalao') {
+      if (!meu) return;
+      // (o balão continua à vista enquanto desce até a mão: a tela cuida dele agora)
+      balaoDescendo.set(e.i, agora + 0.1);
+      missoesVila.pegar(e.i, !!e.presente);
+      somRua?.tocar('balaoDesce', { x: j.x, z: j.z });
+      if (e.presente) setTimeout(() => somRua?.tocar('balaoPresente', { x: j.x, z: j.z }), 1300);
+      // a Dona Flor acena de lá
+      acenar(VENDEDORA_DE_BALOES);
+    } else if (e.e === 'vilaPrenda') {
+      const de = e.i ? pq.pescaria : pq.argola;
+      if (meu) somRua?.tocar('carimbo', { x: de[0], z: de[2] });
+      if (e.pelucia && meu) {
+        missoesVila.pelucia([de[0], de[1] + 1.2, de[2]]);
+        setTimeout(() => somRua?.tocar('prenda', { x: de[0], z: de[2] }), 350);
+      }
+    } else if (e.e === 'vilaVovo') {
+      const a = planoVila.pontos.postos.avo;
+      const quem = replicaCriaturas.lista.find(
+        (q) => q.morador?.povoado === 'vila' && q.morador.n === AVO,
+      );
+      const [x, y, z] = quem ? [quem.x, quem.y, quem.z] : a;
+      missoesVila.vovo(x, y, z);
+      coracoes.soltar(x, y + 2.1, z, 6);
+      somRua?.tocar('vovo', { x, z });
+      if (quem) gestos?.evento({ e: 'gesto', gesto: 'comemorar', criatura: quem.id });
+    } else {
+      fenoNoCocho = e.fim ? 2 : Math.max(1, fenoNoCocho);
+      fenoAte = agora + 22;
+      missoesVila.lanche();
+      const onde = { x: pq.cocho[0], z: pq.cocho[2] };
+      somRua?.tocar('cocho', onde);
+      // as lhamas chegam e pulam um pouco depois (o núcleo marca os pulinhos a partir de 2,4 s)
+      for (const ms of e.fim ? [2400, 3300, 4300] : [2400, 3400])
+        setTimeout(() => somRua?.tocar('lhamaFeliz', onde), ms);
+    }
+  }
   estado.eventosVila = planoVila ? [] : undefined;
   estado.showVila = () => showVila?.estado() ?? null;
   /** Spec 026: a pista onde os patins deslizam (o bloco embaixo dos pés é a pista quadriculada). */
@@ -2991,6 +3176,8 @@ export function criarCena(
   estado.selecionarSlot = (i: number) => {
     hotbar.selecionar(i);
     verificarSlot();
+    // (a barra de baixo acende o espaço novo: o que chega na mão aparece selecionado)
+    window.dispatchEvent(new CustomEvent('brumaluz:slot'));
   };
   estado.apontar = (yaw, pitch) => controle.apontar(yaw, pitch);
   estado.teleportar = (x, z, yFixo) => {
@@ -4166,6 +4353,19 @@ export function criarCena(
     const sp = somParque;
     window.addEventListener('pagehide', () => sp.liberar());
     estado.somParque = () => sp.info();
+    // etapa B: os sons da rua e das missões do parque (também feitos na hora), perto da Rua
+    // anos 80 e do parque
+    const sr = criarSomRua({
+      motor: motorAudio,
+      pontos: [
+        { x: planoVila.pontos.rua.fitas[0], z: planoVila.pontos.rua.fitas[2] },
+        { x: planoVila.pontos.rua.balcao[0], z: planoVila.pontos.rua.balcao[2] },
+        { x: planoVila.pontos.parque.carrossel.x, z: planoVila.pontos.parque.carrossel.z },
+      ],
+    });
+    somRua = sr;
+    window.addEventListener('pagehide', () => sr.liberar());
+    estado.somRua = () => sr.info();
   }
   // spec 026 (T18/T19): o som do show, dos brinquedos e das zonas da Vila Neon (o pacote só baixa
   // neste mundo, depois de ele abrir). Fica aqui, e não junto do showVila, porque precisa do motor.
@@ -4533,6 +4733,8 @@ export function criarCena(
       replicaBate?.carros(tempo),
       replicaBate?.meu ?? -1,
     );
+    quadroMissoesVila(tempo);
+    somRua?.quadro(controle.jogador);
     // (o parque não toca música com o show ou as caixas tocando perto: uma música por vez)
     somParque?.quadro(
       controle.jogador,
@@ -6133,6 +6335,14 @@ export function criarCena(
       }
       case 'gesto': // spec 015: gesto de um amigo ou de um morador que respondeu
         gestos?.evento(e);
+        break;
+      // spec 026 (parte 2, etapa B): as missões do parque
+      case 'vilaBalao':
+      case 'vilaPrenda':
+      case 'vilaVovo':
+      case 'vilaLanche':
+        eventoDasMissoes(e);
+        estado.eventosVila?.push({ ...e, recebido: performance.now() / 1000 });
         break;
       // spec 026 (parte 2): o parque (o que a criança mesma fez já apareceu na hora)
       case 'parqueSentou':

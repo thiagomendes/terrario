@@ -805,7 +805,10 @@ export function balao(r: Ref, x: number, y: number, z: number, cor: string): voi
 
 // ------------------------------------------------------------------ a fazendinha
 
-/** O cocho de madeira das lhamas, com o feno dentro. */
+/**
+ * O cocho de madeira das lhamas: vazio, só com a palhinha do fundo (o feno é a criança quem
+ * põe, na missão do lanche: os montes são de `missoesParque.ts`).
+ */
 function cocho(r: Ref): void {
   for (const x of [-0.7, 0.7]) {
     r.barra([x, 0, -0.26], [x, 0.62, 0.2], 0.1, MADEIRA2);
@@ -814,6 +817,5 @@ function cocho(r: Ref): void {
   r.caixa(1.8, 0.08, 0.56, 0, 0.42, 0, COR.madeira, 0.02);
   for (const z of [-0.3, 0.3]) r.caixa(1.8, 0.34, 0.08, 0, 0.42, z, COR.madeira, 0.02);
   for (const x of [-0.9, 0.9]) r.caixa(0.08, 0.34, 0.66, x, 0.42, 0, MADEIRA2, 0.02);
-  r.caixa(1.6, 0.16, 0.46, 0, 0.5, 0, '#e8c860', 0.04);
-  r.caixa(0.7, 0.1, 0.3, -0.3, 0.64, 0.02, '#f0d878', 0.03);
+  r.caixa(1.6, 0.05, 0.46, 0, 0.5, 0, '#d9b75a', 0);
 }
