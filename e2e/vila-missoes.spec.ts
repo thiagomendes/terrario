@@ -474,8 +474,13 @@ async function prenda(page: Page, t: Tamanho): Promise<void> {
   expect(await tem(page, 'pelucia')).toBe(0);
   const avo = await page.evaluate(() => window.__brumaluz!.vila!()!.pontos.postos.avo);
   // (a festa espera: a vovó comemora no mundo primeiro)
-  await olharPara(page, [avo[0], avo[1] + 1.2, avo[2]], 0.2, -0.45);
-  await page.waitForTimeout(300);
+  // (de lado e um pouco de cima: a câmera por cima dos canteiros da porta)
+  await page.evaluate((avo) => {
+    const e = window.__brumaluz!;
+    const p = e.jogadorPes!();
+    e.apontar!(Math.atan2(avo[0] - p[0], avo[2] - p[2]) - 0.4, 0.4);
+  }, avo);
+  await page.waitForTimeout(700);
   await foto(page, `${t}-f8-5-vovo-feliz`);
   await festa(page, `${t}-f8-6-festa`);
   expect(await feitas(page)).toContain('f8');
