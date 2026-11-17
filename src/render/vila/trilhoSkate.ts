@@ -29,10 +29,12 @@ import type { Juntas } from '../../personagem/gestos';
 export const PEDIR_DE_NOVO = 0.3;
 /** A câmera no trilho: o olhar um pouco de cima, de longe, e quanto ela vira por segundo. */
 export const PITCH_NA_RAMPA = 0.3;
-export const ZOOM_NA_RAMPA = 6.5;
+export const ZOOM_NA_RAMPA = 8;
 export const VIRA_NA_RAMPA = 2.2;
 /** Depois de a criança mexer na câmera, ela só volta a seguir passado este tempo (s). */
 export const ESPERA_NA_RAMPA = 3;
+/** Quanto tempo o vai e vem insiste no pedido da volta, se o núcleo ainda não respondeu (s). */
+export const ESPERA_DA_VOLTA = 1.5;
 
 /** A pose de quem anda no trilho: os joelhos um tico dobrados, os braços abertos para o lado. */
 export const JUNTAS_NA_RAMPA: Juntas = {
@@ -81,6 +83,9 @@ export function criarTrilhoSkate(d: DepsTrilho) {
   let agora = 0;
   /** O trilho que acabou aqui (a tela não o usa de novo enquanto o quadro novo não chega). */
   let acabou: string | null = null;
+  /** A volta do vai e vem: o lado pedido no fim do trilho e até quando insistir (s). */
+  let volta: 1 | -1 | 0 = 0;
+  let voltaAte = -Infinity;
 
   const chave = (t: Trilho) => `${t.lado}:${t.desde}`;
 
@@ -120,15 +125,25 @@ export function criarTrilhoSkate(d: DepsTrilho) {
           // segurando o controle, o próximo trilho já vem dali (o vai e vem)
           const c = d.controle();
           if (Math.hypot(c.x, c.z) > 0.25 && d.deSkate()) {
-            d.pedir(lado > 0 ? -1 : 1);
+            volta = lado > 0 ? -1 : 1;
+            voltaAte = t + ESPERA_DA_VOLTA;
+            d.pedir(volta);
             pedidoEm = t;
           }
         } else ultimo = l;
       }
       if (!atual) {
-        // de skate no fundo, empurrando para uma curva: pede o trilho (de novo, se não veio)
+        // de skate no fundo, empurrando para uma curva: pede o trilho (de novo, se não veio);
+        // no vai e vem, o controle segurado vale para a volta, para onde quer que aponte (a
+        // câmera de lado vira o "para a frente")
         const c = d.controle();
-        const lado = d.deSkate() ? entraNoTrilho(r, d.jogador.x, d.jogador.z, c.x, c.z) : 0;
+        const segura = Math.hypot(c.x, c.z) > 0.25;
+        const lado = !d.deSkate()
+          ? 0
+          : volta && segura && t < voltaAte
+            ? volta
+            : entraNoTrilho(r, d.jogador.x, d.jogador.z, c.x, c.z);
+        if (!segura) volta = 0;
         if (lado && t - pedidoEm > PEDIR_DE_NOVO) {
           d.pedir(lado);
           pedidoEm = t;

@@ -21,7 +21,7 @@ import { alvoDeSentar, alvoDoToque, diagnostico, esperarDica } from './vila-alvo
  * - **f7 Lanche das lhamas:** o toque no fardo põe o feno na mão; o toque no cocho põe o feno
  *   nele; duas vezes; as lhamas vêm comer → 4;
  * - **f8 Prenda para a vovó:** a argola e a pescaria, a lhama de pelúcia na mão, a trilha até a
- *   vovó no portãozinho da Casa anos 80 → 5.
+ *   vovó no sofá da Casa anos 80 → 5.
  *
  * `MISSOES_SO=bilhete|baloes|lanche|prenda` roda uma só.
  */
@@ -458,7 +458,7 @@ async function prenda(page: Page, t: Tamanho): Promise<void> {
   await foto(page, `${t}-f8-3-pelucia-chegando`);
   await fotoDeFrente(page, `${t}-f8-3-pelucia-na-mao`);
   await fotoDoQuadro(page, `${t}-f8-4-quadro-duas-bolinhas`);
-  // a trilha leva até a vovó, no portãozinho da Casa anos 80 (atravessa o bairro)
+  // a trilha leva até a vovó, no sofá da Casa anos 80 (atravessa o bairro e entra na casa)
   const ini = Date.now();
   await page.waitForFunction(() => window.__guia!.alvo()?.chave === 'vovo', undefined, {
     timeout: 15_000,
@@ -474,7 +474,7 @@ async function prenda(page: Page, t: Tamanho): Promise<void> {
   expect(await tem(page, 'pelucia')).toBe(0);
   const avo = await page.evaluate(() => window.__brumaluz!.vila!()!.pontos.postos.avo);
   // (a festa espera: a vovó comemora no mundo primeiro)
-  // (de lado e um pouco de cima: a câmera por cima dos canteiros da porta)
+  // (de lado e um pouco de cima: dentro da casa, a câmera de casinha de bonecas)
   await page.evaluate((avo) => {
     const e = window.__brumaluz!;
     const p = e.jogadorPes!();
@@ -484,11 +484,11 @@ async function prenda(page: Page, t: Tamanho): Promise<void> {
   await foto(page, `${t}-f8-5-vovo-feliz`);
   await festa(page, `${t}-f8-6-festa`);
   expect(await feitas(page)).toContain('f8');
-  // a vovó continua no portãozinho da Casa anos 80, com a prenda nos braços (a foto de quem
-  // chega pela calçada)
+  // a vovó continua no sofá da Casa anos 80, com a prenda nos braços (a foto de quem está no
+  // tapete, entre o sofá e a TV)
   await page.evaluate((avo) => {
     const e = window.__brumaluz!;
-    e.teleportar!(avo[0] + 1.6, avo[2] + 2.8, avo[1] + 0.2);
+    e.teleportar!(avo[0] - 0.8, avo[2] - 2.4, avo[1] + 0.2);
   }, avo);
   await page.waitForTimeout(800);
   await olharPara(page, [avo[0], avo[1] + 1.2, avo[2]], 0.2, -0.45);

@@ -104,6 +104,15 @@ for (const tamanho of ['empe', 'deitado'] as const) {
     });
     await page.waitForTimeout(150);
     await foto('6-la-em-cima');
+    console.log(
+      'skate: câmera lá em cima',
+      JSON.stringify(
+        await page.evaluate(() => {
+          const c = window.__brumaluz!.vilaCasa!.estado();
+          return { dist: c.camDist, rot: window.__brumaluz!.rotacao };
+        }),
+      ),
+    );
     // lá em cima a criança está na curva, perto da borda (mais alta que o fundo)
     expect((await page.evaluate(() => window.__brumaluz!.jogadorPes!()))[1]).toBeGreaterThan(R.y + 0.7);
     await page.waitForFunction(() => window.__brumaluz!.vilaCasa!.estado().trilho.fase === 'desce', undefined, {

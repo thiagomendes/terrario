@@ -118,28 +118,6 @@ for (const tamanho of ['empe', 'deitado'] as const) {
     await page.waitForTimeout(2200);
     // o telhado sumiu e a câmera está por cima, livre
     expect((await casa(page)).corte).toBe(true);
-    console.log(
-      `ENTROU ${JSON.stringify(
-        await page.evaluate(() => {
-          const e = window.__brumaluz!;
-          const c = e.cenaBabylon!().activeCamera!.position;
-          const s = e.cenaBabylon!() as unknown as {
-            pick(x: number, y: number, f?: (m: { isEnabled(): boolean; isVisible: boolean }) => boolean): {
-              pickedMesh: { name: string } | null;
-              distance: number;
-            } | null;
-            getEngine(): { getRenderWidth(): number; getRenderHeight(): number };
-          };
-          const w = s.getEngine().getRenderWidth();
-          const h = s.getEngine().getRenderHeight();
-          const toque = [0.5, 0.3, 0.6].map((f) => {
-            const r = s.pick(w / 2, h * f, (m) => m.isEnabled() && m.isVisible);
-            return `${r?.pickedMesh?.name ?? '-'}@${r?.distance?.toFixed(2)}`;
-          });
-          return { cam: [c.x, c.y, c.z], pes: e.jogadorPes!(), rot: e.rotacao, toque, est: e.vilaCasa!.estado() };
-        }),
-      )}`,
-    );
     await cameraBoa(page, 'entrou');
     await foto('1-entrou');
 
