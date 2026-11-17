@@ -353,10 +353,14 @@ function criarLuzes(scene: Scene) {
       const n = Math.min(MAX_LUZES, pts.length);
       if (!cam || !n) return this.tirar();
       cam.getWorldMatrix().decompose(lixo, rot, lixo);
+      const c = cam.globalPosition;
       for (let i = 0; i < n; i++) {
         const [x, y, z, e] = pts[i];
-        esc.setAll(0.3 * e);
         pos.set(x, y + 0.6, z);
+        // (colada na câmera a luzinha encolhe até sumir: de perto, embaixo da roda-gigante ou
+        // num canto, ela virava uma bola verde enorme no meio da tela)
+        const perto = Math.min(1, Math.max(0, (Vector3.Distance(pos, c) - 1.5) / 2.5));
+        esc.setAll(Math.max(1e-4, 0.3 * e * perto));
         Matrix.ComposeToRef(esc, rot, pos, m);
         m.copyToArray(forte.buf, i * 16);
         m.copyToArray(fraca.buf, i * 16);

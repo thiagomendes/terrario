@@ -10,7 +10,7 @@
  * - **f7 Lanche das lhamas:** pegar feno no fardo e pôr no cocho da fazendinha, duas vezes (uma
  *   braçada para cada lhama). Elas vêm comer e pulam de alegria.
  * - **f8 Prenda para a vovó:** a argola e a pescaria (sempre acerta), a lhama de pelúcia de
- *   prenda e a entrega à vovó, que espera na porta da Casa anos 80.
+ *   prenda e a entrega à vovó, que espera no portãozinho da Casa anos 80.
  *
  * Sem pressa e sem jeito de errar: nada de tempo, nada de ordem, nada que se perde.
  */

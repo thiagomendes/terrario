@@ -155,7 +155,7 @@ export type PostoVila =
   | 'pipoqueiro'
   | 'bate'
   | 'baloes'
-  /** Spec 026 (parte 2, etapa B): a vovó, na porta da Casa anos 80 (a parte 3 a leva para dentro). */
+  /** Spec 026 (parte 2, etapa B): a vovó, no portãozinho da Casa anos 80 (a parte 3 a leva para dentro). */
   | 'avo';
 
 /** Spec 026 (parte 2, etapa B): o que se toca na Rua anos 80. */
@@ -1588,9 +1588,10 @@ function montarVila(semente: number, r: RelevoVila): Montado {
       lanchonete: [X(80) + 0.5, Y, Z(51) + 0.5],
       banca: [X(19) + 0.5, Y, Z(56) + 0.5],
       ...parque.postos,
-      // a vovó espera na porta da Casa anos 80, debaixo do beiral, ao lado da porta (o caminho
-      // do portão chega nela); a parte 3 a leva para o sofá
-      avo: [X(53) + 0.2, Y, Z(54) + 0.5],
+      // a vovó espera no portãozinho aberto da Casa anos 80, no meio do vão do muro baixo, de
+      // frente para a calçada (na porta, lá dentro do quintal, o muro tapava a criança e ela na
+      // câmera); a parte 3 a leva para o sofá
+      avo: [X(53) + 1.0, Y, Z(57) + 0.4],
     },
     parque: parque.pontos,
     rua: {

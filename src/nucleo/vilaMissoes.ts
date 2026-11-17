@@ -12,7 +12,7 @@
  * - **f7 Lanche das lhamas:** o toque no fardo põe o feno na mão; o toque no cocho, com feno, põe
  *   o feno nele (`lanche:feno`), e as duas lhamas da fazendinha vêm comer e pulam.
  * - **f8 Prenda para a vovó:** a argola e a pescaria (um toque em cada: sempre acerta), a lhama
- *   de pelúcia na mão e a entrega à vovó, na porta da Casa anos 80 (é só chegar perto).
+ *   de pelúcia na mão e a entrega à vovó, no portãozinho da Casa anos 80 (é só chegar perto).
  * - **A rua:** a fita de vídeo da locadora e a vitamina da lanchonete vão para a mochila.
  *
  * Nenhuma moedinha por ação: as moedinhas vêm no fim da missão (alma). Nada de tempo, nada que

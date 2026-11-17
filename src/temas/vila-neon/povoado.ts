@@ -359,7 +359,7 @@ export const POVOADO_VILA: PovoadoTema = {
       cabelo: 4,
       semTrocas: true,
     },
-    // spec 026 (parte 2, etapa B): a vovó que espera a prenda na porta da Casa anos 80
+    // spec 026 (parte 2, etapa B): a vovó que espera a prenda no portãozinho da Casa anos 80
     'vila:70': {
       nome: 'Vó Zezé',
       genero: 'f',

@@ -115,7 +115,7 @@ export const MORADORES_PARQUE: readonly { n: number; posto: PostoVila; profissao
 ];
 /**
  * A vovó (spec 026, parte 2, etapa B), com o número depois dos pilotos do bate-bate (66 a 69):
- * espera na porta da Casa anos 80 a prenda da f8. A parte 3 a leva para o sofá da sala.
+ * espera no portãozinho da Casa anos 80 a prenda da f8. A parte 3 a leva para o sofá da sala.
  */
 export const AVO = 70;
 /** O n é da turma da grade (o público do show)? */
@@ -348,7 +348,7 @@ export function criarVila(ctx: CtxVila) {
         profissao: m.profissao,
         posto: p.postos[m.posto],
       })),
-      // a vovó, na porta da Casa anos 80
+      // a vovó, no portãozinho da Casa anos 80
       { n: AVO, profissao: 'cozinheiro' as Profissao, posto: p.postos.avo },
       // quem guia os carrinhos do bate-bate: cada um no carrinho dele
       ...parque.carros().slice(0, N_MORADORES_BATE).map((c, i) => ({

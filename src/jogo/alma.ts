@@ -498,7 +498,7 @@ export const MISSOES: readonly Missao[] = [
   },
   {
     // a argola e a pescaria (sempre acerta), a lhama de pelúcia de prenda e a entrega à vovó, na
-    // porta da Casa anos 80 (cada passo é um "lugar")
+    // portãozinho da Casa anos 80 (cada passo é um "lugar")
     id: 'f8',
     mundo: 'vila-neon',
     nome: 'Prenda para a vovó',

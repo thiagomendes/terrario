@@ -1965,8 +1965,8 @@ export function criarCena(
         (q) => q.morador?.povoado === 'vila' && q.morador.n === AVO,
       );
       const [x, y, z] = quem ? [quem.x, quem.y, quem.z] : a;
+      // (os corações dela são os da roda das missões: seis, em volta, sem amontoar)
       missoesVila.vovo(x, y, z, quem?.yaw ?? 0);
-      coracoes.soltar(x, y + 2.1, z, 6);
       somRua?.tocar('vovo', { x, z });
       if (quem) gestos?.evento({ e: 'gesto', gesto: 'comemorar', criatura: quem.id });
     } else {
