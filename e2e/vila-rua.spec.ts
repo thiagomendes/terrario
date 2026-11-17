@@ -25,16 +25,22 @@ type P3 = [number, number, number];
  * Leva a criança para perto de um ponto da rua, olhando para ele (um pouco de lado: o boneco fica
  * à esquerda na tela e não tapa a coisa).
  */
-async function irPara(page: Page, alvo: P3, de: [number, number], pitch = 0.1): Promise<void> {
+async function irPara(
+  page: Page,
+  alvo: P3,
+  de: [number, number],
+  pitch = 0.1,
+  desvio = -0.3,
+): Promise<void> {
   await page.evaluate(
-    ([alvo, de, pitch]) => {
+    ([alvo, de, pitch, desvio]) => {
       const e = window.__brumaluz!;
       const p = e.vila!()!;
       e.voar?.(false);
       e.teleportar!(de[0], de[1], p.h + 1.2);
-      e.apontar!(Math.atan2(alvo[0] - de[0], alvo[2] - de[1]) - 0.3, pitch);
+      e.apontar!(Math.atan2(alvo[0] - de[0], alvo[2] - de[1]) + desvio, pitch);
     },
-    [alvo, de, pitch] as const,
+    [alvo, de, pitch, desvio] as const,
   );
   await page.waitForTimeout(1500);
 }
@@ -104,6 +110,15 @@ for (const tamanho of ['empe', 'deitado'] as const) {
     const rua = await page.evaluate(() => window.__brumaluz!.vila!()!.pontos.rua);
     const foto = (nome: string) =>
       page.screenshot({ path: `${PASTA}/${tamanho}-${nome}${NOITE ? '-noite' : ''}.png` });
+    /** A foto do boneco de frente (o que está na mão à vista) e a câmera de volta. */
+    const fotoDeFrente = async (nome: string) => {
+      const antes = await page.evaluate(() => window.__brumaluz!.rotacao ?? [0, 0]);
+      await page.evaluate((y) => window.__brumaluz!.apontar!(y + Math.PI - 0.6, 0.15), antes[1]);
+      await page.waitForTimeout(1300);
+      await foto(nome);
+      await page.evaluate(([p, y]) => window.__brumaluz!.apontar!(y, p), [antes[0], antes[1]] as const);
+      await page.waitForTimeout(400);
+    };
 
     // ---------------------------------------------------------------- o orelhão
     // (um pouco de lado: o boneco não tapa o orelhão na câmera)
@@ -153,6 +168,7 @@ for (const tamanho of ['empe', 'deitado'] as const) {
     });
     await page.waitForTimeout(1500);
     await foto('4-locadora-fita-na-mao');
+    await fotoDeFrente('4b-locadora-fita-de-frente');
     // outro toque não enche a mochila de fitas
     await page.evaluate(() => {
       const e = window.__brumaluz!;
@@ -168,7 +184,13 @@ for (const tamanho of ['empe', 'deitado'] as const) {
 
     // ---------------------------------------------------------------- a lanchonete
     // (de lado, no meio da lanchonete: a câmera tem lugar e a moça fica à vista)
-    await irPara(page, [rua.balcao[0], 0, rua.balcao[2]], [rua.balcao[0] - 2.6, rua.balcao[2] + 3.0]);
+    await irPara(
+      page,
+      [rua.balcao[0], 0, rua.balcao[2]],
+      [rua.balcao[0] - 2.6, rua.balcao[2] + 3.0],
+      0.1,
+      -0.6,
+    );
     await assentar(page, 9);
     await esperarDica(page, 'vitamina', 'Toque para pedir');
     await foto('5-lanchonete-dica');
@@ -176,7 +198,10 @@ for (const tamanho of ['empe', 'deitado'] as const) {
       t = await alvoDoToque(page, 'vitamina');
       await page.touchscreen.tap(t.x, t.y);
       await page.waitForTimeout(1500);
-      if (k === 0) await foto('6-lanchonete-vitamina-na-mao');
+      if (k === 0) {
+        await foto('6-lanchonete-vitamina-na-mao');
+        await fotoDeFrente('6b-lanchonete-vitamina-de-frente');
+      }
     }
     // (a moça entrega até duas: o toque não enche a mochila)
     expect(await tem(page, 'vitamina')).toBe(2);

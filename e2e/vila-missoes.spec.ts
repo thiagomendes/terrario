@@ -169,19 +169,29 @@ async function seguir(page: Page, teto = 150_000, esperado?: string): Promise<st
   return r.alvo!;
 }
 
+/** A foto do boneco de frente (o que está na mão à vista) e a câmera de volta. */
+async function fotoDeFrente(page: Page, nome: string): Promise<void> {
+  const antes = await page.evaluate(() => window.__brumaluz!.rotacao ?? [0, 0]);
+  await page.evaluate((yaw) => window.__brumaluz!.apontar!(yaw + Math.PI - 0.6, 0.15), antes[1]);
+  await page.waitForTimeout(1300);
+  await foto(page, nome);
+  await page.evaluate(([p, y]) => window.__brumaluz!.apontar!(y, p), [antes[0], antes[1]] as const);
+  await page.waitForTimeout(400);
+}
+
 /** Vira a câmera para um ponto do mundo (como a criança que arrasta o dedo para olhar). */
-async function olharPara(page: Page, alvo: P3, sobe = 0.55): Promise<void> {
+async function olharPara(page: Page, alvo: P3, sobe = 0.55, desvio = 0): Promise<void> {
   await page.evaluate(
-    ([alvo, sobe]) => {
+    ([alvo, sobe, desvio]) => {
       const e = window.__brumaluz!;
       const p = e.jogadorPes!();
       const d = Math.hypot(alvo[0] - p[0], alvo[2] - p[2]);
       e.apontar!(
-        Math.atan2(alvo[0] - p[0], alvo[2] - p[2]),
+        Math.atan2(alvo[0] - p[0], alvo[2] - p[2]) + desvio,
         -Math.atan2(alvo[1] - (p[1] + 1.6), Math.max(1, d + 4)) * sobe,
       );
     },
-    [alvo, sobe] as const,
+    [alvo, sobe, desvio] as const,
   );
   await page.waitForTimeout(700);
 }
@@ -300,7 +310,8 @@ async function baloes(page: Page, t: Tamanho): Promise<void> {
       );
       expect(onde, `o balão ${i} existe`).not.toBeNull();
       const lugar = await page.evaluate((i) => window.__brumaluz!.balaoFugido!(i), i);
-      await olharPara(page, lugar, 1);
+      // (a inclinação muda a cada volta: deitado, a faixa boa da tela para a dica é estreita)
+      await olharPara(page, lugar, [1, 1.3, 0.75, 1.6, 0.5][v % 5]);
       if ((await dica(page))?.chave === `balao-${i}`) break;
       await page.waitForTimeout(500);
     }
@@ -337,7 +348,7 @@ async function baloes(page: Page, t: Tamanho): Promise<void> {
     await new Promise((r) => setTimeout(r, 700));
     e.controleDireto!.mover(0, 0);
     await new Promise((r) => setTimeout(r, 400));
-    e.apontar!(Math.PI - 0.9, 0.05);
+    e.apontar!(Math.PI - 0.7, 0.3);
   });
   await page.waitForTimeout(2600);
   expect(
@@ -363,12 +374,18 @@ async function lanche(page: Page, t: Tamanho): Promise<void> {
       return false;
     });
     await page.waitForTimeout(900);
-    if (k === 0) await foto(page, `${t}-f7-2-feno-na-mao`);
+    if (k === 0) await fotoDeFrente(page, `${t}-f7-2-feno-na-mao`);
     expect(await seguir(page, 150_000, 'cocho')).toBe('cocho');
     const cocho = await page.evaluate(() => window.__brumaluz!.vila!()!.pontos.parque.cocho);
     await olharPara(page, [cocho[0], cocho[1], cocho[2]], -0.6);
     await esperarDica(page, 'cocho', cocho);
-    if (k === 0) await foto(page, `${t}-f7-3-dica-no-cocho`);
+    if (k === 0) {
+      await foto(page, `${t}-f7-3-dica-no-cocho`);
+      // (a mesma dica com a câmera de lado: o cocho à vista, fora do boneco)
+      await olharPara(page, [cocho[0], cocho[1], cocho[2]], 2.2, -0.45);
+      await page.waitForTimeout(900);
+      await foto(page, `${t}-f7-3b-cocho-de-lado`);
+    }
     ponto = await alvoDoToque(page, 'cocho');
     const antes = await eventos(page, 'vilaLanche');
     await page.touchscreen.tap(ponto.x, ponto.y);
@@ -380,8 +397,9 @@ async function lanche(page: Page, t: Tamanho): Promise<void> {
     );
     expect(await tem(page, 'trigo')).toBe(0);
     if (k === 0) {
-      // as lhamas vêm comer e pulam
-      await page.waitForTimeout(3200);
+      // as lhamas vêm comer e pulam (a câmera de lado, por cima do boneco: o cocho à vista)
+      await olharPara(page, [cocho[0], cocho[1], cocho[2]], 2.2, -0.45);
+      await page.waitForTimeout(2600);
       await foto(page, `${t}-f7-4-lhamas-no-cocho`);
       expect((await aberta(page, 'f7'))?.feito).toBe(1);
     }
@@ -429,7 +447,8 @@ async function prenda(page: Page, t: Tamanho): Promise<void> {
     return false;
   });
   await page.waitForTimeout(1600);
-  await foto(page, `${t}-f8-3-pelucia-na-mao`);
+  await foto(page, `${t}-f8-3-pelucia-chegando`);
+  await fotoDeFrente(page, `${t}-f8-3-pelucia-na-mao`);
   await fotoDoQuadro(page, `${t}-f8-4-quadro-duas-bolinhas`);
   // a trilha leva até a vovó, na porta da Casa anos 80 (atravessa o bairro)
   const ini = Date.now();
@@ -446,7 +465,9 @@ async function prenda(page: Page, t: Tamanho): Promise<void> {
   );
   expect(await tem(page, 'pelucia')).toBe(0);
   const avo = await page.evaluate(() => window.__brumaluz!.vila!()!.pontos.postos.avo);
-  await olharPara(page, [avo[0], avo[1] + 1.2, avo[2]], 0.2);
+  // (a festa espera: a vovó comemora no mundo primeiro)
+  await olharPara(page, [avo[0], avo[1] + 1.2, avo[2]], 0.2, -0.45);
+  await page.waitForTimeout(300);
   await foto(page, `${t}-f8-5-vovo-feliz`);
   await festa(page, `${t}-f8-6-festa`);
   expect(await feitas(page)).toContain('f8');
@@ -456,7 +477,7 @@ async function prenda(page: Page, t: Tamanho): Promise<void> {
     e.teleportar!(avo[0] + 1.6, avo[2] + 4.6, avo[1] + 0.2);
   }, avo);
   await page.waitForTimeout(800);
-  await olharPara(page, [avo[0], avo[1] + 1.2, avo[2]], 0.2);
+  await olharPara(page, [avo[0], avo[1] + 1.2, avo[2]], 0.2, -0.45);
   await page.waitForTimeout(1200);
   await foto(page, `${t}-f8-7-vovo-na-porta`);
 }
