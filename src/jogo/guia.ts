@@ -646,16 +646,18 @@ function alvoNaCasa(
   }
   if (m.id === F_QUARTO) {
     const pegos = mundo.estadoVila?.()?.qto ?? [];
-    // com um brinquedo na mão: o baú (de frente para ele, do lado do quarto)
+    // com um brinquedo na mão: o baú (de frente para ele, do lado do quarto, a uns dois blocos e
+    // meio: de mais perto o baú ficava atrás do boneco)
     if (QUARTO.some((u, i) => pegos[i] && !vistos.has(u)))
-      return sitio('bau', c.bau[0] - 1.5, c.bau[2], 1.3, 'bauArrumado', 1.0);
+      return sitio('bau', c.bau[0] - 2.4, c.bau[2], 1.3, 'bauArrumado', 1.0);
     const lista = c.espalhados
       .map((q, i) => {
-        // (a uns blocos e meio do brinquedo, do lado de quem vem: ele fica na frente do boneco)
+        // (a uns dois blocos e meio do brinquedo, do lado de quem vem: de mais perto ele ficava
+        // atrás do boneco na câmera, como o feno da f7)
         const dx = de.x - q[0];
         const dz = de.z - q[2];
         const dd = Math.hypot(dx, dz) || 1;
-        const k = Math.min(1.4, dd);
+        const k = Math.min(2.6, dd);
         return { chave: `brinquedo:${i}`, x: q[0] + (dx / dd) * k, z: q[2] + (dz / dd) * k, i };
       })
       .filter((b) => !vistos.has(QUARTO[b.i]) && !pegos[b.i]);

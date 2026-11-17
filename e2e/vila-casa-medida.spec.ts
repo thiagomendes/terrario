@@ -15,7 +15,17 @@ test.setTimeout(1_200_000);
 const NOITE = 0.96;
 
 test('celular em pé: a casa, a rampa, o parque, a rua e o festival', async ({ browser }) => {
-  const page = await abrir(browser, 'vila-casa-medida', 'empe', 3, ['f1', 'f2', 'f4']);
+  // (parte 3B: com a f10 aberta, os brinquedos espalhados da casa entram na conta)
+  const page = await abrir(browser, 'vila-casa-medida', 'empe', 3, [
+    'f1',
+    'f2',
+    'f4',
+    'f5',
+    'f6',
+    'f7',
+    'f8',
+    'f9',
+  ]);
   const p = await plano(page);
   const Y = p.h + 1;
   const casa = p.pontos.casa;

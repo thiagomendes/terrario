@@ -121,8 +121,10 @@ const MOVEIS_QUE_SOMEM: Partial<Record<string, readonly string[]>> = {
   'casa-discos': ['disco'],
   'casa-planta': [],
   'casa-telefone': ['telefone'],
-  'casa-bau': ['bau'],
+  'casa-bau': ['bau', 'bau-guardar'],
   'casa-tv': ['tv', 'videocassete'],
+  // parte 3B: a mesinha do bolo do lado da vovó (colada na câmera de quem vê a TV do tapete)
+  'casa-bolo': [],
 };
 
 export interface CaixaNoMundo {

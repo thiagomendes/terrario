@@ -470,9 +470,9 @@ const cartaoRampa = () => `
     <path d="M7.5 37 C7.5 29 10 27 11.5 27 C13 27 15.5 29 15.5 37" fill="none" stroke="#2f8cff" stroke-width="2.4" stroke-linecap="round"/>
     ${[26.5, 39.5, 52]
       .map(
-        (x, k) => `<circle cx="${x}" cy="32" r="6" fill="${TINTAS[k]}" ${s(1.8)}/>
-    <path d="M${x - 4.4} 29.4 L${x - 3.4} 31 H${x + 3.4} L${x + 4.4} 29.4" fill="none" stroke="#fff8ea" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
-    <circle cx="${x - 2.2}" cy="34.4" r="1.3" fill="#fff8ea"/><circle cx="${x + 2.2}" cy="34.4" r="1.3" fill="#fff8ea"/>`,
+        (x, k) => `<circle cx="${x}" cy="32" r="6.2" fill="#fffdf6" stroke="${TINTAS[k]}" stroke-width="2.2"/>
+    <rect x="${x - 4.4}" y="29.6" width="8.8" height="2.4" rx="1.2" fill="${TINTAS[k]}"/>
+    <circle cx="${x - 2.4}" cy="34.2" r="1.35" fill="${TINTAS[k]}"/><circle cx="${x + 2.4}" cy="34.2" r="1.35" fill="${TINTAS[k]}"/>`,
       )
       .join('')}
   </g>

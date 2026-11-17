@@ -49,9 +49,9 @@ export interface RenderMissoesCasa {
 const ESC_ESPALHADO = 1.35;
 /** O voo até o baú e o da fatia (s). */
 const VOO_BAU = 0.9;
-const FATIA_SURGE = 0.4;
-const FATIA_ESPERA = 0.3;
-const FATIA_VOA = 0.95;
+const FATIA_SURGE = 0.5;
+const FATIA_ESPERA = 0.7;
+const FATIA_VOA = 1.1;
 /** Mais longe que isto (blocos) os espalhados não são desenhados. */
 const LONGE = 60;
 

@@ -110,8 +110,12 @@ export function criarDicaToque(): DicaToque {
         el.style.setProperty('--y', `${d.t.y.toFixed(1)}px`);
         el.classList.toggle('mostra', !d.semMao);
       }
-      // o balãozinho fica em cima da coisa (a mãozinha vem por baixo)
-      balao.style.setProperty('--x', `${d.t.x.toFixed(1)}px`);
+      // o balãozinho fica em cima da coisa (a mãozinha vem por baixo), inteiro na tela (parte 3B:
+      // a TV no canto da sala cortava o "Toque para pôr a fita" na beira)
+      const meia = (balao.offsetWidth || 220) / 2 + 8;
+      const larg = typeof innerWidth === 'number' ? innerWidth : 1e4;
+      const bx = Math.max(meia, Math.min(larg - meia, d.t.x));
+      balao.style.setProperty('--x', `${bx.toFixed(1)}px`);
       balao.style.setProperty('--y', `${(d.t.y - 34).toFixed(1)}px`);
       balao.classList.add('mostra');
       atual = d;
