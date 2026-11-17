@@ -436,6 +436,8 @@ export interface EstadoDepuracao {
   };
   /** Spec 031: o boneco fica no máximo tão opaco (a mãozinha atrás dele: ~0,6). */
   limiteOpacidade?: number;
+  /** Spec 026 (parte 3): a chave da dica de toque à vista na Vila Neon, ou null. */
+  dicaVila?: () => string | null;
   /** Spec 030: os sítios (Rancho) a até 220 blocos do jogador, do mais perto ao mais longe. */
   sitios?: () => PlanoPovoado[];
   /** Spec 014 (T10): o horizonte de torres (null fora da cidade). */
@@ -2202,7 +2204,10 @@ export function criarCena(
           mexeuEm: () => controle.mexeuEm,
           zoom: () => orbita.zoom(),
           definirZoom: (d) => void orbita.definirZoom(d),
+          olho: () => cameraVisao.position,
         },
+        dica: () => estado.dicaVila?.() ?? null,
+        quantosDeSkate: () => (aparencia.skate ? 1 : 0) + outrosJogadores.deSkate(),
         plugins: [mundoSolido, mundoPlanta],
         sentar: () => void gestos?.fazer('sentar'),
         outros: () => outrosJogadores.lista,
@@ -2227,6 +2232,7 @@ export function criarCena(
         ),
         trilho: casaCena.trilho.estado(),
         paredes: casaCena.paredesK(),
+        moradoresVulto: casaCena.moradoresVulto(),
         // a câmera nunca dentro de um bloco (nem de parede, nem de telhado que não sumiu) e a
         // distância dela até os olhos da criança
         camLivre: !bloqueiaCamera(
@@ -5165,6 +5171,9 @@ export function criarCena(
             : showVila.poseDoMorador(povoado, n, pose, onde),
       (povoado, n, onde) => showVila.giroDoMorador(povoado, n, onde),
     );
+  // parte 3: lá dentro da Casa anos 80, o morador colado na câmera (a vovó no sofá, atrás de
+  // quem assiste à TV no tapete) ou entre ela e a criança vira um vulto
+  if (casaCena) renderCriaturas.definirOpacidadeDeMorador(casaCena.opacidadeDeMorador);
   // os pilotos ficam onde o carrinho deles está na tela (o mesmo lugar do desenho do carrinho);
   // a vovó, no assento dela do sofá (parte 3)
   if (planoVila && replicaBate) {

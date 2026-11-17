@@ -770,6 +770,12 @@ export function criarRenderCriaturas(
   let lugarDeMorador:
     | ((povoado: string, n: number) => { x: number; y: number; z: number; yaw: number } | null)
     | null = null;
+  /**
+   * Spec 026 (parte 3): a opacidade do morador pelo lugar dele (dentro da Casa anos 80 quem fica
+   * colado na câmera, ou entre ela e a criança, some devagar); null: sempre inteiro.
+   */
+  let opacidadeDeMorador: ((id: number, x: number, y: number, z: number) => number) | null =
+    null;
   let proximaEstatua = -1;
   /**
    * Estátuas da vitrine por lugar: a nova no mesmo lugar descarta a de antes (auditoria 017:
@@ -843,6 +849,12 @@ export function criarRenderCriaturas(
     ): void {
       luzNaMaoDeMorador = cor;
       mostrarLuzNaMao = mostrar;
+    },
+    /** Spec 026 (parte 3): a opacidade do morador pelo lugar dele (null: sempre inteiro). */
+    definirOpacidadeDeMorador(
+      f: ((id: number, x: number, y: number, z: number) => number) | null,
+    ): void {
+      opacidadeDeMorador = f;
     },
     definirPoseDeMorador(
       f: ((povoado: string, n: number, pose: Pose, onde: { x: number; z: number }) => Pose) | null,
@@ -935,6 +947,11 @@ export function criarRenderCriaturas(
             giroDeMorador && c.morador ? giroDeMorador(c.morador.povoado, c.morador.n, c) : null;
           if (levado) mb.boneco.posicionar(levado.x, levado.y, levado.z, levado.yaw);
           else mb.boneco.posicionar(c.x, c.y, c.z, giro ?? c.yaw);
+          // (a conta é de quem pede; o boneco só troca quando o valor muda)
+          if (opacidadeDeMorador) {
+            const p = levado ?? c;
+            mb.boneco.definirOpacidade(opacidadeDeMorador(c.id, p.x, p.y, p.z));
+          }
           if (mb.bastao && !mb.microfone) {
             const ver = mostrarLuzNaMao();
             if (mb.bastao.isEnabled(false) !== ver) mb.bastao.setEnabled(ver);

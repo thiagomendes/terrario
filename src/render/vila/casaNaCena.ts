@@ -26,7 +26,8 @@ import {
   type EstadoCasa,
 } from '../../jogo/casa';
 import type { NoTrilho } from '../../jogo/rampa';
-import { criarCasaVila, type CasaVila, type ToqueCasa } from './casa';
+import { VULTO, criarCasaVila, tapaACamera, type CasaVila, type ToqueCasa } from './casa';
+import { SKATES_NO_SUPORTE } from './pecasCasa';
 import { criarTrilhoSkate, lugarDoAmigoNoTrilho, JUNTAS_NA_RAMPA } from './trilhoSkate';
 import type { SalaNoSom, SomCasa, ToqueCasa as SomToque } from '../../audio/somCasa';
 import type { PluginMundo } from '../materialMundo';
@@ -76,7 +77,13 @@ export interface DepsCasaNaCena {
     mexeuEm(): number;
     zoom(): number;
     definirZoom(d: number): void;
+    /** Onde o olho da câmera está agora (mundo). */
+    olho(): { x: number; y: number; z: number };
   };
+  /** A dica de toque à vista agora (a chave), ou null. */
+  dica(): string | null;
+  /** Quantas crianças do mundo (a daqui e os amigos) estão de skate agora. */
+  quantosDeSkate(): number;
   /** Os materiais dos blocos (o corte do telhado e a luz de dentro). */
   plugins: PluginMundo[];
   /** O gesto de sentar da 015 (a cena faz e manda aos amigos). */
@@ -185,6 +192,29 @@ export function ligarCasaNaCena(d: DepsCasaNaCena) {
   let pulo: { de: [number, number, number]; ate: [number, number, number]; em: number } | null =
     null;
   let agora = 0;
+
+  // ------------------------------------------------------------------ quem tapa a câmera
+  /** O peito da criança (o fim do caminho que a câmera precisa ver). */
+  const peito = () => ({ x: d.jogador.x, y: d.jogador.y + 0.95, z: d.jogador.z });
+  /** A opacidade de cada morador lá dentro (some devagar e volta devagar). */
+  const vultos = new Map<number, { a: number; em: number }>();
+  /**
+   * A opacidade do morador (a vovó no sofá, colada na câmera de quem assiste à TV no tapete):
+   * lá dentro, quem fica a menos de `PERTO_DA_CAMERA` da câmera ou entre ela e a criança vira
+   * um vulto; fora da casa, sempre inteiro.
+   */
+  function opacidadeDeMorador(id: number, x: number, y: number, z: number): number {
+    const v = vultos.get(id) ?? { a: 1, em: agora };
+    const dt = Math.min(0.1, Math.max(0, agora - v.em));
+    v.em = agora;
+    vultos.set(id, v);
+    const caixa = { x0: x - 0.35, y0: y, z0: z - 0.35, x1: x + 0.35, y1: y + 1.7, z1: z + 0.35 };
+    const some = naCasa && dentroDaCasa(pc, x, z) && tapaACamera(caixa, d.camera.olho(), peito());
+    const alvo = some ? VULTO : 1;
+    v.a = Math.abs(alvo - v.a) < 0.01 ? alvo : v.a + (alvo - v.a) * Math.min(1, dt * 7);
+    return v.a;
+  }
+
   function assentoLivre(): number {
     const outros = d.outros();
     const j = d.jogador;
@@ -228,6 +258,9 @@ export function ligarCasaNaCena(d: DepsCasaNaCena) {
      * porta (a câmera não sai da casa e fica perto da criança).
      */
     abertura: () => 1 + (ABERTURA_NA_CASA - 1) * k,
+    opacidadeDeMorador,
+    /** Testes: quantos moradores lá dentro viraram vulto agora. */
+    moradoresVulto: (): number => [...vultos.values()].filter((v) => v.a < 0.5).length,
     /** Testes: quanto cada parede já sumiu (sul, norte, oeste, leste, meio). */
     paredesK: (): number[] => [...kParede],
     /** O lugar do boneco agora (o trilho da rampa ou o pulinho do sofá), ou null. */
@@ -340,7 +373,20 @@ export function ligarCasaNaCena(d: DepsCasaNaCena) {
       }
       // a casa na tela e o som da sala
       const s = sala();
-      render.quadro({ t: q.t, tNucleo: d.tempoNucleo(), noite: q.noite, hora: q.hora, sala: s, cam: q.cam });
+      // o suporte da pista mostra os skates que estão nele (nunca vazio: com todos fora, um
+      // aparece de novo sem alarde, e pegar sempre dá certo)
+      render.skatesNoSuporte(Math.max(1, SKATES_NO_SUPORTE - d.quantosDeSkate()));
+      render.quadro({
+        t: q.t,
+        tNucleo: d.tempoNucleo(),
+        noite: q.noite,
+        hora: q.hora,
+        sala: s,
+        cam: q.cam,
+        dentro: naCasa ? { olho: d.camera.olho(), alvo: peito(), dica: d.dica() } : undefined,
+      });
+      // (quem já não está no mundo há um tempo sai da conta)
+      for (const [id, v] of vultos) if (agora - v.em > 2) vultos.delete(id);
       const som = d.som();
       const tn = d.tempoNucleo();
       if (som) {

@@ -33,7 +33,7 @@ import { TELA_TV } from '../../world/vilaCasa';
 import { naTela, passaFilme, type EstadoCasa } from '../../jogo/casa';
 import { COR, Ref, type Desenho } from './ref';
 import { criarPaletaLuz } from './luzes';
-import { CASA, desenharPecaCasa } from './pecasCasa';
+import { CASA, SKATES_NO_SUPORTE, desenharPecaCasa, skateDoSuporte } from './pecasCasa';
 import { pintarCanal, pintarChuvisco, pintarFilme, pintarNumeroDoCanal } from './desenhosTv';
 
 export type ToqueCasa = 'telefone' | 'ioio' | 'piao' | 'cubo' | 'robo' | 'bola';
@@ -55,16 +55,32 @@ export interface QuadroCasa {
   sala: EstadoCasa;
   /** Onde a câmera está (a tela só pinta perto). */
   cam: { x: number; z: number };
+  /**
+   * Com a criança lá dentro: o olho da câmera, o peito da criança e a dica de agora (os móveis
+   * altos que tapam a câmera somem devagar). Sem isto, tudo inteiro.
+   */
+  dentro?: {
+    olho: { x: number; y: number; z: number };
+    alvo: { x: number; y: number; z: number };
+    dica: string | null;
+  };
 }
 
 export interface CasaVila {
   quadro(q: QuadroCasa): void;
   /** Quanto cada parede já sumiu (sul, norte, oeste, leste, meio): o que fica nela some junto. */
   paredes(k: readonly number[], telhado?: number): void;
+  /**
+   * Quantos skates de pé o suporte da pista mostra (os outros estão com as crianças); o
+   * turquesa sai primeiro.
+   */
+  skatesNoSuporte(n: number): void;
   tocar(qual: ToqueCasa): void;
   /** Testes: o que a casa mostra agora. */
   estado(): {
     visivel: boolean;
+    vultos: string[];
+    skatesNoSuporte: number;
     tela: string;
     disco: boolean;
     telefone: boolean;
@@ -93,6 +109,106 @@ const QUADROS_TELA = 12;
 /** O pião é grande (de cima, a criança de 3 anos acha). */
 const ESC_PIAO = 1.6;
 const PERTO_DA_TELA = 34;
+
+/**
+ * Os móveis altos que somem de perto da câmera (e de entre ela e a criança), cada um com as
+ * dicas dele (o móvel da dica de agora fica: é a coisa que a criança vai tocar).
+ */
+const MOVEIS_QUE_SOMEM: Partial<Record<string, readonly string[]>> = {
+  'casa-sofa': ['sofa'],
+  'casa-abajur': [],
+  'casa-fitas': [],
+  'casa-discos': ['disco'],
+  'casa-planta': [],
+  'casa-telefone': ['telefone'],
+  'casa-bau': ['bau'],
+  'casa-tv': ['tv', 'videocassete'],
+};
+
+export interface CaixaNoMundo {
+  x0: number;
+  y0: number;
+  z0: number;
+  x1: number;
+  y1: number;
+  z1: number;
+}
+interface MovelQueSome {
+  tipo: string;
+  malhas: Mesh[];
+  caixa: CaixaNoMundo;
+  dicas: readonly string[];
+  /** Quanto dele está à vista agora (1 inteiro, 0 sumido). */
+  a: number;
+}
+
+/** A câmera fica mais perto que isto de um móvel ou de um morador lá dentro: ele some. */
+export const PERTO_DA_CAMERA = 1.5;
+/** O quanto fica de quem some (um vulto, para a criança não perder a sala de vista). */
+export const VULTO = 0.12;
+/** "Na frente" da câmera: a menos de uns 40° da linha do olho até a criança. */
+const COS_NA_FRENTE = Math.cos((40 * Math.PI) / 180);
+
+/**
+ * A caixa tapa a câmera lá dentro? Colada nela (a menos de `PERTO_DA_CAMERA`) ou no caminho
+ * entre a câmera e a criança (o segmento do olho ao peito dela, com uma folguinha).
+ */
+export function tapaACamera(
+  c: CaixaNoMundo,
+  olho: { x: number; y: number; z: number },
+  alvo: { x: number; y: number; z: number },
+): boolean {
+  const dx = Math.max(c.x0 - olho.x, 0, olho.x - c.x1);
+  const dy = Math.max(c.y0 - olho.y, 0, olho.y - c.y1);
+  const dz = Math.max(c.z0 - olho.z, 0, olho.z - c.z1);
+  const dCaixa = Math.sqrt(dx * dx + dy * dy + dz * dz);
+  if (dCaixa < PERTO_DA_CAMERA) return true;
+  // na frente da câmera, mais perto dela que a criança e perto da linha do olhar (a vovó do
+  // sofá na beira de baixo da tela de quem assiste à TV no tapete): um vulto também
+  const ax = alvo.x - olho.x;
+  const ay = alvo.y - olho.y;
+  const az = alvo.z - olho.z;
+  const dAlvo = Math.hypot(ax, ay, az);
+  const cx = (c.x0 + c.x1) / 2 - olho.x;
+  const cy = (c.y0 + c.y1) / 2 - olho.y;
+  const cz = (c.z0 + c.z1) / 2 - olho.z;
+  const dC = Math.hypot(cx, cy, cz);
+  if (dCaixa < dAlvo - 0.8 && dC > 0 && (ax * cx + ay * cy + az * cz) / (dAlvo * dC) > COS_NA_FRENTE)
+    return true;
+  // o segmento olho → alvo cruza a caixa (um pouco maior)? (a criança em cima dela, sentada no
+  // sofá, não conta: o sofá dela fica)
+  const f = 0.15;
+  const g = 0.3;
+  if (
+    alvo.x > c.x0 - g &&
+    alvo.x < c.x1 + g &&
+    alvo.z > c.z0 - g &&
+    alvo.z < c.z1 + g &&
+    alvo.y > c.y0 - 0.2 &&
+    alvo.y < c.y1 + 1.2
+  )
+    return false;
+  let t0 = 0;
+  let t1 = 0.92;
+  for (const [o, a, lo, hi] of [
+    [olho.x, alvo.x, c.x0 - f, c.x1 + f],
+    [olho.y, alvo.y, c.y0 - f, c.y1 + f],
+    [olho.z, alvo.z, c.z0 - f, c.z1 + f],
+  ] as const) {
+    const d = a - o;
+    if (Math.abs(d) < 1e-6) {
+      if (o < lo || o > hi) return false;
+      continue;
+    }
+    let ta = (lo - o) / d;
+    let tb = (hi - o) / d;
+    if (ta > tb) [ta, tb] = [tb, ta];
+    t0 = Math.max(t0, ta);
+    t1 = Math.min(t1, tb);
+    if (t0 > t1) return false;
+  }
+  return true;
+}
 
 const desenhoNoMundo = (): Desenho => ({
   corpo: new Pecas(),
@@ -173,10 +289,39 @@ export function criarCasaVila(
     p.tipo === 'casa-relogio' ? 1 : p.tipo === 'casa-cortina' ? (p.n === 2 ? 2 : 0) : -1;
   const parado = desenhoNoMundo();
   const daParede = [0, 1, 2].map(() => desenhoNoMundo());
+  // (os móveis altos vão cada um à parte: colados na câmera, ou entre ela e a criança, somem
+  // devagar; o da dica de agora nunca)
+  const altos: { tipo: string; d: Desenho; dicas: readonly string[] }[] = [];
   for (const p of pecas) {
     const i = naParede(p);
-    desenharPecaCasa(new Ref(i >= 0 ? daParede[i] : parado, p), p.tipo, p.n ?? 0);
+    const dicas = MOVEIS_QUE_SOMEM[p.tipo];
+    let d = i >= 0 ? daParede[i] : parado;
+    if (dicas) {
+      d = desenhoNoMundo();
+      altos.push({ tipo: p.tipo, d, dicas });
+    }
+    desenharPecaCasa(new Ref(d, p), p.tipo, p.n ?? 0);
   }
+  const moveis: MovelQueSome[] = altos.map(({ tipo, d, dicas }) => {
+    const ms = [malha(`casa-${tipo}`, d.corpo), malha(`casa-${tipo}-luz`, d.luz, true)].filter(
+      (m): m is Mesh => !!m,
+    );
+    const caixa = { x0: Infinity, y0: Infinity, z0: Infinity, x1: -Infinity, y1: -Infinity, z1: -Infinity };
+    for (const m of ms) {
+      m.receiveShadows = true;
+      m.computeWorldMatrix(true);
+      m.freezeWorldMatrix();
+      const b = m.getBoundingInfo().boundingBox;
+      caixa.x0 = Math.min(caixa.x0, b.minimumWorld.x);
+      caixa.y0 = Math.min(caixa.y0, b.minimumWorld.y);
+      caixa.z0 = Math.min(caixa.z0, b.minimumWorld.z);
+      caixa.x1 = Math.max(caixa.x1, b.maximumWorld.x);
+      caixa.y1 = Math.max(caixa.y1, b.maximumWorld.y);
+      caixa.z1 = Math.max(caixa.z1, b.maximumWorld.z);
+    }
+    return { tipo, malhas: ms, caixa, dicas, a: 1 };
+  });
+  const movel = (tipo: string) => moveis.find((m) => m.tipo === tipo);
   const mParado = malha('casa-pecas', parado.corpo)!;
   mParado.receiveShadows = true;
   mParado.freezeWorldMatrix();
@@ -515,6 +660,28 @@ export function criarCasaVila(
     return out;
   };
   const chunksCasa = chunksDa(pc.dentro);
+  // ------------------------------------------------------------------ o suporte dos skates
+  // (na pista, longe da casa: fora das malhas que só aparecem com a casa pronta) cada skate de pé
+  // é uma malha; o que está com uma criança sai do suporte
+  const pSuporte = plano.pecas.find((p) => p.tipo === 'suporte-skate');
+  const pranchas: Mesh[] = [];
+  if (pSuporte)
+    for (let k = 0; k < SKATES_NO_SUPORTE; k++) {
+      const d = desenhoNoMundo();
+      skateDoSuporte(new Ref(d, pSuporte), k);
+      const m = malha(`casa-skate-no-suporte-${k}`, d.corpo);
+      if (!m) continue;
+      todas.splice(todas.indexOf(m), 1);
+      m.freezeWorldMatrix();
+      pranchas.push(m);
+    }
+
+  // as partes que mexem somem junto com o móvel delas
+  movel('casa-tv')?.malhas.push(tela);
+  const comFilhas = (m: Mesh): Mesh[] => [m, ...m.getChildMeshes().filter((f): f is Mesh => f instanceof Mesh)];
+  movel('casa-discos')?.malhas.push(...comFilhas(prato), ...comFilhas(braco));
+  movel('casa-telefone')?.malhas.push(...comFilhas(fone));
+
   let visivel = false;
   const mostrar = (v: boolean) => {
     for (const m of todas) if (m.isEnabled() !== v) m.setEnabled(v);
@@ -551,6 +718,20 @@ export function criarCasaVila(
       if (mPonteiros) {
         const v = kParedes[1] < 0.3;
         if (mPonteiros.isEnabled() !== v) mPonteiros.setEnabled(v);
+      }
+      // os móveis altos colados na câmera (ou entre ela e a criança) somem devagar e voltam
+      // devagar; o da dica de agora fica
+      const passoA = Math.min(1, dt * 7);
+      for (const m of moveis) {
+        const den = q.dentro;
+        const some =
+          !!den &&
+          !(den.dica && m.dicas.includes(den.dica)) &&
+          tapaACamera(m.caixa, den.olho, den.alvo);
+        const alvoA = some ? VULTO : 1;
+        if (m.a === alvoA) continue;
+        m.a = Math.abs(alvoA - m.a) < 0.01 ? alvoA : m.a + (alvoA - m.a) * passoA;
+        for (const x of m.malhas) x.visibility = m.a;
       }
       // a luz de dentro: de noite o abajur acende e a sala fica morna (nunca a escuridão da rua)
       const l = 1 - 0.32 * q.noite;
@@ -751,6 +932,9 @@ export function criarCasaVila(
     },
     estado: () => ({
       visivel,
+      /** Os móveis que viraram vulto agora (colados na câmera ou no caminho dela). */
+      vultos: moveis.filter((m) => m.a < 0.5).map((m) => m.tipo),
+      skatesNoSuporte: pranchas.filter((m) => m.isEnabled()).length,
       tela: rotuloTela,
       disco: bracoNoDisco > 0.5,
       telefone: agora - foneDesde < DURA_TOQUE_CASA.telefone,
@@ -760,8 +944,15 @@ export function criarCasaVila(
       robo: agora - roboDesde < DURA_TOQUE_CASA.robo,
       bola: agora - bolaDesde < DURA_TOQUE_CASA.bola,
     }),
+    skatesNoSuporte(n) {
+      pranchas.forEach((m, k) => {
+        const v = k >= SKATES_NO_SUPORTE - n;
+        if (m.isEnabled() !== v) m.setEnabled(v);
+      });
+    },
     descartar() {
       for (const m of todas) m.dispose();
+      for (const m of pranchas) m.dispose();
       mPonteiros?.dispose();
       for (const n of nos) n.dispose();
       for (const m of materiais) m.dispose();

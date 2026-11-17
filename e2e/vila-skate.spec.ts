@@ -66,12 +66,31 @@ for (const tamanho of ['empe', 'deitado'] as const) {
     );
     await assentar(page, 9);
     await esperarDica(page, 'skate', 'Toque para pegar');
+    const noSuporte = () =>
+      page.evaluate(
+        () =>
+          (window.__brumaluz!.vilaCasa!.estado() as unknown as { skatesNoSuporte: number })
+            .skatesNoSuporte,
+      );
+    expect(await noSuporte()).toBe(3);
     await foto('1-suporte-dica');
     const t = await alvoDoToque(page, 'skate');
     await page.touchscreen.tap(t.x, t.y);
     await page.waitForFunction(() => !!window.__brumaluz!.personagem!.aparencia().skate);
     await page.waitForTimeout(1200);
+    // o skate turquesa saiu do suporte: está nos pés da criança
+    expect(await noSuporte()).toBe(2);
     await foto('2-de-skate');
+    await page.evaluate(
+      ([sk]) => {
+        const e = window.__brumaluz!;
+        const p = e.jogadorPes!();
+        e.apontar!(Math.atan2(sk[0] - p[0], sk[2] - p[2]) + 0.35, 0.3);
+      },
+      [sk] as const,
+    );
+    await page.waitForTimeout(900);
+    await foto('2b-suporte-sem-um');
     // de frente, com o skate nos pés
     await page.evaluate(() => {
       const e = window.__brumaluz!;

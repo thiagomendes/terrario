@@ -137,6 +137,32 @@ for (const tamanho of ['empe', 'deitado'] as const) {
       await foto(`3-tv-canal-${(k % 4) + 1}`);
       await page.waitForTimeout(500);
     }
+    // no tapete, de frente para a TV: quem fica colado na câmera (a vovó no sofá atrás da
+    // criança) vira um vulto; olhando para o sofá, ela volta inteira (a criança e a coisa da
+    // dica nunca somem)
+    const vultos = () =>
+      page.evaluate(() => {
+        const c = window.__brumaluz!.vilaCasa!.estado() as unknown as {
+          vultos: string[];
+          moradoresVulto: number;
+        };
+        return { moveis: c.vultos, moradores: c.moradoresVulto };
+      });
+    const vendoTv = await vultos();
+    console.log('casa: vultos vendo a TV', JSON.stringify(vendoTv));
+    // (a vovó no sofá, colada na câmera, vira vulto; a TV, que é a coisa da dica, fica)
+    expect(vendoTv.moradores).toBe(1);
+    expect(vendoTv.moveis).not.toContain('casa-tv');
+    await foto('3b-tapete-tv');
+    await page.evaluate(() => {
+      const e = window.__brumaluz!;
+      e.apontar!(e.rotacao![1] + Math.PI, 0.74);
+    });
+    await page.waitForTimeout(1500);
+    const deCostas = await vultos();
+    console.log('casa: vultos olhando o sofá', JSON.stringify(deCostas));
+    expect(deCostas.moradores).toBe(0);
+    await foto('3c-tapete-sofa');
 
     // ---------------------------------------------------------------- o toca-discos
     await irPara(page, P.prato, [P.discos[0] + 2.4, P.discos[2] + 1.2], -0.2);

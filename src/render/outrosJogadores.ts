@@ -355,6 +355,12 @@ export function criarOutrosJogadores(scene: Scene) {
       if (levesPorId.size > outros.size * 2 + 8) levesPorId.clear();
       return leves;
     },
+    /** Spec 026 (parte 3): quantos amigos andam de skate agora (o suporte da pista). */
+    deSkate(): number {
+      let n = 0;
+      for (const o of outros.values()) if (o.chaveAparencia.includes('"skate":true')) n++;
+      return n;
+    },
     /** Para o minimapa e a seta que aponta para os amigos. */
     get lista() {
       return [...outros.values()].map((o) => ({

@@ -540,15 +540,28 @@ function skateDePe(r: Ref, x: number, cor: string, lista: string): void {
   }
 }
 
-/** O suporte dos skates: a armação de madeira e três skates de pé (cada um de uma cor). */
+/**
+ * O suporte dos skates: só a armação de madeira (os três skates de pé vão cada um à parte, em
+ * `skateDoSuporte`: o que está com uma criança sai do suporte).
+ */
 function suporteDosSkates(r: Ref): void {
   for (const x of [-0.78, 0.78]) r.caixa(0.1, 1.32, 0.48, x, 0, 0, CASA.madeira, 0.02);
   r.caixa(1.66, 0.1, 0.5, 0, 0, 0, CASA.madeiraEscura, 0.02);
   r.caixa(1.66, 0.08, 0.12, 0, 1.22, -0.16, CASA.madeira, 0.02);
   r.caixa(1.66, 0.06, 0.1, 0, 0.62, -0.17, CASA.madeira, 0.02);
-  skateDePe(r, -0.45, GRAFITE.turquesa, GRAFITE.amarelo);
-  skateDePe(r, 0, GRAFITE.rosa, '#f6f4ee');
-  skateDePe(r, 0.45, GRAFITE.amarelo, GRAFITE.rosa);
+}
+
+/** Quantos skates o suporte tem. */
+export const SKATES_NO_SUPORTE = 3;
+
+/**
+ * Um dos skates de pé do suporte (0 o turquesa, que sai primeiro: é a cor do skate nos pés; 1 o
+ * rosa; 2 o amarelo), no referencial do suporte.
+ */
+export function skateDoSuporte(r: Ref, k: number): void {
+  if (k === 0) skateDePe(r, -0.45, GRAFITE.turquesa, GRAFITE.amarelo);
+  else if (k === 1) skateDePe(r, 0, GRAFITE.rosa, '#f6f4ee');
+  else skateDePe(r, 0.45, GRAFITE.amarelo, GRAFITE.rosa);
 }
 
 /** A BMX de enfeite (não se monta): rodas de raio grosso, o quadro e a placa sem número. */

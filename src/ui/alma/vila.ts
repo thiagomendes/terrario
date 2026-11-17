@@ -966,6 +966,8 @@ export function ligarVilaNeon(
     transparente = quer;
     e.limiteOpacidade = quer ? 0.6 : 1;
   });
+  // a casa anos 80 não some com o móvel da dica de agora (a coisa que a criança vai tocar)
+  e.dicaVila = () => dica.estado()?.chave ?? null;
 
   // testes: as caixas na tela e o show
   window.__vila = {
