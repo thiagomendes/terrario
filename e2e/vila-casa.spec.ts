@@ -285,16 +285,23 @@ for (const tamanho of ['empe', 'deitado'] as const) {
     await page.waitForFunction(() => window.__brumaluz!.vilaCasa!.sala().filme > 0, undefined, {
       timeout: 10_000,
     });
-    const ini = Date.now();
     for (const [s, nome] of [
       [1.0, 'contagem'],
       [3.5, 'passeio'],
       [8.0, 'corrida'],
       [13.0, 'passarinho'],
       [16.5, 'abraco'],
-      [18.9, 'fim'],
+      [18.7, 'fim'],
     ] as const) {
-      await page.waitForTimeout(Math.max(0, s * 1000 - (Date.now() - ini)));
+      // (no relógio do núcleo: o quanto do filme já passou)
+      await page.waitForFunction(
+        (s) => {
+          const e = window.__brumaluz!;
+          return e.vilaTempo!() - (e.vilaCasa!.sala().filme - 20) >= s;
+        },
+        s,
+        { polling: 50 },
+      );
       expect((await casa(page)).tela).toBe('filme');
       await foto(`17-filme-${nome}`);
     }

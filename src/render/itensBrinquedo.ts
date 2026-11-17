@@ -311,6 +311,43 @@ export function modeloNaMao(
         add(cx('rotulo-costas', 0.2, 0.1, 0.006, 0.002, '#f4ecdc'), 0, 0.085, -0.021);
         break;
       }
+      case 'ioio': {
+        // spec 026 (parte 3): o ioiô do baú: as duas metades vermelhas, o miolo claro e o fio
+        for (const z of [-0.024, 0.024]) {
+          const m = add(ci(`ioio${z}`, 0.04, 0.075, 0.075, '#e8302a'), 0, 0.085, z);
+          m.rotation.x = Math.PI / 2;
+        }
+        const c = add(ci('ioio-c', 0.012, 0.03, 0.03, '#f6f4ee'), 0, 0.085, 0);
+        c.rotation.x = Math.PI / 2;
+        add(cx('ioio-fio', 0.008, 0.12, 0.008, 0.002, '#f6f4ee'), 0, 0.2, 0);
+        break;
+      }
+      case 'piao': {
+        // o pião de listras vermelhas e creme, a ponta de madeira para baixo
+        add(ci('piao-ponta', 0.05, 0.004, 0.022, '#b98250'), 0, 0.025, 0);
+        add(ci('piao-baixo', 0.06, 0.03, 0.08, '#e8302a'), 0, 0.08, 0);
+        add(ci('piao-faixa', 0.03, 0.08, 0.085, '#f2e2bd'), 0, 0.125, 0);
+        add(ci('piao-cima', 0.04, 0.085, 0.05, '#e8302a'), 0, 0.16, 0);
+        add(ci('piao-cabo', 0.05, 0.015, 0.015, '#8a5530'), 0, 0.205, 0);
+        break;
+      }
+      case 'cubo_cores': {
+        // o cubo de cores 2 × 2 em três cores (amarelo em cima e embaixo, vermelho e azul dos
+        // lados); as juntas pretas cruzam as faces
+        const L = 0.15;
+        const y = L / 2 + 0.005;
+        add(cx('cubo', L, L, L, 0.02, '#1c1c24'), 0, y, 0);
+        const p = L - 0.016;
+        for (const s of [-1, 1]) {
+          add(cx(`cubo-y${s}`, p, 0.006, p, 0.004, '#ffd23a'), 0, y + s * (L / 2), 0);
+          add(cx(`cubo-x${s}`, 0.006, p, p, 0.004, '#e8302a'), s * (L / 2), y, 0);
+          add(cx(`cubo-z${s}`, p, p, 0.006, 0.004, '#2f6fd8'), 0, y, s * (L / 2));
+        }
+        add(cx('cubo-jx', 0.012, L + 0.016, L + 0.016, 0, '#1c1c24'), 0, y, 0);
+        add(cx('cubo-jy', L + 0.016, 0.012, L + 0.016, 0, '#1c1c24'), 0, y, 0);
+        add(cx('cubo-jz', L + 0.016, L + 0.016, 0.012, 0, '#1c1c24'), 0, y, 0);
+        break;
+      }
       case 'pelucia': {
         // spec 026 (etapa B): a lhama de pelúcia (a prenda das barracas): creme, as orelhinhas
         // em pé, o cachecol vermelho e a mantinha azul

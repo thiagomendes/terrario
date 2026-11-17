@@ -172,7 +172,8 @@ export function ligarCasaNaCena(d: DepsCasaNaCena) {
       cz < N.z1 + 1.4,
       cx < W.x1 + 1.4,
       cx > E.x0 - 0.4,
-      j.x < meio !== cx < meio || Math.abs(cx - meio) < 0.8,
+      // (perto dela a câmera também a tiraria de vista: colada na parede, ela enchia meia tela)
+      j.x < meio !== cx < meio || Math.abs(cx - meio) < 2.2,
     ];
   }
 
