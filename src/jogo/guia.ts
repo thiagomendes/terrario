@@ -16,6 +16,16 @@ import { frenteDaPorta, noLote, TAM_LOTE, type Lote, type PlanoPovoado } from '.
 import type { PlanoCanto } from '../world/cantoMissoes';
 import type { PlanoVila } from '../world/vilaNeon';
 import { ALTURA_ARCO, CHAVE_ARCO } from './rinque';
+import {
+  CARIMBOS,
+  CHAVE_BALAO,
+  CHAVE_LANCHE,
+  F_BILHETE,
+  F_PRENDA,
+  N_BALOES,
+  PRENDAS,
+  chaoDoBalao,
+} from './missoesParque';
 
 // ------------------------------------------------------------------ o alvo
 /** Uma caixa no chão (inclusivo em x0/z0, exclusivo em x1/z1). */
@@ -83,6 +93,8 @@ export interface MundoDoGuia {
     ins: readonly boolean[];
     lhamas: readonly number[];
     arcos?: readonly boolean[];
+    /** Etapa B (f6): os balões fugidos que a criança já pegou. */
+    bal?: readonly boolean[];
   } | null;
   /** Spec 026: a criança está com o feno na mão (a lhama já vem atrás). */
   comFeno?(): boolean;
@@ -411,7 +423,7 @@ export function alvoDaMissao(
   atual: string | null = null,
 ): AlvoGuia | null {
   if (mundo.canto) return alvoNoCanto(m, mundo.canto, mundo, de, atual);
-  if (mundo.vila) return alvoNaVila(m, mundo.vila, mundo, de, atual);
+  if (mundo.vila) return alvoNaVila(m, mundo.vila, mundo, de, atual, vistos);
   if (mundo.cidade) {
     const a = alvoNaCidade(m, mundo.cidade, vistos, de, mundo);
     if (a) return a;
@@ -564,13 +576,83 @@ function alvoNaVila(
   mundo: MundoDoGuia,
   de: { x: number; z: number },
   atual: string | null,
+  vistos: ReadonlySet<string> = new Set(),
 ): AlvoGuia | null {
   const d = m.desenho;
   const figura = d.tipo === 'arte' ? d.placa : 'estrela';
   const c = m.conta;
+  const pt = p.pontos;
+  const pq = pt.parque;
+  const chao = p.h + 1;
+  const sitio = (
+    chave: string,
+    x: number,
+    z: number,
+    raio: number,
+    fig = figura,
+    alto = 0,
+  ): AlvoGuia => ({
+    chave,
+    tipo: 'sitio',
+    x,
+    y: chao,
+    z,
+    placa: [x, chao + alto, z],
+    figura: fig,
+    raio,
+  });
+  if (m.id === F_BILHETE) {
+    // o brinquedo mais perto ainda sem carimbo: a frente da roda-gigante, a beira do carrossel do
+    // lado de quem vem, a ponta do caminho do bate-bate (lá, a dica de toque mostra o resto)
+    const bolinhas = d.tipo === 'arte' ? (d.bolinhas ?? []) : [];
+    const dc = Math.hypot(de.x - pq.carrossel.x, de.z - pq.carrossel.z) || 1;
+    const beira = pq.carrossel.beira + 1.2;
+    const lugares: { chave: string; x: number; z: number; i: number }[] = [
+      { chave: 'bilhete:0', x: pq.roda.saida[0], z: pq.roda.saida[2], i: 0 },
+      {
+        chave: 'bilhete:1',
+        x: pq.carrossel.x + ((de.x - pq.carrossel.x) / dc) * beira,
+        z: pq.carrossel.z + ((de.z - pq.carrossel.z) / dc) * beira,
+        i: 1,
+      },
+      { chave: 'bilhete:2', x: pq.bate.saida[0], z: pq.bate.saida[2], i: 2 },
+    ].filter((l) => !vistos.has(CARIMBOS[l.i]));
+    const l = maisPerto(lugares, de, atual);
+    return l ? sitio(l.chave, l.x, l.z, 2.4, bolinhas[l.i] ?? figura, 1.2) : null;
+  }
+  if (m.id === F_PRENDA) {
+    // a argola, a pescaria (a que estiver mais perto primeiro) e, com a prenda, a vovó
+    const frente = (q: readonly number[]) => ({ x: q[0], z: q[2] - 2.5 });
+    const barracas = [
+      { chave: 'prenda:0', ...frente(pq.argola), i: 0 },
+      { chave: 'prenda:1', ...frente(pq.pescaria), i: 1 },
+    ].filter((b) => !vistos.has(PRENDAS[b.i]));
+    const b = maisPerto(barracas, de, atual);
+    const bolinhas = d.tipo === 'arte' ? (d.bolinhas ?? []) : [];
+    if (b) return sitio(b.chave, b.x, b.z, 1.6, bolinhas[b.i] ?? figura, 1.4);
+    if (vistos.has(PRENDAS[2])) return null;
+    const [ax, , az] = pt.postos.avo;
+    return sitio('vovo', ax + 0.8, az + 1.5, 1.6, bolinhas[2] ?? figura, 2.6);
+  }
   if (c.tipo !== 'evento') return null;
   const v = mundo.estadoVila?.() ?? null;
-  const pt = p.pontos;
+  if (c.chave === CHAVE_BALAO) {
+    // o balão fugido mais perto que ela ainda não pegou (o pé da roda, a árvore, o carrossel)
+    const lista = Array.from({ length: N_BALOES }, (_, i) => {
+      const [x, , z] = chaoDoBalao(pq, chao, i);
+      return { chave: `balao:${i}`, x, z, i };
+    }).filter((b) => !v?.bal?.[b.i]);
+    const b = maisPerto(lista, de, atual);
+    return b ? sitio(b.chave, b.x, b.z, 1.8) : null;
+  }
+  if (c.chave === CHAVE_LANCHE) {
+    // sem feno: o fardo da beira do caminho; com o feno na mão: o cocho da fazendinha
+    // (o canto do noroeste do cocho, de quem vem da porteira: as lhamas comem do outro lado)
+    if (mundo.comFeno?.())
+      return sitio('cocho', pq.cocho[0] - 0.8, pq.cocho[2] - 1.6, 2.2, 'cocho', 0.4);
+    // (do lado da porteira: é de lá que ela vem buscar a segunda braçada)
+    return sitio('fardo', pq.fardo[0] + 0.8, pq.fardo[2] + 1.2, 2, 'feno', 1.6);
+  }
   if (c.chave === 'achou:instrumento') {
     // o estojo mais perto que ainda está no chão (um em cada zona)
     const lista = pt.estojos

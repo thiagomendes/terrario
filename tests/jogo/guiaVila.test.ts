@@ -158,4 +158,97 @@ describe('a trilha do guia dá a volta nas peças da Vila Neon (o dono: nada atr
     // a trilha passou rente a peças de verdade (a volta foi dada, não por sorte)
     expect(pecasPerto).toBeGreaterThan(0);
   });
+
+  it('etapa B: a trilha chega a cada lugar das missões do parque, de um lugar ao outro', () => {
+    definirEstiloMundo(obterTema('vila-neon').mundo);
+    const semente = 4242;
+    const vila = vilaDoMundo(semente)!;
+    const chunks = new Map<string, Uint8Array>();
+    const blocos = (x: number, y: number, z: number) => {
+      if (y < 0 || y >= ALTURA) return 0;
+      const cx = Math.floor(x / TAM_X);
+      const cz = Math.floor(z / TAM_Z);
+      const k = `${cx},${cz}`;
+      let c = chunks.get(k);
+      if (!c) chunks.set(k, (c = gerarChunk(cx, cz, semente)));
+      return c[indice(x - cx * TAM_X, y, z - cz * TAM_Z)];
+    };
+    const tomada = (x: number, y: number, z: number) => celulaTomadaPelaVila(vila, x, y, z);
+    const leitor = { bloco: comPecas(blocos, tomada), conhecido: () => true };
+    const Y = vila.h + 1;
+    const pq = vila.pontos.parque;
+    const m = (o: { bal?: boolean[]; feno?: boolean }): MundoDoGuia =>
+      ({
+        cidade: null,
+        sitios: [],
+        bloco: () => 0,
+        moradores: () => [],
+        vila,
+        estadoVila: () => ({ ins: [], lhamas: [], bal: o.bal ?? [false, false, false] }),
+        comFeno: () => !!o.feno,
+        bichos: () => [],
+      }) as unknown as MundoDoGuia;
+    const nasc = { x: vila.nascimento.x, z: vila.nascimento.z };
+    // de onde a criança desce de cada brinquedo e onde ela fica em cada passo
+    const saidaDoCarrossel = { x: pq.carrossel.x - 1.7, z: pq.carrossel.z + pq.carrossel.beira + 1.1 };
+    const lugares: [string, { x: number; z: number }, AlvoGuiaDeTeste][] = [];
+    type AlvoGuiaDeTeste = NonNullable<ReturnType<typeof alvoDaMissao>>;
+    const junta = (nome: string, de: { x: number; z: number }, a: AlvoGuiaDeTeste | null) => {
+      expect(a, nome).not.toBeNull();
+      lugares.push([nome, de, a!]);
+      return { x: a!.x, z: a!.z };
+    };
+    const f5 = missaoPorId('f5')!;
+    const usos = ['bilhete:roda', 'bilhete:carrossel', 'bilhete:bate'];
+    // o bilhete: do nascimento ao primeiro, e de cada brinquedo ao seguinte
+    let de = nasc;
+    const vistos = new Set<string>();
+    for (let k = 0; k < 3; k++) {
+      const a = alvoDaMissao(f5, m({}), vistos, de)!;
+      de = junta(`bilhete ${a.chave}`, de, a);
+      vistos.add(usos[Number(a.chave.split(':')[1])]);
+      if (a.chave === 'bilhete:1') de = saidaDoCarrossel;
+    }
+    expect(alvoDaMissao(f5, m({}), vistos, de)).toBeNull();
+    junta('roda depois do carrossel', saidaDoCarrossel, alvoDaMissao(f5, m({}), new Set([usos[1]]), saidaDoCarrossel));
+    // os balões
+    const f6 = missaoPorId('f6')!;
+    const bal = [false, false, false];
+    for (let k = 0; k < 3; k++) {
+      const a = alvoDaMissao(f6, m({ bal }), new Set(), de)!;
+      de = junta(a.chave, de, a);
+      bal[Number(a.chave.split(':')[1])] = true;
+    }
+    expect(alvoDaMissao(f6, m({ bal }), new Set(), de)).toBeNull();
+    // o lanche: o fardo e, com o feno, o cocho
+    const f7 = missaoPorId('f7')!;
+    de = junta('fardo', de, alvoDaMissao(f7, m({}), new Set(), de));
+    de = junta('cocho', de, alvoDaMissao(f7, m({ feno: true }), new Set(), de));
+    // a prenda: as duas barracas e a vovó, lá na Rua anos 80
+    const f8 = missaoPorId('f8')!;
+    const passos = new Set<string>();
+    for (let k = 0; k < 2; k++) {
+      const a = alvoDaMissao(f8, m({}), passos, de)!;
+      de = junta(a.chave, de, a);
+      passos.add(a.chave === 'prenda:0' ? 'prenda:argola' : 'prenda:pescaria');
+    }
+    const vovo = alvoDaMissao(f8, m({}), passos, de)!;
+    expect(vovo.chave).toBe('vovo');
+    junta('vovó', de, vovo);
+    passos.add('prenda:vovo');
+    expect(alvoDaMissao(f8, m({}), passos, de)).toBeNull();
+    for (const [nome, d, a] of lugares) {
+      const c = procurarCaminho(leitor, [d.x, Y, d.z], [a.x, a.y, a.z]);
+      expect(c.completo, nome).toBe(true);
+      const fim = c.pts[c.pts.length - 1];
+      expect(
+        chegouAoAlvo(a, fim[0], fim[2]),
+        `${nome}: o fim da trilha (${fim[0]}, ${fim[2]}) chega a (${a.x}, ${a.z})`,
+      ).toBe(true);
+      for (const [x, y, z] of c.pts)
+        expect(tomada(Math.floor(x), Math.floor(y), Math.floor(z)), `${nome} em ${x},${z}`).toBe(
+          false,
+        );
+    }
+  });
 });

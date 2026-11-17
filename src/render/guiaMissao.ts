@@ -815,6 +815,10 @@ export function criarGuiaMissao(f: FonteGuia): GuiaMissao {
       if (m) alvo.placa = [m.x, m.y + 1.6, m.z];
     }
     posicionarPlaca(agora);
+    // a busca não achou caminho de onde a criança estava (spec 026, etapa B: o alvo mudou com ela
+    // sentada no cavalinho do carrossel, em cima de uma peça): procura de novo de onde ela está
+    // agora, de tempo em tempo, até achar
+    if (!chegouLa && !rota.length && !busca && agora - ultimaBusca > 1.5) comecarBusca(false);
     if (chegouLa || !rota.length) {
       pegadas.tirar();
       luzes.tirar();
