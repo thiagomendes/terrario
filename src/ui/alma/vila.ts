@@ -640,7 +640,7 @@ export function ligarVilaNeon(
         raio: RAIO_TOQUE * 2.2,
         naHora: true,
         tocar: () => e.vilaCasa?.tocar('bau'),
-        dica: { figura: 'dicaGuardar', texto: 'Toque para guardar', ate: 3.4 },
+        dica: { figura: 'dicaGuardar', texto: 'Toque para guardar', ate: 3.6 },
       },
       {
         chave: 'bau',

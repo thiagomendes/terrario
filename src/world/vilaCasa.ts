@@ -303,8 +303,9 @@ export function montarCasa80(f: FerramentasVila): CasaMontada {
     roboAte: [robo[0] - 1.3, robo[1], robo[2]],
     bola: P(57.2, 49.6),
     bau: P(61.25, 45.0),
-    // (o cubo no canto do sudeste do quarto, longe da bola: do lado dela a trilha empacava)
-    espalhados: [P(57.5, 55.3), P(48.6, 48.9), P(60.3, 51.2)],
+    // (o pião no canto do sudoeste da sala, no chão livre perto da janela, e o cubo no canto do
+    // sudeste do quarto: atrás do sofá e do lado da bola a trilha empacava)
+    espalhados: [P(57.5, 55.3), P(45.4, 50.4), P(60.3, 51.2)],
     mesaBolo: P(U_MESA_BOLO, vSofa - 0.1),
     bolo: P(U_MESA_BOLO, vSofa - 0.1, ALTURA_BOLO),
   };

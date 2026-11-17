@@ -646,23 +646,18 @@ function alvoNaCasa(
   }
   if (m.id === F_QUARTO) {
     const pegos = mundo.estadoVila?.()?.qto ?? [];
-    // com um brinquedo na mão: o baú (de frente para ele, do lado do quarto, a uns dois blocos e
-    // meio: de mais perto o baú ficava atrás do boneco)
+    // com um brinquedo na mão: o baú (de frente para ele, do lado do quarto, a uns dois blocos:
+    // de mais perto o baú ficava atrás do boneco; de mais longe, fora do alcance do toque)
     if (QUARTO.some((u, i) => pegos[i] && !vistos.has(u)))
-      return sitio('bau', c.bau[0] - 2.4, c.bau[2], 1.3, 'bauArrumado', 1.0);
+      return sitio('bau', c.bau[0] - 2.0, c.bau[2], 0.9, 'bauArrumado', 1.0);
     const lista = c.espalhados
-      .map((q, i) => {
-        // (a uns dois blocos e meio do brinquedo, do lado de quem vem: de mais perto ele ficava
-        // atrás do boneco na câmera, como o feno da f7)
-        const dx = de.x - q[0];
-        const dz = de.z - q[2];
-        const dd = Math.hypot(dx, dz) || 1;
-        const k = Math.min(2.6, dd);
-        return { chave: `brinquedo:${i}`, x: q[0] + (dx / dd) * k, z: q[2] + (dz / dd) * k, i };
-      })
+      .map((q, i) => ({ chave: `brinquedo:${i}`, x: q[0], z: q[2], i }))
       .filter((b) => !vistos.has(QUARTO[b.i]) && !pegos[b.i]);
     const b = maisPerto(lista, de, atual);
-    return b ? sitio(b.chave, b.x, b.z, 1.1, bolinhas[b.i] ?? 'bauArrumado', 0.9) : null;
+    // (a trilha vai até o brinquedo e acaba a uns dois blocos dele: de mais perto ele ficava atrás
+    // do boneco na câmera, como o feno da f7; um ponto de chegada ao lado dele às vezes caía na
+    // célula de um móvel e a trilha empacava)
+    return b ? sitio(b.chave, b.x, b.z, 2.2, bolinhas[b.i] ?? 'bauArrumado', 0.9) : null;
   }
   if (m.id === F_RAMPA) {
     const sk = pt.skate.suporte;

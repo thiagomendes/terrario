@@ -152,6 +152,16 @@ async function festa(page: Page, nomeFoto?: string, teto = 45_000): Promise<void
 /** Anda pela trilha até o alvo de agora (o `esperado`, se dito); devolve a chave dele. */
 async function seguir(page: Page, esperado?: string, teto = 180_000): Promise<string> {
   await page.waitForTimeout(1800);
+  // (o nível que sobe no meio da missão abre a festa da estrela: a criança toca no "certo")
+  for (let k = 0; k < 6; k++) {
+    const ok = page.locator('[data-alma-festa] [data-alma-oba], [data-alma-festa] button');
+    if (!(await ok.count())) break;
+    await ok
+      .first()
+      .tap()
+      .catch(() => undefined);
+    await page.waitForTimeout(900);
+  }
   await page.waitForFunction(
     (esperado) => {
       const a = window.__guia!.alvo();
@@ -263,7 +273,8 @@ async function cinema(page: Page, t: Tamanho): Promise<void> {
   await foto(page, `${t}-f9-3-sofa-com-a-vovo-filme`);
   // e de frente, as duas sentadas (do lado da criança: a vovó fica atrás dela, inteira)
   await page.evaluate((s) => window.__brumaluz!.apontar!(s.yaw + Math.PI + 0.5, 0.6), sofa);
-  await page.waitForTimeout(1200);
+  // (logo: parada, a criança acaba virando para onde a câmera olha)
+  await page.waitForTimeout(450);
   await foto(page, `${t}-f9-4-sentadas-de-frente`);
   await page.evaluate((s) => window.__brumaluz!.apontar!(s.yaw, 0.62), sofa);
   // o filme acaba com ela sentada: a festa
@@ -271,8 +282,10 @@ async function cinema(page: Page, t: Tamanho): Promise<void> {
   expect(await feitas(page)).toContain('f9');
   // ainda tem a fita (fica na mochila)
   expect(await tem(page, 'fita_video')).toBe(1);
-  // levanta do sofá (andar desce)
-  await page.evaluate(() => window.__brumaluz!.controleDireto!.mover(-1, 0));
+  // levanta do sofá (andar para a frente, para o tapete, desce)
+  await page.evaluate((s) => window.__brumaluz!.apontar!(s.yaw, 0.5), sofa);
+  await page.waitForTimeout(300);
+  await page.evaluate(() => window.__brumaluz!.controleDireto!.mover(1, 0));
   await page.waitForTimeout(700);
   await page.evaluate(() => window.__brumaluz!.controleDireto!.mover(0, 0));
   await page.waitForTimeout(500);
@@ -307,7 +320,8 @@ async function quarto(page: Page, t: Tamanho): Promise<void> {
       { timeout: 10_000 },
     );
     await page.waitForTimeout(450);
-    if (k === 0) await foto(page, `${t}-f10-4-guardando`);
+    // (no primeiro, o nível sobe e a festa da estrela tapa a tela: a foto é no segundo)
+    if (k === 1) await foto(page, `${t}-f10-4-guardando`);
     expect(await tem(page, itens[i])).toBe(0);
     if (k === 1) await fotoDoQuadro(page, `${t}-f10-5-quadro-dois-guardados`);
   }
@@ -389,9 +403,14 @@ async function bolo(page: Page, t: Tamanho): Promise<void> {
     undefined,
     { timeout: 20_000 },
   );
-  // a vovó comemora e a fatia voa da mesinha até a mão (a câmera do lado da TV: o rosto dela)
+  // a vovó comemora e a fatia voa da mesinha até a mão (a criança de frente para ela: a câmera
+  // atrás da criança, um pouco de lado, vê o rosto da vovó, a mesinha e a fatia)
   const c = await page.evaluate(() => window.__brumaluz!.vila!()!.pontos.casa);
-  await page.evaluate((s) => window.__brumaluz!.apontar!(s.yaw + Math.PI + 0.35, 0.5), c.sofa);
+  await page.evaluate((a) => {
+    const e = window.__brumaluz!;
+    const p = e.jogadorPes!();
+    e.apontar!(Math.atan2(a.x - p[0], a.z - p[2]) + 0.4, 0.5);
+  }, c.sofa.assentos[0]);
   await page.waitForTimeout(250);
   await foto(page, `${t}-f12-3-vovo-da-a-fatia`);
   await page.waitForTimeout(650);

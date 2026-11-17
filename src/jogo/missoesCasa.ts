@@ -36,8 +36,11 @@ export const VOLTAS_NA_RAMPA = 3;
 export const ESPALHADOS = [IOIO, PIAO, CUBO_CORES] as const;
 /** Até onde (blocos, no chão) o toque no brinquedo espalhado vale. */
 export const ALCANCE_ESPALHADO = 4;
-/** Perto da vovó (blocos): ela recebe a vitamina (o mesmo da prenda). */
-export const PERTO_DA_VOVO_BOLO = 3.4;
+/**
+ * Na frente da vovó (blocos, do ponto entre o sofá e o tapete): ela recebe a vitamina. Só de
+ * frente: chegando pela porta, por trás do sofá, ela dava o bolo de costas para a criança.
+ */
+export const PERTO_DA_VOVO_BOLO = 2;
 
 /** O passo do cinema de cada um: quem está sentado num assento do sofá (não o da vovó)? */
 export function sentadoNoSofa(c: PontosCasa, x: number, y: number, z: number): boolean {
@@ -52,8 +55,8 @@ export function alcancaOEspalhado(c: PontosCasa, i: number, x: number, y: number
   return !!q && Math.hypot(q[0] - x, q[2] - z) <= ALCANCE_ESPALHADO && Math.abs(q[1] - y) < 2.5;
 }
 
-/** Perto da vovó, dentro da casa (a vitamina chega até ela)? */
+/** Na frente da vovó, dentro da casa (a vitamina chega até ela)? */
 export function pertoDaVovo(c: PontosCasa, x: number, y: number, z: number): boolean {
-  const a = c.sofa.assentos[0];
-  return Math.hypot(a.x - x, a.z - z) <= PERTO_DA_VOVO_BOLO && Math.abs(c.y - y) < 2;
+  const f = c.vovo;
+  return Math.hypot(f[0] - x, f[2] - z) <= PERTO_DA_VOVO_BOLO && Math.abs(c.y - y) < 2;
 }
