@@ -112,8 +112,9 @@ export function lugarDoBalao(pq: PontosParque, chao: number, i: number, t: numbe
 export function chaoDoBalao(pq: PontosParque, chao: number, i: number): P3 {
   if (i === 0) return [pq.roda.x + 2.4, chao, pq.roda.z + 5.2];
   if (i === 1) {
+    // (a uns três blocos e meio: embaixo do balão ele ficava em cima da cabeça, fora da tela)
     const [x, , z] = pq.arvoreDoBalao;
-    return [x + 1.1, chao, z + 1.6];
+    return [x + 2.1, chao, z + 2.9];
   }
   return [pq.carrossel.x + 5.2, chao, pq.carrossel.z + 6.4];
 }

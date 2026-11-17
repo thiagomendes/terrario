@@ -79,7 +79,29 @@ export async function esperarDica(
       [p, INCLINACOES[k++ % INCLINACOES.length]] as const,
     );
   }
-  throw new Error(`a dica ${chave} não apareceu`);
+  throw new Error(`a dica ${chave} não apareceu: ${await diagnostico(page, chave)}`);
+}
+
+/** O que a tela via (para entender por que a dica não veio). */
+export function diagnostico(page: Page, chave: string): Promise<string> {
+  return page.evaluate((chave) => {
+    const q = window.__vila!.toques().find((t) => t.chave === chave);
+    const caixas = [
+      ...(document.querySelector('[data-toque]')?.querySelectorAll<HTMLElement>(
+        '.joystick, .botoes > *',
+      ) ?? []),
+    ].map((el) => {
+      const r = el.getBoundingClientRect();
+      return [r.left, r.top, r.right, r.bottom].map(Math.round);
+    });
+    return JSON.stringify({
+      tela: [innerWidth, innerHeight],
+      pes: window.__brumaluz!.jogadorPes!().map((v) => Math.round(v * 10) / 10),
+      toque: q,
+      dica: window.__vila!.dica(),
+      caixas,
+    });
+  }, chave);
 }
 
 /** O toque `chave` da etapa B (as missões do parque e a rua), com a criança ao alcance. */

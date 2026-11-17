@@ -113,7 +113,8 @@ for (const tamanho of ['empe', 'deitado'] as const) {
     /** A foto do boneco de frente (o que está na mão à vista) e a câmera de volta. */
     const fotoDeFrente = async (nome: string) => {
       const antes = await page.evaluate(() => window.__brumaluz!.rotacao ?? [0, 0]);
-      await page.evaluate((y) => window.__brumaluz!.apontar!(y + Math.PI - 0.6, 0.15), antes[1]);
+      // (de cima: a câmera passa por cima dos carros e dos balcões em volta)
+      await page.evaluate((y) => window.__brumaluz!.apontar!(y + Math.PI - 0.6, 0.42), antes[1]);
       await page.waitForTimeout(1300);
       await foto(nome);
       await page.evaluate(([p, y]) => window.__brumaluz!.apontar!(y, p), [antes[0], antes[1]] as const);

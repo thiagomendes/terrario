@@ -647,11 +647,13 @@ function alvoNaVila(
   }
   if (c.chave === CHAVE_LANCHE) {
     // sem feno: o fardo da beira do caminho; com o feno na mão: o cocho da fazendinha
-    // (o canto do noroeste do cocho, de quem vem da porteira: as lhamas comem do outro lado)
+    // (o canto do noroeste do cocho, de quem vem da porteira: as lhamas comem do outro lado).
+    // A trilha acaba a uns três blocos: de perto demais a coisa fica nos pés do boneco, atrás
+    // dele na câmera (e, deitado, embaixo da faixa boa da tela para a dica de toque)
     if (mundo.comFeno?.())
-      return sitio('cocho', pq.cocho[0] - 0.8, pq.cocho[2] - 1.6, 2.2, 'cocho', 0.4);
+      return sitio('cocho', pq.cocho[0] - 1.4, pq.cocho[2] - 2.4, 1.5, 'cocho', 0.4);
     // (do lado da porteira: é de lá que ela vem buscar a segunda braçada)
-    return sitio('fardo', pq.fardo[0] + 0.8, pq.fardo[2] + 1.2, 2, 'feno', 1.6);
+    return sitio('fardo', pq.fardo[0] + 1.2, pq.fardo[2] + 2.6, 1.4, 'feno', 1.6);
   }
   if (c.chave === 'achou:instrumento') {
     // o estojo mais perto que ainda está no chão (um em cada zona)

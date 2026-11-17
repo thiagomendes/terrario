@@ -8,7 +8,7 @@ import {
   tocar,
   type Tamanho,
 } from './guia-palco';
-import { alvoDeSentar, alvoDoToque, esperarDica } from './vila-alvo';
+import { alvoDeSentar, alvoDoToque, diagnostico, esperarDica } from './vila-alvo';
 
 /**
  * Spec 026 (parte 2, etapa B): as quatro missões do parque, do "brincar" à festa, no celular
@@ -172,7 +172,8 @@ async function seguir(page: Page, teto = 150_000, esperado?: string): Promise<st
 /** A foto do boneco de frente (o que está na mão à vista) e a câmera de volta. */
 async function fotoDeFrente(page: Page, nome: string): Promise<void> {
   const antes = await page.evaluate(() => window.__brumaluz!.rotacao ?? [0, 0]);
-  await page.evaluate((yaw) => window.__brumaluz!.apontar!(yaw + Math.PI - 0.6, 0.15), antes[1]);
+  // (de cima: a câmera passa por cima das barracas e das cercas em volta)
+  await page.evaluate((yaw) => window.__brumaluz!.apontar!(yaw + Math.PI - 0.6, 0.42), antes[1]);
   await page.waitForTimeout(1300);
   await foto(page, nome);
   await page.evaluate(([p, y]) => window.__brumaluz!.apontar!(y, p), [antes[0], antes[1]] as const);
@@ -315,7 +316,9 @@ async function baloes(page: Page, t: Tamanho): Promise<void> {
       if ((await dica(page))?.chave === `balao-${i}`) break;
       await page.waitForTimeout(500);
     }
-    expect((await dica(page))?.texto).toBe('Toque para pegar');
+    expect((await dica(page))?.texto, await diagnostico(page, `balao-${i}`)).toBe(
+      'Toque para pegar',
+    );
     if (k === 0) await foto(page, `${t}-f6-1-dica-no-balao`);
     const ponto = await alvoDoToque(page, `balao-${i}`);
     await page.touchscreen.tap(ponto.x, ponto.y);
@@ -341,14 +344,15 @@ async function baloes(page: Page, t: Tamanho): Promise<void> {
   await page.evaluate(async () => {
     const e = window.__brumaluz!;
     const q = e.vila!()!;
-    e.teleportar!(q.pontos.parque.entrada[0], q.pontos.parque.entrada[2] - 6, q.h + 1.2);
-    e.apontar!(Math.PI, 0.1);
+    // (andando para o arco da entrada, no caminho aberto; a câmera atrás e à direita dela)
+    e.teleportar!(q.pontos.parque.entrada[0], q.pontos.parque.entrada[2] - 7, q.h + 1.2);
+    e.apontar!(0, 0.1);
     await new Promise((r) => setTimeout(r, 600));
     e.controleDireto!.mover(1, 0);
     await new Promise((r) => setTimeout(r, 700));
     e.controleDireto!.mover(0, 0);
     await new Promise((r) => setTimeout(r, 400));
-    e.apontar!(Math.PI - 0.7, 0.3);
+    e.apontar!(-0.65, 0.2);
   });
   await page.waitForTimeout(2600);
   expect(
