@@ -169,6 +169,187 @@ const arcoNeon = (aceso: boolean) => `
       : ''
   }`;
 
+/** O fardo de feno dourado com as duas cintas vermelhas (o mesmo do pastinho). */
+const fardo = () => `
+    <rect x="8" y="18" width="48" height="38" rx="7" fill="#c9952a"/>
+    <rect x="8" y="14" width="48" height="38" rx="7" fill="#f2c94a" ${s()}/>
+    <path d="M14 24 h16 M34 30 h16 M14 36 h12 M30 42 h18 M18 46 h10" stroke="#c9952a" stroke-width="2.4" stroke-linecap="round"/>
+    <rect x="18" y="13" width="7" height="40" rx="2" fill="#e8302a" ${s(2)}/>
+    <rect x="39" y="13" width="7" height="40" rx="2" fill="#e8302a" ${s(2)}/>
+    <path d="M10 14 l-4 -6 M16 13 l-1 -7 M50 13 l2 -7 M56 15 l5 -5" stroke="#d9a53a" stroke-width="2.4" stroke-linecap="round"/>`;
+
+// ------------------------------------------------------------------ etapa B: as missões do parque
+
+/** A setinha de "vai para lá" (o contorno marrom e a cor por cima): a haste e a ponta. */
+const seta = (haste: string, ponta: string, cor = '#3ccf7a') => `
+  <path d="${haste}" fill="none" stroke="${C}" stroke-width="8" stroke-linecap="round"/>
+  <path d="${ponta}" fill="none" stroke="${C}" stroke-width="8" ${L}/>
+  <path d="${haste}" fill="none" stroke="${cor}" stroke-width="4" stroke-linecap="round"/>
+  <path d="${ponta}" fill="none" stroke="${cor}" stroke-width="4" ${L}/>`;
+
+/** O coração (o mesmo da lhama feliz), com o meio em (cx, cy). */
+const coracao = (cx: number, cy: number, k = 1) => `
+  <path d="M0 9 C-8 3 -10 -3 -6 -7 C-3 -10 0 -9 2 -6 C4 -9 7 -10 10 -7 C14 -3 12 3 4 9 Q2 10.4 0 9 Z" transform="translate(${cx - 2 * k} ${cy}) scale(${k})" fill="#ff5a7a" ${s(2.2)}/>`;
+
+/** A faísca de quatro pontas (o brilhinho de "pronto"). */
+const faisca = (cx: number, cy: number, k = 1) => `
+  <path d="M0 -6 l1.6 4.4 l4.4 1.6 l-4.4 1.6 l-1.6 4.4 l-1.6 -4.4 l-4.4 -1.6 l4.4 -1.6 Z" transform="translate(${cx} ${cy}) scale(${k})" fill="#ffe66a" ${s(1.2)}/>`;
+
+/** O balão de brinquedo (o meio em cx, cy): o corpo, o nozinho e o risquinho de brilho. */
+const balaoSolto = (cx: number, cy: number, k = 1, cor = '#e8302a', sombra = '#b3221c') => `
+  <g transform="translate(${cx} ${cy}) scale(${k})">
+    <path d="M-4.5 23 L0 16 L4.5 23 Z" fill="${cor}" ${s(2.2)}/>
+    <ellipse cx="0" cy="1.5" rx="15.5" ry="18" fill="${sombra}"/>
+    <ellipse cx="0" cy="0" rx="15.5" ry="18" fill="${cor}" ${s()}/>
+    <path d="M-9 -7 Q-7 -12 -1 -13" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" opacity="0.9"/>
+  </g>`;
+
+/** O fio do balão, de (x, y) para baixo, em duas voltinhas. */
+const fio = (x: number, y: number, h: number) =>
+  `<path d="M${x} ${y} q-5 ${h * 0.25} 0 ${h * 0.5} q5 ${h * 0.25} 0 ${h * 0.5}" fill="none" stroke="${C}" stroke-width="2.2" stroke-linecap="round"/>`;
+
+/** O contorno do bilhete (os dois picotes de lado). */
+const BILHETE =
+  'M8 16 H56 Q60 16 60 20 V27 A5 5 0 0 0 60 37 V44 Q60 48 56 48 H8 Q4 48 4 44 V37 A5 5 0 0 0 4 27 V20 Q4 16 8 16 Z';
+/** As tintas dos três carimbos (roda, cavalinho, carrinho): nunca em ordem de arco-íris. */
+const TINTAS = ['#2f7fff', '#e8302a', '#f29a16'] as const;
+
+/** O bilhete do parque: em branco (três lugares de carimbo) ou carimbado, com a faísca. */
+const bilhete = (carimbado: boolean) => `
+  <g transform="rotate(-8 32 32)">
+    <path d="${BILHETE}" fill="#c9952a" transform="translate(0 3)"/>
+    <path d="${BILHETE}" fill="#fff1d6" ${s()}/>
+    <path d="M17.5 18 V46" stroke="${C}" stroke-width="2" stroke-dasharray="2.6 3.2" stroke-linecap="round"/>
+    <polygon points="${estrela5(11.6, 32.6, 3.8)}" fill="#e8302a"/>
+    ${[26.5, 39.5, 52]
+      .map((x, k) =>
+        carimbado
+          ? `<circle cx="${x}" cy="32" r="5.6" fill="${TINTAS[k]}" ${s(1.8)}/><circle cx="${x}" cy="32" r="2.2" fill="#fff8ea"/>`
+          : `<circle cx="${x}" cy="32" r="5.4" fill="#fffdf6" stroke="#a8804a" stroke-width="2.2" stroke-dasharray="3 2.2"/>`,
+      )
+      .join('')}
+  </g>
+  ${carimbado ? faisca(52, 12, 1.25) + faisca(9, 54, 0.8) : ''}`;
+
+/** O carimbo redondo de tinta (o aro e o desenho do brinquedo na mesma tinta). */
+const carimbo = (cor: string, miolo: string) => `
+  <circle cx="32" cy="35" r="27" fill="#d9b77a"/>
+  <circle cx="32" cy="32" r="27" fill="#fff8ea" ${s()}/>
+  <circle cx="32" cy="32" r="21.5" fill="none" stroke="${cor}" stroke-width="3.2"/>
+  ${miolo}`;
+
+/** O cocho de madeira, vazio ou com o feno (as pernas em X, as tábuas, o fundo escuro). */
+const cocho = (feno: boolean) => `
+  <path d="M15 40 L9 59 M23 40 L28 59 M49 40 L55 59 M41 40 L36 59" stroke="${C}" stroke-width="7.5" stroke-linecap="round"/>
+  <path d="M15 40 L9 59 M23 40 L28 59 M49 40 L55 59 M41 40 L36 59" stroke="#8a5a30" stroke-width="3.6" stroke-linecap="round"/>
+  ${
+    feno
+      ? `<path d="M10 24 Q12 10 22 13 Q27 4 35 10 Q44 5 47 14 Q56 13 54 24 Z" fill="#f2c94a" ${s()}/>
+  <path d="M19 19 l3 -5 M30 17 l1 -6 M41 19 l3 -5 M25 22 h8 M38 22 h7" stroke="#c9952a" stroke-width="2.2" stroke-linecap="round"/>`
+      : ''
+  }
+  <path d="M4 22 H60 L54 44 H10 Z" fill="#8a5a30" transform="translate(0 2.5)"/>
+  <path d="M4 22 H60 L54 44 H10 Z" fill="#c98a4a" ${s()}/>
+  ${feno ? '' : `<path d="M9 23.5 H55 L53.4 29 H10.6 Z" fill="#6e4424"/>`}
+  <path d="M8 32.5 H56" stroke="#8a5a30" stroke-width="2.4" stroke-linecap="round"/>
+  <circle cx="13" cy="27" r="1.5" fill="#6e4424"/><circle cx="51" cy="27" r="1.5" fill="#6e4424"/>
+  <circle cx="15" cy="38.5" r="1.5" fill="#6e4424"/><circle cx="49" cy="38.5" r="1.5" fill="#6e4424"/>`;
+
+/**
+ * A lhama de pelúcia (a prenda): sentadinha, creme, as orelhas em pé, o cachecol vermelho e a
+ * mantinha azul; a costura pontilhada diz que é de pano.
+ */
+const pelucia = () => `
+  <path d="M12 60 Q7 45 20 40 H44 Q57 45 52 60 Z" fill="#f4e6cf" ${s()}/>
+  <path d="M10.6 50 Q32 44.4 53.4 50 L53.6 57 Q32 51.4 10.4 57 Z" fill="#2f8cff" ${s(2.2)}/>
+  <path d="M14.6 53.6 Q32 48.2 49.4 53.6" fill="none" stroke="#fff7e6" stroke-width="1.8" stroke-dasharray="2.6 3" stroke-linecap="round"/>
+  <ellipse cx="22" cy="59.6" rx="7" ry="3.6" fill="#fff7e6" ${s(2.4)}/><ellipse cx="42" cy="59.6" rx="7" ry="3.6" fill="#fff7e6" ${s(2.4)}/>
+  <rect x="24" y="15" width="16" height="29" rx="7" fill="#f4e6cf" ${s()}/>
+  <path d="M36.5 36 L38.6 48.4 L45.8 46.6 L43 35 Z" fill="#e8302a" ${s(2.2)}/>
+  <rect x="20.5" y="31.6" width="23" height="7.8" rx="3.9" fill="#e8302a" ${s(2.4)}/>
+  <ellipse cx="24.6" cy="6" rx="3" ry="6" transform="rotate(-16 24.6 6)" fill="#f4e6cf" ${s(2.4)}/>
+  <ellipse cx="39.4" cy="6" rx="3" ry="6" transform="rotate(16 39.4 6)" fill="#f4e6cf" ${s(2.4)}/>
+  <ellipse cx="32" cy="16" rx="12.5" ry="10.5" fill="#f4e6cf" ${s()}/>
+  <path d="M26.4 8.4 Q28.6 3.6 32 6 Q35.4 3.6 37.6 8.4 Q34.6 7.6 32 9.8 Q29.4 7.6 26.4 8.4 Z" fill="#fff7e6" ${s(1.8)}/>
+  <ellipse cx="32" cy="20.6" rx="5.8" ry="4.2" fill="#fff7e6"/>
+  <path d="M30.5 19 h3 l-1.5 1.9 Z" fill="${C}"/>
+  <path d="M29.4 22.4 Q32 24.2 34.6 22.4" fill="none" stroke="${C}" stroke-width="1.6" stroke-linecap="round"/>
+  <circle cx="25.6" cy="15" r="2.3" fill="${C}"/><circle cx="38.4" cy="15" r="2.3" fill="${C}"/>
+  <circle cx="26.3" cy="14.3" r="0.85" fill="#fff"/><circle cx="39.1" cy="14.3" r="0.85" fill="#fff"/>
+  <ellipse cx="22.6" cy="19.8" rx="2.5" ry="1.5" fill="#ffb4a8"/><ellipse cx="41.4" cy="19.8" rx="2.5" ry="1.5" fill="#ffb4a8"/>`;
+
+/**
+ * A vovó (o rosto do boneco do jogo): o cabelo grisalho de coque, os óculos redondos, as
+ * bochechas e o sorriso; a gola do casaquinho lilás. `feliz`: de olhinhos fechados.
+ */
+const vovo = (feliz = false) => `
+  <circle cx="32" cy="9.5" r="8" fill="#d6d3de" ${s(2.6)}/>
+  <path d="M27.5 8 Q32 4.6 36.5 8" fill="none" stroke="#f4f2f8" stroke-width="2" stroke-linecap="round"/>
+  <path d="M13 62 Q14 52 24 51 H40 Q50 52 51 62 Z" fill="#b9a2e6" ${s()}/>
+  <path d="M27 51.5 L32 58 L37 51.5 Z" fill="#fbf3e0" ${s(1.8)}/>
+  <rect x="13" y="16" width="38" height="37" rx="11" fill="#f1c9a5" ${s()}/>
+  <path d="M13 30 Q11 14 32 14 Q53 14 51 30 Q46 21 32 21 Q18 21 13 30 Z" fill="#d6d3de" ${s(2.6)}/>
+  <ellipse cx="18.6" cy="43.6" rx="3.6" ry="2.2" fill="#ff9d94"/><ellipse cx="45.4" cy="43.6" rx="3.6" ry="2.2" fill="#ff9d94"/>
+  <circle cx="24" cy="35" r="6.6" fill="#fff" fill-opacity="0.45" ${s(2.2)}/><circle cx="40" cy="35" r="6.6" fill="#fff" fill-opacity="0.45" ${s(2.2)}/>
+  <path d="M30.6 34.4 Q32 33 33.4 34.4" fill="none" stroke="${C}" stroke-width="2.2" stroke-linecap="round"/>
+  ${
+    feliz
+      ? `<path d="M21 35.6 q3 -3.4 6 0 M37 35.6 q3 -3.4 6 0" fill="none" stroke="${C}" stroke-width="2.2" stroke-linecap="round"/>`
+      : `<circle cx="24" cy="35.2" r="2.3" fill="${C}"/><circle cx="40" cy="35.2" r="2.3" fill="${C}"/>
+  <circle cx="24.8" cy="34.4" r="0.8" fill="#fff"/><circle cx="40.8" cy="34.4" r="0.8" fill="#fff"/>`
+  }
+  <path d="M25.6 45 Q32 50.6 38.4 45" fill="none" stroke="${C}" stroke-width="2.4" stroke-linecap="round"/>`;
+
+/** A argola caída no pino (a base de madeira, o pino amarelo e a argola vermelha em volta). */
+const argola = () => `
+  <ellipse cx="32" cy="54.5" rx="22" ry="6.5" fill="#8a5a30"/>
+  <ellipse cx="32" cy="52" rx="22" ry="6.5" fill="#c98a4a" ${s()}/>
+  <ellipse cx="32" cy="41" rx="19" ry="7.5" fill="none" stroke="${C}" stroke-width="9.5"/>
+  <ellipse cx="32" cy="41" rx="19" ry="7.5" fill="none" stroke="#e8302a" stroke-width="5"/>
+  <rect x="27" y="13" width="10" height="40" rx="5" fill="#ffd23d" ${s()}/>
+  <path d="M30 18 V30" stroke="#fff6c8" stroke-width="2.2" stroke-linecap="round"/>
+  <path d="M13 41 A19 7.5 0 0 0 51 41" fill="none" stroke="${C}" stroke-width="9.5" stroke-linecap="round"/>
+  <path d="M13 41 A19 7.5 0 0 0 51 41" fill="none" stroke="#e8302a" stroke-width="5" stroke-linecap="round"/>
+  <path d="M18 44.6 Q24 47.6 30 48" fill="none" stroke="#ffb4ac" stroke-width="1.8" stroke-linecap="round"/>
+  <path d="M12 20 l-5 -4 M52 20 l5 -4 M32 7 v-5" stroke="#ffe66a" stroke-width="2.8" stroke-linecap="round"/>`;
+
+/** O peixinho de brinquedo pescado: a linha, o ímã vermelho, a argolinha e as gotinhas. */
+const peixinho = () => `
+  <path d="M34 1 V11" stroke="${C}" stroke-width="2.4" stroke-linecap="round"/>
+  <path d="M27 10 H41 V22 H36.5 V15.5 H31.5 V22 H27 Z" fill="#e8302a" ${s(2.2)}/>
+  <path d="M27 19 h4.5 M36.5 19 H41" stroke="#e6e8f0" stroke-width="3"/>
+  <circle cx="34" cy="26.5" r="3.6" fill="none" stroke="${C}" stroke-width="4.4"/>
+  <circle cx="34" cy="26.5" r="3.6" fill="none" stroke="#d4d8e2" stroke-width="2"/>
+  <path d="M19 42 L5 30 Q9 42 5 54 Z" fill="#ffb02a" ${s(2.6)}/>
+  <ellipse cx="35" cy="44.5" rx="21" ry="13" fill="#d96a12"/>
+  <ellipse cx="35" cy="42" rx="21" ry="13" fill="#ff8a2a" ${s()}/>
+  <path d="M26 36 Q33 28.6 42 35" fill="none" stroke="#ffd0a0" stroke-width="2.6" stroke-linecap="round"/>
+  <path d="M29 47 q5 5 10 0" fill="#ffb02a" ${s(2)}/>
+  <circle cx="46" cy="39.5" r="4.4" fill="#fff" ${s(1.8)}/><circle cx="47" cy="39.8" r="2" fill="${C}"/>
+  <path d="M48 47.4 q3 1 5 -1.6" fill="none" stroke="${C}" stroke-width="2" stroke-linecap="round"/>
+  <path d="M12 12 q-3.4 5 0 6.6 q3.4 -1.6 0 -6.6 Z M56 20 q-3 4.4 0 5.8 q3 -1.4 0 -5.8 Z" fill="#8fe0f6" ${s(1.4)}/>`;
+
+/** A mãozinha fechada que segura (o fio do balão passa por dentro). */
+const punho = (cx: number, cy: number, k = 1) => `
+  <g transform="translate(${cx} ${cy}) scale(${k})">
+    <path d="M-12 14 V-2 Q-12 -9 -5 -9 H8 Q14 -9 14 -3 V6 Q14 14 6 14 Z" fill="#ffd9b8" ${s()}/>
+    <path d="M-12 1 Q-18 0 -18 -6 Q-17 -11 -11 -9" fill="#ffd9b8" ${s()}/>
+    <path d="M-4 -9 V-1 M3 -9 V-1 M9 -8 V-1" stroke="${C}" stroke-width="2.2" stroke-linecap="round"/>
+  </g>`;
+
+/** A fita de vídeo (grafite, o rótulo creme com um risco vermelho e um azul, os dois carretéis). */
+const fitaVideo = () => `
+  <rect x="3" y="17" width="58" height="36" rx="5" fill="#24232b"/>
+  <rect x="3" y="13" width="58" height="36" rx="5" fill="#3d3c48" ${s()}/>
+  <rect x="9" y="17.5" width="46" height="11" rx="2" fill="#fff6e0" ${s(2)}/>
+  <path d="M13 21.4 h24" stroke="#e8302a" stroke-width="2.6" stroke-linecap="round"/>
+  <path d="M13 25.4 h15" stroke="#2f7fff" stroke-width="2.6" stroke-linecap="round"/>
+  <rect x="12" y="31.5" width="40" height="13.5" rx="3" fill="#24232b" ${s(2)}/>
+  <circle cx="21.5" cy="38.2" r="4.6" fill="#fff6e0"/><circle cx="42.5" cy="38.2" r="4.6" fill="#fff6e0"/>
+  <circle cx="21.5" cy="38.2" r="1.6" fill="#3d3c48"/><circle cx="42.5" cy="38.2" r="1.6" fill="#3d3c48"/>
+  <rect x="28.5" y="34" width="7" height="8.4" rx="1.4" fill="#8a8ea0"/>
+  <path d="M7 16 Q10 14.6 16 14.8" fill="none" stroke="#6a6878" stroke-width="2" stroke-linecap="round"/>`;
+
 const BASE: Record<string, string> = {
   // ------------------------------------------------------------ a1: os instrumentos
   a80Guitarra: svg(guitarra(33, 37, 0.92)),
@@ -214,13 +395,7 @@ const BASE: Record<string, string> = {
   a80LhamaCoracao: svg(`${lhama(true)}
     <path d="M14 22 C6 16 4 10 8 6 C11 3 14 4 16 7 C18 4 21 3 24 6 C28 10 26 16 18 22 Z" transform="translate(-2 -2)" fill="#ff5a7a" ${s(2.2)}/>`),
   /** O fardo de feno dourado com duas cintas rosa (o mesmo do pastinho). */
-  a80Feno: svg(`
-    <rect x="8" y="18" width="48" height="38" rx="7" fill="#c9952a"/>
-    <rect x="8" y="14" width="48" height="38" rx="7" fill="#f2c94a" ${s()}/>
-    <path d="M14 24 h16 M34 30 h16 M14 36 h12 M30 42 h18 M18 46 h10" stroke="#c9952a" stroke-width="2.4" stroke-linecap="round"/>
-    <rect x="18" y="13" width="7" height="40" rx="2" fill="#e8302a" ${s(2)}/>
-    <rect x="39" y="13" width="7" height="40" rx="2" fill="#e8302a" ${s(2)}/>
-    <path d="M10 14 l-4 -6 M16 13 l-1 -7 M50 13 l2 -7 M56 15 l5 -5" stroke="#d9a53a" stroke-width="2.4" stroke-linecap="round"/>`),
+  a80Feno: svg(fardo()),
   // ------------------------------------------------------------ a3: o grande show
   a80CaixaSom: svg(caixaSom(false)),
   a80CaixaSomAcesa: svg(caixaSom(true)),
@@ -372,6 +547,138 @@ const BASE: Record<string, string> = {
     <circle cx="25.8" cy="39.2" r="1" fill="#fff"/><circle cx="39.8" cy="39.2" r="1" fill="#fff"/>
     <ellipse cx="32" cy="46" rx="3.2" ry="2.4" fill="${C}"/>
     <ellipse cx="20" cy="47" rx="3.6" ry="2" fill="#ff9db4"/><ellipse cx="44" cy="47" rx="3.6" ry="2" fill="#ff9db4"/>`),
+  // ------------------------------------------------------------ f5: o bilhete do parque
+  bilhete: svg(bilhete(false)),
+  bilheteCarimbado: svg(bilhete(true)),
+  /** O carimbo de qualquer brinquedo (a bolinha da missão): a estrela na tinta vermelha. */
+  carimbo: svg(
+    carimbo(TINTAS[1], `<polygon points="${estrela5(32, 32.6, 12.5)}" fill="${TINTAS[1]}"/>`),
+  ),
+  carimboRoda: svg(
+    carimbo(
+      TINTAS[0],
+      `<path d="M32 30 L24.5 46.5 M32 30 L39.5 46.5 M21 47 H43" fill="none" stroke="${TINTAS[0]}" stroke-width="3" ${L}/>
+    <circle cx="32" cy="29" r="11" fill="none" stroke="${TINTAS[0]}" stroke-width="3"/>
+    <path d="M32 18 V40 M21 29 H43" stroke="${TINTAS[0]}" stroke-width="1.8"/>
+    <circle cx="43" cy="29" r="2.7" fill="${TINTAS[0]}"/><circle cx="37.5" cy="38.5" r="2.7" fill="${TINTAS[0]}"/>
+    <circle cx="26.5" cy="38.5" r="2.7" fill="${TINTAS[0]}"/><circle cx="21" cy="29" r="2.7" fill="${TINTAS[0]}"/>
+    <circle cx="26.5" cy="19.5" r="2.7" fill="${TINTAS[0]}"/><circle cx="37.5" cy="19.5" r="2.7" fill="${TINTAS[0]}"/>
+    <circle cx="32" cy="29" r="2.6" fill="${TINTAS[0]}"/>`,
+    ),
+  ),
+  carimboCavalinho: svg(
+    carimbo(
+      TINTAS[1],
+      `<path d="M32 15 V50" stroke="${TINTAS[1]}" stroke-width="2.4" stroke-linecap="round"/>
+    <circle cx="32" cy="14" r="2.2" fill="${TINTAS[1]}"/>
+    <ellipse cx="30.5" cy="34" rx="9.6" ry="5.8" fill="${TINTAS[1]}"/>
+    <path d="M35 33 L38.5 22 L46.4 24.6 L45.2 28.8 L41.4 28.4 L41 35.5 Z M38.6 22.6 l0.4 -4.6 l3.6 3.4 Z" fill="${TINTAS[1]}" stroke="${TINTAS[1]}" stroke-width="1.2" ${L}/>
+    <path d="M24 37 l-3.6 6.4 M28.6 39 l-1 7 M35 39 l2.6 6.4 M39 36.4 l5 4 M21.6 32.6 q-5 1.6 -3.6 8" fill="none" stroke="${TINTAS[1]}" stroke-width="3" ${L}/>
+    <rect x="27.4" y="29.6" width="6.4" height="4" rx="1.4" fill="#fff8ea"/>`,
+    ),
+  ),
+  carimboCarrinho: svg(
+    carimbo(
+      TINTAS[2],
+      `<path d="M41 31 V17" stroke="${TINTAS[2]}" stroke-width="2.6" stroke-linecap="round"/>
+    <polygon points="${estrela5(41, 15.6, 4.6)}" fill="${TINTAS[2]}"/>
+    <circle cx="29" cy="26.4" r="4.2" fill="${TINTAS[2]}"/>
+    <path d="M17 41 Q17 30.5 27 30.5 H39 Q47 30.5 47 41 Z" fill="${TINTAS[2]}"/>
+    <rect x="22" y="34.4" width="20" height="2.6" rx="1.3" fill="#fff8ea"/>
+    <rect x="13.5" y="41.4" width="37" height="6.6" rx="3.3" fill="${TINTAS[2]}"/>`,
+    ),
+  ),
+  // ------------------------------------------------------------ f6: os balões fugidos
+  /** O balão preso na copa da árvore (a árvore de blocos do jogo, o balão enroscado no canto). */
+  balaoPreso: svg(`
+    <rect x="25" y="46" width="10" height="16" fill="#8a5a3a" ${s()}/>
+    <path d="M4 51 V34 H10 V25 H19 V19 H38 V25 H47 V34 H53 V51 Z" fill="#2c7a3c" transform="translate(0 3)"/>
+    <path d="M4 51 V34 H10 V25 H19 V19 H38 V25 H47 V34 H53 V51 Z" fill="#46a84e" ${s()}/>
+    <path d="M11 31 h7 v6 h-7 Z M19 41 h7 v6 h-7 Z M38 43 h8 v5 h-8 Z" fill="#6cc76a"/>
+    ${fio(46, 36, 16)}
+    ${balaoSolto(45, 17.5, 0.82)}
+    <path d="M30 27 h9 v8 h-9 Z" fill="#46a84e" ${s(2.2)}/>`),
+  /**
+   * Um balão com o fio (a bolinha e a plaquinha da f6). O nome não é `balao`: esse já é o balão
+   * de fala do presente do nível 6 (`arte.ts`), e os desenhos da Vila entram por cima dos outros.
+   */
+  balaoParque: svg(`${fio(32, 46, 16)}${balaoSolto(32, 22, 1.1)}`),
+  /** O balão na mão (o resultado da f6): a mãozinha segura o fio. */
+  balaoNaMao: svg(`
+    <path d="M33 36 V44" stroke="${C}" stroke-width="2.2" stroke-linecap="round"/>
+    ${balaoSolto(33, 17, 0.88)}
+    ${punho(34, 50.5, 0.88)}
+    ${faisca(54, 38, 1.1)}${faisca(10, 30, 0.8)}`),
+  // ------------------------------------------------------------ f7: o lanche das lhamas
+  cocho: svg(cocho(false)),
+  /** A lhama feliz diante do cocho cheio de feno, com o coraçãozinho (o resultado da f7). */
+  lhamaComendo: svg(`
+    <g transform="translate(-7 13) scale(0.78)">${lhama(true)}</g>
+    <g transform="translate(28 31) scale(0.55)">${cocho(true)}</g>
+    ${coracao(51, 14, 1.05)}`),
+  // ------------------------------------------------------------ f8: a prenda para a vovó
+  pelucia: svg(pelucia()),
+  argola: svg(argola()),
+  peixinho: svg(peixinho()),
+  vovo: svg(vovo()),
+  /** A vovó abraçada na lhama de pelúcia, com o coração (o resultado da f8). */
+  vovoPresente: svg(`
+    <g transform="translate(-3 -2) scale(0.76)">${vovo(true)}</g>
+    <g transform="translate(25 27) scale(0.58)">${pelucia()}</g>
+    <path d="M9 45 Q13 60 34 58" fill="none" stroke="${C}" stroke-width="11" stroke-linecap="round"/>
+    <path d="M9 45 Q13 60 34 58" fill="none" stroke="#b9a2e6" stroke-width="6.4" stroke-linecap="round"/>
+    <circle cx="36.5" cy="57.6" r="4.4" fill="#f1c9a5" ${s(2)}/>
+    ${coracao(52, 13, 1.1)}`),
+  // ------------------------------------------------------------ as dicas de toque da etapa B
+  /** "Toque para pegar": o balão, a setinha verde que desce e a mãozinha que espera. */
+  dicaPegarBalao: svg(`${fio(23, 42, 16)}${balaoSolto(23, 20, 0.92)}
+    ${seta('M49 7 V33', 'M40 27 L49 38 L58 27')}
+    ${punho(50, 52, 0.62)}`),
+  /** "Toque para pegar": o fardo de feno e a setinha verde até a mão. */
+  dicaFeno: svg(`
+    <g transform="translate(-2 20) scale(0.64)">${fardo()}</g>
+    ${seta('M22 21 Q32 5 47 19', 'M38 17 L48 23.5 L52 12.5')}
+    ${punho(49, 46, 0.72)}`),
+  /** "Toque para dar": o feno e a setinha verde para dentro do cocho. */
+  dicaCocho: svg(`
+    <g transform="translate(1 0) scale(0.44)">${fardo()}</g>
+    <g transform="translate(17 27) scale(0.6)">${cocho(false)}</g>
+    ${seta('M30 12 Q43 12 43 29', 'M34 23.5 L43 34.5 L52 23.5')}`),
+  dicaArgola: svg(argola()),
+  dicaPescaria: svg(peixinho()),
+  /** O fone do orelhão (de brinquedo, azul), o fio enroladinho e os risquinhos de "trim". */
+  dicaTelefone: svg(`
+    <path d="M13 49 q-7 2 -4 7 q4 5 9 1 q4 -3 8 0 q3 3 7 1" fill="none" stroke="${C}" stroke-width="2.6" stroke-linecap="round"/>
+    <g transform="rotate(-38 32 32)">
+      <rect x="7" y="22" width="16" height="23" rx="6" fill="#2f8cff" ${s()}/>
+      <rect x="41" y="22" width="16" height="23" rx="6" fill="#2f8cff" ${s()}/>
+      <rect x="7" y="16" width="50" height="13" rx="6.5" fill="#2f8cff" ${s()}/>
+      <rect x="9.6" y="24" width="10.8" height="6" fill="#2f8cff"/><rect x="43.6" y="24" width="10.8" height="6" fill="#2f8cff"/>
+      <path d="M13 20.4 H49" stroke="#9cc8ff" stroke-width="2.6" stroke-linecap="round"/>
+      <path d="M11.5 38 h7 M11.5 41.4 h7 M45.5 38 h7 M45.5 41.4 h7" stroke="#1c5fc0" stroke-width="1.8" stroke-linecap="round"/>
+    </g>
+    <path d="M47 7 l2 -5 M55 12 l5 -3 M58 21 l5 1" stroke="#ffe66a" stroke-width="3" stroke-linecap="round"/>`),
+  dicaFita: svg(fitaVideo()),
+  /** A vitamina da lanchonete: o copo alto, a espuma branca e os dois canudos. */
+  dicaVitamina: svg(`
+    <ellipse cx="32" cy="59.6" rx="14" ry="3" fill="#d9b77a"/>
+    <path d="M27 15 L21 3" stroke="${C}" stroke-width="6.4" stroke-linecap="round"/>
+    <path d="M27 15 L21 3" stroke="#e8302a" stroke-width="3.2" stroke-linecap="round"/>
+    <path d="M37 15 L45 4" stroke="${C}" stroke-width="6.4" stroke-linecap="round"/>
+    <path d="M37 15 L45 4" stroke="#2f7fff" stroke-width="3.2" stroke-linecap="round"/>
+    <path d="M19 17 H45 L42 53 Q41.6 58 37 58 H27 Q22.4 58 22 53 Z" fill="#ff9ec4" ${s()}/>
+    <path d="M26.4 27 L27.6 48" stroke="#ffd3e6" stroke-width="3.2" stroke-linecap="round"/>
+    <path d="M17 14 Q17 9.4 22 10.4 Q26 5.4 32 9.4 Q38 5.4 42 10.4 Q47 9.4 47 14.4 Q47 20.4 42 20.4 H22 Q17 20.4 17 14 Z" fill="#fff6ee" ${s()}/>`),
+  /** A revista da banca (inventada, sem letras): a faixa do título, a estrela e as chamadas. */
+  dicaRevista: svg(`
+    <g transform="rotate(-8 32 32)">
+      <rect x="14" y="10" width="40" height="50" rx="3" fill="#d9b77a"/>
+      <rect x="11" y="6" width="40" height="50" rx="3" fill="#2f8cff" ${s()}/>
+      <path d="M14.6 9 V53" stroke="#1c5fc0" stroke-width="2.6" stroke-linecap="round"/>
+      <rect x="18" y="10.5" width="29" height="8" rx="2" fill="#ffe14a" ${s(1.8)}/>
+      <polygon points="${estrela5(32.5, 33.5, 10.5)}" fill="#fff6e0" ${s(2)}/>
+      <rect x="18" y="47.4" width="12" height="4" rx="2" fill="#e8302a"/><rect x="33" y="47.4" width="14" height="4" rx="2" fill="#fff6e0"/>
+    </g>`),
 };
 
 /** Os 3 da festa de cada missão (o trio de instrumentos da a1, na ordem das bolinhas). */

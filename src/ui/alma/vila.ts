@@ -8,7 +8,15 @@
  *   dispara o fim; o dedo é todo do jogo (o arrastar gira a câmera o show inteiro);
  * - **o suporte dos patins** (um toque calça, outro tira; arrastar o dedo por cima dele não
  *   calça) e os brinquedos de tocar;
- * - **o feno na mão (f2):** o "pop" do feno que aparece perto das lhamas, já selecionado.
+ * - **o feno na mão (f2):** o "pop" do feno que aparece perto das lhamas, já selecionado;
+ * - **as missões do parque (parte 2, etapa B):** o balão fugido (um toque de perto, de baixo), o
+ *   fardo de feno e o cocho, as barracas de prendas; a prenda, o feno, a fita e a vitamina que
+ *   chegam aparecem na mão com o "pop";
+ * - **os toques da Rua anos 80:** o orelhão, a parede de fitas da locadora, o balcão da
+ *   lanchonete, as revistas da banca e a campainha das bicicletas (o toque de verdade: arrastar o
+ *   dedo por cima continua da câmera).
+ *
+ * Cada coisa que se toca tem a dica de toque (a mãozinha e o balãozinho com o desenho).
  */
 import type { Scene } from '@babylonjs/core/scene';
 import type { EstadoDepuracao } from '../../render/cena';
@@ -28,6 +36,22 @@ import {
 import { boaParaDica, criarDicaToque } from './dicaToque';
 import { arte as arteAlma } from './arte';
 import { CSS_CANTO } from './canto';
+import { criarRevista } from './revista';
+import {
+  ALCANCE_COCHO,
+  ALCANCE_FARDO,
+  ALCANCE_LOJA,
+  F_BALOES,
+  F_LANCHE,
+  F_PRENDA,
+  MAX_FITAS,
+  MAX_VITAMINAS,
+  N_BALOES,
+  PRENDAS,
+  alcancaOBalao,
+  lugarDoBalao,
+} from '../../jogo/missoesParque';
+import { FITA_VIDEO, PELUCIA, VITAMINA } from '../../jogo/exclusivos';
 
 declare global {
   interface Window {
@@ -43,6 +67,13 @@ declare global {
         sentar: { b: number; t: { x: number; y: number } | null }[];
         tocar: { qual: string; i: number; t: { x: number; y: number } | null }[];
       };
+      /**
+       * Etapa B: o que se toca agora nas missões do parque e na rua (a chave, se a criança está
+       * ao alcance e onde fica na tela; null: fora da tela).
+       */
+      toques(): { chave: string; perto: boolean; t: { x: number; y: number } | null }[];
+      /** Etapa B: a revista da banca está aberta na tela? */
+      revista(): boolean;
     };
   }
 }
@@ -283,6 +314,193 @@ export function ligarVilaNeon(
   window.addEventListener('pointerup', soltouNoBrinquedo, { capture: true });
   window.addEventListener('pointercancel', soltouNoBrinquedo, { capture: true });
 
+  // ---------------------------------------------------------------- etapa B: as missões e a rua
+  const revista = criarRevista();
+  const rua = p.rua;
+  /** A missão está aberta para a criança agora (uma das da vez, ou o bis)? */
+  const aberta = (id: string) => !!ui.vista()?.abertas.some((a) => a.id === id);
+  /** Os passos já feitos de uma missão de lugares (a argola, a pescaria). */
+  const usosDe = (id: string) => ui.vista()?.abertas.find((a) => a.id === id)?.usos ?? [];
+  /** Quantos deste item a criança tem na mochila. */
+  const tem = (item: string): number => {
+    const inv = e.inventario;
+    if (!inv) return 0;
+    let n = 0;
+    for (let i = 0; i < 36; i++) {
+      const s = inv.obter(i);
+      if (s?.item === item) n += s.qtd;
+    }
+    return n;
+  };
+  const tNucleo = () => e.vilaTempo?.() ?? e.vilaEstado?.()?.t ?? 0;
+  const pertoDoPonto = (q: readonly number[], alcance: number) => (x: number, z: number) =>
+    Math.hypot(q[0] - x, q[2] - z) <= alcance;
+  /**
+   * Uma coisa que se toca nas missões do parque ou na rua: onde o dedo a pega, de onde a criança
+   * a alcança (a mesma conta do núcleo), o que o toque faz e a dica de toque.
+   */
+  interface ToqueB {
+    chave: string;
+    /** Vale agora (a missão aberta, o balão ainda preso, o feno na mão)? */
+    ativo(): boolean;
+    /** Onde fica (mundo): o dedo pega ali, e a mãozinha da dica aponta ali. */
+    ponto(): [number, number, number];
+    alcanca(x: number, z: number): boolean;
+    /** O raio do alvo na tela (px). */
+    raio: number;
+    /** Responde assim que o dedo desce (as missões); sem isto, só o toque de verdade vale. */
+    naHora?: boolean;
+    tocar(): void;
+    /** A dica: o desenho, as palavras e até onde (blocos) ela aparece. */
+    dica?: { figura: string; texto: string; ate?: number };
+    /** A dica aparece agora? (A fita que ela já tem não chama de novo.) */
+    comDica?(): boolean;
+  }
+  const comando = (c: Parameters<NonNullable<EstadoDepuracao['vilaMissoes']>['comando']>[0]) =>
+    e.vilaMissoes?.comando(c);
+  const TOQUES_B: ToqueB[] = [
+    // f6: os três balões fugidos (o do carrossel gira com o toldo: o alvo vai junto)
+    ...Array.from({ length: N_BALOES }, (_, i): ToqueB => ({
+      chave: `balao-${i}`,
+      ativo: () => aberta(F_BALOES) && !e.vilaEstado?.()?.bal?.[i],
+      ponto: () => {
+        const b = lugarDoBalao(pq, chaoVila, i, tNucleo());
+        return [b.x, b.y, b.z];
+      },
+      alcanca: (x, z) => alcancaOBalao(pq, chaoVila, i, tNucleo(), x, z),
+      raio: RAIO_TOQUE * 2.4,
+      naHora: true,
+      tocar: () => comando({ a: 'balao', i }),
+      dica: { figura: 'dicaPegarBalao', texto: 'Toque para pegar', ate: 6.5 },
+    })),
+    // f7: o fardo (sem feno na mão) e o cocho (com o feno)
+    {
+      chave: 'fardo',
+      ativo: () => aberta(F_LANCHE) && tem('trigo') < 1,
+      ponto: () => [pq.fardo[0], pq.fardo[1] - 0.6, pq.fardo[2]],
+      alcanca: pertoDoPonto(pq.fardo, ALCANCE_FARDO),
+      raio: RAIO_TOQUE * 2.2,
+      naHora: true,
+      tocar: () => comando({ a: 'feno' }),
+      dica: { figura: 'dicaFeno', texto: 'Toque para pegar' },
+    },
+    {
+      chave: 'cocho',
+      ativo: () => aberta(F_LANCHE) && tem('trigo') > 0,
+      ponto: () => [pq.cocho[0], pq.cocho[1] + 0.7, pq.cocho[2]],
+      alcanca: pertoDoPonto(pq.cocho, ALCANCE_COCHO),
+      raio: RAIO_TOQUE * 2.4,
+      naHora: true,
+      tocar: () => comando({ a: 'cocho' }),
+      dica: { figura: 'dicaCocho', texto: 'Toque para dar' },
+    },
+    // f8: as barracas de prendas (com a missão aberta, o toque conta; sem ela, é só brinquedo)
+    ...(['argola', 'pescaria'] as const).map(
+      (qual, i): ToqueB => ({
+        chave: qual,
+        ativo: () => aberta(F_PRENDA) && !usosDe(F_PRENDA).includes(PRENDAS[i]),
+        ponto: () => [pq[qual][0], pq[qual][1] + (i ? 1.3 : 1.5), pq[qual][2]],
+        alcanca: pertoDoPonto(pq[qual], 8),
+        raio: RAIO_TOQUE * 2.2,
+        naHora: true,
+        tocar: () => {
+          e.vilaParque?.tocar(qual);
+          comando({ a: 'prenda', i });
+        },
+        dica: { figura: i ? 'dicaPescaria' : 'dicaArgola', texto: i ? 'Toque para pescar' : 'Toque para jogar', ate: 5.5 },
+      }),
+    ),
+    // a Rua anos 80
+    {
+      chave: 'orelhao',
+      ativo: () => true,
+      ponto: () => [rua.orelhao[0], rua.orelhao[1] + 1.4, rua.orelhao[2]],
+      alcanca: pertoDoPonto(rua.orelhao, 5),
+      raio: RAIO_TOQUE * 1.7,
+      tocar: () => e.vilaMissoes?.rua('orelhao'),
+      dica: { figura: 'dicaTelefone', texto: 'Toque para ligar' },
+    },
+    {
+      chave: 'fitas',
+      ativo: () => true,
+      ponto: () => [rua.fitas[0], rua.fitas[1] + 1.2, rua.fitas[2]],
+      alcanca: pertoDoPonto(rua.fitas, ALCANCE_LOJA),
+      raio: RAIO_TOQUE * 2.4,
+      tocar: () => {
+        if (tem(FITA_VIDEO) < MAX_FITAS) comando({ a: 'fita' });
+        e.vilaMissoes?.rua('fita');
+      },
+      dica: { figura: 'dicaFita', texto: 'Toque para pegar', ate: 5 },
+      comDica: () => tem(FITA_VIDEO) < MAX_FITAS,
+    },
+    {
+      chave: 'vitamina',
+      ativo: () => true,
+      ponto: () => [rua.balcao[0], rua.balcao[1] + 1.2, rua.balcao[2]],
+      alcanca: pertoDoPonto(rua.balcao, ALCANCE_LOJA),
+      raio: RAIO_TOQUE * 2.6,
+      tocar: () => {
+        if (tem(VITAMINA) < MAX_VITAMINAS) comando({ a: 'vitamina' });
+        e.vilaMissoes?.rua('vitamina');
+      },
+      dica: { figura: 'dicaVitamina', texto: 'Toque para pedir', ate: 5 },
+      comDica: () => tem(VITAMINA) < MAX_VITAMINAS,
+    },
+    {
+      chave: 'revista',
+      ativo: () => true,
+      ponto: () => [rua.revistas[0], rua.revistas[1] + 1.5, rua.revistas[2]],
+      alcanca: pertoDoPonto(rua.revistas, 5.5),
+      raio: RAIO_TOQUE * 2.2,
+      tocar: () => {
+        e.vilaMissoes?.rua('revista');
+        revista.abrir();
+      },
+      dica: { figura: 'dicaRevista', texto: 'Toque para ver', ate: 5 },
+    },
+    // a campainha das bicicletas (sem dica: são muitas, e a tela fica limpa)
+    ...rua.bicicletas.map(
+      (b, i): ToqueB => ({
+        chave: `bici-${i}`,
+        ativo: () => true,
+        ponto: () => [b[0], b[1] + 0.9, b[2]],
+        alcanca: pertoDoPonto(b, 4),
+        raio: RAIO_TOQUE * 1.3,
+        tocar: () => e.vilaMissoes?.rua('campainha', i),
+      }),
+    ),
+  ];
+  /** O toque da etapa B perto do dedo (o mais perto, entre os que valem e que ela alcança). */
+  function toqueBNoDedo(x: number, y: number): ToqueB | null {
+    const pes = e.jogadorPes?.();
+    if (!pes) return null;
+    let melhor: { d: number; q: ToqueB } | null = null;
+    for (const q of TOQUES_B) {
+      if (!q.ativo() || !q.alcanca(pes[0], pes[2])) continue;
+      const a = q.ponto();
+      const t = tela(a[0], a[1], a[2]);
+      if (!t) continue;
+      const dist = Math.hypot(pes[0] - a[0], pes[2] - a[2]);
+      const raio = q.raio * Math.max(1, 4 / Math.max(1, dist));
+      const d = Math.hypot(t.x - x, t.y - y);
+      if (d <= raio && (!melhor || d < melhor.d)) melhor = { d, q };
+    }
+    return melhor?.q ?? null;
+  }
+  /** O dedo que desceu num toque da rua: só o toque de verdade vale (desce e sobe no lugar). */
+  let noToqueB: { id: number; x: number; y: number; t: number; q: ToqueB } | null = null;
+  function soltouNoToqueB(ev: PointerEvent): void {
+    const d = noToqueB;
+    if (!d || ev.pointerId !== d.id) return;
+    noToqueB = null;
+    if (ev.type !== 'pointerup' || !noJogo()) return;
+    if (!foiToque(ev.clientX - d.x, ev.clientY - d.y, performance.now() - d.t)) return;
+    d.q.tocar();
+    dicaUsada = d.q.chave;
+  }
+  window.addEventListener('pointerup', soltouNoToqueB, { capture: true });
+  window.addEventListener('pointercancel', soltouNoToqueB, { capture: true });
+
   // ---------------------------------------------------------------- o toque generoso
   let engoliuAte = 0;
   /**
@@ -323,6 +541,25 @@ export function ligarVilaNeon(
       if (e.vilaParque?.sentado()) {
         if (!preso || ev.button !== 0) return;
         e.vilaParque.toqueSentado();
+        engoliuAte = performance.now() + 300;
+        ev.stopImmediatePropagation();
+        ev.preventDefault();
+        return;
+      }
+      // etapa B: as missões do parque respondem na hora; os toques da rua, quando o dedo sobe
+      const toqueB = toqueBNoDedo(x, y);
+      if (toqueB) {
+        if (toqueB.naHora || preso) {
+          toqueB.tocar();
+          dicaUsada = toqueB.chave;
+        } else
+          noToqueB = {
+            id: ev.pointerId,
+            x: ev.clientX,
+            y: ev.clientY,
+            t: performance.now(),
+            q: toqueB,
+          };
         engoliuAte = performance.now() + 300;
         ev.stopImmediatePropagation();
         ev.preventDefault();
@@ -404,9 +641,11 @@ export function ligarVilaNeon(
   // ---------------------------------------------------------------- o feno na mão (f2)
   window.addEventListener('brumaluz:coletou', (ev) => {
     const d = (ev as CustomEvent<{ item: string; qtd: number }>).detail;
-    if (d.item !== 'trigo' || missao() !== 'f2') return;
+    // (etapa B: o feno do fardo, a pelúcia de prenda, a fita e a vitamina também vêm para a mão)
+    const feno = d.item === 'trigo' && (missao() === 'f2' || aberta(F_LANCHE));
+    if (!feno && d.item !== PELUCIA && d.item !== FITA_VIDEO && d.item !== VITAMINA) return;
     for (let i = 0; i < 9; i++)
-      if (e.inventario?.obter(i)?.item === 'trigo') {
+      if (e.inventario?.obter(i)?.item === d.item) {
         e.selecionarSlot?.(i);
         break;
       }
@@ -415,7 +654,7 @@ export function ligarVilaNeon(
     if (!de) return;
     const el = document.createElement('div');
     el.className = 'canto-pop';
-    el.appendChild(figura('item:trigo'));
+    el.appendChild(figura(`item:${d.item}`));
     el.style.left = `${de.x + 34}px`;
     el.style.top = `${de.y - 40}px`;
     el.style.setProperty('--dx', '-30px');
@@ -441,6 +680,8 @@ export function ligarVilaNeon(
   /** No carrinho do bate-bate: de onde ela saiu e se já guiou (a dica de guiar some). */
   let saiuDe: { x: number; z: number; guiou: boolean } | null = null;
   scene.onBeforeRenderObservable.add(() => {
+    // etapa B: os balões fugidos só aparecem para quem tem a missão deles aberta
+    e.vilaMissoes?.baloesAVista(aberta(F_BALOES));
     const pes = e.jogadorPes?.();
     const sentada = e.vilaParque?.sentado();
     if (sentada) dicaUsada = `sentar-${DE_SENTAR.find((q) => q.nome === sentada.b)?.b}`;
@@ -480,7 +721,25 @@ export function ligarVilaNeon(
       return dica.mostrar(null);
     }
     const [sx, sy, sz] = p.patins;
-    const lugares: { base: string; dist: number; ponto: [number, number, number] | undefined }[] = [
+    const lugares: {
+      base: string;
+      dist: number;
+      ponto: [number, number, number] | undefined;
+      /** Etapa B: a dica desta coisa e até onde ela aparece. */
+      b?: ToqueB;
+    }[] = [
+      // etapa B: o que se toca nas missões do parque e na rua (só o que vale e ela alcança)
+      ...TOQUES_B.filter(
+        (q) => q.dica && q.ativo() && (q.comDica?.() ?? true) && q.alcanca(pes[0], pes[2]),
+      ).map((q) => {
+        const ponto = q.ponto();
+        return {
+          base: q.chave,
+          dist: Math.hypot(pes[0] - ponto[0], pes[2] - ponto[2]),
+          ponto,
+          b: q,
+        };
+      }),
       { base: 'patins', dist: Math.hypot(pes[0] - sx, pes[2] - sz), ponto: [sx, sy + 1, sz] },
       ...DE_SENTAR.map((q) => {
         const ponto = q.alvos()[0] as [number, number, number] | undefined;
@@ -503,9 +762,13 @@ export function ligarVilaNeon(
     const perto = lugares
       // (os brinquedos são grandes: a dica vem um pouco antes)
       .filter(
-        (l) => l.dist <= PERTO_DA_DICA + (l.base === 'patins' ? 0 : 1) && l.base !== dicaUsada,
+        (l) =>
+          l.dist <= (l.b?.dica?.ate ?? PERTO_DA_DICA + (l.base === 'patins' ? 0 : 1)) &&
+          l.base !== dicaUsada,
       )
-      .sort((a, b) => a.dist - b.dist)[0];
+      // (o toque de uma missão aberta vem antes do brinquedo ao lado: o balão preso no carrossel
+      // antes do "Toque para andar")
+      .sort((a, b) => Number(!!b.b?.naHora) - Number(!!a.b?.naHora) || a.dist - b.dist)[0];
     const agora = performance.now() / 1000;
     if (!perto) {
       pertoDe = null;
@@ -515,7 +778,14 @@ export function ligarVilaNeon(
     const t = perto.ponto ? tela(perto.ponto[0], perto.ponto[1], perto.ponto[2]) : null;
     if (!t || agora - pertoDe.desde < ESPERA_DA_DICA || !boaParaDica(t, innerWidth, innerHeight))
       return dica.mostrar(null);
-    if (perto.base === 'patins') {
+    if (perto.b?.dica)
+      dica.mostrar({
+        chave: perto.base,
+        t,
+        figura: arteAlma(perto.b.dica.figura),
+        texto: perto.b.dica.texto,
+      });
+    else if (perto.base === 'patins') {
       const calcada = !!e.personagem?.aparencia().patins;
       dica.mostrar({
         chave: calcada ? 'patins-tirar' : 'patins-calcar',
@@ -549,5 +819,17 @@ export function ligarVilaNeon(
         t: tela(q.p[0], q.p[1] + q.alt, q.p[2]),
       })),
     }),
+    toques: () => {
+      const pes = e.jogadorPes?.();
+      return TOQUES_B.filter((q) => q.ativo()).map((q) => {
+        const a = q.ponto();
+        return {
+          chave: q.chave,
+          perto: !!pes && q.alcanca(pes[0], pes[2]),
+          t: tela(a[0], a[1], a[2]),
+        };
+      });
+    },
+    revista: () => revista.aberta(),
   };
 }
