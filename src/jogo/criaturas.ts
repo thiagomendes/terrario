@@ -202,7 +202,11 @@ export interface Criatura {
    * Spec 015: alguém fez o gesto de chamar. A raposa domada e o bicho criado vão até perto
    * de (x, z) em até `t` segundos; o criado passa a morar ali. Não é salvo.
    */
-  chamado?: { x: number; z: number; t: number };
+  /**
+   * `perto`: a que distância do ponto ela para (sem isto, a de quem chama, `PARA_CHAMADO`; a
+   * lhama que vem comer no cocho para bem mais perto).
+   */
+  chamado?: { x: number; z: number; t: number; perto?: number };
   /** Canto da praça escolhido para contornar o marco (mantido até chegar nele). */
   canto?: [number, number];
   x: number;
@@ -1222,7 +1226,8 @@ function atenderChamado(c: Criatura, def: DefCriatura, dt: number): boolean {
   const dx = ch.x - c.x;
   const dz = ch.z - c.z;
   const d = Math.hypot(dx, dz);
-  if (d <= PARA_CHAMADO + 0.3) {
+  const para = ch.perto ?? PARA_CHAMADO;
+  if (d <= para + 0.3) {
     frear(c, 0.5);
     if (d > 0.01) c.yawAlvo = Math.atan2(dx, dz);
     c.estado = 'parado';
@@ -1230,7 +1235,7 @@ function atenderChamado(c: Criatura, def: DefCriatura, dt: number): boolean {
     return true;
   }
   c.estado = 'seguir';
-  const k = PARA_CHAMADO / d;
+  const k = para / d;
   andarPara(c, def, ch.x - dx * k, ch.z - dz * k, d > 5 ? 1.1 : 0.8);
   if (c.tipo === 'coelho' && c.noChao && c.recargaPulo <= 0 && d > 3) {
     c.vy = 4.5;

@@ -107,6 +107,11 @@ export interface Missao {
   minutos: readonly [number, number];
   /** Corre por baixo das outras (espera a natureza): conta sempre, nunca falha. */
   devagar?: boolean;
+  /**
+   * Spec 026 (etapa B): quanto a festa espera (ms) para a criança ver o fim no mundo (a vovó que
+   * comemora com a prenda, as lhamas que comem e pulam, o balão de presente que chega na mão).
+   */
+  festaEspera?: number;
 }
 
 /** Missões abertas de cada vez (como os dois canteiros abertos da 014). */
@@ -465,6 +470,8 @@ export const MISSOES: readonly Missao[] = [
       placa: 'balaoParque',
     },
     conta: { tipo: 'evento', chave: 'pegou:balao', meta: 3 },
+    // (o terceiro balão desce até a mão, volta para a Dona Flor e o de presente chega)
+    festaEspera: 3200,
     moedas: 4,
     habilidade: 'explorador',
     minutos: [1, 2],
@@ -483,6 +490,8 @@ export const MISSOES: readonly Missao[] = [
       placa: 'cocho',
     },
     conta: { tipo: 'evento', chave: 'lanche:feno', meta: 2 },
+    // (as lhamas chegam no cocho e pulam de alegria)
+    festaEspera: 4600,
     moedas: 4,
     habilidade: 'bichos',
     minutos: [1, 2],
@@ -503,6 +512,8 @@ export const MISSOES: readonly Missao[] = [
       placa: 'pelucia',
     },
     conta: { tipo: 'lugares', usos: ['prenda:argola', 'prenda:pescaria', 'prenda:vovo'] },
+    // (a vovó recebe a prenda, comemora e solta corações)
+    festaEspera: 2800,
     moedas: 5,
     habilidade: 'bichos',
     minutos: [2, 4],

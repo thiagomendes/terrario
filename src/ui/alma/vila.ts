@@ -244,6 +244,13 @@ export function ligarVilaNeon(
   /** Até onde (blocos) o toque num brinquedo de sentar ainda faz alguma coisa (a roda pisca). */
   const LONGE_DE_SENTAR = 14;
   function brinquedoDeSentarNoDedo(x: number, y: number): (typeof DE_SENTAR)[number] | null {
+    return sentarNoDedo(x, y)?.q ?? null;
+  }
+  /** A cadeira de brinquedo mais perto do dedo e a que distância dele (px). */
+  function sentarNoDedo(
+    x: number,
+    y: number,
+  ): { d: number; q: (typeof DE_SENTAR)[number] } | null {
     const pes = e.jogadorPes?.();
     if (!pes) return null;
     let melhor: { d: number; q: (typeof DE_SENTAR)[number] } | null = null;
@@ -258,7 +265,7 @@ export function ligarVilaNeon(
         if (d <= raio && (!melhor || d < melhor.d)) melhor = { d, q };
       }
     }
-    return melhor?.q ?? null;
+    return melhor;
   }
   /** Os brinquedos de tocar do parque (os balões, as barracas, a pipoca, o algodão-doce). */
   const DE_TOCAR: {
@@ -491,7 +498,12 @@ export function ligarVilaNeon(
       const d = Math.hypot(t.x - x, t.y - y);
       if (d <= raio && (!melhor || d < melhor.d)) melhor = { d, q };
     }
-    return melhor?.q ?? null;
+    if (!melhor) return null;
+    // (a cadeira de um brinquedo mais perto do dedo ganha: o balão preso no pé da roda-gigante
+    // não rouba o toque de quem quer sentar na cadeirinha ao lado)
+    const cadeira = e.vilaParque?.sentado() ? null : sentarNoDedo(x, y);
+    if (cadeira && cadeira.d < melhor.d) return null;
+    return melhor.q;
   }
   /** O dedo que desceu num toque da rua: só o toque de verdade vale (desce e sobe no lugar). */
   let noToqueB: { id: number; x: number; y: number; t: number; q: ToqueB } | null = null;

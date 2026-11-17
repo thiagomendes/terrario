@@ -137,7 +137,8 @@ function balaoFugido(r: Ref, cor: string): void {
 
 /** O balão de presente (a mão em 0, 0, 0): o fio esticado, o lacinho e o balão lá em cima. */
 function balaoDePresente(r: Ref, cor: string): void {
-  r.barra([0, 0, 0], [0, ALTURA_PRESENTE - 0.42, 0], 0.03, COR.branco);
+  // (o fio fino: de perto, mais grosso parecia um cabo de pirulito)
+  r.barra([0, 0, 0], [0, ALTURA_PRESENTE - 0.42, 0], 0.02, COR.branco);
   r.caixa(0.16, 0.06, 0.06, 0, ALTURA_PRESENTE - 0.5, 0, CREME, 0.02);
   balao(r, 0, ALTURA_PRESENTE, 0, cor);
 }

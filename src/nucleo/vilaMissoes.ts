@@ -49,6 +49,8 @@ const FENO = 'trigo';
 const MAX_BALOES_SALVOS = 64;
 /** As lhamas ficam no cocho por tantos segundos depois de cada braçada de feno. */
 const TEMPO_NO_COCHO = 16;
+/** A que distância do meio da sua metade do cocho a lhama para (a cabeça fica em cima dele). */
+const PERTO_DO_COCHO = 1.15;
 
 export interface JogadorMissoes {
   id: string;
@@ -200,17 +202,18 @@ export function criarMissoesDoParque(ctx: CtxMissoes) {
     const t = ctx.agora();
     const ids = ctx.lhamas();
     const [cx, , cz] = pq.cocho;
-    // (do lado do leste e do nordeste: o canto do noroeste, de quem vem da porteira, fica livre
+    // cada uma vem para uma metade do cocho e para com a cabeça em cima dele (elas moram para o
+    // leste e o norte: chegam por lá, e o canto do noroeste, de quem vem da porteira, fica livre
     // para a criança chegar com a segunda braçada)
-    const lados: [number, number][] = [
-      [cx + 2.0, cz - 0.1],
-      [cx + 1.3, cz - 1.9],
+    const metades: [number, number][] = [
+      [cx + 0.45, cz],
+      [cx - 0.45, cz],
     ];
     ids.forEach((id, k) => {
       const c = ctx.criaturas().find((q) => q.id === id && q.estado !== 'morrendo');
       if (!c) return;
-      const [x, z] = lados[k % lados.length];
-      c.chamado = { x, z, t: TEMPO_NO_COCHO };
+      const [x, z] = metades[k % metades.length];
+      c.chamado = { x, z, t: TEMPO_NO_COCHO, perto: PERTO_DO_COCHO };
       for (let p = 0; p < (fim ? 4 : 2); p++) pulos.push({ id, t: t + 2.4 + p * 0.7 + k * 0.25 });
     });
     ctx.evento(j.id, CHAVE_LANCHE);

@@ -112,6 +112,8 @@ export function criarFestas(op: OpcoesFestas) {
       if (!m) continue;
       // na obra, a festa do mundo (fogos e o ta-dá da 014) vem primeiro
       if (m.conta.tipo === 'obra') await esperar(2200);
+      // (spec 026, etapa B: o fim da missão acontece no mundo primeiro: a vovó, as lhamas)
+      else if (m.festaEspera) await esperar(m.festaEspera);
       const estrela = l.mudanca.estrelas.filter((e) => e.habilidade === m.habilidade).pop();
       let canto: HTMLElement | undefined;
       if (estrela) {
