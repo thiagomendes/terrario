@@ -49,6 +49,11 @@ export interface QuadroMissoes {
   fugidos: readonly [boolean, boolean, boolean];
   /** A criança deste aparelho: os pés e para onde olha (null: ainda não está no mundo). */
   eu: { x: number; y: number; z: number; yaw: number } | null;
+  /**
+   * Para onde a câmera olha (rad, no chão). O balão na mão puxa para o lado da mão que fica de
+   * fora na tela: o fio nunca cruza a cabeça, de qualquer lado que a câmera olhe.
+   */
+  camYaw?: number;
   /** Quem leva o balão de presente agora (a criança daqui também, se tem): os pés e o giro. */
   comBalao: readonly { id: string; x: number; y: number; z: number; yaw: number }[];
   /** Quantas braçadas de feno aparecem no cocho (0 a 2). */
@@ -443,6 +448,19 @@ export function criarMissoesParque(scene: Scene, op: OpcoesMissoesParque): Rende
   let agora = 0;
   let tNucleo = 0;
   let eu: QuadroMissoes['eu'] = null;
+  let camYaw: number | undefined;
+  /**
+   * Para que lado (no chão) o balão na mão de quem olha para `yaw` puxa: o lado da mão direita,
+   * mas, para a criança daqui, o da tela (a direita da câmera, ou a esquerda se a mão está do
+   * lado esquerdo da tela): de costas, de lado ou de frente, o fio fica de fora da cabeça.
+   */
+  const ladoDoBalao = (yaw: number, daqui: boolean): [number, number] => {
+    const corpo: [number, number] = [Math.cos(yaw), -Math.sin(yaw)];
+    if (!daqui || camYaw === undefined) return corpo;
+    const tela: [number, number] = [Math.cos(camYaw), -Math.sin(camYaw)];
+    const s = corpo[0] * tela[0] + corpo[1] * tela[1] < -0.15 ? -1 : 1;
+    return [tela[0] * s, tela[1] * s];
+  };
   let presos = 0;
   let descendo = 0;
   let naMao = 0;
@@ -512,6 +530,7 @@ export function criarMissoesParque(scene: Scene, op: OpcoesMissoesParque): Rende
       agora = t;
       tNucleo = qd.tNucleo;
       eu = qd.eu;
+      camYaw = qd.camYaw;
       const perto = (x: number, z: number) => !eu || Math.hypot(x - eu.x, z - eu.z) < LONGE;
 
       // ---- os balões fugidos: presos (balançando) ou no toque (descem, ficam, sobem embora)
@@ -528,7 +547,7 @@ export function criarMissoesParque(scene: Scene, op: OpcoesMissoesParque): Rende
           // lado da mão (o fio inclina para fora: nunca passa pela cabeça do boneco)
           const alto = (0.44 + FIO_FUGIDO) * TAM_FUGIDO;
           const m = eu ? mao(eu) : [f.de[0], chao + MAO.y, f.de[2]];
-          const lado: [number, number] = eu ? [Math.cos(eu.yaw), -Math.sin(eu.yaw)] : [0, 0];
+          const lado: [number, number] = eu ? ladoDoBalao(eu.yaw, true) : [0, 0];
           const fora = Math.min(DERIVA_FUGIDO, alto * 0.5);
           const alvo: [number, number, number] = [
             m[0] + lado[0] * fora,
@@ -651,8 +670,12 @@ export function criarMissoesParque(scene: Scene, op: OpcoesMissoesParque): Rende
         dx += Math.sin(t * 1.3 + sorte * 40) * 0.07;
         dz += Math.cos(t * 1.1 + sorte * 23) * 0.06;
         // e puxa para fora, para o lado da mão (o fio à vista ao lado da cabeça)
-        dx += Math.cos(c.yaw) * DERIVA_PRESENTE;
-        dz -= Math.sin(c.yaw) * DERIVA_PRESENTE;
+        const lado = ladoDoBalao(
+          c.yaw,
+          !!eu && Math.hypot(c.x - eu.x, c.z - eu.z) < 0.05,
+        );
+        dx += lado[0] * DERIVA_PRESENTE;
+        dz += lado[1] * DERIVA_PRESENTE;
         // o fio aponta da mão para o balão: o molde (em pé) inclina para lá
         const comp = Math.hypot(dx, ALTURA_PRESENTE, dz);
         const inclina = Math.acos(ALTURA_PRESENTE / comp);

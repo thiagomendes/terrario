@@ -1930,6 +1930,7 @@ export function criarCena(
       tNucleo: cliente.vila.tempo(tempo),
       fugidos,
       eu: { x: j.x, y: j.y, z: j.z, yaw: animador.yaw() },
+      camYaw: camera.rotation.y,
       comBalao,
       feno: fenoNoCocho,
     });
