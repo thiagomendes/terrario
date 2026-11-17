@@ -72,10 +72,49 @@ describe('o guia na Vila Neon (spec 026)', () => {
     const lhama = { id: 7, tipo: 'cervo', x: c.x0 + 2, y: plano.h + 1, z: c.z0 + 2 };
     const a = alvoDaMissao(m, mundo({ bichos: [lhama] }), new Set(), de)!;
     expect(a.morador).toBe(7);
-    const g = alvoDaMissao(m, mundo({ bichos: [lhama], feno: true }), new Set(), de)!;
+    // com o feno, e a lhama vindo junto (a dois blocos): a grade
+    const junto = { x: lhama.x + 2, z: lhama.z };
+    const g = alvoDaMissao(m, mundo({ bichos: [lhama], feno: true }), new Set(), junto)!;
     expect(g.chave).toBe('grade');
     expect(g.z).toBeGreaterThanOrEqual(p.plateia.z0);
     expect(g.z).toBeLessThanOrEqual(p.plateia.z1 + 1);
+  });
+
+  it('f2 (parte 3B): a lhama que ficou para trás leva a trilha de volta até ela', () => {
+    // (a f2 que falhava na bateria: o feno chegou à mão perto de uma lhama e a outra passeava do
+    // outro lado do cercadinho, ou parou na quina da cerca a 9 blocos da grade; a trilha ficava
+    // na grade e a criança esperava para sempre)
+    const m = missaoPorId('f2')!;
+    const c = p.cercado;
+    const um = { id: 7, tipo: 'cervo', x: c.x0 + 1, y: plano.h + 1, z: c.z0 + 1 };
+    const outra = { id: 8, tipo: 'cervo', x: c.x1, y: plano.h + 1, z: c.z1 };
+    const perto = { x: um.x + 1.5, z: um.z };
+    const a = alvoDaMissao(m, mundo({ bichos: [um, outra], feno: true }), new Set(), perto)!;
+    expect(a.chave).toBe('lhama:8');
+    expect(a.morador).toBe(8);
+    // perto das duas: a grade
+    const meio = { x: (um.x + outra.x) / 2, z: (um.z + outra.z) / 2 };
+    const ambas = [
+      { ...um, x: meio.x - 1, z: meio.z },
+      { ...outra, x: meio.x + 1, z: meio.z },
+    ];
+    const g = alvoDaMissao(m, mundo({ bichos: ambas, feno: true }), new Set(), meio)!;
+    expect(g.chave).toBe('grade');
+    // na grade, a lhama a 7 blocos ainda vem (não volta a trilha); a 8,5 ficou (volta)
+    const naGrade = { x: g.x, z: g.z };
+    const a7 = { ...outra, x: g.x, z: g.z - 7 };
+    expect(
+      alvoDaMissao(m, mundo({ bichos: [a7], feno: true }), new Set(), naGrade, 'grade')!.chave,
+    ).toBe('grade');
+    const a85 = { ...outra, x: g.x, z: g.z - 8.5 };
+    expect(
+      alvoDaMissao(m, mundo({ bichos: [a85], feno: true }), new Set(), naGrade, 'grade')!.chave,
+    ).toBe('lhama:8');
+    // as lhamas da fazendinha do parque, longe, não contam
+    const daFazendinha = { ...outra, id: 9, x: p.parque.cocho[0], z: p.parque.cocho[2] };
+    expect(
+      alvoDaMissao(m, mundo({ bichos: [daFazendinha], feno: true }), new Set(), naGrade)!.chave,
+    ).toBe('grade');
   });
 
   it('f4: sem patins, o suporte do rinque; de patins, o arco apagado mais perto, um depois do outro', () => {

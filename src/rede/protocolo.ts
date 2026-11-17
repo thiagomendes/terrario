@@ -47,8 +47,12 @@ import type { ObraSalva } from '../nucleo/saneamento';
  * `videocassete`, o `disco`, o `bau` e a `rampa`; o quadro da vila ganhou a `casa` (o canal, o
  * filme e o disco da sala) e a `rampa` (quem está no trilho); o `skate` na aparência; a vovó no
  * sofá; a menina do skate e o menino da BMX; os itens `ioio`, `piao` e `cubo_cores`).
+ * 15: spec 026, parte 3, etapa B (as missões f9 a f12 da casa e da rampa: o comando `vila` ganhou
+ * o `brinquedo` e o `bau` guarda com a f10 aberta; o quadro da vila ganhou o `qto`; os eventos
+ * `vilaGuardou` e `vilaBolo`; a mesinha do bolo nas peças sólidas da casa; os itens `feno` (no
+ * lugar do trigo da f2 e da f7) e `fatia_bolo`).
  */
-export const VERSAO_REDE = 14;
+export const VERSAO_REDE = 15;
 /** Jogadores por mundo. */
 export const MAX_JOGADORES = 8;
 

@@ -16,6 +16,7 @@
  */
 import type { PontosParque } from '../world/vilaParque';
 import { VOLTA_CARROSSEL } from './parque';
+import { FENO } from './exclusivos';
 
 export const F_BILHETE = 'f5';
 export const F_BALOES = 'f6';
@@ -34,6 +35,15 @@ export function carimboDoPasseio(chave: string): string | null {
 
 /** Os três passos da prenda, na ordem das bolinhas: a argola, a pescaria e a vovó. */
 export const PRENDAS = ['prenda:argola', 'prenda:pescaria', 'prenda:vovo'] as const;
+
+/**
+ * Parte 3B: o feno é um item só da Vila (`FENO`); o feixe de trigo que a f2 e a f7 davam antes
+ * (um mundo salvo com ele na mochila) ainda vale para as duas missões: a lhama segue os dois e o
+ * cocho aceita os dois. Quanto feno (de qualquer um dos dois) a criança tem.
+ */
+export const FENO_ANTIGO = 'trigo';
+export const fenoNaMochila = (contar: (item: string) => number): number =>
+  contar(FENO) + contar(FENO_ANTIGO);
 
 /** As chaves que o núcleo conta. */
 export const CHAVE_BALAO = 'pegou:balao';

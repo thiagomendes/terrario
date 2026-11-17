@@ -142,6 +142,8 @@ export type TipoPecaVila =
   | 'casa-robo'
   | 'casa-bola'
   | 'casa-bau'
+  /** Parte 3B: a mesinha redonda do bolo de fubá, do lado da vovó no sofá (a f12). */
+  | 'casa-bolo'
   /** Spec 026 (parte 3): a rampa de skate em U, o suporte dos skates e a BMX de enfeite. */
   | 'rampa-skate'
   | 'suporte-skate'

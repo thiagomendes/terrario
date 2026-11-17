@@ -6,6 +6,7 @@
  */
 import { TransformNode } from '@babylonjs/core/Meshes/transformNode';
 import { Mesh } from '@babylonjs/core/Meshes/mesh';
+import { MeshBuilder } from '@babylonjs/core/Meshes/meshBuilder';
 import { VertexData } from '@babylonjs/core/Meshes/mesh.vertexData';
 import { StandardMaterial } from '@babylonjs/core/Materials/standardMaterial';
 import { Color3 } from '@babylonjs/core/Maths/math.color';
@@ -367,6 +368,64 @@ export function modeloNaMao(
           add(cx(`orelha${x}`, 0.023, 0.052, 0.02, 0.009, creme), x, 0.3, 0.052);
           add(bo(`olho${x}`, 0.009, '#3a2a22'), x * 1.1, 0.262, 0.127);
         }
+        break;
+      }
+      case 'feno': {
+        // parte 3B: o fardinho de feno das lhamas (o do cartão): o bloco dourado de quinas macias,
+        // as duas cintas vermelhas em volta e uns fiapos de palha soltos em cima
+        add(cx('fardo', 0.25, 0.16, 0.17, 0.04, '#f2c94a'), 0, 0.08, 0);
+        add(cx('fardo-topo', 0.21, 0.012, 0.13, 0.006, '#f8dc78'), 0, 0.162, 0);
+        for (const x of [-0.06, 0.06])
+          add(cx(`cinta${x}`, 0.026, 0.168, 0.178, 0.008, '#e8302a'), x, 0.08, 0);
+        for (const [x, z, h, a] of [
+          [-0.085, 0.03, 0.05, 0.5],
+          [0.0, -0.04, 0.06, -0.35],
+          [0.095, 0.02, 0.045, -0.6],
+          [0.03, 0.05, 0.04, 0.3],
+        ] as const) {
+          const f = add(cx(`fiapo${x}${z}`, 0.01, h, 0.01, 0.003, '#d9a53a'), x, 0.165 + h / 2, z);
+          f.rotation.z = a;
+        }
+        for (const [x, y] of [
+          [-0.1, 0.05],
+          [0.03, 0.11],
+          [0.1, 0.04],
+        ] as const)
+          add(cx(`risco${x}`, 0.04, 0.008, 0.004, 0.002, '#c9952a'), x, y, 0.086);
+        break;
+      }
+      case 'fatia_bolo': {
+        // parte 3B: a fatia de bolo de fubá da vovó no pratinho: a cunha amarela de miolo (a ponta
+        // para a frente), a casquinha dourada em cima e nas costas e o açúcar polvilhado
+        add(ci('pratinho', 0.014, 0.12, 0.105, '#f4f8ff'), 0, 0.007, 0);
+        const L = 0.2;
+        const W = 0.15;
+        const H = 0.095;
+        const cunha = (n: string, h: number, cor: string) => {
+          // (um prisma de três lados: a ponta em +x, as costas em -x, achatado na largura)
+          const m = MeshBuilder.CreateCylinder(
+            `${prefixo}-${n}`,
+            { height: h, diameter: 2, tessellation: 3 },
+            scene,
+          );
+          m.scaling.set(L / 1.5, 1, W / Math.sqrt(3));
+          m.convertToFlatShadedMesh();
+          m.material = mats.cor(cor);
+          m.isPickable = false;
+          return m;
+        };
+        // (o meio da cunha no meio do pratinho: a ponta a 2/3 de L, as costas a 1/3)
+        const ox = -L / 6;
+        add(cunha('fatia', H, '#ffd866'), ox, 0.014 + H / 2, 0);
+        add(cunha('fatia-topo', 0.014, '#d9902e'), ox, 0.014 + H + 0.006, 0);
+        add(cx('casca-costas', 0.016, H + 0.012, W + 0.004, 0.006, '#d9902e'), ox - L / 3, 0.014 + (H + 0.012) / 2, 0);
+        for (const [x, z] of [
+          [-0.05, 0.0],
+          [-0.02, -0.035],
+          [-0.015, 0.035],
+          [0.03, 0.005],
+        ] as const)
+          add(bo(`acucar${x}${z}`, 0.01, '#fff6e6', [1.4, 0.4, 1.4]), x, 0.014 + H + 0.016, z);
         break;
       }
       case 'pipoca': {

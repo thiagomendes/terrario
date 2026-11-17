@@ -378,7 +378,8 @@ async function lanche(page: Page, t: Tamanho): Promise<void> {
     await page.touchscreen.tap(ponto.x, ponto.y);
     await page.waitForFunction(() => {
       const inv = window.__brumaluz!.inventario!;
-      for (let i = 0; i < 9; i++) if (inv.obter(i)?.item === 'trigo') return true;
+      // (parte 3B: o feno é item próprio, e vai já selecionado para a mão)
+      for (let i = 0; i < 9; i++) if (inv.obter(i)?.item === 'feno') return true;
       return false;
     });
     await page.waitForTimeout(900);
@@ -403,7 +404,7 @@ async function lanche(page: Page, t: Tamanho): Promise<void> {
       antes,
       { timeout: 10_000 },
     );
-    expect(await tem(page, 'trigo')).toBe(0);
+    expect(await tem(page, 'feno')).toBe(0);
     if (k === 0) {
       // as lhamas vêm comer e pulam (a câmera de lado, por cima do boneco: o cocho à vista)
       await olharPara(page, [cocho[0], cocho[1], cocho[2]], 2.2, -0.45);

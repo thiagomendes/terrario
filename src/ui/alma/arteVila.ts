@@ -350,6 +350,148 @@ const fitaVideo = () => `
   <rect x="28.5" y="34" width="7" height="8.4" rx="1.4" fill="#8a8ea0"/>
   <path d="M7 16 Q10 14.6 16 14.8" fill="none" stroke="#6a6878" stroke-width="2" stroke-linecap="round"/>`;
 
+// ------------------------------------------------------------------ parte 3B: as missões da casa
+
+/** A TV de tubo de madeira (antena, botões, a grade do som) com o que passa na tela. */
+const tvDeTubo = (tela: string, fundo = '#5ec8ff') => `
+  <path d="M26 15 L18 4 M38 15 L46 4" stroke="${C}" stroke-width="2.6" stroke-linecap="round"/>
+  <circle cx="18" cy="4" r="2.4" fill="#d4d8e2" ${s(1.6)}/><circle cx="46" cy="4" r="2.4" fill="#d4d8e2" ${s(1.6)}/>
+  <rect x="6" y="17" width="52" height="40" rx="6" fill="#5e3820"/>
+  <rect x="6" y="14" width="52" height="40" rx="6" fill="#8a5530" ${s()}/>
+  <rect x="11" y="19" width="33" height="30" rx="5" fill="${fundo}" ${s(2.2)}/>
+  ${tela}
+  <circle cx="51" cy="25" r="3" fill="#d4d8e2" ${s(1.6)}/><circle cx="51" cy="35" r="3" fill="#d4d8e2" ${s(1.6)}/>
+  <path d="M48 44 h6 M48 47 h6" stroke="${C}" stroke-width="1.6" stroke-linecap="round"/>
+  <path d="M13 22 Q16 20 21 20.5" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" opacity="0.7"/>`;
+
+/** O filme da fita na tela: a lhama e o balão (o filme "de cinema" da Casa anos 80). */
+const filmeNaTela = (cx: number, cy: number, k = 1) => `
+  <g transform="translate(${cx} ${cy}) scale(${k})">
+    <path d="M-14 9 Q-6 4 0 8 T14 7 V12 H-14 Z" fill="#4cb84a"/>
+    <path d="M7 -2 V-9" stroke="#fff6e0" stroke-width="1.2"/>
+    <circle cx="7" cy="-12" r="4.2" fill="#e8302a"/>
+    <path d="M-9 8 V2 Q-9 -1 -6 -1 H1 Q3 -1 3 2 V8" fill="#f4e6cf"/>
+    <path d="M0 -1 Q-0.5 -5 0.5 -8" fill="none" stroke="#f4e6cf" stroke-width="3.4" stroke-linecap="round"/>
+    <ellipse cx="1.5" cy="-8.5" rx="3.4" ry="2.6" fill="#f4e6cf"/>
+  </g>`;
+
+/** O sofá xadrez visto de trás (o encosto e os braços). */
+const sofaDeCostas = () => `
+  <rect x="2" y="43" width="60" height="19" rx="6" fill="#8e3e20"/>
+  <rect x="2" y="40" width="60" height="20" rx="6" fill="#b8562e" ${s()}/>
+  <path d="M16 41 V59 M32 41 V59 M48 41 V59 M3 50 H61" stroke="#6a3a20" stroke-width="2.6"/>
+  <path d="M19 41 V59 M35 41 V59 M51 41 V59 M3 53 H61" stroke="#f2e2bd" stroke-width="1"/>`;
+
+/**
+ * As duas cabeças de costas por cima do encosto: a criança (o cabelo castanho) e a vovó (o
+ * grisalho com o coque).
+ */
+const cabecasDeCostas = () => `
+  <circle cx="21" cy="38" r="9" fill="#6a3a20" ${s()}/>
+  <path d="M15 33 Q19 30 24 31" fill="none" stroke="#9a5a30" stroke-width="2" stroke-linecap="round"/>
+  <circle cx="43" cy="37" r="9" fill="#d6d3de" ${s()}/>
+  <circle cx="43" cy="26.5" r="4.6" fill="#d6d3de" ${s(2.4)}/>
+  <path d="M38 33 Q41 30 46 31" fill="none" stroke="#f4f2f8" stroke-width="2" stroke-linecap="round"/>`;
+
+/** O resultado da f9: a criança e a vovó no sofá, de costas, vendo o filme na TV. */
+const sessaoCinema = () => `
+  <path d="M22 28 L6 40 M42 28 L58 40" stroke="#bfe0ff" stroke-width="2.4" stroke-linecap="round" opacity="0.75"/>
+  <g transform="translate(16 -1) scale(0.5)">${tvDeTubo(filmeNaTela(27.5, 35, 1.05), '#3a4e8a')}</g>
+  <g transform="translate(0 6) scale(1 0.9)">${cabecasDeCostas()}${sofaDeCostas()}</g>
+  ${faisca(56, 10, 0.9)}${faisca(8, 12, 0.7)}`;
+
+/** O ioiô vermelho deitado de lado, com o fio solto (a figura dos espalhados). */
+const ioioNoChao = (cx: number, cy: number, k = 1) => `
+  <g transform="translate(${cx} ${cy}) scale(${k})">
+    <path d="M6 4 Q14 10 9 15 Q4 19 11 22" fill="none" stroke="${C}" stroke-width="2" stroke-linecap="round"/>
+    <circle cx="0" cy="0" r="9" fill="#e8302a" ${s(2.6)}/>
+    <circle cx="0" cy="0" r="5" fill="#ff6a5a"/>
+    <circle cx="0" cy="0" r="2" fill="#f6f4ee" ${s(1.4)}/>
+  </g>`;
+/** O pião deitado (parou de rodar). */
+const piaoDeitado = (cx: number, cy: number, k = 1, rot = 62) => `
+  <g transform="translate(${cx} ${cy}) rotate(${rot}) scale(${k})">
+    <path d="M0 -15 V-10" stroke="#8a5530" stroke-width="4" stroke-linecap="round"/>
+    <path d="M-12 -8 Q0 -14 12 -8 L1.5 12 Q0 14 -1.5 12 Z" fill="#e8302a" ${s(2.4)}/>
+    <path d="M-9.5 -3.6 Q0 -8 9.5 -3.6" stroke="#f2e2bd" stroke-width="2.8" fill="none"/>
+  </g>`;
+/** O cubo de cores 2 × 2 de três cores, de quina. */
+const cuboDeQuina = (cx: number, cy: number, k = 1) => `
+  <g transform="translate(${cx} ${cy}) scale(${k})">
+    <path d="M-10 -5 L0 -10 L10 -5 L0 0 Z" fill="#ffd23a" ${s(2)}/>
+    <path d="M-10 -5 L0 0 V12 L-10 7 Z" fill="#e8302a" ${s(2)}/>
+    <path d="M10 -5 L0 0 V12 L10 7 Z" fill="#2f6fd8" ${s(2)}/>
+    <path d="M-5 -7.5 L5 -2.5 M5 -7.5 L-5 -2.5 M-5 -2.5 V9.5 M-10 1 L0 6 L10 1 M5 -2.5 V9.5" stroke="${C}" stroke-width="1.2"/>
+  </g>`;
+
+/** O baú azul de tampa amarela, fechado (o quarto arrumado) ou aberto (para guardar). */
+const bauDeBrinquedos = (aberto: boolean) => `
+  <rect x="8" y="33" width="48" height="26" rx="4" fill="#2f6ab0"/>
+  <rect x="8" y="30" width="48" height="26" rx="4" fill="#4a8ad8" ${s()}/>
+  ${
+    aberto
+      ? `<path d="M9 31 L13 24 H51 L55 31 Z" fill="#24325a" ${s(2.4)}/><path d="M13 24 L16 18 H54 L51 24 Z" fill="#f2c230" ${s(2.4)}/>`
+      : `<rect x="6" y="24" width="52" height="9" rx="3" fill="#f2c230" ${s()}/>`
+  }
+  <polygon points="${estrela5(32, 44, 7)}" fill="#f2c230" ${s(1.6)}/>`;
+
+/** O skate turquesa de rodinhas amarelas (o do suporte da pista). */
+const skate = (cy: number) => `
+  <rect x="6" y="${cy + 3}" width="52" height="9" rx="4.5" fill="#138a7e"/>
+  <rect x="6" y="${cy}" width="52" height="9" rx="4.5" fill="#22c2b0" ${s()}/>
+  <circle cx="16" cy="${cy + 14}" r="4.2" fill="#ffd23a" ${s(2)}/><circle cx="48" cy="${cy + 14}" r="4.2" fill="#ffd23a" ${s(2)}/>
+  <path d="M10 ${cy + 2} L6 ${cy - 4} M54 ${cy + 2} L58 ${cy - 4}" stroke="${C}" stroke-width="2.6" stroke-linecap="round"/>`;
+
+/** A mini rampa em U de concreto, de lado (as bordas de cromo, as pontas azuis). */
+const rampaU = () => `
+  <path d="M3 21 H14 C14 40 20 47 27 47 H37 C44 47 50 40 50 21 H61 V59 H3 Z" fill="#8a8e9a" transform="translate(0 2.5)"/>
+  <path d="M3 19 H14 C14 38 20 45 27 45 H37 C44 45 50 38 50 19 H61 V57 H3 Z" fill="#c9ccd4" ${s()}/>
+  <path d="M3 19 H14 V24 H3 Z M50 19 H61 V24 H50 Z" fill="#2f8cff"/>
+  <path d="M3 19 H14 C14 38 20 45 27 45 H37 C44 45 50 38 50 19 H61" fill="none" ${s()}/>
+  <circle cx="14" cy="19" r="2.6" fill="#eef0f6" ${s(1.6)}/><circle cx="50" cy="19" r="2.6" fill="#eef0f6" ${s(1.6)}/>
+  <path d="M10 52 q4 -4 8 0 t8 0 t8 0 t8 0 t8 0" fill="none" stroke="#ff6fb4" stroke-width="2.4" stroke-linecap="round"/>
+  <path d="M19 31 Q22 39 27 41" fill="none" stroke="#e6e8f0" stroke-width="2" stroke-linecap="round"/>`;
+
+/** O carimbo do skate (a bolinha da f11): a prancha e as rodinhas na tinta. */
+const carimboSkate = (cor: string) =>
+  carimbo(
+    cor,
+    `<rect x="13" y="27" width="38" height="8" rx="4" fill="${cor}"/>
+    <path d="M15 29 L12 24 M49 29 L52 24" stroke="${cor}" stroke-width="3" stroke-linecap="round"/>
+    <circle cx="21" cy="40" r="4" fill="${cor}"/><circle cx="43" cy="40" r="4" fill="${cor}"/>`,
+  );
+
+/** O cartão da rampa com os três carimbos de skate (o resultado da f11, como o bilhete da f5). */
+const cartaoRampa = () => `
+  <g transform="rotate(-8 32 32)">
+    <path d="${BILHETE}" fill="#c9952a" transform="translate(0 3)"/>
+    <path d="${BILHETE}" fill="#e6f8f4" ${s()}/>
+    <path d="M17.5 18 V46" stroke="${C}" stroke-width="2" stroke-dasharray="2.6 3.2" stroke-linecap="round"/>
+    <path d="M7.5 37 C7.5 29 10 27 11.5 27 C13 27 15.5 29 15.5 37" fill="none" stroke="#2f8cff" stroke-width="2.4" stroke-linecap="round"/>
+    ${[26.5, 39.5, 52]
+      .map(
+        (x, k) => `<circle cx="${x}" cy="32" r="6" fill="${TINTAS[k]}" ${s(1.8)}/>
+    <path d="M${x - 4.4} 29.4 L${x - 3.4} 31 H${x + 3.4} L${x + 4.4} 29.4" fill="none" stroke="#fff8ea" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="${x - 2.2}" cy="34.4" r="1.3" fill="#fff8ea"/><circle cx="${x + 2.2}" cy="34.4" r="1.3" fill="#fff8ea"/>`,
+      )
+      .join('')}
+  </g>
+  ${faisca(52, 12, 1.25) + faisca(9, 54, 0.8)}`;
+
+/** A fatia de bolo de fubá no pratinho (a casca dourada em cima, o miolo amarelo, o açúcar). */
+const fatiaDeBolo = () => `
+  <ellipse cx="32" cy="51" rx="28" ry="8" fill="#c8d0dc"/>
+  <ellipse cx="32" cy="49" rx="28" ry="8" fill="#f4f8ff" ${s()}/>
+  <path d="M8 31 L56 25 L56 43 L8 46 Z" fill="#ffd866" ${s()}/>
+  <path d="M50 25.8 L56 25 L56 43 L50 43.4 Z" fill="#c9802a"/>
+  <path d="M8 31 L56 25 L56 43 L8 46 Z" fill="none" ${s()}/>
+  <path d="M8 31 L44 17 L56 25 Z" fill="#e2a03a" ${s()}/>
+  <ellipse cx="18" cy="38" rx="2.2" ry="1.5" fill="#eeb440"/><ellipse cx="30" cy="35" rx="2" ry="1.4" fill="#eeb440"/>
+  <ellipse cx="42" cy="38" rx="2.4" ry="1.6" fill="#eeb440"/><ellipse cx="25" cy="41" rx="1.8" ry="1.3" fill="#eeb440"/>
+  <circle cx="30" cy="25" r="1.3" fill="#fff6e6"/><circle cx="40" cy="22" r="1.3" fill="#fff6e6"/>
+  <circle cx="47" cy="25" r="1.1" fill="#fff6e6"/><circle cx="22" cy="28" r="1.1" fill="#fff6e6"/>
+  <path d="M12 33 L50 28.6" stroke="#fff3c4" stroke-width="1.6" stroke-linecap="round"/>`;
+
 const BASE: Record<string, string> = {
   // ------------------------------------------------------------ a1: os instrumentos
   a80Guitarra: svg(guitarra(33, 37, 0.92)),
@@ -761,7 +903,56 @@ const BASE: Record<string, string> = {
     <rect x="6" y="20" width="52" height="9" rx="4.5" fill="#22c2b0" ${s()}/>
     <circle cx="16" cy="34" r="4.2" fill="#ffd23a" ${s(2)}/><circle cx="48" cy="34" r="4.2" fill="#ffd23a" ${s(2)}/>
     ${seta('M32 40 V58', 'M24 51 L32 60 L40 51', '#ff8a2a')}`),
+  // ------------------------------------------------------------ parte 3B: as missões da casa
+  /** f9: a fita, a TV de madeira (o sol na tela), a fita entrando e o sofá. */
+  fitaVideo: svg(fitaVideo()),
+  tvMadeira: svg(
+    tvDeTubo(`<circle cx="27.5" cy="31" r="6.5" fill="#ffd23a" ${s(1.8)}/>
+  <path d="M11 43 Q20 37 28 42 T44 41 V49 H11 Z" fill="#4cb84a"/>`),
+  ),
+  /** A fita entrando no videocassete (a bolinha do segundo passo). */
+  fitaNaTv: svg(`
+    <g transform="translate(14 -6) scale(0.56)">${fitaVideo()}</g>
+    ${seta('M32 26 V40', 'M25 34 L32 42 L39 34')}
+    <rect x="6" y="42" width="52" height="16" rx="3" fill="#c9ccd4" ${s()}/>
+    <rect x="13" y="47" width="22" height="4" rx="1.5" fill="#24232a"/>
+    <rect x="42" y="47" width="9" height="4" rx="1" fill="#5aff8a"/>`),
+  /** O sofá com as duas cabeças de costas (a bolinha do terceiro passo: assistir sentado). */
+  sofaCinema: svg(`${cabecasDeCostas()}${sofaDeCostas()}${faisca(32, 12, 1.2)}`),
+  sessaoCinema: svg(sessaoCinema()),
+  /** f10: os três brinquedos espalhados no chão de tábua. */
+  brinquedosEspalhados: svg(`
+    <rect x="2" y="46" width="60" height="16" rx="3" fill="#c98a4a" ${s()}/>
+    <path d="M2 54 H62 M20 46 V54 M44 54 V62" stroke="#a06a34" stroke-width="2"/>
+    ${ioioNoChao(13, 36, 1)}
+    ${piaoDeitado(33, 37, 0.8, 70)}
+    ${cuboDeQuina(52, 38, 1.05)}
+    <path d="M10 18 q2 -3 4 0 M30 22 q2 -3 4 0 M50 20 q2 -3 4 0" fill="none" stroke="#ffe66a" stroke-width="2.4" stroke-linecap="round"/>
+    ${faisca(20, 8, 0.8)}${faisca(44, 9, 0.8)}`),
+  /** O baú fechado, o quarto arrumado (o resultado e a placa da f10). */
+  bauArrumado: svg(`${bauDeBrinquedos(false)}${faisca(53, 13, 1.2)}${faisca(11, 14, 0.9)}${faisca(32, 9, 0.7)}`),
+  /** "Toque para guardar": o pião e a setinha verde para dentro do baú aberto. */
+  dicaGuardar: svg(`
+    ${bauDeBrinquedos(true)}
+    ${piaoDeitado(14, 12, 0.6, 20)}
+    ${seta('M34 3 V22', 'M27 15 L34 24 L41 15')}`),
+  /** f11: a rampa em U, o skate, o carimbo de skate e o cartão carimbado. */
+  rampaU: svg(rampaU()),
+  skate: svg(skate(30)),
+  carimboSkate: svg(carimboSkate('#14a596')),
+  cartaoRampa: svg(cartaoRampa()),
+  /** f12: a vitamina, a fatia de bolo e a vovó com a fatia. */
+  fatiaBolo: svg(fatiaDeBolo()),
+  vovoBolo: svg(`
+    <g transform="translate(-3 -2) scale(0.76)">${vovo(true)}</g>
+    <g transform="translate(26 31) scale(0.56)">${fatiaDeBolo()}</g>
+    ${coracao(52, 13, 1.1)}`),
 };
+BASE.vitamina = BASE.dicaVitamina;
+// (as bolinhas da f10: os brinquedos do quarto, os mesmos das dicas)
+BASE.ioioBolinha = BASE.dicaIoio;
+BASE.piaoBolinha = BASE.dicaPiao;
+BASE.cuboBolinha = BASE.dicaCubo;
 
 /** Os 3 da festa de cada missão (o trio de instrumentos da a1, na ordem das bolinhas). */
 

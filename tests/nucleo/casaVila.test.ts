@@ -206,7 +206,8 @@ describe('a rede da parte 3', () => {
   it('subiu para 14 e os comandos novos passam a limpo (o resto não passa)', async () => {
     const { VERSAO_REDE } = await import('../../src/rede/protocolo');
     const { sanear } = await import('../../src/nucleo/saneamento');
-    expect(VERSAO_REDE).toBe(14);
+    // (14 na parte 3; 15 na etapa B, com as missões da casa)
+    expect(VERSAO_REDE).toBeGreaterThanOrEqual(14);
     for (const a of ['tv', 'videocassete', 'disco', 'bau'])
       expect(sanear({ t: 'vila', a, lixo: 1 })).toEqual({ t: 'vila', a });
     expect(sanear({ t: 'vila', a: 'rampa', l: 1, x: 9 })).toEqual({ t: 'vila', a: 'rampa', l: 1 });

@@ -118,6 +118,7 @@ import { criarSomRua, type SomRua } from '../audio/somRua';
 import { criarSomCasa, type SomCasa } from '../audio/somCasa';
 import { ligarCasaNaCena, JUNTAS_SOFA } from './vila/casaNaCena';
 import { criarMissoesParque } from './vila/missoesParque';
+import { criarMissoesCasa } from './vila/missoesCasa';
 import { FALAS_DO_ORELHAO, N_BALOES, lugarDoBalao } from '../jogo/missoesParque';
 import { AVO } from '../nucleo/vila';
 import { faseDoShow, noiteDeShow } from '../jogo/show';
@@ -528,10 +529,14 @@ export interface EstadoDepuracao {
     comando(
       c:
         | { a: 'balao' | 'prenda'; i: number }
-        | { a: 'feno' | 'cocho' | 'fita' | 'vitamina' },
+        | { a: 'feno' | 'cocho' | 'fita' | 'vitamina' }
+        /** Parte 3B (f10): o brinquedo espalhado. */
+        | { a: 'brinquedo'; i: number },
     ): void;
     rua(qual: 'orelhao' | 'fita' | 'vitamina' | 'revista' | 'campainha', i?: number): void;
     baloesAVista(sim: boolean): void;
+    /** Parte 3B (f10): os brinquedos espalhados que a criança vê. */
+    espalhados(v: readonly [boolean, boolean, boolean]): void;
     /** Testes: o que as missões mostram e quantos toques da rua soaram. */
     estado(): ReturnType<import('./vila/missoesParque').RenderMissoesParque['estado']> & {
       toquesDaRua: number;
@@ -539,6 +544,8 @@ export interface EstadoDepuracao {
       comBalao: string[];
     };
   };
+  /** Parte 3B (testes): o que as missões da casa mostram (os espalhados, o voo, a fatia). */
+  vilaMissoesCasa?: () => ReturnType<import('./vila/missoesCasa').RenderMissoesCasa['estado']> | null;
   /** Etapa B (testes): onde está agora o balão fugido `i` (mundo). */
   balaoFugido?: (i: number) => [number, number, number];
   somRua?: () => ReturnType<SomRua['info']> | null;
@@ -1863,6 +1870,18 @@ export function criarCena(
           pool.emitir(lista.map((p) => ({ ...p, tipo: tipo === 'gota' ? GOTA : CONFETE }))),
       })
     : null;
+  // parte 3B: as missões da casa na tela (os brinquedos espalhados, o voo até o baú, a fatia)
+  const missoesCasaVila = planoVila
+    ? criarMissoesCasa(scene, {
+        plano: planoVila,
+        tapaOGlow,
+        emitir: (lista, tipo) =>
+          pool.emitir(lista.map((p) => ({ ...p, tipo: tipo === 'gota' ? GOTA : CONFETE }))),
+      })
+    : null;
+  /** Os brinquedos espalhados que esta criança vê (a interface diz: a f10 aberta, não pegos). */
+  let espalhadosAVista: [boolean, boolean, boolean] = [false, false, false];
+  estado.vilaMissoesCasa = () => missoesCasaVila?.estado() ?? null;
   /** O som da rua e das missões (criado mais abaixo, com o motor do áudio). */
   let somRua: SomRua | null = null;
   /** A missão dos balões está aberta para a criança (a interface diz): os fugidos aparecem. */
@@ -1917,6 +1936,9 @@ export function criarCena(
       baloesAVista: (sim) => {
         baloesAVista = sim;
       },
+      espalhados: (v) => {
+        espalhadosAVista = [v[0], v[1], v[2]];
+      },
       estado: () => ({
         ...missoesVila.estado(),
         toquesDaRua,
@@ -1963,6 +1985,35 @@ export function criarCena(
       comBalao,
       feno: fenoNoCocho,
     });
+    missoesCasaVila?.quadro({
+      t: tempo,
+      espalhados: espalhadosAVista,
+      eu: { x: j.x, y: j.y, z: j.z },
+    });
+  }
+  /** Parte 3B: os eventos das missões da casa (o brinquedo no baú, o bolo da vovó). */
+  function eventoDaCasa(e: Extract<EventoNucleo, { e: 'vilaGuardou' | 'vilaBolo' }>): void {
+    if (!planoVila || !missoesVila) return;
+    const c = planoVila.pontos.casa;
+    const meu = e.quem === voce;
+    if (e.e === 'vilaGuardou') {
+      if (meu) missoesCasaVila?.guardar(e.i);
+      setTimeout(() => somCasa?.tocar('bau', { x: c.bau[0], z: c.bau[2] }), meu ? 850 : 0);
+      return;
+    }
+    // o bolo: a vovó comemora (os corações, sem a pelúcia) e a fatia voa até quem levou a vitamina
+    const quem = replicaCriaturas.lista.find(
+      (q) => q.morador?.povoado === 'vila' && q.morador.n === AVO,
+    );
+    const [x, y, z] = quem ? [quem.x, quem.y, quem.z] : planoVila.pontos.postos.avo;
+    const cv = c.sofa.assentos[0];
+    missoesVila.vovo(x, y, z, quem?.yaw ?? 0, Math.hypot(x - cv.x, z - cv.z) < 0.8, false);
+    somRua?.tocar('vovo', { x, z });
+    if (quem) gestos?.evento({ e: 'gesto', gesto: 'comemorar', criatura: quem.id });
+    if (meu) {
+      missoesCasaVila?.bolo();
+      setTimeout(() => somRua?.tocar('prenda', { x: c.bolo[0], z: c.bolo[2] }), 300);
+    }
   }
   /** Os eventos das missões do parque (o que a criança fez e o que os amigos veem). */
   function eventoDasMissoes(
@@ -6545,6 +6596,12 @@ export function criarCena(
       case 'vilaVovo':
       case 'vilaLanche':
         eventoDasMissoes(e);
+        estado.eventosVila?.push({ ...e, recebido: performance.now() / 1000 });
+        break;
+      // parte 3B: as missões da casa
+      case 'vilaGuardou':
+      case 'vilaBolo':
+        eventoDaCasa(e);
         estado.eventosVila?.push({ ...e, recebido: performance.now() / 1000 });
         break;
       // spec 026 (parte 2): o parque (o que a criança mesma fez já apareceu na hora)

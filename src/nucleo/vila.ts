@@ -58,6 +58,8 @@ import {
   type Ponto,
 } from '../jogo/coreografia';
 import { dentroDoArco, F_RINQUE, CHAVE_ARCO } from '../jogo/rinque';
+import { FENO } from '../jogo/exclusivos';
+import { fenoNaMochila } from '../jogo/missoesParque';
 import {
   alguemVe,
   caminhoDoPublico,
@@ -72,6 +74,11 @@ import { criarParqueNucleo, type ComandoParque, type EventoParque } from './parq
 import { criarMissoesDoParque, type ComandoMissoes, type EventoMissoes } from './vilaMissoes';
 import { F_BALOES } from '../jogo/missoesParque';
 import { criarCasaNucleo, type ComandoCasa } from './casa';
+import {
+  criarMissoesDaCasa,
+  type ComandoCasaMissoes,
+  type EventoCasaMissoes,
+} from './casaMissoes';
 import type { CasaNaRede } from '../jogo/casa';
 import type { TrilhoNaRede } from '../jogo/rampa';
 
@@ -151,8 +158,11 @@ export const PERTO_DO_FESTIVAL = 6;
 export const PERTO_DA_LHAMA = 4;
 /** O presente do vocalista: a parede de pôster (bloco 108) da banda inventada. */
 export const PRESENTE_VOCALISTA = { item: 'bloco:108', qtd: 4 } as const;
-/** A comida das lhamas (o papel cervo come trigo em todo tema; aqui o nome é "feno"). */
-export const FENO = 'trigo';
+/**
+ * A comida das lhamas: o feno, item só daqui (parte 3B; antes era o trigo de todo tema, que o
+ * papel cervo também come: o trigo de um mundo salvo antes ainda vale, `fenoNaMochila`).
+ */
+export { FENO };
 
 /** O que vai para a tela (no quadro, quando muda, e o relógio a cada segundo). */
 export interface VilaVista {
@@ -177,6 +187,8 @@ export interface VilaVista {
   casa?: CasaNaRede;
   /** Parte 3: quem está no trilho da rampa de skate (o lado, de onde e quando começou). */
   rampa?: Record<string, TrilhoNaRede>;
+  /** Parte 3B (f10): os brinquedos espalhados que quem recebe o quadro pegou e não guardou. */
+  qto?: [boolean, boolean, boolean];
 }
 
 /** O que vai salvo com o mundo (`extras.vila`). */
@@ -257,7 +269,9 @@ export type EventoVila =
   /** Spec 026 (parte 2): o parque (sentou, desceu, o "tum" e o empurrão da roda). */
   | EventoParque
   /** Etapa B: as missões do parque (o balão que desce, a prenda, a vovó, o lanche das lhamas). */
-  | EventoMissoes;
+  | EventoMissoes
+  /** Parte 3B: as missões da casa (o brinquedo guardado no baú, o bolo da vovó). */
+  | EventoCasaMissoes;
 
 /**
  * O toque numa caixa do palco (fora do show: brinquedo livre) e, no parque (parte 2), sentar
@@ -268,7 +282,9 @@ export type ComandoVila =
   | ComandoParque
   | ComandoMissoes
   /** Parte 3: a TV, o videocassete, o disco e o baú da casa; o trilho da rampa de skate. */
-  | ComandoCasa;
+  | ComandoCasa
+  /** Parte 3B: o brinquedo espalhado (f10). */
+  | ComandoCasaMissoes;
 
 /** O comando é da Casa anos 80 ou da rampa de skate (parte 3)? */
 const DA_CASA = new Set(['tv', 'videocassete', 'disco', 'bau', 'rampa']);
@@ -350,6 +366,16 @@ export function criarVila(ctx: CtxVila) {
       return j ? { ...j, skate: !!j.skate, soltar: () => j.soltar?.() } : undefined;
     },
     evento: ctx.evento,
+    sujar: ctx.sujar,
+  });
+  // as missões da casa (parte 3B): o cinema, o quarto e o bolo da vovó
+  const missoesCasa = criarMissoesDaCasa({
+    casa: p.casa,
+    agora: ctx.agora,
+    jogadores: ctx.jogadores,
+    jogador: ctx.jogador,
+    sala: () => casa.sala(),
+    espalhar: ctx.espalhar,
     sujar: ctx.sujar,
   });
 
@@ -738,7 +764,7 @@ export function criarVila(ctx: CtxVila) {
     }
     // o feno na mão de quem tem a f2 no selinho, perto de uma lhama ainda no cercadinho
     for (const j of ctx.jogadores()) {
-      if (j.morto || j.missao !== 'f2' || j.contar(FENO) > 0) continue;
+      if (j.morto || j.missao !== 'f2' || fenoNaMochila((i) => j.contar(i)) > 0) continue;
       const perto = [...vivas.values()].some(
         (c) => !naGrade.has(c.id) && Math.hypot(c.x - j.x, c.z - j.z) <= PERTO_DA_LHAMA,
       );
@@ -1123,6 +1149,7 @@ export function criarVila(ctx: CtxVila) {
       missoes.passo(n);
       // (o fim do trilho da rampa no passo certo: o trilho seguinte já pode vir logo)
       casa.passo();
+      missoesCasa.passo(n);
     },
     comando(id: string, c: ComandoVila): void {
       const j = ctx.jogador(id);
@@ -1132,13 +1159,22 @@ export function criarVila(ctx: CtxVila) {
       if (!podeTocar(id)) return;
       if (c.a === 'caixa') tocarCaixa(j, c.i);
       else if (c.a === 'sentar' || c.a === 'sair' || c.a === 'roda') parque.comando(id, c);
-      else if (ehDaCasa(c)) casa.comando(id, c);
+      else if (c.a === 'brinquedo') missoesCasa.comando(id, c);
+      // (parte 3B: com a f10 aberta o baú guarda o brinquedo espalhado, e não dá)
+      else if (c.a === 'bau' && missoesCasa.bau(id)) return;
+      else if (c.a === 'videocassete') {
+        const antes = casa.sala().filme;
+        casa.comando(id, c);
+        if (casa.sala().filme !== antes) missoesCasa.fitaPosta(id);
+      } else if (ehDaCasa(c)) casa.comando(id, c);
       else missoes.comando(id, c as ComandoMissoes);
     },
     /** Parte 3: a sala da casa e o trilho da rampa (testes). */
     casa,
     /** Etapa B: as missões do parque (testes). */
     missoes,
+    /** Parte 3B: as missões da casa (testes). */
+    missoesCasa,
     /** Spec 026 (parte 2): as cadeiras do parque (testes). */
     parque,
     /** Spec 026 (parte 2): os carrinhos do bate-bate para o quadro deste jogador (ou null). */
@@ -1156,6 +1192,7 @@ export function criarVila(ctx: CtxVila) {
       ...v,
       arcos: arcosDe(id),
       bal: missoes.pegosDe(id),
+      qto: missoesCasa.pegosDe(id),
     }),
     /**
      * Testes e vídeos: o show tocando pula para `s` s desde o começo (antes do acorde final; a

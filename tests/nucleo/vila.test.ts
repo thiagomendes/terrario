@@ -380,7 +380,8 @@ describe('spec 026: a Vila Neon no núcleo', () => {
     passos(n, 40);
     const lh = n.estado.vila!.lhamas();
     expect(lh.todas).toHaveLength(2);
-    expect(n.estado.jogadores.get('ana')!.inventario.contar('trigo')).toBeGreaterThan(0);
+    // (parte 3B: o feno é item próprio, não mais o trigo)
+    expect(n.estado.jogadores.get('ana')!.inventario.contar('feno')).toBeGreaterThan(0);
     // a criança anda devagar até a grade com o feno na mão; as lhamas seguem
     const g = p.pontos.plateia;
     const gx = Math.max(g.x0 + 1, Math.min(g.x1 - 1, mx));
@@ -587,7 +588,7 @@ describe('spec 026: a Vila Neon no núcleo', () => {
     const sz = c.z0 + 0.6;
     ir(n, 'ana', sx, p.h + 1, sz);
     passos(n, 60);
-    expect(n.estado.jogadores.get('ana')!.inventario.contar('trigo')).toBeGreaterThan(0);
+    expect(n.estado.jogadores.get('ana')!.inventario.contar('feno')).toBeGreaterThan(0);
     const g = p.pontos.plateia;
     const mx = (c.x0 + c.x1 + 1) / 2;
     const gx = Math.max(g.x0 + 2, Math.min(g.x1 - 1, mx));

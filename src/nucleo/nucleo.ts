@@ -2751,6 +2751,8 @@ export function criarNucleo(op: OpcoesNucleo) {
         else if (c.a === 'balao' || c.a === 'prenda') vila?.comando(j.id, { a: c.a, i: c.i });
         // (parte 3: o trilho da rampa de skate, para um lado)
         else if (c.a === 'rampa') vila?.comando(j.id, { a: 'rampa', l: c.l });
+        // (parte 3B: o brinquedo espalhado do quarto)
+        else if (c.a === 'brinquedo') vila?.comando(j.id, { a: 'brinquedo', i: c.i });
         else vila?.comando(j.id, { a: c.a });
         break;
       }

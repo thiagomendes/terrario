@@ -130,11 +130,11 @@ describe('spec 026 (parte 2, etapa B): as missões do parque no núcleo', () => 
     expect(sanear({ t: 'vila', a: 'pelucia' })).toBeNull();
   });
 
-  it('as quatro missões: 18 moedinhas (o mundo dá 33), sem fantasia, sem pressa', () => {
+  it('as quatro missões: 18 moedinhas (o mundo dava 33; com as da casa, 51), sem fantasia', () => {
     const lista = missoesDoMundo('vila-neon');
-    expect(lista.map((m) => m.id)).toEqual(['f1', 'f2', 'f4', 'f5', 'f6', 'f7', 'f8']);
-    expect(lista.slice(3).map((m) => m.moedas)).toEqual([5, 4, 4, 5]);
-    expect(moedasDoMundo('vila-neon')).toBe(33);
+    expect(lista.map((m) => m.id).slice(0, 7)).toEqual(['f1', 'f2', 'f4', 'f5', 'f6', 'f7', 'f8']);
+    expect(lista.slice(3, 7).map((m) => m.moedas)).toEqual([5, 4, 4, 5]);
+    expect(moedasDoMundo('vila-neon')).toBe(51);
     for (const m of lista.slice(3)) {
       expect(m.fantasia).toBeUndefined();
       if (m.desenho.tipo === 'arte') expect(m.desenho.resultado).not.toBe(m.desenho.principal);
@@ -251,11 +251,12 @@ describe('spec 026 (parte 2, etapa B): as missões do parque no núcleo', () => 
       passos(n, 2);
       n.comando('ana', vila(n, 'feno'));
       passos(n, 22);
-      expect(inv(n, 'ana').contar('trigo')).toBe(1);
+      // (parte 3B: o feno é item próprio, não mais o trigo)
+      expect(inv(n, 'ana').contar('feno')).toBe(1);
       // outro toque no fardo com o feno na mão não dá mais feno
       n.comando('ana', vila(n, 'feno'));
       passos(n, 22);
-      expect(inv(n, 'ana').contar('trigo')).toBe(1);
+      expect(inv(n, 'ana').contar('feno')).toBe(1);
       // do fardo o cocho está longe: o toque não vale
       n.comando('ana', vila(n, 'cocho'));
       expect(passos(n, 22).some((e) => e.e === 'vilaLanche')).toBe(false);
@@ -266,7 +267,7 @@ describe('spec 026 (parte 2, etapa B): as missões do parque no núcleo', () => 
       const ev = evs.find((e) => e.e === 'vilaLanche');
       expect(ev).toMatchObject({ quem: 'ana' });
       if (ev?.e === 'vilaLanche') expect(ev.fim).toBe(k === 1 ? true : undefined);
-      expect(inv(n, 'ana').contar('trigo')).toBe(0);
+      expect(inv(n, 'ana').contar('feno')).toBe(0);
       expect(moedas(evs)).toBe(k === 1 ? 4 : 0);
       // as lhamas foram chamadas para o cocho e pulam (nunca saem da fazendinha)
       const ids = v.lhamas().fazendinha;
@@ -339,9 +340,9 @@ describe('spec 026 (parte 2, etapa B): as missões do parque no núcleo', () => 
     expect(inv(n, 'ana').contar(PELUCIA)).toBe(0);
     expect(movidas(e3).find((m) => m.id === F_PRENDA)).toMatchObject({ concluiu: true });
     expect(moedas(e3)).toBe(5);
-    // tudo feito: nada novo para convidar
+    // (parte 3B: depois da prenda vêm as missões da casa: há missão nova para convidar)
     const quadro = e3.flatMap((e) => (e.e === 'alma' && e.quadro ? [e.quadro] : [])).pop();
-    expect(quadro && temMissaoNova(quadro)).toBe(false);
+    expect(quadro && temMissaoNova(quadro)).toBe(true);
   });
 
   it('a rua: a fita da locadora (uma) e a vitamina da lanchonete (até duas), só de perto', () => {

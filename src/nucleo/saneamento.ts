@@ -219,6 +219,9 @@ export function sanear(c: unknown): Comando | null {
         return { t: 'vila', a: o.a } as unknown as Comando;
       if (o.a === 'rampa' && (o.l === 1 || o.l === -1))
         return { t: 'vila', a: 'rampa', l: o.l } as unknown as Comando;
+      // parte 3B: o brinquedo espalhado do quarto (0 a 2)
+      if (o.a === 'brinquedo' && inteiro(o.i, 0, 2))
+        return { t: 'vila', a: 'brinquedo', i: o.i } as unknown as Comando;
       return null;
     case 'pularPerto':
       // spec 021: só o id de um amigo (texto curto)

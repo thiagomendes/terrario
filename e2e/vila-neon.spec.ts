@@ -177,6 +177,26 @@ async function f1(page: Page, pre: string): Promise<void> {
 
 /** f2: até a lhama (o feno aparece na mão), depois até a grade; as lhamas vêm atrás. */
 async function f2(page: Page, pre: string): Promise<void> {
+  // (diagnóstico) onde estão a criança e as lhamas, a cada meio segundo
+  await page.evaluate(() => {
+    const e = window.__brumaluz!;
+    const w = window as unknown as { __diagF2: string[] };
+    w.__diagF2 = [];
+    const t0 = performance.now();
+    setInterval(() => {
+      const p = e.jogadorPes!();
+      const l = (e.criaturas?.() ?? [])
+        .filter((c) => c.tipo === 'cervo')
+        .map(
+          (c) =>
+            `${c.id}:${c.estado}@${Math.hypot(c.x - p[0], c.z - p[2]).toFixed(1)}(${c.x.toFixed(0)},${c.z.toFixed(0)})`,
+        )
+        .join(' ');
+      w.__diagF2.push(
+        `${((performance.now() - t0) / 1000).toFixed(1)} fps=${(e.fps ?? 0).toFixed(0)} p=(${p[0].toFixed(0)},${p[2].toFixed(0)}) alvo=${window.__guia!.alvo()?.chave} ${l}`,
+      );
+    }, 500);
+  });
   for (let volta = 0; volta < 8 && !(await temFesta(page)); volta++) {
     const r = await andarPelaTrilha(page, 60_000);
     console.log(`vila: f2 trilha ${r.alvo} chegou=${r.chegou} ${r.s.toFixed(1)} s`);
@@ -186,6 +206,10 @@ async function f2(page: Page, pre: string): Promise<void> {
       await page.screenshot({ path: `${PASTA}/${pre}-f2-grade.png` });
     } else await page.waitForTimeout(1500);
   }
+  const diag = await page.evaluate(() =>
+    (window as unknown as { __diagF2: string[] }).__diagF2.splice(0),
+  );
+  if (!(await temFesta(page)) || process.env.DIAG_F2) console.log(diag.join('\n'));
 }
 
 /**

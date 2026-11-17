@@ -7,7 +7,8 @@ import type { TipoSer } from './criaturas';
 
 /** Comida de cada papel. Peixe, criatura da noite e moradores não comem da mão. */
 export const COMIDA_DOS_BICHOS: Partial<Record<TipoSer, readonly string[]>> = {
-  cervo: ['trigo'],
+  // (spec 026, parte 3B: o feno das lhamas da Vila Neon; o item só existe lá)
+  cervo: ['trigo', 'feno'],
   coelho: ['semente_trigo', 'semente_milho', 'semente_abobora'],
   // a raposa continua sendo domada com frutinhas (comando `domar`)
   raposa: ['frutinhas'],

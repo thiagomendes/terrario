@@ -205,7 +205,12 @@ type ComandoSemSeq =
    * alcance, a esperinha da sala, a fita na mochila, o skate e o limite de toques por segundo.
    */
   | { t: 'vila'; a: 'tv' | 'videocassete' | 'disco' | 'bau' }
-  | { t: 'vila'; a: 'rampa'; l: number };
+  | { t: 'vila'; a: 'rampa'; l: number }
+  /**
+   * Parte 3B (f10, arrumar o quarto): pegar o brinquedo espalhado `i` (0 o ioiô, 1 o pião, 2 o
+   * cubo). O núcleo confere a missão aberta e o alcance; o baú, com a missão aberta, guarda.
+   */
+  | { t: 'vila'; a: 'brinquedo'; i: number };
 
 /** Atalhos de teste e captura (o servidor da nuvem só aceita em ambiente de testes). */
 export type Depuracao =

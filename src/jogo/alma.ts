@@ -518,6 +518,89 @@ export const MISSOES: readonly Missao[] = [
     habilidade: 'bichos',
     minutos: [2, 4],
   },
+  // spec 026 (parte 3, etapa B): as quatro missões da Casa anos 80 e da rampa de skate. As regras
+  // e os lugares estão em `missoesCasa.ts`; pagas só no fim, sem fantasia
+  {
+    // a fita da locadora, a fita no videocassete e o filme visto no sofá do lado da vovó
+    id: 'f9',
+    mundo: 'vila-neon',
+    nome: 'Sessão de cinema',
+    desenho: {
+      tipo: 'arte',
+      principal: 'fitaVideo',
+      selo: 'tvMadeira',
+      resultado: 'sessaoCinema',
+      bolinha: 'fitaVideo',
+      bolinhas: ['fitaVideo', 'fitaNaTv', 'sofaCinema'],
+      placa: 'fitaVideo',
+    },
+    conta: { tipo: 'lugares', usos: ['cinema:fita', 'cinema:tv', 'cinema:sofa'] },
+    // (a íris do fim do filme fecha e a vovó bate palminhas)
+    festaEspera: 2200,
+    moedas: 5,
+    habilidade: 'explorador',
+    minutos: [2, 4],
+  },
+  {
+    // o ioiô do quintal, o pião da sala e o cubo do quarto, de volta para o baú
+    id: 'f10',
+    mundo: 'vila-neon',
+    nome: 'Arrumar o quarto',
+    desenho: {
+      tipo: 'arte',
+      principal: 'brinquedosEspalhados',
+      selo: 'pegar',
+      resultado: 'bauArrumado',
+      bolinha: 'bauArrumado',
+      bolinhas: ['ioioBolinha', 'piaoBolinha', 'cuboBolinha'],
+      placa: 'bauArrumado',
+    },
+    conta: { tipo: 'lugares', usos: ['quarto:ioio', 'quarto:piao', 'quarto:cubo'] },
+    // (o último brinquedo cai no baú e a tampa fecha)
+    festaEspera: 1600,
+    moedas: 4,
+    habilidade: 'construtor',
+    minutos: [2, 3],
+  },
+  {
+    // três idas e voltas inteiras na rampa de skate (cada uma um carimbo)
+    id: 'f11',
+    mundo: 'vila-neon',
+    nome: 'Volta na rampa',
+    desenho: {
+      tipo: 'arte',
+      principal: 'rampaU',
+      selo: 'skate',
+      resultado: 'cartaoRampa',
+      bolinha: 'carimboSkate',
+      placa: 'rampaU',
+    },
+    conta: { tipo: 'evento', chave: 'andou:rampa', meta: 3 },
+    moedas: 4,
+    habilidade: 'explorador',
+    minutos: [1, 2],
+  },
+  {
+    // a vitamina da lanchonete para a vovó; ela dá a fatia de bolo de fubá da mesinha
+    id: 'f12',
+    mundo: 'vila-neon',
+    nome: 'Bolo da vovó',
+    desenho: {
+      tipo: 'arte',
+      principal: 'vitamina',
+      selo: 'vovo',
+      resultado: 'vovoBolo',
+      bolinha: 'fatiaBolo',
+      bolinhas: ['vitamina', 'fatiaBolo'],
+      placa: 'fatiaBolo',
+    },
+    conta: { tipo: 'lugares', usos: ['bolo:vitamina', 'bolo:vovo'] },
+    // (a vovó recebe a vitamina, comemora e a fatia voa até a mão)
+    festaEspera: 2600,
+    moedas: 5,
+    habilidade: 'cozinheiro',
+    minutos: [2, 3],
+  },
 ];
 
 const POR_ID: ReadonlyMap<string, Missao> = new Map(MISSOES.map((m) => [m.id, m]));

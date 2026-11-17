@@ -49,9 +49,20 @@ import {
   N_BALOES,
   PRENDAS,
   alcancaOBalao,
+  fenoNaMochila,
   lugarDoBalao,
 } from '../../jogo/missoesParque';
-import { CUBO_CORES, FITA_VIDEO, IOIO, PELUCIA, PIAO, VITAMINA } from '../../jogo/exclusivos';
+import {
+  CUBO_CORES,
+  FATIA_BOLO,
+  FENO,
+  FITA_VIDEO,
+  IOIO,
+  PELUCIA,
+  PIAO,
+  VITAMINA,
+} from '../../jogo/exclusivos';
+import { ALCANCE_ESPALHADO, ESPALHADOS, F_QUARTO, QUARTO } from '../../jogo/missoesCasa';
 import {
   ALCANCE_DISCOS,
   alcancaATv,
@@ -343,6 +354,9 @@ export function ligarVilaNeon(
   const aberta = (id: string) => !!ui.vista()?.abertas.some((a) => a.id === id);
   /** Os passos já feitos de uma missão de lugares (a argola, a pescaria). */
   const usosDe = (id: string) => ui.vista()?.abertas.find((a) => a.id === id)?.usos ?? [];
+  /** Parte 3B (f10): o brinquedo espalhado `i` ainda está no chão para esta criança? */
+  const espalhadoNoChao = (i: number) =>
+    aberta(F_QUARTO) && !usosDe(F_QUARTO).includes(QUARTO[i]) && !e.vilaEstado?.()?.qto?.[i];
   /** Quantos deste item a criança tem na mochila. */
   const tem = (item: string): number => {
     const inv = e.inventario;
@@ -399,7 +413,7 @@ export function ligarVilaNeon(
     // f7: o fardo (sem feno na mão) e o cocho (com o feno)
     {
       chave: 'fardo',
-      ativo: () => aberta(F_LANCHE) && tem('trigo') < 1,
+      ativo: () => aberta(F_LANCHE) && fenoNaMochila(tem) < 1,
       ponto: () => [pq.fardo[0], pq.fardo[1] - 0.6, pq.fardo[2]],
       alcanca: pertoDoPonto(pq.fardo, ALCANCE_FARDO),
       raio: RAIO_TOQUE * 2.2,
@@ -409,7 +423,7 @@ export function ligarVilaNeon(
     },
     {
       chave: 'cocho',
-      ativo: () => aberta(F_LANCHE) && tem('trigo') > 0,
+      ativo: () => aberta(F_LANCHE) && fenoNaMochila(tem) > 0,
       ponto: () => [pq.cocho[0], pq.cocho[1] + 0.7, pq.cocho[2]],
       alcanca: pertoDoPonto(pq.cocho, ALCANCE_COCHO),
       raio: RAIO_TOQUE * 2.4,
@@ -519,6 +533,11 @@ export function ligarVilaNeon(
         )
       );
     };
+    const espalhadoAVista = espalhadoNoChao;
+    /** Com a f10 aberta e um brinquedo espalhado na mão: o baú guarda. */
+    const guardaNoBau = () =>
+      aberta(F_QUARTO) &&
+      QUARTO.some((u, i) => !!e.vilaEstado?.()?.qto?.[i] && !usosDe(F_QUARTO).includes(u));
     const vcr: [number, number, number] = [c.tv[0] - 0.5, Yc + 0.27, c.tv[2] + 0.34];
     const assento = c.sofa.assentos[1];
     const brinquedo = (
@@ -592,9 +611,41 @@ export function ligarVilaNeon(
       brinquedo('cubo', c.cubo, 0.3, 'dicaCubo'),
       brinquedo('robo', c.robo, 0.6, 'dicaRobo'),
       brinquedo('bola', c.bola, 0.3),
+      // parte 3B (f10): os brinquedos espalhados (um toque pega) e o baú que guarda
+      ...ESPALHADOS.map(
+        (_, i): ToqueB => ({
+          chave: `espalhado-${i}`,
+          ativo: () => espalhadoAVista(i),
+          ponto: () => {
+            const q = c.espalhados[i];
+            return [q[0], q[1] + 0.25, q[2]];
+          },
+          alcanca: (x, z) =>
+            Math.hypot(c.espalhados[i][0] - x, c.espalhados[i][2] - z) <= ALCANCE_ESPALHADO,
+          raio: RAIO_TOQUE * 1.9,
+          naHora: true,
+          tocar: () => comando({ a: 'brinquedo', i }),
+          dica: {
+            figura: ['dicaIoio', 'dicaPiao', 'dicaCubo'][i],
+            texto: 'Toque para pegar',
+            ate: 3.8,
+          },
+        }),
+      ),
+      {
+        chave: 'bau-guardar',
+        ativo: () => guardaNoBau(),
+        ponto: () => [c.bau[0], c.bau[1] + 0.62, c.bau[2]],
+        alcanca: (x, z) => alcancaOBau(c, x, z),
+        raio: RAIO_TOQUE * 2.2,
+        naHora: true,
+        tocar: () => e.vilaCasa?.tocar('bau'),
+        dica: { figura: 'dicaGuardar', texto: 'Toque para guardar', ate: 3.4 },
+      },
       {
         chave: 'bau',
-        ativo: () => proximoDoBau(tem) !== null,
+        // (com a f10 aberta o baú só guarda)
+        ativo: () => proximoDoBau(tem) !== null && !aberta(F_QUARTO),
         ponto: () => [c.bau[0], c.bau[1] + 0.62, c.bau[2]],
         alcanca: (x, z) => alcancaOBau(c, x, z),
         raio: RAIO_TOQUE * 2,
@@ -794,10 +845,10 @@ export function ligarVilaNeon(
   window.addEventListener('brumaluz:coletou', (ev) => {
     const d = (ev as CustomEvent<{ item: string; qtd: number }>).detail;
     // (etapa B: o feno do fardo, a pelúcia de prenda, a fita e a vitamina também vêm para a mão)
-    const feno = d.item === 'trigo' && (missao() === 'f2' || aberta(F_LANCHE));
-    // (parte 3: os brinquedos do baú da Casa anos 80 também)
-    const naMao = [PELUCIA, FITA_VIDEO, VITAMINA, IOIO, PIAO, CUBO_CORES];
-    if (!feno && !naMao.includes(d.item)) return;
+    // (parte 3: os brinquedos do baú da Casa anos 80 também; parte 3B: o feno é item próprio, só
+    // das lhamas, e vai sempre para a mão; antes era o trigo, só com a f2 ou a f7 na vez)
+    const naMao = [FENO, PELUCIA, FITA_VIDEO, VITAMINA, IOIO, PIAO, CUBO_CORES, FATIA_BOLO];
+    if (!naMao.includes(d.item)) return;
     for (let i = 0; i < 9; i++)
       if (e.inventario?.obter(i)?.item === d.item) {
         e.selecionarSlot?.(i);
@@ -836,6 +887,8 @@ export function ligarVilaNeon(
   scene.onBeforeRenderObservable.add(() => {
     // etapa B: os balões fugidos só aparecem para quem tem a missão deles aberta
     e.vilaMissoes?.baloesAVista(aberta(F_BALOES));
+    // parte 3B: os brinquedos espalhados só para quem tem a f10 aberta e ainda não pegou
+    e.vilaMissoes?.espalhados([espalhadoNoChao(0), espalhadoNoChao(1), espalhadoNoChao(2)]);
     const pes = e.jogadorPes?.();
     const sentada = e.vilaParque?.sentado();
     if (sentada) dicaUsada = `sentar-${DE_SENTAR.find((q) => q.nome === sentada.b)?.b}`;

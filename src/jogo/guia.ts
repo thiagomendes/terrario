@@ -26,6 +26,9 @@ import {
   PRENDAS,
   chaoDoBalao,
 } from './missoesParque';
+import { BOLO, CINEMA, F_BOLO, F_CINEMA, F_QUARTO, F_RAMPA, QUARTO, sentadoNoSofa } from './missoesCasa';
+import { casaDaRede, passaFilme } from './casa';
+import { FITA_VIDEO, VITAMINA } from './exclusivos';
 
 // ------------------------------------------------------------------ o alvo
 /** Uma caixa no chão (inclusivo em x0/z0, exclusivo em x1/z1). */
@@ -95,11 +98,23 @@ export interface MundoDoGuia {
     arcos?: readonly boolean[];
     /** Etapa B (f6): os balões fugidos que a criança já pegou. */
     bal?: readonly boolean[];
+    /** Parte 3: a sala da casa (o filme da fita), como vem na rede. */
+    casa?: unknown;
+    /** Parte 3B (f10): os brinquedos espalhados que a criança pegou e ainda não guardou. */
+    qto?: readonly boolean[];
   } | null;
   /** Spec 026: a criança está com o feno na mão (a lhama já vem atrás). */
   comFeno?(): boolean;
   /** Spec 026: a criança está de patins (a f4: primeiro o suporte, depois os arcos). */
   comPatins?(): boolean;
+  /** Parte 3B: a criança está de skate (a f11: primeiro o suporte, depois a rampa). */
+  comSkate?(): boolean;
+  /** Parte 3B: quantos deste item a criança tem (a fita da f9, a vitamina da f12). */
+  tem?(item: string): number;
+  /** Parte 3B: o relógio do núcleo (s), para saber se o filme da fita está passando. */
+  tempoNucleo?(): number;
+  /** Parte 3B: os pés da criança (a altura: sentada no sofá). */
+  pes?(): readonly [number, number, number];
 }
 
 const caixaDoLoteCidade = (l: LoteCidade): CaixaChao => ({
@@ -565,10 +580,103 @@ function alvoNoCanto(
 export const RAIO_ESTOJO = 1.3;
 /** Perto da lhama: o feno aparece na mão (o núcleo dá a 4). */
 export const RAIO_LHAMA = 3.2;
+/**
+ * Com o feno na mão (f2), a lhama a mais que `VEIO_JUNTO` da criança ficou para trás e a trilha
+ * volta até ela (na grade, a mais que `FICOU_PARA_TRAS`, para a trilha não ir e voltar com a lhama
+ * que segue a uns dois blocos e apressa o passo acima de cinco). As duas ficam abaixo dos 8 blocos
+ * em que a lhama começa a seguir o feno: a lhama parada a 8,5 da grade nunca mais vinha, e a
+ * trilha não a mostrava.
+ */
+export const FICOU_PARA_TRAS = 7.5;
+export const VEIO_JUNTO = 6;
+/** As lhamas da f2 ficam a menos que isto (blocos) do meio do cercadinho (a grade fica a ~25). */
+const LONGE_DA_F2 = 45;
 /** Perto do suporte dos patins: o toque nele calça (a tela aceita a 4). */
 export const RAIO_PATINS = 2.2;
 /** Dentro do arco (o núcleo conta no vão, a uns 0,75 do meio). */
 export const RAIO_ARCO = 0.7;
+
+type Sitio = (
+  chave: string,
+  x: number,
+  z: number,
+  raio: number,
+  fig?: string,
+  alto?: number,
+) => AlvoGuia;
+
+/**
+ * Parte 3B: as missões da Casa anos 80 e da rampa (f9 a f12). Devolve undefined quando a missão
+ * não é delas, e null quando não há aonde ir agora (sentada no sofá vendo o filme, tudo feito).
+ */
+function alvoNaCasa(
+  m: Missao,
+  p: PlanoVila,
+  mundo: MundoDoGuia,
+  de: { x: number; z: number },
+  atual: string | null,
+  vistos: ReadonlySet<string>,
+  sitio: Sitio,
+): AlvoGuia | null | undefined {
+  const pt = p.pontos;
+  const c = pt.casa;
+  const rua = pt.rua;
+  const d = m.desenho;
+  const bolinhas = d.tipo === 'arte' ? (d.bolinhas ?? []) : [];
+  // (a locadora e a lanchonete: da calçada, na frente da parede de fitas e do balcão)
+  const locadora = () =>
+    sitio('locadora', rua.fitas[0] + 0.5, rua.fitas[2] + 3.2, 1.6, 'fitaVideo', 1.6);
+  const lanchonete = () =>
+    sitio('lanchonete', rua.balcao[0] - 2.6, rua.balcao[2] + 3.0, 1.6, 'vitamina', 1.6);
+  if (m.id === F_CINEMA) {
+    if (vistos.has(CINEMA[2])) return null;
+    const sala = casaDaRede(mundo.estadoVila?.()?.casa ?? null);
+    const t = mundo.tempoNucleo?.() ?? 0;
+    if (vistos.has(CINEMA[1]) && passaFilme(sala, t)) {
+      // o filme passando: o sofá (sentada, a trilha some: é só assistir)
+      const pes = mundo.pes?.();
+      if (pes && sentadoNoSofa(c, pes[0], pes[1], pes[2])) return null;
+      const a = c.sofa.assentos[1];
+      return sitio('sofa', a.x, a.z - 1.3, 1.3, bolinhas[2] ?? 'sofaCinema', 1.1);
+    }
+    if ((mundo.tem?.(FITA_VIDEO) ?? 0) > 0)
+      // com a fita: o tapete na frente da TV (o videocassete alcança de toda a sala)
+      return sitio('tv', c.tv[0], c.tv[2] + 3.4, 1.6, bolinhas[1] ?? 'fitaNaTv', 1.8);
+    return locadora();
+  }
+  if (m.id === F_QUARTO) {
+    const pegos = mundo.estadoVila?.()?.qto ?? [];
+    // com um brinquedo na mão: o baú (de frente para ele, do lado do quarto)
+    if (QUARTO.some((u, i) => pegos[i] && !vistos.has(u)))
+      return sitio('bau', c.bau[0] - 1.5, c.bau[2], 1.3, 'bauArrumado', 1.0);
+    const lista = c.espalhados
+      .map((q, i) => {
+        // (a uns blocos e meio do brinquedo, do lado de quem vem: ele fica na frente do boneco)
+        const dx = de.x - q[0];
+        const dz = de.z - q[2];
+        const dd = Math.hypot(dx, dz) || 1;
+        const k = Math.min(1.4, dd);
+        return { chave: `brinquedo:${i}`, x: q[0] + (dx / dd) * k, z: q[2] + (dz / dd) * k, i };
+      })
+      .filter((b) => !vistos.has(QUARTO[b.i]) && !pegos[b.i]);
+    const b = maisPerto(lista, de, atual);
+    return b ? sitio(b.chave, b.x, b.z, 1.1, bolinhas[b.i] ?? 'bauArrumado', 0.9) : null;
+  }
+  if (m.id === F_RAMPA) {
+    const sk = pt.skate.suporte;
+    if (!mundo.comSkate?.()) return sitio('suporte', sk[0] + 2.2, sk[2] + 1.0, 1.6, 'skate', 1.8);
+    const r = pt.skate.rampa;
+    // de skate: o fundo da rampa (lá, segurar o controle para uma das curvas)
+    return sitio('rampa', r.x - 0.4, r.z, 2.2, 'rampaU', 1.4);
+  }
+  if (m.id === F_BOLO) {
+    if (vistos.has(BOLO[1])) return null;
+    if (!vistos.has(BOLO[0]) && (mundo.tem?.(VITAMINA) ?? 0) < 1) return lanchonete();
+    const [ax, , az] = c.vovo;
+    return sitio('vovo', ax, az, 1.6, 'vovo', 2.2);
+  }
+  return undefined;
+}
 
 function alvoNaVila(
   m: Missao,
@@ -636,6 +744,8 @@ function alvoNaVila(
     const [ax, , az] = pt.casa.vovo;
     return sitio('vovo', ax, az, 1.6, bolinhas[2] ?? figura, 2.2);
   }
+  const casa = alvoNaCasa(m, p, mundo, de, atual, vistos, sitio);
+  if (casa !== undefined) return casa;
   if (c.tipo !== 'evento') return null;
   const v = mundo.estadoVila?.() ?? null;
   if (c.chave === CHAVE_BALAO) {
@@ -679,8 +789,39 @@ function alvoNaVila(
     const g = pt.plateia;
     const ce = pt.cercado;
     const mx = (ce.x0 + ce.x1 + 1) / 2;
-    // com o feno na mão: a grade da plateia, de frente para o cercadinho (as lhamas vêm atrás)
+    const mz = (ce.z0 + ce.z1 + 1) / 2;
+    const naGrade = new Set(v?.lhamas ?? []);
+    // as duas lhamas da f2 que ainda não chegaram à grade (as da fazendinha do parque moram a
+    // mais de cem blocos daqui: as daqui são as que estão perto do cercadinho ou da grade)
+    const daMissao = (mundo.bichos?.() ?? []).filter(
+      (b) =>
+        b.tipo === 'cervo' &&
+        !naGrade.has(b.id) &&
+        Math.hypot(b.x - mx, b.z - mz) < LONGE_DA_F2,
+    );
+    // com o feno na mão: a grade da plateia, de frente para o cercadinho (as lhamas vêm atrás).
+    // A lhama que ficou para trás (estava longe quando o feno chegou à mão, ou desistiu de
+    // seguir) leva a trilha de volta até ela: perto do feno ela vem junto. Sem isso a trilha
+    // ficava na grade e a criança esperava para sempre por uma lhama que não vinha (a f2 que
+    // falhava "de vez em quando": a segunda lhama passeava do outro lado do cercadinho)
     if (mundo.comFeno?.()) {
+      const longe = atual === 'grade' ? FICOU_PARA_TRAS : VEIO_JUNTO;
+      const atras = daMissao
+        .filter((b) => Math.hypot(b.x - de.x, b.z - de.z) > longe)
+        .map((b) => ({ ...b, chave: `lhama:${b.id}` }));
+      const b = maisPerto(atras, de, atual);
+      if (b)
+        return {
+          chave: b.chave,
+          tipo: 'morador',
+          x: b.x,
+          y: b.y,
+          z: b.z,
+          placa: [b.x, b.y + 1.6, b.z],
+          figura,
+          raio: RAIO_LHAMA,
+          morador: b.id,
+        };
       const x = Math.max(g.x0 + 2, Math.min(g.x1 - 1, mx));
       const z = g.z1 - 0.5;
       return {
@@ -695,9 +836,7 @@ function alvoNaVila(
       };
     }
     // sem feno: a lhama mais perto ainda no cercadinho (o feno aparece na mão perto dela)
-    const naGrade = new Set(v?.lhamas ?? []);
-    const lista = (mundo.bichos?.() ?? [])
-      .filter((b) => b.tipo === 'cervo' && !naGrade.has(b.id))
+    const lista = daMissao
       .filter((b) => b.x >= ce.x0 - 4 && b.x <= ce.x1 + 5 && b.z >= ce.z0 - 4 && b.z <= ce.z1 + 5)
       .map((b) => ({ ...b, chave: `lhama:${b.id}` }));
     const b = maisPerto(lista, de, atual);

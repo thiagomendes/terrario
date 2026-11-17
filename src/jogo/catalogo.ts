@@ -2,6 +2,8 @@ import {
   CACHORRO_QUENTE,
   COLHER_PEDREIRO,
   CUBO_CORES,
+  FATIA_BOLO,
+  FENO,
   FITA_VIDEO,
   IOIO,
   PELUCIA,
@@ -1001,6 +1003,73 @@ export function registrarCatalogo(): void {
       '..kkkkkkkkkkkk..',
       '................',
       '................',
+      '................',
+    ],
+  });
+  // parte 3, etapa B: o feno das lhamas (o fardinho dourado com as duas cintas vermelhas, o mesmo
+  // do cartão) e a fatia de bolo de fubá da vovó (comida)
+  registrarItem({ id: FENO, nome: 'Feno', tipo: 'material', pilha: 16 });
+  registrarDesenho(FENO, {
+    paleta: {
+      k: '#5a3a22',
+      Y: '#f8dc78',
+      y: '#f2c94a',
+      d: '#c9952a',
+      r: '#e8302a',
+      R: '#b8241e',
+    },
+    linhas: [
+      '................',
+      '....y.....y..y..',
+      '..kkkkkkkkkkkk..',
+      '.kYYYYrYYYYrYYk.',
+      '.kYYYYrYYYYrYYk.',
+      '.kyyyyRyyyyRyyk.',
+      '.kyddyryyddryyk.',
+      '.kyyyyryyyyrdyk.',
+      '.kydyyrydyyryyk.',
+      '.kyyyyryyyyryyk.',
+      '.kyyddryyyyrddk.',
+      '.kdyyyryydyryyk.',
+      '.kddddRddddRddk.',
+      '..kkkkkkkkkkkk..',
+      '................',
+      '................',
+    ],
+  });
+  registrarItem({
+    id: FATIA_BOLO,
+    nome: 'Fatia de bolo de fubá',
+    tipo: 'comida',
+    pilha: 16,
+    comida: { fome: 4, saturacao: 3 },
+  });
+  registrarDesenho(FATIA_BOLO, {
+    paleta: {
+      k: '#5a3a22',
+      c: '#d9902e',
+      s: '#fff6e6',
+      b: '#b8701e',
+      f: '#ffd866',
+      h: '#eeb440',
+      w: '#f4f8ff',
+    },
+    linhas: [
+      '................',
+      '................',
+      '...........kk...',
+      '........kkkcck..',
+      '.....kkkcccccck.',
+      '..kkkccscccsccck',
+      '.kccccccccccccbk',
+      '.kffffffffffffbk',
+      '.kfhffffhfffffbk',
+      '.kffffhffffhffbk',
+      '.kfhfffffhffffbk',
+      '.kffffffffffffbk',
+      '.kkkkkkkkkkkkkkk',
+      'kwwwwwwwwwwwwwwk',
+      '.kkkkkkkkkkkkkk.',
       '................',
     ],
   });

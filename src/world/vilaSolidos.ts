@@ -211,6 +211,8 @@ function caixasLocais(tipo: TipoPecaVila, n: number): readonly Local[] {
       return [B(-0.32, 0.32, 0, 0.66, -0.32, 0.32)];
     case 'casa-bau':
       return [B(-0.47, 0.47, 0, 0.66, -0.3, 0.3)];
+    case 'casa-bolo':
+      return [B(-0.28, 0.28, 0, 0.84, -0.28, 0.28)];
     // ---------------------------------------------------------------- a pista de skate (parte 3)
     case 'rampa-skate':
       return CAIXAS_DA_RAMPA;

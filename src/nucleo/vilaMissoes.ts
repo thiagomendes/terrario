@@ -21,7 +21,7 @@
 import type { PontosParque } from '../world/vilaParque';
 import type { PontosRua } from '../world/vilaNeon';
 import type { Criatura } from '../jogo/criaturas';
-import { FITA_VIDEO, PELUCIA, VITAMINA } from '../jogo/exclusivos';
+import { FENO, FITA_VIDEO, PELUCIA, VITAMINA } from '../jogo/exclusivos';
 import {
   ALCANCE_BARRACA,
   ALCANCE_COCHO,
@@ -33,6 +33,7 @@ import {
   F_BILHETE,
   F_LANCHE,
   F_PRENDA,
+  FENO_ANTIGO,
   MAX_FITAS,
   MAX_VITAMINAS,
   N_BALOES,
@@ -40,11 +41,9 @@ import {
   PRENDAS,
   alcancaOBalao,
   carimboDoPasseio,
+  fenoNaMochila,
   pertoDe,
 } from '../jogo/missoesParque';
-
-/** A comida das lhamas (o papel cervo come trigo em todo tema; aqui o nome é "feno"). */
-const FENO = 'trigo';
 /** Quantas crianças com o balão de presente vão salvas com o mundo. */
 const MAX_BALOES_SALVOS = 64;
 /** As lhamas ficam no cocho por tantos segundos depois de cada braçada de feno. */
@@ -185,15 +184,16 @@ export function criarMissoesDoParque(ctx: CtxMissoes) {
   }
 
   function pegarFeno(j: JogadorMissoes): void {
-    if (!j.aberta(F_LANCHE) || j.contar(FENO) > 0) return;
+    if (!j.aberta(F_LANCHE) || fenoNaMochila((i) => j.contar(i)) > 0) return;
     if (!pertoDe(pq.fardo, j.x, j.z, ALCANCE_FARDO)) return;
     j.darNaMao(FENO, 1);
   }
 
   function porNoCocho(j: JogadorMissoes): void {
-    if (!j.aberta(F_LANCHE) || !j.tirar || j.contar(FENO) < 1) return;
+    if (!j.aberta(F_LANCHE) || !j.tirar || fenoNaMochila((i) => j.contar(i)) < 1) return;
     if (!pertoDe(pq.cocho, j.x, j.z, ALCANCE_COCHO)) return;
-    if (j.tirar(FENO, 1) < 1) return;
+    // (o feno de agora primeiro; o trigo de um mundo salvo antes também vale)
+    if (j.tirar(FENO, 1) < 1 && j.tirar(FENO_ANTIGO, 1) < 1) return;
     const n = (bracadas.get(j.id) ?? 0) + 1;
     bracadas.set(j.id, n);
     if (bracadas.size > 256) bracadas.delete(bracadas.keys().next().value as string);

@@ -90,9 +90,27 @@ export const PELUCIA = 'pelucia';
 export const IOIO = 'ioio';
 export const PIAO = 'piao';
 export const CUBO_CORES = 'cubo_cores';
+/**
+ * Parte 3, etapa B: o feno das lhamas (a f2 e a f7; antes era o feixe de trigo de todo tema, e
+ * a criança via "+1 Feixe de trigo" com o desenho do trigo enquanto o cartão mostrava o fardo) e a
+ * fatia de bolo de fubá da vovó (comida, a f12).
+ */
+export const FENO = 'feno';
+export const FATIA_BOLO = 'fatia_bolo';
 export const EXCLUSIVOS_VILA: Exclusivos = {
   blocos: [...BLOCOS_DE_RUA, ...BLOCOS_SO_DA_VILA],
-  itens: [CACHORRO_QUENTE, SUCO, VITAMINA, FITA_VIDEO, PELUCIA, IOIO, PIAO, CUBO_CORES],
+  itens: [
+    CACHORRO_QUENTE,
+    SUCO,
+    VITAMINA,
+    FITA_VIDEO,
+    PELUCIA,
+    IOIO,
+    PIAO,
+    CUBO_CORES,
+    FENO,
+    FATIA_BOLO,
+  ],
 };
 
 /**

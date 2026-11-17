@@ -85,6 +85,9 @@ export function desenharPecaCasa(r: Ref, tipo: TipoPecaVila, n: number): boolean
     case 'casa-bau':
       bau(r);
       return true;
+    case 'casa-bolo':
+      mesaDoBolo(r);
+      return true;
     // (o pião, o cubo, o robô e a bola mexem: são todos de `casa.ts`)
     case 'casa-piao':
     case 'casa-cubo':
@@ -413,6 +416,34 @@ function bau(r: Ref): void {
   r.caixa(0.2, 0.05, 0.05, 0, 0.6, 0.31, COR.vermelho, 0.02);
   for (const x of [-0.42, 0.42]) r.caixa(0.06, 0.48, 0.6, x, 0.03, 0, '#3a74c0', 0.02);
 }
+
+/**
+ * Parte 3B: a mesinha redonda do lado da vovó (o pé de madeira torneado, o tampo, o paninho de
+ * crochê) com o bolo de fubá de furo no meio no prato de pé, dourado e polvilhado de açúcar.
+ */
+function mesaDoBolo(r: Ref): void {
+  r.prisma(12, 0.2, 0.04, 0, 0.02, 0, CASA.madeiraEscura, 'y');
+  r.prisma(8, 0.05, 0.5, 0, 0.29, 0, CASA.madeira, 'y');
+  r.prisma(8, 0.08, 0.06, 0, 0.3, 0, CASA.madeiraClara, 'y');
+  r.prisma(16, 0.28, 0.05, 0, 0.575, 0, CASA.madeira, 'y');
+  r.prisma(16, 0.24, 0.008, 0, 0.604, 0, CASA.creme, 'y');
+  // o prato de pé e o bolo
+  r.prisma(10, 0.05, 0.03, 0, 0.623, 0, '#e8eef6', 'y');
+  r.prisma(16, 0.21, 0.016, 0, 0.645, 0, '#f4f8ff', 'y');
+  r.prisma(16, 0.17, 0.15, 0, BOLO_MEIO, 0, '#e9a83a', 'y');
+  r.prisma(16, 0.175, 0.02, 0, BOLO_MEIO + 0.075, 0, '#c9802a', 'y');
+  r.prisma(10, 0.05, 0.024, 0, BOLO_MEIO + 0.077, 0, '#7a4a1e', 'y');
+  for (const [x, z] of [
+    [0.1, 0.03],
+    [-0.08, 0.08],
+    [0.02, -0.11],
+    [-0.1, -0.05],
+    [0.07, 0.1],
+  ] as const)
+    r.caixa(0.03, 0.008, 0.03, x, BOLO_MEIO + 0.086, z, '#fff6e6', 0.004);
+}
+/** O meio do bolo em cima da mesinha (o mesmo `ALTURA_BOLO` do ponto da casa). */
+const BOLO_MEIO = 0.74;
 
 // ================================================================== a pista de skate
 

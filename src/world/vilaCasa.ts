@@ -92,6 +92,14 @@ export interface PontosCasa {
   bau: P3;
   /** O robô anda dois passos para lá e dois para cá: a outra ponta. */
   roboAte: P3;
+  /**
+   * Parte 3B (f10, arrumar o quarto): onde ficam espalhados o ioiô (no quintal), o pião (na sala,
+   * atrás do sofá) e o cubo (no canto do quarto), no chão, na ordem do baú.
+   */
+  espalhados: [P3, P3, P3];
+  /** Parte 3B (f12): a mesinha do bolo de fubá do lado da vovó (o pé, no chão) e o meio do bolo. */
+  mesaBolo: P3;
+  bolo: P3;
 }
 
 export interface CasaMontada {
@@ -115,6 +123,9 @@ function local(p: P3, dir: number, x: number, y: number, z: number): P3 {
 export const ALTURA_ASSENTO = 0.5;
 /** O sofá: o comprimento e de quanto em quanto ficam os assentos. */
 export const SOFA = { largura: 3.3, fundura: 1.0, passo: 1.05 } as const;
+/** Parte 3B: onde fica a mesinha do bolo (u do lote) e a que altura fica o meio do bolo. */
+const U_MESA_BOLO = 51.36;
+export const ALTURA_BOLO = 0.74;
 
 export function montarCasa80(f: FerramentasVila): CasaMontada {
   const { X, Z, Y, chao, b, peca, ret } = f;
@@ -225,6 +236,9 @@ export function montarCasa80(f: FerramentasVila): CasaMontada {
   peca('casa-abajur', 46.6, vSofa, DIR.n);
   peca('casa-telefone', 52.35, vSofa, DIR.n);
   peca('casa-discos', 43.85, 41.2, DIR.l);
+  // parte 3B: a mesinha redonda do bolo de fubá, entre o braço do sofá do lado da vovó e a
+  // mesinha do telefone (a f12: ela dá uma fatia dali)
+  peca('casa-bolo', U_MESA_BOLO, vSofa - 0.1, DIR.n);
   // as cortinas das janelas da frente da sala (por dentro) e a do oeste
   peca('casa-cortina', 45.5, 52.5, DIR.n, 0, 0);
   peca('casa-cortina', 48.5, 52.5, DIR.n, 1, 0);
@@ -289,6 +303,9 @@ export function montarCasa80(f: FerramentasVila): CasaMontada {
     roboAte: [robo[0] - 1.3, robo[1], robo[2]],
     bola: P(57.2, 49.6),
     bau: P(61.25, 45.0),
+    espalhados: [P(57.5, 55.3), P(48.6, 48.9), P(57.7, 51.1)],
+    mesaBolo: P(U_MESA_BOLO, vSofa - 0.1),
+    bolo: P(U_MESA_BOLO, vSofa - 0.1, ALTURA_BOLO),
   };
   void topoTelhado;
   return { pontos, avo };

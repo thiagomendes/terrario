@@ -70,7 +70,15 @@ export interface RenderMissoesParque {
   /** A lhama de pelúcia aparece no balcão `de` da barraca e voa em arco até a criança (~1 s). */
   pelucia(de: readonly [number, number, number]): void;
   /** Corações e estrelinhas em volta da vovó (os pés dela em x, y, z). */
-  vovo(x: number, y: number, z: number, yaw?: number, sentada?: boolean): void;
+  vovo(
+    x: number,
+    y: number,
+    z: number,
+    yaw?: number,
+    sentada?: boolean,
+    /** Parte 3B: sem a pelúcia nos braços (o bolo da vovó: só os corações). */
+    comPelucia?: boolean,
+  ): void;
   /** O feno caiu no cocho: a nuvenzinha de palha. */
   lanche(): void;
   /** Testes: o que está à vista. */
@@ -487,10 +495,12 @@ export function criarMissoesParque(scene: Scene, op: OpcoesMissoesParque): Rende
       peluciaDe = [de[0], de[1], de[2]];
       leque(de[0], de[1] + 0.5, de[2], 6);
     },
-    vovo(x, y, z, yaw = 0, sentada = false) {
-      vovoDesde = agora;
-      vovoEm = [x, y, z, yaw];
-      vovoNoColo = sentada;
+    vovo(x, y, z, yaw = 0, sentada = false, comPelucia = true) {
+      if (comPelucia) {
+        vovoDesde = agora;
+        vovoEm = [x, y, z, yaw];
+        vovoNoColo = sentada;
+      }
       for (let k = 0; k < 6; k++) {
         const a = (k / 6) * Math.PI * 2 + 0.4;
         soltar(coracoes, {

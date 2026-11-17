@@ -19,6 +19,8 @@ import { pedirSomGuia } from '../../audio/somGuia';
 import { medirHud } from '../carinhasAmigos';
 import { ligarCantoMissoes } from './canto';
 import { ligarVilaNeon } from './vila';
+import { FENO } from '../../jogo/exclusivos';
+import { FENO_ANTIGO } from '../../jogo/missoesParque';
 
 /** O quadro de cortiça com as duas missões (o ícone de "Missões" na roda do menu). */
 export const QUADRO_SVG = `<svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
@@ -107,11 +109,32 @@ export function ligarGuiaMissao(e: EstadoDepuracao, ui: AlmaUi): GuiaMissao | nu
     comFeno: () => {
       const inv = e.inventario;
       if (!inv) return false;
-      for (let i = 0; i < 36; i++) if (inv.obter(i)?.item === 'trigo') return true;
+      // (parte 3B: o feno é item próprio; o trigo de um mundo salvo antes ainda vale)
+      for (let i = 0; i < 36; i++) {
+        const item = inv.obter(i)?.item;
+        if (item === FENO || item === FENO_ANTIGO) return true;
+      }
       return false;
     },
     // spec 026 (f4): de patins, o guia leva aos arcos do rinque; sem eles, ao suporte
     comPatins: () => !!e.personagem?.aparencia().patins,
+    // parte 3B: o skate da f11, a fita da f9 e a vitamina da f12, o filme e o sofá
+    comSkate: () => !!e.personagem?.aparencia().skate,
+    tem: (item: string) => {
+      const inv = e.inventario;
+      if (!inv) return 0;
+      let n = 0;
+      for (let i = 0; i < 36; i++) {
+        const s = inv.obter(i);
+        if (s?.item === item) n += s.qtd;
+      }
+      return n;
+    },
+    tempoNucleo: () => e.vilaTempo?.() ?? e.vilaEstado?.()?.t ?? 0,
+    pes: () => {
+      const p = e.jogadorPes?.() ?? [0, 0, 0];
+      return [p[0], p[1], p[2]] as const;
+    },
   };
   const guia = criarGuiaMissao({
     scene,
