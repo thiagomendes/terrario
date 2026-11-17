@@ -27,6 +27,7 @@ import {
   type SubjuntaPremium,
   type TexturaPremium,
 } from '../personagem/boneco';
+import { ALTURA_PRANCHA } from '../personagem/bonecoFantasia';
 import { luzPremium, texturaAquario } from './premiumLuzes';
 import type { Pose } from '../personagem/poses';
 import {
@@ -319,6 +320,8 @@ export function criarBoneco(
   escalar.parent = raiz;
   const mats = criarPlasticos(scene, prefixo);
   let juntas = {} as Record<Junta, TransformNode>;
+  /** Spec 026 (parte 3): de skate (o corpo sobe em cima da prancha e fica de pé nela). */
+  let deSkate = !!aparencia.skate;
   /** Spec 023: os nós próprios dos premium (as asas do dragão). */
   let subjuntas: Partial<Record<SubjuntaPremium, TransformNode>> = {};
   let malhas: Mesh[] = [];
@@ -394,6 +397,7 @@ export function criarBoneco(
 
   function aplicarAparencia(a: Aparencia): void {
     limpar();
+    deSkate = !!a.skate && !a.patins;
     const plano = ajustarPlano ? ajustarPlano(planoBoneco(a)) : planoBoneco(a);
     escalar.scaling.setAll(plano.escala);
     for (const [nome, j] of Object.entries(plano.juntas) as Array<
@@ -692,6 +696,18 @@ export function criarBoneco(
     const kLento = extras ? 1 - Math.exp(-dt * 6) : 1;
     // para onde cada junta vai nesta pose (a mesma conta do teste de encaixe)
     const alvo = rotacoesDaPose(pose, extras ? extras.olhar : 0, naMao.segurando());
+    // spec 026 (parte 3): de skate, o corpo fica de pé em cima da prancha, as pernas firmes e um
+    // pouco abertas (nada de passada: quem anda é o skate) e os braços um tico para fora. Sentado
+    // (o gesto, um brinquedo do parque), a pose é a de sentar
+    if (deSkate && Math.min(alvo.pernaD[0], alvo.pernaE[0]) > -0.9) {
+      alvo.corpoY += ALTURA_PRANCHA;
+      alvo.pernaD = [0.05, 0, 0];
+      alvo.pernaE = [-0.05, 0, 0];
+      if ((pose.pesoGesto ?? 0) < 0.3) {
+        alvo.bracoD = [alvo.bracoD[0] * 0.3 - 0.1, alvo.bracoD[1], alvo.bracoD[2] + 0.28];
+        alvo.bracoE = [alvo.bracoE[0] * 0.3 - 0.1, alvo.bracoE[1], alvo.bracoE[2] - 0.28];
+      }
+    }
     const j = juntas;
     j.corpo.position.y = suave('corpoY', alvo.corpoY, k);
     // movimento com vida: o corpo inteiro inclina para a frente e para dentro da curva

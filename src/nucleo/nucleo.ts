@@ -813,6 +813,7 @@ export function criarNucleo(op: OpcoesNucleo) {
     morto: o.sobrevivencia.estado.morto,
     olhar: o.tel.yaw,
     patins: (o.perfil.aparencia as { patins?: unknown } | undefined)?.patins === true,
+    skate: (o.perfil.aparencia as { skate?: unknown } | undefined)?.skate === true,
     missao: mundoAlma ? (missaoDoHud(almaDe(o.id), mundoAlma)?.id ?? null) : null,
     aberta: (m: string) => missaoAberta(o.id, m),
     contar: (item: string) => o.inventario.contar(item),
@@ -2748,6 +2749,8 @@ export function criarNucleo(op: OpcoesNucleo) {
         else if (c.a === 'guiar') vila?.comando(j.id, { a: 'guiar', x: c.x, z: c.z, n: c.n });
         // (etapa B: o balão fugido, a barraca de prendas, o feno, o cocho, a fita e a vitamina)
         else if (c.a === 'balao' || c.a === 'prenda') vila?.comando(j.id, { a: c.a, i: c.i });
+        // (parte 3: o trilho da rampa de skate, para um lado)
+        else if (c.a === 'rampa') vila?.comando(j.id, { a: 'rampa', l: c.l });
         else vila?.comando(j.id, { a: c.a });
         break;
       }

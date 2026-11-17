@@ -2741,3 +2741,66 @@ export function vestirPatins(pecas: Peca[], m: MedidasBoneco, corRodas = '#ff6fb
         });
   }
 }
+
+/**
+ * Spec 026 (parte 3): a altura do skate (o tampo da prancha, onde os pés pisam), no plano do
+ * boneco: de skate, o corpo sobe isto na pose (`render/boneco.ts`).
+ */
+export const ALTURA_PRANCHA = 0.118;
+
+/**
+ * Spec 026 (parte 3): o skate do suporte da pista, debaixo dos pés: a prancha turquesa com as
+ * duas pontas levantadas, a lixa grafite, os dois eixos de cromo e as quatro rodinhas amarelas.
+ * Fica na junta `prancha` (no chão, fora do corpo): o corpo sobe `ALTURA_PRANCHA` em cima dela.
+ */
+export function vestirSkate(pecas: Peca[]): void {
+  const por = (p: Omit<Peca, 'junta'>) => pecas.push({ ...p, junta: 'prancha' });
+  const TURQUESA = '#22c2b0';
+  por({
+    nome: 'skate-prancha',
+    forma: 'caixa',
+    tamanho: [0.34, 0.032, 0.66],
+    raio: 0.014,
+    pos: [0, ALTURA_PRANCHA - 0.016, 0],
+    cor: TURQUESA,
+  });
+  for (const s of [-1, 1])
+    por({
+      nome: `skate-ponta${s}`,
+      forma: 'caixa',
+      tamanho: [0.32, 0.03, 0.16],
+      raio: 0.014,
+      pos: [0, ALTURA_PRANCHA - 0.002, s * 0.39],
+      rot: [-s * 0.38, 0, 0],
+      cor: TURQUESA,
+    });
+  por({
+    nome: 'skate-lixa',
+    forma: 'caixa',
+    tamanho: [0.3, 0.006, 0.6],
+    raio: 0.002,
+    pos: [0, ALTURA_PRANCHA + 0.002, 0],
+    cor: '#2e2d36',
+  });
+  for (const z of [-0.24, 0.24]) {
+    por({
+      nome: `skate-eixo${z}`,
+      forma: 'caixa',
+      tamanho: [0.24, 0.026, 0.06],
+      raio: 0.008,
+      pos: [0, 0.072, z],
+      cor: '#d4d8e2',
+      brilho: 0.5,
+    });
+    for (const x of [-0.13, 0.13])
+      por({
+        nome: `skate-roda${x}${z}`,
+        forma: 'cilindro',
+        tamanho: [0.05, 0.04, 0.04],
+        pos: [x, 0.04, z],
+        cor: '#ffd23a',
+        rot: [0, 0, Math.PI / 2],
+        brilho: 0.3,
+      });
+  }
+}

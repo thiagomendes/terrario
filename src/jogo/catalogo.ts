@@ -1,8 +1,11 @@
 import {
   CACHORRO_QUENTE,
   COLHER_PEDREIRO,
+  CUBO_CORES,
   FITA_VIDEO,
+  IOIO,
   PELUCIA,
+  PIAO,
   SUCO,
   VITAMINA,
   itemNoMundo,
@@ -930,6 +933,74 @@ export function registrarCatalogo(): void {
       '...kck.....kck..',
       '...kck.....kck..',
       '...kkk.....kkk..',
+      '................',
+    ],
+  });
+  // spec 026 (parte 3): os brinquedos do baú da Casa anos 80 (o ioiô, o pião e o cubo de cores
+  // 2 × 2: três cores, nunca o cubo de marca)
+  registrarItem({ id: IOIO, nome: 'Ioiô', tipo: 'material', pilha: 1 });
+  registrarDesenho(IOIO, {
+    paleta: { k: '#3a1a1a', r: '#e8302a', R: '#ff6a5a', w: '#f6f4ee', b: '#c9a24a' },
+    linhas: [
+      '.......b........',
+      '.......b........',
+      '.......b........',
+      '.......b........',
+      '.....kkkkk......',
+      '....kRRrrrk.....',
+      '...kRrrrrrrk....',
+      '...kwwwwwwwk....',
+      '...kwwwkwwwk....',
+      '...kwwwwwwwk....',
+      '...krrrrrrrk....',
+      '....krrrrrk.....',
+      '.....kkkkk......',
+      '................',
+      '................',
+      '................',
+    ],
+  });
+  registrarItem({ id: PIAO, nome: 'Pião', tipo: 'material', pilha: 1 });
+  registrarDesenho(PIAO, {
+    paleta: { k: '#3a2416', r: '#e8302a', c: '#f4ecdc', m: '#a8703c', w: '#ffffff' },
+    linhas: [
+      '.......kk.......',
+      '.......mm.......',
+      '....kkkkkkkk....',
+      '...krrrrrrrrk...',
+      '..kccccccccccck.',
+      '..kwrrrrrrrrrrk.',
+      '..krrrrrrrrrrrk.',
+      '...kccccccccck..',
+      '....krrrrrrrk...',
+      '.....kccccck....',
+      '......krrrk.....',
+      '.......kmk......',
+      '.......kmk......',
+      '........k.......',
+      '................',
+      '................',
+    ],
+  });
+  registrarItem({ id: CUBO_CORES, nome: 'Cubo de cores', tipo: 'material', pilha: 1 });
+  registrarDesenho(CUBO_CORES, {
+    paleta: { k: '#1c1c24', r: '#e8302a', y: '#ffd23a', b: '#2f6fd8', R: '#c41e1a', B: '#2456b0' },
+    linhas: [
+      '................',
+      '.....kkkkkk.....',
+      '...kkyyykyykk...',
+      '..kyyyykyyyyyk..',
+      '..kkkkkkkkkkkk..',
+      '..krrrkbbkbbBk..',
+      '..krrrkbbkbbBk..',
+      '..kRRRkbbkbbBk..',
+      '..kkkkkkkkkkkk..',
+      '..kbbbkrrkrrRk..',
+      '..kbbbkrrkrrRk..',
+      '..kBBBkrrkrrRk..',
+      '..kkkkkkkkkkkk..',
+      '................',
+      '................',
       '................',
     ],
   });

@@ -25,7 +25,9 @@
 import { Bloco } from './blocks';
 import { hash2 } from './noise';
 import type { ArcoRinque } from '../jogo/rinque';
-import { montarParque, type PontosParque } from './vilaParque';
+import { montarParque, type FerramentasVila, type PontosParque } from './vilaParque';
+import { montarCasa80, type PontosCasa } from './vilaCasa';
+import { montarPistaDeSkate, type PontosRampa } from './vilaRampa';
 
 /** Tamanho do bairro (o mapa). */
 export const LARGURA_VILA = 180;
@@ -117,7 +119,33 @@ export type TipoPecaVila =
   | 'barraca-pesca'
   | 'algodao'
   | 'baloes'
-  | 'cocho';
+  | 'cocho'
+  /**
+   * Spec 026 (parte 3): a sala e o quarto de brinquedos da Casa anos 80 (desenhados por
+   * `render/vila/casa.ts`, com a luz de dentro da casa; aqui dão o lugar e a colisão).
+   */
+  | 'casa-tv'
+  | 'casa-fitas'
+  | 'casa-planta'
+  | 'casa-relogio'
+  | 'casa-tapete'
+  | 'casa-sofa'
+  | 'casa-abajur'
+  | 'casa-telefone'
+  | 'casa-discos'
+  | 'casa-cortina'
+  | 'casa-capacho'
+  | 'casa-quebra-cabeca'
+  | 'casa-ioio'
+  | 'casa-piao'
+  | 'casa-cubo'
+  | 'casa-robo'
+  | 'casa-bola'
+  | 'casa-bau'
+  /** Spec 026 (parte 3): a rampa de skate em U, o suporte dos skates e a BMX de enfeite. */
+  | 'rampa-skate'
+  | 'suporte-skate'
+  | 'bmx';
 
 /** Nomes dos letreiros (em português, inventados; só no mundo, nunca na interface). */
 export const LETREIROS = [
@@ -155,8 +183,11 @@ export type PostoVila =
   | 'pipoqueiro'
   | 'bate'
   | 'baloes'
-  /** Spec 026 (parte 2, etapa B): a vovó, no portãozinho da Casa anos 80 (a parte 3 a leva para dentro). */
-  | 'avo';
+  /** Spec 026 (parte 2, etapa B; parte 3): a vovó, no sofá da sala da Casa anos 80. */
+  | 'avo'
+  /** Spec 026 (parte 3): a menina do skate e o menino da BMX, na pista de skate. */
+  | 'skatista'
+  | 'bmx';
 
 /** Spec 026 (parte 2, etapa B): o que se toca na Rua anos 80. */
 export interface PontosRua {
@@ -209,6 +240,10 @@ export interface PontosVila {
   parque: PontosParque;
   /** Spec 026 (parte 2, etapa B): os toques da Rua anos 80. */
   rua: PontosRua;
+  /** Spec 026 (parte 3): a Casa anos 80 por dentro. */
+  casa: PontosCasa;
+  /** Spec 026 (parte 3): a pista de skate (a rampa em U e o suporte dos skates). */
+  skate: PontosRampa;
 }
 
 export interface PlanoVila {
@@ -1019,82 +1054,8 @@ function montarVila(semente: number, r: RelevoVila): Montado {
     casa(133, 130, 12, 18, 's', k++);
   }
 
-  // ============================================================== sudeste: o lote da rampa
-  // (parte 3) jardim cercado e acabado: gramado, cerca-viva, árvores, canteiros e bancos
-  const jardim = (u0: number, v0: number, u1: number, v1: number, k: number) => {
-    cercaViva(u0, v0, u1, v0);
-    cercaViva(u0, v1, u1, v1);
-    cercaViva(u0, v0, u0, v1);
-    cercaViva(u1, v0, u1, v1);
-    // as entradas no meio de cada lado
-    const mu = (u0 + u1) >> 1;
-    const mv = (v0 + v1) >> 1;
-    for (const [u, v] of [
-      [mu, v0],
-      [mu + 1, v0],
-      [mu, v1],
-      [mu + 1, v1],
-      [u0, mv],
-      [u0, mv + 1],
-      [u1, mv],
-      [u1, mv + 1],
-    ])
-      b(u, 1, v, Bloco.AR);
-    // a cruz de caminhos de pedra creme
-    encher(mu, v0, mu + 1, v1, Bloco.PEDRA_CREME);
-    encher(u0, mv, u1, mv + 1, Bloco.PEDRA_CREME);
-    // bosques nos quatro quartos e canteiros na volta da cruz
-    for (let u = u0 + 4; u < u1 - 3; u += 6)
-      for (let v = v0 + 4; v < v1 - 3; v += 6) {
-        if (Math.abs(u - mu) < 4 || Math.abs(v - mv) < 4) continue;
-        // o laguinho do lote do parque fica livre
-        if (k === 1 && u >= 152 && u <= 172 && v >= 8 && v <= 24) continue;
-        if (s(u, v, 30 + k) < 0.82)
-          arvore(u + Math.floor(s(u, v, 31) * 2), v + Math.floor(s(u, v, 32) * 2), k);
-        else canteiro(u, v, 2, 2);
-      }
-    // canteiros de flor ao longo da cruz de caminhos, de 6 em 6
-    for (let u = u0 + 3; u < u1 - 2; u += 6) {
-      if (Math.abs(u - mu) < 5) continue;
-      canteiro(u, mv - 1, 2, 1);
-      canteiro(u, mv + 2, 2, 1);
-    }
-    for (let v = v0 + 3; v < v1 - 2; v += 6) {
-      if (Math.abs(v - mv) < 5) continue;
-      canteiro(mu - 1, v, 1, 2);
-      canteiro(mu + 2, v, 1, 2);
-    }
-    peca('banco', mu - 7, mv - 2, DIR.s, 12 + k);
-    peca('banco', mu + 8, mv + 3, DIR.n, 13 + k);
-    canteiro(mu - 3, mv - 3, 2, 2);
-    canteiro(mu + 3, mv - 3, 2, 2);
-    canteiro(mu - 3, mv + 3, 2, 2);
-    canteiro(mu + 3, mv + 3, 2, 2);
-    peca('banco', mu - 2, mv - 5, DIR.s, 10 + k);
-    peca('banco', mu + 3, mv + 6, DIR.n, 11 + k);
-    poste(mu - 1, mv - 1);
-    poste(mu + 2, mv + 2);
-  };
-  jardim(150, 110, 178, 147, 0);
-  // o chafariz de pedra num dos quartos do jardim
-  for (let u = 168; u <= 172; u++)
-    for (let v = 118; v <= 122; v++) {
-      const beira = u === 168 || u === 172 || v === 118 || v === 122;
-      chao(u, v, Bloco.PEDRA_LISA);
-      if (beira) b(u, 1, v, Bloco.PEDRA_LISA);
-      else b(u, 1, v, Bloco.AGUA);
-    }
-  b(170, 1, 120, Bloco.PEDRA_LISA);
-  b(170, 2, 120, Bloco.PEDRA_LISA);
-  b(170, 3, 120, Bloco.FLOR);
-
-  // ============================================================== nordeste: casas e o parque
-  {
-    let k = 3;
-    for (let v = 2; v + 10 <= 56; v += 11) casa(104, v, 10, 14, 'o', k++);
-  }
-  // o Parque de diversões (parte 2), no lote que nasceu como jardim: `vilaParque.ts`
-  const parque = montarParque({
+  /** As ferramentas do planejador para os lotes de cada parte (o parque, a casa, a pista). */
+  const ferramentas: FerramentasVila = {
     X,
     Z,
     Y,
@@ -1109,7 +1070,19 @@ function montarVila(semente: number, r: RelevoVila): Montado {
     canteiro,
     ret,
     s,
-  });
+  };
+
+  // ============================================================== sudeste: a pista de skate
+  // (parte 3) a rampa em U no lote que nasceu jardim, com o suporte dos skates: `vilaRampa.ts`
+  const pista = montarPistaDeSkate(ferramentas);
+
+  // ============================================================== nordeste: casas e o parque
+  {
+    let k = 3;
+    for (let v = 2; v + 10 <= 56; v += 11) casa(104, v, 10, 14, 'o', k++);
+  }
+  // o Parque de diversões (parte 2), no lote que nasceu como jardim: `vilaParque.ts`
+  const parque = montarParque(ferramentas);
   const lago = parque.lago;
 
   // ============================================================== noroeste: a Rua anos 80
@@ -1137,10 +1110,11 @@ function montarVila(semente: number, r: RelevoVila): Montado {
   // a locadora (uma loja de um andar)
   loja(26, 47, 13, 11, 's', Bloco.REBOCO_AZUL, Bloco.TOLDO_VERMELHO, LETREIRO.locadora, 1);
   peca('vitrine', 32, 56, DIR.s, 0);
-  // a casa da parte 3 (por enquanto fechada: fachada, quintal e muro, como as outras)
-  casa(43, 36, 14, 22, 's', 2);
-  arvore(60, 44);
-  arvore(60, 52);
+  // a Casa anos 80 (parte 3): de porta aberta, com a sala e o quarto de brinquedos por dentro
+  // (`vilaCasa.ts`); as árvores do lado dela ficam fora do corte do telhado
+  const casa80 = montarCasa80(ferramentas);
+  arvore(67, 44);
+  arvore(67, 52);
   // a lanchonete na esquina, com sobrado e sacada
   loja(70, 45, 20, 13, 's', Bloco.REBOCO_ROSA, Bloco.TOLDO_VERMELHO, LETREIRO.lanchonete, 2);
   peca('balcao', 79.5, 50, DIR.s, 1);
@@ -1588,10 +1562,10 @@ function montarVila(semente: number, r: RelevoVila): Montado {
       lanchonete: [X(80) + 0.5, Y, Z(51) + 0.5],
       banca: [X(19) + 0.5, Y, Z(56) + 0.5],
       ...parque.postos,
-      // a vovó espera no portãozinho aberto da Casa anos 80, no meio do vão do muro baixo, de
-      // frente para a calçada (na porta, lá dentro do quintal, o muro tapava a criança e ela na
-      // câmera); a parte 3 a leva para o sofá
-      avo: [X(53) + 1.0, Y, Z(57) + 0.4],
+      // a vovó mora no sofá da sala da Casa anos 80 (parte 3; na parte 2 ela esperava no
+      // portãozinho): o assento do leste, de frente para a TV
+      avo: casa80.avo,
+      ...pista.postos,
     },
     parque: parque.pontos,
     rua: {
@@ -1610,6 +1584,8 @@ function montarVila(semente: number, r: RelevoVila): Montado {
         )
         .map((q) => [q.x, q.y, q.z] as [number, number, number]),
     },
+    casa: casa80.pontos,
+    skate: pista.pontos,
   };
   // o olhar de quem nasce: para o oeste-sudoeste, no rumo do palco
   // (34° ao sul do oeste: o portal da pracinha na frente, o palco inteiro lá longe por baixo do
@@ -1629,7 +1605,7 @@ function montarVila(semente: number, r: RelevoVila): Montado {
       fliperama: ret(130, 73, 145, 84),
       rinque: ret(rinqueU0 - 1, rinqueV0 - 4, rinqueU0 + rinqueW, rinqueV0 + rinqueD),
       parque: ret(122, 2, 178, 56),
-      casa80: ret(43, 36, 56, 57),
+      casa80: ret(43, 36, 62, 57),
       rampa: ret(150, 110, 178, 147),
     },
     nascimento: { x: nasceX, z: nasceZ, olhar },

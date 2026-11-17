@@ -71,6 +71,9 @@ import { N0_PILOTOS, N_MORADORES_BATE, pilotoDoBate } from '../jogo/bate';
 import { criarParqueNucleo, type ComandoParque, type EventoParque } from './parque';
 import { criarMissoesDoParque, type ComandoMissoes, type EventoMissoes } from './vilaMissoes';
 import { F_BALOES } from '../jogo/missoesParque';
+import { criarCasaNucleo, type ComandoCasa } from './casa';
+import type { CasaNaRede } from '../jogo/casa';
+import type { TrilhoNaRede } from '../jogo/rampa';
 
 /** Os postos e quem mora em cada um (o número é o `n` do morador). */
 export const MORADORES_VILA: readonly { posto: PostoVila; profissao: Profissao }[] = [
@@ -118,6 +121,16 @@ export const MORADORES_PARQUE: readonly { n: number; posto: PostoVila; profissao
  * espera no portãozinho da Casa anos 80 a prenda da f8. A parte 3 a leva para o sofá da sala.
  */
 export const AVO = 70;
+/**
+ * Spec 026 (parte 3): a menina do skate (com o skate debaixo do braço, perto do suporte) e o
+ * menino da BMX (a bicicleta é enfeite), na pista de skate.
+ */
+export const SKATISTA = 71;
+export const MENINO_BMX = 72;
+export const MORADORES_PISTA: readonly { n: number; posto: PostoVila; profissao: Profissao }[] = [
+  { n: SKATISTA, posto: 'skatista', profissao: 'construtor' },
+  { n: MENINO_BMX, posto: 'bmx', profissao: 'construtor' },
+];
 /** O n é da turma da grade (o público do show)? */
 export const daTurma = (n: number) => n >= N0_PUBLICO && n < N0_PUBLICO + PUBLICO_GRADE;
 /** O papel na banda de um morador da vila (null: não é da banda). */
@@ -160,6 +173,10 @@ export interface VilaVista {
   bal?: [boolean, boolean, boolean];
   /** Etapa B (f6): quem, no mundo, leva o balão de presente da Dona Flor (ids dos jogadores). */
   balao?: string[];
+  /** Parte 3: a sala da Casa anos 80 (o canal da TV, o filme da fita, o disco). */
+  casa?: CasaNaRede;
+  /** Parte 3: quem está no trilho da rampa de skate (o lado, de onde e quando começou). */
+  rampa?: Record<string, TrilhoNaRede>;
 }
 
 /** O que vai salvo com o mundo (`extras.vila`). */
@@ -186,6 +203,8 @@ export interface JogadorVila {
   olhar?: number;
   /** Está de patins (a aparência: só na Vila Neon)? */
   patins: boolean;
+  /** Parte 3: está de skate (a aparência: só na Vila Neon)? */
+  skate?: boolean;
   /** A missão do selinho deste jogador neste mundo (ou null). */
   missao: string | null;
   /** A missão está aberta para ele agora (uma das da vez, ou o bis)? */
@@ -244,7 +263,16 @@ export type EventoVila =
  * O toque numa caixa do palco (fora do show: brinquedo livre) e, no parque (parte 2), sentar
  * num brinquedo, sair dele, o "tum" do bate-bate e o empurrãozinho da roda-gigante.
  */
-export type ComandoVila = { a: 'caixa'; i: number } | ComandoParque | ComandoMissoes;
+export type ComandoVila =
+  | { a: 'caixa'; i: number }
+  | ComandoParque
+  | ComandoMissoes
+  /** Parte 3: a TV, o videocassete, o disco e o baú da casa; o trilho da rampa de skate. */
+  | ComandoCasa;
+
+/** O comando é da Casa anos 80 ou da rampa de skate (parte 3)? */
+const DA_CASA = new Set(['tv', 'videocassete', 'disco', 'bau', 'rampa']);
+const ehDaCasa = (c: ComandoVila): c is ComandoCasa => DA_CASA.has(c.a);
 
 const tres = (v: unknown): [boolean, boolean, boolean] =>
   Array.isArray(v) && v.length === 3
@@ -312,8 +340,22 @@ export function criarVila(ctx: CtxVila) {
     sujar: ctx.sujar,
   });
 
+  // a Casa anos 80 e a rampa de skate (parte 3): a TV e o disco da sala, o baú, o trilho da rampa
+  const casa = criarCasaNucleo({
+    casa: p.casa,
+    skate: p.skate,
+    agora: ctx.agora,
+    jogador: (id) => {
+      const j = ctx.jogador(id);
+      return j ? { ...j, skate: !!j.skate, soltar: () => j.soltar?.() } : undefined;
+    },
+    evento: ctx.evento,
+    sujar: ctx.sujar,
+  });
+
   const vista = (): VilaVista => {
     const balao = missoes.comBalao();
+    const rampa = casa.vistaRampa();
     return {
       t: Math.round(ctx.agora() * 1000) / 1000,
       ins: [...ins] as VilaVista['ins'],
@@ -322,6 +364,8 @@ export function criarVila(ctx: CtxVila) {
       lhamas: [...naGrade],
       parque: parque.vista(),
       ...(balao.length ? { balao } : {}),
+      casa: casa.vistaCasa(),
+      ...(rampa ? { rampa } : {}),
     };
   };
   /** Os arcos que este jogador já acendeu. */
@@ -348,8 +392,10 @@ export function criarVila(ctx: CtxVila) {
         profissao: m.profissao,
         posto: p.postos[m.posto],
       })),
-      // a vovó, no portãozinho da Casa anos 80
+      // a vovó, no sofá da sala da Casa anos 80
       { n: AVO, profissao: 'cozinheiro' as Profissao, posto: p.postos.avo },
+      // a menina do skate e o menino da BMX, na pista de skate
+      ...MORADORES_PISTA.map((m) => ({ n: m.n, profissao: m.profissao, posto: p.postos[m.posto] })),
       // quem guia os carrinhos do bate-bate: cada um no carrinho dele
       ...parque.carros().slice(0, N_MORADORES_BATE).map((c, i) => ({
         n: N0_PILOTOS + i,
@@ -395,6 +441,12 @@ export function criarVila(ctx: CtxVila) {
       if (c.morador?.povoado !== POVOADO_VILA || c.estado === 'morrendo') continue;
       const carro = carros[pilotoDoBate(c.morador.n)];
       if (carro) porNoLugar(c, carro.x, p.parque.bate.y, carro.z, carro.yaw);
+      // (parte 3) a vovó fica sentada no assento dela do sofá, de frente para a TV
+      else if (c.morador.n === AVO) {
+        const [x, y, z] = p.postos.avo;
+        if (Math.hypot(c.x - x, c.z - z) > 0.01 || Math.abs(c.y - y) > 0.01 || c.yaw !== p.casa.sofa.yaw)
+          porNoLugar(c, x, y, z, p.casa.sofa.yaw);
+      }
     }
   }
 
@@ -1069,6 +1121,8 @@ export function criarVila(ctx: CtxVila) {
       cuidarDosPilotos();
       if (n % 20 === 7) cuidarDaFazendinha();
       missoes.passo(n);
+      // (o fim do trilho da rampa no passo certo: o trilho seguinte já pode vir logo)
+      casa.passo();
     },
     comando(id: string, c: ComandoVila): void {
       const j = ctx.jogador(id);
@@ -1078,8 +1132,11 @@ export function criarVila(ctx: CtxVila) {
       if (!podeTocar(id)) return;
       if (c.a === 'caixa') tocarCaixa(j, c.i);
       else if (c.a === 'sentar' || c.a === 'sair' || c.a === 'roda') parque.comando(id, c);
-      else missoes.comando(id, c);
+      else if (ehDaCasa(c)) casa.comando(id, c);
+      else missoes.comando(id, c as ComandoMissoes);
     },
+    /** Parte 3: a sala da casa e o trilho da rampa (testes). */
+    casa,
     /** Etapa B: as missões do parque (testes). */
     missoes,
     /** Spec 026 (parte 2): as cadeiras do parque (testes). */

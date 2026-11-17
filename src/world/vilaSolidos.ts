@@ -19,6 +19,8 @@
 import type { CaixaSolida, Solido } from '../player/fisica';
 import { estiloMundo, vilaDoMundo } from './chunk';
 import { LETREIRO, type PecaVila, type PlanoVila, type TipoPecaVila } from './vilaNeon';
+import { MEDIDA_RAMPA, alturaDoDeck, alturaNaRampa } from '../jogo/rampa';
+import { COMPRIMENTO_RAMPA } from './vilaRampa';
 
 /** Caixa local da peça: x para a direita de quem olha a frente, y para cima, z para a frente. */
 type Local = readonly [x0: number, x1: number, y0: number, y1: number, z0: number, z1: number];
@@ -166,10 +168,73 @@ function caixasLocais(tipo: TipoPecaVila, n: number): readonly Local[] {
       return [B(-0.31, 0.31, 0, 1.56, -0.31, 0.31)];
     case 'cocho':
       return [B(-0.94, 0.94, 0, 0.76, -0.34, 0.34)];
+    // ---------------------------------------------------------------- a Casa anos 80 (parte 3)
+    // (os brinquedos pequenos têm caixa mais alta que eles: a criança esbarra, nunca sobe em
+    // cima do pião; o tapete, o relógio, as cortinas e o capacho ficam de passagem)
+    case 'casa-tv':
+      // o móvel baixo e a TV de tubo em cima, mais funda que ele
+      return [B(-1.1, 1.1, 0, 0.62, -0.31, 0.31), B(-0.79, 0.55, 0, 1.72, -0.33, 0.44)];
+    case 'casa-fitas':
+      return [B(-0.72, 0.72, 0, 2.12, -0.21, 0.21)];
+    case 'casa-planta':
+      return [B(-0.3, 0.3, 0, 0.9, -0.3, 0.3)];
+    case 'casa-sofa':
+      // o assento (onde se senta, de 0,5), o encosto atrás e os dois braços
+      return [
+        B(-1.65, 1.65, 0, 0.5, -0.5, 0.5),
+        B(-1.65, 1.65, 0, 1.12, -0.5, -0.24),
+        ...par(1.36, 1.65, 0, 0.8, -0.5, 0.5),
+      ];
+    case 'casa-abajur':
+      return [B(-0.24, 0.24, 0, 1.7, -0.24, 0.24)];
+    case 'casa-telefone':
+      return [B(-0.31, 0.31, 0, 0.66, -0.31, 0.31)];
+    case 'casa-discos':
+      // o móvel do toca-discos e as duas caixinhas de som no chão, dos lados
+      return [B(-0.8, 0.8, 0, 0.74, -0.3, 0.3), ...par(0.9, 1.38, 0, 0.82, -0.22, 0.22)];
+    case 'casa-ioio':
+      return [B(-0.26, 0.26, 0, 1.3, -0.26, 0.26)];
+    case 'casa-piao':
+      return [B(-0.2, 0.2, 0, 0.6, -0.2, 0.2)];
+    case 'casa-cubo':
+      return [B(-0.24, 0.24, 0, 0.6, -0.24, 0.24)];
+    case 'casa-robo':
+      // o robô anda dois passos para a frente e volta: a caixa cobre as duas pontas
+      return [B(-0.3, 0.3, 0, 0.82, -0.26, 1.56)];
+    case 'casa-bola':
+      return [B(-0.27, 0.27, 0, 0.6, -0.27, 0.27)];
+    case 'casa-bau':
+      return [B(-0.47, 0.47, 0, 0.66, -0.3, 0.3)];
+    // ---------------------------------------------------------------- a pista de skate (parte 3)
+    case 'rampa-skate':
+      return CAIXAS_DA_RAMPA;
+    case 'suporte-skate':
+      return [B(-0.85, 0.85, 0, 1.35, -0.28, 0.28)];
+    case 'bmx':
+      return [B(-0.82, 0.82, 0, 1.0, -0.25, 0.25)];
     default:
       return [];
   }
 }
+
+/**
+ * A rampa de skate (parte 3): cada curva em fatias de 0,35 de lado, cada uma da altura da curva
+ * no meio dela (a criança a pé sobe a curva em degrauzinhos, como numa rampa de verdade, e a
+ * câmera não entra por baixo dela), e o deck em cima. O fundo é o próprio chão.
+ */
+const CAIXAS_DA_RAMPA: readonly Local[] = (() => {
+  const r = MEDIDA_RAMPA;
+  const meio = COMPRIMENTO_RAMPA / 2;
+  const out: Local[] = [];
+  const passo = 0.35;
+  for (let d = 0; d < r.curva - 1e-6; d += passo) {
+    const ate = Math.min(r.curva, d + passo);
+    const alt = Math.max(0.02, alturaNaRampa(r, r.meia + (d + ate) / 2));
+    out.push(...par(r.meia + d, r.meia + ate, 0, alt, -meio, meio));
+  }
+  out.push(...par(r.meia + r.curva, r.meia + r.curva + r.deck, 0, alturaDoDeck(r), -meio, meio));
+  return out;
+})();
 
 /** Os tipos que seguram (o resto fica de passagem). */
 export function pecaSolida(p: PecaVila): boolean {

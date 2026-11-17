@@ -83,9 +83,16 @@ export const SUCO = 'suco';
 export const VITAMINA = 'vitamina';
 export const FITA_VIDEO = 'fita_video';
 export const PELUCIA = 'pelucia';
+/**
+ * Spec 026 (parte 3): os brinquedos do baú do quarto da Casa anos 80 (para levar e usar neste
+ * mundo): o ioiô, o pião e o cubo de cores 2 × 2.
+ */
+export const IOIO = 'ioio';
+export const PIAO = 'piao';
+export const CUBO_CORES = 'cubo_cores';
 export const EXCLUSIVOS_VILA: Exclusivos = {
   blocos: [...BLOCOS_DE_RUA, ...BLOCOS_SO_DA_VILA],
-  itens: [CACHORRO_QUENTE, SUCO, VITAMINA, FITA_VIDEO, PELUCIA],
+  itens: [CACHORRO_QUENTE, SUCO, VITAMINA, FITA_VIDEO, PELUCIA, IOIO, PIAO, CUBO_CORES],
 };
 
 /**

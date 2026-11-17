@@ -32,6 +32,7 @@ import {
 } from './neon';
 import { desenharPecaFestival } from './pecasFestival';
 import { desenharPecaParque } from './pecasParque';
+import { desenharPecaRampa } from './pecasCasa';
 import { carroVila, picapeVila, vanVila } from './carros';
 
 export { COR, Ref, perfilRaio };
@@ -108,6 +109,9 @@ export function desenharPeca(p: PecaVila, d: Desenho): void {
     case 'toalha':
       return toalha(r, n);
     default:
+      // (a Casa anos 80 por dentro vai na malha dela, com a luz de dentro: `casa.ts`)
+      if (p.tipo.startsWith('casa-')) return;
+      if (desenharPecaRampa(r, p.tipo, n)) return;
       if (desenharPecaParque(r, p.tipo, n)) return;
       return desenharPecaFestival(r, p.tipo, n);
   }

@@ -32,6 +32,17 @@ export class PluginMundo extends MaterialPluginBase {
    * feixes do palco pousam num chão escuro de verdade.
    */
   verdeNoite = 0;
+  /**
+   * Spec 026 (parte 3): a Casa anos 80 por dentro. `casaDentro` é a caixa de dentro da casa no
+   * chão (x0, z0, x1, z1, mundo): ali a luz do dia entra como lá fora (o telhado é de blocos e
+   * escureceria a sala) e, de noite, o abajur deixa a sala morna. `casaCorte` é a caixa do
+   * telhado (com o beiral) e `casaY` = (o chão, a altura do primeiro bloco do telhado, quanto do
+   * corte já valeu de 0 a 1, a noite de 0 a 1): com a criança lá dentro, os blocos do telhado
+   * encolhem até sumir (a câmera olha a casa de cima, como uma casinha de bonecas).
+   */
+  readonly casaDentro = new Float32Array([1e9, 1e9, -1e9, -1e9]);
+  readonly casaCorte = new Float32Array([1e9, 1e9, -1e9, -1e9]);
+  readonly casaY = new Float32Array([1e9, -1e9, 0, 0]);
 
   /** Desenha as juntas entre blocos (quina macia e um friso), só no material sólido. */
   private readonly juntas: boolean;
@@ -83,11 +94,14 @@ export class PluginMundo extends MaterialPluginBase {
         { name: 'pisoCeu', size: 1, type: 'float' },
         { name: 'verdeNoite', size: 1, type: 'float' },
         { name: 'blocosOcultos', size: 4, type: 'vec4', arraySize: 8 },
+        { name: 'casaDentro', size: 4, type: 'vec4' },
+        { name: 'casaCorte', size: 4, type: 'vec4' },
+        { name: 'casaY', size: 4, type: 'vec4' },
       ],
       vertex:
-        'uniform float ventoFolhas;\nuniform float tempoMundo;\nuniform vec4 blocosOcultos[8];',
+        'uniform float ventoFolhas;\nuniform float tempoMundo;\nuniform vec4 blocosOcultos[8];\nuniform vec4 casaCorte;\nuniform vec4 casaY;',
       fragment:
-        'uniform float pisoCeu;\nuniform float verdeNoite;\nuniform vec3 corBruma;\nuniform float forcaBruma;\nuniform float luzBlocos;\nuniform float outono;\nuniform float inverno;\nuniform float molhado;',
+        'uniform float pisoCeu;\nuniform float verdeNoite;\nuniform vec3 corBruma;\nuniform float forcaBruma;\nuniform float luzBlocos;\nuniform float outono;\nuniform float inverno;\nuniform float molhado;\nuniform vec4 casaDentro;\nuniform vec4 casaY;',
     };
   }
 
@@ -95,6 +109,7 @@ export class PluginMundo extends MaterialPluginBase {
     updateFloat(nome: string, valor: number): void;
     updateFloatArray(nome: string, valores: Float32Array): void;
     updateFloat3(nome: string, x: number, y: number, z: number): void;
+    updateFloat4(nome: string, x: number, y: number, z: number, w: number): void;
   }): void {
     uniformBuffer.updateFloat3('corBruma', ...this.corBruma);
     uniformBuffer.updateFloat('forcaBruma', this.forcaBruma);
@@ -107,6 +122,21 @@ export class PluginMundo extends MaterialPluginBase {
     uniformBuffer.updateFloat('pisoCeu', this.pisoCeu);
     uniformBuffer.updateFloat('verdeNoite', this.verdeNoite);
     uniformBuffer.updateFloatArray('blocosOcultos', this.ocultos);
+    uniformBuffer.updateFloat4(
+      'casaDentro',
+      this.casaDentro[0],
+      this.casaDentro[1],
+      this.casaDentro[2],
+      this.casaDentro[3],
+    );
+    uniformBuffer.updateFloat4(
+      'casaCorte',
+      this.casaCorte[0],
+      this.casaCorte[1],
+      this.casaCorte[2],
+      this.casaCorte[3],
+    );
+    uniformBuffer.updateFloat4('casaY', this.casaY[0], this.casaY[1], this.casaY[2], this.casaY[3]);
   }
 
   override getCustomCode(shaderType: string): Record<string, string> | null {
@@ -133,6 +163,11 @@ export class PluginMundo extends MaterialPluginBase {
               vec4 bO = blocosOcultos[iO];
               if (bO.w > 0.5 && all(equal(donoO, bO.xyz))) positionUpdated = position + (bO.xyz + vec3(0.5) - pmO);
             }
+            // spec 026 (parte 3): o telhado da Casa anos 80 com a criança lá dentro: cada bloco
+            // encolhe para o meio dele até sumir (o corte vai de 0 a 1)
+            if (casaY.z > 0.0 && donoO.y >= casaY.y && donoO.x >= casaCorte.x && donoO.x < casaCorte.z
+                && donoO.z >= casaCorte.y && donoO.z < casaCorte.w)
+              positionUpdated = position + (donoO + vec3(0.5) - pmO) * casaY.z;
           }
           #ifdef VERTEXCOLOR
           if (ventoFolhas > 0.0 && color.a < 0.99) {
@@ -217,9 +252,16 @@ export class PluginMundo extends MaterialPluginBase {
           float ceuL = clamp(vLuzMundo.x, 0.0, 1.0);
           float blocoL = clamp(vLuzMundo.y, 0.0, 1.0);
           float fCeu = max(pow(0.8, (1.0 - ceuL) * 15.0), pisoCeu);
+          // spec 026 (parte 3): dentro da Casa anos 80 a luz do dia entra como lá fora
+          vec3 bcC = vBlocoMundo;
+          float naCasa = step(casaDentro.x, bcC.x) * step(bcC.x, casaDentro.z) * step(casaDentro.y, bcC.z)
+            * step(bcC.z, casaDentro.w) * step(casaY.x, bcC.y) * step(bcC.y, casaY.y);
+          fCeu = mix(fCeu, max(fCeu, 0.9), naCasa);
           float fBloco = blocoL > 0.001 ? pow(0.86, (1.0 - blocoL) * 15.0) * smoothstep(0.15, 0.55, blocoL) : 0.0;
           vec3 corTocha = vec3(1.0, 0.72, 0.42) * fBloco * 2.4 * luzBlocos;
           color.rgb = color.rgb * fCeu + baseColor.rgb * corTocha * (1.0 - fCeu * 0.6) + baseColor.rgb * 0.03;
+          // e de noite o abajur deixa a sala morna (nunca o escuro da rua)
+          color.rgb += baseColor.rgb * vec3(1.0, 0.8, 0.58) * 0.42 * casaY.w * naCasa;
           // spec 026: de noite o verde apaga (o gramado vira roxo-escuro); onde a lâmpada bate
           // ele fica um pouco, e o neon (claro) não muda
           if (verdeNoite > 0.0) {

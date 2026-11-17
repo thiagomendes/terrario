@@ -197,7 +197,15 @@ type ComandoSemSeq =
    * núcleo confere a missão aberta, o alcance e o limite de toques por segundo.
    */
   | { t: 'vila'; a: 'balao' | 'prenda'; i: number }
-  | { t: 'vila'; a: 'feno' | 'cocho' | 'fita' | 'vitamina' };
+  | { t: 'vila'; a: 'feno' | 'cocho' | 'fita' | 'vitamina' }
+  /**
+   * Spec 026 (parte 3): na Casa anos 80, trocar o canal da TV, pôr a fita da locadora no
+   * videocassete, ligar e desligar o disco e pegar um brinquedo do baú; na pista de skate, pedir
+   * o trilho da rampa para o lado `l` (1 a curva do leste, -1 a do oeste). O núcleo confere o
+   * alcance, a esperinha da sala, a fita na mochila, o skate e o limite de toques por segundo.
+   */
+  | { t: 'vila'; a: 'tv' | 'videocassete' | 'disco' | 'bau' }
+  | { t: 'vila'; a: 'rampa'; l: number };
 
 /** Atalhos de teste e captura (o servidor da nuvem só aceita em ambiente de testes). */
 export type Depuracao =

@@ -11,6 +11,7 @@ import {
   roupaDaFantasia,
   vestirFantasia,
   vestirPatins,
+  vestirSkate,
   type MedidasBoneco,
 } from './bonecoFantasia';
 import { vestirPremiumNoPlano } from './bonecoPremium';
@@ -32,7 +33,9 @@ export type Junta =
   // spec 017: as peças que balançam sozinhas (capa, saia e rabo de dino)
   | 'capa'
   | 'saia'
-  | 'rabo';
+  | 'rabo'
+  // spec 026 (parte 3): o skate debaixo dos pés (fora do corpo: o corpo sobe em cima dele)
+  | 'prancha';
 
 /**
  * placa (spec 017): um desenho chato com espessura (estrela, raio, coração, folha, concha, a
@@ -211,6 +214,8 @@ export function planoBoneco(a: Aparencia): PlanoBoneco {
     capa: { pai: 'tronco', pos: [0, troncoH - 0.03, -prof / 2 + 0.02] },
     saia: { pai: 'corpo', pos: [0, quadril, 0] },
     rabo: { pai: 'tronco', pos: [0, 0.1, -prof / 2 + 0.02] },
+    // spec 026 (parte 3): o skate fica no chão, fora do corpo (que sobe para ficar em cima dele)
+    prancha: { pai: null, pos: [0, 0, 0] },
   };
   const pecas: Peca[] = [];
   const caixa = (
@@ -896,6 +901,8 @@ export function planoBoneco(a: Aparencia): PlanoBoneco {
   if (a.premium) vestirPremiumNoPlano(a.premium, pecas, medidas, !!vestidaAgora);
   // spec 026: de patins (só na Vila Neon), por cima do sapato, das botas e do tênis
   if (a.patins) vestirPatins(pecas, medidas);
+  // parte 3: de skate (a prancha debaixo dos pés; o corpo sobe em cima dela na pose)
+  else if (a.skate) vestirSkate(pecas);
   if (modo) ajeitarCabeloDebaixo(pecas, modo, topoTampa, cab, rabo);
 
   return {

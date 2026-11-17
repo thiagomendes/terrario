@@ -75,6 +75,11 @@ export interface Aparencia {
    */
   patins?: true;
   /**
+   * Spec 026 (parte 3): de skate (o do suporte da pista de skate; só na Vila Neon, nunca salvo,
+   * nunca junto dos patins). Sem skate, o campo não existe.
+   */
+  skate?: true;
+  /**
    * Spec 023 (T09): presentes de nível que os amigos veem. A etiqueta do nome colorida (nível
    * 2) ou com estrela (nível 7) e o balão com estrelinha (nível 6). O aparelho põe quando a
    * criança chega ao nível; sem nenhum, os campos não existem.
@@ -417,6 +422,8 @@ export function normalizarAparencia(entrada: unknown): Aparencia {
   if (premium) a.premium = premium;
   // spec 026: os patins da Vila Neon (só o sim; qualquer outra coisa some)
   if (obj.patins === true) a.patins = true;
+  // parte 3: o skate (só o sim, e nunca junto dos patins: os patins ganham)
+  else if (obj.skate === true) a.skate = true;
   // spec 023 (T09): os presentes de nível que os amigos veem
   if (obj.etiqueta === 'cor' || obj.etiqueta === 'estrela') a.etiqueta = obj.etiqueta;
   if (obj.balao === 'estrela') a.balao = 'estrela';

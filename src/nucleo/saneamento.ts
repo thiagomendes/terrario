@@ -214,6 +214,11 @@ export function sanear(c: unknown): Comando | null {
         return { t: 'vila', a: 'prenda', i: o.i } as unknown as Comando;
       if (o.a === 'feno' || o.a === 'cocho' || o.a === 'fita' || o.a === 'vitamina')
         return { t: 'vila', a: o.a } as unknown as Comando;
+      // spec 026 (parte 3): a TV, o videocassete, o disco e o baú da casa; o trilho da rampa
+      if (o.a === 'tv' || o.a === 'videocassete' || o.a === 'disco' || o.a === 'bau')
+        return { t: 'vila', a: o.a } as unknown as Comando;
+      if (o.a === 'rampa' && (o.l === 1 || o.l === -1))
+        return { t: 'vila', a: 'rampa', l: o.l } as unknown as Comando;
       return null;
     case 'pularPerto':
       // spec 021: só o id de um amigo (texto curto)
