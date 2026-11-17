@@ -265,25 +265,29 @@ function almofadaXadrez(
 ): void {
   r.caixa(w, h, d, x, y, z, CASA.ferrugem, 0.08);
   const e = 0.006;
+  // (as listras ficam no miolo da face, longe das quinas macias: nunca soltas no ar)
+  const fio = '#e0a070';
+  const listra = '#8a4426';
   if (frente === 'cima') {
-    // por cima: as listras ao longo e de través, a marrom grossa e a creme fina do lado
-    for (const k of [-0.28, 0.28]) {
-      r.caixa(0.1, e, d - 0.12, x + k * w, y + h, z, CASA.marrom, 0);
-      r.caixa(w - 0.12, e, 0.1, x, y + h, z + k * d, CASA.marrom, 0);
-      r.caixa(0.025, e * 2, d - 0.12, x + k * w + 0.09, y + h, z, CASA.creme, 0);
-      r.caixa(w - 0.12, e * 2, 0.025, x, y + h, z + k * d + 0.09, CASA.creme, 0);
+    // por cima: as listras ao longo e de través, a escura grossa e o fio claro do lado
+    for (const k of [-0.25, 0.25]) {
+      r.caixa(0.1, e, d - 0.22, x + k * w, y + h, z, listra, 0);
+      r.caixa(w - 0.22, e, 0.1, x, y + h, z + k * d, listra, 0);
+      r.caixa(0.022, e * 2, d - 0.22, x + k * w + 0.085, y + h, z, fio, 0);
+      r.caixa(w - 0.22, e * 2, 0.022, x, y + h, z + k * d + 0.085, fio, 0);
     }
     // e na frente da almofada as listras descem
-    for (const k of [-0.28, 0.28]) r.caixa(0.1, h - 0.1, e, x + k * w, y + 0.05, z + d / 2, CASA.marrom, 0);
+    for (const k of [-0.25, 0.25])
+      r.caixa(0.1, h - 0.18, e, x + k * w, y + 0.09, z + d / 2, listra, 0);
   } else {
     // de frente (o encosto e os braços): as listras em pé e as deitadas
-    for (const k of [-0.28, 0.28]) {
-      r.caixa(0.1, h - 0.12, e, x + k * w, y + 0.06, z + d / 2, CASA.marrom, 0);
-      r.caixa(0.025, h - 0.12, e * 2, x + k * w + 0.09, y + 0.06, z + d / 2, CASA.creme, 0);
+    for (const k of [-0.25, 0.25]) {
+      r.caixa(0.1, h - 0.2, e, x + k * w, y + 0.1, z + d / 2, listra, 0);
+      r.caixa(0.022, h - 0.2, e * 2, x + k * w + 0.085, y + 0.1, z + d / 2, fio, 0);
     }
-    for (const k of [0.3, 0.7]) {
-      r.caixa(w - 0.12, 0.1, e, x, y + h * k, z + d / 2, CASA.marrom, 0);
-      r.caixa(w - 0.12, 0.025, e * 2, x, y + h * k + 0.12, z + d / 2, CASA.creme, 0);
+    for (const k of [0.32, 0.68]) {
+      r.caixa(w - 0.2, 0.1, e, x, y + h * k, z + d / 2, listra, 0);
+      r.caixa(w - 0.2, 0.022, e * 2, x, y + h * k + 0.12, z + d / 2, fio, 0);
     }
   }
 }
@@ -428,8 +432,8 @@ export function desenharPecaRampa(r: Ref, tipo: TipoPecaVila, n: number): boolea
   }
 }
 
-const CONCRETO = '#aeaba4';
-const CONCRETO_LADO = '#94908a';
+const CONCRETO = '#9d9a93';
+const CONCRETO_LADO = '#837f78';
 /** O grafite de formas (sem palavra): duas ou três cores por desenho. */
 const GRAFITE = { rosa: '#ff5fa8', turquesa: '#22c2b0', amarelo: '#ffd23a', roxo: '#7a4ad8' };
 

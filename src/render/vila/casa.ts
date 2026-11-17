@@ -89,6 +89,8 @@ export const DURA_TOQUE_CASA: Readonly<Record<ToqueCasa, number>> = {
 const TOQUE_TELEFONE = 1.1;
 /** A tela pinta a tantos quadros por segundo e só com a câmera a até tantos blocos. */
 const QUADROS_TELA = 12;
+/** O pião é grande (de cima, a criança de 3 anos acha). */
+const ESC_PIAO = 1.6;
 const PERTO_DA_TELA = 34;
 
 const desenhoNoMundo = (): Desenho => ({
@@ -314,6 +316,8 @@ export function criarCasaVila(
     r.caixa(0.012, 0.12, 0.012, 0.055, -0.06, 0, COR.branco, 0);
   });
   ioio.rotation.y = giroDe(pIoio);
+  // (os brinquedos são grandes, de brinquedo de verdade: de cima, a criança de 3 anos acha)
+  ioio.scaling.setAll(1.5);
   const fio = parte('casa-ioio-fio', (r) => r.caixa(0.012, 1, 0.012, 0, -1, 0, '#f6f4ee', 0));
   const pontaIoio = mundo(pIoio, 0, 1.2, 0.2);
   fio.position.set(pontaIoio[0], pontaIoio[1], pontaIoio[2]);
@@ -338,6 +342,7 @@ export function criarCasaVila(
     r.prisma(8, 0.03, 0.09, 0, 0.36, 0, CASA.madeira, 'y');
   });
   piao.parent = piaoGiro;
+  piao.scaling.setAll(ESC_PIAO);
   const lugarPiao = mundo(pPiao, 0, 0.04, 0);
   piaoBase.position.set(lugarPiao[0], lugarPiao[1], lugarPiao[2]);
   let piaoDesde = -Infinity;
@@ -347,7 +352,7 @@ export function criarCasaVila(
 
   // ------------------------------------------------------------------ o cubo de cores 2 × 2
   const pCubo = achar('casa-cubo');
-  const lado = 0.2;
+  const lado = 0.27;
   const camadaDoCubo = (y0: number, nome: string) =>
     parte(nome, (r) => {
       for (const x of [-1, 1])
@@ -388,6 +393,7 @@ export function criarCasaVila(
     for (const x of [-0.14, 0.14]) r.prisma(8, 0.03, 0.04, x, 0.72, 0, COR.vermelho, 'x');
   });
   roboCorpo.parent = roboNo;
+  roboNo.scaling.setAll(1.3);
   const perna = (s: number) => {
     const p = no(`casa-robo-perna${s}`, roboNo);
     p.position.set(s * 0.09, 0.3, 0);
@@ -422,7 +428,7 @@ export function criarCasaVila(
   // ------------------------------------------------------------------ a bola
   const pBola = achar('casa-bola');
   const bola = (() => {
-    const vd = CreateSphereVertexData({ diameter: 0.5, segments: 8 });
+    const vd = CreateSphereVertexData({ diameter: 0.6, segments: 8 });
     const P = vd.positions as number[];
     const n = P.length / 3;
     const cores: number[] = [];
@@ -436,7 +442,7 @@ export function criarCasaVila(
       const [x, y, z] = [P[i * 3], P[i * 3 + 1], P[i * 3 + 2]];
       // os gomos pela longitude e as tampinhas brancas em cima e embaixo
       const g = Math.floor(((Math.atan2(z, x) + Math.PI) / (Math.PI * 2)) * 6) % 4;
-      const c = Math.abs(y) > 0.21 ? [0.98, 0.97, 0.95] : tons[g];
+      const c = Math.abs(y) > 0.25 ? [0.98, 0.97, 0.95] : tons[g];
       cores.push(c[0], c[1], c[2], 1);
     }
     vd.colors = cores;
@@ -448,7 +454,7 @@ export function criarCasaVila(
     todas.push(m);
     return m;
   })();
-  const lugarBola = mundo(pBola, 0, 0.25, 0);
+  const lugarBola = mundo(pBola, 0, 0.3, 0);
   bola.position.set(lugarBola[0], lugarBola[1], lugarBola[2]);
   let bolaDesde = -Infinity;
 
@@ -598,14 +604,14 @@ export function criarCasaVila(
         const D = DURA_TOQUE_CASA.piao;
         let inclina = DEITADO;
         let precessao = 0.6;
-        let alt = 0.07;
+        let alt = 0.07 * ESC_PIAO;
         if (f >= 0 && f < D) {
           const levanta = suave(f / 0.25);
           const deita = suave((f - (D - 0.7)) / 0.6);
           const bamba = 0.06 + 0.22 * suave((f - D * 0.55) / (D * 0.35));
           inclina = DEITADO * (1 - levanta) + bamba * levanta * (1 - deita) + DEITADO * deita;
           precessao = 0.6 + f * (6 - f);
-          alt = 0.07 * (1 - levanta) + 0.07 * deita + Math.abs(Math.sin(f * 30)) * 0.004;
+          alt = 0.07 * ESC_PIAO * (1 - levanta + deita) + Math.abs(Math.sin(f * 30)) * 0.004;
           giroPiao += dt * 26 * (1 - f / D);
         }
         piaoBase.rotation.y = precessao;

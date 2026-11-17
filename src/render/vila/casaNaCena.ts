@@ -139,6 +139,22 @@ export function ligarCasaNaCena(d: DepsCasaNaCena) {
     return false;
   }
   /**
+   * O que segura a câmera com a criança lá dentro: a câmera fica sempre dentro da casa (por cima
+   * dela, sem telhado), nunca do lado de fora das paredes (de lá, por cima da parede, ela via o
+   * avesso do telhado e da parede, o "vazio"). Devolve true (segura), false (o telhado e as paredes
+   * que sumiram não seguram) ou undefined (a conta de sempre).
+   */
+  function seguraCamera(x: number, y: number, z: number): boolean | undefined {
+    if (k <= 0.5) return undefined;
+    const dentroDaCaixa =
+      x >= corte.x0 - 1 && x <= corte.x1 + 1 && z >= corte.z0 - 1 && z <= corte.z1 + 1;
+    if (!dentroDaCaixa || y < Y) return undefined;
+    const r = pc.dentro;
+    const noMiolo = x >= r.x0 && x <= r.x1 && z >= r.z0 && z <= r.z1;
+    if (!noMiolo) return true;
+    return cortado(x, y, z) ? false : undefined;
+  }
+  /**
    * Quais paredes ficam entre a câmera e a criança (somem): a câmera de cima fica atrás dela, a
    * uns blocos; a parede de fora que fica desse lado (ou perto dele) sai, e a do meio sai quando
    * a câmera está do outro lado dela.
@@ -199,6 +215,7 @@ export function ligarCasaNaCena(d: DepsCasaNaCena) {
     render,
     trilho,
     cortado,
+    seguraCamera,
     /** Está dentro da casa agora? */
     dentro: () => naCasa,
     /** O lugar do boneco agora (o trilho da rampa ou o pulinho do sofá), ou null. */

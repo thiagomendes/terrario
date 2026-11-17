@@ -82,7 +82,7 @@ export function montarPistaDeSkate(f: FerramentasVila): RampaMontada {
   poste(161, 112);
   poste(168, 112);
   poste(156, 135);
-  poste(173, 135);
+  poste(175, 137);
 
   // ============================================================== árvores e canteiros
   for (const [u, v, k] of [
@@ -124,7 +124,8 @@ export function montarPistaDeSkate(f: FerramentasVila): RampaMontada {
       lote: ret(U0, V0, U1, V1),
     },
     postos: {
-      skatista: [X(162.1) + 0.5, Y, Z(115.4) + 0.5],
+      // (do outro lado do caminho: nunca na frente do suporte)
+      skatista: [X(169.4) + 0.5, Y, Z(113.2) + 0.5],
       bmx: [X(171.4) + 0.5, Y, Z(135.7) + 0.5],
     },
   };

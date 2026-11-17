@@ -201,14 +201,14 @@ function caixasLocais(tipo: TipoPecaVila, n: number): readonly Local[] {
     case 'casa-ioio':
       return [B(-0.26, 0.26, 0, 1.3, -0.26, 0.26)];
     case 'casa-piao':
-      return [B(-0.2, 0.2, 0, 0.6, -0.2, 0.2)];
+      return [B(-0.3, 0.3, 0, 0.7, -0.3, 0.3)];
     case 'casa-cubo':
-      return [B(-0.24, 0.24, 0, 0.6, -0.24, 0.24)];
+      return [B(-0.32, 0.32, 0, 0.66, -0.32, 0.32)];
     case 'casa-robo':
       // o robô anda dois passos para a frente e volta: a caixa cobre as duas pontas
-      return [B(-0.3, 0.3, 0, 0.82, -0.26, 1.56)];
+      return [B(-0.36, 0.36, 0, 1.0, -0.32, 1.62)];
     case 'casa-bola':
-      return [B(-0.27, 0.27, 0, 0.6, -0.27, 0.27)];
+      return [B(-0.32, 0.32, 0, 0.66, -0.32, 0.32)];
     case 'casa-bau':
       return [B(-0.47, 0.47, 0, 0.66, -0.3, 0.3)];
     // ---------------------------------------------------------------- a pista de skate (parte 3)

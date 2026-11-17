@@ -2831,8 +2831,10 @@ export function criarCena(
       celulasQuadro = quadroAtual;
       celulasEdicoes = edicoes.versaoGeral;
     }
-    // parte 3: o telhado cortado da Casa anos 80 (a criança lá dentro) não segura a câmera
-    if (casaCena?.cortado(x, y, z)) return false;
+    // parte 3: com a criança dentro da Casa anos 80, a câmera fica dentro dela (por cima, sem
+    // telhado): o telhado e as paredes que sumiram não seguram, e o lado de fora segura
+    const naCasa = casaCena?.seguraCamera(x, y, z);
+    if (naCasa !== undefined) return naCasa;
     const k = ((x + 131072) * 1024 + (y + 512)) * 262144 + (z + 131072);
     const ja = celulasCamera.get(k);
     if (ja !== undefined) return ja;

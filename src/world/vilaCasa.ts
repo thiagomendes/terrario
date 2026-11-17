@@ -170,8 +170,8 @@ export function montarCasa80(f: FerramentasVila): CasaMontada {
   );
   for (let u = U0; u <= U1; u++)
     for (let v = V_FUNDO; v <= V_FRENTE; v++) {
-      // o chão: tábua escura na sala, clara no quarto
-      chao(u, v, u > U_MEIO ? Bloco.TABUAS_BETULA : Bloco.TABUAS);
+      // o chão de tábua (a clara de bétula ficava cinza na luz de dentro)
+      chao(u, v, Bloco.TABUAS);
       if (naParede(u, v)) {
         const porta = v === V_FRENTE && (u === PORTA[0] || u === PORTA[1]);
         for (let y = 1; y <= H; y++) {
