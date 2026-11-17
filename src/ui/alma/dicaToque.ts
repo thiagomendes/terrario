@@ -44,9 +44,35 @@ export interface DicaToque {
   estado(): { chave: string; texto: string; t: { x: number; y: number } } | null;
 }
 
-/** A coisa está num lugar bom da tela para a dica (longe dos botões das bordas)? */
+/** Os controles de toque à vista (o joystick e os botões de pular e correr), lidos de vez em quando. */
+let controles: { ate: number; larg: number; alt: number; caixas: DOMRect[] } | null = null;
+const LONGE_DOS_CONTROLES = 48;
+function caixasDosControles(larg: number, alt: number): DOMRect[] {
+  const agora = performance.now();
+  if (controles && controles.ate > agora && controles.larg === larg && controles.alt === alt)
+    return controles.caixas;
+  const caixas: DOMRect[] = [];
+  if (typeof document === 'undefined') return caixas;
+  const toque = document.querySelector<HTMLElement>('[data-toque]');
+  if (toque && !toque.hidden)
+    for (const el of toque.querySelectorAll<HTMLElement>('.joystick, .botoes > *')) {
+      const r = el.getBoundingClientRect();
+      if (r.width > 0 && r.height > 0) caixas.push(r);
+    }
+  controles = { ate: agora + 1000, larg, alt, caixas };
+  return caixas;
+}
+
+/**
+ * A coisa está num lugar bom da tela para a dica (longe dos botões das bordas e dos controles de
+ * toque: a mãozinha em cima do joystick confunde, e o dedo da criança ali pega o joystick)?
+ */
 export function boaParaDica(t: { x: number; y: number }, larg: number, alt: number): boolean {
-  return t.x > 70 && t.x < larg - 70 && t.y > 120 && t.y < alt - 150;
+  if (!(t.x > 70 && t.x < larg - 70 && t.y > 120 && t.y < alt - 150)) return false;
+  const m = LONGE_DOS_CONTROLES;
+  for (const r of caixasDosControles(larg, alt))
+    if (t.x > r.left - m && t.x < r.right + m && t.y > r.top - m && t.y < r.bottom + m) return false;
+  return true;
 }
 
 export function criarDicaToque(): DicaToque {

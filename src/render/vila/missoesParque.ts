@@ -85,8 +85,13 @@ const CORES_PRESENTE = [COR.turquesa, COR.amarelo] as const;
 const MAX_PRESENTES = 8;
 /** A mão que segura o fio: quanto para a direita do corpo e a que altura dos pés. */
 const MAO = { lado: 0.42, y: 0.8 } as const;
-/** O balão de presente flutua este tanto acima da mão (2,3 blocos acima dos pés). */
-const ALTURA_PRESENTE = 1.5;
+/** O balão de presente flutua este tanto acima da mão (2,5 blocos acima dos pés). */
+const ALTURA_PRESENTE = 1.7;
+/**
+ * O balão de presente puxa um pouco para fora, para o lado da mão: o fio fica à vista ao lado da
+ * cabeça (com o balão bem em cima, a câmera atrás via só um balão solto no ar).
+ */
+const DERIVA_PRESENTE = 0.42;
 /** O toque no balão fugido: desce, fica na mão, sobe embora (s). */
 const DESCE = 1.2;
 const NA_MAO = 1.5;
@@ -613,6 +618,9 @@ export function criarMissoesParque(scene: Scene, op: OpcoesMissoesParque): Rende
         // o vento de leve
         dx += Math.sin(t * 1.3 + sorte * 40) * 0.07;
         dz += Math.cos(t * 1.1 + sorte * 23) * 0.06;
+        // e puxa para fora, para o lado da mão (o fio à vista ao lado da cabeça)
+        dx += Math.cos(c.yaw) * DERIVA_PRESENTE;
+        dz -= Math.sin(c.yaw) * DERIVA_PRESENTE;
         // o fio aponta da mão para o balão: o molde (em pé) inclina para lá
         const comp = Math.hypot(dx, ALTURA_PRESENTE, dz);
         const inclina = Math.acos(ALTURA_PRESENTE / comp);

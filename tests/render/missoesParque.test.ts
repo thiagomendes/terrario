@@ -124,7 +124,8 @@ describe('as missões do parque na tela (spec 026, parte 2, etapa B)', () => {
       a.r.quadro({ ...a.base, t: 2.05 + k * 0.05, comBalao: so(eu.x + k * 0.3) });
     const cheia = malhas.find((m) => m.isEnabled())!;
     const mat = cheia.thinInstanceGetWorldMatrices()[0].m;
-    expect(mat[4]).toBeLessThan(-0.2);
+    // (para trás, apesar de o balão puxar um pouco para o lado da mão, que aqui é a frente)
+    expect(mat[4]).toBeLessThan(-0.15);
     expect(mat[5]).toBeGreaterThan(0.8);
     expect(mat[13] - chao).toBeCloseTo(0.8, 1);
     a.r.quadro({ ...a.base, t: 3.1, fugidos: [false, false, false] });

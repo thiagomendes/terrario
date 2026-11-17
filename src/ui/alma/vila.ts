@@ -71,7 +71,13 @@ declare global {
        * Etapa B: o que se toca agora nas missões do parque e na rua (a chave, se a criança está
        * ao alcance e onde fica na tela; null: fora da tela).
        */
-      toques(): { chave: string; perto: boolean; t: { x: number; y: number } | null }[];
+      toques(): {
+        chave: string;
+        perto: boolean;
+        /** Onde fica no mundo e na tela. */
+        p: [number, number, number];
+        t: { x: number; y: number } | null;
+      }[];
       /** Etapa B: a revista da banca está aberta na tela? */
       revista(): boolean;
     };
@@ -826,6 +832,7 @@ export function ligarVilaNeon(
         return {
           chave: q.chave,
           perto: !!pes && q.alcanca(pes[0], pes[2]),
+          p: a,
           t: tela(a[0], a[1], a[2]),
         };
       });
