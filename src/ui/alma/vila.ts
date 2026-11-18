@@ -783,7 +783,7 @@ export function ligarVilaNeon(
     (ev) => {
       const alvo = ev.target as HTMLElement | null;
       if (
-        alvo?.closest?.('button, .alma-fundo, .roda, .barra, .joystick, .menu-hud, .controle-toque')
+        alvo?.closest?.('button, .alma-fundo, .roleta, .barra, .joystick, .menu-hud, .controle-toque')
       )
         return;
       if (!noJogo()) return;

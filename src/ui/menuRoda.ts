@@ -8,8 +8,13 @@
  * Esc) e cada item mostra a dele; 1 a 8 só com a roda de gestos aberta. O (de "opções") abre e
  * fecha a roda do menu: o mouse preso na câmera é solto sem a pausa e volta a prender quando a
  * roda fecha, a não ser que o item escolhido abra uma tela.
+ *
+ * Spec 033 (dono, 18 nov 2026): a roda virou a roleta (src/ui/roleta.ts), embaixo, por cima da
+ * barrinha, em todo mundo e aparelho. Os itens, os extras de cada mundo, os gestos (agora uma
+ * roleta ligada, com "Voltar" mostrando a carinha de Gestos) e as teclas continuam os mesmos.
  */
-import { criarRoda, teclaDaRoda, type ItemRoda, type ListaRoda, type Roda } from './roda';
+import { teclaDaRoda, type ItemRoda, type ListaRoda, type Roda } from './roda';
+import { criarRoleta } from './roleta';
 import { alternarTelaCheia, podeAlternarTelaCheia } from './telaCheia';
 
 /** Ícones do esboço dos menus (viewBox 0 0 32 32). */
@@ -111,7 +116,7 @@ export const CSS_MENU_RODA = `
 .menu-hud kbd { position: absolute; bottom: -6px; right: -6px; min-width: 16px; height: 16px; padding: 0 4px; border-radius: 8px;
   display: grid; place-items: center; font: 800 0.6rem var(--jogo, system-ui), sans-serif; color: var(--tinta, #3b2a1e);
   background: #ffe4a8; box-shadow: 0 1px 0 #d9b56a; pointer-events: none; }
-body.toque-ativo .menu-hud kbd, body.sem-teclas .menu-hud kbd, body.sem-teclas .roda kbd { display: none; }
+body.toque-ativo .menu-hud kbd, body.sem-teclas .menu-hud kbd { display: none; }
 .menu-hud.botao-roda { top: calc(8px + env(safe-area-inset-top)); left: calc(60px + env(safe-area-inset-left)); }
 /* acima do fundo da roda aberta: tocar nele de novo fecha */
 .menu-hud.botao-roda.ativo { z-index: 56; }
@@ -188,7 +193,7 @@ export function criarMenuRoda(op: OpcoesMenuRoda, raiz: HTMLElement = document.b
   /** O item escolhido abre uma tela: o mouse fica solto. */
   let abriuTela = false;
 
-  const roda = criarRoda({
+  const roda = criarRoleta({
     rotulo: 'Menu',
     aoMudar: (aberta) => {
       bRoda.classList.toggle('ativo', aberta);
@@ -261,11 +266,14 @@ export function criarMenuRoda(op: OpcoesMenuRoda, raiz: HTMLElement = document.b
     else if (it.codigo) tecla(it.codigo);
   }
   let gestos = op.gestos;
+  /** O item de cima dos gestos (a plaquinha "Voltar" mostra a carinha dele). */
+  const paiGestos: ItemRoda = { id: 'gestos', nome: 'Gestos', icone: svg(IC.gestos) };
   const listaDeGestos = (gs: readonly ItemRoda[]): ListaRoda => ({
     // 1 a 9 e o 0 para o décimo
     itens: gs.map((g, i) => ({ ...g, tecla: String((i + 1) % 10) })),
     aoEscolher: (id) => op.fazerGesto(id),
     aoVoltar: () => abrirMenu(),
+    pai: paiGestos,
   });
   let listaGestos: ListaRoda = listaDeGestos(gestos);
   // desempenho: os botões das duas listas já ficam montados (abrir não cria nada)

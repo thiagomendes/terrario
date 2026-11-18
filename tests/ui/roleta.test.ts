@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  AJUSTE_PADRAO,
-  ajusteDaBusca,
+  TAM_ROLETA,
   deslocamentoNaRoleta,
   escalaNaRoleta,
   modulo,
@@ -9,10 +8,20 @@ import {
   pararRoleta,
   vizinhosVisiveis,
 } from '../../src/ui/roleta';
-import { zoomInicialToque } from '../../src/esboco/camera033';
-import { ZOOM_PADRAO_TOQUE } from '../../src/player/camera';
+import {
+  ZOOM_MAXIMO,
+  ZOOM_MINIMO,
+  ZOOM_PADRAO_TOQUE,
+  ZOOM_TOQUE_DEITADO,
+  ZOOM_TOQUE_EM_PE,
+  zoomInicialToque,
+} from '../../src/player/camera';
 
-describe('roleta do esboço 033', () => {
+describe('roleta do menu (spec 033)', () => {
+  it('o do meio tem 96 px (o que o dono aprovou no esboço)', () => {
+    expect(TAM_ROLETA).toBe(96);
+  });
+
   it('dá a volta sem fim (o resto é sempre de 0 a n-1)', () => {
     expect(modulo(-1, 8)).toBe(7);
     expect(modulo(17, 8)).toBe(1);
@@ -61,29 +70,21 @@ describe('roleta do esboço 033', () => {
     expect(pararRoleta(0, -0.6, -40)).toBe(-3);
   });
 
-  it('os ajustes do esboço vêm da busca, com padrões seguros', () => {
-    expect(ajusteDaBusca('')).toEqual(AJUSTE_PADRAO);
-    expect(ajusteDaBusca('?roletaLugar=meio&roletaTam=112&roletaVizinho=escolher')).toEqual({
-      lugar: 'meio',
-      tamanho: 112,
-      vizinho: 'escolher',
-    });
-    expect(ajusteDaBusca('?roletaLugar=lua&roletaTam=9999').lugar).toBe('baixo');
-    expect(ajusteDaBusca('?roletaTam=9999').tamanho).toBe(AJUSTE_PADRAO.tamanho);
-  });
 });
 
-describe('câmera do esboço 033', () => {
-  it('sem o parâmetro, a distância de hoje', () => {
-    expect(zoomInicialToque(844, 390, '')).toBe(ZOOM_PADRAO_TOQUE);
-    expect(zoomInicialToque(390, 844, '?esboco=camera')).toBe(ZOOM_PADRAO_TOQUE);
+describe('câmera do celular (spec 033)', () => {
+  it('começa mais afastada: deitado +8 % (4,75) e em pé +15 % (5,06)', () => {
+    expect(zoomInicialToque(844, 390)).toBe(ZOOM_TOQUE_DEITADO);
+    expect(zoomInicialToque(390, 844)).toBe(ZOOM_TOQUE_EM_PE);
+    expect(ZOOM_TOQUE_DEITADO).toBe(4.75);
+    expect(ZOOM_TOQUE_EM_PE).toBe(5.06);
+    expect(ZOOM_TOQUE_DEITADO / ZOOM_PADRAO_TOQUE).toBeCloseTo(1.08, 2);
+    expect(ZOOM_TOQUE_EM_PE / ZOOM_PADRAO_TOQUE).toBeCloseTo(1.15, 2);
   });
-  it('com o esboço, mais afastada (e em pé, um pouco mais), dentro da pinça', () => {
-    const deitado = zoomInicialToque(844, 390, '?esboco=033');
-    const emPe = zoomInicialToque(390, 844, '?esboco=033');
-    expect(deitado).toBeGreaterThan(ZOOM_PADRAO_TOQUE);
-    expect(emPe).toBeGreaterThanOrEqual(deitado);
-    expect(zoomInicialToque(844, 390, '?esboco=033&zoomDeitado=5.94')).toBe(5.94);
-    expect(zoomInicialToque(844, 390, '?esboco=033&zoomDeitado=40')).toBe(7);
+  it('dentro da pinça (a criança ainda aproxima e afasta)', () => {
+    for (const d of [ZOOM_TOQUE_DEITADO, ZOOM_TOQUE_EM_PE]) {
+      expect(d).toBeGreaterThan(ZOOM_MINIMO);
+      expect(d).toBeLessThan(ZOOM_MAXIMO);
+    }
   });
 });

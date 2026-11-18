@@ -1,5 +1,6 @@
 /**
- * Esboço 033: a roleta, no lugar da roda (spec 015) — só com `?esboco=033`.
+ * A roleta do menu (spec 033, dono, 18 nov 2026): no lugar da roda da spec 015, em todo mundo,
+ * modo e aparelho.
  *
  * Uma fileira de botões redondos (os mesmos da roda: creme, contorno marrom, os mesmos ícones)
  * numa bandeja como a da barrinha. A criança arrasta para a esquerda ou para a direita; o do
@@ -7,30 +8,25 @@
  * vizinhos encolhem e somem para as pontas, e a fileira dá a volta sem fim. Só 3 a 5 aparecem
  * de cada vez, então cabe qualquer número de itens sem encostar.
  *
- * Roletas ligadas: escolher um item que tem lista (Gestos) troca a fileira pela dele, e o ícone
- * do item de cima vira a abinha "Voltar" no canto da bandeja (a criança vê de onde veio). Tocar
+ * Roletas ligadas: escolher um item que tem lista (Gestos) troca a fileira pela dele, e a
+ * plaquinha de cima da bandeja vira "‹ [ícone de onde veio] Voltar" (na de cima, "✕ Fechar"):
+ * um lugar só para sair, em pé no meio (o canto é do joystick) e deitado à esquerda. Tocar
  * fora sobe um nível (na de cima, fecha). Qualquer profundidade: cada nível é uma roleta igual.
  *
- * Implementa a mesma interface da roda (`Roda`), então o menu (`menuRoda.ts`) não muda.
+ * Embaixo, por cima da barrinha: aberta, a barrinha, o joystick e os botões de correr e pular
+ * dão licença e voltam quando ela fecha. Fecha sozinha em 8 s. Tocar num vizinho rola até ele;
+ * tocar no do meio escolhe. Cada item que passa pelo meio faz um "toc" baixinho.
+ *
+ * No computador: arrastar com o mouse, a rodinha, as setas, Enter (ou espaço) escolhe,
+ * Backspace sobe um nível e Esc fecha (o menu cuida do Esc e dos números dos gestos).
  */
 import { tocarSomInterface } from '../audio/somInterface';
 import type { ItemRoda, ListaRoda, OpcoesRoda, Roda } from './roda';
 
 // ------------------------------------------------------------------------ contas (puras)
 
-/** Onde a roleta fica na tela. */
-export type LugarRoleta = 'baixo' | 'acima' | 'meio';
-/** Tocar num vizinho: rola até ele (e outro toque escolhe) ou já escolhe. */
-export type VizinhoRoleta = 'rolar' | 'escolher';
-
-export interface AjusteRoleta {
-  lugar: LugarRoleta;
-  /** Lado do botão do meio (px). */
-  tamanho: number;
-  vizinho: VizinhoRoleta;
-}
-
-export const AJUSTE_PADRAO: AjusteRoleta = { lugar: 'baixo', tamanho: 96, vizinho: 'rolar' };
+/** Lado do botão do meio (px); os vizinhos ficam com 78 % e os seguintes com 58 %. */
+export const TAM_ROLETA = 96;
 
 /** O resto sempre positivo (a fileira dá a volta). */
 export const modulo = (i: number, n: number) => ((i % n) + n) % n;
@@ -88,19 +84,6 @@ export function pararRoleta(de: number, agora: number, vel: number): number {
   return alvo;
 }
 
-/** Ajuste do esboço pela busca da página (`&roletaLugar=`, `&roletaTam=`, `&roletaVizinho=`). */
-export function ajusteDaBusca(busca: string): AjusteRoleta {
-  const p = new URLSearchParams(busca);
-  const lugar = p.get('roletaLugar');
-  const tam = Number(p.get('roletaTam'));
-  const viz = p.get('roletaVizinho');
-  return {
-    lugar: lugar === 'acima' || lugar === 'meio' ? lugar : AJUSTE_PADRAO.lugar,
-    tamanho: Number.isFinite(tam) && tam >= 64 && tam <= 140 ? tam : AJUSTE_PADRAO.tamanho,
-    vizinho: viz === 'escolher' ? 'escolher' : AJUSTE_PADRAO.vizinho,
-  };
-}
-
 // ------------------------------------------------------------------------------ o desenho
 
 const SETA =
@@ -119,9 +102,8 @@ export const CSS_ROLETA = `
   -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 13%, #000 87%, transparent 100%);
           mask-image: linear-gradient(90deg, transparent 0, #000 13%, #000 87%, transparent 100%); }
 .roleta.aberta .bandeja { transform: translate(-50%, 0); opacity: 1; }
-.roleta[data-lugar="baixo"] .bandeja { bottom: max(8px, env(safe-area-inset-bottom)); }
-.roleta[data-lugar="acima"] .bandeja { bottom: calc(max(8px, env(safe-area-inset-bottom)) + 76px); }
-.roleta[data-lugar="meio"] .bandeja { top: 50%; margin-top: calc((var(--tam) + 58px) / -2); }
+/* embaixo, por cima da barrinha (que dá licença enquanto ela está aberta) */
+.roleta .bandeja { bottom: max(8px, env(safe-area-inset-bottom)); }
 /* a trilha dos botões: o meio da bandeja, um pouco acima (o nome vai embaixo) */
 .roleta .trilho { position: absolute; left: 50%; top: calc(8px + var(--tam) / 2); width: 0; height: 0; }
 .roleta .item { position: absolute; left: 0; top: 0; width: var(--tam); height: var(--tam); margin: calc(var(--tam) / -2); padding: 0; border: 0;
@@ -165,14 +147,14 @@ body[data-overlay] .roleta, body.modo-foto .roleta, body.tela-titulo .roleta { d
 
 let cssPosto = false;
 
+/** O que fica embaixo da roleta e dá licença enquanto ela está aberta. */
+export const TAPA_ROLETA = '.barra, .toque .joystick, .toque .botoes';
+
 /** Passos do arraste (px) por item: o espaço do meio ao vizinho. */
 const passoPx = (tamanho: number) => deslocamentoNaRoleta(1, tamanho);
 
-export function criarRoleta(
-  op: OpcoesRoda,
-  ajuste: AjusteRoleta = AJUSTE_PADRAO,
-  raiz: HTMLElement = document.body,
-): Roda {
+export function criarRoleta(op: OpcoesRoda, raiz: HTMLElement = document.body): Roda {
+  const tamanho = TAM_ROLETA;
   if (!cssPosto) {
     cssPosto = true;
     const st = document.createElement('style');
@@ -181,8 +163,7 @@ export function criarRoleta(
   }
   const el = document.createElement('div');
   el.className = 'roleta';
-  el.dataset.lugar = ajuste.lugar;
-  el.style.setProperty('--tam', `${ajuste.tamanho}px`);
+  el.style.setProperty('--tam', `${tamanho}px`);
   el.setAttribute('role', 'menu');
   el.setAttribute('aria-label', op.rotulo);
   el.setAttribute('aria-hidden', 'true');
@@ -232,7 +213,7 @@ export function criarRoleta(
   }
 
   const n = () => lista?.itens.length ?? 0;
-  const passo = () => passoPx(ajuste.tamanho);
+  const passo = () => passoPx(tamanho);
 
   function desenhar(): void {
     const l = lista;
@@ -263,9 +244,9 @@ export function criarRoleta(
         c.b.setAttribute('aria-label', it.nome);
         c.b.setAttribute('data-item', it.id);
       }
-      const x = deslocamentoNaRoleta(u, ajuste.tamanho);
+      const x = deslocamentoNaRoleta(u, tamanho);
       const s = escalaNaRoleta(u);
-      const tf = `translate(${x.toFixed(1)}px, ${((1 - s) * ajuste.tamanho * 0.18).toFixed(1)}px) scale(${s.toFixed(3)})`;
+      const tf = `translate(${x.toFixed(1)}px, ${((1 - s) * tamanho * 0.18).toFixed(1)}px) scale(${s.toFixed(3)})`;
       c.b.style.transform = tf;
       c.b.style.setProperty('--tf', tf);
       c.b.style.opacity = opacidadeNaRoleta(u).toFixed(3);
@@ -294,8 +275,9 @@ export function criarRoleta(
   function animar(): void {
     cancelAnimationFrame(quadro);
     ultimoT = performance.now();
+    delete el.dataset.parada;
     const passo = (t: number) => {
-      const dt = Math.min(0.05, (t - ultimoT) / 1000);
+      const dt = Math.min(0.05, Math.max(0, t - ultimoT) / 1000);
       ultimoT = t;
       if (!arrastando) {
         const d = alvo - pos;
@@ -305,6 +287,8 @@ export function criarRoleta(
       tique();
       desenhar();
       if (arrastando || pos !== alvo) quadro = requestAnimationFrame(passo);
+      // assentou (os testes esperam por isto antes do próximo toque)
+      else el.dataset.parada = '';
     };
     quadro = requestAnimationFrame(passo);
   }
@@ -385,22 +369,32 @@ export function criarRoleta(
       const c = chips.find((q) => q.b === tocado);
       if (c) {
         const k = chips.indexOf(c) - R;
+        // o do meio escolhe; um vizinho rola até o meio (outro toque escolhe)
         if (k === 0) escolherMeio();
-        else if (ajuste.vizinho === 'escolher') {
-          alvo = Math.round(pos0) + k;
-          animar();
-          escolherNoIndice(modulo(Math.round(pos0) + k, n()));
-        } else irPara(Math.round(pos0) + k);
+        else irPara(Math.round(pos0) + k);
       } else irPara(Math.round(pos0));
       return;
     }
     const h0 = historico[0];
     const h1 = historico[historico.length - 1];
-    const vel = h1.t > h0.t ? ((h1.p - h0.p) / (h1.t - h0.t)) * 1000 : 0;
+    // o dedo parou antes de soltar: sem piparote (assenta onde está)
+    const parado = performance.now() - h1.t > 100;
+    const vel = h1.t > h0.t && !parado ? ((h1.p - h0.p) / (h1.t - h0.t)) * 1000 : 0;
     irPara(pararRoleta(pos0, pos, vel));
   };
   el.addEventListener('pointerup', soltar);
   el.addEventListener('pointercancel', soltar);
+  // o toque que escolhe já abriu a tela do item (a pausa, o mapa...) quando o dedo sai: sem
+  // isto, o clique de compatibilidade do navegador cairia no botão que está ali na tela nova
+  // (a plaquinha de sair, que age pelo clique, fica de fora)
+  el.addEventListener(
+    'touchend',
+    (e) => {
+      if (bVoltar.contains(e.target as Node)) return;
+      if (e.cancelable) e.preventDefault();
+    },
+    { passive: false },
+  );
   // a rodinha do mouse e o touchpad andam um item por vez
   let rodaAcum = 0;
   el.addEventListener(
@@ -408,6 +402,8 @@ export function criarRoleta(
     (e) => {
       if (!aberta) return;
       e.preventDefault();
+      // nem a câmera nem a barrinha (Shift) andam junto
+      e.stopPropagation();
       rodaAcum += Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
       if (Math.abs(rodaAcum) >= 60) {
         irPara(Math.round(alvo) + Math.sign(rodaAcum));
@@ -494,11 +490,7 @@ export function criarRoleta(
   function licenca(sob: boolean): void {
     for (const a of document.querySelectorAll('.toast-area, .legendas'))
       a.classList.toggle('sob-roda', sob);
-    const tapa =
-      ajuste.lugar === 'baixo'
-        ? ['.barra', '.toque .joystick', '.toque .botoes']
-        : ['.toque .joystick', '.toque .botoes'];
-    for (const a of document.querySelectorAll(tapa.join(','))) a.classList.toggle('sob-roleta', sob);
+    for (const a of document.querySelectorAll(TAPA_ROLETA)) a.classList.toggle('sob-roleta', sob);
   }
 
   function posicionarVoltar(l: ListaRoda, animarDoMeio: boolean): void {
@@ -543,6 +535,9 @@ export function criarRoleta(
       // a lista nova nasce um pouco de lado e corre para o lugar (a criança vê que mudou)
       if (aberta && trocou) pos = alvo + (entrando ? 1.6 : -1.6);
       for (const c of chips) c.i = Number.NaN;
+      // a lista inteira (só 5 a 7 botões existem de cada vez): leitores de tela e testes
+      el.dataset.itens = l.itens.map((it) => it.id).join(' ');
+      el.dataset.nivel = l.aoVoltar ? 'dentro' : 'topo';
     }
     el.classList.add('aberta');
     el.setAttribute('aria-hidden', 'false');
@@ -588,7 +583,6 @@ export function criarRoleta(
     get lista() {
       return lista;
     },
-    desenho: null,
     abrir,
     preparar: () => undefined,
     fechar,

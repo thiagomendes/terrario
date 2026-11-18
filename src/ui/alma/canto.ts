@@ -175,7 +175,7 @@ export function ligarCantoMissoes(
     'pointerdown',
     (ev) => {
       const alvo = ev.target as HTMLElement | null;
-      if (alvo?.closest?.('button, .alma-fundo, .roda, .barra, .joystick, .menu-hud')) return;
+      if (alvo?.closest?.('button, .alma-fundo, .roleta, .barra, .joystick, .menu-hud')) return;
       const lista = alvos();
       if (!lista.length) return;
       const preso = !!document.pointerLockElement;
