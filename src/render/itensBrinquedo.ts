@@ -108,7 +108,7 @@ export function modeloNaMao(
     cilindro(`${prefixo}-${n}`, scene, h, r1, r2, mats.cor(cor));
   /** Spec 032: o copo de plástico transparente (a bebida dentro se vê, e desce a cada gole). */
   const vidro = (n: string, h: number, r1: number, r2: number) =>
-    cilindro(`${prefixo}-${n}`, scene, h, r1, r2, mats.cor('#eef6ff', 0.7, 0.34));
+    cilindro(`${prefixo}-${n}`, scene, h, r1, r2, mats.cor('#eef6ff', 0.7, 0.24));
 
   const def = item ? obterItem(item) : undefined;
   if (def?.ferramenta) {
@@ -301,7 +301,7 @@ export function modeloNaMao(
       case 'suco': {
         // spec 026: o copo com o suco de laranja e o canudo vermelho (spec 032: o copo é de
         // plástico transparente, e o suco que desce a cada gole se vê de qualquer lado)
-        add(ci('suco', 0.12, 0.054, 0.046, '#ff8a2a'), 0, 0.066, 0);
+        add(ci('suco', 0.12, 0.054, 0.046, '#ff7a10'), 0, 0.066, 0);
         add(vidro('copo', 0.15, 0.06, 0.05), 0, 0.075, 0);
         const canudo = add(ci('canudo', 0.16, 0.009, 0.009, '#e8302a'), 0.02, 0.16, 0);
         canudo.rotation.z = -0.25;

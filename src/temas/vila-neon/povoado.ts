@@ -234,7 +234,15 @@ export const POVOADO_VILA: PovoadoTema = {
       fantasia: { id: 'guitarrista-vila', cor: 0 },
       cabelo: 2,
     },
-    'vila:3': { nome: 'Bia', genero: 'f', titulo: 'Moça do lanche', pecas: MORADORES.cozinheiro },
+    // (spec 032: a Bia, a Tati e o Seu Chico vendem na barraca, com a entrega de verdade: sem a
+    // janela de trocas)
+    'vila:3': {
+      nome: 'Bia',
+      genero: 'f',
+      titulo: 'Moça do lanche',
+      pecas: MORADORES.cozinheiro,
+      semTrocas: true,
+    },
     'vila:4': {
       nome: 'Mel',
       genero: 'f',
@@ -258,6 +266,7 @@ export const POVOADO_VILA: PovoadoTema = {
       genero: 'f',
       titulo: 'Moça da lanchonete',
       pecas: MORADORES.cozinheiro,
+      semTrocas: true,
     },
     'vila:7': { nome: 'Beto', genero: 'm', titulo: 'Moço da banca', pecas: MORADORES.construtor },
     // spec 026 (o público do show): a turma (vila:8 a vila:47), cada um de um jeito
@@ -317,6 +326,31 @@ export const POVOADO_VILA: PovoadoTema = {
         { t: [0.42, 0.05, 0.38], p: [0, ACIMA - 0.02, 0], cor: '#e8302a', papel: 'cabeca' },
       ],
       cabelo: 0,
+      semTrocas: true,
+    },
+    // spec 032: a pipoqueira da pracinha, atrás do carrinho de pipoca perto de onde a criança
+    // nasce (a primeira barraca que ela vê vende de verdade): camisa branca, o avental de listras
+    // azuis e o chapéu de papel azul (o Seu Chico é de vermelho)
+    'vila:73': {
+      nome: 'Dona Cida',
+      genero: 'f',
+      titulo: 'Pipoqueira',
+      pecas: [
+        ...corpoDeMorador({
+          pele: '#b07850',
+          roupa: '#f6f4ee',
+          calca: '#2f3e66',
+          sapato: '#2e2d36',
+          cabelo: '#2a1c14',
+        }),
+        { t: [0.44, 0.5, 0.04], p: [0, 1.0, 0.155], cor: '#fbfaf4' },
+        { t: [0.07, 0.5, 0.02], p: [-0.13, 1.0, 0.178], cor: '#2f7fff' },
+        { t: [0.07, 0.5, 0.02], p: [0.13, 1.0, 0.178], cor: '#2f7fff' },
+        { t: [0.4, 0.16, 0.36], p: [0, ACIMA + 0.04, 0], cor: '#fbfaf4', papel: 'cabeca' },
+        { t: [0.42, 0.05, 0.38], p: [0, ACIMA - 0.02, 0], cor: '#2f7fff', papel: 'cabeca' },
+      ],
+      cabelo: 3,
+      semTrocas: true,
     },
     'vila:64': {
       nome: 'Duda',

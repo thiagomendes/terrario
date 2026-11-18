@@ -34,6 +34,8 @@ export interface Personagem {
   definirNaMao(bloco: number | null, item: string | null): void;
   /** Spec 032: o nó da mão direita (a comida mordida e o lanche da entrega vão nele). */
   noDaMao(): TransformNode;
+  /** Spec 032: a cabeça e a boca nela (+z é a frente do rosto): a comida para na frente da boca. */
+  boca(): { no: TransformNode; pos: [number, number, number] };
   /** Spec 032: a mão segura outra coisa por um tempo (o item de sempre some até soltar). */
   ocuparMao(ocupada: boolean): void;
   /** Spec 032: os plásticos do boneco (a comida mordida acende com a mesma luz). */

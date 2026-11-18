@@ -1,5 +1,5 @@
 import { test, type Page } from '@playwright/test';
-import { mkdirSync } from 'node:fs';
+import { mkdirSync, readdirSync, readFileSync } from 'node:fs';
 import { abrirMundo, assentar, type Tamanho } from './guia-palco';
 import { alvoDoToque, esperarDica } from './vila-alvo';
 
@@ -16,7 +16,8 @@ import { alvoDoToque, esperarDica } from './vila-alvo';
 declare const process: { env: Record<string, string | undefined> };
 test.setTimeout(1_800_000);
 test.use({ actionTimeout: 30_000 });
-const PASTA = process.env.FOTOS_PASTA ?? 'test-results/comprar-comer-fotos';
+// (fora de test-results: o Playwright limpa essa pasta a cada rodada)
+const PASTA = process.env.FOTOS_PASTA ?? 'capturas-032/fotos';
 const NOITE = process.env.FOTOS_HORA === 'noite';
 const TAMANHO = (process.env.FOTOS_TAMANHO ?? 'empe') as Tamanho;
 const SO = process.env.FOTOS_SO ?? '';
@@ -29,7 +30,10 @@ const COMIDAS = (
 async function abrir(browser: import('@playwright/test').Browser, id: string): Promise<Page> {
   mkdirSync(PASTA, { recursive: true });
   const page = await abrirMundo(browser, { id, tema: 'vila-neon', tamanho: TAMANHO });
-  await page.addStyleTag({ content: '.dica-mira { display: none !important; }' });
+  await page.addStyleTag({
+    content:
+      '.dica-mira, .painel-foto, .grade-foto, .flash-foto, .moldura-foto { display: none !important; }',
+  });
   if (NOITE)
     await page.evaluate(() => {
       const e = window.__brumaluz!;
@@ -44,6 +48,30 @@ async function abrir(browser: import('@playwright/test').Browser, id: string): P
 }
 const foto = (page: Page, nome: string) => page.screenshot({ path: `${PASTA}/${nome}-${SUFIXO}.png` });
 
+/**
+ * A folha de fotos (para a revisão): as fotos que começam com `prefixo`, lado a lado, pequenas,
+ * com o nome embaixo de cada uma.
+ */
+async function folha(browser: import('@playwright/test').Browser, prefixo: string, nome: string, largura = 210): Promise<void> {
+  const arquivos = readdirSync(PASTA)
+    .filter((a) => a.startsWith(prefixo) && a.endsWith(`-${SUFIXO}.png`))
+    .sort();
+  if (!arquivos.length) return;
+  const page = await browser.newPage({ viewport: { width: largura * 6 + 40, height: 400 } });
+  const cels = arquivos
+    .map(
+      (a) =>
+        `<figure><img src="data:image/png;base64,${readFileSync(`${PASTA}/${a}`, 'base64')}"><figcaption>${a.replace(prefixo, '').replace(`-${SUFIXO}.png`, '')}</figcaption></figure>`,
+    )
+    .join('');
+  await page.setContent(
+    `<style>body{margin:8px;background:#222;font:12px sans-serif;color:#eee;display:flex;flex-wrap:wrap;gap:4px}figure{margin:0;width:${largura}px}img{width:100%;display:block}figcaption{text-align:center}</style>${cels}`,
+  );
+  await page.waitForTimeout(300);
+  await page.screenshot({ path: `${PASTA}/folha-${nome}-${SUFIXO}.png`, fullPage: true });
+  await page.close();
+}
+
 test('comer: cada comida de perto, mordida por mordida', async ({ browser }) => {
   test.skip(!!SO && SO !== 'comer');
   const page = await abrir(browser, `fotos-comer-${SUFIXO}`);
@@ -52,8 +80,8 @@ test('comer: cada comida de perto, mordida por mordida', async ({ browser }) => 
     const e = window.__brumaluz!;
     const p = e.vila!()!;
     e.voar?.(false);
-    e.teleportar!(p.nascimento.x + 2, p.nascimento.z + 3, p.h + 1.2);
-    e.apontar!(0.4, 0.15);
+    e.teleportar!(p.nascimento.x, p.nascimento.z, p.h + 1.2);
+    e.apontar!(p.nascimento.olhar, 0.15);
   });
   await page.waitForTimeout(1500);
   for (const item of COMIDAS) {
@@ -63,22 +91,27 @@ test('comer: cada comida de perto, mordida por mordida', async ({ browser }) => 
       e.selecionarSlot!(0);
     }, item);
     await page.waitForTimeout(700);
+    const yaw0 = await page.evaluate(() => {
+      const e = window.__brumaluz!;
+      const y = e.yawBoneco!();
+      e.travarYaw!(y);
+      return y;
+    });
     for (const lado of ['frente', 'lado'] as const) {
-      await page.evaluate((lado) => {
-        const e = window.__brumaluz!;
-        const f = e.modoFoto!;
-        if (!f.ativo()) f.alternar();
-        f.fov(38);
-        f.selfie();
-        if (lado === 'lado') {
+      await page.evaluate(
+        ({ lado, yaw0 }) => {
+          const e = window.__brumaluz!;
+          const f = e.modoFoto!;
+          if (!f.ativo()) f.alternar();
           const pes = e.jogadorPes!();
-          const yaw = e.yawBoneco?.() ?? 0;
-          // de lado e um pouco à frente (o lado da mão direita, a da comida)
-          const a = yaw - 1.2;
-          f.posicionar!(pes[0] + Math.sin(a) * 2.2, pes[1] + 1.7, pes[2] + Math.cos(a) * 2.2);
-          e.apontar!(a + Math.PI, 0.1);
-        }
-      }, lado);
+          // de frente, ou de lado e um pouco à frente (o lado da mão direita, a da comida)
+          const a = lado === 'lado' ? yaw0 - 0.7 : yaw0;
+          const d = 1.9;
+          f.posicionar!(pes[0] + Math.sin(a) * d, pes[1] + 1.45, pes[2] + Math.cos(a) * d);
+          e.apontar!(a + Math.PI, 0.06);
+        },
+        { lado, yaw0 },
+      );
       await page.waitForTimeout(900);
       await foto(page, `comer-${item}-${lado}-0-na-mao`);
       await page.evaluate(() => window.__brumaluz!.comer!());
@@ -104,13 +137,19 @@ test('comer: cada comida de perto, mordida por mordida', async ({ browser }) => 
       await page.waitForTimeout(400);
     }
     await page.evaluate(() => {
-      const f = window.__brumaluz!.modoFoto!;
+      const e = window.__brumaluz!;
+      e.travarYaw!(null);
+      const f = e.modoFoto!;
       if (f.ativo()) f.alternar();
     });
   }
-  // de trás, a câmera do jogo: a dica "Toque para comer" e a criança comendo
+  // de trás, a câmera do jogo: a dica "Toque para comer" e a criança comendo (longe do carrinho
+  // da Dona Cida: perto da barraca a dica de comprar vem antes)
   await page.evaluate(() => {
     const e = window.__brumaluz!;
+    const p = e.vila!()!;
+    e.teleportar!(p.nascimento.x + 2, p.nascimento.z + 3, p.h + 1.2);
+    e.apontar!(0.4, 0.15);
     e.inventario!.definir(0, { item: 'cachorro_quente', qtd: 2 });
     e.selecionarSlot!(0);
   });
@@ -126,6 +165,121 @@ test('comer: cada comida de perto, mordida por mordida', async ({ browser }) => 
     await page.waitForTimeout(ms === 700 ? 700 : ms === 1250 ? 550 : 1150);
     await foto(page, `comer-jogo-${nome}`);
   }
+  await page.context().close();
+  for (const item of COMIDAS) await folha(browser, `comer-${item}-`, `comer-${item}`);
+  await folha(browser, 'comer-jogo-', 'comer-jogo');
+});
+
+test('ajuste: a comida na boca (o braço e a comida na mão), parado na primeira mordida', async ({ browser }) => {
+  test.skip(SO !== 'ajuste');
+  const page = await abrir(browser, `fotos-ajuste-${SUFIXO}`);
+  await page.evaluate(() => {
+    const e = window.__brumaluz!;
+    const p = e.vila!()!;
+    e.voar?.(false);
+    e.teleportar!(p.nascimento.x, p.nascimento.z, p.h + 1.2);
+    e.apontar!(p.nascimento.olhar, 0.15);
+  });
+  await page.waitForTimeout(2500);
+  const yaw0 = await page.evaluate(() => {
+    const e = window.__brumaluz!;
+    const y = e.yawBoneco!();
+    e.travarYaw!(y);
+    return y;
+  });
+  const grade = JSON.parse(process.env.AJUSTE_GRADE ?? '[{}]') as {
+    braco?: number;
+    abre?: number;
+    folga?: number;
+    rumo?: [number, number, number];
+  }[];
+  for (const [k, g] of grade.entries()) for (const item of COMIDAS)
+    for (const [lado, da] of [
+      ['frente', 0],
+      ['dir', -0.7],
+      ['esq', 0.7],
+    ] as const) {
+      await page.evaluate(
+        ({ g, item }) => {
+          const e = window.__brumaluz!;
+          const a = e.ajusteComer!;
+          if (g.braco !== undefined) a.pose.braco = g.braco;
+          if (g.abre !== undefined) a.pose.abre = g.abre;
+          if (g.folga !== undefined) a.boca.folga = g.folga;
+          if (g.rumo) a.boca.rumo = g.rumo;
+          e.inventario!.definir(0, { item, qtd: 4 });
+          e.selecionarSlot!(0);
+        },
+        { g, item },
+      );
+      await page.waitForTimeout(400);
+      await page.evaluate(
+        ({ yaw0, da }) => {
+          const e = window.__brumaluz!;
+          const f = e.modoFoto!;
+          if (!f.ativo()) f.alternar();
+          const pes = e.jogadorPes!();
+          const a = yaw0 + da;
+          f.posicionar!(pes[0] + Math.sin(a) * 1.7, pes[1] + 1.4, pes[2] + Math.cos(a) * 1.7);
+          e.apontar!(a + Math.PI, 0.04);
+          e.comer!();
+        },
+        { yaw0, da },
+      );
+      await page.waitForTimeout(Number(process.env.AJUSTE_MS ?? 820));
+      await foto(page, `ajuste-${k}-${item}-${lado}`);
+      await page.waitForTimeout(3600 - Number(process.env.AJUSTE_MS ?? 820));
+    }
+  await page.context().close();
+  await folha(browser, 'ajuste-', 'ajuste');
+});
+
+test('vídeo: comprar a pipoca da Dona Cida e comer (para o dono)', async ({ browser }) => {
+  test.skip(SO !== 'video');
+  const pasta = `${PASTA}/video`;
+  mkdirSync(pasta, { recursive: true });
+  const page = await abrirMundo(browser, { id: `video-comprar-${SUFIXO}`, tema: 'vila-neon', tamanho: TAMANHO, video: pasta });
+  await page.addStyleTag({ content: '.dica-mira { display: none !important; }' });
+  if (NOITE)
+    await page.evaluate(() => {
+      const e = window.__brumaluz!;
+      e.pausarDia = true;
+      e.hora = 0.96;
+    });
+  await assentar(page);
+  await page.waitForFunction(() => !!window.__brumaluz?.vilaCompras, undefined, { timeout: 30_000 });
+  const b = (await page.evaluate(() => window.__brumaluz!.vilaCompras!.balcoes())).find(
+    (q) => q.chave === (process.env.VIDEO_BALCAO ?? 'compra-cachorro'),
+  )!;
+  const lados: Record<string, [number, number]> = {
+    lanche: [0.6, 3],
+    lanchonete: [-1.2, 3],
+    pipocaParque: [0.5, 3],
+    algodao: [-0.5, 3],
+    pipocaPracinha: [3, 0.4],
+  };
+  const [dx, dz] = lados[b.barraca] ?? [0, 3];
+  await page.evaluate(
+    ({ p, dx, dz }) => {
+      const e = window.__brumaluz!;
+      e.voar?.(false);
+      e.teleportar!(p[0] + dx, p[2] + dz, e.vila!()!.h + 1.2);
+      e.apontar!(Math.atan2(-dx, -dz) - 0.35, 0.18);
+    },
+    { p: b.p, dx, dz },
+  );
+  await page.waitForTimeout(2500);
+  await esperarDica(page, b.chave, b.p, 20_000).catch(() => undefined);
+  await page.waitForTimeout(1200);
+  const t = await alvoDoToque(page, b.chave);
+  await page.touchscreen.tap(t.x, t.y);
+  await page.waitForTimeout(3200);
+  // a dica de comer e o toque na comida
+  await page.waitForFunction(() => !!window.__dicaComer?.estado(), undefined, { timeout: 10_000 }).catch(() => undefined);
+  await page.waitForTimeout(900);
+  const m = await page.evaluate(() => window.__dicaComer?.estado()?.t ?? window.__brumaluz!.maoNaTela?.() ?? null);
+  if (m) await page.touchscreen.tap(m.x, m.y);
+  await page.waitForTimeout(4000);
   await page.context().close();
 });
 
@@ -156,7 +310,7 @@ test('comprar: cada barraca antes, no meio e depois', async ({ browser }) => {
         const [dx, dz] = lados[barraca] ?? [0, 3];
         e.voar?.(false);
         e.teleportar!(p[0] + dx, p[2] + dz, plano.h + 1.2);
-        e.apontar!(Math.atan2(-dx, -dz) - 0.35, 0.15);
+        e.apontar!(Math.atan2(-dx, -dz) - 0.45, 0.3);
       },
       { p: b.p, barraca: b.barraca },
     );
@@ -183,12 +337,51 @@ test('comprar: cada barraca antes, no meio e depois', async ({ browser }) => {
         await foto(page, `comprar-${b.chave}-${nome}`);
       }
     } else await page.waitForTimeout(2100);
-    // o lanche na mão, de frente (o modo foto)
+    if (meio) {
+      // a entrega de perto, de lado (o modo foto): a criança e a vendedora na mesma foto
+      await page.waitForTimeout(800);
+      await page.evaluate(
+        ({ p, i }) => {
+          const e = window.__brumaluz!;
+          const f = e.modoFoto!;
+          if (!f.ativo()) f.alternar();
+          const pes = e.jogadorPes!();
+          // o meio entre a criança e o lanche, visto de lado, um pouco de cima
+          const mx = (pes[0] + p[0]) / 2;
+          const mz = (pes[2] + p[2]) / 2;
+          const dx = p[0] - pes[0];
+          const dz = p[2] - pes[2];
+          const l = Math.hypot(dx, dz) || 1;
+          const nx = -dz / l;
+          const nz = dx / l;
+          f.posicionar!(mx + nx * 3.4, pes[1] + 2.2, mz + nz * 3.4);
+          e.apontar!(Math.atan2(-nx, -nz), 0.32);
+          e.vilaCompras!.comprar(i);
+        },
+        { p: b.p, i: balcoes.indexOf(b) },
+      );
+      let t0 = 0;
+      for (const [ms, nome] of [
+        [300, '6-lado-fichinha'],
+        [950, '7-lado-preparo'],
+        [1300, '8-lado-entrega'],
+        [1480, '9-lado-pulinho'],
+      ] as const) {
+        await page.waitForTimeout(ms - t0);
+        t0 = ms;
+        await foto(page, `comprar-${b.chave}-${nome}`);
+      }
+      await page.waitForTimeout(1500);
+    }
+    // o lanche na mão, de frente (o modo foto), o corpo inteiro
     await page.evaluate(() => {
-      const f = window.__brumaluz!.modoFoto!;
+      const e = window.__brumaluz!;
+      const f = e.modoFoto!;
       if (!f.ativo()) f.alternar();
-      f.fov(40);
-      f.selfie();
+      const pes = e.jogadorPes!();
+      const a = e.yawBoneco!() - 0.5;
+      f.posicionar!(pes[0] + Math.sin(a) * 2.6, pes[1] + 1.3, pes[2] + Math.cos(a) * 2.6);
+      e.apontar!(a + Math.PI, 0.12);
     });
     await page.waitForTimeout(900);
     await foto(page, `comprar-${b.chave}-5-na-mao`);
@@ -218,4 +411,5 @@ test('comprar: cada barraca antes, no meio e depois', async ({ browser }) => {
     await foto(page, 'comprar-barra-cheia');
   }
   await page.context().close();
+  for (const b of balcoes) await folha(browser, `comprar-${b.chave}-`, `comprar-${b.chave}`);
 });

@@ -341,6 +341,8 @@ export function criarBoneco(
   let chaveMao = '';
   /** Spec 032: a mão segura outra coisa por um tempo (a comida mordida, o lanche da entrega). */
   let maoOcupada = false;
+  /** Spec 032: a boca no espaço da cabeça (a frente do rosto é +z). */
+  let bocaNaCabeca: [number, number, number] = [0, -0.18, 0.3];
   const naMao = {
     definir(bloco: number | null, item: string | null) {
       const chave = `${bloco ?? ''}|${item ?? ''}`;
@@ -406,6 +408,9 @@ export function criarBoneco(
     deSkate = !!a.skate && !a.patins;
     const plano = ajustarPlano ? ajustarPlano(planoBoneco(a)) : planoBoneco(a);
     escalar.scaling.setAll(plano.escala);
+    // spec 032: onde fica a boca (na cabeça), para a comida parar na frente dela
+    const b = plano.pecas.find((p) => p.nome === 'boca' && p.junta === 'cabeca');
+    if (b) bocaNaCabeca = [b.pos[0], b.pos[1], b.pos[2]];
     for (const [nome, j] of Object.entries(plano.juntas) as Array<
       [Junta, (typeof plano.juntas)[Junta]]
     >) {
@@ -795,6 +800,7 @@ export function criarBoneco(
       naMao.definir(bloco, item);
     },
     noDaMao: () => pega,
+    boca: () => ({ no: juntas.cabeca, pos: bocaNaCabeca }),
     ocuparMao: (o) => naMao.ocupar(o),
     plasticos: () => mats,
     definirVisivel(v) {

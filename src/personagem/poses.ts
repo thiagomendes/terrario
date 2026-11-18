@@ -11,8 +11,7 @@ export const PERIODO_MINERAR = 0.25;
  * Spec 032: o braço com a comida na frente da boca (o giro para a frente e para dentro): a
  * comida para na boca, sem entrar no rosto.
  */
-export const BRACO_NA_BOCA = -2.0;
-export const ABRE_NA_BOCA = -0.35;
+export const AJUSTE_COMER = { braco: -1.65, abre: -0.9, feliz: 0.45 };
 export const DURACAO_COLOCAR = 0.2;
 export const DURACAO_PULO = 0.25;
 export const DURACAO_ATERRISSAGEM = 0.25;
@@ -224,11 +223,12 @@ export function calcularPose(entrada: EntradaPose): Pose {
     const t = entrada.comendo * FIM_REFEICAO;
     const leva = bracoNaRefeicao(t);
     const nhac = nhacNaRefeicao(t);
-    bracoDireito = BRACO_NA_BOCA * leva - nhac * 0.06 * leva;
-    bracoDireitoAbre = ABRE_NA_BOCA * leva;
+    bracoDireito = AJUSTE_COMER.braco * leva - nhac * 0.06 * leva;
+    bracoDireitoAbre = AJUSTE_COMER.abre * leva;
     cabeca = 0.06 * leva + nhac * 0.14;
-    boca = bocaNaRefeicao(t);
     feliz = felizNaRefeicao(t);
+    // (feliz, a boca fica aberta num sorriso)
+    boca = Math.max(bocaNaRefeicao(t), feliz * AJUSTE_COMER.feliz);
   }
   // a cabeça acompanha um pouco a câmera (ou o olhar do amigo)
   if (entrada.cabecaGiro !== undefined) cabecaGiro += entrada.cabecaGiro;

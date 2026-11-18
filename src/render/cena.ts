@@ -219,7 +219,8 @@ import { empacotar } from '../world/edicoes';
 import { criaturaNaMira, novaCriatura, type Criatura, type TipoCriatura } from '../jogo/criaturas';
 import { criarRenderCriaturas } from './criaturas';
 import { criarCoracoes } from './coracoes';
-import { criarRefeicoes, type Refeicoes } from './refeicao';
+import { criarRefeicoes, NA_BOCA, NA_MAO_COMENDO, type Refeicoes } from './refeicao';
+import { AJUSTE_COMER } from '../personagem/poses';
 import { criarRenderCompras } from './vila/compras';
 import { balcoesDaVila } from '../jogo/compra';
 import { DURACAO_REFEICAO } from '../jogo/refeicao';
@@ -806,10 +807,23 @@ export interface EstadoDepuracao {
   maoNaTela?: () => { x: number; y: number } | null;
   /** Spec 032: a criança está comendo agora? */
   comendo?: () => boolean;
+  /**
+   * Spec 032: a criança está perto de uma barraca ou no meio de uma compra (a dica de comer
+   * espera: a da barraca vem antes, e a entrega fica limpa na tela).
+   */
+  pertoDeComprar?: () => boolean;
   /** Spec 032 (testes e fotos): come a comida da mão, como o toque. */
   comer?: () => void;
   /** Spec 032 (fotos): para onde o corpo do boneco da criança está virado (rad). */
   yawBoneco?: () => number;
+  /** Spec 032 (só fotos de teste): trava o corpo num rumo (null solta). */
+  travarYaw?: (yaw: number | null) => void;
+  /** Spec 032 (só testes de tela): o ajuste da comida na boca. */
+  ajusteComer?: {
+    pose: { braco: number; abre: number; feliz: number };
+    mao: { pos: [number, number, number]; giro: [number, number, number] };
+    boca: { folga: number; rumo: [number, number, number] };
+  };
   /** Spec 032 (testes): a refeição da criança agora (null sem refeição). */
   refeicao?: () => ReturnType<Refeicoes['estado']>;
   /** Spec 032 (testes): a refeição de um amigo (null sem refeição). */
@@ -3570,6 +3584,13 @@ export function criarCena(
   // spec 032 (testes e fotos): come a comida da mão, como o toque (também no modo foto)
   estado.comer = () => comecarRefeicao();
   estado.yawBoneco = () => animador.yaw();
+  if (ehTesteDeTela())
+    estado.travarYaw = (y) => {
+      yawTravado = y;
+    };
+  // spec 032 (só nos testes de tela): o ajuste da comida na boca (o braço e a comida na mão)
+  if (ehTesteDeTela())
+    estado.ajusteComer = { pose: AJUSTE_COMER, mao: NA_MAO_COMENDO, boca: NA_BOCA };
   /** Vira o olhar para o raio do centro da tela passar pelo ponto (o pivô muda com o olhar). */
   estado.mirarPonto = (ax, ay, az) => {
     let yaw = camera.rotation.y;
@@ -3660,6 +3681,8 @@ export function criarCena(
   let slotNaMao = -1;
   let blocoNaMaoAtual = -1;
   let itemNaMaoAtual = '';
+  /** Spec 032 (só fotos de teste): o corpo travado num rumo. */
+  let yawTravado: number | null = null;
   /** Giro extra do corpo (só para capturas). */
   let giroCorpo = 0;
   let luzJogador = 1;
@@ -3688,6 +3711,8 @@ export function criarCena(
     // (parte 3B: sentada no sofá da casa, o corpo olha para a TV)
     const cadeira = passeio?.lugar() ?? casaCena?.noTrilho() ?? casaCena?.noSofa() ?? null;
     if (cadeira) animador.definirYaw(cadeira.yaw);
+    // spec 032 (só fotos de teste): o corpo parado num rumo (a câmera livre dá a volta nele)
+    if (yawTravado !== null) animador.definirYaw(yawTravado);
     let pose = animador.atualizar(dt, {
       velocidadeHoriz,
       correndo: corrida,

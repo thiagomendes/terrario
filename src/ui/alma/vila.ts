@@ -401,6 +401,11 @@ export function ligarVilaNeon(
   const balcoes = balcoesDaVila(plano);
   /** Spec 032: a criança está no meio de uma compra (a dica não chama de novo). */
   const comprando = () => !!e.vilaCompras?.estado().some((q) => q.quem === e.voce);
+  e.pertoDeComprar = () => {
+    if (comprando()) return true;
+    const pes = e.jogadorPes?.();
+    return !!pes && balcoes.some((b) => alcancaOBalcao(b, pes[0], pes[2]));
+  };
   const FIGURA_DO_LANCHE: Record<Lanche, string> = {
     pipoca: 'dicaPipoca',
     cachorro: 'dicaCachorroQuente',

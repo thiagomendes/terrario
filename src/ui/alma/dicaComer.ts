@@ -61,6 +61,7 @@ export function ligarDicaComer(e: EstadoDepuracao, scene: Scene): void {
       noJogo() &&
       !e.comendo?.() &&
       !e.dicaVila?.() &&
+      !e.pertoDeComprar?.() &&
       agora - desde >= ESPERA;
     const t = pode ? (e.maoNaTela?.() ?? null) : null;
     if (!t || !boaParaDica(t, innerWidth, innerHeight)) {

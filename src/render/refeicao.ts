@@ -28,6 +28,7 @@ import type { Scene } from '@babylonjs/core/scene';
 import { modeloNaMao, type ModeloItem } from './itensBrinquedo';
 import { esfera, type Plasticos } from './formas';
 import {
+  bracoNaRefeicao,
   DESCE,
   DURACAO_REFEICAO,
   FIM_REFEICAO,
@@ -37,22 +38,62 @@ import {
 } from '../jogo/refeicao';
 import type { EventoSom } from '../audio/sons';
 
-/** Quem come: o boneco (a mão, os plásticos e o nó do corpo). */
+/** Quem come: o boneco (a mão, a boca, os plásticos e o nó do corpo). */
 export interface DonoDaRefeicao {
   raiz: TransformNode;
   noDaMao(): TransformNode;
+  /** A cabeça e a boca nela (+z é a frente do rosto). Sem ela, a comida fica na mão. */
+  boca?(): { no: TransformNode; pos: [number, number, number] };
   ocuparMao(ocupada: boolean): void;
   plasticos(): Plasticos;
 }
 
 /**
- * Onde a comida fica na mão durante a refeição (no nó da mão): a ponta que se morde virada para
- * a boca, a comida na frente do rosto (nunca dentro dele). Medido nas fotos de frente e de lado.
+ * Onde a comida fica na mão antes de subir e depois de descer (no nó da mão, como o item de
+ * sempre).
  */
 export const NA_MAO_COMENDO = {
-  pos: [0, -0.02, 0.1] as [number, number, number],
-  giro: [0, -Math.PI / 2, 0] as [number, number, number],
+  pos: [0, -0.05, 0.09] as [number, number, number],
+  giro: [0, 0, 0] as [number, number, number],
 };
+
+/**
+ * Na boca (no espaço da cabeça): a ponta que se morde encosta nos lábios, um tiquinho à frente
+ * (nunca dentro do rosto). As comidas compridas (o cachorro-quente, o pão, o peixe, a carne)
+ * ficam de través, a ponta de fora para o lado da mão e um pouco para baixo; as outras ficam em
+ * pé, com o lado que se morde (o canudo, a beira do balde, a ponta da fatia) virado para a boca.
+ */
+export const NA_BOCA = {
+  /** Folga dos lábios até a ponta (blocos, na frente do rosto). */
+  folga: 0.012,
+  /** Para onde vai a ponta de fora das compridas (cabeça: x para o lado, y, z para a frente). */
+  rumo: [0.62, -0.3, 1] as [number, number, number],
+};
+
+/** O ponto de cada comida que encosta na boca (no modelo; +x é o lado que se morde). */
+const CONTATO: Readonly<Record<string, [number, number, number]>> = {
+  suco: [0.045, 0.235, 0],
+  vitamina: [0.075, 0.3, 0],
+  pipoca: [0.075, 0.165, 0],
+  algodao_doce: [0.08, 0.3, 0],
+  ensopado: [0.095, 0.085, 0],
+  fatia_bolo: [0.1, 0.11, 0],
+  torta_abobora: [0.11, 0.08, 0],
+  frutinhas: [0.08, 0.04, 0],
+  maca: [0.09, 0.0, 0],
+  ovo_cozido: [0.09, 0.04, 0],
+};
+/**
+ * Um tiquinho para o lado da mão e para baixo (cabeça: x, y, z), nas redondas: bem na frente da
+ * boca, a maçã parecia um nariz de palhaço.
+ */
+const DESLOCAR: Readonly<Record<string, [number, number, number]>> = {
+  maca: [0.075, -0.05, 0],
+  ovo_cozido: [0.06, -0.04, 0],
+  frutinhas: [0.06, -0.04, 0],
+};
+/** As compridas, que se comem de través pela ponta. */
+const DE_TRAVES = new Set(['cachorro_quente', 'pao', 'peixe_cru', 'peixe_assado', 'carne_crua', 'carne_assada']);
 
 type V3 = [number, number, number];
 
@@ -119,6 +160,12 @@ export interface ComidaMordida {
   estagio(k: number): void;
   /** Onde a mordida pega (no espaço do modelo): as migalhas saem dali. */
   pontoDaMordida(k: number): Vector3;
+  /** O ponto que encosta na boca depois de `k` mordidas (no modelo). */
+  contato(k: number): Vector3;
+  /** Comprida (de través, pela ponta) ou em pé. */
+  traves: boolean;
+  /** De que ponta (x) se morde. */
+  ponta: 1 | -1;
   descartar(): void;
 }
 
@@ -136,6 +183,8 @@ interface Guardada {
   enfeites: Map<string, number>;
   /** Onde cada mordida pega (o modelo). */
   pontos: V3[];
+  /** A ponta que encosta na boca depois de cada mordida (0 a 3), no modelo. */
+  frentes: V3[];
 }
 /** As formas mordidas de cada comida (feitas uma vez). */
 const guardadas = new Map<string, Guardada>();
@@ -283,7 +332,19 @@ function guardarMordida(modelo: ModeloItem, prefixo: string, def: DefMordida): G
       if (dentes[j].some((d) => dentro({ ...d, r: d.r * 1.15 }, c.x, c.y, c.z))) k = j + 1;
     if (k <= 3) enfeites.set(nm, k);
   }
-  return { partes, enfeites, pontos };
+  // a ponta de cada estado: o vértice mais de fora no comprimento, na altura e largura do meio
+  const cy = (min[1] + max[1]) / 2;
+  const cz = (min[2] + max[2]) / 2;
+  const frentes: V3[] = [0, 1, 2, 3].map((k) => {
+    let x = def.ponta > 0 ? -Infinity : Infinity;
+    for (const pg of partes) {
+      const p = pg.estados[k].p;
+      for (let i = 0; i < p.length; i += 3)
+        x = def.ponta > 0 ? Math.max(x, p[i]) : Math.min(x, p[i]);
+    }
+    return [x, cy, cz];
+  });
+  return { partes, enfeites, pontos, frentes };
 }
 
 /** Um prisma de contorno (planta x, z) de y0 a y1, com cor por vértice (o miolo nas mordidas). */
@@ -421,6 +482,8 @@ export function montarComidaMordida(
   const matCv = mats.corVertice(0.4);
   let estagio: (k: number) => void = () => undefined;
   let ponto: (k: number) => Vector3 = () => new Vector3(0, 0.12, 0);
+  const fixo = CONTATO[item] ?? [0.08, 0.06, 0];
+  let contato: (k: number) => Vector3 = () => Vector3.FromArray(fixo);
 
   const def = MORDIDAS_DE[item];
   if (jeito === 'mordida' && def) {
@@ -458,6 +521,7 @@ export function montarComidaMordida(
       for (const [nm, ate] of gg.enfeites) peca(nm)?.setEnabled(k < ate);
     };
     ponto = (k) => Vector3.FromArray(gg.pontos[Math.max(0, Math.min(2, k - 1))]);
+    contato = (k) => Vector3.FromArray(gg.frentes[Math.max(0, Math.min(3, k))]);
   } else if (item === 'fatia_bolo' || item === 'torta_abobora') {
     // recortadas no contorno, vistas de cima (a fatia pela ponta, a torta pela beira)
     const bolo = item === 'fatia_bolo';
@@ -527,6 +591,8 @@ export function montarComidaMordida(
         e.setEnabled(!circulos(kk).some((c) => Math.hypot(c.x - e.position.x, c.z - e.position.z) < c.r * 1.2));
     };
     ponto = (k) => new Vector3(pontaX - Math.max(0, k - 1) * 0.045 - 0.03, 0.09, 0);
+    // (a ponta que sobra depois de cada mordida encosta na boca)
+    contato = (k) => new Vector3(pontaX - Math.max(0, Math.min(3, k)) * (bolo ? 0.045 : 0.05), bolo ? 0.11 : 0.08, 0);
   } else if (jeito === 'pipoca') {
     const pipocas = modelo.malhas
       .filter((m) => /^pipoca/.test(nome(m)))
@@ -588,6 +654,9 @@ export function montarComidaMordida(
     modelo,
     estagio,
     pontoDaMordida: ponto,
+    contato,
+    traves: DE_TRAVES.has(item),
+    ponta: def?.ponta ?? 1,
     descartar() {
       for (const m of extras) m.dispose();
       for (const m of modelo.malhas) m.dispose();
@@ -684,6 +753,71 @@ export function criarRefeicoes(scene: Scene, op: OpcoesRefeicoes): Refeicoes {
     }
   }
 
+  const mMao = new Matrix();
+  const mBoca = new Matrix();
+  const local = new Matrix();
+  const giro = new Matrix();
+  const sA = new Vector3();
+  const sB = new Vector3();
+  const pA = new Vector3();
+  const pB = new Vector3();
+  const qA = new Quaternion();
+  const qB = new Quaternion();
+  const naCabeca = new Vector3();
+  /**
+   * A comida entre a mão e a boca: na mão (como o item de sempre) quando o braço está embaixo, na
+   * frente da boca (o ponto que se morde encostado nos lábios) quando ele está em cima, e o meio do
+   * caminho no meio. Depois de cada mordida, a ponta que sobrou volta a encostar na boca.
+   */
+  function posicionar(c: Comendo): void {
+    const comida = c.comida!;
+    const no = comida.modelo.no;
+    const mao = c.dono.noDaMao();
+    mao.computeWorldMatrix(true);
+    Matrix.ComposeToRef(
+      Vector3.OneReadOnly,
+      Quaternion.FromEulerAngles(...NA_MAO_COMENDO.giro),
+      Vector3.FromArray(NA_MAO_COMENDO.pos),
+      local,
+    );
+    local.multiplyToRef(mao.getWorldMatrix(), mMao);
+    mMao.decompose(sA, qA, pA);
+    const w = bracoNaRefeicao(c.t);
+    const b = c.dono.boca?.();
+    if (b && w > 0) {
+      b.no.computeWorldMatrix(true);
+      let q: Quaternion;
+      if (comida.traves) {
+        // de través: o comprimento (x) da ponta de fora para a boca
+        const f = Vector3.FromArray(NA_BOCA.rumo).normalize();
+        const x = f.scale(-comida.ponta);
+        const z = Vector3.Cross(x, Vector3.UpReadOnly).normalize();
+        const y = Vector3.Cross(z, x).normalize();
+        Matrix.FromXYZAxesToRef(x, y, z, giro);
+        q = Quaternion.FromRotationMatrix(giro);
+      } else q = Quaternion.FromEulerAngles(0, Math.PI / 2, 0);
+      // o ponto que se morde, girado, encosta na frente dos lábios
+      Matrix.FromQuaternionToRef(q, giro);
+      Vector3.TransformCoordinatesToRef(comida.contato(c.mordidas), giro, naCabeca);
+      const [bx, by, bz] = b.pos;
+      const [dx, dy, dz] = DESLOCAR[c.item] ?? [0, 0, 0];
+      const pos = new Vector3(
+        bx + dx - naCabeca.x,
+        by + dy - naCabeca.y,
+        bz + dz + NA_BOCA.folga - naCabeca.z,
+      );
+      Matrix.ComposeToRef(Vector3.OneReadOnly, q, pos, local);
+      local.multiplyToRef(b.no.getWorldMatrix(), mBoca);
+      mBoca.decompose(sB, qB, pB);
+      Vector3.LerpToRef(sA, sB, w, sA);
+      Vector3.LerpToRef(pA, pB, w, pA);
+      Quaternion.SlerpToRef(qA, qB, w, qA);
+    }
+    no.scaling.copyFrom(sA);
+    no.position.copyFrom(pA);
+    no.rotationQuaternion!.copyFrom(qA);
+  }
+
   function fim(c: Comendo): void {
     c.comida?.descartar();
     c.comida = null;
@@ -696,9 +830,7 @@ export function criarRefeicoes(scene: Scene, op: OpcoesRefeicoes): Refeicoes {
       if (antes) fim(antes);
       const comida = montarComidaMordida(scene, dono.plasticos(), item, `refeicao-${n++}`);
       if (comida) {
-        comida.modelo.no.parent = dono.noDaMao();
-        comida.modelo.no.position.set(...NA_MAO_COMENDO.pos);
-        comida.modelo.no.rotation.set(...NA_MAO_COMENDO.giro);
+        comida.modelo.no.rotationQuaternion = new Quaternion();
         for (const m of comida.modelo.no.getChildMeshes()) {
           m.alwaysSelectAsActiveMesh = true;
           op.preparar?.(m as Mesh);
@@ -727,6 +859,7 @@ export function criarRefeicoes(scene: Scene, op: OpcoesRefeicoes): Refeicoes {
       const passo = Math.min(Math.max(dt, 0), 0.1);
       for (const [dono, c] of ativas) {
         c.t += passo;
+        if (c.comida) posicionar(c);
         // as três mordidas
         while (c.mordidas < 3 && c.t >= MORDIDAS[c.mordidas]) {
           c.mordidas++;

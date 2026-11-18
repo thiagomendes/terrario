@@ -30,10 +30,12 @@ export async function criarMundo(
   tema: string,
   extras: Record<string, unknown> = {},
   semente = 1337,
+  /** Spec 032: o modo do mundo (a sobrevivência, para a fome). */
+  modo: 'criativo' | 'sobrevivencia' = 'criativo',
 ): Promise<void> {
   await page.goto('/manifest.webmanifest');
   await page.evaluate(
-    ({ id, tema, extras, semente }) =>
+    ({ id, tema, extras, semente, modo }) =>
       new Promise<void>((ok, erro) => {
         const req = indexedDB.open('brumaluz', 1);
         req.onupgradeneeded = () => req.result.createObjectStore('kv');
@@ -49,7 +51,7 @@ export async function criarMundo(
                 id,
                 nome: 'Guia',
                 semente,
-                modo: 'criativo',
+                modo,
                 criadoEm: agora,
                 jogadoEm: agora,
                 versao: 2,
@@ -67,7 +69,7 @@ export async function criarMundo(
           tx.onerror = () => erro(tx.error);
         };
       }),
-    { id, tema, extras, semente },
+    { id, tema, extras, semente, modo },
   );
 }
 
@@ -92,6 +94,8 @@ export async function abrirMundo(
     tamanho: Tamanho;
     /** Grava o vídeo da página (com a interface) nesta pasta, no dobro do tamanho da tela. */
     video?: string;
+    /** Spec 032: o modo do mundo (padrão: criativo). */
+    modo?: 'criativo' | 'sobrevivencia';
   },
 ): Promise<Page> {
   const t = TAMANHOS[op.tamanho];
@@ -121,7 +125,7 @@ export async function abrirMundo(
       // sem armazenamento
     }
   });
-  await criarMundo(page, op.id, op.tema, op.extras ?? {});
+  await criarMundo(page, op.id, op.tema, op.extras ?? {}, 1337, op.modo ?? 'criativo');
   await page.goto(`/?mundo=${op.id}`);
   await page.waitForFunction(() => window.__brumaluz?.ready === true, undefined, {
     timeout: 240_000,
