@@ -2020,6 +2020,9 @@ export function criarCena(
         },
         preparo: (b) => {
           const onde = { x: b.p[0], z: b.p[2] };
+          // (o preparo do carrinho conta como um toque no brinquedo do parque, como antes)
+          if (b.barraca === 'algodao' || b.barraca === 'pipocaParque' || b.barraca === 'pipocaPracinha')
+            estado.parqueToques = (estado.parqueToques ?? 0) + 1;
           if (b.barraca === 'lanchonete') estado.vilaMissoes?.rua('vitamina');
           else if (b.barraca === 'algodao') {
             parqueVila?.tocar('algodao', 0);
