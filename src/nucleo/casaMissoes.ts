@@ -6,7 +6,8 @@
  *
  * - **f9 Sessão de cinema:** a fita na mochila acende a primeira bolinha; pôr a fita no
  *   videocassete (quem pôs e quem estava na sala com a fita dele) acende a segunda; quem se sentou
- *   no sofá durante o filme e ainda está na casa quando ele acaba ganha a terceira.
+ *   no sofá durante o filme e ainda está na casa quando ele acaba faz a missão inteira, com ou sem
+ *   fita (decisão de 18 nov: é mais justo entre irmãos; as bolinhas que faltavam acendem juntas).
  * - **f10 Arrumar o quarto:** um toque no brinquedo espalhado põe ele na mão; o toque no baú,
  *   com ele na mão, guarda (a bolinha dele). Com a missão aberta, o baú só guarda (não dá).
  * - **f12 Bolo da vovó:** a vitamina na mochila acende a primeira bolinha; perto da vovó ela
@@ -124,7 +125,8 @@ export function criarMissoesDaCasa(ctx: CtxCasaMissoes) {
     const t = ctx.agora();
     if (passaFilme(s, t)) {
       for (const j of ctx.jogadores()) {
-        if (j.morto || !j.aberta(F_CINEMA) || !j.visitou?.(CINEMA[1])) continue;
+        // (com ou sem fita: quem se senta no sofá durante o filme vale, decisão de 18 nov)
+        if (j.morto || !j.aberta(F_CINEMA) || !j.visitou) continue;
         if (sentadoNoSofa(c, j.x, j.y, j.z)) sentou.set(j.id, s.filme);
       }
       return;
@@ -137,7 +139,8 @@ export function criarMissoesDaCasa(ctx: CtxCasaMissoes) {
       sentou.delete(id);
       const j = ctx.jogador(id);
       if (!j || j.morto || !j.aberta(F_CINEMA) || !dentroDaCasa(c, j.x, j.z, 0.5)) continue;
-      passo(j, CINEMA[2]);
+      // (a missão inteira: o irmão sem fita, que não pôs a fita, vê o cartão todo aceso)
+      for (const u of CINEMA) passo(j, u);
     }
     for (const [id, fim] of [...sentou]) if (fim < s.filme) sentou.delete(id);
   }

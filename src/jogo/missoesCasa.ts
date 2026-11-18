@@ -5,7 +5,8 @@
  * - **f9 Sessão de cinema:** a fita da locadora, a fita no videocassete da sala e o filme visto
  *   no sofá, do lado da vovó. Vale quem se sentou no sofá durante o filme e ainda está na casa
  *   quando ele acaba (a regra macia: quem levanta no meio e senta de novo, ou só levanta no fim,
- *   também ganha; quem não sentou põe a fita de novo, que continua na mochila).
+ *   também ganha; quem não sentou põe a fita de novo, que continua na mochila). Com ou sem fita:
+ *   o irmão que só sentou para assistir faz a missão inteira (decisão de 18 nov).
  * - **f10 Arrumar o quarto:** o ioiô (no quintal), o pião (na sala) e o cubo (no canto do quarto)
  *   estão espalhados, só para quem tem a missão aberta. Um toque pega; o toque no baú guarda.
  * - **f11 Volta na rampa:** três idas e voltas inteiras na rampa de skate (o trilho inteiro, a

@@ -634,8 +634,8 @@ function alvoNaCasa(
     if (vistos.has(CINEMA[2])) return null;
     const sala = casaDaRede(mundo.estadoVila?.()?.casa ?? null);
     const t = mundo.tempoNucleo?.() ?? 0;
-    if (vistos.has(CINEMA[1]) && passaFilme(sala, t)) {
-      // o filme passando: o sofá (sentada, a trilha some: é só assistir)
+    if (passaFilme(sala, t)) {
+      // o filme passando: o sofá, com ou sem fita (sentada, a trilha some: é só assistir)
       const pes = mundo.pes?.();
       if (pes && sentadoNoSofa(c, pes[0], pes[1], pes[2])) return null;
       const a = c.sofa.assentos[1];

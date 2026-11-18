@@ -177,6 +177,45 @@ describe('spec 026 (parte 3, etapa B): as missões da casa no núcleo', () => {
     expect(inv(n, 'ana').contar(FITA_VIDEO)).toBe(1);
   });
 
+  it('f9 (18 nov): quem sentou no sofá durante o filme faz a missão inteira, com ou sem fita', () => {
+    const n = abrir(['ana', 'bia', 'caio']);
+    const c = plano().pontos.casa;
+    for (const q of ['ana', 'bia', 'caio']) fez(n, q, ...ANTES);
+    inv(n, 'ana').definir(3, { item: FITA_VIDEO, qtd: 1 });
+    // a Ana põe a fita do tapete; a Bia e o Caio, sem fita, estão do lado dela
+    ir(n, 'ana', c.tv[0], c.y, c.tv[2] + 3.5);
+    ir(n, 'bia', c.tv[0] + 1, c.y, c.tv[2] + 3.5);
+    ir(n, 'caio', c.tv[0] - 1, c.y, c.tv[2] + 3.5);
+    passos(n, 6);
+    n.comando('ana', vila('videocassete'));
+    passos(n, 6);
+    expect(alma(n, 'bia').lugares).not.toContain(CINEMA[1]);
+    // as duas sentam (a Ana no meio, a Bia no outro assento); o Caio fica de pé no tapete
+    const [, a1, a2] = c.sofa.assentos;
+    ir(n, 'ana', a1.x, a1.y, a1.z);
+    ir(n, 'bia', a2.x, a2.y, a2.z);
+    const bia: Ev[] = [];
+    const caio: Ev[] = [];
+    for (let i = 0; i < Math.round((DURA_FILME + 2) / PASSO); i++) {
+      n.passo();
+      for (const [q, f] of n.quadros()) {
+        if (q === 'bia') bia.push(...(f.eventos ?? []));
+        if (q === 'caio') caio.push(...(f.eventos ?? []));
+      }
+    }
+    for (const q of ['ana', 'bia']) {
+      expect(alma(n, q).feitas).toContain(F_CINEMA);
+      for (const u of CINEMA) expect(alma(n, q).lugares).toContain(u);
+    }
+    // a Bia: o cartão todo aceso e as moedinhas só no fim (uma vez)
+    expect(movidas(bia).find((m) => m.id === F_CINEMA)).toMatchObject({ concluiu: true });
+    expect(moedas(bia)).toBe(5);
+    // o Caio, que não sentou, não fez
+    expect(alma(n, 'caio').feitas).not.toContain(F_CINEMA);
+    expect(alma(n, 'caio').lugares).not.toContain(CINEMA[2]);
+    expect(moedas(caio)).toBe(0);
+  });
+
   it('f10 quarto: o espalhado vai para a mão e o baú guarda; com a missão aberta o baú não dá', () => {
     const n = abrir();
     const c = plano().pontos.casa;
