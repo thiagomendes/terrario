@@ -26,4 +26,18 @@ Tamanho: **P** (até meio dia), **M** (1 a 2 dias), **G** (3 dias ou mais). Uma 
 **Ordem:** T01 → T02 → T03 → T04 → T05 → T06 → T07 → T08 → T09.
 
 ## Situação
-- (18 nov 2026) Em andamento.
+- (18 nov 2026) T01 a T09 feitas. O que passou:
+  - `tsc` limpo;
+  - o Vitest inteiro: 2044 testes, os 3 de tempo passam sozinhos;
+  - paridade 36/36;
+  - a suíte e2e inteira em 6 pedaços de 2 trabalhadores, com o que caiu rodado de novo e conferido contra a `main` (176350f).
+- O que cai também na `main`, ou seja, nada da 033:
+  - `criacao` ×2: a dica diz "uma semente";
+  - `guia-chegada` c3 e c6;
+  - o HUD do `plantio` no celular;
+  - `temas`: Cidade Grande e Vila Neon;
+  - `tesouro-fantasia`;
+  - as réguas de volume (`trilha-regua`, `vozes-regua`).
+- Os outros que caíram na primeira volta passaram sozinhos: `alma`, `bloco-some`, `capturas-encaixe`, `mineracao`, `som-veiculos`.
+- O portão visual teve duas rodadas de acertos: a vista baixa deitado e o nome que some no arraste. O revisor novo conferiu os dois.
+- Falta: rodada em família no celular de verdade.
