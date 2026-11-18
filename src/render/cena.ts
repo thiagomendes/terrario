@@ -353,6 +353,7 @@ import {
   degrauOpacidade,
   LADO_OMBRO,
   zoomInicialToque,
+  ZOOM_PADRAO_TOQUE,
   VISTA_BAIXA_ROLETA,
   direcaoOlhar as direcaoDoOlhar,
   pivoCamera,
@@ -3694,8 +3695,43 @@ export function criarCena(
     },
     { passive: false },
   );
+  /**
+   * Spec 033 (medida): no show da Vila Neon, no campo do festival, a câmera mais afastada do
+   * celular via o público inteiro e o pior caso caía de 51 para 43 quadros. Lá, enquanto o show
+   * toca, a distância de começo volta à de antes (4,4); fora dele, ou acabado o show, volta a
+   * nova. Se a criança mexeu na pinça, a distância é a dela e nada muda.
+   */
+  let guardaFestival = false;
+  let olhouFestival = 0;
+  function guardarFestival(agora: number): void {
+    if (!toqueCamera || !planoVila || agora - olhouFestival < 500) return;
+    olhouFestival = agora;
+    const v = cliente.vila.estado;
+    const f = planoVila.zonas.festival;
+    const x = camera.position.x;
+    const z = camera.position.z;
+    const dentro =
+      !!v?.show &&
+      faseDoShow(v.show, cliente.vila.tempo(agora / 1000)) !== 'acabou' &&
+      x >= f.x0 &&
+      x <= f.x1 + 1 &&
+      z >= f.z0 &&
+      z <= f.z1 + 1;
+    const z0 = orbita.zoom();
+    if (dentro && !guardaFestival && Math.abs(z0 - zoomComeco) < 1e-6) {
+      guardaFestival = true;
+      orbita.definirZoom(Math.min(zoomComeco, ZOOM_PADRAO_TOQUE));
+    } else if (guardaFestival && Math.abs(z0 - Math.min(zoomComeco, ZOOM_PADRAO_TOQUE)) > 1e-6) {
+      // a criança mexeu na pinça: a distância é a dela
+      guardaFestival = false;
+    } else if (guardaFestival && !dentro) {
+      guardaFestival = false;
+      orbita.definirZoom(zoomComeco);
+    }
+  }
   function atualizarCameraVisao(dt: number): void {
     const agora = performance.now();
+    guardarFestival(agora);
     cameraVisao.rotation.copyFrom(camera.rotation);
     if (estado.modoFoto?.ativo()) {
       cameraVisao.position.copyFrom(fotoPosRef());
