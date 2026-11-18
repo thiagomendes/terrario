@@ -1,11 +1,23 @@
 import { expect, test, type Page } from '@playwright/test';
 import { mkdirSync } from 'node:fs';
+import {
+  ROLETA_ABERTA,
+  abrirRoleta,
+  escolherNaRoleta,
+  esperarAssentar,
+  itensDaRoleta,
+  meioDaRoleta,
+  rolarAte,
+  tocarNaPlaquinha,
+} from './roleta-palco';
 
 /**
  * Spec 015 (decisão do dono: opção C do esboço dos menus, em todo aparelho). Em cima à
- * esquerda, informações e o botão da roda; embaixo do minimapa, só a mochila; o minimapa abre
- * o mapa grande. A roda tem Mapa, Diário, Personagem, Lojinha (023), Foto, Gestos, Tela cheia e Pausa;
- * "Gestos" troca pela roda de gestos com "Voltar" no meio; segurar o botão abre os gestos.
+ * esquerda, informações e o botão do menu; embaixo do minimapa, só a mochila; o minimapa abre
+ * o mapa grande. O menu tem Mapa, Diário, Personagem, Lojinha (023), Foto, Gestos, Tela cheia e
+ * Pausa; "Gestos" troca pelos gestos com "Voltar"; segurar o botão abre os gestos.
+ *
+ * Spec 033: o menu é a roleta de baixo (no lugar da roda em volta do boneco).
  */
 const PASTA = 'test-results/gestos015';
 mkdirSync(PASTA, { recursive: true });
@@ -84,10 +96,8 @@ async function cadaItem(page: Page, tocar: boolean, nome: string) {
 
   await clicar('[data-botao-roda]');
   await expect.poll(() => menu(page)).toBe('menu');
-  await page.waitForTimeout(400);
-  const itens = await page
-    .locator('.roda.aberta button.ativo')
-    .evaluateAll((bs) => bs.map((b) => b.getAttribute('data-item')));
+  await esperarAssentar(page);
+  const itens = await itensDaRoleta(page);
   expect(itens.filter((i) => i !== 'tela')).toEqual([
     'mapa',
     'diario',
@@ -105,30 +115,23 @@ async function cadaItem(page: Page, tocar: boolean, nome: string) {
   await expect.poll(() => menu(page)).toBe(null);
 
   for (const id of Object.keys(ABRE)) {
-    await clicar('[data-botao-roda]');
-    await expect.poll(() => menu(page)).toBe('menu');
-    await page.waitForTimeout(350);
-    await clicar(`.roda.aberta button.ativo[data-item="${id}"]`);
+    await escolherNaRoleta(page, id);
     await expect.poll(() => ABRE[id](page), { message: id }).toBe(true);
     await expect.poll(() => menu(page)).toBe(null);
     await voltarAoJogo(page);
   }
 
-  // Gestos troca a roda no lugar, com Voltar no meio
-  await clicar('[data-botao-roda]');
-  await expect.poll(() => menu(page)).toBe('menu');
-  await page.waitForTimeout(350);
-  await clicar('.roda.aberta button.ativo[data-item="gestos"]');
+  // Gestos troca a roleta no lugar, com a plaquinha "Voltar" (a carinha de Gestos)
+  await escolherNaRoleta(page, 'gestos');
   await expect.poll(() => menu(page)).toBe('gestos');
-  await page.waitForTimeout(450);
-  await expect(page.locator('.roda.aberta button.ativo')).toHaveCount(9);
+  await esperarAssentar(page);
+  expect(await itensDaRoleta(page)).toHaveLength(8);
+  await expect(page.locator(`${ROLETA_ABERTA} .voltar.ativo`)).toContainText('Voltar');
   await page.screenshot({ path: `${PASTA}/menu-gestos-${nome}.png` });
-  await clicar('.roda.aberta button.ativo[data-item="voltar"]');
+  await tocarNaPlaquinha(page);
   await expect.poll(() => menu(page)).toBe('menu');
-  await page.waitForTimeout(350);
-  await clicar('.roda.aberta button.ativo[data-item="gestos"]');
-  await page.waitForTimeout(450);
-  await clicar('.roda.aberta button.ativo[data-item="aplaudir"]');
+  await expect(page.locator(`${ROLETA_ABERTA} .voltar.ativo`)).toContainText('Fechar');
+  await escolherNaRoleta(page, 'gestos', 'aplaudir');
   await expect
     .poll(() => page.evaluate(() => window.__brumaluz!.gestos!.local().gesto))
     .toBe('aplaudir');
@@ -188,28 +191,59 @@ test('computador: menu de roda, cada item abre o seu, mochila e minimapa', async
   // as teclas de sempre continuam, e G abre os gestos (os itens mostram a tecla)
   await page.keyboard.press('KeyG');
   await expect.poll(() => menu(page)).toBe('gestos');
-  await expect(page.locator('.roda.aberta button.ativo[data-item="acenar"] kbd')).toHaveText('1');
+  await rolarAte(page, 'acenar');
+  await expect(page.locator(`${ROLETA_ABERTA} .item[data-item="acenar"] kbd`)).toHaveText('1');
   await page.keyboard.press('KeyG');
   await expect.poll(() => menu(page)).toBe(null);
-  await page.locator('[data-botao-roda]').click();
-  await expect(page.locator('.roda.aberta button.ativo[data-item="mapa"] kbd')).toHaveText('Tab');
-  await expect(page.locator('.roda.aberta button.ativo[data-item="pausa"] kbd')).toHaveText('Esc');
+  await abrirRoleta(page);
+  await rolarAte(page, 'mapa');
+  await expect(page.locator(`${ROLETA_ABERTA} .item[data-item="mapa"] kbd`)).toHaveText('Tab');
+  await rolarAte(page, 'pausa');
+  await expect(page.locator(`${ROLETA_ABERTA} .item[data-item="pausa"] kbd`)).toHaveText('Esc');
+  await rolarAte(page, 'mapa');
   await page.keyboard.press('Escape');
   await expect.poll(() => menu(page)).toBe(null);
-  // pelo teclado: Enter no botão leva o foco para a roda, as setas andam entre os itens e
-  // fechar devolve o foco ao botão
+  // pelo teclado: Enter no botão leva o foco para a roleta (o do meio), as setas andam a
+  // fileira e fechar devolve o foco ao botão
   await page.locator('[data-botao-roda]').focus();
   await page.keyboard.press('Enter');
   await expect.poll(() => menu(page)).toBe('menu');
   const focado = () =>
     page.evaluate(() => (document.activeElement as HTMLElement | null)?.dataset.item ?? null);
+  await esperarAssentar(page);
   await expect.poll(focado).toBe('mapa');
   await page.keyboard.press('ArrowRight');
-  const segundo = await focado();
-  expect(segundo).not.toBe('mapa');
-  expect(segundo).not.toBeNull();
+  await esperarAssentar(page);
+  await expect.poll(focado).toBe('diario');
+  expect(await meioDaRoleta(page)).toBe('diario');
   await page.keyboard.press('ArrowLeft');
+  await esperarAssentar(page);
   await expect.poll(focado).toBe('mapa');
+  // a rodinha do mouse também anda um item (e não aproxima a câmera)
+  const zoom0 = await page.evaluate(() => window.__brumaluz!.camera!.zoom());
+  const caixa = (await page.locator(`${ROLETA_ABERTA} .item.meio`).boundingBox())!;
+  await page.mouse.move(caixa.x + caixa.width / 2, caixa.y + caixa.height / 2);
+  await page.mouse.wheel(0, 120);
+  await esperarAssentar(page);
+  await expect.poll(() => meioDaRoleta(page)).toBe('diario');
+  expect(await page.evaluate(() => window.__brumaluz!.camera!.zoom())).toBe(zoom0);
+  // arrastar devagar com o mouse para a esquerda traz o seguinte
+  const b = (await page.locator(`${ROLETA_ABERTA} .bandeja`).boundingBox())!;
+  const y = b.y + 8 + 48;
+  await page.mouse.move(b.x + b.width / 2 + 40, y);
+  await page.mouse.down();
+  for (let i = 1; i <= 16; i++) {
+    await page.mouse.move(b.x + b.width / 2 + 40 - i * 5, y);
+    await page.waitForTimeout(30);
+  }
+  await page.waitForTimeout(150);
+  await page.mouse.up();
+  await esperarAssentar(page);
+  await expect.poll(() => meioDaRoleta(page)).toBe('personagem');
+  await page.keyboard.press('ArrowLeft');
+  await page.keyboard.press('ArrowLeft');
+  await esperarAssentar(page);
+  expect(await meioDaRoleta(page)).toBe('mapa');
   await page.keyboard.press('Escape');
   await expect.poll(() => menu(page)).toBe(null);
   expect(
@@ -239,8 +273,8 @@ test('celular: menu de roda pelo toque, segurar abre os gestos', async ({ browse
   await cadaItem(page, true, 'celular');
   // nada de selinho de tecla no toque
   await page.locator('[data-botao-roda]').tap();
-  await page.waitForTimeout(400);
-  expect(await page.locator('.roda.aberta button.ativo kbd:visible').count()).toBe(0);
+  await esperarAssentar(page);
+  expect(await page.locator(`${ROLETA_ABERTA} .item kbd:visible`).count()).toBe(0);
   expect(erros).toEqual([]);
   await ctx.close();
 });
@@ -348,8 +382,7 @@ test('computador: O abre e fecha a roda do menu, soltando o mouse sem a pausa', 
   // um item que abre uma tela (o mapa): o mouse fica solto, com o mapa por cima
   await page.keyboard.press('KeyO');
   await expect.poll(() => menu(page)).toBe('menu');
-  await page.waitForTimeout(350);
-  await page.locator('.roda.aberta button.ativo[data-item="mapa"]').click();
+  await escolherNaRoleta(page, 'mapa');
   await expect.poll(() => page.evaluate(() => document.body.dataset.overlay)).toBe('mapa');
   await page.waitForTimeout(400);
   expect(await preso()).toBe(null);
@@ -385,18 +418,13 @@ test('Vila Neon: a roda de gestos ganha o roqueiro (só neste mundo)', async ({ 
   await page.evaluate(() => document.querySelector('.entrada')?.setAttribute('hidden', ''));
   await page.waitForTimeout(1500);
   await voltarAoJogo(page);
-  await page.locator('[data-botao-roda]').click();
-  await expect.poll(() => menu(page)).toBe('menu');
-  await page.waitForTimeout(350);
-  await page.locator('.roda.aberta button.ativo[data-item="gestos"]').click();
+  await escolherNaRoleta(page, 'gestos');
   await expect.poll(() => menu(page)).toBe('gestos');
-  await page.waitForTimeout(450);
-  const itens = await page
-    .locator('.roda.aberta button.ativo')
-    .evaluateAll((bs) => bs.map((b) => b.getAttribute('data-item')));
-  console.log(`roda da Vila Neon: ${itens.length} itens: ${itens.join(', ')}`);
-  // os de sempre (9 com o Voltar) e o roqueiro
+  await esperarAssentar(page);
+  const itens = await itensDaRoleta(page);
+  console.log(`gestos da Vila Neon: ${itens.length} itens: ${itens.join(', ')}`);
+  // os 8 de sempre e o roqueiro
   expect(itens).toContain('roqueiro');
-  expect(itens).toHaveLength(10);
+  expect(itens).toHaveLength(9);
   await page.screenshot({ path: `${PASTA}/menu-gestos-vila-neon.png` });
 });

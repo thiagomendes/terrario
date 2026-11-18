@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { mkdirSync } from 'node:fs';
+import { escolherNaRoleta } from './roleta-palco';
 
 /**
  * 023 (depois de publicada): o passeio da Cidade (c3: padaria, escola e sorveteria) acende a
@@ -84,7 +85,7 @@ test('passeio c3: a bolinha do lugar visitado acende', async ({ page }) => {
   const abrirQuadro = async () => {
     // no computador a roda abre pela tecla O (o ponteiro fica preso no jogo)
     await page.keyboard.press('KeyO');
-    await page.locator('.roda.aberta button.ativo[data-item="missoes"]').click();
+    await escolherNaRoleta(page, 'missoes');
     await page.waitForSelector('[data-alma-quadro]', { timeout: 15_000 });
   };
   await abrirQuadro();

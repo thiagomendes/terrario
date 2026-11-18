@@ -9,6 +9,7 @@ import {
   type Tamanho,
 } from './guia-palco';
 import { alvoDeSentar, alvoDoToque, diagnostico, esperarDica } from './vila-alvo';
+import { escolherNaRoleta } from './roleta-palco';
 
 /**
  * Spec 026 (parte 2, etapa B): as quatro missões do parque, do "brincar" à festa, no celular
@@ -206,11 +207,7 @@ const eventos = (page: Page, tipo: string) =>
   );
 
 async function sairDoBrinquedo(page: Page): Promise<void> {
-  await page.locator('.menu-hud.botao-roda').tap();
-  const sair = page.locator('.roda.aberta button.ativo[data-item="sair-brinquedo"]');
-  await sair.waitFor({ state: 'visible' });
-  await page.waitForTimeout(400);
-  await sair.tap();
+  await escolherNaRoleta(page, 'sair-brinquedo');
   await page.waitForFunction(() => !window.__brumaluz!.vilaParque!.sentado());
   await page.waitForTimeout(1200);
 }

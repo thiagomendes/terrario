@@ -1,4 +1,5 @@
 import type { Browser, Page } from '@playwright/test';
+import { escolherNaRoleta } from './roleta-palco';
 
 /**
  * Spec 030: o palco dos testes do guia da missão (não é um teste): grava um mundo do tema
@@ -151,10 +152,9 @@ export async function tocar(page: Page, seletor: string): Promise<void> {
   else await el.click();
 }
 
-/** Abre a roda do menu e escolhe um item. */
+/** Abre o menu (a roleta da spec 033) e escolhe um item. */
 export async function escolherNaRoda(page: Page, item: string): Promise<void> {
-  await tocar(page, '.menu-hud:visible');
-  await tocar(page, `.roda.aberta button.ativo[data-item="${item}"]`);
+  await escolherNaRoleta(page, item);
 }
 
 /**

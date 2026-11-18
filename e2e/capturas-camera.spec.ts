@@ -1,5 +1,6 @@
 import { test, type Browser, type Page } from '@playwright/test';
 import { Bloco } from '../src/world/blocks';
+import { escolherNaRoleta } from './roleta-palco';
 
 /**
  * Capturas da terceira pessoa (spec 015) nos momentos do esboço aprovado
@@ -205,12 +206,12 @@ async function rodasEGestos(page: Page, prefixo: string, toque: boolean) {
   await page.waitForFunction(() => window.__brumaluz!.gestos!.menu() === 'menu');
   await page.waitForTimeout(450);
   await foto(page, `${prefixo}-11-roda-menu`);
-  await clicar('.roda.aberta button.ativo[data-item="gestos"]');
+  await escolherNaRoleta(page, 'gestos');
   await page.waitForFunction(() => window.__brumaluz!.gestos!.menu() === 'gestos');
   await page.waitForTimeout(450);
   await foto(page, `${prefixo}-12-roda-gestos`);
-  // escolhe "acenar" pela roda (como a criança) e fotografa logo depois
-  await clicar('.roda.aberta button.ativo[data-item="acenar"]');
+  // escolhe "acenar" pela roleta (como a criança) e fotografa logo depois
+  await escolherNaRoleta(page, 'acenar');
   if ((await menu()) !== null) await page.keyboard.press('Escape');
   await page.waitForTimeout(1300);
   // de frente para o boneco (a câmera é solta: girar não gira o corpo)

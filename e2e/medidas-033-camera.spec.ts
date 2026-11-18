@@ -5,8 +5,10 @@ import { andarPelaTrilha, assentar, criarMundo } from './guia-palco';
 import { gravarTela, navegadorJanelaGrande } from './gravarTela033';
 
 /**
- * Esboço 033 (`?esboco=033`): no celular, a câmera começa mais afastada. Mede várias distâncias
- * de começo (a de hoje, 4,4 blocos, e +8 %, +15 %, +25 %, +35 %) no celular deitado e em pé.
+ * Spec 033 (medidas, não roda na suíte): no celular a câmera começa mais afastada (4,75 deitado
+ * e 5,06 em pé, src/player/camera.ts). Mede várias distâncias de começo (a de antes, 4,4
+ * blocos, e +8 %, +15 %, +25 %, +35 %; cada uma posta pela câmera depois de abrir) no celular
+ * deitado e em pé. Sem ZOOMS, vale a do jogo.
  *
  * - ESBOCO_033=mira: a "criança simulada" da 022 (mesmas cenas, mesmos alvos, mesmo erro de dedo
  *   de 24 px, 2 sementes × 4 giros × 7 alvos × 4 cenas = 224 tentativas por distância);
@@ -19,7 +21,7 @@ import { gravarTela, navegadorJanelaGrande } from './gravarTela033';
  */
 declare const process: { env: Record<string, string | undefined> };
 const QUAL = process.env.ESBOCO_033 ?? '';
-test.skip(!QUAL, 'esboço só com ESBOCO_033');
+test.skip(!QUAL, 'medidas só com ESBOCO_033');
 test.setTimeout(5_400_000);
 test.describe.configure({ mode: 'parallel' });
 const PASTA = process.env.ESBOCO_PASTA ?? 'test-results/esboco-033';
@@ -92,12 +94,12 @@ async function pronto(page: Page) {
   await page.addStyleTag({ content: '.toast-area { display: none !important; }' });
 }
 
-/** Abre um tema novo (sem mundo gravado) com o esboço; `zoom` vira a distância de começo. */
+/** Abre um tema novo (sem mundo gravado); `zoom` vira a distância (sem ele, a do jogo). */
 async function abrirTema(browser: Browser, tela: NomeTela, tema: string, zoom?: number, video?: string) {
   const { ctx, page } = await contexto(browser, tela, video);
-  const z = zoom ? `&zoomDeitado=${zoom}&zoomEmPe=${zoom}` : '';
-  await page.goto(`/?tema=${tema}&esboco=033${z}`);
+  await page.goto(`/?tema=${tema}`);
   await pronto(page);
+  if (zoom) await zoomAgora(page, zoom);
   await assentar(page, 16);
   return { ctx, page };
 }
@@ -753,8 +755,9 @@ for (const tela of telas)
       await criarMundo(page, id, 'cidade-grande', {
         alma: { local: { feitas: missao === 'c3' ? ['c1', 'c2'] : [] } },
       });
-      await page.goto(`/?mundo=${id}&esboco=033&zoomDeitado=${zoom}&zoomEmPe=${zoom}`);
+      await page.goto(`/?mundo=${id}`);
       await pronto(page);
+      await zoomAgora(page, zoom);
       await assentar(page);
       await page.evaluate(() => window.dispatchEvent(new CustomEvent('brumaluz:missoes')));
       await page.waitForSelector('[data-alma-quadro]', { timeout: 20_000 });

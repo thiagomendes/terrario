@@ -4,7 +4,7 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 declare const process: { env: Record<string, string | undefined> };
 
 /**
- * Esboço 033: grava a tela inteira (o jogo e a interface por cima) pelo screencast do Chromium,
+ * Spec 033 (vídeos do esboço e da entrega): grava a tela inteira (o jogo e a interface por cima) pelo screencast do Chromium,
  * quadro a quadro, com a hora de cada um. O mp4 de 30 quadros constantes sai depois pelo
  * ffmpeg, com a `lista.txt` (cada quadro dura até o seguinte).
  *

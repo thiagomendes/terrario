@@ -1,6 +1,7 @@
 import { mkdirSync } from 'node:fs';
 import { expect, test, type Browser, type Page } from '@playwright/test';
 import { Bloco } from '../src/world/blocks';
+import { escolherPeloTeclado, esperarItem } from './roleta-palco';
 
 /**
  * Spec 016 (T03 e T04): construções protegidas com três jogadores na nuvem. A Ana é a dona
@@ -443,9 +444,9 @@ test('voltar para casa: pela pausa e pela roda, com o aviso de esperar um pouqui
   // pela roda, logo em seguida: espera um pouquinho
   // (o canvas fica por cima no headless com o ponteiro preso: o clique vai direto no botão)
   await p.locator('[data-botao-roda]').dispatchEvent('click');
-  await p.waitForTimeout(400);
-  await expect(p.locator('.roda.aberta button.ativo[data-item="casa"]')).toBeVisible();
+  await esperarItem(p, 'casa');
   await p.screenshot({ path: `${PASTA}/12-roda-para-casa.png` });
-  await p.locator('.roda.aberta button.ativo[data-item="casa"]').dispatchEvent('click');
+  // a roleta pelo teclado (as setas e o Enter valem com o mouse preso)
+  await escolherPeloTeclado(p, 'casa');
   await expect(aviso(p, 'Espera um pouquinho para voltar de novo.')).toBeVisible();
 });

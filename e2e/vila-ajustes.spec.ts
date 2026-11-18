@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { comecarGravacao, pararGravacao } from './gravarCena';
+import { abrirRoleta, escolherNaRoleta, esperarItem } from './roleta-palco';
 import { abrirMundo, andarPelaTrilha, assentar, escolherNaRoda, tocar } from './guia-palco';
 import { APLAUSO, CHAMADO, ESPERA_FINAL } from '../src/jogo/show';
 import {
@@ -236,11 +237,10 @@ test('patins: calçar no suporte, a volta nos arcos e tirar pela roda (vídeo)',
   );
   console.log(`MARCA patins fora ${s()}`);
   await page.waitForTimeout(600);
-  await page.locator('.menu-hud.botao-roda').tap();
-  const tirar = page.locator('.roda.aberta button.ativo[data-item="tirar-patins"]');
-  await tirar.waitFor({ state: 'visible' });
+  await abrirRoleta(page);
+  await esperarItem(page, 'tirar-patins');
   await page.waitForTimeout(1400);
-  await tirar.tap();
+  await escolherNaRoleta(page, 'tirar-patins');
   await page.waitForFunction(() => !window.__brumaluz!.personagem?.aparencia().patins);
   await page.waitForTimeout(2200);
   console.log(`MARCA patins fim ${s()}`);

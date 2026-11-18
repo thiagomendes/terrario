@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import { mkdirSync } from 'node:fs';
+import { escolherNaRoleta } from './roleta-palco';
 
 /**
  * Spec 023 (T14): a lojinha premium de ponta a ponta, nos três tamanhos (computador, celular
@@ -120,9 +121,7 @@ for (const t of TAMANHOS) {
       await ganhar(page, 70);
 
       // a roda do menu tem a lojinha e abre a vitrine
-      await tocar('[data-botao-roda]');
-      await page.waitForTimeout(450);
-      await tocar('.roda.aberta button.ativo[data-item="lojinha"]');
+      await escolherNaRoleta(page, 'lojinha');
       await expect(page.locator('[data-alma-loja]')).toBeVisible();
       await expect(page.locator('.alma-lcard')).toHaveCount(6);
       await figurasProntas(page, '.alma-lcard');
@@ -215,9 +214,7 @@ for (const t of TAMANHOS) {
       await foto('loja-8-vestido');
 
       // reabre: o dragão é meu e estou vestindo; a capa (30) ainda não dá com 15
-      await tocar('[data-botao-roda]');
-      await page.waitForTimeout(450);
-      await tocar('.roda.aberta button.ativo[data-item="lojinha"]');
+      await escolherNaRoleta(page, 'lojinha');
       await expect(page.locator('.alma-lcard[data-premium="dragao"][data-meu]')).toBeVisible();
       await expect(page.locator('.alma-lcard[data-premium="dragao"] [data-alma-no-boneco]')).toBeVisible();
       await figurasProntas(page, '.alma-lcard');
@@ -226,9 +223,7 @@ for (const t of TAMANHOS) {
       await tocar('[data-alma-fechar]');
       // ganha mais e compra a capa: as asas e a capa dividem as costas, às claras
       await ganhar(page, 40);
-      await tocar('[data-botao-roda]');
-      await page.waitForTimeout(450);
-      await tocar('.roda.aberta button.ativo[data-item="lojinha"]');
+      await escolherNaRoleta(page, 'lojinha');
       await tocar('.alma-lcard[data-premium="capa-estrelas"]');
       await expect(page.locator('[data-alma-detalhe] [data-alma-troca="dragao"]')).toBeVisible();
       await figurasProntas(page, '[data-alma-detalhe]');
@@ -242,9 +237,7 @@ for (const t of TAMANHOS) {
       const p2 = await perfil(page);
       expect(p2.vestidos).toEqual({ costas: 'capa-estrelas' });
       // vestir o dragão de novo pelo cartão (tira a capa); depois tirar
-      await tocar('[data-botao-roda]');
-      await page.waitForTimeout(450);
-      await tocar('.roda.aberta button.ativo[data-item="lojinha"]');
+      await escolherNaRoleta(page, 'lojinha');
       await tocar('.alma-lcard[data-premium="dragao"]');
       await expect(page.locator('[data-alma-detalhe] [data-alma-troca="capa-estrelas"]')).toBeVisible();
       await tocar('[data-alma-detalhe] [data-alma-vestir-premium]');

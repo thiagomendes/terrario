@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import { mkdirSync } from 'node:fs';
 import { abrirMundo, assentar } from './guia-palco';
+import { abrirRoleta, escolherNaRoleta, esperarItem } from './roleta-palco';
 
 /**
  * Spec 026 (parte 2, o Parque de diversões): "sentar e ser levado" e os brinquedos de tocar, no
@@ -127,12 +128,10 @@ for (const tamanho of ['deitado', 'empe'] as const) {
     await page.touchscreen.tap(meio.x, meio.y);
     await page.waitForFunction(() => window.__brumaluz!.parqueVila!()!.correndo);
     // "Sair do brinquedo" na roda (só sentada) desce do lado de fora
-    await page.locator('.menu-hud.botao-roda').tap();
-    const sair = page.locator('.roda.aberta button.ativo[data-item="sair-brinquedo"]');
-    await sair.waitFor({ state: 'visible' });
-    await page.waitForTimeout(400);
+    await abrirRoleta(page);
+    await esperarItem(page, 'sair-brinquedo');
     await page.screenshot({ path: `${PASTA}/${tamanho}-roda-do-menu-sair.png` });
-    await sair.tap();
+    await escolherNaRoleta(page, 'sair-brinquedo');
     await page.waitForFunction(() => !window.__brumaluz!.vilaParque!.sentado());
     await page.waitForTimeout(1200);
     const fora = await pes(page);
@@ -141,11 +140,9 @@ for (const tamanho of ['deitado', 'empe'] as const) {
     );
     expect(Math.abs(fora[1] - Y)).toBeLessThan(0.3);
     // em pé, a roda do menu não tem o "Sair"
-    await page.locator('.menu-hud.botao-roda').tap();
-    await page.waitForSelector('.roda.aberta button.ativo[data-item="mapa"]');
-    expect(
-      await page.locator('.roda.aberta button.ativo[data-item="sair-brinquedo"]').count(),
-    ).toBe(0);
+    await abrirRoleta(page);
+    await esperarItem(page, 'mapa');
+    await esperarItem(page, 'sair-brinquedo', false);
     await page.locator('.menu-hud.botao-roda').tap();
     await page.waitForFunction(() => !window.__brumaluz!.gestos!.roda());
     await page.waitForTimeout(400);
@@ -172,11 +169,7 @@ for (const tamanho of ['deitado', 'empe'] as const) {
     await page.waitForTimeout(400);
     expect((await sentado(page))?.b).toBe('bate');
     // "Sair do brinquedo" na roda desce do lado de fora da mureta
-    await page.locator('.menu-hud.botao-roda').tap();
-    const sairDoBate = page.locator('.roda.aberta button.ativo[data-item="sair-brinquedo"]');
-    await sairDoBate.waitFor({ state: 'visible' });
-    await page.waitForTimeout(400);
-    await sairDoBate.tap();
+    await escolherNaRoleta(page, 'sair-brinquedo');
     await page.waitForFunction(() => !window.__brumaluz!.vilaParque!.sentado());
     await page.waitForTimeout(1200);
     const saiu = await pes(page);

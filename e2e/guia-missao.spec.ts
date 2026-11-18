@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import { mkdirSync } from 'node:fs';
 import { abrirMundo, assentar, escolherNaRoda, tocar, type Tamanho } from './guia-palco';
+import { abrirRoleta, esperarItem } from './roleta-palco';
 
 /**
  * Spec 030 "Guia da missão" nos dois mundos com missões. Nada abre ao entrar; o quadro vem
@@ -207,12 +208,11 @@ test('guia: o convite (o baú com "?") e a roda com "Missões" e "Baú"', async 
   await page.screenshot({ path: `${PASTA}/convite-1-brilha.png` });
   await page.waitForTimeout(1500);
   await page.screenshot({ path: `${PASTA}/convite-2-quieto.png` });
-  await tocar(page, '.menu-hud:visible');
-  await page.waitForTimeout(700);
-  await expect(page.locator('.roda.aberta button.ativo[data-item="missoes"]')).toBeVisible();
-  await expect(page.locator('.roda.aberta button.ativo[data-item="bau"]')).toBeVisible();
+  await abrirRoleta(page);
+  await esperarItem(page, 'missoes');
+  await esperarItem(page, 'bau');
   await page.screenshot({ path: `${PASTA}/convite-3-roda.png` });
-  await tocar(page, '.menu-hud:visible');
+  await tocar(page, '[data-botao-roda]');
   await page.waitForTimeout(500);
   // tocar no convite abre o quadro
   await tocar(page, '[data-alma-missao].convite');

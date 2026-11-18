@@ -1,5 +1,13 @@
 import { expect, test, type Page } from '@playwright/test';
 import { mkdirSync } from 'node:fs';
+import {
+  ROLETA_ABERTA,
+  escolherNaRoleta,
+  esperarAssentar,
+  itensDaRoleta,
+  rolarAte,
+  tocarNoMeio,
+} from './roleta-palco';
 
 /**
  * Spec 015 (T04, critério 5): os 8 gestos. A roda abre com G (computador) e pelo botão da
@@ -75,15 +83,14 @@ test('computador: G abre a roda, 1 a 8 escolhem, balão, andar interrompe; captu
   await page.evaluate(() => window.__brumaluz!.apontar!(0, 0.25));
   await page.waitForTimeout(800);
 
-  // G abre: 8 botões em volta do meio da tela
+  // G abre: os 8 gestos na roleta de baixo (spec 033)
   const slot0 = await page.evaluate(() => window.__brumaluz!.slotAtivo);
   await page.keyboard.press('KeyG');
   await expect.poll(() => rodaAberta(page)).toBe(true);
-  const botoes = page.locator('.roda.aberta button.ativo');
-  await expect(botoes).toHaveCount(9); // 8 gestos e o Voltar no meio
-  await page.waitForTimeout(350);
-  const caixa = await botoes.first().boundingBox();
-  expect(caixa!.width).toBeGreaterThanOrEqual(56);
+  expect(await itensDaRoleta(page)).toEqual([...IDS]);
+  await esperarAssentar(page);
+  const caixa = await page.locator(`${ROLETA_ABERTA} .item.meio`).boundingBox();
+  expect(caixa!.width).toBeGreaterThanOrEqual(90);
   await page.screenshot({ path: `${PASTA}/roda-computador.png` });
 
   // 1 = acenar: o boneco acena e o balão aparece; a barra de itens não muda
@@ -101,26 +108,23 @@ test('computador: G abre a roda, 1 a 8 escolhem, balão, andar interrompe; captu
   await expect.poll(() => page.evaluate(() => window.__brumaluz!.slotAtivo)).toBe(2);
   expect((await local(page)).gesto).toBeNull();
 
-  // Esc fecha; tocar fora fecha; e ela fecha sozinha
+  // Esc fecha; clicar fora sobe para o menu e, de novo, fecha; e ela fecha sozinha
   await page.keyboard.press('KeyG');
   await expect.poll(() => rodaAberta(page)).toBe(true);
   await page.keyboard.press('Escape');
   await expect.poll(() => rodaAberta(page)).toBe(false);
   await page.keyboard.press('KeyG');
   await expect.poll(() => rodaAberta(page)).toBe(true);
-  await page.mouse.click(40, 360);
+  await page.mouse.click(40, 200);
+  await expect.poll(() => page.evaluate(() => window.__brumaluz!.gestos!.menu())).toBe('menu');
+  await page.mouse.click(40, 200);
   await expect.poll(() => rodaAberta(page)).toBe(false);
   await page.keyboard.press('KeyG');
   await expect.poll(() => rodaAberta(page)).toBe(true);
   await expect.poll(() => rodaAberta(page), { timeout: 9000 }).toBe(false);
 
-  // o botão da roda no alto: Gestos, e clicar no gesto faz
-  await page.locator('[data-botao-roda]').click();
-  await expect.poll(() => rodaAberta(page)).toBe(true);
-  await page.waitForTimeout(350);
-  await page.locator('.roda.aberta button.ativo[data-item="gestos"]').click();
-  await page.waitForTimeout(450);
-  await page.locator('.roda.aberta button.ativo[data-item="dancar"]').click();
+  // o botão do menu no alto: Gestos, e clicar no gesto faz
+  await escolherNaRoleta(page, 'gestos', 'dancar');
   await expect.poll(async () => (await local(page)).gesto).toBe('dancar');
   // andar interrompe
   await page.evaluate(() => window.__brumaluz!.controleDireto!.mover(1, 0));
@@ -197,25 +201,30 @@ test('celular: segurar o botão da roda abre os gestos e o toque escolhe', async
   };
   await segurar();
   await expect.poll(() => rodaAberta(page)).toBe(true);
-  await page.waitForTimeout(450);
-  // botões grandes (alvo de toque) que cabem na tela
-  for (const b of await page.locator('.roda.aberta button.ativo:not(.voltar)').all()) {
+  await esperarAssentar(page);
+  // botões grandes (alvo de toque): o do meio e os vizinhos, dentro da tela
+  for (const b of await page.locator(`${ROLETA_ABERTA} .item:visible`).all()) {
     const c = (await b.boundingBox())!;
-    expect(c.width).toBeGreaterThanOrEqual(60);
+    if (c.width < 60) continue; // os de longe, sumindo na ponta
     expect(c.x).toBeGreaterThanOrEqual(0);
     expect(c.x + c.width).toBeLessThanOrEqual(390);
   }
+  const meio = (await page.locator(`${ROLETA_ABERTA} .item.meio`).boundingBox())!;
+  expect(meio.width).toBeGreaterThanOrEqual(90);
   await page.screenshot({ path: `${PASTA}/roda-celular.png` });
-  await page.locator('.roda.aberta button.ativo[data-item="comemorar"]').tap();
+  await rolarAte(page, 'comemorar');
+  await tocarNoMeio(page);
   await expect.poll(() => local(page)).toEqual({ gesto: 'comemorar', balao: 'comemorar' });
   await expect.poll(() => rodaAberta(page)).toBe(false);
   await page.waitForTimeout(400);
   await page.screenshot({ path: `${PASTA}/comemorar-celular.png` });
-  // tocar fora fecha (e não mexe no mundo)
+  // tocar fora sobe para o menu e, de novo, fecha (e não mexe no mundo)
   await page.waitForTimeout(1200);
   await segurar();
   await expect.poll(() => rodaAberta(page)).toBe(true);
-  await page.touchscreen.tap(30, 760);
+  await page.touchscreen.tap(195, 300);
+  await expect.poll(() => page.evaluate(() => window.__brumaluz!.gestos!.menu())).toBe('menu');
+  await page.touchscreen.tap(195, 300);
   await expect.poll(() => rodaAberta(page)).toBe(false);
   expect(erros).toEqual([]);
   await ctx.close();

@@ -1,6 +1,16 @@
 import { expect, test, type Page } from '@playwright/test';
 import { mkdirSync } from 'node:fs';
 import { abrirMundo, assentar } from './guia-palco';
+import {
+  ROLETA_ABERTA,
+  abrirRoleta,
+  escolherPeloTeclado,
+  esperarAssentar,
+  esperarItem,
+  itensDaRoleta,
+  rolarAte,
+  tocarNoMeio,
+} from './roleta-palco';
 
 /**
  * Spec 026 (os acertos do dono, 16 nov 2026):
@@ -129,9 +139,9 @@ test('Vila Neon: os patins são uma escolha (o suporte calça e tira; a roda tir
 
   // sem patins a roda não tem "Tirar patins"
   await page.waitForTimeout(700);
-  await page.locator('.menu-hud.botao-roda').tap();
-  await page.waitForSelector('.roda.aberta button.ativo[data-item="mapa"]');
-  expect(await page.locator('.roda.aberta button.ativo[data-item="tirar-patins"]').count()).toBe(0);
+  await abrirRoleta(page);
+  await esperarItem(page, 'mapa');
+  await esperarItem(page, 'tirar-patins', false);
   await page.locator('.menu-hud.botao-roda').tap();
   await page.waitForFunction(() => !window.__brumaluz!.gestos!.roda());
   await page.waitForTimeout(500);
@@ -150,12 +160,11 @@ test('Vila Neon: os patins são uma escolha (o suporte calça e tira; a roda tir
   expect(await dePatins(page)).toBe(true);
 
   // longe do rinque, a roda tem "Tirar patins" (só agora), e ele tira
-  await page.locator('.menu-hud.botao-roda').tap();
-  const tirar = page.locator('.roda.aberta button.ativo[data-item="tirar-patins"]');
-  await tirar.waitFor({ state: 'visible' });
-  await page.waitForTimeout(500);
+  await abrirRoleta(page);
+  await esperarItem(page, 'tirar-patins');
+  await rolarAte(page, 'tirar-patins');
   await page.screenshot({ path: `${PASTA}/patins-roda.png` });
-  await tirar.tap();
+  await tocarNoMeio(page);
   await page.waitForFunction(() => !window.__brumaluz!.personagem?.aparencia().patins);
   expect(await page.evaluate(() => window.__brumaluz!.patinsTrocas)).toBe(4);
   await page.waitForTimeout(700);
@@ -165,28 +174,40 @@ test('Vila Neon: os patins são uma escolha (o suporte calça e tira; a roda tir
 
 interface CaixaTela {
   item: string;
-  parte: 'botao' | 'nome';
+  /** `ponta`: os de longe (58 %), que somem na ponta da bandeja e podem passar da beira. */
+  parte: 'botao' | 'ponta' | 'nome' | 'plaquinha' | 'hud';
   x0: number;
   y0: number;
   x1: number;
   y1: number;
 }
 
-/** As caixas de verdade dos botões e dos nomes da roda aberta (px da tela). */
+/**
+ * Spec 033: as caixas de verdade da roleta aberta (px da tela): os botões bem à vista (os de
+ * longe, sumindo na ponta da bandeja, não contam), o nome do meio, a plaquinha de sair e o que
+ * fica à vista do HUD em volta (o botão do menu, informações, minimapa, mochila, amigos).
+ */
 const caixas = (page: Page) =>
   page.evaluate(() => {
     const out: CaixaTela[] = [];
-    for (const b of Array.from(
-      document.querySelectorAll<HTMLElement>('.roda.aberta button.ativo'),
-    )) {
-      const item = b.dataset.item ?? '';
-      const rb = b.getBoundingClientRect();
-      out.push({ item, parte: 'botao', x0: rb.left, y0: rb.top, x1: rb.right, y1: rb.bottom });
-      const n = b.querySelector<HTMLElement>('.nome');
-      if (n) {
-        const rn = n.getBoundingClientRect();
-        out.push({ item, parte: 'nome', x0: rn.left, y0: rn.top, x1: rn.right, y1: rn.bottom });
-      }
+    const caixa = (item: string, parte: CaixaTela['parte'], el: Element) => {
+      const r = el.getBoundingClientRect();
+      if (r.width > 0 && r.height > 0)
+        out.push({ item, parte, x0: r.left, y0: r.top, x1: r.right, y1: r.bottom });
+    };
+    const rol = document.querySelector<HTMLElement>('[data-roleta].aberta')!;
+    Array.from(rol.querySelectorAll<HTMLElement>('.item')).forEach((b, j, todos) => {
+      const s = getComputedStyle(b);
+      if (s.visibility === 'hidden' || Number(s.opacity) < 0.5) return;
+      const k = j - (todos.length - 1) / 2;
+      caixa(b.dataset.item ?? '', Math.abs(k) <= 1 ? 'botao' : 'ponta', b);
+    });
+    caixa(rol.dataset.meio ?? '', 'nome', rol.querySelector('[data-nome-meio]')!);
+    caixa('sair', 'plaquinha', rol.querySelector('.voltar.ativo')!);
+    for (const s of ['[data-botao-roda]', '[data-hud-info]', '[data-minimapa]', '[data-botao-mochila]', '.botao-amigos']) {
+      const el = document.querySelector(s);
+      if (el && getComputedStyle(el).display !== 'none' && Number(getComputedStyle(el).opacity) > 0.1)
+        caixa(s, 'hud', el);
     }
     return out;
   });
@@ -199,11 +220,14 @@ function conferir(cs: CaixaTela[], largura: number, altura: number) {
       const a = cs[i];
       const b = cs[j];
       if (a.item === b.item) continue;
+      // o HUD só não pode encostar na roleta (entre eles já é de antes)
+      if (a.parte === 'hud' && b.parte === 'hud') continue;
       // (meio px de folga: as caixas da tela vêm arredondadas)
       if (a.x0 < b.x1 - 0.5 && b.x0 < a.x1 - 0.5 && a.y0 < b.y1 - 0.5 && b.y0 < a.y1 - 0.5)
         encostos.push(`${a.item}/${a.parte} × ${b.item}/${b.parte}`);
     }
   const fora = cs
+    .filter((c) => c.parte !== 'hud' && c.parte !== 'ponta')
     .filter((c) => c.x0 < 0 || c.y0 < 0 || c.x1 > largura || c.y1 > altura)
     .map((c) => `${c.item}/${c.parte}`);
   return { encostos, fora };
@@ -216,27 +240,30 @@ async function conferirRodas(page: Page, nome: string, largura: number, altura: 
   const botao = page.locator('.menu-hud.botao-roda');
   // o menu (com "Tirar patins": a criança está de patins)
   await botao.dispatchEvent('click');
-  await page.waitForSelector('.roda.aberta button.ativo[data-item="tirar-patins"]');
-  await page.waitForTimeout(650);
+  await esperarItem(page, 'tirar-patins');
+  await esperarAssentar(page);
+  await page.waitForTimeout(400);
   let cs = await caixas(page);
-  const itensMenu = new Set(cs.map((c) => c.item)).size;
+  const itensMenu = (await itensDaRoleta(page)).length;
   let r = conferir(cs, largura, altura);
   await page.screenshot({ path: `${PASTA}/roda-menu-${nome}.png` });
-  console.log(`RODA ${nome} ${largura}x${altura} menu itens=${itensMenu} ${JSON.stringify(r)}`);
+  console.log(`ROLETA ${nome} ${largura}x${altura} menu itens=${itensMenu} ${JSON.stringify(r)}`);
   expect(itensMenu).toBeGreaterThanOrEqual(11);
   expect(r.encostos).toEqual([]);
   expect(r.fora).toEqual([]);
   // os gestos (com os presentes de nível e o roqueiro)
-  await page.locator('.roda.aberta button.ativo[data-item="gestos"]').dispatchEvent('click');
-  await page.waitForSelector('.roda.aberta button.ativo[data-item="roqueiro"]');
-  await page.waitForTimeout(650);
+  await escolherPeloTeclado(page, 'gestos');
+  await esperarItem(page, 'roqueiro');
+  await esperarAssentar(page);
+  await page.waitForTimeout(400);
   cs = await caixas(page);
-  const itensGestos = new Set(cs.map((c) => c.item)).size;
+  const itensGestos = (await itensDaRoleta(page)).length;
   r = conferir(cs, largura, altura);
   await page.screenshot({ path: `${PASTA}/roda-gestos-${nome}.png` });
-  console.log(`RODA ${nome} ${largura}x${altura} gestos itens=${itensGestos} ${JSON.stringify(r)}`);
-  // 11 gestos e o "Voltar" no meio
-  expect(itensGestos).toBe(12);
+  console.log(`ROLETA ${nome} ${largura}x${altura} gestos itens=${itensGestos} ${JSON.stringify(r)}`);
+  // 11 gestos (a plaquinha "Voltar" fica fora da fileira)
+  expect(itensGestos).toBe(11);
+  await expect(page.locator(`${ROLETA_ABERTA} .voltar.ativo`)).toContainText('Voltar');
   expect(r.encostos).toEqual([]);
   expect(r.fora).toEqual([]);
   // (o pedido de gestos com a roda de gestos aberta fecha a roda)

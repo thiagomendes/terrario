@@ -1,6 +1,7 @@
 import { expect, test, type Browser, type Page } from '@playwright/test';
 import { mkdirSync } from 'node:fs';
 import { PASTA_CAPTURAS } from '../playwright.config';
+import { escolherNaRoleta } from './roleta-palco';
 
 /**
  * Spec 023 "Alma do jogo" (fase B): o HUD de verdade (carteira, nível, cartão da missão e o
@@ -190,9 +191,9 @@ async function abrirQuadro(page: Page, toque: boolean) {
     else await l.click();
   };
   // no computador a roda abre pela tecla O (o ponteiro fica preso no jogo)
-  if (toque) await clicar('.menu-hud:visible');
+  if (toque) await clicar('[data-botao-roda]');
   else await page.keyboard.press('KeyO');
-  await clicar('.roda.aberta button.ativo[data-item="missoes"]');
+  await escolherNaRoleta(page, 'missoes');
   await page.waitForSelector('[data-alma-quadro]', { timeout: 15_000 });
 }
 

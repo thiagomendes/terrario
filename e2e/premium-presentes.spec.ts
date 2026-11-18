@@ -1,5 +1,6 @@
 import { expect, test, type Browser, type Page } from '@playwright/test';
 import { mkdirSync } from 'node:fs';
+import { itensDaRoleta } from './roleta-palco';
 
 /**
  * Spec 023 (fase C): os presentes de nível de verdade (T09) e os premium vistos pelos amigos
@@ -91,7 +92,7 @@ test('presentes de nível de verdade', async ({ page }) => {
   // a roda de gestos com os 10 (G abre)
   await page.evaluate(() => window.dispatchEvent(new CustomEvent('brumaluz:gestos')));
   await page.waitForTimeout(700);
-  await expect(page.locator('.roda button.ativo')).toHaveCount(11);
+  await expect.poll(async () => (await itensDaRoleta(page)).length).toBe(10);
   await page.screenshot({ path: `${PASTA}/presente-roda-10-gestos.png` });
   await page.evaluate(() => window.dispatchEvent(new CustomEvent('brumaluz:gestos')));
   await page.waitForTimeout(500);

@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import { mkdirSync } from 'node:fs';
 import { comecarGravacao, pararGravacao } from './gravarCena';
+import { abrirRoleta, escolherNaRoleta, esperarItem } from './roleta-palco';
 import {
   abrir,
   assentar,
@@ -110,11 +111,10 @@ test('o parque: os vídeos dos três brinquedos (deitado, com o som do jogo)', a
       await girar(page, yaw, yaw + 1.6, 0.12, 8);
       await page.waitForTimeout(3000);
       // "Sair do brinquedo" na roda do menu
-      await page.locator('.menu-hud.botao-roda').tap();
-      const sair = page.locator('.roda.aberta button.ativo[data-item="sair-brinquedo"]');
-      await sair.waitFor({ state: 'visible' });
+      await abrirRoleta(page);
+      await esperarItem(page, 'sair-brinquedo');
       await page.waitForTimeout(900);
-      await sair.tap();
+      await escolherNaRoleta(page, 'sair-brinquedo');
       await page.waitForFunction(() => !window.__brumaluz!.vilaParque!.sentado());
     });
   }
