@@ -131,10 +131,12 @@ export const TAXA_SUBIR_PERTO = 5;
 /** Spec 033: a vista baixa e volta com a roleta (por segundo). */
 export const TAXA_DESVIO = 7;
 /**
- * Spec 033 (revisão das fotos): no celular deitado, com a roleta aberta, a vista baixa isto
- * (blocos) e o boneco inteiro fica acima da bandeja (sem isto, a bandeja cobria as pernas).
+ * Spec 033 (revisão das fotos): no celular deitado, com a roleta aberta, a vista inteira baixa
+ * isto vezes a distância da câmera (0,9 bloco a 4,75) e o boneco fica inteiro acima da bandeja
+ * (sem isto, a bandeja cobria as pernas). Na proporção da distância, o boneco sobe o mesmo
+ * tanto na tela com a câmera perto (encostada numa parede) ou longe.
  */
-export const VISTA_BAIXA_ROLETA = 0.9;
+export const VISTA_BAIXA_ROLETA = 0.19;
 /**
  * Olhando para baixo numa casinha, o pivô alto empurra a câmera para o teto e ela cola na
  * cabeça: se sem subir ela fica mais longe do que isto (blocos), o pivô não sobe.
@@ -357,8 +359,8 @@ export function criarCameraOrbita(zoom = ZOOM_PADRAO, alturaPivo = ALTURA_PIVO) 
   /** Quanto o pivô subiu por estar perto (blocos). */
   let subida = 0;
   /**
-   * Spec 033: a vista baixa um pouco (blocos, negativo) enquanto a roleta do menu está aberta no
-   * celular deitado, e o boneco sobe na tela, acima da bandeja; suave, e volta ao fechar.
+   * Spec 033: a vista baixa um pouco (fração da distância) enquanto a roleta do menu está
+   * aberta no celular deitado, e o boneco sobe na tela, acima da bandeja; suave, e volta.
    */
   let desvio = 0;
   let alvoDesvio = 0;
@@ -416,25 +418,21 @@ export function criarCameraOrbita(zoom = ZOOM_PADRAO, alturaPivo = ALTURA_PIVO) 
       subida =
         cabe < subida ? cabe : subida + (alvoSubida - subida) * fracao(TAXA_SUBIR_PERTO, q.dt);
       desvio += (alvoDesvio - desvio) * fracao(TAXA_DESVIO, q.dt);
-      if (Math.abs(alvoDesvio - desvio) < 1e-3) desvio = alvoDesvio;
-      const pivo = pivoCamera(
-        seguido,
-        q.yaw,
-        q.pitch,
-        q.bloqueia,
-        LADO_OMBRO,
-        alturaPivo + subida + desvio,
-      );
+      if (Math.abs(alvoDesvio - desvio) < 1e-4) desvio = alvoDesvio;
+      const pivo = pivoCamera(seguido, q.yaw, q.pitch, q.bloqueia, LADO_OMBRO, alturaPivo + subida);
       const livre = distanciaLivre(pivo, q.yaw, q.pitch, alvoDistancia, q.bloqueia);
       distancia = suavizarDistancia(distancia, livre, q.dt);
       const f = direcaoOlhar(q.yaw, q.pitch);
+      // spec 033: a vista inteira (a câmera e o ponto olhado) baixa junto, na proporção da
+      // distância: o boneco sobe na tela o mesmo tanto, perto ou longe, com parede ou sem
+      const dy = desvio * distancia;
       ultimo = {
         posicao: {
           x: pivo.x - f.x * distancia,
-          y: pivo.y - f.y * distancia,
+          y: pivo.y - f.y * distancia - dy,
           z: pivo.z - f.z * distancia,
         },
-        pivo,
+        pivo: dy ? { x: pivo.x, y: pivo.y - dy, z: pivo.z } : pivo,
         distancia,
         opacidade: Math.min(opacidadeBoneco(distancia), opacidadePitch(q.pitch)),
         desviando: livre < alvoDistancia - 0.4,
@@ -455,10 +453,10 @@ export function criarCameraOrbita(zoom = ZOOM_PADRAO, alturaPivo = ALTURA_PIVO) 
      * Altura do pivô acima dos olhos (negativa no toque), com a subida de quando a câmera
      * está bem perto: a mira usa a mesma.
      */
-    alturaPivo: () => alturaPivo + subida + desvio,
-    /** Spec 033: baixa a vista `d` blocos (0 volta), suave. */
-    baixarVista(d: number): void {
-      alvoDesvio = -Math.max(0, d);
+    alturaPivo: () => alturaPivo + subida,
+    /** Spec 033: baixa a vista `k` vezes a distância da câmera (0 volta), suave. */
+    baixarVista(k: number): void {
+      alvoDesvio = Math.max(0, k);
     },
     /** Ponto seguido (olhos com atraso); null antes do primeiro quadro. */
     seguido: (): Vec3 | null => (seguido ? { ...seguido } : null),

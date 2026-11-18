@@ -3,6 +3,7 @@ import {
   ALTURA_PIVO,
   ALTURA_PIVO_TOQUE,
   ZOOM_PADRAO_TOQUE,
+  VISTA_BAIXA_ROLETA,
   ANGULO_MAXIMO_RECENTRAR,
   criarCameraOrbita,
   degrauOpacidade,
@@ -120,17 +121,23 @@ describe('órbita em campo aberto', () => {
   it('spec 033: com a roleta aberta deitado, a vista baixa suave e volta ao fechar', () => {
     const c = criarCameraOrbita(ZOOM_PADRAO_TOQUE, ALTURA_PIVO_TOQUE);
     const q = { dt: 1 / 60, olhos, yaw: 0, pitch: 0.3, bloqueia: livre };
-    c.quadro(q);
-    c.baixarVista(0.9);
-    const logo = c.quadro(q).pivo.y;
-    // não pula de uma vez
-    expect(logo).toBeGreaterThan(olhos.y + ALTURA_PIVO_TOQUE - 0.9 + 0.5);
     let r = c.quadro(q);
     for (let i = 0; i < 120; i++) r = c.quadro(q);
-    expect(r.pivo.y).toBeCloseTo(olhos.y + ALTURA_PIVO_TOQUE - 0.9, 3);
+    const antes = { pivo: r.pivo.y, cam: r.posicao.y, d: r.distancia };
+    c.baixarVista(VISTA_BAIXA_ROLETA);
+    // não pula de uma vez
+    expect(c.quadro(q).pivo.y).toBeGreaterThan(antes.pivo - 0.5 * VISTA_BAIXA_ROLETA * antes.d);
+    for (let i = 0; i < 120; i++) r = c.quadro(q);
+    // a vista inteira (a câmera e o ponto olhado) baixa, na proporção da distância
+    const dy = VISTA_BAIXA_ROLETA * r.distancia;
+    expect(r.pivo.y).toBeCloseTo(antes.pivo - dy, 3);
+    expect(r.posicao.y).toBeCloseTo(antes.cam - dy, 3);
+    expect(dy).toBeGreaterThan(0.7);
+    // a mira não muda
+    expect(c.alturaPivo()).toBeCloseTo(ALTURA_PIVO_TOQUE, 5);
     c.baixarVista(0);
     for (let i = 0; i < 120; i++) r = c.quadro(q);
-    expect(r.pivo.y).toBeCloseTo(olhos.y + ALTURA_PIVO_TOQUE, 3);
+    expect(r.pivo.y).toBeCloseTo(antes.pivo, 3);
   });
   it('parede à direita: o pivô encolhe o lado e nunca entra nela', () => {
     const parede: BloqueiaCamera = (x) => x >= 11;
