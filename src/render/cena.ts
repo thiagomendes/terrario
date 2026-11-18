@@ -3728,6 +3728,11 @@ export function criarCena(
   let yawTravado: number | null = null;
   /** Spec 032: há quanto tempo (s) a câmera está espremida contra uma parede (na Vila). */
   let apertoCamera = 0;
+  /**
+   * Spec 032: comendo parada, o quanto o corpo fica de lado em relação à câmera (0 seria de
+   * frente; o lado da mão da comida virado para a câmera).
+   */
+  const VIRA_COMENDO = -0.85;
   /** Spec 032: até onde a câmera espremida sobe (o pitch, olhando de cima). */
   const PITCH_POR_CIMA = 0.72;
   /** Giro extra do corpo (só para capturas). */
@@ -3736,7 +3741,23 @@ export function criarCena(
   /** Para onde o corpo vira minerando ou construindo: o bloco da mira (ou o olhar). */
   function yawDaAcao(): number | null {
     const v = animador.vista();
-    if (v.golpe === null && v.colocar === null) return null;
+    // spec 032: comendo parada, a criança vira de três quartos para a câmera (o rosto e as
+    // mordidas à vista; de costas só se via a nuca); andando, fica como sempre. Só na tela: o
+    // corpo que os amigos veem continua para onde ela olha, que é a pose de sempre
+    if (v.golpe === null && v.colocar === null) {
+      const t = controle.teclas;
+      const parada =
+        velocidadeHoriz < 0.15 &&
+        !t.frente &&
+        !t.tras &&
+        !t.esquerda &&
+        !t.direita &&
+        !controle.jogador.voando &&
+        !estado.modoFoto?.ativo();
+      return performance.now() < comendoAte + 400 && parada
+        ? camera.rotation.y + Math.PI + VIRA_COMENDO
+        : null;
+    }
     const j = controle.jogador;
     // o toque já soltou a mira: o corpo vira para o bloco tocado, não para o do centro
     const recente = alvoDoToque && performance.now() < alvoDoToque.ate ? alvoDoToque : null;

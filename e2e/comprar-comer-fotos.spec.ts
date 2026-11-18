@@ -73,7 +73,7 @@ async function folha(browser: import('@playwright/test').Browser, prefixo: strin
 }
 
 test('comer: cada comida de perto, mordida por mordida', async ({ browser }) => {
-  test.skip(!!SO && SO !== 'comer');
+  test.skip(!!SO && SO !== 'comer' && SO !== 'jogo');
   const page = await abrir(browser, `fotos-comer-${SUFIXO}`);
   // num lugar aberto da pracinha, longe das barracas
   await page.evaluate(() => {
@@ -84,7 +84,7 @@ test('comer: cada comida de perto, mordida por mordida', async ({ browser }) => 
     e.apontar!(p.nascimento.olhar, 0.15);
   });
   await page.waitForTimeout(1500);
-  for (const item of COMIDAS) {
+  for (const item of SO === 'jogo' ? [] : COMIDAS) {
     await page.evaluate((item) => {
       const e = window.__brumaluz!;
       // (um só: depois da refeição a mão fica vazia, como de verdade)
@@ -147,25 +147,36 @@ test('comer: cada comida de perto, mordida por mordida', async ({ browser }) => 
   }
   // de trás, a câmera do jogo: a dica "Toque para comer" e a criança comendo (longe do carrinho
   // da Dona Cida: perto da barraca a dica de comprar vem antes)
-  await page.evaluate(() => {
-    const e = window.__brumaluz!;
-    const p = e.vila!()!;
-    e.teleportar!(p.nascimento.x + 2, p.nascimento.z + 3, p.h + 1.2);
-    e.apontar!(0.4, 0.15);
-    e.inventario!.definir(0, { item: 'cachorro_quente', qtd: 1 });
-    e.selecionarSlot!(0);
-  });
-  await page.waitForTimeout(2000);
-  await foto(page, 'comer-jogo-0-dica');
-  const mao = await page.evaluate(() => window.__brumaluz!.maoNaTela?.() ?? null);
-  if (mao) await page.touchscreen.tap(mao.x, mao.y);
-  for (const [ms, nome] of [
-    [700, '1-mordida1'],
-    [1250, '2-mordida2'],
-    [2400, '3-feliz'],
-  ] as const) {
-    await page.waitForTimeout(ms === 700 ? 700 : ms === 1250 ? 550 : 1150);
-    await foto(page, `comer-jogo-${nome}`);
+  // (a câmera do jogo de sempre, atrás da criança: parada, ela vira de três quartos para comer)
+  for (const item of (process.env.FOTOS_JOGO ?? 'cachorro_quente,pipoca,suco,maca').split(',')) {
+    await page.evaluate((item) => {
+      const e = window.__brumaluz!;
+      const p = e.vila!()!;
+      e.teleportar!(p.nascimento.x + 2, p.nascimento.z + 3, p.h + 1.2);
+      e.apontar!(0.4, 0.15);
+      e.inventario!.definir(0, { item, qtd: 1 });
+      e.selecionarSlot!(0);
+    }, item);
+    await page.waitForTimeout(2000);
+    await foto(page, `comer-jogo-${item}-0-dica`);
+    const t = await page.evaluate(
+      () => window.__dicaComer?.estado()?.t ?? window.__brumaluz!.maoNaTela?.() ?? null,
+    );
+    if (t) await page.touchscreen.tap(t.x, t.y);
+    let t0 = 0;
+    for (const [ms, nome] of [
+      [450, '1-vira'],
+      [620, '2-mordida1'],
+      [1220, '3-mordida2'],
+      [1870, '4-mordida3'],
+      [2500, '5-feliz'],
+      [3900, '6-volta'],
+    ] as const) {
+      await page.waitForTimeout(ms - t0);
+      t0 = ms;
+      await foto(page, `comer-jogo-${item}-${nome}`);
+    }
+    await page.waitForTimeout(800);
   }
   await page.context().close();
   for (const item of COMIDAS) await folha(browser, `comer-${item}-`, `comer-${item}`);
