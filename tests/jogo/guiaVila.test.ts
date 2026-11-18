@@ -31,6 +31,8 @@ function mundo(o: {
   feno?: boolean;
   patins?: boolean;
   bichos?: { id: number; tipo: string; x: number; y: number; z: number }[];
+  /** As lhamas do cercadinho da f2 (o que o núcleo manda). */
+  f2?: number[];
 }): MundoDoGuia {
   return {
     cidade: null,
@@ -42,6 +44,7 @@ function mundo(o: {
       ins: o.ins ?? [false, false, false],
       lhamas: [],
       arcos: o.arcos ?? [false, false, false],
+      ...(o.f2 ? { lhamasF2: o.f2 } : {}),
     }),
     comFeno: () => !!o.feno,
     comPatins: () => !!o.patins,
@@ -114,6 +117,14 @@ describe('o guia na Vila Neon (spec 026)', () => {
     const daFazendinha = { ...outra, id: 9, x: p.parque.cocho[0], z: p.parque.cocho[2] };
     expect(
       alvoDaMissao(m, mundo({ bichos: [daFazendinha], feno: true }), new Set(), naGrade)!.chave,
+    ).toBe('grade');
+    // a lhama solta que passeia pelo campo, perto, também não (o núcleo diz quais são as da f2:
+    // na bateria a trilha foi atrás de uma solta e a criança andou dois minutos atrás dela)
+    const solta = { ...outra, id: 45, x: g.x, z: g.z - 9 };
+    const junto2 = { ...um, x: g.x + 1, z: g.z };
+    expect(
+      alvoDaMissao(m, mundo({ bichos: [junto2, solta], feno: true, f2: [7, 8] }), new Set(), naGrade, 'grade')!
+        .chave,
     ).toBe('grade');
   });
 

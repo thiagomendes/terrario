@@ -102,6 +102,8 @@ export interface MundoDoGuia {
     casa?: unknown;
     /** Parte 3B (f10): os brinquedos espalhados que a criança pegou e ainda não guardou. */
     qto?: readonly boolean[];
+    /** Parte 3B (f2): as duas lhamas do cercadinho (ids). */
+    lhamasF2?: readonly number[];
   } | null;
   /** Spec 026: a criança está com o feno na mão (a lhama já vem atrás). */
   comFeno?(): boolean;
@@ -788,13 +790,15 @@ function alvoNaVila(
     const mx = (ce.x0 + ce.x1 + 1) / 2;
     const mz = (ce.z0 + ce.z1 + 1) / 2;
     const naGrade = new Set(v?.lhamas ?? []);
-    // as duas lhamas da f2 que ainda não chegaram à grade (as da fazendinha do parque moram a
-    // mais de cem blocos daqui: as daqui são as que estão perto do cercadinho ou da grade)
+    // as duas lhamas da f2 que ainda não chegaram à grade: as do cercadinho, que o núcleo diz
+    // quais são (as lhamas soltas passeiam pelo campo e não são da missão: a trilha ia atrás de
+    // uma delas); sem a lista, as que estão perto do cercadinho ou da grade
+    const doCercadinho = v?.lhamasF2 ? new Set(v.lhamasF2) : null;
     const daMissao = (mundo.bichos?.() ?? []).filter(
       (b) =>
         b.tipo === 'cervo' &&
         !naGrade.has(b.id) &&
-        Math.hypot(b.x - mx, b.z - mz) < LONGE_DA_F2,
+        (doCercadinho ? doCercadinho.has(b.id) : Math.hypot(b.x - mx, b.z - mz) < LONGE_DA_F2),
     );
     // com o feno na mão: a grade da plateia, de frente para o cercadinho (as lhamas vêm atrás).
     // A lhama que ficou para trás (estava longe quando o feno chegou à mão, ou desistiu de

@@ -175,6 +175,11 @@ export interface VilaVista {
   show: Show | null;
   /** As lhamas que chegaram à grade (ids das criaturas). */
   lhamas: number[];
+  /**
+   * Parte 3B: as duas lhamas do cercadinho da f2 (ids): a trilha volta só para elas (as lhamas
+   * soltas que passeiam pelo campo não são da missão).
+   */
+  lhamasF2?: number[];
   /** Os arcos do rinque que quem recebe o quadro já acendeu (f4), por arco. */
   arcos?: [boolean, boolean, boolean];
   /** Spec 026 (parte 2): o parque (quem está sentado em qual cadeira e o empurrão da roda). */
@@ -388,6 +393,7 @@ export function criarVila(ctx: CtxVila) {
       cx: [...caixas] as VilaVista['cx'],
       show: show ? { ...show } : null,
       lhamas: [...naGrade],
+      lhamasF2: [...lhamas],
       parque: parque.vista(),
       ...(balao.length ? { balao } : {}),
       casa: casa.vistaCasa(),
