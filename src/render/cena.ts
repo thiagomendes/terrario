@@ -822,7 +822,7 @@ export interface EstadoDepuracao {
   ajusteComer?: {
     pose: { braco: number; abre: number; feliz: number };
     mao: { pos: [number, number, number]; giro: [number, number, number] };
-    boca: { folga: number; rumo: [number, number, number] };
+    boca: { folga: number; afasta: number; rumo: [number, number, number] };
   };
   /** Spec 032 (testes): a refeição da criança agora (null sem refeição). */
   refeicao?: () => ReturnType<Refeicoes['estado']>;
@@ -3376,8 +3376,10 @@ export function criarCena(
       enviar({ t: 'domar', criatura: naMira.id, slot: hotbar.ativo });
       return;
     }
-    if (def?.comida) {
-      // spec 032: comida na mão se come, em todo modo (as três mordidas)
+    if (def?.comida && !naMira) {
+      // spec 032: comida na mão se come, em todo modo (as três mordidas). Com um bicho na mira,
+      // não: quem toca no bicho com a comida quer dar a ele (a raposa já mansa, o bicho que não
+      // come aquilo), e a comida não some sem querer
       comecarRefeicao();
       return;
     }

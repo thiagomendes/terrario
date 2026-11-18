@@ -1571,9 +1571,9 @@ function montarVila(semente: number, r: RelevoVila): Montado {
       // portãozinho): o assento do leste, de frente para a TV
       avo: casa80.avo,
       ...pista.postos,
-      // spec 032: a Dona Cida atrás do carrinho de pipoca da pracinha (a alça, do lado do
-      // portal), de frente para quem nasce
-      pracinha: [X(112) + 0.5 - 1.45, Y, Z(74) + 0.5],
+      // spec 032: a Dona Cida do lado do carrinho de pipoca da pracinha (um passo para trás e
+      // para o lado da alça: atrás da vitrine ela sumia), de frente para quem nasce
+      pracinha: [X(112) + 0.5 - 0.55, Y, Z(74) + 0.5 + 1.15],
     },
     parque: parque.pontos,
     rua: {

@@ -46,7 +46,7 @@ async function irAoBalcao(page: Page, b: Balcao): Promise<void> {
       const e = window.__brumaluz!;
       const plano = e.vila!()!;
       const lados: Record<string, [number, number]> = {
-        lanche: [0, 3],
+        lanche: [2.2, 2.4],
         lanchonete: [-1.2, 3],
         pipocaParque: [0.5, 3],
         algodao: [-0.5, 3],
@@ -195,6 +195,45 @@ test('a barrinha cheia: nada é comprado, nada sai da mão, o aviso aparece', as
   );
   await page.waitForTimeout(2500);
   expect(await page.evaluate(() => JSON.stringify(window.__brumaluz!.inventario!.slots.slice(0, 9)))).toBe(antes);
+  await page.context().close();
+});
+
+test('medida (COMPRAR_MEDIDA=1): os quadros no celular durante a compra e a refeição', async ({ browser }) => {
+  test.skip(!process.env.COMPRAR_MEDIDA, 'só com COMPRAR_MEDIDA');
+  const { abrir: abrirMedida, medir } = await import('./vila-noite-palco');
+  const page = await abrirMedida(browser, 'comprar-medida', 'empe', 3);
+  await assentar(page, 12);
+  const medidas: Record<string, number> = {};
+  const balcoes = (await page.evaluate(() => window.__brumaluz!.vilaCompras!.balcoes())) as readonly Balcao[];
+  for (const [quando, h] of [
+    ['dia', 0.42],
+    ['noite', 0.96],
+  ] as const) {
+    await page.evaluate((h) => {
+      const e = window.__brumaluz!;
+      e.pausarDia = true;
+      e.hora = h;
+    }, h);
+    for (const b of [balcoes[0], balcoes[4], balcoes[6]]) {
+      await irAoBalcao(page, b);
+      await page.waitForTimeout(1500);
+      // a entrega e, logo depois, as mordidas: as migalhas, os corações e o lanche que pula
+      const i = balcoes.indexOf(b);
+      await page.evaluate((i) => {
+        const e = window.__brumaluz!;
+        for (let k = 0; k < 9; k++) e.inventario!.definir(k, null);
+        e.vilaCompras!.comprar(i);
+      }, i);
+      await page.waitForTimeout(700);
+      medidas[`${b.barraca}-entrega-${quando}`] = (await medir(page, `${b.barraca}-entrega-${quando}`)).fps;
+      await page.waitForTimeout(1800);
+      await page.evaluate(() => window.__brumaluz!.comer!());
+      await page.waitForTimeout(200);
+      medidas[`${b.barraca}-comendo-${quando}`] = (await medir(page, `${b.barraca}-comendo-${quando}`)).fps;
+    }
+  }
+  console.log(`MEDIDAS DA 032 ${JSON.stringify(medidas)}`);
+  for (const [k, v] of Object.entries(medidas)) expect(v, k).toBeGreaterThanOrEqual(55);
   await page.context().close();
 });
 

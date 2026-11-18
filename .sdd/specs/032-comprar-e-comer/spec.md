@@ -156,5 +156,16 @@ O desenho da compra (fichinha, preparo, entrega, chegou) e o do comer (três mor
 2. **Comer de barriga cheia na sobrevivência:** deixei comer (a fome fica no máximo). Está bom, ou prefere o "Você está sem fome" de antes?
 3. **A comida acaba no criativo:** deixei acabar (é o "de verdade"). Está bom?
 
+## Decisões de quem implementou (18 nov 2026), para o dono conferir
+1. **A comida vai para a frente da boca, não fica na mão.** O braço do boneco sobe, mas a mão do boneco de cabeção fica do lado do rosto; com a comida presa na mão ela entrava na cabeça (as primeiras fotos não mostravam comida nenhuma). Agora a comida sai da mão, vai para a frente dos lábios (o ponto que se morde encostado neles, 1 cm à frente) e volta para a mão quando o braço desce. As compridas (cachorro-quente, pão, peixe, carne) ficam de través, a ponta de fora para o lado da mão; as outras em pé, com o lado que se morde virado para a boca (o canudo, a beira do balde, a ponta da fatia). Na boca a comida fica 25% maior, para ler na câmera de trás.
+2. **Entre uma mordida e outra a comida sai um tiquinho da boca** (mastigando): a marca da mordida aparece, e volta para a próxima.
+3. **A mordida é um recorte de verdade**, não encolher: os vértices dentro dos três "dentinhos" de cada mordida andam até a borda deles (a malha continua fechada) e ganham a cor do miolo; a fatia de bolo e a torta são recortadas no contorno, vistas de cima. As formas são feitas uma vez por comida e guardadas.
+4. **Os copos viraram transparentes** (o suco e a vitamina): o nível desce a cada gole e se vê de qualquer lado.
+5. **A Dona Cida** (pipoqueira nova, `vila:73`) fica do lado do carrinho da pracinha, não atrás dele: atrás da vitrine ela sumia.
+6. **A Bia, a Tati e o Seu Chico não abrem mais a janela de trocas** (`semTrocas`): o que eles têm se compra na barraca. As outras trocas de cozinheiro, de outros mundos, não faziam sentido no bairro sem roça.
+7. **No toque, tocar com comida na mão come** (antes, no criativo, nada acontecia); segurar também come. Com comida na mão, segurar não quebra bloco (no criativo, para quebrar, troca o item da mão).
+8. **A dica de comer espera perto das barracas** (a de comprar vem antes, e a tela fica limpa durante a entrega), e some depois que ela come, até outra comida chegar na mão.
+9. **A dica da barraca não volta logo depois da compra**: só depois de a criança se afastar (como os outros toques da Vila).
+
 ## Decisões do dono
 (a preencher)

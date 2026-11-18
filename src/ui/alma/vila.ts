@@ -1038,8 +1038,13 @@ export function ligarVilaNeon(
       }),
     ];
     // usou (calçou, tirou, andou no brinquedo): a dica só volta depois de ela se afastar
-    if (dicaUsada && (lugares.find((l) => l.base === dicaUsada)?.dist ?? 99) > LONGE_DA_DICA)
-      dicaUsada = null;
+    // (spec 032: a barraca no meio da entrega sai da lista, mas a criança continua ali: a distância
+    // vem do lugar dela mesmo, e a dica não volta logo depois da compra)
+    const usado = dicaUsada ? TOQUES_B.find((q) => q.chave === dicaUsada) : undefined;
+    const distUsada = usado
+      ? Math.hypot(pes[0] - usado.ponto()[0], pes[2] - usado.ponto()[2])
+      : (lugares.find((l) => l.base === dicaUsada)?.dist ?? 99);
+    if (dicaUsada && distUsada > LONGE_DA_DICA) dicaUsada = null;
     const perto = lugares
       // (os brinquedos são grandes: a dica vem um pouco antes)
       .filter(

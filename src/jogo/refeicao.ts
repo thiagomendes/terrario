@@ -77,6 +77,25 @@ export function bracoNaRefeicao(t: number): number {
   return f >= 1 ? 0 : 1 - suave(f);
 }
 
+/**
+ * Entre uma mordida e outra a comida sai um tiquinho da boca (0 a 1: mastigando, a marca da
+ * mordida aparece) e volta para a próxima; depois da última, fica longe.
+ */
+export function afastaNaRefeicao(t: number): number {
+  const suave = (x: number) => {
+    const c = Math.min(1, Math.max(0, x));
+    return c * c * (3 - 2 * c);
+  };
+  for (let k = 0; k < MORDIDAS.length; k++) {
+    const m = MORDIDAS[k];
+    const prox = MORDIDAS[k + 1];
+    if (t < m) continue;
+    if (prox === undefined) return suave((t - m - 0.04) / 0.16);
+    if (t < prox) return Math.min(suave((t - m - 0.04) / 0.16), suave((prox - 0.12 - t) / 0.16));
+  }
+  return 0;
+}
+
 /** A carinha feliz (0 a 1) no instante `t`. */
 export function felizNaRefeicao(t: number): number {
   const [a, b] = FELIZ;

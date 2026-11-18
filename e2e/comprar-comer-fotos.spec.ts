@@ -256,7 +256,7 @@ test('vídeo: comprar a pipoca da Dona Cida e comer (para o dono)', async ({ bro
     lanchonete: [-1.2, 3],
     pipocaParque: [0.5, 3],
     algodao: [-0.5, 3],
-    pipocaPracinha: [3, 0.4],
+    pipocaPracinha: [3.2, 1.0],
   };
   const [dx, dz] = lados[b.barraca] ?? [0, 3];
   await page.evaluate(
@@ -264,7 +264,7 @@ test('vídeo: comprar a pipoca da Dona Cida e comer (para o dono)', async ({ bro
       const e = window.__brumaluz!;
       e.voar?.(false);
       e.teleportar!(p[0] + dx, p[2] + dz, e.vila!()!.h + 1.2);
-      e.apontar!(Math.atan2(-dx, -dz) - 0.35, 0.18);
+      e.apontar!(Math.atan2(-dx, -dz) - 0.3, 0.42);
     },
     { p: b.p, dx, dz },
   );
@@ -273,7 +273,11 @@ test('vídeo: comprar a pipoca da Dona Cida e comer (para o dono)', async ({ bro
   await page.waitForTimeout(1200);
   const t = await alvoDoToque(page, b.chave);
   await page.touchscreen.tap(t.x, t.y);
-  await page.waitForTimeout(3200);
+  await page.waitForTimeout(3000);
+  // uns passos para trás (longe da barraca, a dica de comer aparece)
+  await page.evaluate(() => window.__brumaluz!.controleDireto!.mover(-1, 0));
+  await page.waitForTimeout(1300);
+  await page.evaluate(() => window.__brumaluz!.controleDireto!.mover(0, 0));
   // a dica de comer e o toque na comida
   await page.waitForFunction(() => !!window.__dicaComer?.estado(), undefined, { timeout: 10_000 }).catch(() => undefined);
   await page.waitForTimeout(900);
@@ -287,30 +291,25 @@ test('comprar: cada barraca antes, no meio e depois', async ({ browser }) => {
   test.skip(!!SO && SO !== 'comprar');
   const page = await abrir(browser, `fotos-comprar-${SUFIXO}`);
   const balcoes = await page.evaluate(() => window.__brumaluz!.vilaCompras!.balcoes());
-  const feitos = new Set<string>();
-  for (const b of balcoes) {
-    // (a barraca do lanche tem três lanches: as fotos do meio só no primeiro)
-    const meio = !feitos.has(b.barraca);
-    feitos.add(b.barraca);
-    // de frente para a barraca, a 3 blocos, um pouco de lado (o boneco não tapa)
+  for (const [i, b] of balcoes.entries()) {
+    // de frente para a barraca, um pouco de lado (o boneco não tapa), de mãos vazias
     await page.evaluate(
       ({ p, barraca }) => {
         const e = window.__brumaluz!;
         const plano = e.vila!()!;
-        // de que lado fica o freguês: o contrário de onde a vendedora está
-        const pecas = plano.pecas;
-        void pecas;
+        for (let k = 0; k < 36; k++) e.inventario!.definir(k, null);
         const lados: Record<string, [number, number]> = {
-          lanche: [0, 3],
+          // (de viés: atrás de quem está de frente para o balcão fica a barraca das camisetas)
+          lanche: [1.2, 2.6],
           lanchonete: [-1.2, 3],
           pipocaParque: [0.5, 3],
           algodao: [-0.5, 3],
-          pipocaPracinha: [3, 0.4],
+          pipocaPracinha: [2.6, 0.6],
         };
         const [dx, dz] = lados[barraca] ?? [0, 3];
         e.voar?.(false);
         e.teleportar!(p[0] + dx, p[2] + dz, plano.h + 1.2);
-        e.apontar!(Math.atan2(-dx, -dz) - 0.45, 0.3);
+        e.apontar!(Math.atan2(-dx, -dz) - 0.3, 0.4);
       },
       { p: b.p, barraca: b.barraca },
     );
@@ -321,72 +320,64 @@ test('comprar: cada barraca antes, no meio e depois', async ({ browser }) => {
       // (fica a foto do que se via)
     }
     await foto(page, `comprar-${b.chave}-0-dica`);
-    const t = await alvoDoToque(page, b.chave).catch(() => null);
-    if (!t) continue;
-    await page.touchscreen.tap(t.x, t.y);
-    if (meio) {
-      for (const [ms, nome] of [
-        [300, '1-fichinha'],
-        [900, '2-preparo'],
-        [1350, '3-entrega'],
-        [1520, '3b-pulinho'],
-        [2050, '4-chegou'],
-      ] as const) {
-        const antes = [0, 300, 900, 1350, 1520][['1-fichinha', '2-preparo', '3-entrega', '3b-pulinho', '4-chegou'].indexOf(nome)];
-        await page.waitForTimeout(ms - antes);
-        await foto(page, `comprar-${b.chave}-${nome}`);
-      }
-    } else await page.waitForTimeout(2100);
-    if (meio) {
-      // a entrega de perto, de lado (o modo foto): a criança e a vendedora na mesma foto
-      await page.waitForTimeout(800);
-      await page.evaluate(
-        ({ p, i }) => {
-          const e = window.__brumaluz!;
-          const f = e.modoFoto!;
-          if (!f.ativo()) f.alternar();
-          const pes = e.jogadorPes!();
-          // o meio entre a criança e o lanche, visto de lado, um pouco de cima
-          const mx = (pes[0] + p[0]) / 2;
-          const mz = (pes[2] + p[2]) / 2;
-          const dx = p[0] - pes[0];
-          const dz = p[2] - pes[2];
-          const l = Math.hypot(dx, dz) || 1;
-          const nx = -dz / l;
-          const nz = dx / l;
-          f.posicionar!(mx + nx * 3.4, pes[1] + 2.2, mz + nz * 3.4);
-          e.apontar!(Math.atan2(-nx, -nz), 0.32);
-          e.vilaCompras!.comprar(i);
-        },
-        { p: b.p, i: balcoes.indexOf(b) },
-      );
-      let t0 = 0;
-      for (const [ms, nome] of [
-        [300, '6-lado-fichinha'],
-        [950, '7-lado-preparo'],
-        [1300, '8-lado-entrega'],
-        [1480, '9-lado-pulinho'],
-      ] as const) {
-        await page.waitForTimeout(ms - t0);
-        t0 = ms;
-        await foto(page, `comprar-${b.chave}-${nome}`);
-      }
-      await page.waitForTimeout(1500);
+    // a entrega de perto (o modo foto, sem a tela do jogo): o corpo parado de frente para a
+    // barraca, a câmera de lado e um pouco de cima, a criança e a vendedora na mesma foto
+    const yaw0 = await page.evaluate((p) => {
+      const e = window.__brumaluz!;
+      const pes = e.jogadorPes!();
+      const y = Math.atan2(p[0] - pes[0], p[2] - pes[2]);
+      e.travarYaw!(y);
+      return y;
+    }, b.p);
+    await page.waitForTimeout(500);
+    await page.evaluate(
+      ({ yaw0, i }) => {
+        const e = window.__brumaluz!;
+        const f = e.modoFoto!;
+        if (!f.ativo()) f.alternar();
+        const pes = e.jogadorPes!();
+        // por cima do ombro, alto: atrás da criança fica o caminho por onde ela chegou (livre),
+        // e de cima se vê a mão dela, o balcão e a vendedora
+        // (baixo o bastante para ver por baixo do toldo das barracas, de lado o bastante para a
+        // cabeça da criança não tapar a mão)
+        const cx = pes[0] - Math.sin(yaw0) * 1.6 + Math.cos(yaw0) * 1.25;
+        const cz = pes[2] - Math.cos(yaw0) * 1.6 - Math.sin(yaw0) * 1.25;
+        const cy = pes[1] + 2.0;
+        f.posicionar!(cx, cy, cz);
+        const tx = pes[0] + Math.sin(yaw0) * 1.6;
+        const tz = pes[2] + Math.cos(yaw0) * 1.6;
+        e.apontar!(Math.atan2(tx - cx, tz - cz), Math.atan2(cy - (pes[1] + 1.1), Math.hypot(tx - cx, tz - cz)));
+        e.vilaCompras!.comprar(i);
+      },
+      { yaw0, i },
+    );
+    let t0 = 0;
+    for (const [ms, nome] of [
+      [320, '1-fichinha'],
+      [950, '2-preparo'],
+      [1280, '3-entrega'],
+      [1470, '4-pulinho'],
+      [2100, '5-chegou'],
+    ] as const) {
+      await page.waitForTimeout(ms - t0);
+      t0 = ms;
+      await foto(page, `comprar-${b.chave}-${nome}`);
     }
-    // o lanche na mão, de frente (o modo foto), o corpo inteiro
-    await page.evaluate(() => {
+    // o lanche na mão, de frente, o corpo inteiro
+    await page.evaluate((yaw0) => {
       const e = window.__brumaluz!;
       const f = e.modoFoto!;
-      if (!f.ativo()) f.alternar();
       const pes = e.jogadorPes!();
-      const a = e.yawBoneco!() - 0.5;
+      const a = yaw0 - 0.5;
       f.posicionar!(pes[0] + Math.sin(a) * 2.6, pes[1] + 1.3, pes[2] + Math.cos(a) * 2.6);
       e.apontar!(a + Math.PI, 0.12);
-    });
+    }, yaw0);
     await page.waitForTimeout(900);
-    await foto(page, `comprar-${b.chave}-5-na-mao`);
+    await foto(page, `comprar-${b.chave}-6-na-mao`);
     await page.evaluate(() => {
-      const f = window.__brumaluz!.modoFoto!;
+      const e = window.__brumaluz!;
+      e.travarYaw!(null);
+      const f = e.modoFoto!;
       if (f.ativo()) f.alternar();
     });
     await page.waitForTimeout(600);

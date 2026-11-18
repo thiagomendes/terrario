@@ -28,6 +28,7 @@ import type { Scene } from '@babylonjs/core/scene';
 import { modeloNaMao, type ModeloItem } from './itensBrinquedo';
 import { esfera, type Plasticos } from './formas';
 import {
+  afastaNaRefeicao,
   bracoNaRefeicao,
   DESCE,
   DURACAO_REFEICAO,
@@ -66,6 +67,10 @@ export const NA_MAO_COMENDO = {
 export const NA_BOCA = {
   /** Folga dos lábios até a ponta (blocos, na frente do rosto). */
   folga: 0.012,
+  /** Quanto a comida sai da boca entre as mordidas (blocos). */
+  afasta: 0.09,
+  /** A comida na boca, um pouco maior que na mão (lê de longe, na câmera de trás). */
+  escala: 1.25,
   /** Para onde vai a ponta de fora das compridas (cabeça: x para o lado, y, z para a frente). */
   rumo: [0.62, -0.3, 1] as [number, number, number],
 };
@@ -89,6 +94,11 @@ const CONTATO: Readonly<Record<string, [number, number, number]>> = {
  */
 const DESLOCAR: Readonly<Record<string, [number, number, number]>> = {
   maca: [0.075, -0.05, 0],
+  // (as em pé, um tiquinho para o lado da mão, que fica embaixo delas)
+  suco: [0.03, 0, 0],
+  vitamina: [0.03, 0, 0],
+  pipoca: [0.035, 0, 0],
+  algodao_doce: [0.035, 0, 0],
   ovo_cozido: [0.06, -0.04, 0],
   frutinhas: [0.06, -0.04, 0],
 };
@@ -635,7 +645,7 @@ export function montarComidaMordida(
     ponto = () => new Vector3(0, 0.08, 0);
   } else if (jeito === 'nuvem') {
     const tufos = modelo.malhas.filter((m) => /^nuvem/.test(nome(m)));
-    const ate = [0, 3, 6, tufos.length];
+    const ate = [0, 3, 5, tufos.length];
     estagio = (k) => tufos.forEach((m, i) => m.setEnabled(i >= ate[Math.max(0, Math.min(3, k))]));
     ponto = (k) => new Vector3(0, 0.3 - k * 0.02, 0.04);
   } else if (item === 'frutinhas') {
@@ -801,12 +811,18 @@ export function criarRefeicoes(scene: Scene, op: OpcoesRefeicoes): Refeicoes {
       Vector3.TransformCoordinatesToRef(comida.contato(c.mordidas), giro, naCabeca);
       const [bx, by, bz] = b.pos;
       const [dx, dy, dz] = DESLOCAR[c.item] ?? [0, 0, 0];
+      // mastigando, a comida sai um tiquinho da boca (para a frente e para baixo): a marca da
+      // mordida aparece
+      const af = afastaNaRefeicao(c.t) * NA_BOCA.afasta;
       const pos = new Vector3(
         bx + dx - naCabeca.x,
-        by + dy - naCabeca.y,
-        bz + dz + NA_BOCA.folga - naCabeca.z,
+        by + dy - naCabeca.y - af * 0.45,
+        bz + dz + NA_BOCA.folga + af - naCabeca.z,
       );
-      Matrix.ComposeToRef(Vector3.OneReadOnly, q, pos, local);
+      // (na boca a comida fica um pouco maior: de trás, a câmera do jogo ainda vê a comida)
+      const e = NA_BOCA.escala;
+      pos.subtractInPlace(naCabeca.scale(e - 1));
+      Matrix.ComposeToRef(new Vector3(e, e, e), q, pos, local);
       local.multiplyToRef(b.no.getWorldMatrix(), mBoca);
       mBoca.decompose(sB, qB, pB);
       Vector3.LerpToRef(sA, sB, w, sA);
@@ -881,7 +897,8 @@ export function criarRefeicoes(scene: Scene, op: OpcoesRefeicoes): Refeicoes {
         if (!c.coracoes && c.t >= DURACAO_REFEICAO - 0.5) {
           c.coracoes = true;
           const p = dono.raiz.getAbsolutePosition();
-          op.coracoes(p.x, p.y + 2.05, p.z, 3);
+          // (pouco acima da cabeça: sobem à vista, sem sair da tela do celular)
+          op.coracoes(p.x, p.y + 1.6, p.z, 3);
         }
         if (c.t >= FIM_REFEICAO) {
           fim(c);

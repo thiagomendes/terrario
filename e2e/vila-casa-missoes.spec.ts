@@ -384,7 +384,8 @@ async function rampa(page: Page, t: Tamanho): Promise<void> {
 async function bolo(page: Page, t: Tamanho): Promise<void> {
   await escolher(page, 'f12', `${t}-f12-0-quadro`);
   expect(await seguir(page, 'lanchonete')).toBe('lanchonete');
-  await tocarNaDica(page, 'vitamina', 'Toque para pedir', `${t}-f12-1-lanchonete-dica`);
+  // (spec 032: a vitamina se compra; a Tati entrega na mão)
+  await tocarNaDica(page, 'compra-vitamina', 'Toque para comprar', `${t}-f12-1-lanchonete-dica`);
   await page.waitForFunction(() => {
     const inv = window.__brumaluz!.inventario!;
     for (let i = 0; i < 36; i++) if (inv.obter(i)?.item === 'vitamina') return true;

@@ -194,19 +194,20 @@ for (const tamanho of ['empe', 'deitado'] as const) {
       -0.6,
     );
     await assentar(page, 9);
-    await esperarDica(page, 'vitamina', 'Toque para pedir');
+    // (spec 032: a vitamina se compra; a Tati entrega na mão)
+    await esperarDica(page, 'compra-vitamina', 'Toque para comprar');
     await foto('5-lanchonete-dica');
-    for (let k = 0; k < 3; k++) {
-      t = await alvoDoToque(page, 'vitamina');
+    for (let k = 0; k < 4; k++) {
+      t = await alvoDoToque(page, 'compra-vitamina');
       await page.touchscreen.tap(t.x, t.y);
-      await page.waitForTimeout(1500);
+      await page.waitForTimeout(2700);
       if (k === 0) {
         await foto('6-lanchonete-vitamina-na-mao');
         await fotoDeFrente('6b-lanchonete-vitamina-de-frente');
       }
     }
-    // (a moça entrega até duas: o toque não enche a mochila)
-    expect(await tem(page, 'vitamina')).toBe(2);
+    // (a moça vende até três: o toque não enche a mochila)
+    expect(await tem(page, 'vitamina')).toBe(3);
     // é comida de verdade (come-se como as outras)
     expect(
       await page.evaluate(() => {

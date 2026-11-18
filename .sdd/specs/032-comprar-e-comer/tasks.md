@@ -35,4 +35,4 @@ Tamanho: **P** (até meio dia), **M** (1 a 2 dias), **G** (3 dias ou mais). Uma 
 **Ordem:** T01 → T02 → T03 → T04 → T05 → T06 → T07 → T08 → T09 → T10 → T11 (parada) → T12 → T13 → T14.
 
 ## Situação
-- (18 nov 2026) Spec escrita; implementação começando pela fase 1.
+- (18 nov 2026) Spec escrita; fases 1 a 3 feitas (núcleo, rede 16, o comer em todo mundo, as barracas da Vila). Portão visual e bateria em curso.
