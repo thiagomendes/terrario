@@ -278,7 +278,8 @@ for (const tamanho of ['empe', 'deitado'] as const) {
     await page.evaluate(() => {
       const e = window.__brumaluz!;
       const q = e.vila!()!;
-      e.teleportar!(q.nascimento.x, q.nascimento.z, q.h + 1.2);
+      // (spec 032: um pouco além de onde nasce; ao lado do nascer fica o carrinho da Dona Cida)
+      e.teleportar!(q.nascimento.x + 2, q.nascimento.z + 3, q.h + 1.2);
     });
     await page.waitForTimeout(1500);
     expect(await page.evaluate(() => window.__vila!.dica())).toBeNull();
