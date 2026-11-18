@@ -69,12 +69,14 @@ O esboço (`esboco/033-camera-roleta`, 18 nov 2026, só com `?esboco=033`) mediu
 - `ZOOM_TOQUE_EM_PE = 5.06` e `ZOOM_TOQUE_DEITADO = 4.75`; `zoomInicialToque(largura, altura)` escolhe pela tela.
 - A cena começa com a da tela; no `resize`, se a distância ainda é a de começo, troca para a da posição nova.
 - `preverToque` (testes): o que um toque faria, sem tocar, para a criança simulada.
+- **Revisão das fotos:** no celular deitado a bandeja cobria as pernas do boneco. Com a roleta aberta deitado, a vista baixa 0,9 bloco, suave (`baixarVista`, `VISTA_BAIXA_ROLETA`), e o boneco fica inteiro acima da bandeja; volta ao fechar. Em pé sobra tela e nada muda.
 
 ### A roleta (`src/ui/roleta.ts`)
 - Implementa a mesma interface `Roda` (`src/ui/roda.ts`, que agora guarda só os tipos e as teclas); o menu (`src/ui/menuRoda.ts`) só troca quem desenha.
 - 7 botões reaproveitados (o meio, 2 vizinhos de cada lado e mais um sumindo na ponta), então cabe qualquer número de itens sem encostar.
 - A lista de Gestos leva o pai (`ListaRoda.pai`): a plaquinha mostra a carinha de Gestos.
 - O toque que escolhe não deixa o clique do navegador cair na tela que abriu (a pausa, o mapa).
+- Enquanto o dedo arrasta, o nome some (ele fica parado no meio e o anel anda com o botão) e volta quando a fileira assenta.
 - A rodinha do mouse na roleta não aproxima a câmera nem troca o item da barrinha.
 
 ## Os itens por mundo
@@ -86,6 +88,17 @@ O menu e os gestos vêm das mesmas listas de antes (`itensDoMenu`, `EXTRAS_RODA`
 | Onde há missões (Cidade Grande, Rancho Alegre, Era dos Dinos, Doce Reino, Vila Neon) | + Missões, logo depois de Personagem | — |
 | Sem missões (o mundo de sempre, Planeta Vivo, Mata Encantada, Exploração Lunar) | só os de todos | — |
 | Vila Neon | + Tirar patins (só de patins), Guardar skate (só de skate), Sair do brinquedo (só sentada num brinquedo) | + Roqueiro |
+
+## A criança simulada na entrega (18 nov 2026)
+As cinco cenas da 022 (corredor, casinha, obra, campo e copa da árvore), 2 sementes × 4 giros × 7 alvos, 56 tentativas por cena (280 por distância):
+
+| Distância | Deitado: de primeira | Deitado: acerto | Em pé: de primeira | Em pé: acerto |
+| --- | --- | --- | --- | --- |
+| 4,4 (antes) | 66,1 % | 89,3 % | 205/280 (73,2 %) | 256/280 (91,4 %) |
+| 4,75 (deitado, a nova) | 66,4 % | 88,9 % | 208/280 (74,3 %) | 258/280 (92,1 %) |
+| 5,06 (em pé, a nova) | 63,6 % | 86,8 % | 205/280 (73,2 %) | 257/280 (91,8 %) |
+
+Nas distâncias escolhidas (4,75 deitado, 5,06 em pé) a criança simulada acerta igual à câmera de antes, como no esboço. (Em pé, a primeira rodada perdeu o desenho da página depois da obra; a obra, o campo e a copa foram medidos de novo numa página só.)
 
 ## Experiência medida
 - Os toques, arrastes, vizinhos, voltas sem fim, Gestos, Voltar, Fechar, tocar fora e o fechar sozinho, com dedo de verdade, em pé e deitado (`e2e/roleta.spec.ts`).
