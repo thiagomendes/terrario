@@ -1,6 +1,6 @@
 import { test } from '@playwright/test';
 import { mkdirSync } from 'node:fs';
-import { ARTE_VILA } from '../src/ui/alma/arteVila';
+import { ARTE as ARTE_VILA } from '../src/ui/alma/arte';
 
 /**
  * Spec 026 (parte 3B): a folha dos desenhos das missões da casa, em tamanho de cartão e de

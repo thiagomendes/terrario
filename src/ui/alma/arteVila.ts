@@ -467,7 +467,7 @@ const cartaoRampa = () => `
     <path d="${BILHETE}" fill="#c9952a" transform="translate(0 3)"/>
     <path d="${BILHETE}" fill="#e6f8f4" ${s()}/>
     <path d="M17.5 18 V46" stroke="${C}" stroke-width="2" stroke-dasharray="2.6 3.2" stroke-linecap="round"/>
-    <path d="M7.5 37 C7.5 29 10 27 11.5 27 C13 27 15.5 29 15.5 37" fill="none" stroke="#2f8cff" stroke-width="2.4" stroke-linecap="round"/>
+    <polygon points="${estrela5(11.6, 32.6, 3.8)}" fill="#2f8cff"/>
     ${[26.5, 39.5, 52]
       .map(
         (x, k) => `<circle cx="${x}" cy="32" r="6.2" fill="#fffdf6" stroke="${TINTAS[k]}" stroke-width="2.2"/>

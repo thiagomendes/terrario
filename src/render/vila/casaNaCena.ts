@@ -281,6 +281,19 @@ export function ligarCasaNaCena(d: DepsCasaNaCena) {
     },
     /** O trilho de agora (a inclinação da prancha e o rumo), ou null. */
     noTrilho: (): NoTrilho | null => trilho.lugar(),
+    /**
+     * Parte 3B: sentada no sofá (ou no pulinho até ele), o corpo olha para a TV, como a vovó. Antes
+     * ficava virado para onde a criança vinha andando: quem chegava pela frente do sofá sentava de
+     * costas para a TV.
+     */
+    noSofa(): { yaw: number } | null {
+      if (pulo) return { yaw: pc.sofa.yaw };
+      const j = d.jogador;
+      const sentada = pc.sofa.assentos.some(
+        (a, i) => i > 0 && Math.hypot(a.x - j.x, a.z - j.z) < 0.45 && Math.abs(a.y - j.y) < 0.3,
+      );
+      return sentada ? { yaw: pc.sofa.yaw } : null;
+    },
     /** A pose do boneco no trilho (os joelhos e os braços). */
     pose(pose: Pose): Pose {
       return trilho.lugar() ? aplicarJuntas(pose, JUNTAS_NA_RAMPA, 1) : pose;

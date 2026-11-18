@@ -369,8 +369,8 @@ async function rampa(page: Page, t: Tamanho): Promise<void> {
   );
   const primeira = segurar(1);
   await meio;
-  // (no alto da curva, com a câmera já de lado)
-  await page.waitForTimeout(1300);
+  // (descendo a curva, com a câmera já de lado olhando ao longo da rampa)
+  await page.waitForTimeout(2400);
   await foto(page, `${t}-f11-3-no-alto`);
   await primeira;
   await page.waitForTimeout(1500);

@@ -52,6 +52,8 @@ const VOO_BAU = 0.9;
 const FATIA_SURGE = 0.5;
 const FATIA_ESPERA = 0.7;
 const FATIA_VOA = 1.1;
+/** A fatia voando: uns dois terços do bolo inteiro da mesinha (o prato de 0,4 de largura). */
+const ESC_FATIA = 0.72;
 /** Mais longe que isto (blocos) os espalhados não são desenhados. */
 const LONGE = 60;
 
@@ -257,7 +259,8 @@ export function criarMissoesCasa(scene: Scene, op: OpcoesMissoesCasa): RenderMis
         const [x0, y0, z0] = [c.bolo[0], c.bolo[1] + 0.12, c.bolo[2]];
         const yaw = eu ? Math.atan2(eu.x - x0, eu.z - z0) : 0;
         if (g < FATIA_SURGE + FATIA_ESPERA) {
-          const k = pulo(g / FATIA_SURGE) * 1.2;
+          // (menor que o bolo inteiro da mesinha: a revisão viu a fatia maior que o bolo)
+          const k = pulo(g / FATIA_SURGE) * ESC_FATIA;
           const salto = g < FATIA_SURGE ? Math.sin((g / FATIA_SURGE) * Math.PI) * 0.22 : 0;
           malhaFatia.position.set(x0, y0 + salto, z0);
           malhaFatia.scaling.setAll(Math.max(0.001, k));
@@ -271,7 +274,7 @@ export function criarMissoesCasa(scene: Scene, op: OpcoesMissoesCasa): RenderMis
             y0 + (ate[1] - y0) * s + Math.sin(u * Math.PI) * 0.9,
             z0 + (ate[2] - z0) * s,
           );
-          malhaFatia.scaling.setAll(1.2 * (u > 0.7 ? 1 - suave((u - 0.7) / 0.3) * 0.85 : 1));
+          malhaFatia.scaling.setAll(ESC_FATIA * (u > 0.7 ? 1 - suave((u - 0.7) / 0.3) * 0.85 : 1));
           malhaFatia.rotation.set(0, yaw + s * Math.PI, 0);
         }
       }

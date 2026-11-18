@@ -3593,7 +3593,8 @@ export function criarCena(
     if (document.body.classList.contains('tela-titulo')) animador.definirYaw(camera.rotation.y);
     // spec 026 (parte 2): sentado num brinquedo do parque, o corpo olha para onde a cadeira vai
     // (parte 3: no trilho da rampa de skate, o corpo olha para onde o skate vai)
-    const cadeira = passeio?.lugar() ?? casaCena?.noTrilho() ?? null;
+    // (parte 3B: sentada no sofá da casa, o corpo olha para a TV)
+    const cadeira = passeio?.lugar() ?? casaCena?.noTrilho() ?? casaCena?.noSofa() ?? null;
     if (cadeira) animador.definirYaw(cadeira.yaw);
     let pose = animador.atualizar(dt, {
       velocidadeHoriz,
