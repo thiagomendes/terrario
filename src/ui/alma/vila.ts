@@ -36,7 +36,7 @@ import {
 import { boaParaDica, criarDicaToque } from './dicaToque';
 import { alcancaOBalcao, balcoesDaVila, MAX_POR_LANCHE, type Lanche } from '../../jogo/compra';
 import { arte as arteAlma } from './arte';
-import { CSS_CANTO, maoAtrasDoBoneco } from './canto';
+import { CSS_CANTO } from './canto';
 import { criarRevista } from './revista';
 import {
   ALCANCE_COCHO,
@@ -1088,23 +1088,11 @@ export function ligarVilaNeon(
       });
   });
 
-  // a coisa da dica atrás do boneco (o fardo, o cocho, a barraca bem na frente dela): o boneco
-  // fica meio transparente e a coisa aparece através dele, como no canto das missões
-  let transparente = false;
-  scene.onBeforeRenderObservable.add(() => {
-    const d = dica.estado();
-    // (parte 3B: na Casa anos 80, no quintal dela e nos brinquedos espalhados, a criança nunca
-    // some: a câmera de casinha de bonecas olha de cima e a trilha acaba longe o bastante para a
-    // coisa ficar acima da cabeça; meio apagada, a criança de 3 anos via uma boneca desbotada)
-    const pes = e.jogadorPes?.();
-    const naCasa =
-      !!d &&
-      (d.chave.startsWith('espalhado-') || (!!pes && dentroDaCasa(p.casa, pes[0], pes[2], 4.5)));
-    const quer = !!d && !naCasa && !d.chave.startsWith('bate-') && maoAtrasDoBoneco(e, d.t);
-    if (quer === transparente) return;
-    transparente = quer;
-    e.limiteOpacidade = quer ? 0.6 : 1;
-  });
+  // (spec 032: na Vila Neon inteira a criança nunca fica meio transparente, nem com a coisa da
+  // dica atrás dela: meio apagada, a criança de 3 anos via uma boneca desbotada, como a 3B já
+  // tinha visto na casa. A dica é desenhada por cima do jogo, e a mãozinha continua à vista)
+  e.limiteOpacidade = 1;
+  e.semTransparenciaDoBoneco = true;
   // a casa anos 80 não some com o móvel da dica de agora (a coisa que a criança vai tocar)
   e.dicaVila = () => dica.estado()?.chave ?? null;
 

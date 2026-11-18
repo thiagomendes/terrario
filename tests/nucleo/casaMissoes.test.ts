@@ -105,7 +105,8 @@ const moedas = (evs: Ev[]) => evs.reduce((s, e) => s + (e.e === 'alma' ? e.ganho
 
 describe('spec 026 (parte 3, etapa B): as missões da casa no núcleo', () => {
   it('a rede subiu para 15, o comando do brinquedo passa a limpo e os itens novos são da Vila', () => {
-    expect(VERSAO_REDE).toBe(15);
+    // (15 na parte 3B; 16 na spec 032, comprar e comer)
+    expect(VERSAO_REDE).toBeGreaterThanOrEqual(15);
     expect(sanear({ t: 'vila', a: 'brinquedo', i: 2, lixo: 1 })).toEqual({
       t: 'vila',
       a: 'brinquedo',

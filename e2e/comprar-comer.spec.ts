@@ -1,4 +1,5 @@
 import { expect, test, type Browser, type Page } from '@playwright/test';
+import { mkdirSync } from 'node:fs';
 import { abrirMundo, assentar, criarMundo, type Tamanho } from './guia-palco';
 import { alvoDoToque, esperarDica } from './vila-alvo';
 
@@ -46,7 +47,8 @@ async function irAoBalcao(page: Page, b: Balcao): Promise<void> {
       const e = window.__brumaluz!;
       const plano = e.vila!()!;
       const lados: Record<string, [number, number]> = {
-        lanche: [2.2, 2.4],
+        // (bem na frente de cada lanche do balcão da Bia: a dica é a do lanche mais perto)
+        lanche: [0, 2.6],
         lanchonete: [-1.2, 3],
         pipocaParque: [0.5, 3],
         algodao: [-0.5, 3],
@@ -114,8 +116,8 @@ async function comer(page: Page, item: string): Promise<void> {
   await page.waitForFunction((item) => window.__brumaluz!.refeicao?.()?.item === item, item, {
     timeout: 3_000,
   });
-  // a dica some enquanto come
-  expect(await page.evaluate(() => window.__dicaComer!.estado())).toBeNull();
+  // a dica some enquanto come (no quadro seguinte)
+  await page.waitForFunction(() => window.__dicaComer!.estado() === null, undefined, { timeout: 1_000 });
   await page.waitForFunction(() => (window.__brumaluz!.refeicao?.()?.mordidas ?? 0) >= 3, undefined, {
     timeout: 4_000,
   });
@@ -265,7 +267,8 @@ const entrarNoJogo = (p: Page) =>
   });
 
 test('com amigos: a Bia vê a Ana comprar e comer', async ({ browser }) => {
-  const PASTA = process.env.AMIGOS_PASTA ?? 'test-results/comprar-comer-amigos';
+  const PASTA = process.env.AMIGOS_PASTA ?? 'capturas-032/amigos';
+  mkdirSync(PASTA, { recursive: true });
   const ana = await jogador(browser, 'ana-comprar', 'Ana');
   await criarMundo(ana, 'comprar-amigos', 'vila-neon');
   await ana.goto('/?mundo=comprar-amigos');

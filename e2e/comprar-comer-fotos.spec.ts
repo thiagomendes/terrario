@@ -300,7 +300,7 @@ test('comprar: cada barraca antes, no meio e depois', async ({ browser }) => {
         for (let k = 0; k < 36; k++) e.inventario!.definir(k, null);
         const lados: Record<string, [number, number]> = {
           // (de viés: atrás de quem está de frente para o balcão fica a barraca das camisetas)
-          lanche: [1.2, 2.6],
+          lanche: [0, 2.6],
           lanchonete: [-1.2, 3],
           pipocaParque: [0.5, 3],
           algodao: [-0.5, 3],

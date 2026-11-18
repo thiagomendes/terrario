@@ -442,6 +442,8 @@ export interface EstadoDepuracao {
   };
   /** Spec 031: o boneco fica no máximo tão opaco (a mãozinha atrás dele: ~0,6). */
   limiteOpacidade?: number;
+  /** Spec 032: neste mundo (a Vila Neon) a criança nunca fica meio transparente. */
+  semTransparenciaDoBoneco?: boolean;
   /** Spec 026 (parte 3): a chave da dica de toque à vista na Vila Neon, ou null. */
   dicaVila?: () => string | null;
   /** Spec 030: os sítios (Rancho) a até 220 blocos do jogador, do mais perto ao mais longe. */
@@ -805,6 +807,8 @@ export interface EstadoDepuracao {
   coracoes?: () => number;
   /** Spec 032: onde fica a mão da criança na tela (null: fora da tela). */
   maoNaTela?: () => { x: number; y: number } | null;
+  /** Spec 032: onde fica a boca da criança na tela (null: fora da tela). */
+  bocaNaTela?: () => { x: number; y: number } | null;
   /** Spec 032: a criança está comendo agora? */
   comendo?: () => boolean;
   /**
@@ -3581,6 +3585,14 @@ export function criarCena(
     const p = no.getAbsolutePosition();
     return estado.telaDoPonto?.(p.x, p.y + 0.08, p.z) ?? null;
   };
+  // spec 032: onde fica a boca da criança na tela (no celular deitado a mão fica baixa demais,
+  // perto dos botões: a mãozinha do "Toque para comer" aponta para a boca)
+  estado.bocaNaTela = () => {
+    const b = personagem.boca();
+    b.no.computeWorldMatrix(true);
+    const p = Vector3.TransformCoordinates(Vector3.FromArray(b.pos), b.no.getWorldMatrix());
+    return estado.telaDoPonto?.(p.x, p.y, p.z) ?? null;
+  };
   // spec 032: a criança está comendo agora (a dica de comer some)
   estado.comendo = () => performance.now() < comendoAte;
   // spec 032 (testes e fotos): come a comida da mão, como o toque (também no modo foto)
@@ -3668,8 +3680,11 @@ export function criarCena(
     cameraVisao.position.set(r.posicao.x, r.posicao.y, r.posicao.z);
     // spec 026 (parte 3): dentro da Casa anos 80 o campo de visão abre (a sala inteira na tela)
     cameraVisao.fov = camera.fov * (casaCena ? casaCena.abertura() : 1);
-    // perto demais: o boneco fica meio transparente (só troca quando o degrau muda)
-    const op = Math.min(degrauOpacidade(r.opacidade), estado.limiteOpacidade ?? 1);
+    // perto demais: o boneco fica meio transparente (só troca quando o degrau muda). Spec 032: na
+    // Vila Neon a criança nunca fica transparente (a câmera é que se afasta, mais abaixo)
+    const op = estado.semTransparenciaDoBoneco
+      ? 1
+      : Math.min(degrauOpacidade(r.opacidade), estado.limiteOpacidade ?? 1);
     if (op !== opacidadeAplicada) {
       opacidadeAplicada = op;
       personagem.definirOpacidade(op);

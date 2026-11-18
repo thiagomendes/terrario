@@ -63,8 +63,14 @@ export function ligarDicaComer(e: EstadoDepuracao, scene: Scene): void {
       !e.dicaVila?.() &&
       !e.pertoDeComprar?.() &&
       agora - desde >= ESPERA;
-    const t = pode ? (e.maoNaTela?.() ?? null) : null;
-    if (!t || !boaParaDica(t, innerWidth, innerHeight)) {
+    // a mãozinha toca na comida da mão; se ali não dá (no celular deitado a mão fica baixa, perto
+    // dos botões), toca na boca (qualquer toque na tela come)
+    const t = pode
+      ? ([e.maoNaTela?.(), e.bocaNaTela?.()].find(
+          (q): q is { x: number; y: number } => !!q && boaParaDica(q, innerWidth, innerHeight),
+        ) ?? null)
+      : null;
+    if (!t) {
       dica.mostrar(null);
       return;
     }
