@@ -171,6 +171,7 @@ import {
 } from '../audio/somVila';
 import { criarProgressoObra } from '../ui/progressoObra';
 import { MAO } from '../ui/dicaMira';
+import { EVENTO_ROLETA } from '../ui/roleta';
 import {
   acordeDaCamada,
   humDoPedreiro,
@@ -352,6 +353,7 @@ import {
   degrauOpacidade,
   LADO_OMBRO,
   zoomInicialToque,
+  VISTA_BAIXA_ROLETA,
   direcaoOlhar as direcaoDoOlhar,
   pivoCamera,
   passoDaRoda,
@@ -1162,6 +1164,18 @@ export function criarCena(
   const orbita = toqueCamera
     ? criarCameraOrbita(zoomComeco, ALTURA_PIVO_TOQUE)
     : criarCameraOrbita();
+  if (toqueCamera) {
+    // spec 033: celular deitado com a roleta do menu aberta: a vista baixa um pouco e o boneco
+    // fica inteiro acima da bandeja (em pé sobra tela e nada muda)
+    let roletaAberta = false;
+    const vistaDaRoleta = () =>
+      orbita.baixarVista(roletaAberta && innerWidth > innerHeight ? VISTA_BAIXA_ROLETA : 0);
+    addEventListener(EVENTO_ROLETA, (e) => {
+      roletaAberta = !!(e as CustomEvent<{ aberta?: boolean }>).detail?.aberta;
+      vistaDaRoleta();
+    });
+    addEventListener('resize', vistaDaRoleta);
+  }
   if (toqueCamera)
     // virou o celular sem mexer na pinça: a distância de começo segue a tela
     addEventListener('resize', () => {

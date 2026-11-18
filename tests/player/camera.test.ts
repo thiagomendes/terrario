@@ -117,6 +117,21 @@ describe('órbita em campo aberto', () => {
     expect(ALTURA_PIVO_TOQUE).toBeLessThan(0);
     expect(c.zoom()).toBeGreaterThan(ZOOM_PADRAO);
   });
+  it('spec 033: com a roleta aberta deitado, a vista baixa suave e volta ao fechar', () => {
+    const c = criarCameraOrbita(ZOOM_PADRAO_TOQUE, ALTURA_PIVO_TOQUE);
+    const q = { dt: 1 / 60, olhos, yaw: 0, pitch: 0.3, bloqueia: livre };
+    c.quadro(q);
+    c.baixarVista(0.9);
+    const logo = c.quadro(q).pivo.y;
+    // não pula de uma vez
+    expect(logo).toBeGreaterThan(olhos.y + ALTURA_PIVO_TOQUE - 0.9 + 0.5);
+    let r = c.quadro(q);
+    for (let i = 0; i < 120; i++) r = c.quadro(q);
+    expect(r.pivo.y).toBeCloseTo(olhos.y + ALTURA_PIVO_TOQUE - 0.9, 3);
+    c.baixarVista(0);
+    for (let i = 0; i < 120; i++) r = c.quadro(q);
+    expect(r.pivo.y).toBeCloseTo(olhos.y + ALTURA_PIVO_TOQUE, 3);
+  });
   it('parede à direita: o pivô encolhe o lado e nunca entra nela', () => {
     const parede: BloqueiaCamera = (x) => x >= 11;
     const p = pivoCamera(olhos, 0, 0.3, parede);

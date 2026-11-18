@@ -118,7 +118,11 @@ export const CSS_ROLETA = `
 /* o nome do meio, numa plaquinha creme (letra grande, marrom) */
 .roleta .nome-meio { position: absolute; left: 50%; bottom: 8px; transform: translateX(-50%); max-width: calc(100% - 40px);
   padding: 3px 14px; border-radius: 999px; background: #fff7e8; color: #3b2a1e; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-  font: 800 1.05rem/1.25 var(--jogo, system-ui), sans-serif; box-shadow: 0 2px 0 #e9d6b2; pointer-events: none; }
+  font: 800 1.05rem/1.25 var(--jogo, system-ui), sans-serif; box-shadow: 0 2px 0 #e9d6b2; pointer-events: none;
+  transition: opacity 0.12s; }
+/* com o dedo arrastando, o nome some (ele fica parado no meio e o anel anda com o botão);
+   volta quando a fileira assenta */
+.roleta.arrastando .nome-meio { opacity: 0; }
 /* a plaquinha de cima da bandeja: dentro de uma lista, "Voltar" com o ícone de onde a criança
    veio; na de cima, "Fechar". Sempre no mesmo lugar (um lugar só para sair). */
 .roleta .voltar { position: absolute; left: 0; top: 0; height: 58px; margin: 0; padding: 0 18px 0 8px; border: 0; border-radius: 999px;
@@ -146,6 +150,9 @@ body[data-overlay] .roleta, body.modo-foto .roleta, body.tela-titulo .roleta { d
 `;
 
 let cssPosto = false;
+
+/** Abriu ou fechou (`detail.aberta`): a câmera do celular deitado baixa a vista. */
+export const EVENTO_ROLETA = 'brumaluz:roleta';
 
 /** O que fica embaixo da roleta e dá licença enquanto ela está aberta. */
 export const TAPA_ROLETA =
@@ -288,8 +295,11 @@ export function criarRoleta(op: OpcoesRoda, raiz: HTMLElement = document.body): 
       tique();
       desenhar();
       if (arrastando || pos !== alvo) quadro = requestAnimationFrame(passo);
-      // assentou (os testes esperam por isto antes do próximo toque)
-      else el.dataset.parada = '';
+      else {
+        // assentou (os testes esperam por isto antes do próximo toque); o nome volta
+        el.dataset.parada = '';
+        el.classList.remove('arrastando');
+      }
     };
     quadro = requestAnimationFrame(passo);
   }
@@ -352,7 +362,10 @@ export function criarRoleta(op: OpcoesRoda, raiz: HTMLElement = document.body): 
   el.addEventListener('pointermove', (e) => {
     if (!arrastando || e.pointerId !== dedo) return;
     const dx = e.clientX - x0;
-    if (Math.abs(dx) > 8) moveu = true;
+    if (Math.abs(dx) > 8 && !moveu) {
+      moveu = true;
+      el.classList.add('arrastando');
+    }
     // arrastar para a direita traz os da esquerda (a fileira anda com o dedo)
     pos = pos0 - dx / passo();
     const t = performance.now();
@@ -551,6 +564,7 @@ export function criarRoleta(op: OpcoesRoda, raiz: HTMLElement = document.body): 
       aberta = true;
       licenca(true);
       op.aoMudar?.(true);
+      window.dispatchEvent(new CustomEvent(EVENTO_ROLETA, { detail: { aberta: true } }));
       tocarSomInterface('rodaAbrir');
     }
   }
@@ -568,10 +582,12 @@ export function criarRoleta(op: OpcoesRoda, raiz: HTMLElement = document.body): 
     }
     focoAntes = null;
     arrastando = false;
+    el.classList.remove('arrastando');
     if (aberta) {
       aberta = false;
       licenca(false);
       op.aoMudar?.(false);
+      window.dispatchEvent(new CustomEvent(EVENTO_ROLETA, { detail: { aberta: false } }));
       tocarSomInterface('rodaFechar');
     }
   }

@@ -128,6 +128,13 @@ export const PERTO_INICIO = 1.8;
 export const PERTO_FIM = 0.9;
 /** Sobe e desce sem tranco (por segundo). */
 export const TAXA_SUBIR_PERTO = 5;
+/** Spec 033: a vista baixa e volta com a roleta (por segundo). */
+export const TAXA_DESVIO = 7;
+/**
+ * Spec 033 (revisão das fotos): no celular deitado, com a roleta aberta, a vista baixa isto
+ * (blocos) e o boneco inteiro fica acima da bandeja (sem isto, a bandeja cobria as pernas).
+ */
+export const VISTA_BAIXA_ROLETA = 0.9;
 /**
  * Olhando para baixo numa casinha, o pivô alto empurra a câmera para o teto e ela cola na
  * cabeça: se sem subir ela fica mais longe do que isto (blocos), o pivô não sobe.
@@ -349,6 +356,12 @@ export function criarCameraOrbita(zoom = ZOOM_PADRAO, alturaPivo = ALTURA_PIVO) 
   let ultimo: ResultadoCamera | null = null;
   /** Quanto o pivô subiu por estar perto (blocos). */
   let subida = 0;
+  /**
+   * Spec 033: a vista baixa um pouco (blocos, negativo) enquanto a roleta do menu está aberta no
+   * celular deitado, e o boneco sobe na tela, acima da bandeja; suave, e volta ao fechar.
+   */
+  let desvio = 0;
+  let alvoDesvio = 0;
   return {
     quadro(q: QuadroCamera): ResultadoCamera {
       const o = q.olhos;
@@ -402,7 +415,16 @@ export function criarCameraOrbita(zoom = ZOOM_PADRAO, alturaPivo = ALTURA_PIVO) 
       // descer para caber no teto é na hora; subir e voltar, suave
       subida =
         cabe < subida ? cabe : subida + (alvoSubida - subida) * fracao(TAXA_SUBIR_PERTO, q.dt);
-      const pivo = pivoCamera(seguido, q.yaw, q.pitch, q.bloqueia, LADO_OMBRO, alturaPivo + subida);
+      desvio += (alvoDesvio - desvio) * fracao(TAXA_DESVIO, q.dt);
+      if (Math.abs(alvoDesvio - desvio) < 1e-3) desvio = alvoDesvio;
+      const pivo = pivoCamera(
+        seguido,
+        q.yaw,
+        q.pitch,
+        q.bloqueia,
+        LADO_OMBRO,
+        alturaPivo + subida + desvio,
+      );
       const livre = distanciaLivre(pivo, q.yaw, q.pitch, alvoDistancia, q.bloqueia);
       distancia = suavizarDistancia(distancia, livre, q.dt);
       const f = direcaoOlhar(q.yaw, q.pitch);
@@ -433,7 +455,11 @@ export function criarCameraOrbita(zoom = ZOOM_PADRAO, alturaPivo = ALTURA_PIVO) 
      * Altura do pivô acima dos olhos (negativa no toque), com a subida de quando a câmera
      * está bem perto: a mira usa a mesma.
      */
-    alturaPivo: () => alturaPivo + subida,
+    alturaPivo: () => alturaPivo + subida + desvio,
+    /** Spec 033: baixa a vista `d` blocos (0 volta), suave. */
+    baixarVista(d: number): void {
+      alvoDesvio = -Math.max(0, d);
+    },
     /** Ponto seguido (olhos com atraso); null antes do primeiro quadro. */
     seguido: (): Vec3 | null => (seguido ? { ...seguido } : null),
     ultimo: () => ultimo,
