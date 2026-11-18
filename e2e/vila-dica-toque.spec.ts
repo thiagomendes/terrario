@@ -41,8 +41,9 @@ for (const tamanho of ['deitado', 'empe'] as const)
       tamanho,
     });
     await assentar(page);
-    // longe de tudo: nenhuma dica na tela
-    expect(await dica(page)).toBeNull();
+    // longe de tudo: nenhuma dica na tela (spec 032: só a do carrinho de pipoca da Dona Cida, a
+    // primeira barraca, ao lado de onde a criança nasce)
+    expect([null, 'compra-pipoca-pracinha']).toContain((await dica(page))?.chave ?? null);
 
     // perto do suporte, descalça: "calçar"
     await irAoSuporte(page);

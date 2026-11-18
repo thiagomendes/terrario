@@ -506,7 +506,9 @@ export function ligarVilaNeon(
         dica: {
           figura: FIGURA_DO_LANCHE[b.lanche],
           texto: 'Toque para comprar',
-          ate: b.barraca === 'lanche' ? 4.5 : 5,
+          // (os carrinhos do parque ficam do lado dos brinquedos: a dica deles só bem de perto, e a
+          // de andar no brinquedo vem antes)
+          ate: b.barraca === 'lanche' ? 4.5 : b.barraca === 'lanchonete' ? 5 : 3.6,
         },
         comDica: () => tem(b.item) < MAX_POR_LANCHE && !comprando(),
       }),
