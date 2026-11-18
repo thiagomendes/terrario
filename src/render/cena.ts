@@ -351,7 +351,7 @@ import {
   criarCameraOrbita,
   degrauOpacidade,
   LADO_OMBRO,
-  ZOOM_PADRAO_TOQUE,
+  zoomInicialToque,
   direcaoOlhar as direcaoDoOlhar,
   pivoCamera,
   passoDaRoda,
@@ -988,6 +988,17 @@ export interface EstadoDepuracao {
     x: number,
     y: number,
   ) => { x: number; y: number; z: number; distancia: number; alcanca: boolean } | null;
+  /**
+   * Testes (spec 033): o que um toque em (x, y) faria agora (o fantasma da obra ou o bloco e a
+   * face), sem tocar. A criança simulada da 022 mede a mira com isto.
+   */
+  preverToque?: (
+    x: number,
+    y: number,
+  ) => {
+    fantasma: { x: number; y: number; z: number } | null;
+    alvo: { x: number; y: number; z: number; normal: Vec3 } | null;
+  };
   /** Testes: o bloco que o destaque (contorno) marca agora, ou null. */
   destaque?: () => { x: number; y: number; z: number } | null;
   /** Testes: onde um ponto do mundo aparece na tela (coordenadas CSS), ou null atrás da câmera. */
@@ -1146,9 +1157,19 @@ export function criarCena(
   scene.skipPointerMovePicking = true;
   // a câmera de terceira pessoa (spec 015): segue o boneco, desvia de blocos, zoom
   const toqueCamera = typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches;
+  // spec 033: no celular a câmera começa mais afastada (em pé um pouco mais que deitado)
+  let zoomComeco = zoomInicialToque(innerWidth, innerHeight);
   const orbita = toqueCamera
-    ? criarCameraOrbita(ZOOM_PADRAO_TOQUE, ALTURA_PIVO_TOQUE)
+    ? criarCameraOrbita(zoomComeco, ALTURA_PIVO_TOQUE)
     : criarCameraOrbita();
+  if (toqueCamera)
+    // virou o celular sem mexer na pinça: a distância de começo segue a tela
+    addEventListener('resize', () => {
+      const novo = zoomInicialToque(innerWidth, innerHeight);
+      if (Math.abs(orbita.zoom() - zoomComeco) < 1e-6 && novo !== zoomComeco)
+        orbita.definirZoom(novo);
+      zoomComeco = novo;
+    });
   const edicoes = criarEdicoes(semente);
   if (dadosIniciais) edicoes.importar(dadosIniciais.edicoes);
   // spec 016: quem colocou cada bloco (a tabela do núcleo; muda pelos quadros)
@@ -3572,6 +3593,16 @@ export function criarCena(
     };
     const distancia = Math.hypot(p.x - olhos.x, p.y - olhos.y, p.z - olhos.z);
     return { x: a.x, y: a.y, z: a.z, distancia, alcanca: !!alvoNoRaio(r, true) };
+  };
+  estado.preverToque = (x, y) => {
+    const antes = raioToque;
+    raioToque = raioNaTela(x, y);
+    alvoMemoQuadro = -1;
+    const f = podeEncherObra() ? fantasmaNaMira() : null;
+    const a = calcularAlvo();
+    raioToque = antes;
+    alvoMemoQuadro = -1;
+    return { fantasma: f ? { x: f.x, y: f.y, z: f.z } : null, alvo: a };
   };
   estado.telaDoPonto = (x, y, z) => {
     const motor = scene.getEngine();

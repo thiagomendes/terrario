@@ -54,6 +54,19 @@ export const ALTURA_PIVO = 0.2;
  */
 export const ALTURA_PIVO_TOQUE = -0.35;
 export const ZOOM_PADRAO_TOQUE = 4.4;
+/**
+ * Spec 033 (dono, 18 nov 2026): no celular a câmera começa mais afastada, perto de onde o dono
+ * deixa com a pinça. Deitado +8 % (4,75) e em pé +15 % (5,06): em pé a tela é estreita e pede
+ * um pouco mais. A criança simulada da 022 não perde acerto de primeira nessas distâncias
+ * (deitado cai a partir de +15 %; em pé, a partir de +25 %). A pinça continua (2,5 a 7).
+ */
+export const ZOOM_TOQUE_DEITADO = 4.75;
+export const ZOOM_TOQUE_EM_PE = 5.06;
+
+/** A distância de começo no toque para uma tela de `largura` × `altura` (px). */
+export function zoomInicialToque(largura: number, altura: number): number {
+  return altura > largura ? ZOOM_TOQUE_EM_PE : ZOOM_TOQUE_DEITADO;
+}
 export const LADO_OMBRO = 0.45;
 /** Olhando quase reto para baixo, o lado some (a mira volta para o pé do boneco). */
 export const PITCH_SEM_LADO = 1.4;
