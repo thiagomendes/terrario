@@ -382,11 +382,23 @@ export function criarCasaVila(
   // de pedra dela sai, e a tampa daquele pedaço junto)
   const mTampas = pc.paredes.map((r, i) => (i === 4 ? null : tampa(r, i, pc.y + 1, false)));
   const meio = pc.paredes[4];
-  const tampaMeio: { m: Mesh; x: number; z: number }[] = [];
+  const tampaMeio: { m: Mesh; chao: Mesh; x: number; z: number }[] = [];
+  // (onde a pedra sai, o assoalho embaixo dela não tem a face de cima na malha dos blocos: um
+  // pedaço de tábua tapa o buraco)
+  // (o plástico acende mais que o bloco: o tom é o do assoalho já na luz de dentro)
+  const matAssoalho = pl.cor('#6e5236', 0);
   for (let z = meio.z0; z <= meio.z1; z++) {
     if (noVao(meio.x0, z)) continue;
     const m = tampa({ x0: meio.x0, z0: z, x1: meio.x0, z1: z }, 4, pc.y + 1, false);
-    tampaMeio.push({ m, x: meio.x0 + 0.5, z: z + 0.5 });
+    const chao = MeshBuilder.CreateBox(`casa-assoalho-meio-${z}`, { width: 1, height: 0.02, depth: 1 }, scene);
+    chao.position.set(meio.x0 + 0.5, pc.y + 0.01, z + 0.5);
+    chao.material = matAssoalho;
+    chao.isPickable = false;
+    chao.freezeWorldMatrix();
+    chao.setEnabled(false);
+    opcoes.tapaOGlow?.(chao);
+    todas.push(chao);
+    tampaMeio.push({ m, chao, x: meio.x0 + 0.5, z: z + 0.5 });
   }
   const mTopos = pc.paredes.slice(0, 4).map((r, i) => tampa(r, i, pc.corte.y, true));
   /** Quanto cada parede já sumiu (a do sul, a do norte, a do oeste, a do leste, a do meio). */
@@ -729,10 +741,13 @@ export function criarCasaVila(
       });
       const olho = q.dentro?.olho;
       for (const t of tampaMeio) {
-        const v =
-          kParedes[4] > 0.6 &&
-          !(olho && Math.hypot(t.x - olho.x, t.z - olho.z) < PEDRA_PERTO_DO_OLHO);
+        const perto =
+          kParedes[4] > 0.5 &&
+          !!olho &&
+          Math.hypot(t.x - olho.x, t.z - olho.z) < PEDRA_PERTO_DO_OLHO;
+        const v = kParedes[4] > 0.6 && !perto;
         if (t.m.isEnabled() !== v) t.m.setEnabled(v);
+        if (t.chao.isEnabled() !== perto) t.chao.setEnabled(perto);
       }
       mTopos.forEach((m, i) => {
         const v = kTelhado > 0.6 && kParedes[i] < 0.4;
