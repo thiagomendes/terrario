@@ -33,7 +33,7 @@ export const MORDIDAS: readonly [number, number, number] = [0.6, 1.2, 1.85];
 /** O braço começa a descer (s). */
 export const DESCE = 2.15;
 /** A carinha feliz (os olhos sorrindo e os corações), de quando a quando (s). */
-export const FELIZ: readonly [number, number] = [2.0, 3.2];
+export const FELIZ: readonly [number, number] = [1.95, 3.5];
 /** O movimento inteiro no boneco (s): a refeição e a carinha feliz até o fim. */
 export const FIM_REFEICAO = FELIZ[1];
 

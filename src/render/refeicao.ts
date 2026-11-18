@@ -68,7 +68,9 @@ export const NA_BOCA = {
   /** Folga dos lábios até a ponta (blocos, na frente do rosto). */
   folga: 0.012,
   /** Quanto a comida sai da boca entre as mordidas (blocos). */
-  afasta: 0.09,
+  afasta: 0.1,
+  /** Quanto ela vira de lado entre as mordidas (rad): a marca da mordida aparece. */
+  giro: 1.0,
   /** A comida na boca, um pouco maior que na mão (lê de longe, na câmera de trás). */
   escala: 1.25,
   /** Para onde vai a ponta de fora das compridas (cabeça: x para o lado, y, z para a frente). */
@@ -806,6 +808,16 @@ export function criarRefeicoes(scene: Scene, op: OpcoesRefeicoes): Refeicoes {
         Matrix.FromXYZAxesToRef(x, y, z, giro);
         q = Quaternion.FromRotationMatrix(giro);
       } else q = Quaternion.FromEulerAngles(0, Math.PI / 2, 0);
+      // mastigando, a comida também vira um pouco de lado: a marca da mordida, que estava virada
+      // para a boca, aparece para quem olha (de frente, de lado e de trás)
+      // (no canudinho a criança não solta: o canudo fica na boca e o nível é que desce)
+      const solta = c.jeito === 'canudinho' ? 0 : afastaNaRefeicao(c.t);
+      const ag = solta * NA_BOCA.giro;
+      if (ag) {
+        Matrix.FromQuaternionToRef(q, giro);
+        giro.multiplyToRef(Matrix.RotationY(ag), local);
+        q = Quaternion.FromRotationMatrix(local);
+      }
       // o ponto que se morde, girado, encosta na frente dos lábios
       Matrix.FromQuaternionToRef(q, giro);
       Vector3.TransformCoordinatesToRef(comida.contato(c.mordidas), giro, naCabeca);
@@ -813,7 +825,7 @@ export function criarRefeicoes(scene: Scene, op: OpcoesRefeicoes): Refeicoes {
       const [dx, dy, dz] = DESLOCAR[c.item] ?? [0, 0, 0];
       // mastigando, a comida sai um tiquinho da boca (para a frente e para baixo): a marca da
       // mordida aparece
-      const af = afastaNaRefeicao(c.t) * NA_BOCA.afasta;
+      const af = solta * NA_BOCA.afasta;
       const pos = new Vector3(
         bx + dx - naCabeca.x,
         by + dy - naCabeca.y - af * 0.45,
@@ -884,8 +896,9 @@ export function criarRefeicoes(scene: Scene, op: OpcoesRefeicoes): Refeicoes {
           dono.raiz.computeWorldMatrix(true);
           op.som(SOM_DO_JEITO[c.jeito], dono.raiz.getAbsolutePosition(), c.meu);
         }
-        // o que sobrou (o balde, o copo, o palito) some com um brilhinho quando o braço desce
-        if (!c.sumiu && c.t >= DESCE + 0.1) {
+        // o que sobrou (o balde, o copo, o palito) some com um brilhinho quando o braço já desceu
+        // (perto da mão: o brilhinho na frente do rosto parecia farelo nos olhos)
+        if (!c.sumiu && c.t >= Math.max(DESCE + 0.1, DURACAO_REFEICAO - 0.05)) {
           c.sumiu = true;
           if (c.comida) {
             c.comida.modelo.no.computeWorldMatrix(true);

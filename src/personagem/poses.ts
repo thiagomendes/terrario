@@ -11,7 +11,7 @@ export const PERIODO_MINERAR = 0.25;
  * Spec 032: o braço com a comida na frente da boca (o giro para a frente e para dentro): a
  * comida para na boca, sem entrar no rosto.
  */
-export const AJUSTE_COMER = { braco: -1.65, abre: -0.9, feliz: 0.45 };
+export const AJUSTE_COMER = { braco: -1.5, abre: -0.75, feliz: 0.45 };
 export const DURACAO_COLOCAR = 0.2;
 export const DURACAO_PULO = 0.25;
 export const DURACAO_ATERRISSAGEM = 0.25;

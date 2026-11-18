@@ -49,8 +49,8 @@ export interface OpcoesCompras {
 }
 
 /** Os tempos da coreografia (s, do toque). */
-const FICHA_SAI = 0.15;
-const FICHA_CHEGA = 0.5;
+const FICHA_SAI = 0.3;
+const FICHA_CHEGA = 0.62;
 const PEGA_NO_BALCAO = 0.62;
 const NA_MAO_DELA = 0.85;
 const ESTICA = 1.1;
@@ -146,6 +146,8 @@ export function criarRenderCompras(scene: Scene, op: OpcoesCompras): RenderCompr
   /** A fichinha: a moeda dourada de brinquedo com a estrela creme dos dois lados. */
   function fichinha(): TransformNode {
     const no = new TransformNode(`fichinha-${n++}`, scene);
+    // (do tamanho de uma moeda grande de brinquedo na mão do boneco: a criança vê de longe)
+    no.scaling.setAll(1.5);
     const disco = cilindro(`fichinha-disco-${n}`, scene, 0.022, 0.075, 0.075, pl.cor('#ffcf3a', 0.6));
     disco.parent = no;
     const borda = cilindro(`fichinha-borda-${n}`, scene, 0.026, 0.062, 0.062, pl.cor('#f2b21e', 0.5));
@@ -266,27 +268,32 @@ export function criarRenderCompras(scene: Scene, op: OpcoesCompras): RenderCompr
           e.preparou = true;
           op.preparo(e.b, e.i);
         }
-        // o lanche na mão da vendedora
+        // o lanche aparece na mão da vendedora, sempre em pé (o copo com o canudo para cima, o
+        // palito do algodão para baixo), e acompanha a mão dela até o pulinho
         if (!e.naMao && e.t >= NA_MAO_DELA) {
           e.naMao = true;
-          vend?.boneco.definirNaMao(null, e.b.item);
-        }
-        // 3. o lanche pula da mão dela para a da criança
-        if (!e.pulou && e.t >= PULA) {
-          e.pulou = true;
-          vend?.boneco.definirNaMao(null, null);
-          const de = maoDe(vend, e.lancheDe) ?? e.lancheDe.copyFrom(Vector3.FromArray(e.b.p));
           e.lanche = modeloNaMao(scene, pl, null, e.b.item, `vila-compra-${n++}`);
-          if (e.lanche) {
-            e.lanche.no.position.copyFrom(de);
+          if (e.lanche)
             for (const m of e.lanche.malhas) {
               m.alwaysSelectAsActiveMesh = true;
               op.preparar?.(m);
             }
-          }
+        }
+        if (e.lanche && !e.pulou) {
+          const mao = maoDe(vend, v) ?? Vector3.FromArray(e.b.p);
+          // (cresce num "pop" ao aparecer)
+          const s = Math.min(1, (e.t - NA_MAO_DELA) / 0.12);
+          e.lanche.no.scaling.setAll(Math.max(0.05, s));
+          e.lanche.no.position.set(mao.x, mao.y - 0.02, mao.z);
+        }
+        // 3. o lanche pula da mão dela para a da criança
+        if (!e.pulou && e.t >= PULA) {
+          e.pulou = true;
+          const de = maoDe(vend, e.lancheDe) ?? e.lancheDe.copyFrom(Vector3.FromArray(e.b.p));
+          if (e.lanche) e.lanche.no.scaling.setAll(1);
           op.som('pulo', de);
         }
-        if (e.lanche) {
+        if (e.lanche && e.pulou) {
           const ate = maoDe(comprador, v);
           const f = suave((e.t - PULA) / (CHEGA - PULA));
           if (ate) {

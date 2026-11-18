@@ -87,7 +87,8 @@ test('comer: cada comida de perto, mordida por mordida', async ({ browser }) => 
   for (const item of COMIDAS) {
     await page.evaluate((item) => {
       const e = window.__brumaluz!;
-      e.inventario!.definir(0, { item, qtd: 4 });
+      // (um só: depois da refeição a mão fica vazia, como de verdade)
+      e.inventario!.definir(0, { item, qtd: 1 });
       e.selecionarSlot!(0);
     }, item);
     await page.waitForTimeout(700);
@@ -116,10 +117,11 @@ test('comer: cada comida de perto, mordida por mordida', async ({ browser }) => 
       await foto(page, `comer-${item}-${lado}-0-na-mao`);
       await page.evaluate(() => window.__brumaluz!.comer!());
       const marcos: [number, string][] = [
-        [420, '1-leva'],
-        [700, '2-mordida1'],
-        [1300, '3-mordida2'],
-        [1950, '4-mordida3'],
+        // (a foto sai uns 0,25 s depois de pedida)
+        [330, '1-leva'],
+        [620, '2-mordida1'],
+        [1220, '3-mordida2'],
+        [1870, '4-mordida3'],
         [2500, '5-feliz'],
       ];
       let t0 = 0;
@@ -132,7 +134,7 @@ test('comer: cada comida de perto, mordida por mordida', async ({ browser }) => 
       // (a comida acabou: põe de novo para a próxima vista)
       await page.evaluate((item) => {
         const e = window.__brumaluz!;
-        e.inventario!.definir(0, { item, qtd: 4 });
+        e.inventario!.definir(0, { item, qtd: 1 });
       }, item);
       await page.waitForTimeout(400);
     }
@@ -150,7 +152,7 @@ test('comer: cada comida de perto, mordida por mordida', async ({ browser }) => 
     const p = e.vila!()!;
     e.teleportar!(p.nascimento.x + 2, p.nascimento.z + 3, p.h + 1.2);
     e.apontar!(0.4, 0.15);
-    e.inventario!.definir(0, { item: 'cachorro_quente', qtd: 2 });
+    e.inventario!.definir(0, { item: 'cachorro_quente', qtd: 1 });
     e.selecionarSlot!(0);
   });
   await page.waitForTimeout(2000);
@@ -341,9 +343,12 @@ test('comprar: cada barraca antes, no meio e depois', async ({ browser }) => {
         // e de cima se vê a mão dela, o balcão e a vendedora
         // (baixo o bastante para ver por baixo do toldo das barracas, de lado o bastante para a
         // cabeça da criança não tapar a mão)
-        const cx = pes[0] - Math.sin(yaw0) * 1.6 + Math.cos(yaw0) * 1.25;
-        const cz = pes[2] - Math.cos(yaw0) * 1.6 - Math.sin(yaw0) * 1.25;
-        const cy = pes[1] + 2.0;
+        // de lado e de longe (no celular em pé a tela é estreita): a criança, o lanche que pula e a
+        // vendedora na mesma foto
+        const a = yaw0 + 1.45;
+        const cx = pes[0] + Math.sin(yaw0) * 1.3 + Math.sin(a) * 5.6;
+        const cz = pes[2] + Math.cos(yaw0) * 1.3 + Math.cos(a) * 5.6;
+        const cy = pes[1] + 2.3;
         f.posicionar!(cx, cy, cz);
         const tx = pes[0] + Math.sin(yaw0) * 1.6;
         const tz = pes[2] + Math.cos(yaw0) * 1.6;
