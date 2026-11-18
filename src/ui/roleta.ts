@@ -110,6 +110,7 @@ export const CSS_ROLETA = `
   border-radius: 999px; display: grid; place-items: center; cursor: pointer; color: var(--tinta, #3b2a1e); background: var(--creme, #fff7e8);
   box-shadow: 0 4px 0 #e9d6b2, 0 8px 14px rgba(60, 35, 10, 0.22), inset 0 2px 0 rgba(255, 255, 255, 0.85);
   will-change: transform, opacity; touch-action: none; }
+.roleta .item .desenho { display: contents; }
 .roleta .item svg { width: 56%; height: 56%; pointer-events: none; }
 .roleta .item.meio { background: #ffe4a8; box-shadow: 0 0 0 4px #f5b52e, 0 5px 0 #d99a1f, 0 10px 18px rgba(60, 35, 10, 0.28), inset 0 2px 0 rgba(255, 255, 255, 0.85); }
 .roleta .item.escolhido { animation: roleta-pulo 0.2s ease-out; }
@@ -209,7 +210,15 @@ export function criarRoleta(op: OpcoesRoda, raiz: HTMLElement = document.body): 
 
   // os botões reaproveitados (um por lugar da fileira, -R..R)
   const R = 3;
-  const chips: { b: HTMLButtonElement; i: number }[] = [];
+  /** Um botão da fileira, com o estilo escrito por último (só escreve o que mudou). */
+  interface Chip {
+    b: HTMLButtonElement;
+    i: number;
+    lista: string;
+    /** opacidade, transform, pointer-events, visibility, z-index */
+    e: string[];
+  }
+  const chips: Chip[] = [];
   for (let k = -R; k <= R; k++) {
     const b = document.createElement('button');
     b.type = 'button';
@@ -217,7 +226,28 @@ export function criarRoleta(op: OpcoesRoda, raiz: HTMLElement = document.body): 
     b.setAttribute('role', 'menuitem');
     b.tabIndex = -1;
     trilho.append(b);
-    chips.push({ b, i: Number.NaN });
+    chips.push({ b, i: Number.NaN, lista: '', e: ['', '', '', '', ''] });
+  }
+  const PROPS = ['opacity', 'transform', 'pointer-events', 'visibility', 'z-index'] as const;
+  function estilo(c: Chip, ...v: string[]): void {
+    for (let p = 0; p < PROPS.length; p++)
+      if (c.e[p] !== v[p]) {
+        c.e[p] = v[p];
+        c.b.style.setProperty(PROPS[p], v[p]);
+      }
+  }
+  /** O desenho de cada item (ícone e selinho da tecla), montado uma vez por lista. */
+  const desenhos = new Map<string, HTMLElement>();
+  function desenhoDoItem(lid: string, i: number, it: ItemRoda): HTMLElement {
+    const chave = `${lid}:${i}`;
+    let d = desenhos.get(chave);
+    if (!d) {
+      d = document.createElement('span');
+      d.className = 'desenho';
+      d.innerHTML = it.icone + (it.tecla ? `<kbd>${it.tecla}</kbd>` : '');
+      desenhos.set(chave, d);
+    }
+    return d;
   }
 
   const n = () => lista?.itens.length ?? 0;
@@ -237,31 +267,35 @@ export function criarRoleta(op: OpcoesRoda, raiz: HTMLElement = document.body): 
       const u = base + k - pos;
       const vis = Math.abs(k) <= lado && N > 0;
       if (!vis) {
-        c.b.style.opacity = '0';
-        c.b.style.pointerEvents = 'none';
-        c.b.style.visibility = 'hidden';
+        estilo(c, '0', '', 'none', 'hidden', '0');
         return;
       }
-      c.b.style.visibility = '';
       const i = modulo(base + k, N);
-      if (c.i !== i || c.b.dataset.lista !== listaId(l)) {
+      const lid = listaId(l);
+      if (c.i !== i || c.lista !== lid) {
         const it = l.itens[i];
         c.i = i;
-        c.b.dataset.lista = listaId(l);
-        c.b.innerHTML = it.icone + (it.tecla ? `<kbd>${it.tecla}</kbd>` : '');
+        c.lista = lid;
+        // o desenho de cada item é montado uma vez e só muda de botão (sem ler SVG a cada passo)
+        c.b.replaceChildren(desenhoDoItem(lid, i, it));
         c.b.setAttribute('aria-label', it.nome);
         c.b.setAttribute('data-item', it.id);
       }
       const x = deslocamentoNaRoleta(u, tamanho);
       const s = escalaNaRoleta(u);
-      const tf = `translate(${x.toFixed(1)}px, ${((1 - s) * tamanho * 0.18).toFixed(1)}px) scale(${s.toFixed(3)})`;
-      c.b.style.transform = tf;
-      c.b.style.setProperty('--tf', tf);
-      c.b.style.opacity = opacidadeNaRoleta(u).toFixed(3);
-      c.b.style.zIndex = String(10 - Math.round(Math.abs(u) * 2));
-      c.b.style.pointerEvents = opacidadeNaRoleta(u) > 0.3 ? '' : 'none';
-      c.b.classList.toggle('meio', k === 0 && Math.abs(u) < 0.5);
-      c.b.tabIndex = k === 0 ? 0 : -1;
+      const op = opacidadeNaRoleta(u);
+      estilo(
+        c,
+        op.toFixed(3),
+        `translate(${x.toFixed(1)}px, ${((1 - s) * tamanho * 0.18).toFixed(1)}px) scale(${s.toFixed(3)})`,
+        op > 0.3 ? '' : 'none',
+        '',
+        String(10 - Math.round(Math.abs(u) * 2)),
+      );
+      const meio = k === 0 && Math.abs(u) < 0.5;
+      if (c.b.classList.contains('meio') !== meio) c.b.classList.toggle('meio', meio);
+      const tab = k === 0 ? 0 : -1;
+      if (c.b.tabIndex !== tab) c.b.tabIndex = tab;
     });
     const nome = l.itens[meioI]?.nome ?? '';
     if (nomeMeio.textContent !== nome) nomeMeio.textContent = nome;
@@ -482,6 +516,8 @@ export function criarRoleta(op: OpcoesRoda, raiz: HTMLElement = document.body): 
     const it = l?.itens[i];
     if (!l || !it || !aberta) return;
     const c = chips[R];
+    // o pulinho parte de onde o botão está
+    c.b.style.setProperty('--tf', c.e[1]);
     c.b.classList.remove('escolhido');
     void c.b.offsetWidth;
     c.b.classList.add('escolhido');

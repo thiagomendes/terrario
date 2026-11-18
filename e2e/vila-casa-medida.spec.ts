@@ -100,6 +100,18 @@ test('celular em pé: a casa, a rampa, o parque, a rua e o festival', async ({ b
   await olhar(0, 0.02);
   await page.waitForTimeout(3000);
   medidas['festival-pior-caso'] = (await medir(page, 'festival-pior-caso')).fps;
+  // spec 033 (CASA_AB=1): no mesmo lugar e na mesma hora, a câmera de começo de antes (4,4) e a
+  // de agora, alternadas três vezes (a do celular em pé começa a 5,06)
+  if (process.env.CASA_AB) {
+    const ab: Record<string, number[]> = {};
+    for (let volta = 0; volta < 3; volta++)
+      for (const z of [4.4, 5.06]) {
+        await page.evaluate((z) => window.__brumaluz!.camera!.definirZoom(z), z);
+        await page.waitForTimeout(2500);
+        (ab[z] ??= []).push((await medir(page, `festival-${z}`)).fps);
+      }
+    console.log(`FESTIVAL-AB ${JSON.stringify(ab)}`);
+  }
   console.log(`MEDIDAS DA PARTE 3 ${JSON.stringify(medidas)}`);
   for (const [k, v] of Object.entries(medidas))
     if (k !== 'festival-pior-caso') expect(v, k).toBeGreaterThanOrEqual(55);
