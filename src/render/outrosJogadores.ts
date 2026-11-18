@@ -161,13 +161,30 @@ export function criarOutrosJogadores(scene: Scene) {
     };
   }
 
+  /** Spec 032: o amigo começou a comer (`item`): a tela faz as três mordidas no boneco dele. */
+  let aoComer: ((personagem: Outro['personagem'], item: string | null) => void) | null = null;
+  let aoSair: ((personagem: Outro['personagem']) => void) | null = null;
+
   function descartar(o: Outro): void {
+    aoSair?.(o.personagem);
     o.balao?.descartar();
     o.personagem.descartar();
     o.placa.remove();
   }
 
   return {
+    /** Spec 032: quem desenha a refeição do amigo (as mordidas na comida certa). */
+    definirRefeicao(
+      comer: ((personagem: Outro['personagem'], item: string | null) => void) | null,
+      sair: ((personagem: Outro['personagem']) => void) | null,
+    ) {
+      aoComer = comer;
+      aoSair = sair;
+    },
+    /** Spec 032: o boneco de um amigo (testes, e a entrega do lanche que ele comprou). */
+    personagemDe: (id: string) => outros.get(id)?.personagem ?? null,
+    /** Spec 032: o animador de um amigo (o braço que paga e pega o lanche). */
+    animadorDe: (id: string) => outros.get(id)?.animador ?? null,
     /**
      * Apelidos e aparências (chegam quando alguém entra ou muda). Os perfis vêm todos juntos:
      * só refaz o boneco de quem mudou de visual (auditoria 017); o apelido só troca o texto.
@@ -279,7 +296,11 @@ export function criarOutrosJogadores(scene: Scene) {
           if (antes) {
             if (a.acoes[0] > antes[0]) o.animador.evento('golpe');
             if (a.acoes[1] > antes[1]) o.animador.evento('colocacao');
-            if (a.acoes[2] > antes[2]) o.animador.evento('comer');
+            if (a.acoes[2] > antes[2]) {
+              o.animador.evento('comer');
+              // spec 032: as três mordidas na comida que ele está comendo (o núcleo diz qual)
+              aoComer?.(o.personagem, a.come ?? null);
+            }
           }
           o.acoes = [a.acoes[0], a.acoes[1], a.acoes[2]];
         }

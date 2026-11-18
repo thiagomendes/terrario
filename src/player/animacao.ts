@@ -14,14 +14,18 @@ import {
   type SaidaCorpo,
 } from '../personagem/vida';
 import { VELOCIDADE_MINIMA_PASSO } from './movimento';
+import { FIM_REFEICAO } from '../jogo/refeicao';
 
 /** Tempo (s) em que o estado "minerando" persiste após cada golpe. */
 export const JANELA_GOLPE = PERIODO_MINERAR * 1.4;
 
 export type EventoAnimacao = 'golpe' | 'colocacao' | 'pulo' | 'aterrissagem' | 'comer';
 
-/** Quanto dura levar a comida à boca e mastigar (s). */
-export const DURACAO_COMER = 1.1;
+/**
+ * Quanto dura a refeição (s): levar a comida à boca, as três mordidas, descer e a carinha feliz
+ * (spec 032; antes 1,1 s de mastigar).
+ */
+export const DURACAO_COMER = FIM_REFEICAO;
 
 export interface MovimentoAnimacao {
   velocidadeHoriz: number;

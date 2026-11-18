@@ -837,6 +837,14 @@ export function criarRenderCriaturas(
       return true;
     },
     /**
+     * Spec 032: o boneco e o animador de um morador à vista (a vendedora que entrega o lanche:
+     * o braço esticado e o lanche na mão); null se ele ainda não tem boneco.
+     */
+    bonecoDoMorador(id: number): { boneco: Personagem; animador: ReturnType<typeof criarAnimador> } | null {
+      const mb = moradores.get(id);
+      return mb ? { boneco: mb.boneco, animador: mb.animador } : null;
+    },
+    /**
      * Spec 026: uma pose por cima da do morador (a banda no Show da Vila); null tira.
      */
     /**

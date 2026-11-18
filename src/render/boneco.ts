@@ -339,6 +339,8 @@ export function criarBoneco(
   // o item de brinquedo na mão, preso pelo ponto de pega (ponta do cabo nas ferramentas)
   let modelo: ModeloItem | null = null;
   let chaveMao = '';
+  /** Spec 032: a mão segura outra coisa por um tempo (a comida mordida, o lanche da entrega). */
+  let maoOcupada = false;
   const naMao = {
     definir(bloco: number | null, item: string | null) {
       const chave = `${bloco ?? ''}|${item ?? ''}`;
@@ -363,14 +365,18 @@ export function criarBoneco(
         modelo.no.position.set(0, -0.02, 0.1);
         modelo.no.scaling.setAll(1.6);
       } else modelo.no.position.set(0, -0.05, 0.09);
-      for (const m of modelo.malhas) m.setEnabled(visivel);
+      for (const m of modelo.malhas) m.setEnabled(visivel && !maoOcupada);
     },
-    segurando: () => modelo !== null,
+    segurando: () => modelo !== null || maoOcupada,
     definirLuz(_f: number) {
       // os materiais são os mesmos do boneco (seguem a mesma luz)
     },
     definirVisivel(v: boolean) {
-      if (modelo) for (const m of modelo.malhas) m.setEnabled(v);
+      if (modelo) for (const m of modelo.malhas) m.setEnabled(v && !maoOcupada);
+    },
+    ocupar(o: boolean) {
+      maoOcupada = o;
+      if (modelo) for (const m of modelo.malhas) m.setEnabled(visivel && !o);
     },
     descartar() {
       if (modelo) {
@@ -762,7 +768,8 @@ export function criarBoneco(
         no.rotation.x = -0.12;
       }
     }
-    const pisca = pose.piscar ? 0.1 : 1;
+    // spec 032: a carinha feliz depois de comer (os olhos fecham sorrindo)
+    const pisca = pose.piscar ? 0.1 : 1 - (pose.feliz ?? 0) * 0.78;
     for (const o of olhos) o.scaling.y = (baseY.get(o) ?? 1) * pisca;
     if (boca) boca.scaling.y = (baseY.get(boca) ?? 1) * (1 + (pose.boca ?? 0) * 1.1);
   }
@@ -787,6 +794,9 @@ export function criarBoneco(
     definirNaMao(bloco, item) {
       naMao.definir(bloco, item);
     },
+    noDaMao: () => pega,
+    ocuparMao: (o) => naMao.ocupar(o),
+    plasticos: () => mats,
     definirVisivel(v) {
       visivel = v;
       for (const m of malhas) m.setEnabled(v);

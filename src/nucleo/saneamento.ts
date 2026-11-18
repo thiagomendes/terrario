@@ -207,13 +207,16 @@ export function sanear(c: unknown): Comando | null {
       if (o.a === 'guiar' && inteiro(o.x, -100, 100) && inteiro(o.z, -100, 100) && inteiro(o.n, 1, 2 ** 31))
         return { t: 'vila', a: 'guiar', x: o.x, z: o.z, n: o.n } as unknown as Comando;
       // spec 026 (parte 2, etapa B): o balão fugido (0 a 2), a barraca de prendas (0 a argola, 1
-      // a pescaria), o feno do fardo, o cocho, a fita da locadora e a vitamina da lanchonete
+      // a pescaria), o feno do fardo, o cocho e a fita da locadora
       if (o.a === 'balao' && inteiro(o.i, 0, 2))
         return { t: 'vila', a: 'balao', i: o.i } as unknown as Comando;
       if (o.a === 'prenda' && inteiro(o.i, 0, 1))
         return { t: 'vila', a: 'prenda', i: o.i } as unknown as Comando;
-      if (o.a === 'feno' || o.a === 'cocho' || o.a === 'fita' || o.a === 'vitamina')
+      if (o.a === 'feno' || o.a === 'cocho' || o.a === 'fita')
         return { t: 'vila', a: o.a } as unknown as Comando;
+      // spec 032: comprar o lanche de uma barraca (o índice do lugar de comprar)
+      if (o.a === 'comprar' && inteiro(o.i, 0, 15))
+        return { t: 'vila', a: 'comprar', i: o.i } as unknown as Comando;
       // spec 026 (parte 3): a TV, o videocassete, o disco e o baú da casa; o trilho da rampa
       if (o.a === 'tv' || o.a === 'videocassete' || o.a === 'disco' || o.a === 'bau')
         return { t: 'vila', a: o.a } as unknown as Comando;

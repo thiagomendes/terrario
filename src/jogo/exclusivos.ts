@@ -97,6 +97,8 @@ export const CUBO_CORES = 'cubo_cores';
  */
 export const FENO = 'feno';
 export const FATIA_BOLO = 'fatia_bolo';
+/** Spec 032: o algodão-doce do parque (comida, comprado do Seu Chico). */
+export const ALGODAO_DOCE = 'algodao_doce';
 export const EXCLUSIVOS_VILA: Exclusivos = {
   blocos: [...BLOCOS_DE_RUA, ...BLOCOS_SO_DA_VILA],
   itens: [
@@ -110,6 +112,7 @@ export const EXCLUSIVOS_VILA: Exclusivos = {
     CUBO_CORES,
     FENO,
     FATIA_BOLO,
+    ALGODAO_DOCE,
   ],
 };
 

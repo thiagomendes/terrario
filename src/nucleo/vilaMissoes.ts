@@ -13,7 +13,8 @@
  *   o feno nele (`lanche:feno`), e as duas lhamas da fazendinha vêm comer e pulam.
  * - **f8 Prenda para a vovó:** a argola e a pescaria (um toque em cada: sempre acerta), a lhama
  *   de pelúcia na mão e a entrega à vovó, no portãozinho da Casa anos 80 (é só chegar perto).
- * - **A rua:** a fita de vídeo da locadora e a vitamina da lanchonete vão para a mochila.
+ * - **A rua:** a fita de vídeo da locadora vai para a mochila (a vitamina da lanchonete, desde a
+ *   spec 032, se compra: `vilaCompras.ts`).
  *
  * Nenhuma moedinha por ação: as moedinhas vêm no fim da missão (alma). Nada de tempo, nada que
  * se perde: sem a pelúcia na mochila a vovó recebe a prenda do mesmo jeito.
@@ -21,7 +22,7 @@
 import type { PontosParque } from '../world/vilaParque';
 import type { PontosRua } from '../world/vilaNeon';
 import type { Criatura } from '../jogo/criaturas';
-import { FENO, FITA_VIDEO, PELUCIA, VITAMINA } from '../jogo/exclusivos';
+import { FENO, FITA_VIDEO, PELUCIA } from '../jogo/exclusivos';
 import {
   ALCANCE_BARRACA,
   ALCANCE_COCHO,
@@ -35,7 +36,6 @@ import {
   F_PRENDA,
   FENO_ANTIGO,
   MAX_FITAS,
-  MAX_VITAMINAS,
   N_BALOES,
   PERTO_DA_VOVO,
   PRENDAS,
@@ -81,7 +81,7 @@ export type EventoMissoes =
 export type ComandoMissoes =
   | { a: 'balao'; i: number }
   | { a: 'prenda'; i: number }
-  | { a: 'feno' | 'cocho' | 'fita' | 'vitamina' };
+  | { a: 'feno' | 'cocho' | 'fita' };
 
 export interface CtxMissoes {
   parque: PontosParque;
@@ -242,12 +242,10 @@ export function criarMissoesDoParque(ctx: CtxMissoes) {
     pulos = fica;
   }
 
-  function pegarNaLoja(j: JogadorMissoes, qual: 'fita' | 'vitamina'): void {
-    const fita = qual === 'fita';
-    if (!pertoDe(fita ? ctx.rua.fitas : ctx.rua.balcao, j.x, j.z, ALCANCE_LOJA)) return;
-    const item = fita ? FITA_VIDEO : VITAMINA;
-    if (j.contar(item) >= (fita ? MAX_FITAS : MAX_VITAMINAS)) return;
-    j.dar(item, 1);
+  function pegarNaLoja(j: JogadorMissoes): void {
+    if (!pertoDe(ctx.rua.fitas, j.x, j.z, ALCANCE_LOJA)) return;
+    if (j.contar(FITA_VIDEO) >= MAX_FITAS) return;
+    j.dar(FITA_VIDEO, 1);
   }
 
   return {
@@ -258,7 +256,7 @@ export function criarMissoesDoParque(ctx: CtxMissoes) {
       else if (c.a === 'prenda') brincarNaBarraca(j, c.i);
       else if (c.a === 'feno') pegarFeno(j);
       else if (c.a === 'cocho') porNoCocho(j);
-      else pegarNaLoja(j, c.a);
+      else pegarNaLoja(j);
     },
     /** O passeio inteiro num brinquedo do parque: o carimbo do bilhete de quem tem a missão. */
     passeio(id: string, chave: string): void {

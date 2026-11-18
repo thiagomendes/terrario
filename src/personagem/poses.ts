@@ -1,4 +1,18 @@
+import {
+  bocaNaRefeicao,
+  bracoNaRefeicao,
+  felizNaRefeicao,
+  FIM_REFEICAO,
+  nhacNaRefeicao,
+} from '../jogo/refeicao';
+
 export const PERIODO_MINERAR = 0.25;
+/**
+ * Spec 032: o braço com a comida na frente da boca (o giro para a frente e para dentro): a
+ * comida para na boca, sem entrar no rosto.
+ */
+export const BRACO_NA_BOCA = -2.0;
+export const ABRE_NA_BOCA = -0.35;
 export const DURACAO_COLOCAR = 0.2;
 export const DURACAO_PULO = 0.25;
 export const DURACAO_ATERRISSAGEM = 0.25;
@@ -24,7 +38,10 @@ export interface EntradaPose {
   afundar?: number;
   /** Voando no criativo: pernas juntas, levemente para trás, balançando devagar. */
   voando?: boolean;
-  /** Progresso 0..1 de levar a comida à boca e mastigar (opcional). */
+  /**
+   * Progresso 0..1 da refeição (spec 032: `FIM_REFEICAO` s; leva à boca, três mordidas, desce e
+   * a carinha feliz).
+   */
   comendo?: number;
   /**
    * Movimento com vida (spec 015): fase e amplitude da passada pela velocidade (no lugar
@@ -78,6 +95,8 @@ export interface Pose {
   piscar?: boolean;
   /** Boca abrindo (mastigar). */
   boca?: number;
+  /** Spec 032: a carinha feliz depois de comer (0 a 1: os olhos fecham sorrindo). */
+  feliz?: number;
   /** Corpo inteiro (a partir dos pés): inclinado para a frente e de lado (rad). */
   corpoX?: number;
   corpoZ?: number;
@@ -198,20 +217,23 @@ export function calcularPose(entrada: EntradaPose): Pose {
     bracoDireito = -Math.sin(p * Math.PI) * 0.9;
     troncoX += Math.sin(p * Math.PI) * 0.08;
   }
+  let feliz = 0;
   if (entrada.comendo !== undefined && entrada.comendo > 0) {
-    // leva até a boca (30% do tempo), mastiga e abaixa no fim
-    const leva =
-      suave(Math.min(1, entrada.comendo / 0.3)) *
-      (1 - suave(Math.max(0, (entrada.comendo - 0.85) / 0.15)));
-    bracoDireito = -2.0 * leva + Math.sin(tempo * 14) * 0.08 * leva;
-    bracoDireitoAbre = -0.35 * leva;
-    cabeca = 0.12 + Math.sin(tempo * 14) * 0.05;
-    boca = Math.abs(Math.sin(tempo * 14)) * leva;
+    // spec 032: leva à boca, três "nhacs" (a boca abre antes e fecha na mordida, a cabeça vai
+    // para a frente) e desce; no fim, a carinha feliz
+    const t = entrada.comendo * FIM_REFEICAO;
+    const leva = bracoNaRefeicao(t);
+    const nhac = nhacNaRefeicao(t);
+    bracoDireito = BRACO_NA_BOCA * leva - nhac * 0.06 * leva;
+    bracoDireitoAbre = ABRE_NA_BOCA * leva;
+    cabeca = 0.06 * leva + nhac * 0.14;
+    boca = bocaNaRefeicao(t);
+    feliz = felizNaRefeicao(t);
   }
   // a cabeça acompanha um pouco a câmera (ou o olhar do amigo)
   if (entrada.cabecaGiro !== undefined) cabecaGiro += entrada.cabecaGiro;
-  // piscar a cada ~3,3 s
-  const piscar = tempo % 3.3 < 0.12;
+  // piscar a cada ~3,3 s (feliz, os olhos já estão fechadinhos)
+  const piscar = feliz <= 0 && tempo % 3.3 < 0.12;
   // o topete vem atrasado: mexe ao contrário do corpo
   const topete =
     -corpoY * 2.5 - troncoX * 0.8 - (entrada.inclina ?? 0) * 0.8 + Math.sin(tempo * 3) * 0.05;
@@ -235,6 +257,7 @@ export function calcularPose(entrada: EntradaPose): Pose {
     topete,
     piscar,
     boca,
+    ...(feliz > 0 ? { feliz } : {}),
     corpoX: entrada.inclina ?? 0,
     corpoZ: entrada.roll ?? 0,
     tempo,

@@ -219,6 +219,10 @@ import { empacotar } from '../world/edicoes';
 import { criaturaNaMira, novaCriatura, type Criatura, type TipoCriatura } from '../jogo/criaturas';
 import { criarRenderCriaturas } from './criaturas';
 import { criarCoracoes } from './coracoes';
+import { criarRefeicoes, type Refeicoes } from './refeicao';
+import { criarRenderCompras } from './vila/compras';
+import { balcoesDaVila } from '../jogo/compra';
+import { DURACAO_REFEICAO } from '../jogo/refeicao';
 import { AVISO_LIMITE, COMIDA_DOS_BICHOS, comeEsse, domaCom, viraCriado } from '../jogo/criacao';
 import { biomaEm, estiloMundo } from '../world/chunk';
 import { criarTrilhaMundo, type InfoTrilha } from '../audio/trilhaMundo';
@@ -525,11 +529,23 @@ export interface EstadoDepuracao {
    * ao núcleo (ele confere a missão e o alcance); `rua` é a resposta da tela (o som, o aceno de
    * quem atende); `baloesAVista`: a missão dos balões está aberta para a criança.
    */
+  /**
+   * Spec 032: comprar nas barracas da Vila Neon. `comprar` vai ao núcleo (ele confere o alcance,
+   * uma por vez, os 3 e a barrinha); a entrega aparece quando ele avisa (`vilaCompra`).
+   */
+  vilaCompras?: {
+    comprar(i: number): void;
+    /** A vendedora `n` acena (o toque de quem já tem 3 do lanche). */
+    acenar(n: number): void;
+    balcoes(): readonly import('../jogo/compra').Balcao[];
+    /** Testes: as entregas em curso. */
+    estado(): ReturnType<import('./vila/compras').RenderCompras['estado']>;
+  };
   vilaMissoes?: {
     comando(
       c:
         | { a: 'balao' | 'prenda'; i: number }
-        | { a: 'feno' | 'cocho' | 'fita' | 'vitamina' }
+        | { a: 'feno' | 'cocho' | 'fita' }
         /** Parte 3B (f10): o brinquedo espalhado. */
         | { a: 'brinquedo'; i: number },
     ): void;
@@ -786,6 +802,18 @@ export interface EstadoDepuracao {
   crescerLavoura?: (segundos: number) => void;
   /** Spec 013: corações na tela agora (testes da criação). */
   coracoes?: () => number;
+  /** Spec 032: onde fica a mão da criança na tela (null: fora da tela). */
+  maoNaTela?: () => { x: number; y: number } | null;
+  /** Spec 032: a criança está comendo agora? */
+  comendo?: () => boolean;
+  /** Spec 032 (testes e fotos): come a comida da mão, como o toque. */
+  comer?: () => void;
+  /** Spec 032 (fotos): para onde o corpo do boneco da criança está virado (rad). */
+  yawBoneco?: () => number;
+  /** Spec 032 (testes): a refeição da criança agora (null sem refeição). */
+  refeicao?: () => ReturnType<Refeicoes['estado']>;
+  /** Spec 032 (testes): a refeição de um amigo (null sem refeição). */
+  refeicaoDoAmigo?: (id: string) => ReturnType<Refeicoes['estado']>;
   /**
    * Spec 023: os comandos da alma para o núcleo (o HUD e a banca das próximas fases usam
    * estes; o resultado volta nos eventos `brumaluz:alma`).
@@ -1919,10 +1947,9 @@ export function criarCena(
           brinquedosVila?.tocar('orelhao', 0);
         } else if (qual === 'fita') somRua?.tocar('fita', em(rua.fitas));
         else if (qual === 'vitamina') {
+          // spec 032: o preparo da vitamina comprada (a Tati acena quando ela chega na mão)
           somRua?.tocar('liquidificador', em(rua.balcao));
           brinquedosVila?.tocar('liquidificador', 0);
-          // a moça da lanchonete acena (o posto 6 do bairro)
-          acenar(6);
         } else if (qual === 'revista') {
           somRua?.tocar('revista', em(rua.revistas));
           // o moço da banca (o posto 7)
@@ -1956,6 +1983,59 @@ export function criarCena(
       return [b.x, b.y, b.z];
     };
   }
+  // spec 032: comprar nas barracas (a fichinha, o preparo, a entrega e o aceno, para todos)
+  const balcoesVila = planoVila ? balcoesDaVila(planoVila) : [];
+  const comprasVila = planoVila
+    ? criarRenderCompras(scene, {
+        balcoes: balcoesVila,
+        comprador: (id) => {
+          if (id === voce) return { boneco: personagem, animador };
+          const b = outrosJogadores.personagemDe(id);
+          const a = outrosJogadores.animadorDe(id);
+          return b && a ? { boneco: b, animador: a } : null;
+        },
+        vendedora: (n) => {
+          const c = replicaCriaturas.lista.find(
+            (q) => q.morador?.povoado === 'vila' && q.morador.n === n && q.estado !== 'morrendo',
+          );
+          return c ? renderCriaturas.bonecoDoMorador(c.id) : null;
+        },
+        preparo: (b) => {
+          const onde = { x: b.p[0], z: b.p[2] };
+          if (b.barraca === 'lanchonete') estado.vilaMissoes?.rua('vitamina');
+          else if (b.barraca === 'algodao') {
+            parqueVila?.tocar('algodao', 0);
+            somParque?.tocar('algodao', onde);
+          } else if (b.barraca === 'pipocaParque' || b.barraca === 'pipocaPracinha') {
+            const l = planoVila!.pecas.filter((q) => q.tipo === 'pipoca');
+            let k = 0;
+            l.forEach((q, j) => {
+              if (Math.hypot(q.x - b.p[0], q.z - b.p[2]) < Math.hypot(l[k].x - b.p[0], l[k].z - b.p[2]))
+                k = j;
+            });
+            parqueVila?.tocar('pipoca', k);
+            somParque?.tocar('sininho', onde);
+            somParque?.tocar('estouro', onde);
+          }
+        },
+        aceno: (n) => acenar(n),
+        som: (qual, onde) => {
+          const j = controle.jogador;
+          if (Math.hypot(onde.x - j.x, onde.z - j.z) > 14) return;
+          somEfeito(qual === 'fichinha' ? 'moeda' : qual === 'pulo' ? 'puf' : 'recusa', 80);
+        },
+        preparar: prepararEfeito,
+      })
+    : null;
+  estado.vilaCompras = {
+    comprar: (i) => {
+      enviarTelemetria(true);
+      enviar({ t: 'vila', a: 'comprar', i });
+    },
+    acenar: (n) => acenar(n),
+    balcoes: () => balcoesVila,
+    estado: () => comprasVila?.estado() ?? [],
+  };
   /** As missões do parque na tela, uma vez por quadro. */
   function quadroMissoesVila(tempo: number): void {
     if (!planoVila || !missoesVila) return;
@@ -3282,9 +3362,9 @@ export function criarCena(
       enviar({ t: 'domar', criatura: naMira.id, slot: hotbar.ativo });
       return;
     }
-    if (def?.comida && modo === 'sobrevivencia') {
-      // fome cheia: nem tenta (o núcleo confere de novo)
-      if (cliente.sobrevivencia.fome < 20) enviar({ t: 'comer', slot: hotbar.ativo });
+    if (def?.comida) {
+      // spec 032: comida na mão se come, em todo modo (as três mordidas)
+      comecarRefeicao();
       return;
     }
     if (a && ehEnxada(def?.ferramenta)) {
@@ -3478,6 +3558,18 @@ export function criarCena(
     const r = canvas.getBoundingClientRect();
     return { x: r.left + (v.x / w) * r.width, y: r.top + (v.y / h) * r.height };
   };
+  // spec 032: onde fica a mão da criança na tela (a mãozinha do "Toque para comer" aponta ali)
+  estado.maoNaTela = () => {
+    const no = personagem.noDaMao();
+    no.computeWorldMatrix(true);
+    const p = no.getAbsolutePosition();
+    return estado.telaDoPonto?.(p.x, p.y + 0.08, p.z) ?? null;
+  };
+  // spec 032: a criança está comendo agora (a dica de comer some)
+  estado.comendo = () => performance.now() < comendoAte;
+  // spec 032 (testes e fotos): come a comida da mão, como o toque (também no modo foto)
+  estado.comer = () => comecarRefeicao();
+  estado.yawBoneco = () => animador.yaw();
   /** Vira o olhar para o raio do centro da tela passar pelo ponto (o pivô muda com o olhar). */
   estado.mirarPonto = (ax, ay, az) => {
     let yaw = camera.rotation.y;
@@ -3889,6 +3981,43 @@ export function criarCena(
   }
   const coracoes = criarCoracoes(scene, prepararEfeito);
   estado.coracoes = () => coracoes.vivos;
+  // spec 032: a refeição (as três mordidas, as migalhas, o som e os corações) da criança e dos
+  // amigos
+  const refeicoes = criarRefeicoes(scene, {
+    som: (ev, onde, meu) => {
+      const j = controle.jogador;
+      if (meu || Math.hypot(onde.x - j.x, onde.z - j.z) < 10) somEfeito(ev, 60);
+    },
+    coracoes: (x, y, z, n) => coracoes.soltar(x, y, z, n),
+    brilho: (x, y, z) =>
+      pool.emitir(
+        Array.from({ length: 6 }, (_, i) => {
+          const ang = (i / 6) * Math.PI * 2;
+          return {
+            x,
+            y,
+            z,
+            vx: Math.cos(ang) * 0.8,
+            vy: 1.2 + rngFx() * 0.6,
+            vz: Math.sin(ang) * 0.8,
+            cor: [1, 0.86, 0.36] as [number, number, number],
+            tipo: CONFETE,
+          };
+        }),
+      ),
+    preparar: prepararEfeito,
+  });
+  outrosJogadores.definirRefeicao(
+    (p, item) => {
+      if (item) refeicoes.comecar(p, item, false);
+    },
+    (p) => refeicoes.parar(p),
+  );
+  estado.refeicao = () => refeicoes.estado(personagem);
+  estado.refeicaoDoAmigo = (id) => {
+    const p = outrosJogadores.personagemDe(id);
+    return p ? refeicoes.estado(p) : null;
+  };
   barramento.ouvir('golpe', (d) => aplicarPlano('golpe', d));
   barramento.ouvir('quebra', (d) => aplicarPlano('quebra', d));
   /** Confete de folhinhas (e grãos dourados) ao colher a planta madura. */
@@ -4227,6 +4356,8 @@ export function criarCena(
     }
     pool.atualizar(dt, (x, y, z) => !!obterBlocoDef(blocoEm(x, y, z))?.solido);
     coracoes.atualizar(dt);
+    refeicoes.atualizar(dt);
+    comprasVila?.atualizar(dt);
     const vivas = pool.vivas();
     for (let i = 0; i < pecasParticulas.length; i++) {
       const { peca, pino, confete, gota } = pecasParticulas[i];
@@ -5434,38 +5565,29 @@ export function criarCena(
     if (viraCriado(c.tipo) && comeEsse(c.tipo, item)) return true;
     return c.tipo === 'raposa' && !c.domada && domaCom(temaAtual.mundo.domar, item);
   }
-  /** Comida na mão no modo sobrevivência. */
+  /** Comida na mão (spec 032: em todo modo; antes só na sobrevivência). */
   function comidaNaMao(): boolean {
     const p = hotbar.pilhaAtiva();
-    return modo === 'sobrevivencia' && !!(p && obterItem(p.item)?.comida);
+    return !!(p && obterItem(p.item)?.comida);
   }
-  // segurar para comer (toque): 1,1 s mastigando; soltar antes cancela
-  let comerTimer = 0;
-  /** Quando o mastigar (segurar para comer) começou: o fim da refeição é só o "nhac". */
-  let mastigouEm = -Infinity;
-  function comecarAComer(): void {
-    pararDeComer();
-    if (cliente.sobrevivencia.fome >= 20) {
-      toast('Você está sem fome');
-      return;
-    }
-    tocarSom(motorAudio, 'comer');
-    mastigouEm = performance.now();
+  /** Spec 032: até quando (ms da tela) a refeição de agora vai (uma por vez, como no núcleo). */
+  let comendoAte = 0;
+  /**
+   * Spec 032: começa a refeição com a comida da mão: o núcleo come no começo (e confere de novo),
+   * a tela faz as três mordidas na hora (o toque responde sem esperar a rede).
+   */
+  function comecarRefeicao(): void {
+    const p = hotbar.pilhaAtiva();
+    if (!p || !obterItem(p.item)?.comida || sobrevivenciaMorto()) return;
+    const agora = performance.now();
+    if (agora < comendoAte) return;
+    comendoAte = agora + DURACAO_REFEICAO * 1000;
+    enviarTelemetria(true);
+    enviar({ t: 'comer', slot: hotbar.ativo });
     animador.evento('comer');
-    comerTimer = window.setTimeout(() => {
-      comerTimer = 0;
-      enviar({ t: 'comer', slot: hotbar.ativo });
-      // ainda segurando: continua comendo enquanto tiver fome e comida
-      window.setTimeout(() => {
-        if (gestoSegurando() && comidaNaMao() && cliente.sobrevivencia.fome < 20) comecarAComer();
-      }, 250);
-    }, 1100);
+    refeicoes.comecar(personagem, p.item, true);
+    window.dispatchEvent(new CustomEvent('brumaluz:comendo', { detail: p.item }));
   }
-  function pararDeComer(): void {
-    if (comerTimer) clearTimeout(comerTimer);
-    comerTimer = 0;
-  }
-  const gestoSegurando = () => pontoToque !== null;
   // dica perto da mira: como falar com o morador, domar a raposa, comer
   let esperaDica = 0;
   let dicaAtual = '';
@@ -5504,8 +5626,9 @@ export function criarCena(
       t = toque
         ? `Toque para dar ${comida} ${bicho.a}`
         : `Clique direito (ou F): dar ${comida} ${bicho.a}`;
-    } else if (comidaNaMao() && cliente.sobrevivencia.fome < 20) {
-      t = toque ? 'Segure o dedo na tela para comer' : 'Clique direito (ou F): comer';
+    } else if (comidaNaMao()) {
+      // (spec 032: no toque, a dica é a da mãozinha na comida, "Toque para comer")
+      t = toque ? '' : 'Clique direito (ou F): comer';
     } else if (!semDedo && podeEncherObra() && fantasmaNaMira()) {
       // spec 014: o fantasma da obra na mira (a mãozinha para quem não lê)
       t = `${MAO}${toque ? 'Toque no bloco azul' : 'Clique direito: pôr no bloco azul'}`;
@@ -5927,15 +6050,14 @@ export function criarCena(
       // spec 026 (parte 2): sentado num brinquedo do parque, o dedo é do brinquedo
       if (ativo && passeio?.sentado()) return;
       if (ativo) {
-        // no toque, segurar com comida na mão (sobrevivência) come em vez de quebrar
+        if (amigoNaMira()) return;
+        // no toque, segurar com comida na mão come em vez de quebrar (spec 032: em todo modo)
         if (comidaNaMao()) {
-          comecarAComer();
+          comecarRefeicao();
           return;
         }
-        if (amigoNaMira()) return;
         if (!atacarNaMira()) minerador.pressionar();
       } else {
-        pararDeComer();
         minerador.soltar();
       }
     },
@@ -6599,6 +6721,13 @@ export function criarCena(
         eventoDasMissoes(e);
         estado.eventosVila?.push({ ...e, recebido: performance.now() / 1000 });
         break;
+      // spec 032: a compra na barraca (a entrega, para todos); a barrinha cheia de quem tocou
+      case 'vilaCompra':
+        comprasVila?.evento(e);
+        if (e.cheia && e.quem === voce)
+          window.dispatchEvent(new CustomEvent('brumaluz:barraCheia', { detail: e.i }));
+        estado.eventosVila?.push({ ...e, recebido: performance.now() / 1000 });
+        break;
       // parte 3B: as missões da casa
       case 'vilaGuardou':
       case 'vilaBolo':
@@ -6761,13 +6890,14 @@ export function criarCena(
         window.dispatchEvent(new CustomEvent('brumaluz:espantou', { detail: e.tipo }));
         break;
       case 'comeu':
-        // spec 019: o mastigar já tocou ao segurar (toque); aqui fecha com o "nhac", sem
-        // repetir as mordidas (antes o 'comer' tocava duas vezes por refeição)
-        if (performance.now() - mastigouEm < 2500) somEfeito('nhac');
-        else tocarSom(motorAudio, 'comer');
-        mastigouEm = -Infinity;
-        animador.evento('comer');
-        window.dispatchEvent(new CustomEvent('brumaluz:comeu'));
+        // spec 032: a refeição já começou no toque (as mordidas fazem os sons); se ela veio de
+        // outro jeito (um atalho de teste), começa agora
+        if (performance.now() >= comendoAte) {
+          comendoAte = performance.now() + DURACAO_REFEICAO * 1000;
+          animador.evento('comer');
+          refeicoes.comecar(personagem, e.item, true);
+        }
+        window.dispatchEvent(new CustomEvent('brumaluz:comeu', { detail: e.item }));
         break;
       case 'dano':
         tocarSom(motorAudio, 'dano');

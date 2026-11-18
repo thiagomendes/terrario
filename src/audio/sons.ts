@@ -54,7 +54,15 @@ export type EventoSom =
   | 'moeda'
   | 'plim'
   | 'nivel'
-  | 'vitrine';
+  | 'vitrine'
+  /**
+   * Spec 032: cada comida mordida do seu jeito: a mordida crocante (pão, cachorro-quente, bolo,
+   * fruta), a pipoca miudinha, o gole de canudinho (e a colherada da sopa) e o algodão fofo.
+   */
+  | 'mordida'
+  | 'crocante'
+  | 'gole'
+  | 'fofo';
 
 export const EVENTOS_SOM: readonly EventoSom[] = [
   'golpe',
@@ -96,6 +104,10 @@ export const EVENTOS_SOM: readonly EventoSom[] = [
   'plim',
   'nivel',
   'vitrine',
+  'mordida',
+  'crocante',
+  'gole',
+  'fofo',
 ];
 
 export const VARIACOES_POR_EVENTO = 4;
@@ -187,6 +199,11 @@ const BASE_EVENTO: Record<EventoSom, BaseEvento> = {
   plim: { ganho: 0.12, duracao: 0.32, ruido: 0, escalaTom: 1, grupoAudio: 'efeitos' },
   nivel: { ganho: 0.18, duracao: 1.4, ruido: 0, escalaTom: 1, grupoAudio: 'efeitos' },
   vitrine: { ganho: 0.18, duracao: 1.7, ruido: 0, escalaTom: 1, grupoAudio: 'efeitos' },
+  // spec 032: as mordidas (curtas e macias, abaixo do golpe de bloco)
+  mordida: { ganho: 0.34, duracao: 0.16, ruido: 0.85, escalaTom: 1, grupoAudio: 'efeitos' },
+  crocante: { ganho: 0.3, duracao: 0.24, ruido: 0.85, escalaTom: 1, grupoAudio: 'efeitos' },
+  gole: { ganho: 0.26, duracao: 0.34, ruido: 0.7, escalaTom: 1, grupoAudio: 'efeitos' },
+  fofo: { ganho: 0.22, duracao: 0.26, ruido: 0.8, escalaTom: 1, grupoAudio: 'efeitos' },
 };
 
 const FIXOS: Partial<Record<EventoSom, BaseMaterial>> = {
@@ -223,6 +240,10 @@ const FIXOS: Partial<Record<EventoSom, BaseMaterial>> = {
   plim: { frequencia: 1046.5, filtroHz: 5000 },
   nivel: { frequencia: 523.25, filtroHz: 5000 },
   vitrine: { frequencia: 783.99, filtroHz: 5000 },
+  mordida: { frequencia: 260, filtroHz: 2200 },
+  crocante: { frequencia: 520, filtroHz: 3200 },
+  gole: { frequencia: 380, filtroHz: 900 },
+  fofo: { frequencia: 660, filtroHz: 1400 },
 };
 
 export const AMPLITUDE_TOM = 0.12;
@@ -931,6 +952,35 @@ function desenharNovo(
         pecas.push(tom(ctx, out, t0, 'sine', f / 2, f / 2, 0.18, 1.5, 0.08));
       break;
     }
+    case 'mordida':
+      // spec 032: "crec": o estalo seco da mordida e duas migalhinhas logo depois
+      pecas.push(ruido(ctx, out, t0, 'bandpass', par.filtroHz, 1.6, 0.8, 0.05, 0.002));
+      pecas.push(tom(ctx, out, t0, 'triangle', f, f * 0.6, 0.3, 0.07));
+      for (let i = 0; i < 2; i++)
+        pecas.push(
+          ruido(ctx, out, t0 + 0.07 + i * 0.045, 'bandpass', par.filtroHz * (1.3 + sorte() * 0.4), 2.2, 0.32, 0.025, 0.002),
+        );
+      break;
+    case 'crocante':
+      // a pipoca: cinco "crunches" miudinhos e rápidos
+      for (let i = 0, t = t0; i < 5; i++) {
+        pecas.push(
+          ruido(ctx, out, t, 'bandpass', par.filtroHz * (0.8 + sorte() * 0.5), 2.4, 0.5 - i * 0.06, 0.022, 0.002),
+        );
+        t += 0.035 + sorte() * 0.03;
+      }
+      break;
+    case 'gole':
+      // o gole de canudinho: o chiado que sobe (o "slurp") e uma bolhinha no fim
+      pecas.push(ruido(ctx, out, t0, 'bandpass', par.filtroHz, 3, 0.55, 0.24, 0.05));
+      pecas.push(ruido(ctx, out, t0 + 0.06, 'bandpass', par.filtroHz * 1.8, 3, 0.3, 0.16, 0.04));
+      pecas.push(tom(ctx, out, t0 + 0.24, 'sine', f, f * 1.9, 0.22, 0.07));
+      break;
+    case 'fofo':
+      // o algodão-doce: um "fff" macio e um tiquinho de brilho (derrete na boca)
+      pecas.push(ruido(ctx, out, t0, 'lowpass', par.filtroHz, 0.7, 0.6, 0.18, 0.06));
+      pecas.push(tom(ctx, out, t0 + 0.08, 'sine', f * 1.5, f * 1.5, 0.08, 0.16, 0.02));
+      break;
     default:
       pecas.push(tom(ctx, out, t0, 'sine', f, f, 0.3, 0.05));
   }
@@ -960,6 +1010,11 @@ function variadorDe(evento: EventoSom, grupo: GrupoMaterial) {
 
 /** Os sons novos da spec 019 (T05): ações, mundo, gestos e interface. */
 export const SONS_NOVOS_019: readonly EventoSom[] = [
+  // (spec 032: as mordidas de cada comida tocam pelo mesmo caminho)
+  'mordida',
+  'crocante',
+  'gole',
+  'fofo',
   'nhac',
   'agua',
   'nado',

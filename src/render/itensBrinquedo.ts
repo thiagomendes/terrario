@@ -40,6 +40,24 @@ export interface ModeloItem {
   planta?: boolean;
 }
 
+/**
+ * Spec 032: os tufos da nuvem do algodão-doce (x, y, z, raio, cor), na ordem em que somem nas
+ * mordidas (os da frente e de cima primeiro; o miolo por último).
+ */
+export const NUVEM_ALGODAO: readonly (readonly [number, number, number, number, string])[] = [
+  [0.0, 0.31, 0.045, 0.055, '#ffd2e6'],
+  [0.05, 0.29, 0.03, 0.05, '#ffb0d2'],
+  [-0.05, 0.29, 0.03, 0.05, '#ffd2e6'],
+  [0.0, 0.35, -0.01, 0.052, '#ffe4f0'],
+  [0.06, 0.25, -0.02, 0.05, '#ffb0d2'],
+  [-0.06, 0.25, -0.02, 0.05, '#ffb0d2'],
+  [0.03, 0.24, 0.045, 0.045, '#ffd2e6'],
+  [-0.03, 0.24, 0.045, 0.045, '#ffb0d2'],
+  [0.0, 0.28, -0.05, 0.058, '#ffc4de'],
+  [0.0, 0.28, 0.0, 0.07, '#ffc4de'],
+  [0.0, 0.215, 0.0, 0.045, '#ffb0d2'],
+];
+
 const hexDe = (rgb: [number, number, number]) =>
   `#${rgb.map((v) => Math.round(v).toString(16).padStart(2, '0')).join('')}`;
 
@@ -88,6 +106,9 @@ export function modeloNaMao(
   ) => esfera(`${prefixo}-${n}`, scene, r, mats.cor(cor, brilho), esc);
   const ci = (n: string, h: number, r1: number, r2: number, cor: string) =>
     cilindro(`${prefixo}-${n}`, scene, h, r1, r2, mats.cor(cor));
+  /** Spec 032: o copo de plástico transparente (a bebida dentro se vê, e desce a cada gole). */
+  const vidro = (n: string, h: number, r1: number, r2: number) =>
+    cilindro(`${prefixo}-${n}`, scene, h, r1, r2, mats.cor('#eef6ff', 0.7, 0.34));
 
   const def = item ? obterItem(item) : undefined;
   if (def?.ferramenta) {
@@ -278,25 +299,36 @@ export function modeloNaMao(
         break;
       }
       case 'suco': {
-        // spec 026: o copo com o suco de laranja e o canudo vermelho
-        add(ci('copo', 0.15, 0.06, 0.05, '#f4f8ff'), 0, 0.075, 0);
+        // spec 026: o copo com o suco de laranja e o canudo vermelho (spec 032: o copo é de
+        // plástico transparente, e o suco que desce a cada gole se vê de qualquer lado)
         add(ci('suco', 0.12, 0.054, 0.046, '#ff8a2a'), 0, 0.066, 0);
+        add(vidro('copo', 0.15, 0.06, 0.05), 0, 0.075, 0);
         const canudo = add(ci('canudo', 0.16, 0.009, 0.009, '#e8302a'), 0.02, 0.16, 0);
         canudo.rotation.z = -0.25;
         break;
       }
       case 'vitamina': {
         // spec 026 (etapa B): o copo alto da lanchonete, de pé cromado, a vitamina rosa, a
-        // espuma branca e os dois canudos (um vermelho e um azul)
+        // espuma branca e os dois canudos (um vermelho e um azul). Spec 032: o copo de vidro e a
+        // vitamina dentro (desce a cada gole)
         add(ci('pe-v', 0.012, 0.046, 0.042, '#d4d8e2'), 0, 0.006, 0);
         add(ci('haste-v', 0.03, 0.013, 0.013, '#d4d8e2'), 0, 0.026, 0);
-        add(ci('vitamina', 0.16, 0.044, 0.06, '#ff9ec4'), 0, 0.12, 0);
-        add(bo('espuma', 0.063, '#fff6ee', [1, 0.42, 1], 0.4), 0, 0.203, 0);
-        add(bo('espuma2', 0.032, '#fff6ee', [1, 0.7, 1], 0.4), 0.012, 0.222, 0.008);
+        add(ci('vitamina', 0.15, 0.039, 0.054, '#ff9ec4'), 0, 0.117, 0);
+        add(vidro('copo-v', 0.17, 0.045, 0.061), 0, 0.125, 0);
+        add(bo('espuma', 0.058, '#fff6ee', [1, 0.42, 1], 0.4), 0, 0.196, 0);
+        add(bo('espuma2', 0.03, '#fff6ee', [1, 0.7, 1], 0.4), 0.012, 0.214, 0.008);
         const vermelho = add(ci('canudo-r', 0.15, 0.008, 0.008, '#e8302a'), -0.034, 0.27, 0);
         vermelho.rotation.z = 0.3;
         const azul = add(ci('canudo-a', 0.14, 0.008, 0.008, '#2f8cff'), 0.036, 0.266, 0);
         azul.rotation.z = -0.34;
+        break;
+      }
+      case 'algodao_doce': {
+        // spec 032: o algodão-doce do parque: o palito de madeira e a nuvem fofa em tufos de dois
+        // rosas (nada de várias cores), mais clara em cima
+        add(ci('palito', 0.2, 0.011, 0.011, '#c8925a'), 0, 0.1, 0);
+        for (const [x, y, z, r, cor] of NUVEM_ALGODAO)
+          add(bo(`nuvem${x}${y}${z}`, r, cor, [1, 0.92, 1], 0.32), x, y, z);
         break;
       }
       case 'fita_video': {

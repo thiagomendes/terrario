@@ -19,6 +19,7 @@ import { pedirSomGuia } from '../../audio/somGuia';
 import { medirHud } from '../carinhasAmigos';
 import { ligarCantoMissoes } from './canto';
 import { ligarVilaNeon } from './vila';
+import { ligarDicaComer } from './dicaComer';
 import { FENO } from '../../jogo/exclusivos';
 import { FENO_ANTIGO } from '../../jogo/missoesParque';
 
@@ -75,6 +76,8 @@ function noJogo(): boolean {
 export function ligarGuiaMissao(e: EstadoDepuracao, ui: AlmaUi): GuiaMissao | null {
   const scene = e.cenaBabylon?.() as Scene | undefined;
   if (!scene) return null;
+  // spec 032: "Toque para comer" com comida na mão (todos os mundos)
+  ligarDicaComer(e, scene);
   const AR = Bloco.AR;
   const st = document.createElement('style');
   st.textContent = CSS_CERTO;

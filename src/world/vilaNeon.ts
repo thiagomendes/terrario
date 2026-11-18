@@ -189,7 +189,9 @@ export type PostoVila =
   | 'avo'
   /** Spec 026 (parte 3): a menina do skate e o menino da BMX, na pista de skate. */
   | 'skatista'
-  | 'bmx';
+  | 'bmx'
+  /** Spec 032: a Dona Cida, pipoqueira da pracinha (atrás do carrinho de pipoca). */
+  | 'pracinha';
 
 /** Spec 026 (parte 2, etapa B): o que se toca na Rua anos 80. */
 export interface PontosRua {
@@ -1569,6 +1571,9 @@ function montarVila(semente: number, r: RelevoVila): Montado {
       // portãozinho): o assento do leste, de frente para a TV
       avo: casa80.avo,
       ...pista.postos,
+      // spec 032: a Dona Cida atrás do carrinho de pipoca da pracinha (a alça, do lado do
+      // portal), de frente para quem nasce
+      pracinha: [X(112) + 0.5 - 1.45, Y, Z(74) + 0.5],
     },
     parque: parque.pontos,
     rua: {

@@ -193,11 +193,17 @@ type ComandoSemSeq =
   /**
    * Spec 026 (parte 2, etapa B): as missões do parque e os toques da Rua anos 80. O toque num
    * balão fugido (`i`, 0 a 2), numa barraca de prendas (`i`: 0 a argola, 1 a pescaria), no fardo
-   * de feno, no cocho da fazendinha, na parede de fitas da locadora e no balcão da lanchonete. O
-   * núcleo confere a missão aberta, o alcance e o limite de toques por segundo.
+   * de feno, no cocho da fazendinha e na parede de fitas da locadora. O núcleo confere a missão
+   * aberta, o alcance e o limite de toques por segundo.
    */
   | { t: 'vila'; a: 'balao' | 'prenda'; i: number }
-  | { t: 'vila'; a: 'feno' | 'cocho' | 'fita' | 'vitamina' }
+  | { t: 'vila'; a: 'feno' | 'cocho' | 'fita' }
+  /**
+   * Spec 032: comprar o lanche `i` (o índice em `balcoesDaVila`: os três do balcão da Bia, a
+   * vitamina da lanchonete, a pipoca e o algodão-doce do parque, a pipoca da pracinha). O núcleo
+   * confere o alcance, uma compra por vez, os 3 de cada lanche e a barrinha.
+   */
+  | { t: 'vila'; a: 'comprar'; i: number }
   /**
    * Spec 026 (parte 3): na Casa anos 80, trocar o canal da TV, pôr a fita da locadora no
    * videocassete, ligar e desligar o disco e pegar um brinquedo do baú; na pista de skate, pedir
@@ -271,6 +277,8 @@ export interface JogadorVisto {
    * o amigo dispara o movimento quando um número cresce.
    */
   acoes?: [number, number, number];
+  /** Spec 032: o que ele está comendo (durante a refeição): o amigo vê as mordidas certas. */
+  come?: string;
 }
 
 /** Criatura como o cliente a desenha. */

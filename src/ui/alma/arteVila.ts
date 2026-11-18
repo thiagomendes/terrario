@@ -494,7 +494,82 @@ const fatiaDeBolo = () => `
   <circle cx="47" cy="25" r="1.1" fill="#fff6e6"/><circle cx="22" cy="28" r="1.1" fill="#fff6e6"/>
   <path d="M12 33 L50 28.6" stroke="#fff3c4" stroke-width="1.6" stroke-linecap="round"/>`;
 
+// ------------------------------------------------------------------ spec 032: comprar e comer
+/** O balde de pipoca listrado de vermelho e branco, cheio, com as pipocas fofas por cima. */
+const baldePipoca = () => `
+  <ellipse cx="32" cy="59" rx="15" ry="3" fill="#d9b77a"/>
+  <path d="M15 26 L49 26 L44 57 L20 57 Z" fill="#fff8ee" ${s()}/>
+  <path d="M21.5 26 L24.5 57 M32 26 L32 57 M42.5 26 L39.5 57" stroke="#e8302a" stroke-width="5"/>
+  <path d="M15 26 L49 26 L44 57 L20 57 Z" fill="none" ${s()}/>
+  ${[
+    [19, 22, 6],
+    [27, 18, 6.6],
+    [36, 17, 6.4],
+    [45, 21, 6],
+    [31, 10, 5.6],
+    [23, 12, 4.8],
+    [40, 11, 5],
+  ]
+    .map(([x, y, r]) => `<circle cx="${x}" cy="${y}" r="${r}" fill="#fff6dc" ${s(2.2)}/>`)
+    .join('')}
+  <path d="M25 17 q2 -2 4 0 M34 13 q2 -2 4 0" stroke="#f2d48a" stroke-width="1.6" fill="none" stroke-linecap="round"/>`;
+
+/** O cachorro-quente: o pão comprido aberto, a salsicha e a mostarda em zigue-zague. */
+const cachorroQuente = () => `
+  <ellipse cx="32" cy="52" rx="26" ry="4" fill="#d9b77a"/>
+  <path d="M6 36 Q6 49 18 50 L46 50 Q58 49 58 36 Z" fill="#e8b067" ${s()}/>
+  <rect x="5" y="26" width="54" height="14" rx="7" fill="#c8452c" ${s()}/>
+  <path d="M11 30 l5 4 l5 -4 l5 4 l5 -4 l5 4 l5 -4 l5 4 l5 -4" fill="none" stroke="#ffd23d" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M6 38 Q8 44 18 44 L46 44 Q56 44 58 38" fill="none" stroke="#f6cf8c" stroke-width="2" stroke-linecap="round"/>`;
+
+/** O copo de suco de laranja (o copo transparente, o suco dentro e o canudo vermelho). */
+const copoSuco = () => `
+  <ellipse cx="32" cy="59.6" rx="14" ry="3" fill="#d9b77a"/>
+  <path d="M38 22 L46 3" stroke="${C}" stroke-width="6.4" stroke-linecap="round"/>
+  <path d="M38 22 L46 3" stroke="#e8302a" stroke-width="3.2" stroke-linecap="round"/>
+  <path d="M19 26 H45 L42 54 Q41.6 58 37 58 H27 Q22.4 58 22 54 Z" fill="#ff8a2a"/>
+  <path d="M17 14 H47 L42.4 54 Q42 58.6 37 58.6 H27 Q22 58.6 21.6 54 Z" fill="#eaf4ff" fill-opacity="0.45" ${s()}/>
+  <path d="M19.5 26 H44.5" stroke="#ffb05a" stroke-width="2.4" stroke-linecap="round"/>
+  <path d="M23 20 L25 48" stroke="#ffffff" stroke-width="3" stroke-linecap="round" opacity="0.8"/>`;
+
+/** O algodão-doce: a nuvem cor-de-rosa em dois tons, no palito de madeira. */
+const algodaoDoce = () => `
+  <path d="M32 40 L32 61" stroke="${C}" stroke-width="6" stroke-linecap="round"/>
+  <path d="M32 40 L32 61" stroke="#c8925a" stroke-width="3" stroke-linecap="round"/>
+  <path d="M14 30 Q8 22 15 15 Q17 6 27 7 Q33 1 40 6 Q50 5 51 14 Q58 20 52 29 Q53 38 43 40 Q37 46 29 42 Q18 44 16 37 Q10 35 14 30 Z" fill="#ffb0d2" ${s()}/>
+  <path d="M19 18 Q22 12 29 13 M36 11 Q42 10 45 15 M23 30 Q28 34 34 31 M40 27 Q45 26 47 22" fill="none" stroke="#ffe4f0" stroke-width="2.6" stroke-linecap="round"/>
+  <path d="M17 27 Q20 33 26 33 M44 33 Q48 31 49 27" fill="none" stroke="#ff8fbf" stroke-width="2.2" stroke-linecap="round"/>`;
+
+/** "Toque para comer": a carinha do boneco de olhos fechados sorrindo, mordendo o biscoito. */
+const carinhaComendo = () => `
+  <ellipse cx="30" cy="59" rx="18" ry="3" fill="#d9b77a"/>
+  <circle cx="28" cy="32" r="22" fill="#f2c9a0" ${s()}/>
+  <path d="M15 27 q4 -4 8 0 M31 27 q4 -4 8 0" fill="none" stroke="${C}" stroke-width="2.8" stroke-linecap="round"/>
+  <ellipse cx="14" cy="36" rx="3.4" ry="2.2" fill="#ff9aa8" opacity="0.7"/><ellipse cx="40" cy="36" rx="3.4" ry="2.2" fill="#ff9aa8" opacity="0.7"/>
+  <path d="M20 40 Q27 49 35 40 Z" fill="#b8423a" ${s(2.4)}/>
+  <circle cx="47" cy="44" r="12" fill="#e8b067" ${s()}/>
+  <circle cx="35.5" cy="41" r="4.5" fill="#f2c9a0"/><circle cx="36.5" cy="48.5" r="4.5" fill="#f2c9a0"/>
+  <path d="M37.33 36.88 A4.5 4.5 0 0 1 35.09 45.48 M35 44.27 A4.5 4.5 0 0 1 38.54 52.51" fill="none" stroke="${C}" stroke-width="2.6" stroke-linecap="round"/>
+  <circle cx="49" cy="40" r="1.6" fill="#a0602e"/><circle cx="52" cy="47" r="1.6" fill="#a0602e"/><circle cx="46" cy="50" r="1.4" fill="#a0602e"/>
+  <circle cx="35" cy="54" r="1.6" fill="#e8b067"/><circle cx="40" cy="58" r="1.3" fill="#e8b067"/>`;
+
+/** A barrinha cheia: os espaços todos ocupados (um lanche, um bloco, um balão...). */
+const barrinhaCheia = () => `
+  <rect x="3" y="20" width="58" height="24" rx="7" fill="#3d3c48" ${s()}/>
+  <rect x="7" y="24" width="15" height="16" rx="3" fill="#f6f4ee"/><rect x="24.5" y="24" width="15" height="16" rx="3" fill="#f6f4ee"/><rect x="42" y="24" width="15" height="16" rx="3" fill="#f6f4ee"/>
+  <circle cx="14.5" cy="32" r="5" fill="#e8302a"/>
+  <rect x="27.5" y="27" width="9" height="10" rx="2" fill="#2f7fff"/>
+  <polygon points="${estrela5(49.5, 32.4, 6)}" fill="#ffd23a"/>
+  <path d="M10 49 h44" stroke="#c8d0dc" stroke-width="3" stroke-linecap="round" stroke-dasharray="1 7"/>`;
+
 const BASE: Record<string, string> = {
+  // spec 032: as dicas de comprar (cada lanche no seu desenho) e de comer
+  dicaPipoca: svg(baldePipoca()),
+  dicaCachorroQuente: svg(cachorroQuente()),
+  dicaSuco: svg(copoSuco()),
+  dicaAlgodao: svg(algodaoDoce()),
+  dicaComer: svg(carinhaComendo()),
+  barraCheia: svg(barrinhaCheia()),
   // ------------------------------------------------------------ a1: os instrumentos
   a80Guitarra: svg(guitarra(33, 37, 0.92)),
   a80Teclado: svg(teclado(32, 34, 1.1)),

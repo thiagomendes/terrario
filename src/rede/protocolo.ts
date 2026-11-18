@@ -51,8 +51,12 @@ import type { ObraSalva } from '../nucleo/saneamento';
  * o `brinquedo` e o `bau` guarda com a f10 aberta; o quadro da vila ganhou o `qto`; os eventos
  * `vilaGuardou` e `vilaBolo`; a mesinha do bolo nas peças sólidas da casa; os itens `feno` (no
  * lugar do trigo da f2 e da f7) e `fatia_bolo`).
+ * 16: spec 032, comprar e comer (o comando `vila` ganhou o `comprar` e perdeu a `vitamina`; o
+ * evento `vilaCompra`; o jogador visto ganhou o `come`; comer vale no criativo e de barriga cheia,
+ * uma refeição por vez; a Dona Cida, pipoqueira da pracinha; o item `algodao_doce`; as trocas de
+ * comida "de graça" da Vila saíram).
  */
-export const VERSAO_REDE = 15;
+export const VERSAO_REDE = 16;
 /** Jogadores por mundo. */
 export const MAX_JOGADORES = 8;
 

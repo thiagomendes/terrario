@@ -1,4 +1,5 @@
 import {
+  ALGODAO_DOCE,
   CACHORRO_QUENTE,
   COLHER_PEDREIRO,
   CUBO_CORES,
@@ -1070,6 +1071,43 @@ export function registrarCatalogo(): void {
       '.kkkkkkkkkkkkkkk',
       'kwwwwwwwwwwwwwwk',
       '.kkkkkkkkkkkkkk.',
+      '................',
+    ],
+  });
+  // spec 032: o algodão-doce do parque (comida): a nuvem cor-de-rosa no palito de madeira
+  registrarItem({
+    id: ALGODAO_DOCE,
+    nome: 'Algodão-doce',
+    tipo: 'comida',
+    pilha: 16,
+    comida: { fome: 2, saturacao: 1 },
+  });
+  registrarDesenho(ALGODAO_DOCE, {
+    paleta: {
+      k: '#8a3a5e',
+      p: '#ffb0d2',
+      P: '#ffd2e6',
+      q: '#ff8fbf',
+      w: '#fff4fa',
+      m: '#c8925a',
+      M: '#9a6638',
+    },
+    linhas: [
+      '................',
+      '.....kkkkk......',
+      '...kkPPwPPkk....',
+      '..kPPwwPPppPk...',
+      '.kPwwPPppPPppk..',
+      '.kPPPppPPppqpk..',
+      '.kpPPppPpppqqk..',
+      '..kppqppppqqk...',
+      '...kqqpqqqqk....',
+      '....kkqqqkk.....',
+      '......kmk.......',
+      '......kmk.......',
+      '......kMk.......',
+      '......kMk.......',
+      '......kkk.......',
       '................',
     ],
   });

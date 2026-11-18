@@ -72,6 +72,8 @@ import type { ParqueVista } from '../jogo/parque';
 import { N0_PILOTOS, N_MORADORES_BATE, pilotoDoBate } from '../jogo/bate';
 import { criarParqueNucleo, type ComandoParque, type EventoParque } from './parque';
 import { criarMissoesDoParque, type ComandoMissoes, type EventoMissoes } from './vilaMissoes';
+import { criarComprasDaVila, type ComandoCompras, type EventoCompras } from './vilaCompras';
+import { balcoesDaVila } from '../jogo/compra';
 import { F_BALOES } from '../jogo/missoesParque';
 import { criarCasaNucleo, type ComandoCasa } from './casa';
 import {
@@ -137,7 +139,12 @@ export const MENINO_BMX = 72;
 export const MORADORES_PISTA: readonly { n: number; posto: PostoVila; profissao: Profissao }[] = [
   { n: SKATISTA, posto: 'skatista', profissao: 'construtor' },
   { n: MENINO_BMX, posto: 'bmx', profissao: 'construtor' },
+  // spec 032: a Dona Cida, pipoqueira da pracinha (atrás do carrinho de pipoca, perto de onde a
+  // criança nasce: a primeira barraca que ela vê vende de verdade)
+  { n: 73, posto: 'pracinha', profissao: 'cozinheiro' },
 ];
+/** Spec 032: a pipoqueira da pracinha. */
+export const PIPOQUEIRA_PRACINHA = 73;
 /** O n é da turma da grade (o público do show)? */
 export const daTurma = (n: number) => n >= N0_PUBLICO && n < N0_PUBLICO + PUBLICO_GRADE;
 /** O papel na banda de um morador da vila (null: não é da banda). */
@@ -239,6 +246,10 @@ export interface JogadorVila {
   /** Etapa B: um "lugar" das missões de lugares (o carimbo do bilhete, o passo da prenda). */
   visitar?(uso: string): void;
   visitou?(uso: string): boolean;
+  /** Spec 032: o lanche comprado cabe na barrinha? */
+  cabeNaBarra?(item: string): boolean;
+  /** Spec 032: põe um na barrinha (e avisa a tela); falso se não coube. */
+  porNaBarra?(item: string): boolean;
 }
 
 export interface CtxVila {
@@ -276,7 +287,9 @@ export type EventoVila =
   /** Etapa B: as missões do parque (o balão que desce, a prenda, a vovó, o lanche das lhamas). */
   | EventoMissoes
   /** Parte 3B: as missões da casa (o brinquedo guardado no baú, o bolo da vovó). */
-  | EventoCasaMissoes;
+  | EventoCasaMissoes
+  /** Spec 032: comprar na barraca (a entrega, para todos verem). */
+  | EventoCompras;
 
 /**
  * O toque numa caixa do palco (fora do show: brinquedo livre) e, no parque (parte 2), sentar
@@ -289,7 +302,9 @@ export type ComandoVila =
   /** Parte 3: a TV, o videocassete, o disco e o baú da casa; o trilho da rampa de skate. */
   | ComandoCasa
   /** Parte 3B: o brinquedo espalhado (f10). */
-  | ComandoCasaMissoes;
+  | ComandoCasaMissoes
+  /** Spec 032: comprar um lanche numa barraca. */
+  | ComandoCompras;
 
 /** O comando é da Casa anos 80 ou da rampa de skate (parte 3)? */
 const DA_CASA = new Set(['tv', 'videocassete', 'disco', 'bau', 'rampa']);
@@ -359,6 +374,14 @@ export function criarVila(ctx: CtxVila) {
     evento: ctx.evento,
     espalhar: ctx.espalhar,
     sujar: ctx.sujar,
+  });
+
+  // spec 032: comprar nas barracas (a entrega e o lanche na barrinha)
+  const compras = criarComprasDaVila({
+    balcoes: balcoesDaVila(plano),
+    agora: ctx.agora,
+    jogador: ctx.jogador,
+    espalhar: ctx.espalhar,
   });
 
   // a Casa anos 80 e a rampa de skate (parte 3): a TV e o disco da sala, o baú, o trilho da rampa
@@ -1153,6 +1176,7 @@ export function criarVila(ctx: CtxVila) {
       cuidarDosPilotos();
       if (n % 20 === 7) cuidarDaFazendinha();
       missoes.passo(n);
+      compras.passo();
       // (o fim do trilho da rampa no passo certo: o trilho seguinte já pode vir logo)
       casa.passo();
       missoesCasa.passo(n);
@@ -1164,6 +1188,7 @@ export function criarVila(ctx: CtxVila) {
       if (c.a === 'guiar') return parque.guiar(id, c);
       if (!podeTocar(id)) return;
       if (c.a === 'caixa') tocarCaixa(j, c.i);
+      else if (c.a === 'comprar') compras.comando(id, c);
       else if (c.a === 'sentar' || c.a === 'sair' || c.a === 'roda') parque.comando(id, c);
       else if (c.a === 'brinquedo') missoesCasa.comando(id, c);
       // (parte 3B: com a f10 aberta o baú guarda o brinquedo espalhado, e não dá)
@@ -1181,6 +1206,8 @@ export function criarVila(ctx: CtxVila) {
     missoes,
     /** Parte 3B: as missões da casa (testes). */
     missoesCasa,
+    /** Spec 032: as compras nas barracas (testes). */
+    compras,
     /** Spec 026 (parte 2): as cadeiras do parque (testes). */
     parque,
     /** Spec 026 (parte 2): os carrinhos do bate-bate para o quadro deste jogador (ou null). */

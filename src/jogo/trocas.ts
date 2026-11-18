@@ -63,16 +63,8 @@ export const TROCAS: Record<Profissao, readonly Troca[]> = {
     },
   ],
   cozinheiro: [
-    // spec 026 (T08): a moça do lanche da Vila Neon (sem roça no bairro: o pão sai do balcão)
-    // a barraca do lanche: pipoca, cachorro-quente e suco (de graça: sem roça e sem dinheiro)
-    { id: 'pipoca', dar: [], receber: { item: 'pipoca', qtd: 2 }, planta: 'bairro' },
-    {
-      id: 'cachorro-quente',
-      dar: [],
-      receber: { item: 'cachorro_quente', qtd: 1 },
-      planta: 'bairro',
-    },
-    { id: 'suco', dar: [], receber: { item: 'suco', qtd: 1 }, planta: 'bairro' },
+    // (spec 026 tinha aqui a pipoca, o cachorro-quente e o suco "de graça" da Vila Neon; desde a
+    // spec 032 eles se compram na barraca, com a entrega de verdade: `src/jogo/compra.ts`)
     {
       id: 'peixe',
       dar: [{ item: 'peixe_cru', qtd: 3 }],

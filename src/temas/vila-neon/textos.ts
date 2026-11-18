@@ -151,6 +151,7 @@ export const TEXTOS_VILA: TextosTema = {
     cubo_cores: 'Cubo de cores',
     feno: 'Feno',
     fatia_bolo: 'Bolo de fubá',
+    algodao_doce: 'Algodão-doce',
     pipoca: 'Pipoca do festival',
     ovo: 'Ovo',
     ovo_cozido: 'Ovo cozido',

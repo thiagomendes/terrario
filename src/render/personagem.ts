@@ -32,6 +32,12 @@ export interface Personagem {
   definirLuz(f: number): void;
   /** O que a mão direita segura. */
   definirNaMao(bloco: number | null, item: string | null): void;
+  /** Spec 032: o nó da mão direita (a comida mordida e o lanche da entrega vão nele). */
+  noDaMao(): TransformNode;
+  /** Spec 032: a mão segura outra coisa por um tempo (o item de sempre some até soltar). */
+  ocuparMao(ocupada: boolean): void;
+  /** Spec 032: os plásticos do boneco (a comida mordida acende com a mesma luz). */
+  plasticos(): import('./formas').Plasticos;
   contarMalhas(): number;
   /** Peças do item na mão (0 com a mão vazia). */
   contarMalhasMao(): number;

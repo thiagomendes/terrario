@@ -125,9 +125,11 @@ describe('spec 026 (parte 2, etapa B): as missões do parque no núcleo', () => 
     expect(sanear({ t: 'vila', a: 'balao' })).toBeNull();
     expect(sanear({ t: 'vila', a: 'prenda', i: 1 })).toEqual({ t: 'vila', a: 'prenda', i: 1 });
     expect(sanear({ t: 'vila', a: 'prenda', i: 2 })).toBeNull();
-    for (const a of ['feno', 'cocho', 'fita', 'vitamina'])
+    for (const a of ['feno', 'cocho', 'fita'])
       expect(sanear({ t: 'vila', a, i: 9, x: 1 })).toEqual({ t: 'vila', a });
     expect(sanear({ t: 'vila', a: 'pelucia' })).toBeNull();
+    // (spec 032: a vitamina se compra, pelo `comprar`)
+    expect(sanear({ t: 'vila', a: 'vitamina' })).toBeNull();
   });
 
   it('as quatro missões: 18 moedinhas (o mundo dava 33; com as da casa, 51), sem fantasia', () => {
@@ -345,12 +347,14 @@ describe('spec 026 (parte 2, etapa B): as missões do parque no núcleo', () => 
     expect(quadro && temMissaoNova(quadro)).toBe(true);
   });
 
-  it('a rua: a fita da locadora (uma) e a vitamina da lanchonete (até duas), só de perto', () => {
+  it('a rua: a fita da locadora (uma) e a vitamina da lanchonete (comprada, até três), só de perto', () => {
     const n = abrir();
     const rua = plano().pontos.rua;
+    // (spec 032: a vitamina se compra no lugar de comprar 3, a lanchonete)
+    const vitamina = () => vila(n, 'comprar', { i: 3 });
     n.comando('ana', vila(n, 'fita'));
-    n.comando('ana', vila(n, 'vitamina'));
-    passos(n, 22);
+    n.comando('ana', vitamina());
+    passos(n, 50);
     expect(inv(n, 'ana').contar(FITA_VIDEO)).toBe(0);
     expect(inv(n, 'ana').contar(VITAMINA)).toBe(0);
     ir(n, 'ana', rua.fitas[0], Y(), rua.fitas[2] + 3);
@@ -363,9 +367,9 @@ describe('spec 026 (parte 2, etapa B): as missões do parque no núcleo', () => 
     ir(n, 'ana', rua.balcao[0], Y(), rua.balcao[2] + 2.5);
     passos(n, 2);
     for (let k = 0; k < 4; k++) {
-      n.comando('ana', vila(n, 'vitamina'));
-      passos(n, 22);
+      n.comando('ana', vitamina());
+      passos(n, 50);
     }
-    expect(inv(n, 'ana').contar(VITAMINA)).toBe(2);
+    expect(inv(n, 'ana').contar(VITAMINA)).toBe(3);
   });
 });

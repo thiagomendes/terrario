@@ -94,6 +94,8 @@ import { criarClima, estacaoDoDia, type EstadoClima } from '../jogo/clima';
 import { criarSobrevivencia, type Sobrevivencia } from '../jogo/sobrevivencia';
 import { criarInventario, type Inventario, type Slot } from '../jogo/inventario';
 import { blocoDoItem, obterItem } from '../jogo/itens';
+import { lugarNaBarra } from '../jogo/compra';
+import { DURACAO_REFEICAO } from '../jogo/refeicao';
 import { RECEITAS } from '../jogo/receitas';
 import { podeColetar } from '../jogo/ferramentas';
 import { TROCAS, fazerTroca, trocasDoMundo } from '../jogo/trocas';
@@ -269,6 +271,8 @@ interface Jogador {
   constroi: boolean;
   /** Golpes, colocações e comidas desde que entrou (os amigos veem o movimento). */
   acoes: [number, number, number];
+  /** Spec 032: o que está comendo e até quando (o relógio do núcleo); null sem refeição. */
+  comendo: { item: string; ate: number } | null;
   /** Passo da última telemetria aceita (para conferir se a posição nova é possível). */
   passoTelemetria: number;
   /** O núcleo mandou o jogador para longe (renascer): a próxima posição pode saltar. */
@@ -844,6 +848,17 @@ export function criarNucleo(op: OpcoesNucleo) {
       ganharAlma(o.id, visitarLugar(almaDe(o.id), mundoAlma, uso));
     },
     visitou: (uso: string) => almaDe(o.id).lugares.includes(uso),
+    // spec 032: o lanche comprado entra na barrinha (a pilha dele, a mão vazia ou um espaço vazio)
+    cabeNaBarra: (item: string) =>
+      lugarNaBarra(o.inventario.slots, item, o.tel.slot, obterItem(item)?.pilha) >= 0,
+    porNaBarra(item: string) {
+      const i = lugarNaBarra(o.inventario.slots, item, o.tel.slot, obterItem(item)?.pilha);
+      if (i < 0) return false;
+      const s = o.inventario.obter(i);
+      o.inventario.definir(i, { item, qtd: (s?.item === item ? s.qtd : 0) + 1 });
+      o.eventos.push({ e: 'coletou', item, qtd: 1 });
+      return true;
+    },
   });
   const vila: VilaNucleo | null = planoVila
     ? criarVila({
@@ -993,6 +1008,7 @@ export function criarNucleo(op: OpcoesNucleo) {
       sono: 0,
       querDormir: 0,
       acoes: [0, 0, 0],
+      comendo: null,
       passoTelemetria: n,
       saltoPermitido: true,
       passoGesto: -Infinity,
@@ -2403,16 +2419,24 @@ export function criarNucleo(op: OpcoesNucleo) {
     if (ok) almaEvento(j.id, `trocou:${c.profissao}`);
   }
 
+  /**
+   * Spec 032: comer vale em todo modo. A refeição come no começo (tira da mochila e, na
+   * sobrevivência, sobe a fome; de barriga cheia ela fica no máximo) e a tela faz as três
+   * mordidas; outra refeição só depois de `DURACAO_REFEICAO`. No criativo é brincadeira (sem
+   * conta), mas a comida acaba como de verdade.
+   */
   function comer(j: Jogador, c: Extract<Comando, { t: 'comer' }>): void {
-    if (modo !== 'sobrevivencia') return;
+    if (j.sobrevivencia.estado.morto) return;
     const p = j.inventario.obter(c.slot);
     const comida = p ? obterItem(p.item)?.comida : undefined;
     if (!p || !comida) return;
-    if (j.sobrevivencia.comer(comida.fome, comida.saturacao)) {
-      j.inventario.remover(c.slot, 1);
-      j.eventos.push({ e: 'comeu', item: p.item });
-      j.acoes[2]++;
-    }
+    const t = n * PASSO;
+    if (j.comendo && t < j.comendo.ate) return;
+    if (modo === 'sobrevivencia') j.sobrevivencia.comer(comida.fome, comida.saturacao);
+    j.inventario.remover(c.slot, 1);
+    j.comendo = { item: p.item, ate: t + DURACAO_REFEICAO };
+    j.eventos.push({ e: 'comeu', item: p.item });
+    j.acoes[2]++;
   }
 
   /**
@@ -2753,6 +2777,8 @@ export function criarNucleo(op: OpcoesNucleo) {
         else if (c.a === 'rampa') vila?.comando(j.id, { a: 'rampa', l: c.l });
         // (parte 3B: o brinquedo espalhado do quarto)
         else if (c.a === 'brinquedo') vila?.comando(j.id, { a: 'brinquedo', i: c.i });
+        // (spec 032: comprar o lanche de uma barraca)
+        else if (c.a === 'comprar') vila?.comando(j.id, { a: 'comprar', i: c.i });
         else vila?.comando(j.id, { a: c.a });
         break;
       }
@@ -2988,6 +3014,8 @@ export function criarNucleo(op: OpcoesNucleo) {
       correndo: o.tel.correndo,
       mao: o.inventario.obter(o.tel.slot)?.item ?? null,
       acoes: [o.acoes[0], o.acoes[1], o.acoes[2]],
+      // spec 032: o que está comendo (o amigo vê as mordidas na comida certa)
+      ...(o.comendo && n * PASSO < o.comendo.ate ? { come: o.comendo.item } : {}),
     }));
     const perfis = perfisSujos
       ? Object.fromEntries([...jogadores.values()].map((o) => [o.id, o.perfil]))

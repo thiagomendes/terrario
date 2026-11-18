@@ -34,6 +34,7 @@ import {
   type Brinquedo,
 } from '../../jogo/parque';
 import { boaParaDica, criarDicaToque } from './dicaToque';
+import { alcancaOBalcao, balcoesDaVila, MAX_POR_LANCHE, type Lanche } from '../../jogo/compra';
 import { arte as arteAlma } from './arte';
 import { CSS_CANTO, maoAtrasDoBoneco } from './canto';
 import { criarRevista } from './revista';
@@ -45,7 +46,6 @@ import {
   F_LANCHE,
   F_PRENDA,
   MAX_FITAS,
-  MAX_VITAMINAS,
   N_BALOES,
   PRENDAS,
   alcancaOBalao,
@@ -53,6 +53,8 @@ import {
   lugarDoBalao,
 } from '../../jogo/missoesParque';
 import {
+  ALGODAO_DOCE,
+  CACHORRO_QUENTE,
   CUBO_CORES,
   FATIA_BOLO,
   FENO,
@@ -60,6 +62,7 @@ import {
   IOIO,
   PELUCIA,
   PIAO,
+  SUCO,
   VITAMINA,
 } from '../../jogo/exclusivos';
 import { ALCANCE_ESPALHADO, ESPALHADOS, F_QUARTO, QUARTO } from '../../jogo/missoesCasa';
@@ -394,6 +397,17 @@ export function ligarVilaNeon(
   }
   const comando = (c: Parameters<NonNullable<EstadoDepuracao['vilaMissoes']>['comando']>[0]) =>
     e.vilaMissoes?.comando(c);
+  /** Spec 032: os lugares de comprar (a mesma lista do núcleo, na mesma ordem). */
+  const balcoes = balcoesDaVila(plano);
+  /** Spec 032: a criança está no meio de uma compra (a dica não chama de novo). */
+  const comprando = () => !!e.vilaCompras?.estado().some((q) => q.quem === e.voce);
+  const FIGURA_DO_LANCHE: Record<Lanche, string> = {
+    pipoca: 'dicaPipoca',
+    cachorro: 'dicaCachorroQuente',
+    suco: 'dicaSuco',
+    vitamina: 'dicaVitamina',
+    algodao: 'dicaAlgodao',
+  };
   const TOQUES_B: ToqueB[] = [
     // f6: os três balões fugidos (o do carrossel gira com o toldo: o alvo vai junto)
     ...Array.from({ length: N_BALOES }, (_, i): ToqueB => ({
@@ -470,19 +484,28 @@ export function ligarVilaNeon(
       dica: { figura: 'dicaFita', texto: 'Toque para pegar', ate: 5 },
       comDica: () => tem(FITA_VIDEO) < MAX_FITAS,
     },
-    {
-      chave: 'vitamina',
-      ativo: () => true,
-      ponto: () => [rua.balcao[0], rua.balcao[1] + 1.2, rua.balcao[2]],
-      alcanca: pertoDoPonto(rua.balcao, ALCANCE_LOJA),
-      raio: RAIO_TOQUE * 2.6,
-      tocar: () => {
-        if (tem(VITAMINA) < MAX_VITAMINAS) comando({ a: 'vitamina' });
-        e.vilaMissoes?.rua('vitamina');
-      },
-      dica: { figura: 'dicaVitamina', texto: 'Toque para pedir', ate: 5 },
-      comDica: () => tem(VITAMINA) < MAX_VITAMINAS,
-    },
+    // spec 032: comprar nas barracas (os três lanches no balcão da Bia, a vitamina da lanchonete,
+    // a pipoca e o algodão-doce do parque, a pipoca da pracinha): um toque e a entrega acontece
+    ...balcoes.map(
+      (b, i): ToqueB => ({
+        chave: b.chave,
+        ativo: () => true,
+        ponto: () => b.p,
+        alcanca: (x, z) => alcancaOBalcao(b, x, z),
+        raio: RAIO_TOQUE * (b.barraca === 'lanche' ? 1.5 : b.barraca === 'lanchonete' ? 2.6 : 2),
+        tocar: () => {
+          // (com 3 do mesmo lanche, ela só acena: a mochila não enche de pipoca)
+          if (tem(b.item) >= MAX_POR_LANCHE) e.vilaCompras?.acenar(b.vendedora);
+          else e.vilaCompras?.comprar(i);
+        },
+        dica: {
+          figura: FIGURA_DO_LANCHE[b.lanche],
+          texto: 'Toque para comprar',
+          ate: b.barraca === 'lanche' ? 4.5 : 5,
+        },
+        comDica: () => tem(b.item) < MAX_POR_LANCHE && !comprando(),
+      }),
+    ),
     {
       chave: 'revista',
       ativo: () => true,
@@ -847,7 +870,21 @@ export function ligarVilaNeon(
     // (etapa B: o feno do fardo, a pelúcia de prenda, a fita e a vitamina também vêm para a mão)
     // (parte 3: os brinquedos do baú da Casa anos 80 também; parte 3B: o feno é item próprio, só
     // das lhamas, e vai sempre para a mão; antes era o trigo, só com a f2 ou a f7 na vez)
-    const naMao = [FENO, PELUCIA, FITA_VIDEO, VITAMINA, IOIO, PIAO, CUBO_CORES, FATIA_BOLO];
+    // (spec 032: os lanches comprados também chegam na mão)
+    const naMao = [
+      FENO,
+      PELUCIA,
+      FITA_VIDEO,
+      VITAMINA,
+      IOIO,
+      PIAO,
+      CUBO_CORES,
+      FATIA_BOLO,
+      'pipoca',
+      CACHORRO_QUENTE,
+      SUCO,
+      ALGODAO_DOCE,
+    ];
     if (!naMao.includes(d.item)) return;
     for (let i = 0; i < 9; i++)
       if (e.inventario?.obter(i)?.item === d.item) {
@@ -868,6 +905,38 @@ export function ligarVilaNeon(
     setTimeout(() => el.remove(), 1300);
     tocarSomInterface('mochila');
     setTimeout(() => tocarSomInterface('plim'), 180);
+  });
+
+  // ---------------------------------------------------------------- spec 032: a barrinha cheia
+  // (a compra não acontece e nada sai da mão: a barrinha balança de leve e o balãozinho com o
+  // desenho da barrinha cheia aparece em cima dela por um tempinho)
+  const avisoCheia = criarDicaToque();
+  const stCheia = document.createElement('style');
+  stCheia.textContent = `
+@keyframes barra-cheia { 0%, 100% { translate: 0 0; } 20% { translate: -7px 0; } 40% { translate: 6px 0; } 60% { translate: -4px 0; } 80% { translate: 2px 0; } }
+.barra.cheia { animation: barra-cheia 0.55s ease-in-out; }
+@media (prefers-reduced-motion: reduce) { .barra.cheia { animation: none; } }`;
+  document.head.appendChild(stCheia);
+  let cheiaAte = 0;
+  window.addEventListener('brumaluz:barraCheia', () => {
+    const barra = document.querySelector<HTMLElement>('.barra');
+    if (!barra) return;
+    barra.classList.remove('cheia');
+    void barra.offsetWidth;
+    barra.classList.add('cheia');
+    setTimeout(() => barra.classList.remove('cheia'), 600);
+    const r = barra.getBoundingClientRect();
+    avisoCheia.mostrar({
+      chave: 'barra-cheia',
+      t: { x: r.left + r.width / 2, y: r.top - 6 },
+      semMao: true,
+      figura: arteAlma('barraCheia'),
+      texto: 'A barrinha está cheia',
+    });
+    const ate = (cheiaAte = performance.now() + 2500);
+    setTimeout(() => {
+      if (cheiaAte === ate) avisoCheia.mostrar(null);
+    }, 2500);
   });
 
   void guia;
