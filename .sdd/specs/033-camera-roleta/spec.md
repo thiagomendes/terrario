@@ -100,6 +100,12 @@ As cinco cenas da 022 (corredor, casinha, obra, campo e copa da árvore), 2 seme
 
 Nas distâncias escolhidas (4,75 deitado, 5,06 em pé) a criança simulada acerta igual à câmera de antes, como no esboço. (Em pé, a primeira rodada perdeu o desenho da página depois da obra; a obra, o campo e a copa foram medidos de novo numa página só.)
 
+## Quadros por segundo (RTX 3060 pela ponte do WSL)
+- **A roleta:** fechada, aberta e arrastando com o dedo, na Vila Neon em pé e deitado: 60 nos três (depois de a fileira passar a escrever só o estilo que mudou e montar o desenho de cada item uma vez; antes, arrastando deitado caía para 50–54).
+- **As zonas do celular em pé** (`vila-casa-medida`, a casa, a rampa, o parque e a rua, de dia e de noite): 60.
+- **O pior caso do festival:** com a câmera nova ele caía (no mesmo lugar e hora, alternado três vezes: 4,4 dá 49, 51 e 51; 5,06 dá 43, 41 e 47), porque a câmera mais longe põe o público inteiro na tela (+20 mil triângulos, +18 desenhos). Então, **no campo do festival com o show tocando, a distância de começo volta à de antes (4,4)**; fora dele volta a nova, e a pinça da criança sempre vale.
+- **Câmera de antes e a nova com a CPU 4× mais lenta** (`medidas-033-camera`, alternadas): dentro do ruído da medida.
+
 ## Experiência medida
 - Os toques, arrastes, vizinhos, voltas sem fim, Gestos, Voltar, Fechar, tocar fora e o fechar sozinho, com dedo de verdade, em pé e deitado (`e2e/roleta.spec.ts`).
 - Nada encosta e nada sai da tela com a roleta mais cheia, de 320×568 a 1280×720 (`e2e/vila-patins.spec.ts`).
