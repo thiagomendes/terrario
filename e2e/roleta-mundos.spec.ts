@@ -7,12 +7,12 @@ import { escolherNaRoleta, esperarItem, itensDaRoleta, meioDaRoleta, rolarAte } 
  * Spec 033: nada da roda de antes se perdeu na roleta, em nenhum mundo. Em cada tema, no
  * celular em pé e com o dedo: a lista do menu (os itens de sempre, os extras do mundo e, na
  * Vila Neon, os que só aparecem quando servem) e a dos gestos (com os presentes de nível e o
- * do mundo), e cada item alcançado de verdade, rolando até o meio. A lista vai para
- * test-results/roleta033/itens-por-mundo.json (o relatório da spec).
+ * do mundo), e cada item alcançado de verdade, rolando até o meio. A lista de cada mundo vai
+ * para capturas-033/itens-<tema>.json (o relatório da spec).
  */
 test.setTimeout(900_000);
 test.use({ actionTimeout: 30_000 });
-const PASTA = 'test-results/roleta033';
+const PASTA = 'capturas-033';
 
 const TEMAS = [
   'padrao',

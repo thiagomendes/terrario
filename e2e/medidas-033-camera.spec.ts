@@ -24,7 +24,8 @@ const QUAL = process.env.ESBOCO_033 ?? '';
 test.skip(!QUAL, 'medidas só com ESBOCO_033');
 test.setTimeout(5_400_000);
 test.describe.configure({ mode: 'parallel' });
-const PASTA = process.env.ESBOCO_PASTA ?? 'test-results/esboco-033';
+// (fora de test-results, que o Playwright apaga a cada rodada)
+const PASTA = process.env.ESBOCO_PASTA ?? 'capturas-033';
 
 const TELAS = {
   deitado: { viewport: { width: 844, height: 390 } },

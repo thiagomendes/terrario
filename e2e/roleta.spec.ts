@@ -22,7 +22,7 @@ import {
  */
 test.setTimeout(420_000);
 test.use({ actionTimeout: 30_000 });
-const PASTA = 'test-results/roleta033';
+const PASTA = 'capturas-033/roleta';
 
 const menu = (page: Page) => page.evaluate(() => window.__brumaluz!.gestos!.menu());
 

@@ -18,7 +18,8 @@ const QUAL = process.env.ESBOCO_ROLETA ?? '';
 test.skip(!QUAL, 'fotos só com ESBOCO_ROLETA');
 test.setTimeout(1_800_000);
 test.describe.configure({ mode: 'parallel' });
-const PASTA = process.env.ESBOCO_PASTA ?? 'test-results/medidas-033';
+// (fora de test-results, que o Playwright apaga a cada rodada)
+const PASTA = process.env.ESBOCO_PASTA ?? 'capturas-033';
 const NOITE = process.env.ROLETA_HORA === 'noite';
 const MUNDOS = (process.env.MUNDOS ?? 'vila-neon,cidade-grande,rancho-alegre,padrao').split(',');
 
