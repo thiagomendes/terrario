@@ -2020,9 +2020,6 @@ export function criarCena(
         },
         preparo: (b) => {
           const onde = { x: b.p[0], z: b.p[2] };
-          // (o preparo do carrinho conta como um toque no brinquedo do parque, como antes)
-          if (b.barraca === 'algodao' || b.barraca === 'pipocaParque' || b.barraca === 'pipocaPracinha')
-            estado.parqueToques = (estado.parqueToques ?? 0) + 1;
           if (b.barraca === 'lanchonete') estado.vilaMissoes?.rua('vitamina');
           else if (b.barraca === 'algodao') {
             parqueVila?.tocar('algodao', 0);
@@ -2052,6 +2049,10 @@ export function criarCena(
     comprar: (i) => {
       enviarTelemetria(true);
       enviar({ t: 'vila', a: 'comprar', i });
+      // (o toque no carrinho do parque conta como toque no brinquedo dele, como antes da compra)
+      const b = balcoesVila[i];
+      if (b && b.barraca !== 'lanche' && b.barraca !== 'lanchonete')
+        estado.parqueToques = (estado.parqueToques ?? 0) + 1;
     },
     acenar: (n) => acenar(n),
     balcoes: () => balcoesVila,
@@ -3688,7 +3689,9 @@ export function criarCena(
     // olha de cima, por cima do que tapava (só quando a criança não está mexendo na câmera, e
     // nunca dentro da casa, que tem a câmera dela)
     if (estado.semTransparenciaDoBoneco && !casaCena?.dentro() && !passeio?.sentado()) {
-      const espremida = r.desviando && r.distancia < 2.6;
+      // (só perto das barracas, onde a criança fica de frente para o balcão; perto dos brinquedos
+      // a câmera fica como sempre e a dica deles continua na tela)
+      const espremida = r.desviando && r.distancia < 2.6 && !!estado.pertoDeComprar?.();
       apertoCamera = espremida ? apertoCamera + dt : Math.max(0, apertoCamera - dt);
       const quieta = !arrastandoCamera && performance.now() / 1000 - controle.mexeuEm > 1.2;
       if (apertoCamera > 0.35 && quieta && camera.rotation.x < PITCH_POR_CIMA)
