@@ -309,7 +309,8 @@ test('comprar: cada barraca antes, no meio e depois', async ({ browser }) => {
         const [dx, dz] = lados[barraca] ?? [0, 3];
         e.voar?.(false);
         e.teleportar!(p[0] + dx, p[2] + dz, plano.h + 1.2);
-        e.apontar!(Math.atan2(-dx, -dz) - 0.3, 0.4);
+        // (na barraca da Bia, a de camisetas fica logo atrás: a câmera vê de mais de cima)
+        e.apontar!(Math.atan2(-dx, -dz) - 0.3, barraca === 'lanche' ? 0.62 : 0.45);
       },
       { p: b.p, barraca: b.barraca },
     );

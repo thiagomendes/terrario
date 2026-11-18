@@ -3680,8 +3680,23 @@ export function criarCena(
     cameraVisao.position.set(r.posicao.x, r.posicao.y, r.posicao.z);
     // spec 026 (parte 3): dentro da Casa anos 80 o campo de visão abre (a sala inteira na tela)
     cameraVisao.fov = camera.fov * (casaCena ? casaCena.abertura() : 1);
+    // spec 032: na Vila Neon a criança nunca fica transparente; com a câmera espremida contra
+    // uma parede (a barraca das camisetas logo atrás de quem compra na da Bia), ela sobe devagar e
+    // olha de cima, por cima do que tapava (só quando a criança não está mexendo na câmera, e
+    // nunca dentro da casa, que tem a câmera dela)
+    if (estado.semTransparenciaDoBoneco && !casaCena?.dentro() && !passeio?.sentado()) {
+      const espremida = r.desviando && r.distancia < 2.6;
+      apertoCamera = espremida ? apertoCamera + dt : Math.max(0, apertoCamera - dt);
+      const quieta = !arrastandoCamera && performance.now() / 1000 - controle.mexeuEm > 1.2;
+      if (apertoCamera > 0.35 && quieta && camera.rotation.x < PITCH_POR_CIMA)
+        controle.apontar(
+          camera.rotation.y,
+          camera.rotation.x + Math.min(PITCH_POR_CIMA - camera.rotation.x, dt * 0.9),
+          true,
+        );
+    }
     // perto demais: o boneco fica meio transparente (só troca quando o degrau muda). Spec 032: na
-    // Vila Neon a criança nunca fica transparente (a câmera é que se afasta, mais abaixo)
+    // Vila Neon a criança nunca fica transparente (a câmera é que se afasta, logo acima)
     const op = estado.semTransparenciaDoBoneco
       ? 1
       : Math.min(degrauOpacidade(r.opacidade), estado.limiteOpacidade ?? 1);
@@ -3700,6 +3715,10 @@ export function criarCena(
   let itemNaMaoAtual = '';
   /** Spec 032 (só fotos de teste): o corpo travado num rumo. */
   let yawTravado: number | null = null;
+  /** Spec 032: há quanto tempo (s) a câmera está espremida contra uma parede (na Vila). */
+  let apertoCamera = 0;
+  /** Spec 032: até onde a câmera espremida sobe (o pitch, olhando de cima). */
+  const PITCH_POR_CIMA = 0.72;
   /** Giro extra do corpo (só para capturas). */
   let giroCorpo = 0;
   let luzJogador = 1;
