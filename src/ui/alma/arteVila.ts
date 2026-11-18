@@ -470,9 +470,11 @@ const cartaoRampa = () => `
     <polygon points="${estrela5(11.6, 32.6, 3.8)}" fill="#2f8cff"/>
     ${[26.5, 39.5, 52]
       .map(
-        (x, k) => `<circle cx="${x}" cy="32" r="6.2" fill="#fffdf6" stroke="${TINTAS[k]}" stroke-width="2.2"/>
-    <rect x="${x - 4.4}" y="29.6" width="8.8" height="2.4" rx="1.2" fill="${TINTAS[k]}"/>
-    <circle cx="${x - 2.4}" cy="34.2" r="1.35" fill="${TINTAS[k]}"/><circle cx="${x + 2.4}" cy="34.2" r="1.35" fill="${TINTAS[k]}"/>`,
+        // (o skate carimbado, sem o aro: dentro de um círculo a prancha e as rodinhas pareciam
+        // uma carinha)
+        (x, k) => `<g transform="rotate(${k % 2 ? 8 : -10} ${x} 32)">
+    <path d="M${x - 5.6} 27.6 L${x - 4.4} 30.4 H${x + 4.4} L${x + 5.6} 27.6" fill="none" stroke="${TINTAS[k]}" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="${x - 3}" cy="34" r="1.8" fill="${TINTAS[k]}"/><circle cx="${x + 3}" cy="34" r="1.8" fill="${TINTAS[k]}"/></g>`,
       )
       .join('')}
   </g>
