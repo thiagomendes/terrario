@@ -340,7 +340,16 @@ test('com amigos: a Bia vê a Ana comprar e comer', async ({ browser }) => {
   await bia.waitForFunction((id) => window.__brumaluz!.refeicaoDoAmigo?.(id)?.item === 'cachorro_quente', anaId, {
     timeout: 8_000,
   });
-  await bia.waitForTimeout(500);
+  // (a foto do aparelho da Bia: a câmera livre dela na frente da Ana, que está comendo)
+  await bia.addStyleTag({ content: '.painel-foto, .grade-foto, .flash-foto { display: none !important; }' });
+  await bia.evaluate((l) => {
+    const e = window.__brumaluz!;
+    const f = e.modoFoto!;
+    if (!f.ativo()) f.alternar();
+    f.posicionar!(l[0] + 0.5, l[2] + 1.5, l[1] + 2.3);
+    e.apontar!(Math.PI + 0.2, 0.08);
+  }, lugar);
+  await bia.waitForTimeout(250);
   await bia.screenshot({ path: `${PASTA}/bia-ve-ana-comer.png` });
   await bia.waitForFunction((id) => (window.__brumaluz!.refeicaoDoAmigo?.(id)?.mordidas ?? 0) >= 2, anaId, {
     timeout: 5_000,
