@@ -84,6 +84,7 @@ O menu e os gestos vêm das mesmas listas de antes (`itensDoMenu`, `EXTRAS_RODA`
 | --- | --- | --- |
 | Todos | Mapa, Diário, Personagem, Baú, Lojinha, Foto, Gestos, Para casa, Tela cheia (onde o navegador deixa), Pausa | Acenar, Cumprimentar, Chamar, Comemorar, Aplaudir, Dançar, Apontar, Sentar; Pulo de estrela (nível 3) e Reverência (nível 8) |
 | Onde há missões (Cidade Grande, Rancho Alegre, Era dos Dinos, Doce Reino, Vila Neon) | + Missões, logo depois de Personagem | — |
+| Sem missões (o mundo de sempre, Planeta Vivo, Mata Encantada, Exploração Lunar) | só os de todos | — |
 | Vila Neon | + Tirar patins (só de patins), Guardar skate (só de skate), Sair do brinquedo (só sentada num brinquedo) | + Roqueiro |
 
 ## Experiência medida

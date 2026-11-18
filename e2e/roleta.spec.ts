@@ -176,6 +176,8 @@ for (const tamanho of ['empe', 'deitado'] as Tamanho[])
     await tocarSeletor(cdp, page, `${ROLETA_ABERTA} .voltar.ativo`);
     await expect.poll(() => menu(page)).toBe('menu');
     await expect(placa).toContainText('Fechar');
+    // a fileira do menu volta correndo de lado e para em Gestos (de onde a criança veio)
+    await esperarAssentar(page);
     expect(await meioDaRoleta(page)).toBe('gestos');
     // de novo em Gestos; tocar fora sobe um nível e, de novo, fecha
     await tocarSeletor(cdp, page, `${ROLETA_ABERTA} .item.meio`);

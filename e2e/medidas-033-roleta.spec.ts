@@ -196,6 +196,55 @@ for (const tela of telas)
       await ctx.close();
     });
 
+/** Quadros por segundo em `ms` (enquanto `durante` roda). */
+async function quadros(page: Page, ms: number, durante: () => Promise<void> = async () => {}) {
+  const medida = page.evaluate(async (ms) => {
+    const amostras: number[] = [];
+    let ultimo = performance.now();
+    const fim = ultimo + ms;
+    await new Promise<void>((ok) => {
+      const passo = () => {
+        const agora = performance.now();
+        amostras.push(agora - ultimo);
+        ultimo = agora;
+        if (agora < fim) requestAnimationFrame(passo);
+        else ok();
+      };
+      requestAnimationFrame(passo);
+    });
+    return Math.round((amostras.length / (ms / 1000)) * 10) / 10;
+  }, ms);
+  await durante();
+  return medida;
+}
+
+for (const tela of telas)
+  test(`roleta: os quadros fechada, aberta e arrastando, ${tela}`, async ({ browser }) => {
+    test.skip(QUAL !== 'fps');
+    const r: Record<string, number[]> = { fechada: [], aberta: [], arrastando: [] };
+    const { ctx, page, cdp } = await abrir(browser, tela, 'vila-neon');
+    await espera(page, 4000);
+    for (let volta = 0; volta < 3; volta++) {
+      r.fechada.push(await quadros(page, 4000));
+      await tocarSeletor(cdp, page, '[data-botao-roda]');
+      await espera(page, 800);
+      r.aberta.push(await quadros(page, 3000));
+      const b = await bandeja(page);
+      r.arrastando.push(
+        await quadros(page, 3000, async () => {
+          for (let i = 0; i < 3; i++) await arrastar(cdp, page, b.x + 60, b.y, -120, 900);
+        }),
+      );
+      await tocarSeletor(cdp, page, '[data-roleta] .voltar');
+      await espera(page, 1500);
+    }
+    const med = (v: number[]) => [...v].sort((a, b) => a - b)[Math.floor(v.length / 2)];
+    console.log(
+      `FPS-ROLETA ${tela} fechada ${med(r.fechada)} aberta ${med(r.aberta)} arrastando ${med(r.arrastando)} ${JSON.stringify(r)}`,
+    );
+    await ctx.close();
+  });
+
 for (const tela of telas)
   test(`roleta: o vídeo da criança de 3 anos, ${tela}`, async () => {
     test.skip(QUAL !== 'video');
