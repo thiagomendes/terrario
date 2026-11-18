@@ -35,4 +35,5 @@ Tamanho: **P** (até meio dia), **M** (1 a 2 dias), **G** (3 dias ou mais). Uma 
 **Ordem:** T01 → T02 → T03 → T04 → T05 → T06 → T07 → T08 → T09 → T10 → T11 (parada) → T12 → T13 → T14.
 
 ## Situação
-- (18 nov 2026) Spec escrita; fases 1 a 3 feitas (núcleo, rede 16, o comer em todo mundo, as barracas da Vila). Portão visual e bateria em curso.
+- (18 nov 2026) Fases 1 a 4 feitas: núcleo, rede 16, o comer em todo mundo, as barracas da Vila; `tsc` limpo; Vitest inteiro verde; paridade 36/36; e2e `comprar-comer` 5/5; bateria da Vila 57/62 na primeira volta, os 5 que caíram (a dica no nascer, o toque nos carrinhos do parque, a tela limpa da rua) corrigidos e de novo na fila; portão visual com duas voltas de fotos e o revisor novo.
+- Falta: rodada em família; as barracas dos outros mundos (etapas próprias).

@@ -166,6 +166,10 @@ O desenho da compra (fichinha, preparo, entrega, chegou) e o do comer (três mor
 7. **No toque, tocar com comida na mão come** (antes, no criativo, nada acontecia); segurar também come. Com comida na mão, segurar não quebra bloco (no criativo, para quebrar, troca o item da mão).
 8. **A dica de comer espera perto das barracas** (a de comprar vem antes, e a tela fica limpa durante a entrega), e some depois que ela come, até outra comida chegar na mão.
 9. **A dica da barraca não volta logo depois da compra**: só depois de a criança se afastar (como os outros toques da Vila).
+10. **Na Vila Neon inteira a criança nunca fica transparente** (pedido do coordenador ao ver as fotos): nem com a coisa da dica atrás dela, nem com a câmera perto. Com a câmera espremida contra uma parede (a barraca das camisetas logo atrás de quem compra na da Bia), ela sobe devagar e olha de cima.
+11. **Tocar num bicho com comida na mão não come** (a comida é para dar a ele); foi o que manteve a paridade em 36 de 36 (a raposa já mansa comia as frutinhas no criativo).
+12. **A dica dos carrinhos do parque só aparece bem de perto** (3,6 blocos): do lado dos brinquedos, a de andar no brinquedo vem antes.
+13. **A revisão das fotos (revisor novo)**: a marca da mordida ficava virada para a boca (agora a comida sai um pouco e vira de lado entre as mordidas; no canudinho o canudo fica na boca), a fichinha não se via (maior, mais tempo na mão), o lanche ficava de cabeça para baixo na mão esticada da vendedora (agora em pé), o brilhinho do fim parecia farelo nos olhos (agora sai com o braço embaixo), a carinha feliz acabava cedo (até 3,5 s), a mão entrava no queixo (mais baixa, embaixo da comida).
 
 ## Decisões do dono
 (a preencher)
