@@ -399,6 +399,20 @@ export function ligarVilaNeon(
     e.vilaMissoes?.comando(c);
   /** Spec 032: os lugares de comprar (a mesma lista do núcleo, na mesma ordem). */
   const balcoes = balcoesDaVila(plano);
+  /** Spec 032: o número do carrinho de pipoca de um lugar de comprar (o brinquedo de tocar dele). */
+  const pipocaDe = (b: { p: readonly number[] }) => {
+    const l = plano.pecas.filter((q) => q.tipo === 'pipoca');
+    let k = 0;
+    l.forEach((q, j) => {
+      if (Math.hypot(q.x - b.p[0], q.z - b.p[2]) < Math.hypot(l[k].x - b.p[0], l[k].z - b.p[2])) k = j;
+    });
+    return k;
+  };
+  /** Spec 032: a distância de uma dica para escolher a da vez (a de comprar, longe do balcão, perde). */
+  const distDaDica = (l: { base: string; dist: number }) =>
+    l.base.startsWith('compra-') && l.dist > 2.8 ? l.dist + 3 : l.dist;
+  /** Spec 032: quando a criança tocou para comprar (a próxima compra espera a entrega). */
+  let tocouParaComprar = -Infinity;
   /** Spec 032: a criança está no meio de uma compra (a dica não chama de novo). */
   const comprando = () => !!e.vilaCompras?.estado().some((q) => q.quem === e.voce);
   e.pertoDeComprar = () => {
@@ -499,9 +513,18 @@ export function ligarVilaNeon(
         alcanca: (x, z) => alcancaOBalcao(b, x, z),
         raio: RAIO_TOQUE * (b.barraca === 'lanche' ? 1.5 : b.barraca === 'lanchonete' ? 2.6 : 2),
         tocar: () => {
-          // (com 3 do mesmo lanche, ela só acena: a mochila não enche de pipoca)
-          if (tem(b.item) >= MAX_POR_LANCHE) e.vilaCompras?.acenar(b.vendedora);
-          else e.vilaCompras?.comprar(i);
+          const agora = performance.now();
+          // (com 3 do mesmo lanche, ou no meio da entrega, a compra não acontece: a vendedora
+          // acena e o carrinho faz o brinquedo dele, a pipoca estoura, a cuba gira)
+          const carrinho =
+            b.barraca === 'algodao' ? 'algodao' : b.barraca.startsWith('pipoca') ? 'pipoca' : null;
+          if (tem(b.item) >= MAX_POR_LANCHE || agora - tocouParaComprar < 2300) {
+            e.vilaCompras?.acenar(b.vendedora);
+            if (carrinho) e.vilaParque?.tocar(carrinho, carrinho === 'pipoca' ? pipocaDe(b) : 0);
+            return;
+          }
+          tocouParaComprar = agora;
+          e.vilaCompras?.comprar(i);
         },
         dica: {
           figura: FIGURA_DO_LANCHE[b.lanche],
@@ -1056,7 +1079,11 @@ export function ligarVilaNeon(
       )
       // (o toque de uma missão aberta vem antes do brinquedo ao lado: o balão preso no carrossel
       // antes do "Toque para andar")
-      .sort((a, b) => Number(!!b.b?.naHora) - Number(!!a.b?.naHora) || a.dist - b.dist)[0];
+      // (spec 032: a barraca só ganha do brinquedo ao lado quando a criança chega no balcão)
+      .sort(
+        (a, b) =>
+          Number(!!b.b?.naHora) - Number(!!a.b?.naHora) || distDaDica(a) - distDaDica(b),
+      )[0];
     const agora = performance.now() / 1000;
     if (!perto) {
       pertoDe = null;

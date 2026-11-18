@@ -304,8 +304,8 @@ test('comprar: cada barraca antes, no meio e depois', async ({ browser }) => {
           // (de viés: atrás de quem está de frente para o balcão fica a barraca das camisetas)
           lanche: [0, 2.6],
           lanchonete: [-1.2, 3],
-          pipocaParque: [0.5, 3],
-          algodao: [-0.5, 3],
+          pipocaParque: [0.4, 2.4],
+          algodao: [-0.4, 2.4],
           pipocaPracinha: [2.6, 0.6],
         };
         const [dx, dz] = lados[barraca] ?? [0, 3];

@@ -50,8 +50,9 @@ async function irAoBalcao(page: Page, b: Balcao): Promise<void> {
         // (bem na frente de cada lanche do balcão da Bia: a dica é a do lanche mais perto)
         lanche: [0, 2.6],
         lanchonete: [-1.2, 3],
-        pipocaParque: [0.5, 3],
-        algodao: [-0.5, 3],
+        // (no balcão dos carrinhos do parque: mais longe, a dica é a do brinquedo ao lado)
+        pipocaParque: [0.4, 2.4],
+        algodao: [-0.4, 2.4],
         pipocaPracinha: [3, 0.4],
       };
       const [dx, dz] = lados[barraca] ?? [0, 3];
