@@ -148,7 +148,8 @@ body[data-overlay] .roleta, body.modo-foto .roleta, body.tela-titulo .roleta { d
 let cssPosto = false;
 
 /** O que fica embaixo da roleta e dá licença enquanto ela está aberta. */
-export const TAPA_ROLETA = '.barra, .toque .joystick, .toque .botoes';
+export const TAPA_ROLETA =
+  '.barra, .nome-item, .status, .toque .joystick, .toque .botoes';
 
 /** Passos do arraste (px) por item: o espaço do meio ao vizinho. */
 const passoPx = (tamanho: number) => deslocamentoNaRoleta(1, tamanho);
