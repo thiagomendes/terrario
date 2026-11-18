@@ -3384,7 +3384,12 @@ export function criarCena(
       enviar({ t: 'domar', criatura: naMira.id, slot: hotbar.ativo });
       return;
     }
-    if (def?.comida && !naMira) {
+    // (o bicho que conta é o que está bem perto da criança; um lá longe, na linha do dedo que tocou
+    // a mão dela, não impede comer)
+    const bichoPerto =
+      !!naMira &&
+      Math.hypot(naMira.x - controle.jogador.x, naMira.z - controle.jogador.z) < 3;
+    if (def?.comida && !bichoPerto) {
       // spec 032: comida na mão se come, em todo modo (as três mordidas). Com um bicho na mira,
       // não: quem toca no bicho com a comida quer dar a ele (a raposa já mansa, o bicho que não
       // come aquilo), e a comida não some sem querer
