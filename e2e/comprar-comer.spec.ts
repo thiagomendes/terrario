@@ -319,12 +319,22 @@ test('com amigos: a Bia vê a Ana comprar e comer', async ({ browser }) => {
     anaId,
     { timeout: 10_000 },
   );
-  // a Ana come (o dedo na comida); a Bia vê as mordidas no cachorro-quente
-  await ana.evaluate(() => {
+  // a Ana come (o dedo na comida); a Bia vê as mordidas no cachorro-quente. As duas na pracinha,
+  // a Bia de frente para a Ana (a foto mostra a Ana comendo)
+  const lugar = await ana.evaluate(() => {
     const e = window.__brumaluz!;
+    const p = e.vila!()!;
     for (let i = 0; i < 9; i++) if (e.inventario!.obter(i)?.item === 'cachorro_quente') e.selecionarSlot!(i);
+    e.teleportar!(p.nascimento.x + 2, p.nascimento.z + 3, p.h + 1.2);
+    e.apontar!(0, 0.15);
+    return [p.nascimento.x + 2, p.nascimento.z + 3, p.h + 1.2] as const;
   });
-  await ana.waitForTimeout(1000);
+  await bia.evaluate((l) => {
+    const e = window.__brumaluz!;
+    e.teleportar!(l[0] + 0.6, l[1] + 3.6, l[2]);
+    e.apontar!(Math.atan2(-0.6, -3.6), 0.2);
+  }, lugar);
+  await ana.waitForTimeout(2500);
   await ana.evaluate(() => window.__brumaluz!.comer!());
   await bia.waitForFunction((id) => window.__brumaluz!.refeicaoDoAmigo?.(id)?.item === 'cachorro_quente', anaId, {
     timeout: 8_000,
