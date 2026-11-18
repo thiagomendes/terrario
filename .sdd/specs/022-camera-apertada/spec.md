@@ -55,3 +55,4 @@ Ajuda na mira fica fora, a não ser que as medidas mostrem que a câmera sozinha
 
 ## Decisões do dono (continuação)
 - 13 nov 2026: depois das medidas, "Vamos de WebGPU então, deixa isso aí parado." A 022 fica parada; a câmera de hoje continua.
+- 18 nov 2026 (spec 033): no celular a câmera começa um pouco mais afastada (4,75 deitado e 5,06 em pé, contra 4,4), medida com a criança simulada desta spec; o recorte da parede continua fora.

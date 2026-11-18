@@ -60,6 +60,8 @@ Pedido do dono em 10 nov 2026: o boneco de brinquedo da 012 quase não aparece e
 - **Botão da carinha:** no canto superior esquerdo, ao lado do "+" (decisão do dono), para a tela ficar limpa.
 
 ## Menus da tela: opção C em todos os aparelhos (decisão do dono, 10 nov 2026)
+> **Trocada pela spec 033 (18 nov 2026):** a roda em volta do boneco virou a **roleta** de baixo, por cima da barrinha, em todo mundo, modo e aparelho (`src/ui/roleta.ts`; `.sdd/specs/033-camera-roleta/`). O botão de cima, os itens, os extras de cada mundo, os gestos (agora uma roleta ligada, com a plaquinha "Voltar") e as teclas continuam os mesmos. O resto desta seção vale como história.
+
 Esboço: `referencia/menus.html`, https://claude.ai/artifact/1ZGL5c9T41PnvQDUbGUghs. O dono escolheu a C e pediu a mesma experiência no celular, no tablet e no computador ("para a criança aprender a jogar tanto no browser quanto no tablet ou no celular"):
 - **Em cima à esquerda:** o botão de informações e, ao lado, um botão só que abre a roda (a mesma peça da roda de gestos, no meio da tela, em volta do boneco).
 - **Na roda:** Mapa, Diário, Personagem, Foto, Gestos, Tela cheia e Pausa. "Gestos" troca a roda pelos 8 gestos no mesmo lugar, com "Voltar" no meio; segurar o botão da roda abre direto os gestos.
