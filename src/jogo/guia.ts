@@ -659,7 +659,8 @@ function alvoNaCasa(
     // (a trilha vai até o brinquedo e acaba a uns dois blocos dele: de mais perto ele ficava atrás
     // do boneco na câmera, como o feno da f7; um ponto de chegada ao lado dele às vezes caía na
     // célula de um móvel e a trilha empacava)
-    return b ? sitio(b.chave, b.x, b.z, 2.2, bolinhas[b.i] ?? 'bauArrumado', 0.9) : null;
+    // (a três blocos: de cima, o brinquedo fica acima da cabeça da criança, nunca atrás dela)
+    return b ? sitio(b.chave, b.x, b.z, 3.0, bolinhas[b.i] ?? 'bauArrumado', 0.9) : null;
   }
   if (m.id === F_RAMPA) {
     const sk = pt.skate.suporte;

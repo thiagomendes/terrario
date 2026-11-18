@@ -35,7 +35,7 @@ export const VOLTAS_NA_RAMPA = 3;
 /** Os brinquedos espalhados (os itens), na ordem de `QUARTO`. */
 export const ESPALHADOS = [IOIO, PIAO, CUBO_CORES] as const;
 /** Até onde (blocos, no chão) o toque no brinquedo espalhado vale. */
-export const ALCANCE_ESPALHADO = 4;
+export const ALCANCE_ESPALHADO = 4.6;
 /**
  * Na frente da vovó (blocos, do ponto entre o sofá e o tapete): ela recebe a vitamina. Só de
  * frente: chegando pela porta, por trás do sofá, ela dava o bolo de costas para a criança.

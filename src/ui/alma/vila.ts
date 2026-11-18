@@ -628,7 +628,7 @@ export function ligarVilaNeon(
           dica: {
             figura: ['dicaIoio', 'dicaPiao', 'dicaCubo'][i],
             texto: 'Toque para pegar',
-            ate: 3.8,
+            ate: 4.4,
           },
         }),
       ),
@@ -1014,7 +1014,14 @@ export function ligarVilaNeon(
   let transparente = false;
   scene.onBeforeRenderObservable.add(() => {
     const d = dica.estado();
-    const quer = !!d && !d.chave.startsWith('bate-') && maoAtrasDoBoneco(e, d.t);
+    // (parte 3B: na Casa anos 80, no quintal dela e nos brinquedos espalhados, a criança nunca
+    // some: a câmera de casinha de bonecas olha de cima e a trilha acaba longe o bastante para a
+    // coisa ficar acima da cabeça; meio apagada, a criança de 3 anos via uma boneca desbotada)
+    const pes = e.jogadorPes?.();
+    const naCasa =
+      !!d &&
+      (d.chave.startsWith('espalhado-') || (!!pes && dentroDaCasa(p.casa, pes[0], pes[2], 4.5)));
+    const quer = !!d && !naCasa && !d.chave.startsWith('bate-') && maoAtrasDoBoneco(e, d.t);
     if (quer === transparente) return;
     transparente = quer;
     e.limiteOpacidade = quer ? 0.6 : 1;

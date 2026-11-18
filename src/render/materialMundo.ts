@@ -222,6 +222,13 @@ export class PluginMundo extends MaterialPluginBase {
             }
             if (kC > hC) discard;
           }
+          // parte 3B: a fileira de pedra da parede do meio sai perto do olho da câmera
+          // (casaParedeK[1].yz o olho no chão, .w o raio; 0 = nada)
+          if (casaParedeK[1].w > 0.0 && dC.y > casaY.x && dC.y < casaY.x + 1.02) {
+            vec4 cM = casaParede[4];
+            if (dC.x >= cM.x && dC.x < cM.z && dC.z >= cM.y && dC.z < cM.w
+                && length(dC.xz + 0.5 - casaParedeK[1].yz) < casaParedeK[1].w) discard;
+          }
           vec3 blocoM = floor(vBlocoMundo - normalize(vNormalW) * 0.02);
           float hM = hashMundo(blocoM);
           baseColor.rgb *= 0.94 + 0.1 * hM;

@@ -93,6 +93,11 @@ export interface CasaVila {
   descartar(): void;
 }
 
+/**
+ * Parte 3B: a fileira de pedra da parede do meio (e a tampa dela) sai a menos disto (blocos, no
+ * chão) do olho da câmera: colada nela, virava uma laje creme no canto da tela.
+ */
+export const PEDRA_PERTO_DO_OLHO = 3.2;
 /** Quanto dura cada brinquedo depois do toque (s). */
 export const DURA_TOQUE_CASA: Readonly<Record<ToqueCasa, number>> = {
   telefone: 3.2,
@@ -373,7 +378,16 @@ export function criarCasaVila(
     todas.push(m);
     return m;
   };
-  const mTampas = pc.paredes.map((r, i) => tampa(r, i, pc.y + 1, false));
+  // (parte 3B: a da parede do meio vai em pedaços de um bloco: perto do olho da câmera a fileira
+  // de pedra dela sai, e a tampa daquele pedaço junto)
+  const mTampas = pc.paredes.map((r, i) => (i === 4 ? null : tampa(r, i, pc.y + 1, false)));
+  const meio = pc.paredes[4];
+  const tampaMeio: { m: Mesh; x: number; z: number }[] = [];
+  for (let z = meio.z0; z <= meio.z1; z++) {
+    if (noVao(meio.x0, z)) continue;
+    const m = tampa({ x0: meio.x0, z0: z, x1: meio.x0, z1: z }, 4, pc.y + 1, false);
+    tampaMeio.push({ m, x: meio.x0 + 0.5, z: z + 0.5 });
+  }
   const mTopos = pc.paredes.slice(0, 4).map((r, i) => tampa(r, i, pc.corte.y, true));
   /** Quanto cada parede já sumiu (a do sul, a do norte, a do oeste, a do leste, a do meio). */
   let kParedes: readonly number[] = [0, 0, 0, 0, 0];
@@ -711,8 +725,15 @@ export function criarCasaVila(
       });
       mTampas.forEach((m, i) => {
         const v = kParedes[i] > 0.6;
-        if (m.isEnabled() !== v) m.setEnabled(v);
+        if (m && m.isEnabled() !== v) m.setEnabled(v);
       });
+      const olho = q.dentro?.olho;
+      for (const t of tampaMeio) {
+        const v =
+          kParedes[4] > 0.6 &&
+          !(olho && Math.hypot(t.x - olho.x, t.z - olho.z) < PEDRA_PERTO_DO_OLHO);
+        if (t.m.isEnabled() !== v) t.m.setEnabled(v);
+      }
       mTopos.forEach((m, i) => {
         const v = kTelhado > 0.6 && kParedes[i] < 0.4;
         if (m.isEnabled() !== v) m.setEnabled(v);

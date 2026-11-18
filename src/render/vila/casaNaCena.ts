@@ -26,7 +26,14 @@ import {
   type EstadoCasa,
 } from '../../jogo/casa';
 import type { NoTrilho } from '../../jogo/rampa';
-import { VULTO, criarCasaVila, tapaACamera, type CasaVila, type ToqueCasa } from './casa';
+import {
+  PEDRA_PERTO_DO_OLHO,
+  VULTO,
+  criarCasaVila,
+  tapaACamera,
+  type CasaVila,
+  type ToqueCasa,
+} from './casa';
 import { SKATES_NO_SUPORTE } from './pecasCasa';
 import { criarTrilhoSkate, lugarDoAmigoNoTrilho, JUNTAS_NA_RAMPA } from './trilhoSkate';
 import type { SalaNoSom, SomCasa, ToqueCasa as SomToque } from '../../audio/somCasa';
@@ -373,6 +380,12 @@ export function ligarCasaNaCena(d: DepsCasaNaCena) {
         p.casaY[3] = q.noite;
         p.casaParedeK.set(kParede.slice(0, 4), 0);
         p.casaParedeK[4] = kParede[4];
+        // parte 3B: a fileira de pedra da parede do meio também sai perto do olho da câmera
+        // (colada nela, a pedra com a tampa virava uma laje creme no canto da tela)
+        const olho = naCasa ? d.camera.olho() : null;
+        p.casaParedeK[5] = olho?.x ?? 0;
+        p.casaParedeK[6] = olho?.z ?? 0;
+        p.casaParedeK[7] = olho && kParede[4] > 0.5 ? PEDRA_PERTO_DO_OLHO : 0;
       }
       render.paredes(kParede, k);
       // a câmera de cima: chega devagar logo depois de entrar; depois, nunca mais baixa que o
