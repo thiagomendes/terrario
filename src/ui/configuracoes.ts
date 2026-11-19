@@ -1,6 +1,7 @@
 import { LIMITES, type Config, type GerenciadorConfig, type Qualidade } from '../jogo/config';
 import { criarModal } from './mundos';
 import { CREDITOS_SONS } from '../audio/creditosSons';
+import { ligarToquesEscondidos, TOQUES_PAINEL_MEDIDA } from './toquesEscondidos';
 
 export const CSS_CONFIG = `
 /* abas: trilho de poço com a aba escolhida em peça amarela */
@@ -250,6 +251,13 @@ export function criarPainelConfig(raiz: HTMLElement, g: GerenciadorConfig) {
   const modal = criarModal('Configurações', 'data-painel-config', 'config');
   const { fundo, corpo } = modal;
   raiz.appendChild(fundo);
+  // spec 034: tocar 5 vezes seguidas no título abre o painel de medida da janela (escondido;
+  // carregado só quando abre)
+  const titulo = fundo.querySelector<HTMLElement>('header h2');
+  if (titulo)
+    ligarToquesEscondidos(titulo, TOQUES_PAINEL_MEDIDA, () => {
+      void import('./painelMedida').then((m) => m.abrirPainelMedida());
+    });
   const abas = document.createElement('div');
   abas.className = 'abas';
   abas.setAttribute('role', 'tablist');
