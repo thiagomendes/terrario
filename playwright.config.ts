@@ -42,7 +42,12 @@ const LANCAR = process.env.E2E_GPU
         ...WEBGPU,
       ],
     }
-  : { args: ['--use-gl=angle', '--use-angle=swiftshader', '--ignore-gpu-blocklist', ...WEBGPU] };
+  : {
+      args: ['--use-gl=angle', '--use-angle=swiftshader', '--ignore-gpu-blocklist', ...WEBGPU],
+      // Claude Code na nuvem: o Chromium já instalado no ambiente (E2E_CHROMIUM=/opt/pw-browsers/chromium),
+      // de outra versão que a do Playwright do projeto
+      ...(process.env.E2E_CHROMIUM ? { executablePath: process.env.E2E_CHROMIUM } : {}),
+    };
 
 export default defineConfig({
   testDir: 'e2e',
