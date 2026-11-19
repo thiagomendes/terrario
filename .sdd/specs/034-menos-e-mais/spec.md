@@ -239,9 +239,14 @@ Depois disso, todos esses hashes continuam iguais até o fim da spec.
   - um painel de medida escondido que funcione **aberto pelo ícone**: esse modo não recebe parâmetro de URL e não divide o armazenamento com o Safari, então ele abre por um toque escondido nas Configurações;
   - ele mostra `innerWidth`/`innerHeight`, `clientWidth`/`clientHeight`, `visualViewport`, `screen`, `env(safe-area-inset-*)`, se está rodando como app e o tamanho real do canvas e do contêiner do jogo;
   - o orquestrador pede ao dono um print desse painel no iPhone, em pé e deitado.
+- **A correção é genérica, nunca do iPhone** (dono, 19 nov: "o jogo poderá ser jogado em N tipos de dispositivos com N tipos de tamanho"):
+  - nada de testar modelo, sistema ou `userAgent`, e nada de número mágico de aparelho;
+  - o jogo cobre a janela inteira pelo jeito padrão da web (o canvas e o contêiner do tamanho da área visível, as áreas seguras por `env(safe-area-inset-*)`), e os botões se afastam das áreas seguras de qualquer aparelho;
+  - o painel serve só para entender a causa no aparelho onde ela aparece;
+  - se a correção de 12 nov (`tamanhoDoCanvas`, que completa o canvas pelo `screen` até 1/8) for uma remendo que a causa de verdade torna desnecessária, ela sai.
 - **Corrigir com os números de verdade:**
   - teste de unidade de `tamanhoDoCanvas` (e do que mais entrar) com as medidas do aparelho;
-  - o e2e confere a cobertura até a borda com valores injetados;
+  - o e2e confere a cobertura até a borda com valores injetados, numa matriz de tamanhos (celulares pequenos e grandes, em pé e deitado, com e sem áreas seguras; tablet; computador);
   - as fotos de antes e depois no Chromium, a 390×844, 844×390 e 1280×720, ficam iguais;
   - os botões continuam dentro da área segura.
 - **Confirmação final:** no iPhone do dono, depois da publicação.

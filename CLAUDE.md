@@ -69,6 +69,7 @@ Durante o trabalho, mandar ao dono "aperitivos" (fotos e vídeos do que está fi
 - **Sem arco-íris** em produtos, roupas e adereços.
 - **Nomes sensíveis:** nada que possa soar preconceituoso (ex.: não chamar o gato preto de "Pretinho").
 - **Cada tema com o seu conteúdo:** o que é de um tema não vai para outro.
+- **Qualquer aparelho e qualquer tamanho de tela:** nada de tratamento específico por modelo, sistema ou `userAgent`; o leiaute se adapta pela área visível e pelas áreas seguras.
 - **Multijogador justo e LGPD:** a criança nunca digita dado pessoal.
 - **Mundos (decisão de 18 nov 2026):** Vila Neon (padrão), Cidade Grande, Rancho Alegre, Doce Reino e Exploração Lunar. Bruma e Luz, Planeta Vivo, Mata Encantada e Era dos Dinos saem na spec 034.
 
