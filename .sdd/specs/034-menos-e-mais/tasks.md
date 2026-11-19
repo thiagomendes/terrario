@@ -23,7 +23,7 @@ Na nuvem (Claude Code na web), o e2e roda com `E2E_CHROMIUM=/opt/pw-browsers/chr
 | # | Tarefa | Tamanho |
 | --- | --- | --- |
 | T07 | **No aparelho:**<br>- a limpeza depois de `prepararFormato`, primeiro o índice e depois os dados;<br>- o tema desconhecido fica;<br>- o mundo aberto que saiu dá lugar ao próximo;<br>- testes com armazém em memória. | P |
-| T08 | **Na nuvem:**<br>- `Armazem` lista mundos e salas e apaga a pasta do mundo (Azure e memória);<br>- a varredura pelos mundos depois do `listen`, e de novo em ~10 min;<br>- a remoção na leitura;<br>- o log sem nome;<br>- `recusar('versao')` para tema removido;<br>- `VERSAO_REDE` 17;<br>- os testes da seção 2. | M |
+| T08 | **Na nuvem:**<br>- `Armazem` lista mundos e salas e apaga a pasta do mundo (Azure e memória);<br>- a varredura pelos mundos depois do `listen`, e de novo em ~10 min;<br>- a remoção na leitura;<br>- o log sem nome;<br>- `recusar('versao')` para tema removido;<br>- `VERSAO_REDE` 17;<br>- os testes da seção 2.<br><br>**Investigar:** as memórias de `encontrarNascimento` e dos planos de povoado são chaveadas só pela semente. No servidor, que abre mundos de temas diferentes no mesmo processo, dois mundos com a mesma semente (ex.: 1337) e temas diferentes podem trocar de plano. Se for verdade, a chave passa a levar o tema, com teste. | M |
 
 ## Fase 3: prévias e ícones
 | # | Tarefa | Tamanho |
