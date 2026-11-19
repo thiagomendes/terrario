@@ -1,7 +1,7 @@
 ---
 id: 034-menos-e-mais
 title: 'Menos é mais: saem quatro mundos; a Vila Neon vira o padrão; prévias, ícones dos gestos, a faixa azul do iPhone e os testes que já falhavam'
-status: DRAFT
+status: APPROVED
 base_branch: main
 created_at: 2026-11-19T20:00:00Z
 ---
@@ -95,7 +95,7 @@ O dono, em 18 nov 2026 à noite: "menos é mais". Manter mundos simples custa ca
   - `commons/caoz_pradaria.ogg`, `commons/cobaia_wheek.ogg`, `commons/elefante.ogg`, `commons/guira.wav`;
   - `commons/lobos.ogg`, `commons/pardal.wav`, `commons/pelicano.ogg`, `commons/perereca.ogg`;
   - `commons/peru.wav`, `commons/ra_comestivel.ogg`, `commons/risada_elfo.ogg`, `commons/sapo.ogg`.
-  - Os créditos ficam no índice e em `AUTORES_GRAVACOES` (`audio/creditosSons.ts:14`).
+  - Hoje esses créditos estão no índice e em `AUTORES_GRAVACOES` (`audio/creditosSons.ts:14`).
   - Quatro créditos não aparecem em pacote nenhum (`bsb/0283.mp3`, `bsb/0440.mp3`, `commons/c_galo_medio.ogg`, `commons/c_galo_pequeno.ogg`) e **ficam**.
 - **Imagens:**
   - as prévias `public/temas/<id>.jpg`;
@@ -201,10 +201,11 @@ Depois disso, todos esses hashes continuam iguais até o fim da spec.
   - rodar duas vezes não muda nada;
   - o mundo removido regravado depois da varredura sai na leitura;
   - criar com tema removido é recusado.
-- **Publicar nesta ordem:**
-  1. o servidor primeiro (`servidor.yml` com `agora: true`);
-  2. conferir a revisão nova de pé e o log da varredura;
-  3. só então o site.
+- **Publicar nesta ordem.** O push na `main` dispara o site (`publicar.yml`) em minutos e o servidor (`servidor.yml`) esperando até 2 h. Por isso:
+  1. fazer o push e cancelar na hora a execução de `publicar.yml`;
+  2. disparar `servidor.yml` à mão com `agora: true`;
+  3. conferir a revisão nova de pé e o log da varredura;
+  4. disparar `publicar.yml` de novo.
   - Quem estiver com o cliente antigo aberto vê o aviso de versão nova até recarregar, como em toda subida de versão.
 
 ### 3. Prévias dos cartões

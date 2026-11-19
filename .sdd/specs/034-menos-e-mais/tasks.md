@@ -48,12 +48,12 @@ Na nuvem (Claude Code na web), o e2e roda com `E2E_CHROMIUM=/opt/pw-browsers/chr
 | # | Tarefa | Tamanho |
 | --- | --- | --- |
 | T16 | **Portão visual:**<br>- a escolha de mundos, os gestos e o iPhone, em pé de dia e de noite, e deitado;<br>- autocrítica e refazer;<br>- o revisor novo só com as fotos;<br>- acertos. | M |
-| T17 | **Publicar:**<br>- o servidor primeiro (`agora: true`);<br>- a revisão nova de pé e o log da varredura;<br>- o site;<br>- conferir no ar;<br>- o relatório para o dono e a Situação aqui. | P |
+| T17 | **Publicar:**<br>- push na `main` e cancelar na hora a execução de `publicar.yml`;<br>- disparar `servidor.yml` com `agora: true`;<br>- a revisão nova de pé e o log da varredura;<br>- disparar `publicar.yml` de novo;<br>- conferir no ar;<br>- o relatório para o dono e a Situação aqui. | P |
 
 **Ordem:** T00 → T01 (publica) → T02 → T03 → T04 → T05 → T06 → T07 → T08 → T09 → T10 (o dono escolhe) → T12, quando o print chegar → T11 → T13 → T14 → T15 → T16 → T17.
 
 ## Situação
-- **(19 nov 2026) Spec revisada.** O revisor aprovou com ajustes, e os ajustes entraram (ver "Revisão da spec").
+- **(19 nov 2026) Spec aprovada.** O revisor aprovou com ajustes; os ajustes entraram (ver "Revisão da spec") e ele conferiu a versão final.
 - **Linha de base nesta máquina** (nuvem, sem placa de vídeo):
   - Vitest: 204 arquivos, 2044 de 2044;
   - os e2e precisam de `E2E_CHROMIUM`; `fumaca` passa 3 de 3.
