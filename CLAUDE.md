@@ -84,6 +84,7 @@ Durante o trabalho, mandar ao dono "aperitivos" (fotos e vídeos do que está fi
   - e2e: `npx playwright test <arquivo>`;
   - capturas em `test-results/screens`; fotos e medidas que precisam sobreviver vão em `capturas-NNN/` (o Playwright apaga `test-results`).
 - **No computador do dono (WSL):**
+  - o ambiente Docker fica em `docker/` (imagem `terrario-workspace`, gerada com `docker compose -f docker/compose.yaml build`);
   - `scripts/e2e-gpu.sh <spec>` roda o e2e na placa de vídeo;
   - depois, `scripts/limpar-restos-root.sh <pasta>` limpa os restos de root;
   - medidas de quadros por segundo só valem lá ou no aparelho.

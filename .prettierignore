@@ -1,5 +1,4 @@
-.nants/
-.nants-outputs/
+docker/
 .sdd/
 dist/
 node_modules/

@@ -38,7 +38,7 @@ A spec 009-servidor-local separou o mundo do desenho. O **núcleo** (`src/nucleo
 - TypeScript 5.6.3, Vite 5.4.10, Babylon.js (`@babylonjs/core` 7.31.0, imports por módulo para tree-shaking).
 - Vitest 2.1.4 para a lógica pura (ambiente node, sem jsdom); Playwright 1.48.2 (Chromium) para e2e e capturas; Prettier 3.3.3.
 - Áudio: Web Audio API do navegador, sintetizado por código, sem biblioteca e sem arquivos.
-- Docker: imagem base `mcr.microsoft.com/playwright:v1.48.2-noble` (traz Node e navegadores), via `.nants/Dockerfile` e `.nants/compose.yaml` (serviço `workspace`, porta 5174).
+- Docker: imagem base `mcr.microsoft.com/playwright:v1.48.2-noble` (traz Node e navegadores), via `docker/Dockerfile` e `docker/compose.yaml` (serviço `workspace`, porta 5174).
 
 ## Estrutura
 
@@ -64,7 +64,7 @@ A spec 009-servidor-local separou o mundo do desenho. O **núcleo** (`src/nucleo
 - Testes rápidos: `npx vitest run` (ou `npm test`); completos: `npx vitest run && npx playwright test`
 - Build: `npm run build`; preview: `npm run preview`
 - Executar: `npm run dev -- --host 0.0.0.0 --port 5174 --strictPort`
-- Via Docker (sem runtime no host): `docker compose -f .nants/compose.yaml run --rm --service-ports workspace sh -lc '<comando>'`
+- Via Docker (sem runtime no host): `docker compose -f docker/compose.yaml run --rm --service-ports workspace sh -lc '<comando>'`
 - O Playwright sobe sozinho `npm run build` e o preview em `127.0.0.1:4173`. Capturas em `test-results/screens`.
 
 ## Padrões e convenções

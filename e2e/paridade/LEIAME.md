@@ -5,9 +5,9 @@ mesmas sessões precisam dar o mesmo estado salvo.
 
 ```sh
 # grava (cada sessão roda duas vezes e as duas têm que sair iguais)
-docker compose -f .nants/compose.yaml run --rm workspace sh -lc 'PARIDADE=gravar npx playwright test e2e/paridade.spec.ts --workers=1 --reporter=list'
+docker compose -f docker/compose.yaml run --rm workspace sh -lc 'PARIDADE=gravar npx playwright test e2e/paridade.spec.ts --workers=1 --reporter=list'
 # confere com o que está gravado
-docker compose -f .nants/compose.yaml run --rm workspace sh -lc 'PARIDADE=conferir npx playwright test e2e/paridade.spec.ts --workers=1 --reporter=list'
+docker compose -f docker/compose.yaml run --rm workspace sh -lc 'PARIDADE=conferir npx playwright test e2e/paridade.spec.ts --workers=1 --reporter=list'
 ```
 
 `PARIDADE_SESSOES=construir,itens`, `PARIDADE_SEMENTES=42` e `PARIDADE_TEMAS=doce-reino`

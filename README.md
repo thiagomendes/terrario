@@ -10,7 +10,7 @@ Jogo sandbox de exploração, construção e sobrevivência em mundo voxel, que 
 ## Executar
 
 ```sh
-docker compose -f .nants/compose.yaml run --rm --service-ports workspace sh -lc 'npm ci --no-audit --no-fund && npm run dev -- --host 0.0.0.0 --port 5174 --strictPort'
+docker compose -f docker/compose.yaml run --rm --service-ports workspace sh -lc 'npm ci --no-audit --no-fund && npm run dev -- --host 0.0.0.0 --port 5174 --strictPort'
 ```
 
 Abra `http://127.0.0.1:5174/` no navegador e clique em "Jogar". O menu de título também tem Mundos, Personagem (aparência com prévia) e Configurações.
@@ -76,7 +76,7 @@ Configurações (vídeo, áudio, controles e acessibilidade) ficam salvas em `lo
 ## Testar
 
 ```sh
-docker compose -f .nants/compose.yaml run --rm --service-ports workspace sh -lc 'npm ci --no-audit --no-fund && npx vitest run && npx playwright test'
+docker compose -f docker/compose.yaml run --rm --service-ports workspace sh -lc 'npm ci --no-audit --no-fund && npx vitest run && npx playwright test'
 ```
 
 Roteiros pesados, fora da bateria normal: `CAPTURAS_TEMAS=1 npx playwright test e2e/capturas-temas.spec.ts` (matriz de capturas por tema e prévias dos cartões em `public/temas/`) e `EXPLORACAO=1 npx playwright test e2e/exploracao.spec.ts` (robô que joga uns minutos em cada tema). Os dois aceitam uma lista de ids no lugar de `1`.

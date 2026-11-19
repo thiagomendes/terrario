@@ -1,0 +1,16 @@
+# Ambiente de desenvolvimento e testes (Node + Playwright). A imagem fica com o nome
+# terrario-workspace (usada por scripts/e2e-gpu.sh, e2e-webkit.sh e limpar-restos-root.sh).
+name: terrario
+services:
+  workspace:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: terrario-workspace:latest
+    working_dir: /work
+    volumes:
+      - ${PASTA_PROJETO:-..}:/work
+    ports:
+      - "5174:5174"
+    shm_size: "1gb"
+    command: ["sleep", "infinity"]
