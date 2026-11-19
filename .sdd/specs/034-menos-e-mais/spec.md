@@ -306,6 +306,7 @@ Depois disso, todos esses hashes continuam iguais até o fim da spec.
 - O que a criança ganhou nesses mundos some junto.
 - A faixa azul do iPhone entra.
 - As prévias fracas são refeitas.
+- Moedinhas, experiência e nível ganhos nos mundos que saem ficam com a criança (recomendação aceita).
 
 ## Revisão da spec (19 nov 2026)
 O revisor aprovou com ajustes. Entraram nesta versão:
