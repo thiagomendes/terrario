@@ -32,7 +32,7 @@ Ideias e pedidos do dono que ainda não viraram spec, e a fila combinada. A orde
   - 032;
   - 033;
   - a 023 também pede: fps com 4 amigos de premium, o provador girando e se a criança de 3 a 4 anos entende a troca dragão e capa e o pote de moedas.
-- **Faixa azul embaixo no iPhone pelo ícone da tela de início** (12 nov 2026): ver com captura do aparelho de verdade.
+- **Faixa azul embaixo no iPhone pelo ícone da tela de início** (12 nov 2026; captura do dono em 19 nov): vai com a casca nativa (020), decisão do dono em 19 nov. Correção genérica, para qualquer aparelho. O painel de medida da janela está pronto no commit 65c6e2d (desfeito na 034) para quando precisar.
 
 ## Paradas
 - **029, WebGPU:** medida feita no iPhone em 13 nov; a página `?medir=webgpu` continua escondida para medir de novo.

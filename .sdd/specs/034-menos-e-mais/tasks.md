@@ -8,7 +8,7 @@ Na nuvem (Claude Code na web), o e2e roda com `E2E_CHROMIUM=/opt/pw-browsers/chr
 | # | Tarefa | Tamanho |
 | --- | --- | --- |
 | T00 | **Antes de qualquer outra mudança** (spec, "O que muda", seção 0):<br>- `tests/temas/paridade-cinco.test.ts` com os hashes dos cinco (atlas; terreno com povoados em 3 sementes; criaturas, movimento, vozes, povoado, céu e mundo);<br>- o hash do canto do Doce;<br>- a paridade e2e com o Rancho no lugar do Bruma, gravada e conferida 36/36;<br>- as fotos de antes do nascer dos cinco;<br>- commit só disso. | M |
-| T01 | **O painel de medida da janela** (seção 5), aberto por um toque escondido nas Configurações.<br><br>É publicado sozinho logo em seguida (só o site; é escondido e não muda o jogo), para o dono medir no iPhone enquanto o resto anda. | P |
+| T01 | ~~O painel de medida da janela~~: feita (65c6e2d) e desfeita quando a faixa azul saiu da spec (dono, 19 nov). | — |
 
 ## Fase 1: quatro mundos saem, a base fica
 | # | Tarefa | Tamanho |
@@ -33,9 +33,7 @@ Na nuvem (Claude Code na web), o e2e roda com `E2E_CHROMIUM=/opt/pw-browsers/chr
 | T11 | **Ícones dos gestos, a escolhida:** no jogo, na roleta, no balão e nas carinhas, em pé e deitado; os e2e de gestos e da roleta passando. | M |
 
 ## Fase 4: a faixa azul do iPhone
-| # | Tarefa | Tamanho |
-| --- | --- | --- |
-| T12 | **Com o print do dono:**<br>- a causa e a correção;<br>- o teste de unidade com as medidas do aparelho;<br>- o e2e com valores injetados;<br>- as fotos de antes e depois iguais no Chromium.<br><br>Sem o print, fica para o fim e, se preciso, volta ao backlog. | P |
+Saiu da spec (dono, 19 nov): vai com a casca nativa (020). A T12 não existe mais.
 
 ## Fase 5: os testes
 | # | Tarefa | Tamanho |
@@ -47,10 +45,10 @@ Na nuvem (Claude Code na web), o e2e roda com `E2E_CHROMIUM=/opt/pw-browsers/chr
 ## Fase 6: acabamento e publicação
 | # | Tarefa | Tamanho |
 | --- | --- | --- |
-| T16 | **Portão visual:**<br>- a escolha de mundos, os gestos e o iPhone, em pé de dia e de noite, e deitado;<br>- autocrítica e refazer;<br>- o revisor novo só com as fotos;<br>- acertos. | M |
+| T16 | **Portão visual:**<br>- a escolha de mundos e os gestos, em pé de dia e de noite, e deitado;<br>- autocrítica e refazer;<br>- o revisor novo só com as fotos;<br>- acertos. | M |
 | T17 | **Publicar:**<br>- push na `main` e cancelar na hora a execução de `publicar.yml`;<br>- disparar `servidor.yml` com `agora: true`;<br>- a revisão nova de pé e o log da varredura;<br>- disparar `publicar.yml` de novo;<br>- conferir no ar;<br>- o relatório para o dono e a Situação aqui. | P |
 
-**Ordem:** T00 → T01 (publica) → T02 → T03 → T04 → T05 → T06 → T07 → T08 → T09 → T10 (o dono escolhe) → T12, quando o print chegar → T11 → T13 → T14 → T15 → T16 → T17.
+**Ordem:** T00 → T02 → T03 → T04 → T05 → T06 → T07 → T08 → T09 → T10 (o dono escolhe) → T11 → T13 → T14 → T15 → T16 → T17.
 
 ## Situação
 - **(19 nov 2026) Spec aprovada.** O revisor aprovou com ajustes; os ajustes entraram (ver "Revisão da spec") e ele conferiu a versão final.

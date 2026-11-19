@@ -1,6 +1,6 @@
 ---
 id: 034-menos-e-mais
-title: 'Menos é mais: saem quatro mundos; a Vila Neon vira o padrão; prévias, ícones dos gestos, a faixa azul do iPhone e os testes que já falhavam'
+title: 'Menos é mais: saem quatro mundos; a Vila Neon vira o padrão; prévias, ícones dos gestos e os testes que já falhavam'
 status: APPROVED
 base_branch: main
 created_at: 2026-11-19T20:00:00Z
@@ -23,7 +23,7 @@ O dono, em 18 nov 2026 à noite: "menos é mais". Manter mundos simples custa ca
 - O que a criança ganhou nesses mundos (fantasias, coisas da banca) some junto, "para não deixar rastros".
 - Na nuvem saem só os mundos desses quatro temas, e nada mais.
 - Os mundos do aparelho sem tema gravado, que abrem como Bruma, também saem.
-- A faixa azul embaixo no iPhone, aberto pelo ícone da tela de início, entra nesta spec (captura do dono em 19 nov).
+- A faixa azul embaixo no iPhone, aberto pelo ícone da tela de início, entrou nesta spec e depois saiu: vai com a casca nativa (020).
 - As prévias fracas (Lua e Rancho) são refeitas.
 
 ## O que existia (19 nov 2026, `main` 65b0a57, `VERSAO_REDE` 16)
@@ -234,23 +234,11 @@ Depois disso, todos esses hashes continuam iguais até o fim da spec.
   - O orquestrador manda as duas com a recomendada, e o dono decide.
 - **O revisor das fotos** responde, para cada ícone: "uma criança de 3 anos sabe o que acontece se tocar?"
 
-### 5. A faixa azul do iPhone
-- **Medir antes de mexer:**
-  - um painel de medida escondido que funcione **aberto pelo ícone**: esse modo não recebe parâmetro de URL e não divide o armazenamento com o Safari, então ele abre por um toque escondido nas Configurações;
-  - ele mostra `innerWidth`/`innerHeight`, `clientWidth`/`clientHeight`, `visualViewport`, `screen`, `env(safe-area-inset-*)`, se está rodando como app e o tamanho real do canvas e do contêiner do jogo;
-  - o orquestrador pede ao dono um print desse painel no iPhone, em pé e deitado.
-- **A correção é genérica, nunca do iPhone** (dono, 19 nov: "o jogo poderá ser jogado em N tipos de dispositivos com N tipos de tamanho"):
-  - nada de testar modelo, sistema ou `userAgent`, e nada de número mágico de aparelho;
-  - o jogo cobre a janela inteira pelo jeito padrão da web (o canvas e o contêiner do tamanho da área visível, as áreas seguras por `env(safe-area-inset-*)`), e os botões se afastam das áreas seguras de qualquer aparelho;
-  - o painel serve só para entender a causa no aparelho onde ela aparece;
-  - se a correção de 12 nov (`tamanhoDoCanvas`, que completa o canvas pelo `screen` até 1/8) for uma remendo que a causa de verdade torna desnecessária, ela sai.
-- **Corrigir com os números de verdade:**
-  - teste de unidade de `tamanhoDoCanvas` (e do que mais entrar) com as medidas do aparelho;
-  - o e2e confere a cobertura até a borda com valores injetados, numa matriz de tamanhos (celulares pequenos e grandes, em pé e deitado, com e sem áreas seguras; tablet; computador);
-  - as fotos de antes e depois no Chromium, a 390×844, 844×390 e 1280×720, ficam iguais;
-  - os botões continuam dentro da área segura.
-- **Confirmação final:** no iPhone do dono, depois da publicação.
-- **Se o print demorar,** esta parte vai para o fim da fila da spec. Se a 034 fechar sem ele, a faixa volta ao backlog com o painel já publicado.
+### 5. A faixa azul do iPhone: fora desta spec
+Entrou em 19 nov e saiu no mesmo dia (dono: "não precisamos nos preocupar com tratar essa barra azul do iPhone agora, pois na sequência faremos a casca nativa para distribuir nas lojas").
+- Vai com a 020 (casca nativa).
+- O painel de medida feito na T01 foi desfeito, e fica no commit 65c6e2d para quando a 020 precisar.
+- A regra continua: a correção é genérica, para qualquer aparelho e tamanho, nunca específica de iPhone.
 
 ### 6. Os testes que já falhavam
 - **Para cada um,** achar a causa e dizer no registro da spec se era o teste ou o jogo:
@@ -282,7 +270,6 @@ Depois disso, todos esses hashes continuam iguais até o fim da spec.
   - o teste de textos por tema da seção 1.
 - **Os cinco iguais a antes:** os hashes da T00 e as fotos de antes e depois do nascer.
 - **Os gestos:** a folha das duas direções; depois, a roleta de Gestos, o balão e as carinhas com os ícones escolhidos, em pé e deitado.
-- **O iPhone:** o print do painel de medida e a correção conferida pelo dono.
 - **A suíte inteira:**
   - Vitest;
   - paridade 36/36 contra a gravação da T00;
@@ -290,6 +277,7 @@ Depois disso, todos esses hashes continuam iguais até o fim da spec.
   - cada pedaço que cair, rodado de novo.
 
 ## Fora desta spec
+- **A faixa azul do iPhone** (vai com a 020).
 - **A riqueza nova da Lua, do Doce Reino e do Rancho** (specs próprias). Aqui entra só a prévia.
 - **A voz do orelhão.**
 - **Renomear o `brumaluz` interno**: o banco IndexedDB, `window.__brumaluz` e os eventos.
@@ -309,7 +297,7 @@ Depois disso, todos esses hashes continuam iguais até o fim da spec.
 - Os mundos do aparelho sem tema saem.
 - A Vila Neon é o padrão.
 - O que a criança ganhou nesses mundos some junto.
-- A faixa azul do iPhone entra.
+- A faixa azul do iPhone entra (e sai no mesmo dia: vai com a casca nativa, 020).
 - As prévias fracas são refeitas.
 - Moedinhas, experiência e nível ganhos nos mundos que saem ficam com a criança (recomendação aceita).
 
