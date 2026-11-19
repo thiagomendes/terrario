@@ -1,7 +1,7 @@
 ---
 id: 031-missoes-dinos-doce
 title: 'Missões da Era dos Dinos e do Doce Reino: ovinhos, capim, fósseis e bolo, com o guia da 030'
-status: APPROVED
+status: DONE
 base_branch: main
 branch: feat/031-missoes-dinos-doce
 created_at: 2026-11-14T20:00:00Z

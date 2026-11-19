@@ -1,7 +1,7 @@
 ---
 id: 014-cidade-grande
 title: 'Cidade Grande: prédios de visitar, ruas e praças, e o canteiro de obras'
-status: APPROVED
+status: DONE
 approved_at: 2026-11-12
 base_branch: main
 branch: feat/cidade-grande

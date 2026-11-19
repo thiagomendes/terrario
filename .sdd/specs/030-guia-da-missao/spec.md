@@ -1,7 +1,7 @@
 ---
 id: 030-guia-da-missao
 title: 'Guia da missão: a trilha de pegadinhas até o lugar, a placa do alvo e a mãozinha da obra'
-status: APPROVED
+status: DONE
 approved_at: 2026-11-14
 base_branch: main
 branch: feat/030-guia-da-missao

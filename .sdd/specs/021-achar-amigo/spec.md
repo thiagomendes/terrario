@@ -1,7 +1,7 @@
 ---
 id: 021-achar-amigo
 title: 'Achar o amigo: a carinha na borda, a trilha de estrelinhas, pular para perto e chamar'
-status: APPROVED
+status: DONE
 approved_at: 2026-11-12
 base_branch: main
 branch: feat/achar-amigo
