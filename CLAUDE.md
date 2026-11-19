@@ -51,7 +51,7 @@ Durante o trabalho, mandar ao dono "aperitivos" (fotos e vídeos do que está fi
 
 ## Ritmo
 - Uma spec por vez.
-- Trabalho só das 7h às 22h (hora de Brasília). Às 22h: parar os agentes, a vigia e os contêineres, avisar o dono e agendar a retomada às 7h.
+- No computador do dono, trabalho só das 7h às 22h (hora de Brasília); às 22h: parar os agentes, a vigia e os contêineres, avisar o dono e agendar a retomada às 7h. Na nuvem (Claude Code na web) não há pausa das 22h (decisão do dono, 19 nov 2026).
 
 ## Regras do produto
 - **Capricho visual é inegociável.**
