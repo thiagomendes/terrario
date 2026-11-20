@@ -557,14 +557,15 @@ function ligar(scene: Scene): void {
     peca(x0 + 5.5, Y + 1.75, zf + 1, 0, campainha);
     peca(x0 + 1.45, Y + 1, zf + 1, 0, vassoura);
     // o caldeirão no pé da varanda, na frente (à vista de quem passa na rua)
-    peca(x0 + 1.9, Y + 1, zf + 3.9, 0, caldeirao, 1.3);
-    peca(x0 + 1.9, Y + 1, zf + 3.9, 0, vapor, 1.3);
+    // (parte 2: na escala da Vovó, que fica do lado dele: antes era maior que ela)
+    peca(x0 + 2.1, Y + 1, zf + 3.6, 0, caldeirao, 0.95);
+    peca(x0 + 2.1, Y + 1, zf + 3.6, 0, vapor, 0.95);
     peca(x0 + 0.62, Y + 3.98, zf + 2.5, 0, (r) => teia(r, 0.9, 1));
     peca(tx1 + 0.96, topo + 0.96, zf + 1.04, 0, (r) => teia(r, 0.8, -1));
     peca(x0 + 5.2, Y + 5.75, zf + 1, 0, luaEstrelas);
     // parte 2: o banquinho do Tufinho, na beira da varanda
-    peca(x0 + 5.0, Y + 1, zf + 2.35, 0, banquinho);
-    pontos.banquinho = [x0 + 5.0, Y + 1, zf + 2.35];
+    peca(x0 + 4.4, Y + 1, zf + 2.4, 0, banquinho);
+    pontos.banquinho = [x0 + 4.4, Y + 1, zf + 2.4];
     pontos.vovo = [meio + 0.5, Y + 1, zf + 1];
   }
 
@@ -681,7 +682,9 @@ function ligar(scene: Scene): void {
       const x = trilha(z) + (hash2(k, 2, 51) - 0.5) * 12;
       if (pertoDeCamera(ox + x, oz + z, 7)) continue;
       // (parte 2: nem colado na câmera da foto dos morceguinhos, na frente do galho)
-      if (Math.hypot(x - (gx - 3.1), z - (gz + 5.8)) < 3.2) continue;
+      if (Math.hypot(x - (gx - 2.6), z - (gz + 5.6)) < 3.2) continue;
+      // (nem entre o Dudu e a câmera da foto dele: o cubinho aceso ficava na frente dele)
+      if (z > 78 && z < 85 && Math.abs(x - trilha(z)) < 2.2) continue;
       // (parte 3: nem no meio da trilha por onde a câmera do passeio noturno passa)
       if (Math.abs(x - trilha(z)) < 1.4 && z > 32 && z < 64) continue;
       vagalumes.push([ox + x, Y + 0.9 + hash2(k, 3, 51) * 2.2, oz + z]);
@@ -730,19 +733,33 @@ function ligar(scene: Scene): void {
       por(x0 + ax, Y + 1, z0 + az, Bloco.AR);
       abobora({ x: x0 + ax + 0.5, y: Y + 1, z: z0 + az + 0.5, ang: ax, bloco: Bloco.ABOBORA, lado: 0.55 });
     }
-    for (let x = x0 - 1; x <= x0 + w; x++) {
-      por(x, Y + 1, z0 - 1, Bloco.CERCA);
-      if (x < x0 + 4 || x > x0 + 6) por(x, Y + 1, z0 + d, Bloco.CERCA);
-    }
-    for (let z = z0; z < z0 + d; z++) {
-      por(x0 - 1, Y + 1, z, Bloco.CERCA);
-      por(x0 + w, Y + 1, z, Bloco.CERCA);
-    }
+    // (parte 2: a cerca de bloco formava uma fila de "F", com as travessas soltas; aqui é peça:
+    // um mourão por bloco e as duas travessas contínuas de ponta a ponta)
+    const cerca = (ax: number, az: number, bx: number, bz: number) =>
+      peca(ax, Y + 1, az, 0, (r) => {
+        const dx = bx - ax;
+        const dz = bz - az;
+        const n = Math.round(Math.hypot(dx, dz));
+        for (let i = 0; i <= n; i++) {
+          const t = n ? i / n : 0;
+          r.caixa(0.15, 0.66, 0.15, dx * t, 0, dz * t, CORES.madeira, 0.04);
+          r.caixa(0.19, 0.06, 0.19, dx * t, 0.66, dz * t, CORES.madeiraEscura, 0.03);
+        }
+        for (const y of [0.22, 0.48]) r.barra([0, y, 0], [dx, y, dz], 0.07, CORES.madeira);
+      });
+    const [xa, xb, za, zb] = [x0 - 0.5, x0 + w + 0.5, z0 - 0.5, z0 + d + 0.5];
+    cerca(xa, za, xb, za);
+    cerca(xa, za, xa, zb);
+    cerca(xb, za, xb, zb);
+    cerca(xa, zb, x0 + 3.5, zb);
+    cerca(x0 + 7.5, zb, xb, zb);
     // a bancada das três carinhas, na frente do canteiro
     const bx = x0 + 5.5;
     const bz = z0 + d + 2.6;
     peca(bx, Y + 1, bz, 0, bancada);
-    const tipos: Carinha[] = ['sorridente', 'piscando', 'surpresa'];
+    // (parte 2: nada da boca de "oh!" com o olho vazio aceso, que de noite parecia fantasma
+    // gritando: só carinhas de olho redondo e sorriso)
+    const tipos: Carinha[] = ['sorridente', 'piscando', 'sorridente'];
     tipos.forEach((t, i) =>
       abobora({ x: bx - 0.9 + i * 0.9, y: Y + 2.0, z: bz + 0.02, ang: 0, bloco: Bloco.ABOBORA, lado: 0.8, carinha: t }),
     );
@@ -1276,7 +1293,11 @@ function ligar(scene: Scene): void {
   /** As abóboras pequenas: o modelo de brinquedo do jogo, com o rosto aceso de verdade. */
   function montarAbobrinhas() {
     abobrinhas.forEach((a, i) => {
-      const ms = modeloDeBloco(scene, pl, a.bloco, `esboco-abobrinha-${i}`, a.lado);
+      // (parte 2: a lanterna de abóbora do jogo tem olho triangular, cara de brava: aqui vira a
+      // abóbora de brinquedo com a carinha redonda e simpática, acesa)
+      const lampiao = a.bloco === Bloco.LAMPIAO_ABOBORA;
+      if (lampiao && !a.carinha) a.carinha = 'sorridente';
+      const ms = modeloDeBloco(scene, pl, lampiao ? Bloco.ABOBORA : a.bloco, `esboco-abobrinha-${i}`, a.lado);
       if (!ms) return;
       const raiz = new TransformNode(`esboco-abobrinha-${i}`, scene);
       raiz.position.set(a.x, a.y + 0.4 * a.lado, a.z);

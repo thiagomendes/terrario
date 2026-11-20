@@ -41,17 +41,17 @@ function tufinho(): PecaCriatura[] {
   b.bola(0.165, carvao, [1, 1.05, 1.12], [0, 0.17, -0.04]);
   b.bola(0.115, claro, [1, 1.25, 0.75], [0, 0.25, 0.075]);
   for (const s of [-1, 1]) {
-    // as ancas e as patinhas de trás
+    // as ancas e a patinha de trás (branca, deitada debaixo da anca)
     b.bola(0.1, carvao, [0.9, 0.9, 1.2], [s * 0.11, 0.09, -0.04]);
-    b.bola(0.05, claro, [1, 0.6, 1.4], [s * 0.13, 0.025, 0.06]);
-    // as pernas da frente em pé, com as patinhas claras
-    b.caixa([0.07, 0.19, 0.07], [s * 0.06, 0.1, 0.11], carvao, 0.035);
-    b.bola(0.045, claro, [1.05, 0.7, 1.2], [s * 0.06, 0.025, 0.13]);
+    b.bola(0.055, claro, [0.9, 0.45, 1.5], [s * 0.13, 0.02, 0.03]);
+    // as pernas da frente em pé, com as "meias" brancas inteiras (a patinha é a meia, sem
+    // bolinha solta na frente)
+    b.caixa([0.07, 0.12, 0.07], [s * 0.06, 0.135, 0.11], carvao, 0.033);
+    b.caixa([0.075, 0.09, 0.08], [s * 0.06, 0.045, 0.115], claro, 0.035);
   }
-  // o rabo deitado no chão, enrolando para a frente, com a pontinha clara
+  // o rabo deitado no chão, enrolando para a frente (todo carvão)
   b.caixa([0.06, 0.06, 0.26], [0.17, 0.035, -0.1], carvao, 0.03, { papel: 'cauda', rot: [0, -0.35, 0] });
   b.caixa([0.06, 0.06, 0.16], [0.24, 0.035, 0.07], carvao, 0.03, { papel: 'cauda', rot: [0, 0.35, 0] });
-  b.bola(0.035, claro, [1, 1, 1], [0.21, 0.04, 0.15], { papel: 'cauda' });
   // o lacinho laranja no pescoço
   for (const s of [-1, 1])
     b.bola(0.045, COR.laranja, [1.2, 0.85, 0.6], [s * 0.05, 0.335, 0.115], { rot: [0, 0, s * 0.3] });
@@ -62,8 +62,10 @@ function tufinho(): PecaCriatura[] {
   b.bola(0.075, claro, [1.25, 0.75, 0.8], [0, -0.06, 0.115]);
   b.bola(0.024, '#ff9aae', [1.2, 0.85, 0.8], [0, -0.025, 0.17]);
   for (const s of [-1, 1]) {
-    b.caixa([0.09, 0.1, 0.04], [s * 0.1, 0.16, -0.01], carvao, 0.02, { rot: [0, 0, s * 0.55] });
-    b.caixa([0.05, 0.06, 0.02], [s * 0.1, 0.155, 0.012], '#ffb3c1', 0.01, { rot: [0, 0, s * 0.55] });
+    // as orelhas: triângulos de ponta redonda (um losango meio enterrado na cabeça)
+    // (bem enterrado: só a metade de cima aparece, um triângulo de ponta redonda)
+    b.caixa([0.12, 0.12, 0.045], [s * 0.088, 0.1, -0.01], carvao, 0.018, { rot: [0, 0, Math.PI / 4 + s * 0.1] });
+    b.caixa([0.06, 0.06, 0.02], [s * 0.088, 0.115, 0.014], '#ffb3c1', 0.01, { rot: [0, 0, Math.PI / 4 + s * 0.1] });
     b.caixa([0.12, 0.008, 0.008], [s * 0.12, -0.05, 0.15], claro, 0.004, { rot: [0, 0, s * 0.12] });
     // os olhões: âmbar com a pupila grande e o pontinho de brilho (amigáveis, nada de bravo)
     b.bola(0.05, '#f4c64e', [0.95, 1.05, 0.45], [s * 0.068, 0.025, 0.124]);
@@ -88,10 +90,12 @@ function morcego(dormindo: boolean): PecaCriatura[] {
       // as asas fechadas abraçando o corpo, na frente da barriga
       b.bola(0.11, asa, [0.55, 1.05, 0.2], [s * 0.075, 0.11, 0.075], { papel, rot: [0, s * -0.7, 0] });
     } else {
-      // a asa aberta, redonda, com três gomos na beira de baixo
-      b.bola(0.13, asa, [1, 0.72, 0.16], [s * 0.2, 0.13, -0.01], { papel });
-      for (const k of [0, 1, 2])
-        b.bola(0.045, asa, [1, 1, 0.5], [s * (0.12 + k * 0.075), 0.055, -0.01], { papel });
+      // a asa aberta: uma membrana lisa e fina, redonda, com duas ondas na beira de baixo (nada
+      // de cacho de bolinhas) e o ossinho de cima um tom mais escuro
+      b.bola(0.15, asa, [1, 0.6, 0.07], [s * 0.21, 0.14, -0.01], { papel });
+      for (const k of [0, 1])
+        b.bola(0.075, asa, [1, 0.75, 0.07], [s * (0.15 + k * 0.12), 0.085, -0.01], { papel });
+      b.caixa([0.26, 0.026, 0.026], [s * 0.2, 0.225, -0.01], '#4e3282', 0.012, { papel, rot: [0, 0, s * -0.15] });
     }
   }
   b.grupo([0, 0.25, 0.01], 'cabeca');
@@ -129,6 +133,13 @@ function coruja(): PecaCriatura[] {
     const q = { ...p, p: [...p.p] as V3, cor: troca[p.cor] ?? p.cor };
     // a barriga creme e as pintinhas um tico para a frente: aparecem na frente do corpo
     if (p.cor === '#f4e0b8' || p.cor === '#c9a274') q.p[2] += 0.05;
+    // os olhões: o aro amarelo sem acender (de noite brilhava demais) e a pupila no meio do
+    // olho, um tico maior (de perto parecia vesga)
+    if (p.cor === '#ffe27a') q.brilho = 0.2;
+    if (p.cor === '#2a1f3a') {
+      q.p[0] = Math.sign(p.p[0]) * Math.abs(p.p[0]) * 1.04;
+      q.t = [p.t[0] * 1.12, p.t[1] * 1.12, p.t[2]];
+    }
     return q;
   });
 }
@@ -301,7 +312,8 @@ export function montarBichos(ctx: CtxPalco): Bichos {
     // de cabeça para baixo: o pezinho no galho (a parte de baixo do bloco)
     b.raiz.rotation.z = Math.PI;
     // (o giro em z vira de ponta-cabeça e deixa a carinha para +z)
-    b.raiz.position.set(gx + k * 0.95, gy - 0.005 + b.base, gz + 0.02 * k);
+    // (um tico para o lado do tronco: de frente, nenhum fica em cima do lampião do caminho)
+    b.raiz.position.set(gx - 0.2 + k * 0.9, gy - 0.005 + b.base, gz + 0.02 * k);
     b.raiz.rotation.y = k * 0.2;
     dormindo.push(b);
   });
@@ -422,7 +434,11 @@ export function montarBichos(ctx: CtxPalco): Bichos {
       animando = sim;
       // parado: um instante bonito (uma abóbora no alto do pulo, a outra agachada; as asas
       // abertas; as fantasminhas em alturas diferentes)
-      if (!sim) quadro(0.2);
+      if (!sim) {
+        quadro(0.2);
+        // (os que voam de frente para a foto: de costas, o morceguinho parecia aranha)
+        voando.forEach((v, i) => (v.b.raiz.rotation.y = i ? -0.25 : 0.3));
+      }
     },
     tomadas: {},
   };
@@ -430,21 +446,22 @@ export function montarBichos(ctx: CtxPalco): Bichos {
   // ---------------------------------------------------------------- as tomadas
   const tm = (pos: V3, alvo: V3, fov: number) => ({ pos, alvo, fov });
   api.tomadas.morcegos = {
-    deitado: tm([gx - 0.9, gy - 1.5, gz + 4.4], [gx - 0.3, gy - 0.25, gz], 56),
-    empe: tm([gx - 1.3, gy - 1.7, gz + 6.2], [gx - 0.9, gy - 0.1, gz], 74),
+    deitado: tm([gx - 0.5, gy - 1.5, gz + 4.6], [gx - 0.5, gy - 0.25, gz], 56),
+    empe: tm([gx - 0.9, gy - 1.6, gz + 6.4], [gx - 0.8, gy + 0.1, gz], 72),
   };
   api.tomadas.fantasminhas = {
     deitado: tm([ox + 23.8, Y + 1.4, oz + 28.6], [ox + 23.8, Y + 1.0, oz + 23.3], 56),
-    empe: tm([ox + 23.8, Y + 1.5, oz + 31.4], [ox + 23.8, Y + 1.3, oz + 23.3], 74),
+    empe: tm([ox + 23.8, Y + 1.25, oz + 31.4], [ox + 23.8, Y + 1.9, oz + 23.3], 74),
   };
   api.tomadas.abobrinhas = {
-    deitado: tm([bx - 1.6, Y + 0.95, bz + 4.0], [bx - 1.6, Y + 0.35, bz + 1.4], 50),
-    empe: tm([bx - 1.65, Y + 1.1, bz + 6.0], [bx - 1.65, Y + 0.55, bz + 1.4], 66),
+    deitado: tm([bx - 2.0, Y + 0.95, bz + 4.8], [bx - 1.6, Y + 0.4, bz + 1.4], 50),
+    empe: tm([bx - 1.65, Y + 0.9, bz + 5.6], [bx - 1.65, Y + 0.9, bz + 1.4], 66),
   };
-  // (de lado do banquinho que fica longe da Vovó: ela sai do quadro)
+  // (um tico do lado de fora do banquinho: a Vovó sai do quadro e a campainha da porta fica de
+  // lado, longe das costas dele)
   api.tomadas.tufinho = {
-    deitado: tm([banq[0] - 0.6, banq[1] + 0.85, banq[2] + 2.3], [banq[0] + 0.05, banq[1] + 0.68, banq[2]], 44),
-    empe: tm([banq[0] - 0.6, banq[1] + 0.9, banq[2] + 2.6], [banq[0] + 0.05, banq[1] + 0.72, banq[2]], 56),
+    deitado: tm([banq[0] + 0.35, banq[1] + 0.8, banq[2] + 2.4], [banq[0] + 0.02, banq[1] + 0.66, banq[2]], 38),
+    empe: tm([banq[0] + 0.3, banq[1] + 0.8, banq[2] + 2.8], [banq[0] + 0.02, banq[1] + 0.95, banq[2]], 50),
   };
   return api;
 }

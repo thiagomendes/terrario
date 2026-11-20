@@ -489,7 +489,7 @@ export function caldeirao(r: Ref): void {
     [-0.08, 0.2, 0.11],
     [0.26, -0.18, 0.08],
   ] as const)
-    r.caixa(t, t, t, x, 0.86, z, '#d8b8f8', t / 2.5);
+    bolinha(r, x, 0.86 + t * 0.35, z, t / 2, '#d8b8f8', [1, 0.8, 1]);
   // a colher de pau
   r.barra([0.24, 0.8, 0.14], [0.52, 1.5, 0.36], 0.06, CORES.madeira);
 }
@@ -502,7 +502,8 @@ export function vapor(r: Ref): void {
     [0.1, 1.62, -0.04, 0.28],
     [-0.04, 1.95, 0.02, 0.22],
   ] as const)
-    r.caixa(t, t * 0.8, t, x, y, z, '#efe4fa', t / 2.4, true);
+    // (bolinhas redondas: as caixinhas de canto redondo pareciam hexágonos)
+    bolinha(r, x, y + t * 0.4, z, t / 2, '#efe4fa', [1, 0.85, 1], true);
 }
 
 /** A vassoura encostada na parede (z = 0): o cabo e as palhas presas com a fita roxa. */
