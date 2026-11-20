@@ -532,8 +532,15 @@ function vestirLulu(p: PlanoBoneco): void {
     const q = p.pecas[i];
     if ((q.junta === 'cabeca' || q.junta === 'topete') && q.cor === cabelo) p.pecas.splice(i, 1);
   }
-  // as mãozinhas um tico mais longe do ombro: saem pela frente do lençol
-  for (const q of p.pecas) if (/-mao$/.test(q.nome)) q.pos = [0, -0.1, 0.02];
+  // as mãozinhas cobertas pelo lençol: tocos redondos de pano no fim das mangas de fantasma
+  for (const q of p.pecas) {
+    if (/-punho$/.test(q.nome)) q.cor = lencol;
+    if (/-mao$/.test(q.nome)) {
+      q.cor = lencol;
+      q.tamanho = [0.1, 0.105, 0.1];
+      q.pos = [0, -0.02, 0];
+    }
+  }
   // o capuz de cúpula e o lençol em sino são malhas próprias (`lencolDaLulu`): precisam da
   // abertura oval do rosto e da barra em pontas, que as peças do plano não fazem
   medidasLulu = medir(p);
@@ -611,7 +618,8 @@ function lencolDaLulu(ctx: CtxPalco, b: Personagem, prefixo: string, m: Medidas)
   const tronco = noDaJunta(b, prefixo, 'tronco');
   const mat = new StandardMaterial(`${prefixo}-lencol`, scene);
   mat.diffuseColor = Color3.FromHexString('#f4efe4');
-  mat.specularColor = new Color3(0.16, 0.16, 0.16);
+  // (pano fosco: com o brilho de plástico, o lençol ganhava uma faixa clara de um lado)
+  mat.specularColor = new Color3(0.05, 0.05, 0.05);
   mat.specularPower = 40;
   mat.backFaceCulling = false;
   const malha = (nome: string, P: number[], I: number[], pai?: TransformNode) => {
@@ -969,7 +977,8 @@ const MORADORES: DefMorador[] = [
     modelo: 'tecela',
     aparencia: { corpo: 'feminino', pele: 7, rosto: 2, cabeloEstilo: 8, cabeloCor: 1, roupaEstilo: 0, acessorio: 'nenhum' },
     vestir: vestirLulu,
-    pose: { beX: -1.3, bdX: -1.3, beZ: 0.3, bdZ: -0.3, cabZ: 0.16, corpoZ: 0.1 },
+    // o "buu!": os braços de pano abertos para os lados, na altura dos ombros
+    pose: { beX: -0.35, bdX: -0.35, beZ: -1.35, bdZ: 1.35, cabZ: 0.12, corpoZ: 0.06 },
   },
   {
     id: 'bento',
@@ -1054,7 +1063,7 @@ export function montarMoradores(ctx: CtxPalco): Moradores {
   const lugares: Record<string, { x: number; y: number; z: number; giro: number }> = {
     vovo: { x: vx - 0.3, y: Y, z: vz + 2.15, giro: -0.25 },
     dudu: { x: ox + t(79) + 0.5, y: Y, z: oz + 79.3, giro: 0.15 },
-    lulu: { x: ox + 14.62, y: Y, z: oz + 18.45, giro: -0.6 },
+    lulu: { x: ox + 14.8, y: Y, z: oz + 18.45, giro: -0.6 },
     bento: { x: px, y: py, z: pz + 0.4, giro: 0 },
     jeronimo: { x: ox + 15.7, y: Y, z: oz + 49.4, giro: -0.35 },
   };
