@@ -19,7 +19,11 @@ Dois defeitos de quem joga com amigos, os dois achados pelo dono em 20 nov 2026.
 
 **Do backlog, para conferir aqui:** a "Queda curta da conexão". Na sala de teste, a conexão de quem criou o mundo caiu uma vez (código 1005) e voltou meio segundo depois.
 
-O conserto mínimo do defeito 1 já entrou na 034. Esta spec faz o conserto completo, conserta o defeito 2 e responde sobre a queda 1005.
+**Achados na escrita e na revisão desta spec, que o dono pôs dentro dela:**
+- quem volta de uma queda não vê os blocos que os amigos mudaram enquanto estava fora;
+- com a sala fechada pelo dono, o visitante que cai é barrado na volta.
+
+O conserto mínimo do defeito 1 já entrou na 034. Esta spec faz o conserto completo, conserta o defeito 2 e os dois achados, e responde sobre a queda 1005.
 
 ## O que existia (20 nov 2026, `main` 94b3b6e, `VERSAO_REDE` 17)
 ### Defeito 1: o primeiro quadro perdido
@@ -40,6 +44,17 @@ O conserto mínimo do defeito 1 já entrou na 034. Esta spec faz o conserto comp
   - com 120 ms aplica 0 e não vê ninguém.
   - O arquivo importa de uma pasta temporária da sessão que o escreveu (`W`): para rodar, trocar `W` pela raiz do repositório.
 
+**O mesmo travamento por outro caminho: o buraco na sequência.**
+- O núcleo conta o passo antes de fazer o resto dele: `n++` é a primeira linha de `passo` (`src/nucleo/nucleo.ts:2819`).
+- No servidor, um erro no meio do passo ou na montagem dos quadros cai num `catch` que só registra (`servidor/src/salas.ts:817-833`).
+- Nesse passo o número já subiu e nenhum quadro sai: **a sala inteira fica com um número sem quadro**.
+- Quem já tinha o `primeiro` espera esse número para sempre (`src/cliente/estado.ts:147`). Todo quadro seguinte vai para `adiantados`, e o cliente trava igual.
+
+**A conexão morta sem aviso.**
+- O servidor não tem ping/pong, nem o navegador.
+- Uma conexão que morre sem aviso (o celular troca de antena, o roteador cai) pode ficar minutos sem disparar o `onclose` (`src/cliente/conexaoNuvem.ts:167`).
+- Nesse tempo não chega quadro nenhum e a reconexão não começa: a criança fica parada com o mundo congelado.
+
 **O que já entrou na 034** (e7027fb, 1fb86a4):
 - A lista do aparelho é lida antes de conectar (`src/main.ts:119-120`). Entre o bem-vindo (`src/main.ts:130`) e `criarCena` (`src/main.ts:300`) nada espera, fora os esboços.
 - Se a leitura falhar, a entrada segue sem a lista (`.catch(() => [])`, 1fb86a4).
@@ -48,13 +63,26 @@ O conserto mínimo do defeito 1 já entrou na 034. Esta spec faz o conserto comp
 - `referencia/levar-a-nuvem.ts` copia a ordem do `main.ts` com um IndexedDB de mentira: "agora" (antes da 034) perde a Bia em até 16 de 16 rodadas; "antes" (o conserto) vê em 64 de 64. Ela prova o princípio, mas não roda o `main.ts`.
 
 **O que a conexão e o estado já fazem bem:**
-- A conexão reconecta sozinha quando cai, com espera crescente de 0,5 s a 8 s (`src/cliente/conexaoNuvem.ts:55`, `:167-175`).
+- A conexão reconecta sozinha quando o `onclose` chega, com espera crescente de 0,5 s a 8 s (`src/cliente/conexaoNuvem.ts:55`, `:167-175`).
 - Mensagem de uma conexão velha é ignorada (`:121`, `:168`).
 - Ao voltar, o servidor recomeça os quadros de quem voltou com um `primeiro` novo (`servidor/src/salas.ts:492`, `src/nucleo/nucleo.ts:3150-3162`).
 - A página zera a sequência ao voltar (`src/nuvem.ts:540-543`, `cena.reconferir()` em `src/cliente/estado.ts:204-213`) e avisa "Voltamos! A conexão está de pé de novo."
 - Durante a queda aparece o aviso "A internet caiu. Reconectando…" (`src/ui/amigos.ts:583-588`).
 - **O servidor local** (Web Worker) não tem a corrida: o worker é criado e ouvido na mesma tarefa (`src/cliente/conexao.ts:15-31`, chamado em `src/render/cena.ts:1334-1346`).
 - **Cuidado para o conserto:** o `aoQuadro` da cena usa `cliente.ambiente` (`src/render/cena.ts:1370`), e `cliente` só existe depois que `criarEstadoCliente` volta. Entregar a fila dentro do próprio `aoReceber` quebraria a cena.
+
+### Os blocos mudados durante a queda
+- O `primeiro` novo de quem volta não manda os blocos de novo: `reiniciarQuadros` marca o inventário, o baú, a sobrevivência, os donos e as missões, mas não os blocos (`src/nucleo/nucleo.ts:3150-3162`).
+- O bem-vindo de cada volta traz as edições e os donos do mundo inteiro (`servidor/src/salas.ts:527-545`), mas a página só os lê na entrada (`dadosDaSala`, `src/nuvem.ts:375-408`). Na volta, a conexão só resolve o `pronta` uma vez (`src/cliente/conexaoNuvem.ts:139`) e ninguém mais olha o bem-vindo.
+- **Resultado:** um bloco que o pai põe ou tira enquanto o filho está fora não aparece para o filho, nem depois que ele volta, até sair e entrar de novo.
+- Uma edição também pode sair, quando a célula volta ao terreno gerado (`remover`, `src/world/edicoes.ts:246-255`).
+
+### A sala fechada que barra quem cai
+- Em `entrar` (`servidor/src/salas.ts:474-475`), a sala fechada recusa quem não é dono **antes** de ver se ele já estava na sala:
+  - `if (s.sala.fechado && !ehDono) return recusar('fechado');`
+  - `const ja = s.presentes.get(jog.id);`
+- O visitante que cai depois de o dono fechar a sala é recusado na volta e vê a tela "Não deu para voltar".
+- Com a rede de segurança desta spec, uma ressincronização do visitante teria o mesmo fim.
 
 ### Defeito 2: preso no mundo da nuvem (causa confirmada na leitura do código)
 - **No mundo da nuvem a lista de mundos existe:** o `repo` vai para a interface também na nuvem (`src/main.ts:204-205`). "Criar" (`src/ui/mundos.ts:389`) e "Jogar" (`src/ui/mundos.ts:440`) chamam `abrirMundo`.
@@ -72,46 +100,53 @@ O conserto mínimo do defeito 1 já entrou na 034. Esta spec faz o conserto comp
   - `?sala=LUA-SOL-01` vira `?sala=LUA-SOL-01&mundo=m123`: a página mostra de novo o cartão "Entrar no mundo de…".
 - **Por isso quem mais sofre é quem criou o mundo.** Quem entrou pelo link ainda escapa tocando em "Voltar" no cartão: `voltarAoLocal` (`src/nuvem.ts:145-150`) tira `sala` e `novo` e o `?mundo=` que sobrou abre. Quem criou não vê cartão nenhum.
 - **Os outros caminhos já limpam o endereço:** `irParaSala` (`src/nuvem.ts:158`) e `abrirMundoDoAparelho` (`src/nuvem.ts:632-637`) zeram a busca inteira.
+- **Na lista, dentro da nuvem,** o mundo do aparelho que foi para esta sala mostra "Jogar", não "Continuar" (`src/ui/mundos.ts:437-440`): `op.atual` é o mundo da nuvem (`nuvem:<id>`, `src/nuvem.ts:380`), com outro id.
 
 ### A queda 1005 (conclusão: inofensiva, é o registro que engana)
-- **O que é o 1005:** o código que o servidor recebe quando o outro lado fecha a conexão sem dizer o código ("sem código").
-- **Quem fecha sem código:**
+- **O que é o 1005:** o código que o servidor recebe quando a conexão fecha sem que ninguém diga o código ("sem código").
+- **Quem fecha sem código, do lado do navegador:**
   - `conexaoNuvem.encerrar()` chama `ws?.close()` sem código (`src/cliente/conexaoNuvem.ts:203`);
   - ao levar o mundo para a nuvem, `subirParaNuvem` cria a sala numa conexão, grava o código no aparelho, chama `encerrar()` e só então vai para `?sala=` (`src/nuvem.ts:787-791`).
-- **O que o servidor registra:** tudo o que não é 1000 ou 1001 entra como "conexão caiu" (`servidor/src/index.ts:135-138`).
+- **Quem fecha sem código, do lado do servidor** (`canal.fechar()` é `ws.close()`, `servidor/src/index.ts:111`), todos de propósito:
+  - a recusa (`servidor/src/salas.ts:419`);
+  - a sala apagada, que encerra quem está nela (`:234`);
+  - o "substituído", a mesma criança em outra aba (`:485-486`);
+  - o expulso (`:569`);
+  - os outros, quando o dono leva o mundo de volta para o aparelho (`:635`), e o próprio dono depois (`:643`);
+  - a despedida de quem ficou fora tempo demais (`:742`).
+- **O que o servidor registra:** tudo o que não é 1000 ou 1001 entra como "conexão caiu (código …, depois de N s)" (`servidor/src/index.ts:135-138`).
 - **O "voltou meio segundo depois"** é a página nova, `?sala=`, entrando pelo código.
-- **Conclusão:** não é queda. É a conexão de criar a sala, fechada de propósito. A sequência bate com o que se viu: a troca de `?mundo=` para `?sala=`, um 1005 e a volta em meio segundo.
+- **Conclusão:** não é queda. É a conexão de criar a sala, fechada de propósito. A sequência bate com o que se viu: a troca de `?mundo=` para `?sala=`, um 1005 de uma conexão de poucos segundos e a volta em meio segundo.
 - **Nada se perde nela:**
   - o jogador fica na sala esperando voltar (`servidor/src/salas.ts:704-714`);
   - a página nova é o mesmo jogador e recebe um `primeiro` novo (`:492`).
-- **Outra fonte do mesmo número:** o "substituído" (a mesma criança abriu o mundo em outra aba) também fecha sem código, do lado do servidor (`servidor/src/salas.ts:485-486`, `servidor/src/index.ts:111`). Também é de propósito.
-- **Por que vale um ajuste pequeno:** com o 1005 de propósito misturado às quedas de verdade, o registro não mostra se as crianças estão caindo. O ajuste está em "O que muda", seção 4.
+- **Por que vale um ajuste pequeno:** com o 1005 de propósito misturado às quedas de verdade, o registro não mostra se as crianças estão caindo. O ajuste está em "O que muda", seção 6.
 
 ## Decisões do dono
 **20 nov 2026:**
 - Corrigir logo depois da 034, sem misturar as duas.
 - O defeito 2 (preso no mundo da nuvem) entra nesta spec.
 - A "Queda curta da conexão" do backlog é conferida nesta spec.
-- **As duas perguntas abaixo, respondidas pelas recomendadas** ("Concordo com suas recomendações"):
-  - enquanto o jogo se reacerta, a criança não vê nada novo: os amigos simplesmente aparecem;
+- **As duas perguntas, respondidas pelas recomendadas** ("Concordo com suas recomendações"):
+  - enquanto o jogo se reacerta, a criança não vê nada novo: os amigos simplesmente aparecem (sem o aviso "A internet caiu", que seria falso, e sem o "Voltamos!");
   - se não se acertar depois das tentativas, a página recarrega uma vez sozinha e entra direto no mesmo mundo, nunca mais de uma vez por mundo em 10 min.
-
-**Perguntas para o dono** (a recomendada primeiro; respondidas em 20 nov, ver acima):
-1. **O que a criança vê enquanto o jogo se reacerta** (a rede de segurança da seção 2, de 1 a 2 s, quase sempre com a tela de entrada ainda na frente):
-   - **(recomendada) Nada novo.** O mundo segue na tela e, quando acerta, os amigos aparecem.
-     - O aviso de hoje, "A internet caiu. Reconectando…", não aparece: a internet não caiu.
-     - O "Voltamos!" também não.
-   - O aviso de hoje, com a bolinha. A frase diz uma coisa falsa, e a criança não lê.
-   - Um ícone pequeno no botão dos amigos: os dois bonequinhos com um círculo girando, sem texto.
-2. **Se o jogo não se acertar nem depois das tentativas** (não deve acontecer depois do conserto da seção 1; é para uma causa que ainda não conhecemos):
-   - **(recomendada) Recarregar a página uma vez,** sozinho, com a tela de entrada, e entrar direto no mesmo mundo. É o que resolveu para o dono ("saiu e entrou de novo"). Nunca mais de uma vez por mundo em 10 min.
-   - Parar de tentar e seguir sem os amigos. A criança brinca sozinha, como no defeito de hoje, até sair e entrar.
+- **Os blocos que os amigos mudam durante a queda entram na 035:**
+  - a cada bem-vindo depois do primeiro, o cliente aplica a diferença das edições e dos donos;
+  - é uma fase própria, só no cliente;
+  - começa provada por um teste no Node, como a corrida.
+  - A ressincronização não perde os blocos dos `adiantados` jogados fora: o bem-vindo novo traz o estado.
+- **A sala fechada que barra o visitante na volta entra na 035:**
+  - a linha do servidor, com teste;
+  - o servidor publica, e o protocolo não muda.
 
 ## O que muda
 **Não muda o protocolo:**
 - nenhuma mensagem nova e nenhum campo novo;
-- `VERSAO_REDE` fica 17;
-- o servidor não muda. Só o site publica (sem o cuidado de "Publicar com mudança de protocolo").
+- `VERSAO_REDE` fica 17.
+
+**O servidor muda uma linha** (seção 4) e publica antes do site, pelo `servidor.yml` (ver a T07).
+- **O cliente novo funciona com o servidor antigo:** a fila, a rede de segurança, os blocos da volta e o endereço são só do navegador. Enquanto o servidor antigo está no ar, só a sala fechada continua barrando quem cai, como hoje.
+- **O cliente antigo funciona com o servidor novo:** a linha só deixa entrar quem antes era barrado.
 
 ### 1. A conexão não perde mensagem
 Em `src/cliente/conexaoNuvem.ts`:
@@ -119,7 +154,9 @@ Em `src/cliente/conexaoNuvem.ts`:
 - **A entrega:**
   - o primeiro `aoReceber` recebe a fila inteira, em ordem;
   - a entrega é logo depois que o `aoReceber` volta (`queueMicrotask`), nunca dentro dele: a cena precisa de `cliente` pronto (`src/render/cena.ts:1370`);
-  - mensagem que chega enquanto a fila não esvaziou vai para o fim dela: a ordem nunca troca.
+  - mensagem que chega enquanto a fila não esvaziou vai para o fim dela: a ordem nunca troca;
+  - cada mensagem é entregue num `try/catch` próprio, com `console.error`: um erro numa não para as outras;
+  - o laço relê o tamanho da fila a cada volta, porque um `encerrar()` no meio pode esvaziá-la.
 - **O teto da fila:** 200 mensagens (10 s de quadros). Passando disso, sai a mais antiga.
   - Isso protege as conexões que nunca ouvem quadros, como a de criar a sala (`src/nuvem.ts:771`) e a de parar de jogar com amigos (`src/nuvem.ts:715`, até 45 s aberta).
   - Se o teto cortar o `primeiro`, a rede de segurança da seção 2 acerta.
@@ -128,112 +165,182 @@ Em `src/cliente/conexaoNuvem.ts`:
 - **Os esboços** (`src/main.ts:233-241`) deixam de ser perigo: com a fila, uma espera entre o bem-vindo e a cena não perde nada.
 
 ### 2. A rede de segurança: o estado do cliente não trava para sempre
-Em `src/cliente/estado.ts`:
-- **Quando dispara:**
-  - chegam quadros, mas nenhum é aplicado há **1 s**;
-  - e há pelo menos **10 quadros** esperando em `adiantados`.
-  - Cobre o caso de hoje (nenhum `primeiro`) e o de um buraco na sequência depois do `primeiro`.
-  - A conta é feita quando cada quadro chega, sem relógio à parte: se nada chega, é queda de verdade, e a reconexão da conexão já cuida.
-- **Por que 1 s e 10 quadros:**
-  - **Numa conexão boa isso nunca acontece:**
+Em `src/cliente/estado.ts`.
+
+**Só quando a conexão sabe ressincronizar.** Na interface `Conexao` (`src/cliente/conexao.ts:8-12`) entra `ressincronizar?()`, opcional.
+- Sem ela (o servidor local, o canal dos testes do protocolo em `tests/nucleo/canal.test.ts`), o estado não mede nem dispara nada.
+- O servidor local não tem a corrida, e um teste com o canal ruim (atraso e ordem trocada) não pode ressincronizar.
+
+**Ao receber um `primeiro`,** os `adiantados` de número menor saem (`src/cliente/estado.ts:145`): sobras de antes não ficam presas no mapa.
+
+**Dois jeitos de travar, uma resposta só.**
+- **Quadros chegam e nenhum é aplicado:**
+  - a medida é feita a cada quadro que chega, depois de aplicar o que der;
+  - o tempo conta desde o último quadro aplicado, a criação do estado ou o último `reconferir`, o que for mais recente;
+  - dispara com **1 s** sem aplicar e pelo menos **10 quadros** esperando em `adiantados`;
+  - cobre o `primeiro` perdido e o buraco na sequência.
+- **Silêncio: nenhum quadro chega:**
+  - um relógio de 1 s confere: sem nenhum quadro por **4 s**, com `document.visibilityState === 'visible'`, dispara;
+  - a contagem recomeça quando a página volta a ficar visível: em segundo plano o navegador segura a página e o silêncio é dele;
+  - cobre a conexão morta sem aviso, que não dispara o `onclose` por minutos.
+- **Por que esses números:**
+  - **Numa conexão boa nada disso acontece:**
     - o WebSocket entrega em ordem;
     - o primeiro quadro de cada conexão é o `primeiro`;
-    - com a fila da seção 1, ele não se perde.
-    - O tempo é só folga.
-  - **No celular pela internet:** a rede às vezes para alguns segundos e depois entrega tudo de uma vez. Nesse caso os quadros chegam em ordem e são aplicados na hora; não contam como travados.
+    - com a fila da seção 1, ele não se perde;
+    - o servidor manda 20 quadros por segundo.
+  - **No celular pela internet:** a rede às vezes para alguns segundos e depois entrega tudo de uma vez. Os quadros chegam em ordem e são aplicados na hora, então não contam como travados.
   - **10 quadros** são meio segundo do servidor: um tropeço de um quadro não dispara nada.
-  - **1 s** fica abaixo do que a criança nota: na entrada, a tela "Entrando…" ainda está na frente enquanto o terreno é montado. Somado à volta da conexão (uma ida e volta, mais o bem-vindo), a criança fica no máximo uns 2 s sem os amigos, e não para sempre.
-- **O que faz: ressincroniza.** Fecha a conexão e abre outra na hora, com um `primeiro` novo do servidor.
-  - **O estado** zera a sua sequência (`proximoQuadro = -1`, `adiantados` vazio) e pede de volta as células ainda previstas, como no `reconferir` (`src/cliente/estado.ts:204-213`).
-  - **Na interface `Conexao`** (`src/cliente/conexao.ts:8-12`) entra `ressincronizar?()`, opcional. O servidor local não precisa dela: não tem a corrida.
-  - **Na `conexaoNuvem`:**
-    - `ressincronizar()` fecha a conexão atual com o código 4001 ("ressincronizar"), que o registro do servidor mostra (seção 4);
-    - abre outra na hora, sem a espera da reconexão;
-    - o estado da conexão passa por `'ressincronizando'` e volta a `'conectado'` no bem-vindo;
-    - os comandos do meio esperam na fila de guardados, como numa queda (`src/cliente/conexaoNuvem.ts:87-101`);
-    - se a conexão nova não abrir, vale a reconexão de sempre, com o aviso de sempre: aí a internet caiu mesmo.
-  - **Em `src/nuvem.ts:537-553`:** `'ressincronizando'` não mostra o aviso de queda nem o "Voltamos!" (pergunta 1).
-- **Sem laço de reconexão:**
-  - no máximo **2 ressincronizações** por página: a primeira na hora, a segunda só se travar de novo depois de pelo menos **3 s**;
-  - a conta volta a zero depois de **60 s** com os quadros andando;
-  - **depois da segunda**, o que o dono escolher na pergunta 2. Na recomendada, a página recarrega uma vez, direto no mesmo mundo (com `direto=1`). Uma marca em `sessionStorage` por código de sala impede um segundo recarregar em 10 min; com ela, para de tentar.
-  - O pior caso é 2 reconexões e 1 recarregar em 10 min. A espera da reconexão de sempre (0,5 s a 8 s) continua valendo se a internet cair de verdade.
-  - O servidor não limita quem entra por um código válido: a tentativa conta e é descontada na hora (`servidor/src/salas.ts:446-468`).
-  - **A queda de verdade não confunde a conta:** durante a queda não chega quadro, e o `reconferir` da volta (`src/nuvem.ts:542`) também zera a medida do travamento.
-- **Para os testes:**
-  - um relógio que o teste pode trocar (`agora?: () => number` nas opções do estado);
-  - o número de ressincronizações no `window.__brumaluz` (`src/render/cena.ts:1109`).
+  - **1 s** fica abaixo do que a criança nota: na entrada, a tela "Entrando…" ainda está na frente enquanto o terreno é montado. Somado à volta da conexão (uma ida e volta, mais o bem-vindo), a criança fica no máximo uns 2 s sem os amigos.
+  - **4 s de silêncio** ficam bem acima de uma parada comum da rede do celular e bem abaixo dos minutos de uma conexão morta.
 
-### 3. Sair do mundo da nuvem para um mundo do aparelho
+**O que faz: ressincroniza.** Fecha a conexão e abre outra na hora, com um bem-vindo e um `primeiro` novos do servidor.
+- **O estado** zera a sua sequência (`proximoQuadro = -1`, `adiantados` vazio) e pede de volta as células ainda previstas, como no `reconferir` (`src/cliente/estado.ts:204-213`).
+- **Os blocos dos `adiantados` jogados fora não se perdem:** o bem-vindo novo traz o mundo como está, e a seção 3 aplica a diferença.
+- **Na `conexaoNuvem`,** `ressincronizar()`:
+  - troca o `ws` (ou solta os ouvintes da conexão velha) **antes** de fechar a velha: assim o `onclose` dela não agenda uma reconexão a mais (`:167-175`);
+  - fecha a velha com o código 4001 ("ressincronizar"), que o registro do servidor mostra (seção 6);
+  - abre outra na hora, sem a espera da reconexão;
+  - passa por `'ressincronizando'` e volta a `'conectado'` no bem-vindo;
+  - os comandos do meio esperam na fila de guardados, como numa queda (`src/cliente/conexaoNuvem.ts:87-101`);
+  - se a conexão nova não abrir, vale a reconexão de sempre, com o aviso de sempre: aí a internet caiu mesmo.
+- **Em `src/nuvem.ts:537-553`:** `'ressincronizando'` não mostra o aviso de queda nem o "Voltamos!" (decisão do dono).
+
+**Sem laço de reconexão:**
+- no máximo **2 ressincronizações** por página: a primeira na hora, a segunda só se travar de novo depois de pelo menos **3 s**;
+- a conta volta a zero depois de **60 s** com os quadros andando;
+- **depois da segunda, a página recarrega uma vez** (decisão do dono):
+  - antes, manda o `guardar` com o diário e o mapa (`src/nuvem.ts:555`);
+  - recarrega direto no mesmo mundo, com `direto=1` (quem entrou pelo link não vê o cartão de novo);
+  - uma marca em `sessionStorage` por código de sala impede um segundo recarregar em 10 min;
+  - **se o `sessionStorage` não abrir ou der erro, não recarrega:** sem a marca, não há como garantir que não vira laço;
+  - com a marca de pé (ou sem `sessionStorage`), para de tentar e o jogo segue como está.
+- **O pior caso, seguido:** 2 ressincronizações, 1 recarregar e mais 2 ressincronizações na página nova: **4 ressincronizações e 1 recarregar em 10 min**.
+- A espera da reconexão de sempre (0,5 s a 8 s) continua valendo se a internet cair de verdade.
+- **O limite do servidor por endereço:** um código válido também é barrado com `limite` se o endereço já juntou 20 tentativas erradas na janela (`servidor/src/salas.ts:446`, `TENTATIVAS` em `:59`). A volta pelo código certo conta e é descontada na hora (`:448`, `:468`), então as ressincronizações não enchem essa conta.
+- **A queda de verdade não confunde a conta:** o `reconferir` da volta (`src/nuvem.ts:542`) também zera a medida do travamento.
+
+**Para os testes:**
+- um relógio que o teste pode trocar (`agora?: () => number` nas opções do estado);
+- o número de ressincronizações no `window.__brumaluz` (`src/render/cena.ts:1109`).
+
+### 3. Os blocos da volta
+Só no cliente.
+- **A conexão avisa cada bem-vindo depois do primeiro** (um `aoBemVindo` novo em `conexaoNuvem`):
+  - dentro do mesmo tratamento do bem-vindo, antes de qualquer quadro da conexão nova;
+  - não vale para a sala reaberta, que recarrega a página (`src/cliente/conexaoNuvem.ts:140-143`).
+- **A página aplica a diferença** (em `src/nuvem.ts`, ligando o `aoBemVindo` à cena):
+  - primeiro os donos: a tabela do bem-vindo é importada antes dos blocos, porque os blocos apontam para ela;
+  - célula com valor diferente no bem-vindo: aplica o valor de lá;
+  - célula editada aqui que não está no bem-vindo: a edição sai (`remover`) e a célula volta ao terreno gerado;
+  - célula com previsão local ainda não confirmada: fica, e o `reconferir` resolve;
+  - só as células que mudaram refazem a malha.
+- **A conta da diferença** é uma função pura em `src/cliente/` (e não em `src/world/`, para o servidor não publicar por ela), com teste de unidade.
+- **Na ressincronização e numa queda de verdade é igual:** os dois passam por um bem-vindo novo.
+
+### 4. A sala fechada não barra quem já estava nela
+- Em `servidor/src/salas.ts:474-475`: o `ja` vem antes, e a recusa vira `fechado && !ehDono && !ja`.
+- Quem estava na sala e caiu volta, com a sala fechada ou não. Quem chega de novo continua barrado.
+- Um teste em `servidor/testes/salas.test.ts`: o dono fecha a sala; o visitante cai e volta; ele entra. Um terceiro que nunca entrou é recusado.
+- É a única linha do servidor nesta spec.
+
+### 5. Sair do mundo da nuvem para um mundo do aparelho
 - **A função:** abrir um mundo do aparelho tira `sala`, `novo` e `direto` do endereço, além do `tema`, e põe `mundo`.
-  - Ela fica numa função pequena e sem DOM, com teste de unidade (ex.: `enderecoDoMundo(href, id)`).
+  - Ela fica numa função pequena e sem DOM, com teste de unidade (`enderecoDoMundo(href, id)`, em `src/pagina.ts`).
   - O resto do endereço fica como está: os testes e as capturas usam parâmetros próprios.
 - **Onde:** `abrirMundo` (`src/main.ts:221-228`) usa essa função. `abrirMundoDoAparelho` (`src/nuvem.ts:632-637`) fica como está: ele já zera tudo.
 - **O mundo que foi para a nuvem continua abrindo na nuvem:** "Jogar" nele leva ao `?mundo=` e dali à sala (`src/main.ts:142`).
+- **"Continuar" no mundo desta sala:** dentro da nuvem, o mundo da lista cujo `nuvem` é o código da sala aberta (o de agora, que o dono pode ter trocado) mostra "Continuar" e só fecha a lista (`src/ui/mundos.ts:437-440`).
 
-### 4. O registro da queda 1005
+### 6. O registro da queda 1005
 - `encerrar()` fecha com o código 1000 ("saiu normalmente"): `ws?.close(1000)` em `src/cliente/conexaoNuvem.ts:203`.
 - A conexão de criar a sala deixa de aparecer como queda no registro.
-- **O servidor não muda.** O "substituído", fechado pelo servidor sem código, continua a aparecer como 1005 (`servidor/src/index.ts:111`). Isso fica para quando o servidor publicar de novo (ver "Fora desta spec").
+- **Os fechamentos do servidor continuam sem código** (a lista em "O que existia"): eles ficam fora (ver "Fora desta spec"), para que a única mudança do servidor seja a da sala fechada.
 - **A ressincronização (4001) aparece no registro** como "conexão caiu (código 4001…)". Assim dá para ver no ar se a rede de segurança dispara.
 
-### 5. Testes
+### 7. Testes
 **Unidade:**
 - **A corrida com o servidor de verdade:** `referencia/corrida.ts` vira `tests/cliente/corridaNuvem.test.ts`:
   - com o servidor real (`criarGerenciador`, `armazemMemoria`), a Vila Neon, a conexão e o estado reais;
   - a espera entre o bem-vindo e o estado: 0 ms, uma tarefa, 120 ms, 500 ms e 2 s;
   - em todas, o filho aplica quadros, vê o pai e o pai vê o filho;
+  - em todas, **0 ressincronizações**: a fila resolve sozinha;
   - **falha antes do conserto** (com 120 ms, 0 quadros) e passa depois;
-  - a ida para a nuvem como no jogo: a conexão de criar fecha e a página nova entra pelo código.
+  - a ida para a nuvem como no jogo: a conexão de criar fecha e a página nova entra pelo código;
+  - uma rodada na suíte; 3 rodadas com uma variável de ambiente (ex.: `CORRIDA_RODADAS=3`).
+- **Os blocos da volta, com o servidor de verdade** (`tests/cliente/blocosDaVolta.test.ts`, como a corrida):
+  - o pai põe um bloco e tira outro com o filho fora (a conexão do filho caída);
+  - o filho volta: tem o bloco posto e não tem o tirado, com o dono certo;
+  - **falha antes do conserto:** o filho volta sem o bloco;
+  - o mesmo com uma ressincronização no lugar da queda.
 - **O teste de comportamento substitui `tests/cliente/entradaNuvem.test.ts`** (o teste de texto sai):
   - a conexão com o WebSocket de mentira (o de `tests/cliente/conexaoNuvem.test.ts`): bem-vindo, `primeiro` e mais quadros chegam antes de alguém ouvir; o estado liga depois de uma espera qualquer (`await`, `.then`, `setTimeout`);
   - todos os quadros são aplicados em ordem, e o primeiro aplicado é o `primeiro`;
   - nada é entregue dentro do `aoReceber`;
   - quadros que chegam no meio da entrega da fila ficam na ordem;
+  - um ouvinte que lança erro numa mensagem não para as seguintes;
+  - um `encerrar()` no meio da entrega para o laço sem erro;
   - o teto de 200 e o `encerrar()` esvaziando a fila.
-- **A rede de segurança** (`tests/cliente/estado.test.ts` ou junto do teste de comportamento):
+- **A rede de segurança** (`tests/cliente/estado.test.ts`, com o relógio trocado):
   - quadros sem `primeiro` por 1 s, com 10 ou mais esperando: ressincroniza uma vez;
   - um buraco na sequência depois do `primeiro`: também ressincroniza;
   - quadros parados por 5 s e depois todos de uma vez, em ordem: não ressincroniza;
+  - silêncio de 4 s com a página visível: ressincroniza; com a página escondida, não; voltou a ficar visível, conta de novo do zero;
   - travou de novo antes de 3 s: espera; depois de 3 s: a segunda;
-  - depois da segunda: o que o dono decidir (pergunta 2), uma vez só;
-  - 60 s com os quadros andando: a conta volta a zero.
-- **A conexão:** `ressincronizar()` fecha com 4001, abre outra na hora e passa por `'ressincronizando'`, sem `'reconectando'`; o que chega pela conexão velha é ignorado; `encerrar()` fecha com 1000.
+  - depois da segunda: manda o `guardar` e recarrega uma vez; com a marca de pé, não recarrega; com o `sessionStorage` dando erro, não recarrega;
+  - 60 s com os quadros andando: a conta volta a zero;
+  - um `primeiro` apaga os `adiantados` de número menor;
+  - **com a conexão local** (o canal de `tests/nucleo/canal.test.ts`, com atraso e ordem trocada): nunca mede nem dispara.
+- **A conexão:**
+  - `ressincronizar()` fecha com 4001, abre outra na hora e passa por `'ressincronizando'`, sem `'reconectando'`;
+  - o `onclose` da velha não agenda outra conexão: o FalsoWS conta exatamente 2 conexões abertas;
+  - o que chega pela conexão velha é ignorado;
+  - o `aoBemVindo` chega em cada bem-vindo depois do primeiro, antes dos quadros da conexão nova;
+  - `encerrar()` fecha com 1000.
+- **A diferença das edições:** célula mudada, célula nova, edição que saiu, célula com previsão e a tabela de donos.
 - **O endereço:** `enderecoDoMundo` com `?sala=X&direto=1`, `?sala=X`, `?sala=X&novo=1&direto=1`, `?tema=…` e um parâmetro de teste que tem de ficar.
+- **O servidor:** a sala fechada da seção 4.
 
-**E2e** (num arquivo novo, `e2e/entrada-nuvem.spec.ts`, com os ajudantes de `e2e/multiplayer.spec.ts`):
-- **A. A leitura do aparelho da Ana atrasada:**
-  - a variante do `multiplayer`, com o IndexedDB da página da Ana lento (cada pedido com uns 150 ms a mais, por um script de início);
-  - Ana leva o mundo para a nuvem, Bia entra pelo link e cada uma vê a outra.
-  - **Este já passa na `main`,** pelo conserto da 034: ele guarda o caso do dono contra uma volta da espera.
-  - O desenvolvedor confere que o atraso não quebra o IndexedDB (uma transação que se fecha antes do pedido seguinte) e escreve no teste como atrasou.
+**E2e** (num arquivo novo, `e2e/entrada-nuvem.spec.ts`, com os ajudantes de `e2e/multiplayer.spec.ts`; o contador é lido com acesso opcional, `?.ressincronizacoes ?? 0`, para o teste rodar também no código de antes):
 - **B. O primeiro quadro perdido:**
-  - um script de início na página da Ana, só no `?sala=`, joga fora a primeira mensagem com `"primeiro":true`;
-  - Ana vê a Bia mesmo assim, em até 5 s depois de a Bia entrar;
-  - o aviso de queda não aparece (pergunta 1);
-  - Ana teve exatamente 1 ressincronização.
-  - **Falha antes do conserto:** Ana nunca vê a Bia.
+  - Ana leva o mundo para a nuvem; Bia entra pelo link com a Ana já na sala;
+  - um script de início na página da Bia joga fora a primeira mensagem com `"primeiro":true`;
+  - mede do bem-vindo da Bia até ela ver a Ana: **meta de até 3 s**;
+  - `ressincronizacoes === 1`;
+  - o aviso de queda e o "Voltamos!" não aparecem em nenhum momento (conferidos o tempo todo, não só no fim);
+  - **falha antes do conserto:** Bia nunca vê a Ana.
+- **B, buraco:** o mesmo, mas o script joga fora um quadro do meio, depois do `primeiro`. Bia continua vendo a Ana andar, com 1 ressincronização.
+- **B2. Nada se acerta:**
+  - o script joga fora todo `primeiro`;
+  - 2 ressincronizações, 1 recarregar;
+  - depois do recarregar, mais 2 ressincronizações e nenhum segundo recarregar.
 - **C. Sair da nuvem:**
   - Ana entra num mundo da nuvem (leva o dela, como no `multiplayer`);
+  - na lista, o mundo dela mostra "Continuar";
   - dali, cria um mundo do Rancho Alegre ("Criar", "Jogar");
   - o endereço fica com `mundo=` e sem `sala`, `novo` ou `direto`;
   - o mundo que abre é o novo, do Rancho, sem conexão com a nuvem (sem o botão dos amigos);
-  - depois, de volta à lista, "Jogar" num terceiro mundo do aparelho também abre ele.
-  - **Falha antes do conserto:** volta para a sala.
-- **Nada de ressincronização à toa:** no `multiplayer` e nos e2e de amigos (`achar-amigo-nuvem`, `amigos-sem-atrito`, `vila-bate-amigos`, `vila-casa-amigos`), o número de ressincronizações fica em 0.
+  - depois, de volta à lista, "Jogar" num terceiro mundo do aparelho também abre ele;
+  - **falha antes do conserto:** volta para a sala.
+- **Nada de ressincronização à toa:** no `multiplayer` e nos e2e de amigos (`achar-amigo-nuvem`, `amigos-sem-atrito`, `vila-bate-amigos`, `vila-casa-amigos`), o contador fica em 0.
 
 ## Experiência medida
 **O que a criança e o pai veem:**
 - **Quem cria o mundo vê o amigo,** no computador e no celular, sempre:
-  - no teste da corrida, com espera de 0 ms a 2 s entre o bem-vindo e a cena: o filho vê o pai em 5 de 5 esperas, 3 rodadas cada;
-  - no e2e A, 3 rodadas seguidas verdes na placa de vídeo.
-- **Se o primeiro quadro se perder mesmo assim** (e2e B):
-  - do primeiro quadro travado até a Bia aparecer: no máximo 1 s mais a volta da conexão; meta de até 3 s no computador, medida e escrita na Situação;
-  - nenhuma tela, aviso ou texto novo (pergunta 1, se a recomendada for aceita);
+  - no teste da corrida, com espera de 0 ms a 2 s entre o bem-vindo e a cena: o filho vê o pai em 5 de 5 esperas, 3 rodadas cada, sem nenhuma ressincronização.
+- **Se o primeiro quadro se perder mesmo assim, ou faltar um no meio** (e2e B e B, buraco):
+  - do bem-vindo da Bia até ela ver a Ana: até 3 s, medido e escrito na Situação;
+  - 1 ressincronização;
+  - nenhuma tela, aviso ou texto novo (decisão do dono);
   - a criança não precisa fazer nada.
+- **Se nada se acertar** (e2e B2): a página recarrega uma vez sozinha, com o diário e o mapa guardados antes, e nunca entra em laço.
+- **Se a conexão morrer sem aviso:** com a página na frente, em até 4 s o jogo tenta de novo, em vez de ficar congelado por minutos.
+- **Quem volta de uma queda vê o que os amigos construíram enquanto estava fora:** no teste dos blocos da volta, o bloco posto e o tirado, com o dono certo.
+- **Com a sala fechada pelo dono, o amigo que caiu volta para ela.**
 - **Quem está na nuvem abre outro mundo** (e2e C):
   - o toque em "Jogar" ou "Criar" abre o mundo escolhido, 3 de 3 rodadas;
-  - nenhuma volta para a sala.
+  - nenhuma volta para a sala;
+  - o mundo desta sala aparece como "Continuar".
 - **Nada piora:**
   - na entrada normal, nenhuma ressincronização (o contador em 0 nos e2e de amigos);
   - a entrada pelo link e a reconexão de quando a internet cai continuam iguais: o aviso, o "Voltamos!" e o `multiplayer` verde.
@@ -241,7 +348,9 @@ Em `src/cliente/estado.ts`:
 **No servidor (o registro):**
 - levar um mundo para a nuvem não registra mais "conexão caiu (código 1005)";
 - uma ressincronização aparece como código 4001.
-- Depois de publicar, o orquestrador abre um mundo na nuvem com o celular, leva para a nuvem, e confere no registro: nenhum 1005 e nenhum 4001.
+- **Depois de publicar,** o orquestrador leva um mundo para a nuvem pelo celular e confere no registro:
+  - nenhum 1005 de quem levou o mundo (a conexão de criar, de poucos segundos: olhar o "depois de N s");
+  - nenhum 4001.
 
 **A suíte inteira:**
 - Vitest;
@@ -250,13 +359,10 @@ Em `src/cliente/estado.ts`:
 - o e2e inteiro em pedaços de 2 trabalhadores;
 - o que cair, conferido contra a `main`.
 
-**Fotos:** não há visual novo, então não há portão visual. Se o dono escolher o ícone na pergunta 1, entram as fotos do botão dos amigos, em pé e deitado, de dia e de noite.
+**Fotos:** não há visual novo, então não há portão visual.
 
 ## Fora desta spec
-- **A reconexão não traz os blocos mudados durante a queda** (achado lateral, a conferir):
-  - o `primeiro` novo não manda os blocos de novo (`src/nucleo/nucleo.ts:3150-3162` não marca blocos);
-  - o bem-vindo da reconexão traz as edições, mas ninguém lê depois do primeiro (`src/nuvem.ts:375`, só na entrada).
-  - Vale para toda queda, não só para a ressincronização. Vai para o backlog.
-- O "substituído" fechar com um código próprio, do lado do servidor: na próxima vez que o servidor publicar.
+- **O relógio da rajada:** a fila entregue de uma vez aplica os quadros guardados com o horário da entrega, não o da chegada (`src/cliente/estado.ts:118-119`, veículos e Vila). Não é grave: os quadros seguintes acertam.
+- **Os fechamentos do servidor com um código próprio** (a lista em "O que existia"): eles aparecem como 1005 no registro. Fica para uma próxima vez que o servidor publicar.
 - `voltarAoLocal` (`src/nuvem.ts:145-150`) não tira o `direto`. É inofensivo: sem `sala`, o `direto` não é lido.
 - O toque da roleta usando `e.timeStamp` em vez de `performance.now()` (ideia no backlog).
