@@ -7,7 +7,8 @@ Ideias e pedidos do dono que ainda não viraram spec, e a fila combinada. A orde
    - saem Bruma e Luz, Planeta Vivo, Mata Encantada e Era dos Dinos, com tudo que é só deles, inclusive o que a criança ganhou neles e os mundos salvos no aparelho e na nuvem (só os desses quatro temas);
    - ficam Vila Neon (o novo padrão), Cidade Grande, Rancho Alegre, Doce Reino e Exploração Lunar;
    - junto: a miniatura escura na escolha de mundos, os ícones dos gestos para 3 anos e os testes que já falhavam na `main`.
-2. **027, Noite das Fantasias** (`.sdd/specs/027-mundo-halloween/spec.md`): esboço com fotos a partir da ideia aprovada em 18 nov, no nível da Vila Neon. Ela traz:
+2. **035, Entrada na nuvem** (`.sdd/specs/035-entrada-na-nuvem/spec.md`): logo depois da 034 (dono, 20 nov). Quem cria o mundo e chama um amigo às vezes fica sem ver ninguém; a causa já foi achada e reproduzida.
+3. **027, Noite das Fantasias** (`.sdd/specs/027-mundo-halloween/spec.md`): esboço com fotos a partir da ideia aprovada em 18 nov, no nível da Vila Neon. Ela traz:
    - sete lugares;
    - os moradores Vovó Zuleica, Conde Dudu, Lili, Bento e Seu Jerônimo;
    - umas 10 missões;
@@ -15,7 +16,7 @@ Ideias e pedidos do dono que ainda não viraram spec, e a fila combinada. A orde
    - comidas de festa brasileira.
 
    O gato preto não pode se chamar Pretinho (ex.: Tufinho).
-3. **Riqueza nos mundos antigos**: Lua, Doce Reino e Rancho Alegre, um por spec, depois da 027, na ordem que o dono escolher. Cada um ganha:
+4. **Riqueza nos mundos antigos**: Lua, Doce Reino e Rancho Alegre, um por spec, depois da 027, na ordem que o dono escolher. Cada um ganha:
    - lugares por dentro;
    - objetos, brinquedos e veículos de toque;
    - moradores com nome e missões com história;
@@ -45,6 +46,7 @@ Ideias e pedidos do dono que ainda não viraram spec, e a fila combinada. A orde
   - girar as pás do moinho;
   - quebrar porta numa pilha de duas.
 - **Leite e balde, filhotes, colmeia e mel** (fora da 013).
+- **Toque da roleta em aparelho travando:** usar o `e.timeStamp` do evento em vez de `performance.now()`, para um toque de criança contar mesmo num aparelho lento (achado na 034).
 - **Voz do orelhão:** o dono achou rápida demais, mas fica como está por enquanto (18 nov).
 
 ## Feitas e publicadas (resumo)
