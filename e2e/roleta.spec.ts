@@ -7,6 +7,7 @@ import {
   itensDaRoleta,
   meioDaRoleta,
   roletaAberta,
+  tocarComDedo,
 } from './roleta-palco';
 
 /**
@@ -40,10 +41,16 @@ async function tocarEm(cdp: CDPSession, page: Page, x: number, y: number) {
   await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
 }
 
-async function tocarSeletor(cdp: CDPSession, page: Page, sel: string) {
-  const r = await page.locator(sel).first().boundingBox();
-  if (!r) throw new Error(`sem ${sel}`);
-  await tocarEm(cdp, page, r.x + r.width / 2, r.y + r.height / 2);
+/**
+ * O toque num botão: um toque de dedo de verdade no meio dele, o `tap()` do Playwright (encosta e
+ * solta pelo protocolo do Chromium; `tocarComDedo`). Spec 034: com o `Input.synthesizeTapGesture`,
+ * na placa de vídeo o botão da roda não abria o menu. Spec 034 (T14): na nuvem, sem placa de
+ * vídeo (1 quadro por segundo), o encostar e o soltar chegam à página em quadros diferentes e
+ * passam dos 600 ms que separam o toque do arraste parado, e a roleta fecha sozinha (8 s) antes
+ * do passo seguinte: este teste se confere na placa de vídeo.
+ */
+async function tocarSeletor(_cdp: CDPSession, page: Page, sel: string) {
+  await tocarComDedo(page, sel);
 }
 
 /** Um dedinho: encosta, arrasta `dx` em `ms` (devagar no começo e no fim) e solta. */

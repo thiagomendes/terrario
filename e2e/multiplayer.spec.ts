@@ -35,6 +35,16 @@ test('dois navegadores no mesmo mundo: convite, entrada pelo link e tudo sincron
   const ana = await jogador(browser, 'ana-e2e', 'Ana');
   await ana.goto('/');
   await pronto(ana);
+  // spec 034: um mundo do Doce Reino, de terreno natural no nascimento (o "Meu primeiro mundo"
+  // era do Bruma e Luz, que saiu; na Vila Neon, agora o padrão, o bairro tem paredes no
+  // caminho de quem anda e o chão é protegido)
+  await ana.locator('[data-abrir-mundos]').click();
+  await ana.locator('.cartao-tema[data-tema="doce-reino"]').click();
+  await ana.locator('button[data-modo="criativo"]').click();
+  await ana.locator('[data-novo-nome]').fill('Mundo da Ana');
+  await ana.locator('[data-criar-mundo]').click();
+  await ana.waitForURL(/mundo=/);
+  await pronto(ana);
   await entrarNoJogo(ana);
   // Ana abre o painel e leva o mundo para a nuvem
   await ana.evaluate(() => window.dispatchEvent(new CustomEvent('brumaluz:amigos')));

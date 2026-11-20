@@ -89,10 +89,14 @@ test('presentes de nível de verdade', async ({ page }) => {
   expect(a.etiqueta).toBe('estrela');
   expect(a.balao).toBe('estrela');
 
-  // a roda de gestos com os 10 (G abre)
+  // a roda de gestos com os 10 (G abre); spec 034: o "Meu primeiro mundo" é da Vila Neon, que
+  // tem também o roqueiro (spec 026)
   await page.evaluate(() => window.dispatchEvent(new CustomEvent('brumaluz:gestos')));
   await page.waitForTimeout(700);
-  await expect.poll(async () => (await itensDaRoleta(page)).length).toBe(10);
+  await expect
+    .poll(async () => await itensDaRoleta(page))
+    .toEqual(expect.arrayContaining(['pulo-estrela', 'reverencia', 'roqueiro']));
+  expect((await itensDaRoleta(page)).length).toBe(11);
   await page.screenshot({ path: `${PASTA}/presente-roda-10-gestos.png` });
   await page.evaluate(() => window.dispatchEvent(new CustomEvent('brumaluz:gestos')));
   await page.waitForTimeout(500);

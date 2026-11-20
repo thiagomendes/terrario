@@ -1,46 +1,69 @@
 # Backlog
 
-> O que está em andamento na spec 012 fica no registro dela (seção "Registro de tudo o que o dono pediu nesta rodada"), não aqui.
+Ideias e pedidos do dono que ainda não viraram spec, e a fila combinada. A ordem é combinada com o dono na hora; o número da spec não é a ordem. Atualizar ao fechar cada spec.
 
-Ideias e pedidos do dono que ainda não viraram spec. Cada item diz de onde veio e o que precisa ficar claro antes de virar spec.
+## Fila combinada (19 nov 2026)
+1. **035, Entrada na nuvem** (`.sdd/specs/035-entrada-na-nuvem/spec.md`): logo depois da 034 (dono, 20 nov). Dois defeitos de quem joga com amigos, com a causa achada:
+   - quem cria o mundo e chama um amigo às vezes fica sem ver ninguém (reproduzido; o conserto mínimo já foi na 034, e falta o completo);
+   - quem entrou num mundo com amigos fica preso nele: ao criar ou abrir outro mundo, volta sempre para o da nuvem.
+2. **027, Noite das Fantasias** (`.sdd/specs/027-mundo-halloween/spec.md`): esboço com fotos a partir da ideia aprovada em 18 nov, no nível da Vila Neon. Ela traz:
+   - sete lugares;
+   - os moradores Vovó Zuleica, Conde Dudu, Lili, Bento e Seu Jerônimo;
+   - umas 10 missões;
+   - a vassoura-patinete;
+   - comidas de festa brasileira.
 
-## Pedidos
+   O gato preto não pode se chamar Pretinho (ex.: Tufinho).
+3. **Riqueza nos mundos antigos**: Lua, Doce Reino e Rancho Alegre, um por spec, depois da 027, na ordem que o dono escolher. Cada um ganha:
+   - lugares por dentro;
+   - objetos, brinquedos e veículos de toque;
+   - moradores com nome e missões com história;
+   - barracas de comprar e comer com as comidas do tema (o que a 032 deixou para depois).
 
-- **Rodada em família no Rancho Alegre** (critério 12 da 013). Pendente com o dono.
-- **Acabamento do Rancho:** refazer a foto da vitrine (um morro tapa o sítio), girar as pás do moinho, quebrar porta numa pilha de duas.
+## Esperando o dono
+- **028, Cubolândia:** busca no INPI e domínio (`cubolandia.com.br`). Depois dela: 024 (conta da família), 020 (lojas), 025 (loja do jogo).
+- **Rodadas em família pendentes:**
+  - 010 (15 minutos em dois aparelhos);
+  - 013 (Rancho);
+  - 015;
+  - 023;
+  - 026 (Vila Neon);
+  - 032;
+  - 033;
+  - 034 (os cinco mundos, a escolha de mundos, os ícones dos gestos, e quem cria o mundo vendo o amigo);
+  - a 023 também pede: fps com 4 amigos de premium, o provador girando e se a criança de 3 a 4 anos entende a troca dragão e capa e o pote de moedas.
+- **Faixa azul embaixo no iPhone pelo ícone da tela de início** (12 nov 2026; captura do dono em 19 nov): vai com a casca nativa (020), decisão do dono em 19 nov. Correção genérica, para qualquer aparelho. O painel de medida da janela está pronto no commit 65c6e2d (desfeito na 034) para quando precisar.
 
-- **Contas de jogador:** virou a spec 024 (13 nov 2026).
+## Paradas
+- **029, WebGPU:** medida feita no iPhone em 13 nov; a página `?medir=webgpu` continua escondida para medir de novo.
+- **022, Câmera em lugar apertado:** "deixa isso aí parado" (13 nov). O recorte de adereços continua fora.
+- **033, terceiro nível da roleta:** depois (ex.: "Festa" dentro de Gestos).
 
-- **Rodada em família de 15 minutos em dois aparelhos** (critério 13 da spec 010). Pendente com o dono.
+## Testes antigos instáveis (caem também na `main`; achados na 034)
+- **`guia-chegada:128`:** no c6 em pé, a mãozinha não aparece em 4 s.
+- **`plantio:210`:** o HUD do Rancho no celular.
+- **`tesouro-fantasia:61`.**
+- **Na beira do limite, nas duas versões:**
+  - `som-veiculos:61`: o sorvete passa de 5 dB por pouco;
+  - `lojinha:107`: a festa leva perto de 3400 ms;
+  - o pulo do `achar-amigo-nuvem`: perto de 2500 ms.
+- **Na nuvem, sem placa de vídeo:** os da roleta e os de tempo caem por lentidão; o e2e de verdade é no computador do dono.
 
-- **Faixa azul embaixo no iPhone pelo ícone da tela de início** (dono, 12 nov 2026): continua aparecendo depois da correção de nitidez (90387de, que só foi testada em emulação). Ver na sequência, de preferência com captura do aparelho de verdade. A nitidez ficou aprovada ("ficou excelente").
+## Ideias soltas
+- **Acabamento do Rancho** (entra na spec de riqueza do Rancho):
+  - refazer a foto da vitrine (um morro tapa o sítio);
+  - girar as pás do moinho;
+  - quebrar porta numa pilha de duas.
+- **Leite e balde, filhotes, colmeia e mel** (fora da 013).
+- **Contador de FPS ligado para todos** (decisão do dono, 20 nov): fica ligado durante o desenvolvimento, para acompanhar o desempenho; desligar de fábrica antes de ir para as lojas (020).
+- **Balão do gesto com a cara de quem gesticula** (achado no portão visual da 034): hoje o balão e a carinha do amigo mostram sempre o boneco padrão de azul; ficaria melhor com o boneco de quem faz o gesto (o pipoqueiro, o amigo de chapéu).
+- **Toque da roleta em aparelho travando:** usar o `e.timeStamp` do evento em vez de `performance.now()`, para um toque de criança contar mesmo num aparelho lento (achado na 034).
+- **Voz do orelhão:** o dono achou rápida demais, mas fica como está por enquanto (18 nov).
 
-## Specs na fila
-
-**Ordem combinada em 13 nov 2026** (todas começam por esboço; cuidados legais em `.sdd/cuidados-legais.md`):
-- (parada) **029, WebGPU** (`.sdd/specs/029-webgpu/spec.md`): primeiro um teste de medida nos aparelhos da família; se positivo, a troca é feita em seguida, antes da 023 (decisão do dono, 13 nov 2026).
-- (publicada 14 nov 2026) **023, Alma do jogo** (`.sdd/specs/023-alma-do-jogo/spec.md`): missões, nível e habilidades, moedinhas, banca do mundo e lojinha premium. Falta o teste do dono nos aparelhos: fps com 4 amigos de premium, o provador girando, se a criança de 3–4 anos entende a troca dragão↔capa e o pote de moedas.
-2b. **028, Nome novo: Cubolândia** (`.sdd/specs/028-cubolandia/spec.md`): antes das contas e das lojas, para não renomear depois; o dono começa pela busca no INPI e pelo domínio.
-3. **024, Conta da família** (`.sdd/specs/024-conta-da-familia/spec.md`): adulto com e-mail e código, crianças como perfis, online só com conta, limites, banimento e área dos pais.
-4. **020, Nas lojas** (`.sdd/specs/020-lojas/spec.md`): casca nativa (não acelera o jogo; dá tela cheia, arquivos no aparelho e loja).
-5. **025, Loja do jogo** (`.sdd/specs/025-loja-do-jogo/spec.md`): compras pela loja, só pelos pais, sem sorteio pago.
-- Parada: **022, Câmera em lugar apertado** (`.sdd/specs/022-camera-apertada/spec.md`). O esboço afastando a câmera piorou a mira no celular; resultado na spec (dono, 13 nov 2026: "deixa isso aí parado").
-- Intercalados: **026, Anos 80** e **027, Noite das Fantasias (Halloween)**.
-
-Histórico anterior:
-
-Ordem combinada com o dono (10 nov 2026): 013 → 015 → 017 → 016 → 014 → 018. Proposta de 11 nov 2026 (019 antes da 014): 017 → 016 → 019 → 014 → 018.
-
-- **013, Rancho Alegre:** publicada em 10 nov 2026 (relatório https://claude.ai/artifact/P27LQ7348TBUapLEzB1wgj); falta a rodada em família.
-- **015, Só terceira pessoa e roda de gestos**: FEITA e publicada em 10 nov 2026 (relatório em `.sdd/specs/015-terceira-pessoa/report.md`). Falta a rodada em família. Polimento: vulto do boneco na casinha 3×3; morador colado na câmera tapa um canto; dono de cada bicho criado ("chamar" só os seus) vai para a 016.
-- **017, Fantasias** (`.sdd/specs/017-fantasias/spec.md`): esboço publicado; fantasias dos temas livres; inclui conferir os chapéus soltos de hoje.
-- **014, Cidade Grande** (rascunho em `.sdd/specs/014-cidade-grande/spec.md`): depois da 013, da 015 e da 016; decidido em 12 nov 2026: prédios de 2 a 6 andares e atividade própria "canteiro de obras". A cidade já nasce com a atividade própria dela (decisão do dono, 10 nov 2026, ver 018).
-- **018, Cada mundo com seu jeito** (rascunho em `.sdd/specs/018-cada-mundo-seu-jeito/spec.md`): a roça completa vira marca do Rancho; Lua com estufa, Doce Reino com confeitaria, Planeta Vivo com pesquisa; depois da 014.
-
-## Ideias para depois da 013
-
-- **016, Construções protegidas:** rascunho da spec (`.sdd/specs/016-construcoes-protegidas/spec.md`), estratégia aprovada em 10 nov 2026.
-
-- **Leite e balde, filhotes, colmeia e mel** (fora de escopo da 013).
-- **019, Som vivo** (`.sdd/specs/019-som-vivo/spec.md`): trilhas compostas por tema, em camadas que seguem o mundo; moda de viola de verdade no Rancho; vozes e golpes dos bichos com personalidade; esboço para ouvir.
-- **020, Nas lojas** (`.sdd/specs/020-lojas/spec.md`, rascunho): nome novo Cubolândia (a confirmar marca) e revisão de propriedade intelectual; casca nativa (Capacitor no celular, Tauri ou Electron no computador) com o mesmo jogo web e o mesmo servidor; regras da Apple e do Google para jogo infantil (portão dos pais, denunciar e bloquear, privacidade); contas e compras como fase futura. Esboço quando chegar a vez; fica depois da 018.
+## Feitas e publicadas (resumo)
+- **007 a 017, 019, 021, 023, 026, 030 a 034:** ver cada spec.
+- **034 (20 nov 2026):**
+  - saíram Bruma e Luz, Planeta Vivo, Mata Encantada e Era dos Dinos;
+  - ficaram Vila Neon (o padrão), Cidade Grande, Rancho Alegre, Doce Reino e Exploração Lunar.
+- **018:** juntou-se à 023.
+- **A 031 perde a Era dos Dinos na 034;** as missões do Doce Reino ficam.

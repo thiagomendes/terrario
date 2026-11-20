@@ -137,7 +137,7 @@ import { caixasDoBloco, cercaConecta, direcaoDoYaw, vetorDirecao } from '../worl
 import { abreEFecha, alternado, ehPorta, ehPorteira } from '../world/portas';
 import { velocidadeMineracao } from '../jogo/ferramentas';
 import { blocoDoItem, obterItem } from '../jogo/itens';
-import { COLHER_PEDREIRO } from '../jogo/exclusivos';
+import { COLHER_PEDREIRO, itemNoMundo } from '../jogo/exclusivos';
 import { entradaNaCaixa, fantasmaNoRaio } from '../jogo/miraObra';
 import { sanearObras } from '../nucleo/saneamento';
 import {
@@ -222,6 +222,7 @@ import { criarRenderCriaturas } from './criaturas';
 import { criarCoracoes } from './coracoes';
 import { criarRefeicoes, NA_BOCA, NA_MAO_COMENDO, type Refeicoes } from './refeicao';
 import { AJUSTE_COMER } from '../personagem/poses';
+import { CHAVE_TRILHA_SAIDA } from '../audio/trilha';
 import { criarRenderCompras } from './vila/compras';
 import { balcoesDaVila } from '../jogo/compra';
 import { DURACAO_REFEICAO } from '../jogo/refeicao';
@@ -430,17 +431,16 @@ export interface EstadoDepuracao {
   /** Povoados a até 900 blocos do jogador (centro da praça e altura do piso). */
   /** Spec 014: o plano da Cidade Grande do mundo (testes de tela), ou null. */
   cidade?: () => PlanoCidade | null;
-  /** Spec 031: o canto das missões (Era dos Dinos e Doce Reino; null nos outros). */
+  /** Spec 031: o canto das missões (o do Doce Reino; null nos outros). */
   canto?: () => PlanoCanto | null;
   /** Spec 031: a criança tem a missão do bolo (os fantasmas do bolo aceitam o toque). */
   boloLiberado?: boolean;
   /**
    * Spec 031: os toques das missões do canto (a área de toque é do guia, generosa): pôr o
-   * bloco no fantasma do bolo, tirar a rocha de osso e dar a comida da mão ao bicho.
+   * bloco no fantasma do bolo e dar a comida da mão ao bicho.
    */
   missaoToque?: {
     encher(x: number, y: number, z: number): boolean;
-    escavar(x: number, y: number, z: number): void;
     alimentar(id: number): boolean;
   };
   /** Spec 031: o boneco fica no máximo tão opaco (a mãozinha atrás dele: ~0,6). */
@@ -465,6 +465,12 @@ export interface EstadoDepuracao {
   silencioDoShow?: () => boolean;
   /** Spec 026 (testes e vídeos): o show tocando pula para `s` s desde o começo. */
   pularShow?: (s: number) => void;
+  /**
+   * Spec 034 (só a paridade): liga ou desliga o cansaço que vem do relógio na sobrevivência.
+   * Existe logo depois da conexão com o núcleo (antes do mundo ficar pronto), para a sessão
+   * desligar logo que a cena liga o núcleo.
+   */
+  relogioCansa?: (ligado: boolean) => void;
   /** Spec 026: os eventos do show que chegaram (testes) e o que o show mostra. */
   eventosVila?: (import('../nucleo/vila').EventoVila & { recebido: number })[];
   showVila?: () => ReturnType<import('./vila/show').ShowVila['estado']> | null;
@@ -1071,7 +1077,7 @@ export function criarCena(
       try {
         const depois = trilha.info().medidas;
         sessionStorage.setItem(
-          'terrario:trilha-saida',
+          CHAVE_TRILHA_SAIDA,
           JSON.stringify({ tema: temaAtual.id, antes, depois }),
         );
       } catch {
@@ -1381,6 +1387,7 @@ export function criarCena(
     if (c.t !== 'jogador' && c.t !== 'transacao') cliente.sincronia.verificar();
     cliente.enviar(c);
   };
+  estado.relogioCansa = (ligado) => enviar({ t: 'depurar', d: { f: 'relogioCansa', ligado } });
   /** Última abertura de baú ou fornalha pedida (fechar antes de chegar cancela). */
   let ultimaAbertura = 0;
   function pedirUso(x: number, y: number, z: number, id = proximoId()): void {
@@ -4491,16 +4498,6 @@ export function criarCena(
       const c = listaFantasmas.find((q) => q.x === x && q.y === y && q.z === z);
       return !!c && encherFantasma(c);
     },
-    escavar(x, y, z) {
-      const antes = blocoEm(x, y, z);
-      if (antes === Bloco.AR) return;
-      const id = proximoId();
-      cliente.prever(id, x, y, z, Bloco.AR, 0);
-      enviarTelemetria(true);
-      enviar({ t: 'quebrar', id, x, y, z, slot: hotbar.ativo });
-      aplicarPlano('quebra', { x, y, z, bloco: antes });
-      barramento.emitir('quebra', { x, y, z, bloco: antes });
-    },
     alimentar(id) {
       const c = criaturaPorId(id);
       if (!c) return false;
@@ -5789,7 +5786,11 @@ export function criarCena(
         : `Clique direito (ou F): dar ${comida} ${bicho.a}`;
     } else if (c && viraCriado(c.tipo) && c.estado !== 'morrendo') {
       const bicho = comArtigo(CRIATURAS[c.tipo].nome);
-      const lista = COMIDA_DOS_BICHOS[c.tipo] ?? [];
+      // spec 034: só a comida que existe neste mundo (o feno da lhama é só da Vila Neon; com
+      // ele na lista, a vaca do Rancho pedia "uma semente" em vez do trigo)
+      const lista = (COMIDA_DOS_BICHOS[c.tipo] ?? []).filter((i) =>
+        itemNoMundo(i, temaAtual.mundo),
+      );
       const comida =
         lista.length === 1 ? minuscula(obterItem(lista[0])?.nome ?? lista[0]) : 'uma semente';
       t = `Segure ${comida} para ${bicho.o} seguir você`;
@@ -7009,10 +7010,8 @@ export function criarCena(
         if (!c || Math.hypot(c.x - camera.position.x, c.z - camera.position.z) >= 20) break;
         // spec 026: no show da Vila Neon, perto do festival, nenhum bicho canta por cima
         if (silencioDoShow(c.x, c.z) || silencioDoShow(camera.position.x, camera.position.z)) break;
-        // a voz gravada da noturna do tema (o Espectro da bruma também: o "uuuh" dele); sem o
-        // pacote, o gemido de sempre no Bruma e Luz e a voz sintetizada nos outros
-        if (temaAtual.id === 'bruma-e-luz' && !vozes.pronto) tocarSom(motorAudio, 'espectro');
-        else vozBicho(c, 'chamado', Math.max(0.4, volumeDaDistancia(c)));
+        // a voz gravada da noturna do tema; sem o pacote, a voz sintetizada
+        vozBicho(c, 'chamado', Math.max(0.4, volumeDaDistancia(c)));
         const ang =
           Math.atan2(c.x - camera.position.x, c.z - camera.position.z) - camera.rotation.y;
         const rel = Math.atan2(Math.sin(ang), Math.cos(ang));

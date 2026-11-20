@@ -21,7 +21,12 @@ const PASTA = process.env.BATE_PASTA ?? 'test-results/vila-bate';
 /** Os dedos de verdade do navegador (o controle de toque do jogo ouve estes). */
 class Dedos {
   private pontos = new Map<number, { x: number; y: number }>();
-  constructor(private cdp: CDPSession) {}
+  // spec 034: o campo escrito à parte (o Playwright com o Node 22 tira os tipos sem compilar,
+  // e propriedade no parâmetro do construtor não carrega: o arquivo nem abria)
+  private cdp: CDPSession;
+  constructor(cdp: CDPSession) {
+    this.cdp = cdp;
+  }
   private mandar(type: 'touchStart' | 'touchMove' | 'touchEnd') {
     return this.cdp.send('Input.dispatchTouchEvent', {
       type,

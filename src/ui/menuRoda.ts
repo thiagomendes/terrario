@@ -16,6 +16,7 @@
 import { teclaDaRoda, type ItemRoda, type ListaRoda, type Roda } from './roda';
 import { criarRoleta } from './roleta';
 import { alternarTelaCheia, podeAlternarTelaCheia } from './telaCheia';
+import { ICONE_CARINHA, svgDoIcone } from './iconesGestos';
 
 /** Ícones do esboço dos menus (viewBox 0 0 32 32). */
 const IC = {
@@ -27,8 +28,6 @@ const IC = {
   personagem:
     '<rect x="10" y="4" width="12" height="11" rx="3" fill="#e8b48a" stroke="#3b2a1e" stroke-width="2"/><rect x="9" y="16" width="14" height="10" rx="3" fill="#3b6fb6" stroke="#3b2a1e" stroke-width="2"/><circle cx="13.5" cy="10" r="1.3" fill="#3b2a1e"/><circle cx="18.5" cy="10" r="1.3" fill="#3b2a1e"/>',
   foto: '<rect x="5" y="10" width="22" height="15" rx="3" fill="#b9bec6" stroke="#3b2a1e" stroke-width="2"/><path d="M11 10 L13 6 H19 L21 10" fill="#b9bec6" stroke="#3b2a1e" stroke-width="2" stroke-linejoin="round"/><circle cx="16" cy="17.5" r="4.3" fill="#7cc6ff" stroke="#3b2a1e" stroke-width="2"/>',
-  gestos:
-    '<circle cx="16" cy="16" r="11" fill="#ffd45a" stroke="#3b2a1e" stroke-width="2.2"/><circle cx="12" cy="14" r="1.7" fill="#3b2a1e"/><circle cx="20" cy="14" r="1.7" fill="#3b2a1e"/><path d="M11 18.5 Q16 23.5 21 18.5" fill="none" stroke="#3b2a1e" stroke-width="2.2" stroke-linecap="round"/>',
   tela: '<path d="M6 12 V6 H12 M20 6 H26 V12 M26 20 V26 H20 M12 26 H6 V20" fill="none" stroke="#3b2a1e" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>',
   casa: '<path d="M5 15 L16 5 L27 15" fill="none" stroke="#3b2a1e" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/><path d="M8 14 V27 H24 V14" fill="#ffd45a" stroke="#3b2a1e" stroke-width="2" stroke-linejoin="round"/><path d="M5 15 L16 5 L27 15 Z" fill="#e8463c" stroke="#3b2a1e" stroke-width="2" stroke-linejoin="round"/><rect x="13.5" y="19" width="5" height="8" rx="1" fill="#c9884a" stroke="#3b2a1e" stroke-width="1.6"/>',
   pausa:
@@ -38,6 +37,9 @@ const IC = {
 
 const svg = (miolo: string) =>
   `<svg viewBox="0 0 32 32" aria-hidden="true" focusable="false">${miolo}</svg>`;
+/** O ícone de cada item; o de "Gestos" é a carinha do boneco (spec 034, a dos ícones dos gestos). */
+const iconeDoItem = (id: ItemMenu['id']) =>
+  id === 'gestos' ? svgDoIcone(ICONE_CARINHA) : svg(IC[id]);
 
 /** O que cada item do menu faz: a tecla de sempre (o jogo já sabe o que fazer com ela). */
 export interface ItemMenu {
@@ -166,6 +168,15 @@ export interface MenuRoda {
 
 let cssPosto = false;
 
+/**
+ * O selinho da tecla do i-ésimo gesto (de 0): 1 a 9 e o 0 para o décimo (`teclaDaRoda`). Do 11º
+ * em diante (o roqueiro da Vila Neon com os dois de presente) não há tecla nem selinho (spec
+ * 034: o "1" aparecia de novo no roqueiro, e a tecla 1 é a do Acenar).
+ */
+export function teclaDoGesto(i: number): string | undefined {
+  return i >= 0 && i < 10 ? String((i + 1) % 10) : undefined;
+}
+
 export function criarMenuRoda(op: OpcoesMenuRoda, raiz: HTMLElement = document.body): MenuRoda {
   if (!cssPosto) {
     cssPosto = true;
@@ -231,7 +242,7 @@ export function criarMenuRoda(op: OpcoesMenuRoda, raiz: HTMLElement = document.b
     const itensRoda = itens.map((i) => ({
       id: i.id as string,
       nome: i.nome,
-      icone: svg(IC[i.id]),
+      icone: iconeDoItem(i.id),
       tecla: i.tecla,
     }));
     if (extras.length) {
@@ -267,10 +278,9 @@ export function criarMenuRoda(op: OpcoesMenuRoda, raiz: HTMLElement = document.b
   }
   let gestos = op.gestos;
   /** O item de cima dos gestos (a plaquinha "Voltar" mostra a carinha dele). */
-  const paiGestos: ItemRoda = { id: 'gestos', nome: 'Gestos', icone: svg(IC.gestos) };
+  const paiGestos: ItemRoda = { id: 'gestos', nome: 'Gestos', icone: iconeDoItem('gestos') };
   const listaDeGestos = (gs: readonly ItemRoda[]): ListaRoda => ({
-    // 1 a 9 e o 0 para o décimo
-    itens: gs.map((g, i) => ({ ...g, tecla: String((i + 1) % 10) })),
+    itens: gs.map((g, i) => ({ ...g, tecla: teclaDoGesto(i) })),
     aoEscolher: (id) => op.fazerGesto(id),
     aoVoltar: () => abrirMenu(),
     pai: paiGestos,

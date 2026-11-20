@@ -14,7 +14,7 @@ for alvo in "$@"; do
   case "$real" in */*/*/*/*/*) echo "recusado (subpasta): $real" >&2; exit 2 ;; esac
   [ -d "$real/.git" ] || [ -f "$real/.git" ] || { echo "recusado (não é checkout git): $real" >&2; exit 2; }
   # capturas-* cobre capturas-temas e as pastas de fotos de cada spec (capturas-cidade, capturas-t08...)
-  docker run --rm -v "$real":/w nants-workspace:latest \
+  docker run --rm -v "$real":/w terrario-workspace:latest \
     sh -c 'rm -rf /w/capturas-* /w/test-results /w/dist /w/servidor/dist'
   # o que ainda sobrar como root (o usuário comum não apaga): avisa em vez de mexer
   sobra=$(find "$real" -path "$real/.git" -prune -o ! -user "$(id -un)" -print 2>/dev/null | head -5)

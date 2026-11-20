@@ -313,7 +313,7 @@ function bocaFornalha(acesa: boolean): Pintor {
   };
 }
 
-/** Pintores do tema base (Bruma e Luz), por nome do tile. */
+/** Pintores do tema base, por nome do tile. */
 const TABUAS_PORTA = tabuasDe(['#8a603a', '#966a40', '#a27446']);
 
 export const PINTORES: Record<string, Pintor> = {

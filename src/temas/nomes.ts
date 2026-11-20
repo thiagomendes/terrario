@@ -5,7 +5,7 @@ import type { Profissao } from '../world/povoado';
 export type Genero = 'f' | 'm' | 'n';
 
 /**
- * Gênero dos nomes de gente dos temas (os nomes inventados, como Zib, Plim e Jujuba, servem
+ * Gênero dos nomes de gente dos temas (os nomes inventados, como Bip, Ori e Jujuba, servem
  * para qualquer um). O morador ganha um nome que combina com a profissão: "Ferreira" recebe
  * nome feminino, "Ferreiro" masculino, "Chef estelar" qualquer um.
  */
@@ -16,7 +16,6 @@ const NOMES_GENERO: Record<string, Genero> = {
   Bia: 'f',
   Luz: 'f',
   Dita: 'f',
-  Lila: 'f',
   Rosa: 'f',
   Nena: 'f',
   Cida: 'f',
@@ -24,7 +23,6 @@ const NOMES_GENERO: Record<string, Genero> = {
   Duda: 'f',
   Tati: 'f',
   Mel: 'f',
-  Iris: 'f',
   Lara: 'f',
   Vega: 'f',
   Zara: 'f',
@@ -46,7 +44,6 @@ const NOMES_GENERO: Record<string, Genero> = {
   Leo: 'm',
   Gui: 'm',
   Beto: 'm',
-  Otto: 'm',
   Nico: 'm',
   Tito: 'm',
   Rex: 'm',

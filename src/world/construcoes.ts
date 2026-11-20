@@ -123,30 +123,6 @@ function casaCupula(l: Lote, em: Pincel): void {
     }
 }
 
-function casaTenda(l: Lote, em: Pincel): void {
-  const h = l.h;
-  const ao = eixoPortaX(l);
-  for (let a = 1; a <= 5; a++)
-    for (let b = 1; b <= 5; b++) {
-      const [dx, dz] = ao ? [a, b] : [b, a];
-      em(l.x0 + dx, h, l.z0 + dz, Bloco.TABUAS);
-    }
-  // lona em A: cada andar mais estreito, fundo fechado e frente aberta pela porta
-  for (let k = 0; k <= 3; k++)
-    for (let a = 1; a <= 5; a++)
-      for (let b = 1 + k; b <= 5 - k; b++) {
-        const lado = b === 1 + k || b === 5 - k;
-        const ponta = a === 1 || a === 5;
-        if (!lado && !ponta && k < 3) continue;
-        const [dx, dz] = ao ? [a, b] : [b, a];
-        em(l.x0 + dx, h + 1 + k, l.z0 + dz, Bloco.LA_BRANCA);
-      }
-  // mastro só no fundo (o da frente ficaria na passagem da porta)
-  for (const a of [l.porta === 'n' || l.porta === 'o' ? 6 : 0]) {
-    const [dx, dz] = ao ? [a, 3] : [3, a];
-    for (let y = h + 1; y <= h + 4; y++) em(l.x0 + dx, y, l.z0 + dz, Bloco.MADEIRA_RETORCIDA);
-  }
-}
 
 function casaRedonda(l: Lote, em: Pincel): void {
   const h = l.h;
@@ -195,7 +171,6 @@ function casaModulo(l: Lote, em: Pincel): void {
 const CASAS: Record<FormaCasa, (l: Lote, em: Pincel) => void> = {
   'duas-aguas': casaDuasAguas,
   cupula: casaCupula,
-  tenda: casaTenda,
   redonda: casaRedonda,
   modulo: casaModulo,
 };
@@ -230,29 +205,6 @@ export function marco(p: PlanoPovoado, forma: FormaMarco, em: Pincel): void {
       for (const dx of [-1, 1]) em(cx + dx, h + 6, cz, Bloco.TABUAS);
       for (const dz of [-1, 1]) em(cx, h + 5, cz + dz, Bloco.TABUAS);
       em(cx, h + 8, cz, Bloco.LANTERNA);
-      break;
-    case 'totem':
-      for (let y = h + 1; y <= h + 5; y++)
-        em(cx, y, cz, y % 2 ? Bloco.MADEIRA_RETORCIDA : Bloco.TABUAS);
-      for (const [dx, dz] of [
-        [1, 0],
-        [-1, 0],
-      ])
-        em(cx + dx, h + 4, cz + dz, Bloco.TABUAS);
-      em(cx, h + 6, cz, Bloco.LANTERNA);
-      break;
-    case 'esqueleto':
-      // coluna e costelas claras (lã branca: cor de osso em todo tema), crânio na ponta
-      for (let dx = -3; dx <= 2; dx++) em(cx + dx, h + 3, cz, Bloco.LA_BRANCA);
-      for (const dx of [-2, 0, 2])
-        for (const dz of [-1, 1]) {
-          em(cx + dx, h + 3, cz + dz, Bloco.LA_BRANCA);
-          em(cx + dx, h + 2, cz + dz * 2, Bloco.LA_BRANCA);
-          em(cx + dx, h + 1, cz + dz * 2, Bloco.LA_BRANCA);
-        }
-      for (let y = h + 2; y <= h + 3; y++)
-        for (const dz of [0, 1]) em(cx + 3, y, cz + dz, Bloco.LA_BRANCA);
-      em(cx - 3, h + 1, cz, Bloco.LANTERNA);
       break;
     case 'moinho': {
       // spec 013: moinho de vento. Torre branca de 3x3 com telhado vermelho e quatro pás

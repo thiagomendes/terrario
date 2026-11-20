@@ -13,7 +13,6 @@ export interface GrupoCreditos {
 /** Autores das gravações de bichos, por acervo (a pessoa que publicou cada som). */
 export const AUTORES_GRAVACOES: Readonly<Record<string, readonly string[]>> = {
   'Wikimedia Commons': [
-    '*ngoomie',
     'A.-K. D.',
     'Crunchysaviour',
     'earthcalling',
@@ -31,16 +30,8 @@ export const AUTORES_GRAVACOES: Readonly<Record<string, readonly string[]>> = {
     'Mysid',
     'PSsoundproject',
     'Rabe19',
-    'Retron',
     'sagetyrtle',
     'stephan',
-    'stilgar',
-    'Tiago Lubiana',
-    'TwoWings',
-    'U.S. Fish and Wildlife Service',
-    'W0lfie',
-    'WrS.tm.pl',
-    'தகவலுழவன்',
   ],
   BigSoundBank: ['DenisChardonnet', 'Joseph SARDIN'],
   PDSounds: ['alys'],

@@ -99,15 +99,11 @@ describe('receita de contexto (alvoMix)', () => {
 });
 
 describe('índice e pacotes', () => {
-  it('os 9 temas têm música; só o Rancho, a Cidade e a Vila Neon não têm perigo (a noite lá é mansa)', () => {
+  it('os 5 temas têm música; só o Rancho, a Cidade e a Vila Neon não têm perigo (a noite lá é mansa)', () => {
     expect(TEMAS.sort()).toEqual(
       [
-        'bruma-e-luz',
         'doce-reino',
-        'era-dos-dinos',
         'exploracao-lunar',
-        'mata-encantada',
-        'planeta-vivo',
         'rancho-alegre',
         'cidade-grande',
         'vila-neon',
@@ -165,7 +161,7 @@ describe('índice e pacotes', () => {
   });
 
   it('só abre o que a mistura toca, mais o próximo provável', () => {
-    const t = INDICE.temas['bruma-e-luz'];
+    const t = INDICE.temas['doce-reino'];
     const dia = clipsDaMistura(t, alvoMix(e(), true, false).g);
     expect([...dia].every((id) => id === 'base' || id.startsWith('dia_'))).toBe(true);
     expect(dia.has('noite')).toBe(false);
@@ -178,7 +174,7 @@ describe('índice e pacotes', () => {
   });
 
   it('no sobrevivência, à noite, o perigo já fica aberto (menos no Rancho e de dia)', () => {
-    const t = INDICE.temas['bruma-e-luz'];
+    const t = INDICE.temas['doce-reino'];
     const noite = e({ hora: 'noite' });
     expect(clipsProvaveis(t, noite, true, false).has('perigo')).toBe(false);
     expect(clipsProvaveis(t, noite, true, false, true).has('perigo')).toBe(true);
@@ -362,7 +358,7 @@ function decodificarFalso(tema: TemaTrilha) {
   };
 }
 
-async function montar(temaId = 'bruma-e-luz') {
+async function montar(temaId = 'doce-reino') {
   esquecerIndiceTrilha();
   const tema = INDICE.temas[temaId];
   const { buscar, pedidos } = buscarDoDisco();
@@ -416,7 +412,7 @@ describe('carregador da trilha', () => {
     esquecerIndiceTrilha();
     const { buscar } = buscarDoDisco(true);
     const car = new CarregadorTrilha({ buscar, decodificar: async () => ({}) as AudioBuffer });
-    expect(await car.baixar('bruma-e-luz')).toBe(false);
+    expect(await car.baixar('doce-reino')).toBe(false);
     expect(car.falhou).toBe(true);
     expect(car.pronto).toBe(false);
   });
@@ -424,25 +420,25 @@ describe('carregador da trilha', () => {
 
 describe('motor da trilha gravada', () => {
   it('passa pelo ajuste de volume do tema e troca o ajuste junto com o contexto', async () => {
-    const { ctx, m } = await montar('planeta-vivo');
+    const { ctx, m } = await montar('exploracao-lunar');
     m.iniciar(e(), 0.3);
-    expect(m.ganhoNivel).toBeCloseTo(nivelTrilha('planeta-vivo', 'dia'), 9);
+    expect(m.ganhoNivel).toBeCloseTo(nivelTrilha('exploracao-lunar', 'dia'), 9);
     ctx.currentTime = 1;
     const tb = m.mudar(e({ hora: 'noite' }))!;
     const nivel = (m as unknown as { nivel: { gain: Param } }).nivel.gain;
     const rampa = nivel.chamadas.filter((c) => c[0] === 'rampa').pop()!;
-    expect(rampa[1]).toBeCloseTo(nivelTrilha('planeta-vivo', 'noite'), 9);
+    expect(rampa[1]).toBeCloseTo(nivelTrilha('exploracao-lunar', 'noite'), 9);
     expect(rampa[2]).toBeCloseTo(tb + 1.5 * m.compasso, 9);
-    expect(nivelTrilha('planeta-vivo', 'noite')).toBeGreaterThan(
-      nivelTrilha('planeta-vivo', 'dia'),
+    expect(nivelTrilha('exploracao-lunar', 'noite')).toBeGreaterThan(
+      nivelTrilha('exploracao-lunar', 'dia'),
     );
   });
 
   it('troca de contexto no meio da rampa do ajuste de volume: segue de onde está, sem degrau', async () => {
-    const { ctx, m } = await montar('planeta-vivo');
+    const { ctx, m } = await montar('exploracao-lunar');
     m.iniciar(e(), 0.3);
-    const dia = nivelTrilha('planeta-vivo', 'dia');
-    const noite = nivelTrilha('planeta-vivo', 'noite');
+    const dia = nivelTrilha('exploracao-lunar', 'dia');
+    const noite = nivelTrilha('exploracao-lunar', 'noite');
     ctx.currentTime = 1;
     const tb = m.mudar(e({ hora: 'noite' }))!;
     // no meio da rampa dia → noite, volta o dia

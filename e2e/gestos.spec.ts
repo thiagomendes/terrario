@@ -34,8 +34,8 @@ async function pronto(page: Page) {
   });
 }
 
-async function entrar(page: Page) {
-  await page.goto('/');
+async function entrar(page: Page, caminho = '/') {
+  await page.goto(caminho);
   await pronto(page);
   await page.evaluate(() => {
     document.querySelector('.entrada')?.setAttribute('hidden', '');
@@ -83,25 +83,63 @@ test('computador: G abre a roda, 1 a 8 escolhem, balão, andar interrompe; captu
   await page.evaluate(() => window.__brumaluz!.apontar!(0, 0.25));
   await page.waitForTimeout(800);
 
-  // G abre: os 8 gestos na roleta de baixo (spec 033)
+  // G abre: os 8 gestos na roleta de baixo (spec 033); spec 034: o "Meu primeiro mundo" é da
+  // Vila Neon, que tem também o roqueiro (spec 026), no fim da lista
   const slot0 = await page.evaluate(() => window.__brumaluz!.slotAtivo);
   await page.keyboard.press('KeyG');
   await expect.poll(() => rodaAberta(page)).toBe(true);
-  expect(await itensDaRoleta(page)).toEqual([...IDS]);
+  expect(await itensDaRoleta(page)).toEqual([...IDS, 'roqueiro']);
   await esperarAssentar(page);
   const caixa = await page.locator(`${ROLETA_ABERTA} .item.meio`).boundingBox();
   expect(caixa!.width).toBeGreaterThanOrEqual(90);
   await page.screenshot({ path: `${PASTA}/roda-computador.png` });
 
-  // 1 = acenar: o boneco acena e o balão aparece; a barra de itens não muda
+  // 1 = acenar: o boneco acena e o balão aparece; a barra de itens não muda. O relógio do jogo
+  // (o do balão) começa a contar aqui: cada quadro soma o tempo dele, até 1/30 s
+  // (DT_MAXIMO_QUADRO), como o jogo faz
+  await page.evaluate(() => {
+    const w = window as unknown as { relogioJogo: { s: number; ativo: boolean } };
+    w.relogioJogo = { s: 0, ativo: true };
+    let antes = performance.now();
+    const quadro = (t: number) => {
+      w.relogioJogo.s += Math.min(Math.max(0, t - antes) / 1000, 1 / 30);
+      antes = t;
+      if (w.relogioJogo.ativo) requestAnimationFrame(quadro);
+    };
+    requestAnimationFrame(quadro);
+  });
   await page.keyboard.press('Digit1');
   await expect.poll(() => local(page)).toEqual({ gesto: 'acenar', balao: 'acenar' });
   expect(await page.evaluate(() => window.__brumaluz!.slotAtivo)).toBe(slot0);
   await expect.poll(() => rodaAberta(page)).toBe(false);
   await page.waitForTimeout(500);
   await page.screenshot({ path: `${PASTA}/acenar-costas-computador.png` });
-  // o balão some depois de 2 s; o gesto acaba sozinho
-  await expect.poll(() => local(page), { timeout: 5000 }).toEqual({ gesto: null, balao: null });
+  // o balão some depois de 2 s (DURACAO_BALAO) do relógio do jogo; o gesto acaba sozinho.
+  // Spec 034 (T14): medido no relógio do jogo, que anda no máximo 1/30 s por quadro; na nuvem,
+  // por software, a 1 quadro por segundo, os 2 s levam perto de 1 min de verdade (era o que
+  // caía aqui, também na main). Os 90 s de relógio de verdade são só o teto da espera
+  // (conferido a cada quadro, para o tempo anotado ser o do quadro em que o balão sumiu)
+  await page.waitForFunction(
+    () => {
+      const w = window as unknown as {
+        relogioJogo: { s: number; ativo: boolean; sumiu?: number };
+      };
+      if (w.relogioJogo.sumiu === undefined && window.__brumaluz!.gestos!.local().balao === null)
+        w.relogioJogo.sumiu = w.relogioJogo.s;
+      return w.relogioJogo.sumiu !== undefined;
+    },
+    undefined,
+    { polling: 'raf', timeout: 90_000 },
+  );
+  await expect.poll(() => local(page), { timeout: 90_000 }).toEqual({ gesto: null, balao: null });
+  const sumiuEm = await page.evaluate(() => {
+    const w = window as unknown as { relogioJogo: { s: number; ativo: boolean; sumiu: number } };
+    w.relogioJogo.ativo = false;
+    return w.relogioJogo.sumiu;
+  });
+  // 2 s, mais uns quadros entre a tecla e o gesto
+  expect(sumiuEm).toBeGreaterThan(1.8);
+  expect(sumiuEm).toBeLessThan(2.6);
 
   // fechada, os números voltam a ser da barra
   await page.keyboard.press('Digit3');
@@ -235,7 +273,9 @@ test('o morador perto acena de volta', async ({ page }) => {
   const erros: string[] = [];
   page.on('pageerror', (e) => erros.push(String(e)));
   await page.setViewportSize({ width: 1280, height: 720 });
-  await entrar(page);
+  // spec 034: no Doce Reino, de povoado perto do nascimento (o "Meu primeiro mundo" era do
+  // Bruma e Luz, que saiu; a Vila Neon, agora o padrão, não tem povoado ali)
+  await entrar(page, '/?tema=doce-reino');
   const p = await page.evaluate(() => window.__brumaluz!.povoados!()[0]);
   expect(p, 'nenhum povoado perto do nascimento').toBeTruthy();
   await page.evaluate((p) => window.__brumaluz!.teleportar!(p.cx + 2.5, p.cz + 2.5), p);

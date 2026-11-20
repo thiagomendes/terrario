@@ -56,6 +56,41 @@ describe('sobrevivência', () => {
     expect(a.estado.fome).toBeLessThan(b.estado.fome);
   });
 
+  it('o relógio cansa: parado, a saturação cai 1 a cada 200 s, antes da fome', () => {
+    // spec 034: a paridade desliga este cansaço (a duração da sessão varia com a máquina); a
+    // regra do jogo fica conferida aqui
+    const s = criarSobrevivencia();
+    const sat0 = s.estado.saturacao;
+    expect(sat0).toBeGreaterThan(1);
+    for (let i = 0; i < 1990; i++) s.atualizar(0.1, parado);
+    expect(s.estado.saturacao).toBe(sat0);
+    for (let i = 0; i < 20; i++) s.atualizar(0.1, parado);
+    expect(s.estado.saturacao).toBe(sat0 - 1);
+    expect(s.estado.fome).toBe(FOME_MAX);
+    // andando cansa mais que parado, e correndo mais ainda
+    const andando = criarSobrevivencia();
+    const correndo = criarSobrevivencia();
+    // 81 s: 4,05 de exaustão andando, 20,25 correndo
+    for (let i = 0; i < 810; i++) {
+      andando.atualizar(0.1, { ...parado, andando: true });
+      correndo.atualizar(0.1, { ...parado, andando: true, correndo: true });
+    }
+    expect(andando.estado.saturacao).toBe(sat0 - 1);
+    expect(correndo.estado.saturacao).toBeLessThan(andando.estado.saturacao);
+  });
+
+  it('sem o cansaço do relógio (atalho da paridade), só pulos e golpes cansam', () => {
+    const s = criarSobrevivencia();
+    const sat0 = s.estado.saturacao;
+    for (let i = 0; i < 6000; i++)
+      s.atualizar(0.1, { correndo: true, andando: true, submerso: false, relogioCansa: false });
+    expect(s.estado.saturacao).toBe(sat0);
+    expect(s.estado.exaustao).toBe(0);
+    // 6 pulos correndo = 4,8 de exaustão: a saturação cai 1
+    for (let i = 0; i < 6; i++) s.pulo(true);
+    expect(s.estado.saturacao).toBe(sat0 - 1);
+  });
+
   it('debaixo d’água o ar acaba e começa o afogamento; fora, o ar volta', () => {
     const s = criarSobrevivencia();
     rodar(s, AR_MAX + 3, { correndo: false, andando: false, submerso: true });

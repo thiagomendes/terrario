@@ -1,33 +1,41 @@
+import { mkdirSync } from 'node:fs';
 import { test, type Page } from '@playwright/test';
-import { temasPedidos } from './temas';
+import { temasPedidos, type IdTemaE2e } from './temas';
 
 /**
- * Matriz de capturas por tema (spec 007, critério 5) e prévias dos cartões de tema
- * (public/temas/<id>.jpg). Pesado: só roda com CAPTURAS_TEMAS=1.
- *   CAPTURAS_TEMAS=1 npx playwright test e2e/capturas-temas.spec.ts
- * CAPTURAS_TEMAS=<id> roda só um tema.
+ * Matriz de capturas por tema (spec 007, critério 5), as prévias dos cartões de tema
+ * (public/temas/<id>.jpg), a imagem de compartilhar (public/compartilhar.jpg) e as fotos do
+ * cartão de criação de mundo (capturas-034/previas/). Pesado: só roda com CAPTURAS_TEMAS=1.
+ *   CAPTURAS_TEMAS=1 npx playwright test e2e/capturas-temas.spec.ts -g "prévia do cartão"
+ * CAPTURAS_TEMAS=<id> roda só um tema; -g escolhe o grupo ("prévia do cartão", "a imagem de
+ * compartilhar", "cartões de criação", "matriz", "celular").
  */
 declare const process: { env: Record<string, string | undefined> };
 const pedido = process.env.CAPTURAS_TEMAS;
 const TEMAS = temasPedidos(pedido);
 // fora de test-results: o Playwright limpa aquela pasta a cada rodada
 const PASTA = 'capturas-temas';
+mkdirSync('capturas-034/previas', { recursive: true });
 const AGUA = 67;
 const TOCHA = 37;
 
 test.skip(!pedido, 'capturas de tema só com CAPTURAS_TEMAS');
 
 async function abrir(page: Page, id: string) {
-  // a cidade vista do alto: o outro lado do parque precisa estar carregado no cartão
-  if (id === 'cidade-grande')
-    await page.addInitScript(() => {
+  // a cidade vista do alto: o outro lado do parque precisa estar carregado no cartão; no
+  // Rancho e na Lua, o fundo inteiro (sem a borda do mundo aparecendo)
+  const distancia =
+    id === 'cidade-grande' ? 5 : id === 'rancho-alegre' || id === 'exploracao-lunar' ? 6 : 0;
+  if (distancia)
+    await page.addInitScript((distancia) => {
       try {
-        localStorage.setItem('terrario:config', JSON.stringify({ distancia: 5 }));
+        localStorage.setItem('terrario:config', JSON.stringify({ distancia }));
       } catch {
         // sem armazenamento
       }
-    });
-  await page.goto(`/?tema=${id}`);
+    }, distancia);
+  // a resolução fixa (sem o ajuste automático pelos quadros por segundo, que aqui borra)
+  await page.goto(`/?tema=${id}&escala=1`);
   await page.waitForFunction(() => window.__brumaluz?.ready === true, undefined, {
     timeout: 180_000,
   });
@@ -141,6 +149,323 @@ async function cartaoDaCidade(page: Page) {
   await page.setViewportSize({ width: 1280, height: 720 });
 }
 
+// ---------------------------------------------------------------------------------------
+// Spec 034 (T09): as prévias dos cartões (public/temas/<id>.jpg), 960 × 540, sem interface.
+// O mundo é o "Meu primeiro mundo" (semente 1337) aberto com ?tema=<id>: as posições abaixo
+// são dessa semente. A câmera é parada (a do jogo segue o boneco) e a criança, os moradores e
+// os bichos ficam no chão, dentro da foto. Regra do cartão: o tema numa olhada, no cartão
+// pequeno do celular.
+// ---------------------------------------------------------------------------------------
+
+interface Fixo {
+  cam: V3;
+  alvo: V3;
+  /** Onde a criança fica (x, z: o chão é achado), de costas para a câmera. */
+  crianca: [number, number];
+  moradores?: {
+    p: [number, number];
+    profissao: 'ferreiro' | 'cozinheiro' | 'construtor';
+    n: number;
+  }[];
+  bichos?: { tipo: 'cervo' | 'coelho' | 'raposa'; p: [number, number] }[];
+}
+interface Enquadramento {
+  /** O que a foto mostra (escrito para quem refizer). */
+  oQueMostra: string;
+  hora: number;
+  /** 'cidade': a câmera da esquina do parque (cartaoDaCidade); 'nascer': a do nascer. */
+  como: Fixo | 'cidade' | 'nascer';
+}
+
+const ENQUADRAMENTOS: Record<IdTemaE2e, Enquadramento> = {
+  // escolhida entre a pracinha com o arco, o rinque, a rua e o palco, de dia e no começo da
+  // noite: o palco aceso com os canhões de luz, o céu roxo e o neon lê melhor no cartão pequeno
+  'vila-neon': {
+    oQueMostra:
+      'o Festival Trovão no começo da noite: o palco com os canhões de luz e os raios de neon, ' +
+      'a plateia com gente e a lhama, a criança de costas no meio da praça',
+    hora: 0.8,
+    como: {
+      cam: [24, 83, 257],
+      alvo: [-2, 80, 285],
+      crianca: [12.5, 265.5],
+      moradores: [
+        { p: [8, 263], profissao: 'cozinheiro', n: 0 },
+        { p: [16, 262], profissao: 'construtor', n: 3 },
+        { p: [2, 266], profissao: 'ferreiro', n: 4 },
+      ],
+      bichos: [
+        { tipo: 'cervo', p: [4.5, 266.5] },
+        { tipo: 'raposa', p: [10.5, 262.5] },
+      ],
+    },
+  },
+  'cidade-grande': {
+    oQueMostra:
+      'a esquina de fora do parque, um pouco do alto: o gramado e as árvores, as faixas da ' +
+      'avenida, a torre art déco e as casas de tijolo, as torres atrás; a criança com o ' +
+      'cachorro e o pedreiro',
+    hora: 0.4,
+    como: 'cidade',
+  },
+  // portão visual da 034: mais perto e mais baixo, sem a faixa de neve com os pinheiros à
+  // esquerda e sem a borda do mundo (com a distância de visão maior que a da Cidade)
+  'rancho-alegre': {
+    oQueMostra:
+      'o sítio mais perto do nascer visto do sul, um pouco do alto: a casa da fazenda, o ' +
+      'moinho no meio, o celeiro vermelho, o silo e a lavoura na frente, sem morro tapando; a ' +
+      'criança com o cachorro, a galinha e a vaca',
+    hora: 0.38,
+    como: {
+      cam: [-204, 74, -86],
+      alvo: [-204, 69, -66],
+      crianca: [-204.5, -78.5],
+      bichos: [
+        { tipo: 'raposa', p: [-202.5, -77.5] },
+        { tipo: 'coelho', p: [-207.5, -79.5] },
+        { tipo: 'cervo', p: [-199.5, -75.5] },
+      ],
+    },
+  },
+  'doce-reino': {
+    oQueMostra:
+      'o nascer de manhã: o chão de glacê, as árvores de algodão-doce e os troncos de ' +
+      'biscoito (conferida na 034: fica como estava)',
+    hora: 0.36,
+    como: 'nascer',
+  },
+  // portão visual da 034: a base (a ~330 blocos do nascer) ficava num chão quase branco, que
+  // no cartão pequeno parecia neve. Agora a floresta de cristais a ~90 blocos do nascer, de
+  // chão cinza, olhando para onde a Terra fica (-0,35; 0,2; -1)
+  'exploracao-lunar': {
+    oQueMostra:
+      'a floresta de cristais roxos no chão cinza da Lua, com a Terra no meio do céu negro; a ' +
+      'criança com o rover, o coelho-lunar e o robô-companheiro',
+    hora: 0.42,
+    como: {
+      cam: [112.5, 79, 169.8],
+      alvo: [100.3, 76, 134.9],
+      crianca: [107.2, 154.7],
+      bichos: [
+        { tipo: 'cervo', p: [109.1, 154] },
+        { tipo: 'coelho', p: [105.8, 155.2] },
+        { tipo: 'raposa', p: [106.2, 153.5] },
+      ],
+    },
+  },
+};
+
+/** Os chunks em volta chegam (a contagem para de subir). */
+async function esperarChunks(page: Page) {
+  let antes = -1;
+  for (let i = 0; i < 20; i++) {
+    await page.waitForTimeout(2000);
+    const n = await page.evaluate(() => window.__brumaluz!.chunksCarregados ?? 0);
+    if (n === antes) break;
+    antes = n;
+  }
+}
+
+/** A câmera parada do enquadramento, com quem aparece na foto no chão. */
+async function cameraFixa(page: Page, f: Fixo) {
+  await page.evaluate((f) => {
+    const e = window.__brumaluz!;
+    e.voar?.(true);
+    e.teleportar!(f.crianca[0], f.crianca[1], f.alvo[1] + 2);
+    e.cenaBabylon!().onBeforeCameraRenderObservable.add((c) => {
+      const camera = c as unknown as {
+        position: { set(...a: number[]): void; clone(): { set(...a: number[]): unknown } };
+        setTarget(v: unknown): void;
+      };
+      camera.position.set(...f.cam);
+      const a = camera.position.clone();
+      a.set(...f.alvo);
+      camera.setTarget(a);
+      // o Babylon já recortou a cena com a vista da câmera do jogo: refaz com a da câmera fixa
+      (
+        c.getScene() as unknown as { setTransformMatrix(a: unknown, b: unknown): void }
+      ).setTransformMatrix(
+        (c as unknown as { getViewMatrix(f: boolean): unknown }).getViewMatrix(true),
+        (c as unknown as { getProjectionMatrix(f: boolean): unknown }).getProjectionMatrix(true),
+      );
+    });
+    const tela = document.getElementById('cena')!;
+    for (const el of Array.from(document.body.querySelectorAll<HTMLElement>('*')))
+      if (el !== tela && !el.contains(tela)) el.style.visibility = 'hidden';
+  }, f);
+  await esperarChunks(page);
+  await page.evaluate((f) => {
+    const e = window.__brumaluz!;
+    const AGUA = 67;
+    const chao = (x: number, z: number) => {
+      for (let y = 120; y > 2; y--) {
+        const b = e.bloco!(Math.floor(x), y, Math.floor(z));
+        if (b && b !== AGUA) return y + 1;
+      }
+      return f.alvo[1];
+    };
+    const paraCamera = (x: number, z: number) => Math.atan2(f.cam[0] - x, f.cam[2] - z);
+    e.voar?.(false);
+    e.teleportar!(f.crianca[0], f.crianca[1], chao(f.crianca[0], f.crianca[1]));
+    e.apontar!(paraCamera(f.crianca[0], f.crianca[1]) + Math.PI, 0);
+    for (const m of f.moradores ?? [])
+      e.estatua!('morador', m.p[0], chao(m.p[0], m.p[1]), m.p[1], paraCamera(m.p[0], m.p[1]), {
+        profissao: m.profissao,
+        n: m.n,
+      });
+    for (const b of f.bichos ?? [])
+      e.invocar!(b.tipo as never, b.p[0], chao(b.p[0], b.p[1]), b.p[1]);
+  }, f);
+}
+
+for (const id of TEMAS) {
+  test(`prévia do cartão: ${id}`, async ({ page }) => {
+    test.setTimeout(600_000);
+    const q = ENQUADRAMENTOS[id];
+    await page.setViewportSize({ width: 1280, height: 720 });
+    await abrir(page, id);
+    await entrarNoJogo(page);
+    if (q.como === 'cidade') {
+      await cartaoDaCidade(page);
+      return;
+    }
+    if (q.como === 'nascer') {
+      await page.evaluate(() => window.__brumaluz!.apontar!(0.6, -0.12));
+      await semHud(page, true);
+    }
+    await page.setViewportSize({ width: 960, height: 540 });
+    if (q.como === 'nascer') await page.waitForTimeout(4000);
+    else {
+      // de dia primeiro: a noite que chega com a criança já no lugar acende o show da Vila
+      await cena(page, 0.42, 'limpo', 500);
+      await cameraFixa(page, q.como);
+    }
+    await cena(page, q.hora, 'limpo', 3000);
+    if (id === 'vila-neon') {
+      // a Vila: o show começa sozinho com a criança no festival (a noite aberta há 20 s e ela
+      // lá há 6 s, e as três caixas acendem); a foto é com os canhões de luz acesos
+      // depois da abertura (o palco escuro): o palco todo aceso e os feixes na plateia
+      await page.waitForFunction(
+        () => {
+          const f = window.__brumaluz!.showVila?.()?.fase;
+          return !!f && f !== 'intro' && f !== 'entrada';
+        },
+        undefined,
+        { timeout: 240_000, polling: 500 },
+      );
+      await page.waitForTimeout(2500);
+      console.log(`vila: fase do show ${await page.evaluate(() => window.__brumaluz!.showVila?.()?.fase)}`);
+    }
+    await page.waitForTimeout(1500);
+    await page.screenshot({ path: `public/temas/${id}.jpg`, type: 'jpeg', quality: 82 });
+  });
+}
+
+/**
+ * A imagem de compartilhar (`og:image` de index.html, 1200 × 630): a tela de título como a
+ * criança vê ao abrir, com o "Meu primeiro mundo" da Vila Neon atrás e a vitrine parada no
+ * cartão da Vila Neon (nada dos temas que saíram).
+ */
+// Portão visual da 034: a tela em 1400 × 735 (CSS), fotografada em 1200 × 630 (escala 6/7),
+// para sobrar margem embaixo do cartão "Criar mundo novo"; e a câmera parada um passo à frente
+// do boneco, olhando para onde ele olha, para nenhum pedaço dele aparecer atrás dos botões.
+test.describe('compartilhar', () => {
+  test.use({ viewport: { width: 1400, height: 735 }, deviceScaleFactor: 6 / 7 });
+  test('a imagem de compartilhar', compartilhar);
+});
+async function compartilhar({ page }: { page: Page }) {
+  test.setTimeout(400_000);
+  await page.goto('/');
+  await page.waitForFunction(() => window.__brumaluz?.ready === true, undefined, {
+    timeout: 180_000,
+  });
+  await page.evaluate(() => {
+    window.__brumaluz!.pausarDia = true;
+    window.__brumaluz!.hora = 0.42;
+  });
+  // a vitrine para no cartão da Vila Neon (o primeiro)
+  await page.waitForFunction(
+    () => {
+      const v = document.querySelector<HTMLElement>('[data-vitrine-temas]');
+      if (v?.dataset.tema !== 'vila-neon') return false;
+      v.dispatchEvent(new PointerEvent('pointerenter'));
+      return true;
+    },
+    undefined,
+    { timeout: 60_000, polling: 200 },
+  );
+  // o rodapé (créditos e teclas) não cabe na imagem pequena do link
+  await page.addStyleTag({ content: '.rodape-titulo { display: none !important; }' });
+  // a câmera um passo à frente do boneco, olhando para onde ele olha (ele fica atrás dela)
+  await page.evaluate(() => {
+    const e = window.__brumaluz!;
+    const c = e.camera!.posicao();
+    const p = e.camera!.pivo();
+    const dx = p[0] - c[0];
+    const dz = p[2] - c[2];
+    const n = Math.hypot(dx, dz) || 1;
+    const cam = [p[0] + (dx / n) * 1.5, p[1] + 0.6, p[2] + (dz / n) * 1.5];
+    const alvo = [p[0] + (dx / n) * 30, p[1] + 1.5, p[2] + (dz / n) * 30];
+    e.cenaBabylon!().onBeforeCameraRenderObservable.add((cc) => {
+      const camera = cc as unknown as {
+        position: { set(...a: number[]): void; clone(): { set(...a: number[]): unknown } };
+        setTarget(v: unknown): void;
+      };
+      camera.position.set(...cam);
+      const a = camera.position.clone();
+      a.set(...alvo);
+      camera.setTarget(a);
+      (
+        cc.getScene() as unknown as { setTransformMatrix(a: unknown, b: unknown): void }
+      ).setTransformMatrix(
+        (cc as unknown as { getViewMatrix(f: boolean): unknown }).getViewMatrix(true),
+        (cc as unknown as { getProjectionMatrix(f: boolean): unknown }).getProjectionMatrix(true),
+      );
+    });
+  });
+  await page.waitForTimeout(4000);
+  await page.screenshot({ path: 'public/compartilhar.jpg', type: 'jpeg', quality: 86 });
+}
+
+/** Spec 034: o cartão de criação de mundo com as cinco prévias, nos três tamanhos. */
+for (const [nome, viewport] of [
+  ['390x844', { width: 390, height: 844 }],
+  ['844x390', { width: 844, height: 390 }],
+  ['1280x720', { width: 1280, height: 720 }],
+] as const)
+  test(`cartões de criação de mundo: ${nome}`, async ({ browser }) => {
+    test.setTimeout(400_000);
+    const celular = viewport.width < 900;
+    const ctx = await browser.newContext({
+      viewport,
+      ...(celular ? { isMobile: true, hasTouch: true, deviceScaleFactor: 2 } : {}),
+    });
+    const page = await ctx.newPage();
+    await page.goto('/');
+    await page.waitForFunction(() => window.__brumaluz?.ready === true, undefined, {
+      timeout: 180_000,
+    });
+    await page.locator('[data-abrir-mundos]').click();
+    await page.locator('.cartao-tema').first().waitFor();
+    // as prévias carregadas
+    await page.waitForFunction(() =>
+      [...document.querySelectorAll<HTMLImageElement>('.cartao-tema img')].every(
+        (i) => i.complete && i.naturalWidth > 0,
+      ),
+    );
+    // os cartões à vista (deitado eles ficam abaixo da lista de mundos)
+    await page
+      .locator('.cartao-tema')
+      .first()
+      .evaluate((el) => el.scrollIntoView({ block: 'center' }));
+    await page.waitForTimeout(800);
+    await page.screenshot({ path: `capturas-034/previas/cartoes-${nome}.png` });
+    await page.locator('.seletor-temas').screenshot({
+      path: `capturas-034/previas/cartoes-${nome}-so.png`,
+    });
+    await ctx.close();
+  });
+
 for (const id of TEMAS) {
   test(`matriz de capturas: ${id}`, async ({ page }) => {
     test.setTimeout(900_000);
@@ -168,19 +493,6 @@ for (const id of TEMAS) {
       return { yaw, pitch: Math.min(-0.12, pitch * 0.6), ceu: pitch };
     });
     await page.evaluate((v) => window.__brumaluz!.apontar!(v.yaw, v.pitch), vista);
-
-    // prévia do cartão do tema: manhã clara, sem interface
-    if (id === 'cidade-grande') await cartaoDaCidade(page);
-    else {
-      await semHud(page, true);
-      await cena(page, 0.36, 'limpo', 4000);
-      await page.setViewportSize({ width: 960, height: 540 });
-      await page.waitForTimeout(1200);
-      await page.screenshot({ path: `public/temas/${id}.jpg`, type: 'jpeg', quality: 80 });
-      await page.setViewportSize({ width: 1280, height: 720 });
-    }
-    // o modo foto tem câmera própria (não segue teleportes): a matriz usa a câmera do jogo
-    await semHud(page, false);
     await page.waitForTimeout(800);
 
     // dia, crepúsculo e noite olhando o horizonte e o céu

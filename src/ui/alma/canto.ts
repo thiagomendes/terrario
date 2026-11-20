@@ -1,26 +1,21 @@
 /**
- * Spec 031: o canto das missões no aparelho (Era dos Dinos e Doce Reino). O núcleo decide tudo
- * (os ovinhos, os bichos do pasto, as rochas de osso, o bolo, as moedinhas); aqui fica o que a
- * criança vê e toca:
+ * Spec 031: o canto das missões no aparelho (o do Doce Reino). O núcleo decide tudo (os bichos
+ * do pasto, o bolo, as moedinhas); aqui fica o que a criança vê e toca:
  *
- * - o ninho de gravetos e o brilhinho em cima de cada ovinho ainda no chão;
- * - o "pop" da comida que aparece na mão perto do bicho (d2, e2), com som, já na mão;
- * - a mãozinha no lugar (a rocha de osso, o bicho sem comida), em até 1,5 s ao chegar, que pula
- *   para o próximo depois de cada toque (a do bolo é a da obra, `maoObra`, no mesmo jeito);
- * - o toque generoso: com a missão no lugar, o dedo pega a rocha, o fantasma do bolo da camada
- *   de agora ou o bicho ainda sem comida que estiver perto dele (alvo de 56 px ou mais);
- * - o osso que sai da rocha e voa até o selinho;
+ * - o "pop" da comida que aparece na mão perto do bicho (e2), com som, já na mão;
+ * - a mãozinha no lugar (o bicho sem comida), em até 1,5 s ao chegar, que pula para o próximo
+ *   depois de cada toque (a do bolo é a da obra, `maoObra`, no mesmo jeito);
+ * - o toque generoso: com a missão no lugar, o dedo pega o fantasma do bolo da camada de agora
+ *   ou o bicho ainda sem comida que estiver perto dele (alvo de 56 px ou mais);
  * - o boneco ~40% transparente quando a mãozinha fica atrás dele.
  */
 import type { Scene } from '@babylonjs/core/scene';
 import type { EstadoDepuracao } from '../../render/cena';
 import type { GuiaMissao } from '../../render/guiaMissao';
 import type { AlmaUi } from './index';
-import { criarBrilhoOvos, criarNinho } from '../../render/ninhoCanto';
 import { missaoFixada } from './hud';
 import { figura } from './figuras';
 import { tocarSomInterface } from '../../audio/somInterface';
-import { Bloco } from '../../world/blocks';
 
 export const CSS_CANTO = `
 .canto-pop { position: fixed; z-index: 9; width: 74px; height: 74px; margin: -37px 0 0 -37px; pointer-events: none;
@@ -30,11 +25,6 @@ export const CSS_CANTO = `
 @keyframes canto-pop { 0% { transform: scale(0.2); opacity: 0; } 18% { transform: scale(1.25); opacity: 1; }
   32% { transform: scale(1); } 70% { transform: scale(1); opacity: 1; }
   100% { transform: translate(var(--dx), var(--dy)) scale(0.45); opacity: 0; } }
-.canto-voa { position: fixed; z-index: 9; width: 54px; height: 54px; margin: -27px 0 0 -27px; pointer-events: none;
-  transition: transform 0.75s cubic-bezier(.45,-0.35,.6,1), opacity 0.75s; }
-.canto-voa .alma-fig { width: 100%; height: 100%; }
-.canto-voa.sai { animation: canto-sai 0.3s ease-out both; }
-@keyframes canto-sai { from { transform: scale(0.3) translateY(10px); } 70% { transform: scale(1.2) translateY(-6px); } to { transform: scale(1) translateY(-6px); } }
 @media (prefers-reduced-motion: reduce) { .canto-pop { animation-duration: 2s; } }
 `;
 
@@ -88,8 +78,6 @@ export function ligarCantoMissoes(
   const st = document.createElement('style');
   st.textContent = CSS_CANTO;
   document.head.appendChild(st);
-  if (p.ninho) criarNinho(scene, p.ninho[0], p.ninho[1], p.ninho[2]);
-  const brilhos = p.ovos.length ? criarBrilhoOvos(scene, p.ovos) : null;
   const agoraS = () => performance.now() / 1000;
   const tela = (x: number, y: number, z: number) => e.telaDoPonto?.(x, y, z) ?? null;
   const missao = () => missaoFixada(ui.vista())?.m.id ?? null;
@@ -106,7 +94,7 @@ export function ligarCantoMissoes(
   window.addEventListener('brumaluz:coletou', (ev) => {
     const d = (ev as CustomEvent<{ item: string; qtd: number }>).detail;
     const m = missao();
-    if (d.item !== 'trigo' || (m !== 'd2' && m !== 'e2')) return;
+    if (d.item !== 'trigo' || m !== 'e2') return;
     // a casinha da comida vira a da mão (o toque no bicho já dá a comida)
     for (let i = 0; i < 9; i++)
       if (e.inventario?.obter(i)?.item === 'trigo') {
@@ -139,13 +127,7 @@ export function ligarCantoMissoes(
     const pes = e.jogadorPes?.();
     if (!pes) return [];
     const r: Alvo[] = [];
-    if (m === 'd3')
-      for (const [x, y, z] of plano.fosseis) {
-        if ((e.bloco?.(x, y, z) ?? Bloco.AR) !== Bloco.MINERIO_FERRO) continue;
-        const t = tela(x + 0.5, y + 0.75, z + 0.5);
-        if (t) r.push({ t, tocar: () => escavar(x, y, z, t) });
-      }
-    else if (m === 'd2' || m === 'e2') {
+    if (m === 'e2') {
       const [px, , pz] = plano.pasto;
       for (const c of e.criaturas?.() ?? []) {
         if (c.tipo !== 'cervo' || c.criado || Math.hypot(c.x - px, c.z - pz) > 16) continue;
@@ -207,28 +189,7 @@ export function ligarCantoMissoes(
       { capture: true, passive: false },
     );
 
-  /** A rocha de osso: sai com um pó, e o osso voa até o selinho. */
-  function escavar(x: number, y: number, z: number, t: Tela): void {
-    e.missaoToque?.escavar(x, y, z);
-    tocarSomInterface('plim');
-    const el = document.createElement('div');
-    el.className = 'canto-voa sai';
-    el.appendChild(figura('osso'));
-    el.style.left = `${t.x}px`;
-    el.style.top = `${t.y}px`;
-    document.body.appendChild(el);
-    const selo = document.querySelector('.alma-missao:not([hidden])')?.getBoundingClientRect();
-    setTimeout(() => {
-      el.classList.remove('sai');
-      if (selo) {
-        el.style.transform = `translate(${selo.left + selo.width / 2 - t.x}px, ${selo.top + selo.height / 2 - t.y}px) scale(0.5)`;
-        el.style.opacity = '0.4';
-      }
-    }, 380);
-    setTimeout(() => el.remove(), 1250);
-  }
-
-  // ---------------------------------------------------------------- a mãozinha (rocha e bicho)
+  // ---------------------------------------------------------------- a mãozinha (o bicho)
   const modelo = document.querySelector<HTMLElement>('[data-guia-mao]');
   const maoCanto = document.createElement('div');
   maoCanto.className = 'guia-mao';
@@ -257,20 +218,11 @@ export function ligarCantoMissoes(
     const m = missao();
     // os fantasmas do bolo aceitam o toque de quem tem a missão do bolo no selinho
     e.boloLiberado = m === 'e1';
-    // o brilhinho dos ovinhos ainda no chão (só com a d1 no selinho)
-    if (brilhos) {
-      const noChao =
-        m === 'd1' && noJogo() ? (e.itensNoChao?.() ?? []).filter((i) => i.item === 'ovo') : [];
-      brilhos.quadro(
-        plano.ovos.map((o) => noChao.some((q) => Math.hypot(q.x - o[0], q.z - o[2]) < 1.2)),
-        agoraS(),
-      );
-    }
     const agora = agoraS();
     const la = guia.chegou();
     if (la && !chegouLa) chegouEm = agora;
     chegouLa = la;
-    if (m === 'd3' || m === 'd2' || m === 'e2') {
+    if (m === 'e2') {
       const lista =
         la && agora - chegouEm > MAO_CHEGA && agora - tocouEm > MAO_VOLTA ? alvos() : [];
       if (!lista.length) esconderMao();

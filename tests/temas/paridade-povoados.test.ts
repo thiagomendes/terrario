@@ -10,11 +10,13 @@ import {
 import { limparPovoados, planoDaRegiao } from '../../src/world/povoado';
 import '../../src/temas/todos';
 import { obterTema } from '../../src/temas';
+import { temaBase } from '../../src/temas/base';
 
 /**
- * Spec 013: o sítio e o espantalho só existem com os campos novos do estilo. Os seis temas
- * de antes geram os mesmos povoados, o mesmo nascimento e os mesmos blocos em volta do
- * primeiro povoado (hashes tirados antes do sítio existir).
+ * Spec 013: o sítio e o espantalho só existem com os campos novos do estilo. Os temas de
+ * antes geram os mesmos povoados, o mesmo nascimento e os mesmos blocos em volta do primeiro
+ * povoado (hashes tirados antes do sítio existir). Spec 034: dos seis, ficam a base (o estilo
+ * do Bruma e Luz, com o mesmo hash), o Doce Reino e a Exploração Lunar.
  */
 async function sha(partes: (Uint8Array | string)[]): Promise<string> {
   const pedacos = partes.map((p) => (typeof p === 'string' ? new TextEncoder().encode(p) : p));
@@ -31,28 +33,19 @@ async function sha(partes: (Uint8Array | string)[]): Promise<string> {
     .slice(0, 16);
 }
 
-const TEMAS_DE_ANTES = [
-  'bruma-e-luz',
-  'doce-reino',
-  'era-dos-dinos',
-  'exploracao-lunar',
-  'mata-encantada',
-  'planeta-vivo',
-] as const;
+const TEMAS_DE_ANTES = ['base', 'doce-reino', 'exploracao-lunar'] as const;
 
 const ESPERADO: Record<string, string> = {
-  'bruma-e-luz': 'aad6e205acaed7be',
+  // era o 'bruma-e-luz' (o mesmo estilo)
+  base: 'aad6e205acaed7be',
   'doce-reino': '13b72d90d8e60adb',
-  'era-dos-dinos': 'c344377fab88ceea',
   'exploracao-lunar': '58923160d40db933',
-  'mata-encantada': '07c9bdb0ca67e5cd',
-  'planeta-vivo': 'db89e0cdf5b30708',
 };
 
-describe('os seis temas de antes não mudam com o sítio', () => {
+describe('os temas de antes não mudam com o sítio', () => {
   for (const id of TEMAS_DE_ANTES)
     it(`${id}: povoados, nascimento e blocos do primeiro povoado`, async () => {
-      definirEstiloMundo(obterTema(id).mundo);
+      definirEstiloMundo(id === 'base' ? temaBase().mundo : obterTema(id).mundo);
       definirPovoados(true);
       limparPovoados();
       const partes: (Uint8Array | string)[] = [];

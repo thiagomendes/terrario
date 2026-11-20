@@ -8,7 +8,9 @@ import {
   itensDaRoleta,
   meioDaRoleta,
   rolarAte,
+  tocarComDedo,
   tocarNaPlaquinha,
+  usarDedoDeVerdade,
 } from './roleta-palco';
 
 /**
@@ -22,6 +24,13 @@ import {
 const PASTA = 'test-results/gestos015';
 mkdirSync(PASTA, { recursive: true });
 
+/**
+ * Spec 034: na Exploração Lunar, o mundo sem missões, com o diário à vista e o menu de sempre
+ * (o "Meu primeiro mundo" era do Bruma e Luz, que saiu; a Vila Neon, agora o padrão, tem as
+ * missões e o baú na roda e o diário recolhido). O teste da Vila Neon, no fim, abre a Vila.
+ */
+const MUNDO = '/?tema=exploracao-lunar';
+
 async function entrar(page: Page) {
   // o teste usa o mouse livre (com o mouse preso na câmera, o clique vai todo para o jogo e a
   // criança usa as teclas); voltar da pausa prende o mouse, então aqui ele nunca prende
@@ -30,7 +39,7 @@ async function entrar(page: Page) {
       return Promise.resolve();
     } as typeof HTMLElement.prototype.requestPointerLock;
   });
-  await page.goto('/');
+  await page.goto(MUNDO);
   await page.waitForFunction(() => window.__brumaluz?.ready === true, undefined, {
     timeout: 180_000,
   });
@@ -86,8 +95,12 @@ const ABRE: Record<string, (p: Page) => Promise<boolean>> = {
 };
 
 async function cadaItem(page: Page, tocar: boolean, nome: string) {
-  const clicar = async (sel: string) =>
-    tocar ? page.locator(sel).tap() : page.locator(sel).click();
+  // no celular, o dedo de verdade (o `tap()` do Playwright, pelo protocolo do Chromium, também
+  // nos ajudantes da roleta: `usarDedoDeVerdade`); no computador, o clique. Spec 034 (T14): na
+  // nuvem, sem placa de vídeo, o toque e a roleta (que fecha sozinha em 8 s) passam do tempo:
+  // conferir na placa de vídeo
+  if (tocar) usarDedoDeVerdade(page);
+  const clicar = (sel: string) => (tocar ? tocarComDedo(page, sel) : page.locator(sel).click());
   // o alto: informações, a roda ao lado; a mochila embaixo do minimapa
   for (const sel of ['[data-hud-info]', '[data-botao-roda]', '[data-botao-mochila]'])
     await expect(page.locator(sel)).toBeVisible();
@@ -272,7 +285,7 @@ test('celular: menu de roda pelo toque, segurar abre os gestos', async ({ browse
   await expect(page.locator('[data-missao-atual]')).toBeHidden();
   await cadaItem(page, true, 'celular');
   // nada de selinho de tecla no toque
-  await page.locator('[data-botao-roda]').tap();
+  await tocarComDedo(page, '[data-botao-roda]');
   await esperarAssentar(page);
   expect(await page.locator(`${ROLETA_ABERTA} .item kbd:visible`).count()).toBe(0);
   expect(erros).toEqual([]);
@@ -341,7 +354,7 @@ test('computador: O abre e fecha a roda do menu, soltando o mouse sem a pausa', 
       setTimeout(avisar, 0);
     };
   });
-  await page.goto('/');
+  await page.goto(MUNDO);
   await page.waitForFunction(() => window.__brumaluz?.ready === true, undefined, {
     timeout: 180_000,
   });

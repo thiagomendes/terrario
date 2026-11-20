@@ -10,4 +10,4 @@ exec docker run --rm --shm-size 1g -w /work \
   -v "$AQUI":/work \
   -v "$MODULOS":/mine-browser/node_modules -v "$MODULOS":"$MODULOS" \
   -e FORCE_COLOR=0 \
-  nants-workspace:latest sh -lc "npx playwright test -c playwright.webkit.config.ts $*"
+  terrario-workspace:latest sh -lc "npx playwright test -c playwright.webkit.config.ts $*"

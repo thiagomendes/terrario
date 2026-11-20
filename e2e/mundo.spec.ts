@@ -12,11 +12,21 @@ test('edições, posição e hora sobrevivem a recarregar a página', async ({ p
   await pronto(page);
   await expect(page.locator('[data-mundo-atual]')).toContainText('Meu primeiro mundo');
   await page.evaluate(() => document.querySelector('.entrada')?.setAttribute('hidden', ''));
-  await page.evaluate(() => window.__brumaluz!.apontar!(0, 1.2));
-  await page.waitForFunction(() => {
-    const r = window.__brumaluz!.rotacao;
-    return !!r && Math.abs(r[0] - 1.2) < 1e-6 && window.__brumaluz!.alvo !== null;
+  // spec 034: o "Meu primeiro mundo" é da Vila Neon, e o chão do bairro é protegido (o bloco
+  // nem sai): quebra fora dele, no mundo natural (era do Bruma e Luz, que saiu)
+  await page.evaluate(() => {
+    const v = window.__brumaluz!.vila?.();
+    if (v) window.__brumaluz!.teleportar!(v.plana.x0 - 40.5, v.nascimento.z);
   });
+  await page.waitForFunction(
+    () => {
+      window.__brumaluz!.apontar!(0, 1.2);
+      const r = window.__brumaluz!.rotacao;
+      return !!r && Math.abs(r[0] - 1.2) < 1e-6 && window.__brumaluz!.alvo !== null;
+    },
+    undefined,
+    { polling: 500, timeout: 120_000 },
+  );
   const alvo = await page.evaluate(() => window.__brumaluz!.alvo);
   expect(alvo).not.toBeNull();
   const ok = await page.evaluate(() => window.__brumaluz!.interagir!('quebrar'));

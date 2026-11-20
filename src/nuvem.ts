@@ -31,7 +31,7 @@ import {
 } from './ui/amigos';
 import { prepararAudioNoGesto } from './audio/ligador';
 import { CSS_BRINQUEDO } from './ui/brinquedo';
-import { obterTema, temaExiste } from './temas';
+import { TEMA_PADRAO, obterTema, temaExiste } from './temas';
 import type { MotivoRecusa } from './rede/protocolo';
 
 /** A prévia que o servidor devolve (ou "não existe"). */
@@ -671,9 +671,8 @@ export async function criarMundoComAmigos(
 ): Promise<void> {
   const nome = apelidoOuSugerido(apelido, meta.tema);
   definirApelido(nome);
-  // o terreno é o do tema escolhido (não o do mundo aberto agora na página)
-  const tema = temaExiste(meta.tema ?? '') ? obterTema(meta.tema!) : obterTema('bruma-e-luz');
-  await subirParaNuvem(repo, meta, undefined, nome, tema.mundo);
+  // o terreno é o do tema escolhido (não o do mundo aberto agora na página); sem tema, o padrão
+  await subirParaNuvem(repo, meta, undefined, nome, obterTema(meta.tema).mundo);
 }
 
 /** Nome para os amigos: o do aparelho, ou pergunta no diálogo (já com a sugestão do tema). */
@@ -702,8 +701,7 @@ export async function levarMundoParaAmigos(
 ): Promise<void> {
   const apelido = await apelidoParaAmigos(meta.tema);
   const dados = await repo.carregar(meta.id);
-  const tema = temaExiste(meta.tema ?? '') ? obterTema(meta.tema!) : obterTema('bruma-e-luz');
-  await subirParaNuvem(repo, meta, dados, apelido, tema.mundo);
+  await subirParaNuvem(repo, meta, dados, apelido, obterTema(meta.tema).mundo);
 }
 
 /**
@@ -736,7 +734,7 @@ export async function pararMundoComAmigos(repo: RepositorioMundos, meta: MetaMun
         nome: meta.nome,
         semente: meta.semente,
         modo: meta.modo,
-        tema: meta.tema ?? 'bruma-e-luz',
+        tema: meta.tema && temaExiste(meta.tema) ? meta.tema : TEMA_PADRAO,
       },
       [codigo, ...(bv ? [bv.sala.codigo] : [])],
       dados,
@@ -776,7 +774,7 @@ async function subirParaNuvem(
     criar: {
       nome: m.nome,
       semente: m.semente,
-      tema: m.tema ?? 'bruma-e-luz',
+      tema: m.tema && temaExiste(m.tema) ? m.tema : TEMA_PADRAO,
       modo: m.modo,
       versaoMundo: m.versao ?? 1,
       estilo,

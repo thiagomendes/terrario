@@ -209,12 +209,14 @@ test('HUD da alma: a carteira em todo mundo, o selinho e a placa onde há missõ
   const falhas: string[] = [];
   const casos: Array<[string, Tamanho]> = [];
   for (const t of ['pc', 'deitado', 'empe'] as Tamanho[])
-    for (const tema of ['cidade-grande', 'rancho-alegre', 'bruma-e-luz']) casos.push([tema, t]);
+    // spec 034: a Lua é o mundo sem missões (o Bruma e Luz saiu)
+    for (const tema of ['cidade-grande', 'rancho-alegre', 'exploracao-lunar'])
+      casos.push([tema, t]);
   for (const [tema, tamanho] of casos) {
     const page = await abrir(browser, { tema, tamanho });
     await semAvisos(page);
     await assentar(page);
-    const missoes = tema !== 'bruma-e-luz';
+    const missoes = tema !== 'exploracao-lunar';
     // spec 030: nada abre sozinho; o quadro vem pela roda e o "brincar" acende o selinho
     await page.waitForSelector('[data-alma-carteira]', { timeout: 20_000 });
     await page.waitForTimeout(2500);
@@ -334,13 +336,14 @@ test('o baú: álbum, nível, habilidades e a banca de verdade (com a confirmaç
 }) => {
   test.setTimeout(1_500_000);
   for (const tamanho of ['pc', 'deitado', 'empe'] as Tamanho[])
-    for (const tema of ['cidade-grande', 'rancho-alegre', 'bruma-e-luz']) {
+    // spec 034: a Lua é o mundo sem missões (o Bruma e Luz saiu)
+    for (const tema of ['cidade-grande', 'rancho-alegre', 'exploracao-lunar']) {
       const toque = tamanho !== 'pc';
       const page = await abrir(browser, { tema, tamanho });
       await semAvisos(page);
       await assentar(page);
       const n = (s: string) => `bau-${tema}-${tamanho}-${s}`;
-      const missoes = tema !== 'bruma-e-luz';
+      const missoes = tema !== 'exploracao-lunar';
       void missoes;
       // sem moedinha: a banca mostra o potinho e a recusa calma
       await page.waitForSelector('[data-alma-carteira]', { timeout: 20_000 });

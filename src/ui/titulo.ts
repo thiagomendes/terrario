@@ -54,7 +54,7 @@ const mix = (a: Rgb, b: Rgb, t: number): Rgb => [
   a[1] + (b[1] - a[1]) * t,
   a[2] + (b[2] - a[2]) * t,
 ];
-/** A extrusão escurece para o fundo (o Bruma e Luz vai de 122,58,18 a 70,30,10). */
+/** A extrusão escurece para o fundo (na base vai de 122,58,18 a 70,30,10). */
 const escuro = (c: Rgb): Rgb => [c[0] * 0.574, c[1] * 0.517, c[2] * 0.556];
 type CoresLogo = Tema['cores']['logo'];
 const css = (c: Rgb, f = 1) =>

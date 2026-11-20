@@ -399,7 +399,7 @@ export const ARTE: Record<string, string> = {
     <path d="M22 28 V48" stroke="#fff" stroke-width="3" stroke-linecap="round" opacity="0.7"/>`),
 };
 
-// spec 031: os desenhos das missões da Era dos Dinos e do Doce Reino
+// spec 031: os desenhos das missões do Doce Reino
 Object.assign(ARTE, ARTE_CANTO);
 Object.assign(ARTE, ARTE_VILA);
 

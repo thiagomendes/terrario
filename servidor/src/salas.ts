@@ -27,6 +27,17 @@ import {
 } from '../../src/rede/protocolo';
 import { limparApelido } from '../../src/jogo/apelido';
 import { FORMATO_MUNDO, regiaoDe, type Armazem, type MundoGuardado, type Sala } from './armazem';
+import { IDS_TEMAS, TEMAS_QUE_SAIRAM } from '../../src/temas/tipos';
+
+/**
+ * Spec 034: o mundo guardado é de um dos quatro temas que saíram. Só o `mundo.tema` gravado
+ * exatamente igual a um deles, e só no formato de agora: tema ausente, desconhecido ou de outro
+ * tipo, ou um mundo de formato antigo, não é tocado.
+ */
+export function mundoDeTemaQueSaiu(g: MundoGuardado): boolean {
+  const tema: unknown = g.mundo?.tema;
+  return g.formato === FORMATO_MUNDO && typeof tema === 'string' && TEMAS_QUE_SAIRAM.includes(tema);
+}
 
 /** O que o gerenciador precisa de uma conexão (WebSocket de verdade ou de teste). */
 export interface Canal {
@@ -55,6 +66,12 @@ const MAX_SALAS = 300;
 const ID_VALIDO = /^[A-Za-z0-9_-]{2,64}$/;
 const JANELA = 600_000;
 
+/**
+ * Spec 034: só o tipo do erro vai para o log (a mensagem de um erro da Azure pode trazer o
+ * endereço e o conteúdo do pedido).
+ */
+const nomeDoErro = (e: unknown) =>
+  e instanceof Error && /^[A-Za-z]{1,40}$/.test(e.name) ? e.name : 'erro';
 const resumo = (chave: string) => createHash('sha256').update(chave).digest('hex');
 /** Números com 2 casas: metade dos bytes, sem diferença que se veja. */
 const compacto = (_k: string, v: unknown) =>
@@ -184,7 +201,79 @@ export function criarGerenciador(op: OpcoesGerenciador) {
    */
   async function lerMundoAtual(id: string): Promise<MundoGuardado | null> {
     const g = await armazem.lerMundo(id);
+    // spec 034: um mundo de tema que saiu (a réplica antiga regravou depois da varredura, ou a
+    // varredura ainda não passou) sai na hora e não abre
+    if (g && mundoDeTemaQueSaiu(g)) {
+      await apagarMundoQueSaiu(id, g.mundo.tema).catch((e) =>
+        log(`apagar o mundo ${id} na leitura: falhou (${nomeDoErro(e)})`),
+      );
+      return null;
+    }
     return g && g.formato === FORMATO_MUNDO ? g : null;
+  }
+
+  /**
+   * Spec 034: apaga um mundo de tema que saiu: as salas dele (o código deixa de valer) e depois
+   * a pasta inteira. O log diz o código, o id e o tema, nunca o nome (quem digita é a criança).
+   */
+  async function apagarMundoQueSaiu(id: string, tema: string, dasSalas?: Sala[]): Promise<void> {
+    const lista = dasSalas ?? (await armazem.listarSalas()).filter((s) => s.mundoId === id);
+    const apagadas: string[] = [];
+    for (const sala of lista) {
+      // a lista pode ser velha (a varredura lê todas as salas antes de começar): a sala é
+      // relida e só sai se ainda for deste mundo
+      const atual = await armazem.lerSala(sala.codigo);
+      if (atual?.mundoId !== id) continue;
+      // (no servidor novo nenhuma abre: criar é recusado e a leitura apaga antes de abrir)
+      const ativa = ativas.get(sala.codigo);
+      if (ativa?.mundo.id === id) {
+        ativa.encerrada = true;
+        ativas.delete(sala.codigo);
+        for (const pr of ativa.presentes.values()) {
+          enviar(pr.canal, { t: 'encerrada' });
+          pr.canal?.fechar();
+        }
+      }
+      await armazem.apagarSala(sala.codigo);
+      apagadas.push(sala.codigo);
+    }
+    await armazem.apagarMundo(id);
+    const codigos = apagadas.join(', ') || 'nenhuma';
+    log(`mundo de tema que saiu apagado: sala ${codigos}, id ${id}, tema ${tema}`);
+  }
+
+  /**
+   * Spec 034: a varredura dos mundos guardados (não das salas: um mundo sem sala também sai).
+   * Só o tema gravado exatamente igual a um dos quatro; os erros vão só para o log. Rodar de
+   * novo não muda nada. Devolve quantos saíram.
+   */
+  async function varrerTemasQueSairam(): Promise<number> {
+    let ids: string[];
+    let todas: Sala[];
+    try {
+      ids = await armazem.listarMundos();
+      todas = await armazem.listarSalas();
+    } catch (e) {
+      log(`varredura dos temas que saíram: a lista falhou (${nomeDoErro(e)})`);
+      return 0;
+    }
+    let n = 0;
+    for (const id of ids) {
+      try {
+        const g = await armazem.lerMundo(id);
+        if (!g || !mundoDeTemaQueSaiu(g)) continue;
+        await apagarMundoQueSaiu(
+          id,
+          g.mundo.tema,
+          todas.filter((s) => s.mundoId === id),
+        );
+        n++;
+      } catch (e) {
+        log(`varredura dos temas que saíram, mundo ${id}: falhou (${nomeDoErro(e)})`);
+      }
+    }
+    log(`varredura dos temas que saíram: ${n} de ${ids.length} mundos apagados`);
+    return n;
   }
 
   async function carregar(codigo: string): Promise<SalaAtiva | null> {
@@ -346,6 +435,9 @@ export function criarGerenciador(op: OpcoesGerenciador) {
     let s: SalaAtiva | null;
     let guardado: Awaited<ReturnType<Armazem['lerJogador']>> = null;
     if (p.criar) {
+      // spec 034: só os cinco temas (um cliente antigo com um tema que saiu precisa recarregar)
+      if (!(IDS_TEMAS as readonly string[]).includes(String(p.criar.tema)))
+        return recusar('versao');
       if (excedeu(criacoes, canal.ip, CRIACOES) || ativas.size >= MAX_SALAS)
         return recusar('limite');
       contar(criacoes, canal.ip);
@@ -852,6 +944,7 @@ export function criarGerenciador(op: OpcoesGerenciador) {
     passo,
     manutencao,
     gravarTudo,
+    varrerTemasQueSairam,
     get resumo() {
       let jogadores = 0;
       for (const s of ativas.values()) jogadores += s.presentes.size;

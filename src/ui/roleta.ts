@@ -112,6 +112,8 @@ export const CSS_ROLETA = `
   will-change: transform, opacity; touch-action: none; }
 .roleta .item .desenho { display: contents; }
 .roleta .item svg { width: 56%; height: 56%; pointer-events: none; }
+/* spec 034: os gestos (e a carinha de Gestos) são o boneco desenhado: ocupam mais do botão */
+.roleta .item svg.icone-gesto { width: 76%; height: 76%; }
 .roleta .item.meio { background: #ffe4a8; box-shadow: 0 0 0 4px #f5b52e, 0 5px 0 #d99a1f, 0 10px 18px rgba(60, 35, 10, 0.28), inset 0 2px 0 rgba(255, 255, 255, 0.85); }
 .roleta .item.escolhido { animation: roleta-pulo 0.2s ease-out; }
 @keyframes roleta-pulo { 50% { transform: var(--tf) scale(1.12); } }

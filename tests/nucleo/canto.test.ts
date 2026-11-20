@@ -17,11 +17,10 @@ import type { Comando, EventoNucleo } from '../../src/nucleo/protocolo';
 import type { EstiloMundo } from '../../src/temas/tipos';
 
 /**
- * Spec 031: o canto das missões no núcleo. Cada missão de ponta a ponta com as moedinhas de
- * verdade; o que é de cada missão volta só quando ela é escolhida de novo; a rocha de osso só
- * sai para quem tem a d3; e o canto nunca cobre o que alguém construiu num mundo salvo antes.
+ * Spec 031: o canto das missões no núcleo (spec 034: só o do Doce Reino). Cada missão de ponta
+ * a ponta com as moedinhas de verdade; o que é de cada missão volta só quando ela é escolhida
+ * de novo; e o canto nunca cobre o que alguém construiu num mundo salvo antes.
  */
-const DINOS = obterTema('era-dos-dinos').mundo;
 const DOCE = obterTema('doce-reino').mundo;
 const SEMENTE = 1337;
 afterAll(() => {
@@ -95,58 +94,10 @@ const moedas = (evs: Extract<EventoNucleo, { e: 'alma' }>[]) =>
   evs.reduce((s, e) => s + e.ganho.moedas, 0);
 
 describe('spec 031: as missões do canto no núcleo', () => {
-  it('d1: escolher a missão põe 3 ovinhos; pegar os 3 dá 4 moedinhas; só voltam ao escolher de novo', () => {
-    const n = abrir(DINOS);
-    expect(n.estado.mundoAlma).toBe('era-dos-dinos');
-    const p = cantoDoMundo(SEMENTE)!;
-    passos(n);
-    n.comando('ana', { t: 'almaFixar', missao: 'd1' });
-    passos(n);
-    const ovos = () => n.estado.mundoItens.itens.filter((i) => i.item === 'ovo');
-    expect(ovos()).toHaveLength(3);
-    let ganho = 0;
-    for (const [x, y, z] of p.ovos) {
-      ir(n, 'ana', x, y, z);
-      ganho += moedas(passos(n, 10));
-    }
-    expect(ovos()).toHaveLength(0);
-    expect(ganho).toBe(4);
-    expect(n.estado.almas.get('ana')!.feitas).toContain('d1');
-    // com o tempo nada volta (um minuto de jogo)
-    passos(n, 60 * 20);
-    expect(ovos()).toHaveLength(0);
-  });
-
-  it('d3: a rocha de osso sai com um toque só para quem tem a missão; 3 rochas dão 6 moedinhas', () => {
-    const n = abrir(DINOS, ['ana', 'leo']);
-    const p = cantoDoMundo(SEMENTE)!;
-    passos(n);
-    const e = n.estado.almas.get('ana')!;
-    e.feitas.push('d1', 'd2');
-    n.comando('ana', { t: 'almaFixar', missao: 'd3' });
-    const [x0, y0, z0] = p.fosseis[0];
-    const [ex, ez] = p.caixa!.entrada;
-    ir(n, 'ana', ex, p.caixa!.y + 1, ez);
-    ir(n, 'leo', ex, p.caixa!.y + 1, ez);
-    passos(n);
-    // leo não tem a d3 aberta (as abertas dele são d1 e d2): a rocha fica
-    n.comando('leo', { t: 'quebrar', id: id(), x: x0, y: y0, z: z0, slot: 0 });
-    passos(n);
-    expect(n.estado.mundo.bloco(x0, y0, z0)).toBe(Bloco.MINERIO_FERRO);
-    let ganho = 0;
-    for (const [x, y, z] of p.fosseis) {
-      n.comando('ana', { t: 'quebrar', id: id(), x, y, z, slot: 0 });
-      ganho += moedas(passos(n));
-      expect(n.estado.mundo.bloco(x, y, z)).toBe(Bloco.AR);
-    }
-    expect(ganho).toBe(6);
-    // escolher de novo (o bis) põe as rochas de volta
-    e.feitas.push('d3');
-    n.comando('ana', { t: 'almaFixar', missao: 'd1' });
-    n.comando('ana', { t: 'almaFixar', missao: 'd3' });
-    passos(n);
-    // (no bis a vez é de uma missão por vez: d1 primeiro; a d3 volta quando for a vez dela)
-    expect(p.fosseis.every(([x, y, z]) => n.estado.mundo.bloco(x, y, z) !== undefined)).toBe(true);
+  it('spec 034: um mundo salvo da Era dos Dinos (o estilo do ninho) não tem missões nem canto', () => {
+    const n = abrir({ ...DOCE, estrutura: 'ninho' as 'ruina' });
+    expect(n.estado.mundoAlma).toBeNull();
+    expect(cantoDoMundo(SEMENTE)).toBeNull();
   });
 
   it('e1: o bolo em três camadas (uma bolinha por camada) com a mão vazia; 8 moedinhas', () => {
@@ -231,10 +182,7 @@ describe('spec 031: as missões do canto no núcleo', () => {
 });
 
 describe('spec 031: o canto nunca cobre o que alguém construiu', () => {
-  for (const [nome, estilo] of [
-    ['Era dos Dinos', DINOS],
-    ['Doce Reino', DOCE],
-  ] as const)
+  for (const [nome, estilo] of [['Doce Reino', DOCE]] as const)
     it(`${nome}: um mundo salvo com construção no lugar do canto ganha o canto em outro lugar`, () => {
       definirEstiloMundo(estilo);
       limparPovoados();
@@ -273,7 +221,7 @@ describe('spec 031: o canto nunca cobre o que alguém construiu', () => {
     });
 
   it('um mundo novo usa o melhor lugar (e uma construção feita depois não muda nada)', () => {
-    const n = abrir(DINOS);
+    const n = abrir(DOCE);
     expect(n.escolhaCanto).toBe(0);
     const salvo = n.salvar();
     expect(salvo.extras['canto']).toEqual({ escolha: 0 });

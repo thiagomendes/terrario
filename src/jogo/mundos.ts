@@ -1,4 +1,6 @@
 import type { EdicoesExportadas } from '../world/edicoes';
+import { TEMA_PADRAO } from '../temas';
+import { TEMAS_QUE_SAIRAM } from '../temas/tipos';
 
 export type ModoJogo = 'criativo' | 'sobrevivencia';
 
@@ -11,7 +13,10 @@ export interface MetaMundo {
   jogadoEm: number;
   /** Miniatura JPEG (data URL) da última vez que o mundo foi salvo. */
   miniatura?: string;
-  /** Tema visual do mundo (mundos antigos não têm: são Bruma e Luz). */
+  /**
+   * Tema visual do mundo. Spec 034: todo mundo novo nasce com ele gravado; os antigos sem tema
+   * eram do Bruma e Luz, que saiu do jogo (e são apagados ao abrir: `apagarTemasQueSairam`).
+   */
   tema?: string;
   /** Versão do mundo: 2 = criado já com povoados (mundos antigos não têm). */
   versao?: number;
@@ -139,6 +144,30 @@ export interface RepositorioMundos {
    * Devolve quantos mundos foram apagados (0 na maioria das vezes). Chamar antes de listar.
    */
   prepararFormato(): Promise<number>;
+  /**
+   * Spec 034: apaga os mundos dos quatro temas que saíram e os sem tema (que abriam como Bruma
+   * e Luz), inclusive as entradas que apontam para a nuvem; tirados do índice primeiro, depois
+   * os dados. Um tema desconhecido (nem dos quatro, nem dos cinco) fica. Não muda o formato.
+   * Devolve os ids apagados. Chamar logo depois de `prepararFormato`.
+   */
+  apagarTemasQueSairam(): Promise<string[]>;
+}
+
+/**
+ * O mundo que abre quando nenhum foi pedido (ou o pedido não existe mais, como o de um tema
+ * que saiu): o mais recente do aparelho, ou o "Meu primeiro mundo", que nasce na Vila Neon.
+ */
+export async function mundoParaAbrir(repo: RepositorioMundos): Promise<MetaMundo> {
+  const lista = await repo.listar();
+  return (
+    lista.find((m) => !m.nuvem) ??
+    (await repo.criar('Meu primeiro mundo', SEMENTE_PADRAO_MUNDO, 'criativo', TEMA_PADRAO))
+  );
+}
+
+/** Spec 034: o mundo é de um tema que saiu do jogo (ou não tem tema, e abria como Bruma). */
+export function mundoDeTemaQueSaiu(m: Pick<MetaMundo, 'tema'>): boolean {
+  return typeof m.tema !== 'string' || m.tema === '' || TEMAS_QUE_SAIRAM.includes(m.tema);
 }
 
 export function criarRepositorioMundos(
@@ -152,12 +181,32 @@ export function criarRepositorioMundos(
   async function gravarIndice(lista: MetaMundo[]): Promise<void> {
     await armazem.gravar(CHAVE_INDICE, lista);
   }
-  async function atualizar(id: string, f: (m: MetaMundo) => void): Promise<void> {
+  /**
+   * Spec 034 (T14): quem lê o índice para regravar entra numa fila, um por vez. Sem ela, o
+   * salvar automático do mundo aberto (que lê o índice, espera e regrava) podia passar por
+   * cima do mundo que a criança acabava de criar: o índice voltava sem ele, e a página nova,
+   * sem achar o mundo pedido, abria o "Meu primeiro mundo" (era o que caía, às vezes, nos
+   * testes de criar mundo; num aparelho lento pode acontecer de verdade). A fila vale dentro
+   * da mesma página (este repositório); duas abas do mesmo aparelho não se enxergam. Os dados
+   * de um mundo entram no mesmo passo do índice dele (salvar grava os dois; excluir tira os
+   * dois), para nenhum passo de outro deixar dados sem índice no meio.
+   */
+  let fila: Promise<unknown> = Promise.resolve();
+  function emFila<T>(f: () => Promise<T>): Promise<T> {
+    const p = fila.then(f, f);
+    fila = p.catch(() => undefined);
+    return p;
+  }
+  /** Muda a entrada de um mundo no índice (só de dentro de um passo da fila). */
+  async function mudarNoIndice(id: string, f: (m: MetaMundo) => void): Promise<void> {
     const lista = await indice();
     const m = lista.find((x) => x.id === id);
     if (!m) return;
     f(m);
     await gravarIndice(lista);
+  }
+  function atualizar(id: string, f: (m: MetaMundo) => void): Promise<void> {
+    return emFila(() => mudarNoIndice(id, f));
   }
   let contador = 0;
   const repo: RepositorioMundos = {
@@ -167,47 +216,51 @@ export function criarRepositorioMundos(
     async obter(id) {
       return (await indice()).find((m) => m.id === id) ?? null;
     },
-    async criar(nome, semente, modo, tema) {
-      const lista = await indice();
-      const t = agora();
-      const id = `${t.toString(36)}${(contador++).toString(36)}${lista.length.toString(36)}`;
-      const meta: MetaMundo = {
-        id,
-        nome: limparNomeMundo(nome),
-        semente: semente | 0,
-        modo: modo === 'sobrevivencia' ? 'sobrevivencia' : 'criativo',
-        criadoEm: t,
-        jogadoEm: t,
-        versao: 2,
-      };
-      if (tema) meta.tema = tema;
-      lista.push(meta);
-      // o primeiro mundo de um aparelho novo já nasce no formato de agora
-      if ((await armazem.obter(CHAVE_FORMATO)) !== FORMATO_MUNDOS)
-        await armazem.gravar(CHAVE_FORMATO, FORMATO_MUNDOS);
-      await gravarIndice(lista);
-      await armazem.gravar(chaveDados(id), dadosVazios());
-      return meta;
-    },
+    criar: (nome, semente, modo, tema) =>
+      emFila(async () => {
+        const lista = await indice();
+        const t = agora();
+        const id = `${t.toString(36)}${(contador++).toString(36)}${lista.length.toString(36)}`;
+        const meta: MetaMundo = {
+          id,
+          nome: limparNomeMundo(nome),
+          semente: semente | 0,
+          modo: modo === 'sobrevivencia' ? 'sobrevivencia' : 'criativo',
+          criadoEm: t,
+          jogadoEm: t,
+          versao: 2,
+          // spec 034: todo mundo novo com o tema gravado (sem pedido, o padrão)
+          tema: tema || TEMA_PADRAO,
+        };
+        lista.push(meta);
+        // o primeiro mundo de um aparelho novo já nasce no formato de agora
+        if ((await armazem.obter(CHAVE_FORMATO)) !== FORMATO_MUNDOS)
+          await armazem.gravar(CHAVE_FORMATO, FORMATO_MUNDOS);
+        await gravarIndice(lista);
+        await armazem.gravar(chaveDados(id), dadosVazios());
+        return meta;
+      }),
     async carregar(id) {
       return normalizarDados(await armazem.obter(chaveDados(id)));
     },
-    async salvar(id, dados, miniatura) {
-      await armazem.gravar(chaveDados(id), dados);
-      await atualizar(id, (m) => {
-        m.jogadoEm = agora();
-        if (miniatura) m.miniatura = miniatura;
-      });
-    },
+    salvar: (id, dados, miniatura) =>
+      emFila(async () => {
+        await armazem.gravar(chaveDados(id), dados);
+        await mudarNoIndice(id, (m) => {
+          m.jogadoEm = agora();
+          if (miniatura) m.miniatura = miniatura;
+        });
+      }),
     async renomear(id, nome) {
       await atualizar(id, (m) => {
         m.nome = limparNomeMundo(nome, m.nome);
       });
     },
-    async excluir(id) {
-      await gravarIndice((await indice()).filter((m) => m.id !== id));
-      await armazem.remover(chaveDados(id));
-    },
+    excluir: (id) =>
+      emFila(async () => {
+        await gravarIndice((await indice()).filter((m) => m.id !== id));
+        await armazem.remover(chaveDados(id));
+      }),
     async ultimo() {
       return (await repo.listar())[0] ?? null;
     },
@@ -223,22 +276,33 @@ export function criarRepositorioMundos(
         m.jogadoEm = agora();
       });
     },
-    async prepararFormato() {
-      const formato = await armazem.obter(CHAVE_FORMATO);
-      if (formato === FORMATO_MUNDOS) return 0;
-      // índice inteiro, mesmo com lixo: cada mundo listado sai com os dados dele
-      const bruto = await armazem.obter(CHAVE_INDICE);
-      const lista = Array.isArray(bruto) ? (bruto as Partial<MetaMundo>[]) : [];
-      let apagados = 0;
-      for (const m of lista) {
-        if (!m || typeof m.id !== 'string') continue;
-        await armazem.remover(chaveDados(m.id));
-        apagados++;
-      }
-      await armazem.remover(CHAVE_INDICE);
-      await armazem.gravar(CHAVE_FORMATO, FORMATO_MUNDOS);
-      return apagados;
-    },
+    prepararFormato: () =>
+      emFila(async () => {
+        const formato = await armazem.obter(CHAVE_FORMATO);
+        if (formato === FORMATO_MUNDOS) return 0;
+        // índice inteiro, mesmo com lixo: cada mundo listado sai com os dados dele
+        const bruto = await armazem.obter(CHAVE_INDICE);
+        const lista = Array.isArray(bruto) ? (bruto as Partial<MetaMundo>[]) : [];
+        let apagados = 0;
+        for (const m of lista) {
+          if (!m || typeof m.id !== 'string') continue;
+          await armazem.remover(chaveDados(m.id));
+          apagados++;
+        }
+        await armazem.remover(CHAVE_INDICE);
+        await armazem.gravar(CHAVE_FORMATO, FORMATO_MUNDOS);
+        return apagados;
+      }),
+    apagarTemasQueSairam: () =>
+      emFila(async () => {
+        const lista = await indice();
+        const saem = lista.filter(mundoDeTemaQueSaiu).map((m) => m.id);
+        if (!saem.length) return [];
+        // o índice primeiro: se a página fechar no meio, nenhum mundo fica listado sem dados
+        await gravarIndice(lista.filter((m) => !saem.includes(m.id)));
+        for (const id of saem) await armazem.remover(chaveDados(id));
+        return saem;
+      }),
   };
   return repo;
 }

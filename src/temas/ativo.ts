@@ -1,9 +1,10 @@
 import type { PovoadoTema, Tema } from './tipos';
-import { temaBase } from './bruma-e-luz';
+import { temaBase } from './base';
 
 /**
  * Tema ativo da página. Cada mundo abre numa carga de página própria, então o tema é
- * definido uma vez na inicialização (thread principal e worker) e lido por todos.
+ * definido uma vez na inicialização (thread principal e worker) e lido por todos. Antes de
+ * qualquer ativação, vale a base.
  */
 let atual: Tema | null = null;
 
@@ -15,7 +16,7 @@ export function definirTemaAtivo(t: Tema): void {
   atual = t;
 }
 
-/** Povoado do tema ativo (sem a seção no tema, vale a do Bruma e Luz). */
+/** Povoado do tema ativo (sem a seção no tema, vale o povoado de reserva da base). */
 export function povoadoDoTema(): PovoadoTema {
   return tema().povoado ?? temaBase().povoado!;
 }

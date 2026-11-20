@@ -10,7 +10,9 @@ export interface IdentidadeLocal {
   apelido: string;
 }
 
-const CHAVE = 'terrario:identidade';
+/** Onde o aparelho guarda a identidade (o apelido vai junto). */
+export const CHAVE_IDENTIDADE = 'terrario:identidade';
+const CHAVE = CHAVE_IDENTIDADE;
 
 function aleatorio(bytes: number): string {
   const b = new Uint8Array(bytes);
@@ -54,16 +56,15 @@ export { MAX_APELIDO, limparApelido } from '../jogo/apelido';
 
 /** O complemento do nome sugerido em cada tema (neutro: vale para menina e menino). */
 const DO_TEMA: Record<string, string> = {
-  'bruma-e-luz': 'da Bruma',
-  'planeta-vivo': 'Estelar',
   'doce-reino': 'Doce',
-  'era-dos-dinos': 'dos Dinos',
   'exploracao-lunar': 'Lunar',
-  'mata-encantada': 'da Mata',
   'rancho-alegre': 'do Rancho',
   'cidade-grande': 'da Cidade',
   'vila-neon': 'da Vila',
 };
+
+/** O complemento do tema padrão (spec 034: a Vila Neon). */
+export const COMPLEMENTO_PADRAO = DO_TEMA['vila-neon'];
 
 /**
  * Nome sugerido quando a criança não escreve nenhum (spec 011): o personagem dela mais o tema
@@ -71,7 +72,8 @@ const DO_TEMA: Record<string, string> = {
  */
 export function nomeSugerido(personagem: string, tema?: string): string {
   const base = limparApelido(personagem) || 'Aventureiro';
-  const extra = (tema && DO_TEMA[tema]) || DO_TEMA['bruma-e-luz'];
+  // sem tema (ou um que saiu do jogo), o do tema padrão (spec 034: a Vila Neon)
+  const extra = (tema && DO_TEMA[tema]) || COMPLEMENTO_PADRAO;
   return limparApelido(`${base} ${extra}`);
 }
 

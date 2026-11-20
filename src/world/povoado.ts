@@ -24,8 +24,8 @@ export type Profissao = 'ferreiro' | 'cozinheiro' | 'construtor';
 export const PROFISSOES: readonly Profissao[] = ['ferreiro', 'cozinheiro', 'construtor'];
 /** 'campo' (spec 013): lote do sítio sem construção de morar (lavoura, curral, galinheiro). */
 export type TipoLote = 'casa' | 'oficina' | 'deposito' | 'campo';
-export type FormaCasa = 'duas-aguas' | 'cupula' | 'tenda' | 'redonda' | 'modulo';
-export type FormaMarco = 'poco' | 'fonte' | 'antena' | 'totem' | 'esqueleto' | 'moinho';
+export type FormaCasa = 'duas-aguas' | 'cupula' | 'redonda' | 'modulo';
+export type FormaMarco = 'poco' | 'fonte' | 'antena' | 'moinho';
 /**
  * Spec 013: o que o planejador põe nos lotes. 'vila' (ou sem o campo) é o povoado de
  * sempre; 'sitio' troca as casas por casa da fazenda, celeiro, ferraria, silo, lavouras,
@@ -146,6 +146,12 @@ export interface TerrenoNatural {
   nascimento?(semente: number): { x: number; z: number };
   /** Spec 013: o que vai nos lotes (do estilo do mundo; sem o campo, 'vila'). */
   readonly planta?: PlantaPovoado;
+  /**
+   * Spec 034: o que muda o relevo neste estilo (as crateras da Lua). Entra na chave da memória
+   * dos planos: o servidor abre mundos de temas diferentes no mesmo processo, e dois mundos com
+   * a mesma semente e relevo diferente não podem trocar de plano.
+   */
+  readonly relevo?: string;
 }
 
 const chave = (x: number, z: number) => (x + 32768) * 65536 + (z + 32768);
@@ -205,8 +211,7 @@ export function planoSemBloqueio(
   semente: number,
   t: TerrenoNatural,
 ): PlanoPovoado | null {
-  const planta = t.planta ?? 'vila';
-  const k = planta === 'vila' ? `${rx},${rz},${semente}` : `${rx},${rz},${semente},${planta}`;
+  const k = `${rx},${rz},${semente},${t.planta ?? 'vila'},${t.relevo ?? ''}`;
   if (cache.has(k)) return cache.get(k)!;
   const p = planejar(rx, rz, semente, t);
   if (cache.size > 256) cache.clear();

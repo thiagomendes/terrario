@@ -26,6 +26,7 @@ import {
 import { limparPovoados, planoDaRegiao, REGIAO_POVOADO } from '../../src/world/povoado';
 import '../../src/temas/todos';
 import { obterTema } from '../../src/temas';
+import { cronometrar, melhorDe } from '../tempo';
 
 /**
  * Spec 016, T03/T04: a regra de quem mexe em quê (a mesma no núcleo e no cliente), os avisos
@@ -226,15 +227,15 @@ describe('custo de conferir o bloco mirado', () => {
       return c[indice(x - cx * TAM_X, y, z - cz * TAM_Z)];
     };
     // medido do zero (a máscara de cada chunk nasce na primeira mira dele)
-    const prot = criarProtecaoMundo(semente);
-    const m: MundoDaRegra = {
-      protecao: prot,
+    const mundoDaRegra = (): MundoDaRegra => ({
+      protecao: criarProtecaoMundo(semente),
       bloco: gerado,
       gerado,
       dono: () => null,
       apelido: () => undefined,
       donoDoMundo: 'ana',
-    };
+    });
+    let m = mundoDaRegra();
     for (let x = plano!.minX; x <= plano!.maxX; x += 16)
       for (let z = plano!.minZ; z <= plano!.maxZ; z += 16) gerado(x, 60, z);
     const alvos: [number, number, number][] = [];
@@ -243,14 +244,24 @@ describe('custo de conferir o bloco mirado', () => {
       const z = plano!.minZ + ((i * 13) % (plano!.maxZ - plano!.minZ + 1));
       alvos.push([x, plano!.h + (i % 4), z]);
     }
-    const t0 = performance.now();
+    // spec 034 (T14): o melhor de 3 rodadas (cada uma do zero, com a proteção nova), e não uma
+    // rodada só: a máquina ocupada só soma tempo, e uma conta a mais pesa nas três
     let protegidos = 0;
-    for (const [x, y, z] of alvos) if (recusaQuebrar(m, 'bia', x, y, z)) protegidos++;
-    const ms = (performance.now() - t0) / alvos.length;
+    const ms =
+      melhorDe(3, () => {
+        m = mundoDaRegra();
+        return cronometrar(() => {
+          protegidos = 0;
+          for (const [x, y, z] of alvos) if (recusaQuebrar(m, 'bia', x, y, z)) protegidos++;
+        });
+      }) / alvos.length;
     // a mira de verdade confere uma vez por bloco novo mirado (parada, nada)
-    const t1 = performance.now();
-    for (const [x, y, z] of alvos) recusaQuebrar(m, 'bia', x, y, z);
-    const quente = (performance.now() - t1) / alvos.length;
+    const quente =
+      melhorDe(3, () =>
+        cronometrar(() => {
+          for (const [x, y, z] of alvos) recusaQuebrar(m, 'bia', x, y, z);
+        }),
+      ) / alvos.length;
     console.log(
       `[016 custo] ${alvos.length} blocos no sítio: ${(ms * 1000).toFixed(2)} µs do zero, ` +
         `${(quente * 1000).toFixed(2)} µs com a máscara pronta; ${protegidos} protegidos`,

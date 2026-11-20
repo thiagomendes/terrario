@@ -1,7 +1,7 @@
 ---
 id: 032-comprar-e-comer
 title: 'Comprar e comer: a barraca entrega na mão e a criança come de verdade, em três mordidas'
-status: APPROVED
+status: DONE
 base_branch: main
 branch: feat/032-comprar-e-comer
 created_at: 2026-11-18T12:00:00Z

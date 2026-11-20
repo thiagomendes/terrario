@@ -4,7 +4,8 @@ import { REGISTRO_BLOCOS } from '../../src/world/blocks';
 import { idDoBloco, obterItem, nomeBonito, todosItens } from '../../src/jogo/itens';
 import { CRIATURAS } from '../../src/jogo/criaturas';
 import { NOMES_BIOMA } from '../../src/world/chunk';
-import { obterTema, temasDisponiveis, TEMA_PADRAO } from '../../src/temas';
+import { obterTema, temasDisponiveis } from '../../src/temas';
+import { temaBase } from '../../src/temas/base';
 import { ativarTemaPuro } from '../../src/temas/ativarPuro';
 import { textosOriginais } from '../../src/temas/originais';
 import { blocoExclusivo, EXCLUSIVOS_CIDADE, EXCLUSIVOS_VILA } from '../../src/jogo/exclusivos';
@@ -40,7 +41,7 @@ describe('renomear pelo tema', () => {
   it('voltar ao tema base devolve exatamente os nomes de antes', () => {
     const orig = textosOriginais();
     for (const id of temasDisponiveis()) ativarTemaPuro(obterTema(id));
-    ativarTemaPuro(obterTema(TEMA_PADRAO));
+    ativarTemaPuro(temaBase());
     for (const b of REGISTRO_BLOCOS) {
       if (!b.id) continue;
       expect(b.nome).toBe(orig.blocos[b.id]);

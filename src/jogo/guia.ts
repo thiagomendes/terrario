@@ -83,12 +83,10 @@ export interface MundoDoGuia {
   sitios: readonly PlanoPovoado[];
   bloco(x: number, y: number, z: number): number;
   moradores(): readonly MoradorVisto[];
-  /** Spec 031: o canto das missões (Era dos Dinos e Doce Reino; null nos outros). */
+  /** Spec 031: o canto das missões (o do Doce Reino; null nos outros). */
   canto?: PlanoCanto | null;
   /** Spec 031: os bichos perto (o guia leva ao do pasto que ainda não comeu). */
   bichos?(): readonly (MoradorVisto & { tipo?: string; criado?: boolean })[];
-  /** Spec 031: os ovinhos no chão (o aparelho vê os itens soltos). */
-  ovos?(): readonly { x: number; y: number; z: number }[];
   /** Spec 026: a Vila Neon (null nos outros mundos). */
   vila?: PlanoVila | null;
   /** Spec 026: o estado do bairro (estojos achados, lhamas na grade, os arcos acesos da f4). */
@@ -450,13 +448,11 @@ export function alvoDaMissao(
 }
 
 // ------------------------------------------------------------------ o canto (spec 031)
-/** Perto do ovinho (blocos): ele já veio para a mochila sozinho (o ímã dos itens). */
-export const RAIO_OVO = 1.3;
 /** Perto do bicho do pasto: a comida aparece na mão. */
 export const RAIO_BICHO = 3;
-/** Na caixa de areia e na mesa: dentro da caixa ou a tanto do lado de quem vem. */
+/** Na mesa: a tanto do lado de quem vem. */
 export const RAIO_LUGAR = 2.4;
-/** Na mesa e na caixa de areia a criança chega bem perto (o bolo e as rochas ao alcance do dedo). */
+/** Na mesa a criança chega bem perto (o bolo ao alcance do dedo). */
 export const RAIO_CHEGAR_PERTO = 1.2;
 
 /** O mais perto de `de` (o atual fica, enquanto servir: a trilha não pula de um para outro). */
@@ -503,25 +499,6 @@ function alvoNoCanto(
   const figura = d.tipo === 'arte' ? d.placa : 'estrela';
   const c = m.conta;
   if (c.tipo !== 'evento') return null;
-  if (c.chave === 'coletou:ovo:ninho') {
-    // o ovinho que ainda está no chão (o aparelho vê os itens soltos perto de cada lugar)
-    const noChao = mundo.ovos?.() ?? [];
-    const lista = p.ovos
-      .map((o, i) => ({ chave: `ovo:${i}`, x: o[0], y: o[1], z: o[2] }))
-      .filter((o) => noChao.some((q) => Math.hypot(q.x - o.x, q.z - o.z) < 1.2));
-    const o = maisPerto(lista, de, atual);
-    if (!o) return null;
-    return {
-      chave: o.chave,
-      tipo: 'sitio',
-      x: o.x,
-      y: o.y,
-      z: o.z,
-      placa: [o.x, o.y - 1, o.z],
-      figura,
-      raio: RAIO_OVO,
-    };
-  }
   if (c.chave === 'criou:cervo') {
     const [px, , pz] = p.pasto;
     const lista = (mundo.bichos?.() ?? [])
@@ -555,17 +532,14 @@ function alvoNoCanto(
     };
   }
   const lugar =
-    c.chave === 'escavou:fossil' && p.caixa
-      ? { caixa: p.caixa, y: p.caixa.y + 1, placaY: p.caixa.y }
-      : c.chave === 'bolo:camada' && p.mesa
-        ? { caixa: p.mesa, y: p.mesa.y + 1, placaY: p.mesa.y + 1 }
-        : null;
+    c.chave === 'bolo:camada' && p.mesa
+      ? { caixa: p.mesa, y: p.mesa.y + 1, placaY: p.mesa.y + 1 }
+      : null;
   if (!lugar) return null;
-  const [x, z] =
-    c.chave === 'escavou:fossil' && p.caixa ? p.caixa.entrada : beiraDoLado(lugar.caixa, de, 1);
+  const [x, z] = beiraDoLado(lugar.caixa, de, 1);
   const k = lugar.caixa;
   return {
-    chave: c.chave === 'escavou:fossil' ? 'caixa' : 'mesa',
+    chave: 'mesa',
     tipo: 'sitio',
     x,
     y: lugar.y,

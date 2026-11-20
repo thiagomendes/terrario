@@ -20,14 +20,19 @@ const TODAS = [
   'heroi-estrela',
   'heroi-coracao',
   'heroi-mata',
+  // spec 034: as dos cinco temas que ficam (Dino, Cientista, Guardiã da Mata e Lanterneira
+  // saíram com os quatro)
   'fazendeira',
   'vaqueira',
+  'caipira',
+  'peao-campeao',
   'astronauta',
-  'dino',
   'confeiteira',
-  'cientista',
-  'guardia-mata',
-  'lanterneira',
+  'capacete-obra',
+  'colete-obra',
+  'roqueira-palco',
+  'danca-neon',
+  'patinadora',
 ];
 /** FANTASIAS_IDS=a,b: só essas (para comparar cores e peças com o esboço mais depressa). */
 const IDS = process.env.FANTASIAS_IDS ? process.env.FANTASIAS_IDS.split(',') : TODAS;
@@ -126,13 +131,19 @@ test('capa, saia e rabo em movimento (correndo, sentado, comemorando)', async ({
     ['heroi-relampago', 'menino'],
     ['realeza-flores', 'menina'],
     ['realeza-estrelas', 'menino'],
-    ['dino', 'menina'],
-    ['guardia-mata', 'menino'],
+    // spec 034: o rabo era do Dino (saiu); fica o do dragãozinho da lojinha, e a patinadora da
+    // Vila no lugar da Guardiã da Mata (a saia e a capa já estão na realeza e nos heróis)
+    ['dragao', 'menina'],
+    ['patinadora', 'menino'],
   ] as const;
   for (const [id, quem] of casos) {
     await page.evaluate(
       ({ base, id }) =>
-        window.__brumaluz!.personagem!.definir({ ...base, fantasia: { id, cor: 0 } } as never),
+        window.__brumaluz!.personagem!.definir(
+          (id === 'dragao'
+            ? { ...base, premium: { fantasia: 'dragao' } }
+            : { ...base, fantasia: { id, cor: 0 } }) as never,
+        ),
       { base: QUEM[quem], id },
     );
     await page.evaluate(() => window.__brumaluz!.personagem!.girarCorpo?.(0));

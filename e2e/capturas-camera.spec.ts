@@ -14,7 +14,8 @@ declare const process: { env: Record<string, string | undefined> };
 test.skip(!process.env.CAPTURAS_CAMERA, 'capturas só com CAPTURAS_CAMERA');
 const PASTA = 'capturas-temas/camera015';
 
-const TEMAS = (process.env.CAPTURAS_CAMERA_TEMAS ?? 'rancho-alegre,bruma-e-luz').split(',');
+// spec 034: o Doce Reino no lugar do Bruma e Luz (o outro mundo de povoados e mata)
+const TEMAS = (process.env.CAPTURAS_CAMERA_TEMAS ?? 'rancho-alegre,doce-reino').split(',');
 const TELAS = [
   { nome: 'computador', viewport: { width: 1280, height: 720 }, toque: false },
   { nome: 'celular', viewport: { width: 844, height: 390 }, toque: true },

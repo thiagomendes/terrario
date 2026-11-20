@@ -182,7 +182,7 @@ describe('povoados: terreno e construções', () => {
 
   it('em toda forma, a porta tem passagem livre do miolo da casa até a frente', () => {
     const [p] = povoados(1);
-    for (const casa of ['duas-aguas', 'cupula', 'tenda', 'redonda', 'modulo'] as FormaCasa[]) {
+    for (const casa of ['duas-aguas', 'cupula', 'redonda', 'modulo'] as FormaCasa[]) {
       definirEstiloMundo({
         ...ESTILO_PADRAO,
         povoado: { casa, oficina: casa, deposito: casa, marco: 'poco' },
@@ -236,8 +236,8 @@ describe('povoados: terreno e construções', () => {
 
   it('todas as formas dão a mesma mecânica (blocos funcionais iguais)', () => {
     const [p] = povoados(1);
-    const casas: FormaCasa[] = ['duas-aguas', 'cupula', 'tenda', 'redonda', 'modulo'];
-    const marcos: FormaMarco[] = ['poco', 'fonte', 'antena', 'totem', 'esqueleto', 'moinho'];
+    const casas: FormaCasa[] = ['duas-aguas', 'cupula', 'redonda', 'modulo'];
+    const marcos: FormaMarco[] = ['poco', 'fonte', 'antena', 'moinho'];
     let ref: string | null = null;
     marcos.forEach((marco, i) => {
       const casa = casas[i % casas.length];

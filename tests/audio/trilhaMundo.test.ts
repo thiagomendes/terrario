@@ -72,7 +72,7 @@ describe('trilha do mundo', () => {
   it('com o som ligado: abre a mistura, entra em cruz com a de hoje e solta ao sair', async () => {
     const car = carregador();
     const amb = ambiente();
-    const t = criarTrilhaMundo('bruma-e-luz', { carregador: car });
+    const t = criarTrilhaMundo('doce-reino', { carregador: car });
     t.baixar();
     t.ligar(amb);
     for (let i = 0; i < 40 && !t.info().gravada; i++) {
@@ -94,7 +94,7 @@ describe('trilha do mundo', () => {
   it('o som ligar antes do mundo ficar pronto não baixa nada (o mundo não espera)', async () => {
     const car = carregador();
     const amb = ambiente();
-    const t = criarTrilhaMundo('bruma-e-luz', { carregador: car });
+    const t = criarTrilhaMundo('doce-reino', { carregador: car });
     t.ligar(amb);
     await vi.advanceTimersByTimeAsync(2000);
     expect(t.info().fase).toBe('esperando');
@@ -109,7 +109,7 @@ describe('trilha do mundo', () => {
 
   it('sem o pacote: a de hoje segue, sem erro', async () => {
     const amb = ambiente();
-    const t = criarTrilhaMundo('bruma-e-luz', { carregador: carregador(true) });
+    const t = criarTrilhaMundo('doce-reino', { carregador: carregador(true) });
     t.ligar(amb);
     t.baixar();
     await vi.advanceTimersByTimeAsync(1000);
@@ -134,7 +134,7 @@ describe('trilha do mundo', () => {
       saidaTrilha: () => ({ contexto: ctxQuebrado, destino: new No() }),
       definirSintetizada: (v: number, s: number) => sint.push([v, s]),
     };
-    const t = criarTrilhaMundo('bruma-e-luz', { carregador: car });
+    const t = criarTrilhaMundo('doce-reino', { carregador: car });
     t.ligar(amb);
     t.baixar();
     for (let i = 0; i < 40 && montagens === 0; i++) await vi.advanceTimersByTimeAsync(200);
@@ -151,7 +151,7 @@ describe('trilha do mundo', () => {
   it('com a música calada não baixa nem toca; ao voltar, baixa e entra', async () => {
     const car = carregador();
     const amb = ambiente();
-    const t = criarTrilhaMundo('bruma-e-luz', { carregador: car });
+    const t = criarTrilhaMundo('doce-reino', { carregador: car });
     t.definirAudivel(false);
     t.ligar(amb);
     t.baixar();

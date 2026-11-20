@@ -1,7 +1,7 @@
 ---
 id: 026-mundo-anos-80
 title: 'Vila Neon: o bairro anos 80 com o Festival Trovão, de brinquedo, já nascendo completo'
-status: APPROVED
+status: DONE
 base_branch: main
 branch: feat/026-vila-neon
 created_at: 2026-11-13T17:00:00Z

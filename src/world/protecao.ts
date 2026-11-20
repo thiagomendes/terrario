@@ -266,9 +266,8 @@ export function protecaoDoChunk(
       }
     });
   } else if (e.tipo === 'canto') {
-    // spec 031: o canto das missões. O chão das peças não se cava; o ninho, a cova da caixa
-    // de areia e o lugar dos ovinhos ficam vazios; as células do bolo são de obra (só o bloco
-    // certo entra; cheias, não quebram)
+    // spec 031: o canto das missões. O chão das peças não se cava; as passagens ficam vazias;
+    // as células do bolo são de obra (só o bloco certo entra; cheias, não quebram)
     const p: PlanoCanto = e.plano;
     for (const [wx, wz, h] of p.chao) chao(wx, wz, h);
     for (const [wx, y, wz] of p.passagens) passagem(wx, y, wz);

@@ -41,11 +41,7 @@ import { icone, type NomeIcone } from './pixicones';
 export const NOMES_TEMAS: Record<IdTema, { nome: string; curto: string; de: string }> = {
   'rancho-alegre': { nome: 'Rancho Alegre', curto: 'Rancho', de: 'do' },
   'exploracao-lunar': { nome: 'Exploração Lunar', curto: 'Lua', de: 'da' },
-  'era-dos-dinos': { nome: 'Era dos Dinos', curto: 'Dinos', de: 'da' },
   'doce-reino': { nome: 'Doce Reino', curto: 'Doce Reino', de: 'do' },
-  'planeta-vivo': { nome: 'Planeta Vivo', curto: 'Planeta', de: 'do' },
-  'mata-encantada': { nome: 'Mata Encantada', curto: 'Mata', de: 'da' },
-  'bruma-e-luz': { nome: 'Bruma e Luz', curto: 'Bruma', de: 'de' },
   'cidade-grande': { nome: 'Cidade Grande', curto: 'Cidade', de: 'da' },
   'vila-neon': { nome: 'Vila Neon', curto: 'Vila', de: 'da' },
 };
@@ -70,10 +66,6 @@ export const NOMES_PECAS: Partial<Record<TipoPeca, string>> = {
   'chapeu-vaqueiro': 'Chapéu',
   'capacete-bolha': 'Capacete',
   'touca-chef': 'Touca',
-  oculos: 'Óculos',
-  'coroa-folhas': 'Coroa',
-  'capa-folhas': 'Capa',
-  lanterna: 'Lanterna',
   'capacete-obra': 'Capacete',
   'chapeu-festa': 'Chapéu',
   'chapeu-peao': 'Chapéu',

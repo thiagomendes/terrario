@@ -28,7 +28,6 @@ import { CANTEIRO_BOLO, Protecao, criarProtecaoMundo, replantioDaLavoura } from 
 import {
   celulaDoBolo,
   colunasEditadas,
-  ehFossilDoCanto,
   escolherCanto,
 } from '../world/cantoMissoes';
 import { criarCacheGeracional } from './mundo';
@@ -166,14 +165,14 @@ import {
 /** Distância máxima para bater, domar e trocar com uma criatura. */
 const ALCANCE_CRIATURA = 7;
 /** Pés da lavoura que crescem num passo, no máximo (o custo do passo tem teto). */
-const ORCAMENTO_LAVOURA = 1024;
+export const ORCAMENTO_LAVOURA = 1024;
 /**
  * Segundos que a luz de tocha guardada da lavoura vale. Pôr ou tirar fonte de luz perto já
  * a esquece na hora; isto é só para conferir de vez em quando.
  */
 const LUZ_LAVOURA_VALE = 60;
 /** Células de luz da lavoura calculadas num passo, no máximo (cada uma lê 2025 blocos). */
-const ORCAMENTO_LUZ = 32;
+export const ORCAMENTO_LUZ = 32;
 /** Pé da lavoura que ainda cresce: progresso no estágio e quando cresceu por último. */
 interface PeLavoura {
   x: number;
@@ -358,7 +357,7 @@ export function criarNucleo(op: OpcoesNucleo) {
   definirRegioesSemPovoado(semPovoado);
 
   /**
-   * Spec 031: qual lugar do canto das missões vale (Era dos Dinos e Doce Reino). Gravado com o
+   * Spec 031: qual lugar do canto das missões vale (o do Doce Reino). Gravado com o
    * mundo; sem a gravação (mundo novo, ou salvo antes do canto), o primeiro lugar bom sem
    * nenhuma edição na caixa dele: o canto nunca cobre o que alguém construiu ou mexeu.
    */
@@ -455,6 +454,8 @@ export function criarNucleo(op: OpcoesNucleo) {
   let hora = dados && dados.hora >= 0 ? dados.hora : HORA_INICIAL;
   let horaAnterior = hora;
   let pausado = false;
+  /** Spec 034: o atalho de teste da paridade desliga o cansaço do relógio (ver `relogioCansa`). */
+  let relogioCansa = true;
   let n = 0;
 
   /** Blocos que mudaram desde o último quadro (para todos). */
@@ -667,28 +668,11 @@ export function criarNucleo(op: OpcoesNucleo) {
 
   // ------------------------------------------------------------ canto das missões (spec 031)
   /**
-   * O canto das missões da Era dos Dinos e do Doce Reino (perto do nascer, da geração). O que é
-   * de cada missão volta quando ela é escolhida de novo (nunca sozinho, com o tempo): os 3
-   * ovinhos do ninho (d1), os dois bichos do pasto ainda sem comida (d2, e2), as rochas de osso
-   * (d3) e o bolo vazio (e1).
+   * O canto das missões do Doce Reino (perto do nascer, da geração). O que é de cada missão
+   * volta quando ela é escolhida de novo (nunca sozinho, com o tempo): os dois bichos do pasto
+   * ainda sem comida (e2) e o bolo vazio (e1).
    */
   const canto = cantoDoMundo(semente);
-  // os bichos não entram na caixa de areia (nem nascem nela): a cerquinha vale para eles
-  // (a mesma conta dos veículos da cidade: o passo que entra na caixa não é dado)
-  if (canto?.caixa && !transito) {
-    const k = canto.caixa;
-    const [ax0, az0, ax1, az1] = [k.x0 - 1, k.z0 - 1, k.x1 + 2, k.z1 + 2];
-    mundo.criaturas.folgaVeiculo = (x, _y, z) => {
-      const dx = Math.max(ax0 - x, 0, x - ax1);
-      const dz = Math.max(az0 - z, 0, z - az1);
-      const fora = Math.hypot(dx, dz);
-      // dentro: negativo (quanto mais para o meio, mais negativo), para poder sair
-      return fora > 0 ? fora - 0.45 : -Math.min(x - ax0, ax1 - x, z - az0, az1 - z) - 0.45;
-    };
-    const sup = mundo.criaturas.superficie;
-    mundo.criaturas.superficie = (x, z) =>
-      x >= ax0 - 1 && x <= ax1 && z >= az0 - 1 && z <= az1 ? null : sup(x, z);
-  }
   /** Quem pôs bloco no bolo desta vez (ganha quando ele fica pronto). */
   const ajudantesBolo = new Set<string>();
   /** Os bichos do pasto que o canto chamou (o guia da criança vai até eles). */
@@ -696,22 +680,12 @@ export function criarNucleo(op: OpcoesNucleo) {
   /** Missões do canto que contam para o jogador agora (abertas: as duas da vez, ou o bis). */
   const missaoAberta = (id: string, missao: string) =>
     !!mundoAlma && abertas(almaDe(id), mundoAlma).some((m) => m.id === missao);
-  const MARCA_OVO = 'ninho:';
   /** Perto do bicho (blocos): a comida aparece na mão. */
   const PERTO_DO_BICHO = 3.2;
   function prepararCanto(j: Jogador, missao: string | null): void {
     if (!canto || !mundoAlma || !missao || !missaoAberta(j.id, missao)) return;
-    if (missao === 'd1')
-      canto.ovos.forEach(([x, y, z], i) => {
-        const marca = `${MARCA_OVO}${i}`;
-        if (mundoItens.itens.some((it) => it.marca === marca)) return;
-        mundoItens.pousar('ovo', 1, x, y + 0.13, z, marca);
-      });
-    else if (missao === 'd2' || missao === 'e2') prepararPasto();
-    else if (missao === 'd3') {
-      for (const [x, y, z] of canto.fosseis)
-        if (mundo.bloco(x, y, z) !== Bloco.MINERIO_FERRO) editar(x, y, z, Bloco.MINERIO_FERRO);
-    } else if (missao === 'e1' && canto.bolo.every((c) => mundo.bloco(c.x, c.y, c.z) === c.bloco)) {
+    if (missao === 'e2') prepararPasto();
+    else if (missao === 'e1' && canto.bolo.every((c) => mundo.bloco(c.x, c.y, c.z) === c.bloco)) {
       // o bolo de antes já foi festejado: a mesa fica limpa para fazer outro
       for (const c of canto.bolo) editar(c.x, c.y, c.z, Bloco.AR);
       ajudantesBolo.clear();
@@ -751,16 +725,15 @@ export function criarNucleo(op: OpcoesNucleo) {
     }
   }
   /**
-   * A comida na mão ao chegar perto de um bicho do pasto ainda sem comida (d2, e2): o capim
-   * dourado ou o broto-doce (o mesmo item, o trigo), como os blocos que a obra dá. Só para quem
-   * tem a missão no selinho.
+   * A comida na mão ao chegar perto de um bicho do pasto ainda sem comida (e2): o broto-doce
+   * (o item é o trigo), como os blocos que a obra dá. Só para quem tem a missão no selinho.
    */
   function cuidarDoPasto(): void {
     if (!canto || !mundoAlma) return;
     for (const j of jogadores.values()) {
       if (j.sobrevivencia.estado.morto) continue;
       const m = missaoDoHud(almaDe(j.id), mundoAlma);
-      if (m?.id !== 'd2' && m?.id !== 'e2') continue;
+      if (m?.id !== 'e2') continue;
       if (j.inventario.contar('trigo') > 0) continue;
       const perto = populacao.lista.some(
         (c) =>
@@ -912,6 +885,8 @@ export function criarNucleo(op: OpcoesNucleo) {
   const luzLavoura = criarCacheGeracional<{ v: number; t: number }>(16384);
   /** Células de luz calculadas neste passo (têm teto, como os pés). */
   let luzesNoPasso = 0;
+  /** Spec 034 (T14): pés que cresceram neste passo (os testes contam o trabalho do passo). */
+  let pesNoPasso = 0;
   {
     const salvo = extras['lavoura'];
     const progresso =
@@ -1057,7 +1032,7 @@ export function criarNucleo(op: OpcoesNucleo) {
     if (mundoAlma) {
       almaObrasFeitas(id);
       pedirQuadroAlma(id);
-      // spec 031: a missão do canto que ficou no selinho (o ovinho do ninho esperando)
+      // spec 031: a missão do canto que ficou no selinho (os bichos do pasto esperando)
       prepararCanto(j, missaoDoHud(almaDe(id), mundoAlma)?.id ?? null);
     }
   }
@@ -1193,17 +1168,6 @@ export function criarNucleo(op: OpcoesNucleo) {
       j.sobrevivencia.estado.morto
     ) {
       recusar(j, c.id, 'quebrar', [c, { x, y: y - 1, z }, { x, y: y + 1, z }]);
-      return;
-    }
-    // spec 031: a rocha de osso do canto sai com um toque, só para quem tem a d3
-    if (b === Bloco.MINERIO_FERRO && ehFossilDoCanto(canto, x, y, z)) {
-      if (!missaoAberta(j.id, 'd3')) {
-        recusar(j, c.id, 'quebrar', [c], { motivo: 'mundo', lugar: 'estrutura' });
-        return;
-      }
-      editar(x, y, z, Bloco.AR);
-      j.acoes[0]++;
-      almaEvento(j.id, 'escavou:fossil');
       return;
     }
     // spec 016: o que o mundo construiu não quebra; o que alguém pôs, só ele e o dono do mundo
@@ -1414,6 +1378,7 @@ export function criarNucleo(op: OpcoesNucleo) {
     const noite = noiteNaHora(hora);
     const chuva = chuvaNoMundo();
     luzesNoPasso = 0;
+    pesNoPasso = 0;
     let reinicios = 0;
     for (let i = 0; i < cota; i++) {
       let r = cursorLavoura?.next();
@@ -1435,7 +1400,10 @@ export function criarNucleo(op: OpcoesNucleo) {
         continue;
       const passou = relogioLavoura - c.t;
       c.t = relogioLavoura;
-      if (passou > 0) crescerPe(k, c, passou, noite, chuva);
+      if (passou > 0) {
+        pesNoPasso++;
+        crescerPe(k, c, passou, noite, chuva);
+      }
     }
   }
 
@@ -2581,6 +2549,9 @@ export function criarNucleo(op: OpcoesNucleo) {
       case 'pularShow':
         vila?.pularShow(Number(d.s) || 0);
         break;
+      case 'relogioCansa':
+        relogioCansa = d.ligado !== false;
+        break;
     }
   }
 
@@ -2873,6 +2844,7 @@ export function criarNucleo(op: OpcoesNucleo) {
         correndo: j.tel.correndo,
         andando: j.tel.vel > 0.5,
         submerso: j.tel.submerso,
+        relogioCansa,
       });
       if (j.tel.y < -20) j.sobrevivencia.dano(100, 'queda', true);
     }
@@ -2902,9 +2874,7 @@ export function criarNucleo(op: OpcoesNucleo) {
       for (const c of coletados) {
         lista[c.quem].eventos.push({ e: 'coletou', item: c.item, qtd: c.qtd });
         // spec 023: só o ovo que a galinha pôs (o jogado no chão e pego de novo não conta)
-        // spec 031: o ovinho do ninho do canto (só o que o canto pôs; pegar de novo não conta)
-        if (c.marca?.startsWith(MARCA_OVO)) almaEvento(lista[c.quem].id, 'coletou:ovo:ninho');
-        else if (c.item === 'ovo' && ovosPostos > 0) {
+        if (c.item === 'ovo' && ovosPostos > 0) {
           const q = Math.min(c.qtd, ovosPostos);
           ovosPostos -= q;
           almaEvento(lista[c.quem].id, 'coletou:ovo', q);
@@ -3236,6 +3206,8 @@ export function criarNucleo(op: OpcoesNucleo) {
         conteineres,
         jogadores,
         lavoura,
+        /** Spec 034 (T14): o trabalho da lavoura no último passo (pés e células de luz). */
+        trabalhoLavoura: { pes: pesNoPasso, luzes: luzesNoPasso },
         /** A criatura da noite deste mundo ('assusta' ou 'mansa'). */
         noite: noiteDoMundo,
         /** Spec 014 (T13): os veículos da cidade (null fora dela). */

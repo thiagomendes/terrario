@@ -101,11 +101,7 @@ export type GrupoNivelVoz = 'bichos' | 'moradores' | 'baque' | 'derrota';
  * derrota). Tema ou grupo que falta usa `GANHO_VOZ_GRAVADA` nas vozes e `GANHO_BAQUE` nos golpes.
  */
 export const NIVEL_VOZES: Readonly<Record<string, Partial<Record<GrupoNivelVoz, number>>>> = {
-  'bruma-e-luz': { bichos: -2.2, moradores: -3.3, baque: -0.9, derrota: 0.6 },
-  'planeta-vivo': { bichos: -4.6, moradores: -2.9, baque: -0.1, derrota: 0.7 },
-  'mata-encantada': { bichos: -5.9, moradores: -4.4, baque: -1.3, derrota: 0.8 },
   'doce-reino': { bichos: -3.5, moradores: -1.7, baque: 0.2, derrota: 0.5 },
-  'era-dos-dinos': { bichos: -3.6, moradores: -2.7, baque: -1.5, derrota: 0.4 },
   'exploracao-lunar': { bichos: -8.5, moradores: -9.8, baque: -3.8, derrota: -1.1 },
   'rancho-alegre': { bichos: -5.9, moradores: -3.0, baque: -1.3, derrota: 0.4 },
   'cidade-grande': { bichos: -7.7, moradores: -3.2, baque: -0.6, derrota: 0.45 },

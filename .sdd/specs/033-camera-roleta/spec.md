@@ -1,7 +1,7 @@
 ---
 id: 033-camera-roleta
 title: 'No celular a câmera começa mais afastada, e a roleta de baixo toma o lugar da roda do menu em todo mundo'
-status: APPROVED
+status: DONE
 base_branch: main
 branch: feat/033-camera-roleta
 created_at: 2026-11-18T18:00:00Z

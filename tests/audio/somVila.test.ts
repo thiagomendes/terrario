@@ -616,6 +616,38 @@ describe('o tocador do show (contexto falso)', () => {
   });
 });
 
+describe('o volume da trilha da Vila Neon (spec 026, T18)', () => {
+  /**
+   * Spec 034 (T14): a régua da 019 (e2e/trilha-regua.spec.ts) compara o RMS da gravada com a
+   * trilha sintetizada de antes da 019, e a Vila Neon (que veio depois e nunca tocou a
+   * sintetizada) foi afinada de outro jeito: o volume percebido (LUFS) de cada mistura igual à
+   * média do Rancho e da Cidade com o ajuste deles. O synth-pop tem mais grave, e o RMS dele
+   * fica acima no mesmo volume percebido (era o que caía na régua). Aqui fica a regra da 026,
+   * pelas medidas do pacote: nivel = média(LUFS_ref + NIVEL_TRILHA_ref) − LUFS_vila.
+   */
+  const MEDIDAS = (
+    JSON.parse(lerTexto('.sdd/specs/026-mundo-anos-80/referencia/fontes/medidas-pacote.json')) as {
+      nivel: {
+        lufs: Record<string, Record<string, number>>;
+        nivelTrilhaVila: Record<string, number>;
+      };
+    }
+  ).nivel;
+  const db = (g: number) => 20 * Math.log10(g);
+
+  it('cada contexto no volume percebido do Rancho e da Cidade (décimo de dB)', () => {
+    const contextos = ['dia', 'tarde', 'noite', 'caverna'] as const;
+    for (const c of contextos) {
+      const ref = (['rancho-alegre', 'cidade-grande'] as const).map(
+        (id) => MEDIDAS.lufs[id][c] + db(nivelTrilha(id, c)),
+      );
+      const alvo = (ref[0] + ref[1]) / 2 - MEDIDAS.lufs['vila-neon'][c];
+      expect(db(nivelTrilha('vila-neon', c)), c).toBeCloseTo(alvo, 1);
+      expect(db(nivelTrilha('vila-neon', c)), c).toBeCloseTo(MEDIDAS.nivelTrilhaVila[c], 6);
+    }
+  });
+});
+
 describe('vozes da Vila Neon', () => {
   it('sem pacote de vozes no índice: não baixa nada e fica na voz sintetizada', async () => {
     expect(JSON_INDICE.ordem).not.toContain('vila-neon');

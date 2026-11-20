@@ -76,6 +76,7 @@ describe('diário na ordem do tema (spec 013)', () => {
     await import('../../src/temas/todos');
     const { obterTema } = await import('../../src/temas/index');
     const { ativarTemaPuro } = await import('../../src/temas/ativarPuro');
+    const { temaBase } = await import('../../src/temas/base');
     const rancho = obterTema('rancho-alegre');
     ativarTemaPuro(rancho);
     try {
@@ -83,7 +84,7 @@ describe('diário na ordem do tema (spec 013)', () => {
       const d = criarDiario(undefined, { primeiroCapitulo: rancho.primeiroCapitulo });
       expect(d.atual()?.id).toBe('arar');
     } finally {
-      ativarTemaPuro(obterTema('bruma-e-luz'));
+      ativarTemaPuro(temaBase());
     }
   });
 

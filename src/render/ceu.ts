@@ -19,7 +19,7 @@ uniform float noite;
 uniform float crepusculo;
 uniform float cobertura;
 uniform float arcoIris;
-// do tema (constantes por mundo; os padroes reproduzem o Bruma e Luz)
+// do tema (constantes por mundo; os padroes reproduzem a base)
 uniform float haloSol;
 uniform float faixaCrep;
 uniform vec3 corCrep;
@@ -71,9 +71,6 @@ uniform vec3 corEstrelas;
 uniform float limiarEstrela;
 uniform vec3 corSolTema;
 uniform vec2 solLimiar;
-uniform vec3 paraSol2;
-uniform vec2 sol2Limiar;
-uniform vec3 sol2Cor;
 uniform vec3 corLuaTema;
 uniform vec2 luaLimiar;
 uniform float luaEscala;
@@ -155,14 +152,9 @@ void main() {
     }
   }
 
-  // disco do sol (e o segundo sol, se houver)
+  // disco do sol
   float s = dot(d, paraSol);
   c = mix(c, vec3(1.25, 1.05, 0.8) * corSolTema, smoothstep(solLimiar.x, solLimiar.y, s));
-  if (sol2Limiar.y > 0.0) {
-    float s2 = dot(d, paraSol2);
-    c += sol2Cor * pow(max(s2, 0.0), 40.0) * 0.25 * (1.0 - noite) * haloSol;
-    c = mix(c, sol2Cor, smoothstep(sol2Limiar.x, sol2Limiar.y, s2));
-  }
 
   // lua com crateras
   float l = dot(d, paraLua);
@@ -229,9 +221,6 @@ const UNIFORMES_ASTROS = [
   'limiarEstrela',
   'corSolTema',
   'solLimiar',
-  'paraSol2',
-  'sol2Limiar',
-  'sol2Cor',
   'corLuaTema',
   'luaLimiar',
   'luaEscala',
@@ -303,14 +292,6 @@ function aplicarAstros(mat: ShaderMaterial): void {
   mat.setFloat('limiarEstrela', 1 - 0.016 * c.densidadeEstrelas);
   mat.setColor3('corSolTema', cor(c.corSol));
   mat.setVector2('solLimiar', limiarDisco(0.9988, 0.9993, c.tamanhoSol));
-  if (c.segundoSol) {
-    mat.setVector2('sol2Limiar', limiarDisco(0.9988, 0.9993, c.segundoSol.tamanho));
-    mat.setColor3('sol2Cor', cor(c.segundoSol.cor));
-  } else {
-    mat.setVector2('sol2Limiar', new Vector2(0, 0));
-    mat.setColor3('sol2Cor', new Color3());
-  }
-  mat.setVector3('paraSol2', new Vector3(0, 1, 0));
   mat.setColor3('corLuaTema', cor(c.corLua));
   mat.setVector2('luaLimiar', limiarDisco(0.9975, 0.998, c.tamanhoLua));
   mat.setFloat('luaEscala', c.tamanhoLua);
@@ -336,20 +317,6 @@ function aplicarAstros(mat: ShaderMaterial): void {
   }
   mat.setColor3('corNuvens', cor(c.corNuvens));
   mat.setFloat('fatorNuvens', c.fatorNuvens);
-}
-
-/** Direção do segundo sol: o primeiro girado em volta do eixo vertical. */
-export function direcaoSegundoSol(
-  paraSol: readonly number[],
-  deslocamento: number,
-  saida: Vector3,
-): Vector3 {
-  const c = Math.cos(deslocamento);
-  const s = Math.sin(deslocamento);
-  const x = paraSol[0] * c - paraSol[2] * s;
-  const z = paraSol[0] * s + paraSol[2] * c;
-  // um pouco mais baixo que o primeiro: os dois não se cruzam
-  return saida.set(x, paraSol[1] - 0.08, z).normalize();
 }
 
 export interface Ceu {
@@ -378,15 +345,11 @@ export function criarCeu(scene: Scene): Ceu {
   domo.renderingGroupId = 0;
   domo.alphaIndex = -1;
   aplicarAstros(mat);
-  const sol2 = tema().ceu.segundoSol;
-  const dirSol2 = new Vector3();
   return {
     malha: domo,
     atualizar(a, tempo) {
       aplicarUniformesCeu(mat, a);
       mat.setFloat('tempo', tempo);
-      if (sol2)
-        mat.setVector3('paraSol2', direcaoSegundoSol(a.paraSol, sol2.deslocamento, dirSol2));
     },
   };
 }

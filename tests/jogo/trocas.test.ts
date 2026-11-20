@@ -159,7 +159,7 @@ describe('nenhum ciclo troca ↔ receita dá item do nada (auditoria 013)', () =
       expect.arrayContaining(['colher', 'tijolo', 'escada', 'toldo-vermelho']),
     );
     expect(naCidade.length).toBeLessThanOrEqual(8);
-    const fora = trocasDoMundo('construtor', obterTema('bruma-e-luz').mundo).map((t) => t.id);
+    const fora = trocasDoMundo('construtor', obterTema('rancho-alegre').mundo).map((t) => t.id);
     for (const t of ['colher', 'tijolo', 'escada', 'toldo-vermelho', 'toldo-verde'])
       expect(fora).not.toContain(t);
   });

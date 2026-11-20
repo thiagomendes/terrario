@@ -242,7 +242,13 @@ export type Depuracao =
   /** A lavoura avança como se tantos segundos tivessem passado (até 1 hora). */
   | { f: 'crescer'; segundos: number }
   /** Spec 026 (testes e vídeos): o show tocando pula para `s` s desde o começo dele. */
-  | { f: 'pularShow'; s: number };
+  | { f: 'pularShow'; s: number }
+  /**
+   * Spec 034 (a paridade): liga ou desliga o cansaço que vem do relógio na sobrevivência. A
+   * sessão gravada dura mais ou menos tempo de verdade conforme a máquina, e a saturação caía
+   * ou não na beira de uma queda; sem ele, o retrato não depende da velocidade da máquina.
+   */
+  | { f: 'relogioCansa'; ligado: boolean };
 
 /** O que é de cada jogador num mundo de vários (salvo à parte do mundo). */
 export interface DadosJogador {

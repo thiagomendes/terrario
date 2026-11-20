@@ -27,7 +27,7 @@ import type { Scene } from '@babylonjs/core/scene';
 import { corDoAmigo } from '../ui/mapa';
 import { fotografarBoneco } from '../render/fotoBoneco';
 import { normalizarAparencia } from '../personagem/aparencia';
-import { ICONES_GESTOS } from '../ui/iconesGestos';
+import { ICONES_GESTOS, svgDoIcone } from '../ui/iconesGestos';
 import { Bloco, obterBloco } from '../world/blocks';
 
 // ------------------------------------------------------------------ tipos da API dos testes
@@ -177,9 +177,9 @@ const CSS = `
 /** Ícone da bandeja: três carinhas (sem texto). */
 const ICONE_BANDEJA =
   '<svg viewBox="0 0 32 32"><circle cx="9" cy="13" r="5.5" fill="#ff9db8" stroke="#3b2a1e" stroke-width="1.6"/><circle cx="23" cy="13" r="5.5" fill="#7cc6ff" stroke="#3b2a1e" stroke-width="1.6"/><circle cx="16" cy="19" r="6.5" fill="#ffd45a" stroke="#3b2a1e" stroke-width="1.8"/><circle cx="13.8" cy="18" r="1" fill="#3b2a1e"/><circle cx="18.2" cy="18" r="1" fill="#3b2a1e"/><path d="M13.5 21.5 Q16 23.8 18.5 21.5" fill="none" stroke="#3b2a1e" stroke-width="1.5" stroke-linecap="round"/></svg>';
-/** Ícone do Chamar: a mão do gesto "chamar" da 015 com ondinhas de som. */
-const ICONE_CHAMAR = `<svg viewBox="0 0 32 32">${ICONES_GESTOS.chamar}<path d="M26 6 Q31 16 26 26" stroke="#a8610a" stroke-width="2" fill="none" stroke-linecap="round"/></svg>`;
-const ICONE_ACENO = `<svg viewBox="0 0 32 32">${ICONES_GESTOS.acenar}</svg>`;
+/** Ícone do Chamar e o aceno: os dos gestos do jogo (spec 034, viewBox de 64). */
+const ICONE_CHAMAR = svgDoIcone(ICONES_GESTOS.chamar, '');
+const ICONE_ACENO = svgDoIcone(ICONES_GESTOS.acenar, '');
 
 export function prepararEsbocoAmigos(): void {
   const esperar = () => {

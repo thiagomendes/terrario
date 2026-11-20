@@ -4,6 +4,7 @@ declare module 'node:fs' {
   export function readFileSync(caminho: string, codificacao: 'utf8' | 'base64'): string;
   /** Spec 032: a folha de fotos lê a pasta das fotos. */
   export function readdirSync(caminho: string): string[];
-  export function writeFileSync(caminho: string, dados: string): void;
+  /** Spec 034 (T10): `base64` grava as fotos que vêm da página. */
+  export function writeFileSync(caminho: string, dados: string, codificacao?: 'base64'): void;
   export function mkdirSync(caminho: string, opcoes?: { recursive?: boolean }): void;
 }

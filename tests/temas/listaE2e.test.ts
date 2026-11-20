@@ -11,6 +11,7 @@ describe('lista de temas dos testes de tela', () => {
   it('filtra pelo pedido da variável de ambiente', () => {
     expect(temasPedidos(undefined)).toHaveLength(TEMAS_E2E.length);
     expect(temasPedidos('1')).toHaveLength(TEMAS_E2E.length);
-    expect(temasPedidos('rancho-alegre,doce-reino')).toEqual(['doce-reino', 'rancho-alegre']);
+    // na ordem dos cartões, não na do pedido
+    expect(temasPedidos('doce-reino,rancho-alegre')).toEqual(['rancho-alegre', 'doce-reino']);
   });
 });

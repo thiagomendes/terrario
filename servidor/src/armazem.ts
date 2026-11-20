@@ -66,6 +66,12 @@ export interface Armazem {
   ): Promise<void>;
   lerJogador(mundo: string, jogador: string): Promise<JogadorGuardado | null>;
   gravarJogador(mundo: string, jogador: string, j: JogadorGuardado): Promise<void>;
+  /** Spec 034: os ids de todos os mundos guardados (as pastas `<id>/`). */
+  listarMundos(): Promise<string[]>;
+  /** Spec 034: todas as salas (código → mundo). */
+  listarSalas(): Promise<Sala[]>;
+  /** Spec 034: apaga a pasta inteira do mundo (mundo, regiões e jogadores); o que já não existe é ignorado. */
+  apagarMundo(id: string): Promise<void>;
 }
 
 /** Armazém em memória (testes e servidor local de desenvolvimento). */
@@ -113,8 +119,60 @@ export function armazemMemoria(): Armazem & { gravacoes: number } {
       a.gravacoes++;
       jogadores.set(`${mundo}/${j}`, JSON.stringify(d));
     },
+    async listarMundos() {
+      const ids = new Set([...mundos.keys(), ...regioes.keys()]);
+      for (const k of jogadores.keys()) ids.add(k.slice(0, k.indexOf('/')));
+      return [...ids];
+    },
+    async listarSalas() {
+      return [...salas.values()].map(copia);
+    },
+    /**
+     * Testes (spec 034): devolve true para o apagar desse arquivo falhar (como um erro da
+     * Azure no meio da pasta).
+     */
+    falharAoApagar: undefined as ((nome: string) => boolean) | undefined,
+    async apagarMundo(id: string) {
+      // os mesmos nomes da pasta na Azure, cada um com o seu apagar
+      const acoes = new Map<string, () => void>();
+      for (const r of regioes.get(id)?.keys() ?? [])
+        acoes.set(`${id}/regioes/${r}.json.gz`, () => {
+          const m = regioes.get(id);
+          m?.delete(r);
+          if (m && !m.size) regioes.delete(id);
+        });
+      for (const k of jogadores.keys())
+        if (k.startsWith(`${id}/`))
+          acoes.set(`${id}/jogadores/${k.slice(id.length + 1)}.json.gz`, () => jogadores.delete(k));
+      if (mundos.has(id)) acoes.set(`${id}/${ARQUIVO_MUNDO}`, () => mundos.delete(id));
+      await apagarPastaDoMundo(id, acoes.keys(), async (nome) => {
+        if (a.falharAoApagar?.(nome)) throw new Error('falha de teste ao apagar');
+        acoes.get(nome)?.();
+      });
+    },
   };
   return a;
+}
+
+/** O arquivo do mundo dentro da pasta `<id>/` (é por ele que a varredura acha e lê o mundo). */
+export const ARQUIVO_MUNDO = 'mundo.json.gz';
+
+/**
+ * Spec 034: apaga os arquivos da pasta de um mundo com o arquivo do mundo por último. Se um
+ * apagar falhar no meio, o mundo continua sendo achado e lido (é um dos quatro temas que
+ * saíram) e a próxima varredura termina o serviço; nunca sobram regiões ou jogadores sem o
+ * mundo, que nenhuma varredura acharia de novo.
+ */
+export async function apagarPastaDoMundo(
+  id: string,
+  nomes: Iterable<string> | AsyncIterable<string>,
+  apagar: (nome: string) => Promise<void>,
+): Promise<void> {
+  const principal = `${id}/${ARQUIVO_MUNDO}`;
+  const lista: string[] = [];
+  for await (const n of nomes) lista.push(n);
+  for (const n of lista) if (n !== principal) await apagar(n);
+  if (lista.includes(principal)) await apagar(principal);
 }
 
 /** Região de 8×8 chunks de um chunk "cx,cz". */

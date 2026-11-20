@@ -32,7 +32,9 @@ test('povoado: moradores, tela de trocas com mouse e teclado', async ({ page }) 
   const erros: string[] = [];
   page.on('pageerror', (e) => erros.push(String(e)));
   await page.setViewportSize({ width: 1280, height: 800 });
-  await page.goto('/');
+  // spec 034: no Doce Reino, de povoados com trocas (o "Meu primeiro mundo" era do Bruma e
+  // Luz, que saiu; a Vila Neon, agora o padrão, não tem povoado perto do nascimento)
+  await page.goto('/?tema=doce-reino');
   await pronto(page);
   await page.evaluate(() => {
     document.querySelector('.entrada')?.setAttribute('hidden', '');

@@ -1,7 +1,7 @@
 import { fotografarBoneco } from '../render/fotoBoneco';
 import { CSS_BRINQUEDO } from './brinquedo';
 import { CSS_TEMAS_UI, criarVitrineTitulo } from './temasUi';
-import { obterTema } from '../temas';
+import { TEMA_PADRAO, obterTema } from '../temas';
 import { CSS_ATALHOS } from './atalhos';
 import type { Hotbar } from '../player/hotbar';
 import { criarBarra } from './barra';
@@ -692,7 +692,7 @@ export function criarInterface(
   };
   const painel = criarPainelPersonagem(telaPersonagem, {
     armazenamento: armazenamento(),
-    temaDoMundo: opMundo.mundo ? (opMundo.mundo.tema ?? 'bruma-e-luz') : undefined,
+    temaDoMundo: opMundo.mundo ? (opMundo.mundo.tema ?? TEMA_PADRAO) : undefined,
     aoFestejar: () => festejarNoPalco(pedestal),
     aoMudar: (a) => {
       mostrarPrevia(a);

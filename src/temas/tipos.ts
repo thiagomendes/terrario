@@ -13,16 +13,36 @@ import type { Estacao, TipoClima } from '../jogo/clima';
 import type { FormasPovoado, Profissao } from '../world/povoado';
 import type { Exclusivos } from '../jogo/exclusivos';
 
+/** Os temas do jogo (spec 034: ficam cinco). */
 export type IdTema =
-  | 'bruma-e-luz'
-  | 'planeta-vivo'
-  | 'mata-encantada'
-  | 'doce-reino'
-  | 'era-dos-dinos'
-  | 'exploracao-lunar'
-  | 'rancho-alegre'
+  | 'vila-neon'
   | 'cidade-grande'
-  | 'vila-neon';
+  | 'rancho-alegre'
+  | 'doce-reino'
+  | 'exploracao-lunar';
+
+/**
+ * Os ids dos cinco temas (dado puro: o servidor confere com ele o tema de um mundo novo). A
+ * ordem dos cartões fica em `src/temas/index.ts`.
+ */
+export const IDS_TEMAS: readonly IdTema[] = [
+  'vila-neon',
+  'cidade-grande',
+  'rancho-alegre',
+  'doce-reino',
+  'exploracao-lunar',
+];
+
+/**
+ * Spec 034: os quatro temas que saíram do jogo. Os mundos salvos neles são apagados (no
+ * aparelho e na nuvem) e o que a criança ganhou neles não deixa rastro.
+ */
+export const TEMAS_QUE_SAIRAM: readonly string[] = [
+  'bruma-e-luz',
+  'planeta-vivo',
+  'mata-encantada',
+  'era-dos-dinos',
+];
 
 export type Rgb = readonly [number, number, number];
 /** Pixel RGBA 0..255 de um tile. */
@@ -45,7 +65,7 @@ export interface QuadroCeu {
   dens: number;
 }
 
-/** Astros e detalhes do céu (shader do céu). Os padrões reproduzem o Bruma e Luz. */
+/** Astros e detalhes do céu (shader do céu). Os padrões reproduzem a base. */
 export interface CeuTema {
   /** 0..1: estrelas visíveis de dia (1 na Lua). */
   estrelasDia: number;
@@ -58,8 +78,6 @@ export interface CeuTema {
   tamanhoSol: number;
   /** Halo em volta do sol (0 = nenhum, como no vácuo). */
   haloSol: number;
-  /** Segundo sol (Planeta Vivo): deslocamento angular em relação ao primeiro e cor. */
-  segundoSol?: { deslocamento: number; cor: Rgb; tamanho: number };
   /** Tinta da lua. */
   corLua: Rgb;
   tamanhoLua: number;
@@ -165,7 +183,7 @@ export interface PecaCriatura {
 export interface MovimentoCriatura {
   /** Altura dos pulinhos ao andar (coelho, gelatina). */
   saltita: number;
-  /** Flutua parada no ar (amplitude; a noturna do Bruma e Luz usa 0.08). */
+  /** Flutua parada no ar (amplitude; a noturna da base usa 0.08). */
   flutua: number;
   /** Ginga o corpo de lado ao andar (0 a 0.3). */
   ginga: number;
@@ -204,10 +222,8 @@ export type FormaArvore =
   | 'betula'
   | 'pinho'
   | 'lanterna'
-  | 'palmeira'
   | 'fungo'
   | 'pirulito'
-  | 'samambaia'
   | 'cristal'
   | 'araucaria';
 
@@ -215,11 +231,8 @@ export type FormaArvore =
 export type FormaEstrutura =
   | 'ruina'
   | 'cupula'
-  | 'circulo'
-  | 'arcos'
   | 'casinha'
   | 'torre'
-  | 'ninho'
   /** Spec 013: espantalho com baú no meio de uma lavoura abandonada. */
   | 'espantalho'
   /** Spec 014: a roda-gigante de um parque de diversões abandonado (Cidade Grande). */
@@ -264,7 +277,7 @@ export interface TimbreMusica {
 export interface NaturezaTema {
   passaros: number;
   grilos: number;
-  /** Multiplica o tom de pássaros e grilos (dinossauros: mais grave). */
+  /** Multiplica o tom de pássaros e grilos (menor que 1: mais grave). */
   tom: number;
   /** Bipes de rádio distantes no lugar dos pássaros (Lua), de dia e à noite. */
   bipes?: boolean;
@@ -398,7 +411,8 @@ export interface TextosTema {
 }
 
 export interface Tema {
-  id: IdTema;
+  /** O id do tema; `'base'` só na base (que não se escolhe: `src/temas/base`). */
+  id: IdTema | 'base';
   nome: string;
   /** Frase do cartão e do título. */
   lema: string;
@@ -446,7 +460,7 @@ export interface Tema {
   };
   materiais: Partial<Record<GrupoMaterial, AjusteMaterial>>;
   natureza: NaturezaTema;
-  /** Povoados (spec 008). Sem esta seção, o tema usa a do Bruma e Luz. */
+  /** Povoados (spec 008). Sem esta seção, o tema usa o povoado de reserva da base. */
   povoado?: PovoadoTema;
   /** Aparência sugerida ao criar o mundo (a personalização continua livre). */
   personagem: Partial<Aparencia>;

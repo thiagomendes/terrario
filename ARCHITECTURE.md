@@ -20,6 +20,8 @@ A spec 006-expansao (branch `feat/expansao`, 2026-11-06) transformou a cena em j
 
 A spec 007-terrario-temas deu o nome Terrário ao jogo e criou os seis temas de mundo (só aparência, nomes e sons; a mecânica é a mesma). A spec 008-povoados trouxe vilas com moradores, profissões e trocas, na cara de cada tema.
 
+A spec 034-menos-e-mais deixou cinco temas: Vila Neon (o padrão), Cidade Grande, Rancho Alegre, Doce Reino e Exploração Lunar; saíram Bruma e Luz, Planeta Vivo, Mata Encantada e Era dos Dinos, com o que era só deles. O registro fica em `src/temas/index.ts` (`TEMA_PADRAO`, a ordem dos cartões em `temasDisponiveis`, `obterTema`), e os construtores se registram em `src/temas/todos.ts`. A base (`src/temas/base/`: `temaBase()`, `corpoDeMorador`, `naCabeca` e a reserva genérica de criaturas, vozes e povoado) é o tema de antes de qualquer ativação e a reserva de quem não importa `todos.ts`; ela não se escolhe. O resto da base (pintores e atlas, `PALETAS_MUSICAIS`, `ESTILO_PADRAO`, `FORMAS_PADRAO`, `textosOriginais`) fica onde sempre esteve. `tests/temas/paridade-cinco.test.ts` guarda os hashes dos cinco (e do canto do Doce) de antes da 034, e `paridade-base.test.ts` os da base.
+
 A spec 009-servidor-local separou o mundo do desenho. O **núcleo** (`src/nucleo/`) é o dono do mundo e das regras, puro, sem tela nem DOM: blocos e edições, baús e fornalhas, itens no chão, criaturas e moradores, inventário, sobrevivência, dia, clima e estações, em passos fixos de 50 ms. Ele roda num Web Worker (servidor local) e, na spec 010, roda igual no Node de um servidor na nuvem. O **cliente** (`src/render/`, `src/ui/`, `src/cliente/`) desenha, toca os sons, lê os controles e faz a física do próprio jogador; ele manda comandos e aplica os quadros que o núcleo devolve. Ações do jogador aparecem na hora (previsão) e são confirmadas ou desfeitas pelo núcleo.
 
 ## Núcleo e cliente (spec 009)
@@ -38,7 +40,7 @@ A spec 009-servidor-local separou o mundo do desenho. O **núcleo** (`src/nucleo
 - TypeScript 5.6.3, Vite 5.4.10, Babylon.js (`@babylonjs/core` 7.31.0, imports por módulo para tree-shaking).
 - Vitest 2.1.4 para a lógica pura (ambiente node, sem jsdom); Playwright 1.48.2 (Chromium) para e2e e capturas; Prettier 3.3.3.
 - Áudio: Web Audio API do navegador, sintetizado por código, sem biblioteca e sem arquivos.
-- Docker: imagem base `mcr.microsoft.com/playwright:v1.48.2-noble` (traz Node e navegadores), via `.nants/Dockerfile` e `.nants/compose.yaml` (serviço `workspace`, porta 5174).
+- Docker: imagem base `mcr.microsoft.com/playwright:v1.48.2-noble` (traz Node e navegadores), via `docker/Dockerfile` e `docker/compose.yaml` (serviço `workspace`, porta 5174).
 
 ## Estrutura
 
@@ -64,7 +66,7 @@ A spec 009-servidor-local separou o mundo do desenho. O **núcleo** (`src/nucleo
 - Testes rápidos: `npx vitest run` (ou `npm test`); completos: `npx vitest run && npx playwright test`
 - Build: `npm run build`; preview: `npm run preview`
 - Executar: `npm run dev -- --host 0.0.0.0 --port 5174 --strictPort`
-- Via Docker (sem runtime no host): `docker compose -f .nants/compose.yaml run --rm --service-ports workspace sh -lc '<comando>'`
+- Via Docker (sem runtime no host): `docker compose -f docker/compose.yaml run --rm --service-ports workspace sh -lc '<comando>'`
 - O Playwright sobe sozinho `npm run build` e o preview em `127.0.0.1:4173`. Capturas em `test-results/screens`.
 
 ## Padrões e convenções

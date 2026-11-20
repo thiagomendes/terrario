@@ -16,7 +16,7 @@
 import { SEGURAR_PULO, TOQUE_CARINHA, type Caixa, type ItemBorda } from '../jogo/acharAmigo';
 import { fotografarBoneco } from '../render/fotoBoneco';
 import { normalizarAparencia } from '../personagem/aparencia';
-import { ICONES_GESTOS } from './iconesGestos';
+import { ICONES_GESTOS, svgDoIcone } from './iconesGestos';
 
 export const CSS_CARINHAS = `
 .carinhas-amigos { position: fixed; inset: 0; pointer-events: none; z-index: 8; }
@@ -44,10 +44,11 @@ body:has(.entrada:not([hidden])) .carinhas-amigos { display: none; }
 .carinha-amigo.chamando::before, .carinha-amigo.chamando::after { content: ''; position: absolute; inset: -4px; border-radius: 50%;
   border: 4px solid var(--cor); animation: amg-onda 1.4s ease-out infinite; pointer-events: none; }
 .carinha-amigo.chamando::after { animation-delay: 0.7s; }
-.carinha-amigo .mao { position: absolute; right: -10px; top: -12px; width: 30px; height: 30px; border-radius: 50%; background: #fff6d8;
+.carinha-amigo .mao { position: absolute; right: -13px; top: -15px; width: 38px; height: 38px; border-radius: 50%; background: #fff6d8;
   box-shadow: 0 2px 0 rgba(150, 110, 60, 0.4); display: none; animation: amg-aceno 0.6s ease-in-out infinite alternate; pointer-events: none; }
 .carinha-amigo.chamando .mao { display: block; }
-.carinha-amigo .mao svg { width: 30px; height: 30px; }
+/* spec 034: o aceno é o boneco desenhado (o mesmo ícone da roleta), quase do tamanho do balãozinho */
+.carinha-amigo .mao svg { display: block; width: 34px; height: 34px; margin: 2px; }
 .carinha-amigo.escolhido .aro { box-shadow: 0 0 0 5px var(--cor), 0 0 0 8px #fff6d8, 0 4px 0 8px rgba(0,0,0,0.12), 0 6px 10px rgba(20, 16, 40, 0.3); }
 /* o "não" do pulo sem lugar seguro: balança de um lado para o outro */
 .carinha-amigo.nao .aro { animation: amg-nao 0.5s ease-in-out 2; }
@@ -88,6 +89,7 @@ body:has(.entrada:not([hidden])) .carinhas-amigos { display: none; }
   box-shadow: 0 3px 0 rgba(150, 110, 60, 0.35), 0 6px 12px rgba(40, 25, 10, 0.2), inset 0 2px 0 rgba(255, 255, 255, 0.85); }
 .botao-bandeja[hidden], .botao-chamar[hidden] { display: none; }
 .botao-bandeja svg, .botao-chamar svg { width: 30px; height: 30px; pointer-events: none; }
+.botao-chamar svg.icone-gesto { width: 38px; height: 38px; }
 .botao-bandeja:active, .botao-chamar:active { transform: translateY(2px); }
 .botao-bandeja.ativo { background: #ffe4a8; }
 .bandeja-amigos { position: fixed; z-index: 7; display: flex; gap: 10px; padding: 8px 10px; border-radius: 999px;
@@ -113,9 +115,10 @@ body:has(.entrada:not([hidden])) .botao-bandeja, body:has(.entrada:not([hidden])
 }
 `;
 
-const ICONE_ACENO = `<svg viewBox="0 0 32 32">${ICONES_GESTOS.acenar}</svg>`;
-/** Ícone do Chamar: a mão do gesto "chamar" da 015 com ondinhas de som. */
-const ICONE_CHAMAR = `<svg viewBox="0 0 32 32">${ICONES_GESTOS.chamar}<path d="M26 6 Q31 16 26 26" stroke="#a8610a" stroke-width="2" fill="none" stroke-linecap="round"/></svg>`;
+/** O aceno do amigo que chama: o ícone do gesto "acenar" (spec 034, o boneco com a mão aberta). */
+const ICONE_ACENO = svgDoIcone(ICONES_GESTOS.acenar);
+/** Ícone do Chamar: o do gesto "chamar" (spec 034: o boneco gritando, com as ondas de som). */
+const ICONE_CHAMAR = svgDoIcone(ICONES_GESTOS.chamar);
 /** O Chamar dormindo: um relógio de areia desenhado (sem número). */
 const AMPULHETA =
   '<svg class="ampulheta" viewBox="0 0 32 32"><path d="M9 4 H23 M9 28 H23" stroke="#7a4826" stroke-width="2.6" stroke-linecap="round"/><path d="M10.5 5 Q10.5 12 16 16 Q21.5 12 21.5 5 Z M10.5 27 Q10.5 20 16 16 Q21.5 20 21.5 27 Z" fill="#fff6d8" stroke="#7a4826" stroke-width="1.8" stroke-linejoin="round"/><path class="areia-cima" d="M12.5 8 Q13 12 16 14.5 Q19 12 19.5 8 Z" fill="#e6b450"/><path class="areia-baixo" d="M12 26 Q13 21.5 16 20 Q19 21.5 20 26 Z" fill="#e6b450"/></svg>';
@@ -313,7 +316,7 @@ export function criarCarinhas(acoes: AcoesCarinhas) {
     bBandeja.classList.toggle('ativo', aberta);
     medidoEm = -Infinity;
   }
-  // o Chamar (com 1 amigo ou mais): a mão do gesto e ondinhas; depois de apertar, dorme
+  // o Chamar (com 1 amigo ou mais): o ícone do gesto "chamar"; depois de apertar, dorme
   const bChamar = document.createElement('button');
   bChamar.className = 'botao-chamar';
   bChamar.innerHTML = ICONE_CHAMAR + AMPULHETA;

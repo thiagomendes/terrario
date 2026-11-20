@@ -1,8 +1,8 @@
 import { expect, test, type Page } from '@playwright/test';
 
 /**
- * Spec 019 (T04): vozes gravadas no jogo. O golpe na criatura da noite (o Saci da Mata, que
- * soava como vidro) toca o baque de pano do porte dele e o "ai" gravado; a derrota é o "puf"
+ * Spec 019 (T04): vozes gravadas no jogo. O golpe na criatura da noite (era o Saci da Mata, que
+ * soava como vidro; na spec 034, com a Mata fora, o Eco-sombra da Lua, também de pano) toca o baque de pano do porte dele e o "ai" gravado; a derrota é o "puf"
  * fofo (nunca mais o arbusto); o morador acena de volta com o cumprimento gravado, na voz do
  * gênero dele. O que tocou vem do registro dos testes de tela (`sonsTocados`).
  */
@@ -72,13 +72,13 @@ async function laje(page: Page) {
   });
 }
 
-test('golpe no Saci: baque de pano e "ai" gravados (sem vidro); derrota com "puf"', async ({
+test('golpe no Eco-sombra: baque de pano e "ai" gravados (sem vidro); derrota com "puf"', async ({
   page,
 }, testInfo) => {
   test.setTimeout(420_000);
   const erros = coletarErros(page);
   await page.setViewportSize({ width: 1024, height: 600 });
-  await mundoNovo(page, 'mata-encantada');
+  await mundoNovo(page, 'exploracao-lunar');
   await ligarSom(page);
   const { fx, fy, fz } = await laje(page);
   const r = await page.evaluate(
@@ -87,13 +87,13 @@ test('golpe no Saci: baque de pano e "ai" gravados (sem vidro); derrota com "puf
       const espera = (ms: number) => new Promise((r) => setTimeout(r, ms));
       e.hora = 0;
       await espera(500);
-      const sacis = () => e.criaturas!().filter((c) => c.tipo === 'espectro');
-      const antes = new Set(sacis().map((c) => c.id));
+      const sombras = () => e.criaturas!().filter((c) => c.tipo === 'espectro');
+      const antes = new Set(sombras().map((c) => c.id));
       e.invocar!('espectro', fx + 0.5, fy, fz + 2.5);
       let id = -1;
       for (let i = 0; i < 40 && id < 0; i++) {
         await espera(100);
-        id = sacis().find((c) => !antes.has(c.id))?.id ?? -1;
+        id = sombras().find((c) => !antes.has(c.id))?.id ?? -1;
       }
       const tocadosAntes = e.sonsTocados!().length;
       let golpes = 0;
@@ -126,15 +126,15 @@ test('golpe no Saci: baque de pano e "ai" gravados (sem vidro); derrota com "puf
   });
   expect(r.id).toBeGreaterThan(0);
   expect(r.vivo).toBe(false);
-  // o Saci é médio e de pano no índice (`mata-encantada` → espectro → `pano.medio`)
+  // o Eco-sombra é grande e de pano no índice (`exploracao-lunar` → espectro → `pano.grande`)
   expect(r.primeiroGolpe).toEqual(
-    expect.arrayContaining(['gravada:baque:pano.medio', 'gravada:ai:espectro']),
+    expect.arrayContaining(['gravada:baque:pano.grande', 'gravada:ai:espectro']),
   );
   expect(r.tocados.some((t) => t.includes('cristal'))).toBe(false);
   expect(r.tocados.filter((t) => t.startsWith('sintese:'))).toEqual([]);
-  expect(r.tocados).toContain('gravada:derrota:puf_medio');
+  expect(r.tocados).toContain('gravada:derrota:puf_grande');
   // derrota não é mais o susto de novo nem o arbusto
-  expect(r.tocados.indexOf('gravada:derrota:puf_medio')).toBeGreaterThan(0);
+  expect(r.tocados.indexOf('gravada:derrota:puf_grande')).toBeGreaterThan(0);
   expect(erros, erros.join('\n')).toEqual([]);
 });
 
@@ -142,7 +142,10 @@ test('o morador acena de volta com o cumprimento gravado', async ({ page }) => {
   test.setTimeout(420_000);
   const erros = coletarErros(page);
   await page.setViewportSize({ width: 1024, height: 600 });
-  await page.goto('/');
+  // spec 034: no Doce Reino, de povoado com moradores e vozes gravadas (o "Meu primeiro mundo"
+  // era do Bruma e Luz, que saiu; a Vila Neon, agora o padrão, não tem pacote de vozes nem
+  // povoado perto do nascimento)
+  await page.goto('/?tema=doce-reino');
   await pronto(page);
   await ligarSom(page);
   await page.evaluate(() => (window.__brumaluz!.hora = 0.42));

@@ -23,6 +23,12 @@ export interface Atividade {
   correndo: boolean;
   andando: boolean;
   submerso: boolean;
+  /**
+   * Spec 034 (só o atalho de teste da paridade): false tira o cansaço que vem do relógio (0,02
+   * por segundo parado, 0,05 andando, 0,25 correndo). Pulos, golpes, danos e a cura continuam
+   * cansando. Sem o campo, cansa como sempre.
+   */
+  relogioCansa?: boolean;
 }
 
 export type EventoSobrevivencia =
@@ -110,7 +116,7 @@ export function criarSobrevivencia(salvo?: unknown) {
     atualizar(dt: number, a: Atividade): void {
       if (e.morto || !(dt > 0)) return;
       invulneravel = Math.max(0, invulneravel - dt);
-      cansar(dt * (a.correndo ? 0.25 : a.andando ? 0.05 : 0.02));
+      if (a.relogioCansa !== false) cansar(dt * (a.correndo ? 0.25 : a.andando ? 0.05 : 0.02));
       // regenera com a barriga cheia
       if (e.fome >= 18 && e.vida < VIDA_MAX) {
         tRegen += dt;

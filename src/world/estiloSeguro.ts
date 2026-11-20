@@ -27,26 +27,21 @@ const ARVORES: readonly FormaArvore[] = [
   'betula',
   'pinho',
   'lanterna',
-  'palmeira',
   'fungo',
   'pirulito',
-  'samambaia',
   'cristal',
   'araucaria',
 ];
 const ESTRUTURAS: readonly FormaEstrutura[] = [
   'ruina',
   'cupula',
-  'circulo',
-  'arcos',
   'casinha',
   'torre',
-  'ninho',
   'espantalho',
   'roda-gigante',
 ];
-const CASAS: readonly FormaCasa[] = ['duas-aguas', 'cupula', 'tenda', 'redonda', 'modulo'];
-const MARCOS: readonly FormaMarco[] = ['poco', 'fonte', 'antena', 'totem', 'esqueleto', 'moinho'];
+const CASAS: readonly FormaCasa[] = ['duas-aguas', 'cupula', 'redonda', 'modulo'];
+const MARCOS: readonly FormaMarco[] = ['poco', 'fonte', 'antena', 'moinho'];
 const PLANTAS: readonly PlantaPovoado[] = ['vila', 'sitio', 'cidade', 'bairro'];
 const NOITES: readonly NonNullable<EstiloMundo['noite']>[] = ['assusta', 'mansa'];
 const DOMAR: readonly NonNullable<EstiloMundo['domar']>[] = ['frutinhas', 'peixe'];

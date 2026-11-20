@@ -12,7 +12,8 @@ export const PASTA = process.env.ACHAR_PASTA ?? 'capturas-021';
 /** Os 7 amigos (sala de 8): cada um com a fantasia e o cabelo dele. */
 export const AMIGOS: Record<string, Record<string, unknown>> = {
   lia: { corpo: 'feminino', cabeloEstilo: 5, cabeloCor: 1, pele: 1, rosto: 1, fantasia: { id: 'fazendeira', cor: 0 } },
-  theo: { corpo: 'masculino', cabeloEstilo: 0, cabeloCor: 0, pele: 2, fantasia: { id: 'dino', cor: 0 } },
+  // spec 034: o Theo era de Dino (saiu com a Era dos Dinos); agora é roqueiro da Vila
+  theo: { corpo: 'masculino', cabeloEstilo: 0, cabeloCor: 0, pele: 2, fantasia: { id: 'roqueira-palco', cor: 0 } },
   bia: { corpo: 'feminino', cabeloEstilo: 2, cabeloCor: 3, pele: 0, fantasia: { id: 'realeza-flores', cor: 0 } },
   gui: { corpo: 'masculino', cabeloEstilo: 1, cabeloCor: 2, pele: 3, fantasia: { id: 'astronauta', cor: 0 } },
   nina: { corpo: 'feminino', cabeloEstilo: 7, cabeloCor: 4, pele: 2, fantasia: { id: 'heroi-coracao', cor: 1 } },

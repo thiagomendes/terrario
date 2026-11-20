@@ -18,7 +18,7 @@ import { tocarSomInterface } from './audio/somInterface';
 import { criarInterface, travarPonteiro } from './ui/interface';
 import { modoToque } from './ui/pixicones';
 import { armazemIndexedDB } from './jogo/indexeddb';
-import { SEMENTE_PADRAO_MUNDO, criarRepositorioMundos, type MetaMundo } from './jogo/mundos';
+import { criarRepositorioMundos, mundoParaAbrir, type MetaMundo } from './jogo/mundos';
 import { CSS_INVENTARIO, criarInventarioUI } from './ui/inventario';
 import { criarDicaMira } from './ui/dicaMira';
 import { CSS_CRIACAO, criarCriacao } from './ui/criacao';
@@ -44,7 +44,8 @@ import {
 import { criarDiario, temObras } from './jogo/diario';
 import { ativarTema } from './temas/ativar';
 import { povoadoDoTema, tema } from './temas/ativo';
-import { temaExiste } from './temas';
+import { TEMA_PADRAO, temaExiste } from './temas';
+import { esquecerMundos, limparRastrosDosTemas } from './personagem/rastros';
 import { CORES_MARCADOR, type Marcador } from './jogo/mapa';
 import type { DadosMundo } from './jogo/mundos';
 import { normalizarCodigo } from './jogo/codigos';
@@ -84,6 +85,24 @@ async function iniciar(app: HTMLElement): Promise<void> {
   // vez só (o personagem e as preferências ficam). Falhando, o jogo segue com o que tiver.
   const apagados = await repo.prepararFormato().catch(() => 0);
   if (apagados > 0) avisoMundosNovos = 'Os mundos começaram de novo! Bora construir?';
+  // spec 034 (decisão do dono, 19 nov 2026): os mundos dos quatro temas que saíram e os sem tema
+  // (que abriam como Bruma e Luz) são apagados, sem aviso (a criança não lê; o mundo some da
+  // lista). Antes de `?sala` e `?mundo`: o mundo pedido que saiu dá lugar ao próximo da lista,
+  // ou ao "Meu primeiro mundo" na Vila Neon. Falhando, o jogo segue com o que tiver.
+  const mundosQueSairam = await repo.apagarTemasQueSairam().catch(() => [] as string[]);
+  // e sem rastro do que saiu com eles (fantasias e lembranças do aparelho); cada armazenamento
+  // lido no seu try: um bloqueado não pula a limpeza do outro
+  const armazenamentoDe = (ler: () => Storage): Storage | null => {
+    try {
+      return ler();
+    } catch {
+      return null;
+    }
+  };
+  const loja = armazenamentoDe(() => window.localStorage);
+  const sessao = armazenamentoDe(() => window.sessionStorage);
+  limparRastrosDosTemas(loja, sessao);
+  esquecerMundos(loja, mundosQueSairam);
   const params = new URLSearchParams(location.search);
   // mundo com amigos: ?sala=CÓDIGO (link, QR Code ou "Entrar com código")
   const sala = params.get('sala');
@@ -91,6 +110,14 @@ async function iniciar(app: HTMLElement): Promise<void> {
   let fecharTela: (() => void) | undefined;
   let mundo: MetaMundo | null = null;
   let dados: DadosMundo;
+  // quem acabou de levar o mundo para a nuvem (novo=1): a lista do aparelho é lida aqui, antes
+  // de conectar, e não depois do "bem-vindo". Entre o bem-vindo e a cena (que liga o estado do
+  // cliente) nada pode esperar: o primeiro quadro do servidor chega logo atrás do bem-vindo, e
+  // se ele chega nessa espera se perde, e a criança não vê mais ninguém (spec 035; o conserto
+  // completo, a conexão guardar as mensagens até alguém ouvir, fica para ela)
+  // (a lista só serve para a sugestão de fantasia: se a leitura falhar, segue sem ela)
+  const doAparelho =
+    sala && params.get('novo') === '1' ? await repo.listar().catch(() => []) : [];
   if (sala) {
     const pedido = entrarNaSala(
       app,
@@ -113,12 +140,7 @@ async function iniciar(app: HTMLElement): Promise<void> {
     // um mundo que foi para a nuvem abre lá (sem internet, fica um do aparelho)
     // (é o mundo desta criança: entra direto, sem a prévia do link)
     if (mundo?.nuvem && navigator.onLine) return irParaSala(mundo.nuvem, false, true);
-    if (!mundo) {
-      const lista = await repo.listar();
-      mundo =
-        lista.find((m) => !m.nuvem) ??
-        (await repo.criar('Meu primeiro mundo', SEMENTE_PADRAO_MUNDO, 'criativo'));
-    }
+    if (!mundo) mundo = await mundoParaAbrir(repo);
     dados = await repo.carregar(mundo.id);
   }
   // o tema do mundo vale para a página inteira: aparência, nomes e terreno
@@ -128,7 +150,7 @@ async function iniciar(app: HTMLElement): Promise<void> {
     !nuvem &&
     !!temaPrevia &&
     temaExiste(temaPrevia) &&
-    temaPrevia !== (mundo.tema ?? 'bruma-e-luz');
+    temaPrevia !== (mundo.tema ?? TEMA_PADRAO);
   const temaMundo = ativarTema(emPrevia ? temaPrevia : mundo.tema);
   // na nuvem o terreno segue o estilo gravado com o mundo (igual ao do servidor)
   if (nuvem) definirEstiloMundo(nuvem.bv.mundo.estilo);
@@ -175,9 +197,8 @@ async function iniciar(app: HTMLElement): Promise<void> {
     if (ehMundoNovo(armazenamento, atual.id)) mundoNovo = { id: atual.id };
   } else if (nuvem.novo) {
     const codigo = normalizarCodigo(nuvem.bv.sala.codigo);
-    const local = (await repo.listar()).find(
-      (m) => m.nuvem && normalizarCodigo(m.nuvem) === codigo,
-    );
+    // (lida antes de conectar: aqui não pode haver espera; ver `doAparelho`)
+    const local = doAparelho.find((m) => m.nuvem && normalizarCodigo(m.nuvem) === codigo);
     if (local && ehMundoNovo(armazenamento, local.id)) mundoNovo = { id: local.id };
   }
   const ui = criarInterface(app, hotbar, {

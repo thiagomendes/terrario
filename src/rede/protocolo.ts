@@ -55,8 +55,13 @@ import type { ObraSalva } from '../nucleo/saneamento';
  * evento `vilaCompra`; o jogador visto ganhou o `come`; comer vale no criativo e de barriga cheia,
  * uma refeição por vez; a Dona Cida, pipoqueira da pracinha; o item `algodao_doce`; as trocas de
  * comida "de graça" da Vila saíram).
+ * 17: spec 034, menos é mais (saem Bruma e Luz, Planeta Vivo, Mata Encantada e Era dos Dinos:
+ * criar um mundo com tema fora dos cinco é recusado por versão, e o servidor apaga os mundos
+ * desses quatro; a Era dos Dinos sai da alma e do canto, e as formas, as fantasias e as peças só
+ * deles saem do estilo e da aparência; o `depurar` ganhou o `relogioCansa`, atalho de teste da
+ * paridade, aceito só com os atalhos de depuração ligados).
  */
-export const VERSAO_REDE = 16;
+export const VERSAO_REDE = 17;
 /** Jogadores por mundo. */
 export const MAX_JOGADORES = 8;
 

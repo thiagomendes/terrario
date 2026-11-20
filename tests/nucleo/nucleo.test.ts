@@ -152,6 +152,51 @@ describe('núcleo', () => {
     expect(rodar()).toEqual(rodar());
   });
 
+  it('o relógio cansa na sobrevivência; o atalho da paridade desliga só esse cansaço', () => {
+    // spec 034: correndo, 0,25 de exaustão por segundo; 20 s (400 passos) passam de 4 e a
+    // saturação cai 1
+    const sat = (n: Nucleo) => n.dadosJogador('local')!.sobrevivencia.saturacao;
+    const comRelogio = novo();
+    comRelogio.n.comando(
+      'local',
+      telemetria(comRelogio.x + 0.5, comRelogio.y, comRelogio.z + 0.5, { correndo: true }),
+    );
+    const s0 = sat(comRelogio.n);
+    for (let i = 0; i < 400; i++) comRelogio.n.passo();
+    expect(sat(comRelogio.n)).toBe(s0 - 1);
+
+    const semRelogio = novo();
+    const { x, y, z } = semRelogio;
+    semRelogio.n.comando('local', { t: 'depurar', d: { f: 'relogioCansa', ligado: false } });
+    semRelogio.n.comando('local', telemetria(x + 0.5, y, z + 0.5, { correndo: true }));
+    for (let i = 0; i < 400; i++) semRelogio.n.passo();
+    expect(sat(semRelogio.n)).toBe(s0);
+    // os pulos continuam cansando: 6 correndo = 4,8 de exaustão
+    semRelogio.n.comando('local', telemetria(x + 0.5, y, z + 0.5, { correndo: true, pulos: 6 }));
+    semRelogio.n.passo();
+    expect(sat(semRelogio.n)).toBe(s0 - 1);
+    // e religado, o relógio volta a cansar
+    semRelogio.n.comando('local', { t: 'depurar', d: { f: 'relogioCansa', ligado: true } });
+    for (let i = 0; i < 400; i++) semRelogio.n.passo();
+    expect(sat(semRelogio.n)).toBe(s0 - 2);
+  });
+
+  it('como no servidor da nuvem (sem os atalhos de depuração), o atalho não tira o cansaço', () => {
+    const n = criarNucleo({ semente: SEMENTE, modo: 'sobrevivencia', versaoMundo: 2 });
+    n.conectar('a');
+    const p = encontrarNascimento(SEMENTE);
+    const x = Math.floor(p.x) + 0.5;
+    const z = Math.floor(p.z) + 0.5;
+    const y = alturaTerreno(Math.floor(p.x), Math.floor(p.z), SEMENTE) + 1;
+    const sat = () => n.dadosJogador('a')!.sobrevivencia.saturacao;
+    n.comando('a', telemetria(x, y, z));
+    const s0 = sat();
+    n.comando('a', { t: 'depurar', d: { f: 'relogioCansa', ligado: false } });
+    n.comando('a', telemetria(x, y, z, { correndo: true }));
+    for (let i = 0; i < 400; i++) n.passo();
+    expect(sat()).toBe(s0 - 1);
+  });
+
   it('salvar e reabrir dá o mesmo estado do mundo', () => {
     const { n, x, y, z } = novo();
     n.comando('local', { t: 'quebrar', id: 1, x: x + 1, y: y - 1, z, slot: 0 });
