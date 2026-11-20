@@ -104,3 +104,40 @@ O primeiro trabalho da divisão "o que precisa de placa de vídeo vai para o com
   - autocrítica e uma rodada de refazer antes de entregar.
 - **Perguntas ao dono:** as escolhas que dependem dele, cada uma com as opções e a recomendada.
 - **Regras:** as do `CLAUDE.md` (capricho visual, todo mundo com cara de boneco do jogo, nada que assuste, original, nada que lembre personagem conhecido).
+
+### O que o esboço entregou (20 nov 2026)
+Branch `esboco/027-noite-das-fantasias`, `?esboco=fantasias`, fotos e vídeos em `capturas-027/esboco/`, música e sons em `capturas-027/esboco/sons/` (partitura e `rodar.sh` em `referencia/fontes/`). Teste das fotos: `e2e/esboco-fantasias.spec.ts` (`ESBOCO_027=1`, na placa de vídeo).
+- **Código** (só `src/esboco/` e uma linha no `main.ts`):
+  - `fantasias.ts`: o palco e a API `window.__fantasias`;
+  - `fantasiasCeu.ts`: o céu, a lua, a névoa e os tiles repintados;
+  - `fantasiasPecas.ts`: as peças;
+  - `fantasiasGente.ts`: os moradores, com o boneco de verdade e as peças de fantasia presas às juntas;
+  - `fantasiasBichos.ts` e `fantasiasPasseios.ts`: os bichos, a vassoura e o trem.
+- **Mundo-base:** um mundo da Vila Neon (semente 1337), montado fora do bairro, num platô aplainado. O tema é mudado só na memória e nada vai ao núcleo nem à rede.
+- **Portão visual:** autocrítica com várias rodadas por parte, mais dois revisores novos que só viram as fotos (um na parte 1, outro nas partes 2 e 3).
+- **O que o dono viu e aprovou no caminho:**
+  - os sons ("muito bons");
+  - a abóbora gigante como peça de brinquedo arredondada, e não de cubos (pedido dele);
+  - a vassoura-patinete ("ficou muito bom");
+  - o túnel do trem mais alto, depois de ele ver as cabeças atravessando o teto ("agora ficou ótimo o trem, tá ficando muito bom esse mundo novo").
+- **Decisões de acabamento do orquestrador:** todas as abóboras com olhos redondos, da família da gigante, e nenhuma com olho triangular de cara brava. A locomotiva entra inteira no quadro.
+- **Achados que valem para a spec:**
+  - a abóbora gigante e as abóboras com rosto são malhas de brinquedo arredondadas; o resto do mundo é de blocos;
+  - a Lulu precisa de malha própria (cúpula com abertura oval), porque as peças do plano não fazem furo oval;
+  - a capa do Dudu também é malha própria, um pano curvo;
+  - o brilho somado da lanterninha lavava a calça do Dudu até a cor de pele: luz perto de roupa escura precisa de cuidado;
+  - a abertura (fov) das tomadas era ignorada, porque a câmera do jogo copia a dela a cada quadro: o esboço usa `fovFixo`;
+  - o túnel tem de ser medido contra o passageiro mais alto (o teste escreve as linhas "FOLGA"; o Bento chega a ~3,55 e o teto está a 4,25).
+- **O que ficou fraco (para a spec resolver):**
+  - **Barracas:** o toldo lê como faixa de bicos, não como cobertura.
+  - **Bento:** o alto do capuz é liso, com pouca franja.
+  - **Morceguinho:** o que voa, de longe, vira uma mancha roxa.
+  - **Seu Jerônimo:** a faixa de cabelo branco sob o chapéu pode ser lida como faixa.
+  - **Vídeos:**
+    - a vassoura é filmada de 3/4 de frente (o dono aprovou assim);
+    - a parede do túnel passa perto da câmera ao entrar;
+    - as lanterninhas do túnel saem cortadas na vista a bordo;
+    - a música começa do início nos três.
+  - **Vista do alto:** ao longe ainda aparecem morros cortados de outro bioma.
+  - **Peças:** são montadas uma a uma, sem fundir; na implementação, fundir e instanciar.
+  - **Texturas:** repintam tiles da Vila; a telha roxa, o tijolo torto, a teia e as folhas laranja precisam de id próprio.
