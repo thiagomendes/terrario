@@ -16,7 +16,7 @@ test.skip(!process.env.ESBOCO_027, 'fotos do esboço só com ESBOCO_027');
 
 /** O entardecer dourado (o dia do mundo) e a noite roxa com a lua baixa no leste. */
 const ENTARDECER = 0.7;
-const NOITE = 0.845;
+const NOITE = 0.8;
 
 const ORDEM = ['praca', 'barracas', 'rua', 'vovo', 'bosque', 'horta', 'panorama'];
 

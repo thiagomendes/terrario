@@ -4,6 +4,9 @@
  * quadradas, prismas facetados; nada de liso redondo. Coordenadas locais da Vila: x para a
  * direita de quem olha a frente, y para cima (0 é o chão da peça), z para a frente.
  *
+ * As abóboras pequenas (portas, horta, bancada, praça) não moram aqui: são o modelo de
+ * brinquedo do jogo (`render/blocosBrinquedo.ts`), montado em `fantasias.ts`.
+ *
  * Tudo PROVISÓRIO (o palco do esboço): na implementação, as peças viram tipos da Vila (o
  * desenho fundido por chunk, como `render/vila/index.ts`).
  */
@@ -14,6 +17,7 @@ import { perfilEstrela, type Ref } from '../render/vila/ref';
 export const CORES = {
   roxo: '#6a3e9c',
   roxoEscuro: '#46305e',
+  ferro: '#3a2c4e',
   lilas: '#a88ad0',
   laranja: '#f0862a',
   laranjaEscuro: '#c8621a',
@@ -24,10 +28,66 @@ export const CORES = {
   madeiraEscura: '#7a4e2a',
   dourado: '#e8b23a',
   fio: '#5a4632',
-  barbante: '#efe8f2',
+  barbante: '#e4d8ee',
   luz: '#ffd56a',
   luzMorna: '#ffc45a',
 } as const;
+
+/** Uma placa (contorno no plano xy) deitada e girada: `incl` a partir de em pé, `giro` em y. */
+function placaGirada(
+  r: Ref,
+  perfil: Array<[number, number]>,
+  esp: number,
+  p: V3,
+  incl: number,
+  giro: number,
+  cor: string,
+  luz = false,
+): void {
+  const vd = dadosPlaca(perfil, esp);
+  const P = vd.positions as number[];
+  const N = vd.normals as number[];
+  const ci = Math.cos(incl);
+  const si = Math.sin(incl);
+  const cg = Math.cos(giro);
+  const sg = Math.sin(giro);
+  const gira = (x: number, y: number, z: number): V3 => {
+    // inclina em volta de x (deita para a frente), depois gira em volta de y
+    const y1 = y * ci - z * si;
+    const z1 = y * si + z * ci;
+    return [x * cg + z1 * sg, y1, -x * sg + z1 * cg];
+  };
+  for (let j = 0; j < P.length; j += 3) {
+    const q = gira(P[j], P[j + 1], P[j + 2]);
+    P[j] = p[0] + q[0];
+    P[j + 1] = p[1] + q[1];
+    P[j + 2] = p[2] + q[2];
+    const n = gira(N[j], N[j + 1], N[j + 2]);
+    N[j] = n[0];
+    N[j + 1] = n[1];
+    N[j + 2] = n[2];
+  }
+  vd.uvs = null;
+  r.por(vd, luz, cor);
+}
+
+/** A cor um tom mais escura (`f` < 1). */
+const escurecer = (hex: string, f: number): string =>
+  '#' +
+  [1, 3, 5]
+    .map((i) =>
+      Math.round(parseInt(hex.slice(i, i + 2), 16) * f)
+        .toString(16)
+        .padStart(2, '0'),
+    )
+    .join('');
+
+/** Contorno de círculo (n lados) de raio `rr` com o meio em (cx, cy). */
+const circulo = (rr: number, n = 16, cx = 0, cy = 0): Array<[number, number]> =>
+  Array.from({ length: n }, (_, i) => {
+    const a = (i / n) * Math.PI * 2;
+    return [cx + Math.cos(a) * rr, cy + Math.sin(a) * rr] as [number, number];
+  });
 
 // ------------------------------------------------------------------ bandeirolas
 
@@ -49,44 +109,31 @@ export function bandeirolas(r: Ref, a: V3, b: V3, barriga = 0.9, comLuz = true):
     ]);
   }
   for (let i = 0; i < n; i++) r.barra(pts[i], pts[i + 1], 0.04, CORES.fio);
-  // as bandeirolas de frente para o lado do fio
   const ang = Math.atan2(b[0] - a[0], b[2] - a[2]) - Math.PI / 2;
-  const c = Math.cos(ang);
-  const s = Math.sin(ang);
   const q = Math.max(3, Math.round(L / 0.72));
-  for (let i = 0; i < q; i++) {
-    const t = (i + 0.5) / q;
+  const noFio = (t: number): V3 => {
     const f = Math.min(n - 0.001, t * n);
     const k = Math.floor(f);
     const u = f - k;
-    const p: V3 = [0, 1, 2].map((j) => pts[k][j] + (pts[k + 1][j] - pts[k][j]) * u) as V3;
-    const vd = dadosPlaca(
+    return [0, 1, 2].map((j) => pts[k][j] + (pts[k + 1][j] - pts[k][j]) * u) as V3;
+  };
+  for (let i = 0; i < q; i++) {
+    const p = noFio((i + 0.5) / q);
+    placaGirada(
+      r,
       [
         [-0.25, 0],
         [0.25, 0],
         [0, -0.5],
       ],
       0.035,
+      [p[0], p[1] - 0.03, p[2]],
+      0,
+      ang,
+      i % 2 ? CORES.roxo : CORES.laranja,
     );
-    const P = vd.positions as number[];
-    const N = vd.normals as number[];
-    for (let j = 0; j < P.length; j += 3) {
-      const [x, y, z] = [P[j], P[j + 1], P[j + 2]];
-      P[j] = p[0] + x * c + z * s;
-      P[j + 1] = p[1] - 0.03 + y;
-      P[j + 2] = p[2] - x * s + z * c;
-      const [nx, nz] = [N[j], N[j + 2]];
-      N[j] = nx * c + nz * s;
-      N[j + 2] = -nx * s + nz * c;
-    }
-    vd.uvs = null;
-    r.por(vd, false, i % 2 ? CORES.roxo : CORES.laranja);
-    // a lampadinha entre duas bandeirolas
     if (comLuz && i < q - 1) {
-      const f2 = Math.min(n - 0.001, ((i + 1) / q) * n);
-      const k2 = Math.floor(f2);
-      const u2 = f2 - k2;
-      const p2 = [0, 1, 2].map((j) => pts[k2][j] + (pts[k2 + 1][j] - pts[k2][j]) * u2);
+      const p2 = noFio((i + 1) / q);
       r.caixa(0.06, 0.06, 0.06, p2[0], p2[1] - 0.1, p2[2], CORES.fio, 0);
       r.luz(0.13, 0.15, 0.13, p2[0], p2[1] - 0.25, p2[2], CORES.luz);
     }
@@ -101,58 +148,84 @@ export function mastro(r: Ref, h: number): void {
   r.caixa(0.18, 0.18, 0.18, 0, h + 0.15, 0, CORES.laranja, 0.06);
 }
 
-// ------------------------------------------------------------------ barracas
+// ------------------------------------------------------------------ a abóbora gigante
 
-/** Em cima do balcão da barraca do doce de abóbora: a bandeja de cubinhos e os potes. */
-export function balcaoDoce(r: Ref): void {
-  // a bandeja de doce em cubinhos
-  r.caixa(1.6, 0.05, 0.62, -0.9, 0, 0, CORES.creme, 0.02);
-  for (let i = 0; i < 4; i++)
-    for (let j = 0; j < 2; j++)
-      r.caixa(
-        0.24,
-        0.16,
-        0.24,
-        -1.42 + i * 0.35,
-        0.05,
-        -0.14 + j * 0.3,
-        j % 2 ? '#e8822a' : '#f09636',
-        0.04,
-      );
-  // os potes de doce, de tampa roxa e laço laranja
-  for (let i = 0; i < 3; i++) {
-    const x = 0.45 + i * 0.42;
-    r.caixa(0.32, 0.36, 0.32, x, 0, 0, '#f2dcc0', 0.05);
-    r.caixa(0.27, 0.26, 0.27, x, 0.04, 0, '#ee8a2c', 0.04);
-    r.caixa(0.36, 0.08, 0.36, x, 0.36, 0, CORES.roxo, 0.03);
-    r.caixa(0.1, 0.08, 0.1, x, 0.44, 0, CORES.laranja, 0.03);
-  }
-  // o tacho de cobre no fundo (facetado)
-  r.prisma(8, 0.36, 0.34, 1.75, 0.17, -0.05, '#b8642a', 'y');
-  r.prisma(8, 0.33, 0.04, 1.75, 0.35, -0.05, '#f09030', 'y');
-  r.barra([1.75, 0.3, -0.05], [1.9, 0.75, -0.2], 0.05, CORES.madeiraEscura);
+/** O talo curvo da abóbora gigante e a folha (a base do talo em 0, 0, 0). */
+export function taloEFolha(r: Ref): void {
+  const verde = '#5a7a2e';
+  const pts: V3[] = [
+    [0, -0.4, 0],
+    [0.05, 0.9, 0],
+    [0.45, 1.7, 0.05],
+    [1.15, 2.15, 0.1],
+  ];
+  const lados = [0.95, 0.8, 0.62];
+  for (let i = 0; i < 3; i++) r.barra(pts[i], pts[i + 1], lados[i], i % 2 ? '#668a34' : verde);
+  r.caixa(0.6, 0.5, 0.6, 1.25, 1.95, 0.1, '#4e6a28', 0.18);
+  // a folha larga, quase deitada, caindo para o lado
+  const folha: Array<[number, number]> = [
+    [0, 0],
+    [0.7, 0.35],
+    [1.2, 1.0],
+    [1.0, 1.7],
+    [0.5, 2.1],
+    [0, 2.4],
+    [-0.5, 2.1],
+    [-1.0, 1.7],
+    [-1.2, 1.0],
+    [-0.7, 0.35],
+  ];
+  placaGirada(r, folha, 0.12, [-0.2, 0.75, 0.2], 1.25, -2.3, '#6e9a3a');
+  placaGirada(r, [[0, 0], [0.08, 0], [0.08, 2.2], [0, 2.2]], 0.14, [-0.2, 0.8, 0.2], 1.25, -2.3, '#4e7028');
 }
 
-/** Em cima do balcão da barraca da maçã do amor: o suporte com as maçãs no palito. */
-export function balcaoMaca(r: Ref): void {
-  r.caixa(2.6, 0.14, 0.5, -0.2, 0, 0, CORES.madeira, 0.04);
-  r.caixa(2.5, 0.08, 0.42, -0.2, 0.14, 0, CORES.creme, 0.02);
-  for (let i = 0; i < 5; i++)
-    for (let j = 0; j < 2; j++) {
-      const x = -1.2 + i * 0.5 + j * 0.25;
-      const z = -0.1 + j * 0.2;
-      const y = 0.22 + j * 0.02;
-      // a maçã vermelha de calda brilhante, de quina redonda (brinquedo), e o palito
-      r.caixa(0.3, 0.27, 0.3, x, y, z, j % 2 ? '#d42a2e' : '#e0343a', 0.11);
-      r.caixa(0.14, 0.04, 0.14, x, y + 0.27, z, '#b82024', 0.02);
-      r.barra([x, y + 0.27, z], [x, y + 0.62, z], 0.035, '#f0e2c0');
-    }
-  // as maçãs embrulhadas no saquinho com o laço roxo
-  for (let i = 0; i < 2; i++) {
-    const x = 1.55 + i * 0.32;
-    r.caixa(0.3, 0.38, 0.3, x, 0, 0.05, '#f4eef8', 0.08);
-    r.caixa(0.22, 0.2, 0.22, x, 0.06, 0.06, '#d42a2e', 0.08);
-    r.caixa(0.2, 0.06, 0.2, x, 0.38, 0.05, CORES.roxo, 0.02);
+// ------------------------------------------------------------------ a praça
+
+/** Banco de praça de brinquedo: o assento de tábuas, o encosto e os pés roxos. */
+export function banco(r: Ref): void {
+  for (const x of [-0.75, 0.75]) {
+    r.caixa(0.14, 0.42, 0.5, x, 0, 0, CORES.ferro, 0.03);
+    r.caixa(0.12, 0.62, 0.12, x, 0.42, -0.22, CORES.ferro, 0.03);
+  }
+  for (const z of [-0.14, 0.04, 0.22]) r.caixa(1.9, 0.08, 0.16, 0, 0.42, z, CORES.madeira, 0.03);
+  for (const y of [0.7, 0.9]) r.caixa(1.9, 0.14, 0.07, 0, y, -0.24, CORES.madeira, 0.03);
+}
+
+/** Mesinha de praça com guarda-sol em gomos laranja e roxo e dois banquinhos. */
+export function mesinha(r: Ref): void {
+  r.caixa(0.44, 0.06, 0.44, 0, 0, 0, CORES.ferro, 0.02);
+  r.caixa(0.09, 2.1, 0.09, 0, 0, 0, CORES.ferro, 0);
+  r.prisma(8, 0.5, 0.07, 0, 0.74, 0, CORES.creme, 'y');
+  r.prisma(8, 1.0, 0.1, 0, 2.0, 0, CORES.laranja, 'y');
+  r.prisma(8, 0.62, 0.12, 0, 2.1, 0, CORES.roxo, 'y');
+  r.prisma(8, 0.24, 0.12, 0, 2.2, 0, CORES.laranja, 'y');
+  for (const s of [-1, 1]) {
+    r.caixa(0.08, 0.44, 0.08, s * 0.85, 0, 0, CORES.ferro, 0);
+    r.prisma(8, 0.22, 0.1, s * 0.85, 0.48, 0, CORES.roxo, 'y');
+  }
+  // o docinho e o copo em cima
+  r.caixa(0.16, 0.1, 0.16, 0.15, 0.81, 0.1, '#f09636', 0.04);
+  r.caixa(0.12, 0.2, 0.12, -0.18, 0.81, -0.08, '#c8a0f0', 0.03);
+}
+
+// ------------------------------------------------------------------ barracas
+
+/**
+ * O toldo listrado da barraca, em peças (gomos de duas cores e a barra de bicos na frente):
+ * `w` de largura (x), `d` de fundo (para -z a partir da frente em z = 0); a base em y = 0.
+ */
+export function toldoListrado(r: Ref, w: number, d: number, a: string, b: string): void {
+  const n = Math.round(w / 0.5);
+  const lw = w / n;
+  for (let i = 0; i < n; i++) {
+    const x = -w / 2 + (i + 0.5) * lw;
+    const c = i % 2 ? b : a;
+    // o gomo cai um pouquinho para a frente (o fundo mais alto: em dois degraus)
+    r.caixa(lw, 0.16, d * 0.5, x, 0.12, -d * 0.75, c, 0.04);
+    r.caixa(lw, 0.16, d * 0.5 + 0.02, x, 0.0, -d * 0.25, c, 0.04);
+    // o bico da barra da frente
+    r.caixa(lw * 0.9, 0.26, 0.06, x, -0.24, 0.02, c, 0.05);
+    r.caixa(lw * 0.5, 0.1, 0.06, x, -0.32, 0.02, c, 0.04);
   }
 }
 
@@ -171,216 +244,338 @@ export function toalhaBalcao(r: Ref, largura: number, bico: string): void {
   }
 }
 
+/** Em cima do balcão da barraca do doce de abóbora: a travessa de cubinhos e os potes. */
+export function balcaoDoce(r: Ref): void {
+  // a travessa grande, na frente, com o doce em cubinhos empilhados em montinho
+  r.caixa(2.2, 0.06, 0.8, -0.5, 0, 0.05, CORES.roxo, 0.03);
+  r.caixa(2.0, 0.04, 0.64, -0.5, 0.06, 0.05, CORES.creme, 0.02);
+  for (let i = 0; i < 6; i++)
+    for (let j = 0; j < 2; j++)
+      r.caixa(0.24, 0.22, 0.24, -1.25 + i * 0.3, 0.1, -0.1 + j * 0.3, (i + j) % 2 ? '#e8782a' : '#f49a3a', 0.05);
+  for (let i = 0; i < 4; i++)
+    r.caixa(0.24, 0.22, 0.24, -1.1 + i * 0.3, 0.32, 0.05, i % 2 ? '#f49a3a' : '#e8782a', 0.05);
+  // os potes de tampa roxa, atrás
+  for (let i = 0; i < 2; i++) {
+    const x = 1.0 + i * 0.45;
+    r.caixa(0.34, 0.4, 0.34, x, 0, -0.1, '#f2dcc0', 0.06);
+    r.caixa(0.28, 0.28, 0.28, x, 0.05, -0.1, '#ee8a2c', 0.05);
+    r.caixa(0.38, 0.09, 0.38, x, 0.4, -0.1, CORES.roxo, 0.03);
+  }
+}
+
+/** Em cima do balcão da barraca da maçã do amor: o suporte com as maçãs no palito. */
+export function balcaoMaca(r: Ref): void {
+  r.caixa(2.8, 0.14, 0.6, 0, 0, 0, CORES.madeira, 0.04);
+  r.caixa(2.7, 0.08, 0.52, 0, 0.14, 0, CORES.creme, 0.02);
+  for (let i = 0; i < 6; i++)
+    for (let j = 0; j < 2; j++) {
+      const x = -1.15 + i * 0.46 + j * 0.23;
+      const z = -0.12 + j * 0.24;
+      const y = 0.22;
+      // a maçã de calda: o corpo, o brilho da calda e o palito
+      r.prisma(10, 0.17, 0.3, x, y + 0.15, z, j % 2 ? '#d42a2e' : '#e0343a', 'y');
+      r.prisma(10, 0.13, 0.08, x, y + 0.32, z, '#b82024', 'y');
+      r.caixa(0.06, 0.06, 0.03, x - 0.07, y + 0.22, z + 0.16, '#ffb0b0', 0.02);
+      r.barra([x, y + 0.36, z], [x, y + 0.7, z], 0.04, '#f0e2c0');
+    }
+}
+
 /** A plaquinha de desenho em cima do toldo (sem letra): o meio da base em 0, 0, 0. */
-function plaquinha(r: Ref): void {
-  r.caixa(1.3, 0.9, 0.1, 0, 0.06, 0, CORES.creme, 0.04);
+function plaquinha(r: Ref, fundo: string): void {
+  r.caixa(1.3, 0.96, 0.1, 0, 0.06, 0, fundo, 0.05);
   r.caixa(1.42, 0.08, 0.14, 0, 0.0, 0, CORES.madeiraEscura, 0.02);
-  r.caixa(1.42, 0.08, 0.14, 0, 0.94, 0, CORES.madeiraEscura, 0.02);
-  for (const s of [-1, 1]) r.caixa(0.08, 1.0, 0.14, s * 0.67, 0.0, 0, CORES.madeiraEscura, 0.02);
+  r.caixa(1.42, 0.08, 0.14, 0, 1.0, 0, CORES.madeiraEscura, 0.02);
+  for (const s of [-1, 1]) r.caixa(0.08, 1.06, 0.14, s * 0.67, 0.0, 0, CORES.madeiraEscura, 0.02);
 }
-/** A plaquinha da barraca do doce: a abóbora desenhada (gomos facetados e o cabinho). */
+/** A plaquinha da barraca do doce: a abóbora redonda e três cubinhos de doce. */
 export function placaDoce(r: Ref): void {
-  plaquinha(r);
-  r.prisma(8, 0.24, 0.06, -0.15, 0.48, 0.07, '#d8701c', 'z');
-  r.prisma(8, 0.24, 0.06, 0.15, 0.48, 0.07, '#d8701c', 'z');
-  r.prisma(8, 0.27, 0.07, 0, 0.48, 0.08, '#f08a24', 'z');
-  r.caixa(0.07, 0.16, 0.05, 0, 0.72, 0.09, CORES.musgo, 0.02);
-  r.caixa(0.16, 0.06, 0.05, 0.1, 0.8, 0.09, '#6a8a3a', 0.02);
+  plaquinha(r, '#dccaf0');
+  r.placa(circulo(0.21, 16, -0.12, 0.6), 0.05, 0, 0, 0.07, '#d8701c');
+  r.placa(circulo(0.21, 16, 0.12, 0.6), 0.05, 0, 0, 0.07, '#d8701c');
+  r.placa(circulo(0.24, 16, 0, 0.6), 0.05, 0, 0, 0.09, '#f28c26');
+  r.caixa(0.07, 0.14, 0.04, 0, 0.82, 0.1, CORES.musgo, 0.02);
+  for (let i = 0; i < 3; i++) r.caixa(0.14, 0.14, 0.05, -0.2 + i * 0.2, 0.18, 0.08, '#e8782a', 0.03);
 }
-/** A plaquinha da barraca da maçã do amor: a maçã vermelha no palito. */
+/** A plaquinha da barraca da maçã do amor: a maçã redonda com a folhinha e o brilho da calda. */
 export function placaMaca(r: Ref): void {
-  plaquinha(r);
-  r.barra([0, 0.14, 0.08], [0, 0.34, 0.08], 0.05, '#c89a5a');
-  r.prisma(8, 0.27, 0.07, 0, 0.52, 0.08, '#d42a2e', 'z');
-  r.caixa(0.06, 0.12, 0.05, 0, 0.78, 0.09, CORES.madeiraEscura, 0.02);
-  r.caixa(0.16, 0.08, 0.05, 0.11, 0.8, 0.09, '#5a9a3a', 0.02);
-  r.caixa(0.07, 0.07, 0.03, -0.1, 0.6, 0.12, '#ff8a8a', 0.02);
+  plaquinha(r, '#d6e8b4');
+  r.placa(circulo(0.25, 18, -0.1, 0.52), 0.05, 0, 0, 0.07, '#d42a2e');
+  r.placa(circulo(0.25, 18, 0.1, 0.52), 0.05, 0, 0, 0.07, '#d42a2e');
+  r.placa(circulo(0.07, 10, -0.14, 0.62), 0.03, 0, 0, 0.1, '#ffc8c8');
+  r.caixa(0.05, 0.14, 0.04, 0, 0.76, 0.1, CORES.madeiraEscura, 0.02);
+  r.placa(
+    [
+      [0, 0],
+      [0.1, 0.05],
+      [0.2, 0.0],
+      [0.1, -0.05],
+    ],
+    0.03,
+    0.03,
+    0.84,
+    0.1,
+    '#4e8a2e',
+  );
+  r.barra([0, 0.12, 0.08], [0, 0.3, 0.08], 0.05, '#c89a5a');
 }
 
 // ------------------------------------------------------------------ as casinhas
 
-/**
- * A campainha da porta: o sininho dourado pendurado no suporte, com a cordinha roxa (a
- * criança reconhece o sino; tocar é só um toque). A peça encosta na parede (z = 0).
- */
-export function campainha(r: Ref): void {
-  r.caixa(0.2, 0.2, 0.06, 0, 0.32, 0.03, CORES.roxoEscuro, 0.02);
-  r.barra([0, 0.42, 0.04], [0, 0.42, 0.34], 0.06, CORES.roxoEscuro);
-  // o sino: a boca larga embaixo, o corpo e o cocuruto
-  r.caixa(0.3, 0.07, 0.3, 0, 0.0, 0.34, CORES.dourado, 0.02);
-  r.caixa(0.24, 0.16, 0.24, 0, 0.06, 0.34, '#f0c24a', 0.05);
-  r.caixa(0.15, 0.1, 0.15, 0, 0.22, 0.34, '#f0c24a', 0.04);
-  r.caixa(0.07, 0.1, 0.07, 0, 0.31, 0.34, CORES.dourado, 0.02);
-  // o badalo e a cordinha de puxar
-  r.caixa(0.08, 0.08, 0.08, 0, -0.07, 0.34, '#c8902a', 0.03);
-  r.barra([0.1, 0.02, 0.36], [0.12, -0.42, 0.36], 0.03, CORES.roxo);
-  r.caixa(0.08, 0.1, 0.08, 0.12, -0.52, 0.36, CORES.laranja, 0.03);
+/** A porta de casinha (o vão de 1 x 2 blocos atrás; a frente da parede em z = 0). */
+export function porta(r: Ref, cor: string): void {
+  // o batente na parede e a folha um pouco para dentro
+  r.caixa(1.16, 0.12, 0.08, 0, 2.0, 0.02, CORES.madeiraEscura, 0.02);
+  for (const s of [-1, 1]) r.caixa(0.12, 2.06, 0.08, s * 0.53, 0, 0.02, CORES.madeiraEscura, 0.02);
+  r.caixa(0.94, 1.96, 0.1, 0, 0.02, -0.12, cor, 0.03);
+  // as duas almofadas da porta, um tom mais escuro
+  for (const y of [0.25, 1.1]) r.caixa(0.62, 0.62, 0.04, 0, y, -0.05, escurecer(cor, 0.8), 0.04);
+  r.caixa(0.1, 0.1, 0.06, 0.32, 0.95, -0.03, CORES.dourado, 0.03);
+}
+
+/** A porta da Vovó: roxa, grande e redonda em cima (o vão de 3 x 3 blocos atrás). */
+export function portaVovo(r: Ref): void {
+  // o fundo de tábua escura cobre o vão inteiro
+  r.caixa(2.9, 2.96, 0.1, 0, 0.02, -0.14, '#4a3020', 0.02);
+  const roxo = '#7a4aae';
+  r.caixa(2.0, 2.0, 0.12, 0, 0.02, -0.06, roxo, 0.04);
+  // o arco em degraus redondos
+  const degraus: [number, number][] = [
+    [1.9, 0.22],
+    [1.65, 0.2],
+    [1.25, 0.18],
+    [0.7, 0.16],
+  ];
+  let y = 2.02;
+  for (const [w, h] of degraus) {
+    r.caixa(w, h, 0.12, 0, y, -0.06, roxo, 0.06);
+    y += h;
+  }
+  // as tábuas (frisos), a janelinha redonda acesa e a maçaneta dourada
+  for (const x of [-0.5, 0, 0.5]) r.caixa(0.04, 2.3, 0.04, x, 0.1, 0.01, '#5e3488', 0);
+  r.placa(circulo(0.3, 16, 0, 2.15), 0.04, 0, 0, 0.03, '#4a2c6e');
+  r.placa(circulo(0.22, 16, 0, 2.15), 0.04, 0, 0, 0.06, '#ffd56a', true);
+  r.prisma(10, 0.09, 0.08, 0.72, 1.05, 0.04, CORES.dourado, 'z');
+}
+
+/** A janela redonda da Vovó (no plano da parede, z = 0): a moldura e o vidro aceso em cruz. */
+export function janelaRedonda(r: Ref): void {
+  r.placa(circulo(0.62, 18), 0.08, 0, 0, 0.04, '#4a3266');
+  r.placa(circulo(0.5, 18), 0.06, 0, 0, 0.07, '#ffd87e', true);
+  r.caixa(0.08, 1.0, 0.06, 0, -0.5, 0.1, '#4a3266', 0);
+  r.caixa(1.0, 0.08, 0.06, 0, -0.04, 0.1, '#4a3266', 0);
 }
 
 /**
- * Teia de barbante no canto: os fios grossos e fofos (de brinquedo), do canto (0, 0) para
- * baixo e para o lado `lado` (1 direita, -1 esquerda), no plano z = 0 da peça.
+ * A campainha da porta: o botão redondo dourado numa plaquinha na parede (z = 0), na altura
+ * da mão do boneco, com um sininho pequeno em cima.
+ */
+export function campainha(r: Ref): void {
+  r.caixa(0.26, 0.36, 0.05, 0, 0, 0.025, CORES.roxoEscuro, 0.03);
+  r.prisma(12, 0.08, 0.06, 0, 0.16, 0.08, CORES.dourado, 'z');
+  r.prisma(12, 0.05, 0.04, 0, 0.16, 0.12, '#ffe07a', 'z');
+  // o sininho em cima da plaquinha
+  r.caixa(0.06, 0.06, 0.08, 0, 0.36, 0.05, CORES.roxoEscuro, 0);
+  r.caixa(0.2, 0.05, 0.16, 0, 0.42, 0.06, CORES.dourado, 0.02);
+  r.caixa(0.16, 0.12, 0.12, 0, 0.47, 0.06, '#f0c24a', 0.04);
+  r.caixa(0.08, 0.06, 0.08, 0, 0.59, 0.06, CORES.dourado, 0.02);
+}
+
+/**
+ * Teia de barbante no canto: poucos fios, finos e claros, do canto (0, 0) para baixo e para o
+ * lado `lado` (1 direita, -1 esquerda), no plano z = 0 da peça; o vão fica vazio.
  */
 export function teia(r: Ref, raio: number, lado: 1 | -1): void {
-  const raios = 5;
-  const pontaDo = (k: number, f: number): V3 => {
+  const raios = 4;
+  const ponta = (k: number, f: number): V3 => {
     const a = (k / (raios - 1)) * (Math.PI / 2);
     return [Math.cos(a) * raio * f * lado, -Math.sin(a) * raio * f, 0];
   };
-  for (let k = 0; k < raios; k++) r.barra([0, 0, 0], pontaDo(k, 1), 0.05, CORES.barbante);
-  for (const f of [0.38, 0.68, 0.96])
+  for (let k = 0; k < raios; k++) r.barra([0, 0, 0], ponta(k, 1), 0.035, CORES.barbante);
+  for (const f of [0.45, 0.9])
     for (let k = 0; k < raios - 1; k++) {
-      const a = pontaDo(k, f);
-      const b = pontaDo(k + 1, f);
-      // o fio da volta cai um pouquinho para o canto (barbante solto)
-      const m: V3 = [(a[0] + b[0]) * 0.47, (a[1] + b[1]) * 0.47, 0];
-      r.barra(a, m, 0.045, CORES.barbante);
-      r.barra(m, b, 0.045, CORES.barbante);
+      const a = ponta(k, f);
+      const b = ponta(k + 1, f);
+      const m: V3 = [(a[0] + b[0]) * 0.46, (a[1] + b[1]) * 0.46, 0];
+      r.barra(a, m, 0.032, CORES.barbante);
+      r.barra(m, b, 0.032, CORES.barbante);
     }
 }
 
-/** O caldeirão da Vovó Zuleica na varanda: facetado, com o suco de uva borbulhando. */
+/** O caldeirão da Vovó Zuleica: facetado e grande, com o suco de uva borbulhando lilás. */
 export function caldeirao(r: Ref): void {
   for (let k = 0; k < 3; k++) {
     const a = (k / 3) * Math.PI * 2 + 0.5;
-    r.caixa(0.14, 0.16, 0.14, Math.cos(a) * 0.36, 0, Math.sin(a) * 0.36, '#2e2a36', 0.03);
+    r.caixa(0.16, 0.18, 0.16, Math.cos(a) * 0.42, 0, Math.sin(a) * 0.42, '#2e2a36', 0.03);
   }
-  // a barriga (mais larga no meio) e a boca com a beira grossa
-  r.prisma(8, 0.5, 0.36, 0, 0.36, 0, '#4a4060', 'y');
-  r.prisma(8, 0.42, 0.14, 0, 0.13, 0, '#3e3652', 'y');
-  r.prisma(8, 0.46, 0.16, 0, 0.6, 0, '#443a5a', 'y');
-  r.prisma(8, 0.52, 0.1, 0, 0.72, 0, '#5c5274', 'y');
-  // o suco roxo (aceso de leve), acima da beira, e as bolhas
-  r.prisma(8, 0.44, 0.06, 0, 0.78, 0, '#9a5ad6', 'y', true);
+  r.prisma(10, 0.42, 0.14, 0, 0.16, 0, '#3e3652', 'y');
+  r.prisma(10, 0.56, 0.36, 0, 0.4, 0, '#4a4060', 'y');
+  r.prisma(10, 0.5, 0.16, 0, 0.66, 0, '#443a5a', 'y');
+  r.prisma(10, 0.56, 0.1, 0, 0.78, 0, '#5c5274', 'y');
+  // o suco roxo (aceso de leve), acima da beira, e as bolhas lilás
+  r.prisma(10, 0.48, 0.06, 0, 0.84, 0, '#9a5ad6', 'y', true);
   for (const [x, z, t] of [
-    [0.14, 0.06, 0.14],
-    [-0.16, -0.1, 0.11],
-    [0.02, -0.2, 0.09],
-    [-0.06, 0.18, 0.08],
+    [0.16, 0.06, 0.16],
+    [-0.18, -0.12, 0.13],
+    [0.02, -0.24, 0.1],
+    [-0.08, 0.2, 0.11],
+    [0.26, -0.18, 0.08],
   ] as const)
-    r.caixa(t, t, t, x, 0.8, z, '#c8a0f0', t / 3);
-  // a colher de pau encostada na beira
-  r.barra([0.2, 0.74, 0.12], [0.46, 1.42, 0.32], 0.06, CORES.madeira);
-  r.caixa(0.14, 0.06, 0.12, 0.2, 0.74, 0.12, CORES.madeira, 0.02);
+    r.caixa(t, t, t, x, 0.86, z, '#d8b8f8', t / 2.5);
+  // a colher de pau
+  r.barra([0.24, 0.8, 0.14], [0.52, 1.5, 0.36], 0.06, CORES.madeira);
 }
 
-/** A lua crescente dourada e duas estrelinhas na fachada da Vovó (no plano z = 0). */
-export function luaEstrelas(r: Ref): void {
-  const p: Array<[number, number]> = [];
-  for (let a = 50; a <= 310; a += 20) {
-    const t = (a * Math.PI) / 180;
-    p.push([Math.cos(t) * 0.5, Math.sin(t) * 0.5]);
-  }
-  for (let a = 310; a >= 50; a -= 20) {
-    const t = (a * Math.PI) / 180;
-    p.push([-0.2 + Math.cos(t) * 0.38, Math.sin(t) * 0.38]);
-  }
-  // acesas (a lua e as estrelas da Vovó brilham de noite)
-  r.placa(p, 0.06, 0, 0, 0.03, '#ffd24a', true);
-  r.placa(perfilEstrela(0.19), 0.05, 0.5, 0.3, 0.03, '#ffe07a', true);
-  r.placa(perfilEstrela(0.13), 0.05, 0.42, -0.34, 0.03, '#ffe07a', true);
+/** A fumacinha clara do caldeirão (bolinhas de vapor subindo, acesas de leve). */
+export function vapor(r: Ref): void {
+  for (const [x, y, z, t] of [
+    [0.05, 1.05, 0, 0.2],
+    [-0.12, 1.32, 0.05, 0.24],
+    [0.1, 1.62, -0.04, 0.28],
+    [-0.04, 1.95, 0.02, 0.22],
+  ] as const)
+    r.caixa(t, t * 0.8, t, x, y, z, '#efe4fa', t / 2.4, true);
 }
 
 /** A vassoura encostada na parede (z = 0): o cabo e as palhas presas com a fita roxa. */
 export function vassoura(r: Ref): void {
-  const pe: V3 = [0, 0.04, 0.52];
-  const topo: V3 = [0, 1.78, 0.06];
+  const pe: V3 = [0, 0.04, 0.55];
+  const topo: V3 = [0, 1.9, 0.06];
   const dx = topo[0] - pe[0];
   const dy = topo[1] - pe[1];
   const dz = topo[2] - pe[2];
   const L = Math.hypot(dx, dy, dz);
   const em = (t: number): V3 => [pe[0] + (dx * t) / L, pe[1] + (dy * t) / L, pe[2] + (dz * t) / L];
-  r.barra(em(0.5), topo, 0.08, CORES.madeira);
-  // as palhas: três feixes lado a lado, do pé até a amarração
-  for (const x of [-0.15, 0, 0.15]) {
+  r.barra(em(0.5), topo, 0.09, CORES.madeira);
+  for (const x of [-0.18, 0, 0.18]) {
     const a = em(0);
-    const b = em(0.6);
-    r.barra([a[0] + x * 1.2, a[1], a[2]], [b[0] + x * 0.6, b[1], b[2]], 0.17, '#e8b850');
+    const b = em(0.62);
+    r.barra([a[0] + x * 1.2, a[1], a[2]], [b[0] + x * 0.6, b[1], b[2]], 0.2, '#e8b850');
   }
-  const f = em(0.52);
-  r.barra([f[0] - 0.16, f[1], f[2]], [f[0] + 0.16, f[1], f[2]], 0.12, CORES.roxo);
+  const f = em(0.55);
+  r.barra([f[0] - 0.2, f[1], f[2]], [f[0] + 0.2, f[1], f[2]], 0.14, CORES.roxo);
+}
+
+/** A lua crescente dourada (gorda) e duas estrelinhas, acesas, no plano z = 0. */
+export function luaEstrelas(r: Ref): void {
+  const p: Array<[number, number]> = [];
+  for (let a = 40; a <= 320; a += 14) {
+    const t = (a * Math.PI) / 180;
+    p.push([Math.cos(t) * 0.55, Math.sin(t) * 0.55]);
+  }
+  for (let a = 320; a >= 40; a -= 14) {
+    const t = (a * Math.PI) / 180;
+    p.push([0.2 + Math.cos(t) * 0.4, Math.sin(t) * 0.4]);
+  }
+  r.placa(p, 0.08, 0, 0, 0.04, '#ffd24a', true);
+  r.placa(perfilEstrela(0.2), 0.06, 0.55, 0.36, 0.04, '#ffe07a', true);
+  r.placa(perfilEstrela(0.14), 0.06, 0.5, -0.38, 0.04, '#ffe07a', true);
 }
 
 // ------------------------------------------------------------------ o bosque
 
+/**
+ * O poste de ferro de brinquedo (roxo-escuro) da lanterna de bloco: a base, a haste grossa e
+ * o colar que segura a lanterna (o bloco fica em cima, de `alt` a `alt` + 1).
+ */
+export function posteFerro(r: Ref, alt: number): void {
+  r.caixa(0.62, 0.18, 0.62, 0, 0, 0, CORES.ferro, 0.05);
+  r.caixa(0.44, 0.2, 0.44, 0, 0.18, 0, '#46365c', 0.05);
+  r.caixa(0.24, alt - 0.38, 0.24, 0, 0.38, 0, CORES.ferro, 0.04);
+  r.caixa(0.5, 0.12, 0.5, 0, alt - 0.12, 0, '#46365c', 0.03);
+  r.caixa(0.32, 0.12, 0.32, 0, 0.9, 0, '#46365c', 0.03);
+}
+
 /** O telhadinho roxo em degraus por cima do bloco da lanterna (o meio em 0, 0, 0). */
 export function capaLanterna(r: Ref): void {
-  r.caixa(1.14, 0.1, 1.14, 0, 0, 0, CORES.roxoEscuro, 0.03);
-  r.caixa(0.74, 0.12, 0.74, 0, 0.1, 0, CORES.roxo, 0.03);
-  r.caixa(0.38, 0.12, 0.38, 0, 0.22, 0, CORES.roxo, 0.03);
+  r.caixa(1.1, 0.1, 1.1, 0, 0, 0, CORES.ferro, 0.03);
+  r.caixa(0.66, 0.12, 0.66, 0, 0.1, 0, CORES.roxoEscuro, 0.03);
+  r.caixa(0.3, 0.12, 0.3, 0, 0.22, 0, CORES.roxoEscuro, 0.03);
   r.caixa(0.14, 0.14, 0.14, 0, 0.34, 0, CORES.laranja, 0.04);
 }
 
 // ------------------------------------------------------------------ a horta
 
-/**
- * Abóbora de brinquedo de peças (o meio da base em x, y, z; `k` o tamanho, 1 = meio bloco):
- * os gomos são caixas de quina redonda em dois tons, o cabinho musgo.
- */
-export function aboborinha(r: Ref, x: number, y: number, z: number, k: number): void {
-  const a = '#f08a24';
-  const b = '#d8701c';
-  r.caixa(0.42 * k, 0.38 * k, 0.5 * k, x, y, z, a, 0.12 * k);
-  r.caixa(0.28 * k, 0.34 * k, 0.44 * k, x - 0.2 * k, y + 0.01 * k, z, b, 0.1 * k);
-  r.caixa(0.28 * k, 0.34 * k, 0.44 * k, x + 0.2 * k, y + 0.01 * k, z, b, 0.1 * k);
-  r.caixa(0.5 * k, 0.36 * k, 0.3 * k, x, y + 0.01 * k, z, a, 0.1 * k);
-  r.caixa(0.07 * k, 0.14 * k, 0.07 * k, x, y + 0.36 * k, z, '#5a7630', 0.02 * k);
-  r.caixa(0.16 * k, 0.03 * k, 0.1 * k, x + 0.08 * k, y + 0.38 * k, z, '#6a8a3a', 0.01 * k);
-}
-
 export type Carinha = 'sorridente' | 'piscando' | 'surpresa';
 
 /**
- * A carinha acesa na frente da abóbora de peças (`k` o tamanho da abóbora): olhos redondos e
- * boca de sorriso, piscando ou de "oh!" fofo. Nada de dente.
+ * A carinha acesa na frente de uma abóbora de raio `k` (a frente em z = k): olhos redondos e
+ * a boca bem diferentes em cada uma (sorriso, piscadinha com língua, "oh!" de surpresa).
  */
-export function carinha(r: Ref, x: number, y: number, z: number, k: number, tipo: Carinha): void {
-  const f = z + 0.25 * k + 0.012;
+export function carinha(r: Ref, x: number, y: number, k: number, tipo: Carinha): void {
+  const f = k + 0.02;
   const cor = CORES.luz;
-  const olho = 0.07 * k;
-  const yo = y + 0.24 * k;
+  const olho = (ox: number) =>
+    r.placa(circulo(0.15 * k, 12, 0, 0), 0.04, x + ox, y + 0.24 * k, f, cor, true);
   if (tipo === 'piscando') {
-    // o olho fechado: o risquinho curvo (dois traços em "u" deitado)
-    r.luz(0.1 * k, 0.025 * k, 0.02, x - 0.1 * k, yo + 0.01 * k, f, cor);
-    r.luz(0.03 * k, 0.03 * k, 0.02, x - 0.155 * k, yo + 0.03 * k, f, cor);
-  } else r.luz(olho, olho * (tipo === 'surpresa' ? 1.3 : 1), 0.02, x - 0.1 * k, yo, f, cor);
-  r.luz(olho, olho * (tipo === 'surpresa' ? 1.3 : 1), 0.02, x + 0.1 * k, yo, f, cor);
-  const yb = y + 0.1 * k;
+    // o olho fechado: um arco (três traços em "^" deitado)
+    r.barra([x - 0.3 * k, y + 0.22 * k, f], [x - 0.2 * k, y + 0.29 * k, f], 0.05 * k, cor, true);
+    r.barra([x - 0.2 * k, y + 0.29 * k, f], [x - 0.1 * k, y + 0.22 * k, f], 0.05 * k, cor, true);
+    olho(0.2 * k);
+  } else if (tipo === 'surpresa') {
+    // olhos maiores e as sobrancelhas levantadas
+    r.placa(circulo(0.1 * k * 2, 12, 0, 0), 0.04, x - 0.2 * k, y + 0.26 * k, f, cor, true);
+    r.placa(circulo(0.1 * k * 2, 12, 0, 0), 0.04, x + 0.2 * k, y + 0.26 * k, f, cor, true);
+    r.caixa(0.16 * k, 0.04 * k, 0.03, x - 0.2 * k, y + 0.5 * k, f, '#7a3a10', 0.01);
+    r.caixa(0.16 * k, 0.04 * k, 0.03, x + 0.2 * k, y + 0.5 * k, f, '#7a3a10', 0.01);
+  } else {
+    olho(-0.2 * k);
+    olho(0.2 * k);
+  }
   if (tipo === 'surpresa') {
-    // a boquinha de "oh!": um quadradinho
-    r.luz(0.07 * k, 0.07 * k, 0.02, x, yb - 0.01 * k, f, cor);
+    // a boca de "oh!": um anel redondinho
+    r.placa(circulo(0.09 * k, 12, 0, 0), 0.04, x, y - 0.18 * k, f, cor, true);
+    r.placa(circulo(0.045 * k, 10, 0, 0), 0.04, x, y - 0.18 * k, f + 0.01, '#8a4012');
     return;
   }
-  // o sorriso em U: o fundo e as duas pontas subindo
-  r.luz(0.16 * k, 0.035 * k, 0.02, x, yb, f, cor);
-  r.luz(0.035 * k, 0.05 * k, 0.02, x - 0.095 * k, yb + 0.02 * k, f, cor);
-  r.luz(0.035 * k, 0.05 * k, 0.02, x + 0.095 * k, yb + 0.02 * k, f, cor);
+  // o sorriso em U (cinco gomos) e as bochechas
+  const pts: [number, number][] = [
+    [-0.3, 0.0],
+    [-0.18, -0.15],
+    [0, -0.2],
+    [0.18, -0.15],
+    [0.3, 0.0],
+  ];
+  for (let i = 0; i < pts.length - 1; i++)
+    r.barra(
+      [x + pts[i][0] * k, y + pts[i][1] * k - 0.05 * k, f],
+      [x + pts[i + 1][0] * k, y + pts[i + 1][1] * k - 0.05 * k, f],
+      0.07 * k,
+      cor,
+      true,
+    );
+  if (tipo === 'piscando')
+    // a pontinha da língua
+    r.placa(circulo(0.06 * k, 10, 0, 0), 0.04, x + 0.08 * k, y - 0.29 * k, f, '#ff8a8a');
+  for (const s of [-1, 1])
+    r.placa(circulo(0.07 * k, 10, 0, 0), 0.03, x + s * 0.36 * k, y + 0.02 * k, f - 0.01, '#ff9a6a');
 }
 
 /**
- * A bancada do Seu Jerônimo: a mesa de tábuas e as três abóboras para escolher a carinha
- * (sorridente, piscando e surpresa), com o copinho de pincéis (pintar, não cortar).
+ * A bancada do Seu Jerônimo: a mesa de tábuas e o lugar das três abóboras (o modelo de
+ * brinquedo vai por cima, em `fantasias.ts`); as três carinhas vão com elas.
  */
 export function bancada(r: Ref): void {
   const H = 0.86;
-  r.caixa(2.6, 0.1, 0.9, 0, H, 0, CORES.madeira, 0.03);
-  r.caixa(2.5, 0.08, 0.8, 0, 0.26, 0, CORES.madeiraEscura, 0.02);
-  for (const x of [-1.15, 1.15])
+  r.caixa(2.8, 0.1, 0.9, 0, H, 0, CORES.madeira, 0.03);
+  r.caixa(2.7, 0.08, 0.8, 0, 0.26, 0, CORES.madeiraEscura, 0.02);
+  for (const x of [-1.25, 1.25])
     for (const z of [-0.34, 0.34]) r.caixa(0.12, H, 0.12, x, 0, z, CORES.madeiraEscura, 0.03);
-  const tipos: Carinha[] = ['sorridente', 'piscando', 'surpresa'];
-  tipos.forEach((t, i) => {
-    const x = -0.8 + i * 0.8;
-    r.caixa(0.5, 0.04, 0.5, x, H + 0.1, 0.05, CORES.creme, 0.01);
-    aboborinha(r, x, H + 0.14, 0.05, 1.15);
-    carinha(r, x, H + 0.14, 0.05, 1.15, t);
-  });
-  // o copinho de pincéis
-  r.caixa(0.18, 0.2, 0.18, 1.15, H + 0.1, -0.25, CORES.roxo, 0.03);
-  r.barra([1.12, H + 0.25, -0.25], [1.08, H + 0.5, -0.27], 0.03, CORES.madeira);
-  r.barra([1.18, H + 0.25, -0.24], [1.24, H + 0.48, -0.22], 0.03, CORES.madeira);
-  r.caixa(0.05, 0.06, 0.05, 1.08, H + 0.5, -0.27, CORES.laranja, 0.01);
-  r.caixa(0.05, 0.06, 0.05, 1.24, H + 0.48, -0.22, CORES.musgo, 0.01);
-  // abóboras pequenas debaixo da mesa (para levar)
-  aboborinha(r, -0.6, 0.34, 0, 0.8);
-  aboborinha(r, 0.3, 0.34, 0.05, 0.7);
+  for (let i = 0; i < 3; i++) r.caixa(0.6, 0.04, 0.6, -0.9 + i * 0.9, H + 0.1, 0.02, CORES.creme, 0.01);
+}
+
+/** O carrinho de mão de madeira, com a roda na frente (+z) e os cabos para trás. */
+export function carrinhoDeMao(r: Ref): void {
+  r.roda(0.26, 0.12, 0, 0.26, 0.95, '#3a2c2a');
+  r.roda(0.12, 0.14, 0, 0.26, 0.95, CORES.dourado);
+  // a caçamba de tábuas, larga em cima
+  r.caixa(0.9, 0.08, 1.1, 0, 0.42, 0.1, CORES.madeiraEscura, 0.02);
+  for (const s of [-1, 1]) r.caixa(0.08, 0.36, 1.1, s * 0.47, 0.46, 0.1, CORES.madeira, 0.02);
+  r.caixa(0.94, 0.36, 0.08, 0, 0.46, 0.66, CORES.madeira, 0.02);
+  r.caixa(0.94, 0.36, 0.08, 0, 0.46, -0.46, CORES.madeira, 0.02);
+  for (const s of [-1, 1]) {
+    r.barra([s * 0.4, 0.46, 0.6], [s * 0.36, 0.3, 0.95], 0.08, CORES.madeiraEscura);
+    r.barra([s * 0.4, 0.5, -0.4], [s * 0.42, 0.62, -1.15], 0.08, CORES.madeiraEscura);
+    r.caixa(0.08, 0.42, 0.08, s * 0.4, 0, -0.35, CORES.madeiraEscura, 0.02);
+    r.caixa(0.12, 0.12, 0.2, s * 0.42, 0.56, -1.2, CORES.roxo, 0.04);
+  }
 }
