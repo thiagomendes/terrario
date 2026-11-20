@@ -25,6 +25,9 @@ import { esquecerIndiceSons, lerIndiceSons } from './indiceSons';
 /** Taxa dos arquivos gravados (e da decodificação). */
 export const TAXA_TRILHA = 22050;
 
+/** Onde a cena guarda, na sessão, a medida da trilha ao sair do mundo (só nos testes de tela). */
+export const CHAVE_TRILHA_SAIDA = 'terrario:trilha-saida';
+
 /**
  * Ganho único da trilha gravada sobre a mesma cadeia da trilha de hoje (busMusica 0,6 ×
  * "Música" × mestre do ambiente 0,5 × grupo ambiente 0,7). Ajustado pela régua de volume

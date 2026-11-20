@@ -90,13 +90,19 @@ async function iniciar(app: HTMLElement): Promise<void> {
   // lista). Antes de `?sala` e `?mundo`: o mundo pedido que saiu dá lugar ao próximo da lista,
   // ou ao "Meu primeiro mundo" na Vila Neon. Falhando, o jogo segue com o que tiver.
   const mundosQueSairam = await repo.apagarTemasQueSairam().catch(() => [] as string[]);
-  // e sem rastro do que saiu com eles (fantasias e lembranças do aparelho)
-  try {
-    limparRastrosDosTemas(window.localStorage, window.sessionStorage);
-    esquecerMundos(window.localStorage, mundosQueSairam);
-  } catch {
-    // sem armazenamento: nada guardado para limpar
-  }
+  // e sem rastro do que saiu com eles (fantasias e lembranças do aparelho); cada armazenamento
+  // lido no seu try: um bloqueado não pula a limpeza do outro
+  const armazenamentoDe = (ler: () => Storage): Storage | null => {
+    try {
+      return ler();
+    } catch {
+      return null;
+    }
+  };
+  const loja = armazenamentoDe(() => window.localStorage);
+  const sessao = armazenamentoDe(() => window.sessionStorage);
+  limparRastrosDosTemas(loja, sessao);
+  esquecerMundos(loja, mundosQueSairam);
   const params = new URLSearchParams(location.search);
   // mundo com amigos: ?sala=CÓDIGO (link, QR Code ou "Entrar com código")
   const sala = params.get('sala');

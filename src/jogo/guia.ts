@@ -450,9 +450,9 @@ export function alvoDaMissao(
 // ------------------------------------------------------------------ o canto (spec 031)
 /** Perto do bicho do pasto: a comida aparece na mão. */
 export const RAIO_BICHO = 3;
-/** Na caixa de areia e na mesa: dentro da caixa ou a tanto do lado de quem vem. */
+/** Na mesa: a tanto do lado de quem vem. */
 export const RAIO_LUGAR = 2.4;
-/** Na mesa e na caixa de areia a criança chega bem perto (o bolo e as rochas ao alcance do dedo). */
+/** Na mesa a criança chega bem perto (o bolo ao alcance do dedo). */
 export const RAIO_CHEGAR_PERTO = 1.2;
 
 /** O mais perto de `de` (o atual fica, enquanto servir: a trilha não pula de um para outro). */

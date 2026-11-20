@@ -55,6 +55,16 @@ describe('spec 034: os rastros dos quatro temas no aparelho', () => {
     expect(carregarAparencia(loja)).toEqual(carregarAparencia(memoria().loja));
   });
 
+  it('a aparência de outro formato não é regravada (não zera a do jogador)', () => {
+    const outro = JSON.stringify({
+      versao: VERSAO_APARENCIA + 1,
+      aparencia: { ...aparenciaPadrao(), fantasia: { id: 'dino', cor: 0 } },
+    });
+    const { dados, loja } = memoria({ [CHAVE_APARENCIA]: outro });
+    limparRastrosDosTemas(loja);
+    expect(dados.get(CHAVE_APARENCIA)).toBe(outro);
+  });
+
   it('a aparência com uma fantasia que fica não muda', () => {
     const { dados, loja } = memoria();
     salvarAparencia(loja, vestirFantasia(aparenciaPadrao(), 'astronauta', 1));

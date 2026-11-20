@@ -277,7 +277,7 @@ export interface TimbreMusica {
 export interface NaturezaTema {
   passaros: number;
   grilos: number;
-  /** Multiplica o tom de pássaros e grilos (dinossauros: mais grave). */
+  /** Multiplica o tom de pássaros e grilos (menor que 1: mais grave). */
   tom: number;
   /** Bipes de rádio distantes no lugar dos pássaros (Lua), de dia e à noite. */
   bipes?: boolean;

@@ -15,10 +15,12 @@
  * dela, não do mundo.
  */
 import { TEMAS_QUE_SAIRAM } from '../temas/tipos';
+import { CHAVE_TRILHA_SAIDA } from '../audio/trilha';
 import { CHAVE_ANTERIOR, CHAVE_BRILHOU } from '../ui/abaFantasias';
 import { CHAVE_MUNDO_NOVO, CHAVE_SUGERIDAS } from '../ui/sugestaoFantasia';
 import {
   CHAVE_APARENCIA,
+  VERSAO_APARENCIA,
   carregarAparencia,
   salvarAparencia,
   type Armazenamento,
@@ -32,8 +34,7 @@ export const FANTASIAS_QUE_SAIRAM: readonly string[] = [
   'guardia-mata',
   'lanterneira',
 ];
-/** A medida da trilha que os testes de tela leem ao sair do mundo (na sessão). */
-export const CHAVE_TRILHA_SAIDA = 'terrario:trilha-saida';
+export { CHAVE_TRILHA_SAIDA };
 
 function apagar(loja: Armazenamento, chave: string): void {
   const l = loja as Armazenamento & { removeItem?: (k: string) => void };
@@ -61,9 +62,13 @@ export function limparRastrosDosTemas(
 ): void {
   if (loja) {
     try {
-      // a aparência guardada com uma fantasia que saiu: regravada sem ela
+      // a aparência guardada com uma fantasia que saiu: regravada sem ela (só a do formato de
+      // agora; a de outro formato o carregamento não lê, e regravar zeraria a do jogador)
       const ap = lerJson(loja, CHAVE_APARENCIA);
-      const vestida = objeto(ap) && objeto(ap.aparencia) ? ap.aparencia.fantasia : undefined;
+      const vestida =
+        objeto(ap) && ap.versao === VERSAO_APARENCIA && objeto(ap.aparencia)
+          ? ap.aparencia.fantasia
+          : undefined;
       if (objeto(vestida) && FANTASIAS_QUE_SAIRAM.includes(String(vestida.id)))
         salvarAparencia(loja, carregarAparencia(loja));
     } catch {

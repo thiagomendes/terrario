@@ -270,8 +270,8 @@ describe.each(temas.map((t) => [t.id, t] as [string, Tema]))('tema %s', (_id, t)
     expect(f, 'formas das construções').toBeTruthy();
     if (f) {
       for (const k of ['casa', 'oficina', 'deposito'] as const)
-        expect(['duas-aguas', 'cupula', 'tenda', 'redonda', 'modulo']).toContain(f[k]);
-      expect(['poco', 'fonte', 'antena', 'totem', 'esqueleto', 'moinho']).toContain(f.marco);
+        expect(['duas-aguas', 'cupula', 'redonda', 'modulo']).toContain(f[k]);
+      expect(['poco', 'fonte', 'antena', 'moinho']).toContain(f.marco);
       if (f.planta) expect(['vila', 'sitio', 'cidade', 'bairro']).toContain(f.planta);
     }
   });

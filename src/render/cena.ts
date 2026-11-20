@@ -222,7 +222,7 @@ import { criarRenderCriaturas } from './criaturas';
 import { criarCoracoes } from './coracoes';
 import { criarRefeicoes, NA_BOCA, NA_MAO_COMENDO, type Refeicoes } from './refeicao';
 import { AJUSTE_COMER } from '../personagem/poses';
-import { CHAVE_TRILHA_SAIDA } from '../personagem/rastros';
+import { CHAVE_TRILHA_SAIDA } from '../audio/trilha';
 import { criarRenderCompras } from './vila/compras';
 import { balcoesDaVila } from '../jogo/compra';
 import { DURACAO_REFEICAO } from '../jogo/refeicao';

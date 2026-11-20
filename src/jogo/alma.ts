@@ -602,7 +602,7 @@ export const GANHO_DE_EVENTO: Readonly<
 };
 /**
  * O ganho de uma chave (pedido do dono: o nível e as habilidades sobem em qualquer mundo): a
- * chave exata, ou a família dela ('criou:dino' vale como dar comida a qualquer bicho; a comida
+ * chave exata, ou a família dela ('criou:ovelha' vale como dar comida a qualquer bicho; a comida
  * tirada da fornalha vale como a pipoca).
  */
 export function ganhoDaChave(
