@@ -1,9 +1,10 @@
+import { readdirSync, readFileSync } from 'node:fs';
 import { describe, expect, it, vi } from 'vitest';
 
 /**
  * Spec 034 (T00): a prova de que os cinco mundos que ficam não mudam quando os quatro saem.
- * Hashes tirados no código de antes da 034 (o commit-pai deste arquivo), e que precisam
- * continuar iguais até o fim da spec:
+ * Hashes tirados no código de antes da remoção dos temas (o da T00, antes da T02), e que
+ * precisam continuar iguais até o fim da spec:
  *
  * - **atlas:** os pixels do atlas do tema como o jogo gera (os pintores do tema por cima dos de
  *   base, com o acabamento de brinquedo), a lista dos tiles que brilham e o mapa emissivo
@@ -11,9 +12,17 @@ import { describe, expect, it, vi } from 'vitest';
  * - **terreno com os povoados ligados**, em 3 sementes: o nascimento e o olhar, os planos dos
  *   povoados das 9 × 9 regiões em volta do nascer e os blocos de 7 × 7 chunks em volta do
  *   nascer, mais todos os chunks da área plana da cidade ou do bairro e do povoado (ou sítio)
- *   mais perto do nascer;
+ *   mais perto do nascer. Na Cidade e na Vila, também o plano inteiro (moradores, pistas,
+ *   zonas, pontos, peças...) e os metadados que a geração dá a cada chunk (a direção dos
+ *   degraus, portas, bancos e placas). O estilo do mundo passado a limpo para a nuvem
+ *   (`estiloSeguro`) é o mesmo do tema: o servidor gera o mesmo terreno;
  * - **dados do tema:** o JSON (com as chaves em ordem) de `criaturas`, `movimento`, `vozes`,
  *   `povoado`, `ceu`, `quadrosCeu` e `mundo`;
+ * - **sons:** a entrada do tema e a comum no índice dos sons, os tamanhos e o conteúdo dos
+ *   pacotes do tema e do comum, os ajustes de volume da trilha e das vozes do tema, e a música,
+ *   a natureza e os materiais do tema;
+ * - **o resto do tema:** todo o tema menos os textos (água, bruma, partículas, clima, cores,
+ *   personagem, primeiro capítulo, exclusivos, nome, lema, convite...);
  * - **o canto do Doce Reino:** os lugares do canto (`candidatosDoCanto`, que chama
  *   `planejarCantos('doce', ...)` com o terreno do jogo) e os chunks da caixa do canto
  *   escolhido, em 3 sementes.
@@ -49,6 +58,8 @@ interface Hashes {
   ceu: string;
   quadrosCeu: string;
   mundo: string;
+  sons: string;
+  resto: string;
 }
 
 const ESPERADO: Record<Id, Hashes> = {
@@ -56,7 +67,7 @@ const ESPERADO: Record<Id, Hashes> = {
     atlas: '13acfa8e991f83f5',
     emissivos: 'c505831f068db2c5',
     mapaEmissivo: '80e0275fe82b66f0',
-    terreno: ['ccb8b0657b17ace4', '7b165fd5a5a78184', 'b5f1d5270f08344b'],
+    terreno: ['5b3eb709c4ce77fa', 'a0d3de4f58c5e69a', '568fd3dc111b5072'],
     criaturas: 'a409326e859035e9',
     movimento: 'a8ac12f5a1cb09a4',
     vozes: '471fc47ed4b120c0',
@@ -64,12 +75,14 @@ const ESPERADO: Record<Id, Hashes> = {
     ceu: 'ff569563531ed96f',
     quadrosCeu: 'd6e9057778dcc118',
     mundo: '9b0a36e4a763314a',
+    sons: '84ec03353330833c',
+    resto: 'e38910e236134e60',
   },
   'cidade-grande': {
     atlas: 'b537276ea011f90a',
     emissivos: '78cb9703a7c6fc08',
     mapaEmissivo: '5e3ec88724d11d41',
-    terreno: ['7d1cfc60b828532f', 'ed75a4bf6181fe7b', 'af2fd7130173dc47'],
+    terreno: ['0ffd672eb7c509b8', 'a080aeb40a60e8c2', '080dfb5e4c2d3bab'],
     criaturas: 'e47cfbb8c9c2d984',
     movimento: '94323f1ba615535d',
     vozes: 'f4f8405fae239ae8',
@@ -77,6 +90,8 @@ const ESPERADO: Record<Id, Hashes> = {
     ceu: 'ff0df45d5a9e655b',
     quadrosCeu: 'c9d3e6697af71986',
     mundo: '85d86060163d8de9',
+    sons: 'bada02cff588e297',
+    resto: '69d32e59ff4493a7',
   },
   'rancho-alegre': {
     atlas: '09e1e6f3cabac84b',
@@ -90,6 +105,8 @@ const ESPERADO: Record<Id, Hashes> = {
     ceu: '14b865e3e1750616',
     quadrosCeu: '71219b8460bacda5',
     mundo: '178a7ab93d8e7fd0',
+    sons: '25205ed023a860a2',
+    resto: '2cad26f68ce0b221',
   },
   'doce-reino': {
     atlas: '5d8b67fd98c0e82e',
@@ -103,6 +120,8 @@ const ESPERADO: Record<Id, Hashes> = {
     ceu: 'e9f34610468fa1c6',
     quadrosCeu: '2c9bf41aa0e6c34a',
     mundo: 'f0383aeaf7a98325',
+    sons: '0a2f11ecb6fbe611',
+    resto: 'b6ff84c0cd6494ba',
   },
   'exploracao-lunar': {
     atlas: '11a679fb8d8dea71',
@@ -116,6 +135,8 @@ const ESPERADO: Record<Id, Hashes> = {
     ceu: 'b7d4093bd58b19e0',
     quadrosCeu: '45705c0572e213f4',
     mundo: '438bb0460c3e4000',
+    sons: '0604749106fcabd6',
+    resto: 'b13b5fb3b924c0d9',
   },
 };
 
@@ -170,11 +191,49 @@ async function carregar(id: Id) {
   const { gerarAtlas } = await import('../../src/art/atlas');
   const { construirMapaEmissivo } = await import('../../src/render/emissivo');
   const { Bloco } = await import('../../src/world/blocks');
+  const { estiloSeguro } = await import('../../src/world/estiloSeguro');
+  const { NIVEL_TRILHA } = await import('../../src/audio/trilha');
+  const { NIVEL_VOZES } = await import('../../src/audio/vozesGravadas');
   const t = obterTema(id);
   expect(t.id).toBe(id);
   ativarTemaPuro(t);
   chunk.definirPovoados(true);
-  return { chunk, povoado, t, gerarAtlas, construirMapaEmissivo, Bloco };
+  return {
+    chunk,
+    povoado,
+    t,
+    gerarAtlas,
+    construirMapaEmissivo,
+    Bloco,
+    estiloSeguro,
+    NIVEL_TRILHA,
+    NIVEL_VOZES,
+  };
+}
+
+/** Os sons do tema: o índice, os pacotes (tamanho e conteúdo) e os ajustes de volume. */
+async function hashSons(j: Jogo, id: Id): Promise<string> {
+  const indice = JSON.parse(readFileSync('public/sons/indice.json', 'utf8'));
+  const pasta = 'public/sons/pacotes';
+  const arquivos = readdirSync(pasta)
+    .filter((a) => a === 'comum-vozes.mp3' || (a.startsWith(`${id}-`) && a.endsWith('.mp3')))
+    .sort();
+  expect(arquivos.some((a) => a.startsWith(`${id}-`))).toBe(true);
+  const partes: (Uint8Array | string)[] = [
+    jsonEstavel({
+      tema: indice.temas[id] ?? null,
+      comum: indice.comum ?? null,
+      tamanhos: arquivos.map((a) => [a, indice.tamanhos?.[a] ?? null]),
+      trilha: j.NIVEL_TRILHA[id] ?? null,
+      vozes: j.NIVEL_VOZES[id] ?? null,
+      musica: j.t.musica,
+      natureza: j.t.natureza,
+      materiais: j.t.materiais,
+    }),
+  ];
+  // o conteúdo de cada pacote (em base64: os tipos do Node do projeto só leem texto)
+  for (const a of arquivos) partes.push(`${a};`, readFileSync(`${pasta}/${a}`, 'base64'));
+  return sha(partes);
 }
 
 type Jogo = Awaited<ReturnType<typeof carregar>>;
@@ -204,6 +263,8 @@ async function hashTerreno(j: Jogo, semente: number): Promise<string> {
   // a cidade ou o bairro inteiro
   const urbano = chunk.cidadeDoMundo(semente) ?? chunk.vilaDoMundo(semente);
   if (urbano) {
+    // o plano inteiro: moradores, pistas, metrô, vaga, cruzamentos, postes; zonas, pontos, peças
+    partes.push(jsonEstavel(urbano));
     const { x0, z0, x1, z1 } = urbano.plana;
     chunksDaCaixa(x0, z0, x1, z1, chaves);
   }
@@ -225,14 +286,20 @@ async function hashTerreno(j: Jogo, semente: number): Promise<string> {
   if (perto) chunksDaCaixa(perto.p.minX, perto.p.minZ, perto.p.maxX, perto.p.maxZ, chaves);
   // na Cidade, na Vila e no Rancho o nascer é no meio (ou ao lado) do lugar: tem que haver um
   expect(!!urbano || !!perto, 'sem bairro, cidade nem povoado perto do nascer').toBe(true);
-  for (const [cx, cz] of emOrdem(chaves))
+  for (const [cx, cz] of emOrdem(chaves)) {
     partes.push(`${cx},${cz};`, chunk.gerarChunk(cx, cz, semente));
+    // a direção dos degraus, portas, bancos e placas (só a Cidade e a Vila têm)
+    const metas = [...chunk.metasGeradasDoChunk(cx, cz, semente)].sort((a, b) => a[0] - b[0]);
+    if (metas.length) partes.push(JSON.stringify(metas));
+  }
   return sha(partes);
 }
 
 async function calcular(id: Id): Promise<Hashes> {
   const j = await carregar(id);
   const { t } = j;
+  // a nuvem gera o terreno com o estilo passado a limpo: tem que ser o mesmo do tema
+  expect(jsonEstavel(j.estiloSeguro(t.mundo))).toBe(jsonEstavel(t.mundo));
   const atlas = j.gerarAtlas(j.chunk.SEMENTE_PADRAO);
   const emissivos = atlas.tiles
     .filter((x) => x.emissivo)
@@ -253,6 +320,9 @@ async function calcular(id: Id): Promise<Hashes> {
     ceu: await sha([jsonEstavel(t.ceu)]),
     quadrosCeu: await sha([jsonEstavel(t.quadrosCeu)]),
     mundo: await sha([jsonEstavel(t.mundo)]),
+    sons: await hashSons(j, id),
+    // os textos ficam de fora (a 034 troca os textos de base que aparecem nos cinco)
+    resto: await sha([jsonEstavel({ ...t, textos: undefined })]),
   };
 }
 

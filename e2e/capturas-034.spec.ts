@@ -10,13 +10,20 @@ import { mkdirSync } from 'node:fs';
  * O mundo é gravado direto no banco do jogo com o tema, a semente e o modo (como na paridade),
  * e aberto por `?mundo=`: antes e depois passam pelo mesmo caminho, sem depender do "Meu
  * primeiro mundo" nem da prévia de tema. Hora parada às 0,45 e tempo limpo; a câmera é a do
- * nascer (ninguém aponta). Duas fotos por tamanho: com a interface e só a cena.
+ * nascer (ninguém aponta). Duas fotos por tamanho: com a interface e só a cena. A resolução fica
+ * fixa (`escala=1`): sem o ajuste automático pelos quadros por segundo nem o corte de efeitos
+ * do celular, que mudam com a velocidade da máquina.
+ *
+ * A comparação de antes e depois é visual (olhando as fotos lado a lado), não pixel a pixel:
+ * a física, as criaturas e os moradores andam com o relógio e nunca saem no mesmo lugar.
  */
 declare const process: { env: Record<string, string | undefined> };
 const pedido = process.env.CAPTURAS_034;
 test.skip(!pedido, 'capturas da 034 só com CAPTURAS_034=antes ou CAPTURAS_034=depois');
+if (pedido && pedido !== 'antes' && pedido !== 'depois')
+  throw new Error(`CAPTURAS_034 aceita só "antes" ou "depois" (veio "${pedido}")`);
 
-const PASTA = `capturas-034/${pedido === 'depois' ? 'depois' : 'antes'}`;
+const PASTA = `capturas-034/${pedido}`;
 const CINCO = [
   'vila-neon',
   'cidade-grande',
@@ -69,7 +76,7 @@ async function abrir(page: Page, tema: string) {
       }),
     { id: ID_MUNDO, semente: SEMENTE, tema },
   );
-  await page.goto(`/?mundo=${ID_MUNDO}`);
+  await page.goto(`/?mundo=${ID_MUNDO}&escala=1`);
   await page.waitForFunction(() => window.__brumaluz?.ready === true, undefined, {
     timeout: 240_000,
   });
