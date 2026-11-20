@@ -4,7 +4,7 @@
  */
 import { gzipSync, gunzipSync } from 'node:zlib';
 import { BlobServiceClient, type ContainerClient } from '@azure/storage-blob';
-import { TableClient } from '@azure/data-tables';
+import { TableClient, odata } from '@azure/data-tables';
 import { DefaultAzureCredential } from '@azure/identity';
 import type { Armazem, JogadorGuardado, MundoGuardado, Sala } from './armazem';
 
@@ -69,5 +69,30 @@ export function armazemAzure(conta: string): Armazem {
     gravarRegiao: (id, r, e) => gravar(`${id}/regioes/${r}.json.gz`, e),
     lerJogador: (m, j) => ler<JogadorGuardado>(`${m}/jogadores/${j}.json.gz`),
     gravarJogador: (m, j, d) => gravar(`${m}/jogadores/${j}.json.gz`, d),
+    async listarMundos() {
+      // as "pastas" do primeiro nível: `<id>/`
+      const ids: string[] = [];
+      for await (const item of blobs.listBlobsByHierarchy('/'))
+        if (item.kind === 'prefix') ids.push(item.name.replace(/\/$/, ''));
+      return ids;
+    },
+    async listarSalas() {
+      const lista: Sala[] = [];
+      for await (const e of salas.listEntities<{ dados: string }>({
+        queryOptions: { filter: odata`PartitionKey eq 'sala'` },
+      }))
+        lista.push(JSON.parse(e.dados) as Sala);
+      return lista;
+    },
+    async apagarMundo(id) {
+      // o prefixo com a barra no fim: `abc/` nunca pega a pasta de `abcd`
+      if (!id || id.includes('/')) return;
+      for await (const b of blobs.listBlobsFlat({ prefix: `${id}/` }))
+        try {
+          await blobs.deleteBlob(b.name);
+        } catch (e) {
+          if ((e as { statusCode?: number }).statusCode !== 404) throw e;
+        }
+    },
   };
 }

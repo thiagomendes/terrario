@@ -1342,3 +1342,154 @@ describe('canteiro de obras na sala (spec 014)', () => {
     expect(novo.obras()['2']?.cheias).toHaveLength(4);
   });
 });
+
+describe('spec 034: os mundos dos quatro temas que saíram, na nuvem', () => {
+  const entrarComo = (id: string, extra: object) =>
+    JSON.stringify({ t: 'entrar', versao: VERSAO_REDE, jogador: ident(id), ...extra });
+  const QUATRO = ['bruma-e-luz', 'planeta-vivo', 'mata-encantada', 'era-dos-dinos'];
+  const CINCO = ['vila-neon', 'cidade-grande', 'rancho-alegre', 'doce-reino', 'exploracao-lunar'];
+  let n = 0;
+
+  /** Grava direto no armazém um mundo (com sala, regiões e um jogador), como a nuvem tem hoje. */
+  async function guardar(
+    s: ReturnType<typeof servidor>,
+    tema: unknown,
+    op: { sala?: boolean; formato?: number | null } = {},
+  ) {
+    const id = `mundo-${++n}`;
+    const codigo = gerarCodigo(() => (n * 0.137) % 1);
+    if (op.sala !== false)
+      await s.armazem.gravarSala({
+        codigo,
+        mundoId: id,
+        dono: 'ana',
+        chaveDono: 'x',
+        fechado: false,
+        constroem: true,
+        criadoEm: 0,
+        acessadoEm: 0,
+      });
+    await s.armazem.gravarMundo(id, {
+      ...(op.formato === null ? {} : { formato: op.formato ?? 2 }),
+      mundo: { ...criarMundo, id, nome: `Mundo secreto ${n}`, tema: tema as string },
+      hora: 0.3,
+      extras: {},
+    });
+    await s.armazem.gravarRegiao(id, '0,0', { '0,0': [[1, 7]] });
+    await s.armazem.gravarJogador(id, 'ana', {
+      chave: 'x',
+      perfil: { apelido: 'Ana', aparencia: {} },
+      dados: {} as never,
+    });
+    return { id, codigo };
+  }
+  const existe = async (s: ReturnType<typeof servidor>, id: string) =>
+    (await s.armazem.listarMundos()).includes(id);
+
+  it('saem os quatro temas, com as salas, as regiões e os jogadores; os cinco ficam inteiros', async () => {
+    const logs: string[] = [];
+    const armazem = armazemMemoria();
+    const g = criarGerenciador({ armazem, sorteio: Math.random, log: (m) => logs.push(m) });
+    const s = { g, armazem } as unknown as ReturnType<typeof servidor>;
+    const saem = await Promise.all(QUATRO.map((t) => guardar(s, t)));
+    const ficam = await Promise.all(CINCO.map((t) => guardar(s, t)));
+    // um dos cinco sem sala (o dono levou de volta para o aparelho) também fica
+    const semSala = await guardar(s, 'doce-reino', { sala: false });
+    // um dos quatro sem sala também sai (a varredura percorre os mundos, não as salas)
+    const semSalaQueSai = await guardar(s, 'era-dos-dinos', { sala: false });
+    expect(await g.varrerTemasQueSairam()).toBe(5);
+    for (const m of [...saem, semSalaQueSai]) {
+      expect(await existe(s, m.id), m.id).toBe(false);
+      expect(await armazem.lerMundo(m.id)).toBeNull();
+      expect(await armazem.lerRegioes(m.id)).toEqual({});
+      expect(await armazem.lerJogador(m.id, 'ana')).toBeNull();
+    }
+    for (const m of saem) expect(await armazem.lerSala(m.codigo)).toBeNull();
+    for (const m of [...ficam, semSala]) {
+      expect(await armazem.lerMundo(m.id), m.id).not.toBeNull();
+      expect(Object.keys(await armazem.lerRegioes(m.id))).toEqual(['0,0']);
+      expect(await armazem.lerJogador(m.id, 'ana')).not.toBeNull();
+    }
+    for (const m of ficam) expect(await armazem.lerSala(m.codigo)).not.toBeNull();
+    // o log: código, id e tema de cada um, e o total; nunca o nome do mundo
+    expect(logs.filter((l) => l.startsWith('mundo de tema que saiu apagado'))).toHaveLength(5);
+    expect(logs.some((l) => l.includes(saem[0].codigo) && l.includes(saem[0].id))).toBe(true);
+    expect(logs.some((l) => l.includes('bruma-e-luz'))).toBe(true);
+    expect(logs.some((l) => /5 de \d+ mundos apagados/.test(l))).toBe(true);
+    expect(logs.join('\n')).not.toContain('Mundo secreto');
+  });
+
+  it('tema vazio, estranho, de outro tipo, ou mundo de formato antigo: não é tocado', async () => {
+    const s = servidor();
+    const casos = [
+      await guardar(s, ''),
+      await guardar(s, undefined),
+      await guardar(s, 'tema-que-nao-existe'),
+      await guardar(s, 'Bruma-e-Luz'),
+      await guardar(s, ['bruma-e-luz']),
+      await guardar(s, 7),
+      await guardar(s, 'bruma-e-luz', { formato: null }),
+      await guardar(s, 'era-dos-dinos', { formato: 1 }),
+    ];
+    expect(await s.g.varrerTemasQueSairam()).toBe(0);
+    for (const m of casos) {
+      expect(await existe(s, m.id), m.id).toBe(true);
+      expect(await s.armazem.lerSala(m.codigo)).not.toBeNull();
+    }
+  });
+
+  it('rodar duas vezes não muda nada', async () => {
+    const s = servidor();
+    await guardar(s, 'planeta-vivo');
+    const fica = await guardar(s, 'rancho-alegre');
+    expect(await s.g.varrerTemasQueSairam()).toBe(1);
+    const depois = JSON.stringify([
+      await s.armazem.listarMundos(),
+      await s.armazem.listarSalas(),
+      await s.armazem.lerMundo(fica.id),
+    ]);
+    expect(await s.g.varrerTemasQueSairam()).toBe(0);
+    expect(
+      JSON.stringify([
+        await s.armazem.listarMundos(),
+        await s.armazem.listarSalas(),
+        await s.armazem.lerMundo(fica.id),
+      ]),
+    ).toBe(depois);
+  });
+
+  it('o mundo regravado depois da varredura (a réplica antiga ao sair) sai na leitura', async () => {
+    const s = servidor();
+    await s.g.varrerTemasQueSairam();
+    const m = await guardar(s, 'mata-encantada');
+    // a prévia não mostra e o código não abre: o mundo sai na hora
+    expect(await s.g.previa(m.codigo, '9.9.9.9')).toBeNull();
+    expect(await existe(s, m.id)).toBe(false);
+    expect(await s.armazem.lerSala(m.codigo)).toBeNull();
+    const m2 = await guardar(s, 'era-dos-dinos');
+    const a = canal();
+    await s.g.receber(a, entrarComo('ana', { codigo: m2.codigo }));
+    expect(a.recebidas).toEqual([{ t: 'recusado', motivo: 'codigo' }]);
+    expect(s.g.ativas.size).toBe(0);
+    expect(await existe(s, m2.id)).toBe(false);
+  });
+
+  it('criar com um tema fora dos cinco é recusado por versão (o cliente antigo recarrega)', async () => {
+    // a rede subiu para 17 com a 034 (o cliente de antes recebe "versão nova")
+    expect(VERSAO_REDE).toBe(17);
+    const s = servidor();
+    for (const tema of [...QUATRO, 'tema-que-nao-existe', '', undefined]) {
+      const a = canal(`10.0.0.${QUATRO.indexOf(tema as string) + 2}`);
+      await s.g.receber(a, entrarComo('ana', { criar: { ...criarMundo, tema } }));
+      expect(a.recebidas, String(tema)).toEqual([{ t: 'recusado', motivo: 'versao' }]);
+      expect(a.fechado()).toBe(true);
+    }
+    expect(s.g.ativas.size).toBe(0);
+    expect(await s.armazem.listarMundos()).toEqual([]);
+    for (const tema of CINCO) {
+      const a = canal();
+      await s.g.receber(a, entrarComo('ana', { criar: { ...criarMundo, tema } }));
+      expect(a.recebidas[0]?.t, tema).toBe('bemvindo');
+    }
+  });
+});

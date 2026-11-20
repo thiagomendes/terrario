@@ -98,7 +98,7 @@ const passosAte = (s: number) => Math.ceil(s / PASSO);
 
 describe('spec 032: comprar nas barracas da Vila Neon', () => {
   it('a rede subiu para 16, o comando novo passa a limpo e o pagamento é a fichinha de graça', () => {
-    expect(VERSAO_REDE).toBe(16);
+    expect(VERSAO_REDE).toBeGreaterThanOrEqual(16);
     expect(sanear({ t: 'vila', a: 'comprar', i: 2, lixo: 1 })).toEqual({ t: 'vila', a: 'comprar', i: 2 });
     expect(sanear({ t: 'vila', a: 'comprar', i: -1 })).toBeNull();
     expect(sanear({ t: 'vila', a: 'comprar', i: 99 })).toBeNull();

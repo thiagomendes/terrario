@@ -197,7 +197,16 @@ setInterval(() => {
   salas.zerarPior();
 }, 60_000);
 
-http.listen(PORTA, () => log(`Terrário no ar na porta ${PORTA} (${conta ? 'Azure' : 'memória'})`));
+http.listen(PORTA, () => {
+  log(`Terrário no ar na porta ${PORTA} (${conta ? 'Azure' : 'memória'})`);
+  // spec 034: os mundos dos quatro temas que saíram são apagados. Depois do listen, sem segurar
+  // a /saude; e de novo uns 10 minutos depois (pega o que a réplica antiga regravou ao sair).
+  // Os erros vão só para o log.
+  const varrer = () =>
+    void salas.varrerTemasQueSairam().catch((e) => log(`varredura: ${String(e)}`));
+  setTimeout(varrer, 1_000);
+  setTimeout(varrer, 10 * 60_000);
+});
 
 // nova versão sendo publicada: grava tudo antes de sair
 for (const sinal of ['SIGTERM', 'SIGINT'] as const)

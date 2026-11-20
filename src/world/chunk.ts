@@ -138,7 +138,19 @@ export const TERRENO_NATURAL: TerrenoNatural = {
   get planta() {
     return estilo.povoado?.planta ?? 'vila';
   },
+  get relevo() {
+    return chaveDoRelevo();
+  },
 };
+
+/**
+ * Spec 034: a parte do estilo que muda o terreno natural (as crateras). As memórias da geração
+ * (nascimento, planos dos povoados) levam isto na chave: no servidor, mundos de temas
+ * diferentes com a mesma semente rodam no mesmo processo.
+ */
+function chaveDoRelevo(): string {
+  return String(estilo.crateras);
+}
 
 let povoadosLigados = true;
 
@@ -270,7 +282,7 @@ let ultimoPlano: PlanoPovoado | null = null;
 export function povoadoNaColuna(wx: number, wz: number, semente: number): PlanoPovoado | null {
   const rx = Math.floor(wx / REGIAO_POVOADO);
   const rz = Math.floor(wz / REGIAO_POVOADO);
-  const k = `${rx},${rz},${semente},${versaoDosPovoados()},${TERRENO_NATURAL.planta}`;
+  const k = `${rx},${rz},${semente},${versaoDosPovoados()},${TERRENO_NATURAL.planta},${chaveDoRelevo()}`;
   if (k !== ultimaRegiao) {
     ultimaRegiao = k;
     ultimoPlano = planoDaRegiao(rx, rz, semente, TERRENO_NATURAL);
@@ -1324,7 +1336,7 @@ export function arvoreDaForma(
 /** Nascimento pelo terreno natural (povoados nunca cobrem este ponto). */
 const nascimentos = new Map<string, { x: number; z: number }>();
 /** Para onde o jogador olha ao nascer (só nos mundos de sítio: para o sítio mais perto). */
-const olhares = new Map<number, number | undefined>();
+const olhares = new Map<string, number | undefined>();
 export function encontrarNascimento(semente: number): { x: number; z: number } {
   // spec 014: na calçada da praça, ao lado do primeiro canteiro
   const cidade = cidadeDoMundo(semente);
@@ -1333,13 +1345,14 @@ export function encontrarNascimento(semente: number): { x: number; z: number } {
   const vila = vilaDoMundo(semente);
   if (vila) return { x: vila.nascimento.x, z: vila.nascimento.z };
   const sitio = TERRENO_NATURAL.planta === 'sitio';
-  const k = sitio ? `${semente},sitio` : `${semente}`;
+  // spec 034: a chave leva o relevo (o servidor tem mundos de temas diferentes juntos)
+  const k = `${semente},${sitio ? 'sitio' : ''},${chaveDoRelevo()}`;
   let n = nascimentos.get(k);
   if (!n) {
     if (sitio) {
       const r = nascimentoPertoDoSitio(semente);
       n = { x: r.x, z: r.z };
-      olhares.set(semente, r.olhar);
+      olhares.set(k, r.olhar);
     } else n = procurarNascimento(semente);
     nascimentos.set(k, n);
   }
@@ -1357,7 +1370,7 @@ export function olharDoNascimento(semente: number): number | undefined {
   if (vila) return vila.nascimento.olhar;
   if (TERRENO_NATURAL.planta !== 'sitio') return undefined;
   encontrarNascimento(semente);
-  return olhares.get(semente);
+  return olhares.get(`${semente},sitio,${chaveDoRelevo()}`);
 }
 
 function bomParaNascer(x: number, z: number, semente: number): boolean {

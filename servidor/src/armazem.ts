@@ -66,6 +66,12 @@ export interface Armazem {
   ): Promise<void>;
   lerJogador(mundo: string, jogador: string): Promise<JogadorGuardado | null>;
   gravarJogador(mundo: string, jogador: string, j: JogadorGuardado): Promise<void>;
+  /** Spec 034: os ids de todos os mundos guardados (as pastas `<id>/`). */
+  listarMundos(): Promise<string[]>;
+  /** Spec 034: todas as salas (código → mundo). */
+  listarSalas(): Promise<Sala[]>;
+  /** Spec 034: apaga a pasta inteira do mundo (mundo, regiões e jogadores); o que já não existe é ignorado. */
+  apagarMundo(id: string): Promise<void>;
 }
 
 /** Armazém em memória (testes e servidor local de desenvolvimento). */
@@ -112,6 +118,19 @@ export function armazemMemoria(): Armazem & { gravacoes: number } {
     async gravarJogador(mundo: string, j: string, d: JogadorGuardado) {
       a.gravacoes++;
       jogadores.set(`${mundo}/${j}`, JSON.stringify(d));
+    },
+    async listarMundos() {
+      const ids = new Set([...mundos.keys(), ...regioes.keys()]);
+      for (const k of jogadores.keys()) ids.add(k.slice(0, k.indexOf('/')));
+      return [...ids];
+    },
+    async listarSalas() {
+      return [...salas.values()].map(copia);
+    },
+    async apagarMundo(id: string) {
+      mundos.delete(id);
+      regioes.delete(id);
+      for (const k of [...jogadores.keys()]) if (k.startsWith(`${id}/`)) jogadores.delete(k);
     },
   };
   return a;
