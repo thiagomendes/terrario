@@ -95,12 +95,12 @@ const ABRE: Record<string, (p: Page) => Promise<boolean>> = {
 };
 
 async function cadaItem(page: Page, tocar: boolean, nome: string) {
-  // no celular, o dedo de verdade (o protocolo do Chromium, também nos ajudantes da roleta:
-  // `usarDedoDeVerdade`); no computador, o clique. Spec 034 (T14): na nuvem, sem placa de vídeo,
-  // o toque e a roleta (que fecha sozinha em 8 s) passam do tempo: conferir na placa de vídeo
-  const dedo = tocar ? await usarDedoDeVerdade(page) : null;
-  const clicar = (sel: string) =>
-    dedo ? tocarComDedo(dedo, page, sel) : page.locator(sel).click();
+  // no celular, o dedo de verdade (o `tap()` do Playwright, pelo protocolo do Chromium, também
+  // nos ajudantes da roleta: `usarDedoDeVerdade`); no computador, o clique. Spec 034 (T14): na
+  // nuvem, sem placa de vídeo, o toque e a roleta (que fecha sozinha em 8 s) passam do tempo:
+  // conferir na placa de vídeo
+  if (tocar) usarDedoDeVerdade(page);
+  const clicar = (sel: string) => (tocar ? tocarComDedo(page, sel) : page.locator(sel).click());
   // o alto: informações, a roda ao lado; a mochila embaixo do minimapa
   for (const sel of ['[data-hud-info]', '[data-botao-roda]', '[data-botao-mochila]'])
     await expect(page.locator(sel)).toBeVisible();
@@ -285,7 +285,7 @@ test('celular: menu de roda pelo toque, segurar abre os gestos', async ({ browse
   await expect(page.locator('[data-missao-atual]')).toBeHidden();
   await cadaItem(page, true, 'celular');
   // nada de selinho de tecla no toque
-  await tocarComDedo(await usarDedoDeVerdade(page), page, '[data-botao-roda]');
+  await tocarComDedo(page, '[data-botao-roda]');
   await esperarAssentar(page);
   expect(await page.locator(`${ROLETA_ABERTA} .item kbd:visible`).count()).toBe(0);
   expect(erros).toEqual([]);

@@ -1,4 +1,4 @@
-import { expect, type CDPSession, type Page } from '@playwright/test';
+import { expect, type Page } from '@playwright/test';
 
 /**
  * Spec 033: a roleta do menu (src/ui/roleta.ts) nos testes. Só 5 a 7 botões existem de cada
@@ -122,40 +122,36 @@ export async function toqueRapido(page: Page, seletor: string): Promise<void> {
   if (r) throw new Error(`o toque em ${seletor} não chegou: ${r}`);
 }
 
-/** As páginas que tocam com o dedo de verdade (o protocolo do Chromium), e a sessão de cada. */
-const dedos = new WeakMap<Page, CDPSession>();
+/** As páginas que tocam com o dedo de verdade (o `tap()` do Playwright). */
+const dedos = new WeakSet<Page>();
 
 /**
  * Os testes que conferem a roleta e o menu no celular tocam com o dedo de verdade (decisão do
- * dono, 18 nov 2026): depois desta chamada, todo toque desta página nos ajudantes daqui é um
- * toque do protocolo do Chromium (`Input.synthesizeTapGesture`), e não o toque rápido.
+ * dono, 18 nov 2026): depois desta chamada, todo toque desta página nos ajudantes daqui é o
+ * `tap()` do Playwright (`tocarComDedo`), e não o toque rápido montado na página.
  */
-export async function usarDedoDeVerdade(page: Page): Promise<CDPSession> {
-  const cdp = dedos.get(page) ?? (await page.context().newCDPSession(page));
-  dedos.set(page, cdp);
-  return cdp;
+export function usarDedoDeVerdade(page: Page): void {
+  dedos.add(page);
 }
 
-/** Um toque de dedo de verdade (50 ms) no meio do elemento, pelo protocolo do Chromium. */
-export async function tocarComDedo(cdp: CDPSession, page: Page, seletor: string): Promise<void> {
+/**
+ * Um toque de dedo de verdade no meio do elemento: o `tap()` do Playwright, que encosta e solta
+ * pelo protocolo do Chromium (`Input.dispatchTouchEvent`), como na `main`. Spec 034: com o
+ * `Input.synthesizeTapGesture` (o gesto montado pelo navegador), na placa de vídeo o toque no
+ * botão da roda não abria o menu (roleta:88 e menu-roda:271 caíam; na `main`, com o `tap()`,
+ * passam). Na nuvem, sem placa de vídeo (1 quadro por segundo), o encostar e o soltar chegam em
+ * quadros diferentes e passam dos 600 ms do toque, e a roleta fecha sozinha (8 s) antes do passo
+ * seguinte: quem usa este toque se confere na placa de vídeo.
+ */
+export async function tocarComDedo(page: Page, seletor: string): Promise<void> {
   const el = page.locator(seletor).first();
   await el.waitFor({ state: 'visible', timeout: 20_000 });
-  await el.scrollIntoViewIfNeeded();
-  const c = await el.boundingBox();
-  if (!c) throw new Error(`sem ${seletor}`);
-  await cdp.send('Input.synthesizeTapGesture', {
-    x: c.x + c.width / 2,
-    y: c.y + c.height / 2,
-    duration: 50,
-    tapCount: 1,
-    gestureSourceType: 'touch',
-  });
+  await el.tap();
 }
 
 /** Toca (ou clica) num seletor, à vista. */
 async function tocarSeletor(page: Page, seletor: string): Promise<void> {
-  const cdp = dedos.get(page);
-  if (cdp) await tocarComDedo(cdp, page, seletor);
+  if (dedos.has(page)) await tocarComDedo(page, seletor);
   else await toqueRapido(page, seletor);
 }
 
