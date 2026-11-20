@@ -37,6 +37,12 @@ O dono, em 13 nov 2026: um "mundo de criaturas, estilo Dia das Bruxas... criatur
 
 ## Decisões do dono
 - 13 nov 2026: aprovado como ideia. Entra intercalado na sequência. Começa por esboço.
+- 20 nov 2026, o plano do esboço (as quatro recomendadas):
+  - a fantasminha se chama **Lulu**, porque "Lili" já é a guitarrista da Vila Neon;
+  - o lençol da Lulu é de capuz, com o rosto do boneco à mostra (fica a cara de boneco do jogo e o sorriso);
+  - a vassoura-patinete tem o cabo em pé como guidão, a palha atrás e as rodinhas escondidas: a criança entende que é patinete e que não voa;
+  - o Trem das Risadas é ao ar livre, em volta da praça, com um túnel curto e claro.
+  - Decisões pequenas do esboço: o Conde Dudu sem presas; o Tufinho cor de carvão, com focinho e patinhas claros e lacinho laranja (o preto puro some de noite); nenhum letreiro com palavra.
 
 ## A ideia aprovada (18 nov 2026, à noite)
 O dono: "Gostei da ideia, de forma geral tá bem legal. Amanhã me traz um esboço daí que a gente aprova." Vem logo depois da 034 ("menos é mais") e nasce no nível da Vila Neon: lugares por dentro, objetos que reagem ao toque, moradores com nome, missões com história, comprar e comer.
@@ -59,7 +65,7 @@ O dono: "Gostei da ideia, de forma geral tá bem legal. Amanhã me traz um esbo�
 **Personagens:**
 - Vovó Zuleica: a bruxinha boa, com o gato **Tufinho**. Nunca "Pretinho" e nunca a missão "o Pretinho fugiu": o dono acha que pode soar racista.
 - Conde Dudu: o vampirinho com medo do escuro.
-- Lili: a fantasminha de lençol, tímida, que adora esconde-esconde.
+- Lulu: a fantasminha de lençol, tímida, que adora esconde-esconde (era "Lili"; mudou em 20 nov).
 - Bento: o monstrinho peludo grandão que ama abraço e toca bumbo na banda.
 - Seu Jerônimo: o dono da horta de abóboras.
 - Bichos: fantasminhas flutuando, abóboras saltitantes, morceguinhos, coruja e gato preto.
@@ -67,7 +73,7 @@ O dono: "Gostei da ideia, de forma geral tá bem legal. Amanhã me traz um esbo�
 **Missões (10 a 12, com moedinhas, como na Vila):**
 - doces ou travessuras (5 casas, encher a sacola);
 - o Conde Dudu tem medo do escuro (acender as lanternas do bosque);
-- esconde-esconde com a Lili (achar pela risadinha);
+- esconde-esconde com a Lulu (achar pela risadinha);
 - abóbora de carinha (plantar, colher, escolher a cara, pôr na porta);
 - a poção da Vovó (uva, maçã e hortelã no caldeirão);
 - o gato da Vovó sumiu (seguir as pegadas do Tufinho, como a lhama);
@@ -90,7 +96,7 @@ O dono: "Gostei da ideia, de forma geral tá bem legal. Amanhã me traz um esbo�
 O primeiro trabalho da divisão "o que precisa de placa de vídeo vai para o computador do dono": o orquestrador, na nuvem, coordena; a sessão do computador do dono faz o esboço num branch próprio (`esboco/027-noite-das-fantasias`) e não publica nada.
 - **O que mostrar, com o motor de verdade e só com `?esboco=fantasias`** (código em `src/esboco/`, o jogo nunca carrega):
   - o visual do mundo: o entardecer e a noite, a praça com a abóbora gigante, a rua das casinhas tortas, o bosque das lanternas, a horta;
-  - os moradores fantasiados (Vovó Zuleica com o Tufinho, Conde Dudu, Lili, Bento, Seu Jerônimo) e os bichos fofos;
+  - os moradores fantasiados (Vovó Zuleica com o Tufinho, Conde Dudu, Lulu, Bento, Seu Jerônimo) e os bichos fofos;
   - uma amostra de cada "além dos cubos" que mais pesa na decisão: a vassoura-patinete e o Trem das Risadas, em foto ou vídeo curto;
   - a música e os sons, num trecho para ouvir.
 - **As fotos:**
