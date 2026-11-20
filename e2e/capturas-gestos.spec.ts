@@ -1,6 +1,6 @@
 import { mkdirSync } from 'node:fs';
 import { test, type Browser, type Page } from '@playwright/test';
-import { abrir, irPara, MORROS, porAmigos } from './achar-amigo-palco';
+import { irPara, porAmigos } from './achar-amigo-palco';
 
 /**
  * Spec 034 (T11): os ícones dos gestos no jogo (a direção A reforçada, aprovada pelo dono em
@@ -93,8 +93,10 @@ const abrirGestos = async (page: Page) => {
   await esperarAssentar(page);
 };
 /**
- * Rola até `id` ficar no meio, tocando no vizinho (como `rolarAte` de roleta-palco, com prazos
- * longos: na tela de 2× do SwiftShader, com outro teste rodando junto, um toque passa de 10 s).
+ * Rola até `id` ficar no meio, pelas setas do teclado. Não pelo toque, como `rolarAte` de
+ * roleta-palco: na tela de 2× do SwiftShader, com outro teste rodando junto, um quadro passa de
+ * segundos, o toque chega à roleta com mais de 600 ms entre encostar e soltar e vira um arraste
+ * parado (a fileira não anda). Aqui só se tiram fotos; o toque é conferido nos testes da roleta.
  */
 async function rolarDevagar(page: Page, id: string) {
   const meio = () =>
@@ -111,10 +113,9 @@ async function rolarDevagar(page: Page, id: string) {
     const m = itens.indexOf(await meio());
     if (m === i) return;
     const d = (((i - m) % n) + n) % n;
-    const vizinho = itens[(((m + (d <= n / 2 ? 1 : -1)) % n) + n) % n];
-    const el = page.locator(`[data-roleta].aberta .item[data-item="${vizinho}"]`).first();
-    if (await page.evaluate(() => matchMedia('(pointer: coarse)').matches)) await el.tap({ timeout: 90_000 });
-    else await el.click({ timeout: 90_000 });
+    const lado = d <= n / 2 ? 1 : -1;
+    const vizinho = itens[(((m + lado) % n) + n) % n];
+    await page.keyboard.press(lado > 0 ? 'ArrowRight' : 'ArrowLeft');
     await page.waitForFunction(
       (v) => document.querySelector<HTMLElement>('[data-roleta].aberta')?.dataset.meio === v,
       vizinho,
@@ -129,7 +130,8 @@ const nivel = (page: Page, n: number) =>
 
 for (const t of TELAS)
   test(`gestos no jogo: ${t.nome}`, async ({ browser }) => {
-    test.setTimeout(t.todos ? 1_200_000 : 600_000);
+    // no SwiftShader, com outros testes rodando junto, a 0 a 1 quadro por segundo
+    test.setTimeout(t.todos ? 1_800_000 : 1_200_000);
     mkdirSync(PASTA, { recursive: true });
     const ctx = await contexto(browser, t);
     const page = await ctx.newPage();
@@ -182,19 +184,32 @@ for (const t of TELAS)
   });
 
 test('carinhas dos amigos: o aceno de quem chama e o botão Chamar', async ({ browser }) => {
-  test.setTimeout(600_000);
+  test.setTimeout(1_200_000);
   mkdirSync(PASTA, { recursive: true });
-  for (const t of [TELAS[0], TELAS[3]]) {
+  // só no celular em pé (é onde o aceno e o botão ficam menores)
+  for (const t of [TELAS[0]]) {
     const ctx = await contexto(browser, t);
     const page = await ctx.newPage();
-    await abrir(page);
-    if (t.toque) await page.evaluate(() => document.body.classList.add('toque-ativo'));
-    const b = await irPara(page, MORROS, 0.6);
+    // na Vila (o mundo de sempre), na praça da entrada; os amigos de mentirinha seguem na tela
+    // (o quadro do núcleo local não traz ninguém), como no palco do achar-amigo
+    await entrar(page, t);
+    await page.evaluate(() => {
+      const w = window as unknown as { __amigosPostos?: unknown[] };
+      setInterval(() => {
+        if (w.__amigosPostos?.length) window.__brumaluz!.amigosDeTeste!(w.__amigosPostos as never);
+      }, 300);
+    });
+    const [x, , z] = await page.evaluate(() => window.__brumaluz!.posicao!);
+    const b = await irPara(page, [x, z], 0.6);
     await page.waitForTimeout(2500);
     // a Lia longe, do lado: a carinha presa na borda, chamando (com o aceno em cima)
     await porAmigos(page, b, [['lia', -1.6, 40]]);
     await page.waitForTimeout(2500);
-    await page.evaluate(() => window.__brumaluz!.acharAmigo!.chamado('lia'));
+    // o chamado dura 6 s, e a 1 quadro por segundo a foto passa disso: ele se repete a cada 2 s
+    await page.evaluate(() => {
+      window.__brumaluz!.acharAmigo!.chamado('lia');
+      setInterval(() => window.__brumaluz!.acharAmigo!.chamado('lia'), 2000);
+    });
     await page.waitForSelector('.carinha-amigo.chamando .mao', { state: 'visible', timeout: 20_000 });
     await page.waitForTimeout(500);
     await page.screenshot({ path: `${PASTA}/carinhas-${t.nome}.png` });
