@@ -18,7 +18,7 @@ import { tocarSomInterface } from './audio/somInterface';
 import { criarInterface, travarPonteiro } from './ui/interface';
 import { modoToque } from './ui/pixicones';
 import { armazemIndexedDB } from './jogo/indexeddb';
-import { SEMENTE_PADRAO_MUNDO, criarRepositorioMundos, type MetaMundo } from './jogo/mundos';
+import { criarRepositorioMundos, mundoParaAbrir, type MetaMundo } from './jogo/mundos';
 import { CSS_INVENTARIO, criarInventarioUI } from './ui/inventario';
 import { criarDicaMira } from './ui/dicaMira';
 import { CSS_CRIACAO, criarCriacao } from './ui/criacao';
@@ -45,7 +45,7 @@ import { criarDiario, temObras } from './jogo/diario';
 import { ativarTema } from './temas/ativar';
 import { povoadoDoTema, tema } from './temas/ativo';
 import { TEMA_PADRAO, temaExiste } from './temas';
-import { limparRastrosDosTemas } from './personagem/rastros';
+import { esquecerMundos, limparRastrosDosTemas } from './personagem/rastros';
 import { CORES_MARCADOR, type Marcador } from './jogo/mapa';
 import type { DadosMundo } from './jogo/mundos';
 import { normalizarCodigo } from './jogo/codigos';
@@ -85,9 +85,15 @@ async function iniciar(app: HTMLElement): Promise<void> {
   // vez só (o personagem e as preferências ficam). Falhando, o jogo segue com o que tiver.
   const apagados = await repo.prepararFormato().catch(() => 0);
   if (apagados > 0) avisoMundosNovos = 'Os mundos começaram de novo! Bora construir?';
-  // spec 034: sem rastro do que saiu com os quatro temas (fantasias e lembranças do aparelho)
+  // spec 034 (decisão do dono, 19 nov 2026): os mundos dos quatro temas que saíram e os sem tema
+  // (que abriam como Bruma e Luz) são apagados, sem aviso (a criança não lê; o mundo some da
+  // lista). Antes de `?sala` e `?mundo`: o mundo pedido que saiu dá lugar ao próximo da lista,
+  // ou ao "Meu primeiro mundo" na Vila Neon. Falhando, o jogo segue com o que tiver.
+  const mundosQueSairam = await repo.apagarTemasQueSairam().catch(() => [] as string[]);
+  // e sem rastro do que saiu com eles (fantasias e lembranças do aparelho)
   try {
     limparRastrosDosTemas(window.localStorage, window.sessionStorage);
+    esquecerMundos(window.localStorage, mundosQueSairam);
   } catch {
     // sem armazenamento: nada guardado para limpar
   }
@@ -120,12 +126,7 @@ async function iniciar(app: HTMLElement): Promise<void> {
     // um mundo que foi para a nuvem abre lá (sem internet, fica um do aparelho)
     // (é o mundo desta criança: entra direto, sem a prévia do link)
     if (mundo?.nuvem && navigator.onLine) return irParaSala(mundo.nuvem, false, true);
-    if (!mundo) {
-      const lista = await repo.listar();
-      mundo =
-        lista.find((m) => !m.nuvem) ??
-        (await repo.criar('Meu primeiro mundo', SEMENTE_PADRAO_MUNDO, 'criativo', TEMA_PADRAO));
-    }
+    if (!mundo) mundo = await mundoParaAbrir(repo);
     dados = await repo.carregar(mundo.id);
   }
   // o tema do mundo vale para a página inteira: aparência, nomes e terreno

@@ -14,6 +14,7 @@
  * Ficam com a criança as moedinhas, o XP, os pontos e o nível (`terrario:alma-crianca`): são
  * dela, não do mundo.
  */
+import { TEMAS_QUE_SAIRAM } from '../temas/tipos';
 import { CHAVE_ANTERIOR, CHAVE_BRILHOU } from '../ui/abaFantasias';
 import { CHAVE_MUNDO_NOVO, CHAVE_SUGERIDAS } from '../ui/sugestaoFantasia';
 import {
@@ -23,13 +24,7 @@ import {
   type Armazenamento,
 } from './persistencia';
 
-/** Os quatro temas que saíram do jogo na spec 034. */
-export const TEMAS_QUE_SAIRAM: readonly string[] = [
-  'bruma-e-luz',
-  'planeta-vivo',
-  'mata-encantada',
-  'era-dos-dinos',
-];
+export { TEMAS_QUE_SAIRAM };
 /** As fantasias desses temas (o catálogo não tem mais). */
 export const FANTASIAS_QUE_SAIRAM: readonly string[] = [
   'dino',

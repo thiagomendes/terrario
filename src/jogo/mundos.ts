@@ -1,5 +1,6 @@
 import type { EdicoesExportadas } from '../world/edicoes';
 import { TEMA_PADRAO } from '../temas';
+import { TEMAS_QUE_SAIRAM } from '../temas/tipos';
 
 export type ModoJogo = 'criativo' | 'sobrevivencia';
 
@@ -14,7 +15,7 @@ export interface MetaMundo {
   miniatura?: string;
   /**
    * Tema visual do mundo. Spec 034: todo mundo novo nasce com ele gravado; os antigos sem tema
-   * eram do Bruma e Luz, que saiu do jogo.
+   * eram do Bruma e Luz, que saiu do jogo (e são apagados ao abrir: `apagarTemasQueSairam`).
    */
   tema?: string;
   /** Versão do mundo: 2 = criado já com povoados (mundos antigos não têm). */
@@ -143,6 +144,30 @@ export interface RepositorioMundos {
    * Devolve quantos mundos foram apagados (0 na maioria das vezes). Chamar antes de listar.
    */
   prepararFormato(): Promise<number>;
+  /**
+   * Spec 034: apaga os mundos dos quatro temas que saíram e os sem tema (que abriam como Bruma
+   * e Luz), inclusive as entradas que apontam para a nuvem; tirados do índice primeiro, depois
+   * os dados. Um tema desconhecido (nem dos quatro, nem dos cinco) fica. Não muda o formato.
+   * Devolve os ids apagados. Chamar logo depois de `prepararFormato`.
+   */
+  apagarTemasQueSairam(): Promise<string[]>;
+}
+
+/**
+ * O mundo que abre quando nenhum foi pedido (ou o pedido não existe mais, como o de um tema
+ * que saiu): o mais recente do aparelho, ou o "Meu primeiro mundo", que nasce na Vila Neon.
+ */
+export async function mundoParaAbrir(repo: RepositorioMundos): Promise<MetaMundo> {
+  const lista = await repo.listar();
+  return (
+    lista.find((m) => !m.nuvem) ??
+    (await repo.criar('Meu primeiro mundo', SEMENTE_PADRAO_MUNDO, 'criativo', TEMA_PADRAO))
+  );
+}
+
+/** Spec 034: o mundo é de um tema que saiu do jogo (ou não tem tema, e abria como Bruma). */
+export function mundoDeTemaQueSaiu(m: Pick<MetaMundo, 'tema'>): boolean {
+  return typeof m.tema !== 'string' || m.tema === '' || TEMAS_QUE_SAIRAM.includes(m.tema);
 }
 
 export function criarRepositorioMundos(
@@ -243,6 +268,15 @@ export function criarRepositorioMundos(
       await armazem.remover(CHAVE_INDICE);
       await armazem.gravar(CHAVE_FORMATO, FORMATO_MUNDOS);
       return apagados;
+    },
+    async apagarTemasQueSairam() {
+      const lista = await indice();
+      const saem = lista.filter(mundoDeTemaQueSaiu).map((m) => m.id);
+      if (!saem.length) return [];
+      // o índice primeiro: se a página fechar no meio, nenhum mundo fica listado sem dados
+      await gravarIndice(lista.filter((m) => !saem.includes(m.id)));
+      for (const id of saem) await armazem.remover(chaveDados(id));
+      return saem;
     },
   };
   return repo;

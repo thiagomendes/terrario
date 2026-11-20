@@ -21,6 +21,29 @@ export type IdTema =
   | 'doce-reino'
   | 'exploracao-lunar';
 
+/**
+ * Os ids dos cinco temas (dado puro: o servidor confere com ele o tema de um mundo novo). A
+ * ordem dos cartões fica em `src/temas/index.ts`.
+ */
+export const IDS_TEMAS: readonly IdTema[] = [
+  'vila-neon',
+  'cidade-grande',
+  'rancho-alegre',
+  'doce-reino',
+  'exploracao-lunar',
+];
+
+/**
+ * Spec 034: os quatro temas que saíram do jogo. Os mundos salvos neles são apagados (no
+ * aparelho e na nuvem) e o que a criança ganhou neles não deixa rastro.
+ */
+export const TEMAS_QUE_SAIRAM: readonly string[] = [
+  'bruma-e-luz',
+  'planeta-vivo',
+  'mata-encantada',
+  'era-dos-dinos',
+];
+
 export type Rgb = readonly [number, number, number];
 /** Pixel RGBA 0..255 de um tile. */
 export type Px = [number, number, number, number];

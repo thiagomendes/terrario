@@ -2,9 +2,12 @@ import { describe, expect, it } from 'vitest';
 import {
   armazemMemoria,
   criarRepositorioMundos,
+  FORMATO_MUNDOS,
   limparNomeMundo,
+  mundoParaAbrir,
   normalizarDados,
   sementeDeTexto,
+  type MetaMundo,
 } from '../../src/jogo/mundos';
 
 function repo() {
@@ -131,5 +134,129 @@ describe('formato dos mundos do aparelho', () => {
     await armazem.gravar('mundos', 'lixo');
     expect(await r.prepararFormato()).toBe(0);
     expect(await r.listar()).toEqual([]);
+  });
+});
+
+describe('spec 034: os mundos dos quatro temas que saíram', () => {
+  const NOVE = [
+    'bruma-e-luz',
+    'planeta-vivo',
+    'mata-encantada',
+    'era-dos-dinos',
+    'vila-neon',
+    'cidade-grande',
+    'rancho-alegre',
+    'doce-reino',
+    'exploracao-lunar',
+  ];
+  const meta = (id: string, tema: unknown, extra: Partial<MetaMundo> = {}): MetaMundo =>
+    ({
+      id,
+      nome: `Mundo ${id}`,
+      semente: 1,
+      modo: 'criativo',
+      criadoEm: 1,
+      jogadoEm: 100 - id.length,
+      versao: 2,
+      ...(tema === undefined ? {} : { tema }),
+      ...extra,
+    }) as MetaMundo;
+
+  /** Um aparelho com um mundo de cada um dos nove temas, sem tema, estranho e da nuvem. */
+  async function aparelho() {
+    const operacoes: string[] = [];
+    const base = armazemMemoria();
+    const armazem = {
+      ...base,
+      gravar: async (k: string, v: unknown) => {
+        operacoes.push(`gravar ${k}`);
+        await base.gravar(k, v);
+      },
+      remover: async (k: string) => {
+        operacoes.push(`remover ${k}`);
+        await base.remover(k);
+      },
+    };
+    const lista = [
+      ...NOVE.map((t) => meta(t, t)),
+      meta('sem-tema', undefined),
+      meta('tema-vazio', ''),
+      meta('tema-numero', 7),
+      meta('estranho', 'tema-que-nao-existe'),
+      meta('nuvem-dinos', 'era-dos-dinos', { nuvem: 'ABCD-EFGH-12' }),
+      meta('nuvem-doce', 'doce-reino', { nuvem: 'WXYZ-QRST-34' }),
+      meta('nuvem-sem-tema', undefined, { nuvem: 'JKLM-NOPQ-56' }),
+    ];
+    await base.gravar('formato', FORMATO_MUNDOS);
+    await base.gravar('mundos', lista);
+    for (const m of lista) await base.gravar(`mundo:${m.id}`, { versao: 1, edicoes: {} });
+    return { base, operacoes, r: criarRepositorioMundos(armazem, () => 5000) };
+  }
+
+  it('saem os quatro, os sem tema e as entradas da nuvem deles; ficam os cinco e o estranho', async () => {
+    const { base, operacoes, r } = await aparelho();
+    expect(await r.prepararFormato()).toBe(0);
+    const saiu = await r.apagarTemasQueSairam();
+    expect(saiu.sort()).toEqual(
+      [
+        'bruma-e-luz',
+        'planeta-vivo',
+        'mata-encantada',
+        'era-dos-dinos',
+        'sem-tema',
+        'tema-vazio',
+        'tema-numero',
+        'nuvem-dinos',
+        'nuvem-sem-tema',
+      ].sort(),
+    );
+    const ficaram = (await r.listar()).map((m) => m.id).sort();
+    expect(ficaram).toEqual(
+      [
+        'vila-neon',
+        'cidade-grande',
+        'rancho-alegre',
+        'doce-reino',
+        'exploracao-lunar',
+        'estranho',
+        'nuvem-doce',
+      ].sort(),
+    );
+    for (const id of saiu) expect(base.dados.has(`mundo:${id}`), id).toBe(false);
+    for (const id of ficaram) expect(base.dados.has(`mundo:${id}`), id).toBe(true);
+    // o índice primeiro, depois os dados; o formato não muda (mudar apagaria todos)
+    const indice = operacoes.indexOf('gravar mundos');
+    expect(indice).toBeGreaterThanOrEqual(0);
+    expect(operacoes.slice(0, indice).some((o) => o.startsWith('remover'))).toBe(false);
+    expect(operacoes.filter((o) => o.startsWith('remover'))).toHaveLength(saiu.length);
+    expect(operacoes).not.toContain('gravar formato');
+    expect(await base.obter('formato')).toBe(FORMATO_MUNDOS);
+  });
+
+  it('rodar de novo não muda nada', async () => {
+    const { operacoes, r } = await aparelho();
+    await r.apagarTemasQueSairam();
+    const antes = operacoes.length;
+    expect(await r.apagarTemasQueSairam()).toEqual([]);
+    expect(operacoes).toHaveLength(antes);
+  });
+
+  it('o mundo aberto que saiu dá lugar ao próximo, ou ao "Meu primeiro mundo" na Vila Neon', async () => {
+    const { r } = await aparelho();
+    await r.apagarTemasQueSairam();
+    // o pedido (?mundo=bruma-e-luz) não existe mais: abre o mais recente que ficou
+    expect(await r.obter('bruma-e-luz')).toBeNull();
+    const proximo = await mundoParaAbrir(r);
+    expect(proximo.nuvem).toBeUndefined();
+    expect(proximo.tema).not.toBe('bruma-e-luz');
+    expect((await r.listar()).map((m) => m.id)).toContain(proximo.id);
+    // um aparelho só com mundos que saíram fica vazio e ganha o primeiro mundo na Vila Neon
+    const so = armazemMemoria();
+    await so.gravar('formato', FORMATO_MUNDOS);
+    await so.gravar('mundos', [meta('a', 'mata-encantada'), meta('b', undefined)]);
+    const r2 = criarRepositorioMundos(so);
+    expect((await r2.apagarTemasQueSairam()).sort()).toEqual(['a', 'b']);
+    const primeiro = await mundoParaAbrir(r2);
+    expect(primeiro).toMatchObject({ nome: 'Meu primeiro mundo', tema: 'vila-neon' });
   });
 });
