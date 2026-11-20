@@ -12,7 +12,9 @@
  * As mãos (dono, 20 nov, depois da 034): as dos bonecos do jogo não têm dedos, são bolinhas, e
  * as dos ícones também. Sem a palma aberta do tchau, as mãos do aplauso e o dedo do apontar,
  * quem diz o gesto é o braço e a pose, os risquinhos de movimento (o balanço do tchau, o "plac"
- * do aplauso, a setinha do apontar) e o olhar. Folha de prova: `capturas-034/maos/`.
+ * do aplauso, a setinha do apontar) e o olhar. No tchau e no aplauso o braço dobra no cotovelo
+ * (`dobrados`): com o braço reto, a mão-bolinha no peito parecia um objeto e o tchau parecia
+ * jogar uma bola. Folha de prova: `capturas-034/maos/`.
  *
  * O boneco tem as medidas do plano do boneco (`personagem/boneco.ts`: cabeça 0,72 × 0,68, tronco
  * 0,46 × 0,42, perna 0,24, braço até a mão 0,27, mão 0,085) e as cores do boneco padrão (pele,
@@ -117,10 +119,10 @@ interface Pose {
   fundo?: string;
   frente?: string;
   /**
-   * De frente: o braço (0 ou 1) com a mão-bolinha maior que a de sempre (o tamanho, 1 = a do
-   * boneco), para a mão do tchau ler a 48 px. Nenhuma mão tem dedo: as dos bonecos são bolinhas.
+   * De frente: braços dobrados no cotovelo, no lugar do braço reto (o da esquerda e o da
+   * direita; `null` deixa o reto). Nenhuma mão tem dedo: as dos bonecos são bolinhas.
    */
-  maoGrande?: [0 | 1, number];
+  dobrados?: [Dobrado | null, Dobrado | null];
   /** Quadro: o meio (x, y) e a meia altura mostrada, em unidades. */
   quadro: { x: number; y: number; meia: number };
 }
@@ -158,25 +160,77 @@ function rot(graus: number, x: number, y: number): string {
   return `rotate(${graus.toFixed(2)} ${x} ${y})`;
 }
 
-/** O meio da mão-bolinha no braço (caído, no espaço do ombro): a maior sai um tiquinho do punho. */
-const meioDaMao = (k: number) => -0.275 - (k - 1) * 0.07;
-
 /**
  * O braço (no ombro, caído para baixo): a manga, o punho e a mão, a bolinha do boneco (sem dedo
- * nenhum, como no jogo), de tamanho `kMao` (1 = a de sempre).
+ * nenhum, como no jogo).
  */
-function braco(longe = false, kMao = 1): string {
+function braco(longe = false): string {
   const manga = longe ? escurecer(ROUPA, 0.18) : ROUPA;
   const pele = longe ? escurecer(PELE, 0.12) : PELE;
-  const y = meioDaMao(kMao);
   return (
     caixa(-0.068, -0.235, 0.068, 0.04, 0.06, manga) +
     caixa(-0.074, -0.24, 0.074, -0.19, 0.02, escurecer(manga, 0.22)) +
-    bola(0, y, Number((0.088 * kMao).toFixed(3)), pele) +
-    (kMao === 1
-      ? `<circle cx="-0.025" cy="-0.25" r="0.028" fill="#ffffff" opacity="0.45"/>`
-      : `<circle cx="${(-0.025 * kMao).toFixed(3)}" cy="${(y + 0.025 * kMao).toFixed(3)}" r="${(0.028 * kMao).toFixed(3)}" fill="#ffffff" opacity="0.45"/>`)
+    bola(0, -0.275, 0.088, pele) +
+    `<circle cx="-0.025" cy="-0.25" r="0.028" fill="#ffffff" opacity="0.45"/>`
   );
+}
+
+/** Um braço dobrado (de frente, no espaço do tronco): o cotovelo, o meio da mão e o tamanho dela. */
+interface Dobrado {
+  cotovelo: Ponto;
+  mao: Ponto;
+  /** O tamanho da mão-bolinha (1 = a do boneco). */
+  k?: number;
+  /** Os risquinhos curvos do tchau dos dois lados da mão (o vai e volta): o vão até a mão. */
+  balanco?: number;
+}
+
+/** Uma peça reta (manga) de `a` até `b`, com as pontas arredondadas passando um tiquinho. */
+function segmento(a: Ponto, b: Ponto, larg: number, cor: string, ext: number): string {
+  const dx = b[0] - a[0];
+  const dy = b[1] - a[1];
+  const L = Math.hypot(dx, dy);
+  const giro = (Math.atan2(-dx, dy) * 180) / Math.PI;
+  const r = larg / 2;
+  return `<g transform="translate(${a[0].toFixed(3)} ${a[1].toFixed(3)}) rotate(${giro.toFixed(2)})">${caixa(-r, -ext, r, L + ext, Math.min(r, 0.06), cor)}</g>`;
+}
+
+/**
+ * O braço dobrado no cotovelo (de frente, na frente do corpo): o braço e o antebraço da manga,
+ * que se emendam numa peça só (os contornos de dentro somem), o punho e a mão-bolinha.
+ */
+function bracoDobrado(ombro: Ponto, d: Dobrado): string {
+  const k = d.k ?? 1;
+  const r = 0.088 * k;
+  const [mx, my] = d.mao;
+  const [cx, cy] = d.cotovelo;
+  const L = Math.hypot(mx - cx, my - cy);
+  const ux = (mx - cx) / L;
+  const uy = (my - cy) / L;
+  // o pulso: onde o punho encosta na mão
+  const pulso: Ponto = [mx - ux * (r * 0.8 + 0.02), my - uy * (r * 0.8 + 0.02)];
+  const LARG = 0.136;
+  let s =
+    segmento(ombro, d.cotovelo, LARG, ROUPA, 0.03) +
+    segmento(d.cotovelo, pulso, LARG, ROUPA, 0.03) +
+    // a emenda do cotovelo: a manga por cima dos contornos de dentro
+    bola(cx, cy, Number((LARG / 2 - 0.012).toFixed(3)), ROUPA, false) +
+    segmento(
+      [pulso[0] - ux * 0.02, pulso[1] - uy * 0.02],
+      [pulso[0] + ux * 0.02, pulso[1] + uy * 0.02],
+      0.148,
+      escurecer(ROUPA, 0.22),
+      0.012,
+    ) +
+    maoBola(mx, my, PELE, k);
+  if (d.balanco) {
+    // o tchau: um risquinho curvo de cada lado da mão, finos e sem contorno (com contorno, ou
+    // perto demais, a 48 px eles grudavam na mão e viravam uma corneta)
+    const arco = (dx: number, h: number) =>
+      `<path d="M${(mx + dx).toFixed(3)} ${(my + h).toFixed(3)} Q${(mx + dx + Math.sign(dx) * h * 0.6).toFixed(3)} ${my.toFixed(3)} ${(mx + dx).toFixed(3)} ${(my - h).toFixed(3)}" fill="none" stroke="${MARCA}" stroke-width="2.3" stroke-linecap="round" ${UNID}/>`;
+    s += arco(-(r + d.balanco), 0.11) + arco(r + d.balanco, 0.11);
+  }
+  return s;
 }
 
 function rosto(p: Pose): string {
@@ -315,8 +369,11 @@ function boneco(p: Pose): string {
       s += `<g transform="${rot(lado * ang, x, 0.34)}">${caixa(x - 0.085, 0.1, x + 0.085, 0.36, 0.035, CALCA)}${caixa(x - 0.11, 0, x + 0.11, 0.135, 0.055, SAPATO)}${brilho(x - 0.08, 0.095, x + 0.06, 0.12, 0.01, 0.2)}</g>`;
     }
     s += `<g transform="${rot(tronco, 0, 0.34)}">`;
-    const bracoFrente = (lado: -1 | 1, ang: number, k: number) =>
-      `<g transform="translate(${lado * 0.28} 0.68) ${`rotate(${(lado * ang).toFixed(2)})`} scale(1 ${k})">${braco(false, p.maoGrande?.[0] === (lado < 0 ? 0 : 1) ? p.maoGrande[1] : 1)}</g>`;
+    const bracoFrente = (lado: -1 | 1, ang: number, k: number) => {
+      const d = p.dobrados?.[lado < 0 ? 0 : 1];
+      if (d) return bracoDobrado([lado * 0.28, 0.66], d);
+      return `<g transform="translate(${lado * 0.28} 0.68) ${`rotate(${(lado * ang).toFixed(2)})`} scale(1 ${k})">${braco(false)}</g>`;
+    };
     // os braços para o alto passam atrás da cabeça (no jogo também)
     const atras = (ang: number) => ang > 120;
     if (atras(b0)) s += bracoFrente(-1, b0, k0);
@@ -504,7 +561,7 @@ function chapeu(x: number, y: number, giro: number, k = 1): string {
 }
 
 /** Os risquinhos do "plac": traços curtos saindo para fora em volta de (x, y). */
-function plac(x: number, y: number, r0: number, r1: number, angulos: number[]): string {
+function plac(x: number, y: number, r0: number, r1: number, angulos: number[], larg = 2.4): string {
   let s = '';
   for (const g of angulos) {
     const a = (g * Math.PI) / 180;
@@ -513,7 +570,7 @@ function plac(x: number, y: number, r0: number, r1: number, angulos: number[]): 
     s += traco(
       `M${(x + c * r0).toFixed(3)} ${(y + sn * r0).toFixed(3)} L${(x + c * r1).toFixed(3)} ${(y + sn * r1).toFixed(3)}`,
       LARANJA,
-      2.4,
+      larg,
     );
   }
   return s;
@@ -576,30 +633,23 @@ function comObjetos(
 
 // ---------------------------------------------------------------------------- as poses
 const POSES: Record<IdGesto, Pose> = {
-  // o braço levantado de lado, a mão-bolinha no alto e os risquinhos do tchau balançando dos
-  // dois lados dela (a mão é a do boneco, sem dedo: quem diz "tchau" é o braço e o balanço)
-  acenar: comObjetos(
-    {
-      vista: 'frente',
-      // o corpo se afasta da mão, para ela ficar solta no céu e não colar no rosto
-      tronco: -12,
-      bracos: [122, 10],
-      cabeca: -14,
-      boca: 'aberta',
-      maoGrande: [0, 1.35],
-      quadro: { x: -0.25, y: 0.8, meia: 0.88 },
-    },
-    (m) => {
-      // o meio da mão-bolinha
-      const [x, y] = m(0, -meioDaMao(1.35));
-      // as marquinhas do tchau: risquinhos curvos soltos da mão, finos e sem contorno (com
-      // contorno, ou perto demais, a 48 px eles grudavam na mão e viravam uma corneta)
-      const arco = (dx: number, r: number) =>
-        `<path d="M${x + dx} ${y + r} Q${x + dx + Math.sign(dx) * r * 0.6} ${y} ${x + dx} ${y - r}" fill="none" stroke="${MARCA}" stroke-width="2.3" stroke-linecap="round" ${UNID}/>`;
-      // só por fora: o risquinho entre a mão e a cabeça caía na bochecha e virava mancha
-      return { frente: arco(-0.25, 0.13) + arco(-0.38, 0.2) };
-    },
-  ),
+  // o tchau clássico: o braço sai de lado, o cotovelo para fora e o antebraço em pé, a
+  // mão-bolinha no alto (sem dedo) e um risquinho de cada lado dela (o vai e volta). Com o
+  // braço reto e os risquinhos só de um lado, parecia jogar uma bola.
+  acenar: {
+    vista: 'frente',
+    // o corpo se afasta da mão, para ela ficar solta no céu e não colar no rosto
+    tronco: -14,
+    cabeca: -16,
+    bracos: [0, 10],
+    boca: 'aberta',
+    // o cotovelo um pouco acima do ombro e a mão no alto (com o braço deitado e a mão na altura
+    // da bochecha, parecia mostrar o muque)
+    dobrados: [{ cotovelo: [-0.5, 0.76], mao: [-0.58, 1.04], k: 1.3, balanco: 0.1 }, null],
+    // o boneco inteiro dentro do desenho (com o quadro apertado, o cabelo terminava numa linha
+    // reta na borda da direita)
+    quadro: { x: 0.04, y: 0.84, meia: 1.0 },
+  },
   // em pé, a mão estendida para a frente apertando a mão do amigo, que balança
   cumprimentar: (() => {
     const base: Pose = {
@@ -617,7 +667,8 @@ const POSES: Record<IdGesto, Pose> = {
     const x = D / 2;
     return {
       ...base,
-      quadro: { x, y: 0.76, meia: 1.04 },
+      // com folga dos lados: a 75 px, o cabelo do amigo terminava cortado na borda
+      quadro: { x, y: 0.76, meia: 1.1 },
       frente:
         amigo(base, D) +
         traco(`M${x - 0.1} ${hy + 0.18} Q${x} ${hy + 0.25} ${x + 0.1} ${hy + 0.18}`, LARANJA, 2.2) +
@@ -634,7 +685,8 @@ const POSES: Record<IdGesto, Pose> = {
       boca: 'aberta',
       quadro: { x: 0.1, y: 0.77, meia: 0.84 },
     },
-    () => ({ frente: ondasSom(0.4, 0.99) }),
+    // as ondas com folga da mão e da boca (perto, nos tamanhos pequenos elas encostavam)
+    () => ({ frente: ondasSom(0.5, 0.99) }),
   ),
   // pulando de alegria, os braços para o alto e o confete caindo em volta
   comemorar: comObjetos(
@@ -644,13 +696,14 @@ const POSES: Record<IdGesto, Pose> = {
       bracos: [152, 152],
       pernas: [4, 4],
       boca: 'aberta',
-      quadro: { x: 0, y: 0.88, meia: 0.92 },
+      // um tiquinho mais alto: os dois confetes de cima saem de cima do cabelo (encostavam)
+      quadro: { x: 0, y: 0.94, meia: 0.99 },
     },
     () => ({
       fundo:
         confete(-0.6, 1.5, 30, ROSA) +
-        confete(-0.24, 1.72, -20, AZUL) +
-        confete(0.2, 1.74, 15, AMARELO, true) +
+        confete(-0.26, 1.8, -20, AZUL) +
+        confete(0.24, 1.82, 15, AMARELO, true) +
         confete(0.62, 1.5, -35, AMARELO) +
         confete(-0.74, 1.04, 70, AMARELO, true) +
         confete(0.76, 1.04, 20, ROSA) +
@@ -660,30 +713,24 @@ const POSES: Record<IdGesto, Pose> = {
         confete(0.52, 0.2, -15, AMARELO),
     }),
   ),
-  // as duas mãos-bolinha batendo na frente do peito (um tiquinho maiores, sem dedo) e os
-  // risquinhos do "plac" saindo de onde elas se encontram
-  aplaudir: comObjetos(
-    {
+  // as duas mãos-bolinha (sem dedo, da cor do rosto) lado a lado no alto do peito, com um
+  // vãozinho entre elas, os antebraços dobrando dos cotovelos até elas, e o "plac" subindo do
+  // vão. Juntas no meio do peito, sem braço chegando, pareciam um objeto (coco, biscoito).
+  aplaudir: (() => {
+    const MAO_Y = 0.56;
+    const MAO_X = 0.15;
+    return {
       vista: 'frente',
-      // os braços sobem mais que os do aplauso de dedos: as mãos-bolinha batem na altura do
-      // peito (mais baixo, em cima do cinto, pareciam botões da roupa)
-      bracos: [-74, -74],
       boca: 'aberta',
+      dobrados: [
+        { cotovelo: [-0.38, 0.45], mao: [-MAO_X, MAO_Y], k: 1.3 },
+        { cotovelo: [0.38, 0.45], mao: [MAO_X, MAO_Y], k: 1.3 },
+      ],
+      // três risquinhos curtos subindo do vão (sem encostar nas mãos nem no queixo)
+      frente: plac(0, MAO_Y, 0.06, 0.18, [60, 90, 120], 1.8),
       quadro: { x: 0, y: 0.78, meia: 0.84 },
-    },
-    (m) => {
-      const [, y] = m(0);
-      // uma por cima da outra e um tiquinho de lado (lado a lado, iguais, as duas bolinhas no
-      // peito pareciam parte da roupa); a de cima, a da frente
-      const k = 1.45;
-      return {
-        frente:
-          maoBola(-0.09, y - 0.04, escurecer(PELE, 0.06), k) +
-          maoBola(0.08, y + 0.04, PELE, k) +
-          plac(0, y, 0.32, 0.43, [145, 180, 215, 35, 0, -35]),
-      };
-    },
-  ),
+    } satisfies Pose;
+  })(),
   // o requebrado: um braço em cima, o outro na cintura, a perna para o lado e as notas
   dancar: comObjetos(
     {
@@ -710,12 +757,13 @@ const POSES: Record<IdGesto, Pose> = {
       bracos: [8, 90],
       olhar: 0.07,
       cabeca: -4,
-      quadro: { x: 0.5, y: 0.74, meia: 0.93 },
+      quadro: { x: 0.58, y: 0.74, meia: 1.05 },
     },
     (m) => {
       const [x, y] = m(1);
-      // a setinha começa logo depois da mão (um vão pequeno, para não grudar nela)
-      const ponta = x + 0.45;
+      // a setinha solta da mão, com um vão que ainda se vê a 48 px (rente, a mão, a seta e a
+      // estrela emendavam numa linha só, como uma varinha)
+      const ponta = x + 0.58;
       return {
         frente: maoBola(x, y) + seta(ponta, y, 1, 0.6) + estrela(ponta + 0.24, y, 0.21, 0.095, AMARELO),
       };
