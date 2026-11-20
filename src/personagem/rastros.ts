@@ -9,12 +9,16 @@
  * - `terrario:trilha-saida` (a medida da trilha dos testes de tela, na sessão): sai se for de
  *   um tema que saiu;
  * - `terrario:fantasia-sugerida` e `terrario:mundo-novo` guardam ids de mundo: os mundos
- *   apagados (os desses temas) saem delas por `esquecerMundos`, chamado por quem apaga.
+ *   apagados (os desses temas) saem delas por `esquecerMundos`, chamado por quem apaga;
+ * - `terrario:identidade`: o apelido que termina no complemento de um tema que saiu (o nome
+ *   sugerido da spec 011, como "Aventureira da Bruma") troca só esse final pelo da Vila Neon
+ *   ("Aventureira da Vila"; decisão do dono, 20 nov 2026). O resto da identidade não muda.
  *
  * Ficam com a criança as moedinhas, o XP, os pontos e o nível (`terrario:alma-crianca`): são
  * dela, não do mundo.
  */
 import { TEMAS_QUE_SAIRAM } from '../temas/tipos';
+import { CHAVE_IDENTIDADE, COMPLEMENTO_PADRAO } from '../cliente/identidade';
 import { CHAVE_TRILHA_SAIDA } from '../audio/trilha';
 import { CHAVE_ANTERIOR, CHAVE_BRILHOU } from '../ui/abaFantasias';
 import { CHAVE_MUNDO_NOVO, CHAVE_SUGERIDAS } from '../ui/sugestaoFantasia';
@@ -35,6 +39,22 @@ export const FANTASIAS_QUE_SAIRAM: readonly string[] = [
   'lanterneira',
 ];
 export { CHAVE_TRILHA_SAIDA };
+/**
+ * Os complementos do nome sugerido nos temas que saíram (spec 011), com o espaço da frente: só
+ * o apelido que termina exatamente num deles muda.
+ */
+export const FINAIS_QUE_SAIRAM: readonly string[] = [
+  ' da Bruma',
+  ' dos Dinos',
+  ' da Mata',
+  ' Estelar',
+];
+
+/** O apelido com o final de um tema que saiu ganha o final da Vila Neon; os outros ficam. */
+export function apelidoSemTemaQueSaiu(apelido: string): string {
+  const final = FINAIS_QUE_SAIRAM.find((f) => apelido.endsWith(f) && apelido.length > f.length);
+  return final ? `${apelido.slice(0, -final.length)} ${COMPLEMENTO_PADRAO}` : apelido;
+}
 
 function apagar(loja: Armazenamento, chave: string): void {
   const l = loja as Armazenamento & { removeItem?: (k: string) => void };
@@ -88,6 +108,16 @@ export function limparRastrosDosTemas(
       const anterior = lerJson(loja, CHAVE_ANTERIOR);
       if (objeto(anterior) && FANTASIAS_QUE_SAIRAM.includes(String(anterior.id)))
         apagar(loja, CHAVE_ANTERIOR);
+    } catch {
+      // idem
+    }
+    try {
+      const ident = lerJson(loja, CHAVE_IDENTIDADE);
+      if (objeto(ident) && typeof ident.apelido === 'string') {
+        const novo = apelidoSemTemaQueSaiu(ident.apelido);
+        if (novo !== ident.apelido)
+          loja.setItem(CHAVE_IDENTIDADE, JSON.stringify({ ...ident, apelido: novo }));
+      }
     } catch {
       // idem
     }

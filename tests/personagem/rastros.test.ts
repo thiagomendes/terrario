@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   CHAVE_TRILHA_SAIDA,
+  apelidoSemTemaQueSaiu,
   esquecerMundos,
   limparRastrosDosTemas,
 } from '../../src/personagem/rastros';
@@ -21,6 +22,7 @@ import {
 } from '../../src/ui/sugestaoFantasia';
 import { CHAVE_ALMA_CRIANCA, carregarPerfilAlma } from '../../src/personagem/almaCrianca';
 import { normalizarAlmaMundo, normalizarPerfilAlma } from '../../src/jogo/alma';
+import { CHAVE_IDENTIDADE } from '../../src/cliente/identidade';
 
 /** Spec 034 (T05): sem rastro do que a criança ganhou nos quatro temas que saíram. */
 function memoria(inicial: Record<string, string> = {}) {
@@ -96,6 +98,49 @@ describe('spec 034: os rastros dos quatro temas no aparelho', () => {
     const fica = memoria({ [CHAVE_TRILHA_SAIDA]: JSON.stringify({ tema: 'vila-neon' }) });
     limparRastrosDosTemas(null, fica.loja);
     expect(fica.dados.has(CHAVE_TRILHA_SAIDA)).toBe(true);
+  });
+
+  it('o apelido com o final de um tema que saiu troca só o final pelo da Vila', () => {
+    const casos: [string, string][] = [
+      ['Aventureira da Bruma', 'Aventureira da Vila'],
+      ['Explorador dos Dinos', 'Explorador da Vila'],
+      ['Fadinha da Mata', 'Fadinha da Vila'],
+      ['Astronauta Estelar', 'Astronauta da Vila'],
+      // o mesmo texto no meio, ou sem ser o final exato, fica
+      ['Bruma da Bruma', 'Bruma da Vila'],
+      ['Ana da Brumas', 'Ana da Brumas'],
+      ['Mata da Lua', 'Mata da Lua'],
+      ['Estelar', 'Estelar'],
+      ['Leo Estelar2', 'Leo Estelar2'],
+      ['Aventureira da Vila', 'Aventureira da Vila'],
+      ['Exploradora Lunar', 'Exploradora Lunar'],
+      ['', ''],
+    ];
+    for (const [antes, depois] of casos) expect(apelidoSemTemaQueSaiu(antes), antes).toBe(depois);
+  });
+
+  it('na limpeza, o apelido guardado ganha o final da Vila e o resto da identidade fica', () => {
+    const ident = { id: 'abc123', chave: 'k'.repeat(48), apelido: 'Aventureira da Bruma' };
+    const { dados, loja } = memoria({ [CHAVE_IDENTIDADE]: JSON.stringify(ident) });
+    limparRastrosDosTemas(loja);
+    expect(JSON.parse(dados.get(CHAVE_IDENTIDADE)!)).toEqual({
+      ...ident,
+      apelido: 'Aventureira da Vila',
+    });
+    // idempotente: a segunda passada não muda nada
+    const uma = dados.get(CHAVE_IDENTIDADE);
+    limparRastrosDosTemas(loja);
+    expect(dados.get(CHAVE_IDENTIDADE)).toBe(uma);
+    // o apelido sem o final de um tema que saiu não é regravado (nem a identidade estragada)
+    for (const guardado of [
+      JSON.stringify({ ...ident, apelido: 'Leo do Rancho' }),
+      '{estragada',
+      JSON.stringify({ id: 'x', chave: 'y' }),
+    ]) {
+      const m = memoria({ [CHAVE_IDENTIDADE]: guardado });
+      limparRastrosDosTemas(m.loja);
+      expect(m.dados.get(CHAVE_IDENTIDADE)).toBe(guardado);
+    }
   });
 
   it('os mundos apagados saem da sugestão de fantasia e do "mundo novo"', () => {
