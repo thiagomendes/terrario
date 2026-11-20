@@ -20,7 +20,9 @@ test.skip(!modoParidade, 'paridade só com PARIDADE=gravar ou PARIDADE=conferir'
 const PASTA = 'e2e/paridade';
 const ID_MUNDO = 'paridade';
 const SEMENTES = (process.env.PARIDADE_SEMENTES ?? '1337,42,7').split(',').map(Number);
-const TEMAS = (process.env.PARIDADE_TEMAS ?? 'bruma-e-luz,doce-reino').split(',');
+// spec 034: o Rancho Alegre no lugar do Bruma e Luz (que sai do jogo); tem a raposa que
+// come frutinhas e as três profissões no sítio
+const TEMAS = (process.env.PARIDADE_TEMAS ?? 'rancho-alegre,doce-reino').split(',');
 
 type Modo = 'criativo' | 'sobrevivencia';
 type Etapas = Record<string, unknown>;
@@ -53,6 +55,8 @@ interface Ajudantes {
   plataforma(raio: number): { cx: number; cz: number; y0: number };
   danos: { qtd: number; causa: string }[];
   eventos: string[];
+  /** Spec 034: o cansaço do relógio foi desligado antes do primeiro passo do núcleo. */
+  semCansacoDoRelogio?: boolean;
 }
 declare global {
   interface Window {
@@ -183,6 +187,25 @@ function instalarAjudantes(): void {
   for (const nome of ['morte', 'dormiu', 'povoado', 'comeu', 'domou', 'fundiu', 'trocou']) {
     window.addEventListener(`brumaluz:${nome}`, () => par.eventos.push(nome));
   }
+  // Spec 034: sem o cansaço do relógio. A exaustão crescia com o tempo de verdade (0,02 por
+  // segundo parado), e a saturação caía ou não conforme a máquina demorava (a 1 quadro por
+  // segundo, sem placa de vídeo, as sessões ficavam na beira da queda). Desligado assim que a
+  // cena liga o núcleo, antes do primeiro passo; pulos, golpes, danos e a cura continuam
+  // cansando (o cansaço do relógio é conferido nos testes de unidade da sobrevivência).
+  let cena: any;
+  Object.defineProperty(w, '__brumaluz', {
+    configurable: true,
+    get: () => cena,
+    set(v) {
+      cena = v;
+      // a conexão e o atalho existem quando a parte síncrona da criação da cena termina
+      queueMicrotask(() => {
+        if (typeof v?.relogioCansa !== 'function') return;
+        v.relogioCansa(false);
+        par.semCansacoDoRelogio = true;
+      });
+    },
+  });
 }
 /* eslint-enable @typescript-eslint/no-explicit-any */
 
@@ -252,9 +275,14 @@ async function abrirMundo(
     e.pausarDia = true;
     e.hora = 0.4;
     e.definirClima!('limpo');
-    return { tema: e.tema, modo: e.modo, semente: e.mundo?.semente };
+    return {
+      tema: e.tema,
+      modo: e.modo,
+      semente: e.mundo?.semente,
+      semCansaco: window.__par.semCansacoDoRelogio === true,
+    };
   });
-  expect(info).toEqual({ tema, modo, semente });
+  expect(info).toEqual({ tema, modo, semente, semCansaco: true });
   return { page, erros, fechar: () => ctx.close() };
 }
 
@@ -513,40 +541,64 @@ const SESSOES: Record<string, Sessao> = {
           e.invocar!('raposa', cx + 3.5, y, cz - 2.5);
           e.selecionarSlot!(3);
           await e.sincronizar?.();
-          // a raposa invocada (a mais perto da plataforma): no mundo em tempo real uma
-          // selvagem pode ter nascido por perto
+          // a raposa invocada (a mais perto da plataforma, em cima dela): no mundo em tempo
+          // real uma selvagem pode ter nascido por perto, até embaixo da plataforma
           const daPlataforma = () =>
             (e.criaturas!() ?? [])
-              .filter((c) => c.tipo === 'raposa')
+              .filter((c) => c.tipo === 'raposa' && Math.abs(c.y - y) < 1.5)
               .sort((a, b) => Math.hypot(a.x - cx, a.z - cz) - Math.hypot(b.x - cx, b.z - cz))[0];
-          for (let t = 0; t < 60; t++) {
+          // Spec 034: a raposa selvagem é curiosa e para a uns 2,75 blocos do jogador (de 2,25
+          // a 3,25). O jogador ia a 1,6 dela, e ela corria para trás (4,2 blocos por segundo)
+          // enquanto a mira virava: sem placa de vídeo, a 1 quadro por segundo, quase toda
+          // frutinha errava a raposa e as 60 acabavam. Agora o jogador fica na distância em que
+          // ela para, e a frutinha só vai com a raposa parada. Continuam no máximo 60
+          // frutinhas (cada uma confia com 45% no núcleo).
+          let frutinhas = 0;
+          for (let t = 0; t < 400 && frutinhas < 60; t++) {
             const r = daPlataforma();
-            if (!r) return false;
-            if (r.domada) return true;
+            if (!r) break;
+            if (r.domada) return { domou: true, frutinhas };
             const [ex, , ez] = e.posicao!;
             const dist = Math.hypot(r.x - ex, r.z - ez);
-            if (dist > 2.2 || dist < 1) {
+            if (dist > 3 || dist < 2.1) {
               const d = dist || 1;
-              const tx = Math.min(cx + 4.4, Math.max(cx - 3.4, r.x - ((r.x - ex) / d) * 1.6));
-              const tz = Math.min(cz + 4.4, Math.max(cz - 3.4, r.z - ((r.z - ez) / d) * 1.6));
+              const tx = Math.min(cx + 4.4, Math.max(cx - 3.4, r.x - ((r.x - ex) / d) * 2.5));
+              const tz = Math.min(cz + 4.4, Math.max(cz - 3.4, r.z - ((r.z - ez) / d) * 2.5));
               e.teleportar!(tx, tz, y);
               await window.__par.quadros(2);
+              continue;
             }
-            const [px, py, pz] = e.posicao!;
-            const agora = daPlataforma()!;
-            const dx = agora.x - px;
-            const dy = agora.y + 0.3 - py;
-            const dz = agora.z - pz;
-            e.mirarPonto!(px + dx, py + dy, pz + dz);
+            await window.__par.quadros(1);
+            const agora = daPlataforma();
+            if (!agora || Math.hypot(agora.x - r.x, agora.z - r.z) > 0.05) continue;
+            e.mirarPonto!(agora.x, agora.y + 0.3, agora.z);
             await window.__par.quadros(1);
             e.controleDireto!.usar();
+            frutinhas++;
             await window.__par.quadros(1);
           }
-          return false;
+          const r = daPlataforma();
+          if (r?.domada) return { domou: true, frutinhas };
+          // o que se via quando não deu (para achar a causa)
+          return {
+            domou: false,
+            frutinhas,
+            plataforma: [cx, y, cz],
+            jogador: e.posicao,
+            raposas: (e.criaturas!() ?? [])
+              .filter((c) => c.tipo === 'raposa')
+              .map((c) => [
+                Math.round(c.x * 10) / 10,
+                Math.round(c.y * 10) / 10,
+                Math.round(c.z * 10) / 10,
+                c.domada,
+              ]),
+          };
         },
         { cx, cz, y },
       );
-      expect(domou, 'a raposa não confiou no jogador').toBe(true);
+      console.log(`construir: a raposa confiou = ${domou.domou}, frutinhas ${domou.frutinhas}`);
+      expect(domou.domou, `a raposa não confiou no jogador ${JSON.stringify(domou)}`).toBe(true);
       await page.evaluate(
         ({ cx, cz, y }) => window.__brumaluz!.teleportar!(cx + 0.5, cz + 0.5, y),
         { cx, cz, y },

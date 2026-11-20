@@ -10,13 +10,23 @@ docker compose -f docker/compose.yaml run --rm workspace sh -lc 'PARIDADE=gravar
 docker compose -f docker/compose.yaml run --rm workspace sh -lc 'PARIDADE=conferir npx playwright test e2e/paridade.spec.ts --workers=1 --reporter=list'
 ```
 
+Na nuvem (Claude Code na web, sem Docker e sem placa de vídeo), com o Chromium do ambiente:
+
+```sh
+E2E_CHROMIUM=/opt/pw-browsers/chromium PARIDADE=conferir npx playwright test e2e/paridade.spec.ts --workers=1 --reporter=line --trace off
+```
+
 `PARIDADE_SESSOES=construir,itens`, `PARIDADE_SEMENTES=42` e `PARIDADE_TEMAS=doce-reino`
 limitam o que roda. Um arquivo por sessão × semente × tema: `<sessão>-<semente>-<tema>.json`
-(sementes 1337, 42 e 7; temas `bruma-e-luz` e `doce-reino`).
+(sementes 1337, 42 e 7; temas `rancho-alegre` e `doce-reino`; até a spec 034 eram
+`bruma-e-luz` e `doce-reino`).
 
 ## Como cada sessão começa
 
 - Mundo novo gravado direto no IndexedDB do jogo (semente, tema e modo conhecidos), aberto por `?mundo=paridade`.
+- Spec 034: assim que a cena liga o núcleo (antes do primeiro passo), o atalho de teste
+  `relogioCansa(false)` desliga o cansaço que vem do relógio na sobrevivência (ver
+  "Regravações"). Pulos, golpes, danos e a cura continuam cansando.
 - Assim que fica pronto: tela de título escondida, `pausarDia = true`, `hora = 0,4` e clima `limpo`.
 - Quase tudo acontece numa **plataforma** de pedra (11 × 11, borda de vidro com 2 de altura),
   8 blocos acima do ponto mais alto do terreno em volta do nascimento. Assim árvores, água e
@@ -54,7 +64,10 @@ salvamento entra só a parte determinística:
 
 ## O que foi deixado de fora, e por quê
 
-- **Exaustão:** cresce com o tempo real parado (0,02 por segundo), então depende de quanto a sessão demorou.
+- **Exaustão:** cresce com o tempo real parado (0,02 por segundo), então depende de quanto a
+  sessão demorou. Desde a spec 034 o cansaço do relógio fica desligado nas sessões, e a
+  exaustão que sobra (pulos, golpes, danos, cura) é a mesma em toda rodada; ela continua fora
+  do retrato, mas a saturação e a fome que ela derruba entram.
 - **Posição e velocidade de itens no chão:** a física dos itens anda com o quadro; só a soma por item é estável.
 - **Posição do jogador e das criaturas:** dependem dos quadros; das criaturas entra só a contagem e se estão em lugar livre.
 - **Progresso e queima da fornalha:** andam com o tempo real; a sessão espera a fornalha apagar, quando os dois voltam a 0.
@@ -93,6 +106,36 @@ salvamento entra só a parte determinística:
   vez de 5 na etapa `meiaNoite` do `clima` (doce-reino), mas a gravação (duas rodadas iguais)
   e a conferência seguinte deram 5: é a virada da meia-noite caindo depois do retrato, não
   o nascimento. Regravadas com `PARIDADE=gravar PARIDADE_SEMENTES=1337`.
+
+- **Spec 034 (T00), as 36 regravadas, com o Rancho Alegre no lugar do Bruma e Luz:**
+  - **O Bruma sai:** o Bruma e Luz sai do jogo na 034, e as 18 sessões dele saem junto (os
+    `*-bruma-e-luz.json`). No lugar entra o Rancho Alegre, que tem a raposa (o cachorro do
+    sítio) domada com frutinhas e as três profissões no sítio, o povoado mais perto do nascer.
+  - **A causa da regravação:** na nuvem, sem placa de vídeo, o jogo roda a cerca de 1 quadro
+    por segundo e as sessões duram bem mais tempo de verdade. A exaustão crescia com o relógio
+    (0,02 por segundo parado, 0,05 andando) e a saturação cai 1 a cada 4 de exaustão: as
+    sessões `itens` e `trocas` ficavam na beira dessa queda e o retrato virava com a
+    velocidade da máquina. Medido no código de antes: as 18 gravações do Doce, conferidas
+    aqui, deram 13 de 18 (as 5 falhas eram só `saturacao` 5 → 4), e o Rancho e a Lua não
+    gravavam iguais duas vezes (`trocas` 1337 do Rancho e `itens` 7 da Lua, 4 numa rodada e 5
+    na outra).
+  - **O conserto:** o atalho de teste `relogioCansa` (`depurar`, só com os atalhos de
+    depuração ligados; nada muda para o jogador) desliga só o cansaço do relógio, logo que a
+    cena liga o núcleo. A regra do jogo fica nos testes de unidade
+    (`tests/jogo/sobrevivencia.test.ts`, "o relógio cansa", e `tests/nucleo/nucleo.test.ts`,
+    "o relógio cansa na sobrevivência").
+  - **A raposa de `construir`:** às vezes acabavam as 60 frutinhas sem ela confiar ("a raposa
+    não confiou no jogador", em sementes e temas variados). A raposa selvagem é curiosa e para
+    a uns 2,75 blocos do jogador (de 2,25 a 3,25); a sessão punha o jogador a 1,6 dela, ela
+    corria para trás (4,2 blocos por segundo) enquanto a mira virava, e a 1 quadro por segundo
+    quase toda frutinha errava. Agora o jogador fica a 2,5 dela (onde ela para), a frutinha só
+    vai com a raposa parada, e só conta a raposa em cima da plataforma (não uma selvagem
+    embaixo). O que se confere não mudou: no máximo 60 frutinhas, e cada uma que chega confia
+    com 45% no núcleo. Medido aqui: confiou com 1 a 5 frutinhas nas 6 sessões.
+  - **Regravadas** com `PARIDADE=gravar` (as 18 do Rancho e as 18 do Doce), no código de antes
+    da 034 com só o atalho a mais, e conferidas 36/36 duas vezes seguidas. As 18 do Doce saíram
+    iguais, byte a byte, às gravadas antes com placa de vídeo: lá as sessões eram rápidas e o
+    relógio não chegava a derrubar a saturação.
 
 `PARIDADE_OBTIDO=pasta` (com `PARIDADE=conferir`) grava o retrato de cada sessão conferida
 nessa pasta, para comparar com a gravação quando falha.

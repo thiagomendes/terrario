@@ -465,6 +465,12 @@ export interface EstadoDepuracao {
   silencioDoShow?: () => boolean;
   /** Spec 026 (testes e vídeos): o show tocando pula para `s` s desde o começo. */
   pularShow?: (s: number) => void;
+  /**
+   * Spec 034 (só a paridade): liga ou desliga o cansaço que vem do relógio na sobrevivência.
+   * Existe logo depois da conexão com o núcleo (antes do mundo ficar pronto), para a sessão
+   * desligar antes do primeiro passo.
+   */
+  relogioCansa?: (ligado: boolean) => void;
   /** Spec 026: os eventos do show que chegaram (testes) e o que o show mostra. */
   eventosVila?: (import('../nucleo/vila').EventoVila & { recebido: number })[];
   showVila?: () => ReturnType<import('./vila/show').ShowVila['estado']> | null;
@@ -1381,6 +1387,7 @@ export function criarCena(
     if (c.t !== 'jogador' && c.t !== 'transacao') cliente.sincronia.verificar();
     cliente.enviar(c);
   };
+  estado.relogioCansa = (ligado) => enviar({ t: 'depurar', d: { f: 'relogioCansa', ligado } });
   /** Última abertura de baú ou fornalha pedida (fechar antes de chegar cancela). */
   let ultimaAbertura = 0;
   function pedirUso(x: number, y: number, z: number, id = proximoId()): void {

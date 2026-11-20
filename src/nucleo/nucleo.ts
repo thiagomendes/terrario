@@ -455,6 +455,8 @@ export function criarNucleo(op: OpcoesNucleo) {
   let hora = dados && dados.hora >= 0 ? dados.hora : HORA_INICIAL;
   let horaAnterior = hora;
   let pausado = false;
+  /** Spec 034: o atalho de teste da paridade desliga o cansaço do relógio (ver `relogioCansa`). */
+  let relogioCansa = true;
   let n = 0;
 
   /** Blocos que mudaram desde o último quadro (para todos). */
@@ -2581,6 +2583,9 @@ export function criarNucleo(op: OpcoesNucleo) {
       case 'pularShow':
         vila?.pularShow(Number(d.s) || 0);
         break;
+      case 'relogioCansa':
+        relogioCansa = d.ligado !== false;
+        break;
     }
   }
 
@@ -2873,6 +2878,7 @@ export function criarNucleo(op: OpcoesNucleo) {
         correndo: j.tel.correndo,
         andando: j.tel.vel > 0.5,
         submerso: j.tel.submerso,
+        relogioCansa,
       });
       if (j.tel.y < -20) j.sobrevivencia.dano(100, 'queda', true);
     }

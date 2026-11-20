@@ -1,7 +1,7 @@
 {
   "sessao": "trocas",
-  "semente": 1337,
-  "tema": "bruma-e-luz",
+  "semente": 7,
+  "tema": "rancho-alegre",
   "modo": "sobrevivencia",
   "etapas": {
     "final": {
@@ -25,7 +25,7 @@
       },
       "conteineres": {"baus":{},"fornalhas":{}},
       "sobrevivencia": {"vida":20,"fome":20,"saturacao":5,"ar":10,"morto":false,"causa":null},
-      "spawn": {"x":50.5,"z":82.5},
+      "spawn": {"x":172.5,"z":-159.5},
       "dia": 0,
       "clima": "limpo",
       "diario": {
@@ -36,14 +36,22 @@
           "trocou:ferreiro": 5,
           "visitou:povoado": 1
         },
-        "concluidas": ["ferreiro","povoado","trocas"]
+        "concluidas": ["ferreiro","povoado","taiga","trocas"]
       },
       "itensSoltos": {},
       "criaturas": {"porTipo":{},"todasEmLugarValido":true}
     }
   },
   "notas": {
-    "povoado": {"id":"-1,2","cx":-90,"cz":330,"h":74,"moradores":4},
+    "povoado": {
+      "id": "1,-2",
+      "cx": 178,
+      "cz": -189,
+      "h": 64,
+      "moradores": 3,
+      "porteira": [169,-183],
+      "foraPorteira": [169,-184]
+    },
     "trocas": {
       "ferreiro": [true,true,true,true,true],
       "cozinheiro": [true,true,true,true,true,true,false],
