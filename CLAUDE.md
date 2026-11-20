@@ -9,7 +9,17 @@ Jogo voxel de brinquedo no navegador, para crianças (os testadores são os dois
   - escreve as specs e cuida da qualidade;
   - delega o código e a revisão a agentes e faz a ponte entre eles;
   - publica e avisa.
-  - **Decisões pequenas** (técnicas, ou de acabamento que não mudam regra nem tiram nada visível): o orquestrador decide pela recomendação e conta ao dono depois.
+  - **O orquestrador decide sozinho** (dono, 20 nov: "coisas pequenas e que não gerem tanto impacto, decida por mim; só me delegar as mais críticas"):
+    - o técnico (código, testes, arquitetura, ordem das tarefas dentro da spec);
+    - o acabamento visual e sonoro (detalhes de personagem, cor, enquadramento, ícone, texto curto, prévias);
+    - correções de defeito;
+    - e conta ao dono no boletim, numa linha.
+  - **Fica com o dono:**
+    - regra do jogo e economia;
+    - tirar algo visível que as crianças já usam;
+    - a ordem do backlog e specs novas;
+    - o que for legal, de dinheiro ou de segurança das crianças;
+    - a aprovação dos esboços e das decisões que mudam a cara de um mundo.
   - **Decisões do dono:** levar as alternativas com a recomendada primeiro.
 - **Agentes**: todos Opus 5.5 em esforço high, nunca Fable.
   - **Desenvolvedor:** implementa por fases.
