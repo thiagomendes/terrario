@@ -130,3 +130,14 @@ Saiu da spec (dono, 19 nov): vai com a casca nativa (020). A T12 não existe mai
     - a `main` caiu uma vez no celular porque a Ana não via a Bia: é o defeito da 035, que também existe na `main`.
   - `lojinha:107` (limite de 3400 ms): a `main` foi de 1145 a 3460 ms e passou do limite uma vez; a 034 ficou entre 2772 e 3011 ms.
   - Os três ficam no backlog com os testes antigos instáveis.
+- **(20 nov 2026) Na placa de vídeo, a 4ª rodada** (em 380fdae, 2 trabalhadores): 30 de 32 passaram.
+  - Resolvidos:
+    - `multiplayer:31` passou 3 de 3 (do link ao mundo pronto: 4,7 a 5,1 s);
+    - a roleta e o menu-roda no celular voltaram a passar com o `tap()`;
+    - `premium-presentes:207` ficou abaixo de 1 s pela primeira vez;
+    - passaram também gestos, roleta-mundos e os outros testes do guia.
+  - `guia-chegada:128` cai igual na `main`.
+  - `construcoes-protegidas:151` não é instabilidade:
+    - na 034, parou sempre no mesmo ponto, quando o Léo mira a parede da Bia (4 de 4 no dia);
+    - na `main`, cai em outro ponto e passa às vezes;
+    - a causa está sendo investigada: o teste foi para o Doce Reino nesta spec.
