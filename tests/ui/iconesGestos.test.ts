@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { aparenciaPadrao, PALETAS } from '../../src/personagem/aparencia';
 import { IDS_GESTOS } from '../../src/personagem/gestos';
 import {
   ENGROSSA_BALAO,
@@ -29,6 +30,23 @@ describe('spec 034: os ícones dos gestos (a direção A reforçada)', () => {
     }
     // o aperto de mão tem o amigo (as cores de outro boneco pronto do jogo)
     expect(ICONES_GESTOS.cumprimentar.match(/<ellipse cx="0.1" cy="1.43"/g)).toHaveLength(2);
+  });
+
+  it('nenhuma mão tem dedo: a pele é só a cabeça (retângulo) e as mãos-bolinha (círculos)', () => {
+    // as mãos dos bonecos do jogo são bolinhas (achado do dono, 20 nov): dedo, palma e polegar
+    // eram retângulos e elipses de pele; a pele agora só pode ser a cabeça e as bolinhas
+    // (a do boneco padrão e a do amigo do aperto de mão)
+    const peles = new Set<string>([PALETAS.pele[aparenciaPadrao().pele], PALETAS.pele[2]]);
+    const formasDePele = (miolo: string) =>
+      [...miolo.matchAll(/<(\w+)\b[^>]*?fill="([^"]+)"/g)].filter((m) => peles.has(m[2])).map((m) => m[1]);
+    for (const id of IDS_GESTOS) {
+      const formas = formasDePele(ICONES_GESTOS[id]);
+      const cabecas = id === 'cumprimentar' ? 2 : 1;
+      expect(formas.filter((f) => f === 'rect'), id).toHaveLength(cabecas);
+      expect(formas.filter((f) => f !== 'rect' && f !== 'circle'), id).toEqual([]);
+      // e as mãos estão lá, de bolinha
+      expect(formas.filter((f) => f === 'circle').length, id).toBeGreaterThanOrEqual(cabecas);
+    }
   });
 
   it('o ícone vai num viewBox de 64, com os contornos de grossura fixa na tela', () => {

@@ -9,6 +9,11 @@
  * aplaudir com as mãos grandes (as faíscas confundiam com o pulo de estrela) e o roqueiro com
  * uma guitarra de verdade (a de antes parecia um raio).
  *
+ * As mãos (dono, 20 nov, depois da 034): as dos bonecos do jogo não têm dedos, são bolinhas, e
+ * as dos ícones também. Sem a palma aberta do tchau, as mãos do aplauso e o dedo do apontar,
+ * quem diz o gesto é o braço e a pose, os risquinhos de movimento (o balanço do tchau, o "plac"
+ * do aplauso, a setinha do apontar) e o olhar. Folha de prova: `capturas-034/maos/`.
+ *
  * O boneco tem as medidas do plano do boneco (`personagem/boneco.ts`: cabeça 0,72 × 0,68, tronco
  * 0,46 × 0,42, perna 0,24, braço até a mão 0,27, mão 0,085) e as cores do boneco padrão (pele,
  * cabelo com topete, túnica com cinto e fivela, calça, sapato, bochechas, olhos com brilho).
@@ -111,8 +116,11 @@ interface Pose {
   /** O objeto forte do gesto (SVG no espaço do boneco), atrás do boneco e na frente dele. */
   fundo?: string;
   frente?: string;
-  /** De frente: o braço (0 ou 1) com a mão aberta do tchau, o giro do pulso (graus) e o tamanho. */
-  maoAberta?: [0 | 1, number, number?];
+  /**
+   * De frente: o braço (0 ou 1) com a mão-bolinha maior que a de sempre (o tamanho, 1 = a do
+   * boneco), para a mão do tchau ler a 48 px. Nenhuma mão tem dedo: as dos bonecos são bolinhas.
+   */
+  maoGrande?: [0 | 1, number];
   /** Quadro: o meio (x, y) e a meia altura mostrada, em unidades. */
   quadro: { x: number; y: number; meia: number };
 }
@@ -150,41 +158,24 @@ function rot(graus: number, x: number, y: number): string {
   return `rotate(${graus.toFixed(2)} ${x} ${y})`;
 }
 
-/** O braço (no ombro, caído para baixo): a manga, o punho e a mão (bolinha ou aberta). */
-function braco(longe = false, aberta: number | false = false, kPalma?: number): string {
-  const manga = longe ? escurecer(ROUPA, 0.18) : ROUPA;
-  const pele = longe ? escurecer(PELE, 0.12) : PELE;
-  const punho = caixa(-0.074, -0.24, 0.074, -0.19, 0.02, escurecer(manga, 0.22));
-  return (
-    caixa(-0.068, -0.235, 0.068, 0.04, 0.06, manga) +
-    (aberta !== false
-      ? palma(pele, aberta, kPalma) + punho
-      : punho +
-        bola(0, -0.275, 0.088, pele) +
-        `<circle cx="-0.025" cy="-0.25" r="0.028" fill="#ffffff" opacity="0.45"/>`)
-  );
-}
+/** O meio da mão-bolinha no braço (caído, no espaço do ombro): a maior sai um tiquinho do punho. */
+const meioDaMao = (k: number) => -0.275 - (k - 1) * 0.07;
 
 /**
- * A mão aberta do tchau (a palma de frente, os quatro dedos abertos em leque e o polegar), no
- * lugar da bolinha e maior que ela: os vãos entre os dedos dizem "mão" mesmo a 48 px.
+ * O braço (no ombro, caído para baixo): a manga, o punho e a mão, a bolinha do boneco (sem dedo
+ * nenhum, como no jogo), de tamanho `kMao` (1 = a de sempre).
  */
-function palma(pele: string, giro = 0, k = 1.3): string {
-  // os dedos (atrás da palma, que cobre a base deles), cada um girando um tiquinho para fora
-  let dedos = '';
-  for (const [x, comp, giroDedo] of [
-    [-0.07, 0.16, -20],
-    [-0.024, 0.19, -7],
-    [0.024, 0.19, 7],
-    [0.07, 0.16, 20],
-  ] as const)
-    dedos += `<g transform="rotate(${giroDedo} ${x} -0.3)">${caixa(x - 0.023, -0.3 - comp, x + 0.023, -0.28, 0.023, pele)}</g>`;
+function braco(longe = false, kMao = 1): string {
+  const manga = longe ? escurecer(ROUPA, 0.18) : ROUPA;
+  const pele = longe ? escurecer(PELE, 0.12) : PELE;
+  const y = meioDaMao(kMao);
   return (
-    `<g transform="translate(0 -0.2) rotate(${giro}) scale(${k}) translate(0 0.2)">` +
-    dedos +
-    `<ellipse cx="0" cy="0" rx="0.034" ry="0.078" fill="${pele}" ${contorno} transform="translate(-0.112 -0.255) rotate(42)"/>` +
-    caixa(-0.1, -0.335, 0.1, -0.17, 0.05, pele) +
-    `<ellipse cx="-0.035" cy="-0.27" rx="0.028" ry="0.045" fill="#ffffff" opacity="0.35"/></g>`
+    caixa(-0.068, -0.235, 0.068, 0.04, 0.06, manga) +
+    caixa(-0.074, -0.24, 0.074, -0.19, 0.02, escurecer(manga, 0.22)) +
+    bola(0, y, Number((0.088 * kMao).toFixed(3)), pele) +
+    (kMao === 1
+      ? `<circle cx="-0.025" cy="-0.25" r="0.028" fill="#ffffff" opacity="0.45"/>`
+      : `<circle cx="${(-0.025 * kMao).toFixed(3)}" cy="${(y + 0.025 * kMao).toFixed(3)}" r="${(0.028 * kMao).toFixed(3)}" fill="#ffffff" opacity="0.45"/>`)
   );
 }
 
@@ -325,7 +316,7 @@ function boneco(p: Pose): string {
     }
     s += `<g transform="${rot(tronco, 0, 0.34)}">`;
     const bracoFrente = (lado: -1 | 1, ang: number, k: number) =>
-      `<g transform="translate(${lado * 0.28} 0.68) ${`rotate(${(lado * ang).toFixed(2)})`} scale(1 ${k})">${braco(false, p.maoAberta?.[0] === (lado < 0 ? 0 : 1) ? p.maoAberta[1] : false, p.maoAberta?.[2])}</g>`;
+      `<g transform="translate(${lado * 0.28} 0.68) ${`rotate(${(lado * ang).toFixed(2)})`} scale(1 ${k})">${braco(false, p.maoGrande?.[0] === (lado < 0 ? 0 : 1) ? p.maoGrande[1] : 1)}</g>`;
     // os braços para o alto passam atrás da cabeça (no jogo também)
     const atras = (ang: number) => ang > 120;
     if (atras(b0)) s += bracoFrente(-1, b0, k0);
@@ -484,11 +475,14 @@ function cadeira(s: number): string {
   );
 }
 
-/** A mão (bolinha) do boneco em (x, y), redesenhada por cima do que ela segura. */
-function maoBola(x: number, y: number, pele = PELE): string {
+/**
+ * A mão (bolinha) do boneco em (x, y), redesenhada por cima do que ela segura; `k` a deixa maior
+ * que a de sempre (as mãos do aplauso), sem nunca ganhar dedo.
+ */
+function maoBola(x: number, y: number, pele = PELE, k = 1): string {
   return (
-    bola(x, y, 0.088, pele) +
-    `<circle cx="${(x - 0.025).toFixed(3)}" cy="${(y + 0.025).toFixed(3)}" r="0.028" fill="#ffffff" opacity="0.45"/>`
+    bola(x, y, Number((0.088 * k).toFixed(3)), pele) +
+    `<circle cx="${(x - 0.025 * k).toFixed(3)}" cy="${(y + 0.025 * k).toFixed(3)}" r="${Number((0.028 * k).toFixed(3))}" fill="#ffffff" opacity="0.45"/>`
   );
 }
 
@@ -505,24 +499,6 @@ function chapeu(x: number, y: number, giro: number, k = 1): string {
     caixa(-0.185, 0.06, 0.185, 0.13, 0.02, FIVELA) +
     caixa(-0.33, -0.045, 0.33, 0.055, 0.05, MARROM) +
     brilho(-0.28, 0.02, 0.24, 0.04, 0.01, 0.25) +
-    '</g>'
-  );
-}
-
-/**
- * A mão grande do aplauso (de frente: os dedos juntos para cima e o polegar para fora), do lado
- * `lado` do meio; as duas se encostam em x = 0.
- */
-function maoAplauso(lado: -1 | 1, y: number): string {
-  const x0 = lado * 0.006;
-  const x1 = lado * 0.185;
-  const [a, b] = lado < 0 ? [x1, x0] : [x0, x1];
-  const xm = (a + b) / 2;
-  return (
-    `<g transform="${rot(lado * -8, x0, y)}">` +
-    `<ellipse cx="0" cy="0" rx="0.05" ry="0.09" fill="${PELE}" ${contorno} transform="translate(${(lado * 0.2).toFixed(3)} ${(y + 0.13).toFixed(3)}) rotate(${lado * 40})"/>` +
-    caixa(a, y, b, y + 0.34, 0.08, PELE) +
-    `<ellipse cx="${(xm - 0.02).toFixed(3)}" cy="${(y + 0.24).toFixed(3)}" rx="0.035" ry="0.06" fill="#ffffff" opacity="0.35"/>` +
     '</g>'
   );
 }
@@ -600,28 +576,28 @@ function comObjetos(
 
 // ---------------------------------------------------------------------------- as poses
 const POSES: Record<IdGesto, Pose> = {
-  // a mão bem no alto e as marquinhas do tchau dos dois lados dela
+  // o braço levantado de lado, a mão-bolinha no alto e os risquinhos do tchau balançando dos
+  // dois lados dela (a mão é a do boneco, sem dedo: quem diz "tchau" é o braço e o balanço)
   acenar: comObjetos(
     {
       vista: 'frente',
-      // o corpo se afasta da mão, para a palma ficar solta no céu e não colar no rosto
+      // o corpo se afasta da mão, para ela ficar solta no céu e não colar no rosto
       tronco: -12,
-      bracos: [98, 10],
-      cabeca: -16,
+      bracos: [122, 10],
+      cabeca: -14,
       boca: 'aberta',
-      maoAberta: [0, -66, 1.45],
-      quadro: { x: -0.2, y: 0.84, meia: 0.9 },
+      maoGrande: [0, 1.35],
+      quadro: { x: -0.25, y: 0.8, meia: 0.88 },
     },
     (m) => {
-      // o pulso, e a palma em pé em cima dele
-      const [px, py] = m(0, 0.2);
-      const x = px - 0.02;
-      const y = py + 0.24;
-      // as marquinhas do tchau: dois risquinhos curvos por fora da palma, finos e sem contorno
-      // (com contorno, a 48 px eles grudavam na palma e viravam uma corneta)
+      // o meio da mão-bolinha
+      const [x, y] = m(0, -meioDaMao(1.35));
+      // as marquinhas do tchau: risquinhos curvos soltos da mão, finos e sem contorno (com
+      // contorno, ou perto demais, a 48 px eles grudavam na mão e viravam uma corneta)
       const arco = (dx: number, r: number) =>
         `<path d="M${x + dx} ${y + r} Q${x + dx + Math.sign(dx) * r * 0.6} ${y} ${x + dx} ${y - r}" fill="none" stroke="${MARCA}" stroke-width="2.3" stroke-linecap="round" ${UNID}/>`;
-      return { frente: arco(-0.3, 0.13) + arco(-0.42, 0.2) };
+      // só por fora: o risquinho entre a mão e a cabeça caía na bochecha e virava mancha
+      return { frente: arco(-0.25, 0.13) + arco(-0.38, 0.2) };
     },
   ),
   // em pé, a mão estendida para a frente apertando a mão do amigo, que balança
@@ -684,21 +660,26 @@ const POSES: Record<IdGesto, Pose> = {
         confete(0.52, 0.2, -15, AMARELO),
     }),
   ),
-  // as mãos grandes batendo na frente do peito e os risquinhos do "plac" em volta delas
+  // as duas mãos-bolinha batendo na frente do peito (um tiquinho maiores, sem dedo) e os
+  // risquinhos do "plac" saindo de onde elas se encontram
   aplaudir: comObjetos(
     {
       vista: 'frente',
-      bracos: [-62, -62],
+      // os braços sobem mais que os do aplauso de dedos: as mãos-bolinha batem na altura do
+      // peito (mais baixo, em cima do cinto, pareciam botões da roupa)
+      bracos: [-74, -74],
       boca: 'aberta',
       quadro: { x: 0, y: 0.78, meia: 0.84 },
     },
     (m) => {
       const [, y] = m(0);
+      const k = 1.45;
+      const dx = 0.088 * k - 0.006;
       return {
         frente:
-          maoAplauso(-1, y - 0.06) +
-          maoAplauso(1, y - 0.06) +
-          plac(0, y + 0.06, 0.28, 0.41, [165, 195, 225, 15, -15, -45]),
+          maoBola(-dx, y, PELE, k) +
+          maoBola(dx, y, PELE, k) +
+          plac(0, y, 0.32, 0.43, [145, 180, 215, 35, 0, -35]),
       };
     },
   ),
@@ -719,26 +700,23 @@ const POSES: Record<IdGesto, Pose> = {
         notas2(0.36, 1.32, 1.05, ROSA) + nota(-0.7, 0.62, 1, AZUL) + nota(0.6, 0.42, 0.85, AMARELO),
     }),
   ),
-  // o braço esticado para a direita, o dedo e os olhos para lá, e a setinha levando à
-  // estrelinha (para a direita: a plaquinha Voltar é que aponta para a esquerda)
+  // o braço esticado para a direita com a mão-bolinha na ponta (sem dedo), os olhos para lá e a
+  // setinha saindo da mão até a estrelinha (para a direita: a plaquinha Voltar é que aponta
+  // para a esquerda)
   apontar: comObjetos(
     {
       vista: 'frente',
       bracos: [8, 90],
       olhar: 0.07,
       cabeca: -4,
-      quadro: { x: 0.54, y: 0.74, meia: 0.95 },
+      quadro: { x: 0.5, y: 0.74, meia: 0.93 },
     },
     (m) => {
       const [x, y] = m(1);
-      const dedo = caixa(x + 0.02, y - 0.035, x + 0.19, y + 0.035, 0.035, PELE);
-      const ponta = x + 0.5;
+      // a setinha começa logo depois da mão (um vão pequeno, para não grudar nela)
+      const ponta = x + 0.45;
       return {
-        frente:
-          dedo +
-          maoBola(x, y) +
-          seta(ponta, y, 1, 0.6) +
-          estrela(ponta + 0.24, y, 0.21, 0.095, AMARELO),
+        frente: maoBola(x, y) + seta(ponta, y, 1, 0.6) + estrela(ponta + 0.24, y, 0.21, 0.095, AMARELO),
       };
     },
   ),
@@ -831,7 +809,8 @@ export function svgDoIcone(miolo: string, classe = 'icone-gesto'): string {
  * O balão vira uma textura de 256 px e aparece na tela com uns 45 a 80 px: os contornos (de
  * grossura fixa na tela) engrossam na mesma conta, para ler como o balão da folha (a 72 px).
  * A conta é a de 90 px, e não a de 72: a textura no 3D fica um tiquinho mais macia que o SVG
- * na folha, e o contorno com a conta de 72 empastava os dedos da mão do tchau.
+ * na folha, e o contorno com a conta de 72 empastava os miúdos (na época, os dedos da mão do
+ * tchau; hoje, os risquinhos e a setinha).
  */
 const LADO_BALAO = 256;
 export const ENGROSSA_BALAO = LADO_BALAO / 90;

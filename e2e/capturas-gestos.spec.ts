@@ -11,11 +11,13 @@ import { irPara, porAmigos } from './achar-amigo-palco';
  *
  *   CAPTURAS_GESTOS=1 npx playwright test e2e/capturas-gestos.spec.ts
  *
+ * `CAPTURAS_PASTA` troca a pasta (as mãos sem dedo foram para capturas-034/maos/).
+ *
  * As folhas de escolha (as direções A, B e a A reforçada) ficam em capturas-034/gestos/: são o
  * registro do esboço, que saiu do código quando os ícones entraram no jogo.
  */
 declare const process: { env: Record<string, string | undefined> };
-const PASTA = 'capturas-034/gestos-jogo';
+const PASTA = process.env.CAPTURAS_PASTA ?? 'capturas-034/gestos-jogo';
 
 test.skip(!process.env.CAPTURAS_GESTOS, 'capturas dos gestos só com CAPTURAS_GESTOS');
 test.describe.configure({ mode: 'parallel' });
