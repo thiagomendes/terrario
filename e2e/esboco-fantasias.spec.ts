@@ -117,12 +117,32 @@ const FOTOS_PASSEIO: Array<[string, string, number]> = [
   ['21-trem', 'trem', 7.4],
   ['21-trem-perto', 'tremPerto', 5.7],
   ['21-trem-bordo', 'bordo', 2.9],
+  ['21-trem-tunel-dentro', 'tunelDentro', 5.5],
 ];
 
 async function fotografarPasseios(page: Page, t: Tamanho) {
   await page.waitForFunction(() => window.__fantasias!.passeiosProntos(), undefined, { timeout: 60_000 });
   const tipo = t === 'empe' ? 'empe' : 'deitado';
   const so = process.env.FANTASIAS_SO?.split(',');
+  // a folga até o teto do túnel: o alto de cada passageiro (do chão), com o trem lá dentro
+  for (const inst of [4.0, 4.8, 5.6, 6.4]) {
+    const alto = await page.evaluate((i) => {
+      window.__fantasias!.passeio(null, i, false);
+      const cena = window.__brumaluz!.cenaBabylon!() as {
+        meshes: Array<{ name: string; isEnabled(): boolean; computeWorldMatrix(f: boolean): unknown; getBoundingInfo(): { boundingBox: { maximumWorld: { y: number } } } }>;
+      };
+      const chao = window.__fantasias!.pontos.origem[1] + 1;
+      const r: Record<string, number> = {};
+      for (const m of cena.meshes) {
+        const k = ['bento-trem', 'bruxinha-trem', 'abobrinha-trem'].find((n) => m.name.startsWith(`esboco-passeio-${n}`));
+        if (!k || !m.isEnabled()) continue;
+        m.computeWorldMatrix(true);
+        r[k] = Math.max(r[k] ?? 0, m.getBoundingInfo().boundingBox.maximumWorld.y - chao);
+      }
+      return r;
+    }, inst);
+    console.log(`FOLGA t=${inst} alto dos passageiros ${JSON.stringify(alto)} (o teto do túnel a 3,8 no meio e 3,67 a 0,6 do meio)`);
+  }
   for (const [qual, h] of [
     ['entardecer', ENTARDECER],
     ['noite', NOITE],

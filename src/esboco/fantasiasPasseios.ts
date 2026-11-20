@@ -654,13 +654,16 @@ export function montarPasseios(ctx: CtxPasseios): Passeios {
     const zc = oz + TUNEL.z;
     const x0 = ox + TUNEL.x0;
     const x1 = ox + TUNEL.x1;
-    const RA = 1.3; // o raio do arco
-    const HP = 1.45; // a altura das paredes (onde o arco começa)
+    // (dono, 20 nov: o túnel era baixo e a cabeça dos passageiros atravessava a cobertura;
+    // medido no teste, o chapéu da bruxinha, o mais alto, chega a 3,06 do chão e o Bento a 3,03:
+    // o teto fica a 3,8 no meio, e a 0,6 do meio ainda a 3,67, mais de meio bloco de folga)
+    const RA = 1.45; // o raio do arco
+    const HP = 2.35; // a altura das paredes (onde o arco começa)
     // as paredes de tábuas em pé (roxo e laranja, uma sim, uma não), com duas janelinhas redondas
     // de cada lado; a tábua que cruza a janela fica em dois pedaços (debaixo e em cima dela)
     const janelas = [-1.7, 1.7];
     const JR = 0.46;
-    const JY = 0.95;
+    const JY = 1.25;
     const TAB = 0.5;
     const n = Math.round((x1 - x0) / TAB);
     for (const lado of [-1, 1]) {
@@ -689,7 +692,7 @@ export function montarPasseios(ctx: CtxPasseios): Passeios {
       k.caixa([x1 - x0 + 0.1, 0.12, 0.2], [(x0 + x1) / 2, Y + HP + 0.02, z], creme, 0.04);
     }
     // o teto em arco: ripas ao comprido (roxo e laranja), com frestas abertas para o céu
-    const RIPAS = 13;
+    const RIPAS = 15;
     for (let i = 0; i < RIPAS; i++) {
       const a = ((i + 0.5) / RIPAS) * Math.PI;
       const y = Y + HP + Math.sin(a) * RA;
@@ -1092,6 +1095,13 @@ export function montarPasseios(ctx: CtxPasseios): Passeios {
         const pos: V3 = [ox + TUNEL.x0 - (em ? 7.0 : 6.4), Y + 1.4, oz + TUNEL.z + (em ? 2.0 : 1.7)];
         const alvo: V3 = [ox + TUNEL.x0 + 0.3, Y + 1.2, oz + TUNEL.z - 0.1];
         return { pos, alvo, fov: em ? 70 : 52 };
+      }
+      if (qual === 'tunelDentro') {
+        // da boca de entrada, olhando para dentro do túnel com o trem lá no meio: a folga entre o
+        // alto dos passageiros (de costas, braços para cima) e o teto
+        const pos: V3 = [ox + TUNEL.x1 + 1.7, Y + 1.75, oz + TUNEL.z + 0.55];
+        const alvo: V3 = [ox + TUNEL.x1 - 3.5, Y + 2.3, oz + TUNEL.z];
+        return { pos, alvo, fov: em ? 78 : 62 };
       }
       if (qual === 'bordo') {
         // a bordo, na cabine da locomotiva (o lugar do maquinista): por cima da abóbora, a
