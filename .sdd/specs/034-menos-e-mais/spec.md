@@ -301,6 +301,18 @@ Entrou em 19 nov e saiu no mesmo dia (dono: "não precisamos nos preocupar com t
 - As prévias fracas são refeitas.
 - Moedinhas, experiência e nível ganhos nos mundos que saem ficam com a criança (recomendação aceita).
 
+**20 nov 2026:**
+- **Ícones dos gestos:** a direção A reforçada. É o boneco do jogo desenhado fazendo o gesto, com um objeto forte em cada um para nenhum ficar parecido com outro:
+  - notas no Dançar;
+  - confete no Comemorar;
+  - a cadeira no Sentar;
+  - setinha no Apontar;
+  - a estrela no Pulo de estrela;
+  - faíscas no Aplaudir.
+  
+  A folha refeita volta ao dono antes de entrar no jogo.
+- **Apelido salvo com o final de um tema que saiu** ("… da Bruma", "… dos Dinos", "… da Mata", "… Estelar"): troca só o final pelo da Vila ("… da Vila"), na limpeza do aparelho.
+
 ## Revisão da spec (19 nov 2026)
 O revisor aprovou com ajustes. Entraram nesta versão:
 - O canto do Doce protegido: só sai o ramo dos Dinos, e o d2 sai sem tocar no e2.
