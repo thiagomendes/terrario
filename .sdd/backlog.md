@@ -58,6 +58,11 @@ Ideias e pedidos do dono que ainda não viraram spec, e a fila combinada. A orde
 - **Contador de FPS ligado para todos** (decisão do dono, 20 nov): fica ligado durante o desenvolvimento, para acompanhar o desempenho; desligar de fábrica antes de ir para as lojas (020).
 - **Balão do gesto com a cara de quem gesticula** (achado no portão visual da 034): hoje o balão e a carinha do amigo mostram sempre o boneco padrão de azul; ficaria melhor com o boneco de quem faz o gesto (o pipoqueiro, o amigo de chapéu).
 - **Toque da roleta em aparelho travando:** usar o `e.timeStamp` do evento em vez de `performance.now()`, para um toque de criança contar mesmo num aparelho lento (achado na 034).
+- **Acabamento do cartão do mundo salvo** (visto no ar, depois da 034):
+  - a miniatura do "Meu primeiro mundo" é um degradê genérico, e não a cara da Vila Neon;
+  - no computador, o nome quebra em 3 linhas;
+  - a data começa com um "·" solto.
+- **Queda curta da conexão** (vista no ar, depois da 034): na sala de teste, a conexão de quem criou caiu uma vez (código 1005) e voltou meio segundo depois. Pode ser a troca de `?mundo=` para `?sala=`; conferir na 035.
 - **Voz do orelhão:** o dono achou rápida demais, mas fica como está por enquanto (18 nov).
 
 ## Feitas e publicadas (resumo)

@@ -156,4 +156,17 @@ Saiu da spec (dono, 19 nov): vai com a casca nativa (020). A T12 não existe mai
   - `guia-chegada:128` (c6 em pé, a mãozinha em 4 s);
   - `plantio:210`, `tesouro-fantasia:61`;
   - os de beira de limite: `som-veiculos:61`, `lojinha:107`, o pulo do `achar-amigo-nuvem`.
+- **(20 nov 2026) Publicada** (merge b5c71ff):
+  - o servidor saiu às 21h07 UTC, na revisão --0000046; ninguém estava jogando, então ele não esperou;
+  - o site saiu às 21h19 UTC;
+  - a integração do GitHub desta sessão não pode cancelar nem disparar Actions (403), então valeu a ordem natural: o servidor terminou antes do site.
+- **(20 nov 2026) Conferida no ar** (pelo computador do dono, fotos em `capturas-034/no-ar/` no branch do esboço):
+  - a escolha de mundos tem só os 5, com a Vila Neon primeiro e a prévia dela;
+  - a Vila Neon e a roleta abrem com os ícones novos;
+  - duas jogadoras na nuvem: quem criou vê a amiga e a amiga vê quem criou (sala de teste ARCO-PIAO-10);
+  - nenhum erro no console.
+  - **A varredura do servidor:**
+    - às 21h08, apagou 1 de 11 mundos, a sala BOLA-CRISTAL-53, do Bruma e Luz;
+    - às 21h18, apagou 0 de 10;
+    - não havia mundo de Planeta Vivo, Mata ou Dinos na nuvem.
 - **Falta:** a rodada em família, que é o dono com as crianças no aparelho de verdade.
