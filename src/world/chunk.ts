@@ -218,7 +218,8 @@ export function candidatosDoCanto(semente: number): readonly PlanoCanto[] {
   // spec 034: só o Doce Reino tem o canto (o da Era dos Dinos saiu com ela)
   const tema = mundo === 'doce-reino' ? 'doce' : null;
   if (!tema) return [];
-  const k = `${semente},${tema},${versaoDosPovoados()}`;
+  // a planta e o relevo também (como as outras memórias por semente): o canto lê o terreno
+  const k = `${semente},${tema},${versaoDosPovoados()},${TERRENO_NATURAL.planta},${chaveDoRelevo()}`;
   const ja = cantos.get(k);
   if (ja) return ja;
   const nascer = pontoDeNascer(semente);

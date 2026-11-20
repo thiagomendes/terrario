@@ -6,7 +6,14 @@ import { gzipSync, gunzipSync } from 'node:zlib';
 import { BlobServiceClient, type ContainerClient } from '@azure/storage-blob';
 import { TableClient, odata } from '@azure/data-tables';
 import { DefaultAzureCredential } from '@azure/identity';
-import type { Armazem, JogadorGuardado, MundoGuardado, Sala } from './armazem';
+import {
+  apagarPastaDoMundo,
+  ARQUIVO_MUNDO,
+  type Armazem,
+  type JogadorGuardado,
+  type MundoGuardado,
+  type Sala,
+} from './armazem';
 
 export function armazemAzure(conta: string): Armazem {
   const credencial = new DefaultAzureCredential();
@@ -55,8 +62,8 @@ export function armazemAzure(conta: string): Armazem {
         if ((e as { statusCode?: number }).statusCode !== 404) throw e;
       }
     },
-    lerMundo: (id) => ler<MundoGuardado>(`${id}/mundo.json.gz`),
-    gravarMundo: (id, m) => gravar(`${id}/mundo.json.gz`, m),
+    lerMundo: (id) => ler<MundoGuardado>(`${id}/${ARQUIVO_MUNDO}`),
+    gravarMundo: (id, m) => gravar(`${id}/${ARQUIVO_MUNDO}`, m),
     async lerRegioes(id) {
       const out: Record<string, Record<string, Array<[number, number]>>> = {};
       for await (const b of blobs.listBlobsFlat({ prefix: `${id}/regioes/` })) {
@@ -87,12 +94,18 @@ export function armazemAzure(conta: string): Armazem {
     async apagarMundo(id) {
       // o prefixo com a barra no fim: `abc/` nunca pega a pasta de `abcd`
       if (!id || id.includes('/')) return;
-      for await (const b of blobs.listBlobsFlat({ prefix: `${id}/` }))
+      // o `<id>/mundo.json.gz` por último: uma falha no meio deixa o mundo para a próxima
+      // varredura achar e terminar
+      async function* nomes() {
+        for await (const b of blobs.listBlobsFlat({ prefix: `${id}/` })) yield b.name;
+      }
+      await apagarPastaDoMundo(id, nomes(), async (nome) => {
         try {
-          await blobs.deleteBlob(b.name);
+          await blobs.deleteBlob(nome);
         } catch (e) {
           if ((e as { statusCode?: number }).statusCode !== 404) throw e;
         }
+      });
     },
   };
 }

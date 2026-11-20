@@ -734,7 +734,7 @@ export async function pararMundoComAmigos(repo: RepositorioMundos, meta: MetaMun
         nome: meta.nome,
         semente: meta.semente,
         modo: meta.modo,
-        tema: meta.tema ?? TEMA_PADRAO,
+        tema: meta.tema && temaExiste(meta.tema) ? meta.tema : TEMA_PADRAO,
       },
       [codigo, ...(bv ? [bv.sala.codigo] : [])],
       dados,
@@ -774,7 +774,7 @@ async function subirParaNuvem(
     criar: {
       nome: m.nome,
       semente: m.semente,
-      tema: m.tema ?? TEMA_PADRAO,
+      tema: m.tema && temaExiste(m.tema) ? m.tema : TEMA_PADRAO,
       modo: m.modo,
       versaoMundo: m.versao ?? 1,
       estilo,

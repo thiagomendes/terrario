@@ -1458,6 +1458,59 @@ describe('spec 034: os mundos dos quatro temas que saíram, na nuvem', () => {
     ).toBe(depois);
   });
 
+  it('o apagar falha uma vez no meio da pasta: o mundo continua sendo achado e a passada seguinte termina', async () => {
+    const logs: string[] = [];
+    const armazem = armazemMemoria();
+    const g = criarGerenciador({ armazem, sorteio: Math.random, log: (m) => logs.push(m) });
+    const s = { g, armazem } as unknown as ReturnType<typeof servidor>;
+    const m = await guardar(s, 'bruma-e-luz');
+    await armazem.gravarRegiao(m.id, '1,0', { '8,0': [[2, 7]] });
+    const apagados: string[] = [];
+    let falhou = false;
+    armazem.falharAoApagar = (nome) => {
+      // a segunda região falha (uma vez), depois de a primeira já ter saído
+      if (!falhou && apagados.some((a) => a.includes('/regioes/')) && nome.includes('/regioes/')) {
+        falhou = true;
+        return true;
+      }
+      apagados.push(nome);
+      return false;
+    };
+    expect(await g.varrerTemasQueSairam()).toBe(0);
+    expect(falhou).toBe(true);
+    // o arquivo do mundo nunca saiu antes do resto: a varredura acha e lê o mundo de novo
+    expect(apagados).not.toContain(`${m.id}/mundo.json.gz`);
+    expect(await existe(s, m.id)).toBe(true);
+    expect(await armazem.lerMundo(m.id)).not.toBeNull();
+    // o log diz só o tipo do erro, nunca a mensagem
+    expect(logs.some((l) => l.includes(m.id) && l.includes('falhou (Error)'))).toBe(true);
+    expect(logs.join('\n')).not.toContain('falha de teste');
+    expect(await g.varrerTemasQueSairam()).toBe(1);
+    expect(apagados.at(-1)).toBe(`${m.id}/mundo.json.gz`);
+    expect(await existe(s, m.id)).toBe(false);
+    expect(await armazem.lerMundo(m.id)).toBeNull();
+    expect(await armazem.lerRegioes(m.id)).toEqual({});
+    expect(await armazem.lerJogador(m.id, 'ana')).toBeNull();
+    expect(await armazem.lerSala(m.codigo)).toBeNull();
+  });
+
+  it('a sala que mudou de mundo depois da lista da varredura não é apagada', async () => {
+    const s = servidor();
+    const m = await guardar(s, 'planeta-vivo');
+    const outro = await guardar(s, 'vila-neon', { sala: false });
+    const sala = (await s.armazem.lerSala(m.codigo))!;
+    // a lista velha diz que a sala é do mundo que sai; no armazém ela já aponta para outro
+    const lista = await s.armazem.listarSalas();
+    await s.armazem.gravarSala({ ...sala, mundoId: outro.id });
+    const listar = s.armazem.listarSalas;
+    s.armazem.listarSalas = async () => lista;
+    expect(await s.g.varrerTemasQueSairam()).toBe(1);
+    s.armazem.listarSalas = listar;
+    expect(await existe(s, m.id)).toBe(false);
+    expect((await s.armazem.lerSala(m.codigo))?.mundoId).toBe(outro.id);
+    expect(await s.armazem.lerMundo(outro.id)).not.toBeNull();
+  });
+
   it('o mundo regravado depois da varredura (a réplica antiga ao sair) sai na leitura', async () => {
     const s = servidor();
     await s.g.varrerTemasQueSairam();

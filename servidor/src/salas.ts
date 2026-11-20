@@ -66,6 +66,12 @@ const MAX_SALAS = 300;
 const ID_VALIDO = /^[A-Za-z0-9_-]{2,64}$/;
 const JANELA = 600_000;
 
+/**
+ * Spec 034: só o tipo do erro vai para o log (a mensagem de um erro da Azure pode trazer o
+ * endereço e o conteúdo do pedido).
+ */
+const nomeDoErro = (e: unknown) =>
+  e instanceof Error && /^[A-Za-z]{1,40}$/.test(e.name) ? e.name : 'erro';
 const resumo = (chave: string) => createHash('sha256').update(chave).digest('hex');
 /** Números com 2 casas: metade dos bytes, sem diferença que se veja. */
 const compacto = (_k: string, v: unknown) =>
@@ -199,7 +205,7 @@ export function criarGerenciador(op: OpcoesGerenciador) {
     // varredura ainda não passou) sai na hora e não abre
     if (g && mundoDeTemaQueSaiu(g)) {
       await apagarMundoQueSaiu(id, g.mundo.tema).catch((e) =>
-        log(`apagar o mundo ${id} na leitura: ${String(e)}`),
+        log(`apagar o mundo ${id} na leitura: falhou (${nomeDoErro(e)})`),
       );
       return null;
     }
@@ -212,7 +218,12 @@ export function criarGerenciador(op: OpcoesGerenciador) {
    */
   async function apagarMundoQueSaiu(id: string, tema: string, dasSalas?: Sala[]): Promise<void> {
     const lista = dasSalas ?? (await armazem.listarSalas()).filter((s) => s.mundoId === id);
+    const apagadas: string[] = [];
     for (const sala of lista) {
+      // a lista pode ser velha (a varredura lê todas as salas antes de começar): a sala é
+      // relida e só sai se ainda for deste mundo
+      const atual = await armazem.lerSala(sala.codigo);
+      if (atual?.mundoId !== id) continue;
       // (no servidor novo nenhuma abre: criar é recusado e a leitura apaga antes de abrir)
       const ativa = ativas.get(sala.codigo);
       if (ativa?.mundo.id === id) {
@@ -224,9 +235,10 @@ export function criarGerenciador(op: OpcoesGerenciador) {
         }
       }
       await armazem.apagarSala(sala.codigo);
+      apagadas.push(sala.codigo);
     }
     await armazem.apagarMundo(id);
-    const codigos = lista.map((s) => s.codigo).join(', ') || 'nenhuma';
+    const codigos = apagadas.join(', ') || 'nenhuma';
     log(`mundo de tema que saiu apagado: sala ${codigos}, id ${id}, tema ${tema}`);
   }
 
@@ -242,7 +254,7 @@ export function criarGerenciador(op: OpcoesGerenciador) {
       ids = await armazem.listarMundos();
       todas = await armazem.listarSalas();
     } catch (e) {
-      log(`varredura dos temas que saíram: ${String(e)}`);
+      log(`varredura dos temas que saíram: a lista falhou (${nomeDoErro(e)})`);
       return 0;
     }
     let n = 0;
@@ -257,7 +269,7 @@ export function criarGerenciador(op: OpcoesGerenciador) {
         );
         n++;
       } catch (e) {
-        log(`varredura dos temas que saíram, mundo ${id}: ${String(e)}`);
+        log(`varredura dos temas que saíram, mundo ${id}: falhou (${nomeDoErro(e)})`);
       }
     }
     log(`varredura dos temas que saíram: ${n} de ${ids.length} mundos apagados`);
