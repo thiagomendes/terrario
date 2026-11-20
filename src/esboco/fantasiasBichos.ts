@@ -306,7 +306,7 @@ export function montarBichos(ctx: CtxPalco): Bichos {
     dormindo.push(b);
   });
   const voando = [
-    { b: novo('morcego-voa0', morcego(false)), c: [gx + 2.2, gy + 0.2, gz + 0.5] as V3, r: 0.3, f: 0 },
+    { b: novo('morcego-voa0', morcego(false)), c: [gx + 1.6, gy - 0.5, gz + 2.0] as V3, r: 0.3, f: 0 },
     { b: novo('morcego-voa1', morcego(false)), c: [gx + 0.5, gy - 1.25, gz + 1.0] as V3, r: 0.3, f: 2.2 },
   ];
   // a coruja no alto do poleiro, ao lado da árvore dos morceguinhos

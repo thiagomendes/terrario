@@ -670,6 +670,8 @@ function ligar(scene: Scene): void {
       const z = 4 + hash2(k, 1, 51) * (D - 8);
       const x = trilha(z) + (hash2(k, 2, 51) - 0.5) * 12;
       if (pertoDeCamera(ox + x, oz + z, 7)) continue;
+      // (parte 2: nem colado na câmera da foto dos morceguinhos, na frente do galho)
+      if (Math.hypot(x - (gx - 3.1), z - (gz + 5.8)) < 3.2) continue;
       vagalumes.push([ox + x, Y + 0.9 + hash2(k, 3, 51) * 2.2, oz + z]);
     }
     pontos.bosque = [ox + trilha(60), Y + 1, oz + 60];
