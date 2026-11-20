@@ -28,6 +28,19 @@ O dono, em 20 nov 2026: o filho criou um mundo na Vila Neon e o levou para a nuv
 - **Nesta spec:** o teste de comportamento abaixo substitui esse teste de texto.
 - **A reprodução:** `referencia/levar-a-nuvem.ts` copia a ordem do `main.ts`, mas não roda o arquivo. Ela prova o princípio.
 
+## O segundo defeito: preso no mundo da nuvem (achado do dono, 20 nov)
+- **O que acontece:**
+  - quem entrou num mundo com amigos e tenta abrir outro mundo cai sempre de volta no mundo da nuvem;
+  - isso vale para criar um mundo novo (ex.: Rancho Alegre, "Criar", "Jogar") e para escolher um da lista;
+  - a criança nunca consegue sair daquele mundo.
+- **A causa (lida no código, a reproduzir):**
+  - `abrirMundo` em `src/main.ts` (perto da linha 221) põe `?mundo=<id>` no endereço, mas deixa o `?sala=` que já estava lá;
+  - a página nova lê primeiro o `sala` (`src/main.ts`, perto da linha 108) e volta para a nuvem;
+  - `abrirMundoDoAparelho` (`src/nuvem.ts`, perto da linha 632) e `irParaSala` limpam o endereço; o `abrirMundo` do `main.ts`, não.
+- **O conserto:**
+  - abrir um mundo do aparelho tira `sala`, `novo` e `direto` do endereço;
+  - um e2e: entrar pela nuvem, criar um mundo do Rancho e conferir que ele abre.
+
 ## O que muda (a escrever e revisar quando a 034 for publicada)
 - **Não perder mensagem:** `conexaoNuvem` guarda as mensagens até o primeiro `aoReceber` e entrega todas, em ordem, quando ele chega.
 - **Rede de segurança:** se o estado do cliente ficar acumulando `adiantados` sem nenhum `primeiro` por mais de um tempo curto, ressincroniza (reconecta) em vez de ficar parado para sempre.
