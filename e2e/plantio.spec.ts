@@ -317,7 +317,11 @@ test('HUD do Rancho no celular: dicas, corações e avisos sem cobrir nada', asy
   // o topo do bloco (em terceira pessoa a mira vem de cima do ombro: no meio do bloco, o
   // chão da frente tapa)
   await mirar(fx + 2.5, fy - 0.05, fz + 0.5);
-  await expect(page.locator('.dica-mira')).toHaveText('Toque na grama para arar');
+  // (spec 034: na nuvem, a 1 quadro por segundo, a dica chegou uns 5 s depois de mirar; a
+  // espera é de 20 s, e num aparelho de verdade ela chega no quarto de segundo da dica)
+  await expect(page.locator('.dica-mira')).toHaveText('Toque na grama para arar', {
+    timeout: 20_000,
+  });
   // spec 034 (T14): espera a dica acabar de surgir (0,18 s de entrada), como a criança a vê.
   // Era o que caía: o texto chega junto com o começo da entrada, e a medida logo em seguida
   // achava a dica ainda transparente (opacidade abaixo de 0,05), fora dos "vistos". Na nuvem

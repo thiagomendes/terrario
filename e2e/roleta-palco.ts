@@ -44,12 +44,77 @@ async function ehToque(page: Page): Promise<boolean> {
   return page.evaluate(() => matchMedia('(pointer: coarse)').matches);
 }
 
-/** Toca (ou clica) num seletor, à vista. */
-async function tocarSeletor(page: Page, seletor: string): Promise<void> {
+/**
+ * Spec 034 (T14): um toque (ou clique) rápido de verdade no meio do elemento, que não depende
+ * do relógio da máquina. A roleta trata como toque o que leva menos de 600 ms entre encostar e
+ * soltar, e o botão da roda abre os gestos quando o dedo fica 450 ms (`performance.now` e
+ * `setTimeout` da página). O `tap()` e o `click()` do Playwright mandam o encostar e o soltar
+ * em mensagens separadas: com o navegador carregado (a nuvem, sem placa de vídeo, a 1 quadro
+ * por segundo), o soltar chegava mais de 600 ms depois, o toque virava "arraste parado" (a
+ * fileira não andava) ou "segurar" (abria os gestos no lugar do menu). Aqui a sequência inteira
+ * (pointerdown, touchstart, pointerup, touchend, e o clique de compatibilidade se ninguém o
+ * cancelou; no mouse, mousedown, mouseup e click) sai num passo só, no elemento que está de
+ * fato por cima naquele ponto (como o dedo acharia), e quem o jogo escolhe é o mesmo de um
+ * toque de verdade. Se outro elemento tapa o ponto, o teste cai aqui.
+ */
+export async function toqueRapido(page: Page, seletor: string): Promise<void> {
   const el = page.locator(seletor).first();
   await el.waitFor({ state: 'visible', timeout: 20_000 });
-  if (await ehToque(page)) await el.tap();
-  else await el.click();
+  await el.scrollIntoViewIfNeeded();
+  const toque = await ehToque(page);
+  const r = await el.evaluate((alvo: Element, toque: boolean) => {
+    const c = alvo.getBoundingClientRect();
+    const x = c.left + c.width / 2;
+    const y = c.top + c.height / 2;
+    const topo = document.elementFromPoint(x, y);
+    if (!topo || !(topo === alvo || alvo.contains(topo)))
+      return `tapado por ${topo ? (topo as HTMLElement).outerHTML.slice(0, 120) : 'nada'}`;
+    const base = { bubbles: true, cancelable: true, composed: true, clientX: x, clientY: y };
+    const ponteiro = {
+      ...base,
+      pointerId: toque ? 7 : 1,
+      pointerType: toque ? 'touch' : 'mouse',
+      isPrimary: true,
+      button: 0,
+    };
+    topo.dispatchEvent(new PointerEvent('pointerdown', { ...ponteiro, buttons: 1 }));
+    let compat = true;
+    if (toque) {
+      const t = new Touch({ identifier: 7, target: topo, clientX: x, clientY: y });
+      topo.dispatchEvent(
+        new TouchEvent('touchstart', {
+          ...base,
+          touches: [t],
+          targetTouches: [t],
+          changedTouches: [t],
+        }),
+      );
+      topo.dispatchEvent(new PointerEvent('pointerup', { ...ponteiro, buttons: 0 }));
+      compat = topo.dispatchEvent(
+        new TouchEvent('touchend', {
+          ...base,
+          touches: [],
+          targetTouches: [],
+          changedTouches: [t],
+        }),
+      );
+    } else {
+      topo.dispatchEvent(
+        new MouseEvent('mousedown', { ...base, button: 0, buttons: 1, detail: 1 }),
+      );
+      if (topo instanceof HTMLElement) topo.focus({ preventScroll: true });
+      topo.dispatchEvent(new PointerEvent('pointerup', { ...ponteiro, buttons: 0 }));
+      topo.dispatchEvent(new MouseEvent('mouseup', { ...base, button: 0, detail: 1 }));
+    }
+    if (compat) topo.dispatchEvent(new MouseEvent('click', { ...base, button: 0, detail: 1 }));
+    return '';
+  }, toque);
+  if (r) throw new Error(`o toque em ${seletor} não chegou: ${r}`);
+}
+
+/** Toca (ou clica) num seletor, à vista. */
+async function tocarSeletor(page: Page, seletor: string): Promise<void> {
+  await toqueRapido(page, seletor);
 }
 
 /** Abre o menu pelo botão de cima (se ainda fechado). */

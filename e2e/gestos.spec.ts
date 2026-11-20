@@ -101,8 +101,11 @@ test('computador: G abre a roda, 1 a 8 escolhem, balão, andar interrompe; captu
   await expect.poll(() => rodaAberta(page)).toBe(false);
   await page.waitForTimeout(500);
   await page.screenshot({ path: `${PASTA}/acenar-costas-computador.png` });
-  // o balão some depois de 2 s; o gesto acaba sozinho
-  await expect.poll(() => local(page), { timeout: 5000 }).toEqual({ gesto: null, balao: null });
+  // o balão some depois de 2 s; o gesto acaba sozinho. Spec 034 (T14): os 2 s são do relógio
+  // do jogo, que anda no máximo 1/30 s por quadro (DT_MAXIMO_QUADRO); na nuvem, por software,
+  // a 1 quadro por segundo, eles levam perto de 1 min de verdade (era o que caía aqui, também
+  // na main). Num aparelho de verdade continua em 2 s
+  await expect.poll(() => local(page), { timeout: 90_000 }).toEqual({ gesto: null, balao: null });
 
   // fechada, os números voltam a ser da barra
   await page.keyboard.press('Digit3');

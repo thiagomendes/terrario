@@ -9,6 +9,7 @@ import {
   meioDaRoleta,
   rolarAte,
   tocarNaPlaquinha,
+  toqueRapido,
 } from './roleta-palco';
 
 /**
@@ -93,8 +94,10 @@ const ABRE: Record<string, (p: Page) => Promise<boolean>> = {
 };
 
 async function cadaItem(page: Page, tocar: boolean, nome: string) {
-  const clicar = async (sel: string) =>
-    tocar ? page.locator(sel).tap() : page.locator(sel).click();
+  // spec 034 (T14): o toque rápido que não depende do relógio da máquina (roleta-palco.ts);
+  // ele toca com o dedo ou clica com o mouse pelo ponteiro da página, que é o do aparelho
+  expect(await page.evaluate(() => matchMedia('(pointer: coarse)').matches)).toBe(tocar);
+  const clicar = (sel: string) => toqueRapido(page, sel);
   // o alto: informações, a roda ao lado; a mochila embaixo do minimapa
   for (const sel of ['[data-hud-info]', '[data-botao-roda]', '[data-botao-mochila]'])
     await expect(page.locator(sel)).toBeVisible();
@@ -279,7 +282,7 @@ test('celular: menu de roda pelo toque, segurar abre os gestos', async ({ browse
   await expect(page.locator('[data-missao-atual]')).toBeHidden();
   await cadaItem(page, true, 'celular');
   // nada de selinho de tecla no toque
-  await page.locator('[data-botao-roda]').tap();
+  await toqueRapido(page, '[data-botao-roda]');
   await esperarAssentar(page);
   expect(await page.locator(`${ROLETA_ABERTA} .item kbd:visible`).count()).toBe(0);
   expect(erros).toEqual([]);
@@ -317,7 +320,7 @@ test('celular deitado e tablet: o alto cabe sem cobrir nada', async ({ browser }
     expect(sobre(r.mochila, r.mini)).toBe(false);
     expect(sobre(r.mochila, r.botoes)).toBe(false);
     expect(r.mochila.bottom).toBeLessThanOrEqual(h);
-    await page.locator('[data-botao-roda]').tap();
+    await toqueRapido(page, '[data-botao-roda]');
     await page.waitForTimeout(450);
     await page.screenshot({ path: `${PASTA}/menu-roda-${w}x${h}.png` });
     await ctx.close();

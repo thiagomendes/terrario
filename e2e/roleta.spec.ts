@@ -7,6 +7,7 @@ import {
   itensDaRoleta,
   meioDaRoleta,
   roletaAberta,
+  toqueRapido,
 } from './roleta-palco';
 
 /**
@@ -40,10 +41,15 @@ async function tocarEm(cdp: CDPSession, page: Page, x: number, y: number) {
   await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
 }
 
-async function tocarSeletor(cdp: CDPSession, page: Page, sel: string) {
-  const r = await page.locator(sel).first().boundingBox();
-  if (!r) throw new Error(`sem ${sel}`);
-  await tocarEm(cdp, page, r.x + r.width / 2, r.y + r.height / 2);
+/**
+ * Spec 034 (T14): o toque num botão é o toque rápido de roleta-palco.ts, que não depende do
+ * relógio da máquina. Pelo protocolo, o encostar e o soltar chegavam à página em quadros
+ * diferentes; com o navegador carregado (1 quadro por segundo na nuvem), passavam dos 600 ms
+ * que separam o toque do arraste parado, e a fileira não andava. Os arrastes e o "tocar fora"
+ * (que age já no encostar) continuam pelo protocolo, com o dedo de verdade.
+ */
+async function tocarSeletor(_cdp: CDPSession, page: Page, sel: string) {
+  await toqueRapido(page, sel);
 }
 
 /** Um dedinho: encosta, arrasta `dx` em `ms` (devagar no começo e no fim) e solta. */
