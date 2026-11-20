@@ -239,6 +239,8 @@ async function iniciar(app: HTMLElement): Promise<void> {
   if (esboco === 'amigos') (await import('./esboco/amigos')).prepararEsbocoAmigos();
   // esboço 014d (só com ?esboco=estetica): a estética firme dos veículos ao lado da de hoje
   if (esboco === 'estetica') (await import('./esboco/veiculosEstetica')).prepararEsbocoEstetica();
+  // esboço da spec 027 (só com ?esboco=fantasias): a Noite das Fantasias, num palco à parte
+  if (esboco === 'fantasias') (await import('./esboco/fantasias')).prepararEsbocoFantasias();
   // esboço da spec 034 (só com ?esboco=gestos034&direcao=A ou B): o jogo com os ícones dos
   // gestos daquela direção (antes da cena, que monta a roleta)
   if (esboco === 'gestos034')
