@@ -674,7 +674,8 @@ function ligar(scene: Scene): void {
     for (let k = 1; k <= 3; k++) por(ox + gx - k, Y + 4, oz + gz, Bloco.MADEIRA_RETORCIDA);
     pontos.galho = [ox + gx - 2, Y + 4, oz + gz + 0.5];
     // parte 2: o poleiro da coruja, ao lado da árvore dos morceguinhos
-    const [px, pz] = [ox + gx - 3.9, oz + gz + 1.9];
+    // (mais ao fundo, atrás do galho: na foto dos morcegos, a coruja não rouba a cena)
+    const [px, pz] = [ox + gx - 4.3, oz + gz - 1.6];
     peca(px, Y + 1, pz, 0, poleiro);
     pontos.poleiro = [px, Y + 1 + 2.5, pz];
     for (let k = 0; k < 70; k++) {

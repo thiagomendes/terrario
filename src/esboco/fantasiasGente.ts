@@ -794,106 +794,140 @@ function lencolDaLulu(ctx: CtxPalco, b: Personagem, prefixo: string, m: Medidas)
 /** Bento: o monstrinho peludo grandão (macacão de tufos, chifrinhos e pezões) com o bumbo. */
 export function vestirBento(p: PlanoBoneco): void {
   roupaLisa(p);
-  const pelo = COR.musgo;
-  // (tons bem próximos: o pelo é um só, os tufos só dão a textura)
-  const pelos = [COR.musgo, '#64843a', '#5a7731'];
-  // (o cabelo que aparece debaixo da aba vira a testa do capuz, no mesmo pelo)
-  pintarRoupa(p, { camisa: pelo, calca: pelo, sapato: COR.musgoEscuro, cabelo: '#557330' });
-  const m = medir(p);
-  // o cabelo fica guardado dentro do capuz (a beira verde dele aparecia em manchas na testa)
+  // verde-musgo de verdade: oliva apagado (o verde-folha saturado puxava para planta), em três
+  // tons bem próximos, tudo fosco (nada de brilho de plástico no pelo)
+  const pelo = '#6b7444';
+  const pelos = [pelo, '#737c4a', '#636b3e'];
+  const fosco = { brilho: 0 } as const;
+  pintarRoupa(p, { camisa: pelo, calca: pelo, sapato: '#565e35', cabelo: '#5f6840' });
+  // o cabelo fica guardado dentro do capuz
   for (let i = p.pecas.length - 1; i >= 0; i--) {
     const q = p.pecas[i];
-    if ((q.junta === 'cabeca' || q.junta === 'topete') && q.cor === '#557330') p.pecas.splice(i, 1);
+    if ((q.junta === 'cabeca' || q.junta === 'topete') && q.cor === '#5f6840') p.pecas.splice(i, 1);
+  }
+  // o grandalhão fofo de abraço: o corpo, os braços, as mãos e as pernas mais largos e grossos
+  // (não só o capuz), os ombros mais para fora
+  for (const q of p.pecas) {
+    const [w, h, d] = q.tamanho;
+    if (q.nome === 'peito' || q.nome === 'quadril') q.tamanho = [w * 1.28, h, d * 1.15];
+    else if (/-(manga|punho)$/.test(q.nome)) q.tamanho = [w * 1.45, h, d * 1.45];
+    else if (/-(ombro|mao)$/.test(q.nome)) q.tamanho = [w * 1.45, h * 1.45, d * 1.45];
+    else if (/-perna$/.test(q.nome)) q.tamanho = [w * 1.3, h, d * 1.3];
+    if (q.junta !== 'cabeca') q.brilho = 0;
+  }
+  const m = medir(p);
+  for (const s of [-1, 1] as const) {
+    const j = s < 0 ? p.juntas.bracoE : p.juntas.bracoD;
+    j.pos = [s * (m.larg / 2 + 0.07), j.pos[1], j.pos[2]];
+    const pe = s < 0 ? p.juntas.pernaE : p.juntas.pernaD;
+    pe.pos = [pe.pos[0] * 1.2, pe.pos[1], pe.pos[2]];
   }
   const a = alfaiate(p.pecas);
-  const { troncoH, prof, frente, larg, xBraco } = m;
-  // o grandão: bem maior que os outros (na fila, ele passa todo mundo)
-  p.escala *= 1.4;
-  // a barriga clara, grande e redonda (o bumbo fica mais embaixo, na frente das coxas)
-  a.bola('barriga', 'tronco', 0.2, [0, troncoH * 0.48, frente - 0.025], '#a9bd6e', [larg * 2.15, 1.15, 0.32]);
-  // o pelo comprido e macio, CAINDO: mechas de cápsula alongada penduradas para baixo, uma
-  // fileira por cima da outra (como franja de tapete ou de esfregão), nenhuma ponta para fora
-  // (os cones espetados pareciam cacto ou ouriço)
+  const { troncoH, prof, frente, larg } = m;
+  // grande, mas cabendo no túnel do trem (o alto dele sentado fica abaixo de 3,55)
+  p.escala *= 1.32;
+  // a barriga clara e fosca (nada de brilho de lâmpada), por cima do bumbo
+  a.bola('barriga', 'tronco', 0.2, [0, troncoH * 0.62, frente - 0.03], '#b3b78a', [larg * 2.0, 0.95, 0.32], fosco);
+  // o pelo de bichinho de pelúcia: tufos curvos (três gotas encavaladas, a base larga, a ponta
+  // virando para fora), densos e sobrepostos como penugem, quebrando o contorno em toda a volta;
+  // nada de bola solta, espinho ou mecha dura
   let k = 0;
-  const franja = (junta: Junta, base: V3, n: V3, comp = 0.17, w = 0.095) => {
-    // quase reta para baixo, só um tico afastada da roupa (o pano cai rente ao corpo)
-    const l0 = Math.hypot(n[0], n[2]) || 1;
-    const d0: V3 = [(n[0] / l0) * 0.18, -1, (n[2] / l0) * 0.18];
-    const l = Math.hypot(...d0);
-    const d: V3 = [d0[0] / l, d0[1] / l, d0[2] / l];
-    const c = comp * (0.88 + sorte(k, 11) * 0.24);
-    a.caixa(
-      `mecha${k}`,
-      junta,
-      [w, c, w * 0.75],
-      [base[0] + (d[0] * c) / 2, base[1] + (d[1] * c) / 2, base[2] + (d[2] * c) / 2],
-      pelos[k % 3],
-      w * 0.37,
-      { rot: giroPara([-d[0], -d[1], -d[2]]) },
-    );
+  const tufo = (junta: Junta, base: V3, n: V3, tam = 1) => {
+    const ln = Math.hypot(...n) || 1;
+    const nn: V3 = [n[0] / ln, n[1] / ln, n[2] / ln];
+    // (deitado na superfície, escorrendo para baixo como pelo penteado, e só a pontinha virando
+    // para fora: espetado para fora, o tufo parecia minhoca ou cacho de cobra)
+    const t0: V3 = [nn[1] * nn[0], -1 + nn[1] * nn[1], nn[1] * nn[2]];
+    let lt = Math.hypot(...t0);
+    let tg: V3 = lt > 0.25 ? [t0[0] / lt, t0[1] / lt, t0[2] / lt] : [0, 0, -1];
+    if (lt <= 0.25) {
+      // (no alto do capuz, o pelo escorre para trás)
+      lt = 1;
+      tg = [0, -0.2, -1];
+    }
+    const d0: V3 = [tg[0] + nn[0] * 0.3, tg[1] + nn[1] * 0.3, tg[2] + nn[2] * 0.3];
+    const ld = Math.hypot(...d0) || 1;
+    const d: V3 = [d0[0] / ld, d0[1] / ld, d0[2] / ld];
+    const s = tam * (0.9 + sorte(k, 13) * 0.25);
+    const cor = pelos[k % 3];
+    const rot = giroPara(d);
+    const em = (fd: number, fn: number): V3 => [
+      base[0] + (d[0] * fd + nn[0] * fn) * s,
+      base[1] + (d[1] * fd + nn[1] * fn) * s,
+      base[2] + (d[2] * fd + nn[2] * fn) * s,
+    ];
+    a.bola(`tufo${k}a`, junta, 0.075 * s, em(0, 0.005), cor, [1.15, 1.0, 0.55], { rot, brilho: 0 });
+    a.bola(`tufo${k}b`, junta, 0.052 * s, em(0.06, 0.018), cor, [1.1, 1.0, 0.6], { rot, brilho: 0 });
+    a.bola(`tufo${k}c`, junta, 0.03 * s, em(0.095, 0.035), cor, [1, 1, 0.8], { rot, brilho: 0 });
     k++;
   };
-  // o tronco: fileiras em volta (dos ombros até o quadril), a barriga clara livre no meio
-  for (let j = 0; j < 4; j++) {
-    const y = troncoH + 0.02 - j * 0.12;
-    for (let q = 0; q < 24; q++) {
-      const t = (q / 24) * Math.PI * 2 + j * 0.13;
-      const x = Math.sin(t) * (larg / 2 + 0.01);
-      const z = Math.cos(t) * (prof / 2 + 0.01);
-      if (z > 0 && Math.abs(x) < larg * 0.28 && j > 0) continue;
-      franja('tronco', [x, y, z], [Math.sin(t), 0, Math.cos(t)]);
+  // o tronco: fileiras desencontradas em volta (dos ombros até o quadril), a barriga livre
+  for (let j = 0; j < 5; j++) {
+    const y = troncoH + 0.01 - j * 0.1;
+    const n = 26;
+    for (let q = 0; q < n; q++) {
+      const t = ((q + (j % 2) * 0.5) / n) * Math.PI * 2;
+      const x = Math.sin(t) * (larg / 2 + 0.005);
+      const z = Math.cos(t) * (prof / 2 + 0.005);
+      if (z > 0 && Math.abs(x) < larg * 0.3 && j > 0) continue;
+      tufo('tronco', [x, y, z], [Math.sin(t), j === 0 ? 0.5 : 0, Math.cos(t)]);
     }
   }
-  // os braços e as pernas: franjas em volta
+  // os braços e as pernas: tufos em volta
   for (const lado of ['bracoE', 'bracoD'] as const)
-    for (let j = 0; j < 2; j++)
-      for (let q = 0; q < 6; q++) {
-        const t = (q / 6) * Math.PI * 2 + j * 0.5;
-        franja(lado, [Math.sin(t) * 0.07, 0.02 - j * 0.11, Math.cos(t) * 0.07], [Math.sin(t), 0, Math.cos(t)], 0.14, 0.06);
+    for (let j = 0; j < 3; j++)
+      for (let q = 0; q < 8; q++) {
+        const t = ((q + (j % 2) * 0.5) / 8) * Math.PI * 2;
+        tufo(lado, [Math.sin(t) * 0.09, 0.02 - j * 0.08, Math.cos(t) * 0.09], [Math.sin(t), 0, Math.cos(t)], 0.85);
       }
   for (const lado of ['pernaE', 'pernaD'] as const)
-    for (let q = 0; q < 6; q++) {
-      const t = (q / 6) * Math.PI * 2;
-      franja(lado, [Math.sin(t) * 0.08, -0.02, Math.cos(t) * 0.08], [Math.sin(t), 0, Math.cos(t)], 0.15, 0.065);
-    }
-  // o capuz de monstro: uma bola grande e redonda por trás e por cima da cabeça, coberta de
-  // franjas caindo; na frente, a borda do pelo (mechas curtas caindo em volta) emoldura o rosto
+    for (let j = 0; j < 2; j++)
+      for (let q = 0; q < 8; q++) {
+        const t = ((q + j * 0.5) / 8) * Math.PI * 2;
+        tufo(lado, [Math.sin(t) * 0.1, -0.02 - j * 0.09, Math.cos(t) * 0.1], [Math.sin(t), 0, Math.cos(t)], 0.9);
+      }
+  // o capuz de monstro: uma bola redonda e fosca por trás e por cima da cabeça, coberta de tufos
+  // em toda a volta (em cima, atrás e dos lados); na frente, os tufos em volta emolduram o rosto
   const cc: V3 = [0, 0.1, -0.2];
-  const RR: V3 = [0.55, 0.6, 0.5];
-  a.bola('monstro-capuz', 'cabeca', 1, cc, pelo, RR);
+  const RR: V3 = [0.53, 0.56, 0.48];
+  a.bola('monstro-capuz', 'cabeca', 1, cc, pelo, RR, fosco);
   const naCasca = (fi: number, u: number) => {
     const p: V3 = [cc[0] + RR[0] * Math.cos(fi) * Math.sin(u), cc[1] + RR[1] * Math.sin(fi), cc[2] + RR[2] * Math.cos(fi) * Math.cos(u)];
     const n: V3 = [(p[0] - cc[0]) / RR[0] ** 2, (p[1] - cc[1]) / RR[1] ** 2, (p[2] - cc[2]) / RR[2] ** 2];
     return { p, n };
   };
   for (const [fi, nq] of [
-    [1.25, 6],
-    [0.95, 12],
-    [0.6, 16],
-    [0.2, 18],
-    [-0.2, 18],
+    [1.35, 5],
+    [1.05, 11],
+    [0.7, 16],
+    [0.3, 19],
+    [-0.1, 19],
+    [-0.45, 16],
   ] as const)
     for (let q = 0; q < nq; q++) {
-      const uu = (q / nq) * Math.PI * 2 + fi;
+      const uu = ((q + (nq % 2) * 0.5) / nq) * Math.PI * 2;
       // (na frente, só por cima e dos lados do rosto: o rosto fica livre)
-      if (Math.cos(uu) > 0.55 && fi < 0.9) continue;
+      if (Math.cos(uu) > 0.5 && fi < 0.85) continue;
       const { p: pp, n } = naCasca(fi, uu);
-      franja('cabeca', [pp[0] * 0.98, pp[1], pp[2] * 0.98], n, 0.2, 0.085);
+      tufo('cabeca', pp, n, 1.15);
     }
-  // a borda do pelo em volta do rosto: mechinhas curtas caindo, de orelha a orelha por cima
-  for (let q = 0; q <= 10; q++) {
-    const t = Math.PI * (q / 10);
-    franja('cabeca', [Math.cos(t) * 0.4, 0.08 + Math.sin(t) * 0.3, 0.27], [Math.cos(t), 0, 0.6], q === 5 ? 0.08 : 0.11, 0.07);
+  // a moldura do rosto: tufos em volta da abertura, apontando para fora (de orelha a orelha)
+  for (let q = 0; q < 14; q++) {
+    const t = (q / 14) * Math.PI * 2 + 0.2;
+    if (Math.sin(t) < -0.75) continue;
+    tufo('cabeca', [Math.cos(t) * 0.4, -0.03 + Math.sin(t) * 0.37, 0.25], [Math.cos(t), Math.sin(t), 0.45], 0.8);
+  }
+  // a franjinha de pelo na testa: cobre o alto da cabeça na frente (o rosto fica dentro do capuz)
+  for (let q = 0; q < 7; q++) {
+    const x = -0.33 + q * 0.11;
+    tufo('cabeca', [x, 0.33 - Math.abs(x) * 0.15, 0.3], [0, 0.35, 1], 0.95);
   }
   for (const s of [-1, 1]) {
-    // os chifrinhos: grandes, lisos e redondos, laranja (nada de broto)
-    const h = naCasca(1.0, s * 0.55);
-    a.bola(`chifre${s}`, 'cabeca', 0.12, [h.p[0], h.p[1] + 0.05, h.p[2]], COR.laranja, [1, 1.12, 1], { brilho: 0.4 });
-    // as orelhinhas de monstro: redondas, de lado, com o miolo claro
-    const o = naCasca(0.15, s * 1.45);
-    a.bola(`orelha${s}`, 'cabeca', 0.14, [o.p[0] + s * 0.05, o.p[1], o.p[2]], pelo, [0.45, 1, 0.85], { rot: [0, 0, s * 0.3] });
-    a.bola(`orelha-dentro${s}`, 'cabeca', 0.085, [o.p[0] + s * 0.09, o.p[1], o.p[2] + 0.03], '#a9bd6e', [0.3, 1, 0.75], {
-      rot: [0, 0, s * 0.3],
+    // os chifrinhos: curtos e redondos, saindo do pelo um tico para fora (laranja apagado, fosco)
+    const h = naCasca(1.05, s * 0.5);
+    a.caixa(`chifre${s}`, 'cabeca', [0.1, 0.17, 0.1], [h.p[0] + s * 0.02, h.p[1] + 0.07, h.p[2]], '#d9863c', 0.05, {
+      rot: [0, 0, -s * 0.38],
+      brilho: 0,
     });
   }
   // os pezões: no lugar do sapato, pés grandes e redondos com três dedinhos claros
@@ -906,29 +940,29 @@ export function vestirBento(p: PlanoBoneco): void {
     for (const x of [-0.07, 0, 0.07])
       a.bola(`${lado}-dedo${x}`, lado, 0.045, [x, sapato.pos[1] - 0.01, sapato.pos[2] + 0.17], COR.musgoClaro, [1, 0.8, 0.8]);
   }
-  // o bumbo embaixo da barriga, na frente das coxas (a barriga clara aparece por cima), a correia
-  // roxa no ombro, faces creme e aros roxos
-  const rB = 0.2;
-  const zB = frente + rB + 0.08;
-  const yB = -0.06;
-  a.cilindro('bumbo', 'tronco', 0.3, rB, rB, [0, yB, zB], COR.laranja, { rot: [0, 0, Math.PI / 2] });
+  // o bumbo grande na frente, embaixo da barriga, com a pele creme virada para a frente, os aros
+  // roxos e a alça roxa atravessada no ombro; a baqueta da mão direita encosta na pele
+  const rB = 0.27;
+  const fundo = 0.26;
+  const xB = 0.12;
+  const yB = -0.03;
+  const zB = frente + fundo / 2 + 0.05;
+  const deFrente = { rot: [Math.PI / 2, 0, 0] as V3 };
+  a.cilindro('bumbo', 'tronco', fundo, rB, rB, [xB, yB, zB], COR.laranja, { ...deFrente, brilho: 0.2 });
   for (const s of [-1, 1]) {
-    a.cilindro(`bumbo-pele${s}`, 'tronco', 0.012, rB - 0.02, rB - 0.02, [s * 0.155, yB, zB], COR.creme, {
-      rot: [0, 0, Math.PI / 2],
-    });
-    a.anel(`bumbo-aro${s}`, 'tronco', rB * 2, 0.045, [s * 0.15, yB, zB], COR.roxo, { rot: [0, 0, Math.PI / 2] });
+    a.cilindro(`bumbo-pele${s}`, 'tronco', 0.012, rB - 0.02, rB - 0.02, [xB, yB, zB + s * (fundo / 2 + 0.004)], COR.creme, deFrente);
+    a.anel(`bumbo-aro${s}`, 'tronco', rB * 2, 0.05, [xB, yB, zB + s * (fundo / 2 - 0.004)], COR.roxo, deFrente);
   }
-  for (let i = 0; i < 6; i++) {
-    const t = (i / 6) * Math.PI * 2;
-    a.caixa(`bumbo-corda${i}`, 'tronco', [0.3, 0.025, 0.025], [0, yB + Math.sin(t) * (rB + 0.004), zB + Math.cos(t) * (rB + 0.004)], COR.creme, 0.01);
+  for (let i = 0; i < 8; i++) {
+    const t = (i / 8) * Math.PI * 2;
+    a.caixa(`bumbo-corda${i}`, 'tronco', [0.025, 0.025, fundo], [xB + Math.cos(t) * (rB + 0.004), yB + Math.sin(t) * (rB + 0.004), zB], COR.creme, 0.01);
   }
-  a.caixa('bumbo-correia', 'tronco', [0.07, troncoH * 1.25, prof + 0.04], [0, troncoH * 0.55, 0], COR.roxo, 0.025, {
-    rot: [0, 0, -0.72],
+  a.caixa('bumbo-correia', 'tronco', [0.08, troncoH * 1.3, prof + 0.05], [0.02, troncoH * 0.5, 0], COR.roxo, 0.03, {
+    rot: [0, 0, -0.62],
   });
-  // a maceta na mão direita: cabo de madeira e a bola creme
-  a.cilindro('maceta-cabo', 'maoD', 0.32, 0.02, 0.02, [0, -0.02, 0.17], '#a8703c', { rot: [Math.PI / 2, 0, 0] });
-  a.bola('maceta-bola', 'maoD', 0.075, [0, -0.02, 0.34], COR.creme);
-  void xBraco;
+  // a baqueta na mão direita, ao longo do braço para baixo: a bola encosta na pele do bumbo
+  a.cilindro('maceta-cabo', 'maoD', 0.28, 0.022, 0.022, [0, -0.15, 0.02], '#a8703c');
+  a.bola('maceta-bola', 'maoD', 0.07, [0, -0.3, 0.02], COR.creme);
 }
 
 /** Seu Jerônimo: o dono da horta (palha com fita laranja, macacão jeans, xadrez, regador). */
@@ -1028,7 +1062,8 @@ const MORADORES: DefMorador[] = [
     modelo: 'ferreiro',
     aparencia: { corpo: 'masculino', pele: 3, rosto: 0, cabeloEstilo: 0, cabeloCor: 1, roupaEstilo: 0, acessorio: 'nenhum' },
     vestir: vestirBento,
-    pose: { bdX: -1.0, bdZ: 0.55, beX: -0.5, beZ: -0.1, cabZ: 0.08 },
+    // (a mão direita com a baqueta encostando na pele do bumbo, a esquerda apoiada nele)
+    pose: { bdX: -1.1, bdZ: -0.25, beX: -0.6, beZ: 0.2, cabZ: 0.08 },
   },
   {
     id: 'jeronimo',
@@ -1184,7 +1219,8 @@ export function montarMoradores(ctx: CtxPalco): Moradores {
     ctx.foraDoBrilho(haloDudu);
   }
   // (um tico mais espaçados: o Bento grandão e o bumbo precisam de lugar)
-  const fila = (i: number) => ({ x: ox + 49.3 + i * 1.85, y: Y, z: oz + 46.5, giro: 0 });
+  // (juntinhos, ombro com ombro: em pé, a fila inteira cabe de mais perto)
+  const fila = (i: number) => ({ x: ox + 49.3 + i * 1.6, y: Y, z: oz + 46.5, giro: 0 });
   const ordemFila = ['vovo', 'dudu', 'lulu', 'bento', 'jeronimo'];
   const por = (q: Morador, l: { x: number; y: number; z: number; giro: number }) => {
     q.boneco.posicionar(l.x, l.y, l.z, l.giro);
@@ -1207,12 +1243,12 @@ export function montarMoradores(ctx: CtxPalco): Moradores {
   // ---------------------------------------------------------------- as tomadas
   const tm = (pos: V3, alvo: V3, fov: number) => ({ pos, alvo, fov });
   const P = (x: number, h: number, z: number): V3 => [ox + x, O.y + h, oz + z];
-  const fx = 49.3 + 2 * 1.85;
+  const fx = 49.3 + 2 * 1.6;
   api.tomadas.fila = {
     // (o alto da abóbora gigante inteiro no quadro: os olhos dela não saem cortados)
     deitado: tm(P(fx, 2.0, 53.6), P(fx, 2.65, 46.5), 54),
     // (em pé, a fila só cabe de longe: a abóbora gigante atrás enche o alto do quadro)
-    empe: tm(P(fx, 1.7, 56.6), P(fx, 3.0, 46.5), 88),
+    empe: tm(P(fx, 1.75, 55.0), P(fx, 2.55, 46.5), 90),
   };
   const L = (id: string) => lugares[id];
   /**

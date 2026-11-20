@@ -120,6 +120,8 @@ const FOTOS_PASSEIO: Array<[string, string, number]> = [
   ['21-trem-perto', 'tremPerto', 5.7],
   ['21-trem-bordo', 'bordo', 2.9],
   ['21-trem-tunel-dentro', 'tunelDentro', 5.5],
+  // a prova da folga: ao lado do trem, dentro do túnel, na altura da cabeça do Bento
+  ['21-trem-folga-tunel', 'tremFolga', 5.2],
 ];
 
 async function fotografarPasseios(page: Page, t: Tamanho) {
@@ -220,7 +222,8 @@ async function gravarPasseios(page: Page) {
       await page.waitForTimeout(Math.max(0, quando - (Date.now() - t0)));
       await page.evaluate((k) => window.__fantasias!.lanterna(k, true), i);
     }
-    await page.waitForTimeout(Math.max(0, 10200 - (Date.now() - t0)));
+    // (no fim, a câmera chega perto do galho dos morceguinhos e fica ali uns 3 segundos)
+    await page.waitForTimeout(Math.max(0, 14600 - (Date.now() - t0)));
     await pararGravacao(page, `${pasta}/22-bosque-noite.webm`);
     passo('vídeo do bosque');
   }

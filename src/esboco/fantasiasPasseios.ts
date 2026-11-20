@@ -217,7 +217,8 @@ function vestirBruxinha(p: PlanoBoneco): void {
 /** A criança de abóbora: a barriga redonda de gomos, a golinha de folhas e o gorro de cabinho. */
 function vestirAbobrinha(p: PlanoBoneco): void {
   roupaLisa(p);
-  pintarRoupa(p, { camisa: COR.laranja, calca: COR.musgoEscuro, sapato: COR.musgo });
+  // (o cabelo na cor do gorro: a beira loira que aparecia por baixo parecia um boné furando)
+  pintarRoupa(p, { camisa: COR.laranja, calca: COR.musgoEscuro, sapato: COR.musgo, cabelo: COR.musgo });
   const m = medir(p);
   const a = alfaiate(p.pecas);
   const { troncoH, frente, baseChapeu, topoTampa, cab } = m;
@@ -231,7 +232,8 @@ function vestirAbobrinha(p: PlanoBoneco): void {
       rot: [0, 0, s * 0.35],
     });
   // o gorro verde de cabinho e folhinha
-  a.cilindro('gorro', 'cabeca', 0.16, 0.37, 0.3, [0, baseChapeu + 0.05, -0.01], COR.musgo);
+  // (o gorro mais largo que a tampa de cabelo: nada aparece por baixo dele)
+  a.cilindro('gorro', 'cabeca', 0.16, 0.405, 0.32, [0, baseChapeu + 0.05, -0.01], COR.musgo);
   a.bola('gorro-topo', 'cabeca', 0.3, [0, baseChapeu + 0.13, -0.01], COR.musgo, [1, 0.42, 1]);
   a.cilindro('cabinho', 'cabeca', 0.14, 0.045, 0.035, [0.02, baseChapeu + 0.25, 0], '#7a4e2a', { rot: [0, 0, -0.25] });
   a.bola('folhinha', 'cabeca', 0.08, [0.12, baseChapeu + 0.23, 0.02], COR.musgoClaro, [1.2, 0.35, 0.7], { rot: [0, 0.4, -0.5] });
@@ -965,7 +967,9 @@ export function montarPasseios(ctx: CtxPasseios): Passeios {
     ctx,
     'abobrinha-trem',
     'andarilho',
-    { corpo: 'masculino', pele: 1, rosto: 0, cabeloEstilo: 1, cabeloCor: 3, roupaEstilo: 0, acessorio: 'nenhum' },
+    // (cabelo raspadinho debaixo do gorro: a tampa loira de franja saía por baixo e parecia um
+    // boné furando o chapéu)
+    { corpo: 'masculino', pele: 1, rosto: 0, cabeloEstilo: 3, cabeloCor: 3, roupaEstilo: 0, acessorio: 'nenhum' },
     vestirAbobrinha,
     SENTADO,
   );
@@ -1143,6 +1147,17 @@ export function montarPasseios(ctx: CtxPasseios): Passeios {
         const alvo: V3 = [ox + TUNEL.x0 + 0.3, Y + 1.2, oz + TUNEL.z - 0.1];
         return { pos, alvo, fov: em ? 70 : 52 };
       }
+      if (qual === 'tremFolga') {
+        // a prova da folga: dentro do túnel, ao lado do trem, na altura da cabeça do Bento,
+        // olhando para ele de frente e um tico de lado: a cabeça dele e o teto do arco por cima
+        const p = ondeCarro(sDoTrem(t), carros[1]);
+        const zc = oz + TUNEL.z;
+        // (de frente para ele, uns 2,6 à frente, um tico abaixo do alto da cabeça: o rosto, o
+        // alto do capuz e o arco do teto por cima, com o vão entre os dois)
+        const pos: V3 = [p.x + p.dx * 2.6, Y + 2.65, zc + 0.95];
+        const alvo: V3 = [p.x, Y + 3.25, zc - 0.1];
+        return { pos, alvo, fov: em ? 84 : 74 };
+      }
       if (qual === 'tunelDentro') {
         // da boca de entrada, olhando para dentro do túnel com o trem lá no meio: a folga entre o
         // alto dos passageiros (de costas, braços para cima) e o teto
@@ -1169,15 +1184,28 @@ export function montarPasseios(ctx: CtxPasseios): Passeios {
         // (revisor: passava raspando nos postes; os postes ficam a 3 do meio, um de cada lado,
         // a cada 7 blocos: a câmera desvia para o lado contrário do poste que vem, ~4 dele)
         // (começa logo depois de um poste, que fica para trás: nada de lampião cortado no começo)
-        const z = 62 - 2.0 * t;
         // (o desvio maior vem uns 3 blocos antes do poste, quando ele está entrando no quadro)
         const desvia = (zz: number) => -1.2 * Math.cos((Math.PI * (83 - (zz - 3))) / 7);
-        const x = ctx.trilha(z) + 0.5 + desvia(z);
-        const za = z - 9;
-        const pos: V3 = [ox + x, Y + 1.55, oz + z];
-        const alvo: V3 = [ox + ctx.trilha(za) + 0.5 + desvia(za) * 0.4, Y + 1.6, oz + za];
-        // (mais fechada: o lampião que vem de lado não entra cortado na beira de cima)
-        return { pos, alvo, fov: em ? 66 : 50 };
+        const andar = (tt: number) => {
+          const z = 62 - 2.0 * tt;
+          const x = ctx.trilha(z) + 0.5 + desvia(z);
+          const za = z - 9;
+          return {
+            pos: [ox + x, Y + 1.55, oz + z] as V3,
+            alvo: [ox + ctx.trilha(za) + 0.5 + desvia(za) * 0.4, Y + 1.6, oz + za] as V3,
+          };
+        };
+        // no fim (revisor: os morceguinhos eram manchas de longe), a câmera chega perto do galho
+        // deles e fica ali uns 3 segundos: os três dormindo de cabeça para baixo e o que voa
+        const T0 = 9.2;
+        if (t <= T0) return { ...andar(t), fov: em ? 66 : 50 };
+        const g = ctx.pontos.galho;
+        const perto = { pos: [g[0] - 0.45, g[1] - 1.25, g[2] + 3.0] as V3, alvo: [g[0] - 0.3, g[1] - 0.5, g[2] + 0.3] as V3 };
+        const a = andar(T0);
+        const u = Math.min(1, (t - T0) / 2.2);
+        const k = u * u * (3 - 2 * u);
+        const mix = (p: V3, q: V3): V3 => [p[0] + (q[0] - p[0]) * k, p[1] + (q[1] - p[1]) * k, p[2] + (q[2] - p[2]) * k];
+        return { pos: mix(a.pos, perto.pos), alvo: mix(a.alvo, perto.alvo), fov: em ? 66 : 50 };
       }
       return null;
     },

@@ -25,7 +25,7 @@ import type { PecaCriatura } from '../temas/tipos';
 import { bicho, CRIATURAS_RANCHO } from '../temas/rancho-alegre/criaturas';
 import { bichoDeBrinquedo } from '../render/bichoBrinquedo';
 import { juntasDoBicho } from '../render/juntasBicho';
-import { caixaArredondada, esfera } from '../render/formas';
+import { caixaArredondada, dadosPlaca, esfera } from '../render/formas';
 import { COR, sombrinha, type CtxPalco } from './fantasiasGente';
 
 type V3 = [number, number, number];
@@ -77,48 +77,85 @@ function tufinho(): PecaCriatura[] {
 }
 
 /** Morceguinho roxo de asa redonda: acordado (voando) ou dormindo (asas fechadas na frente). */
+/** As cores do morceguinho: lilás claro com a barriga creme (de noite não some no céu roxo). */
+const MORCEGO = { corpo: '#9b80d6', barriga: '#f3e8d4', asa: '#8a6dc9', braco: '#6b52a8', escala: 1.3 };
+
 function morcego(dormindo: boolean): PecaCriatura[] {
-  const roxo = '#7a55b8';
-  const asa = '#5f3f98';
-  const b = bicho(1.3);
+  const { corpo: roxo, asa } = MORCEGO;
+  const b = bicho(MORCEGO.escala);
   b.bola(0.1, roxo, [1, 1.1, 0.9], [0, 0.11, 0]);
-  b.bola(0.065, '#c2abe8', [1, 1.15, 0.5], [0, 0.1, 0.06]);
+  b.bola(0.068, MORCEGO.barriga, [1, 1.15, 0.5], [0, 0.1, 0.06]);
   for (const s of [-1, 1]) b.bola(0.025, asa, [1, 0.8, 1.2], [s * 0.035, 0.01, 0.02]);
   for (const s of [-1, 1]) {
     const papel = s > 0 ? 'asa0' : 'asa1';
     if (dormindo) {
-      // as asas fechadas abraçando o corpo, na frente da barriga
-      b.bola(0.11, asa, [0.55, 1.05, 0.2], [s * 0.075, 0.11, 0.075], { papel, rot: [0, s * -0.7, 0] });
+      // as asas dobradas em volta do corpo, como uma capinha fechada na frente (a carinha de fora)
+      b.bola(0.12, asa, [0.6, 1.05, 0.95], [s * 0.05, 0.1, 0.0], { papel, rot: [0, s * -0.35, 0] });
+      b.bola(0.09, asa, [0.6, 1.0, 0.35], [s * 0.045, 0.09, 0.075], { papel, rot: [0, s * -0.5, 0] });
     } else {
-      // a asa aberta: uma membrana lisa e fina, redonda, com duas ondas na beira de baixo (nada
-      // de cacho de bolinhas) e o ossinho de cima um tom mais escuro
-      b.bola(0.15, asa, [1, 0.6, 0.07], [s * 0.21, 0.14, -0.01], { papel });
-      for (const k of [0, 1])
-        b.bola(0.075, asa, [1, 0.75, 0.07], [s * (0.15 + k * 0.12), 0.085, -0.01], { papel });
-      b.caixa([0.26, 0.026, 0.026], [s * 0.2, 0.225, -0.01], '#4e3282', 0.012, { papel, rot: [0, 0, s * -0.15] });
+      // só o bracinho fino por cima da asa: a membrana em leque é uma malha própria
+      // (`asaDeMorcego`), presa a esta mesma junta
+      b.caixa([0.3, 0.022, 0.022], [s * 0.21, 0.225, -0.01], MORCEGO.braco, 0.011, { papel, rot: [0, 0, s * 0.12] });
     }
   }
   b.grupo([0, 0.25, 0.01], 'cabeca');
   b.bola(0.1, roxo, [1.12, 1, 1], [0, 0, 0]);
   for (const s of [-1, 1]) {
-    b.bola(0.045, roxo, [0.8, 1.3, 0.5], [s * 0.075, 0.1, -0.01], { rot: [0, 0, -s * 0.3] });
-    b.bola(0.026, '#ffb3c1', [0.8, 1.2, 0.3], [s * 0.075, 0.1, 0.012], { rot: [0, 0, -s * 0.3] });
+    // as orelhinhas pontudas (um losango meio enterrado: só a ponta de cima aparece)
+    b.caixa([0.09, 0.09, 0.035], [s * 0.065, 0.075, -0.01], roxo, 0.014, { rot: [0, 0, Math.PI / 4 - s * 0.2] });
+    b.caixa([0.045, 0.045, 0.02], [s * 0.065, 0.085, 0.01], '#ffb3c1', 0.008, { rot: [0, 0, Math.PI / 4 - s * 0.2] });
     b.bola(0.022, '#ff9aa8', [1.4, 0.75, 0.3], [s * 0.065, -0.035, 0.09]);
   }
   if (dormindo)
     for (const s of [-1, 1])
-      // os olhinhos fechados: um risquinho curvo (dormindo de bico feliz)
-      b.caixa([0.05, 0.014, 0.012], [s * 0.042, 0.005, 0.098], '#231a28', 0.006, { rot: [0, 0, s * -0.25] });
-  else b.olhos(0.01, 0.09, 0.042, 0.024, { bochecha: false });
-  // o sorrisinho (três bolinhas em arco)
+      // os olhinhos fechados: um arquinho bem legível (três pontinhos em curva)
+      for (const [dx, dy] of [
+        [-0.022, 0.006],
+        [0, -0.004],
+        [0.022, 0.006],
+      ])
+        b.bola(0.011, '#2a1f3a', [1.4, 1, 0.5], [s * 0.045 + dx, 0.012 + dy, 0.1]);
+  else b.olhos(0.01, 0.09, 0.042, 0.026, { bochecha: false });
+  // a boquinha sorrindo (três bolinhas em arco), sem dente nenhum
   for (const [x, y] of [
     [-0.022, -0.03],
     [0, -0.04],
     [0.022, -0.03],
   ])
     b.bola(0.011, '#4a2a5a', [1.3, 1, 0.5], [x, y, 0.1]);
-  b.bola(0.012, '#fff6f0', [0.8, 1, 0.5], [0.012, -0.045, 0.098]);
   return b.fim().pecas;
+}
+
+/**
+ * A asa aberta do morceguinho: uma membrana fina em leque, no plano da asa, com três pontas
+ * redondas embaixo e a beira recortada em ondas entre elas; o bracinho fica por cima (peça do
+ * desenho). Coordenadas do bicho (antes da escala do desenho), o ombro em x = 0,06.
+ */
+function perfilAsa(s: 1 | -1): Array<[number, number]> {
+  const pts: Array<[number, number]> = [];
+  // a beira de baixo, de dentro para fora: ondas descendo até cada ponta redonda
+  const pontas: Array<[number, number]> = [
+    [0.13, 0.035],
+    [0.24, 0.02],
+    [0.35, 0.06],
+  ];
+  let ant: [number, number] = [0.06, 0.09];
+  pts.push(ant);
+  for (const [px, py] of pontas) {
+    // a onda: sobe um tico no meio e desce até a ponta, redondinha
+    for (let i = 1; i <= 5; i++) {
+      const t = i / 5;
+      const x = ant[0] + (px - ant[0]) * t;
+      const y = ant[1] + (py - ant[1]) * t + 0.035 * Math.sin(Math.PI * t);
+      pts.push([x, y]);
+    }
+    ant = [px, py];
+  }
+  // a ponta de fora e a beira de cima (o bracinho), voltando ao ombro
+  pts.push([0.375, 0.12], [0.36, 0.2], [0.3, 0.235], [0.2, 0.235], [0.1, 0.205], [0.06, 0.18]);
+  const k = MORCEGO.escala;
+  const out = pts.map(([x, y]) => [s * x * k, y * k] as [number, number]);
+  return s > 0 ? out : out.reverse();
 }
 
 /** A coruja do Rancho (`rancho-alegre/criaturas.ts`), repintada de lilás e creme. */
@@ -317,14 +354,42 @@ export function montarBichos(ctx: CtxPalco): Bichos {
     b.raiz.rotation.y = k * 0.2;
     dormindo.push(b);
   });
-  const voando = [
-    { b: novo('morcego-voa0', morcego(false)), c: [gx + 1.6, gy - 0.5, gz + 2.0] as V3, r: 0.3, f: 0 },
-    { b: novo('morcego-voa1', morcego(false)), c: [gx - 0.3, gy - 1.35, gz + 0.6] as V3, r: 0.3, f: 2.2 },
-  ];
-  // a coruja no alto do poleiro, ao lado da árvore dos morceguinhos
+  // (um só voando, no vão debaixo do galho, longe do tronco e da cabeça dos postes: o que voava
+  // colado no tronco parecia esquilo)
+  const voando = [{ b: novo('morcego-voa1', morcego(false)), c: [gx + 1.45, gy - 0.65, gz + 1.6] as V3, r: 0.22, f: 2.2 }];
+  // a asa em leque de cada um que voa: a membrana fina presa à junta da asa (bate junto)
+  for (const v of voando)
+    for (const parte of v.b.partes) {
+      if (parte.papel !== 'asa0' && parte.papel !== 'asa1') continue;
+      const s = parte.papel === 'asa0' ? 1 : -1;
+      const vd = dadosPlaca(perfilAsa(s), 0.014 * MORCEGO.escala);
+      const P = vd.positions as number[];
+      const piv = parte.no.position;
+      for (let i = 0; i < P.length; i += 3) {
+        P[i] -= piv.x;
+        P[i + 1] -= piv.y;
+        P[i + 2] += -0.012 * MORCEGO.escala - piv.z;
+      }
+      const c = Color3.FromHexString(MORCEGO.asa);
+      const n = P.length / 3;
+      const cores = new Float32Array(n * 4);
+      for (let i = 0; i < n; i++) cores.set([c.r, c.g, c.b, 1], i * 4);
+      vd.colors = cores;
+      vd.uvs = null;
+      const m = new Mesh(`esboco-bicho-asa-${s}`, scene);
+      vd.applyToMesh(m);
+      m.material = v.b.materiais[0];
+      m.parent = parte.no;
+      m.isPickable = false;
+      ctx.semBrilho(m);
+    }
+  // a coruja no alto do poleiro, ao lado da árvore dos morceguinhos (menor: na foto dos
+  // morcegos, quem aparece são eles)
   const cor = novo('coruja', coruja());
   const pol = pontos.poleiro ?? [gx - 1.9, gy - 0.4, gz + 1.4];
-  por(cor, pol[0], pol[1], pol[2], 0.35);
+  cor.raiz.scaling.setAll(0.7);
+  cor.raiz.position.set(pol[0], pol[1] - cor.base * 0.7, pol[2]);
+  cor.raiz.rotation.y = 0.35;
 
   // as fantasminhas flutuando na rua, juntinhas (na frente das casinhas)
   const fantas = [
@@ -374,6 +439,18 @@ export function montarBichos(ctx: CtxPalco): Bichos {
     ctx.foraDoBrilho(m);
     return m;
   });
+  // o brilhinho de contorno dos morceguinhos de noite (um halo lilás bem fraco atrás de cada um:
+  // no céu roxo, eles não somem)
+  for (const [i, b] of [...dormindo, ...voando.map((v) => v.b)].entries()) {
+    const m = MeshBuilder.CreatePlane(`esboco-morcego-halo${i}`, { size: 0.9 }, scene);
+    m.material = mh;
+    m.billboardMode = Mesh.BILLBOARDMODE_ALL;
+    m.parent = b.raiz;
+    m.position.set(0, 0.22, -0.12);
+    m.isPickable = false;
+    ctx.foraDoBrilho(m);
+    halos.push(m);
+  }
 
   let animando = true;
   let t = 0;
@@ -437,7 +514,7 @@ export function montarBichos(ctx: CtxPalco): Bichos {
       if (!sim) {
         quadro(0.2);
         // (os que voam de frente para a foto: de costas, o morceguinho parecia aranha)
-        voando.forEach((v, i) => (v.b.raiz.rotation.y = i ? -0.25 : 0.3));
+        voando.forEach((v) => (v.b.raiz.rotation.y = 0.12));
       }
     },
     tomadas: {},
@@ -446,8 +523,9 @@ export function montarBichos(ctx: CtxPalco): Bichos {
   // ---------------------------------------------------------------- as tomadas
   const tm = (pos: V3, alvo: V3, fov: number) => ({ pos, alvo, fov });
   api.tomadas.morcegos = {
-    deitado: tm([gx - 0.5, gy - 1.5, gz + 4.6], [gx - 0.5, gy - 0.25, gz], 56),
-    empe: tm([gx - 0.9, gy - 1.6, gz + 6.4], [gx - 0.8, gy + 0.1, gz], 72),
+    // (de mais perto: os morceguinhos grandes no quadro, a coruja no canto)
+    deitado: tm([gx - 0.45, gy - 1.25, gz + 3.4], [gx - 0.3, gy - 0.45, gz + 0.3], 54),
+    empe: tm([gx - 0.5, gy - 1.35, gz + 4.3], [gx - 0.35, gy - 0.3, gz + 0.3], 70),
   };
   api.tomadas.fantasminhas = {
     deitado: tm([ox + 23.8, Y + 1.4, oz + 28.6], [ox + 23.8, Y + 1.0, oz + 23.3], 56),
