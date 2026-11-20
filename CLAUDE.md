@@ -51,6 +51,8 @@ Durante o trabalho, mandar ao dono "aperitivos" (fotos e vídeos do que está fi
 
 ## Boletim para o dono (decisão de 20 nov 2026)
 - **De hora em hora**, e na hora quando algo precisa dele (decisão, aperitivo, publicação, problema).
+- **Relatório do dia, às 22h de Brasília**, no painel publicado "Painel do Terrário" (sempre no mesmo endereço): no topo, o dia (o que entrou, as decisões, as fotos, o que fica para amanhã); depois o estado da spec, o que precisa do dono, a fila e o que já está no ar. No chat vai só o link com 2 ou 3 linhas.
+- **Agendamentos:** o boletim e o relatório do dia são tarefas agendadas no claude.ai, que sobrevivem ao reinício da máquina; a vigia é da sessão e tem de ser recriada depois de um reinício.
 - **A vigia dos agentes é silenciosa:** a cada ~15 min, só fala com o dono se houver problema.
 - **No chat, sem página publicada** (dono, 20 nov): só o que o chat mostra (título, barra de progresso em texto, tabela, listas), sem detalhe técnico, horário de Brasília:
 
