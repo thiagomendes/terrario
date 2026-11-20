@@ -23,7 +23,7 @@ test.skip(!pedido, 'capturas de tema só com CAPTURAS_TEMAS');
 
 async function abrir(page: Page, id: string) {
   // a cidade vista do alto: o outro lado do parque precisa estar carregado no cartão; no
-  // Rancho, o fundo inteiro (sem a borda do mundo aparecendo)
+  // Rancho e na Lua, o fundo inteiro (sem a borda do mundo aparecendo)
   const distancia =
     id === 'cidade-grande' ? 5 : id === 'rancho-alegre' || id === 'exploracao-lunar' ? 6 : 0;
   if (distancia)
@@ -209,7 +209,7 @@ const ENQUADRAMENTOS: Record<IdTemaE2e, Enquadramento> = {
     como: 'cidade',
   },
   // portão visual da 034: mais perto e mais baixo, sem a faixa de neve com os pinheiros à
-  // esquerda e sem a borda do mundo (com a distância de visão maior, como a da Cidade)
+  // esquerda e sem a borda do mundo (com a distância de visão maior que a da Cidade)
   'rancho-alegre': {
     oQueMostra:
       'o sítio mais perto do nascer visto do sul, um pouco do alto: a casa da fazenda, o ' +

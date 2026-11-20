@@ -776,6 +776,7 @@ const POSES: Record<IdGesto, Pose> = {
       tronco: 54,
       cabeca: -28,
       bracos: [88, 20],
+      // o braço da frente estica de propósito, para o chapéu sair da frente do queixo
       encurta: [1.4, 1],
       pernas: [4, -12],
       quadro: { x: 0.48, y: 0.68, meia: 0.84 },
