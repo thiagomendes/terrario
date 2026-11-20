@@ -62,7 +62,7 @@ Durante o trabalho, mandar ao dono "aperitivos" (fotos e vídeos do que está fi
 ## Boletim para o dono (decisão de 20 nov 2026)
 - **De hora em hora**, e na hora quando algo precisa dele (decisão, aperitivo, publicação, problema).
 - **Relatório do dia, às 22h de Brasília**, no painel publicado "Painel do Terrário" (sempre no mesmo endereço): no topo, o dia (o que entrou, as decisões, as fotos, o que fica para amanhã); depois o estado da spec, o que precisa do dono, a fila e o que já está no ar. No chat vai só o link com 2 ou 3 linhas.
-- **Agendamentos:** o boletim, o relatório do dia e a vigia são agendamentos da própria sessão (as tarefas agendadas do claude.ai foram recusadas nesta sessão, que fala com o computador do dono). Eles caem quando a máquina da nuvem reinicia: depois de um reinício, recriar os três.
+- **Agendamentos:** o boletim, o relatório do dia e a vigia são agendamentos da própria sessão, que fica no computador do dono (desde 20 nov 2026, uma sessão só). Eles caem quando a sessão reinicia: ao retomar, recriar os três. Às 22h param com o resto e voltam às 7h.
 - **A vigia dos agentes é silenciosa:** a cada ~15 min, só fala com o dono se houver problema.
 - **No chat, sem página publicada** (dono, 20 nov): só o que o chat mostra (título, barra de progresso em texto, tabela, listas), sem detalhe técnico, horário de Brasília:
 
@@ -77,7 +77,14 @@ Durante o trabalho, mandar ao dono "aperitivos" (fotos e vídeos do que está fi
 
 ## Ritmo
 - Uma spec por vez.
-- No computador do dono, trabalho só das 7h às 22h (hora de Brasília); às 22h: parar os agentes, a vigia e os contêineres, avisar o dono e agendar a retomada às 7h. Na nuvem (Claude Code na web) não há pausa das 22h (decisão do dono, 19 nov 2026).
+- Trabalho só das 7h às 22h (hora de Brasília), no computador do dono. Às 22h:
+  - parar os agentes, a vigia e os contêineres;
+  - mandar o relatório do dia;
+  - avisar o dono;
+  - agendar a retomada às 7h.
+- **Permissões e Azure** (dono, 20 nov 2026):
+  - quando precisar de acesso (site no ar, sala de teste na nuvem, logs), é só pedir ao dono, que aprova na janela de permissão;
+  - a sessão tem o `az` para olhar os recursos da Azure.
 
 ## Regras do produto
 - **Capricho visual é inegociável.**
@@ -115,6 +122,11 @@ Durante o trabalho, mandar ao dono "aperitivos" (fotos e vídeos do que está fi
   - `scripts/e2e-gpu.sh <spec>` roda o e2e na placa de vídeo;
   - depois, `scripts/limpar-restos-root.sh <pasta>` limpa os restos de root;
   - medidas de quadros por segundo só valem lá ou no aparelho.
-- **Na nuvem (Claude Code na web):**
-  - sem placa de vídeo: o e2e roda por software (SwiftShader), mais devagar;
-  - máquina de 4 núcleos: no máximo 2 trabalhadores (`--workers 2`).
+- **Se um dia rodar na nuvem (Claude Code na web):**
+  - sem placa de vídeo: o e2e roda por software (SwiftShader), mais devagar, e os testes de tempo e da roleta caem;
+  - `E2E_CHROMIUM=/opt/pw-browsers/chromium`;
+  - no máximo 2 trabalhadores (`--workers 2`).
+- **Publicar com mudança de protocolo:**
+  - o servidor tem que sair antes do site;
+  - o `servidor.yml` do push espera ninguém estar jogando (até 2 h), enquanto o `publicar.yml` sai na hora;
+  - com gente jogando: cancelar o `publicar.yml`, disparar o `servidor.yml` com `agora: true` e, depois, o `publicar.yml`.
