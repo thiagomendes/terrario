@@ -312,6 +312,7 @@ Entrou em 19 nov e saiu no mesmo dia (dono: "não precisamos nos preocupar com t
   
   A folha refeita volta ao dono antes de entrar no jogo.
 - **A folha da A reforçada foi aprovada pelo dono** (20 nov): os ícones entram no jogo como estão na folha (`capturas-034/gestos/folha-A2.png`).
+- **Rastros do nome nos códigos e fantasias:** a palavra "BRUMA" sai do sorteio dos códigos de sala (os códigos antigos continuam valendo); a fantasia "Herói da Mata" fica ("mata" é floresta, não o mundo).
 - **Apelido salvo com o final de um tema que saiu** ("… da Bruma", "… dos Dinos", "… da Mata", "… Estelar"): troca só o final pelo da Vila ("… da Vila"), na limpeza do aparelho.
 
 ## Revisão da spec (19 nov 2026)
