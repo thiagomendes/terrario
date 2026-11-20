@@ -1,6 +1,6 @@
 import { mkdirSync } from 'node:fs';
 import { expect, test, type Browser, type Page } from '@playwright/test';
-import { Bloco } from '../src/world/blocks';
+import { Bloco, obterBloco } from '../src/world/blocks';
 import { escolherPeloTeclado, esperarItem } from './roleta-palco';
 
 /**
@@ -114,23 +114,52 @@ async function lugaresDaVila(p: Page) {
   return { vila: v, ...l! };
 }
 
-/** Campo livre (terreno natural plano) ao lado do povoado, para os blocos dos amigos. */
+/** Blocos que não servem de chão para o Léo ficar em pé (ar, planta, folha, água). */
+const NAO_CHAO = Array.from({ length: 256 }, (_, id) => id).filter((id) => {
+  const d = obterBloco(id);
+  return id === 0 || !d || !d.solido || !!d.folhas || d.planta || !!d.liquido;
+});
+
+/**
+ * Campo livre ao lado do povoado, para os blocos dos amigos: C é a célula de ar logo acima do
+ * chão onde os três ficam (em C.x - 1.5, olhando para +x) e os blocos da Bia vão em C.y, de
+ * C.x - 1 a C.x + 2. Spec 034: no Doce Reino (semente 1337) a busca antiga parava no topo de
+ * uma árvore (folhagem a 8 blocos do chão): a parede B ficava no ar, longe dos olhos do Léo
+ * no chão, e a mira nunca a acertava. Agora o chão de quem fica é terra de verdade e nada passa
+ * da altura dele entre quem fica e os blocos (nem planta, que a mira também pega), então os
+ * blocos ficam na altura dos olhos e no alcance; a proteção é "livre" no chão e acima dele.
+ */
 async function campoLivre(p: Page, v: { cx: number; cz: number }): Promise<P> {
-  const c = await p.evaluate((v) => {
-    const e = window.__brumaluz!;
-    for (let d = 40; d < 140; d += 4) {
-      const x = v.cx + d;
-      const z = v.cz;
-      let y = 120;
-      while (y > 2 && e.bloco!(x, y, z) === 0) y--;
-      let ok = true;
-      for (let dx = -3; dx <= 3 && ok; dx++)
-        for (let dz = -3; dz <= 3 && ok; dz++)
-          if (e.protecao!(x + dx, y, z + dz) !== 'livre') ok = false;
-      if (ok) return { x, y: y + 1, z };
-    }
-    return null;
-  }, v);
+  const c = await p.evaluate(
+    ({ v, naoChao }) => {
+      const e = window.__brumaluz!;
+      const topo = (x: number, z: number) => {
+        let y = 120;
+        while (y > 2 && e.bloco!(x, y, z) === 0) y--;
+        return y;
+      };
+      for (let d = 40; d < 140; d += 4) {
+        const x = v.cx + d;
+        const z = v.cz;
+        // o chão de quem fica (C.x - 2)
+        const y = topo(x - 2, z);
+        let ok = !naoChao.includes(e.bloco!(x - 2, y, z));
+        for (let dx = -3; dx <= 3 && ok; dx++)
+          for (let dz = -3; dz <= 3 && ok; dz++) {
+            // de quem fica até a parede, nada acima do chão (morro, árvore, doce, planta)
+            if (dx <= 2 && topo(x + dx, z + dz) > y) ok = false;
+            else if (
+              e.protecao!(x + dx, y, z + dz) !== 'livre' ||
+              e.protecao!(x + dx, y + 1, z + dz) !== 'livre'
+            )
+              ok = false;
+          }
+        if (ok) return { x, y: y + 1, z };
+      }
+      return null;
+    },
+    { v, naoChao: NAO_CHAO },
+  );
   expect(c, 'nenhum campo livre perto da vila').not.toBeNull();
   return c!;
 }
@@ -228,7 +257,9 @@ test('três amigos na nuvem: casa da vila, parede do amigo, passagem, baú, forn
   const Q = { x: C.x + 2, y: C.y, z: C.z + 2 };
   const D = { x: C.x + 2, y: C.y, z: C.z - 2 };
   const F = { x: C.x + 1, y: C.y, z: C.z + 3 };
-  for (const p of todos) await ir(p, C.x - 1.5, C.z + 0.5);
+  // na altura do campo (C.y é o ar logo acima do chão de quem fica), sem depender da conta
+  // do terreno do teleporte
+  for (const p of todos) await ir(p, C.x - 1.5, C.z + 0.5, C.y);
   await bia.waitForTimeout(4000);
   // a Bia constrói (de novo, se o servidor ainda não tinha a posição nova dela e recusou)
   const construir = () =>
