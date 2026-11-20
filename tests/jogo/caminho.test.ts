@@ -7,6 +7,7 @@ import {
   type LeitorCaminho,
 } from '../../src/jogo/caminho';
 import { Bloco } from '../../src/world/blocks';
+import { cronometrar, melhorDe } from '../tempo';
 
 /** Um mundo de mentirinha: chão de pedra em y = 9 (pés em 10) e o que o teste puser. */
 function mundo(extra: Record<string, number> = {}, conhecido = (_x: number, _z: number) => true) {
@@ -123,14 +124,16 @@ describe('caminho a pé (trilha de estrelinhas)', () => {
     expect(dePe(w.leitor.bloco, 3, 11, 3)).toBe(false);
   });
 
-  it('a 150 blocos procura em menos de 15 ms (média)', () => {
+  // protege: a busca a 150 blocos cabe num quadro (a trilha de estrelinhas não trava o jogo).
+  // Spec 034 (T14): o melhor de 5 buscas, e não a média (a máquina ocupada só soma tempo)
+  it('a 150 blocos procura em menos de 15 ms (a melhor de 5)', () => {
     const w = mundo();
     // um morro no meio para dar trabalho
     for (let x = 60; x <= 90; x++) for (let z = -30; z <= 30; z++) for (let y = 10; y <= 12; y++) w.por(x, y, z, Bloco.PEDRA_RACHADA);
     procurarCaminho(w.leitor, [0.5, 10, 0.5], [150.5, 10, 20.5]);
-    const t0 = performance.now();
-    for (let i = 0; i < 5; i++) procurarCaminho(w.leitor, [0.5, 10, 0.5], [150.5, 10, 20.5]);
-    const ms = (performance.now() - t0) / 5;
+    const ms = melhorDe(5, () =>
+      cronometrar(() => procurarCaminho(w.leitor, [0.5, 10, 0.5], [150.5, 10, 20.5])),
+    );
     console.log(`caminho de 150 blocos: ${ms.toFixed(1)} ms`);
     expect(ms).toBeLessThan(15);
   });

@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { criarNucleo, type Nucleo } from '../../src/nucleo/nucleo';
+import {
+  criarNucleo,
+  ORCAMENTO_LAVOURA,
+  ORCAMENTO_LUZ,
+  type Nucleo,
+} from '../../src/nucleo/nucleo';
+import { cronometrar, melhorDe } from '../tempo';
 import '../../src/temas/todos';
 import { obterTema } from '../../src/temas';
 import {
@@ -374,11 +380,20 @@ describe('salvamento com lixo não trava o núcleo', () => {
     n.conectar('ana', { perfil: { apelido: 'Ana', aparencia: {} } });
     return n;
   }
-  /** Milissegundos por passo, em 40 passos (o servidor tem 50 ms por passo). */
+  /**
+   * Milissegundos por passo (o servidor tem 50 ms por passo): protege que o lixo gravado não
+   * faz o passo gerar terreno longe nem andar em volta absurda. Spec 034 (T14): o melhor de 5
+   * rodadas de 8 passos, e não a média de 40 (a máquina ocupada só soma tempo; uma conta a
+   * mais pesa em todas as rodadas).
+   */
   function medir(n: Nucleo): number {
-    const t0 = performance.now();
-    for (let i = 0; i < 40; i++) n.passo();
-    return (performance.now() - t0) / 40;
+    return (
+      melhorDe(5, () =>
+        cronometrar(() => {
+          for (let i = 0; i < 8; i++) n.passo();
+        }),
+      ) / 8
+    );
   }
 
   for (const v of [1e9, -1e12, 1e300, -1e300])
@@ -475,7 +490,11 @@ describe('lavoura grande não pesa no servidor', () => {
     expect(q.blocos?.filter((b) => b.y === 120 && b.v === Bloco.AR).length).toBe(64);
   });
 
-  it('40.960 pés de lavoura (10 andares, à noite, sem céu) custam menos de 10 ms por passo', () => {
+  // Protege: a lavoura enorme não pesa no passo do servidor (antes da correção da 013, cada
+  // passo recalculava a luz de todo pé: 282 ms). Spec 034 (T14): o teste conta o trabalho de
+  // cada passo (pés que crescem e células de luz calculadas), que não depende da máquina; os
+  // milissegundos só vão para o log.
+  it('40.960 pés de lavoura (10 andares, à noite, sem céu): o passo tem teto de trabalho e a luz fica guardada', () => {
     const n = nuvem('criativo');
     for (let k = 0; k < 10; k++) {
       const terra = [];
@@ -498,24 +517,36 @@ describe('lavoura grande não pesa no servidor', () => {
     // (com teto por passo); depois fica guardada
     const passos = 600;
     const tempos: number[] = [];
+    const pes: number[] = [];
+    const luzes: number[] = [];
     for (let i = 0; i < passos; i++) {
       const a = performance.now();
       n.passo();
       n.quadros();
       tempos.push(performance.now() - a);
-      if (process.env.DETALHE) console.log(i, tempos[i].toFixed(1));
+      pes.push(n.estado.trabalhoLavoura.pes);
+      luzes.push(n.estado.trabalhoLavoura.luzes);
+      if (process.env.DETALHE) console.log(i, tempos[i].toFixed(1), pes[i], luzes[i]);
     }
     const media = (de: number) => tempos.slice(de).reduce((a, b) => a + b, 0) / (passos - de);
-    const pior = Math.max(...tempos.slice(20));
+    const soma = (l: number[]) => l.reduce((a, b) => a + b, 0);
     console.log(
       `lavoura de 40960 pés: ${media(0).toFixed(2)} ms por passo em 30 s ` +
-        `(${media(400).toFixed(2)} ms depois de aquecer; pior ${pior.toFixed(1)} ms)`,
+        `(${media(400).toFixed(2)} ms depois de aquecer); ${soma(luzes)} células de luz, ` +
+        `${soma(pes)} pés crescidos`,
     );
-    // sozinha, a conta dá uns 3 ms por passo nos 30 s (1 ms depois de aquecer); os tetos
-    // são folgados para a suíte inteira rodando junto (antes desta correção: 282 ms)
-    expect(media(0)).toBeLessThan(20);
-    expect(media(400)).toBeLessThan(10);
-    expect(pior).toBeLessThan(150);
+    // cada passo: no máximo ORCAMENTO_LAVOURA pés e ORCAMENTO_LUZ células de luz (cada uma
+    // lê 2025 blocos), e a volta pela lavoura anda o tempo todo
+    expect(Math.max(...pes)).toBeLessThanOrEqual(ORCAMENTO_LAVOURA);
+    expect(Math.max(...luzes)).toBeLessThanOrEqual(ORCAMENTO_LUZ);
+    expect(Math.min(...pes.slice(1))).toBeGreaterThan(0);
+    // a luz é calculada uma vez por célula 2x2x2 e fica guardada: depois de aquecer, nenhuma
+    // célula é calculada de novo (a luz guardada vale 60 s, mais que os 30 s do teste)
+    const celulas = new Set(
+      [...n.estado.lavoura.values()].map((c) => `${c.x >> 1},${c.y >> 1},${c.z >> 1}`),
+    );
+    expect(soma(luzes)).toBeLessThanOrEqual(celulas.size);
+    expect(soma(luzes.slice(400))).toBe(0);
     // cresceu o tempo todo: 30 s à noite (metade) = uns 15 s de progresso em cada pé, e
     // perto da tocha como de dia (30 s)
     const ps = [...n.estado.lavoura.values()].map((c) => c.p);

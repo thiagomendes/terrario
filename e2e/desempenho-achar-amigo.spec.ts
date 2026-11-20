@@ -13,7 +13,8 @@ test.describe.configure({ mode: 'serial' });
 
 const AMIGOS: Record<string, Record<string, unknown>> = {
   lia: { corpo: 'feminino', cabeloEstilo: 5, cabeloCor: 1, fantasia: { id: 'fazendeira', cor: 0 } },
-  theo: { corpo: 'masculino', cabeloEstilo: 0, fantasia: { id: 'dino', cor: 0 } },
+  // spec 034: o Dino saiu com a Era dos Dinos
+  theo: { corpo: 'masculino', cabeloEstilo: 0, fantasia: { id: 'roqueira-palco', cor: 0 } },
   bia: { corpo: 'feminino', cabeloEstilo: 2, fantasia: { id: 'realeza-flores', cor: 0 } },
   gui: { corpo: 'masculino', cabeloEstilo: 1, fantasia: { id: 'astronauta', cor: 0 } },
   nina: { corpo: 'feminino', cabeloEstilo: 7, fantasia: { id: 'heroi-coracao', cor: 1 } },

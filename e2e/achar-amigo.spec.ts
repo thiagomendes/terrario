@@ -75,7 +75,8 @@ for (const tela of TELAS) {
       });
       await page.evaluate(() => {
         const w = window as unknown as { __amigosPostos: { aparencia: Record<string, unknown> }[] };
-        w.__amigosPostos[0].aparencia = { ...w.__amigosPostos[0].aparencia, fantasia: { id: 'dino', cor: 0 } };
+        // (spec 034: a patinadora no lugar do Dino, que saiu)
+        w.__amigosPostos[0].aparencia = { ...w.__amigosPostos[0].aparencia, fantasia: { id: 'patinadora', cor: 0 } };
       });
       await page.waitForTimeout(1500);
       const depois = await page.evaluate(() => {

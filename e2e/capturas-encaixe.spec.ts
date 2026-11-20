@@ -160,7 +160,8 @@ test('encaixe no morador do povoado', async ({ page }) => {
  */
 const TEMAS_MORADORES = (
   process.env.ENCAIXE_TEMAS ??
-  'planeta-vivo,mata-encantada,doce-reino,exploracao-lunar,rancho-alegre'
+  // spec 034: os cinco temas que ficam
+  'vila-neon,cidade-grande,doce-reino,exploracao-lunar,rancho-alegre'
 ).split(',');
 for (const tema of TEMAS_MORADORES)
   test(`encaixe dos enfeites dos moradores: ${tema}`, async ({ page }) => {

@@ -146,7 +146,8 @@ test.describe('celular', () => {
   test('medida: custo de cada tema e de cada efeito', async ({ page }) => {
     test.skip(!process.env.MEDIR_TEMAS, 'medição só com MEDIR_TEMAS');
     test.setTimeout(900_000);
-    const temas = (process.env.TEMAS ?? 'exploracao-lunar,doce-reino,mata-encantada').split(',');
+    // spec 034: a Vila Neon no lugar da Mata Encantada, que saiu
+    const temas = (process.env.TEMAS ?? 'exploracao-lunar,doce-reino,vila-neon').split(',');
     const escala = process.env.NITIDEZ_ESCALA ?? '0.3333';
     for (const tema of temas) {
       await noMundoDaLua(page, tema, `&escala=${escala}`);

@@ -14,10 +14,15 @@ async function pronto(page: Page) {
   await page.waitForFunction(() => !!window.__brumaluz!.inventario?.obter(1));
 }
 
+/**
+ * Spec 034: no Doce Reino, de povoado com trocas (era o "Meu primeiro mundo" do Bruma e Luz,
+ * que saiu; na Vila Neon, agora o padrão, os moradores não trocam).
+ */
 async function mundoSobrevivencia(page: Page) {
   await page.goto('/');
   await pronto(page);
   await page.locator('[data-abrir-mundos]').click();
+  await page.locator('.cartao-tema[data-tema="doce-reino"]').click();
   await page.locator('[data-modo="sobrevivencia"]').click();
   await page.locator('[data-novo-nome]').fill('Ajustes');
   await page.locator('[data-criar-mundo]').click();

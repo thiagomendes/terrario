@@ -19,6 +19,7 @@ import {
   type PlanoPovoado,
 } from '../../src/world/povoado';
 import { Bloco } from '../../src/world/blocks';
+import { cronometrar, melhorDe } from '../tempo';
 import {
   criarProtecaoMundo,
   MARGEM_CHAO,
@@ -294,32 +295,44 @@ describe('proteção do mundo: desempenho', () => {
     limparPovoados();
     const [p] = povoados(2);
     // planos já feitos (o jogo os faz ao gerar o chunk); a máscara não
-    const prot = criarProtecaoMundo(SEMENTE);
+    // spec 034 (T14): cada medida é a melhor de 3 rodadas (as do zero com a proteção nova): a
+    // máquina ocupada só soma tempo, e uma conta a mais pesa nas três
     const cs = chunksDo(p);
-    const t0 = performance.now();
-    for (const [cx, cz] of cs) prot.doChunk(cx, cz);
-    const frio = (performance.now() - t0) / cs.length;
+    let prot = criarProtecaoMundo(SEMENTE);
+    const frio =
+      melhorDe(3, () => {
+        prot = criarProtecaoMundo(SEMENTE);
+        return cronometrar(() => {
+          for (const [cx, cz] of cs) prot.doChunk(cx, cz);
+        });
+      }) / cs.length;
     // mira andando pelo sítio: células vizinhas, chunk mudando de vez em quando
     let s = 1;
     const rnd = () => (s = (s * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff;
     const N = 200_000;
-    const t1 = performance.now();
     let soma = 0;
-    for (let i = 0; i < N; i++) {
-      const x = p.minX + Math.floor(rnd() * (p.maxX - p.minX + 1));
-      const z = p.minZ + Math.floor(rnd() * (p.maxZ - p.minZ + 1));
-      soma += prot.em(x, p.h - 4 + Math.floor(rnd() * 16), z);
-    }
-    const quente = (performance.now() - t1) / N;
+    const quente =
+      melhorDe(3, () =>
+        cronometrar(() => {
+          for (let i = 0; i < N; i++) {
+            const x = p.minX + Math.floor(rnd() * (p.maxX - p.minX + 1));
+            const z = p.minZ + Math.floor(rnd() * (p.maxZ - p.minZ + 1));
+            soma += prot.em(x, p.h - 4 + Math.floor(rnd() * 16), z);
+          }
+        }),
+      ) / N;
     // do zero (máscara feita na primeira mira de cada chunk), espalhado pelos chunks
-    const prot2 = criarProtecaoMundo(SEMENTE);
-    const t2 = performance.now();
-    for (let i = 0; i < 20_000; i++) {
-      const x = p.minX + Math.floor(rnd() * (p.maxX - p.minX + 1));
-      const z = p.minZ + Math.floor(rnd() * (p.maxZ - p.minZ + 1));
-      prot2.em(x, p.h + 1, z);
-    }
-    const amortizado = (performance.now() - t2) / 20_000;
+    const amortizado =
+      melhorDe(3, () => {
+        const prot2 = criarProtecaoMundo(SEMENTE);
+        return cronometrar(() => {
+          for (let i = 0; i < 20_000; i++) {
+            const x = p.minX + Math.floor(rnd() * (p.maxX - p.minX + 1));
+            const z = p.minZ + Math.floor(rnd() * (p.maxZ - p.minZ + 1));
+            prot2.em(x, p.h + 1, z);
+          }
+        });
+      }) / 20_000;
     console.log(
       `[protecao] ${cs.length} chunks: máscara ${frio.toFixed(3)} ms/chunk, consulta ${(quente * 1e3).toFixed(3)} µs, amortizada do zero ${(amortizado * 1e3).toFixed(3)} µs (soma ${soma})`,
     );

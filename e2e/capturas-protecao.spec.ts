@@ -24,7 +24,8 @@ async function abrir(page: Page, id: string) {
   });
 }
 
-for (const id of ['rancho-alegre', 'bruma-e-luz'] as const) {
+// spec 034: o Doce Reino (povoados de casinhas) no lugar do Bruma e Luz
+for (const id of ['rancho-alegre', 'doce-reino'] as const) {
   test(`proteção do mundo: ${id}`, async ({ page }) => {
     test.setTimeout(600_000);
     const erros: string[] = [];

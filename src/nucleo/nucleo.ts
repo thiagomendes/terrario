@@ -165,14 +165,14 @@ import {
 /** Distância máxima para bater, domar e trocar com uma criatura. */
 const ALCANCE_CRIATURA = 7;
 /** Pés da lavoura que crescem num passo, no máximo (o custo do passo tem teto). */
-const ORCAMENTO_LAVOURA = 1024;
+export const ORCAMENTO_LAVOURA = 1024;
 /**
  * Segundos que a luz de tocha guardada da lavoura vale. Pôr ou tirar fonte de luz perto já
  * a esquece na hora; isto é só para conferir de vez em quando.
  */
 const LUZ_LAVOURA_VALE = 60;
 /** Células de luz da lavoura calculadas num passo, no máximo (cada uma lê 2025 blocos). */
-const ORCAMENTO_LUZ = 32;
+export const ORCAMENTO_LUZ = 32;
 /** Pé da lavoura que ainda cresce: progresso no estágio e quando cresceu por último. */
 interface PeLavoura {
   x: number;
@@ -885,6 +885,8 @@ export function criarNucleo(op: OpcoesNucleo) {
   const luzLavoura = criarCacheGeracional<{ v: number; t: number }>(16384);
   /** Células de luz calculadas neste passo (têm teto, como os pés). */
   let luzesNoPasso = 0;
+  /** Spec 034 (T14): pés que cresceram neste passo (os testes contam o trabalho do passo). */
+  let pesNoPasso = 0;
   {
     const salvo = extras['lavoura'];
     const progresso =
@@ -1376,6 +1378,7 @@ export function criarNucleo(op: OpcoesNucleo) {
     const noite = noiteNaHora(hora);
     const chuva = chuvaNoMundo();
     luzesNoPasso = 0;
+    pesNoPasso = 0;
     let reinicios = 0;
     for (let i = 0; i < cota; i++) {
       let r = cursorLavoura?.next();
@@ -1397,7 +1400,10 @@ export function criarNucleo(op: OpcoesNucleo) {
         continue;
       const passou = relogioLavoura - c.t;
       c.t = relogioLavoura;
-      if (passou > 0) crescerPe(k, c, passou, noite, chuva);
+      if (passou > 0) {
+        pesNoPasso++;
+        crescerPe(k, c, passou, noite, chuva);
+      }
     }
   }
 
@@ -3200,6 +3206,8 @@ export function criarNucleo(op: OpcoesNucleo) {
         conteineres,
         jogadores,
         lavoura,
+        /** Spec 034 (T14): o trabalho da lavoura no último passo (pés e células de luz). */
+        trabalhoLavoura: { pes: pesNoPasso, luzes: luzesNoPasso },
         /** A criatura da noite deste mundo ('assusta' ou 'mansa'). */
         noite: noiteDoMundo,
         /** Spec 014 (T13): os veículos da cidade (null fora dela). */

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { criarFilaRemalha, MAX_REMALHAS_POR_QUADRO } from '../../src/render/fila';
 import { gerarChunkEditado, criarEdicoes } from '../../src/world/edicoes';
 import { gerarMalha } from '../../src/mesh/malha';
+import { cronometrar, melhorDe } from '../tempo';
 
 describe('fila de remalha', () => {
   it('limite por quadro vale 2', () => {
@@ -29,12 +30,9 @@ describe('fila de remalha', () => {
     e.definir(4, 10, 4, 0);
     // o melhor de 3 (com a máquina ocupada por outros testes, uma rodada sozinha às vezes
     // passa do prazo; sozinha leva ~130 ms, e uma lentidão de verdade pesa nas três)
-    let melhor = Infinity;
-    for (let i = 0; i < 3; i++) {
-      const t = performance.now();
-      gerarMalha(gerarChunkEditado(0, 0, 1337, e));
-      melhor = Math.min(melhor, performance.now() - t);
-    }
+    const melhor = melhorDe(3, () =>
+      cronometrar(() => gerarMalha(gerarChunkEditado(0, 0, 1337, e))),
+    );
     expect(melhor).toBeLessThan(500);
   });
 });

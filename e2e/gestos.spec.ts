@@ -34,8 +34,8 @@ async function pronto(page: Page) {
   });
 }
 
-async function entrar(page: Page) {
-  await page.goto('/');
+async function entrar(page: Page, caminho = '/') {
+  await page.goto(caminho);
   await pronto(page);
   await page.evaluate(() => {
     document.querySelector('.entrada')?.setAttribute('hidden', '');
@@ -235,7 +235,9 @@ test('o morador perto acena de volta', async ({ page }) => {
   const erros: string[] = [];
   page.on('pageerror', (e) => erros.push(String(e)));
   await page.setViewportSize({ width: 1280, height: 720 });
-  await entrar(page);
+  // spec 034: no Doce Reino, de povoado perto do nascimento (o "Meu primeiro mundo" era do
+  // Bruma e Luz, que saiu; a Vila Neon, agora o padrão, não tem povoado ali)
+  await entrar(page, '/?tema=doce-reino');
   const p = await page.evaluate(() => window.__brumaluz!.povoados!()[0]);
   expect(p, 'nenhum povoado perto do nascimento').toBeTruthy();
   await page.evaluate((p) => window.__brumaluz!.teleportar!(p.cx + 2.5, p.cz + 2.5), p);

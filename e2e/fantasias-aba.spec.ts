@@ -225,16 +225,18 @@ for (const tela of TELAS) {
     await expect(grupo(page, 'temas')).toHaveAttribute('aria-selected', 'true');
     await expect(grupo(page, 'temas')).toBeFocused();
     const secoes = painel(page).locator('[data-cartas="temas"] .secao');
-    await expect(secoes.first()).toHaveText('Do seu mundo · Bruma e Luz');
+    // spec 034: o "Meu primeiro mundo" é da Vila Neon (o Bruma e Luz saiu)
+    await expect(secoes.first()).toHaveText('Do seu mundo · Vila Neon');
     await expect(
       painel(page).locator('[data-cartas="temas"] button.carta').first(),
-    ).toHaveAttribute('data-fantasia', 'lanterneira');
+    ).toHaveAttribute('data-fantasia', 'roqueira-palco');
     await foto(page, 'fantasias-temas', tela);
 
     // teclado: Enter no cartão veste
-    await carta(page, 'cientista').focus();
+    // (uma livre de outro tema: a Cientista saiu com o Planeta Vivo)
+    await carta(page, 'astronauta').focus();
     await page.keyboard.press('Enter');
-    expect((await aparencia(page)).fantasia?.id).toBe('cientista');
+    expect((await aparencia(page)).fantasia?.id).toBe('astronauta');
     await grupo(page, 'realeza').click();
     await carta(page, 'realeza-estrelas').click();
     await cores.nth(2).click();

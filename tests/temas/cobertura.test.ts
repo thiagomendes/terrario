@@ -25,6 +25,7 @@ import type { Tema } from '../../src/temas/tipos';
 import { PROFISSOES } from '../../src/world/povoado';
 import { blocoExclusivo } from '../../src/jogo/exclusivos';
 import { idDoBloco } from '../../src/jogo/itens';
+import { cronometrar, melhorDe } from '../tempo';
 
 /**
  * Spec 014 (só na Cidade Grande): o que é exclusivo de um tema não precisa de nome nem de
@@ -449,9 +450,11 @@ describe('robustez do registro', () => {
     for (const t of temas) {
       ativarTemaPuro(t);
       gerarAtlas(1337); // aquece
-      const t0 = performance.now();
-      gerarAtlas(1337);
-      expect(performance.now() - t0, t.id).toBeLessThan(150);
+      // spec 034 (T14): o melhor de 3 (a máquina ocupada só soma tempo)
+      expect(
+        melhorDe(3, () => cronometrar(() => gerarAtlas(1337))),
+        t.id,
+      ).toBeLessThan(150);
     }
     ativarTemaPuro(base);
   });

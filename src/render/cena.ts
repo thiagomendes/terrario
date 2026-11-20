@@ -137,7 +137,7 @@ import { caixasDoBloco, cercaConecta, direcaoDoYaw, vetorDirecao } from '../worl
 import { abreEFecha, alternado, ehPorta, ehPorteira } from '../world/portas';
 import { velocidadeMineracao } from '../jogo/ferramentas';
 import { blocoDoItem, obterItem } from '../jogo/itens';
-import { COLHER_PEDREIRO } from '../jogo/exclusivos';
+import { COLHER_PEDREIRO, itemNoMundo } from '../jogo/exclusivos';
 import { entradaNaCaixa, fantasmaNoRaio } from '../jogo/miraObra';
 import { sanearObras } from '../nucleo/saneamento';
 import {
@@ -5786,7 +5786,11 @@ export function criarCena(
         : `Clique direito (ou F): dar ${comida} ${bicho.a}`;
     } else if (c && viraCriado(c.tipo) && c.estado !== 'morrendo') {
       const bicho = comArtigo(CRIATURAS[c.tipo].nome);
-      const lista = COMIDA_DOS_BICHOS[c.tipo] ?? [];
+      // spec 034: só a comida que existe neste mundo (o feno da lhama é só da Vila Neon; com
+      // ele na lista, a vaca do Rancho pedia "uma semente" em vez do trigo)
+      const lista = (COMIDA_DOS_BICHOS[c.tipo] ?? []).filter((i) =>
+        itemNoMundo(i, temaAtual.mundo),
+      );
       const comida =
         lista.length === 1 ? minuscula(obterItem(lista[0])?.nome ?? lista[0]) : 'uma semente';
       t = `Segure ${comida} para ${bicho.o} seguir você`;

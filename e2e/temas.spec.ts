@@ -9,7 +9,12 @@ async function pronto(page: Page) {
   });
 }
 
-test('mundo antigo (gravado sem tema, como antes do Terrário) abre como Bruma e Luz', async ({
+/**
+ * Spec 034: o mundo gravado sem tema (de antes do Terrário, que abria como Bruma e Luz) sai do
+ * aparelho junto com os quatro temas que saíram; pedido pelo endereço, abre o próximo da lista
+ * (aqui o "Meu primeiro mundo", na Vila Neon).
+ */
+test('mundo antigo (gravado sem tema, como antes do Terrário) sai e abre o próximo', async ({
   page,
 }) => {
   test.setTimeout(300_000);
@@ -55,11 +60,18 @@ test('mundo antigo (gravado sem tema, como antes do Terrário) abre como Bruma e
       }),
   );
   expect(mexeu, 'índice de mundos não encontrado no banco').toBe(1);
+  // o endereço ainda pede o mundo sem tema (?mundo=<id>)
   await page.reload();
   await pronto(page);
-  expect(await page.evaluate(() => window.__brumaluz!.tema)).toBe('bruma-e-luz');
-  await expect(page.locator('[data-mundo-atual]')).toContainText('Mundo de antes');
-  await expect(page.locator('[data-mundo-atual]')).toContainText('Bruma e Luz');
+  expect(await page.evaluate(() => window.__brumaluz!.tema)).toBe('vila-neon');
+  await expect(page.locator('[data-mundo-atual]')).toContainText('Meu primeiro mundo');
+  await expect(page.locator('[data-mundo-atual]')).not.toContainText('Mundo de antes');
+  // e ele saiu da lista de mundos
+  await page.locator('[data-abrir-mundos]').click();
+  await expect(page.locator('[data-painel-mundos] [data-mundo]').first()).toBeVisible();
+  await expect(
+    page.locator('[data-painel-mundos] [data-mundo]', { hasText: 'Mundo de antes' }),
+  ).toHaveCount(0);
 });
 
 test('cartões de tema: grupo de opções com teclado e alvos grandes', async ({ page }) => {

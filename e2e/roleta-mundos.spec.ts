@@ -14,17 +14,8 @@ test.setTimeout(900_000);
 test.use({ actionTimeout: 30_000 });
 const PASTA = 'capturas-033';
 
-const TEMAS = [
-  'padrao',
-  'planeta-vivo',
-  'mata-encantada',
-  'doce-reino',
-  'era-dos-dinos',
-  'exploracao-lunar',
-  'rancho-alegre',
-  'cidade-grande',
-  'vila-neon',
-];
+// spec 034: os cinco temas que ficam (o padrão agora é a Vila Neon, que já está na lista)
+const TEMAS = ['doce-reino', 'exploracao-lunar', 'rancho-alegre', 'cidade-grande', 'vila-neon'];
 
 /** O menu de sempre (a ordem da roda da 015; "Tela cheia" só onde o navegador deixa). */
 const SEMPRE = ['mapa', 'diario', 'personagem', 'foto', 'gestos', 'casa', 'pausa'];

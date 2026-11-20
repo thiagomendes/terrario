@@ -47,10 +47,15 @@ const entrarNoJogo = (p: Page) =>
     e.hora = 0.42;
   });
 
+/**
+ * Spec 034: no Doce Reino, de povoado com casas da vila (o "Meu primeiro mundo" era do Bruma e
+ * Luz, que saiu; a Vila Neon, agora o padrão, não tem povoado perto do nascimento).
+ */
 async function mundoCriativo(p: Page, nome: string) {
   await p.goto('/');
   await pronto(p);
   await p.locator('[data-abrir-mundos]').click();
+  await p.locator('.cartao-tema[data-tema="doce-reino"]').click();
   await p.locator('button[data-modo="criativo"]').click();
   await p.locator('[data-novo-nome]').fill(nome);
   await p.locator('[data-novo-semente]').fill('1337');
