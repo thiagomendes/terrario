@@ -1,6 +1,6 @@
 import type { Profissao } from '../../world/povoado';
 import type { PecaCriatura, PovoadoTema } from '../tipos';
-import { corpoDeMorador, naCabeca } from '../bruma-e-luz/povoado';
+import { corpoDeMorador, naCabeca } from '../base/povoado';
 
 /** Colete de expedição: duas faixas na frente do tronco, com bolsinhos. */
 function colete(cor: string, bolso: string): PecaCriatura[] {

@@ -218,7 +218,7 @@ export function criarVitrineTitulo(aoEscolher: (id: IdTema) => void) {
   }).observe(b);
   b.addEventListener('click', (e) => {
     e.stopPropagation();
-    aoEscolher(temas[i].id);
+    aoEscolher(ids[i]);
   });
   return {
     elemento: b,

@@ -10,7 +10,7 @@ import type { TextosTema } from './tipos';
 let originais: TextosTema | null = null;
 
 /**
- * Textos do jogo base (Bruma e Luz), lidos dos registros na primeira chamada — antes
+ * Textos do jogo base, lidos dos registros na primeira chamada — antes
  * de qualquer tema renomear algo. Servem de tema base e de valor de volta.
  */
 export function textosOriginais(): TextosTema {

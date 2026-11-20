@@ -51,7 +51,7 @@ export const NIVEL_MAR = 62;
 /** Compatibilidade: antigo nível dos lagos. */
 export const NIVEL_LAGO = NIVEL_MAR;
 
-/** Estilo do tema (só forma: árvores, estrutura, crateras, flora). Padrão = Bruma e Luz. */
+/** Estilo do tema (só forma: árvores, estrutura, crateras, flora). Padrão = o da base. */
 export const ESTILO_PADRAO: EstiloMundo = {
   arvores: {},
   estrutura: 'ruina',

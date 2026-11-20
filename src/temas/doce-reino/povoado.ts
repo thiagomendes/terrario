@@ -1,5 +1,5 @@
 import type { Profissao } from '../../world/povoado';
-import { corpoDeMorador, naCabeca } from '../bruma-e-luz/povoado';
+import { corpoDeMorador, naCabeca } from '../base/povoado';
 import type { PecaCriatura, PioCriatura, PovoadoTema } from '../tipos';
 
 /** Bochechas rosadas e sorrisinho (presos à cabeça). */

@@ -98,7 +98,7 @@ export interface Quadro {
   dens: number;
 }
 
-/** Ciclo do dia do tema Bruma e Luz (base). */
+/** Ciclo do dia da base (os temas sem ciclo próprio usam este). */
 export const QUADROS_CEU_BASE: Quadro[] = [
   {
     h: 0,
@@ -240,7 +240,7 @@ function suave(t: number): number {
 export function atmosferaNaHora(horaBruta: number): EstadoAtmosfera {
   const hora = normalizarHora(horaBruta);
   let i = 0;
-  // ciclo do dia do tema ativo (o Bruma e Luz usa os quadros base)
+  // ciclo do dia do tema ativo (a base usa os quadros base)
   const quadros = tema().quadrosCeu;
   while (i < quadros.length - 2 && quadros[i + 1].h <= hora) i++;
   const a = quadros[i];

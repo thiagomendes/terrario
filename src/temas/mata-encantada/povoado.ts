@@ -1,5 +1,5 @@
 import type { Profissao } from '../../world/povoado';
-import { naCabeca } from '../bruma-e-luz/povoado';
+import { naCabeca } from '../base/povoado';
 import type { PecaCriatura, PovoadoTema } from '../tipos';
 
 /**

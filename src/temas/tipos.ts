@@ -45,7 +45,7 @@ export interface QuadroCeu {
   dens: number;
 }
 
-/** Astros e detalhes do céu (shader do céu). Os padrões reproduzem o Bruma e Luz. */
+/** Astros e detalhes do céu (shader do céu). Os padrões reproduzem a base. */
 export interface CeuTema {
   /** 0..1: estrelas visíveis de dia (1 na Lua). */
   estrelasDia: number;
@@ -165,7 +165,7 @@ export interface PecaCriatura {
 export interface MovimentoCriatura {
   /** Altura dos pulinhos ao andar (coelho, gelatina). */
   saltita: number;
-  /** Flutua parada no ar (amplitude; a noturna do Bruma e Luz usa 0.08). */
+  /** Flutua parada no ar (amplitude; a noturna da base usa 0.08). */
   flutua: number;
   /** Ginga o corpo de lado ao andar (0 a 0.3). */
   ginga: number;
@@ -398,7 +398,8 @@ export interface TextosTema {
 }
 
 export interface Tema {
-  id: IdTema;
+  /** O id do tema; `'base'` só na base (que não se escolhe: `src/temas/base`). */
+  id: IdTema | 'base';
   nome: string;
   /** Frase do cartão e do título. */
   lema: string;
@@ -446,7 +447,7 @@ export interface Tema {
   };
   materiais: Partial<Record<GrupoMaterial, AjusteMaterial>>;
   natureza: NaturezaTema;
-  /** Povoados (spec 008). Sem esta seção, o tema usa a do Bruma e Luz. */
+  /** Povoados (spec 008). Sem esta seção, o tema usa o povoado de reserva da base. */
   povoado?: PovoadoTema;
   /** Aparência sugerida ao criar o mundo (a personalização continua livre). */
   personagem: Partial<Aparencia>;

@@ -1,5 +1,5 @@
 import type { Profissao } from '../../world/povoado';
-import { corpoDeMorador } from '../bruma-e-luz/povoado';
+import { corpoDeMorador } from '../base/povoado';
 import type { PecaCriatura, PovoadoTema } from '../tipos';
 import { pio } from '../rancho-alegre/vozes';
 import { corDaPeca, fantasiaPorId } from '../../personagem/fantasias';

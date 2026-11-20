@@ -23,11 +23,11 @@ const BOCHECHA = '#ff9fb8';
 /**
  * Modelos (pele) das criaturas no tema base, desenhados à mão como brinquedo (spec 012):
  * cabeção, olhos de bolinha com pontinho branco, bochechas rosadas e plástico gordinho.
- * A cara do Bruma e Luz fica: o cervo de musgo com pontas de chifre que brilham, o coelho
- * lilás da neblina, a raposa laranja com a ponta do rabo acesa, o peixinho de água-marinha
- * e o espectro, que aqui é um fantasminha pastel "que brilha no escuro".
+ * São a reserva genérica (spec 034): o cervo de musgo com pontas de chifre que brilham, o
+ * coelho lilás, a raposa laranja com a ponta do rabo acesa, o peixinho de água-marinha e o
+ * espectro, um fantasminha pastel "que brilha no escuro".
  */
-export const CRIATURAS_BRUMA: Record<TipoCriatura, PecaCriatura[]> = {
+export const CRIATURAS_BASE: Record<TipoCriatura, PecaCriatura[]> = {
   // cervo filhote: musgo no lombo, focinho claro e chifrinhos com as pontas acesas
   cervo: [
     { forma: 'caixa', raio: 0.2, t: [0.58, 0.5, 0.88], p: [0, 0.66, 0], cor: '#ad5a26' },
@@ -323,7 +323,7 @@ export const CRIATURAS_BRUMA: Record<TipoCriatura, PecaCriatura[]> = {
       rot: [0, 0, -0.3],
       papel: 'cabeca',
     }),
-    // rabo fofo levantado (a base entra no corpo), com a ponta de luz do Bruma e Luz
+    // rabo fofo levantado (a base entra no corpo), com a ponta de luz
     {
       forma: 'bola',
       t: [0.26, 0.26, 0.44],

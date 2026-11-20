@@ -79,7 +79,8 @@ const MORADORES: Record<Profissao, PecaCriatura[]> = {
   ],
 };
 
-export const POVOADO_BRUMA: PovoadoTema = {
+/** O povoado de reserva, de quem não tem o seu (a base). */
+export const POVOADO_BASE: PovoadoTema = {
   nome: 'Aldeia das lanternas',
   profissoes: { ferreiro: 'Ferreira', cozinheiro: 'Cozinheiro', construtor: 'Construtora' },
   nomes: ['Lia', 'Teo', 'Mira', 'Davi', 'Nina', 'Caio', 'Bia', 'Rui', 'Luz', 'Ivo'],

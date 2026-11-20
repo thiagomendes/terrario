@@ -8,9 +8,9 @@ import {
   definirPovoados,
   ESTILO_PADRAO,
 } from '../../src/world/chunk';
-import { CRIATURAS_BRUMA } from '../../src/temas/bruma-e-luz/criaturas';
+import { CRIATURAS_BASE } from '../../src/temas/base/criaturas';
 import { definirTemaAtivo } from '../../src/temas/ativo';
-import { obterTema } from '../../src/temas';
+import { temaBase } from '../../src/temas/base';
 import { REGISTRO_BLOCOS } from '../../src/world/blocks';
 import { blocoExclusivo } from '../../src/jogo/exclusivos';
 
@@ -25,7 +25,8 @@ const NOMES_ANTIGOS = new Set(
 );
 
 /**
- * Paridade do Bruma e Luz: o tema extraído reproduz exatamente o jogo de antes.
+ * Paridade da base (era a do Bruma e Luz até a spec 034, com os mesmos hashes): a base
+ * reproduz exatamente o jogo de antes dos temas.
  * Os hashes foram tirados do commit 4aaa257 (antes de existir temas).
  */
 async function sha(...partes: (Uint8Array | string)[]): Promise<string> {
@@ -70,9 +71,9 @@ const TILES_014 = [
   ),
 ];
 
-describe('Bruma e Luz é idêntico ao jogo antes dos temas', () => {
+describe('a base é idêntica ao jogo antes dos temas', () => {
   it('atlas: os mesmos pixels e os mesmos tiles brilhantes', async () => {
-    definirTemaAtivo(obterTema('bruma-e-luz'));
+    definirTemaAtivo(temaBase());
     // a pintura de cada tile (antes das cores limpas de brinquedo da spec 012)
     const a = gerarAtlas(1337, { brinquedo: false });
     expect([a.largura, a.altura]).toEqual([512, 256]);
@@ -116,7 +117,14 @@ describe('Bruma e Luz é idêntico ao jogo antes dos temas', () => {
   });
 
   it('criaturas: os mesmos modelos', async () => {
-    expect(await sha(JSON.stringify(CRIATURAS_BRUMA))).toBe(
+    // spec 034: os movimentos, as vozes e o povoado de reserva da base, como eram no Bruma
+    // e Luz (hashes tirados antes da 034 mexer em qualquer coisa deles)
+    const b = temaBase();
+    expect((await sha(JSON.stringify(b.movimento))).slice(0, 16)).toBe('c2a11518abdef42f');
+    expect((await sha(JSON.stringify(b.vozes))).slice(0, 16)).toBe('8cb799d557101b61');
+    expect((await sha(JSON.stringify(b.povoado))).slice(0, 16)).toBe('adf571325e7a48d5');
+    expect((await sha(JSON.stringify(b.mundo))).slice(0, 16)).toBe('49185d58faa4e098');
+    expect(await sha(JSON.stringify(CRIATURAS_BASE))).toBe(
       'd83dea56608f1b5614365d6c6908c0143ff0dcc2578a543302d99c50692d5a59',
     );
   });

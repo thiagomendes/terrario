@@ -1,7 +1,8 @@
 import type { TipoCriatura } from '../../jogo/criaturas';
 import type { MovimentoCriatura, VozCriatura } from '../tipos';
 
-export const MOVIMENTO_BRUMA: Record<TipoCriatura, MovimentoCriatura> = {
+/** Movimento das criaturas na base (a reserva genérica). */
+export const MOVIMENTO_BASE: Record<TipoCriatura, MovimentoCriatura> = {
   cervo: { saltita: 0, flutua: 0, ginga: 0 },
   coelho: { saltita: 0, flutua: 0, ginga: 0 },
   peixe: { saltita: 0, flutua: 0, ginga: 0 },
@@ -9,8 +10,8 @@ export const MOVIMENTO_BRUMA: Record<TipoCriatura, MovimentoCriatura> = {
   raposa: { saltita: 0, flutua: 0, ginga: 0 },
 };
 
-/** Vozes do Bruma e Luz: bichos de floresta, suaves, com um brilho etéreo. */
-export const VOZES_BRUMA: Record<TipoCriatura, VozCriatura> = {
+/** Vozes da base (a reserva genérica): bichos de floresta, suaves, com um brilho etéreo. */
+export const VOZES_BASE: Record<TipoCriatura, VozCriatura> = {
   cervo: {
     chamado: {
       onda: 'triangle',

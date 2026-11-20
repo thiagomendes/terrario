@@ -19,7 +19,7 @@ uniform float noite;
 uniform float crepusculo;
 uniform float cobertura;
 uniform float arcoIris;
-// do tema (constantes por mundo; os padroes reproduzem o Bruma e Luz)
+// do tema (constantes por mundo; os padroes reproduzem a base)
 uniform float haloSol;
 uniform float faixaCrep;
 uniform vec3 corCrep;

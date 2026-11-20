@@ -61,7 +61,7 @@ export function criarPrecipitacao(scene: Scene) {
   chuva.minScaleY = 1.7;
   chuva.maxScaleY = 2.1;
   const tp = tema().particulas;
-  // tinta do tema sobre as cores de base (Bruma e Luz: 0.78, 0.84, 0.95)
+  // tinta do tema sobre as cores de base (na base: 0.78, 0.84, 0.95)
   const tc = [tp.chuva[0] / 0.78, tp.chuva[1] / 0.84, tp.chuva[2] / 0.95];
   chuva.color1 = new Color4(0.78 * tc[0], 0.84 * tc[1], 0.95 * tc[2], 0.7);
   chuva.color2 = new Color4(0.68 * tc[0], 0.75 * tc[1], 0.88 * tc[2], 0.55);
