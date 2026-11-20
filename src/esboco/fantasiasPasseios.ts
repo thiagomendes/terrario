@@ -918,7 +918,8 @@ export function montarPasseios(ctx: CtxPasseios): Passeios {
     (p) => {
       vestirBento(p);
       // (no trem, sem o bumbo: as mãos estão para cima)
-      for (let i = p.pecas.length - 1; i >= 0; i--) if (p.pecas[i].nome.startsWith('bumbo')) p.pecas.splice(i, 1);
+      for (let i = p.pecas.length - 1; i >= 0; i--)
+        if (/^(bumbo|maceta)/.test(p.pecas[i].nome)) p.pecas.splice(i, 1);
     },
     SENTADO,
   );
