@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { teclaDaRoda } from '../../src/ui/roda';
 import { GESTOS, gestosLiberados } from '../../src/personagem/gestos';
 import { FUNCOES_JOGO } from '../../src/ui/atalhos';
-import { SEGURAR_GESTOS, itensDoMenu } from '../../src/ui/menuRoda';
+import { SEGURAR_GESTOS, itensDoMenu, teclaDoGesto } from '../../src/ui/menuRoda';
 
 /**
  * O menu da spec 015 (as listas e as teclas). Spec 033: quem mostra é a roleta de baixo
@@ -24,6 +24,18 @@ describe('menu de botões (spec 015)', () => {
     expect(teclaDaRoda('Digit0', true, 10)).toEqual({ acao: 'escolher', i: 9 });
     expect(teclaDaRoda('Digit0', true, 8)).toBeNull();
     expect(teclaDaRoda('KeyW', true, 8)).toBeNull();
+  });
+
+  it('o selinho de cada gesto é a tecla que o escolhe, e o 11º fica sem (spec 034)', () => {
+    const vila = gestosLiberados(10, 'vila-neon');
+    expect(vila).toHaveLength(11);
+    const selos = vila.map((_, i) => teclaDoGesto(i));
+    expect(selos).toEqual(['1', '2', '3', '4', '5', '6', '7', '8', '9', '0', undefined]);
+    // nenhum selinho repetido, e cada um escolhe o seu gesto
+    expect(new Set(selos.filter(Boolean)).size).toBe(10);
+    selos.forEach((s, i) => {
+      if (s) expect(teclaDaRoda(`Digit${s}`, true, vila.length)).toEqual({ acao: 'escolher', i });
+    });
   });
 
   it('os gestos têm os 8 (e os 2 de presente) e a barra do computador tem a carinha', () => {

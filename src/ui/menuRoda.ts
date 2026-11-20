@@ -168,6 +168,15 @@ export interface MenuRoda {
 
 let cssPosto = false;
 
+/**
+ * O selinho da tecla do i-ésimo gesto (de 0): 1 a 9 e o 0 para o décimo (`teclaDaRoda`). Do 11º
+ * em diante (o roqueiro da Vila Neon com os dois de presente) não há tecla nem selinho (spec
+ * 034: o "1" aparecia de novo no roqueiro, e a tecla 1 é a do Acenar).
+ */
+export function teclaDoGesto(i: number): string | undefined {
+  return i >= 0 && i < 10 ? String((i + 1) % 10) : undefined;
+}
+
 export function criarMenuRoda(op: OpcoesMenuRoda, raiz: HTMLElement = document.body): MenuRoda {
   if (!cssPosto) {
     cssPosto = true;
@@ -271,8 +280,7 @@ export function criarMenuRoda(op: OpcoesMenuRoda, raiz: HTMLElement = document.b
   /** O item de cima dos gestos (a plaquinha "Voltar" mostra a carinha dele). */
   const paiGestos: ItemRoda = { id: 'gestos', nome: 'Gestos', icone: iconeDoItem('gestos') };
   const listaDeGestos = (gs: readonly ItemRoda[]): ListaRoda => ({
-    // 1 a 9 e o 0 para o décimo
-    itens: gs.map((g, i) => ({ ...g, tecla: String((i + 1) % 10) })),
+    itens: gs.map((g, i) => ({ ...g, tecla: teclaDoGesto(i) })),
     aoEscolher: (id) => op.fazerGesto(id),
     aoVoltar: () => abrirMenu(),
     pai: paiGestos,
