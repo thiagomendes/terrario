@@ -162,9 +162,43 @@ export async function abrirPalco(browser: Browser, tamanho: Tamanho): Promise<Pa
     await page.evaluate(([x, z]) => window.__brumaluz!.teleportar!(x, z), [melhor.x, melhor.z] as const);
   }
   await assentar(page);
+  // o palco inteiro (e a margem) tem de ter chegado: coluna sem pedaço não seria aplainada
+  for (let i = 0; i < 60; i++) {
+    const faltam = await page.evaluate(() => {
+      const e = window.__brumaluz!;
+      const [px, , pz] = e.posicao!;
+      let n = 0;
+      for (let dx = -82; dx <= 82; dx += 8)
+        for (let dz = -68; dz <= 68; dz += 8) {
+          let tem = false;
+          for (let y = 120; y > 1 && !tem; y--) tem = !!e.bloco!(Math.floor(px) + dx, y, Math.floor(pz) + dz);
+          if (!tem) n++;
+        }
+      return n;
+    });
+    if (faltam === 0) break;
+    if (i % 5 === 0) console.log(`esperando o chão: faltam ${faltam} colunas`);
+    await page.waitForTimeout(1500);
+  }
+  await page.waitForTimeout(3000);
   const O = await page.evaluate(() => window.__fantasias!.montar());
   console.log(`palco ${JSON.stringify(O)}`);
-  await page.waitForTimeout(12000);
+  // (a malha dos pedaços refeita depois das edições demora mais no computador, em resolução
+  // cheia: com menos espera, um pedaço da praça saía com o chão de antes)
+  await page.waitForTimeout(20000);
+  console.log(
+    `conferindo ${JSON.stringify(
+      await page.evaluate(([ox, y, oz]) => {
+        const e = window.__brumaluz!;
+        return {
+          jogador: e.posicao,
+          abobora: e.bloco!(ox + 53, y + 3, oz + 41),
+          chao: e.bloco!(ox + 40, y + 1, oz + 40),
+          palco: e.bloco!(ox + 37, y + 1, oz + 34),
+        };
+      }, [O.ox, O.y, O.oz] as const),
+    )}`,
+  );
   await page.evaluate(() => window.__fantasias!.esconder(true));
   // só o 3D na foto
   await page.evaluate(() => {

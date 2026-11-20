@@ -37,16 +37,16 @@ const NOITE: Omit<QuadroCeu, 'h'> = {
 
 /** A tarde dourada que dura o "dia" inteiro (o mundo mora no fim de tarde). */
 const TARDE: Omit<QuadroCeu, 'h'> = {
-  zen: [0.36, 0.38, 0.72],
-  meio: [0.9, 0.66, 0.58],
-  hor: [1, 0.76, 0.46],
+  zen: [0.44, 0.42, 0.72],
+  meio: [0.98, 0.72, 0.5],
+  hor: [1, 0.8, 0.48],
   luz: [1, 0.82, 0.56],
   il: 1.45,
   ceu: [0.84, 0.72, 0.72],
   chao: [0.34, 0.25, 0.18],
   ic: 0.54,
   amb: [0.24, 0.19, 0.18],
-  dens: 0.0024,
+  dens: 0.0018,
 };
 
 export const QUADROS_FANTASIAS: QuadroCeu[] = [
@@ -130,7 +130,7 @@ export const CEU_FANTASIAS: CeuTema = {
   // a noite baixa a luz do chão (a Vila Neon desce a 0,09; aqui, nunca escuro de verdade)
   pisoNoite: 0.22,
   // o verde do gramado puxa para o lilás de noite, sem apagar
-  verdeNoite: 0.75,
+  verdeNoite: 0.45,
 };
 
 // ------------------------------------------------------------------ texturas provisórias
@@ -294,7 +294,8 @@ export const PINTORES_FANTASIAS: Record<string, Pintor> = {
     2,
   ),
   // as copas: musgo na beira do palco, laranja e dourado no bosque
-  folhas: folhasDe(['#3e5a26', '#48662c', '#527232', '#5e7e3a', '#6a8a42'], 0.13),
+  // (claras o bastante para de noite não virarem uma mancha escura)
+  folhas: folhasDe(['#56762e', '#608234', '#6a8e3a', '#76983f', '#82a246'], 0.13),
   folhas_outono: folhasDe(['#c4521a', '#d4641e', '#e27624', '#ec8a2c', '#f4a03a'], 0.15),
   folhas_betula: folhasDe(['#b8782a', '#c48632', '#d0943a', '#daa244'], 0.15),
   telha_colonial: telhaRoxa,

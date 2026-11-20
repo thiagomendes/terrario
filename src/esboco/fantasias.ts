@@ -784,7 +784,7 @@ function ligar(scene: Scene): void {
     };
     tomadas.barracas = {
       deitado: t(P(69.5, 2.6, 44.5), P(70.5, 2.6, 36), 56),
-      empe: t(P(69, 2.6, 46), P(70, 2.8, 36), 66),
+      empe: t(P(71.5, 2.8, 44.5), P(71.5, 2.4, 36), 72),
     };
     tomadas.rua = {
       deitado: t(P(2, 3.0, 24.5), P(27, 4.0, 16.5), 56),
@@ -799,12 +799,12 @@ function ligar(scene: Scene): void {
       empe: t(P(trilha(bz) + 0.5, 2.4, bz), P(trilha(66) + 0.5, 3.2, 66), 66),
     };
     tomadas.horta = {
-      deitado: t(P(14.5, 4.2, 57), P(12.5, 1.0, 44), 56),
+      deitado: t(P(14, 3.6, 54.5), P(12.5, 1.0, 44), 56),
       empe: t(P(13.5, 4.6, 58.5), P(12.5, 1.2, 44), 66),
     };
     tomadas.panorama = {
       deitado: t(P(57, 25, 84), P(52, 0, 30), 58),
-      empe: t(P(56, 40, 104), P(52, 0, 36), 64),
+      empe: t(P(56, 30, 90), P(52, 0, 34), 64),
     };
   }
 
