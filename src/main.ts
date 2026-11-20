@@ -110,6 +110,12 @@ async function iniciar(app: HTMLElement): Promise<void> {
   let fecharTela: (() => void) | undefined;
   let mundo: MetaMundo | null = null;
   let dados: DadosMundo;
+  // quem acabou de levar o mundo para a nuvem (novo=1): a lista do aparelho é lida aqui, antes
+  // de conectar, e não depois do "bem-vindo". Entre o bem-vindo e a cena (que liga o estado do
+  // cliente) nada pode esperar: o primeiro quadro do servidor chega logo atrás do bem-vindo, e
+  // se ele chega nessa espera se perde, e a criança não vê mais ninguém (spec 035; o conserto
+  // completo, a conexão guardar as mensagens até alguém ouvir, fica para ela)
+  const doAparelho = sala && params.get('novo') === '1' ? await repo.listar() : [];
   if (sala) {
     const pedido = entrarNaSala(
       app,
@@ -189,9 +195,8 @@ async function iniciar(app: HTMLElement): Promise<void> {
     if (ehMundoNovo(armazenamento, atual.id)) mundoNovo = { id: atual.id };
   } else if (nuvem.novo) {
     const codigo = normalizarCodigo(nuvem.bv.sala.codigo);
-    const local = (await repo.listar()).find(
-      (m) => m.nuvem && normalizarCodigo(m.nuvem) === codigo,
-    );
+    // (lida antes de conectar: aqui não pode haver espera; ver `doAparelho`)
+    const local = doAparelho.find((m) => m.nuvem && normalizarCodigo(m.nuvem) === codigo);
     if (local && ehMundoNovo(armazenamento, local.id)) mundoNovo = { id: local.id };
   }
   const ui = criarInterface(app, hotbar, {
