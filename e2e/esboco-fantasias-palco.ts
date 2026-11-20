@@ -185,7 +185,7 @@ export async function abrirPalco(browser: Browser, tamanho: Tamanho): Promise<Pa
   console.log(`palco ${JSON.stringify(O)}`);
   // (a malha dos pedaços refeita depois das edições demora mais no computador, em resolução
   // cheia: com menos espera, um pedaço da praça saía com o chão de antes)
-  await page.waitForTimeout(20000);
+  await page.waitForTimeout(tamanho === 'pc' ? 40000 : 20000);
   console.log(
     `conferindo ${JSON.stringify(
       await page.evaluate(([ox, y, oz]) => {

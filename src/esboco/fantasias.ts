@@ -20,6 +20,8 @@ import { Vector3 } from '@babylonjs/core/Maths/math.vector';
 import { StandardMaterial } from '@babylonjs/core/Materials/standardMaterial';
 import { DynamicTexture } from '@babylonjs/core/Materials/Textures/dynamicTexture';
 import { Mesh } from '@babylonjs/core/Meshes/mesh';
+import { VertexData } from '@babylonjs/core/Meshes/mesh.vertexData';
+import { Ray } from '@babylonjs/core/Culling/ray';
 import { MeshBuilder } from '@babylonjs/core/Meshes/meshBuilder';
 import { TransformNode } from '@babylonjs/core/Meshes/transformNode';
 import { Constants } from '@babylonjs/core/Engines/constants';
@@ -40,6 +42,7 @@ import { aplicarCeuETexturas } from './fantasiasCeu';
 import {
   CORES,
   balcaoDoce,
+  barracaDeFesta,
   balcaoMaca,
   bandeirolas,
   bancada,
@@ -60,8 +63,6 @@ import {
   posteFerro,
   taloEFolha,
   teia,
-  toalhaBalcao,
-  toldoListrado,
   vapor,
   vassoura,
   type Carinha,
@@ -275,110 +276,17 @@ function ligar(scene: Scene): void {
 
   // ---------------------------------------------------------------- a abóbora gigante
   /**
-   * A abóbora gigante de blocos (o meio da base em cx, cz): redonda em degraus, mais larga
-   * que alta, com os gomos em sulcos mais escuros; o talo curvo com a folha e a carinha de
-   * brinquedo (olhos e sorriso arredondados, bochechas) em peças por cima da casca.
+   * A abóbora gigante (pedido do dono: nada de cubos): o modelo de brinquedo do jogo, o mesmo
+   * das abóboras pequenas, bem grande, com os gomos, o cabinho e a folha; a carinha da bancada
+   * da horta, ampliada, desenhada rente à casca (`montarGigante`). Aqui só guarda o lugar.
    */
+  let gigante: { x: number; y: number; z: number; lado: number } | null = null;
   function aboboraGigante(cx: number, cz: number) {
     const Y0 = O.y + 1;
-    const rx = 7.3;
-    const ry = 5.0;
-    const rz = 6.6;
-    const cy = 3.4;
-    // (a fileira do chão tem a largura da de cima: a abóbora assenta, sem "pezinhos")
-    const dentro = (x: number, y: number, z: number) =>
-      (x / rx) ** 2 + ((Math.max(y, 1) + 0.5 - cy) / ry) ** 2 + (z / rz) ** 2 <= 1;
-    /** A frente da casca na coluna (x, y): o z do último bloco (ou -99). */
-    const frente = (x: number, y: number) => {
-      for (let z = 7; z >= 0; z--) if (dentro(x, y, z)) return z;
-      return -99;
-    };
-    let topo = 0;
-    for (let y = 0; y <= 9; y++)
-      for (let x = -8; x <= 8; x++)
-        for (let z = -7; z <= 7; z++) {
-          if (!dentro(x, y, z)) continue;
-          topo = Math.max(topo, y);
-          if (
-            dentro(x + 1, y, z) &&
-            dentro(x - 1, y, z) &&
-            dentro(x, y + 1, z) &&
-            dentro(x, y - 1, z) &&
-            dentro(x, y, z + 1) &&
-            dentro(x, y, z - 1)
-          )
-            continue;
-          // os 12 gomos: o sulco mais escuro em pé (menos na frente da carinha)
-          const a = Math.atan2(x / rx, z / rz);
-          const g = (((a / (Math.PI / 6)) % 1) + 1) % 1;
-          const naCara = z > 0 && Math.abs(x) <= 3 && y >= 1 && y <= 6;
-          const sulco = !naCara && (g < 0.13 || g > 0.93);
-          por(cx + x, Y0 + y, cz + z, sulco ? Bloco.LA_VERMELHA : Bloco.LA_LARANJA);
-        }
-    // o talo curvo e a folha (peças), saindo do alto
-    peca(cx + 0.5, Y0 + topo + 1, cz + 0.5, 0, taloEFolha, 1.5);
+    gigante = { x: cx + 0.5, y: Y0, z: cz + 0.5, lado: 12 };
+    // o talo curvo e a folha larga, encaixados no alto (o alto da casca fica a 0,7 do lado)
+    peca(cx + 0.5, Y0 + 0.7 * 12 - 0.1, cz + 0.5, 0, taloEFolha, 1.6);
     pontos.abobora = [cx, Y0, cz];
-    // a carinha: cada peça encosta na casca da coluna dela (a frente em degraus)
-    // (a peça cobre as colunas e as fileiras do retângulo dela: fica na frente de todas)
-    const naCasca = (x: number, y: number, larg: number, alt: number) => {
-      let zf = -99;
-      for (let k = Math.floor(x + 0.5 - larg / 2); k <= Math.floor(x + 0.5 + larg / 2); k++)
-        for (let j = Math.floor(y - alt / 2); j <= Math.floor(y + alt / 2); j++)
-          zf = Math.max(zf, frente(k, j));
-      return cz + zf + 1;
-    };
-    // a carinha toda num plano só (o da frente mais saliente da cara), cada peça funda o
-    // bastante para encostar na casca da coluna dela: lê como carinha de longe, sem degrau
-    // da casca cortando os olhos
-    const zCara = naCasca(0, 4, 7, 5) + 0.06;
-    const parte = (
-      x: number,
-      y: number,
-      w: number,
-      h: number,
-      cor: string,
-      bisel: number,
-      em: Destino,
-      aceso: boolean,
-      noPlano = true,
-    ) => {
-      // (a peça sai meio bloco da casca: as quinas redondas ficam todas à mostra)
-      const zLocal = naCasca(x, y, w, h);
-      const z = (noPlano ? zCara : zLocal) + 0.45;
-      const fundo = z - zLocal + 1.2;
-      peca(
-        cx + x + 0.5,
-        Y0 + y - h / 2,
-        z,
-        0,
-        (r) => r.caixa(w, h, fundo, 0, 0, -fundo / 2, cor, bisel, aceso),
-        1,
-        em,
-      );
-    };
-    for (const [em, cor, aceso] of [
-      ['rostoDia', '#5a2a10', false],
-      ['rostoNoite', '#ffd24a', true],
-    ] as const) {
-      // os olhos redondos (um ovo de quinas bem redondas)
-      for (const s of [-1, 1]) {
-        parte(s * 2.5, 5.1, 1.45, 1.7, cor, 0.4, em, aceso);
-        parte(s * 2.5, 5.1, 1.15, 2.05, cor, 0.38, em, aceso);
-      }
-      // o sorriso em U: gomos arredondados que sobem nas pontas
-      for (const [x, y] of [
-        [-3.2, 3.3],
-        [-2.3, 2.6],
-        [-1.15, 2.25],
-        [0, 2.15],
-        [1.15, 2.25],
-        [2.3, 2.6],
-        [3.2, 3.3],
-      ])
-        parte(x, y, 1.45, 0.72, cor, 0.2, em, aceso);
-    }
-    // as bochechas rosadas (de dia e de noite), na casca do lado
-    for (const s of [-1, 1]) parte(s * 4.3, 3.7, 1.2, 0.8, '#ff8a5a', 0.35, 'corpo', false, false);
   }
 
   // ---------------------------------------------------------------- lanternas de poste
@@ -419,24 +327,20 @@ function ligar(scene: Scene): void {
     });
   }
 
-  /** Barraca de tábuas (6 × 4, o balcão de frente para +z) com o toldo listrado de peças. */
+  /**
+   * Barraca de festa no desenho das barracas da Vila (postes, balcão, toldo listrado por
+   * cima), repintada no laranja ou no roxo; o chão de tábuas embaixo. O meio em (x0 + 3, z0 + 2).
+   */
   function barraca(x0: number, z0: number, qual: 'doce' | 'maca') {
     const Y = O.y;
-    for (let x = x0; x < x0 + 6; x++)
-      for (let z = z0; z < z0 + 4; z++) {
-        const borda = x === x0 || x === x0 + 5 || z === z0 || z === z0 + 3;
-        const frente = z === z0 + 3 && x > x0 && x < x0 + 5;
-        por(x, Y, z, Bloco.TABUAS);
-        if (borda && !frente) for (let y = Y + 1; y <= Y + 2; y++) por(x, y, z, Bloco.TABUAS);
-        if (frente) por(x, Y + 1, z, Bloco.TABUAS);
-      }
+    for (let x = x0 + 1; x < x0 + 5; x++) for (let z = z0; z < z0 + 4; z++) por(x, Y, z, Bloco.TABUAS);
     const [a, b] = qual === 'doce' ? [CORES.laranja, CORES.creme] : [CORES.roxo, CORES.creme];
-    peca(x0 + 3, Y + 3, z0 + 4.4, 0, (r) => toldoListrado(r, 6.2, 4.6, a, b));
-    peca(x0 + 3, Y + 1, z0 + 4, 0, (r) =>
-      toalhaBalcao(r, 4, qual === 'doce' ? CORES.laranja : CORES.roxo),
-    );
-    peca(x0 + 3, Y + 2.06, z0 + 3.5, 0, qual === 'doce' ? balcaoDoce : balcaoMaca);
-    peca(x0 + 3, Y + 3.3, z0 + 2.2, 0, qual === 'doce' ? placaDoce : placaMaca);
+    const cx = x0 + 3;
+    const cz = z0 + 2;
+    peca(cx, Y + 1, cz, 0, (r) => barracaDeFesta(r, a, b));
+    // o que se vende, no tampo do balcão (y 1,01; a frente do tampo em cz + 0,85)
+    peca(cx, Y + 2.01, cz + 0.53, 0, qual === 'doce' ? balcaoDoce : balcaoMaca);
+    peca(cx, Y + 3.88, cz - 0.4, 0, qual === 'doce' ? placaDoce : placaMaca);
   }
 
   function praca() {
@@ -947,8 +851,8 @@ function ligar(scene: Scene): void {
       empe: t(P(53.5, 3.0, 58), P(53.5, 6.6, 36), 76),
     };
     tomadas.barracas = {
-      deitado: t(P(69.5, 2.4, 44), P(70, 2.8, 36), 56),
-      empe: t(P(71.5, 2.1, 46.5), P(71.5, 3.7, 36), 78),
+      deitado: t(P(68.5, 2.7, 42), P(68.5, 2.5, 35), 58),
+      empe: t(P(72, 2.5, 40.5), P(72, 3.0, 35), 76),
     };
     tomadas.rua = {
       deitado: t(P(2, 3.0, 28), P(27, 5.0, 18), 58),
@@ -970,6 +874,16 @@ function ligar(scene: Scene): void {
     tomadas.panorama = {
       deitado: t(P(-4, 11, 44), P(58, 6, 38), 58),
       empe: t(P(53.5, 16, 66), P(52, 8, 32), 70),
+    };
+    // de noite, a rua e o panorama olham para perto da lua (a 22 graus do leste para o sul e
+    // 17 de altura): longe do meio do quadro a perspectiva achatava a lua num oval
+    tomadas.ruaNoite = {
+      deitado: t(P(0, 3.0, 26), P(30, 7.2, 31.3), 58),
+      empe: tomadas.rua.empe,
+    };
+    tomadas.panoramaNoite = {
+      deitado: t(P(-4, 11, 44), P(58, 16.4, 57), 58),
+      empe: tomadas.panorama.empe,
     };
   }
 
@@ -1060,8 +974,159 @@ function ligar(scene: Scene): void {
     vagalumesMalha.position.set(O.ox, 0, O.oz);
     vagalumesMalha.isPickable = false;
     montarAbobrinhas();
+    montarGigante();
     montarHalos();
     atualizarNoite();
+  }
+
+  /**
+   * A abóbora gigante: o modelo de brinquedo do jogo (o das abóboras pequenas), bem grande, e
+   * a carinha da bancada da horta ampliada, desenhada rente à casca: cada ponto dos olhos, do
+   * sorriso e das bochechas encosta na casca (um raio de frente acha a casca ali), então a
+   * carinha acompanha os gomos, sem nada saltado. De dia, marrom recortada com o brilhinho nos
+   * olhos; de noite, acesa com o brilho quente.
+   */
+  function montarGigante() {
+    if (!gigante) return;
+    const { x, y, z, lado: L } = gigante;
+    const ms = modeloDeBloco(scene, pl, Bloco.ABOBORA, 'esboco-gigante', L);
+    if (!ms) return;
+    const raiz = new TransformNode('esboco-gigante', scene);
+    // (a base dos gomos encosta no chão: nem flutua, nem afunda)
+    raiz.position.set(x, y + 0.41 * L, z);
+    // (meio gomo de giro: um sulco no meio da frente e cada olho no meio de um gomo)
+    raiz.rotation.y = Math.PI / 8;
+    raiz.computeWorldMatrix(true);
+    for (const m of ms) {
+      m.parent = raiz;
+      m.receiveShadows = true;
+      semBrilho(m);
+      // o cabinho e a folhinha do modelo saem: no tamanho gigante vai o talo curvo com a folha
+      // larga (peças), que se vê de frente
+      const nome = m.material?.name ?? '';
+      if (nome.includes('6b7a2e') || nome.includes('5cbf63')) m.setEnabled(false);
+      m.isPickable = true;
+      m.computeWorldMatrix(true);
+      m.refreshBoundingInfo();
+    }
+    const alvo = new Set<unknown>(ms);
+    const zCasca = (wx: number, wy: number): number | null => {
+      const raio = new Ray(new Vector3(wx, wy, z + L), new Vector3(0, 0, -1), 2 * L);
+      const p = scene.pickWithRay(raio, (m) => alvo.has(m));
+      return p?.hit && p.pickedPoint ? p.pickedPoint.z : null;
+    };
+    // o desenho da carinha da bancada (em k), com o meio na altura do meio da abóbora
+    const k = 0.6 * L;
+    const fx = x;
+    const fy = y + 0.36 * L;
+    const desloca = 0.14;
+    type Malha = { P: number[]; I: number[] };
+    const nova = (): Malha => ({ P: [], I: [] });
+    let ultimoZ = z + 0.5 * L;
+    const ponto = (m: Malha, px: number, py: number) => {
+      const wx = fx + px * k;
+      const wy = fy + py * k;
+      const zc = zCasca(wx, wy);
+      if (zc !== null) ultimoZ = zc;
+      m.P.push(wx, wy, ultimoZ + desloca);
+      return m.P.length / 3 - 1;
+    };
+    /** Um disco (anéis × gomos) rente à casca. */
+    const disco = (m: Malha, cx: number, cy: number, r: number, sy = 1) => {
+      const A = 10;
+      const S = 48;
+      const meio = ponto(m, cx, cy);
+      let antes: number[] = [];
+      for (let a = 1; a <= A; a++) {
+        const anel: number[] = [];
+        for (let s = 0; s < S; s++) {
+          const t = (s / S) * Math.PI * 2;
+          anel.push(ponto(m, cx + Math.cos(t) * r * (a / A), cy + Math.sin(t) * r * sy * (a / A)));
+        }
+        for (let s = 0; s < S; s++) {
+          const s2 = (s + 1) % S;
+          if (a === 1) m.I.push(meio, anel[s2], anel[s]);
+          else m.I.push(antes[s], anel[s2], anel[s], antes[s], antes[s2], anel[s2]);
+        }
+        antes = anel;
+      }
+    };
+    /** A faixa do sorriso em U (uma peça só), com as pontas redondas. */
+    const sorriso = (m: Malha) => {
+      const N = 110;
+      const h = 0.05;
+      const c = (u: number) => [0.31 * u, -0.05 - 0.2 * (1 - u * u)] as const;
+      // (três fileiras de pontos: a faixa acompanha a casca também na largura)
+      let ant: number[] | null = null;
+      for (let i = 0; i <= N; i++) {
+        const u = -1 + (2 * i) / N;
+        const [cx, cy] = c(u);
+        const [ax, ay] = c(Math.min(1, u + 0.01));
+        const [bx, by] = c(Math.max(-1, u - 0.01));
+        const tx = ax - bx;
+        const ty = ay - by;
+        const l = Math.hypot(tx, ty) || 1;
+        const nx = -ty / l;
+        const ny = tx / l;
+        const fila = [1, 0, -1].map((f) => ponto(m, cx + nx * h * f, cy + ny * h * f));
+        if (ant)
+          for (let j = 0; j < 2; j++)
+            m.I.push(ant[j], fila[j], ant[j + 1], ant[j + 1], fila[j], fila[j + 1]);
+        ant = fila;
+      }
+      for (const u of [-1, 1]) {
+        const [cx, cy] = c(u);
+        disco(m, cx, cy, h);
+      }
+    };
+    const fazer = (m: Malha, nome: string) => {
+      const vd = new VertexData();
+      vd.positions = m.P;
+      vd.indices = m.I;
+      const N: number[] = [];
+      VertexData.ComputeNormals(m.P, m.I, N);
+      vd.normals = N;
+      const malha = new Mesh(nome, scene);
+      vd.applyToMesh(malha);
+      malha.isPickable = false;
+      return malha;
+    };
+    const cara = () => {
+      const m = nova();
+      disco(m, -0.2, 0.19, 0.15, 1.08);
+      disco(m, 0.2, 0.19, 0.15, 1.08);
+      sorriso(m);
+      return m;
+    };
+    // (materiais próprios, dos dois lados: a carinha é uma película rente à casca)
+    const pintura = (hex: string, aceso: boolean) => {
+      const m = new StandardMaterial(`esboco-gigante-${hex}`, scene);
+      m.backFaceCulling = false;
+      if (aceso) {
+        m.disableLighting = true;
+        m.emissiveColor = Color3.FromHexString(hex);
+        m.diffuseColor = Color3.Black();
+      } else m.diffuseColor = Color3.FromHexString(hex);
+      m.specularColor = new Color3(0.08, 0.08, 0.08);
+      return m;
+    };
+    const dia = fazer(cara(), 'esboco-gigante-rosto-dia');
+    dia.material = pintura('#4a220e', false);
+    semBrilho(dia);
+    const brilho = nova();
+    disco(brilho, -0.24, 0.24, 0.04);
+    disco(brilho, 0.16, 0.24, 0.04);
+    const mb = fazer(brilho, 'esboco-gigante-brilho');
+    // (o brilhinho um tico mais na frente que o olho)
+    mb.position.z = 0.02;
+    mb.material = pintura('#fff4e6', false);
+    mb.parent = dia;
+    semBrilho(mb);
+    const noite = fazer(cara(), 'esboco-gigante-rosto-noite');
+    noite.material = pintura('#ffd24a', true);
+    for (const m of ms) m.isPickable = false;
+    rostos.dia = dia;
+    rostos.noite = noite;
   }
 
   /** As abóboras pequenas: o modelo de brinquedo do jogo, com o rosto aceso de verdade. */

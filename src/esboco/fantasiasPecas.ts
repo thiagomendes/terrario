@@ -10,6 +10,7 @@
  * Tudo PROVISÓRIO (o palco do esboço): na implementação, as peças viram tipos da Vila (o
  * desenho fundido por chunk, como `render/vila/index.ts`).
  */
+import { CreateSphereVertexData } from '@babylonjs/core/Meshes/Builders/sphereBuilder';
 import { dadosPlaca } from '../render/formas';
 import type { V3 } from '../render/solidos';
 import { perfilEstrela, type Ref } from '../render/vila/ref';
@@ -210,74 +211,123 @@ export function mesinha(r: Ref): void {
 
 // ------------------------------------------------------------------ barracas
 
+/** Bolinha de brinquedo (poucos gomos, como as do modelo de brinquedo do jogo). */
+function bolinha(
+  r: Ref,
+  x: number,
+  y: number,
+  z: number,
+  raio: number,
+  cor: string,
+  esc: V3 = [1, 1, 1],
+  luz = false,
+): void {
+  const vd = CreateSphereVertexData({ diameter: raio * 2, segments: 8 });
+  const P = vd.positions as number[];
+  const N = vd.normals as number[];
+  for (let i = 0; i < P.length; i += 3) {
+    P[i] = x + P[i] * esc[0];
+    P[i + 1] = y + P[i + 1] * esc[1];
+    P[i + 2] = z + P[i + 2] * esc[2];
+    const nx = N[i] / esc[0];
+    const ny = N[i + 1] / esc[1];
+    const nz = N[i + 2] / esc[2];
+    const l = Math.hypot(nx, ny, nz) || 1;
+    N[i] = nx / l;
+    N[i + 1] = ny / l;
+    N[i + 2] = nz / l;
+  }
+  vd.uvs = null;
+  r.por(vd, luz, cor);
+}
+
 /**
- * O toldo listrado da barraca, em peças (gomos de duas cores e a barra de bicos na frente):
- * `w` de largura (x), `d` de fundo (para -z a partir da frente em z = 0); a base em y = 0.
+ * A barraca de festa no desenho das barracas da Vila (a frente para +z, o meio do chão em 0, 0,
+ * 0): os quatro postes, o balcão com a frente listrada e o tampo de madeira, a prateleira do
+ * fundo e o toldo listrado de duas cores por cima, com a barra de bicos. `a` e `b`: as cores.
  */
-export function toldoListrado(r: Ref, w: number, d: number, a: string, b: string): void {
-  const n = Math.round(w / 0.5);
-  const lw = w / n;
+export function barracaDeFesta(r: Ref, a: string, b: string): void {
+  const W = 3.8;
+  const zf = 0.85;
+  const zt = -1.05;
+  // os postes (os da frente mais baixos: o toldo cai para a frente)
+  for (const x of [-W / 2, W / 2]) {
+    r.caixa(0.16, 2.55, 0.16, x, 0, zf, CORES.madeiraEscura, 0.03);
+    r.caixa(0.16, 2.85, 0.16, x, 0, zt, CORES.madeiraEscura, 0.03);
+  }
+  // o balcão: a frente em gomos de duas cores e o tampo de madeira
+  const n = 8;
   for (let i = 0; i < n; i++) {
-    const x = -w / 2 + (i + 0.5) * lw;
+    const x = -W / 2 + 0.1 + (i + 0.5) * ((W - 0.2) / n);
+    r.caixa((W - 0.2) / n, 0.92, 0.08, x, 0, zf - 0.02, i % 2 ? b : a, 0.02);
+  }
+  r.caixa(W - 0.2, 0.9, 0.6, 0, 0, zf - 0.36, CORES.madeira, 0.03);
+  r.caixa(W + 0.1, 0.09, 0.78, 0, 0.92, zf - 0.32, '#c08a52', 0.03);
+  // a prateleira do fundo e o pano de fundo de duas cores
+  r.caixa(W - 0.2, 0.08, 0.36, 0, 1.45, zt + 0.12, CORES.madeira, 0.02);
+  for (let i = 0; i < n; i++) {
+    const x = -W / 2 + 0.1 + (i + 0.5) * ((W - 0.2) / n);
+    r.caixa((W - 0.2) / n, 1.5, 0.05, x, 0.9, zt - 0.04, i % 2 ? CORES.creme : b, 0.01);
+  }
+  // o toldo: gomos de duas cores do fundo (alto) até a frente (baixo), em três degraus
+  const m = 9;
+  const lw = (W + 0.5) / m;
+  const prof = zf - zt + 0.5;
+  for (let i = 0; i < m; i++) {
+    const x = -(W + 0.5) / 2 + (i + 0.5) * lw;
     const c = i % 2 ? b : a;
-    // o gomo cai um pouquinho para a frente (o fundo mais alto: em dois degraus)
-    r.caixa(lw, 0.16, d * 0.5, x, 0.12, -d * 0.75, c, 0.04);
-    r.caixa(lw, 0.16, d * 0.5 + 0.02, x, 0.0, -d * 0.25, c, 0.04);
-    // o bico da barra da frente
-    r.caixa(lw * 0.9, 0.26, 0.06, x, -0.24, 0.02, c, 0.05);
-    r.caixa(lw * 0.5, 0.1, 0.06, x, -0.32, 0.02, c, 0.04);
-  }
-}
-
-/**
- * A toalha de festa no balcão de blocos da barraca (o meio da frente do balcão em 0, 0, 0; o
- * balcão tem 1 de altura e 1 de fundo, para -z): o pano por cima e a barra de bicos na frente.
- */
-export function toalhaBalcao(r: Ref, largura: number, bico: string): void {
-  r.caixa(largura + 0.1, 0.06, 1.08, 0, 1.0, -0.5, CORES.creme, 0.02);
-  r.caixa(largura + 0.1, 0.32, 0.05, 0, 0.72, 0.03, CORES.creme, 0.01);
-  const n = Math.round(largura / 0.42);
-  for (let i = 0; i < n; i++) {
-    const x = -largura / 2 + (i + 0.5) * (largura / n);
-    r.caixa(0.3, 0.16, 0.05, x, 0.6, 0.05, i % 2 ? bico : CORES.creme, 0.04);
-    r.caixa(0.16, 0.08, 0.05, x, 0.53, 0.05, i % 2 ? bico : CORES.creme, 0.03);
-  }
-}
-
-/** Em cima do balcão da barraca do doce de abóbora: a travessa de cubinhos e os potes. */
-export function balcaoDoce(r: Ref): void {
-  // a travessa grande, na frente, com o doce em cubinhos empilhados em montinho
-  r.caixa(2.2, 0.06, 0.8, -0.5, 0, 0.05, CORES.roxo, 0.03);
-  r.caixa(2.0, 0.04, 0.64, -0.5, 0.06, 0.05, CORES.creme, 0.02);
-  for (let i = 0; i < 6; i++)
-    for (let j = 0; j < 2; j++)
-      r.caixa(0.24, 0.22, 0.24, -1.25 + i * 0.3, 0.1, -0.1 + j * 0.3, (i + j) % 2 ? '#e8782a' : '#f49a3a', 0.05);
-  for (let i = 0; i < 4; i++)
-    r.caixa(0.24, 0.22, 0.24, -1.1 + i * 0.3, 0.32, 0.05, i % 2 ? '#f49a3a' : '#e8782a', 0.05);
-  // os potes de tampa roxa, atrás
-  for (let i = 0; i < 2; i++) {
-    const x = 1.0 + i * 0.45;
-    r.caixa(0.34, 0.4, 0.34, x, 0, -0.1, '#f2dcc0', 0.06);
-    r.caixa(0.28, 0.28, 0.28, x, 0.05, -0.1, '#ee8a2c', 0.05);
-    r.caixa(0.38, 0.09, 0.38, x, 0.4, -0.1, CORES.roxo, 0.03);
-  }
-}
-
-/** Em cima do balcão da barraca da maçã do amor: o suporte com as maçãs no palito. */
-export function balcaoMaca(r: Ref): void {
-  r.caixa(2.8, 0.14, 0.6, 0, 0, 0, CORES.madeira, 0.04);
-  r.caixa(2.7, 0.08, 0.52, 0, 0.14, 0, CORES.creme, 0.02);
-  for (let i = 0; i < 6; i++)
-    for (let j = 0; j < 2; j++) {
-      const x = -1.15 + i * 0.46 + j * 0.23;
-      const z = -0.12 + j * 0.24;
-      const y = 0.22;
-      // a maçã de calda: o corpo, o brilho da calda e o palito
-      r.prisma(10, 0.17, 0.3, x, y + 0.15, z, j % 2 ? '#d42a2e' : '#e0343a', 'y');
-      r.prisma(10, 0.13, 0.08, x, y + 0.32, z, '#b82024', 'y');
-      r.caixa(0.06, 0.06, 0.03, x - 0.07, y + 0.22, z + 0.16, '#ffb0b0', 0.02);
-      r.barra([x, y + 0.36, z], [x, y + 0.7, z], 0.04, '#f0e2c0');
+    for (let k = 0; k < 3; k++) {
+      const z = zt - 0.1 + (k + 0.5) * (prof / 3);
+      r.caixa(lw, 0.12, prof / 3 + 0.04, x, 2.85 - k * 0.12, z, c, 0.03);
     }
+    // o bico pendurado na frente
+    r.caixa(lw * 0.92, 0.24, 0.06, x, 2.42, zf + 0.42, c, 0.04);
+    r.caixa(lw * 0.46, 0.1, 0.06, x, 2.34, zf + 0.42, c, 0.03);
+  }
+}
+
+/** O doce de abóbora no balcão (o tampo em y = 0): potinhos de tampa roxa e a travessa. */
+export function balcaoDoce(r: Ref): void {
+  // a travessa redonda com os quadradinhos laranja (o doce de corte), em montinho
+  r.caixa(1.2, 0.04, 0.72, -0.75, 0.0, 0, CORES.roxo, 0.02);
+  r.caixa(1.1, 0.03, 0.64, -0.75, 0.04, 0, CORES.creme, 0.01);
+  for (let i = 0; i < 3; i++)
+    for (let j = 0; j < 2; j++)
+      r.caixa(0.3, 0.24, 0.3, -1.1 + i * 0.35, 0.07, -0.16 + j * 0.34, (i + j) % 2 ? '#e8782a' : '#f49a3a', 0.06);
+  r.caixa(0.3, 0.24, 0.3, -0.92, 0.31, 0.01, '#f49a3a', 0.06);
+  r.caixa(0.3, 0.24, 0.3, -0.58, 0.31, 0.01, '#e8782a', 0.06);
+  // os potinhos de vidro com o doce laranja e a tampa roxa de laço
+  for (let i = 0; i < 3; i++) {
+    const x = 0.45 + i * 0.42;
+    r.prisma(10, 0.15, 0.34, x, 0.17, 0, '#f6ecdc', 'y');
+    r.prisma(10, 0.13, 0.24, x, 0.13, 0, '#ee8a2c', 'y');
+    r.prisma(10, 0.17, 0.08, x, 0.38, 0, CORES.roxo, 'y');
+    r.caixa(0.1, 0.07, 0.1, x, 0.42, 0, CORES.laranja, 0.03);
+  }
+}
+
+/** A maçã do amor em pé: redonda, de calda vermelha brilhante, com o palito para cima. */
+function macaDoAmor(r: Ref, x: number, y: number, z: number): void {
+  bolinha(r, x, y + 0.2, z, 0.21, '#c81e26', [1, 0.92, 1]);
+  // a calda que escorreu e virou o pezinho, e o brilho
+  bolinha(r, x, y + 0.05, z, 0.17, '#a8141c', [1.1, 0.35, 1.1]);
+  bolinha(r, x - 0.08, y + 0.29, z + 0.15, 0.05, '#ffe0e0');
+  r.barra([x, y + 0.34, z], [x, y + 0.78, z], 0.045, '#f0e2c0');
+}
+
+/** As maçãs do amor no balcão (o tampo em y = 0), em pé numa travessa redonda. */
+export function balcaoMaca(r: Ref): void {
+  r.caixa(1.6, 0.04, 0.7, -0.17, 0.0, -0.05, CORES.roxo, 0.02);
+  r.caixa(1.5, 0.03, 0.62, -0.17, 0.04, -0.05, CORES.creme, 0.01);
+  for (const [x, z] of [
+    [-0.7, -0.17],
+    [-0.22, -0.17],
+    [0.26, -0.17],
+    [-0.46, 0.15],
+    [0.02, 0.15],
+    [0.5, 0.15],
+  ] as const)
+    macaDoAmor(r, x, 0.07, z);
 }
 
 /** A plaquinha de desenho em cima do toldo (sem letra): o meio da base em 0, 0, 0. */

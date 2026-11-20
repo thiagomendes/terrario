@@ -123,7 +123,8 @@ export const CEU_FANTASIAS: CeuTema = {
   tamanhoSol: 1.3,
   haloSol: 1.5,
   // a lua grande e morna, de livro de história
-  corLua: [1, 0.95, 0.8],
+  // (creme claro: a conta do céu escurece a lua para 0,86 com as crateras; aqui compensa)
+  corLua: [1.3, 1.24, 1.06],
   tamanhoLua: 2.6,
   corNuvens: [1, 0.9, 0.9],
   // quase sem nuvem (de noite elas viravam manchas escuras, como fumaça; de dia, rastros)
@@ -228,9 +229,12 @@ const lanternaAcesa: Pintor = (x, y, s) => {
 const lanternaApagada: Pintor = (x, y, s) => {
   if (armacao(x, y)) return rampa(['#3a2a4c', '#46345a'], hash2(x, y, s), x, y, s);
   // o vidro de dia (apagado): âmbar acinzentado, com o reflexo no canto
-  // (apagada de verdade: o vidro escuro, só o reflexo no canto)
-  if (x + y === 6 && x >= 2 && x <= 4) return cor('#7a7088')(x, y, s);
-  return rampa(['#2e2838', '#342e40', '#3a3446'], hash2(x, y, s) * 0.6 + y / 40, x, y, s);
+  // (a mesma lanterna, apagada: o vidro escuro com o reflexo em risco e a vela apagada)
+  const lx = x < 8 ? x : x - 8;
+  if (lx + y === 8 || lx + y === 9) return cor('#9a94b4')(x, y, s);
+  if (y >= 9 && y <= 12 && (x === 4 || x === 11)) return cor('#efe4d0')(x, y, s);
+  if (y === 8 && (x === 4 || x === 11)) return cor('#3a2a20')(x, y, s);
+  return rampa(['#5c5a70', '#646278', '#6c6a80'], hash2(x, y, s) * 0.5 + y / 30, x, y, s);
 };
 
 /** A tábua pintada de verde-musgo (as casinhas de madeira), em fileiras deitadas. */

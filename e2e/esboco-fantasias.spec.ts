@@ -32,7 +32,8 @@ async function fotografar(page: Page, t: Tamanho) {
     await page.waitForTimeout(3000);
     for (const [i, nome] of ORDEM.entries()) {
       if (so && !so.includes(nome)) continue;
-      const tm = tomadas[nome][tipo];
+      // (de noite, a tomada própria da noite quando há: a rua e o panorama olham para a lua)
+      const tm = (qual === 'noite' && tomadas[`${nome}Noite`] ? tomadas[`${nome}Noite`] : tomadas[nome])[tipo];
       await camera(page, tm.pos, tm.alvo, tm.fov);
       await foto(page, `${String(i + 1).padStart(2, '0')}-${nome}-${qual}-${t}`);
     }
