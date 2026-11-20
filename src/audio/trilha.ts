@@ -52,11 +52,7 @@ export function contextoNivel(e: EstadoTrilha, temPerigo: boolean): ContextoNive
  * Contexto que falta usa o do dia; tema que falta, 0.
  */
 export const NIVEL_TRILHA: Readonly<Record<string, Partial<Record<ContextoNivel, number>>>> = {
-  'bruma-e-luz': { dia: 2.4, tarde: 2.9, noite: 5.8, caverna: 4.9, perigo: 4.2 },
-  'planeta-vivo': { dia: 4.1, tarde: 4.5, noite: 7.0, caverna: 7.2, perigo: 5.5 },
-  'mata-encantada': { dia: 2.4, tarde: 2.9, noite: 5.4, caverna: 5.9, perigo: 4.1 },
   'doce-reino': { dia: 3.6, tarde: 3.8, noite: 7.2, caverna: 6.5, perigo: 5.9 },
-  'era-dos-dinos': { dia: 2.1, tarde: 2.6, noite: 5.1, caverna: 5.0, perigo: 4.0 },
   'exploracao-lunar': { dia: 4.8, tarde: 5.2, noite: 7.2, caverna: 6.9, perigo: 5.6 },
   'rancho-alegre': { dia: 0, tarde: 0.2, noite: 2.5, caverna: 3.0 },
   // spec 014: no volume do Rancho gravado (o som da cidade antes da T09) e de 0 a 1,5 dB

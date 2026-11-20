@@ -561,12 +561,9 @@ describe('alma: o ritmo (experiência medida)', () => {
     expect(Math.abs(media - SESSAO.moedasPorMissao)).toBeLessThan(0.2);
   });
 
-  it('spec 031: a Era dos Dinos e o Doce Reino dão 15 moedinhas cada, sem fantasia', () => {
-    expect(moedasDoMundo('era-dos-dinos')).toBe(15);
+  it('spec 031: o Doce Reino dá 15 moedinhas, sem fantasia', () => {
     expect(moedasDoMundo('doce-reino')).toBe(15);
-    for (const m of MISSOES.filter(
-      (x) => x.mundo === 'era-dos-dinos' || x.mundo === 'doce-reino',
-    )) {
+    for (const m of MISSOES.filter((x) => x.mundo === 'doce-reino')) {
       expect(m.fantasia).toBeUndefined();
       // o lado direito do cartão (o resultado) nunca é o mesmo desenho do esquerdo
       if (m.desenho.tipo === 'arte') expect(m.desenho.resultado).not.toBe(m.desenho.principal);
@@ -574,8 +571,9 @@ describe('alma: o ritmo (experiência medida)', () => {
   });
 
   it('spec 031: o núcleo sabe o mundo pelo estilo (sem campo novo)', () => {
-    expect(mundoAlmaDoEstilo({ estrutura: 'ninho' })).toBe('era-dos-dinos');
     expect(mundoAlmaDoEstilo({ estrutura: 'casinha' })).toBe('doce-reino');
+    // spec 034: a Era dos Dinos saiu (o ninho, de um estilo salvo antes, não é mais mundo)
+    expect(mundoAlmaDoEstilo({ estrutura: 'ninho' })).toBeNull();
     expect(mundoAlmaDoEstilo({ estrutura: 'ruina' })).toBeNull();
     expect(mundoAlmaDoEstilo({ estrutura: 'espantalho', povoado: { planta: 'sitio' } })).toBe(
       'rancho-alegre',

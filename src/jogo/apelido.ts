@@ -3,7 +3,7 @@
  * limpam de novo o que chega (vai para os avisos dos outros e para o Storage).
  */
 
-/** Tamanho máximo do apelido (cabe "Construtora dos Dinos"). */
+/** Tamanho máximo do apelido (cabe "Exploradora da Cidade"). */
 export const MAX_APELIDO = 22;
 
 /** Apelido: até 22 letras, sem nada estranho. */

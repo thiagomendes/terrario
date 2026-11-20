@@ -249,8 +249,6 @@ function perfilCapa(cima: number, baixo: number, comprimento: number): P2[] {
 export interface FantasiaNoBoneco {
   /** Como o cabelo fica por baixo do que vai na cabeça (null: nada muda). */
   cabelo: ModoCabelo | null;
-  /** No capuz de dino o rabo de cavalo sai por baixo; nos outros fica guardado. */
-  rabo: 'guardar' | 'baixo';
 }
 
 const OURO = '#ffd45a';
@@ -557,7 +555,7 @@ export function vestirFantasia(
         p.pos = [p.pos[0], (cima + baixo) / 2, p.pos[2]];
       }
   }
-  if (tem('capa') || tem('capa-curta') || tem('capa-folhas')) {
+  if (tem('capa') || tem('capa-curta')) {
     // com capa, o cabelo comprido das costas cai por cima da gola dela (termina acima do pano,
     // que levanta andando e correndo sem cortar o cabelo)
     for (const p of pecas)
@@ -570,7 +568,6 @@ export function vestirFantasia(
   }
 
   let cabelo: ModoCabelo | null = null;
-  let rabo: FantasiaNoBoneco['rabo'] = 'guardar';
   const sobreCabelo = (modo: ModoCabelo) => {
     // o que mais esconde o cabelo vence (bolha > capuz > chapéu)
     const ordem: ModoCabelo[] = ['chapeu', 'capuz', 'bolha'];
@@ -1329,94 +1326,6 @@ export function vestirFantasia(
       case 'patas-dragao':
         patasDragao(pecas, m, c);
         break;
-      case 'capuz-dino': {
-        // capuz em cima da cabeça (o rosto e o cabelo de baixo ficam de fora), com olhinhos,
-        // dentinhos na frente e espinhos nas costas; barriga clara e rabo
-        const capH = 0.32;
-        const capY = m.topoTampa + 0.035 - capH / 2;
-        const capD = cab.d + 0.1;
-        caixa(
-          'dino-capuz',
-          'cabeca',
-          'cabeca',
-          [cab.w + 0.14, capH, capD],
-          [0, capY, -0.02],
-          c,
-          0.1,
-        );
-        const baixo = capY - capH / 2;
-        for (let i = 0; i < 5; i++)
-          cilindro(
-            `dino-dente${i}`,
-            'cabeca',
-            'cabeca',
-            0.06,
-            0.035,
-            0,
-            [-0.28 + i * 0.14, baixo - 0.012, capD / 2 - 0.06],
-            BRANCO,
-            { rot: [Math.PI, 0, 0] },
-          );
-        const cimaCapuz = capY + capH / 2;
-        for (const s of [-1, 1]) {
-          bola(
-            `dino-olho${s}`,
-            'cabeca',
-            'cabeca',
-            0.075,
-            [s * 0.18, cimaCapuz - 0.02, capD / 2 - 0.1],
-            BRANCO,
-            [1, 1, 0.75],
-          );
-          bola(
-            `dino-pupila${s}`,
-            'cabeca',
-            'cabeca',
-            0.035,
-            [s * 0.18, cimaCapuz - 0.01, capD / 2 - 0.045],
-            '#231a28',
-            [1, 1, 0.6],
-            { brilho: 0.5 },
-          );
-        }
-        const escuro = escurecer(c, 0.3);
-        for (let i = 0; i < 4; i++) {
-          const z = 0.02 - i * 0.12;
-          const y = i < 3 ? cimaCapuz : cimaCapuz - 0.07;
-          cilindro(
-            `dino-espinho${i}`,
-            'cabeca',
-            'cabeca',
-            0.13 - i * 0.015,
-            0.065 - i * 0.006,
-            0,
-            [0, y + 0.03, z - 0.02],
-            escuro,
-            { rot: [-0.35 - (i === 3 ? 0.6 : 0), 0, 0] },
-          );
-        }
-        caixa(
-          'dino-barriga',
-          'tronco',
-          'tronco',
-          [0.3, 0.3, 0.03],
-          [0, troncoH * 0.42, frente + 0.005],
-          corDaPeca(f, 'emblema'),
-          0.08,
-        );
-        for (let i = 0; i < 4; i++)
-          bola(
-            `dino-rabo${i}`,
-            'rabo',
-            'tronco',
-            0.1 - i * 0.018,
-            [0, -0.0 - i * 0.035, -0.05 - i * 0.105],
-            i === 3 ? escuro : c,
-          );
-        sobreCabelo('capuz');
-        rabo = 'baixo';
-        break;
-      }
       case 'avental-doce': {
         caixa(
           'avental-doce',
@@ -1473,200 +1382,6 @@ export function vestirFantasia(
           { brilho: 0.28 },
         );
         sobreCabelo('chapeu');
-        break;
-      }
-      case 'jaleco': {
-        const fundo = -0.08;
-        caixa(
-          'jaleco',
-          'tronco',
-          'tronco',
-          [larg + 0.03, troncoH - fundo, prof + 0.03],
-          [0, (troncoH + fundo) / 2, 0],
-          c,
-          0.12,
-        );
-        caixa(
-          'jaleco-abertura',
-          'tronco',
-          'tronco',
-          [0.016, troncoH - fundo - 0.06, 0.01],
-          [0, (troncoH + fundo) / 2, frente + 0.015],
-          escurecer(c, 0.25),
-          0.005,
-        );
-        for (const s of [-1, 1])
-          caixa(
-            `jaleco-lapela${s}`,
-            'tronco',
-            'tronco',
-            [0.07, 0.16, 0.02],
-            [s * 0.06, troncoH - 0.1, frente + 0.018],
-            clarear(c, 0.5),
-            0.01,
-            { rot: [0, 0, -s * 0.35] },
-          );
-        caixa(
-          'jaleco-bolso',
-          'tronco',
-          'tronco',
-          [0.1, 0.12, 0.02],
-          [0.13, troncoH * 0.55, frente + 0.018],
-          escurecer(c, 0.1),
-          0.015,
-        );
-        cilindro(
-          'jaleco-caneta',
-          'tronco',
-          'tronco',
-          0.1,
-          0.012,
-          0.012,
-          [0.11, troncoH * 0.55 + 0.06, frente + 0.03],
-          corDaPeca(f, 'emblema'),
-        );
-        break;
-      }
-      case 'oculos':
-        for (const x of [-0.15, 0.15])
-          anel(`oculos${x}`, 'cabeca', 'cabeca', 0.19, 0.026, [x, -0.04, zRosto + 0.03], c, 0, {
-            rot: [Math.PI / 2, 0, 0],
-          });
-        caixa(
-          'oculos-ponte',
-          'cabeca',
-          'cabeca',
-          [0.12, 0.022, 0.022],
-          [0, -0.03, zRosto + 0.03],
-          c,
-          0.008,
-        );
-        for (const s of [-1, 1])
-          caixa(
-            `oculos-haste${s}`,
-            'cabeca',
-            'cabeca',
-            [0.022, 0.022, 0.3],
-            [s * (cab.w / 2 + 0.005), -0.04, zRosto - 0.14],
-            c,
-            0.008,
-          );
-        break;
-      case 'coroa-folhas': {
-        const y = m.baseChapeu + 0.04;
-        anel('folhas-aro', 'cabeca', 'cabeca', 0.74, 0.07, [0, y, 0], c);
-        const cores = ['#ff8fc8', BRANCO, OURO];
-        for (let i = 0; i < 7; i++) {
-          const a = (i / 7) * Math.PI * 2;
-          flor(
-            `folhas-flor${i}`,
-            'cabeca',
-            'cabeca',
-            [Math.sin(a) * 0.395, y + 0.03, Math.cos(a) * 0.395],
-            cores[i % 3],
-            0.04,
-            a,
-          );
-          const af = a + Math.PI / 7;
-          placa(
-            `folhas-folha${i}`,
-            'cabeca',
-            'cabeca',
-            perfilFolha(0.12),
-            0.02,
-            [Math.sin(af) * 0.39, y + 0.02, Math.cos(af) * 0.39],
-            c,
-            { rot: [0, af, 1.1] },
-          );
-        }
-        sobreCabelo('chapeu');
-        break;
-      }
-      case 'capa-folhas': {
-        // capa de folhas presas num cipó atrás dos ombros: duas em cima (cabe entre os
-        // braços), três no meio e duas embaixo
-        cilindro('capa-cipo', 'capa', 'tronco', 0.36, 0.025, 0.025, [0, 0.0, -0.03], '#3f8a2c', {
-          rot: [0, 0, Math.PI / 2],
-        });
-        const fileiras: Array<{ y: number; xs: number[]; tam: number }> = [
-          { y: -0.16, xs: [-0.09, 0.09], tam: 0.32 },
-          { y: -0.38, xs: [-0.17, 0, 0.17], tam: 0.32 },
-          { y: -0.56, xs: [-0.1, 0.1], tam: 0.26 },
-        ];
-        let i = 0;
-        for (const fl of fileiras)
-          for (const x of fl.xs) {
-            placa(
-              `capa-folha${i}`,
-              'capa',
-              'tronco',
-              perfilFolha(fl.tam),
-              0.025,
-              [x, fl.y, -0.045 - (i % 2) * 0.012],
-              i % 2 ? c : escurecer(c, 0.2),
-              { brilho: 0.28 },
-            );
-            i++;
-          }
-        break;
-      }
-      case 'capuz-lanterneira': {
-        // capuz aberto na frente (como o capuz de hoje), com a ponta caída atrás e a borda
-        // escura em volta do rosto
-        const capW = cab.w + 0.12;
-        const capH = cab.h + 0.1;
-        const capD = cab.d + 0.13;
-        const capY = 0.05;
-        const capZ = -0.025;
-        caixa(
-          'lanterneira-capuz',
-          'cabeca',
-          'cabeca',
-          [capW, 0.14, capD],
-          [0, capY + capH / 2 - 0.07, capZ],
-          c,
-          0.07,
-        );
-        caixa(
-          'lanterneira-capuz-costas',
-          'cabeca',
-          'cabeca',
-          [capW, capH, 0.14],
-          [0, capY, capZ - capD / 2 + 0.07],
-          c,
-          0.07,
-        );
-        for (const s of [-1, 1])
-          caixa(
-            `lanterneira-capuz-lado${s}`,
-            'cabeca',
-            'cabeca',
-            [0.1, capH, capD],
-            [s * (capW / 2 - 0.05), capY, capZ],
-            c,
-            0.05,
-          );
-        caixa(
-          'lanterneira-borda',
-          'cabeca',
-          'cabeca',
-          [capW + 0.01, 0.07, 0.07],
-          [0, capY + capH / 2 - 0.05, capZ + capD / 2 - 0.03],
-          escurecer(c, 0.25),
-          0.03,
-        );
-        cilindro(
-          'lanterneira-ponta',
-          'cabeca',
-          'cabeca',
-          0.3,
-          0.12,
-          0.02,
-          [0, capY + capH / 2 - 0.08, capZ - capD / 2 - 0.08],
-          c,
-          { rot: [-2.0, 0, 0] },
-        );
-        sobreCabelo('capuz');
         break;
       }
       case 'capacete-obra': {
@@ -2656,24 +2371,9 @@ export function vestirFantasia(
         caixa('oculos-q-ponte', 'cabeca', 'cabeca', [0.07, 0.03, 0.03], [0, y + 0.065, z], c, 0.01);
         break;
       }
-      case 'lanterna': {
-        // a lanterna acesa na mão, um pouco à frente (aparece de frente, como no esboço);
-        // tinta de sempre, sem a tinta funda da fantasia: ela é a luz
-        const z = 0.085;
-        caixa('lanterna-corpo', 'maoE', 'mao', [0.18, 0.2, 0.18], [0, -0.19, z], c, 0.06, {
-          brilho: 0.9,
-          viva: false,
-        });
-        caixa('lanterna-tampa', 'maoE', 'mao', [0.2, 0.04, 0.2], [0, -0.075, z], '#3b2a1e', 0.014);
-        caixa('lanterna-fundo', 'maoE', 'mao', [0.2, 0.035, 0.2], [0, -0.3, z], '#3b2a1e', 0.014);
-        anel('lanterna-alca', 'maoE', 'mao', 0.13, 0.022, [0, -0.045, z * 0.5], '#5a4a3a', 0, {
-          rot: [0, Math.PI / 2, Math.PI / 2],
-        });
-        break;
-      }
     }
   }
-  return { cabelo, rabo };
+  return { cabelo };
 }
 
 /**

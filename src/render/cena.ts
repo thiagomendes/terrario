@@ -430,17 +430,16 @@ export interface EstadoDepuracao {
   /** Povoados a até 900 blocos do jogador (centro da praça e altura do piso). */
   /** Spec 014: o plano da Cidade Grande do mundo (testes de tela), ou null. */
   cidade?: () => PlanoCidade | null;
-  /** Spec 031: o canto das missões (Era dos Dinos e Doce Reino; null nos outros). */
+  /** Spec 031: o canto das missões (o do Doce Reino; null nos outros). */
   canto?: () => PlanoCanto | null;
   /** Spec 031: a criança tem a missão do bolo (os fantasmas do bolo aceitam o toque). */
   boloLiberado?: boolean;
   /**
    * Spec 031: os toques das missões do canto (a área de toque é do guia, generosa): pôr o
-   * bloco no fantasma do bolo, tirar a rocha de osso e dar a comida da mão ao bicho.
+   * bloco no fantasma do bolo e dar a comida da mão ao bicho.
    */
   missaoToque?: {
     encher(x: number, y: number, z: number): boolean;
-    escavar(x: number, y: number, z: number): void;
     alimentar(id: number): boolean;
   };
   /** Spec 031: o boneco fica no máximo tão opaco (a mãozinha atrás dele: ~0,6). */
@@ -4498,16 +4497,6 @@ export function criarCena(
       const c = listaFantasmas.find((q) => q.x === x && q.y === y && q.z === z);
       return !!c && encherFantasma(c);
     },
-    escavar(x, y, z) {
-      const antes = blocoEm(x, y, z);
-      if (antes === Bloco.AR) return;
-      const id = proximoId();
-      cliente.prever(id, x, y, z, Bloco.AR, 0);
-      enviarTelemetria(true);
-      enviar({ t: 'quebrar', id, x, y, z, slot: hotbar.ativo });
-      aplicarPlano('quebra', { x, y, z, bloco: antes });
-      barramento.emitir('quebra', { x, y, z, bloco: antes });
-    },
     alimentar(id) {
       const c = criaturaPorId(id);
       if (!c) return false;
@@ -7016,10 +7005,8 @@ export function criarCena(
         if (!c || Math.hypot(c.x - camera.position.x, c.z - camera.position.z) >= 20) break;
         // spec 026: no show da Vila Neon, perto do festival, nenhum bicho canta por cima
         if (silencioDoShow(c.x, c.z) || silencioDoShow(camera.position.x, camera.position.z)) break;
-        // a voz gravada da noturna do tema (o Espectro da bruma também: o "uuuh" dele); sem o
-        // pacote, o gemido de sempre no Bruma e Luz e a voz sintetizada nos outros
-        if (temaAtual.id === 'bruma-e-luz' && !vozes.pronto) tocarSom(motorAudio, 'espectro');
-        else vozBicho(c, 'chamado', Math.max(0.4, volumeDaDistancia(c)));
+        // a voz gravada da noturna do tema; sem o pacote, a voz sintetizada
+        vozBicho(c, 'chamado', Math.max(0.4, volumeDaDistancia(c)));
         const ang =
           Math.atan2(c.x - camera.position.x, c.z - camera.position.z) - camera.rotation.y;
         const rel = Math.atan2(Math.sin(ang), Math.cos(ang));

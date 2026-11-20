@@ -78,11 +78,6 @@ export interface ItemSolto {
   idade: number;
   /** Quem jogou no chão (de propósito): ele só pega de volta depois de TEMPO_DONO_RECOLHER. */
   de?: string;
-  /**
-   * Spec 031: posto pelo mundo num lugar certo (o ovinho do ninho do canto): não envelhece, não
-   * junta com outro e quem pega leva a marca junto (o núcleo conta a missão por ela).
-   */
-  marca?: string;
 }
 
 /** Opções de um item jogado no chão de propósito (dar a um amigo, como no Minecraft). */
@@ -117,13 +112,6 @@ export interface MundoDeItens {
     dur?: number,
     arremesso?: Arremesso,
   ): void;
-  /**
-   * Spec 031: põe o item parado num lugar certo, com uma marca (não pula, não some com o
-   * tempo, não junta). Não sorteia nada (a sequência dos drops de sempre fica igual).
-   */
-  pousar(item: string, qtd: number, x: number, y: number, z: number, marca: string): void;
-  /** Spec 031: tira do chão os itens com esta marca (devolve quantos tirou). */
-  tirarMarca(marca: string): number;
   /** Itens no chão para o salvamento. */
   salvar(): { item: string; qtd: number; dur?: number; x: number; y: number; z: number }[];
   carregar(dados: unknown): void;
@@ -135,7 +123,7 @@ export interface MundoDeItens {
     dt: number,
     jogador: PosColetor | readonly PosColetor[],
     coletar: (item: string, qtd: number, dur: number | undefined, quem: number) => number,
-  ): (Drop & { quem: number; marca?: string })[];
+  ): (Drop & { quem: number })[];
 }
 
 /** Quem pode pegar itens: a posição e (com vários jogadores) o id. */
@@ -179,7 +167,6 @@ export function criarMundoDeItens(
           (o) =>
             o.item === item &&
             o.dur === undefined &&
-            !o.marca &&
             o.de === arremesso?.de &&
             Math.hypot(o.x - x, o.y - y, o.z - z) < 1.5,
         );
@@ -211,28 +198,6 @@ export function criarMundoDeItens(
       });
       if (itens.length > MAX_ITENS_SOLTOS) itens.splice(0, itens.length - MAX_ITENS_SOLTOS);
     },
-    pousar(item, qtd, x, y, z, marca) {
-      if (!(qtd > 0)) return;
-      itens.push({
-        id: proximo++,
-        item,
-        qtd,
-        x,
-        y,
-        z,
-        vx: 0,
-        vy: 0,
-        vz: 0,
-        idade: TEMPO_ANTES_DE_COLETAR + 0.05,
-        marca,
-      });
-      if (itens.length > MAX_ITENS_SOLTOS) itens.splice(0, itens.length - MAX_ITENS_SOLTOS);
-    },
-    tirarMarca(marca) {
-      const antes = itens.length;
-      itens = itens.filter((i) => i.marca !== marca);
-      return antes - itens.length;
-    },
     salvar() {
       return itens.map((i) => ({ item: i.item, qtd: i.qtd, dur: i.dur, x: i.x, y: i.y, z: i.z }));
     },
@@ -261,7 +226,7 @@ export function criarMundoDeItens(
     },
     atualizar(jogadoresDt, jj, coletar) {
       const dt = jogadoresDt;
-      const coletados: (Drop & { quem: number; marca?: string })[] = [];
+      const coletados: (Drop & { quem: number })[] = [];
       if (!(dt > 0)) return coletados;
       const js: readonly PosColetor[] = Array.isArray(jj) ? jj : [jj as PosColetor];
       if (js.length === 0) return coletados;
@@ -295,12 +260,7 @@ export function criarMundoDeItens(
         if (pronto && d < RAIO_COLETA) {
           const resto = coletar(it.item, it.qtd, it.dur, quem);
           if (resto < it.qtd)
-            coletados.push({
-              item: it.item,
-              qtd: it.qtd - resto,
-              quem,
-              ...(it.marca ? { marca: it.marca } : {}),
-            });
+            coletados.push({ item: it.item, qtd: it.qtd - resto, quem });
           it.qtd = resto;
           if (resto > 0) it.idade = 0;
           continue;
@@ -328,14 +288,13 @@ export function criarMundoDeItens(
         for (let b = a + 1; b < itens.length; b++) {
           const B = itens[b];
           if (B.qtd <= 0 || B.item !== A.item || B.dur !== undefined || B.de !== A.de) continue;
-          if (A.marca || B.marca) continue;
           if (Math.hypot(A.x - B.x, A.y - B.y, A.z - B.z) < 0.6) {
             A.qtd += B.qtd;
             B.qtd = 0;
           }
         }
       }
-      itens = itens.filter((it) => it.qtd > 0 && (it.idade < VIDA_ITEM || !!it.marca));
+      itens = itens.filter((it) => it.qtd > 0 && it.idade < VIDA_ITEM);
       return coletados;
     },
   };

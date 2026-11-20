@@ -161,7 +161,7 @@ describe('capacete e colete no catálogo da 017 (spec 014)', () => {
     expect(fantasiaParaSugerir(l, 'm1', true, 'cidade-grande', a)).toBeUndefined();
     // os outros temas continuam iguais
     expect(fantasiaDoTema('rancho-alegre')?.id).toBe('fazendeira');
-    expect(fantasiaParaSugerir(l, 'm1', true, 'bruma-e-luz', a)?.id).toBe('lanterneira');
+    expect(fantasiaParaSugerir(l, 'm1', true, 'exploracao-lunar', a)?.id).toBe('astronauta');
   });
 });
 

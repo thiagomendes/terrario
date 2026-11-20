@@ -20,7 +20,7 @@ import { conferirBalanco, escalasDaPose, girosDaPose, posesDeTeste } from './enc
 const comBalanco = FANTASIAS.filter((f) =>
   CORPOS.some((c) =>
     f.visual[c].pecas.some((p) =>
-      ['capa', 'capa-curta', 'capa-folhas', 'saia-camadas', 'capuz-dino'].includes(p.tipo),
+      ['capa', 'capa-curta', 'saia-camadas'].includes(p.tipo),
     ),
   ),
 );
@@ -52,7 +52,8 @@ function conferirTudo(casos: Array<[ModeloId, number]>, passo: number): string[]
 
 describe('capa, saia e rabo balançando (spec 017, T03)', () => {
   it('há fantasias com capa, saia e rabo', () => {
-    expect(comBalanco.length).toBeGreaterThan(8);
+    // spec 034: a capa de folhas (Guardiã da Mata) e o rabo do dino saíram com os temas deles
+    expect(comBalanco.length).toBeGreaterThanOrEqual(8);
   });
   it('não cortam o cabelo, em todo cabelo', () => {
     const casos = [...Array(ESTILOS_CABELO).keys()]

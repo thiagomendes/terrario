@@ -1,8 +1,8 @@
 import { temaBase } from './base';
-import type { IdTema, IdTemaQueSai, Tema } from './tipos';
+import type { IdTema, Tema } from './tipos';
 
 /** Construtores dos temas (cada pacote monta o seu na primeira vez). */
-const CONSTRUTORES: Partial<Record<IdTema | IdTemaQueSai, () => Tema>> = {};
+const CONSTRUTORES: Partial<Record<IdTema, () => Tema>> = {};
 
 /**
  * Spec 034: os cartões dos temas, nesta ordem (a Vila Neon primeiro, marcada). Só o que
@@ -17,7 +17,7 @@ const ORDEM_TEMAS: readonly IdTema[] = [
 ];
 
 /** Registra um tema (cada pacote chama ao ser importado em `todos.ts`). */
-export function registrarTema(id: IdTema | IdTemaQueSai, construir: () => Tema): void {
+export function registrarTema(id: IdTema, construir: () => Tema): void {
   CONSTRUTORES[id] = construir;
 }
 

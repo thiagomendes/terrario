@@ -18,7 +18,6 @@ import { pecasVestidas, type FantasiaVestida, type PecaFantasia, type TipoPeca }
 export const PECAS_DAS_COSTAS: readonly TipoPeca[] = [
   'capa',
   'capa-curta',
-  'capa-folhas',
   'traje-espacial',
 ];
 

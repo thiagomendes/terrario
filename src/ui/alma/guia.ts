@@ -102,10 +102,9 @@ export function ligarGuiaMissao(e: EstadoDepuracao, ui: AlmaUi): GuiaMissao | nu
     },
     bloco,
     moradores: () => (e.criaturas?.() ?? []).filter((c) => c.profissao),
-    // spec 031: o canto das missões, os bichos do pasto e os ovinhos no chão
+    // spec 031: o canto das missões e os bichos do pasto
     canto: e.canto?.() ?? null,
     bichos: () => e.criaturas?.() ?? [],
-    ovos: () => (e.itensNoChao?.() ?? []).filter((i) => i.item === 'ovo'),
     // spec 026: a Vila Neon (estojos, lhamas e o palco)
     vila: e.vila?.() ?? null,
     estadoVila: () => e.vilaEstado?.() ?? null,
@@ -290,7 +289,7 @@ export function ligarGuiaMissao(e: EstadoDepuracao, ui: AlmaUi): GuiaMissao | nu
     },
     convite: () => ({ mostra, segundos: relogio.segundos }),
   });
-  // spec 031: o canto das missões da Era dos Dinos e do Doce Reino
+  // spec 031: o canto das missões do Doce Reino
   ligarCantoMissoes(e, ui, guia, scene);
   // spec 026: as caixas do palco, o toque no show e o feno na mão da Vila Neon
   ligarVilaNeon(e, ui, guia, scene);

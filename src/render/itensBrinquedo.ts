@@ -488,32 +488,6 @@ export function modeloNaMao(
         break;
       }
       case 'ovo':
-        if (tema().id === 'era-dos-dinos') {
-          // spec 031: o ovinho de dino (maior que o da galinha), creme com pintas verdes
-          add(bo('ovo', 0.21, '#fff1d2', [0.84, 1.08, 0.84], 0.45), 0, 0.21, 0);
-          for (const [a, y, r] of [
-            [0.3, 0.308, 0.051],
-            [2.2, 0.21, 0.059],
-            [4.1, 0.28, 0.046],
-            [1.2, 0.112, 0.053],
-            [3.2, 0.098, 0.046],
-            [5.3, 0.168, 0.053],
-            [0.8, 0.378, 0.035],
-            [3.7, 0.378, 0.032],
-          ] as const) {
-            // a pinta encosta na casca (o raio da casca naquela altura), achatada para fora
-            const yy = (y - 0.21) / (0.21 * 1.08);
-            const rr = 0.21 * 0.84 * Math.sqrt(Math.max(0, 1 - yy * yy)) - 0.006;
-            const p = add(
-              bo(`pinta${a}`, r, a > 3 ? '#5aa83f' : '#7cc35a', [1, 1, 0.35], 0.3),
-              Math.cos(a) * rr,
-              y,
-              Math.sin(a) * rr,
-            );
-            p.rotation.y = -a + Math.PI / 2;
-          }
-          break;
-        }
         add(bo('ovo', 0.075, '#f4ead6', [0.82, 1.05, 0.82], 0.45), 0, 0.07, 0);
         break;
       case 'ovo_cozido': {

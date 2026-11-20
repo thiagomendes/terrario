@@ -30,7 +30,7 @@ export type Junta =
   | 'maoD'
   | 'pernaE'
   | 'pernaD'
-  // spec 017: as peças que balançam sozinhas (capa, saia e rabo de dino)
+  // spec 017: as peças que balançam sozinhas (capa, saia e o rabo do dragãozinho)
   | 'capa'
   | 'saia'
   | 'rabo'
@@ -210,7 +210,7 @@ export function planoBoneco(a: Aparencia): PlanoBoneco {
     cabeca: { pai: 'tronco', pos: [0, yCab, 0] },
     topete: { pai: 'cabeca', pos: [0.1, cab.h / 2 - 0.01, 0.16] },
     // spec 017: a capa presa atrás dos ombros, a saia na cintura (no corpo, como as pernas,
-    // para não entrar nelas quando o tronco inclina) e o rabo de dino nas costas, embaixo
+    // para não entrar nelas quando o tronco inclina) e o rabo do dragãozinho nas costas, embaixo
     capa: { pai: 'tronco', pos: [0, troncoH - 0.03, -prof / 2 + 0.02] },
     saia: { pai: 'corpo', pos: [0, quadril, 0] },
     rabo: { pai: 'tronco', pos: [0, 0.1, -prof / 2 + 0.02] },
@@ -861,7 +861,6 @@ export function planoBoneco(a: Aparencia): PlanoBoneco {
       : apoio === 'cabeca' && acessorio !== 'oculos' && acessorio !== 'nenhum'
         ? 'chapeu'
         : null;
-  let rabo: 'guardar' | 'baixo' = 'guardar';
   const medidas: MedidasBoneco = {
     feminino,
     larg,
@@ -889,7 +888,6 @@ export function planoBoneco(a: Aparencia): PlanoBoneco {
     const antes = pecas.length;
     const vestida = vestirFantasia(vestidaAgora, a.corpo, pecas, medidas);
     modo = vestida.cabelo;
-    rabo = vestida.rabo;
     marcarTintaDaFantasia(
       pecas,
       antes,
@@ -903,7 +901,7 @@ export function planoBoneco(a: Aparencia): PlanoBoneco {
   if (a.patins) vestirPatins(pecas, medidas);
   // parte 3: de skate (a prancha debaixo dos pés; o corpo sobe em cima dela na pose)
   else if (a.skate) vestirSkate(pecas);
-  if (modo) ajeitarCabeloDebaixo(pecas, modo, topoTampa, cab, rabo);
+  if (modo) ajeitarCabeloDebaixo(pecas, modo, topoTampa, cab);
 
   return {
     juntas,
@@ -950,8 +948,7 @@ function marcarTintaDaFantasia(
  * que cai abaixo dele continua aparecendo).
  *
  * Fantasias (T03): 'bolha' é o capacete de bolha do astronauta (o cabelo inteiro fica dentro
- * do vidro: o comprido vira coque na nuca e o resto encolhe até caber); no capuz de dino o
- * rabo de cavalo sai por baixo do capuz (`rabo: 'baixo'`) em vez de ficar guardado.
+ * do vidro: o comprido vira coque na nuca e o resto encolhe até caber).
  */
 export type ModoCabelo = 'chapeu' | 'capuz' | 'capacete' | 'bolha';
 
@@ -966,7 +963,6 @@ export function ajeitarCabeloDebaixo(
   modo: ModoCabelo,
   topoTampa: number,
   cab: { w: number; h: number; d: number },
-  rabo: 'guardar' | 'baixo' = 'guardar',
 ): void {
   const chapeu = modo === 'chapeu';
   const capuz = modo === 'capuz';
@@ -976,10 +972,7 @@ export function ajeitarCabeloDebaixo(
   const guardar = (p: Peca): boolean => {
     if (p.apoio || p.junta === 'corpo') return false;
     const n = p.nome;
-    if (capuz)
-      return rabo === 'baixo'
-        ? /^(topete|coque|cacho)/.test(n)
-        : /^(topete|coque|cacho|rabo)/.test(n);
+    if (capuz) return /^(topete|coque|cacho|rabo)/.test(n);
     if (capacete)
       return (
         /^(cabelo|topete|franja|chanel-franja|coque|rabo-preso)/.test(n) ||
@@ -1004,11 +997,6 @@ export function ajeitarCabeloDebaixo(
       const meio = p.forma === 'caixa' ? p.tamanho[0] / 2 : p.tamanho[0];
       const x = Math.sign(p.pos[0]) * Math.min(Math.abs(p.pos[0]), borda - meio);
       p.pos = [x, p.pos[1], p.pos[2]];
-    }
-    if (capuz && rabo === 'baixo' && p.junta === 'cabeca') {
-      // o rabo de cavalo sai por baixo do capuz, na nuca
-      if (p.nome === 'rabo-preso') p.pos = [0, 0.02, -cab.d / 2 - 0.04];
-      if (p.nome === 'rabo') p.pos = [0, -0.18, -cab.d / 2 - 0.1];
     }
   }
   if (!bolha) return;
@@ -1127,7 +1115,7 @@ export interface RotacoesPose {
   pernaE: [number, number, number];
   /**
    * Spec 017: a capa (levanta para trás), a saia (inclina e abre: escala x, y, z) e o rabo
-   * de dino (levanta e abana). Só animação, sem física: cada um sai das juntas da pose, com
+   * do dragãozinho (levanta e abana). Só animação, sem física: cada um sai das juntas da pose, com
    * folga para nunca entrar nas pernas, nos braços nem no corpo.
    */
   capa: [number, number, number];

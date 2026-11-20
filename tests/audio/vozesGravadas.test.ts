@@ -147,8 +147,9 @@ describe('atraso do codificador', () => {
 });
 
 describe('índice das vozes (conjunto aprovado)', () => {
-  it('todo bicho dos 8 temas tem chamado, susto, contente e "ai", e baque e derrota no comum', () => {
-    expect(INDICE.ordem).toHaveLength(8);
+  it('todo bicho dos 4 temas com vozes tem chamado, susto, contente e "ai", e baque e derrota no comum', () => {
+    // spec 034: os quatro temas que saíram levaram os pacotes deles (a Vila Neon não tem)
+    expect(INDICE.ordem).toHaveLength(4);
     for (const t of INDICE.ordem) {
       const v = INDICE.temas[t].vozes!;
       const pacote = INDICE.tamanhos[`${t}-vozes.mp3`];
@@ -179,7 +180,7 @@ describe('índice das vozes (conjunto aprovado)', () => {
     expect(de('rancho-alegre', 'cervo')).toMatchObject({ material: 'pelo', porte: 'grande' });
     expect(de('rancho-alegre', 'coelho')).toMatchObject({ material: 'pena', porte: 'pequeno' });
     expect(de('rancho-alegre', 'espectro')).toMatchObject({ material: 'pena', porte: 'medio' });
-    expect(de('mata-encantada', 'espectro')).toMatchObject({ material: 'pano', porte: 'medio' });
+    expect(de('cidade-grande', 'espectro')).toMatchObject({ material: 'pelo', porte: 'medio' });
     expect(de('exploracao-lunar', 'cervo')).toMatchObject({ material: 'lata', derrota: 'robo' });
     expect(de('doce-reino', 'raposa')).toMatchObject({ material: 'crocante' });
     for (const t of INDICE.ordem)

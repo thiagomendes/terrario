@@ -34,10 +34,11 @@ import { criarGerador } from '../../src/audio/variacao';
 import type { EstiloMundo } from '../../src/temas/tipos';
 import '../../src/temas/todos';
 import { obterTema } from '../../src/temas';
+import { temaBase } from '../../src/temas/base';
 
-/** Estilo de teste: o do Bruma e Luz com o sítio, o moinho e o espantalho (spec 013). */
+/** Estilo de teste: o da base (era o do Bruma e Luz) com o sítio, o moinho e o espantalho. */
 const SITIO: EstiloMundo = {
-  ...obterTema('bruma-e-luz').mundo,
+  ...temaBase().mundo,
   povoado: {
     casa: 'duas-aguas',
     oficina: 'duas-aguas',

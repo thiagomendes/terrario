@@ -54,12 +54,8 @@ export { MAX_APELIDO, limparApelido } from '../jogo/apelido';
 
 /** O complemento do nome sugerido em cada tema (neutro: vale para menina e menino). */
 const DO_TEMA: Record<string, string> = {
-  'bruma-e-luz': 'da Bruma',
-  'planeta-vivo': 'Estelar',
   'doce-reino': 'Doce',
-  'era-dos-dinos': 'dos Dinos',
   'exploracao-lunar': 'Lunar',
-  'mata-encantada': 'da Mata',
   'rancho-alegre': 'do Rancho',
   'cidade-grande': 'da Cidade',
   'vila-neon': 'da Vila',

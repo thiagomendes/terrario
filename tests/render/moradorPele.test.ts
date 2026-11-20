@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import '../../src/temas/todos';
 import { obterTema, temasDisponiveis } from '../../src/temas';
+import { temaBase } from '../../src/temas/base';
 import { moradorDeBrinquedo } from '../../src/render/moradorBoneco';
 import { planoBoneco } from '../../src/personagem/boneco';
 import { PALETAS } from '../../src/personagem/aparencia';
@@ -20,7 +21,7 @@ describe('pele dos moradores', () => {
     const falhas: string[] = [];
     let conferidos = 0;
     for (const id of temasDisponiveis()) {
-      const pov = obterTema(id).povoado ?? obterTema('bruma-e-luz').povoado!;
+      const pov = obterTema(id).povoado ?? temaBase().povoado!;
       for (const prof of Object.keys(pov.moradores) as Profissao[]) {
         const pecas = pov.moradores[prof];
         const cabeca = pecas

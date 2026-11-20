@@ -7,7 +7,7 @@
  * "Tirar fantasia" só tira a camada, e o look de antes volta igualzinho.
  */
 import type { Corpo, IdDesbloqueio } from './aparencia';
-import type { IdTema, IdTemaQueSai } from '../temas/tipos';
+import type { IdTema } from '../temas/tipos';
 
 export type GrupoFantasia = 'realeza' | 'herois' | 'temas';
 /** Abas sempre nesta ordem (a criança aprende o lugar das coisas). */
@@ -45,15 +45,8 @@ export type TipoPeca =
   | 'chapeu-vaqueiro'
   | 'traje-espacial'
   | 'capacete-bolha'
-  | 'capuz-dino'
   | 'avental-doce'
   | 'touca-chef'
-  | 'jaleco'
-  | 'oculos'
-  | 'coroa-folhas'
-  | 'capa-folhas'
-  | 'capuz-lanterneira'
-  | 'lanterna'
   // spec 014: prêmios do canteiro da cidade
   | 'capacete-obra'
   | 'colete-obra'
@@ -136,7 +129,7 @@ export interface FantasiaDef {
   id: string;
   grupo: GrupoFantasia;
   /** Só nas fantasias dos temas (elas servem em qualquer mundo; o tema só ordena e sugere). */
-  tema?: IdTema | IdTemaQueSai;
+  tema?: IdTema;
   /** Nome pelo corpo escolhido: "Heroína Relâmpago" / "Herói Relâmpago". */
   nomes: Record<Corpo, string>;
   /** Opções da cor principal; a primeira é a padrão. */
@@ -369,23 +362,6 @@ export const FANTASIAS: readonly FantasiaDef[] = [
     }),
   },
   {
-    id: 'dino',
-    grupo: 'temas',
-    tema: 'era-dos-dinos',
-    nomes: { feminino: 'Fantasia de Dino', masculino: 'Fantasia de Dino' },
-    cores: ['#5fbf4a', '#ff8a3d', '#8a6aff', '#3fb8d8'],
-    corEmblema: '#fff3c8',
-    visual: mesmo({
-      roupa: { camisa: 'principal', calca: 'principal' },
-      cabeca: 'capuz',
-      pecas: [
-        { tipo: 'capuz-dino', cor: 'principal' },
-        { tipo: 'luvas', cor: 'clara' },
-        { tipo: 'botas', cor: 'escura' },
-      ],
-    }),
-  },
-  {
     id: 'confeiteira',
     grupo: 'temas',
     tema: 'doce-reino',
@@ -398,54 +374,6 @@ export const FANTASIAS: readonly FantasiaDef[] = [
       pecas: [
         { tipo: 'avental-doce', cor: 'principal' },
         { tipo: 'touca-chef', cor: BRANCO, opcional: true },
-      ],
-    }),
-  },
-  {
-    id: 'cientista',
-    grupo: 'temas',
-    tema: 'planeta-vivo',
-    nomes: { feminino: 'Cientista', masculino: 'Cientista' },
-    cores: ['#f6f6f6', '#cfe8ff', '#e8ffe0'],
-    corEmblema: '#2f6fd8',
-    visual: mesmo({
-      roupa: { camisa: 'principal', calca: '#3f6fb8' },
-      cabeca: 'livre',
-      pecas: [
-        { tipo: 'jaleco', cor: 'principal' },
-        { tipo: 'oculos', cor: '#3b4250', opcional: true },
-      ],
-    }),
-  },
-  {
-    id: 'guardia-mata',
-    grupo: 'temas',
-    tema: 'mata-encantada',
-    nomes: { feminino: 'Guardiã da Mata', masculino: 'Guardião da Mata' },
-    cores: ['#4caa3a', '#2f8a5a', '#a8c83a'],
-    corEmblema: '#ff8fc8',
-    visual: mesmo({
-      roupa: { camisa: 'principal', calca: 'escura' },
-      cabeca: 'livre',
-      pecas: [
-        { tipo: 'coroa-folhas', cor: '#3f8a2c', simbolo: 'flor', opcional: true },
-        { tipo: 'capa-folhas', cor: 'principal', simbolo: 'folha', opcional: true },
-      ],
-    }),
-  },
-  {
-    id: 'lanterneira',
-    grupo: 'temas',
-    tema: 'bruma-e-luz',
-    nomes: { feminino: 'Lanterneira', masculino: 'Lanterneiro' },
-    cores: ['#6a5ab8', '#2f6f8f', '#8a4a6a'],
-    corEmblema: '#ffe58a',
-    visual: mesmo({
-      roupa: { camisa: 'principal', calca: '#2d3a4f' },
-      cabeca: 'capuz',
-      pecas: [
-        { tipo: 'capuz-lanterneira', cor: 'principal' },
-        { tipo: 'lanterna', cor: '#ffe58a', opcional: true },
       ],
     }),
   },
@@ -875,8 +803,8 @@ export function fantasiasDoGrupo(grupo: GrupoFantasia, temaDoMundo?: string): Fa
 }
 
 /** Os temas de "Dos temas" na ordem da tela (o do mundo aberto primeiro, sem repetir). */
-export function temasDasFantasias(temaDoMundo?: string): (IdTema | IdTemaQueSai)[] {
-  const temas: (IdTema | IdTemaQueSai)[] = [];
+export function temasDasFantasias(temaDoMundo?: string): IdTema[] {
+  const temas: IdTema[] = [];
   for (const f of fantasiasDoGrupo('temas', temaDoMundo))
     if (f.tema && !temas.includes(f.tema)) temas.push(f.tema);
   return temas;

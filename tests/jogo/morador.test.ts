@@ -66,9 +66,8 @@ describe('moradores', () => {
   it.each([
     ['duas-aguas', 'poco'],
     ['cupula', 'antena'],
-    ['tenda', 'esqueleto'],
     ['redonda', 'fonte'],
-    ['modulo', 'totem'],
+    ['modulo', 'moinho'],
   ] as const)('casas %s e marco %s: um por casa e nunca presos em 10 dias', (casa, marco) => {
     definirEstiloMundo({
       ...ESTILO_PADRAO,

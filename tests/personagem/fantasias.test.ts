@@ -29,14 +29,10 @@ import {
 import { sanear, sanearAparencia } from '../../src/nucleo/saneamento';
 import { criarNucleo, INTERVALO_APARENCIA } from '../../src/nucleo/nucleo';
 import { PASSO } from '../../src/nucleo/protocolo';
-import type { IdTema, IdTemaQueSai } from '../../src/temas/tipos';
+import type { IdTema } from '../../src/temas/tipos';
 
-const TEMAS: (IdTema | IdTemaQueSai)[] = [
-  'bruma-e-luz',
-  'planeta-vivo',
-  'mata-encantada',
+const TEMAS: IdTema[] = [
   'doce-reino',
-  'era-dos-dinos',
   'exploracao-lunar',
   'rancho-alegre',
   'cidade-grande',
@@ -97,11 +93,11 @@ describe('catálogo das fantasias', () => {
     expect(rotuloDaFantasia({ id: 'realeza-estrelas', cor: 0 }, 'masculino')).toBe(
       'Príncipe das Estrelas',
     );
-    expect(rotuloDaFantasia('guardia-mata', 'masculino')).toBe('Guardião da Mata');
+    expect(rotuloDaFantasia('confeiteira', 'masculino')).toBe('Confeiteiro');
     expect(rotuloDaFantasia('nao-existe', 'feminino')).toBe('');
   });
 
-  it('fantasias dos temas: tema real e todos os 9 temas cobertos', () => {
+  it('fantasias dos temas: tema real e todos os 5 temas cobertos', () => {
     const temas = fantasiasDoGrupo('temas');
     for (const f of temas) expect(TEMAS).toContain(f.tema);
     for (const f of FANTASIAS.filter((x) => x.grupo !== 'temas')) expect(f.tema).toBeUndefined();
@@ -116,7 +112,7 @@ describe('catálogo das fantasias', () => {
     const rancho = fantasiasDoGrupo('temas', 'rancho-alegre').map((f) => f.id);
     expect(rancho.slice(0, 2)).toEqual(['fazendeira', 'vaqueira']);
     expect(temasDasFantasias('doce-reino')[0]).toBe('doce-reino');
-    expect(new Set(temasDasFantasias()).size).toBe(9);
+    expect(new Set(temasDasFantasias()).size).toBe(5);
     // as outras abas não mudam de ordem
     expect(fantasiasDoGrupo('herois', 'rancho-alegre')).toEqual(fantasiasDoGrupo('herois'));
   });
@@ -217,12 +213,12 @@ describe('fantasia na aparência', () => {
 
   it('salva e carrega a fantasia; fechar e abrir e depois tirar volta ao de antes', () => {
     const a = memoria();
-    const v = alternarPecaDaFantasia(vestirFantasia(minha, 'dino', 1), 'capuz-dino');
-    salvarAparencia(a, vestirFantasia(minha, 'dino', 1));
+    const v = alternarPecaDaFantasia(vestirFantasia(minha, 'astronauta', 1), 'traje-espacial');
+    salvarAparencia(a, vestirFantasia(minha, 'astronauta', 1));
     const lida = carregarAparencia(a);
-    expect(lida.fantasia).toEqual({ id: 'dino', cor: 1 });
+    expect(lida.fantasia).toEqual({ id: 'astronauta', cor: 1 });
     expect(tirarFantasia(lida)).toEqual(minha);
-    // capuz do dino não é opcional
+    // o traje do astronauta não é opcional
     expect(v.fantasia?.sem).toBeUndefined();
   });
 

@@ -21,9 +21,6 @@ export type IdTema =
   | 'doce-reino'
   | 'exploracao-lunar';
 
-/** Spec 034: os quatro temas que saem do jogo (este tipo some quando eles saem, na T04). */
-export type IdTemaQueSai = 'bruma-e-luz' | 'planeta-vivo' | 'mata-encantada' | 'era-dos-dinos';
-
 export type Rgb = readonly [number, number, number];
 /** Pixel RGBA 0..255 de um tile. */
 export type Px = [number, number, number, number];
@@ -58,8 +55,6 @@ export interface CeuTema {
   tamanhoSol: number;
   /** Halo em volta do sol (0 = nenhum, como no vácuo). */
   haloSol: number;
-  /** Segundo sol (Planeta Vivo): deslocamento angular em relação ao primeiro e cor. */
-  segundoSol?: { deslocamento: number; cor: Rgb; tamanho: number };
   /** Tinta da lua. */
   corLua: Rgb;
   tamanhoLua: number;
@@ -204,10 +199,8 @@ export type FormaArvore =
   | 'betula'
   | 'pinho'
   | 'lanterna'
-  | 'palmeira'
   | 'fungo'
   | 'pirulito'
-  | 'samambaia'
   | 'cristal'
   | 'araucaria';
 
@@ -215,11 +208,8 @@ export type FormaArvore =
 export type FormaEstrutura =
   | 'ruina'
   | 'cupula'
-  | 'circulo'
-  | 'arcos'
   | 'casinha'
   | 'torre'
-  | 'ninho'
   /** Spec 013: espantalho com baú no meio de uma lavoura abandonada. */
   | 'espantalho'
   /** Spec 014: a roda-gigante de um parque de diversões abandonado (Cidade Grande). */
@@ -399,7 +389,7 @@ export interface TextosTema {
 
 export interface Tema {
   /** O id do tema; `'base'` só na base (que não se escolhe: `src/temas/base`). */
-  id: IdTema | IdTemaQueSai | 'base';
+  id: IdTema | 'base';
   nome: string;
   /** Frase do cartão e do título. */
   lema: string;

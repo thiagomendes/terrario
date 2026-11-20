@@ -9,13 +9,14 @@ import { moradorDeBrinquedo } from '../../src/render/moradorBoneco';
 import { generoDoMorador } from '../../src/temas/nomes';
 import '../../src/temas/todos';
 import { obterTema, temasDisponiveis } from '../../src/temas';
+import { temaBase } from '../../src/temas/base';
 import type { Profissao } from '../../src/world/povoado';
 
 /** Caixa de cada material (em coordenadas do boneco) e o total de vértices. */
 function retrato(fundir: boolean, tema: string, prof: Profissao, n: number) {
   const scene = new Scene(new NullEngine());
   const t = obterTema(tema);
-  const pov = t.povoado ?? obterTema('bruma-e-luz').povoado!;
+  const pov = t.povoado ?? temaBase().povoado!;
   const m = moradorDeBrinquedo(
     pov.moradores[prof],
     n,

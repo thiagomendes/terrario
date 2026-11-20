@@ -174,7 +174,7 @@ export function definirPovoados(ligado: boolean): void {
 }
 
 /**
- * Spec 031: o canto das missões do mundo (Era dos Dinos e Doce Reino; null nos outros). Os
+ * Spec 031: o canto das missões do mundo (o do Doce Reino; null nos outros). Os
  * povoados desligados (o teste de paridade) desligam o canto também.
  */
 const cantos = new Map<string, PlanoCanto[]>();
@@ -203,7 +203,8 @@ export function versaoDoCanto(): number {
 export function candidatosDoCanto(semente: number): readonly PlanoCanto[] {
   if (!povoadosLigados) return [];
   const mundo = mundoAlmaDoEstilo(estilo);
-  const tema = mundo === 'era-dos-dinos' ? 'dinos' : mundo === 'doce-reino' ? 'doce' : null;
+  // spec 034: só o Doce Reino tem o canto (o da Era dos Dinos saiu com ela)
+  const tema = mundo === 'doce-reino' ? 'doce' : null;
   if (!tema) return [];
   const k = `${semente},${tema},${versaoDosPovoados()}`;
   const ja = cantos.get(k);
@@ -235,7 +236,7 @@ export function candidatosDoCanto(semente: number): readonly PlanoCanto[] {
   return lista;
 }
 /**
- * Spec 031: o canto das missões do mundo (Era dos Dinos e Doce Reino; null nos outros ou
+ * Spec 031: o canto das missões do mundo (o do Doce Reino; null nos outros ou
  * quando todo lugar bom já tinha construção). Os povoados desligados (o teste de paridade)
  * desligam o canto também.
  */
@@ -916,27 +917,6 @@ function construirEstrutura(
             );
           }
       break;
-    case 'circulo':
-      // círculo de pedras em pé, de alturas diferentes, com musgo no alto
-      for (let k = 0; k < 8; k++) {
-        const a = (k / 8) * Math.PI * 2;
-        const x = Math.round(8 + Math.cos(a) * 3);
-        const z = Math.round(8 + Math.sin(a) * 3);
-        const alt = 2 + Math.floor(hash2(k, 3, semente + 64) * 3);
-        for (let y = 1; y <= alt; y++) em(x, h + y, z, parede);
-        if (hash2(k, 5, semente + 65) < 0.5) em(x, h + alt + 1, z, Bloco.FOLHAGEM);
-      }
-      break;
-    case 'arcos':
-      // três arcos alinhados (costelas de um gigante de pedra)
-      for (const dz of [-2, 0, 2])
-        for (let dx = -3; dx <= 3; dx++) {
-          const alt = Math.round(4 - (dx * dx) / 3);
-          if (Math.abs(dx) === 3)
-            for (let y = 1; y <= alt; y++) em(8 + dx, h + y, 8 + dz, gasto(dx, y, dz));
-          else em(8 + dx, h + alt, 8 + dz, gasto(dx, alt, dz));
-        }
-      break;
     case 'casinha':
       // casinha de paredes baixas, telhado em duas águas e porta na frente
       for (let dz = -2; dz <= 2; dz++)
@@ -957,23 +937,6 @@ function construirEstrutura(
             for (let y = 3; y < 3 + (2 - Math.abs(dx)); y++)
               if (Math.abs(dz) === 2) em(8 + dx, h + y, 8 + dz, parede);
         }
-      break;
-    case 'ninho':
-      // ninho raso: anel de pedras de dois andares em volta do baú, com ovos de pedra lisa
-      for (let dz = -3; dz <= 3; dz++)
-        for (let dx = -3; dx <= 3; dx++) {
-          const d = Math.hypot(dx, dz);
-          if (d > 3.4 || d < 2.2) continue;
-          em(8 + dx, h + 1, 8 + dz, gasto(dx, 1, dz));
-          if (d > 2.8 && hash2(dx, dz, semente + 66) < 0.6)
-            em(8 + dx, h + 2, 8 + dz, gasto(dx, 2, dz));
-        }
-      for (const [dx, dz] of [
-        [1, 1],
-        [-1, 1],
-        [1, -1],
-      ])
-        em(8 + dx, h + 1, 8 + dz, Bloco.PEDRA_LISA);
       break;
     case 'espantalho': {
       // spec 013: lavoura abandonada (terra arada com umas plantas maduras, grama tomando
@@ -1291,29 +1254,6 @@ export function arvoreDaForma(
       }
       break;
     }
-    case 'palmeira': {
-      // tronco alto e fino, folhas em cruz caindo nas pontas
-      const t = coluna(6 + Math.floor(r * 3));
-      por(blocos, x, t + 1, z, folha);
-      for (const [dx, dz] of [
-        [1, 0],
-        [-1, 0],
-        [0, 1],
-        [0, -1],
-      ]) {
-        por(blocos, x + dx, t + 1, z + dz, folha);
-        por(blocos, x + dx * 2, t, z + dz * 2, folha);
-        por(blocos, x + dx * 2, t - 1, z + dz * 2, folha);
-      }
-      for (const [dx, dz] of [
-        [1, 1],
-        [-1, 1],
-        [1, -1],
-        [-1, -1],
-      ])
-        por(blocos, x + dx, t, z + dz, folha);
-      break;
-    }
     case 'fungo': {
       // cogumelo gigante: talo grosso de um bloco e chapéu largo e achatado
       const t = coluna(4 + Math.floor(r * 3));
@@ -1334,25 +1274,6 @@ export function arvoreDaForma(
         for (let dz = -2; dz <= 2; dz++)
           for (let dx = -2; dx <= 2; dx++)
             if (Math.hypot(dx, dz, dy - 2) <= 2.3) por(blocos, x + dx, t + 1 + dy, z + dz, folha);
-      break;
-    }
-    case 'samambaia': {
-      // samambaia-árvore: tronco curto e frondes longas em X, arqueadas
-      const t = coluna(3 + Math.floor(r * 3));
-      por(blocos, x, t + 1, z, folha);
-      for (const [dx, dz] of [
-        [1, 0],
-        [-1, 0],
-        [0, 1],
-        [0, -1],
-        [1, 1],
-        [-1, -1],
-        [1, -1],
-        [-1, 1],
-      ]) {
-        por(blocos, x + dx, t + 1, z + dz, folha);
-        if (dx === 0 || dz === 0) por(blocos, x + dx * 2, t, z + dz * 2, folha);
-      }
       break;
     }
     case 'araucaria': {

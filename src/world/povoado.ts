@@ -24,8 +24,8 @@ export type Profissao = 'ferreiro' | 'cozinheiro' | 'construtor';
 export const PROFISSOES: readonly Profissao[] = ['ferreiro', 'cozinheiro', 'construtor'];
 /** 'campo' (spec 013): lote do sítio sem construção de morar (lavoura, curral, galinheiro). */
 export type TipoLote = 'casa' | 'oficina' | 'deposito' | 'campo';
-export type FormaCasa = 'duas-aguas' | 'cupula' | 'tenda' | 'redonda' | 'modulo';
-export type FormaMarco = 'poco' | 'fonte' | 'antena' | 'totem' | 'esqueleto' | 'moinho';
+export type FormaCasa = 'duas-aguas' | 'cupula' | 'redonda' | 'modulo';
+export type FormaMarco = 'poco' | 'fonte' | 'antena' | 'moinho';
 /**
  * Spec 013: o que o planejador põe nos lotes. 'vila' (ou sem o campo) é o povoado de
  * sempre; 'sitio' troca as casas por casa da fazenda, celeiro, ferraria, silo, lavouras,

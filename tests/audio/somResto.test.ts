@@ -102,8 +102,8 @@ describe('volume da trilha por tema (NIVEL_TRILHA)', () => {
 
   it('ganho linear do ajuste; contexto que falta usa o dia, tema que falta é 1', () => {
     const c: ContextoNivel = 'noite';
-    expect(nivelTrilha('bruma-e-luz', c)).toBeCloseTo(
-      Math.pow(10, NIVEL_TRILHA['bruma-e-luz'].noite! / 20),
+    expect(nivelTrilha('doce-reino', c)).toBeCloseTo(
+      Math.pow(10, NIVEL_TRILHA['doce-reino'].noite! / 20),
       9,
     );
     expect(nivelTrilha('rancho-alegre', 'perigo')).toBeCloseTo(
@@ -119,7 +119,8 @@ describe('volume das vozes por tema (NIVEL_VOZES)', () => {
     const comVozes = Object.keys(INDICE.temas).filter(
       (id) => !!(INDICE.temas[id] as { vozes?: unknown }).vozes,
     );
-    expect(comVozes.length).toBe(8);
+    // spec 034: os quatro temas que saíram levaram os pacotes deles
+    expect(comVozes.length).toBe(4);
     // spec 026: a Vila Neon fica com a voz sintetizada do tema (sem pacote de vozes nem tabela)
     expect((INDICE.temas['vila-neon'] as { vozes?: unknown }).vozes).toBeUndefined();
     expect(NIVEL_VOZES['vila-neon']).toBeUndefined();
@@ -189,14 +190,15 @@ describe('sons novos da spec 019 (T05)', () => {
   });
 
   it('tempestade: pipoca no Doce, estalo de rádio na Lua, trovão no resto; sem chiado no vácuo', () => {
-    const ids = ['doce-reino', 'exploracao-lunar', 'bruma-e-luz'];
+    const ids = ['doce-reino', 'exploracao-lunar', 'vila-neon'];
     const porId = Object.fromEntries(ids.map((id) => [id, obterTema(id)]));
+    expect(porId['vila-neon'].id).toBe('vila-neon');
     expect(somDoTrovao(porId['doce-reino'].natureza)).toBe('pipoca');
     expect(somDoTrovao(porId['exploracao-lunar'].natureza)).toBe('estalo');
-    expect(somDoTrovao(porId['bruma-e-luz'].natureza)).toBe('trovao');
+    expect(somDoTrovao(porId['vila-neon'].natureza)).toBe('trovao');
     expect(chuvaAudivel(porId['exploracao-lunar'].natureza, 1, false)).toBe(0);
-    expect(chuvaAudivel(porId['bruma-e-luz'].natureza, 0.8, false)).toBe(0.8);
-    expect(chuvaAudivel(porId['bruma-e-luz'].natureza, 0.8, true)).toBeCloseTo(0.2, 9);
+    expect(chuvaAudivel(porId['vila-neon'].natureza, 0.8, false)).toBe(0.8);
+    expect(chuvaAudivel(porId['vila-neon'].natureza, 0.8, true)).toBeCloseTo(0.2, 9);
     // a Lua não tem clarão, mas a legenda da tempestade solar agora aparece com o estalo
     expect(porId['exploracao-lunar'].climaVisual.relampago).toBe(false);
   });
@@ -246,6 +248,28 @@ describe('créditos dos sons', () => {
     );
     expect([...nossos.keys()].sort()).toEqual([...doIndice.keys()].sort());
     for (const [a, s] of doIndice) expect([...nossos.get(a)!].sort(), a).toEqual([...s].sort());
+  });
+
+  it('todo som citado pelos pacotes que ficam tem crédito (spec 034)', () => {
+    const cru = INDICE as unknown as { comum: unknown; temas: Record<string, unknown> };
+    const citados = new Set<string>();
+    const juntar = (o: unknown): void => {
+      if (Array.isArray(o)) o.forEach(juntar);
+      else if (o && typeof o === 'object')
+        for (const [k, v] of Object.entries(o)) {
+          if (k === 'f' && Array.isArray(v)) for (const f of v) citados.add(String(f));
+          else juntar(v);
+        }
+    };
+    juntar(cru.comum);
+    for (const t of Object.values(cru.temas)) juntar(t);
+    expect(citados.size).toBeGreaterThan(20);
+    for (const f of citados) expect(INDICE.creditos[f], f).toBeDefined();
+    // os temas que saíram levaram os pacotes e os 16 créditos que só eles citavam
+    for (const id of ['bruma-e-luz', 'planeta-vivo', 'mata-encantada', 'era-dos-dinos'])
+      expect(cru.temas[id], id).toBeUndefined();
+    for (const c of ['commons/assobio1.ogg', 'commons/elefante.ogg', 'commons/sapo.ogg'])
+      expect(INDICE.creditos[c], c).toBeUndefined();
   });
 
   it('cita o banco da música com a licença e nenhum link', () => {

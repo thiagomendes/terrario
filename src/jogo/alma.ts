@@ -15,16 +15,10 @@
  * nada expira, sem limite por dia, sem oferta por tempo; a moedinha não passa a outro jogador.
  */
 
-export type MundoAlma =
-  | 'cidade-grande'
-  | 'rancho-alegre'
-  | 'era-dos-dinos'
-  | 'doce-reino'
-  | 'vila-neon';
+export type MundoAlma = 'cidade-grande' | 'rancho-alegre' | 'doce-reino' | 'vila-neon';
 export const MUNDOS_ALMA: readonly MundoAlma[] = [
   'cidade-grande',
   'rancho-alegre',
-  'era-dos-dinos',
   'doce-reino',
   'vila-neon',
 ];
@@ -40,16 +34,15 @@ export function mundoAlmaDaPlanta(planta: string | undefined): MundoAlma | null 
 
 /**
  * Spec 031: o mundo da alma pelo estilo do mundo, a única coisa de tema que o núcleo conhece.
- * A Cidade e o Rancho pela planta; a Era dos Dinos e o Doce Reino pela estrutura rara, que só
- * eles usam (o ninho e a casinha). Não precisa de campo novo no estilo: os mundos já salvos na
- * nuvem (com o estilo de antes) ganham as missões sem mudar nada, e a rede fica igual.
+ * A Cidade, a Vila e o Rancho pela planta; o Doce Reino pela estrutura rara, que só ele usa (a
+ * casinha). Não precisa de campo novo no estilo: os mundos já salvos na nuvem (com o estilo de
+ * antes) ganham as missões sem mudar nada, e a rede fica igual.
  */
 export function mundoAlmaDoEstilo(
   estilo: { estrutura?: string; povoado?: { planta?: string } } | null | undefined,
 ): MundoAlma | null {
   const pela = mundoAlmaDaPlanta(estilo?.povoado?.planta);
   if (pela) return pela;
-  if (estilo?.estrutura === 'ninho') return 'era-dos-dinos';
   if (estilo?.estrutura === 'casinha') return 'doce-reino';
   return null;
 }
@@ -281,59 +274,6 @@ export const MISSOES: readonly Missao[] = [
     habilidade: 'fazendeiro',
     minutos: [6, 10],
     devagar: true,
-  },
-  // ------------------------------------------------------------ Era dos Dinos (3, 15 moedinhas)
-  // spec 031: tudo mora no canto das missões, perto de onde a criança nasce
-  {
-    id: 'd1',
-    mundo: 'era-dos-dinos',
-    nome: 'Ovinhos do ninho',
-    desenho: {
-      tipo: 'arte',
-      principal: 'ninhoOvos',
-      selo: 'pegar',
-      resultado: 'mochilaOvos',
-      bolinha: 'ovoDino',
-      placa: 'ovoDino',
-    },
-    conta: { tipo: 'evento', chave: 'coletou:ovo:ninho', meta: 3 },
-    moedas: 4,
-    habilidade: 'bichos',
-    minutos: [1, 2],
-  },
-  {
-    id: 'd2',
-    mundo: 'era-dos-dinos',
-    nome: 'Capim para 2 pescoçudos',
-    desenho: {
-      tipo: 'arte',
-      principal: 'pescocudo',
-      selo: 'capimDourado',
-      resultado: 'pescocudoCoracao',
-      bolinha: 'pescocudo',
-      placa: 'pescocudo',
-    },
-    conta: { tipo: 'evento', chave: 'criou:cervo', meta: 2 },
-    moedas: 5,
-    habilidade: 'bichos',
-    minutos: [1, 2],
-  },
-  {
-    id: 'd3',
-    mundo: 'era-dos-dinos',
-    nome: 'Fósseis na areia',
-    desenho: {
-      tipo: 'arte',
-      principal: 'rochaOsso',
-      selo: 'pincel',
-      resultado: 'ossoAchado',
-      bolinha: 'osso',
-      placa: 'rochaOsso',
-    },
-    conta: { tipo: 'evento', chave: 'escavou:fossil', meta: 3 },
-    moedas: 6,
-    habilidade: 'explorador',
-    minutos: [1, 2],
   },
   // ------------------------------------------------------------ Doce Reino (2, 15 moedinhas)
   {
@@ -643,9 +583,7 @@ export const GANHO_DE_EVENTO: Readonly<
   'colheu:minha': { xp: 0 },
   plantou: { xp: 1, hab: ['fazendeiro', 0.25] },
   'coletou:ovo': { xp: 3, hab: ['bichos', 0.5] },
-  // spec 031: o ovinho do ninho do canto, a rocha de osso escavada e o bloco do bolo
-  'coletou:ovo:ninho': { xp: 3, hab: ['bichos', 0.5] },
-  'escavou:fossil': { xp: 2, hab: ['explorador', 0.5] },
+  // spec 031: o bloco do bolo do canto do Doce
   'bolo:bloco': { xp: 1, hab: ['construtor', 0.2] },
   'bolo:camada': { xp: 0 },
   // spec 026: o estojo achado, a lhama levada até a grade e a caixa do show acesa
@@ -705,15 +643,15 @@ export const HABILIDADES: readonly Habilidade[] = [
     desenho: 'explorador',
     cor: '#3f9ad8',
     nome: 'Explorador',
-    mundos: ['cidade-grande', 'rancho-alegre', 'era-dos-dinos', 'vila-neon'],
-    conta: 'lugares novos, fósseis escavados',
+    mundos: ['cidade-grande', 'rancho-alegre', 'vila-neon'],
+    conta: 'lugares novos',
   },
   {
     id: 'bichos',
     desenho: 'bichos',
     cor: '#e05a7a',
     nome: 'Amigo dos bichos',
-    mundos: ['rancho-alegre', 'era-dos-dinos', 'doce-reino', 'vila-neon'],
+    mundos: ['rancho-alegre', 'doce-reino', 'vila-neon'],
     conta:
       'bicho alimentado ou criado, ovos (o mesmo bicho não conta de novo em menos de 1 minuto)',
   },
@@ -892,51 +830,6 @@ export const BANCA: readonly ItemBanca[] = [
     desenho: 'galinha',
   },
   // spec 031: só blocos do tema, preço fixo (nada de fondant de várias cores junto)
-  {
-    id: 'magnolias',
-    mundo: 'era-dos-dinos',
-    nome: 'Magnólias',
-    preco: 3,
-    item: 'bloco:9',
-    qtd: 6,
-    desenho: 'item:bloco:9',
-  },
-  {
-    id: 'tochas-resina',
-    mundo: 'era-dos-dinos',
-    nome: 'Tochas de resina',
-    preco: 3,
-    item: 'bloco:37',
-    qtd: 6,
-    desenho: 'item:bloco:37',
-  },
-  {
-    id: 'ginkgo',
-    mundo: 'era-dos-dinos',
-    nome: 'Leque de ginkgo',
-    preco: 4,
-    item: 'bloco:55',
-    qtd: 8,
-    desenho: 'item:bloco:55',
-  },
-  {
-    id: 'ninho-folhas',
-    mundo: 'era-dos-dinos',
-    nome: 'Ninho de folhas',
-    preco: 4,
-    item: 'bloco:56',
-    qtd: 1,
-    desenho: 'item:bloco:56',
-  },
-  {
-    id: 'ambar',
-    mundo: 'era-dos-dinos',
-    nome: 'Âmbar que brilha',
-    preco: 5,
-    item: 'bloco:39',
-    qtd: 4,
-    desenho: 'item:bloco:39',
-  },
   {
     id: 'flor-confeito',
     mundo: 'doce-reino',
