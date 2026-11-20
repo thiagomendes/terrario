@@ -21,6 +21,13 @@ O dono, em 20 nov 2026: o filho criou um mundo na Vila Neon e o levou para a nuv
 - **Por que só às vezes:** no computador o IndexedDB responde antes do quadro e o e2e passa. No celular, pela internet, o quadro muitas vezes já está na fila atrás do bem-vindo.
 - **Reprodução:** `referencia/corrida.ts`. Usa o servidor real (`criarGerenciador` e `armazemMemoria`), a Vila Neon, o `conexaoNuvem` e o `criarEstadoCliente` reais, com um WebSocket de mentira que entrega cada mensagem como tarefa separada. Com atraso 0 ms o filho aplica 28 quadros e vê o pai; com 120 ms aplica 0 e não vê ninguém. Para rodar: `npx vite-node .sdd/specs/035-entrada-na-nuvem/referencia/corrida.ts`.
 
+## O que já entrou na 034 (e7027fb)
+- **O conserto mínimo:** a espera saiu do meio. Quem leva o mundo para a nuvem lê a lista do aparelho antes de conectar, e entre o bem-vindo e a cena nada espera. A linha de `src/main.ts` citada em "A causa" já não existe.
+- **O teste dele:** `tests/cliente/entradaNuvem.test.ts` só procura texto no `main.ts`. Ele não cobre `src/nuvem.ts` (`conectar`, `entrarNaSala`, `entrarPeloLink`), nem um `.then` ou `setTimeout` antes de `criarCena`.
+- **O que fica:** os `import()` dos esboços (`src/main.ts`) ainda reabririam a janela se `?esboco=` viesse junto de `?sala=`.
+- **Nesta spec:** o teste de comportamento abaixo substitui esse teste de texto.
+- **A reprodução:** `referencia/levar-a-nuvem.ts` copia a ordem do `main.ts`, mas não roda o arquivo. Ela prova o princípio.
+
 ## O que muda (a escrever e revisar quando a 034 for publicada)
 - **Não perder mensagem:** `conexaoNuvem` guarda as mensagens até o primeiro `aoReceber` e entrega todas, em ordem, quando ele chega.
 - **Rede de segurança:** se o estado do cliente ficar acumulando `adiantados` sem nenhum `primeiro` por mais de um tempo curto, ressincroniza (reconecta) em vez de ficar parado para sempre.

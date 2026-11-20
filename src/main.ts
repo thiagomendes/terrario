@@ -115,7 +115,9 @@ async function iniciar(app: HTMLElement): Promise<void> {
   // cliente) nada pode esperar: o primeiro quadro do servidor chega logo atrás do bem-vindo, e
   // se ele chega nessa espera se perde, e a criança não vê mais ninguém (spec 035; o conserto
   // completo, a conexão guardar as mensagens até alguém ouvir, fica para ela)
-  const doAparelho = sala && params.get('novo') === '1' ? await repo.listar() : [];
+  // (a lista só serve para a sugestão de fantasia: se a leitura falhar, segue sem ela)
+  const doAparelho =
+    sala && params.get('novo') === '1' ? await repo.listar().catch(() => []) : [];
   if (sala) {
     const pedido = entrarNaSala(
       app,

@@ -32,7 +32,7 @@ describe('a entrada na nuvem em src/main.ts', () => {
   });
 
   it('a lista do aparelho de quem levou o mundo é lida antes de conectar', () => {
-    const lida = MAIN.indexOf("const doAparelho = sala && params.get('novo') === '1'");
+    const lida = MAIN.indexOf('repo.listar()');
     expect(lida).toBeGreaterThan(0);
     expect(lida).toBeLessThan(MAIN.indexOf('entrarNaSala('));
   });
