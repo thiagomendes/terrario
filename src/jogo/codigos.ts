@@ -1,8 +1,15 @@
 /**
  * Códigos de sala: duas palavras e dois números (LUA-COMETA-48). Fáceis de uma criança
- * ditar para outra, sem acento nem letra que confunda. 202 × 201 × 100 = 4,06 milhões de
+ * ditar para outra, sem acento nem letra que confunda. 201 × 200 × 100 = 4,02 milhões de
  * combinações; o servidor ainda limita as tentativas por endereço.
  */
+
+/**
+ * Spec 034 (decisão do dono, 20 nov 2026): palavras que não saem mais no sorteio, mas que a
+ * leitura ainda aceita, para as salas que já existem com elas continuarem entrando. "BRUMA"
+ * lembrava o mundo Bruma e Luz, que saiu do jogo.
+ */
+export const PALAVRAS_SO_DE_LEITURA: readonly string[] = ['BRUMA'];
 
 /** Palavras curtas, concretas e gentis (sem acento: o teclado do celular agradece). */
 export const PALAVRAS: readonly string[] = [
@@ -36,7 +43,6 @@ export const PALAVRAS: readonly string[] = [
   'BONECO',
   'BOTA',
   'BRISA',
-  'BRUMA',
   'BUSSOLA',
   'CABRA',
   'CACAU',
@@ -239,7 +245,8 @@ export function normalizarCodigo(texto: string): string | null {
   const m = /^([A-Z]+) ?([A-Z]+) ?(\d{1,2})$/.exec(limpo);
   if (!m) return null;
   const [, a, b, n] = m;
-  if (!PALAVRAS.includes(a) || !PALAVRAS.includes(b)) return null;
+  const conhecida = (p: string) => PALAVRAS.includes(p) || PALAVRAS_SO_DE_LEITURA.includes(p);
+  if (!conhecida(a) || !conhecida(b)) return null;
   return `${a}-${b}-${n.padStart(2, '0')}`;
 }
 
