@@ -80,13 +80,6 @@ async function iniciar(app: HTMLElement): Promise<void> {
   // spec 029: a página escondida de medida do WebGPU (só com ?medir=webgpu), pedaço à parte
   if (new URLSearchParams(location.search).get('medir') === 'webgpu')
     return (await import('./medida/webgpu')).medirWebGPU(app);
-  // esboço da spec 034 (só com ?esboco=gestos034, sem `direcao`): a folha dos ícones dos
-  // gestos, sem o jogo; pedaço à parte que o jogo nunca carrega
-  {
-    const p = new URLSearchParams(location.search);
-    if (p.get('esboco') === 'gestos034' && !p.get('direcao'))
-      return (await import('./esboco/gestos034')).montarFolhaGestos(app);
-  }
   const repo = criarRepositorioMundos(armazemIndexedDB());
   // spec 016 (decisão do dono, 11 nov 2026): os mundos de antes não abrem mais; apagados uma
   // vez só (o personagem e as preferências ficam). Falhando, o jogo segue com o que tiver.
@@ -239,10 +232,6 @@ async function iniciar(app: HTMLElement): Promise<void> {
   if (esboco === 'amigos') (await import('./esboco/amigos')).prepararEsbocoAmigos();
   // esboço 014d (só com ?esboco=estetica): a estética firme dos veículos ao lado da de hoje
   if (esboco === 'estetica') (await import('./esboco/veiculosEstetica')).prepararEsbocoEstetica();
-  // esboço da spec 034 (só com ?esboco=gestos034&direcao=A ou B): o jogo com os ícones dos
-  // gestos daquela direção (antes da cena, que monta a roleta)
-  if (esboco === 'gestos034')
-    await (await import('./esboco/gestos034')).prepararEsbocoGestos(params.get('direcao'));
   // spec 023 (T14): a lojinha premium na roda do menu, de qualquer mundo (a roda é montada
   // com a cena; a alma, que abre a lojinha, vem depois e ouve o pedido)
   // spec 030: o quadro de missões (só onde há missões) e o baú moram na roda do menu
