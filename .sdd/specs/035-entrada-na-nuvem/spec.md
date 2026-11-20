@@ -92,8 +92,11 @@ O conserto mínimo do defeito 1 já entrou na 034. Esta spec faz o conserto comp
 - Corrigir logo depois da 034, sem misturar as duas.
 - O defeito 2 (preso no mundo da nuvem) entra nesta spec.
 - A "Queda curta da conexão" do backlog é conferida nesta spec.
+- **As duas perguntas abaixo, respondidas pelas recomendadas** ("Concordo com suas recomendações"):
+  - enquanto o jogo se reacerta, a criança não vê nada novo: os amigos simplesmente aparecem;
+  - se não se acertar depois das tentativas, a página recarrega uma vez sozinha e entra direto no mesmo mundo, nunca mais de uma vez por mundo em 10 min.
 
-**Perguntas para o dono** (a recomendada primeiro):
+**Perguntas para o dono** (a recomendada primeiro; respondidas em 20 nov, ver acima):
 1. **O que a criança vê enquanto o jogo se reacerta** (a rede de segurança da seção 2, de 1 a 2 s, quase sempre com a tela de entrada ainda na frente):
    - **(recomendada) Nada novo.** O mundo segue na tela e, quando acerta, os amigos aparecem.
      - O aviso de hoje, "A internet caiu. Reconectando…", não aparece: a internet não caiu.
