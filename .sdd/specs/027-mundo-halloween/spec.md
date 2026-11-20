@@ -37,3 +37,64 @@ O dono, em 13 nov 2026: um "mundo de criaturas, estilo Dia das Bruxas... criatur
 
 ## Decisões do dono
 - 13 nov 2026: aprovado como ideia. Entra intercalado na sequência. Começa por esboço.
+
+## A ideia aprovada (18 nov 2026, à noite)
+O dono: "Gostei da ideia, de forma geral tá bem legal. Amanhã me traz um esboço daí que a gente aprova." Vem logo depois da 034 ("menos é mais") e nasce no nível da Vila Neon: lugares por dentro, objetos que reagem ao toque, moradores com nome, missões com história, comprar e comer.
+
+**Clima:** a festa à fantasia de uma vila de brinquedo.
+- De dia, entardecer laranja dourado.
+- De noite, roxo, com lua grande e lanternas acesas; nunca escuro de verdade.
+- Moradores fantasiados, com o mesmo visual de boneco do jogo; bichos fofos e sorridentes.
+- Música travessa (xilofone, risadinhas), nunca de terror.
+
+**Lugares:**
+1. Praça da Abóbora: abóbora gigante sorridente, o palco da festa e as barracas.
+2. Rua das Casinhas Tortas: telhados tortos e campainha em cada porta (doces ou travessuras).
+3. Casa da Vovó Bruxinha, por dentro (como a casa anos 80): caldeirão de verdade para poções de suco, vassoura na parede, o gato no sofá.
+4. Loja de Fantasias: experimentar capa, chapéu, lençol de fantasma e máscara, e se ver no espelho mágico (aproveita as fantasias do jogo).
+5. Bosque das Lanternas: caminho de lanternas que se acendem com um toque, vagalumes, morceguinhos dormindo de cabeça para baixo.
+6. Castelinho do Vampirinho: escorregador em espiral na torre, órgão que toca notas ao encostar, quadros que piscam.
+7. Horta de Abóboras: plantar, colher e escolher a carinha da abóbora, que vira lanterna.
+
+**Personagens:**
+- Vovó Zuleica: a bruxinha boa, com o gato **Tufinho**. Nunca "Pretinho" e nunca a missão "o Pretinho fugiu": o dono acha que pode soar racista.
+- Conde Dudu: o vampirinho com medo do escuro.
+- Lili: a fantasminha de lençol, tímida, que adora esconde-esconde.
+- Bento: o monstrinho peludo grandão que ama abraço e toca bumbo na banda.
+- Seu Jerônimo: o dono da horta de abóboras.
+- Bichos: fantasminhas flutuando, abóboras saltitantes, morceguinhos, coruja e gato preto.
+
+**Missões (10 a 12, com moedinhas, como na Vila):**
+- doces ou travessuras (5 casas, encher a sacola);
+- o Conde Dudu tem medo do escuro (acender as lanternas do bosque);
+- esconde-esconde com a Lili (achar pela risadinha);
+- abóbora de carinha (plantar, colher, escolher a cara, pôr na porta);
+- a poção da Vovó (uva, maçã e hortelã no caldeirão);
+- o gato da Vovó sumiu (seguir as pegadas do Tufinho, como a lhama);
+- fantasia completa (vestir na loja e desfilar no palco);
+- a banda da festa (levar os instrumentos; o show começa com todos dançando, como no festival da Vila);
+- com amigos: desfile de fantasias juntos, e todo mundo ganha.
+
+**Além dos cubos:**
+- Trem das Risadas: passeio em que fantasminhas fofos aparecem sorrindo.
+- Vassoura-patinete: desliza rente ao chão como os patins da Vila; não voa (justo no multijogador).
+- Carrossel de morcegos e balanço de teia.
+
+**Itens só deste mundo:** sacola de doces; lanterna de abóbora (pôr onde quiser); varinha de condão (brilhinho e flores); caldeirão; blocos novos (telha roxa, tijolo torto, teia de barbante, folhas laranja).
+
+**Comer:** doce de abóbora, maçã do amor, brigadeiro, cocada, chocolate quente e a "poção" de uva com canudinho. É Halloween com sabor de festa brasileira.
+
+**Cuidados:** nada de caveira, sangue, susto ou escuro total; cores no roxo, laranja e verde-musgo, sem arco-íris.
+
+## O esboço (piloto no computador do dono, 20 nov 2026)
+O primeiro trabalho da divisão "o que precisa de placa de vídeo vai para o computador do dono": o orquestrador, na nuvem, coordena; a sessão do computador do dono faz o esboço num branch próprio (`esboco/027-noite-das-fantasias`) e não publica nada.
+- **O que mostrar, com o motor de verdade e só com `?esboco=fantasias`** (código em `src/esboco/`, o jogo nunca carrega):
+  - o visual do mundo: o entardecer e a noite, a praça com a abóbora gigante, a rua das casinhas tortas, o bosque das lanternas, a horta;
+  - os moradores fantasiados (Vovó Zuleica com o Tufinho, Conde Dudu, Lili, Bento, Seu Jerônimo) e os bichos fofos;
+  - uma amostra de cada "além dos cubos" que mais pesa na decisão: a vassoura-patinete e o Trem das Risadas, em foto ou vídeo curto;
+  - a música e os sons, num trecho para ouvir.
+- **As fotos:**
+  - em pé de dia e de noite, e deitado (390×844, 844×390), e no computador (1280×720);
+  - autocrítica e uma rodada de refazer antes de entregar.
+- **Perguntas ao dono:** as escolhas que dependem dele, cada uma com as opções e a recomendada.
+- **Regras:** as do `CLAUDE.md` (capricho visual, todo mundo com cara de boneco do jogo, nada que assuste, original, nada que lembre personagem conhecido).
