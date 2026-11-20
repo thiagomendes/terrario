@@ -10,7 +10,16 @@ import { temasPedidos } from './temas';
  * TEMAS=<id>,<id> escolhe os temas (padrão: todos). REGUA_CRUA=1 mede sem o ajuste do tema
  * (`NIVEL_TRILHA`), para recalcular a tabela, e não confere os limites.
  */
-const TEMAS = temasPedidos(process.env.TEMAS);
+const PEDIDOS = temasPedidos(process.env.TEMAS);
+/**
+ * Spec 034 (T14): a Vila Neon fica de fora (era o que caía, +0,7 a +1,8 dB). Ela veio depois
+ * desta régua (spec 026) e nunca tocou a trilha sintetizada de antes, que é a "de hoje" aqui: o
+ * volume dela foi afinado pelo volume percebido (LUFS) na média do Rancho e da Cidade (026,
+ * T18), e o synth-pop, com mais grave, tem o RMS acima no mesmo volume percebido. A regra dela
+ * fica no teste de unidade (tests/audio/somVila.test.ts, "o volume da trilha da Vila Neon").
+ */
+const DE_OUTRA_REGRA = ['vila-neon'];
+const TEMAS = PEDIDOS.filter((id) => !DE_OUTRA_REGRA.includes(id));
 const CRUA = process.env.REGUA_CRUA === '1';
 /** Folga de medida (dB): as versões das frases são sorteadas e variam uns décimos. */
 const FOLGA_DB = 0.25;
