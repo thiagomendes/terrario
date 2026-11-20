@@ -627,7 +627,10 @@ describe('o volume da trilha da Vila Neon (spec 026, T18)', () => {
    */
   const MEDIDAS = (
     JSON.parse(lerTexto('.sdd/specs/026-mundo-anos-80/referencia/fontes/medidas-pacote.json')) as {
-      nivel: { lufs: Record<string, Record<string, number>>; nivelTrilhaVila: Record<string, number> };
+      nivel: {
+        lufs: Record<string, Record<string, number>>;
+        nivelTrilhaVila: Record<string, number>;
+      };
     }
   ).nivel;
   const db = (g: number) => 20 * Math.log10(g);

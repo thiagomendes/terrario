@@ -318,6 +318,18 @@ test('HUD do Rancho no celular: dicas, corações e avisos sem cobrir nada', asy
   // chão da frente tapa)
   await mirar(fx + 2.5, fy - 0.05, fz + 0.5);
   await expect(page.locator('.dica-mira')).toHaveText('Toque na grama para arar');
+  // spec 034 (T14): espera a dica acabar de surgir (0,18 s de entrada), como a criança a vê.
+  // Era o que caía: o texto chega junto com o começo da entrada, e a medida logo em seguida
+  // achava a dica ainda transparente (opacidade abaixo de 0,05), fora dos "vistos". Na nuvem
+  // (1 quadro por segundo) a entrada leva segundos, daí a folga
+  await page.waitForFunction(
+    () => {
+      const d = document.querySelector<HTMLElement>('.dica-mira.visivel');
+      return !!d && Number(getComputedStyle(d).opacity) > 0.9;
+    },
+    undefined,
+    { polling: 50, timeout: 20_000 },
+  );
   const s1 = await sobreposicoes();
   await page.screenshot({ path: `${PASTA_CAPTURAS}/rancho-celular-arar.png` });
   // no celular em pé, a missão fica recolhida no botão de informações (spec 011)

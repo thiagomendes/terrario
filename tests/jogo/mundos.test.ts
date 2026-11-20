@@ -55,6 +55,55 @@ describe('repositório de mundos', () => {
     expect(await r.carregar(a.id)).toEqual(dados);
   });
 
+  it('o salvar automático do mundo aberto não apaga o mundo que acabou de ser criado', async () => {
+    // spec 034 (T14): num aparelho lento, o salvar lia o índice, demorava e regravava por cima
+    // do mundo novo; a página nova não achava o mundo e abria o "Meu primeiro mundo"
+    const base = armazemMemoria();
+    const lento = {
+      ...base,
+      obter: async (k: string) => {
+        const v = await base.obter(k);
+        await new Promise((r) => setTimeout(r, 5));
+        return v;
+      },
+      gravar: async (k: string, v: unknown) => {
+        await new Promise((r) => setTimeout(r, 5));
+        await base.gravar(k, v);
+      },
+    };
+    let t = 1000;
+    const r = criarRepositorioMundos(lento, () => (t += 10));
+    const primeiro = await r.criar('Meu primeiro mundo', 1, 'criativo');
+    const salvando = [1, 2, 3].map((i) =>
+      r.salvar(primeiro.id, { ...normalizarDados({}), relogio: i } as never, `foto${i}`),
+    );
+    const novo = r.criar('Sítio', 2, 'sobrevivencia', 'rancho-alegre');
+    const renomeando = r.renomear(primeiro.id, 'Casa');
+    await Promise.all([...salvando, novo, renomeando]);
+    const m = await novo;
+    expect(await r.obter(m.id)).toMatchObject({ nome: 'Sítio', tema: 'rancho-alegre' });
+    expect(await r.obter(primeiro.id)).toMatchObject({ nome: 'Casa', miniatura: 'foto3' });
+    expect((await r.listar()).map((x) => x.id).sort()).toEqual([primeiro.id, m.id].sort());
+  });
+
+  it('um erro no meio não trava a fila do índice', async () => {
+    const base = armazemMemoria();
+    let falhar = true;
+    const r = criarRepositorioMundos({
+      ...base,
+      gravar: async (k: string, v: unknown) => {
+        if (falhar && k === 'mundos') {
+          falhar = false;
+          throw new Error('cheio');
+        }
+        await base.gravar(k, v);
+      },
+    });
+    await expect(r.criar('Falha', 1, 'criativo')).rejects.toThrow('cheio');
+    const ok = await r.criar('Depois', 2, 'criativo');
+    expect((await r.listar()).map((x) => x.id)).toEqual([ok.id]);
+  });
+
   it('renomeia, exclui e ignora ids desconhecidos', async () => {
     const { r, armazem } = repo();
     const a = await r.criar('A', 1, 'criativo');
