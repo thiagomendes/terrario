@@ -306,7 +306,7 @@ export function montarBichos(ctx: CtxPalco): Bichos {
     dormindo.push(b);
   });
   const voando = [
-    { b: novo('morcego-voa0', morcego(false)), c: [gx + 2.4, gy - 0.5, gz + 0.9] as V3, r: 0.3, f: 0 },
+    { b: novo('morcego-voa0', morcego(false)), c: [gx + 2.2, gy + 0.2, gz + 0.5] as V3, r: 0.3, f: 0 },
     { b: novo('morcego-voa1', morcego(false)), c: [gx + 0.5, gy - 1.25, gz + 1.0] as V3, r: 0.3, f: 2.2 },
   ];
   // a coruja no alto do poleiro, ao lado da árvore dos morceguinhos
@@ -431,7 +431,7 @@ export function montarBichos(ctx: CtxPalco): Bichos {
   const tm = (pos: V3, alvo: V3, fov: number) => ({ pos, alvo, fov });
   api.tomadas.morcegos = {
     deitado: tm([gx - 0.9, gy - 1.5, gz + 4.4], [gx - 0.3, gy - 0.25, gz], 56),
-    empe: tm([gx - 0.9, gy - 1.6, gz + 5.0], [gx - 0.3, gy + 0.0, gz], 70),
+    empe: tm([gx - 1.3, gy - 1.7, gz + 6.2], [gx - 0.9, gy - 0.1, gz], 74),
   };
   api.tomadas.fantasminhas = {
     deitado: tm([ox + 24.6, Y + 1.4, oz + 28.6], [ox + 24.6, Y + 1.0, oz + 23.3], 56),

@@ -459,14 +459,15 @@ function vestirDudu(p: PlanoBoneco, info: InfoPose): void {
     );
   };
   const meia = 0.37;
-  painel('gola', meia * 2 + 0.02, 0.46, 0, zGola, 0);
+  painel('gola', meia * 2 + 0.02, 0.44, 0, zGola, 0);
   for (const s of [-1, 1]) {
-    // a aba sai da beira do painel de trás e abre para a frente e para fora
-    const g = -s * 0.6;
-    const w = 0.44;
+    // a aba sai da beira do painel de trás e abre para a frente e para fora (curta e redonda:
+    // grande, de frente, parecia orelha de fone)
+    const g = -s * 0.85;
+    const w = 0.3;
     const ux = Math.cos(g) * s;
     const uz = -Math.sin(g) * s;
-    painel(`gola${s}`, w, 0.52, s * meia + (ux * w) / 2, zGola + (uz * w) / 2, g);
+    painel(`gola${s}`, w, 0.38, s * meia + (ux * w) / 2, zGola + (uz * w) / 2, g);
   }
   // a pala que liga a gola aos ombros (debaixo da nuca, sem entrar na cabeça)
   a.caixa('gola-pala', 'tronco', [larg + 0.1, 0.06, 0.24], [0, troncoH - 0.035, -prof / 2 - 0.06], capa, 0.03);
@@ -740,7 +741,7 @@ const MORADORES: DefMorador[] = [
     modelo: 'tecela',
     aparencia: { corpo: 'feminino', pele: 7, rosto: 2, cabeloEstilo: 8, cabeloCor: 1, roupaEstilo: 0, acessorio: 'nenhum' },
     vestir: vestirLulu,
-    pose: { beX: -1.05, bdX: -1.05, beZ: 0.3, bdZ: -0.3, cabZ: 0.16, corpoZ: 0.1 },
+    pose: { beX: -1.3, bdX: -1.3, beZ: 0.3, bdZ: -0.3, cabZ: 0.16, corpoZ: 0.1 },
   },
   {
     id: 'bento',
@@ -921,7 +922,7 @@ export function montarMoradores(ctx: CtxPalco): Moradores {
   api.tomadas.fila = {
     deitado: tm(P(fx, 2.0, 52.2), P(fx, 1.85, 46.5), 50),
     // (em pé, a fila só cabe de longe: a abóbora gigante atrás enche o alto do quadro)
-    empe: tm(P(fx, 1.9, 53.8), P(fx, 2.9, 46.5), 86),
+    empe: tm(P(fx, 1.9, 56.3), P(fx, 2.6, 46.5), 88),
   };
   const L = (id: string) => lugares[id];
   const perto = (id: string, dx: number, dz: number, h: number, alvoH: number, fovD: number, fovE: number, dzE = dz) => {
