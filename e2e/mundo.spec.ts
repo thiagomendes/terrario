@@ -8,7 +8,10 @@ async function pronto(page: import('@playwright/test').Page) {
 
 test('edições, posição e hora sobrevivem a recarregar a página', async ({ page }) => {
   test.setTimeout(240_000);
-  await page.goto('/');
+  // spec 034: o "Meu primeiro mundo" na prévia do Doce Reino, de terreno natural no
+  // nascimento (era do Bruma e Luz, que saiu; na Vila Neon, agora o padrão, o chão do bairro
+  // é protegido e o bloco nem sai)
+  await page.goto('/?tema=doce-reino');
   await pronto(page);
   await expect(page.locator('[data-mundo-atual]')).toContainText('Meu primeiro mundo');
   await page.evaluate(() => document.querySelector('.entrada')?.setAttribute('hidden', ''));

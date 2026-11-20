@@ -22,6 +22,13 @@ import {
 const PASTA = 'test-results/gestos015';
 mkdirSync(PASTA, { recursive: true });
 
+/**
+ * Spec 034: na Exploração Lunar, o mundo sem missões, com o diário à vista e o menu de sempre
+ * (o "Meu primeiro mundo" era do Bruma e Luz, que saiu; a Vila Neon, agora o padrão, tem as
+ * missões e o baú na roda e o diário recolhido). O teste da Vila Neon, no fim, abre a Vila.
+ */
+const MUNDO = '/?tema=exploracao-lunar';
+
 async function entrar(page: Page) {
   // o teste usa o mouse livre (com o mouse preso na câmera, o clique vai todo para o jogo e a
   // criança usa as teclas); voltar da pausa prende o mouse, então aqui ele nunca prende
@@ -30,7 +37,7 @@ async function entrar(page: Page) {
       return Promise.resolve();
     } as typeof HTMLElement.prototype.requestPointerLock;
   });
-  await page.goto('/');
+  await page.goto(MUNDO);
   await page.waitForFunction(() => window.__brumaluz?.ready === true, undefined, {
     timeout: 180_000,
   });
@@ -341,7 +348,7 @@ test('computador: O abre e fecha a roda do menu, soltando o mouse sem a pausa', 
       setTimeout(avisar, 0);
     };
   });
-  await page.goto('/');
+  await page.goto(MUNDO);
   await page.waitForFunction(() => window.__brumaluz?.ready === true, undefined, {
     timeout: 180_000,
   });

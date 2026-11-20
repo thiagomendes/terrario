@@ -37,6 +37,9 @@ async function celular(browser: Browser) {
   await page.goto('/');
   await pronto(page);
   await page.locator('[data-abrir-mundos]').click();
+  // spec 034: no Doce Reino, de terreno natural no nascimento (era o tema padrão, o Bruma e
+  // Luz, que saiu; na Vila Neon, agora o padrão, o chão do bairro é protegido)
+  await page.locator('.cartao-tema[data-tema="doce-reino"]').click();
   await page.locator('[data-modo="sobrevivencia"]').click();
   await page.locator('[data-novo-nome]').fill('Dedo');
   await page.locator('[data-novo-semente]').fill('4242');

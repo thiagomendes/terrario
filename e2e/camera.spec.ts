@@ -28,9 +28,16 @@ async function pronto(page: Page): Promise<void> {
   });
 }
 
+/**
+ * Spec 034: no Doce Reino, de terreno natural em volta do nascimento (o "Meu primeiro mundo"
+ * era do Bruma e Luz, que saiu; na Vila Neon, agora o padrão, o nascimento fica no bairro
+ * protegido, e o chão e as paredes que o teste põe são recusados).
+ */
+const MUNDO = '/?tema=doce-reino';
+
 async function abrir(page: Page): Promise<void> {
   await page.setViewportSize({ width: 1280, height: 720 });
-  await page.goto('/');
+  await page.goto(MUNDO);
   await pronto(page);
 }
 
@@ -42,7 +49,7 @@ async function celular(browser: Browser) {
   });
   const page = await ctx.newPage();
   const erros = coletarErros(page);
-  await page.goto('/');
+  await page.goto(MUNDO);
   await pronto(page);
   await expect(page.locator('[data-toque]')).toBeVisible();
   return { ctx, page, erros };

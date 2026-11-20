@@ -23,7 +23,9 @@ function coletarErros(page: Page): string[] {
 }
 
 async function abrir(page: Page): Promise<void> {
-  await page.goto('/');
+  // spec 034: no Doce Reino, de terreno natural no nascimento (o "Meu primeiro mundo" era do
+  // Bruma e Luz, que saiu; na Vila Neon, agora o padrão, o chão do bairro é protegido)
+  await page.goto('/?tema=doce-reino');
   await page.waitForFunction(() => window.__brumaluz?.ready === true, undefined, {
     timeout: 120_000,
   });

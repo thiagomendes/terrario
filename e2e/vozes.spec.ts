@@ -142,7 +142,10 @@ test('o morador acena de volta com o cumprimento gravado', async ({ page }) => {
   test.setTimeout(420_000);
   const erros = coletarErros(page);
   await page.setViewportSize({ width: 1024, height: 600 });
-  await page.goto('/');
+  // spec 034: no Doce Reino, de povoado com moradores e vozes gravadas (o "Meu primeiro mundo"
+  // era do Bruma e Luz, que saiu; a Vila Neon, agora o padrão, não tem pacote de vozes nem
+  // povoado perto do nascimento)
+  await page.goto('/?tema=doce-reino');
   await pronto(page);
   await ligarSom(page);
   await page.evaluate(() => (window.__brumaluz!.hora = 0.42));

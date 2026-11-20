@@ -140,6 +140,10 @@ for (const [id, nome] of TEMAS) {
     await page.evaluate(() => {
       const c = window.__brumaluz!.cidade?.();
       if (c) window.__brumaluz!.teleportar!(c.plana.x0 - 40.5, c.nascimento.z);
+      // spec 034: o chão do bairro da Vila Neon também é protegido (era o caso que já caía);
+      // quebra fora dele, no mundo natural
+      const v = window.__brumaluz!.vila?.();
+      if (v) window.__brumaluz!.teleportar!(v.plana.x0 - 40.5, v.nascimento.z);
     });
     // olha para o chão até ter um bloco na mira. Com vários testes juntos o chão em volta
     // demora a chegar do worker: reaponta a cada meio segundo e, se nada aparecer em 20 s,

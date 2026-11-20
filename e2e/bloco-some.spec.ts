@@ -7,7 +7,10 @@ import { expect, test } from '@playwright/test';
 test('bloco quebrado some na hora, mesmo com a malha nova atrasada', async ({ page }) => {
   test.setTimeout(240_000);
   await page.setViewportSize({ width: 800, height: 600 });
-  await page.goto('/');
+  // spec 034: no Doce Reino, de terreno natural no nascimento (o "Meu primeiro mundo" era do
+  // Bruma e Luz, que saiu; na Vila Neon, agora o padrão, o chão do bairro é protegido e o
+  // bloco nem sai)
+  await page.goto('/?tema=doce-reino');
   await page.waitForFunction(() => window.__brumaluz?.ready === true, undefined, {
     timeout: 180_000,
   });

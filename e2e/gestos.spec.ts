@@ -83,11 +83,12 @@ test('computador: G abre a roda, 1 a 8 escolhem, balão, andar interrompe; captu
   await page.evaluate(() => window.__brumaluz!.apontar!(0, 0.25));
   await page.waitForTimeout(800);
 
-  // G abre: os 8 gestos na roleta de baixo (spec 033)
+  // G abre: os 8 gestos na roleta de baixo (spec 033); spec 034: o "Meu primeiro mundo" é da
+  // Vila Neon, que tem também o roqueiro (spec 026), no fim da lista
   const slot0 = await page.evaluate(() => window.__brumaluz!.slotAtivo);
   await page.keyboard.press('KeyG');
   await expect.poll(() => rodaAberta(page)).toBe(true);
-  expect(await itensDaRoleta(page)).toEqual([...IDS]);
+  expect(await itensDaRoleta(page)).toEqual([...IDS, 'roqueiro']);
   await esperarAssentar(page);
   const caixa = await page.locator(`${ROLETA_ABERTA} .item.meio`).boundingBox();
   expect(caixa!.width).toBeGreaterThanOrEqual(90);

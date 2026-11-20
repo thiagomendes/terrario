@@ -95,7 +95,9 @@ test('a música começa num mundo novo sem segurar o mundo e abre só o que toca
 test('contexto pelo gancho muda as camadas no compasso seguinte', async ({ page }) => {
   test.setTimeout(240_000);
   const erros = coletarErros(page);
-  await abrir(page);
+  // spec 034: no Doce Reino, que tem a camada de perigo (era o "Meu primeiro mundo" do Bruma e
+  // Luz, que saiu; a noite da Vila Neon, agora o padrão, é mansa e sem perigo)
+  await abrir(page, '/?tema=doce-reino');
   await ligarSom(page);
   await esperarGravada(page);
   const i0 = await info(page);
@@ -117,7 +119,7 @@ test('contexto pelo gancho muda as camadas no compasso seguinte', async ({ page 
   expect(i2.motor!.camadas).toMatchObject({ base: 0.6, noite: 1, pingos: 1, fdia: 0 });
   expect(i2.motor!.lp).toBe(1100);
   expect(i2.medidas.ids).toEqual(expect.arrayContaining(['noite', 'pingos']));
-  // perigo (o Bruma tem): substitui tudo
+  // perigo (o Doce Reino tem): substitui tudo
   await page.evaluate(() => window.__brumaluz!.trilha!.forcar({ caverna: false, perigo: true }));
   const t3 = (await info(page)).motor!.troca!.compasso;
   await esperarAte(page, t3 + 1.6 * bar);
