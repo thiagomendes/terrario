@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { IDS_GESTOS } from '../../src/personagem/gestos';
 import {
+  ENGROSSA_BALAO,
   ICONE_CARINHA,
   ICONES_GESTOS,
   svgDoBalao,
@@ -36,15 +37,16 @@ describe('spec 034: os ícones dos gestos (a direção A reforçada)', () => {
     expect(Math.max(...grossuras(svg))).toBeLessThan(5);
   });
 
-  it('o balão (textura de 256) engrossa os contornos para ler como a 72 px', () => {
+  it('o balão (textura de 256) engrossa os contornos para ler como na folha', () => {
     for (const id of IDS_GESTOS) {
       const icone = grossuras(ICONES_GESTOS[id]);
       for (const balao of [svgDoBalao(id), svgDoBalaoEstrela(id)]) {
         const g = grossuras(balao);
         expect(g).toHaveLength(icone.length);
-        g.forEach((w, i) => expect(w).toBeCloseTo((icone[i] * 256) / 72, 1));
+        g.forEach((w, i) => expect(w).toBeCloseTo(icone[i] * ENGROSSA_BALAO, 1));
       }
     }
+    expect(ENGROSSA_BALAO).toBeGreaterThan(2.5);
     expect(svgDoBalao('acenar')).toContain('width="256"');
   });
 });

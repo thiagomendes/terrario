@@ -739,10 +739,12 @@ export function svgDoIcone(miolo: string, classe = 'icone-gesto'): string {
 
 /**
  * O balão vira uma textura de 256 px e aparece na tela com uns 45 a 80 px: os contornos (de
- * grossura fixa na tela) engrossam na mesma conta, para ler como o balão da folha, a 72 px.
+ * grossura fixa na tela) engrossam na mesma conta, para ler como o balão da folha (a 72 px).
+ * A conta é a de 90 px, e não a de 72: a textura no 3D fica um tiquinho mais macia que o SVG
+ * na folha, e o contorno com a conta de 72 empastava os dedos da mão do tchau.
  */
 const LADO_BALAO = 256;
-const ENGROSSA_BALAO = LADO_BALAO / 72;
+export const ENGROSSA_BALAO = LADO_BALAO / 90;
 function engrossar(miolo: string, k: number): string {
   return miolo.replace(
     /stroke-width="([\d.]+)"([^>]*?vector-effect="non-scaling-stroke")/g,

@@ -1,6 +1,5 @@
 import { mkdirSync } from 'node:fs';
 import { test, type Browser, type Page } from '@playwright/test';
-import { esperarAssentar, rolarAte } from './roleta-palco';
 import { abrir, irPara, MORROS, porAmigos } from './achar-amigo-palco';
 
 /**
@@ -19,6 +18,7 @@ declare const process: { env: Record<string, string | undefined> };
 const PASTA = 'capturas-034/gestos-jogo';
 
 test.skip(!process.env.CAPTURAS_GESTOS, 'capturas dos gestos só com CAPTURAS_GESTOS');
+test.describe.configure({ mode: 'parallel' });
 
 interface Tela {
   nome: string;
@@ -73,6 +73,13 @@ async function entrar(page: Page, t: Tela) {
   await page.waitForTimeout(2500);
 }
 
+/** Espera a fileira assentar (prazo longo, ver `rolarDevagar`). */
+const esperarAssentar = (page: Page) =>
+  page.waitForFunction(
+    () => document.querySelector<HTMLElement>('[data-roleta].aberta')?.dataset.parada !== undefined,
+    undefined,
+    { timeout: 90_000 },
+  );
 const aberta = (page: Page) => page.evaluate(() => !!document.querySelector('[data-roleta].aberta'));
 const fecharRoleta = async (page: Page) => {
   if (await aberta(page)) await page.evaluate(() => window.dispatchEvent(new Event('brumaluz:gestos')));
@@ -85,6 +92,37 @@ const abrirGestos = async (page: Page) => {
   await page.waitForSelector('[data-roleta].aberta');
   await esperarAssentar(page);
 };
+/**
+ * Rola até `id` ficar no meio, tocando no vizinho (como `rolarAte` de roleta-palco, com prazos
+ * longos: na tela de 2× do SwiftShader, com outro teste rodando junto, um toque passa de 10 s).
+ */
+async function rolarDevagar(page: Page, id: string) {
+  const meio = () =>
+    page.evaluate(() => document.querySelector<HTMLElement>('[data-roleta].aberta')?.dataset.meio ?? '');
+  const assentar = () => esperarAssentar(page);
+  const itens = await page.evaluate(() =>
+    (document.querySelector<HTMLElement>('[data-roleta].aberta')?.dataset.itens ?? '').split(' '),
+  );
+  const n = itens.length;
+  const i = itens.indexOf(id);
+  if (i < 0) throw new Error(`a roleta não tem "${id}" (tem: ${itens.join(', ')})`);
+  for (let volta = 0; volta <= n; volta++) {
+    await assentar();
+    const m = itens.indexOf(await meio());
+    if (m === i) return;
+    const d = (((i - m) % n) + n) % n;
+    const vizinho = itens[(((m + (d <= n / 2 ? 1 : -1)) % n) + n) % n];
+    const el = page.locator(`[data-roleta].aberta .item[data-item="${vizinho}"]`).first();
+    if (await page.evaluate(() => matchMedia('(pointer: coarse)').matches)) await el.tap({ timeout: 90_000 });
+    else await el.click({ timeout: 90_000 });
+    await page.waitForFunction(
+      (v) => document.querySelector<HTMLElement>('[data-roleta].aberta')?.dataset.meio === v,
+      vizinho,
+      { timeout: 90_000 },
+    );
+  }
+  throw new Error(`não chegou em "${id}"`);
+}
 /** O nível da criança (os presentes de nível entram na roleta; do 6 em diante, o balão tem estrelinha). */
 const nivel = (page: Page, n: number) =>
   page.evaluate((n) => window.dispatchEvent(new CustomEvent('brumaluz:almaNivel', { detail: { nivel: n } })), n);
@@ -116,14 +154,14 @@ for (const t of TELAS)
       () => document.querySelector<HTMLElement>('[data-roleta].aberta')?.dataset.itens?.includes('mapa'),
     );
     await esperarAssentar(page);
-    await rolarAte(page, 'gestos');
+    await rolarDevagar(page, 'gestos');
     await page.screenshot({ path: `${PASTA}/menu-${t.nome}.png` });
     // a roleta de Gestos (com "Voltar" e a carinha em cima)
     await fecharRoleta(page);
     await abrirGestos(page);
     await page.screenshot({ path: `${PASTA}/roleta-${t.nome}.png` });
     await abrirGestos(page);
-    await rolarAte(page, 'comemorar');
+    await rolarDevagar(page, 'comemorar');
     await page.screenshot({ path: `${PASTA}/roleta-${t.nome}-comemorar.png` });
     if (t.todos) {
       // cada gesto no meio (só a bandeja da roleta)
@@ -132,7 +170,7 @@ for (const t of TELAS)
       );
       for (const id of ids) {
         await abrirGestos(page);
-        await rolarAte(page, id);
+        await rolarDevagar(page, id);
         const caixa = await page.locator('[data-roleta].aberta .bandeja').boundingBox();
         await page.screenshot({
           path: `${PASTA}/roleta-${t.nome}-${id}.png`,
