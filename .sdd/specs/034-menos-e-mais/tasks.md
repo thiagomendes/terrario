@@ -86,4 +86,14 @@ Saiu da spec (dono, 19 nov): vai com a casca nativa (020). A T12 não existe mai
   | `achar-amigo-nuvem` (instável) | aqui: com dois navegadores a página não fica pronta em 180 s | — | conferir na placa de vídeo |
 
   - Falta: as 3 rodadas seguidas dos que só rodam de verdade na placa de vídeo (as réguas, guia-chegada, tesouro-fantasia, achar-amigo-nuvem, a roleta).
+- **(20 nov 2026) T15, a parte sem placa de vídeo** (nesta máquina, na nuvem; a suíte e2e inteira roda no computador do dono):
+  - **Vitest inteiro:** 211 arquivos, 1985 de 1985 (eram 2044 em 204 antes da 034: saíram os testes dos quatro); `npm run build` limpo.
+  - **Hashes da T00:** `paridade-cinco` (6) e `paridade-base` (3) passam, sem nenhum hash regravado depois da T00 (o canto do Doce foi só dividido em duas partes, plano e chunks, em e4e62fe, com os de antes no comentário).
+  - **Busca no `dist/`** (build novo): zero ocorrências de "Bruma e Luz", "Planeta Vivo", "Mata Encantada", "Era dos Dinos", "Fantasia de Dino", "Guardiã da Mata", "Guardião da Mata", "Lanterneira", "Lanterneiro", das peças `capuz-dino`, `jaleco`, `coroa-folhas`, `capa-folhas`, `capuz-lanterneira`, e dos nomes de morador só dos quatro (Zib, Plim, Blup, Quark, Nebi, Glim, Tuti, Bop, Lulo, Ziza, Lila, Iris, Otto). O que aparece, e por quê:
+    - `brumaluz` (o gancho dos testes, o banco do aparelho, os eventos), `corBruma`/`forcaBruma`/`brumaM` (a névoa no desenho) e o bloco `areia-bruma` (o nome na tela é "Areias douradas"): nomes internos;
+    - "Cientista": o modelo `musgueira`, que fica;
+    - as listas da limpeza do aparelho (os ids dos quatro temas e das quatro fantasias, e os finais " da Bruma", " dos Dinos", " da Mata", " Estelar" do apelido): precisam deles para limpar, nunca vão para a tela;
+    - Teo, Mira, Nina, Rui, Luz, Ivo: o povoado de reserva da base, que continua (com hash), e não aparece com os cinco registrados; Nina, Zuzu e Pipo também são da plateia do show da Vila;
+    - "Onde a bruma brilha", "Espectro da bruma", "Caçador da bruma", "coelho-bruma": os textos de registro da base; nos cinco eles têm texto próprio (`textosDosCinco`);
+    - **para o dono decidir:** a palavra `BRUMA` na lista dos códigos de sala (`src/jogo/codigos.ts`; um código pode sair "BRUMA-LUA-12") e a fantasia livre "Herói da Mata" (`heroi-mata`, de folha, não é do tema). Nenhum dos dois foi mexido: tirar a palavra muda a conta dos códigos e os que já existem.
 - **(20 nov 2026) O apelido** (decisão do dono, 972c346): o apelido guardado que termina em " da Bruma", " dos Dinos", " da Mata" ou " Estelar" troca só o final por " da Vila", na limpeza do aparelho; idempotente, com teste.
