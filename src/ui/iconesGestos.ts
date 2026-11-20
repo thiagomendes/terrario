@@ -673,12 +673,13 @@ const POSES: Record<IdGesto, Pose> = {
     },
     (m) => {
       const [, y] = m(0);
+      // uma por cima da outra e um tiquinho de lado (lado a lado, iguais, as duas bolinhas no
+      // peito pareciam parte da roupa); a de cima, a da frente
       const k = 1.45;
-      const dx = 0.088 * k - 0.006;
       return {
         frente:
-          maoBola(-dx, y, PELE, k) +
-          maoBola(dx, y, PELE, k) +
+          maoBola(-0.09, y - 0.04, escurecer(PELE, 0.06), k) +
+          maoBola(0.08, y + 0.04, PELE, k) +
           plac(0, y, 0.32, 0.43, [145, 180, 215, 35, 0, -35]),
       };
     },
