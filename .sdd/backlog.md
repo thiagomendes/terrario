@@ -46,6 +46,7 @@ Ideias e pedidos do dono que ainda não viraram spec, e a fila combinada. A orde
   - girar as pás do moinho;
   - quebrar porta numa pilha de duas.
 - **Leite e balde, filhotes, colmeia e mel** (fora da 013).
+- **Balão do gesto com a cara de quem gesticula** (achado no portão visual da 034): hoje o balão e a carinha do amigo mostram sempre o boneco padrão de azul; ficaria melhor com o boneco de quem faz o gesto (o pipoqueiro, o amigo de chapéu).
 - **Toque da roleta em aparelho travando:** usar o `e.timeStamp` do evento em vez de `performance.now()`, para um toque de criança contar mesmo num aparelho lento (achado na 034).
 - **Voz do orelhão:** o dono achou rápida demais, mas fica como está por enquanto (18 nov).
 

@@ -312,6 +312,7 @@ Entrou em 19 nov e saiu no mesmo dia (dono: "não precisamos nos preocupar com t
   
   A folha refeita volta ao dono antes de entrar no jogo.
 - **A folha da A reforçada foi aprovada pelo dono** (20 nov): os ícones entram no jogo como estão na folha (`capturas-034/gestos/folha-A2.png`).
+- **Portão visual (20 nov):** refazer 4 ícones de gesto que confundiam (reverência sem nada saindo de trás, tirando o chapéu; apontar para a direita, para uma estrela; aplaudir com mãos grandes e "plac"; roqueiro com guitarra de verdade); os outros 7 ficam. O balão continua com o boneco padrão (a cara de quem faz o gesto vai para o backlog).
 - **Rastros do nome nos códigos e fantasias:** a palavra "BRUMA" sai do sorteio dos códigos de sala (os códigos antigos continuam valendo); a fantasia "Herói da Mata" fica ("mata" é floresta, não o mundo).
 - **Apelido salvo com o final de um tema que saiu** ("… da Bruma", "… dos Dinos", "… da Mata", "… Estelar"): troca só o final pelo da Vila ("… da Vila"), na limpeza do aparelho.
 
