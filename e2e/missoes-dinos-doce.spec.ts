@@ -11,9 +11,9 @@ import {
 } from './guia-palco';
 
 /**
- * Spec 031: as missões da Era dos Dinos e do Doce Reino. Fase 1 (o que se vê): o canto das
- * missões perto do nascer, o ninho de gravetos com os ovinhos de dino e os cartões do quadro
- * (o resultado à direita, a próxima missão aparecendo um pedacinho). Fotos em MISSOES_PASTA.
+ * Spec 031: as missões do Doce Reino (spec 034: a parte da Era dos Dinos saiu com ela). Fase 1
+ * (o que se vê): o canto das missões perto do nascer e os cartões do quadro (o resultado à
+ * direita). Fotos em MISSOES_PASTA.
  */
 declare const process: { env: Record<string, string | undefined> };
 const PASTA = process.env.MISSOES_PASTA ?? 'test-results/missoes-dinos-doce';
@@ -39,30 +39,6 @@ async function olharCanto(page: Page, pitch = 0.32): Promise<void> {
   await page.waitForTimeout(900);
 }
 
-/** Leva o boneco para perto de um ponto, olhando para ele (as fotos de perto). */
-async function chegarPerto(
-  page: Page,
-  alvo: [number, number, number],
-  dist: number,
-  lado: number,
-  pitch: number,
-): Promise<void> {
-  await page.evaluate(
-    ({ alvo, dist, lado, pitch }) => {
-      const e = window.__brumaluz!;
-      const c = e.canto!()!;
-      const n = { x: c.x - Math.sin(c.yaw) * 12, z: c.z - Math.cos(c.yaw) * 12 };
-      const a = Math.atan2(n.x - alvo[0], n.z - alvo[2]) + lado;
-      const x = alvo[0] + Math.sin(a) * dist;
-      const z = alvo[2] + Math.cos(a) * dist;
-      e.teleportar!(x, z);
-      e.apontar!(Math.atan2(alvo[0] - x, alvo[2] - z) - 0.3, pitch);
-    },
-    { alvo, dist, lado, pitch },
-  );
-  await page.waitForTimeout(1800);
-}
-
 async function quadro(page: Page, nome: string): Promise<void> {
   await escolherNaRoda(page, 'missoes');
   await page.waitForSelector('[data-alma-quadro]', { timeout: 20_000 });
@@ -71,10 +47,7 @@ async function quadro(page: Page, nome: string): Promise<void> {
   await page.locator('[data-alma-quadro]').screenshot({ path: `${PASTA}/${nome}-cartoes.png` });
 }
 
-for (const [tema, nome, primeira] of [
-  ['era-dos-dinos', 'dinos', 'd1'],
-  ['doce-reino', 'doce', 'e1'],
-] as const)
+for (const [tema, nome, primeira] of [['doce-reino', 'doce', 'e1']] as const)
   for (const tamanho of ['deitado', 'empe'] as const)
     test(`fase 1: ${nome}, ${tamanho}: o canto, o quadro e o começo da trilha`, async ({
       browser,
@@ -96,59 +69,12 @@ for (const [tema, nome, primeira] of [
       await olharCanto(page);
       await page.screenshot({ path: `${PASTA}/${nome}-${tamanho}-canto.png` });
       await quadro(page, `${nome}-${tamanho}`);
-      // o quadro: as duas da vez e a próxima só um pedacinho (Dinos tem 3)
+      // o quadro: as duas da vez
       const n = await page.locator('[data-alma-quadro] .alma-oferta').count();
-      expect(n).toBe(nome === 'dinos' ? 3 : 2);
-      if (nome === 'dinos') {
-        // o pedaço da próxima: pelo menos 60 px do desenho dela à vista, fora do X e da beira
-        const m = await page.evaluate(() => {
-          const g = document.querySelector('.alma-quadro')!.getBoundingClientRect();
-          const t = document.querySelector('[data-missao-espera] .tarefa')!.getBoundingClientRect();
-          const x = document
-            .querySelector('[data-alma-quadro] > .alma-fechar')!
-            .getBoundingClientRect();
-          const SOME = 34;
-          // a parte do desenho que se vê: dentro da grade, antes da beira que some
-          const v = {
-            l: Math.max(t.left, g.left),
-            r: Math.min(t.right, g.right - SOME),
-            t: Math.max(t.top, g.top),
-            b: Math.min(t.bottom, g.bottom - (innerWidth <= 560 ? SOME : 0)),
-          };
-          // fora do X
-          const livreX = x.bottom <= v.t || x.left >= v.r ? v.r - v.l : Math.max(x.left - v.l, 0);
-          const livreY = v.b - v.t;
-          return { livreX: Math.round(livreX), livreY: Math.round(livreY) };
-        });
-        console.log(`m031: ${tamanho}: pedaço da próxima à vista ${m.livreX} x ${m.livreY} px`);
-        expect(Math.min(m.livreX, m.livreY)).toBeGreaterThanOrEqual(60);
-      }
+      expect(n).toBe(2);
       await tocar(page, `[data-alma-jogar="${primeira}"]`);
       await page.waitForTimeout(3500);
       await page.screenshot({ path: `${PASTA}/${nome}-${tamanho}-trilha.png` });
-      if (nome === 'dinos') {
-        const ovos = await page.evaluate(
-          () => window.__brumaluz!.itensNoChao!().filter((i) => i.item === 'ovo').length,
-        );
-        console.log(`m031: ovinhos no chão ${ovos}`);
-        expect(ovos).toBe(3);
-        // de 6 blocos o ovinho tem pelo menos ~48 px de altura na tela (a régua do consultor)
-        const px = await page.evaluate(() => {
-          const e = window.__brumaluz!;
-          const o = e.canto!()!.ovos[0];
-          const p = e.jogadorPes!();
-          const d = Math.hypot(o[0] - p[0], o[2] - p[2]);
-          const a = e.telaDoPonto!(o[0], o[1], o[2]);
-          const b = e.telaDoPonto!(o[0], o[1] + 0.59, o[2]);
-          return { d, h: a && b ? Math.abs(a.y - b.y) : 0 };
-        });
-        // a 6 blocos, na tela do celular (2 pixels por ponto)
-        const a6 = (px.h * px.d) / 6;
-        console.log(
-          `m031: ${tamanho}: ovinho a ${px.d.toFixed(1)} blocos, ${px.h.toFixed(0)} pt; a 6 blocos ${a6.toFixed(0)} pt (${(a6 * 2).toFixed(0)} px)`,
-        );
-        expect(a6 * 2).toBeGreaterThanOrEqual(44);
-      }
       // anda pela trilha de verdade (o joystick) até o lugar: a foto de quem chega
       const r = await andarPelaTrilha(page, 60_000);
       console.log(`m031: ${nome} ${tamanho}: chegou=${r.chegou} em ${r.s.toFixed(1)} s`);
@@ -166,18 +92,6 @@ for (const [tema, nome, primeira] of [
         });
         await page.waitForTimeout(1200);
         await page.screenshot({ path: `${PASTA}/doce-bolo-fantasma.png` });
-      }
-      if (tamanho === 'deitado' && nome === 'dinos') {
-        // de perto: o ninho e os ovinhos (dinos), a mesa do bolo (doce)
-        const c = canto!;
-        const alvo: [number, number, number] = [c.ninho![0], c.ninho![1], c.ninho![2]];
-        await chegarPerto(page, alvo, 5.5, 1.2, 0.55);
-        await page.screenshot({ path: `${PASTA}/${nome}-perto.png` });
-        {
-          const k = c.caixa!;
-          await chegarPerto(page, [(k.x0 + k.x1 + 1) / 2, k.y, (k.z0 + k.z1 + 1) / 2], 5, 0.6, 0.6);
-          await page.screenshot({ path: `${PASTA}/dinos-caixa.png` });
-        }
       }
       await page.context().close();
     });
@@ -333,12 +247,6 @@ async function fazer(
     if (await feitaNoNucleo(page, id)) break;
     const r = await andarPelaTrilha(page, 40_000);
     console.log(`m031: ${id} trilha ${r.alvo} chegou=${r.chegou} ${r.s.toFixed(1)} s`);
-    if (id === 'd1') {
-      // o ovinho vem sozinho para a mochila
-      await page.waitForTimeout(1300);
-      if (foto++ === 0) await page.screenshot({ path: `${PASTA}/${fotos}-ovo.png` });
-      continue;
-    }
     const m = await esperarMao(page);
     if (!m) {
       const dbg = await page.evaluate(() => {
@@ -405,10 +313,7 @@ async function ligarSom(page: Page): Promise<void> {
   await page.waitForTimeout(600);
 }
 
-for (const [tema, nome, ids] of [
-  ['era-dos-dinos', 'dinos', ['d1', 'd2', 'd3']],
-  ['doce-reino', 'doce', ['e1', 'e2']],
-] as const)
+for (const [tema, nome, ids] of [['doce-reino', 'doce', ['e1', 'e2']]] as const)
   test(`fase 2: ${nome}, deitado: todas as missões de ponta a ponta, com moedinhas de verdade`, async ({
     browser,
   }) => {
@@ -430,7 +335,7 @@ for (const [tema, nome, ids] of [
       );
       expect(s).toBeLessThan(120);
       for (const q of r.maos) expect(q).toBeLessThan(1.5);
-      esperado += { d1: 4, d2: 5, d3: 6, e1: 8, e2: 7 }[id];
+      esperado += { e1: 8, e2: 7 }[id];
     }
     await parar();
     const depois = await moedasReais(page);
@@ -440,9 +345,6 @@ for (const [tema, nome, ids] of [
   });
 
 for (const [tema, nome, id, feitas] of [
-  ['era-dos-dinos', 'dinos', 'd1', []],
-  ['era-dos-dinos', 'dinos', 'd2', []],
-  ['era-dos-dinos', 'dinos', 'd3', ['d1', 'd2']],
   ['doce-reino', 'doce', 'e1', []],
   ['doce-reino', 'doce', 'e2', []],
 ] as const)
@@ -450,7 +352,7 @@ for (const [tema, nome, id, feitas] of [
     test.setTimeout(400_000);
     const page = await abrir(browser, `m031-empe-${id}`, tema, 'empe');
     await ligarSom(page);
-    // as de antes já feitas (a d3 só abre depois das duas primeiras)
+    // as de antes já feitas (no Doce as duas abrem juntas: nenhuma)
     for (const f of feitas) {
       await escolher(page, f);
       await page.waitForTimeout(2500);

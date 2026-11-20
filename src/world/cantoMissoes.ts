@@ -1,27 +1,23 @@
 /**
- * Spec 031: o canto das missões da Era dos Dinos e do Doce Reino. Puro e determinístico (só a
- * semente e o estilo do mundo): o núcleo (servidor da nuvem e modo local), a cena, o trabalhador
- * da malha e a proteção da 016 acham o mesmo canto.
+ * Spec 031: o canto das missões do Doce Reino. Puro e determinístico (só a semente e o estilo
+ * do mundo): o núcleo (servidor da nuvem e modo local), a cena, o trabalhador da malha e a
+ * proteção da 016 acham o mesmo canto.
  *
  * O canto fica a uns 12 blocos de onde a criança nasce (as trilhas curtas, de 8 a 15 blocos, são
  * as que ela acompanha), à frente do olhar de quem nasce, num chão que já é quase plano: nada de
  * terreno aplainado em volta. Só cada peça acerta o chão debaixo dela (no máximo dois degraus) e
  * o mato do canto sai, para ninguém tropeçar na árvore.
  *
- * - **Era dos Dinos, o acampamento-mirim:** o ninho de gravetos (desenhado pela cena, por cima
- *   de um fundo de leque de ginkgo), os 3 ovinhos em volta dele (o núcleo põe quando a d1 é
- *   escolhida), a caixa de areia vermelha com 3 rochas de osso e uma cerquinha de gravetos (d3) e o pasto
- *   dos pescoçudos (d2), com dois fardos de capim-dourado.
- * - **Doce Reino, a confeitaria ao ar livre:** o prato do bolo (tablete de caramelo 4 × 4, no nível do chão) com as
- *   células do bolo (chocolate embaixo, chantilly em cima e a vela), que aceitam só o bloco
- *   certo (como a obra da cidade, 014), e o pasto das ovelhas (e2).
+ * A confeitaria ao ar livre: o prato do bolo (tablete de caramelo 4 × 4, no nível do chão) com
+ * as células do bolo (chocolate embaixo, chantilly em cima e a vela), que aceitam só o bloco
+ * certo (como a obra da cidade, 014), e o pasto das ovelhas (e2).
  *
- * A proteção da 016 vale para o canto todo: ninguém cava o chão das peças, ninguém põe bloco no
- * ninho nem na caixa de areia; as rochas de osso só saem para quem tem a d3 (o núcleo decide).
+ * A proteção da 016 vale para o canto todo: ninguém cava o chão das peças. (Spec 034: o
+ * acampamento da Era dos Dinos saiu com ela.)
  */
 import { Bloco } from './blocks';
 
-export type TemaCanto = 'dinos' | 'doce';
+export type TemaCanto = 'doce';
 
 /** O bloco do chão da coluna (o do bioma): a geração troca pelo de verdade. */
 export const SUPERFICIE = -1;
@@ -60,21 +56,8 @@ export interface PlanoCanto {
   celulas: readonly CelulaCanto[];
   /** Colunas de chão protegido (x, z, a altura do chão). */
   chao: readonly (readonly [number, number, number])[];
-  /** Células que ficam vazias (ninguém põe bloco): o ninho, a cova, onde os ovinhos ficam. */
+  /** Células que ficam vazias (ninguém põe bloco). */
   passagens: readonly (readonly [number, number, number])[];
-  /** Era dos Dinos: o ninho (o meio, em cima do chão), os ovinhos, as rochas e a caixa. */
-  ninho: readonly [number, number, number] | null;
-  ovos: readonly (readonly [number, number, number])[];
-  fosseis: readonly (readonly [number, number, number])[];
-  /** `entrada`: o meio do lado aberto da cerquinha (onde a criança fica para escavar). */
-  caixa: {
-    x0: number;
-    z0: number;
-    x1: number;
-    z1: number;
-    y: number;
-    entrada: readonly [number, number];
-  } | null;
   /** O pasto dos bichos (o meio, em cima do chão). */
   pasto: readonly [number, number, number];
   /** Doce Reino: a mesa (inclusiva, `y` é o tampo) e as células do bolo. */
@@ -106,38 +89,14 @@ const DEGRAUS = 1;
 
 type Pe = { x: number; z: number; w: number; d: number };
 
-/** As peças de cada tema em coordenadas do canto (s para a direita, f para a frente). */
-function pecas(tema: TemaCanto): { nome: string; s: number; f: number; w: number; d: number }[] {
-  return tema === 'dinos'
-    ? [
-        // o ninho no meio de um chão plano de 5 × 5 (os ovinhos em volta, no mesmo chão)
-        { nome: 'ninho', s: -5, f: 0, w: 5, d: 5 },
-        // a caixa: a cerquinha na volta de fora, a borda de areia e a cova de 3 × 3
-        { nome: 'caixa', s: 4, f: 1, w: 7, d: 7 },
-        { nome: 'pasto', s: 0, f: 8, w: 5, d: 5 },
-      ]
-    : [
-        // o prato de 4 × 4 no meio de um chão plano de 6 × 6 (rente ao chão dos quatro lados)
-        { nome: 'mesa', s: -3, f: 0, w: 6, d: 6 },
-        { nome: 'pasto', s: 5, f: 3, w: 5, d: 5 },
-      ];
+/** As peças do canto em coordenadas do canto (s para a direita, f para a frente). */
+function pecas(): { nome: string; s: number; f: number; w: number; d: number }[] {
+  return [
+    // o prato de 4 × 4 no meio de um chão plano de 6 × 6 (rente ao chão dos quatro lados)
+    { nome: 'mesa', s: -3, f: 0, w: 6, d: 6 },
+    { nome: 'pasto', s: 5, f: 3, w: 5, d: 5 },
+  ];
 }
-
-/**
- * Os ovinhos em volta do ninho (s, f a partir do meio dele, a ~2,2 blocos: dentro do chão plano
- * de 5 × 5, fora do ninho), o primeiro do lado de quem vem.
- */
-const OVOS: readonly [number, number][] = [
-  [1, -2],
-  [2, 1],
-  [-2, 1],
-];
-/** As rochas de osso na cova (3 × 3 do meio da caixa). */
-const FOSSEIS: readonly [number, number][] = [
-  [-1, -1],
-  [1, 0],
-  [-1, 1],
-];
 
 /** Quantos lugares o planejador oferece (o primeiro sem nada que a criança construiu vale). */
 export const CANDIDATOS_CANTO = 6;
@@ -156,7 +115,7 @@ export function planejarCantos(
   t: TerrenoCanto,
   max = CANDIDATOS_CANTO,
 ): PlanoCanto[] {
-  const lista = pecas(tema);
+  const lista = pecas();
   const achados: { nota: number; x: number; z: number; yaw: number }[] = [];
   // perto e plano primeiro; depois perto com degraus; depois mais longe; por fim, na ilha
   // pequena, a prainha (o chão da peça sobe até a altura dela)
@@ -310,7 +269,7 @@ function mediana(v: number[]): number {
 }
 
 function montar(tema: TemaCanto, t: TerrenoCanto, x: number, z: number, yaw: number): PlanoCanto {
-  const pes = pesDasPecas(pecas(tema), x, z, yaw);
+  const pes = pesDasPecas(pecas(), x, z, yaw);
   const celulas = new Map<string, CelulaCanto>();
   const por = (cx: number, y: number, cz: number, b: number) =>
     celulas.set(`${cx},${y},${cz}`, { x: cx, y, z: cz, b });
@@ -330,10 +289,6 @@ function montar(tema: TemaCanto, t: TerrenoCanto, x: number, z: number, yaw: num
     return Math.max(t.minimo, mediana(hs));
   };
   const ocupadas = new Set<string>();
-  let ninho: [number, number, number] | null = null;
-  const ovos: [number, number, number][] = [];
-  const fosseis: [number, number, number][] = [];
-  let caixa: PlanoCanto['caixa'] = null;
   let mesa: PlanoCanto['mesa'] = null;
   const bolo: CelulaBolo[] = [];
   let pasto: [number, number, number] = [x + 0.5, t.altura(x, z) + 1, z + 0.5];
@@ -357,73 +312,7 @@ function montar(tema: TemaCanto, t: TerrenoCanto, x: number, z: number, yaw: num
       }
     const mx = p.x + (p.w - 1) / 2 + 0.5;
     const mz = p.z + (p.d - 1) / 2 + 0.5;
-    if (p.nome === 'ninho') {
-      // o fundo de folhas de ginkgo (o ninho de gravetos é da cena, por cima)
-      const c = p.x + 2;
-      const d = p.z + 2;
-      por(c, h0, d, Bloco.FOLHAS_OUTONO);
-      for (let i = -1; i <= 1; i++)
-        for (let k = -1; k <= 1; k++)
-          for (const dy of [1, 2]) passagens.push([c + i, h0 + dy, d + k]);
-      ninho = [mx, h0 + 1, mz];
-      // os ovinhos no mesmo chão plano do ninho (nada de degrau entre eles)
-      for (const [s, f] of OVOS) {
-        const [ox, oz] = noMundo(c, d, yaw, s, f);
-        ovos.push([ox + 0.5, h0 + 1, oz + 0.5]);
-        passagens.push([ox, h0 + 1, oz]);
-      }
-    } else if (p.nome === 'caixa') {
-      // a volta de fora: a cerquinha de gravetos nos três lados de trás e os postes das quinas
-      // na frente, aberta do lado de quem vem do nascer (a entrada); dentro, a borda de areia e a cova de 3 × 3 um degrau
-      // abaixo, com as 3 rochas de osso
-      const dx = t.nascer.x - mx;
-      const dz = t.nascer.z - mz;
-      const aberto = Math.abs(dx) > Math.abs(dz) ? (dx > 0 ? 'l' : 'o') : dz > 0 ? 's' : 'n';
-      const W = p.w - 1;
-      const portao = (i: number, k: number) => {
-        const lado = i === 0 ? 'o' : i === W ? 'l' : k === 0 ? 'n' : k === W ? 's' : null;
-        const ao = lado === 'o' || lado === 'l' ? k : i;
-        // o lado de quem chega fica aberto (só os postes das quinas): a cerquinha da frente
-        // tapava a cova e as rochas bem na hora de tocar (revisão de UX); os outros três lados
-        // seguram a caixa (e os bichos não entram: o núcleo confere)
-        return lado === aberto && ao > 0 && ao < W;
-      };
-      for (let i = 0; i < p.w; i++)
-        for (let k = 0; k < p.d; k++) {
-          const cx = p.x + i;
-          const cz = p.z + k;
-          const fora = i === 0 || k === 0 || i === W || k === W;
-          const borda = !fora && (i === 1 || k === 1 || i === W - 1 || k === W - 1);
-          if (fora) {
-            if (!portao(i, k)) por(cx, h0 + 1, cz, Bloco.CERCA);
-            else passagens.push([cx, h0 + 1, cz], [cx, h0 + 2, cz]);
-            continue;
-          }
-          por(cx, h0, cz, borda ? Bloco.AREIA_BRUMA : Bloco.AR);
-          if (!borda) {
-            por(cx, h0 - 1, cz, Bloco.AREIA_BRUMA);
-            passagens.push([cx, h0, cz]);
-          }
-          passagens.push([cx, h0 + 1, cz]);
-        }
-      for (const [s2, f2] of FOSSEIS) {
-        const fx = p.x + 3 + s2;
-        const fz = p.z + 3 + f2;
-        por(fx, h0, fz, Bloco.MINERIO_FERRO);
-        fosseis.push([fx, h0, fz]);
-      }
-      // a entrada: o meio dos 2 blocos abertos, na volta da cerquinha
-      const entrada: [number, number] =
-        aberto === 'o'
-          ? [p.x + 0.5, p.z + 3.5]
-          : aberto === 'l'
-            ? [p.x + W + 0.5, p.z + 3.5]
-            : aberto === 'n'
-              ? [p.x + 3.5, p.z + 0.5]
-              : [p.x + 3.5, p.z + W + 0.5];
-      // a caixa de areia é a parte de dentro da cerquinha
-      caixa = { x0: p.x + 1, z0: p.z + 1, x1: p.x + W - 1, z1: p.z + W - 1, y: h0, entrada };
-    } else if (p.nome === 'mesa') {
+    if (p.nome === 'mesa') {
       for (let i = 1; i < p.w - 1; i++)
         for (let k = 1; k < p.d - 1; k++) por(p.x + i, h0, p.z + k, Bloco.PEDRA_LISA);
       // o prato de caramelo no nível do chão (o bolo grandão fica da altura da criança: os
@@ -455,27 +344,15 @@ function montar(tema: TemaCanto, t: TerrenoCanto, x: number, z: number, yaw: num
     }
   }
 
-  // enfeites do tema, só em chão livre (nunca em cima de uma peça)
-  const enfeites: [number, number, number][] =
-    tema === 'dinos'
-      ? [
-          [-1, 3, Bloco.GRAMA_ALTA],
-          [1, -3, Bloco.FLOR],
-          [-6, 3, Bloco.GRAMA_ALTA],
-          [6, -2, Bloco.GRAMA_ALTA],
-          [-3, 5, Bloco.FENO],
-          [3, 8, Bloco.FENO],
-          [-7, -1, Bloco.FLOR],
-          [2, 4, Bloco.GRAMA_ALTA],
-        ]
-      : [
-          [0, -2, Bloco.FLOR],
-          [-6, 2, Bloco.FLOR],
-          [1, 2, Bloco.ARBUSTO_FRUTINHAS],
-          [7, 0, Bloco.FLOR],
-          [-1, 5, Bloco.FLOR],
-          [6, 6, Bloco.ARBUSTO_FRUTINHAS],
-        ];
+  // enfeites do canto, só em chão livre (nunca em cima de uma peça)
+  const enfeites: [number, number, number][] = [
+    [0, -2, Bloco.FLOR],
+    [-6, 2, Bloco.FLOR],
+    [1, 2, Bloco.ARBUSTO_FRUTINHAS],
+    [7, 0, Bloco.FLOR],
+    [-1, 5, Bloco.FLOR],
+    [6, 6, Bloco.ARBUSTO_FRUTINHAS],
+  ];
   for (const [s, f, b] of enfeites) {
     const [ex, ez] = noMundo(x, z, yaw, s, f);
     if (ocupadas.has(`${ex},${ez}`)) continue;
@@ -498,10 +375,6 @@ function montar(tema: TemaCanto, t: TerrenoCanto, x: number, z: number, yaw: num
     celulas: todas,
     chao: [...chao.values()],
     passagens,
-    ninho,
-    ovos,
-    fosseis,
-    caixa,
     pasto,
     mesa,
     bolo,
@@ -517,11 +390,6 @@ export function celulaDoBolo(
 ): CelulaBolo | null {
   if (!p || !p.bolo.length) return null;
   return p.bolo.find((c) => c.x === x && c.y === y && c.z === z) ?? null;
-}
-
-/** A célula é de uma rocha de osso do canto? */
-export function ehFossilDoCanto(p: PlanoCanto | null, x: number, y: number, z: number): boolean {
-  return !!p && p.fosseis.some((f) => f[0] === x && f[1] === y && f[2] === z);
 }
 
 /** O canto alcança o chunk (cx, cz)? */

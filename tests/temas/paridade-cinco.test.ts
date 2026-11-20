@@ -179,17 +179,14 @@ const ESPERADO: Record<Id, Hashes> = {
   },
 };
 
-/** O canto do Doce Reino, por semente (na ordem de `SEMENTES`): os lugares e os chunks juntos. */
-const ESPERADO_CANTO: [string, string, string] = [
-  '405b486ea34c9d29',
-  'b6020c859f632b4e',
-  '80a95fcf8ef43533',
-];
 /**
- * Os mesmos dados em dois hashes (a revisão da fase 1 da 034, antes de tirar o ramo dos Dinos
- * do canto): os lugares sem os campos que só o ramo dos Dinos enchia (`ninho`, `ovos`,
- * `fosseis`, `caixa`, sempre vazios no Doce) e os chunks da caixa. Conferidos junto com o
- * combinado acima, no código que ainda tinha o ramo.
+ * O canto do Doce Reino, por semente (na ordem de `SEMENTES`), em dois hashes: os lugares (o
+ * plano) e os chunks da caixa. A corrente de prova (revisão da fase 1 da 034): o hash de antes
+ * era um só, dos lugares e dos chunks juntos (405b486ea34c9d29, b6020c859f632b4e,
+ * 80a95fcf8ef43533); no código que ainda tinha o ramo dos Dinos, ele passou junto com estes
+ * dois, tirados dos mesmos dados (os lugares sem os campos que só o ramo dos Dinos enchia:
+ * `ninho`, `ovos`, `fosseis`, `caixa`, sempre vazios no Doce). Depois de tirar o ramo, estes
+ * dois continuam iguais.
  */
 const ESPERADO_CANTO_PLANO: [string, string, string] = [
   'dc212ccf4665083a',
@@ -471,36 +468,25 @@ describe('spec 034: os cinco mundos que ficam são os mesmos de antes', () => {
   it('o canto do Doce Reino: os lugares e os chunks da caixa, em 3 sementes', async () => {
     const j = await carregar('doce-reino');
     const { chunk } = j;
-    const obtido: string[] = [];
     const plano: string[] = [];
     const chunks: string[] = [];
     for (const s of SEMENTES) {
       const lugares = chunk.candidatosDoCanto(s);
       expect(lugares.length).toBeGreaterThan(0);
       expect(lugares.every((p) => p.tema === 'doce')).toBe(true);
+      // o ramo dos Dinos saiu: o plano não tem mais os campos dele
+      for (const k of ['ninho', 'ovos', 'fosseis', 'caixa']) expect(lugares[0]).not.toHaveProperty(k);
       const canto = chunk.cantoDoMundo(s)!;
       expect(canto).toBe(lugares[0]);
       const chaves = new Set<string>();
       // a geração mexe no mato até 4 blocos fora da caixa
       chunksDaCaixa(canto.x0 - 4, canto.z0 - 4, canto.x1 + 4, canto.z1 + 4, chaves);
-      const partes: (Uint8Array | string)[] = [jsonEstavel(lugares)];
       const soChunks: (Uint8Array | string)[] = [];
-      for (const [cx, cz] of emOrdem(chaves)) {
-        partes.push(`${cx},${cz};`, chunk.gerarChunk(cx, cz, s));
+      for (const [cx, cz] of emOrdem(chaves))
         soChunks.push(`${cx},${cz};`, chunk.gerarChunk(cx, cz, s));
-      }
-      obtido.push(await sha(partes));
-      // os mesmos dados em dois hashes: o plano sem os campos do ramo dos Dinos (sempre vazios
-      // no Doce) e os chunks da caixa
-      const semDinos = lugares.map((l) => {
-        const { ninho, ovos, fosseis, caixa, ...resto } = l as unknown as Record<string, unknown>;
-        void [ninho, ovos, fosseis, caixa];
-        return resto;
-      });
-      plano.push(await sha([jsonEstavel(semDinos)]));
+      plano.push(await sha([jsonEstavel(lugares)]));
       chunks.push(await sha(soChunks));
     }
-    expect(obtido).toEqual(ESPERADO_CANTO);
     expect(plano).toEqual(ESPERADO_CANTO_PLANO);
     expect(chunks).toEqual(ESPERADO_CANTO_CHUNKS);
   }, 120_000);
