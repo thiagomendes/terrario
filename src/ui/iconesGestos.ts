@@ -1,8 +1,13 @@
 /**
  * Ícones dos gestos (spec 034, a direção A reforçada que o dono aprovou em 20 nov 2026, na folha
  * `capturas-034/gestos/folha-A2.png`): o mesmo boneco do jogo desenhado em SVG fazendo o gesto,
- * com um objeto forte em cada um para nenhum ficar parecido com outro a 48 px (confete, faíscas,
- * notas, setinha, cadeira, estrela, floreio, ondas de som, a mão do amigo, a guitarra-raio).
+ * com um objeto forte em cada um para nenhum ficar parecido com outro a 48 px (confete, as mãos
+ * grandes do "plac", notas, a setinha para a estrelinha, cadeira, estrela, o chapéu, ondas de
+ * som, a mão do amigo, a guitarra-raio). No portão visual o dono pediu de novo quatro deles
+ * (folha `capturas-034/gestos/folha-A3.png`): a reverência tirando o chapéu (o floreio de trás
+ * parecia um pum), o apontar para a direita (o da esquerda era o "<" da plaquinha Voltar), o
+ * aplaudir com as mãos grandes (as faíscas confundiam com o pulo de estrela) e o roqueiro com
+ * uma guitarra de verdade (a de antes parecia um raio).
  *
  * O boneco tem as medidas do plano do boneco (`personagem/boneco.ts`: cabeça 0,72 × 0,68, tronco
  * 0,46 × 0,42, perna 0,24, braço até a mão 0,27, mão 0,085) e as cores do boneco padrão (pele,
@@ -98,8 +103,11 @@ interface Pose {
   boca?: 'sorriso' | 'aberta';
   /** Marquinhas: [x, y, giro] em unidades, junto do que se mexe. */
   marcas?: Array<{ tipo: 'arco'; x: number; y: number; giro?: number; tam?: number }>;
-  /** A guitarra-raio da Vila Neon (a da fantasia de roqueiro, `ui/alma/arteVila.ts`) nas mãos. */
-  guitarra?: { x: number; y: number; giro: number; k: number };
+  /**
+   * De frente: a guitarra-raio da Vila Neon (a da fantasia de roqueiro, `ui/alma/arteVila.ts`)
+   * na frente da barriga, debaixo das mãos: o meio do corpo dela e o giro do braço (graus).
+   */
+  guitarra?: { x: number; y: number; giro: number };
   /** O objeto forte do gesto (SVG no espaço do boneco), atrás do boneco e na frente dele. */
   fundo?: string;
   frente?: string;
@@ -233,22 +241,53 @@ function cabeca(p: Pose): string {
   );
 }
 
-/** A guitarra-raio de brinquedo (o desenho de `ui/alma/arteVila.ts`, no espaço do boneco). */
+/**
+ * A guitarra-raio da Vila (as cores da de `ui/alma/arteVila.ts`), agora com a forma de guitarra
+ * de verdade: o corpo de dois gomos vermelho com o raiozinho, o braço com as cordas e a cabeça
+ * com as tarraxas. O braço sai do corpo para o lado de `giro` (graus); o meio do corpo em (x, y).
+ */
 function guitarra(g: NonNullable<Pose['guitarra']>): string {
-  const estrela: string[] = [];
-  for (let i = 0; i < 10; i++) {
-    const a = -Math.PI / 2 + (i * Math.PI) / 5;
-    const r = i % 2 ? 1.5 : 3.4;
-    estrela.push(`${(1.5 + Math.cos(a) * r).toFixed(1)},${(12 + Math.sin(a) * r).toFixed(1)}`);
-  }
-  const corpo = 'M-6 0 L12 0 L2 9 L15 9 L-9 30 L-3 15 L-15 15 Z';
-  return `<g transform="translate(${g.x} ${g.y}) rotate(${g.giro}) scale(${g.k} ${-g.k})">
-    <path d="${corpo}" fill="#9a1a14" transform="translate(1 3)"/>
-    <path d="${corpo}" fill="#e8302a" ${contorno}/>
-    <rect x="-3.5" y="-28" width="7" height="30" rx="2" fill="#f2c27a" ${contorno}/>
-    <rect x="-5.5" y="-36" width="11" height="10" rx="3" fill="#3d3c48" ${contorno}/>
-    <circle cx="-8" cy="-33" r="2.4" fill="#ffd23d" ${contorno}/><circle cx="8" cy="-33" r="2.4" fill="#ffd23d" ${contorno}/>
-    <polygon points="${estrela.join(' ')}" fill="#ffe66a"/></g>`;
+  const VERMELHO = '#e8302a';
+  const fundo = '#9a1a14';
+  // os dois gomos: o de baixo maior; contornados primeiro e cheios por cima (o contorno de
+  // dentro some e fica só a silhueta)
+  const gomos: Array<[number, number, number]> = [
+    [0, 0, 0.215],
+    [0.235, 0, 0.165],
+  ];
+  let s = '';
+  for (const [x, y, r] of gomos) s += bola(x, y - 0.025, r, fundo, false);
+  for (const [x, y, r] of gomos) s += bola(x, y, r, VERMELHO);
+  for (const [x, y, r] of gomos) s += bola(x, y, r - 0.012, VERMELHO, false);
+  // o brilho de plástico no gomo de baixo
+  s += `<ellipse cx="-0.07" cy="0.1" rx="0.08" ry="0.045" fill="#ffffff" opacity="0.35" transform="rotate(-25 -0.07 0.1)"/>`;
+  // o braço (madeira) e os trastes
+  s += caixa(0.26, -0.05, 0.86, 0.05, 0.02, '#f2c27a');
+  for (const x of [0.46, 0.58, 0.7])
+    s += `<rect x="${x}" y="-0.045" width="0.016" height="0.09" fill="#b9874a"/>`;
+  // a cabeça com as tarraxas dos dois lados
+  for (const x of [0.92, 1.0]) for (const y of [-0.105, 0.105]) s += bola(x, y, 0.04, '#ffd23d');
+  s += caixa(0.84, -0.075, 1.05, 0.075, 0.035, '#3d3c48');
+  // a ponte e o captador escuro no corpo, e as cordas por cima de tudo
+  s += caixa(-0.13, -0.075, -0.07, 0.075, 0.015, '#3d3c48');
+  s += caixa(0.07, -0.06, 0.13, 0.06, 0.015, '#3d3c48');
+  for (const y of [-0.026, 0, 0.026])
+    s += `<line x1="-0.1" y1="${y}" x2="0.87" y2="${y}" stroke="#fff3d6" stroke-width="0.9" ${UNID}/>`;
+  // o raiozinho no gomo de baixo
+  s += poli(
+    [
+      [-0.01, -0.05],
+      [0.07, -0.05],
+      [0.025, -0.11],
+      [0.075, -0.11],
+      [-0.045, -0.2],
+      [-0.01, -0.13],
+      [-0.06, -0.13],
+    ],
+    '#ffe66a',
+    true,
+  );
+  return `<g transform="translate(${g.x} ${g.y}) rotate(${g.giro})">${s}</g>`;
 }
 
 /** As marquinhas de movimento (no espaço do boneco, y para cima). */
@@ -298,6 +337,7 @@ function boneco(p: Pose): string {
     s += caixa(-0.2425, 0.425, 0.2425, 0.475, 0.02, CINTO);
     s += caixa(-0.04, 0.42, 0.04, 0.48, 0.015, FIVELA);
     s += `<g transform="${rot(cab, 0, 0.76)}">${cabeca(p)}</g>`;
+    if (p.guitarra) s += guitarra(p.guitarra);
     if (!atras(b0)) s += bracoFrente(-1, b0, k0);
     if (!atras(b1)) s += bracoFrente(1, b1, k1);
     s += '</g>';
@@ -320,7 +360,6 @@ function boneco(p: Pose): string {
     s += caixa(-0.1825, 0.425, 0.1825, 0.475, 0.02, CINTO);
     s += caixa(0.16, 0.42, 0.2, 0.48, 0.012, FIVELA);
     s += `<g transform="${rot(-cab, 0, 0.76)}">${cabeca(p)}</g>`;
-    if (p.guitarra) s += guitarra(p.guitarra);
     s += bracoLado(b0, k0, false);
     s += '</g>';
   }
@@ -343,11 +382,6 @@ function estrela(x: number, y: number, r: number, ri: number, cor: string, n = 5
     pts.push([x + Math.cos(a) * rr, y + Math.sin(a) * rr]);
   }
   return poli(pts, cor, fino);
-}
-
-/** Faísca de quatro pontas, com o brilhinho no meio. */
-function faisca(x: number, y: number, r: number, cor = AMARELO): string {
-  return estrela(x, y, r, r * 0.4, cor, 4, true) + bola(x, y, r * 0.16, '#ffffff', false);
 }
 
 /** Traço duplo (o contorno escuro por baixo e a cor por cima), para linhas que precisam ler. */
@@ -450,17 +484,63 @@ function cadeira(s: number): string {
   );
 }
 
-/** O floreio dourado que sai da mão (x, y), para trás e enrolando. */
-function floreio(x: number, y: number): string {
+/** A mão (bolinha) do boneco em (x, y), redesenhada por cima do que ela segura. */
+function maoBola(x: number, y: number, pele = PELE): string {
   return (
-    traco(
-      `M${x} ${y} C${x - 0.12} ${y + 0.1} ${x - 0.3} ${y + 0.12} ${x - 0.38} ${y + 0.02} C${x - 0.46} ${y - 0.08} ${x - 0.38} ${y - 0.2} ${x - 0.28} ${y - 0.17} C${x - 0.2} ${y - 0.14} ${x - 0.21} ${y - 0.05} ${x - 0.28} ${y - 0.06}`,
-      '#ffc93d',
-      2.2,
-    ) +
-    faisca(x - 0.08, y + 0.24, 0.085) +
-    faisca(x - 0.5, y + 0.2, 0.06)
+    bola(x, y, 0.088, pele) +
+    `<circle cx="${(x - 0.025).toFixed(3)}" cy="${(y + 0.025).toFixed(3)}" r="0.028" fill="#ffffff" opacity="0.45"/>`
   );
+}
+
+/**
+ * O chapéu do boneco (o `chapeu` de `personagem/boneco.ts`: a aba larga, a copa e a fita), de
+ * lado, com a aba em (x, y) e a copa para o lado de `giro` (graus, 0 = para cima).
+ */
+function chapeu(x: number, y: number, giro: number, k = 1): string {
+  const MARROM = '#8a5a32';
+  return (
+    `<g transform="translate(${x.toFixed(3)} ${y.toFixed(3)}) rotate(${giro}) scale(${k})">` +
+    caixa(-0.18, 0.02, 0.18, 0.31, 0.08, MARROM) +
+    brilho(-0.12, 0.21, 0.07, 0.27, 0.03, 0.3) +
+    caixa(-0.185, 0.06, 0.185, 0.13, 0.02, FIVELA) +
+    caixa(-0.33, -0.045, 0.33, 0.055, 0.05, MARROM) +
+    brilho(-0.28, 0.02, 0.24, 0.04, 0.01, 0.25) +
+    '</g>'
+  );
+}
+
+/**
+ * A mão grande do aplauso (de frente: os dedos juntos para cima e o polegar para fora), do lado
+ * `lado` do meio; as duas se encostam em x = 0.
+ */
+function maoAplauso(lado: -1 | 1, y: number): string {
+  const x0 = lado * 0.006;
+  const x1 = lado * 0.185;
+  const [a, b] = lado < 0 ? [x1, x0] : [x0, x1];
+  const xm = (a + b) / 2;
+  return (
+    `<g transform="${rot(lado * -8, x0, y)}">` +
+    `<ellipse cx="0" cy="0" rx="0.05" ry="0.09" fill="${PELE}" ${contorno} transform="translate(${(lado * 0.2).toFixed(3)} ${(y + 0.13).toFixed(3)}) rotate(${lado * 40})"/>` +
+    caixa(a, y, b, y + 0.34, 0.08, PELE) +
+    `<ellipse cx="${(xm - 0.02).toFixed(3)}" cy="${(y + 0.24).toFixed(3)}" rx="0.035" ry="0.06" fill="#ffffff" opacity="0.35"/>` +
+    '</g>'
+  );
+}
+
+/** Os risquinhos do "plac": traços curtos saindo para fora em volta de (x, y). */
+function plac(x: number, y: number, r0: number, r1: number, angulos: number[]): string {
+  let s = '';
+  for (const g of angulos) {
+    const a = (g * Math.PI) / 180;
+    const c = Math.cos(a);
+    const sn = Math.sin(a);
+    s += traco(
+      `M${(x + c * r0).toFixed(3)} ${(y + sn * r0).toFixed(3)} L${(x + c * r1).toFixed(3)} ${(y + sn * r1).toFixed(3)}`,
+      LARANJA,
+      2.4,
+    );
+  }
+  return s;
 }
 
 /** As ondas de som saindo da boca (x, y) para a direita: três arcos crescendo. */
@@ -604,12 +684,11 @@ const POSES: Record<IdGesto, Pose> = {
         confete(0.52, 0.2, -15, AMARELO),
     }),
   ),
-  // as mãos batendo na frente do peito e as faíscas da palma
+  // as mãos grandes batendo na frente do peito e os risquinhos do "plac" em volta delas
   aplaudir: comObjetos(
     {
       vista: 'frente',
-      bracos: [-70, -70],
-      encurta: [0.92, 0.92],
+      bracos: [-62, -62],
       boca: 'aberta',
       quadro: { x: 0, y: 0.78, meia: 0.84 },
     },
@@ -617,10 +696,9 @@ const POSES: Record<IdGesto, Pose> = {
       const [, y] = m(0);
       return {
         frente:
-          faisca(-0.48, y + 0.24, 0.23) +
-          faisca(0.48, y + 0.24, 0.23) +
-          faisca(-0.55, y - 0.2, 0.15) +
-          faisca(0.55, y - 0.2, 0.15),
+          maoAplauso(-1, y - 0.06) +
+          maoAplauso(1, y - 0.06) +
+          plac(0, y + 0.06, 0.28, 0.41, [165, 195, 225, 15, -15, -45]),
       };
     },
   ),
@@ -641,18 +719,27 @@ const POSES: Record<IdGesto, Pose> = {
         notas2(0.36, 1.32, 1.05, ROSA) + nota(-0.7, 0.62, 1, AZUL) + nota(0.6, 0.42, 0.85, AMARELO),
     }),
   ),
-  // o braço esticado para o lado, os olhos para lá e a setinha na ponta do dedo
+  // o braço esticado para a direita, o dedo e os olhos para lá, e a setinha levando à
+  // estrelinha (para a direita: a plaquinha Voltar é que aponta para a esquerda)
   apontar: comObjetos(
     {
       vista: 'frente',
-      bracos: [92, 8],
-      olhar: -0.07,
-      cabeca: 4,
-      quadro: { x: -0.36, y: 0.76, meia: 0.86 },
+      bracos: [8, 90],
+      olhar: 0.07,
+      cabeca: -4,
+      quadro: { x: 0.54, y: 0.74, meia: 0.95 },
     },
     (m) => {
-      const [x, y] = m(0);
-      return { frente: seta(x - 0.58, y, -1) };
+      const [x, y] = m(1);
+      const dedo = caixa(x + 0.02, y - 0.035, x + 0.19, y + 0.035, 0.035, PELE);
+      const ponta = x + 0.5;
+      return {
+        frente:
+          dedo +
+          maoBola(x, y) +
+          seta(ponta, y, 1, 0.6) +
+          estrela(ponta + 0.24, y, 0.21, 0.095, AMARELO),
+      };
     },
   ),
   // sentado na cadeira, as mãos nos joelhos
@@ -681,36 +768,38 @@ const POSES: Record<IdGesto, Pose> = {
       fundo: estrela(0, 0.86, 0.98, 0.46, AMARELO) + estrela(0, 0.86, 0.78, 0.36, '#ffe58f', 5, true),
     }),
   ),
-  // a curva funda: um braço no peito, o outro para trás com o floreio, a perna para trás
+  // a curva funda tirando o chapéu: o braço estendido para a frente com o chapéu na mão (nada
+  // sai de trás dele)
   reverencia: comObjetos(
     {
       vista: 'lado',
-      tronco: 48,
-      cabeca: 6,
-      bracos: [40, -72],
-      pernas: [6, -22],
-      quadro: { x: 0.3, y: 0.66, meia: 0.93 },
+      tronco: 54,
+      cabeca: -28,
+      bracos: [88, 20],
+      encurta: [1.4, 1],
+      pernas: [4, -12],
+      quadro: { x: 0.48, y: 0.68, meia: 0.84 },
     },
     (m) => {
-      const [x, y] = m(1);
-      return { frente: floreio(x - 0.04, y + 0.02) };
+      // o chapéu em pé, seguro pela aba, oferecido na frente (debaixo do queixo)
+      const [x, y] = m(0);
+      return { frente: chapeu(x + 0.27, y - 0.03, 0, 0.95) + maoBola(x, y) };
     },
   ),
-  // bater cabeça: a cabeça baixa no tempo, tocando a guitarra-raio da Vila (o roqueiro só
-  // existe na Vila)
+  // tocando a guitarra-raio da Vila (o roqueiro só existe na Vila): uma mão no braço dela, a
+  // outra nas cordas, a cabeça balançando no tempo
   roqueiro: {
-    vista: 'lado',
-    tronco: 10,
-    cabeca: 26,
-    bracos: [78, 48],
-    pernas: [8, -6],
+    vista: 'frente',
+    cabeca: 12,
+    bracos: [-34, 112],
+    pernas: [8, 8],
     boca: 'aberta',
-    guitarra: { x: 0.2, y: 0.54, giro: -58, k: 0.019 },
+    guitarra: { x: -0.1, y: 0.4, giro: 28 },
     marcas: [
-      { tipo: 'arco', x: -0.46, y: 1.3, giro: 150, tam: 1.1 },
-      { tipo: 'arco', x: 0.5, y: 1.46, giro: 20, tam: 0.9 },
+      { tipo: 'arco', x: -0.52, y: 1.3, giro: 160, tam: 1.1 },
+      { tipo: 'arco', x: 0.46, y: 1.42, giro: 25, tam: 0.9 },
     ],
-    quadro: { x: 0.11, y: 0.8, meia: 0.85 },
+    quadro: { x: 0.25, y: 0.78, meia: 0.86 },
   },
 };
 
