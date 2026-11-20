@@ -467,7 +467,7 @@ export interface EstadoDepuracao {
   /**
    * Spec 034 (só a paridade): liga ou desliga o cansaço que vem do relógio na sobrevivência.
    * Existe logo depois da conexão com o núcleo (antes do mundo ficar pronto), para a sessão
-   * desligar antes do primeiro passo.
+   * desligar logo que a cena liga o núcleo.
    */
   relogioCansa?: (ligado: boolean) => void;
   /** Spec 026: os eventos do show que chegaram (testes) e o que o show mostra. */

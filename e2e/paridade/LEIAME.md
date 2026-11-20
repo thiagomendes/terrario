@@ -24,9 +24,9 @@ limitam o que roda. Um arquivo por sessão × semente × tema: `<sessão>-<semen
 ## Como cada sessão começa
 
 - Mundo novo gravado direto no IndexedDB do jogo (semente, tema e modo conhecidos), aberto por `?mundo=paridade`.
-- Spec 034: assim que a cena liga o núcleo (antes do primeiro passo), o atalho de teste
-  `relogioCansa(false)` desliga o cansaço que vem do relógio na sobrevivência (ver
-  "Regravações"). Pulos, golpes, danos e a cura continuam cansando.
+- Spec 034: logo que a cena liga o núcleo, o atalho de teste `relogioCansa(false)` desliga o
+  cansaço que vem do relógio na sobrevivência (ver "Regravações"). Pulos, golpes, danos e a
+  cura continuam cansando.
 - Assim que fica pronto: tela de título escondida, `pausarDia = true`, `hora = 0,4` e clima `limpo`.
 - Quase tudo acontece numa **plataforma** de pedra (11 × 11, borda de vidro com 2 de altura),
   8 blocos acima do ponto mais alto do terreno em volta do nascimento. Assim árvores, água e
@@ -65,8 +65,12 @@ salvamento entra só a parte determinística:
 ## O que foi deixado de fora, e por quê
 
 - **Exaustão:** cresce com o tempo real parado (0,02 por segundo), então depende de quanto a
-  sessão demorou. Desde a spec 034 o cansaço do relógio fica desligado nas sessões, e a
-  exaustão que sobra (pulos, golpes, danos, cura) é a mesma em toda rodada; ela continua fora
+  sessão demorou. Desde a spec 034 o cansaço do relógio fica desligado nas sessões (a sessão
+  `sobrevivencia` confere, parada 6 s logo depois de abrir, que a exaustão gravada não sobe;
+  ela pode já começar com 0,2 de um passo de pulo no nascer). A exaustão que sobra vem de
+  pulos, golpes, danos e da cura natural; a cura ainda anda com o relógio (1 de vida a cada
+  3 s ferido de barriga cheia, cansando 1,5 cada), mas é limitada pelo dano: não passa da vida
+  que faltava. Então ela não é estritamente igual em toda rodada, só limitada; continua fora
   do retrato, mas a saturação e a fome que ela derruba entram.
 - **Posição e velocidade de itens no chão:** a física dos itens anda com o quadro; só a soma por item é estável.
 - **Posição do jogador e das criaturas:** dependem dos quadros; das criaturas entra só a contagem e se estão em lugar livre.
@@ -131,7 +135,8 @@ salvamento entra só a parte determinística:
     quase toda frutinha errava. Agora o jogador fica a 2,5 dela (onde ela para), a frutinha só
     vai com a raposa parada, e só conta a raposa em cima da plataforma (não uma selvagem
     embaixo). O que se confere não mudou: no máximo 60 frutinhas, e cada uma que chega confia
-    com 45% no núcleo. Medido aqui: confiou com 1 a 5 frutinhas nas 6 sessões.
+    com 45% no núcleo. Medido aqui: confiou com 1 a 5 frutinhas nas 18 vezes medidas (as 6
+    sessões `construir`, numa rodada de prova e nas duas conferências).
   - **Regravadas** com `PARIDADE=gravar` (as 18 do Rancho e as 18 do Doce), no código de antes
     da 034 com só o atalho a mais, e conferidas 36/36 duas vezes seguidas. As 18 do Doce saíram
     iguais, byte a byte, às gravadas antes com placa de vídeo: lá as sessões eram rápidas e o

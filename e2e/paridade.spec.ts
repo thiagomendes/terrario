@@ -55,7 +55,7 @@ interface Ajudantes {
   plataforma(raio: number): { cx: number; cz: number; y0: number };
   danos: { qtd: number; causa: string }[];
   eventos: string[];
-  /** Spec 034: o cansaço do relógio foi desligado antes do primeiro passo do núcleo. */
+  /** Spec 034: o cansaço do relógio foi desligado logo que a cena ligou o núcleo. */
   semCansacoDoRelogio?: boolean;
 }
 declare global {
@@ -189,9 +189,10 @@ function instalarAjudantes(): void {
   }
   // Spec 034: sem o cansaço do relógio. A exaustão crescia com o tempo de verdade (0,02 por
   // segundo parado), e a saturação caía ou não conforme a máquina demorava (a 1 quadro por
-  // segundo, sem placa de vídeo, as sessões ficavam na beira da queda). Desligado assim que a
-  // cena liga o núcleo, antes do primeiro passo; pulos, golpes, danos e a cura continuam
-  // cansando (o cansaço do relógio é conferido nos testes de unidade da sobrevivência).
+  // segundo, sem placa de vídeo, as sessões ficavam na beira da queda). Desligado logo que a
+  // cena liga o núcleo (a sessão `sobrevivencia` confere que a exaustão não sobe); pulos,
+  // golpes, danos e a cura continuam cansando (o cansaço do relógio é conferido nos testes de
+  // unidade da sobrevivência).
   let cena: any;
   Object.defineProperty(w, '__brumaluz', {
     configurable: true,
@@ -923,6 +924,34 @@ const SESSOES: Record<string, Sessao> = {
   sobrevivencia: {
     modo: 'sobrevivencia',
     async rodar(page) {
+      // spec 034: o núcleo de fato desligou o cansaço do relógio (não basta o atalho ter sido
+      // chamado). Logo depois de abrir, antes de qualquer pulo da sessão, parado 6 s: com o
+      // relógio cansando a exaustão gravada subiria (0,02 por segundo; medido aqui com o
+      // relógio religado, 0,2 → 0,38 em 6 s). Ela não começa sempre em 0: o nascer pode já ter
+      // dado um passo de pulo (0,2 exatos na semente 42 do Rancho), por isso a conta é que
+      // ela não sobe
+      const exaustao = () =>
+        page.evaluate(async (id) => {
+          if (!(await window.__brumaluz!.salvar!(false))) return 'o salvamento falhou';
+          const dados = await new Promise<any>((resolve, reject) => {
+            const req = indexedDB.open('brumaluz', 1);
+            req.onerror = () => reject(req.error);
+            req.onsuccess = () => {
+              const db = req.result;
+              const g = db.transaction('kv', 'readonly').objectStore('kv').get(`mundo:${id}`);
+              g.onsuccess = () => {
+                db.close();
+                resolve(g.result);
+              };
+              g.onerror = () => reject(g.error);
+            };
+          });
+          return dados?.extras?.sobrevivencia?.exaustao;
+        }, ID_MUNDO);
+      const exaustao0 = await exaustao();
+      expect(typeof exaustao0, `a exaustão não foi gravada (${exaustao0})`).toBe('number');
+      await page.waitForTimeout(6000);
+      expect(await exaustao(), 'o relógio ainda cansa no núcleo').toBe(exaustao0);
       const base = await page.evaluate(() => window.__par.plataforma(5));
       await page.evaluate(() => window.__par.assentar());
       const { cx, cz, y0 } = base;

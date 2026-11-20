@@ -1,5 +1,7 @@
 import { readdirSync, readFileSync } from 'node:fs';
 import { describe, expect, it, vi } from 'vitest';
+import type { TextosTema } from '../../src/temas/tipos';
+import type { Profissao } from '../../src/world/povoado';
 
 /**
  * Spec 034 (T00): a prova de que os cinco mundos que ficam não mudam quando os quatro saem.
@@ -18,9 +20,17 @@ import { describe, expect, it, vi } from 'vitest';
  *   (`estiloSeguro`) é o mesmo do tema: o servidor gera o mesmo terreno;
  * - **dados do tema:** o JSON (com as chaves em ordem) de `criaturas`, `movimento`, `vozes`,
  *   `povoado`, `ceu`, `quadrosCeu` e `mundo`;
- * - **sons:** a entrada do tema e a comum no índice dos sons, os tamanhos e o conteúdo dos
- *   pacotes do tema e do comum, os ajustes de volume da trilha e das vozes do tema, e a música,
- *   a natureza e os materiais do tema;
+ * - **sons:** a entrada do tema e a comum no índice dos sons, as regras de `musica` (sem os
+ *   créditos, que a 034 enxuga) e de `vozes` do índice, os tamanhos e o conteúdo dos pacotes do
+ *   tema e do comum, os ajustes de volume da trilha e das vozes do tema, e a música, a natureza
+ *   e os materiais do tema;
+ * - **nomes dos moradores:** cada nome do povoado do tema com o gênero (`generoDoNome`), e
+ *   `nomeDoMorador` e `generoDoMorador` de n = 0 a 8 em cada profissão (e de cada morador do
+ *   plano) nos povoados que o hash do terreno encontra, mais a cidade ou o bairro. A 034 tira de
+ *   `NOMES_GENERO` os nomes só dos quatro: um nome dos cinco que saísse por engano mudaria o
+ *   nome e o corpo dos moradores;
+ * - **os textos aplicados:** os textos do tema por cima dos de base (como `aplicarTextos` faz),
+ *   menos as chaves de `TEXTOS_FORA`;
  * - **o resto do tema:** todo o tema menos os textos (água, bruma, partículas, clima, cores,
  *   personagem, primeiro capítulo, exclusivos, nome, lema, convite...);
  * - **o canto do Doce Reino:** os lugares do canto (`candidatosDoCanto`, que chama
@@ -46,6 +56,23 @@ const CINCO = [
 ] as const;
 type Id = (typeof CINCO)[number];
 
+/** Textos com "bruma" ou com os nomes dos quatro que saem (o que a 034 troca nos textos). */
+const DOS_QUATRO = /bruma|planeta vivo|mata encantada|era dos dinos|dino/i;
+
+/**
+ * As chaves dos textos aplicados que a 034 pode trocar nos cinco ("seção.chave", ou só a
+ * chave nos textos soltos como `boasVindas`): os textos de base com "bruma" ou com os nomes
+ * dos quatro que algum dos cinco mostra por não ter texto próprio.
+ *
+ * A busca no código de antes (20 nov 2026) não achou nenhuma: os cinco têm texto próprio para
+ * todos os textos de base com "bruma" (`blocos.3` "areia-bruma", `criaturas.coelho`
+ * "Coelho-bruma", `criaturas.espectro` "Espectro da bruma", `missoes.espectro` "Caçador da
+ * bruma", `missoes.pantano`, `missoes.criar`, `boasVindas` e `legendas.criaturaNoturna`). Então
+ * nenhuma chave fica de fora, e o teste confere que a busca continua sem achar nada fora desta
+ * lista.
+ */
+const TEXTOS_FORA: readonly string[] = [];
+
 interface Hashes {
   atlas: string;
   emissivos: string;
@@ -59,6 +86,8 @@ interface Hashes {
   quadrosCeu: string;
   mundo: string;
   sons: string;
+  nomes: string;
+  textos: string;
   resto: string;
 }
 
@@ -75,7 +104,9 @@ const ESPERADO: Record<Id, Hashes> = {
     ceu: 'ff569563531ed96f',
     quadrosCeu: 'd6e9057778dcc118',
     mundo: '9b0a36e4a763314a',
-    sons: '84ec03353330833c',
+    sons: '197c8ccbebf6c557',
+    nomes: 'e978e64aab09049c',
+    textos: '74ce53ea4cbc1be2',
     resto: 'e38910e236134e60',
   },
   'cidade-grande': {
@@ -90,7 +121,9 @@ const ESPERADO: Record<Id, Hashes> = {
     ceu: 'ff0df45d5a9e655b',
     quadrosCeu: 'c9d3e6697af71986',
     mundo: '85d86060163d8de9',
-    sons: 'bada02cff588e297',
+    sons: '2516821a20392a1e',
+    nomes: 'ff02674eb56dc547',
+    textos: 'df67db26786de5de',
     resto: '69d32e59ff4493a7',
   },
   'rancho-alegre': {
@@ -105,7 +138,9 @@ const ESPERADO: Record<Id, Hashes> = {
     ceu: '14b865e3e1750616',
     quadrosCeu: '71219b8460bacda5',
     mundo: '178a7ab93d8e7fd0',
-    sons: '25205ed023a860a2',
+    sons: '4f6db08825459c9f',
+    nomes: '9fd6bc7f6c6c006a',
+    textos: '8b8bd4caee52e65c',
     resto: '2cad26f68ce0b221',
   },
   'doce-reino': {
@@ -120,7 +155,9 @@ const ESPERADO: Record<Id, Hashes> = {
     ceu: 'e9f34610468fa1c6',
     quadrosCeu: '2c9bf41aa0e6c34a',
     mundo: 'f0383aeaf7a98325',
-    sons: '0a2f11ecb6fbe611',
+    sons: '9d9a70b5d144c046',
+    nomes: '5e5595e03f49538f',
+    textos: '56e4d1cac60b1f74',
     resto: 'b6ff84c0cd6494ba',
   },
   'exploracao-lunar': {
@@ -135,7 +172,9 @@ const ESPERADO: Record<Id, Hashes> = {
     ceu: 'b7d4093bd58b19e0',
     quadrosCeu: '45705c0572e213f4',
     mundo: '438bb0460c3e4000',
-    sons: '0604749106fcabd6',
+    sons: '14007d30fc1ff96c',
+    nomes: '35f93f1f05349085',
+    textos: 'f56358d5afe605cb',
     resto: 'b13b5fb3b924c0d9',
   },
 };
@@ -194,6 +233,9 @@ async function carregar(id: Id) {
   const { estiloSeguro } = await import('../../src/world/estiloSeguro');
   const { NIVEL_TRILHA } = await import('../../src/audio/trilha');
   const { NIVEL_VOZES } = await import('../../src/audio/vozesGravadas');
+  const nomes = await import('../../src/temas/nomes');
+  const { povoadoDoTema } = await import('../../src/temas/ativo');
+  const { textosOriginais } = await import('../../src/temas/originais');
   const t = obterTema(id);
   expect(t.id).toBe(id);
   ativarTemaPuro(t);
@@ -208,6 +250,9 @@ async function carregar(id: Id) {
     estiloSeguro,
     NIVEL_TRILHA,
     NIVEL_VOZES,
+    nomes,
+    povoadoDoTema,
+    textosOriginais,
   };
 }
 
@@ -223,6 +268,9 @@ async function hashSons(j: Jogo, id: Id): Promise<string> {
     jsonEstavel({
       tema: indice.temas[id] ?? null,
       comum: indice.comum ?? null,
+      // as regras do índice (taxa, laço, volume, formato), sem os créditos
+      indiceMusica: { ...indice.musica, creditos: undefined },
+      indiceVozes: indice.vozes ?? null,
       tamanhos: arquivos.map((a) => [a, indice.tamanhos?.[a] ?? null]),
       trilha: j.NIVEL_TRILHA[id] ?? null,
       vozes: j.NIVEL_VOZES[id] ?? null,
@@ -250,7 +298,10 @@ function emOrdem(chaves: Set<string>): [number, number][] {
     .sort((a, b) => a[0] - b[0] || a[1] - b[1]);
 }
 
-async function hashTerreno(j: Jogo, semente: number): Promise<string> {
+/** Os moradores dos planos achados: id do povoado (como o núcleo dá) -> [n, profissão]. */
+type Moradores = Map<string, [number, Profissao][]>;
+
+async function hashTerreno(j: Jogo, semente: number, moradores: Moradores): Promise<string> {
   const { chunk, povoado } = j;
   const partes: (Uint8Array | string)[] = [];
   const n = chunk.encontrarNascimento(semente);
@@ -265,6 +316,11 @@ async function hashTerreno(j: Jogo, semente: number): Promise<string> {
   if (urbano) {
     // o plano inteiro: moradores, pistas, metrô, vaga, cruzamentos, postes; zonas, pontos, peças
     partes.push(jsonEstavel(urbano));
+    // o núcleo chama os moradores da cidade de 'cidade' e os do bairro de 'vila'
+    const chave = 'moradores' in urbano ? 'cidade' : 'vila';
+    const lista = moradores.get(chave) ?? [];
+    if ('moradores' in urbano) for (const mo of urbano.moradores) lista.push([mo.n, mo.profissao]);
+    moradores.set(chave, lista);
     const { x0, z0, x1, z1 } = urbano.plana;
     chunksDaCaixa(x0, z0, x1, z1, chaves);
   }
@@ -280,6 +336,10 @@ async function hashTerreno(j: Jogo, semente: number): Promise<string> {
       const p = povoado.planoDaRegiao(i, k, semente, chunk.TERRENO_NATURAL);
       if (!p) continue;
       partes.push(jsonEstavel(p));
+      moradores.set(
+        p.id,
+        p.moradores.map((mo) => [mo.n, mo.profissao]),
+      );
       const d = Math.hypot(p.cx - n.x, p.cz - n.z);
       if (!perto || d < perto.d) perto = { p, d };
     }
@@ -295,6 +355,62 @@ async function hashTerreno(j: Jogo, semente: number): Promise<string> {
   return sha(partes);
 }
 
+/**
+ * Os nomes dos moradores: cada nome do povoado com o gênero, e o nome e o gênero de n = 0 a 8
+ * em cada profissão (e de cada morador dos planos) em cada povoado achado.
+ */
+async function hashNomes(j: Jogo, moradores: Moradores): Promise<string> {
+  const { nomeDoMorador, generoDoMorador, generoDoNome } = j.nomes;
+  const generos = j.povoadoDoTema().nomes.map((nome) => [nome, generoDoNome(nome)]);
+  expect(generos.length).toBeGreaterThan(0);
+  expect(moradores.size).toBeGreaterThan(0);
+  const porPovoado: [string, [number, Profissao, string, string][]][] = [];
+  for (const id of [...moradores.keys()].sort()) {
+    const casos = new Map<string, [number, Profissao]>();
+    for (let n = 0; n <= 8; n++)
+      for (const prof of j.povoado.PROFISSOES) casos.set(`${n}:${prof}`, [n, prof]);
+    for (const [n, prof] of moradores.get(id)!) casos.set(`${n}:${prof}`, [n, prof]);
+    const lista = [...casos.values()]
+      .sort((a, b) => a[0] - b[0] || a[1].localeCompare(b[1]))
+      .map(([n, prof]) => [n, prof, nomeDoMorador(id, n, prof), generoDoMorador(id, n, prof)]);
+    porPovoado.push([id, lista as [number, Profissao, string, string][]]);
+  }
+  return sha([jsonEstavel({ generos, porPovoado })]);
+}
+
+/** Os textos do tema por cima dos de base, como `aplicarTextos` aplica (e o jogo lê). */
+function textosAplicados(t: TextosTema, o: TextosTema): Record<string, string> {
+  const r: Record<string, string> = {};
+  for (const sec of [
+    'blocos',
+    'itens',
+    'criaturas',
+    'biomas',
+    'estacoes',
+    'climas',
+    'missoes',
+    'capitulos',
+    'legendas',
+  ] as const) {
+    const base = o[sec] as Record<string, unknown>;
+    const doTema = t[sec] as Record<string, unknown>;
+    for (const k of new Set([...Object.keys(base), ...Object.keys(doTema)]))
+      r[`${sec}.${k}`] = jsonEstavel(doTema[k] ?? base[k]);
+  }
+  for (const k of ['diario', 'boasVindas', 'morte'] as const) r[k] = t[k] ?? o[k];
+  return r;
+}
+
+async function hashTextos(j: Jogo): Promise<string> {
+  const aplicados = textosAplicados(j.t.textos, j.textosOriginais());
+  // a busca: fora de `TEXTOS_FORA`, nenhum texto aplicado com "bruma" ou os nomes dos quatro
+  const achados = Object.keys(aplicados).filter((k) => DOS_QUATRO.test(aplicados[k]));
+  expect(achados.filter((k) => !TEXTOS_FORA.includes(k))).toEqual([]);
+  const r: Record<string, string> = {};
+  for (const k of Object.keys(aplicados)) if (!TEXTOS_FORA.includes(k)) r[k] = aplicados[k];
+  return sha([jsonEstavel(r)]);
+}
+
 async function calcular(id: Id): Promise<Hashes> {
   const j = await carregar(id);
   const { t } = j;
@@ -307,7 +423,8 @@ async function calcular(id: Id): Promise<Hashes> {
     .join(',');
   const mapa = j.construirMapaEmissivo(atlas, [j.Bloco.CRISTAL_LUZ, j.Bloco.COGUMELO_BRILHANTE]);
   const terreno: string[] = [];
-  for (const s of SEMENTES) terreno.push(await hashTerreno(j, s));
+  const moradores: Moradores = new Map();
+  for (const s of SEMENTES) terreno.push(await hashTerreno(j, s, moradores));
   return {
     atlas: await sha([atlas.pixels]),
     emissivos: await sha([emissivos]),
@@ -321,7 +438,9 @@ async function calcular(id: Id): Promise<Hashes> {
     quadrosCeu: await sha([jsonEstavel(t.quadrosCeu)]),
     mundo: await sha([jsonEstavel(t.mundo)]),
     sons: await hashSons(j, id),
-    // os textos ficam de fora (a 034 troca os textos de base que aparecem nos cinco)
+    nomes: await hashNomes(j, moradores),
+    textos: await hashTextos(j),
+    // os textos ficam de fora (têm o hash próprio, sem as chaves que a 034 pode trocar)
     resto: await sha([jsonEstavel({ ...t, textos: undefined })]),
   };
 }
