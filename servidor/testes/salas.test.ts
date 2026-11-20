@@ -42,7 +42,7 @@ const ident = (id: string) => ({
 const criarMundo = {
   nome: 'Mundo da família',
   semente: 1337,
-  tema: 'bruma-e-luz',
+  tema: 'vila-neon',
   modo: 'criativo' as const,
   versaoMundo: 2,
   estilo: ESTILO_PADRAO,
@@ -224,7 +224,7 @@ describe('salas do servidor', () => {
     expect(p).toMatchObject({
       codigo,
       nome: 'Mundo da família',
-      tema: 'bruma-e-luz',
+      tema: 'vila-neon',
       dono: 'ana',
       fechado: false,
       cheio: false,

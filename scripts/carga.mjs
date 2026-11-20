@@ -42,7 +42,7 @@ function robo(nome, sala) {
                 criar: {
                   nome: `Carga ${nome}`,
                   semente: 1000 + sala.n,
-                  tema: 'bruma-e-luz',
+                  tema: 'vila-neon',
                   modo: 'criativo',
                   versaoMundo: 2,
                   estilo,
