@@ -41,6 +41,7 @@ import { Ref, type Desenho } from '../render/vila/ref';
 import { aplicarCeuETexturas } from './fantasiasCeu';
 import { montarMoradores, type CtxPalco, type Moradores } from './fantasiasGente';
 import { montarBichos, type Bichos } from './fantasiasBichos';
+import { distanciaAoTrilho, montarPasseios, TRILHO, type Passeios } from './fantasiasPasseios';
 import {
   CORES,
   balcaoDoce,
@@ -123,6 +124,15 @@ export interface EsbocoFantasias {
   moradores(modo: 'lugares' | 'fila'): void;
   /** Parte 2: liga ou para a animação dos bichos (parada: o instante das fotos). */
   animar(sim: boolean): void;
+  /** Parte 3: a vassoura-patinete e o trem já estão no palco? */
+  passeiosProntos(): boolean;
+  /**
+   * Parte 3: o roteiro dos passeios no instante `t` (s), rodando ou parado, com a câmera que
+   * acompanha (`qual`: vassoura, trem, bordo, bosque...; null deixa a câmera como está).
+   */
+  passeio(qual: string | null, t: number, rodando: boolean, tipo?: 'deitado' | 'empe'): void;
+  /** Parte 3: o instante de agora do roteiro (s). */
+  passeioAgora(): number;
 }
 
 declare global {
@@ -750,6 +760,16 @@ function ligar(scene: Scene): void {
     pontos.bancada = [bx, Y + 1, bz];
   }
 
+  // ---------------------------------------------------------------- parte 3: o leito do trem
+  /** O leito de cascalho do trilho (os dormentes, os trilhos e o túnel são peças: `fantasiasPasseios`). */
+  function trilhoDoTrem() {
+    const { ox, oz } = O;
+    const { cx, cz, Lh, R } = TRILHO;
+    for (let x = Math.floor(cx - Lh - R - 2); x <= cx + Lh + R + 2; x++)
+      for (let z = Math.floor(cz - R - 2); z <= cz + R + 2; z++)
+        if (distanciaAoTrilho(x + 0.5, z + 0.5) < 0.95) por(ox + x, O.y, oz + z, Bloco.CASCALHO);
+  }
+
   // ---------------------------------------------------------------- montar
   function montar() {
     const eb = e.bloco!;
@@ -809,6 +829,7 @@ function ligar(scene: Scene): void {
     rua();
     bosque();
     horta();
+    trilhoDoTrem();
     // árvores do gerador atrás das casas e soltas no palco
     for (let x = 2; x < 80; x += 6) {
       const jz = 3 + Math.floor(hash2(x, 1, 81) * 5);
@@ -826,8 +847,11 @@ function ligar(scene: Scene): void {
       [64, 68],
       [74, 80],
       [34, 82],
-    ])
+    ]) {
+      // (parte 3: nenhuma copa em cima do trilho do trem nem do lugar da câmera dele)
+      if (distanciaAoTrilho(x, z) < 4.5) continue;
       arvoreDaBeira(ox + x, oz + z);
+    }
     // o fundo: voltas de árvores do gerador em volta do palco, no chão de cada lugar
     // (cobrem o terreno de outro bioma e os platôs cortados que apareciam ao longe)
     for (const [afasta, passo] of [
@@ -1001,6 +1025,7 @@ function ligar(scene: Scene): void {
   // ---------------------------------------------------------------- parte 2: gente e bichos
   let gente: Moradores | null = null;
   let bichos: Bichos | null = null;
+  let passeios: Passeios | null = null;
   function montarGente() {
     const ctx: CtxPalco = {
       scene,
@@ -1013,6 +1038,7 @@ function ligar(scene: Scene): void {
     };
     gente = montarMoradores(ctx);
     bichos = montarBichos(ctx);
+    passeios = montarPasseios({ ...ctx, pl });
     // as tomadas das fotos da parte 2 (morador-*, bicho-*)
     for (const [k, v] of Object.entries(gente.tomadas)) tomadas[`morador-${k}`] = v;
     for (const [k, v] of Object.entries(bichos.tomadas)) tomadas[`bicho-${k}`] = v;
@@ -1331,6 +1357,7 @@ function ligar(scene: Scene): void {
   function atualizarNoite() {
     gente?.hora(ehNoite);
     bichos?.hora(ehNoite);
+    passeios?.hora(ehNoite);
     vagalumesMalha?.setEnabled(ehNoite);
     rostos.dia?.setEnabled(!ehNoite);
     rostos.noite?.setEnabled(ehNoite);
@@ -1349,7 +1376,16 @@ function ligar(scene: Scene): void {
    */
   let fovFixo = false;
   let fovFoto = 0;
+  /** Parte 3: a câmera que acompanha o roteiro dos passeios (a cada quadro). */
+  let rig: { qual: string; tipo: 'deitado' | 'empe' } | null = null;
   scene.onBeforeCameraRenderObservable.add((cam) => {
+    if (rig && passeios) {
+      const c = passeios.camera(rig.qual, rig.tipo);
+      if (c) {
+        fixa = { p: new Vector3(...c.pos), a: new Vector3(...c.alvo) };
+        fovFoto = (c.fov * Math.PI) / 180;
+      }
+    }
     if (fixa && fovFixo && fovFoto) cam.fov = fovFoto;
   });
   scene.onBeforeCameraRenderObservable.add((cam) => {
@@ -1376,6 +1412,7 @@ function ligar(scene: Scene): void {
     pontos,
     tomadas,
     camera(pos, alvo, fov) {
+      rig = null;
       fixa = pos && alvo ? { p: new Vector3(...pos), a: new Vector3(...alvo) } : null;
       fovFoto = fov ? (fov * Math.PI) / 180 : 0;
       if (fov && scene.activeCamera) scene.activeCamera.fov = (fov * Math.PI) / 180;
@@ -1407,6 +1444,15 @@ function ligar(scene: Scene): void {
     animar(sim) {
       bichos?.animar(sim);
     },
+    passeiosProntos: () => !!passeios,
+    passeio(qual, t, rodando, tipo = 'deitado') {
+      if (!passeios) return;
+      passeios.mostrar(true);
+      passeios.relogio(t, rodando);
+      rig = qual ? { qual, tipo } : null;
+      fovFixo = true;
+    },
+    passeioAgora: () => passeios?.agora() ?? 0,
     esconder(sim) {
       escondido = sim;
       if (!sim) {

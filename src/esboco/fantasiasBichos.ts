@@ -194,7 +194,7 @@ interface Parte {
   no: TransformNode;
   papel: PecaCriatura['papel'];
 }
-interface Bicho {
+export interface Bicho {
   raiz: TransformNode;
   partes: Parte[];
   materiais: StandardMaterial[];
@@ -203,7 +203,7 @@ interface Bicho {
 }
 
 /** Monta o bicho como `criaturas.ts`: uma malha por junta e por material, cor nos vértices. */
-function montarBicho(ctx: CtxPalco, nome: string, desenho: PecaCriatura[]): Bicho {
+export function montarBicho(ctx: CtxPalco, nome: string, desenho: PecaCriatura[]): Bicho {
   const { scene } = ctx;
   const pecas = bichoDeBrinquedo(desenho);
   const raiz = new TransformNode(`esboco-bicho-${nome}`, scene);

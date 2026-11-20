@@ -77,7 +77,7 @@ const clarear = (c: string, t: number) => misturar(c, '#ffffff', t);
 // ------------------------------------------------------------------ medidas do boneco
 
 /** As medidas do plano que as peças usam (as mesmas que `planoBoneco` dá às fantasias). */
-interface Medidas {
+export interface Medidas {
   larg: number;
   troncoH: number;
   prof: number;
@@ -91,7 +91,7 @@ interface Medidas {
   zRosto: number;
 }
 
-function medir(p: PlanoBoneco): Medidas {
+export function medir(p: PlanoBoneco): Medidas {
   const peito = p.pecas.find((q) => q.nome === 'peito')!;
   const cabeca = p.pecas.find((q) => q.nome === 'cabeca' && q.junta === 'cabeca')!;
   const cabelo = p.pecas.find((q) => q.nome === 'cabelo' && q.junta === 'cabeca');
@@ -114,7 +114,7 @@ function medir(p: PlanoBoneco): Medidas {
 }
 
 /** As peças de uma fantasia nova, presas às juntas (como em `bonecoFantasia.ts`). */
-function alfaiate(pecas: Peca[]) {
+export function alfaiate(pecas: Peca[]) {
   const por = (p: Peca) => pecas.push(p);
   return {
     caixa(
@@ -191,7 +191,7 @@ function alfaiate(pecas: Peca[]) {
 }
 
 /** Tira do plano os enfeites da roupa de sempre (cinto, bolso, listras...). */
-function roupaLisa(p: PlanoBoneco): void {
+export function roupaLisa(p: PlanoBoneco): void {
   const fora = /^(tunica-barra|cinto|fivela|bolso|listra|colete|camiseta|gola|bandoleira|avental)/;
   for (let i = p.pecas.length - 1; i >= 0; i--) if (fora.test(p.pecas[i].nome)) p.pecas.splice(i, 1);
 }
@@ -206,7 +206,7 @@ interface Roupa {
 }
 
 /** Pinta a roupa de baixo (camisa, mangas, calça, sapato) e o cabelo. */
-function pintarRoupa(p: PlanoBoneco, r: Roupa): void {
+export function pintarRoupa(p: PlanoBoneco, r: Roupa): void {
   const cabeloAntes = p.cores.cabelo;
   const manga = r.manga ?? r.camisa;
   for (const q of p.pecas) {
@@ -773,7 +773,7 @@ function lencolDaLulu(ctx: CtxPalco, b: Personagem, prefixo: string, m: Medidas)
 }
 
 /** Bento: o monstrinho peludo grandão (macacão de tufos, chifrinhos e pezões) com o bumbo. */
-function vestirBento(p: PlanoBoneco): void {
+export function vestirBento(p: PlanoBoneco): void {
   roupaLisa(p);
   const pelo = COR.musgo;
   // (tons bem próximos: o pelo é um só, os tufos só dão a textura)
@@ -997,7 +997,7 @@ const MORADORES: DefMorador[] = [
 ];
 
 /** A pose parada de ficar em pé (um instante sem piscar). */
-const emPe = (): Pose =>
+export const emPe = (): Pose =>
   calcularPose({ andando: false, correndo: false, noAr: false, minerando: false, colocando: false, tempo: 1 });
 
 /** A sombrinha de contato no chão (um disco escuro e macio), de todos os moradores e bichos. */
@@ -1048,7 +1048,7 @@ export interface Moradores {
   tomadas: Record<string, Record<'deitado' | 'empe', { pos: V3; alvo: V3; fov: number }>>;
 }
 
-function noDaJunta(b: Personagem, prefixo: string, junta: Junta): TransformNode | undefined {
+export function noDaJunta(b: Personagem, prefixo: string, junta: Junta): TransformNode | undefined {
   return b.raiz.getChildTransformNodes(false).find((n) => n.name === `${prefixo}-junta-${junta}`);
 }
 

@@ -1,5 +1,7 @@
 import { test, type Page } from '@playwright/test';
-import { abrirPalco, camera, foto, hora, passo, type V3 } from './esboco-fantasias-palco';
+import { mkdirSync } from 'node:fs';
+import { abrirPalco, camera, foto, hora, PASTA, passo, type V3 } from './esboco-fantasias-palco';
+import { comecarGravacao, pararGravacao } from './gravarCena';
 import type { Tamanho } from './guia-palco';
 
 /**
@@ -101,6 +103,110 @@ async function fotografarGente(page: Page, t: Tamanho) {
   }
   await page.evaluate(() => window.__fantasias!.moradores('lugares'));
 }
+
+/**
+ * Parte 3: a vassoura-patinete e o Trem das Risadas, num roteiro (fotos paradas num instante
+ * do roteiro, com a câmera que acompanha) e os vídeos (só no computador, FANTASIAS_VIDEO=1):
+ * a vassoura na rua, o trem no túnel (de fora e a bordo) e o passeio noturno pelo bosque.
+ * O webm sai em capturas-027/esboco/videos/ (o mp4 do celular é feito à parte, com o ffmpeg).
+ */
+const FOTOS_PASSEIO: Array<[string, string, number]> = [
+  // nome, câmera do roteiro e o instante (s)
+  ['20-vassoura', 'vassoura', 3.6],
+  ['20-vassoura-perto', 'vassouraPerto', 2.4],
+  ['21-trem', 'trem', 7.4],
+  ['21-trem-perto', 'tremPerto', 5.7],
+  ['21-trem-bordo', 'bordo', 4.1],
+];
+
+async function fotografarPasseios(page: Page, t: Tamanho) {
+  await page.waitForFunction(() => window.__fantasias!.passeiosProntos(), undefined, { timeout: 60_000 });
+  const tipo = t === 'empe' ? 'empe' : 'deitado';
+  const so = process.env.FANTASIAS_SO?.split(',');
+  for (const [qual, h] of [
+    ['entardecer', ENTARDECER],
+    ['noite', NOITE],
+  ] as const) {
+    if (process.env.FANTASIAS_HORA && process.env.FANTASIAS_HORA !== qual) continue;
+    await hora(page, h);
+    await page.waitForTimeout(2000);
+    for (const [nome, rig, inst] of FOTOS_PASSEIO) {
+      if (so && !so.some((s) => nome.includes(s))) continue;
+      await page.evaluate(([r, i, tp]) => window.__fantasias!.passeio(r, i, false, tp), [rig, inst, tipo] as const);
+      await page.waitForTimeout(1500);
+      await foto(page, `${nome}-${qual}-${t}`);
+    }
+  }
+}
+
+async function gravarPasseios(page: Page) {
+  const pasta = `${PASTA}/videos`;
+  mkdirSync(pasta, { recursive: true });
+  const so = process.env.FANTASIAS_VIDEO!.split(',');
+  const quer = (n: string) => so.includes('1') || so.includes(n);
+  await page.waitForFunction(() => window.__fantasias!.passeiosProntos(), undefined, { timeout: 60_000 });
+  await page.evaluate(() => window.__fantasias!.animar(true));
+  if (quer('vassoura')) {
+    await hora(page, ENTARDECER);
+    await page.evaluate(() => window.__fantasias!.passeio('vassoura', 0, false, 'deitado'));
+    await page.waitForTimeout(2500);
+    await comecarGravacao(page);
+    await page.evaluate(() => window.__fantasias!.passeio('vassoura', 0, true, 'deitado'));
+    await page.waitForTimeout(6300);
+    await pararGravacao(page, `${pasta}/20-vassoura.webm`);
+    passo('vídeo da vassoura');
+  }
+  if (quer('trem')) {
+    await hora(page, ENTARDECER);
+    await page.evaluate(() => window.__fantasias!.passeio('trem', 0, false, 'deitado'));
+    await page.waitForTimeout(2500);
+    await comecarGravacao(page);
+    await page.evaluate(() => window.__fantasias!.passeio('trem', 0, true, 'deitado'));
+    await page.waitForTimeout(7300);
+    // o corte para a bordo: o trem chegando no túnel, visto do último vagão
+    await page.evaluate(() => window.__fantasias!.passeio('bordo', 2.6, true, 'deitado'));
+    await page.waitForTimeout(3700);
+    await pararGravacao(page, `${pasta}/21-trem.webm`);
+    passo('vídeo do trem');
+  }
+  if (quer('bosque')) {
+    await hora(page, NOITE);
+    const n = await page.evaluate(() => window.__fantasias!.lanternas().length);
+    await page.evaluate((k) => {
+      for (let i = 0; i < k; i++) window.__fantasias!.lanterna(i, false);
+      window.__fantasias!.passeio('bosque', 0, false, 'deitado');
+    }, n);
+    await page.waitForTimeout(4000);
+    await comecarGravacao(page);
+    await page.evaluate(() => window.__fantasias!.passeio('bosque', 0, true, 'deitado'));
+    // as lanternas da trilha acendem uma a uma, na frente de quem passeia
+    const t0 = Date.now();
+    for (const [i, quando] of [
+      [4, 700],
+      [5, 2000],
+      [6, 3300],
+      [7, 4600],
+      [8, 5900],
+      [9, 7200],
+    ] as const) {
+      await page.waitForTimeout(Math.max(0, quando - (Date.now() - t0)));
+      await page.evaluate((k) => window.__fantasias!.lanterna(k, true), i);
+    }
+    await page.waitForTimeout(Math.max(0, 10200 - (Date.now() - t0)));
+    await pararGravacao(page, `${pasta}/22-bosque-noite.webm`);
+    passo('vídeo do bosque');
+  }
+}
+
+for (const t of ['empe', 'deitado', 'pc'] as const)
+  test(`passeios da Noite das Fantasias: ${t}`, async ({ browser }) => {
+    test.setTimeout(1_200_000);
+    const page = await abrirPalco(browser, t);
+    if (process.env.FANTASIAS_VIDEO && t === 'pc') await gravarPasseios(page);
+    if (!process.env.FANTASIAS_SEM_FOTOS) await fotografarPasseios(page, t);
+    passo(`passeios ${t}`);
+    await page.context().close();
+  });
 
 for (const t of ['empe', 'deitado', 'pc'] as const)
   test(`moradores e bichos da Noite das Fantasias: ${t}`, async ({ browser }) => {
