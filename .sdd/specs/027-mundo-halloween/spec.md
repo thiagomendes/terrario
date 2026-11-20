@@ -42,6 +42,7 @@ O dono, em 13 nov 2026: um "mundo de criaturas, estilo Dia das Bruxas... criatur
   - o lençol da Lulu é de capuz, com o rosto do boneco à mostra (fica a cara de boneco do jogo e o sorriso);
   - a vassoura-patinete tem o cabo em pé como guidão, a palha atrás e as rodinhas escondidas: a criança entende que é patinete e que não voa;
   - o Trem das Risadas é ao ar livre, em volta da praça, com um túnel curto e claro.
+- 20 nov 2026, à noite: **esboço aprovado** pelo dono ("Esboço da 27 aprovado"), depois de ver o Bento e os morcegos refeitos na rodada do revisor. Ele vira spec; o pelo do Bento fica como item a refinar na spec, com versões lado a lado para o dono escolher (recomendação do orquestrador).
   - Decisões pequenas do esboço: o Conde Dudu sem presas; o Tufinho cor de carvão, com focinho e patinhas claros e lacinho laranja (o preto puro some de noite); nenhum letreiro com palavra.
 
 ## A ideia aprovada (18 nov 2026, à noite)
