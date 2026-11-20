@@ -3,12 +3,10 @@
 Ideias e pedidos do dono que ainda não viraram spec, e a fila combinada. A ordem é combinada com o dono na hora; o número da spec não é a ordem. Atualizar ao fechar cada spec.
 
 ## Fila combinada (19 nov 2026)
-1. **034, Menos é mais** (`.sdd/specs/034-menos-e-mais/`), decidida em 18 e 19 nov 2026:
-   - saem Bruma e Luz, Planeta Vivo, Mata Encantada e Era dos Dinos, com tudo que é só deles, inclusive o que a criança ganhou neles e os mundos salvos no aparelho e na nuvem (só os desses quatro temas);
-   - ficam Vila Neon (o novo padrão), Cidade Grande, Rancho Alegre, Doce Reino e Exploração Lunar;
-   - junto: a miniatura escura na escolha de mundos, os ícones dos gestos para 3 anos e os testes que já falhavam na `main`.
-2. **035, Entrada na nuvem** (`.sdd/specs/035-entrada-na-nuvem/spec.md`): logo depois da 034 (dono, 20 nov). Quem cria o mundo e chama um amigo às vezes fica sem ver ninguém; a causa já foi achada e reproduzida.
-3. **027, Noite das Fantasias** (`.sdd/specs/027-mundo-halloween/spec.md`): esboço com fotos a partir da ideia aprovada em 18 nov, no nível da Vila Neon. Ela traz:
+1. **035, Entrada na nuvem** (`.sdd/specs/035-entrada-na-nuvem/spec.md`): logo depois da 034 (dono, 20 nov). Dois defeitos de quem joga com amigos, com a causa achada:
+   - quem cria o mundo e chama um amigo às vezes fica sem ver ninguém (reproduzido; o conserto mínimo já foi na 034, e falta o completo);
+   - quem entrou num mundo com amigos fica preso nele: ao criar ou abrir outro mundo, volta sempre para o da nuvem.
+2. **027, Noite das Fantasias** (`.sdd/specs/027-mundo-halloween/spec.md`): esboço com fotos a partir da ideia aprovada em 18 nov, no nível da Vila Neon. Ela traz:
    - sete lugares;
    - os moradores Vovó Zuleica, Conde Dudu, Lili, Bento e Seu Jerônimo;
    - umas 10 missões;
@@ -16,7 +14,7 @@ Ideias e pedidos do dono que ainda não viraram spec, e a fila combinada. A orde
    - comidas de festa brasileira.
 
    O gato preto não pode se chamar Pretinho (ex.: Tufinho).
-4. **Riqueza nos mundos antigos**: Lua, Doce Reino e Rancho Alegre, um por spec, depois da 027, na ordem que o dono escolher. Cada um ganha:
+3. **Riqueza nos mundos antigos**: Lua, Doce Reino e Rancho Alegre, um por spec, depois da 027, na ordem que o dono escolher. Cada um ganha:
    - lugares por dentro;
    - objetos, brinquedos e veículos de toque;
    - moradores com nome e missões com história;
@@ -32,6 +30,7 @@ Ideias e pedidos do dono que ainda não viraram spec, e a fila combinada. A orde
   - 026 (Vila Neon);
   - 032;
   - 033;
+  - 034 (os cinco mundos, a escolha de mundos, os ícones dos gestos, e quem cria o mundo vendo o amigo);
   - a 023 também pede: fps com 4 amigos de premium, o provador girando e se a criança de 3 a 4 anos entende a troca dragão e capa e o pote de moedas.
 - **Faixa azul embaixo no iPhone pelo ícone da tela de início** (12 nov 2026; captura do dono em 19 nov): vai com a casca nativa (020), decisão do dono em 19 nov. Correção genérica, para qualquer aparelho. O painel de medida da janela está pronto no commit 65c6e2d (desfeito na 034) para quando precisar.
 
@@ -39,6 +38,16 @@ Ideias e pedidos do dono que ainda não viraram spec, e a fila combinada. A orde
 - **029, WebGPU:** medida feita no iPhone em 13 nov; a página `?medir=webgpu` continua escondida para medir de novo.
 - **022, Câmera em lugar apertado:** "deixa isso aí parado" (13 nov). O recorte de adereços continua fora.
 - **033, terceiro nível da roleta:** depois (ex.: "Festa" dentro de Gestos).
+
+## Testes antigos instáveis (caem também na `main`; achados na 034)
+- **`guia-chegada:128`:** no c6 em pé, a mãozinha não aparece em 4 s.
+- **`plantio:210`:** o HUD do Rancho no celular.
+- **`tesouro-fantasia:61`.**
+- **Na beira do limite, nas duas versões:**
+  - `som-veiculos:61`: o sorvete passa de 5 dB por pouco;
+  - `lojinha:107`: a festa leva perto de 3400 ms;
+  - o pulo do `achar-amigo-nuvem`: perto de 2500 ms.
+- **Na nuvem, sem placa de vídeo:** os da roleta e os de tempo caem por lentidão; o e2e de verdade é no computador do dono.
 
 ## Ideias soltas
 - **Acabamento do Rancho** (entra na spec de riqueza do Rancho):
@@ -52,6 +61,9 @@ Ideias e pedidos do dono que ainda não viraram spec, e a fila combinada. A orde
 - **Voz do orelhão:** o dono achou rápida demais, mas fica como está por enquanto (18 nov).
 
 ## Feitas e publicadas (resumo)
-- **007 a 017, 019, 021, 023, 026, 030 a 033:** ver cada spec.
+- **007 a 017, 019, 021, 023, 026, 030 a 034:** ver cada spec.
+- **034 (20 nov 2026):**
+  - saíram Bruma e Luz, Planeta Vivo, Mata Encantada e Era dos Dinos;
+  - ficaram Vila Neon (o padrão), Cidade Grande, Rancho Alegre, Doce Reino e Exploração Lunar.
 - **018:** juntou-se à 023.
 - **A 031 perde a Era dos Dinos na 034;** as missões do Doce Reino ficam.

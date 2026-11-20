@@ -141,3 +141,19 @@ Saiu da spec (dono, 19 nov): vai com a casca nativa (020). A T12 não existe mai
     - na 034, parou sempre no mesmo ponto, quando o Léo mira a parede da Bia (4 de 4 no dia);
     - na `main`, cai em outro ponto e passa às vezes;
     - a causa está sendo investigada: o teste foi para o Doce Reino nesta spec.
+- **(20 nov 2026) O teste dos três amigos** (cea3f45, só no teste):
+  - a causa: no Doce Reino, semente 1337, a busca do campo livre parava na copa de uma árvore. A parede da Bia ficava no ar, 8 blocos acima do chão, fora do alcance da mira do Léo;
+  - o conserto: agora o campo exige chão de verdade e nada mais alto entre quem fica e os blocos, e o teleporte vai com a altura do campo.
+- **(20 nov 2026) Na placa de vídeo, a rodada final** (em cea3f45): 13 de 13.
+  - `construcoes-protegidas` 3 vezes: o arquivo inteiro passou;
+  - `multiplayer` (do link ao mundo pronto, 6,1 s);
+  - `achar-amigo-nuvem` no computador e no celular.
+- **(20 nov 2026) A revisão do conserto da entrada na nuvem** (e7027fb):
+  - aprovada;
+  - os ajustes entraram em 1fb86a4: a leitura do aparelho que falha não trava a entrada, o teste ficou menos literal, e a 035 registra o que já entrou;
+  - Vitest inteiro: 212 arquivos, 1991 de 1991. `npm run build` limpo.
+- **Fica para depois** (backlog, "testes antigos instáveis", que caem também na `main`):
+  - `guia-chegada:128` (c6 em pé, a mãozinha em 4 s);
+  - `plantio:210`, `tesouro-fantasia:61`;
+  - os de beira de limite: `som-veiculos:61`, `lojinha:107`, o pulo do `achar-amigo-nuvem`.
+- **Falta:** a rodada em família, que é o dono com as crianças no aparelho de verdade.

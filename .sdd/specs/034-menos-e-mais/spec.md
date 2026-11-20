@@ -1,7 +1,7 @@
 ---
 id: 034-menos-e-mais
 title: 'Menos é mais: saem quatro mundos; a Vila Neon vira o padrão; prévias, ícones dos gestos e os testes que já falhavam'
-status: APPROVED
+status: DONE
 base_branch: main
 created_at: 2026-11-19T20:00:00Z
 ---
