@@ -61,7 +61,6 @@ import {
   porta,
   portaVovo,
   posteFerro,
-  taloEFolha,
   teia,
   vapor,
   vassoura,
@@ -284,8 +283,6 @@ function ligar(scene: Scene): void {
   function aboboraGigante(cx: number, cz: number) {
     const Y0 = O.y + 1;
     gigante = { x: cx + 0.5, y: Y0, z: cz + 0.5, lado: 12 };
-    // o talo curvo e a folha larga, encaixados no alto (o alto da casca fica a 0,7 do lado)
-    peca(cx + 0.5, Y0 + 0.7 * 12 - 0.1, cz + 0.5, 0, taloEFolha, 1.6);
     pontos.abobora = [cx, Y0, cz];
   }
 
@@ -989,31 +986,108 @@ function ligar(scene: Scene): void {
   function montarGigante() {
     if (!gigante) return;
     const { x, y, z, lado: L } = gigante;
-    const ms = modeloDeBloco(scene, pl, Bloco.ABOBORA, 'esboco-gigante', L);
-    if (!ms) return;
+    // o corpo no jeito do modelo de brinquedo da abóbora (`blocosBrinquedo.ts`): a bola
+    // achatada e os gomos em volta, mas com 10 gomos mais estreitos e sulcos rasos, e um gomo
+    // inteiro no meio da cara (o 0 aponta para +z)
     const raiz = new TransformNode('esboco-gigante', scene);
     // (a base dos gomos encosta no chão: nem flutua, nem afunda)
     raiz.position.set(x, y + 0.41 * L, z);
-    // (meio gomo de giro: um sulco no meio da frente e cada olho no meio de um gomo)
-    raiz.rotation.y = Math.PI / 8;
     raiz.computeWorldMatrix(true);
-    for (const m of ms) {
+    const tons = ['#e4801f', '#f28c26'];
+    const ms: Mesh[] = [];
+    const bola = (cor: string, r: number, esc: V3, px: number, py: number, pz: number, giro = 0) => {
+      const m = MeshBuilder.CreateSphere(`esboco-gigante-p${ms.length}`, { diameter: r * 2 * L, segments: 24 }, scene);
+      m.scaling.set(...esc);
+      m.position.set(px * L, py * L, pz * L);
+      m.rotation.y = giro;
+      m.material = pl.cor(cor, 0.35);
       m.parent = raiz;
+      ms.push(m);
+    };
+    // (a bola de dentro maior que no modelo pequeno: enche os vãos e os sulcos ficam rasos)
+    bola('#e07c1e', 0.47, [1.12, 0.8, 1.12], 0, -0.06, 0);
+    const N = 10;
+    for (let i = 0; i < N; i++) {
+      const a = (i / N) * Math.PI * 2;
+      bola(tons[i % 2], 0.34, [0.62, 0.98, 1], Math.sin(a) * 0.2, -0.05, Math.cos(a) * 0.2, a);
+    }
+    for (const m of ms) {
       m.receiveShadows = true;
       semBrilho(m);
-      // o cabinho e a folhinha do modelo saem: no tamanho gigante vai o talo curvo com a folha
-      // larga (peças), que se vê de frente
-      const nome = m.material?.name ?? '';
-      if (nome.includes('6b7a2e') || nome.includes('5cbf63')) m.setEnabled(false);
       m.isPickable = true;
       m.computeWorldMatrix(true);
       m.refreshBoundingInfo();
     }
+    // o talo de brinquedo: liso e curvo (um tubo que afina), saindo do alto e caindo de lado,
+    // com a pontinha redonda; e a folha arredondada deitada na casca (como no modelo pequeno)
+    const talo: Vector3[] = [];
+    for (let i = 0; i <= 12; i++) {
+      const t = i / 12;
+      talo.push(new Vector3(0.16 * t * t * L, (0.22 + 0.26 * t - 0.06 * t * t) * L, 0.03 * t * L));
+    }
+    const verdeTalo = pl.cor('#6b7a2e', 0.3);
+    const tubo = MeshBuilder.CreateTube(
+      'esboco-gigante-talo',
+      { path: talo, radiusFunction: (i) => (0.07 - 0.024 * (i / 12)) * L, tessellation: 16, cap: Mesh.CAP_ALL },
+      scene,
+    );
+    tubo.material = verdeTalo;
+    tubo.parent = raiz;
+    const ponta = MeshBuilder.CreateSphere('esboco-gigante-talo-ponta', { diameter: 0.075 * L, segments: 12 }, scene);
+    ponta.position.copyFrom(talo[talo.length - 1]);
+    ponta.material = verdeTalo;
+    ponta.parent = raiz;
+    const folha = (px: number, pz: number, giro: number, incl: number, tam: number) => {
+      const f = MeshBuilder.CreateSphere('esboco-gigante-folha', { diameter: 0.22 * L * tam, segments: 16 }, scene);
+      f.scaling.set(1.7, 0.22, 1.0);
+      f.position.set(px * L, 0.29 * L, pz * L);
+      f.rotation.set(0, giro, incl);
+      f.material = pl.cor('#5cbf63', 0.35);
+      f.parent = raiz;
+      return f;
+    };
+    // (a folha grande levantada, de lado do talo: aparece de frente)
+    const folhas = [folha(-0.15, 0.0, 0.25, -0.55, 1.15), folha(0.06, -0.13, -1.2, 0.35, 0.8)];
+    for (const m of [tubo, ponta, ...folhas]) {
+      m.receiveShadows = true;
+      semBrilho(m);
+    }
+    // a sombrinha de contato no chão: um disco escuro e macio debaixo da abóbora
+    const texSombra = new DynamicTexture('esboco-gigante-sombra', { width: 128, height: 128 }, scene, false);
+    const gs = texSombra.getContext();
+    const grad = gs.createRadialGradient(64, 64, 0, 64, 64, 64);
+    grad.addColorStop(0, 'rgba(0,0,0,0.62)');
+    grad.addColorStop(0.55, 'rgba(0,0,0,0.42)');
+    grad.addColorStop(1, 'rgba(0,0,0,0)');
+    gs.fillStyle = grad;
+    gs.fillRect(0, 0, 128, 128);
+    texSombra.update();
+    texSombra.hasAlpha = true;
+    const matSombra = new StandardMaterial('esboco-gigante-sombra', scene);
+    matSombra.diffuseColor = new Color3(0.12, 0.08, 0.16);
+    matSombra.specularColor = Color3.Black();
+    matSombra.disableLighting = true;
+    matSombra.emissiveColor = new Color3(0.1, 0.06, 0.14);
+    matSombra.opacityTexture = texSombra;
+    const sombra = MeshBuilder.CreateGround('esboco-gigante-sombra', { width: 1.45 * L, height: 1.3 * L }, scene);
+    sombra.position.set(x, y + 0.03, z);
+    sombra.material = matSombra;
+    sombra.isPickable = false;
+    semBrilho(sombra);
     const alvo = new Set<unknown>(ms);
-    const zCasca = (wx: number, wy: number): number | null => {
+    const zRaio = (wx: number, wy: number): number | null => {
       const raio = new Ray(new Vector3(wx, wy, z + L), new Vector3(0, 0, -1), 2 * L);
       const p = scene.pickWithRay(raio, (m) => alvo.has(m));
       return p?.hit && p.pickedPoint ? p.pickedPoint.z : null;
+    };
+    // (o maior z por perto: a carinha passa por cima do sulco raso, sem dobrar nele)
+    const zCasca = (wx: number, wy: number): number | null => {
+      let melhor: number | null = null;
+      for (const dx of [-0.05, 0, 0.05]) {
+        const zz = zRaio(wx + dx * L, wy);
+        if (zz !== null && (melhor === null || zz > melhor)) melhor = zz;
+      }
+      return melhor;
     };
     // o desenho da carinha da bancada (em k), com o meio na altura do meio da abóbora
     const k = 0.6 * L;

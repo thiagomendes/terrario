@@ -234,7 +234,8 @@ const lanternaApagada: Pintor = (x, y, s) => {
   if (lx + y === 8 || lx + y === 9) return cor('#9a94b4')(x, y, s);
   if (y >= 9 && y <= 12 && (x === 4 || x === 11)) return cor('#efe4d0')(x, y, s);
   if (y === 8 && (x === 4 || x === 11)) return cor('#3a2a20')(x, y, s);
-  return rampa(['#5c5a70', '#646278', '#6c6a80'], hash2(x, y, s) * 0.5 + y / 30, x, y, s);
+  // (lilás-acinzentado: escuro, mas a lanterna ainda se lê; nunca preto)
+  return rampa(['#7a7894', '#82809c', '#8a88a4'], hash2(x, y, s) * 0.5 + y / 30, x, y, s);
 };
 
 /** A tábua pintada de verde-musgo (as casinhas de madeira), em fileiras deitadas. */
