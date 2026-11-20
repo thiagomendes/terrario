@@ -83,15 +83,24 @@ const esperarAssentar = (page: Page) =>
     { timeout: 90_000 },
   );
 const aberta = (page: Page) => page.evaluate(() => !!document.querySelector('[data-roleta].aberta'));
+/**
+ * Fecha a roleta. O pedido "brumaluz:gestos" só fecha quando ela está nos gestos; com o menu
+ * aberto, ele troca para os gestos, e o segundo pedido fecha.
+ */
 const fecharRoleta = async (page: Page) => {
-  if (await aberta(page)) await page.evaluate(() => window.dispatchEvent(new Event('brumaluz:gestos')));
-  await page.waitForFunction(() => !document.querySelector('[data-roleta].aberta'));
+  for (let i = 0; i < 3 && (await aberta(page)); i++) {
+    await page.evaluate(() => window.dispatchEvent(new Event('brumaluz:gestos')));
+    await page.waitForTimeout(800);
+  }
+  await page.waitForFunction(() => !document.querySelector('[data-roleta].aberta'), undefined, {
+    timeout: 90_000,
+  });
   await page.waitForTimeout(400);
 };
 /** Abre a roleta de Gestos (de novo, se fechou). */
 const abrirGestos = async (page: Page) => {
   if (!(await aberta(page))) await page.evaluate(() => window.dispatchEvent(new Event('brumaluz:gestos')));
-  await page.waitForSelector('[data-roleta].aberta');
+  await page.waitForSelector('[data-roleta].aberta', { timeout: 90_000 });
   await esperarAssentar(page);
 };
 /**
@@ -151,11 +160,15 @@ for (const t of TELAS)
     await page.waitForTimeout(2500);
     // o menu com a carinha de Gestos no meio
     await page.evaluate(() => window.dispatchEvent(new Event('brumaluz:gestos')));
-    await page.waitForSelector('[data-roleta].aberta');
+    await page.waitForSelector('[data-roleta].aberta', { timeout: 90_000 });
     await esperarAssentar(page);
-    await page.locator('[data-roleta].aberta .voltar').first().click({ force: true });
+    // a plaquinha "Voltar" entra deslizando: o clique logo ao assentar às vezes caía antes dela
+    await page.waitForTimeout(1000);
+    await page.locator('[data-roleta].aberta .voltar').first().click({ force: true, timeout: 90_000 });
     await page.waitForFunction(
       () => document.querySelector<HTMLElement>('[data-roleta].aberta')?.dataset.itens?.includes('mapa'),
+      undefined,
+      { timeout: 90_000 },
     );
     await esperarAssentar(page);
     await rolarDevagar(page, 'gestos');
