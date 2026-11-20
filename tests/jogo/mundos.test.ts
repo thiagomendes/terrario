@@ -86,6 +86,25 @@ describe('repositório de mundos', () => {
     expect((await r.listar()).map((x) => x.id).sort()).toEqual([primeiro.id, m.id].sort());
   });
 
+  it('excluir logo depois de um salvar lento não deixa dados sem mundo', async () => {
+    const base = armazemMemoria();
+    // os dados do mundo demoram mais para gravar que o índice
+    const lento = {
+      ...base,
+      gravar: async (k: string, v: unknown) => {
+        await new Promise((r) => setTimeout(r, k.startsWith('mundo:') ? 25 : 5));
+        await base.gravar(k, v);
+      },
+    };
+    const r = criarRepositorioMundos(lento);
+    const m = await r.criar('Some', 1, 'criativo');
+    const salvando = r.salvar(m.id, normalizarDados({}), 'foto');
+    const excluindo = r.excluir(m.id);
+    await Promise.all([salvando, excluindo]);
+    expect(await r.obter(m.id)).toBeNull();
+    expect(base.dados.has(`mundo:${m.id}`)).toBe(false);
+  });
+
   it('um erro no meio não trava a fila do índice', async () => {
     const base = armazemMemoria();
     let falhar = true;

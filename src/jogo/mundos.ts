@@ -186,7 +186,10 @@ export function criarRepositorioMundos(
    * salvar automático do mundo aberto (que lê o índice, espera e regrava) podia passar por
    * cima do mundo que a criança acabava de criar: o índice voltava sem ele, e a página nova,
    * sem achar o mundo pedido, abria o "Meu primeiro mundo" (era o que caía, às vezes, nos
-   * testes de criar mundo; num aparelho lento pode acontecer de verdade).
+   * testes de criar mundo; num aparelho lento pode acontecer de verdade). A fila vale dentro
+   * da mesma página (este repositório); duas abas do mesmo aparelho não se enxergam. Os dados
+   * de um mundo entram no mesmo passo do índice dele (salvar grava os dois; excluir tira os
+   * dois), para nenhum passo de outro deixar dados sem índice no meio.
    */
   let fila: Promise<unknown> = Promise.resolve();
   function emFila<T>(f: () => Promise<T>): Promise<T> {
@@ -194,14 +197,16 @@ export function criarRepositorioMundos(
     fila = p.catch(() => undefined);
     return p;
   }
+  /** Muda a entrada de um mundo no índice (só de dentro de um passo da fila). */
+  async function mudarNoIndice(id: string, f: (m: MetaMundo) => void): Promise<void> {
+    const lista = await indice();
+    const m = lista.find((x) => x.id === id);
+    if (!m) return;
+    f(m);
+    await gravarIndice(lista);
+  }
   function atualizar(id: string, f: (m: MetaMundo) => void): Promise<void> {
-    return emFila(async () => {
-      const lista = await indice();
-      const m = lista.find((x) => x.id === id);
-      if (!m) return;
-      f(m);
-      await gravarIndice(lista);
-    });
+    return emFila(() => mudarNoIndice(id, f));
   }
   let contador = 0;
   const repo: RepositorioMundos = {
@@ -238,22 +243,24 @@ export function criarRepositorioMundos(
     async carregar(id) {
       return normalizarDados(await armazem.obter(chaveDados(id)));
     },
-    async salvar(id, dados, miniatura) {
-      await armazem.gravar(chaveDados(id), dados);
-      await atualizar(id, (m) => {
-        m.jogadoEm = agora();
-        if (miniatura) m.miniatura = miniatura;
-      });
-    },
+    salvar: (id, dados, miniatura) =>
+      emFila(async () => {
+        await armazem.gravar(chaveDados(id), dados);
+        await mudarNoIndice(id, (m) => {
+          m.jogadoEm = agora();
+          if (miniatura) m.miniatura = miniatura;
+        });
+      }),
     async renomear(id, nome) {
       await atualizar(id, (m) => {
         m.nome = limparNomeMundo(nome, m.nome);
       });
     },
-    async excluir(id) {
-      await emFila(async () => gravarIndice((await indice()).filter((m) => m.id !== id)));
-      await armazem.remover(chaveDados(id));
-    },
+    excluir: (id) =>
+      emFila(async () => {
+        await gravarIndice((await indice()).filter((m) => m.id !== id));
+        await armazem.remover(chaveDados(id));
+      }),
     async ultimo() {
       return (await repo.listar())[0] ?? null;
     },
