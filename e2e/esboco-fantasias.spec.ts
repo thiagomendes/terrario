@@ -56,6 +56,61 @@ async function fotografar(page: Page, t: Tamanho) {
   await foto(page, `05-bosque-noite-todas-acesas-${t}`);
 }
 
+/**
+ * Parte 2: os moradores fantasiados (os cinco lado a lado na praça e cada um no seu lugar) e
+ * os bichos, de tarde e de noite, com a animação parada num instante bonito.
+ */
+const FOTOS_GENTE: Array<[string, string]> = [
+  ['10-moradores-fila', 'morador-fila'],
+  ['11-vovo-tufinho', 'morador-vovo'],
+  ['12-dudu-bosque', 'morador-dudu'],
+  ['13-lulu-espiando', 'morador-lulu'],
+  ['14-bento-palco', 'morador-bento'],
+  ['15-jeronimo-horta', 'morador-jeronimo'],
+  ['16-bichos-morcegos', 'bicho-morcegos'],
+  ['16-bichos-fantasminhas', 'bicho-fantasminhas'],
+  ['16-bichos-abobrinhas', 'bicho-abobrinhas'],
+  ['16-bichos-tufinho', 'bicho-tufinho'],
+  // (só para conferir a gola da capa por trás: não vai para o dono)
+  ...(process.env.FANTASIAS_DEBUG ? [['99-debug-dudu-costas', 'morador-duduCostas'] as [string, string]] : []),
+];
+
+async function fotografarGente(page: Page, t: Tamanho) {
+  await page.waitForFunction(() => window.__fantasias!.gentePronta(), undefined, { timeout: 60_000 });
+  await page.evaluate(() => {
+    window.__fantasias!.animar(false);
+    window.__fantasias!.fovFixo(true);
+  });
+  const tomadas = await page.evaluate(() => window.__fantasias!.tomadas);
+  const tipo = t === 'empe' ? 'empe' : 'deitado';
+  const so = process.env.FANTASIAS_SO?.split(',');
+  for (const [qual, h] of [
+    ['entardecer', ENTARDECER],
+    ['noite', NOITE],
+  ] as const) {
+    await hora(page, h);
+    await page.waitForTimeout(2000);
+    for (const [nome, tomada] of FOTOS_GENTE) {
+      if (so && !so.some((s) => nome.includes(s))) continue;
+      const fila = tomada === 'morador-fila';
+      await page.evaluate((f) => window.__fantasias!.moradores(f ? 'fila' : 'lugares'), fila);
+      const tm = tomadas[tomada][tipo];
+      await camera(page, tm.pos, tm.alvo, tm.fov);
+      await foto(page, `${nome}-${qual}-${t}`);
+    }
+  }
+  await page.evaluate(() => window.__fantasias!.moradores('lugares'));
+}
+
+for (const t of ['empe', 'deitado', 'pc'] as const)
+  test(`moradores e bichos da Noite das Fantasias: ${t}`, async ({ browser }) => {
+    test.setTimeout(900_000);
+    const page = await abrirPalco(browser, t);
+    await fotografarGente(page, t);
+    passo(`fotos da gente ${t}`);
+    await page.context().close();
+  });
+
 for (const t of ['empe', 'deitado', 'pc'] as const)
   test(`esboço da Noite das Fantasias: ${t}`, async ({ browser }) => {
     test.setTimeout(900_000);

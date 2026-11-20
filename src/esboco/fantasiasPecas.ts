@@ -192,6 +192,25 @@ export function banco(r: Ref): void {
   for (const y of [0.7, 0.9]) r.caixa(1.9, 0.14, 0.07, 0, y, -0.24, CORES.madeira, 0.03);
 }
 
+/** Banquinho de madeira da varanda da Vovó (o assento a 0,45 do chão): o lugar do Tufinho. */
+export function banquinho(r: Ref): void {
+  for (const x of [-0.27, 0.27])
+    for (const z of [-0.15, 0.15]) r.caixa(0.08, 0.38, 0.08, x, 0, z, CORES.madeiraEscura, 0.025);
+  r.caixa(0.72, 0.07, 0.44, 0, 0.38, 0, CORES.madeira, 0.03);
+  r.caixa(0.6, 0.05, 0.05, 0, 0.14, 0.15, CORES.madeiraEscura, 0.015);
+  r.caixa(0.6, 0.05, 0.05, 0, 0.14, -0.15, CORES.madeiraEscura, 0.015);
+  // a almofadinha roxa
+  r.caixa(0.5, 0.05, 0.34, 0, 0.45, 0, CORES.roxo, 0.025);
+}
+
+/** O poleiro da coruja no bosque: um mourão de madeira com a travessa no alto (2,5 do chão). */
+export function poleiro(r: Ref): void {
+  r.caixa(0.36, 0.14, 0.36, 0, 0, 0, CORES.madeiraEscura, 0.04);
+  r.caixa(0.18, 2.4, 0.18, 0, 0, 0, CORES.madeira, 0.04);
+  r.caixa(0.8, 0.1, 0.16, 0, 2.4, 0, CORES.madeira, 0.04);
+  for (const s of [-1, 1]) r.barra([s * 0.08, 2.0, 0], [s * 0.3, 2.4, 0], 0.06, CORES.madeiraEscura);
+}
+
 /** Mesinha de praça com guarda-sol em gomos laranja e roxo e dois banquinhos. */
 export function mesinha(r: Ref): void {
   r.caixa(0.44, 0.06, 0.44, 0, 0, 0, CORES.ferro, 0.02);

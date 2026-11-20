@@ -39,9 +39,12 @@ import { modeloDeBloco } from '../render/blocosBrinquedo';
 import { Pecas, type V3 } from '../render/solidos';
 import { Ref, type Desenho } from '../render/vila/ref';
 import { aplicarCeuETexturas } from './fantasiasCeu';
+import { montarMoradores, type CtxPalco, type Moradores } from './fantasiasGente';
+import { montarBichos, type Bichos } from './fantasiasBichos';
 import {
   CORES,
   balcaoDoce,
+  banquinho,
   barracaDeFesta,
   balcaoMaca,
   bandeirolas,
@@ -58,6 +61,7 @@ import {
   mesinha,
   placaDoce,
   placaMaca,
+  poleiro,
   porta,
   portaVovo,
   posteFerro,
@@ -111,6 +115,14 @@ export interface EsbocoFantasias {
   esconder(sim: boolean): void;
   /** Pontos de referência (mundo) de cada lugar. */
   pontos: Record<string, V3>;
+  /** Parte 2: a abertura dada em `camera` vale de verdade (as fotos da parte 2). */
+  fovFixo(sim: boolean): void;
+  /** Parte 2: os moradores e os bichos já estão no palco? */
+  gentePronta(): boolean;
+  /** Parte 2: os moradores cada um no seu lugar, ou os cinco lado a lado na praça. */
+  moradores(modo: 'lugares' | 'fila'): void;
+  /** Parte 2: liga ou para a animação dos bichos (parada: o instante das fotos). */
+  animar(sim: boolean): void;
 }
 
 declare global {
@@ -540,6 +552,9 @@ function ligar(scene: Scene): void {
     peca(x0 + 0.62, Y + 3.98, zf + 2.5, 0, (r) => teia(r, 0.9, 1));
     peca(tx1 + 0.96, topo + 0.96, zf + 1.04, 0, (r) => teia(r, 0.8, -1));
     peca(x0 + 5.2, Y + 5.75, zf + 1, 0, luaEstrelas);
+    // parte 2: o banquinho do Tufinho, na beira da varanda
+    peca(x0 + 5.0, Y + 1, zf + 2.35, 0, banquinho);
+    pontos.banquinho = [x0 + 5.0, Y + 1, zf + 2.35];
     pontos.vovo = [meio + 0.5, Y + 1, zf + 1];
   }
 
@@ -647,6 +662,10 @@ function ligar(scene: Scene): void {
     arvore(ox + gx, oz + gz, 'carvalho', Bloco.MADEIRA_RETORCIDA, Bloco.FOLHAS_OUTONO);
     for (let k = 1; k <= 3; k++) por(ox + gx - k, Y + 4, oz + gz, Bloco.MADEIRA_RETORCIDA);
     pontos.galho = [ox + gx - 2, Y + 4, oz + gz + 0.5];
+    // parte 2: o poleiro da coruja, ao lado da árvore dos morceguinhos
+    const [px, pz] = [ox + gx - 3.9, oz + gz + 1.9];
+    peca(px, Y + 1, pz, 0, poleiro);
+    pontos.poleiro = [px, Y + 1 + 2.5, pz];
     for (let k = 0; k < 70; k++) {
       const z = 4 + hash2(k, 1, 51) * (D - 8);
       const x = trilha(z) + (hash2(k, 2, 51) - 0.5) * 12;
@@ -973,7 +992,28 @@ function ligar(scene: Scene): void {
     montarAbobrinhas();
     montarGigante();
     montarHalos();
+    montarGente();
     atualizarNoite();
+  }
+
+  // ---------------------------------------------------------------- parte 2: gente e bichos
+  let gente: Moradores | null = null;
+  let bichos: Bichos | null = null;
+  function montarGente() {
+    const ctx: CtxPalco = {
+      scene,
+      O,
+      pontos,
+      semBrilho,
+      foraDoBrilho,
+      acesa,
+      trilha,
+    };
+    gente = montarMoradores(ctx);
+    bichos = montarBichos(ctx);
+    // as tomadas das fotos da parte 2 (morador-*, bicho-*)
+    for (const [k, v] of Object.entries(gente.tomadas)) tomadas[`morador-${k}`] = v;
+    for (const [k, v] of Object.entries(bichos.tomadas)) tomadas[`bicho-${k}`] = v;
   }
 
   /**
@@ -1287,6 +1327,8 @@ function ligar(scene: Scene): void {
 
   let ehNoite = false;
   function atualizarNoite() {
+    gente?.hora(ehNoite);
+    bichos?.hora(ehNoite);
     vagalumesMalha?.setEnabled(ehNoite);
     rostos.dia?.setEnabled(!ehNoite);
     rostos.noite?.setEnabled(ehNoite);
@@ -1298,6 +1340,16 @@ function ligar(scene: Scene): void {
 
   // ---------------------------------------------------------------- câmera, hora, lanternas
   let fixa: { p: Vector3; a: Vector3 } | null = null;
+  /**
+   * Parte 2: a abertura das fotos de verdade (a câmera do jogo copia a dela a cada quadro, então
+   * a abertura dada em `camera` não valia). Só quando ligada (`fovFixo`): as fotos da parte 1
+   * foram compostas com a abertura de sempre.
+   */
+  let fovFixo = false;
+  let fovFoto = 0;
+  scene.onBeforeCameraRenderObservable.add((cam) => {
+    if (fixa && fovFixo && fovFoto) cam.fov = fovFoto;
+  });
   scene.onBeforeCameraRenderObservable.add((cam) => {
     if (!fixa) return;
     const c = cam as TargetCamera;
@@ -1323,6 +1375,7 @@ function ligar(scene: Scene): void {
     tomadas,
     camera(pos, alvo, fov) {
       fixa = pos && alvo ? { p: new Vector3(...pos), a: new Vector3(...alvo) } : null;
+      fovFoto = fov ? (fov * Math.PI) / 180 : 0;
       if (fov && scene.activeCamera) scene.activeCamera.fov = (fov * Math.PI) / 180;
     },
     hora(h) {
@@ -1342,6 +1395,16 @@ function ligar(scene: Scene): void {
       atualizarNoite();
     },
     lanternas: () => lanternas.map((l) => l.acesa),
+    gentePronta: () => !!gente && !!bichos,
+    fovFixo(sim) {
+      fovFixo = sim;
+    },
+    moradores(modo) {
+      gente?.modo(modo);
+    },
+    animar(sim) {
+      bichos?.animar(sim);
+    },
     esconder(sim) {
       escondido = sim;
       if (!sim) {
