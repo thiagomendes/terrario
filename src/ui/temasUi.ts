@@ -50,7 +50,7 @@ export const CSS_TEMAS_UI = `
 }
 .cartao-tema .previa { aspect-ratio: 16 / 9; width: 100%; overflow: hidden; border-radius: 13px; }
 .cartao-tema .previa img, .vitrine-temas .previa img { display: block; width: 100%; height: 100%; object-fit: cover; }
-.cartao-tema .texto { display: grid; gap: 2px; padding: 7px 6px 4px; }
+.cartao-tema .texto { display: grid; align-content: start; gap: 2px; padding: 7px 6px 4px; }
 .cartao-tema .nome {
   font: 700 0.98rem/1.15 var(--display); color: color-mix(in srgb, var(--acento, #ffb35c), #3a1a00 68%);
 }

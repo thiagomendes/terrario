@@ -107,5 +107,14 @@ Saiu da spec (dono, 19 nov): vai com a casca nativa (020). A T12 não existe mai
     - na Cidade a 390×844, a ferramenta da barra no desenho de pixel (antes, no desenho 3D): os ícones 3D dos brinquedos chegam num lote assíncrono, e a foto pegou cada um num momento (a 1280×720, os dois no de pixel);
     - no Doce, o vidro de baixo da janela um pouco mais escuro (o que aparece atrás do vidro);
     - nenhuma vem dos quatro temas que saíram.
+  - **Portão visual, ajustes do revisor das fotos** (os 4 ícones de gesto esperam o dono):
+    - prévia do Rancho mais perto e mais baixa, com a distância de visão maior: sem a faixa de neve à esquerda e sem a borda do mundo (o sítio com o moinho, a casa, o celeiro e a lavoura no centro);
+    - prévia da Lua refeita: a floresta de cristais roxos no chão cinza, a ~90 blocos do nascer, olhando para a Terra (o chão quase branco da base parecia neve no cartão);
+    - cartões de criar mundo: a descrição começa colada no título em todos (o texto do cartão não estica mais as linhas na altura que sobra);
+    - no cartão do mundo salvo (1280×720), o "·" solto e a data quebrada em coluna: a lista de mundos (`src/ui/mundos.ts`) não mudou na 034, já era assim na `main` (a coluna do meio fica estreita com os quatro botões ao lado). Anotado, não mexido;
+    - `public/compartilhar.jpg`: a tela em 1400×735 fotografada em 1200×630, com margem embaixo do cartão "Criar mundo novo", e a câmera um passo à frente do boneco (nada dele atrás dos botões). A descrição da Vila Neon na vitrine continua o `lema` do tema ("O bairro anos 80 com o show do Festival Trovão"): o cartão de mundos mostra o `convite`, e o lema está no hash da T00; igualar pede mudar a vitrine para o convite em todos os temas (no celular o da Lua passa de 3 linhas) — para decidir;
+    - a roleta de Gestos no computador: o 11º gesto (o roqueiro da Vila) ganhava o selinho "1" repetido; agora só 1 a 9 e 0 têm selinho (57e52c3; já era assim na `main`);
+    - o contador de FPS aparece por padrão no jogo publicado (`mostrarFps: true` em `src/jogo/config.ts`, desligável em Configurações; já era assim antes da 034): decisão do dono, só relatado;
+    - o ícone da ferramenta na barra da Cidade a 390×844: confirmado no código, os ícones 3D dos brinquedos são feitos depois de o mundo ficar pronto, poucos por quadro (`gerarIconesBrinquedo`), e até lá vale o desenho de pixel.
   - **Paridade 36 de 36** (`PARIDADE=conferir`, um trabalhador, 55 min), contra a gravação da T00, no código depois dos ajustes da revisão.
 - **(20 nov 2026) O apelido** (decisão do dono, 972c346): o apelido guardado que termina em " da Bruma", " dos Dinos", " da Mata" ou " Estelar" troca só o final por " da Vila", na limpeza do aparelho; idempotente, com teste.

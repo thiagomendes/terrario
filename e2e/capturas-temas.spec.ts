@@ -22,15 +22,18 @@ const TOCHA = 37;
 test.skip(!pedido, 'capturas de tema só com CAPTURAS_TEMAS');
 
 async function abrir(page: Page, id: string) {
-  // a cidade vista do alto: o outro lado do parque precisa estar carregado no cartão
-  if (id === 'cidade-grande')
-    await page.addInitScript(() => {
+  // a cidade vista do alto: o outro lado do parque precisa estar carregado no cartão; no
+  // Rancho, o fundo inteiro (sem a borda do mundo aparecendo)
+  const distancia =
+    id === 'cidade-grande' ? 5 : id === 'rancho-alegre' || id === 'exploracao-lunar' ? 6 : 0;
+  if (distancia)
+    await page.addInitScript((distancia) => {
       try {
-        localStorage.setItem('terrario:config', JSON.stringify({ distancia: 5 }));
+        localStorage.setItem('terrario:config', JSON.stringify({ distancia }));
       } catch {
         // sem armazenamento
       }
-    });
+    }, distancia);
   // a resolução fixa (sem o ajuste automático pelos quadros por segundo, que aqui borra)
   await page.goto(`/?tema=${id}&escala=1`);
   await page.waitForFunction(() => window.__brumaluz?.ready === true, undefined, {
@@ -205,6 +208,8 @@ const ENQUADRAMENTOS: Record<IdTemaE2e, Enquadramento> = {
     hora: 0.4,
     como: 'cidade',
   },
+  // portão visual da 034: mais perto e mais baixo, sem a faixa de neve com os pinheiros à
+  // esquerda e sem a borda do mundo (com a distância de visão maior, como a da Cidade)
   'rancho-alegre': {
     oQueMostra:
       'o sítio mais perto do nascer visto do sul, um pouco do alto: a casa da fazenda, o ' +
@@ -212,13 +217,13 @@ const ENQUADRAMENTOS: Record<IdTemaE2e, Enquadramento> = {
       'criança com o cachorro, a galinha e a vaca',
     hora: 0.38,
     como: {
-      cam: [-206, 77, -93],
-      alvo: [-205, 69, -68],
-      crianca: [-205.5, -84.5],
+      cam: [-204, 74, -86],
+      alvo: [-204, 69, -66],
+      crianca: [-204.5, -78.5],
       bichos: [
-        { tipo: 'raposa', p: [-203.5, -83.5] },
-        { tipo: 'coelho', p: [-208.5, -85.5] },
-        { tipo: 'cervo', p: [-201.5, -81.5] },
+        { tipo: 'raposa', p: [-202.5, -77.5] },
+        { tipo: 'coelho', p: [-207.5, -79.5] },
+        { tipo: 'cervo', p: [-199.5, -75.5] },
       ],
     },
   },
@@ -229,21 +234,22 @@ const ENQUADRAMENTOS: Record<IdTemaE2e, Enquadramento> = {
     hora: 0.36,
     como: 'nascer',
   },
-  // a base fica a ~330 blocos do nascer nesta semente: a foto vai até ela
+  // portão visual da 034: a base (a ~330 blocos do nascer) ficava num chão quase branco, que
+  // no cartão pequeno parecia neve. Agora a floresta de cristais a ~90 blocos do nascer, de
+  // chão cinza, olhando para onde a Terra fica (-0,35; 0,2; -1)
   'exploracao-lunar': {
     oQueMostra:
-      'a base lunar vista do norte: os módulos com as antenas, os cristais em volta e a Terra ' +
-      'no céu negro; a criança de astronauta com o rover, o coelho-lunar e o robô-companheiro',
+      'a floresta de cristais roxos no chão cinza da Lua, com a Terra no meio do céu negro; a ' +
+      'criança com o rover, o coelho-lunar e o robô-companheiro',
     hora: 0.42,
     como: {
-      cam: [-171, 83, 345],
-      alvo: [-179, 79, 318],
-      // a criança ao lado do primeiro módulo (na frente dele ela sai da foto)
-      crianca: [-178.3, 334.6],
+      cam: [112.5, 79, 169.8],
+      alvo: [100.3, 76, 134.9],
+      crianca: [107.2, 154.7],
       bichos: [
-        { tipo: 'cervo', p: [-180.5, 337.5] },
-        { tipo: 'coelho', p: [-175.5, 336.5] },
-        { tipo: 'raposa', p: [-182.5, 335.5] },
+        { tipo: 'cervo', p: [109.1, 154] },
+        { tipo: 'coelho', p: [105.8, 155.2] },
+        { tipo: 'raposa', p: [106.2, 153.5] },
       ],
     },
   },
@@ -360,9 +366,15 @@ for (const id of TEMAS) {
  * criança vê ao abrir, com o "Meu primeiro mundo" da Vila Neon atrás e a vitrine parada no
  * cartão da Vila Neon (nada dos temas que saíram).
  */
-test('a imagem de compartilhar', async ({ page }) => {
+// Portão visual da 034: a tela em 1400 × 735 (CSS), fotografada em 1200 × 630 (escala 6/7),
+// para sobrar margem embaixo do cartão "Criar mundo novo"; e a câmera parada um passo à frente
+// do boneco, olhando para onde ele olha, para nenhum pedaço dele aparecer atrás dos botões.
+test.describe('compartilhar', () => {
+  test.use({ viewport: { width: 1400, height: 735 }, deviceScaleFactor: 6 / 7 });
+  test('a imagem de compartilhar', compartilhar);
+});
+async function compartilhar({ page }: { page: Page }) {
   test.setTimeout(400_000);
-  await page.setViewportSize({ width: 1200, height: 630 });
   await page.goto('/');
   await page.waitForFunction(() => window.__brumaluz?.ready === true, undefined, {
     timeout: 180_000,
@@ -384,9 +396,36 @@ test('a imagem de compartilhar', async ({ page }) => {
   );
   // o rodapé (créditos e teclas) não cabe na imagem pequena do link
   await page.addStyleTag({ content: '.rodape-titulo { display: none !important; }' });
+  // a câmera um passo à frente do boneco, olhando para onde ele olha (ele fica atrás dela)
+  await page.evaluate(() => {
+    const e = window.__brumaluz!;
+    const c = e.camera!.posicao();
+    const p = e.camera!.pivo();
+    const dx = p[0] - c[0];
+    const dz = p[2] - c[2];
+    const n = Math.hypot(dx, dz) || 1;
+    const cam = [p[0] + (dx / n) * 1.5, p[1] + 0.6, p[2] + (dz / n) * 1.5];
+    const alvo = [p[0] + (dx / n) * 30, p[1] + 1.5, p[2] + (dz / n) * 30];
+    e.cenaBabylon!().onBeforeCameraRenderObservable.add((cc) => {
+      const camera = cc as unknown as {
+        position: { set(...a: number[]): void; clone(): { set(...a: number[]): unknown } };
+        setTarget(v: unknown): void;
+      };
+      camera.position.set(...cam);
+      const a = camera.position.clone();
+      a.set(...alvo);
+      camera.setTarget(a);
+      (
+        cc.getScene() as unknown as { setTransformMatrix(a: unknown, b: unknown): void }
+      ).setTransformMatrix(
+        (cc as unknown as { getViewMatrix(f: boolean): unknown }).getViewMatrix(true),
+        (cc as unknown as { getProjectionMatrix(f: boolean): unknown }).getProjectionMatrix(true),
+      );
+    });
+  });
   await page.waitForTimeout(4000);
   await page.screenshot({ path: 'public/compartilhar.jpg', type: 'jpeg', quality: 86 });
-});
+}
 
 /** Spec 034: o cartão de criação de mundo com as cinco prévias, nos três tamanhos. */
 for (const [nome, viewport] of [
