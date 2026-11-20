@@ -6,9 +6,9 @@ Ideias e pedidos do dono que ainda não viraram spec, e a fila combinada. A orde
 1. **035, Entrada na nuvem** (`.sdd/specs/035-entrada-na-nuvem/spec.md`): logo depois da 034 (dono, 20 nov). Dois defeitos de quem joga com amigos, com a causa achada:
    - quem cria o mundo e chama um amigo às vezes fica sem ver ninguém (reproduzido; o conserto mínimo já foi na 034, e falta o completo);
    - quem entrou num mundo com amigos fica preso nele: ao criar ou abrir outro mundo, volta sempre para o da nuvem.
-2. **027, Noite das Fantasias** (`.sdd/specs/027-mundo-halloween/spec.md`): esboço com fotos a partir da ideia aprovada em 18 nov, no nível da Vila Neon. Ela traz:
+2. **027, Noite das Fantasias** (`.sdd/specs/027-mundo-halloween/spec.md`): **esboço aprovado pelo dono em 20 nov** (branch `esboco/027-noite-das-fantasias`); a spec sai do esboço, no nível da Vila Neon. Ela traz:
    - sete lugares;
-   - os moradores Vovó Zuleica, Conde Dudu, Lili, Bento e Seu Jerônimo;
+   - os moradores Vovó Zuleica, Conde Dudu, Lulu, Bento e Seu Jerônimo;
    - umas 10 missões;
    - a vassoura-patinete;
    - comidas de festa brasileira.
@@ -58,12 +58,6 @@ Ideias e pedidos do dono que ainda não viraram spec, e a fila combinada. A orde
 - **Contador de FPS ligado para todos** (decisão do dono, 20 nov): fica ligado durante o desenvolvimento, para acompanhar o desempenho; desligar de fábrica antes de ir para as lojas (020).
 - **Balão do gesto com a cara de quem gesticula** (achado no portão visual da 034): hoje o balão e a carinha do amigo mostram sempre o boneco padrão de azul; ficaria melhor com o boneco de quem faz o gesto (o pipoqueiro, o amigo de chapéu).
 - **Toque da roleta em aparelho travando:** usar o `e.timeStamp` do evento em vez de `performance.now()`, para um toque de criança contar mesmo num aparelho lento (achado na 034).
-- **As mãos dos ícones dos gestos** (dono, 20 nov, depois da 034; correção do orquestrador, entra logo):
-  - o "Acenar" mostra a mão com dedos abertos, mas as mãos dos bonecos do jogo não têm dedos;
-  - o aplauso (dedos juntos e polegar) e o apontar (o dedo) também desenham dedos;
-  - todas as mãos dos ícones passam a ser a mão do boneco;
-  - quem diz o gesto é o braço, a pose e os risquinhos de movimento;
-  - código em `src/ui/iconesGestos.ts`, com prova a 48 px e foto da roleta.
 - **Acabamento do cartão do mundo salvo** (visto no ar, depois da 034):
   - a miniatura do "Meu primeiro mundo" é um degradê genérico, e não a cara da Vila Neon;
   - no computador, o nome quebra em 3 linhas;
@@ -78,3 +72,4 @@ Ideias e pedidos do dono que ainda não viraram spec, e a fila combinada. A orde
   - ficaram Vila Neon (o padrão), Cidade Grande, Rancho Alegre, Doce Reino e Exploração Lunar.
 - **018:** juntou-se à 023.
 - **A 031 perde a Era dos Dinos na 034;** as missões do Doce Reino ficam.
+- **As mãos dos ícones dos gestos sem dedos (20 nov 2026, 19c8808):** a mão de bolinha do boneco em todos os ícones; o aplauso com as mãos lado a lado e o "plac" entre elas, o tchau com o braço dobrado. Conferido no ar. Fotos em `capturas-034/maos/`.
