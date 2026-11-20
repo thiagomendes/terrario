@@ -23,23 +23,26 @@ import type { CeuTema, Pintor, QuadroCeu, Tema } from '../temas/tipos';
 const NOITE: Omit<QuadroCeu, 'h'> = {
   zen: [0.13, 0.06, 0.28],
   meio: [0.27, 0.13, 0.46],
-  // o horizonte: um lilás aceso, com um fio de laranja das lanternas da vila
-  hor: [0.52, 0.3, 0.6],
-  luz: [0.72, 0.66, 1],
-  il: 0.36,
-  // a luz do céu da noite é lilás: o gramado fica musgo-arroxeado, não preto
-  ceu: [0.42, 0.34, 0.72],
-  chao: [0.12, 0.09, 0.16],
-  ic: 0.4,
-  amb: [0.13, 0.1, 0.2],
-  dens: 0.0036,
+  // o horizonte: um lilás claro (a névoa da noite fica leve, sem magenta forte)
+  hor: [0.44, 0.34, 0.6],
+  luz: [0.76, 0.72, 1],
+  il: 0.46,
+  // a luz do céu da noite é lilás: o gramado fica musgo médio, nunca preto
+  ceu: [0.5, 0.44, 0.76],
+  chao: [0.16, 0.13, 0.2],
+  ic: 0.5,
+  amb: [0.17, 0.14, 0.24],
+  dens: 0.0026,
 };
 
-/** A tarde dourada que dura o "dia" inteiro (o mundo mora no fim de tarde). */
+/**
+ * A tarde dourada que dura o "dia" inteiro (o mundo mora no fim de tarde): laranja dourado
+ * embaixo, pêssego no meio e lilás só no alto.
+ */
 const TARDE: Omit<QuadroCeu, 'h'> = {
-  zen: [0.44, 0.42, 0.72],
-  meio: [0.98, 0.72, 0.5],
-  hor: [1, 0.8, 0.48],
+  zen: [0.58, 0.48, 0.78],
+  meio: [1, 0.78, 0.58],
+  hor: [1, 0.66, 0.3],
   luz: [1, 0.82, 0.56],
   il: 1.45,
   ceu: [0.84, 0.72, 0.72],
@@ -98,16 +101,16 @@ export const QUADROS_FANTASIAS: QuadroCeu[] = [
   {
     // o roxo chegando, com o resto do laranja no horizonte
     h: 0.8,
-    zen: [0.15, 0.08, 0.32],
-    meio: [0.32, 0.16, 0.48],
-    hor: [0.68, 0.36, 0.48],
-    luz: [0.8, 0.7, 1],
-    il: 0.6,
-    ceu: [0.56, 0.44, 0.76],
-    chao: [0.2, 0.15, 0.22],
-    ic: 0.58,
-    amb: [0.23, 0.18, 0.3],
-    dens: 0.0065,
+    zen: [0.16, 0.09, 0.32],
+    meio: [0.3, 0.18, 0.48],
+    hor: [0.56, 0.38, 0.56],
+    luz: [0.78, 0.72, 1],
+    il: 0.5,
+    ceu: [0.5, 0.42, 0.74],
+    chao: [0.17, 0.13, 0.2],
+    ic: 0.52,
+    amb: [0.18, 0.14, 0.25],
+    dens: 0.003,
   },
   { h: 1, ...NOITE },
 ];
@@ -123,14 +126,14 @@ export const CEU_FANTASIAS: CeuTema = {
   corLua: [1, 0.95, 0.8],
   tamanhoLua: 2.6,
   corNuvens: [1, 0.9, 0.9],
-  // poucas nuvens (de noite elas viram manchas escuras no roxo)
-  fatorNuvens: 0.14,
+  // quase sem nuvem (de noite elas viravam manchas escuras, como fumaça; de dia, rastros)
+  fatorNuvens: 0,
   faixaCrepusculo: 1.6,
   corCrepusculo: [1, 0.56, 0.3],
   // a noite baixa a luz do chão (a Vila Neon desce a 0,09; aqui, nunca escuro de verdade)
-  pisoNoite: 0.22,
-  // o verde do gramado puxa para o lilás de noite, sem apagar
-  verdeNoite: 0.45,
+  pisoNoite: 0.34,
+  // o verde do gramado puxa um pouco para o lilás de noite, sem virar cinza-chumbo
+  verdeNoite: 0.18,
 };
 
 // ------------------------------------------------------------------ texturas provisórias
@@ -138,7 +141,7 @@ export const CEU_FANTASIAS: CeuTema = {
 const cor = (c: string): Pintor => (x, y, s) => rampa([c], 0, x, y, s);
 
 /** Gramado verde-musgo, com folhinhas laranja caídas aqui e ali. */
-const MUSGO = ['#3c5424', '#445e28', '#4c682c', '#557230'];
+const MUSGO = ['#4c5428', '#545c2c', '#5c6430', '#646c34'];
 const gramaMusgo: Pintor = (x, y, s) => {
   const r = hash2(x, y, s + 5);
   if (r > 0.988) return rampa(['#e8892c', '#f0a040'], hash2(x, y, s + 1), x, y, s);
@@ -195,7 +198,7 @@ const aboboraGigante: Pintor = (x, y, s) => {
 };
 /** O gomo mais escuro da abóbora gigante. */
 const gomoAbobora: Pintor = (x, y, s) =>
-  rampa(['#d86e1c', '#e07822', '#e68228'], hash2(x, y, s) * 0.6 + fbmT(x, y, 2, s) * 0.4, x, y, s);
+  rampa(['#b8520e', '#c25a12', '#ca6216'], hash2(x, y, s) * 0.6 + fbmT(x, y, 2, s) * 0.4, x, y, s);
 /** O cabinho e a folha: verde-musgo com as fibras. */
 const cabinho: Pintor = (x, y, s) =>
   rampa(
@@ -225,9 +228,53 @@ const lanternaAcesa: Pintor = (x, y, s) => {
 const lanternaApagada: Pintor = (x, y, s) => {
   if (armacao(x, y)) return rampa(['#3a2a4c', '#46345a'], hash2(x, y, s), x, y, s);
   // o vidro de dia (apagado): âmbar acinzentado, com o reflexo no canto
-  if (x + y === 6 && x >= 2 && x <= 4) return cor('#d8d0c0')(x, y, s);
-  return rampa(['#8c7c66', '#968670', '#a0907a'], hash2(x, y, s) * 0.6 + y / 40, x, y, s);
+  // (apagada de verdade: o vidro escuro, só o reflexo no canto)
+  if (x + y === 6 && x >= 2 && x <= 4) return cor('#7a7088')(x, y, s);
+  return rampa(['#2e2838', '#342e40', '#3a3446'], hash2(x, y, s) * 0.6 + y / 40, x, y, s);
 };
+
+/** A tábua pintada de verde-musgo (as casinhas de madeira), em fileiras deitadas. */
+const tabuaPintada: Pintor = (x, y, s) => {
+  const fila = y >> 2;
+  if ((y & 3) === 3) return cor('#4a5a2e')(x, y, s);
+  if ((y & 3) === 0) return rampa(['#8a9c5c'], 0, x, y, s);
+  const junta = (fila * 7 + 5) % T;
+  if (x === junta) return cor('#56683a')(x, y, s);
+  return rampa(['#71844a', '#788b4f', '#7f9254'], hash2(x >> 2, fila, s) * 0.5 + hash2(x, y, s) * 0.4, x, y, s);
+};
+
+/**
+ * Pedras irregulares (as juntas não seguem a beira do bloco): cada pixel pega a pedra mais
+ * perto entre pontos sorteados numa grade de `cel` pixels (repete a cada tile, sem costura).
+ */
+const pedrasIrregulares =
+  (cel: number, cores: string[], junta: string): Pintor =>
+  (x, y, s) => {
+    const n = T / cel;
+    const gx = Math.floor(x / cel);
+    const gy = Math.floor(y / cel);
+    let d1 = 1e9;
+    let d2 = 1e9;
+    let id = 0;
+    for (let oy = -1; oy <= 1; oy++)
+      for (let ox = -1; ox <= 1; ox++) {
+        const cx = gx + ox;
+        const cy = gy + oy;
+        const wx = ((cx % n) + n) % n;
+        const wy = ((cy % n) + n) % n;
+        const px = cx * cel + 0.5 + hash2(wx, wy, 301) * (cel - 1);
+        const py = cy * cel + 0.5 + hash2(wx, wy, 302) * (cel - 1);
+        const d = Math.hypot(x + 0.5 - px, y + 0.5 - py);
+        if (d < d1) {
+          d2 = d1;
+          d1 = d;
+          id = wx * 31 + wy;
+        } else if (d < d2) d2 = d;
+      }
+    if (d2 - d1 < 0.9) return cor(junta)(x, y, s);
+    const t = hash2(id, 7, 303) * 0.85 + (d1 < cel * 0.3 ? 0.12 : 0);
+    return rampa(cores, t, x, y, s);
+  };
 
 /** Toldo de duas cores, listras largas de 4 (nunca mais de duas cores). */
 const toldo =
@@ -239,21 +286,6 @@ const toldo =
 const cortina: Pintor = (x, y, s) => {
   const dobra = Math.cos(((x % 5) / 5) * Math.PI * 2) * 0.5 + 0.5;
   return rampa(['#3e2262', '#4a2a74', '#563486', '#643e96'], dobra * 0.8 + hash2(x, y, s) * 0.2, x, y, s);
-};
-
-/** O caminho de pedrinha lilás-acinzentada da vila (paralelepípedo desencontrado). */
-const pedrinha: Pintor = (x, y, s) => {
-  const fila = y >> 2;
-  const dx = (x + (fila & 1) * 2) & 3;
-  if ((y & 3) === 3 || dx === 3) return cor('#5a5068')(x, y, s);
-  const pedra = Math.floor((x + (fila & 1) * 2) / 4) + fila * 5;
-  return rampa(
-    ['#7c7290', '#887e9c', '#948aa8', '#a096b2'],
-    hash2(pedra, fila, s + 11) * 0.6 + hash2(x, y, s) * 0.4,
-    x,
-    y,
-    s,
-  );
 };
 
 /** A janela acesa: moldura roxa-escura, a luz morna de dentro e a cortininha laranja. */
@@ -300,7 +332,7 @@ export const PINTORES_FANTASIAS: Record<string, Pintor> = {
   folhas_betula: folhasDe(['#b8782a', '#c48632', '#d0943a', '#daa244'], 0.15),
   telha_colonial: telhaRoxa,
   reboco_amarelo: tijoloTorto(['#b8743c', '#c27e44', '#cc8a4e', '#d69658'], '#8a5a36'),
-  reboco_menta: tijoloTorto(['#6a7a4a', '#748452', '#7e8e5a', '#889862'], '#4e5a36'),
+  reboco_menta: tabuaPintada,
   reboco_rosa: cortina,
   la_laranja: aboboraGigante,
   la_vermelha: gomoAbobora,
@@ -312,7 +344,10 @@ export const PINTORES_FANTASIAS: Record<string, Pintor> = {
   la_branca: lanternaApagada,
   toldo_vermelho: toldo('#f0862a', '#f8ecd6'),
   toldo_verde: toldo('#6a3e9c', '#f8ecd6'),
-  pedregulho: pedrinha,
+  // a praça: pedrinhas de tamanhos e tons variados (nada de lajota de banheiro)
+  pedregulho: pedrasIrregulares(4, ['#8a7e94', '#968a9e', '#a296a8', '#b0a2a8', '#9c8f86'], '#665a70'),
+  // o caminho da rua: pedras maiores e irregulares
+  la_amarela: pedrasIrregulares(8, ['#8e8278', '#9a8e84', '#a69a8e', '#94889c'], '#5e5466'),
   janela_acesa: janelaAcesa,
   abobora_rosto: aboboraRosto,
 };
