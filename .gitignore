@@ -8,7 +8,8 @@ capturas-cidade/
 capturas-021/
 capturas-023c/
 capturas-023d/
-.claude/
+.claude/*
+!.claude/settings.json
 servidor/dist/
 node_modules
 capturas-014c/
