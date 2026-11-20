@@ -307,7 +307,7 @@ export function montarBichos(ctx: CtxPalco): Bichos {
   });
   const voando = [
     { b: novo('morcego-voa0', morcego(false)), c: [gx + 1.6, gy - 0.5, gz + 2.0] as V3, r: 0.3, f: 0 },
-    { b: novo('morcego-voa1', morcego(false)), c: [gx + 0.5, gy - 1.25, gz + 1.0] as V3, r: 0.3, f: 2.2 },
+    { b: novo('morcego-voa1', morcego(false)), c: [gx - 0.3, gy - 1.35, gz + 0.6] as V3, r: 0.3, f: 2.2 },
   ];
   // a coruja no alto do poleiro, ao lado da árvore dos morceguinhos
   const cor = novo('coruja', coruja());
@@ -316,9 +316,9 @@ export function montarBichos(ctx: CtxPalco): Bichos {
 
   // as fantasminhas flutuando na rua, juntinhas (na frente das casinhas)
   const fantas = [
-    { b: novo('fantasminha0', fantasminha()), x: ox + 22.6, z: oz + 23.0, h: 0.35, f: 0, g: 0.35 },
-    { b: novo('fantasminha1', fantasminha()), x: ox + 24.6, z: oz + 24.0, h: 0.7, f: 1.7, g: 0 },
-    { b: novo('fantasminha2', fantasminha()), x: ox + 26.6, z: oz + 22.7, h: 0.45, f: 3.1, g: -0.35 },
+    { b: novo('fantasminha0', fantasminha()), x: ox + 22.1, z: oz + 23.0, h: 0.35, f: 0, g: 0.35 },
+    { b: novo('fantasminha1', fantasminha()), x: ox + 23.8, z: oz + 24.0, h: 0.7, f: 1.7, g: 0 },
+    { b: novo('fantasminha2', fantasminha()), x: ox + 25.5, z: oz + 22.7, h: 0.45, f: 3.1, g: -0.35 },
   ];
   for (const q of fantas) {
     q.b.raiz.scaling.setAll(q.f === 0 ? 0.85 : 1);
@@ -434,12 +434,12 @@ export function montarBichos(ctx: CtxPalco): Bichos {
     empe: tm([gx - 1.3, gy - 1.7, gz + 6.2], [gx - 0.9, gy - 0.1, gz], 74),
   };
   api.tomadas.fantasminhas = {
-    deitado: tm([ox + 24.6, Y + 1.4, oz + 28.6], [ox + 24.6, Y + 1.0, oz + 23.3], 56),
-    empe: tm([ox + 24.6, Y + 1.5, oz + 29.6], [ox + 24.6, Y + 1.1, oz + 23.3], 70),
+    deitado: tm([ox + 23.8, Y + 1.4, oz + 28.6], [ox + 23.8, Y + 1.0, oz + 23.3], 56),
+    empe: tm([ox + 23.8, Y + 1.5, oz + 31.4], [ox + 23.8, Y + 1.3, oz + 23.3], 74),
   };
   api.tomadas.abobrinhas = {
     deitado: tm([bx - 1.6, Y + 0.95, bz + 4.0], [bx - 1.6, Y + 0.35, bz + 1.4], 50),
-    empe: tm([bx - 1.6, Y + 1.0, bz + 4.6], [bx - 1.6, Y + 0.45, bz + 1.4], 62),
+    empe: tm([bx - 1.65, Y + 1.1, bz + 6.0], [bx - 1.65, Y + 0.55, bz + 1.4], 66),
   };
   // (de lado do banquinho que fica longe da Vovó: ela sai do quadro)
   api.tomadas.tufinho = {
