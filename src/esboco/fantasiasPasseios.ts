@@ -1176,7 +1176,8 @@ export function montarPasseios(ctx: CtxPasseios): Passeios {
         const za = z - 9;
         const pos: V3 = [ox + x, Y + 1.55, oz + z];
         const alvo: V3 = [ox + ctx.trilha(za) + 0.5 + desvia(za) * 0.4, Y + 1.6, oz + za];
-        return { pos, alvo, fov: em ? 70 : 56 };
+        // (mais fechada: o lampião que vem de lado não entra cortado na beira de cima)
+        return { pos, alvo, fov: em ? 66 : 50 };
       }
       return null;
     },
