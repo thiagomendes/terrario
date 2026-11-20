@@ -45,6 +45,7 @@ import { criarDiario, temObras } from './jogo/diario';
 import { ativarTema } from './temas/ativar';
 import { povoadoDoTema, tema } from './temas/ativo';
 import { TEMA_PADRAO, temaExiste } from './temas';
+import { limparRastrosDosTemas } from './personagem/rastros';
 import { CORES_MARCADOR, type Marcador } from './jogo/mapa';
 import type { DadosMundo } from './jogo/mundos';
 import { normalizarCodigo } from './jogo/codigos';
@@ -84,6 +85,12 @@ async function iniciar(app: HTMLElement): Promise<void> {
   // vez só (o personagem e as preferências ficam). Falhando, o jogo segue com o que tiver.
   const apagados = await repo.prepararFormato().catch(() => 0);
   if (apagados > 0) avisoMundosNovos = 'Os mundos começaram de novo! Bora construir?';
+  // spec 034: sem rastro do que saiu com os quatro temas (fantasias e lembranças do aparelho)
+  try {
+    limparRastrosDosTemas(window.localStorage, window.sessionStorage);
+  } catch {
+    // sem armazenamento: nada guardado para limpar
+  }
   const params = new URLSearchParams(location.search);
   // mundo com amigos: ?sala=CÓDIGO (link, QR Code ou "Entrar com código")
   const sala = params.get('sala');

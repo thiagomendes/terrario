@@ -41,7 +41,8 @@ export function textosOriginais(): TextosTema {
     diario: 'Diário',
     missoes,
     capitulos,
-    boasVindas: 'Bem-vindo ao mundo de bruma e luz',
+    // spec 034: a base tem texto neutro (todo tema que se escolhe tem as boas-vindas dele)
+    boasVindas: 'Bem-vindo ao seu mundo',
     morte: 'Você desmaiou',
     legendas: { trovao: 'Trovão', criaturaNoturna: 'Gemido de espectro' },
   };

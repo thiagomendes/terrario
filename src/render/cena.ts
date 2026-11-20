@@ -222,6 +222,7 @@ import { criarRenderCriaturas } from './criaturas';
 import { criarCoracoes } from './coracoes';
 import { criarRefeicoes, NA_BOCA, NA_MAO_COMENDO, type Refeicoes } from './refeicao';
 import { AJUSTE_COMER } from '../personagem/poses';
+import { CHAVE_TRILHA_SAIDA } from '../personagem/rastros';
 import { criarRenderCompras } from './vila/compras';
 import { balcoesDaVila } from '../jogo/compra';
 import { DURACAO_REFEICAO } from '../jogo/refeicao';
@@ -1076,7 +1077,7 @@ export function criarCena(
       try {
         const depois = trilha.info().medidas;
         sessionStorage.setItem(
-          'terrario:trilha-saida',
+          CHAVE_TRILHA_SAIDA,
           JSON.stringify({ tema: temaAtual.id, antes, depois }),
         );
       } catch {
