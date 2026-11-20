@@ -56,7 +56,7 @@ Durante o trabalho, mandar ao dono "aperitivos" (fotos e vídeos do que está fi
 
 > ### Boletim das 11h · Terrário
 > **034 · Menos é mais**
-> `▓▓▓▓▓▓▓▓▓▓▒▒░░░░  10 de 16`  (▓ feito · ▒ andando · ░ falta)
+> `▓▓▓▓▓▓▓▓▓▓▒▒░░░░  10 de 16`
 > | Etapa | Situação | (uma linha por etapa, agrupando as tarefas)
 > **Andou desde o último:** 1 a 3 itens.
 > **Precisa de você:** "nada agora", ou cada decisão com uma linha de contexto, **Recomendo:** a opção e por quê, e **Outras:** as alternativas.
