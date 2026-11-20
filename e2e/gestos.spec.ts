@@ -94,18 +94,52 @@ test('computador: G abre a roda, 1 a 8 escolhem, balão, andar interrompe; captu
   expect(caixa!.width).toBeGreaterThanOrEqual(90);
   await page.screenshot({ path: `${PASTA}/roda-computador.png` });
 
-  // 1 = acenar: o boneco acena e o balão aparece; a barra de itens não muda
+  // 1 = acenar: o boneco acena e o balão aparece; a barra de itens não muda. O relógio do jogo
+  // (o do balão) começa a contar aqui: cada quadro soma o tempo dele, até 1/30 s
+  // (DT_MAXIMO_QUADRO), como o jogo faz
+  await page.evaluate(() => {
+    const w = window as unknown as { relogioJogo: { s: number; ativo: boolean } };
+    w.relogioJogo = { s: 0, ativo: true };
+    let antes = performance.now();
+    const quadro = (t: number) => {
+      w.relogioJogo.s += Math.min(Math.max(0, t - antes) / 1000, 1 / 30);
+      antes = t;
+      if (w.relogioJogo.ativo) requestAnimationFrame(quadro);
+    };
+    requestAnimationFrame(quadro);
+  });
   await page.keyboard.press('Digit1');
   await expect.poll(() => local(page)).toEqual({ gesto: 'acenar', balao: 'acenar' });
   expect(await page.evaluate(() => window.__brumaluz!.slotAtivo)).toBe(slot0);
   await expect.poll(() => rodaAberta(page)).toBe(false);
   await page.waitForTimeout(500);
   await page.screenshot({ path: `${PASTA}/acenar-costas-computador.png` });
-  // o balão some depois de 2 s; o gesto acaba sozinho. Spec 034 (T14): os 2 s são do relógio
-  // do jogo, que anda no máximo 1/30 s por quadro (DT_MAXIMO_QUADRO); na nuvem, por software,
-  // a 1 quadro por segundo, eles levam perto de 1 min de verdade (era o que caía aqui, também
-  // na main). Num aparelho de verdade continua em 2 s
+  // o balão some depois de 2 s (DURACAO_BALAO) do relógio do jogo; o gesto acaba sozinho.
+  // Spec 034 (T14): medido no relógio do jogo, que anda no máximo 1/30 s por quadro; na nuvem,
+  // por software, a 1 quadro por segundo, os 2 s levam perto de 1 min de verdade (era o que
+  // caía aqui, também na main). Os 90 s de relógio de verdade são só o teto da espera
+  // (conferido a cada quadro, para o tempo anotado ser o do quadro em que o balão sumiu)
+  await page.waitForFunction(
+    () => {
+      const w = window as unknown as {
+        relogioJogo: { s: number; ativo: boolean; sumiu?: number };
+      };
+      if (w.relogioJogo.sumiu === undefined && window.__brumaluz!.gestos!.local().balao === null)
+        w.relogioJogo.sumiu = w.relogioJogo.s;
+      return w.relogioJogo.sumiu !== undefined;
+    },
+    undefined,
+    { polling: 'raf', timeout: 90_000 },
+  );
   await expect.poll(() => local(page), { timeout: 90_000 }).toEqual({ gesto: null, balao: null });
+  const sumiuEm = await page.evaluate(() => {
+    const w = window as unknown as { relogioJogo: { s: number; ativo: boolean; sumiu: number } };
+    w.relogioJogo.ativo = false;
+    return w.relogioJogo.sumiu;
+  });
+  // 2 s, mais uns quadros entre a tecla e o gesto
+  expect(sumiuEm).toBeGreaterThan(1.8);
+  expect(sumiuEm).toBeLessThan(2.6);
 
   // fechada, os números voltam a ser da barra
   await page.keyboard.press('Digit3');

@@ -384,16 +384,20 @@ describe('salvamento com lixo não trava o núcleo', () => {
    * Milissegundos por passo (o servidor tem 50 ms por passo): protege que o lixo gravado não
    * faz o passo gerar terreno longe nem andar em volta absurda. Spec 034 (T14): o melhor de 5
    * rodadas de 8 passos, e não a média de 40 (a máquina ocupada só soma tempo; uma conta a
-   * mais pesa em todas as rodadas).
+   * mais pesa em todas as rodadas). A pior rodada também tem teto, folgado: 50 ms por passo,
+   * o passo inteiro do servidor (um passo que trava às vezes não se esconde atrás do melhor).
    */
   function medir(n: Nucleo): number {
-    return (
-      melhorDe(5, () =>
-        cronometrar(() => {
-          for (let i = 0; i < 8; i++) n.passo();
-        }),
-      ) / 8
-    );
+    let pior = 0;
+    const melhor = melhorDe(5, () => {
+      const ms = cronometrar(() => {
+        for (let i = 0; i < 8; i++) n.passo();
+      });
+      pior = Math.max(pior, ms);
+      return ms;
+    });
+    expect(pior / 8, 'a pior rodada, por passo').toBeLessThan(50);
+    return melhor / 8;
   }
 
   for (const v of [1e9, -1e12, 1e300, -1e300])

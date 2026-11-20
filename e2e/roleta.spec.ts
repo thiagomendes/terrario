@@ -7,7 +7,7 @@ import {
   itensDaRoleta,
   meioDaRoleta,
   roletaAberta,
-  toqueRapido,
+  tocarComDedo,
 } from './roleta-palco';
 
 /**
@@ -42,14 +42,14 @@ async function tocarEm(cdp: CDPSession, page: Page, x: number, y: number) {
 }
 
 /**
- * Spec 034 (T14): o toque num botão é o toque rápido de roleta-palco.ts, que não depende do
- * relógio da máquina. Pelo protocolo, o encostar e o soltar chegavam à página em quadros
- * diferentes; com o navegador carregado (1 quadro por segundo na nuvem), passavam dos 600 ms
- * que separam o toque do arraste parado, e a fileira não andava. Os arrastes e o "tocar fora"
- * (que age já no encostar) continuam pelo protocolo, com o dedo de verdade.
+ * O toque num botão: um toque de dedo de verdade pelo protocolo do Chromium
+ * (`Input.synthesizeTapGesture`, 50 ms), no meio dele. Spec 034 (T14): na nuvem, sem placa de
+ * vídeo (1 quadro por segundo), o encostar e o soltar chegam à página em quadros diferentes e
+ * passam dos 600 ms que separam o toque do arraste parado, e a roleta fecha sozinha (8 s) antes
+ * do passo seguinte: este teste se confere na placa de vídeo.
  */
-async function tocarSeletor(_cdp: CDPSession, page: Page, sel: string) {
-  await toqueRapido(page, sel);
+async function tocarSeletor(cdp: CDPSession, page: Page, sel: string) {
+  await tocarComDedo(cdp, page, sel);
 }
 
 /** Um dedinho: encosta, arrasta `dx` em `ms` (devagar no começo e no fim) e solta. */

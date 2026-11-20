@@ -10,25 +10,29 @@ import { temasPedidos } from './temas';
  * TEMAS=<id>,<id> escolhe os temas (padrão: todos). REGUA_CRUA=1 mede sem o ajuste do tema
  * (`NIVEL_TRILHA`), para recalcular a tabela, e não confere os limites.
  */
-const PEDIDOS = temasPedidos(process.env.TEMAS);
-/**
- * Spec 034 (T14): a Vila Neon fica de fora (era o que caía, +0,7 a +1,8 dB). Ela veio depois
- * desta régua (spec 026) e nunca tocou a trilha sintetizada de antes, que é a "de hoje" aqui: o
- * volume dela foi afinado pelo volume percebido (LUFS) na média do Rancho e da Cidade (026,
- * T18), e o synth-pop, com mais grave, tem o RMS acima no mesmo volume percebido. A regra dela
- * fica no teste de unidade (tests/audio/somVila.test.ts, "o volume da trilha da Vila Neon").
- */
-const DE_OUTRA_REGRA = ['vila-neon'];
-const TEMAS = PEDIDOS.filter((id) => !DE_OUTRA_REGRA.includes(id));
+const TEMAS = temasPedidos(process.env.TEMAS);
 const CRUA = process.env.REGUA_CRUA === '1';
 /** Folga de medida (dB): as versões das frases são sorteadas e variam uns décimos. */
 const FOLGA_DB = 0.25;
 /** O mais baixo que a gravada pode ficar (dB abaixo da de hoje). */
 const MAIS_BAIXA_DB = -1.5;
+/**
+ * Spec 034 (T14): a faixa (dB, gravada − hoje) de cada tema. A Vila Neon tem a dela (era o que
+ * caía): veio depois desta régua (spec 026) e nunca tocou a trilha sintetizada de antes, que é
+ * a "de hoje" aqui; o volume dela foi afinado pelo volume percebido (LUFS) na média do Rancho
+ * e da Cidade (026, T18), e o synth-pop, com mais grave, tem o RMS acima no mesmo volume
+ * percebido. A faixa é a medida de hoje (dia +0,66, tarde −0,16, noite +1,42, caverna +1,84)
+ * com folga; a regra da 026 fica no teste de unidade (tests/audio/somVila.test.ts).
+ */
+const FAIXA_DB: Record<string, readonly [number, number]> = {
+  'vila-neon': [-0.6, 2.1],
+};
+const faixa = (tema: string) => FAIXA_DB[tema] ?? ([MAIS_BAIXA_DB, FOLGA_DB] as const);
 const CONTEXTOS = ['dia', 'tarde', 'noite', 'caverna', 'perigo'] as const;
 
 test('régua de volume: a gravada não fica mais alta que a de hoje', async ({ page }, info) => {
   test.setTimeout(120_000 + TEMAS.length * 300_000);
+  expect(TEMAS.length, `nenhum tema pedido em TEMAS=${process.env.TEMAS ?? ''}`).toBeGreaterThan(0);
   const erros: string[] = [];
   page.on('pageerror', (e) => erros.push(e.message));
   const linhas: unknown[] = [];
@@ -54,11 +58,13 @@ test('régua de volume: a gravada não fica mais alta que a de hoje', async ({ p
     body: JSON.stringify(linhas, null, 2),
     contentType: 'application/json',
   });
-  // em todo tema e contexto, a gravada não passa da de hoje e não fica bem mais baixa
+  // em todo tema e contexto, a gravada não passa da de hoje e não fica bem mais baixa (a Vila
+  // Neon, na faixa dela)
   if (!CRUA)
     for (const r of linhas as { tema: string; contexto: string; diferencaDb: number }[]) {
-      expect(r.diferencaDb, `${r.tema} ${r.contexto}`).toBeLessThanOrEqual(FOLGA_DB);
-      expect(r.diferencaDb, `${r.tema} ${r.contexto}`).toBeGreaterThanOrEqual(MAIS_BAIXA_DB);
+      const [baixa, alta] = faixa(r.tema);
+      expect(r.diferencaDb, `${r.tema} ${r.contexto}`).toBeLessThanOrEqual(alta);
+      expect(r.diferencaDb, `${r.tema} ${r.contexto}`).toBeGreaterThanOrEqual(baixa);
     }
   expect(erros).toEqual([]);
 });

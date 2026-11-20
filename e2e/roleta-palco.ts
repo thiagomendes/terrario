@@ -1,4 +1,4 @@
-import { expect, type Page } from '@playwright/test';
+import { expect, type CDPSession, type Page } from '@playwright/test';
 
 /**
  * Spec 033: a roleta do menu (src/ui/roleta.ts) nos testes. Só 5 a 7 botões existem de cada
@@ -55,7 +55,9 @@ async function ehToque(page: Page): Promise<boolean> {
  * (pointerdown, touchstart, pointerup, touchend, e o clique de compatibilidade se ninguém o
  * cancelou; no mouse, mousedown, mouseup e click) sai num passo só, no elemento que está de
  * fato por cima naquele ponto (como o dedo acharia), e quem o jogo escolhe é o mesmo de um
- * toque de verdade. Se outro elemento tapa o ponto, o teste cai aqui.
+ * toque de verdade. Se outro elemento tapa o ponto, o teste cai aqui. Serve aos testes que só
+ * passam pela roleta para chegar a outra coisa; os que conferem a própria roleta e o menu no
+ * celular tocam com o dedo de verdade (`usarDedoDeVerdade`).
  */
 export async function toqueRapido(page: Page, seletor: string): Promise<void> {
   const el = page.locator(seletor).first();
@@ -77,11 +79,15 @@ export async function toqueRapido(page: Page, seletor: string): Promise<void> {
       isPrimary: true,
       button: 0,
     };
-    topo.dispatchEvent(new PointerEvent('pointerdown', { ...ponteiro, buttons: 1 }));
+    // como o navegador: o pointerdown cancelado não manda mousedown nem mouseup (o clique
+    // continua); o touchstart ou o touchend cancelado não manda o clique de compatibilidade
+    const okPointerdown = topo.dispatchEvent(
+      new PointerEvent('pointerdown', { ...ponteiro, buttons: 1 }),
+    );
     let compat = true;
     if (toque) {
       const t = new Touch({ identifier: 7, target: topo, clientX: x, clientY: y });
-      topo.dispatchEvent(
+      const okTouchstart = topo.dispatchEvent(
         new TouchEvent('touchstart', {
           ...base,
           touches: [t],
@@ -90,7 +96,7 @@ export async function toqueRapido(page: Page, seletor: string): Promise<void> {
         }),
       );
       topo.dispatchEvent(new PointerEvent('pointerup', { ...ponteiro, buttons: 0 }));
-      compat = topo.dispatchEvent(
+      const okTouchend = topo.dispatchEvent(
         new TouchEvent('touchend', {
           ...base,
           touches: [],
@@ -98,13 +104,17 @@ export async function toqueRapido(page: Page, seletor: string): Promise<void> {
           changedTouches: [t],
         }),
       );
+      compat = okTouchstart && okTouchend;
     } else {
-      topo.dispatchEvent(
-        new MouseEvent('mousedown', { ...base, button: 0, buttons: 1, detail: 1 }),
-      );
-      if (topo instanceof HTMLElement) topo.focus({ preventScroll: true });
+      if (okPointerdown) {
+        topo.dispatchEvent(
+          new MouseEvent('mousedown', { ...base, button: 0, buttons: 1, detail: 1 }),
+        );
+        if (topo instanceof HTMLElement) topo.focus({ preventScroll: true });
+      }
       topo.dispatchEvent(new PointerEvent('pointerup', { ...ponteiro, buttons: 0 }));
-      topo.dispatchEvent(new MouseEvent('mouseup', { ...base, button: 0, detail: 1 }));
+      if (okPointerdown)
+        topo.dispatchEvent(new MouseEvent('mouseup', { ...base, button: 0, detail: 1 }));
     }
     if (compat) topo.dispatchEvent(new MouseEvent('click', { ...base, button: 0, detail: 1 }));
     return '';
@@ -112,9 +122,41 @@ export async function toqueRapido(page: Page, seletor: string): Promise<void> {
   if (r) throw new Error(`o toque em ${seletor} não chegou: ${r}`);
 }
 
+/** As páginas que tocam com o dedo de verdade (o protocolo do Chromium), e a sessão de cada. */
+const dedos = new WeakMap<Page, CDPSession>();
+
+/**
+ * Os testes que conferem a roleta e o menu no celular tocam com o dedo de verdade (decisão do
+ * dono, 18 nov 2026): depois desta chamada, todo toque desta página nos ajudantes daqui é um
+ * toque do protocolo do Chromium (`Input.synthesizeTapGesture`), e não o toque rápido.
+ */
+export async function usarDedoDeVerdade(page: Page): Promise<CDPSession> {
+  const cdp = dedos.get(page) ?? (await page.context().newCDPSession(page));
+  dedos.set(page, cdp);
+  return cdp;
+}
+
+/** Um toque de dedo de verdade (50 ms) no meio do elemento, pelo protocolo do Chromium. */
+export async function tocarComDedo(cdp: CDPSession, page: Page, seletor: string): Promise<void> {
+  const el = page.locator(seletor).first();
+  await el.waitFor({ state: 'visible', timeout: 20_000 });
+  await el.scrollIntoViewIfNeeded();
+  const c = await el.boundingBox();
+  if (!c) throw new Error(`sem ${seletor}`);
+  await cdp.send('Input.synthesizeTapGesture', {
+    x: c.x + c.width / 2,
+    y: c.y + c.height / 2,
+    duration: 50,
+    tapCount: 1,
+    gestureSourceType: 'touch',
+  });
+}
+
 /** Toca (ou clica) num seletor, à vista. */
 async function tocarSeletor(page: Page, seletor: string): Promise<void> {
-  await toqueRapido(page, seletor);
+  const cdp = dedos.get(page);
+  if (cdp) await tocarComDedo(cdp, page, seletor);
+  else await toqueRapido(page, seletor);
 }
 
 /** Abre o menu pelo botão de cima (se ainda fechado). */
