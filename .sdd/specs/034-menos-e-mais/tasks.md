@@ -123,3 +123,10 @@ Saiu da spec (dono, 19 nov): vai com a casca nativa (020). A T12 não existe mai
   - Caem duas vezes e **também na `main`** (não são da 034): `construcoes-protegidas:151` (três amigos na nuvem), `guia-chegada:128` (c6 em pé), `plantio:210` (HUD do Rancho no celular), `premium-presentes:207` (premium em 1 s; na main 1125 ms) e `tesouro-fantasia:61` (instável nas duas). A T14 não os fechou na placa de vídeo: ficam no backlog como "testes antigos instáveis".
   - Caem só na 034, por limite de tempo ou de volume e na beira (a main rodou uma vez só): `achar-amigo-nuvem:99` (pulo 2657/2545 ms; limite 2500; main 2174/2403), `som-veiculos:61` (sorvete +4,30/+4,93 dB; precisa >5; main 6,16) e `lojinha:107` (3609/3557 ms; limite 3400; passou na repetição). Uma 3ª rodada, alternando main e 034 sem o esboço na placa, separa regressão de instabilidade.
   - Os nove que caem por tempo na nuvem (menu-roda, roleta, gestos, réguas, guia, tesouro, achar-amigo) passam na placa de vídeo, fora os listados acima.
+- **(20 nov 2026) Na placa de vídeo, a 3ª rodada:** 6 passadas alternando `main` (65b0a57) e 034 (ec4f682), com 1 trabalhador e sem o esboço na placa. **Nenhuma das três diferenças se sustenta:**
+  - `som-veiculos` (sorvete, precisa de mais de 5 dB): a `main` deu 5,76, 5,83 e 4,90, e caiu na 5ª passada (os bombeiros deram 0,38 dB); a 034 deu 5,85, 5,92 e 6,18. Fica perto do limite nas duas.
+  - `achar-amigo-nuvem` (o pulo, limite de 2500 ms):
+    - nas duas versões, entre 2,0 e 2,6 s; a 034 passou do limite uma vez (2641 ms);
+    - a `main` caiu uma vez no celular porque a Ana não via a Bia: é o defeito da 035, que também existe na `main`.
+  - `lojinha:107` (limite de 3400 ms): a `main` foi de 1145 a 3460 ms e passou do limite uma vez; a 034 ficou entre 2772 e 3011 ms.
+  - Os três ficam no backlog com os testes antigos instáveis.
