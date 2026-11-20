@@ -181,7 +181,10 @@ Em `src/cliente/estado.ts`.
   - cobre o `primeiro` perdido e o buraco na sequência.
 - **Silêncio: nenhum quadro chega:**
   - um relógio de 1 s confere: sem nenhum quadro por **4 s**, com `document.visibilityState === 'visible'`, dispara;
+  - **só com a conexão em `'conectado'`:** durante `'conectando'`, `'reconectando'` ou `'ressincronizando'` o vigia não age (quem cuida é a conexão);
+  - **só depois do primeiro quadro aplicado:** na entrada, antes disso, o silêncio não conta;
   - a contagem recomeça quando a página volta a ficar visível: em segundo plano o navegador segura a página e o silêncio é dele;
+  - **a contagem recomeça se passarem mais de 2 s entre duas voltas do próprio relógio:** num celular lento, montando o terreno, a página fica ocupada e os quadros esperam na fila do navegador; esse silêncio é da página, não da rede;
   - cobre a conexão morta sem aviso, que não dispara o `onclose` por minutos.
 - **Por que esses números:**
   - **Numa conexão boa nada disso acontece:**
@@ -203,7 +206,8 @@ Em `src/cliente/estado.ts`.
   - abre outra na hora, sem a espera da reconexão;
   - passa por `'ressincronizando'` e volta a `'conectado'` no bem-vindo;
   - os comandos do meio esperam na fila de guardados, como numa queda (`src/cliente/conexaoNuvem.ts:87-101`);
-  - se a conexão nova não abrir, vale a reconexão de sempre, com o aviso de sempre: aí a internet caiu mesmo.
+  - se a conexão nova não abrir, vale a reconexão de sempre, com o aviso de sempre: aí a internet caiu mesmo;
+  - **se `'ressincronizando'` passar 5 s sem bem-vindo,** a conexão vira `'reconectando'`, com o aviso de sempre e a reconexão de sempre: com a internet morta, a criança não fica num laço calado.
 - **Em `src/nuvem.ts:537-553`:** `'ressincronizando'` não mostra o aviso de queda nem o "Voltamos!" (decisão do dono).
 
 **Sem laço de reconexão:**
@@ -215,7 +219,8 @@ Em `src/cliente/estado.ts`.
   - uma marca em `sessionStorage` por código de sala impede um segundo recarregar em 10 min;
   - **se o `sessionStorage` não abrir ou der erro, não recarrega:** sem a marca, não há como garantir que não vira laço;
   - com a marca de pé (ou sem `sessionStorage`), para de tentar e o jogo segue como está.
-- **O pior caso, seguido:** 2 ressincronizações, 1 recarregar e mais 2 ressincronizações na página nova: **4 ressincronizações e 1 recarregar em 10 min**.
+- **O recarregar só vem do travamento com a conexão de pé (quadros chegando e nenhum aplicado). O silêncio só leva a ressincronizar, com conta própria, fora das 2 do travamento, e no máximo uma vez a cada 30 s; ele nunca leva a recarregar.**
+- **O pior caso, seguido:** 2 ressincronizações, 1 recarregar e mais 2 ressincronizações na página nova: **4 ressincronizações e 1 recarregar em 10 min**, pelo travamento. O silêncio soma no máximo uma ressincronização a cada 30 s, e só com a conexão de pé.
 - A espera da reconexão de sempre (0,5 s a 8 s) continua valendo se a internet cair de verdade.
 - **O limite do servidor por endereço:** um código válido também é barrado com `limite` se o endereço já juntou 20 tentativas erradas na janela (`servidor/src/salas.ts:446`, `TENTATIVAS` em `:59`). A volta pelo código certo conta e é descontada na hora (`:448`, `:468`), então as ressincronizações não enchem essa conta.
 - **A queda de verdade não confunde a conta:** o `reconferir` da volta (`src/nuvem.ts:542`) também zera a medida do travamento.
@@ -241,7 +246,8 @@ Só no cliente.
 ### 4. A sala fechada não barra quem já estava nela
 - Em `servidor/src/salas.ts:474-475`: o `ja` vem antes, e a recusa vira `fechado && !ehDono && !ja`.
 - Quem estava na sala e caiu volta, com a sala fechada ou não. Quem chega de novo continua barrado.
-- Um teste em `servidor/testes/salas.test.ts`: o dono fecha a sala; o visitante cai e volta; ele entra. Um terceiro que nunca entrou é recusado.
+- **Vale só dentro da `TOLERANCIA_QUEDA`, de 30 s** (`servidor/src/salas.ts:53`): depois disso o servidor despede quem caiu (`:870`), ele sai de `presentes` e, com a sala fechada, volta a ser barrado como quem chega de novo.
+- Um teste em `servidor/testes/salas.test.ts`: o dono fecha a sala; o visitante cai e volta **antes dos 30 s**; ele entra. Um terceiro que nunca entrou é recusado.
 - É a única linha do servidor nesta spec.
 
 ### 5. Sair do mundo da nuvem para um mundo do aparelho
@@ -286,6 +292,9 @@ Só no cliente.
   - um buraco na sequência depois do `primeiro`: também ressincroniza;
   - quadros parados por 5 s e depois todos de uma vez, em ordem: não ressincroniza;
   - silêncio de 4 s com a página visível: ressincroniza; com a página escondida, não; voltou a ficar visível, conta de novo do zero;
+  - o silêncio não dispara durante `'ressincronizando'`, nem antes do primeiro quadro aplicado;
+  - com o relógio trocado, um intervalo de mais de 2 s entre duas voltas do vigia recomeça a contagem;
+  - dois silêncios seguidos não recarregam e não gastam a conta do travamento; o segundo só depois de 30 s;
   - travou de novo antes de 3 s: espera; depois de 3 s: a segunda;
   - depois da segunda: manda o `guardar` e recarrega uma vez; com a marca de pé, não recarrega; com o `sessionStorage` dando erro, não recarrega;
   - 60 s com os quadros andando: a conta volta a zero;
@@ -293,11 +302,15 @@ Só no cliente.
   - **com a conexão local** (o canal de `tests/nucleo/canal.test.ts`, com atraso e ordem trocada): nunca mede nem dispara.
 - **A conexão:**
   - `ressincronizar()` fecha com 4001, abre outra na hora e passa por `'ressincronizando'`, sem `'reconectando'`;
+  - um FalsoWS que nunca abre: o estado vira `'reconectando'` e o aviso de queda aparece em até 5 s;
   - o `onclose` da velha não agenda outra conexão: o FalsoWS conta exatamente 2 conexões abertas;
   - o que chega pela conexão velha é ignorado;
   - o `aoBemVindo` chega em cada bem-vindo depois do primeiro, antes dos quadros da conexão nova;
   - `encerrar()` fecha com 1000.
-- **A diferença das edições:** célula mudada, célula nova, edição que saiu, célula com previsão e a tabela de donos.
+- **A diferença das edições:**
+  - célula mudada, célula nova, edição que saiu, célula com previsão e a tabela de donos;
+  - uma volta que não muda nada não muda nenhuma célula, na Vila Neon e na Cidade Grande (com as obras do canteiro);
+  - o tempo da diferença medido num mundo com muitas edições, e escrito na Situação.
 - **O endereço:** `enderecoDoMundo` com `?sala=X&direto=1`, `?sala=X`, `?sala=X&novo=1&direto=1`, `?tema=…` e um parâmetro de teste que tem de ficar.
 - **O servidor:** a sala fechada da seção 4.
 
@@ -362,6 +375,7 @@ Só no cliente.
 **Fotos:** não há visual novo, então não há portão visual.
 
 ## Fora desta spec
+- **A queda antes de a página ouvir o `aoBemVindo`:** se a conexão cair e voltar antes de `ligarAmigos` ligar o `aoBemVindo` (`src/main.ts:317`), os blocos mudados naquela janela se perdem. A janela é de milissegundos.
 - **O relógio da rajada:** a fila entregue de uma vez aplica os quadros guardados com o horário da entrega, não o da chegada (`src/cliente/estado.ts:118-119`, veículos e Vila). Não é grave: os quadros seguintes acertam.
 - **Os fechamentos do servidor com um código próprio** (a lista em "O que existia"): eles aparecem como 1005 no registro. Fica para uma próxima vez que o servidor publicar.
 - `voltarAoLocal` (`src/nuvem.ts:145-150`) não tira o `direto`. É inofensivo: sem `sala`, o `direto` não é lido.
