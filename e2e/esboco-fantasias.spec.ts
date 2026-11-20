@@ -116,7 +116,7 @@ const FOTOS_PASSEIO: Array<[string, string, number]> = [
   ['20-vassoura-perto', 'vassouraPerto', 2.4],
   ['21-trem', 'trem', 7.4],
   ['21-trem-perto', 'tremPerto', 5.7],
-  ['21-trem-bordo', 'bordo', 4.1],
+  ['21-trem-bordo', 'bordo', 2.9],
 ];
 
 async function fotografarPasseios(page: Page, t: Tamanho) {
@@ -164,8 +164,9 @@ async function gravarPasseios(page: Page) {
     await page.evaluate(() => window.__fantasias!.passeio('trem', 0, true, 'deitado'));
     await page.waitForTimeout(7300);
     // o corte para a bordo: o trem chegando no túnel, visto do último vagão
-    await page.evaluate(() => window.__fantasias!.passeio('bordo', 2.6, true, 'deitado'));
-    await page.waitForTimeout(3700);
+    // (na cabine da locomotiva: entra no túnel em 1,8 s e sai do outro lado em 3,8 s)
+    await page.evaluate(() => window.__fantasias!.passeio('bordo', 1.6, true, 'deitado'));
+    await page.waitForTimeout(4100);
     await pararGravacao(page, `${pasta}/21-trem.webm`);
     passo('vídeo do trem');
   }

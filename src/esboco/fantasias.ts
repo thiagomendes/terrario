@@ -682,6 +682,8 @@ function ligar(scene: Scene): void {
       if (pertoDeCamera(ox + x, oz + z, 7)) continue;
       // (parte 2: nem colado na câmera da foto dos morceguinhos, na frente do galho)
       if (Math.hypot(x - (gx - 3.1), z - (gz + 5.8)) < 3.2) continue;
+      // (parte 3: nem no meio da trilha por onde a câmera do passeio noturno passa)
+      if (Math.abs(x - trilha(z)) < 1.4 && z > 32 && z < 64) continue;
       vagalumes.push([ox + x, Y + 0.9 + hash2(k, 3, 51) * 2.2, oz + z]);
     }
     pontos.bosque = [ox + trilha(60), Y + 1, oz + 60];
@@ -1448,6 +1450,8 @@ function ligar(scene: Scene): void {
     passeio(qual, t, rodando, tipo = 'deitado') {
       if (!passeios) return;
       passeios.mostrar(true);
+      // (a câmera primeiro: a fumacinha do instante já sai do jeito dessa câmera)
+      if (qual) passeios.camera(qual, tipo);
       passeios.relogio(t, rodando);
       rig = qual ? { qual, tipo } : null;
       fovFixo = true;
