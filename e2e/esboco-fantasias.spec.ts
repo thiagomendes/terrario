@@ -94,7 +94,9 @@ async function fotografarGente(page: Page, t: Tamanho) {
     await page.waitForTimeout(2000);
     for (const [nome, tomada] of FOTOS_GENTE) {
       if (so && !so.some((s) => nome.includes(s))) continue;
-      const fila = tomada === 'morador-fila';
+      // (nas fotos dos bichos, os moradores ficam na fila da praça: a Vovó não entra pela beira
+      // da foto do Tufinho)
+      const fila = tomada === 'morador-fila' || tomada.startsWith('bicho-');
       await page.evaluate((f) => window.__fantasias!.moradores(f ? 'fila' : 'lugares'), fila);
       const tm = tomadas[tomada][tipo];
       await camera(page, tm.pos, tm.alvo, tm.fov);
@@ -141,7 +143,7 @@ async function fotografarPasseios(page: Page, t: Tamanho) {
       }
       return r;
     }, inst);
-    console.log(`FOLGA t=${inst} alto dos passageiros ${JSON.stringify(alto)} (o teto do túnel a 3,8 no meio e 3,67 a 0,6 do meio)`);
+    console.log(`FOLGA t=${inst} alto dos passageiros ${JSON.stringify(alto)} (o teto do túnel a 4,25 no meio e 4,12 a 0,6 do meio)`);
   }
   for (const [qual, h] of [
     ['entardecer', ENTARDECER],
@@ -178,15 +180,20 @@ async function gravarPasseios(page: Page) {
   }
   if (quer('trem')) {
     await hora(page, ENTARDECER);
-    await page.evaluate(() => window.__fantasias!.passeio('trem', 0, false, 'deitado'));
+    // sempre para a frente no tempo (revisor: o corte voltava no tempo): de fora, a câmera
+    // acompanhando a locomotiva até a boca do túnel; a bordo, por dentro do túnel até sair; de
+    // fora de novo, os vagões saindo e o trem indo embora
+    const trocar = (rig: string) =>
+      page.evaluate((r) => window.__fantasias!.passeio(r, window.__fantasias!.passeioAgora(), true, 'deitado'), rig);
+    await page.evaluate(() => window.__fantasias!.passeio('tremSegue', 0, false, 'deitado'));
     await page.waitForTimeout(2500);
     await comecarGravacao(page);
-    await page.evaluate(() => window.__fantasias!.passeio('trem', 0, true, 'deitado'));
-    await page.waitForTimeout(7300);
-    // o corte para a bordo: o trem chegando no túnel, visto do último vagão
-    // (na cabine da locomotiva: entra no túnel em 1,8 s e sai do outro lado em 3,8 s)
-    await page.evaluate(() => window.__fantasias!.passeio('bordo', 1.6, true, 'deitado'));
-    await page.waitForTimeout(4100);
+    await page.evaluate(() => window.__fantasias!.passeio('tremSegue', 0, true, 'deitado'));
+    await page.waitForTimeout(3100);
+    await trocar('bordo');
+    await page.waitForTimeout(3200);
+    await trocar('tremSegue');
+    await page.waitForTimeout(3600);
     await pararGravacao(page, `${pasta}/21-trem.webm`);
     passo('vídeo do trem');
   }

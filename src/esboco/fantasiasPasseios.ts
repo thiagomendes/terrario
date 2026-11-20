@@ -400,6 +400,42 @@ export function montarPasseios(ctx: CtxPasseios): Passeios {
     halos.push(m);
     return m;
   };
+  /**
+   * A abóbora de brinquedo do jogo (o modelo de gomos, `blocosBrinquedo.ts`) com o rosto da
+   * família da abóbora gigante da praça: olhos redondos castanhos com o brilhinho, bochechas
+   * rosadas e o sorriso aceso. Nada de olho triangular de lampião: é a carinha doce da festa.
+   * A raiz fica no meio da abóbora (a base a 0,4 × lado abaixo); o rosto olha para +z.
+   */
+  const aboboraSorridente = (nome: string, lado: number, pai: TransformNode | null): TransformNode => {
+    const raiz = new TransformNode(nome, scene);
+    if (pai) raiz.parent = pai;
+    for (const m of modeloDeBloco(scene, pl, Bloco.ABOBORA, `${nome}-modelo`, lado) ?? []) {
+      m.parent = raiz;
+      m.receiveShadows = true;
+      m.isPickable = false;
+      ctx.semBrilho(m);
+    }
+    const L = lado;
+    const k = new Kit();
+    const luz = new Map<string, Kit>();
+    // (a casca: o gomo da frente chega a ~0,57 no meio, a beirada dos olhos a ~0,5)
+    for (const s of [-1, 1]) {
+      k.bola(0.085 * L, [s * 0.155 * L, 0.08 * L, 0.505 * L], '#3a1a0c', [1, 1.18, 0.5]);
+      k.bola(0.027 * L, [(s * 0.155 - 0.03) * L, 0.12 * L, 0.545 * L], '#fff4e6', [1, 1, 0.5]);
+      k.bola(0.06 * L, [s * 0.285 * L, -0.04 * L, 0.47 * L], '#f4a27a', [1, 0.7, 0.4], [0, s * 0.55, 0]);
+    }
+    for (let i = 0; i <= 12; i++) {
+      const u = -1 + i / 6;
+      kitDeLuz(luz, '#ffcf4a').bola(
+        0.034 * L,
+        [u * 0.17 * L, (-0.1 - 0.07 * (1 - u * u)) * L, (0.565 - 0.08 * u * u) * L],
+        '#ffcf4a',
+      );
+    }
+    malha(k, `${nome}-rosto`, raiz);
+    luzes(luz, `${nome}-sorriso`, raiz);
+    return raiz;
+  };
 
   // ================================================================ a vassoura-patinete
   const bruxinha = criarGente(
@@ -407,7 +443,10 @@ export function montarPasseios(ctx: CtxPasseios): Passeios {
     'bruxinha',
     'tecela',
     // (o cabelo escuro e a pele clara: de longe, o rosto se lê dentro do chapéu)
-    { corpo: 'feminino', pele: 7, rosto: 2, cabeloEstilo: 3, cabeloCor: 0, roupaEstilo: 0, acessorio: 'nenhum' },
+    // (revisor: o rosto 2 tem sardas, que pareciam pintinhas escuras; o 1 tem cílios inclinados
+    // que liam como sobrancelha brava; o 0 é o clássico, de bochecha rosada lisa. O cabelo
+    // aparece debaixo do chapéu, até o ombro)
+    { corpo: 'feminino', pele: 7, rosto: 0, cabeloEstilo: 7, cabeloCor: 0, roupaEstilo: 0, acessorio: 'nenhum' },
     vestirBruxinha,
     // um pé no deque, o outro levantado atrás, as mãos no guidão e o corpo um tico para a frente
     { bdX: -1.32, beX: -1.32, bdZ: 0.1, beZ: -0.1, corpoY: 0.15, pernaD: 0.02, pernaE: 1.3, cabX: -0.04, corpoX: 0.06 },
@@ -469,8 +508,9 @@ export function montarPasseios(ctx: CtxPasseios): Passeios {
     k.cil(2 * xm + 0.12, 0.034, 0.034, [0, yBar, zBar], madeira, [0, 0, Math.PI / 2]);
     k.bola(0.045, [0, yBar, zBar], madeira);
     for (const s of [-1, 1]) {
-      k.cil(0.15, 0.05, 0.05, [s * xm, yBar, zBar], '#5e3488', [0, 0, Math.PI / 2]);
-      k.bola(0.052, [s * (xm + 0.08), yBar, zBar], COR.lilas, [0.7, 1, 1]);
+      // (a pega é curta e fina, toda dentro da mãozinha; só a ponta lilás aparece do lado de fora)
+      k.cil(0.12, 0.04, 0.04, [s * (xm + 0.02), yBar, zBar], '#5e3488', [0, 0, Math.PI / 2]);
+      k.bola(0.042, [s * (xm + 0.1), yBar, zBar], COR.lilas, [0.7, 1, 1]);
     }
     malha(k, 'esboco-passeio-vassoura', bruxinha.boneco.raiz);
   }
@@ -655,10 +695,11 @@ export function montarPasseios(ctx: CtxPasseios): Passeios {
     const x0 = ox + TUNEL.x0;
     const x1 = ox + TUNEL.x1;
     // (dono, 20 nov: o túnel era baixo e a cabeça dos passageiros atravessava a cobertura;
-    // medido no teste, o chapéu da bruxinha, o mais alto, chega a 3,06 do chão e o Bento a 3,03:
-    // o teto fica a 3,8 no meio, e a 0,6 do meio ainda a 3,67, mais de meio bloco de folga)
+    // medido no teste, o chapéu da bruxinha chega a 3,06 do chão e o Bento novo, de tufos
+    // espetados, a 3,5: o teto fica a 4,25 no meio, e a 0,6 do meio ainda a 4,12, mais de meio
+    // bloco de folga sobre todos)
     const RA = 1.45; // o raio do arco
-    const HP = 2.35; // a altura das paredes (onde o arco começa)
+    const HP = 2.8; // a altura das paredes (onde o arco começa)
     // as paredes de tábuas em pé (roxo e laranja, uma sim, uma não), com duas janelinhas redondas
     // de cada lado; a tábua que cruza a janela fica em dois pedaços (debaixo e em cima dela)
     const janelas = [-1.7, 1.7];
@@ -723,9 +764,9 @@ export function montarPasseios(ctx: CtxPasseios): Passeios {
     // as lanterninhas acesas penduradas no teto, por dentro (o túnel nunca fica escuro)
     // (de um lado e do outro, perto das paredes: o meio fica livre para o trem e a chaminé)
     for (const [lx, lz] of [
-      [-2.3, -0.85],
-      [0, 0.85],
-      [2.3, -0.85],
+      [-2.3, -1.0],
+      [0, 1.0],
+      [2.3, -1.0],
     ]) {
       const x = ox + TCX + lx;
       const z = zc + lz;
@@ -739,18 +780,10 @@ export function montarPasseios(ctx: CtxPasseios): Passeios {
     // a placa de cima da boca da entrada: uma abóbora sorridente (sem letreiro)
     malha(k, 'esboco-passeio-tunel', null);
     luzes(luzTunel, 'esboco-passeio-tunel-luz', null);
-    const ab = modeloDeBloco(scene, pl, Bloco.LAMPIAO_ABOBORA, 'esboco-passeio-tunel-abobora', 0.75);
-    if (ab) {
-      const r = new TransformNode('esboco-passeio-tunel-abobora', scene);
-      r.position.set(x1 + 0.0, Y + HP + RA + 0.22 + 0.4 * 0.75, zc);
-      // o rosto para +x (de onde o trem vem)
-      r.rotation.y = Math.PI / 2 + (5 * Math.PI) / 4;
-      for (const m of ab) {
-        m.parent = r;
-        if (m.material?.name.includes('ffe04a')) m.material = ctx.acesa('#ffcf4a');
-        else ctx.semBrilho(m);
-      }
-    }
+    // a abóbora de rosto redondo em cima da boca de entrada, olhando para +x (de onde o trem vem)
+    const topo = aboboraSorridente('esboco-passeio-tunel-abobora', 0.75, null);
+    topo.position.set(x1 + 0.0, Y + HP + RA + 0.22 + 0.4 * 0.75, zc);
+    topo.rotation.y = Math.PI / 2;
     // as fantasminhas: duas nas janelinhas de fora (de frente para quem olha do gramado), uma em
     // cada boca, espiando do lado (de frente para o trem que chega e para o que sai)
     const pos: Array<[number, number, number, number]> = [
@@ -777,6 +810,9 @@ export function montarPasseios(ctx: CtxPasseios): Passeios {
   }
   const carros: Carro[] = [];
   const RT = 0.145; // o topo do trilho
+  /** A chaminé na locomotiva (local): um tico para o lado e na frente da abóbora. */
+  const XCH = 0.2;
+  const ZCH = 0.56;
   const RODA = 0.2;
   const rodas = (k: Kit, zs: number[], aro: string) => {
     for (const z of zs)
@@ -818,25 +854,16 @@ export function montarPasseios(ctx: CtxPasseios): Passeios {
     k.caixa([0.96, 0.08, 0.96], [0, RT + 1.49, zc], COR.musgoClaro, 0.04);
     // a chaminezinha (em cima da frente da abóbora), de boca larga creme
     // (o pé dela entra na casca: de lado não aparece vão entre a chaminé e a abóbora)
-    const zch = 0.62;
-    const yb = RT + 0.46 + 0.6;
-    k.cil(0.5, 0.1, 0.12, [0, yb + 0.25, zch], '#3a2c50');
-    k.cil(0.1, 0.17, 0.15, [0, yb + 0.53, zch], COR.creme);
+    // (um tico para o lado, fora do eixo: a câmera de bordo vê o trilho pelo meio)
+    const yb = RT + 0.46 + 0.5;
+    k.cil(0.58, 0.1, 0.12, [XCH, yb + 0.29, ZCH], '#3a2c50');
+    k.cil(0.1, 0.17, 0.15, [XCH, yb + 0.6, ZCH], COR.creme);
     malha(k, 'esboco-passeio-locomotiva-corpo', no);
     luzes(luz, 'esboco-passeio-locomotiva-luz', no);
-    // a caldeira: a abóbora de brinquedo do jogo, de carinha acesa para a frente
-    const ab = modeloDeBloco(scene, pl, Bloco.LAMPIAO_ABOBORA, 'esboco-passeio-caldeira', 1.08);
-    if (ab) {
-      const r = new TransformNode('esboco-passeio-caldeira', scene);
-      r.parent = no;
-      r.position.set(0, RT + 0.46 + 0.4 * 1.08, 0.42);
-      r.rotation.y = (5 * Math.PI) / 4;
-      for (const m of ab) {
-        m.parent = r;
-        if (m.material?.name.includes('ffe04a')) m.material = ctx.acesa('#ffcf4a');
-        else ctx.semBrilho(m);
-      }
-    }
+    // a caldeira: a abóbora de brinquedo de rosto redondo e doce (a família da gigante), com o
+    // sorriso aceso, para a frente
+    const cald = aboboraSorridente('esboco-passeio-caldeira', 1.08, no);
+    cald.position.set(0, RT + 0.46 + 0.4 * 1.08, 0.42);
     const sombra = sombrinha(ctx, 'esboco-passeio-locomotiva-sombra', 0.5);
     sombra.scaling.set(2.0, 1, 5.0);
     carros.push({ no, atras: 0, sombra });
@@ -930,7 +957,7 @@ export function montarPasseios(ctx: CtxPasseios): Passeios {
     ctx,
     'bruxinha-trem',
     'tecela',
-    { corpo: 'feminino', pele: 6, rosto: 1, cabeloEstilo: 5, cabeloCor: 0, roupaEstilo: 0, acessorio: 'nenhum' },
+    { corpo: 'feminino', pele: 6, rosto: 0, cabeloEstilo: 5, cabeloCor: 0, roupaEstilo: 0, acessorio: 'nenhum' },
     vestirBruxinha,
     SENTADO,
   );
@@ -938,7 +965,7 @@ export function montarPasseios(ctx: CtxPasseios): Passeios {
     ctx,
     'abobrinha-trem',
     'andarilho',
-    { corpo: 'masculino', pele: 1, rosto: 3, cabeloEstilo: 1, cabeloCor: 3, roupaEstilo: 0, acessorio: 'nenhum' },
+    { corpo: 'masculino', pele: 1, rosto: 0, cabeloEstilo: 1, cabeloCor: 3, roupaEstilo: 0, acessorio: 'nenhum' },
     vestirAbobrinha,
     SENTADO,
   );
@@ -979,21 +1006,22 @@ export function montarPasseios(ctx: CtxPasseios): Passeios {
       pose.cabecaLado = Math.sin(t * 2.2 + q.f) * 0.1;
       g.boneco.aplicarPose(pose);
     }
-    // a fumacinha: nove bolinhas em fila, cada uma numa idade (a mais velha some lá em cima)
-    const VIDA = 1.8;
+    // a fumacinha: bolinhas que saem da boca da chaminé, sobem um tico para trás, crescem e
+    // somem ali perto (de brinquedo: nada de fiapos espalhados pelo caminho)
+    const VIDA = 1.3;
+    const pl0 = pontoDoTrilho(s);
+    // dentro do túnel a chaminé descansa (nada de fumaça atravessando o teto)
+    const noTunel = pl0.dx < -0.5 && pl0.x > TUNEL.x0 - 1.2 && pl0.x < TUNEL.x1 + 0.6;
+    const bx = ox + pl0.x + pl0.dx * ZCH + pl0.dz * XCH;
+    const bz = oz + pl0.z + pl0.dz * ZCH - pl0.dx * XCH;
     for (let i = 0; i < fumacas.length; i++) {
       const idade = (((t + (i * VIDA) / fumacas.length) % VIDA) + VIDA) % VIDA;
       const f = idade / VIDA;
-      // nasceu na boca da chaminé onde a locomotiva estava (a fumaça fica para trás)
-      const sNasceu = s - idade * V_TREM;
-      const p = pontoDoTrilho(sNasceu);
-      const zch = 0.62;
-      const x = ox + p.x + p.dx * zch;
-      const z = oz + p.z + p.dz * zch;
-      // dentro do túnel a chaminé descansa (nada de fumaça atravessando o teto)
-      const noTunel = p.dx < -0.5 && p.x > TUNEL.x0 - 0.8 && p.x < TUNEL.x1 + 0.3;
-      const r = 0.11 + f * 0.26;
-      fumacas[i].position.set(x + Math.sin(i * 2.1) * 0.1 * f, Y + RT + 1.68 + f * 1.15, z + Math.cos(i * 1.7) * 0.1 * f);
+      const atras = idade * 0.55;
+      const x = bx - pl0.dx * atras;
+      const z = bz - pl0.dz * atras;
+      const r = 0.1 + f * 0.2;
+      fumacas[i].position.set(x + Math.sin(i * 2.1) * 0.08 * f, Y + RT + 1.72 + f * 0.95, z + Math.cos(i * 1.7) * 0.08 * f);
       fumacas[i].rotation.y = i * 1.3 + f;
       // (com a câmera a bordo, sem fumacinha: o trem anda mais depressa do que ela sobe, e a
       // que ficava para trás passava enorme por cima da câmera)
@@ -1025,12 +1053,22 @@ export function montarPasseios(ctx: CtxPasseios): Passeios {
     t += Math.min(0.1, scene.getEngine().getDeltaTime() / 1000);
     quadro();
   });
+  let mostrando = false;
   const mostrar = (sim: boolean) => {
+    mostrando = sim;
     for (const r of raizes) r.setEnabled(sim);
     sombraVassoura.setEnabled(sim);
     for (const c of carros) c.sombra.setEnabled(sim);
     for (const f of fumacas) f.setEnabled(sim);
   };
+  // nas tomadas dos passeios, o Bento do palco sai (ele vai no trem: aparecia duas vezes, com a
+  // abóbora gigante pousada na cabeça) e a Lulu também (de costas, ao fundo da rua, o capuz
+  // dela sem rosto lia como um vulto)
+  scene.onBeforeRenderObservable.add(() => {
+    if (!mostrando) return;
+    for (const m of scene.meshes)
+      if ((m.name.startsWith('esboco-bento') || m.name.startsWith('esboco-lulu')) && m.isVisible) m.isVisible = false;
+  });
   quadro();
 
   const api: Passeios = {
@@ -1067,32 +1105,41 @@ export function montarPasseios(ctx: CtxPasseios): Passeios {
         // levantado e o rastro
         const frente = qual === 'vassouraFrente' ? 4.2 : 3.4;
         const longe = em ? 1.3 : 1.15;
-        const pos: V3 = [v.x + sx * frente - cz * longe, Y + (em ? 1.35 : 1.15), v.z + cz * frente + sx * longe];
-        const alvo: V3 = [v.x - sx * 0.5, Y + (em ? 1.0 : 0.85), v.z - cz * 0.5];
-        return { pos, alvo, fov: em ? 66 : 50 };
+        // (revisor: o chapéu saía cortado no alto; a câmera sobe e mira mais alto)
+        const pos: V3 = [v.x + sx * frente - cz * longe, Y + (em ? 1.5 : 1.4), v.z + cz * frente + sx * longe];
+        const alvo: V3 = [v.x - sx * 0.5, Y + (em ? 1.1 : 1.05), v.z - cz * 0.5];
+        return { pos, alvo, fov: em ? 68 : 55 };
       }
       if (qual === 'vassouraPerto') {
         const v = ondeVassoura(t);
         const sx = Math.sin(v.yaw);
         const cz = Math.cos(v.yaw);
         const longe = em ? 2.9 : 2.5;
-        const pos: V3 = [v.x + sx * 2.0 - cz * longe, Y + 1.3, v.z + cz * 2.0 + sx * longe];
-        const alvo: V3 = [v.x - sx * 0.2, Y + 0.9, v.z - cz * 0.2];
-        return { pos, alvo, fov: em ? 66 : 50 };
+        const pos: V3 = [v.x + sx * 2.0 - cz * longe, Y + 1.45, v.z + cz * 2.0 + sx * longe];
+        const alvo: V3 = [v.x - sx * 0.2, Y + 1.05, v.z - cz * 0.2];
+        return { pos, alvo, fov: em ? 68 : 55 };
       }
       if (qual === 'trem') {
-        // do gramado ao sul, olhando o túnel; o olhar acompanha devagar a locomotiva
-        // do gramado ao sudoeste, de longe: o túnel inteiro e o trem; o olhar acompanha devagar
-        // a locomotiva
+        // do gramado ao sudoeste, de longe: o túnel inteiro e o trem inteiro, a locomotiva
+        // sem cortar na beira
+        const pos: V3 = [ox + TCX - (em ? 11 : 13), Y + (em ? 3.4 : 3.1), oz + TUNEL.z + (em ? 10.5 : 9)];
+        const alvo: V3 = [ox + TCX - (em ? 6 : 5), Y + 0.9, oz + TUNEL.z - 0.8];
+        return { pos, alvo, fov: em ? 66 : 50 };
+      }
+      if (qual === 'tremSegue') {
+        // o vídeo de fora: a câmera anda no gramado ao sul do trilho, um pouco à frente da
+        // locomotiva, e olha para ela (a carinha aparece chegando e saindo do túnel)
         const p = ondeCarro(sDoTrem(t), carros[0]);
-        const alvoX = Math.max(ox + TCX - 7, Math.min(ox + TCX + 6, p.x));
-        const pos: V3 = [ox + TCX - (em ? 8 : 9.5), Y + (em ? 3.4 : 3.1), oz + TUNEL.z + (em ? 10 : 8.5)];
-        const alvo: V3 = [alvoX * 0.6 + (ox + TCX) * 0.4, Y + 0.9, oz + TUNEL.z - 0.8];
-        return { pos, alvo, fov: em ? 66 : 48 };
+        // (até cx + 8: mais para o leste, a árvore da beira passava na frente da câmera)
+        const cx = Math.max(ox + TCX - 15, Math.min(ox + TCX + 8, p.x - 5));
+        const pos: V3 = [cx, Y + 2.0, oz + TUNEL.z + 6.2];
+        const alvo: V3 = [p.x + 1.2, Y + 1.0, p.z];
+        return { pos, alvo, fov: em ? 66 : 52 };
       }
       if (qual === 'tremPerto') {
         // de frente para a boca de saída: a locomotiva-abóbora saindo do túnel, sorrindo
-        const pos: V3 = [ox + TUNEL.x0 - (em ? 7.0 : 6.4), Y + 1.4, oz + TUNEL.z + (em ? 2.0 : 1.7)];
+        // (olhando para o nordeste: a lua, baixa no leste, fica fora do quadro)
+        const pos: V3 = [ox + TUNEL.x0 - 5.4, Y + 1.45, oz + TUNEL.z + (em ? 4.4 : 3.9)];
         const alvo: V3 = [ox + TUNEL.x0 + 0.3, Y + 1.2, oz + TUNEL.z - 0.1];
         return { pos, alvo, fov: em ? 70 : 52 };
       }
@@ -1107,22 +1154,29 @@ export function montarPasseios(ctx: CtxPasseios): Passeios {
         // a bordo, na cabine da locomotiva (o lugar do maquinista): por cima da abóbora, a
         // chaminé soltando fumacinha e o túnel chegando (de trás, a cabeça grande dos
         // passageiros tapava tudo)
-        // (por cima do telhado da cabine: de dentro, o forro escuro tapava o alto do quadro)
-        const s = sDoTrem(t) - 0.55;
+        // (por cima da abóbora, na frente do telhado da cabine, que fica fora do quadro; um tico
+        // para o lado contrário da chaminé, que sai do meio do quadro)
+        const s = sDoTrem(t) - 0.6;
         const q = pontoDoTrilho(s);
         const a = pontoDoTrilho(s + 10);
-        const pos: V3 = [ox + q.x, Y + RT + 1.8, oz + q.z];
+        const lado = -0.2;
+        const pos: V3 = [ox + q.x + q.dz * lado, Y + RT + 2.35, oz + q.z - q.dx * lado];
         const alvo: V3 = [ox + a.x, Y + 1.0, oz + a.z];
-        return { pos, alvo, fov: em ? 82 : 70 };
+        return { pos, alvo, fov: em ? 80 : 66 };
       }
       if (qual === 'bosque') {
         // o passeio noturno pela trilha do bosque, para o norte (−z), devagar
-        const z = 60 - 2.0 * t;
-        const x = ctx.trilha(z) + 0.5 + Math.sin(t * 0.5) * 0.3;
+        // (revisor: passava raspando nos postes; os postes ficam a 3 do meio, um de cada lado,
+        // a cada 7 blocos: a câmera desvia para o lado contrário do poste que vem, ~4 dele)
+        // (começa logo depois de um poste, que fica para trás: nada de lampião cortado no começo)
+        const z = 62 - 2.0 * t;
+        // (o desvio maior vem uns 3 blocos antes do poste, quando ele está entrando no quadro)
+        const desvia = (zz: number) => -1.2 * Math.cos((Math.PI * (83 - (zz - 3))) / 7);
+        const x = ctx.trilha(z) + 0.5 + desvia(z);
         const za = z - 9;
         const pos: V3 = [ox + x, Y + 1.55, oz + z];
-        const alvo: V3 = [ox + ctx.trilha(za) + 0.5, Y + 1.6, oz + za];
-        return { pos, alvo, fov: em ? 74 : 60 };
+        const alvo: V3 = [ox + ctx.trilha(za) + 0.5 + desvia(za) * 0.4, Y + 1.6, oz + za];
+        return { pos, alvo, fov: em ? 70 : 56 };
       }
       return null;
     },
