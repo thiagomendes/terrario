@@ -44,7 +44,7 @@ import {
 import { criarDiario, temObras } from './jogo/diario';
 import { ativarTema } from './temas/ativar';
 import { povoadoDoTema, tema } from './temas/ativo';
-import { temaExiste } from './temas';
+import { TEMA_PADRAO, temaExiste } from './temas';
 import { CORES_MARCADOR, type Marcador } from './jogo/mapa';
 import type { DadosMundo } from './jogo/mundos';
 import { normalizarCodigo } from './jogo/codigos';
@@ -117,7 +117,7 @@ async function iniciar(app: HTMLElement): Promise<void> {
       const lista = await repo.listar();
       mundo =
         lista.find((m) => !m.nuvem) ??
-        (await repo.criar('Meu primeiro mundo', SEMENTE_PADRAO_MUNDO, 'criativo'));
+        (await repo.criar('Meu primeiro mundo', SEMENTE_PADRAO_MUNDO, 'criativo', TEMA_PADRAO));
     }
     dados = await repo.carregar(mundo.id);
   }
@@ -128,7 +128,7 @@ async function iniciar(app: HTMLElement): Promise<void> {
     !nuvem &&
     !!temaPrevia &&
     temaExiste(temaPrevia) &&
-    temaPrevia !== (mundo.tema ?? 'bruma-e-luz');
+    temaPrevia !== (mundo.tema ?? TEMA_PADRAO);
   const temaMundo = ativarTema(emPrevia ? temaPrevia : mundo.tema);
   // na nuvem o terreno segue o estilo gravado com o mundo (igual ao do servidor)
   if (nuvem) definirEstiloMundo(nuvem.bv.mundo.estilo);

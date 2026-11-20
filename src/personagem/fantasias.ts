@@ -7,7 +7,7 @@
  * "Tirar fantasia" só tira a camada, e o look de antes volta igualzinho.
  */
 import type { Corpo, IdDesbloqueio } from './aparencia';
-import type { IdTema } from '../temas/tipos';
+import type { IdTema, IdTemaQueSai } from '../temas/tipos';
 
 export type GrupoFantasia = 'realeza' | 'herois' | 'temas';
 /** Abas sempre nesta ordem (a criança aprende o lugar das coisas). */
@@ -136,7 +136,7 @@ export interface FantasiaDef {
   id: string;
   grupo: GrupoFantasia;
   /** Só nas fantasias dos temas (elas servem em qualquer mundo; o tema só ordena e sugere). */
-  tema?: IdTema;
+  tema?: IdTema | IdTemaQueSai;
   /** Nome pelo corpo escolhido: "Heroína Relâmpago" / "Herói Relâmpago". */
   nomes: Record<Corpo, string>;
   /** Opções da cor principal; a primeira é a padrão. */
@@ -875,8 +875,8 @@ export function fantasiasDoGrupo(grupo: GrupoFantasia, temaDoMundo?: string): Fa
 }
 
 /** Os temas de "Dos temas" na ordem da tela (o do mundo aberto primeiro, sem repetir). */
-export function temasDasFantasias(temaDoMundo?: string): IdTema[] {
-  const temas: IdTema[] = [];
+export function temasDasFantasias(temaDoMundo?: string): (IdTema | IdTemaQueSai)[] {
+  const temas: (IdTema | IdTemaQueSai)[] = [];
   for (const f of fantasiasDoGrupo('temas', temaDoMundo))
     if (f.tema && !temas.includes(f.tema)) temas.push(f.tema);
   return temas;

@@ -1,6 +1,7 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 import '../../src/temas/todos';
 import { obterTema, temasDisponiveis, TEMA_PADRAO } from '../../src/temas';
+import { temaBase } from '../../src/temas/base';
 import { ativarTemaPuro } from '../../src/temas/ativarPuro';
 import { textosOriginais } from '../../src/temas/originais';
 import { gerarAtlas, PINTORES } from '../../src/art/atlas';
@@ -65,10 +66,11 @@ const TILES_EXCLUSIVOS: ReadonlySet<string> = (() => {
  * Regras que todo tema cumpre (spec 007): cobertura completa de nomes e tiles,
  * mecânica intocada, contraste legível e nada vazando de outro tema.
  */
-const base = obterTema(TEMA_PADRAO);
+// spec 034: a base (que não se escolhe) e os cinco temas, todos "outros" em relação a ela
+const base = temaBase();
 const orig = textosOriginais();
 const temas = temasDisponiveis().map((id) => obterTema(id));
-const outros = temas.filter((t) => t.id !== TEMA_PADRAO);
+const outros = temas;
 
 /** Palavras que só fazem sentido no Bruma e Luz (não podem aparecer nos outros). */
 const ASSINATURA_BRUMA = ['bruma', 'brumal', 'lume', 'luzita', 'musgo', 'retorcid', 'espectro'];
@@ -238,7 +240,7 @@ describe.each(temas.map((t) => [t.id, t] as [string, Tema]))('tema %s', (_id, t)
     const pv = t.povoado;
     expect(pv, 'sem seção povoado').toBeTruthy();
     if (!pv) return;
-    if (t.id !== TEMA_PADRAO) expect(pv, 'usa o povoado do Bruma e Luz').not.toBe(base.povoado);
+    expect(pv, 'usa o povoado de reserva da base').not.toBe(base.povoado);
     expect(pv.nome).toBeTruthy();
     for (const p of PROFISSOES) expect(pv.profissoes[p], `profissão ${p}`).toBeTruthy();
     expect(new Set(pv.nomes).size, 'nomes de moradores').toBeGreaterThanOrEqual(8);
@@ -265,7 +267,7 @@ describe.each(temas.map((t) => [t.id, t] as [string, Tema]))('tema %s', (_id, t)
     for (const k of ['trocas', 'trocar', 'faltam', 'chegou'] as const)
       expect(pv.textos[k], k).toBeTruthy();
     const f = t.mundo.povoado;
-    if (t.id !== TEMA_PADRAO) expect(f, 'formas das construções').toBeTruthy();
+    expect(f, 'formas das construções').toBeTruthy();
     if (f) {
       for (const k of ['casa', 'oficina', 'deposito'] as const)
         expect(['duas-aguas', 'cupula', 'tenda', 'redonda', 'modulo']).toContain(f[k]);
@@ -436,7 +438,8 @@ describe('cada tema é ele mesmo', () => {
 });
 
 describe('robustez do registro', () => {
-  it('tema desconhecido ou ausente cai no Bruma e Luz', () => {
+  it('tema desconhecido ou ausente cai no padrão (a Vila Neon)', () => {
+    expect(TEMA_PADRAO).toBe('vila-neon');
     expect(obterTema('nao-existe').id).toBe(TEMA_PADRAO);
     expect(obterTema(undefined).id).toBe(TEMA_PADRAO);
     expect(obterTema(null).id).toBe(TEMA_PADRAO);

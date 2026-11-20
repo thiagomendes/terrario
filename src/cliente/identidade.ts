@@ -71,7 +71,8 @@ const DO_TEMA: Record<string, string> = {
  */
 export function nomeSugerido(personagem: string, tema?: string): string {
   const base = limparApelido(personagem) || 'Aventureiro';
-  const extra = (tema && DO_TEMA[tema]) || DO_TEMA['bruma-e-luz'];
+  // sem tema (ou um que saiu do jogo), o do tema padrão (spec 034: a Vila Neon)
+  const extra = (tema && DO_TEMA[tema]) || DO_TEMA['vila-neon'];
   return limparApelido(`${base} ${extra}`);
 }
 

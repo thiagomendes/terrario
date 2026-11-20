@@ -13,16 +13,16 @@ import type { Estacao, TipoClima } from '../jogo/clima';
 import type { FormasPovoado, Profissao } from '../world/povoado';
 import type { Exclusivos } from '../jogo/exclusivos';
 
+/** Os temas do jogo (spec 034: ficam cinco). */
 export type IdTema =
-  | 'bruma-e-luz'
-  | 'planeta-vivo'
-  | 'mata-encantada'
-  | 'doce-reino'
-  | 'era-dos-dinos'
-  | 'exploracao-lunar'
-  | 'rancho-alegre'
+  | 'vila-neon'
   | 'cidade-grande'
-  | 'vila-neon';
+  | 'rancho-alegre'
+  | 'doce-reino'
+  | 'exploracao-lunar';
+
+/** Spec 034: os quatro temas que saem do jogo (este tipo some quando eles saem, na T04). */
+export type IdTemaQueSai = 'bruma-e-luz' | 'planeta-vivo' | 'mata-encantada' | 'era-dos-dinos';
 
 export type Rgb = readonly [number, number, number];
 /** Pixel RGBA 0..255 de um tile. */
@@ -399,7 +399,7 @@ export interface TextosTema {
 
 export interface Tema {
   /** O id do tema; `'base'` só na base (que não se escolhe: `src/temas/base`). */
-  id: IdTema | 'base';
+  id: IdTema | IdTemaQueSai | 'base';
   nome: string;
   /** Frase do cartão e do título. */
   lema: string;

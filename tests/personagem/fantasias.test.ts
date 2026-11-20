@@ -29,9 +29,9 @@ import {
 import { sanear, sanearAparencia } from '../../src/nucleo/saneamento';
 import { criarNucleo, INTERVALO_APARENCIA } from '../../src/nucleo/nucleo';
 import { PASSO } from '../../src/nucleo/protocolo';
-import type { IdTema } from '../../src/temas/tipos';
+import type { IdTema, IdTemaQueSai } from '../../src/temas/tipos';
 
-const TEMAS: IdTema[] = [
+const TEMAS: (IdTema | IdTemaQueSai)[] = [
   'bruma-e-luz',
   'planeta-vivo',
   'mata-encantada',

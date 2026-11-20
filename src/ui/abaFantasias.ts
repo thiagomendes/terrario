@@ -34,11 +34,14 @@ import {
 } from '../personagem/fantasias';
 import type { Armazenamento } from '../personagem/persistencia';
 import { nivelDaCrianca } from '../personagem/almaCrianca';
-import type { IdTema } from '../temas/tipos';
+import type { IdTema, IdTemaQueSai } from '../temas/tipos';
 import { icone, type NomeIcone } from './pixicones';
 
 /** Nome de cada tema na aba (o inteiro no título da seção, o curto no selinho do cartão). */
-export const NOMES_TEMAS: Record<IdTema, { nome: string; curto: string; de: string }> = {
+export const NOMES_TEMAS: Record<
+  IdTema | IdTemaQueSai,
+  { nome: string; curto: string; de: string }
+> = {
   'rancho-alegre': { nome: 'Rancho Alegre', curto: 'Rancho', de: 'do' },
   'exploracao-lunar': { nome: 'Exploração Lunar', curto: 'Lua', de: 'da' },
   'era-dos-dinos': { nome: 'Era dos Dinos', curto: 'Dinos', de: 'da' },

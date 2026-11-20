@@ -26,6 +26,15 @@ describe('repositório de mundos', () => {
     expect(d.jogador).toBeNull();
   });
 
+  it('todo mundo novo nasce com o tema gravado (sem pedido, a Vila Neon)', async () => {
+    // spec 034: nenhum mundo novo fica sem tema
+    const { r } = repo();
+    expect((await r.criar('Sem pedido', 1, 'criativo')).tema).toBe('vila-neon');
+    expect((await r.criar('Vazio', 2, 'criativo', '')).tema).toBe('vila-neon');
+    expect((await r.criar('Doce', 3, 'criativo', 'doce-reino')).tema).toBe('doce-reino');
+    expect((await r.listar()).every((m) => !!m.tema)).toBe(true);
+  });
+
   it('salvar grava os dados, atualiza a data e o último mundo', async () => {
     const { r } = repo();
     const a = await r.criar('A', 1, 'criativo');

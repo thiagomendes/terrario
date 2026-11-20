@@ -1,4 +1,5 @@
 import type { EdicoesExportadas } from '../world/edicoes';
+import { TEMA_PADRAO } from '../temas';
 
 export type ModoJogo = 'criativo' | 'sobrevivencia';
 
@@ -11,7 +12,10 @@ export interface MetaMundo {
   jogadoEm: number;
   /** Miniatura JPEG (data URL) da última vez que o mundo foi salvo. */
   miniatura?: string;
-  /** Tema visual do mundo (mundos antigos não têm: são Bruma e Luz). */
+  /**
+   * Tema visual do mundo. Spec 034: todo mundo novo nasce com ele gravado; os antigos sem tema
+   * eram do Bruma e Luz, que saiu do jogo.
+   */
   tema?: string;
   /** Versão do mundo: 2 = criado já com povoados (mundos antigos não têm). */
   versao?: number;
@@ -179,8 +183,9 @@ export function criarRepositorioMundos(
         criadoEm: t,
         jogadoEm: t,
         versao: 2,
+        // spec 034: todo mundo novo com o tema gravado (sem pedido, o padrão)
+        tema: tema || TEMA_PADRAO,
       };
-      if (tema) meta.tema = tema;
       lista.push(meta);
       // o primeiro mundo de um aparelho novo já nasce no formato de agora
       if ((await armazem.obter(CHAVE_FORMATO)) !== FORMATO_MUNDOS)

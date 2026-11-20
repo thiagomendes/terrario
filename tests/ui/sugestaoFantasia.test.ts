@@ -27,8 +27,11 @@ const quebrada: Armazenamento = {
 describe('sugestão de fantasia ao criar mundo', () => {
   it('pergunta pelo nome do tema, com o artigo certo', () => {
     expect(perguntaDaSugestao('rancho-alegre')).toBe('Quer vestir a fantasia do Rancho Alegre?');
-    expect(perguntaDaSugestao('mata-encantada')).toBe('Quer vestir a fantasia da Mata Encantada?');
-    expect(perguntaDaSugestao(undefined)).toBe('Quer vestir a fantasia de Bruma e Luz?');
+    expect(perguntaDaSugestao('exploracao-lunar')).toBe(
+      'Quer vestir a fantasia da Exploração Lunar?',
+    );
+    // spec 034: sem tema, o padrão (a Vila Neon)
+    expect(perguntaDaSugestao(undefined)).toBe('Quer vestir a fantasia da Vila Neon?');
   });
 
   it('o mundo criado fica marcado como novo até a sugestão aparecer', () => {
@@ -47,8 +50,8 @@ describe('sugestão de fantasia ao criar mundo', () => {
     const a = aparenciaPadrao();
     expect(fantasiaParaSugerir(l, 'm1', true, 'rancho-alegre', a)?.id).toBe('fazendeira');
     expect(fantasiaParaSugerir(l, 'm1', true, 'exploracao-lunar', a)?.id).toBe('astronauta');
-    // mundo antigo, sem tema: Bruma e Luz
-    expect(fantasiaParaSugerir(l, 'm1', true, undefined, a)?.id).toBe('lanterneira');
+    // sem tema: o padrão (spec 034: a Vila Neon)
+    expect(fantasiaParaSugerir(l, 'm1', true, undefined, a)?.id).toBe('roqueira-palco');
     marcarSugerida(l, 'm1');
     expect(jaSugerida(l, 'm1')).toBe(true);
     expect(fantasiaParaSugerir(l, 'm1', true, 'rancho-alegre', a)).toBeUndefined();

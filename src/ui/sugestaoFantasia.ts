@@ -8,6 +8,7 @@ import type { Aparencia } from '../personagem/aparencia';
 import { fantasiaDoTema, type FantasiaDef } from '../personagem/fantasias';
 import type { Armazenamento } from '../personagem/persistencia';
 import type { IdTema } from '../temas/tipos';
+import { TEMA_PADRAO } from '../temas';
 import { NOMES_TEMAS } from './abaFantasias';
 
 /** O mundo que a criança acabou de criar (a página dele abre logo depois). */
@@ -73,13 +74,13 @@ export function fantasiaParaSugerir(
   aparencia: Aparencia,
 ): FantasiaDef | undefined {
   if (!novo || !idMundo || jaSugerida(loja, idMundo)) return undefined;
-  const def = fantasiaDoTema(tema ?? 'bruma-e-luz', aparencia.desbloqueios);
+  const def = fantasiaDoTema(tema ?? TEMA_PADRAO, aparencia.desbloqueios);
   if (!def || aparencia.fantasia?.id === def.id) return undefined;
   return def;
 }
 
 /** "Quer vestir a fantasia do Rancho Alegre?" */
 export function perguntaDaSugestao(tema: string | undefined): string {
-  const t = NOMES_TEMAS[(tema ?? 'bruma-e-luz') as IdTema] ?? NOMES_TEMAS['bruma-e-luz'];
+  const t = NOMES_TEMAS[(tema ?? TEMA_PADRAO) as IdTema] ?? NOMES_TEMAS[TEMA_PADRAO];
   return `Quer vestir a fantasia ${t.de} ${t.nome}?`;
 }
