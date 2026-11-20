@@ -49,6 +49,20 @@ Jogo voxel de brinquedo no navegador, para crianças (os testadores são os dois
 
 Durante o trabalho, mandar ao dono "aperitivos" (fotos e vídeos do que está ficando pronto). Crítica do dono no meio do caminho: se cabe na spec, entra nela; se não, vira spec nova no backlog.
 
+## Boletim para o dono (decisão de 20 nov 2026)
+- **De hora em hora**, e na hora quando algo precisa dele (decisão, aperitivo, publicação, problema).
+- **A vigia dos agentes é silenciosa:** a cada ~15 min, só fala com o dono se houver problema.
+- **Modelo enxuto**, sem detalhe técnico, horário de Brasília:
+
+> **Boletim das 10h**
+> **034 · 11 de 16:** agora, os testes que dependiam dos 4 mundos.
+> **Andou:** o apelido ganhou o final da Vila; a folha dos gestos ficou pronta.
+> **Precisa de você:** 1) aprovar os gestos A reforçada. Opções: aprovar / ajustar algum / manter os de hoje. Recomendo aprovar.
+> **Riscos:** (só se houver)
+> **Próximo:** os testes antigos, os gestos no jogo, a conferência final e a publicação. **Depois:** o esboço da Noite das Fantasias.
+
+- "Precisa de você" sempre traz as opções e a recomendada; se não houver nada, diz "nada".
+
 ## Ritmo
 - Uma spec por vez.
 - No computador do dono, trabalho só das 7h às 22h (hora de Brasília); às 22h: parar os agentes, a vigia e os contêineres, avisar o dono e agendar a retomada às 7h. Na nuvem (Claude Code na web) não há pausa das 22h (decisão do dono, 19 nov 2026).
