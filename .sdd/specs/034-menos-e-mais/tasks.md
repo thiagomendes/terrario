@@ -55,3 +55,10 @@ Saiu da spec (dono, 19 nov): vai com a casca nativa (020). A T12 não existe mai
 - **Linha de base nesta máquina** (nuvem, sem placa de vídeo):
   - Vitest: 204 arquivos, 2044 de 2044;
   - os e2e precisam de `E2E_CHROMIUM`; `fumaca` passa 3 de 3.
+- **(20 nov 2026) T00 feita** (501f256, f0a26d8, a65117b):
+  - hashes dos cinco (atlas, terreno com povoados em 3 sementes, plano urbano e metas, sons, dados e resto do tema) e do canto do Doce;
+  - fotos de antes com `escala=1`.
+  - A paridade agora é Rancho + Doce, 36/36 conferida duas vezes nesta máquina.
+  - Na nuvem a paridade não fechava com tema nenhum: a saturação caía 5→4 conforme a duração em tempo real, a ~1 FPS. O atalho de teste `relogioCansa` desliga só o cansaço do relógio durante a paridade; o servidor de produção não aceita `depurar`. A queda pela exaustão ficou coberta por testes de unidade.
+  - O roteiro da raposa na paridade estava errado: ela é curiosa e para a ~2,75 blocos, e o jogador ficava a 1,6.
+- **T01 feita e desfeita** (65c6e2d, 947ba23): a faixa azul saiu da spec.
