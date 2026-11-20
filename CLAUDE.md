@@ -52,16 +52,16 @@ Durante o trabalho, mandar ao dono "aperitivos" (fotos e vídeos do que está fi
 ## Boletim para o dono (decisão de 20 nov 2026)
 - **De hora em hora**, e na hora quando algo precisa dele (decisão, aperitivo, publicação, problema).
 - **A vigia dos agentes é silenciosa:** a cada ~15 min, só fala com o dono se houver problema.
-- **Modelo enxuto**, sem detalhe técnico, horário de Brasília:
+- **No chat, sem página publicada** (dono, 20 nov): só o que o chat mostra (título, barra de progresso em texto, tabela, listas), sem detalhe técnico, horário de Brasília:
 
-> **Boletim das 10h**
-> **034 · 11 de 16:** agora, os testes que dependiam dos 4 mundos.
-> **Andou:** o apelido ganhou o final da Vila; a folha dos gestos ficou pronta.
-> **Precisa de você:** 1) aprovar os gestos A reforçada. Opções: aprovar / ajustar algum / manter os de hoje. Recomendo aprovar.
-> **Riscos:** (só se houver)
-> **Próximo:** os testes antigos, os gestos no jogo, a conferência final e a publicação. **Depois:** o esboço da Noite das Fantasias.
-
-- "Precisa de você" sempre traz as opções e a recomendada; se não houver nada, diz "nada".
+> ### Boletim das 11h · Terrário
+> **034 · Menos é mais**
+> `▓▓▓▓▓▓▓▓▓▓▒▒░░░░  10 de 16`  (▓ feito · ▒ andando · ░ falta)
+> | Etapa | Situação | (uma linha por etapa, agrupando as tarefas)
+> **Andou desde o último:** 1 a 3 itens.
+> **Precisa de você:** "nada agora", ou cada decisão com uma linha de contexto, **Recomendo:** a opção e por quê, e **Outras:** as alternativas.
+> **Riscos:** só se houver.
+> **Próximo:** os passos seguintes. **Depois:** a próxima spec da fila.
 
 ## Ritmo
 - Uma spec por vez.
