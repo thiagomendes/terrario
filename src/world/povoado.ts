@@ -262,8 +262,9 @@ const TENTATIVAS_SITIO = 6;
 
 function planejar(rx: number, rz: number, semente: number, t: TerrenoNatural): PlanoPovoado | null {
   // spec 014: o mundo da cidade não tem povoado de região (a cidade é o povoado dele); o da
-  // Vila Neon (spec 026), também não (o bairro é o povoado dele)
-  if (t.planta === 'cidade' || t.planta === 'bairro') return null;
+  // Vila Neon (spec 026), também não (o bairro é o povoado dele); nem o da Noite das Fantasias
+  // (spec 027: a vila da festa é o povoado dele)
+  if (t.planta === 'cidade' || t.planta === 'bairro' || t.planta === 'baile') return null;
   // metade das regiões tem chance de povoado
   if (hash2(rx, rz, semente + 7101) > 0.5) return null;
   if (t.planta !== 'sitio') return planejarEm(rx, rz, semente, t, 0);

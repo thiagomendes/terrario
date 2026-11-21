@@ -17,7 +17,9 @@ import {
   definirEstiloMundo,
   cidadeDoMundo,
   vilaDoMundo,
+  baileDoMundo,
 } from '../../src/world/chunk';
+import { ALCANCE_SUAVE_BAILE } from '../../src/world/noiteFantasias';
 import { ALCANCE_SUAVE, distanciaDaCidade } from '../../src/world/cidade';
 import { ALCANCE_SUAVE_VILA, distanciaDaVila } from '../../src/world/vilaNeon';
 import { normalizarAparencia, aparenciaPadrao } from '../../src/personagem/aparencia';
@@ -338,11 +340,23 @@ describe('temas não mudam a mecânica', () => {
     const pular = (cx: number, cz: number) =>
       distanciaDaCidade(cidade, cx * 16 + 8, cz * 16 + 8) <= ALCANCE_SUAVE + 16 ||
       distanciaDaVila(vila, cx * 16 + 8, cz * 16 + 8) <= ALCANCE_SUAVE_VILA + 16;
-    const contar = () => {
+    // spec 027: a vila da festa achata o relevo e fica só com o bosque e o campinho até além da
+    // visão máxima (o morro de outro bioma não aparece de dentro dela): a conta dela é feita
+    // numa janela de 9 × 9 chunks depois do alcance (a exploração lá é a de sempre)
+    definirEstiloMundo(obterTema('noite-das-fantasias').mundo);
+    const baile = baileDoMundo(1337)!;
+    const janelaBaile = {
+      cx0: Math.floor((baile.plana.x1 + ALCANCE_SUAVE_BAILE + 40) / 16),
+      cz0: Math.floor((baile.plana.z0 + baile.plana.z1) / 32) - 4,
+    };
+    const contar = (janela?: { cx0: number; cz0: number }) => {
       const r = { bau: 0, minerios: 0, comida: 0 };
-      for (let cx = -8; cx <= 8; cx++)
-        for (let cz = -8; cz <= 8; cz++) {
-          if (pular(cx, cz)) continue;
+      const [a0, a1, b0, b1] = janela
+        ? [janela.cx0, janela.cx0 + 8, janela.cz0, janela.cz0 + 8]
+        : [-8, 8, -8, 8];
+      for (let cx = a0; cx <= a1; cx++)
+        for (let cz = b0; cz <= b1; cz++) {
+          if (!janela && pular(cx, cz)) continue;
           const c = gerarChunk(cx, cz, 1337);
           for (let i = 0; i < c.length; i++) {
             if (c[i] === 42) r.bau++;
@@ -355,9 +369,15 @@ describe('temas não mudam a mecânica', () => {
     };
     definirEstiloMundo(ESTILO_PADRAO);
     const ref = contar();
+    const refBaile = contar(janelaBaile);
     for (const t of outros) {
       definirEstiloMundo(t.mundo);
-      const r = contar();
+      const baileT = t.mundo.povoado?.planta === 'baile';
+      const r = contar(baileT ? janelaBaile : undefined);
+      if (baileT) {
+        expect(r, t.id).toEqual(refBaile);
+        continue;
+      }
       expect(r.bau, t.id).toBe(ref.bau);
       expect(
         Math.abs(r.comida - ref.comida) / ref.comida,

@@ -50,6 +50,7 @@ import {
 import { lavouraDoBloco } from '../jogo/plantio';
 import { distanciaDaCidade, passagensDaCidade } from './cidade';
 import { construirVila, distanciaDaVila } from './vilaNeon';
+import { construirBaile, distanciaDoBaile } from './noiteFantasias';
 
 /** Passo de cada direção do metadado (0 +z, 1 +x, 2 -z, 3 -x). */
 const DIRS: readonly (readonly [number, number])[] = [
@@ -133,7 +134,15 @@ export function replantioDaLavoura(colhido: number): number | null {
  * De quem é a construção do chunk, para o aviso (spec 016, T03): a vila, o sítio, a ruína ou
  * a estrutura rara do tema.
  */
-export type LugarProtecao = 'vila' | 'sitio' | 'ruina' | 'estrutura' | 'cidade' | 'bairro';
+export type LugarProtecao =
+  | 'vila'
+  | 'sitio'
+  | 'ruina'
+  | 'estrutura'
+  | 'cidade'
+  | 'bairro'
+  /** Spec 027: a vila da Noite das Fantasias. */
+  | 'festa';
 
 /** Proteção de um chunk: só a faixa de altura [y0, y1] com algo protegido. */
 export interface MascaraProtecao {
@@ -265,6 +274,26 @@ export function protecaoDoChunk(
         passagem(wx, y + 2, wz);
       }
     });
+  } else if (e.tipo === 'baile') {
+    // spec 027: a vila da festa é do mundo (como o bairro da Vila Neon): o chão inteiro e a
+    // margem não se cavam; o vão das portas fechadas e o ar em cima da escadinha do palco
+    // ficam livres
+    const p = e.plano;
+    for (let z = 0; z < TAM_Z; z++)
+      for (let x = 0; x < TAM_X; x++) {
+        const wx = x0 + x;
+        const wz = z0 + z;
+        if (distanciaDoBaile(p, wx, wz) > MARGEM_CHAO) continue;
+        chao(wx, wz, alturaTerreno(wx, wz, semente));
+      }
+    construirBaile(p, cx, cz, (wx, y, wz, id) => {
+      if (wx < x0 || wx >= x0 + TAM_X || wz < z0 || wz >= z0 + TAM_Z) return;
+      if (id === Bloco.AR) passagem(wx, y, wz);
+      else if (id === Bloco.ESCADA) {
+        passagem(wx, y + 1, wz);
+        passagem(wx, y + 2, wz);
+      }
+    });
   } else if (e.tipo === 'canto') {
     // spec 031: o canto das missões. O chão das peças não se cava; as passagens ficam vazias;
     // as células do bolo são de obra (só o bloco certo entra; cheias, não quebram)
@@ -298,7 +327,9 @@ export function protecaoDoChunk(
       ? 'cidade'
       : e.tipo === 'vila'
         ? 'bairro'
-        : e.tipo === 'canto'
+        : e.tipo === 'baile'
+          ? 'festa'
+          : e.tipo === 'canto'
           ? 'estrutura'
           : e.tipo === 'povoado'
             ? e.plano.lotes.some((l) => l.uso !== undefined)

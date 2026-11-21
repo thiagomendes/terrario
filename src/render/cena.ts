@@ -15,6 +15,7 @@ import {
   encontrarNascimento,
   escolhaDoCanto,
   vilaDoMundo,
+  baileDoMundo,
 } from '../world/chunk';
 import { colunasEditadas, escolherCanto, type PlanoCanto } from '../world/cantoMissoes';
 import { povoadoDoTema, tema } from '../temas/ativo';
@@ -125,6 +126,7 @@ import { faseDoShow, noiteDeShow } from '../jogo/show';
 import { noiteDosBichos } from '../jogo/tempo';
 import { criarShowVila } from './vila/show';
 import type { PlanoVila } from '../world/vilaNeon';
+import type { PlanoBaile } from '../world/noiteFantasias';
 import { LARGURA_CIDADE, PROFUNDIDADE_CIDADE } from '../world/cidade';
 import { criarAgua } from './agua';
 import { criarVagalumes } from './vagalumes';
@@ -459,6 +461,8 @@ export interface EstadoDepuracao {
   horizonte?: () => { triangulos: number; ativo: boolean } | null;
   /** Spec 026: o plano da Vila Neon (null nos outros temas). */
   vila?: () => PlanoVila | null;
+  /** Spec 027: o plano da vila da Noite das Fantasias (null nos outros temas). */
+  baile?: () => PlanoBaile | null;
   /** Spec 026: o estado do bairro que o núcleo mandou (show, estojos, caixas, lhamas). */
   vilaEstado?: () => import('../nucleo/vila').VilaVista | null;
   /** Spec 026: manda a caixa do palco ou o toque no palco ao núcleo. */
@@ -1842,8 +1846,11 @@ export function criarCena(
     // 014c: na cidade (plana, a rua comprida à vista) a névoa chega até a ponta do chão
     // desenhado, para as ruas de longe sumirem na bruma em vez de acabarem num corte. As torres
     // do horizonte (variante C) continuam com a névoa de antes.
+    // (spec 027: na Noite das Fantasias também: da praça, nenhuma borda do mundo aparece)
     const densMundo =
-      temaAtual.id === 'cidade-grande' || temaAtual.id === 'vila-neon'
+      temaAtual.id === 'cidade-grande' ||
+      temaAtual.id === 'vila-neon' ||
+      temaAtual.id === 'noite-das-fantasias'
         ? Math.max(densAr, NEVOA_NA_PONTA / bordaDoChao())
         : densAr;
     scene.fogDensity = densMundo + (0.06 - densMundo) * ns;
@@ -1929,6 +1936,9 @@ export function criarCena(
       })
     : null;
   estado.vila = () => planoVila;
+  // spec 027: a vila da Noite das Fantasias (null nos outros temas)
+  const planoBaile = baileDoMundo(semente);
+  estado.baile = () => planoBaile;
   const showVila = planoVila
     ? criarShowVila(scene, planoVila, {
         temMalha: (cx, cz) => malhas.has(chave(cx, cz)),
@@ -4048,12 +4058,13 @@ export function criarCena(
     enviarRemalhas();
     const cx = Math.floor(camera.position.x / TAM_X);
     const cz = Math.floor(camera.position.z / TAM_Z);
-    // spec 026: na Vila Neon, o que está na frente da câmera chega antes
+    // spec 026: na Vila Neon, o que está na frente da câmera chega antes (spec 027: na vila da
+    // festa também: da praça, a abóbora gigante e as barracas primeiro)
     const desejados = chunksDesejados(
       cx,
       cz,
       raioChunks,
-      planoVila
+      planoVila || planoBaile
         ? { x: Math.sin(cameraVisao.rotation.y), z: Math.cos(cameraVisao.rotation.y) }
         : undefined,
     );

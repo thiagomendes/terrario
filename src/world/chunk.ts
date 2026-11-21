@@ -29,6 +29,16 @@ import {
   vilaNoChunk,
   type PlanoVila,
 } from './vilaNeon';
+import {
+  ACHATADO_BAILE,
+  ajusteDoBaile,
+  baileNoChunk,
+  construirBaile,
+  distanciaDoBaile,
+  planoDoBaile,
+  RAMPA_BAILE,
+  type PlanoBaile,
+} from './noiteFantasias';
 import { Bloco } from './blocks';
 import {
   cantoNoChunk,
@@ -124,6 +134,9 @@ export function alturaTerreno(wx: number, wz: number, semente: number): number {
   // spec 026: a Vila Neon (o mesmo jeito: chão plano e o relevo amaciado em volta)
   const vila = vilaDoMundo(semente);
   if (vila) return ajusteDaVila(vila, wx, wz, natural)?.h ?? natural;
+  // spec 027: a vila da festa (o chão plano e os morrinhos baixos em volta)
+  const baile = baileDoMundo(semente);
+  if (baile) return ajusteDoBaile(baile, wx, wz, natural)?.h ?? natural;
   const p = povoadosLigados ? povoadoNaColuna(wx, wz, semente) : null;
   if (!p) return natural;
   return ajusteDaColuna(p, wx, wz, natural)?.h ?? natural;
@@ -176,9 +189,17 @@ export function vilaDoMundo(semente: number): PlanoVila | null {
   if (!povoadosLigados || estilo.povoado?.planta !== 'bairro') return null;
   return planoDaVila(semente, RELEVO, String(estilo.crateras));
 }
-/** Mundo com planejador próprio (cidade ou bairro): sem povoados, canto nem ruína por perto. */
+/**
+ * Spec 027: a vila da festa do mundo, se o tema for a Noite das Fantasias (`planta: 'baile'`);
+ * senão null. Os povoados desligados (teste de paridade) desligam a vila também.
+ */
+export function baileDoMundo(semente: number): PlanoBaile | null {
+  if (!povoadosLigados || estilo.povoado?.planta !== 'baile') return null;
+  return planoDoBaile(semente, RELEVO, String(estilo.crateras));
+}
+/** Mundo com planejador próprio (cidade, bairro ou festa): sem povoados, canto nem ruína perto. */
 function urbanoDoMundo(semente: number): boolean {
-  return !!cidadeDoMundo(semente) || !!vilaDoMundo(semente);
+  return !!cidadeDoMundo(semente) || !!vilaDoMundo(semente) || !!baileDoMundo(semente);
 }
 /** Liga ou desliga os povoados (o teste de paridade com o jogo antigo desliga). */
 export function definirPovoados(ligado: boolean): void {
@@ -352,6 +373,11 @@ export function biomaEm(wx: number, wz: number, semente: number, h?: number): Bi
   const altura = h ?? alturaTerreno(wx, wz, semente);
   const c = clima(wx, wz, semente);
   if (altura < NIVEL_MAR - 1) return 'oceano';
+  // spec 027: em volta da vila da festa, até além da visão máxima, só o bosque e o campinho do
+  // tema (nenhum morro de neve, deserto ou brejo à vista de dentro da vila)
+  const baile = estilo.povoado?.planta === 'baile' ? baileDoMundo(semente) : null;
+  if (baile && distanciaDoBaile(baile, wx, wz) <= ACHATADO_BAILE + 16)
+    return c.umidade < 0.44 ? 'campos' : 'floresta';
   if (altura >= 90) return 'montanhas';
   if (c.temperatura < 0.36) return 'taiga';
   if (c.temperatura > 0.6 && c.umidade < 0.42) return 'deserto';
@@ -452,6 +478,7 @@ export function gerarChunk(cx: number, cz: number, semente: number = SEMENTE_PAD
   );
   const cidade = cidadeDoMundo(semente);
   const vila = vilaDoMundo(semente);
+  const baile = baileDoMundo(semente);
   // spec 031: o canto das missões (o chão dele é firme; o mato sai de perto)
   const canto = cantoNoChunk(cantoDoMundo(semente), cx, cz, 4) ? cantoDoMundo(semente) : null;
 
@@ -460,12 +487,15 @@ export function gerarChunk(cx: number, cz: number, semente: number = SEMENTE_PAD
       const wx = cx * TAM_X + x;
       const wz = cz * TAM_Z + z;
       const natural = alturaNatural(wx, wz, semente);
-      const plano = povoadosLigados && !cidade && !vila ? povoadoNaColuna(wx, wz, semente) : null;
+      const plano =
+        povoadosLigados && !cidade && !vila && !baile ? povoadoNaColuna(wx, wz, semente) : null;
       const ajusteCidade = cidade
         ? ajusteDaCidade(cidade, wx, wz, natural)
         : vila
           ? ajusteDaVila(vila, wx, wz, natural)
-          : null;
+          : baile
+            ? ajusteDoBaile(baile, wx, wz, natural)
+            : null;
       const ajuste = plano ? ajusteDaColuna(plano, wx, wz, natural) : ajusteCidade;
       const h = ajuste?.h ?? natural;
       alturas[z * TAM_X + x] = h;
@@ -628,7 +658,7 @@ export function gerarChunk(cx: number, cz: number, semente: number = SEMENTE_PAD
       }
     }
   }
-  const metas = cidade || vila ? new Map<number, number>() : undefined;
+  const metas = cidade || vila || baile ? new Map<number, number>() : undefined;
   pintarEstruturas(blocos, cx, cz, semente, alturas, biomas, metas);
   if (metas) guardarMetas(cx, cz, semente, metas);
   return blocos;
@@ -640,6 +670,8 @@ export type EstruturaDoChunk =
   | { tipo: 'cidade'; plano: PlanoCidade }
   /** Spec 026: o bairro da Vila Neon. */
   | { tipo: 'vila'; plano: PlanoVila }
+  /** Spec 027: a vila da Noite das Fantasias. */
+  | { tipo: 'baile'; plano: PlanoBaile }
   | { tipo: 'ruina'; h: number; forma: EstiloMundo['estrutura'] }
   /** Spec 031: o canto das missões (o chunk dele não tem povoado nem estrutura rara). */
   | { tipo: 'canto'; plano: PlanoCanto }
@@ -713,6 +745,22 @@ export function pintarEstruturas(
     });
     return { tipo: 'vila', plano: vila };
   }
+  // spec 027: a vila da festa (e então nem povoado nem ruína)
+  const baile = baileDoMundo(semente);
+  if (baile && baileNoChunk(baile, cx, cz)) {
+    construirBaile(baile, cx, cz, (wx, y, wz, id, meta) => {
+      const x = wx - x0;
+      const z = wz - z0;
+      if (x < 0 || x >= TAM_X || z < 0 || z >= TAM_Z || y < 1 || y >= ALTURA) return;
+      const i = indice(x, y, z);
+      blocos[i] = id;
+      if (metas) {
+        if (meta) metas.set(i, meta);
+        else metas.delete(i);
+      }
+    });
+    return { tipo: 'baile', plano: baile };
+  }
   // spec 031: o canto das missões (o planejador escolheu um lugar sem povoado nem ruína)
   const canto = cantoDoMundo(semente);
   if (canto && cantoNoChunk(canto, cx, cz)) {
@@ -747,8 +795,11 @@ export function estruturaDoChunk(
 ): EstruturaDoChunk {
   const cidade = cidadeDoMundo(semente);
   const vilaP = vilaDoMundo(semente);
+  const baileP = baileDoMundo(semente);
   const naCidade =
-    (!!cidade && cidadeNoChunk(cidade, cx, cz)) || (!!vilaP && vilaNoChunk(vilaP, cx, cz));
+    (!!cidade && cidadeNoChunk(cidade, cx, cz)) ||
+    (!!vilaP && vilaNoChunk(vilaP, cx, cz)) ||
+    (!!baileP && baileNoChunk(baileP, cx, cz));
   const plano = naCidade ? null : planoQueTocaOChunk(cx, cz, semente);
   const noCanto = !naCidade && cantoNoChunk(cantoDoMundo(semente), cx, cz);
   if (
@@ -815,7 +866,12 @@ export function metasGeradasDoChunk(
 ): ReadonlyMap<number, number> {
   const cidade = cidadeDoMundo(semente);
   const vila = vilaDoMundo(semente);
-  if (!(cidade && cidadeNoChunk(cidade, cx, cz)) && !(vila && vilaNoChunk(vila, cx, cz)))
+  const baile = baileDoMundo(semente);
+  if (
+    !(cidade && cidadeNoChunk(cidade, cx, cz)) &&
+    !(vila && vilaNoChunk(vila, cx, cz)) &&
+    !(baile && baileNoChunk(baile, cx, cz))
+  )
     return SEM_METAS;
   conferirVersaoMetas();
   const k = `${cx},${cz},${semente}`;
@@ -830,7 +886,8 @@ export function metasGeradasDoChunk(
 /** Metadado que a geração deu à célula (0 se nenhum). */
 export function metaGerada(x: number, y: number, z: number, semente: number): number {
   const planta = estilo.povoado?.planta;
-  if ((planta !== 'cidade' && planta !== 'bairro') || y < 0 || y >= ALTURA) return 0;
+  if ((planta !== 'cidade' && planta !== 'bairro' && planta !== 'baile') || y < 0 || y >= ALTURA)
+    return 0;
   const cx = Math.floor(x / TAM_X);
   const cz = Math.floor(z / TAM_Z);
   return metasGeradasDoChunk(cx, cz, semente).get(indice(x - cx * TAM_X, y, z - cz * TAM_Z)) ?? 0;
@@ -856,6 +913,9 @@ function construirRuina(
     return null;
   const vila = vilaDoMundo(semente);
   if (vila && distanciaDaVila(vila, cx * TAM_X + 8, cz * TAM_Z + 8) <= RAMPA_VILA + 12) return null;
+  // spec 027: nem dentro da vista da vila da festa (nada de estrutura alheia à vista)
+  const baile = baileDoMundo(semente);
+  if (baile && distanciaDoBaile(baile, cx * TAM_X + 8, cz * TAM_Z + 8) <= ACHATADO_BAILE) return null;
   const c = 8 * TAM_X + 8;
   const b = biomas[c];
   if (b === 'oceano' || b === 'praia' || b === 'pantano' || b === 'montanhas') return null;
@@ -1345,6 +1405,9 @@ export function encontrarNascimento(semente: number): { x: number; z: number } {
   // spec 026: na pracinha da Vila Neon, olhando para o palco
   const vila = vilaDoMundo(semente);
   if (vila) return { x: vila.nascimento.x, z: vila.nascimento.z };
+  // spec 027: na Praça da Abóbora, de frente para a abóbora gigante
+  const baile = baileDoMundo(semente);
+  if (baile) return { x: baile.nascimento.x, z: baile.nascimento.z };
   const sitio = TERRENO_NATURAL.planta === 'sitio';
   // spec 034: a chave leva o relevo (o servidor tem mundos de temas diferentes juntos)
   const k = `${semente},${sitio ? 'sitio' : ''},${chaveDoRelevo()}`;
@@ -1369,6 +1432,8 @@ export function olharDoNascimento(semente: number): number | undefined {
   if (cidade) return cidade.nascimento.olhar;
   const vila = vilaDoMundo(semente);
   if (vila) return vila.nascimento.olhar;
+  const baile = baileDoMundo(semente);
+  if (baile) return baile.nascimento.olhar;
   if (TERRENO_NATURAL.planta !== 'sitio') return undefined;
   encontrarNascimento(semente);
   return olhares.get(`${semente},sitio,${chaveDoRelevo()}`);

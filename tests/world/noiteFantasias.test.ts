@@ -15,7 +15,26 @@ import {
 } from '../../src/world/noiteFantasias';
 import { Bloco, obterBloco } from '../../src/world/blocks';
 import { BLOCOS_SO_DA_VILA, EXCLUSIVOS_CIDADE } from '../../src/jogo/exclusivos';
-import { ALTURA } from '../../src/world/chunk';
+import {
+  ALTURA,
+  alturaTerreno,
+  baileDoMundo,
+  biomaEm,
+  definirEstiloMundo,
+  encontrarNascimento,
+  estiloMundo,
+  estruturaDoChunk,
+  gerarChunk,
+  indice,
+  olharDoNascimento,
+  TAM_X,
+  TAM_Z,
+  TERRENO_NATURAL,
+} from '../../src/world/chunk';
+import { planoDaRegiao, REGIAO_POVOADO } from '../../src/world/povoado';
+import { naoQuebra, protecaoDoMundo } from '../../src/world/protecao';
+import { obterTema } from '../../src/temas';
+import '../../src/temas/todos';
 
 /**
  * Spec 027 (T03): o planejador da Noite das Fantasias, puro. Determinismo, nada fora do lugar,
@@ -248,6 +267,106 @@ describe('Noite das Fantasias: o planejador da vila da festa (spec 027)', () => 
     for (const d of [40, 80, 128]) {
       const a = ajusteDoBaile(p, p.plana.x1 + d, p.nascimento.z | 0, p.h + 50)!;
       expect(a.h - p.h, `a ${d} blocos`).toBeLessThan(0.5 * 50);
+    }
+  });
+});
+
+/**
+ * Spec 027 (T04): a vila da festa na geração (chunk.ts), na proteção e no estilo: só com o tema,
+ * a criança nasce na praça; o chunk tem o chão da vila; nenhum povoado de região nem estrutura
+ * rara por perto; em volta, até além da visão máxima, só o bosque e o campinho do tema.
+ */
+describe('Noite das Fantasias na geração (chunk.ts e proteção)', () => {
+  const BAILE = obterTema('noite-das-fantasias').mundo;
+
+  it('só com o tema: nasce na praça, de frente para a abóbora, e o chunk tem o chão da vila', () => {
+    const antes = estiloMundo();
+    try {
+      definirEstiloMundo(obterTema('vila-neon').mundo);
+      expect(baileDoMundo(42)).toBeNull();
+      definirEstiloMundo(BAILE);
+      for (const semente of [1337, 42, 7]) {
+        const p = baileDoMundo(semente)!;
+        expect(p).not.toBeNull();
+        const n = encontrarNascimento(semente);
+        expect(n).toEqual({ x: p.nascimento.x, z: p.nascimento.z });
+        expect(olharDoNascimento(semente)).toBe(p.nascimento.olhar);
+        const cx = Math.floor(n.x / TAM_X);
+        const cz = Math.floor(n.z / TAM_Z);
+        const blocos = gerarChunk(cx, cz, semente);
+        const lx = Math.floor(n.x) - cx * TAM_X;
+        const lz = Math.floor(n.z) - cz * TAM_Z;
+        expect(alturaTerreno(Math.floor(n.x), Math.floor(n.z), semente)).toBe(p.h);
+        expect(blocos[indice(lx, p.h, lz)]).toBe(Bloco.PEDRINHA_LILAS);
+        expect(blocos[indice(lx, p.h + 1, lz)]).toBe(Bloco.AR);
+        expect(blocos[indice(lx, p.h + 2, lz)]).toBe(Bloco.AR);
+        // o chunk da abóbora gigante é da vila (a estrutura dele é a festa)
+        const a = p.pontos.abobora;
+        expect(estruturaDoChunk(Math.floor(a.x / 16), Math.floor(a.z / 16), semente)?.tipo).toBe('baile');
+      }
+    } finally {
+      definirEstiloMundo(antes);
+    }
+  });
+
+  it('nenhum povoado de região, e em volta só o bosque e o campinho até além da visão máxima', () => {
+    const antes = estiloMundo();
+    try {
+      definirEstiloMundo(BAILE);
+      for (const semente of [1337, 42, 7]) {
+        const p = baileDoMundo(semente)!;
+        const rx = Math.floor(p.nascimento.x / REGIAO_POVOADO);
+        const rz = Math.floor(p.nascimento.z / REGIAO_POVOADO);
+        for (let i = rx - 3; i <= rx + 3; i++)
+          for (let k = rz - 3; k <= rz + 3; k++)
+            expect(planoDaRegiao(i, k, semente, TERRENO_NATURAL)).toBeNull();
+        // da beira da vila até 140 blocos para fora (a visão máxima, 8 pedaços), nos quatro rumos
+        const vistos = new Set<string>();
+        for (let d = 0; d <= 140; d += 7)
+          for (let t = -60; t <= 60; t += 20) {
+            const cxm = (p.plana.x0 + p.plana.x1) >> 1;
+            const czm = (p.plana.z0 + p.plana.z1) >> 1;
+            for (const [x, z] of [
+              [p.plana.x1 + d, czm + t],
+              [p.plana.x0 - d, czm + t],
+              [cxm + t, p.plana.z1 + d],
+              [cxm + t, p.plana.z0 - d],
+            ])
+              vistos.add(biomaEm(x, z, semente));
+          }
+        for (const b of vistos) expect(['floresta', 'campos', 'oceano'], b).toContain(b);
+      }
+    } finally {
+      definirEstiloMundo(antes);
+    }
+  });
+
+  it('a vila é do mundo: o chão da praça e as paredes das casinhas não se quebram', () => {
+    const antes = estiloMundo();
+    try {
+      definirEstiloMundo(BAILE);
+      const p = baileDoMundo(1337)!;
+      const n = p.nascimento;
+      expect(naoQuebra(protecaoDoMundo(Math.floor(n.x), p.h, Math.floor(n.z), 1337))).toBe(true);
+      const porta = p.pontos.portas[0];
+      // a parede do lado da porta (a célula atrás da frente da porta, um bloco acima do chão)
+      const d = [
+        [0, 1],
+        [1, 0],
+        [0, -1],
+        [-1, 0],
+      ][porta.dir];
+      const px = Math.floor(porta.x) - d[0];
+      const pz = Math.floor(porta.z) - d[1];
+      const lado = [
+        [1, 0],
+        [0, 1],
+      ][porta.dir & 1];
+      expect(
+        naoQuebra(protecaoDoMundo(px + lado[0] * 2, p.h + 1, pz + lado[1] * 2, 1337)),
+      ).toBe(true);
+    } finally {
+      definirEstiloMundo(antes);
     }
   });
 });

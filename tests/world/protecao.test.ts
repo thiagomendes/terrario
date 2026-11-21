@@ -163,10 +163,12 @@ function conferirPovoado(p: PlanoPovoado, prot: ProtecaoMundo): void {
 const TEMAS = temasDisponiveis();
 
 describe('proteção do mundo: povoados e sítios em todo tema', () => {
-  // a Cidade Grande (spec 014) e a Vila Neon (spec 026) não têm povoado de região: a proteção
-  // delas está em cidade.test e vilaNeon.test
+  // a Cidade Grande (spec 014), a Vila Neon (spec 026) e a Noite das Fantasias (spec 027) não
+  // têm povoado de região: a proteção delas está em cidade.test, vilaNeon.test e noiteFantasias.test
   it.each(
-    TEMAS.filter((id) => !['cidade', 'bairro'].includes(obterTema(id).mundo.povoado?.planta ?? '')),
+    TEMAS.filter(
+      (id) => !['cidade', 'bairro', 'baile'].includes(obterTema(id).mundo.povoado?.planta ?? ''),
+    ),
   )('%s: blocos, chão, usáveis e passagens', (id) => {
     definirEstiloMundo(obterTema(id).mundo);
     limparPovoados();
