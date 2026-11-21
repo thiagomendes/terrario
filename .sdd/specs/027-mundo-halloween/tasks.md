@@ -219,7 +219,22 @@ Tamanho: **P** (até meio dia), **M** (1 a 2 dias), **G** (3 dias ou mais). Uma 
   - Testes: `tests/nucleo/baileVarinha.test.ts` (4: o comando saneado; a varinha da fantasia e a tirada; no aparelho e na nuvem, perto a flor vai para as duas, longe, rápido demais e sem varinha nada; nada fica salvo); `tests/render/florVarinha.test.ts` (2: o tamanho no tempo; nada fica no mundo depois de 4 s); o e2e `e2e/varinha-027.spec.ts` com **duas amigas na nuvem** (a Bia vê a flor da Ana, e ela some nas duas telas).
   - **Fotos** em `capturas-027/parte1/varinha/` (`VARINHA_027=1`): a mão subindo com a flor nascendo, a flor aberta e a flor vista pela Bia, no entardecer e de noite.
   - **Ainda fraco:** o som da varinha vem na T21; a câmera do jogo bem perto da bruxinha às vezes entra na aba do chapéu (visto numa tomada do e2e, de antes desta tarefa: a câmera de trás com o olhar alto).
-- **Vitest inteiro (depois da T15):** 233 arquivos, 2149 testes, todos verdes.
+- **T17 (21 nov): feita.** Alma e banca.
+  - **O mundo da alma** `noite-das-fantasias` (`src/jogo/alma.ts`): em `MundoAlma` e `MUNDOS_ALMA`, reconhecido pela planta `'baile'` (`mundoAlmaDaPlanta`, e assim `mundoAlmaDoEstilo` no núcleo, no quadro e na roda). Com isso o quadro deste mundo deixa a missão genérica do diário ("Lenha do bosque", que some com a classe `alma-missoes`) e mostra a n1 e a n2; "Missões" entra na roda.
+  - **As missões n1 a n5** (5 + 4 + 4 + 5 + 4 = 22 moedinhas, sem fantasia, moedinhas só no fim). As contas, que o núcleo da T18 vai mandar:
+    - n1 "Doces ou travessuras", de lugares: `doces:porta1` a `doces:porta5` (uma bolinha por porta, em qualquer ordem); explorador;
+    - n2 "O Conde Dudu tem medo do escuro", de ação (volta no bis): o evento `acendeu:lanterna`, meta 5 (o núcleo manda uma vez por lanterna de cada criança, a já acesa também); explorador; o ganho solto da lanterna é 2 de XP e 0,5 de explorador;
+    - n3 "Esconde-esconde com a Lulu", de lugares: `lulu:abobora`, `lulu:casinha`, `lulu:bosque` (a ordem um de cada vez é do núcleo); explorador;
+    - n4 "Abóbora de carinha", de lugares: `abobora:horta`, `abobora:carinha`, `abobora:porta`; fazendeiro;
+    - n5 "O gato da Vovó sumiu", de lugares: `tufinho:achou` (o toque que chama na horta) e `tufinho:vovo` (a entrega); amigo dos bichos.
+  - **Habilidades:** o explorador, o amigo dos bichos e o fazendeiro mostram o mundo da festa no baú (o desenho `mundoFesta`, a abóbora de carinha no roxo).
+  - **A banca da pergunta 2** (`conferirBanca` igual à de todos): telha roxa ×12 por 3, folhas laranja ×8 por 3, teia de barbante ×4 por 3, janela torta acesa ×4 por 4, toldinho listrado ×4 por 4, caldeirão ×1 por 5; o lampião de abóbora fica só no Rancho. O toldo da banca no baú é roxo (`#8a4fc8`).
+  - **Os desenhos das missões** (`src/ui/alma/arteFesta.ts`, no jeito da Vila: 64 × 64, contorno marrom macio, olhos redondos): a sacola vazia e a cheia, a campainha, a lanterna apagada e a acesa, o bosque aceso, a Lulu tímida e a Lulu achada rindo, a abóbora de carinha, a porta com o lampião, o Tufinho (carvão, focinho clarinho, laço roxo), as patinhas e o Tufinho com o coração; o brigadeiro é a bolinha da n1 e a abóbora do jogo é a da horta na n4. Conferidos numa folha a 64 e a 28 px (o docinho branco com o cravo saiu da sacola cheia: a 28 px parecia um olho). **A T19 confere a leitura a 28 px** e põe o Dudu no cartão da n2 (hoje o selo é a mãozinha de tocar).
+  - **O ritmo da 023** começando por este mundo passa (nível 2 até a segunda missão, a camiseta em 2 sessões, o unicórnio entre a 6ª e a 8ª), com as 22 moedinhas da parte 1.
+  - Testes: `alma.test.ts` (50: as três novas da 027, as missões, a banca e o mundo pela planta, e o ritmo, o prêmio e o convite agora também para a festa); `arteMissoes.test.ts` (todo desenho das missões existe).
+  - **Fica para a T18 e a T19: a sacola de doces da n1** (pendente da T15). Ela nasce com a missão: o núcleo da T18 põe o doce na sacola de quem tocou a campainha (a sacola vazia na mão ao abrir a n1? um docinho por porta?) e a T19 faz o modelo, a mão e o jeito de comer (um docinho por mordida, a sacola vazia some com brilhinho). Não coube aqui sem apertar: depende da entrega do núcleo.
+  - **Até a T18:** o mundo já mostra as missões, mas nada no mundo ainda manda as chaves delas (as portas, as lanternas, a Lulu, a horta e o Tufinho vêm na T18), e o guia não tem alvo neste mundo (`alvoDaMissao` devolve nada: sem trilha, sem erro) até a T19. Não publicar entre a T17 e a T20.
+- **Vitest inteiro (depois da T17):** 235 arquivos, 2162 testes, todos verdes.
 
 A 035 já está na `main` (5996d11) e deixou a `VERSAO_REDE` em 17; esta spec é a próxima da fila. No criativo valem comprar, comer e as missões, como na Vila.
 

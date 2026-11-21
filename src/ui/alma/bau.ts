@@ -420,7 +420,13 @@ export function criarBau(op: OpcoesBau) {
       for (const m of h.mundos)
         mundos.appendChild(
           svgEl(
-            m === 'cidade-grande' ? 'mundoCidade' : m === 'vila-neon' ? 'mundoVila' : 'mundoRancho',
+            m === 'cidade-grande'
+              ? 'mundoCidade'
+              : m === 'vila-neon'
+                ? 'mundoVila'
+                : m === 'noite-das-fantasias'
+                  ? 'mundoFesta'
+                  : 'mundoRancho',
           ),
         );
       mundos.appendChild(svgEl('mundoTodos'));
@@ -440,7 +446,14 @@ export function criarBau(op: OpcoesBau) {
     caixa.setAttribute('data-alma-banca', m0);
     caixa.style.setProperty(
       '--toldo',
-      m0 === 'cidade-grande' ? '#3fae5a' : m0 === 'vila-neon' ? '#2f8cff' : '#e8402f',
+      m0 === 'cidade-grande'
+        ? '#3fae5a'
+        : m0 === 'vila-neon'
+          ? '#2f8cff'
+          : // spec 027: o roxo da festa (o do toldinho listrado)
+            m0 === 'noite-das-fantasias'
+            ? '#8a4fc8'
+            : '#e8402f',
     );
     const toldo = document.createElement('div');
     toldo.className = 'toldo';

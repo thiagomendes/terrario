@@ -15,12 +15,18 @@
  * nada expira, sem limite por dia, sem oferta por tempo; a moedinha não passa a outro jogador.
  */
 
-export type MundoAlma = 'cidade-grande' | 'rancho-alegre' | 'doce-reino' | 'vila-neon';
+export type MundoAlma =
+  | 'cidade-grande'
+  | 'rancho-alegre'
+  | 'doce-reino'
+  | 'vila-neon'
+  | 'noite-das-fantasias';
 export const MUNDOS_ALMA: readonly MundoAlma[] = [
   'cidade-grande',
   'rancho-alegre',
   'doce-reino',
   'vila-neon',
+  'noite-das-fantasias',
 ];
 
 /**
@@ -29,6 +35,8 @@ export const MUNDOS_ALMA: readonly MundoAlma[] = [
  */
 export function mundoAlmaDaPlanta(planta: string | undefined): MundoAlma | null {
   if (planta === 'bairro') return 'vila-neon';
+  // spec 027: a planta da festa é a Noite das Fantasias
+  if (planta === 'baile') return 'noite-das-fantasias';
   return planta === 'cidade' ? 'cidade-grande' : planta === 'sitio' ? 'rancho-alegre' : null;
 }
 
@@ -541,6 +549,109 @@ export const MISSOES: readonly Missao[] = [
     habilidade: 'cozinheiro',
     minutos: [2, 3],
   },
+  // ------------------------------------------------------------ Noite das Fantasias (parte 1)
+  // spec 027 (T17): n1 a n5, 5 + 4 + 4 + 5 + 4 = 22 moedinhas, só no fim de cada missão e sem
+  // fantasia (as do tema são de graça). Cada criança tem o progresso dela com os objetos únicos
+  // do mundo (a regra está no núcleo, `nucleo/baile.ts`, T18). De lugares (cada passo uma
+  // bolinha, não voltam no bis): n1, n3, n4 e n5; de ação (voltam no bis): n2
+  {
+    // as cinco portas da rua (a da Vovó é uma): cada campainha, um doce na sacola de quem tocou
+    id: 'n1',
+    mundo: 'noite-das-fantasias',
+    nome: 'Doces ou travessuras',
+    desenho: {
+      tipo: 'arte',
+      principal: 'sacolaVazia',
+      selo: 'campainha',
+      resultado: 'sacolaCheia',
+      bolinha: 'item:brigadeiro',
+      placa: 'campainha',
+    },
+    conta: {
+      tipo: 'lugares',
+      usos: ['doces:porta1', 'doces:porta2', 'doces:porta3', 'doces:porta4', 'doces:porta5'],
+    },
+    moedas: 5,
+    habilidade: 'explorador',
+    minutos: [2, 3],
+  },
+  {
+    // as cinco lanternas do caminho do bosque, um toque em cada (de dia e de noite); a lanterna
+    // já acesa por um amigo conta e pisca (o núcleo manda uma chave por lanterna desta criança)
+    id: 'n2',
+    mundo: 'noite-das-fantasias',
+    nome: 'O Conde Dudu tem medo do escuro',
+    desenho: {
+      tipo: 'arte',
+      principal: 'lanternaApagada',
+      selo: 'pegar',
+      resultado: 'bosqueAceso',
+      bolinha: 'lanternaAcesa',
+      placa: 'lanternaAcesa',
+    },
+    conta: { tipo: 'evento', chave: 'acendeu:lanterna', meta: 5 },
+    moedas: 4,
+    habilidade: 'explorador',
+    minutos: [1, 2],
+  },
+  {
+    // três esconderijos, um de cada vez: atrás da abóbora gigante, na quina de uma casinha e
+    // atrás de uma árvore do bosque (a Lulu escondida é uma cópia só na tela de quem procura)
+    id: 'n3',
+    mundo: 'noite-das-fantasias',
+    nome: 'Esconde-esconde com a Lulu',
+    desenho: {
+      tipo: 'arte',
+      principal: 'lulu',
+      selo: 'lupa',
+      resultado: 'luluAchada',
+      bolinha: 'lulu',
+      placa: 'lulu',
+    },
+    conta: { tipo: 'lugares', usos: ['lulu:abobora', 'lulu:casinha', 'lulu:bosque'] },
+    moedas: 4,
+    habilidade: 'explorador',
+    minutos: [1, 2],
+  },
+  {
+    // a horta (plantar, regar e colher), a bancada (a carinha) e a porta da Vovó (o lampião)
+    id: 'n4',
+    mundo: 'noite-das-fantasias',
+    nome: 'Abóbora de carinha',
+    desenho: {
+      tipo: 'arte',
+      principal: 'item:bloco:65',
+      selo: 'plantar',
+      resultado: 'aboboraCarinha',
+      bolinha: 'aboboraCarinha',
+      bolinhas: ['item:bloco:65', 'aboboraCarinha', 'portaLampiao'],
+      placa: 'aboboraCarinha',
+    },
+    conta: { tipo: 'lugares', usos: ['abobora:horta', 'abobora:carinha', 'abobora:porta'] },
+    moedas: 5,
+    habilidade: 'fazendeiro',
+    minutos: [2, 3],
+  },
+  {
+    // as patinhas do Tufinho da varanda até a horta; um toque chama e ele segue a criança de
+    // volta até a Vovó (a entrega conta para quem está perto)
+    id: 'n5',
+    mundo: 'noite-das-fantasias',
+    nome: 'O gato da Vovó sumiu',
+    desenho: {
+      tipo: 'arte',
+      principal: 'tufinho',
+      selo: 'patinhas',
+      resultado: 'tufinhoColo',
+      bolinha: 'tufinho',
+      bolinhas: ['tufinho', 'tufinhoColo'],
+      placa: 'tufinho',
+    },
+    conta: { tipo: 'lugares', usos: ['tufinho:achou', 'tufinho:vovo'] },
+    moedas: 4,
+    habilidade: 'bichos',
+    minutos: [2, 3],
+  },
 ];
 
 const POR_ID: ReadonlyMap<string, Missao> = new Map(MISSOES.map((m) => [m.id, m]));
@@ -590,6 +701,8 @@ export const GANHO_DE_EVENTO: Readonly<
   'achou:instrumento': { xp: 3, hab: ['explorador', 0.5] },
   'levou:lhama': { xp: 4, hab: ['bichos', 1] },
   'show:caixa': { xp: 2, hab: ['construtor', 0.3] },
+  // spec 027: a lanterna do caminho do bosque (a n2), uma vez por lanterna de cada criança
+  'acendeu:lanterna': { xp: 2, hab: ['explorador', 0.5] },
   // receita de comida (o pão e as outras): o núcleo manda a chave 'cozinhou' para o ganho
   cozinhou: { xp: 5, hab: ['cozinheiro', 1] },
   // receita que não é comida (ferramenta, bloco): pouco, e conta para o cozinheiro (pedido
@@ -643,7 +756,7 @@ export const HABILIDADES: readonly Habilidade[] = [
     desenho: 'explorador',
     cor: '#3f9ad8',
     nome: 'Explorador',
-    mundos: ['cidade-grande', 'rancho-alegre', 'vila-neon'],
+    mundos: ['cidade-grande', 'rancho-alegre', 'vila-neon', 'noite-das-fantasias'],
     conta: 'lugares novos',
   },
   {
@@ -651,7 +764,7 @@ export const HABILIDADES: readonly Habilidade[] = [
     desenho: 'bichos',
     cor: '#e05a7a',
     nome: 'Amigo dos bichos',
-    mundos: ['rancho-alegre', 'doce-reino', 'vila-neon'],
+    mundos: ['rancho-alegre', 'doce-reino', 'vila-neon', 'noite-das-fantasias'],
     conta:
       'bicho alimentado ou criado, ovos (o mesmo bicho não conta de novo em menos de 1 minuto)',
   },
@@ -660,7 +773,7 @@ export const HABILIDADES: readonly Habilidade[] = [
     desenho: 'fazendeiro',
     cor: '#5cbf4f',
     nome: 'Fazendeiro',
-    mundos: ['rancho-alegre'],
+    mundos: ['rancho-alegre', 'noite-das-fantasias'],
     conta: 'plantar e colher maduro',
   },
   {
@@ -929,6 +1042,62 @@ export const BANCA: readonly ItemBanca[] = [
     item: 'bloco:105',
     qtd: 8,
     desenho: 'item:bloco:105',
+  },
+  // spec 027 (pergunta 2): a banca da Noite das Fantasias, só blocos deste mundo. O lampião de
+  // abóbora não entra (o Rancho já vende)
+  {
+    id: 'telha-roxa',
+    mundo: 'noite-das-fantasias',
+    nome: 'Telha roxa',
+    preco: 3,
+    item: 'bloco:117',
+    qtd: 12,
+    desenho: 'item:bloco:117',
+  },
+  {
+    id: 'folhas-laranja',
+    mundo: 'noite-das-fantasias',
+    nome: 'Folhas laranja',
+    preco: 3,
+    item: 'bloco:120',
+    qtd: 8,
+    desenho: 'item:bloco:120',
+  },
+  {
+    id: 'teia-barbante',
+    mundo: 'noite-das-fantasias',
+    nome: 'Teia de barbante',
+    preco: 3,
+    item: 'bloco:119',
+    qtd: 4,
+    desenho: 'item:bloco:119',
+  },
+  {
+    id: 'janela-torta',
+    mundo: 'noite-das-fantasias',
+    nome: 'Janela torta acesa',
+    preco: 4,
+    item: 'bloco:125',
+    qtd: 4,
+    desenho: 'item:bloco:125',
+  },
+  {
+    id: 'toldinho',
+    mundo: 'noite-das-fantasias',
+    nome: 'Toldinho listrado',
+    preco: 4,
+    item: 'bloco:126',
+    qtd: 4,
+    desenho: 'item:bloco:126',
+  },
+  {
+    id: 'caldeirao',
+    mundo: 'noite-das-fantasias',
+    nome: 'Caldeirão',
+    preco: 5,
+    item: 'bloco:127',
+    qtd: 1,
+    desenho: 'item:bloco:127',
   },
 ];
 export function bancaDoMundo(mundo: MundoAlma): ItemBanca[] {

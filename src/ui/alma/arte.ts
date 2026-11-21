@@ -4,6 +4,7 @@
  */
 import { ARTE_CANTO } from './arteCanto';
 import { ARTE_VILA } from './arteVila';
+import { ARTE_FESTA } from './arteFesta';
 
 const C = '#5a3a22'; // contorno
 const L = 'stroke-linejoin="round" stroke-linecap="round"';
@@ -402,6 +403,8 @@ export const ARTE: Record<string, string> = {
 // spec 031: os desenhos das missões do Doce Reino
 Object.assign(ARTE, ARTE_CANTO);
 Object.assign(ARTE, ARTE_VILA);
+// spec 027: os da Noite das Fantasias
+Object.assign(ARTE, ARTE_FESTA);
 
 export function arte(nome: string): string {
   return ARTE[nome] ?? ARTE.estrela;

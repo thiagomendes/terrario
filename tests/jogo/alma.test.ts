@@ -4,7 +4,10 @@ import {
   BANCA,
   COMPRAS_POR_SESSAO,
   GANHO_DE_EVENTO,
+  HABILIDADES,
   ganhoDaChave,
+  metaDa,
+  missoesDeBis,
   MISSOES,
   MOEDAS_BIS,
   MUNDOS_ALMA,
@@ -568,6 +571,65 @@ describe('alma: o ritmo (experiência medida)', () => {
       // o lado direito do cartão (o resultado) nunca é o mesmo desenho do esquerdo
       if (m.desenho.tipo === 'arte') expect(m.desenho.resultado).not.toBe(m.desenho.principal);
     }
+  });
+
+  it('spec 027: a Noite das Fantasias dá 22 moedinhas na parte 1 (n1 a n5), sem fantasia', () => {
+    const n = missoesDoMundo('noite-das-fantasias');
+    expect(n.map((m) => [m.id, m.moedas])).toEqual([
+      ['n1', 5],
+      ['n2', 4],
+      ['n3', 4],
+      ['n4', 5],
+      ['n5', 4],
+    ]);
+    expect(moedasDoMundo('noite-das-fantasias')).toBe(22);
+    for (const m of n) {
+      expect(m.fantasia, m.id).toBeUndefined();
+      if (m.desenho.tipo === 'arte') expect(m.desenho.resultado).not.toBe(m.desenho.principal);
+    }
+    // de lugares (não voltam no bis): n1, n3, n4 e n5; de ação: a n2
+    expect(missoesDeBis('noite-das-fantasias').map((m) => m.id)).toEqual(['n2']);
+    // cada porta, esconderijo e passo é uma bolinha
+    expect(n.map((m) => metaDa(m))).toEqual([5, 5, 3, 3, 2]);
+    // as habilidades que a festa alimenta mostram o mundo no baú
+    for (const m of n)
+      expect(HABILIDADES.find((h) => h.id === m.habilidade)!.mundos).toContain(
+        'noite-das-fantasias',
+      );
+  });
+
+  it('spec 027: a banca da festa (pergunta 2), só blocos deste mundo, sem o lampião', () => {
+    expect(bancaDoMundo('noite-das-fantasias').map((i) => [i.item, i.qtd, i.preco])).toEqual([
+      ['bloco:117', 12, 3],
+      ['bloco:120', 8, 3],
+      ['bloco:119', 4, 3],
+      ['bloco:125', 4, 4],
+      ['bloco:126', 4, 4],
+      ['bloco:127', 1, 5],
+    ]);
+    expect(conferirBanca('noite-das-fantasias', 'caldeirao', 5, 0, 2).ok).toBe(true);
+    expect(conferirBanca('noite-das-fantasias', 'caldeirao', 4, 0, 2)).toEqual({
+      ok: false,
+      motivo: 'saldo',
+    });
+    // a telha roxa não se compra em outro mundo, e a pista da Vila não se compra aqui
+    expect(conferirBanca('vila-neon', 'telha-roxa', 99, 0, 99)).toEqual({
+      ok: false,
+      motivo: 'tema',
+    });
+    expect(conferirBanca('noite-das-fantasias', 'pista-neon', 99, 0, 99)).toEqual({
+      ok: false,
+      motivo: 'tema',
+    });
+    // o lampião de abóbora (66) fica só na banca do Rancho
+    expect(BANCA.filter((b) => b.item === 'bloco:66').map((b) => b.mundo)).toEqual([
+      'rancho-alegre',
+    ]);
+  });
+
+  it('spec 027: o mundo da festa pela planta (o núcleo e o quadro reconhecem)', () => {
+    expect(mundoAlmaDaPlanta('baile')).toBe('noite-das-fantasias');
+    expect(mundoAlmaDoEstilo({ povoado: { planta: 'baile' } })).toBe('noite-das-fantasias');
   });
 
   it('spec 031: o núcleo sabe o mundo pelo estilo (sem campo novo)', () => {
