@@ -409,6 +409,15 @@ describe('salas do servidor', () => {
       JSON.stringify({ t: 'entrar', versao: VERSAO_REDE, jogador: ident('caio'), codigo }),
     );
     expect(c.recebidas[0]).toEqual({ t: 'recusado', motivo: 'fechado' });
+    // depois da tolerância de 30 s, quem caiu saiu da sala: com ela fechada, é barrado
+    g.caiu(b2);
+    await avancar(35_000);
+    const b3 = canal('5.6.7.8');
+    await g.receber(
+      b3,
+      JSON.stringify({ t: 'entrar', versao: VERSAO_REDE, jogador: ident('bia'), codigo }),
+    );
+    expect(b3.recebidas[0]).toEqual({ t: 'recusado', motivo: 'fechado' });
   });
 
   it('sala vazia dorme e volta igual: blocos, inventário e posição', async () => {

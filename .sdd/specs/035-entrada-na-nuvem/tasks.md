@@ -106,3 +106,7 @@ Os e2e rodam na placa de vídeo: `scripts/e2e-gpu.sh <spec>`, e depois `scripts/
   - **O tempo da diferença:** 200 mil edições em 400 chunks, com 150 células mudadas, levam **85 ms** (no contêiner).
   - A corrida continua com 0 ressincronizações.
   - Falta conferir a cena aplicando a volta no navegador: nenhum e2e cobre a queda com blocos. A T08 pode pôr isso no `multiplayer`.
+- **(20 nov 2026) T06 pronta:** em `servidor/src/salas.ts`, o `ja` vem antes, e a recusa da sala fechada passou a ser `fechado && !ehDono && !ja`.
+  - O teste da T00 passa: o visitante que cai e volta antes dos 30 s entra, e quem nunca entrou é recusado.
+  - Entrou também o caso de depois da tolerância: com 35 s fora, quem caiu é barrado como quem chega.
+  - `servidor/testes` passa inteiro (43). É a única mudança do servidor nesta spec.

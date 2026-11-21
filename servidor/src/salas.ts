@@ -471,8 +471,10 @@ export function criarGerenciador(op: OpcoesGerenciador) {
     // o nome do dono para quando ele sair (gravado com a sala na próxima gravação)
     if (ehDono) s.sala.apelidoDono = jog.apelido;
     if (s.expulsos.has(jog.id)) return recusar('expulso');
-    if (s.sala.fechado && !ehDono) return recusar('fechado');
+    // spec 035: quem já estava na sala e caiu volta mesmo com ela fechada (dentro da
+    // tolerância da queda; depois dela, saiu de `presentes` e é barrado como quem chega)
     const ja = s.presentes.get(jog.id);
+    if (s.sala.fechado && !ehDono && !ja) return recusar('fechado');
     if (!ja && s.presentes.size >= MAX_JOGADORES) return recusar('cheio');
     // ninguém entra no lugar de outro (nem de quem ainda não foi gravado)
     if (guardado && guardado.chave !== chave) return recusar('identidade');
