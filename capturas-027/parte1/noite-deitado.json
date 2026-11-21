@@ -1,0 +1,83 @@
+{
+  "praca-deitado": {
+    "pixelsChao": 1505,
+    "medianaChao": 0.501,
+    "piorQuadrado": 0.2672,
+    "onde": [
+      0,
+      0.22
+    ]
+  },
+  "barracas-deitado": {
+    "pixelsChao": 1993,
+    "medianaChao": 0.564,
+    "piorQuadrado": 0.2746,
+    "onde": [
+      0,
+      0.11
+    ]
+  },
+  "rua-deitado": {
+    "pixelsChao": 970,
+    "medianaChao": 0.581,
+    "piorQuadrado": 0.2491,
+    "onde": [
+      0,
+      0.32
+    ]
+  },
+  "vovo-deitado": {
+    "pixelsChao": 1207,
+    "medianaChao": 0.596,
+    "piorQuadrado": 0.1124,
+    "onde": [
+      0.9,
+      0.65
+    ]
+  },
+  "loja-deitado": {
+    "pixelsChao": 1466,
+    "medianaChao": 0.548,
+    "piorQuadrado": 0.2277,
+    "onde": [
+      0.7,
+      0.11
+    ]
+  },
+  "bosque-deitado": {
+    "pixelsChao": 1679,
+    "medianaChao": 0.335,
+    "piorQuadrado": 0.1461,
+    "onde": [
+      0.15,
+      0.54
+    ]
+  },
+  "castelo-deitado": {
+    "pixelsChao": 203,
+    "medianaChao": 0.303,
+    "piorQuadrado": 0.1625,
+    "onde": [
+      0.35,
+      0.75
+    ]
+  },
+  "horta-deitado": {
+    "pixelsChao": 1884,
+    "medianaChao": 0.429,
+    "piorQuadrado": 0.2909,
+    "onde": [
+      0.85,
+      0.65
+    ]
+  },
+  "gramado-deitado": {
+    "pixelsChao": 2144,
+    "medianaChao": 0.484,
+    "piorQuadrado": 0.349,
+    "onde": [
+      0,
+      0.32
+    ]
+  }
+}

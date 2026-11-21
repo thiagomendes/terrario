@@ -143,6 +143,8 @@ export interface PontosBaile {
   portas: PortaBaile[];
   /** As lanternas do caminho do bosque (a célula da luz). */
   lanternas: [number, number, number][];
+  /** O caminho do bosque, da praça ao castelinho (o meio do caminho em cada curva, no chão). */
+  trilha: [number, number][];
   /** A varanda da Vovó (onde ela fica), o caldeirão, o porta-vassouras e o banquinho do Tufinho. */
   varanda: [number, number, number];
   caldeirao: [number, number, number];
@@ -924,6 +926,8 @@ function montarBaile(semente: number, r: RelevoVila): Montado {
     }
     lampiao(u0 - 1, meio - 2, 'o');
     lampiao(u0 - 1, meio + 2, 'o');
+    // as luzes de dentro da loja (a vitrine fica acesa de noite: por trás do vidro, nada de breu)
+    for (const v of [v0 + 4, v1 - 4]) b(u0 + 3, 4, v, Bloco.LANTERNA);
     peca('teia', u0 - 0.5, v0 + 0.5, DIR.o, 1, H - 0.05);
     // o caminho da praça até a porta
     encher(PRACA.u1 + 1, meio - 2, u0 - 1, meio + 2, Bloco.PEDRINHA_LILAS);
@@ -1022,7 +1026,8 @@ function montarBaile(semente: number, r: RelevoVila): Montado {
     nos.forEach(([u, v], i) => {
       peca('lanterna-bosque', u + 0.5, v + 0.5, 0, i);
       lanternas.push(p3(u + 0.5, 2.6, v + 0.5));
-      tomar(u, v, u, v);
+      // (com folga: a copa de uma árvore do corredor engolia a caixinha da lanterna)
+      tomar(u - 2, v - 2, u + 2, v + 2);
     });
     // o laguinho do peixinho lilás
     for (let u = LAGO.u0; u <= LAGO.u1; u++)
@@ -1044,6 +1049,20 @@ function montarBaile(semente: number, r: RelevoVila): Montado {
     peca('poleiro', gu + 3.5, gv - 1.5, DIR.n);
     tomar(gu + 2, gv - 3, gu + 4, gv - 1);
     // o bosque fechado dos dois lados do caminho (laranja, douradas e cobre)
+    // o corredor de árvores dos dois lados do caminho, a cada ~4 blocos (o túnel de folhas
+    // laranja do esboço: as copas quase se encontram por cima de quem anda)
+    for (let i = 1; i < TRILHA_BOSQUE.length; i++) {
+      const [a, c] = [TRILHA_BOSQUE[i - 1], TRILHA_BOSQUE[i]];
+      const dx = c[0] - a[0];
+      const dz = c[1] - a[1];
+      const l = Math.hypot(dx, dz) || 1;
+      for (let t = 0.15; t < 1; t += 4 / l)
+        for (const lado of [-1, 1]) {
+          const u = Math.round(a[0] + dx * t + (-dz / l) * 4.5 * lado);
+          const v = Math.round(a[1] + dz * t + (dx / l) * 4.5 * lado);
+          if (livre(u, v, 1)) arvore(u, v, folhaDoBosque(u, v), s(u, v, 35) < 0.4 ? 1 : 0);
+        }
+    }
     // (de perto do caminho: as copas fazem o túnel de folhas laranja do esboço)
     for (let v = 45; v <= 98; v += 3)
       for (let u = 1; u <= 42; u += 3) {
@@ -1202,6 +1221,7 @@ function montarBaile(semente: number, r: RelevoVila): Montado {
     barracas,
     portas,
     lanternas,
+    trilha: TRILHA_BOSQUE.map(([u, v]) => [X(u) + 0.5, Z(v) + 0.5] as [number, number]),
     varanda,
     caldeirao,
     portaVassouras,

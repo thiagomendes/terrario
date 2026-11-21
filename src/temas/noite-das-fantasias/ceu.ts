@@ -9,8 +9,10 @@ import type { CeuTema, QuadroCeu } from '../tipos';
 
 /** A noite roxa de brinquedo: a lua clareia o chão (nunca o escuro de verdade). */
 const NOITE: Omit<QuadroCeu, 'h'> = {
-  zen: [0.13, 0.06, 0.28],
-  meio: [0.27, 0.13, 0.46],
+  // (o alto do céu um tico mais claro que o do esboço: na tela em pé, o céu ocupa metade da
+  // foto e o roxo do alto ficava abaixo da conta da noite, a "parte grande escura")
+  zen: [0.21, 0.12, 0.4],
+  meio: [0.3, 0.16, 0.5],
   // o horizonte: um lilás claro (a névoa da noite fica leve, sem magenta forte)
   hor: [0.44, 0.34, 0.6],
   luz: [0.76, 0.72, 1],
@@ -89,7 +91,7 @@ export const QUADROS_FANTASIAS: QuadroCeu[] = [
   {
     // o roxo chegando, com o resto do laranja no horizonte
     h: 0.8,
-    zen: [0.16, 0.09, 0.32],
+    zen: [0.21, 0.12, 0.4],
     meio: [0.3, 0.18, 0.48],
     hor: [0.56, 0.38, 0.56],
     luz: [0.78, 0.72, 1],
@@ -119,8 +121,10 @@ export const CEU_FANTASIAS: CeuTema = {
   fatorNuvens: 0,
   faixaCrepusculo: 1.6,
   corCrepusculo: [1, 0.56, 0.3],
-  // a noite baixa a luz do chão só um pouco (a Vila Neon desce a 0,3; aqui, nunca escuro)
-  pisoNoite: 0.34,
+  // a noite baixa a luz do chão só um pouco (a Vila Neon desce a 0,3; aqui, nunca escuro: o
+  // gramado verde-oliva do bosque, à sombra das copas, ficava perto do limite da conta da noite
+  // com 0,34)
+  pisoNoite: 0.55,
   // o verde do gramado puxa um pouco para o lilás de noite, sem virar cinza-chumbo
-  verdeNoite: 0.18,
+  verdeNoite: 0.14,
 };

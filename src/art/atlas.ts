@@ -712,7 +712,8 @@ export const PINTORES: Record<string, Pintor> = {
  */
 function pintoresDoBaile(): Record<string, Pintor> {
   const cor = (c: string) => (x: number, y: number, s: number) => rampa([c], 0, x, y, s);
-  const ROXO = ['#5c3888', '#6a4498', '#7852a8', '#8862b8'];
+  // (um tom mais claro que o do esboço: de noite, o telhado grande de perto passava da conta)
+  const ROXO = ['#7450ac', '#825cba', '#9068c6', '#9e76d2'];
   /** Telha roxa: as fileiras de canudo desencontradas, com a sombra de cada uma. */
   const telha =
     (sombra: string, junta: string, k: number): Pintor =>
@@ -823,8 +824,10 @@ function pintoresDoBaile(): Record<string, Pintor> {
   /** O ferro roxo-quase-preto do caldeirão de brinquedo, com o brilho da borda. */
   const ferro = ['#2e2440', '#362b4a', '#3e3254'];
   return {
-    telha_roxa: telha('#3a2458', '#4a2e70', 0.12),
-    telha_roxa_topo: telha('#432a64', '#523478', 0.06),
+    // (as sombras das fileiras um tom acima do esboço: o telhado grande, de noite, ficava no
+    // limite da conta da noite na tela em pé)
+    telha_roxa: telha('#4e3672', '#5c4282', 0.12),
+    telha_roxa_topo: telha('#5a3e80', '#664a8c', 0.06),
     tijolo_torto: tijoloTorto,
     // teia de barbante colorido (roxo, laranja e creme), sem aranha: os raios e os anéis
     teia_barbante: (x, y, s) => {

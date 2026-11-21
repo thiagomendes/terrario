@@ -200,13 +200,17 @@ const ENQUADRAMENTOS: Record<IdTemaE2e, Enquadramento> = {
       ],
     },
   },
-  // spec 027: a praça de noite com a abóbora gigante acesa (o nascer olha para ela)
+  // spec 027: a praça de noite com a abóbora gigante acesa, de 3/4, com uma barraca e o palco
   'noite-das-fantasias': {
     oQueMostra:
-      'a Praça da Abóbora de noite: a abóbora gigante de rosto aceso, o palco e as barracas, ' +
-      'o céu roxo com a lua grande',
-    hora: 0.95,
-    como: 'nascer',
+      'a Praça da Abóbora no começo da noite: a abóbora gigante de rosto aceso, o palco com as ' +
+      'bandeirolas, uma barraca de toldo listrado e o céu roxo; a criança de costas na praça',
+    hora: 0.86,
+    como: {
+      cam: [-11, 81.5, -157],
+      alvo: [-27, 79, -179],
+      crianca: [-19.5, -166.5],
+    },
   },
   'cidade-grande': {
     oQueMostra:

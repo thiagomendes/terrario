@@ -17,9 +17,11 @@ import type { PecaBaile } from '../../world/noiteFantasias';
 import type { PecaVila } from '../../world/vilaNeon';
 
 export const CORES = {
-  roxo: '#6a3e9c',
-  roxoEscuro: '#46305e',
-  ferro: '#3a2c4e',
+  // (o roxo, o roxo-escuro e o ferro de brinquedo um tom acima do esboço: a porta da loja e o
+  // poste de perto, de noite, viravam mancha escura na tela)
+  roxo: '#7a4cae',
+  roxoEscuro: '#5a4280',
+  ferro: '#6a54a0',
   lilas: '#a88ad0',
   laranja: '#f0862a',
   laranjaEscuro: '#c8621a',
@@ -347,6 +349,19 @@ export function rostoDaAbobora(
  * levantada e a carinha de olhos redondos rente à casca: entalhada de dia e acesa de noite.
  */
 function aboboraGigante(r: Ref, d: DesenhoBaile, L: number): void {
+  // a sombrinha de contato no chão (sem ela, a abóbora grande parecia flutuar na praça)
+  // (em dois anéis, o de fora mais clarinho, para a borda não ficar dura como um tapete)
+  for (const [raio, y, cor] of [
+    [0.47, 0.012, '#5e4e80'],
+    [0.41, 0.02, '#4c3e6a'],
+  ] as const) {
+    const sombra: Array<[number, number]> = [];
+    for (let i = 0; i < 32; i++) {
+      const a = (i / 32) * Math.PI * 2;
+      sombra.push([Math.cos(a) * raio * L, Math.sin(a) * raio * L]);
+    }
+    placaGirada(r, sombra, 0.01, [0, y, 0], Math.PI / 2, 0, cor);
+  }
   abobora(r, 0, 0, 0, L, 10);
   // o talo curvo de brinquedo e a folha grande levantada, de lado
   const t: V3[] = [];
@@ -640,7 +655,8 @@ function porta(r: Ref, cor: string): void {
   for (const y of [0.25, 1.1]) r.caixa(0.62, 0.62, 0.04, 0, y, -0.05, escurecer(cor, 0.8), 0.04);
   r.caixa(0.1, 0.1, 0.06, 0.32, 0.95, -0.03, CORES.dourado, 0.03);
 }
-const PORTAS = ['#6a3e9c', '#d8701c', '#7a4aae', '#5e3488'];
+// (os roxos das portas um tom acima do esboço: de noite, a porta de perto virava mancha escura)
+const PORTAS = ['#7a4cae', '#d8701c', '#8656ba', '#7452ae'];
 
 /** A porta da Vovó: roxa, grande e redonda em cima (o vão de 3 x 3 blocos atrás). */
 function portaVovo(r: Ref): void {
@@ -756,7 +772,7 @@ function luaEstrelas(r: Ref): void {
 
 /** A porta da loja: dupla, verde-oliva e roxa, com a janelinha de cima e o cabide dourado. */
 function portaLoja(r: Ref): void {
-  r.caixa(3.0, 3.0, 0.1, 0, 0, -0.08, '#4a3020', 0.02);
+  r.caixa(3.0, 3.0, 0.1, 0, 0, -0.08, '#5e3e28', 0.02);
   for (const s of [-1, 1]) {
     r.caixa(1.3, 2.7, 0.12, s * 0.68, 0.05, 0.0, s < 0 ? CORES.roxo : CORES.oliva, 0.04);
     r.caixa(0.8, 0.7, 0.04, s * 0.68, 1.7, 0.07, '#e8d8ff', 0.03);
@@ -832,9 +848,9 @@ function vitrine(r: Ref, n: number): void {
 
 /** A porta do castelinho: grande, de tábuas roxas, com o arco em degraus e os cravos dourados. */
 function portaCastelo(r: Ref): void {
-  r.caixa(3.0, 3.1, 0.1, 0, 0, -0.06, '#3a2440', 0.02);
-  const roxo = '#5e3a86';
-  for (let i = 0; i < 4; i++) r.caixa(0.62, 2.6 + (i === 1 || i === 2 ? 0.3 : 0.15), 0.12, -0.96 + i * 0.64, 0.02, 0.02, i % 2 ? roxo : '#6a4494', 0.03);
+  r.caixa(3.0, 3.1, 0.1, 0, 0, -0.06, '#4e3462', 0.02);
+  const roxo = '#7450a4';
+  for (let i = 0; i < 4; i++) r.caixa(0.62, 2.6 + (i === 1 || i === 2 ? 0.3 : 0.15), 0.12, -0.96 + i * 0.64, 0.02, 0.02, i % 2 ? roxo : '#8260b2', 0.03);
   for (const y of [0.5, 1.4, 2.2]) r.caixa(2.6, 0.1, 0.06, 0, y, 0.1, CORES.ferro, 0.02);
   for (const x of [-0.9, -0.3, 0.3, 0.9])
     for (const y of [0.55, 1.45, 2.25]) r.prisma(8, 0.05, 0.05, x, y, 0.14, CORES.dourado, 'z');
@@ -855,10 +871,10 @@ function bandeirinha(r: Ref, n: number): void {
 function posteLanterna(r: Ref): void {
   const alt = 2;
   r.caixa(0.62, 0.18, 0.62, 0, 0, 0, CORES.ferro, 0.05);
-  r.caixa(0.44, 0.2, 0.44, 0, 0.18, 0, '#46365c', 0.05);
+  r.caixa(0.44, 0.2, 0.44, 0, 0.18, 0, CORES.roxoEscuro, 0.05);
   r.caixa(0.24, alt - 0.38, 0.24, 0, 0.38, 0, CORES.ferro, 0.04);
-  r.caixa(0.5, 0.12, 0.5, 0, alt - 0.12, 0, '#46365c', 0.03);
-  r.caixa(0.32, 0.12, 0.32, 0, 0.9, 0, '#46365c', 0.03);
+  r.caixa(0.5, 0.12, 0.5, 0, alt - 0.12, 0, CORES.roxoEscuro, 0.03);
+  r.caixa(0.32, 0.12, 0.32, 0, 0.9, 0, CORES.roxoEscuro, 0.03);
   // o telhadinho roxo em degraus por cima do bloco da lanterna
   const y = 3;
   r.caixa(1.1, 0.1, 1.1, 0, y, 0, CORES.ferro, 0.03);
@@ -875,7 +891,7 @@ function posteLanterna(r: Ref): void {
 function lanternaBosque(r: Ref, d: DesenhoBaile): void {
   r.caixa(0.62, 0.18, 0.62, 0, 0, 0, CORES.ferro, 0.05);
   r.caixa(0.24, 1.9, 0.24, 0, 0.18, 0, CORES.ferro, 0.04);
-  r.caixa(0.5, 0.12, 0.5, 0, 2.08, 0, '#46365c', 0.03);
+  r.caixa(0.5, 0.12, 0.5, 0, 2.08, 0, CORES.roxoEscuro, 0.03);
   // a caixinha: os quatro pilares e o vidro (apagado) por dentro
   for (const sx of [-1, 1])
     for (const sz of [-1, 1]) r.caixa(0.08, 0.7, 0.08, sx * 0.24, 2.2, sz * 0.24, CORES.ferro, 0.02);

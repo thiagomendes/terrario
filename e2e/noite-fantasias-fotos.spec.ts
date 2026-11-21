@@ -39,6 +39,7 @@ interface Plano {
   barracas: { x: number; z: number }[];
   portas: { x: number; z: number; vovo?: boolean }[];
   lanternas: V3[];
+  trilha: [number, number][];
   loja: V3;
   castelo: V3;
   torre: V3;
@@ -74,6 +75,11 @@ async function abrir(browser: Browser, tamanho: Tamanho, distancia: number): Pro
     const w = window as unknown as { __camFixa: { p: V3; a: V3 } | null };
     w.__camFixa = null;
     const scene = e.cenaBabylon!();
+    // a criança fica fora da foto (o lugar é o assunto; na tela em pé a cabeça tapava o chão)
+    scene.onBeforeRenderObservable.add(() => {
+      for (const m of scene.meshes)
+        if (m.name.startsWith('personagem') || m.name.startsWith('braco')) m.isVisible = false;
+    });
     scene.onBeforeCameraRenderObservable.add((c) => {
       const f = w.__camFixa;
       if (!f) return;
@@ -120,6 +126,7 @@ const plano = (page: Page): Promise<Plano> =>
       barracas: p.barracas,
       portas: p.portas,
       lanternas: p.lanternas,
+      trilha: p.trilha,
       loja: p.loja,
       castelo: p.castelo,
       torre: p.torre,
@@ -212,6 +219,8 @@ async function contaDaNoite(page: Page, chao: number) {
     // os quadrados de lado 10% da largura, passo de meio lado
     const lado = Math.max(8, Math.round(W * 0.1));
     let pior = 1;
+    // onde fica o pior quadrado (o canto de cima à esquerda, em fração da tela), para achar o culpado
+    let onde = [0, 0];
     for (let y0 = 0; y0 + lado <= H; y0 += lado >> 1)
       for (let x0 = 0; x0 + lado <= W; x0 += lado >> 1) {
         let s = 0;
@@ -221,9 +230,13 @@ async function contaDaNoite(page: Page, chao: number) {
             s += lum(x, y);
             n++;
           }
-        pior = Math.min(pior, s / n);
+        if (s / n < pior) {
+          pior = s / n;
+          onde = [Number((x0 / W).toFixed(2)), Number((y0 / H).toFixed(2))];
+        }
       }
-    return { pixelsChao: chaoL.length, medianaChao: Number(mediana.toFixed(3)), piorQuadrado: Number(pior.toFixed(3)) };
+    // (quatro casas no pior quadrado: com três, um 0,0996 aparecia como 0,1 e passava)
+    return { pixelsChao: chaoL.length, medianaChao: Number(mediana.toFixed(3)), piorQuadrado: Number(pior.toFixed(4)), onde };
   }, chao);
 }
 
@@ -260,14 +273,16 @@ function tomadas(p: Plano): Tomada[] {
   const vovo = p.portas.find((q) => q.vovo)!;
   t('rua', [vovo.x + 2, Y + 3, p.oz + 42], [vovo.x, Y + 3, vovo.z + 6]);
   // a Casa da Vovó de frente, um pouco de lado
-  t('vovo', [vovo.x + 6, Y + 2.6, vovo.z + 13], [vovo.x, Y + 2.5, vovo.z - 2]);
+  // (pelo meio da rua: de lado, a câmera de trás da tela em pé entrava no telhado da vizinha)
+  t('vovo', [vovo.x + 2, Y + 2.6, vovo.z + 13], [vovo.x, Y + 2.5, vovo.z - 2], [0, 3, 4]);
   // a Loja de Fantasias, da praça
   t('loja', [p.loja[0] - 10, Y + 2.8, p.loja[2] - 3], [p.loja[0] + 3, Y + 3, p.loja[2] + 1]);
-  // o bosque das lanternas: o caminho, da primeira lanterna para dentro
-  const l0 = p.lanternas[0];
-  t('bosque', [l0[0] + 5, Y + 2.2, l0[2] - 2], [p.lanternas[2][0], Y + 1.5, p.lanternas[2][2]]);
-  // o castelinho: do caminho, a torre inteira
-  t('castelo', [p.castelo[0] + 6, Y + 3, p.castelo[2] - 14], [p.castelo[0] + 2, Y + 7, p.castelo[2] + 4], [0, 6, 8]);
+  // o bosque das lanternas: de cima do caminho (o corredor de árvores dos dois lados), olhando
+  // para dentro dele; na tela em pé, mais alto, por cima das copas do começo
+  const tr = p.trilha;
+  t('bosque', [tr[1][0] + 1.5, Y + 2.2, tr[1][1] - 0.5], [tr[3][0], Y + 1.6, tr[3][1]], [0, 2, 0]);
+  // o castelinho: do fim do caminho, a porta e a torre inteira
+  t('castelo', [tr[4][0] + 1, Y + 2.6, tr[4][1] - 1], [p.castelo[0] + 2, Y + 8, p.castelo[2] + 4], [0, 3, 5]);
   // a horta: do portão para dentro
   t('horta', [p.portaoHorta[0] - 4, Y + 4, p.portaoHorta[2] - 6], [p.portaoHorta[0] + 8, Y, p.portaoHorta[2] + 12]);
   // o gramado da festa: da estaçãozinha para dentro

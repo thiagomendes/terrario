@@ -13,8 +13,11 @@ import { T, VAZIO, fbmT, folhasDe, ladoComTopo, rampa } from '../../art/atlas';
 import type { Pintor } from '../tipos';
 import { PINTORES_RANCHO } from '../rancho-alegre/pintores';
 
-/** Gramado verde-oliva, com folhinhas laranja caídas aqui e ali. */
-const OLIVA = ['#4c5428', '#545c2c', '#5c6430', '#646c34'];
+/**
+ * Gramado verde-oliva, com folhinhas laranja caídas aqui e ali (um tom mais claro que o do
+ * esboço: de noite, à sombra das copas do bosque, o chão ficava abaixo da conta da noite).
+ */
+const OLIVA = ['#5a6430', '#626c34', '#6a7438', '#727c3c'];
 const gramado: Pintor = (x, y, s) => {
   const r = hash2(x, y, s + 5);
   if (r > 0.988) return rampa(['#e8892c', '#f0a040'], hash2(x, y, s + 1), x, y, s);
@@ -65,6 +68,17 @@ export const PINTORES_FANTASIAS: Record<string, Pintor> = {
     4,
   ),
   terra,
+  // o tronco marrom-quente de casca em listras (o de antes, escuro, virava um poste roxo de noite)
+  tronco: (x, y, s) => {
+    const listra = (x + Math.floor(hash2(x, 3, s) * 2)) % 4 === 0;
+    return rampa(
+      listra ? ['#6a4630', '#724c34'] : ['#86603e', '#906844', '#9a704a'],
+      hash2(x, y >> 2, s) * 0.6 + hash2(x, y, s) * 0.3,
+      x,
+      y,
+      s,
+    );
+  },
   // as copas: oliva na beira, cobre e douradas no bosque (claras o bastante para de noite não
   // virarem mancha escura); as folhas laranja (o bloco só daqui) ficam com o laranja vivo
   folhas: folhasDe(['#56762e', '#608234', '#6a8e3a', '#76983f', '#82a246'], 0.13),
@@ -77,8 +91,9 @@ export const PINTORES_FANTASIAS: Record<string, Pintor> = {
   // vitrine por dentro, nada de grade)
   vidro: (x, y, s) => {
     if (x === 0 || y === 0 || x === T - 1 || y === T - 1) return rampa(['#4a3266', '#54397a'], hash2(x, y, s), x, y, s);
+    // um risco de reflexo só, curto, no canto de cima (a vitrine não vira grade de X)
     const d = x + y;
-    if (d === 9 || d === 10 || d === 13) return rampa(['#efe6ff', '#f6f0ff'], hash2(x, y, s), x, y, s);
+    if ((d === 6 || d === 7) && x >= 2 && y >= 2) return rampa(['#efe6ff', '#f6f0ff'], hash2(x, y, s), x, y, s);
     return VAZIO;
   },
 };
