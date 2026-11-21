@@ -18,27 +18,35 @@ import { fantasiaPorId } from './fantasias';
 export type PapelAbraco = 'bento' | 'crianca';
 
 /**
- * Entre o meio da criança e o meio do Bento no abraço (blocos): o rosto dela encosta na barriga
- * peluda dele, e os braços dela chegam nos tufos da frente (medido com os bonecos de verdade,
- * `abracoEncaixe.test.ts`: as cabeças grandes nunca se batem).
+ * Entre o meio da criança e o meio do Bento no abraço (blocos): ele do lado dela, as cabeças
+ * encostadas (medido com os bonecos de verdade, `abracoEncaixe.test.ts`: nada entra no outro).
  */
-export const DISTANCIA_ABRACO = 0.95;
+export const DISTANCIA_ABRACO = 1.12;
 /**
- * Com chapéu de aba (a bruxinha, o de palha, o de vaqueiro...) a aba chega na altura do rosto
- * dele: ele para um tico mais longe.
+ * Com chapéu de aba (a bruxinha, o de palha, o de vaqueiro...) a aba chega no rosto dele: ele
+ * para um tico mais longe.
  */
-export const DISTANCIA_ABRACO_CHAPEU = 1.22;
+export const DISTANCIA_ABRACO_CHAPEU = 1.28;
+
+/** O lençol de capuz cobre a cabeça inteira: ele para mais um tico longe. */
+export const DISTANCIA_ABRACO_CAPUZ = 1.25;
+/** A gola alta e o capuz de monstro sobem em volta da cabeça dela: o mais longe. */
+export const DISTANCIA_ABRACO_GOLA = 1.64;
 
 /** Os acessórios de aba larga ou altos na cabeça. */
 const NA_CABECA = new Set(['chapeu', 'chapeu-explorador', 'chapeu-palha', 'coroa-flores', 'touca-chef', 'capacete']);
+/** As peças de fantasia que crescem em volta da cabeça. */
+const EM_VOLTA = new Set(['gola-alta', 'capuz-monstro', 'capuz-dragao']);
 
-/** A distância do abraço para quem a criança é (o chapéu de aba afasta um pouco). */
+/** A distância do abraço para quem a criança é (o que ela tem na cabeça afasta um pouco). */
 export function distanciaDoAbraco(a?: Pick<Aparencia, 'fantasia' | 'acessorio' | 'corpo' | 'premium'> | null): number {
   if (!a) return DISTANCIA_ABRACO;
-  if (a.premium?.fantasia) return DISTANCIA_ABRACO_CHAPEU;
+  if (a.premium?.fantasia) return DISTANCIA_ABRACO_GOLA;
   if (a.fantasia) {
     const def = fantasiaPorId(a.fantasia.id);
     const v = def?.visual[a.corpo ?? 'feminino'];
+    if (v?.pecas.some((p) => EM_VOLTA.has(p.tipo))) return DISTANCIA_ABRACO_GOLA;
+    if (v?.cabeca === 'capuz') return DISTANCIA_ABRACO_CAPUZ;
     return v?.cabeca === 'chapeu' || v?.cabeca === 'capacete' ? DISTANCIA_ABRACO_CHAPEU : DISTANCIA_ABRACO;
   }
   return a.acessorio && NA_CABECA.has(a.acessorio) ? DISTANCIA_ABRACO_CHAPEU : DISTANCIA_ABRACO;
@@ -68,31 +76,43 @@ export function balancoDoAbraco(f: number): number {
 export function juntasDoAbraco(papel: PapelAbraco, f: number): Juntas {
   const b = balancoDoAbraco(f);
   if (papel === 'bento')
-    // ele dobra os joelhos (desce um pouco), põe a barriga para a frente e a cabeça para trás,
-    // olhando para baixo, para ela; os braços descem por cima dos ombros dela e fecham em
-    // volta (as cabeças grandes dos dois nunca se batem)
-    return {
-      troncoX: -0.12,
-      corpoY: -0.06,
-      bdX: -1.22,
-      beX: -1.22,
-      bdZ: -0.48,
-      beZ: 0.48,
-      cabX: 0.1,
-      troncoZ: b,
-      cabZ: -b * 0.6,
-    };
-  // a criança: os braços para a frente e um tico para cima, fechando na barriga dele; a cabeça
-  // deita de ladinho na barriga peluda
-  return {
-    bdX: -1.45,
-    beX: -1.45,
-    bdZ: -0.3,
-    beZ: 0.3,
-    cabZ: 0.18,
-    troncoZ: -b,
-  };
+    // ele fica do lado dela, meio virado para ela, curvado por cima; o braço de trás passa
+    // pelas costas dela até o outro ombro e o da frente fecha na frente; a cabeça deita na
+    // cabeça dela
+    return { ...POSE_BENTO, troncoZ: POSE_BENTO.troncoZ + b, cabZ: POSE_BENTO.cabZ - b * 0.4 };
+  // a criança: um braço em volta da cintura dele, o outro na barriga peluda; a cabeça deita na
+  // bochecha dele
+  return { ...POSE_CRIANCA, troncoZ: POSE_CRIANCA.troncoZ + b * 0.6 };
 }
+
+const POSE_BENTO = {
+  troncoX: 0.156,
+  troncoZ: -0.2,
+  troncoY: -0.071,
+  cabZ: -0.256,
+  cabX: -0.076,
+  bdX: -1.981,
+  beX: -1.756,
+  bdZ: 1.1,
+  beZ: 0.988,
+} as const;
+const POSE_CRIANCA = {
+  troncoZ: -0.208,
+  cabZ: -0.241,
+  cabX: -0.203,
+  // o braço de perto dele vai para o lado dele; o de longe cruza a frente dela até ele
+  bdX: -1.4,
+  beX: -1.5,
+  bdZ: -0.75,
+  beZ: -0.45,
+} as const;
+
+/**
+ * Onde o Bento fica no abraço, no corpo dela (x: para a direita dela, z: para a frente; em
+ * blocos, na distância de sempre), e os giros: o dele a partir de "de frente para ela", o dela
+ * a partir de "de frente para o posto dele".
+ */
+const LUGAR_ABRACO = { x: -1.072, z: -0.187, giroBento: -2.124, giroCrianca: -0.3 } as const;
 
 /** A camada do abraço no animador (o Bento e a criança), com o jeito de soltar. */
 export interface CamadaAbraco extends CamadaPose {
@@ -164,17 +184,23 @@ export function lugarDoBentoNoAbraco(
     dx /= d;
     dz /= d;
   }
-  const colado = { x: crianca.x + dx * distancia, z: crianca.z + dz * distancia };
+  // o lugar dele no corpo dela (ela de frente para o posto dele): a direita dela é (dz, −dx)
+  const k = distancia / Math.hypot(LUGAR_ABRACO.x, LUGAR_ABRACO.z);
+  const colado = {
+    x: crianca.x + (dz * LUGAR_ABRACO.x + dx * LUGAR_ABRACO.z) * k,
+    z: crianca.z + (-dx * LUGAR_ABRACO.x + dz * LUGAR_ABRACO.z) * k,
+  };
   const p = Math.max(0, Math.min(1, peso));
+  const deFrente = Math.atan2(-dx, -dz);
   return {
     x: bento.x + (colado.x - bento.x) * p,
     z: bento.z + (colado.z - bento.z) * p,
-    // ele olha para a criança (de frente para ela)
-    yaw: Math.atan2(-dx, -dz),
+    // de longe ele vem de frente para ela; colado, meio de lado
+    yaw: deFrente + LUGAR_ABRACO.giroBento * p,
   };
 }
 
-/** Para onde a criança olha no abraço (de frente para o Bento). */
+/** Para onde a criança olha no abraço (de frente para o posto do Bento, um tico virada). */
 export function yawDaCriancaNoAbraco(crianca: { x: number; z: number }, bento: { x: number; z: number }): number {
-  return Math.atan2(bento.x - crianca.x, bento.z - crianca.z);
+  return Math.atan2(bento.x - crianca.x, bento.z - crianca.z) + LUGAR_ABRACO.giroCrianca;
 }

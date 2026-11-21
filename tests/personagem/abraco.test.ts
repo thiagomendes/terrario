@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest';
 import { DURACAO_ABRACO, ABRACO } from '../../src/jogo/baile';
 import {
   DISTANCIA_ABRACO,
+  DISTANCIA_ABRACO_CAPUZ,
   DISTANCIA_ABRACO_CHAPEU,
+  DISTANCIA_ABRACO_GOLA,
   distanciaDoAbraco,
   SAIDA_ABRACO,
   camadaDeAbraco,
@@ -44,11 +46,10 @@ describe('o abraço do Bento (T11)', () => {
       expect(meio, papel).not.toBeNull();
       expect(meio!.bracoDireito).toBeLessThan(-0.9);
       expect(meio!.bracoEsquerdo).toBeLessThan(-0.9);
-      // o Bento dobra os joelhos (desce) com a cabeça para trás (as cabeças grandes nunca se batem)
-      if (papel === 'bento') {
-        expect(meio!.corpoY ?? 0).toBeLessThan(base.corpoY ?? base.tronco);
-        expect(meio!.troncoX ?? 0).toBeLessThan(0);
-      }
+      // as cabeças deitam uma na outra: o Bento curva para a frente, por cima dela, e os dois
+      // inclinam para o lado um do outro
+      if (papel === 'bento') expect(meio!.troncoX ?? 0).toBeGreaterThan(0.1);
+      expect(Math.abs(meio!.cabecaLado ?? 0)).toBeGreaterThan(0.15);
       expect(fim).toBeGreaterThan(DURACAO_ABRACO - 0.06);
       expect(fim).toBeLessThan(DURACAO_ABRACO + 0.11);
     }
@@ -77,7 +78,7 @@ describe('o abraço do Bento (T11)', () => {
     expect(b.ativa).toBe(false);
   });
 
-  it('o chapéu de aba afasta o Bento um tico (a aba chega na altura do rosto dele)', () => {
+  it('o que ela tem na cabeça afasta o Bento um tico (chapéu de aba, capuz, gola alta)', () => {
     expect(distanciaDoAbraco(null)).toBe(DISTANCIA_ABRACO);
     expect(distanciaDoAbraco({ corpo: 'feminino', acessorio: 'nenhum' })).toBe(DISTANCIA_ABRACO);
     expect(distanciaDoAbraco({ corpo: 'feminino', acessorio: 'chapeu-palha' })).toBe(DISTANCIA_ABRACO_CHAPEU);
@@ -85,8 +86,10 @@ describe('o abraço do Bento (T11)', () => {
       DISTANCIA_ABRACO_CHAPEU,
     );
     expect(distanciaDoAbraco({ corpo: 'masculino', acessorio: 'nenhum', fantasia: { id: 'lulu-fantasma', cor: 0 } })).toBe(
-      DISTANCIA_ABRACO,
+      DISTANCIA_ABRACO_CAPUZ,
     );
+    for (const id of ['dudu-vampiro', 'bento-peludo'])
+      expect(distanciaDoAbraco({ corpo: 'feminino', acessorio: 'nenhum', fantasia: { id, cor: 0 } })).toBe(DISTANCIA_ABRACO_GOLA);
   });
 
   it('quem vê o abraço chegar atrasado entra no mesmo ponto', () => {
@@ -94,15 +97,22 @@ describe('o abraço do Bento (T11)', () => {
     expect(c.tempo).toBeCloseTo(1.0, 6);
   });
 
-  it('o Bento chega à frente da criança, de frente para ela, e ela olha para ele', () => {
+  it('o Bento chega ao lado dela, meio virado para ela, e ela vira um tico para ele', () => {
     const crianca = { x: 10, z: 5 };
     const bento = { x: 12, z: 5 };
     const longe = lugarDoBentoNoAbraco(crianca, bento, 0);
     expect(longe.x).toBeCloseTo(12, 6);
+    // de longe ele vem de frente para ela (olha para -x)
+    expect(Math.sin(longe.yaw)).toBeCloseTo(-1, 6);
     const perto = lugarDoBentoNoAbraco(crianca, bento, 1);
     expect(Math.hypot(perto.x - crianca.x, perto.z - crianca.z)).toBeCloseTo(DISTANCIA_ABRACO, 6);
-    // o Bento olha para -x (para ela); ela olha para +x (para ele)
-    expect(Math.sin(perto.yaw)).toBeCloseTo(-1, 6);
-    expect(Math.sin(yawDaCriancaNoAbraco(crianca, bento))).toBeCloseTo(1, 6);
+    // ela de frente para o posto (+x): a esquerda dela é +z; ele fica do lado esquerdo dela
+    expect(perto.z).toBeGreaterThan(crianca.z + 0.8);
+    // ele olha para ela (o vetor dele aponta para o lado dela) e ela vira para ele
+    const olharDele = [Math.sin(perto.yaw), Math.cos(perto.yaw)];
+    expect(olharDele[0] * (crianca.x - perto.x) + olharDele[1] * (crianca.z - perto.z)).toBeGreaterThan(0);
+    const yc = yawDaCriancaNoAbraco(crianca, bento);
+    expect(Math.sin(yc)).toBeGreaterThan(0.8);
+    expect(Math.cos(yc)).toBeGreaterThan(0.1);
   });
 });

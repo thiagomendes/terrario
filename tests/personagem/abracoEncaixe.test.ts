@@ -4,7 +4,12 @@ import { obterTema } from '../../src/temas';
 import { aparenciaPadrao, aplicarCorpo, vestirFantasia, type ModeloId } from '../../src/personagem/aparencia';
 import { planoBoneco, rotacoesDaPose, type PlanoBoneco } from '../../src/personagem/boneco';
 import { moradorDeBrinquedo } from '../../src/render/moradorBoneco';
-import { camadaDeAbraco, distanciaDoAbraco } from '../../src/personagem/abraco';
+import {
+  camadaDeAbraco,
+  distanciaDoAbraco,
+  lugarDoBentoNoAbraco,
+  yawDaCriancaNoAbraco,
+} from '../../src/personagem/abraco';
 import { ABRACO, ESCALA_BENTO, N_BAILE, POVOADO_BAILE } from '../../src/jogo/baile';
 import { criarAnimador } from '../../src/player/animacao';
 import type { Pose } from '../../src/personagem/poses';
@@ -100,12 +105,16 @@ describe('o abraço do Bento: nada atravessando (T11)', () => {
       const poseC = poseNoAbraco('crianca', f);
       const porDistancia = new Map<number, ReturnType<typeof noMundo>[]>();
       for (const [rotulo, plano, dist] of criancas) {
+        // o posto dele à frente dela (+z); o lugar e os giros do abraço, como na tela
+        const crianca = { x: 0, z: 0 };
+        const posto = { x: 0, z: 3 };
         let pecasB = porDistancia.get(dist);
         if (!pecasB) {
-          pecasB = bentos.map((b) => noMundo(b, poseB, ESCALA_BENTO, Math.PI, [0, 0, dist]));
+          const l = lugarDoBentoNoAbraco(crianca, posto, 1, dist);
+          pecasB = bentos.map((b) => noMundo(b, poseB, ESCALA_BENTO, l.yaw, [l.x, 0, l.z]));
           porDistancia.set(dist, pecasB);
         }
-        const pc = noMundo(plano, poseC, 1, 0, [0, 0, 0]);
+        const pc = noMundo(plano, poseC, 1, yawDaCriancaNoAbraco(crianca, posto), [0, 0, 0]);
         for (const pb of pecasB)
           for (const a of pc)
             for (const b of pb) {
@@ -118,6 +127,14 @@ describe('o abraço do Bento: nada atravessando (T11)', () => {
       }
     }
     const lista = [...pior].sort((x, y) => x[1] - y[1]).map(([k, d]) => `${d.toFixed(3)} ${k}`);
+    if (process.env.ABRACO_LISTA) {
+      const porRotulo = new Map<string, string>();
+      for (const l of lista) {
+        const r = l.slice(l.indexOf('('));
+        if (!porRotulo.has(r)) porRotulo.set(r, l);
+      }
+      console.log([...porRotulo.values()].join('\n'));
+    }
     expect(lista.slice(0, 30)).toEqual([]);
   });
 });

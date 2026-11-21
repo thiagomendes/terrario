@@ -112,29 +112,31 @@ test.describe('spec 027 (T11): o abraço do Bento', () => {
         if (el !== cena && !el.contains(cena)) el.style.visibility = 'hidden';
     });
     mkdirSync(PASTA, { recursive: true });
-    /** As tomadas pelo lugar de verdade dos dois na tela (u: da criança para o Bento; p: de lado). */
-    const tomada = (nome: string, c: V3, bb: V3): { p: V3; a: V3 } => {
+    /**
+     * As tomadas pelo lugar e pelo giro de verdade dos dois na tela: de frente para a criança
+     * (na direção para onde ela olha), de frente para o Bento (para onde ele olha), e de lado a
+     * 90 graus da linha entre os dois, pela frente dos dois e por trás (o braço dele nas costas
+     * dela).
+     */
+    const tomada = (nome: string, c: V3, bb: V3, yc: number, yb: number): { p: V3; a: V3 } => {
       const dx = bb[0] - c[0];
       const dz = bb[2] - c[2];
       const d = Math.hypot(dx, dz) || 1;
       const u = [dx / d, dz / d];
-      const p = [u[1], -u[0]];
-      const meio: V3 = [(c[0] + bb[0]) / 2, c[1] + 1.15, (c[2] + bb[2]) / 2];
-      const em = (fu: number, fp: number, h: number): V3 => [
-        meio[0] + u[0] * fu + p[0] * fp,
-        meio[1] + h,
-        meio[2] + u[1] * fu + p[1] * fp,
-      ];
-      // de lado: os dois de perfil; por cima do ombro dela (o Bento de frente, abraçando); de
-      // 3/4 do lado dele (o rostinho dela na barriga peluda)
+      // a perpendicular para o lado onde os dois olham
+      let p = [u[1], -u[0]];
+      const olhar = [Math.sin(yc) + Math.sin(yb), Math.cos(yc) + Math.cos(yb)];
+      if (p[0] * olhar[0] + p[1] * olhar[1] < 0) p = [-p[0], -p[1]];
+      const meio: V3 = [(c[0] + bb[0]) / 2, c[1] + 1.35, (c[2] + bb[2]) / 2];
+      const de = (y: number, dist: number, h: number): V3 => [meio[0] + Math.sin(y) * dist, meio[1] + h, meio[2] + Math.cos(y) * dist];
       const lugar =
         nome === 'lado'
-          ? em(0, 3.8, 0.3)
+          ? ([meio[0] + p[0] * 3.6, meio[1] + 0.2, meio[2] + p[1] * 3.6] as V3)
           : nome === 'lado-outro'
-            ? em(0, -3.8, 0.3)
+            ? ([meio[0] - p[0] * 3.6, meio[1] + 0.4, meio[2] - p[1] * 3.6] as V3)
             : nome === 'frente-bento'
-              ? em(-3.0, 1.4, 0.8)
-              : em(1.4, 3.0, 0.2);
+              ? de(yb, 3.4, 0.3)
+              : de(yc, 3.2, 0.1);
       return { p: lugar, a: meio };
     };
     for (const [hora, nomeHora] of [
@@ -151,7 +153,7 @@ test.describe('spec 027 (T11): o abraço do Bento', () => {
           timeout: 10_000,
         });
         const est = (await page.evaluate(() => window.__brumaluz!.abracoBaile!()))!;
-        const cam = tomada(nome, est.crianca, est.bento ?? [b.x, b.y, b.z]);
+        const cam = tomada(nome, est.crianca, est.bento ?? [b.x, b.y, b.z], est.yawCrianca ?? 0, est.yawBento ?? 0);
         await page.evaluate((cam) => {
           (window as unknown as { __camFixa: unknown }).__camFixa = cam;
         }, cam);

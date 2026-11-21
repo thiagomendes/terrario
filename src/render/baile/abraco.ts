@@ -160,6 +160,9 @@ export function criarAbracoNaTela(op: OpcoesAbracoNaTela) {
       /** Onde a criança e o Bento estão na tela (os pés). */
       crianca: [number, number, number];
       bento: [number, number, number] | null;
+      /** Para onde cada um olha (rad, o giro no chão). */
+      yawCrianca: number | null;
+      yawBento: number | null;
     } | null {
       const a = atual;
       if (!a) return null;
@@ -173,6 +176,8 @@ export function criarAbracoNaTela(op: OpcoesAbracoNaTela) {
         peso: peso(a),
         crianca: [a.x, a.y, a.z],
         bento: l && b ? [l.x, b.y, l.z] : null,
+        yawCrianca: b ? yawDaCriancaNoAbraco(a, b) : null,
+        yawBento: l ? l.yaw : null,
       };
     },
   };

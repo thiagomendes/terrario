@@ -198,14 +198,20 @@ export function macacaoDeTufos(pecas: Peca[], m: MedidasBoneco, cor: string, est
         r = Math.max(r, Math.min(p.tamanho[0], p.tamanho[2]) / 2);
     return r || padrao;
   };
+  // (os braços vão afinando e escurecendo para a mão: no abraço, o braço se destaca do corpo
+  // peludo em vez de sumir nos tufos)
   for (const lado of ['bracoE', 'bracoD'] as const) {
     const r = raioDe(lado, 0.07) + 0.012;
-    for (let f = 0; f < j.fileirasBraco; f++)
+    for (let f = 0; f < j.fileirasBraco; f++) {
+      const u = f / Math.max(1, j.fileirasBraco - 1);
+      const tufoBraco =
+        u > 0 ? criarTufo(pecas, j, tons.map((t) => misturar(t, '#2a2410', 0.1 * u))) : tufo;
       for (let q = 0; q < j.voltaMembro; q++) {
         const t = ((q + (f % 2) * 0.5) / j.voltaMembro) * Math.PI * 2;
         const y = 0.02 - (f * 0.24) / Math.max(1, j.fileirasBraco - 1);
-        tufo(lado, 'braco', [Math.sin(t) * r, y, Math.cos(t) * r], [Math.sin(t), 0, Math.cos(t)], 0.85);
+        tufoBraco(lado, 'braco', [Math.sin(t) * r, y, Math.cos(t) * r], [Math.sin(t), 0, Math.cos(t)], 0.85 - 0.2 * u);
       }
+    }
   }
   for (const lado of ['pernaE', 'pernaD'] as const) {
     const r = raioDe(lado, 0.08) + 0.012;
