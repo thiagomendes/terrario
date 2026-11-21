@@ -16,6 +16,8 @@ import type { Scene } from '@babylonjs/core/scene';
 import { Bloco } from '../world/blocks';
 import { coresDoBloco } from '../fx/cores';
 import { caixaArredondada, type Plasticos } from './formas';
+import { tema } from '../temas/ativo';
+import { ROSTO_DO_LAMPIAO } from './lampioes';
 
 type RGB = [number, number, number];
 /** Cor média de uma face do bloco (no tema do mundo); undefined = não tem. */
@@ -612,10 +614,16 @@ export function modeloDeBloco(
         // mão (modelo pequeno) a vista é quase de frente
         const rosto = grupo(0, 0, 0, 0, L < 0.5 ? -0.3 : -Math.PI / 4, 0);
         const luz = '#ffe04a';
+        // spec 027 (T06): o rosto do tema, o mesmo do lampião posto: o Rancho Alegre mantém a
+        // carinha de festa junina (os olhinhos quadrados); os outros mundos, os olhos redondos
+        const junina = ROSTO_DO_LAMPIAO[tema().id] === 'junina';
         for (const s of [-1, 1]) {
-          const olho = prisma(luz, 0.1, 0.12, 0.12, 3, s * 0.16, 0.08, -0.53, 1, rosto);
+          if (junina) {
+            caixa(luz, 0.1, 0.14, 0.1, 0.03, s * 0.16, 0.08, -0.52, 1, rosto);
+            continue;
+          }
+          const olho = prisma(luz, 0.1, 0.1, 0.1, 12, s * 0.16, 0.1, -0.53, 1, rosto);
           olho.rotation.x = -Math.PI / 2;
-          olho.rotation.y = Math.PI;
         }
         const boca = caixa(luz, 0.38, 0.08, 0.1, 0.04, 0, -0.17, -0.52, 1, rosto);
         boca.rotation.x = -0.15;

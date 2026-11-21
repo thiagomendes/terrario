@@ -30,6 +30,13 @@ for (let i = 0; i < 256; i++) OPACO_T[i] = obterBloco(i)?.opaco ? 1 : 0;
  */
 const QUINA_RETA_T = new Uint8Array(256);
 QUINA_RETA_T[Bloco.JANELA] = 1;
+/**
+ * Spec 027 (T06): os blocos desenhados como peça arredondada (o lampião de abóbora e o caldeirão),
+ * fora da malha do chunk; os vizinhos desenham a face encostada neles.
+ */
+const SEM_CUBO_T = new Uint8Array(256);
+SEM_CUBO_T[Bloco.LAMPIAO_ABOBORA] = 1;
+SEM_CUBO_T[Bloco.CALDEIRAO] = 1;
 const FOLHAS_T = new Uint8Array(256);
 for (let i = 0; i < 256; i++) FOLHAS_T[i] = obterBloco(i)?.folhas ? 1 : 0;
 import { ALTURA, TAM_X, TAM_Z, indice } from '../world/chunk';
@@ -871,10 +878,14 @@ export function gerarMalha(
           }
           continue;
         }
+        // spec 027 (T06): o lampião e o caldeirão postos são a peça arredondada
+        // (`render/lampioes.ts`): o cubo deles não entra na malha
+        if (SEM_CUBO_T[id]) continue;
         for (const f of FACES) {
           const viz = ler(x + f.n[0], y + f.n[1], z + f.n[2]);
           const dv = obterBloco(viz);
-          if (dv?.opaco) continue;
+          // (encostado no lampião, a face aparece: ele não é mais um cubo cheio)
+          if (dv?.opaco && !SEM_CUBO_T[viz]) continue;
           if (viz === id && !def.opaco && !def.folhas) continue;
           // dentro da copa não há face: as folhas são uma peça só, sem furos
           if (def.folhas && FOLHAS_T[viz]) continue;

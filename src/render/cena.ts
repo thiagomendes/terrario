@@ -128,6 +128,8 @@ import { criarShowVila } from './vila/show';
 import type { PlanoVila } from '../world/vilaNeon';
 import type { PlanoBaile } from '../world/noiteFantasias';
 import { criarRenderBaile } from './baile';
+import { criarLampioes, ROSTO_DO_LAMPIAO } from './lampioes';
+import { metaGerada } from '../world/chunk';
 import { LARGURA_CIDADE, PROFUNDIDADE_CIDADE } from '../world/cidade';
 import { criarAgua } from './agua';
 import { criarVagalumes } from './vagalumes';
@@ -479,6 +481,8 @@ export interface EstadoDepuracao {
   baileToque?: (q: import('./baile').ToqueBaile) => void;
   /** Spec 027: as portas fechadas da festa (o meio da frente), para o toque. */
   bailePortas?: () => { x: number; y: number; z: number }[];
+  /** Spec 027 (T06): os lampiões e caldeirões postos desenhados como peça (malhas e instâncias). */
+  lampioes?: () => { malhas: number; lampioes: number; caldeiroes: number };
   /** Spec 026: o estado do bairro que o núcleo mandou (show, estojos, caixas, lhamas). */
   vilaEstado?: () => import('../nucleo/vila').VilaVista | null;
   /** Spec 026: manda a caixa do palco ou o toque no palco ao núcleo. */
@@ -1979,6 +1983,15 @@ export function criarCena(
       : null;
   estado.baileToque = (q) => renderBaile?.tocar(q);
   estado.bailePortas = () => renderBaile?.portas() ?? [];
+  // spec 027 (T06): o lampião de abóbora e o caldeirão postos viram a peça arredondada de
+  // brinquedo, com o rosto do tema, instanciados por chunk (fora do glow: o rosto já vem aceso)
+  const lampioes = criarLampioes(
+    scene,
+    ROSTO_DO_LAMPIAO[temaAtual.id],
+    (x, y, z) => metaGerada(x, y, z, semente),
+    (m) => glow.addExcludedMesh(m),
+  );
+  estado.lampioes = () => lampioes.contagem();
   const showVila = planoVila
     ? criarShowVila(scene, planoVila, {
         temMalha: (cx, cz) => malhas.has(chave(cx, cz)),
@@ -2860,6 +2873,8 @@ export function criarCena(
       lista.push(w);
     }
     malhas.set(k, lista);
+    // spec 027 (T06): os lampiões e os caldeirões postos do chunk (o gerado e o editado)
+    lampioes.chunk(r.cx, r.cz, r.base, edicoes.doChunk(r.cx, r.cz));
   }
 
   function solicitar(cx: number, cz: number, urgente = false): void {
@@ -4115,6 +4130,8 @@ export function criarCena(
         m.dispose();
       });
       malhas.delete(k);
+      const [dcx, dcz] = k.split(',').map(Number);
+      lampioes.soltar(dcx, dcz);
       pedidos.delete(k);
       prioritarios.delete(k);
     }
