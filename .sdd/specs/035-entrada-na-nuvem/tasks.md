@@ -65,4 +65,10 @@ Os e2e rodam na placa de vídeo: `scripts/e2e-gpu.sh <spec>`, e depois `scripts/
   - **B2** (1 min): a página nunca recarrega (40 s esperando).
   - **C** (31 s): o mundo da sala mostra "Jogar" e não "Continuar", e o mundo novo do Rancho abre com `sala` no endereço (volta para a sala).
   - Na lista, o botão "Mundos" fica na tela de título: o teste a mostra de novo antes de abrir a lista.
-  - **Cuidado:** o `scripts/limpar-restos-root.sh` apagou as fotos de `capturas-034/`, que estão no git e eram do root; foram restauradas com `git restore capturas-034`.
+  - **Cuidado:** o `scripts/limpar-restos-root.sh` apagou as fotos de `capturas-034/`, que estão no git e eram do root; foram restauradas com `git restore capturas-034`. Daqui em diante, os restos de root saem só com `rm -rf test-results dist` pelo contêiner.
+- **(20 nov 2026) T02 pronta:** a fila em `src/cliente/conexaoNuvem.ts`.
+  - Guarda as mensagens do núcleo enquanto ninguém ouve. O primeiro `aoReceber` recebe tudo, em ordem, numa `queueMicrotask` (nunca dentro dele). O que chega durante a entrega vai para o fim. Cada mensagem tem um `try/catch` com `console.error`, e o laço relê o tamanho a cada volta. O teto é de 200 (sai a mais antiga). O `encerrar()` esvazia a fila e fecha com 1000.
+  - Só o estado do cliente chama `aoReceber` (`src/cliente/estado.ts:157`), então a fila vai inteira para ele.
+  - **A corrida passa nas 5 esperas, também com `CORRIDA_RODADAS=3`, e com 0 ressincronizações.** O `entradaNuvem.test.ts` passa inteiro (10 testes, com o fechamento 1000).
+  - Continuam falhando, como devem: o endereço (T07), os blocos da volta (T05; a da ressincronização espera a T03) e a sala fechada (T06).
+  - E2e na placa de vídeo: o `multiplayer` passa (2 de 2). O `entrada-nuvem` continua falhando nos 4: B, buraco e B2 esperam a T04, e C espera a T07.
