@@ -72,3 +72,12 @@ Os e2e rodam na placa de vídeo: `scripts/e2e-gpu.sh <spec>`, e depois `scripts/
   - **A corrida passa nas 5 esperas, também com `CORRIDA_RODADAS=3`, e com 0 ressincronizações.** O `entradaNuvem.test.ts` passa inteiro (10 testes, com o fechamento 1000).
   - Continuam falhando, como devem: o endereço (T07), os blocos da volta (T05; a da ressincronização espera a T03) e a sala fechada (T06).
   - E2e na placa de vídeo: o `multiplayer` passa (2 de 2). O `entrada-nuvem` continua falhando nos 4: B, buraco e B2 esperam a T04, e C espera a T07.
+- **(20 nov 2026) T03 pronta:** a conexão sabe ressincronizar.
+  - `ressincronizar?()` entrou na interface `Conexao` (opcional); na `ConexaoNuvem` é obrigatório, junto com o `aoBemVindo`.
+  - Na `conexaoNuvem`, `ressincronizar()` só age com a conexão em `'conectado'`. Ela solta a velha (`ws = null`) antes de fechá-la com 4001, abre outra na hora e passa por `'ressincronizando'`. Os comandos do meio esperam o bem-vindo novo, como numa queda. Com 5 s sem bem-vindo, a presa é solta e a conexão vira `'reconectando'`, com o aviso e a reconexão de sempre.
+  - O `aoBemVindo` chega em cada bem-vindo depois do primeiro, dentro do mesmo tratamento e antes dos quadros da conexão nova. A sala reaberta não conta.
+  - Em `src/nuvem.ts`, o aviso já só aparece no `'reconectando'`, e o "Voltamos!" só depois de uma queda: a ressincronização fica calada (ficou um comentário dizendo isso).
+  - **Testes** (`tests/cliente/conexaoNuvem.test.ts`, 7 novos, todos passam): o 4001, a conexão nova na hora e exatamente 2 conexões abertas; o que chega pela velha é ignorado; o `aoBemVindo` antes dos quadros, na ressincronização e na queda; a sala reaberta sem `aoBemVindo`; os comandos do meio; a conexão que nunca abre (em 5 s vira `'reconectando'`, e o aviso de verdade, com um `document` de mentira, mostra "A internet caiu. Reconectando…"); e nada acontece sem a conexão de pé.
+  - O teste dos blocos da volta pela ressincronização agora falha pelo comportamento (o filho volta sem o bloco), esperando a T05.
+  - **Vitest inteiro:** 7 falham (o endereço, os blocos da volta e a sala fechada) e 2011 passam.
+  - **E2e na placa de vídeo:** o `multiplayer` e o `amigos-sem-atrito` passam (4 de 4).
