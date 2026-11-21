@@ -41,6 +41,17 @@ export function saindoPorConta(): boolean {
   return porConta;
 }
 
+/**
+ * O endereço para abrir um mundo do aparelho a partir do endereço de agora. Sem DOM, para ter
+ * teste de unidade. A prévia de tema (`tema`) vale só para esta página e sai; o resto fica.
+ */
+export function enderecoDoMundo(href: string, id: string): string {
+  const url = new URL(href);
+  url.searchParams.set('mundo', id);
+  url.searchParams.delete('tema');
+  return url.toString();
+}
+
 /** Vai para outro endereço soltando a placa de vídeo antes. */
 export function navegar(url: string): void {
   porConta = true;

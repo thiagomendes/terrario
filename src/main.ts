@@ -63,6 +63,7 @@ import {
 } from './nuvem';
 import {
   antesDeSair,
+  enderecoDoMundo,
   falhouAoCarregar,
   liberarEngine,
   ligarSaida,
@@ -220,11 +221,7 @@ async function iniciar(app: HTMLElement): Promise<void> {
     pararComAmigos: (meta) => pararMundoComAmigos(repo, meta),
     abrirMundo: async (id) => {
       await cena?.salvar();
-      const url = new URL(location.href);
-      url.searchParams.set('mundo', id);
-      // a prévia de tema vale só para esta página
-      url.searchParams.delete('tema');
-      navegar(url.toString());
+      navegar(enderecoDoMundo(location.href, id));
     },
   });
   criarDicaMira();
