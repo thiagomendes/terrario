@@ -37,7 +37,7 @@ Jogo voxel de brinquedo no navegador, para crianças (os testadores são os dois
 4. **Código:**
    - o desenvolvedor faz uma fase por vez; cada fase fecha com `npx tsc --noEmit -p .`, os testes que tocou, commit e fotos;
    - os agentes editam código só com Edit/Write (nada de sed, heredoc ou script reescrevendo arquivo);
-   - nenhum agente parado à toa: vigiar a cada ~15 min enquanto um agente trabalha.
+   - nenhum agente parado à toa: a vigia em segundo plano avisa quando um agente para (ver "Boletim para o dono").
 5. **Revisão de código** pelo revisor, com o orquestrador intermediando até o consenso.
 6. **Nada voltou para trás:**
    - Vitest inteiro e `npm run build`;
@@ -62,8 +62,8 @@ Durante o trabalho, mandar ao dono "aperitivos" (fotos e vídeos do que está fi
 ## Boletim para o dono (decisão de 20 nov 2026)
 - **De hora em hora**, e na hora quando algo precisa dele (decisão, aperitivo, publicação, problema).
 - **Relatório do dia, às 22h de Brasília**, no painel publicado "Painel do Terrário" (sempre no mesmo endereço): no topo, o dia (o que entrou, as decisões, as fotos, o que fica para amanhã); depois o estado da spec, o que precisa do dono, a fila e o que já está no ar. No chat vai só o link com 2 ou 3 linhas.
-- **Agendamentos:** o boletim, o relatório do dia e a vigia são agendamentos da própria sessão, que fica no computador do dono (desde 20 nov 2026, uma sessão só). Eles caem quando a sessão reinicia: ao retomar, recriar os três. Às 22h param com o resto e voltam às 7h (às 8h no sábado e no domingo).
-- **A vigia dos agentes é silenciosa:** a cada ~15 min, só fala com o dono se houver problema.
+- **Agendamentos:** o boletim e o relatório do dia são agendamentos da própria sessão, que fica no computador do dono (desde 20 nov 2026, uma sessão só). Eles caem quando a sessão reinicia: ao retomar, recriar os dois. Às 22h param com o resto e voltam às 7h (às 8h no sábado e no domingo).
+- **A vigia dos agentes não escreve no chat** (dono, 21 nov 2026): nada de agendamento de 15 em 15 min respondendo no chat. Enquanto um agente trabalha, roda em segundo plano o `scripts/vigia-agente.sh <worktree>`, que confere a cada 5 min se há contêiner de pé ou arquivo mexido no worktree, e só termina quando o agente fica parado (uns 25 min sem nada). Só então o orquestrador olha, cutuca o agente e, se for problema, fala com o dono. Os avisos automáticos dos agentes também não viram mensagem no chat, a não ser que tragam algo relevante.
 - **No chat, sem página publicada** (dono, 20 nov): só o que o chat mostra (título, barra de progresso em texto, tabela, listas), sem detalhe técnico, horário de Brasília:
 
 > ### Boletim das 11h · Terrário
