@@ -535,6 +535,8 @@ export function ligarAmigos(raiz: HTMLElement, cena: Cena, op: OpcoesAmigos): vo
   // achar os amigos (spec 021): as carinhas na borda vêm da cena; a seta de texto saiu
   let caiu = false;
   nv.conexao.aoEstado((e, motivo) => {
+    // spec 035: a ressincronização ('ressincronizando' e o 'conectado' depois dela) fica
+    // calada: o aviso só aparece no 'reconectando', e o "Voltamos!" só depois de uma queda
     aviso.mostrar(e);
     if (e === 'reconectando') caiu = true;
     else if (e === 'conectado' && caiu) {

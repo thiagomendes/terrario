@@ -20,6 +20,11 @@ export type EstadoConexao =
   | 'conectando'
   | 'conectado'
   | 'reconectando'
+  /**
+   * Spec 035: a rede de segurança trocou a conexão por outra (o estado do cliente travou).
+   * A internet não caiu: a página não mostra o aviso de queda nem o "Voltamos!".
+   */
+  | 'ressincronizando'
   | 'recusado'
   | 'expulso'
   | 'encerrada'
@@ -38,8 +43,14 @@ export interface ConexaoNuvem extends Conexao {
   aoDevolvido(f: (dados: DadosMundo) => void): void;
   /** O servidor recomeçou e abriu a sala de novo (o que está na tela pode estar à frente). */
   aoReaberta(f: () => void): void;
+  /**
+   * Spec 035: cada bem-vindo depois do primeiro (a volta de uma queda ou de uma
+   * ressincronização), antes de qualquer quadro da conexão nova. A sala reaberta não conta.
+   */
+  aoBemVindo(f: (bv: BemVindo) => void): void;
   /** Painel do dono e o diário/mapa do jogador. */
   pedir(p: PedidoCliente): void;
+  ressincronizar(): void;
 }
 
 export interface OpcoesNuvem {
@@ -58,6 +69,10 @@ const ESPERAS = [500, 1000, 2000, 4000, 8000];
  * conexões que nunca ouvem quadros (a de criar a sala, a de parar de jogar com amigos).
  */
 const TETO_FILA = 200;
+/** Spec 035: a ressincronização sem bem-vindo por este tempo vira uma queda de verdade. */
+const PRAZO_RESSINCRONIZAR = 5000;
+/** Código do fechamento da ressincronização (aparece no registro do servidor). */
+const FECHA_RESSINCRONIZAR = 4001;
 
 export function conexaoNuvem(op: OpcoesNuvem): ConexaoNuvem {
   const ouvintes: ((m: Mensagem) => void)[] = [];
@@ -65,6 +80,9 @@ export function conexaoNuvem(op: OpcoesNuvem): ConexaoNuvem {
   const ouvintesDevolvido: ((dados: DadosMundo) => void)[] = [];
   const ouvintesSala: ((s: EstadoSala) => void)[] = [];
   const ouvintesReaberta: (() => void)[] = [];
+  const ouvintesBemVindo: ((bv: BemVindo) => void)[] = [];
+  /** O prazo da ressincronização em andamento (5 s até o bem-vindo). */
+  let prazoRessinc: ReturnType<typeof setTimeout> | undefined;
   let instancia: string | undefined;
   let primeira = true;
   let ws: WebSocket | null = null;
@@ -166,10 +184,12 @@ export function conexaoNuvem(op: OpcoesNuvem): ConexaoNuvem {
         criar = undefined;
         codigo = m.sala.codigo;
         tentativa = 0;
+        clearTimeout(prazoRessinc);
         mudar('conectado');
         const { t: _t, ...bv } = m;
         void _t;
-        const reaberta = !primeira && m.instancia !== undefined && m.instancia !== instancia;
+        const volta = !primeira;
+        const reaberta = volta && m.instancia !== undefined && m.instancia !== instancia;
         primeira = false;
         instancia = m.instancia;
         resolver(bv);
@@ -179,6 +199,8 @@ export function conexaoNuvem(op: OpcoesNuvem): ConexaoNuvem {
         }
         for (const c of guardados.splice(0)) mandar(c);
         for (const f of ouvintesSala) f(m.sala);
+        // a volta: a página acerta o que mudou no mundo com ela fora (os quadros vêm depois)
+        if (volta) for (const f of ouvintesBemVindo) f(bv);
       } else if (m.t === 'recusado') {
         encerrada = true;
         mudar('recusado', m.motivo);
@@ -212,6 +234,29 @@ export function conexaoNuvem(op: OpcoesNuvem): ConexaoNuvem {
   }
   abrir();
 
+  /** Spec 035: troca a conexão de pé por outra, na hora, sem o aviso de queda. */
+  function ressincronizar(): void {
+    if (encerrada || estado !== 'conectado') return;
+    const velha = ws;
+    // solta a velha antes de fechar: o `onclose` dela não agenda outra conexão, e o que ela
+    // ainda disser não vale (`ws !== s`)
+    ws = null;
+    mudar('ressincronizando');
+    velha?.close(FECHA_RESSINCRONIZAR);
+    abrir();
+    clearTimeout(prazoRessinc);
+    prazoRessinc = setTimeout(() => {
+      if (encerrada || estado !== 'ressincronizando') return;
+      // 5 s sem bem-vindo: a internet caiu mesmo; o aviso e a reconexão de sempre
+      const presa = ws;
+      ws = null;
+      presa?.close();
+      mudar('reconectando');
+      const espera = ESPERAS[Math.min(tentativa++, ESPERAS.length - 1)];
+      setTimeout(abrir, espera);
+    }, PRAZO_RESSINCRONIZAR);
+  }
+
   return {
     pronta,
     get estado() {
@@ -240,8 +285,13 @@ export function conexaoNuvem(op: OpcoesNuvem): ConexaoNuvem {
     aoDevolvido: (f) => {
       ouvintesDevolvido.push(f);
     },
+    aoBemVindo: (f) => {
+      ouvintesBemVindo.push(f);
+    },
+    ressincronizar,
     encerrar() {
       encerrada = true;
+      clearTimeout(prazoRessinc);
       fila.length = 0;
       // 1000: saiu normalmente (o registro do servidor não conta como queda)
       ws?.close(1000);

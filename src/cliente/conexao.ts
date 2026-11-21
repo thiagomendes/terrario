@@ -9,6 +9,11 @@ export interface Conexao {
   enviar(c: Comando): void;
   aoReceber(f: (m: Mensagem) => void): void;
   encerrar(): void;
+  /**
+   * Spec 035: fecha a conexão e abre outra na hora, com um bem-vindo e um `primeiro` novos.
+   * Só a da nuvem sabe; sem ela (o servidor local, o canal dos testes), o estado não mede nada.
+   */
+  ressincronizar?(): void;
 }
 
 /** Servidor local num Web Worker. */
