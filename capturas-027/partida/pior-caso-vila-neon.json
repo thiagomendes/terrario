@@ -1,0 +1,29 @@
+{
+  "lugar": "meio do campo do festival, de noite, olhando o palco por cima do público (show)",
+  "tela": "390x844 (celular em pé), distância 3",
+  "semDesacelerar": {
+    "triangulos": 357114,
+    "desenhos": 237,
+    "fps": 49,
+    "pecas": 50140,
+    "moradores": 52,
+    "turma": {
+      "noLugar": 40,
+      "andando": 0,
+      "longe": []
+    }
+  },
+  "cpu4": {
+    "triangulos": 357354,
+    "desenhos": 238,
+    "fps": 29,
+    "pecas": 50140,
+    "moradores": 52,
+    "turma": {
+      "noLugar": 40,
+      "andando": 0,
+      "longe": []
+    }
+  },
+  "quando": "2026-11-21T16:04:52.286Z"
+}

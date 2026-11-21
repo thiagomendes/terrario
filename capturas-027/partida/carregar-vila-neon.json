@@ -1,0 +1,25 @@
+{
+  "tema": "vila-neon",
+  "tela": "390x844 (celular em pé)",
+  "cpu": "4x mais lenta",
+  "criterio": "do goto do mundo até a cortina sair (window.__brumaluz.ready)",
+  "rodadas": [
+    {
+      "total": 10246,
+      "pagina": 11919,
+      "chunks": 29
+    },
+    {
+      "total": 11978,
+      "pagina": 12149,
+      "chunks": 29
+    },
+    {
+      "total": 12906,
+      "pagina": 13054,
+      "chunks": 29
+    }
+  ],
+  "medianaMs": 11978,
+  "quando": "2026-11-21T16:03:36.022Z"
+}

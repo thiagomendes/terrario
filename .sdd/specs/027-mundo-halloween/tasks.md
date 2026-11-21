@@ -111,10 +111,17 @@ Tamanho: **P** (até meio dia), **M** (1 a 2 dias), **G** (3 dias ou mais). Uma 
 | Parte | Estado |
 |---|---|
 | Esboço | aprovado pelo dono em 20 nov (`esboco/027-noite-das-fantasias`; fotos, vídeos e sons em `capturas-027/esboco/`) |
-| Spec | rascunho (DRAFT) com os ajustes da revisão de 21 nov; falta o dono responder as seis perguntas |
-| 1. A vila da festa (T00 a T24) | não começou |
+| Spec | aprovada pelo dono em 21 nov (APPROVED), com as recomendadas nas seis perguntas |
+| 1. A vila da festa (T00 a T24) | em andamento (ver "Parte 1, passo a passo") |
 | 2. Por dentro (T25 a T31) | não começou |
 | 3. Os passeios (T32 a T37) | não começou |
+
+### Parte 1, passo a passo
+- **T00 (21 nov): feita.** Medidas na placa de vídeo (`MEDIR_027=1`, `e2e/partida-027.spec.ts`), em `capturas-027/partida/`:
+  - carregar a Vila Neon no celular em pé (390×844) com a CPU 4× mais lenta, do pedido do mundo até a cortina sair: 10,2 s, 12,0 s e 12,9 s; **mediana 12,0 s** (a meta da Noite das Fantasias é até 10% acima, medida na mesma rodada na T22);
+  - o pior caso da Vila (meio do campo do festival, de noite, olhando o palco por cima do público, com a turma de 40 no show): **49 quadros, 237 chamadas, 357 mil triângulos** sem desacelerar; com a CPU 4× mais lenta, **29 quadros**, 238 chamadas (a própria Vila não chega a 45 com a CPU 4×: ver a dúvida ao orquestrador no relatório da fase 1);
+  - o atlas dos cinco guardado (as 8 linhas de hoje e o mapa emissivo) em `tests/temas/atlas-antes/`, com a prova de que são os da 034 (os hashes do `paridade-cinco`), e o teste célula a célula `tests/temas/atlas-celulas.test.ts`;
+  - `paridade-cinco` 6 de 6; paridade 36 de 36 (`PARIDADE=conferir`, 9,4 min).
 
 A 035 já está na `main` (5996d11) e deixou a `VERSAO_REDE` em 17; esta spec é a próxima da fila. No criativo valem comprar, comer e as missões, como na Vila.
 
