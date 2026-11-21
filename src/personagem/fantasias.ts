@@ -89,7 +89,13 @@ export type TipoPeca =
   // spec 027: o monstrinho peludo (o Bento e a fantasia de Monstrinho Peludo, em bonecoPeludo.ts)
   | 'macacao-tufos'
   | 'capuz-monstro'
-  | 'pezoes';
+  | 'pezoes'
+  // spec 027 (T09): as peças novas da Noite das Fantasias (bonecoFesta.ts)
+  | 'chapeu-bruxa'
+  | 'lencol-capuz'
+  | 'gola-alta'
+  | 'orelhas-gatinho'
+  | 'orelhas-morceguinho';
 
 /** Símbolos próprios (nada de letra no peito, teia ou morcego). */
 export type Simbolo = 'flor' | 'estrela' | 'concha' | 'floco' | 'raio' | 'coracao' | 'folha';
@@ -649,6 +655,104 @@ export const FANTASIAS_DE_MORADOR: readonly FantasiaDef[] = [
         { tipo: 'macacao-tufos', cor: 'principal' },
         { tipo: 'capuz-monstro', cor: 'principal' },
         { tipo: 'pezoes', cor: 'principal' },
+      ],
+    }),
+  },
+  // spec 027 (T09): os moradores fantasiados da Noite das Fantasias, com as peças novas (o
+  // chapéu de bruxa, o lençol de capuz, a gola alta e as orelhinhas) e as que já existem
+  {
+    id: 'vovo-bruxa',
+    grupo: 'temas',
+    tema: 'noite-das-fantasias',
+    nomes: { feminino: 'Bruxinha', masculino: 'Bruxinho' },
+    cores: ['#6a3e9c'],
+    corEmblema: '#ffd45a',
+    visual: mesmo({
+      roupa: { camisa: '#5f7d34', manga: '#5f7d34', calca: '#4e3a66', sapato: '#46305e' },
+      cabeca: 'chapeu',
+      pecas: [
+        { tipo: 'chapeu-bruxa', cor: 'principal' },
+        { tipo: 'capa-curta', cor: 'principal' },
+        { tipo: 'varinha', cor: 'emblema', simbolo: 'estrela' },
+      ],
+    }),
+  },
+  {
+    id: 'dudu-vampiro',
+    grupo: 'temas',
+    tema: 'noite-das-fantasias',
+    nomes: { feminino: 'Vampirinha', masculino: 'Vampirinho' },
+    cores: ['#3a2850'],
+    corEmblema: '#ef8a2c',
+    visual: mesmo({
+      roupa: { camisa: '#f4ead8', manga: '#f4ead8', calca: '#3a2c50', sapato: '#2a2232' },
+      cabeca: 'livre',
+      pecas: [
+        { tipo: 'capa', cor: 'principal' },
+        { tipo: 'gola-alta', cor: 'principal' },
+        { tipo: 'colete-lenco', cor: '#6a3e9c' },
+      ],
+    }),
+  },
+  {
+    id: 'lulu-fantasma',
+    grupo: 'temas',
+    tema: 'noite-das-fantasias',
+    nomes: { feminino: 'Fantasminha', masculino: 'Fantasminha' },
+    cores: ['#f4efe4'],
+    corEmblema: '#b9a0e0',
+    visual: mesmo({
+      roupa: { camisa: 'principal', manga: 'principal', calca: '#c4b0e6', sapato: '#7a54b0' },
+      cabeca: 'capuz',
+      pecas: [{ tipo: 'lencol-capuz', cor: 'principal' }],
+    }),
+  },
+  {
+    id: 'jeronimo-horta',
+    grupo: 'temas',
+    tema: 'noite-das-fantasias',
+    nomes: { feminino: 'Hortelã', masculino: 'Hortelão' },
+    cores: ['#3f6aa8'],
+    corEmblema: '#ef8a2c',
+    visual: mesmo({
+      roupa: { camisa: '#c8463a', manga: '#c8463a', calca: 'principal', sapato: '#6b4a2e' },
+      cabeca: 'chapeu',
+      pecas: [
+        { tipo: 'chapeu-palha', cor: '#e8c46a' },
+        { tipo: 'macacao', cor: 'principal' },
+        { tipo: 'camisa-xadrez', cor: '#c8463a' },
+      ],
+    }),
+  },
+  {
+    id: 'gatinho-festa',
+    grupo: 'temas',
+    tema: 'noite-das-fantasias',
+    nomes: { feminino: 'Gatinha', masculino: 'Gatinho' },
+    cores: ['#4a4458'],
+    corEmblema: '#f4b6c8',
+    visual: mesmo({
+      roupa: { camisa: 'principal', manga: 'principal', calca: 'principal' },
+      cabeca: 'livre',
+      pecas: [
+        { tipo: 'mascara', cor: 'principal' },
+        { tipo: 'orelhas-gatinho', cor: 'principal' },
+      ],
+    }),
+  },
+  {
+    id: 'morceguinho-festa',
+    grupo: 'temas',
+    tema: 'noite-das-fantasias',
+    nomes: { feminino: 'Morceguinha', masculino: 'Morceguinho' },
+    cores: ['#6a3e9c'],
+    corEmblema: '#b9a0e0',
+    visual: mesmo({
+      roupa: { camisa: 'principal', manga: 'principal', calca: '#46305e' },
+      cabeca: 'livre',
+      pecas: [
+        { tipo: 'mascara', cor: 'principal' },
+        { tipo: 'orelhas-morceguinho', cor: 'principal' },
       ],
     }),
   },

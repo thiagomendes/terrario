@@ -89,6 +89,20 @@ const comp = (x: number, y: number) => Math.hypot(x, y);
 /** Distância (com sinal) de um ponto local até a superfície da peça. */
 function distanciaLocal(p: Peca, q: V3): number {
   const [x, y, z] = q;
+  if (p.forma === 'malha') {
+    // spec 027: o pano fino (a gola, a cúpula, o sino): a distância até o triângulo mais perto,
+    // menos meia espessura de pano (nunca "dentro": é uma casca)
+    const P = p.malha?.pos ?? [];
+    const I = p.malha?.ind ?? [];
+    let d = Infinity;
+    for (let i = 0; i < I.length; i += 3) {
+      const a: V3 = [P[I[i] * 3], P[I[i] * 3 + 1], P[I[i] * 3 + 2]];
+      const b: V3 = [P[I[i + 1] * 3], P[I[i + 1] * 3 + 1], P[I[i + 1] * 3 + 2]];
+      const c: V3 = [P[I[i + 2] * 3], P[I[i + 2] * 3 + 1], P[I[i + 2] * 3 + 2]];
+      d = Math.min(d, distanciaTriangulo(q, a, b, c));
+    }
+    return d - 0.008;
+  }
   if (p.forma === 'caixa') {
     const meio = [p.tamanho[0] / 2, p.tamanho[1] / 2, p.tamanho[2] / 2];
     const r = Math.max(0, Math.min(p.raio ?? 0.05, ...meio));
@@ -148,6 +162,46 @@ function distanciaLocal(p: Peca, q: V3): number {
   return comp(comp(x, z) - R, y) - r;
 }
 
+/** Distância de um ponto até um triângulo (o ponto mais perto dele, pelas regiões de Voronoi). */
+function distanciaTriangulo(p: V3, a: V3, b: V3, c: V3): number {
+  const sub = (u: V3, v: V3): V3 => [u[0] - v[0], u[1] - v[1], u[2] - v[2]];
+  const dot = (u: V3, v: V3) => u[0] * v[0] + u[1] * v[1] + u[2] * v[2];
+  const ab = sub(b, a);
+  const ac = sub(c, a);
+  const ap = sub(p, a);
+  const d1 = dot(ab, ap);
+  const d2 = dot(ac, ap);
+  const em = (q: V3) => Math.hypot(...sub(p, q));
+  if (d1 <= 0 && d2 <= 0) return em(a);
+  const bp = sub(p, b);
+  const d3 = dot(ab, bp);
+  const d4 = dot(ac, bp);
+  if (d3 >= 0 && d4 <= d3) return em(b);
+  const vc = d1 * d4 - d3 * d2;
+  if (vc <= 0 && d1 >= 0 && d3 <= 0) {
+    const v = d1 / (d1 - d3);
+    return em([a[0] + ab[0] * v, a[1] + ab[1] * v, a[2] + ab[2] * v]);
+  }
+  const cp = sub(p, c);
+  const d5 = dot(ab, cp);
+  const d6 = dot(ac, cp);
+  if (d6 >= 0 && d5 <= d6) return em(c);
+  const vb = d5 * d2 - d1 * d6;
+  if (vb <= 0 && d2 >= 0 && d6 <= 0) {
+    const w = d2 / (d2 - d6);
+    return em([a[0] + ac[0] * w, a[1] + ac[1] * w, a[2] + ac[2] * w]);
+  }
+  const va = d3 * d6 - d5 * d4;
+  if (va <= 0 && d4 - d3 >= 0 && d5 - d6 >= 0) {
+    const w = (d4 - d3) / (d4 - d3 + (d5 - d6));
+    return em([b[0] + (c[0] - b[0]) * w, b[1] + (c[1] - b[1]) * w, b[2] + (c[2] - b[2]) * w]);
+  }
+  const den = 1 / (va + vb + vc);
+  const v = vb * den;
+  const w = vc * den;
+  return em([a[0] + ab[0] * v + ac[0] * w, a[1] + ab[1] * v + ac[1] * w, a[2] + ab[2] * v + ac[2] * w]);
+}
+
 /** Distância (com sinal) de um ponto do plano até o contorno (negativa dentro). */
 function distanciaPoligono(pts: Array<[number, number]>, x: number, y: number): number {
   const n = pts.length;
@@ -181,6 +235,12 @@ export function dentroDoPerfil(pts: Array<[number, number]>, x: number, y: numbe
 /** Pontos na superfície da peça (no próprio espaço dela). */
 function pontosLocais(p: Peca, n = 10): V3[] {
   const pts: V3[] = [];
+  if (p.forma === 'malha') {
+    // spec 027: os vértices do pano (um de cada dois, para não pesar)
+    const P = p.malha?.pos ?? [];
+    for (let i = 0; i < P.length; i += 6) pts.push([P[i], P[i + 1], P[i + 2]]);
+    return pts;
+  }
   if (p.forma === 'caixa') {
     const meio: V3 = [p.tamanho[0] / 2, p.tamanho[1] / 2, p.tamanho[2] / 2];
     const r = Math.max(0, Math.min(p.raio ?? 0.05, ...meio));

@@ -41,7 +41,7 @@ export type Junta =
  * placa (spec 017): um desenho chato com espessura (estrela, raio, coração, folha, concha, a
  * capa), feito do contorno em `perfil` no plano xy, com a espessura em z.
  */
-export type FormaPeca = 'caixa' | 'esfera' | 'cilindro' | 'anel' | 'placa';
+export type FormaPeca = 'caixa' | 'esfera' | 'cilindro' | 'anel' | 'placa' | 'malha';
 
 export interface Peca {
   nome: string;
@@ -58,6 +58,12 @@ export interface Peca {
   tamanho: [number, number, number];
   /** Contorno da placa (pontos x, y na medida final, em volta do centro). */
   perfil?: Array<[number, number]>;
+  /**
+   * Spec 027: a malha própria (forma 'malha': o pano curvo da gola, a cúpula do lençol com o
+   * furo oval do rosto, o sino do lençol), pontos x, y, z em volta do centro e os triângulos.
+   * É pano fino: sai com as duas faces (o lado de dentro com a mesma luz do de fora).
+   */
+  malha?: { pos: number[]; ind: number[] };
   /** Transparência (spec 017: a bolha do capacete); sem nada, opaco. */
   alfa?: number;
   /** Raio dos cantos (só caixa). */

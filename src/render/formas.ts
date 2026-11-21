@@ -154,6 +154,28 @@ export function triangular(pts: Array<[number, number]>): number[] {
  * Placa (spec 017): o contorno no plano xy com espessura em z (estrela, raio, coração, folha,
  * concha, a capa). Frente e verso planos e a borda com a normal de cada lado.
  */
+/**
+ * Spec 027: a malha de pano (a gola curva, a cúpula e o sino do lençol) com as duas faces: cada
+ * triângulo sai também virado, com a normal para o outro lado (o lado de dentro do pano tem a
+ * mesma luz do de fora, sem material de duas faces).
+ */
+export function dadosMalhaPano(pos: number[], ind: number[]): VertexData {
+  const n = pos.length / 3;
+  const normais: number[] = [];
+  VertexData.ComputeNormals(pos, ind, normais);
+  const positions = [...pos, ...pos];
+  const normals = [...normais, ...normais.map((v) => -v)];
+  const indices = [...ind];
+  for (let i = 0; i < ind.length; i += 3) indices.push(ind[i] + n, ind[i + 2] + n, ind[i + 1] + n);
+  const vd = new VertexData();
+  vd.positions = positions;
+  vd.normals = normals;
+  vd.indices = indices;
+  // (as outras peças têm uv: sem ele, a malha não junta com elas na mesma junta)
+  vd.uvs = new Array((positions.length / 3) * 2).fill(0);
+  return vd;
+}
+
 export function dadosPlaca(perfil: Array<[number, number]>, espessura: number): VertexData {
   const positions: number[] = [];
   const normals: number[] = [];

@@ -71,7 +71,7 @@ describe('o pelo do Bento (spec 027, T08)', () => {
       const altoDosOlhos = Math.max(...olhos.map((q) => q.pos[1] + q.tamanho[1]));
       // os tufos da franja (os da frente do rosto, mais para a frente que o capuz)
       const frente = p.pecas.filter(
-        (q) => q.nome.startsWith('peludo-tufo') && q.junta === 'cabeca' && q.pos[2] > 0.27 && Math.abs(q.pos[0]) < 0.25,
+        (q) => q.nome.startsWith('peludo-tufo') && q.junta === 'cabeca' && q.pos[2] > 0.2 && Math.abs(q.pos[0]) < 0.25,
       );
       expect(frente.length, e).toBeGreaterThan(5);
       for (const t of frente)

@@ -189,21 +189,33 @@ export function macacaoDeTufos(pecas: Peca[], m: MedidasBoneco, cor: string, est
       tufo('tronco', 'tronco', [x, y, z], [Math.sin(t), f === 0 ? 0.5 : 0, Math.cos(t)]);
     }
   }
-  // os braços e as pernas: tufos em volta
-  for (const lado of ['bracoE', 'bracoD'] as const)
+  // os braços e as pernas: tufos em volta, rente à peça de cada um (a perna da menina é mais
+  // fina: com a volta fixa, os tufos miúdos ficavam soltos dela)
+  const raioDe = (junta: Junta, padrao: number) => {
+    let r = 0;
+    for (const p of pecas)
+      if (p.junta === junta && p.forma === 'caixa' && !p.nome.startsWith('peludo'))
+        r = Math.max(r, Math.min(p.tamanho[0], p.tamanho[2]) / 2);
+    return r || padrao;
+  };
+  for (const lado of ['bracoE', 'bracoD'] as const) {
+    const r = raioDe(lado, 0.07) + 0.012;
     for (let f = 0; f < j.fileirasBraco; f++)
       for (let q = 0; q < j.voltaMembro; q++) {
         const t = ((q + (f % 2) * 0.5) / j.voltaMembro) * Math.PI * 2;
         const y = 0.02 - (f * 0.24) / Math.max(1, j.fileirasBraco - 1);
-        tufo(lado, 'braco', [Math.sin(t) * 0.085, y, Math.cos(t) * 0.085], [Math.sin(t), 0, Math.cos(t)], 0.85);
+        tufo(lado, 'braco', [Math.sin(t) * r, y, Math.cos(t) * r], [Math.sin(t), 0, Math.cos(t)], 0.85);
       }
-  for (const lado of ['pernaE', 'pernaD'] as const)
+  }
+  for (const lado of ['pernaE', 'pernaD'] as const) {
+    const r = raioDe(lado, 0.08) + 0.012;
     for (let f = 0; f < j.fileirasPerna; f++)
       for (let q = 0; q < j.voltaMembro; q++) {
         const t = ((q + f * 0.5) / j.voltaMembro) * Math.PI * 2;
         const y = -0.02 - (f * 0.18) / Math.max(1, j.fileirasPerna - 1);
-        tufo(lado, 'perna', [Math.sin(t) * 0.095, y, Math.cos(t) * 0.095], [Math.sin(t), 0, Math.cos(t)], 0.9);
+        tufo(lado, 'perna', [Math.sin(t) * r, y, Math.cos(t) * r], [Math.sin(t), 0, Math.cos(t)], 0.9);
       }
+  }
 }
 
 /**
@@ -221,7 +233,7 @@ export function capuzDeMonstro(pecas: Peca[], m: MedidasBoneco, cor: string, est
     const q = pecas[i];
     if (
       (q.junta === 'cabeca' || q.junta === 'topete') &&
-      /^(cabelo|topete|franja|chanel|coque|rabo|cacho|costas|tranca|mecha|trança)/.test(q.nome)
+      /^(cabelo|nuca|topete|franja|lado|costas|cacho|rabo|coque|tranca|chanel|mecha)/.test(q.nome)
     )
       pecas.splice(i, 1);
   }
@@ -263,14 +275,21 @@ export function capuzDeMonstro(pecas: Peca[], m: MedidasBoneco, cor: string, est
   // a moldura do rosto: tufos em volta da abertura, de orelha a orelha (o queixo livre)
   for (let q = 0; q < 14; q++) {
     const t = (q / 14) * Math.PI * 2 + 0.2;
-    if (Math.sin(t) < -0.75) continue;
-    tufo('cabeca', 'cabeca', [Math.cos(t) * 0.4, -0.03 + Math.sin(t) * 0.37, 0.25], [Math.cos(t), Math.sin(t), 0.45], 0.8);
+    // (os de baixo, perto do queixo, ficavam soltos do capuz e da cabeça: só dos lados e em cima)
+    if (Math.sin(t) < -0.45) continue;
+    // (rente aos lados e ao alto da cabeça, pela medida dela: soltos na frente do capuz, os
+    // tufinhos miúdos ficavam boiando do lado do rosto)
+    const rx = m.cab.w / 2 + 0.025;
+    const ry = m.cab.h / 2 + 0.045;
+    tufo('cabeca', 'cabeca', [Math.cos(t) * rx, -0.03 + Math.sin(t) * ry, m.zRosto - 0.12], [Math.cos(t), Math.sin(t), 0.45], 0.8);
   }
   // a franja de pelo que cai na testa, sem tapar os olhos: presa na beira de cima do rosto e
   // virada mais para cima, curtinha (só a pontinha desce na testa)
   for (let q = 0; q < 7; q++) {
     const x = -0.3 + q * 0.1;
-    tufo('cabeca', 'cabeca', [x, m.topo + 0.01 - Math.abs(x) * 0.08, m.zRosto - 0.01], [0, 0.85, 0.55], 0.72);
+    // (recuada para a quina redonda de cima da cabeça: rente a ela, os tufinhos miúdos não
+    // ficam soltos na frente)
+    tufo('cabeca', 'cabeca', [x, m.topo - 0.02 - Math.abs(x) * 0.08, m.zRosto - 0.07], [0, 0.85, 0.55], 0.72);
   }
   for (const s of [-1, 1]) {
     // os chifrinhos: curtos e redondos, um tico para fora (laranja apagado, fosco)

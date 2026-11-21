@@ -153,3 +153,70 @@ test('o pelo do Bento: as três versões lado a lado, de dia e de noite', async 
   }
   await page.context().close();
 });
+
+/**
+ * T09: as peças de fantasia do tema nas roupas dos moradores (vestidas por amigos de mentirinha,
+ * na menina e no menino), lado a lado na praça: a bruxinha (chapéu de bruxa, capa curta e
+ * varinha), o vampirinho (capa e gola alta com o forro laranja), a fantasminha (o lençol de
+ * capuz), o monstrinho peludo, o hortelão e as máscaras de gatinho e de morceguinho. Em
+ * `capturas-027/parte1/fantasias/`.
+ */
+test('as peças de fantasia do tema (T09)', async ({ browser }) => {
+  const pasta = process.env.BENTO_PASTA ?? 'capturas-027/parte1/fantasias';
+  const page = await (await browser.newContext(TAMANHOS.pc)).newPage();
+  page.on('pageerror', (e) => console.log(`erro na página: ${String(e)}`));
+  await abrir(page);
+  mkdirSync(pasta, { recursive: true });
+  const base = await page.evaluate(() => {
+    const b = window.__brumaluz!.baile!()!;
+    return { x: b.nascimento.x, z: b.nascimento.z, y: b.h + 1 };
+  });
+  // (5 blocos mais ao sul que os do pelo: a câmera da fila, de longe, ficava dentro da abóbora)
+  const z = base.z + 6;
+  await page.evaluate(({ x, z }) => window.__brumaluz!.teleportar!(x, z), { x: base.x - 16, z });
+  await page.waitForTimeout(8000);
+  const ids = ['vovo-bruxa', 'dudu-vampiro', 'lulu-fantasma', 'bento-peludo', 'jeronimo-horta', 'gatinho-festa', 'morceguinho-festa'];
+  const lista = ids.flatMap((id, i) =>
+    (['feminino', 'masculino'] as const).map((corpo, k) => ({
+      id: `${id}-${corpo[0]}`,
+      aparencia: { corpo, cabeloEstilo: k ? 0 : 5, pele: (i + k) % 4, fantasia: { id, cor: 0 } },
+      x: base.x - 6.3 + i * 2.1 + (k ? 0.55 : -0.55),
+      y: base.y,
+      z: z + (k ? 0.9 : 0),
+      yaw: Math.PI,
+    })),
+  );
+  await page.evaluate((l) => window.__brumaluz!.amigosDeTeste!(l), lista);
+  await page.waitForTimeout(2500);
+  await page.evaluate(() => {
+    for (const el of Array.from(document.querySelectorAll<HTMLElement>('.rotulo-amigo'))) el.style.display = 'none';
+    const cena = document.getElementById('cena')!;
+    for (const el of Array.from(document.body.querySelectorAll<HTMLElement>('*')))
+      if (el !== cena && !el.contains(cena)) el.style.visibility = 'hidden';
+  });
+  const y = base.y;
+  for (const [hora, nome] of [
+    [0.7, 'entardecer'],
+    [0.85, 'noite'],
+  ] as const) {
+    await page.evaluate((h) => {
+      window.__brumaluz!.hora = h;
+    }, hora);
+    await page.waitForTimeout(2500);
+    // a fila inteira de frente, e cada par de perto (de frente e de 3/4)
+    const tomadas: Array<[string, V3, V3]> = [['fila', [base.x, y + 2.2, z - 9.5], [base.x, y + 1.0, z]]];
+    ids.forEach((id, i) => {
+      const x = base.x - 6.3 + i * 2.1;
+      tomadas.push([`${id}-frente`, [x, y + 1.6, z - 3.2], [x, y + 1.05, z + 0.4]]);
+      tomadas.push([`${id}-lado`, [x - 2.4, y + 1.7, z - 2.0], [x, y + 1.05, z + 0.4]]);
+    });
+    for (const [t, p, a] of tomadas) {
+      await page.evaluate(({ p, a }) => {
+        (window as unknown as { __camFixa: { p: V3; a: V3 } }).__camFixa = { p, a };
+      }, { p, a });
+      await page.waitForTimeout(700);
+      await page.screenshot({ path: `${pasta}/${t}-${nome}-pc.jpg`, type: 'jpeg', quality: 86 });
+    }
+  }
+  await page.context().close();
+});

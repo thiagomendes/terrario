@@ -40,6 +40,7 @@ import {
   segmentosDaBolinha,
   dadosAnel,
   dadosPlaca,
+  dadosMalhaPano,
   esfera,
   pintarVertices,
   type Plasticos,
@@ -85,6 +86,11 @@ export function montarPeca(scene: Scene, mats: Plasticos, p: Peca, prefixo: stri
   else if (p.forma === 'placa') {
     m = new Mesh(nome, scene);
     dadosPlaca(p.perfil ?? [], p.tamanho[2]).applyToMesh(m);
+    m.material = mat;
+    m.isPickable = false;
+  } else if (p.forma === 'malha') {
+    m = new Mesh(nome, scene);
+    dadosMalhaPano(p.malha?.pos ?? [], p.malha?.ind ?? []).applyToMesh(m);
     m.material = mat;
     m.isPickable = false;
   } else if (p.tamanho[2] > 0) {
@@ -139,6 +145,7 @@ export function dadosDaPeca(
       tessellation: 14,
     });
   else if (p.forma === 'placa') vd = dadosPlaca(p.perfil ?? [], p.tamanho[2]);
+  else if (p.forma === 'malha') vd = dadosMalhaPano(p.malha?.pos ?? [], p.malha?.ind ?? []);
   else if (p.tamanho[2] > 0) vd = dadosAnel(p.tamanho[0], p.tamanho[1], p.tamanho[2]);
   else
     vd = CreateTorusVertexData({

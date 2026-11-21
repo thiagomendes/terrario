@@ -12,6 +12,7 @@
 import type { Corpo } from './aparencia';
 import { asasDragao, capuzDragao, corpoDragao, patasDragao } from './bonecoPremium';
 import { capuzDeMonstro, macacaoDeTufos, pezoes } from './bonecoPeludo';
+import { chapeuDeBruxa, golaAlta, lencolDeCapuz, orelhasDeBichinho } from './bonecoFesta';
 import type { ModoCabelo, Peca } from './boneco';
 import {
   clarear,
@@ -1338,6 +1339,24 @@ export function vestirFantasia(
         break;
       case 'pezoes':
         pezoes(pecas, m, c);
+        break;
+      // spec 027 (T09): as peças novas da Noite das Fantasias (bonecoFesta.ts)
+      case 'chapeu-bruxa':
+        chapeuDeBruxa(pecas, m, c, '#5f7d34', '#ef8a2c');
+        sobreCabelo('chapeu');
+        break;
+      case 'lencol-capuz':
+        lencolDeCapuz(pecas, m, c);
+        sobreCabelo('capuz');
+        break;
+      case 'gola-alta':
+        golaAlta(pecas, m, c, '#ef8a2c');
+        break;
+      case 'orelhas-gatinho':
+        orelhasDeBichinho(pecas, m, 'gatinho', c, '#f4b6c8');
+        break;
+      case 'orelhas-morceguinho':
+        orelhasDeBichinho(pecas, m, 'morceguinho', c, '#b9a0e0');
         break;
       case 'avental-doce': {
         caixa(
