@@ -32,7 +32,9 @@ const NOITE: Omit<QuadroCeu, 'h'> = {
 const TARDE: Omit<QuadroCeu, 'h'> = {
   zen: [0.58, 0.48, 0.78],
   meio: [1, 0.78, 0.58],
-  hor: [1, 0.66, 0.3],
+  // (o horizonte, que é a cor da névoa, num pêssego dourado em vez do laranja forte: de longe e
+  // do alto, a vila ficava num laranja lavado)
+  hor: [0.98, 0.74, 0.5],
   luz: [1, 0.82, 0.56],
   il: 1.45,
   ceu: [0.84, 0.72, 0.72],
@@ -93,7 +95,9 @@ export const QUADROS_FANTASIAS: QuadroCeu[] = [
     h: 0.8,
     zen: [0.21, 0.12, 0.4],
     meio: [0.3, 0.18, 0.48],
-    hor: [0.56, 0.38, 0.56],
+    // (o horizonte, que é a cor da névoa, puxado do rosado para o lilás: no começo da noite o
+    // fundo do cartão ficava rosa lavado)
+    hor: [0.48, 0.35, 0.6],
     luz: [0.78, 0.72, 1],
     il: 0.5,
     ceu: [0.5, 0.42, 0.74],

@@ -274,7 +274,9 @@ function tomadas(p: Plano): Tomada[] {
   t('rua', [vovo.x + 2, Y + 3, p.oz + 42], [vovo.x, Y + 3, vovo.z + 6]);
   // a Casa da Vovó de frente, um pouco de lado
   // (pelo meio da rua: de lado, a câmera de trás da tela em pé entrava no telhado da vizinha)
-  t('vovo', [vovo.x + 2, Y + 2.6, vovo.z + 13], [vovo.x, Y + 2.5, vovo.z - 2], [0, 3, 4]);
+  // (na tela em pé, de longe e baixo: a casa inteira com a varanda cabe, sem o telhado tomar
+  // metade do quadro)
+  t('vovo', [vovo.x + 2, Y + 2.6, vovo.z + 13], [vovo.x, Y + 2.5, vovo.z - 2], [0, 0.6, 13]);
   // a Loja de Fantasias, da praça
   t('loja', [p.loja[0] - 10, Y + 2.8, p.loja[2] - 3], [p.loja[0] + 3, Y + 3, p.loja[2] + 1]);
   // o bosque das lanternas: de cima do caminho (o corredor de árvores dos dois lados), olhando

@@ -21,7 +21,7 @@ export const CORES = {
   // poste de perto, de noite, viravam mancha escura na tela)
   roxo: '#7a4cae',
   roxoEscuro: '#5a4280',
-  ferro: '#6a54a0',
+  ferro: '#5e4698',
   lilas: '#a88ad0',
   laranja: '#f0862a',
   laranjaEscuro: '#c8621a',
@@ -848,9 +848,11 @@ function vitrine(r: Ref, n: number): void {
 
 /** A porta do castelinho: grande, de tábuas roxas, com o arco em degraus e os cravos dourados. */
 function portaCastelo(r: Ref): void {
-  r.caixa(3.0, 3.1, 0.1, 0, 0, -0.06, '#4e3462', 0.02);
-  const roxo = '#7450a4';
-  for (let i = 0; i < 4; i++) r.caixa(0.62, 2.6 + (i === 1 || i === 2 ? 0.3 : 0.15), 0.12, -0.96 + i * 0.64, 0.02, 0.02, i % 2 ? roxo : '#8260b2', 0.03);
+  // (o batente e as tábuas um tom acima: o portão de perto, na tela em pé, é a parte mais
+  // escura da foto de noite)
+  r.caixa(3.0, 3.1, 0.1, 0, 0, -0.06, '#5e4476', 0.02);
+  const roxo = '#7c58ae';
+  for (let i = 0; i < 4; i++) r.caixa(0.62, 2.6 + (i === 1 || i === 2 ? 0.3 : 0.15), 0.12, -0.96 + i * 0.64, 0.02, 0.02, i % 2 ? roxo : '#8a68ba', 0.03);
   for (const y of [0.5, 1.4, 2.2]) r.caixa(2.6, 0.1, 0.06, 0, y, 0.1, CORES.ferro, 0.02);
   for (const x of [-0.9, -0.3, 0.3, 0.9])
     for (const y of [0.55, 1.45, 2.25]) r.prisma(8, 0.05, 0.05, x, y, 0.14, CORES.dourado, 'z');

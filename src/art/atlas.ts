@@ -826,8 +826,10 @@ function pintoresDoBaile(): Record<string, Pintor> {
   return {
     // (as sombras das fileiras um tom acima do esboço: o telhado grande, de noite, ficava no
     // limite da conta da noite na tela em pé)
-    telha_roxa: telha('#4e3672', '#5c4282', 0.12),
-    telha_roxa_topo: telha('#5a3e80', '#664a8c', 0.06),
+    // (o sulco de baixo de cada fileira volta mais escuro, perto do esboço: o contraste das
+    // fileiras sem pesar na média da noite, que é uma linha em quatro)
+    telha_roxa: telha('#3e2862', '#5c4282', 0.12),
+    telha_roxa_topo: telha('#48306e', '#664a8c', 0.06),
     tijolo_torto: tijoloTorto,
     // teia de barbante colorido (roxo, laranja e creme), sem aranha: os raios e os anéis
     teia_barbante: (x, y, s) => {

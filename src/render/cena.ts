@@ -416,6 +416,12 @@ let raioChunks = RAIO_INICIAL;
  * borda (sobra ~30% da cor do chão lá; a uns 60% da borda, ~85%).
  */
 const NEVOA_NA_PONTA = 1.1;
+/**
+ * Spec 027: a névoa da ponta na Noite das Fantasias, bem mais rala (na borda sobra ~70% da cor;
+ * a uns 60% da borda, ~88%): o fundo de árvores e casinhas fica com contraste, como no esboço
+ * aprovado (os mundos de morro nem têm névoa na ponta).
+ */
+const NEVOA_NA_PONTA_FESTA = 0.6;
 /** Distância da câmera até a borda do chão desenhado, no pior rumo (blocos). */
 function bordaDoChao(): number {
   return Math.max(16, raioChunks * 16 - 4);
@@ -1866,13 +1872,15 @@ export function criarCena(
     // 014c: na cidade (plana, a rua comprida à vista) a névoa chega até a ponta do chão
     // desenhado, para as ruas de longe sumirem na bruma em vez de acabarem num corte. As torres
     // do horizonte (variante C) continuam com a névoa de antes.
-    // (spec 027: na Noite das Fantasias também: da praça, nenhuma borda do mundo aparece)
+    // (spec 027: na Noite das Fantasias também: da praça, nenhuma borda do mundo aparece; mas
+    // mais rala, porque a moldura de árvores do tema já tapa a borda: com a da cidade, as
+    // casinhas e as árvores do fundo sumiam num rosado lavado, no cartão e nas fotos do alto)
     const densMundo =
-      temaAtual.id === 'cidade-grande' ||
-      temaAtual.id === 'vila-neon' ||
-      temaAtual.id === 'noite-das-fantasias'
+      temaAtual.id === 'cidade-grande' || temaAtual.id === 'vila-neon'
         ? Math.max(densAr, NEVOA_NA_PONTA / bordaDoChao())
-        : densAr;
+        : temaAtual.id === 'noite-das-fantasias'
+          ? Math.max(densAr, NEVOA_NA_PONTA_FESTA / bordaDoChao())
+          : densAr;
     scene.fogDensity = densMundo + (0.06 - densMundo) * ns;
     const densHorizonte = densAr + (0.06 - densAr) * ns;
     scene.clearColor.set(a.nevoa[0], a.nevoa[1], a.nevoa[2], 1);
@@ -1984,7 +1992,10 @@ export function criarCena(
   estado.baileToque = (q) => renderBaile?.tocar(q);
   estado.bailePortas = () => renderBaile?.portas() ?? [];
   // spec 027 (T06): o lampião de abóbora e o caldeirão postos viram a peça arredondada de
-  // brinquedo, com o rosto do tema, instanciados por chunk (fora do glow: o rosto já vem aceso)
+  // brinquedo, com o rosto do tema, instanciados por chunk (fora do glow: o rosto já vem aceso).
+  // (T07b: o halo suave pelo glow, só da textura acesa, foi tentado e não manchava, mas a
+  // passada do glow soma 5 chamadas de desenho com cem lampiões e cem caldeirões num pedaço, e
+  // o teste da T06 pede no máximo 2: fica sem halo)
   const lampioes = criarLampioes(
     scene,
     ROSTO_DO_LAMPIAO[temaAtual.id],

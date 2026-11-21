@@ -23,9 +23,14 @@ test.skip(!pedido, 'capturas de tema só com CAPTURAS_TEMAS');
 
 async function abrir(page: Page, id: string) {
   // a cidade vista do alto: o outro lado do parque precisa estar carregado no cartão; no
-  // Rancho e na Lua, o fundo inteiro (sem a borda do mundo aparecendo)
+  // Rancho e na Lua, o fundo inteiro (sem a borda do mundo aparecendo); na Noite das Fantasias
+  // (spec 027), as casinhas e as árvores do fundo da praça nítidas, fora da névoa da ponta
   const distancia =
-    id === 'cidade-grande' ? 5 : id === 'rancho-alegre' || id === 'exploracao-lunar' ? 6 : 0;
+    id === 'cidade-grande'
+      ? 5
+      : id === 'rancho-alegre' || id === 'exploracao-lunar' || id === 'noite-das-fantasias'
+        ? 6
+        : 0;
   if (distancia)
     await page.addInitScript((distancia) => {
       try {
@@ -207,9 +212,11 @@ const ENQUADRAMENTOS: Record<IdTemaE2e, Enquadramento> = {
       'bandeirolas, uma barraca de toldo listrado e o céu roxo; a criança de costas na praça',
     hora: 0.86,
     como: {
-      cam: [-11, 81.5, -157],
-      alvo: [-27, 79, -179],
-      crianca: [-19.5, -166.5],
+      // (do sul da praça: a abóbora à direita e, à esquerda dela, a entrada da Rua das Casinhas
+      // Tortas com as casinhas e as árvores do fundo)
+      cam: [-17, 82, -156],
+      alvo: [-33, 79, -190],
+      crianca: [-21.5, -166.5],
     },
   },
   'cidade-grande': {
