@@ -216,7 +216,7 @@ import {
   type Ferramenta,
   type Ponto,
 } from '../jogo/construcao';
-import { empacotar } from '../world/edicoes';
+import { blocoDe, empacotar, indiceDonoDe, metaDe } from '../world/edicoes';
 import { criaturaNaMira, novaCriatura, type Criatura, type TipoCriatura } from '../jogo/criaturas';
 import { criarRenderCriaturas } from './criaturas';
 import { criarCoracoes } from './coracoes';
@@ -262,7 +262,8 @@ import {
   tratarMenuContexto,
   type AcaoInteracao,
 } from '../player/interacao';
-import type { EdicoesExportadas } from '../world/edicoes';
+import type { DonosExportados, EdicoesExportadas } from '../world/edicoes';
+import { diferencaDasEdicoes } from '../cliente/diferencaEdicoes';
 import { chunksAfetados } from './remalha';
 import { criarFilaRemalha, MAX_REMALHAS_POR_QUADRO } from './fila';
 import {
@@ -2994,6 +2995,12 @@ export function criarCena(
     dono?: number,
   ): boolean {
     if (!edicoes.definir(x, y, z, bloco, meta, dono)) return false;
+    remalharCelula(x, y, z, bloco);
+    return true;
+  }
+
+  /** Remalha o chunk da célula que mudou e os vizinhos que a luz alcança. */
+  function remalharCelula(x: number, y: number, z: number, bloco: number): void {
     const cxE = Math.floor(x / TAM_X);
     const czE = Math.floor(z / TAM_Z);
     if (bloco === Bloco.AR) ocultarAteRemalhar(x, y, z, chave(cxE, czE));
@@ -3026,7 +3033,26 @@ export function criarCena(
       envioAgendado = true;
       queueMicrotask(enviarRemalhas);
     }
-    return true;
+  }
+
+  /**
+   * Spec 035, seção 3: a volta (queda ou ressincronização) traz o mundo como está. Os donos
+   * primeiro (os blocos apontam para a tabela); depois só as células que mudaram, e a edição
+   * que saiu volta ao terreno gerado. As previsões ainda não confirmadas ficam.
+   */
+  function aplicarVolta(bv: { edicoes: EdicoesExportadas; donos: DonosExportados }): number {
+    edicoes.donos.importar(sanearDonos(bv.donos));
+    const mudancas = diferencaDasEdicoes(edicoes.exportar(), bv.edicoes ?? {}, (x, y, z) =>
+      cliente.pendente(x, y, z),
+    );
+    for (const m of mudancas) {
+      if (m.valor === undefined) {
+        if (!edicoes.remover?.(m.x, m.y, m.z)) continue;
+        remalharCelula(m.x, m.y, m.z, blocoEm(m.x, m.y, m.z));
+      } else
+        editarBloco(m.x, m.y, m.z, blocoDe(m.valor), metaDe(m.valor), indiceDonoDe(m.valor));
+    }
+    return mudancas.length;
   }
 
   function blocoEm(x: number, y: number, z: number): number {
@@ -7314,6 +7340,8 @@ export function criarCena(
     },
     /** Voltou de uma queda de internet: confere as previsões que ficaram. */
     reconferir: () => cliente.reconferir(),
+    /** Spec 035: o bem-vindo da volta acerta os blocos que mudaram (devolve quantos). */
+    aplicarVolta,
     /** Spec 035: a rede de segurança desistiu (travou depois das 2 ressincronizações). */
     aoDesistir(f: () => void) {
       ouvintesDesistir.push(f);

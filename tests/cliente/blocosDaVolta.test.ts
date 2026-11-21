@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { criarEdicoes } from '../../src/world/edicoes';
+import { blocoDe, criarEdicoes, indiceDonoDe, metaDe } from '../../src/world/edicoes';
+import { diferencaDasEdicoes } from '../../src/cliente/diferencaEdicoes';
 import { Bloco } from '../../src/world/blocks';
 import type { ConexaoNuvem } from '../../src/cliente/conexaoNuvem';
 import { criarNuvem, espera, ligarEstado } from './nuvemDeVerdade';
@@ -28,7 +29,7 @@ async function ate(cond: () => boolean, ms: number, oQue: string): Promise<void>
 
 type ComoSai = 'queda' | 'ressincronização';
 
-async function cenario(como: ComoSai, ip: string) {
+async function cenario(como: ComoSai, ip: string, mudar = true) {
   const nuvem = criarNuvem(ip);
   try {
     const codigo = await nuvem.criarSala('filho');
@@ -46,6 +47,20 @@ async function cenario(como: ComoSai, ip: string) {
         if (q.donosNovos) tela.donos.aplicar(q.donosNovos);
         if (q.jogadores?.some((o) => o.id === 'pai')) viuPai = true;
       },
+    });
+    // como a cena (`aplicarVolta`, ligada ao `aoBemVindo` em src/nuvem.ts): os donos primeiro,
+    // depois só as células que mudaram; a edição que saiu volta ao terreno gerado
+    let celulasDaVolta = 0;
+    c2.aoBemVindo((bv) => {
+      tela.donos.importar(bv.donos);
+      const mudancas = diferencaDasEdicoes(tela.exportar(), bv.edicoes, (x, y, z) =>
+        filho.pendente(x, y, z),
+      );
+      celulasDaVolta += mudancas.length;
+      for (const m of mudancas) {
+        if (m.valor === undefined) tela.remover?.(m.x, m.y, m.z);
+        else tela.definir(m.x, m.y, m.z, blocoDe(m.valor), metaDe(m.valor), indiceDonoDe(m.valor));
+      }
     });
     // como src/nuvem.ts: voltou da queda, reconfere (recomeça a sequência dos quadros)
     let caiu = false;
@@ -95,25 +110,31 @@ async function cenario(como: ComoSai, ip: string) {
       comRessinc.ressincronizar!();
     }
 
-    // com o filho fora, o pai tira um bloco e põe outro
-    pai.enviar({
-      t: 'editar',
-      id: pai.proximoId(),
-      lote: [
-        { ...tirado, v: Bloco.AR },
-        { ...posto, v: BLOCO },
-      ],
-    });
-    await ate(
-      () => noServidor(posto.x, posto.y, posto.z) === BLOCO && noServidor(tirado.x, tirado.y, tirado.z) === 0,
-      3000,
-      'o servidor aplicar o lote do pai',
-    );
+    // com o filho fora, o pai tira um bloco e põe outro (ou não faz nada: a volta sem mudança)
+    if (mudar) {
+      pai.enviar({
+        t: 'editar',
+        id: pai.proximoId(),
+        lote: [
+          { ...tirado, v: Bloco.AR },
+          { ...posto, v: BLOCO },
+        ],
+      });
+      await ate(
+        () =>
+          noServidor(posto.x, posto.y, posto.z) === BLOCO &&
+          noServidor(tirado.x, tirado.y, tirado.z) === 0,
+        3000,
+        'o servidor aplicar o lote do pai',
+      );
+    }
     await espera(200);
+    const voltasAntes = celulasDaVolta;
 
     // o filho volta
     nuvem.soltar('filho');
     await ate(() => c2.estado === 'conectado', 12_000, 'o filho voltar');
+    const celulasNaVolta = celulasDaVolta - voltasAntes;
     // a volta deu certo: o que o pai faz agora chega pelos quadros (só o de antes falta)
     const depois = { x: x + 4, y, z };
     pai.enviar({ t: 'editar', id: pai.proximoId(), lote: [{ ...depois, v: BLOCO }] });
@@ -128,6 +149,7 @@ async function cenario(como: ComoSai, ip: string) {
       posto: tela.obter(posto.x, posto.y, posto.z) ?? 0,
       donoDoPosto: tela.donos.id(tela.indiceDono(posto.x, posto.y, posto.z)),
       tirado: tela.obter(tirado.x, tirado.y, tirado.z) ?? 0,
+      celulasNaVolta,
     };
     c2.encerrar();
     c3.encerrar();
@@ -154,5 +176,12 @@ describe('os blocos da volta, com o servidor de verdade', () => {
     expect(r.posto, 'o bloco posto com o filho fora').toBe(BLOCO);
     expect(r.donoDoPosto, 'o dono do bloco posto').toBe('pai');
     expect(r.tirado, 'o bloco tirado com o filho fora').toBe(Bloco.AR);
+  }, 30_000);
+
+  it('uma volta que não muda nada não muda nenhuma célula (Vila Neon)', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const r = await cenario('queda', '10.9.0.3', false);
+    expect(r.celulasNaVolta).toBe(0);
+    expect(r.tirado, 'o bloco de antes da queda continua').toBe(BLOCO);
   }, 30_000);
 });

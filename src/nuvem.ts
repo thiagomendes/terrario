@@ -532,6 +532,8 @@ export function ligarAmigos(raiz: HTMLElement, cena: Cena, op: OpcoesAmigos): vo
     telaCarregando('Atualizando o mundo…');
     setTimeout(() => recarregar(), 300);
   });
+  // spec 035: a volta (queda ou ressincronização) acerta os blocos que mudaram com a criança fora
+  nv.conexao.aoBemVindo((bv) => cena.aplicarVolta(bv));
   const aviso = criarAvisoConexao(raiz);
   // achar os amigos (spec 021): as carinhas na borda vêm da cena; a seta de texto saiu
   let caiu = false;
