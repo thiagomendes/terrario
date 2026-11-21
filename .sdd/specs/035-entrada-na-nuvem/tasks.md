@@ -116,3 +116,16 @@ Os e2e rodam na placa de vídeo: `scripts/e2e-gpu.sh <spec>`, e depois `scripts/
   - O teste de unidade passa (5 de 5), e `tests/cliente` inteiro passa (60).
   - **O e2e C passa** (28 s), na placa de vídeo.
   - Falta para a T08: a suíte inteira, o build e os e2e de amigos com o contador em 0.
+- **(21 nov 2026) T08, a suíte** (com a `main` eab8b8b mesclada; na placa de vídeo, 2 trabalhadores):
+  - **`tsc` limpo; Vitest inteiro 2041 de 2041 (218 arquivos); `npm run build` limpo.** A corrida com `CORRIDA_RODADAS=3`: 5 de 5, sem ressincronizar. `servidor/testes`: 43 de 43.
+  - **Paridade 36 de 36** (`PARIDADE=conferir`, 9,2 min).
+  - **O contador em 0:** o `multiplayer`, o `achar-amigo-nuvem`, o `amigos-sem-atrito` (Ana, Bia e Caio), o `vila-bate-amigos`, o `vila-casa-amigos` e o C do `entrada-nuvem` conferem no fim que ninguém ressincronizou. Todos passaram com a conferência.
+  - **A queda com blocos no navegador:** o D do `entrada-nuvem`. A internet da Bia cai (a conexão fecha, e as tentativas de voltar falham até a rede voltar), a Ana tira um bloco e põe outro, e a Bia volta vendo os dois, em 2,1 a 2,5 s depois que a rede volta, com 0 ressincronizações. **Na `main` o D falha** (a Bia volta sem os blocos): o teste pega o defeito da T05.
+  - **`entrada-nuvem` 3 rodadas seguidas verdes** (5 de 5 cada, com o D; 5,8, 6,0 e 6,1 min). B: do mundo pronto até ver a Ana, 110, 87 e 173 ms.
+  - **O cliente novo com o servidor antigo** (o servidor montado da `main`, sem a linha da T06): `multiplayer` e `entrada-nuvem` 7 de 7, com o D.
+  - **O e2e inteiro em 8 pedaços** (116 arquivos, fora a paridade e o `entrada-nuvem`): 225 passaram, 16 caíram, 204 pulados (as capturas, que só rodam com variável). O que caiu:
+    - **Ambiente, passaram na repetição:** `ajustes-filho` (5) e `amigos-sem-atrito:41` (a pasta `capturas-temas/` era do root: devolvida ao usuário pelo contêiner); `vila-missoes:521` e `vila-neon:254` (a Vila deitado, num pedaço de 36 min; na repetição e na `main`, passam).
+    - **Caem igual na `main`:** `capturas-encaixe:109` ("nenhum povoado perto do nascimento": abre `/`, a Vila Neon, que não tem povoado; já era assim depois da 034, **novo para a lista de instáveis do backlog**), `guia-chegada:128`, `plantio:210` e `tesouro-fantasia:61`.
+    - **Da lista de instáveis, na beira do limite:** `achar-amigo-nuvem:101` (o pulo no celular: 2879 ms, limite 2500; na `main` 2260 e 2486) e `som-veiculos:61` (a buzina 4,6 dB, precisa de mais de 6; na `main` passou uma vez).
+    - **`fantasias-aba`:** o do celular (`:263`) caiu duas vezes por perda do contexto WebGL na placa (`isContextLost=true` ao compilar um sombreador, criando três mundos seguidos); o do computador (`:83`) caiu uma vez na repetição. Nada da 035 passa por ali (só o jogo local; a rede de segurança só liga com `conexao.ressincronizar`). **Falta** rodar o `fantasias-aba` na `main` e de novo aqui: a rodada foi interrompida.
+  - Nenhum teste pulado, desligado ou afrouxado.
