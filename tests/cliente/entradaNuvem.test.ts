@@ -23,7 +23,9 @@ class FalsoWS {
   send(t: string) {
     this.enviadas.push(t);
   }
-  close() {
+  codigoFechamento: number | undefined;
+  close(codigo?: number) {
+    this.codigoFechamento = codigo;
     this.readyState = 3;
     this.onclose?.();
   }
@@ -193,9 +195,11 @@ describe('a entrada na nuvem: nada se perde antes de alguém ouvir', () => {
     c.encerrar();
   });
 
-  it('o encerrar() esvazia a fila: quem ouve depois não recebe nada', async () => {
-    const { c } = abrirComQuadros(4);
+  it('o encerrar() esvazia a fila e fecha com 1000: quem ouve depois não recebe nada', async () => {
+    const { c, ws } = abrirComQuadros(4);
     c.encerrar();
+    // 1000: saiu normalmente (o registro do servidor deixa de mostrar uma queda 1005)
+    expect(ws.codigoFechamento).toBe(1000);
     const recebidas: Mensagem[] = [];
     c.aoReceber((m) => recebidas.push(m));
     await tarefa();

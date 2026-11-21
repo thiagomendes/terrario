@@ -53,6 +53,11 @@ export interface OpcoesNuvem {
 
 /** Espera entre tentativas de reconexão (cresce até 8 s). */
 const ESPERAS = [500, 1000, 2000, 4000, 8000];
+/**
+ * Spec 035: teto da fila do que chega antes de alguém ouvir (10 s de quadros). Protege as
+ * conexões que nunca ouvem quadros (a de criar a sala, a de parar de jogar com amigos).
+ */
+const TETO_FILA = 200;
 
 export function conexaoNuvem(op: OpcoesNuvem): ConexaoNuvem {
   const ouvintes: ((m: Mensagem) => void)[] = [];
@@ -78,6 +83,37 @@ export function conexaoNuvem(op: OpcoesNuvem): ConexaoNuvem {
     resolver = res;
     rejeitar = rej;
   });
+
+  /**
+   * Spec 035: as mensagens do núcleo que chegam antes de alguém ouvir (o bem-vindo vem e o
+   * `primeiro` quadro logo atrás, enquanto a página ainda monta a cena) esperam aqui, em vez de
+   * sumir. O primeiro `aoReceber` recebe tudo, em ordem, logo depois que ele volta.
+   */
+  const fila: Mensagem[] = [];
+  /** A fila foi entregue ao primeiro ouvinte e ainda não esvaziou: o que chega vai para o fim. */
+  let entregando = false;
+
+  function chegou(m: Mensagem): void {
+    if (ouvintes.length === 0 || entregando) {
+      fila.push(m);
+      if (fila.length > TETO_FILA) fila.shift();
+      return;
+    }
+    for (const f of ouvintes) f(m);
+  }
+
+  function esvaziarFila(): void {
+    // relê o tamanho a cada volta: um `encerrar()` no meio esvazia a fila e para o laço
+    while (fila.length > 0) {
+      const m = fila.shift()!;
+      try {
+        for (const f of ouvintes) f(m);
+      } catch (e) {
+        console.error('conexão: erro ao entregar uma mensagem guardada', e);
+      }
+    }
+    entregando = false;
+  }
 
   const mudar = (e: EstadoConexao, motivo?: MotivoRecusa) => {
     estado = e;
@@ -162,7 +198,7 @@ export function conexaoNuvem(op: OpcoesNuvem): ConexaoNuvem {
       } else if (m.t === 'sala') {
         codigo = m.sala.codigo;
         for (const f of ouvintesSala) f(m.sala);
-      } else for (const f of ouvintes) f(m);
+      } else chegou(m);
     };
     s.onclose = () => {
       if (ws !== s) return;
@@ -185,6 +221,12 @@ export function conexaoNuvem(op: OpcoesNuvem): ConexaoNuvem {
     pedir: (p) => mandar(p),
     aoReceber: (f) => {
       ouvintes.push(f);
+      // o primeiro ouvinte leva a fila, logo depois de voltar (nunca dentro: a cena ainda
+      // termina de montar o `cliente` quando liga o estado)
+      if (ouvintes.length === 1 && fila.length > 0 && !entregando) {
+        entregando = true;
+        queueMicrotask(esvaziarFila);
+      }
     },
     aoEstado: (f) => {
       ouvintesEstado.push(f);
@@ -200,7 +242,9 @@ export function conexaoNuvem(op: OpcoesNuvem): ConexaoNuvem {
     },
     encerrar() {
       encerrada = true;
-      ws?.close();
+      fila.length = 0;
+      // 1000: saiu normalmente (o registro do servidor não conta como queda)
+      ws?.close(1000);
     },
   };
 }
