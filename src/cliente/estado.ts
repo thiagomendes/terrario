@@ -50,7 +50,31 @@ export interface OpcoesEstadoCliente {
   dia: number;
   hora: number;
   sobrevivencia: EstadoSobrevivencia;
+  /** Spec 035: o relógio da rede de segurança, em ms (os testes trocam). */
+  agora?: () => number;
+  /** Spec 035: a página está visível (sem `document`, sempre). */
+  visivel?: () => boolean;
+  /**
+   * Spec 035: travou de novo depois das 2 ressincronizações. A página guarda o diário e
+   * recarrega uma vez (se a marca deixar); a rede de segurança para de tentar.
+   */
+  aoDesistir?(): void;
 }
+
+/** Spec 035: os números da rede de segurança (ver a spec, seção 2). */
+const TRAVADO_MS = 1000;
+const TRAVADO_QUADROS = 10;
+const SILENCIO_MS = 4000;
+const VIGIA_MS = 1000;
+/** Duas voltas do vigia mais longe que isto: a página estava ocupada (o silêncio é dela). */
+const VIGIA_ATRASADO_MS = 2000;
+const MAX_RESSINC_TRAVADO = 2;
+const ESPERA_SEGUNDA_MS = 3000;
+const ZERA_CONTA_MS = 60_000;
+const SILENCIO_ENTRE_MS = 30_000;
+
+const visivelPadrao = () =>
+  typeof document === 'undefined' || document.visibilityState === 'visible';
 
 export type EstadoCliente = ReturnType<typeof criarEstadoCliente>;
 
@@ -139,9 +163,61 @@ export function criarEstadoCliente(op: OpcoesEstadoCliente) {
   const adiantados = new Map<number, Quadro>();
   /** Quadros recebidos (testes: esperar o núcleo). */
   let quadrosRecebidos = 0;
+  /**
+   * Spec 035: a rede de segurança. Só com uma conexão que sabe ressincronizar (a da nuvem): o
+   * servidor local e o canal dos testes não têm a corrida e nunca disparam nada.
+   */
+  const sabe = typeof conexao.ressincronizar === 'function';
+  const agora = op.agora ?? (() => performance.now());
+  const visivel = op.visivel ?? visivelPadrao;
+  /** Desde quando nada é aplicado (o último aplicado, a criação ou o último reconferir). */
+  let desdeAplicado = agora();
+  let aplicouAlgum = false;
+  /** O último quadro que chegou (aplicado ou não): o silêncio conta daqui. */
+  let ultimoChegou = agora();
+  /** Ressincronizações pelo travamento nesta conta (no máximo 2; zera com 60 s andando). */
+  let travamentos = 0;
+  let ultimoTravamento = -Infinity;
+  let ultimoSilencio = -Infinity;
+  let ressincronizacoes = 0;
+  let desistiu = false;
+
+  function ressincronizar(): void {
+    ressincronizacoes++;
+    // a conexão primeiro: o `conferir` do reconferir espera na fila dela e vai na conexão nova
+    conexao.ressincronizar!();
+    proximoQuadro = -1;
+    adiantados.clear();
+    desdeAplicado = agora();
+    ultimoChegou = desdeAplicado;
+    reconferirPrevistas();
+  }
+
+  function medirTravamento(): void {
+    if (!sabe || desistiu) return;
+    const t = agora();
+    if (adiantados.size < TRAVADO_QUADROS || t - desdeAplicado < TRAVADO_MS) return;
+    // travou de novo antes de 3 s da última: espera
+    if (t - ultimoTravamento < ESPERA_SEGUNDA_MS) return;
+    if (travamentos >= MAX_RESSINC_TRAVADO) {
+      // o recarregar só vem daqui (o travamento com a conexão de pé), uma vez por página
+      desistiu = true;
+      op.aoDesistir?.();
+      return;
+    }
+    travamentos++;
+    ultimoTravamento = t;
+    ressincronizar();
+  }
+
   function receberQuadro(q: Quadro): void {
     quadrosRecebidos++;
-    if (q.primeiro) proximoQuadro = q.n;
+    ultimoChegou = agora();
+    if (q.primeiro) {
+      proximoQuadro = q.n;
+      // sobras de antes do `primeiro` não ficam presas no mapa
+      for (const n of adiantados.keys()) if (n < q.n) adiantados.delete(n);
+    }
     if (proximoQuadro >= 0 && q.n < proximoQuadro) return;
     adiantados.set(q.n, q);
     while (adiantados.has(proximoQuadro)) {
@@ -149,7 +225,44 @@ export function criarEstadoCliente(op: OpcoesEstadoCliente) {
       adiantados.delete(proximoQuadro);
       proximoQuadro++;
       aplicar(atual);
+      desdeAplicado = agora();
+      aplicouAlgum = true;
+      // 60 s com os quadros andando: a conta do travamento volta a zero
+      if (travamentos > 0 && desdeAplicado - ultimoTravamento >= ZERA_CONTA_MS) travamentos = 0;
     }
+    medirTravamento();
+  }
+
+  /** O vigia do silêncio: nenhum quadro por 4 s com a página visível e a conexão de pé. */
+  if (sabe) {
+    let ultimaVolta = agora();
+    const vigia = setInterval(() => {
+      const t = agora();
+      const atrasado = t - ultimaVolta > VIGIA_ATRASADO_MS;
+      ultimaVolta = t;
+      // escondida, ocupada ou sem a conexão de pé: o silêncio não é da rede (recomeça a contar)
+      if (atrasado || !visivel() || conexao.estado !== 'conectado') {
+        ultimoChegou = t;
+        return;
+      }
+      if (!aplicouAlgum || t - ultimoChegou < SILENCIO_MS) return;
+      // conta própria: fora das 2 do travamento, uma a cada 30 s, e nunca recarrega
+      if (t - ultimoSilencio < SILENCIO_ENTRE_MS) return;
+      ultimoSilencio = t;
+      ressincronizar();
+    }, VIGIA_MS);
+    // no Node (testes), o vigia não segura o processo
+    (vigia as unknown as { unref?: () => void }).unref?.();
+  }
+
+  /** Pede o valor oficial das células ainda previstas (o comando pode ter se perdido). */
+  function reconferirPrevistas(): void {
+    if (pendentes.size === 0) return;
+    const celulas = [...pendentes.keys()].map((k) => {
+      const [x, y, z] = k.split(',').map(Number);
+      return { x, y, z };
+    });
+    enviar({ t: 'conferir', id: proximoId(), celulas });
   }
 
   let pedido = 0;
@@ -204,12 +317,16 @@ export function criarEstadoCliente(op: OpcoesEstadoCliente) {
     reconferir(): void {
       proximoQuadro = -1;
       adiantados.clear();
-      if (pendentes.size === 0) return;
-      const celulas = [...pendentes.keys()].map((k) => {
-        const [x, y, z] = k.split(',').map(Number);
-        return { x, y, z };
-      });
-      enviar({ t: 'conferir', id: proximoId(), celulas });
+      // spec 035: a queda de verdade não confunde a conta do travamento
+      desdeAplicado = agora();
+      ultimoChegou = desdeAplicado;
+      travamentos = 0;
+      ultimoTravamento = -Infinity;
+      reconferirPrevistas();
+    },
+    /** Spec 035: quantas vezes a rede de segurança ressincronizou nesta página. */
+    get ressincronizacoes() {
+      return ressincronizacoes;
     },
     /** Há previsão local esperando confirmação nesta célula? */
     get quadrosRecebidos() {

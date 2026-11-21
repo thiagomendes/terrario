@@ -424,6 +424,8 @@ const CADEADO_DEPOIS_DO_CLIQUE_MS = 1500;
 
 export interface EstadoDepuracao {
   ready: boolean;
+  /** Spec 035: quantas vezes a rede de segurança ressincronizou nesta página. */
+  ressincronizacoes?: number;
   /** Tema visual ativo nesta página. */
   tema?: string;
   /** Direção do astro fixo do tema (Terra, gigante gasoso), se houver. */
@@ -1342,10 +1344,15 @@ export function criarCena(
       estilo: estiloMundo(),
       dados: dadosIniciais,
     });
+  // spec 035: travou de novo depois das 2 ressincronizações (a página decide o recarregar)
+  const ouvintesDesistir: (() => void)[] = [];
   // o que o cliente sabe do mundo (previsões, itens, criaturas, vida, dia e clima)
   const cliente = criarEstadoCliente({
     conexao,
     inventario,
+    aoDesistir: () => {
+      for (const f of ouvintesDesistir) f();
+    },
     aplicarBloco: (x, y, z, b, meta, dono) => editarBloco(x, y, z, b, meta, dono),
     aoEvento: (e) => tratarEvento(e),
     aoConteiner: (c, novo) =>
@@ -1380,6 +1387,12 @@ export function criarCena(
       ...estadoInicial(),
       ...((dadosIniciais?.extras?.['sobrevivencia'] as Partial<EstadoSobrevivencia>) ?? {}),
     },
+  });
+  // spec 035: o contador da rede de segurança para os testes (0 na entrada normal)
+  Object.defineProperty(estado, 'ressincronizacoes', {
+    get: () => cliente.ressincronizacoes,
+    enumerable: true,
+    configurable: true,
   });
   let quadrosVistos = 0;
   const enviar = (c: Comando) => {
@@ -7301,6 +7314,10 @@ export function criarCena(
     },
     /** Voltou de uma queda de internet: confere as previsões que ficaram. */
     reconferir: () => cliente.reconferir(),
+    /** Spec 035: a rede de segurança desistiu (travou depois das 2 ressincronizações). */
+    aoDesistir(f: () => void) {
+      ouvintesDesistir.push(f);
+    },
     /** Usa um bloco pelo núcleo (porta, baú, fornalha, cama). */
     usarBloco(x: number, y: number, z: number) {
       pedirUso(x, y, z);

@@ -19,6 +19,7 @@ import { normalizarCodigo } from './jogo/codigos';
 import type { DadosMundo, MetaMundo, RepositorioMundos } from './jogo/mundos';
 import { notificar } from './ui/interface';
 import { navegar, recarregar } from './pagina';
+import { enderecoDireto, podeRecarregar } from './cliente/recarregarUmaVez';
 import { perguntar } from './ui/dialogo';
 import {
   CSS_AMIGOS,
@@ -558,6 +559,21 @@ export function ligarAmigos(raiz: HTMLElement, cena: Cena, op: OpcoesAmigos): vo
   setInterval(guardar, 20_000);
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'hidden') guardar();
+  });
+  // spec 035: travou de novo depois das 2 ressincronizações: guarda o diário e o mapa e
+  // recarrega uma vez, direto no mesmo mundo (a marca de 10 min impede o laço; sem ela, segue)
+  cena.aoDesistir(() => {
+    guardar();
+    const codigo = normalizarCodigo(nv.bv.sala.codigo) ?? nv.bv.sala.codigo;
+    let armazem: Storage | null = null;
+    try {
+      armazem = window.sessionStorage;
+    } catch {
+      armazem = null;
+    }
+    if (!podeRecarregar(() => armazem, codigo, Date.now())) return;
+    // um tempinho para o `guardar` sair antes de a página ir embora
+    setTimeout(() => navegar(enderecoDireto(location.href)), 300);
   });
   // primeira vez no mundo que acabou de ir para a nuvem: o convite já aberto, com o mundo atrás
   // (só nesta entrada: recarregar a página não abre de novo)

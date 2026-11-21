@@ -14,6 +14,8 @@ export interface Conexao {
    * Só a da nuvem sabe; sem ela (o servidor local, o canal dos testes), o estado não mede nada.
    */
   ressincronizar?(): void;
+  /** Spec 035: como a conexão está ('conectado' é a de pé). Só a da nuvem diz. */
+  readonly estado?: string;
 }
 
 /** Servidor local num Web Worker. */
