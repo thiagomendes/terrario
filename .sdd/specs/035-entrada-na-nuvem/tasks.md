@@ -110,3 +110,9 @@ Os e2e rodam na placa de vídeo: `scripts/e2e-gpu.sh <spec>`, e depois `scripts/
   - O teste da T00 passa: o visitante que cai e volta antes dos 30 s entra, e quem nunca entrou é recusado.
   - Entrou também o caso de depois da tolerância: com 35 s fora, quem caiu é barrado como quem chega.
   - `servidor/testes` passa inteiro (43). É a única mudança do servidor nesta spec.
+- **(20 nov 2026) T07 pronta:** sair da nuvem.
+  - `enderecoDoMundo` tira `sala`, `novo`, `direto` e `tema`, põe `mundo` e deixa o resto.
+  - Dentro da nuvem, o mundo da lista cujo `nuvem` é o código da sala aberta mostra "Continuar" e só fecha a lista (`src/ui/mundos.ts`). O código vem do `main.ts`, que acompanha o `aoSala` (o dono pode trocar o código).
+  - O teste de unidade passa (5 de 5), e `tests/cliente` inteiro passa (60).
+  - **O e2e C passa** (28 s), na placa de vídeo.
+  - Falta para a T08: a suíte inteira, o build e os e2e de amigos com o contador em 0.
