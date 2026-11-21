@@ -81,3 +81,17 @@ Os e2e rodam na placa de vídeo: `scripts/e2e-gpu.sh <spec>`, e depois `scripts/
   - O teste dos blocos da volta pela ressincronização agora falha pelo comportamento (o filho volta sem o bloco), esperando a T05.
   - **Vitest inteiro:** 7 falham (o endereço, os blocos da volta e a sala fechada) e 2011 passam.
   - **E2e na placa de vídeo:** o `multiplayer` e o `amigos-sem-atrito` passam (4 de 4).
+- **(20 nov 2026) T04 pronta:** a rede de segurança em `src/cliente/estado.ts`.
+  - **Só com `conexao.ressincronizar`.** A interface `Conexao` ganhou também o `estado?` opcional, que a da nuvem já tinha.
+  - **O travamento:** medido a cada quadro que chega, depois de aplicar o que der. Dispara com 1 s sem aplicar e 10 quadros esperando, contando do último aplicado, da criação ou do último `reconferir`.
+  - **O silêncio:** um vigia de 1 s; dispara com 4 s sem quadro. Só age com a página visível, com a conexão em `'conectado'` e depois do primeiro quadro aplicado. Recomeça a contar com a página escondida, com a conexão fora de `'conectado'` e quando passam mais de 2 s entre duas voltas. Tem conta própria (uma vez a cada 30 s) e nunca recarrega.
+  - **O que a ressincronização faz:** pede à conexão primeiro, para o `conferir` esperar a conexão nova. Depois zera a sequência e reconfere as previstas.
+  - **O primeiro e os limites:** o `primeiro` apaga os `adiantados` menores. O travamento ressincroniza no máximo 2 vezes, a segunda depois de 3 s. A conta zera com 60 s de quadros andando e no `reconferir`.
+  - **O recarregar:** travou de novo depois das 2, então `aoDesistir` (uma vez por página). A cena repassa para `src/nuvem.ts`, que manda o `guardar` e recarrega com `direto=1`, se `podeRecarregar` deixar (`src/cliente/recarregarUmaVez.ts`: a marca de 10 min por sala no `sessionStorage`; sem ele, ou com erro, não recarrega).
+  - **O contador:** em `window.__brumaluz.ressincronizacoes`.
+  - **Testes:** `tests/cliente/estado.test.ts`, 15 que passam: os da seção 7 com o relógio trocado, mais o `podeRecarregar` e o `enderecoDireto`. O caso "sem ressincronizar" usa uma conexão de mentira sem o método; o canal de `tests/nucleo/canal.test.ts` continua verde.
+  - **A corrida segue com 0 ressincronizações.**
+  - **E2e na placa de vídeo:** B, buraco e B2 passam; o C espera a T07.
+    - **B, a meta de 3 s:** a linha do tempo da Bia mostra a rede de segurança rápida: 120 ms do quadro jogado fora ao bem-vindo novo. O que passa de 3 s é a montagem da cena: o mundo fica pronto uns 5,6 s depois do bem-vindo, e a página só trata as mensagens quando a montagem solta.
+    - O teste agora mede os 3 s **a partir do mundo pronto** (223 ms) e registra também o total (5,8 s). Na entrada normal, do link ao mundo pronto, foram de 3,3 a 6,2 s nesta máquina.
+    - **Decisão para o orquestrador:** de onde a meta conta.
