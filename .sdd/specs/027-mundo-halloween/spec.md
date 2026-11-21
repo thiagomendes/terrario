@@ -1,7 +1,7 @@
 ---
 id: 027-mundo-halloween
 title: 'Noite das Fantasias: a festa à fantasia de uma vila de brinquedo, já nascendo completa'
-status: DRAFT
+status: APPROVED
 base_branch: main
 branch: feat/027-noite-das-fantasias
 created_at: 2026-11-13T17:00:00Z
@@ -156,7 +156,13 @@ Branch `esboco/027-noite-das-fantasias`, `?esboco=fantasias`, fotos e vídeos em
 - **20 nov 2026, durante o esboço:** os sons ("muito bons"); a abóbora gigante arredondada e não de cubos (pedido dele); a vassoura-patinete ("ficou muito bom"); o túnel do trem mais alto ("agora ficou ótimo o trem").
 - **20 nov 2026, à noite: esboço aprovado** ("Esboço da 27 aprovado"), depois de ver o Bento e os morcegos refeitos na rodada do revisor. Ele vira spec; o pelo do Bento fica como item a refinar na spec, com versões lado a lado para o dono escolher (recomendação do orquestrador).
   - Decisões pequenas do esboço: o Conde Dudu sem presas; o Tufinho cor de carvão, com focinho e patinhas claros e lacinho laranja (o preto puro some de noite); nenhum letreiro com palavra.
-- **21 nov 2026:** (a preencher com as respostas de "Perguntas ao dono").
+- **21 nov 2026: spec aprovada** ("Aprovada"), com as recomendadas nas seis perguntas:
+  1. dez missões: "O desfile" junta a fantasia completa e o desfile com amigos, e entram "Volta de vassoura" e "Tchau, fantasminhas!";
+  2. 45 moedinhas (22, 15 e 8 nas três partes), com a banca como está em "Perguntas ao dono";
+  3. as casas por dentro se aprovam por fotos no começo da parte 2;
+  4. cajuzinho, beijinho e surpresa de uva no lugar da maçã do amor, da cocada e do doce de abóbora;
+  5. a varinha faz brilho e uma florzinha que some sozinha em ~4 s, sem criar bloco;
+  6. três partes, cada uma publicada inteira.
 
 **Decisões do orquestrador na revisão (21 nov), para o boletim:**
 - este mundo não usa os blocos de rua da Cidade e da Vila: tem janela, toldinho e caminho próprios;
@@ -164,7 +170,7 @@ Branch `esboco/027-noite-das-fantasias`, `?esboco=fantasias`, fotos e vídeos em
 - o toque no fantasminha é o gesto principal da n10; os instrumentos da n8 e o Tufinho já em casa da n5 são cópias na tela de cada criança; a uva se colhe sempre;
 - os nomes Lulu, Bento e Dudu ficam (os da Vila e do Rancho não são falados nem lidos pela criança).
 
-## Perguntas ao dono
+## Perguntas ao dono (respondidas em 21 nov: as recomendadas)
 Só o que é dele: regra do jogo, economia, a cara do mundo e a ordem. A recomendada vem sempre primeiro.
 
 **1. As missões: dez, juntando "fantasia completa" com o "desfile com amigos"?**
