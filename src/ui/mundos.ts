@@ -274,6 +274,18 @@ export interface OpcoesPainelMundos {
   salaAberta?(): string | null | undefined;
 }
 
+/**
+ * Spec 035: o mundo do aparelho é o da sala aberta (o `nuvem` dele é o código dela)? Os dois
+ * códigos têm de ser válidos: dois inválidos (`null` e `null`) não são a mesma sala.
+ */
+export function ehDaSalaAberta(
+  nuvem: string | null | undefined,
+  sala: string | null | undefined,
+): boolean {
+  const ns = sala ? normalizarCodigo(sala) : null;
+  return !!ns && !!nuvem && normalizarCodigo(nuvem) === ns;
+}
+
 export function criarPainelMundos(raiz: HTMLElement, op: OpcoesPainelMundos) {
   const modal = criarModal('Mundos', 'data-painel-mundos', 'mundos');
   const { fundo, corpo } = modal;
@@ -438,9 +450,7 @@ export function criarPainelMundos(raiz: HTMLElement, op: OpcoesPainelMundos) {
       jogar.type = 'button';
       jogar.className = 'btn primario';
       // spec 035: dentro da nuvem, o mundo desta sala também é o que está aberto
-      const sala = op.salaAberta?.();
-      const daSala =
-        !!sala && !!m.nuvem && normalizarCodigo(m.nuvem) === normalizarCodigo(sala);
+      const daSala = ehDaSalaAberta(m.nuvem, op.salaAberta?.());
       const aberto = op.atual?.id === m.id || daSala;
       jogar.textContent = aberto ? 'Continuar' : 'Jogar';
       jogar.addEventListener('click', () => {
