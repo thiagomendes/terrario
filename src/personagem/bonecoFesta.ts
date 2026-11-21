@@ -270,13 +270,18 @@ export function golaAlta(pecas: Peca[], m: MedidasBoneco, cor: string, forro: st
       }
     return { pos, ind };
   };
-  por(pecas, 'gola-alta', 'tronco', 'tronco', 'malha', [1, 0.5, 1], [0, 0, 0], cor, { malha: fazer(0, 0) });
-  por(pecas, 'gola-alta-forro', 'tronco', 'tronco', 'malha', [1, 0.5, 1], [0, 0, 0], forro, {
+  // T13: a gola vai presa na junta da capa (a mesma do pano dela): quando a capa balança (andar,
+  // dançar, sentar), a gola balança junto e o pano nunca atravessa a gola. O desenho é feito no
+  // espaço do tronco e levado para o da junta da capa (o ombro de trás)
+  const capa: V3 = [0, troncoH - 0.03, -m.prof / 2 + 0.02];
+  const naCapa = (p: V3): V3 => [p[0] - capa[0], p[1] - capa[1], p[2] - capa[2]];
+  por(pecas, 'gola-alta', 'capa', 'tronco', 'malha', [1, 0.5, 1], naCapa([0, 0, 0]), cor, { malha: fazer(0, 0) });
+  por(pecas, 'gola-alta-forro', 'capa', 'tronco', 'malha', [1, 0.5, 1], naCapa([0, 0, 0]), forro, {
     malha: fazer(0.016, 0.02),
   });
   // a pala que liga a gola aos ombros (debaixo da nuca, sem entrar na cabeça), funda o bastante
   // para chegar no pano da gola atrás (nos modelos de tronco mais fino, a gola ficava solta)
-  por(pecas, 'gola-pala', 'tronco', 'tronco', 'caixa', [m.larg + 0.1, 0.06, 0.42], [0, troncoH - 0.035, -m.prof / 2 - 0.17], cor, {
+  por(pecas, 'gola-pala', 'capa', 'tronco', 'caixa', [m.larg + 0.1, 0.06, 0.42], naCapa([0, troncoH - 0.035, -m.prof / 2 - 0.17]), cor, {
     raio: 0.03,
   });
 }

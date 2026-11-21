@@ -16,6 +16,7 @@ import {
   GRUPOS_FANTASIA,
   corDaPeca,
   fantasiaDoTema,
+  fantasiaPorId,
   fantasiasDoGrupo,
   pecasVestidas,
   rotuloDaFantasia,
@@ -37,6 +38,8 @@ const TEMAS: IdTema[] = [
   'rancho-alegre',
   'cidade-grande',
   'vila-neon',
+  // spec 027 (T13): a Noite das Fantasias
+  'noite-das-fantasias',
 ];
 
 function memoria(): Armazenamento & { dados: Map<string, string> } {
@@ -97,12 +100,33 @@ describe('catálogo das fantasias', () => {
     expect(rotuloDaFantasia('nao-existe', 'feminino')).toBe('');
   });
 
-  it('fantasias dos temas: tema real e todos os 5 temas cobertos', () => {
+  it('fantasias dos temas: tema real e todos os 6 temas cobertos', () => {
     const temas = fantasiasDoGrupo('temas');
     for (const f of temas) expect(TEMAS).toContain(f.tema);
     for (const f of FANTASIAS.filter((x) => x.grupo !== 'temas')) expect(f.tema).toBeUndefined();
     expect(new Set(temas.map((f) => f.tema))).toEqual(new Set(TEMAS));
     expect(fantasiaDoTema('rancho-alegre')?.id).toBe('fazendeira');
+  });
+
+  it('spec 027 (T13): as quatro da Noite das Fantasias, livres, e a Bruxinha é a sugestão', () => {
+    const festa = fantasiasDoGrupo('temas', 'noite-das-fantasias').filter((f) => f.tema === 'noite-das-fantasias');
+    expect(festa.map((f) => f.id)).toEqual([
+      'bruxinha-festa',
+      'vampirinho-festa',
+      'fantasminha-festa',
+      'monstrinho-peludo',
+    ]);
+    expect(fantasiaDoTema('noite-das-fantasias')?.id).toBe('bruxinha-festa');
+    for (const f of festa) expect(f.desbloqueio).toBeUndefined();
+    expect(rotuloDaFantasia('bruxinha-festa', 'masculino')).toBe('Bruxinho');
+    expect(rotuloDaFantasia('vampirinho-festa', 'feminino')).toBe('Vampirinha');
+    // a Bruxinha com a varinha de estrela; o vampirinho com a gola alta (sem presas: nenhuma
+    // peça de dente)
+    const pecas = (id: string) => fantasiaPorId(id)!.visual.feminino.pecas.map((p) => p.tipo);
+    expect(pecas('bruxinha-festa')).toEqual(expect.arrayContaining(['chapeu-bruxa', 'varinha']));
+    expect(pecas('vampirinho-festa')).toEqual(expect.arrayContaining(['capa', 'gola-alta']));
+    expect(pecas('fantasminha-festa')).toEqual(['lencol-capuz']);
+    expect(pecas('monstrinho-peludo')).toEqual(['macacao-tufos', 'capuz-monstro', 'pezoes']);
   });
 
   it('em "Dos temas" o tema do mundo aberto vem primeiro', () => {
@@ -112,7 +136,8 @@ describe('catálogo das fantasias', () => {
     const rancho = fantasiasDoGrupo('temas', 'rancho-alegre').map((f) => f.id);
     expect(rancho.slice(0, 2)).toEqual(['fazendeira', 'vaqueira']);
     expect(temasDasFantasias('doce-reino')[0]).toBe('doce-reino');
-    expect(new Set(temasDasFantasias()).size).toBe(5);
+    // (spec 027: seis temas, com a Noite das Fantasias)
+    expect(new Set(temasDasFantasias()).size).toBe(6);
     // as outras abas não mudam de ordem
     expect(fantasiasDoGrupo('herois', 'rancho-alegre')).toEqual(fantasiasDoGrupo('herois'));
   });

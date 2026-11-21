@@ -532,6 +532,77 @@ export const FANTASIAS: readonly FantasiaDef[] = [
       ],
     }),
   },
+  // spec 027 (T13): as fantasias da Noite das Fantasias (livres, como as dos outros temas), com
+  // as peças da T09 e as cores do mundo (roxo, laranja, verde-oliva e dourado; nada de
+  // arco-íris). A Bruxinha vem primeiro (é a sugestão ao criar um mundo da festa). Nada que
+  // assuste: o vampirinho sem presas, a fantasminha de rosto à mostra, o monstrinho de tufos
+  // redondos.
+  {
+    id: 'bruxinha-festa',
+    grupo: 'temas',
+    tema: 'noite-das-fantasias',
+    nomes: { feminino: 'Bruxinha', masculino: 'Bruxinho' },
+    cores: ['#6a3e9c', '#4a6326', '#c8621a'],
+    corEmblema: '#ffd45a',
+    visual: mesmo({
+      roupa: { camisa: '#5f7d34', manga: '#5f7d34', calca: '#46305e', sapato: '#46305e' },
+      cabeca: 'chapeu',
+      pecas: [
+        { tipo: 'chapeu-bruxa', cor: 'principal' },
+        { tipo: 'capa-curta', cor: 'principal' },
+        { tipo: 'varinha', cor: 'emblema', simbolo: 'estrela', opcional: true },
+      ],
+    }),
+  },
+  {
+    id: 'vampirinho-festa',
+    grupo: 'temas',
+    tema: 'noite-das-fantasias',
+    nomes: { feminino: 'Vampirinha', masculino: 'Vampirinho' },
+    cores: ['#3a2850', '#6a3e9c', '#4a6326'],
+    corEmblema: '#ef8a2c',
+    visual: mesmo({
+      roupa: { camisa: '#f4ead8', manga: '#f4ead8', calca: '#3a2c50', sapato: '#2a2232' },
+      cabeca: 'livre',
+      pecas: [
+        { tipo: 'capa', cor: 'principal' },
+        { tipo: 'gola-alta', cor: 'principal' },
+        { tipo: 'colete-lenco', cor: '#6a3e9c', opcional: true },
+      ],
+    }),
+  },
+  {
+    id: 'fantasminha-festa',
+    grupo: 'temas',
+    tema: 'noite-das-fantasias',
+    nomes: { feminino: 'Fantasminha', masculino: 'Fantasminha' },
+    cores: ['#f4efe4', '#e6dcf8', '#fbe4cc'],
+    corEmblema: '#b9a0e0',
+    visual: mesmo({
+      roupa: { camisa: 'principal', manga: 'principal', calca: '#c4b0e6', sapato: '#7a54b0' },
+      cabeca: 'capuz',
+      pecas: [{ tipo: 'lencol-capuz', cor: 'principal' }],
+    }),
+  },
+  {
+    id: 'monstrinho-peludo',
+    grupo: 'temas',
+    tema: 'noite-das-fantasias',
+    nomes: { feminino: 'Monstrinho Peludo', masculino: 'Monstrinho Peludo' },
+    // o verde-musgo do Bento primeiro; o roxo e o laranja do mundo (nunca azul: não lembra
+    // nenhum monstro peludo conhecido)
+    cores: ['#6b7444', '#7a5aa8', '#c87a3a'],
+    corEmblema: '#d9863c',
+    visual: mesmo({
+      roupa: { camisa: 'principal', manga: 'principal', calca: 'principal', sapato: 'principal' },
+      cabeca: 'capuz',
+      pecas: [
+        { tipo: 'macacao-tufos', cor: 'principal' },
+        { tipo: 'capuz-monstro', cor: 'principal' },
+        { tipo: 'pezoes', cor: 'principal' },
+      ],
+    }),
+  },
 ];
 
 /**
