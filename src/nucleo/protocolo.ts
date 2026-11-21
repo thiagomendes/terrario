@@ -212,6 +212,11 @@ type ComandoSemSeq =
    */
   | { t: 'baile'; a: 'comprar'; i: number }
   /**
+   * Spec 027 (T16): a varinha de condão no ponto do chão tocado. O núcleo confere a varinha na
+   * mão (a fantasia), o alcance e a espera, e manda a florzinha para todos (sem estado salvo).
+   */
+  | { t: 'baile'; a: 'varinha'; x: number; y: number; z: number }
+  /**
    * Spec 026 (parte 3): na Casa anos 80, trocar o canal da TV, pôr a fita da locadora no
    * videocassete, ligar e desligar o disco e pegar um brinquedo do baú; na pista de skate, pedir
    * o trilho da rampa para o lado `l` (1 a curva do leste, -1 a do oeste). O núcleo confere o

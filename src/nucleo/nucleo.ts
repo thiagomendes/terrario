@@ -889,6 +889,8 @@ export function criarNucleo(op: OpcoesNucleo) {
           const o = jogadores.get(id);
           return o ? jogadorDaVila(o) : undefined;
         },
+        // T16: a fantasia da criança (a varinha na mão)
+        aparencia: (id) => jogadores.get(id)?.perfil.aparencia,
         espalhar: (e) => eventosGerais.push(e),
         sujar: () => {},
       })
@@ -2795,6 +2797,8 @@ export function criarNucleo(op: OpcoesNucleo) {
       case 'baile':
         // spec 027 (T14): comprar nas barracas da festa (o módulo confere o resto)
         if (c.a === 'comprar') baile?.comando(j.id, { a: 'comprar', i: c.i });
+        // (T16: a varinha de condão)
+        else if (c.a === 'varinha') baile?.comando(j.id, { a: 'varinha', x: c.x, y: c.y, z: c.z });
         break;
       case 'salvar':
         // o anfitrião responde (precisa do pedido)

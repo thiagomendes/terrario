@@ -130,6 +130,9 @@ import type { PlanoVila } from '../world/vilaNeon';
 import type { PlanoBaile } from '../world/noiteFantasias';
 import { criarRenderBaile } from './baile';
 import { criarAbracoNaTela, type AbracoNaTela } from './baile/abraco';
+import { camadaDaVarinha, criarFloresDaVarinha, type FloresDaVarinha } from './baile/flor';
+import { temVarinha } from '../personagem/fantasias';
+import { VARINHA } from '../jogo/baile';
 import { N_BAILE, POVOADO_BAILE } from '../jogo/baile';
 import { criarLampioes, ROSTO_DO_LAMPIAO } from './lampioes';
 import { metaGerada } from '../world/chunk';
@@ -467,6 +470,10 @@ export interface EstadoDepuracao {
   semTransparenciaDoBoneco?: boolean;
   /** Spec 026 (parte 3): a chave da dica de toque à vista na Vila Neon, ou null. */
   dicaVila?: () => string | null;
+  /** Spec 027 (T16): as florzinhas da varinha à vista (testes) e o toque da varinha num ponto. */
+  floresVarinha?: () => { flores: number; malhas: number; tamanhos: number[] } | null;
+  varinha?: (x: number, y: number, z: number) => void;
+  eventosFlor?: { e: 'baileFlor'; quem: string; x: number; y: number; z: number; t: number }[];
   /** Spec 027 (T14): a dica de comprar à vista na festa (testes). */
   dicaBaile?: () => { chave: string; texto: string; t: { x: number; y: number } } | null;
   /** Spec 030: os sítios (Rancho) a até 220 blocos do jogador, do mais perto ao mais longe. */
@@ -1991,6 +1998,8 @@ export function criarCena(
   estado.baile = () => planoBaile;
   /** T11: o abraço do Bento na tela (criado com os moradores, mais abaixo). */
   let abracoBaile: AbracoNaTela | null = null;
+  /** T16: as florzinhas da varinha (criadas mais abaixo). */
+  let floresVarinha: FloresDaVarinha | null = null;
   const renderBaile = planoBaile
     ? criarRenderBaile(scene, planoBaile, {
         temMalha: (cx, cz) => malhas.has(chave(cx, cz)),
@@ -3631,6 +3640,12 @@ export function criarCena(
       comecarRefeicao();
       return;
     }
+    // spec 027 (T16): na festa, com a varinha na mão (a fantasia) e a mão do bloco vazia, o toque
+    // no chão é a varinha: a florzinha nasce em cima do bloco tocado (o núcleo confere o alcance)
+    if (planoBaile && !p && a && a.normal.y === 1 && !naMira && temVarinha(aparencia)) {
+      usarVarinha(a.x + 0.5, a.y + 1, a.z + 0.5);
+      return;
+    }
     if (a && ehEnxada(def?.ferramenta)) {
       ararNaMira(a);
       return;
@@ -4730,6 +4745,7 @@ export function criarCena(
     refeicoes.atualizar(dt);
     comprasVila?.atualizar(dt);
     comprasBaile?.atualizar(dt);
+    floresVarinha?.atualizar(dt);
     const vivas = pool.vivas();
     for (let i = 0; i < pecasParticulas.length; i++) {
       const { peca, pino, confete, gota } = pecasParticulas[i];
@@ -5749,6 +5765,10 @@ export function criarCena(
       return c ? { x: c.x, y: yBate, z: c.z, yaw: c.yaw } : null;
     });
   }
+  // spec 027 (T16): as florzinhas da varinha
+  floresVarinha = planoBaile ? criarFloresDaVarinha(scene, { preparar: prepararEfeito }) : null;
+  estado.floresVarinha = () => floresVarinha?.estado() ?? null;
+  estado.varinha = (x, y, z) => usarVarinha(x, y, z);
   // spec 027 (T11): o abraço do Bento (o Bento chega até a criança; os dois se abraçam)
   if (planoBaile) {
     const abraco = criarAbracoNaTela({
@@ -5977,6 +5997,20 @@ export function criarCena(
    * Spec 032: começa a refeição com a comida da mão: o núcleo come no começo (e confere de novo),
    * a tela faz as três mordidas na hora (o toque responde sem esperar a rede).
    */
+  /**
+   * Spec 027 (T16): a varinha no ponto do chão tocado: a mão sobe na hora (o toque responde sem
+   * esperar a rede) e o núcleo manda a florzinha para todos.
+   */
+  let ultimaVarinha = -Infinity;
+  function usarVarinha(x: number, y: number, z: number): void {
+    const agora = performance.now();
+    if (agora - ultimaVarinha < VARINHA.espera * 1000) return;
+    ultimaVarinha = agora;
+    enviarTelemetria(true);
+    enviar({ t: 'baile', a: 'varinha', x, y, z });
+    animador.definirCamada(camadaDaVarinha());
+  }
+
   function comecarRefeicao(): void {
     const p = hotbar.pilhaAtiva();
     if (!p || !obterItem(p.item)?.comida || sobrevivenciaMorto()) return;
@@ -7115,6 +7149,12 @@ export function criarCena(
       case 'baileAbraco':
       case 'baileSolta':
         abracoBaile?.evento(e);
+        break;
+      // spec 027 (T16): a florzinha da varinha (a mão do amigo sobe; a daqui já subiu no toque)
+      case 'baileFlor':
+        floresVarinha?.evento(e);
+        if (e.quem !== voce) outrosJogadores.animadorDe(e.quem)?.definirCamada(camadaDaVarinha());
+        estado.eventosFlor = [...(estado.eventosFlor ?? []).slice(-20), { ...e, t: performance.now() / 1000 }];
         break;
       case 'veiculo':
         renderVeiculos?.evento(e.id, e.o);

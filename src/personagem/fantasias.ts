@@ -1030,6 +1030,19 @@ export function fantasiaPorId(id: unknown): FantasiaDef | undefined {
   return typeof id === 'string' ? POR_ID.get(id) : undefined;
 }
 
+/**
+ * Spec 027 (T16): a criança está com a varinha na mão (a fantasia vestida tem a varinha e ela
+ * não tirou)? `a` é a aparência como chega do perfil (no núcleo, sem conferir o resto).
+ */
+export function temVarinha(a: unknown): boolean {
+  const f = (a as { fantasia?: { id?: unknown; sem?: unknown }; corpo?: unknown } | null | undefined)?.fantasia;
+  const def = f ? fantasiaPorId(f.id) : undefined;
+  if (!def) return false;
+  const corpo = (a as { corpo?: unknown }).corpo === 'masculino' ? 'masculino' : 'feminino';
+  const sem = Array.isArray(f!.sem) ? (f!.sem as unknown[]) : [];
+  return def.visual[corpo].pecas.some((p) => p.tipo === 'varinha') && !sem.includes('varinha');
+}
+
 /** Nome pelo corpo: "Princesa das Estrelas" / "Príncipe das Estrelas". */
 export function rotuloDaFantasia(
   fantasia: FantasiaDef | FantasiaVestida | string,

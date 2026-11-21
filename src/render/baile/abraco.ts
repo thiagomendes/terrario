@@ -116,7 +116,8 @@ export function criarAbracoNaTela(op: OpcoesAbracoNaTela) {
           coracoes: 0,
         };
         vestir(atual);
-      } else if (atual && atual.quem === e.quem && atual.criatura === e.criatura) soltar(atual);
+      } else if (e.e === 'baileSolta' && atual && atual.quem === e.quem && atual.criatura === e.criatura)
+        soltar(atual);
     },
     atualizar(dt: number): void {
       const a = atual;

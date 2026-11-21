@@ -230,6 +230,9 @@ export function sanear(c: unknown): Comando | null {
       // spec 027 (T14): comprar o lanche de uma barraca da festa (o índice do lugar de comprar)
       if (o.a === 'comprar' && inteiro(o.i, 0, 15))
         return { t: 'baile', a: 'comprar', i: o.i } as unknown as Comando;
+      // spec 027 (T16): a varinha no ponto do chão tocado (números finitos, no mundo)
+      if (o.a === 'varinha' && [o.x, o.y, o.z].every((v) => typeof v === 'number' && Number.isFinite(v) && Math.abs(v) < 1e7))
+        return { t: 'baile', a: 'varinha', x: o.x, y: o.y, z: o.z } as unknown as Comando;
       return null;
     case 'pularPerto':
       // spec 021: só o id de um amigo (texto curto)

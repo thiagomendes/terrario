@@ -43,5 +43,12 @@ export const ABRACO = {
   /** A criança que anda mais que isto desde o começo solta o abraço (mexeu no controle). */
   solta: 0.35,
 } as const;
+/**
+ * T16: a varinha de condão. Com ela na mão, o toque no chão a até `alcance` blocos faz brilhar
+ * a estrela e nascer uma florzinha, que some sozinha em `flor` s (evento, sem estado salvo). Uma
+ * por vez a cada `espera` s (o limite por segundo).
+ */
+export const VARINHA = { alcance: 5, flor: 4, espera: 0.6 } as const;
+
 /** Quanto dura o abraço inteiro (s). */
 export const DURACAO_ABRACO = ABRACO.entra + ABRACO.balanca + ABRACO.sai;

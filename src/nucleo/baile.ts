@@ -15,7 +15,8 @@
 import type { PlanoBaile, PostoBaile } from '../world/noiteFantasias';
 import type { Profissao } from '../world/povoado';
 import type { Criatura, TipoSer } from '../jogo/criaturas';
-import { ABRACO, DURACAO_ABRACO, N_BAILE, POVOADO_BAILE, VIZINHOS_DA_RUA } from '../jogo/baile';
+import { ABRACO, DURACAO_ABRACO, N_BAILE, POVOADO_BAILE, VARINHA, VIZINHOS_DA_RUA } from '../jogo/baile';
+import { temVarinha } from '../personagem/fantasias';
 import { balcoesDoBaile } from '../jogo/compra';
 import { TOQUES_POR_SEGUNDO } from '../jogo/show';
 import { criarComprasDaVila, type EventoCompras, type JogadorCompra } from './vilaCompras';
@@ -67,6 +68,8 @@ export interface CtxBaile {
   carregado(x: number, z: number): boolean;
   /** T14: quem compra (a mochila e a barrinha), ou undefined. */
   comprador?(id: string): JogadorCompra | undefined;
+  /** T16: a aparência da criança (o perfil), para saber se a varinha está na mão. */
+  aparencia?(id: string): unknown;
   /** Evento para todos (o abraço, a compra). */
   espalhar(e: EventoBaile | EventoCompras): void;
   /** O estado mudou: a tela precisa do quadro novo. */
@@ -77,10 +80,15 @@ export type EventoBaile =
   /** T11: o Bento abraçou a criança `quem` (a criatura é o Bento; x, y, z: os pés dela). */
   | { e: 'baileAbraco'; quem: string; criatura: number; x: number; y: number; z: number }
   /** T11: o abraço acabou antes (a criança mexeu no controle ou saiu). */
-  | { e: 'baileSolta'; quem: string; criatura: number };
+  | { e: 'baileSolta'; quem: string; criatura: number }
+  /** T16: a varinha de `quem` fez nascer uma florzinha no chão em x, y, z (some sozinha). */
+  | { e: 'baileFlor'; quem: string; x: number; y: number; z: number };
 
-/** O comando `baile` (T14: comprar o lanche `i` de `balcoesDoBaile`). */
-export type ComandoBaile = { a: 'comprar'; i: number };
+/**
+ * O comando `baile`: comprar o lanche `i` de `balcoesDoBaile` (T14); a varinha no ponto x, y, z
+ * do chão tocado (T16).
+ */
+export type ComandoBaile = { a: 'comprar'; i: number } | { a: 'varinha'; x: number; y: number; z: number };
 
 /** O abraço de agora (um por vez). */
 interface AbracoAgora {
@@ -197,6 +205,21 @@ export function criarBaile(ctx: CtxBaile) {
     jogador: (id) => ctx.comprador?.(id),
     espalhar: ctx.espalhar,
   });
+  // ------------------------------------------------------------------ a varinha (T16)
+  /** Quando cada criança fez a última florzinha. */
+  const ultimaFlor = new Map<string, number>();
+  function varinha(j: JogadorBaile, c: { x: number; y: number; z: number }): void {
+    if (!temVarinha(ctx.aparencia?.(j.id))) return;
+    // o chão tocado a até 5 blocos (dos pés, no chão; um tico de folga em altura)
+    if (Math.hypot(c.x - j.x, c.z - j.z) > VARINHA.alcance || Math.abs(c.y - j.y) > 3) return;
+    const t = ctx.agora();
+    if (t - (ultimaFlor.get(j.id) ?? -Infinity) < VARINHA.espera) return;
+    ultimaFlor.set(j.id, t);
+    if (ultimaFlor.size > 256) ultimaFlor.delete(ultimaFlor.keys().next().value as string);
+    const r = (v: number) => Math.round(v * 100) / 100;
+    ctx.espalhar({ e: 'baileFlor', quem: j.id, x: r(c.x), y: r(c.y), z: r(c.z) });
+  }
+
   const toques = new Map<string, number[]>();
   function podeTocar(id: string): boolean {
     const t = ctx.agora();
@@ -218,11 +241,12 @@ export function criarBaile(ctx: CtxBaile) {
       cuidarDoAbraco();
       compras.passo();
     },
-    /** O comando `baile` (já saneado): comprar numa barraca da festa. */
+    /** O comando `baile` (já saneado): comprar numa barraca da festa; a varinha. */
     comando(id: string, c: ComandoBaile): void {
       const j = ctx.jogador(id);
       if (!j || j.morto || !podeTocar(id)) return;
       if (c.a === 'comprar') compras.comando(id, c);
+      else if (c.a === 'varinha') varinha(j, c);
     },
     /** Testes: as compras (os lanches a caminho). */
     compras,
