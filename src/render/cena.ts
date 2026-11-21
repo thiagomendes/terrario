@@ -264,6 +264,7 @@ import {
 } from '../player/interacao';
 import type { DonosExportados, EdicoesExportadas } from '../world/edicoes';
 import { diferencaDasEdicoes } from '../cliente/diferencaEdicoes';
+import { nomesDaObra, obrasQueFicaramProntas } from '../cliente/obrasDaVolta';
 import { chunksAfetados } from './remalha';
 import { criarFilaRemalha, MAX_REMALHAS_POR_QUADRO } from './fila';
 import {
@@ -1256,10 +1257,7 @@ export function criarCena(
    */
   const obrasDoMundo = new Map<number, { nomes: string[]; feita: boolean }>();
   for (const [k, o] of Object.entries(sanearObras(dadosIniciais?.extras?.['obras'])))
-    obrasDoMundo.set(Number(k), {
-      nomes: o.ajudantes.map(([, a]) => a).filter((a) => a),
-      feita: !!o.feita,
-    });
+    obrasDoMundo.set(Number(k), { nomes: nomesDaObra(o), feita: !!o.feita });
   definirObrasFeitas([...obrasDoMundo].filter(([, o]) => o.feita).map(([n]) => n));
   // testes de tela (T11): as obras feitas do mundo aberto, não só as feitas nesta sessão
   estado.obrasFeitas = obrasFeitas();
@@ -3039,8 +3037,20 @@ export function criarCena(
    * Spec 035, seção 3: a volta (queda ou ressincronização) traz o mundo como está. Os donos
    * primeiro (os blocos apontam para a tabela); depois só as células que mudaram, e a edição
    * que saiu volta ao terreno gerado. As previsões ainda não confirmadas ficam.
+   *
+   * Antes da diferença, as obras do canteiro que ficaram prontas com a criança fora (o evento
+   * delas foi num quadro que ela não recebeu): viram parte da cidade, sem festa nem som. Senão,
+   * as células da obra feita, que o servidor já tirou das edições, voltariam ao terreno gerado
+   * sem a obra, e o prédio pronto viraria canteiro vazio.
    */
-  function aplicarVolta(bv: { edicoes: EdicoesExportadas; donos: DonosExportados }): number {
+  function aplicarVolta(bv: {
+    edicoes: EdicoesExportadas;
+    donos: DonosExportados;
+    obras?: unknown;
+  }): number {
+    if (cidadeObra)
+      for (const o of obrasQueFicaramProntas(obrasDoMundo, bv.obras))
+        obraFicouPronta(o.canteiro, o.nomes);
     edicoes.donos.importar(sanearDonos(bv.donos));
     const mudancas = diferencaDasEdicoes(edicoes.exportar(), bv.edicoes ?? {}, (x, y, z) =>
       cliente.pendente(x, y, z),
@@ -6846,6 +6856,23 @@ export function criarCena(
       }
   }
 
+  /**
+   * A obra ficou pronta: vira parte da cidade (como no núcleo). As células planejadas saem das
+   * edições, os chunks dela (e do canteiro que abriu) são gerados de novo, e a placa aparece.
+   * Do evento da obra (com a festa) e da volta (spec 035, sem festa nem som).
+   */
+  function obraFicouPronta(canteiro: number, nomes: string[]): void {
+    if (!cidadeObra) return;
+    const antes = canteirosAbertos();
+    obrasDoMundo.set(canteiro, { nomes, feita: true });
+    definirObrasFeitas([...obrasDoMundo].filter(([, o]) => o.feita).map(([n]) => n));
+    const abriram = canteirosAbertos().filter((k) => !antes.includes(k));
+    for (const c of celulasPlanejadas(cidadeObra, canteiro)) edicoes.remover?.(c.x, c.y, c.z);
+    regerarCanteiros([canteiro, ...abriram]);
+    placaDaObra(canteiro);
+    estado.obrasFeitas = obrasFeitas();
+  }
+
   /** O evento da obra: o progresso dos outros, a camada fechada e a obra feita. */
   function eventoObra(e: Extract<EventoNucleo, { e: 'obra' }>): void {
     if (!cidadeObra) return;
@@ -6861,15 +6888,7 @@ export function criarCena(
       if (e.camada && perto) acordeDaCamada(motorAudio, 1, somObraGravado);
       return;
     }
-    // a obra ficou pronta: vira parte da cidade (como no núcleo)
-    const antes = canteirosAbertos();
-    obrasDoMundo.set(e.canteiro, { nomes: e.nomes ?? [], feita: true });
-    definirObrasFeitas([...obrasDoMundo].filter(([, o]) => o.feita).map(([n]) => n));
-    const abriram = canteirosAbertos().filter((k) => !antes.includes(k));
-    for (const c of celulasPlanejadas(cidadeObra, e.canteiro)) edicoes.remover?.(c.x, c.y, c.z);
-    regerarCanteiros([e.canteiro, ...abriram]);
-    placaDaObra(e.canteiro);
-    estado.obrasFeitas = obrasFeitas();
+    obraFicouPronta(e.canteiro, e.nomes ?? []);
     const todas = obrasFeitas().length >= 6;
     if (perto) {
       festaDaObra(e.canteiro, todas);
