@@ -318,7 +318,7 @@ Só no cliente.
 - **B. O primeiro quadro perdido:**
   - Ana leva o mundo para a nuvem; Bia entra pelo link com a Ana já na sala;
   - um script de início na página da Bia joga fora a primeira mensagem com `"primeiro":true`;
-  - mede do bem-vindo da Bia até ela ver a Ana: **meta de até 3 s**;
+  - mede do mundo pronto da Bia até ela ver a Ana: **meta de até 3 s**; o total, do bem-vindo até ver a Ana, fica registrado (a montagem da cena vem antes e é a de qualquer entrada);
   - `ressincronizacoes === 1`;
   - o aviso de queda e o "Voltamos!" não aparecem em nenhum momento (conferidos o tempo todo, não só no fim);
   - **falha antes do conserto:** Bia nunca vê a Ana.
@@ -342,7 +342,8 @@ Só no cliente.
 - **Quem cria o mundo vê o amigo,** no computador e no celular, sempre:
   - no teste da corrida, com espera de 0 ms a 2 s entre o bem-vindo e a cena: o filho vê o pai em 5 de 5 esperas, 3 rodadas cada, sem nenhuma ressincronização.
 - **Se o primeiro quadro se perder mesmo assim, ou faltar um no meio** (e2e B e B, buraco):
-  - do bem-vindo da Bia até ela ver a Ana: até 3 s, medido e escrito na Situação;
+  - do mundo pronto da Bia até ela ver a Ana: até 3 s, medido e escrito na Situação;
+  - o total, do bem-vindo até ver a Ana, fica registrado e comparado com a entrada normal (do link ao mundo pronto, de 3,3 a 6,2 s na máquina do dono): a montagem da cena é a mesma de qualquer entrada, e a rede de segurança soma uns 120 ms (decisão do orquestrador, 20 nov);
   - 1 ressincronização;
   - nenhuma tela, aviso ou texto novo (decisão do dono);
   - a criança não precisa fazer nada.

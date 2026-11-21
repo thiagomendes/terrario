@@ -94,4 +94,4 @@ Os e2e rodam na placa de vídeo: `scripts/e2e-gpu.sh <spec>`, e depois `scripts/
   - **E2e na placa de vídeo:** B, buraco e B2 passam; o C espera a T07.
     - **B, a meta de 3 s:** a linha do tempo da Bia mostra a rede de segurança rápida: 120 ms do quadro jogado fora ao bem-vindo novo. O que passa de 3 s é a montagem da cena: o mundo fica pronto uns 5,6 s depois do bem-vindo, e a página só trata as mensagens quando a montagem solta.
     - O teste agora mede os 3 s **a partir do mundo pronto** (223 ms) e registra também o total (5,8 s). Na entrada normal, do link ao mundo pronto, foram de 3,3 a 6,2 s nesta máquina.
-    - **Decisão para o orquestrador:** de onde a meta conta.
+    - **Decisão do orquestrador (20 nov, 22h14):** os 3 s contam a partir do mundo pronto (medido: 223 ms). O total, do bem-vindo até ver a Ana (medido: 5,8 s), fica registrado e comparado com a entrada normal, de 3,3 a 6,2 s do link ao mundo pronto. A montagem da cena é a mesma de qualquer entrada; a rede de segurança soma uns 120 ms. A "Experiência medida" e o e2e B do spec.md foram ajustados.
