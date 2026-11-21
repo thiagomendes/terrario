@@ -23,6 +23,7 @@ import type { PecaBaile, PlanoBaile } from '../../world/noiteFantasias';
 import { desenharPecaBaile, type DesenhoBaile } from './pecas';
 import { criarSosiasBaile, type SosiasBaile } from './sosias';
 import { criarPaletaLuz } from '../vila/luzes';
+import { criarBichosBaile, type BichosBaile } from './bichos';
 
 export interface OpcoesRenderBaile {
   /** A malha do chunk está desenhada? */
@@ -52,6 +53,8 @@ export interface RenderBaile {
   tocar(t: ToqueBaile): void;
   /** O que está animando agora (testes). */
   animando(): { abobora: number; portas: number[] };
+  /** T12: o Tufinho no banquinho e a corujinha no poleiro. */
+  bichos: BichosBaile;
   descartar(): void;
 }
 
@@ -218,11 +221,14 @@ export function criarRenderBaile(
   }
 
   const sosias = criarSosiasBaile(scene, plano, opcoes);
+  // T12: o Tufinho e a corujinha (no plástico das peças, com a cor nos vértices)
+  const bichos = criarBichosBaile(scene, plano, matCorpo, opcoes.temMalha, (m) => opcoes.tapaOGlow?.(m));
   let semChao = 0;
   let luzAtual = 1;
 
   return {
     sosias,
+    bichos,
     quadro(t, x, z, noite, alto = 0) {
       relogio = t;
       noiteAgora = noite;
@@ -241,6 +247,7 @@ export function criarRenderBaile(
       faltam.sort((a, b) => a[0] - b[0]);
       for (const [, k, cx, cz] of faltam.slice(0, porQuadro)) vivos.set(k, montar(cx, cz, porChunk.get(k)!));
       sosias.quadro(t, x, z, noiteAgora, alto);
+      bichos.quadro(t);
       // de noite o plástico escurece um pouco com o chão (nunca escuro: a noite é mansa aqui)
       const luzPecas = 1 - 0.38 * noite;
       if (Math.abs(luzPecas - luzAtual) > 0.01) {
@@ -302,6 +309,7 @@ export function criarRenderBaile(
       for (const v of vivos.values()) soltar(v);
       vivos.clear();
       sosias.descartar();
+      bichos.descartar();
       paleta.descartar();
       pl.descartar();
     },

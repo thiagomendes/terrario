@@ -95,8 +95,9 @@ export function construirNoiteDasFantasias(): Tema {
         marco: 'fonte',
         planta: 'baile',
       },
-      // o fantasminha de lençol da noite é manso: flutua, ri e vai embora, nunca assusta
-      noite: 'mansa',
+      // o fantasminha de lençol da noite é manso: flutua devagarinho (no máximo 0,5 bloco por
+      // segundo), nunca vem na direção da criança e nunca assusta (T12)
+      noite: 'devagar',
     },
     // a reserva sintetizada (a trilha gravada da festa vem na T21): travessa, em escala maior
     musica: {

@@ -553,6 +553,74 @@ function frear(c: Criatura, k: number): void {
 }
 
 /** Sorteia um destino de passeio; o peixe só escolhe pontos dentro d'água. */
+/**
+ * Spec 027: a fantasminha devagar flutua a isto (blocos por segundo). A meta é no máximo 0,5:
+ * com o empurrãozinho de quem esbarra noutra, ainda fica abaixo.
+ */
+export const VEL_DEVAGAR = 0.36;
+/** Perto disto (blocos), a fantasminha devagar só se afasta (nunca vai na direção da criança). */
+export const LONGE_DEVAGAR = 16;
+
+/**
+ * Spec 027 (T12): a fantasminha de lençol da Noite das Fantasias. Mansa e devagar: flutua a no
+ * máximo `VEL_DEVAGAR`; com a criança a menos de `LONGE_DEVAGAR`, só passeia para longe dela (o
+ * alvo do passeio nunca chega mais perto), e de perto (ou na luz) se afasta devagarinho, dando
+ * uma risadinha; nunca chega perto por curiosidade, nunca persegue, nunca ataca.
+ */
+function passoDevagar(
+  c: Criatura,
+  def: DefCriatura,
+  dt: number,
+  m: Mundo,
+  j: Jogador,
+  rng: Gerador,
+  dxj: number,
+  dzj: number,
+  luz: number,
+  ev: EventoCriatura[],
+): void {
+  const fator = VEL_DEVAGAR / def.velocidade;
+  const dh = Math.hypot(dxj, dzj);
+  // (com folga: quem passeava para lá a 16,1 blocos já para antes de cruzar os 16)
+  const perto = j.vivo && dh < LONGE_DEVAGAR + 2;
+  if ((j.vivo && dh < 4) || luz >= 9) {
+    if (c.estado !== 'fugir') {
+      ev.push({ tipo: 'espantada', criatura: c });
+      ev.push({ tipo: 'som', criatura: c });
+    }
+    c.estado = 'fugir';
+    c.tempoEstado = 2.5;
+    andarPara(c, def, c.x - dxj * 4, c.z - dzj * 4, fator);
+    return;
+  }
+  if (c.estado !== 'vagar') {
+    c.estado = 'vagar';
+    c.tempoEstado = 0;
+  }
+  if (c.tempoEstado <= 0) {
+    c.tempoEstado = 4 + rng() * 4;
+    sortearAlvo(c, m, rng, 12);
+    // com a criança por perto, o passeio nunca chega mais perto dela: o alvo vira para longe
+    if (perto) {
+      const ax = c.alvoX - c.x;
+      const az = c.alvoZ - c.z;
+      // (dxj, dzj: da fantasminha para a criança)
+      if (ax * dxj + az * dzj > 0) {
+        c.alvoX = c.x - ax;
+        c.alvoZ = c.z - az;
+      }
+    }
+  }
+  // a criança chegou mais perto no meio do passeio: o que for na direção dela para
+  if (perto && (c.alvoX - c.x) * dxj + (c.alvoZ - c.z) * dzj > 0) {
+    // para ali mesmo, olhando para ela (nem o embalo do passeio leva na direção dela)
+    c.vx = 0;
+    c.vz = 0;
+    c.yawAlvo = Math.atan2(dxj, dzj);
+  } else andarPara(c, def, c.alvoX, c.alvoZ, fator);
+  if (rng() < dt * 0.15) ev.push({ tipo: 'som', criatura: c });
+}
+
 function sortearAlvo(c: Criatura, m: Mundo, rng: Gerador, raio: number): void {
   const peixe = CRIATURAS[c.tipo].comportamento === 'peixe';
   for (let i = 0; i < 4; i++) {
@@ -1258,6 +1326,11 @@ export function passoCriatura(
   noite: number,
   /** Spec 013: a criatura da noite é mansa (só pia e foge, nunca ataca). */
   mansa = false,
+  /**
+   * Spec 027: e ainda devagar (a fantasminha da Noite das Fantasias): flutua a no máximo
+   * `VEL_DEVAGAR`, nunca chega perto por curiosidade e nunca vai na direção da criança.
+   */
+  devagar = false,
 ): EventoCriatura[] {
   const def = CRIATURAS[c.tipo];
   const ev: EventoCriatura[] = [];
@@ -1406,6 +1479,11 @@ export function passoCriatura(
         // o dia a desfez: para aqui (senão a perseguição ou o vagar apagavam o 'morrendo' e
         // ela ficava no mundo, invisível, soltando um evento de morte por quadro)
         if (c.estado === 'morrendo') break;
+        // spec 027: a fantasminha devagar nunca corre (nem da luz: só se afasta devagarinho)
+        if (devagar) {
+          passoDevagar(c, def, dt, m, j, rng, dxj, dzj, luz, ev);
+          break;
+        }
         if (luz >= 9) {
           c.estado = 'fugir';
           c.tempoEstado = 2;

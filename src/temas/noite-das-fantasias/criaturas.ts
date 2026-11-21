@@ -68,17 +68,21 @@ function aboboraSaltitante(): PecaCriatura[] {
 function morceguinho(): PecaCriatura[] {
   const corpo = '#9b80d6';
   const asa = '#8a6dc9';
-  const borda = '#d4c4f4';
+  // T12: a borda das asas bem clara (de longe, de noite, o contorno do morceguinho se lê no céu
+  // roxo e no chão: antes ele virava uma mancha roxa)
+  const borda = '#ece2ff';
+  // (do tamanho do esboço: a régua da largura do papel coelho não deixa crescer mais)
   const b = bicho(1.3);
   for (const s of [-1, 1]) b.bola(0.025, '#6b52a8', [1, 0.8, 1.2], [s * 0.035, 0.02, 0.02]);
   b.bola(0.1, corpo, [1, 1.1, 0.9], [0, 0.13, 0]);
-  b.bola(0.068, COR_BAILE.creme, [1, 1.15, 0.5], [0, 0.12, 0.06]);
+  b.bola(0.075, COR_BAILE.creme, [1, 1.2, 0.55], [0, 0.12, 0.06]);
   for (const s of [-1, 1]) {
     const papel = s > 0 ? 'asa0' : 'asa1';
-    // a asa aberta em leque: a membrana redonda, a borda clara por baixo e o bracinho por cima
-    b.bola(0.15, borda, [1.05, 0.62, 0.12], [s * 0.2, 0.16, -0.012], { papel });
-    b.bola(0.14, asa, [1, 0.6, 0.14], [s * 0.2, 0.175, -0.01], { papel });
-    b.caixa([0.3, 0.024, 0.024], [s * 0.2, 0.25, 0], '#6b52a8', 0.012, { papel, rot: [0, 0, s * 0.12] });
+    // T12: a asa maior e mais aberta, em leque: a membrana redonda, a borda clara que sobra em
+    // volta dela (por baixo e pela ponta) e o bracinho por cima
+    b.bola(0.215, borda, [1.06, 0.64, 0.12], [s * 0.27, 0.15, -0.014], { papel });
+    b.bola(0.19, asa, [1, 0.6, 0.14], [s * 0.26, 0.175, -0.01], { papel });
+    b.caixa([0.42, 0.026, 0.026], [s * 0.26, 0.27, 0], '#6b52a8', 0.013, { papel, rot: [0, 0, s * 0.12] });
   }
   b.grupo([0, 0.27, 0.01], 'cabeca');
   b.bola(0.1, corpo, [1.12, 1, 1], [0, 0, 0]);
@@ -87,6 +91,9 @@ function morceguinho(): PecaCriatura[] {
     b.caixa([0.09, 0.09, 0.035], [s * 0.065, 0.075, -0.01], corpo, 0.014, { rot: [0, 0, Math.PI / 4 - s * 0.2] });
     b.caixa([0.045, 0.045, 0.02], [s * 0.065, 0.085, 0.01], '#ffb3c1', 0.008, { rot: [0, 0, Math.PI / 4 - s * 0.2] });
   }
+  // T12: os olhinhos claros (o disco creme atrás da bolinha escura: de longe, dois pontinhos de
+  // luz na carinha)
+  for (const s of [-1, 1]) b.bola(0.034, COR_BAILE.creme, [1, 1.05, 0.35], [s * 0.042, 0.012, 0.088]);
   b.olhos(0.01, 0.09, 0.042, 0.026);
   for (const [x, y] of [
     [-0.022, -0.03],

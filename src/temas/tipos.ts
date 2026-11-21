@@ -254,8 +254,10 @@ export interface EstiloMundo {
   /**
    * Spec 013: como a criatura da noite age. Sem o campo, assusta como sempre; 'mansa'
    * (Rancho Alegre) só pia e foge. O comportamento vem da T04; o campo já passa pela nuvem.
+   * Spec 027: 'devagar' (a fantasminha da Noite das Fantasias) é mansa e ainda flutua devagar
+   * (no máximo 0,5 bloco por segundo) e nunca vem na direção da criança.
    */
-  noite?: 'assusta' | 'mansa';
+  noite?: 'assusta' | 'mansa' | 'devagar';
   /**
    * Spec 014: a comida que doma o papel raposa. Sem o campo, frutinhas (como sempre); na
    * Cidade Grande, 'peixe' (o gato de rua é domado com peixe fresco ou assado).

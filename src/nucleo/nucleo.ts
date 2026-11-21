@@ -216,7 +216,7 @@ export interface OpcoesNucleo {
    * Spec 013: a criatura da noite deste mundo. Padrão: a do estilo do mundo definido antes de
    * criar o núcleo (o servidor só conhece o estilo; cada sala guarda a sua aqui).
    */
-  noite?: 'assusta' | 'mansa';
+  noite?: 'assusta' | 'mansa' | 'devagar';
   /**
    * Spec 016: id do dono do mundo (na nuvem, quem criou a sala; no servidor local, o jogador
    * local). O que ele coloca não entra na tabela de donos: edição sem dono é dele, e assim

@@ -148,7 +148,8 @@ export function criarRenderCriaturas(
    * bicho de brinquedo, não um fantasma: perto da luz ela encolhe e some, mas nunca fica
    * meio transparente (só o espectro que assusta se desfaz em bruma).
    */
-  const translucida = (tipo: string) => tipo === 'espectro' && tema().mundo.noite !== 'mansa';
+  const translucida = (tipo: string) =>
+    tipo === 'espectro' && tema().mundo.noite !== 'mansa' && tema().mundo.noite !== 'devagar';
   /** Moradores de brinquedo: o boneco B com as cores e peças do tema (spec 012, A2). */
   const moradores = new Map<
     number,

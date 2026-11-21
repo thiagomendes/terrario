@@ -89,7 +89,7 @@ export interface CriadoSalvo {
 
 export interface OpcoesPopulacao {
   /** Spec 013: a criatura da noite do mundo (do estilo do tema). Sem o campo, assusta. */
-  noite?: 'assusta' | 'mansa';
+  noite?: 'assusta' | 'mansa' | 'devagar';
   /** Spec 016: id do dono do mundo (chama e leva todos os bichos criados). */
   donoDoMundo?: string | null;
 }
@@ -105,7 +105,9 @@ const COMEM: ReadonlySet<TipoSer> = new Set(['cervo', 'coelho']);
 
 export function criarPopulacao(rng: Gerador, salvo?: unknown, opcoes: OpcoesPopulacao = {}) {
   const lista: Criatura[] = [];
-  const mansa = opcoes.noite === 'mansa';
+  // spec 027: a fantasminha 'devagar' é mansa e ainda flutua devagar, sem vir na direção de ninguém
+  const devagar = opcoes.noite === 'devagar';
+  const mansa = opcoes.noite === 'mansa' || devagar;
   const donoDoMundo = opcoes.donoDoMundo ?? null;
   /** Spec 016: o jogador pode levar o bicho? (sem id: o jogo de um só, como antes) */
   const leva = (c: Criatura, j: Jogador) =>
@@ -609,7 +611,7 @@ export function criarPopulacao(rng: Gerador, salvo?: unknown, opcoes: OpcoesPopu
             j.z = c.z;
           }
         } else if (deAlguem && j.mao && !leva(c, j)) j = comoVisto(j);
-        const evc = passoCriatura(c, dt, m, j, rng, hostis, noite, mansa);
+        const evc = passoCriatura(c, dt, m, j, rng, hostis, noite, mansa, devagar);
         for (const e of evc) {
           if (e.tipo === 'ataque' || e.tipo === 'espantada') e.jogador = j;
           ev.push(e);

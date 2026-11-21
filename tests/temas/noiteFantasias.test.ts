@@ -79,7 +79,9 @@ describe('spec 027: a Noite das Fantasias registrada', () => {
 
   it('o céu sem arco-íris, a noite mansa e a planta da vila da festa (também na nuvem)', () => {
     expect(t.climaVisual.arcoIris).toBe(false);
-    expect(t.mundo.noite).toBe('mansa');
+    // (T12: mansa e ainda devagar: a fantasminha flutua a no máximo 0,5 bloco por segundo e nunca
+    // vem na direção da criança; o estilo passa igual pela nuvem, logo abaixo)
+    expect(t.mundo.noite).toBe('devagar');
     expect(t.mundo.povoado?.planta).toBe('baile');
     expect(estiloSeguro(t.mundo)).toEqual(t.mundo);
     // a noite nunca escura de verdade: o piso de luz da noite bem acima do da Vila Neon (0,3)
