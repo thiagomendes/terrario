@@ -34,6 +34,8 @@ const entrarNoJogo = (p: Page) =>
     window.__brumaluz!.pausarDia = true;
     window.__brumaluz!.hora = 0.42;
   });
+const ressincronizacoes = (p: Page) =>
+  p.evaluate(() => window.__brumaluz?.ressincronizacoes ?? 0);
 const carros = (p: Page) =>
   p.evaluate(() => (window.__brumaluz!.vilaParque!.carros() ?? []).map((c) => [c.x, c.z]));
 
@@ -191,6 +193,9 @@ test('dois navegadores no bate-bate: a Ana guia e bate no carrinho da Bia, e as 
     expect(prev.maiorErro).toBeLessThan(1.5);
     expect(prev.pendentes).toBeLessThan(12);
   }
+  // spec 035: na entrada normal, a rede de segurança não ressincroniza nunca
+  expect(await ressincronizacoes(ana), 'a Ana não ressincronizou').toBe(0);
+  expect(await ressincronizacoes(bia), 'a Bia não ressincronizou').toBe(0);
   await ana.context().close();
   await bia.context().close();
 });

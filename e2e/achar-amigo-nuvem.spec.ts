@@ -45,6 +45,8 @@ async function jogador(
 }
 const pronto = (p: Page) =>
   p.waitForFunction(() => window.__brumaluz?.ready, null, { timeout: 180_000 });
+const ressincronizacoes = (p: Page) =>
+  p.evaluate(() => window.__brumaluz?.ressincronizacoes ?? 0);
 const jogar = (p: Page) =>
   p.evaluate(() => {
     document.querySelector('.entrada')?.setAttribute('hidden', '');
@@ -236,6 +238,9 @@ for (const tela of TELAS) {
     const antes = await bia.evaluate(() => window.__brumaluz!.acharAmigo!.chamadas());
     await bia.locator('.botao-chamar').click({ force: true });
     expect(await bia.evaluate(() => window.__brumaluz!.acharAmigo!.chamadas())).toBe(antes);
+    // spec 035: na entrada normal, a rede de segurança não ressincroniza nunca
+    expect(await ressincronizacoes(ana), 'a Ana não ressincronizou').toBe(0);
+    expect(await ressincronizacoes(bia), 'a Bia não ressincronizou').toBe(0);
     await ana.context().close();
     await bia.context().close();
   });

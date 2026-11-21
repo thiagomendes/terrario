@@ -22,6 +22,8 @@ async function jogador(browser: Browser, id: string, apelido: string): Promise<P
 }
 const pronto = (p: Page) =>
   p.waitForFunction(() => window.__brumaluz?.ready, null, { timeout: 180_000 });
+const ressincronizacoes = (p: Page) =>
+  p.evaluate(() => window.__brumaluz?.ressincronizacoes ?? 0);
 const entrarNoJogo = (p: Page) =>
   p.evaluate(() => {
     document.querySelector('.entrada')?.setAttribute('hidden', '');
@@ -218,6 +220,9 @@ test('dois navegadores no mesmo mundo: convite, entrada pelo link e tudo sincron
 
   await bia.screenshot({ path: 'test-results/screens/multiplayer-bia-ve-ana.png' });
   await ana.screenshot({ path: 'test-results/screens/multiplayer-ana-ve-bia.png' });
+  // spec 035: na entrada normal, a rede de segurança não ressincroniza nunca
+  expect(await ressincronizacoes(ana), 'a Ana não ressincronizou').toBe(0);
+  expect(await ressincronizacoes(bia), 'a Bia não ressincronizou').toBe(0);
 });
 
 test('código que não existe: mensagem para criança e volta ao mundo do aparelho', async ({

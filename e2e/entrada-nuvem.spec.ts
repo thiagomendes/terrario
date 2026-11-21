@@ -8,6 +8,8 @@ import { expect, test, type Browser, type Page } from '@playwright/test';
  * - B2: joga fora todo `primeiro`; 2 ressincronizações, 1 recarregar, e na página nova mais 2,
  *   sem um segundo recarregar.
  * - C: a Ana sai da nuvem para um mundo novo do Rancho Alegre: o endereço perde a sala.
+ * - D (T08): a internet da Bia cai, a Ana põe e tira um bloco, e a Bia volta vendo os dois
+ *   (os blocos da volta, na cena de verdade).
  * O contador é lido com acesso opcional, para rodar também no código de antes (onde falham:
  * B, buraco e B2 até a T04; C até a T07).
  */
@@ -132,6 +134,32 @@ function roteiroDaBia(modo: 'primeiro' | 'buraco' | 'todo-primeiro') {
     characterData: true,
   });
   setInterval(vigiar, 100);
+}
+
+/**
+ * D: a página da Bia pode perder a internet de verdade. `cortar()` fecha a conexão aberta, e
+ * as tentativas de voltar vão para uma porta fechada (falham na hora) até o `voltar()`.
+ */
+function redeDaBia() {
+  const Original = window.WebSocket;
+  let semRede = false;
+  const abertas: WebSocket[] = [];
+  class ComRede extends Original {
+    constructor(url: string | URL, protocolos?: string | string[]) {
+      super(semRede ? 'ws://127.0.0.1:9/' : url, protocolos);
+      abertas.push(this);
+    }
+  }
+  window.WebSocket = ComRede;
+  (window as unknown as { __e2eRede: { cortar(): void; voltar(): void } }).__e2eRede = {
+    cortar() {
+      semRede = true;
+      for (const s of abertas.splice(0)) if (s.readyState <= Original.OPEN) s.close();
+    },
+    voltar() {
+      semRede = false;
+    },
+  };
 }
 
 const pronto = (p: Page) =>
@@ -315,6 +343,8 @@ test('C: sair da nuvem para um mundo do aparelho, e de lá para outro', async ({
   await expect
     .soft(daSala.locator('button.primario'), 'o mundo desta sala mostra "Continuar"')
     .toHaveText('Continuar', { timeout: 10_000 });
+  // na entrada normal, sozinha na sala, a rede de segurança não ressincronizou
+  expect(await ressincronizacoes(ana), 'a Ana não ressincronizou').toBe(0);
   // dali, cria um mundo do Rancho Alegre
   await ana.locator('.cartao-tema[data-tema="rancho-alegre"]').click();
   await ana.locator('button[data-modo="criativo"]').click();
@@ -346,4 +376,72 @@ test('C: sair da nuvem para um mundo do aparelho, e de lá para outro', async ({
   await pronto(ana);
   expect(new URL(ana.url()).searchParams.has('sala')).toBe(false);
   await expect(ana.locator('[data-botao-amigos]')).toHaveCount(0);
+});
+
+test('D: a Bia cai, a Ana põe e tira um bloco, e a Bia volta vendo os dois', async ({
+  browser,
+}) => {
+  test.setTimeout(400_000);
+  const { ana, codigo } = await anaNaNuvem(browser, 'ana-e2e-d');
+  const bia = await jogador(browser, 'bia-e2e-d', 'Bia');
+  await bia.context().addInitScript(redeDaBia);
+  await biaEntra(bia, codigo);
+  await veAna(bia, 30_000);
+  expect(await ressincronizacoes(bia), 'na entrada, nenhuma ressincronização').toBe(0);
+  // perto da Ana: um bloco para tirar e, ao lado, um lugar vazio para pôr
+  const cels = await ana.evaluate(() => {
+    const e = window.__brumaluz!;
+    const [x, y, z] = e.posicao!.map(Math.floor);
+    for (let yy = y; yy > y - 6; yy--)
+      if (e.bloco!(x + 1, yy, z) !== 0 && e.bloco!(x + 2, yy + 1, z) === 0)
+        return { tirar: { x: x + 1, y: yy, z }, por: { x: x + 2, y: yy + 1, z } };
+    return null;
+  });
+  expect(cels).not.toBeNull();
+  const { tirar, por } = cels!;
+  const naBia = () =>
+    bia.evaluate(
+      ([t, p]) => ({
+        tirar: window.__brumaluz!.bloco!(t.x, t.y, t.z),
+        por: window.__brumaluz!.bloco!(p.x, p.y, p.z),
+      }),
+      [tirar, por] as const,
+    );
+  const antes = await naBia();
+  expect(antes.tirar, 'a Bia vê o bloco que a Ana vai tirar').not.toBe(0);
+  expect(antes.por).toBe(0);
+
+  // a internet da Bia cai (o aviso de queda aparece)
+  await bia.evaluate(() =>
+    (window as unknown as { __e2eRede: { cortar(): void } }).__e2eRede.cortar(),
+  );
+  await expect(bia.locator('body')).toContainText('A internet caiu', { timeout: 10_000 });
+  // com a Bia fora, a Ana tira um bloco e põe outro
+  await ana.evaluate(
+    ([t, p]) => {
+      const e = window.__brumaluz!;
+      e.definirBloco!(t.x, t.y, t.z, 0);
+      e.definirBloco!(p.x, p.y, p.z, 7);
+    },
+    [tirar, por] as const,
+  );
+  await ana.waitForTimeout(2000);
+  expect(await naBia(), 'fora, a Bia ainda não viu nada').toEqual(antes);
+
+  // a internet volta: a Bia reconecta sozinha e vê o que a Ana fez
+  const t0 = Date.now();
+  await bia.evaluate(() =>
+    (window as unknown as { __e2eRede: { voltar(): void } }).__e2eRede.voltar(),
+  );
+  await bia.waitForFunction(
+    ([t, p]) =>
+      window.__brumaluz!.bloco!(t.x, t.y, t.z) === 0 &&
+      window.__brumaluz!.bloco!(p.x, p.y, p.z) === 7,
+    [tirar, por] as const,
+    { timeout: 30_000 },
+  );
+  console.log(`D: da volta da internet até a Bia ver os blocos: ${Date.now() - t0} ms`);
+  await veAna(bia, 10_000);
+  await bia.screenshot({ path: 'test-results/screens/entrada-nuvem-d-bia-volta.png' });
+  console.log(`D: ressincronizações da Bia depois da queda: ${await ressincronizacoes(bia)}`);
 });

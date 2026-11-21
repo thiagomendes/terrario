@@ -82,6 +82,8 @@ const entrarNoJogo = (p: Page) =>
     window.__brumaluz!.pausarDia = true;
     window.__brumaluz!.hora = 0.42;
   });
+const ressincronizacoes = (p: Page) =>
+  p.evaluate(() => window.__brumaluz?.ressincronizacoes ?? 0);
 const canal = (p: Page) => p.evaluate(() => window.__brumaluz!.vilaCasa!.sala().canal);
 /** A criança na sala, entre o sofá e a TV. */
 const naSala = (p: Page, dx: number) =>
@@ -277,6 +279,9 @@ test('dois navegadores na sala da casa: a TV e o disco são de todos, com a espe
   );
   await bia.screenshot({ path: 'capturas-026c/amigos-bia-ve-ana-na-rampa.png' });
   await ana.evaluate(() => window.__brumaluz!.controleDireto!.mover(0, 0));
+  // spec 035: na entrada normal, a rede de segurança não ressincroniza nunca
+  expect(await ressincronizacoes(ana), 'a Ana não ressincronizou').toBe(0);
+  expect(await ressincronizacoes(bia), 'a Bia não ressincronizou').toBe(0);
   await ana.context().close();
   await bia.context().close();
 });

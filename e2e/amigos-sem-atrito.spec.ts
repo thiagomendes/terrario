@@ -34,6 +34,8 @@ async function jogador(
 }
 const pronto = (p: Page) =>
   p.waitForFunction(() => window.__brumaluz?.ready === true, null, { timeout: 180_000 });
+const ressincronizacoes = (p: Page) =>
+  p.evaluate(() => window.__brumaluz?.ressincronizacoes ?? 0);
 const TECNICO = /websocket|erro \d|1006|exception|undefined|\bnull\b|NaN/i;
 
 test('criar com amigos, entrar pelo link e pelo código, e parar de jogar com amigos', async ({
@@ -148,6 +150,9 @@ test('criar com amigos, entrar pelo link e pelo código, e parar de jogar com am
   await ana.waitForFunction(({ x, y, z }) => window.__brumaluz!.bloco!(x, y, z) === 7, cel, {
     timeout: 30_000,
   });
+  // spec 035: na entrada normal (criar com amigos, link e código), nenhuma ressincronização
+  for (const [nome, p] of [['Ana', ana], ['Bia', bia], ['Caio', caio]] as const)
+    expect(await ressincronizacoes(p), `${nome} não ressincronizou`).toBe(0);
 
   // 4. Ana para de jogar com amigos: o mundo volta inteiro para o aparelho dela
   // (pela pausa ou pelo botão fixo: o navegador de teste solta o mouse e a pausa abre)
