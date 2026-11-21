@@ -165,6 +165,11 @@ export interface PontosBaile {
   estacao: [number, number, number];
   /** Onde cada morador fica. */
   postos: Record<PostoBaile, [number, number, number]>;
+  /**
+   * T10: os vizinhos das casinhas da rua (na ordem das portas, sem a da Vovó): na varandinha do
+   * lado da porta, de frente para a rua.
+   */
+  vizinhos: { x: number; y: number; z: number; yaw: number }[];
 }
 
 export interface PlanoBaile {
@@ -391,6 +396,13 @@ const TRILHA_BOSQUE: [number, number][] = [
   [14, 90],
 ];
 const LAGO = { u0: 24, v0: 52, u1: 34, v1: 61 } as const;
+/** As lanternas de poste da rua, alternando os lados (u, v). */
+const POSTES_RUA: readonly [number, number][] = [
+  [47, 37],
+  [55, 31],
+  [47, 21],
+  [55, 13],
+];
 
 function montarBaile(semente: number, r: RelevoVila): Montado {
   const lugar = lugarDoBaile(semente, r);
@@ -578,6 +590,7 @@ function montarBaile(semente: number, r: RelevoVila): Montado {
     vovo?: boolean;
   }
   const portas: PortaBaile[] = [];
+  const vizinhos: PontosBaile['vizinhos'] = [];
   let varanda: [number, number, number] = [0, 0, 0];
   let caldeirao: [number, number, number] = [0, 0, 0];
   let portaVassouras: [number, number, number] = [0, 0, 0];
@@ -644,6 +657,19 @@ function montarBaile(semente: number, r: RelevoVila): Montado {
     const pz = (pv + fv) / 2 + 0.5;
     peca(c.vovo ? 'porta-vovo' : 'porta', px, pz, dir, c.porta);
     portas.push({ x: X(fu) + 0.5, y: Y, z: Z(fv) + 0.5, dir, ...(c.vovo ? { vovo: true } : {}) });
+    if (!c.vovo) {
+      // T10: o vizinho da casinha, no quintalzinho da frente do lado do caminho da porta (do
+      // outro lado da campainha, longe das folhinhas das janelas), de frente para a rua
+      // (fora da célula de um poste de lanterna da rua)
+      const sx = [meio - 2, meio - 3].find((k) => {
+        const [u, v] = q(k, 0);
+        return !POSTES_RUA.some(([pu, pv]) => pu === u && pv === v);
+      })!;
+      const [mu, mv] = q(sx, 0);
+      const [ru, rv] = q(sx, -1);
+      const [x, y, z] = p3(mu + 0.5, 0, mv + 0.5);
+      vizinhos.push({ x, y, z, yaw: Math.atan2(ru - mu, rv - mv) });
+    }
     // a campainha do lado da porta, e o toldinho por cima
     const [cu, cv] = q(meio + (c.vovo ? 2 : 1), f0);
     const [cfu, cfv] = q(meio + (c.vovo ? 2 : 1), f0 - 1);
@@ -884,13 +910,7 @@ function montarBaile(semente: number, r: RelevoVila): Montado {
     vovo: true,
   });
   // as lanternas de poste da rua, alternando os lados
-  for (const [u, v] of [
-    [47, 37],
-    [55, 31],
-    [47, 21],
-    [55, 13],
-  ])
-    posteLanterna(u, v);
+  for (const [u, v] of POSTES_RUA) posteLanterna(u, v);
 
   // ============================================================== a loja de fantasias
   {
@@ -1244,6 +1264,7 @@ function montarBaile(semente: number, r: RelevoVila): Montado {
       filo: p3(49.5, 0, 51.5),
       olavo: p3(49.5, 0, 61.5),
     },
+    vizinhos,
   };
   const entradas: PlanoBaile['entradas'] = {
     rua: [X((RUA.u0 + RUA.u1) >> 1), Z(PRACA.v0 - 1)],

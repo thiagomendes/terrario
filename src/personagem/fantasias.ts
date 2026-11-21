@@ -95,7 +95,16 @@ export type TipoPeca =
   | 'lencol-capuz'
   | 'gola-alta'
   | 'orelhas-gatinho'
-  | 'orelhas-morceguinho';
+  | 'orelhas-morceguinho'
+  // spec 027 (T10): o que só os moradores da festa vestem (bonecoFesta.ts): o xale e os óculos
+  // redondos da Vovó, as sobrancelhas grisalhas, a lanterninha do Dudu, o lenço com o broche e as
+  // mechas grisalhas do Seu Jerônimo
+  | 'xale'
+  | 'oculos-redondos'
+  | 'sobrancelhas'
+  | 'lanterninha'
+  | 'lenco-broche'
+  | 'mechas-grisalhas';
 
 /** Símbolos próprios (nada de letra no peito, teia ou morcego). */
 export type Simbolo = 'flor' | 'estrela' | 'concha' | 'floco' | 'raio' | 'coracao' | 'folha';
@@ -721,6 +730,51 @@ export const FANTASIAS_DE_MORADOR: readonly FantasiaDef[] = [
         { tipo: 'chapeu-palha', cor: '#e8c46a' },
         { tipo: 'macacao', cor: 'principal' },
         { tipo: 'camisa-xadrez', cor: '#c8463a' },
+        // T10: o detalhe de festa (o lenço roxo, o broche de abóbora e a fita roxa e laranja) e
+        // o cabelo grisalho em mechas, com o chapéu mais baixo (depois do chapéu: mexem nele)
+        { tipo: 'lenco-broche', cor: '#6a3e9c' },
+        { tipo: 'mechas-grisalhas', cor: '#d6d3de' },
+        { tipo: 'sobrancelhas', cor: '#d6d3de' },
+      ],
+    }),
+  },
+  // T10: a Vovó Zuleica, uma senhora (o jeito de vovó dos povoados: o cabelo grisalho, os óculos
+  // redondos e o vestido comprido), com o chapéu de bruxa, o xale roxo de franjinha e a varinha
+  {
+    id: 'vovo-zuleica',
+    grupo: 'temas',
+    tema: 'noite-das-fantasias',
+    nomes: { feminino: 'Vovó Bruxinha', masculino: 'Vovô Bruxinho' },
+    cores: ['#6a3e9c'],
+    corEmblema: '#ffd45a',
+    visual: mesmo({
+      roupa: { camisa: '#5f7d34', manga: '#5f7d34', calca: '#4e6a2a', sapato: '#46305e' },
+      cabeca: 'chapeu',
+      pecas: [
+        { tipo: 'chapeu-bruxa', cor: 'principal' },
+        { tipo: 'xale', cor: '#7c50b4' },
+        { tipo: 'oculos-redondos', cor: '#c9962e' },
+        { tipo: 'sobrancelhas', cor: '#e2dee8' },
+        { tipo: 'varinha', cor: 'emblema', simbolo: 'estrela' },
+      ],
+    }),
+  },
+  // T10: o Conde Dudu, o vampirinho com medo do escuro (sem presas), com a lanterninha acesa
+  {
+    id: 'conde-dudu',
+    grupo: 'temas',
+    tema: 'noite-das-fantasias',
+    nomes: { feminino: 'Condessa', masculino: 'Conde' },
+    cores: ['#3a2850'],
+    corEmblema: '#ef8a2c',
+    visual: mesmo({
+      roupa: { camisa: '#f4ead8', manga: '#f4ead8', calca: '#3a2c50', sapato: '#2a2232' },
+      cabeca: 'livre',
+      pecas: [
+        { tipo: 'capa', cor: 'principal' },
+        { tipo: 'gola-alta', cor: 'principal' },
+        { tipo: 'colete-lenco', cor: '#6a3e9c' },
+        { tipo: 'lanterninha', cor: '#46305e' },
       ],
     }),
   },

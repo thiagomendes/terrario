@@ -28,6 +28,10 @@ const NOVAS = [
   'jeronimo-horta',
   'gatinho-festa',
   'morceguinho-festa',
+  // T10: a Vovó Zuleica (o xale, os óculos redondos e as sobrancelhas) e o Conde Dudu (a
+  // lanterninha); o Seu Jerônimo (o lenço, o broche e as mechas grisalhas) já está acima
+  'vovo-zuleica',
+  'conde-dudu',
 ];
 
 describe('as peças de fantasia da Noite das Fantasias (spec 027, T09)', () => {

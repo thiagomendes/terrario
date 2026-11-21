@@ -132,7 +132,12 @@ export type IdLuzPremium =
   | 'estrela0'
   | 'estrela1'
   | 'estrela2'
-  | 'chifre';
+  | 'chifre'
+  /**
+   * Spec 027 (T10): o vidro da lanterninha do Conde Dudu, uma vela parada. Fica abaixo do
+   * limiar do brilho que borra (a luz dele não lava a calça escura do Dudu).
+   */
+  | 'vela';
 /** Spec 023: os nós que só os premium têm (as asas batem; o resto segue a junta). */
 export type SubjuntaPremium = 'asaE' | 'asaD';
 

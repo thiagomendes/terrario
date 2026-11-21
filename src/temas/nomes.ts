@@ -59,7 +59,8 @@ const NOMES_GENERO: Record<string, Genero> = {
   Otávio: 'm',
   Abel: 'm',
   Lauro: 'm',
-  Quinzinho: 'm',
+  // (era Quinzinho, que parecia o Quindim do Doce Reino)
+  Nestor: 'm',
 };
 
 export function generoDoNome(nome: string): Genero {

@@ -185,7 +185,9 @@ export function trocaNoMundo(t: Troca, estilo: EstiloMundo): boolean {
   const planta = estilo.povoado?.planta ?? 'vila';
   if (t.planta !== undefined && t.planta !== planta) return false;
   // a roça que o pedreiro da cidade não faz também não entra no bairro (sem roça na Vila Neon)
-  if (t.foraDaCidade && (planta === 'cidade' || planta === 'bairro')) return false;
+  // nem na vila da festa (o marceneiro de lá troca os blocos das casinhas tortas)
+  if (t.foraDaCidade && (planta === 'cidade' || planta === 'bairro' || planta === 'baile'))
+    return false;
   return itemNoMundo(t.receber.item, estilo) && t.dar.every((d) => itemNoMundo(d.item, estilo));
 }
 

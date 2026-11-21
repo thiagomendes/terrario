@@ -16,7 +16,8 @@ describe('trocas dos moradores', () => {
   it('todas as profissões têm de 3 a 8 trocas com itens que existem', () => {
     for (const p of PROFISSOES) {
       // spec 014: a lista de cada mundo (a do pedreiro da cidade é outra) cabe em 8
-      for (const planta of ['vila', 'sitio', 'cidade'] as const) {
+      // (spec 027: e o bairro da Vila Neon e a vila da festa)
+      for (const planta of ['vila', 'sitio', 'cidade', 'bairro', 'baile'] as const) {
         const n = trocasDoMundo(p, { povoado: { planta } } as unknown as EstiloMundo).length;
         expect(n, `${p} em ${planta}`).toBeGreaterThanOrEqual(3);
         expect(n, `${p} em ${planta}`).toBeLessThanOrEqual(8);

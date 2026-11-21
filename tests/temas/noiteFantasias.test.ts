@@ -47,6 +47,8 @@ function todosOsTextos(): string[] {
     pv.nome,
     ...Object.values(pv.profissoes),
     ...pv.nomes,
+    // T10: os moradores de posto (o nome e o que fazem)
+    ...Object.values(pv.porMorador ?? {}).flatMap((m) => [m.nome, m.titulo ?? '']),
     ...Object.values(pv.textos),
     // e o que vale de base sem texto próprio (o que a criança lê neste mundo)
     ...Object.keys(o.blocos)

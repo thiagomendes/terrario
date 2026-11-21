@@ -245,19 +245,21 @@ export function lencolDeCapuz(pecas: Peca[], m: MedidasBoneco, cor: string): voi
 export function golaAlta(pecas: Peca[], m: MedidasBoneco, cor: string, forro: string): void {
   const { troncoH } = m;
   const fazer = (dr: number, baixa: number) => {
-    const NV = 10;
-    const NU = 24;
+    const NV = 12;
+    const NU = 28;
     const pos: number[] = [];
     const ind: number[] = [];
     for (let i = 0; i <= NV; i++)
       for (let j = 0; j <= NU; j++) {
         const t = i / NV;
         const u = -1 + (2 * j) / NU;
-        // (um tico mais alta e mais aberta que a do esboço: na cabeça grande do boneco, a gola
-        // do esboço sumia atrás dela vista de frente)
-        const r = 0.46 + 0.12 * t ** 1.5 - dr;
-        const th = u * (1.26 + 0.22 * t);
-        const y = troncoH - 0.04 + (0.5 - baixa) * t + 0.07 * t * Math.abs(u) ** 2;
+        // T10 (decisão do orquestrador): bem mais alta e mais aberta que a do esboço. Na cabeça
+        // grande do boneco, a gola do esboço sumia atrás dela vista de frente; agora o pano sobe
+        // até a altura do alto da cabeça e abre em leque dos dois lados, com as duas pontas de
+        // cima levantadas: de frente, o vampirinho se reconhece pela gola atrás da cabeça
+        const r = 0.46 + 0.22 * t ** 1.4 - dr;
+        const th = u * (1.22 + 0.3 * t);
+        const y = troncoH - 0.04 + (0.74 - baixa) * t + 0.16 * t ** 2 * Math.abs(u) ** 2.2;
         pos.push(r * Math.sin(th), y, -r * Math.cos(th));
       }
     for (let i = 0; i < NV; i++)
@@ -313,20 +315,190 @@ function perfilOrelhaMorcego(): P2[] {
 
 /** As orelhinhas de bichinho em cima da cabeça (vão com a `mascara` de gatinho ou de morceguinho). */
 export function orelhasDeBichinho(pecas: Peca[], m: MedidasBoneco, tipo: 'gatinho' | 'morceguinho', cor: string, dentro: string): void {
-  // (a base da orelha assenta no alto do cabelo, sem entrar nele: no raspado, entrava)
-  const y = m.topoTampa + (tipo === 'gatinho' ? 0.066 : 0.078);
-  const perfil = tipo === 'gatinho' ? perfilOrelhaGato() : perfilOrelhaMorcego();
+  // T10 (decisão do orquestrador): as orelhinhas um tanto maiores (de longe, na cabeça grande
+  // do boneco, sumiam); a base continua assentada no alto do cabelo, sem entrar nele
+  const g = tipo === 'gatinho' ? 1.35 : 1.3;
+  const y = m.topoTampa + (tipo === 'gatinho' ? 0.066 : 0.078) * g;
+  const perfil = (tipo === 'gatinho' ? perfilOrelhaGato() : perfilOrelhaMorcego()).map(
+    ([px, py]) => [px * g, py * g] as P2,
+  );
   const k = tipo === 'gatinho' ? 0.6 : 0.62;
   for (const s of [-1, 1]) {
     // (bem nos cantos de cima da cabeça: o coque e o topete no meio ficam livres entre elas)
-    const x = s * (m.cab.w / 2 - 0.08);
-    por(pecas, `orelha-${tipo}${s}`, 'cabeca', 'cabeca', 'placa', [0.2, 0.3, 0.05], [x, y, -0.02], cor, {
+    // (maiores, ficam um tico mais para os cantos: o coque do meio continua livre entre elas)
+    const x = s * (m.cab.w / 2 - 0.07);
+    por(pecas, `orelha-${tipo}${s}`, 'cabeca', 'cabeca', 'placa', [0.2 * g, 0.3 * g, 0.05], [x, y, -0.02], cor, {
       perfil,
       rot: [0, 0, -s * (tipo === 'gatinho' ? 0.22 : 0.35)],
     });
-    por(pecas, `orelha-${tipo}-dentro${s}`, 'cabeca', 'cabeca', 'placa', [0.12, 0.18, 0.02], [x, y - 0.005, 0.02], dentro, {
+    por(pecas, `orelha-${tipo}-dentro${s}`, 'cabeca', 'cabeca', 'placa', [0.12 * g, 0.18 * g, 0.02], [x, y - 0.005, 0.02], dentro, {
       perfil: perfil.map(([px, py]) => [px * k, py * k] as P2),
       rot: [0, 0, -s * (tipo === 'gatinho' ? 0.22 : 0.35)],
     });
   }
+}
+
+// ------------------------------------------------------------------ os moradores (T10)
+
+/** O contorno de uma placa (a largura e a altura que o plano guarda só como informação). */
+function placa(pecas: Peca[], nome: string, junta: Junta, apoio: Peca['apoio'], perfil: P2[], esp: number, pos: V3, cor: string, extra: Partial<Peca> = {}): void {
+  let w = 0;
+  let h = 0;
+  for (const [x, y] of perfil) {
+    w = Math.max(w, Math.abs(x) * 2);
+    h = Math.max(h, Math.abs(y) * 2);
+  }
+  por(pecas, nome, junta, apoio, 'placa', [w, h, esp], pos, cor, { perfil, ...extra });
+}
+
+/**
+ * O xale da Vovó Zuleica (do esboço aprovado): o triângulo nas costas, o pano por cima de cada
+ * ombro e as duas pontas caindo na frente, dos lados do peito, com a franjinha clara na beira.
+ * O pescoço fica livre (nada perto do queixo).
+ */
+export function xale(pecas: Peca[], m: MedidasBoneco, cor: string, franja: string): void {
+  const { troncoH, prof, frente, larg } = m;
+  const bT = troncoH * 0.72;
+  placa(
+    pecas,
+    'xale-costas',
+    'tronco',
+    'tronco',
+    [
+      [-(larg / 2 + 0.02), bT / 2],
+      [larg / 2 + 0.02, bT / 2],
+      [0.04, -bT / 2],
+      [-0.04, -bT / 2],
+    ],
+    0.03,
+    [0, troncoH - 0.03 - bT / 2, -prof / 2 - 0.016],
+    cor,
+  );
+  for (let k = 0; k <= 6; k++) {
+    const t = k / 6;
+    for (const s of [-1, 1])
+      por(pecas, `xale-franja-costas${s}${k}`, 'tronco', 'tronco', 'esfera', [0.018, 0.027, 0.0144], [s * ((larg / 2 + 0.02) * (1 - t) + 0.04 * t), troncoH - 0.03 - bT * t - 0.012, -prof / 2 - 0.024], franja);
+  }
+  for (const s of [-1, 1]) {
+    const x = s * (larg / 2 - 0.075);
+    por(pecas, `xale-ombro${s}`, 'tronco', 'tronco', 'caixa', [0.12, 0.05, prof + 0.05], [x, troncoH - 0.035, 0], cor, { raio: 0.022 });
+    por(pecas, `xale-ponta${s}`, 'tronco', 'tronco', 'caixa', [0.11, troncoH * 0.62, 0.035], [x, troncoH * 0.67, frente + 0.016], cor, { raio: 0.02 });
+    for (const dx of [-0.035, 0, 0.035])
+      por(pecas, `xale-franja${s}${dx}`, 'tronco', 'tronco', 'esfera', [0.018, 0.0288, 0.0144], [x + dx, troncoH * 0.36 - 0.012, frente + 0.016], franja);
+  }
+}
+
+/** Os óculos redondos de vovó (a armação dourada, como no esboço), na frente dos olhos. */
+export function oculosRedondos(pecas: Peca[], m: MedidasBoneco, cor: string): void {
+  const z = m.zRosto + 0.03;
+  for (const x of [-0.15, 0.15])
+    por(pecas, `oculos-r${x}`, 'cabeca', 'cabeca', 'anel', [0.18, 0.022, 0], [x, -0.04, z], cor, {
+      rot: [Math.PI / 2, 0, 0],
+    });
+  por(pecas, 'oculos-r-ponte', 'cabeca', 'cabeca', 'caixa', [0.12, 0.022, 0.022], [0, -0.03, z], cor, { raio: 0.008 });
+}
+
+/**
+ * As sobrancelhas grisalhas de quem é mais velho (a Vovó, o Seu Jerônimo): dois risquinhos
+ * macios acima dos olhos, um tico caídos para fora (o jeito bonzinho).
+ */
+export function sobrancelhas(pecas: Peca[], m: MedidasBoneco, cor: string): void {
+  for (const s of [-1, 1])
+    por(pecas, `sobrancelha${s}`, 'cabeca', 'cabeca', 'caixa', [0.12, 0.034, 0.03], [s * 0.15, 0.085, m.zRosto - 0.004], cor, {
+      raio: 0.014,
+      rot: [0, 0, s * 0.16],
+    });
+}
+
+/**
+ * A lanterninha do Conde Dudu, pendurada na mão esquerda: a alça, a tampinha de telhado, o
+ * vidro aceso de luz própria (brilha sem espalhar luz na roupa: nenhuma luz da cena, e fora do
+ * brilho que borra) e as quatro grades roxas.
+ */
+export function lanterninha(pecas: Peca[], cor: string): void {
+  const z = 0.04;
+  por(pecas, 'lanterninha-alca', 'maoE', 'mao', 'anel', [0.12, 0.022, 0], [0, -0.06, z], cor, { rot: [0, Math.PI / 2, 0] });
+  por(pecas, 'lanterninha-telhado', 'maoE', 'mao', 'cilindro', [0.06, 0.1, 0.03], [0, -0.105, z], cor);
+  por(pecas, 'lanterninha-tampa', 'maoE', 'mao', 'caixa', [0.15, 0.04, 0.15], [0, -0.15, z], cor, { raio: 0.018 });
+  por(pecas, 'lanterninha-vidro', 'maoE', 'mao', 'caixa', [0.118, 0.15, 0.118], [0, -0.245, z], '#ffd27a', {
+    raio: 0.02,
+    luz: 'vela',
+  });
+  por(pecas, 'lanterninha-fundo', 'maoE', 'mao', 'caixa', [0.15, 0.04, 0.15], [0, -0.34, z], cor, { raio: 0.018 });
+  for (const [gx, gz] of [
+    [-1, -1],
+    [1, -1],
+    [-1, 1],
+    [1, 1],
+  ])
+    por(pecas, `lanterninha-grade${gx}${gz}`, 'maoE', 'mao', 'caixa', [0.022, 0.17, 0.022], [gx * 0.062, -0.245, z + gz * 0.062], cor, { raio: 0.008 });
+}
+
+/**
+ * O detalhe de festa do Seu Jerônimo, que o separa do fazendeiro do Rancho: o lenço roxo de
+ * festa no pescoço (por cima das alças do macacão), o broche de abóbora sorridente no peito e a
+ * fita do chapéu de palha em roxo e laranja.
+ */
+export function lencoEBroche(pecas: Peca[], m: MedidasBoneco, roxo: string, laranja: string): void {
+  const { troncoH, frente } = m;
+  const z = frente + 0.03;
+  placa(
+    pecas,
+    'lenco-festa',
+    'tronco',
+    'tronco',
+    [
+      [-0.085, 0.07],
+      [0, -0.08],
+      [0.085, 0.07],
+    ],
+    0.026,
+    [0, troncoH - 0.09, z],
+    roxo,
+  );
+  por(pecas, 'lenco-festa-no', 'tronco', 'tronco', 'esfera', [0.046, 0.04, 0.034], [0, troncoH - 0.025, z - 0.004], roxo);
+  // o broche: a abóbora redondinha de gomos, o cabinho verde e os olhinhos e o sorriso
+  const bx = -0.075;
+  const by = 0.2;
+  const bz = frente + 0.045;
+  por(pecas, 'broche', 'tronco', 'tronco', 'esfera', [0.05, 0.043, 0.026], [bx, by, bz], laranja);
+  por(pecas, 'broche-cabo', 'tronco', 'tronco', 'caixa', [0.014, 0.024, 0.012], [bx, by + 0.048, bz], '#5f7d34', { raio: 0.005 });
+  for (const s of [-1, 1])
+    por(pecas, `broche-olho${s}`, 'tronco', 'tronco', 'esfera', [0.008, 0.009, 0.004], [bx + s * 0.017, by + 0.008, bz + 0.024], '#3a2418');
+  por(pecas, 'broche-boca', 'tronco', 'tronco', 'caixa', [0.026, 0.007, 0.004], [bx, by - 0.015, bz + 0.024], '#3a2418', { raio: 0.003 });
+  for (const q of pecas) if (q.nome === 'palha-fita') q.cor = roxo;
+  // a listrinha laranja na fita roxa (duas cores, nunca na ordem do arco-íris)
+  const fita = pecas.find((q) => q.nome === 'palha-fita');
+  if (fita)
+    por(pecas, 'palha-fita-listra', 'cabeca', 'cabeca', 'cilindro', [0.022, fita.tamanho[1] + 0.004, fita.tamanho[2] + 0.004], fita.pos, laranja);
+}
+
+/**
+ * O cabelo grisalho do Seu Jerônimo debaixo do chapéu de palha: mechas dos lados e na nuca,
+ * nunca uma faixa contínua em volta da cabeça (a tampa de cabelo, que aparecia como uma faixa
+ * branca debaixo da aba, sai), e o chapéu assentado um pouco mais baixo, rente à cabeça.
+ */
+export function mechasGrisalhas(pecas: Peca[], m: MedidasBoneco, cor: string): void {
+  for (let i = pecas.length - 1; i >= 0; i--) {
+    const q = pecas[i];
+    if (
+      (q.junta === 'cabeca' || q.junta === 'topete') &&
+      !q.apoio &&
+      /^(cabelo|nuca|topete|franja|lado|costas|cacho|rabo|coque|tranca|chanel|mecha)/.test(q.nome)
+    )
+      pecas.splice(i, 1);
+  }
+  // o chapéu desce o que a tampa de cabelo tinha de altura (a aba encosta no alto da cabeça)
+  const desce = m.baseChapeu + 0.06 - m.topo;
+  for (const q of pecas)
+    if (q.junta === 'cabeca' && /^palha-/.test(q.nome)) q.pos = [q.pos[0], q.pos[1] - desce, q.pos[2]];
+  const { cab, topo } = m;
+  for (const s of [-1, 1]) {
+    // dos lados, atrás de onde ficaria a orelha: duas mechas, a de cima maior
+    por(pecas, `mecha-lado${s}`, 'cabeca', 'cabeca', 'esfera', [0.06, 0.1, 0.1], [s * (cab.w / 2 - 0.005), topo - 0.12, -0.08], cor);
+    por(pecas, `mecha-lado-baixo${s}`, 'cabeca', 'cabeca', 'esfera', [0.05, 0.075, 0.08], [s * (cab.w / 2 - 0.008), topo - 0.25, -0.13], cor);
+    // na nuca: dois tufinhos de cada lado, com o vão no meio (nada de faixa)
+    por(pecas, `mecha-nuca${s}`, 'cabeca', 'cabeca', 'esfera', [0.1, 0.09, 0.06], [s * 0.15, topo - 0.13, -cab.d / 2 - 0.005], cor);
+  }
+  por(pecas, 'mecha-nuca-baixo', 'cabeca', 'cabeca', 'esfera', [0.1, 0.07, 0.05], [0, topo - 0.26, -cab.d / 2 - 0.004], cor);
 }

@@ -12,7 +12,18 @@
 import type { Corpo } from './aparencia';
 import { asasDragao, capuzDragao, corpoDragao, patasDragao } from './bonecoPremium';
 import { capuzDeMonstro, macacaoDeTufos, pezoes } from './bonecoPeludo';
-import { chapeuDeBruxa, golaAlta, lencolDeCapuz, orelhasDeBichinho } from './bonecoFesta';
+import {
+  chapeuDeBruxa,
+  golaAlta,
+  lanterninha,
+  lencoEBroche,
+  lencolDeCapuz,
+  mechasGrisalhas,
+  oculosRedondos,
+  orelhasDeBichinho,
+  sobrancelhas,
+  xale,
+} from './bonecoFesta';
 import type { ModoCabelo, Peca } from './boneco';
 import {
   clarear,
@@ -1357,6 +1368,25 @@ export function vestirFantasia(
         break;
       case 'orelhas-morceguinho':
         orelhasDeBichinho(pecas, m, 'morceguinho', c, '#b9a0e0');
+        break;
+      // spec 027 (T10): as peças dos moradores da festa (bonecoFesta.ts)
+      case 'xale':
+        xale(pecas, m, c, '#d9c8f4');
+        break;
+      case 'oculos-redondos':
+        oculosRedondos(pecas, m, c);
+        break;
+      case 'sobrancelhas':
+        sobrancelhas(pecas, m, c);
+        break;
+      case 'lanterninha':
+        lanterninha(pecas, c);
+        break;
+      case 'lenco-broche':
+        lencoEBroche(pecas, m, c, '#ef8a2c');
+        break;
+      case 'mechas-grisalhas':
+        mechasGrisalhas(pecas, m, c);
         break;
       case 'avental-doce': {
         caixa(

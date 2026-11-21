@@ -50,6 +50,9 @@ const BASE: Record<IdLuzPremium, string> = {
   estrela1: '#fff3b0',
   estrela2: '#fff3b0',
   chifre: '#fff1a8',
+  // spec 027: a vela da lanterninha do Conde Dudu (âmbar; a soma das cores fica abaixo de 1,6,
+  // o limiar do brilho que borra nos moradores: a luz dela não lava a roupa)
+  vela: '#f09410',
 };
 
 function daCena(scene: Scene): LuzesDaCena {

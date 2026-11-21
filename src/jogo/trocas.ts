@@ -21,7 +21,7 @@ export interface Troca {
    * Spec 014: a troca só existe nos mundos desta planta (a do pedreiro da cidade: tijolo,
    * escada e toldo para o canteiro). Sem o campo, em todo tema (menos o exclusivo de outro).
    */
-  planta?: 'cidade' | 'bairro';
+  planta?: 'cidade' | 'bairro' | 'baile';
   /** Spec 014: a troca da roça que o pedreiro da cidade não faz (a lista dele cabe em 8). */
   foraDaCidade?: true;
 }
@@ -116,6 +116,38 @@ export const TROCAS: Record<Profissao, readonly Troca[]> = {
       dar: [{ item: b(Bloco.PEDREGULHO), qtd: 2 }],
       receber: { item: b(Bloco.PISTA_NEON), qtd: 8 },
       planta: 'bairro',
+    },
+    // spec 027 (T10): o marceneiro das casinhas tortas da Noite das Fantasias troca os blocos de
+    // apoio da vila (os especiais, como a telha roxa e o toldinho, são da banca)
+    {
+      id: 'tabua-roxa',
+      dar: [{ item: b(Bloco.TABUAS), qtd: 4 }],
+      receber: { item: b(Bloco.TABUA_ROXA), qtd: 8 },
+      planta: 'baile',
+    },
+    {
+      id: 'tabua-musgo',
+      dar: [{ item: b(Bloco.TABUAS), qtd: 4 }],
+      receber: { item: b(Bloco.TABUA_MUSGO), qtd: 8 },
+      planta: 'baile',
+    },
+    {
+      id: 'tijolo-torto',
+      dar: [{ item: b(Bloco.PEDREGULHO), qtd: 4 }],
+      receber: { item: b(Bloco.TIJOLO_TORTO), qtd: 8 },
+      planta: 'baile',
+    },
+    {
+      id: 'pedrinha-lilas',
+      dar: [{ item: b(Bloco.PEDREGULHO), qtd: 4 }],
+      receber: { item: b(Bloco.PEDRINHA_LILAS), qtd: 8 },
+      planta: 'baile',
+    },
+    {
+      id: 'janela-torta',
+      dar: [{ item: b(Bloco.VIDRO), qtd: 2 }],
+      receber: { item: b(Bloco.JANELA_TORTA), qtd: 2 },
+      planta: 'baile',
     },
     // spec 014 (T07): o pedreiro da cidade. A colher vem de graça (quem perdeu ganha outra)
     // e os blocos das obras saem de coisas fáceis de juntar

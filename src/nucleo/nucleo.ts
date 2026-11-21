@@ -40,6 +40,7 @@ import {
   cantoDoMundo,
   cidadeDoMundo,
   vilaDoMundo,
+  baileDoMundo,
   definirEscolhaDoCanto,
   encontrarNascimento,
   estiloMundo,
@@ -79,6 +80,7 @@ import { criarPopulacao } from '../jogo/populacao';
 import { corpoNaRua, criarTransito, type PessoaNaRua } from '../jogo/transito';
 import { arred } from '../jogo/veiculos';
 import { criarVila, FENO, type VilaNucleo, type VilaVista } from './vila';
+import { criarBaile, type BaileNucleo } from './baile';
 import {
   ATRASO_RESPOSTA,
   INTERVALO_GESTO_NUCLEO,
@@ -856,6 +858,35 @@ export function criarNucleo(op: OpcoesNucleo) {
       })
     : null;
   void FENO;
+
+  // ------------------------------------------------------------ a Noite das Fantasias (spec 027)
+  /** A vila da festa (os moradores com posto). */
+  const planoBaile = baileDoMundo(semente);
+  const baile: BaileNucleo | null = planoBaile
+    ? criarBaile({
+        plano: planoBaile,
+        salvo: extras['baile'],
+        agora: () => n * PASSO,
+        jogadores: () =>
+          [...jogadores.values()].map((o) => ({
+            id: o.id,
+            x: o.tel.x,
+            y: o.tel.y,
+            z: o.tel.z,
+            morto: o.sobrevivencia.estado.morto,
+          })),
+        jogador: (id) => {
+          const o = jogadores.get(id);
+          return o
+            ? { id: o.id, x: o.tel.x, y: o.tel.y, z: o.tel.z, morto: o.sobrevivencia.estado.morto }
+            : undefined;
+        },
+        adicionar: (tipo, x, y, z) => populacao.adicionar(tipo, x, y, z),
+        criaturas: () => populacao.lista,
+        carregado: (x, z) => mundo.criaturas.superficie(Math.floor(x), Math.floor(z)) !== null,
+        sujar: () => {},
+      })
+    : null;
 
   /** Lugares novos (conferidos no passo, a cada meio segundo). */
   function cuidarDosLugares(): void {
@@ -2686,6 +2717,8 @@ export function criarNucleo(op: OpcoesNucleo) {
         if (cr?.morador) cr.yawAlvo = Math.atan2(j.tel.x - cr.x, j.tel.z - cr.z);
         // spec 026: o vocalista dá o pôster da banda (uma vez por mundo a cada criança)
         if (cr && vila) vila.falou(j.id, cr);
+        // spec 027: os moradores da festa (o abraço do Bento)
+        if (cr && baile) baile.falou(j.id, cr);
         break;
       }
       case 'trocar':
@@ -2892,6 +2925,8 @@ export function criarNucleo(op: OpcoesNucleo) {
     if (canto && n % 5 === 0) cuidarDoPasto();
     // spec 026: a Vila Neon (estojos, show, lhamas e moradores com posto)
     vila?.passo(n);
+    // spec 027: a Noite das Fantasias (os moradores com posto)
+    baile?.passo(n);
 
     // spec 014: o pedreiro do canteiro (aparece, acena e dá a colher), os moradores da cidade
     // e o cachorro da casinha
@@ -3217,6 +3252,8 @@ export function criarNucleo(op: OpcoesNucleo) {
         almas,
         /** Spec 026: a Vila Neon (null fora dela). */
         vila,
+        /** Spec 027: a Noite das Fantasias (null fora dela). */
+        baile,
       };
     },
   };

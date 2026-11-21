@@ -163,6 +163,8 @@ export function criarRenderCriaturas(
       microfone?: boolean;
       /** Spec 026: o teclado de pendurar da tecladista (só aparece quando ela toca nele). */
       keytar?: Mesh[] | null;
+      /** Spec 027: o tamanho do boneco (o Bento, o grandão da festa). */
+      escala: number;
       ultX: number;
       ultZ: number;
       vel: number;
@@ -503,7 +505,8 @@ export function criarRenderCriaturas(
       fixo?.cabelo,
     );
     const chave = `${tema().id}|${prof}|${fixo && c.morador ? `${c.morador.povoado}:${c.morador.n}` : ''}|${acessorio ?? ''}|${JSON.stringify(m.aparencia)}`;
-    return { m, chave };
+    // spec 027: o tamanho do boneco (o Bento, o grandão da festa)
+    return { m, chave, escala: fixo?.escala ?? 1 };
   }
   /** O plano encaixado do morador (feito agora, ou o guardado). */
   function planoDoMorador(prep: ReturnType<typeof prepararMorador>, p?: PlanoBoneco) {
@@ -550,6 +553,7 @@ export function criarRenderCriaturas(
       bastao,
       microfone,
       keytar,
+      escala: prep.escala,
       animador: criarAnimador(),
       ultX: c.x,
       ultZ: c.z,
@@ -978,7 +982,7 @@ export function criarRenderCriaturas(
             if (mb.keytar) plasticoKeytar?.definirLuz(l);
           }
           const morrer = c.estado === 'morrendo' ? c.dissolver : 0;
-          mb.boneco.raiz.scaling.setAll((1 - morrer * 0.8) * crescer(c.id, dt));
+          mb.boneco.raiz.scaling.setAll((1 - morrer * 0.8) * crescer(c.id, dt) * mb.escala);
           const ferido = c.ferida > 0;
           if (ferido !== mb.ferido) {
             mb.ferido = ferido;

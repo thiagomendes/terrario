@@ -823,6 +823,8 @@ export interface EstadoDepuracao {
   criaturas?: () => {
     id: number;
     profissao?: string;
+    /** Spec 027: o morador de posto ("povoado:n"), para os testes de tela acharem cada um. */
+    morador?: string;
     tipo: string;
     x: number;
     y: number;
@@ -6105,6 +6107,7 @@ export function criarCena(
     replicaCriaturas.vistas.map((c) => ({
       id: c.id,
       profissao: c.morador?.profissao,
+      ...(c.morador ? { morador: `${c.morador.povoado}:${c.morador.n}` } : {}),
       tipo: c.tipo,
       x: c.x,
       y: c.y,
