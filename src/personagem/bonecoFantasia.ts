@@ -11,6 +11,7 @@
  */
 import type { Corpo } from './aparencia';
 import { asasDragao, capuzDragao, corpoDragao, patasDragao } from './bonecoPremium';
+import { capuzDeMonstro, macacaoDeTufos, pezoes } from './bonecoPeludo';
 import type { ModoCabelo, Peca } from './boneco';
 import {
   clarear,
@@ -1325,6 +1326,18 @@ export function vestirFantasia(
         break;
       case 'patas-dragao':
         patasDragao(pecas, m, c);
+        break;
+      // spec 027: o monstrinho peludo (peças em bonecoPeludo.ts, o pelo da versão em uso)
+      case 'macacao-tufos':
+        macacaoDeTufos(pecas, m, c);
+        break;
+      case 'capuz-monstro':
+        capuzDeMonstro(pecas, m, c);
+        // o capuz cobre o alto e a nuca: o cabelo de cima fica guardado dentro dele
+        sobreCabelo('capuz');
+        break;
+      case 'pezoes':
+        pezoes(pecas, m, c);
         break;
       case 'avental-doce': {
         caixa(

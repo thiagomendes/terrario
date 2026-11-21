@@ -113,6 +113,7 @@ import { carrinhoLivrePerto } from '../jogo/parque';
 import { pilotoDoBate, type Batida } from '../jogo/bate';
 import { criarReplicaBate } from '../cliente/bate';
 import { aplicarJuntas } from '../personagem/gestos';
+import { definirPeloDeTeste, type EstiloPelo } from '../personagem/bonecoPeludo';
 import { PIPOQUEIRO, VENDEDORA_DE_BALOES } from '../nucleo/vila';
 import { criarSomParque, type SomParque } from '../audio/somParque';
 import { criarSomRua, type SomRua } from '../audio/somRua';
@@ -714,6 +715,11 @@ export interface EstadoDepuracao {
       correndo?: boolean;
     }>,
   ) => void;
+  /**
+   * Testes (spec 027, T08): o pelo do monstrinho dos próximos bonecos montados (as três versões
+   * lado a lado para o dono escolher); null volta ao pelo em uso.
+   */
+  peloDeTeste?: (estilo: EstiloPelo | null) => void;
   /** Tempo médio da lógica de cada quadro na linha principal, fora o desenho (ms). */
   logicaQuadroMs?: number;
   atmosfera?: { noite: number; crepusculo: number };
@@ -7354,6 +7360,7 @@ export function criarCena(
         })),
       );
     };
+  if (ehTesteDeTela()) estado.peloDeTeste = definirPeloDeTeste;
   estado.definirClima = (t) => enviar({ t: 'depurar', d: { f: 'clima', tipo: t } });
   estado.dia = () => dia;
   estado.definirDia = (d) => {

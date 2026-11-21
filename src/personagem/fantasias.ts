@@ -85,7 +85,11 @@ export type TipoPeca =
   | 'paleto-ombreiras'
   | 'mangas-arregacadas'
   | 'gravata-fina'
-  | 'oculos-quadrados';
+  | 'oculos-quadrados'
+  // spec 027: o monstrinho peludo (o Bento e a fantasia de Monstrinho Peludo, em bonecoPeludo.ts)
+  | 'macacao-tufos'
+  | 'capuz-monstro'
+  | 'pezoes';
 
 /** Símbolos próprios (nada de letra no peito, teia ou morcego). */
 export type Simbolo = 'flor' | 'estrela' | 'concha' | 'floco' | 'raio' | 'coracao' | 'folha';
@@ -626,6 +630,25 @@ export const FANTASIAS_DE_MORADOR: readonly FantasiaDef[] = [
         { tipo: 'gravata-fina', cor: 'emblema' },
         { tipo: 'oculos-quadrados', cor: 'emblema' },
         { tipo: 'tenis-cano', cor: '#f6f4ee' },
+      ],
+    }),
+  },
+  // spec 027: o Bento, o monstrinho peludo grandão da Noite das Fantasias (o macacão de tufos
+  // verde-musgo, o capuz de monstro com os chifrinhos e os pezões); o pelo é o da versão em uso
+  {
+    id: 'bento-peludo',
+    grupo: 'temas',
+    tema: 'noite-das-fantasias',
+    nomes: { feminino: 'Monstrinho Peludo', masculino: 'Monstrinho Peludo' },
+    cores: ['#6b7444'],
+    corEmblema: '#d9863c',
+    visual: mesmo({
+      roupa: { camisa: 'principal', manga: 'principal', calca: 'principal', sapato: 'principal' },
+      cabeca: 'capuz',
+      pecas: [
+        { tipo: 'macacao-tufos', cor: 'principal' },
+        { tipo: 'capuz-monstro', cor: 'principal' },
+        { tipo: 'pezoes', cor: 'principal' },
       ],
     }),
   },
