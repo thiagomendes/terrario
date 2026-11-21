@@ -441,6 +441,16 @@ test('D: a Bia cai, a Ana põe e tira um bloco, e a Bia volta vendo os dois', as
     { timeout: 30_000 },
   );
   console.log(`D: da volta da internet até a Bia ver os blocos: ${Date.now() - t0} ms`);
+  // o dono do bloco posto, na Bia, é o mesmo que na Ana (a Ana também é a dona do mundo, então
+  // o bloco sem dono na tabela daria o mesmo: o dono de outro jogador é o teste de unidade,
+  // tests/cliente/blocosDaVolta.test.ts)
+  const anaId = await ana.evaluate(() => window.__brumaluz!.voce);
+  const donoNaAna = await ana.evaluate((p) => window.__brumaluz!.donoDoBloco!(p.x, p.y, p.z), por);
+  expect(donoNaAna).toBe(anaId);
+  expect(
+    await bia.evaluate((p) => window.__brumaluz!.donoDoBloco!(p.x, p.y, p.z), por),
+    'o dono do bloco posto, na Bia',
+  ).toBe(donoNaAna);
   await veAna(bia, 10_000);
   await bia.screenshot({ path: 'test-results/screens/entrada-nuvem-d-bia-volta.png' });
   console.log(`D: ressincronizações da Bia depois da queda: ${await ressincronizacoes(bia)}`);
