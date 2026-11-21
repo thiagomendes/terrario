@@ -16,6 +16,12 @@ export interface Conexao {
   ressincronizar?(): void;
   /** Spec 035: como a conexão está ('conectado' é a de pé). Só a da nuvem diz. */
   readonly estado?: string;
+  /**
+   * Spec 035: a queda de agora nasceu de uma ressincronização (5 s sem bem-vindo na conexão
+   * nova), e não da conexão de pé caindo. Fica até a próxima ressincronização ou queda de
+   * verdade. Só a da nuvem diz.
+   */
+  readonly quedaNaRessincronizacao?: boolean;
 }
 
 /** Servidor local num Web Worker. */

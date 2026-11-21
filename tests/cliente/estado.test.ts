@@ -28,6 +28,7 @@ function montar(op: { sabe?: boolean; visivel?: () => boolean } = {}) {
   let ressinc = 0;
   const conexao = {
     estado: 'conectado' as string,
+    quedaNaRessincronizacao: false,
     enviar: () => undefined,
     aoReceber: (f: (m: Mensagem) => void) => {
       ouvintes.push(f);
@@ -251,6 +252,62 @@ describe('a rede de segurança do estado (spec 035)', () => {
     vi.advanceTimersByTime(3000);
     travar(m, n);
     expect(m.ressinc()).toBe(3);
+    expect(m.desistiu()).toBe(0);
+  });
+
+  it('a queda que nasceu da ressincronização pelo travamento (5 s sem bem-vindo) não zera a conta: a segunda e depois o recarregar', () => {
+    /**
+     * Como a conexão da nuvem e src/nuvem.ts: a conexão nova não dá bem-vindo em 5 s e vira
+     * 'reconectando'; quando volta, o 'conectado' depois da queda chama o `reconferir`.
+     */
+    const cai = (x: ReturnType<typeof montar>, naRessincronizacao: boolean) => {
+      x.conexao.estado = 'ressincronizando';
+      vi.advanceTimersByTime(5000);
+      x.conexao.estado = 'reconectando';
+      x.conexao.quedaNaRessincronizacao = naRessincronizacao;
+      vi.advanceTimersByTime(500);
+      x.conexao.estado = 'conectado';
+      x.estado.reconferir();
+    };
+    const m = montar({ visivel: () => false });
+    let n = travar(m, 100);
+    expect(m.ressinc()).toBe(1);
+    cai(m, true);
+    n = travar(m, n);
+    expect(m.ressinc(), 'a segunda, e não uma conta zerada').toBe(2);
+    cai(m, true);
+    travar(m, n);
+    expect(m.desistiu(), 'o ciclo acaba no recarregar').toBe(1);
+    expect(m.ressinc()).toBe(2);
+
+    // a queda de verdade (a conexão de pé caiu) zera, como sempre
+    const q = montar({ visivel: () => false });
+    let k = travar(q, 100);
+    cai(q, false);
+    k = travar(q, k);
+    vi.advanceTimersByTime(3000);
+    travar(q, k);
+    expect(q.ressinc(), 'a conta zerou: mais 2').toBe(3);
+    expect(q.desistiu()).toBe(0);
+  });
+
+  it('com a conexão fora de "conectado", o travamento não mede nem conta', () => {
+    const m = montar({ visivel: () => false });
+    m.conexao.estado = 'reconectando';
+    let n = travar(m, 100);
+    n = chegando(m, n, 4000);
+    expect(m.ressinc(), 'reconectando').toBe(0);
+    m.conexao.estado = 'ressincronizando';
+    n = chegando(m, n, 4000);
+    expect(m.ressinc(), 'ressincronizando').toBe(0);
+    expect(m.desistiu()).toBe(0);
+    // de pé de novo: a conta está inteira (a primeira das 2)
+    m.conexao.estado = 'conectado';
+    n = chegando(m, n, 100);
+    expect(m.ressinc()).toBe(1);
+    vi.advanceTimersByTime(3000);
+    travar(m, n);
+    expect(m.ressinc()).toBe(2);
     expect(m.desistiu()).toBe(0);
   });
 

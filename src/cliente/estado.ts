@@ -181,9 +181,12 @@ export function criarEstadoCliente(op: OpcoesEstadoCliente) {
   let ultimoSilencio = -Infinity;
   let ressincronizacoes = 0;
   let desistiu = false;
+  /** A última ressincronização foi pelo travamento (e não pelo silêncio). */
+  let ultimaPeloTravamento = false;
 
-  function ressincronizar(): void {
+  function ressincronizar(peloTravamento: boolean): void {
     ressincronizacoes++;
+    ultimaPeloTravamento = peloTravamento;
     // a conexão primeiro: o `conferir` do reconferir espera na fila dela e vai na conexão nova
     conexao.ressincronizar!();
     proximoQuadro = -1;
@@ -195,6 +198,8 @@ export function criarEstadoCliente(op: OpcoesEstadoCliente) {
 
   function medirTravamento(): void {
     if (!sabe || desistiu) return;
+    // sem a conexão de pé, o `ressincronizar` dela não faz nada: nem mede, nem conta
+    if (conexao.estado !== undefined && conexao.estado !== 'conectado') return;
     const t = agora();
     if (adiantados.size < TRAVADO_QUADROS || t - desdeAplicado < TRAVADO_MS) return;
     // travou de novo antes de 3 s da última: espera
@@ -207,7 +212,7 @@ export function criarEstadoCliente(op: OpcoesEstadoCliente) {
     }
     travamentos++;
     ultimoTravamento = t;
-    ressincronizar();
+    ressincronizar(true);
   }
 
   function receberQuadro(q: Quadro): void {
@@ -249,7 +254,7 @@ export function criarEstadoCliente(op: OpcoesEstadoCliente) {
       // conta própria: fora das 2 do travamento, uma a cada 30 s, e nunca recarrega
       if (t - ultimoSilencio < SILENCIO_ENTRE_MS) return;
       ultimoSilencio = t;
-      ressincronizar();
+      ressincronizar(false);
     }, VIGIA_MS);
     // no Node (testes), o vigia não segura o processo
     (vigia as unknown as { unref?: () => void }).unref?.();
@@ -320,8 +325,12 @@ export function criarEstadoCliente(op: OpcoesEstadoCliente) {
       // spec 035: a queda de verdade não confunde a conta do travamento
       desdeAplicado = agora();
       ultimoChegou = desdeAplicado;
-      travamentos = 0;
-      ultimoTravamento = -Infinity;
+      // a queda que nasceu de uma ressincronização pelo travamento (5 s sem bem-vindo) não
+      // zera a conta: senão, travar, cair e voltar viraria um ciclo sem fim, sem o recarregar
+      if (!(ultimaPeloTravamento && conexao.quedaNaRessincronizacao)) {
+        travamentos = 0;
+        ultimoTravamento = -Infinity;
+      }
       reconferirPrevistas();
     },
     /** Spec 035: quantas vezes a rede de segurança ressincronizou nesta página. */

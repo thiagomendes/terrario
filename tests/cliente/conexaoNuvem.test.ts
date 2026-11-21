@@ -228,6 +228,44 @@ describe('a ressincronização da conexão', () => {
     expect(caixa.hidden).toBe(true);
   });
 
+  it('o prazo de 5 s fecha a presa com 4001 e marca a queda como da ressincronização; a queda de verdade desmarca', () => {
+    const { c, abertos } = abrirConectada();
+    expect(c.quedaNaRessincronizacao).toBe(false);
+    c.ressincronizar();
+    vi.advanceTimersByTime(5000);
+    expect(c.estado).toBe('reconectando');
+    // no registro do servidor, 4001 (e não 1005, o fechamento sem código)
+    expect(abertos[1].codigoFechamento).toBe(4001);
+    expect(c.quedaNaRessincronizacao).toBe(true);
+    // a tentativa seguinte também falha: continua sendo a mesma queda
+    vi.advanceTimersByTime(600);
+    abertos[2].close();
+    expect(c.quedaNaRessincronizacao).toBe(true);
+    vi.advanceTimersByTime(1100);
+    abertos[3].abriu();
+    abertos[3].chega(bemvindo);
+    // de pé: a marca fica até a próxima (src/nuvem.ts chama o reconferir aqui)
+    expect(c.estado).toBe('conectado');
+    expect(c.quedaNaRessincronizacao).toBe(true);
+    // a conexão de pé cai: queda de verdade
+    abertos[3].close();
+    expect(c.quedaNaRessincronizacao).toBe(false);
+  });
+
+  it('a conexão nova que cai antes do bem-vindo também marca a queda como da ressincronização', () => {
+    const { c, abertos } = abrirConectada();
+    c.ressincronizar();
+    abertos[1].close();
+    expect(c.estado).toBe('reconectando');
+    expect(c.quedaNaRessincronizacao).toBe(true);
+    // a próxima ressincronização começa sem a marca
+    vi.advanceTimersByTime(600);
+    abertos[2].abriu();
+    abertos[2].chega(bemvindo);
+    c.ressincronizar();
+    expect(c.quedaNaRessincronizacao).toBe(false);
+  });
+
   it('só ressincroniza com a conexão de pé', () => {
     const { c, abertos } = abrirConectada();
     abertos[0].close();

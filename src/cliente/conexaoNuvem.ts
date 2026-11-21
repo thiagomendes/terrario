@@ -37,6 +37,7 @@ export interface ConexaoNuvem extends Conexao {
   /** Primeiro "bem-vindo" (o mundo a abrir). */
   readonly pronta: Promise<BemVindo>;
   readonly estado: EstadoConexao;
+  readonly quedaNaRessincronizacao: boolean;
   aoEstado(f: (e: EstadoConexao, motivo?: MotivoRecusa) => void): void;
   aoSala(f: (s: EstadoSala) => void): void;
   /** O mundo voltou para este aparelho (o dono parou de jogar com amigos). */
@@ -83,6 +84,8 @@ export function conexaoNuvem(op: OpcoesNuvem): ConexaoNuvem {
   const ouvintesBemVindo: ((bv: BemVindo) => void)[] = [];
   /** O prazo da ressincronização em andamento (5 s até o bem-vindo). */
   let prazoRessinc: ReturnType<typeof setTimeout> | undefined;
+  /** A queda de agora veio do prazo da ressincronização (o estado não zera a conta por ela). */
+  let quedaNaRessinc = false;
   let instancia: string | undefined;
   let primeira = true;
   let ws: WebSocket | null = null;
@@ -226,6 +229,10 @@ export function conexaoNuvem(op: OpcoesNuvem): ConexaoNuvem {
       if (ws !== s) return;
       ws = null;
       if (encerrada) return;
+      // a conexão de pé caiu: é uma queda de verdade; a nova da ressincronização caiu antes do
+      // bem-vindo: a queda nasceu dela (e as tentativas que falham depois continuam sendo ela)
+      if (estado === 'conectado') quedaNaRessinc = false;
+      else if (estado === 'ressincronizando') quedaNaRessinc = true;
       // caiu: tenta de novo, cada vez esperando um pouco mais
       mudar('reconectando');
       const espera = ESPERAS[Math.min(tentativa++, ESPERAS.length - 1)];
@@ -241,6 +248,7 @@ export function conexaoNuvem(op: OpcoesNuvem): ConexaoNuvem {
     // solta a velha antes de fechar: o `onclose` dela não agenda outra conexão, e o que ela
     // ainda disser não vale (`ws !== s`)
     ws = null;
+    quedaNaRessinc = false;
     mudar('ressincronizando');
     velha?.close(FECHA_RESSINCRONIZAR);
     abrir();
@@ -250,7 +258,9 @@ export function conexaoNuvem(op: OpcoesNuvem): ConexaoNuvem {
       // 5 s sem bem-vindo: a internet caiu mesmo; o aviso e a reconexão de sempre
       const presa = ws;
       ws = null;
-      presa?.close();
+      // 4001 também aqui: no registro do servidor é a ressincronização, não um 1005
+      presa?.close(FECHA_RESSINCRONIZAR);
+      quedaNaRessinc = true;
       mudar('reconectando');
       const espera = ESPERAS[Math.min(tentativa++, ESPERAS.length - 1)];
       setTimeout(abrir, espera);
@@ -261,6 +271,9 @@ export function conexaoNuvem(op: OpcoesNuvem): ConexaoNuvem {
     pronta,
     get estado() {
       return estado;
+    },
+    get quedaNaRessincronizacao() {
+      return quedaNaRessinc;
     },
     enviar: (c) => mandar(c),
     pedir: (p) => mandar(p),
