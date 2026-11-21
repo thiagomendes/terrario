@@ -12,7 +12,8 @@ import { abrirMundo, assentar } from './guia-palco';
 declare const process: { env: Record<string, string | undefined> };
 test.setTimeout(900_000);
 const PASTA = 'capturas-027/parte1/comer';
-const COMIDAS = ['brigadeiro', 'beijinho', 'cajuzinho', 'surpresa_uva', 'chocolate_quente', 'pocao_uva'];
+// (e a "Uva" da parreirinha, o item frutinhas deste mundo, em cacho roxo)
+const COMIDAS = ['brigadeiro', 'beijinho', 'cajuzinho', 'surpresa_uva', 'chocolate_quente', 'pocao_uva', 'frutinhas'];
 
 async function abrir(browser: import('@playwright/test').Browser, id: string): Promise<Page> {
   const page = await abrirMundo(browser, { id, tema: 'noite-das-fantasias', tamanho: 'pc' });

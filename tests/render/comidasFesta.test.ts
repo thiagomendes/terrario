@@ -10,6 +10,7 @@ import { obterItem } from '../../src/jogo/itens';
 import { textosOriginais } from '../../src/temas/originais';
 import { ativarTemaPuro } from '../../src/temas/ativarPuro';
 import { temaBase } from '../../src/temas/base';
+import { definirTemaAtivo } from '../../src/temas/ativo';
 import { criarPlasticos } from '../../src/render/formas';
 import { montarComidaMordida } from '../../src/render/refeicao';
 import { jeitoDeComer } from '../../src/jogo/refeicao';
@@ -90,6 +91,30 @@ describe('spec 027 (T15): as comidas da festa', () => {
       }
       c.descartar();
     }
+  });
+
+  it('a "Uva" deste mundo é um cachinho roxo de seis uvas, duas por mordida (nos outros, as três frutinhas)', () => {
+    const scene = cena();
+    const frutas = (c: NonNullable<ReturnType<typeof montarComidaMordida>>) =>
+      c.modelo.malhas.filter((m) => /-fruta/.test(m.name) && m.isEnabled());
+    definirTemaAtivo(obterTema('noite-das-fantasias'));
+    const uva = montarComidaMordida(scene, criarPlasticos(scene, 't'), 'frutinhas', 'uva')!;
+    expect(frutas(uva).length).toBe(6);
+    for (const m of frutas(uva)) {
+      const cor = (m.material as unknown as { diffuseColor: { r: number; g: number; b: number } }).diffuseColor;
+      // roxo: o azul e o vermelho acima do verde
+      expect(cor.b).toBeGreaterThan(cor.g);
+      expect(cor.r).toBeGreaterThan(cor.g);
+    }
+    uva.estagio(1);
+    expect(frutas(uva).length).toBe(4);
+    uva.estagio(3);
+    expect(frutas(uva).length).toBe(0);
+    definirTemaAtivo(obterTema('rancho-alegre'));
+    const outra = montarComidaMordida(scene, criarPlasticos(scene, 't'), 'frutinhas', 'fr')!;
+    expect(frutas(outra).length).toBe(3);
+    outra.estagio(1);
+    expect(frutas(outra).length).toBe(2);
   });
 
   it('o chocolate desce na caneca e a poção desce no copo a cada gole', () => {

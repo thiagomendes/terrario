@@ -38,6 +38,7 @@ import {
   type JeitoDeComer,
 } from '../jogo/refeicao';
 import type { EventoSom } from '../audio/sons';
+import { tema } from '../temas/ativo';
 
 /** Quem come: o boneco (a mão, a boca, os plásticos e o nó do corpo). */
 export interface DonoDaRefeicao {
@@ -708,7 +709,10 @@ export function montarComidaMordida(
     ponto = (k) => new Vector3(0, 0.3 - k * 0.02, 0.04);
   } else if (item === 'frutinhas') {
     const frutas = modelo.malhas.filter((m) => /^fruta/.test(nome(m)));
-    estagio = (k) => frutas.forEach((m, i) => m.setEnabled(i >= Math.max(0, Math.min(3, k))));
+    // (três frutinhas, uma por mordida; o cacho de uva da festa, duas uvas por mordida)
+    const porMordida = frutas.length / 3;
+    estagio = (k) =>
+      frutas.forEach((m, i) => m.setEnabled(i >= Math.round(Math.max(0, Math.min(3, k)) * porMordida)));
     ponto = () => new Vector3(0, 0.03, 0);
   } else {
     // (uma comida sem forma mordida: fica menor a cada mordida, e some na terceira)
@@ -798,11 +802,13 @@ export function criarRefeicoes(scene: Scene, op: OpcoesRefeicoes): Refeicoes {
     no.computeWorldMatrix(true);
     const p = c.comida.pontoDaMordida(c.mordidas);
     Vector3.TransformCoordinatesToRef(p, no.getWorldMatrix(), mundo);
-    const cores = MIGALHAS[c.item] ?? ['#e0b080'];
+    // (spec 027: a uva da festa solta gotinhas roxas, e pequenas)
+    const uvaDaFesta = c.item === 'frutinhas' && tema().id === 'noite-das-fantasias';
+    const cores = uvaDaFesta ? ['#8a4ec8'] : (MIGALHAS[c.item] ?? ['#e0b080']);
     const leve = c.jeito === 'nuvem';
     // (spec 027: o docinho é macio, não esfarela: duas migalhinhas pequenas, nada de bolinhas na
     // cara; a caneca, uma gotinha)
-    const docinho = c.jeito === 'pipoca' && c.item !== 'pipoca';
+    const docinho = (c.jeito === 'pipoca' && c.item !== 'pipoca') || uvaDaFesta;
     const quantas = docinho ? 2 : c.jeito === 'caneca' ? 1 : c.jeito === 'canudinho' ? 2 : c.jeito === 'colherada' ? 2 : leve ? 4 : 5;
     const mats = c.dono.plasticos();
     for (let i = 0; i < quantas; i++) {

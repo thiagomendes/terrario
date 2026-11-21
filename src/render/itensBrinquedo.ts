@@ -159,6 +159,23 @@ export function modeloNaMao(
         break;
       }
       case 'frutinhas':
+        if (tema().id === 'noite-das-fantasias') {
+          // spec 027 (T15): neste mundo o item é a "Uva" da parreirinha do Seu Jerônimo: o
+          // cachinho roxo (seis uvas em triângulo, a de baixo some primeiro), o cabinho e a folha
+          for (const [x, y, z, cor] of [
+            [0, 0.0, 0, '#7a3ea8'],
+            [-0.028, 0.045, 0.01, '#8a4ec8'],
+            [0.028, 0.045, -0.006, '#6e3498'],
+            [-0.05, 0.09, -0.004, '#6e3498'],
+            [0, 0.095, 0.012, '#7a3ea8'],
+            [0.05, 0.09, 0.004, '#8a4ec8'],
+          ] as const)
+            add(bo(`fruta${x}${y}`, 0.03, cor, [1, 1.08, 1], 0.6), x, y, z);
+          add(ci('cabinho-uva', 0.05, 0.007, 0.009, '#6a4a2a'), 0, 0.14, 0);
+          const folha = add(bo('folha-uva', 0.04, '#5f8a34', [1.4, 0.35, 1], 0.3), 0.035, 0.155, 0);
+          folha.rotation.z = -0.4;
+          break;
+        }
         for (const [x, y, z] of [
           [-0.04, 0, 0],
           [0.04, 0, 0.01],
