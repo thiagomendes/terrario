@@ -133,9 +133,20 @@ export const BLOCOS_SO_DO_BAILE: readonly number[] = [
   Bloco.TOLDINHO,
   Bloco.CALDEIRAO,
 ];
+/**
+ * Spec 027 (T14): as comidas das barracas da festa (só deste mundo): os três docinhos da Tia
+ * Filó e a surpresa de uva do Seu Jerônimo (cada um na forminha com três), o chocolate quente e
+ * a poção de uva do Seu Olavo.
+ */
+export const BRIGADEIRO = 'brigadeiro';
+export const BEIJINHO = 'beijinho';
+export const CAJUZINHO = 'cajuzinho';
+export const SURPRESA_UVA = 'surpresa_uva';
+export const CHOCOLATE_QUENTE = 'chocolate_quente';
+export const POCAO_UVA = 'pocao_uva';
 export const EXCLUSIVOS_BAILE: Exclusivos = {
   blocos: BLOCOS_SO_DO_BAILE,
-  itens: [],
+  itens: [BRIGADEIRO, BEIJINHO, CAJUZINHO, SURPRESA_UVA, CHOCOLATE_QUENTE, POCAO_UVA],
 };
 
 /**

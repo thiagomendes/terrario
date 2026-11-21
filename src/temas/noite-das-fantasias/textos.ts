@@ -119,6 +119,13 @@ export const TEXTOS_FANTASIAS: TextosTema = {
     maca: 'Maçã',
     // a uva da parreirinha do Seu Jerônimo (o sapinho de chapeuzinho vem atrás dela)
     frutinhas: 'Uva',
+    // as comidas das barracas da festa (T14)
+    brigadeiro: 'Brigadeiro',
+    beijinho: 'Beijinho',
+    cajuzinho: 'Cajuzinho',
+    surpresa_uva: 'Surpresa de uva',
+    chocolate_quente: 'Chocolate quente',
+    pocao_uva: 'Poção de uva',
     carne_assada: 'Espetinho',
     peixe_cru: 'Peixe fresco',
     peixe_assado: 'Peixe assado',

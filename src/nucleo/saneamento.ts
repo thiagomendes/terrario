@@ -226,6 +226,11 @@ export function sanear(c: unknown): Comando | null {
       if (o.a === 'brinquedo' && inteiro(o.i, 0, 2))
         return { t: 'vila', a: 'brinquedo', i: o.i } as unknown as Comando;
       return null;
+    case 'baile':
+      // spec 027 (T14): comprar o lanche de uma barraca da festa (o índice do lugar de comprar)
+      if (o.a === 'comprar' && inteiro(o.i, 0, 15))
+        return { t: 'baile', a: 'comprar', i: o.i } as unknown as Comando;
+      return null;
     case 'pularPerto':
       // spec 021: só o id de um amigo (texto curto)
       return texto(o.alvo, 64) ? (o as unknown as Comando) : null;

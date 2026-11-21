@@ -13,13 +13,38 @@
  *   lanche a vendedora só acena.
  */
 import type { PlanoVila, PecaVila } from '../world/vilaNeon';
-import { ALGODAO_DOCE, CACHORRO_QUENTE, SUCO, VITAMINA } from './exclusivos';
+import type { PlanoBaile } from '../world/noiteFantasias';
+import {
+  ALGODAO_DOCE,
+  BEIJINHO,
+  BRIGADEIRO,
+  CACHORRO_QUENTE,
+  CAJUZINHO,
+  CHOCOLATE_QUENTE,
+  POCAO_UVA,
+  SUCO,
+  SURPRESA_UVA,
+  VITAMINA,
+} from './exclusivos';
+import { N_BAILE } from './baile';
 import { TAMANHO_BARRA, type Slot } from './inventario';
 
 type P3 = [number, number, number];
 
 /** O que se compra. */
-export type Lanche = 'pipoca' | 'cachorro' | 'suco' | 'vitamina' | 'algodao';
+export type Lanche =
+  | 'pipoca'
+  | 'cachorro'
+  | 'suco'
+  | 'vitamina'
+  | 'algodao'
+  // spec 027 (T14): a festa
+  | 'brigadeiro'
+  | 'beijinho'
+  | 'cajuzinho'
+  | 'uva'
+  | 'chocolate'
+  | 'pocao';
 
 /** O item de cada lanche. */
 export const ITEM_DO_LANCHE: Readonly<Record<Lanche, string>> = {
@@ -28,15 +53,31 @@ export const ITEM_DO_LANCHE: Readonly<Record<Lanche, string>> = {
   suco: SUCO,
   vitamina: VITAMINA,
   algodao: ALGODAO_DOCE,
+  brigadeiro: BRIGADEIRO,
+  beijinho: BEIJINHO,
+  cajuzinho: CAJUZINHO,
+  uva: SURPRESA_UVA,
+  chocolate: CHOCOLATE_QUENTE,
+  pocao: POCAO_UVA,
 };
 
 /** As barracas (cada uma com o seu preparo na tela). */
-export type Barraca = 'lanche' | 'lanchonete' | 'pipocaParque' | 'algodao' | 'pipocaPracinha';
+export type Barraca =
+  | 'lanche'
+  | 'lanchonete'
+  | 'pipocaParque'
+  | 'algodao'
+  | 'pipocaPracinha'
+  // spec 027 (T14): a Barraca dos Doces, a Barraca das Canecas e a Bancada da Horta
+  | 'doces'
+  | 'canecas'
+  | 'horta';
 
 /**
- * Quem entrega (o `n` do morador da vila): a Bia do lanche (o posto 3), a Tati da lanchonete
- * (6), o Seu Chico do parque (63) e a Dona Cida da pracinha (73). Os números são os de
- * `src/nucleo/vila.ts` (o teste confere).
+ * Quem entrega (o `n` do morador do povoado do mundo): na Vila, a Bia do lanche (o posto 3), a
+ * Tati da lanchonete (6), o Seu Chico do parque (63) e a Dona Cida da pracinha (73), os números
+ * de `src/nucleo/vila.ts` (o teste confere); na festa, a Tia Filó, o Seu Olavo e o Seu
+ * Jerônimo (`N_BAILE`).
  */
 export const VENDEDORA: Readonly<Record<Barraca, number>> = {
   lanche: 3,
@@ -44,6 +85,9 @@ export const VENDEDORA: Readonly<Record<Barraca, number>> = {
   pipocaParque: 63,
   algodao: 63,
   pipocaPracinha: 73,
+  doces: N_BAILE.filo,
+  canecas: N_BAILE.olavo,
+  horta: N_BAILE.jeronimo,
 };
 
 /** Um lugar de comprar: um lanche numa barraca. */
@@ -125,6 +169,59 @@ export function balcoesDaVila(plano: PlanoVila): Balcao[] {
   if (daPracinha)
     add({ chave: 'compra-pipoca-pracinha', barraca: 'pipocaPracinha', lanche: 'pipoca', p: noMundo(daPracinha, 0, 1.35, 0), alcance: ALCANCE_CARRINHO });
   return r;
+}
+
+/**
+ * Onde, na Bancada da Horta, ficam as forminhas da surpresa de uva (no espaço da peça, ao lado
+ * das três abóboras de carinha). A tela desenha ali; o balcão de comprar lê daqui.
+ */
+export const SURPRESAS_NA_BANCADA: readonly (readonly [number, number, number])[] = [
+  [1.0, 0.96, 0.12],
+  [1.45, 0.96, -0.1],
+];
+/** Na barraca da festa (no espaço da peça): o tampo e a fila da frente do que ela vende. */
+const TAMPO_BAILE = 1.01;
+const FRENTE_BAILE = 0.55;
+
+/**
+ * Spec 027 (T14): os lugares de comprar da Noite das Fantasias, sempre na mesma ordem (o índice
+ * é o do comando `comprar`): o brigadeiro, o beijinho e o cajuzinho da Barraca dos Doces (as
+ * forminhas da frente, da esquerda para a direita), o chocolate quente e a poção de uva da
+ * Barraca das Canecas e a surpresa de uva da Bancada da Horta.
+ */
+export function balcoesDoBaile(plano: PlanoBaile): Balcao[] {
+  const r: Balcao[] = [];
+  const add = (b: Omit<Balcao, 'item' | 'vendedora'>) =>
+    r.push({ ...b, item: ITEM_DO_LANCHE[b.lanche], vendedora: VENDEDORA[b.barraca] });
+  const doces = plano.pecas.find((q) => q.tipo === 'barraca' && q.n === 0);
+  if (doces)
+    (['brigadeiro', 'beijinho', 'cajuzinho'] as const).forEach((l, i) =>
+      add({
+        chave: `compra-${l}`,
+        barraca: 'doces',
+        lanche: l,
+        p: noMundo(doces, -1.1 + i * 1.1, TAMPO_BAILE + 0.1, FRENTE_BAILE),
+        alcance: ALCANCE_BALCAO,
+      }),
+    );
+  const canecas = plano.pecas.find((q) => q.tipo === 'barraca' && q.n === 1);
+  if (canecas) {
+    add({ chave: 'compra-chocolate', barraca: 'canecas', lanche: 'chocolate', p: noMundo(canecas, -0.8, TAMPO_BAILE + 0.12, FRENTE_BAILE), alcance: ALCANCE_BALCAO });
+    add({ chave: 'compra-pocao', barraca: 'canecas', lanche: 'pocao', p: noMundo(canecas, 0.8, TAMPO_BAILE + 0.15, FRENTE_BAILE), alcance: ALCANCE_BALCAO });
+  }
+  const bancada = plano.pecas.find((q) => q.tipo === 'bancada');
+  if (bancada) {
+    const [x, y, z] = SURPRESAS_NA_BANCADA[0];
+    add({ chave: 'compra-uva', barraca: 'horta', lanche: 'uva', p: noMundo(bancada, x, y + 0.1, z), alcance: ALCANCE_BALCAO });
+  }
+  return r;
+}
+
+/** Os lugares de comprar do mundo, pela planta do povoado (a Vila Neon ou a festa). */
+export function balcoesDoMundo(plano: { vila?: PlanoVila | null; baile?: PlanoBaile | null }): Balcao[] {
+  if (plano.vila) return balcoesDaVila(plano.vila);
+  if (plano.baile) return balcoesDoBaile(plano.baile);
+  return [];
 }
 
 /** A criança (os pés em x, z) alcança este lugar de comprar? */

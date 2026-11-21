@@ -16,6 +16,9 @@ import type { PlanoBaile, PostoBaile } from '../world/noiteFantasias';
 import type { Profissao } from '../world/povoado';
 import type { Criatura, TipoSer } from '../jogo/criaturas';
 import { ABRACO, DURACAO_ABRACO, N_BAILE, POVOADO_BAILE, VIZINHOS_DA_RUA } from '../jogo/baile';
+import { balcoesDoBaile } from '../jogo/compra';
+import { TOQUES_POR_SEGUNDO } from '../jogo/show';
+import { criarComprasDaVila, type EventoCompras, type JogadorCompra } from './vilaCompras';
 
 export { POVOADO_BAILE };
 
@@ -62,8 +65,10 @@ export interface CtxBaile {
   criaturas(): readonly Criatura[];
   /** O chão da coluna já está carregado (alguém vê)? */
   carregado(x: number, z: number): boolean;
-  /** Evento para todos (o abraço). */
-  espalhar(e: EventoBaile): void;
+  /** T14: quem compra (a mochila e a barrinha), ou undefined. */
+  comprador?(id: string): JogadorCompra | undefined;
+  /** Evento para todos (o abraço, a compra). */
+  espalhar(e: EventoBaile | EventoCompras): void;
   /** O estado mudou: a tela precisa do quadro novo. */
   sujar(): void;
 }
@@ -73,6 +78,9 @@ export type EventoBaile =
   | { e: 'baileAbraco'; quem: string; criatura: number; x: number; y: number; z: number }
   /** T11: o abraço acabou antes (a criança mexeu no controle ou saiu). */
   | { e: 'baileSolta'; quem: string; criatura: number };
+
+/** O comando `baile` (T14: comprar o lanche `i` de `balcoesDoBaile`). */
+export type ComandoBaile = { a: 'comprar'; i: number };
 
 /** O abraço de agora (um por vez). */
 interface AbracoAgora {
@@ -180,12 +188,44 @@ export function criarBaile(ctx: CtxBaile) {
     }
   }
 
+  // ------------------------------------------------------------------ comprar (T14)
+  // o mesmo módulo da Vila Neon (spec 032), com os balcões da festa: a fichinha, a entrega, uma
+  // compra por vez, 3 de cada e a barrinha cheia sem perder nada
+  const compras = criarComprasDaVila({
+    balcoes: balcoesDoBaile(ctx.plano),
+    agora: ctx.agora,
+    jogador: (id) => ctx.comprador?.(id),
+    espalhar: ctx.espalhar,
+  });
+  const toques = new Map<string, number[]>();
+  function podeTocar(id: string): boolean {
+    const t = ctx.agora();
+    const l = (toques.get(id) ?? []).filter((x) => t - x < 1);
+    if (l.length >= TOQUES_POR_SEGUNDO) {
+      toques.set(id, l);
+      return false;
+    }
+    l.push(t);
+    toques.set(id, l);
+    if (toques.size > 256) toques.delete(toques.keys().next().value as string);
+    return true;
+  }
+
   return {
     /** A cada passo (o núcleo chama com o número do passo). */
     passo(n: number): void {
       if (n % 20 === 0) cuidarDosMoradores();
       cuidarDoAbraco();
+      compras.passo();
     },
+    /** O comando `baile` (já saneado): comprar numa barraca da festa. */
+    comando(id: string, c: ComandoBaile): void {
+      const j = ctx.jogador(id);
+      if (!j || j.morto || !podeTocar(id)) return;
+      if (c.a === 'comprar') compras.comando(id, c);
+    },
+    /** Testes: as compras (os lanches a caminho). */
+    compras,
     /** Um toque num morador (o núcleo chama no "falar"): no Bento, o abraço. */
     falou(id: string, c: Criatura): void {
       if (c.morador?.povoado === POVOADO_BAILE && c.morador.n === N_BAILE.bento) abracar(id, c);

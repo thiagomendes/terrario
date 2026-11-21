@@ -15,6 +15,7 @@ import type { Pecas, V3 } from '../solidos';
 import { perfilEstrela, Ref, type Desenho } from '../vila/ref';
 import type { PecaBaile } from '../../world/noiteFantasias';
 import type { PecaVila } from '../../world/vilaNeon';
+import { SURPRESAS_NA_BANCADA } from '../../jogo/compra';
 
 export const CORES = {
   // (o roxo, o roxo-escuro e o ferro de brinquedo um tom acima do esboço: a porta da loja e o
@@ -557,9 +558,15 @@ function barracaDeFesta(r: Ref, a: string, b: string): void {
 }
 
 /** A forminha de docinho com três (o brigadeiro, o beijinho ou o cajuzinho), no tampo. */
-function forminha(r: Ref, x: number, y: number, z: number, doce: 'brigadeiro' | 'beijinho' | 'cajuzinho'): void {
+function forminha(
+  r: Ref,
+  x: number,
+  y: number,
+  z: number,
+  doce: 'brigadeiro' | 'beijinho' | 'cajuzinho' | 'uva',
+): void {
   r.prisma(10, 0.22, 0.06, x, y, z, '#f6ecdc', 'y');
-  const cor = doce === 'brigadeiro' ? '#5a3424' : doce === 'beijinho' ? '#fbf3e6' : '#e8a050';
+  const cor = doce === 'brigadeiro' ? '#5a3424' : doce === 'beijinho' || doce === 'uva' ? '#fbf3e6' : '#e8a050';
   for (let i = 0; i < 3; i++) {
     const a = (i / 3) * Math.PI * 2;
     const bx = x + Math.cos(a) * 0.09;
@@ -568,6 +575,11 @@ function forminha(r: Ref, x: number, y: number, z: number, doce: 'brigadeiro' | 
     if (doce === 'cajuzinho') r.caixa(0.03, 0.05, 0.03, bx, y + 0.16, bz, '#7a4e2a', 0.01);
     if (doce === 'beijinho') r.caixa(0.035, 0.035, 0.035, bx, y + 0.16, bz, '#5a3424', 0.01);
     if (doce === 'brigadeiro') r.caixa(0.04, 0.02, 0.04, bx, y + 0.16, bz, CORES.laranja, 0.01);
+    // a surpresa de uva: o docinho branco com a uva roxa aparecendo em cima e o cabinho verde
+    if (doce === 'uva') {
+      bolinha(r, bx, y + 0.155, bz, 0.04, '#7a3ea8');
+      r.caixa(0.016, 0.04, 0.016, bx, y + 0.19, bz, '#5f8a34', 0.005);
+    }
   }
 }
 
@@ -913,17 +925,21 @@ function lanternaBosque(r: Ref, d: DesenhoBaile): void {
 /** A bancada do Seu Jerônimo com as três abóboras de carinha (sorriso, língua e piscadinha). */
 function bancada(r: Ref, d: DesenhoBaile): void {
   const H = 0.86;
-  r.caixa(2.8, 0.1, 0.9, 0, H, 0, CORES.madeira, 0.03);
-  r.caixa(2.7, 0.08, 0.8, 0, 0.26, 0, CORES.madeiraEscura, 0.02);
-  for (const x of [-1.25, 1.25])
+  // (spec 027, T14: mais larga; as surpresas de uva que o Seu Jerônimo vende ficam do lado das
+  // abóboras, na bandejinha creme)
+  r.caixa(3.7, 0.1, 0.9, 0, H, 0, CORES.madeira, 0.03);
+  r.caixa(3.6, 0.08, 0.8, 0, 0.26, 0, CORES.madeiraEscura, 0.02);
+  for (const x of [-1.7, 0, 1.7])
     for (const z of [-0.34, 0.34]) r.caixa(0.12, H, 0.12, x, 0, z, CORES.madeiraEscura, 0.03);
   const tipos: Carinha[] = ['sorriso', 'lingua', 'piscadinha'];
   tipos.forEach((t, i) => {
-    const x = -0.9 + i * 0.9;
+    const x = -1.4 + i * 0.8;
     r.caixa(0.6, 0.04, 0.6, x, H + 0.1, 0.02, CORES.creme, 0.01);
     abobora(r, x, H + 0.14, 0.02, 0.62, 8);
     rostoDaAbobora(r, d, [x, H + 0.14, 0.02], 0.62, 8, t, 'sempre');
   });
+  r.caixa(1.0, 0.03, 0.68, 1.24, H + 0.1, 0.01, '#dccaf0', 0.01);
+  for (const [x, , z] of SURPRESAS_NA_BANCADA) forminha(r, x, H + 0.13, z, 'uva');
 }
 
 /** A latada da parreirinha de uva: os mourões, as travessas e os cachos pendurados. */

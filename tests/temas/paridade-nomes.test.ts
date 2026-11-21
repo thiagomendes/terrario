@@ -8,10 +8,17 @@ import { obterTema, temasDisponiveis } from '../../src/temas';
 import { temaBase } from '../../src/temas/base';
 import { ativarTemaPuro } from '../../src/temas/ativarPuro';
 import { textosOriginais } from '../../src/temas/originais';
-import { blocoExclusivo, EXCLUSIVOS_CIDADE, EXCLUSIVOS_VILA } from '../../src/jogo/exclusivos';
+import {
+  blocoExclusivo,
+  EXCLUSIVOS_BAILE,
+  EXCLUSIVOS_CIDADE,
+  EXCLUSIVOS_VILA,
+} from '../../src/jogo/exclusivos';
 
 const exclusivo = (item: string) =>
-  EXCLUSIVOS_CIDADE.itens.includes(item) || EXCLUSIVOS_VILA.itens.includes(item);
+  EXCLUSIVOS_CIDADE.itens.includes(item) ||
+  EXCLUSIVOS_VILA.itens.includes(item) ||
+  EXCLUSIVOS_BAILE.itens.includes(item);
 
 describe('renomear pelo tema', () => {
   it('cada tema renomeia blocos, itens de bloco, itens, criaturas e biomas', () => {

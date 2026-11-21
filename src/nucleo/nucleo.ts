@@ -884,6 +884,11 @@ export function criarNucleo(op: OpcoesNucleo) {
         adicionar: (tipo, x, y, z) => populacao.adicionar(tipo, x, y, z),
         criaturas: () => populacao.lista,
         carregado: (x, z) => mundo.criaturas.superficie(Math.floor(x), Math.floor(z)) !== null,
+        // T14: quem compra nas barracas da festa (a mochila e a barrinha, como na Vila)
+        comprador: (id) => {
+          const o = jogadores.get(id);
+          return o ? jogadorDaVila(o) : undefined;
+        },
         espalhar: (e) => eventosGerais.push(e),
         sujar: () => {},
       })
@@ -2787,6 +2792,10 @@ export function criarNucleo(op: OpcoesNucleo) {
         else vila?.comando(j.id, { a: c.a });
         break;
       }
+      case 'baile':
+        // spec 027 (T14): comprar nas barracas da festa (o módulo confere o resto)
+        if (c.a === 'comprar') baile?.comando(j.id, { a: 'comprar', i: c.i });
+        break;
       case 'salvar':
         // o anfitrião responde (precisa do pedido)
         break;

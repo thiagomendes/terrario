@@ -420,7 +420,8 @@ export function ligarVilaNeon(
     const pes = e.jogadorPes?.();
     return !!pes && balcoes.some((b) => alcancaOBalcao(b, pes[0], pes[2]));
   };
-  const FIGURA_DO_LANCHE: Record<Lanche, string> = {
+  // (só os lanches da Vila: a lista de balcões daqui é a da Vila)
+  const FIGURA_DO_LANCHE: Partial<Record<Lanche, string>> = {
     pipoca: 'dicaPipoca',
     cachorro: 'dicaCachorroQuente',
     suco: 'dicaSuco',
@@ -527,7 +528,7 @@ export function ligarVilaNeon(
           e.vilaCompras?.comprar(i);
         },
         dica: {
-          figura: FIGURA_DO_LANCHE[b.lanche],
+          figura: FIGURA_DO_LANCHE[b.lanche] ?? 'dicaPipoca',
           texto: 'Toque para comprar',
           // (os carrinhos do parque ficam do lado dos brinquedos: a dica deles só bem de perto, e a
           // de andar no brinquedo vem antes)

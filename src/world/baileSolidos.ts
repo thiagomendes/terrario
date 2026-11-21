@@ -63,7 +63,8 @@ function caixasLocais(tipo: TipoPecaBaile, n: number): readonly Local[] {
     case 'banquinho':
       return [B(-0.36, 0.36, 0, 0.5, -0.22, 0.22)];
     case 'bancada':
-      return [B(-1.4, 1.4, 0, 1.0, -0.45, 0.45)];
+      // (spec 027, T14: mais larga, com as surpresas de uva do lado das abóboras)
+      return [B(-1.85, 1.85, 0, 1.0, -0.45, 0.45)];
     case 'parreira': {
       const out: Local[] = [];
       for (const x of [-3.8, 0, 3.8]) for (const z of [-0.7, 0.7]) out.push(B(x - 0.08, x + 0.08, 0, 2.4, z - 0.08, z + 0.08));

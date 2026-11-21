@@ -232,7 +232,7 @@ import { criarRefeicoes, NA_BOCA, NA_MAO_COMENDO, type Refeicoes } from './refei
 import { AJUSTE_COMER } from '../personagem/poses';
 import { CHAVE_TRILHA_SAIDA } from '../audio/trilha';
 import { criarRenderCompras } from './vila/compras';
-import { balcoesDaVila } from '../jogo/compra';
+import { balcoesDaVila, balcoesDoBaile } from '../jogo/compra';
 import { DURACAO_REFEICAO } from '../jogo/refeicao';
 import { AVISO_LIMITE, COMIDA_DOS_BICHOS, comeEsse, domaCom, viraCriado } from '../jogo/criacao';
 import { biomaEm, estiloMundo } from '../world/chunk';
@@ -467,6 +467,8 @@ export interface EstadoDepuracao {
   semTransparenciaDoBoneco?: boolean;
   /** Spec 026 (parte 3): a chave da dica de toque à vista na Vila Neon, ou null. */
   dicaVila?: () => string | null;
+  /** Spec 027 (T14): a dica de comprar à vista na festa (testes). */
+  dicaBaile?: () => { chave: string; texto: string; t: { x: number; y: number } } | null;
   /** Spec 030: os sítios (Rancho) a até 220 blocos do jogador, do mais perto ao mais longe. */
   sitios?: () => PlanoPovoado[];
   /** Spec 014 (T10): o horizonte de torres (null fora da cidade). */
@@ -584,6 +586,13 @@ export interface EstadoDepuracao {
    * Spec 032: comprar nas barracas da Vila Neon. `comprar` vai ao núcleo (ele confere o alcance,
    * uma por vez, os 3 e a barrinha); a entrega aparece quando ele avisa (`vilaCompra`).
    */
+  /** Spec 027 (T14): comprar nas barracas da festa (o mesmo jeito da Vila). */
+  baileCompras?: {
+    comprar(i: number): void;
+    acenar(n: number): void;
+    balcoes(): readonly import('../jogo/compra').Balcao[];
+    estado(): ReturnType<import('./vila/compras').RenderCompras['estado']>;
+  };
   vilaCompras?: {
     comprar(i: number): void;
     /** A vendedora `n` acena (o toque de quem já tem 3 do lanche). */
@@ -2188,6 +2197,50 @@ export function criarCena(
         preparar: prepararEfeito,
       })
     : null;
+  // spec 027 (T14): comprar nas barracas da festa, o mesmo desenho da 032 (a fichinha, a Tia
+  // Filó, o Seu Olavo ou o Seu Jerônimo pegam no balcão e entregam)
+  const balcoesBaile = planoBaile ? balcoesDoBaile(planoBaile) : [];
+  const acenarBaile = (n: number) => {
+    const quem = replicaCriaturas.lista.find(
+      (q) => q.morador?.povoado === POVOADO_BAILE && q.morador.n === n,
+    );
+    if (quem) gestos?.evento({ e: 'gesto', gesto: 'acenar', criatura: quem.id });
+  };
+  const comprasBaile = planoBaile
+    ? criarRenderCompras(scene, {
+        balcoes: balcoesBaile,
+        comprador: (id) => {
+          if (id === voce) return { boneco: personagem, animador };
+          const b = outrosJogadores.personagemDe(id);
+          const a = outrosJogadores.animadorDe(id);
+          return b && a ? { boneco: b, animador: a } : null;
+        },
+        vendedora: (n) => {
+          const c = replicaCriaturas.lista.find(
+            (q) => q.morador?.povoado === POVOADO_BAILE && q.morador.n === n && q.estado !== 'morrendo',
+          );
+          return c ? renderCriaturas.bonecoDoMorador(c.id) : null;
+        },
+        // (o docinho, a caneca e a surpresa já estão prontos no balcão: a vendedora só pega)
+        preparo: () => {},
+        aceno: (n) => acenarBaile(n),
+        som: (qual, onde) => {
+          const j = controle.jogador;
+          if (Math.hypot(onde.x - j.x, onde.z - j.z) > 14) return;
+          somEfeito(qual === 'fichinha' ? 'moeda' : qual === 'pulo' ? 'puf' : 'recusa', 80);
+        },
+        preparar: prepararEfeito,
+      })
+    : null;
+  estado.baileCompras = {
+    comprar: (i) => {
+      enviarTelemetria(true);
+      enviar({ t: 'baile', a: 'comprar', i });
+    },
+    acenar: (n) => acenarBaile(n),
+    balcoes: () => balcoesBaile,
+    estado: () => comprasBaile?.estado() ?? [],
+  };
   estado.vilaCompras = {
     comprar: (i) => {
       enviarTelemetria(true);
@@ -4676,6 +4729,7 @@ export function criarCena(
     abracoBaile?.atualizar(dt);
     refeicoes.atualizar(dt);
     comprasVila?.atualizar(dt);
+    comprasBaile?.atualizar(dt);
     const vivas = pool.vivas();
     for (let i = 0; i < pecasParticulas.length; i++) {
       const { peca, pino, confete, gota } = pecasParticulas[i];
@@ -7094,6 +7148,7 @@ export function criarCena(
       // spec 032: a compra na barraca (a entrega, para todos); a barrinha cheia de quem tocou
       case 'vilaCompra':
         comprasVila?.evento(e);
+        comprasBaile?.evento(e);
         if (e.cheia && e.quem === voce)
           window.dispatchEvent(new CustomEvent('brumaluz:barraCheia', { detail: e.i }));
         estado.eventosVila?.push({ ...e, recebido: performance.now() / 1000 });

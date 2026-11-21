@@ -1,5 +1,11 @@
 import {
   ALGODAO_DOCE,
+  BEIJINHO,
+  BRIGADEIRO,
+  CAJUZINHO,
+  CHOCOLATE_QUENTE,
+  POCAO_UVA,
+  SURPRESA_UVA,
   CACHORRO_QUENTE,
   COLHER_PEDREIRO,
   CUBO_CORES,
@@ -768,6 +774,100 @@ function lingote(cor: string, cor2: string, cor3: string) {
   };
 }
 
+/**
+ * Spec 027 (T14): o docinho na forminha de papel pregueada (o ícone; na mão vão os três). `topo`:
+ * o cravo do beijinho, o amendoim do cajuzinho ou a uva roxa da surpresa de uva.
+ */
+function docinho(
+  cores: { k: string; b: string; B: string; d: string; t: string },
+  topo?: 'cravo' | 'amendoim' | 'uva',
+) {
+  const linhas = [
+    '................',
+    '................',
+    '......kkkk......',
+    '....kkBBbbkk....',
+    '...kBBtbbtbbk...',
+    '..kBbbbbbbbtdk..',
+    '..kbtbbbbtbbdk..',
+    '..kbbbbtbbbbdk..',
+    '..kdbbbbbbbddk..',
+    '.kkkddddddddkkk.',
+    '.kfFfFfFfFfFfFk.',
+    '..kfFfFfFfFfFk..',
+    '..kfFfFfFfFfFk..',
+    '...kFfFfFfFfk...',
+    '....kkkkkkkk....',
+    '................',
+  ];
+  if (topo === 'cravo') linhas[1] = '.......cc.......';
+  if (topo === 'amendoim') linhas[1] = '......ccc.......';
+  if (topo === 'uva') {
+    linhas[0] = '........g.......';
+    linhas[1] = '......cccc......';
+  }
+  const c = topo === 'cravo' ? '#4a2a18' : topo === 'amendoim' ? '#c88a4a' : '#7a3ea8';
+  return { paleta: { ...cores, f: '#f6ecdc', F: '#e0cfb4', c, g: '#5f8a34' }, linhas };
+}
+
+/** Spec 027 (T14): as comidas das barracas da festa (só da Noite das Fantasias). */
+function registrarComidasDaFesta(): void {
+  const doces: [string, string, Parameters<typeof docinho>[0], Parameters<typeof docinho>[1]][] = [
+    [BRIGADEIRO, 'Brigadeiro', { k: '#2a160e', b: '#5a3424', B: '#7e5038', d: '#3e2216', t: '#ff9a3a' }, undefined],
+    [BEIJINHO, 'Beijinho', { k: '#7a6a52', b: '#fbf3e6', B: '#ffffff', d: '#e0d4bf', t: '#e8dcc6' }, 'cravo'],
+    [CAJUZINHO, 'Cajuzinho', { k: '#6a3a16', b: '#e0904a', B: '#f0b070', d: '#b86a30', t: '#c07838' }, 'amendoim'],
+    [SURPRESA_UVA, 'Surpresa de uva', { k: '#7a6a52', b: '#fbf3e6', B: '#ffffff', d: '#e0d4bf', t: '#efe6d4' }, 'uva'],
+  ];
+  for (const [id, nome, cores, topo] of doces) {
+    registrarItem({ id, nome, tipo: 'comida', pilha: 16, comida: { fome: 3, saturacao: 2 } });
+    registrarDesenho(id, docinho(cores, topo));
+  }
+  registrarItem({ id: CHOCOLATE_QUENTE, nome: 'Chocolate quente', tipo: 'comida', pilha: 16, comida: { fome: 4, saturacao: 3 } });
+  registrarDesenho(CHOCOLATE_QUENTE, {
+    paleta: { k: '#5a3420', c: '#5a3020', C: '#7a4a30', m: '#f2a24a', M: '#ffc27a', d: '#c87a2a', w: '#ffffff' },
+    linhas: [
+      '................',
+      '....w...w.......',
+      '.....w...w......',
+      '....w...w.......',
+      '..kkkkkkkkkk....',
+      '..kccCccccck....',
+      '..kmmmmmmmmkkk..',
+      '..kMmmmmmmmk.k..',
+      '..kMmmmmmmmk.k..',
+      '..kMmmmmmmmkkk..',
+      '..kMmmmmmmmk....',
+      '..kMmmmmmmdk....',
+      '...kddddddk.....',
+      '....kkkkkk......',
+      '................',
+      '................',
+    ],
+  });
+  registrarItem({ id: POCAO_UVA, nome: 'Poção de uva', tipo: 'comida', pilha: 16, comida: { fome: 3, saturacao: 2 } });
+  registrarDesenho(POCAO_UVA, {
+    paleta: { k: '#4a2a6e', g: '#e8d8ff', p: '#8a4ec8', P: '#b07ae0', q: '#6a32a0', s: '#ff9a3a' },
+    linhas: [
+      '..........s.....',
+      '.........s......',
+      '........s.......',
+      '.......s........',
+      '...kkkkskkkkk...',
+      '...kgggsggggk...',
+      '...kpppsppppk...',
+      '...kpPpsppppk...',
+      '...kpPpppppqk...',
+      '....kpPppppk....',
+      '....kpppppqk....',
+      '....kpppppqk....',
+      '....kgggggk.....',
+      '.....kkkkkk.....',
+      '................',
+      '................',
+    ],
+  });
+}
+
 let registrado = false;
 
 /** Registra materiais, ferramentas e comidas (idempotente). */
@@ -1111,6 +1211,7 @@ export function registrarCatalogo(): void {
       '................',
     ],
   });
+  registrarComidasDaFesta();
   const metais: [string, string, string, string, string][] = [
     ['cobre', 'Cobre', '#c46e3a', '#e08a55', '#ffc49a'],
     ['ferro', 'Ferro', '#cfab90', '#e2c4a8', '#ffffff'],

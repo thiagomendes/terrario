@@ -206,6 +206,12 @@ type ComandoSemSeq =
    */
   | { t: 'vila'; a: 'comprar'; i: number }
   /**
+   * Spec 027 (T14): na Noite das Fantasias, comprar o lanche `i` (o índice em `balcoesDoBaile`:
+   * os três docinhos da Barraca dos Doces, o chocolate quente e a poção da Barraca das Canecas e
+   * a surpresa de uva da Bancada da Horta), com as mesmas conferências da Vila.
+   */
+  | { t: 'baile'; a: 'comprar'; i: number }
+  /**
    * Spec 026 (parte 3): na Casa anos 80, trocar o canal da TV, pôr a fita da locadora no
    * videocassete, ligar e desligar o disco e pegar um brinquedo do baú; na pista de skate, pedir
    * o trilho da rampa para o lado `l` (1 a curva do leste, -1 a do oeste). O núcleo confere o
