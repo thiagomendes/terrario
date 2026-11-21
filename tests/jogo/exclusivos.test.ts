@@ -14,7 +14,9 @@ import {
   blocoExclusivo,
   blocoNoMundo,
   BLOCOS_SO_DA_VILA,
+  BLOCOS_SO_DO_BAILE,
   COLHER_PEDREIRO,
+  EXCLUSIVOS_BAILE,
   EXCLUSIVOS_CIDADE,
   EXCLUSIVOS_VILA,
   itemNoMundo,
@@ -41,14 +43,19 @@ import type { EstiloMundo } from '../../src/temas/tipos';
  */
 const CIDADE = obterTema('cidade-grande');
 const VILA = obterTema('vila-neon');
+/** Spec 027: a Noite das Fantasias tem os seus (117 em diante) e nenhum de rua. */
+const BAILE = obterTema('noite-das-fantasias');
 const OUTROS = temasDisponiveis()
-  .filter((id) => id !== 'cidade-grande' && id !== 'vila-neon')
+  .filter((id) => id !== 'cidade-grande' && id !== 'vila-neon' && id !== 'noite-das-fantasias')
   .map((id) => obterTema(id));
-/** Tudo o que é exclusivo de algum tema (da cidade ou do bairro). */
+/** Tudo o que é exclusivo de algum tema (da cidade, do bairro ou da festa). */
 const EXCLUSIVOS = new Set([
-  ...[...EXCLUSIVOS_CIDADE.blocos, ...EXCLUSIVOS_VILA.blocos].map(idDoBloco),
+  ...[...EXCLUSIVOS_CIDADE.blocos, ...EXCLUSIVOS_VILA.blocos, ...EXCLUSIVOS_BAILE.blocos].map(
+    idDoBloco,
+  ),
   ...EXCLUSIVOS_CIDADE.itens,
   ...EXCLUSIVOS_VILA.itens,
+  ...EXCLUSIVOS_BAILE.itens,
 ]);
 const SO_DA_CIDADE = [Bloco.PLACA, Bloco.TAPUME, Bloco.ESCADA_GRADE];
 const estiloCidade: EstiloMundo = {
@@ -82,7 +89,7 @@ describe('o que é só da cidade', () => {
   it('a Vila Neon lista os blocos de rua da cidade e os dela (103 em diante), sem colher', () => {
     expect(VILA.exclusivos).toBe(EXCLUSIVOS_VILA);
     expect(VILA.mundo.povoado?.planta).toBe('bairro');
-    const doBairro = REGISTRO_BLOCOS.filter((b) => b.id >= 103).map((b) => b.id);
+    const doBairro = REGISTRO_BLOCOS.filter((b) => b.id >= 103 && b.id <= 116).map((b) => b.id);
     expect(doBairro).toHaveLength(14);
     expect([...BLOCOS_SO_DA_VILA].sort((a, b) => a - b)).toEqual(doBairro);
     const deRua = EXCLUSIVOS_CIDADE.blocos.filter((b) => !SO_DA_CIDADE.includes(b as never));
@@ -259,6 +266,125 @@ describe('o que é só da cidade', () => {
       pedir(Bloco.TABUAS, 2);
       n.passo();
       expect(n.estado.mundo.bloco(x, y, z)).toBe(Bloco.TABUAS);
+    },
+  );
+});
+
+/**
+ * Spec 027: os onze blocos da Noite das Fantasias (117 a 127) são só dela, e ela não usa os
+ * blocos de rua da Cidade e da Vila (tem janela, toldinho e caminho próprios).
+ */
+describe('o que é só da Noite das Fantasias', () => {
+  const daFesta = REGISTRO_BLOCOS.filter((b) => b.id >= 117).map((b) => b.id);
+
+  it('o tema lista os onze blocos dela (117 a 127), e nada de rua nem da Vila', () => {
+    expect(BAILE.exclusivos).toBe(EXCLUSIVOS_BAILE);
+    expect(BAILE.mundo.povoado?.planta).toBe('baile');
+    expect(daFesta).toEqual([117, 118, 119, 120, 121, 122, 123, 124, 125, 126, 127]);
+    expect([...BLOCOS_SO_DO_BAILE].sort((a, b) => a - b)).toEqual(daFesta);
+    for (const b of REGISTRO_BLOCOS.filter((d) => d.id >= 84 && d.id <= 116))
+      expect(blocoNoMundo(b.id, BAILE.mundo), b.nome).toBe(false);
+    expect(itemNoMundo(COLHER_PEDREIRO, BAILE.mundo)).toBe(false);
+    for (const b of daFesta) expect(blocoNoMundo(b, BAILE.mundo)).toBe(true);
+    // e os blocos de todo tema (o lampião e a abóbora também) continuam
+    for (const b of [Bloco.TABUAS, Bloco.LAMPIAO_ABOBORA, Bloco.ABOBORA, Bloco.FOLHAS_OUTONO])
+      expect(blocoNoMundo(b, BAILE.mundo)).toBe(true);
+  });
+
+  it('os outros mundos não têm nada da festa: nem no criativo, nem nas trocas e receitas', () => {
+    registrarCatalogo();
+    for (const e of [VILA.mundo, estiloCidade, ...OUTROS.map((t) => t.mundo)]) {
+      for (const b of daFesta) expect(blocoNoMundo(b, e)).toBe(false);
+      const ids = new Set(itensDoCatalogo(e).map((d) => d.id));
+      for (const b of daFesta) expect(ids.has(idDoBloco(b)), String(b)).toBe(false);
+    }
+    // o criativo da festa mostra os onze e nada da cidade nem da Vila
+    const naFesta = new Set(itensDoCatalogo(BAILE.mundo).map((d) => d.id));
+    for (const b of daFesta) expect(naFesta.has(idDoBloco(b)), String(b)).toBe(true);
+    for (const b of [...EXCLUSIVOS_CIDADE.blocos, ...EXCLUSIVOS_VILA.blocos])
+      expect(naFesta.has(idDoBloco(b)), String(b)).toBe(false);
+    const telha: Troca = {
+      id: 'teste-telha',
+      dar: [{ item: idDoBloco(Bloco.PEDREGULHO), qtd: 2 }],
+      receber: { item: idDoBloco(Bloco.TELHA_ROXA), qtd: 4 },
+    };
+    expect(trocaNoMundo(telha, BAILE.mundo)).toBe(true);
+    for (const e of [VILA.mundo, estiloCidade, ...OUTROS.map((t) => t.mundo)])
+      expect(trocaNoMundo(telha, e)).toBe(false);
+    for (const r of RECEITAS) expect(receitaNoMundo(r, BAILE.mundo), r.id).toBe(true);
+  });
+
+  it('a geração do mundo da festa só põe blocos que existem nele', () => {
+    definirEstiloMundo(BAILE.mundo);
+    limparPovoados();
+    const n = encontrarNascimento(1337);
+    const cx0 = Math.floor(n.x / 16);
+    const cz0 = Math.floor(n.z / 16);
+    for (let cx = cx0 - 3; cx <= cx0 + 3; cx++)
+      for (let cz = cz0 - 3; cz <= cz0 + 3; cz++) {
+        const c = gerarChunk(cx, cz, 1337);
+        for (let i = 0; i < c.length; i++)
+          if (c[i] >= 84 && !blocoNoMundo(c[i], BAILE.mundo))
+            throw new Error(`noite-das-fantasias: bloco ${c[i]} em ${cx},${cz}`);
+      }
+    definirEstiloMundo(ESTILO_PADRAO);
+  });
+
+  it.each(['local', 'nuvem'] as const)(
+    'núcleo (%s): a telha roxa só entra no mundo da festa, e o asfalto nunca entra nele',
+    (modo) => {
+      for (const [estilo, aceita, recusa] of [
+        [BAILE.mundo, Bloco.TELHA_ROXA, Bloco.ASFALTO],
+        [VILA.mundo, Bloco.ASFALTO, Bloco.TELHA_ROXA],
+      ] as const) {
+        definirEstiloMundo(estilo);
+        limparPovoados();
+        const semente = 1337;
+        const n = criarNucleo({
+          semente,
+          modo: 'criativo',
+          versaoMundo: 2,
+          confiarNoCliente: modo === 'local',
+          depuracao: true,
+        });
+        n.conectar('ana', { perfil: { apelido: 'Ana', aparencia: {} } });
+        const p = encontrarNascimento(semente);
+        // um lugar livre perto de quem nasce (fora do que a geração do lugar protege)
+        const x = Math.floor(p.x) + 2;
+        const z = Math.floor(p.z) + 1;
+        const y = alturaTerreno(x, z, semente) + 3;
+        n.comando('ana', {
+          t: 'jogador',
+          x: x + 1.5,
+          y,
+          z: z + 0.5,
+          yaw: 0,
+          pitch: 0,
+          olhos: y + 1.62,
+          noChao: true,
+          voando: true,
+          vel: 0,
+          correndo: false,
+          submerso: false,
+          quedas: [],
+          pulos: 0,
+          golpes: 0,
+          slot: 0,
+        });
+        n.passo();
+        n.quadros();
+        const pedir = (bloco: number, id: number) =>
+          n.comando('ana', sanear({ t: 'colocar', id, x, y, z, bloco, meta: 0, slot: 0 })!);
+        pedir(recusa, 1);
+        n.passo();
+        const ev = n.quadros().get('ana')!.eventos ?? [];
+        expect(ev.some((e: EventoNucleo) => e.e === 'recusa' && e.comando === 1)).toBe(true);
+        expect(n.estado.mundo.bloco(x, y, z)).not.toBe(recusa);
+        pedir(aceita, 2);
+        n.passo();
+        expect(n.estado.mundo.bloco(x, y, z), `${estilo.povoado?.planta}`).toBe(aceita);
+      }
+      definirEstiloMundo(ESTILO_PADRAO);
     },
   );
 });

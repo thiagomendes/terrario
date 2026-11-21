@@ -4,6 +4,7 @@
  * bichos fofos e os blocos que só ela tem. Nunca "Halloween" nem palavra em inglês: o mundo diz
  * "festa à fantasia" ou "Noite das Fantasias".
  */
+import { Bloco } from '../../world/blocks';
 import type { TextosTema } from '../tipos';
 import { TEXTOS_RANCHO } from '../rancho-alegre/textos';
 
@@ -99,6 +100,18 @@ export const TEXTOS_FANTASIAS: TextosTema = {
     67: 'água',
     82: 'portãozinho',
     83: 'portãozinho aberto',
+    // os blocos que só a festa tem (117 em diante)
+    [Bloco.TELHA_ROXA]: 'telha roxa',
+    [Bloco.TIJOLO_TORTO]: 'tijolo torto',
+    [Bloco.TEIA_BARBANTE]: 'teia de barbante',
+    [Bloco.FOLHAS_LARANJA]: 'folhas laranja',
+    [Bloco.TABUA_MUSGO]: 'tábua verde-oliva',
+    [Bloco.PEDRINHA_LILAS]: 'pedrinha lilás',
+    [Bloco.TABUA_ROXA]: 'tábua roxa',
+    [Bloco.JANELA_TORTA]: 'janela torta',
+    [Bloco.JANELA_TORTA_ACESA]: 'janela torta acesa',
+    [Bloco.TOLDINHO]: 'toldinho listrado',
+    [Bloco.CALDEIRAO]: 'caldeirão',
   },
   itens: {
     ...TEXTOS_RANCHO.itens,

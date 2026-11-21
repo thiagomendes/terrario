@@ -2,6 +2,9 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { describe, expect, it, vi } from 'vitest';
 import type { TextosTema } from '../../src/temas/tipos';
 import type { Profissao } from '../../src/world/povoado';
+import { CELULA } from '../../src/art/atlas';
+import { PRIMEIRO_BLOCO_027 } from '../../src/world/blocks';
+import { EXCLUSIVOS_BAILE } from '../../src/jogo/exclusivos';
 
 /**
  * Spec 034 (T00): a prova de que os cinco mundos que ficam não mudam quando os quatro saem.
@@ -414,8 +417,22 @@ function textosAplicados(t: TextosTema, o: TextosTema): Record<string, string> {
   return r;
 }
 
+/**
+ * Spec 027: as chaves dos textos que já existiam antes da Noite das Fantasias. Os nomes dos
+ * blocos 117 em diante (nos textos de base) e os itens só da festa ficam de fora do hash: o que
+ * os cinco mostram não muda.
+ */
+function chaveDeAntes(k: string): boolean {
+  const [sec, chave] = k.split('.');
+  if (sec === 'blocos') return Number(chave) < PRIMEIRO_BLOCO_027;
+  if (sec === 'itens') return !EXCLUSIVOS_BAILE.itens.includes(chave);
+  return true;
+}
+
 async function hashTextos(j: Jogo): Promise<string> {
-  const aplicados = textosAplicados(j.t.textos, j.textosOriginais());
+  const todos = textosAplicados(j.t.textos, j.textosOriginais());
+  const aplicados: Record<string, string> = {};
+  for (const k of Object.keys(todos)) if (chaveDeAntes(k)) aplicados[k] = todos[k];
   // a busca: fora de `TEXTOS_FORA`, nenhum texto aplicado com "bruma" ou os nomes dos quatro
   const achados = Object.keys(aplicados).filter((k) => DOS_QUATRO.test(aplicados[k]));
   expect(achados.filter((k) => !TEXTOS_FORA.includes(k))).toEqual([]);
@@ -435,13 +452,18 @@ async function calcular(id: Id): Promise<Hashes> {
     .map((x) => x.nome)
     .join(',');
   const mapa = j.construirMapaEmissivo(atlas, [j.Bloco.CRISTAL_LUZ, j.Bloco.COGUMELO_BRILHANTE]);
+  // spec 027: o atlas cresceu para 16 linhas; o hash lê só as 8 de antes (os tiles dos blocos
+  // 117 em diante moram da célula 128 em diante, e o teste `atlas-celulas` confere as 128
+  // primeiras uma a uma)
+  const oitoLinhas = atlas.largura * 8 * CELULA * 4;
+  expect(atlas.altura).toBe(16 * CELULA);
   const terreno: string[] = [];
   const moradores: Moradores = new Map();
   for (const s of SEMENTES) terreno.push(await hashTerreno(j, s, moradores));
   return {
-    atlas: await sha([atlas.pixels]),
+    atlas: await sha([atlas.pixels.subarray(0, oitoLinhas)]),
     emissivos: await sha([emissivos]),
-    mapaEmissivo: await sha([mapa]),
+    mapaEmissivo: await sha([mapa.subarray(0, oitoLinhas)]),
     terreno: terreno as [string, string, string],
     criaturas: await sha([jsonEstavel(t.criaturas)]),
     movimento: await sha([jsonEstavel(t.movimento)]),

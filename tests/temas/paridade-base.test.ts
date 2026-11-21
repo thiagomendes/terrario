@@ -76,7 +76,9 @@ describe('a base é idêntica ao jogo antes dos temas', () => {
     definirTemaAtivo(temaBase());
     // a pintura de cada tile (antes das cores limpas de brinquedo da spec 012)
     const a = gerarAtlas(1337, { brinquedo: false });
-    expect([a.largura, a.altura]).toEqual([512, 256]);
+    // spec 027: o atlas cresceu para 16 linhas; as 8 de antes é que são comparadas (as de baixo
+    // só têm os tiles dos blocos exclusivos, zerados como os da cidade)
+    expect([a.largura, a.altura]).toEqual([512, 512]);
     // os tiles das peças de brinquedo (spec 012) e os do plantio (spec 013) são novos: ficam
     // de fora da comparação
     const px = new Uint8Array(a.pixels.slice().buffer);
@@ -89,7 +91,11 @@ describe('a base é idêntica ao jogo antes dos temas', () => {
     }
     // hash refeito na 013 só porque a célula da porta (repintada de propósito) agora vai
     // zerada; antes era 3aed3d5a8a609f6fe704538a62a5d75f4a87a7a43372b8ac899913165bca488c
-    expect(await sha(px)).toBe('51f279ca21dcf184e765ff7d308d21c5bdc6995eff9b0639f3091fdd071ab84c');
+    const oito = a.largura * 256 * 4;
+    expect(px.subarray(oito).every((v) => v === 0)).toBe(true);
+    expect(await sha(px.slice(0, oito))).toBe(
+      '51f279ca21dcf184e765ff7d308d21c5bdc6995eff9b0639f3091fdd071ab84c',
+    );
     const em = a.tiles
       .filter(
         (t) =>

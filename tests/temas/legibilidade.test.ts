@@ -86,6 +86,9 @@ const PARENTES: [string, string][] = [
   // a fornalha é feita de pedregulho
   ['pedregulho', 'fornalha_lado'],
   ['pedregulho', 'fornalha_topo'],
+  // spec 027: o topo e o lado do mesmo bloco da Noite das Fantasias
+  ['telha_roxa', 'telha_roxa_topo'],
+  ['toldinho', 'toldinho_topo'],
 ];
 const parentes = (a: string, b: string) =>
   PARENTES.some(([x, y]) => (x === a && y === b) || (x === b && y === a));

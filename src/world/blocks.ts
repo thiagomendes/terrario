@@ -120,7 +120,23 @@ export const Bloco = {
   GRADE_PLATEIA: 114,
   FAIXA_NEON: 115,
   ALAMBRADO: 116,
+  // spec 027: a Noite das Fantasias (só existem no tema da festa: `Tema.exclusivos`). Os tiles
+  // deles começam na célula 128 do atlas (`src/art/tiles.ts`): as 8 primeiras linhas não mudam
+  TELHA_ROXA: 117,
+  TIJOLO_TORTO: 118,
+  TEIA_BARBANTE: 119,
+  FOLHAS_LARANJA: 120,
+  TABUA_MUSGO: 121,
+  PEDRINHA_LILAS: 122,
+  TABUA_ROXA: 123,
+  JANELA_TORTA: 124,
+  JANELA_TORTA_ACESA: 125,
+  TOLDINHO: 126,
+  CALDEIRAO: 127,
 } as const;
+
+/** Spec 027: o primeiro bloco da Noite das Fantasias (os tiles dele em diante vão na célula 128). */
+export const PRIMEIRO_BLOCO_027 = Bloco.TELHA_ROXA;
 
 export type Ferramenta = 'picareta' | 'machado' | 'pa' | 'espada';
 export type GrupoSom = 'terra' | 'pedra' | 'areia' | 'madeira' | 'folhagem' | 'cristal';
@@ -664,6 +680,47 @@ export const REGISTRO_BLOCOS: readonly DefinicaoBloco[] = [
     'alambrado',
     pedra({ opaco: false, recorte: true, dureza: 1.2 }),
   ),
+  // spec 027: a Noite das Fantasias. Os telhados tortos de telha roxa, as casinhas de tijolo
+  // torto e de tábua verde-oliva, o palco e o castelinho de tábua roxa, o caminho de pedrinha
+  // lilás (onde a vassoura desliza), a teia de barbante colorido (recorte, vê-se através, sem
+  // aranha), as janelas tortas de cortina (a acesa brilha sem espalhar luz, como a janela da
+  // cidade), o toldinho listrado e o caldeirão de brinquedo
+  def(
+    Bloco.TELHA_ROXA,
+    'telha roxa',
+    'telha_roxa',
+    pedra({ dureza: 1.2, tiles: { topo: 'telha_roxa_topo', lado: 'telha_roxa' } }),
+  ),
+  def(Bloco.TIJOLO_TORTO, 'tijolo torto', 'tijolo_torto', pedra({ dureza: 1.6 })),
+  def(Bloco.TEIA_BARBANTE, 'teia de barbante', 'teia_barbante', {
+    opaco: false,
+    recorte: true,
+    dureza: 0.3,
+    som: 'folhagem',
+  }),
+  def(Bloco.FOLHAS_LARANJA, 'folhas laranja', 'folhas_laranja', folhas()),
+  def(Bloco.TABUA_MUSGO, 'tábua verde-oliva', 'tabua_musgo', madeira({ dureza: 0.9 })),
+  def(Bloco.PEDRINHA_LILAS, 'pedrinha lilás', 'pedrinha_lilas', pedra({ dureza: 1.4 })),
+  def(Bloco.TABUA_ROXA, 'tábua roxa', 'tabua_roxa', madeira({ dureza: 0.9 })),
+  def(Bloco.JANELA_TORTA, 'janela torta', 'janela_torta', { dureza: 0.4, som: 'cristal' }),
+  def(Bloco.JANELA_TORTA_ACESA, 'janela torta acesa', 'janela_torta_acesa', {
+    emissivo: true,
+    dureza: 0.4,
+    som: 'cristal',
+  }),
+  def(Bloco.TOLDINHO, 'toldinho listrado', 'toldinho', {
+    opaco: false,
+    forma: 'laje',
+    dureza: 0.4,
+    som: 'folhagem',
+    tiles: { topo: 'toldinho_topo', lado: 'toldinho' },
+  }),
+  def(Bloco.CALDEIRAO, 'caldeirão', 'caldeirao', {
+    opaco: false,
+    dureza: 0.8,
+    som: 'pedra',
+    tiles: { topo: 'caldeirao_topo', lado: 'caldeirao' },
+  }),
 ];
 
 export function obterBloco(id: number): DefinicaoBloco | undefined {

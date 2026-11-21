@@ -16,13 +16,14 @@ describe('registro', () => {
     expect(REGISTRO_BLOCOS.filter((b) => b.planta).length).toBeGreaterThanOrEqual(3);
     for (const b of REGISTRO_BLOCOS.filter((x) => x.planta)) expect(b.forma).toBe('cruz');
     expect(REGISTRO_BLOCOS[Bloco.CRISTAL_LUZ].emissivo).toBe(true);
-    // a janela acesa da cidade (spec 014) e os neons do bairro (spec 026) brilham sem espalhar
-    // luz: são os únicos
+    // a janela acesa da cidade (spec 014), os neons do bairro (spec 026) e a janela torta acesa
+    // da festa (spec 027) brilham sem espalhar luz: são os únicos
     const semLuz: number[] = [
       Bloco.JANELA_ACESA,
       Bloco.PISTA_NEON,
       Bloco.LETREIRO_NEON,
       Bloco.FAIXA_NEON,
+      Bloco.JANELA_TORTA_ACESA,
     ];
     for (const b of REGISTRO_BLOCOS.filter((x) => x.emissivo && !semLuz.includes(x.id))) {
       expect(b.luz ?? 0, b.nome).toBeGreaterThan(0);

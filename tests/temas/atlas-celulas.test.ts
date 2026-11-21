@@ -109,6 +109,55 @@ function celulasDiferentes(a: Uint8Array, b: Uint8Array): string[] {
   return fora;
 }
 
+describe('spec 027: os tiles dos blocos 117 em diante a partir da célula 128', () => {
+  it('a 127 fica vazia, o primeiro tile novo cai na 128 e os de antes não mudam de célula', async () => {
+    vi.resetModules();
+    const { NOMES_TILES, TILES_027, PRIMEIRA_CELULA_027, indiceDoTile, TILE_PORTA_CIMA, TILES_PECAS } =
+      await import('../../src/art/tiles');
+    const { REGISTRO_BLOCOS, PRIMEIRO_BLOCO_027 } = await import('../../src/world/blocks');
+    expect(PRIMEIRA_CELULA_027).toBe(128);
+    // os onze blocos novos e os 14 tiles deles, só daqui
+    expect(REGISTRO_BLOCOS.filter((b) => b.id >= PRIMEIRO_BLOCO_027).map((b) => b.id)).toEqual([
+      117, 118, 119, 120, 121, 122, 123, 124, 125, 126, 127,
+    ]);
+    expect(TILES_027.length).toBe(14);
+    expect(indiceDoTile(TILES_027[0])).toBe(128);
+    TILES_027.forEach((n, i) => expect(indiceDoTile(n), n).toBe(128 + i));
+    // os de antes: as 127 células de sempre (a metade de cima da porta e as peças no fim)
+    const antes = NOMES_TILES.slice(0, NOMES_TILES.length - TILES_027.length);
+    expect(antes.length).toBe(127);
+    antes.forEach((n, i) => expect(indiceDoTile(n), n).toBe(i));
+    expect(indiceDoTile(TILE_PORTA_CIMA)).toBe(127 - TILES_PECAS.length - 1);
+    expect(antes.slice(-TILES_PECAS.length)).toEqual([...TILES_PECAS]);
+    // nenhum tile mora na 127
+    expect(NOMES_TILES.some((n) => indiceDoTile(n) === 127)).toBe(false);
+  });
+
+  it('no atlas de cada um dos seis, a célula 127 é toda vazia e as novas estão pintadas', async () => {
+    for (const id of [...CINCO, 'noite-das-fantasias'] as const) {
+      vi.resetModules();
+      await import('../../src/temas/todos');
+      const { obterTema } = await import('../../src/temas');
+      const { ativarTemaPuro } = await import('../../src/temas/ativarPuro');
+      const { gerarAtlas } = await import('../../src/art/atlas');
+      const { TILES_027, indiceDoTile } = await import('../../src/art/tiles');
+      ativarTemaPuro(obterTema(id));
+      const a = gerarAtlas(1337);
+      expect(a.altura, id).toBe(16 * CELULA);
+      const opacos = (c: number) => {
+        const ox = (c % COLUNAS) * CELULA;
+        const oy = Math.floor(c / COLUNAS) * CELULA;
+        let n = 0;
+        for (let y = 0; y < CELULA; y++)
+          for (let x = 0; x < CELULA; x++) if (a.pixels[((oy + y) * LARGURA + ox + x) * 4 + 3]) n++;
+        return n;
+      };
+      expect(opacos(127), `${id}: célula 127`).toBe(0);
+      for (const n of TILES_027) expect(opacos(indiceDoTile(n)), `${id}: ${n}`).toBeGreaterThan(0);
+    }
+  }, 60_000);
+});
+
 describe('spec 027: as 128 primeiras células do atlas dos cinco, iguais às de antes', () => {
   for (const id of CINCO)
     it(`${id}: atlas e mapa emissivo, célula a célula`, async () => {

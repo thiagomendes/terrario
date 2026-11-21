@@ -117,13 +117,36 @@ export const EXCLUSIVOS_VILA: Exclusivos = {
 };
 
 /**
+ * Spec 027: os blocos 117 em diante, só da Noite das Fantasias. Este mundo não usa os blocos de
+ * rua da Cidade e da Vila (decisão do orquestrador): tem janela, toldinho e caminho próprios.
+ */
+export const BLOCOS_SO_DO_BAILE: readonly number[] = [
+  Bloco.TELHA_ROXA,
+  Bloco.TIJOLO_TORTO,
+  Bloco.TEIA_BARBANTE,
+  Bloco.FOLHAS_LARANJA,
+  Bloco.TABUA_MUSGO,
+  Bloco.PEDRINHA_LILAS,
+  Bloco.TABUA_ROXA,
+  Bloco.JANELA_TORTA,
+  Bloco.JANELA_TORTA_ACESA,
+  Bloco.TOLDINHO,
+  Bloco.CALDEIRAO,
+];
+export const EXCLUSIVOS_BAILE: Exclusivos = {
+  blocos: BLOCOS_SO_DO_BAILE,
+  itens: [],
+};
+
+/**
  * Exclusivos por planta do povoado (o núcleo e o servidor só conhecem o estilo do mundo):
- * a planta 'cidade' é a Cidade Grande; a 'bairro', a Vila Neon. Um item pode ser de mais de uma
- * planta (os blocos de rua).
+ * a planta 'cidade' é a Cidade Grande; a 'bairro', a Vila Neon; a 'baile', a Noite das
+ * Fantasias. Um item pode ser de mais de uma planta (os blocos de rua).
  */
 const POR_PLANTA: Readonly<Record<string, Exclusivos>> = {
   cidade: EXCLUSIVOS_CIDADE,
   bairro: EXCLUSIVOS_VILA,
+  baile: EXCLUSIVOS_BAILE,
 };
 
 /** Item -> plantas dos mundos donos dele. */

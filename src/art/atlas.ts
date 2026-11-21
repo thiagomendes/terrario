@@ -7,7 +7,11 @@ export const TAM_TILE = 16;
 export const PADDING = 8;
 export const CELULA = TAM_TILE + PADDING * 2;
 export const COLUNAS = 16;
-export const LINHAS = 8;
+/**
+ * Spec 027: 16 linhas (256 células). As 8 primeiras são as de antes, iguais pixel a pixel (os
+ * hashes da 034); os tiles dos blocos 117 em diante começam na célula 128 (`tiles.ts`).
+ */
+export const LINHAS = 16;
 export const LARGURA_ATLAS = COLUNAS * CELULA;
 export const ALTURA_ATLAS = LINHAS * CELULA;
 
@@ -697,7 +701,172 @@ export const PINTORES: Record<string, Pintor> = {
   ...pintoresDaCidade(),
   // spec 026: a Vila Neon (só aparecem no tema do bairro; este é o desenho de verdade)
   ...pintoresDaVila(),
+  // spec 027: a Noite das Fantasias (só aparecem no tema da festa; este é o desenho de verdade)
+  ...pintoresDoBaile(),
 };
+
+/**
+ * Tiles da Noite das Fantasias (spec 027), do esboço aprovado, no jeito do atlas (tons de rampa
+ * e o tremor de pixel). Roxo, laranja, verde-oliva e dourado, sempre em duas cores alternadas,
+ * nunca na ordem do arco-íris.
+ */
+function pintoresDoBaile(): Record<string, Pintor> {
+  const cor = (c: string) => (x: number, y: number, s: number) => rampa([c], 0, x, y, s);
+  const ROXO = ['#5c3888', '#6a4498', '#7852a8', '#8862b8'];
+  /** Telha roxa: as fileiras de canudo desencontradas, com a sombra de cada uma. */
+  const telha =
+    (sombra: string, junta: string, k: number): Pintor =>
+    (x, y, s) => {
+      const fila = y >> 2;
+      const ly = y & 3;
+      const cx = (x + (fila & 1) * 2) & 3;
+      if (ly === 3) return cor(sombra)(x, y, s);
+      if (cx === 0) return cor(junta)(x, y, s);
+      const t = (cx === 1 ? 0.85 : cx === 2 ? 0.6 : 0.3) - ly * k + hash2(x, y, s) * 0.15;
+      return rampa(ROXO, t, x, y, s);
+    };
+  /**
+   * Tijolo torto: as fileiras sobem e descem um pixel a cada tijolo e os tijolos têm larguras
+   * diferentes, como parede de casinha de história (torta, mas de blocos retos).
+   */
+  const tijoloTorto: Pintor = (x, y, s) => {
+    const argamassa = '#8a5a36';
+    const col = Math.floor((x + ((y >> 2) & 1) * 3) / 6);
+    const yy = y + (hash2(col, y >> 2, 71) > 0.5 ? 1 : 0);
+    const fila = yy >> 2;
+    if ((yy & 3) === 3) return cor(argamassa)(x, y, s);
+    const larg = 5 + Math.floor(hash2(fila, 3, 13) * 3);
+    const desl = Math.floor(hash2(fila, 7, 17) * larg);
+    if ((x + desl) % larg === 0) return cor(argamassa)(x, y, s);
+    const tijolo = Math.floor((x + desl) / larg) + fila * 7;
+    return rampa(
+      ['#b8743c', '#c27e44', '#cc8a4e', '#d69658'],
+      hash2(tijolo, fila, s + 3) * 0.7 + hash2(x, y, s) * 0.3,
+      x,
+      y,
+      s,
+    );
+  };
+  /** Tábua pintada em fileiras deitadas (a de verde-oliva das casinhas e a roxa do palco). */
+  const tabua =
+    (cores: string[], junta: string, luz: string, emenda: string): Pintor =>
+    (x, y, s) => {
+      const fila = y >> 2;
+      if ((y & 3) === 3) return cor(junta)(x, y, s);
+      if ((y & 3) === 0) return cor(luz)(x, y, s);
+      if (x === (fila * 7 + 5) % T) return cor(emenda)(x, y, s);
+      return rampa(cores, hash2(x >> 2, fila, s) * 0.5 + hash2(x, y, s) * 0.4, x, y, s);
+    };
+  /**
+   * Pedrinhas irregulares (as juntas não seguem a beira do bloco): cada pixel pega a pedra mais
+   * perto entre pontos sorteados numa grade de `cel` pixels (repete a cada tile, sem costura).
+   */
+  const pedrinhas = (cel: number, cores: string[], junta: string): Pintor => {
+    const n = T / cel;
+    return (x, y, s) => {
+      const gx = Math.floor(x / cel);
+      const gy = Math.floor(y / cel);
+      let d1 = 1e9;
+      let d2 = 1e9;
+      let id = 0;
+      for (let oy = -1; oy <= 1; oy++)
+        for (let ox = -1; ox <= 1; ox++) {
+          const cx = gx + ox;
+          const cy = gy + oy;
+          const wx = ((cx % n) + n) % n;
+          const wy = ((cy % n) + n) % n;
+          const px = cx * cel + 0.5 + hash2(wx, wy, 301) * (cel - 1);
+          const py = cy * cel + 0.5 + hash2(wx, wy, 302) * (cel - 1);
+          const d = Math.hypot(x + 0.5 - px, y + 0.5 - py);
+          if (d < d1) {
+            d2 = d1;
+            d1 = d;
+            id = wx * 31 + wy;
+          } else if (d < d2) d2 = d;
+        }
+      if (d2 - d1 < 0.9) return cor(junta)(x, y, s);
+      return rampa(cores, hash2(id, 7, 303) * 0.85 + (d1 < cel * 0.3 ? 0.12 : 0), x, y, s);
+    };
+  };
+  /**
+   * Janela torta de cortina: o caixilho roxo-escuro mais grosso de um lado (o torto), a cruz do
+   * caixilho fora do meio e a cortininha laranja dos lados. Apagada, o vidro lilás de noite de
+   * história; acesa, a luz morna de dentro.
+   */
+  const caixilho = (x: number, y: number) =>
+    x <= 1 ||
+    x >= T - 2 ||
+    y <= 1 + (x > 9 ? 1 : 0) ||
+    y >= T - 2 ||
+    x === 8 + (y > 8 ? 1 : 0) ||
+    y === 7 + (x > 8 ? 1 : 0);
+  const janela =
+    (vidro: string[], brilho: boolean): Pintor =>
+    (x, y, s) => {
+      if (caixilho(x, y)) return rampa(['#4a3266', '#54397a'], hash2(x, y, s), x, y, s);
+      if (x === 2 || x === T - 3) return rampa(['#e07a2a', '#e88838'], hash2(x, y, s), x, y, s);
+      const lx = x < 8 ? x - 2 : x - 9;
+      const d = brilho
+        ? Math.hypot(lx - 2.5, (y % 8) - 4) / 3
+        : (lx + (y % 8)) / 10 + (lx + (y % 8) === 5 ? -0.4 : 0);
+      return rampa(vidro, d + hash2(x, y, s) * 0.2, x, y, s);
+    };
+  /** Toldinho listrado de duas cores (roxo e laranja), listras de 4, a beira em bicos. */
+  const toldinho =
+    (bicos: boolean): Pintor =>
+    (x, y, s) => {
+      if (bicos && y >= T - 3 && Math.abs((x & 3) - 1.5) + (y - (T - 3)) > 2) return VAZIO;
+      return (x >> 2) % 2 === 0
+        ? rampa(['#6a3e9c', '#74469f'], hash2(x, y, s), x, y, s)
+        : rampa(['#f0862a', '#f49038'], hash2(x, y, s), x, y, s);
+    };
+  /** O ferro roxo-quase-preto do caldeirão de brinquedo, com o brilho da borda. */
+  const ferro = ['#2e2440', '#362b4a', '#3e3254'];
+  return {
+    telha_roxa: telha('#3a2458', '#4a2e70', 0.12),
+    telha_roxa_topo: telha('#432a64', '#523478', 0.06),
+    tijolo_torto: tijoloTorto,
+    // teia de barbante colorido (roxo, laranja e creme), sem aranha: os raios e os anéis
+    teia_barbante: (x, y, s) => {
+      const dx = x - 7.5;
+      const dy = y - 7.5;
+      const r = Math.max(Math.abs(dx), Math.abs(dy)) * 0.6 + Math.hypot(dx, dy) * 0.4;
+      const raio = Math.abs(dx) < 0.6 || Math.abs(dy) < 0.6 || Math.abs(Math.abs(dx) - Math.abs(dy)) < 0.7;
+      const anel = Math.abs(r - Math.round(r / 2.6) * 2.6) < 0.45 && r > 1.5;
+      if (!raio && !anel) return VAZIO;
+      const qual = raio ? 2 : Math.round(r / 2.6) % 2;
+      return rampa([['#8a5cc8', '#9466d2'], ['#f0862a', '#f6983e'], ['#f6ecd8', '#fff4e2']][qual], hash2(x, y, s), x, y, s);
+    },
+    folhas_laranja: folhasDe(['#c4521a', '#d4641e', '#e27624', '#ec8a2c', '#f4a03a'], 0.15),
+    tabua_musgo: tabua(['#71844a', '#788b4f', '#7f9254'], '#4a5a2e', '#8a9c5c', '#56683a'),
+    // a pedrinha lilás da praça e dos caminhos: lilás de dia também, de tons variados
+    pedrinha_lilas: pedrinhas(
+      4,
+      ['#9a84b8', '#a690c2', '#b09bcb', '#bba8d4', '#a6939c'],
+      '#6e5a86',
+    ),
+    tabua_roxa: tabua(['#5e3a86', '#6a4494', '#764ea2'], '#3e2660', '#8a62b4', '#4a2e70'),
+    janela_torta: janela(['#7a6a9e', '#8676aa', '#9282b6'], false),
+    janela_torta_acesa: janela(['#ffe6a0', '#ffd87e', '#ffc95e'], true),
+    toldinho: toldinho(true),
+    toldinho_topo: toldinho(false),
+    caldeirao: (x, y, s) => {
+      if (y <= 2) return rampa(['#5a4a74', '#6a5a84'], y / 3, x, y, s);
+      if (y === 3) return cor('#241c34')(x, y, s);
+      const brilho = x >= 3 && x <= 4 && y >= 5 && y <= 11 ? 0.6 : 0;
+      return rampa(ferro, hash2(x, y, s) * 0.5 + brilho, x, y, s);
+    },
+    // o caldeirão por cima: a borda de ferro e a poção roxa com as bolhas
+    caldeirao_topo: (x, y, s) => {
+      const d = Math.hypot(x - 7.5, y - 7.5);
+      if (d > 6.2) return rampa(ferro, hash2(x, y, s) * 0.6, x, y, s);
+      if (d > 5.4) return cor('#5a4a74')(x, y, s);
+      const bolha = (hash2(x >> 1, y >> 1, s + 5) > 0.78 && (x + y) % 2 === 0) || d < 1.2;
+      if (bolha) return rampa(['#d8b8ff', '#e8d0ff'], hash2(x, y, s), x, y, s);
+      return rampa(['#8a4ec8', '#9a5ad6', '#a868e0'], fbmT(x, y, 2, s) * 0.6 + hash2(x, y, s) * 0.3, x, y, s);
+    },
+  };
+}
 
 /** Tiles da Cidade Grande (spec 014), no jeito do atlas: tons de rampa e o tremor de pixel. */
 function pintoresDaCidade(): Record<string, Pintor> {
@@ -1322,7 +1491,9 @@ export function gerarAtlas(semente = 1337, opcoes: { brinquedo?: boolean } = {})
   const brinquedo = opcoes.brinquedo ?? true;
   const pixels = new Uint8ClampedArray(LARGURA_ATLAS * ALTURA_ATLAS * 4);
   const tiles: TileAtlas[] = [];
-  NOMES_TILES.forEach((nome, indice) => {
+  NOMES_TILES.forEach((nome) => {
+    // a célula do tile (spec 027: os dos blocos 117 em diante a partir da 128)
+    const indice = indiceDoTile(nome);
     // o tema pode repintar qualquer tile; o que ele não repinta usa o pintor base
     const pinta =
       nome === TILE_BRANCO || nome.startsWith('brilho_')

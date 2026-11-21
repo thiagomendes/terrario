@@ -1,4 +1,5 @@
 import type { Tema } from '../tipos';
+import { EXCLUSIVOS_BAILE } from '../../jogo/exclusivos';
 import { CEU_FANTASIAS, QUADROS_FANTASIAS } from './ceu';
 import { CRIATURAS_FANTASIAS, MOVIMENTO_FANTASIAS } from './criaturas';
 import { MASCARAS_FANTASIAS, PINTORES_FANTASIAS } from './pintores';
@@ -43,6 +44,8 @@ export function construirNoiteDasFantasias(): Tema {
       'bloco_luzita',
       'fornalha_acesa',
       'abobora_rosto',
+      // a janela torta acesa brilha sem espalhar luz (como a janela acesa da cidade)
+      'janela_torta_acesa',
     ],
     mascarasBrilho: MASCARAS_FANTASIAS,
     quadrosCeu: QUADROS_FANTASIAS,
@@ -139,5 +142,6 @@ export function construirNoiteDasFantasias(): Tema {
     },
     povoado: POVOADO_FANTASIAS,
     personagem: { acessorio: 'nenhum', roupaEstilo: 2, roupaCor: 6, calcaCor: 5 },
+    exclusivos: EXCLUSIVOS_BAILE,
   };
 }
