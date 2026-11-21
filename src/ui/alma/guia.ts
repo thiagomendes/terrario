@@ -19,6 +19,7 @@ import { pedirSomGuia } from '../../audio/somGuia';
 import { medirHud } from '../carinhasAmigos';
 import { ligarCantoMissoes } from './canto';
 import { ligarVilaNeon } from './vila';
+import { ligarBaile } from './baile';
 import { ligarDicaComer } from './dicaComer';
 import { FENO } from '../../jogo/exclusivos';
 import { FENO_ANTIGO } from '../../jogo/missoesParque';
@@ -293,5 +294,7 @@ export function ligarGuiaMissao(e: EstadoDepuracao, ui: AlmaUi): GuiaMissao | nu
   ligarCantoMissoes(e, ui, guia, scene);
   // spec 026: as caixas do palco, o toque no show e o feno na mão da Vila Neon
   ligarVilaNeon(e, ui, guia, scene);
+  // spec 027: o toque na abóbora gigante e nas portas fechadas da Noite das Fantasias
+  ligarBaile(e);
   return guia;
 }

@@ -51,11 +51,13 @@ export function construirNoiteDasFantasias(): Tema {
     quadrosCeu: QUADROS_FANTASIAS,
     ceu: CEU_FANTASIAS,
     // o laguinho do bosque: lilás-azulado de livro de história
+    // (a tinta do reflexo puxada para o lilás-azulado: com o céu de pêssego da tarde, a água de
+    // tinta clara virava uma folha branca)
     agua: {
-      fundoDia: [0.22, 0.36, 0.62],
+      fundoDia: [0.2, 0.3, 0.6],
       fundoNoite: [0.1, 0.06, 0.22],
-      tinta: [0.9, 0.84, 1],
-      opacidade: 0.78,
+      tinta: [0.5, 0.48, 0.78],
+      opacidade: 0.86,
     },
     // a névoa baixa clarinha, quase branca com um toque lilás, rente ao chão
     bruma: { cor: [1, 0.95, 1.02], forca: 1 },

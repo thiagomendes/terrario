@@ -17,8 +17,10 @@
  *   daquela célula (`comPecasDaVila` lê o bloco antes); nada depende da malha desenhada.
  */
 import type { CaixaSolida, Solido } from '../player/fisica';
-import { estiloMundo, vilaDoMundo } from './chunk';
+import { baileDoMundo, estiloMundo, vilaDoMundo } from './chunk';
 import { LETREIRO, type PecaVila, type PlanoVila, type TipoPecaVila } from './vilaNeon';
+import type { PlanoBaile } from './noiteFantasias';
+import { caixasDaPecaBaile } from './baileSolidos';
 import { MEDIDA_RAMPA, alturaDoDeck, alturaNaRampa } from '../jogo/rampa';
 import { COMPRIMENTO_RAMPA } from './vilaRampa';
 
@@ -285,7 +287,7 @@ export interface IndiceVila {
 const chaveCelula = (x: number, y: number, z: number) =>
   ((x + 32768) * 65536 + (z + 32768)) * 512 + y;
 
-const indices = new WeakMap<PlanoVila, IndiceVila>();
+const indices = new WeakMap<object, IndiceVila>();
 
 /** O índice das caixas do bairro por célula (montado uma vez por plano). */
 export function indiceDaVila(plano: PlanoVila): IndiceVila {
@@ -293,6 +295,27 @@ export function indiceDaVila(plano: PlanoVila): IndiceVila {
   if (idx) return idx;
   const caixas: CaixaSolida[] = [];
   for (const p of plano.pecas) caixas.push(...caixasDaPeca(p));
+  idx = indiceDasCaixas(caixas);
+  indices.set(plano, idx);
+  return idx;
+}
+
+/**
+ * Spec 027: o índice das caixas das peças da Noite das Fantasias (a abóbora gigante, as barracas,
+ * as portas fechadas...), o mesmo jeito do bairro.
+ */
+export function indiceDoBaile(plano: PlanoBaile): IndiceVila {
+  let idx = indices.get(plano);
+  if (idx) return idx;
+  const caixas: CaixaSolida[] = [];
+  for (const p of plano.pecas) caixas.push(...caixasDaPecaBaile(p));
+  idx = indiceDasCaixas(caixas);
+  indices.set(plano, idx);
+  return idx;
+}
+
+/** As caixas por célula. */
+function indiceDasCaixas(caixas: CaixaSolida[]): IndiceVila {
   const mapa = new Map<number, NaCelula[]>();
   for (const c of caixas)
     for (let x = Math.floor(c[0]); x < c[3]; x++)
@@ -304,14 +327,20 @@ export function indiceDaVila(plano: PlanoVila): IndiceVila {
           if (l) l.push({ abs: c, rel });
           else mapa.set(k, [{ abs: c, rel }]);
         }
-  idx = { caixas, daCelula: (x, y, z) => mapa.get(chaveCelula(x, y, z)) ?? null };
-  indices.set(plano, idx);
-  return idx;
+  return { caixas, daCelula: (x, y, z) => mapa.get(chaveCelula(x, y, z)) ?? null };
 }
 
-/** O índice do bairro do mundo (null fora da Vila Neon; quase de graça nos outros temas). */
+/**
+ * O índice das peças do mundo: o do bairro (Vila Neon) ou o da vila da festa (Noite das
+ * Fantasias); null nos outros temas (quase de graça neles).
+ */
 export function indiceDoMundo(semente: number): IndiceVila | null {
-  if (estiloMundo().povoado?.planta !== 'bairro') return null;
+  const planta = estiloMundo().povoado?.planta;
+  if (planta === 'baile') {
+    const b = baileDoMundo(semente);
+    return b ? indiceDoBaile(b) : null;
+  }
+  if (planta !== 'bairro') return null;
   const p = vilaDoMundo(semente);
   return p ? indiceDaVila(p) : null;
 }

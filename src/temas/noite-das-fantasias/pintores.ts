@@ -9,7 +9,7 @@
  * como os da Vila Neon: os outros temas não os mostram.
  */
 import { hash2 } from '../../world/noise';
-import { T, fbmT, folhasDe, ladoComTopo, rampa } from '../../art/atlas';
+import { T, VAZIO, fbmT, folhasDe, ladoComTopo, rampa } from '../../art/atlas';
 import type { Pintor } from '../tipos';
 import { PINTORES_RANCHO } from '../rancho-alegre/pintores';
 
@@ -73,6 +73,14 @@ export const PINTORES_FANTASIAS: Record<string, Pintor> = {
   lanterna,
   abobora_lado: casca,
   abobora_rosto: aboboraRosto,
+  // o vidro da vitrine da loja: a moldurinha roxa e o reflexo em risco; o resto vazado (vê-se a
+  // vitrine por dentro, nada de grade)
+  vidro: (x, y, s) => {
+    if (x === 0 || y === 0 || x === T - 1 || y === T - 1) return rampa(['#4a3266', '#54397a'], hash2(x, y, s), x, y, s);
+    const d = x + y;
+    if (d === 9 || d === 10 || d === 13) return rampa(['#efe6ff', '#f6f0ff'], hash2(x, y, s), x, y, s);
+    return VAZIO;
+  },
 };
 
 /** Só o rosto do lampião acende (a casca não brilha). */

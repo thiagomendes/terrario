@@ -63,6 +63,11 @@ export interface PecaBaile {
 export type TipoPecaBaile =
   /** A abóbora gigante sorridente da praça (o meio da base; `n` é o lado em blocos). */
   | 'abobora-gigante'
+  /**
+   * Uma abóbora de enfeite, o modelo arredondado de brinquedo (nos montinhos do gramado e na
+   * horta); `n`: o lado em décimos de bloco.
+   */
+  | 'abobora'
   /** As barracas da praça: 0 a dos doces (Tia Filó), 1 a das canecas (Seu Olavo). */
   | 'barraca'
   | 'banco'
@@ -947,12 +952,13 @@ function montarBaile(semente: number, r: RelevoVila): Montado {
       const u = Math.round(cu + Math.cos(a) * 11);
       const v = Math.round(cv + Math.sin(a) * 9);
       if (k % 2 === 0) {
-        for (const [du, dv] of [
-          [0, 0],
-          [1, 0],
-          [0, 1],
+        // o montinho de abóboras de brinquedo (redondas, nunca de cubo) com o lampião
+        for (const [du, dv, t] of [
+          [0, 0, 9],
+          [1, 0, 7],
+          [0, 1, 6],
         ])
-          b(u + du, 1, v + dv, Bloco.ABOBORA);
+          peca('abobora', u + du + 0.5, v + dv + 0.5, (k + du) & 3, t);
         lampiao(u + 1, v + 1, 'n');
       } else
         for (let du = -1; du <= 1; du++)
@@ -968,7 +974,7 @@ function montarBaile(semente: number, r: RelevoVila): Montado {
       const u = Math.round(cu + Math.cos(a) * 5.5);
       const v = Math.round(cv + Math.sin(a) * 4.5);
       if (k % 2 === 0) {
-        b(u, 1, v, Bloco.ABOBORA);
+        peca('abobora', u + 0.5, v + 0.5, k & 3, 8);
         lampiao(u + 1, v, 'n');
       } else peca('mesinha', u + 0.5, v + 0.5, 0);
       tomar(u - 1, v - 1, u + 1, v + 1);
@@ -1038,11 +1044,12 @@ function montarBaile(semente: number, r: RelevoVila): Montado {
     peca('poleiro', gu + 3.5, gv - 1.5, DIR.n);
     tomar(gu + 2, gv - 3, gu + 4, gv - 1);
     // o bosque fechado dos dois lados do caminho (laranja, douradas e cobre)
-    for (let v = 46; v <= 98; v += 4)
-      for (let u = 2; u <= 42; u += 4) {
-        const lu = u + Math.floor(s(u, v, 31) * 3) - 1;
-        const lv = v + Math.floor(s(u, v, 32) * 3) - 1;
-        if (s(u, v, 33) > 0.85 || !livre(lu, lv, 3)) continue;
+    // (de perto do caminho: as copas fazem o túnel de folhas laranja do esboço)
+    for (let v = 45; v <= 98; v += 3)
+      for (let u = 1; u <= 42; u += 3) {
+        const lu = u + Math.floor(s(u, v, 31) * 2);
+        const lv = v + Math.floor(s(u, v, 32) * 2);
+        if (s(u, v, 33) > 0.8 || !livre(lu, lv, 2)) continue;
         arvore(lu, lv, folhaDoBosque(lu, lv), s(u, v, 34) < 0.3 ? 1 : 0);
       }
   }
@@ -1138,7 +1145,7 @@ function montarBaile(semente: number, r: RelevoVila): Montado {
       for (let u = ua; u <= ub; u++) {
         chao(u, v, Bloco.TERRA_ARADA);
         if ((u + v) % 3 === 0) b(u, 1, v, Bloco.ABOBOREIRA_3);
-        else if ((u + v) % 5 === 1) b(u, 1, v, Bloco.ABOBORA);
+        else if ((u + v) % 5 === 1) peca('abobora', u + 0.5, v + 0.5, (u + v) & 3, 6 + ((u * 7 + v) % 3));
         else if ((u + v) % 7 === 2) b(u, 1, v, Bloco.ABOBOREIRA_2);
       }
     };

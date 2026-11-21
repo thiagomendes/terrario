@@ -127,6 +127,7 @@ import { noiteDosBichos } from '../jogo/tempo';
 import { criarShowVila } from './vila/show';
 import type { PlanoVila } from '../world/vilaNeon';
 import type { PlanoBaile } from '../world/noiteFantasias';
+import { criarRenderBaile } from './baile';
 import { LARGURA_CIDADE, PROFUNDIDADE_CIDADE } from '../world/cidade';
 import { criarAgua } from './agua';
 import { criarVagalumes } from './vagalumes';
@@ -463,6 +464,21 @@ export interface EstadoDepuracao {
   vila?: () => PlanoVila | null;
   /** Spec 027: o plano da vila da Noite das Fantasias (null nos outros temas). */
   baile?: () => PlanoBaile | null;
+  /** Spec 027: as peças da festa vivas, as sem chão (sempre 0), os sósias e o que anima. */
+  bailePecas?: () => {
+    chunks: number;
+    malhas: number;
+    triangulos: number;
+    sosias: number;
+    sosiasLista: { nome: string; visivel: boolean }[];
+    semChao: number;
+    sosiaEmDobro: string[];
+    animando: { abobora: number; portas: number[] };
+  } | null;
+  /** Spec 027: o toque nas peças da festa (a abóbora pisca e ri, a porta fechada balança). */
+  baileToque?: (q: import('./baile').ToqueBaile) => void;
+  /** Spec 027: as portas fechadas da festa (o meio da frente), para o toque. */
+  bailePortas?: () => { x: number; y: number; z: number }[];
   /** Spec 026: o estado do bairro que o núcleo mandou (show, estojos, caixas, lhamas). */
   vilaEstado?: () => import('../nucleo/vila').VilaVista | null;
   /** Spec 026: manda a caixa do palco ou o toque no palco ao núcleo. */
@@ -1936,9 +1952,33 @@ export function criarCena(
       })
     : null;
   estado.vila = () => planoVila;
-  // spec 027: a vila da Noite das Fantasias (null nos outros temas)
+  // spec 027: a vila da Noite das Fantasias (null nos outros temas), as peças dela e os sósias de
+  // longe, só em cima de chão desenhado
   const planoBaile = baileDoMundo(semente);
   estado.baile = () => planoBaile;
+  const renderBaile = planoBaile
+    ? criarRenderBaile(scene, planoBaile, {
+        temMalha: (cx, cz) => malhas.has(chave(cx, cz)),
+        tapaOGlow,
+        brilha: brilhaNaVila,
+        porQuadro: toqueGrosso ? 1 : 2,
+      })
+    : null;
+  estado.bailePecas = () =>
+    renderBaile
+      ? {
+          ...renderBaile.contagem(),
+          semChao: renderBaile.semChao(),
+          sosiasLista: renderBaile.sosias.lista(),
+          sosiaEmDobro: renderBaile.sosias
+            .pedacos()
+            .filter((q) => q.visivel && malhas.has(chave(q.cx, q.cz)))
+            .map((q) => `${q.nome}@${q.cx},${q.cz}`),
+          animando: renderBaile.animando(),
+        }
+      : null;
+  estado.baileToque = (q) => renderBaile?.tocar(q);
+  estado.bailePortas = () => renderBaile?.portas() ?? [];
   const showVila = planoVila
     ? criarShowVila(scene, planoVila, {
         temMalha: (cx, cz) => malhas.has(chave(cx, cz)),
@@ -5314,6 +5354,13 @@ export function criarCena(
       controle.jogador.z,
       noiteVila,
       planoVila ? controle.jogador.y - (planoVila.h + 1) : 0,
+    );
+    renderBaile?.quadro(
+      tempo,
+      controle.jogador.x,
+      controle.jogador.z,
+      noiteVila,
+      planoBaile ? controle.jogador.y - (planoBaile.h + 1) : 0,
     );
     // spec 026: o show é só de noite (a noite do show acende o palco)
     const noiteShow = noiteDeShow(hora);
