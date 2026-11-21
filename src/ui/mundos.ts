@@ -1,4 +1,5 @@
 import { perguntar } from './dialogo';
+import { normalizarCodigo } from '../jogo/codigos';
 import { criarSeletorTemas } from './temasUi';
 import { obterTema, TEMA_PADRAO } from '../temas';
 import type { IdTema } from '../temas/tipos';
@@ -269,6 +270,8 @@ export interface OpcoesPainelMundos {
   levarParaAmigos?(meta: MetaMundo): Promise<void>;
   /** Mundo com amigos volta para o aparelho (só o dono). Rejeita com a mensagem a mostrar. */
   pararComAmigos?(meta: MetaMundo): Promise<void>;
+  /** Spec 035: o código da sala aberta agora (dentro da nuvem; o dono pode ter trocado). */
+  salaAberta?(): string | null | undefined;
 }
 
 export function criarPainelMundos(raiz: HTMLElement, op: OpcoesPainelMundos) {
@@ -434,9 +437,14 @@ export function criarPainelMundos(raiz: HTMLElement, op: OpcoesPainelMundos) {
       const jogar = document.createElement('button');
       jogar.type = 'button';
       jogar.className = 'btn primario';
-      jogar.textContent = op.atual?.id === m.id ? 'Continuar' : 'Jogar';
+      // spec 035: dentro da nuvem, o mundo desta sala também é o que está aberto
+      const sala = op.salaAberta?.();
+      const daSala =
+        !!sala && !!m.nuvem && normalizarCodigo(m.nuvem) === normalizarCodigo(sala);
+      const aberto = op.atual?.id === m.id || daSala;
+      jogar.textContent = aberto ? 'Continuar' : 'Jogar';
       jogar.addEventListener('click', () => {
-        if (op.atual?.id === m.id) modal.fechar();
+        if (aberto) modal.fechar();
         else op.abrir(m.id);
       });
       const renomear = document.createElement('button');

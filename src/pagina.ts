@@ -43,12 +43,14 @@ export function saindoPorConta(): boolean {
 
 /**
  * O endereço para abrir um mundo do aparelho a partir do endereço de agora. Sem DOM, para ter
- * teste de unidade. A prévia de tema (`tema`) vale só para esta página e sai; o resto fica.
+ * teste de unidade. A prévia de tema (`tema`) vale só para esta página e sai. Spec 035: a sala
+ * da nuvem (`sala`, `novo`, `direto`) também sai, senão a criança voltava para a sala. O resto
+ * (os parâmetros dos testes e das capturas) fica.
  */
 export function enderecoDoMundo(href: string, id: string): string {
   const url = new URL(href);
+  for (const p of ['sala', 'novo', 'direto', 'tema']) url.searchParams.delete(p);
   url.searchParams.set('mundo', id);
-  url.searchParams.delete('tema');
   return url.toString();
 }
 

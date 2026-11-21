@@ -202,10 +202,14 @@ async function iniciar(app: HTMLElement): Promise<void> {
     const local = doAparelho.find((m) => m.nuvem && normalizarCodigo(m.nuvem) === codigo);
     if (local && ehMundoNovo(armazenamento, local.id)) mundoNovo = { id: local.id };
   }
+  // spec 035: o código da sala aberta (o dono pode trocar): o mundo dela mostra "Continuar"
+  let salaAberta = nuvem?.bv.sala.codigo;
+  nuvem?.conexao.aoSala((s) => (salaAberta = s.codigo));
   const ui = criarInterface(app, hotbar, {
     repo,
     mundo: atual,
     mundoNovo,
+    salaAberta: () => salaAberta,
     config,
     salvar: () => cena?.salvar() ?? Promise.resolve(false),
     criarComAmigos: async (meta, apelido) => {
