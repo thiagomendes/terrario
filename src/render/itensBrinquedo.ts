@@ -323,6 +323,68 @@ export function modeloNaMao(
         azul.rotation.z = -0.34;
         break;
       }
+      case 'brigadeiro':
+      case 'beijinho':
+      case 'cajuzinho':
+      case 'surpresa_uva': {
+        // spec 027 (T15): a forminha de papel pregueada com três docinhos (um some a cada
+        // mordida): o brigadeiro com o granulado laranja, o beijinho branco com o cravo, o
+        // cajuzinho com o amendoim e a surpresa de uva branca com a uva roxa em cima
+        add(ci('forminha', 0.034, 0.078, 0.06, '#f6ecdc'), 0, 0.017, 0);
+        for (let i = 0; i < 8; i++) {
+          const a = (i / 8) * Math.PI * 2;
+          const pr = add(cx(`prega${i}`, 0.012, 0.03, 0.006, 0.002, '#e4d2b4'), Math.cos(a) * 0.07, 0.018, Math.sin(a) * 0.07);
+          pr.rotation.y = -a;
+        }
+        const DOCE: Record<string, [string, string]> = {
+          brigadeiro: ['#5a3424', '#ff9a3a'],
+          beijinho: ['#fbf3e6', '#4a2a18'],
+          cajuzinho: ['#e0904a', '#c88a4a'],
+          surpresa_uva: ['#fbf3e6', '#7a3ea8'],
+        };
+        const [corDoce, corTopo] = DOCE[item];
+        // (de lado para a boca: o +x é o primeiro que se come)
+        for (let k = 0; k < 3; k++) {
+          const a = (k / 3) * Math.PI * 2;
+          const x = Math.cos(a) * 0.036;
+          const z = Math.sin(a) * 0.036;
+          add(bo(`docinho${k}`, 0.034, corDoce, [1, 0.92, 1], 0.42), x, 0.058, z);
+          if (item === 'brigadeiro')
+            for (const [dx, dz] of [
+              [-0.012, 0.006],
+              [0.01, -0.01],
+              [0.004, 0.014],
+            ])
+              add(cx(`docinho${k}-gr${dx}`, 0.009, 0.006, 0.006, 0.002, corTopo), x + dx, 0.089, z + dz);
+          else if (item === 'surpresa_uva') {
+            add(bo(`docinho${k}-uva`, 0.017, corTopo, [1, 0.85, 1], 0.5), x, 0.088, z);
+            add(cx(`docinho${k}-cabo`, 0.005, 0.014, 0.005, 0.002, '#5f8a34'), x, 0.104, z);
+          } else add(bo(`docinho${k}-topo`, 0.011, corTopo, [0.8, 1.2, 0.8], 0.3), x, 0.092, z);
+        }
+        break;
+      }
+      case 'chocolate_quente': {
+        // spec 027 (T15): a caneca laranja de alça, o chocolate dentro (desce a cada gole) e a
+        // fumacinha
+        add(ci('caneca', 0.11, 0.052, 0.05, '#f2a24a'), 0, 0.055, 0);
+        add(ci('chocolate', 0.012, 0.045, 0.045, '#5a3020'), 0, 0.104, 0);
+        add(cx('alca', 0.022, 0.07, 0.022, 0.01, '#e8923a'), -0.066, 0.058, 0);
+        add(cx('alca-c', 0.03, 0.016, 0.02, 0.008, '#e8923a'), -0.052, 0.088, 0);
+        add(cx('alca-b', 0.03, 0.016, 0.02, 0.008, '#e8923a'), -0.052, 0.028, 0);
+        add(bo('fumaca', 0.022, '#ffffff', [1, 0.8, 1], 0.6), 0.008, 0.14, 0);
+        add(bo('fumaca2', 0.016, '#ffffff', [1, 0.8, 1], 0.6), -0.012, 0.17, 0.006);
+        break;
+      }
+      case 'pocao_uva': {
+        // spec 027 (T15): o copinho de poção de uva (o copo transparente, a poção roxa que
+        // desce a cada gole e o canudinho laranja)
+        add(ci('pocao', 0.12, 0.052, 0.044, '#8a4ec8'), 0, 0.066, 0);
+        add(vidro('copo', 0.15, 0.058, 0.048), 0, 0.075, 0);
+        add(bo('bolha', 0.012, '#c8a0f0', [1, 1, 1], 0.6), 0.02, 0.12, 0.018);
+        const canudo = add(ci('canudo', 0.16, 0.009, 0.009, '#ff9a3a'), 0.02, 0.16, 0);
+        canudo.rotation.z = -0.25;
+        break;
+      }
       case 'algodao_doce': {
         // spec 032: o algodão-doce do parque: o palito de madeira e a nuvem fofa em tufos de dois
         // rosas (nada de várias cores), mais clara em cima

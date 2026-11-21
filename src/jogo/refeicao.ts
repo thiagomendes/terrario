@@ -9,7 +9,7 @@
  */
 
 /** Cada comida do seu jeito (a mordida que se vê, as migalhas e o som). */
-export type JeitoDeComer = 'mordida' | 'pipoca' | 'canudinho' | 'colherada' | 'nuvem';
+export type JeitoDeComer = 'mordida' | 'pipoca' | 'canudinho' | 'colherada' | 'nuvem' | 'caneca';
 
 const JEITO: Readonly<Record<string, JeitoDeComer>> = {
   pipoca: 'pipoca',
@@ -17,6 +17,14 @@ const JEITO: Readonly<Record<string, JeitoDeComer>> = {
   vitamina: 'canudinho',
   ensopado: 'colherada',
   algodao_doce: 'nuvem',
+  // spec 027 (T15): os docinhos da forminha (um some a cada mordida, o jeito da pipoca), a poção
+  // de canudinho e o chocolate quente no gole de caneca (a caneca inclina, o nível desce)
+  brigadeiro: 'pipoca',
+  beijinho: 'pipoca',
+  cajuzinho: 'pipoca',
+  surpresa_uva: 'pipoca',
+  pocao_uva: 'canudinho',
+  chocolate_quente: 'caneca',
 };
 
 /** O jeito de comer um item (o que não está na lista se morde). */

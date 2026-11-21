@@ -89,6 +89,13 @@ const CONTATO: Readonly<Record<string, [number, number, number]>> = {
   frutinhas: [0.08, 0.04, 0],
   maca: [0.09, 0.0, 0],
   ovo_cozido: [0.09, 0.04, 0],
+  // spec 027 (T15): o docinho da frente da forminha, a beira da caneca e o canudinho da poção
+  brigadeiro: [0.075, 0.06, 0],
+  beijinho: [0.075, 0.06, 0],
+  cajuzinho: [0.075, 0.06, 0],
+  surpresa_uva: [0.075, 0.06, 0],
+  chocolate_quente: [0.055, 0.11, 0],
+  pocao_uva: [0.045, 0.235, 0],
 };
 /**
  * Um tiquinho para o lado da mão e para baixo (cabeça: x, y, z), nas redondas: bem na frente da
@@ -103,6 +110,13 @@ const DESLOCAR: Readonly<Record<string, [number, number, number]>> = {
   algodao_doce: [0.035, 0, 0],
   ovo_cozido: [0.06, -0.04, 0],
   frutinhas: [0.06, -0.04, 0],
+  // (o docinho da vez na altura da boca: mais baixo, a forminha ficava no queixo)
+  brigadeiro: [0.03, 0.08, 0],
+  beijinho: [0.03, 0.08, 0],
+  cajuzinho: [0.03, 0.08, 0],
+  surpresa_uva: [0.03, 0.08, 0],
+  chocolate_quente: [0.03, -0.01, 0],
+  pocao_uva: [0.03, 0, 0],
 };
 /** As compridas, que se comem de través pela ponta. */
 const DE_TRAVES = new Set(['cachorro_quente', 'pao', 'peixe_cru', 'peixe_assado', 'carne_crua', 'carne_assada']);
@@ -154,6 +168,12 @@ const MIGALHAS: Readonly<Record<string, string[]>> = {
   vitamina: ['#ffb0d2'],
   ensopado: ['#e0a84a'],
   algodao_doce: ['#ffd2e6', '#ffb0d2'],
+  brigadeiro: ['#5a3424', '#ff9a3a'],
+  beijinho: ['#fbf3e6', '#e8dcc6'],
+  cajuzinho: ['#e0904a', '#c88a4a'],
+  surpresa_uva: ['#fbf3e6', '#7a3ea8'],
+  chocolate_quente: ['#7a4a30'],
+  pocao_uva: ['#b07ae0'],
 };
 
 /** O som de cada jeito. */
@@ -163,6 +183,7 @@ export const SOM_DO_JEITO: Readonly<Record<JeitoDeComer, EventoSom>> = {
   canudinho: 'gole',
   colherada: 'gole',
   nuvem: 'fofo',
+  caneca: 'gole',
 };
 
 /** A comida mordida: o modelo e como fica depois de cada mordida. */
@@ -605,6 +626,41 @@ export function montarComidaMordida(
     ponto = (k) => new Vector3(pontaX - Math.max(0, k - 1) * 0.045 - 0.03, 0.09, 0);
     // (a ponta que sobra depois de cada mordida encosta na boca)
     contato = (k) => new Vector3(pontaX - Math.max(0, Math.min(3, k)) * (bolo ? 0.045 : 0.05), bolo ? 0.11 : 0.08, 0);
+  } else if (jeito === 'pipoca' && modelo.malhas.some((m) => /^docinho\d/.test(nome(m)))) {
+    // spec 027 (T15): os três docinhos da forminha, um por mordida (o da frente primeiro), com o
+    // granulado, o cravo ou a uva de cada um
+    const doDocinho = (k: number) => modelo.malhas.filter((m) => nome(m).startsWith(`docinho${k}`));
+    // (a forminha gira na mão: o docinho da vez fica sempre do lado da boca, o +x)
+    const base = modelo.malhas.map((m) => ({ m, x: m.position.x, z: m.position.z, ry: m.rotation.y }));
+    estagio = (k) => {
+      const kk = Math.max(0, Math.min(3, k));
+      for (let i = 0; i < 3; i++) for (const m of doDocinho(i)) m.setEnabled(i >= kk);
+      const a = (Math.min(2, kk) / 3) * Math.PI * 2;
+      const c = Math.cos(a);
+      const s = Math.sin(a);
+      // (o giro em y que leva o docinho kk, que estava no ângulo a, para o +x)
+      for (const b of base) {
+        b.m.position.x = b.x * c + b.z * s;
+        b.m.position.z = -b.x * s + b.z * c;
+        b.m.rotation.y = b.ry + a;
+      }
+    };
+    ponto = () => new Vector3(0.036, 0.07, 0);
+    contato = () => new Vector3(0.07, 0.06, 0);
+  } else if (jeito === 'caneca') {
+    // spec 027 (T15): o gole de caneca: o chocolate desce a cada gole e a fumacinha vai sumindo
+    const choco = peca('chocolate');
+    const fumacas = ['fumaca', 'fumaca2'].map(peca).filter((m): m is Mesh => !!m);
+    const y = choco?.position.y ?? 0;
+    estagio = (k) => {
+      const kk = Math.max(0, Math.min(3, k));
+      if (choco) {
+        choco.position.y = y - kk * 0.024;
+        choco.scaling.x = choco.scaling.z = 1 - kk * 0.04;
+      }
+      fumacas.forEach((m, i) => m.setEnabled(kk < 3 - i));
+    };
+    ponto = () => new Vector3(0.04, 0.11, 0);
   } else if (jeito === 'pipoca') {
     const pipocas = modelo.malhas
       .filter((m) => /^pipoca/.test(nome(m)))
@@ -613,7 +669,7 @@ export function montarComidaMordida(
     estagio = (k) => pipocas.forEach((m, i) => m.setEnabled(i >= ate[Math.max(0, Math.min(3, k))]));
     ponto = () => new Vector3(0, 0.17, 0);
   } else if (jeito === 'canudinho') {
-    const liquido = peca(item === 'vitamina' ? 'vitamina' : 'suco');
+    const liquido = peca(item === 'vitamina' ? 'vitamina' : item === 'pocao_uva' ? 'pocao' : 'suco');
     const espumas = ['espuma', 'espuma2'].map(peca).filter((m): m is Mesh => !!m);
     const nivel = [1, 0.68, 0.38, 0.1];
     const base = liquido ? { y: liquido.position.y, h: liquido.getBoundingInfo().boundingBox.extendSize.y * 2 } : null;
@@ -744,7 +800,10 @@ export function criarRefeicoes(scene: Scene, op: OpcoesRefeicoes): Refeicoes {
     Vector3.TransformCoordinatesToRef(p, no.getWorldMatrix(), mundo);
     const cores = MIGALHAS[c.item] ?? ['#e0b080'];
     const leve = c.jeito === 'nuvem';
-    const quantas = c.jeito === 'canudinho' ? 2 : c.jeito === 'colherada' ? 2 : leve ? 4 : 5;
+    // (spec 027: o docinho é macio, não esfarela: duas migalhinhas pequenas, nada de bolinhas na
+    // cara; a caneca, uma gotinha)
+    const docinho = c.jeito === 'pipoca' && c.item !== 'pipoca';
+    const quantas = docinho ? 2 : c.jeito === 'caneca' ? 1 : c.jeito === 'canudinho' ? 2 : c.jeito === 'colherada' ? 2 : leve ? 4 : 5;
     const mats = c.dono.plasticos();
     for (let i = 0; i < quantas; i++) {
       if (migalhas.length >= MAX_MIGALHAS) {
@@ -752,7 +811,7 @@ export function criarRefeicoes(scene: Scene, op: OpcoesRefeicoes): Refeicoes {
         velha?.m.dispose();
       }
       const cor = cores[(i + c.mordidas) % cores.length];
-      const tam = c.jeito === 'pipoca' ? 0.028 : c.jeito === 'canudinho' ? 0.014 : leve ? 0.022 : 0.018;
+      const tam = docinho ? 0.011 : c.jeito === 'pipoca' ? 0.028 : c.jeito === 'canudinho' || c.jeito === 'caneca' ? 0.014 : leve ? 0.022 : 0.018;
       const m = esfera(`migalha-${n++}`, scene, tam, mats.cor(cor, 0.35), [1, 0.85, 1]);
       m.position.copyFrom(mundo);
       m.isPickable = false;
@@ -808,10 +867,17 @@ export function criarRefeicoes(scene: Scene, op: OpcoesRefeicoes): Refeicoes {
         Matrix.FromXYZAxesToRef(x, y, z, giro);
         q = Quaternion.FromRotationMatrix(giro);
       } else q = Quaternion.FromEulerAngles(0, Math.PI / 2, 0);
+      // spec 027 (T15): o gole de caneca: a caneca inclina a beira para a boca, um tico mais a
+      // cada gole (o chocolate vai acabando)
+      if (c.jeito === 'caneca') {
+        Matrix.FromQuaternionToRef(q, giro);
+        Matrix.RotationZ(-(0.38 + Math.min(3, c.mordidas) * 0.14)).multiplyToRef(giro, local);
+        q = Quaternion.FromRotationMatrix(local);
+      }
       // mastigando, a comida também vira um pouco de lado: a marca da mordida, que estava virada
       // para a boca, aparece para quem olha (de frente, de lado e de trás)
       // (no canudinho a criança não solta: o canudo fica na boca e o nível é que desce)
-      const solta = c.jeito === 'canudinho' ? 0 : afastaNaRefeicao(c.t);
+      const solta = c.jeito === 'canudinho' || c.jeito === 'caneca' ? 0 : afastaNaRefeicao(c.t);
       const ag = solta * NA_BOCA.giro;
       if (ag) {
         Matrix.FromQuaternionToRef(q, giro);
