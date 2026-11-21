@@ -1,6 +1,7 @@
 /**
  * Spec 035: depois das 2 ressincronizações, a página recarrega uma vez. Uma marca no
- * `sessionStorage`, por código de sala, impede um segundo recarregar em 10 min. Sem o
+ * `sessionStorage`, pelo id do mundo da nuvem (não pelo código da sala, que o dono pode trocar
+ * enquanto isso), impede um segundo recarregar em 10 min. Sem o
  * `sessionStorage` (ou com ele dando erro) não recarrega: sem a marca, não há como garantir que
  * não vira laço. Sem DOM, para ter teste de unidade.
  */
@@ -10,13 +11,13 @@ export const ESPERA_RECARREGAR_MS = 10 * 60_000;
 /** Pode recarregar agora? Se pode, já deixa a marca. */
 export function podeRecarregar(
   armazem: () => Pick<Storage, 'getItem' | 'setItem'> | null | undefined,
-  codigo: string,
+  mundo: string,
   agora: number,
 ): boolean {
   try {
     const s = armazem();
     if (!s) return false;
-    const chave = MARCA_RECARREGOU + codigo;
+    const chave = MARCA_RECARREGOU + mundo;
     const antes = Number(s.getItem(chave));
     if (s.getItem(chave) !== null && Number.isFinite(antes) && agora - antes < ESPERA_RECARREGAR_MS)
       return false;

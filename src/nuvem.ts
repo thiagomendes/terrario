@@ -566,14 +566,15 @@ export function ligarAmigos(raiz: HTMLElement, cena: Cena, op: OpcoesAmigos): vo
   // recarrega uma vez, direto no mesmo mundo (a marca de 10 min impede o laço; sem ela, segue)
   cena.aoDesistir(() => {
     guardar();
-    const codigo = normalizarCodigo(nv.bv.sala.codigo) ?? nv.bv.sala.codigo;
+    // a marca é do mundo (o id fica), não do código da sala, que o dono pode trocar
+    const mundo = nv.bv.mundo.id;
     let armazem: Storage | null = null;
     try {
       armazem = window.sessionStorage;
     } catch {
       armazem = null;
     }
-    if (!podeRecarregar(() => armazem, codigo, Date.now())) return;
+    if (!podeRecarregar(() => armazem, mundo, Date.now())) return;
     // um tempinho para o `guardar` sair antes de a página ir embora
     setTimeout(() => navegar(enderecoDireto(location.href)), 300);
   });

@@ -276,24 +276,26 @@ describe('o recarregar uma vez (spec 035)', () => {
     };
   }
 
-  it('a primeira vez pode, e deixa a marca; com a marca de pé, não; depois de 10 min, pode de novo', () => {
+  it('a primeira vez pode, e deixa a marca do mundo; com a marca de pé, não; depois de 10 min, pode de novo', () => {
     const s = armazem();
-    expect(podeRecarregar(() => s, 'LUA-SOL-01', 1000)).toBe(true);
-    expect(s.dados.get(MARCA_RECARREGOU + 'LUA-SOL-01')).toBe('1000');
-    expect(podeRecarregar(() => s, 'LUA-SOL-01', 1000 + 60_000)).toBe(false);
-    // outra sala tem a marca dela
-    expect(podeRecarregar(() => s, 'MAR-RIO-02', 2000)).toBe(true);
-    expect(podeRecarregar(() => s, 'LUA-SOL-01', 1000 + ESPERA_RECARREGAR_MS)).toBe(true);
+    // a marca é pelo id do mundo da nuvem (o dono pode trocar o código da sala no meio)
+    expect(podeRecarregar(() => s, 'mundo-a1', 1000)).toBe(true);
+    expect(s.dados.get(MARCA_RECARREGOU + 'mundo-a1')).toBe('1000');
+    expect([...s.dados.keys()]).toEqual([MARCA_RECARREGOU + 'mundo-a1']);
+    expect(podeRecarregar(() => s, 'mundo-a1', 1000 + 60_000)).toBe(false);
+    // outro mundo tem a marca dele
+    expect(podeRecarregar(() => s, 'mundo-b2', 2000)).toBe(true);
+    expect(podeRecarregar(() => s, 'mundo-a1', 1000 + ESPERA_RECARREGAR_MS)).toBe(true);
   });
 
   it('sem sessionStorage, ou com ele dando erro, não recarrega', () => {
-    expect(podeRecarregar(() => null, 'LUA-SOL-01', 1000)).toBe(false);
+    expect(podeRecarregar(() => null, 'mundo-a1', 1000)).toBe(false);
     expect(
       podeRecarregar(
         () => {
           throw new Error('bloqueado');
         },
-        'LUA-SOL-01',
+        'mundo-a1',
         1000,
       ),
     ).toBe(false);
@@ -303,10 +305,10 @@ describe('o recarregar uma vez (spec 035)', () => {
         throw new Error('cheio');
       },
     };
-    expect(podeRecarregar(() => quebrado, 'LUA-SOL-01', 1000)).toBe(false);
+    expect(podeRecarregar(() => quebrado, 'mundo-a1', 1000)).toBe(false);
     // a marca que não fica (o navegador ignora a escrita) também não deixa
     const mudo = { getItem: () => null, setItem: () => undefined };
-    expect(podeRecarregar(() => mudo, 'LUA-SOL-01', 1000)).toBe(false);
+    expect(podeRecarregar(() => mudo, 'mundo-a1', 1000)).toBe(false);
   });
 
   it('recarrega direto no mesmo mundo (com direto=1, o resto do endereço fica)', () => {
