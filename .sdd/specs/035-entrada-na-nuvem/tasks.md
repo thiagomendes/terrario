@@ -47,7 +47,7 @@ Os e2e rodam na placa de vídeo: `scripts/e2e-gpu.sh <spec>`, e depois `scripts/
 **Ordem:** T00 → T01 → T02 → T03 → T04 → T05 → T06 → T07 → T08 → T09.
 
 ## Situação
-- **(20 nov 2026) O revisor aprovou com ajustes; ajustes incorporados; falta a aprovação do dono.**
+- **(20 nov 2026) Spec aprovada pelo dono** ("Aprovado"), depois de o revisor aprovar com ajustes e os ajustes entrarem. O código começa em 21 nov, às 7h, pela T00.
   - O dono respondeu às duas perguntas pelas recomendadas e pôs na spec os blocos da volta e a sala fechada.
   - Os 18 apontamentos da primeira revisão entraram (a decisão técnica foi do orquestrador).
   - Os 7 ajustes da conferência final entraram: o vigia de silêncio só com a conexão de pé, os 5 s da ressincronização sem bem-vindo, o falso silêncio do celular lento, o silêncio que nunca recarrega, os testes da volta sem mudança, a `TOLERANCIA_QUEDA` da sala fechada e o cancelamento do `publicar.yml`.
