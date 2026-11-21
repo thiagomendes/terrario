@@ -62,7 +62,7 @@ Durante o trabalho, mandar ao dono "aperitivos" (fotos e vídeos do que está fi
 ## Boletim para o dono (decisão de 20 nov 2026)
 - **De hora em hora**, e na hora quando algo precisa dele (decisão, aperitivo, publicação, problema).
 - **Relatório do dia, às 22h de Brasília**, no painel publicado "Painel do Terrário" (sempre no mesmo endereço): no topo, o dia (o que entrou, as decisões, as fotos, o que fica para amanhã); depois o estado da spec, o que precisa do dono, a fila e o que já está no ar. No chat vai só o link com 2 ou 3 linhas.
-- **Agendamentos:** o boletim, o relatório do dia e a vigia são agendamentos da própria sessão, que fica no computador do dono (desde 20 nov 2026, uma sessão só). Eles caem quando a sessão reinicia: ao retomar, recriar os três. Às 22h param com o resto e voltam às 7h.
+- **Agendamentos:** o boletim, o relatório do dia e a vigia são agendamentos da própria sessão, que fica no computador do dono (desde 20 nov 2026, uma sessão só). Eles caem quando a sessão reinicia: ao retomar, recriar os três. Às 22h param com o resto e voltam às 7h (às 8h no sábado e no domingo).
 - **A vigia dos agentes é silenciosa:** a cada ~15 min, só fala com o dono se houver problema.
 - **No chat, sem página publicada** (dono, 20 nov): só o que o chat mostra (título, barra de progresso em texto, tabela, listas), sem detalhe técnico, horário de Brasília:
 
@@ -77,11 +77,11 @@ Durante o trabalho, mandar ao dono "aperitivos" (fotos e vídeos do que está fi
 
 ## Ritmo
 - Uma spec por vez.
-- Trabalho só das 7h às 22h (hora de Brasília), no computador do dono. Às 22h:
+- Trabalho só das 7h às 22h (hora de Brasília) em dia útil, e das 8h às 22h no sábado e no domingo (dono, 20 nov 2026), no computador do dono. Às 22h:
   - parar os agentes, a vigia e os contêineres;
   - mandar o relatório do dia;
   - avisar o dono;
-  - agendar a retomada às 7h.
+  - agendar a retomada às 7h (às 8h no sábado e no domingo).
 - **Permissões e Azure** (dono, 20 nov 2026):
   - quando precisar de acesso (site no ar, sala de teste na nuvem, logs), é só pedir ao dono, que aprova na janela de permissão;
   - a sessão tem o `az` para olhar os recursos da Azure.
