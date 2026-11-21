@@ -121,6 +121,11 @@ const entrarNoJogo = (p: Page) =>
     document.querySelector('.entrada')?.setAttribute('hidden', '');
     window.__brumaluz!.pausarDia = true;
   });
+/** A tela de título (com o botão "Mundos") de volta, como quem pausa o jogo, e a lista aberta. */
+const abrirLista = async (p: Page) => {
+  await p.evaluate(() => document.querySelector('.entrada')?.removeAttribute('hidden'));
+  await p.locator('[data-abrir-mundos]').click({ timeout: 20_000 });
+};
 const ressincronizacoes = (p: Page) =>
   p.evaluate(
     () =>
@@ -222,11 +227,16 @@ test('B, buraco: um quadro do meio perdido, e a Bia continua vendo a Ana andar',
       const a = (window.__brumaluz!.outrosJogadores?.() ?? []).find((o) => o.apelido === 'Ana');
       return a ? { x: a.x, z: a.z } : null;
     });
+  const propria = () => ana.evaluate(() => [...window.__brumaluz!.posicao!]);
+  const a1 = await propria();
   const p1 = await posAna();
   await bia.waitForTimeout(1500);
   const p2 = await posAna();
+  const a2 = await propria();
   await ana.keyboard.up('KeyD');
   console.log(`B buraco: a Ana vista pela Bia ${JSON.stringify(p1)} → ${JSON.stringify(p2)}`);
+  // a prova vale só se a Ana andou mesmo
+  expect(Math.hypot(a2[0] - a1[0], a2[2] - a1[2]), 'a Ana anda na tela dela').toBeGreaterThan(0.5);
   expect(p1).not.toBeNull();
   expect(p2).not.toBeNull();
   expect(Math.hypot(p2!.x - p1!.x, p2!.z - p1!.z), 'a Bia vê a Ana andar').toBeGreaterThan(0.5);
@@ -267,7 +277,7 @@ test('C: sair da nuvem para um mundo do aparelho, e de lá para outro', async ({
   test.setTimeout(400_000);
   const { ana, codigo } = await anaNaNuvem(browser, 'ana-e2e-c');
   // na lista, o mundo desta sala mostra "Continuar"
-  await ana.locator('[data-abrir-mundos]').click();
+  await abrirLista(ana);
   const daSala = ana.locator('.cartao-mundo-item', {
     has: ana.locator('.chip.codigo', { hasText: codigo }),
   });
@@ -294,7 +304,7 @@ test('C: sair da nuvem para um mundo do aparelho, e de lá para outro', async ({
   const rancho = p.get('mundo')!;
   // de volta à lista, "Jogar" num terceiro mundo do aparelho também abre ele
   await entrarNoJogo(ana);
-  await ana.locator('[data-abrir-mundos]').click();
+  await abrirLista(ana);
   const terceiro = ana
     .locator('.cartao-mundo-item:not(.atual)', { hasNot: ana.locator('.chip.codigo') })
     .first();

@@ -59,3 +59,10 @@ Os e2e rodam na placa de vídeo: `scripts/e2e-gpu.sh <spec>`, e depois `scripts/
   - **`tests/cliente/entradaNuvem.test.ts`** (o de texto saiu): 8 de 9 falham (nada chega a quem ouve depois); o do `encerrar()` que esvazia a fila passa já hoje. Conserta na T02.
   - **`servidor/testes/salas.test.ts`:** a sala fechada com a volta antes dos 30 s falha (`recusado: fechado`). Conserta na T06.
   - **Vitest inteiro:** 18 falham (exatamente os novos acima) e 1993 passam.
+- **(20 nov 2026) T01 pronta:** `e2e/entrada-nuvem.spec.ts`, rodado na `main` (na placa de vídeo, 1 trabalhador, 2 min 44 s ao todo). Os 4 falham pelo comportamento:
+  - **B** (41 s): o roteiro joga fora o `primeiro` e a Bia nunca vê a Ana (20 s esperando).
+  - **B, buraco** (29 s): a Ana anda na tela dela (conferido), e a Bia a vê parada no mesmo lugar depois do quadro perdido.
+  - **B2** (1 min): a página nunca recarrega (40 s esperando).
+  - **C** (31 s): o mundo da sala mostra "Jogar" e não "Continuar", e o mundo novo do Rancho abre com `sala` no endereço (volta para a sala).
+  - Na lista, o botão "Mundos" fica na tela de título: o teste a mostra de novo antes de abrir a lista.
+  - **Cuidado:** o `scripts/limpar-restos-root.sh` apagou as fotos de `capturas-034/`, que estão no git e eram do root; foram restauradas com `git restore capturas-034`.
