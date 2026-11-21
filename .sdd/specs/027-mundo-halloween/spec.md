@@ -37,6 +37,13 @@ O dono, em 13 nov 2026: um "mundo de criaturas, estilo Dia das Bruxas... criatur
 
 ## Decisões do dono
 - 13 nov 2026: aprovado como ideia. Entra intercalado na sequência. Começa por esboço.
+- 20 nov 2026, o plano do esboço (as quatro recomendadas):
+  - a fantasminha se chama **Lulu**, porque "Lili" já é a guitarrista da Vila Neon;
+  - o lençol da Lulu é de capuz, com o rosto do boneco à mostra (fica a cara de boneco do jogo e o sorriso);
+  - a vassoura-patinete tem o cabo em pé como guidão, a palha atrás e as rodinhas escondidas: a criança entende que é patinete e que não voa;
+  - o Trem das Risadas é ao ar livre, em volta da praça, com um túnel curto e claro.
+- 20 nov 2026, à noite: **esboço aprovado** pelo dono ("Esboço da 27 aprovado"), depois de ver o Bento e os morcegos refeitos na rodada do revisor. Ele vira spec; o pelo do Bento fica como item a refinar na spec, com versões lado a lado para o dono escolher (recomendação do orquestrador).
+  - Decisões pequenas do esboço: o Conde Dudu sem presas; o Tufinho cor de carvão, com focinho e patinhas claros e lacinho laranja (o preto puro some de noite); nenhum letreiro com palavra.
 
 ## A ideia aprovada (18 nov 2026, à noite)
 O dono: "Gostei da ideia, de forma geral tá bem legal. Amanhã me traz um esboço daí que a gente aprova." Vem logo depois da 034 ("menos é mais") e nasce no nível da Vila Neon: lugares por dentro, objetos que reagem ao toque, moradores com nome, missões com história, comprar e comer.
@@ -59,7 +66,7 @@ O dono: "Gostei da ideia, de forma geral tá bem legal. Amanhã me traz um esbo�
 **Personagens:**
 - Vovó Zuleica: a bruxinha boa, com o gato **Tufinho**. Nunca "Pretinho" e nunca a missão "o Pretinho fugiu": o dono acha que pode soar racista.
 - Conde Dudu: o vampirinho com medo do escuro.
-- Lili: a fantasminha de lençol, tímida, que adora esconde-esconde.
+- Lulu: a fantasminha de lençol, tímida, que adora esconde-esconde (era "Lili"; mudou em 20 nov).
 - Bento: o monstrinho peludo grandão que ama abraço e toca bumbo na banda.
 - Seu Jerônimo: o dono da horta de abóboras.
 - Bichos: fantasminhas flutuando, abóboras saltitantes, morceguinhos, coruja e gato preto.
@@ -67,7 +74,7 @@ O dono: "Gostei da ideia, de forma geral tá bem legal. Amanhã me traz um esbo�
 **Missões (10 a 12, com moedinhas, como na Vila):**
 - doces ou travessuras (5 casas, encher a sacola);
 - o Conde Dudu tem medo do escuro (acender as lanternas do bosque);
-- esconde-esconde com a Lili (achar pela risadinha);
+- esconde-esconde com a Lulu (achar pela risadinha);
 - abóbora de carinha (plantar, colher, escolher a cara, pôr na porta);
 - a poção da Vovó (uva, maçã e hortelã no caldeirão);
 - o gato da Vovó sumiu (seguir as pegadas do Tufinho, como a lhama);
@@ -90,7 +97,7 @@ O dono: "Gostei da ideia, de forma geral tá bem legal. Amanhã me traz um esbo�
 O primeiro trabalho da divisão "o que precisa de placa de vídeo vai para o computador do dono": o orquestrador, na nuvem, coordena; a sessão do computador do dono faz o esboço num branch próprio (`esboco/027-noite-das-fantasias`) e não publica nada.
 - **O que mostrar, com o motor de verdade e só com `?esboco=fantasias`** (código em `src/esboco/`, o jogo nunca carrega):
   - o visual do mundo: o entardecer e a noite, a praça com a abóbora gigante, a rua das casinhas tortas, o bosque das lanternas, a horta;
-  - os moradores fantasiados (Vovó Zuleica com o Tufinho, Conde Dudu, Lili, Bento, Seu Jerônimo) e os bichos fofos;
+  - os moradores fantasiados (Vovó Zuleica com o Tufinho, Conde Dudu, Lulu, Bento, Seu Jerônimo) e os bichos fofos;
   - uma amostra de cada "além dos cubos" que mais pesa na decisão: a vassoura-patinete e o Trem das Risadas, em foto ou vídeo curto;
   - a música e os sons, num trecho para ouvir.
 - **As fotos:**
@@ -98,3 +105,40 @@ O primeiro trabalho da divisão "o que precisa de placa de vídeo vai para o com
   - autocrítica e uma rodada de refazer antes de entregar.
 - **Perguntas ao dono:** as escolhas que dependem dele, cada uma com as opções e a recomendada.
 - **Regras:** as do `CLAUDE.md` (capricho visual, todo mundo com cara de boneco do jogo, nada que assuste, original, nada que lembre personagem conhecido).
+
+### O que o esboço entregou (20 nov 2026)
+Branch `esboco/027-noite-das-fantasias`, `?esboco=fantasias`, fotos e vídeos em `capturas-027/esboco/`, música e sons em `capturas-027/esboco/sons/` (partitura e `rodar.sh` em `referencia/fontes/`). Teste das fotos: `e2e/esboco-fantasias.spec.ts` (`ESBOCO_027=1`, na placa de vídeo).
+- **Código** (só `src/esboco/` e uma linha no `main.ts`):
+  - `fantasias.ts`: o palco e a API `window.__fantasias`;
+  - `fantasiasCeu.ts`: o céu, a lua, a névoa e os tiles repintados;
+  - `fantasiasPecas.ts`: as peças;
+  - `fantasiasGente.ts`: os moradores, com o boneco de verdade e as peças de fantasia presas às juntas;
+  - `fantasiasBichos.ts` e `fantasiasPasseios.ts`: os bichos, a vassoura e o trem.
+- **Mundo-base:** um mundo da Vila Neon (semente 1337), montado fora do bairro, num platô aplainado. O tema é mudado só na memória e nada vai ao núcleo nem à rede.
+- **Portão visual:** autocrítica com várias rodadas por parte, mais dois revisores novos que só viram as fotos (um na parte 1, outro nas partes 2 e 3).
+- **O que o dono viu e aprovou no caminho:**
+  - os sons ("muito bons");
+  - a abóbora gigante como peça de brinquedo arredondada, e não de cubos (pedido dele);
+  - a vassoura-patinete ("ficou muito bom");
+  - o túnel do trem mais alto, depois de ele ver as cabeças atravessando o teto ("agora ficou ótimo o trem, tá ficando muito bom esse mundo novo").
+- **Decisões de acabamento do orquestrador:** todas as abóboras com olhos redondos, da família da gigante, e nenhuma com olho triangular de cara brava. A locomotiva entra inteira no quadro.
+- **Achados que valem para a spec:**
+  - a abóbora gigante e as abóboras com rosto são malhas de brinquedo arredondadas; o resto do mundo é de blocos;
+  - a Lulu precisa de malha própria (cúpula com abertura oval), porque as peças do plano não fazem furo oval;
+  - a capa do Dudu também é malha própria, um pano curvo;
+  - o brilho somado da lanterninha lavava a calça do Dudu até a cor de pele: luz perto de roupa escura precisa de cuidado;
+  - a abertura (fov) das tomadas era ignorada, porque a câmera do jogo copia a dela a cada quadro: o esboço usa `fovFixo`;
+  - o túnel tem de ser medido contra o passageiro mais alto (o teste escreve as linhas "FOLGA"; o Bento chega a ~3,55 e o teto está a 4,25).
+- **O que ficou fraco (para a spec resolver):**
+  - **Barracas:** o toldo lê como faixa de bicos, não como cobertura.
+  - **Bento:** o alto do capuz é liso, com pouca franja.
+  - **Morceguinho:** o que voa, de longe, vira uma mancha roxa.
+  - **Seu Jerônimo:** a faixa de cabelo branco sob o chapéu pode ser lida como faixa.
+  - **Vídeos:**
+    - a vassoura é filmada de 3/4 de frente (o dono aprovou assim);
+    - a parede do túnel passa perto da câmera ao entrar;
+    - as lanterninhas do túnel saem cortadas na vista a bordo;
+    - a música começa do início nos três.
+  - **Vista do alto:** ao longe ainda aparecem morros cortados de outro bioma.
+  - **Peças:** são montadas uma a uma, sem fundir; na implementação, fundir e instanciar.
+  - **Texturas:** repintam tiles da Vila; a telha roxa, o tijolo torto, a teia e as folhas laranja precisam de id próprio.

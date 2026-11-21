@@ -1,0 +1,154 @@
+{
+ "noite-das-fantasias-demo": {
+  "wav": {
+   "lufsIntegrado": -15.71,
+   "picoVerdadeiroDbtp": -1.7,
+   "ganhoDb": 15.88,
+   "limitadorMaxDb": -6.29,
+   "limitadorTempoAcima1dB": 0.0109,
+   "limitadorTempoAcima3dB": 0.0035
+  },
+  "mp3": {
+   "segundos": 24.816,
+   "lufsIntegrado": -16.0,
+   "lraLU": 2.8,
+   "picoVerdadeiroDbtp": -1.9,
+   "momentaneoMaxLufs": -12.8,
+   "volumeMedioDb": -19.6,
+   "volumeMaxDb": -1.9
+  }
+ },
+ "abobora-pula": {
+  "wav": {
+   "momentaneoMaxLufs": -17.07,
+   "picoVerdadeiroDbtp": -3.5,
+   "ganhoDb": 3.95,
+   "limitadorMaxDb": -1.36,
+   "limitadorTempoAcima1dB": 0.0577,
+   "limitadorTempoAcima3dB": 0.0
+  },
+  "mp3": {
+   "segundos": 0.705,
+   "lufsIntegrado": -20.5,
+   "lraLU": 0.0,
+   "picoVerdadeiroDbtp": -4.0,
+   "momentaneoMaxLufs": -17.5,
+   "volumeMedioDb": -18.8,
+   "volumeMaxDb": -4.0
+  }
+ },
+ "apito-trem": {
+  "wav": {
+   "momentaneoMaxLufs": -17.0,
+   "picoVerdadeiroDbtp": -8.93,
+   "ganhoDb": -2.92,
+   "limitadorMaxDb": -0.0,
+   "limitadorTempoAcima1dB": 0.0,
+   "limitadorTempoAcima3dB": 0.0
+  },
+  "mp3": {
+   "segundos": 1.515,
+   "lufsIntegrado": -19.0,
+   "lraLU": 0.0,
+   "picoVerdadeiroDbtp": -9.4,
+   "momentaneoMaxLufs": -17.0,
+   "volumeMedioDb": -20.8,
+   "volumeMaxDb": -9.4
+  }
+ },
+ "campainha": {
+  "wav": {
+   "momentaneoMaxLufs": -17.0,
+   "picoVerdadeiroDbtp": -8.25,
+   "ganhoDb": -2.24,
+   "limitadorMaxDb": -0.0,
+   "limitadorTempoAcima1dB": 0.0,
+   "limitadorTempoAcima3dB": 0.0
+  },
+  "mp3": {
+   "segundos": 1.802,
+   "lufsIntegrado": -20.4,
+   "lraLU": 0.0,
+   "picoVerdadeiroDbtp": -8.7,
+   "momentaneoMaxLufs": -17.3,
+   "volumeMedioDb": -20.9,
+   "volumeMaxDb": -8.7
+  }
+ },
+ "lanterna-acende": {
+  "wav": {
+   "momentaneoMaxLufs": -17.0,
+   "picoVerdadeiroDbtp": -8.57,
+   "ganhoDb": -2.58,
+   "limitadorMaxDb": -0.0,
+   "limitadorTempoAcima1dB": 0.0,
+   "limitadorTempoAcima3dB": 0.0
+  },
+  "mp3": {
+   "segundos": 1.411,
+   "lufsIntegrado": -19.6,
+   "lraLU": 0.0,
+   "picoVerdadeiroDbtp": -9.0,
+   "momentaneoMaxLufs": -17.1,
+   "volumeMedioDb": -22.8,
+   "volumeMaxDb": -9.1
+  }
+ },
+ "miado-tufinho": {
+  "wav": {
+   "momentaneoMaxLufs": -17.0,
+   "picoVerdadeiroDbtp": -8.86,
+   "ganhoDb": -2.85,
+   "limitadorMaxDb": -0.0,
+   "limitadorTempoAcima1dB": 0.0,
+   "limitadorTempoAcima3dB": 0.0
+  },
+  "mp3": {
+   "segundos": 0.784,
+   "lufsIntegrado": -18.7,
+   "lraLU": 0.0,
+   "picoVerdadeiroDbtp": -9.3,
+   "momentaneoMaxLufs": -17.3,
+   "volumeMedioDb": -19.7,
+   "volumeMaxDb": -9.3
+  }
+ },
+ "morceguinho": {
+  "wav": {
+   "momentaneoMaxLufs": -17.03,
+   "picoVerdadeiroDbtp": -3.5,
+   "ganhoDb": 4.65,
+   "limitadorMaxDb": -2.18,
+   "limitadorTempoAcima1dB": 0.1586,
+   "limitadorTempoAcima3dB": 0.0
+  },
+  "mp3": {
+   "segundos": 0.94,
+   "lufsIntegrado": -17.7,
+   "lraLU": 0.0,
+   "picoVerdadeiroDbtp": -3.8,
+   "momentaneoMaxLufs": -17.2,
+   "volumeMedioDb": -20.6,
+   "volumeMaxDb": -3.9
+  }
+ },
+ "risadinha-fantasminha": {
+  "wav": {
+   "momentaneoMaxLufs": -17.0,
+   "picoVerdadeiroDbtp": -6.85,
+   "ganhoDb": -0.84,
+   "limitadorMaxDb": -0.0,
+   "limitadorTempoAcima1dB": 0.0,
+   "limitadorTempoAcima3dB": 0.0
+  },
+  "mp3": {
+   "segundos": 0.914,
+   "lufsIntegrado": -18.6,
+   "lraLU": 0.0,
+   "picoVerdadeiroDbtp": -7.3,
+   "momentaneoMaxLufs": -17.3,
+   "volumeMedioDb": -19.0,
+   "volumeMaxDb": -7.3
+  }
+ }
+}
