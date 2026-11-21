@@ -64,6 +64,7 @@ Ideias e pedidos do dono que ainda não viraram spec, e a fila combinada. A orde
   - a data começa com um "·" solto.
 - **Queda curta da conexão** (vista no ar, depois da 034): na sala de teste, a conexão de quem criou caiu uma vez (código 1005) e voltou meio segundo depois. Pode ser a troca de `?mundo=` para `?sala=`; conferir na 035.
 - **Voz do orelhão:** o dono achou rápida demais, mas fica como está por enquanto (18 nov).
+- **A dica "trocar" nos fãs da plateia da Vila** (achado na revisão da 027, 21 nov): o defeito da dica de trocar nos fãs da plateia, a conferir e consertar numa spec própria. Fora da 027.
 
 ## Feitas e publicadas (resumo)
 - **007 a 017, 019, 021, 023, 026, 030 a 034:** ver cada spec.
