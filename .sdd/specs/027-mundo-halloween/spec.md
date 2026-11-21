@@ -160,14 +160,15 @@ Branch `esboco/027-noite-das-fantasias`, `?esboco=fantasias`, fotos e vídeos em
 
 **Decisões do orquestrador na revisão (21 nov), para o boletim:**
 - este mundo não usa os blocos de rua da Cidade e da Vila: tem janela, toldinho e caminho próprios;
-- o lampião de abóbora posto vira a peça arredondada, com olhos redondos, em todos os mundos (toca o Rancho: uma linha para o dono, sem tirar nada);
+- o lampião de abóbora posto vira a peça arredondada em todos os mundos, com o rosto de cada tema (o Rancho mantém a carinha de festa junina; os outros ganham o sorriso de olhos redondos); toca o Rancho: uma linha para o dono, sem tirar nada;
+- o toque no fantasminha é o gesto principal da n10; os instrumentos da n8 e o Tufinho já em casa da n5 são cópias na tela de cada criança; a uva se colhe sempre;
 - os nomes Lulu, Bento e Dudu ficam (os da Vila e do Rancho não são falados nem lidos pela criança).
 
 ## Perguntas ao dono
 Só o que é dele: regra do jogo, economia, a cara do mundo e a ordem. A recomendada vem sempre primeiro.
 
 **1. As missões: dez, juntando "fantasia completa" com o "desfile com amigos"?**
-- **(a) Recomendo: juntar as duas numa missão só, "O desfile", e completar as dez com duas missões dos passeios:** "Volta de vassoura" (passar pelos três arcos de lanternas) e "Tchau, fantasminhas!" (acenar para os fantasminhas do túnel do trem em três voltas). Ver "As missões".
+- **(a) Recomendo: juntar as duas numa missão só, "O desfile", e completar as dez com duas missões dos passeios:** "Volta de vassoura" (passar pelos três arcos de lanternas) e "Tchau, fantasminhas!" (no trem, tocar nos fantasminhas do túnel, que acenam de volta, em três voltas). Ver "As missões".
   - Por quê: as duas eram quase a mesma coisa (vestir e desfilar no palco), e uma missão que só se faz com amigo fica parada no quadro de quem brinca sozinha, o que frustra uma criança de 3 anos. No desfile junto, quem brinca sozinha desfila com os moradores; com amigos, todo mundo que está no palco ganha (a ideia de 18 nov continua).
   - E os passeios ganham uma razão para a criança achar a vassoura e o trem.
 - (b) As nove da ideia como estão (o desfile com amigos separado, e sozinha ele se faz com os moradores) mais "Tchau, fantasminhas!": dez.
@@ -185,10 +186,13 @@ Só o que é dele: regra do jogo, economia, a cara do mundo e a ordem. A recomen
 
 **4. Três comidas da festa já existem em outros mundos. Trocar?**
 A maçã do amor e a cocada são do Doce Reino, e o doce de abóbora é do Doce Reino e do Rancho. A regra é "cada tema com o seu conteúdo".
-- **(a) Recomendo: trocar as três por doces só desta festa, ainda com sabor de festa brasileira** (nenhum existe em outro mundo; conferido no código):
-  - **pé de moleque** no lugar da maçã do amor (mordida crocante);
-  - **beijinho** no lugar da cocada (a forminha com três, um some a cada mordida);
-  - **canjica** no lugar do doce de abóbora (a tigelinha com colher, colherada).
+- **(a) Recomendo: trocar as três por docinhos de festa de aniversário brasileira**, que combinam com "festa à fantasia" (nenhum existe em outro mundo; conferido no código):
+  - **cajuzinho** no lugar da maçã do amor;
+  - **beijinho** no lugar da cocada;
+  - **surpresa de uva** no lugar do doce de abóbora (a uva coberta de docinho branco, da parreirinha do Seu Jerônimo).
+  - Os três vêm na forminha com três, e um some a cada mordida.
+  - O quindim, que combinaria, ficou de fora: "Quindim" já é nome de morador do Doce Reino.
+  - **Por que não pé de moleque e canjica** (a primeira ideia): são doces de festa junina, a cara do Rancho Alegre, que vai ganhar barracas na riqueza dele.
   - Ficam o brigadeiro, o chocolate quente e a poção de uva (no Doce Reino, brigadeiro e chocolate são blocos, não comida).
 - (b) Manter o cardápio de 18 nov e anotar no backlog que o Doce Reino, quando ganhar barracas, terá outros doces.
 
@@ -255,7 +259,7 @@ Vem do esboço (`fantasiasCeu.ts`), aprovado pelo dono:
 
 **O atlas sem mexer em nenhum hash da 034:**
 - O atlas cresce para **16 linhas** (256 células).
-- Os tiles dos blocos 117 em diante entram em `NOMES_TILES` **depois de `TILES_PECAS`**, numa lista própria, e começam na **célula 128** (a primeira da 9ª linha; a célula 127 continua vazia). Assim `porta_cima`, `branco` e os `brilho_*` não mudam de célula, e as 8 primeiras linhas ficam iguais pixel a pixel.
+- Os tiles dos blocos 117 em diante entram em `NOMES_TILES` **depois de `TILES_PECAS`**, numa lista própria, e começam na **célula 128** (a primeira da 9ª linha). Para o primeiro tile novo não cair na célula 127, que está vazia, a lista dos tiles novos começa com um tile de enchimento na 127, fora do hash, ou a contagem das células da lista nova começa direto na 128 (a T02 escolhe e testa). Assim `porta_cima`, `branco` e os `brilho_*` não mudam de célula, e as 8 primeiras linhas ficam iguais pixel a pixel.
 - O `paridade-cinco` passa a fazer o hash **só das 8 primeiras linhas** do atlas e do mapa emissivo (a leitura muda; o valor gravado não).
 - **Os textos e o resto do tema** entram no hash dos cinco **só pelas chaves que já existiam**: os nomes dos blocos 117+ nos textos de base e a entrada `baile` dos exclusivos ficam de fora.
 - **Meta: nenhum hash da 034 é gravado de novo.** Um teste novo prova isso: o `paridade-cinco` roda com os mesmos valores, e as 128 primeiras células são comparadas uma a uma com o atlas de antes.
@@ -283,7 +287,7 @@ Planejador puro `src/world/noiteFantasias.ts`, no caminho de `vilaNeon.ts`: o ma
 | **4. Loja de Fantasias** | por fora (parte 1): a vitrine **só com cabides e chapéus nos suportes** (sem manequim). Por dentro (parte 2): cabides por tipo (chapéu, capa, lençol, máscara de bichinho), o provador e o **espelho mágico** de moldura dourada | (parte 2) tocar no cabide veste a peça; tocar no espelho: a câmera vira para a criança, que se vê com brilhinho; tocar de novo volta | o "plim" de vestir, o brilho do espelho | 1 e 2 |
 | **5. Bosque das Lanternas** | o caminho de pedrinha lilás entre árvores laranja e douradas, lanternas de poste, vaga-lumes, os morceguinhos dormindo de cabeça para baixo num galho, a corujinha | **acender cada lanterna com um toque** (fica acesa); tocar nos morceguinhos (eles se espreguiçam e voltam a dormir) | grilo, a corujinha de leve, o "plim" da lanterna acendendo | 1 |
 | **6. Castelinho do Vampirinho** | por fora (parte 1): castelinho de brinquedo de tábua roxa e tijolo torto, com a torre, bandeirinhas e janelas redondas acesas. Por dentro (parte 2): o **órgão** de canos, os **quadros** (retratos dos moradores sorrindo, feitos com `render/fotoBoneco.ts`), a escada da torre e o **escorregador em espiral** que desce por fora dela | (parte 2) encostar no órgão toca notas alegres (sempre afinadas, escala maior); **tocar no quadro, ele pisca um olho** (só ao toque); subir a escada e escorregar | as notas do órgão, o "uiii" do escorregador | 1 e 2 |
-| **7. Horta do Seu Jerônimo** | a horta cercada com abóboras de brinquedo, as abóboras saltitantes, a bancada de abóboras com carinha, a parreirinha de uva e o canteiro de hortelã, o regador | plantar, regar, colher e escolher a carinha (n4); colher uva e hortelã (n6) | o regador, as abóboras pulando ("pof") | 1 |
+| **7. Horta do Seu Jerônimo** | a horta cercada com abóboras de brinquedo, as abóboras saltitantes, a bancada de abóboras com carinha, a parreirinha de uva e o canteiro de hortelã, o regador | plantar, regar, colher e escolher a carinha (n4); **colher uva na parreirinha a qualquer hora, desde a parte 1** (um toque, a uva vai para a mão; é a comida do sapinho); colher hortelã (n6) | o regador, as abóboras pulando ("pof") | 1 |
 
 **Cuidados com os lugares:**
 - **Densidade como a Vila:** a cada ~10 blocos de caminho, algo para olhar ou tocar (lanterna, abóbora, banco, teia, canteiro, bicho). Nenhum gramado vazio.
@@ -347,13 +351,13 @@ Os cinco papéis com a cara do tema (`cobertura`, `encaixeBicho`, `juntasBicho`,
 ### 9. Comprar e comer (parte 1)
 O desenho da 032, igual: "Toque para comprar", a fichinha dourada de mentirinha (de graça; se o dono decidir outro jeito na 032, vale aqui), o preparo, a entrega, o lanche na mão e na barrinha; uma compra por vez; no máximo 3 de cada; barrinha cheia não perde nada.
 
-O cardápio abaixo é o recomendado na pergunta 4. Se o dono escolher manter o de 18 nov, a maçã do amor, a cocada e o doce de abóbora entram no lugar do pé de moleque, do beijinho e da canjica, com os mesmos jeitos de comer (mordida, mordida e colherada).
+O cardápio abaixo é o recomendado na pergunta 4. Se o dono escolher manter o de 18 nov, a maçã do amor (mordida), a cocada (mordida) e o doce de abóbora (colherada) entram no lugar do cajuzinho, do beijinho e da surpresa de uva.
 
 | Barraca | Quem | O que vende | Como se come |
 | --- | --- | --- | --- |
-| **Barraca dos Doces** (praça) | Tia Filó | pé de moleque, brigadeiro, beijinho | pé de moleque: mordida ("crec"); brigadeiro e beijinho: a forminha com três, um some a cada mordida (o jeito da pipoca) |
+| **Barraca dos Doces** (praça) | Tia Filó | brigadeiro, beijinho, cajuzinho | a forminha com três, um some a cada mordida (o jeito da pipoca) |
 | **Barraca das Canecas** (praça) | Seu Olavo | chocolate quente, poção de uva com canudinho | chocolate quente: **gole de caneca** (jeito novo: a caneca sobe, o nível desce, sai fumacinha); poção: canudinho |
-| **Bancada da Horta** | Seu Jerônimo | canjica (a tigelinha com colher) | colherada |
+| **Bancada da Horta** | Seu Jerônimo | surpresa de uva | a forminha com três |
 
 - **A sacola de doces** da n1 também se come: um docinho sai a cada mordida (o jeito da pipoca) e a sacola vazia some com brilhinho.
 - **A poção da Vovó** (n6) é o mesmo copo de poção de uva, com canudinho.
@@ -374,7 +378,7 @@ No cartão da 031 (esquerda → direita), com o guia da 030: a trilha de pegadin
 | **n7 O desfile** | o espelho + o cabide → a criança fantasiada no palco, com aplausos | a loja (vestir uma fantasia do cabide; quem já está fantasiada só se vê no espelho), o espelho mágico, e o palco da praça (andar até a ponta). Sozinha, a Lulu, o Dudu e o Bento desfilam junto; com amigos, **todos os fantasiados que estão no palco fazem a missão juntos**, cada um com as suas moedinhas | **5** | 2 |
 | **n8 A banda da festa** | o bumbo + os instrumentos → a banda tocando, todos dançando | três instrumentos, um em cada lugar de dentro (o pandeiro na Casa da Vovó, o chocalho de abóbora na loja, o xilofone no castelinho); levar ao palco; o show começa: o Bento no bumbo, a banda e todos os moradores dançando, como no festival da Vila. Vale a qualquer hora | **5** | 2 |
 | **n9 Volta de vassoura** | a vassoura + o arco de lanternas → os três arcos acesos | o porta-vassouras da varanda da Vovó e os três arcos de lanternas da rua e da praça; passar de vassoura por eles acende cada um | **4** | 3 |
-| **n10 Tchau, fantasminhas!** | o vagãozinho + a mãozinha acenando → os três fantasminhas do túnel acenando de volta | o Trem das Risadas: em cada volta, ao passar pelo túnel, acenar (o gesto de tchau da 015, que aparece como dica no túnel) para os fantasminhas das janelinhas; cada volta com aceno é uma bolinha, três voltas | **4** | 3 |
+| **n10 Tchau, fantasminhas!** | o vagãozinho + a mãozinha acenando → os três fantasminhas do túnel acenando de volta | o Trem das Risadas: em cada volta, na passagem perto do túnel, **tocar num fantasminha das janelinhas**; ele acena de volta, e isso conta. O tchau da roda de gestos também conta, se a criança usar. A dica no túnel é desenho (a mãozinha tocando o fantasminha), nunca texto. Cada volta com um toque é uma bolinha, três voltas | **4** | 3 |
 
 - **Total: 45 moedinhas** (pergunta 2). O ritmo da 023 é testado para este mundo.
 - **Missões de lugares** (n1, n3, n4, n5, n6, n8): cada passo uma bolinha, não voltam no bis. **De ação** (n2, n7, n9, n10): voltam no bis.
@@ -387,9 +391,11 @@ Os objetos destas missões são um só no mundo (a porta, a lanterna, a Lulu, a 
 - **n2 (as lanternas):** as lanternas acesas são do mundo, para todos. Uma lanterna **já acesa** conta para quem tem a n2 aberta quando ela toca nela: a lanterna pisca e acende a bolinha dela. O Dudu sorri para cada criança que completou.
 - **n3 (a Lulu):** a Lulu de cada criança é o progresso dela. A Lulu escondida é uma cópia que só aparece na tela de quem tem a n3 aberta, no esconderijo do passo dessa criança (como os brinquedos da f10); a Lulu de verdade continua no posto dela, espiando, para todos. Achar conta só para quem achou.
 - **n4 (a abóbora e a porta):** a planta do canteiro marcado é de cada criança (só na tela de quem tem a n4 aberta, no passo dela). **Pôr o lampião na porta** conta para quem põe e para quem também tem a n4 no último passo a até 4 blocos da porta. O lampião da porta é um só no mundo; o último posto fica.
-- **n5 (o Tufinho):** o gato é um só. Ele foge para a horta quando alguém abre a n5 e ele está em casa. Segue uma criança por vez (a que chamou). **A entrega conta para quem está perto:** quando ele chega à Vovó, todas as crianças com a n5 aberta a até 6 blocos dela fazem o passo.
-- **O que volta quando a missão é escolhida de novo nunca apaga o que é do amigo:** as lanternas só se apagam no começo da n2 se ninguém mais na sala tem a n2 aberta; o Tufinho só foge de novo se está em casa e não está seguindo ninguém; o lampião da porta, as portas e a Lulu do amigo não mudam.
+- **n5 (o Tufinho):** o gato é um só. Ele foge para a horta quando alguém abre a n5 e ele está em casa. Segue uma criança por vez (a que chamou). **A entrega conta para quem está perto:** quando ele chega à Vovó, todas as crianças com a n5 aberta a até 6 blocos dela fazem o passo. **Se ele já está em casa** (depois da entrega de um amigo) e outra criança está num passo anterior da n5, na tela dela ele volta a estar "fugido" na horta: é uma cópia só na tela dela, como a Lulu, e é essa cópia que segue a criança de volta; o Tufinho de verdade fica com a Vovó para os outros.
+- **O que volta quando a missão é escolhida de novo nunca apaga o que é do amigo:** as lanternas só se apagam no começo da n2 se ninguém mais na sala tem a n2 aberta; o Tufinho de verdade só foge de novo se está em casa e não está seguindo ninguém (senão, a cópia); o lampião da porta, as portas e a Lulu do amigo não mudam.
 - **Testes de dois jogadores** no núcleo (aparelho e modo nuvem), um por missão: os dois na mesma missão, um adiantado e outro atrasado, e um que escolhe de novo enquanto o outro está no meio.
+
+**n6 a n10 seguem a mesma regra de cada criança:** as frutas da n6 e a fantasia da n7 são de cada uma; **na n8, o instrumento é uma cópia na tela de cada criança**, como a Lulu, e o que ela pega não some para o amigo; **na n9, o arco já aceso conta para quem passa de vassoura e pisca**, como a lanterna da n2; na n10, o fantasminha acena para quem tocou, e cada criança tem as voltas dela. Testes de dois jogadores na T29 e na T36.
 
 ### 11. Os passeios (parte 3)
 | Passeio | Como é | Justo no multijogador |
@@ -417,10 +423,11 @@ Os objetos destas missões são um só no mundo (a porta, a lanterna, a Lulu, a 
 - **Vassoura-patinete** (parte 3), **os instrumentos** da banda (parte 2) e **as comidas** da seção 9.
 
 ### 13. O lampião de abóbora em todos os mundos (decisão do orquestrador)
-- O modelo arredondado do lampião ganha **olhos redondos e sorriso** no ícone, na mão e no item caído, **em todos os mundos**.
-- **O lampião posto** passa a ser a peça arredondada, também em todos os mundos, com o mesmo bloco 66 (nada muda no terreno, no salvamento nem na rede).
-- **Toca o Rancho**, que tem e vende o lampião: é uma melhora, sem tirar nada, e entra para o dono numa linha do boletim.
-- **Teste:** o lampião do Rancho continua aceso e com a mesma luz (a mesma cor e o mesmo raio de antes).
+- **O lampião posto** passa a ser a peça arredondada em todos os mundos, com o mesmo bloco 66 (nada muda no terreno, no salvamento nem na rede).
+- **A peça lê o rosto do tema:** o Rancho mantém a carinha de festa junina dele; este mundo e os outros ganham o sorriso de olhos redondos. O mesmo rosto vale no ícone, na mão e no item caído.
+- **Instanciados por pedaço:** o lampião e o caldeirão postos são uma malha só por tipo, desenhada várias vezes em cada pedaço, porque a criança pode pôr muitos.
+- **Toca o Rancho**, que tem e vende o lampião: a peça arredondada é uma melhora, sem tirar nada, e entra para o dono numa linha do boletim.
+- **Testes:** o lampião do Rancho continua aceso, com a mesma luz (a mesma cor e o mesmo raio de antes) e a carinha dele; cem lampiões e cem caldeirões postos num pedaço somam no máximo duas chamadas de desenho a mais.
 
 ### 14. As fantasias do tema (017)
 De graça, como todas as fantasias dos temas, só na aba deste mundo (`NOMES_TEMAS`), reaproveitando as peças que existem:
@@ -509,9 +516,10 @@ Medido no computador do dono, na placa de vídeo (`scripts/e2e-gpu.sh`), em cada
 
 ## O que muda em relação ao aprovado
 - **As missões:** "fantasia completa" e "desfile com amigos" juntas em "O desfile", mais "Volta de vassoura" e "Tchau, fantasminhas!" (se o dono aceitar a pergunta 1).
-- **As comidas:** pé de moleque, beijinho e canjica no lugar da maçã do amor, da cocada e do doce de abóbora, que já são de outros mundos (se o dono aceitar a pergunta 4).
+- **As comidas:** cajuzinho, beijinho e surpresa de uva no lugar da maçã do amor, da cocada e do doce de abóbora, que já são de outros mundos (se o dono aceitar a pergunta 4).
+- **A uva da parreirinha** se colhe a qualquer hora desde a parte 1 (a ideia só a usava na poção), porque o sapinho segue quem tem uva.
 - **A varinha:** a florzinha some em ~4 s (se o dono aceitar a pergunta 5).
-- **A lanterna de abóbora** não é só deste mundo: é o lampião que todo mundo tem, agora arredondado e sorrindo em todos (seção 13). O que é só deste mundo é o lampião da porta, da n4.
+- **A lanterna de abóbora** não é só deste mundo: é o lampião que todo mundo tem, agora arredondado em todos, com o rosto de cada tema (seção 13). O que é só deste mundo é o lampião da porta, da n4.
 - **O trem** fica em volta do gramado colado à praça, como no esboço aprovado, e não em volta da praça inteira.
 - **Blocos:** além dos quatro aprovados, sete de apoio com id próprio (tábua musgo, pedrinha lilás, tábua roxa, janela torta apagada e acesa, toldinho listrado, caldeirão), no lugar dos tiles da Vila que o esboço repintava e dos blocos de rua da Cidade e da Vila.
 - **A teia** é de barbante colorido (roxo, laranja e creme), não cinza.
