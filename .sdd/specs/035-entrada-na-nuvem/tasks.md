@@ -149,3 +149,14 @@ Os e2e rodam na placa de vídeo: `scripts/e2e-gpu.sh <spec>`, e depois `scripts/
     - Como a cena das obras mudou: `canteiro`, `cidade-grande` e `cidade-tema`: 4 passaram, 4 pulados (o `cidade-tema`, só com `CIDADE_T08`), 1,8 min.
     - Paridade 36 de 36 (`PARIDADE=conferir`, 9,3 min).
   - Nenhum teste pulado, desligado ou afrouxado.
+- **(21 nov 2026) T09 pronta: publicada e conferida no ar.**
+  - O servidor saiu primeiro (revisão 0000047, de pé às 15:09 UTC); o `publicar.yml` do push foi cancelado na hora e disparado depois do servidor.
+  - **Conferência no ar** (sala SINO-LUA-51, fotos em `capturas-035/no-ar/`):
+    - a Ana leva o mundo para a nuvem pelo celular (mundo da sala pronto em 4,0 a 9,8 s) e a Bia entra pelo código; cada uma vê a outra; ressincronizações 0 e 0;
+    - a Ana fecha a sala; a Bia cai 8 s e volta, vendo o bloco que a Ana pôs enquanto ela estava fora (145 ms depois de a rede voltar), sem ser barrada;
+    - o Caio, que nunca entrou, é barrado com o aviso da sala fechada;
+    - na lista, o mundo da sala mostra "Continuar"; a Ana cria outro mundo e cai nele, sem `sala` no endereço.
+    - Uma ressincronização da Bia na queda veio do jeito de simular (o `setOffline` deixa o socket mudo; o roteiro fechou com 3999), e não da entrada.
+  - **Registros do servidor:** nenhum 4001 e nenhum 1005 de quem levou o mundo; a conexão de criar fecha limpa. O 1005 de 0 s é a recusa do Caio (o servidor manda `recusado` e fecha sem código, como já anotado).
+  - **Achados para o backlog** (fora da 035): as duas nascem no mesmo ponto e uma fica dentro da outra até alguém andar; quem sai normalmente continua contado na sala por 30 s; a chave "Fechar para novas visitas" fica abaixo da dobra no celular.
+  - Falta a **rodada em família**: o dono e as crianças levando um mundo para a nuvem, chamando o outro aparelho e saindo para outro mundo.
