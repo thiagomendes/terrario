@@ -32,9 +32,10 @@ export type FormaMarco = 'poco' | 'fonte' | 'antena' | 'moinho';
  * curral e galinheiro (mesma região, mesmo raio e mesmo lote). 'cidade' (spec 014) é a
  * Cidade Grande: uma cidade só por mundo, em volta do nascimento (`src/world/cidade.ts`).
  * 'bairro' (spec 026) é a Vila Neon: um bairro só por mundo, em volta do nascimento
- * (`src/world/vilaNeon.ts`).
+ * (`src/world/vilaNeon.ts`). 'baile' (spec 027) é a Noite das Fantasias: a vila da festa, uma
+ * só por mundo, em volta do nascimento (`src/world/noiteFantasias.ts`).
  */
-export type PlantaPovoado = 'vila' | 'sitio' | 'cidade' | 'bairro';
+export type PlantaPovoado = 'vila' | 'sitio' | 'cidade' | 'bairro' | 'baile';
 /** Uso de cada lote do sítio (o `tipo` continua dizendo casa, oficina, depósito ou campo). */
 export type UsoSitio =
   | 'fazenda'

@@ -273,7 +273,7 @@ describe.each(temas.map((t) => [t.id, t] as [string, Tema]))('tema %s', (_id, t)
       for (const k of ['casa', 'oficina', 'deposito'] as const)
         expect(['duas-aguas', 'cupula', 'redonda', 'modulo']).toContain(f[k]);
       expect(['poco', 'fonte', 'antena', 'moinho']).toContain(f.marco);
-      if (f.planta) expect(['vila', 'sitio', 'cidade', 'bairro']).toContain(f.planta);
+      if (f.planta) expect(['vila', 'sitio', 'cidade', 'bairro', 'baile']).toContain(f.planta);
     }
   });
 

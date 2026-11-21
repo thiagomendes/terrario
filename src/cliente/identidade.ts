@@ -61,6 +61,7 @@ const DO_TEMA: Record<string, string> = {
   'rancho-alegre': 'do Rancho',
   'cidade-grande': 'da Cidade',
   'vila-neon': 'da Vila',
+  'noite-das-fantasias': 'da Festa',
 };
 
 /** O complemento do tema padrão (spec 034: a Vila Neon). */

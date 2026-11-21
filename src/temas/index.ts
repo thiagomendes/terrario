@@ -6,10 +6,12 @@ const CONSTRUTORES: Partial<Record<IdTema, () => Tema>> = {};
 
 /**
  * Spec 034: os cartões dos temas, nesta ordem (a Vila Neon primeiro, marcada). Só o que
- * estiver registrado aparece.
+ * estiver registrado aparece. Spec 027: a Noite das Fantasias logo depois da Vila, para a
+ * novidade aparecer sem rolar no celular.
  */
 const ORDEM_TEMAS: readonly IdTema[] = [
   'vila-neon',
+  'noite-das-fantasias',
   'cidade-grande',
   'rancho-alegre',
   'doce-reino',

@@ -40,7 +40,8 @@ function achados(textos: Record<string, string>): string[] {
 
 describe('spec 034: nenhum texto dos quatro que saíram nos cinco', () => {
   it('os cinco temas são os que se escolhem, e a busca acha o que procura', () => {
-    expect(temasDisponiveis()).toHaveLength(5);
+    // (spec 027: mais a Noite das Fantasias, o sexto; a busca vale nele também)
+    expect(temasDisponiveis()).toHaveLength(6);
     expect(
       achados({
         a: 'Espectro da bruma',

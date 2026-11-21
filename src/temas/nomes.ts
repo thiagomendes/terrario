@@ -51,6 +51,15 @@ const NOMES_GENERO: Record<string, Genero> = {
   Tunico: 'm',
   Dudu: 'm',
   Zeca: 'm',
+  // spec 027: a turma da Noite das Fantasias (só deste mundo)
+  Dalva: 'f',
+  Odete: 'f',
+  Celeste: 'f',
+  Dorinha: 'f',
+  Otávio: 'm',
+  Abel: 'm',
+  Lauro: 'm',
+  Quinzinho: 'm',
 };
 
 export function generoDoNome(nome: string): Genero {

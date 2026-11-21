@@ -6,6 +6,7 @@
  */
 export const TEMAS_E2E = [
   ['vila-neon', 'Vila Neon'],
+  ['noite-das-fantasias', 'Noite das Fantasias'],
   ['cidade-grande', 'Cidade Grande'],
   ['rancho-alegre', 'Rancho Alegre'],
   ['doce-reino', 'Doce Reino'],

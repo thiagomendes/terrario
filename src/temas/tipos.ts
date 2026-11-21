@@ -13,16 +13,17 @@ import type { Estacao, TipoClima } from '../jogo/clima';
 import type { FormasPovoado, Profissao } from '../world/povoado';
 import type { Exclusivos } from '../jogo/exclusivos';
 
-/** Os temas do jogo (spec 034: ficam cinco). */
+/** Os temas do jogo (spec 034: ficam cinco; spec 027: a Noite das Fantasias é o sexto). */
 export type IdTema =
   | 'vila-neon'
   | 'cidade-grande'
   | 'rancho-alegre'
   | 'doce-reino'
-  | 'exploracao-lunar';
+  | 'exploracao-lunar'
+  | 'noite-das-fantasias';
 
 /**
- * Os ids dos cinco temas (dado puro: o servidor confere com ele o tema de um mundo novo). A
+ * Os ids dos seis temas (dado puro: o servidor confere com ele o tema de um mundo novo). A
  * ordem dos cartões fica em `src/temas/index.ts`.
  */
 export const IDS_TEMAS: readonly IdTema[] = [
@@ -31,6 +32,7 @@ export const IDS_TEMAS: readonly IdTema[] = [
   'rancho-alegre',
   'doce-reino',
   'exploracao-lunar',
+  'noite-das-fantasias',
 ];
 
 /**

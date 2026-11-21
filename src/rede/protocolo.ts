@@ -60,8 +60,12 @@ import type { ObraSalva } from '../nucleo/saneamento';
  * desses quatro; a Era dos Dinos sai da alma e do canto, e as formas, as fantasias e as peças só
  * deles saem do estilo e da aparência; o `depurar` ganhou o `relogioCansa`, atalho de teste da
  * paridade, aceito só com os atalhos de depuração ligados).
+ * 18: spec 027, parte 1 (a Noite das Fantasias: o tema novo em `IDS_TEMAS`, que um servidor
+ * antigo recusaria ao criar o mundo, e a planta `'baile'` no estilo; a parte 1 inteira sai nesta
+ * versão: os blocos 117 a 127, a alma do mundo com as missões n1 a n5, o comando `baile`, o
+ * abraço, a varinha, as comidas e as fantasias na aparência).
  */
-export const VERSAO_REDE = 17;
+export const VERSAO_REDE = 18;
 /** Jogadores por mundo. */
 export const MAX_JOGADORES = 8;
 

@@ -14,15 +14,17 @@ describe('registro dos temas', () => {
     expect(temaExiste('vila-neon')).toBe(false);
   });
 
-  it('com todos registrados: os cinco cartões em ordem, e o desconhecido cai na Vila Neon', async () => {
+  it('com todos registrados: os seis cartões em ordem, e o desconhecido cai na Vila Neon', async () => {
     vi.resetModules();
     await import('../../src/temas/todos');
     const { obterTema, temasDisponiveis, TEMA_PADRAO, temaExiste } = await import(
       '../../src/temas'
     );
     expect(TEMA_PADRAO).toBe('vila-neon');
+    // spec 027: a Noite das Fantasias logo depois da Vila (a novidade sem rolar no celular)
     expect(temasDisponiveis()).toEqual([
       'vila-neon',
+      'noite-das-fantasias',
       'cidade-grande',
       'rancho-alegre',
       'doce-reino',

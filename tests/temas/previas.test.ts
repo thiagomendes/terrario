@@ -11,7 +11,8 @@ import { temasDisponiveis } from '../../src/temas';
 describe('prévias dos cartões de tema', () => {
   it('todo tema tem public/temas/<id>.jpg, e só eles', () => {
     const ids = temasDisponiveis();
-    expect(ids.length).toBe(5);
+    // spec 027: a Noite das Fantasias é o sexto
+    expect(ids.length).toBe(6);
     for (const id of ids) {
       const arquivo = `public/temas/${id}.jpg`;
       expect(existsSync(arquivo), arquivo).toBe(true);

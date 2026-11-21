@@ -1385,7 +1385,15 @@ describe('spec 034: os mundos dos quatro temas que saíram, na nuvem', () => {
   const entrarComo = (id: string, extra: object) =>
     JSON.stringify({ t: 'entrar', versao: VERSAO_REDE, jogador: ident(id), ...extra });
   const QUATRO = ['bruma-e-luz', 'planeta-vivo', 'mata-encantada', 'era-dos-dinos'];
-  const CINCO = ['vila-neon', 'cidade-grande', 'rancho-alegre', 'doce-reino', 'exploracao-lunar'];
+  // os temas que ficam (spec 027: a Noite das Fantasias é o sexto)
+  const CINCO = [
+    'vila-neon',
+    'cidade-grande',
+    'rancho-alegre',
+    'doce-reino',
+    'exploracao-lunar',
+    'noite-das-fantasias',
+  ];
   let n = 0;
 
   /** Grava direto no armazém um mundo (com sala, regiões e um jogador), como a nuvem tem hoje. */
@@ -1566,8 +1574,9 @@ describe('spec 034: os mundos dos quatro temas que saíram, na nuvem', () => {
   });
 
   it('criar com um tema fora dos cinco é recusado por versão (o cliente antigo recarrega)', async () => {
-    // a rede subiu para 17 com a 034 (o cliente de antes recebe "versão nova")
-    expect(VERSAO_REDE).toBe(17);
+    // a rede subiu para 17 com a 034 (o cliente de antes recebe "versão nova") e para 18 com a
+    // Noite das Fantasias (027, parte 1: o tema novo em `IDS_TEMAS`)
+    expect(VERSAO_REDE).toBe(18);
     const s = servidor();
     for (const tema of [...QUATRO, 'tema-que-nao-existe', '', undefined]) {
       const a = canal(`10.0.0.${QUATRO.indexOf(tema as string) + 2}`);

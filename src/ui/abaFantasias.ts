@@ -44,6 +44,7 @@ export const NOMES_TEMAS: Record<IdTema, { nome: string; curto: string; de: stri
   'doce-reino': { nome: 'Doce Reino', curto: 'Doce Reino', de: 'do' },
   'cidade-grande': { nome: 'Cidade Grande', curto: 'Cidade', de: 'da' },
   'vila-neon': { nome: 'Vila Neon', curto: 'Vila', de: 'da' },
+  'noite-das-fantasias': { nome: 'Noite das Fantasias', curto: 'Festa', de: 'da' },
 };
 
 export const ICONES_GRUPOS: Record<GrupoFantasia, NomeIcone> = {

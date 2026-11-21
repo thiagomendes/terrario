@@ -9,8 +9,10 @@ import { construirExploracaoLunar } from './exploracao-lunar';
 import { construirRanchoAlegre } from './rancho-alegre';
 import { construirCidadeGrande } from './cidade-grande';
 import { construirVilaNeon } from './vila-neon';
+import { construirNoiteDasFantasias } from './noite-das-fantasias';
 
 registrarTema('vila-neon', construirVilaNeon);
+registrarTema('noite-das-fantasias', construirNoiteDasFantasias);
 registrarTema('cidade-grande', construirCidadeGrande);
 registrarTema('rancho-alegre', construirRanchoAlegre);
 registrarTema('doce-reino', construirDoceReino);
