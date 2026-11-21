@@ -382,6 +382,35 @@ describe('salas do servidor', () => {
     expect(c2.recebidas[0]).toMatchObject({ t: 'bemvindo' });
   });
 
+  // spec 035, seção 4: falha até a T06 (hoje a sala fechada barra quem caiu e volta)
+  it('a sala fechada não barra quem já estava nela e caiu (antes dos 30 s); quem chega de novo, sim', async () => {
+    const { g, a, codigo, avancar } = await criarSala();
+    const b = canal('5.6.7.8');
+    await g.receber(
+      b,
+      JSON.stringify({ t: 'entrar', versao: VERSAO_REDE, jogador: ident('bia'), codigo }),
+    );
+    expect(b.recebidas[0]).toMatchObject({ t: 'bemvindo', voce: 'bia' });
+    await avancar(200);
+    await g.receber(a, JSON.stringify({ t: 'dono', acao: 'fechar', fechado: true }));
+    // a internet da Bia cai e volta antes da tolerância de 30 s
+    g.caiu(b);
+    await avancar(5000);
+    const b2 = canal('5.6.7.8');
+    await g.receber(
+      b2,
+      JSON.stringify({ t: 'entrar', versao: VERSAO_REDE, jogador: ident('bia'), codigo }),
+    );
+    expect(b2.recebidas[0]).toMatchObject({ t: 'bemvindo', voce: 'bia' });
+    // quem nunca entrou continua barrado
+    const c = canal('7.7.7.7');
+    await g.receber(
+      c,
+      JSON.stringify({ t: 'entrar', versao: VERSAO_REDE, jogador: ident('caio'), codigo }),
+    );
+    expect(c.recebidas[0]).toEqual({ t: 'recusado', motivo: 'fechado' });
+  });
+
   it('sala vazia dorme e volta igual: blocos, inventário e posição', async () => {
     const { g, a, codigo, avancar } = await criarSala();
     await avancar(300);
