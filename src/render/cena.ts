@@ -129,6 +129,8 @@ import { criarShowVila } from './vila/show';
 import type { PlanoVila } from '../world/vilaNeon';
 import type { PlanoBaile } from '../world/noiteFantasias';
 import { criarRenderBaile } from './baile';
+import { criarAbracoNaTela, type AbracoNaTela } from './baile/abraco';
+import { N_BAILE, POVOADO_BAILE } from '../jogo/baile';
 import { criarLampioes, ROSTO_DO_LAMPIAO } from './lampioes';
 import { metaGerada } from '../world/chunk';
 import { LARGURA_CIDADE, PROFUNDIDADE_CIDADE } from '../world/cidade';
@@ -473,6 +475,8 @@ export interface EstadoDepuracao {
   vila?: () => PlanoVila | null;
   /** Spec 027: o plano da vila da Noite das Fantasias (null nos outros temas). */
   baile?: () => PlanoBaile | null;
+  /** Spec 027 (T11): o abraço do Bento na tela agora (testes de tela), ou null. */
+  abracoBaile?: () => ReturnType<AbracoNaTela['estado']>;
   /** Spec 027: as peças da festa vivas, as sem chão (sempre 0), os sósias e o que anima. */
   bailePecas?: () => {
     chunks: number;
@@ -1976,6 +1980,8 @@ export function criarCena(
   // longe, só em cima de chão desenhado
   const planoBaile = baileDoMundo(semente);
   estado.baile = () => planoBaile;
+  /** T11: o abraço do Bento na tela (criado com os moradores, mais abaixo). */
+  let abracoBaile: AbracoNaTela | null = null;
   const renderBaile = planoBaile
     ? criarRenderBaile(scene, planoBaile, {
         temMalha: (cx, cz) => malhas.has(chave(cx, cz)),
@@ -4002,6 +4008,9 @@ export function criarCena(
     if (cadeira) animador.definirYaw(cadeira.yaw);
     // spec 032 (só fotos de teste): o corpo parado num rumo (a câmera livre dá a volta nele)
     if (yawTravado !== null) animador.definirYaw(yawTravado);
+    // spec 027 (T11): no abraço do Bento, o corpo fica de frente para ele
+    const yawAbraco = abracoBaile?.yawDe(voce) ?? null;
+    if (yawAbraco !== null) animador.definirYaw(yawAbraco);
     let pose = animador.atualizar(dt, {
       velocidadeHoriz,
       correndo: corrida,
@@ -4010,8 +4019,9 @@ export function criarCena(
       // movimento com vida (spec 015): o corpo vira para onde anda, solto da câmera
       vx: velX,
       vz: velZ,
-      alvoYaw: cadeira ? null : yawDaAcao(),
-      olharYaw: camera.rotation.y,
+      alvoYaw: cadeira ? null : (yawAbraco ?? yawDaAcao()),
+      // (no abraço a cabeça fica no rumo do corpo: virada para a câmera, entrava no Bento)
+      olharYaw: yawAbraco ?? camera.rotation.y,
     });
     if (passeio) pose = passeio.pose(pose);
     if (casaCena) pose = casaCena.pose(pose);
@@ -4663,6 +4673,7 @@ export function criarCena(
     }
     pool.atualizar(dt, (x, y, z) => !!obterBlocoDef(blocoEm(x, y, z))?.solido);
     coracoes.atualizar(dt);
+    abracoBaile?.atualizar(dt);
     refeicoes.atualizar(dt);
     comprasVila?.atualizar(dt);
     const vivas = pool.vivas();
@@ -5684,6 +5695,28 @@ export function criarCena(
       return c ? { x: c.x, y: yBate, z: c.z, yaw: c.yaw } : null;
     });
   }
+  // spec 027 (T11): o abraço do Bento (o Bento chega até a criança; os dois se abraçam)
+  if (planoBaile) {
+    const abraco = criarAbracoNaTela({
+      voce,
+      animadorLocal: animador,
+      aparenciaLocal: () => aparencia,
+      amigo: (id) => outrosJogadores.amigo(id),
+      morador: (id) => renderCriaturas.bonecoDoMorador(id),
+      criatura: (id) => criaturaPorId(id) ?? null,
+      coracoes: (x, y, z, n) => coracoes.soltar(x, y, z, n),
+    });
+    abracoBaile = abraco;
+    renderCriaturas.definirLugarDeMorador((povoado, n) => {
+      if (povoado !== POVOADO_BAILE || n !== N_BAILE.bento) return null;
+      const c = replicaCriaturas.lista.find(
+        (q) => q.morador?.povoado === POVOADO_BAILE && q.morador.n === N_BAILE.bento,
+      );
+      return c ? abraco.lugarDoBento(c.id) : null;
+    });
+    outrosJogadores.definirYawFixo((id) => abraco.yawDe(id));
+    estado.abracoBaile = () => abraco.estado();
+  }
   /** 014c (testes de tela): os bichos do desfile das capturas. */
   let desfile: Criatura[] = [];
   // spec 016: a proteção do mundo à vista nas capturas (só nos testes de tela)
@@ -5920,7 +5953,11 @@ export function criarCena(
     const p = hotbar.pilhaAtiva();
     if (c?.morador) {
       const nome = nomeDoMorador(c.morador.povoado, c.morador.n, c.morador.profissao);
-      t = toque ? `Toque em ${nome} para trocar` : `Clique direito (ou F): trocar com ${nome}`;
+      // spec 027 (T11): o Bento ama abraço
+      if (c.morador.povoado === POVOADO_BAILE && c.morador.n === N_BAILE.bento)
+        t = toque ? `Toque no ${nome} para abraçar` : `Clique direito (ou F): abraçar o ${nome}`;
+      else
+        t = toque ? `Toque em ${nome} para trocar` : `Clique direito (ou F): trocar com ${nome}`;
     } else if (c && viraCriado(c.tipo) && comeEsse(c.tipo, p?.item)) {
       const bicho = comArtigo(CRIATURAS[c.tipo].nome);
       const comida = minuscula(obterItem(p!.item)?.nome ?? p!.item);
@@ -7019,6 +7056,11 @@ export function criarCena(
         somVila?.evento(e, cliente.vila.tempo(performance.now() / 1000));
         estado.eventosVila?.push({ ...e, recebido: performance.now() / 1000 });
         if ((estado.eventosVila?.length ?? 0) > 200) estado.eventosVila!.splice(0, 100);
+        break;
+      // spec 027 (T11): o abraço do Bento
+      case 'baileAbraco':
+      case 'baileSolta':
+        abracoBaile?.evento(e);
         break;
       case 'veiculo':
         renderVeiculos?.evento(e.id, e.o);

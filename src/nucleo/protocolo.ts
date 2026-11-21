@@ -21,6 +21,7 @@ import type { PlanoVeiculo } from '../jogo/veiculos';
 import type { OcorrenciaVeiculo } from '../jogo/transito';
 import type { Ganho, MissaoMovida, RecusaBanca, VistaAlmaMundo } from '../jogo/alma';
 import type { EventoVila, VilaVista } from './vila';
+import type { EventoBaile } from './baile';
 import type { BateVista } from '../jogo/bate';
 
 /** Sobe quando uma mensagem muda de formato (cliente e servidor precisam concordar). */
@@ -341,6 +342,8 @@ export type ConteinerVisto =
 export type EventoNucleo =
   /** Spec 026: o acorde no palco, o acorde final, o estojo achado, a caixa, a lhama, o pôster. */
   | EventoVila
+  /** Spec 027 (T11): o abraço do Bento (começou e soltou antes). */
+  | EventoBaile
   | { e: 'quebra'; x: number; y: number; z: number; bloco: number; meu: boolean }
   | { e: 'colocacao'; x: number; y: number; z: number; bloco: number; meu: boolean }
   /**

@@ -132,6 +132,7 @@ export function criarOutrosJogadores(scene: Scene) {
   const leves: { id: string; x: number; y: number; z: number; aparencia: string }[] = [];
   const levesPorId = new Map<string, (typeof leves)[number]>();
   let assento: ((id: string) => AssentoDoAmigo | null) | null = null;
+  let yawFixo: ((id: string) => number | null) | null = null;
 
   function criar(v: JogadorVisto): Outro {
     const perfil = perfis[v.id];
@@ -230,6 +231,23 @@ export function criarOutrosJogadores(scene: Scene) {
     definirAssento(f: ((id: string) => AssentoDoAmigo | null) | null) {
       assento = f;
     },
+    /** Spec 027 (T11): o rumo do corpo de um amigo preso a algo (o abraço do Bento), ou null. */
+    definirYawFixo(f: ((id: string) => number | null) | null) {
+      yawFixo = f;
+    },
+    /** Spec 027 (T11): o animador e os pés de um amigo à vista (o abraço do Bento), ou null. */
+    amigo(id: string): {
+      animador: ReturnType<typeof criarAnimador>;
+      aparencia: Aparencia;
+      x: number;
+      y: number;
+      z: number;
+    } | null {
+      const o = outros.get(id);
+      return o
+        ? { animador: o.animador, aparencia: JSON.parse(o.chaveAparencia) as Aparencia, x: o.x, y: o.y, z: o.z }
+        : null;
+    },
     atualizar(dt: number, luz: number) {
       const k = Math.min(1, dt * 14);
       const cam = scene.activeCamera;
@@ -282,6 +300,9 @@ export function criarOutrosJogadores(scene: Scene) {
           o.vz = 0;
           o.animador.definirYaw(cadeira.yaw);
         }
+        // spec 027 (T11): no abraço do Bento, o corpo do amigo fica de frente para ele
+        const fixo = yawFixo?.(o.id) ?? null;
+        if (fixo !== null) o.animador.definirYaw(fixo);
         let dy = a.yaw - o.yaw;
         dy = Math.atan2(Math.sin(dy), Math.cos(dy));
         o.yaw += dy * k;
@@ -314,8 +335,8 @@ export function criarOutrosJogadores(scene: Scene) {
           vx: o.vx,
           vz: o.vz,
           // minerando ou construindo, vira para onde o amigo olha (o bloco dele)
-          alvoYaw: agindo && !cadeira ? o.yaw : null,
-          olharYaw: o.yaw,
+          alvoYaw: fixo !== null ? fixo : agindo && !cadeira ? o.yaw : null,
+          olharYaw: fixo ?? o.yaw,
         });
         if (cadeira) pose = aplicarJuntas(pose, cadeira.juntas, 1);
         o.personagem.aplicarPose(pose, { dt, olhar: a.pitch, vista: o.animador.vista() });

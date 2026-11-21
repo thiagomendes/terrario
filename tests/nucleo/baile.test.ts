@@ -6,7 +6,8 @@ import { baileDoMundo, definirEstiloMundo, ESTILO_PADRAO } from '../../src/world
 import { limparPovoados } from '../../src/world/povoado';
 import type { Comando } from '../../src/nucleo/protocolo';
 import { MORADORES_BAILE, PROFISSOES_DA_RUA } from '../../src/nucleo/baile';
-import { N_BAILE, POVOADO_BAILE, VIZINHOS_DA_RUA } from '../../src/jogo/baile';
+import { ABRACO, DURACAO_ABRACO, N_BAILE, POVOADO_BAILE, VIZINHOS_DA_RUA } from '../../src/jogo/baile';
+import { PASSO } from '../../src/nucleo/protocolo';
 import { trocasDoMundo } from '../../src/jogo/trocas';
 import { definirTemaAtivo } from '../../src/temas/ativo';
 import { nomeDoMorador } from '../../src/temas/nomes';
@@ -163,6 +164,88 @@ describe('spec 027 (T10): os moradores com posto da festa', () => {
       const outras = trocasDoMundo('construtor', obterTema(id).mundo).map((t) => t.id);
       expect(outras.some((t) => ['tabua-roxa', 'tabua-musgo', 'tijolo-torto', 'pedrinha-lilas', 'janela-torta'].includes(t)), id).toBe(false);
     }
+  });
+
+  for (const confiar of [true, false])
+    it(`T11: o abraço do Bento, um por vez, para todos verem (${confiar ? 'aparelho' : 'nuvem'})`, () => {
+      const n = abrir(['ana', 'bia'], confiar);
+      const p = baileDoMundo(SEMENTE)!;
+      const [bx, by, bz] = p.pontos.postos.bento;
+      // as duas no palco, uma de cada lado do Bento
+      ir(n, 'ana', bx - 1.2, by, bz + 1);
+      ir(n, 'bia', bx + 1.2, by, bz + 1);
+      const evs: Record<string, { e: string; quem?: string }[]> = { ana: [], bia: [] };
+      const andar = (k: number) => {
+        for (let i = 0; i < k; i++) {
+          n.passo();
+          for (const [q, f] of n.quadros())
+            if (q in evs) evs[q].push(...((f.eventos ?? []).filter((e) => e.e.startsWith('baile')) as never[]));
+        }
+      };
+      andar(200);
+      const bento = n.estado.baile!.moradores().find((c) => c.morador!.n === N_BAILE.bento)!;
+      expect(bento).toBeTruthy();
+      // as duas pedem o abraço no mesmo passo: só a primeira ganha
+      n.comando('ana', { t: 'falar', criatura: bento.id });
+      n.comando('bia', { t: 'falar', criatura: bento.id });
+      andar(1);
+      expect(n.estado.baile!.abraco()?.quem).toBe('ana');
+      // as duas veem o mesmo abraço (quem, com qual morador)
+      for (const q of ['ana', 'bia'])
+        expect(evs[q].filter((e) => e.e === 'baileAbraco').map((e) => e.quem)).toEqual(['ana']);
+      // no meio do abraço, a Bia toca de novo: espera
+      andar(10);
+      n.comando('bia', { t: 'falar', criatura: bento.id });
+      andar(1);
+      expect(n.estado.baile!.abraco()?.quem).toBe('ana');
+      // acaba sozinho (2 s depois do começo, que foi há 12 passos), sem "soltou"
+      andar(Math.ceil(DURACAO_ABRACO / PASSO) - 12);
+      expect(n.estado.baile!.abraco()).toBeNull();
+      expect(evs.bia.some((e) => e.e === 'baileSolta')).toBe(false);
+      // logo depois do fim (menos de 0,3 s), ainda não
+      n.comando('bia', { t: 'falar', criatura: bento.id });
+      andar(1);
+      expect(n.estado.baile!.abraco()).toBeNull();
+      // depois dos 0,3 s, a vez da Bia
+      andar(Math.ceil(ABRACO.espera / PASSO) + 1);
+      n.comando('bia', { t: 'falar', criatura: bento.id });
+      andar(1);
+      expect(n.estado.baile!.abraco()?.quem).toBe('bia');
+      // a Bia mexe no controle: solta na hora, e as duas recebem o "soltou"
+      ir(n, 'bia', bx + 2.4, by, bz + 1);
+      andar(1);
+      expect(n.estado.baile!.abraco()).toBeNull();
+      for (const q of ['ana', 'bia'])
+        expect(evs[q].filter((e) => e.e === 'baileSolta').map((e) => e.quem)).toEqual(['bia']);
+    });
+
+  it('T11: longe do Bento, ou em outro morador, não tem abraço', () => {
+    const n = abrir(['ana']);
+    const p = baileDoMundo(SEMENTE)!;
+    const [bx, by, bz] = p.pontos.postos.bento;
+    ir(n, 'ana', bx, by, bz + 2);
+    passos(n, 200);
+    const bento = n.estado.baile!.moradores().find((c) => c.morador!.n === N_BAILE.bento)!;
+    // longe (5 blocos)
+    ir(n, 'ana', bx, by, bz + 5);
+    passos(n, 2);
+    n.comando('ana', { t: 'falar', criatura: bento.id });
+    passos(n, 1);
+    expect(n.estado.baile!.abraco()).toBeNull();
+    // embaixo do palco (outro chão), perto em linha reta
+    ir(n, 'ana', bx, by - 1, bz + 2.5);
+    passos(n, 2);
+    n.comando('ana', { t: 'falar', criatura: bento.id });
+    passos(n, 1);
+    expect(n.estado.baile!.abraco()).toBeNull();
+    // outro morador (a Lulu): nada
+    const [lx, ly, lz] = p.pontos.postos.lulu;
+    ir(n, 'ana', lx + 1, ly, lz + 1);
+    passos(n, 200);
+    const lulu = n.estado.baile!.moradores().find((c) => c.morador!.n === N_BAILE.lulu)!;
+    n.comando('ana', { t: 'falar', criatura: lulu.id });
+    passos(n, 1);
+    expect(n.estado.baile!.abraco()).toBeNull();
   });
 
   it('nenhum nome novo da festa está em outro povoado (nem um parecido)', () => {

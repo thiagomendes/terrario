@@ -24,3 +24,24 @@ export const VIZINHOS_DA_RUA = 5;
 
 /** O Bento é o grandão da turma (o monstrinho peludo que ama abraço). */
 export const ESCALA_BENTO = 1.3;
+
+/**
+ * T11: o abraço do Bento. Um toque nele, de perto: os dois corpos se encontram (ele se abaixa e
+ * envolve a criança), balançam de leve 1,2 s e soltam. Os tempos (s) e as distâncias (blocos).
+ */
+export const ABRACO = {
+  /** O Bento chega e envolve. */
+  entra: 0.4,
+  /** O balanço junto. */
+  balanca: 1.2,
+  /** Solta. */
+  sai: 0.4,
+  /** Depois de um abraço, a próxima criança espera este tanto. */
+  espera: 0.3,
+  /** Até onde o toque no Bento vale (do centro dele aos pés da criança, no chão). */
+  alcance: 2.8,
+  /** A criança que anda mais que isto desde o começo solta o abraço (mexeu no controle). */
+  solta: 0.35,
+} as const;
+/** Quanto dura o abraço inteiro (s). */
+export const DURACAO_ABRACO = ABRACO.entra + ABRACO.balanca + ABRACO.sai;

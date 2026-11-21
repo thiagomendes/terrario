@@ -884,6 +884,7 @@ export function criarNucleo(op: OpcoesNucleo) {
         adicionar: (tipo, x, y, z) => populacao.adicionar(tipo, x, y, z),
         criaturas: () => populacao.lista,
         carregado: (x, z) => mundo.criaturas.superficie(Math.floor(x), Math.floor(z)) !== null,
+        espalhar: (e) => eventosGerais.push(e),
         sujar: () => {},
       })
     : null;
