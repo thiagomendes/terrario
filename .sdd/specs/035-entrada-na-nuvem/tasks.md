@@ -51,3 +51,11 @@ Os e2e rodam na placa de vídeo: `scripts/e2e-gpu.sh <spec>`, e depois `scripts/
   - O dono respondeu às duas perguntas pelas recomendadas e pôs na spec os blocos da volta e a sala fechada.
   - Os 18 apontamentos da primeira revisão entraram (a decisão técnica foi do orquestrador).
   - Os 7 ajustes da conferência final entraram: o vigia de silêncio só com a conexão de pé, os 5 s da ressincronização sem bem-vindo, o falso silêncio do celular lento, o silêncio que nunca recarrega, os testes da volta sem mudança, a `TOLERANCIA_QUEDA` da sala fechada e o cancelamento do `publicar.yml`.
+- **(20 nov 2026) T00 pronta** (o dono estendeu o dia; branch `feat/035-entrada-na-nuvem`). Nada consertado; os que falham ficam falhando, sem `skip` nem `fails`.
+  - **Refatoração:** `enderecoDoMundo(href, id)` em `src/pagina.ts`, igual ao de antes (põe `mundo`, tira só o `tema`); o `abrirMundo` do `main.ts` usa ela. `tsc` passa.
+  - **`tests/cliente/enderecoDoMundo.test.ts`:** 4 de 5 falham pelo comportamento (o `sala`, o `novo` e o `direto` ficam); o do `tema` passa. Conserta na T07.
+  - **`tests/cliente/corridaNuvem.test.ts`** (com o ajudante `tests/cliente/nuvemDeVerdade.ts`: servidor real, conexão e estado reais, WebSocket de mentira com uma tarefa por mensagem, a ida para a nuvem com a conexão de criar fechando): 0 ms e uma tarefa passam; **120 ms, 500 ms e 2 s falham com 0 quadros aplicados**, como na reprodução. `CORRIDA_RODADAS=3` repete. As ressincronizações contam pelo `ressincronizar` da conexão (quando a T03 puser) e pelos fechamentos 4001. Conserta na T02.
+  - **`tests/cliente/blocosDaVolta.test.ts`:** a queda falha pelo comportamento (o filho volta sem o bloco posto; o bloco que o pai põe depois da volta chega, então a volta em si funciona); a da ressincronização falha porque a conexão ainda não tem `ressincronizar`. A "tela" do filho é um `Edicoes` como a cena monta; na T05 ligar ali o `aoBemVindo` à diferença.
+  - **`tests/cliente/entradaNuvem.test.ts`** (o de texto saiu): 8 de 9 falham (nada chega a quem ouve depois); o do `encerrar()` que esvazia a fila passa já hoje. Conserta na T02.
+  - **`servidor/testes/salas.test.ts`:** a sala fechada com a volta antes dos 30 s falha (`recusado: fechado`). Conserta na T06.
+  - **Vitest inteiro:** 18 falham (exatamente os novos acima) e 1993 passam.
