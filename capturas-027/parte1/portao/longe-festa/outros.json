@@ -1,0 +1,32 @@
+{
+  "noite-das-fantasias-bicho-longe-lente": {
+    "longe": true,
+    "distanciaDaCrianca": 22.9,
+    "rumo": 0
+  },
+  "noite-das-fantasias-bicho-longe-jogo": {
+    "longe": true,
+    "distanciaDaCrianca": 23.6,
+    "rumo": 0
+  },
+  "noite-das-fantasias-bicho-perto": {
+    "longe": false,
+    "distanciaDaCrianca": 4.2,
+    "rumo": 0
+  },
+  "noite-das-fantasias-morador-longe-lente": {
+    "longe": true,
+    "distanciaDaCrianca": 22,
+    "rumo": 0
+  },
+  "noite-das-fantasias-morador-longe-jogo": {
+    "longe": true,
+    "distanciaDaCrianca": 22,
+    "rumo": 0
+  },
+  "noite-das-fantasias-morador-perto": {
+    "longe": false,
+    "distanciaDaCrianca": 4,
+    "rumo": 0
+  }
+}
