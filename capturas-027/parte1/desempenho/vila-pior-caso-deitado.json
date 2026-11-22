@@ -1,0 +1,239 @@
+{
+  "lugar": "Vila Neon: meio do campo do festival, de noite, olhando o palco por cima do público (o pior caso da T00)",
+  "tela": "deitado, distância 3",
+  "normal": {
+    "fps": 25,
+    "p95ms": 50.1,
+    "piorMs": 66.7,
+    "desenhos": 471,
+    "desenhosMax": 471,
+    "triangulos": 480706,
+    "fpsBabylon": 25,
+    "escala": 0.5,
+    "alivio": 0,
+    "chunks": 29,
+    "malhasAtivas": 373,
+    "moradores": 52,
+    "bichos": 16,
+    "amigos": 0
+  },
+  "cpu4": {
+    "fps": 25.6,
+    "p95ms": 50,
+    "piorMs": 50.1,
+    "desenhos": 470,
+    "desenhosMax": 471,
+    "triangulos": 480706,
+    "fpsBabylon": 26,
+    "escala": 0.5,
+    "alivio": 0,
+    "chunks": 29,
+    "malhasAtivas": 372,
+    "moradores": 52,
+    "bichos": 16,
+    "amigos": 0
+  },
+  "detalhe": {
+    "grupos": [
+      {
+        "nome": "morador#-fundida",
+        "triangulos": 113528,
+        "malhas": 94,
+        "material": "morador-38-plastico-#ffffff"
+      },
+      {
+        "nome": "morador#-fundida-longe",
+        "triangulos": 93720,
+        "malhas": 159,
+        "material": "morador-5-plastico-#ffffff"
+      },
+      {
+        "nome": "chunk-#,#",
+        "triangulos": 59924,
+        "malhas": 17,
+        "material": "atlas"
+      },
+      {
+        "nome": "chunk#,#",
+        "triangulos": 32892,
+        "malhas": 11,
+        "material": "atlas"
+      },
+      {
+        "nome": "vila-pecas-#,#",
+        "triangulos": 13912,
+        "malhas": 9,
+        "material": "vila-plastico-cv"
+      },
+      {
+        "nome": "vila-pecas#,#",
+        "triangulos": 5976,
+        "malhas": 5,
+        "material": "vila-plastico-cv"
+      },
+      {
+        "nome": "ceu",
+        "triangulos": 4624,
+        "malhas": 1,
+        "material": "ceu"
+      },
+      {
+        "nome": "vila-carros#,#",
+        "triangulos": 4208,
+        "malhas": 1,
+        "material": "vila-plastico-cv"
+      },
+      {
+        "nome": "morador#-bastao-halo",
+        "triangulos": 3360,
+        "malhas": 14,
+        "material": "morador-bastao-halo-#4df07a"
+      },
+      {
+        "nome": "criatura#-longe",
+        "triangulos": 2936,
+        "malhas": 2,
+        "material": "criatura-72-plastico"
+      },
+      {
+        "nome": "personagem-cabeca-fundida",
+        "triangulos": 1892,
+        "malhas": 2,
+        "material": "personagem-plastico-cv"
+      },
+      {
+        "nome": "personagem-bracoE-fundida",
+        "triangulos": 1784,
+        "malhas": 1,
+        "material": "personagem-plastico-cv"
+      },
+      {
+        "nome": "personagem-bracoD-fundida",
+        "triangulos": 1784,
+        "malhas": 1,
+        "material": "personagem-plastico-cv"
+      },
+      {
+        "nome": "personagem-olhos-fundida",
+        "triangulos": 1568,
+        "malhas": 1,
+        "material": "personagem-plastico-cv"
+      },
+      {
+        "nome": "personagem-brilhos-fundida",
+        "triangulos": 1568,
+        "malhas": 1,
+        "material": "personagem-plastico-cv"
+      },
+      {
+        "nome": "plantas-#,#",
+        "triangulos": 1420,
+        "malhas": 5,
+        "material": "atlas-plantas"
+      },
+      {
+        "nome": "vila-show-estrelinhas",
+        "triangulos": 1360,
+        "malhas": 1,
+        "material": "vila-show-feixe"
+      },
+      {
+        "nome": "vila-caixa-acesa#",
+        "triangulos": 1296,
+        "malhas": 3,
+        "material": "vila-show-pulso"
+      },
+      {
+        "nome": "vila-estojo#",
+        "triangulos": 984,
+        "malhas": 1,
+        "material": "vila-show-plastico-cv"
+      },
+      {
+        "nome": "personagem-boca",
+        "triangulos": 784,
+        "malhas": 1,
+        "material": "personagem-plastico-#9a4a3c"
+      },
+      {
+        "nome": "personagem-topete-fundida",
+        "triangulos": 784,
+        "malhas": 1,
+        "material": "personagem-plastico-cv"
+      },
+      {
+        "nome": "vila-palco-noite",
+        "triangulos": 696,
+        "malhas": 1,
+        "material": "vila-show-luz"
+      },
+      {
+        "nome": "personagem-tronco-fundida",
+        "triangulos": 648,
+        "malhas": 1,
+        "material": "personagem-plastico-cv"
+      },
+      {
+        "nome": "morador#-bastao",
+        "triangulos": 560,
+        "malhas": 14,
+        "material": "morador-bastao-#4df07a"
+      },
+      {
+        "nome": "plantas#,#",
+        "triangulos": 518,
+        "malhas": 4,
+        "material": "atlas-plantas"
+      }
+    ],
+    "seres": [
+      "morador vila:19 #40: 9384",
+      "morador vila:45 #68: 8160",
+      "morador vila:23 #44: 7916",
+      "morador vila:43 #67: 7440",
+      "morador vila:25 #46: 7356",
+      "morador vila:27 #48: 7000",
+      "morador vila:36 #60: 6788",
+      "morador vila:24 #45: 6748",
+      "morador vila:42 #66: 6728",
+      "morador vila:41 #65: 6396",
+      "morador vila:46 #69: 6360",
+      "morador vila:21 #42: 6240",
+      "morador vila:17 #38: 6144",
+      "morador vila:10 #31: 6120",
+      "morador vila:20 #41: 6036",
+      "morador vila:47 #70: 5972",
+      "morador vila:35 #59: 5820",
+      "morador vila:14 #35: 5536",
+      "morador vila:0 #21: 5112",
+      "morador vila:26 #47: 5000",
+      "morador vila:61 #24: 4608",
+      "morador vila:62 #25: 4248",
+      "morador vila:40 #64: 4156",
+      "morador vila:33 #57: 4080",
+      "morador vila:2 #22: 3984",
+      "morador vila:1 #5: 3500",
+      "morador vila:8 #29: 3352",
+      "morador vila:12 #33: 3352",
+      "morador vila:9 #30: 3308",
+      "morador vila:29 #53: 3292",
+      "morador vila:38 #62: 3084",
+      "morador vila:11 #32: 3004",
+      "morador vila:31 #55: 2968",
+      "criatura espectro #72: 2936",
+      "morador vila:18 #39: 2916",
+      "morador vila:32 #56: 2888",
+      "morador vila:13 #34: 2848",
+      "morador vila:39 #63: 2760",
+      "morador vila:30 #54: 2752",
+      "morador vila:34 #58: 2752",
+      "morador vila:37 #61: 2724",
+      "morador vila:60 #23: 2616",
+      "morador vila:28 #51: 2616",
+      "morador vila:16 #37: 2560",
+      "morador vila:44 #52: 2464",
+      "morador vila:15 #36: 2368"
+    ]
+  },
+  "quando": "2026-11-22T16:53:38.428Z"
+}

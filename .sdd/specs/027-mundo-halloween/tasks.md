@@ -292,6 +292,43 @@ Tamanho: **P** (até meio dia), **M** (1 a 2 dias), **G** (3 dias ou mais). Uma 
     - **Os docinhos da sacola com 1 ou 2** maiores e mais para fora da boca (raio 0,03 com três, 0,043 com dois, 0,05 com um); fotos `t19-n1-sacola-1-*` e `t19-n1-sacola-2-*` refeitas.
   - **Achado no caminho:** os momentos das missões montavam o mesmo desenho de novo juntando as próprias partes (o `merge` escreve na primeira): o docinho e o fantasminha dobravam a malha a cada porta e, com o fantasminha no material aceso, a segunda travessura da página nem montava ("Cannot merge vertex data", visto no teste das duas amigas). Agora cada montagem junta uma cópia das partes; o teste das duas amigas confere que nenhum erro de malha volta.
 
+- **T22 (22 nov): feita, com dois números acima da meta (abaixo).** O desempenho, na placa (`e2e/desempenho-027.spec.ts`, `MEDIR_027=1`, um trabalhador só para não dividir a placa), gravado em `capturas-027/parte1/desempenho/` (os JSON de cada grupo, as fotos de cada rumo e lugar; `antes/` é o pior caso antes das otimizações; `visual/antes` e `visual/depois` as fotos de comparação).
+  - **O pior caso medido:** a praça de noite, do sul (onde a criança nasce), em três rumos (a abóbora com o palco atrás, as barracas, a loja e a rua), com os 12 moradores, 4 fantasminhas, 3 morceguinhos, 2 abóboras saltitantes e 1 sapinho (invocados, além dos que nascem sozinhos: 22 bichos ao todo), a criança com a sacola de 3 docinhos, 12 lampiões de abóbora postos em roda na praça e as duas amigas fantasiadas (bruxinha e fantasminha) com a sacola na mão (`amigosDeTeste`, que agora aceita a mão). Vale o pior rumo.
+  - **O que a medida achou:** o pior caso passava de **1 milhão de triângulos em pé e 1,5 milhão deitado e no computador** (a meta é 450 mil); deitado, a página travou 119 s num quadro e **perdeu o contexto WebGL** (o mesmo sintoma da T20 deitada: provável a placa estourar o tempo do quadro). As causas, pela conta de cada malha: o **Bento sozinho com 192 mil** (o pelo: ~620 bolinhas de 8 gomos), os bichos da festa com 16 a 27 mil cada um (bolinhas de 12 gomos, também na malha de longe), o **lampião de abóbora com 8,9 mil** cada (12 gomos em cada gomo da abóbora), e as bolinhas miúdas da sacola (o olhinho da estampa, os docinhos) com 784 cada.
+  - **O que entrou (nenhum corte do que a criança vê):**
+    - o pelo de tufos com 5, 5 e 4 gomos por gota (`gomos` na peça, `GOMOS_GOTA`); a criança de Monstrinho Peludo, que passava de 480 mil (12 gomos), cai para ~110 mil;
+    - **o boneco de longe dos moradores** (`definirLonge` no boneco com esqueleto): a mais de 18 blocos da câmera, as mesmas peças com menos gomos, nos mesmos ossos (a pose, o piscar e a boca valem igual), sem a pontinha de cada tufo do pelo (`soPerto`); montado na primeira vez que o morador fica longe, um por quadro, com o mesmo brilho das de perto; o Bento de longe tem 43 mil;
+    - **os bichos de longe com menos gomos** (`segmentosDeLonge`: a malha de longe sai das peças, não mais da cópia das de perto) e **os de perto pelo tamanho da bolinha**, nunca menos de 7 gomos (os da festa caem de 16 a 27 mil para 9 a 11 mil);
+    - **as abóboras de até 2 blocos** (o lampião, as de enfeite, as das missões) com 10 gomos no corpo e 8 em cada gomo (o lampião de 8,9 para ~5 mil); a gigante fica igual;
+    - **as bolinhas do item na mão** pelo tamanho (`gomosDoItem`: 5 a 12).
+    - **O custo visual:** nenhum que se veja, nas fotos lado a lado de antes e depois (o Bento e os três pelos de perto, a fila dos bichos e cada um de perto, o morceguinho a 15 blocos, o brigadeiro e o beijinho na mão e na boca, o lampião na festa e no Rancho): `capturas-027/parte1/desempenho/visual/`. Vale para todos os mundos (os bichos, os moradores de longe e o lampião), sem mudar dado nenhum.
+  - **Os números finais** (celular em pé 390×844 e deitado 844×390 com a CPU 4× mais lenta; computador 1280×720 sem desacelerar; quadros contados pelo `requestAnimationFrame` em 5 s; o teto é 60, a tela cheia):
+
+    | Pior caso (pior rumo) | quadros | chamadas | triângulos | antes |
+    |---|---|---|---|---|
+    | em pé | 47,5 | 224 | 545 a 562 mil | 1,0 milhão, ~46 a 51 quadros |
+    | deitado | 41,2 | 283 a 297 | 715 a 736 mil | 1,5 milhão, travou e perdeu o contexto |
+    | computador | 34,0 | 284 | 810 mil | 1,5 milhão, 26 quadros |
+
+    | A Vila na mesma rodada (pior caso da T00) | quadros | chamadas | triângulos |
+    |---|---|---|---|
+    | em pé | 48,2 | 237 | 307 a 358 mil |
+    | deitado | 25,6 | 470 | 481 mil |
+    | computador | 24,5 | 457 | 568 mil |
+
+    | Lugares (rua, Vovó, loja, bosque, castelinho, horta, gramado), entardecer e noite | quadros | chamadas | triângulos |
+    |---|---|---|---|
+    | em pé | 59,2 a 59,8 (a rua é o menor) | 101 a 172 | 279 a 440 mil |
+    | deitado | 58,6 a 59,8 (a rua) | 119 a 192 | 309 a 555 mil |
+    | computador | 53,0 a 59,8 (a rua de noite 53, de dia 55) | 109 a 186 | 520 a 672 mil |
+
+  - **Carregar** (Vila e festa alternadas, três de cada, em pé com a CPU 4×): Vila 10,9, 9,2 e 8,5 s; festa 8,0, 9,0 e 9,1 s; **medianas 9,2 s e 9,0 s, razão 0,97** (meta: até 1,10).
+  - **Contra a meta:** carregar passa; os lugares passam no celular (60, a rua 58,6 a 59,4) e no computador ficam em 53 a 60 (a rua abaixo de 60); o pior caso em pé fica **acima de 45** (47,5) e **abaixo de 250 chamadas** (224), mas **acima dos 450 mil triângulos** (545 a 562 mil). Deitado e no computador o pior caso fica **abaixo de 45 e de 60** (41 e 34) e **acima de 250 chamadas e de 450 mil triângulos**, mas **melhor que a Vila no mesmo aparelho e na mesma rodada** (a Vila: 25,6 deitado e 24,5 no computador, com 470 e 457 chamadas). O que passa da conta no pior caso é o que a medida pôs de propósito por cima do mundo: os 12 lampiões postos (~66 mil), as duas amigas fantasiadas com a sacola (~50 mil) e os bichos invocados perto (~30 mil); sem eles, o em pé fica em ~410 mil. Os quadros desta máquina andam com as chamadas e a tela, não com a CPU: com a CPU 4× mais lenta o número quase não muda.
+  - **Ainda fraco:** os triângulos do pior caso; as chamadas deitado e no computador (o campo de visão mais largo pega mais pedaços e mais bichos de perto); a rua no computador (53 a 55). O que sobra para cortar mexe no que a criança vê (fica com o dono): metade dos vaga-lumes e do confete e os fantasminhas de longe parados, como a spec já prevê, ou menos bichos de noite à vista.
+  - **O WebGL:** na rodada final, nenhuma perda de contexto e nenhuma medida de 5 s que levasse mais de 15 s, nas três telas. (Na rodada final, a Vila em pé caiu uma vez esperando o show começar, 90 s, antes de medir; sozinha logo depois, passou: é o número da tabela.) A perda vista antes das otimizações (deitado, 1,5 milhão de triângulos, um quadro de 119 s) bate com a da T20 deitada; fica a conferência da T23 com a suíte inteira. (A rodada de antes, deitado e no computador, rodou com o Vitest ao lado: os quadros daquela vez valem só como ordem de grandeza.)
+  - **A foto do cartão** (`public/temas/noite-das-fantasias.jpg`) era de antes dos moradores (T07b): refeita no mesmo enquadramento, agora com a Tia Filó na barraca, um vizinho e o montinho de abóboras da Lulu.
+  - Testes: `tests/render/bonecoLonge.test.ts` (3: as gotas do pelo com poucos gomos; com esqueleto, o boneco de longe com menos de 40% dos triângulos, as mesmas malhas acesas e o mesmo esqueleto, e volta; sem esqueleto não há); os e2e das fotos (bento, bichos, comer, lampiões: **cem lampiões e cem caldeirões, 182 chamadas antes e depois**). **Vitest inteiro:** 239 arquivos, 2202 testes, todos verdes.
+
 A 035 já está na `main` (5996d11) e deixou a `VERSAO_REDE` em 17; esta spec é a próxima da fila. No criativo valem comprar, comer e as missões, como na Vila.
 
 Falta sempre, ao fim de cada parte, a **rodada em família**.

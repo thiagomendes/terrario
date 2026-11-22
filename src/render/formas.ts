@@ -679,6 +679,14 @@ const esferasFeitas = new Map<number, VertexData>();
  * bolinha pequena (o brilho do olho, a boca, o botão do boné) não precisa de 784 triângulos:
  * de perto ela continua redonda (a luz é macia), e o boneco cai para menos da metade.
  */
+/**
+ * Spec 027 (T22): os gomos de cada bolinha de longe (o bicho e o morador a mais de 18 blocos da
+ * câmera), pelo raio: de lá a bolinha tem uns poucos pixels e a silhueta é a mesma.
+ */
+export function segmentosDeLonge(raio: number): number {
+  return raio < 0.06 ? 3 : raio < 0.15 ? 4 : raio < 0.3 ? 5 : 6;
+}
+
 export function segmentosDaBolinha(raio: number): number {
   return raio < 0.035
     ? 4
@@ -699,9 +707,11 @@ export function esfera(
   raio: number,
   material: StandardMaterial,
   escala: [number, number, number] = [1, 1, 1],
+  /** Os gomos (sem nada, 12; spec 027, T22: menos nas peças pequenas e nos bichos de longe). */
+  segmentos = 12,
 ): Mesh {
   const m = new Mesh(nome, scene);
-  dadosEsfera(raio).applyToMesh(m);
+  dadosEsfera(raio, segmentos).applyToMesh(m);
   m.scaling.set(escala[0], escala[1], escala[2]);
   m.material = material;
   m.isPickable = false;

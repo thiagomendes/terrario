@@ -753,6 +753,9 @@ export interface EstadoDepuracao {
       yaw?: number;
       vel?: number;
       correndo?: boolean;
+      /** Spec 027 (T22): o que ele segura (a sacola de doces, com a contagem). */
+      mao?: string;
+      maoQtd?: number;
     }>,
   ) => void;
   /**
@@ -7706,7 +7709,8 @@ export function criarCena(
           voando: false,
           noChao: true,
           correndo: a.correndo ?? false,
-          mao: null,
+          mao: a.mao ?? null,
+          ...(a.maoQtd !== undefined ? { maoQtd: a.maoQtd } : {}),
         })),
       );
     };

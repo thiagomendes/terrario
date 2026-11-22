@@ -68,6 +68,17 @@ export interface Peca {
   alfa?: number;
   /** Raio dos cantos (só caixa). */
   raio?: number;
+  /**
+   * Spec 027 (T22, desempenho): os gomos da esfera (sem nada, os de sempre). As gotas do pelo
+   * de tufos são centenas de bolinhas foscas encavaladas: com menos gomos o boneco peludo cai
+   * de ~190 mil triângulos para menos da metade, e o pelo continua o mesmo de perto.
+   */
+  gomos?: number;
+  /**
+   * Spec 027 (T22): a peça fica fora do boneco de longe (o morador a mais de 18 blocos): a
+   * pontinha de cada tufo do pelo, que de lá não passa de um pixel.
+   */
+  soPerto?: boolean;
   pos: [number, number, number];
   rot?: [number, number, number];
   cor: string;

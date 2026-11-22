@@ -1,0 +1,210 @@
+{
+  "lugar": "Vila Neon: meio do campo do festival, de noite, olhando o palco por cima do público (o pior caso da T00)",
+  "tela": "empe, distância 3",
+  "normal": {
+    "fps": 48.6,
+    "p95ms": 33.4,
+    "piorMs": 100,
+    "desenhos": 238,
+    "desenhosMax": 266,
+    "triangulos": 357946,
+    "fpsBabylon": 49,
+    "escala": 0.5,
+    "alivio": 0,
+    "chunks": 29,
+    "malhasAtivas": 165,
+    "moradores": 52,
+    "bichos": 16,
+    "amigos": 0
+  },
+  "cpu4": {
+    "fps": 48.2,
+    "p95ms": 33.4,
+    "piorMs": 33.4,
+    "desenhos": 237,
+    "desenhosMax": 238,
+    "triangulos": 306894,
+    "fpsBabylon": 50,
+    "escala": 0.5,
+    "alivio": 0,
+    "chunks": 29,
+    "malhasAtivas": 164,
+    "moradores": 52,
+    "bichos": 16,
+    "amigos": 0
+  },
+  "detalhe": {
+    "grupos": [
+      {
+        "nome": "chunk-#,#",
+        "triangulos": 48192,
+        "malhas": 15,
+        "material": "atlas"
+      },
+      {
+        "nome": "morador#-fundida",
+        "triangulos": 44124,
+        "malhas": 38,
+        "material": "morador-46-plastico-#ffffff"
+      },
+      {
+        "nome": "morador#-fundida-longe",
+        "triangulos": 35476,
+        "malhas": 58,
+        "material": "morador-5-plastico-#ffffff"
+      },
+      {
+        "nome": "chunk#,#",
+        "triangulos": 32892,
+        "malhas": 11,
+        "material": "atlas"
+      },
+      {
+        "nome": "vila-pecas-#,#",
+        "triangulos": 9740,
+        "malhas": 5,
+        "material": "vila-plastico-cv"
+      },
+      {
+        "nome": "vila-pecas#,#",
+        "triangulos": 5912,
+        "malhas": 4,
+        "material": "vila-plastico-cv"
+      },
+      {
+        "nome": "ceu",
+        "triangulos": 4624,
+        "malhas": 1,
+        "material": "ceu"
+      },
+      {
+        "nome": "personagem-cabeca-fundida",
+        "triangulos": 1892,
+        "malhas": 2,
+        "material": "personagem-plastico-cv"
+      },
+      {
+        "nome": "personagem-bracoE-fundida",
+        "triangulos": 1784,
+        "malhas": 1,
+        "material": "personagem-plastico-cv"
+      },
+      {
+        "nome": "personagem-bracoD-fundida",
+        "triangulos": 1784,
+        "malhas": 1,
+        "material": "personagem-plastico-cv"
+      },
+      {
+        "nome": "personagem-olhos-fundida",
+        "triangulos": 1568,
+        "malhas": 1,
+        "material": "personagem-plastico-cv"
+      },
+      {
+        "nome": "personagem-brilhos-fundida",
+        "triangulos": 1568,
+        "malhas": 1,
+        "material": "personagem-plastico-cv"
+      },
+      {
+        "nome": "vila-show-estrelinhas",
+        "triangulos": 1360,
+        "malhas": 1,
+        "material": "vila-show-feixe"
+      },
+      {
+        "nome": "vila-caixa-acesa#",
+        "triangulos": 1296,
+        "malhas": 3,
+        "material": "vila-show-pulso"
+      },
+      {
+        "nome": "personagem-boca",
+        "triangulos": 784,
+        "malhas": 1,
+        "material": "personagem-plastico-#9a4a3c"
+      },
+      {
+        "nome": "personagem-topete-fundida",
+        "triangulos": 784,
+        "malhas": 1,
+        "material": "personagem-plastico-cv"
+      },
+      {
+        "nome": "morador#-bastao-halo",
+        "triangulos": 720,
+        "malhas": 3,
+        "material": "morador-bastao-halo-#2ee8d8"
+      },
+      {
+        "nome": "vila-palco-noite",
+        "triangulos": 696,
+        "malhas": 1,
+        "material": "vila-show-luz"
+      },
+      {
+        "nome": "personagem-tronco-fundida",
+        "triangulos": 648,
+        "malhas": 1,
+        "material": "personagem-plastico-cv"
+      },
+      {
+        "nome": "vila-palco-show",
+        "triangulos": 276,
+        "malhas": 1,
+        "material": "vila-show-luz"
+      },
+      {
+        "nome": "vila-luzes-palco-#,#",
+        "triangulos": 276,
+        "malhas": 2,
+        "material": "vila-luz-palco"
+      },
+      {
+        "nome": "morador#-microfone-cabeca",
+        "triangulos": 256,
+        "malhas": 1,
+        "material": "morador-microfone-cabeca"
+      },
+      {
+        "nome": "vila-show-feixes",
+        "triangulos": 246,
+        "malhas": 1,
+        "material": "vila-show-feixe"
+      },
+      {
+        "nome": "personagem-pernaE-fundida",
+        "triangulos": 216,
+        "malhas": 1,
+        "material": "personagem-plastico-cv"
+      },
+      {
+        "nome": "personagem-pernaD-fundida",
+        "triangulos": 216,
+        "malhas": 1,
+        "material": "personagem-plastico-cv"
+      }
+    ],
+    "seres": [
+      "morador vila:46 #70: 6836",
+      "morador vila:36 #60: 6788",
+      "morador vila:42 #67: 6728",
+      "morador vila:41 #66: 6396",
+      "morador vila:24 #46: 6360",
+      "morador vila:35 #59: 5820",
+      "morador vila:26 #48: 5756",
+      "morador vila:0 #21: 5112",
+      "morador vila:61 #24: 4608",
+      "morador vila:62 #25: 4248",
+      "morador vila:2 #22: 3984",
+      "morador vila:1 #5: 3500",
+      "morador vila:12 #33: 3352",
+      "morador vila:29 #53: 3292",
+      "morador vila:11 #32: 2724",
+      "morador vila:60 #23: 2616",
+      "morador vila:32 #56: 2608"
+    ]
+  },
+  "quando": "2026-11-22T17:06:14.595Z"
+}

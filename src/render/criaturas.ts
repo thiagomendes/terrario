@@ -13,7 +13,7 @@ import type { Scene } from '@babylonjs/core/scene';
 import type { Criatura } from '../jogo/criaturas';
 import type { PecaCriatura } from '../temas/tipos';
 import { povoadoDoTema, tema } from '../temas/ativo';
-import { caixaArredondada, criarPlasticos, esfera } from './formas';
+import { caixaArredondada, criarPlasticos, esfera, segmentosDaBolinha, segmentosDeLonge } from './formas';
 // spec 026: o teclado de pendurar da tecladista, desenhado com as ferramentas das peças da vila
 import { Ref, type Desenho } from './vila/ref';
 import { Pecas } from './solidos';
@@ -65,7 +65,14 @@ const MAXIMO_PLANOS = 200;
 interface Modelo {
   raiz: TransformNode;
   /** Uma parte por grupo que se mexe junto (corpo, cabeça, cada perna...), já fundida. */
-  partes: { no: TransformNode; malhas: Mesh[]; papel: Peca['papel']; base: Vector3 }[];
+  partes: {
+    no: TransformNode;
+    malhas: Mesh[];
+    papel: Peca['papel'];
+    base: Vector3;
+    /** Spec 027 (T22): as peças da parte (a malha de longe sai delas, com menos gomos). */
+    fontes: { peca: PecaBicho; classe: 'plastico' | 'suave' | 'forte' }[];
+  }[];
   /** Material do plástico deste bicho (a luz do lugar escurece só ele). */
   plastico: StandardMaterial;
   /** Materiais próprios (descartados com o bicho). */
@@ -172,6 +179,10 @@ export function criarRenderCriaturas(
       quadro: number;
       /** Malhas do boneco (fixas: o morador não troca de roupa nem de item na mão). */
       malhas: Mesh[];
+      /** Spec 027 (T22): o boneco de longe já foi montado (as malhas dele entram em `malhas`). */
+      longeFeito?: boolean;
+      /** O corpo dele tapa o brilho (quem segura o microfone ou o teclado). */
+      tapa?: boolean;
       ferido: boolean;
       luz: number;
     }
@@ -519,6 +530,18 @@ export function criarRenderCriaturas(
     }
     return feito;
   }
+  /**
+   * O brilho de cada malha do morador: só a lanterna e o que o tema marcou como brilhante entram
+   * no brilho; o corpo de quem segura o microfone ou o teclado tapa o brilho (`tapa`).
+   */
+  function brilhoDoMorador(malha: Mesh, tapa: boolean): void {
+    const mat = malha.material as StandardMaterial | null;
+    if (mat && mat.emissiveColor.r + mat.emissiveColor.g + mat.emissiveColor.b > 1.6) incluirNoGlow(malha);
+    else if (tapa) taparOGlow(malha);
+    else excluirDoGlow(malha);
+    malha.isPickable = false;
+  }
+
   function montarMorador(c: Criatura, prep = prepararMorador(c)) {
     const m = prep.m;
     const ajustar = (p: PlanoBoneco) => planoDoMorador(prep, p);
@@ -531,15 +554,7 @@ export function criarRenderCriaturas(
     // a tecladista (o friso de neon do teclado de pendurar brilha de verdade) e o vocalista, que
     // canta na frente dela: o corpo dos dois tapa esse brilho (visto por trás e pela frente)
     const tapa = corLuz === 'microfone' || !!corLuz?.startsWith('keytar');
-    for (const malha of boneco.raiz.getChildMeshes()) {
-      const mat = malha.material as StandardMaterial | null;
-      // só a lanterna e o que o tema marcou como brilhante entram no brilho
-      if (mat && mat.emissiveColor.r + mat.emissiveColor.g + mat.emissiveColor.b > 1.6)
-        incluirNoGlow(malha as Mesh);
-      else if (tapa) taparOGlow(malha as Mesh);
-      else excluirDoGlow(malha as Mesh);
-      malha.isPickable = false;
-    }
+    for (const malha of boneco.raiz.getChildMeshes()) brilhoDoMorador(malha as Mesh, tapa);
     // ('microfone': o vocalista do show segura o microfone, sempre)
     const microfone = corLuz === 'microfone';
     // ('keytar…': a tecladista tem o teclado de pendurar, que aparece só quando ela toca nele)
@@ -563,6 +578,9 @@ export function criarRenderCriaturas(
       malhas: boneco.raiz.getChildMeshes() as Mesh[],
       ferido: false,
       luz: -1,
+      /** Spec 027 (T22): o boneco de longe já foi montado. */
+      longeFeito: false,
+      tapa,
     };
   }
   let quadro = 0;
@@ -584,20 +602,39 @@ export function criarRenderCriaturas(
     }
     const inversa = Matrix.Invert(m.raiz.computeWorldMatrix(true));
     const porMaterial = new Map<StandardMaterial, Mesh[]>();
+    // (spec 027, T22: de longe as bolinhas saem com menos gomos, pelo tamanho; o bicho a mais de
+    // 18 blocos tem uns poucos pixels por bolinha, e os bichos da festa somavam 10 a 20 mil
+    // triângulos cada um na malha de longe)
+    const [plastico, suave] = [...m.substitui];
     for (const p of m.partes) {
       p.no.computeWorldMatrix(true);
-      for (const malha of p.malhas) {
-        const mat = malha.material as StandardMaterial | null;
-        if (!mat || !m.substitui.has(mat)) continue;
-        const copia = malha.clone(`${malha.name}-longe`, null, true);
-        if (!copia) continue;
+      let k = 0;
+      for (const { peca, classe } of p.fontes) {
+        if (classe === 'forte') continue;
+        const mat = classe === 'plastico' ? plastico : suave;
+        const [w, h, d] = peca.t;
+        const maior = Math.max(w, h, d);
+        const nome = `${p.no.name}-longe${k++}`;
+        const copia =
+          peca.forma === 'bola'
+            ? esfera(nome, scene, maior / 2, mat, [w / maior, h / maior, d / maior], segmentosDeLonge(maior / 2))
+            : caixaArredondada(nome, scene, w, h, d, peca.raio, mat, 2);
+        copia.parent = p.no;
+        copia.position.set(peca.p[0] - p.base.x, peca.p[1] - p.base.y, peca.p[2] - p.base.z);
+        if (peca.rot) copia.rotation.set(peca.rot[0], peca.rot[1], peca.rot[2]);
+        const cor = corBase(peca.cor);
+        const nv = copia.getTotalVertices();
+        const cores = new Float32Array(nv * 4);
+        for (let q = 0; q < nv; q++) cores.set([cor.r, cor.g, cor.b, 1], q * 4);
+        copia.setVerticesData(VertexBuffer.ColorKind, cores);
+        const mundo = copia.computeWorldMatrix(true).multiply(inversa);
         copia.parent = null;
         copia.position.setAll(0);
         copia.rotation.setAll(0);
         copia.rotationQuaternion = null;
         copia.scaling.setAll(1);
         copia.makeGeometryUnique();
-        copia.bakeTransformIntoVertices(malha.computeWorldMatrix(true).multiply(inversa));
+        copia.bakeTransformIntoVertices(mundo);
         let l = porMaterial.get(mat);
         if (!l) porMaterial.set(mat, (l = []));
         l.push(copia);
@@ -686,13 +723,17 @@ export function criarRenderCriaturas(
         suave: [],
         forte: [],
       };
+      const fontes: Modelo['partes'][number]['fontes'] = [];
       for (const peca of g.pecas) {
         const [w, h, d] = peca.t;
         const maior = Math.max(w, h, d);
         const nome = `criatura-${c.id}-p${n++}`;
+        // (spec 027, T22: os gomos pelo tamanho da bolinha, como nos moradores da 026, mas nunca
+        // menos de 7: o bicho de perto continua redondo; os bichos da festa passavam de 20 mil
+        // triângulos cada um)
         const malha =
           peca.forma === 'bola'
-            ? esfera(nome, scene, maior / 2, plastico, [w / maior, h / maior, d / maior])
+            ? esfera(nome, scene, maior / 2, plastico, [w / maior, h / maior, d / maior], Math.max(7, segmentosDaBolinha(maior / 2)))
             : caixaArredondada(nome, scene, w, h, d, peca.raio, plastico, 3);
         malha.position.set(peca.p[0] - g.pivo[0], peca.p[1] - g.pivo[1], peca.p[2] - g.pivo[2]);
         if (peca.rot) malha.rotation.set(peca.rot[0], peca.rot[1], peca.rot[2]);
@@ -702,7 +743,9 @@ export function criarRenderCriaturas(
         for (let k = 0; k < nv; k++) cores.set([cor.r, cor.g, cor.b, 1], k * 4);
         malha.setVerticesData(VertexBuffer.ColorKind, cores);
         const b = peca.brilho ?? 0;
-        porClasse[b > 0.45 ? 'forte' : b > 0 ? 'suave' : 'plastico'].push(malha);
+        const classe = b > 0.45 ? 'forte' : b > 0 ? 'suave' : 'plastico';
+        porClasse[classe].push(malha);
+        fontes.push({ peca, classe });
       }
       const malhas: Mesh[] = [];
       for (const [classe, lista] of Object.entries(porClasse) as [
@@ -722,7 +765,7 @@ export function criarRenderCriaturas(
         else excluirDoGlow(fundida);
         malhas.push(fundida);
       }
-      return { no, malhas, papel: g.papel, base: no.position.clone() };
+      return { no, malhas, papel: g.papel, base: no.position.clone(), fontes };
     });
     return {
       raiz,
@@ -977,6 +1020,25 @@ export function criarRenderCriaturas(
           if (opacidadeDeMorador) {
             const p = levado ?? c;
             mb.boneco.definirOpacidade(opacidadeDeMorador(c.id, p.x, p.y, p.z));
+          }
+          // spec 027 (T22): de longe, o boneco de longe (as mesmas peças com menos gomos, nos
+          // mesmos ossos); montado na primeira vez que ele fica longe, um por quadro
+          if (mb.boneco.definirLonge) {
+            const p = levado ?? c;
+            const longe = !!mb.boneco.deLonge?.();
+            const d = Math.hypot(p.x - camX, p.y + 1 - camY, p.z - camZ);
+            const quer = longe ? d > LONGE_VOLTA : d > LONGE_LOD;
+            if (quer !== longe && (!quer || mb.longeFeito || montadasNoQuadro < LONGE_POR_QUADRO)) {
+              if (quer && !mb.longeFeito) {
+                montadasNoQuadro++;
+                mb.longeFeito = true;
+                mb.boneco.definirLonge(true);
+                const antes = new Set(mb.malhas);
+                mb.malhas = mb.boneco.raiz.getChildMeshes() as Mesh[];
+                // (as malhas de longe com o mesmo brilho das de perto: fora do glow, sem desenho a mais)
+                for (const f of mb.malhas) if (!antes.has(f)) brilhoDoMorador(f, !!mb.tapa);
+              } else mb.boneco.definirLonge(quer);
+            }
           }
           if (mb.bastao && !mb.microfone) {
             const ver = mostrarLuzNaMao();

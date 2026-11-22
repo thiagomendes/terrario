@@ -1,0 +1,46 @@
+{
+  "tela": "390x844 (celular em pé)",
+  "cpu": "4x mais lenta",
+  "criterio": "do goto do mundo até a cortina sair (window.__brumaluz.ready); Vila e festa alternadas",
+  "rodadas": {
+    "vila-neon": [
+      {
+        "total": 10896,
+        "pagina": 11111,
+        "chunks": 29
+      },
+      {
+        "total": 9210,
+        "pagina": 9405,
+        "chunks": 29
+      },
+      {
+        "total": 8495,
+        "pagina": 9898,
+        "chunks": 29
+      }
+    ],
+    "noite-das-fantasias": [
+      {
+        "total": 7993,
+        "pagina": 9480,
+        "chunks": 29
+      },
+      {
+        "total": 8954,
+        "pagina": 9181,
+        "chunks": 29
+      },
+      {
+        "total": 9051,
+        "pagina": 9265,
+        "chunks": 29
+      }
+    ]
+  },
+  "medianaVilaMs": 9210,
+  "medianaFestaMs": 8954,
+  "razao": 0.972,
+  "meta": "festa até 1,10 da Vila",
+  "quando": "2026-11-22T16:46:17.018Z"
+}

@@ -350,6 +350,9 @@ export function pezoes(pecas: Peca[], m: MedidasBoneco, cor: string): void {
   }
 }
 
+/** Spec 027 (T22): os gomos de cada gota do tufo (a maior primeiro; a ponta, a menor). */
+export const GOMOS_GOTA: readonly number[] = [5, 5, 4];
+
 /**
  * O tufo de pelúcia: gotas encavaladas deitadas na superfície, escorrendo para baixo como pelo
  * penteado, e só a pontinha virando para fora (espetado para fora, o tufo parecia minhoca).
@@ -385,6 +388,11 @@ function criarTufo(pecas: Peca[], j: Jeito, tons: string[]) {
         cor,
         brilho: 0,
         viva: false,
+        // (T22: poucos gomos; as gotas foscas e encavaladas não mostram a quina, e o pelo de
+        // centenas delas pesava mais que um povoado inteiro)
+        gomos: GOMOS_GOTA[Math.min(g, GOMOS_GOTA.length - 1)],
+        // (a pontinha do tufo fica fora do boneco de longe)
+        ...(g > 0 && g === j.gotas.length - 1 ? { soPerto: true } : {}),
       });
     });
     k++;

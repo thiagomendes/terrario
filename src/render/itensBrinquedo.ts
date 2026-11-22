@@ -71,6 +71,15 @@ export function docinhosNaSacola(qtd?: number): number {
 }
 
 /**
+ * Spec 027 (T22): os gomos das bolinhas do item na mão, pelo tamanho. O olhinho da estampa e o
+ * granulado têm uns milímetros: com os 12 de sempre (784 triângulos cada), a sacola de doces de
+ * três amigas somava mais de 20 mil triângulos.
+ */
+export function gomosDoItem(raio: number): number {
+  return raio < 0.02 ? 5 : raio < 0.04 ? 6 : raio < 0.07 ? 8 : 12;
+}
+
+/**
  * Monta o modelo do item na mão. `tamanho` é a escala geral (1 = medidas do boneco).
  * Devolve null para mão vazia. `qtd`: a pilha da mão (a sacola de doces mostra quantos restam).
  */
@@ -113,7 +122,7 @@ export function modeloNaMao(
     cor: string,
     esc: [number, number, number] = [1, 1, 1],
     brilho?: number,
-  ) => esfera(`${prefixo}-${n}`, scene, r, mats.cor(cor, brilho), esc);
+  ) => esfera(`${prefixo}-${n}`, scene, r, mats.cor(cor, brilho), esc, gomosDoItem(r));
   const ci = (n: string, h: number, r1: number, r2: number, cor: string) =>
     cilindro(`${prefixo}-${n}`, scene, h, r1, r2, mats.cor(cor));
   /** Spec 032: o copo de plástico transparente (a bebida dentro se vê, e desce a cada gole). */

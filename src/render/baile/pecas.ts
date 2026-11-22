@@ -164,7 +164,10 @@ export function bolinha(
  */
 export function abobora(r: Ref, x: number, y: number, z: number, L: number, gomos = 10): void {
   const cy = y + 0.41 * L;
-  bolinha(r, x, cy - 0.06 * L, z, 0.47 * L, '#e07c1e', [1.12, 0.8, 1.12], undefined, 0, 16);
+  // (T22: as de até 2 blocos, o lampião e as de enfeite, com menos gomos em cada bola: o
+  // lampião caía de ~8,9 mil triângulos para ~4,6 mil; a gigante fica com os de sempre)
+  const pequena = L <= 2;
+  bolinha(r, x, cy - 0.06 * L, z, 0.47 * L, '#e07c1e', [1.12, 0.8, 1.12], undefined, 0, pequena ? 10 : 16);
   for (let i = 0; i < gomos; i++) {
     const a = (i / gomos) * Math.PI * 2;
     bolinha(
@@ -177,7 +180,7 @@ export function abobora(r: Ref, x: number, y: number, z: number, L: number, gomo
       [0.62, 0.98, 1],
       undefined,
       a,
-      12,
+      pequena ? 8 : 12,
     );
   }
   r.barra([x, cy + 0.26 * L, z], [x + 0.06 * L, cy + 0.42 * L, z], 0.08 * L, '#6b7a2e');

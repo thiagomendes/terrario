@@ -24,6 +24,13 @@ export interface Personagem {
   posicionar(x: number, y: number, z: number, yaw: number): void;
   definirVisivel(visivel: boolean): void;
   /**
+   * Spec 027 (T22): o boneco de longe (menos gomos, as mesmas peças e os mesmos ossos), só nos
+   * bonecos com esqueleto (os moradores). Devolve false quando não há boneco de longe.
+   */
+  definirLonge?(sim: boolean): boolean;
+  /** Spec 027 (T22): é o boneco de longe que aparece agora? */
+  deLonge?(): boolean;
+  /**
    * Meio transparente quando a câmera chega perto demais (spec 015). Só mexe nas malhas
    * quando o valor muda; 1 volta ao desenho normal, sem custo de transparência.
    */

@@ -1,0 +1,619 @@
+{
+  "lugar": "a praça de noite, do sul (onde a criança nasce), com tudo",
+  "tela": "empe, distância 3",
+  "tudo": "moradores de posto e vizinhos; 4 fantasminhas, 3 morceguinhos, 2 abóboras saltitantes e 1 sapinho; a criança com a sacola de 3 docinhos; 12 lampiões de abóbora postos em roda; as duas amigas fantasiadas com a sacola",
+  "medidas": {
+    "norte": {
+      "normal": {
+        "fps": 48.6,
+        "p95ms": 33.4,
+        "piorMs": 33.4,
+        "desenhos": 220,
+        "desenhosMax": 221,
+        "triangulos": 561888,
+        "fpsBabylon": 49,
+        "escala": 1,
+        "alivio": 0,
+        "chunks": 29,
+        "malhasAtivas": 172,
+        "moradores": 12,
+        "bichos": 22,
+        "amigos": 2
+      },
+      "cpu4": {
+        "fps": 48.9,
+        "p95ms": 33.4,
+        "piorMs": 33.4,
+        "desenhos": 217,
+        "desenhosMax": 218,
+        "triangulos": 554372,
+        "fpsBabylon": 49,
+        "escala": 1,
+        "alivio": 0,
+        "chunks": 29,
+        "malhasAtivas": 170,
+        "moradores": 12,
+        "bichos": 22,
+        "amigos": 2
+      },
+      "detalhe": {
+        "grupos": [
+          {
+            "nome": "chunk-#,#",
+            "triangulos": 76690,
+            "malhas": 21,
+            "material": "atlas"
+          },
+          {
+            "nome": "lampioes#-#,#",
+            "triangulos": 65780,
+            "malhas": 3,
+            "material": "lampioes"
+          },
+          {
+            "nome": "morador#-fundida-longe",
+            "triangulos": 58760,
+            "malhas": 24,
+            "material": "morador-5-plastico-cv"
+          },
+          {
+            "nome": "baile-pecas-#,#",
+            "triangulos": 47016,
+            "malhas": 3,
+            "material": "baile-plastico-cv"
+          },
+          {
+            "nome": "criatura#-p#_merged",
+            "triangulos": 32788,
+            "malhas": 17,
+            "material": "criatura-33-plastico"
+          },
+          {
+            "nome": "chunk#,#",
+            "triangulos": 20038,
+            "malhas": 5,
+            "material": "atlas"
+          },
+          {
+            "nome": "criatura#-longe",
+            "triangulos": 19556,
+            "malhas": 11,
+            "material": "criatura-13-plastico"
+          },
+          {
+            "nome": "personagem-cabeca-fundida",
+            "triangulos": 15648,
+            "malhas": 8,
+            "material": "personagem-plastico-cv"
+          },
+          {
+            "nome": "baile-abobora-gigante-#,#",
+            "triangulos": 11068,
+            "malhas": 1,
+            "material": "baile-plastico-cv"
+          },
+          {
+            "nome": "personagem-capa-fundida",
+            "triangulos": 10272,
+            "malhas": 1,
+            "material": "personagem-plastico-#ffffff"
+          },
+          {
+            "nome": "personagem-bracoE-fundida",
+            "triangulos": 5444,
+            "malhas": 4,
+            "material": "personagem-plastico-cv"
+          },
+          {
+            "nome": "personagem-bracoD-fundida",
+            "triangulos": 5352,
+            "malhas": 4,
+            "material": "personagem-plastico-cv"
+          },
+          {
+            "nome": "personagem-olhos-fundida",
+            "triangulos": 4704,
+            "malhas": 3,
+            "material": "personagem-plastico-cv"
+          },
+          {
+            "nome": "personagem-brilhos-fundida",
+            "triangulos": 4704,
+            "malhas": 3,
+            "material": "personagem-plastico-cv"
+          },
+          {
+            "nome": "ceu",
+            "triangulos": 4624,
+            "malhas": 1,
+            "material": "ceu"
+          },
+          {
+            "nome": "personagem-tronco-fundida",
+            "triangulos": 4328,
+            "malhas": 3,
+            "material": "personagem-plastico-cv"
+          },
+          {
+            "nome": "personagem-boca",
+            "triangulos": 2352,
+            "malhas": 3,
+            "material": "personagem-plastico-#9a4a3c"
+          },
+          {
+            "nome": "personagem-mao-docinho#",
+            "triangulos": 2336,
+            "malhas": 8,
+            "material": "personagem-plastico-#5a3424"
+          },
+          {
+            "nome": "personagem-mao-docinho#-topo",
+            "triangulos": 1568,
+            "malhas": 8,
+            "material": "personagem-plastico-#ff9a3a"
+          },
+          {
+            "nome": "personagem-mao-estampa-olho#",
+            "triangulos": 1176,
+            "malhas": 6,
+            "material": "personagem-plastico-#4a2a18"
+          },
+          {
+            "nome": "baile-abobora-gigante-#,#-noite",
+            "triangulos": 872,
+            "malhas": 1,
+            "material": "baile-luz"
+          },
+          {
+            "nome": "personagem-topete-fundida",
+            "triangulos": 784,
+            "malhas": 1,
+            "material": "personagem-plastico-cv"
+          },
+          {
+            "nome": "personagem-mao-estampa",
+            "triangulos": 768,
+            "malhas": 3,
+            "material": "personagem-plastico-#ff9a3a"
+          },
+          {
+            "nome": "personagem-pernaE-fundida",
+            "triangulos": 648,
+            "malhas": 3,
+            "material": "personagem-plastico-cv"
+          },
+          {
+            "nome": "personagem-pernaD-fundida",
+            "triangulos": 648,
+            "malhas": 3,
+            "material": "personagem-plastico-cv"
+          }
+        ],
+        "seres": [
+          "morador baile:3 #5: 42776",
+          "criatura raposa #37: 12888",
+          "criatura cervo #36: 10768",
+          "criatura coelho #33: 9132",
+          "morador baile:0 #19: 7640",
+          "criatura espectro #22: 3568",
+          "criatura espectro #29: 3568",
+          "criatura espectro #30: 3568",
+          "morador baile:7 #20: 3276",
+          "criatura cervo #13: 3224",
+          "criatura cervo #15: 3224",
+          "morador baile:10 #11: 2656",
+          "morador baile:11 #12: 2412",
+          "criatura coelho #34: 2404"
+        ]
+      }
+    },
+    "oeste": {
+      "normal": {
+        "fps": 48.2,
+        "p95ms": 33.4,
+        "piorMs": 33.4,
+        "desenhos": 222,
+        "desenhosMax": 228,
+        "triangulos": 550920,
+        "fpsBabylon": 49,
+        "escala": 1,
+        "alivio": 0,
+        "chunks": 29,
+        "malhasAtivas": 175,
+        "moradores": 12,
+        "bichos": 22,
+        "amigos": 2
+      },
+      "cpu4": {
+        "fps": 47.5,
+        "p95ms": 33.4,
+        "piorMs": 33.5,
+        "desenhos": 224,
+        "desenhosMax": 225,
+        "triangulos": 544592,
+        "fpsBabylon": 48,
+        "escala": 1,
+        "alivio": 0,
+        "chunks": 29,
+        "malhasAtivas": 175,
+        "moradores": 12,
+        "bichos": 22,
+        "amigos": 2
+      },
+      "detalhe": {
+        "grupos": [
+          {
+            "nome": "lampioes#-#,#",
+            "triangulos": 96140,
+            "malhas": 5,
+            "material": "lampioes"
+          },
+          {
+            "nome": "chunk-#,#",
+            "triangulos": 73758,
+            "malhas": 21,
+            "material": "atlas"
+          },
+          {
+            "nome": "baile-pecas-#,#",
+            "triangulos": 51280,
+            "malhas": 4,
+            "material": "baile-plastico-cv"
+          },
+          {
+            "nome": "morador#-fundida-longe",
+            "triangulos": 28484,
+            "malhas": 30,
+            "material": "morador-4-plastico-#ffffff"
+          },
+          {
+            "nome": "criatura#-p#_merged",
+            "triangulos": 23656,
+            "malhas": 12,
+            "material": "criatura-35-plastico"
+          },
+          {
+            "nome": "criatura#-longe",
+            "triangulos": 21408,
+            "malhas": 12,
+            "material": "criatura-21-suave"
+          },
+          {
+            "nome": "personagem-cabeca-fundida",
+            "triangulos": 15648,
+            "malhas": 8,
+            "material": "personagem-plastico-cv"
+          },
+          {
+            "nome": "chunk#,#",
+            "triangulos": 13294,
+            "malhas": 3,
+            "material": "atlas"
+          },
+          {
+            "nome": "baile-abobora-gigante-#,#",
+            "triangulos": 11068,
+            "malhas": 1,
+            "material": "baile-plastico-cv"
+          },
+          {
+            "nome": "personagem-capa-fundida",
+            "triangulos": 10272,
+            "malhas": 1,
+            "material": "personagem-plastico-#ffffff"
+          },
+          {
+            "nome": "personagem-bracoE-fundida",
+            "triangulos": 5444,
+            "malhas": 4,
+            "material": "personagem-plastico-cv"
+          },
+          {
+            "nome": "personagem-bracoD-fundida",
+            "triangulos": 5352,
+            "malhas": 4,
+            "material": "personagem-plastico-cv"
+          },
+          {
+            "nome": "personagem-olhos-fundida",
+            "triangulos": 4704,
+            "malhas": 3,
+            "material": "personagem-plastico-cv"
+          },
+          {
+            "nome": "personagem-brilhos-fundida",
+            "triangulos": 4704,
+            "malhas": 3,
+            "material": "personagem-plastico-cv"
+          },
+          {
+            "nome": "ceu",
+            "triangulos": 4624,
+            "malhas": 1,
+            "material": "ceu"
+          },
+          {
+            "nome": "personagem-tronco-fundida",
+            "triangulos": 4328,
+            "malhas": 3,
+            "material": "personagem-plastico-cv"
+          },
+          {
+            "nome": "personagem-boca",
+            "triangulos": 2352,
+            "malhas": 3,
+            "material": "personagem-plastico-#9a4a3c"
+          },
+          {
+            "nome": "personagem-mao-docinho#",
+            "triangulos": 2336,
+            "malhas": 8,
+            "material": "personagem-plastico-#5a3424"
+          },
+          {
+            "nome": "personagem-mao-docinho#-topo",
+            "triangulos": 1568,
+            "malhas": 8,
+            "material": "personagem-plastico-#ff9a3a"
+          },
+          {
+            "nome": "personagem-mao-estampa-olho#",
+            "triangulos": 1176,
+            "malhas": 6,
+            "material": "personagem-plastico-#4a2a18"
+          },
+          {
+            "nome": "baile-abobora-gigante-#,#-noite",
+            "triangulos": 872,
+            "malhas": 1,
+            "material": "baile-luz"
+          },
+          {
+            "nome": "personagem-topete-fundida",
+            "triangulos": 784,
+            "malhas": 1,
+            "material": "personagem-plastico-cv"
+          },
+          {
+            "nome": "personagem-mao-estampa",
+            "triangulos": 768,
+            "malhas": 3,
+            "material": "personagem-plastico-#ff9a3a"
+          },
+          {
+            "nome": "personagem-pernaE-fundida",
+            "triangulos": 648,
+            "malhas": 3,
+            "material": "personagem-plastico-cv"
+          },
+          {
+            "nome": "personagem-pernaD-fundida",
+            "triangulos": 648,
+            "malhas": 3,
+            "material": "personagem-plastico-cv"
+          }
+        ],
+        "seres": [
+          "criatura raposa #37: 12888",
+          "criatura cervo #35: 10768",
+          "morador baile:2 #4: 10308",
+          "morador baile:9 #10: 3732",
+          "criatura espectro #21: 3568",
+          "criatura espectro #22: 3568",
+          "criatura espectro #23: 3568",
+          "criatura espectro #25: 3568",
+          "criatura espectro #26: 3568",
+          "criatura espectro #28: 3568",
+          "morador baile:5 #7: 3444",
+          "morador baile:7 #20: 3276",
+          "morador baile:6 #8: 2704",
+          "morador baile:8 #9: 2608",
+          "morador baile:11 #12: 2412"
+        ]
+      }
+    },
+    "nordeste": {
+      "normal": {
+        "fps": 54.7,
+        "p95ms": 33.3,
+        "piorMs": 33.4,
+        "desenhos": 194,
+        "desenhosMax": 216,
+        "triangulos": 485336,
+        "fpsBabylon": 53,
+        "escala": 0.75,
+        "alivio": 0,
+        "chunks": 29,
+        "malhasAtivas": 148,
+        "moradores": 12,
+        "bichos": 22,
+        "amigos": 2
+      },
+      "cpu4": {
+        "fps": 55.1,
+        "p95ms": 33.3,
+        "piorMs": 33.4,
+        "desenhos": 187,
+        "desenhosMax": 189,
+        "triangulos": 447328,
+        "fpsBabylon": 56,
+        "escala": 0.75,
+        "alivio": 0,
+        "chunks": 29,
+        "malhasAtivas": 141,
+        "moradores": 12,
+        "bichos": 22,
+        "amigos": 2
+      },
+      "detalhe": {
+        "grupos": [
+          {
+            "nome": "lampioes#-#,#",
+            "triangulos": 55660,
+            "malhas": 3,
+            "material": "lampioes"
+          },
+          {
+            "nome": "chunk-#,#",
+            "triangulos": 55166,
+            "malhas": 18,
+            "material": "atlas"
+          },
+          {
+            "nome": "baile-pecas-#,#",
+            "triangulos": 47980,
+            "malhas": 5,
+            "material": "baile-plastico-cv"
+          },
+          {
+            "nome": "criatura#-p#_merged",
+            "triangulos": 34424,
+            "malhas": 17,
+            "material": "criatura-35-plastico"
+          },
+          {
+            "nome": "chunk#,#",
+            "triangulos": 22102,
+            "malhas": 6,
+            "material": "atlas"
+          },
+          {
+            "nome": "criatura#-longe",
+            "triangulos": 19612,
+            "malhas": 12,
+            "material": "criatura-13-plastico"
+          },
+          {
+            "nome": "personagem-cabeca-fundida",
+            "triangulos": 15648,
+            "malhas": 8,
+            "material": "personagem-plastico-cv"
+          },
+          {
+            "nome": "baile-abobora-gigante-#,#",
+            "triangulos": 11068,
+            "malhas": 1,
+            "material": "baile-plastico-cv"
+          },
+          {
+            "nome": "personagem-capa-fundida",
+            "triangulos": 10272,
+            "malhas": 1,
+            "material": "personagem-plastico-#ffffff"
+          },
+          {
+            "nome": "personagem-bracoE-fundida",
+            "triangulos": 5444,
+            "malhas": 4,
+            "material": "personagem-plastico-cv"
+          },
+          {
+            "nome": "personagem-bracoD-fundida",
+            "triangulos": 5352,
+            "malhas": 4,
+            "material": "personagem-plastico-cv"
+          },
+          {
+            "nome": "personagem-olhos-fundida",
+            "triangulos": 4704,
+            "malhas": 3,
+            "material": "personagem-plastico-cv"
+          },
+          {
+            "nome": "personagem-brilhos-fundida",
+            "triangulos": 4704,
+            "malhas": 3,
+            "material": "personagem-plastico-cv"
+          },
+          {
+            "nome": "ceu",
+            "triangulos": 4624,
+            "malhas": 1,
+            "material": "ceu"
+          },
+          {
+            "nome": "personagem-tronco-fundida",
+            "triangulos": 4328,
+            "malhas": 3,
+            "material": "personagem-plastico-cv"
+          },
+          {
+            "nome": "personagem-boca",
+            "triangulos": 2352,
+            "malhas": 3,
+            "material": "personagem-plastico-#9a4a3c"
+          },
+          {
+            "nome": "personagem-mao-docinho#",
+            "triangulos": 2336,
+            "malhas": 8,
+            "material": "personagem-plastico-#5a3424"
+          },
+          {
+            "nome": "personagem-mao-docinho#-topo",
+            "triangulos": 1568,
+            "malhas": 8,
+            "material": "personagem-plastico-#ff9a3a"
+          },
+          {
+            "nome": "personagem-mao-estampa-olho#",
+            "triangulos": 1176,
+            "malhas": 6,
+            "material": "personagem-plastico-#4a2a18"
+          },
+          {
+            "nome": "baile-abobora-gigante-#,#-noite",
+            "triangulos": 872,
+            "malhas": 1,
+            "material": "baile-luz"
+          },
+          {
+            "nome": "personagem-topete-fundida",
+            "triangulos": 784,
+            "malhas": 1,
+            "material": "personagem-plastico-cv"
+          },
+          {
+            "nome": "personagem-mao-estampa",
+            "triangulos": 768,
+            "malhas": 3,
+            "material": "personagem-plastico-#ff9a3a"
+          },
+          {
+            "nome": "personagem-pernaE-fundida",
+            "triangulos": 648,
+            "malhas": 3,
+            "material": "personagem-plastico-cv"
+          },
+          {
+            "nome": "personagem-pernaD-fundida",
+            "triangulos": 648,
+            "malhas": 3,
+            "material": "personagem-plastico-cv"
+          },
+          {
+            "nome": "personagem-mao-alca#",
+            "triangulos": 648,
+            "malhas": 6,
+            "material": "personagem-plastico-#ff9a3a"
+          }
+        ],
+        "seres": [
+          "criatura raposa #37: 12888",
+          "criatura cervo #35: 10768",
+          "criatura cervo #36: 10768",
+          "criatura espectro #30: 3568",
+          "criatura espectro #31: 3568",
+          "criatura cervo #13: 3224",
+          "criatura cervo #14: 3224",
+          "criatura cervo #18: 3224",
+          "criatura coelho #34: 2804"
+        ]
+      }
+    }
+  },
+  "piorRumo": "oeste",
+  "perdasDoContexto": 0,
+  "avisos": [],
+  "quando": "2026-11-22T16:47:46.669Z"
+}

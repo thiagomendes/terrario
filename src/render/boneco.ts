@@ -38,6 +38,7 @@ import {
   caixaFeita,
   dadosEsfera,
   segmentosDaBolinha,
+  segmentosDeLonge,
   dadosAnel,
   dadosPlaca,
   dadosMalhaPano,
@@ -80,7 +81,7 @@ export function montarPeca(scene: Scene, mats: Plasticos, p: Peca, prefixo: stri
     );
   else if (p.forma === 'esfera') {
     const r = Math.max(p.tamanho[0], p.tamanho[1], p.tamanho[2]);
-    m = esfera(nome, scene, r, mat, [p.tamanho[0] / r, p.tamanho[1] / r, p.tamanho[2] / r]);
+    m = esfera(nome, scene, r, mat, [p.tamanho[0] / r, p.tamanho[1] / r, p.tamanho[2] / r], p.gomos);
   } else if (p.forma === 'cilindro')
     m = cilindro(nome, scene, p.tamanho[0], p.tamanho[1], p.tamanho[2], mat);
   else if (p.forma === 'placa') {
@@ -128,21 +129,28 @@ export function dadosDaPeca(
   corNoVertice = false,
   /** Spec 026: as bolinhas com os gomos pelo tamanho (os moradores com esqueleto). */
   leve = false,
+  /**
+   * Spec 027 (T22): o boneco de longe (o morador a mais de 18 blocos da câmera): menos gomos nas
+   * bolinhas, quinas e cilindros. O desenho é o mesmo, peça por peça.
+   */
+  grosso = false,
 ): VertexData {
   let vd: VertexData;
   let escala: [number, number, number] = [1, 1, 1];
   if (p.forma === 'caixa')
-    vd = caixaFeita(p.tamanho[0], p.tamanho[1], p.tamanho[2], p.raio ?? 0.05, 3);
+    vd = caixaFeita(p.tamanho[0], p.tamanho[1], p.tamanho[2], p.raio ?? 0.05, grosso ? 2 : 3);
   else if (p.forma === 'esfera') {
     const r = Math.max(p.tamanho[0], p.tamanho[1], p.tamanho[2]);
-    vd = dadosEsfera(r, leve ? segmentosDaBolinha(r) : 12);
+    // (de longe, as gotas do pelo, que já são de poucos gomos, ficam com o mínimo)
+    const gomosLonge = p.gomos ? 3 : segmentosDeLonge(r);
+    vd = dadosEsfera(r, grosso ? gomosLonge : (p.gomos ?? (leve ? segmentosDaBolinha(r) : 12)));
     escala = [p.tamanho[0] / r, p.tamanho[1] / r, p.tamanho[2] / r];
   } else if (p.forma === 'cilindro')
     vd = CreateCylinderVertexData({
       height: p.tamanho[0],
       diameterBottom: p.tamanho[1] * 2,
       diameterTop: p.tamanho[2] * 2,
-      tessellation: 14,
+      tessellation: grosso ? 8 : 14,
     });
   else if (p.forma === 'placa') vd = dadosPlaca(p.perfil ?? [], p.tamanho[2]);
   else if (p.forma === 'malha') vd = dadosMalhaPano(p.malha?.pos ?? [], p.malha?.ind ?? []);
@@ -290,6 +298,13 @@ function tiposDaPeca(p: Peca, corNoVertice = false): string {
   return p.viva || corNoVertice ? 'cor' : '';
 }
 
+/** Spec 027 (T22): uma peça fundida e como ela foi montada (para refazer o boneco de longe). */
+interface FontePeca {
+  p: Peca;
+  deslocar?: [number, number, number];
+  cv: boolean;
+}
+
 function naVista(m: Mesh): void {
   m.alwaysSelectAsActiveMesh = true;
   m.doNotSyncBoundingInfo = true;
@@ -332,6 +347,11 @@ export function criarBoneco(
   /** Spec 023: os nós próprios dos premium (as asas do dragão). */
   let subjuntas: Partial<Record<SubjuntaPremium, TransformNode>> = {};
   let malhas: Mesh[] = [];
+  /** Spec 027 (T22): monta o boneco de longe (só com esqueleto; null sem ele). */
+  let montarDeLonge: (() => Mesh[]) | null = null;
+  /** O boneco de longe, quando já montado, e se é ele que aparece agora. */
+  let malhasLonge: Mesh[] | null = null;
+  let emLonge = false;
   /** Spec 026: o esqueleto do boneco fundido e os nós próprios (olhos, brilho, boca). */
   let esqueleto: Skeleton | null = null;
   let nosProprios: TransformNode[] = [];
@@ -401,6 +421,10 @@ export function criarBoneco(
   function limpar(): void {
     pega.parent = null;
     for (const m of malhas) m.dispose();
+    for (const m of malhasLonge ?? []) m.dispose();
+    malhasLonge = null;
+    montarDeLonge = null;
+    emLonge = false;
     for (const n of nosProprios) n.dispose();
     nosProprios = [];
     esqueleto?.dispose();
@@ -445,6 +469,8 @@ export function criarBoneco(
         n: number;
         /** Spec 023: o nó próprio (as asas), quando não é a junta. */
         no?: TransformNode;
+        /** Spec 027 (T22): as peças do grupo, para o boneco de longe (com esqueleto). */
+        fontes: FontePeca[];
       }
     >();
     const materialDe = (p: Peca) => materialDaPeca(scene, mats, p);
@@ -493,7 +519,7 @@ export function criarBoneco(
           paraFundir.set(
             k,
             (g = par
-              ? { junta, material, dados: [], nome: `${par}s`, pivo: [0, 0, 0], n: 0 }
+              ? { junta, material, dados: [], nome: `${par}s`, pivo: [0, 0, 0], n: 0, fontes: [] }
               : {
                   junta,
                   material,
@@ -502,9 +528,11 @@ export function criarBoneco(
                   n: 0,
                   // a mão já foi para a junta do braço (deslocada): o nó próprio é só das asas
                   no: p.subjunta ? noDaPeca(p) : undefined,
+                  fontes: [],
                 }),
           );
         g.dados.push(dadosDaPeca(p, deslocar, !!cv, comEsqueleto));
+        if (comEsqueleto) g.fontes.push({ p, deslocar, cv: !!cv });
         if (g.pivo) {
           g.pivo[0] += p.pos[0];
           g.pivo[1] += p.pos[1];
@@ -578,6 +606,7 @@ export function criarBoneco(
       pivo?: [number, number, number];
       n: number;
       no?: TransformNode;
+      fontes: FontePeca[];
     }>,
     bocas: Peca[],
   ): { olhos: TransformNode[]; boca: TransformNode | null } {
@@ -621,12 +650,16 @@ export function criarBoneco(
       nosProprios.push(t);
       return t;
     };
-    const porMaterial = new Map<string, { material: StandardMaterial; dados: VertexData[] }>();
+    type PorMaterial = Map<string, { material: StandardMaterial; dados: VertexData[] }>;
+    const porMaterial: PorMaterial = new Map();
+    /** Onde cada grupo foi parar (o nó, o material e o desconto), para o boneco de longe. */
+    const alvos: { no: TransformNode; material: StandardMaterial; fontes: FontePeca[]; menos?: number[] }[] = [];
     const juntar = (
       no: TransformNode,
       material: StandardMaterial,
       vds: VertexData[],
       menos?: number[],
+      destino: PorMaterial = porMaterial,
     ) => {
       const i = osso(no);
       const [ax, ay, az] = absoluta(no);
@@ -647,8 +680,8 @@ export function criarBoneco(
         vd.matricesIndices = idx;
         vd.matricesWeights = pes;
         const chave = `${material.uniqueId}|${vd.colors ? 'cor' : ''}|${vd.uvs ? 'uv' : ''}`;
-        let g = porMaterial.get(chave);
-        if (!g) porMaterial.set(chave, (g = { material, dados: [] }));
+        let g = destino.get(chave);
+        if (!g) destino.set(chave, (g = { material, dados: [] }));
         g.dados.push(vd);
       }
     };
@@ -661,7 +694,11 @@ export function criarBoneco(
         const t = noProprio(g.nome, dono, c);
         olhosNos.push(t);
         juntar(t, g.material, g.dados, c);
-      } else juntar(dono, g.material, g.dados);
+        alvos.push({ no: t, material: g.material, fontes: g.fontes, menos: c });
+      } else {
+        juntar(dono, g.material, g.dados);
+        alvos.push({ no: dono, material: g.material, fontes: g.fontes });
+      }
     }
     let bocaNo: TransformNode | null = null;
     for (const p of bocas) {
@@ -673,22 +710,46 @@ export function criarBoneco(
       const t = noProprio('boca', juntas[p.junta], [p.pos[0], p.pos[1], p.pos[2]]);
       bocaNo = t;
       juntar(t, material, [dadosDaPeca(p, undefined, !!cv, true)], p.pos);
+      alvos.push({ no: t, material, fontes: [{ p, cv: !!cv }], menos: p.pos });
     }
-    for (const { material, dados } of porMaterial.values()) {
-      const vd = dados.length === 1 ? dados[0] : dados[0].merge(dados.slice(1), true);
-      const f = new Mesh(`${prefixo}-fundida`, scene);
-      vd.applyToMesh(f);
-      f.material = material;
-      f.skeleton = sk;
-      f.numBoneInfluencers = 1;
-      f.hasVertexAlpha = false;
-      f.isPickable = false;
-      f.receiveShadows = false;
-      f.parent = escalar;
-      f.setEnabled(visivel);
-      f.visibility = opacidade;
-      malhas.push(f);
-    }
+    const subir = (mapa: PorMaterial, nome: string, lista: Mesh[], ligada: boolean) => {
+      for (const { material, dados } of mapa.values()) {
+        const vd = dados.length === 1 ? dados[0] : dados[0].merge(dados.slice(1), true);
+        const f = new Mesh(nome, scene);
+        vd.applyToMesh(f);
+        f.material = material;
+        f.skeleton = sk;
+        f.numBoneInfluencers = 1;
+        f.hasVertexAlpha = false;
+        f.isPickable = false;
+        f.receiveShadows = false;
+        f.parent = escalar;
+        f.setEnabled(ligada);
+        f.visibility = opacidade;
+        if (sempreNaVista) naVista(f);
+        lista.push(f);
+      }
+    };
+    subir(porMaterial, `${prefixo}-fundida`, malhas, visivel);
+    // spec 027 (T22): o boneco de longe, montado só na primeira vez que ele fica longe: as
+    // mesmas peças com menos gomos, nos mesmos ossos (a pose, o piscar e a boca valem igual)
+    montarDeLonge = () => {
+      const mapa: PorMaterial = new Map();
+      for (const a of alvos) {
+        const fontes = a.fontes.filter((f) => !f.p.soPerto);
+        if (!fontes.length) continue;
+        juntar(
+          a.no,
+          a.material,
+          fontes.map((f) => dadosDaPeca(f.p, f.deslocar, f.cv, true, true)),
+          a.menos,
+          mapa,
+        );
+      }
+      const lista: Mesh[] = [];
+      subir(mapa, `${prefixo}-fundida-longe`, lista, false);
+      return lista;
+    };
     return { olhos: olhosNos, boca: bocaNo };
   }
 
@@ -814,15 +875,28 @@ export function criarBoneco(
     plasticos: () => mats,
     definirVisivel(v) {
       visivel = v;
-      for (const m of malhas) m.setEnabled(v);
+      for (const m of malhas) m.setEnabled(v && !emLonge);
+      for (const m of malhasLonge ?? []) m.setEnabled(v && emLonge);
       naMao.definirVisivel(v);
     },
+    definirLonge(sim) {
+      if (sim && !malhasLonge) {
+        if (!montarDeLonge) return false;
+        malhasLonge = montarDeLonge();
+      }
+      if (sim === emLonge) return true;
+      emLonge = sim;
+      for (const m of malhas) m.setEnabled(visivel && !emLonge);
+      for (const m of malhasLonge ?? []) m.setEnabled(visivel && emLonge);
+      return true;
+    },
+    deLonge: () => emLonge,
     definirOpacidade(a) {
       const n = Math.min(1, Math.max(0, a));
       if (n === opacidade) return;
       opacidade = n;
       mats.definirSoFrente(n < 1);
-      for (const m of malhas) {
+      for (const m of [...malhas, ...(malhasLonge ?? [])]) {
         m.visibility = n;
         // meio transparente, a ordem de desenho das peças usa a caixa de cada uma
         if (sempreNaVista) m.doNotSyncBoundingInfo = n >= 1;
