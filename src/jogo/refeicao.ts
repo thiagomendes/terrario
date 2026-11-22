@@ -23,6 +23,8 @@ const JEITO: Readonly<Record<string, JeitoDeComer>> = {
   beijinho: 'pipoca',
   cajuzinho: 'pipoca',
   surpresa_uva: 'pipoca',
+  // (T19: a sacola de doces da n1: um docinho sai a cada mordida, o jeito da forminha)
+  sacola_doces: 'pipoca',
   pocao_uva: 'canudinho',
   chocolate_quente: 'caneca',
 };

@@ -87,17 +87,32 @@ const DISCOS: readonly [number, number, number, number][] = [
 ];
 
 /**
+ * Spec 027 (T19): a patinha do Tufinho (a almofadinha e os quatro dedinhos redondos), no lugar
+ * das pegadinhas na n5, no mesmo verde-água. Menor que o pé da criança.
+ */
+const DISCOS_PATINHA: readonly [number, number, number, number][] = [
+  [0.0, -0.04, 0.1, 0.085],
+  [-0.095, 0.085, 0.036, 0.042],
+  [-0.034, 0.14, 0.036, 0.042],
+  [0.034, 0.14, 0.036, 0.042],
+  [0.095, 0.085, 0.036, 0.042],
+];
+
+/**
  * A pegada deitada no chão. `camadas`: [escala, altura, cor] de cada camada, de baixo para
  * cima (a borda escura por fora, a clara por dentro). Uma malha só, com a cor nos vértices.
  */
-function dadosPegada(camadas: readonly [number, number, Color3][]): VertexData {
+function dadosPegada(
+  camadas: readonly [number, number, Color3][],
+  discos: readonly (readonly [number, number, number, number])[] = DISCOS,
+): VertexData {
   const pos: number[] = [];
   const ind: number[] = [];
   const nor: number[] = [];
   const cor: number[] = [];
   const SEG = 14;
   for (const [esc, y, c] of camadas)
-    for (const [cx, cz, rx0, rz0] of DISCOS) {
+    for (const [cx, cz, rx0, rz0] of discos) {
       // a borda cresce mais nos dedinhos pequenos (o contorno fica do mesmo tamanho)
       const rx = rx0 + (esc - 1) * 0.06;
       const rz = rz0 + (esc - 1) * 0.06;
@@ -121,9 +136,12 @@ function dadosPegada(camadas: readonly [number, number, Color3][]): VertexData {
   return vd;
 }
 
-function criarPegadas(scene: Scene) {
+function criarPegadas(scene: Scene, patinha = false) {
+  const discos = patinha ? DISCOS_PATINHA : DISCOS;
+  const sufixo = patinha ? '-patinhas' : '';
   /** Duas malhas (2 chamadas de desenho): a borda (escura por fora, clara por dentro) e a menta. */
-  const criar = (nome: string, camadas: readonly [number, number, Color3][], zOffset: number) => {
+  const criar = (nome0: string, camadas: readonly [number, number, Color3][], zOffset: number) => {
+    const nome = nome0 + sufixo;
     const mat = new StandardMaterial(nome, scene);
     mat.disableLighting = true;
     mat.emissiveColor = Color3.White();
@@ -132,7 +150,7 @@ function criarPegadas(scene: Scene) {
     mat.backFaceCulling = false;
     mat.zOffset = zOffset;
     const pe = new Mesh(nome, scene);
-    dadosPegada(camadas).applyToMesh(pe);
+    dadosPegada(camadas, discos).applyToMesh(pe);
     pe.useVertexColors = true;
     pe.material = mat;
     pe.isPickable = false;
@@ -166,7 +184,9 @@ function criarPegadas(scene: Scene) {
         if (e <= 0.01) continue;
         const [x, y, z, yaw, lado] = pts[i];
         Quaternion.RotationYawPitchRollToRef(yaw, 0, 0, q);
-        s.set(e * TAM_PEGADA * lado, 1, e * TAM_PEGADA);
+        // (a patinha é menor que o pezinho, e não espelha: é redonda)
+        const t = patinha ? TAM_PEGADA * 0.85 : TAM_PEGADA;
+        s.set(e * t * (patinha ? 1 : lado), 1, e * t);
         p.set(x, y + 0.03 + ergue(i), z);
         Matrix.ComposeToRef(s, q, p, m);
         m.copyToArray(cima.buf, k * 16);
@@ -431,6 +451,8 @@ export interface ApiGuia {
   caminho(): V3[];
   /** As pegadas e as luzinhas à vista. */
   pegadas(): number;
+  /** Spec 027 (T19): as patinhas do Tufinho à vista (a n5 no lugar das pegadinhas)? */
+  patinhas?(): boolean;
   luzes(): number;
   /** As pegadas à vista agora (x, y, z), para os testes medirem. */
   vistas(): [number, number, number][];
@@ -468,7 +490,29 @@ export interface GuiaMissao {
 
 export function criarGuiaMissao(f: FonteGuia): GuiaMissao {
   const { scene } = f;
-  const pegadas = criarPegadas(scene);
+  const pegadinhas = criarPegadas(scene);
+  /** Spec 027 (T19): na n5, as patinhas do Tufinho no lugar das pegadinhas (uma trilha só). */
+  const patinhas = criarPegadas(scene, true);
+  const pegadas = {
+    get atual() {
+      return missao?.id === 'n5' && missao.mundo === 'noite-das-fantasias' ? patinhas : pegadinhas;
+    },
+    desenhar(...a: Parameters<typeof pegadinhas.desenhar>) {
+      (this.atual === patinhas ? pegadinhas : patinhas).tirar();
+      this.atual.desenhar(...a);
+    },
+    tirar() {
+      pegadinhas.tirar();
+      patinhas.tirar();
+    },
+    get n() {
+      return pegadinhas.n + patinhas.n;
+    },
+    /** Testes: as patinhas estão à vista (a n5)? */
+    get patinhas() {
+      return patinhas.n > 0;
+    },
+  };
   const luzes = criarLuzes(scene);
   const placa = criarPlaca();
   const anel = criarAnel(scene);
@@ -842,6 +886,7 @@ export function criarGuiaMissao(f: FonteGuia): GuiaMissao {
       alvo ? { chave: alvo.chave, x: alvo.x, y: alvo.y, z: alvo.z, figura: alvo.figura } : null,
     caminho: () => rota.map((p) => [...p] as V3),
     pegadas: () => pegadas.n,
+    patinhas: () => pegadas.patinhas,
     luzes: () => luzes.n,
     vistas: () => vistasAgora.map((q) => [q[0], q[1], q[2]]),
     primeira: () =>

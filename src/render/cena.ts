@@ -112,7 +112,7 @@ import { criarPasseio, lugarDoAmigo, JUNTAS_SENTADO } from './vila/passeio';
 import { carrinhoLivrePerto } from '../jogo/parque';
 import { pilotoDoBate, type Batida } from '../jogo/bate';
 import { criarReplicaBate } from '../cliente/bate';
-import { aplicarJuntas } from '../personagem/gestos';
+import { aplicarJuntas, camadaDeGesto } from '../personagem/gestos';
 import { definirPeloDeTeste, type EstiloPelo } from '../personagem/bonecoPeludo';
 import { PIPOQUEIRO, VENDEDORA_DE_BALOES } from '../nucleo/vila';
 import { criarSomParque, type SomParque } from '../audio/somParque';
@@ -132,7 +132,7 @@ import { criarRenderBaile } from './baile';
 import { criarAbracoNaTela, type AbracoNaTela } from './baile/abraco';
 import { camadaDaVarinha, criarFloresDaVarinha, type FloresDaVarinha } from './baile/flor';
 import { temVarinha } from '../personagem/fantasias';
-import { VARINHA } from '../jogo/baile';
+import { VARINHA, pontosDasMissoes } from '../jogo/baile';
 import { N_BAILE, POVOADO_BAILE } from '../jogo/baile';
 import { criarLampioes, ROSTO_DO_LAMPIAO } from './lampioes';
 import { metaGerada } from '../world/chunk';
@@ -148,7 +148,7 @@ import { caixasDoBloco, cercaConecta, direcaoDoYaw, vetorDirecao } from '../worl
 import { abreEFecha, alternado, ehPorta, ehPorteira } from '../world/portas';
 import { velocidadeMineracao } from '../jogo/ferramentas';
 import { blocoDoItem, obterItem } from '../jogo/itens';
-import { COLHER_PEDREIRO, itemNoMundo } from '../jogo/exclusivos';
+import { COLHER_PEDREIRO, SACOLA_DOCES, itemNoMundo } from '../jogo/exclusivos';
 import { entradaNaCaixa, fantasmaNoRaio } from '../jogo/miraObra';
 import { sanearObras } from '../nucleo/saneamento';
 import {
@@ -236,7 +236,7 @@ import { AJUSTE_COMER } from '../personagem/poses';
 import { CHAVE_TRILHA_SAIDA } from '../audio/trilha';
 import { criarRenderCompras } from './vila/compras';
 import { balcoesDaVila, balcoesDoBaile } from '../jogo/compra';
-import { DURACAO_REFEICAO } from '../jogo/refeicao';
+import { DESCE, DURACAO_REFEICAO } from '../jogo/refeicao';
 import { AVISO_LIMITE, COMIDA_DOS_BICHOS, comeEsse, domaCom, viraCriado } from '../jogo/criacao';
 import { biomaEm, estiloMundo } from '../world/chunk';
 import { criarTrilhaMundo, type InfoTrilha } from '../audio/trilhaMundo';
@@ -478,6 +478,12 @@ export interface EstadoDepuracao {
   baileEstado?: () => import('../jogo/baile').BaileVista | null;
   /** Spec 027 (T18): a réplica da festa (a previsão da lanterna e da porta). */
   baileReplica?: () => import('../cliente/baile').ReplicaBaile;
+  /** Spec 027 (T20, testes): onde se toca em cada coisa das missões da festa. */
+  baileToques?: () => ReturnType<typeof import('../jogo/baile').pontosDasMissoes> | null;
+  /** Spec 027 (T19, testes): quantas vezes a sacola de doces vazia sumiu num brilhinho. */
+  sacolaSumiu?: number;
+  /** Spec 027 (T19, testes e fotos): o que as missões da festa mostram nesta tela. */
+  baileTela?: () => Record<string, unknown> | null;
   /** Spec 027 (T18): um toque de missão para o núcleo (com a previsão na hora). */
   baileMissao?: (c: import('../nucleo/baileMissoes').ComandoMissoesBaile) => void;
   /** Spec 027 (T18): os eventos das missões da festa que chegaram (testes). */
@@ -2008,12 +2014,49 @@ export function criarCena(
   let abracoBaile: AbracoNaTela | null = null;
   /** T16: as florzinhas da varinha (criadas mais abaixo). */
   let floresVarinha: FloresDaVarinha | null = null;
+  /** T19: a vista da alma desta criança (as missões abertas e os lugares já vistos). */
+  const almaVista = () =>
+    (window as unknown as { __almaUi?: { vista(): { abertas: { id: string; usos?: string[] }[] } | null } }).__almaUi?.vista() ??
+    null;
   const renderBaile = planoBaile
     ? criarRenderBaile(scene, planoBaile, {
         temMalha: (cx, cz) => malhas.has(chave(cx, cz)),
         tapaOGlow,
         brilha: brilhaNaVila,
         porQuadro: toqueGrosso ? 1 : 2,
+        // T19: as lanternas do bosque acendem pela n2 (o mundo, ou a previsão do toque)
+        lanternaAcesa: (i) => cliente.baile.acesa(i, performance.now() / 1000),
+        missoes: {
+          estado: () => cliente.baile.estado,
+          aberta: (id) => !!almaVista()?.abertas.some((a) => a.id === id),
+          usos: (id) => almaVista()?.abertas.find((a) => a.id === id)?.usos ?? [],
+          voce: () => voce,
+          pes: (id) => {
+            if (id === voce) return [controle.jogador.x, controle.jogador.y, controle.jogador.z];
+            const o = outrosJogadores.leves().find((q) => q.id === id);
+            return o ? [o.x, o.y, o.z] : null;
+          },
+          criarLulu: () => {
+            const c = renderCriaturas.copiaDoMorador(POVOADO_BAILE, N_BAILE.lulu, 'cozinheiro');
+            for (const m of c.boneco.raiz.getChildMeshes()) m.isPickable = false;
+            return {
+              posicionar: (x, y, z, yaw) => c.boneco.posicionar(x, y, z, yaw),
+              comemorar: () => c.animador.definirCamada(camadaDeGesto('comemorar')),
+              mostrar: (sim) => c.boneco.raiz.setEnabled(sim),
+              quadro: (dt) => {
+                const pose = c.animador.atualizar(dt, { velocidadeHoriz: 0, correndo: false, noChao: true, voando: false });
+                c.boneco.aplicarPose(pose, { dt, olhar: 0, vista: c.animador.vista() });
+              },
+              descartar: () => c.boneco.descartar(),
+            };
+          },
+          som: (qual, volume) => {
+            // (a risadinha é a da fantasminha deste mundo, baixinha; o miado e os sons próprios
+            // das missões vêm na T21)
+            if (qual === 'risadinha') vozes.bicho('espectro', 'contente', { volume: volume * 0.6, quem: 'lulu' });
+            else somEfeito(qual === 'plim' ? 'coleta' : 'brilho', 80);
+          },
+        },
       })
     : null;
   estado.bailePecas = () =>
@@ -2483,10 +2526,23 @@ export function criarCena(
   // abre na hora, pela previsão; o núcleo confere e manda o resto)
   estado.baileEstado = () => (planoBaile ? cliente.baile.estado : null);
   estado.baileReplica = () => cliente.baile;
+  estado.baileToques = () => (planoBaile ? pontosDasMissoes(planoBaile) : null);
+  estado.baileTela = () =>
+    renderBaile
+      ? {
+          ...(renderBaile.missoes?.estado() ?? {}),
+          portas: renderBaile.estadoPortas(),
+          bichos: renderBaile.bichos.lista(),
+        }
+      : null;
   estado.eventosBaile = [];
   estado.baileMissao = (c) => {
     if (!planoBaile) return;
     if (c.a === 'lanterna' || c.a === 'campainha') cliente.baile.prever(c, performance.now() / 1000);
+    // (a porta já abre na hora do toque, a previsão; o núcleo confirma e o doce vem)
+    const q = c.a === 'campainha' ? planoBaile.pontos.portas[c.i] : null;
+    const k = q && renderBaile ? renderBaile.portaDaRua(q.x, q.z) : -1;
+    if (k >= 0) renderBaile!.abrirPorta(k);
     enviarTelemetria(true);
     enviar({ t: 'baile', ...c } as Comando);
   };
@@ -6040,6 +6096,16 @@ export function criarCena(
     enviar({ t: 'comer', slot: hotbar.ativo });
     animador.evento('comer');
     refeicoes.comecar(personagem, p.item, true);
+    // spec 027 (T19): o último docinho da sacola: no fim da refeição, a sacola vazia some da mão
+    // num brilhinho de estrelinhas
+    if (p.item === SACOLA_DOCES && p.qtd <= 1)
+      setTimeout(() => {
+        const j = controle.jogador;
+        const yaw = animador.yaw();
+        floresVarinha?.brilhinho(j.x + Math.sin(yaw) * 0.35, j.y + 1.0, j.z + Math.cos(yaw) * 0.35);
+        somEfeito('brilho', 80);
+        estado.sacolaSumiu = (estado.sacolaSumiu ?? 0) + 1;
+      }, DESCE * 1000);
     window.dispatchEvent(new CustomEvent('brumaluz:comendo', { detail: p.item }));
   }
   // dica perto da mira: como falar com o morador, domar a raposa, comer
@@ -7150,6 +7216,26 @@ export function criarCena(
     const ve = renderVeiculos.lista().find((v) => v.id === e.id);
     somVeiculos.evento(e.o, ve, atualizarOuvinte(), performance.now() / 1000);
   }
+  /**
+   * Spec 027 (T19): os momentos das missões da festa na tela. A porta da rua abre (e o vizinho dela
+   * acena), o docinho voa até a sacola e, na terceira porta, a travessura; a lanterna que contou de
+   * novo pisca; o Dudu acena para quem acendeu as cinco; a Lulu achada pula; a rega.
+   */
+  function eventoDaFesta(e: import('../nucleo/baileMissoes').EventoMissoesBaile): void {
+    if (!renderBaile || !planoBaile) return;
+    if (e.e === 'bailePorta') {
+      const q = planoBaile.pontos.portas[e.i];
+      const k = q ? renderBaile.portaDaRua(q.x, q.z) : -1;
+      if (k >= 0) renderBaile.abrirPorta(k);
+      if (q) acenarBaile(q.vovo ? N_BAILE.vovo : N_BAILE.rua + e.i);
+    }
+    if (e.e === 'baileLanterna') {
+      renderBaile.piscarLanterna(e.i);
+      if (e.conta && e.quem === voce && (cliente.baile.estado?.lc.length ?? 0) >= planoBaile.pontos.lanternas.length)
+        acenarBaile(N_BAILE.dudu);
+    }
+    renderBaile.missoes?.evento(e);
+  }
   function tratarEvento(e: EventoNucleo): void {
     switch (e.e) {
       // spec 026: a Vila Neon (o final do show, o estojo, a caixa, a lhama, o pôster, o arco)
@@ -7184,6 +7270,7 @@ export function criarCena(
       case 'baileCarinha':
       case 'baileLampiao':
       case 'baileTufinho':
+        eventoDaFesta(e);
         estado.eventosBaile?.push({ ...e, recebido: performance.now() / 1000 });
         if ((estado.eventosBaile?.length ?? 0) > 200) estado.eventosBaile!.splice(0, 100);
         break;

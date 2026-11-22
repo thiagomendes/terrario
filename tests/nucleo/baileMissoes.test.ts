@@ -20,6 +20,7 @@ import {
 import { LAMPIOES_CARINHA, SACOLA_DOCES, SACOLA_VAZIA, itemNoMundo } from '../../src/jogo/exclusivos';
 import { idDoBloco } from '../../src/jogo/itens';
 import { VERSAO_REDE } from '../../src/rede/protocolo';
+import { caixasDaPecaBaile } from '../../src/world/baileSolidos';
 import { TOQUES_POR_SEGUNDO } from '../../src/jogo/show';
 
 /**
@@ -157,9 +158,16 @@ describe('spec 027 (T18): as missões n1 a n5 no núcleo', () => {
         expect(blocos[indice(lx, p.h, lz)]).not.toBe(Bloco.AGUA);
         expect(obterBloco(blocos[indice(lx, p.h + 1, lz)])?.solido, `pés em ${x},${z}`).toBe(false);
       }
-      // o do bosque fica no bosque, o da abóbora atrás dela (do lado do palco)
+      // o do bosque fica no bosque; o da abóbora atrás dela (do lado do palco), encostado na casca
+      // e fora das caixas que a seguram
       const [ab, , bo] = p.pontos.esconderijos;
-      expect(ab.z).toBeLessThan(p.pontos.abobora.z - p.pontos.abobora.lado / 2);
+      const A = p.pontos.abobora;
+      expect(ab.z).toBeLessThan(A.z - 2);
+      const d = Math.hypot(ab.x - A.x, ab.z - A.z);
+      expect(d).toBeGreaterThan(A.lado * 0.56);
+      expect(d).toBeLessThan(A.lado * 0.7);
+      for (const c of caixasDaPecaBaile(p.pecas.find((q) => q.tipo === 'abobora-gigante')!))
+        expect(ab.x > c[0] - 0.3 && ab.x < c[3] + 0.3 && ab.z > c[2] - 0.3 && ab.z < c[5] + 0.3).toBe(false);
       const zb = p.zonas.bosque;
       expect(bo.x >= zb.x0 && bo.x <= zb.x1 + 1 && bo.z >= zb.z0 && bo.z <= zb.z1 + 1).toBe(true);
     }

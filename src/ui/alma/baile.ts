@@ -141,11 +141,8 @@ export function ligarBaile(e: EstadoDepuracao, ui?: AlmaUi): void {
       // canteiro marcado, as carinhas da bancada, a porta da Vovó, o Tufinho e a parreirinha
       const pm = pontos;
       pm.portas.forEach(([px, py, pz], i) =>
-        conferir(px, py, pz, MISSOES_BAILE.campainha - 0.5, () => {
-          const k = portasDaTela.findIndex((q) => daRua(q) === i);
-          if (k >= 0) e.baileToque?.({ a: 'porta', i: k });
-          e.baileMissao?.({ a: 'campainha', i });
-        }),
+        // (a porta abre na hora, pela previsão; o núcleo confirma e o doce vem)
+        conferir(px, py, pz, MISSOES_BAILE.campainha - 0.5, () => e.baileMissao?.({ a: 'campainha', i })),
       );
       pm.lanternas.forEach(([lx, ly, lz], i) =>
         conferir(lx, ly, lz, MISSOES_BAILE.lanterna - 0.5, () => e.baileMissao?.({ a: 'lanterna', i })),

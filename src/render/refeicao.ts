@@ -95,6 +95,7 @@ const CONTATO: Readonly<Record<string, [number, number, number]>> = {
   beijinho: [0.075, 0.06, 0],
   cajuzinho: [0.075, 0.06, 0],
   surpresa_uva: [0.075, 0.06, 0],
+  sacola_doces: [0.075, 0.17, 0],
   chocolate_quente: [0.055, 0.11, 0],
   pocao_uva: [0.045, 0.235, 0],
 };
@@ -116,6 +117,7 @@ const DESLOCAR: Readonly<Record<string, [number, number, number]>> = {
   beijinho: [0.03, 0.08, 0],
   cajuzinho: [0.03, 0.08, 0],
   surpresa_uva: [0.03, 0.08, 0],
+  sacola_doces: [0.03, 0.02, 0],
   chocolate_quente: [0.03, -0.01, 0],
   pocao_uva: [0.03, 0, 0],
 };
@@ -173,6 +175,7 @@ const MIGALHAS: Readonly<Record<string, string[]>> = {
   beijinho: ['#fbf3e6', '#e8dcc6'],
   cajuzinho: ['#e0904a', '#c88a4a'],
   surpresa_uva: ['#fbf3e6', '#7a3ea8'],
+  sacola_doces: ['#5a3424', '#ff9a3a'],
   chocolate_quente: ['#7a4a30'],
   pocao_uva: ['#b07ae0'],
 };
@@ -646,8 +649,10 @@ export function montarComidaMordida(
         b.m.rotation.y = b.ry + a;
       }
     };
-    ponto = () => new Vector3(0.036, 0.07, 0);
-    contato = () => new Vector3(0.07, 0.06, 0);
+    // (o docinho da vez na boca: na forminha ele fica baixo, na sacola de doces, na beira dela)
+    const y0 = doDocinho(0)[0]?.position.y ?? 0.058;
+    ponto = () => new Vector3(0.036, y0 + 0.012, 0);
+    contato = () => new Vector3(0.07, y0 + 0.002, 0);
   } else if (jeito === 'caneca') {
     // spec 027 (T15): o gole de caneca: o chocolate desce a cada gole e a fumacinha vai sumindo
     const choco = peca('chocolate');

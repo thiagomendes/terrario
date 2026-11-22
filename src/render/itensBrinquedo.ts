@@ -380,6 +380,54 @@ export function modeloNaMao(
         }
         break;
       }
+      case 'sacola_vazia':
+      case 'sacola_doces': {
+        // spec 027 (T19): a sacola de doces da n1: lilás, a beira laranja, a alça e a abóbora
+        // sorridente estampada na frente; a cheia com o brigadeiro, o beijinho e o cajuzinho
+        // espiando pela boca (um sai a cada mordida)
+        add(cx('sacola', 0.15, 0.15, 0.1, 0.02, '#9a6ad8'), 0, 0.075, 0);
+        add(cx('beira', 0.156, 0.024, 0.106, 0.008, '#ff9a3a'), 0, 0.15, 0);
+        for (const s of [-1, 1]) add(cx(`alca${s}`, 0.012, 0.07, 0.012, 0.004, '#ff9a3a'), s * 0.045, 0.19, 0);
+        add(cx('alca-topo', 0.102, 0.012, 0.012, 0.004, '#ff9a3a'), 0, 0.225, 0);
+        add(bo('estampa', 0.03, '#ff9a3a', [1.15, 0.9, 0.3]), 0, 0.075, 0.05);
+        add(cx('estampa-cabo', 0.008, 0.014, 0.006, 0.002, '#5f8a34'), 0, 0.106, 0.052);
+        for (const s of [-1, 1]) add(bo(`estampa-olho${s}`, 0.006, '#4a2a18', [1, 1, 0.4]), s * 0.012, 0.082, 0.06);
+        add(cx('estampa-boca', 0.022, 0.005, 0.004, 0.002, '#4a2a18'), 0, 0.064, 0.061);
+        if (item === 'sacola_doces') {
+          const DOCES: [string, string][] = [
+            ['#5a3424', '#ff9a3a'],
+            ['#fbf3e6', '#4a2a18'],
+            ['#e0904a', '#c88a4a'],
+          ];
+          DOCES.forEach(([cor, topo], k) => {
+            const a = (k / 3) * Math.PI * 2;
+            const x = Math.cos(a) * 0.032;
+            const z = Math.sin(a) * 0.026;
+            add(bo(`docinho${k}`, 0.03, cor, [1, 0.92, 1], 0.42), x, 0.168, z);
+            add(bo(`docinho${k}-topo`, 0.009, topo, [1, 1, 1], 0.3), x, 0.196, z);
+          });
+        }
+        break;
+      }
+      case 'lampiao_sorriso':
+      case 'lampiao_lingua':
+      case 'lampiao_piscadinha': {
+        // spec 027 (T19): o lampião de carinha da n4 (a abóbora redonda, os olhos redondos acesos)
+        add(bo('abobora', 0.085, '#f08a2a', [1.15, 0.85, 1.15], 0.25), 0, 0.075, 0);
+        for (let i = 0; i < 6; i++) {
+          const a = (i / 6) * Math.PI * 2;
+          add(bo(`gomo${i}`, 0.05, '#e07c1e', [0.7, 1.25, 0.7], 0.2), Math.cos(a) * 0.06, 0.075, Math.sin(a) * 0.06);
+        }
+        add(ci('cabo', 0.04, 0.01, 0.013, '#5f8a34'), 0, 0.165, 0);
+        const ACESO = '#ffd84a';
+        const pisca = item === 'lampiao_piscadinha';
+        add(bo('olho-d', 0.014, ACESO, [1, 1, 0.5], 0.9), 0.03, 0.095, 0.088);
+        if (pisca) add(cx('olho-e', 0.03, 0.006, 0.006, 0.002, ACESO, 0.9), -0.03, 0.093, 0.09);
+        else add(bo('olho-e', 0.014, ACESO, [1, 1, 0.5], 0.9), -0.03, 0.095, 0.088);
+        add(cx('boca', 0.06, 0.012, 0.006, 0.004, ACESO, 0.9), 0, 0.058, 0.092);
+        if (item === 'lampiao_lingua') add(bo('lingua', 0.014, '#ff7aa8', [1.2, 1, 0.6]), 0.008, 0.046, 0.094);
+        break;
+      }
       case 'chocolate_quente': {
         // spec 027 (T15): a caneca laranja de alça, o chocolate dentro (desce a cada gole) e a
         // fumacinha

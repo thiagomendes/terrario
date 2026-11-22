@@ -850,6 +850,19 @@ export function criarRenderCriaturas(
       return mb ? { boneco: mb.boneco, animador: mb.animador } : null;
     },
     /**
+     * Spec 027 (T19): uma cópia do boneco de um morador de posto, só desta tela (a Lulu escondida
+     * da n3, que só quem procura vê). O dono da cópia posiciona, anima e descarta.
+     */
+    copiaDoMorador(
+      povoado: string,
+      n: number,
+      profissao: Profissao,
+    ): { boneco: Personagem; animador: ReturnType<typeof criarAnimador> } {
+      const falsa = { id: 900_000 + n, x: 0, y: 0, z: 0, morador: { povoado, n, profissao } } as unknown as Criatura;
+      const mb = montarMorador(falsa);
+      return { boneco: mb.boneco, animador: mb.animador };
+    },
+    /**
      * Spec 026: uma pose por cima da do morador (a banda no Show da Vila); null tira.
      */
     /**

@@ -18,6 +18,8 @@ interface Flor {
   malhas: Mesh[];
   t: number;
   brilhos: { m: Mesh; vx: number; vy: number; vz: number }[];
+  /** T19: só o brilhinho (a sacola de doces vazia que some), sem a flor. */
+  so?: true;
 }
 
 /** No máximo tantas flores ao mesmo tempo (as mais velhas somem antes). */
@@ -66,11 +68,24 @@ export function criarFloresDaVarinha(scene: Scene, op: { preparar?(m: Mesh): voi
     f.no.dispose();
   }
 
-  function nova(x: number, y: number, z: number): void {
+  function nova(x: number, y: number, z: number, so = false): void {
     if (flores.length >= MAX_FLORES) descartar(flores.shift()!);
     const k = n++;
     const no = new TransformNode(`flor-varinha-${k}`, scene);
     no.position.set(x, y, z);
+    if (so) {
+      // (só as estrelinhas: a sacola vazia some num brilhinho)
+      const brilhos = Array.from({ length: 9 }, (_, i) => {
+        const a = (i / 9) * Math.PI * 2;
+        const m = esfera(`flor-brilho-${k}-${i}`, scene, 0.028, mats.cor('#ffe07a', 1), [1, 1, 1]);
+        m.position.set(x, y, z);
+        m.isPickable = false;
+        op.preparar?.(m);
+        return { m, vx: Math.cos(a) * 0.7, vy: 0.9 + (i % 3) * 0.25, vz: Math.sin(a) * 0.7 };
+      });
+      flores.push({ no, malhas: [], t: 0, brilhos, so: true });
+      return;
+    }
     no.rotation.y = (k * 1.7) % (Math.PI * 2);
     const malhas: Mesh[] = [];
     const add = (m: Mesh, px: number, py: number, pz: number) => {
@@ -116,12 +131,16 @@ export function criarFloresDaVarinha(scene: Scene, op: { preparar?(m: Mesh): voi
     evento(e: { e: 'baileFlor'; x: number; y: number; z: number }): void {
       nova(e.x, e.y, e.z);
     },
+    /** T19: só o brilhinho das estrelinhas (a sacola de doces vazia que some da mão). */
+    brilhinho(x: number, y: number, z: number): void {
+      nova(x, y, z, true);
+    },
     atualizar(dt: number): void {
       const p = dt > 0 && Number.isFinite(dt) ? Math.min(dt, 0.1) : 0;
       const ficam: Flor[] = [];
       for (const f of flores) {
         f.t += p;
-        if (f.t >= VARINHA.flor) {
+        if (f.t >= (f.so ? 0.85 : VARINHA.flor)) {
           descartar(f);
           continue;
         }

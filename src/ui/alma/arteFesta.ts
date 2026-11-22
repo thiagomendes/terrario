@@ -72,6 +72,33 @@ const lulu = (rindo: boolean) => `
   <circle cx="25" cy="32" r="2" fill="#ff9aa8" opacity="0.7"/><circle cx="39" cy="32" r="2" fill="#ff9aa8" opacity="0.7"/>
   <path d="M19 26 Q20 18 26 14" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round"/>`;
 
+/**
+ * O Conde Dudu (T19, no cartão da n2): o vampirinho de brinquedo, a carinha redonda e corada, o
+ * cabelo roxo-escuro com o topete, a gola alta roxa de forro laranja aberta em leque atrás da
+ * cabeça e a gravatinha. Sem presas e sem nada de bravo: `sorrindo` abre o sorriso (o bosque aceso);
+ * sem ele, a boquinha preocupada e as sobrancelhas para cima (o medo do escuro, fofo).
+ */
+const dudu = (sorrindo: boolean) => `
+  ${sombra(32, 59, 18)}
+  <path d="M8 40 Q6 18 18 10 L26 26 Z" fill="${LARANJA}" ${s(2.5)}/>
+  <path d="M56 40 Q58 18 46 10 L38 26 Z" fill="${LARANJA}" ${s(2.5)}/>
+  <path d="M11 40 Q10 22 19 14 L25 28 Z" fill="${ROXO}"/>
+  <path d="M53 40 Q54 22 45 14 L39 28 Z" fill="${ROXO}"/>
+  <path d="M16 56 Q16 44 32 42 Q48 44 48 56 Z" fill="${ROXO_ESCURO}" ${s()}/>
+  <path d="M27 44 L32 50 L37 44 Z" fill="#fff6e8" ${s(2)}/>
+  <path d="M29 50 L32 47 L35 50 L32 53 Z" fill="${LARANJA}" ${s(1.6)}/>
+  <circle cx="32" cy="29" r="15" fill="#f6d2b4" ${s()}/>
+  <path d="M17 26 Q18 12 32 12 Q46 12 47 26 Q40 19 34 22 L32 26 L30 22 Q24 19 17 26 Z" fill="#3e2a52" ${s(2.5)}/>
+  <circle cx="26" cy="30" r="2.8" fill="${C}"/><circle cx="38" cy="30" r="2.8" fill="${C}"/>
+  <circle cx="27" cy="29" r="1" fill="#fff"/><circle cx="39" cy="29" r="1" fill="#fff"/>
+  <circle cx="22" cy="35" r="2.6" fill="#ff9aa8" opacity="0.7"/><circle cx="42" cy="35" r="2.6" fill="#ff9aa8" opacity="0.7"/>
+  ${
+    sorrindo
+      ? `<path d="M26 35 Q32 42 38 35 Q32 38 26 35 Z" fill="#c8506a" ${s(2)}/>`
+      : `<path d="M28 38 Q32 35 36 38" fill="none" stroke="${C}" stroke-width="2.2" stroke-linecap="round"/>
+  <path d="M22 24 L28 22.5 M42 24 L36 22.5" stroke="${C}" stroke-width="2" stroke-linecap="round"/>`
+  }`;
+
 /** A abóbora de carinha (olhos redondos e o sorriso), o lampião que vai na porta da Vovó. */
 const aboboraCarinha = `
   ${sombra(32, 58, 22)}
@@ -130,11 +157,13 @@ export const ARTE_FESTA: Record<string, string> = {
   /** n2: a lanterna apagada, a acesa e o caminho do bosque aceso (três lanternas). */
   lanternaApagada: svg(lanterna(false)),
   lanternaAcesa: svg(lanterna(true)),
+  /** n2 (T19): o Conde Dudu no cartão (com medo do escuro), e sorrindo no bosque aceso. */
+  dudu: svg(dudu(false)),
   bosqueAceso: svg(`
     <path d="M4 60 Q32 44 60 60 Z" fill="#b89ad8"/>
-    ${dentro(lanterna(true), 0, 14, 30)}
-    ${dentro(lanterna(true), 34, 14, 30)}
-    ${dentro(lanterna(true), 15, 0, 34)}`),
+    ${dentro(lanterna(true), -4, 2, 30)}
+    ${dentro(lanterna(true), 38, 2, 30)}
+    ${dentro(dudu(true), 14, 18, 38)}`),
   /** n3: a Lulu tímida (o que achar) e a Lulu achada, rindo de braços para cima. */
   lulu: svg(lulu(false)),
   luluAchada: svg(lulu(true)),

@@ -180,7 +180,16 @@ export function criarBichosBaile(
   mat: StandardMaterial,
   temMalha: (cx: number, cz: number) => boolean,
   preparar: (m: Mesh) => void,
+  /**
+   * T19 (n5): onde o Tufinho está agora, quando não está no banquinho (fugido na horta, ou atrás
+   * de quem ele segue); null: no banquinho.
+   */
+  lugarDoTufinho?: (
+    t: number,
+    dt: number,
+  ) => { x: number; y: number; z: number; yaw: number; anda: number; brinca: boolean } | null,
 ): BichosBaile {
+  let ultimo = -1;
   const enfeites: Enfeite[] = [];
   const banco = plano.pecas.find((p) => p.tipo === 'banquinho');
   if (banco)
@@ -208,7 +217,20 @@ export function criarBichosBaile(
 
   return {
     quadro(t) {
+      const dt = ultimo < 0 ? 0 : Math.min(0.1, Math.max(0, t - ultimo));
+      ultimo = t;
       for (const e of enfeites) {
+        // T19: o Tufinho fora do banquinho (a horta, ou seguindo alguém)
+        const fora = e.nome === 'tufinho' ? (lugarDoTufinho?.(t, dt) ?? null) : null;
+        if (e.nome === 'tufinho') {
+          if (fora) {
+            e.cx = Math.floor(fora.x / 16);
+            e.cz = Math.floor(fora.z / 16);
+          } else if (banco) {
+            e.cx = Math.floor(banco.x / 16);
+            e.cz = Math.floor(banco.z / 16);
+          }
+        }
         const pode = temMalha(e.cx, e.cz);
         if (pode && !e.vivo) {
           e.vivo = montar(scene, e.nome, desenhos[e.nome], mat);
@@ -222,9 +244,21 @@ export function criarBichosBaile(
         const v = e.vivo;
         if (!v) continue;
         if (e.nome === 'tufinho') {
+          // T19: fora do banquinho, no chão (na horta brincando, ou andando atrás de alguém)
+          if (fora) {
+            v.raiz.position.set(fora.x, fora.y, fora.z);
+            v.raiz.rotation.y = fora.yaw;
+            // andando, o corpinho inclina para a frente e o rabo balança mais
+            v.raiz.rotation.x = Math.min(0.18, fora.anda * 0.04);
+            if (v.cauda) v.cauda.rotation.y = Math.sin(t * (fora.anda > 0.5 ? 6 : 3)) * 0.45;
+          } else {
+            v.raiz.position.set(...e.lugar);
+            v.raiz.rotation.y = e.yaw;
+            v.raiz.rotation.x = 0;
+          }
           // respira, abana a pontinha do rabo e vira a cabecinha de vez em quando
           v.raiz.scaling.set(1, 1 + Math.sin(t * 2.2) * 0.015, 1);
-          if (v.cauda) v.cauda.rotation.y = Math.sin(t * 1.7) * 0.25;
+          if (v.cauda && !fora) v.cauda.rotation.y = Math.sin(t * 1.7) * 0.25;
           if (v.cabeca) {
             const olha = Math.sin(t * 0.35) > 0.6 ? Math.sin(t * 0.7) * 0.45 : 0;
             v.cabeca.rotation.y += (olha - v.cabeca.rotation.y) * 0.05;
@@ -238,7 +272,11 @@ export function criarBichosBaile(
       }
     },
     lista: () =>
-      enfeites.map((e) => ({ nome: e.nome, x: e.lugar[0], y: e.lugar[1], z: e.lugar[2], vivo: !!e.vivo })),
+      // (onde ele está desenhado agora: fora do banquinho na n5)
+      enfeites.map((e) => {
+        const p = e.vivo?.raiz.position;
+        return { nome: e.nome, x: p?.x ?? e.lugar[0], y: p?.y ?? e.lugar[1], z: p?.z ?? e.lugar[2], vivo: !!e.vivo };
+      }),
     descartar() {
       for (const e of enfeites) e.vivo?.raiz.dispose();
     },

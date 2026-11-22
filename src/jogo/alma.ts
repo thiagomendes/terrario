@@ -584,7 +584,9 @@ export const MISSOES: readonly Missao[] = [
     desenho: {
       tipo: 'arte',
       principal: 'lanternaApagada',
-      selo: 'pegar',
+      // (T19: o Conde Dudu no cartão: a lanterna apagada + o Dudu com medo → o bosque aceso
+      // com o Dudu sorrindo)
+      selo: 'dudu',
       resultado: 'bosqueAceso',
       bolinha: 'lanternaAcesa',
       placa: 'lanternaAcesa',

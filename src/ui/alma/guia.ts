@@ -9,7 +9,7 @@ import type { EstadoDepuracao } from '../../render/cena';
 import { criarGuiaMissao, type ApiGuia, type GuiaMissao } from '../../render/guiaMissao';
 import { criarRelogioConvite, CONVITE_S, type MundoDoGuia } from '../../jogo/guia';
 import { Bloco } from '../../world/blocks';
-import { celulaTomadaPelaVila } from '../../world/vilaSolidos';
+import { celulaTomadaPelaVila, celulaTomadaPeloBaile } from '../../world/vilaSolidos';
 import { CANTEIRO_BOLO } from '../../world/protecao';
 import type { AlmaUi } from './index';
 import { missaoFixada } from './hud';
@@ -119,6 +119,9 @@ export function ligarGuiaMissao(e: EstadoDepuracao, ui: AlmaUi): GuiaMissao | nu
       }
       return false;
     },
+    // spec 027 (T19): a vila da festa e o estado das missões desta criança
+    baile: e.baile?.() ?? null,
+    estadoBaile: () => e.baileEstado?.() ?? null,
     // spec 026 (f4): de patins, o guia leva aos arcos do rinque; sem eles, ao suporte
     comPatins: () => !!e.personagem?.aparencia().patins,
     // parte 3B: o skate da f11, a fita da f9 e a vitamina da f12, o filme e o sofá
@@ -147,7 +150,9 @@ export function ligarGuiaMissao(e: EstadoDepuracao, ui: AlmaUi): GuiaMissao | nu
     },
     bloco,
     // spec 026: os carros, bancos e brinquedos da Vila Neon (a trilha dá a volta)
-    peca: (x, y, z) => celulaTomadaPelaVila(mundo.vila ?? null, x, y, z),
+    // (spec 027: e as barracas, a abóbora gigante e os bancos da festa)
+    peca: (x, y, z) =>
+      celulaTomadaPelaVila(mundo.vila ?? null, x, y, z) || celulaTomadaPeloBaile(mundo.baile ?? null, x, y, z),
     conhecido: () => true,
     mundo: () => mundo,
     tela: (x, y, z) => e.telaDoPonto?.(x, y, z) ?? null,

@@ -1,6 +1,6 @@
 import { expect, test, type Browser, type Page } from '@playwright/test';
 import { mkdirSync } from 'node:fs';
-import { abrirMundo, assentar, type Tamanho } from './guia-palco';
+import { abrirMundo, andarPelaTrilha, assentar, criarMundo, escolherNaRoda, tocar, type Tamanho } from './guia-palco';
 
 /**
  * Spec 027: as missões n1 a n5 da Noite das Fantasias na tela, com o dedo de verdade.
@@ -79,6 +79,298 @@ async function tocarNoMundo(page: Page, p: [number, number, number]): Promise<vo
   else await page.mouse.click(t!.x, t!.y);
 }
 
+/** A câmera fixa das fotos (posição e alvo; null volta a câmera do jogo). */
+async function cameraFixa(page: Page): Promise<void> {
+  await page.evaluate(() => {
+    const e = window.__brumaluz!;
+    type V3 = [number, number, number];
+    const w = window as unknown as { __camFixa: { p: V3; a: V3 } | null };
+    w.__camFixa = null;
+    e.cenaBabylon!().onBeforeCameraRenderObservable.add((c) => {
+      const f = w.__camFixa;
+      if (!f) return;
+      const cam = c as unknown as {
+        position: { set(...a: number[]): void; clone(): { set(...a: number[]): unknown } };
+        setTarget(v: unknown): void;
+      };
+      cam.position.set(...f.p);
+      const alvo = cam.position.clone();
+      alvo.set(...f.a);
+      cam.setTarget(alvo);
+      (c.getScene() as unknown as { setTransformMatrix(a: unknown, b: unknown): void }).setTransformMatrix(
+        (c as unknown as { getViewMatrix(f: boolean): unknown }).getViewMatrix(true),
+        (c as unknown as { getProjectionMatrix(f: boolean): unknown }).getProjectionMatrix(true),
+      );
+    });
+  });
+}
+const camera = (page: Page, p: [number, number, number] | null, a: [number, number, number] = [0, 0, 0]) =>
+  page.evaluate(({ p, a }) => {
+    (window as unknown as { __camFixa: unknown }).__camFixa = p ? { p, a } : null;
+  }, { p, a });
+const tela = (page: Page) => page.evaluate(() => window.__brumaluz!.baileTela!() as Record<string, unknown>);
+/** Vai até (x, z) no chão da festa, olhando para (ax, az). */
+const ir = (page: Page, x: number, z: number, ax: number, az: number) =>
+  page.evaluate(
+    ({ x, z, ax, az }) => {
+      const e = window.__brumaluz!;
+      e.voar?.(false);
+      e.teleportar!(x, z, e.baile!()!.h + 1.2);
+      e.apontar!(Math.atan2(ax - x, az - z), 0.2);
+    },
+    { x, z, ax, az },
+  );
+/** A festa da missão acabada: espera ela aparecer e toca no "oba" (o botão do ✓). */
+async function fecharFesta(page: Page): Promise<void> {
+  const ok = page.locator('[data-alma-oba]').first();
+  await ok.waitFor({ state: 'visible', timeout: 15_000 });
+  await page.waitForTimeout(1500);
+  await ok.click();
+  await page.waitForTimeout(1200);
+}
+/** O toque de missão direto (o dedo de verdade é o da T18 e da T20). */
+const missao = (page: Page, c: Record<string, unknown>) =>
+  page.evaluate((c) => window.__brumaluz!.baileMissao!(c as never), c);
+
+for (const [hora, nome] of [
+  [0.7, 'entardecer'],
+  [0.86, 'noite'],
+] as const)
+  test(`T19: os momentos das missões na tela (${nome})`, async ({ browser }) => {
+    const foto = (page: Page, n: string) =>
+      page.screenshot({ path: `${PASTA}/${n}-${nome}.jpg`, type: 'jpeg', quality: 88 });
+    // ---------------------------------------------------------------- n1 e n2
+    let page = await abrir(browser, `t19-a-${nome}`, 'pc', hora);
+    await page.addStyleTag({ content: '.toast-area { display: none !important; }' });
+    await cameraFixa(page);
+    const p = await page.evaluate(() => {
+      const b = window.__brumaluz!.baile!()!;
+      return { portas: b.pontos.portas, lanternas: b.pontos.lanternas, trilha: b.pontos.trilha, h: b.h };
+    });
+    const Y = p.h + 1;
+    const frente = (i: number, k: number) => {
+      const q = p.portas[i];
+      const d = [[0, 1], [1, 0], [0, -1], [-1, 0]][q.dir];
+      return [q.x + d[0] * k, q.z + d[1] * k] as const;
+    };
+    for (const i of [0, 1, 2]) {
+      const [x, z] = frente(i, 1.4);
+      await ir(page, x, z, p.portas[i].x, p.portas[i].z);
+      await page.waitForTimeout(i === 0 ? 2500 : 900);
+      const [cx, cz] = frente(i, 4.6);
+      const q = p.portas[i];
+      const lado = [[1, 0], [0, -1], [-1, 0], [0, 1]][q.dir];
+      // (de frente e um tico do lado da campainha, mais alto: a porta, o vizinho e a criança)
+      void lado;
+      const [fx0, fz0] = frente(i, 5.8);
+      await camera(page, [fx0 - lado[0] * 1.0, Y + 2.9, fz0 - lado[1] * 1.0], [q.x, Y + 1.1, q.z]);
+      await missao(page, { a: 'campainha', i });
+      await page.waitForFunction(() => ((window.__brumaluz!.baileTela!()!.portas as { abertas: number[] }).abertas.length ?? 0) > 0, undefined, { timeout: 5000 });
+      if (i === 0) {
+        await page.waitForTimeout(700);
+        await foto(page, 't19-n1-porta-abrindo');
+      }
+      if (i === 2) {
+        // a travessura: o fantasminha sorridente e o confete de folhinhas
+        await page.waitForFunction(() => (window.__brumaluz!.baileTela!()!.travessuras as number) > 0, undefined, { timeout: 5000 });
+        await page.waitForTimeout(1300);
+        await foto(page, 't19-n1-travessura');
+      }
+      await page.waitForTimeout(2200);
+    }
+    const t1 = await tela(page);
+    expect(t1.travessuras).toBe(0);
+    // a sacola cheia na mão (3 docinhos), de 3/4 de frente
+    await page.evaluate(() => {
+      const e = window.__brumaluz!;
+      const inv = e.inventario!;
+      for (let s = 0; s < 9; s++) if (inv.obter(s)?.item === 'sacola_doces') e.selecionarSlot!(s);
+    });
+    // (de 3/4 de frente, do lado da mão: a sacola cheia, com os docinhos espiando)
+    const olhoNaMao = () =>
+      page.evaluate(() => {
+        const e = window.__brumaluz!;
+        const [x, y, z] = e.jogadorPes!();
+        const yaw = e.rotacao![1];
+        const f = [Math.sin(yaw), Math.cos(yaw)];
+        const d = [Math.cos(yaw), -Math.sin(yaw)];
+        e.travarYaw?.(yaw);
+        (window as unknown as { __camFixa: unknown }).__camFixa = {
+          p: [x + f[0] * 1.9 + d[0] * 0.9, y + 1.45, z + f[1] * 1.9 + d[1] * 0.9],
+          a: [x + d[0] * 0.15, y + 0.95, z + d[1] * 0.15],
+        };
+      });
+    await olhoNaMao();
+    await page.waitForTimeout(900);
+    await foto(page, 't19-n1-sacola-na-mao');
+    // comer a sacola: um docinho a cada mordida; o último leva a sacola embora num brilhinho
+    for (let k = 0; k < 3; k++) {
+      await page.evaluate(() => window.__brumaluz!.comer!());
+      if (k === 0) {
+        await page.waitForTimeout(1300);
+        await foto(page, 't19-n1-sacola-comendo');
+      }
+      await page.waitForTimeout(3200);
+    }
+    await page.waitForFunction(() => (window.__brumaluz!.sacolaSumiu ?? 0) === 1, undefined, { timeout: 8000 });
+    expect(await naMochila(page, 'sacola_doces')).toBe(0);
+    await page.evaluate(() => window.__brumaluz!.travarYaw?.(null));
+    await camera(page, null);
+    // n2: três lanternas acesas e uma piscando (o caminho do bosque)
+    for (const i of [0, 1, 2]) {
+      const l = p.lanternas[i];
+      await ir(page, l[0] + 1.5, l[2], l[0], l[2]);
+      await page.waitForTimeout(i === 0 ? 2500 : 600);
+      await missao(page, { a: 'lanterna', i });
+      await page.waitForTimeout(400);
+    }
+    await page.waitForFunction(() => window.__brumaluz!.baileEstado!()!.ln.filter(Boolean).length === 3, undefined, { timeout: 5000 });
+    // (do meio do caminho do bosque, na frente da lanterna do meio: ela e as vizinhas acesas)
+    const l1 = p.lanternas[1];
+    let [tx, tz] = [p.trilha[1][0], p.trilha[1][1]];
+    let dm = Infinity;
+    for (let k = 1; k < p.trilha.length; k++)
+      for (let s = 0; s <= 10; s++) {
+        const [a, b2] = [p.trilha[k - 1], p.trilha[k]];
+        const qx = a[0] + ((b2[0] - a[0]) * s) / 10;
+        const qz = a[1] + ((b2[1] - a[1]) * s) / 10;
+        const d = Math.hypot(qx - l1[0], qz - l1[2]);
+        if (d < dm) [dm, tx, tz] = [d, qx, qz];
+      }
+    const ux = (tx - l1[0]) / dm;
+    const uz = (tz - l1[2]) / dm;
+    // (no próprio caminho, meio bloco além do meio dele: as copas dos dois lados ficam fora)
+    await camera(page, [tx + ux * 0.5, Y + 1.7, tz + uz * 0.5], [l1[0], Y + 2.2, l1[2]]);
+    await page.waitForTimeout(900);
+    await foto(page, 't19-n2-lanternas');
+    await page.context().close();
+
+    // ---------------------------------------------------------------- n3 e n4
+    page = await abrir(browser, `t19-b-${nome}`, 'pc', hora, ['n1', 'n2']);
+    await page.addStyleTag({ content: '.toast-area { display: none !important; }' });
+    await cameraFixa(page);
+    const b = await page.evaluate(() => {
+      const pl = window.__brumaluz!.baile!()!;
+      const peca = (t: string) => {
+        const q = pl.pecas.find((k) => k.tipo === t)!;
+        return [q.x, q.y, q.z] as [number, number, number];
+      };
+      return {
+        es: pl.pontos.esconderijos,
+        canteiro: pl.pontos.canteiro,
+        bancada: pl.pontos.bancada,
+        portas: pl.pontos.portas,
+        pCanteiro: peca('canteiro-marcado'),
+        pBancada: peca('bancada'),
+      };
+    });
+    // a Lulu espiando do esconderijo da vez (atrás da abóbora), vista de onde a trilha acaba
+    const e0 = b.es[0];
+    const fx = Math.sin(e0.yaw);
+    const fz = Math.cos(e0.yaw);
+    await ir(page, e0.x + fx * 3.2, e0.z + fz * 3.2, e0.x, e0.z);
+    await page.waitForFunction(() => window.__brumaluz!.baileTela!()!.lulu === 0, undefined, { timeout: 15_000 });
+    // (de lado: a criança à direita, a Lulu espiando da curva da abóbora)
+    await camera(page, [e0.x + fx * 5.5 + fz * 3.2, Y + 1.9, e0.z + fz * 5.5 - fx * 3.2], [e0.x, Y + 0.9, e0.z]);
+    await page.waitForTimeout(1500);
+    await foto(page, 't19-n3-lulu-espiando');
+    await missao(page, { a: 'lulu' });
+    await page.waitForTimeout(500);
+    await foto(page, 't19-n3-lulu-achada');
+    // a horta: plantar, regar e a abóbora crescendo
+    const [kx, , kz] = b.canteiro;
+    const [cx0, , cz0] = b.pCanteiro;
+    await ir(page, kx, kz, cx0, cz0);
+    await page.waitForTimeout(2500);
+    // (do lado, um tico acima: a criança à esquerda, o canteiro na frente dela)
+    await camera(page, [cx0 + 3.2, Y + 1.7, (kz + cz0) / 2 - 0.4], [cx0 - 0.3, Y + 0.35, cz0]);
+    await missao(page, { a: 'horta' });
+    await page.waitForFunction(() => window.__brumaluz!.baileTela!()!.broto === true, undefined, { timeout: 5000 });
+    await page.waitForTimeout(400);
+    await foto(page, 't19-n4-broto');
+    await page.waitForTimeout(900);
+    await missao(page, { a: 'horta' });
+    await page.waitForTimeout(2600);
+    await foto(page, 't19-n4-horta-crescendo');
+    await page.waitForTimeout(3000);
+    await foto(page, 't19-n4-abobora-pronta');
+    await missao(page, { a: 'horta' });
+    await page.waitForFunction(() => window.__brumaluz!.baileEstado!()!.hv === undefined, undefined, { timeout: 5000 });
+    // as três carinhas com as estrelinhas
+    const [bx, , bz] = b.bancada;
+    const [px0, , pz0] = b.pBancada;
+    await ir(page, bx - 1.5, bz, px0, pz0);
+    await page.waitForFunction(() => (window.__brumaluz!.baileTela!()!.estrelas as number) === 3, undefined, { timeout: 8000 });
+    await camera(page, [bx + 2.2, Y + 2.0, bz - 0.8], [px0 - 0.4, Y + 1.0, pz0]);
+    await page.waitForTimeout(600);
+    await foto(page, 't19-n4-carinhas');
+    await missao(page, { a: 'carinha', c: 2 });
+    await page.waitForTimeout(800);
+    // o lampião de carinha na porta da Vovó
+    const vovo = b.portas.find((q) => q.vovo)!;
+    const dv = [[0, 1], [1, 0], [0, -1], [-1, 0]][vovo.dir];
+    await ir(page, vovo.x + dv[0] * 1.3, vovo.z + dv[1] * 1.3, vovo.x, vovo.z);
+    await page.waitForTimeout(2500);
+    await missao(page, { a: 'lampiao' });
+    await page.waitForFunction(() => window.__brumaluz!.baileTela!()!.lampiao === 2, undefined, { timeout: 8000 });
+    await camera(page, [vovo.x + dv[0] * 5 + 2, Y + 2.2, vovo.z + dv[1] * 5], [vovo.x + 1, Y + 0.8, vovo.z]);
+    await ir(page, vovo.x + dv[0] * 3 - 3, vovo.z + dv[1] * 3, vovo.x, vovo.z);
+    await fecharFesta(page);
+    await foto(page, 't19-n4-lampiao-na-porta');
+    await page.context().close();
+
+    // ---------------------------------------------------------------- n5
+    page = await abrir(browser, `t19-c-${nome}`, 'pc', hora, ['n1', 'n2', 'n3', 'n4']);
+    await page.addStyleTag({ content: '.toast-area { display: none !important; }' });
+    await cameraFixa(page);
+    const c = await page.evaluate(() => {
+      const pl = window.__brumaluz!.baile!()!;
+      return { horta: pl.pontos.tufinhoHorta, varanda: pl.pontos.varanda, portao: pl.pontos.portaoHorta };
+    });
+    const [hx, , hz] = c.horta;
+    await ir(page, hx + 1.5, hz - 1.5, hx, hz);
+    await page.waitForFunction(() => window.__brumaluz!.baileEstado!()!.tf.o === 'horta', undefined, { timeout: 15_000 });
+    await page.waitForTimeout(2500);
+    await camera(page, [hx + 3, Y + 1.8, hz - 3.2], [hx, Y + 0.4, hz]);
+    await foto(page, 't19-n5-tufinho-na-horta');
+    // as patinhas do guia (a n5 escolhida)
+    await camera(page, null);
+    await page.evaluate(() => window.__brumaluz!.alma!.fixar('n5'));
+    await page.waitForTimeout(300);
+    await ir(page, c.portao[0], c.portao[2] - 6, hx, hz);
+    await page.waitForFunction(() => window.__guia?.patinhas?.() === true, undefined, { timeout: 15_000 });
+    await page.waitForTimeout(800);
+    await foto(page, 't19-n5-patinhas');
+    await ir(page, hx + 1.5, hz - 1.5, hx, hz);
+    await page.waitForTimeout(600);
+    await missao(page, { a: 'tufinho' });
+    await page.waitForFunction(() => window.__brumaluz!.baileEstado!()!.tf.o === 'segue', undefined, { timeout: 5000 });
+    // ele vem atrás: a criança anda uns passos para o portão
+    const [gx, , gz] = c.portao;
+    for (let k = 1; k <= 4; k++) {
+      await ir(page, hx + ((gx - hx) * k) / 4, hz + ((gz - hz) * k) / 4, gx, gz);
+      await page.waitForTimeout(500);
+    }
+    await page.waitForTimeout(1200);
+    const gato = ((await tela(page)).bichos as { nome: string; x: number; z: number }[]).find((q) => q.nome === 'tufinho')!;
+    expect(Math.hypot(gato.x - gx, gato.z - gz)).toBeLessThan(3);
+    await camera(page, [gx + 3.5, Y + 2.2, gz + 3], [gx, Y + 0.5, gz]);
+    await page.waitForTimeout(300);
+    await foto(page, 't19-n5-tufinho-seguindo');
+    // de volta à Vovó: ele volta para o banquinho
+    const [vx, , vz] = c.varanda;
+    await camera(page, null);
+    await ir(page, vx, vz + 2, vx, vz);
+    await page.waitForFunction(() => window.__brumaluz!.baileEstado!()!.tf.o === 'casa', undefined, { timeout: 15_000 });
+    await fecharFesta(page);
+    await camera(page, [vx + 3, Y + 2.4, vz + 5], [vx, Y + 0.8, vz]);
+    await page.waitForTimeout(300);
+    await foto(page, 't19-n5-tufinho-em-casa');
+    // o quadro de missões nunca abriu sozinho (nem na missão acabada)
+    expect(await page.locator('[data-alma-quadro]').count()).toBe(0);
+    await page.context().close();
+  });
+
 for (const [tamanho, hora, nome] of [
   ['deitado', 0.7, 'entardecer'],
   ['empe', 0.86, 'noite'],
@@ -141,3 +433,296 @@ for (const [tamanho, hora, nome] of [
     await page.screenshot({ path: `${PASTA}/t18-n2-${tamanho}-${nome}.jpg`, type: 'jpeg', quality: 88 });
     await page.context().close();
   });
+
+// ------------------------------------------------------------------------------------ T20
+type P3 = [number, number, number];
+const moedasReais = (page: Page) =>
+  page.evaluate(() => (window as unknown as { __almaCrianca: { perfil: { moedas: number } } }).__almaCrianca.perfil.moedas);
+const toques = (page: Page) => page.evaluate(() => window.__brumaluz!.baileToques!()!);
+
+/** Escolhe a missão no quadro (a roda, "Missões", o "brincar" do cartão). */
+async function escolher(page: Page, id: string): Promise<void> {
+  await page.waitForFunction(() => !document.body.dataset.overlay, undefined, { timeout: 15_000 }).catch(() => undefined);
+  await escolherNaRoda(page, 'missoes');
+  await page.waitForSelector('[data-alma-quadro]', { timeout: 20_000 });
+  await page.waitForTimeout(700);
+  await tocar(page, `[data-alma-jogar="${id}"]`);
+  await page.waitForFunction(() => !document.querySelector('[data-alma-quadro]'), undefined, { timeout: 10_000 });
+  await page.waitForTimeout(1500);
+}
+/** A festa do fim da missão (o "oba" fecha); devolve as moedinhas que ela deu. */
+async function festaDoFim(page: Page, antes: number): Promise<number> {
+  await page.waitForSelector('[data-alma-festa]', { timeout: 30_000 });
+  await page.waitForTimeout(1800);
+  for (let k = 0; k < 20; k++) {
+    const ok = page.locator('[data-alma-festa] [data-alma-oba]');
+    if (!(await page.locator('[data-alma-festa]').count())) break;
+    if (await ok.count()) await ok.first().tap().catch(() => undefined);
+    await page.waitForTimeout(800);
+  }
+  await page.waitForTimeout(800);
+  return (await moedasReais(page)) - antes;
+}
+/** Anda pela trilha (o joystick de verdade) até o alvo de agora; devolve a chave dele. */
+async function seguir(page: Page, esperado?: RegExp): Promise<string> {
+  await page.waitForTimeout(1600);
+  await page.waitForFunction(() => !!window.__guia!.alvo(), undefined, { timeout: 20_000 });
+  const r = await andarPelaTrilha(page, 120_000);
+  expect(r.chegou, `chegou a ${r.alvo} em ${r.s.toFixed(0)} s`).toBe(true);
+  if (esperado) expect(r.alvo).toMatch(esperado);
+  await page.waitForTimeout(400);
+  return r.alvo!;
+}
+/** Vira a câmera para o ponto (a criança arrasta o dedo para olhar) e toca nele com o dedo. */
+async function tocarNo(page: Page, p: P3): Promise<void> {
+  await page.evaluate((p) => {
+    const e = window.__brumaluz!;
+    const q = e.jogadorPes!();
+    const d = Math.hypot(p[0] - q[0], p[2] - q[2]);
+    e.apontar!(Math.atan2(p[0] - q[0], p[2] - q[2]), Math.max(-0.2, Math.min(0.45, -Math.atan2(p[1] - (q[1] + 1.6), Math.max(1, d + 4)) * 0.6)));
+  }, p);
+  await page.waitForTimeout(700);
+  const t = await page.evaluate((p) => window.__brumaluz!.telaDoPonto!(p[0], p[1], p[2]), p);
+  expect(t, 'o ponto está na tela').not.toBeNull();
+  await page.touchscreen.tap(t!.x, t!.y);
+}
+const esperar = (page: Page, f: string, arg: unknown = null, timeout = 10_000) =>
+  page.waitForFunction(new Function('arg', `return (${f})(arg)`) as (a: unknown) => boolean, arg, { timeout });
+
+for (const tamanho of ['deitado', 'empe'] as const)
+  test(`T20: n1 a n5 de ponta a ponta, com o dedo e moedinhas de verdade (${tamanho})`, async ({ browser }) => {
+    test.setTimeout(1_500_000);
+    const page = await abrir(browser, `t20-${tamanho}`, tamanho, 0.7);
+    await page.addStyleTag({ content: '.toast-area { display: none !important; }' });
+    const tq = await toques(page);
+    const tempos: Record<string, number> = {};
+    const ganhos: Record<string, number> = {};
+    const missao = async (id: string, fazer: () => Promise<void>) => {
+      const antes = await moedasReais(page);
+      const t0 = Date.now();
+      await escolher(page, id);
+      await fazer();
+      ganhos[id] = await festaDoFim(page, antes);
+      tempos[id] = (Date.now() - t0) / 1000;
+      console.log(`T20 ${tamanho}: ${id} em ${tempos[id].toFixed(0)} s, ${ganhos[id]} moedinhas`);
+      expect(tempos[id], `${id} em até 3 minutos`).toBeLessThan(180);
+    };
+    // n1: as portas que a trilha mostra, uma de cada vez; cada campainha, um doce na sacola
+    await missao('n1', async () => {
+      for (let k = 0; k < 5; k++) {
+        const alvo = await seguir(page, /^porta:\d$/);
+        const i = Number(alvo.split(':')[1]);
+        await tocarNo(page, tq.portas[i]);
+        await esperar(page, `(i) => (window.__brumaluz.eventosBaile ?? []).some((e) => e.e === 'bailePorta' && e.i === i && e.doce)`, i);
+      }
+      expect(await naMochila(page, 'sacola_doces')).toBe(5);
+    });
+    // n2: as cinco lanternas do bosque
+    await missao('n2', async () => {
+      for (let k = 0; k < 5; k++) {
+        const alvo = await seguir(page, /^lanterna:\d$/);
+        const i = Number(alvo.split(':')[1]);
+        await tocarNo(page, tq.lanternas[i]);
+        await esperar(page, `(i) => window.__brumaluz.baileEstado().lc.includes(i) || window.__brumaluz.baileEstado().lc.length === 0`, i);
+      }
+    });
+    // n3: a Lulu nos três esconderijos
+    await missao('n3', async () => {
+      for (let k = 0; k < 3; k++) {
+        await seguir(page, /^lulu:\d$/);
+        await tocarNo(page, tq.lulu[k]);
+        await esperar(page, `(k) => (window.__brumaluz.eventosBaile ?? []).some((e) => e.e === 'baileLulu' && e.k === k)`, k);
+      }
+    });
+    // n4: plantar, regar, esperar, colher; a carinha; o lampião na porta da Vovó
+    await missao('n4', async () => {
+      await seguir(page, /^horta$/);
+      await tocarNo(page, tq.canteiro);
+      await esperar(page, `() => window.__brumaluz.baileEstado().hv?.f === 'broto'`);
+      await page.waitForTimeout(1100);
+      await tocarNo(page, tq.canteiro);
+      await esperar(page, `() => window.__brumaluz.baileEstado().hv?.f === 'regada'`);
+      await page.waitForTimeout(5600);
+      await tocarNo(page, tq.canteiro);
+      await esperar(page, `() => !window.__brumaluz.baileEstado().hv`);
+      await seguir(page, /^bancada$/);
+      await tocarNo(page, tq.carinhas[0]);
+      await esperar(page, `() => window.__brumaluz.baileEstado().car === 0`);
+      await seguir(page, /^portaVovo$/);
+      await tocarNo(page, tq.porta);
+    });
+    // n5: as patinhas até a horta, o toque chama o Tufinho e ele vem atrás até a Vovó
+    await missao('n5', async () => {
+      await esperar(page, `() => window.__guia.patinhas?.() === true`, null, 20_000);
+      await seguir(page, /^tufinho$/);
+      await tocarNo(page, tq.tufinho);
+      await esperar(page, `() => window.__brumaluz.baileEstado().tf.o === 'segue'`);
+      await seguir(page, /^vovo$/);
+    });
+    expect(ganhos).toEqual({ n1: 5, n2: 4, n3: 4, n4: 5, n5: 4 });
+    // o quadro nunca abriu sozinho
+    expect(await page.locator('[data-alma-quadro]').count()).toBe(0);
+    await page.context().close();
+  });
+
+/** Uma jogadora com identidade própria (a nuvem precisa de duas). */
+async function jogadora(b: Browser, id: string, apelido: string): Promise<Page> {
+  const ctx = await b.newContext({ viewport: { width: 1280, height: 720 } });
+  await ctx.addInitScript(
+    ([i, a]) => {
+      localStorage.setItem(
+        'terrario:identidade',
+        JSON.stringify({ id: i, chave: `chave-de-teste-${i}-0123456789abcdef`, apelido: a }),
+      );
+      localStorage.setItem('terrario:config', JSON.stringify({ distancia: 3, mostrarFps: false, mostrarAtalhos: false }));
+    },
+    [id, apelido],
+  );
+  const p = await ctx.newPage();
+  p.on('pageerror', (e) => console.log(`[${apelido}] erro: ${String(e)}`));
+  return p;
+}
+/** Teleporta para (x, z) no chão da festa (as missões por toque direto: o dedo é o do teste de cima). */
+const irPara = (p: Page, x: number, z: number) =>
+  p.evaluate(({ x, z }) => {
+    const e = window.__brumaluz!;
+    e.voar?.(false);
+    e.teleportar!(x, z, e.baile!()!.h + 1.2);
+  }, { x, z });
+const toque = (p: Page, c: Record<string, unknown>) => p.evaluate((c) => window.__brumaluz!.baileMissao!(c as never), c);
+
+test('T20: duas amigas na nuvem, na n2 (a lanterna da Ana conta para a Bia) e na n5 (a cópia fugida)', async ({ browser }) => {
+  test.setTimeout(900_000);
+  const pronto = (p: Page) => p.waitForFunction(() => window.__brumaluz?.ready, null, { timeout: 180_000 });
+  const jogar = (p: Page) =>
+    p.evaluate(() => {
+      document.querySelector('.entrada')?.setAttribute('hidden', '');
+      const e = window.__brumaluz!;
+      e.pausarDia = true;
+      e.hora = 0.86;
+      e.definirClima?.('limpo');
+    });
+  const ana = await jogadora(browser, 'ana-027-t20', 'Ana');
+  await criarMundo(ana, 't20-nuvem', 'noite-das-fantasias', {}, 1337);
+  await ana.goto('/?mundo=t20-nuvem');
+  await pronto(ana);
+  await jogar(ana);
+  await ana.evaluate(() => window.dispatchEvent(new CustomEvent('brumaluz:amigos')));
+  await ana.locator('[data-abrir-para-amigos]').click();
+  await ana.waitForURL(/sala=/, { timeout: 60_000 });
+  await pronto(ana);
+  await jogar(ana);
+  const codigo = await ana.locator('[data-codigo-mundo]').getAttribute('data-codigo-mundo', { timeout: 30_000 });
+  await ana.keyboard.press('Escape');
+  await ana.evaluate(() => document.querySelector<HTMLElement>('.amigos [data-fechar], .amigos .fechar')?.click());
+  const bia = await jogadora(browser, 'bia-027-t20', 'Bia');
+  await bia.goto(`/?sala=${codigo}`);
+  await bia.locator('[data-entrar-mundo]').click({ timeout: 60_000 });
+  await pronto(bia);
+  await jogar(bia);
+  for (const p of [ana, bia]) await p.addStyleTag({ content: '.toast-area, .dica-mira { display: none !important; }' });
+  const pl = await ana.evaluate(() => {
+    const b = window.__brumaluz!.baile!()!;
+    return { lanternas: b.pontos.lanternas, portas: b.pontos.portas, es: b.pontos.esconderijos, canteiro: b.pontos.canteiro, bancada: b.pontos.bancada, horta: b.pontos.tufinhoHorta, varanda: b.pontos.varanda };
+  });
+  const vista = (p: Page) => p.evaluate(() => window.__brumaluz!.baileEstado!()!);
+  const feitas = (p: Page) =>
+    p.evaluate(() => (window as unknown as { __almaUi: { vista(): { feitas: string[] } | null } }).__almaUi.vista()?.feitas ?? []);
+
+  // ---------------------------------------------------------------- n2
+  // a Ana acende a lanterna 0; a Bia chega depois: a lanterna já acesa conta para ela (e pisca)
+  const l = pl.lanternas[0];
+  await irPara(ana, l[0] + 1.5, l[2]);
+  await ana.waitForTimeout(1500);
+  await toque(ana, { a: 'lanterna', i: 0 });
+  await bia.waitForFunction(() => window.__brumaluz!.baileEstado!()!.ln[0] === true, undefined, { timeout: 15_000 });
+  expect((await vista(bia)).lc).toEqual([]);
+  await irPara(bia, l[0] - 1.5, l[2]);
+  await bia.waitForTimeout(1500);
+  await toque(bia, { a: 'lanterna', i: 0 });
+  await bia.waitForFunction(() => window.__brumaluz!.baileEstado!()!.lc.includes(0), undefined, { timeout: 10_000 });
+  // a Ana vê a lanterna piscar pela Bia
+  await ana.waitForFunction(
+    () => (window.__brumaluz!.eventosBaile ?? []).some((e) => e.e === 'baileLanterna' && e.quem !== 'ana-027-t20' && e.i === 0 && e.conta && !e.acendeu),
+    undefined,
+    { timeout: 10_000 },
+  );
+  expect((await vista(ana)).lc).toEqual([0]);
+
+  // ---------------------------------------------------------------- até a n5 (as duas fazem n1 a n4 pelo toque)
+  async function ate5(p: Page): Promise<void> {
+    const passo = async (x: number, z: number, c: Record<string, unknown>, espera = 1200) => {
+      await irPara(p, x, z);
+      await p.waitForTimeout(espera);
+      await toque(p, c);
+      await p.waitForTimeout(400);
+    };
+    for (const i of [0, 1, 2, 3, 4]) await passo(pl.portas[i].x, pl.portas[i].z, { a: 'campainha', i });
+    for (const i of [0, 1, 2, 3, 4]) await passo(pl.lanternas[i][0] + 1.5, pl.lanternas[i][2], { a: 'lanterna', i });
+    for (const k of [0, 1, 2]) await passo(pl.es[k].x + 1, pl.es[k].z, { a: 'lulu' }, 1500);
+    await passo(pl.canteiro[0], pl.canteiro[2], { a: 'horta' });
+    await passo(pl.canteiro[0], pl.canteiro[2], { a: 'horta' }, 600);
+    await p.waitForTimeout(5500);
+    await passo(pl.canteiro[0], pl.canteiro[2], { a: 'horta' }, 600);
+    await passo(pl.bancada[0], pl.bancada[2], { a: 'carinha', c: 1 });
+    const vovo = pl.portas.find((q) => q.vovo)!;
+    await passo(vovo.x, vovo.z, { a: 'lampiao' });
+    await p.waitForFunction(() => {
+      const v = (window as unknown as { __almaUi: { vista(): { feitas: string[] } | null } }).__almaUi.vista();
+      return ['n1', 'n2', 'n3', 'n4'].every((m) => v?.feitas.includes(m));
+    }, undefined, { timeout: 20_000 });
+    // (a festa de cada missão acabada: fecha)
+    for (let k = 0; k < 12; k++) {
+      const ok = p.locator('[data-alma-festa] [data-alma-oba]');
+      if (await ok.count()) await ok.first().click().catch(() => undefined);
+      else if (!(await p.locator('[data-alma-festa]').count())) break;
+      await p.waitForTimeout(700);
+    }
+  }
+  await ate5(ana);
+  await ate5(bia);
+  expect(await feitas(ana)).toEqual(expect.arrayContaining(['n1', 'n2', 'n3', 'n4']));
+
+  // ---------------------------------------------------------------- n5
+  // a Bia fica longe; a Ana chama o Tufinho na horta e leva até a Vovó
+  await irPara(bia, pl.horta[0] - 40, pl.horta[2]);
+  const [hx, , hz] = pl.horta;
+  await irPara(ana, hx + 1.2, hz);
+  await ana.waitForFunction(() => window.__brumaluz!.baileEstado!()!.tf.o === 'horta', undefined, { timeout: 15_000 });
+  await ana.waitForTimeout(1200);
+  await toque(ana, { a: 'tufinho' });
+  await ana.waitForFunction(() => window.__brumaluz!.baileEstado!()!.tf.o === 'segue', undefined, { timeout: 10_000 });
+  const [vx, , vz] = pl.varanda;
+  await irPara(ana, vx, vz + 2);
+  await ana.waitForFunction(() => window.__brumaluz!.baileEstado!()!.tf.o === 'casa', undefined, { timeout: 15_000 });
+  // o de verdade está com a Vovó; a Bia, que estava longe, tem a cópia fugida na horta
+  await bia.waitForFunction(() => window.__brumaluz!.baileEstado!()!.tc === 'horta', undefined, { timeout: 15_000 });
+  expect((await vista(ana)).tc).toBeUndefined();
+  expect(await feitas(ana)).toContain('n5');
+  expect(await feitas(bia)).not.toContain('n5');
+  // a Bia vai até a horta: na tela dela o Tufinho está lá (a cópia); na da Ana, no banquinho
+  await irPara(bia, hx + 1.2, hz);
+  await bia.waitForTimeout(2500);
+  const gatoDa = async (p: Page) =>
+    ((await p.evaluate(() => window.__brumaluz!.baileTela!()!.bichos)) as { nome: string; x: number; z: number }[]).find(
+      (q) => q.nome === 'tufinho',
+    )!;
+  const naBia = await gatoDa(bia);
+  expect(Math.hypot(naBia.x - hx, naBia.z - hz)).toBeLessThan(1.5);
+  const naAna = await gatoDa(ana);
+  expect(Math.hypot(naAna.x - hx, naAna.z - hz)).toBeGreaterThan(20);
+  mkdirSync(PASTA, { recursive: true });
+  await bia.screenshot({ path: `${PASTA}/t20-n5-copia-fugida-bia.jpg`, type: 'jpeg', quality: 88 });
+  // a Bia chama a cópia e leva até a Vovó: a n5 dela fecha; a da Ana não conta de novo
+  await toque(bia, { a: 'tufinho' });
+  await bia.waitForFunction(() => window.__brumaluz!.baileEstado!()!.tc === 'segue', undefined, { timeout: 10_000 });
+  await irPara(bia, vx + 1, vz + 2);
+  await bia.waitForFunction(() => window.__brumaluz!.baileEstado!()!.tc === undefined, undefined, { timeout: 15_000 });
+  await bia.waitForFunction(
+    () => ((window as unknown as { __almaUi: { vista(): { feitas: string[] } | null } }).__almaUi.vista()?.feitas ?? []).includes('n5'),
+    undefined,
+    { timeout: 15_000 },
+  );
+  await bia.screenshot({ path: `${PASTA}/t20-n5-bia-entregou.jpg`, type: 'jpeg', quality: 88 });
+  for (const p of [ana, bia]) await p.context().close();
+});

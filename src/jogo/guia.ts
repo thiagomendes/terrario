@@ -29,6 +29,19 @@ import {
 import { BOLO, CINEMA, F_BOLO, F_CINEMA, F_QUARTO, F_RAMPA, QUARTO, sentadoNoSofa } from './missoesCasa';
 import { casaDaRede, passaFilme } from './casa';
 import { FITA_VIDEO, VITAMINA } from './exclusivos';
+import type { PlanoBaile } from '../world/noiteFantasias';
+import {
+  M_ABOBORA,
+  M_DOCES,
+  M_LANTERNAS,
+  M_LULU,
+  M_TUFINHO,
+  USOS_ABOBORA,
+  USOS_LULU,
+  USOS_TUFINHO,
+  passoEmOrdem,
+  type BaileVista,
+} from './baile';
 
 // ------------------------------------------------------------------ o alvo
 /** Uma caixa no chão (inclusivo em x0/z0, exclusivo em x1/z1). */
@@ -115,6 +128,10 @@ export interface MundoDoGuia {
   tempoNucleo?(): number;
   /** Parte 3B: os pés da criança (a altura: sentada no sofá). */
   pes?(): readonly [number, number, number];
+  /** Spec 027: a vila da Noite das Fantasias (null nos outros mundos). */
+  baile?: PlanoBaile | null;
+  /** Spec 027 (T19): a festa desta criança (as portas, as lanternas, o Tufinho). */
+  estadoBaile?(): BaileVista | null;
 }
 
 const caixaDoLoteCidade = (l: LoteCidade): CaixaChao => ({
@@ -439,12 +456,131 @@ export function alvoDaMissao(
 ): AlvoGuia | null {
   if (mundo.canto) return alvoNoCanto(m, mundo.canto, mundo, de, atual);
   if (mundo.vila) return alvoNaVila(m, mundo.vila, mundo, de, atual, vistos);
+  if (mundo.baile) return alvoNoBaile(m, mundo.baile, mundo, de, atual, vistos);
   if (mundo.cidade) {
     const a = alvoNaCidade(m, mundo.cidade, vistos, de, mundo);
     if (a) return a;
   }
   if (mundo.sitios.length) return alvoNoSitio(m, mundo, de, atual);
   return null;
+}
+
+// ------------------------------------------------------------------ a Noite das Fantasias (027)
+/** A frente de cada porta (a direção de quem sai por ela), pelo `dir` do plano. */
+const FRENTE_DIR: readonly (readonly [number, number])[] = [
+  [0, 1],
+  [1, 0],
+  [0, -1],
+  [-1, 0],
+];
+/**
+ * Spec 027 (T19): o alvo de cada missão da festa. Um por vez, o mais perto que ainda falta (o de
+ * agora fica enquanto servir). A trilha acaba um tico antes da coisa (a porta, a lanterna, a
+ * Lulu), para ela ficar à vista na tela, e a plaquinha flutua em cima da coisa.
+ */
+function alvoNoBaile(
+  m: Missao,
+  p: PlanoBaile,
+  mundo: MundoDoGuia,
+  de: { x: number; z: number },
+  atual: string | null,
+  vistos: ReadonlySet<string>,
+): AlvoGuia | null {
+  const d = m.desenho;
+  const figura = d.tipo === 'arte' ? d.placa : 'estrela';
+  const bolinhas = d.tipo === 'arte' ? (d.bolinhas ?? []) : [];
+  const pt = p.pontos;
+  const chao = p.h + 1;
+  const v = mundo.estadoBaile?.() ?? null;
+  const alvo = (chave: string, x: number, z: number, raio: number, placa: V3, fig = figura): AlvoGuia => ({
+    chave,
+    tipo: 'sitio',
+    x,
+    y: chao,
+    z,
+    placa,
+    figura: fig,
+    raio,
+  });
+  const lista = <T extends { chave: string; x: number; z: number }>(l: T[]) => maisPerto(l, de, atual);
+  /** Na frente da porta (a criança fica no caminho, a porta à vista). */
+  const naPorta = (q: { x: number; z: number; dir: number }, chave: string, fig = figura): AlvoGuia => {
+    const [fx, fz] = FRENTE_DIR[q.dir & 3];
+    return alvo(chave, q.x + fx * 1.3, q.z + fz * 1.3, 1.7, [q.x - fx * 0.4, chao + 2.6, q.z - fz * 0.4], fig);
+  };
+  if (m.id === M_DOCES) {
+    const minhas = new Set(v?.pt ?? []);
+    const portas = pt.portas
+      .map((q, i) => ({ chave: `porta:${i}`, x: q.x, z: q.z, q }))
+      .filter((_, i) => !minhas.has(i));
+    const q = lista(portas);
+    return q ? naPorta(q.q, q.chave) : null;
+  }
+  if (m.id === M_LANTERNAS) {
+    // a lanterna que ainda não contou nesta rodada; a trilha acaba no caminho, ao lado dela
+    const contadas = new Set(v?.lc ?? []);
+    const ls = pt.lanternas
+      .map((l, i) => ({ chave: `lanterna:${i}`, x: l[0], z: l[2], l }))
+      .filter((_, i) => !contadas.has(i));
+    const l = lista(ls);
+    if (!l) return null;
+    const [tx, tz] = maisPertoNaLinha(pt.trilha, l.x, l.z);
+    const dl = Math.hypot(tx - l.x, tz - l.z) || 1;
+    const k = Math.min(1.6, dl);
+    return alvo(l.chave, l.x + ((tx - l.x) / dl) * k, l.z + ((tz - l.z) / dl) * k, 1.8, [l.x, l.l[1] + 1, l.z]);
+  }
+  if (m.id === M_LULU) {
+    // o esconderijo da vez: a trilha leva até perto (a uns 3 blocos na frente dela); dali a
+    // risadinha e a pontinha do lençol mostram o resto
+    const k = passoEmOrdem(USOS_LULU, [...vistos]);
+    const e = pt.esconderijos[k];
+    if (!e) return null;
+    const x = e.x + Math.sin(e.yaw) * 3;
+    const z = e.z + Math.cos(e.yaw) * 3;
+    return alvo(`lulu:${k}`, x, z, 2.2, [e.x, chao + 2.4, e.z], 'lulu');
+  }
+  if (m.id === M_ABOBORA) {
+    const passo = passoEmOrdem(USOS_ABOBORA, [...vistos]);
+    if (passo === 0)
+      return alvo('horta', pt.canteiro[0], pt.canteiro[2], 1.5, [pt.canteiro[0], chao + 1.8, pt.canteiro[2] + 2], bolinhas[0] ?? figura);
+    if (passo === 1)
+      return alvo('bancada', pt.bancada[0], pt.bancada[2], 1.5, [pt.bancada[0], chao + 2.2, pt.bancada[2] + 2], bolinhas[1] ?? figura);
+    const vovo = pt.portas.find((q) => q.vovo);
+    return passo === 2 && vovo ? naPorta(vovo, 'portaVovo', bolinhas[2] ?? figura) : null;
+  }
+  if (m.id === M_TUFINHO) {
+    const passo = passoEmOrdem(USOS_TUFINHO, [...vistos]);
+    if (passo >= USOS_TUFINHO.length) return null;
+    // a cópia fugida (só desta criança) manda; senão, o Tufinho de verdade
+    const comigo = v?.tc ? v.tc === 'segue' : v?.tf.o === 'segue';
+    const [vx, , vz] = pt.varanda;
+    // com ele atrás (ou atrás da amiga), a varanda da Vovó; senão, a horta onde ele brinca
+    if (comigo || (passo === 1 && v?.tf.o === 'segue'))
+      return alvo('vovo', vx, vz + 2, 2.5, [vx, chao + 2.4, vz], bolinhas[1] ?? 'tufinhoColo');
+    const [hx, , hz] = pt.tufinhoHorta;
+    const [gx, , gz] = pt.portaoHorta;
+    const dh = Math.hypot(gx - hx, gz - hz) || 1;
+    return alvo('tufinho', hx + ((gx - hx) / dh) * 1.6, hz + ((gz - hz) / dh) * 1.6, 1.8, [hx, chao + 1.6, hz], bolinhas[0] ?? 'tufinho');
+  }
+  return null;
+}
+
+/** O ponto da linha (no chão: x, z) mais perto de (x, z). */
+function maisPertoNaLinha(linha: readonly (readonly [number, number])[], x: number, z: number): [number, number] {
+  let melhor: [number, number] = [x, z];
+  let dm = Infinity;
+  for (let i = 1; i < linha.length; i++) {
+    const [a, b] = [linha[i - 1], linha[i]];
+    const dx = b[0] - a[0];
+    const dz = b[1] - a[1];
+    const l2 = dx * dx + dz * dz || 1;
+    const t = Math.max(0, Math.min(1, ((x - a[0]) * dx + (z - a[1]) * dz) / l2));
+    const px = a[0] + dx * t;
+    const pz = a[1] + dz * t;
+    const d = Math.hypot(px - x, pz - z);
+    if (d < dm) [dm, melhor] = [d, [px, pz]];
+  }
+  return melhor;
 }
 
 // ------------------------------------------------------------------ o canto (spec 031)

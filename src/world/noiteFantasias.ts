@@ -389,6 +389,8 @@ const RUA = { u0: 48, u1: 54, v0: 10 } as const;
 const PALCO = { u0: 60, v0: 40, u1: 76, v1: 45 } as const;
 const ABOBORA = { u: 68, v: 57, lado: 12 } as const;
 const NASCE = { u: 68.5, v: 71.5 } as const;
+/** T18: o rumo da quina de trás da abóbora gigante (o esconderijo da Lulu), para o nordeste. */
+const ATRAS_ABOBORA = [0.72, -0.694] as const;
 const LOJA = { u0: 90, v0: 50, u1: 104, v1: 64 } as const;
 const HORTA = { u0: 92, v0: 78, u1: 120, v1: 104 } as const;
 const GRAMADO = { u0: 48, v0: 77, u1: 86, v1: 108 } as const;
@@ -1279,8 +1281,14 @@ function montarBaile(semente: number, r: RelevoVila): Montado {
   const [tu, tv] = naTrilha(au, av);
   const dl = Math.hypot(au - tu, av - tv) || 1;
   const esconderijos: PontosBaile['esconderijos'] = [
-    // atrás da abóbora gigante (do lado do palco), espiando para a praça
-    esconde(ABOBORA.u + 0.5, ABOBORA.v + 0.5 - ABOBORA.lado / 2 - 2, 0),
+    // atrás da abóbora gigante (na quina de trás, do lado da loja), encostada na casca: de quem
+    // vem da praça, a curva da abóbora tapa a Lulu, e ela espia de lado
+    esconde(
+      // (fora das caixas que seguram a abóbora: o octógono vai a 0,56 do lado no meio de cada face)
+      ABOBORA.u + 0.5 + ATRAS_ABOBORA[0] * ABOBORA.lado * 0.67,
+      ABOBORA.v + 0.5 + ATRAS_ABOBORA[1] * ABOBORA.lado * 0.67,
+      Math.atan2(ATRAS_ABOBORA[0], ATRAS_ABOBORA[1]),
+    ),
     // na quina entre as duas casinhas do leste, espiando para a rua
     esconde(57.5, 24.5, -Math.PI / 2),
     // atrás do tronco, do lado de lá do caminho, espiando para ele

@@ -16,7 +16,10 @@
  */
 import type { Scene } from '@babylonjs/core/scene';
 import { Mesh } from '@babylonjs/core/Meshes/mesh';
-import type { StandardMaterial } from '@babylonjs/core/Materials/standardMaterial';
+import { StandardMaterial } from '@babylonjs/core/Materials/standardMaterial';
+import { Color3 } from '@babylonjs/core/Maths/math.color';
+import { Vector3 } from '@babylonjs/core/Maths/math.vector';
+import { CreatePlane } from '@babylonjs/core/Meshes/Builders/planeBuilder';
 import { criarPlasticos } from '../formas';
 import { Pecas } from '../solidos';
 import type { PecaBaile, PlanoBaile } from '../../world/noiteFantasias';
@@ -24,6 +27,7 @@ import { desenharPecaBaile, type DesenhoBaile } from './pecas';
 import { criarSosiasBaile, type SosiasBaile } from './sosias';
 import { criarPaletaLuz } from '../vila/luzes';
 import { criarBichosBaile, type BichosBaile } from './bichos';
+import { criarMissoesNaTela, type MissoesNaTela, type OpcoesMissoesNaTela } from './missoes';
 
 export interface OpcoesRenderBaile {
   /** A malha do chunk está desenhada? */
@@ -34,7 +38,15 @@ export interface OpcoesRenderBaile {
   tapaOGlow?(m: Mesh): void;
   /** Uma peça por quadro no celular; no computador, até 2. */
   porQuadro?: number;
+  /** T19: a lanterna `i` do bosque está acesa (o mundo, ou a previsão do toque)? */
+  lanternaAcesa?(i: number): boolean;
+  /** T19: o que as missões leem da tela (a vista desta criança, as missões abertas, os pés). */
+  missoes?: Omit<OpcoesMissoesNaTela, 'scene' | 'plano' | 'mat' | 'luz' | 'temMalha' | 'tapaOGlow' | 'brilha'>;
 }
+
+/** T19: quanto tempo a porta fica aberta (s) e quanto a folha abre (radianos). */
+const PORTA_ABERTA = 2;
+const ABRE = 1.25;
 
 /** O que se toca nas peças da festa (desenho só desta tela). */
 export type ToqueBaile = { a: 'abobora' } | { a: 'porta'; i: number };
@@ -53,8 +65,18 @@ export interface RenderBaile {
   tocar(t: ToqueBaile): void;
   /** O que está animando agora (testes). */
   animando(): { abobora: number; portas: number[] };
+  /** T19: a porta `i` (de `portas()`) abre para a rua e fecha sozinha (a campainha da n1). */
+  abrirPorta(i: number): void;
+  /** T19: a lanterna `i` do bosque pisca (a já acesa que contou de novo). */
+  piscarLanterna(i: number): void;
+  /** T19: a porta da tela (índice de `portas()`) em (x, z), ou -1. */
+  portaDaRua(x: number, z: number): number;
+  /** T19 (testes): as portas abertas, as luzes de dentro e as lanternas piscando. */
+  estadoPortas(): { abertas: number[]; dentro: number; piscando: number[] };
   /** T12: o Tufinho no banquinho e a corujinha no poleiro. */
   bichos: BichosBaile;
+  /** T19: os momentos das missões nesta tela (null sem as opções das missões). */
+  missoes: MissoesNaTela | null;
   descartar(): void;
 }
 
@@ -68,6 +90,8 @@ interface ChunkVivo {
   portas: { i: number; malha: Mesh }[];
   /** A abóbora gigante (o rosto que pisca: a malha do dia e a da noite). */
   abobora: Mesh[];
+  /** T19: o vidro aceso de cada lanterna do bosque (o número dela na n2). */
+  lanternas: { i: number; luz: Mesh }[];
 }
 
 const chave = (cx: number, cz: number) => `${cx},${cz}`;
@@ -97,10 +121,12 @@ export function criarRenderBaile(
   /** O índice de cada porta fechada no plano (o toque e o balanço). */
   const indicePorta = new Map<PecaBaile, number>();
   const listaPortas: { x: number; y: number; z: number }[] = [];
+  const dadosPorta: PecaBaile[] = [];
   for (const p of plano.pecas) {
     if (PORTAS.has(p.tipo)) {
       indicePorta.set(p, listaPortas.length);
       listaPortas.push({ x: p.x, y: p.y + 1, z: p.z });
+      dadosPorta.push(p);
     }
     for (const k of chunksDaPeca(p)) {
       const l = porChunk.get(k);
@@ -133,6 +159,51 @@ export function criarRenderBaile(
   let acesoDeNoite = false;
   /** O balanço das portas (quando começou) e a piscadinha da abóbora. */
   const balanco = new Map<number, number>();
+  /** T19: as portas abertas (a campainha da n1) e as lanternas que piscam (quando começou). */
+  const abertas = new Map<number, number>();
+  const piscadas = new Map<number, number>();
+  /** O quanto a folha está aberta (radianos; para fora, para a rua). */
+  const aberturaDaPorta = (i: number, t: number): number => {
+    const t0 = abertas.get(i);
+    if (t0 === undefined) return 0;
+    const b = t - t0;
+    const suave = (x: number) => {
+      const c = Math.min(1, Math.max(0, x));
+      return c * c * (3 - 2 * c);
+    };
+    const f = b < 0.35 ? suave(b / 0.35) : b < PORTA_ABERTA - 0.35 ? 1 : 1 - suave((b - (PORTA_ABERTA - 0.35)) / 0.35);
+    return -ABRE * f;
+  };
+  /** A luz quentinha de dentro, no vão da porta aberta (o lado de dentro nunca é breu). */
+  const matDentro = new StandardMaterial('baile-luz-dentro', scene);
+  matDentro.disableLighting = true;
+  matDentro.emissiveColor = Color3.FromHexString('#ffcf86');
+  matDentro.diffuseColor = Color3.Black();
+  matDentro.specularColor = Color3.Black();
+  matDentro.backFaceCulling = false;
+  const dentro = new Map<number, Mesh>();
+  function luzesDeDentro(t: number): void {
+    for (const [i, m] of dentro)
+      if (!abertas.has(i)) {
+        m.dispose();
+        dentro.delete(i);
+      }
+    for (const [i, t0] of abertas) {
+      if (dentro.has(i)) continue;
+      const q = dadosPorta[i];
+      if (!q || t - t0 < 0) continue;
+      const vovo = q.tipo === 'porta-vovo';
+      const m = CreatePlane(`baile-dentro-${i}`, { width: vovo ? 2.0 : 0.94, height: vovo ? 2.6 : 1.96 }, scene);
+      const a = ((q.dir & 3) * Math.PI) / 2;
+      // um tico para dentro da parede (atrás da folha fechada), de frente para a rua
+      const fundo = vovo ? -0.1 : -0.22;
+      m.position.set(q.x + fundo * Math.sin(a), q.y + (vovo ? 1.32 : 1.0), q.z + fundo * Math.cos(a));
+      m.rotation.y = a;
+      m.material = matDentro;
+      m.isPickable = false;
+      dentro.set(i, m);
+    }
+  }
   let piscouEm = -1e9;
   let relogio = 0;
 
@@ -153,7 +224,7 @@ export function criarRenderBaile(
     const ox = cx * 16;
     const oz = cz * 16;
     const d = novoDesenho(ox, oz);
-    const vivo: ChunkVivo = { cx, cz, malhas: [], dia: [], noite: [], portas: [], abobora: [] };
+    const vivo: ChunkVivo = { cx, cz, malhas: [], dia: [], noite: [], portas: [], abobora: [], lanternas: [] };
     const fazer = (pecas: Pecas, nome: string, mat: StandardMaterial, x = ox, z = oz) => {
       if (!pecas.partes.length) return null;
       const m = new Mesh(nome, scene);
@@ -168,14 +239,18 @@ export function criarRenderBaile(
       return m;
     };
     for (const p of lista) {
-      // a porta e a abóbora gigante vão em malhas à parte (balançam e piscam no toque); o meio
-      // delas na origem da malha, para girar em volta do próprio eixo
-      const sozinha = PORTAS.has(p.tipo) || p.tipo === 'abobora-gigante';
+      // a porta, a abóbora gigante e as lanternas do bosque vão em malhas à parte (a porta abre
+      // e balança, a abóbora pisca, a lanterna acende no toque); o meio delas na origem da malha,
+      // para girar em volta do próprio eixo
+      const lanterna = p.tipo === 'lanterna-bosque';
+      const sozinha = PORTAS.has(p.tipo) || p.tipo === 'abobora-gigante' || lanterna;
       if (!sozinha) {
         desenharPecaBaile(p, d);
         continue;
       }
       const s = novoDesenho(p.x, p.z);
+      // (o batente da porta fica parado quando a folha abre)
+      if (PORTAS.has(p.tipo)) s.fixo = new Pecas();
       // (desenhada na origem da peça: a malha fica em p.x, p.z)
       desenharPecaBaile({ ...p }, { ...s, ox: p.x, oz: p.z });
       const nome = `baile-${p.tipo}-${cx},${cz}`;
@@ -183,14 +258,32 @@ export function criarRenderBaile(
       const ml = fazer(s.luz, `${nome}-luz`, matLuz, p.x, p.z);
       const md = fazer(s.dia, `${nome}-dia`, matCorpo, p.x, p.z);
       const mn = fazer(s.noite, `${nome}-noite`, matLuz, p.x, p.z);
-      for (const m of [mc, md]) if (m) opcoes.tapaOGlow?.(m);
+      const mf = s.fixo ? fazer(s.fixo, `${nome}-batente`, matCorpo, p.x, p.z) : null;
+      for (const m of [mc, md, mf]) if (m) opcoes.tapaOGlow?.(m);
       for (const m of [ml, mn]) if (m) opcoes.brilha?.(m);
       if (mc) mc.receiveShadows = true;
       if (md) vivo.dia.push(md);
+      if (lanterna) {
+        // T19: o vidro aceso da lanterna é da missão (acende no toque, de dia e de noite)
+        if (mn) {
+          // (a piscadinha cresce em volta do vidro, não do pé do poste)
+          mn.setPivotPoint(new Vector3(0, 2.55, 0));
+          vivo.lanternas.push({ i: p.n ?? 0, luz: mn });
+        }
+        continue;
+      }
       if (mn) vivo.noite.push(mn);
       if (PORTAS.has(p.tipo)) {
         const i = indicePorta.get(p) ?? -1;
-        for (const m of [mc, ml]) if (m) vivo.portas.push({ i, malha: m });
+        // a dobradiça na beira da folha (a folha gira em volta dela quando abre)
+        const meia = p.tipo === 'porta-vovo' ? 1.0 : 0.47;
+        const a = ((p.dir & 3) * Math.PI) / 2;
+        const piv = new Vector3(-meia * Math.cos(a), 0, meia * Math.sin(a));
+        for (const m of [mc, ml])
+          if (m) {
+            m.setPivotPoint(piv);
+            vivo.portas.push({ i, malha: m });
+          }
       } else vivo.abobora.push(...[mc, md, mn, ml].filter((m): m is Mesh => !!m));
     }
     const mc = fazer(d.corpo, `baile-pecas-${cx},${cz}`, matCorpo);
@@ -212,7 +305,9 @@ export function criarRenderBaile(
     }
     for (const m of vivo.dia) m.setEnabled(!acesoDeNoite);
     for (const m of vivo.noite) m.setEnabled(acesoDeNoite);
-    for (const m of vivo.malhas) if (!vivo.portas.some((q) => q.malha === m) && !vivo.abobora.includes(m)) m.freezeWorldMatrix();
+    for (const m of vivo.malhas)
+      if (!vivo.portas.some((q) => q.malha === m) && !vivo.abobora.includes(m) && !vivo.lanternas.some((q) => q.luz === m))
+        m.freezeWorldMatrix();
     return vivo;
   }
 
@@ -221,15 +316,41 @@ export function criarRenderBaile(
   }
 
   const sosias = criarSosiasBaile(scene, plano, opcoes);
-  // T12: o Tufinho e a corujinha (no plástico das peças, com a cor nos vértices)
-  const bichos = criarBichosBaile(scene, plano, matCorpo, opcoes.temMalha, (m) => opcoes.tapaOGlow?.(m));
+  // T19: os momentos das missões nesta tela (a plantinha, a Lulu, o docinho, a travessura...)
+  const missoes = opcoes.missoes
+    ? criarMissoesNaTela({
+        ...opcoes.missoes,
+        scene,
+        plano,
+        mat: matCorpo,
+        luz: paleta,
+        temMalha: opcoes.temMalha,
+        tapaOGlow: opcoes.tapaOGlow,
+        brilha: opcoes.brilha,
+      })
+    : null;
+  // T12: o Tufinho e a corujinha (no plástico das peças, com a cor nos vértices); T19: o
+  // Tufinho sai do banquinho na n5
+  const bichos = criarBichosBaile(
+    scene,
+    plano,
+    matCorpo,
+    opcoes.temMalha,
+    (m) => opcoes.tapaOGlow?.(m),
+    missoes ? (t, dt) => missoes.tufinho(t, dt) : undefined,
+  );
   let semChao = 0;
+  let ultimoT = -1;
   let luzAtual = 1;
 
   return {
     sosias,
     bichos,
+    missoes,
     quadro(t, x, z, noite, alto = 0) {
+      const passo = ultimoT < 0 ? 0 : Math.min(0.1, Math.max(0, t - ultimoT));
+      ultimoT = t;
+      missoes?.quadro(t, passo);
       relogio = t;
       noiteAgora = noite;
       for (const [k, v] of vivos)
@@ -276,10 +397,22 @@ export function criarRenderBaile(
           const t0 = balanco.get(q.i);
           const b = t0 === undefined ? 0 : t - t0;
           const ang = b >= 0 && b < 0.9 ? Math.sin(b * 22) * 0.12 * (1 - b / 0.9) : 0;
-          q.malha.rotation.y = ang;
+          q.malha.rotation.y = ang + aberturaDaPorta(q.i, t);
+        }
+        // T19: a lanterna acesa (do mundo, ou a previsão do toque) e a piscadinha dela
+        for (const q of v.lanternas) {
+          const acesa = opcoes.lanternaAcesa?.(q.i) ?? false;
+          if (q.luz.isEnabled() !== acesa) q.luz.setEnabled(acesa);
+          const t0 = piscadas.get(q.i);
+          const b = t0 === undefined ? 1 : (t - t0) / 0.9;
+          const k = b >= 0 && b < 1 ? 1 + 0.22 * Math.sin(b * Math.PI * 3) * (1 - b) : 1;
+          q.luz.scaling.set(k, k, k);
         }
       }
       for (const [i, t0] of balanco) if (t - t0 > 1) balanco.delete(i);
+      for (const [i, t0] of piscadas) if (t - t0 > 1) piscadas.delete(i);
+      for (const [i, t0] of abertas) if (t - t0 > PORTA_ABERTA) abertas.delete(i);
+      luzesDeDentro(t);
       semChao = 0;
       for (const [k, v] of vivos)
         if (!comChao(k, v.cx, v.cz)) semChao += v.malhas.filter((m) => m.isEnabled()).length;
@@ -301,6 +434,17 @@ export function criarRenderBaile(
       if (q.a === 'abobora') piscouEm = relogio;
       else balanco.set(q.i, relogio);
     },
+    abrirPorta(i) {
+      // (já aberta: fica aberta mais um pouco, sem fechar e abrir de novo)
+      const t0 = abertas.get(i);
+      if (t0 !== undefined && relogio - t0 < PORTA_ABERTA - 0.35) abertas.set(i, Math.min(t0 + 0.5, relogio - 0.35));
+      else abertas.set(i, relogio);
+    },
+    piscarLanterna(i) {
+      piscadas.set(i, relogio);
+    },
+    portaDaRua: (x, z) => listaPortas.findIndex((q) => Math.hypot(q.x - x, q.z - z) < 1.6),
+    estadoPortas: () => ({ abertas: [...abertas.keys()], dentro: dentro.size, piscando: [...piscadas.keys()] }),
     animando: () => ({
       abobora: relogio - piscouEm < 1.4 ? 1 : 0,
       portas: [...balanco.keys()],
@@ -310,6 +454,9 @@ export function criarRenderBaile(
       vivos.clear();
       sosias.descartar();
       bichos.descartar();
+      missoes?.descartar();
+      for (const m of dentro.values()) m.dispose();
+      matDentro.dispose();
       paleta.descartar();
       pl.descartar();
     },

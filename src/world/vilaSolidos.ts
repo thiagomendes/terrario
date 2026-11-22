@@ -418,7 +418,16 @@ export function celulaTomadaPelaVila(
   z: number,
 ): boolean {
   if (!plano) return false;
-  const l = indiceDaVila(plano).daCelula(x, y, z);
+  return tomada(indiceDaVila(plano), x, y, z);
+}
+
+/** Spec 027 (T19): o mesmo para as peças da vila da festa (o guia dá a volta nelas). */
+export function celulaTomadaPeloBaile(plano: PlanoBaile | null, x: number, y: number, z: number): boolean {
+  return !!plano && tomada(indiceDoBaile(plano), x, y, z);
+}
+
+function tomada(idx: IndiceVila, x: number, y: number, z: number): boolean {
+  const l = idx.daCelula(x, y, z);
   if (!l) return false;
   for (const { rel: c } of l)
     if (c[0] < 0.8 && c[3] > 0.2 && c[2] < 0.8 && c[5] > 0.2 && c[1] < 0.95 && c[4] > 0.05)

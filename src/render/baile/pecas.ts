@@ -44,6 +44,17 @@ export interface DesenhoBaile extends Desenho {
   noite: Pecas;
   /** O que só aparece de dia (o rosto entalhado da abóbora gigante). */
   dia: Pecas;
+  /**
+   * T19: o batente da porta, que fica parado quando a folha abre (a porta da rua abre na n1);
+   * sem ele, o batente vai junto com o resto.
+   */
+  fixo?: Pecas;
+}
+
+/** O batente da porta: no `fixo`, quando há (a folha abre sozinha). */
+function batente(r: Ref): Ref {
+  const f = (r.d as DesenhoBaile).fixo;
+  return f ? new Ref({ ...r.d, corpo: f }, r.p) : r;
 }
 
 /** O referencial de uma peça da festa (o `Ref` da Vila lê só tipo, posição, giro e variante). */
@@ -107,7 +118,7 @@ const circulo = (rr: number, n = 16, cx = 0, cy = 0): Array<[number, number]> =>
   });
 
 /** Bolinha de brinquedo (poucos gomos), na malha `destino` (o corpo, a de noite...). */
-function bolinha(
+export function bolinha(
   r: Ref,
   x: number,
   y: number,
@@ -661,8 +672,9 @@ function placaDaBarraca(r: Ref, qual: number): void {
 
 /** A porta de casinha (o vão de 1 x 2 blocos atrás; a frente da parede em z = 0). */
 function porta(r: Ref, cor: string): void {
-  r.caixa(1.16, 0.12, 0.08, 0, 2.0, 0.02, CORES.madeiraEscura, 0.02);
-  for (const s of [-1, 1]) r.caixa(0.12, 2.06, 0.08, s * 0.53, 0, 0.02, CORES.madeiraEscura, 0.02);
+  const b = batente(r);
+  b.caixa(1.16, 0.12, 0.08, 0, 2.0, 0.02, CORES.madeiraEscura, 0.02);
+  for (const s of [-1, 1]) b.caixa(0.12, 2.06, 0.08, s * 0.53, 0, 0.02, CORES.madeiraEscura, 0.02);
   r.caixa(0.94, 1.96, 0.1, 0, 0.02, -0.12, cor, 0.03);
   for (const y of [0.25, 1.1]) r.caixa(0.62, 0.62, 0.04, 0, y, -0.05, escurecer(cor, 0.8), 0.04);
   r.caixa(0.1, 0.1, 0.06, 0.32, 0.95, -0.03, CORES.dourado, 0.03);
@@ -672,7 +684,7 @@ const PORTAS = ['#7a4cae', '#d8701c', '#8656ba', '#7452ae'];
 
 /** A porta da Vovó: roxa, grande e redonda em cima (o vão de 3 x 3 blocos atrás). */
 function portaVovo(r: Ref): void {
-  r.caixa(2.9, 2.96, 0.1, 0, 0.02, -0.14, '#4a3020', 0.02);
+  batente(r).caixa(2.9, 2.96, 0.1, 0, 0.02, -0.14, '#4a3020', 0.02);
   const roxo = '#7a4aae';
   r.caixa(2.0, 2.0, 0.12, 0, 0.02, -0.06, roxo, 0.04);
   let y = 2.02;
