@@ -62,8 +62,16 @@ const hexDe = (rgb: [number, number, number]) =>
   `#${rgb.map((v) => Math.round(v).toString(16).padStart(2, '0')).join('')}`;
 
 /**
+ * Spec 027 (acabamento da n1): quantos docinhos espiam da sacola de doces com `qtd` na pilha (3 ou
+ * mais mostram três; 2, dois; 1, um). Sem a quantidade (o amigo, o ícone), três.
+ */
+export function docinhosNaSacola(qtd?: number): number {
+  return qtd === undefined ? 3 : Math.max(1, Math.min(3, Math.floor(qtd)));
+}
+
+/**
  * Monta o modelo do item na mão. `tamanho` é a escala geral (1 = medidas do boneco).
- * Devolve null para mão vazia.
+ * Devolve null para mão vazia. `qtd`: a pilha da mão (a sacola de doces mostra quantos restam).
  */
 export function modeloNaMao(
   scene: Scene,
@@ -71,6 +79,7 @@ export function modeloNaMao(
   bloco: number | null,
   item: string | null,
   prefixo: string,
+  qtd?: number,
 ): ModeloItem | null {
   // a semente "é" o bloco que ela planta (para colocar), mas na mão é a semente
   if (bloco !== null && !item) {
@@ -399,8 +408,10 @@ export function modeloNaMao(
             ['#fbf3e6', '#4a2a18'],
             ['#e0904a', '#c88a4a'],
           ];
-          DOCES.forEach(([cor, topo], k) => {
-            const a = (k / 3) * Math.PI * 2;
+          // (só os que restam: com um, ele fica sozinho na beira, do lado da boca)
+          const n = docinhosNaSacola(qtd);
+          DOCES.slice(0, n).forEach(([cor, topo], k) => {
+            const a = (k / n) * Math.PI * 2;
             const x = Math.cos(a) * 0.032;
             const z = Math.sin(a) * 0.026;
             add(bo(`docinho${k}`, 0.03, cor, [1, 0.92, 1], 0.42), x, 0.168, z);

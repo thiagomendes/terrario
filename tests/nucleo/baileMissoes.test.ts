@@ -178,6 +178,70 @@ describe('spec 027 (T18): as missões n1 a n5 no núcleo', () => {
     }
   });
 
+  it('acabamento da n3: atrás da abóbora, a Lulu fica escondida de longe de todos os lados (o montinho tapa o do palco)', () => {
+    definirEstiloMundo(BAILE);
+    /** O segmento de `a` a `b` passa por dentro da caixa? (o método das fatias) */
+    const corta = (a: readonly number[], b: readonly number[], c: readonly number[]) => {
+      let t0 = 0;
+      let t1 = 1;
+      for (let k = 0; k < 3; k++) {
+        const d = b[k] - a[k];
+        if (Math.abs(d) < 1e-9) {
+          if (a[k] < c[k] || a[k] > c[k + 3]) return false;
+          continue;
+        }
+        let u = (c[k] - a[k]) / d;
+        let v = (c[k + 3] - a[k]) / d;
+        if (u > v) [u, v] = [v, u];
+        t0 = Math.max(t0, u);
+        t1 = Math.min(t1, v);
+        if (t0 > t1) return false;
+      }
+      return true;
+    };
+    for (const semente of [1337, 7, 90210]) {
+      limparPovoados();
+      const p = baileDoMundo(semente)!;
+      const ab = p.pontos.esconderijos[0];
+      // o meio do corpo da Lulu (de longe, quem vê o corpo vê a Lulu; a pontinha do lençol fica acima)
+      const lulu = [ab.x, p.h + 1 + 0.8, ab.z];
+      // as abóboras de brinquedo perto pelas caixas delas; a gigante pela casca redonda que se vê (um
+      // cilindro de 0,53 do lado, o raio do corpo e dos gomos em `abobora()`, até 0,7 do lado de
+      // altura: as caixas dela passam da casca nas quinas)
+      const caixasPequenas = p.pecas
+        .filter((q) => q.tipo === 'abobora' && Math.hypot(q.x - ab.x, q.z - ab.z) < 12)
+        .flatMap((q) => caixasDaPecaBaile(q));
+      const A = p.pontos.abobora;
+      const casca = (q: number[]) => Math.hypot(q[0] - A.x, q[2] - A.z) < 0.53 * A.lado && q[1] < A.y + 0.7 * A.lado;
+      /** Algo fica entre o olho e a Lulu? */
+      const tapa = (olho: number[]) => {
+        if (caixasPequenas.some((c) => corta(olho, lulu, c))) return true;
+        for (let k = 1; k < 100; k++) {
+          const u = k / 100;
+          if (casca([0, 1, 2].map((i) => olho[i] + (lulu[i] - olho[i]) * u))) return true;
+        }
+        return false;
+      };
+      // o montinho: seis abóboras de brinquedo em volta, do lado de fora, e nenhuma em cima dela
+      const montinho = p.pecas.filter((q) => q.tipo === 'abobora' && Math.hypot(q.x - ab.x, q.z - ab.z) < 2.2);
+      expect(montinho).toHaveLength(6);
+      for (const q of montinho) expect(Math.hypot(q.x - ab.x, q.z - ab.z)).toBeGreaterThan(1.2);
+      // de 12 blocos, à altura dos olhos da câmera (2 acima do chão), em volta: quase todos tapados
+      // (só a fresta rente à casca, por onde quem procura chega, deixa ver)
+      let abertos = 0;
+      for (let k = 0; k < 36; k++) {
+        const a = (k / 36) * Math.PI * 2;
+        const olho = [ab.x + Math.sin(a) * 12, p.h + 1 + 2, ab.z + Math.cos(a) * 12];
+        if (!tapa(olho)) abertos++;
+      }
+      expect(abertos, `semente ${semente}`).toBeLessThanOrEqual(3);
+      // e de toda a frente do palco (o achado do orquestrador), tapada
+      const pc = p.pontos.palco;
+      for (let x = pc.x0; x <= pc.x1; x += 2)
+        for (const dz of [2, 4]) expect(tapa([x, p.h + 1 + 2, pc.z1 + dz]), `do palco em x ${x}, +${dz}`).toBe(true);
+    }
+  });
+
   for (const confiar of [true, false])
     it(`n1 doces ou travessuras: as portas de cada criança, o doce na sacola, a travessura (${confiar ? 'aparelho' : 'nuvem'})`, () => {
       const n = abrir(confiar);

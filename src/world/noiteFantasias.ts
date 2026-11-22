@@ -391,6 +391,22 @@ const ABOBORA = { u: 68, v: 57, lado: 12 } as const;
 const NASCE = { u: 68.5, v: 71.5 } as const;
 /** T18: o rumo da quina de trás da abóbora gigante (o esconderijo da Lulu), para o nordeste. */
 const ATRAS_ABOBORA = [0.72, -0.694] as const;
+/**
+ * O montinho de abóboras que esconde a Lulu (acabamento da n3): o ângulo de cada abóbora em volta
+ * do esconderijo (0 é para fora da abóbora gigante; positivo, para o lado de cá do relógio) e o
+ * tamanho (décimos de bloco: as de 17 têm 1,2 de altura, a Lulu tem uns 1,5), a `RAIO_MONTINHO`.
+ */
+const MONTINHO_LULU: readonly (readonly [number, number])[] = [
+  // (rente à casca, do lado do palco: a frente do palco fica bem na linha da fresta desse lado)
+  [-2.15, 14],
+  [-1.5, 15],
+  [-0.78, 16],
+  [0, 17],
+  [0.78, 16],
+  // (do lado da praça, um pouco para fora: fica o corredor rente à casca, por onde quem procura chega)
+  [1.2, 13],
+];
+const RAIO_MONTINHO = 1.5;
 const LOJA = { u0: 90, v0: 50, u1: 104, v1: 64 } as const;
 const HORTA = { u0: 92, v0: 78, u1: 120, v1: 104 } as const;
 const GRAMADO = { u0: 48, v0: 77, u1: 86, v1: 108 } as const;
@@ -845,6 +861,22 @@ function montarBaile(semente: number, r: RelevoVila): Montado {
     ABOBORA.u + ABOBORA.lado / 2,
     ABOBORA.v + ABOBORA.lado / 2,
   );
+  // acabamento da n3 (depois da T20): o montinho de abóboras de brinquedo que esconde a Lulu atrás
+  // da abóbora gigante, do lado de fora (o do palco e o da loja). Ela fica entre a casca e o
+  // montinho: da praça, a curva da abóbora tapa; do palco e da loja, o montinho tapa, e de longe só
+  // a pontinha do lençol aparece por cima. Do lado da praça, rente à casca, o caminho fica livre para
+  // quem procura chegar perto (é por ali que ela espia); do lado do palco, a fresta também é tapada
+  {
+    const [du, dv] = ATRAS_ABOBORA;
+    const eu = ABOBORA.u + 0.5 + du * ABOBORA.lado * 0.67;
+    const ev = ABOBORA.v + 0.5 + dv * ABOBORA.lado * 0.67;
+    MONTINHO_LULU.forEach(([ang, n], k) => {
+      const pu = eu + RAIO_MONTINHO * (Math.cos(ang) * du - Math.sin(ang) * dv);
+      const pv = ev + RAIO_MONTINHO * (Math.cos(ang) * dv + Math.sin(ang) * du);
+      peca('abobora', pu, pv, k & 3, n);
+      tomar(Math.floor(pu - 0.5), Math.floor(pv - 0.5), Math.floor(pu + 0.5), Math.floor(pv + 0.5));
+    });
+  }
   // as barracas no lado oeste, de frente para o meio da praça (o chão de tábuas embaixo)
   const barracas: PontosBaile['barracas'] = [];
   for (const [n, v] of [

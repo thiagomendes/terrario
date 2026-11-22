@@ -103,13 +103,22 @@ export function criarMissoesNaTela(op: OpcoesMissoesNaTela) {
   const chao = plano.h + 1;
   const vovo = pt.portas.find((q) => q.vovo) ?? pt.portas[pt.portas.length - 1];
 
+  /**
+   * Junta as partes de um desenho numa malha nova, sem mexer nelas: o mesmo desenho é montado de
+   * novo a cada docinho e a cada travessura (o `merge` escreve na primeira parte, e a paleta de luz
+   * mexe no resultado; juntando as próprias partes, a segunda vez dobrava a malha ou não juntava).
+   */
+  const juntarCopia = (q: Pecas): VertexData => {
+    const [a, ...resto] = q.partes.map((v) => v.clone());
+    return resto.length ? a.merge(resto, true) : a;
+  };
   /** Um desenho na origem vira um nó com o corpo e o que brilha. */
   function montar(nome: string, d: DesenhoBaile, luzTambem: Pecas[] = [], semBrilho = false): TransformNode {
     const raiz = new TransformNode(nome, scene);
     const corpo = d.corpo.partes.length ? d.corpo : null;
     if (corpo) {
       const m = new Mesh(`${nome}-corpo`, scene);
-      corpo.juntar().applyToMesh(m);
+      juntarCopia(corpo).applyToMesh(m);
       m.material = op.mat;
       m.parent = raiz;
       m.isPickable = false;
@@ -118,7 +127,7 @@ export function criarMissoesNaTela(op: OpcoesMissoesNaTela) {
     const luzes = [d.luz, ...luzTambem].filter((q) => q.partes.length);
     for (const [k, q] of luzes.entries()) {
       const m = new Mesh(`${nome}-luz${k}`, scene);
-      const vd = q.juntar();
+      const vd = juntarCopia(q);
       op.luz.aplicar(vd);
       vd.applyToMesh(m);
       m.material = op.luz.material;
@@ -440,10 +449,13 @@ export function criarMissoesNaTela(op: OpcoesMissoesNaTela) {
     lulu.mostrar(true);
     const pes = op.pes(op.voce());
     const d = pes ? Math.hypot(pes[0] - e.x, pes[2] - e.z) : 99;
-    // de longe só a pontinha do lençol; perto, ela espia mais (de lado, para fora do esconderijo)
+    // de longe só a pontinha do lençol; perto, ela espia mais (de lado, para fora do esconderijo,
+    // do lado de quem procura: atrás da abóbora gigante, pela fresta entre a casca e o montinho)
     const perto = Math.max(0, Math.min(1, 1 - (d - 2) / 6));
     const vai = Math.max(0, Math.sin(t * 1.3)) ** 2;
-    const lado = comemorando ? 0.55 : 0.12 + (0.2 + 0.3 * perto) * vai;
+    const direita = pes ? (pes[0] - e.x) * Math.cos(e.yaw) - (pes[2] - e.z) * Math.sin(e.yaw) : 1;
+    const sinal = direita < 0 ? -1 : 1;
+    const lado = sinal * (comemorando ? 0.55 : 0.12 + (0.15 + 0.55 * perto * perto) * vai);
     const dx = Math.cos(e.yaw) * lado;
     const dz = -Math.sin(e.yaw) * lado;
     const sobe = comemorando ? Math.abs(Math.sin((t - achadaEm) * Math.PI * 1.6)) * 0.5 : 0;

@@ -509,8 +509,9 @@ export function montarComidaMordida(
   mats: Plasticos,
   item: string,
   prefixo: string,
+  qtd?: number,
 ): ComidaMordida | null {
-  const modelo = modeloNaMao(scene, mats, null, item, prefixo);
+  const modelo = modeloNaMao(scene, mats, null, item, prefixo, qtd);
   if (!modelo) return null;
   const jeito = jeitoDeComer(item);
   const nome = (m: Mesh) => m.name.slice(prefixo.length + 1);
@@ -637,6 +638,18 @@ export function montarComidaMordida(
     // (a forminha gira na mão: o docinho da vez fica sempre do lado da boca, o +x)
     const base = modelo.malhas.map((m) => ({ m, x: m.position.x, z: m.position.z, ry: m.rotation.y }));
     estagio = (k) => {
+      if (item === 'sacola_doces') {
+        // (acabamento da n1: a refeição da sacola come um docinho só, o da beira do lado da boca, em
+        // três mordidas; os outros ficam espiando, e a sacola mostra quantos restam)
+        const kk = Math.max(0, Math.min(3, k));
+        for (const m of doDocinho(0)) {
+          m.setEnabled(kk < 3);
+          const b = base.find((q) => q.m === m);
+          m.scaling.setAll(1 - kk * 0.3);
+          if (b) m.position.x = b.x - kk * 0.008;
+        }
+        return;
+      }
       const kk = Math.max(0, Math.min(3, k));
       for (let i = 0; i < 3; i++) for (const m of doDocinho(i)) m.setEnabled(i >= kk);
       const a = (Math.min(2, kk) / 3) * Math.PI * 2;
@@ -783,8 +796,11 @@ interface Comendo {
 }
 
 export interface Refeicoes {
-  /** O boneco `dono` come `item` (do começo; uma refeição por boneco). */
-  comecar(dono: DonoDaRefeicao, item: string, meu: boolean): void;
+  /**
+   * O boneco `dono` come `item` (do começo; uma refeição por boneco). `qtd`: a pilha da mão antes
+   * de comer (a sacola de doces mostra quantos docinhos restam).
+   */
+  comecar(dono: DonoDaRefeicao, item: string, meu: boolean, qtd?: number): void;
   /** Para a refeição do boneco (ele sumiu, desmaiou). */
   parar(dono: DonoDaRefeicao): void;
   atualizar(dt: number): void;
@@ -930,10 +946,10 @@ export function criarRefeicoes(scene: Scene, op: OpcoesRefeicoes): Refeicoes {
   }
 
   return {
-    comecar(dono, item, meu) {
+    comecar(dono, item, meu, qtd) {
       const antes = ativas.get(dono);
       if (antes) fim(antes);
-      const comida = montarComidaMordida(scene, dono.plasticos(), item, `refeicao-${n++}`);
+      const comida = montarComidaMordida(scene, dono.plasticos(), item, `refeicao-${n++}`, qtd);
       if (comida) {
         comida.modelo.no.rotationQuaternion = new Quaternion();
         for (const m of comida.modelo.no.getChildMeshes()) {

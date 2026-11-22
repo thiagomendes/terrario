@@ -30,8 +30,8 @@ export interface Personagem {
   definirOpacidade(a: number): void;
   opacidade(): number;
   definirLuz(f: number): void;
-  /** O que a mão direita segura. */
-  definirNaMao(bloco: number | null, item: string | null): void;
+  /** O que a mão direita segura (`qtd`: a pilha; a sacola de doces mostra quantos restam). */
+  definirNaMao(bloco: number | null, item: string | null, qtd?: number): void;
   /** Spec 032: o nó da mão direita (a comida mordida e o lanche da entrega vão nele). */
   noDaMao(): TransformNode;
   /** Spec 032: a cabeça e a boca nela (+z é a frente do rosto): a comida para na frente da boca. */

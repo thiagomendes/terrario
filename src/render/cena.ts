@@ -4211,13 +4211,14 @@ export function criarCena(
     const longeDosOlhos = foto && Vector3.Distance(fotoPosRef(), camera.position) > 1.2;
     personagem.definirVisivel(foto ? longeDosOlhos : true);
     const blocoMao = hotbar.blocoAtivo();
-    const itemMao = hotbar.pilhaAtiva()?.item ?? '';
+    const pilhaMao = hotbar.pilhaAtiva();
+    // (spec 027: a sacola de doces mostra quantos docinhos restam: a pilha também conta)
+    const itemMao = `${pilhaMao?.item ?? ''}${pilhaMao?.item === SACOLA_DOCES ? `#${pilhaMao.qtd}` : ''}`;
     if (hotbar.ativo !== slotNaMao || blocoMao !== blocoNaMaoAtual || itemMao !== itemNaMaoAtual) {
       itemNaMaoAtual = itemMao;
       slotNaMao = hotbar.ativo;
       blocoNaMaoAtual = blocoMao;
-      const pilhaMao = hotbar.pilhaAtiva();
-      personagem.definirNaMao(blocoMao || null, !blocoMao && pilhaMao ? pilhaMao.item : null);
+      personagem.definirNaMao(blocoMao || null, !blocoMao && pilhaMao ? pilhaMao.item : null, pilhaMao?.qtd);
     }
     personagem.aplicarPose(pose, {
       dt,
@@ -6165,7 +6166,7 @@ export function criarCena(
     enviarTelemetria(true);
     enviar({ t: 'comer', slot: hotbar.ativo });
     animador.evento('comer');
-    refeicoes.comecar(personagem, p.item, true);
+    refeicoes.comecar(personagem, p.item, true, p.qtd);
     // spec 027 (T19): o último docinho da sacola: no fim da refeição, a sacola vazia some da mão
     // num brilhinho de estrelinhas
     if (p.item === SACOLA_DOCES && p.qtd <= 1)

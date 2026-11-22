@@ -13,6 +13,7 @@ import { temaBase } from '../../src/temas/base';
 import { definirTemaAtivo } from '../../src/temas/ativo';
 import { criarPlasticos } from '../../src/render/formas';
 import { montarComidaMordida } from '../../src/render/refeicao';
+import { docinhosNaSacola, modeloNaMao } from '../../src/render/itensBrinquedo';
 import { jeitoDeComer } from '../../src/jogo/refeicao';
 import {
   BEIJINHO,
@@ -91,6 +92,34 @@ describe('spec 027 (T15): as comidas da festa', () => {
       }
       c.descartar();
     }
+  });
+
+  it('acabamento da n1: a sacola de doces mostra quantos restam (3 ou mais, 2, 1) e cada refeição come um só', () => {
+    const scene = cena();
+    const doces = (m: { malhas: { name: string; isEnabled(): boolean }[] }) =>
+      m.malhas.filter((q) => /-docinho\d$/.test(q.name) && q.isEnabled()).length;
+    for (const [qtd, n] of [
+      [8, 3],
+      [3, 3],
+      [2, 2],
+      [1, 1],
+    ] as const) {
+      const m = modeloNaMao(scene, criarPlasticos(scene, 't'), null, 'sacola_doces', `s-${qtd}`, qtd)!;
+      expect(doces(m), `${qtd} na pilha`).toBe(n);
+      expect(docinhosNaSacola(qtd)).toBe(n);
+      for (const q of m.malhas) q.dispose();
+      // a refeição: o docinho da beira (o do lado da boca) some nas três mordidas; os outros ficam
+      const c = montarComidaMordida(scene, criarPlasticos(scene, 't'), 'sacola_doces', `sc-${qtd}`, qtd)!;
+      const vivos = () => c.modelo.malhas.filter((q) => /-docinho\d$/.test(q.name) && q.isEnabled());
+      c.estagio(1);
+      expect(vivos()).toHaveLength(n);
+      c.estagio(3);
+      expect(vivos()).toHaveLength(n - 1);
+      expect(vivos().some((q) => q.name.endsWith('docinho0'))).toBe(false);
+      c.descartar();
+    }
+    // sem a pilha (o amigo, o ícone), as três de sempre
+    expect(docinhosNaSacola()).toBe(3);
   });
 
   it('a "Uva" deste mundo é um cachinho roxo de seis uvas, duas por mordida (nos outros, as três frutinhas)', () => {

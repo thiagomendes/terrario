@@ -45,7 +45,7 @@ import {
   pintarVertices,
   type Plasticos,
 } from './formas';
-import { modeloNaMao, type ModeloItem } from './itensBrinquedo';
+import { docinhosNaSacola, modeloNaMao, type ModeloItem } from './itensBrinquedo';
 import type { ExtrasPose, Personagem } from './personagem';
 
 export const MAXIMO_MALHAS_BONECO = 90;
@@ -351,15 +351,17 @@ export function criarBoneco(
   /** Spec 032: a boca no espaço da cabeça (a frente do rosto é +z). */
   let bocaNaCabeca: [number, number, number] = [0, -0.18, 0.3];
   const naMao = {
-    definir(bloco: number | null, item: string | null) {
-      const chave = `${bloco ?? ''}|${item ?? ''}`;
+    definir(bloco: number | null, item: string | null, qtd?: number) {
+      // (spec 027: a sacola de doces mostra quantos docinhos restam; as outras não mudam com a pilha)
+      const n = item === 'sacola_doces' ? docinhosNaSacola(qtd) : undefined;
+      const chave = `${bloco ?? ''}|${item ?? ''}|${n ?? ''}`;
       if (chave === chaveMao) return;
       chaveMao = chave;
       if (modelo) {
         for (const m of modelo.malhas) m.dispose();
         modelo.no.dispose();
       }
-      modelo = modeloNaMao(scene, mats, bloco, item, `${prefixo}-mao`);
+      modelo = modeloNaMao(scene, mats, bloco, item, `${prefixo}-mao`, n);
       if (!modelo) return;
       modelo.no.parent = pega;
       for (const m of modelo.malhas) {
@@ -803,8 +805,8 @@ export function criarBoneco(
       mats.definirLuz(f);
       naMao.definirLuz(f);
     },
-    definirNaMao(bloco, item) {
-      naMao.definir(bloco, item);
+    definirNaMao(bloco, item, qtd) {
+      naMao.definir(bloco, item, qtd);
     },
     noDaMao: () => pega,
     boca: () => ({ no: juntas.cabeca, pos: bocaNaCabeca }),

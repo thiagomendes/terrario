@@ -152,6 +152,9 @@ for (const [hora, nome] of [
         vizinhos: b.pontos.vizinhos,
         nascimento: b.nascimento,
         h: b.h,
+        postes: b.pecas.filter((q) => q.tipo === 'poste-lanterna').map((q) => [q.x, q.z] as [number, number]),
+        esconderijos: b.pontos.esconderijos,
+        palco: b.pontos.palco,
       };
     });
     const Y = p.h + 1;
@@ -170,12 +173,34 @@ for (const [hora, nome] of [
       // de lado para a porta; a câmera alta, de frente e um tico para o lado do vizinho: a porta
       // aberta no meio, o vizinho que dá o doce de um lado, a criança com a sacola do outro
       const viz = p.vizinhos[i];
-      const s = viz && (viz.x - q.x) * lado[0] + (viz.z - q.z) * lado[1] < 0 ? -1 : 1;
+      let s = viz && (viz.x - q.x) * lado[0] + (viz.z - q.z) * lado[1] < 0 ? -1 : 1;
+      // (a travessura, de 3/4: a câmera do lado em que nenhum poste de lanterna fica entre ela e a
+      // porta, e a criança do outro lado; o fantasminha no meio do quadro, na porta)
+      const cam34 = (sc: number) => {
+        const [cx, cz] = frente(i, 4.2);
+        return [cx + sc * lado[0] * 2.8, cz + sc * lado[1] * 2.8] as const;
+      };
+      const folga = (sc: number) => {
+        const [ax, az] = cam34(sc);
+        const [bx, bz] = frente(i, 0.65);
+        let m = Infinity;
+        for (const [px, pz] of p.postes) {
+          const [vx, vz] = [bx - ax, bz - az];
+          const u = Math.max(0, Math.min(1, ((px - ax) * vx + (pz - az) * vz) / (vx * vx + vz * vz)));
+          m = Math.min(m, Math.hypot(ax + vx * u - px, az + vz * u - pz));
+        }
+        return m;
+      };
+      if (i === 2) s = folga(1) >= folga(-1) ? 1 : -1;
       await ir(page, x - s * lado[0] * 1.1, z - s * lado[1] * 1.1, q.x, q.z);
       await page.waitForTimeout(500);
       const [fx0, fz0] = frente(i, 6.0);
       const [mx, mz] = frente(i, 0.7);
-      await camera(page, [fx0 + s * lado[0] * 0.9, Y + 3.3, fz0 + s * lado[1] * 0.9], [mx, Y + 1.3, mz]);
+      if (i === 2) {
+        const [cx, cz] = cam34(s);
+        const [gx, gz] = frente(i, 0.65);
+        await camera(page, [cx, Y + 2.1, cz], [gx, Y + 1.15, gz]);
+      } else await camera(page, [fx0 + s * lado[0] * 0.9, Y + 3.3, fz0 + s * lado[1] * 0.9], [mx, Y + 1.3, mz]);
       await missao(page, { a: 'campainha', i });
       await page.waitForFunction(() => ((window.__brumaluz!.baileTela!()!.portas as { abertas: number[] }).abertas.length ?? 0) > 0, undefined, { timeout: 5000 });
       if (i === 0) {
@@ -221,6 +246,8 @@ for (const [hora, nome] of [
     await foto(page, 't19-n1-sacola-na-mao');
     // comer a sacola: um docinho a cada mordida; o último leva a sacola embora num brilhinho
     for (let k = 0; k < 3; k++) {
+      // (acabamento da n1: a sacola mostra quantos restam: três, dois, um)
+      if (k > 0) await foto(page, `t19-n1-sacola-${3 - k}`);
       await page.evaluate(() => window.__brumaluz!.comer!());
       if (k === 0) {
         await page.waitForTimeout(1300);
@@ -278,16 +305,33 @@ for (const [hora, nome] of [
         portas: pl.pontos.portas,
         pCanteiro: peca('canteiro-marcado'),
         pBancada: peca('bancada'),
+        palco: pl.pontos.palco,
+        nascimento: pl.nascimento,
       };
     });
-    // a Lulu espiando do esconderijo da vez (atrás da abóbora), vista de onde a trilha acaba
+    // acabamento da n3: atrás da abóbora gigante a Lulu fica escondida de todos os lados até a
+    // criança chegar perto (o montinho de abóboras tapa o lado do palco). A foto de quem olha da
+    // frente do palco, de longe: só a pontinha do lençol
     const e0 = b.es[0];
     const fx = Math.sin(e0.yaw);
     const fz = Math.cos(e0.yaw);
-    await ir(page, e0.x + fx * 3.2, e0.z + fz * 3.2, e0.x, e0.z);
+    const pcx = (b.palco.x0 + b.palco.x1) / 2;
+    const pcz = b.palco.z1 + 2;
+    await ir(page, pcx, pcz, e0.x, e0.z);
     await page.waitForFunction(() => window.__brumaluz!.baileTela!()!.lulu === 0, undefined, { timeout: 15_000 });
-    // (de lado: a criança à direita, a Lulu espiando da curva da abóbora)
-    await camera(page, [e0.x + fx * 5.5 + fz * 3.2, Y + 1.9, e0.z + fz * 5.5 - fx * 3.2], [e0.x, Y + 0.9, e0.z]);
+    await camera(page, [pcx, Y + 2.6, pcz], [e0.x, Y + 0.9, e0.z]);
+    await page.waitForTimeout(1500);
+    await foto(page, 't19-n3-lulu-escondida-do-palco');
+    // e de onde a trilha acaba, rente à casca, do lado de quem vem da praça: ela espia pela fresta
+    const tx0 = Math.cos(e0.yaw);
+    const tz0 = -Math.sin(e0.yaw);
+    const ladoT = (e0.x + tx0 - b.nascimento.x) ** 2 + (e0.z + tz0 - b.nascimento.z) ** 2 < (e0.x - tx0 - b.nascimento.x) ** 2 + (e0.z - tz0 - b.nascimento.z) ** 2 ? 1 : -1;
+    // (no corredor rente à casca: um tico para dentro, do lado da abóbora gigante)
+    const [ex, ez] = [e0.x + ladoT * tx0 * 2.6 - fx * 0.7, e0.z + ladoT * tz0 * 2.6 - fz * 0.7];
+    await ir(page, ex, ez, e0.x, e0.z);
+    await page.waitForTimeout(1200);
+    // (de 3/4, por trás e um tico acima da criança: ela à frente, a Lulu espiando)
+    await camera(page, [e0.x + ladoT * tx0 * 5.2 + fx * 1.6, Y + 2.0, e0.z + ladoT * tz0 * 5.2 + fz * 1.6], [e0.x, Y + 0.9, e0.z]);
     await page.waitForTimeout(1500);
     await foto(page, 't19-n3-lulu-espiando');
     await missao(page, { a: 'lulu' });
@@ -347,7 +391,17 @@ for (const [hora, nome] of [
     await ir(page, hx + 1.5, hz - 1.5, hx, hz);
     await page.waitForFunction(() => window.__brumaluz!.baileEstado!()!.tf.o === 'horta', undefined, { timeout: 15_000 });
     await page.waitForTimeout(2500);
-    await camera(page, [hx + 3, Y + 1.8, hz - 3.2], [hx, Y + 0.4, hz]);
+    // (de lado, girada da linha entre a criança e ele: o Tufinho passeando à vista, sem a criança na frente)
+    const lado5 = await page.evaluate(() => {
+      const e = window.__brumaluz!;
+      const g = e.tufinhoOnde!()!;
+      const [x, , z] = e.jogadorPes!();
+      const d = Math.hypot(x - g.x, z - g.z) || 1;
+      const [ux, uz] = [(x - g.x) / d, (z - g.z) / d];
+      return { p: [g.x - uz * 3.2 - ux * 0.8, g.y + 1.7, g.z + ux * 3.2 - uz * 0.8], a: [g.x, g.y + 0.3, g.z] };
+    });
+    await camera(page, lado5.p as [number, number, number], lado5.a as [number, number, number]);
+    await page.waitForTimeout(400);
     await foto(page, 't19-n5-tufinho-na-horta');
     // as patinhas do guia (a n5 escolhida)
     await camera(page, null);
@@ -363,10 +417,18 @@ for (const [hora, nome] of [
     await page.waitForFunction(() => window.__brumaluz!.baileEstado!()!.tf.o === 'segue', undefined, { timeout: 5000 });
     // ele vem atrás: a criança anda uns passos para o portão
     const [gx, , gz] = c.portao;
+    // (acabamento da n5: ele anda de verdade, em pé, com as patinhas mexendo)
+    let patas = 0;
     for (let k = 1; k <= 4; k++) {
       await ir(page, hx + ((gx - hx) * k) / 4, hz + ((gz - hz) * k) / 4, gx, gz);
-      await page.waitForTimeout(500);
+      for (let j = 0; j < 5; j++) {
+        await page.waitForTimeout(100);
+        const g = ((await tela(page)).bichos as { nome: string; emPe: boolean; patas: number[] }[]).find((q) => q.nome === 'tufinho')!;
+        expect(g.emPe).toBe(true);
+        patas = Math.max(patas, ...g.patas.map(Math.abs));
+      }
     }
+    expect(patas).toBeGreaterThan(0.1);
     await page.waitForTimeout(1200);
     const gato = ((await tela(page)).bichos as { nome: string; x: number; z: number }[]).find((q) => q.nome === 'tufinho')!;
     expect(Math.hypot(gato.x - gx, gato.z - gz)).toBeLessThan(3);
@@ -631,9 +693,17 @@ async function jogadora(b: Browser, id: string, apelido: string): Promise<Page> 
     [id, apelido],
   );
   const p = await ctx.newPage();
-  p.on('pageerror', (e) => console.log(`[${apelido}] erro: ${String(e)}`));
+  p.on('pageerror', (e) => {
+    console.log(`[${apelido}] erro: ${String(e)}`);
+    errosDeMalha.push(`${apelido}: ${String(e)}`);
+  });
   return p;
 }
+/**
+ * Os erros de montar malha nas páginas das duas (o acabamento achou um: o mesmo desenho montado de
+ * novo na segunda travessura não juntava; o teste confere que nenhum volta).
+ */
+const errosDeMalha: string[] = [];
 /** Teleporta para (x, z) no chão da festa (as missões por toque direto: o dedo é o do teste de cima). */
 const irPara = (p: Page, x: number, z: number) =>
   p.evaluate(({ x, z }) => {
@@ -772,13 +842,41 @@ test('T20: duas amigas na nuvem, na n2 (a lanterna da Ana conta para a Bia) e na
   expect(Math.hypot(naAna.x - hx, naAna.z - hz)).toBeGreaterThan(20);
   mkdirSync(PASTA, { recursive: true });
   await fecharFestas(bia);
+  // (a foto com o Tufinho à vista: a Bia a uns 2,5 blocos dele, um tico de lado, a câmera do jogo
+  // olhando para ele por cima do ombro dela)
   await bia.evaluate(({ hx, hz }) => {
     const e = window.__brumaluz!;
+    const g = e.tufinhoOnde?.() ?? { x: hx, z: hz };
     const [x, , z] = e.jogadorPes!();
-    e.apontar!(Math.atan2(hx - x, hz - z) + 0.5, 0.35);
+    const d = Math.hypot(x - g.x, z - g.z) || 1;
+    const [px, pz] = [g.x + ((x - g.x) / d) * 2.5, g.z + ((z - g.z) / d) * 2.5];
+    e.teleportar!(px, pz, e.baile!()!.h + 1.2);
+    e.apontar!(Math.atan2(g.x - px, g.z - pz) + 0.3, 0.45);
   }, { hx, hz });
+  await bia.waitForTimeout(1200);
+  // (a câmera de lado, de 3/4: a Bia de um lado, o Tufinho do outro, nenhum na frente do outro)
+  await cameraFixa(bia);
+  const enquadre = await bia.evaluate(() => {
+    const e = window.__brumaluz!;
+    const g = e.tufinhoOnde!()!;
+    const [x, y, z] = e.jogadorPes!();
+    const [dx, dz] = [(x - g.x) / 2.5, (z - g.z) / 2.5];
+    const meio = [(x + g.x) / 2, y + 0.45, (z + g.z) / 2];
+    // (girada 80 graus da linha entre os dois, 3,6 blocos do meio, um tico acima)
+    const c = Math.cos(1.4);
+    const s = Math.sin(1.4);
+    return { p: [meio[0] + (dx * c - dz * s) * 3.6, y + 1.9, meio[2] + (dx * s + dz * c) * 3.6], a: meio };
+  });
+  await camera(bia, enquadre.p as [number, number, number], enquadre.a as [number, number, number]);
   await bia.waitForTimeout(900);
+  const naTela = await bia.evaluate(() => {
+    const e = window.__brumaluz!;
+    const g = e.tufinhoOnde!()!;
+    return e.telaDoPonto!(g.x, g.y + 0.3, g.z);
+  });
+  expect(naTela, 'o Tufinho (a cópia) à vista na foto').not.toBeNull();
   await bia.screenshot({ path: `${PASTA}/t20-n5-copia-fugida-bia.jpg`, type: 'jpeg', quality: 88 });
+  await camera(bia, null);
   // a Bia chama a cópia e leva até a Vovó: a n5 dela fecha; a da Ana não conta de novo
   await toque(bia, { a: 'tufinho' });
   await bia.waitForFunction(() => window.__brumaluz!.baileEstado!()!.tc === 'segue', undefined, { timeout: 10_000 });
@@ -791,5 +889,7 @@ test('T20: duas amigas na nuvem, na n2 (a lanterna da Ana conta para a Bia) e na
   );
   await fecharFestas(bia);
   await bia.screenshot({ path: `${PASTA}/t20-n5-bia-entregou.jpg`, type: 'jpeg', quality: 88 });
+  // (cada uma viu duas travessuras, a dela e a da amiga: a malha montou as duas vezes)
+  expect(errosDeMalha.filter((e) => /merge|vertex/i.test(e))).toEqual([]);
   for (const p of [ana, bia]) await p.context().close();
 });
