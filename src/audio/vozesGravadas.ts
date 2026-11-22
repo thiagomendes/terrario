@@ -112,10 +112,11 @@ export const NIVEL_VOZES: Readonly<Record<string, Partial<Record<GrupoNivelVoz, 
   // spec 026: a Vila Neon não tem vozes gravadas (os bichos e os moradores do bairro usam a voz
   // sintetizada do tema, src/temas/vila-neon/vozes.ts): o carregador nem baixa pacote de vozes
   // spec 027 (T21): os bichos e os moradores da festa são síntese nossa na régua da 019 (-23 dB
-  // "enquanto soa", como os outros pacotes); os moradores no nível dos da Cidade (a mesma voz de
-  // formantes, com outro sabor), os bichos no meio dos do Rancho e da Cidade, o baque e o "puf" no
-  // nível do Rancho
-  'noite-das-fantasias': { bichos: -6.8, moradores: -3.2, baque: -1.3, derrota: 0.4 },
+  // "enquanto soa", como os outros pacotes); os bichos no meio dos do Rancho e da Cidade, o baque e
+  // o "puf" no nível do Rancho. T23: os moradores tinham o ganho dos da Cidade (-3,2), e a régua
+  // de vozes deu +1,42 dB acima da voz sintetizada de hoje (o sabor "festa" tem mais brilho):
+  // -5,1 deixa ~0,5 dB abaixo, no meio da faixa da 019
+  'noite-das-fantasias': { bichos: -6.8, moradores: -5.1, baque: -1.3, derrota: 0.4 },
 };
 
 /**

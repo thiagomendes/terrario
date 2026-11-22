@@ -136,15 +136,11 @@ for (const [id, nome] of TEMAS) {
     await expect(page.locator('[data-mundo-atual]')).toContainText(nome);
     // joga: quebra o bloco mirado e salva
     await page.evaluate(() => document.querySelector('.entrada')?.setAttribute('hidden', ''));
-    // spec 014: o chão da Cidade Grande é protegido (016); quebra fora dela, no mundo natural
-    await page.evaluate(() => {
-      const c = window.__brumaluz!.cidade?.();
-      if (c) window.__brumaluz!.teleportar!(c.plana.x0 - 40.5, c.nascimento.z);
-      // spec 034: o chão do bairro da Vila Neon também é protegido (era o caso que já caía);
-      // quebra fora dele, no mundo natural
-      const v = window.__brumaluz!.vila?.();
-      if (v) window.__brumaluz!.teleportar!(v.plana.x0 - 40.5, v.nascimento.z);
-    });
+    // spec 014: o chão da Cidade Grande é protegido (016); quebra fora dela, no mundo natural.
+    // Spec 034: o chão do bairro da Vila Neon também; spec 027 (T04): e o da vila da Noite das
+    // Fantasias. T23: com vários testes juntos, às vezes o jogador volta para o lugar de nascer
+    // logo depois do teleporte (visto na festa e na Vila: a mira no chão da praça, protegido);
+    // então, a cada mirada, quem está dentro da área plana vai para fora de novo
     // olha para o chão até ter um bloco na mira. Com vários testes juntos o chão em volta
     // demora a chegar do worker: reaponta a cada meio segundo e, se nada aparecer em 20 s,
     // põe o jogador de novo em cima do terreno (o chão já carregado)
@@ -153,6 +149,19 @@ for (const [id, nome] of TEMAS) {
       .waitForFunction(
         (inicio) => {
           const e = window.__brumaluz!;
+          const plano = e.cidade?.() ?? e.vila?.() ?? e.baile?.();
+          const p = e.posicao;
+          const dentro =
+            !!plano &&
+            !!p &&
+            p[0] >= plano.plana.x0 - 3 &&
+            p[0] <= plano.plana.x1 + 3 &&
+            p[2] >= plano.plana.z0 - 3 &&
+            p[2] <= plano.plana.z1 + 3;
+          if (plano && (dentro || !p)) {
+            e.teleportar!(plano.plana.x0 - 40.5, plano.nascimento.z);
+            return false;
+          }
           if (Date.now() - inicio > 20_000 && e.posicao) {
             e.teleportar!(e.posicao[0], e.posicao[2]);
           }
@@ -175,7 +184,24 @@ for (const [id, nome] of TEMAS) {
         throw new Error(`sem bloco na mira: ${JSON.stringify(onde)} (${String(erro)})`);
       });
     const alvo = await page.evaluate(() => window.__brumaluz!.alvo);
-    expect(await page.evaluate(() => window.__brumaluz!.interagir!('quebrar'))).toBe(true);
+    const quebra = await page.evaluate(() => {
+      const e = window.__brumaluz!;
+      const antes = e.alvo;
+      const p = e.posicao;
+      const bloco = antes ? e.bloco!(antes.x, antes.y, antes.z) : null;
+      const prot = antes
+        ? (e as unknown as { protecao?: (x: number, y: number, z: number) => string }).protecao?.(
+            antes.x,
+            antes.y,
+            antes.z,
+          )
+        : null;
+      const ok = e.interagir!('quebrar');
+      return { ok, antes, depois: e.alvo, p, bloco, prot };
+    });
+    // se não quebrou, diz onde estava e o que havia na mira (para achar a causa)
+    if (!quebra.ok) console.log(`não quebrou: ${JSON.stringify(quebra)}`);
+    expect(quebra.ok).toBe(true);
     expect(await page.evaluate(() => window.__brumaluz!.salvar!(true))).toBe(true);
     await page.reload();
     await pronto(page);

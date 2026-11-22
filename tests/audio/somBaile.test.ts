@@ -95,6 +95,37 @@ describe('o pacote de sons da festa', () => {
   });
 });
 
+describe('o volume da trilha da festa (spec 027, T21)', () => {
+  /**
+   * T23: a régua da 019 (e2e/trilha-regua.spec.ts) compara o RMS da gravada com a trilha
+   * sintetizada de antes da 019, e a festa (como a Vila Neon) veio depois e nunca tocou a
+   * sintetizada: a "de hoje" dela é a reserva da T01. A gravada foi afinada como a da Vila (026,
+   * T18): o volume percebido (LUFS) de cada mistura igual à média do Rancho e da Cidade com o
+   * ajuste deles. Aqui fica a regra, pelas medidas dos dois pacotes:
+   * nivel = média(LUFS_ref + NIVEL_TRILHA_ref) − LUFS_festa.
+   */
+  const REF = (
+    JSON.parse(lerTexto('.sdd/specs/026-mundo-anos-80/referencia/fontes/medidas-pacote.json')) as {
+      nivel: { lufs: Record<string, Record<string, number>> };
+    }
+  ).nivel.lufs;
+  const LUFS_FESTA = (
+    JSON.parse(lerTexto('.sdd/specs/027-mundo-halloween/referencia/fontes/medidas-pacote.json')) as {
+      musica: { lufs: Record<string, number> };
+    }
+  ).musica.lufs;
+
+  it('cada contexto no volume percebido do Rancho e da Cidade (décimo de dB)', () => {
+    for (const c of ['dia', 'tarde', 'noite', 'caverna'] as const) {
+      const ref = (['rancho-alegre', 'cidade-grande'] as const).map(
+        (id) => REF[id][c] + (NIVEL_TRILHA[id][c] ?? NIVEL_TRILHA[id].dia ?? 0),
+      );
+      const alvo = (ref[0] + ref[1]) / 2 - LUFS_FESTA[c];
+      expect(NIVEL_TRILHA[TEMA][c], c).toBeCloseTo(alvo, 1);
+    }
+  });
+});
+
 describe('o ambiente por lugar', () => {
   it('cada zona do plano cai num lugar (a loja e o gramado na praça; a Vovó na rua; o castelinho no bosque)', () => {
     expect(lugarDaFesta(ZONAS, 5, 5)).toBe('praca');

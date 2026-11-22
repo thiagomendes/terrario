@@ -26,6 +26,14 @@ const MAIS_BAIXA_DB = -1.5;
  */
 const FAIXA_DB: Record<string, readonly [number, number]> = {
   'vila-neon': [-0.6, 2.1],
+  // spec 027 (T23): a Noite das Fantasias é o mesmo caso. Também veio depois da 019 e nunca tocou
+  // uma trilha sintetizada de antes: a "de hoje" dela é a reserva feita na T01, que soa como a
+  // do Doce, uns 2 dB acima da do Rancho e da Cidade. A gravada foi afinada na T21 pelo volume
+  // percebido (LUFS) na média do Rancho e da Cidade, como a Vila (a regra fica em
+  // tests/audio/somBaile.test.ts); no RMS ela fica junto das gravadas deles (-46,3 a -46,6 dBFS
+  // contra -45,7 a -46,1) e abaixo da reserva. A faixa é a medida de hoje (dia -3,47, tarde
+  // -3,63, noite -3,55, caverna -3,44, perigo -3,37) com folga, e nunca acima da reserva.
+  'noite-das-fantasias': [-4.1, -2.9],
 };
 const faixa = (tema: string) => FAIXA_DB[tema] ?? ([MAIS_BAIXA_DB, FOLGA_DB] as const);
 const CONTEXTOS = ['dia', 'tarde', 'noite', 'caverna', 'perigo'] as const;

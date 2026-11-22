@@ -48,6 +48,13 @@ Ideias e pedidos do dono que ainda não viraram spec, e a fila combinada. A orde
   - `lojinha:107`: a festa leva perto de 3400 ms;
   - o pulo do `achar-amigo-nuvem`: perto de 2500 ms.
 - **Na nuvem, sem placa de vídeo:** os da roleta e os de tempo caem por lentidão; o e2e de verdade é no computador do dono.
+- **Achados na T23 da 027 (22 nov), que também caem na `main` (eab8b8b):**
+  - `capturas-encaixe:109`: "nenhum povoado perto do nascimento" (o `/` abre a Vila Neon desde a 034, que não tem povoado); cai sempre;
+  - `cidade-grande:242`: os 12 tijolos soltos não voltam para a mochila (0 de 12; o concreto e o asfalto voltam); 2 de 3 na `main`;
+  - `guia-chegada:61` (a c3 inteira andando): a trilha não passa para o lugar seguinte em 15 s;
+  - `vila-bate:76` (em pé): instável nas duas (na 027, a maior velocidade 16 numa vez; na `main`, `yaw` de nulo);
+  - `som-veiculos:61`: desta vez a buzina (3,7 dB, precisa de 6).
+- **A página deitada que trava ou perde o contexto WebGL** (T20, T22 e T23 da 027; a Vila deitada também): na ponte da placa do WSL, a placa trava inteira por uns 2 minutos (o `nvidia-smi` do Windows fica sem responder) e volta zerada; nunca passou de 450 MiB de 6 GB. Cai uma em duas ou três rodadas, em qualquer missão. Conferir no aparelho de verdade.
 
 ## Ideias soltas
 - **Acabamento do Rancho** (entra na spec de riqueza do Rancho):

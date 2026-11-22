@@ -111,7 +111,38 @@ test('cem lampiões e cem caldeirões postos num pedaço: no máximo duas chamad
     (window as unknown as { __camFixa: unknown }).__camFixa = { p, a };
   }, [cam, olha] as const);
   await page.waitForTimeout(4000);
-  const antes = await chamadas(page);
+  // T23: a cena assentada antes de medir. Os bichos vão nascendo em volta depois do teleporte
+  // (cada bicho de longe são 2 chamadas): medido logo aos 4 s, o "antes" saía 7 a 9 chamadas abaixo
+  // do que a cena tem uns segundos depois, sem lampião nenhum, e a diferença caía nos lampiões.
+  // Agora o "antes" sai com três leituras seguidas (a 2 s uma da outra) com o mesmo número de
+  // bichos e as chamadas a no máximo 1 uma da outra.
+  const bichos = () => page.evaluate(() => (window.__brumaluz!.criaturas?.() ?? []).length);
+  const leituras: [number, number][] = [];
+  for (let k = 0; k < 20; k++) {
+    leituras.push([await chamadas(page), await bichos()]);
+    const u = leituras.slice(-3);
+    if (
+      u.length === 3 &&
+      u.every(([, b]) => b === u[0][1]) &&
+      Math.max(...u.map(([c]) => c)) - Math.min(...u.map(([c]) => c)) <= 1
+    )
+      break;
+    await page.waitForTimeout(2000);
+  }
+  console.log(`LAMPIOES leituras antes ${JSON.stringify(leituras)}`);
+  // mesmo assentada, a cena oscila 1 ou 2 chamadas (um bicho que entra ou sai da vista): o antes
+  // e o depois são a mediana de 5 leituras, a 1 s uma da outra
+  const chamadasNoTempo = async () => {
+    const m: number[] = [];
+    for (let k = 0; k < 5; k++) {
+      m.push(await chamadas(page));
+      await page.waitForTimeout(1000);
+    }
+    console.log(`LAMPIOES leituras ${JSON.stringify(m)}`);
+    return [...m].sort((a, b) => a - b)[2];
+  };
+  const antes = await chamadasNoTempo();
+  const bichosAntes = await bichos();
   const contaAntes = await page.evaluate(() => window.__brumaluz!.lampioes!());
   // cem lampiões e cem caldeirões, em cima do chão do chunk (duas camadas no ar)
   await page.evaluate((a) => {
@@ -125,9 +156,14 @@ test('cem lampiões e cem caldeirões postos num pedaço: no máximo duas chamad
     window.__brumaluz!.editarLote!(lote);
   }, alvo);
   await page.waitForTimeout(4000);
-  const depois = await chamadas(page);
+  const depois = await chamadasNoTempo();
+  const bichosDepois = await bichos();
   const conta = await page.evaluate(() => window.__brumaluz!.lampioes!());
-  console.log(`LAMPIOES chamadas ${antes} -> ${depois}; ${JSON.stringify(contaAntes)} -> ${JSON.stringify(conta)}`);
+  console.log(
+    `LAMPIOES chamadas ${antes} -> ${depois}; bichos ${bichosAntes} -> ${bichosDepois}; ${JSON.stringify(contaAntes)} -> ${JSON.stringify(conta)}`,
+  );
+  // a conta só vale com os mesmos bichos na cena (cada um muda as chamadas)
+  expect(bichosDepois, 'um bicho nasceu ou sumiu no meio da medida').toBe(bichosAntes);
   expect(conta.lampioes - contaAntes.lampioes).toBe(100);
   expect(conta.caldeiroes - contaAntes.caldeiroes).toBe(100);
   expect(depois - antes).toBeLessThanOrEqual(2);
