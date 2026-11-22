@@ -1,0 +1,1391 @@
+{
+ "musica": {
+  "pacoteBytes": 1212271,
+  "pacoteKB": 1183.9,
+  "segundosDecodificados": 150.3,
+  "memoriaMB24k": 13.76,
+  "memoriaMBTaxaDoArquivo": 12.64,
+  "memoriaMB48k": 27.52,
+  "metas": {
+   "downloadMenorQue2MB": true,
+   "memoria24kMenorQue15MB": true
+  },
+  "andamento": 126,
+  "compassos": 16,
+  "segundosVolta": 30.476,
+  "ganhosDb": {
+   "base": 12.93,
+   "dia": 8.54,
+   "entardecer": -2.74,
+   "noite": 7.41,
+   "mov": 19.26,
+   "amigos": 20.15,
+   "pingos": 7.92
+  },
+  "lufs": {
+   "dia": -25.63,
+   "tarde": -26.43,
+   "noite": -28.94,
+   "caverna": -28.89
+  },
+  "mixes": {
+   "dia": {
+    "rmsDb": -25.21,
+    "picoDb": -9.21,
+    "cortes": 0,
+    "ganhos": {
+     "base": 1,
+     "frases dia": 1
+    }
+   },
+   "entardecer": {
+    "rmsDb": -25.7,
+    "picoDb": -9.8,
+    "cortes": 0,
+    "ganhos": {
+     "base": 1,
+     "frases entardecer": 1
+    }
+   },
+   "noite": {
+    "rmsDb": -28.1,
+    "picoDb": -13.64,
+    "cortes": 0,
+    "ganhos": {
+     "base": 0.65,
+     "noite": 1
+    }
+   },
+   "chuva (dia, sem o filtro)": {
+    "rmsDb": -25.07,
+    "picoDb": -9.21,
+    "cortes": 0,
+    "ganhos": {
+     "base": 1,
+     "frases dia": 1,
+     "pingos": 1
+    }
+   },
+   "caverna (sem o filtro)": {
+    "rmsDb": -28.2,
+    "picoDb": -12.16,
+    "cortes": 0,
+    "ganhos": {
+     "base": 0.6,
+     "noite": 1,
+     "pingos": 1
+    }
+   },
+   "andando": {
+    "rmsDb": -24.88,
+    "picoDb": -8.76,
+    "cortes": 0,
+    "ganhos": {
+     "base": 1,
+     "frases dia": 1,
+     "movimento": 0.6
+    }
+   },
+   "correndo": {
+    "rmsDb": -24.34,
+    "picoDb": -6.96,
+    "cortes": 0,
+    "ganhos": {
+     "base": 1,
+     "frases dia": 1,
+     "movimento": 1
+    }
+   },
+   "amigos (parado)": {
+    "rmsDb": -24.23,
+    "picoDb": -5.36,
+    "cortes": 0,
+    "ganhos": {
+     "base": 1,
+     "frases dia": 1,
+     "amigos": 1
+    }
+   },
+   "correndo + amigos": {
+    "rmsDb": -23.52,
+    "picoDb": -4.83,
+    "cortes": 0,
+    "ganhos": {
+     "base": 1,
+     "frases dia": 1,
+     "movimento": 1,
+     "amigos": 1
+    }
+   },
+   "tudo ligado (pior caso)": {
+    "rmsDb": -22.68,
+    "picoDb": -5.09,
+    "cortes": 0,
+    "ganhos": {}
+   }
+  },
+  "clips": {
+   "base": {
+    "segundos": 30.596,
+    "rmsDb": -26.41,
+    "kb": 239.8,
+    "picoDb": -10.48,
+    "cortes": 0,
+    "desvioCodificador": 0,
+    "silencio": 0.0,
+    "emenda": {
+     "saltoDb": -61.29,
+     "passoTipicoDb": -53.06,
+     "erroPeriodicoDb": -39.82,
+     "saltoWav": 0.00161
+    }
+   },
+   "noite": {
+    "segundos": 30.596,
+    "rmsDb": -32.57,
+    "kb": 239.8,
+    "picoDb": -16.96,
+    "cortes": 0,
+    "desvioCodificador": 0,
+    "silencio": 0.0,
+    "emenda": {
+     "saltoDb": -66.61,
+     "passoTipicoDb": -56.41,
+     "erroPeriodicoDb": -52.28,
+     "saltoWav": 6e-05
+    }
+   },
+   "amigos": {
+    "segundos": 3.93,
+    "rmsDb": -31.09,
+    "kb": 31.4,
+    "picoDb": -8.39,
+    "cortes": 0,
+    "desvioCodificador": 0,
+    "silencio": 0.105,
+    "emenda": {
+     "saltoDb": -66.92,
+     "passoTipicoDb": -58.07,
+     "erroPeriodicoDb": -50.57,
+     "saltoWav": 0.00065
+    }
+   },
+   "mov": {
+    "segundos": 2.025,
+    "rmsDb": -31.77,
+    "kb": 16.5,
+    "picoDb": -12.04,
+    "cortes": 0,
+    "desvioCodificador": 0,
+    "silencio": 0.0,
+    "emenda": {
+     "saltoDb": -39.97,
+     "passoTipicoDb": -41.3,
+     "erroPeriodicoDb": -22.91,
+     "saltoWav": 0.00811
+    }
+   },
+   "pingos": {
+    "segundos": 7.739,
+    "rmsDb": -39.39,
+    "kb": 61.2,
+    "picoDb": -21.91,
+    "cortes": 0,
+    "desvioCodificador": 0,
+    "silencio": 0.533,
+    "emenda": {
+     "saltoDb": -50.3,
+     "passoTipicoDb": -79.07,
+     "erroPeriodicoDb": -61.84,
+     "saltoWav": 0.00332
+    }
+   },
+   "dia_a_1": {
+    "segundos": 8.379,
+    "rmsDb": -32.46,
+    "kb": 66.1,
+    "picoDb": -14.31,
+    "cortes": 0,
+    "desvioCodificador": 0,
+    "silencio": 0.033
+   },
+   "dia_a_2": {
+    "segundos": 8.379,
+    "rmsDb": -32.46,
+    "kb": 66.1,
+    "picoDb": -14.71,
+    "cortes": 0,
+    "desvioCodificador": 0,
+    "silencio": 0.007
+   },
+   "tarde_a_1": {
+    "segundos": 8.379,
+    "rmsDb": -34.03,
+    "kb": 66.1,
+    "picoDb": -24.56,
+    "cortes": 0,
+    "desvioCodificador": 0,
+    "silencio": 0.0
+   },
+   "dia_a2_1": {
+    "segundos": 8.379,
+    "rmsDb": -32.49,
+    "kb": 66.1,
+    "picoDb": -14.43,
+    "cortes": 0,
+    "desvioCodificador": 0,
+    "silencio": 0.046
+   },
+   "tarde_a2_1": {
+    "segundos": 8.379,
+    "rmsDb": -33.85,
+    "kb": 66.1,
+    "picoDb": -24.36,
+    "cortes": 0,
+    "desvioCodificador": 0,
+    "silencio": 0.0
+   },
+   "dia_bx_1": {
+    "segundos": 8.379,
+    "rmsDb": -30.96,
+    "kb": 66.1,
+    "picoDb": -13.55,
+    "cortes": 0,
+    "desvioCodificador": 0,
+    "silencio": 0.046
+   },
+   "tarde_bx_1": {
+    "segundos": 8.379,
+    "rmsDb": -34.8,
+    "kb": 66.1,
+    "picoDb": -24.78,
+    "cortes": 0,
+    "desvioCodificador": 0,
+    "silencio": 0.0
+   },
+   "dia_by_1": {
+    "segundos": 8.379,
+    "rmsDb": -31.44,
+    "kb": 66.1,
+    "picoDb": -13.75,
+    "cortes": 0,
+    "desvioCodificador": 0,
+    "silencio": 0.046
+   },
+   "tarde_by_1": {
+    "segundos": 8.379,
+    "rmsDb": -34.52,
+    "kb": 66.1,
+    "picoDb": -24.23,
+    "cortes": 0,
+    "desvioCodificador": 0,
+    "silencio": 0.0
+   }
+  }
+ },
+ "vozes": {
+  "pacoteBytes": 477556,
+  "totais": {
+   "arquivos": 96,
+   "kb": 466.4,
+   "segundos": 79.6,
+   "decodificadoMB22k": 6.69,
+   "porSecao": {
+    "bichos": {
+     "arquivos": 44,
+     "kb": 133.0,
+     "segundos": 22.7,
+     "decodificadoMB22k": 1.91
+    },
+    "moradores": {
+     "arquivos": 16,
+     "kb": 66.1,
+     "segundos": 11.3,
+     "decodificadoMB22k": 0.95
+    },
+    "festa": {
+     "arquivos": 21,
+     "kb": 151.2,
+     "segundos": 25.8,
+     "decodificadoMB22k": 2.17
+    },
+    "ambiente": {
+     "arquivos": 15,
+     "kb": 116.0,
+     "segundos": 19.8,
+     "decodificadoMB22k": 1.67
+    }
+   }
+  },
+  "regua": "RMS \"enquanto soa\" (janelas de 50 ms acima de -60 dBFS) no MP3 decodificado; alvo -23 dB (ambiente -27); pico <= -1 dBFS; LUFS momentâneo máximo (ebur128) <= -12",
+  "lufsMomentaneoMax": -16.9,
+  "arquivos": {
+   "ambiente.abobora.0": {
+    "seg": 0.888,
+    "alvoDb": -27.0,
+    "rmsDb": -27.0,
+    "picoDb": -12.3,
+    "lufsMomentaneoMax": -25.9,
+    "bytes": 5329,
+    "cortes": 0,
+    "centroideHz": 365,
+    "acima4k": 0.0
+   },
+   "ambiente.abobora.1": {
+    "seg": 0.836,
+    "alvoDb": -27.0,
+    "rmsDb": -27.0,
+    "picoDb": -12.7,
+    "lufsMomentaneoMax": -26.1,
+    "bytes": 5015,
+    "cortes": 0,
+    "centroideHz": 386,
+    "acima4k": 0.0
+   },
+   "ambiente.campainhaLonge.0": {
+    "seg": 1.855,
+    "alvoDb": -27.0,
+    "rmsDb": -27.0,
+    "picoDb": -14.7,
+    "lufsMomentaneoMax": -23.4,
+    "bytes": 11128,
+    "cortes": 0,
+    "centroideHz": 885,
+    "acima4k": 0.0
+   },
+   "ambiente.campainhaLonge.1": {
+    "seg": 1.567,
+    "alvoDb": -27.0,
+    "rmsDb": -27.3,
+    "picoDb": -14.5,
+    "lufsMomentaneoMax": -24.8,
+    "bytes": 9404,
+    "cortes": 0,
+    "centroideHz": 1086,
+    "acima4k": 0.0
+   },
+   "ambiente.corujinha.0": {
+    "seg": 0.705,
+    "alvoDb": -27.0,
+    "rmsDb": -27.0,
+    "picoDb": -17.4,
+    "lufsMomentaneoMax": -26.7,
+    "bytes": 4232,
+    "cortes": 0,
+    "centroideHz": 621,
+    "acima4k": 0.0
+   },
+   "ambiente.corujinha.1": {
+    "seg": 0.705,
+    "alvoDb": -27.0,
+    "rmsDb": -27.0,
+    "picoDb": -17.6,
+    "lufsMomentaneoMax": -27.1,
+    "bytes": 4232,
+    "cortes": 0,
+    "centroideHz": 661,
+    "acima4k": 0.0
+   },
+   "ambiente.grilo.0": {
+    "seg": 0.914,
+    "alvoDb": -27.0,
+    "rmsDb": -27.0,
+    "picoDb": -14.9,
+    "lufsMomentaneoMax": -26.2,
+    "bytes": 5485,
+    "cortes": 0,
+    "centroideHz": 4301,
+    "acima4k": 1.0
+   },
+   "ambiente.grilo.1": {
+    "seg": 0.914,
+    "alvoDb": -27.0,
+    "rmsDb": -27.0,
+    "picoDb": -14.9,
+    "lufsMomentaneoMax": -26.2,
+    "bytes": 5485,
+    "cortes": 0,
+    "centroideHz": 4450,
+    "acima4k": 1.0
+   },
+   "ambiente.regador.0": {
+    "seg": 1.593,
+    "alvoDb": -27.0,
+    "rmsDb": -27.4,
+    "picoDb": -13.6,
+    "lufsMomentaneoMax": -22.6,
+    "bytes": 9561,
+    "cortes": 0,
+    "centroideHz": 3285,
+    "acima4k": 0.118
+   },
+   "ambiente.regador.1": {
+    "seg": 1.593,
+    "alvoDb": -27.0,
+    "rmsDb": -27.0,
+    "picoDb": -11.5,
+    "lufsMomentaneoMax": -22.2,
+    "bytes": 9561,
+    "cortes": 0,
+    "centroideHz": 3281,
+    "acima4k": 0.121
+   },
+   "ambiente.risadinhaLonge.0": {
+    "seg": 0.993,
+    "alvoDb": -27.0,
+    "rmsDb": -27.0,
+    "picoDb": -14.4,
+    "lufsMomentaneoMax": -25.4,
+    "bytes": 5956,
+    "cortes": 0,
+    "centroideHz": 899,
+    "acima4k": 0.0
+   },
+   "ambiente.risadinhaLonge.1": {
+    "seg": 0.993,
+    "alvoDb": -27.0,
+    "rmsDb": -27.0,
+    "picoDb": -16.3,
+    "lufsMomentaneoMax": -26.0,
+    "bytes": 5956,
+    "cortes": 0,
+    "centroideHz": 904,
+    "acima4k": 0.0
+   },
+   "ambiente.sininhos.0": {
+    "seg": 1.881,
+    "alvoDb": -27.0,
+    "rmsDb": -27.0,
+    "picoDb": -14.6,
+    "lufsMomentaneoMax": -20.0,
+    "bytes": 11285,
+    "cortes": 0,
+    "centroideHz": 2178,
+    "acima4k": 0.002
+   },
+   "ambiente.sininhos.1": {
+    "seg": 2.116,
+    "alvoDb": -27.0,
+    "rmsDb": -27.0,
+    "picoDb": -15.3,
+    "lufsMomentaneoMax": -20.7,
+    "bytes": 12695,
+    "cortes": 0,
+    "centroideHz": 2119,
+    "acima4k": 0.002
+   },
+   "ambiente.sininhos.2": {
+    "seg": 2.247,
+    "alvoDb": -27.0,
+    "rmsDb": -27.0,
+    "picoDb": -14.6,
+    "lufsMomentaneoMax": -22.7,
+    "bytes": 13479,
+    "cortes": 0,
+    "centroideHz": 1847,
+    "acima4k": 0.0
+   },
+   "bicho.cervo.ai.0": {
+    "seg": 0.313,
+    "alvoDb": -23.0,
+    "rmsDb": -23.0,
+    "picoDb": -11.6,
+    "lufsMomentaneoMax": -27.8,
+    "bytes": 1881,
+    "cortes": 0,
+    "centroideHz": 1102,
+    "acima4k": 0.001
+   },
+   "bicho.cervo.ai.1": {
+    "seg": 0.287,
+    "alvoDb": -23.0,
+    "rmsDb": -23.0,
+    "picoDb": -10.9,
+    "lufsMomentaneoMax": -27.8,
+    "bytes": 1724,
+    "cortes": 0,
+    "centroideHz": 1085,
+    "acima4k": 0.001
+   },
+   "bicho.cervo.chamado.0": {
+    "seg": 0.81,
+    "alvoDb": -23.0,
+    "rmsDb": -23.0,
+    "picoDb": -7.8,
+    "lufsMomentaneoMax": -22.1,
+    "bytes": 4859,
+    "cortes": 0,
+    "centroideHz": 403,
+    "acima4k": 0.0
+   },
+   "bicho.cervo.chamado.1": {
+    "seg": 0.862,
+    "alvoDb": -23.0,
+    "rmsDb": -23.0,
+    "picoDb": -8.2,
+    "lufsMomentaneoMax": -21.8,
+    "bytes": 5172,
+    "cortes": 0,
+    "centroideHz": 377,
+    "acima4k": 0.0
+   },
+   "bicho.cervo.chamado.2": {
+    "seg": 0.758,
+    "alvoDb": -23.0,
+    "rmsDb": -23.0,
+    "picoDb": -8.6,
+    "lufsMomentaneoMax": -22.5,
+    "bytes": 4545,
+    "cortes": 0,
+    "centroideHz": 429,
+    "acima4k": 0.0
+   },
+   "bicho.cervo.contente.0": {
+    "seg": 0.993,
+    "alvoDb": -23.0,
+    "rmsDb": -23.0,
+    "picoDb": -9.3,
+    "lufsMomentaneoMax": -22.0,
+    "bytes": 5956,
+    "cortes": 0,
+    "centroideHz": 478,
+    "acima4k": 0.0
+   },
+   "bicho.cervo.contente.1": {
+    "seg": 1.071,
+    "alvoDb": -23.0,
+    "rmsDb": -23.0,
+    "picoDb": -9.2,
+    "lufsMomentaneoMax": -21.9,
+    "bytes": 6426,
+    "cortes": 0,
+    "centroideHz": 446,
+    "acima4k": 0.0
+   },
+   "bicho.cervo.susto.0": {
+    "seg": 0.418,
+    "alvoDb": -23.0,
+    "rmsDb": -23.0,
+    "picoDb": -10.4,
+    "lufsMomentaneoMax": -25.7,
+    "bytes": 2508,
+    "cortes": 0,
+    "centroideHz": 512,
+    "acima4k": 0.0
+   },
+   "bicho.cervo.susto.1": {
+    "seg": 0.418,
+    "alvoDb": -23.0,
+    "rmsDb": -23.0,
+    "picoDb": -9.7,
+    "lufsMomentaneoMax": -25.7,
+    "bytes": 2508,
+    "cortes": 0,
+    "centroideHz": 565,
+    "acima4k": 0.0
+   },
+   "bicho.coelho.ai.0": {
+    "seg": 0.261,
+    "alvoDb": -23.0,
+    "rmsDb": -23.0,
+    "picoDb": -11.5,
+    "lufsMomentaneoMax": -24.7,
+    "bytes": 1567,
+    "cortes": 0,
+    "centroideHz": 2140,
+    "acima4k": 0.0
+   },
+   "bicho.coelho.ai.1": {
+    "seg": 0.261,
+    "alvoDb": -23.0,
+    "rmsDb": -23.0,
+    "picoDb": -11.6,
+    "lufsMomentaneoMax": -26.3,
+    "bytes": 1567,
+    "cortes": 0,
+    "centroideHz": 2240,
+    "acima4k": 0.0
+   },
+   "bicho.coelho.chamado.0": {
+    "seg": 0.94,
+    "alvoDb": -23.0,
+    "rmsDb": -23.1,
+    "picoDb": -5.2,
+    "lufsMomentaneoMax": -19.9,
+    "bytes": 5642,
+    "cortes": 0,
+    "centroideHz": 2523,
+    "acima4k": 0.021
+   },
+   "bicho.coelho.chamado.1": {
+    "seg": 0.888,
+    "alvoDb": -23.0,
+    "rmsDb": -23.0,
+    "picoDb": -5.7,
+    "lufsMomentaneoMax": -19.4,
+    "bytes": 5329,
+    "cortes": 0,
+    "centroideHz": 2594,
+    "acima4k": 0.021
+   },
+   "bicho.coelho.chamado.2": {
+    "seg": 0.967,
+    "alvoDb": -23.0,
+    "rmsDb": -23.0,
+    "picoDb": -6.0,
+    "lufsMomentaneoMax": -19.6,
+    "bytes": 5799,
+    "cortes": 0,
+    "centroideHz": 2398,
+    "acima4k": 0.014
+   },
+   "bicho.coelho.contente.0": {
+    "seg": 0.705,
+    "alvoDb": -23.0,
+    "rmsDb": -23.4,
+    "picoDb": -8.6,
+    "lufsMomentaneoMax": -19.5,
+    "bytes": 4232,
+    "cortes": 0,
+    "centroideHz": 2521,
+    "acima4k": 0.01
+   },
+   "bicho.coelho.contente.1": {
+    "seg": 0.653,
+    "alvoDb": -23.0,
+    "rmsDb": -23.0,
+    "picoDb": -9.4,
+    "lufsMomentaneoMax": -19.7,
+    "bytes": 3918,
+    "cortes": 0,
+    "centroideHz": 2580,
+    "acima4k": 0.005
+   },
+   "bicho.coelho.susto.0": {
+    "seg": 0.287,
+    "alvoDb": -23.0,
+    "rmsDb": -23.0,
+    "picoDb": -11.3,
+    "lufsMomentaneoMax": -24.2,
+    "bytes": 1724,
+    "cortes": 0,
+    "centroideHz": 2736,
+    "acima4k": 0.0
+   },
+   "bicho.coelho.susto.1": {
+    "seg": 0.261,
+    "alvoDb": -23.0,
+    "rmsDb": -23.0,
+    "picoDb": -12.1,
+    "lufsMomentaneoMax": -25.8,
+    "bytes": 1567,
+    "cortes": 0,
+    "centroideHz": 2921,
+    "acima4k": 0.0
+   },
+   "bicho.espectro.ai.0": {
+    "seg": 0.366,
+    "alvoDb": -23.0,
+    "rmsDb": -22.9,
+    "picoDb": -10.4,
+    "lufsMomentaneoMax": -26.3,
+    "bytes": 2194,
+    "cortes": 0,
+    "centroideHz": 1160,
+    "acima4k": 0.0
+   },
+   "bicho.espectro.ai.1": {
+    "seg": 0.366,
+    "alvoDb": -23.0,
+    "rmsDb": -23.0,
+    "picoDb": -10.3,
+    "lufsMomentaneoMax": -26.3,
+    "bytes": 2194,
+    "cortes": 0,
+    "centroideHz": 1254,
+    "acima4k": 0.0
+   },
+   "bicho.espectro.chamado.0": {
+    "seg": 0.81,
+    "alvoDb": -23.0,
+    "rmsDb": -23.0,
+    "picoDb": -13.0,
+    "lufsMomentaneoMax": -22.5,
+    "bytes": 4859,
+    "cortes": 0,
+    "centroideHz": 917,
+    "acima4k": 0.0
+   },
+   "bicho.espectro.chamado.1": {
+    "seg": 0.81,
+    "alvoDb": -23.0,
+    "rmsDb": -23.0,
+    "picoDb": -12.8,
+    "lufsMomentaneoMax": -22.6,
+    "bytes": 4859,
+    "cortes": 0,
+    "centroideHz": 1005,
+    "acima4k": 0.0
+   },
+   "bicho.espectro.contente.0": {
+    "seg": 0.914,
+    "alvoDb": -23.0,
+    "rmsDb": -23.4,
+    "picoDb": -11.0,
+    "lufsMomentaneoMax": -22.9,
+    "bytes": 5485,
+    "cortes": 0,
+    "centroideHz": 1571,
+    "acima4k": 0.001
+   },
+   "bicho.espectro.contente.1": {
+    "seg": 0.888,
+    "alvoDb": -23.0,
+    "rmsDb": -23.0,
+    "picoDb": -13.3,
+    "lufsMomentaneoMax": -22.5,
+    "bytes": 5329,
+    "cortes": 0,
+    "centroideHz": 1611,
+    "acima4k": 0.002
+   },
+   "bicho.espectro.susto.0": {
+    "seg": 0.313,
+    "alvoDb": -23.0,
+    "rmsDb": -23.0,
+    "picoDb": -12.7,
+    "lufsMomentaneoMax": -25.2,
+    "bytes": 1881,
+    "cortes": 0,
+    "centroideHz": 2488,
+    "acima4k": 0.057
+   },
+   "bicho.espectro.susto.1": {
+    "seg": 0.313,
+    "alvoDb": -23.0,
+    "rmsDb": -23.0,
+    "picoDb": -12.7,
+    "lufsMomentaneoMax": -26.2,
+    "bytes": 1881,
+    "cortes": 0,
+    "centroideHz": 2244,
+    "acima4k": 0.011
+   },
+   "bicho.peixe.ai.0": {
+    "seg": 0.261,
+    "alvoDb": -23.0,
+    "rmsDb": -23.0,
+    "picoDb": -10.7,
+    "lufsMomentaneoMax": -29.7,
+    "bytes": 1567,
+    "cortes": 0,
+    "centroideHz": 378,
+    "acima4k": 0.0
+   },
+   "bicho.peixe.ai.1": {
+    "seg": 0.261,
+    "alvoDb": -23.0,
+    "rmsDb": -23.0,
+    "picoDb": -10.9,
+    "lufsMomentaneoMax": -29.7,
+    "bytes": 1567,
+    "cortes": 0,
+    "centroideHz": 413,
+    "acima4k": 0.0
+   },
+   "bicho.peixe.chamado.0": {
+    "seg": 0.496,
+    "alvoDb": -23.0,
+    "rmsDb": -23.0,
+    "picoDb": -9.3,
+    "lufsMomentaneoMax": -24.1,
+    "bytes": 2978,
+    "cortes": 0,
+    "centroideHz": 580,
+    "acima4k": 0.0
+   },
+   "bicho.peixe.chamado.1": {
+    "seg": 0.496,
+    "alvoDb": -23.0,
+    "rmsDb": -23.0,
+    "picoDb": -9.3,
+    "lufsMomentaneoMax": -24.1,
+    "bytes": 2978,
+    "cortes": 0,
+    "centroideHz": 652,
+    "acima4k": 0.0
+   },
+   "bicho.peixe.chamado.2": {
+    "seg": 0.496,
+    "alvoDb": -23.0,
+    "rmsDb": -23.0,
+    "picoDb": -9.2,
+    "lufsMomentaneoMax": -24.0,
+    "bytes": 2978,
+    "cortes": 0,
+    "centroideHz": 725,
+    "acima4k": 0.0
+   },
+   "bicho.peixe.contente.0": {
+    "seg": 0.47,
+    "alvoDb": -23.0,
+    "rmsDb": -23.0,
+    "picoDb": -7.7,
+    "lufsMomentaneoMax": -24.3,
+    "bytes": 2821,
+    "cortes": 0,
+    "centroideHz": 952,
+    "acima4k": 0.0
+   },
+   "bicho.peixe.contente.1": {
+    "seg": 0.47,
+    "alvoDb": -23.0,
+    "rmsDb": -23.0,
+    "picoDb": -7.4,
+    "lufsMomentaneoMax": -24.2,
+    "bytes": 2821,
+    "cortes": 0,
+    "centroideHz": 1011,
+    "acima4k": 0.0
+   },
+   "bicho.peixe.susto.0": {
+    "seg": 0.261,
+    "alvoDb": -23.0,
+    "rmsDb": -23.0,
+    "picoDb": -10.0,
+    "lufsMomentaneoMax": -28.9,
+    "bytes": 1567,
+    "cortes": 0,
+    "centroideHz": 1033,
+    "acima4k": 0.0
+   },
+   "bicho.peixe.susto.1": {
+    "seg": 0.261,
+    "alvoDb": -23.0,
+    "rmsDb": -23.0,
+    "picoDb": -10.2,
+    "lufsMomentaneoMax": -29.0,
+    "bytes": 1567,
+    "cortes": 0,
+    "centroideHz": 977,
+    "acima4k": 0.0
+   },
+   "bicho.raposa.ai.0": {
+    "seg": 0.287,
+    "alvoDb": -23.0,
+    "rmsDb": -23.0,
+    "picoDb": -6.4,
+    "lufsMomentaneoMax": -27.9,
+    "bytes": 1724,
+    "cortes": 0,
+    "centroideHz": 610,
+    "acima4k": 0.0
+   },
+   "bicho.raposa.ai.1": {
+    "seg": 0.287,
+    "alvoDb": -23.0,
+    "rmsDb": -23.0,
+    "picoDb": -5.2,
+    "lufsMomentaneoMax": -27.8,
+    "bytes": 1724,
+    "cortes": 0,
+    "centroideHz": 635,
+    "acima4k": 0.0
+   },
+   "bicho.raposa.chamado.0": {
+    "seg": 0.366,
+    "alvoDb": -23.0,
+    "rmsDb": -23.0,
+    "picoDb": -9.8,
+    "lufsMomentaneoMax": -26.7,
+    "bytes": 2194,
+    "cortes": 0,
+    "centroideHz": 581,
+    "acima4k": 0.0
+   },
+   "bicho.raposa.chamado.1": {
+    "seg": 0.366,
+    "alvoDb": -23.0,
+    "rmsDb": -23.0,
+    "picoDb": -10.0,
+    "lufsMomentaneoMax": -26.7,
+    "bytes": 2194,
+    "cortes": 0,
+    "centroideHz": 583,
+    "acima4k": 0.0
+   },
+   "bicho.raposa.chamado.2": {
+    "seg": 0.366,
+    "alvoDb": -23.0,
+    "rmsDb": -23.0,
+    "picoDb": -9.1,
+    "lufsMomentaneoMax": -26.6,
+    "bytes": 2194,
+    "cortes": 0,
+    "centroideHz": 589,
+    "acima4k": 0.0
+   },
+   "bicho.raposa.contente.0": {
+    "seg": 0.522,
+    "alvoDb": -23.0,
+    "rmsDb": -23.0,
+    "picoDb": -7.7,
+    "lufsMomentaneoMax": -24.2,
+    "bytes": 3134,
+    "cortes": 0,
+    "centroideHz": 584,
+    "acima4k": 0.0
+   },
+   "bicho.raposa.contente.1": {
+    "seg": 0.522,
+    "alvoDb": -23.0,
+    "rmsDb": -23.0,
+    "picoDb": -7.7,
+    "lufsMomentaneoMax": -24.2,
+    "bytes": 3134,
+    "cortes": 0,
+    "centroideHz": 596,
+    "acima4k": 0.0
+   },
+   "bicho.raposa.susto.0": {
+    "seg": 0.287,
+    "alvoDb": -23.0,
+    "rmsDb": -23.0,
+    "picoDb": -7.7,
+    "lufsMomentaneoMax": -27.8,
+    "bytes": 1724,
+    "cortes": 0,
+    "centroideHz": 679,
+    "acima4k": 0.0
+   },
+   "bicho.raposa.susto.1": {
+    "seg": 0.287,
+    "alvoDb": -23.0,
+    "rmsDb": -23.0,
+    "picoDb": -8.7,
+    "lufsMomentaneoMax": -27.8,
+    "bytes": 1724,
+    "cortes": 0,
+    "centroideHz": 685,
+    "acima4k": 0.0
+   },
+   "festa.abobora.0": {
+    "seg": 0.967,
+    "alvoDb": -23.0,
+    "rmsDb": -23.0,
+    "picoDb": -6.9,
+    "lufsMomentaneoMax": -21.5,
+    "bytes": 5799,
+    "cortes": 0,
+    "centroideHz": 322,
+    "acima4k": 0.0
+   },
+   "festa.abobora.1": {
+    "seg": 0.914,
+    "alvoDb": -23.0,
+    "rmsDb": -23.0,
+    "picoDb": -8.1,
+    "lufsMomentaneoMax": -21.6,
+    "bytes": 5485,
+    "cortes": 0,
+    "centroideHz": 348,
+    "acima4k": 0.0
+   },
+   "festa.abraco.0": {
+    "seg": 1.489,
+    "alvoDb": -23.0,
+    "rmsDb": -23.0,
+    "picoDb": -9.1,
+    "lufsMomentaneoMax": -18.9,
+    "bytes": 8934,
+    "cortes": 0,
+    "centroideHz": 1274,
+    "acima4k": 0.001
+   },
+   "festa.abraco.1": {
+    "seg": 1.489,
+    "alvoDb": -23.0,
+    "rmsDb": -23.0,
+    "picoDb": -8.9,
+    "lufsMomentaneoMax": -18.7,
+    "bytes": 8934,
+    "cortes": 0,
+    "centroideHz": 1041,
+    "acima4k": 0.0
+   },
+   "festa.apito.0": {
+    "seg": 1.463,
+    "alvoDb": -23.0,
+    "rmsDb": -23.0,
+    "picoDb": -12.6,
+    "lufsMomentaneoMax": -19.9,
+    "bytes": 8777,
+    "cortes": 0,
+    "centroideHz": 1420,
+    "acima4k": 0.0
+   },
+   "festa.campainha.0": {
+    "seg": 1.776,
+    "alvoDb": -23.0,
+    "rmsDb": -23.0,
+    "picoDb": -11.5,
+    "lufsMomentaneoMax": -19.5,
+    "bytes": 10658,
+    "cortes": 0,
+    "centroideHz": 1372,
+    "acima4k": 0.0
+   },
+   "festa.campainha.1": {
+    "seg": 1.463,
+    "alvoDb": -23.0,
+    "rmsDb": -23.0,
+    "picoDb": -11.1,
+    "lufsMomentaneoMax": -19.8,
+    "bytes": 8777,
+    "cortes": 0,
+    "centroideHz": 1692,
+    "acima4k": 0.0
+   },
+   "festa.confete.0": {
+    "seg": 1.176,
+    "alvoDb": -23.0,
+    "rmsDb": -23.0,
+    "picoDb": -5.4,
+    "lufsMomentaneoMax": -17.9,
+    "bytes": 7053,
+    "cortes": 0,
+    "centroideHz": 2562,
+    "acima4k": 0.022
+   },
+   "festa.confete.1": {
+    "seg": 1.097,
+    "alvoDb": -23.0,
+    "rmsDb": -23.0,
+    "picoDb": -4.1,
+    "lufsMomentaneoMax": -18.5,
+    "bytes": 6583,
+    "cortes": 0,
+    "centroideHz": 2863,
+    "acima4k": 0.031
+   },
+   "festa.lanterna.0": {
+    "seg": 1.358,
+    "alvoDb": -23.0,
+    "rmsDb": -23.0,
+    "picoDb": -10.5,
+    "lufsMomentaneoMax": -17.9,
+    "bytes": 8150,
+    "cortes": 0,
+    "centroideHz": 1980,
+    "acima4k": 0.005
+   },
+   "festa.lanterna.1": {
+    "seg": 1.254,
+    "alvoDb": -23.0,
+    "rmsDb": -23.0,
+    "picoDb": -10.4,
+    "lufsMomentaneoMax": -17.7,
+    "bytes": 7523,
+    "cortes": 0,
+    "centroideHz": 2176,
+    "acima4k": 0.004
+   },
+   "festa.miau.0": {
+    "seg": 0.836,
+    "alvoDb": -23.0,
+    "rmsDb": -23.0,
+    "picoDb": -13.7,
+    "lufsMomentaneoMax": -21.8,
+    "bytes": 5015,
+    "cortes": 0,
+    "centroideHz": 1182,
+    "acima4k": 0.0
+   },
+   "festa.miau.1": {
+    "seg": 0.784,
+    "alvoDb": -23.0,
+    "rmsDb": -23.0,
+    "picoDb": -12.8,
+    "lufsMomentaneoMax": -21.4,
+    "bytes": 4702,
+    "cortes": 0,
+    "centroideHz": 1266,
+    "acima4k": 0.0
+   },
+   "festa.miau.2": {
+    "seg": 0.888,
+    "alvoDb": -23.0,
+    "rmsDb": -23.0,
+    "picoDb": -12.8,
+    "lufsMomentaneoMax": -22.1,
+    "bytes": 5329,
+    "cortes": 0,
+    "centroideHz": 1100,
+    "acima4k": 0.0
+   },
+   "festa.risadinha.0": {
+    "seg": 0.914,
+    "alvoDb": -23.0,
+    "rmsDb": -23.0,
+    "picoDb": -10.7,
+    "lufsMomentaneoMax": -22.5,
+    "bytes": 5485,
+    "cortes": 0,
+    "centroideHz": 1593,
+    "acima4k": 0.001
+   },
+   "festa.risadinha.1": {
+    "seg": 0.888,
+    "alvoDb": -23.0,
+    "rmsDb": -23.0,
+    "picoDb": -13.4,
+    "lufsMomentaneoMax": -22.6,
+    "bytes": 5329,
+    "cortes": 0,
+    "centroideHz": 1644,
+    "acima4k": 0.003
+   },
+   "festa.risadinha.2": {
+    "seg": 0.94,
+    "alvoDb": -23.0,
+    "rmsDb": -23.0,
+    "picoDb": -12.5,
+    "lufsMomentaneoMax": -22.4,
+    "bytes": 5642,
+    "cortes": 0,
+    "centroideHz": 1519,
+    "acima4k": 0.001
+   },
+   "festa.ronrono.0": {
+    "seg": 1.672,
+    "alvoDb": -23.0,
+    "rmsDb": -23.0,
+    "picoDb": -7.0,
+    "lufsMomentaneoMax": -22.7,
+    "bytes": 10031,
+    "cortes": 0,
+    "centroideHz": 373,
+    "acima4k": 0.0
+   },
+   "festa.ronrono.1": {
+    "seg": 1.672,
+    "alvoDb": -23.0,
+    "rmsDb": -23.0,
+    "picoDb": -6.0,
+    "lufsMomentaneoMax": -22.5,
+    "bytes": 10031,
+    "cortes": 0,
+    "centroideHz": 370,
+    "acima4k": 0.0
+   },
+   "festa.varinha.0": {
+    "seg": 1.384,
+    "alvoDb": -23.0,
+    "rmsDb": -23.0,
+    "picoDb": -9.2,
+    "lufsMomentaneoMax": -17.3,
+    "bytes": 8307,
+    "cortes": 0,
+    "centroideHz": 2350,
+    "acima4k": 0.003
+   },
+   "festa.varinha.1": {
+    "seg": 1.384,
+    "alvoDb": -23.0,
+    "rmsDb": -23.0,
+    "picoDb": -8.7,
+    "lufsMomentaneoMax": -16.9,
+    "bytes": 8307,
+    "cortes": 0,
+    "centroideHz": 2568,
+    "acima4k": 0.005
+   },
+   "morador.feminino.contente.0": {
+    "seg": 0.679,
+    "alvoDb": -23.0,
+    "rmsDb": -23.0,
+    "picoDb": -10.9,
+    "lufsMomentaneoMax": -23.2,
+    "bytes": 4075,
+    "cortes": 0,
+    "centroideHz": 981,
+    "acima4k": 0.0
+   },
+   "morador.feminino.contente.1": {
+    "seg": 0.679,
+    "alvoDb": -23.0,
+    "rmsDb": -23.0,
+    "picoDb": -9.2,
+    "lufsMomentaneoMax": -22.9,
+    "bytes": 4075,
+    "cortes": 0,
+    "centroideHz": 1319,
+    "acima4k": 0.0
+   },
+   "morador.feminino.cumprimento.0": {
+    "seg": 0.627,
+    "alvoDb": -23.0,
+    "rmsDb": -23.0,
+    "picoDb": -11.4,
+    "lufsMomentaneoMax": -22.8,
+    "bytes": 3761,
+    "cortes": 0,
+    "centroideHz": 1134,
+    "acima4k": 0.0
+   },
+   "morador.feminino.cumprimento.1": {
+    "seg": 0.653,
+    "alvoDb": -23.0,
+    "rmsDb": -23.0,
+    "picoDb": -11.0,
+    "lufsMomentaneoMax": -23.2,
+    "bytes": 3918,
+    "cortes": 0,
+    "centroideHz": 1049,
+    "acima4k": 0.0
+   },
+   "morador.feminino.obrigado.0": {
+    "seg": 0.888,
+    "alvoDb": -23.0,
+    "rmsDb": -23.0,
+    "picoDb": -13.7,
+    "lufsMomentaneoMax": -22.5,
+    "bytes": 5329,
+    "cortes": 0,
+    "centroideHz": 1229,
+    "acima4k": 0.0
+   },
+   "morador.feminino.obrigado.1": {
+    "seg": 0.888,
+    "alvoDb": -23.0,
+    "rmsDb": -23.0,
+    "picoDb": -10.9,
+    "lufsMomentaneoMax": -22.6,
+    "bytes": 5329,
+    "cortes": 0,
+    "centroideHz": 1296,
+    "acima4k": 0.0
+   },
+   "morador.feminino.surpresa.0": {
+    "seg": 0.601,
+    "alvoDb": -23.0,
+    "rmsDb": -23.0,
+    "picoDb": -10.8,
+    "lufsMomentaneoMax": -23.6,
+    "bytes": 3605,
+    "cortes": 0,
+    "centroideHz": 1021,
+    "acima4k": 0.0
+   },
+   "morador.feminino.surpresa.1": {
+    "seg": 0.627,
+    "alvoDb": -23.0,
+    "rmsDb": -23.0,
+    "picoDb": -10.9,
+    "lufsMomentaneoMax": -22.4,
+    "bytes": 3761,
+    "cortes": 0,
+    "centroideHz": 1218,
+    "acima4k": 0.0
+   },
+   "morador.masculino.contente.0": {
+    "seg": 0.679,
+    "alvoDb": -23.0,
+    "rmsDb": -23.0,
+    "picoDb": -11.1,
+    "lufsMomentaneoMax": -22.7,
+    "bytes": 4075,
+    "cortes": 0,
+    "centroideHz": 761,
+    "acima4k": 0.0
+   },
+   "morador.masculino.contente.1": {
+    "seg": 0.679,
+    "alvoDb": -23.0,
+    "rmsDb": -23.0,
+    "picoDb": -10.8,
+    "lufsMomentaneoMax": -23.0,
+    "bytes": 4075,
+    "cortes": 0,
+    "centroideHz": 892,
+    "acima4k": 0.0
+   },
+   "morador.masculino.cumprimento.0": {
+    "seg": 0.627,
+    "alvoDb": -23.0,
+    "rmsDb": -23.0,
+    "picoDb": -14.5,
+    "lufsMomentaneoMax": -23.4,
+    "bytes": 3761,
+    "cortes": 0,
+    "centroideHz": 698,
+    "acima4k": 0.0
+   },
+   "morador.masculino.cumprimento.1": {
+    "seg": 0.653,
+    "alvoDb": -23.0,
+    "rmsDb": -23.0,
+    "picoDb": -10.6,
+    "lufsMomentaneoMax": -23.5,
+    "bytes": 3918,
+    "cortes": 0,
+    "centroideHz": 935,
+    "acima4k": 0.0
+   },
+   "morador.masculino.obrigado.0": {
+    "seg": 0.888,
+    "alvoDb": -23.0,
+    "rmsDb": -23.0,
+    "picoDb": -11.4,
+    "lufsMomentaneoMax": -23.0,
+    "bytes": 5329,
+    "cortes": 0,
+    "centroideHz": 977,
+    "acima4k": 0.0
+   },
+   "morador.masculino.obrigado.1": {
+    "seg": 0.888,
+    "alvoDb": -23.0,
+    "rmsDb": -23.0,
+    "picoDb": -13.0,
+    "lufsMomentaneoMax": -21.8,
+    "bytes": 5329,
+    "cortes": 0,
+    "centroideHz": 949,
+    "acima4k": 0.0
+   },
+   "morador.masculino.surpresa.0": {
+    "seg": 0.601,
+    "alvoDb": -23.0,
+    "rmsDb": -23.0,
+    "picoDb": -11.5,
+    "lufsMomentaneoMax": -23.5,
+    "bytes": 3605,
+    "cortes": 0,
+    "centroideHz": 762,
+    "acima4k": 0.0
+   },
+   "morador.masculino.surpresa.1": {
+    "seg": 0.627,
+    "alvoDb": -23.0,
+    "rmsDb": -23.0,
+    "picoDb": -11.6,
+    "lufsMomentaneoMax": -23.2,
+    "bytes": 3761,
+    "cortes": 0,
+    "centroideHz": 732,
+    "acima4k": 0.0
+   }
+  }
+ },
+ "indice": {
+  "bytes": 107094,
+  "temaBytes": 12628,
+  "totalGeralVozes": {
+   "arquivos": 587,
+   "kb": 2371.3,
+   "segundos": 404.6,
+   "decodificadoMB22k": 34.03
+  }
+ }
+}

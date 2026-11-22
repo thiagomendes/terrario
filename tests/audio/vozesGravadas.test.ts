@@ -147,9 +147,10 @@ describe('atraso do codificador', () => {
 });
 
 describe('índice das vozes (conjunto aprovado)', () => {
-  it('todo bicho dos 4 temas com vozes tem chamado, susto, contente e "ai", e baque e derrota no comum', () => {
-    // spec 034: os quatro temas que saíram levaram os pacotes deles (a Vila Neon não tem)
-    expect(INDICE.ordem).toHaveLength(4);
+  it('todo bicho dos 5 temas com vozes tem chamado, susto, contente e "ai", e baque e derrota no comum', () => {
+    // spec 034: os quatro temas que saíram levaram os pacotes deles (a Vila Neon não tem); spec 027
+    // (T21): a Noite das Fantasias, a quinta, com bichos e moradores de síntese nossa
+    expect(INDICE.ordem).toEqual(['exploracao-lunar', 'doce-reino', 'rancho-alegre', 'cidade-grande', 'noite-das-fantasias']);
     for (const t of INDICE.ordem) {
       const v = INDICE.temas[t].vozes!;
       const pacote = INDICE.tamanhos[`${t}-vozes.mp3`];

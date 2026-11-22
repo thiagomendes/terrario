@@ -119,8 +119,10 @@ describe('volume das vozes por tema (NIVEL_VOZES)', () => {
     const comVozes = Object.keys(INDICE.temas).filter(
       (id) => !!(INDICE.temas[id] as { vozes?: unknown }).vozes,
     );
-    // spec 034: os quatro temas que saíram levaram os pacotes deles
-    expect(comVozes.length).toBe(4);
+    // spec 034: os quatro temas que saíram levaram os pacotes deles; spec 027 (T21): a Noite das
+    // Fantasias tem o dela (bichos e moradores de síntese nossa)
+    expect(comVozes.length).toBe(5);
+    expect(comVozes).toContain('noite-das-fantasias');
     // spec 026: a Vila Neon fica com a voz sintetizada do tema (sem pacote de vozes nem tabela)
     expect((INDICE.temas['vila-neon'] as { vozes?: unknown }).vozes).toBeUndefined();
     expect(NIVEL_VOZES['vila-neon']).toBeUndefined();

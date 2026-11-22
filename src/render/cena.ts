@@ -180,6 +180,7 @@ import {
   type SomVila,
   type BrinquedoVila,
 } from '../audio/somVila';
+import { criarSomBaile, type SomBaile, type SomFesta } from '../audio/somBaile';
 import { criarProgressoObra } from '../ui/progressoObra';
 import { MAO } from '../ui/dicaMira';
 import { EVENTO_ROLETA } from '../ui/roleta';
@@ -540,6 +541,11 @@ export interface EstadoDepuracao {
   somVila?: () => ReturnType<SomVila['info']> | null;
   /** Spec 026 (T19, testes): o som de um brinquedo do bairro agora. */
   tocarBrinquedoVila?: (qual: BrinquedoVila, i?: number) => boolean;
+  /** Spec 027 (T21, testes): o ambiente da festa (o lugar, os pesos) e um som da festa agora. */
+  somBaile?: () => ReturnType<SomBaile['info']> | null;
+  tocarFesta?: (som: SomFesta, onde: { x: number; z: number } | null) => boolean;
+  /** Spec 027 (T21): onde o Tufinho está desenhado agora (em pé fora do banquinho, ou sentado nele). */
+  tufinhoOnde?: () => { x: number; y: number; z: number; emPe: boolean } | null;
   /** Spec 026: calça ou tira os patins (o suporte da pista e o "Tirar patins" da roda). */
   vilaPatins?: (calcar: boolean) => void;
   /** Spec 026 (testes): quantas vezes os patins foram calçados ou tirados (com a festinha). */
@@ -2014,6 +2020,9 @@ export function criarCena(
   let abracoBaile: AbracoNaTela | null = null;
   /** T16: as florzinhas da varinha (criadas mais abaixo). */
   let floresVarinha: FloresDaVarinha | null = null;
+  /** T21: os sons da festa e o ambiente de cada lugar (criados com as vozes, mais abaixo). */
+  let somBaile: SomBaile | null = null;
+  const ouvinteFesta = () => ({ x: controle.jogador.x, z: controle.jogador.z });
   /** T19: a vista da alma desta criança (as missões abertas e os lugares já vistos). */
   const almaVista = () =>
     (window as unknown as { __almaUi?: { vista(): { abertas: { id: string; usos?: string[] }[] } | null } }).__almaUi?.vista() ??
@@ -2050,10 +2059,10 @@ export function criarCena(
               descartar: () => c.boneco.descartar(),
             };
           },
-          som: (qual, volume) => {
-            // (a risadinha é a da fantasminha deste mundo, baixinha; o miado e os sons próprios
-            // das missões vêm na T21)
-            if (qual === 'risadinha') vozes.bicho('espectro', 'contente', { volume: volume * 0.6, quem: 'lulu' });
+          som: (qual, volume, onde) => {
+            // T21: a risadinha (da Lulu e da travessura) e o confete são os da festa, de onde
+            // acontecem; o docinho que chega na sacola e o brilhinho, os de sempre
+            if (qual === 'risadinha' || qual === 'confete') somBaile?.tocar(qual, onde ?? null, ouvinteFesta(), volume);
             else somEfeito(qual === 'plim' ? 'coleta' : 'brilho', 80);
           },
         },
@@ -2072,7 +2081,23 @@ export function criarCena(
           animando: renderBaile.animando(),
         }
       : null;
-  estado.baileToque = (q) => renderBaile?.tocar(q);
+  let carinhosNoTufinho = 0;
+  estado.tufinhoOnde = () => {
+    const g = renderBaile?.bichos.lista().find((b) => b.nome === 'tufinho');
+    return g && g.vivo ? { x: g.x, y: g.y, z: g.z, emPe: g.emPe } : null;
+  };
+  estado.baileToque = (q) => {
+    renderBaile?.tocar(q);
+    if (!planoBaile) return;
+    // T21: a abóbora gigante pisca e faz o "boing" grande; o Tufinho ganha carinho e ronrona (ou mia)
+    if (q.a === 'abobora') {
+      const a = planoBaile.pontos.abobora;
+      somBaile?.tocar('abobora', { x: a.x, z: a.z }, ouvinteFesta());
+    } else if (q.a === 'tufinho') {
+      const g = renderBaile?.bichos.lista().find((b) => b.nome === 'tufinho');
+      if (g) somBaile?.tocar(++carinhosNoTufinho % 3 === 0 ? 'miau' : 'ronrono', { x: g.x, z: g.z }, ouvinteFesta());
+    }
+  };
   estado.bailePortas = () => renderBaile?.portas() ?? [];
   // spec 027 (T06): o lampião de abóbora e o caldeirão postos viram a peça arredondada de
   // brinquedo, com o rosto do tema, instanciados por chunk (fora do glow: o rosto já vem aceso).
@@ -2538,6 +2563,19 @@ export function criarCena(
   estado.eventosBaile = [];
   estado.baileMissao = (c) => {
     if (!planoBaile) return;
+    // T21: o som responde na hora do toque (a campainha, a lanterna que acende, ou a já acesa
+    // piscando, mais baixinho, e o miado do Tufinho chamado); o dos amigos vem com o evento
+    const agoraS = performance.now() / 1000;
+    if (c.a === 'campainha') {
+      const q = planoBaile.pontos.portas[c.i];
+      if (q) somBaile?.tocar('campainha', { x: q.x, z: q.z }, ouvinteFesta());
+    } else if (c.a === 'lanterna') {
+      const l = planoBaile.pontos.lanternas[c.i];
+      if (l) somBaile?.tocar('lanterna', { x: l[0], z: l[2] }, ouvinteFesta(), cliente.baile.acesa(c.i, agoraS) ? 0.6 : 1);
+    } else if (c.a === 'tufinho') {
+      const g = renderBaile?.bichos.lista().find((b) => b.nome === 'tufinho');
+      if (g) somBaile?.tocar('miau', { x: g.x, z: g.z }, ouvinteFesta());
+    }
     if (c.a === 'lanterna' || c.a === 'campainha') cliente.baile.prever(c, performance.now() / 1000);
     // (a porta já abre na hora do toque, a previsão; o núcleo confirma e o doce vem)
     const q = c.a === 'campainha' ? planoBaile.pontos.portas[c.i] : null;
@@ -5129,6 +5167,33 @@ export function criarCena(
   /** Spec 014 (T09): os sons do canteiro gravados no pacote da cidade (a sintetizada é a reserva). */
   const somObraGravado: TocadorObra = (chave, volume, reserva, indice) =>
     vozes.extra('obra', chave, { volume, indice, reserva });
+  // spec 027 (T21): os sons da festa e o ambiente de cada lugar, do pacote de vozes do tema (sem o
+  // pacote, a reserva de antes: a risadinha sintetizada da fantasminha, o "plim" e o brilho)
+  if (planoBaile) {
+    const sb = criarSomBaile({
+      zonas: planoBaile.zonas,
+      extra: (secao, chave, volume, grupo) => {
+        if (!vozes.temExtra(secao, chave)) return false;
+        vozes.extra(secao, chave, { volume, grupo });
+        return true;
+      },
+      reserva: (som, v) => {
+        if (som === 'risadinha') vozes.bicho('espectro', 'contente', { volume: v * 0.6, quem: 'lulu' });
+        else somEfeito(som === 'campainha' || som === 'abobora' ? 'coleta' : 'brilho', 80);
+      },
+      natureza: () => configAtual?.volumeAmbiente ?? 0.8,
+      rng: criarGerador(0x5027),
+      aoTocar: ehTesteDeTela()
+        ? (id) => {
+            sonsTocados.push(id);
+            if (sonsTocados.length > 300) sonsTocados.shift();
+          }
+        : undefined,
+    });
+    somBaile = sb;
+    estado.somBaile = () => sb.info();
+    estado.tocarFesta = (som, onde) => sb.tocar(som, onde, ouvinteFesta());
+  }
   /** O bicho que a criança golpeou por último (o golpe dela soa mesmo um pouco longe). */
   const meuAlvo = { id: -1, em: -Infinity };
   const MEU_GOLPE_MS = 3000;
@@ -5554,6 +5619,9 @@ export function criarCena(
       noiteVila,
       planoBaile ? controle.jogador.y - (planoBaile.h + 1) : 0,
     );
+    // spec 027 (T21): o ambiente do lugar da festa (cruza em ~1,5 s ao mudar de lugar)
+    // (a noite dos bichos: o grilinho só canta de noite, nunca no entardecer)
+    somBaile?.quadro(Math.min(dtBruto, 0.25), ouvinteFesta(), noiteDosBichos(hora));
     // spec 026: o show é só de noite (a noite do show acende o palco)
     const noiteShow = noiteDeShow(hora);
     showVila?.quadro(tempo, cliente.vila.estado, cliente.vila.tempo(tempo), noiteVila, noiteShow);
@@ -6084,6 +6152,8 @@ export function criarCena(
     enviarTelemetria(true);
     enviar({ t: 'baile', a: 'varinha', x, y, z });
     animador.definirCamada(camadaDaVarinha());
+    // T21: as estrelinhas soam na hora do toque (a florzinha vem do núcleo)
+    somBaile?.tocar('varinha', null, null);
   }
 
   function comecarRefeicao(): void {
@@ -7223,16 +7293,33 @@ export function criarCena(
    */
   function eventoDaFesta(e: import('../nucleo/baileMissoes').EventoMissoesBaile): void {
     if (!renderBaile || !planoBaile) return;
+    const ouvinte = ouvinteFesta();
     if (e.e === 'bailePorta') {
       const q = planoBaile.pontos.portas[e.i];
       const k = q ? renderBaile.portaDaRua(q.x, q.z) : -1;
       if (k >= 0) renderBaile.abrirPorta(k);
       if (q) acenarBaile(q.vovo ? N_BAILE.vovo : N_BAILE.rua + e.i);
+      // T21: a campainha do amigo (a desta criança já tocou no toque)
+      if (q && e.quem !== voce) somBaile?.tocar('campainha', { x: q.x, z: q.z }, ouvinte);
     }
     if (e.e === 'baileLanterna') {
+      const l = planoBaile.pontos.lanternas[e.i];
+      if (l && e.quem !== voce) somBaile?.tocar('lanterna', { x: l[0], z: l[2] }, ouvinte, e.acendeu ? 1 : 0.6);
       renderBaile.piscarLanterna(e.i);
       if (e.conta && e.quem === voce && (cliente.baile.estado?.lc.length ?? 0) >= planoBaile.pontos.lanternas.length)
         acenarBaile(N_BAILE.dudu);
+    }
+    // T21: o Tufinho mia quando é chamado (o desta criança já miou no toque) e ronrona quando chega
+    // em casa; a cópia fugida só soa na tela de quem a tem
+    if (e.e === 'baileTufinho' && (!e.copia || e.quem === voce)) {
+      if (e.miou && e.quem !== voce) {
+        const g = renderBaile.bichos.lista().find((b) => b.nome === 'tufinho');
+        if (g) somBaile?.tocar('miau', { x: g.x, z: g.z }, ouvinte);
+      }
+      if (e.o === 'casa' && e.quem) {
+        const b = planoBaile.pontos.banquinho;
+        somBaile?.tocar('ronrono', { x: b[0], z: b[2] }, ouvinte);
+      }
     }
     renderBaile.missoes?.evento(e);
   }
@@ -7254,9 +7341,13 @@ export function criarCena(
       case 'baileAbraco':
       case 'baileSolta':
         abracoBaile?.evento(e);
+        // T21: o "fuf" de pelúcia e o "hum-hum" contente do abraço
+        if (e.e === 'baileAbraco') somBaile?.tocar('abraco', { x: e.x, z: e.z }, ouvinteFesta());
         break;
       // spec 027 (T16): a florzinha da varinha (a mão do amigo sobe; a daqui já subiu no toque)
       case 'baileFlor':
+        // T21: as estrelinhas da varinha (a desta criança já soaram no toque)
+        if (e.quem !== voce) somBaile?.tocar('varinha', { x: e.x, z: e.z }, ouvinteFesta());
         floresVarinha?.evento(e);
         if (e.quem !== voce) outrosJogadores.animadorDe(e.quem)?.definirCamada(camadaDaVarinha());
         estado.eventosFlor = [...(estado.eventosFlor ?? []).slice(-20), { ...e, t: performance.now() / 1000 }];

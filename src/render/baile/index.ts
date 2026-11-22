@@ -49,7 +49,7 @@ const PORTA_ABERTA = 2;
 const ABRE = 1.25;
 
 /** O que se toca nas peças da festa (desenho só desta tela). */
-export type ToqueBaile = { a: 'abobora' } | { a: 'porta'; i: number };
+export type ToqueBaile = { a: 'abobora' } | { a: 'porta'; i: number } | { a: 'tufinho' };
 
 export interface RenderBaile {
   /** Uma vez por quadro: nasce ou some o que mudou, e anima. */
@@ -432,6 +432,7 @@ export function criarRenderBaile(
     portas: () => listaPortas,
     tocar(q) {
       if (q.a === 'abobora') piscouEm = relogio;
+      else if (q.a === 'tufinho') bichos.carinho(relogio);
       else balanco.set(q.i, relogio);
     },
     abrirPorta(i) {

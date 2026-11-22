@@ -99,7 +99,7 @@ describe('receita de contexto (alvoMix)', () => {
 });
 
 describe('índice e pacotes', () => {
-  it('os 5 temas têm música; só o Rancho, a Cidade e a Vila Neon não têm perigo (a noite lá é mansa)', () => {
+  it('os 6 temas têm música; só o Rancho, a Cidade, a Vila Neon e a Noite das Fantasias não têm perigo (a noite lá é mansa)', () => {
     expect(TEMAS.sort()).toEqual(
       [
         'doce-reino',
@@ -107,11 +107,13 @@ describe('índice e pacotes', () => {
         'rancho-alegre',
         'cidade-grande',
         'vila-neon',
+        'noite-das-fantasias',
       ].sort(),
     );
+    const mansas = ['rancho-alegre', 'cidade-grande', 'vila-neon', 'noite-das-fantasias'];
     for (const id of TEMAS) {
       const tem = INDICE.temas[id].clips.some((c) => c.id === 'perigo');
-      expect(tem, id).toBe(!['rancho-alegre', 'cidade-grande', 'vila-neon'].includes(id));
+      expect(tem, id).toBe(!mansas.includes(id));
     }
     expect(INDICE.taxa).toBe(TAXA_TRILHA);
   });

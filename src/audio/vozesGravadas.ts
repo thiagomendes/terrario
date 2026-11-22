@@ -59,9 +59,11 @@ export interface ComumIndice {
  * Spec 014 (T09): sons gravados do tema que não são vozes de bicho nem de morador, no mesmo
  * pacote de vozes: os do canteiro de obras (`obra`: plim da escala, acorde, ta-dá, "hum?"
  * do pedreiro, coreto, colher) e os do ambiente da rua (`ambiente`: pardal, buzininha ao
- * longe, grilo de jardim). Cada chave tem uma lista de fatias.
+ * longe, grilo de jardim). Cada chave tem uma lista de fatias. Spec 027 (T21): os da Noite das
+ * Fantasias (`festa`: a campainha, a lanterna, a risadinha, o Tufinho, o abraço, a varinha... e
+ * `lugar`, o ambiente de cada lugar da festa; ver `somBaile.ts`).
  */
-export type SecaoExtra = 'obra' | 'ambiente';
+export type SecaoExtra = 'obra' | 'ambiente' | 'festa' | 'lugar';
 
 /** O pedaço do `indice.json` que as vozes usam. */
 export interface IndiceSons {
@@ -71,6 +73,8 @@ export interface IndiceSons {
       vozes?: VozesTemaIndice;
       obra?: Record<string, ClipIndice[]>;
       ambiente?: Record<string, ClipIndice[]>;
+      festa?: Record<string, ClipIndice[]>;
+      lugar?: Record<string, ClipIndice[]>;
     }
   >;
   comum: ComumIndice;
@@ -107,6 +111,11 @@ export const NIVEL_VOZES: Readonly<Record<string, Partial<Record<GrupoNivelVoz, 
   'cidade-grande': { bichos: -7.7, moradores: -3.2, baque: -0.6, derrota: 0.45 },
   // spec 026: a Vila Neon não tem vozes gravadas (os bichos e os moradores do bairro usam a voz
   // sintetizada do tema, src/temas/vila-neon/vozes.ts): o carregador nem baixa pacote de vozes
+  // spec 027 (T21): os bichos e os moradores da festa são síntese nossa na régua da 019 (-23 dB
+  // "enquanto soa", como os outros pacotes); os moradores no nível dos da Cidade (a mesma voz de
+  // formantes, com outro sabor), os bichos no meio dos do Rancho e da Cidade, o baque e o "puf" no
+  // nível do Rancho
+  'noite-das-fantasias': { bichos: -6.8, moradores: -3.2, baque: -1.3, derrota: 0.4 },
 };
 
 /**
@@ -126,6 +135,29 @@ export const NIVEL_EXTRAS: Readonly<Record<string, Readonly<Record<string, numbe
     'ambiente.pardal': -18.6,
     'ambiente.buzininha': -30.2,
     'ambiente.grilo': -29.8,
+  },
+  // spec 027 (T21): os sons da festa na régua da 019 (-23 dB "enquanto soa"), no nível dos toques
+  // da Vila Neon (`GANHO_RUA`, a mesma régua: a campainha a -11); o ambiente de cada lugar (`lugar`)
+  // sai a -27 no arquivo e fica no nível do pardal e do grilo da Cidade. Conferidos na saída do jogo
+  // (e2e/noite-fantasias-som.spec.ts): nenhum acima de -12 LUFS momentâneo a 2 blocos.
+  'noite-das-fantasias': {
+    'festa.campainha': -11,
+    'festa.lanterna': -11,
+    'festa.risadinha': -11,
+    'festa.confete': -12,
+    'festa.miau': -10,
+    'festa.ronrono': -11,
+    'festa.abraco': -11,
+    'festa.varinha': -12,
+    'festa.abobora': -12,
+    'festa.apito': -11,
+    'lugar.sininhos': -15,
+    'lugar.campainhaLonge': -16,
+    'lugar.risadinhaLonge': -16,
+    'lugar.grilo': -22,
+    'lugar.corujinha': -15,
+    'lugar.regador': -17,
+    'lugar.abobora': -15,
   },
 };
 
@@ -442,6 +474,8 @@ export function criarVozesGravadas(op: OpcoesVozesGravadas): VozesGravadas {
         extrasTema = {
           obra: indice.temas[op.tema]?.obra,
           ambiente: indice.temas[op.tema]?.ambiente,
+          festa: indice.temas[op.tema]?.festa,
+          lugar: indice.temas[op.tema]?.lugar,
         };
         comum = indice.comum;
         if (!indiceTema || !comum) throw new Error('tema sem vozes no índice');

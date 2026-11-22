@@ -54,7 +54,7 @@ export const CREDITOS_SONS: readonly GrupoCreditos[] = [
   {
     titulo: 'Moradores, golpes, passos e o resto',
     texto:
-      'Sons feitos por nós: os moradores e os golpes, gravados de síntese própria; o canteiro de obras da cidade (piano e caixinha de música do FluidR3_GM, licença MIT) e a buzininha de brinquedo; o show da Vila Neon (composto para o Terrário e gravado com o FluidR3_GM) e a plateia, o fliperama e os brinquedos do bairro, de síntese própria; passos, blocos, gestos e menus, gerados na hora pelo jogo.',
+      'Sons feitos por nós: os moradores e os golpes, gravados de síntese própria; o canteiro de obras da cidade (piano e caixinha de música do FluidR3_GM, licença MIT) e a buzininha de brinquedo; o show da Vila Neon (composto para o Terrário e gravado com o FluidR3_GM) e a plateia, o fliperama e os brinquedos do bairro, de síntese própria; os bichos, os moradores e os sons da festa da Noite das Fantasias (a campainha, as lanternas, a risadinha, o gatinho, o abraço, a varinha e os sons de cada lugar), de síntese própria; passos, blocos, gestos e menus, gerados na hora pelo jogo.',
   },
 ];
 

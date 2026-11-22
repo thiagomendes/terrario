@@ -65,6 +65,10 @@ export const NIVEL_TRILHA: Readonly<Record<string, Partial<Record<ContextoNivel,
   // Rancho e da Cidade com o ajuste deles (026/referencia/fontes/medidas-pacote.json, "nivel"): o
   // synth-pop tem mais grave que a viola e o jazz, e a noite (pad sem bateria) é a mais baixa
   'vila-neon': { dia: 0.7, tarde: 0.4, noite: 4.6, caverna: 4.9 },
+  // spec 027 (T21): o mesmo jeito da Vila Neon (027/referencia/fontes/medidas-pacote.json,
+  // "musica.lufs"): a festa tem o xilofone e a flauta brilhando (gravada 0,6 dB abaixo para o dia
+  // ficar em 0); a noite (harpa e celesta, sem percussão) é a que mais sobe
+  'noite-das-fantasias': { dia: 0, tarde: 0.3, noite: 2.9, caverna: 2.7 },
 };
 
 /** O ajuste do tema no contexto, em ganho linear. */

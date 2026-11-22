@@ -18,8 +18,8 @@ import { Color3 } from '@babylonjs/core/Maths/math.color';
 import type { StandardMaterial } from '@babylonjs/core/Materials/standardMaterial';
 import { caixaArredondada, esfera } from '../formas';
 import { bichoDeBrinquedo } from '../bichoBrinquedo';
-import { juntasDoBicho } from '../juntasBicho';
-import { bicho } from '../../temas/rancho-alegre/criaturas';
+import { aberturaDoPasso, alturaDoQuadril, ergueDaPata, juntasDoBicho, passoSemDeslizar } from '../juntasBicho';
+import { bicho, DIAGONAL } from '../../temas/rancho-alegre/criaturas';
 import { COR_BAILE } from '../../temas/noite-das-fantasias/criaturas';
 import type { PecaCriatura } from '../../temas/tipos';
 import type { PlanoBaile } from '../../world/noiteFantasias';
@@ -55,6 +55,53 @@ export function desenhoTufinho(): PecaCriatura[] {
     b.caixa([0.06, 0.06, 0.02], [s * 0.088, 0.115, 0.014], '#ffb3c1', 0.01, { rot: [0, 0, Math.PI / 4 + s * 0.1] });
     b.caixa([0.12, 0.008, 0.008], [s * 0.12, -0.05, 0.15], claro, 0.004, { rot: [0, 0, s * 0.12] });
     // os olhões âmbar com a pupila grande e o pontinho de brilho (amigáveis, nada de bravo)
+    b.bola(0.05, '#f4c64e', [0.95, 1.05, 0.45], [s * 0.068, 0.025, 0.124]);
+    b.bola(0.033, '#231a28', [0.9, 1.1, 0.45], [s * 0.068, 0.022, 0.138], { brilho: 0.35 });
+    b.bola(0.013, '#ffffff', [1, 1, 0.5], [s * 0.068 + 0.012, 0.042, 0.152], { brilho: 0.3 });
+    b.bola(0.03, '#ff9aa8', [1.4, 0.75, 0.3], [s * 0.115, -0.045, 0.125]);
+  }
+  return b.fim().pecas;
+}
+
+/**
+ * O Tufinho em pé, andando (o acabamento da n5): o mesmo gatinho do banquinho (carvão, o focinho, o
+ * peito e as patinhas creme, o lacinho laranja, os olhões âmbar), nas quatro patas como os bichos de
+ * quatro patas do jogo (as patas em diagonal, `perna0` e `perna1`, giram do quadril e o pé acompanha
+ * o chão), com o rabo em pé e a pontinha curvada.
+ */
+export function desenhoTufinhoEmPe(): PecaCriatura[] {
+  const carvao = '#3c3744';
+  const claro = '#f1e8dc';
+  const b = bicho(1.25);
+  for (const [x, z] of [
+    [-0.08, 0.12],
+    [0.08, 0.12],
+    [-0.08, -0.12],
+    [0.08, -0.12],
+  ]) {
+    const papel = DIAGONAL[`${Math.sign(x)},${Math.sign(z)}`];
+    b.caixa([0.085, 0.17, 0.085], [x, 0.095, z], carvao, 0.04, { papel });
+    // as patinhas creme
+    b.caixa([0.095, 0.045, 0.105], [x, 0.022, z + 0.005], claro, 0.02, { papel });
+  }
+  b.caixa([0.27, 0.21, 0.42], [0, 0.27, 0], carvao, 0.1);
+  // o peito creme na frente, embaixo do pescoço
+  b.bola(0.1, claro, [1.15, 1.0, 0.7], [0, 0.26, 0.17]);
+  // o rabo em pé, com a pontinha curvada para a frente
+  b.caixa([0.05, 0.28, 0.05], [0, 0.46, -0.23], carvao, 0.025, { papel: 'cauda', rot: [-0.2, 0, 0] });
+  b.bola(0.035, carvao, [1, 1, 1], [0, 0.61, -0.25], { papel: 'cauda' });
+  // o lacinho laranja no pescoço
+  for (const s of [-1, 1])
+    b.bola(0.045, COR_BAILE.laranja, [1.2, 0.85, 0.6], [s * 0.05, 0.37, 0.2], { rot: [0, 0, s * 0.3] });
+  b.bola(0.024, COR_BAILE.laranjaEscuro, [1, 1, 1], [0, 0.37, 0.225]);
+  b.grupo([0, 0.47, 0.24], 'cabeca');
+  b.caixa([0.3, 0.26, 0.26], [0, 0, 0], carvao, 0.11);
+  b.bola(0.075, claro, [1.25, 0.75, 0.8], [0, -0.06, 0.115]);
+  b.bola(0.024, '#ff9aae', [1.2, 0.85, 0.8], [0, -0.025, 0.17]);
+  for (const s of [-1, 1]) {
+    b.caixa([0.12, 0.12, 0.045], [s * 0.088, 0.1, -0.01], carvao, 0.018, { rot: [0, 0, Math.PI / 4 + s * 0.1] });
+    b.caixa([0.06, 0.06, 0.02], [s * 0.088, 0.115, 0.014], '#ffb3c1', 0.01, { rot: [0, 0, Math.PI / 4 + s * 0.1] });
+    b.caixa([0.12, 0.008, 0.008], [s * 0.12, -0.05, 0.15], claro, 0.004, { rot: [0, 0, s * 0.12] });
     b.bola(0.05, '#f4c64e', [0.95, 1.05, 0.45], [s * 0.068, 0.025, 0.124]);
     b.bola(0.033, '#231a28', [0.9, 1.1, 0.45], [s * 0.068, 0.022, 0.138], { brilho: 0.35 });
     b.bola(0.013, '#ffffff', [1, 1, 0.5], [s * 0.068 + 0.012, 0.042, 0.152], { brilho: 0.3 });
@@ -112,6 +159,10 @@ interface Montado {
   raiz: TransformNode;
   cabeca: TransformNode | null;
   cauda: TransformNode | null;
+  /** As patas (andando): o nó de cada uma, o lado do passo e a altura de repouso. */
+  patas: { no: TransformNode; papel: 'perna0' | 'perna1'; y: number }[];
+  /** A altura do quadril (o comprimento da perna, para o passo sem deslizar). */
+  quadril: number;
   malhas: Mesh[];
 }
 
@@ -122,13 +173,16 @@ function montar(scene: Scene, nome: string, desenho: PecaCriatura[], mat: Standa
   const malhas: Mesh[] = [];
   let cabeca: TransformNode | null = null;
   let cauda: TransformNode | null = null;
+  const patas: Montado['patas'] = [];
   let n = 0;
-  for (const g of juntasDoBicho(pecas)) {
+  const juntas = juntasDoBicho(pecas);
+  for (const g of juntas) {
     const no = new TransformNode(`baile-${nome}-g${n++}`, scene);
     no.parent = raiz;
     no.position.set(g.pivo[0], g.pivo[1], g.pivo[2]);
     if (g.papel === 'cabeca') cabeca = no;
     if (g.papel === 'cauda') cauda = no;
+    if (g.papel === 'perna0' || g.papel === 'perna1') patas.push({ no, papel: g.papel, y: g.pivo[1] });
     const lista: Mesh[] = [];
     for (const peca of g.pecas) {
       const [w, h, d] = peca.t;
@@ -155,7 +209,7 @@ function montar(scene: Scene, nome: string, desenho: PecaCriatura[], mat: Standa
     f.isPickable = false;
     malhas.push(f);
   }
-  return { raiz, cabeca, cauda, malhas };
+  return { raiz, cabeca, cauda, patas, quadril: alturaDoQuadril(juntas), malhas };
 }
 
 interface Enfeite {
@@ -165,12 +219,18 @@ interface Enfeite {
   cx: number;
   cz: number;
   vivo: Montado | null;
+  /** O Tufinho em pé (fora do banquinho, na n5), com o passo das patas. */
+  emPe: Montado | null;
+  fase: number;
+  amp: number;
 }
 
 export interface BichosBaile {
   quadro(t: number): void;
+  /** T21: carinho no Tufinho (o toque): ele inclina a cabecinha e levanta o rabo. */
+  carinho(t: number): void;
   /** Testes e fotos: onde cada um está e se está desenhado. */
-  lista(): { nome: string; x: number; y: number; z: number; vivo: boolean }[];
+  lista(): { nome: string; x: number; y: number; z: number; vivo: boolean; emPe: boolean; patas: number[] }[];
   descartar(): void;
 }
 
@@ -201,6 +261,9 @@ export function criarBichosBaile(
       cx: Math.floor(banco.x / 16),
       cz: Math.floor(banco.z / 16),
       vivo: null,
+      emPe: null,
+      fase: 0,
+      amp: 0,
     });
   const poleiro = plano.pecas.find((p) => p.tipo === 'poleiro');
   if (poleiro)
@@ -212,8 +275,14 @@ export function criarBichosBaile(
       cx: Math.floor(poleiro.x / 16),
       cz: Math.floor(poleiro.z / 16),
       vivo: null,
+      emPe: null,
+      fase: 0,
+      amp: 0,
     });
   const desenhos = { tufinho: desenhoTufinho(), corujinha: desenhoCorujinha() };
+  const tufinhoEmPe = desenhoTufinhoEmPe();
+  /** T21: quando o Tufinho ganhou carinho (o toque). */
+  let carinhoEm = -1e9;
 
   return {
     quadro(t) {
@@ -241,30 +310,75 @@ export function criarBichosBaile(
           e.vivo.raiz.dispose();
           e.vivo = null;
         }
-        const v = e.vivo;
-        if (!v) continue;
+        // T21: o Tufinho em pé (só fora do banquinho), montado na primeira vez que ele sai
         if (e.nome === 'tufinho') {
-          // T19: fora do banquinho, no chão (na horta brincando, ou andando atrás de alguém)
-          if (fora) {
-            v.raiz.position.set(fora.x, fora.y, fora.z);
-            v.raiz.rotation.y = fora.yaw;
-            // andando, o corpinho inclina para a frente e o rabo balança mais
-            v.raiz.rotation.x = Math.min(0.18, fora.anda * 0.04);
-            if (v.cauda) v.cauda.rotation.y = Math.sin(t * (fora.anda > 0.5 ? 6 : 3)) * 0.45;
-          } else {
-            v.raiz.position.set(...e.lugar);
-            v.raiz.rotation.y = e.yaw;
-            v.raiz.rotation.x = 0;
+          if (pode && fora && !e.emPe) {
+            e.emPe = montar(scene, 'tufinho-em-pe', tufinhoEmPe, mat);
+            for (const m of e.emPe.malhas) preparar(m);
+          } else if ((!pode || !fora) && e.emPe) {
+            e.emPe.raiz.dispose();
+            e.emPe = null;
           }
+        }
+        const sentado = e.vivo;
+        if (!sentado) continue;
+        if (e.nome === 'tufinho') {
+          // T21: o carinho (o toque): a cabecinha inclina e o rabo sobe, por 1,2 s
+          const c = t - carinhoEm;
+          const mimo = c >= 0 && c < 1.2 ? Math.sin((c / 1.2) * Math.PI) : 0;
+          const p = e.emPe;
+          sentado.raiz.setEnabled(!(fora && p));
+          if (fora && p) {
+            // T19/T21: fora do banquinho, em pé no chão (na horta brincando, ou atrás de alguém),
+            // andando de verdade: as patas em diagonal no passo dos bichos do jogo, o pé no chão
+            // acompanhando o chão (o ritmo pela rapidez e pelo comprimento da perna)
+            const rapidez = Math.max(0, fora.anda);
+            e.amp += (aberturaDoPasso(rapidez) - e.amp) * Math.min(1, dt * 8);
+            const passo = passoSemDeslizar(rapidez, p.quadril, e.amp);
+            e.fase += dt * passo.ritmo;
+            const abertura = passo.abertura * (e.amp > 0.001 ? 1 : 0);
+            const seno = Math.sin(e.fase);
+            const cosseno = Math.cos(e.fase);
+            const balanco = seno * abertura;
+            const andando = Math.min(1, e.amp * 3);
+            const ergue = ergueDaPata(p.quadril) * andando;
+            for (const q of p.patas) {
+              const s = q.papel === 'perna0' ? 1 : -1;
+              q.no.rotation.x = s * balanco;
+              q.no.position.y = q.y + ergue * Math.max(0, -s * cosseno);
+            }
+            // (a pata girada sobe um tiquinho: o corpo desce o mesmo tanto, o pé de apoio no chão)
+            const apoio = p.quadril * (1 - Math.cos(balanco));
+            p.raiz.position.set(fora.x, fora.y - apoio, fora.z);
+            p.raiz.rotation.y = fora.yaw;
+            // o gato anda macio: um tico de ginga, e parado respira
+            p.raiz.rotation.z = seno * 0.05 * andando;
+            p.raiz.scaling.set(1, 1 + Math.sin(t * 2.2) * 0.015 * (1 - andando), 1);
+            if (p.cauda) {
+              p.cauda.rotation.y = Math.sin(t * (andando > 0.3 ? 5 : 2.5)) * 0.3;
+              p.cauda.rotation.x = -0.25 * mimo;
+            }
+            if (p.cabeca) {
+              p.cabeca.rotation.x = Math.sin(e.fase * 2) * 0.04 * andando;
+              p.cabeca.rotation.z = Math.sin(t * 0.5) * 0.06 + 0.3 * mimo;
+            }
+            continue;
+          }
+          sentado.raiz.position.set(...e.lugar);
+          sentado.raiz.rotation.y = e.yaw;
+          sentado.raiz.rotation.x = 0;
           // respira, abana a pontinha do rabo e vira a cabecinha de vez em quando
-          v.raiz.scaling.set(1, 1 + Math.sin(t * 2.2) * 0.015, 1);
-          if (v.cauda && !fora) v.cauda.rotation.y = Math.sin(t * 1.7) * 0.25;
-          if (v.cabeca) {
+          sentado.raiz.scaling.set(1, 1 + Math.sin(t * 2.2) * 0.015, 1);
+          if (sentado.cauda) sentado.cauda.rotation.y = Math.sin(t * (mimo > 0 ? 6 : 1.7)) * (0.25 + 0.2 * mimo);
+          if (sentado.cabeca) {
             const olha = Math.sin(t * 0.35) > 0.6 ? Math.sin(t * 0.7) * 0.45 : 0;
-            v.cabeca.rotation.y += (olha - v.cabeca.rotation.y) * 0.05;
-            v.cabeca.rotation.z = Math.sin(t * 0.5) * 0.06;
+            sentado.cabeca.rotation.y += (olha * (1 - mimo) - sentado.cabeca.rotation.y) * 0.05;
+            sentado.cabeca.rotation.z = Math.sin(t * 0.5) * 0.06 + 0.3 * mimo;
           }
-        } else if (v.cabeca) {
+          continue;
+        }
+        const v = sentado;
+        if (v.cabeca) {
           // a corujinha vira a cabeça devagar para um lado e para o outro (nunca segue ninguém)
           v.cabeca.rotation.y = Math.sin(t * 0.32) * 0.7;
           v.raiz.scaling.set(1, 1 + Math.sin(t * 1.6) * 0.012, 1);
@@ -273,12 +387,27 @@ export function criarBichosBaile(
     },
     lista: () =>
       // (onde ele está desenhado agora: fora do banquinho na n5)
+      // (T21: em pé, é o desenho em pé que vale; `emPe` e o passo das patas para os testes)
       enfeites.map((e) => {
-        const p = e.vivo?.raiz.position;
-        return { nome: e.nome, x: p?.x ?? e.lugar[0], y: p?.y ?? e.lugar[1], z: p?.z ?? e.lugar[2], vivo: !!e.vivo };
+        const p = (e.emPe ?? e.vivo)?.raiz.position;
+        return {
+          nome: e.nome,
+          x: p?.x ?? e.lugar[0],
+          y: p?.y ?? e.lugar[1],
+          z: p?.z ?? e.lugar[2],
+          vivo: !!e.vivo,
+          emPe: !!e.emPe,
+          patas: e.emPe ? e.emPe.patas.map((q) => +q.no.rotation.x.toFixed(3)) : [],
+        };
       }),
+    carinho(t) {
+      carinhoEm = t;
+    },
     descartar() {
-      for (const e of enfeites) e.vivo?.raiz.dispose();
+      for (const e of enfeites) {
+        e.vivo?.raiz.dispose();
+        e.emPe?.raiz.dispose();
+      }
     },
   };
 }

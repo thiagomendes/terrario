@@ -163,11 +163,20 @@ export function ligarBaile(e: EstadoDepuracao, ui?: AlmaUi): void {
           );
         if (passo === 2) conferir(...pm.porta, MISSOES_BAILE.porta - 0.5, () => e.baileMissao?.({ a: 'lampiao' }));
       }
-      if (aberta(M_TUFINHO)) {
-        const v = e.baileEstado?.();
-        const naHorta = v?.tc ? v.tc === 'horta' : v?.tf.o === 'horta';
-        if (naHorta) conferir(...pm.tufinho, MISSOES_BAILE.tufinho - 0.5, () => e.baileMissao?.({ a: 'tufinho' }));
+      // T21: na tela, o dedo vai no Tufinho desenhado (na horta ele passeia em volta do lugar dele);
+      // o perto continua medido do lugar dele, como no núcleo
+      const gato = e.tufinhoOnde?.();
+      const v = aberta(M_TUFINHO) ? e.baileEstado?.() : null;
+      const naHorta = !!v && (v.tc ? v.tc === 'horta' : v.tf.o === 'horta');
+      if (naHorta && perto(pm.tufinho[0], pm.tufinho[2], MISSOES_BAILE.tufinho - 0.5)) {
+        const t = gato ? tela(gato.x, gato.y + 0.3, gato.z) : tela(...pm.tufinho);
+        const d = t ? Math.hypot(t.x - x, t.y - y) : Infinity;
+        const m0 = melhor as { d: number } | null;
+        if (d <= RAIO_TOQUE && (!m0 || d < m0.d)) melhor = { d, f: () => e.baileMissao?.({ a: 'tufinho' }) };
       }
+      // e o carinho: tocado em qualquer outra hora (no banquinho, ou atrás de quem ele segue), ele
+      // inclina a cabecinha e ronrona (desenho e som só desta tela)
+      if (!naHorta && gato) conferir(gato.x, gato.y + 0.3, gato.z, 5, () => e.baileToque?.({ a: 'tufinho' }));
       conferir(...pm.parreira, MISSOES_BAILE.parreira - 0.5, () => e.baileMissao?.({ a: 'uva' }));
       // T14: o docinho, a caneca ou a surpresa de uva no balcão: um toque e a entrega acontece
       // (com 3 do mesmo, ou no meio da entrega, quem vende só acena)

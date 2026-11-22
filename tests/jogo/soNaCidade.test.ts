@@ -47,10 +47,10 @@ function daCidadeSemSerDe(t: (typeof OUTROS)[number]): ReadonlySet<string> {
 /**
  * Temas ainda sem o pacote de som gravado (caem na reserva sintetizada, sem erro). Desde a T18
  * da spec 026 nenhum: a Vila Neon tem a trilha do bairro e o pacote do show (as vozes do bairro
- * são as sintetizadas do tema, sem pacote). Spec 027: a Noite das Fantasias até a T21 (a trilha
- * e os sons gravados da festa entram no índice lá; até então, a reserva sintetizada do tema).
+ * são as sintetizadas do tema, sem pacote). Spec 027: a Noite das Fantasias ganhou o pacote dela
+ * na T21 (a trilha e os sons gravados da festa, sem os do canteiro nem os da rua da cidade).
  */
-const SEM_PACOTE_AINDA: readonly string[] = ['noite-das-fantasias'];
+const SEM_PACOTE_AINDA: readonly string[] = [];
 const INDICE = JSON.parse(lerTexto('public/sons/indice.json')) as {
   temas: Record<string, Record<string, unknown>>;
   tamanhos: Record<string, number>;

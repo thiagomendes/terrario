@@ -43,6 +43,9 @@ import type { EventoMissoesBaile } from '../../nucleo/baileMissoes';
 
 type V3 = [number, number, number];
 
+/** T21: o raio (blocos) dos três cantinhos em que o Tufinho passeia na horta, em volta do lugar dele. */
+export const RODA_NA_HORTA = 0.8;
+
 /** A cópia da Lulu na tela de quem procura (o boneco de verdade dela, de outro dono). */
 export interface LuluNaTela {
   posicionar(x: number, y: number, z: number, yaw: number): void;
@@ -68,7 +71,8 @@ export interface OpcoesMissoesNaTela {
   pes(id: string): V3 | null;
   /** A cópia da Lulu (criada quando a n3 abre), ou null. */
   criarLulu(): LuluNaTela | null;
-  som?(qual: 'risadinha' | 'plim' | 'confete' | 'miau' | 'brilho', volume: number): void;
+  /** O som de um momento (T21: de onde ele soa; sem `onde`, é da própria criança). */
+  som?(qual: 'risadinha' | 'plim' | 'confete' | 'brilho', volume: number, onde?: { x: number; z: number }): void;
   tapaOGlow?(m: Mesh): void;
   brilha?(m: Mesh): void;
 }
@@ -224,8 +228,11 @@ export function criarMissoesNaTela(op: OpcoesMissoesNaTela) {
     }
     r.caixa(0.2, 0.08, 0.2, 0, 0, 0, '#f6ecdc', 0.02);
   });
-  const fantasma = desenhar((r) => {
+  const fantasma = desenhar((rr) => {
     // o fantasminha de lençol: a cúpula clarinha, a barra em ondinhas, os olhos redondos e o sorriso
+    // (no material aceso, sem halo: de noite ele fica clarinho, nunca cinza, e se lê de longe)
+    const d = rr.d as DesenhoBaile;
+    const r = new Ref({ ...d, corpo: d.luz }, rr.p);
     bolinha(r, 0, 0.55, 0, 0.32, '#f4f0fa', [1, 1.15, 1], undefined, 0, 12);
     for (let i = 0; i < 6; i++) {
       const a = (i / 6) * Math.PI * 2;
@@ -241,7 +248,10 @@ export function criarMissoesNaTela(op: OpcoesMissoesNaTela) {
     // as mãozinhas de pano (uma dá tchau)
     bolinha(r, -0.34, 0.45, 0.05, 0.08, '#f4f0fa');
   });
-  const maoFantasma = desenhar((r) => bolinha(r, 0, 0, 0, 0.08, '#f4f0fa'));
+  const maoFantasma = desenhar((rr) => {
+    const d = rr.d as DesenhoBaile;
+    bolinha(new Ref({ ...d, corpo: d.luz }, rr.p), 0, 0, 0, 0.08, '#f4f0fa');
+  });
   // as folhinhas do confete (achatadas, uma malha por cor): laranja, dourado, oliva e cobre
   const CORES_FOLHA = ['#f0862a', '#e8b040', '#7a9a3a', '#c8622a', '#ffb050'];
   // (no material aceso, sem halo: o confete se vê de dia e de noite, colorido, sem virar luz)
@@ -273,6 +283,8 @@ export function criarMissoesNaTela(op: OpcoesMissoesNaTela) {
     base: V3;
     giro: number;
     confete: { no: TransformNode; v: V3; p: V3; gira: number }[];
+    /** T21: o confete já saiu (o "pof" e as folhinhas soam uma vez). */
+    estourou: boolean;
   }
   const travessuras: Travessura[] = [];
   /** Onde fica o meio da porta `i` da rua, e para onde ela olha. */
@@ -309,10 +321,12 @@ export function criarMissoesNaTela(op: OpcoesMissoesNaTela) {
 
   function travessura(i: number, t: number): void {
     const p = daPorta(i);
-    // (na soleira, um tico para fora do vão: ele sai pela porta aberta e flutua na frente dela)
-    const base: V3 = [p.x - p.f[0] * 0.15, chao, p.z - p.f[1] * 0.15];
-    const no = montar('baile-fantasminha', fantasma);
-    const mao = montar('baile-fantasminha-mao', maoFantasma);
+    // (na soleira, para fora do vão: ele sai pela porta aberta e flutua na frente dela, na altura da
+    // criança, do tamanho dela, bem à vista; nunca no alto da porta, atrás do toldinho)
+    // (a frente da porta, `f`, aponta para a rua)
+    const base: V3 = [p.x + p.f[0] * 0.65, chao, p.z + p.f[1] * 0.65];
+    const no = montar('baile-fantasminha', fantasma, [], true);
+    const mao = montar('baile-fantasminha-mao', maoFantasma, [], true);
     mao.parent = no;
     mao.position.set(0.34, 0.55, 0.05);
     no.position.set(...base);
@@ -331,8 +345,8 @@ export function criarMissoesNaTela(op: OpcoesMissoesNaTela) {
         gira: ((k % 5) - 2) * 3,
       });
     }
-    travessuras.push({ t0: t + 0.3, no, mao, base, giro: p.a, confete });
-    op.som?.('risadinha', 0.35);
+    travessuras.push({ t0: t + 0.3, no, mao, base, giro: p.a, confete, estourou: false });
+    op.som?.('risadinha', 0.7, { x: base[0], z: base[2] });
   }
 
   function cuidarDaTravessura(t: number, dt: number): void {
@@ -348,11 +362,15 @@ export function criarMissoesNaTela(op: OpcoesMissoesNaTela) {
       // ele sobe devagar da porta (nada de pulo de susto), dá tchau e volta para dentro
       const sobe = b < 0 ? 0 : b < 0.6 ? b / 0.6 : b < 2.2 ? 1 : Math.max(0, 1 - (b - 2.2) / 0.6);
       const e = sobe * sobe * (3 - 2 * sobe);
-      q.no.scaling.setAll(Math.max(0.001, 1.35 * e));
-      q.no.position.set(q.base[0], q.base[1] + 0.25 + 0.75 * e + Math.sin(t * 2.4) * 0.05 * e, q.base[2]);
+      q.no.scaling.setAll(Math.max(0.001, 1.75 * e));
+      q.no.position.set(q.base[0], q.base[1] + 0.12 + 0.3 * e + Math.sin(t * 2.4) * 0.05 * e, q.base[2]);
       q.no.rotation.z = Math.sin(t * 1.8) * 0.06;
       q.mao.position.y = 0.55 + Math.max(0, Math.sin(t * 7)) * 0.18;
       // o confete de folhinhas sai quando ele chega lá em cima, e cai devagar girando
+      if (b >= 0.55 && !q.estourou) {
+        q.estourou = true;
+        op.som?.('confete', 0.9, { x: q.base[0], z: q.base[2] });
+      }
       if (b >= 0.55)
         for (const c of q.confete) {
           if (!c.no.isEnabled()) {
@@ -434,7 +452,7 @@ export function criarMissoesNaTela(op: OpcoesMissoesNaTela) {
     // a risadinha cresce perto do esconderijo (só na tela de quem procura)
     if (!comemorando && d < MISSOES_BAILE.risadinha && t >= proximaRisada) {
       const f = 1 - d / MISSOES_BAILE.risadinha;
-      op.som?.('risadinha', 0.2 + 0.6 * f);
+      op.som?.('risadinha', 0.2 + 0.6 * f, { x: e.x, z: e.z });
       proximaRisada = t + 3.2 - 1.4 * f;
     }
   }
@@ -454,8 +472,13 @@ export function criarMissoesNaTela(op: OpcoesMissoesNaTela) {
     }
     let alvo: [number, number];
     let olha: number | null = null;
-    if (modo === 'horta') alvo = [pt.tufinhoHorta[0], pt.tufinhoHorta[2]];
-    else {
+    if (modo === 'horta') {
+      // T21: na horta ele brinca de verdade: passeia devagar entre três cantinhos em volta do lugar
+      // dele (perto o bastante para o dedo achar), para, dá o pulinho de gato e vai de novo
+      const k = Math.floor(t / 3.4) % 3;
+      const ang = k * 2.1 + 0.4;
+      alvo = [pt.tufinhoHorta[0] + Math.cos(ang) * RODA_NA_HORTA, pt.tufinhoHorta[2] + Math.sin(ang) * RODA_NA_HORTA];
+    } else {
       const p = quem ? op.pes(quem) : null;
       if (!p) return null;
       // atrás de quem ele segue, um tico de lado (nunca no pé dela)
@@ -474,7 +497,8 @@ export function criarMissoesNaTela(op: OpcoesMissoesNaTela) {
       gato.x = alvo[0] - (dx / d) * 2;
       gato.z = alvo[1] - (dz / d) * 2;
     }
-    const passo = Math.min(d, (d > 3 ? 6.5 : 4.2) * dt);
+    // (na horta, o passeio é devagar; atrás de quem ele segue, o trote de gato que alcança)
+    const passo = Math.min(d, (modo === 'horta' ? 1.3 : d > 3 ? 6.5 : 4.2) * dt);
     if (d > 0.05) {
       gato.x += (dx / d) * passo;
       gato.z += (dz / d) * passo;
@@ -488,10 +512,11 @@ export function criarMissoesNaTela(op: OpcoesMissoesNaTela) {
       gato.yaw += gira * Math.min(1, dt * 4);
     }
     gato.anda += (passo / Math.max(dt, 1e-3) - gato.anda) * Math.min(1, dt * 8);
-    // na horta ele brinca: um pulinho de gato de vez em quando, virando para as abóboras
+    // na horta ele brinca: parado no cantinho, um pulinho de gato de vez em quando (andando, quem
+    // anda são as patinhas: nada de pular no lugar)
     const brinca = modo === 'horta' && d < 0.3;
-    const pulo = brinca ? Math.max(0, Math.sin(t * 2.6)) ** 6 * 0.35 : gato.anda > 0.5 ? Math.abs(Math.sin(t * 12)) * 0.05 : 0;
-    return { x: gato.x, y: chao + pulo, z: gato.z, yaw: brinca ? gato.yaw + Math.sin(t * 0.9) * 0.8 : gato.yaw, anda: gato.anda, brinca };
+    const pulo = brinca ? Math.max(0, Math.sin(t * 2.6)) ** 6 * 0.3 : 0;
+    return { x: gato.x, y: chao + pulo, z: gato.z, yaw: gato.yaw, anda: gato.anda, brinca };
   }
 
   // ------------------------------------------------------------------ o quadro
@@ -560,6 +585,8 @@ export function criarMissoesNaTela(op: OpcoesMissoesNaTela) {
         luluEm = e.k;
         lulu?.comemorar();
         op.som?.('brilho', 0.7);
+        // (achada, ela ri contente, pertinho)
+        op.som?.('risadinha', 1);
       }
     },
     /** Testes e fotos. */
