@@ -854,15 +854,15 @@ export const FANTASIAS_DE_MORADOR: readonly FantasiaDef[] = [
     grupo: 'temas',
     tema: 'noite-das-fantasias',
     nomes: { feminino: 'Gatinha', masculino: 'Gatinho' },
-    cores: ['#4a4458'],
+    // (portão da T24: o macacão grafite com a máscara de pontinhas nos olhos lembrava a ladra
+    // de máscara dos quadrinhos; agora a gatinha cinza clara de orelhinhas, sem máscara, o rosto
+    // à mostra)
+    cores: ['#a79db8'],
     corEmblema: '#f4b6c8',
     visual: mesmo({
       roupa: { camisa: 'principal', manga: 'principal', calca: 'principal' },
       cabeca: 'livre',
-      pecas: [
-        { tipo: 'mascara', cor: 'principal' },
-        { tipo: 'orelhas-gatinho', cor: 'principal' },
-      ],
+      pecas: [{ tipo: 'orelhas-gatinho', cor: 'principal' }],
     }),
   },
   {

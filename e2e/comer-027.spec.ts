@@ -11,7 +11,9 @@ import { abrirMundo, assentar } from './guia-palco';
  */
 declare const process: { env: Record<string, string | undefined> };
 test.setTimeout(900_000);
-const PASTA = 'capturas-027/parte1/comer';
+const PASTA = process.env.COMER_PASTA ?? 'capturas-027/parte1/comer';
+// (T24: `COMER_HORA=noite` tira as mesmas fotos de noite, com COMER_PASTA)
+const HORA = process.env.COMER_HORA === 'noite' ? 0.85 : 0.7;
 // (e a "Uva" da parreirinha, o item frutinhas deste mundo, em cacho roxo)
 const COMIDAS = ['brigadeiro', 'beijinho', 'cajuzinho', 'surpresa_uva', 'chocolate_quente', 'pocao_uva', 'frutinhas'];
 
@@ -19,16 +21,16 @@ async function abrir(browser: import('@playwright/test').Browser, id: string): P
   const page = await abrirMundo(browser, { id, tema: 'noite-das-fantasias', tamanho: 'pc' });
   await page.addStyleTag({ content: '.dica-mira, .toast-area { display: none !important; }' });
   await assentar(page);
-  await page.evaluate(() => {
+  await page.evaluate((hora) => {
     const e = window.__brumaluz!;
     const p = e.baile!()!;
     e.pausarDia = true;
-    e.hora = 0.7;
+    e.hora = hora;
     e.voar?.(false);
     // no gramado da praça, longe das barracas (o toque é da comida)
     e.teleportar!(p.nascimento.x + 3, p.nascimento.z - 4, p.h + 1.2);
     e.apontar!(p.nascimento.olhar, 0.15);
-  });
+  }, HORA);
   await page.waitForTimeout(2500);
   return page;
 }

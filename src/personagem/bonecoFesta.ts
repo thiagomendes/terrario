@@ -91,11 +91,14 @@ function cupula(): { pos: number[]; ind: number[]; beira: V3[] } {
     let y = c[1] + R[1] * d[1];
     let z = c[2] + R[2] * d[2];
     if (z > c[2]) z = c[2] + (z - c[2]) * 0.9;
+    // (portão da T24: o alto do pano era puxado para cima numa ponta; de lado, o capuz branco
+    // pontudo com o furo do rosto lembrava o capuz de um grupo de ódio. Agora o alto é redondo,
+    // a cabeça de fantasminha de desenho, com só um tico de pano caído de lado)
     if (d[1] > 0.5) {
       const s = (d[1] - 0.5) / 0.5;
-      y += 0.24 * s * s;
-      x -= 0.2 * s * s * s;
-      z -= 0.04 * s * s;
+      y += 0.03 * s * s;
+      x -= 0.06 * s * s * s;
+      z -= 0.02 * s * s;
     }
     return [x, y, z];
   };

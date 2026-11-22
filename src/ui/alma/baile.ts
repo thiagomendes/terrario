@@ -85,8 +85,12 @@ export function ligarBaile(e: EstadoDepuracao, ui?: AlmaUi): void {
     const dist = (i: number) => Math.hypot(pes[0] - balcoes[i].p[0], pes[2] - balcoes[i].p[2]);
     if (usada && dist(usada.i) > LONGE_DA_DICA) usada = null;
     let i = -1;
+    // (portão da T24: com a n4 aberta, a horta é da missão; o "Toque para comprar" da uva na
+    // bancada aparecia junto da mãozinha das carinhas, na mesma mesa. Comprar ali continua
+    // valendo no toque; só a dica espera a n4 acabar)
     balcoes.forEach((b, k) => {
       if (k === usada?.i || tem(b.item) >= MAX_POR_LANCHE || dist(k) > PERTO_DA_DICA) return;
+      if (b.barraca === 'horta' && aberta('n4')) return;
       if (i < 0 || dist(k) < dist(i)) i = k;
     });
     const agora = performance.now() / 1000;

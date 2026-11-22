@@ -186,7 +186,9 @@ const POR_MORADOR: NonNullable<PovoadoTema['porMorador']> = {
     nome: 'Celeste',
     genero: 'f',
     titulo: 'Vizinha',
-    pecas: corpoDe('#e8b896', '#5a3422', '#4a4458', '#4a4458'),
+    // (portão da T24: a gatinha cinza clara, sem a máscara; de grafite com a máscara de
+    // pontinhas, lembrava a ladra de máscara dos quadrinhos. A roupa do morador vem daqui)
+    pecas: corpoDe('#e8b896', '#5a3422', '#a79db8', '#a79db8'),
     fantasia: { id: 'gatinho-festa', cor: 0 },
     cabelo: 5,
     semTrocas: true,

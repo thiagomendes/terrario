@@ -1,0 +1,83 @@
+{
+  "praca-empe": {
+    "pixelsChao": 9375,
+    "medianaChao": 0.51,
+    "piorQuadrado": 0.11,
+    "onde": [
+      0.55,
+      0.62
+    ]
+  },
+  "barracas-empe": {
+    "pixelsChao": 13303,
+    "medianaChao": 0.646,
+    "piorQuadrado": 0.1992,
+    "onde": [
+      0.75,
+      0.37
+    ]
+  },
+  "rua-empe": {
+    "pixelsChao": 8405,
+    "medianaChao": 0.651,
+    "piorQuadrado": 0.2328,
+    "onde": [
+      0.8,
+      0.37
+    ]
+  },
+  "vovo-empe": {
+    "pixelsChao": 8895,
+    "medianaChao": 0.659,
+    "piorQuadrado": 0.1571,
+    "onde": [
+      0.85,
+      0.28
+    ]
+  },
+  "loja-empe": {
+    "pixelsChao": 8004,
+    "medianaChao": 0.571,
+    "piorQuadrado": 0.1055,
+    "onde": [
+      0.55,
+      0.58
+    ]
+  },
+  "bosque-empe": {
+    "pixelsChao": 9669,
+    "medianaChao": 0.428,
+    "piorQuadrado": 0.1035,
+    "onde": [
+      0.8,
+      0.53
+    ]
+  },
+  "castelo-empe": {
+    "pixelsChao": 4416,
+    "medianaChao": 0.446,
+    "piorQuadrado": 0.1198,
+    "onde": [
+      0.9,
+      0.39
+    ]
+  },
+  "horta-empe": {
+    "pixelsChao": 11238,
+    "medianaChao": 0.462,
+    "piorQuadrado": 0.2618,
+    "onde": [
+      0.05,
+      0.51
+    ]
+  },
+  "gramado-empe": {
+    "pixelsChao": 11765,
+    "medianaChao": 0.573,
+    "piorQuadrado": 0.2985,
+    "onde": [
+      0.25,
+      0.39
+    ]
+  }
+}

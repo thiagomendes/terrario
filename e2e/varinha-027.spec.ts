@@ -10,7 +10,7 @@ import { criarMundo } from './guia-palco';
  * `capturas-027/parte1/varinha/`.
  */
 declare const process: { env: Record<string, string | undefined> };
-const PASTA = 'capturas-027/parte1/varinha';
+const PASTA = process.env.VARINHA_PASTA ?? 'capturas-027/parte1/varinha';
 
 test('dois na nuvem: a Bia vê a florzinha da varinha da Ana, e ela some sozinha', async ({ browser }) => {
   test.setTimeout(600_000);

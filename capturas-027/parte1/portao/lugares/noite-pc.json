@@ -1,0 +1,83 @@
+{
+  "praca-pc": {
+    "pixelsChao": 2052,
+    "medianaChao": 0.507,
+    "piorQuadrado": 0.2179,
+    "onde": [
+      0.35,
+      0.53
+    ]
+  },
+  "barracas-pc": {
+    "pixelsChao": 2681,
+    "medianaChao": 0.581,
+    "piorQuadrado": 0.2512,
+    "onde": [
+      0,
+      0.18
+    ]
+  },
+  "rua-pc": {
+    "pixelsChao": 1469,
+    "medianaChao": 0.605,
+    "piorQuadrado": 0.1742,
+    "onde": [
+      0.8,
+      0.71
+    ]
+  },
+  "vovo-pc": {
+    "pixelsChao": 1775,
+    "medianaChao": 0.615,
+    "piorQuadrado": 0.1942,
+    "onde": [
+      0.75,
+      0
+    ]
+  },
+  "loja-pc": {
+    "pixelsChao": 1913,
+    "medianaChao": 0.579,
+    "piorQuadrado": 0.1892,
+    "onde": [
+      0.7,
+      0.09
+    ]
+  },
+  "bosque-pc": {
+    "pixelsChao": 2222,
+    "medianaChao": 0.355,
+    "piorQuadrado": 0.13,
+    "onde": [
+      0.1,
+      0.62
+    ]
+  },
+  "castelo-pc": {
+    "pixelsChao": 1320,
+    "medianaChao": 0.387,
+    "piorQuadrado": 0.1237,
+    "onde": [
+      0.9,
+      0.62
+    ]
+  },
+  "horta-pc": {
+    "pixelsChao": 2562,
+    "medianaChao": 0.442,
+    "piorQuadrado": 0.2668,
+    "onde": [
+      0.9,
+      0.62
+    ]
+  },
+  "gramado-pc": {
+    "pixelsChao": 2890,
+    "medianaChao": 0.497,
+    "piorQuadrado": 0.329,
+    "onde": [
+      0.25,
+      0.62
+    ]
+  }
+}

@@ -268,7 +268,9 @@ function tomadas(p: Plano): Tomada[] {
   t('praca', [p.nascimento.x, Y + 2.6, p.nascimento.z + 3], [a.x, Y + 4, a.z]);
   // as barracas: de 3/4, da praça
   const b0 = p.barracas[0];
-  t('barracas', [b0.x + 8, Y + 2.4, b0.z + 7], [b0.x - 1, Y + 1.6, b0.z + 2]);
+  // (T24: na tela em pé, mais alto e quase sem recuar: 6 blocos para trás a câmera ficava dentro
+  // da abóbora gigante)
+  t('barracas', [b0.x + 8, Y + 2.4, b0.z + 7], [b0.x - 1, Y + 1.6, b0.z + 2], [0, 4.5, 1]);
   // a rua das casinhas tortas: do começo da rua, olhando para a Vovó lá no fim
   const vovo = p.portas.find((q) => q.vovo)!;
   t('rua', [vovo.x + 2, Y + 3, p.oz + 42], [vovo.x, Y + 3, vovo.z + 6]);
@@ -284,7 +286,16 @@ function tomadas(p: Plano): Tomada[] {
   const tr = p.trilha;
   t('bosque', [tr[1][0] + 1.5, Y + 2.2, tr[1][1] - 0.5], [tr[3][0], Y + 1.6, tr[3][1]], [0, 2, 0]);
   // o castelinho: do fim do caminho, a porta e a torre inteira
-  t('castelo', [tr[4][0] + 1, Y + 2.6, tr[4][1] - 1], [p.castelo[0] + 2, Y + 8, p.castelo[2] + 4], [0, 3, 5]);
+  // (T24: 5 blocos mais para trás no caminho e o alvo mais baixo: de perto e olhando para cima, a
+  // torre reta parecia torta na foto)
+  const cv = [tr[4][0] + 1 - (p.castelo[0] + 2), tr[4][1] - 1 - (p.castelo[2] + 4)];
+  const cl = Math.hypot(cv[0], cv[1]) || 1;
+  t(
+    'castelo',
+    [tr[4][0] + 1 + (cv[0] / cl) * 5, Y + 3.6, tr[4][1] - 1 + (cv[1] / cl) * 5],
+    [p.castelo[0] + 2, Y + 5, p.castelo[2] + 4],
+    [0, 3, 5],
+  );
   // a horta: do portão para dentro
   t('horta', [p.portaoHorta[0] - 4, Y + 4, p.portaoHorta[2] - 6], [p.portaoHorta[0] + 8, Y, p.portaoHorta[2] + 12]);
   // o gramado da festa: da estaçãozinha para dentro

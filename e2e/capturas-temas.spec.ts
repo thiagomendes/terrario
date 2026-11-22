@@ -173,6 +173,10 @@ interface Fixo {
     n: number;
   }[];
   bichos?: { tipo: 'cervo' | 'coelho' | 'raposa'; p: [number, number] }[];
+  /** A fantasia da criança na foto (spec 027: a festa é das fantasias). */
+  fantasia?: { id: string; cor: number };
+  /** Bichos parados (a vitrine), de frente para a câmera: não saem andando da foto. */
+  parados?: { tipo: 'cervo' | 'coelho' | 'raposa' | 'peixe' | 'espectro'; p: [number, number] }[];
 }
 interface Enquadramento {
   /** O que a foto mostra (escrito para quem refizer). */
@@ -209,7 +213,8 @@ const ENQUADRAMENTOS: Record<IdTemaE2e, Enquadramento> = {
   'noite-das-fantasias': {
     oQueMostra:
       'a Praça da Abóbora no começo da noite: a abóbora gigante de rosto aceso, o palco com as ' +
-      'bandeirolas, uma barraca de toldo listrado e o céu roxo; a criança de costas na praça',
+      'bandeirolas, uma barraca de toldo listrado e o céu roxo; a criança de bruxinha, de ' +
+      'costas na praça, com uma abóbora saltitante ao lado',
     hora: 0.86,
     como: {
       // (do sul da praça: a abóbora à direita e, à esquerda dela, a entrada da Rua das Casinhas
@@ -217,6 +222,10 @@ const ENQUADRAMENTOS: Record<IdTemaE2e, Enquadramento> = {
       cam: [-17, 82, -156],
       alvo: [-33, 79, -190],
       crianca: [-21.5, -166.5],
+      // (portão da T24: a criança de roupa comum no cartão da festa das fantasias não dizia a
+      // festa; de bruxinha, o chapéu pontudo lê de costas, e o bicho do tema ao lado dela)
+      fantasia: { id: 'bruxinha-festa', cor: 0 },
+      parados: [{ tipo: 'cervo', p: [-23.6, -167.6] }],
     },
   },
   'cidade-grande': {
@@ -327,6 +336,7 @@ async function cameraFixa(page: Page, f: Fixo) {
     e.voar?.(false);
     e.teleportar!(f.crianca[0], f.crianca[1], chao(f.crianca[0], f.crianca[1]));
     e.apontar!(paraCamera(f.crianca[0], f.crianca[1]) + Math.PI, 0);
+    if (f.fantasia) e.personagem!.definir({ fantasia: f.fantasia } as never);
     for (const m of f.moradores ?? [])
       e.estatua!('morador', m.p[0], chao(m.p[0], m.p[1]), m.p[1], paraCamera(m.p[0], m.p[1]), {
         profissao: m.profissao,
@@ -334,6 +344,8 @@ async function cameraFixa(page: Page, f: Fixo) {
       });
     for (const b of f.bichos ?? [])
       e.invocar!(b.tipo as never, b.p[0], chao(b.p[0], b.p[1]), b.p[1]);
+    for (const b of f.parados ?? [])
+      e.estatua!(b.tipo, b.p[0], chao(b.p[0], b.p[1]), b.p[1], paraCamera(b.p[0], b.p[1]));
   }, f);
 }
 

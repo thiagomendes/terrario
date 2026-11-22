@@ -101,7 +101,9 @@ interface Hashes {
 const ESPERADO: Hashes = {
   terreno: ['98983f687e233d45', '364f50455e26feb5', '682b256e126cfc06'],
   plano: ['81074c6bc78df083', '5db6326cb07e2dfe', '0ea0a889af736f2c'],
-  povoado: '1414aee894e3fd59',
+  // (regravado no portão da T24: a roupa da vizinha Celeste, de gatinha, de grafite para cinza
+  // claro; nada mais do povoado mudou)
+  povoado: '80140157c992a492',
   atlas: '6ed5a6453b4cacde',
   mapaEmissivo: '06cd38bd102431a9',
   emissivos: '98a32cdc9f6a5e29',
@@ -112,7 +114,8 @@ const ESPERADO: Hashes = {
   vozes: 'c3f0935da623a647',
   mundo: '7aee8a78a6d0dbfb',
   textos: '6e1454340067bc28',
-  resto: 'fcf36d5a9c0082d7',
+  // (regravado no portão da T24, pela mesma roupa da Celeste, que o tema inteiro também leva)
+  resto: '0eff64ced9aaeaba',
 };
 
 async function sha(partes: (Uint8Array | Uint8ClampedArray | string)[]): Promise<string> {
