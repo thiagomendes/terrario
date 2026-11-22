@@ -295,6 +295,6 @@ export function ligarGuiaMissao(e: EstadoDepuracao, ui: AlmaUi): GuiaMissao | nu
   // spec 026: as caixas do palco, o toque no show e o feno na mão da Vila Neon
   ligarVilaNeon(e, ui, guia, scene);
   // spec 027: o toque na abóbora gigante e nas portas fechadas da Noite das Fantasias
-  ligarBaile(e);
+  ligarBaile(e, ui);
   return guia;
 }

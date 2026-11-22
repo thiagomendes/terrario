@@ -233,6 +233,16 @@ export function sanear(c: unknown): Comando | null {
       // spec 027 (T16): a varinha no ponto do chão tocado (números finitos, no mundo)
       if (o.a === 'varinha' && [o.x, o.y, o.z].every((v) => typeof v === 'number' && Number.isFinite(v) && Math.abs(v) < 1e7))
         return { t: 'baile', a: 'varinha', x: o.x, y: o.y, z: o.z } as unknown as Comando;
+      // spec 027 (T18): as missões n1 a n5 (a porta 0 a 5, a lanterna 0 a 4, a carinha 0 a 2 e
+      // os toques sem número)
+      if (o.a === 'campainha' && inteiro(o.i, 0, 5))
+        return { t: 'baile', a: 'campainha', i: o.i } as unknown as Comando;
+      if (o.a === 'lanterna' && inteiro(o.i, 0, 4))
+        return { t: 'baile', a: 'lanterna', i: o.i } as unknown as Comando;
+      if (o.a === 'carinha' && inteiro(o.c, 0, 2))
+        return { t: 'baile', a: 'carinha', c: o.c } as unknown as Comando;
+      if (o.a === 'lulu' || o.a === 'horta' || o.a === 'lampiao' || o.a === 'tufinho' || o.a === 'uva')
+        return { t: 'baile', a: o.a } as unknown as Comando;
       return null;
     case 'pularPerto':
       // spec 021: só o id de um amigo (texto curto)

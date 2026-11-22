@@ -163,6 +163,13 @@ export interface PontosBaile {
   canteiro: [number, number, number];
   /** O lugar da estaçãozinha do trem (parte 3), na beira do gramado da festa. */
   estacao: [number, number, number];
+  /**
+   * T18 (n3): os três esconderijos da Lulu, na ordem da missão (atrás da abóbora gigante, na
+   * quina de uma casinha, atrás de uma árvore do bosque): os pés e para onde ela espia.
+   */
+  esconderijos: { x: number; y: number; z: number; yaw: number }[];
+  /** T18 (n5): onde o Tufinho brinca na horta quando foge (os pés). */
+  tufinhoHorta: [number, number, number];
   /** Onde cada morador fica. */
   postos: Record<PostoBaile, [number, number, number]>;
   /**
@@ -423,6 +430,8 @@ function montarBaile(semente: number, r: RelevoVila): Montado {
   const tomado = new Uint8Array(largura * profundidade);
   const porChunk = new Map<string, number[]>();
   const pecas: PecaBaile[] = [];
+  /** Os troncos das árvores (u, v e a altura), para o esconderijo da Lulu no bosque (T18). */
+  const troncos: [number, number, number][] = [];
   const s = (a: number, b: number, k: number) => hash2(a, b, semente + 9500 + k);
 
   const X = (u: number) => ox + u;
@@ -524,6 +533,7 @@ function montarBaile(semente: number, r: RelevoVila): Montado {
    */
   const arvore = (u: number, v: number, folha: number, alta = 0) => {
     const tronco = 4 + Math.floor(s(u, v, 12) * 2) + alta;
+    troncos.push([u, v, tronco]);
     for (let y = 1; y <= tronco; y++) b(u, y, v, Bloco.MADEIRA_RETORCIDA);
     for (let dy = -2; dy <= 1; dy++) {
       const raio = dy >= 0 ? 1 : 2;
@@ -1234,6 +1244,48 @@ function montarBaile(semente: number, r: RelevoVila): Montado {
   const abobora = { x: X(ABOBORA.u) + 0.5, y: Y, z: Z(ABOBORA.v) + 0.5, lado: ABOBORA.lado };
   // o olhar de quem nasce: de frente para a abóbora gigante (norte)
   const olhar = Math.atan2(abobora.x - nasceX, abobora.z - nasceZ);
+  // T18 (n3): os três esconderijos da Lulu, um de cada vez
+  const esconde = (u: number, v: number, yaw: number) => {
+    const [x, y, z] = p3(u, 0, v);
+    return { x, y, z, yaw };
+  };
+  // (o do bosque: atrás de uma árvore do corredor, do lado de lá do caminho, perto do meio dele)
+  const naTrilha = (u: number, v: number): [number, number] => {
+    let melhor: [number, number] = TRILHA_BOSQUE[0];
+    let d = Infinity;
+    for (let i = 1; i < TRILHA_BOSQUE.length; i++) {
+      const [a, c] = [TRILHA_BOSQUE[i - 1], TRILHA_BOSQUE[i]];
+      for (let k = 0; k <= 20; k++) {
+        const pu = a[0] + ((c[0] - a[0]) * k) / 20;
+        const pv = a[1] + ((c[1] - a[1]) * k) / 20;
+        const dd = Math.hypot(u - pu, v - pv);
+        if (dd < d) [d, melhor] = [dd, [pu, pv]];
+      }
+    }
+    return melhor;
+  };
+  const alvoBosque = TRILHA_BOSQUE[3];
+  let arvoreLulu: [number, number] | null = null;
+  let dArvore = Infinity;
+  for (const [u, v, alto] of troncos) {
+    if (alto < 5) continue;
+    const [pu, pv] = naTrilha(u, v);
+    const dt = Math.hypot(u - pu, v - pv);
+    if (dt < 3 || dt > 6 || Math.hypot(LAGO.u0 + 5 - u, LAGO.v0 + 4.5 - v) < 9) continue;
+    const d = Math.hypot(u - alvoBosque[0], v - alvoBosque[1]);
+    if (d < dArvore) [dArvore, arvoreLulu] = [d, [u, v]];
+  }
+  const [au, av] = arvoreLulu ?? [alvoBosque[0] + 4, alvoBosque[1]];
+  const [tu, tv] = naTrilha(au, av);
+  const dl = Math.hypot(au - tu, av - tv) || 1;
+  const esconderijos: PontosBaile['esconderijos'] = [
+    // atrás da abóbora gigante (do lado do palco), espiando para a praça
+    esconde(ABOBORA.u + 0.5, ABOBORA.v + 0.5 - ABOBORA.lado / 2 - 2, 0),
+    // na quina entre as duas casinhas do leste, espiando para a rua
+    esconde(57.5, 24.5, -Math.PI / 2),
+    // atrás do tronco, do lado de lá do caminho, espiando para ele
+    esconde(au + 0.5 + ((au - tu) / dl) * 1.1, av + 0.5 + ((av - tv) / dl) * 1.1, Math.atan2(tu - au, tv - av)),
+  ];
   const pontos: PontosBaile = {
     abobora,
     palco: { ...ret(PALCO.u0, PALCO.v0 + 1, PALCO.u1, PALCO.v1), y: h + 1 },
@@ -1255,6 +1307,9 @@ function montarBaile(semente: number, r: RelevoVila): Montado {
     hortela,
     canteiro,
     estacao: p3(68.5, 0, GRAMADO.v0 + 3.5),
+    esconderijos,
+    // (no caminho de terra entre as leiras, perto do portão: as abóboras saltitantes da horta)
+    tufinhoHorta: p3(HORTA.u0 + 9.5, 0, HORTA.v0 + 7.5),
     postos: {
       vovo: varanda,
       dudu: p3(TRILHA_BOSQUE[0][0] - 2.5, 0, TRILHA_BOSQUE[0][1] - 2.5),

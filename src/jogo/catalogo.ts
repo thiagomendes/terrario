@@ -6,6 +6,9 @@ import {
   CHOCOLATE_QUENTE,
   POCAO_UVA,
   SURPRESA_UVA,
+  SACOLA_VAZIA,
+  SACOLA_DOCES,
+  LAMPIOES_CARINHA,
   CACHORRO_QUENTE,
   COLHER_PEDREIRO,
   CUBO_CORES,
@@ -868,6 +871,82 @@ function registrarComidasDaFesta(): void {
   });
 }
 
+/**
+ * Spec 027 (T18): as coisas das missões da festa. A sacola de doces da n1 (lilás, com a abóbora
+ * sorridente estampada; a cheia com o brigadeiro, o beijinho e o cajuzinho espiando pela boca) e
+ * os três lampiões de carinha da n4 (todos de olhos redondos e acesos: o sorriso, a língua de
+ * fora e a piscadinha).
+ */
+function registrarCoisasDasMissoesDaFesta(): void {
+  const corpo = [
+    '..kkkkkkkkkkkk..',
+    '..kPpppppppppk..',
+    '..kPppppgppppk..',
+    '..kPppoooopppk..',
+    '..kPpofoofoppk..',
+    '..kPpoooooopqk..',
+    '..kPpofoofopqk..',
+    '..kPpooffoopqk..',
+    '..kPppppppppqk..',
+    '..kqqqqqqqqqqk..',
+    '..kkkkkkkkkkkk..',
+    '................',
+  ];
+  const cores = {
+    k: '#4a2a6e',
+    p: '#9a6ad8',
+    P: '#b892ea',
+    q: '#7a4ab8',
+    h: '#ff9a3a',
+    o: '#ff9a3a',
+    f: '#4a2a18',
+    g: '#5f8a34',
+    b: '#5a3424',
+    t: '#ff9a3a',
+    w: '#fbf3e6',
+    c: '#e0904a',
+  };
+  registrarItem({ id: SACOLA_VAZIA, nome: 'Sacola vazia', tipo: 'material', pilha: 1 });
+  registrarDesenho(SACOLA_VAZIA, {
+    paleta: cores,
+    linhas: ['................', '.....hhhhhh.....', '....h......h....', '....h......h....', ...corpo],
+  });
+  registrarItem({ id: SACOLA_DOCES, nome: 'Sacola de doces', tipo: 'comida', pilha: 8, comida: { fome: 2, saturacao: 1 } });
+  registrarDesenho(SACOLA_DOCES, {
+    paleta: cores,
+    linhas: ['................', '...bb..ww..cc...', '..btbbwwwwcccc..', '..bbbbwwwwcccc..', ...corpo],
+  });
+  // os lampiões de carinha: a abóbora redonda com o rosto aceso
+  const lampiao = (olhos: [string, string], boca: [string, string]) => [
+    '................',
+    '.......gk.......',
+    '.......gk.......',
+    '....kkkkkkkk....',
+    '...koOoodoOok...',
+    '..koOooodooOok..',
+    `..k${olhos[0]}k..`,
+    `..k${olhos[1]}k..`,
+    `..k${'o'.repeat(10)}k..`,
+    `..k${boca[0]}k..`,
+    `..k${boca[1]}k..`,
+    '..kdoooooooodk..',
+    '...kdoooooodk...',
+    '....kkkkkkkk....',
+    '................',
+    '................',
+  ];
+  const paleta = { k: '#7a3a10', o: '#ff9a3a', O: '#ffb86a', d: '#e07a20', y: '#ffd84a', g: '#5f8a34', r: '#ff7aa8' };
+  const rostos: [string, [string, string], [string, string]][] = [
+    ['Lampião sorridente', ['ooyyooyyoo', 'ooyyooyyoo'], ['oyooooooyo', 'ooyyyyyyoo']],
+    ['Lampião de língua de fora', ['ooyyooyyoo', 'ooyyooyyoo'], ['oyyyyyyyyo', 'oooorroooo']],
+    ['Lampião piscando', ['ooooooyyoo', 'ooyyooyyoo'], ['oyooooooyo', 'ooyyyyyyoo']],
+  ];
+  rostos.forEach(([nome, olhos, boca], i) => {
+    registrarItem({ id: LAMPIOES_CARINHA[i], nome, tipo: 'material', pilha: 1 });
+    registrarDesenho(LAMPIOES_CARINHA[i], { paleta, linhas: lampiao(olhos, boca) });
+  });
+}
+
 let registrado = false;
 
 /** Registra materiais, ferramentas e comidas (idempotente). */
@@ -1212,6 +1291,7 @@ export function registrarCatalogo(): void {
     ],
   });
   registrarComidasDaFesta();
+  registrarCoisasDasMissoesDaFesta();
   const metais: [string, string, string, string, string][] = [
     ['cobre', 'Cobre', '#c46e3a', '#e08a55', '#ffc49a'],
     ['ferro', 'Ferro', '#cfab90', '#e2c4a8', '#ffffff'],

@@ -17,6 +17,7 @@ import type { Conexao } from './conexao';
 import { indiceDonoDe } from '../world/edicoes';
 import { criarReplicaVeiculos } from './veiculos';
 import { criarReplicaVila } from './vila';
+import { criarReplicaBaile } from './baile';
 import { PASSO } from '../nucleo/protocolo';
 import type { BateVista } from '../jogo/bate';
 import {
@@ -106,6 +107,8 @@ export function criarEstadoCliente(op: OpcoesEstadoCliente) {
   const veiculos = criarReplicaVeiculos();
   /** Spec 026: o estado da Vila Neon e o relógio do núcleo. */
   const vila = criarReplicaVila();
+  /** Spec 027 (T18): a festa desta criança (as missões n1 a n5). */
+  const baile = criarReplicaBaile();
   /** Spec 026 (parte 2): quem recebe os carrinhos do bate-bate (a cena, na Vila Neon). */
   let ouvinteBate: ((v: BateVista, t: number, agora: number) => void) | null = null;
   let conteiner: ConteinerReplica | null = null;
@@ -141,6 +144,7 @@ export function criarEstadoCliente(op: OpcoesEstadoCliente) {
     if (q.itens) itens.receber(q.itens);
     if (q.veiculos) veiculos.receber(q.veiculos, performance.now() / 1000, !!q.primeiro);
     if (q.vila) vila.receber(q.vila, performance.now() / 1000);
+    if (q.baile) baile.receber(q.baile);
     // spec 026 (parte 2): os carrinhos do bate-bate (o relógio do quadro é o passo do núcleo)
     if (q.bate) ouvinteBate?.(q.bate, q.n * PASSO, performance.now() / 1000);
     if (q.inventario) {
@@ -289,6 +293,7 @@ export function criarEstadoCliente(op: OpcoesEstadoCliente) {
     itens,
     veiculos,
     vila,
+    baile,
     /** Spec 026 (parte 2): a cena pede os carrinhos do bate-bate que chegam no quadro. */
     ouvirBate(f: ((v: BateVista, t: number, agora: number) => void) | null) {
       ouvinteBate = f;

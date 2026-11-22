@@ -474,6 +474,14 @@ export interface EstadoDepuracao {
   floresVarinha?: () => { flores: number; malhas: number; tamanhos: number[] } | null;
   varinha?: (x: number, y: number, z: number) => void;
   eventosFlor?: { e: 'baileFlor'; quem: string; x: number; y: number; z: number; t: number }[];
+  /** Spec 027 (T18): a festa desta criança (as missões n1 a n5), como o núcleo mandou. */
+  baileEstado?: () => import('../jogo/baile').BaileVista | null;
+  /** Spec 027 (T18): a réplica da festa (a previsão da lanterna e da porta). */
+  baileReplica?: () => import('../cliente/baile').ReplicaBaile;
+  /** Spec 027 (T18): um toque de missão para o núcleo (com a previsão na hora). */
+  baileMissao?: (c: import('../nucleo/baileMissoes').ComandoMissoesBaile) => void;
+  /** Spec 027 (T18): os eventos das missões da festa que chegaram (testes). */
+  eventosBaile?: (import('../nucleo/baileMissoes').EventoMissoesBaile & { recebido: number })[];
   /** Spec 027 (T14): a dica de comprar à vista na festa (testes). */
   dicaBaile?: () => { chave: string; texto: string; t: { x: number; y: number } } | null;
   /** Spec 030: os sítios (Rancho) a até 220 blocos do jogador, do mais perto ao mais longe. */
@@ -2470,6 +2478,17 @@ export function criarCena(
     tocarSomInterface(pegar ? 'plim' : 'mochila');
     estado.skateTrocas = (estado.skateTrocas ?? 0) + 1;
     window.dispatchEvent(new CustomEvent('brumaluz:skate', { detail: { pegou: pegar } }));
+  };
+  // spec 027 (T18): a festa desta criança e os toques das missões (a lanterna acende e a porta
+  // abre na hora, pela previsão; o núcleo confere e manda o resto)
+  estado.baileEstado = () => (planoBaile ? cliente.baile.estado : null);
+  estado.baileReplica = () => cliente.baile;
+  estado.eventosBaile = [];
+  estado.baileMissao = (c) => {
+    if (!planoBaile) return;
+    if (c.a === 'lanterna' || c.a === 'campainha') cliente.baile.prever(c, performance.now() / 1000);
+    enviarTelemetria(true);
+    enviar({ t: 'baile', ...c } as Comando);
   };
   estado.vilaEstado = () => (planoVila ? cliente.vila.estado : null);
   estado.vilaComando = (c) => {
@@ -7155,6 +7174,18 @@ export function criarCena(
         floresVarinha?.evento(e);
         if (e.quem !== voce) outrosJogadores.animadorDe(e.quem)?.definirCamada(camadaDaVarinha());
         estado.eventosFlor = [...(estado.eventosFlor ?? []).slice(-20), { ...e, t: performance.now() / 1000 }];
+        break;
+      // spec 027 (T18): as missões n1 a n5 (as portas, as lanternas, a Lulu, a horta, o Tufinho)
+      case 'bailePorta':
+      case 'baileLanterna':
+      case 'baileApagou':
+      case 'baileLulu':
+      case 'baileHorta':
+      case 'baileCarinha':
+      case 'baileLampiao':
+      case 'baileTufinho':
+        estado.eventosBaile?.push({ ...e, recebido: performance.now() / 1000 });
+        if ((estado.eventosBaile?.length ?? 0) > 200) estado.eventosBaile!.splice(0, 100);
         break;
       case 'veiculo':
         renderVeiculos?.evento(e.id, e.o);

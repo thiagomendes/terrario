@@ -862,6 +862,22 @@ export function criarNucleo(op: OpcoesNucleo) {
   // ------------------------------------------------------------ a Noite das Fantasias (spec 027)
   /** A vila da festa (os moradores com posto). */
   const planoBaile = baileDoMundo(semente);
+  /** T18: quem precisa do estado da festa no próximo quadro (todos, quando muda). */
+  let baileSujo = true;
+  /** T18: a criança como as missões da festa a veem (a da Vila, e trocar no mesmo espaço). */
+  const jogadorDoBaile = (o: Jogador) => ({
+    ...jogadorDaVila(o),
+    trocar(de: string, para: string): boolean {
+      const slots = o.inventario.slots;
+      // (a da mão primeiro)
+      const ordem = [o.tel.slot, ...slots.keys()];
+      const i = ordem.find((k) => slots[k]?.item === de);
+      if (i === undefined) return false;
+      o.inventario.definir(i, { item: para, qtd: 1 });
+      o.eventos.push({ e: 'coletou', item: para, qtd: 1 });
+      return true;
+    },
+  });
   const baile: BaileNucleo | null = planoBaile
     ? criarBaile({
         plano: planoBaile,
@@ -891,8 +907,17 @@ export function criarNucleo(op: OpcoesNucleo) {
         },
         // T16: a fantasia da criança (a varinha na mão)
         aparencia: (id) => jogadores.get(id)?.perfil.aparencia,
+        // T18: as missões n1 a n5 (a missão aberta, a mochila, os lugares e a lanterna)
+        jogadoresMissoes: () => [...jogadores.values()].map(jogadorDoBaile),
+        jogadorMissoes: (id) => {
+          const o = jogadores.get(id);
+          return o ? jogadorDoBaile(o) : undefined;
+        },
+        evento: (id, chave) => almaEvento(id, chave),
         espalhar: (e) => eventosGerais.push(e),
-        sujar: () => {},
+        sujar: () => {
+          baileSujo = true;
+        },
       })
     : null;
 
@@ -2774,6 +2799,8 @@ export function criarNucleo(op: OpcoesNucleo) {
         prepararCanto(j, c.missao);
         // spec 026: a missão da Vila Neon escolhida de novo: o que é dela volta ao lugar
         if (e && mundoAlma && missaoAberta(j.id, c.missao ?? '')) vila?.preparar(c.missao, j.id);
+        // spec 027 (T18): a missão da festa escolhida de novo (as lanternas, a sacola)
+        if (e && mundoAlma && missaoAberta(j.id, c.missao ?? '')) baile?.preparar(j.id, c.missao);
         break;
       }
       case 'vila': {
@@ -2799,6 +2826,11 @@ export function criarNucleo(op: OpcoesNucleo) {
         if (c.a === 'comprar') baile?.comando(j.id, { a: 'comprar', i: c.i });
         // (T16: a varinha de condão)
         else if (c.a === 'varinha') baile?.comando(j.id, { a: 'varinha', x: c.x, y: c.y, z: c.z });
+        // (T18: a campainha da porta e a lanterna do bosque, a carinha da bancada e os toques
+        // sem número: a Lulu, a horta, o lampião da porta, o Tufinho e a uva da parreirinha)
+        else if (c.a === 'campainha' || c.a === 'lanterna') baile?.comando(j.id, { a: c.a, i: c.i });
+        else if (c.a === 'carinha') baile?.comando(j.id, { a: 'carinha', c: c.c });
+        else baile?.comando(j.id, { a: c.a });
         break;
       case 'salvar':
         // o anfitrião responde (precisa do pedido)
@@ -3049,6 +3081,8 @@ export function criarNucleo(op: OpcoesNucleo) {
       // (com os arcos do rinque que este jogador já acendeu: a f4 é de cada um)
       if (vila && vistaVila && (vilaSuja || !j.iniciado || n % 20 === 0))
         q.vila = vila.vistaDe(j.id, vistaVila);
+      // spec 027 (T18): a festa desta criança (as portas, as lanternas, a horta, o Tufinho)
+      if (baile && (baileSujo || !j.iniciado || n % 20 === 0)) q.baile = baile.vistaDe(j.id);
       // spec 026 (parte 2): os carrinhos do bate-bate, só para quem está perto da pista
       const carrinhos = vila?.bateDe(j.id, n);
       if (carrinhos) q.bate = carrinhos;
@@ -3118,6 +3152,7 @@ export function criarNucleo(op: OpcoesNucleo) {
     veiculosMudados = [];
     almaPendente.clear();
     vilaSuja = false;
+    baileSujo = false;
     return out;
   }
 
@@ -3143,6 +3178,11 @@ export function criarNucleo(op: OpcoesNucleo) {
     if (almas.size > 0) out['alma'] = JSON.parse(JSON.stringify(Object.fromEntries(almas)));
     // spec 026: a Vila Neon (instrumentos no palco, caixas acesas, quem já ganhou o pôster)
     if (vila) out['vila'] = vila.salvar();
+    // spec 027 (T18): as missões da festa (mundo sem nada começado grava igual a antes)
+    if (baile) {
+      const b = baile.salvar();
+      if (Object.keys(b).length) out['baile'] = b;
+    }
     // na nuvem cada jogador é salvo à parte (dadosJogador); localmente vai junto do mundo
     if (j && confiar) {
       out['sobrevivencia'] = j.sobrevivencia.salvar();

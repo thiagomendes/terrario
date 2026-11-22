@@ -20,6 +20,12 @@ import { temVarinha } from '../personagem/fantasias';
 import { balcoesDoBaile } from '../jogo/compra';
 import { TOQUES_POR_SEGUNDO } from '../jogo/show';
 import { criarComprasDaVila, type EventoCompras, type JogadorCompra } from './vilaCompras';
+import {
+  criarMissoesDoBaile,
+  type ComandoMissoesBaile,
+  type EventoMissoesBaile,
+  type JogadorMissoesBaile,
+} from './baileMissoes';
 
 export { POVOADO_BAILE };
 
@@ -70,6 +76,11 @@ export interface CtxBaile {
   comprador?(id: string): JogadorCompra | undefined;
   /** T16: a aparência da criança (o perfil), para saber se a varinha está na mão. */
   aparencia?(id: string): unknown;
+  /** T18: as crianças como as missões as veem (a missão aberta, a mochila, os lugares). */
+  jogadoresMissoes?(): JogadorMissoesBaile[];
+  jogadorMissoes?(id: string): JogadorMissoesBaile | undefined;
+  /** T18: o ganho de uma ação (a lanterna da n2). */
+  evento?(id: string, chave: string): void;
   /** Evento para todos (o abraço, a compra). */
   espalhar(e: EventoBaile | EventoCompras): void;
   /** O estado mudou: a tela precisa do quadro novo. */
@@ -82,13 +93,18 @@ export type EventoBaile =
   /** T11: o abraço acabou antes (a criança mexeu no controle ou saiu). */
   | { e: 'baileSolta'; quem: string; criatura: number }
   /** T16: a varinha de `quem` fez nascer uma florzinha no chão em x, y, z (some sozinha). */
-  | { e: 'baileFlor'; quem: string; x: number; y: number; z: number };
+  | { e: 'baileFlor'; quem: string; x: number; y: number; z: number }
+  /** T18: as missões n1 a n5 (as portas, as lanternas, a Lulu, a horta, o Tufinho). */
+  | EventoMissoesBaile;
 
 /**
  * O comando `baile`: comprar o lanche `i` de `balcoesDoBaile` (T14); a varinha no ponto x, y, z
- * do chão tocado (T16).
+ * do chão tocado (T16); os toques das missões (T18).
  */
-export type ComandoBaile = { a: 'comprar'; i: number } | { a: 'varinha'; x: number; y: number; z: number };
+export type ComandoBaile =
+  | { a: 'comprar'; i: number }
+  | { a: 'varinha'; x: number; y: number; z: number }
+  | ComandoMissoesBaile;
 
 /** O abraço de agora (um por vez). */
 interface AbracoAgora {
@@ -220,6 +236,18 @@ export function criarBaile(ctx: CtxBaile) {
     ctx.espalhar({ e: 'baileFlor', quem: j.id, x: r(c.x), y: r(c.y), z: r(c.z) });
   }
 
+  // ------------------------------------------------------------------ as missões n1 a n5 (T18)
+  const missoes = criarMissoesDoBaile({
+    plano: ctx.plano,
+    salvo: ctx.salvo,
+    agora: ctx.agora,
+    jogadores: () => ctx.jogadoresMissoes?.() ?? [],
+    jogador: (id) => ctx.jogadorMissoes?.(id),
+    evento: (id, chave) => ctx.evento?.(id, chave),
+    espalhar: ctx.espalhar,
+    sujar: ctx.sujar,
+  });
+
   const toques = new Map<string, number[]>();
   function podeTocar(id: string): boolean {
     const t = ctx.agora();
@@ -240,16 +268,29 @@ export function criarBaile(ctx: CtxBaile) {
       if (n % 20 === 0) cuidarDosMoradores();
       cuidarDoAbraco();
       compras.passo();
+      missoes.passo(n);
     },
-    /** O comando `baile` (já saneado): comprar numa barraca da festa; a varinha. */
+    /** O comando `baile` (já saneado): comprar numa barraca da festa; a varinha; as missões. */
     comando(id: string, c: ComandoBaile): void {
       const j = ctx.jogador(id);
       if (!j || j.morto || !podeTocar(id)) return;
       if (c.a === 'comprar') compras.comando(id, c);
       else if (c.a === 'varinha') varinha(j, c);
+      else missoes.comando(id, c);
+    },
+    /** T18: a missão foi escolhida (ou escolhida de novo): o que é dela volta ao lugar. */
+    preparar: (id: string, missao: string | null) => missoes.preparar(id, missao),
+    /** T18: o que a tela desta criança sabe da festa (o quadro). */
+    vistaDe: (id: string) => missoes.vistaDe(id),
+    /** T18: o que vai salvo com o mundo (`extras.baile`). */
+    salvar: () => {
+      const m = missoes.salvar();
+      return Object.keys(m).length ? { m } : {};
     },
     /** Testes: as compras (os lanches a caminho). */
     compras,
+    /** Testes: as missões (as portas abertas, o Tufinho e as cópias). */
+    missoes,
     /** Um toque num morador (o núcleo chama no "falar"): no Bento, o abraço. */
     falou(id: string, c: Criatura): void {
       if (c.morador?.povoado === POVOADO_BAILE && c.morador.n === N_BAILE.bento) abracar(id, c);

@@ -12,6 +12,17 @@ import { tocarSomInterface } from '../../audio/somInterface';
 import { balcoesDoBaile, MAX_POR_LANCHE } from '../../jogo/compra';
 import { DESENHOS } from '../../art/itens';
 import { boaParaDica, criarDicaToque } from './dicaToque';
+import type { AlmaUi } from './index';
+import {
+  MISSOES_BAILE,
+  M_ABOBORA,
+  M_LULU,
+  M_TUFINHO,
+  USOS_ABOBORA,
+  passoDaLulu,
+  passoEmOrdem,
+  pontosDasMissoes,
+} from '../../jogo/baile';
 
 const RAIO_TOQUE = 60;
 /** Até onde (blocos) a dica de comprar aparece, e quanto a criança se afasta para ela voltar. */
@@ -32,9 +43,13 @@ function figuraDoItem(id: string): string {
   return `<svg viewBox="0 0 16 16" shape-rendering="crispEdges" aria-hidden="true">${r}</svg>`;
 }
 
-export function ligarBaile(e: EstadoDepuracao): void {
+export function ligarBaile(e: EstadoDepuracao, ui?: AlmaUi): void {
   const plano = e.baile?.();
   if (!plano) return;
+  // T18: as missões abertas e os lugares já vistos de cada uma (a vista da alma)
+  const pontos = pontosDasMissoes(plano);
+  const aberta = (id: string) => !!ui?.vista()?.abertas.some((a) => a.id === id);
+  const usosDe = (id: string) => ui?.vista()?.abertas.find((a) => a.id === id)?.usos ?? [];
   const tela = (x: number, y: number, z: number) => e.telaDoPonto?.(x, y, z) ?? null;
   // T14: os lugares de comprar (a mesma lista do núcleo, na mesma ordem)
   const balcoes = balcoesDoBaile(plano);
@@ -113,9 +128,47 @@ export function ligarBaile(e: EstadoDepuracao): void {
       // o rosto da abóbora (o meio da cara, na frente da casca) e o meio do corpo
       conferir(a.x, a.y + 0.45 * a.lado, a.z + 0.5 * a.lado, 16, () => e.baileToque?.({ a: 'abobora' }));
       conferir(a.x, a.y + 0.3 * a.lado, a.z + 0.45 * a.lado, 16, () => e.baileToque?.({ a: 'abobora' }));
-      (e.bailePortas?.() ?? []).forEach((p, i) =>
-        conferir(p.x, p.y, p.z, 6, () => e.baileToque?.({ a: 'porta', i })),
+      const portasDaTela = e.bailePortas?.() ?? [];
+      /** A porta da tela que é a da rua `i` (a de campainha), ou -1. */
+      const daRua = (q: { x: number; z: number }) =>
+        pontos.portas.findIndex(([px, , pz]) => Math.hypot(q.x - px, q.z - pz) < 1.6);
+      // (as portas da loja e do castelinho só balançam; as da rua tocam a campainha, abaixo)
+      portasDaTela.forEach((p, i) => {
+        if (daRua(p) < 0) conferir(p.x, p.y, p.z, 6, () => e.baileToque?.({ a: 'porta', i }));
+      });
+      // T18: as missões. A campainha de cada porta da rua (a porta balança na tela, e o núcleo
+      // abre e dá o doce), as lanternas do bosque, a Lulu escondida no passo da criança, o
+      // canteiro marcado, as carinhas da bancada, a porta da Vovó, o Tufinho e a parreirinha
+      const pm = pontos;
+      pm.portas.forEach(([px, py, pz], i) =>
+        conferir(px, py, pz, MISSOES_BAILE.campainha - 0.5, () => {
+          const k = portasDaTela.findIndex((q) => daRua(q) === i);
+          if (k >= 0) e.baileToque?.({ a: 'porta', i: k });
+          e.baileMissao?.({ a: 'campainha', i });
+        }),
       );
+      pm.lanternas.forEach(([lx, ly, lz], i) =>
+        conferir(lx, ly, lz, MISSOES_BAILE.lanterna - 0.5, () => e.baileMissao?.({ a: 'lanterna', i })),
+      );
+      if (aberta(M_LULU)) {
+        const l = pm.lulu[passoDaLulu(usosDe(M_LULU))];
+        if (l) conferir(l[0], l[1], l[2], MISSOES_BAILE.lulu - 0.5, () => e.baileMissao?.({ a: 'lulu' }));
+      }
+      if (aberta(M_ABOBORA)) {
+        const passo = passoEmOrdem(USOS_ABOBORA, usosDe(M_ABOBORA));
+        if (passo === 0) conferir(...pm.canteiro, MISSOES_BAILE.canteiro - 0.5, () => e.baileMissao?.({ a: 'horta' }));
+        if (passo === 1)
+          pm.carinhas.forEach(([cx, cy, cz], c) =>
+            conferir(cx, cy, cz, MISSOES_BAILE.bancada - 0.5, () => e.baileMissao?.({ a: 'carinha', c })),
+          );
+        if (passo === 2) conferir(...pm.porta, MISSOES_BAILE.porta - 0.5, () => e.baileMissao?.({ a: 'lampiao' }));
+      }
+      if (aberta(M_TUFINHO)) {
+        const v = e.baileEstado?.();
+        const naHorta = v?.tc ? v.tc === 'horta' : v?.tf.o === 'horta';
+        if (naHorta) conferir(...pm.tufinho, MISSOES_BAILE.tufinho - 0.5, () => e.baileMissao?.({ a: 'tufinho' }));
+      }
+      conferir(...pm.parreira, MISSOES_BAILE.parreira - 0.5, () => e.baileMissao?.({ a: 'uva' }));
       // T14: o docinho, a caneca ou a surpresa de uva no balcão: um toque e a entrega acontece
       // (com 3 do mesmo, ou no meio da entrega, quem vende só acena)
       balcoes.forEach((b, i) =>

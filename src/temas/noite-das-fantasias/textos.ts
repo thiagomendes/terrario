@@ -126,6 +126,12 @@ export const TEXTOS_FANTASIAS: TextosTema = {
     surpresa_uva: 'Surpresa de uva',
     chocolate_quente: 'Chocolate quente',
     pocao_uva: 'Poção de uva',
+    // as coisas das missões (T18): a sacola de doces da n1 e os lampiões de carinha da n4
+    sacola_vazia: 'Sacola vazia',
+    sacola_doces: 'Sacola de doces',
+    lampiao_sorriso: 'Lampião sorridente',
+    lampiao_lingua: 'Lampião de língua de fora',
+    lampiao_piscadinha: 'Lampião piscando',
     carne_assada: 'Espetinho',
     peixe_cru: 'Peixe fresco',
     peixe_assado: 'Peixe assado',

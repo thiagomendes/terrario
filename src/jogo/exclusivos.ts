@@ -144,9 +144,28 @@ export const CAJUZINHO = 'cajuzinho';
 export const SURPRESA_UVA = 'surpresa_uva';
 export const CHOCOLATE_QUENTE = 'chocolate_quente';
 export const POCAO_UVA = 'pocao_uva';
+/**
+ * Spec 027 (T18): a sacola de doces da n1. Vai vazia para a mão quando a n1 abre e ganha um
+ * docinho a cada porta (a pilha é o número de docinhos dentro); cheia, se come (um docinho a cada
+ * vez) e a sacola vazia some com um brilhinho.
+ */
+export const SACOLA_VAZIA = 'sacola_vazia';
+export const SACOLA_DOCES = 'sacola_doces';
+/** Spec 027 (T18): o lampião de carinha da n4, na mão de quem escolheu a carinha na bancada. */
+export const LAMPIOES_CARINHA = ['lampiao_sorriso', 'lampiao_lingua', 'lampiao_piscadinha'] as const;
 export const EXCLUSIVOS_BAILE: Exclusivos = {
   blocos: BLOCOS_SO_DO_BAILE,
-  itens: [BRIGADEIRO, BEIJINHO, CAJUZINHO, SURPRESA_UVA, CHOCOLATE_QUENTE, POCAO_UVA],
+  itens: [
+    BRIGADEIRO,
+    BEIJINHO,
+    CAJUZINHO,
+    SURPRESA_UVA,
+    CHOCOLATE_QUENTE,
+    POCAO_UVA,
+    SACOLA_VAZIA,
+    SACOLA_DOCES,
+    ...LAMPIOES_CARINHA,
+  ],
 };
 
 /**

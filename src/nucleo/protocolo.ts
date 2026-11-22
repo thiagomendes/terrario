@@ -22,6 +22,7 @@ import type { OcorrenciaVeiculo } from '../jogo/transito';
 import type { Ganho, MissaoMovida, RecusaBanca, VistaAlmaMundo } from '../jogo/alma';
 import type { EventoVila, VilaVista } from './vila';
 import type { EventoBaile } from './baile';
+import type { BaileVista } from '../jogo/baile';
 import type { BateVista } from '../jogo/bate';
 
 /** Sobe quando uma mensagem muda de formato (cliente e servidor precisam concordar). */
@@ -216,6 +217,15 @@ type ComandoSemSeq =
    * mão (a fantasia), o alcance e a espera, e manda a florzinha para todos (sem estado salvo).
    */
   | { t: 'baile'; a: 'varinha'; x: number; y: number; z: number }
+  /**
+   * Spec 027 (T18): os toques das missões n1 a n5. A campainha da porta `i` da rua (0 a 5) e a
+   * lanterna `i` do bosque (0 a 4); a carinha `c` da bancada (0 a 2); a Lulu escondida, o
+   * canteiro marcado (plantar, regar e colher), o lampião na porta da Vovó, o Tufinho e a uva da
+   * parreirinha. O núcleo confere a missão aberta, o passo, o alcance e o limite por segundo.
+   */
+  | { t: 'baile'; a: 'campainha' | 'lanterna'; i: number }
+  | { t: 'baile'; a: 'carinha'; c: number }
+  | { t: 'baile'; a: 'lulu' | 'horta' | 'lampiao' | 'tufinho' | 'uva' }
   /**
    * Spec 026 (parte 3): na Casa anos 80, trocar o canal da TV, pôr a fita da locadora no
    * videocassete, ligar e desligar o disco e pegar um brinquedo do baú; na pista de skate, pedir
@@ -513,6 +523,8 @@ export interface Quadro {
   veiculos?: VeiculosQuadro;
   /** Spec 026: o estado da Vila Neon (o show, os instrumentos, as caixas, as lhamas). */
   vila?: VilaVista;
+  /** Spec 027 (T18): a festa desta criança (as missões n1 a n5), quando muda. */
+  baile?: BaileVista;
   /**
    * Spec 026 (parte 2): os carrinhos do bate-bate que o núcleo simula, só para quem está perto
    * da pista (quem guia, a cada passo; quem olha, passo sim, passo não). O primeiro número é o
