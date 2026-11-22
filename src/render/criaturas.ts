@@ -515,6 +515,7 @@ export function criarRenderCriaturas(
       acessorio,
       fixo ? fixo.fantasia : povoadoDoTema().fantasias?.[prof],
       fixo?.cabelo,
+      fixo?.rosto,
     );
     const chave = `${tema().id}|${prof}|${fixo && c.morador ? `${c.morador.povoado}:${c.morador.n}` : ''}|${acessorio ?? ''}|${JSON.stringify(m.aparencia)}`;
     // spec 027: o tamanho do boneco (o Bento, o grandão da festa)
@@ -553,7 +554,11 @@ export function criarRenderCriaturas(
     const corLuz = c.morador && luzNaMaoDeMorador?.(c.morador.povoado, c.morador.n);
     // a tecladista (o friso de neon do teclado de pendurar brilha de verdade) e o vocalista, que
     // canta na frente dela: o corpo dos dois tapa esse brilho (visto por trás e pela frente)
-    const tapa = corLuz === 'microfone' || !!corLuz?.startsWith('keytar');
+    // spec 027 (portão da T24): na festa, os lampiões da rua e das paredes acendem atrás dos
+    // moradores; fora do mapa do brilho, o halo deles passava por cima da cabeça como um véu
+    // branco. Lá o corpo de todo morador tapa o brilho do que fica atrás
+    const tapa =
+      corLuz === 'microfone' || !!corLuz?.startsWith('keytar') || tema().id === 'noite-das-fantasias';
     for (const malha of boneco.raiz.getChildMeshes()) brilhoDoMorador(malha as Mesh, tapa);
     // ('microfone': o vocalista do show segura o microfone, sempre)
     const microfone = corLuz === 'microfone';

@@ -126,17 +126,20 @@ function sapinho(): PecaCriatura[] {
   b.grupo([0, 0.27, 0.04], 'cabeca');
   b.bola(0.14, verde, [1.15, 0.78, 1], [0, 0, 0]);
   for (const s of [-1, 1]) {
-    // os olhões em cima da cabeça, amigáveis
+    // os olhões em cima da cabeça, amigáveis, olhando de frente para quem chega (portão da T24:
+    // a pupila no meio do olho e um pouco para dentro, com o brilho grande; de lado, os olhos
+    // saltados com a boca reta lembravam a adultos o sapo de um meme)
     b.bola(0.06, verde, [1, 1, 1], [s * 0.075, 0.08, 0.04]);
-    b.bola(0.046, '#ffffff', [1, 1, 0.6], [s * 0.075, 0.085, 0.075]);
-    b.bola(0.028, '#231a28', [0.9, 1.1, 0.5], [s * 0.075, 0.085, 0.098], { brilho: 0.35 });
-    b.bola(0.01, '#ffffff', [1, 1, 0.5], [s * 0.075 + 0.01, 0.098, 0.11], { brilho: 0.3 });
+    b.bola(0.048, '#ffffff', [1, 1, 0.6], [s * 0.075, 0.085, 0.077]);
+    b.bola(0.03, '#231a28', [1, 1.1, 0.5], [s * 0.068, 0.083, 0.102], { brilho: 0.35 });
+    b.bola(0.013, '#ffffff', [1, 1, 0.5], [s * 0.068 + 0.011, 0.097, 0.116], { brilho: 0.4 });
+    b.bola(0.006, '#ffffff', [1, 1, 0.5], [s * 0.068 - 0.009, 0.072, 0.116], { brilho: 0.4 });
     b.bola(0.03, '#ff9aa8', [1.4, 0.75, 0.3], [s * 0.1, -0.02, 0.1]);
   }
-  // o sorrisão de sapo, de canto a canto
+  // o sorriso de sapo: curto e bem curvo, os cantos para cima
   for (let i = 0; i <= 6; i++) {
     const u = -1 + i / 3;
-    b.bola(0.012, '#3a4a1c', [1.2, 1, 0.5], [u * 0.08, -0.03 - 0.02 * (1 - u * u), 0.12]);
+    b.bola(0.012, '#3a4a1c', [1.2, 1, 0.5], [u * 0.055, -0.022 - 0.035 * (1 - u * u), 0.121 + 0.008 * u * u]);
   }
   // o chapeuzinho pontudo: a aba, o cone em degraus redondos e a fita laranja
   b.bola(0.08, COR_BAILE.roxo, [1, 0.18, 1], [-0.01, 0.1, -0.02]);

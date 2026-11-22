@@ -310,15 +310,61 @@ function perfilOrelhaGato(): P2[] {
   return pts;
 }
 
-/** Orelha de morceguinho: maior, redonda em cima, com a pontinha (nada de asa de morcego feia). */
+/**
+ * Orelha de morceguinho: alta e pontuda, de lados um tico curvos para dentro (portão da T24: a
+ * redonda de antes parecia de rato ou de coelho).
+ */
 function perfilOrelhaMorcego(): P2[] {
-  const pts: P2[] = [];
-  for (let i = 0; i <= 16; i++) {
-    const a = Math.PI * (i / 16);
-    pts.push([Math.cos(a) * 0.1, Math.sin(a) * 0.15 + 0.0]);
+  return [
+    [-0.08, -0.08],
+    [0.08, -0.08],
+    [0.078, -0.01],
+    [0.062, 0.06],
+    [0.04, 0.12],
+    [0.016, 0.17],
+    [0.0, 0.19],
+    [-0.016, 0.17],
+    [-0.04, 0.12],
+    [-0.062, 0.06],
+    [-0.078, -0.01],
+  ];
+}
+
+/**
+ * A capinha de asa de morcego do vizinho Nestor (portão da T24): o pano preso nos ombros que
+ * abre em asa dos dois lados, com a barra em três arcos de cada lado (as pontas da asa
+ * arredondadas). Contorno no plano da capa: y = 0 na junta, descendo.
+ */
+export function perfilAsaDeMorcego(): P2[] {
+  // (larga: de frente, as pontas da asa aparecem dos dois lados, por fora dos braços)
+  const pts: P2[] = [
+    [0.17, 0],
+    [-0.17, 0],
+    [-0.36, -0.06],
+  ];
+  // as pontas da barra, de fora para dentro, e os arcos que sobem entre elas
+  const pontas: P2[] = [
+    [-0.58, -0.2],
+    [-0.3, -0.38],
+    [0, -0.46],
+    [0.3, -0.38],
+    [0.58, -0.2],
+  ];
+  pts.push(pontas[0]);
+  for (let k = 0; k < pontas.length - 1; k++) {
+    const [ax, ay] = pontas[k];
+    const [bx, by] = pontas[k + 1];
+    const cx = (ax + bx) / 2;
+    const cy = (ay + by) / 2 + 0.09;
+    for (let i = 1; i <= 5; i++) {
+      const t = i / 6;
+      const u = 1 - t;
+      pts.push([u * u * ax + 2 * u * t * cx + t * t * bx, u * u * ay + 2 * u * t * cy + t * t * by]);
+    }
+    pts.push(pontas[k + 1]);
   }
-  pts.push([-0.08, -0.08], [0.08, -0.08]);
-  return pts.reverse();
+  pts.push([0.36, -0.06]);
+  return pts;
 }
 
 /** As orelhinhas de bichinho em cima da cabeça (vão com a `mascara` de gatinho ou de morceguinho). */

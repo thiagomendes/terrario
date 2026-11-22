@@ -111,6 +111,9 @@ const POR_MORADOR: NonNullable<PovoadoTema['porMorador']> = {
     pecas: corpoDe('#c99064', '#3a2418', '#f4efe4', '#c4b0e6', '#7a54b0'),
     fantasia: { id: 'lulu-fantasma', cor: 0 },
     cabelo: 4,
+    // (portão da T24: com os cílios sorteados, os olhos que fecham sorrindo na comemoração de
+    // achada viravam uma cara triste; o rosto clássico, de olhos redondos)
+    rosto: 0,
     semTrocas: true,
   },
   [`baile:${N_BAILE.bento}`]: {
@@ -191,6 +194,9 @@ const POR_MORADOR: NonNullable<PovoadoTema['porMorador']> = {
     pecas: corpoDe('#e8b896', '#5a3422', '#a79db8', '#a79db8'),
     fantasia: { id: 'gatinho-festa', cor: 0 },
     cabelo: 5,
+    // (portão da T24: os cílios sorteados, riscos acima dos olhos caindo para o meio, pareciam
+    // sobrancelhas bravas; o rosto clássico, de olhos redondos)
+    rosto: 0,
     semTrocas: true,
   },
   [`baile:${N_BAILE.rua + 1}`]: {
@@ -206,6 +212,9 @@ const POR_MORADOR: NonNullable<PovoadoTema['porMorador']> = {
     titulo: 'Confeiteira',
     pecas: MORADORES.cozinheiro,
     cabelo: 4,
+    // (portão da T24: os cílios pareciam sobrancelhas bravas e as sardas escuras no rosado da
+    // bochecha, joaninhas; o rosto clássico, sem os dois)
+    rosto: 0,
   },
   [`baile:${N_BAILE.rua + 3}`]: {
     nome: 'Nestor',
@@ -214,6 +223,9 @@ const POR_MORADOR: NonNullable<PovoadoTema['porMorador']> = {
     pecas: corpoDe('#9a6844', '#1e1a22', '#6a3e9c', '#46305e'),
     fantasia: { id: 'morceguinho-festa', cor: 0 },
     cabelo: 0,
+    // (portão da T24: a barba sorteada, preta, com a faixa nos olhos, parecia mordaça; o rosto
+    // clássico, sem barba)
+    rosto: 0,
     semTrocas: true,
   },
   [`baile:${N_BAILE.rua + 4}`]: {

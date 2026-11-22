@@ -58,10 +58,13 @@ async function abrir(page: Page): Promise<void> {
     const w = window as unknown as { __camFixa: { p: V3; a: V3 } | null };
     w.__camFixa = null;
     const scene = e.cenaBabylon!();
-    // a criança fica fora da foto (o morador é o assunto)
+    // a criança fica fora da foto (o morador é o assunto), e o contorno do bloco que a mira
+    // dela marca também (portão da T24: a casca clara do destaque no piso do palco, aos pés do
+    // Bento, parecia uma placa solta)
     scene.onBeforeRenderObservable.add(() => {
       for (const m of scene.meshes)
-        if (m.name.startsWith('personagem') || m.name.startsWith('braco')) m.isVisible = false;
+        if (m.name.startsWith('personagem') || m.name.startsWith('braco') || m.name === 'destaque')
+          m.isVisible = false;
     });
     scene.onBeforeCameraRenderObservable.add((c) => {
       const f = w.__camFixa;

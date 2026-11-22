@@ -102,20 +102,25 @@ const ESPERADO: Hashes = {
   terreno: ['98983f687e233d45', '364f50455e26feb5', '682b256e126cfc06'],
   plano: ['81074c6bc78df083', '5db6326cb07e2dfe', '0ea0a889af736f2c'],
   // (regravado no portão da T24: a roupa da vizinha Celeste, de gatinha, de grafite para cinza
-  // claro; nada mais do povoado mudou)
-  povoado: '80140157c992a492',
+  // claro; nada mais do povoado mudou. Regravado de novo na rodada do revisor visual: o rosto
+  // fixo, sem cílios, sardas nem barba, da Celeste, da Dalva, da Lulu e do Nestor, e a fantasia
+  // do Nestor sem a faixa nos olhos, de orelhas pontudas e capinha de asa)
+  povoado: '05ccdaeef0881e19',
   atlas: '6ed5a6453b4cacde',
   mapaEmissivo: '06cd38bd102431a9',
   emissivos: '98a32cdc9f6a5e29',
   ceu: '79fc1f280d7d24ab',
   quadrosCeu: 'cbf44b22558945de',
-  criaturas: '998844f774d5b73c',
+  // (regravado na rodada do revisor visual da T24: o sapinho de olhos de frente, com o brilho,
+  // e a boca em curva de sorriso)
+  criaturas: 'b25c160b4d8fd864',
   movimento: 'dacd063760735de4',
   vozes: 'c3f0935da623a647',
   mundo: '7aee8a78a6d0dbfb',
   textos: '6e1454340067bc28',
-  // (regravado no portão da T24, pela mesma roupa da Celeste, que o tema inteiro também leva)
-  resto: '0eff64ced9aaeaba',
+  // (regravado no portão da T24, pela mesma roupa da Celeste, que o tema inteiro também leva; e
+  // de novo na rodada do revisor visual, pelas mesmas mudanças do povoado e do sapinho)
+  resto: '371b03481b78fc13',
 };
 
 async function sha(partes: (Uint8Array | Uint8ClampedArray | string)[]): Promise<string> {

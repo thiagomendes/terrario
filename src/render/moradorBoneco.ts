@@ -218,6 +218,8 @@ export function moradorDeBrinquedo(
   fantasia?: Aparencia['fantasia'],
   /** Spec 026: o corte de cabelo fixo do morador de posto (o liso comprido do vocalista). */
   cabeloEstilo?: number,
+  /** Spec 027: os traços fixos do rosto (o Nestor de morceguinho, sem a barba sorteada). */
+  rosto?: number,
 ): Morador {
   const cabecas = pecas.filter((p) => p.papel === 'cabeca');
   const cabeca = [...cabecas].sort((a, b) => volume(b) - volume(a))[0];
@@ -281,7 +283,7 @@ export function moradorDeBrinquedo(
   a.cabeloEstilo = cabeloEstilo ?? Math.floor(hash(id, 2) * ESTILOS_CABELO);
   // rosto no gênero do morador: cílios e sardas para elas; barba e bigode só para eles
   const rostos = genero === 'f' ? [0, 1, 2, 3] : genero === 'm' ? [0, 2, 4, 5] : [0, 1, 2, 3, 4, 5];
-  a.rosto = rostos[Math.floor(hash(id, 3) * rostos.length)];
+  a.rosto = rosto ?? rostos[Math.floor(hash(id, 3) * rostos.length)];
   a.acessorio = acessorio ?? 'nenhum';
   // T11: o modelo de braços de fora (avental de ferreiro) pinta a manga com a pele, e a troca
   // "cor da manga -> roupa do tema" pintava a pele do morador com a roupa (o mecânico azul).

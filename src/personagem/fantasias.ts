@@ -96,6 +96,7 @@ export type TipoPeca =
   | 'gola-alta'
   | 'orelhas-gatinho'
   | 'orelhas-morceguinho'
+  | 'capinha-morcego'
   // spec 027 (T10): o que só os moradores da festa vestem (bonecoFesta.ts): o xale e os óculos
   // redondos da Vovó, as sobrancelhas grisalhas, a lanterninha do Dudu, o lenço com o broche e as
   // mechas grisalhas do Seu Jerônimo
@@ -870,14 +871,16 @@ export const FANTASIAS_DE_MORADOR: readonly FantasiaDef[] = [
     grupo: 'temas',
     tema: 'noite-das-fantasias',
     nomes: { feminino: 'Morceguinha', masculino: 'Morceguinho' },
+    // (portão da T24: a faixa nos olhos parecia máscara de bandido; agora o rosto do boneco
+    // inteiro à vista, as orelhas pontudas de morcego e a capinha de asa nas costas)
     cores: ['#6a3e9c'],
     corEmblema: '#b9a0e0',
     visual: mesmo({
       roupa: { camisa: 'principal', manga: 'principal', calca: '#46305e' },
       cabeca: 'livre',
       pecas: [
-        { tipo: 'mascara', cor: 'principal' },
         { tipo: 'orelhas-morceguinho', cor: 'principal' },
+        { tipo: 'capinha-morcego', cor: '#4e3470' },
       ],
     }),
   },

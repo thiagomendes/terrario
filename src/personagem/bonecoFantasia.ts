@@ -21,6 +21,7 @@ import {
   mechasGrisalhas,
   oculosRedondos,
   orelhasDeBichinho,
+  perfilAsaDeMorcego,
   sobrancelhas,
   xale,
 } from './bonecoFesta';
@@ -568,7 +569,7 @@ export function vestirFantasia(
         p.pos = [p.pos[0], (cima + baixo) / 2, p.pos[2]];
       }
   }
-  if (tem('capa') || tem('capa-curta')) {
+  if (tem('capa') || tem('capa-curta') || tem('capinha-morcego')) {
     // com capa, o cabelo comprido das costas cai por cima da gola dela (termina acima do pano,
     // que levanta andando e correndo sem cortar o cabelo)
     for (const p of pecas)
@@ -1368,6 +1369,19 @@ export function vestirFantasia(
         break;
       case 'orelhas-morceguinho':
         orelhasDeBichinho(pecas, m, 'morceguinho', c, '#b9a0e0');
+        break;
+      case 'capinha-morcego':
+        // portão da T24: a capinha de asa de morcego, presa nos ombros como a capa
+        placa(
+          'capa-pano',
+          'capa',
+          'tronco',
+          perfilAsaDeMorcego(),
+          0.035,
+          [0, -0.005, -0.025 - 0.035 / 2],
+          c,
+          { brilho: 0.28 },
+        );
         break;
       // spec 027 (T10): as peças dos moradores da festa (bonecoFesta.ts)
       case 'xale':

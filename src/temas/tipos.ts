@@ -375,6 +375,8 @@ export interface PovoadoTema {
       fantasia?: FantasiaVestida;
       /** O corte de cabelo do boneco (sem ele, sorteado): o liso comprido do vocalista. */
       cabelo?: number;
+      /** Spec 027: os traços do rosto do boneco (sem ele, sorteado): o Nestor sem barba. */
+      rosto?: number;
       /** Spec 027: o tamanho do boneco (o Bento, o grandão da festa); sem ele, 1. */
       escala?: number;
     }
