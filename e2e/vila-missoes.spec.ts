@@ -10,6 +10,7 @@ import {
 } from './guia-palco';
 import { alvoDeSentar, alvoDoToque, diagnostico, esperarDica } from './vila-alvo';
 import { escolherNaRoleta } from './roleta-palco';
+import { contarGl, lerGl } from './gl-vivo';
 
 /**
  * Spec 026 (parte 2, etapa B): as quatro missões do parque, do "brincar" à festa, no celular
@@ -500,19 +501,29 @@ for (const tamanho of ['empe', 'deitado'] as const) {
       browser,
     }) => {
       const page = await abrir(browser, `vila-missoes-a-${tamanho}`, tamanho, ['f1', 'f2', 'f4']);
+      // (o que está vivo no WebGL a cada missão, para comparar a página deitada com a 027)
+      await contarGl(page);
+      const gl = async (onde: string) => console.log(`vila-missoes ${tamanho}: ${onde}, gl ${JSON.stringify(await lerGl(page))}`);
       const antes = await moedasReais(page);
       let devidas = 0;
-      if (SO !== 'baloes') {
-        await bilhete(page, tamanho);
-        devidas += 5;
-      } else
-        await page.evaluate(() => {
-          const q = window.__brumaluz!.vila!()!;
-          window.__brumaluz!.teleportar!(q.pontos.parque.entrada[0], q.pontos.parque.entrada[2] - 6, q.h + 1.2);
-        });
-      if (SO !== 'bilhete') {
-        await baloes(page, tamanho);
-        devidas += 4;
+      try {
+        if (SO !== 'baloes') {
+          await bilhete(page, tamanho);
+          devidas += 5;
+          await gl('f5');
+        } else
+          await page.evaluate(() => {
+            const q = window.__brumaluz!.vila!()!;
+            window.__brumaluz!.teleportar!(q.pontos.parque.entrada[0], q.pontos.parque.entrada[2] - 6, q.h + 1.2);
+          });
+        if (SO !== 'bilhete') {
+          await baloes(page, tamanho);
+          devidas += 4;
+          await gl('f6');
+        }
+      } catch (erro) {
+        await gl('caiu');
+        throw erro;
       }
       expect((await moedasReais(page)) - antes).toBeGreaterThanOrEqual(devidas);
       await page.close();
