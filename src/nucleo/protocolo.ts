@@ -301,6 +301,11 @@ export interface JogadorVisto {
   /** Item na mão (o que ele segura e mostra). */
   mao: string | null;
   /**
+   * Spec 027: quantos docinhos a sacola de doces na mão ainda tem (só com ela na mão): o amigo
+   * vê a mesma contagem na beira da sacola.
+   */
+  maoQtd?: number;
+  /**
    * Quantas vezes ele golpeou, colocou bloco e comeu desde que entrou (sempre sobe). Quem vê
    * o amigo dispara o movimento quando um número cresce.
    */

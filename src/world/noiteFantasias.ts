@@ -403,8 +403,11 @@ const MONTINHO_LULU: readonly (readonly [number, number])[] = [
   [-0.78, 16],
   [0, 17],
   [0.78, 16],
-  // (do lado da praça, um pouco para fora: fica o corredor rente à casca, por onde quem procura chega)
+  // (do lado da praça, um pouco para fora)
   [1.2, 13],
+  // (e a do corredor rente à casca, do lado da praça: de longe, por ali a Lulu ainda aparecia numa
+  // fresta; quem procura dá a volta no montinho e acha ela de perto, a até 4,5 blocos)
+  [1.9, 16],
 ];
 const RAIO_MONTINHO = 1.5;
 const LOJA = { u0: 90, v0: 50, u1: 104, v1: 64 } as const;

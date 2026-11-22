@@ -322,16 +322,24 @@ for (const [hora, nome] of [
     await camera(page, [pcx, Y + 2.6, pcz], [e0.x, Y + 0.9, e0.z]);
     await page.waitForTimeout(1500);
     await foto(page, 't19-n3-lulu-escondida-do-palco');
-    // e de onde a trilha acaba, rente à casca, do lado de quem vem da praça: ela espia pela fresta
+    // e de quem vem da praça pelo corredor rente à casca (onde antes ficava a fresta): a 12 blocos,
+    // no rumo da fresta antiga (uns 27 graus do sul para o leste), também tapada
+    const [rx, rz] = [e0.x + Math.sin(0.47) * 12, e0.z + Math.cos(0.47) * 12];
+    // (a criança um tico atrás da câmera, fora do quadro)
+    await ir(page, e0.x + Math.sin(0.47) * 13.6, e0.z + Math.cos(0.47) * 13.6, e0.x, e0.z);
+    await camera(page, [rx, Y + 2.0, rz], [e0.x, Y + 0.9, e0.z]);
+    await page.waitForTimeout(1500);
+    await foto(page, 't19-n3-lulu-escondida-da-praca');
+    // e de perto, de onde a trilha acaba (do lado de fora do montinho, ao alcance do dedo: a fresta
+    // rente à casca agora é fechada por uma abóbora): ela espia por cima das abóboras
     const tx0 = Math.cos(e0.yaw);
     const tz0 = -Math.sin(e0.yaw);
     const ladoT = (e0.x + tx0 - b.nascimento.x) ** 2 + (e0.z + tz0 - b.nascimento.z) ** 2 < (e0.x - tx0 - b.nascimento.x) ** 2 + (e0.z - tz0 - b.nascimento.z) ** 2 ? 1 : -1;
-    // (no corredor rente à casca: um tico para dentro, do lado da abóbora gigante)
-    const [ex, ez] = [e0.x + ladoT * tx0 * 2.6 - fx * 0.7, e0.z + ladoT * tz0 * 2.6 - fz * 0.7];
+    const [ex, ez] = [e0.x + fx * 3.0, e0.z + fz * 3.0];
     await ir(page, ex, ez, e0.x, e0.z);
     await page.waitForTimeout(1200);
-    // (de 3/4, por trás e um tico acima da criança: ela à frente, a Lulu espiando)
-    await camera(page, [e0.x + ladoT * tx0 * 5.2 + fx * 1.6, Y + 2.0, e0.z + ladoT * tz0 * 5.2 + fz * 1.6], [e0.x, Y + 0.9, e0.z]);
+    // (de 3/4, por trás e acima da criança, do lado da praça: ela à frente, a Lulu espiando por cima)
+    await camera(page, [e0.x + fx * 5.6 + ladoT * tx0 * 1.6, Y + 3.0, e0.z + fz * 5.6 + ladoT * tz0 * 1.6], [e0.x, Y + 0.9, e0.z]);
     await page.waitForTimeout(1500);
     await foto(page, 't19-n3-lulu-espiando');
     await missao(page, { a: 'lulu' });
@@ -713,7 +721,7 @@ const irPara = (p: Page, x: number, z: number) =>
   }, { x, z });
 const toque = (p: Page, c: Record<string, unknown>) => p.evaluate((c) => window.__brumaluz!.baileMissao!(c as never), c);
 
-test('T20: duas amigas na nuvem, na n2 (a lanterna da Ana conta para a Bia) e na n5 (a cópia fugida)', async ({ browser }) => {
+test('T20: duas amigas na nuvem, na n2 (a lanterna da Ana conta para a Bia), na sacola (a Bia vê os docinhos da Ana) e na n5 (a cópia fugida)', async ({ browser }) => {
   test.setTimeout(900_000);
   const pronto = (p: Page) => p.waitForFunction(() => window.__brumaluz?.ready, null, { timeout: 180_000 });
   const jogar = (p: Page) =>
@@ -770,6 +778,44 @@ test('T20: duas amigas na nuvem, na n2 (a lanterna da Ana conta para a Bia) e na
     { timeout: 10_000 },
   );
   expect((await vista(ana)).lc).toEqual([0]);
+
+  // ---------------------------------------------------------------- a sacola da Ana na tela da Bia
+  // (a contagem vai pela rede junto com a mão: com um docinho a Bia vê um, com dois, dois)
+  const docinhosDaAna = async () => {
+    const pes = await ana.evaluate(() => window.__brumaluz!.jogadorPes!());
+    return bia.evaluate((o) => {
+      const ms = window.__brumaluz!.cenaBabylon!().meshes.filter(
+        (m) => /^personagem-mao-docinho\d$/.test(m.name) && m.isEnabled(),
+      );
+      // (só os da mão da Ana: a sacola da Bia está na mão dela, longe)
+      return ms.filter((m) => {
+        const q = m.getAbsolutePosition();
+        return Math.hypot(q.x - o[0], q.z - o[2]) < 1.5;
+      }).length;
+    }, pes);
+  };
+  for (const i of [0, 1]) {
+    const q = pl.portas[i];
+    await irPara(ana, q.x, q.z);
+    await irPara(bia, q.x + 2.5, q.z + 1);
+    await ana.waitForTimeout(1200);
+    await toque(ana, { a: 'campainha', i });
+    await ana.waitForFunction(
+      (k) => {
+        const e = window.__brumaluz!;
+        const inv = e.inventario!;
+        for (let s = 0; s < 9; s++)
+          if (inv.obter(s)?.item === 'sacola_doces' && inv.obter(s)!.qtd === k) {
+            e.selecionarSlot!(s);
+            return true;
+          }
+        return false;
+      },
+      i + 1,
+      { timeout: 10_000 },
+    );
+    await expect.poll(docinhosDaAna, { timeout: 10_000, message: `a Bia vê ${i + 1} docinho(s) na sacola da Ana` }).toBe(i + 1);
+  }
 
   // ---------------------------------------------------------------- até a n5 (as duas fazem n1 a n4 pelo toque)
   async function ate5(p: Page): Promise<void> {

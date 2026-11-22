@@ -82,6 +82,8 @@ interface Outro {
   vx: number;
   vz: number;
   mao: string | null;
+  /** Spec 027: a contagem da sacola de doces na mão dele (já desenhada). */
+  maoQtd?: number;
   apelido: string;
   /** Auditoria 017: a aparência já vestida, passada a limpo em texto (só refaz quando muda). */
   chaveAparencia: string;
@@ -154,6 +156,7 @@ export function criarOutrosJogadores(scene: Scene) {
       vx: 0,
       vz: 0,
       mao: null,
+      maoQtd: undefined,
       acoes: null,
       apelido,
       chaveAparencia: JSON.stringify(aparencia),
@@ -306,10 +309,12 @@ export function criarOutrosJogadores(scene: Scene) {
         let dy = a.yaw - o.yaw;
         dy = Math.atan2(Math.sin(dy), Math.cos(dy));
         o.yaw += dy * k;
-        if (a.mao !== o.mao) {
+        // (spec 027: a sacola de doces muda com a contagem que vem junto)
+        if (a.mao !== o.mao || a.maoQtd !== o.maoQtd) {
           o.mao = a.mao;
+          o.maoQtd = a.maoQtd;
           const b = blocoDoItem(a.mao);
-          o.personagem.definirNaMao(b || null, !b && a.mao ? a.mao : null);
+          o.personagem.definirNaMao(b || null, !b && a.mao ? a.mao : null, a.maoQtd);
         }
         // o amigo golpeou, colocou um bloco ou comeu: o mesmo movimento do boneco dele
         if (a.acoes) {

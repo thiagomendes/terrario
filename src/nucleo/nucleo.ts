@@ -3059,22 +3059,27 @@ export function criarNucleo(op: OpcoesNucleo) {
     const criaturas = vistaCriaturas();
     const itens = vistaItens();
     const amb = ambiente();
-    const todos: JogadorVisto[] = [...jogadores.values()].map((o) => ({
-      id: o.id,
-      x: o.tel.x,
-      y: o.tel.y,
-      z: o.tel.z,
-      yaw: o.tel.yaw,
-      pitch: o.tel.pitch,
-      vel: o.tel.vel,
-      voando: o.tel.voando,
-      noChao: o.tel.noChao,
-      correndo: o.tel.correndo,
-      mao: o.inventario.obter(o.tel.slot)?.item ?? null,
-      acoes: [o.acoes[0], o.acoes[1], o.acoes[2]],
-      // spec 032: o que está comendo (o amigo vê as mordidas na comida certa)
-      ...(o.comendo && n * PASSO < o.comendo.ate ? { come: o.comendo.item } : {}),
-    }));
+    const todos: JogadorVisto[] = [...jogadores.values()].map((o) => {
+      const naMao = o.inventario.obter(o.tel.slot);
+      return {
+        id: o.id,
+        x: o.tel.x,
+        y: o.tel.y,
+        z: o.tel.z,
+        yaw: o.tel.yaw,
+        pitch: o.tel.pitch,
+        vel: o.tel.vel,
+        voando: o.tel.voando,
+        noChao: o.tel.noChao,
+        correndo: o.tel.correndo,
+        mao: naMao?.item ?? null,
+        // spec 027: a sacola de doces leva a contagem (o amigo vê quantos docinhos restam)
+        ...(naMao?.item === SACOLA_DOCES ? { maoQtd: naMao.qtd } : {}),
+        acoes: [o.acoes[0], o.acoes[1], o.acoes[2]],
+        // spec 032: o que está comendo (o amigo vê as mordidas na comida certa)
+        ...(o.comendo && n * PASSO < o.comendo.ate ? { come: o.comendo.item } : {}),
+      };
+    });
     const perfis = perfisSujos
       ? Object.fromEntries([...jogadores.values()].map((o) => [o.id, o.perfil]))
       : undefined;

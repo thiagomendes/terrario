@@ -100,6 +100,11 @@ function tocar(n: Nucleo, quem: string, a: string, extra: Record<string, unknown
   return passos(n, 22);
 }
 const de = (evs: Map<string, Ev[]>, q: string) => evs.get(q) ?? [];
+/** Como `quem` vê a `amiga` no próximo quadro (a mão dela e a contagem da sacola). */
+function amigaVista(n: Nucleo, quem: string, amiga: string) {
+  n.passo();
+  return n.quadros().get(quem)?.jogadores?.find((o) => o.id === amiga);
+}
 const movidas = (evs: Ev[]) => evs.flatMap((e) => (e.e === 'alma' ? e.missoes : []));
 const moedas = (evs: Ev[]) => evs.reduce((s, e) => s + (e.e === 'alma' ? e.ganho.moedas : 0), 0);
 const vista = (n: Nucleo, q: string) => n.estado.baile!.vistaDe(q);
@@ -222,19 +227,31 @@ describe('spec 027 (T18): as missões n1 a n5 no núcleo', () => {
         }
         return false;
       };
-      // o montinho: seis abóboras de brinquedo em volta, do lado de fora, e nenhuma em cima dela
+      // o montinho: sete abóboras de brinquedo em volta, do lado de fora, e nenhuma em cima dela
+      // (a sétima fecha a fresta rente à casca, do lado da praça)
       const montinho = p.pecas.filter((q) => q.tipo === 'abobora' && Math.hypot(q.x - ab.x, q.z - ab.z) < 2.2);
-      expect(montinho).toHaveLength(6);
+      expect(montinho).toHaveLength(7);
       for (const q of montinho) expect(Math.hypot(q.x - ab.x, q.z - ab.z)).toBeGreaterThan(1.2);
-      // de 12 blocos, à altura dos olhos da câmera (2 acima do chão), em volta: quase todos tapados
-      // (só a fresta rente à casca, por onde quem procura chega, deixa ver)
-      let abertos = 0;
+      // de 6, 12 e 20 blocos, à altura dos olhos da câmera (2 acima do chão), em volta: todos
+      // tapados (a fresta rente à casca, do lado da praça, também)
+      for (const raio of [6, 12, 20]) {
+        let abertos = 0;
+        for (let k = 0; k < 36; k++) {
+          const a = (k / 36) * Math.PI * 2;
+          const olho = [ab.x + Math.sin(a) * raio, p.h + 1 + 2, ab.z + Math.cos(a) * raio];
+          if (!tapa(olho)) abertos++;
+        }
+        expect(abertos, `semente ${semente}, de ${raio} blocos`).toBe(0);
+      }
+      // e quem dá a volta acha: de perto (a 3 blocos, ao alcance do dedo), com a câmera por cima do
+      // ombro (3 acima do chão), ela aparece por cima do montinho de vários lados
+      let deCima = 0;
       for (let k = 0; k < 36; k++) {
         const a = (k / 36) * Math.PI * 2;
-        const olho = [ab.x + Math.sin(a) * 12, p.h + 1 + 2, ab.z + Math.cos(a) * 12];
-        if (!tapa(olho)) abertos++;
+        const olho = [ab.x + Math.sin(a) * 3, p.h + 1 + 3, ab.z + Math.cos(a) * 3];
+        if (!casca(olho) && !tapa(olho)) deCima++;
       }
-      expect(abertos, `semente ${semente}`).toBeLessThanOrEqual(3);
+      expect(deCima, `semente ${semente}, de perto`).toBeGreaterThanOrEqual(12);
       // e de toda a frente do palco (o achado do orquestrador), tapada
       const pc = p.pontos.palco;
       for (let x = pc.x0; x <= pc.x1; x += 2)
@@ -249,6 +266,10 @@ describe('spec 027 (T18): as missões n1 a n5 no núcleo', () => {
       passos(n, 30);
       expect(inv(n, 'ana').contar(SACOLA_VAZIA)).toBe(1);
       expect(inv(n, 'bia').contar(SACOLA_VAZIA)).toBe(1);
+      // a amiga vê a sacola vazia na mão dela, sem contagem
+      const vazia = amigaVista(n, 'bia', 'ana');
+      expect(vazia?.mao).toBe(SACOLA_VAZIA);
+      expect(vazia?.maoQtd).toBeUndefined();
       // de longe a campainha não toca
       ir(n, 'ana', portas()[0].x + 20, portas()[0].z);
       passos(n, 2);
@@ -267,6 +288,8 @@ describe('spec 027 (T18): as missões n1 a n5 no núcleo', () => {
         expect(movidas(de(evs, 'ana')).find((m) => m.id === 'n1')).toMatchObject({ feito: k + 1 });
         expect(inv(n, 'ana').contar(SACOLA_DOCES)).toBe(k + 1);
         expect(inv(n, 'ana').contar(SACOLA_VAZIA)).toBe(0);
+        // a amiga vê quantos docinhos a sacola dela tem (a contagem vai junto com a mão)
+        expect(amigaVista(n, 'bia', 'ana')).toMatchObject({ mao: SACOLA_DOCES, maoQtd: k + 1 });
         // o aviso da tela é o docinho que entrou na sacola, não uma sacola nova
         expect(de(evs, 'ana').filter((e) => e.e === 'coletou')).toEqual([
           { e: 'coletou', item: ['brigadeiro', 'beijinho', 'cajuzinho'][k % 3], qtd: 1 },

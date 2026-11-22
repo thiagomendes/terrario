@@ -98,6 +98,12 @@ describe('spec 027 (T15): as comidas da festa', () => {
     const scene = cena();
     const doces = (m: { malhas: { name: string; isEnabled(): boolean }[] }) =>
       m.malhas.filter((q) => /-docinho\d$/.test(q.name) && q.isEnabled()).length;
+    /** O alto do docinho da beira (o centro mais o raio: o quanto ele sai da boca da sacola). */
+    const altoDoDocinho = (m: { malhas: { name: string; position: { y: number }; getBoundingInfo(): { boundingBox: { extendSize: { y: number } } } }[] }) => {
+      const d = m.malhas.find((q) => /-docinho0$/.test(q.name))!;
+      return d.position.y + d.getBoundingInfo().boundingBox.extendSize.y;
+    };
+    const altos: Record<number, number> = {};
     for (const [qtd, n] of [
       [8, 3],
       [3, 3],
@@ -107,6 +113,7 @@ describe('spec 027 (T15): as comidas da festa', () => {
       const m = modeloNaMao(scene, criarPlasticos(scene, 't'), null, 'sacola_doces', `s-${qtd}`, qtd)!;
       expect(doces(m), `${qtd} na pilha`).toBe(n);
       expect(docinhosNaSacola(qtd)).toBe(n);
+      altos[qtd] = altoDoDocinho(m);
       for (const q of m.malhas) q.dispose();
       // a refeição: o docinho da beira (o do lado da boca) some nas três mordidas; os outros ficam
       const c = montarComidaMordida(scene, criarPlasticos(scene, 't'), 'sacola_doces', `sc-${qtd}`, qtd)!;
@@ -118,7 +125,10 @@ describe('spec 027 (T15): as comidas da festa', () => {
       expect(vivos().some((q) => q.name.endsWith('docinho0'))).toBe(false);
       c.descartar();
     }
-    // sem a pilha (o amigo, o ícone), as três de sempre
+    // com um ou dois, os que restam saem mais da boca da sacola (a contagem se lê na foto)
+    expect(altos[2] - altos[3]).toBeGreaterThan(0.015);
+    expect(altos[1] - altos[2]).toBeGreaterThan(0.008);
+    // sem a pilha (o ícone), as três de sempre
     expect(docinhosNaSacola()).toBe(3);
   });
 

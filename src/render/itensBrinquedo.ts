@@ -63,7 +63,8 @@ const hexDe = (rgb: [number, number, number]) =>
 
 /**
  * Spec 027 (acabamento da n1): quantos docinhos espiam da sacola de doces com `qtd` na pilha (3 ou
- * mais mostram três; 2, dois; 1, um). Sem a quantidade (o amigo, o ícone), três.
+ * mais mostram três; 2, dois; 1, um). Sem a quantidade (o ícone), três; o amigo recebe a dele
+ * pela rede (`maoQtd`).
  */
 export function docinhosNaSacola(qtd?: number): number {
   return qtd === undefined ? 3 : Math.max(1, Math.min(3, Math.floor(qtd)));
@@ -410,12 +411,17 @@ export function modeloNaMao(
           ];
           // (só os que restam: com um, ele fica sozinho na beira, do lado da boca)
           const n = docinhosNaSacola(qtd);
+          // (com um ou dois, os que restam ficam maiores e mais para fora da boca: a contagem se lê
+          // de longe; com três, os três de sempre, juntinhos)
+          const r = n === 1 ? 0.05 : n === 2 ? 0.043 : 0.03;
+          const y = 0.168 + (r - 0.03) * 1.9;
+          const roda = n === 1 ? 0.025 : n === 2 ? 0.04 : 0.032;
           DOCES.slice(0, n).forEach(([cor, topo], k) => {
             const a = (k / n) * Math.PI * 2;
-            const x = Math.cos(a) * 0.032;
-            const z = Math.sin(a) * 0.026;
-            add(bo(`docinho${k}`, 0.03, cor, [1, 0.92, 1], 0.42), x, 0.168, z);
-            add(bo(`docinho${k}-topo`, 0.009, topo, [1, 1, 1], 0.3), x, 0.196, z);
+            const x = Math.cos(a) * roda;
+            const z = Math.sin(a) * roda * 0.8;
+            add(bo(`docinho${k}`, r, cor, [1, 0.92, 1], 0.42), x, y, z);
+            add(bo(`docinho${k}-topo`, r * 0.3, topo, [1, 1, 1], 0.3), x, y + r * 0.93, z);
           });
         }
         break;
