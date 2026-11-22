@@ -167,7 +167,7 @@ export interface PontosBaile {
    * T18 (n3): os três esconderijos da Lulu, na ordem da missão (atrás da abóbora gigante, na
    * quina de uma casinha, atrás de uma árvore do bosque): os pés e para onde ela espia.
    */
-  esconderijos: { x: number; y: number; z: number; yaw: number }[];
+  esconderijos: { x: number; y: number; z: number; yaw: number; chegar?: [number, number] }[];
   /** T18 (n5): onde o Tufinho brinca na horta quando foge (os pés). */
   tufinhoHorta: [number, number, number];
   /** Onde cada morador fica. */
@@ -1291,8 +1291,15 @@ function montarBaile(semente: number, r: RelevoVila): Montado {
     ),
     // na quina entre as duas casinhas do leste, espiando para a rua
     esconde(57.5, 24.5, -Math.PI / 2),
-    // atrás do tronco, do lado de lá do caminho, espiando para ele
-    esconde(au + 0.5 + ((au - tu) / dl) * 1.1, av + 0.5 + ((av - tv) / dl) * 1.1, Math.atan2(tu - au, tv - av)),
+    // atrás do tronco, do lado de lá do caminho, espiando para ele (quem procura chega pela
+    // frente da árvore, de lado: o tronco fica entre as duas, e a Lulu espia por ele)
+    {
+      ...esconde(au + 0.5 + ((au - tu) / dl) * 1.1, av + 0.5 + ((av - tv) / dl) * 1.1, Math.atan2(tu - au, tv - av)),
+      chegar: [
+        X(au) + 0.5 + ((tu - au) / dl) * 1.1 + ((av - tv) / dl) * 1.1,
+        Z(av) + 0.5 + ((tv - av) / dl) * 1.1 - ((au - tu) / dl) * 1.1,
+      ] as [number, number],
+    },
   ];
   const pontos: PontosBaile = {
     abobora,

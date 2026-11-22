@@ -535,9 +535,11 @@ function alvoNoBaile(
     const k = passoEmOrdem(USOS_LULU, [...vistos]);
     const e = pt.esconderijos[k];
     if (!e) return null;
-    const x = e.x + Math.sin(e.yaw) * 3;
-    const z = e.z + Math.cos(e.yaw) * 3;
-    return alvo(`lulu:${k}`, x, z, 2.2, [e.x, chao + 2.4, e.z], 'lulu');
+    // (a trilha acaba a uns 2 blocos na frente dela: chegou, ela está ao alcance do dedo)
+    // (atrás da árvore: o lugar de chegar fica do lado do tronco, nunca através dele)
+    const x = e.chegar ? e.chegar[0] : e.x + Math.sin(e.yaw) * 2.2;
+    const z = e.chegar ? e.chegar[1] : e.z + Math.cos(e.yaw) * 2.2;
+    return alvo(`lulu:${k}`, x, z, 1.2, [e.x, chao + 2.4, e.z], 'lulu');
   }
   if (m.id === M_ABOBORA) {
     const passo = passoEmOrdem(USOS_ABOBORA, [...vistos]);

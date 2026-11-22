@@ -145,7 +145,12 @@ describe('spec 027 (T18): as missões n1 a n5 no núcleo', () => {
     for (const semente of [1337, 7, 90210]) {
       limparPovoados();
       const p = baileDoMundo(semente)!;
-      const pontos = [...p.pontos.esconderijos.map((e) => [e.x, e.y, e.z] as const), p.pontos.tufinhoHorta];
+      const pontos = [
+        ...p.pontos.esconderijos.map((e) => [e.x, e.y, e.z] as const),
+        // (e o lugar de chegar no da árvore: do lado do tronco, no chão livre)
+        ...p.pontos.esconderijos.flatMap((e) => (e.chegar ? [[e.chegar[0], p.h + 1, e.chegar[1]] as const] : [])),
+        p.pontos.tufinhoHorta,
+      ];
       expect(p.pontos.esconderijos).toHaveLength(3);
       for (const [x, y, z] of pontos) {
         const cx = Math.floor(x / TAM_X);
@@ -198,6 +203,10 @@ describe('spec 027 (T18): as missões n1 a n5 no núcleo', () => {
         expect(movidas(de(evs, 'ana')).find((m) => m.id === 'n1')).toMatchObject({ feito: k + 1 });
         expect(inv(n, 'ana').contar(SACOLA_DOCES)).toBe(k + 1);
         expect(inv(n, 'ana').contar(SACOLA_VAZIA)).toBe(0);
+        // o aviso da tela é o docinho que entrou na sacola, não uma sacola nova
+        expect(de(evs, 'ana').filter((e) => e.e === 'coletou')).toEqual([
+          { e: 'coletou', item: ['brigadeiro', 'beijinho', 'cajuzinho'][k % 3], qtd: 1 },
+        ]);
         // a mesma porta de novo não conta (e não dá outro doce)
         if (k === 1) {
           passos(n, Math.ceil(MISSOES_BAILE.portaAberta / PASSO));

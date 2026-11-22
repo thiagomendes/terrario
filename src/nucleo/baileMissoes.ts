@@ -78,8 +78,11 @@ export interface JogadorMissoesBaile {
   dar(item: string, qtd: number): number;
   /** Tira da mochila; devolve quantos tirou. */
   tirar(item: string, qtd: number): number;
-  /** Troca o item `de` pelo `para` (1) no mesmo espaço; devolve se achou. */
-  trocar(de: string, para: string): boolean;
+  /**
+   * Um docinho na sacola de doces (a cheia ganha um, a vazia vira a cheia no mesmo espaço, sem
+   * sacola uma nova na mão); o aviso da tela é o docinho (`doce`).
+   */
+  porNaSacola(doce: string): void;
   visitar(uso: string): void;
   visitou(uso: string): boolean;
 }
@@ -207,10 +210,10 @@ export function criarMissoesDoBaile(ctx: CtxMissoesBaile) {
 
   // ------------------------------------------------------------------ n1: as portas
   /** A sacola de quem tocou ganha um docinho (a vazia vira a cheia; sem sacola, uma nova). */
-  function porDoceNaSacola(j: JogadorMissoesBaile): void {
-    if (j.contar(SACOLA_DOCES) > 0) {
-      if (j.dar(SACOLA_DOCES, 1) < 1) return;
-    } else if (!j.trocar(SACOLA_VAZIA, SACOLA_DOCES)) j.darNaMao(SACOLA_DOCES, 1);
+  /** O docinho da porta `n` (a 1ª, a 2ª...): o brigadeiro, o beijinho e o cajuzinho, em roda. */
+  const DOCES_DA_PORTA = ['brigadeiro', 'beijinho', 'cajuzinho'] as const;
+  function porDoceNaSacola(j: JogadorMissoesBaile, n: number): void {
+    j.porNaSacola(DOCES_DA_PORTA[(n - 1) % DOCES_DA_PORTA.length]);
   }
 
   function campainha(j: JogadorMissoesBaile, i: number): void {
@@ -229,7 +232,7 @@ export function criarMissoesDoBaile(ctx: CtxMissoesBaile) {
     const lista = [...minhas, i];
     guardar(portasDe, j.id, lista);
     j.visitar(USOS_DOCES[lista.length - 1]);
-    porDoceNaSacola(j);
+    porDoceNaSacola(j, lista.length);
     ctx.espalhar({
       e: 'bailePorta',
       i,

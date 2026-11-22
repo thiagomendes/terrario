@@ -145,7 +145,14 @@ for (const [hora, nome] of [
     await cameraFixa(page);
     const p = await page.evaluate(() => {
       const b = window.__brumaluz!.baile!()!;
-      return { portas: b.pontos.portas, lanternas: b.pontos.lanternas, trilha: b.pontos.trilha, h: b.h };
+      return {
+        portas: b.pontos.portas,
+        lanternas: b.pontos.lanternas,
+        trilha: b.pontos.trilha,
+        vizinhos: b.pontos.vizinhos,
+        nascimento: b.nascimento,
+        h: b.h,
+      };
     });
     const Y = p.h + 1;
     const frente = (i: number, k: number) => {
@@ -160,10 +167,17 @@ for (const [hora, nome] of [
       const [cx, cz] = frente(i, 4.6);
       const q = p.portas[i];
       const lado = [[1, 0], [0, -1], [-1, 0], [0, 1]][q.dir];
-      // (de frente e um tico do lado da campainha, mais alto: a porta, o vizinho e a criança)
-      void lado;
-      const [fx0, fz0] = frente(i, 5.8);
-      await camera(page, [fx0 - lado[0] * 1.0, Y + 2.9, fz0 - lado[1] * 1.0], [q.x, Y + 1.1, q.z]);
+      // (de 3/4, do lado do vizinho: a porta aberta, o morador que põe o doce e a criança de lado,
+      // sem tapar a porta; o lampião da casa fica do outro lado)
+      const [fx0, fz0] = frente(i, 3.6);
+      const [mx, mz] = frente(i, 0.9);
+      const viz = p.vizinhos[i];
+      const s = viz && (viz.x - q.x) * lado[0] + (viz.z - q.z) * lado[1] < 0 ? -1 : 1;
+      await camera(
+        page,
+        [fx0 + s * lado[0] * 3.4, Y + 2.2, fz0 + s * lado[1] * 3.4],
+        [mx - s * lado[0] * 0.3, Y + 1.15, mz - s * lado[1] * 0.3],
+      );
       await missao(page, { a: 'campainha', i });
       await page.waitForFunction(() => ((window.__brumaluz!.baileTela!()!.portas as { abertas: number[] }).abertas.length ?? 0) > 0, undefined, { timeout: 5000 });
       if (i === 0) {
@@ -186,7 +200,11 @@ for (const [hora, nome] of [
       const inv = e.inventario!;
       for (let s = 0; s < 9; s++) if (inv.obter(s)?.item === 'sacola_doces') e.selecionarSlot!(s);
     });
-    // (de 3/4 de frente, do lado da mão: a sacola cheia, com os docinhos espiando)
+    // (no meio da praça, onde nada fica na frente da câmera; de 3/4 de frente, do lado da mão: a
+    // sacola cheia, com os docinhos espiando)
+    await camera(page, null);
+    await ir(page, p.nascimento.x, p.nascimento.z - 3, p.nascimento.x, p.nascimento.z - 10);
+    await page.waitForTimeout(1500);
     const olhoNaMao = () =>
       page.evaluate(() => {
         const e = window.__brumaluz!;
@@ -450,24 +468,43 @@ async function escolher(page: Page, id: string): Promise<void> {
   await page.waitForFunction(() => !document.querySelector('[data-alma-quadro]'), undefined, { timeout: 10_000 });
   await page.waitForTimeout(1500);
 }
-/** A festa do fim da missão (o "oba" fecha); devolve as moedinhas que ela deu. */
+/**
+ * A festa do fim da missão (o "oba" fecha; depois dela pode vir a do nível). Devolve as moedinhas
+ * da missão (as da chuva da festa da missão) e confere que a carteira de verdade subiu ao menos isso.
+ */
 async function festaDoFim(page: Page, antes: number): Promise<number> {
-  await page.waitForSelector('[data-alma-festa]', { timeout: 30_000 });
-  await page.waitForTimeout(1800);
-  for (let k = 0; k < 20; k++) {
+  await page.waitForSelector('[data-alma-festa="missao"]', { timeout: 30_000 });
+  await page.waitForTimeout(2200);
+  const daMissao = await page.locator('[data-alma-festa="missao"] .chuva .moeda').count();
+  let livre = 0;
+  for (let k = 0; k < 30 && livre < 3; k++) {
+    await page.waitForTimeout(700);
     const ok = page.locator('[data-alma-festa] [data-alma-oba]');
-    if (!(await page.locator('[data-alma-festa]').count())) break;
-    if (await ok.count()) await ok.first().tap().catch(() => undefined);
-    await page.waitForTimeout(800);
+    if (await ok.count()) {
+      livre = 0;
+      await ok.first().tap().catch(() => undefined);
+      await page.waitForTimeout(900);
+    } else if (!(await page.locator('[data-alma-festa]').count())) livre++;
   }
-  await page.waitForTimeout(800);
-  return (await moedasReais(page)) - antes;
+  await page.waitForTimeout(600);
+  expect((await moedasReais(page)) - antes).toBeGreaterThanOrEqual(daMissao);
+  return daMissao;
 }
 /** Anda pela trilha (o joystick de verdade) até o alvo de agora; devolve a chave dele. */
 async function seguir(page: Page, esperado?: RegExp): Promise<string> {
   await page.waitForTimeout(1600);
   await page.waitForFunction(() => !!window.__guia!.alvo(), undefined, { timeout: 20_000 });
   const r = await andarPelaTrilha(page, 120_000);
+  if (!r.chegou) {
+    const onde = await page.evaluate(() => ({
+      pes: window.__brumaluz!.jogadorPes!(),
+      alvo: window.__guia!.alvo(),
+      rota: window.__guia!.caminho().length,
+      fim: window.__guia!.caminho().slice(-1)[0],
+    }));
+    console.log(`T20: não chegou: ${JSON.stringify(onde)}`);
+    await page.screenshot({ path: `${PASTA}/t20-nao-chegou-${String(r.alvo).replace(':', '-')}.jpg`, type: 'jpeg', quality: 80 });
+  }
   expect(r.chegou, `chegou a ${r.alvo} em ${r.s.toFixed(0)} s`).toBe(true);
   if (esperado) expect(r.alvo).toMatch(esperado);
   await page.waitForTimeout(400);
@@ -486,8 +523,20 @@ async function tocarNo(page: Page, p: P3): Promise<void> {
   expect(t, 'o ponto está na tela').not.toBeNull();
   await page.touchscreen.tap(t!.x, t!.y);
 }
-const esperar = (page: Page, f: string, arg: unknown = null, timeout = 10_000) =>
-  page.waitForFunction(new Function('arg', `return (${f})(arg)`) as (a: unknown) => boolean, arg, { timeout });
+const esperar = async (page: Page, f: string, arg: unknown = null, timeout = 10_000) => {
+  try {
+    await page.waitForFunction(new Function('arg', `return (${f})(arg)`) as (a: unknown) => boolean, arg, { timeout });
+  } catch (erro) {
+    const estado = await page.evaluate(() => ({
+      pes: window.__brumaluz!.jogadorPes!(),
+      vista: window.__brumaluz!.baileEstado!(),
+      eventos: (window.__brumaluz!.eventosBaile ?? []).slice(-4),
+    }));
+    console.log(`T20: esperou ${f} (${JSON.stringify(arg)}): ${JSON.stringify(estado)}`);
+    await page.screenshot({ path: `${PASTA}/t20-esperou.jpg`, type: 'jpeg', quality: 80 });
+    throw erro;
+  }
+};
 
 for (const tamanho of ['deitado', 'empe'] as const)
   test(`T20: n1 a n5 de ponta a ponta, com o dedo e moedinhas de verdade (${tamanho})`, async ({ browser }) => {
@@ -504,7 +553,12 @@ for (const tamanho of ['deitado', 'empe'] as const)
       await fazer();
       ganhos[id] = await festaDoFim(page, antes);
       tempos[id] = (Date.now() - t0) / 1000;
-      console.log(`T20 ${tamanho}: ${id} em ${tempos[id].toFixed(0)} s, ${ganhos[id]} moedinhas`);
+      // (as texturas e malhas da cena: nada pode crescer a cada missão)
+      const cena = await page.evaluate(() => {
+        const s = window.__brumaluz!.cenaBabylon!();
+        return { texturas: s.textures.length, malhas: s.meshes.length, materiais: s.materials.length };
+      });
+      console.log(`T20 ${tamanho}: ${id} em ${tempos[id].toFixed(0)} s, ${ganhos[id]} moedinhas, cena ${JSON.stringify(cena)}`);
       expect(tempos[id], `${id} em até 3 minutos`).toBeLessThan(180);
     };
     // n1: as portas que a trilha mostra, uma de cada vez; cada campainha, um doce na sacola
@@ -671,12 +725,19 @@ test('T20: duas amigas na nuvem, na n2 (a lanterna da Ana conta para a Bia) e na
       const v = (window as unknown as { __almaUi: { vista(): { feitas: string[] } | null } }).__almaUi.vista();
       return ['n1', 'n2', 'n3', 'n4'].every((m) => v?.feitas.includes(m));
     }, undefined, { timeout: 20_000 });
-    // (a festa de cada missão acabada: fecha)
-    for (let k = 0; k < 12; k++) {
-      const ok = p.locator('[data-alma-festa] [data-alma-oba]');
-      if (await ok.count()) await ok.first().click().catch(() => undefined);
-      else if (!(await p.locator('[data-alma-festa]').count())) break;
+    await fecharFestas(p);
+  }
+  /** As festas (das missões e do nível) que estiverem na tela: o "oba" fecha cada uma. */
+  async function fecharFestas(p: Page): Promise<void> {
+    let livre = 0;
+    for (let k = 0; k < 40 && livre < 4; k++) {
       await p.waitForTimeout(700);
+      const ok = p.locator('[data-alma-festa] [data-alma-oba]');
+      if (await ok.count()) {
+        livre = 0;
+        await ok.first().click().catch(() => undefined);
+        await p.waitForTimeout(900);
+      } else if (!(await p.locator('[data-alma-festa]').count())) livre++;
     }
   }
   await ate5(ana);
@@ -712,6 +773,13 @@ test('T20: duas amigas na nuvem, na n2 (a lanterna da Ana conta para a Bia) e na
   const naAna = await gatoDa(ana);
   expect(Math.hypot(naAna.x - hx, naAna.z - hz)).toBeGreaterThan(20);
   mkdirSync(PASTA, { recursive: true });
+  await fecharFestas(bia);
+  await bia.evaluate(({ hx, hz }) => {
+    const e = window.__brumaluz!;
+    const [x, , z] = e.jogadorPes!();
+    e.apontar!(Math.atan2(hx - x, hz - z) + 0.5, 0.35);
+  }, { hx, hz });
+  await bia.waitForTimeout(900);
   await bia.screenshot({ path: `${PASTA}/t20-n5-copia-fugida-bia.jpg`, type: 'jpeg', quality: 88 });
   // a Bia chama a cópia e leva até a Vovó: a n5 dela fecha; a da Ana não conta de novo
   await toque(bia, { a: 'tufinho' });
@@ -723,6 +791,7 @@ test('T20: duas amigas na nuvem, na n2 (a lanterna da Ana conta para a Bia) e na
     undefined,
     { timeout: 15_000 },
   );
+  await fecharFestas(bia);
   await bia.screenshot({ path: `${PASTA}/t20-n5-bia-entregou.jpg`, type: 'jpeg', quality: 88 });
   for (const p of [ana, bia]) await p.context().close();
 });

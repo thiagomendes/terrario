@@ -284,8 +284,13 @@ export function criarMissoesNaTela(op: OpcoesMissoesNaTela) {
 
   function soltarDocinho(i: number, quem: string, t: number): void {
     const p = daPorta(i);
-    // (do vão da porta, na altura das mãos de quem dá; o ponto da porta é a frente dela, no caminho)
-    const de: V3 = [p.x - p.f[0] * 0.6, chao + 1.2, p.z - p.f[1] * 0.6];
+    // (da mão do morador da porta, que dá o doce: o vizinho do lado dela, ou a Vovó na varanda;
+    // sem ele, do vão da porta)
+    const q = pt.portas[i];
+    const quemDa = q.vovo ? { x: pt.postos.vovo[0], z: pt.postos.vovo[2] } : pt.vizinhos[i];
+    const de: V3 = quemDa
+      ? [quemDa.x + (p.x - quemDa.x) * 0.25, chao + 1.15, quemDa.z + (p.z - quemDa.z) * 0.25]
+      : [p.x - p.f[0] * 0.6, chao + 1.2, p.z - p.f[1] * 0.6];
     const no = montar('baile-docinho', docinho);
     no.position.set(...de);
     voando.push({

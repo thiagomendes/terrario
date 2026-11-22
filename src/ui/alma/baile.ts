@@ -140,10 +140,13 @@ export function ligarBaile(e: EstadoDepuracao, ui?: AlmaUi): void {
       // abre e dá o doce), as lanternas do bosque, a Lulu escondida no passo da criança, o
       // canteiro marcado, as carinhas da bancada, a porta da Vovó, o Tufinho e a parreirinha
       const pm = pontos;
-      pm.portas.forEach(([px, py, pz], i) =>
+      // (no passo do lampião, o toque na porta da Vovó é o lampião, não a campainha)
+      const passoLampiao = aberta(M_ABOBORA) && passoEmOrdem(USOS_ABOBORA, usosDe(M_ABOBORA)) === 2;
+      pm.portas.forEach(([px, py, pz], i) => {
+        if (passoLampiao && plano.pontos.portas[i].vovo) return;
         // (a porta abre na hora, pela previsão; o núcleo confirma e o doce vem)
-        conferir(px, py, pz, MISSOES_BAILE.campainha - 0.5, () => e.baileMissao?.({ a: 'campainha', i })),
-      );
+        conferir(px, py, pz, MISSOES_BAILE.campainha - 0.5, () => e.baileMissao?.({ a: 'campainha', i }));
+      });
       pm.lanternas.forEach(([lx, ly, lz], i) =>
         conferir(lx, ly, lz, MISSOES_BAILE.lanterna - 0.5, () => e.baileMissao?.({ a: 'lanterna', i })),
       );

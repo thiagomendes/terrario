@@ -100,7 +100,7 @@ import { DURACAO_REFEICAO } from '../jogo/refeicao';
 import { RECEITAS } from '../jogo/receitas';
 import { podeColetar } from '../jogo/ferramentas';
 import { TROCAS, fazerTroca, trocasDoMundo } from '../jogo/trocas';
-import { COLHER_PEDREIRO, blocoNoMundo } from '../jogo/exclusivos';
+import { COLHER_PEDREIRO, SACOLA_DOCES, SACOLA_VAZIA, blocoNoMundo } from '../jogo/exclusivos';
 import {
   canteirosAbertos,
   celulasPlanejadas,
@@ -867,15 +867,22 @@ export function criarNucleo(op: OpcoesNucleo) {
   /** T18: a criança como as missões da festa a veem (a da Vila, e trocar no mesmo espaço). */
   const jogadorDoBaile = (o: Jogador) => ({
     ...jogadorDaVila(o),
-    trocar(de: string, para: string): boolean {
+    /**
+     * T18/T19: um docinho entra na sacola de doces (a cheia ganha um; a vazia vira a cheia no
+     * mesmo espaço; sem sacola, uma nova na mão). O aviso da tela é o docinho que entrou ("+1
+     * Brigadeiro"), não uma sacola nova.
+     */
+    porNaSacola(doce: string): void {
       const slots = o.inventario.slots;
       // (a da mão primeiro)
       const ordem = [o.tel.slot, ...slots.keys()];
-      const i = ordem.find((k) => slots[k]?.item === de);
-      if (i === undefined) return false;
-      o.inventario.definir(i, { item: para, qtd: 1 });
-      o.eventos.push({ e: 'coletou', item: para, qtd: 1 });
-      return true;
+      const pilha = obterItem(SACOLA_DOCES)?.pilha ?? 8;
+      const cheia = ordem.find((k) => slots[k]?.item === SACOLA_DOCES && slots[k]!.qtd < pilha);
+      const vazia = ordem.find((k) => slots[k]?.item === SACOLA_VAZIA);
+      if (cheia !== undefined) o.inventario.definir(cheia, { item: SACOLA_DOCES, qtd: slots[cheia]!.qtd + 1 });
+      else if (vazia !== undefined) o.inventario.definir(vazia, { item: SACOLA_DOCES, qtd: 1 });
+      else return jogadorDaVila(o).darNaMao(SACOLA_DOCES, 1);
+      o.eventos.push({ e: 'coletou', item: doce, qtd: 1 });
     },
   });
   const baile: BaileNucleo | null = planoBaile

@@ -49,7 +49,8 @@ describe('spec 027 (T19): o guia das missões da festa', () => {
       expect(v.pt).not.toContain(i);
       const q = p.pontos.portas[i];
       // chegou na trilha: a campainha responde dali
-      expect(Math.hypot(a.x - q.x, a.z - q.z)).toBeLessThan(MISSOES_BAILE.campainha - (a.raio ?? 0));
+      // (o dedo na tela vale até meio bloco antes do alcance do núcleo)
+      expect(Math.hypot(a.x - q.x, a.z - q.z)).toBeLessThan(MISSOES_BAILE.campainha - 0.5 - (a.raio ?? 0));
       expect(ARTE[a.figura], a.figura).toBeDefined();
       v.pt.push(i);
     }
@@ -64,13 +65,13 @@ describe('spec 027 (T19): o guia das missões da festa', () => {
       const i = Number(a.chave.split(':')[1]);
       expect(a.chave).toBe(`lanterna:${i}`);
       const l = p.pontos.lanternas[i];
-      expect(Math.hypot(a.x - l[0], a.z - l[2])).toBeLessThan(MISSOES_BAILE.lanterna - (a.raio ?? 0));
+      expect(Math.hypot(a.x - l[0], a.z - l[2])).toBeLessThan(MISSOES_BAILE.lanterna - 0.5 - (a.raio ?? 0));
       v.lc.push(i);
     }
     expect(alvoDaMissao(m('n2'), mundo(v), new Set(), de)).toBeNull();
   });
 
-  it('n3: o esconderijo da vez, a uns 3 blocos (a risadinha e o lençol mostram o resto)', () => {
+  it('n3: o esconderijo da vez, a uns 2 blocos (a risadinha e o lençol mostram o caminho)', () => {
     const p = plano();
     const vistos = new Set<string>();
     for (let k = 0; k < 3; k++) {
@@ -81,7 +82,7 @@ describe('spec 027 (T19): o guia das missões da festa', () => {
       expect(d).toBeGreaterThan(2);
       expect(d + (a.raio ?? 0)).toBeLessThan(MISSOES_BAILE.risadinha);
       // o fim da trilha deixa a Lulu ao alcance do toque
-      expect(d).toBeLessThan(MISSOES_BAILE.lulu);
+      expect(d + (a.raio ?? 0)).toBeLessThan(MISSOES_BAILE.lulu - 0.5);
       vistos.add(USOS_LULU[k]);
     }
     expect(alvoDaMissao(m('n3'), mundo(vazia()), vistos, { x: 0, z: 0 })).toBeNull();
@@ -100,7 +101,7 @@ describe('spec 027 (T19): o guia das missões da festa', () => {
       const a = alvoDaMissao(m('n4'), mundo(vazia()), vistos, { x: 0, z: 0 })!;
       expect(a.chave).toBe(chave);
       const [x, z] = Array.isArray(q) ? [q[0], q[2]] : [(q as { x: number }).x, (q as { z: number }).z];
-      expect(Math.hypot(a.x - x, a.z - z) + (a.raio ?? 0)).toBeLessThan(alcance);
+      expect(Math.hypot(a.x - x, a.z - z) + (a.raio ?? 0)).toBeLessThan(alcance - 0.5);
       vistos.add(USOS_ABOBORA[k]);
     });
   });
@@ -112,7 +113,7 @@ describe('spec 027 (T19): o guia das missões da festa', () => {
     let a = alvoDaMissao(m('n5'), mundo(v), new Set(), { x: 0, z: 0 })!;
     expect(a.chave).toBe('tufinho');
     const [hx, , hz] = p.pontos.tufinhoHorta;
-    expect(Math.hypot(a.x - hx, a.z - hz) + (a.raio ?? 0)).toBeLessThan(MISSOES_BAILE.tufinho);
+    expect(Math.hypot(a.x - hx, a.z - hz) + (a.raio ?? 0)).toBeLessThan(MISSOES_BAILE.tufinho - 0.5);
     // ele segue esta criança: a varanda da Vovó, e chegar lá é a entrega
     v.tf = { o: 'segue', q: 'ana' };
     v.tc = 'segue';
