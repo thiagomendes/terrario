@@ -164,20 +164,18 @@ for (const [hora, nome] of [
       const [x, z] = frente(i, 1.4);
       await ir(page, x, z, p.portas[i].x, p.portas[i].z);
       await page.waitForTimeout(i === 0 ? 2500 : 900);
-      const [cx, cz] = frente(i, 4.6);
       const q = p.portas[i];
       const lado = [[1, 0], [0, -1], [-1, 0], [0, 1]][q.dir];
-      // (de 3/4, do lado do vizinho: a porta aberta, o morador que põe o doce e a criança de lado,
-      // sem tapar a porta; o lampião da casa fica do outro lado)
-      const [fx0, fz0] = frente(i, 3.6);
-      const [mx, mz] = frente(i, 0.9);
+      // A foto: a criança um passo para o lado da campainha (a porta à vista, sem ela na frente),
+      // de lado para a porta; a câmera alta, de frente e um tico para o lado do vizinho: a porta
+      // aberta no meio, o vizinho que dá o doce de um lado, a criança com a sacola do outro
       const viz = p.vizinhos[i];
       const s = viz && (viz.x - q.x) * lado[0] + (viz.z - q.z) * lado[1] < 0 ? -1 : 1;
-      await camera(
-        page,
-        [fx0 + s * lado[0] * 3.4, Y + 2.2, fz0 + s * lado[1] * 3.4],
-        [mx - s * lado[0] * 0.3, Y + 1.15, mz - s * lado[1] * 0.3],
-      );
+      await ir(page, x - s * lado[0] * 1.1, z - s * lado[1] * 1.1, q.x, q.z);
+      await page.waitForTimeout(500);
+      const [fx0, fz0] = frente(i, 6.0);
+      const [mx, mz] = frente(i, 0.7);
+      await camera(page, [fx0 + s * lado[0] * 0.9, Y + 3.3, fz0 + s * lado[1] * 0.9], [mx, Y + 1.3, mz]);
       await missao(page, { a: 'campainha', i });
       await page.waitForFunction(() => ((window.__brumaluz!.baileTela!()!.portas as { abertas: number[] }).abertas.length ?? 0) > 0, undefined, { timeout: 5000 });
       if (i === 0) {
