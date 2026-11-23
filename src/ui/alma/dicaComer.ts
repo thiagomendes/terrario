@@ -6,7 +6,8 @@
  *
  * A tela continua limpa: só no toque (no computador, a dica de texto perto da mira já diz "Clique
  * direito (ou F): comer"), só parada, nunca em cima do joystick; a dica de uma coisa da Vila vem
- * antes; some quando ela come e só volta com outra comida na mão.
+ * antes; some quando ela come e só volta com outra comida na mão. Ignorada, se aposenta depois de
+ * uns segundos à vista (spec 027): também só volta com outra comida na mão.
  */
 import type { Scene } from '@babylonjs/core/scene';
 import type { EstadoDepuracao } from '../../render/cena';
@@ -23,6 +24,13 @@ declare global {
 
 /** Quanto tempo (ms) com a comida na mão, parada, até a dica aparecer. */
 const ESPERA = 600;
+/**
+ * Spec 027 (portão da T24): quanto tempo (ms) a dica fica à vista, somando as vezes, com a mesma
+ * comida na mão, antes de se aposentar até outra comida (ou até ela comer). Na festa a sacola de
+ * doces fica na mão a vila inteira, e a mãozinha voltava em cima do boneco a cada parada, nas
+ * missões (no celular em pé, ela tapava a Lulu achada).
+ */
+const A_VISTA = 8000;
 
 export function ligarDicaComer(e: EstadoDepuracao, scene: Scene): void {
   const dica = criarDicaToque();
@@ -32,6 +40,9 @@ export function ligarDicaComer(e: EstadoDepuracao, scene: Scene): void {
   /** Com esta comida na mão ela já comeu: a dica só volta com outra. */
   let comeuCom: string | null = null;
   let ultimo: [number, number, number] | null = null;
+  /** Quanto a dica já ficou à vista com a comida de agora (ms), e o quadro de antes. */
+  let vista = 0;
+  let quadroAntes = 0;
   const noJogo = () => {
     const b = document.body;
     return !b.dataset.overlay && !b.classList.contains('modo-foto') && !b.classList.contains('tela-titulo');
@@ -45,9 +56,12 @@ export function ligarDicaComer(e: EstadoDepuracao, scene: Scene): void {
     const comida = !!p && !!obterItem(p.item)?.comida;
     const k = comida && p ? `${slot}|${p.item}` : '';
     const agora = performance.now();
+    const dt = quadroAntes ? Math.min(250, agora - quadroAntes) : 0;
+    quadroAntes = agora;
     if (k !== chave) {
       chave = k;
       desde = agora;
+      vista = 0;
       if (comeuCom !== null && comeuCom !== k) comeuCom = null;
     }
     // andando, a espera recomeça (a mãozinha não fica correndo atrás da mão)
@@ -62,6 +76,7 @@ export function ligarDicaComer(e: EstadoDepuracao, scene: Scene): void {
       !e.comendo?.() &&
       !e.dicaVila?.() &&
       !e.pertoDeComprar?.() &&
+      vista < A_VISTA &&
       agora - desde >= ESPERA;
     // a mãozinha toca na comida da mão; se ali não dá (no celular deitado a mão fica baixa, perto
     // dos botões), toca na boca (qualquer toque na tela come)
@@ -74,6 +89,7 @@ export function ligarDicaComer(e: EstadoDepuracao, scene: Scene): void {
       dica.mostrar(null);
       return;
     }
+    vista += dt;
     dica.mostrar({ chave: 'comer', t, figura: arte('dicaComer'), texto: 'Toque para comer' });
   });
   window.__dicaComer = { estado: () => dica.estado() };

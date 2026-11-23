@@ -35,7 +35,10 @@ Todas as fotos foram tiradas na placa de vídeo (`scripts/e2e-gpu.sh`), no mundo
 - n3 a Lulu: escondida (vista da praça e do palco), espiando e achada;
 - n4 a horta: o broto, crescendo, a abóbora pronta, a mesa das carinhas, o lampião na porta da Vovó;
 - n5 o Tufinho: as patinhas, na horta, seguindo a criança e em casa.
-- `t19-desenhos-28px.png`: os desenhos das missões no tamanho do quadro.
+- `t19-desenhos-28px.png`: os desenhos das cinco missões (o principal, o selo, o resultado e a placa), grandes e a 28 px, o tamanho do quadro (`arte-vila-fotos.spec.ts`, `ARTE_FOTOS=1 ARTE_PASTA=capturas-027/parte1/portao/missoes`).
+- `t20-empe-*.jpg`: no celular em pé (390 × 844), com a interface, no T20 de ponta a ponta (`-g "ponta.*empe"`): a sacola com o "+1" (`n1-sacola-mais-um`), a lanterna da n2, a Lulu achada e o Tufinho seguindo com o selinho.
+
+A rodada do revisor visual (22 nov, à noite) refez com o mesmo nome as fotos do que mudou: o Nestor, a confeiteira, o lanterneiro, o Bento, o Seu Olavo, a Celeste e a Lulu (`moradores/`); o sapinho e os bichos (`bichos/`); a praça, as barracas e o castelinho (`lugares/`); o comer; as missões do T19; o cartão. O antes de cada uma está no commit 072d7a9.
 
 ## fantasias-crianca/
 

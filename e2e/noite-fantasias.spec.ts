@@ -345,6 +345,8 @@ for (const [hora, nome] of [
     await page.waitForTimeout(1500);
     await foto(page, 't19-n3-lulu-espiando');
     await missao(page, { a: 'lulu' });
+    // (achada, de lado: a câmera sai de trás da criança, cuja cabeça tapava a Lulu)
+    await camera(page, [e0.x + fx * 2.6 + ladoT * tx0 * 3.4, Y + 2.3, e0.z + fz * 2.6 + ladoT * tz0 * 3.4], [e0.x, Y + 1.0, e0.z]);
     await page.waitForTimeout(500);
     await foto(page, 't19-n3-lulu-achada');
     // a horta: plantar, regar e a abóbora crescendo
@@ -615,6 +617,13 @@ for (const tamanho of ['deitado', 'empe'] as const)
     await contarGl(page);
     await page.addStyleTag({ content: '.toast-area { display: none !important; }' });
     const tq = await toques(page);
+    // (portão da T24: no celular em pé, as fotos com a interface de quatro momentos, para ver a
+    // tela pequena limpa: a sacola com o "+1", a lanterna da n2, a Lulu achada e o Tufinho seguindo)
+    const fotoEmPe = async (nome: string, espera = 600) => {
+      if (tamanho !== 'empe') return;
+      await page.waitForTimeout(espera);
+      await page.screenshot({ path: `${PASTA}/t20-empe-${nome}.jpg`, type: 'jpeg', quality: 88 });
+    };
     const tempos: Record<string, number> = {};
     const ganhos: Record<string, number> = {};
     const missao = async (id: string, fazer: () => Promise<void>) => {
@@ -642,6 +651,7 @@ for (const tamanho of ['deitado', 'empe'] as const)
         const i = Number(alvo.split(':')[1]);
         await tocarNo(page, tq.portas[i]);
         await esperar(page, `(i) => (window.__brumaluz.eventosBaile ?? []).some((e) => e.e === 'bailePorta' && e.i === i && e.doce)`, i);
+        if (k === 1) await fotoEmPe('n1-sacola-mais-um', 900);
       }
       expect(await naMochila(page, 'sacola_doces')).toBe(5);
     });
@@ -652,6 +662,7 @@ for (const tamanho of ['deitado', 'empe'] as const)
         const i = Number(alvo.split(':')[1]);
         await tocarNo(page, tq.lanternas[i]);
         await esperar(page, `(i) => window.__brumaluz.baileEstado().lc.includes(i) || window.__brumaluz.baileEstado().lc.length === 0`, i);
+        if (k === 1) await fotoEmPe('n2-lanterna');
       }
     });
     // n3: a Lulu nos três esconderijos
@@ -660,6 +671,7 @@ for (const tamanho of ['deitado', 'empe'] as const)
         await seguir(page, /^lulu:\d$/);
         await tocarNo(page, tq.lulu[k]);
         await esperar(page, `(k) => (window.__brumaluz.eventosBaile ?? []).some((e) => e.e === 'baileLulu' && e.k === k)`, k);
+        if (k === 0) await fotoEmPe('n3-lulu-achada', 500);
       }
     });
     // n4: plantar, regar, esperar, colher; a carinha; o lampião na porta da Vovó
@@ -685,6 +697,7 @@ for (const tamanho of ['deitado', 'empe'] as const)
       await seguir(page, /^tufinho$/);
       await tocarNo(page, tq.tufinho);
       await esperar(page, `() => window.__brumaluz.baileEstado().tf.o === 'segue'`);
+      await fotoEmPe('n5-tufinho-seguindo', 1500);
       await seguir(page, /^vovo$/);
     });
     expect(ganhos).toEqual({ n1: 5, n2: 4, n3: 4, n4: 5, n5: 4 });
