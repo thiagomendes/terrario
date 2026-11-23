@@ -290,9 +290,11 @@ function tomadas(p: Plano): Tomada[] {
   // torre reta parecia torta na foto)
   const cv = [tr[4][0] + 1 - (p.castelo[0] + 2), tr[4][1] - 1 - (p.castelo[2] + 4)];
   const cl = Math.hypot(cv[0], cv[1]) || 1;
+  // (rodada do revisor visual: 2,5 blocos para a frente, um tico mais alto; 5 para trás, a copa da
+  // árvore do caminho tapava o lado esquerdo)
   t(
     'castelo',
-    [tr[4][0] + 1 + (cv[0] / cl) * 5, Y + 3.6, tr[4][1] - 1 + (cv[1] / cl) * 5],
+    [tr[4][0] + 1 + (cv[0] / cl) * 2.5, Y + 4.0, tr[4][1] - 1 + (cv[1] / cl) * 2.5],
     [p.castelo[0] + 2, Y + 5, p.castelo[2] + 4],
     [0, 3, 5],
   );

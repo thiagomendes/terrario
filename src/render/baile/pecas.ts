@@ -162,7 +162,7 @@ export function bolinha(
  * A abóbora de brinquedo (o modelo da família da gigante): a bola achatada e os gomos em volta,
  * o cabinho e a folhinha. `L` é o lado (a abóbora inteira cabe num cubo de L); a base no chão.
  */
-export function abobora(r: Ref, x: number, y: number, z: number, L: number, gomos = 10): void {
+export function abobora(r: Ref, x: number, y: number, z: number, L: number, gomos = 10, talo = true): void {
   const cy = y + 0.41 * L;
   // (T22: as de até 2 blocos, o lampião e as de enfeite, com menos gomos em cada bola: o
   // lampião caía de ~8,9 mil triângulos para ~4,6 mil; a gigante fica com os de sempre)
@@ -183,6 +183,7 @@ export function abobora(r: Ref, x: number, y: number, z: number, L: number, gomo
       pequena ? 8 : 12,
     );
   }
+  if (!talo) return;
   r.barra([x, cy + 0.26 * L, z], [x + 0.06 * L, cy + 0.42 * L, z], 0.08 * L, '#6b7a2e');
   bolinha(r, x - 0.12 * L, cy + 0.31 * L, z + 0.02 * L, 0.11 * L, '#5cbf63', [1.6, 0.25, 0.9]);
 }
@@ -300,6 +301,8 @@ export function rostoDaAbobora(
   gomos: number,
   tipo: Carinha,
   aceso: 'dia' | 'noite' | 'sempre',
+  /** De noite, a pupila escura com o brilhinho no olho aceso (a abóbora gigante). */
+  pupilas = false,
 ): void {
   const k = 0.6 * L;
   const cy = 0.36 * L;
@@ -349,11 +352,25 @@ export function rostoDaAbobora(
   if (aceso !== 'noite') {
     const destino = aceso === 'sempre' ? d.luz : d.dia;
     pintar(destino, aceso === 'sempre' ? CORES.luz : '#4a220e', folga);
+    // (o brilhinho dos dois olhos para o meio da cara: portão da T24, o do olho esquerdo, mais
+    // para fora, caía no vinco entre dois gomos e ficava com um "x" no meio)
     if (aceso === 'dia')
-      for (const ox of [-0.24 * k, 0.16 * k])
-        pelicula(r, d.dia, L, gomos, base, circulo(0.04 * k, 10, ox, cy + 0.24 * k), [ox, cy + 0.24 * k], '#fff4e6', folga + 0.01);
+      for (const ox of [-0.16 * k, 0.16 * k])
+        pelicula(r, d.dia, L, gomos, base, circulo(0.04 * k, 10, ox, cy + 0.24 * k), [ox, cy + 0.24 * k], '#fff4e6', folga + 0.025);
   }
-  if (aceso === 'noite') pintar(d.noite, CORES.luz, folga + 0.01);
+  if (aceso === 'noite') {
+    pintar(d.noite, CORES.luz, folga + 0.01);
+    // portão da T24 (a abóbora gigante): de noite, a pupila escura com o brilhinho dentro do olho
+    // aceso, como de dia (o olho todo aceso, vazio, deixava a carinha sem olhar)
+    if (pupilas)
+      for (const ox of [-0.2 * k, 0.2 * k]) {
+        if (ox > 0 && tipo === 'piscadinha') continue;
+        const py = cy + 0.17 * k;
+        pelicula(r, d.noite, L, gomos, base, circulo(0.085 * k, 14, ox, py), [ox, py], '#4a220e', folga + 0.02);
+        const bx = ox - Math.sign(ox) * 0.03 * k;
+        pelicula(r, d.noite, L, gomos, base, circulo(0.032 * k, 10, bx, py + 0.035 * k), [bx, py + 0.035 * k], '#fff4e6', folga + 0.03);
+      }
+  }
 }
 
 // ------------------------------------------------------------------ a praça
@@ -377,19 +394,18 @@ function aboboraGigante(r: Ref, d: DesenhoBaile, L: number): void {
     }
     placaGirada(r, sombra, 0.01, [0, y, 0], Math.PI / 2, 0, cor);
   }
-  abobora(r, 0, 0, 0, L, 10);
-  // o talo curvo de brinquedo e a folha grande levantada, de lado
-  const t: V3[] = [];
-  for (let i = 0; i <= 6; i++) {
-    const s = i / 6;
-    t.push([0.16 * s * s * L, (0.6 + 0.26 * s - 0.06 * s * s) * L, 0.03 * s * L]);
-  }
-  for (let i = 0; i < 6; i++) r.barra(t[i], t[i + 1], (0.13 - 0.04 * (i / 6)) * L, i % 2 ? '#6b7a2e' : '#5f6e28');
-  bolinha(r, t[6][0], t[6][1], t[6][2], 0.04 * L, '#6b7a2e');
-  bolinha(r, -0.15 * L, 0.7 * L, 0, 0.13 * L, '#5cbf63', [1.7, 0.22, 1], undefined, 0.25);
-  bolinha(r, 0.06 * L, 0.69 * L, -0.13 * L, 0.09 * L, '#5cbf63', [1.7, 0.22, 1], undefined, -1.2);
+  abobora(r, 0, 0, 0, L, 10, false);
+  // o talo de brinquedo, um só, redondo e em pé no meio da tampa, com a ponta arredondada, e as
+  // duas folhas deitadas rente à abóbora, encostadas no pé dele (portão da T24: o talo curvo de
+  // barras quadradas, com a bolinha solta na ponta e a folha levantada, parecia um bloco torto)
+  const verdeTalo = '#5f6e28';
+  // (o alto da casca fica em ~0,73 L no meio)
+  r.prisma(10, 0.07 * L, 0.18 * L, 0, 0.77 * L, 0, verdeTalo, 'y');
+  bolinha(r, 0, 0.86 * L, 0, 0.07 * L, verdeTalo, [1, 0.6, 1], undefined, 0, 12);
+  bolinha(r, -0.14 * L, 0.725 * L, 0.02 * L, 0.11 * L, '#5cbf63', [1.6, 0.18, 0.9], undefined, 0.25, 12);
+  bolinha(r, 0.12 * L, 0.725 * L, -0.06 * L, 0.09 * L, '#5cbf63', [1.6, 0.18, 0.9], undefined, -0.5, 12);
   rostoDaAbobora(r, d, [0, 0, 0], L, 10, 'sorriso', 'dia');
-  rostoDaAbobora(r, d, [0, 0, 0], L, 10, 'sorriso', 'noite');
+  rostoDaAbobora(r, d, [0, 0, 0], L, 10, 'sorriso', 'noite', true);
 }
 
 /** Banco de praça de brinquedo: o assento de tábuas, o encosto e os pés roxos. */
@@ -500,9 +516,12 @@ function barracaDeFesta(r: Ref, a: string, b: string): void {
   r.caixa(W - 0.2, 0.9, 0.6, 0, 0, zf - 0.36, CORES.madeira, 0.03);
   r.caixa(W + 0.1, 0.09, 0.78, 0, 0.92, zf - 0.32, '#c08a52', 0.03);
   r.caixa(W - 0.2, 0.08, 0.36, 0, 1.45, zt + 0.12, CORES.madeira, 0.02);
+  // a parede do fundo em listras do tema, num tom claro da cor da barraca (portão da T24: toda
+  // creme, parecia um painel branco liso; clara, o vendedor continua se destacando na frente)
+  const fundo = a === CORES.laranja ? '#ffc98a' : '#c9aeec';
   for (let i = 0; i < n; i++) {
     const x = -W / 2 + 0.1 + (i + 0.5) * ((W - 0.2) / n);
-    r.caixa((W - 0.2) / n, 1.6, 0.05, x, 0.9, zt - 0.04, i % 2 ? CORES.creme : b, 0.01);
+    r.caixa((W - 0.2) / n, 1.6, 0.05, x, 0.9, zt - 0.04, i % 2 ? b : fundo, 0.01);
   }
   // o toldo: do alto do fundo (y 2.95) até a frente (y 2.4), passando um palmo da frente
   const yAlto = 2.98;
@@ -619,9 +638,14 @@ function balcao(r: Ref, qual: number): void {
   } else {
     for (let i = 0; i < 3; i++) caneca(r, -1.2 + i * 0.4, y, 0.55, i % 2 ? CORES.creme : '#f2a24a');
     for (let i = 0; i < 3; i++) copoPocao(r, 0.4 + i * 0.4, y, 0.55);
-    // a panela de chocolate no fundo, na prateleira
-    r.prisma(10, 0.28, 0.3, -0.6, 1.53, -0.93, '#3e3652', 'y');
-    r.prisma(10, 0.24, 0.02, -0.6, 1.83, -0.93, '#6a3a22', 'y');
+    // a panela de chocolate no fundo, na prateleira, na ponta (portão da T24: no meio, roxo-escura,
+    // ficava bem atrás da cabeça do Seu Olavo e parecia um pedaço solto do chapéu dele); a panela
+    // clara de duas alças, com o chocolate por cima (o prisma tem o meio em y: a panela assenta
+    // na prateleira, em 1.53, e o chocolate rente à beira; antes ele boiava acima dela)
+    const px = -1.3;
+    r.prisma(10, 0.24, 0.26, px, 1.53 + 0.13, -0.93, '#c9c0d6', 'y');
+    r.prisma(10, 0.21, 0.02, px, 1.78, -0.93, '#5a3424', 'y');
+    for (const s of [-1, 1]) r.caixa(0.08, 0.05, 0.06, px + s * 0.27, 1.71, -0.93, '#8a7f9a', 0.02);
     for (let i = 0; i < 2; i++) copoPocao(r, 0.6 + i * 0.35, 1.53, -0.93);
   }
 }
