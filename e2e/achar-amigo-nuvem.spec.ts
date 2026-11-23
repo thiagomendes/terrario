@@ -1,6 +1,7 @@
 import { expect, test, type Browser, type Page } from '@playwright/test';
 import { mkdirSync } from 'node:fs';
 import { MORROS, PASTA, esperarChunks, foto } from './achar-amigo-palco';
+import { telasDoFluxo } from './telas';
 
 /**
  * Spec 021 "Achar o amigo" com dois jogadores de verdade na nuvem (servidor de salas do
@@ -97,7 +98,9 @@ const TELAS = [
   { pre: 'celular', viewport: { width: 390, height: 844 }, toque: true },
 ] as const;
 
-for (const tela of TELAS) {
+// teste de fluxo (a nuvem de verdade): só o celular; a carinha na borda sem tapar o HUD, nas
+// três telas, é do achar-amigo.spec.ts (ver e2e/telas.ts)
+for (const tela of telasDoFluxo(TELAS, (t) => t.pre === 'celular')) {
   test(`dois na nuvem: carinha, trilha, pular e chamar (${tela.pre})`, async ({ browser }) => {
     test.setTimeout(900_000);
     mkdirSync(PASTA, { recursive: true });
@@ -175,7 +178,20 @@ for (const tela of TELAS) {
     await ana.waitForTimeout(150);
     await foto(ana, `${pre}-4-pular-segurando`);
     await ana.evaluate(() => window.__brumaluz!.acharAmigo!.segurar(null));
-    const t0 = Date.now();
+    // o tempo do pulo, no relógio da página: do dedo (ou do botão) descendo até o pulo. Antes
+    // era medido pelo relógio do teste depois das duas fotos e das esperas fixas (1050 + 80 +
+    // 420 ms), e as fotos na placa (de 300 a 500 ms cada) punham o tempo na beira de 2500 ms.
+    await ana.evaluate(() => {
+      const a = window.__brumaluz!.acharAmigo!;
+      const w = window as unknown as { __pulo: { ini: number; fim: number } };
+      w.__pulo = { ini: performance.now(), fim: 0 };
+      const vigia = setInterval(() => {
+        if (a.pulos() > 0) {
+          w.__pulo.fim = performance.now();
+          clearInterval(vigia);
+        }
+      }, 10);
+    });
     if (tela.toque) {
       // o dedo segurando (toque de verdade pelo protocolo do navegador)
       const cdp = await ana.context().newCDPSession(ana);
@@ -199,9 +215,14 @@ for (const tela of TELAS) {
       const b = (e.outrosJogadores?.() ?? []).find((o) => o.apelido === 'Bia')!;
       return Math.hypot(b.x - x, b.z - z);
     });
-    console.log('achar nuvem pulou em', Date.now() - t0, 'ms, ficou a', dist.toFixed(1), 'blocos');
+    const msPulo = await ana.evaluate(() => {
+      const w = window as unknown as { __pulo: { ini: number; fim: number } };
+      return w.__pulo.fim - w.__pulo.ini;
+    });
+    console.log('achar nuvem pulou em', Math.round(msPulo), 'ms, ficou a', dist.toFixed(1), 'blocos');
     expect(dist).toBeLessThan(9);
-    expect(Date.now() - t0).toBeLessThan(2500);
+    expect(msPulo).toBeGreaterThan(0);
+    expect(msPulo).toBeLessThan(2500);
     await ana.waitForTimeout(500);
     const aceno = await ana.evaluate(() => window.__brumaluz!.gestos!.local().gesto);
     expect(aceno).toBe('acenar');
