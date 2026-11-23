@@ -107,12 +107,12 @@ Tamanho: **P** (até meio dia), **M** (1 a 2 dias), **G** (3 dias ou mais). Uma 
 
 **Ordem:** uma fase por vez, na ordem acima. O esboço sai de vez quando a parte 3 fecha (o branch `esboco/027-noite-das-fantasias` fica só como histórico).
 
-## Situação (21 nov 2026)
+## Situação (23 nov 2026)
 | Parte | Estado |
 |---|---|
 | Esboço | aprovado pelo dono em 20 nov (`esboco/027-noite-das-fantasias`; fotos, vídeos e sons em `capturas-027/esboco/`) |
 | Spec | aprovada pelo dono em 21 nov (APPROVED), com as recomendadas nas seis perguntas |
-| 1. A vila da festa (T00 a T24) | em andamento (ver "Parte 1, passo a passo") |
+| 1. A vila da festa (T00 a T24) | **publicada em 22 nov, 22h31, e conferida no ar** (ver "Parte 1, passo a passo"); falta a rodada em família |
 | 2. Por dentro (T25 a T31) | não começou |
 | 3. Os passeios (T32 a T37) | não começou |
 
@@ -367,7 +367,7 @@ Tamanho: **P** (até meio dia), **M** (1 a 2 dias), **G** (3 dias ou mais). Uma 
     - **O que isso diz:** não é memória da placa (nunca passou de 7%), nem malha ou textura que não é solta. A placa trava inteira por uns 2 minutos e o Windows a reinicia (o tempo bate com o quadro de 119 s da T22). Acontece em qualquer missão e também na Vila. A causa provável é a ponte da placa do WSL (Mesa d3d12 sobre o `/dev/dxg`) com o celular deitado. Não deu para reproduzir fora dela nesta tarefa. **Fica para conferir no aparelho de verdade** (o portão da T24 e a rodada em família). Se acontecer no aparelho, a pista é o quadro mais pesado deitado (o campo de visão mais largo).
   - **Também nesta tarefa:** a contagem do que está vivo no WebGL ficou no teste das missões (cada linha "T20" mostra `gl`), e o diagnóstico do `temas` só aparece quando a quebra falha. As fotos e os sons que a suíte regrava em `capturas-027/` voltaram ao que estava no commit.
   - **Falta:** a página deitada no aparelho; o `bloco-some` e a volta para o lugar de nascer depois do teleporte (vistos com carga, a conferir se a criança que anda logo depois do `pronto` também volta); a T24 (portão visual e publicação).
-- **T24 (22 nov): o portão visual até a rodada de refazer; faltam o revisor novo só com as fotos, a conferência do orquestrador e a publicação.**
+- **T24 (22 nov): feita. Publicada e conferida no ar.**
   - **A página deitada, ramo contra `main`** (`vila-missoes`, o bilhete e os balões deitado, o teste que caiu na T23; um trabalhador, uma coisa por vez na placa, alternando ramo e `main` num worktree de eab8b8b; a contagem do WebGL agora também neste teste, pelo `e2e/gl-vivo.ts`):
 
     | Rodada | Ramo | `gl` na f6 (buffers, VAOs, MB) | `main` | `gl` na f6 |
@@ -408,7 +408,10 @@ Tamanho: **P** (até meio dia), **M** (1 a 2 dias), **G** (3 dias ou mais). Uma 
   - **Testes da rodada:** `npx tsc --noEmit -p .` limpo; Vitest inteiro 240 arquivos, 2205 testes, verdes (rodado no meio da rodada; depois disso o `paridade-festa`, 2 de 2, e o `paridade-cinco`, 6 de 6, de novo); `encaixeFantasiasFesta` 5 de 5 (a capinha de asa); `comidasFesta` e `refeicao`; e2e na placa: `moradores-027`, `bichos-027`, `noite-fantasias-fotos`, `comer-027` (as fotos), `noite-fantasias` T19 (2 de 2) e T20 de ponta a ponta (deitado e em pé), `comprar-comer` e `compras-027` (7 passaram, 2 pulados de propósito), `capturas-temas` (o cartão) e `desempenho-027` (o pior caso em pé).
   - **O custo do véu, aceito (22 nov, pelo orquestrador):** com o conserto do véu (na criança, só a cabeça e o tronco tapam o halo), as chamadas de desenho do pior caso em pé ficaram em **255 a 264, acima da régua de 250**; os quadros, de **47 a 55**, seguem acima da meta de 45. O orquestrador aceitou assim; a otimização (tapar o halo só nos bonecos perto de um lampião aceso) vai para o backlog.
   - **As fotos da criança refeitas depois da última regra do véu** (`MISSOES027_PASTA=capturas-027/parte1/portao/missoes`, `noite-fantasias` T19 entardecer e noite e T20 em pé, os mesmos specs da rodada anterior): `t19-n1-travessura-noite`, `t19-n5-tufinho-seguindo-*` e `t20-empe-*`. O véu ficou longe: nenhum halo branco na cabeça da criança nem dos moradores. Na travessura, a peça cinza na cabeça da moradora da frente é a mesma da foto aprovada (geometria, não brilho). `npm run build` e `npx tsc --noEmit -p .` limpos.
-  - **Falta:** o cartão de três-quartos; o servidor antes do site; publicar e conferir no ar; o vídeo e as fotos ao dono; a página deitada no aparelho.
+  - **A publicação (22 nov):** o ramo com a `origin/main` juntada (sem conflito) foi para a `main` em 8c67ff5. O servidor subiu primeiro (`servidor.yml`, `VERSAO_REDE` 18) e o site depois (`publicar.yml`), os dois verdes. As Actions tinham parado pelo limite de gastos da conta; o dono abriu o repositório (público até o lançamento nas lojas), e a varredura de segredos no histórico não achou nada.
+  - **Conferida no ar** (terrario.tmdevlab.com): a escolha de mundos com a festa, a chegada, a praça no entardecer e de noite, a porta, a Vila Neon sem mudança, em pé e no computador. As fotos e o vídeo `noite-das-fantasias-no-ar.mp4` estão em `capturas-027/parte1/no-ar/` e foram ao dono. Os sons e a música já tinham a aprovação dele ("Sons e músicas ficaram boas").
+  - **O tempo da conferência:** de 4 a 6 h na parte 1 (a T23 sozinha levou umas 2 h de e2e mais 9,6 min de paridade). É a medida do jeito antigo, para comparar com a conferência por área decidida pelo dono em 22 nov.
+  - **Falta:** o cartão de três-quartos (fica de costas, mais perto: bom o bastante); a página deitada no aparelho de verdade; a rodada em família (o pelo do Monstrinho de noite, a gola do vampirinho, o lençol cinza de noite).
 
 A 035 já está na `main` (5996d11) e deixou a `VERSAO_REDE` em 17; esta spec é a próxima da fila. No criativo valem comprar, comer e as missões, como na Vila.
 

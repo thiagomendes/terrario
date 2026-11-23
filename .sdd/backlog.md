@@ -2,20 +2,36 @@
 
 Ideias e pedidos do dono que ainda não viraram spec, e a fila combinada. A ordem é combinada com o dono na hora; o número da spec não é a ordem. Atualizar ao fechar cada spec.
 
-## Fila combinada (19 nov 2026)
-1. **027, Noite das Fantasias** (`.sdd/specs/027-mundo-halloween/spec.md`, branch `feat/027-noite-das-fantasias`): **esboço aprovado pelo dono em 20 nov**; a spec sai do esboço, no nível da Vila Neon (em revisão em 21 nov). Ela traz:
-   - sete lugares;
-   - os moradores Vovó Zuleica, Conde Dudu, Lulu, Bento e Seu Jerônimo;
-   - umas 10 missões;
-   - a vassoura-patinete;
-   - comidas de festa brasileira.
-
-   O gato preto não pode se chamar Pretinho (ex.: Tufinho).
-2. **Riqueza nos mundos antigos**: Lua, Doce Reino e Rancho Alegre, um por spec, depois da 027, na ordem que o dono escolher. Cada um ganha:
+## Fila combinada (23 nov 2026)
+1. **Lojinha maior** (decisão do dono em 22 nov; spec nova, 036): o filho já comprou os 6 itens da lojinha premium.
+   - **12 itens novos**, com preço fixo, sem nada que some ou é sorteado;
+   - a ideia do filho é um brinquedo de andar (patinete, carrinho), diferente da vassoura-patinete da festa;
+   - primeiro vai um **esboço com uma foto de cada item candidato**, para o dono escolher com o filho;
+   - junto vai o conserto do **Unicórnio-pônei**, que tem borda estranha, brilho forte demais e treme quando voa (é defeito, e o orquestrador decide).
+2. **027, Noite das Fantasias, partes 2 e 3** (`.sdd/specs/027-mundo-halloween/`, branch `feat/027-noite-das-fantasias`). A parte 1 está no ar desde 22 nov. Faltam:
+   - a parte 2, por dentro: os três lugares por dentro e as missões n6 a n8;
+   - a parte 3, os passeios: a vassoura-patinete, os brinquedos e as missões n9 e n10.
+3. **Riqueza nos mundos antigos**: Lua, Doce Reino e Rancho Alegre, um por spec, depois da 027, na ordem que o dono escolher. Cada um ganha:
    - lugares por dentro;
    - objetos, brinquedos e veículos de toque;
    - moradores com nome e missões com história;
    - barracas de comprar e comer com as comidas do tema (o que a 032 deixou para depois).
+
+## Jeito de testar (decisão do dono em 22 nov 2026)
+- **A conferência passa a ser por área**, escolhida pelo que mudou:
+  - uma suíte curta de fumaça, de uns 15 min;
+  - a paridade só quando mexer no núcleo ou na rede;
+  - as três telas só nos testes de leiaute;
+  - os testes instáveis consertados, ou tirados do caminho que bloqueia a entrega.
+- **Nada de testes à noite** (a ventoinha), e nada de entregas em pedaços sem valor.
+- **Medir a qualidade:** em cada entrega, registrar o tempo da conferência e os defeitos achados depois de publicar. A referência do jeito antigo é a parte 1 da 027, com 4 a 6 h de conferência. Se a qualidade piorar, revemos.
+- A reorganização vem logo depois do esboço da lojinha, enquanto o dono escolhe os itens. Ao terminar, atualizar o passo 6 do fluxo no `CLAUDE.md`.
+
+## Repositório público
+- Em 22 nov, o dono abriu o repositório `terrario` para contornar o limite de gastos das Actions.
+- **Fechar antes do lançamento nas lojas (020).**
+- A varredura de segredos de 22 nov não achou nada no histórico (chaves da Azure, SAS, tokens do GitHub, Anthropic e AWS, chaves privadas, senhas).
+- Os workflows só usam `secrets.*` e rodam em push na `main` e `workflow_dispatch`, nunca em `pull_request`.
 
 ## Esperando o dono
 - **028, Cubolândia:** busca no INPI e domínio (`cubolandia.com.br`). Depois dela: 024 (conta da família), 020 (lojas), 025 (loja do jogo).
@@ -29,6 +45,7 @@ Ideias e pedidos do dono que ainda não viraram spec, e a fila combinada. A orde
   - 033;
   - 034 (os cinco mundos, a escolha de mundos, os ícones dos gestos, e quem cria o mundo vendo o amigo);
   - 035 (levar o mundo para a nuvem, o amigo entrar, cair e voltar, e sair para outro mundo);
+  - 027 parte 1 (a festa inteira, com o celular deitado também, por causa da perda do contexto WebGL vista só na ponte da placa do WSL). Para olhar com as crianças: o pelo do Monstrinho de noite (parece musgo?), a gola do vampirinho (parece orelha?) e o lençol do fantasminha, mais cinza de noite;
   - a 023 também pede: fps com 4 amigos de premium, o provador girando e se a criança de 3 a 4 anos entende a troca dragão e capa e o pote de moedas.
 - **Faixa azul embaixo no iPhone pelo ícone da tela de início** (12 nov 2026; captura do dono em 19 nov): vai com a casca nativa (020), decisão do dono em 19 nov. Correção genérica, para qualquer aparelho. O painel de medida da janela está pronto no commit 65c6e2d (desfeito na 034) para quando precisar.
 
@@ -58,6 +75,16 @@ Ideias e pedidos do dono que ainda não viraram spec, e a fila combinada. A orde
 - **A página deitada que trava ou perde o contexto WebGL** (T20, T22 e T23 da 027; a Vila deitada também): na ponte da placa do WSL, a placa trava inteira por uns 2 minutos (o `nvidia-smi` do Windows fica sem responder) e volta zerada; nunca passou de 450 MiB de 6 GB. Cai uma em duas ou três rodadas, em qualquer missão. Conferir no aparelho de verdade.
 
 ## Ideias soltas
+- **Sobras da parte 1 da 027** (o orquestrador decide e encaixa):
+  - **a volta ao lugar de nascer depois do teleporte:** com a máquina carregada, o teste da T23 viu a criança voltar ao ponto de nascer logo depois do teleporte; foi contornado no teste. Conferir se uma criança que anda logo depois do `pronto` é puxada de volta (defeito, se for);
+  - **o custo do véu:** o pior caso em pé ficou em 255 a 264 chamadas de desenho (a régua é 250), com 47 a 55 quadros. Para baixar, tapar o halo só nos bonecos perto de um lampião aceso;
+  - **o halo do lampião de abóbora** ficou fora: com 100 lampiões, somava 5 chamadas por pedaço;
+  - **a abóbora de bloco posta** continua cubo; virar peça redonda mexe em todos os mundos;
+  - **o `?tema=` no compartilhar:** abrir para os amigos um mundo aberto com `?tema=` leva a vila da festa à nuvem com a cara da Vila Neon (vinha de antes);
+  - **a Vila Neon, no pior caso, faz 29 quadros com a CPU 4× mais lenta** (a meta é 45), medida na T00 da 027;
+  - **o abraço do Bento de frente,** com os braços nas costas, pede a junta de cotovelo no braço dele (M); ficou o abraço de lado, bochecha com bochecha;
+  - **o cartão da festa de três-quartos:** a criança ficou de costas, mais perto (bom o bastante);
+  - **detalhes do revisor do portão:** as barracas em pé com metade de chão vazio; o forro da varanda da Vovó esticado; a Vovó acinzentada de noite sob a varanda; o morceguinho a 15 blocos aparece baixo.
 - **Acabamento do Rancho** (entra na spec de riqueza do Rancho):
   - refazer a foto da vitrine (um morro tapa o sítio);
   - girar as pás do moinho;
@@ -82,6 +109,7 @@ Ideias e pedidos do dono que ainda não viraram spec, e a fila combinada. A orde
 
 ## Feitas e publicadas (resumo)
 - **007 a 017, 019, 021, 023, 026, 030 a 035:** ver cada spec.
+- **027 parte 1, Noite das Fantasias (22 nov 2026):** o sexto mundo, a vila da festa: os lugares, os moradores com fantasia, os bichos, comprar e comer as comidas de festa, a varinha, as missões n1 a n5, a música e os sons (aprovados pelo dono). `VERSAO_REDE` 18. Também valem em todo mundo: a dica "Toque para comer" some depois de 8 s; os moradores e os bichos de longe com menos peças. Conferida no ar; fotos e vídeo em `capturas-027/parte1/no-ar/`.
 - **035, Entrada na nuvem (21 nov 2026):** quem leva o mundo para a nuvem vê o amigo na hora; quem cai volta vendo os blocos e as obras que mudaram; a sala fechada deixa voltar quem caiu (até 30 s); sair da nuvem abre o outro mundo, e o da sala mostra "Continuar". Conferida no ar; fotos em `capturas-035/no-ar/`.
 - **034 (20 nov 2026):**
   - saíram Bruma e Luz, Planeta Vivo, Mata Encantada e Era dos Dinos;
