@@ -30,16 +30,16 @@ type V3 = [number, number, number];
 
 export type IdBichoPremium = 'unicornio' | 'pinguim';
 
-interface Osso {
+export interface Osso {
   nome: string;
   pai: string | null;
   pos: V3;
 }
 
 /** Peça do bicho: a mesma peça do boneco, presa num osso (pelo nome, em `junta`). */
-type PecaBicho = Omit<Peca, 'junta'> & { osso: string };
+export type PecaBicho = Omit<Peca, 'junta'> & { osso: string };
 
-interface Desenho {
+export interface Desenho {
   ossos: Osso[];
   pecas: PecaBicho[];
   escala: number;
@@ -124,7 +124,7 @@ function perfilMecha(
 }
 
 // ---------------------------------------------------------------------------------- peças
-const caixa = (
+export const caixa = (
   osso: string,
   nome: string,
   t: V3,
@@ -133,7 +133,7 @@ const caixa = (
   raio = 0.06,
   extra: Partial<PecaBicho> = {},
 ): PecaBicho => ({ osso, nome, forma: 'caixa', tamanho: t, raio, pos, cor, ...extra });
-const bola = (
+export const bola = (
   osso: string,
   nome: string,
   r: number,
@@ -150,7 +150,7 @@ const bola = (
   cor,
   ...extra,
 });
-const cone = (
+export const cone = (
   osso: string,
   nome: string,
   h: number,
@@ -162,7 +162,7 @@ const cone = (
 ): PecaBicho => ({ osso, nome, forma: 'cilindro', tamanho: [h, rb, rc], pos, cor, ...extra });
 
 /** Olho de bichinho: a bolinha escura achatada, o brilho grande e o brilho pequeno. */
-function olho(osso: string, s: number, x: number, y: number, z: number, r: number): PecaBicho[] {
+export function olho(osso: string, s: number, x: number, y: number, z: number, r: number): PecaBicho[] {
   return [
     bola(osso, `olho${s}`, r, [s * x, y, z], '#1d1430', [0.82, 1, 0.36], { brilho: 0.5 }),
     bola(osso, `olho-brilho${s}`, r * 0.3, [s * x + s * r * 0.2, y + r * 0.38, z + r * 0.3], '#ffffff', [1, 1, 0.45], { brilho: 0.2 }),
@@ -386,8 +386,18 @@ export function pecasDoBicho(id: IdBichoPremium): Array<Omit<Peca, 'junta'> & { 
 
 /** Monta o bicho: os nós, o esqueleto e as malhas fundidas por material. */
 export function montarBichoPremium(scene: Scene, id: IdBichoPremium): BichoMontado {
-  const d = DESENHOS[id]();
-  const prefixo = `premium-${id}`;
+  return { ...montarDesenhoBicho(scene, DESENHOS[id](), `premium-${id}`), id };
+}
+
+/**
+ * Monta um desenho de bicho qualquer (os da lojinha e, na spec 036, os candidatos novos do
+ * esboço): os nós, o esqueleto e as malhas fundidas por material.
+ */
+export function montarDesenhoBicho(
+  scene: Scene,
+  d: Desenho,
+  prefixo: string,
+): Omit<BichoMontado, 'id'> {
   const mats: Plasticos = criarPlasticos(scene, prefixo);
   const raiz = new TransformNode(prefixo, scene);
   const escala = new TransformNode(`${prefixo}-escala`, scene);
@@ -460,7 +470,6 @@ export function montarBichoPremium(scene: Scene, id: IdBichoPremium): BichoMonta
     malhas.push(m);
   }
   return {
-    id,
     raiz,
     nos,
     repouso,
