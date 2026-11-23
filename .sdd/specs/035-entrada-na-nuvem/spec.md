@@ -1,7 +1,7 @@
 ---
 id: 035-entrada-na-nuvem
 title: 'Entrada na nuvem: quem cria o mundo vê o amigo, e quem joga com amigos consegue abrir outro mundo'
-status: APPROVED
+status: DONE
 base_branch: main
 created_at: 2026-11-20T17:00:00Z
 ---
