@@ -11,6 +11,7 @@ import {
 import { alvoDeSentar, alvoDoToque, diagnostico, esperarDica } from './vila-alvo';
 import { escolherNaRoleta } from './roleta-palco';
 import { contarGl, lerGl } from './gl-vivo';
+import { telasDoFluxo } from './telas';
 
 /**
  * Spec 026 (parte 2, etapa B): as quatro missões do parque, do "brincar" à festa, no celular
@@ -495,7 +496,8 @@ async function prenda(page: Page, t: Tamanho): Promise<void> {
   await foto(page, `${t}-f8-7-vovo-na-porta`);
 }
 
-for (const tamanho of ['empe', 'deitado'] as const) {
+// fluxo: só o celular em pé (ver e2e/telas.ts)
+for (const tamanho of telasDoFluxo(['empe', 'deitado'] as const)) {
   if (!SO || SO === 'bilhete' || SO === 'baloes')
     test(`Vila Neon, ${tamanho}: o bilhete do parque e os balões fugidos, do brincar à festa`, async ({
       browser,

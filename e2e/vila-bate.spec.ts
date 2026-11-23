@@ -1,6 +1,7 @@
 import { expect, test, type CDPSession, type Page } from '@playwright/test';
 import { mkdirSync } from 'node:fs';
 import { abrirMundo, assentar } from './guia-palco';
+import { telasDoFluxo } from './telas';
 
 /**
  * Spec 026 (parte 2, o bate-bate de guiar; dono, 16 nov 2026: "guiar o carrinho e bater no outro
@@ -72,7 +73,8 @@ const estado = (page: Page) =>
     };
   });
 
-for (const tamanho of ['deitado', 'empe'] as const) {
+// fluxo: só o celular em pé (ver e2e/telas.ts)
+for (const tamanho of telasDoFluxo(['deitado', 'empe'] as const)) {
   test(`Vila Neon, ${tamanho}: o bate-bate de guiar (o dedo no controle, a batida de verdade, a saída no tapete)`, async ({
     browser,
   }) => {

@@ -2,6 +2,7 @@ import { expect, test, type Browser, type Page } from '@playwright/test';
 import { mkdirSync } from 'node:fs';
 import { abrirMundo, assentar, criarMundo, type Tamanho } from './guia-palco';
 import { alvoDoToque, esperarDica } from './vila-alvo';
+import { telasDoFluxo } from './telas';
 
 /**
  * Spec 032: comprar e comer com o dedo de verdade, no celular em pé e deitado.
@@ -135,7 +136,8 @@ async function comer(page: Page, item: string): Promise<void> {
   await page.waitForTimeout(1200);
 }
 
-for (const tamanho of ['empe', 'deitado'] as const) {
+// fluxo: só o celular em pé (ver e2e/telas.ts)
+for (const tamanho of telasDoFluxo(['empe', 'deitado'] as const)) {
   test(`${tamanho}: comprar cada lanche da Vila e comer no criativo, com o dedo`, async ({ browser }) => {
     const page = await abrir(browser, `comprar-comer-${tamanho}`, tamanho);
     const erros: string[] = [];

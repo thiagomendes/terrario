@@ -2,6 +2,7 @@ import { expect, test, type Page } from '@playwright/test';
 import { mkdirSync } from 'node:fs';
 import { abrirMundo, assentar } from './guia-palco';
 import { alvoDoToque, esperarDica as esperarDicaAqui } from './vila-alvo';
+import { telasDoFluxo } from './telas';
 
 /**
  * Spec 026 (parte 3): a pista de skate, no celular em pé e deitado, com o dedo de verdade. A
@@ -29,7 +30,8 @@ async function esperarDica(page: Page, chave: string, texto: string): Promise<vo
 const fase = (page: Page) =>
   page.evaluate(() => window.__brumaluz!.vilaCasa!.estado().trilho.fase);
 
-for (const tamanho of ['empe', 'deitado'] as const) {
+// fluxo: só o celular em pé (ver e2e/telas.ts)
+for (const tamanho of telasDoFluxo(['empe', 'deitado'] as const)) {
   if (SO_TAMANHO && SO_TAMANHO !== tamanho) continue;
   test(`Vila Neon, ${tamanho}: o skate na rampa em U (pegar, subir, parar lá em cima, descer, vai e vem)`, async ({
     browser,

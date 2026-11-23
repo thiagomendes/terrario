@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import { mkdirSync } from 'node:fs';
 import { abrirMundo, assentar } from './guia-palco';
+import { telasDoFluxo } from './telas';
 
 /**
  * A dica de toque (pedido do dono, 16 nov 2026: no suporte dos patins "tem que adivinhar"): perto
@@ -30,7 +31,8 @@ async function irAoSuporte(page: Page, longe = 1.6) {
   await page.waitForTimeout(900);
 }
 
-for (const tamanho of ['deitado', 'empe'] as const)
+// fluxo: só o celular em pé (ver e2e/telas.ts)
+for (const tamanho of telasDoFluxo(['deitado', 'empe'] as const))
   test(`Vila Neon, ${tamanho}: a dica de toque no suporte dos patins e nos brinquedos do parque`, async ({
     browser,
   }) => {

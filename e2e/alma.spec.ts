@@ -2,6 +2,8 @@ import { expect, test, type Browser, type Page } from '@playwright/test';
 import { mkdirSync } from 'node:fs';
 import { PASTA_CAPTURAS } from '../playwright.config';
 import { escolherNaRoleta } from './roleta-palco';
+import { caixasDoHud, sobrepostas } from './leiaute';
+import { telasDoFluxo } from './telas';
 
 /**
  * Spec 023 "Alma do jogo" (fase B): o HUD de verdade (carteira, nível, cartão da missão e o
@@ -128,59 +130,8 @@ export async function semAvisos(page: Page) {
   await page.addStyleTag({ content: '.toast-area { display: none !important; }' });
 }
 
-/** As caixas da alma e as do HUD que elas não podem tapar (px CSS). */
-async function caixas(page: Page) {
-  return page.evaluate(() => {
-    const vis = (el: Element) => {
-      const r = el.getBoundingClientRect();
-      const cs = getComputedStyle(el);
-      return (
-        r.width > 2 &&
-        r.height > 2 &&
-        cs.display !== 'none' &&
-        cs.visibility !== 'hidden' &&
-        Number(cs.opacity) > 0.05
-      );
-    };
-    const caixa = (el: Element) => {
-      const r = el.getBoundingClientRect();
-      return {
-        x: r.left,
-        y: r.top,
-        w: r.width,
-        h: r.height,
-        nome: (el.className || el.tagName).toString().slice(0, 40),
-      };
-    };
-    const alma = Array.from(document.querySelectorAll('[data-alma-carteira], [data-alma-missao], [data-guia-placa]'))
-      .filter(vis)
-      .map(caixa);
-    const hud = Array.from(
-      document.querySelectorAll(
-        '.hud-info, .menu-hud, .bussola, .minimapa, .barra, [data-botao-mochila], .toque .joystick, .toque .botoes > *, .toque .topo > *, .toque .correr, .botao-amigos, .hud .chip-hud, .status .linha-icones',
-      ),
-    )
-      .filter(vis)
-      .filter((el) => !el.closest('[data-alma-carteira], [data-alma-missao]'))
-      .map(caixa);
-    return { alma, hud, W: innerWidth, H: innerHeight };
-  });
-}
-
-function sobrepostas(c: Awaited<ReturnType<typeof caixas>>): string[] {
-  const out: string[] = [];
-  const folga = 2;
-  for (const a of c.alma) {
-    if (a.x < 0 || a.y < 0 || a.x + a.w > c.W || a.y + a.h > c.H)
-      out.push(`${a.nome} fora da tela`);
-    for (const b of c.hud) {
-      const x = Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x);
-      const y = Math.min(a.y + a.h, b.y + b.h) - Math.max(a.y, b.y);
-      if (x > folga && y > folga) out.push(`${a.nome} × ${b.nome}`);
-    }
-  }
-  return out;
-}
+/** As caixas da alma e as do HUD que elas não podem tapar (px CSS; em e2e/leiaute.ts). */
+const caixas = caixasDoHud;
 
 /** Spec 030: o quadro de missões mora na roda do menu (ele nunca abre sozinho). */
 async function abrirQuadro(page: Page, toque: boolean) {
@@ -248,7 +199,8 @@ test('HUD da alma: a carteira em todo mundo, o selinho e a placa onde há missõ
 test('030: o quadro nunca abre sozinho; vem pela roda; o selinho guarda a missão escolhida', async ({
   browser,
 }) => {
-  for (const tamanho of ['pc', 'deitado', 'empe'] as Tamanho[])
+  // fluxo: só o celular em pé (o leiaute nas três telas é o teste do HUD, acima)
+  for (const tamanho of telasDoFluxo<Tamanho>(['pc', 'deitado', 'empe']))
     for (const tema of ['cidade-grande', 'rancho-alegre']) {
       const id = `alma-quadro-${tema}-${tamanho}`;
       const page = await abrir(browser, { mundo: { id, tema }, tamanho });
@@ -335,7 +287,8 @@ test('o baú: álbum, nível, habilidades e a banca de verdade (com a confirmaç
   browser,
 }) => {
   test.setTimeout(1_500_000);
-  for (const tamanho of ['pc', 'deitado', 'empe'] as Tamanho[])
+  // fluxo: só o celular em pé (o leiaute nas três telas é o teste do HUD, acima)
+  for (const tamanho of telasDoFluxo<Tamanho>(['pc', 'deitado', 'empe']))
     // spec 034: a Lua é o mundo sem missões (o Bruma e Luz saiu)
     for (const tema of ['cidade-grande', 'rancho-alegre', 'exploracao-lunar']) {
       const toque = tamanho !== 'pc';

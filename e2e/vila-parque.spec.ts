@@ -2,6 +2,7 @@ import { expect, test, type Page } from '@playwright/test';
 import { mkdirSync } from 'node:fs';
 import { abrirMundo, assentar } from './guia-palco';
 import { abrirRoleta, escolherNaRoleta, esperarItem } from './roleta-palco';
+import { telasDoFluxo } from './telas';
 
 /**
  * Spec 026 (parte 2, o Parque de diversões): "sentar e ser levado" e os brinquedos de tocar, no
@@ -72,7 +73,8 @@ async function dedo(page: Page, x: number, y: number, dx: number, dy: number, ms
   await page.waitForTimeout(400);
 }
 
-for (const tamanho of ['deitado', 'empe'] as const) {
+// fluxo: só o celular em pé (ver e2e/telas.ts)
+for (const tamanho of telasDoFluxo(['deitado', 'empe'] as const)) {
   test(`Vila Neon, ${tamanho}: o parque (roda-gigante, carrossel, bate-bate e os brinquedos de tocar)`, async ({
     browser,
   }) => {

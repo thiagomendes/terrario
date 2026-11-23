@@ -1,6 +1,7 @@
 import { expect, test, type Browser, type Page } from '@playwright/test';
 import { mkdirSync } from 'node:fs';
 import { abrirMundo, assentar, type Tamanho } from './guia-palco';
+import { telasDoFluxo } from './telas';
 
 /**
  * Spec 027 (T14): comprar nas barracas da Noite das Fantasias com o dedo de verdade, deitado e
@@ -165,7 +166,8 @@ async function comprar(page: Page, b: Balcao, fotos?: string): Promise<number> {
   return ms;
 }
 
-for (const tamanho of ['deitado', 'empe'] as const)
+// fluxo: só o celular em pé (ver e2e/telas.ts)
+for (const tamanho of telasDoFluxo(['deitado', 'empe'] as const))
   test(`${tamanho}: comprar em cada barraca da festa, com o dedo`, async ({ browser }) => {
     const page = await abrir(browser, `compras-027-${tamanho}`, tamanho);
     const balcoes = (await page.evaluate(() => window.__brumaluz!.baileCompras!.balcoes())) as unknown as Balcao[];
