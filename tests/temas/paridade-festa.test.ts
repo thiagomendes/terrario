@@ -113,14 +113,14 @@ const ESPERADO: Hashes = {
   quadrosCeu: 'cbf44b22558945de',
   // (regravado na rodada do revisor visual da T24: o sapinho de olhos de frente, com o brilho,
   // e a boca em curva de sorriso)
-  criaturas: 'b25c160b4d8fd864',
+  criaturas: '0c7e1fb4eab334c9',
   movimento: 'dacd063760735de4',
   vozes: 'c3f0935da623a647',
   mundo: '7aee8a78a6d0dbfb',
   textos: '6e1454340067bc28',
   // (regravado no portão da T24, pela mesma roupa da Celeste, que o tema inteiro também leva; e
   // de novo na rodada do revisor visual, pelas mesmas mudanças do povoado e do sapinho)
-  resto: '371b03481b78fc13',
+  resto: '1d0c3dfd6247208f',
 };
 
 async function sha(partes: (Uint8Array | Uint8ClampedArray | string)[]): Promise<string> {

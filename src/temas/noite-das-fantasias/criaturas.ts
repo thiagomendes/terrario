@@ -130,10 +130,12 @@ function sapinho(): PecaCriatura[] {
     // a pupila no meio do olho e um pouco para dentro, com o brilho grande; de lado, os olhos
     // saltados com a boca reta lembravam a adultos o sapo de um meme)
     b.bola(0.06, verde, [1, 1, 1], [s * 0.075, 0.08, 0.04]);
+    // (a pupila grande, quase do tamanho do branco, bem à frente dele: de qualquer lado de onde
+    // se olha, ela fica no meio do olho)
     b.bola(0.048, '#ffffff', [1, 1, 0.6], [s * 0.075, 0.085, 0.077]);
-    b.bola(0.03, '#231a28', [1, 1.1, 0.5], [s * 0.068, 0.083, 0.102], { brilho: 0.35 });
-    b.bola(0.013, '#ffffff', [1, 1, 0.5], [s * 0.068 + 0.011, 0.097, 0.116], { brilho: 0.4 });
-    b.bola(0.006, '#ffffff', [1, 1, 0.5], [s * 0.068 - 0.009, 0.072, 0.116], { brilho: 0.4 });
+    b.bola(0.036, '#231a28', [1, 1.08, 0.45], [s * 0.072, 0.084, 0.098], { brilho: 0.35 });
+    b.bola(0.014, '#ffffff', [1, 1, 0.5], [s * 0.072 + 0.012, 0.099, 0.114], { brilho: 0.4 });
+    b.bola(0.007, '#ffffff', [1, 1, 0.5], [s * 0.072 - 0.01, 0.072, 0.114], { brilho: 0.4 });
     b.bola(0.03, '#ff9aa8', [1.4, 0.75, 0.3], [s * 0.1, -0.02, 0.1]);
   }
   // o sorriso de sapo: curto e bem curvo, os cantos para cima
