@@ -112,11 +112,12 @@ const DESLOCAR: Readonly<Record<string, [number, number, number]>> = {
   algodao_doce: [0.035, 0, 0],
   ovo_cozido: [0.06, -0.04, 0],
   frutinhas: [0.06, -0.04, 0],
-  // (o docinho da vez na altura da boca: mais baixo, a forminha ficava no queixo)
-  brigadeiro: [0.03, 0.08, 0],
-  beijinho: [0.03, 0.08, 0],
-  cajuzinho: [0.03, 0.08, 0],
-  surpresa_uva: [0.03, 0.08, 0],
+  // (o docinho da vez um tiquinho abaixo da boca: portão da T24, com a forminha na altura da
+  // boca, a beira dela parecia dentes; mais baixo que isso, a forminha ficava no queixo)
+  brigadeiro: [0.03, 0.035, 0],
+  beijinho: [0.03, 0.035, 0],
+  cajuzinho: [0.03, 0.035, 0],
+  surpresa_uva: [0.03, 0.035, 0],
   sacola_doces: [0.03, 0.02, 0],
   chocolate_quente: [0.03, -0.01, 0],
   pocao_uva: [0.03, 0, 0],

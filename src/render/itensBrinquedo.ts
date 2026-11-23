@@ -366,19 +366,20 @@ export function modeloNaMao(
         // spec 027 (T15): a forminha de papel pregueada com três docinhos (um some a cada
         // mordida): o brigadeiro com o granulado laranja, o beijinho branco com o cravo, o
         // cajuzinho com o amendoim e a surpresa de uva branca com a uva roxa em cima
-        add(ci('forminha', 0.034, 0.078, 0.06, '#f6ecdc'), 0, 0.017, 0);
-        for (let i = 0; i < 8; i++) {
-          const a = (i / 8) * Math.PI * 2;
-          const pr = add(cx(`prega${i}`, 0.012, 0.03, 0.006, 0.002, '#e4d2b4'), Math.cos(a) * 0.07, 0.018, Math.sin(a) * 0.07);
-          pr.rotation.y = -a;
-        }
-        const DOCE: Record<string, [string, string]> = {
-          brigadeiro: ['#5a3424', '#ff9a3a'],
-          beijinho: ['#fbf3e6', '#4a2a18'],
-          cajuzinho: ['#e0904a', '#c88a4a'],
-          surpresa_uva: ['#fbf3e6', '#7a3ea8'],
+        // (portão da T24: a forminha branca de pregas em risco, na frente da boca, parecia uma
+        // dentadura; agora colorida, com as pregas em gomos macios, sem ponta nem fresta)
+        const DOCE: Record<string, [string, string, string]> = {
+          brigadeiro: ['#5a3424', '#ff9a3a', '#f08a2c'],
+          beijinho: ['#fbf3e6', '#4a2a18', '#9a62d0'],
+          cajuzinho: ['#e0904a', '#c88a4a', '#b48ae0'],
+          surpresa_uva: ['#fbf3e6', '#7a3ea8', '#f08a2c'],
         };
-        const [corDoce, corTopo] = DOCE[item];
+        const [corDoce, corTopo, corForma] = DOCE[item];
+        add(ci('forminha', 0.034, 0.078, 0.06, corForma), 0, 0.017, 0);
+        for (let i = 0; i < 12; i++) {
+          const a = (i / 12) * Math.PI * 2;
+          add(bo(`prega${i}`, 0.011, corForma, [0.75, 1.45, 0.75]), Math.cos(a) * 0.066, 0.017, Math.sin(a) * 0.066);
+        }
         // (de lado para a boca: o +x é o primeiro que se come)
         for (let k = 0; k < 3; k++) {
           const a = (k / 3) * Math.PI * 2;
