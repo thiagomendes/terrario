@@ -215,9 +215,10 @@ function criarParticulas(scene: Scene, nome: string, max: number, tipo: 'fumaca'
         }
         let r: number;
         if (tipo === 'fumaca') {
-          // cresce macio e depois encolhe até sumir; o vento leva devagar e ela sobe um tico
-          q.v.scaleInPlace(Math.exp(-dt * 2.2));
-          q.v.y += dt * 0.25;
+          // cresce macio e depois encolhe até sumir; o vento leva devagar e ela sobe (a
+          // fumacinha faz uma curva para cima e se espalha, nada de bolo parado no chão)
+          q.v.scaleInPlace(Math.exp(-dt * 0.9));
+          q.v.y += dt * 0.7;
           const cresce = Math.min(1, f / 0.35);
           r = (q.r0 + (q.r1 - q.r0) * cresce) * (f < 0.6 ? 1 : 1 - (f - 0.6) / 0.4);
         } else {
@@ -550,8 +551,8 @@ function ligar(scene: Scene): void {
       const bocal = malhaChama?.getAbsolutePosition() ?? new Vector3(est.x, O[1] + 0.5, est.z);
       const p = bocal.add(new Vector3((rng() - 0.5) * 0.06, -0.06, (rng() - 0.5) * 0.06));
       // fiapos pequenos que descem um tico, vão para trás e sobem devagar (nada de bola no chão)
-      const v = new Vector3((rng() - 0.5) * 0.25, -0.22, (rng() - 0.5) * 0.25).addInPlace(frente.scale(-0.85));
-      fumaca.soltar(p, v, 0.03, 0.06 + rng() * 0.03, 1.4);
+      const v = new Vector3((rng() - 0.5) * 0.35, -0.55, (rng() - 0.5) * 0.35).addInPlace(frente.scale(-0.5));
+      fumaca.soltar(p, v, 0.025, 0.065 + rng() * 0.03, 1.7);
     }
     if (atual === 'bolhas' && est.soltar <= 0) {
       est.soltar = 0.42;

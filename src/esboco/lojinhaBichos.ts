@@ -130,9 +130,10 @@ function desenhoCoelho(): Desenho {
 
 // ------------------------------------------------------------------ tartaruguinha
 function desenhoTartaruga(): Desenho {
-  const VERDE = '#3aa85a';
-  const VERDE_CLARO = '#9be28c';
-  const AMARELO = '#e8c45a';
+  // (o casco verde-azulado com a borda âmbar: não some no gramado)
+  const VERDE = '#2a9a86';
+  const VERDE_CLARO = '#8fe3c6';
+  const AMARELO = '#f0b443';
   const PELE = '#a8e07c';
   const CREME = '#fff1bf';
   const ossos: Osso[] = [
@@ -140,10 +141,11 @@ function desenhoTartaruga(): Desenho {
     { nome: 'casco', pai: 'corpo', pos: [0, 0.17, 0] },
     { nome: 'cabeca', pai: 'corpo', pos: [0, 0.21, 0.26] },
     { nome: 'olhos', pai: 'cabeca', pos: [0, 0.07, 0.15] },
-    { nome: 'pernaFE', pai: 'corpo', pos: [-0.16, 0.08, 0.14] },
-    { nome: 'pernaFD', pai: 'corpo', pos: [0.16, 0.08, 0.14] },
-    { nome: 'pernaTE', pai: 'corpo', pos: [-0.16, 0.08, -0.13] },
-    { nome: 'pernaTD', pai: 'corpo', pos: [0.16, 0.08, -0.13] },
+    // (as patinhas um tico para fora do casco: aparecem de frente e de lado)
+    { nome: 'pernaFE', pai: 'corpo', pos: [-0.2, 0.07, 0.17] },
+    { nome: 'pernaFD', pai: 'corpo', pos: [0.2, 0.07, 0.17] },
+    { nome: 'pernaTE', pai: 'corpo', pos: [-0.2, 0.07, -0.15] },
+    { nome: 'pernaTD', pai: 'corpo', pos: [0.2, 0.07, -0.15] },
     { nome: 'rabo', pai: 'corpo', pos: [0, 0.1, -0.26] },
   ];
   const p: PecaBicho[] = [];
@@ -156,7 +158,7 @@ function desenhoTartaruga(): Desenho {
       rot: [Math.cos(a) * 0.65, 0, -Math.sin(a) * 0.65],
     }));
   }
-  p.push({ osso: 'casco', nome: 'borda', forma: 'anel', tamanho: [0.5, 0.045, 0], pos: [0, -0.03, 0], cor: AMARELO, brilho: 0.4 });
+  p.push({ osso: 'casco', nome: 'borda', forma: 'anel', tamanho: [0.5, 0.06, 0], pos: [0, -0.03, 0], cor: AMARELO, brilho: 0.4 });
   p.push(bola('casco', 'barriga', 0.235, [0, -0.07, 0], CREME, [1, 0.3, 1.1]));
   // uma florzinha no alto do casco (o detalhe só dela)
   for (let k = 0; k < 5; k++) {
@@ -173,7 +175,7 @@ function desenhoTartaruga(): Desenho {
   for (const s of [-1, 1])
     p.push(bola('cabeca', `bochecha${s}`, 0.022, [s * 0.075, 0.0, 0.148], '#ff9cc4', [1, 0.62, 0.3], { brilho: 0 }));
   for (const n of ['pernaFE', 'pernaFD', 'pernaTE', 'pernaTD'])
-    p.push(bola(n, 'pata', 0.065, [0, -0.03, 0], PELE, [1, 0.7, 1.25]));
+    p.push(bola(n, 'pata', 0.075, [0, -0.03, 0], PELE, [1, 0.75, 1.25]));
   p.push(cone('rabo', 'rabo', 0.08, 0.035, 0.006, [0, 0, -0.03], PELE, { rot: [-Math.PI / 2, 0, 0] }));
   return { ossos, pecas: p, escala: 1.55 };
 }

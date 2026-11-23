@@ -607,7 +607,7 @@ function coroa(P: Pecas, m: Medidas): void {
   const cores = ['#ff8fc0', '#fff7fb', '#c9a2ff'];
   const y = m.topoTampa - 0.13;
   // o aro de ramos verdes em volta da cabeça
-  P.anel('coroa-aro', 'cabeca', 'cabeca', 0.92, 0.05, [0, y, -0.01], FOLHA_ESC, { brilho: 0.3 });
+  P.anel('coroa-aro', 'cabeca', 'cabeca', 0.92, 0.035, [0, y, -0.01], FOLHA_ESC, { brilho: 0.3 });
   // dez flores de cinco pétalas (rosa, branca e lilás) e folhinhas entre elas; a da frente é a
   // maior, em cima da testa
   const n = 10;
@@ -660,19 +660,18 @@ function bone(P: Pecas, m: Medidas): void {
   const VERMELHO = '#ff5a5a';
   const b = m.baseChapeu;
   // a cúpula azul (cobre a tampa de cabelo inteira) e a faixa amarela
-  P.bola('bone-cupula', 'cabeca', 'cabeca', 0.48, [0, b - 0.06, -0.01], AZUL, [1, 0.55, 1], { brilho: 0.4 });
-  P.cone('bone-faixa', 'cabeca', 'cabeca', 0.07, 0.485, 0.48, [0, b - 0.08, -0.01], AMARELO, { brilho: 0.35 });
-  // o botão de estrela na frente
-  P.placa('bone-estrela', 'cabeca', 'cabeca', perfilEstrela(0.065), 0.02, [0, b + 0.07, 0.41], AMARELO, { rot: [-0.5, 0, 0], brilho: 0.4 });
-  // a aba para a frente
-  P.caixa('bone-aba', 'cabeca', 'cabeca', [0.6, 0.04, 0.3], [0, b - 0.09, 0.5], AZUL, 0.02, { rot: [-0.08, 0, 0], brilho: 0.4 });
-  // o pino e a hélice (gira no nó dela), duas pás em vermelho e amarelo
+  // a cúpula amarela (cobre a tampa de cabelo inteira), a aba vermelha e a estrela azul na
+  // frente (cores que se destacam de qualquer roupa)
+  P.bola('bone-cupula', 'cabeca', 'cabeca', 0.48, [0, b - 0.06, -0.01], AMARELO, [1, 0.55, 1], { brilho: 0.4 });
+  P.placa('bone-estrela', 'cabeca', 'cabeca', perfilEstrela(0.07), 0.02, [0, b + 0.07, 0.41], AZUL, { rot: [-0.5, 0, 0], brilho: 0.4 });
+  P.caixa('bone-aba', 'cabeca', 'cabeca', [0.6, 0.04, 0.3], [0, b - 0.09, 0.5], VERMELHO, 0.02, { rot: [-0.08, 0, 0], brilho: 0.4 });
+  // o pino e a hélice (gira no nó dela), duas pás em azul e vermelho
   P.cone('bone-pino', 'cabeca', 'cabeca', 0.12, 0.028, 0.022, [0, b + 0.24, -0.01], '#e6e9f2', { brilho: 0.6 });
   const pivo: V3 = [0, b + 0.31, -0.01];
-  P.bola('bone-botao', 'cabeca', 'cabeca', 0.04, [0, 0, 0], AMARELO, [1, 0.8, 1], { brilho: 0.5, ...sub('helice', pivo) });
+  P.bola('bone-botao', 'cabeca', 'cabeca', 0.04, [0, 0, 0], VERMELHO, [1, 0.8, 1], { brilho: 0.5, ...sub('helice', pivo) });
   for (const [s, cor] of [
     [-1, VERMELHO],
-    [1, AMARELO],
+    [1, AZUL],
   ] as const)
     P.placa(
       `bone-pa${s}`,
