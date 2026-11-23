@@ -221,11 +221,14 @@ const ENQUADRAMENTOS: Record<IdTemaE2e, Enquadramento> = {
       // Tortas com as casinhas e as árvores do fundo)
       cam: [-17, 82, -156],
       alvo: [-33, 79, -190],
-      crianca: [-21.5, -166.5],
       // (portão da T24: a criança de roupa comum no cartão da festa das fantasias não dizia a
-      // festa; de bruxinha, o chapéu pontudo lê de costas, e o bicho do tema ao lado dela)
+      // festa; de bruxinha, com o bicho do tema ao lado dela. Na rodada do revisor visual, mais
+      // perto da câmera e um tico à direita do meio: o chapéu e a abóbora saltitante leem no
+      // cartão pequeno; a abóbora gigante acesa, com as pupilas, fica de fundo. De três-quartos
+      // ainda não: virar a criança pelo `apontar` não a tirou de costas na foto)
+      crianca: [-21.6, -162.7],
       fantasia: { id: 'bruxinha-festa', cor: 0 },
-      parados: [{ tipo: 'cervo', p: [-23.6, -167.6] }],
+      parados: [{ tipo: 'cervo', p: [-23.0, -162.7] }],
     },
   },
   'cidade-grande': {

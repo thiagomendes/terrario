@@ -1606,7 +1606,9 @@ export function criarCena(
   const tapaNaFesta = temaAtual.id === 'noite-das-fantasias';
   const cuidarDoBrilho = (m: Mesh) => {
     if (!semBrilho(m.name)) return;
-    if (tapaNaFesta && !m.name.startsWith('personagem-balao')) tapaOGlow(m);
+    // (só a cabeça e o tronco, onde o halo pegava: o corpo inteiro no mapa do brilho somava
+    // umas cem chamadas de desenho no pior caso da praça)
+    if (tapaNaFesta && /cabeca|tronco/.test(m.name) && !m.name.startsWith('personagem-balao')) tapaOGlow(m);
     else glow.addExcludedMesh(m);
   };
   for (const m of scene.meshes) cuidarDoBrilho(m as Mesh);
