@@ -108,12 +108,20 @@ describe('o mapa das áreas (e2e/areas.json)', () => {
     expect(t.areas).toEqual(Object.keys(mapa.areas));
   });
 
-  it('a escolha: a cena sozinha é comum (só a fumaça); um ajudante do e2e chama as suítes que o usam', () => {
+  it('a escolha: a cena sozinha é comum (só a fumaça); o teste mudado roda ele mesmo, sem a área', () => {
     const c = planejar(RAIZ, mapa, ['src/render/cena.ts', '.sdd/backlog.md']);
     expect(c.areas).toEqual([]);
+    expect(c.suitesAvulsas).toEqual([]);
     expect(c.soFumaca).toEqual(['src/render/cena.ts', '.sdd/backlog.md']);
+    // o ajudante: as suítes que o importam (direto ou não)
     const g = planejar(RAIZ, mapa, ['e2e/achar-amigo-palco.ts']);
-    expect(g.areas).toContain('nuvem-amigos');
+    expect(g.areas).toEqual([]);
+    expect(g.suitesAvulsas).toEqual(expect.arrayContaining(['achar-amigo.spec.ts', 'achar-amigo-nuvem.spec.ts']));
+    expect(g.suitesAvulsas).not.toContain('vila-neon.spec.ts');
+    // a suíte mudada de uma área que já roda não entra duas vezes
+    const s = planejar(RAIZ, mapa, ['src/ui/alma/loja.ts', 'e2e/lojinha.spec.ts', 'e2e/vozes.spec.ts']);
+    expect(s.areas).toEqual(['alma-lojinha']);
+    expect(s.suitesAvulsas).toEqual(['vozes.spec.ts']);
   });
 
   it('o grep do Playwright: o nome da suíte inteiro e o título como texto', () => {

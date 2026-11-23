@@ -66,7 +66,7 @@ const daSuite = areaDaSuite(mapa);
 // o que roda em cada parte
 const naArea = (it: ItemDeTeste) => plano.areas.includes(daSuite.get(it.suite) ?? '');
 const quarentena = mapa.quarentena.filter((q) => plano.tudo || naArea(q));
-const suitesDasAreas = plano.areas.flatMap((a) => mapa.areas[a].suites).sort();
+const suitesDasAreas = [...plano.areas.flatMap((a) => mapa.areas[a].suites), ...plano.suitesAvulsas].sort();
 const suitesTudo = Object.values(mapa.areas)
   .flatMap((a) => a.suites)
   .sort();
@@ -76,6 +76,8 @@ console.log(`base: ${BASE}; ${mudados.length} arquivo(s) mudado(s)`);
 if (plano.tudo) console.log(`tudo por causa de: ${plano.porqueTudo}`);
 for (const a of plano.areas)
   console.log(`  área ${a} (${mapa.areas[a].suites.length} suítes): ${(plano.porque[a] ?? ['--tudo']).slice(0, 4).join(', ')}${(plano.porque[a]?.length ?? 0) > 4 ? ', ...' : ''}`);
+if (plano.suitesAvulsas.length)
+  console.log(`  e mais ${plano.suitesAvulsas.length} suítes pelo teste mudado: ${plano.suitesAvulsas.slice(0, 6).join(', ')}${plano.suitesAvulsas.length > 6 ? ', ...' : ''}`);
 console.log(`  paridade: ${plano.paridade ? `sim (${plano.porqueParidade.slice(0, 4).join(', ') || '--tudo'})` : 'não'}`);
 if (plano.soFumaca.length) console.log(`  só a fumaça: ${plano.soFumaca.slice(0, 8).join(', ')}${plano.soFumaca.length > 8 ? ', ...' : ''}`);
 console.log(`  fumaça: ${mapa.fumaca.length} itens; quarentena: ${quarentena.length} itens`);
@@ -228,7 +230,7 @@ if (buildOk) {
       return { ok: c.falhou === 0, resumo: texto(c) + (c.falhas.length ? `\n      ${c.falhas.join('\n      ')}` : '') };
     });
     if (!tem('--so-fumaca') && suitesDasAreas.length)
-      await passo(`áreas (${plano.areas.join(', ')})`, true, () =>
+      await passo(`áreas (${[...plano.areas, ...(plano.suitesAvulsas.length ? [`+${plano.suitesAvulsas.length} suítes`] : [])].join(', ')})`, true, () =>
         // o que a fumaça já rodou não roda de novo
         lotesE2e('areas', suitesDasAreas, { inverso: [grepDosItens(mapa.fumaca), semQuarentena].filter(Boolean).join('|') }),
       );

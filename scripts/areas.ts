@@ -108,6 +108,9 @@ export interface Plano {
   areas: string[];
   /** Para cada área escolhida, os arquivos que a dispararam. */
   porque: Record<string, string[]>;
+  /** Suítes de fora das áreas escolhidas que rodam porque o teste delas mudou. */
+  suitesAvulsas: string[];
+  porqueAvulsas: Record<string, string[]>;
   paridade: boolean;
   porqueParidade: string[];
   /** Arquivos mudados que não disparam nada além da fumaça. */
@@ -139,26 +142,30 @@ export function planejar(
   const suites = arquivosDe(raiz, 'e2e').filter(ehSuite);
   const fechoDaSuite = new Map(suites.map((s) => [s, fechoDeImports(raiz, [s])]));
 
+  // o teste mudado roda ele mesmo (a suíte, ou as suítes que usam o ajudante mudado), sem
+  // puxar a área inteira: quem escolhe as áreas é o código do jogo
+  const avulsas = new Map<string, string[]>();
+  const avulsa = (suite: string, por: string) => {
+    const l = avulsas.get(suite) ?? [];
+    if (!l.includes(por)) l.push(por);
+    avulsas.set(suite, l);
+  };
   for (const f of mudados) {
     let algum = false;
     if (!porqueTudo && mapa.tudo.some((g) => casa(g, f))) porqueTudo = f;
     if (mapa.paridade.gatilhos.some((g) => casa(g, f)) || fecho.has(f)) porqueParidade.push(f);
-    if (ehSuite(f)) {
+    if (ehSuite(f) && existsSync(join(raiz, f))) {
       const nome = nomeDaSuite(f);
       if (nome === mapa.paridade.suite) porqueParidade.push(f);
-      const a = daSuite.get(nome);
-      if (a) {
-        marcar(a, f);
+      else {
+        avulsa(nome, f);
         algum = true;
       }
     } else if (f.startsWith('e2e/') && f.endsWith('.ts')) {
       for (const [s, fs] of fechoDaSuite)
-        if (fs.has(f)) {
-          const a = daSuite.get(nomeDaSuite(s));
-          if (a) {
-            marcar(a, f);
-            algum = true;
-          }
+        if (s !== f && fs.has(f) && nomeDaSuite(s) !== mapa.paridade.suite) {
+          avulsa(nomeDaSuite(s), f);
+          algum = true;
         }
     }
     for (const [id, a] of Object.entries(mapa.areas))
@@ -173,11 +180,15 @@ export function planejar(
     marcar(a, '--areas');
   }
   const tudo = !!porqueTudo;
+  const areas = tudo ? Object.keys(mapa.areas) : Object.keys(mapa.areas).filter((a) => porque[a]);
   return {
     tudo,
     porqueTudo,
-    areas: tudo ? Object.keys(mapa.areas) : Object.keys(mapa.areas).filter((a) => porque[a]),
+    areas,
     porque,
+    // as que a área escolhida já roda não entram de novo
+    suitesAvulsas: [...avulsas.keys()].filter((s) => !areas.includes(daSuite.get(s) ?? '')).sort(),
+    porqueAvulsas: Object.fromEntries(avulsas),
     paridade: tudo || porqueParidade.length > 0,
     porqueParidade: [...new Set(porqueParidade)],
     soFumaca: [...new Set(soFumaca)],
