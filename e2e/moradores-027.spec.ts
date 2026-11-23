@@ -19,11 +19,12 @@ type V3 = [number, number, number];
 const PASTA = process.env.MORADORES_PASTA ?? 'capturas-027/parte1/moradores';
 
 /** Quem fotografar: o nome da foto, o morador ("baile:n") e o rumo da câmera (graus, 0 = sul). */
-const QUEM: Array<{ nome: string; n: number; rumo?: number; longe?: number }> = [
+const QUEM: Array<{ nome: string; n: number; rumo?: number; longe?: number; giroLado?: number }> = [
   { nome: 'vovo', n: 0 },
   { nome: 'dudu', n: 1 },
-  // (a Lulu espia da quina de uma casinha: a câmera fica na rua, a leste dela)
-  { nome: 'lulu', n: 2, rumo: 90 },
+  // (a Lulu espia da quina de uma casinha: a câmera fica na rua, a leste dela; a de lado vai
+  // para o outro lado, porque deste um poste de lanterna ficava bem na frente dela)
+  { nome: 'lulu', n: 2, rumo: 90, giroLado: -0.85 },
   { nome: 'bento', n: 3, longe: 4.4 },
   { nome: 'jeronimo', n: 4 },
   { nome: 'filo', n: 5 },
@@ -246,7 +247,7 @@ test('os moradores com posto da festa, de dia e de noite, e a calça do Dudu', a
       await page.waitForTimeout(1500);
       for (const [tomada, giro] of [
         ['frente', 0],
-        ['lado', 0.85],
+        ['lado', q.giroLado ?? 0.85],
       ] as const) {
         const a = ang + giro;
         await camera(page, [m.x + Math.sin(a) * d, m.y + alto + 0.55, m.z + Math.cos(a) * d], alvo);

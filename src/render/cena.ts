@@ -1600,10 +1600,17 @@ export function criarCena(
   // personagem e item na mão nunca brilham: o piso de luz deles é emissivo,
   // mas não é fonte de luz (inclui malhas criadas depois, como ao trocar a aparência)
   const semBrilho = (nome: string) => nome.startsWith('personagem');
-  for (const m of scene.meshes) if (semBrilho(m.name)) glow.addExcludedMesh(m as Mesh);
-  scene.onNewMeshAddedObservable.add((m) => {
-    if (semBrilho(m.name)) glow.addExcludedMesh(m as Mesh);
-  });
+  // spec 027 (portão da T24): na festa, os lampiões acendem atrás de quem passa; fora do mapa do
+  // brilho, o halo deles passava por cima da cabeça como um véu branco. Lá o boneco tapa o brilho
+  // do que fica atrás (o balão do gesto, transparente, continua fora)
+  const tapaNaFesta = temaAtual.id === 'noite-das-fantasias';
+  const cuidarDoBrilho = (m: Mesh) => {
+    if (!semBrilho(m.name)) return;
+    if (tapaNaFesta && !m.name.startsWith('personagem-balao')) tapaOGlow(m);
+    else glow.addExcludedMesh(m);
+  };
+  for (const m of scene.meshes) cuidarDoBrilho(m as Mesh);
+  scene.onNewMeshAddedObservable.add((m) => cuidarDoBrilho(m as Mesh));
 
   // os outros jogadores (mundo com amigos): personagem, apelido e item na mão
   const outrosJogadores = criarOutrosJogadores(scene);
