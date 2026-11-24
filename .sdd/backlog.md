@@ -12,10 +12,13 @@ Ideias e pedidos do dono que ainda não viraram spec, e a fila combinada. A orde
    - **câmera em primeira pessoa num botão de trocar** (olho), com transição suave, as mãozinhas segurando o bloco, a escolha guardada no aparelho; volta sozinha à terceira pessoa ao comprar ou vestir na lojinha. Esboço primeiro;
    - **bloco nunca em cima de corpo** (defeito): hoje o núcleo só olha os jogadores, numa caixa menor que o corpo, e deixa pôr bloco em cima de bicho e de amigo, que ficam presos. Recusar onde houver criança, amigo, bicho ou morador, e soltar quem ficar preso;
    - **bloco só encostado**, em todos os modos: o bloco só entra encostado em outro bloco ou no chão (lado, embaixo ou em cima), com o tremor de mão das outras recusas.
-3. **027, Noite das Fantasias, partes 2 e 3** (`.sdd/specs/027-mundo-halloween/`, branch `feat/027-noite-das-fantasias`). A parte 1 está no ar desde 22 nov. Faltam:
+3. **Redesenho de dois itens antigos** (decisão do dono em 24 nov, pelo portão visual da 036; spec pequena logo depois da 037). Os dois continuam com quem já comprou e só mudam de desenho:
+   - a camiseta de aquário: o peixe laranja de listras brancas pode lembrar um personagem de filme conhecido;
+   - o tênis de 20 moedinhas: as listras rosa, amarela e azul ficam perto de arco-íris.
+4. **027, Noite das Fantasias, partes 2 e 3** (`.sdd/specs/027-mundo-halloween/`, branch `feat/027-noite-das-fantasias`). A parte 1 está no ar desde 22 nov. Faltam:
    - a parte 2, por dentro: os três lugares por dentro e as missões n6 a n8;
    - a parte 3, os passeios: a vassoura-patinete, os brinquedos e as missões n9 e n10.
-4. **Riqueza nos mundos antigos**: Lua, Doce Reino e Rancho Alegre, um por spec, depois da 027, na ordem que o dono escolher. Cada um ganha:
+5. **Riqueza nos mundos antigos**: Lua, Doce Reino e Rancho Alegre, um por spec, depois da 027, na ordem que o dono escolher. Cada um ganha:
    - lugares por dentro;
    - objetos, brinquedos e veículos de toque;
    - moradores com nome e missões com história;
