@@ -598,6 +598,36 @@
       "titulo": "Vila Neon, deitado:",
       "motivo": "a página deitada perde o contexto WebGL na ponte da placa do WSL (Unable to create VAO na T23 da 027); só roda no --tudo (o fluxo é em pé)",
       "nota": "conferir no aparelho"
+    },
+    {
+      "suite": "guia-chegada.spec.ts",
+      "titulo": "c6 em pé: chega no canteiro 4",
+      "motivo": "defeito do jogo, não do teste: no celular em pé, a criança chega pela trilha virada de lado para a obra e os fantasmas da camada de baixo ficam fora da tela (à esquerda) ou atrás do boneco; a mãozinha não acha lugar e não aparece (3 de 3 em 24 nov, com o diagnóstico no log)",
+      "nota": "sai da quarentena quando a mãozinha (src/ui/alma/maoObra.ts) ou a chegada no canteiro for consertada"
+    },
+    {
+      "suite": "guia-chegada.spec.ts",
+      "titulo": "c3 inteira andando",
+      "motivo": "provável defeito do jogo: às vezes a criança para na padaria (a 0,7 do ponto), o guia diz que chegou, o ✓ do núcleo não vem e o chegou volta a falso sem pegadas: fica parada na porta (1 de 3 em 24 nov, 1 de 2 na 027)",
+      "nota": "conferir a regra de chegar do cliente contra a do núcleo"
+    },
+    {
+      "suite": "premium-presentes.spec.ts",
+      "titulo": "dois na nuvem: cada uma vê o premium",
+      "motivo": "defeito do jogo: quando a amiga veste a capa de estrelas, o pinguim e a camiseta, a tela de quem vê fica parada de 730 a 870 ms (o maior quadro, medido no teste) montando o boneco dela; com isso vê em 1,1 a 3,5 s, e o limite é 1 s (5 de 5 em 23 e 24 nov; o outro lado, 0,3 a 0,8 s)",
+      "nota": "provável compilação dos materiais na primeira vez; sai da quarentena com o conserto"
+    },
+    {
+      "suite": "lampioes-027.spec.ts",
+      "titulo": "cem lampiões e cem caldeirões",
+      "motivo": "a cena parada oscila de 179 a 186 chamadas de desenho (os bichos andando), mais que o limite de +2; com a espera pela cena assentada passou 1 de 3. A malha dos lampiões sobe só 6 para 8",
+      "nota": "precisa medir as chamadas só das peças (por malha), não da cena inteira"
+    },
+    {
+      "suite": "som-veiculos.spec.ts",
+      "titulo": "os veículos se ouvem",
+      "motivo": "a trilha varia de frase para frase e o antes vai de 0,008 a 0,038: o mesmo toque mede de 1,5 a 13 dB; o sorvete, que fica por desenho uns 5 dB acima da rua, cai mais (2 de 4 em 23 e 24 nov). O toque agora só é medido quando toca de verdade",
+      "nota": "conferir de ouvido no aparelho; a medida precisaria da trilha parada ou da voz do toque isolada"
     }
   ]
 }
