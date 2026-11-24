@@ -37,7 +37,23 @@ O esboço fica no branch `esboco/036-lojinha-maior` (o código em `src/esboco/lo
 | T06 A vitrine, o provador e Meus tesouros | **pronta (24 nov)**: as abas só com desenho, a estrelinha de novo, o provador montado e o da pipa, a linha da pipa na figura, Meus tesouros com os 18 e o "o que sai" com a fantasia. Os detalhes abaixo |
 | T07 Sons dos itens | **pronta (24 nov)**: as rodinhas, o pedal, a hélice, as bolhas, o foguete, as gotinhas e a pipa, feitos em código e mais baixos que os passos. Os detalhes abaixo |
 | T00 Medidas de antes | **feita (24 nov)**, na `main` 2ed1739. Os números estão junto com os da T08 |
-| T08 Desempenho | **medida (24 nov)**: os brinquedos sozinhos passam (-6% de quadros, +17 chamadas), montar passa (50 a 95 ms), a vitrine passa (cartões em 0,1 s). **Duas metas falham com os itens novos juntos** (-14% a -19% de quadros, +39 a +47 chamadas), como já falhavam os premium de hoje na `main` (-23%, +71). E há picos ao descer. As causas estão abaixo. **Depois de juntar as malhas**, a mão ficou com -13% e +23 e os montados com -14% e +32: as duas metas ainda falham, e o descer passou nas 6 vezes |
+| T08 Desempenho | **medida (24 nov)**: os brinquedos sozinhos passam (-6% de quadros, +17 chamadas), montar passa (50 a 95 ms), a vitrine passa (cartões em 0,1 s). **Duas metas falham com os itens novos juntos** (-14% a -19% de quadros, +39 a +47 chamadas), como já falhavam os premium de hoje na `main` (-23%, +71). E há picos ao descer. As causas estão abaixo. **Depois de juntar as malhas**, a mão ficou com -13% e +23 e os montados com -14% e +32: as duas metas ainda falham, e o descer passou nas 6 vezes. **Aceito pelo orquestrador (24 nov):**
+  - esses dois são os piores casos, com 4 amigos à vista e todos cheios de itens novos ao mesmo tempo, e ficam melhores que os premium que já estão no ar (-23% e +71 na `main`);
+  - o que sobra são as peças que mexem (hélice, asas, pipa), e juntar mais mudaria o que se vê;
+  - fica no backlog como melhoria de desempenho dos bonecos (por exemplo, um boneco de longe mais simples). |
+| T10 Revisão do núcleo | **feita (24 nov)**, por um `engenheiro-nucleo-rede` novo: pode publicar.
+  - Os 4 apontamentos são detalhes. O da lista à parte guardar só id bem formado foi consertado (a12e065).
+  - Ficam no backlog, porque pedem paridade de novo:
+    - a descida que cai na janela de 0,5 s antes do carrossel ou do abraço (o amigo pode ver o brinquedo por até meio segundo);
+    - o `montado` junto com o premium da mão numa aparência forjada;
+    - a mão contra a varinha da fantasia no servidor.
+  - Nota para o futuro: um "zerar o perfil" tem que apagar as duas chaves (`terrario:alma-crianca` e `terrario:alma-comprados`). |
+| T11 Portão visual | **1ª rodada (24 nov): refazer.** O revisor novo achou 3 graves, todos consertados:
+  - a tela em pé escorregava ao abrir o detalhe;
+  - o cabo do guarda-chuva saía do alto da cabeça;
+  - o ícone das fantasias tinha a forma de máscara de bandido.
+
+  Também foram consertados os médios: o ícone de chapéu, as figuras cortadas, a varinha sem bolhas, "Meus tesouros" deitado, o selo no rosto, as pernas no carrinho, o boné e as fotos de prova. Ficaram fora, por não serem da 036: o rosto dos bonecos, o unicórnio sem graça de noite, as bolhas escuras de noite e o balão do carrossel por cima da criança montada. Falta a 2ª rodada. |
 | T09 Conferência por área | **feita (24 nov)**: nada voltou para trás por causa do ramo. Levou 79 min, mais 45 min conferindo contra a `main`. Uma suíte instável que também falha na `main` foi para a quarentena. Os detalhes abaixo |
 
 ### T01 (24 nov 2026, `engenheiro-nucleo-rede`)
