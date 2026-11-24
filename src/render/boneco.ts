@@ -28,7 +28,7 @@ import {
   type TexturaPremium,
 } from '../personagem/boneco';
 import { ALTURA_PRANCHA } from '../personagem/bonecoFantasia';
-import { avancarAndar, boiarNuvem, estadoAndar, poseNoBrinquedo } from '../personagem/brinquedoAndar';
+import { GUIDAO, avancarAndar, boiarNuvem, estadoAndar, poseNoBrinquedo } from '../personagem/brinquedoAndar';
 import { luzPremium, texturaAquario } from './premiumLuzes';
 import type { Pose } from '../personagem/poses';
 import {
@@ -920,6 +920,34 @@ export function criarBoneco(
    * volta) e a nuvem boia junto com a criança. O estado anda em `aplicarPose`, antes da pose.
    */
   const andar = estadoAndar();
+  const mInv = new Matrix();
+  /**
+   * Spec 036 (T05, acerto do dono): os braços apontam do ombro para o ponto do guidão (o punho, o
+   * lado do volante), no espaço do tronco deste quadro: a mão fecha nele, parada ou andando, no
+   * impulso e no pedal. O braço gira em z e depois em x (o jeito do Babylon): a direção
+   * (sen z, −cos z·cos x, −cos z·sen x) leva o braço, que pende para baixo, até o ponto.
+   */
+  function maosNoGuidao(id: string, w: number): void {
+    const g = GUIDAO[id as keyof typeof GUIDAO];
+    if (!g || w <= 0 || !juntas.prancha || !juntas.tronco) return;
+    for (const n of [raiz, escalar, juntas.corpo, juntas.tronco, juntas.prancha]) n.computeWorldMatrix(true);
+    juntas.tronco.getWorldMatrix().invertToRef(mInv);
+    for (const [lado, braco] of [
+      ['E', juntas.bracoE],
+      ['D', juntas.bracoD],
+    ] as const) {
+      const alvo = Vector3.TransformCoordinates(
+        Vector3.TransformCoordinates(new Vector3(...g[lado]), juntas.prancha.getWorldMatrix()),
+        mInv,
+      ).subtractInPlace(braco.position);
+      const d = alvo.normalize();
+      const rz = Math.asin(Math.max(-1, Math.min(1, d.x)));
+      const rx = Math.atan2(-d.z, -d.y);
+      braco.rotation.x += (rx - braco.rotation.x) * w;
+      braco.rotation.z += (rz - braco.rotation.z) * w;
+      braco.rotation.y *= 1 - w;
+    }
+  }
   function animarBrinquedo(): void {
     const s = subjuntas;
     for (const r of [s.andarRodaF, s.andarRodaT]) if (r) r.rotation.x = andar.roda;
@@ -988,6 +1016,9 @@ export function criarBoneco(
     j.bracoE.rotation.z = suave('bracoEZ', alvo.bracoE[2], k);
     j.bracoD.rotation.y = suave('bracoDY', alvo.bracoD[1], k);
     j.bracoE.rotation.y = suave('bracoEY', alvo.bracoE[1], k);
+    // spec 036 (T05, acerto do dono): montada, as mãos fecham no guidão e no volante de verdade,
+    // como quer que o tronco esteja (fora de um gesto, que manda nos braços)
+    if (montado && andarVestido) maosNoGuidao(andarVestido, 1 - Math.min(1, Math.max(0, (pose.pesoGesto ?? 0) / 0.3)));
     j.cabeca.rotation.x = suave('cabecaX', alvo.cabeca[0], k);
     j.cabeca.rotation.y = suave('cabecaY', alvo.cabeca[1], k);
     j.cabeca.rotation.z = suave('cabecaZ', alvo.cabeca[2], k);

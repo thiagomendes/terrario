@@ -54,12 +54,30 @@ export interface Montaria {
 
 /** A bicicletinha maior que no esboço (spec: ela ficava pequena perto do boneco). */
 const BICI = 1.2;
+/** O meio do guidão da bicicletinha (antes da escala dela). */
+const GUIDAO_BICI: V3 = [0, 0.84, 0.36];
 
 export const MONTARIA: Readonly<Record<IdAndar, Montaria>> = {
   'patinete-luz': { corpoY: 0.135, sentada: false, bracoX: -1.0, bracoAbre: -0.12, perna: 0, pedal: 0, troncoX: 0.08, raioRoda: 0.075 },
   'carrinho-pedal': { corpoY: 0.05, sentada: true, bracoX: -0.85, bracoAbre: -0.16, perna: -1.45, pedal: 0.1, troncoX: 0.04, raioRoda: 0.13 },
-  bicicletinha: { corpoY: 0.3 + 0.47 * (BICI - 1), sentada: true, bracoX: -1.05, bracoAbre: -0.05, perna: -0.62, pedal: 0.3, troncoX: 0.28, raioRoda: 0.2 * BICI },
+  bicicletinha: { corpoY: 0.3 + 0.47 * (BICI - 1), sentada: true, bracoX: -1.05, bracoAbre: -0.05, perna: -0.62, pedal: 0.3, troncoX: 0.42, raioRoda: 0.2 * BICI },
   'nuvem-fofa': { corpoY: 0.36, sentada: true, bracoX: -0.25, bracoAbre: 0.35, perna: -1.3, pedal: 0, troncoX: 0, raioRoda: 0, flutua: 0.035 },
+};
+
+/**
+ * Onde as mãos fecham em cada brinquedo (no espaço da prancha, antes da escala do boneco): os
+ * punhos do guidão (o patinete, a bicicletinha), os dois lados do volante (o carrinho) e, na nuvem,
+ * a almofada da frente. `folga`: o quanto a mão pode ficar longe do ponto (em blocos).
+ */
+export const GUIDAO: Readonly<Record<IdAndar, { E: V3; D: V3; folga: number }>> = {
+  'patinete-luz': { E: [-0.2, 0.71, 0.27], D: [0.2, 0.71, 0.27], folga: 0.07 },
+  'carrinho-pedal': { E: [-0.13, 0.57, 0.15], D: [0.13, 0.57, 0.15], folga: 0.07 },
+  bicicletinha: {
+    E: [-0.21 * BICI, GUIDAO_BICI[1] * BICI, GUIDAO_BICI[2] * BICI],
+    D: [0.21 * BICI, GUIDAO_BICI[1] * BICI, GUIDAO_BICI[2] * BICI],
+    folga: 0.07,
+  },
+  'nuvem-fofa': { E: [-0.37, 0.8, 0.1], D: [0.37, 0.8, 0.1], folga: 0.07 },
 };
 
 // ------------------------------------------------------------------ o estado do andar
@@ -262,12 +280,16 @@ function bicicleta(P: Pecas): void {
     P.cone(`andar-bici-cubo-${nome}`, J, undefined, 0.07 * k, 0.035 * k, 0.035 * k, [0, 0, 0], MENTA_ESC, { rot: [0, 0, Math.PI / 2], ...g });
   }
   // o guidão com os punhos rosa e a campainha
-  P.cone('andar-bici-guidao', J, undefined, 0.5 * k, 0.022 * k, 0.022 * k, K([0, 0.87, 0.42]), PRATA, { rot: [0, 0, Math.PI / 2], brilho: 0.5, ...NO });
+  // (T05, acerto do dono: o guidão um tico para trás e para baixo, com a mesa saindo do garfo, para
+  // as mãos da criança alcançarem os punhos)
+  const [, gy, gz] = GUIDAO_BICI;
+  tubo(P, 'andar-bici-mesa', K([0, 0.86, 0.43]), K([0, gy, gz]), 0.022 * k, MENTA_ESC);
+  P.cone('andar-bici-guidao', J, undefined, 0.5 * k, 0.022 * k, 0.022 * k, K([0, gy, gz]), PRATA, { rot: [0, 0, Math.PI / 2], brilho: 0.5, ...NO });
   for (const s of [-1, 1]) {
-    P.cone(`andar-bici-punho${s}`, J, undefined, 0.12 * k, 0.034 * k, 0.034 * k, K([s * 0.21, 0.87, 0.42]), ROSA, { rot: [0, 0, Math.PI / 2], ...NO });
-    P.bola(`andar-bici-ponta${s}`, J, undefined, 0.036 * k, K([s * 0.275, 0.87, 0.42]), ROSA, [0.6, 1, 1], NO);
+    P.cone(`andar-bici-punho${s}`, J, undefined, 0.12 * k, 0.034 * k, 0.034 * k, K([s * 0.21, gy, gz]), ROSA, { rot: [0, 0, Math.PI / 2], ...NO });
+    P.bola(`andar-bici-ponta${s}`, J, undefined, 0.036 * k, K([s * 0.275, gy, gz]), ROSA, [0.6, 1, 1], NO);
   }
-  P.bola('andar-bici-campainha', J, undefined, 0.032 * k, K([-0.13, 0.905, 0.42]), '#ffc93d', [1, 0.6, 1], { brilho: 0.8, ...NO });
+  P.bola('andar-bici-campainha', J, undefined, 0.032 * k, K([-0.13, gy + 0.035, gz]), '#ffc93d', [1, 0.6, 1], { brilho: 0.8, ...NO });
   // o selim creme
   P.caixa('andar-bici-selim', J, undefined, [0.18 * k, 0.06 * k, 0.26 * k], K([0, 0.47, 0]), CREME, 0.03 * k, NO);
   // a cestinha de vime com a flor
@@ -321,6 +343,9 @@ function nuvem(P: Pecas): void {
     [-0.17, 0.52, -0.33, 0.19, B],
     [0.17, 0.52, -0.33, 0.19, B],
     [0, 0.58, -0.4, 0.2, B],
+    // (T05: os dois bracinhos da poltrona de nuvem, onde as mãos descansam)
+    [-0.37, 0.66, 0.1, 0.16, B],
+    [0.37, 0.66, 0.1, 0.16, B],
     [-0.15, 0.47, 0.47, 0.15, B],
     [0.15, 0.47, 0.47, 0.15, B],
     [0, 0.21, 0.02, 0.29, B3],
@@ -375,7 +400,11 @@ export function poseNoBrinquedo(id: string, alvo: RotacoesPose, pose: Pose, e?: 
   }
   alvo.pernaD = [pernaD, 0, 0];
   alvo.pernaE = [pernaE, 0, 0];
-  alvo.tronco = [troncoX, alvo.tronco[1], alvo.tronco[2]];
+  // (T05, acerto do dono: o volante parecia mexer a cada passo. Era o corpo de quem anda a pé:
+  // o tronco torcendo para um lado e para o outro a cada passo e o corpo inclinando na corrida,
+  // levando os braços junto. Montada, quem anda é o brinquedo: o tronco e o corpo ficam firmes)
+  alvo.tronco = [troncoX, 0, 0];
+  alvo.corpo = [0, 0, 0];
   const w = 1 - Math.min(1, Math.max(0, (pose.pesoGesto ?? 0) / 0.3));
   if (w <= 0) return;
   const mistura = (a: V3, b: V3): V3 => [a[0] + (b[0] - a[0]) * w, a[1] + (b[1] - a[1]) * w, a[2] + (b[2] - a[2]) * w];

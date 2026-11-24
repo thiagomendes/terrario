@@ -162,5 +162,10 @@ O esboço fica no branch `esboco/036-lojinha-maior` (o código em `src/esboco/lo
   - as rodinhas do patinete ficam acesas o tempo todo (a luz é uma por cena, para todos os bonecos: não dá para acender só quando roda);
   - os faróis do carrinho também ficam acesos de dia (mansos);
   - a figura do passarinho voando na lojinha não foi refeita: é uma linha no `fotoBoneco.ts` (aplicar a pose parada também com o passarinho), que está com o `desenvolvedor-jogo` na T06.
+- **Os acertos (24 nov, pelo vídeo do dono):** fotos de antes e depois em `capturas-036/t05-brinquedos/acertos/` (de três-quartos e de lado, parada e andando, de dia; o depois também de noite) e o vídeo novo `depois/brinquedos-andando.webm`.
+  - as mãos fecham no guidão: montada, os braços apontam do ombro para o punho (o patinete e a bicicletinha), para os lados do volante (o carrinho) e para os bracinhos da poltrona de nuvem (dois novos), no espaço do tronco de cada quadro (`maosNoGuidao` em `render/boneco.ts`, os pontos em `GUIDAO`). A bicicletinha ganhou a mesa do guidão (o guidão um tico para trás e para baixo) e a criança inclina um pouco mais para a frente;
+  - o volante "mexendo a cada passo" era o corpo de quem anda a pé: o tronco torcendo a cada passo e o corpo inclinando na corrida levavam os braços e as mãos junto, por cima do volante parado. Montada, o tronco e o corpo ficam firmes (só o impulso do patinete e o pedal mexem);
+  - `tests/render/maosNoGuidao.test.ts` (novo, com o boneco de verdade num motor sem tela): nos 4 brinquedos e nos dois corpos, parada e andando (o passo, o giro do tronco e a inclinação do corpo de quem anda), a mão fica a menos de 0,07 bloco do ponto do guidão ao longo de um ciclo inteiro; e o guidão e o volante não saem do lugar com o passo (só a nuvem boia, de propósito);
+  - o volante não vira nas curvas (ficaria natural, mas o boneco não sabe da curva sem mexer no corpo vivo: ficou de fora).
 
 Falta sempre, ao fim, a **rodada em família**.
