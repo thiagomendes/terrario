@@ -25,7 +25,7 @@ Ideias e pedidos do dono que ainda não viraram spec, e a fila combinada. A orde
   - os testes instáveis consertados, ou tirados do caminho que bloqueia a entrega.
 - **Nada de testes à noite** (a ventoinha), e nada de entregas em pedaços sem valor.
 - **Medir a qualidade:** em cada entrega, registrar o tempo da conferência e os defeitos achados depois de publicar. A referência do jeito antigo é a parte 1 da 027, com 4 a 6 h de conferência. Se a qualidade piorar, revemos.
-- A reorganização vem logo depois do esboço da lojinha, enquanto o dono escolhe os itens. Ao terminar, atualizar o passo 6 do fluxo no `CLAUDE.md`.
+- **Feito em 24 nov 2026** (main fb35dff): `node scripts/conferir.ts`, o mapa `e2e/areas.json`, a fumaça de uns 11 min e a quarentena. Uma mudança típica conferida em uns 30 min, contra 2 h 17 min do regime antigo. O passo 6 do `CLAUDE.md` já cita o script.
 
 ## Repositório público
 - Em 22 nov, o dono abriu o repositório `terrario` para contornar o limite de gastos das Actions.
@@ -54,25 +54,15 @@ Ideias e pedidos do dono que ainda não viraram spec, e a fila combinada. A orde
 - **022, Câmera em lugar apertado:** "deixa isso aí parado" (13 nov). O recorte de adereços continua fora.
 - **033, terceiro nível da roleta:** depois (ex.: "Festa" dentro de Gestos).
 
-## Testes antigos instáveis (caem também na `main`; achados na 034)
-- **`guia-chegada:128`:** no c6 em pé, a mãozinha não aparece em 4 s.
-- **`plantio:210`:** o HUD do Rancho no celular.
-- **`tesouro-fantasia:61`.**
-- **Na beira do limite, nas duas versões:**
-  - `som-veiculos:61`: o sorvete passa de 5 dB por pouco;
-  - `lojinha:107`: a festa leva perto de 3400 ms;
-  - o pulo do `achar-amigo-nuvem`: perto de 2500 ms;
-  - `som-veiculos:61`: a buzina também, perto de 5 dB (achado na 035).
-- **`capturas-encaixe:109`** (achado na 035, vem da 034): abre `/`, que agora é a Vila Neon, e não acha povoado perto do nascimento.
-- **`fantasias-aba`** (achado na 035): no celular, perde o contexto WebGL ao criar três mundos seguidos, às vezes; passou 2 de 2 no ramo e na `main` na conferência.
-- **Na nuvem, sem placa de vídeo:** os da roleta e os de tempo caem por lentidão; o e2e de verdade é no computador do dono.
-- **Achados na T23 da 027 (22 nov), que também caem na `main` (eab8b8b):**
-  - `capturas-encaixe:109`: "nenhum povoado perto do nascimento" (o `/` abre a Vila Neon desde a 034, que não tem povoado); cai sempre;
-  - `cidade-grande:242`: os 12 tijolos soltos não voltam para a mochila (0 de 12; o concreto e o asfalto voltam); 2 de 3 na `main`;
-  - `guia-chegada:61` (a c3 inteira andando): a trilha não passa para o lugar seguinte em 15 s;
-  - `vila-bate:76` (em pé): instável nas duas (na 027, a maior velocidade 16 numa vez; na `main`, `yaw` de nulo);
-  - `som-veiculos:61`: desta vez a buzina (3,7 dB, precisa de 6).
-- **A página deitada que trava ou perde o contexto WebGL** (T20, T22 e T23 da 027; a Vila deitada também): na ponte da placa do WSL, a placa trava inteira por uns 2 minutos (o `nvidia-smi` do Windows fica sem responder) e volta zerada; nunca passou de 450 MiB de 6 GB. Cai uma em duas ou três rodadas, em qualquer missão. Conferir no aparelho de verdade.
+## Testes instáveis e defeitos achados nos testes (24 nov 2026)
+- **A quarentena** fica em `e2e/areas.json`, com o motivo de cada teste (9 em 24 nov). Ela roda à parte e não segura a entrega. Instável novo entra lá com o motivo e só sai consertado.
+- **Defeitos do jogo achados pelos testes, ainda abertos:**
+  - **A tela trava ao ver um premium pela primeira vez:** quando a amiga veste um premium (capa de estrelas, pinguim, camiseta), a tela de quem vê para de 730 a 870 ms, provavelmente compilando os materiais. A amiga aparece em 1,1 a 3,5 s, e o limite é 1 s. Pesa na 036 (itens novos): conferir na T08.
+  - **c6 no celular em pé:** a mãozinha da obra não aparece; a criança chega pela trilha de lado e os blocos azuis de baixo ficam fora da tela ou atrás do boneco.
+  - **c3, a conferir:** às vezes a criança para na porta da padaria, o cliente diz que chegou, o ✓ do núcleo não vem e ela fica sem pegadas.
+  - **`cidade-grande:242`:** os 12 tijolos soltos não voltam para a mochila (o concreto e o asfalto voltam); 2 de 3 na `main` (achado na 027).
+- **Consertado:** a velocidade do carrinho de quem guia o bate-bate dobrava sem controle para refazer (`src/cliente/bate.ts`); vai ao ar com a próxima publicação.
+- **A página deitada perde o contexto WebGL** na ponte da placa do WSL (a placa trava uns 2 min). Esses testes só rodam no `--tudo`; conferir no aparelho de verdade.
 
 ## Ideias soltas
 - **Sobras da parte 1 da 027** (o orquestrador decide e encaixa):
