@@ -54,7 +54,7 @@ O esboço fica no branch `esboco/036-lojinha-maior` (o código em `src/esboco/lo
   - o ícone das fantasias tinha a forma de máscara de bandido.
 
   Também foram consertados os médios: o ícone de chapéu, as figuras cortadas, a varinha sem bolhas, "Meus tesouros" deitado, o selo no rosto, as pernas no carrinho, o boné e as fotos de prova. Ficaram fora, por não serem da 036: o rosto dos bonecos, o unicórnio sem graça de noite, as bolhas escuras de noite e o balão do carrossel por cima da criança montada. Falta a 2ª rodada. |
-| T09 Conferência por área | **feita (24 nov)**: nada voltou para trás por causa do ramo. Levou 79 min, mais 45 min conferindo contra a `main`. Uma suíte instável que também falha na `main` foi para a quarentena. Os detalhes abaixo |
+| T09 Conferência por área | **feita (24 nov)**: nada voltou para trás por causa do ramo. Levou 79 min, mais 45 min conferindo contra a `main`. Uma suíte instável que também falha na `main` foi para a quarentena. **Na conferência final** (38 min), nada voltou para trás: um teste da fumaça foi consertado no próprio teste, e um caiu pela ponte da placa e depois passou 3 de 3. Os detalhes abaixo |
 
 ### T01 (24 nov 2026, `engenheiro-nucleo-rede`)
 - **O catálogo:** os 12 no `PREMIUM` (`src/jogo/alma.ts`), com os ids, preços e efeitos da spec; as categorias `andar`, `chapeu` e `mao` no fim de `CATEGORIAS_PREMIUM`. A vitrine já lista os 18, sem a figura dos novos até a T03 e sem as abas até a T06.
@@ -342,5 +342,30 @@ O esboço fica no branch `esboco/036-lojinha-maior` (o código em `src/esboco/lo
   - há também um arquivo por som, no volume cheio;
   - o `tocarSom` do jogo foi tocado num `OfflineAudioContext`.
   - A hélice (0,06) e a pipa (0,09) ficam quase sumidas perto do passo (0,90): vale ouvir no aparelho.
+- **Depois de juntar as malhas** (`--mudados` com os 3 arquivos da rodada, em a12e065; 47 min 42 s):
+  - o Vitest deu 2332 de 2332, a fumaça 26 de 26, e nas áreas passaram 48 e caíram 2;
+  - as 2 que caíram eram o `tesouro-fantasia`, em pé e deitado. A causa estava no teste: o `scrollIntoViewIfNeeded` esperava parada a prévia que respira sem parar;
+  - foi consertado (8a8634c) e passou 4 de 4.
+- **A conferência final** (`--base d202ea3`; a rodada começou em 980b6f9 e o `9c357a5`, do cartão do boné, entrou no meio; 38 min 19 s, mais 3 min nas repetições):
+  - **as áreas:** a andar-construir (por causa do `render/formas.ts`), a alma e lojinha e o personagem. O leiaute e a paridade não entraram;
+  - **os resultados:**
+
+    | Parte | Tempo | Resultado |
+    |---|---|---|
+    | Vitest | 6 min 11 s | 2338 de 2338 |
+    | build | 10 s | ok |
+    | fumaça | 8 min 17 s | 25 de 26 |
+    | áreas | 22 min 33 s | 67 de 68 |
+    | quarentena | 1 min 8 s | o `premium-presentes` passou, 1 de 1 |
+
+  - **a fumaça, o `temas` da Cidade Grande:** o defeito era do teste, não do jogo.
+    - O bloco na mira era uma construção protegida do mundo (`estrutura`, a 40 blocos da cidade), que não quebra de propósito.
+    - O ramo não muda nada do mundo nem esse teste.
+    - O conserto foi esperar uma mira que não seja `estrutura`, andando 12 blocos para fora; a asserção de quebrar ficou igual. Depois, passou 3 de 3;
+  - **as áreas, o `dar-item` "a Ana joga, a Bia pega":**
+    - a página da Ana não ficou pronta em 180 s ("Unable to create vertex buffer"): o contexto WebGL se perdeu na ponte da placa do WSL;
+    - a mudança em `formas.ts` só vale com o `avessoClaro` ligado;
+    - repetido, passou 3 de 3. Não foi para a quarentena: **conferir no aparelho** se voltar;
+  - **nada voltou para trás por causa do ramo.**
 
 Falta sempre, ao fim, a **rodada em família**.

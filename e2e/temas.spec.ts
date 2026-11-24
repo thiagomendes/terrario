@@ -166,7 +166,23 @@ for (const [id, nome] of TEMAS) {
             e.teleportar!(e.posicao[0], e.posicao[2]);
           }
           e.apontar!(0, 1.2);
-          return e.alvo !== null;
+          // fora da área plana também nascem construções protegidas do mundo (a cúpula, a
+          // casinha: `estrutura` em src/world/protecao.ts); com a mira numa delas o bloco não
+          // quebra, de propósito (caiu assim na conferência final da 036, a 40 blocos da Cidade
+          // Grande). Então anda mais 12 blocos para fora e mira de novo
+          const a = e.alvo;
+          const prot = a
+            ? (e as unknown as { protecao?: (x: number, y: number, z: number) => string | null }).protecao?.(
+                a.x,
+                a.y,
+                a.z,
+              )
+            : null;
+          if (a && prot === 'estrutura' && p) {
+            e.teleportar!(p[0] - 12, p[2]);
+            return false;
+          }
+          return a !== null;
         },
         inicio,
         { polling: 500, timeout: 120_000 },
