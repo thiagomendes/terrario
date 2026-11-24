@@ -92,13 +92,29 @@ test('c3 inteira andando: um ✓ por lugar, a festa e as moedinhas no canto', as
     await page.waitForTimeout(300);
     await page.screenshot({ path: `${PASTA}/c3-${k + 1}-${r.alvo}.png` });
     if (k < 2)
-      await page.waitForFunction(
-        (c) => window.__guia!.alvo()?.chave !== c && (window.__guia!.pegadas() ?? 0) > 0,
-        r.alvo,
-        {
-          timeout: 15_000,
-        },
-      );
+      await page
+        .waitForFunction(
+          (c) => window.__guia!.alvo()?.chave !== c && (window.__guia!.pegadas() ?? 0) > 0,
+          r.alvo,
+          {
+            timeout: 15_000,
+          },
+        )
+        .catch(async (erro) => {
+          // o que o guia achava quando não passou para o lugar seguinte (para achar a causa)
+          console.log(
+            `guia: c3 parou em ${r.alvo} ${JSON.stringify(
+              await page.evaluate(() => ({
+                alvo: window.__guia!.alvo(),
+                chegou: window.__guia!.chegou(),
+                certos: window.__guia!.certos(),
+                pegadas: window.__guia!.pegadas(),
+                pes: window.__brumaluz!.jogadorPes!().map((v) => Math.round(v * 10) / 10),
+              })),
+            )}`,
+          );
+          throw erro;
+        });
   }
   const total = (Date.now() - t0) / 1000;
   console.log(
@@ -148,6 +164,33 @@ test('c6 em pé: chega no canteiro 4 e a mãozinha mostra onde o toque põe o bl
     .then(() => true)
     .catch(() => false);
   console.log(`guia: c6 mãozinha em até 4 s: ${viu}`);
+  if (!viu)
+    // onde a criança parou e onde estão os fantasmas da camada de baixo (para achar a causa)
+    console.log(
+      `guia: c6 sem mãozinha ${JSON.stringify(
+        await page.evaluate(() => {
+          const e = window.__brumaluz!;
+          const pes = e.jogadorPes!();
+          const lista = (e.fantasmasPerto?.() ?? []).filter((f) => f.canteiro === 4);
+          const yMin = Math.min(...lista.map((f) => f.y));
+          return {
+            pes: pes.map((v) => Math.round(v * 10) / 10),
+            yaw: Math.round((e.rotacao?.[1] ?? 0) * 100) / 100,
+            chegou: window.__guia!.chegou(),
+            tela: [innerWidth, innerHeight],
+            baixo: lista
+              .filter((f) => f.y === yMin)
+              .map((f) => {
+                const t = e.telaDoPonto!(f.x + 0.5, f.y + 0.5, f.z + 0.5);
+                return {
+                  t: t ? [Math.round(t.x), Math.round(t.y)] : null,
+                  d: Math.round(Math.hypot(f.x + 0.5 - pes[0], f.z + 0.5 - pes[2]) * 10) / 10,
+                };
+              }),
+          };
+        }),
+      )}`,
+    );
   await page.waitForTimeout(800);
   await page.screenshot({ path: `${PASTA}/c6-1-mao.png` });
   let postos = 0;

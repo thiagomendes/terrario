@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 
 import { PASTA_CAPTURAS } from '../playwright.config';
+import { telasDoFluxo } from './telas';
 
 const VIEWPORTS = [
   { nome: 'desktop', width: 1920, height: 1080 },
@@ -49,7 +50,8 @@ async function fracaoEstourada(
   );
 }
 
-for (const vp of VIEWPORTS) {
+// o brilho do cristal não é leiaute: só o celular (ver e2e/telas.ts)
+for (const vp of telasDoFluxo(VIEWPORTS, (v) => v.nome === 'celular')) {
   test(`cristal sem estouro em ${vp.nome}`, async ({ page }, testInfo) => {
     test.setTimeout(240_000);
     await page.setViewportSize({ width: vp.width, height: vp.height });

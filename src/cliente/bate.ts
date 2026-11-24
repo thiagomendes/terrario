@@ -87,7 +87,11 @@ export function criarReplicaBate(pista: PistaBate) {
           x: a.x + (c.x - a.x) * k,
           z: a.z + (c.z - a.z) * k,
           yaw: a.yaw + difRumo(c.yaw, a.yaw) * k,
-          vel: Math.hypot(c.x - a.x, c.z - a.z) / PASSO_BATE,
+          // a velocidade do próprio carrinho (o embalo e o empurrão), como a dos outros abaixo.
+          // Antes era o andado de `antes` até `c` num passo: quando o quadro do núcleo chegava
+          // sem controle para refazer, `antes` ficava um passo mais velho e a conta dobrava
+          // (6,4 no lugar de 3,2; até 16 com o acerto de uma batida), para o som e os testes
+          vel: Math.hypot(Math.sin(c.yaw) * c.v + c.kx, Math.cos(c.yaw) * c.v + c.kz),
         };
       });
     }

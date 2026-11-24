@@ -2,6 +2,7 @@ import { expect, test, type Page } from '@playwright/test';
 import { mkdirSync } from 'node:fs';
 import { abrirMundo, assentar } from './guia-palco';
 import { alvoDoToque, esperarDica as esperarDicaAqui } from './vila-alvo';
+import { telasDoFluxo } from './telas';
 
 /**
  * Spec 026 (parte 3): a Casa anos 80 por dentro, no celular em pé e deitado, com o dedo de
@@ -74,7 +75,8 @@ async function cameraBoa(page: Page, onde: string): Promise<void> {
   expect(c.camDist, `${onde}: a câmera não cola na criança`).toBeGreaterThan(2.4);
 }
 
-for (const tamanho of ['empe', 'deitado'] as const) {
+// fluxo: só o celular em pé (ver e2e/telas.ts)
+for (const tamanho of telasDoFluxo(['empe', 'deitado'] as const)) {
   if (SO_TAMANHO && SO_TAMANHO !== tamanho) continue;
   test(`Vila Neon, ${tamanho}: a Casa anos 80 por dentro (entrar, cada toque, sentar, a fita na TV)`, async ({
     browser,

@@ -2,6 +2,7 @@ import { expect, test, type Browser, type Page } from '@playwright/test';
 import { mkdirSync } from 'node:fs';
 import { abrirMundo, andarPelaTrilha, assentar, criarMundo, escolherNaRoda, tocar, type Tamanho } from './guia-palco';
 import { contarGl, lerGl } from './gl-vivo';
+import { telasDoFluxo } from './telas';
 
 /**
  * Spec 027: as missões n1 a n5 da Noite das Fantasias na tela, com o dedo de verdade.
@@ -610,7 +611,8 @@ const esperar = async (page: Page, f: string, arg: unknown = null, timeout = 10_
   }
 };
 
-for (const tamanho of ['deitado', 'empe'] as const)
+// fluxo: só o celular em pé (ver e2e/telas.ts)
+for (const tamanho of telasDoFluxo(['deitado', 'empe'] as const))
   test(`T20: n1 a n5 de ponta a ponta, com o dedo e moedinhas de verdade (${tamanho})`, async ({ browser }) => {
     test.setTimeout(1_500_000);
     const page = await abrir(browser, `t20-${tamanho}`, tamanho, 0.7);

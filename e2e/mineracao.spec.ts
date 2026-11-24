@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 
 import { PASTA_CAPTURAS } from '../playwright.config';
+import { telasDoFluxo } from './telas';
 
 const VIEWPORTS = [
   { nome: 'desktop', width: 1920, height: 1080 },
@@ -174,7 +175,8 @@ test('soltar zera o estágio em cerca de 1 s e planta quebra no primeiro golpe',
   expect(erros, erros.join('\n')).toEqual([]);
 });
 
-for (const vp of VIEWPORTS) {
+// as capturas da rachadura não são leiaute: só o celular (ver e2e/telas.ts)
+for (const vp of telasDoFluxo(VIEWPORTS, (v) => v.nome === 'celular')) {
   test(`capturas de rachadura, fragmentos e colocação em ${vp.nome}`, async ({ page }) => {
     test.setTimeout(300_000);
     const erros = coletarErros(page);
