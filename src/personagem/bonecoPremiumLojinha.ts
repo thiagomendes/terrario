@@ -225,7 +225,8 @@ function asasBorboleta(P: Pecas, m: MedidasBoneco): void {
           pintar: (x, y) => misturarCor(LILAS, ROSA, Math.min(1, Math.hypot(x, y) / (0.5 * K))),
           ...sub(nome, pivo),
         });
-    // as bolinhas brancas e uma lilás-escura em cada asa, dos dois lados
+    // as bolinhas brancas e uma lilás-escura em cada asa, só no lado de trás (portão: de frente,
+    // ao lado do corpo e dos braços, as bolinhas do lado da frente pareciam soltas no ar)
     const bolinhas: Array<[number, number, number, string]> = [
       [0.3, 0.32, 0.045, '#ffffff'],
       [0.18, 0.18, 0.03, '#fff3fb'],
@@ -233,8 +234,7 @@ function asasBorboleta(P: Pecas, m: MedidasBoneco): void {
       [0.16, -0.14, 0.03, '#ffffff'],
     ];
     for (const [bx, by, r, cor] of bolinhas)
-      for (const lado of [1, -1])
-        P.bola(`borboleta-bolinha${s}${bx}${lado}`, 'tronco', undefined, r * K, [s * bx * K, by * K, lado > 0 ? 0.016 : -0.028], cor, [1, 1, 0.3], sub(nome, pivo));
+      P.bola(`borboleta-bolinha${s}${bx}`, 'tronco', undefined, r * K, [s * bx * K, by * K, -0.028], cor, [1, 1, 0.3], sub(nome, pivo));
   }
   // o corpinho da borboleta, onde as asas se prendem, e a hastezinha que o prende às costas
   P.caixa('borboleta-corpo', 'tronco', 'tronco', [0.08, 0.3, 0.08], [0, troncoH * 0.5, zAsa], BORDA, 0.038);
@@ -256,9 +256,15 @@ function mochilaFoguete(P: Pecas, m: MedidasBoneco): void {
   P.cone('foguete-corpo', 'tronco', 'tronco', 0.32, 0.125, 0.135, [0, y, z], BRANCO, { brilho: 0.45 });
   P.cone('foguete-bico', 'tronco', 'tronco', 0.15, 0.13, 0.012, [0, y + 0.235, z], CORAL, { brilho: 0.45 });
   P.cone('foguete-anel', 'tronco', 'tronco', 0.05, 0.138, 0.138, [0, y + 0.12, z], CORAL, { brilho: 0.45 });
-  P.anel('foguete-aro', 'tronco', 'tronco', 0.13, 0.03, [0, y + 0.02, z - 0.13], '#c9cfe0', { rot: [Math.PI / 2, 0, 0], brilho: 0.45 });
-  P.bola('foguete-janela', 'tronco', 'tronco', 0.055, [0, y + 0.02, z - 0.125], AZUL, [1, 1, 0.4], { brilho: 0.8 });
-  P.bola('foguete-reflexo', 'tronco', 'tronco', 0.016, [-0.018, y + 0.04, z - 0.147], '#ffffff', [1, 1, 0.4], { brilho: 0.8 });
+  // portão (o revisor: a janelinha redonda, com o miolo azul e o brilho no meio, lia como um olho
+  // só): duas escotilhas pequenas, uma em cima da outra e de tamanhos diferentes, sem o brilho
+  for (const [nome, dy, r] of [
+    ['', 0.065, 0.038],
+    ['2', -0.035, 0.028],
+  ] as const) {
+    P.anel(`foguete-aro${nome}`, 'tronco', 'tronco', r * 2 + 0.026, 0.02, [0, y + dy, z - 0.13], '#c9cfe0', { rot: [Math.PI / 2, 0, 0], brilho: 0.45 });
+    P.bola(`foguete-janela${nome}`, 'tronco', 'tronco', r, [0, y + dy, z - 0.126], AZUL, [1, 1, 0.4], { brilho: 0.45 });
+  }
   // (T03, pedido do dono: a aleta do meio, logo abaixo da janelinha, lia como nariz ou língua e o
   // foguete virava um rosto. Ficaram duas, dos lados e um tico para trás)
   for (const a of [-Math.PI / 2 - 0.45, Math.PI / 2 + 0.45]) {
