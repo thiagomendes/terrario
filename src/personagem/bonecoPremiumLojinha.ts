@@ -103,7 +103,8 @@ function pintar(lista: Peca[], re: RegExp, cor: string): void {
 export const PONTOS_LOJINHA = {
   aroVarinha: [0, -0.47, 0.02] as V3,
   bocalFoguete: [0, 0.42 * 0.3 - 0.3, -0.34 / 2 - 0.17] as V3,
-  guarda: { raio: 0.82, base: 1.08, altura: 0.34, gomos: 8 },
+  // (portão: o pano maior, para cobrir a cabeça com o cabo saindo da mão ao lado dela)
+  guarda: { raio: 1.02, base: 1.04, altura: 0.38, gomos: 8 },
 } as const;
 
 // ------------------------------------------------------------------ boné de hélice
@@ -299,12 +300,14 @@ function guardaChuva(P: Pecas): void {
   const LILAS = '#b48cff';
   const BRANCO = '#fbf7ff';
   const j: Junta = 'maoE';
-  // o guarda-chuva inteiro num nó na mão que a animação mantém em pé (o cabo para cima, um tico
-  // inclinado por cima da cabeça) e gira devagar em volta do cabo, como quer que o braço esteja
+  // o guarda-chuva inteiro num nó na mão que a animação mantém em pé (portão: a mão ao lado da
+  // cabeça e o cabo subindo dela quase reto, um tico inclinado para a cabeça, com o pano por
+  // cima) e gira devagar em volta do cabo, como quer que o braço esteja
   const g = sub('guarda', [0, 0, 0]);
   const { raio: R, base: BASE, altura: ALTURA, gomos: n } = PONTOS_LOJINHA.guarda;
   P.cone('guardachuva-cabo', j, 'mao', BASE + ALTURA + 0.06, 0.02, 0.02, [0, (BASE + ALTURA) / 2 - 0.02, 0], '#e6e9f2', { brilho: 0.45, ...g });
-  P.bola('guardachuva-punho', j, 'mao', 0.05, [0, -0.08, 0], LILAS, [1, 1.3, 1], { brilho: 0.45, ...g });
+  // (o punho rente à mão: mais abaixo, encostava no cabelo comprido, na altura do ombro)
+  P.bola('guardachuva-punho', j, 'mao', 0.036, [0, -0.04, 0], LILAS, [1, 1.2, 1], { brilho: 0.45, ...g });
   // a cúpula em oito gomos (lilás e branco), com a beirada em ondinhas
   for (let k = 0; k < n; k++) {
     const a0 = (k / n) * Math.PI * 2;
@@ -320,7 +323,8 @@ function guardaChuva(P: Pecas): void {
       apoio: 'mao',
       forma: 'malha',
       tamanho: [R, ALTURA, R],
-      malha: { pos: [...topo, ...b, ...meio, ...c], ind: [0, 1, 2, 0, 2, 3] },
+      // (o lado de baixo com a luz de cima: na cor do pano, sem o cinza-escuro de sujo)
+      malha: { pos: [...topo, ...b, ...meio, ...c], ind: [0, 1, 2, 0, 2, 3], avessoClaro: true },
       pos: [0, 0, 0],
       cor: k % 2 ? LILAS : BRANCO,
       brilho: 0.45,

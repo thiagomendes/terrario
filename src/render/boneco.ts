@@ -93,7 +93,7 @@ export function montarPeca(scene: Scene, mats: Plasticos, p: Peca, prefixo: stri
     m.isPickable = false;
   } else if (p.forma === 'malha') {
     m = new Mesh(nome, scene);
-    dadosMalhaPano(p.malha?.pos ?? [], p.malha?.ind ?? []).applyToMesh(m);
+    dadosMalhaPano(p.malha?.pos ?? [], p.malha?.ind ?? [], p.malha?.avessoClaro).applyToMesh(m);
     m.material = mat;
     m.isPickable = false;
   } else if (p.tamanho[2] > 0) {
@@ -155,7 +155,7 @@ export function dadosDaPeca(
       tessellation: grosso ? 8 : 14,
     });
   else if (p.forma === 'placa') vd = dadosPlaca(p.perfil ?? [], p.tamanho[2]);
-  else if (p.forma === 'malha') vd = dadosMalhaPano(p.malha?.pos ?? [], p.malha?.ind ?? []);
+  else if (p.forma === 'malha') vd = dadosMalhaPano(p.malha?.pos ?? [], p.malha?.ind ?? [], p.malha?.avessoClaro);
   else if (p.tamanho[2] > 0) vd = dadosAnel(p.tamanho[0], p.tamanho[1], p.tamanho[2]);
   else
     vd = CreateTorusVertexData({
@@ -307,18 +307,22 @@ interface FontePeca {
   cv: boolean;
 }
 
+/** Spec 036 (portão): o quanto o cabo do guarda-chuva tomba para o lado da cabeça (seno). */
+const INCLINA_GUARDA = -0.07;
+
 /** Spec 036 (T05): a passada 1 é andar (blocos por segundo; a física anda a 4,3). */
 const VEL_ANDAR_BONECO = 4.3;
 
 /**
  * Spec 036: o braço esquerdo segurando o tesouro da mão (x, y, z como no Babylon; z negativo
  * abre o braço esquerdo para fora). A varinha balança no alto, na frente; o guarda-chuva vai
- * para o alto e um tico para fora (o pano fica por cima da cabeça); a pipa vai no alto e para
+ * de lado, com a mão ao lado da cabeça e um pouco acima do ombro (portão: com o braço para o
+ * alto, a mão ficava atrás da cabeça e o cabo parecia espetado nela); a pipa vai no alto e para
  * fora, puxando a linha por fora do corpo e da cabeça.
  */
 export function bracoDoTesouro(id: string, t: number): [number, number, number] | null {
   if (id === 'varinha-bolhas') return [-2.05 + Math.sin(t * 2.2) * 0.18, 0, -0.42 - Math.sin(t * 1.1) * 0.08];
-  if (id === 'guarda-chuva-gotinhas') return [-2.65, 0, -0.35];
+  if (id === 'guarda-chuva-gotinhas') return [1.3, 0, -1.95];
   if (id === 'pipa-lacinhos') return [-2.3 + Math.sin(t * 1.7) * 0.06, 0, -0.85];
   return null;
 }
@@ -853,31 +857,27 @@ export function criarBoneco(
     }
     if (s.guarda && juntas.maoE && juntas.cabeca) {
       f.guarda += dt * (1.2 + 1.2 * anda);
-      // o giro que o guarda-chuva quer no espaço do boneco, desfeito do giro da mão: o cabo sai da
-      // mão inclinado de modo que o pano fique centrado por cima da cabeça (T03, pedido do dono:
-      // com o cabo em pé, o pano ficava atrás e acima dela), e gira devagar em volta do cabo
+      // o giro que o guarda-chuva quer no espaço do boneco, desfeito do giro da mão: o cabo sobe da
+      // mão (ao lado da cabeça) quase em pé, um tico inclinado para o lado da cabeça, e gira devagar
+      // em volta dele. Portão: inclinar o cabo até o pano ficar centrado na cabeça fazia o cabo
+      // passar atrás dela e parecer espetado no alto do cabelo; agora o pano, maior, fica um pouco
+      // para o lado da mão, como a criança segura de verdade
       for (const no of [juntas.maoE, juntas.cabeca]) {
         const cadeia: TransformNode[] = [];
         for (let n: TransformNode | null = no; n; n = n.parent as TransformNode | null) cadeia.unshift(n);
         for (const n of cadeia) n.computeWorldMatrix(true);
       }
-      const inv = raiz.getWorldMatrix().clone().invert();
+      // (o "em pé" é o da cabeça: correndo, o corpo inclina e o cabo vai junto, sem chegar nela)
+      const inv = juntas.cabeca.getWorldMatrix().clone().invert();
       const mao = Vector3.TransformCoordinates(juntas.maoE.getAbsolutePosition(), inv);
-      const cab = Vector3.TransformCoordinates(juntas.cabeca.getAbsolutePosition(), inv);
-      // (a beirada do pano fica a `base` da mão, ao longo do cabo, na escala do boneco)
-      const L = PONTOS_LOJINHA.guarda.base * escalar.scaling.x;
-      let dx = (cab.x - mao.x + Math.sin(t * 1.3) * 0.03) / L;
-      let dz = (cab.z - mao.z + Math.sin(t * 0.9) * 0.03) / L;
-      const h = Math.hypot(dx, dz);
-      if (h > 0.75) {
-        dx *= 0.75 / h;
-        dz *= 0.75 / h;
-      }
+      const hh = Math.hypot(mao.x, mao.z) || 1;
+      const dx = (-mao.x / hh) * INCLINA_GUARDA + Math.sin(t * 1.3) * 0.015;
+      const dz = (-mao.z / hh) * INCLINA_GUARDA + Math.sin(t * 0.9) * 0.015;
       const dir = new Vector3(dx, Math.sqrt(Math.max(0, 1 - dx * dx - dz * dz)), dz);
       const eixo = Vector3.Cross(Vector3.Up(), dir);
       const alinhar =
         eixo.length() > 1e-6 ? Matrix.RotationAxis(eixo.normalize(), Math.acos(Math.min(1, dir.y))) : Matrix.Identity();
-      raiz.getWorldMatrix().decompose(undefined, qAux);
+      juntas.cabeca.getWorldMatrix().decompose(undefined, qAux);
       Matrix.FromQuaternionToRef(qAux, mRaiz);
       juntas.maoE.getWorldMatrix().decompose(undefined, qAux);
       Matrix.FromQuaternionToRef(qAux, mMao);
@@ -889,6 +889,9 @@ export function criarBoneco(
       const q = s.guarda.rotationQuaternion ?? new Quaternion();
       mGuarda.decompose(undefined, q);
       s.guarda.rotationQuaternion = q;
+      // o cabo passa pela beira de fora do punho fechado (o lado longe da cabeça), e não pelo meio
+      const fora = Vector3.TransformNormal(new Vector3((mao.x / hh) * 0.03, 0, (mao.z / hh) * 0.03), juntas.cabeca.getWorldMatrix());
+      s.guarda.position.copyFrom(Vector3.TransformNormal(fora, juntas.maoE.getWorldMatrix().clone().invert()));
     }
     if (s.pipa) {
       s.pipa.rotation.z = Math.sin(t * 1.3) * 0.12;
