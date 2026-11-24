@@ -32,17 +32,25 @@ O dono também reclamou do **Unicórnio-pônei**: ele tem uma borda estranha, br
 - **O catálogo:** `PREMIUM` em `src/jogo/alma.ts`, com 6 itens.
   - As categorias são `roupa`, `costas`, `fantasia` e `bicho`, uma peça por categoria.
   - As costas e a fantasia dividem o lugar (`LUGAR_DIVIDIDO`): a capa sai quando entra o dragão, e vice-versa.
-  - O núcleo confere a compra.
-  - A aparência leva o `premium`, e `normalizarPremium` descarta o id que não está no catálogo ou que veio na categoria errada.
+  - **A compra acontece no aparelho:** `almaCrianca.ts` chama `comprarPremium` e grava no localStorage. O núcleo nunca vê o perfil; o servidor só passa a aparência a limpo (`sanearAparencia`).
+  - A aparência leva o `premium`, e `normalizarPremium` só percorre as 4 categorias e descarta o id que não conhece.
+  - O `normalizarPerfilAlma` também joga fora o id desconhecido em `premium` e em `vestidos`.
+- **As fantasias da 017 e da 027** (`tesouroEFantasia.ts`, `fantasias.ts`): ao trocar, vale a última escolha. A troca entre premium e fantasia não aparece às claras; só a troca entre dois premium aparece.
+- **As mãos:**
+  - a direita segura o item da barra e a comida da 032;
+  - a esquerda segura a lanterna do look e a varinha ou o cetro da fantasia;
+  - a varinha da 027 tem efeito no núcleo: as florzinhas do baile, pelo `temVarinha`.
+- **A roda** (`menuRoda.ts`): cada item tem nome e desenho fixos.
+- **Mudar a aparência refaz o boneco inteiro**, aqui e em cada amigo (`aplicarAparencia`).
 - **A vitrine:** `src/ui/alma/loja.ts`, aberta pela roda em qualquer mundo.
   - Seis cartões de vidro, com o detalhe, o provador, o confirmar e a festa.
   - O que vai sair do boneco ao vestir aparece às claras.
 - **Os desenhos:** `src/personagem/bonecoPremium.ts` (as peças no boneco), `src/render/bichoPremium.ts` (pinguim e unicórnio), `src/render/premiumMundo.ts` (seguir a criança) e `src/render/premiumLuzes.ts` (o brilho).
-- **Andar em alguma coisa:**
-  - na Vila Neon, os patins do rinque e o skate da pista, que ficam só lá;
-  - no Parque, os carrinhos de bate-bate;
-  - na Cidade Grande, os carros;
-  - na 027 parte 3 virá a vassoura-patinete.
+- **Onde a criança já anda, senta ou guia:**
+  - na Vila Neon: os patins do rinque, o skate e o trilho da rampa (só lá), os carrinhos de bate-bate, as cadeiras do carrossel e da roda-gigante, e o sofá da Casa anos 80;
+  - na 027 parte 3 virão a vassoura-patinete, o trem, o carrossel, o balanço e o escorregador;
+  - os carros da Cidade Grande são só trânsito: ninguém entra neles;
+  - sentar no parque hoje não tira os patins nem o skate.
 
 ## Decisões do dono
 - **12 itens novos** (22 nov). Os escolhidos sobre o esboço (23 e 24 nov), com os preços que ele viu:
@@ -66,39 +74,72 @@ O dono também reclamou do **Unicórnio-pônei**: ele tem uma borda estranha, br
 - **Sem pressão de escassez:** preço fixo, nada some, nada é sorteado, nenhuma oferta por tempo (023, `.sdd/cuidados-legais.md`).
 - **O passarinho:** o dono gostou; acertar a posição para ele não colar na cabeça.
 
-## Decisões do orquestrador (pequenas, contadas ao dono)
+## Decisões do orquestrador (pequenas, contadas ao dono; ajustadas na revisão de 24 nov)
 - **Três lugares novos no boneco:** `andar`, `chapeu` e `mao`.
-  - O passarinho fica em `bicho`: um bichinho por vez, como hoje.
-  - A pipa fica na `mao`, porque é segurada pela linha. O guarda-chuva, a varinha e a pipa vão um de cada vez, às claras na lojinha.
+  - O passarinho fica em `bicho` (um bichinho por vez, como hoje), mas preso ao ombro do boneco. Ele não entra pelo "seguir" do pinguim e do unicórnio.
+  - A pipa fica na `mao`, porque é segurada pela linha. O guarda-chuva, a varinha de bolhas e a pipa vão um de cada vez.
+- **Os ids:** `patinete-luz`, `carrinho-pedal`, `bicicletinha`, `nuvem-fofa`, `passarinho-ombro`, `bone-helice`, `pijama-nuvem`, `asas-borboleta`, `mochila-foguete`, `varinha-bolhas`, `guarda-chuva-gotinhas` e `pipa-lacinhos`. Nenhum colide com tipo de peça ou fantasia; depois de publicados, só mudam pelo `PREMIUM_RENOMEADOS`.
 - **Os brinquedos de andar são só enfeite:** a mesma velocidade, o mesmo pulo e o mesmo caminho de quem anda a pé. Num jogo com amigos, ninguém fica mais rápido por ter comprado. A nuvem flutua baixinho só no desenho; não atravessa água nem buraco.
-- **Subir e descer pela roda:**
-  - com um brinquedo de andar vestido, a roda ganha "Andar de patinete" (com o desenho do brinquedo); montada, ganha "Descer";
-  - a roda não ganha item à toa: sem brinquedo vestido, nada muda;
-  - montar e descer têm um puf e um som curto.
-- **Quando o brinquedo sai sozinho:**
-  - ao entrar num carro, carrinho de bate-bate, cadeira de brinquedo do parque, patins ou skate de um tema, ou ao entrar numa casa por dentro, o brinquedo de andar se guarda sozinho;
-  - ao sair, a criança fica a pé (descer não pune: é só tocar de novo na roda).
-- **Andando num brinquedo, o item da mão se guarda** e volta ao descer.
-- **O boné e a fantasia:** quando a fantasia cobre a cabeça (capuz, chapéu ou tiara de fantasia, o dragão incluído), o boné não aparece por cima. No provador e na lojinha isso aparece às claras, como hoje com a capa e o dragão; nunca as duas peças com uma escondida.
-- **A vitrine com 18 itens:** separada por lugar, com abas de figurinha (andar, roupa, costas, mão, chapéu, bichinho, fantasia) e rolagem dentro da aba. A aba de andar abre primeiro na primeira visita depois da atualização. O que é novo tem uma estrelinha até a criança abrir o detalhe dele uma vez.
+- **Montar e descer:**
+  - a roda ganha um item por brinquedo vestido ("Andar de patinete", com o desenho dele) e, montada, o "Descer"; sem brinquedo vestido, nada muda;
+  - comprar ou vestir um brinquedo de andar já monta a criança, quando pode montar;
+  - montar e descer têm um puf e um som curto;
+  - recarregar a página entra a pé, como os patins.
+- **Um só "pode montar"** no cliente decide a roda e o descer sozinho. Pode montar quem está a pé, sem patins nem skate, sem estar sentada, guiando, no trilho ou no sofá, fora de casa por dentro, sem nadar, sem voar e sem estar desmaiada, e fora do provador e do modo foto.
+  - Cada brinquedo de tema novo (a 027 parte 3 incluída) se registra nele.
+  - O descer sozinho acontece na ação da própria criança, e não quando o núcleo responde, para os amigos não verem a bicicleta no carrossel.
+- **Montada:**
+  - continua tudo: minerar, colocar, comer e os gestos;
+  - o abraço faz a criança descer antes;
+  - o premium da mão se guarda e volta ao descer; o item da barra continua na mão direita;
+  - pular para perto de um amigo ou voltar para casa mantém a criança montada, se puder montar no destino.
+- **As mãos:**
+  - o premium da mão vai na esquerda, e a lanterna do look some debaixo dele;
+  - com uma fantasia de varinha ou de cetro, vale a última escolha;
+  - as florzinhas do baile são só da varinha da fantasia da 027.
+- **A cabeça:**
+  - o boné segue o padrão da capa: vale a última escolha, sempre com uma peça só à vista;
+  - vestir o boné tira a peça de cabeça da fantasia que sai sozinha (ou a fantasia inteira, quando a peça não sai sozinha); vestir uma fantasia de cabeça tira o boné;
+  - o chapéu e o capuz do look somem debaixo do boné, como a mochila some debaixo da capa;
+  - as peças de cabeça ficam numa lista só (`PECAS_DA_CABECA`, em `tesouroEFantasia.ts`); a tiara, que hoje é `cabeca: 'livre'`, entra nela se não couber bonita por baixo do boné, e quem decide é o artista.
+- **Às claras em todo lugar:** uma função só de "o que sai" (premium e fantasia) vale na lojinha, no provador, em "Meus tesouros" e no editor. A figurinha do que sai, a seta e o que entra aparecem também quando o que sai é uma fantasia.
+- **A vitrine com 18 itens:**
+  - separada por lugar, com abas de figurinha (andar, roupa, costas, mão, chapéu, bichinho, fantasia) e rolagem dentro da aba;
+  - a aba de andar abre primeiro na primeira visita depois da atualização;
+  - o que é novo tem uma estrelinha até a criança abrir o detalhe dele uma vez;
+  - a estrelinha e a primeira visita ficam numa chave própria do aparelho, fora do perfil.
 
 ## O que muda
 ### 1. O catálogo e o núcleo
 - Os 12 itens entram no `PREMIUM`, com as categorias `andar`, `chapeu` e `mao`.
-- O `LUGAR_DIVIDIDO` e o "o que sai ao vestir" seguem as regras de cima.
-- O núcleo aceita a compra e o vestir dos itens novos, e a aparência os leva pela rede para os amigos.
-- **A versão da rede:** o servidor publica antes do site.
-  - O engenheiro de núcleo e rede decide na fase 1 se a `VERSAO_REDE` sobe para 19 e registra o motivo.
-  - O critério: um navegador de antes que receba um item novo de um amigo não pode quebrar nem mostrar outra coisa; mostrar o amigo sem o item novo é aceitável.
-- **O estado "montado"** vai na aparência ou no quadro do jogador, para os amigos verem a criança no patinete.
-- **A paridade 36/36** e o hash de cada tema sem mudança. Nada aqui muda a geração do mundo.
+- O `LUGAR_DIVIDIDO` vira lista (`fantasia: ['costas', 'chapeu']`); `saiAoVestir`, `vestirPeca` e o conserto "fantasia tira costas" do `normalizarPerfilAlma` acompanham.
+- As regras de cabeça e de mão ficam em `tesouroEFantasia.ts`, com a função única de "o que sai".
+- **A compra continua no aparelho;** a aparência leva os itens novos pela rede para os amigos, e o servidor os passa a limpo.
+- **Nada some, nem se o site voltar atrás:**
+  - os ids comprados também ficam numa chave à parte do aparelho, que o código de hoje não toca, e as duas se unem na leitura;
+  - daqui para a frente, um id bem formado e desconhecido vai para uma lista de "depois", em vez de ser jogado fora;
+  - um teste prova que um perfil com id desconhecido sobrevive a carregar e salvar.
+- **A versão da rede fica em 18** (revisão do engenheiro, 24 nov):
+  - um navegador de antes descarta o item novo e o `montado` e vê o amigo sem eles;
+  - um servidor de antes, se o site sair primeiro por engano, tira o que não conhece, e nada quebra;
+  - subir abriria uma janela em que o site 18 é recusado pelo servidor 19 entre as duas publicações, e a 027 parte 2 já reservou a 19;
+  - a condição: nenhum comando, evento ou campo de quadro novo;
+  - o motivo fica na Situação e num comentário junto da `VERSAO_REDE`, mais um teste: uma cópia congelada das regras de hoje recebe a aparência da 036 e devolve a de sem item;
+  - o servidor publica antes do site mesmo assim, senão os amigos não veem os itens.
+- **O estado "montado" mora na aparência, como os patins e o skate:**
+  - `montado?: true` só com `premium.andar` e sem patins nem skate;
+  - nunca é salvo; apaga ao carregar;
+  - o `estado.personagem.definir` preserva o montado como preserva os patins, senão vestir em "Meus tesouros" desmonta a criança.
+- **Montar não refaz o boneco:** o brinquedo é montado uma vez, quando `premium.andar` está vestido, e o `montado` só troca a pose e a visibilidade, aqui e nos amigos (`outrosJogadores` não refaz o boneco quando só o `montado` mudou).
+- **A paridade 36/36** e o hash de cada tema ficam sem mudança: nada aqui muda a geração do mundo, e o hash não inclui o desenho do boneco. A paridade roda na conferência, porque o `normalizarAparencia` está no caminho do núcleo.
 
 ### 2. As peças no boneco
 - O boné, o pijama, as asas, a mochila-foguete, a varinha, o guarda-chuva e a pipa saem do esboço para `bonecoPremium.ts`, no padrão das peças de hoje, com as correções:
   - o guarda-chuva maior e sempre em pé por cima da cabeça;
   - a fumacinha do foguete subindo e se desfazendo, sem tufo;
   - a pipa com os lacinhos maiores e a linha que não atravessa o corpo.
-- **O passarinho** sai do esboço para `bichoPremium.ts`, na ponta do ombro, sem passar na frente da cabeça em nenhum ângulo do jogo (a câmera de terceira pessoa).
+- **O passarinho** sai do esboço (`pousarNoOmbro`) preso ao tronco do boneco, na ponta do ombro, sem passar na frente da cabeça em nenhum ângulo do jogo (a câmera de terceira pessoa).
+- **As figuras** de cada item novo na lojinha e em "Meus tesouros" (`ui/alma/figuras.ts`).
 - **Os efeitos** (bolhas, gotinhas, fumacinha, hélice) com brilho contido: nada de borda clara, nada que borre, nada que trema.
 
 ### 3. Os brinquedos de andar
@@ -123,10 +164,12 @@ O dono também reclamou do **Unicórnio-pônei**: ele tem uma borda estranha, br
 - Os 18 cartões com o item de verdade desenhado do 3D, como hoje.
 - **O provador dos de andar:** a criança aparece montada, e o brinquedo anda um pouquinho em volta.
 - **O provador da pipa:** a pipa aparece voando.
+- **"Meus tesouros"** (`src/ui/meusTesouros.ts`) mostra os 18 itens, com a mesma função de "o que sai".
 
 ## Experiência medida (para não frustrar)
 - **Achar e comprar:** do toque na lojinha até o detalhe de um brinquedo de andar, no máximo 2 toques.
-- **Montar:** 1 toque na roda, com o brinquedo em menos de 0,5 s, com puf e som.
+- **Montar:** 2 toques (abrir a roda e escolher o brinquedo), com o brinquedo em menos de 0,5 s, com puf e som.
+- **Sem tranco ao montar:** com 4 amigos montando e descendo, com a CPU 4×, o quadro mais longo fica abaixo de 100 ms.
 - **Desempenho**, no celular em pé (390×844) com a CPU 4× mais lenta, na Vila Neon de dia, com 4 amigos montados em brinquedos diferentes e com itens novos:
   - os quadros não caem mais de 10% em relação ao mesmo lugar sem os itens;
   - as chamadas de desenho sobem no máximo 20 (uns 5 por boneco).
@@ -140,6 +183,7 @@ O dono também reclamou do **Unicórnio-pônei**: ele tem uma borda estranha, br
 
 ## Fora desta spec
 - Os 6 candidatos que o dono não quis (cachorrinho, coelhinho, tartaruguinha, coroa de flores, chapéu de explorador, jardineira) e os 2 da rodada 2 (óculos de estrela, rastro de florzinhas). Ficam no histórico do esboço.
+- A compra conferida no núcleo: fica para a 024 (conta da família), que leva o perfil para a nuvem.
 - Andar no brinquedo dentro das casas por dentro.
 - Brinquedo de andar com mais de uma criança.
 - Os brinquedos de cada tema (vassoura-patinete, patins, skate) continuam só no seu mundo.
