@@ -1,0 +1,41 @@
+{
+  "voando-dia": {
+    "quadros": 128,
+    "saltos": 0,
+    "maiorPasso": 0.563,
+    "sobeDesce": 0,
+    "altura": 0
+  },
+  "no-ar-dia": {
+    "id": "unicornio",
+    "x": 79.20374526012266,
+    "y": 86.6432000000477,
+    "z": 357.58030357350924,
+    "barriga": 0,
+    "voando": true,
+    "chamadas": 3
+  },
+  "voando-noite": {
+    "quadros": 149,
+    "saltos": 0,
+    "maiorPasso": 0.564,
+    "sobeDesce": 0,
+    "altura": 0
+  },
+  "no-ar-noite": {
+    "id": "unicornio",
+    "x": 78.82945744259266,
+    "y": 86.65040000009549,
+    "z": 357.5947636357069,
+    "barriga": 0,
+    "voando": true,
+    "chamadas": 3
+  },
+  "parado": {
+    "quadros": 104,
+    "saltos": 0,
+    "maiorPasso": 0,
+    "sobeDesce": 0,
+    "altura": 0
+  }
+}

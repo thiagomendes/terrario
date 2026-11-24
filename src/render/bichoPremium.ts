@@ -4,21 +4,24 @@
  *
  * Desempenho (meta da 012 com 4 amigos e 2 bichos): cada bicho é uma malha só com esqueleto
  * (as peças do mesmo material fundidas, cada vértice preso ao osso dele), mais a malha da luz
- * (o chifre). O unicórnio ainda tem o contorno claro de leve (lê de longe). No máximo 3
- * chamadas de desenho por bicho; a meta da spec é 6.
+ * (o chifre). No máximo 3 chamadas de desenho por bicho; a meta da spec é 6.
+ *
+ * Spec 036 (T02, a borda estranha e o brilho forte do unicórnio): o bicho ficava no mapa do
+ * brilho da cena (o `GlowLayer`), que pinta o piso de luz do plástico (cinza claro) por toda a
+ * silhueta e borra: de noite, um halo branco em volta do corpo inteiro; por cima, o contorno
+ * claro (`renderOutline`) fazia a linha branca da borda. As malhas agora levam o nome do boneco
+ * (`personagem-`), que a cena deixa fora do brilho, como a criança e os amigos, e o contorno saiu.
  *
  * Os ossos são nós comuns (`TransformNode`) ligados ao esqueleto: a animação (premiumMundo.ts)
  * gira os nós e a placa de vídeo dobra a malha. Tudo procedural, feito aqui, no traço de
  * brinquedo da 012 (plástico, olhos de bolinha com brilho, bochechas).
  */
-import { Color3 } from '@babylonjs/core/Maths/math.color';
 import { Matrix } from '@babylonjs/core/Maths/math.vector';
 import { Mesh } from '@babylonjs/core/Meshes/mesh';
 import { VertexData } from '@babylonjs/core/Meshes/mesh.vertexData';
 import { TransformNode } from '@babylonjs/core/Meshes/transformNode';
 import { Skeleton } from '@babylonjs/core/Bones/skeleton';
 import { Bone } from '@babylonjs/core/Bones/bone';
-import '@babylonjs/core/Rendering/outlineRenderer';
 import type { StandardMaterial } from '@babylonjs/core/Materials/standardMaterial';
 import type { Scene } from '@babylonjs/core/scene';
 import type { IdLuzPremium, Junta, Peca } from '../personagem/boneco';
@@ -43,8 +46,6 @@ export interface Desenho {
   ossos: Osso[];
   pecas: PecaBicho[];
   escala: number;
-  /** Contorno claro de leve (o unicórnio: reconhecível a 12 blocos). */
-  contorno?: string;
 }
 
 export interface BichoMontado {
@@ -306,7 +307,7 @@ function desenhoUnicornio(): Desenho {
     });
     p.push(bola(n, 'miolo', larg * 0.5, [0, -comp * 0.45, -0.02], degradeCrina(1 - (c0 + c1) / 2), [0.95, 1.6, 0.95]));
   }
-  return { ossos, pecas: p, escala: 1.4, contorno: '#fff6ff' };
+  return { ossos, pecas: p, escala: 1.4 };
 }
 
 // ----------------------------------------------------------------------------- pinguim
@@ -370,7 +371,7 @@ function desenhoPinguim(): Desenho {
     p.push(bola(n, 'asa', 0.115, [s * 0.02, -0.11, 0], azul, [0.3, 1, 0.62], { rot: [0, 0, s * 0.18], pintar: () => azulFundo }));
   for (const n of ['peE', 'peD'])
     p.push(bola(n, 'pe', 0.075, [0, 0, 0.04], laranja, [0.95, 0.38, 1.3], { brilho: 0.4 }));
-  return { ossos, pecas: p, escala: 1.25, contorno: '#eaf6ff' };
+  return { ossos, pecas: p, escala: 1.25 };
 }
 
 // ------------------------------------------------------------------------- montagem
@@ -391,9 +392,12 @@ export function pecasDoBicho(id: IdBichoPremium): Array<Omit<Peca, 'junta'> & { 
   return DESENHOS[id]().pecas;
 }
 
-/** Monta o bicho: os nós, o esqueleto e as malhas fundidas por material. */
+/**
+ * Monta o bicho: os nós, o esqueleto e as malhas fundidas por material. O nome começa com
+ * `personagem-` (spec 036): fora do mapa do brilho da cena, como os bonecos.
+ */
 export function montarBichoPremium(scene: Scene, id: IdBichoPremium): BichoMontado {
-  return { ...montarDesenhoBicho(scene, DESENHOS[id](), `premium-${id}`), id };
+  return { ...montarDesenhoBicho(scene, DESENHOS[id](), `personagem-premium-${id}`), id };
 }
 
 /**
@@ -467,13 +471,6 @@ export function montarDesenhoBicho(
     m.hasVertexAlpha = false;
     // o bicho anda pelo mundo: a caixa dele é a do corpo inteiro, sem recalcular
     m.alwaysSelectAsActiveMesh = true;
-    if (d.contorno && material === mats.corVertice(0.3)) {
-      m.renderOutline = true;
-      m.outlineColor = Color3.FromHexString(d.contorno);
-      m.outlineWidth = 0.012;
-      // o contorno some de muito longe (premiumMundo): marca quem tem
-      m.metadata = { ...(m.metadata ?? {}), contorno: true };
-    }
     malhas.push(m);
   }
   return {
@@ -491,7 +488,7 @@ export function montarDesenhoBicho(
   };
 }
 
-/** Para os testes: quantas chamadas de desenho o bicho custa (malhas mais o contorno). */
+/** Para os testes: quantas chamadas de desenho o bicho custa (uma por malha). */
 export function chamadasDoBicho(b: BichoMontado): number {
-  return b.malhas.reduce((s, m) => s + 1 + (m.renderOutline ? 1 : 0), 0);
+  return b.malhas.length;
 }

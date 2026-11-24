@@ -92,9 +92,11 @@ function daCena(scene: Scene): LuzesDaCena {
       e.emissiveColor.set(v, v * 0.95, v * 0.66);
     }
     if (m.chifre) {
-      // acima de 1: passa do tom do pós-processo e acende (lê a 12 blocos)
-      const p = 1.45 + 0.3 * Math.sin(t * 3.1);
-      m.chifre.emissiveColor.set(p, p * 0.86, p * 0.5);
+      // spec 036 (T02): o brilho contido dos itens novos. Antes ia de 1,45 a 1,75, acima do
+      // limiar do bloom (1,0): o chifre virava uma chama borrada. Agora fica abaixo dele,
+      // respirando devagar: de dia é marfim e de noite continua aceso no escuro
+      const p = 0.8 + 0.06 * Math.sin(t * 1.6);
+      m.chifre.emissiveColor.set(p, p * 0.88, p * 0.56);
     }
     if (nova.aquario) nova.aquario.quadro(t);
   });

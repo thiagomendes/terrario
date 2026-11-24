@@ -30,6 +30,7 @@ O esboço fica no branch `esboco/036-lojinha-maior` (o código em `src/esboco/lo
 | Esboço | o dono escolheu 10 em 23 nov e mais 2 em 24 nov (os 12 da spec) |
 | Spec | revisada pelo engenheiro de núcleo e rede em 24 nov (15 apontamentos, todos acolhidos: a compra fica no aparelho, a `VERSAO_REDE` fica em 18, as regras de cabeça e de mão, o `montado` na aparência, a chave à parte dos comprados); **aprovada pelo dono em 24 nov**, com as três regras recomendadas (brinquedos só enfeite, montada faz tudo menos o abraço, comprar já monta) |
 | T01 Catálogo, regras e rede | **pronta (24 nov)**. Os detalhes abaixo |
+| T02 O Unicórnio-pônei | **pronta (24 nov)**: a borda, o brilho e o tremor, cada um com a causa achada. Os detalhes abaixo |
 
 ### T01 (24 nov 2026, `engenheiro-nucleo-rede`)
 - **O catálogo:** os 12 no `PREMIUM` (`src/jogo/alma.ts`), com os ids, preços e efeitos da spec; as categorias `andar`, `chapeu` e `mao` no fim de `CATEGORIAS_PREMIUM`. A vitrine já lista os 18, sem a figura dos novos até a T03 e sem as abas até a T06.
@@ -74,5 +75,23 @@ O esboço fica no branch `esboco/036-lojinha-maior` (o código em `src/esboco/lo
   - ao reconectar na nuvem, o "entrar" leva a aparência guardada, sem o montado (nem os patins, como já é hoje): o amigo vê a criança a pé até a próxima aparência;
   - vale mandar a aparência de agora depois do "bem-vindo";
   - o `INTERVALO_APARENCIA` do núcleo junta montar e descer muito seguidos (fica a última, como já é).
+
+### T02 (24 nov 2026, `artista-voxel`)
+- **As fotos:** `capturas-036/t02-unicornio/` (`antes/` e `depois/`, com o `indice.md`): parado, de perto, trotando, pulando e voando, de dia e de noite, no celular em pé; o vídeo voando (`voando.webm`, computador) e a medida do tremor (`tremor.json`). Saem de `e2e/capturas-036.spec.ts` (`CAPTURAS_036=t02`).
+- **A borda estranha:**
+  - o bicho ficava no mapa do brilho da cena (o `GlowLayer`), que pinta o piso de luz do plástico pela silhueta inteira e borra: de noite, um halo branco em volta do corpo;
+  - o contorno claro (`renderOutline`) fazia a linha branca da borda;
+  - as malhas agora levam o nome `personagem-premium-…` (fora do brilho, como os bonecos), e o contorno saiu. O pinguim tem a mesma montagem e ganhou o mesmo conserto (uma chamada de desenho a menos por bicho).
+- **O brilho:**
+  - o chifre ia de 1,45 a 1,75 de luz, acima do limiar do bloom (1,0); agora fica entre 0,74 e 0,86 (`premiumLuzes.ts`);
+  - os brilhinhos e os coraçõezinhos (o pool de todos os premium) saíram do mapa do brilho. Isso vale também para os brilhinhos do tênis-cometa e da capa, que deixam de borrar;
+  - o unicórnio solta menos brilhinho (a cada 0,3 a 0,4 s trotando, antes 0,12 a 0,2 s), menores, e 4 corações em vez de 5.
+- **O tremor ao voar:**
+  - a procura do chão, sem achar nada (criança a mais de uns 7 blocos do chão), devolvia a própria altura procurada: o bicho via um degrau acima a cada quadro, subia aos trancos e, passando 8 blocos de diferença, era jogado de volta num puf (e recomeçava);
+  - voando a 11 ou 20 blocos por segundo, ele (6,5) ficava para trás e reaparecia num puf a cada 1 ou 2 s;
+  - agora o `chao` devolve `null` sem chão; com a criança no alto, o unicórnio voa junto pela mola crítica (`src/render/seguirVoando.ts`, a conta exata, com o lugar adiantado pela velocidade dela) e desce planando; o pinguim espera embaixo;
+  - medido voando de lado por 3 s: **antes 8 e 11 saltos** (o maior de 8 blocos num quadro), **depois 0** (o maior passo, 0,56 bloco).
+- **Os testes:** `tests/render/seguirVoando.test.ts` (novo: voando a 11 e 20 blocos por segundo com quadros de tamanhos variados, sem salto, sem atraso e sem tranco; a mola estável e sem passar do ponto; um pulo comum não liga o voo). `tests/render` e `tests/personagem` verdes.
+- **Ficou fraco:** a foto trotando pega o unicórnio na beira (a câmera do jogo vira junto); o vídeo é `.webm` (sem `ffmpeg` no computador).
 
 Falta sempre, ao fim, a **rodada em família**.

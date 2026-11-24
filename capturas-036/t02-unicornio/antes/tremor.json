@@ -1,0 +1,23 @@
+{
+  "voando-dia": {
+    "quadros": 129,
+    "saltos": 8,
+    "maiorPasso": 8.123,
+    "sobeDesce": 0.9449,
+    "altura": 0
+  },
+  "voando-noite": {
+    "quadros": 177,
+    "saltos": 11,
+    "maiorPasso": 7.875,
+    "sobeDesce": 1.0057,
+    "altura": 0
+  },
+  "parado": {
+    "quadros": 107,
+    "saltos": 0,
+    "maiorPasso": 0,
+    "sobeDesce": 0,
+    "altura": 0
+  }
+}
