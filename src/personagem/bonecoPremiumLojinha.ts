@@ -441,14 +441,14 @@ function passarinho(P: Pecas, m: MedidasBoneco): void {
   bola('rabo', 0.08, V(0, 0.1, -0.18), AZUL_ESC, [0.75, 0.25, 1.4], { rot: [0.45, 0, 0] });
   // (voando, os pezinhos recolhidos para trás)
   for (const s of [-1, 1]) bola(`pe${s}`, 0.022, V(s * 0.045, 0.02, -0.03), LARANJA, [1, 0.5, 1.4], { rot: [0.6, 0, 0] });
-  // as asinhas, cada uma num nó: abertas para os lados, batendo (a animação em render/boneco.ts)
-  for (const [nome, s] of [
-    ['passaroAsaE', -1],
-    ['passaroAsaD', 1],
-  ] as const)
-    P.bola(`passaro-asa${s}`, j, undefined, 0.12 * k, V(s * 0.01, -0.07, -0.02), AZUL_ESC, [0.3, 0.9, 1.1], {
+  // as asinhas, as duas num nó só (desempenho: uma malha a menos por boneco), abertas para os
+  // lados e inclinadas para fora; batem pelo vaivém do nó (a animação em render/boneco.ts)
+  for (const s of [-1, 1])
+    // (a asa na abertura do meio do bater, 1,05 rad para fora, como girava no nó dela antes)
+    P.bola(`passaro-asa${s}`, j, undefined, 0.12 * k, V(s * 0.186, -0.026, -0.02), AZUL_ESC, [0.3, 0.9, 1.1], {
       brilho: 0.45,
-      ...sub(nome, V(s * 0.12, 0.18, -0.01), { pai: 'passaro' }),
+      rot: [0, 0, s * 1.05],
+      ...sub('passaroAsaE', V(0, 0.18, -0.01), { pai: 'passaro' }),
     });
 }
 
@@ -457,12 +457,37 @@ function passarinho(P: Pecas, m: MedidasBoneco): void {
 export function vestirPremiumLojinha(premium: PremiumVestido, lista: Peca[], m: MedidasBoneco): void {
   const antes = new Set(lista);
   vestirTesouros(premium, lista, m);
-  // desempenho (T03, medido na placa): as bolinhas novas com os gomos pelo tamanho, como as dos
-  // moradores (o padrão de 12 gomos levava o passarinho, as pantufas e as bolinhas das asas a
-  // mais de 10 mil triângulos cada); de perto continuam redondinhas
-  for (const p of lista)
-    if (!antes.has(p) && p.forma === 'esfera' && p.gomos === undefined)
-      p.gomos = Math.max(6, segmentosDaBolinha(Math.max(...p.tamanho)));
+  for (const p of lista) {
+    if (antes.has(p)) continue;
+    // desempenho (T03, medido na placa): as bolinhas novas com os gomos pelo tamanho, como as dos
+    // moradores (o padrão de 12 gomos levava o passarinho, as pantufas e as bolinhas das asas a
+    // mais de 10 mil triângulos cada); de perto continuam redondinhas
+    if (p.forma === 'esfera' && p.gomos === undefined) p.gomos = Math.max(6, segmentosDaBolinha(Math.max(...p.tamanho)));
+    juntarMalhas(p);
+  }
+}
+
+/**
+ * Desempenho (T08: com 4 amigos, os itens novos somavam de +39 a +47 chamadas de desenho; a meta
+ * é +20). O desenho junta numa malha as peças do mesmo nó e do mesmo material, e cada degrau de
+ * brilho é um material. Então:
+ * - a peça presa ao corpo (o boné, a mochila-foguete, a varinha, o pijama) fica no brilho do
+ *   corpo (o fosco), e entra na malha que a junta já tem;
+ * - num nó próprio (a hélice, as asas, o guarda-chuva, a pipa, o passarinho), todas as peças no
+ *   mesmo degrau (o acetinado), uma malha por nó; nas asas de borboleta, a borda e as bolinhas
+ *   vão na mesma tinta do degradê;
+ * - a luz própria, a película transparente e o brinquedo de andar (já juntado em
+ *   `brinquedoAndar.ts`) ficam como estão.
+ */
+function juntarMalhas(p: Peca): void {
+  if (p.luz || (p.alfa ?? 1) < 1 || p.textura || p.nome.startsWith('andar-')) return;
+  const no = p.subjunta?.nome;
+  if (!no) {
+    if (!p.viva) p.brilho = 0.28;
+    return;
+  }
+  p.brilho = 0.45;
+  if (no === 'borbE' || no === 'borbD') p.viva = true;
 }
 
 /** Bolinha de raio r: os gomos (o mesmo degrau de `render/formas.ts`, sem puxar o desenho). */

@@ -903,9 +903,10 @@ export function criarBoneco(
       // T03 (decisão do dono): o passarinho voa pertinho do ombro, batendo as asinhas sem parar,
       // com um sobe e desce lento de voo; andando, inclina mais para a frente. Tudo por senos que
       // andam com o tempo (preso ao tronco: segue a criança sem procurar chão e sem tremer)
-      const bate = 1.05 + Math.sin(t * 15) * 0.55;
-      if (s.passaroAsaE) s.passaroAsaE.rotation.z = -bate;
-      if (s.passaroAsaD) s.passaroAsaD.rotation.z = bate;
+      // (as duas asinhas num nó só: batem pelo vaivém dele, abrindo para os lados e subindo, e
+      // fechando para baixo; desempenho, uma malha a menos por boneco)
+      const bate = Math.sin(t * 15);
+      if (s.passaroAsaE) s.passaroAsaE.scaling.set(1 + bate * 0.28, 1 - bate * 0.4, 1);
       const r = repousoSub.get('passaro');
       let p0 = posRepouso.get(s.passaro);
       if (!p0) posRepouso.set(s.passaro, (p0 = s.passaro.position.clone()));

@@ -29,14 +29,23 @@ function passaroEmBolinhas(plano: PlanoBoneco): Array<{ c: V3; r: number }> {
   for (const p of plano.pecas as Peca[]) {
     const s = p.subjunta;
     if (!s || !s.nome.startsWith('passaro')) continue;
-    // (as asinhas estão num nó dentro do corpo e batem em volta dele: a bolinha delas é a volta
-    // inteira que a asa faz em torno do pivô)
-    const asa = s.nome !== 'passaro';
-    const local: V3 = asa ? s.pivo : p.pos;
     const tam = p.forma === 'esfera' ? Math.max(...p.tamanho) : Math.max(p.tamanho[0], p.tamanho[1]) / 2;
-    const r = asa ? Math.hypot(...p.pos) + tam : tam;
-    // (+0,04: o sobe e desce e o balanço do voo)
-    bolinhas.push({ c: noCorpo(local), r: r + 0.04 });
+    if (s.nome === 'passaro') {
+      // (+0,04: o sobe e desce e o balanço do voo)
+      bolinhas.push({ c: noCorpo(p.pos), r: tam + 0.04 });
+      continue;
+    }
+    // as asinhas, num nó dentro do corpo que bate esticando e encolhendo (x de 0,72 a 1,28 e y
+    // de 0,6 a 1,4): a asa nas duas pontas do bater e no meio
+    for (const [ex, ey] of [
+      [0.72, 1.4],
+      [1, 1],
+      [1.28, 0.6],
+    ])
+      bolinhas.push({
+        c: noCorpo([s.pivo[0] + p.pos[0] * ex, s.pivo[1] + p.pos[1] * ey, s.pivo[2] + p.pos[2]]),
+        r: tam * Math.max(ex, ey) + 0.04,
+      });
   }
   return bolinhas;
 }
