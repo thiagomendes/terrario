@@ -1135,12 +1135,27 @@ export function conferirBanca(
 }
 
 // ------------------------------------------------------------------ lojinha premium
-export type CategoriaPremium = 'roupa' | 'costas' | 'fantasia' | 'bicho';
+/**
+ * O lugar de cada premium no boneco (uma peça por lugar). Spec 036: `andar` (os brinquedos de
+ * andar), `chapeu` (o boné de hélice) e `mao` (a varinha de bolhas, o guarda-chuva e a pipa, na
+ * mão esquerda). As categorias novas entram sempre no fim (a ordem é a de passar a limpo).
+ */
+export type CategoriaPremium =
+  | 'roupa'
+  | 'costas'
+  | 'fantasia'
+  | 'bicho'
+  | 'andar'
+  | 'chapeu'
+  | 'mao';
 export const CATEGORIAS_PREMIUM: readonly CategoriaPremium[] = [
   'roupa',
   'costas',
   'fantasia',
   'bicho',
+  'andar',
+  'chapeu',
+  'mao',
 ];
 export interface ItemPremium {
   id: string;
@@ -1203,6 +1218,104 @@ export const PREMIUM: readonly ItemPremium[] = [
     efeito: 'trota atrás, pula junto, chifre que brilha e coraçõezinhos',
     desenho: 'premium:unicornio',
   },
+  // spec 036 (dono, 22 a 24 nov 2026): os 12 da lojinha maior. Os de andar são só enfeite: a
+  // mesma velocidade, o mesmo pulo e o mesmo caminho de quem anda a pé.
+  {
+    id: 'patinete-luz',
+    categoria: 'andar',
+    nome: 'Patinete de luz',
+    preco: 110,
+    efeito: 'anda de pé, dando impulso com o pé; as 3 rodinhas acendem em verde-água quando rodam',
+    desenho: 'premium:patinete-luz',
+  },
+  {
+    id: 'carrinho-pedal',
+    categoria: 'andar',
+    nome: 'Carrinho de pedal',
+    preco: 140,
+    efeito: 'sentada no carrinho aberto, com volante e bandeirinha; os faróis acendem de noite',
+    desenho: 'premium:carrinho-pedal',
+  },
+  {
+    id: 'bicicletinha',
+    categoria: 'andar',
+    nome: 'Bicicletinha',
+    preco: 120,
+    efeito: 'pedala de verdade, com rodinhas de apoio e cestinha com uma flor',
+    desenho: 'premium:bicicletinha',
+  },
+  {
+    id: 'nuvem-fofa',
+    categoria: 'andar',
+    nome: 'Nuvem fofa',
+    preco: 150,
+    efeito: 'sentada, flutua baixinho balançando devagar e deixa nuvenzinhas para trás',
+    desenho: 'premium:nuvem-fofa',
+  },
+  {
+    id: 'passarinho-ombro',
+    categoria: 'bicho',
+    nome: 'Passarinho de ombro',
+    preco: 45,
+    efeito: 'mora no ombro, balança junto e bate as asinhas',
+    desenho: 'premium:passarinho-ombro',
+  },
+  {
+    id: 'bone-helice',
+    categoria: 'chapeu',
+    nome: 'Boné de hélice',
+    preco: 30,
+    efeito: 'a hélice gira devagar com a criança parada e rápido quando ela corre',
+    desenho: 'premium:bone-helice',
+  },
+  {
+    id: 'pijama-nuvem',
+    categoria: 'roupa',
+    nome: 'Pijama de nuvem',
+    preco: 35,
+    efeito: 'azul-céu com nuvenzinhas, gola fofa e pantufas de nuvem',
+    desenho: 'premium:pijama-nuvem',
+  },
+  {
+    id: 'asas-borboleta',
+    categoria: 'costas',
+    nome: 'Asas de borboleta',
+    preco: 55,
+    efeito: 'lilás e rosa com bolinhas; batem devagar, e mais rápido quando a criança corre',
+    desenho: 'premium:asas-borboleta',
+  },
+  {
+    id: 'mochila-foguete',
+    categoria: 'costas',
+    nome: 'Mochila-foguete',
+    preco: 65,
+    efeito: 'foguetinho com janelinha, soltando fumacinha branca',
+    desenho: 'premium:mochila-foguete',
+  },
+  {
+    id: 'varinha-bolhas',
+    categoria: 'mao',
+    nome: 'Varinha de bolhas',
+    preco: 40,
+    efeito: 'solta bolhas que sobem devagar e estouram sozinhas',
+    desenho: 'premium:varinha-bolhas',
+  },
+  {
+    id: 'guarda-chuva-gotinhas',
+    categoria: 'mao',
+    nome: 'Guarda-chuva de gotinhas',
+    preco: 45,
+    efeito: 'lilás e branco, gira devagar no alto; gotinhas azuis caem em volta, sem molhar',
+    desenho: 'premium:guarda-chuva-gotinhas',
+  },
+  {
+    id: 'pipa-lacinhos',
+    categoria: 'mao',
+    nome: 'Pipa de lacinhos',
+    preco: 50,
+    efeito: 'amarela e azul, presa na mão por uma linha, voando atrás e acima da criança com o rabo de lacinhos',
+    desenho: 'premium:pipa-lacinhos',
+  },
 ];
 export const premiumPorId = (id: string): ItemPremium | undefined =>
   PREMIUM.find((p) => p.id === id);
@@ -1223,13 +1336,22 @@ export const idPremiumAtual = (id: string): string =>
 
 /**
  * Categorias que dividem o mesmo lugar no boneco: as asas do dragãozinho (fantasia) ficam nas
- * costas, onde vai a capa. Vestir uma tira a outra (às claras, na lojinha), nunca as duas
- * vestidas com uma escondida.
+ * costas, onde vai a capa, e o capuz dele fica na cabeça, onde vai o boné (spec 036). Vestir uma
+ * tira a outra (às claras, na lojinha), nunca as duas vestidas com uma escondida. A lista vale
+ * nos dois sentidos (quem está em `fantasia` tem `fantasia` na lista dele).
  */
-export const LUGAR_DIVIDIDO: Readonly<Partial<Record<CategoriaPremium, CategoriaPremium>>> = {
-  fantasia: 'costas',
-  costas: 'fantasia',
-};
+export const LUGAR_DIVIDIDO: Readonly<Partial<Record<CategoriaPremium, readonly CategoriaPremium[]>>> =
+  {
+    fantasia: ['costas', 'chapeu'],
+    costas: ['fantasia'],
+    chapeu: ['fantasia'],
+  };
+
+/** As categorias que saem ao vestir uma de `cat`: ela mesma e as que dividem o lugar com ela. */
+export const lugaresDe = (cat: CategoriaPremium): readonly CategoriaPremium[] => [
+  cat,
+  ...(LUGAR_DIVIDIDO[cat] ?? []),
+];
 
 /** O que sai do boneco ao vestir `id`: o da mesma categoria e o que divide o lugar com ele. */
 export function saiAoVestir(
@@ -1239,8 +1361,8 @@ export function saiAoVestir(
   const p = premiumPorId(id);
   if (!p) return [];
   const out: string[] = [];
-  for (const cat of [p.categoria, LUGAR_DIVIDIDO[p.categoria]])
-    if (cat && vestidos[cat] && vestidos[cat] !== id) out.push(vestidos[cat]!);
+  for (const cat of lugaresDe(p.categoria))
+    if (vestidos[cat] && vestidos[cat] !== id) out.push(vestidos[cat]!);
   return out;
 }
 
@@ -1705,6 +1827,12 @@ export interface PerfilAlma {
   /** Premium comprados (ids do catálogo) e o vestido de cada categoria. */
   premium: string[];
   vestidos: Partial<Record<CategoriaPremium, string>>;
+  /**
+   * Spec 036: premium comprados que este código não conhece (um site mais novo vendeu, e o
+   * site voltou atrás). Ficam guardados como estão e voltam para `premium` quando o catálogo
+   * os conhecer de novo: nada do que a criança comprou some.
+   */
+  depois: string[];
   /** Fantasias ganhas nas missões. */
   fantasias: string[];
   /** Totais (auditoria e migração 024): tudo o que veio do núcleo e tudo o que foi gasto. */
@@ -1719,6 +1847,7 @@ export function perfilAlmaVazio(): PerfilAlma {
     pontos: {},
     premium: [],
     vestidos: {},
+    depois: [],
     fantasias: [],
     ganhou: 0,
     gastou: 0,
@@ -1726,7 +1855,44 @@ export function perfilAlmaVazio(): PerfilAlma {
 }
 export const MAX_MOEDAS = 99_999;
 export const MAX_FANTASIAS_ALMA = 32;
-/** Lê o perfil guardado (ou de outro aparelho), jogando fora o que não conhece. */
+/** Spec 036: teto da lista de "depois" (os comprados que este código não conhece). */
+export const MAX_PREMIUM_DEPOIS = 64;
+/**
+ * Spec 036: um id de premium bem formado (letras minúsculas, algarismos e hífen entre eles, até
+ * 40), o formato de todo id do catálogo. Só esse vai para a lista de "depois"; o resto é lixo.
+ */
+export const idPremiumBemFormado = (v: unknown): v is string =>
+  typeof v === 'string' && v.length <= 40 && /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(v);
+
+/**
+ * Os premium comprados de uma lista guardada: os que o catálogo conhece (com o nome de agora)
+ * e os bem formados que ele não conhece ("depois"), sem repetir.
+ */
+export function separarComprados(...listas: unknown[]): { premium: string[]; depois: string[] } {
+  const premium: string[] = [];
+  const depois: string[] = [];
+  for (const lista of listas) {
+    if (!Array.isArray(lista)) continue;
+    for (const bruto of lista) {
+      if (typeof bruto !== 'string') continue;
+      const id = idPremiumAtual(bruto);
+      if (premiumPorId(id)) {
+        if (!premium.includes(id)) premium.push(id);
+      } else if (
+        idPremiumBemFormado(id) &&
+        !depois.includes(id) &&
+        depois.length < MAX_PREMIUM_DEPOIS
+      )
+        depois.push(id);
+    }
+  }
+  return { premium, depois };
+}
+
+/**
+ * Lê o perfil guardado (ou de outro aparelho), jogando fora o que não conhece. Spec 036: menos o
+ * premium comprado com id bem formado, que vai para `depois` (um site mais novo vendeu).
+ */
 export function normalizarPerfilAlma(v: unknown): PerfilAlma {
   const c = perfilAlmaVazio();
   if (!objeto(v)) return c;
@@ -1735,17 +1901,11 @@ export function normalizarPerfilAlma(v: unknown): PerfilAlma {
   if (objeto(v.pontos))
     for (const h of IDS_HABILIDADE)
       if (v.pontos[h] !== undefined) c.pontos[h] = r2(numero(v.pontos[h]));
-  // os ids que trocaram de nome viram o de agora (o guardado de antes continua valendo)
-  c.premium = Array.isArray(v.premium)
-    ? [
-        ...new Set(
-          v.premium
-            .filter((p): p is string => typeof p === 'string')
-            .map(idPremiumAtual)
-            .filter((p) => !!premiumPorId(p)),
-        ),
-      ]
-    : [];
+  // os ids que trocaram de nome viram o de agora (o guardado de antes continua valendo); o que
+  // estava em "depois" e o catálogo de agora conhece volta para os comprados
+  const comprados = separarComprados(v.premium, v.depois);
+  c.premium = comprados.premium;
+  c.depois = comprados.depois;
   if (objeto(v.vestidos))
     for (const [cat, bruto] of Object.entries(v.vestidos)) {
       if (typeof bruto !== 'string') continue;
@@ -1753,8 +1913,10 @@ export function normalizarPerfilAlma(v: unknown): PerfilAlma {
       if (c.premium.includes(id) && premiumPorId(id)?.categoria === cat)
         c.vestidos[cat as CategoriaPremium] = id;
     }
-  // guardado de antes da regra do lugar dividido: a fantasia (as asas) fica, a capa sai
-  if (c.vestidos.fantasia) delete c.vestidos.costas;
+  // guardado de antes da regra do lugar dividido: a fantasia (as asas, o capuz) fica, e o que
+  // divide o lugar com ela (a capa, o boné) sai
+  if (c.vestidos.fantasia)
+    for (const cat of LUGAR_DIVIDIDO.fantasia ?? []) delete c.vestidos[cat];
   c.fantasias = Array.isArray(v.fantasias)
     ? [
         ...new Set(v.fantasias.filter((f): f is string => typeof f === 'string' && f.length <= 40)),
@@ -1847,8 +2009,7 @@ export function comprarPremium(
   return { ok: true };
 }
 function vestirPeca(c: PerfilAlma, p: ItemPremium): void {
-  const outra = LUGAR_DIVIDIDO[p.categoria];
-  if (outra) delete c.vestidos[outra];
+  for (const outra of LUGAR_DIVIDIDO[p.categoria] ?? []) delete c.vestidos[outra];
   c.vestidos[p.categoria] = p.id;
 }
 /** Veste ou tira um premium já comprado (um por categoria). */

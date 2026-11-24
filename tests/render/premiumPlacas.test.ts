@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { triangular } from '../../src/render/formas';
-import { pecasDoBicho } from '../../src/render/bichoPremium';
+import { ehBichoQueSegue, pecasDoBicho } from '../../src/render/bichoPremium';
+import { PREMIUM } from '../../src/jogo/alma';
 import { planoBoneco, type Peca } from '../../src/personagem/boneco';
 import { aparenciaPadrao, type PremiumVestido } from '../../src/personagem/aparencia';
 
@@ -55,4 +56,14 @@ describe('placas dos premium (spec 023)', () => {
     it(`bicho ${id}`, () => {
       expect(conferir(pecasDoBicho(id))).toEqual([]);
     });
+});
+
+describe('036: só o pinguim e o unicórnio seguem pelo chão', () => {
+  it('o passarinho de ombro e o id desconhecido não montam bicho que segue', () => {
+    const bichos = PREMIUM.filter((p) => p.categoria === 'bicho').map((p) => p.id);
+    expect(bichos.filter(ehBichoQueSegue)).toEqual(['pinguim', 'unicornio']);
+    expect(ehBichoQueSegue('passarinho-ombro')).toBe(false);
+    for (const lixo of ['toString', '__proto__', 'foguete-do-futuro', undefined, 7])
+      expect(ehBichoQueSegue(lixo)).toBe(false);
+  });
 });

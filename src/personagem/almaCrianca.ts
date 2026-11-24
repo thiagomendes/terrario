@@ -24,21 +24,66 @@ import {
 import type { Armazenamento } from './persistencia';
 
 export const CHAVE_ALMA_CRIANCA = 'terrario:alma-crianca';
+/**
+ * Spec 036: os ids de todo premium comprado neste aparelho, à parte do perfil. O código de antes
+ * da 036 não conhece esta chave e nunca a toca: se o site voltar atrás, ele joga fora do perfil
+ * o item que não conhece, mas o id continua aqui, e o site de novo o devolve ao ler (as duas
+ * chaves se unem na leitura). Só cresce: o que foi comprado não sai.
+ */
+export const CHAVE_ALMA_COMPRADOS = 'terrario:alma-comprados';
+export const VERSAO_COMPRADOS = 1;
+/** Teto da lista à parte (os 18 de hoje, os que vierem e folga). */
+export const MAX_COMPRADOS = 128;
+
+function lerComprados(armazenamento: Armazenamento): string[] {
+  try {
+    const bruto = armazenamento.getItem(CHAVE_ALMA_COMPRADOS);
+    if (typeof bruto !== 'string' || !bruto) return [];
+    const dado: unknown = JSON.parse(bruto);
+    const ids = Array.isArray(dado) ? dado : (dado as { ids?: unknown } | null)?.ids;
+    return Array.isArray(ids)
+      ? ids.filter((i): i is string => typeof i === 'string').slice(0, MAX_COMPRADOS)
+      : [];
+  } catch {
+    return [];
+  }
+}
 
 export function carregarPerfilAlma(armazenamento: Armazenamento | null): PerfilAlma {
   if (!armazenamento) return perfilAlmaVazio();
+  let guardado: unknown;
   try {
     const bruto = armazenamento.getItem(CHAVE_ALMA_CRIANCA);
-    return typeof bruto === 'string' ? normalizarPerfilAlma(JSON.parse(bruto)) : perfilAlmaVazio();
+    guardado = typeof bruto === 'string' ? JSON.parse(bruto) : undefined;
   } catch {
-    return perfilAlmaVazio();
+    guardado = undefined;
   }
+  const comprados = lerComprados(armazenamento);
+  if (!comprados.length) return normalizarPerfilAlma(guardado);
+  // os comprados à parte entram no perfil (o perfil guardado vem primeiro, na ordem dele)
+  const base =
+    guardado && typeof guardado === 'object' && !Array.isArray(guardado)
+      ? (guardado as Record<string, unknown>)
+      : {};
+  const premium = Array.isArray(base.premium) ? base.premium : [];
+  return normalizarPerfilAlma({ ...base, premium: [...premium, ...comprados] });
 }
 
 export function salvarPerfilAlma(armazenamento: Armazenamento | null, p: PerfilAlma): boolean {
   if (!armazenamento) return false;
   try {
-    armazenamento.setItem(CHAVE_ALMA_CRIANCA, JSON.stringify(normalizarPerfilAlma(p)));
+    const limpo = normalizarPerfilAlma(p);
+    armazenamento.setItem(CHAVE_ALMA_CRIANCA, JSON.stringify(limpo));
+    // a lista à parte só ganha (o que já estava nela fica, mesmo que o perfil não tenha)
+    const ids = lerComprados(armazenamento);
+    const antes = ids.length;
+    for (const id of [...limpo.premium, ...limpo.depois])
+      if (!ids.includes(id) && ids.length < MAX_COMPRADOS) ids.push(id);
+    if (ids.length !== antes)
+      armazenamento.setItem(
+        CHAVE_ALMA_COMPRADOS,
+        JSON.stringify({ versao: VERSAO_COMPRADOS, ids }),
+      );
     return true;
   } catch {
     return false;

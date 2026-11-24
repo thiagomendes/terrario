@@ -39,6 +39,13 @@ import {
   registrarEvento,
   vestirPremium,
   saiAoVestir,
+  CATEGORIAS_PREMIUM,
+  LUGAR_DIVIDIDO,
+  MAX_PREMIUM_DEPOIS,
+  PREMIUM_RENOMEADOS,
+  idPremiumBemFormado,
+  premiumPorId,
+  separarComprados,
   temMissaoNova,
   visitarLugar,
   vistaAlmaMundo,
@@ -49,6 +56,7 @@ import {
   type ResultadoAlma,
 } from '../../src/jogo/alma';
 import { criarRelogioConvite } from '../../src/jogo/guia';
+import { fantasiaPorId } from '../../src/personagem/fantasias';
 import { celulasDaObra, obraDoCanteiro } from '../../src/world/obras';
 import { obterItem } from '../../src/jogo/itens';
 import { registrarCatalogo } from '../../src/jogo/catalogo';
@@ -379,15 +387,41 @@ describe('alma: banca e premium', () => {
     // sem bicho que não exista no tema
     expect(BANCA.some((b) => /gato|ponei/.test(b.id))).toBe(false);
   });
-  it('lojinha: só os 6 de lançamento, de 15 a 80, nada de missão nem de nível', () => {
-    expect(PREMIUM.map((p) => [p.id, p.preco])).toEqual([
-      ['camiseta-aquario', 15],
-      ['tenis-cometa', 20],
-      ['capa-estrelas', 30],
-      ['dragao', 55],
-      ['pinguim', 60],
-      ['unicornio', 80],
+  it('lojinha: os 6 de lançamento e os 12 da 036, com os preços do dono; nada de missão nem de nível', () => {
+    expect(PREMIUM.map((p) => [p.id, p.categoria, p.preco])).toEqual([
+      ['camiseta-aquario', 'roupa', 15],
+      ['tenis-cometa', 'roupa', 20],
+      ['capa-estrelas', 'costas', 30],
+      ['dragao', 'fantasia', 55],
+      ['pinguim', 'bicho', 60],
+      ['unicornio', 'bicho', 80],
+      // spec 036 (a tabela da spec)
+      ['patinete-luz', 'andar', 110],
+      ['carrinho-pedal', 'andar', 140],
+      ['bicicletinha', 'andar', 120],
+      ['nuvem-fofa', 'andar', 150],
+      ['passarinho-ombro', 'bicho', 45],
+      ['bone-helice', 'chapeu', 30],
+      ['pijama-nuvem', 'roupa', 35],
+      ['asas-borboleta', 'costas', 55],
+      ['mochila-foguete', 'costas', 65],
+      ['varinha-bolhas', 'mao', 40],
+      ['guarda-chuva-gotinhas', 'mao', 45],
+      ['pipa-lacinhos', 'mao', 50],
     ]);
+    // todo id é bem formado e único, e nenhum é fantasia (o dragão é a fantasia da lojinha)
+    expect(new Set(PREMIUM.map((p) => p.id)).size).toBe(PREMIUM.length);
+    for (const p of PREMIUM) {
+      expect(idPremiumBemFormado(p.id), p.id).toBe(true);
+      if (p.id !== 'dragao') expect(fantasiaPorId(p.id), p.id).toBeUndefined();
+      expect(CATEGORIAS_PREMIUM).toContain(p.categoria);
+      expect(p.efeito.length).toBeGreaterThan(10);
+    }
+    // nenhum id renomeado aponta para fora do catálogo, nem é id de agora
+    for (const [velho, novo] of Object.entries(PREMIUM_RENOMEADOS)) {
+      expect(premiumPorId(novo)).toBeTruthy();
+      expect(premiumPorId(velho)).toBeUndefined();
+    }
     const ids = new Set(PREMIUM.map((p) => p.id));
     for (const m of MISSOES) expect(ids.has(m.fantasia ?? '')).toBe(false);
     for (const p of PRESENTES_NIVEL) expect(ids.has(p.desenho)).toBe(false);
@@ -427,6 +461,64 @@ describe('alma: banca e premium', () => {
     });
     expect(n.vestidos).toEqual({ fantasia: 'dragao' });
     for (const p of PREMIUM) expect(p.desenho).toBe(`premium:${p.id}`);
+  });
+  it('036: o lugar dividido em lista vale nos dois sentidos', () => {
+    for (const [cat, outras] of Object.entries(LUGAR_DIVIDIDO))
+      for (const o of outras ?? []) expect(LUGAR_DIVIDIDO[o], `${cat} e ${o}`).toContain(cat);
+    expect(LUGAR_DIVIDIDO.fantasia).toEqual(['costas', 'chapeu']);
+  });
+  it('036: o dragãozinho e o boné dividem a cabeça; as asas e a capa, as costas', () => {
+    const c = perfilAlmaVazio();
+    c.moedas = 999;
+    for (const id of ['bone-helice', 'asas-borboleta', 'pipa-lacinhos', 'nuvem-fofa'])
+      expect(comprarPremium(c, id)).toEqual({ ok: true });
+    expect(c.vestidos).toEqual({
+      chapeu: 'bone-helice',
+      costas: 'asas-borboleta',
+      mao: 'pipa-lacinhos',
+      andar: 'nuvem-fofa',
+    });
+    // o dragão tira o boné e as asas, às claras; a mão e o brinquedo ficam
+    expect(saiAoVestir(c.vestidos, 'dragao')).toEqual(['asas-borboleta', 'bone-helice']);
+    expect(comprarPremium(c, 'dragao')).toEqual({ ok: true });
+    expect(c.vestidos).toEqual({ fantasia: 'dragao', mao: 'pipa-lacinhos', andar: 'nuvem-fofa' });
+    // o boné de volta tira o dragão, e as asas continuam fora
+    expect(saiAoVestir(c.vestidos, 'bone-helice')).toEqual(['dragao']);
+    expect(vestirPremium(c, 'bone-helice', true)).toBe(true);
+    expect(c.vestidos).toEqual({ chapeu: 'bone-helice', mao: 'pipa-lacinhos', andar: 'nuvem-fofa' });
+    // um por lugar: a mochila-foguete tira as asas; o guarda-chuva tira a pipa; a capa não tira o boné
+    expect(comprarPremium(c, 'mochila-foguete')).toEqual({ ok: true });
+    expect(saiAoVestir(c.vestidos, 'guarda-chuva-gotinhas')).toEqual(['pipa-lacinhos']);
+    expect(saiAoVestir(c.vestidos, 'capa-estrelas')).toEqual(['mochila-foguete']);
+    expect(saiAoVestir(c.vestidos, 'bicicletinha')).toEqual(['nuvem-fofa']);
+    expect(saiAoVestir(c.vestidos, 'passarinho-ombro')).toEqual([]);
+    // guardado de antes com o dragão, o boné e a capa juntos: fica o dragão
+    const n = normalizarPerfilAlma({
+      ...c,
+      premium: [...c.premium, 'capa-estrelas'],
+      vestidos: { fantasia: 'dragao', chapeu: 'bone-helice', costas: 'capa-estrelas', mao: 'pipa-lacinhos' },
+    });
+    expect(n.vestidos).toEqual({ fantasia: 'dragao', mao: 'pipa-lacinhos' });
+  });
+  it('036: o comprado que este código não conhece vai para "depois" e volta quando conhecer', () => {
+    const n = normalizarPerfilAlma({
+      premium: ['pinguim', 'trem-de-nuvem', 'camiseta-arco-iris', 'pinguim', 'NAO VALE', '', 7, 'a'.repeat(41)],
+      depois: ['trem-de-nuvem', 'bicicletinha', 'outro-futuro'],
+      vestidos: { bicho: 'pinguim', voar: 'trem-de-nuvem' },
+    });
+    // o renomeado vira o de agora; o "depois" que o catálogo conhece volta para os comprados
+    expect(n.premium).toEqual(['pinguim', 'camiseta-aquario', 'bicicletinha']);
+    expect(n.depois).toEqual(['trem-de-nuvem', 'outro-futuro']);
+    // o vestido desconhecido não fica (vestir de novo é um toque); o comprado, sim
+    expect(n.vestidos).toEqual({ bicho: 'pinguim' });
+    // ida e volta igual
+    expect(normalizarPerfilAlma(JSON.parse(JSON.stringify(n)))).toEqual(n);
+    // o teto da lista
+    const muitos = Array.from({ length: 200 }, (_, i) => `futuro-${i}`);
+    expect(separarComprados(muitos).depois).toHaveLength(MAX_PREMIUM_DEPOIS);
+    expect(idPremiumBemFormado('bone-helice')).toBe(true);
+    for (const ruim of ['-bone', 'bone-', 'bo--ne', 'Bone', 'bone helice', 'boné'])
+      expect(idPremiumBemFormado(ruim), ruim).toBe(false);
   });
 });
 

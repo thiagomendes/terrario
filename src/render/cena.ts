@@ -378,7 +378,12 @@ import {
 } from '../player/camera';
 import { chave, chunksDesejados, planejar, respostaObsoleta } from './gerenciador';
 import { criarAnimador } from '../player/animacao';
-import { normalizarAparencia, rotuloDoModelo, type Aparencia } from '../personagem/aparencia';
+import {
+  manterMontado,
+  normalizarAparencia,
+  rotuloDoModelo,
+  type Aparencia,
+} from '../personagem/aparencia';
 import { carregarAparencia, type Armazenamento } from '../personagem/persistencia';
 import type { Pose } from '../personagem/poses';
 import { criarPersonagem } from './personagem';
@@ -1502,6 +1507,8 @@ export function criarCena(
   // Ninguém entra no mundo já de patins (nem quem saiu dele calçado, nem em outro mundo)
   delete aparencia.patins;
   delete aparencia.skate;
+  // spec 036: nem montada no brinquedo de andar (entra a pé)
+  delete aparencia.montado;
   const personagem = criarPersonagem(scene, aparencia);
   let vitrine: ReturnType<EfeitosPremium['registrar']> | null = null;
   let vitrineNo: TransformNode | null = null;
@@ -4278,12 +4285,15 @@ export function criarCena(
       // suporte do rinque); fora da Vila Neon os patins nunca vão (decisão 7 do dono)
       const dePatins = !!planoVila && !!aparencia.patins;
       const deSkate = !!planoVila && !!aparencia.skate;
+      const montadaAntes = !!aparencia.montado;
       aparencia = normalizarAparencia({ ...aparencia, ...parcial });
       if (dePatins) aparencia.patins = true;
       else delete aparencia.patins;
       // (parte 3: o skate também continua, e nunca vem de outro lugar)
       if (deSkate && !dePatins) aparencia.skate = true;
       else delete aparencia.skate;
+      // spec 036: montada no brinquedo de andar continua (vestir em "Meus tesouros" não desmonta)
+      aparencia = manterMontado(montadaAntes, aparencia);
       personagem.aplicarAparencia(aparencia);
       // os amigos no mesmo mundo passam a ver a aparência nova
       // spec 014: os desbloqueios (capacete e colete do canteiro) ficam no aparelho

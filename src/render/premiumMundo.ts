@@ -25,7 +25,12 @@ import type { Scene } from '@babylonjs/core/scene';
 import type { PremiumVestido } from '../personagem/aparencia';
 import { ehSolido } from '../jogo/caminho';
 import { BRILHOS, umaDe } from './premiumLuzes';
-import { montarBichoPremium, type BichoMontado, type IdBichoPremium } from './bichoPremium';
+import {
+  ehBichoQueSegue,
+  montarBichoPremium,
+  type BichoMontado,
+  type IdBichoPremium,
+} from './bichoPremium';
 
 /** Teto do pool de brilhos (spec: no máximo 80 sprites). */
 export const MAXIMO_BRILHOS = 80;
@@ -440,7 +445,8 @@ export function efeitosPremium(scene: Scene): EfeitosPremium {
   }
 
   function arrumarBicho(u: Usuario): void {
-    const id = u.premium.bicho as IdBichoPremium | undefined;
+    // spec 036: só o que segue pelo chão (o passarinho mora no ombro, no boneco)
+    const id = ehBichoQueSegue(u.premium.bicho) ? u.premium.bicho : undefined;
     if (u.bicho && u.bicho.b.id !== id) {
       u.bicho.b.descartar();
       u.bicho = null;

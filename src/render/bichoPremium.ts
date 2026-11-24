@@ -379,6 +379,13 @@ const DESENHOS: Record<IdBichoPremium, () => Desenho> = {
   pinguim: desenhoPinguim,
 };
 
+/**
+ * Spec 036: o bichinho que segue a criança pelo chão (o pinguim e o unicórnio). O passarinho de
+ * ombro também é `bicho`, mas mora no boneco, e o id que este aparelho não conhece não monta.
+ */
+export const ehBichoQueSegue = (id: unknown): id is IdBichoPremium =>
+  typeof id === 'string' && Object.hasOwn(DESENHOS, id);
+
 /** As peças do bicho (testes: toda placa triangula inteira). */
 export function pecasDoBicho(id: IdBichoPremium): Array<Omit<Peca, 'junta'> & { osso: string }> {
   return DESENHOS[id]().pecas;

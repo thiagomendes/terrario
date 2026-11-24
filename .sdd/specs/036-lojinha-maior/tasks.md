@@ -29,6 +29,45 @@ O esboço fica no branch `esboco/036-lojinha-maior` (o código em `src/esboco/lo
 |---|---|
 | Esboço | o dono escolheu 10 em 23 nov e mais 2 em 24 nov (os 12 da spec) |
 | Spec | revisada pelo engenheiro de núcleo e rede em 24 nov (15 apontamentos, todos acolhidos: a compra fica no aparelho, a `VERSAO_REDE` fica em 18, as regras de cabeça e de mão, o `montado` na aparência, a chave à parte dos comprados); **aprovada pelo dono em 24 nov**, com as três regras recomendadas (brinquedos só enfeite, montada faz tudo menos o abraço, comprar já monta) |
-| Código | não começou |
+| T01 Catálogo, regras e rede | **pronta (24 nov)**. Os detalhes abaixo |
+
+### T01 (24 nov 2026, `engenheiro-nucleo-rede`)
+- **O catálogo:** os 12 no `PREMIUM` (`src/jogo/alma.ts`), com os ids, preços e efeitos da spec; as categorias `andar`, `chapeu` e `mao` no fim de `CATEGORIAS_PREMIUM`. A vitrine já lista os 18, sem a figura dos novos até a T03 e sem as abas até a T06.
+- **O lugar dividido em lista:** `LUGAR_DIVIDIDO = { fantasia: ['costas', 'chapeu'], costas: ['fantasia'], chapeu: ['fantasia'] }`, com o `lugaresDe`. O `saiAoVestir`, o `vestirPeca` e o conserto do `normalizarPerfilAlma` (a fantasia fica, a capa e o boné saem) seguem a lista. O `normalizarPremium` da aparência faz o mesmo, venha a aparência de onde vier: uma peça só à vista.
+- **A cabeça e a mão** (`src/personagem/tesouroEFantasia.ts`):
+  - `PECAS_DA_CABECA`, `PECAS_DA_MAO` (a varinha e o cetro);
+  - `oQueSai(a, vestidos, escolha)` é a regra única, para um tesouro ou uma fantasia. Ela devolve, em ordem, os tesouros que saem e, da fantasia, ela inteira ou só a peça que sai sozinha (`{ tipo: 'premium' | 'fantasia' | 'peca' }`). O `tirarDaFantasia` aplica a lista;
+  - o `tesourosQueSaem` e o `aoVestirTesouro` de hoje passaram a usar a regra única, e a interface continua igual até a T06;
+  - o `acessorioEscondido` diz quando o enfeite do look some debaixo do tesouro: a mochila debaixo das costas, o chapéu e o capuz debaixo do boné, a lanterna debaixo da mão. **Para a T03:** ligar no `boneco.ts:206` no lugar da regra só da mochila;
+  - **Para a T03:** a tiara, o enfeite de cabeça e a faixa da testa ficaram **fora** de `PECAS_DA_CABECA`. O artista decide pelas fotos se algum entra. Um teste garante que toda fantasia que cobre a cabeça tem a peça dela na lista;
+  - a varinha de bolhas não liga as florzinhas do baile: o `temVarinha` só olha a fantasia, e vestir o premium da mão tira a varinha da fantasia (põe em `sem`).
+- **Nada some:**
+  - a chave à parte `terrario:alma-comprados` (`{ versao: 1, ids }`, que só cresce) se une ao perfil na leitura;
+  - o `PerfilAlma` ganhou o `depois`, com os ids bem formados e desconhecidos (até 64), que voltam aos comprados quando o catálogo os conhecer;
+  - o teste do site que volta atrás usa a cópia congelada do `normalizarPerfilAlma` de antes;
+  - um perfil com id desconhecido sobrevive a carregar e salvar.
+- **O montado:**
+  - `montado?: true` na aparência, só com `premium.andar` e sem patins nem skate;
+  - nunca é salvo: o `salvarAparencia` e o `carregarAparencia` o apagam, e a cena o apaga ao entrar no mundo;
+  - o `manterMontado` é usado no `estado.personagem.definir` como os patins: o `definir` nunca monta, e só desmonta quando o brinquedo sai.
+- **O "pode montar":** `src/personagem/montar.ts`, puro, com:
+  - `motivoSemMontar`, `podeMontar` e `precisaDescer`;
+  - `brinquedoMontado`;
+  - o registro `criarBrinquedosDeTema()`, em que cada brinquedo de tema se registra.
+
+  Ninguém o chama ainda: é a T04.
+- **A rede fica na 18:**
+  - o motivo está no comentário da `VERSAO_REDE`;
+  - `tests/rede/congelado18.ts` é a cópia congelada das regras da 18 de antes, e `tests/rede/versao-036.test.ts` prova que ela passa a aparência da 036 a limpo, sem os itens novos e sem o `montado`, e que a aparência mais cheia cabe com folga no teto de 4096;
+  - nenhum comando, evento ou campo de quadro novo.
+- **Um conserto de quebra:** o `premiumMundo` montava como bicho que segue qualquer `premium.bicho`. Com o passarinho, o `DESENHOS[id]` não existe e daria erro. Agora só o pinguim e o unicórnio seguem pelo chão (`ehBichoQueSegue`).
+- **Os testes:**
+  - novos: `tests/personagem/montar.test.ts`, `tests/rede/versao-036.test.ts`, os blocos 036 de `alma.test.ts`, `tesouroEFantasia.test.ts` e `premiumPlacas.test.ts`;
+  - mudou um caso de `almaCrianca.test.ts`: o perfil reescrito à mão sem o unicórnio agora o recebe de volta pela chave à parte, de propósito.
+- **Para a T06:** o `e2e/lojinha.spec.ts` ("os seis cartões à vista, sem rolar") e outros testes de tela da vitrine vão falhar com os 18 até as abas entrarem.
+- **Para a T04:**
+  - ao reconectar na nuvem, o "entrar" leva a aparência guardada, sem o montado (nem os patins, como já é hoje): o amigo vê a criança a pé até a próxima aparência;
+  - vale mandar a aparência de agora depois do "bem-vindo";
+  - o `INTERVALO_APARENCIA` do núcleo junta montar e descer muito seguidos (fica a última, como já é).
 
 Falta sempre, ao fim, a **rodada em família**.

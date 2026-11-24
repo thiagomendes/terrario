@@ -1,5 +1,6 @@
 import {
   CATEGORIAS_PREMIUM,
+  LUGAR_DIVIDIDO,
   idPremiumAtual,
   premiumPorId,
   type CategoriaPremium,
@@ -80,6 +81,12 @@ export interface Aparencia {
    */
   skate?: true;
   /**
+   * Spec 036: montada no brinquedo de andar vestido (`premium.andar`). Só existe com ele e sem
+   * patins nem skate; vai pela rede (os amigos veem a criança montada), nunca vai salvo (quem
+   * recarrega entra a pé, como de patins). Sem montar, o campo não existe.
+   */
+  montado?: true;
+  /**
    * Spec 023 (T09): presentes de nível que os amigos veem. A etiqueta do nome colorida (nível
    * 2) ou com estrela (nível 7) e o balão com estrelinha (nível 6). O aparelho põe quando a
    * criança chega ao nível; sem nenhum, os campos não existem.
@@ -106,6 +113,9 @@ export function normalizarPremium(valor: unknown): PremiumVestido | undefined {
     const id = idPremiumAtual(bruto);
     if (premiumPorId(id)?.categoria === cat) out[cat] = id;
   }
+  // spec 036: uma peça só à vista em cada lugar (a fantasia premium fica; a capa e o boné, que
+  // dividem o lugar com ela, saem), venha a aparência de onde vier
+  if (out.fantasia) for (const cat of LUGAR_DIVIDIDO.fantasia ?? []) delete out[cat];
   return Object.keys(out).length ? out : undefined;
 }
 
@@ -424,6 +434,9 @@ export function normalizarAparencia(entrada: unknown): Aparencia {
   if (obj.patins === true) a.patins = true;
   // parte 3: o skate (só o sim, e nunca junto dos patins: os patins ganham)
   else if (obj.skate === true) a.skate = true;
+  // spec 036: montada no brinquedo de andar (só o sim, só com ele vestido, nunca de patins nem
+  // de skate)
+  if (obj.montado === true && a.premium?.andar && !a.patins && !a.skate) a.montado = true;
   // spec 023 (T09): os presentes de nível que os amigos veem
   if (obj.etiqueta === 'cor' || obj.etiqueta === 'estrela') a.etiqueta = obj.etiqueta;
   if (obj.balao === 'estrela') a.balao = 'estrela';
@@ -452,6 +465,21 @@ export function semDesbloqueios<T extends { desbloqueios?: unknown }>(
   const copia = { ...a };
   delete copia.desbloqueios;
   return copia;
+}
+
+/**
+ * Spec 036: a aparência nova (da tela do personagem, de "Meus tesouros", da lojinha) com o
+ * montado de antes, como os patins: quem não sabe do brinquedo não desmonta a criança. Só
+ * montar e descer mudam o montado; aqui ele só cai quando deixa de valer (o brinquedo de andar
+ * saiu, ou entraram os patins ou o skate). Trocar de brinquedo vestido continua montada no novo.
+ */
+export function manterMontado(montadaAntes: boolean, nova: Aparencia): Aparencia {
+  const vale = montadaAntes && !!nova.premium?.andar && !nova.patins && !nova.skate;
+  if (vale === !!nova.montado) return nova;
+  const out: Aparencia = { ...nova };
+  if (vale) out.montado = true;
+  else delete out.montado;
+  return out;
 }
 
 /**
