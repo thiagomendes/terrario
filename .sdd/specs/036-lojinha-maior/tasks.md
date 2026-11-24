@@ -31,6 +31,7 @@ O esboço fica no branch `esboco/036-lojinha-maior` (o código em `src/esboco/lo
 | Spec | revisada pelo engenheiro de núcleo e rede em 24 nov (15 apontamentos, todos acolhidos: a compra fica no aparelho, a `VERSAO_REDE` fica em 18, as regras de cabeça e de mão, o `montado` na aparência, a chave à parte dos comprados); **aprovada pelo dono em 24 nov**, com as três regras recomendadas (brinquedos só enfeite, montada faz tudo menos o abraço, comprar já monta) |
 | T01 Catálogo, regras e rede | **pronta (24 nov)**. Os detalhes abaixo |
 | T02 O Unicórnio-pônei | **pronta (24 nov)**: a borda, o brilho e o tremor, cada um com a causa achada. Os detalhes abaixo |
+| T03 As peças no boneco e os efeitos | **pronta (24 nov)**: as 7 peças, o passarinho no ombro, os efeitos e as figuras. Os detalhes abaixo |
 
 ### T01 (24 nov 2026, `engenheiro-nucleo-rede`)
 - **O catálogo:** os 12 no `PREMIUM` (`src/jogo/alma.ts`), com os ids, preços e efeitos da spec; as categorias `andar`, `chapeu` e `mao` no fim de `CATEGORIAS_PREMIUM`. A vitrine já lista os 18, sem a figura dos novos até a T03 e sem as abas até a T06.
@@ -93,5 +94,24 @@ O esboço fica no branch `esboco/036-lojinha-maior` (o código em `src/esboco/lo
   - medido voando de lado por 3 s: **antes 8 e 11 saltos** (o maior de 8 blocos num quadro), **depois 0** (o maior passo, 0,56 bloco).
 - **Os testes:** `tests/render/seguirVoando.test.ts` (novo: voando a 11 e 20 blocos por segundo com quadros de tamanhos variados, sem salto, sem atraso e sem tranco; a mola estável e sem passar do ponto; um pulo comum não liga o voo). `tests/render` e `tests/personagem` verdes.
 - **Ficou fraco:** a foto trotando pega o unicórnio na beira (a câmera do jogo vira junto); o vídeo é `.webm` (sem `ffmpeg` no computador).
+
+### T03 (24 nov 2026, `artista-voxel`)
+- **As fotos:** `capturas-036/t03-pecas/` (com o `indice.md`): cada peça de três-quartos, de frente e de costas, de dia e de noite, no celular em pé; uma tela deitada e uma no computador; as figuras da lojinha (`figuras/`); a decisão da cabeça (`cabeca/`); o custo (`custo.md`); o vídeo dos efeitos (`efeitos.webm`). Saem de `e2e/capturas-036.spec.ts` (`CAPTURAS_036=t03`, e `custo`).
+- **As peças** (`src/personagem/bonecoPremiumLojinha.ts`, chamado pelo `vestirPremiumNoPlano`): o boné de hélice, o pijama de nuvem, as asas de borboleta, a mochila-foguete, a varinha de bolhas, o guarda-chuva e a pipa, saídas do esboço no padrão das peças de hoje. As correções da spec:
+  - o guarda-chuva maior (raio 0,66 para 0,82) e sempre em pé por cima da cabeça: o nó dele desfaz o giro da mão a cada quadro e gira devagar em volta do cabo;
+  - a fumacinha: andando, fica para trás e sobe se desfazendo; parada, sai para baixo e para os lados e some antes de voltar à altura do foguete (nem tufo embaixo, nem coluna na frente dele);
+  - a pipa com os lacinhos maiores (0,08 para 0,13), voando atrás, à esquerda e no alto, com o desenho virado para a câmera do jogo; a linha sai da mão esquerda levantada para o alto e para fora e passa por fora do corpo e da cabeça.
+- **A mão esquerda:** os três tesouros da mão vão na `maoE`, e o braço esquerdo segura no alto (`bracoDoTesouro` em `render/boneco.ts`), menos durante um gesto. A lanterna do look some debaixo deles.
+- **O passarinho:** peças do boneco presas ao tronco (o nó `passaro`, com as asinhas em nós dentro dele: o `subjunta` ganhou `rot` e `pai`), na ponta do ombro direito, mais para fora e um tico para trás do que no esboço. Não entra no "seguir" (`ehBichoQueSegue`). `tests/personagem/passarinhoOmbro.test.ts` prova que, de nenhum ângulo da câmera do jogo (a volta inteira, do pitch mais baixo ao mais alto), ele cobre o rosto ou a quina da cabeça vista de frente ou de lado; a posição do esboço falha nesse teste. Visto de trás, ele fica na frente do lado da cabeça, como um passarinho de verdade no ombro.
+- **Os efeitos** (`src/render/efeitosLojinha.ts`, uma malha com instâncias finas por efeito para todos os bonecos da cena): a fumacinha, as bolhas (o material do esboço aprovado), as gotinhas (só por fora, dos lados e de trás) e a linha da pipa. Brilho contido: nada passa de 0,5 de luz própria, a chaminha do foguete fica entre 0,76 e 0,92 (`chama` em `premiumLuzes.ts`), tudo fica fora do mapa do brilho e nada pisca. A hélice, as asas, o guarda-chuva, a pipa e o passarinho se mexem por fases que andam com o tempo, no `aplicarPose`.
+- **As figuras:** os 8 novos no `FOTO_PREMIUM` (`ui/alma/figuras.ts`); o fotógrafo ganhou o quadro `tudo` (o guarda-chuva e a pipa cabem) e a pose parada com o braço no alto quando há tesouro da mão.
+- **O `acessorioEscondido`** ligado no `planoBoneco` (`personagem/boneco.ts`), no lugar da regra só da mochila.
+- **A cabeça** (decidido pelas fotos em `cabeca/`): a tiara e o enfeite de cabeça entraram em `PECAS_DA_CABECA` (o arco e a concha atravessavam a cúpula do boné); a faixa da testa ficou de fora (fica na testa, debaixo da aba).
+- **O custo** (na placa, `custo.md`): cada peça soma de 0 a 3 malhas ao boneco (o pijama, 0; a varinha e o guarda-chuva, 1; o boné e o passarinho, 2; as asas, o foguete e a pipa, 3) e de 1,4 mil a 6,4 mil triângulos; cada efeito é 1 chamada de desenho para todos (as bolhas, 2). Boné, pijama, asas, varinha e passarinho juntos: +10 malhas e +20 mil triângulos. As bolinhas novas ganharam os gomos pelo tamanho (antes o passarinho, as pantufas e as asas passavam de 10 mil triângulos cada). A medida com 4 amigos é a T08.
+- **Os testes:** novos `tests/personagem/passarinhoOmbro.test.ts` e `tests/personagem/tesourosNoBoneco.test.ts` (as peças, a mão esquerda, o que some debaixo, a cabeça); `tests/render/premiumPlacas.test.ts` com os tesouros novos. `tests/render` e `tests/personagem` verdes (o `politicaCelular`, de tempo, cai com a placa ocupada e passa sozinho).
+- **Ficou fraco:**
+  - a figura da pipa na lojinha não tem a linha (a linha é efeito do mundo; no estúdio da foto não há);
+  - com várias peças ao mesmo tempo o boneco passa de 5 malhas a mais (as asas e a pipa têm nós próprios); vale conferir na T08;
+  - as bolhas de noite ficam acinzentadas (seguem a luz do lugar, como o resto).
 
 Falta sempre, ao fim, a **rodada em família**.

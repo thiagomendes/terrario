@@ -45,6 +45,10 @@ describe('placas dos premium (spec 023)', () => {
     { roupa: 'camiseta-aquario' },
     { roupa: 'tenis-cometa', costas: 'capa-estrelas' },
     { fantasia: 'dragao' },
+    // spec 036: os tesouros novos (as nuvenzinhas, as asas de borboleta, as aletas, a pipa)
+    { roupa: 'pijama-nuvem', costas: 'asas-borboleta', chapeu: 'bone-helice', mao: 'pipa-lacinhos' },
+    { costas: 'mochila-foguete', mao: 'varinha-bolhas', bicho: 'passarinho-ombro' },
+    { mao: 'guarda-chuva-gotinhas' },
   ];
   for (const corpo of ['feminino', 'masculino'] as const)
     for (const premium of vestidos)

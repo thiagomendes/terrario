@@ -76,7 +76,7 @@ export function desenhoDaObra(n: number): string {
  */
 const FOTO_PREMIUM: Record<
   string,
-  { recorte: RecorteBoneco; giro: number; bicho?: IdBichoPremium }
+  { recorte: RecorteBoneco; giro: number; bicho?: IdBichoPremium; tudo?: boolean }
 > = {
   'camiseta-aquario': { recorte: 'corpo', giro: 0.36 },
   'tenis-cometa': { recorte: 'corpo', giro: 0.75 },
@@ -84,6 +84,17 @@ const FOTO_PREMIUM: Record<
   dragao: { recorte: 'corpo', giro: 0.62 },
   pinguim: { recorte: 'corpo', giro: 0.5, bicho: 'pinguim' },
   unicornio: { recorte: 'corpo', giro: 0.62, bicho: 'unicornio' },
+  // spec 036: os tesouros novos no boneco da criança, cada um do lado em que aparece melhor (as
+  // costas de quina por trás; o passarinho no ombro direito, de frente para ele; o guarda-chuva e
+  // a pipa com o boneco inteiro, para o que fica no alto caber no quadro)
+  'passarinho-ombro': { recorte: 'busto', giro: -0.55 },
+  'bone-helice': { recorte: 'busto', giro: 0.5 },
+  'pijama-nuvem': { recorte: 'corpo', giro: 0.36 },
+  'asas-borboleta': { recorte: 'corpo', giro: Math.PI - 0.75 },
+  'mochila-foguete': { recorte: 'corpo', giro: Math.PI - 1.1 },
+  'varinha-bolhas': { recorte: 'corpo', giro: 0.7, tudo: true },
+  'guarda-chuva-gotinhas': { recorte: 'corpo', giro: 0.5, tudo: true },
+  'pipa-lacinhos': { recorte: 'corpo', giro: Math.PI - 0.5, tudo: true },
 };
 
 /** A foto de um premium (o 3D de verdade) num canvas novo. */
@@ -112,7 +123,7 @@ export function fotografarPremium(
     normalizarAparencia({ ...a, fantasia: undefined, premium: { [p.categoria]: id } }),
     f.recorte,
     altura,
-    { giro: f.giro, bicho: f.bicho },
+    { giro: f.giro, bicho: f.bicho, tudo: f.tudo },
   );
 }
 

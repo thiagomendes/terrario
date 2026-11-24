@@ -53,6 +53,8 @@ const BASE: Record<IdLuzPremium, string> = {
   // spec 027: a vela da lanterninha do Conde Dudu (âmbar; a soma das cores fica abaixo de 1,6,
   // o limiar do brilho que borra nos moradores: a luz dela não lava a roupa)
   vela: '#f09410',
+  // spec 036: a chaminha da mochila-foguete, morna e mansa (abaixo do brilho que borra)
+  chama: '#e8a850',
 };
 
 function daCena(scene: Scene): LuzesDaCena {
@@ -97,6 +99,12 @@ function daCena(scene: Scene): LuzesDaCena {
       // respirando devagar: de dia é marfim e de noite continua aceso no escuro
       const p = 0.8 + 0.06 * Math.sin(t * 1.6);
       m.chifre.emissiveColor.set(p, p * 0.88, p * 0.56);
+    }
+    if (m.chama) {
+      // spec 036: a chaminha tremula de leve (duas ondas que não se repetem juntas), sempre
+      // abaixo de 1 (nada de halo)
+      const k = 0.84 + 0.05 * Math.sin(t * 9) + 0.03 * Math.sin(t * 13);
+      m.chama.emissiveColor.set(0.98 * k, 0.72 * k, 0.36 * k);
     }
     if (nova.aquario) nova.aquario.quadro(t);
   });

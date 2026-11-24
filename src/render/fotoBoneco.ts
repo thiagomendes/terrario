@@ -18,6 +18,21 @@ import { alturaBoneco, topoBoneco } from '../personagem/boneco';
 import { criarBoneco } from './boneco';
 import type { Personagem } from './personagem';
 import { montarBichoPremium, type BichoMontado, type IdBichoPremium } from './bichoPremium';
+import { calcularPose } from '../personagem/poses';
+
+/** Spec 036: a pose parada das fotos com o tesouro da mão (o braço segura no alto). */
+const POSE_PARADA = {
+  ...calcularPose({
+    andando: false,
+    correndo: false,
+    noAr: false,
+    minerando: false,
+    colocando: false,
+    tempo: 0,
+  }),
+  // (nada de foto de olho fechado)
+  piscar: false,
+};
 
 /** Faixa da altura do boneco que cada recorte mostra (0 = pés, 1 = topo da cabeça). */
 export type RecorteBoneco = 'corpo' | 'cabeca' | 'tronco' | 'pernas' | 'busto' | 'pes';
@@ -48,6 +63,8 @@ interface Pedido {
   giro?: number;
   /** Spec 023: só o bichinho premium (a vitrine da lojinha), sem o boneco. */
   bicho?: IdBichoPremium;
+  /** Spec 036: o quadro pega o boneco inteiro com o que ele leva fora do corpo. */
+  tudo?: boolean;
 }
 
 /** O giro padrão do boneco no estúdio: de quina, um pouco virado para a direita. */
@@ -121,12 +138,15 @@ export function fotografarBoneco(
   recorte: RecorteBoneco = 'corpo',
   /** Altura da foto em pixels (o palco usa uma maior que as miniaturas). */
   altura = 200,
-  /** Spec 023: o giro do boneco (a capa se vê de costas) ou só o bichinho premium. */
-  extra: { giro?: number; bicho?: IdBichoPremium } = {},
+  /**
+   * Spec 023: o giro do boneco (a capa se vê de costas) ou só o bichinho premium. Spec 036:
+   * `tudo` enquadra o boneco com o que ele leva fora do corpo (o guarda-chuva, a pipa no alto).
+   */
+  extra: { giro?: number; bicho?: IdBichoPremium; tudo?: boolean } = {},
 ): void {
   // o canvas ganha o formato do recorte (o CSS cuida do tamanho na tela)
   // o bichinho é mais comprido que alto: quadro mais largo
-  const larg = Math.round(altura * (extra.bicho ? 1.2 : FORMATO[recorte]));
+  const larg = Math.round(altura * (extra.bicho ? 1.2 : extra.tudo ? 0.9 : FORMATO[recorte]));
   if (alvo.width !== larg || alvo.height !== altura) {
     alvo.width = larg;
     alvo.height = altura;
@@ -134,12 +154,12 @@ export function fotografarBoneco(
   }
   const chave = extra.bicho
     ? `bicho:${extra.bicho}|${extra.giro ?? GIRO_PADRAO}|${alvo.width}x${alvo.height}`
-    : `${JSON.stringify(aparencia)}|${recorte}|${extra.giro ?? GIRO_PADRAO}|${alvo.width}x${alvo.height}`;
+    : `${JSON.stringify(aparencia)}|${recorte}${extra.tudo ? '|tudo' : ''}|${extra.giro ?? GIRO_PADRAO}|${alvo.width}x${alvo.height}`;
   if (ultimoPedido.get(alvo) === chave) return;
   ultimoPedido.set(alvo, chave);
   // um canvas só precisa da foto mais nova
   for (let i = fila.length - 1; i >= 0; i--) if (fila[i].alvo === alvo) fila.splice(i, 1);
-  fila.push({ alvo, aparencia, recorte, chave, giro: extra.giro, bicho: extra.bicho });
+  fila.push({ alvo, aparencia, recorte, chave, giro: extra.giro, bicho: extra.bicho, tudo: extra.tudo });
   if (!andando) {
     andando = true;
     // fila parada: tira a foto logo depois do toque, sem esperar o próximo quadro (spec 017:
@@ -189,6 +209,9 @@ function passo(): void {
         e.boneco.definirVisivel(true);
         e.boneco.aplicarAparencia(p.aparencia);
         e.boneco.posicionar(0, 0, 0, Math.PI + giro);
+        // spec 036: com o tesouro da mão, o braço segura no alto (o guarda-chuva por cima da
+        // cabeça, a varinha na frente, a pipa puxando)
+        if (p.aparencia.premium?.mao) e.boneco.aplicarPose(POSE_PARADA);
       }
       esperando = { pedido: p, tentativas: 0 };
     }
@@ -219,6 +242,17 @@ function passo(): void {
       cx = (min.x + max.x) / 2;
       const meiaL = (max.x - min.x) / 2;
       meiaAlt = Math.max((y1 - y0) / 2, meiaL * (alt / larg)) / 0.86;
+      meiaLarg = meiaAlt * (larg / alt);
+    } else if (pedido.tudo) {
+      // spec 036: o boneco e o que ele leva (o guarda-chuva, a pipa), um tico de folga em volta
+      e.boneco.raiz.computeWorldMatrix(true);
+      for (const m of e.boneco.raiz.getChildMeshes(false)) m.computeWorldMatrix(true);
+      const { min, max } = e.boneco.raiz.getHierarchyBoundingVectors(true, (m) => m.isEnabled());
+      y0 = Math.min(0, min.y);
+      y1 = max.y;
+      cx = (min.x + max.x) / 2;
+      const meiaL = (max.x - min.x) / 2;
+      meiaAlt = Math.max((y1 - y0) / 2, meiaL * (alt / larg)) / 0.9;
       meiaLarg = meiaAlt * (larg / alt);
     } else {
       const h = alturaBoneco(pedido.aparencia);

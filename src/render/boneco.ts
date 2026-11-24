@@ -305,6 +305,19 @@ interface FontePeca {
   cv: boolean;
 }
 
+/**
+ * Spec 036: o braço esquerdo segurando o tesouro da mão (x, y, z como no Babylon; z negativo
+ * abre o braço esquerdo para fora). A varinha balança no alto, na frente; o guarda-chuva vai
+ * para o alto e um tico para fora (o pano fica por cima da cabeça); a pipa vai no alto e para
+ * fora, puxando a linha por fora do corpo e da cabeça.
+ */
+export function bracoDoTesouro(id: string, t: number): [number, number, number] | null {
+  if (id === 'varinha-bolhas') return [-2.05 + Math.sin(t * 2.2) * 0.18, 0, -0.42 - Math.sin(t * 1.1) * 0.08];
+  if (id === 'guarda-chuva-gotinhas') return [-2.35, 0, -0.5];
+  if (id === 'pipa-lacinhos') return [-2.3 + Math.sin(t * 1.7) * 0.06, 0, -0.85];
+  return null;
+}
+
 function naVista(m: Mesh): void {
   m.alwaysSelectAsActiveMesh = true;
   m.doNotSyncBoundingInfo = true;
@@ -346,6 +359,12 @@ export function criarBoneco(
   let deSkate = !!aparencia.skate;
   /** Spec 023: os nós próprios dos premium (as asas do dragão). */
   let subjuntas: Partial<Record<SubjuntaPremium, TransformNode>> = {};
+  /** Spec 036: o giro de repouso de cada nó próprio (a animação soma em cima). */
+  const repousoSub = new Map<SubjuntaPremium, Vector3>();
+  /** Spec 036: o tesouro da mão esquerda (o braço segura em cima). */
+  let maoPremium: string | undefined;
+  /** Spec 036: as fases das peças que se mexem sozinhas. */
+  const fase036 = { helice: 0, borboleta: 0, guarda: 0, passaro: 1.2, batendo: 0, t: 0 };
   let malhas: Mesh[] = [];
   /** Spec 027 (T22): monta o boneco de longe (só com esqueleto; null sem ele). */
   let montarDeLonge: (() => Mesh[]) | null = null;
@@ -432,6 +451,7 @@ export function criarBoneco(
     for (const j of Object.values(subjuntas)) j.dispose();
     for (const j of Object.values(juntas)) j.dispose();
     subjuntas = {};
+    repousoSub.clear();
     malhas = [];
     juntas = {} as Record<Junta, TransformNode>;
   }
@@ -439,6 +459,7 @@ export function criarBoneco(
   function aplicarAparencia(a: Aparencia): void {
     limpar();
     deSkate = !!a.skate && !a.patins;
+    maoPremium = a.premium?.mao;
     const plano = ajustarPlano ? ajustarPlano(planoBoneco(a)) : planoBoneco(a);
     escalar.scaling.setAll(plano.escala);
     // spec 032: onde fica a boca (na cabeça), para a comida parar na frente dela
@@ -490,8 +511,11 @@ export function criarBoneco(
       let no = subjuntas[sj.nome];
       if (!no) {
         no = new TransformNode(`${prefixo}-junta-${sj.nome}`, scene);
-        no.parent = juntas[p.junta];
+        // spec 036: dentro de outro nó próprio (as asinhas no passarinho), com o giro de repouso
+        no.parent = (sj.pai && subjuntas[sj.pai]) || juntas[p.junta];
         no.position.set(sj.pivo[0], sj.pivo[1], sj.pivo[2]);
+        if (sj.rot) no.rotation.set(sj.rot[0], sj.rot[1], sj.rot[2]);
+        repousoSub.set(sj.nome, no.rotation.clone());
         subjuntas[sj.nome] = no;
       }
       return no;
@@ -508,7 +532,8 @@ export function criarBoneco(
         // a mão não gira sozinha: as peças dela vão para a junta do braço (menos malhas)
         let junta = p.junta;
         let deslocar: [number, number, number] | undefined;
-        if (!par && (junta === 'maoE' || junta === 'maoD')) {
+        // (spec 036: a peça num nó próprio dentro da mão, como o guarda-chuva, fica no nó dela)
+        if (!par && !p.subjunta && (junta === 'maoE' || junta === 'maoD')) {
           deslocar = plano.juntas[junta].pos;
           junta = junta === 'maoE' ? 'bracoE' : 'bracoD';
         }
@@ -770,6 +795,85 @@ export function criarBoneco(
     return n;
   };
 
+  /**
+   * Spec 036: as peças dos tesouros que se mexem sozinhas. A hélice gira devagar parada e rápido
+   * correndo; as asas de borboleta batem (mais rápido correndo); o guarda-chuva fica em pé por
+   * cima da cabeça, como quer que o braço esteja, girando devagar; a pipa balança no vento, com o
+   * rabo atrasado; o passarinho balança no ombro e bate as asinhas de vez em quando. Tudo por
+   * senos e fases que andam com o tempo: mudar o ritmo não dá tranco, nada treme.
+   */
+  const mGuarda = new Matrix();
+  const mMao = new Matrix();
+  const mRaiz = new Matrix();
+  const qAux = new Quaternion();
+  function animarTesouros(dt: number, vista?: ExtrasPose['vista']): void {
+    const s = subjuntas;
+    if (!s.helice && !s.borbE && !s.guarda && !s.pipa && !s.passaro) return;
+    const corre = Math.min(1, (vista?.passada ?? 0) / 1.5);
+    const anda = Math.min(1, vista?.passada ?? 0);
+    const f = fase036;
+    f.t += dt;
+    const t = f.t;
+    if (s.helice) {
+      f.helice += dt * (4.5 + 11.5 * corre);
+      s.helice.rotation.y = f.helice % (Math.PI * 2);
+    }
+    if (s.borbE && s.borbD) {
+      f.borboleta += dt * (0.6 + 0.9 * corre) * Math.PI * 2;
+      // abertas para os lados (aparecem dos dois lados da criança, de frente) e fechando devagar
+      // para trás
+      const a = 0.1 + 0.5 * (0.5 + 0.5 * Math.sin(f.borboleta));
+      s.borbE.rotation.set(0, -a, -0.08);
+      s.borbD.rotation.set(0, a, 0.08);
+    }
+    if (s.guarda && juntas.maoE) {
+      f.guarda += dt * (1.2 + 1.2 * anda);
+      // o giro que o guarda-chuva quer no espaço do boneco (gira em volta do cabo e inclina um
+      // tico para cima da cabeça), desfeito do giro da mão: o pano fica sempre por cima
+      const cadeia: TransformNode[] = [];
+      for (let n: TransformNode | null = juntas.maoE; n; n = n.parent as TransformNode | null) cadeia.unshift(n);
+      for (const n of cadeia) n.computeWorldMatrix(true);
+      raiz.getWorldMatrix().decompose(undefined, qAux);
+      Matrix.FromQuaternionToRef(qAux, mRaiz);
+      juntas.maoE.getWorldMatrix().decompose(undefined, qAux);
+      Matrix.FromQuaternionToRef(qAux, mMao);
+      mMao.invert();
+      Matrix.RotationY(f.guarda % (Math.PI * 2))
+        .multiply(Matrix.RotationZ(-0.16 - 0.05 * Math.sin(t * 1.3)))
+        .multiply(mRaiz)
+        .multiplyToRef(mMao, mGuarda);
+      const q = s.guarda.rotationQuaternion ?? new Quaternion();
+      mGuarda.decompose(undefined, q);
+      s.guarda.rotationQuaternion = q;
+    }
+    if (s.pipa) {
+      s.pipa.rotation.z = Math.sin(t * 1.3) * 0.12;
+      s.pipa.rotation.x = Math.sin(t * 0.9) * 0.06 - corre * 0.12;
+      if (s.rabopipa) {
+        s.rabopipa.rotation.z = Math.sin(t * 1.3 - 0.8) * 0.3;
+        // correndo, o rabo voa mais para trás
+        s.rabopipa.rotation.x = Math.sin(t * 2.1) * 0.12 - 0.15 - corre * 0.35;
+      }
+    }
+    if (s.passaro) {
+      f.passaro -= dt;
+      if (f.passaro <= 0) {
+        f.passaro = anda > 0.3 ? 1.0 : 2.2;
+        f.batendo = 0.55;
+      }
+      f.batendo = Math.max(0, f.batendo - dt);
+      const bate = f.batendo > 0 ? Math.sin(t * 38) * 0.5 + 0.55 : 0.08;
+      if (s.passaroAsaE) s.passaroAsaE.rotation.z = -bate;
+      if (s.passaroAsaD) s.passaroAsaD.rotation.z = bate;
+      // balança junto com a criança (um tico para os lados e para a frente)
+      const r = repousoSub.get('passaro');
+      if (r) {
+        const salto = f.batendo > 0 ? Math.sin((f.batendo / 0.55) * Math.PI) * 0.12 : 0;
+        s.passaro.rotation.set(r.x + Math.sin(t * 2.1) * 0.05 - salto, r.y, r.z + Math.sin(t * 1.3) * 0.05 * (0.4 + anda));
+      }
+    }
+  }
+
   function aplicarPose(pose: Pose, extras?: ExtrasPose): void {
     if (!juntas.corpo) return;
     const dt = extras ? Math.min(Math.max(extras.dt, 0), 0.1) : 1;
@@ -788,6 +892,17 @@ export function criarBoneco(
         alvo.bracoD = [alvo.bracoD[0] * 0.3 - 0.1, alvo.bracoD[1], alvo.bracoD[2] + 0.28];
         alvo.bracoE = [alvo.bracoE[0] * 0.3 - 0.1, alvo.bracoE[1], alvo.bracoE[2] - 0.28];
       }
+    }
+    // spec 036: o tesouro da mão esquerda (a varinha, o guarda-chuva, a pipa): o braço segura no
+    // alto, menos durante um gesto (o gesto manda no braço)
+    const segura = maoPremium ? bracoDoTesouro(maoPremium, pose.tempo ?? 0) : null;
+    if (segura) {
+      const w = 1 - Math.min(1, Math.max(0, pose.pesoGesto ?? 0));
+      alvo.bracoE = [
+        alvo.bracoE[0] + (segura[0] - alvo.bracoE[0]) * w,
+        alvo.bracoE[1] + (segura[1] - alvo.bracoE[1]) * w,
+        alvo.bracoE[2] + (segura[2] - alvo.bracoE[2]) * w,
+      ];
     }
     const j = juntas;
     j.corpo.position.y = suave('corpoY', alvo.corpoY, k);
@@ -843,6 +958,7 @@ export function criarBoneco(
         no.rotation.x = -0.12;
       }
     }
+    animarTesouros(dt, extras?.vista);
     // spec 032: a carinha feliz depois de comer (os olhos fecham sorrindo)
     const pisca = pose.piscar ? 0.1 : 1 - (pose.feliz ?? 0) * 0.78;
     for (const o of olhos) o.scaling.y = (baseY.get(o) ?? 1) * pisca;

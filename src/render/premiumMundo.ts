@@ -32,6 +32,7 @@ import {
   type IdBichoPremium,
 } from './bichoPremium';
 import { RIGIDEZ_VOO, adiantar, passoMola, querVoar, type Mola } from './seguirVoando';
+import { efeitosLojinha, estadoEfeitosLojinha, type EfeitosLojinha, type EstadoEfeitosLojinha } from './efeitosLojinha';
 
 /** Teto do pool de brilhos (spec: no máximo 80 sprites). */
 export const MAXIMO_BRILHOS = 80;
@@ -387,6 +388,8 @@ interface Usuario {
   vz: number;
   /** Spec 036: a altura dos pés da criança acima do chão debaixo dela (null: sem chão achado). */
   altura: number | null;
+  /** Spec 036: os relógios dos efeitos dos tesouros novos. */
+  fx036: EstadoEfeitosLojinha;
   andado: number;
   pe: number;
   noAr: boolean;
@@ -429,7 +432,14 @@ export interface EfeitosPremium {
   ): RegistroPremium;
   definirChao(ler: LerBloco): void;
   /** Testes e diagnóstico. */
-  contar(): { brilhos: number; pegadas: number; bichos: number; usuarios: number };
+  contar(): {
+    brilhos: number;
+    pegadas: number;
+    bichos: number;
+    usuarios: number;
+    /** Spec 036: os efeitos dos tesouros novos (null: ninguém vestiu ainda). */
+    lojinha: ReturnType<EfeitosLojinha['contar']> | null;
+  };
 }
 
 const porCena = new WeakMap<Scene, EfeitosPremium>();
@@ -442,6 +452,8 @@ export function efeitosPremium(scene: Scene): EfeitosPremium {
   let brilhos: ReturnType<typeof criarPoolBrilhos> | null = null;
   let pegadas: ReturnType<typeof criarPegadas> | null = null;
   let ler: LerBloco | null = null;
+  /** Spec 036: os efeitos dos tesouros novos (criados na primeira vez que alguém veste). */
+  let lojinha: EfeitosLojinha | null = null;
   let nPegadas = 0;
   const aux = new Vector3();
 
@@ -630,6 +642,15 @@ export function efeitosPremium(scene: Scene): EfeitosPremium {
         v: new Vector3(0, -0.6, 0),
         tam: 0.12,
       });
+
+    // ---------------------------------------------------- spec 036: fumacinha, bolhas, gotinhas, linha
+    const p = u.premium;
+    if (
+      u.visivel &&
+      perto &&
+      (p.costas === 'mochila-foguete' || p.mao === 'varinha-bolhas' || p.mao === 'guarda-chuva-gotinhas' || p.mao === 'pipa-lacinhos')
+    )
+      (lojinha ??= efeitosLojinha(scene)).doBoneco(u.fx036, p, u.nos, r, yaw, Math.min(1, u.vel / 4.3), dt);
 
     if (u.bicho) quadroBicho(u, u.bicho, dt, perto);
   }
@@ -989,6 +1010,7 @@ export function efeitosPremium(scene: Scene): EfeitosPremium {
     }
     brilhos?.quadro(dt);
     pegadas?.quadro(dt);
+    lojinha?.quadro(dt);
   });
   scene.onDisposeObservable.addOnce(() => {
     scene.onBeforeRenderObservable.remove(obs);
@@ -1011,6 +1033,7 @@ export function efeitosPremium(scene: Scene): EfeitosPremium {
         vx: 0,
         vz: 0,
         altura: 0,
+        fx036: estadoEfeitosLojinha(),
         andado: 0,
         pe: 0,
         noAr: false,
@@ -1074,6 +1097,7 @@ export function efeitosPremium(scene: Scene): EfeitosPremium {
       pegadas: nPegadas,
       bichos: [...usuarios].filter((u) => u.bicho).length,
       usuarios: usuarios.size,
+      lojinha: lojinha?.contar() ?? null,
     }),
   };
   porCena.set(scene, efeitos);

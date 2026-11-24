@@ -38,12 +38,15 @@ export const PECAS_DAS_COSTAS: readonly TipoPeca[] = [
 
 /**
  * Spec 036: peças de fantasia que ocupam a cabeça (onde vai o boné de hélice), a lista única.
- * Ficam de fora o que cabe por baixo do boné: a máscara, os óculos, o cabelo da roqueira e, por
- * enquanto, a tiara, o enfeite de cabeça e a faixa da testa (o artista decide na T03, pelas
- * fotos, se algum deles entra aqui).
+ * Ficam de fora o que cabe por baixo do boné: a máscara, os óculos, o cabelo da roqueira e a
+ * faixa da testa (T03, pelas fotos em `capturas-036/t03-pecas/cabeca/`: ela fica na testa,
+ * debaixo da aba, como uma faixa debaixo de um boné de verdade). A tiara e o enfeite de cabeça
+ * entraram: o arco e a concha atravessavam a cúpula do boné.
  */
 export const PECAS_DA_CABECA: readonly TipoPeca[] = [
   'coroa',
+  'tiara',
+  'enfeite-cabeca',
   'chapeu-palha',
   'chapeu-vaqueiro',
   'capacete-bolha',

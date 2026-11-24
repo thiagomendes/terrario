@@ -26,7 +26,7 @@ const MENINA = { corpo: 'feminino', cabeloEstilo: 5, rosto: 1, cabeloCor: 1, pel
 const MENINO = { corpo: 'masculino', cabeloEstilo: 0, rosto: 0, cabeloCor: 0, pele: 2, roupaEstilo: 0 };
 
 /** Abre um mundo criativo da Vila Neon e aplaina um gramado ao sul do bairro. */
-async function abrirGramado(browser: Browser, tamanho: Tamanho): Promise<{ page: Page; O: V3 }> {
+async function abrirGramado(browser: Browser, tamanho: Tamanho, esconderTela = true): Promise<{ page: Page; O: V3 }> {
   const ctx = await browser.newContext(TAMANHOS[tamanho]);
   const page = await ctx.newPage();
   page.on('pageerror', (e) => console.log(`erro na página: ${String(e)}`));
@@ -101,6 +101,7 @@ async function abrirGramado(browser: Browser, tamanho: Tamanho): Promise<{ page:
     return O;
   }, alvo);
   await page.waitForTimeout(tamanho === 'pc' ? 6000 : 4000);
+  if (!esconderTela) return { page, O };
   // só o 3D na foto
   await page.evaluate(() => {
     const cena = document.getElementById('cena')!;
@@ -173,7 +174,7 @@ async function vestir(page: Page, base: object, premium: Record<string, string>)
 async function medirTremor(page: Page, ms: number) {
   return page.evaluate(
     (ms) =>
-      new Promise<{ quadros: number; saltos: number; maiorPasso: number; sobeDesce: number; altura: number }>((ok) => {
+      new Promise<{ quadros: number; saltos: number; degraus: number; maiorPasso: number; sobeDesce: number; altura: number }>((ok) => {
         const e = window.__brumaluz!;
         const ys: number[] = [];
         const ps: Array<[number, number, number]> = [];
@@ -198,9 +199,14 @@ async function medirTremor(page: Page, ms: number) {
             }
             let s = 0;
             for (let i = 2; i < ys.length; i++) s += Math.abs(ys[i] - 2 * ys[i - 1] + ys[i - 2]);
+            // degraus: quadros em que o bicho sobe mais de um quarto de bloco de uma vez (cair é
+            // a gravidade de verdade; subir assim é tranco)
+            let degraus = 0;
+            for (let i = 1; i < ys.length; i++) if (ys[i] - ys[i - 1] > 0.25) degraus++;
             ok({
               quadros: ps.length,
               saltos,
+              degraus,
               maiorPasso: +maior.toFixed(3),
               sobeDesce: +(s / Math.max(1, ys.length - 2)).toFixed(4),
               altura: +alt.toFixed(2),
@@ -334,6 +340,315 @@ test('T02: o vídeo do Unicórnio-pônei voando (computador)', async ({ browser 
   });
   await page.waitForTimeout(2500);
   await pararGravacao(page, `${pasta}/voando.webm`);
+  await page.context().close();
+});
+
+// ------------------------------------------------------------------------------ T02: o pinguim
+/**
+ * O pinguinzinho com a criança pulando, voando, parada no ar e descendo de um lugar alto: a
+ * mesma medida do tremor do unicórnio. `PINGUIM_PASTA` muda a pasta (o antes roda num worktree
+ * no commit de antes do conserto).
+ */
+test('T02: o tremor do pinguim (celular em pé) e o vídeo dele com a criança voando (computador)', async ({ browser }) => {
+  test.skip(!QUAL.includes('pinguim'));
+  test.setTimeout(900_000);
+  const pasta = process.env.PINGUIM_PASTA ?? 'capturas-036/t02-unicornio/pinguim/depois';
+  mkdirSync(pasta, { recursive: true });
+  const medidas: Record<string, unknown> = {};
+  for (const tamanho of ['empe', 'pc'] as const) {
+    const pc = tamanho === 'pc';
+    if (pc && process.env.SEM_VIDEO) break;
+    const { page, O } = await abrirGramado(browser, tamanho);
+    await vestir(page, MENINO, { bicho: 'pinguim' });
+    // o lugar alto: uma torrinha de 3 por 3 e 6 blocos, a 5 blocos do meio
+    await page.evaluate((O) => {
+      const lote: { x: number; y: number; z: number; v: number }[] = [];
+      for (let dx = 0; dx < 3; dx++)
+        for (let dz = 0; dz < 3; dz++)
+          for (let dy = 0; dy < 6; dy++) lote.push({ x: Math.floor(O[0]) + 5 + dx, y: O[1] + dy, z: Math.floor(O[2]) - 1 + dz, v: 1 });
+      window.__brumaluz!.editarLote!(lote);
+    }, O);
+    await noMeio(page, O, 0, pc ? 7 : 6, 0.32);
+    await page.waitForTimeout(3000);
+    if (pc) await comecarGravacao(page);
+    const medir = async (nome: string, ms: number, acao: () => Promise<void>) => {
+      const m = medirTremor(page, ms);
+      await acao();
+      const r = await m;
+      if (!pc) medidas[nome] = r;
+    };
+    // pulando três vezes, parada
+    await medir('pulando', 3000, async () => {
+      for (let i = 0; i < 3; i++) {
+        await page.evaluate(() => window.__brumaluz!.controleDireto!.tecla('pular', true));
+        await page.waitForTimeout(200);
+        await page.evaluate(() => window.__brumaluz!.controleDireto!.tecla('pular', false));
+        await page.waitForTimeout(750);
+      }
+    });
+    if (!pc) await foto(page, pasta, 'pulando');
+    // voando: sobe uns 10 blocos e vai de lado
+    await medir('voando', 3500, async () => {
+      await voarDeLado(page, 1300);
+      await page.waitForTimeout(1600);
+      if (!pc) await foto(page, pasta, 'voando');
+    });
+    // parada no ar
+    await page.evaluate(() => window.__brumaluz!.controleDireto!.mover(0, 0));
+    await medir('parada-no-ar', 2500, async () => {
+      await page.waitForTimeout(1000);
+      if (!pc) await foto(page, pasta, 'parada-no-ar');
+    });
+    // desce e pousa
+    await medir('pousando', 3500, async () => {
+      await page.evaluate(() => window.__brumaluz!.controleDireto!.tecla('correr', true));
+      await page.waitForTimeout(1700);
+      await page.evaluate(() => {
+        const e = window.__brumaluz!;
+        e.controleDireto!.tecla('correr', false);
+        e.voar!(false);
+      });
+    });
+    // descendo do lugar alto: em cima da torrinha, espera, e sai andando pela beira
+    await page.evaluate((O) => {
+      const e = window.__brumaluz!;
+      e.teleportar!(Math.floor(O[0]) + 6.5, Math.floor(O[2]) + 0.5, O[1] + 6);
+      e.apontar!(-Math.PI / 2, 0.35);
+    }, O);
+    await page.waitForTimeout(2500);
+    if (!pc) await foto(page, pasta, 'no-alto');
+    await medir('descendo', 3500, async () => {
+      await page.evaluate(() => window.__brumaluz!.controleDireto!.mover(1, 0));
+      await page.waitForTimeout(1200);
+      await page.evaluate(() => window.__brumaluz!.controleDireto!.mover(0, 0));
+    });
+    if (!pc) await foto(page, pasta, 'desceu');
+    if (pc) await pararGravacao(page, `${pasta}/pinguim-voando.webm`);
+    await page.context().close();
+  }
+  writeFileSync(`${pasta}/tremor.json`, JSON.stringify(medidas, null, 2));
+  console.log(`TREMOR ${JSON.stringify(medidas)}`);
+});
+
+// ------------------------------------------------------------------------------ T03
+const PASTA_T03 = 'capturas-036/t03-pecas';
+const SO_T03 = process.env.T03_SO?.split(',');
+
+/** Cada tesouro novo: quem veste, o que veste e como a câmera de estúdio o enquadra. */
+interface Peca036 {
+  nome: string;
+  quem: object;
+  premium: Record<string, string>;
+  /** Altura do alvo acima dos pés, distância e altura da câmera acima do alvo. */
+  alvoY: number;
+  dist: number;
+  alt: number;
+  /** Desloca o alvo para o lado esquerdo (+) do corpo (a pipa voa à esquerda). */
+  esquerda?: number;
+  /** Desloca o alvo para trás (+) do corpo. */
+  atras?: number;
+}
+const PECAS_036: Peca036[] = [
+  { nome: 'bone', quem: MENINO, premium: { chapeu: 'bone-helice' }, alvoY: 1.35, dist: 2.6, alt: 0.4 },
+  { nome: 'pijama', quem: MENINO, premium: { roupa: 'pijama-nuvem' }, alvoY: 0.95, dist: 3.6, alt: 0.45 },
+  { nome: 'borboleta', quem: MENINA, premium: { costas: 'asas-borboleta' }, alvoY: 1.0, dist: 3.8, alt: 0.45 },
+  { nome: 'foguete', quem: MENINO, premium: { costas: 'mochila-foguete' }, alvoY: 1.0, dist: 3.6, alt: 0.45 },
+  { nome: 'bolhas', quem: MENINA, premium: { mao: 'varinha-bolhas' }, alvoY: 1.15, dist: 3.8, alt: 0.4 },
+  { nome: 'guardachuva', quem: MENINO, premium: { mao: 'guarda-chuva-gotinhas' }, alvoY: 1.35, dist: 4.4, alt: 0.45 },
+  { nome: 'pipa', quem: MENINA, premium: { mao: 'pipa-lacinhos' }, alvoY: 1.9, dist: 6.2, alt: 0.3, esquerda: 0.5, atras: 0.6 },
+  { nome: 'passarinho', quem: MENINA, premium: { bicho: 'passarinho-ombro' }, alvoY: 1.3, dist: 2.6, alt: 0.35 },
+];
+const quer036 = (nome: string) => !SO_T03 || SO_T03.includes(nome);
+
+/** A câmera de estúdio em volta da criança, `giro` a partir da frente dela. */
+async function estudioNaCrianca(page: Page, O: V3, c: Peca036, giro: number) {
+  const corpo = await page.evaluate(() => window.__brumaluz!.camera!.yawCorpo());
+  // (esquerda e atrás no corpo da criança: +x dela é a direita)
+  const ex = -Math.cos(corpo) * (c.esquerda ?? 0) - Math.sin(corpo) * (c.atras ?? 0);
+  const ez = Math.sin(corpo) * (c.esquerda ?? 0) - Math.cos(corpo) * (c.atras ?? 0);
+  await estudio(page, [O[0] + ex, O[1] + c.alvoY, O[2] + ez], corpo + giro, c.dist, c.alt);
+}
+
+test('T03: cada peça nova de três-quartos, de frente e de costas, de dia e de noite (celular em pé)', async ({ browser }) => {
+  test.skip(!QUAL.includes('t03'));
+  test.setTimeout(1_200_000);
+  const { page, O } = await abrirGramado(browser, 'empe');
+  for (const [quando, hora] of [
+    ['dia', DIA],
+    ['noite', NOITE],
+  ] as const) {
+    await page.evaluate((h) => (window.__brumaluz!.hora = h), hora);
+    for (const c of PECAS_036) {
+      if (!quer036(c.nome)) continue;
+      await sairDoEstudio(page);
+      await noMeio(page, O, 0, 5);
+      await vestir(page, c.quem, c.premium);
+      // (a fumacinha, as bolhas e as gotinhas já saíram; a hélice e as asas já estão no ritmo)
+      await page.waitForTimeout(2600);
+      for (const [vista, giro] of [
+        ['tres-quartos', 0.75],
+        ['frente', 0.05],
+        ['costas', Math.PI - 0.25],
+      ] as const) {
+        await estudioNaCrianca(page, O, c, giro);
+        await page.waitForTimeout(vista === 'tres-quartos' ? 900 : 600);
+        await foto(page, PASTA_T03, `${c.nome}-${vista}-${quando}`);
+      }
+    }
+  }
+  const ef = await page.evaluate(() => window.__brumaluz!.personagem!.efeitosPremium?.());
+  console.log(`EFEITOS ${JSON.stringify(ef)}`);
+  await page.context().close();
+});
+
+test('T03: a tiara, o enfeite de cabeça e a faixa da testa com o boné (para decidir)', async ({ browser }) => {
+  test.skip(!QUAL.includes('t03') || !!SO_T03);
+  test.setTimeout(600_000);
+  const { page, O } = await abrirGramado(browser, 'empe');
+  for (const [nome, fantasia] of [
+    ['tiara', 'realeza-flores'],
+    ['enfeite', 'realeza-mar'],
+    ['faixa', 'roqueira-palco'],
+  ] as const) {
+    await sairDoEstudio(page);
+    await noMeio(page, O, 0, 5);
+    await page.evaluate(
+      ({ base, fantasia }) =>
+        window.__brumaluz!.personagem!.definir({ ...base, fantasia: { id: fantasia, cor: 0 }, premium: { chapeu: 'bone-helice' } } as never),
+      { base: MENINA, fantasia },
+    );
+    await page.waitForTimeout(1800);
+    const c: Peca036 = { nome, quem: MENINA, premium: {}, alvoY: 1.35, dist: 2.6, alt: 0.4 };
+    for (const [vista, giro] of [
+      ['tres-quartos', 0.75],
+      ['frente', 0.05],
+      ['lado', Math.PI / 2],
+    ] as const) {
+      await estudioNaCrianca(page, O, c, giro);
+      await page.waitForTimeout(600);
+      await foto(page, `${PASTA_T03}/cabeca`, `bone-com-${nome}-${vista}`);
+    }
+  }
+  await page.context().close();
+});
+
+test('T03: uma tela deitada e uma no computador, com a câmera do jogo', async ({ browser }) => {
+  test.skip(!QUAL.includes('t03') || !!SO_T03);
+  test.setTimeout(600_000);
+  for (const [tamanho, nome, base, premium] of [
+    ['deitado', 'deitado-guardachuva', MENINO, { mao: 'guarda-chuva-gotinhas', chapeu: 'bone-helice' }],
+    ['pc', 'computador-borboleta-bolhas', MENINA, { costas: 'asas-borboleta', mao: 'varinha-bolhas', bicho: 'passarinho-ombro' }],
+  ] as const) {
+    const { page, O } = await abrirGramado(browser, tamanho);
+    await vestir(page, base, premium);
+    await noMeio(page, O, 2.6, 4.5, 0.28);
+    await page.waitForTimeout(3000);
+    await foto(page, PASTA_T03, `${nome}-dia`);
+    await page.evaluate(() => window.__brumaluz!.controleDireto!.mover(0.6, 0.6));
+    await page.waitForTimeout(1500);
+    await foto(page, PASTA_T03, `${nome}-andando-dia`);
+    await page.context().close();
+  }
+});
+
+test('T03: as figuras dos tesouros novos na lojinha (celular em pé)', async ({ browser }) => {
+  test.skip(!QUAL.includes('t03') || !!SO_T03);
+  test.setTimeout(600_000);
+  const { escolherNaRoleta } = await import('./roleta-palco');
+  const { PREMIUM } = await import('../src/jogo/alma');
+  const { page } = await abrirGramado(browser, 'empe', false);
+  await page.evaluate((base) => window.__brumaluz!.personagem!.definir(base as never), MENINA);
+  await escolherNaRoleta(page, 'lojinha');
+  await page.locator('[data-alma-loja]').waitFor({ state: 'visible' });
+  await page.waitForTimeout(4000);
+  await foto(page, `${PASTA_T03}/figuras`, 'vitrine');
+  const ids = ['passarinho-ombro', 'bone-helice', 'pijama-nuvem', 'asas-borboleta', 'mochila-foguete', 'varinha-bolhas', 'guarda-chuva-gotinhas', 'pipa-lacinhos'];
+  for (const id of ids) {
+    const i = PREMIUM.findIndex((p) => p.id === id);
+    const card = page.locator('.alma-lcard').nth(i);
+    await card.scrollIntoViewIfNeeded();
+    await page.waitForTimeout(700);
+    mkdirSync(`${PASTA_T03}/figuras`, { recursive: true });
+    await card.screenshot({ path: `${PASTA_T03}/figuras/${id}.png` });
+  }
+  await page.context().close();
+});
+
+test('T03: o custo de cada peça (malhas e triângulos do boneco e dos efeitos)', async ({ browser }) => {
+  test.skip(!QUAL.includes('custo'));
+  test.setTimeout(600_000);
+  const { page, O } = await abrirGramado(browser, 'empe');
+  const medir = () =>
+    page.evaluate(() => {
+      const e = window.__brumaluz!;
+      const scene = e.cenaBabylon!() as unknown as {
+        meshes: Array<{ name: string; isEnabled(): boolean; isVisible: boolean; getTotalIndices(): number; thinInstanceCount?: number; hasThinInstances?: boolean }>;
+      };
+      let malhas = 0;
+      let tri = 0;
+      let fx = 0;
+      let triFx = 0;
+      for (const m of scene.meshes) {
+        if (!m.isEnabled() || !m.isVisible) continue;
+        if (m.name.startsWith('personagem-premium-fx-')) {
+          fx++;
+          triFx += (m.getTotalIndices() / 3) * Math.max(1, m.thinInstanceCount ?? 1);
+        } else if (/^personagem-(?!premium)/.test(m.name) && !m.name.startsWith('personagem-mao')) {
+          malhas++;
+          tri += m.getTotalIndices() / 3;
+        }
+      }
+      return { malhas, tri: Math.round(tri), fx, triFx: Math.round(triFx) };
+    });
+  const linhas: string[] = ['| Peça | Malhas do boneco | Triângulos do boneco | Malhas de efeito | Triângulos de efeito |', '|---|---|---|---|---|'];
+  await noMeio(page, O, 0, 5);
+  await vestir(page, MENINO, {});
+  await page.waitForTimeout(2500);
+  const base = await medir();
+  linhas.push(`| sem nada | ${base.malhas} | ${base.tri} | ${base.fx} | ${base.triFx} |`);
+  for (const c of PECAS_036) {
+    await vestir(page, c.quem, c.premium);
+    await page.waitForTimeout(3000);
+    const m = await medir();
+    linhas.push(`| ${c.nome} | ${m.malhas} (${m.malhas - base.malhas >= 0 ? '+' : ''}${m.malhas - base.malhas}) | ${m.tri} (+${m.tri - base.tri}) | ${m.fx} | ${m.triFx} |`);
+  }
+  // todos juntos (um boné, o pijama, as asas, a varinha e o passarinho de uma vez)
+  await vestir(page, MENINA, { chapeu: 'bone-helice', roupa: 'pijama-nuvem', costas: 'asas-borboleta', mao: 'varinha-bolhas', bicho: 'passarinho-ombro' });
+  await page.waitForTimeout(3000);
+  const t = await medir();
+  linhas.push(`| boné, pijama, asas, varinha e passarinho juntos | ${t.malhas} (+${t.malhas - base.malhas}) | ${t.tri} (+${t.tri - base.tri}) | ${t.fx} | ${t.triFx} |`);
+  mkdirSync(PASTA_T03, { recursive: true });
+  writeFileSync(`${PASTA_T03}/custo.md`, `${linhas.join('\n')}\n`);
+  console.log(`CUSTO\n${linhas.join('\n')}`);
+  await page.context().close();
+});
+
+test('T03: o vídeo dos efeitos (computador)', async ({ browser }) => {
+  test.skip(!QUAL.includes('t03') || !!SO_T03 || !!process.env.SEM_VIDEO);
+  test.setTimeout(600_000);
+  mkdirSync(PASTA_T03, { recursive: true });
+  const { page, O } = await abrirGramado(browser, 'pc');
+  await vestir(page, MENINO, { chapeu: 'bone-helice', costas: 'mochila-foguete' });
+  await noMeio(page, O, 2.4, 4.6, 0.3);
+  await page.waitForTimeout(3000);
+  await comecarGravacao(page);
+  // cada um uns 4 s: parado um tico e andando em roda (a hélice gira mais rápido correndo)
+  for (const [base, premium] of [
+    [MENINO, { chapeu: 'bone-helice', costas: 'mochila-foguete' }],
+    [MENINA, { costas: 'asas-borboleta', bicho: 'passarinho-ombro' }],
+    [MENINA, { mao: 'varinha-bolhas' }],
+    [MENINO, { mao: 'guarda-chuva-gotinhas', roupa: 'pijama-nuvem' }],
+    [MENINA, { mao: 'pipa-lacinhos' }],
+  ] as const) {
+    await noMeio(page, O, 2.4, 4.6, 0.3);
+    await vestir(page, base, premium);
+    await page.waitForTimeout(1400);
+    await page.evaluate(() => window.__brumaluz!.controleDireto!.mover(0.5, 0.8));
+    await page.waitForTimeout(2600);
+    await page.evaluate(() => window.__brumaluz!.controleDireto!.mover(0, 0));
+    await page.waitForTimeout(800);
+  }
+  await pararGravacao(page, `${PASTA_T03}/efeitos.webm`);
   await page.context().close();
 });
 
