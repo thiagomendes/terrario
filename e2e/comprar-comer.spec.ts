@@ -1,7 +1,7 @@
 import { expect, test, type Browser, type Page } from '@playwright/test';
 import { mkdirSync } from 'node:fs';
 import { abrirMundo, assentar, criarMundo, type Tamanho } from './guia-palco';
-import { alvoDoToque, esperarDica } from './vila-alvo';
+import { alvoDoToque, diagnostico, esperarDica } from './vila-alvo';
 import { telasDoFluxo } from './telas';
 
 /**
@@ -75,11 +75,15 @@ async function comprar(page: Page, b: Balcao): Promise<number> {
   const t0 = Date.now();
   await page.touchscreen.tap(t.x, t.y);
   // a entrega começa (todos veem) e o lanche chega na barrinha em ~1,6 s
-  await page.waitForFunction(
-    () => (window.__brumaluz!.vilaCompras!.estado() ?? []).length > 0,
-    undefined,
-    { timeout: 5_000 },
-  );
+  await page
+    .waitForFunction(() => (window.__brumaluz!.vilaCompras!.estado() ?? []).length > 0, undefined, {
+      timeout: 5_000,
+    })
+    .catch(async (erro) => {
+      // onde o dedo tocou e o que a tela via (para achar a causa)
+      console.log(`compra: ${b.chave} não começou; toque em ${JSON.stringify(t)}; ${await diagnostico(page, b.chave)}`);
+      throw erro;
+    });
   await page.waitForFunction(
     ([item, n]) => {
       const inv = window.__brumaluz!.inventario!;

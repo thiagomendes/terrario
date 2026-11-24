@@ -36,7 +36,15 @@ async function enquadrar(
         }
         return true;
       }, r.t);
-      if (livre) return r.t;
+      if (livre) {
+        // a câmera ainda pode estar chegando na inclinação nova (ela vai suave): só vale o ponto
+        // que fica parado na tela; senão o toque cai do lado e a compra não começa (24 nov,
+        // na fumaça: "a entrega começa" não veio em 5 s, 2 de 6)
+        await page.waitForTimeout(200);
+        const de = await ler();
+        if (de.t && Math.hypot(de.t.x - r.t.x, de.t.y - r.t.y) < 6) return de.t;
+        continue;
+      }
     }
     if (r.pronto && r.p) {
       await page.evaluate(
