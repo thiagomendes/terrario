@@ -21,9 +21,22 @@ Jogo voxel de brinquedo no navegador, para crianças (os testadores são os dois
     - o que for legal, de dinheiro ou de segurança das crianças;
     - a aprovação dos esboços e das decisões que mudam a cara de um mundo.
   - **Decisões do dono:** levar as alternativas com a recomendada primeiro.
-- **Agentes**: todos Opus 5.5 em esforço high, nunca Fable.
-  - **Desenvolvedor:** implementa por fases.
-  - **Revisor:** revisa specs e código; para o portão visual, um revisor novo que só vê as fotos.
+- **Agentes** (decisão do dono, 24 nov 2026): um time pequeno de especialistas de jogo, definidos em `.claude/agents/`. Cada definição já traz o modelo, o esforço e as regras da sua área. Todos são Opus 5.5, nunca Fable. O orquestrador também é Opus 5.5, em esforço alto.
+
+  | Perfil | Esforço | Cuida de |
+  |---|---|---|
+  | `artista-voxel` | alto | bonecos, itens, luz, brilho, animação e esboços |
+  | `engenheiro-nucleo-rede` | alto | núcleo, servidor, protocolo, sala na nuvem e paridade |
+  | `desenvolvedor-jogo` | médio | missões, lojinha, interface, sons, e o que liga as peças |
+  | `testador` | médio | conferência por área, testes instáveis e fotos de prova |
+  | `revisor-visual` | alto | olhos novos só com as fotos, pensando numa criança de 3 a 4 anos |
+
+  O design do jogo (o que é divertido, a regra, a economia) fica com o dono e o orquestrador.
+- **Agentes custam caro:** cada um relê o projeto do zero, e o limite semanal já acabou uma vez (23 nov 2026). Por isso:
+  - o orquestrador faz direto o que é pequeno (texto, documentação, conserto de poucas linhas);
+  - no máximo dois agentes ao mesmo tempo;
+  - sempre que der, continuar o mesmo agente (SendMessage) em vez de abrir outro;
+  - o pedido ao agente diz o objetivo, as regras e como saber que ficou pronto, e não um passo a passo.
 
 ## Fluxo de uma spec
 1. **Combinar com o dono** o que entra; a ordem do backlog é combinada na hora (o número da spec não é a ordem).
@@ -32,23 +45,27 @@ Jogo voxel de brinquedo no navegador, para crianças (os testadores são os dois
    - fotos e vídeo para o dono;
    - o esboço sai do código quando a spec é feita.
 3. **Spec** em `.sdd/specs/NNN-slug/spec.md` (Contexto, O que existia, Decisões do dono, O que muda, Experiência medida, Fora desta spec) e `tasks.md` (fases, tarefas P/M/G, Situação).
-   - O revisor revisa a spec; cada apontamento é ajustado ou justificado até o consenso.
+   - Um agente novo revisa a spec (o especialista da área principal); cada apontamento é ajustado ou justificado até o consenso.
    - Spec aprovada vira `status: APPROVED`.
 4. **Código:**
-   - o desenvolvedor faz uma fase por vez; cada fase fecha com `npx tsc --noEmit -p .`, os testes que tocou, commit e fotos;
+   - o especialista faz uma fase por vez; cada fase fecha com `npx tsc --noEmit -p .`, os testes que tocou, commit e fotos;
+   - entrega o que foi pedido, no escopo pedido: se achar que o pedido está errado ou que há jeito melhor, diz numa frase e segue com o que foi pedido;
    - os agentes editam código só com Edit/Write (nada de sed, heredoc ou script reescrevendo arquivo);
    - nenhum agente parado à toa: a vigia em segundo plano avisa quando um agente para (ver "Boletim para o dono").
-5. **Revisão de código** pelo revisor, com o orquestrador intermediando até o consenso.
-6. **Nada voltou para trás:**
-   - Vitest inteiro e `npm run build`;
-   - paridade 36/36 (`PARIDADE=conferir`, `e2e/paridade.spec.ts`);
-   - a suíte e2e inteira, em pedaços de no máximo 2 trabalhadores;
-   - o que falhar é conferido contra a `main`.
+5. **Revisão de código só quando mexe no núcleo, na rede ou no servidor**, por um `engenheiro-nucleo-rede` novo, com o orquestrador intermediando até o consenso. Nas outras áreas, o próprio especialista confere o seu trabalho, e o orquestrador olha o resultado.
+6. **Nada voltou para trás, por área** (decisão do dono, 22 nov 2026: testar o que mudou, e não tudo, de dia, e medir se a qualidade cai):
+   - sempre: o Vitest inteiro, o `npm run build` e a fumaça (uns 15 min na placa);
+   - as áreas que o ramo tocou (o mapa das áreas fica em `e2e/areas.json`);
+   - a paridade 36/36 (`PARIDADE=conferir`, `e2e/paridade.spec.ts`) só quando mexe no núcleo, na rede ou no servidor;
+   - as três telas só nos testes de leiaute; o resto roda no celular em pé;
+   - os instáveis da quarentena rodam à parte e não seguram a entrega;
+   - em pedaços de no máximo 2 trabalhadores; nada de teste depois das 21h30 (a ventoinha);
+   - o que falhar é conferido contra a `main`;
+   - registrar na Situação o tempo da conferência e, depois, os defeitos que escaparam (no ar ou na rodada em família).
    - Nunca pular, desligar ou afrouxar teste para passar: achar a causa.
 7. **Portão visual:**
    - fotos em pé de dia e de noite, e deitado (celular 390×844 e 844×390, computador 1280×720);
-   - autocrítica e uma rodada de refazer;
-   - um revisor novo só com as fotos;
+   - um `revisor-visual` novo só com as fotos;
    - o orquestrador confere as fotos principais antes de publicar.
 8. **Publicar:**
    - merge na `main` e `git push`; as Actions publicam o site (`publicar.yml`) e, se mexeu no núcleo ou no servidor, o servidor (`servidor.yml`);
