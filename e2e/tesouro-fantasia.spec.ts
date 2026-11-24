@@ -194,7 +194,10 @@ for (const t of TAMANHOS) {
           ),
         ).toContain('camiseta-aquario');
       }
-      await page.locator('[data-previa-personagem]').scrollIntoViewIfNeeded();
+      // a prévia respira sem parar (previa-respira, 3,2 s, desde a 006): o scrollIntoViewIfNeeded
+      // do Playwright espera a caixa ficar parada dois quadros seguidos e às vezes nunca vê
+      // (7 min presos aqui na conferência da 036). Rolar até ela não precisa disso.
+      await page.locator('[data-previa-personagem]').evaluate((el) => el.scrollIntoView({ block: 'nearest' }));
       await foto('astronauta-editor');
       await fecharEditor();
       await foto('astronauta-jogo');

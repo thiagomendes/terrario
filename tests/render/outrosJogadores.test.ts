@@ -7,8 +7,9 @@ import type { JogadorVisto, PerfilJogador } from '../../src/nucleo/protocolo';
  * de quem mudou é refeito; apelido novo só troca o texto da plaquinha.
  */
 const aplicar = vi.fn();
+const montar = vi.fn();
 vi.mock('../../src/render/personagem', () => ({
-  criarPersonagem: () => ({ aplicarAparencia: aplicar, descartar: () => {}, raiz: {} }),
+  criarPersonagem: () => ({ aplicarAparencia: aplicar, definirMontado: montar, descartar: () => {}, raiz: {} }),
 }));
 
 /** Página de mentirinha: as plaquinhas são só objetos com texto. */
@@ -70,5 +71,34 @@ describe('outros jogadores: perfis', () => {
     });
     expect(aplicar).toHaveBeenCalledTimes(1);
     expect(aplicar.mock.calls[0][0]).toMatchObject({ pele: 4 });
+  });
+
+  it('spec 036 (T04): o amigo que monta e desce não tem o boneco refeito (só o brinquedo acende)', async () => {
+    const { criarOutrosJogadores } = await import('../../src/render/outrosJogadores');
+    const o = criarOutrosJogadores({} as Scene);
+    const pufs: boolean[] = [];
+    o.definirAoMontar((_x, _y, _z, montou) => pufs.push(montou));
+    const aPe = { modelo: 'andarilho', pele: 2, premium: { andar: 'patinete-luz' } };
+    o.definirPerfis({ ana: { apelido: 'Ana', aparencia: aPe } });
+    o.receber([visto('ana')]);
+    aplicar.mockClear();
+    montar.mockClear();
+    o.definirPerfis({ ana: { apelido: 'Ana', aparencia: { ...aPe, montado: true } } });
+    o.definirPerfis({ ana: { apelido: 'Ana', aparencia: { ...aPe, montado: true } } });
+    expect(aplicar).not.toHaveBeenCalled();
+    expect(montar.mock.calls).toEqual([[true]]);
+    const ana = () => o.lista.find((j) => j.id === 'ana')!;
+    expect(ana().montado).toBe(true);
+    expect(ana().refeitos).toBe(0);
+    // quem lê a aparência do amigo (o abraço) vê o montado
+    expect(o.amigo('ana')?.aparencia.montado).toBe(true);
+    o.definirPerfis({ ana: { apelido: 'Ana', aparencia: aPe } });
+    expect(aplicar).not.toHaveBeenCalled();
+    expect(montar.mock.calls).toEqual([[true], [false]]);
+    expect(pufs).toEqual([true, false]);
+    // trocar de brinquedo é outra aparência: aí sim o boneco é refeito
+    o.definirPerfis({ ana: { apelido: 'Ana', aparencia: { ...aPe, premium: { andar: 'nuvem-fofa' } } } });
+    expect(aplicar).toHaveBeenCalledTimes(1);
+    expect(ana().refeitos).toBe(1);
   });
 });

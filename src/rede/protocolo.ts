@@ -64,6 +64,18 @@ import type { ObraSalva } from '../nucleo/saneamento';
  * antigo recusaria ao criar o mundo, e a planta `'baile'` no estilo; a parte 1 inteira sai nesta
  * versão: os blocos 117 a 127, a alma do mundo com as missões n1 a n5, o comando `baile`, o
  * abraço, a varinha, as comidas e as fantasias na aparência).
+ *
+ * Spec 036 (a lojinha maior) fica na 18 de propósito (revisão do engenheiro de núcleo e rede, 24
+ * nov 2026). Ela só acrescenta à aparência os premium novos (as categorias `andar`, `chapeu` e
+ * `mao`, os itens novos de `roupa`, `costas` e `bicho`) e o `montado`; nenhum comando, evento ou
+ * campo de quadro novo. Quem é de antes descarta o que não conhece e segue: um navegador 18 de
+ * antes vê o amigo sem o item novo e a pé; um servidor 18 de antes (se o site sair primeiro por
+ * engano) passa a aparência a limpo sem eles, e nada quebra. Subir para 19 abriria, entre as duas
+ * publicações, uma janela em que o site 18 seria recusado pelo servidor 19, e a 19 já é da 027
+ * parte 2. O servidor publica antes do site mesmo assim (senão os amigos não veem os itens).
+ * `tests/rede/versao-036.test.ts` guarda uma cópia congelada das regras da 18 de antes e prova
+ * que ela lê a aparência da 036 sem quebrar. Se a 036 ganhar comando, evento ou campo de quadro,
+ * esta versão sobe.
  */
 export const VERSAO_REDE = 18;
 /** Jogadores por mundo. */

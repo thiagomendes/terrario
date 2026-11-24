@@ -8,6 +8,8 @@ import { EVENTO_BAU, EVENTO_LOJINHA, EVENTO_MISSOES, ligarAlmaUi } from './ui/al
 import { ligarGuiaMissao, QUADRO_SVG } from './ui/alma/guia';
 import { arte as arteAlma } from './ui/alma/arte';
 import { EXTRAS_RODA } from './ui/menuRoda';
+import { ICONES_ANDAR, ICONE_DESCER, NOME_ANDAR } from './ui/iconesAndar';
+import { IDS_ANDAR } from './personagem/brinquedoAndar';
 import { CATEGORIAS_PREMIUM, ganhoTemAlgo, mundoAlmaDoEstilo, nivelDoXp } from './jogo/alma';
 import type { EventoNucleo } from './nucleo/protocolo';
 import { medirJanela, tamanhoDoCanvas } from './ui/telaCheia';
@@ -72,6 +74,18 @@ import {
 } from './pagina';
 import { ligarContextoPerdido } from './render/contexto';
 import { ehMundoNovo } from './ui/sugestaoFantasia';
+
+/**
+ * Spec 036 (T04): o item do brinquedo na roda. Já vestido, monta; senão, veste pelo perfil (o
+ * mesmo caminho da lojinha e de "Meus tesouros"), e vestir já monta.
+ */
+function montarNoBrinquedo(id: string): void {
+  const alma = (window as unknown as { __almaCrianca?: PerfilCrianca }).__almaCrianca;
+  const ps = window.__brumaluz?.personagem;
+  if (!alma || !ps) return;
+  if (alma.perfil.vestidos.andar === id) ps.montar?.();
+  else alma.vestirPremium(id, true);
+}
 
 /** Spec 016: aviso de uma vez só (os mundos de antes foram apagados), junto da boas-vindas. */
 let avisoMundosNovos: string | null = null;
@@ -296,6 +310,38 @@ async function iniciar(app: HTMLElement): Promise<void> {
       visivel: () => !!window.__brumaluz?.vilaParque?.sentado(),
       semTela: true,
       aoEscolher: () => window.__brumaluz?.vilaParque?.sair(),
+    });
+  // spec 036 (T04): montar nos brinquedos de andar em 2 toques (abrir a roda e escolher o
+  // brinquedo, pelo desenho dele), em qualquer mundo. Um item por brinquedo comprado, só quando
+  // ela pode montar nele; montada, o "Descer". Sem brinquedo comprado, a roda não muda.
+  for (const id of IDS_ANDAR)
+    if (!EXTRAS_RODA.some((x) => x.id === `andar-${id}`))
+      EXTRAS_RODA.push({
+        id: `andar-${id}`,
+        nome: NOME_ANDAR[id],
+        icone: ICONES_ANDAR[id],
+        visivel: () => {
+          const p = window.__brumaluz?.personagem;
+          const alma = (window as unknown as { __almaCrianca?: PerfilCrianca }).__almaCrianca;
+          return (
+            !!p && !!alma?.perfil.premium.includes(id) && p.montado?.() !== id && !!p.podeMontar?.(id)
+          );
+        },
+        semTela: true,
+        // (a roda abre no brinquedo: abrir e tocar no meio)
+        inicio: 1,
+        aoEscolher: () => montarNoBrinquedo(id),
+      });
+  if (!EXTRAS_RODA.some((x) => x.id === 'descer-brinquedo'))
+    EXTRAS_RODA.push({
+      id: 'descer-brinquedo',
+      nome: 'Descer',
+      icone: ICONE_DESCER,
+      visivel: () => !!window.__brumaluz?.personagem?.montado?.(),
+      semTela: true,
+      // (montada, a roda abre no "Descer")
+      inicio: 2,
+      aoEscolher: () => void window.__brumaluz?.personagem?.descer?.(),
     });
   // em prévia de outro tema nada é salvo: o mundo continua sendo do tema dele
   cena = criarCena(canvas, hotbar, {
@@ -788,7 +834,12 @@ function ligarAlma(armazenamento: Storage | null, cena: ReturnType<typeof criarC
     const atual = ps.aparencia().premium ?? {};
     const igual = CATEGORIAS_PREMIUM.every((c) => v[c] === atual[c]);
     if (igual) return;
+    // spec 036 (T04): comprar ou vestir um brinquedo de andar já monta (quando pode); ao abrir
+    // o jogo (sem festa) ela entra a pé
+    const andarNovo = !!v.andar && v.andar !== atual.andar;
     ps.definir({ premium: Object.keys(v).length ? { ...v } : undefined });
+    // (montou: o puf e o som do brinquedo no lugar do brilho de vestir)
+    if (festa && andarNovo && ps.montar?.(!!ps.montado?.())) return;
     if (festa) ps.festaPremium?.();
   };
   vestirPremiumNoBoneco(false);

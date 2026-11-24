@@ -286,6 +286,66 @@ for (const t of TAMANHOS) {
       await abrirEditor();
       await expect(carta('dragao')).toHaveAttribute('aria-pressed', 'true');
       await expect(carta('camiseta-aquario')).toHaveAttribute('aria-pressed', 'false');
+
+      // ---------------------------------------------------------------- spec 036: os 18
+      await page.evaluate(() => {
+        const p = (window as unknown as { __almaCrianca: Perfil }).__almaCrianca;
+        p.aplicarGanho({ moedas: 2000, xp: 0, pontos: {} });
+        for (const id of [
+          'tenis-cometa', 'unicornio', 'patinete-luz', 'carrinho-pedal', 'bicicletinha', 'nuvem-fofa',
+          'passarinho-ombro', 'bone-helice', 'pijama-nuvem', 'asas-borboleta', 'mochila-foguete',
+          'varinha-bolhas', 'guarda-chuva-gotinhas', 'pipa-lacinhos',
+        ])
+          p.comprarPremium(id);
+      });
+      await fecharEditor();
+      await abrirEditor();
+      await tocar('[data-aba="fantasias"]');
+      await expect(page.locator('button[data-tesouro]')).toHaveCount(18);
+      // a prateleira com os 18 continua cabendo (rola dentro dela, nunca para o lado)
+      const com18 = await page.evaluate(() => {
+        const r = (s: string) => document.querySelector(s)!.getBoundingClientRect();
+        return { p: r('[data-tesouros]'), painel: r('[data-painel-personagem]') };
+      });
+      expect(com18.p.right).toBeLessThanOrEqual(com18.painel.right + 1);
+      expect(com18.p.height).toBeLessThanOrEqual(Math.max(150, t.h * 0.36));
+      await semRolagemLateral();
+      // as figuras de todos, inclusive os de andar (montada) e a pipa
+      for (const id of ['bicicletinha', 'pipa-lacinhos']) {
+        await carta(id).scrollIntoViewIfNeeded();
+        await expect
+          .poll(() =>
+            carta(id).evaluate((b) => {
+              const c = b.querySelector('canvas')!;
+              const d = c.getContext('2d')?.getImageData(0, 0, c.width, c.height).data;
+              let n = 0;
+              if (d) for (let i = 3; i < d.length; i += 16) if (d[i] > 0) n++;
+              return n;
+            }),
+          )
+          .toBeGreaterThan(50);
+      }
+      // vestir um brinquedo de andar (o mesmo caminho da lojinha)
+      // (a nuvem, comprada por último, já está vestida: a bicicletinha entra no lugar dela)
+      // (nenhum cartão por cima do outro: o toque cai no que ela vê)
+      const sobrepostos = await page.evaluate(() => {
+        const rs = [...document.querySelectorAll('button[data-tesouro]')].map((b) => b.getBoundingClientRect());
+        let n = 0;
+        for (let i = 0; i < rs.length; i++)
+          for (let k = i + 1; k < rs.length; k++) {
+            const a = rs[i];
+            const b = rs[k];
+            if (a.left < b.right - 1 && b.left < a.right - 1 && a.top < b.bottom - 1 && b.top < a.bottom - 1) n++;
+          }
+        return n;
+      });
+      expect(sobrepostos).toBe(0);
+      await tocar('button[data-tesouro="bicicletinha"]');
+      await expect
+        .poll(() => page.evaluate(() => window.__brumaluz!.personagem!.aparencia().premium?.andar))
+        .toBe('bicicletinha');
+      await carta('pipa-lacinhos').scrollIntoViewIfNeeded();
+      await foto('prateleira-18', '[data-tesouros]');
       expect(erros).toEqual([]);
     });
   });

@@ -28,6 +28,7 @@ import {
   type TexturaPremium,
 } from '../personagem/boneco';
 import { ALTURA_PRANCHA } from '../personagem/bonecoFantasia';
+import { GUIDAO, avancarAndar, boiarNuvem, estadoAndar, poseNoBrinquedo } from '../personagem/brinquedoAndar';
 import { luzPremium, texturaAquario } from './premiumLuzes';
 import type { Pose } from '../personagem/poses';
 import {
@@ -47,6 +48,7 @@ import {
   type Plasticos,
 } from './formas';
 import { docinhosNaSacola, modeloNaMao, type ModeloItem } from './itensBrinquedo';
+import { PONTOS_LOJINHA } from '../personagem/bonecoPremiumLojinha';
 import type { ExtrasPose, Personagem } from './personagem';
 
 export const MAXIMO_MALHAS_BONECO = 90;
@@ -91,7 +93,7 @@ export function montarPeca(scene: Scene, mats: Plasticos, p: Peca, prefixo: stri
     m.isPickable = false;
   } else if (p.forma === 'malha') {
     m = new Mesh(nome, scene);
-    dadosMalhaPano(p.malha?.pos ?? [], p.malha?.ind ?? []).applyToMesh(m);
+    dadosMalhaPano(p.malha?.pos ?? [], p.malha?.ind ?? [], p.malha?.avessoClaro).applyToMesh(m);
     m.material = mat;
     m.isPickable = false;
   } else if (p.tamanho[2] > 0) {
@@ -153,7 +155,7 @@ export function dadosDaPeca(
       tessellation: grosso ? 8 : 14,
     });
   else if (p.forma === 'placa') vd = dadosPlaca(p.perfil ?? [], p.tamanho[2]);
-  else if (p.forma === 'malha') vd = dadosMalhaPano(p.malha?.pos ?? [], p.malha?.ind ?? []);
+  else if (p.forma === 'malha') vd = dadosMalhaPano(p.malha?.pos ?? [], p.malha?.ind ?? [], p.malha?.avessoClaro);
   else if (p.tamanho[2] > 0) vd = dadosAnel(p.tamanho[0], p.tamanho[1], p.tamanho[2]);
   else
     vd = CreateTorusVertexData({
@@ -305,6 +307,65 @@ interface FontePeca {
   cv: boolean;
 }
 
+/**
+ * Spec 036 (portão): o quanto o cabo do guarda-chuva pode tombar para o lado da cabeça (seno):
+ * no máximo uns 24 graus; nas cabeças de cabelo bem largo, um tico para fora.
+ */
+const INCLINA_MAX = 0.4;
+const INCLINA_MIN = -0.07;
+/** O cabo passa pela beira de fora do punho fechado, e não pelo meio dele. */
+const DENTRO_DO_PUNHO = 0.03;
+/** A folga entre o cabo e a cabeça: 3 cm, mais a grossura do cabo e o balanço dele. */
+const FOLGA_GUARDA = 0.08;
+/** A altura de cada fatia do perfil da cabeça. */
+const PERFIL_FATIA = 0.04;
+
+/**
+ * Spec 036 (portão): a meia largura da cabeça com o cabelo (e o que vai nela) em cada altura, no
+ * espaço da cabeça: [y de baixo da fatia, maior |x|]. Feita uma vez por desenho da cabeça (muda
+ * quando o boneco é refeito), dos cantos das malhas dela.
+ */
+const perfisDaCabeca = new WeakMap<TransformNode, { chave: string; perfil: Array<[number, number]> }>();
+function perfilDaCabeca(cabeca: TransformNode, paraCabeca: Matrix): Array<[number, number]> {
+  const malhas = cabeca.getChildMeshes(false).filter((m) => m.isEnabled() && m.getTotalVertices() > 0);
+  const chave = malhas.map((m) => `${m.uniqueId}:${m.getTotalVertices()}`).join(',');
+  const ja = perfisDaCabeca.get(cabeca);
+  if (ja && ja.chave === chave) return ja.perfil;
+  const fatias = new Map<number, number>();
+  const p = new Vector3();
+  for (const m of malhas) {
+    m.computeWorldMatrix(true);
+    const mat = m.getWorldMatrix().multiply(paraCabeca);
+    const pos = m.getVerticesData('position');
+    if (!pos) continue;
+    for (let i = 0; i < pos.length; i += 3) {
+      Vector3.TransformCoordinatesFromFloatsToRef(pos[i], pos[i + 1], pos[i + 2], mat, p);
+      const k = Math.floor(p.y / PERFIL_FATIA);
+      fatias.set(k, Math.max(fatias.get(k) ?? 0, Math.abs(p.x)));
+    }
+  }
+  const perfil = [...fatias].map(([k, w]): [number, number] => [k * PERFIL_FATIA, w]);
+  perfisDaCabeca.set(cabeca, { chave, perfil });
+  return perfil;
+}
+
+/** Spec 036 (T05): a passada 1 é andar (blocos por segundo; a física anda a 4,3). */
+const VEL_ANDAR_BONECO = 4.3;
+
+/**
+ * Spec 036: o braço esquerdo segurando o tesouro da mão (x, y, z como no Babylon; z negativo
+ * abre o braço esquerdo para fora). A varinha balança no alto, na frente; o guarda-chuva vai
+ * de lado, com a mão ao lado da cabeça e um pouco acima do ombro (portão: com o braço para o
+ * alto, a mão ficava atrás da cabeça e o cabo parecia espetado nela); a pipa vai no alto e para
+ * fora, puxando a linha por fora do corpo e da cabeça.
+ */
+export function bracoDoTesouro(id: string, t: number): [number, number, number] | null {
+  if (id === 'varinha-bolhas') return [-2.05 + Math.sin(t * 2.2) * 0.18, 0, -0.42 - Math.sin(t * 1.1) * 0.08];
+  if (id === 'guarda-chuva-gotinhas') return [1.3, 0, -1.95];
+  if (id === 'pipa-lacinhos') return [-2.3 + Math.sin(t * 1.7) * 0.06, 0, -0.85];
+  return null;
+}
+
 function naVista(m: Mesh): void {
   m.alwaysSelectAsActiveMesh = true;
   m.doNotSyncBoundingInfo = true;
@@ -344,8 +405,20 @@ export function criarBoneco(
   let juntas = {} as Record<Junta, TransformNode>;
   /** Spec 026 (parte 3): de skate (o corpo sobe em cima da prancha e fica de pé nela). */
   let deSkate = !!aparencia.skate;
+  /**
+   * Spec 036 (T04): o brinquedo de andar vestido (o nó dele já está montado) e se a criança está
+   * montada nele agora. Montar e descer só acendem o nó e trocam a pose (`definirMontado`).
+   */
+  let andarVestido: string | null = null;
+  let montado = false;
   /** Spec 023: os nós próprios dos premium (as asas do dragão). */
   let subjuntas: Partial<Record<SubjuntaPremium, TransformNode>> = {};
+  /** Spec 036: o giro de repouso de cada nó próprio (a animação soma em cima). */
+  const repousoSub = new Map<SubjuntaPremium, Vector3>();
+  /** Spec 036: o tesouro da mão esquerda (o braço segura em cima). */
+  let maoPremium: string | undefined;
+  /** Spec 036: as fases das peças que se mexem sozinhas. */
+  const fase036 = { helice: 0, borboleta: 0, guarda: 0, passaro: 1.2, batendo: 0, t: 0, tomba: null as number | null };
   let malhas: Mesh[] = [];
   /** Spec 027 (T22): monta o boneco de longe (só com esqueleto; null sem ele). */
   let montarDeLonge: (() => Mesh[]) | null = null;
@@ -432,6 +505,7 @@ export function criarBoneco(
     for (const j of Object.values(subjuntas)) j.dispose();
     for (const j of Object.values(juntas)) j.dispose();
     subjuntas = {};
+    repousoSub.clear();
     malhas = [];
     juntas = {} as Record<Junta, TransformNode>;
   }
@@ -439,6 +513,9 @@ export function criarBoneco(
   function aplicarAparencia(a: Aparencia): void {
     limpar();
     deSkate = !!a.skate && !a.patins;
+    maoPremium = a.premium?.mao;
+    andarVestido = a.premium?.andar && !a.patins && !a.skate ? a.premium.andar : null;
+    montado = !!a.montado && !!andarVestido;
     const plano = ajustarPlano ? ajustarPlano(planoBoneco(a)) : planoBoneco(a);
     escalar.scaling.setAll(plano.escala);
     // spec 032: onde fica a boca (na cabeça), para a comida parar na frente dela
@@ -490,8 +567,11 @@ export function criarBoneco(
       let no = subjuntas[sj.nome];
       if (!no) {
         no = new TransformNode(`${prefixo}-junta-${sj.nome}`, scene);
-        no.parent = juntas[p.junta];
+        // spec 036: dentro de outro nó próprio (as asinhas no passarinho), com o giro de repouso
+        no.parent = (sj.pai && subjuntas[sj.pai]) || juntas[p.junta];
         no.position.set(sj.pivo[0], sj.pivo[1], sj.pivo[2]);
+        if (sj.rot) no.rotation.set(sj.rot[0], sj.rot[1], sj.rot[2]);
+        repousoSub.set(sj.nome, no.rotation.clone());
         subjuntas[sj.nome] = no;
       }
       return no;
@@ -508,7 +588,8 @@ export function criarBoneco(
         // a mão não gira sozinha: as peças dela vão para a junta do braço (menos malhas)
         let junta = p.junta;
         let deslocar: [number, number, number] | undefined;
-        if (!par && (junta === 'maoE' || junta === 'maoD')) {
+        // (spec 036: a peça num nó próprio dentro da mão, como o guarda-chuva, fica no nó dela)
+        if (!par && !p.subjunta && (junta === 'maoE' || junta === 'maoD')) {
           deslocar = plano.juntas[junta].pos;
           junta = junta === 'maoE' ? 'bracoE' : 'bracoD';
         }
@@ -585,6 +666,16 @@ export function criarBoneco(
     baseY.clear();
     for (const m of [...olhos, ...(boca ? [boca] : [])]) baseY.set(m, m.scaling.y);
     mats.definirLuz(luz);
+    // spec 036 (T04): o brinquedo de andar só aparece com a criança montada
+    subjuntas.brinquedo?.setEnabled(montado);
+  }
+
+  /** Spec 036 (T04): montar e descer sem refazer o boneco (só o nó do brinquedo e a pose). */
+  function definirMontado(m: boolean): void {
+    const agora = m && !!andarVestido;
+    if (agora === montado) return;
+    montado = agora;
+    subjuntas.brinquedo?.setEnabled(montado);
   }
   let olhos: TransformNode[] = [];
   let boca: TransformNode | null = null;
@@ -770,6 +861,165 @@ export function criarBoneco(
     return n;
   };
 
+  /**
+   * Spec 036: as peças dos tesouros que se mexem sozinhas. A hélice gira devagar parada e rápido
+   * correndo; as asas de borboleta batem (mais rápido correndo); o guarda-chuva fica centrado por
+   * cima da cabeça, como quer que o braço esteja, girando devagar; a pipa balança no vento, com o
+   * rabo atrasado; o passarinho voa pertinho do ombro, batendo as asinhas. Tudo por
+   * senos e fases que andam com o tempo: mudar o ritmo não dá tranco, nada treme.
+   */
+  const mGuarda = new Matrix();
+  const mMao = new Matrix();
+  const mRaiz = new Matrix();
+  const qAux = new Quaternion();
+  /** Spec 036: a posição de repouso dos nós que boiam (o passarinho voando). */
+  const posRepouso = new WeakMap<TransformNode, Vector3>();
+  function animarTesouros(dt: number, vista?: ExtrasPose['vista']): void {
+    const s = subjuntas;
+    if (!s.helice && !s.borbE && !s.guarda && !s.pipa && !s.passaro) return;
+    const corre = Math.min(1, (vista?.passada ?? 0) / 1.5);
+    const anda = Math.min(1, vista?.passada ?? 0);
+    const f = fase036;
+    f.t += dt;
+    const t = f.t;
+    if (s.helice) {
+      f.helice += dt * (4.5 + 11.5 * corre);
+      s.helice.rotation.y = f.helice % (Math.PI * 2);
+    }
+    if (s.borbE && s.borbD) {
+      f.borboleta += dt * (0.6 + 0.9 * corre) * Math.PI * 2;
+      // abertas para os lados (aparecem dos dois lados da criança, de frente) e fechando devagar
+      // para trás
+      const a = 0.1 + 0.5 * (0.5 + 0.5 * Math.sin(f.borboleta));
+      s.borbE.rotation.set(0, -a, -0.08);
+      s.borbD.rotation.set(0, a, 0.08);
+    }
+    if (s.guarda && juntas.maoE && juntas.cabeca) {
+      f.guarda += dt * (1.2 + 1.2 * anda);
+      // o giro que o guarda-chuva quer no espaço do boneco, desfeito do giro da mão: o cabo sobe da
+      // mão (ao lado da cabeça) quase em pé, um tico inclinado para o lado da cabeça, e gira devagar
+      // em volta dele. Portão: inclinar o cabo até o pano ficar centrado na cabeça fazia o cabo
+      // passar atrás dela e parecer espetado no alto do cabelo; agora o pano, maior, fica um pouco
+      // para o lado da mão, como a criança segura de verdade
+      for (const no of [juntas.maoE, juntas.cabeca]) {
+        const cadeia: TransformNode[] = [];
+        for (let n: TransformNode | null = no; n; n = n.parent as TransformNode | null) cadeia.unshift(n);
+        for (const n of cadeia) n.computeWorldMatrix(true);
+      }
+      // (o "em pé" é o da cabeça: correndo, o corpo inclina e o cabo vai junto, sem chegar nela)
+      const inv = juntas.cabeca.getWorldMatrix().clone().invert();
+      const mao = Vector3.TransformCoordinates(juntas.maoE.getAbsolutePosition(), inv);
+      const hh = Math.hypot(mao.x, mao.z) || 1;
+      // portão (o orquestrador: o pano todo de lado parecia guarda-sol de praia): o cabo tomba
+      // para dentro o quanto a cabeça deixa. A largura da cabeça com o cabelo em cada altura (o
+      // perfil, no espaço da cabeça) diz até onde ele pode ir sem encostar nela, do punho até o
+      // alto do cabelo; daí para cima segue reto, e o pano chega mais perto do meio da cabeça
+      const perfil = perfilDaCabeca(juntas.cabeca, inv);
+      const xCabo = hh + DENTRO_DO_PUNHO;
+      let tomba = INCLINA_MAX;
+      for (const [y, w] of perfil) {
+        const dy = y + PERFIL_FATIA - mao.y;
+        if (dy > 0.02) tomba = Math.min(tomba, (xCabo - w - FOLGA_GUARDA) / dy);
+      }
+      tomba = Math.max(INCLINA_MIN, tomba);
+      f.tomba = f.tomba === null ? tomba : f.tomba + (tomba - f.tomba) * Math.min(1, dt * 5);
+      const dx = (-mao.x / hh) * f.tomba + Math.sin(t * 1.3) * 0.012;
+      const dz = (-mao.z / hh) * f.tomba + Math.sin(t * 0.9) * 0.012;
+      const dir = new Vector3(dx, Math.sqrt(Math.max(0, 1 - dx * dx - dz * dz)), dz);
+      const eixo = Vector3.Cross(Vector3.Up(), dir);
+      const alinhar =
+        eixo.length() > 1e-6 ? Matrix.RotationAxis(eixo.normalize(), Math.acos(Math.min(1, dir.y))) : Matrix.Identity();
+      juntas.cabeca.getWorldMatrix().decompose(undefined, qAux);
+      Matrix.FromQuaternionToRef(qAux, mRaiz);
+      juntas.maoE.getWorldMatrix().decompose(undefined, qAux);
+      Matrix.FromQuaternionToRef(qAux, mMao);
+      mMao.invert();
+      Matrix.RotationY(f.guarda % (Math.PI * 2))
+        .multiply(alinhar)
+        .multiply(mRaiz)
+        .multiplyToRef(mMao, mGuarda);
+      const q = s.guarda.rotationQuaternion ?? new Quaternion();
+      mGuarda.decompose(undefined, q);
+      s.guarda.rotationQuaternion = q;
+      // o cabo passa pela beira de fora do punho fechado (o lado longe da cabeça), e não pelo meio
+      const fora = Vector3.TransformNormal(
+        new Vector3((mao.x / hh) * DENTRO_DO_PUNHO, 0, (mao.z / hh) * DENTRO_DO_PUNHO),
+        juntas.cabeca.getWorldMatrix(),
+      );
+      s.guarda.position.copyFrom(Vector3.TransformNormal(fora, juntas.maoE.getWorldMatrix().clone().invert()));
+    }
+    if (s.pipa) {
+      s.pipa.rotation.z = Math.sin(t * 1.3) * 0.12;
+      s.pipa.rotation.x = Math.sin(t * 0.9) * 0.06 - corre * 0.12;
+      if (s.rabopipa) {
+        s.rabopipa.rotation.z = Math.sin(t * 1.3 - 0.8) * 0.3;
+        // correndo, o rabo voa mais para trás
+        s.rabopipa.rotation.x = Math.sin(t * 2.1) * 0.12 - 0.15 - corre * 0.35;
+      }
+    }
+    if (s.passaro) {
+      // T03 (decisão do dono): o passarinho voa pertinho do ombro, batendo as asinhas sem parar,
+      // com um sobe e desce lento de voo; andando, inclina mais para a frente. Tudo por senos que
+      // andam com o tempo (preso ao tronco: segue a criança sem procurar chão e sem tremer)
+      // (as duas asinhas num nó só: batem pelo vaivém dele, abrindo para os lados e subindo, e
+      // fechando para baixo; desempenho, uma malha a menos por boneco)
+      const bate = Math.sin(t * 15);
+      if (s.passaroAsaE) s.passaroAsaE.scaling.set(1 + bate * 0.28, 1 - bate * 0.4, 1);
+      const r = repousoSub.get('passaro');
+      let p0 = posRepouso.get(s.passaro);
+      if (!p0) posRepouso.set(s.passaro, (p0 = s.passaro.position.clone()));
+      s.passaro.position.set(p0.x + Math.sin(t * 1.1) * 0.015, p0.y + Math.sin(t * 2.3) * 0.035, p0.z + Math.sin(t * 0.8) * 0.015);
+      if (r) s.passaro.rotation.set(r.x + 0.15 * anda + Math.sin(t * 2.3 + 1) * 0.06, r.y, r.z + Math.sin(t * 1.7) * 0.05);
+    }
+  }
+
+  /**
+   * Spec 036 (T05): os nós do brinquedo de andar que se mexem com o andar: as rodas e as rodinhas
+   * giram pelo caminho andado, o pedal pela volta dele (as pernas, na pose, acompanham a mesma
+   * volta) e a nuvem boia junto com a criança. O estado anda em `aplicarPose`, antes da pose.
+   */
+  const andar = estadoAndar();
+  const mInv = new Matrix();
+  /**
+   * Spec 036 (T05, acerto do dono): os braços apontam do ombro para o ponto do guidão (o punho, o
+   * lado do volante), no espaço do tronco deste quadro: a mão fecha nele, parada ou andando, no
+   * impulso e no pedal. O braço gira em z e depois em x (o jeito do Babylon): a direção
+   * (sen z, −cos z·cos x, −cos z·sen x) leva o braço, que pende para baixo, até o ponto.
+   */
+  function maosNoGuidao(id: string, w: number): void {
+    const g = GUIDAO[id as keyof typeof GUIDAO];
+    if (!g || w <= 0 || !juntas.prancha || !juntas.tronco) return;
+    for (const n of [raiz, escalar, juntas.corpo, juntas.tronco, juntas.prancha]) n.computeWorldMatrix(true);
+    juntas.tronco.getWorldMatrix().invertToRef(mInv);
+    for (const [lado, braco] of [
+      ['E', juntas.bracoE],
+      ['D', juntas.bracoD],
+    ] as const) {
+      const alvo = Vector3.TransformCoordinates(
+        Vector3.TransformCoordinates(new Vector3(...g[lado]), juntas.prancha.getWorldMatrix()),
+        mInv,
+      ).subtractInPlace(braco.position);
+      const d = alvo.normalize();
+      const rz = Math.asin(Math.max(-1, Math.min(1, d.x)));
+      const rx = Math.atan2(-d.z, -d.y);
+      braco.rotation.x += (rx - braco.rotation.x) * w;
+      braco.rotation.z += (rz - braco.rotation.z) * w;
+      braco.rotation.y *= 1 - w;
+    }
+  }
+  function animarBrinquedo(): void {
+    const s = subjuntas;
+    for (const r of [s.andarRodaF, s.andarRodaT]) if (r) r.rotation.x = andar.roda;
+    // (as rodinhas de apoio são menores: giram mais depressa no mesmo chão)
+    if (s.andarRodinhaE) s.andarRodinhaE.rotation.x = (andar.roda * 2.5) % (Math.PI * 2);
+    if (s.andarPedal) s.andarPedal.rotation.x = andar.pedal;
+    // a nuvem boia inteira (o nó do brinquedo), junto com o corpo da criança
+    if (andarVestido === 'nuvem-fofa' && s.brinquedo) {
+      s.brinquedo.position.y = boiarNuvem(andar);
+      s.brinquedo.rotation.z = Math.sin(andar.t * 1.1) * 0.03;
+    }
+  }
+
   function aplicarPose(pose: Pose, extras?: ExtrasPose): void {
     if (!juntas.corpo) return;
     const dt = extras ? Math.min(Math.max(extras.dt, 0), 0.1) : 1;
@@ -788,6 +1038,23 @@ export function criarBoneco(
         alvo.bracoD = [alvo.bracoD[0] * 0.3 - 0.1, alvo.bracoD[1], alvo.bracoD[2] + 0.28];
         alvo.bracoE = [alvo.bracoE[0] * 0.3 - 0.1, alvo.bracoE[1], alvo.bracoE[2] - 0.28];
       }
+    }
+    // spec 036: montada no brinquedo de andar, a altura dele, as mãos no guidão, o impulso do
+    // patinete e o pedal (T05: o andar anda antes, pela passada: 1 andando, 1,5 correndo)
+    if (montado && andarVestido) {
+      if (extras) avancarAndar(andar, andarVestido, dt, (extras.vista?.passada ?? 0) * VEL_ANDAR_BONECO);
+      poseNoBrinquedo(andarVestido, alvo, pose, andar);
+    }
+    // spec 036: o tesouro da mão esquerda (a varinha, o guarda-chuva, a pipa): o braço segura no
+    // alto, menos durante um gesto (o gesto manda no braço)
+    const segura = maoPremium ? bracoDoTesouro(maoPremium, pose.tempo ?? 0) : null;
+    if (segura) {
+      const w = 1 - Math.min(1, Math.max(0, pose.pesoGesto ?? 0));
+      alvo.bracoE = [
+        alvo.bracoE[0] + (segura[0] - alvo.bracoE[0]) * w,
+        alvo.bracoE[1] + (segura[1] - alvo.bracoE[1]) * w,
+        alvo.bracoE[2] + (segura[2] - alvo.bracoE[2]) * w,
+      ];
     }
     const j = juntas;
     j.corpo.position.y = suave('corpoY', alvo.corpoY, k);
@@ -808,6 +1075,9 @@ export function criarBoneco(
     j.bracoE.rotation.z = suave('bracoEZ', alvo.bracoE[2], k);
     j.bracoD.rotation.y = suave('bracoDY', alvo.bracoD[1], k);
     j.bracoE.rotation.y = suave('bracoEY', alvo.bracoE[1], k);
+    // spec 036 (T05, acerto do dono): montada, as mãos fecham no guidão e no volante de verdade,
+    // como quer que o tronco esteja (fora de um gesto, que manda nos braços)
+    if (montado && andarVestido) maosNoGuidao(andarVestido, 1 - Math.min(1, Math.max(0, (pose.pesoGesto ?? 0) / 0.3)));
     j.cabeca.rotation.x = suave('cabecaX', alvo.cabeca[0], k);
     j.cabeca.rotation.y = suave('cabecaY', alvo.cabeca[1], k);
     j.cabeca.rotation.z = suave('cabecaZ', alvo.cabeca[2], k);
@@ -843,6 +1113,8 @@ export function criarBoneco(
         no.rotation.x = -0.12;
       }
     }
+    animarTesouros(dt, extras?.vista);
+    if (montado) animarBrinquedo();
     // spec 032: a carinha feliz depois de comer (os olhos fecham sorrindo)
     const pisca = pose.piscar ? 0.1 : 1 - (pose.feliz ?? 0) * 0.78;
     for (const o of olhos) o.scaling.y = (baseY.get(o) ?? 1) * pisca;
@@ -854,6 +1126,8 @@ export function criarBoneco(
   return {
     raiz,
     aplicarAparencia,
+    definirMontado,
+    montado: () => montado,
     aplicarPose,
     posicionar(x, y, z, yaw) {
       raiz.position.set(x, y, z);

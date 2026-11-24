@@ -76,14 +76,35 @@ export function desenhoDaObra(n: number): string {
  */
 const FOTO_PREMIUM: Record<
   string,
-  { recorte: RecorteBoneco; giro: number; bicho?: IdBichoPremium }
+  { recorte: RecorteBoneco; giro: number; bicho?: IdBichoPremium; tudo?: boolean; montado?: true }
 > = {
+  // spec 036 (T06): os brinquedos de andar com a criança montada (o brinquedo inteiro no quadro)
+  'patinete-luz': { recorte: 'corpo', giro: 0.9, tudo: true, montado: true },
+  'carrinho-pedal': { recorte: 'corpo', giro: 0.9, tudo: true, montado: true },
+  bicicletinha: { recorte: 'corpo', giro: 1.1, tudo: true, montado: true },
+  'nuvem-fofa': { recorte: 'corpo', giro: 0.7, tudo: true, montado: true },
   'camiseta-aquario': { recorte: 'corpo', giro: 0.36 },
   'tenis-cometa': { recorte: 'corpo', giro: 0.75 },
   'capa-estrelas': { recorte: 'corpo', giro: Math.PI - 1.05 },
-  dragao: { recorte: 'corpo', giro: 0.62 },
+  // (portão visual: as asas inteiras no quadro, sem o corte reto da borda)
+  dragao: { recorte: 'corpo', giro: 0.62, tudo: true },
   pinguim: { recorte: 'corpo', giro: 0.5, bicho: 'pinguim' },
   unicornio: { recorte: 'corpo', giro: 0.62, bicho: 'unicornio' },
+  // spec 036: os tesouros novos no boneco da criança, cada um do lado em que aparece melhor (as
+  // costas de quina por trás; o passarinho no ombro direito, de frente para ele; o guarda-chuva e
+  // a pipa com o boneco inteiro, para o que fica no alto caber no quadro)
+  // (portão visual: o passarinho voa perto do ombro; o quadro pega ele inteiro)
+  'passarinho-ombro': { recorte: 'corpo', giro: -0.55, tudo: true },
+  // (portão: em busto, o boneco cortado na cintura parecia enterrado no pedestal do cartão)
+  'bone-helice': { recorte: 'corpo', giro: 0.5 },
+  'pijama-nuvem': { recorte: 'corpo', giro: 0.36 },
+  'asas-borboleta': { recorte: 'corpo', giro: Math.PI - 0.75, tudo: true },
+  'mochila-foguete': { recorte: 'corpo', giro: Math.PI - 1.1 },
+  // (portão visual: quase de frente, a mão da varinha fica ao lado do rosto, não na frente dele;
+  // as bolhas saindo do aro são desenhadas na foto, no `fotoBoneco.ts`)
+  'varinha-bolhas': { recorte: 'corpo', giro: 0.12, tudo: true },
+  'guarda-chuva-gotinhas': { recorte: 'corpo', giro: 0.5, tudo: true },
+  'pipa-lacinhos': { recorte: 'corpo', giro: Math.PI - 0.5, tudo: true },
 };
 
 /** A foto de um premium (o 3D de verdade) num canvas novo. */
@@ -109,10 +130,18 @@ export function fotografarPremium(
   const a = base ?? aparenciaAtual();
   fotografarBoneco(
     cv,
-    normalizarAparencia({ ...a, fantasia: undefined, premium: { [p.categoria]: id } }),
+    normalizarAparencia({
+      ...a,
+      fantasia: undefined,
+      premium: { [p.categoria]: id },
+      // (patins e skate do mundo não entram na foto; o de andar vai montado)
+      patins: undefined,
+      skate: undefined,
+      montado: f.montado,
+    }),
     f.recorte,
     altura,
-    { giro: f.giro, bicho: f.bicho },
+    { giro: f.giro, bicho: f.bicho, tudo: f.tudo },
   );
 }
 

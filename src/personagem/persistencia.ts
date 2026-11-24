@@ -20,6 +20,8 @@ export function salvarAparencia(
     const limpa = normalizarAparencia(aparencia);
     delete limpa.patins;
     delete limpa.skate;
+    // spec 036: montar no brinquedo de andar também não vai salvo (recarregar entra a pé)
+    delete limpa.montado;
     const dado = { versao: VERSAO_APARENCIA, aparencia: limpa };
     armazenamento.setItem(CHAVE_APARENCIA, JSON.stringify(dado));
     return true;
@@ -41,6 +43,7 @@ export function carregarAparencia(armazenamento: Armazenamento | null): Aparenci
     const a = normalizarAparencia(obj.aparencia);
     delete a.patins;
     delete a.skate;
+    delete a.montado;
     return a;
   } catch {
     return aparenciaPadrao();

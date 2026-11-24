@@ -159,12 +159,17 @@ export function triangular(pts: Array<[number, number]>): number[] {
  * triângulo sai também virado, com a normal para o outro lado (o lado de dentro do pano tem a
  * mesma luz do de fora, sem material de duas faces).
  */
-export function dadosMalhaPano(pos: number[], ind: number[]): VertexData {
+export function dadosMalhaPano(pos: number[], ind: number[], avessoClaro = false): VertexData {
   const n = pos.length / 3;
   const normais: number[] = [];
   VertexData.ComputeNormals(pos, ind, normais);
+  // Spec 036 (o pano do guarda-chuva): com `avessoClaro`, as duas faces usam a luz de cima (a
+  // normal virada para o céu), e o lado de baixo fica na cor do pano em vez de cinza-escuro
+  if (avessoClaro)
+    for (let i = 0; i < normais.length; i += 3)
+      if (normais[i + 1] < 0) for (let k = 0; k < 3; k++) normais[i + k] = -normais[i + k];
   const positions = [...pos, ...pos];
-  const normals = [...normais, ...normais.map((v) => -v)];
+  const normals = [...normais, ...normais.map((v) => (avessoClaro ? v : -v))];
   const indices = [...ind];
   for (let i = 0; i < ind.length; i += 3) indices.push(ind[i] + n, ind[i + 2] + n, ind[i + 1] + n);
   const vd = new VertexData();

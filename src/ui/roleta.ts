@@ -582,7 +582,8 @@ export function criarRoleta(op: OpcoesRoda, raiz: HTMLElement = document.body): 
     const trocou = lista !== l;
     lista = l;
     if (trocou || !aberta) {
-      pos = alvo = posDe.get(l) ?? 0;
+      // (spec 036: a lista que diz o seu começo abre nele na primeira vez)
+      pos = alvo = posDe.get(l) ?? Math.max(0, l.itens.findIndex((it) => it.id === l.inicio));
       meioAntes = Math.round(pos);
       // a lista nova nasce um pouco de lado e corre para o lugar (a criança vê que mudou)
       if (aberta && trocou) pos = alvo + (entrando ? 1.6 : -1.6);

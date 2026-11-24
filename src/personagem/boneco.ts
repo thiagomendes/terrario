@@ -16,6 +16,7 @@ import {
 } from './bonecoFantasia';
 import { vestirPremiumNoPlano } from './bonecoPremium';
 import { pecasVestidas, type FantasiaVestida } from './fantasias';
+import { acessorioEscondido } from './tesouroEFantasia';
 /** Spec 026: o corte liso até os ombros (o do vocalista e da Roqueira do Palco). */
 export const CABELO_LISO = 2;
 
@@ -62,8 +63,9 @@ export interface Peca {
    * Spec 027: a malha própria (forma 'malha': o pano curvo da gola, a cúpula do lençol com o
    * furo oval do rosto, o sino do lençol), pontos x, y, z em volta do centro e os triângulos.
    * É pano fino: sai com as duas faces (o lado de dentro com a mesma luz do de fora).
+   * `avessoClaro` (spec 036, o guarda-chuva): as duas faces com a luz de cima.
    */
-  malha?: { pos: number[]; ind: number[] };
+  malha?: { pos: number[]; ind: number[]; avessoClaro?: boolean };
   /** Transparência (spec 017: a bolha do capacete); sem nada, opaco. */
   alfa?: number;
   /** Raio dos cantos (só caixa). */
@@ -111,7 +113,17 @@ export interface Peca {
    * Spec 023: a peça mora num nó próprio dentro da junta (as asas do dragão batem sozinhas):
    * `pivo` é onde o nó fica na junta, e `pos` passa a ser relativo a ele.
    */
-  subjunta?: { nome: SubjuntaPremium; pivo: [number, number, number] };
+  subjunta?: {
+    nome: SubjuntaPremium;
+    pivo: [number, number, number];
+    /** Spec 036: o giro de repouso do nó (o passarinho inclinado para fora do ombro). */
+    rot?: [number, number, number];
+    /**
+     * Spec 036: o nó fica dentro de outro nó próprio (as asinhas do passarinho no corpo dele);
+     * as peças do pai vêm antes na lista. O `pivo` é no espaço do pai.
+     */
+    pai?: SubjuntaPremium;
+  };
 }
 
 /**
@@ -148,9 +160,41 @@ export type IdLuzPremium =
    * Spec 027 (T10): o vidro da lanterninha do Conde Dudu, uma vela parada. Fica abaixo do
    * limiar do brilho que borra (a luz dele não lava a calça escura do Dudu).
    */
-  | 'vela';
-/** Spec 023: os nós que só os premium têm (as asas batem; o resto segue a junta). */
-export type SubjuntaPremium = 'asaE' | 'asaD';
+  | 'vela'
+  /** Spec 036: a chaminha da mochila-foguete (morna e mansa, tremulando). */
+  | 'chama'
+  /** Spec 036 (T05): as rodinhas de luz do patinete (verde-água mansa) e os faróis do carrinho. */
+  | 'menta'
+  | 'farol';
+/**
+ * Spec 023: os nós que só os premium têm (as asas batem; o resto segue a junta). Spec 036: a
+ * hélice do boné, as asas de borboleta, o guarda-chuva, a pipa e o rabo dela, e o passarinho com
+ * as asinhas.
+ */
+export type SubjuntaPremium =
+  | 'asaE'
+  | 'asaD'
+  | 'helice'
+  | 'borbE'
+  | 'borbD'
+  | 'guarda'
+  | 'pipa'
+  | 'rabopipa'
+  | 'passaro'
+  | 'passaroAsaE'
+  | 'passaroAsaD'
+  /**
+   * Spec 036 (T04): o brinquedo de andar inteiro (na junta `prancha`). Montado uma vez quando o
+   * brinquedo é vestido; montar e descer só acendem e apagam este nó (o boneco não é refeito).
+   */
+  | 'brinquedo'
+  /** Spec 036 (T05): o que gira dentro do brinquedo (as rodas, o pedal, a nuvem que boia). */
+  | 'andarRodaF'
+  | 'andarRodaT'
+  | 'andarRodinhaE'
+  | 'andarRodinhaD'
+  | 'andarPedal'
+  | 'andarNuvem';
 
 export interface PlanoBoneco {
   juntas: Record<Junta, { pai: Junta | null; pos: [number, number, number] }>;
@@ -201,9 +245,9 @@ export function planoBoneco(a: Aparencia): PlanoBoneco {
   const sapato = fantasia?.sapato ?? escurecer(misturar(calca, '#5a3a22', 0.5), 0.25);
   const detalhe = clarear(roupa, 0.45);
   const punho = escurecer(fantasia?.manga ?? roupa, 0.22);
-  // spec 023: a capa de estrelas nas costas tira a mochila de baixo (não atravessa)
-  const acessorio =
-    fantasia || (a.premium?.costas && a.acessorio === 'mochila') ? 'nenhum' : a.acessorio;
+  // spec 023: a capa de estrelas nas costas tira a mochila de baixo (não atravessa); spec 036:
+  // o chapéu e o capuz somem debaixo do boné, e a lanterna debaixo do tesouro da mão
+  const acessorio = fantasia || acessorioEscondido(a) ? 'nenhum' : a.acessorio;
 
   // proporções: o modelo e o corpo variam um pouco a largura e o comprimento das pernas
   const larg = Math.max(

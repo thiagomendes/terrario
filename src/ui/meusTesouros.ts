@@ -21,6 +21,8 @@ import {
 import { normalizarAparencia, type Aparencia, type PremiumVestido } from '../personagem/aparencia';
 import { arte } from './alma/arte';
 import { fotografarPremium } from './alma/figuras';
+import { fotografarBoneco } from '../render/fotoBoneco';
+import { oQueSai, type Saida } from '../personagem/tesouroEFantasia';
 
 /** O que a criança tem e veste (o perfil do aparelho) e como vestir e abrir a lojinha. */
 export interface FonteTesouros {
@@ -92,7 +94,10 @@ export const CSS_TESOUROS = `
 .painel-personagem .tesouros .titulo-t .bauzinho { width: 40px; height: 40px; flex: none; filter: drop-shadow(0 0 8px rgba(255, 214, 120, 0.45)); }
 .painel-personagem .tesouros .titulo-t .bauzinho svg { width: 100%; height: 100%; display: block; }
 .painel-personagem .tesouros .lista-t { position: relative; display: grid; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); gap: 10px; }
-.painel-personagem .tesouros .lista-t[hidden] { display: none; }
+/* spec 036 (T06): com os 18 tesouros a prateleira não toma o painel: rola dentro dela (num
+   rolo em volta da grade: a grade fica com a altura dela, os cartões nunca se encavalam) */
+.painel-personagem .tesouros .rolo-t { position: relative; max-height: 180px; overflow-y: auto; overscroll-behavior: contain; padding: 4px; margin: -4px; scrollbar-width: thin; }
+.painel-personagem .tesouros .rolo-t[hidden], .painel-personagem .tesouros .lista-t[hidden] { display: none; }
 .painel-personagem .tesouros button.tesouro {
   position: relative; aspect-ratio: 5 / 6; min-height: 0; padding: 0; border-radius: 18px; overflow: hidden; isolation: isolate;
   background: linear-gradient(180deg, rgba(255,255,255,0.13), rgba(255,255,255,0.02) 38%, rgba(0,0,0,0.12)),
@@ -116,7 +121,8 @@ export const CSS_TESOUROS = `
 @keyframes tesouro-flutua { 50% { transform: translateY(-4%); } }
 .painel-personagem .tesouros .arte-t canvas { position: absolute; inset: 0; width: 100%; height: 100%; max-width: 100%; max-height: 100%; object-fit: contain; object-position: 50% 100%;
   filter: drop-shadow(0 5px 0 rgba(10,5,40,0.32)) drop-shadow(0 0 10px rgba(255,230,160,0.3)); }
-.painel-personagem .tesouros .vestindo { position: absolute; z-index: 1; left: 7px; top: 7px; width: 28px; height: 28px; padding: 5px; box-sizing: border-box; border-radius: 50%;
+/* (portão visual da 036: o selo no canto de baixo, longe do rosto do boneco) */
+.painel-personagem .tesouros .vestindo { position: absolute; z-index: 1; right: 6px; bottom: 6px; width: 28px; height: 28px; padding: 5px; box-sizing: border-box; border-radius: 50%;
   background: linear-gradient(#bff0ff, #39b8e8); box-shadow: 0 0 0 2px #fff, 0 3px 0 2px #1d7aa8; display: none; pointer-events: none; }
 .painel-personagem .tesouros .vestindo svg { width: 100%; height: 100%; display: block; }
 .painel-personagem .tesouros button.tesouro[aria-pressed='true'] .vestindo { display: block; }
@@ -156,7 +162,7 @@ export const CSS_TESOUROS = `
 @media (max-width: 420px) {
   .painel-personagem .tesouros .lista-t { grid-template-columns: repeat(auto-fill, minmax(66px, 1fr)); gap: 9px; }
   .painel-personagem .tesouros .titulo-t { font-size: 0.98rem; }
-  .painel-personagem .tesouros .vestindo { left: 5px; top: 5px; width: 24px; height: 24px; padding: 4px; }
+  .painel-personagem .tesouros .vestindo { right: 4px; bottom: 4px; width: 22px; height: 22px; padding: 4px; }
   .painel-personagem .tesouros[data-vazio='true'] .titulo-t { flex-direction: column; gap: 2px; font-size: 0.86rem; }
   .painel-personagem .tesouros .vazio-t .pontinhos i:nth-child(3) { display: none; }
 }
@@ -164,11 +170,20 @@ export const CSS_TESOUROS = `
 @media (max-height: 500px) {
   .painel-personagem .tesouros { grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 6px 12px; padding: 8px 12px; }
   .painel-personagem .tesouros .titulo-t { flex-direction: column; gap: 2px; font-size: 0.86rem; text-align: center; }
-  .painel-personagem .tesouros .lista-t { grid-template-columns: repeat(auto-fill, minmax(66px, 1fr)); }
-  .painel-personagem .tesouros button.tesouro { aspect-ratio: 1; }
-  .painel-personagem .tesouros .vestindo { left: 5px; top: 5px; width: 24px; height: 24px; padding: 4px; }
-  .painel-personagem .tesouros .troca-t { top: 50%; right: auto; left: 6px; transform: translateY(-50%); animation: none; }
+  /* (portão visual da 036: a tela é baixa: uma fileira inteira de cada vez, de altura certa, e a
+     rolagem para sempre numa fileira; nunca meia fileira cortada) */
+  /* (cada passo da rolagem é uma fileira exata; o vão maior que a sombra do cartão: a fileira de
+     cima não aparece como uma tirinha cortada) */
+  .painel-personagem .tesouros .lista-t { grid-template-columns: repeat(auto-fill, minmax(66px, 1fr)); grid-auto-rows: 84px; gap: 12px 9px; }
+  .painel-personagem .tesouros .rolo-t { max-height: 92px; }
+  .painel-personagem .tesouros button.tesouro { aspect-ratio: auto; height: 84px; }
+  .painel-personagem .tesouros .vestindo { right: 4px; bottom: 4px; width: 22px; height: 22px; padding: 4px; }
+  /* (portão visual da 036: o balão da troca no canto de cima à direita, fora do título) */
+  .painel-personagem .tesouros .troca-t { top: 4px; right: 10px; left: auto; height: 40px; animation: none; }
 }
+/* portão visual da 036: a prateleira que rola para sempre numa fileira inteira (nada cortado) */
+.painel-personagem .tesouros .rolo-t { scroll-snap-type: y mandatory; scroll-padding: 4px; }
+.painel-personagem .tesouros button.tesouro { scroll-snap-align: start; }
 @media (prefers-reduced-motion: reduce) {
   .painel-personagem .tesouros .arte-t, .painel-personagem .tesouros button.ir-lojinha svg, .painel-personagem .tesouros .ceu-t i { animation: none; }
 }
@@ -251,7 +266,11 @@ export function criarMeusTesouros(op: OpcoesTesouros): MeusTesouros {
     op.fonte.abrirLojinha();
   });
   vazio.append(pontinhos, irLojinha);
-  raiz.append(ceu, titulo, troca, lista, vazio);
+  // spec 036 (T06): o rolo em volta da grade (com muitos tesouros, rola dentro dele)
+  const rolo = document.createElement('div');
+  rolo.className = 'rolo-t';
+  rolo.appendChild(lista);
+  raiz.append(ceu, titulo, troca, rolo, vazio);
 
   const cartas = new Map<string, { botao: HTMLButtonElement; canvas: HTMLCanvasElement }>();
   let chaveLista = '';
@@ -287,9 +306,11 @@ export function criarMeusTesouros(op: OpcoesTesouros): MeusTesouros {
   }
 
   function tocar(id: string, b: HTMLButtonElement): void {
-    const t = toqueNoTesouro(op.fonte.perfil().vestidos, id);
+    const vestidos = op.fonte.perfil().vestidos;
+    const t = toqueNoTesouro(vestidos, id);
     if (t.vestir) {
-      mostrarTroca(id, t.sai);
+      // spec 036 (T06): a regra única do que sai, com a fantasia às claras também
+      mostrarTroca(id, oQueSai(op.aparencia(), vestidos, { premium: id }));
       puf(b);
       tocarSomInterface('criar');
       op.fonte.vestir(id, true);
@@ -323,18 +344,26 @@ export function criarMeusTesouros(op: OpcoesTesouros): MeusTesouros {
   }
 
   /** O que saiu ao vestir (a figurinha apagada, a seta e o que entrou), por um instante. */
-  function mostrarTroca(id: string, sai: string[]): void {
+  function mostrarTroca(id: string, saidas: readonly Saida[]): void {
     clearTimeout(fecharTroca);
-    if (!sai.length) {
+    if (!saidas.length) {
       troca.hidden = true;
       return;
     }
     const p = premiumPorId(id);
+    // um por coisa: cada tesouro e a fantasia (inteira ou só a peça dela)
+    const sai = [
+      ...new Set(
+        saidas.map((s) =>
+          s.tipo === 'premium' ? s.id : `fantasia:${s.tipo === 'fantasia' ? s.id : s.fantasia}`,
+        ),
+      ),
+    ];
     troca.replaceChildren();
     troca.setAttribute('data-tesouro-troca', sai.join(' '));
     troca.setAttribute(
       'aria-label',
-      `${p?.nome ?? id} entra no lugar de ${sai.map((s) => premiumPorId(s)?.nome ?? s).join(' e ')}`,
+      `${p?.nome ?? id} entra no lugar de ${sai.map((s) => (s.startsWith('fantasia:') ? 'a fantasia' : (premiumPorId(s)?.nome ?? s))).join(' e ')}`,
     );
     const base = op.aparencia();
     const fig = (pid: string, classe: string) => {
@@ -342,7 +371,9 @@ export function criarMeusTesouros(op: OpcoesTesouros): MeusTesouros {
       el.className = `fig-t ${classe}`;
       const cv = document.createElement('canvas');
       cv.setAttribute('aria-hidden', 'true');
-      fotografarPremium(cv, pid, 120, base);
+      if (pid.startsWith('fantasia:'))
+        fotografarBoneco(cv, normalizarAparencia({ ...base, premium: undefined, fantasia: { id: pid.slice(9), cor: base.fantasia?.cor ?? 0 } }), 'corpo', 120);
+      else fotografarPremium(cv, pid, 120, base);
       el.appendChild(cv);
       return el;
     };
@@ -365,6 +396,7 @@ export function criarMeusTesouros(op: OpcoesTesouros): MeusTesouros {
     }
     raiz.dataset.vazio = String(!itens.length);
     lista.hidden = !itens.length;
+    rolo.hidden = !itens.length;
     vazio.hidden = !!itens.length;
     irLojinha.hidden = !op.fonte.temLojinha();
     const base = op.aparencia();

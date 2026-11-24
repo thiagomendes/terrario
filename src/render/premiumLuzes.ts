@@ -53,6 +53,12 @@ const BASE: Record<IdLuzPremium, string> = {
   // spec 027: a vela da lanterninha do Conde Dudu (âmbar; a soma das cores fica abaixo de 1,6,
   // o limiar do brilho que borra nos moradores: a luz dela não lava a roupa)
   vela: '#f09410',
+  // spec 036: a chaminha da mochila-foguete, morna e mansa (abaixo do brilho que borra)
+  chama: '#e8a850',
+  // spec 036 (T05): as rodinhas do patinete e os faróis do carrinho, mansos (abaixo de 1 e fora
+  // do mapa do brilho, como tudo do boneco)
+  menta: '#4cc8b2',
+  farol: '#e8dfb4',
 };
 
 function daCena(scene: Scene): LuzesDaCena {
@@ -92,9 +98,17 @@ function daCena(scene: Scene): LuzesDaCena {
       e.emissiveColor.set(v, v * 0.95, v * 0.66);
     }
     if (m.chifre) {
-      // acima de 1: passa do tom do pós-processo e acende (lê a 12 blocos)
-      const p = 1.45 + 0.3 * Math.sin(t * 3.1);
-      m.chifre.emissiveColor.set(p, p * 0.86, p * 0.5);
+      // spec 036 (T02): o brilho contido dos itens novos. Antes ia de 1,45 a 1,75, acima do
+      // limiar do bloom (1,0): o chifre virava uma chama borrada. Agora fica abaixo dele,
+      // respirando devagar: de dia é marfim e de noite continua aceso no escuro
+      const p = 0.8 + 0.06 * Math.sin(t * 1.6);
+      m.chifre.emissiveColor.set(p, p * 0.88, p * 0.56);
+    }
+    if (m.chama) {
+      // spec 036: a chaminha tremula de leve (duas ondas que não se repetem juntas), sempre
+      // abaixo de 1 (nada de halo)
+      const k = 0.84 + 0.05 * Math.sin(t * 9) + 0.03 * Math.sin(t * 13);
+      m.chama.emissiveColor.set(0.98 * k, 0.72 * k, 0.36 * k);
     }
     if (nova.aquario) nova.aquario.quadro(t);
   });

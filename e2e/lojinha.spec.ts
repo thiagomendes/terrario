@@ -120,31 +120,163 @@ for (const t of TAMANHOS) {
       await entrar(page);
       await ganhar(page, 70);
 
-      // a roda do menu tem a lojinha e abre a vitrine
+      // a roda do menu tem a lojinha e abre a vitrine (spec 036: na aba de andar, a primeira
+      // visita depois da atualização), aberta em até 1 s (os cartões da aba na tela); as figuras
+      // do 3D chegam logo depois (medido na página, quadro a quadro, desde o pedido da lojinha)
+      await page.evaluate(() => {
+        const w = window as unknown as { __tLoja: number; __tPronta: number; __tCartoes: number };
+        w.__tLoja = w.__tPronta = w.__tCartoes = 0;
+        const pronta = () => {
+          if (!w.__tCartoes) {
+            const c = document.querySelector('.alma-lcard');
+            if (c && c.getBoundingClientRect().height > 0) w.__tCartoes = performance.now();
+          }
+          const cvs = [...document.querySelectorAll<HTMLCanvasElement>('.alma-lcard canvas')];
+          const ok =
+            cvs.length > 0 &&
+            cvs.every((cv) => {
+              const c = cv.getContext('2d');
+              if (!c || !cv.width) return false;
+              const d = c.getImageData(0, 0, cv.width, cv.height).data;
+              let n = 0;
+              for (let i = 3; i < d.length; i += 16) if (d[i] > 0) n++;
+              return n > 50;
+            });
+          if (ok) w.__tPronta = performance.now();
+          else requestAnimationFrame(pronta);
+        };
+        window.addEventListener(
+          'brumaluz:lojinha',
+          () => {
+            w.__tLoja = performance.now();
+            requestAnimationFrame(pronta);
+          },
+          { once: true },
+        );
+      });
       await escolherNaRoleta(page, 'lojinha');
       await expect(page.locator('[data-alma-loja]')).toBeVisible();
-      await expect(page.locator('.alma-lcard')).toHaveCount(6);
       await figurasProntas(page, '.alma-lcard');
-      await page.waitForTimeout(900);
-      // nada de relógio, contagem ou "só restam": só números de preço e da carteira
-      const textos = await page.locator('[data-alma-loja]').innerText();
-      expect(textos.replace(/\s+/g, ' ').trim()).toMatch(/^[\d ]+$/);
-      // tudo dentro da tela, sem rolar (os seis cartões à vista)
-      const caixas = await page.locator('.alma-lcard').evaluateAll((bs) =>
-        bs.map((b) => {
-          const r = b.getBoundingClientRect();
-          return [r.left, r.top, r.right, r.bottom];
-        }),
+      await page.waitForFunction(() => (window as unknown as { __tPronta: number }).__tPronta > 0);
+      const [abriuEm, figurasEm] = await page.evaluate(() => {
+        const w = window as unknown as { __tLoja: number; __tPronta: number; __tCartoes: number };
+        return [w.__tCartoes - w.__tLoja, w.__tPronta - w.__tLoja];
+      });
+      console.log(
+        `vitrine (${t.nome}): aberta em ${abriuEm.toFixed(0)} ms; figuras do 3D prontas em ${figurasEm.toFixed(0)} ms`,
       );
-      for (const [l, tp, r, b] of caixas) {
-        expect(l).toBeGreaterThanOrEqual(0);
-        expect(tp).toBeGreaterThanOrEqual(0);
-        expect(r).toBeLessThanOrEqual(t.w);
-        expect(b).toBeLessThanOrEqual(t.h);
+      expect(abriuEm).toBeLessThan(1000);
+      expect(figurasEm).toBeLessThan(3000);
+      await expect(page.locator('[data-alma-aba="andar"]')).toHaveAttribute('aria-selected', 'true');
+      // os novos com a estrelinha (no cartão e na aba)
+      await expect(page.locator('.alma-lcard [data-alma-novo]')).toHaveCount(4);
+      await expect(page.locator('[data-alma-aba="andar"] [data-alma-novo]')).toHaveCount(1);
+      await page.waitForTimeout(900);
+      // spec 036: uma aba por lugar do corpo, só desenho; em cada aba, todos os cartões à vista
+      // sem rolar (a prateleira não rola, nada sai da tela) e nada de relógio, contagem ou "só
+      // restam": só números de preço e da carteira
+      const POR_ABA: Record<string, number> = { andar: 4, roupa: 3, costas: 3, mao: 3, chapeu: 1, bicho: 3, fantasia: 1 };
+      expect(await page.locator('[data-alma-aba]').evaluateAll((bs) => bs.map((b) => b.textContent?.trim() ?? ''))).toEqual(
+        Array(7).fill(''),
+      );
+      for (const [aba, n] of Object.entries(POR_ABA)) {
+        if (aba !== 'andar') await tocar(`[data-alma-aba="${aba}"]`);
+        await expect(page.locator(`[data-alma-prateleira][data-aba="${aba}"] .alma-lcard`)).toHaveCount(n);
+        await figurasProntas(page, '.alma-lcard');
+        const textos = await page.locator('[data-alma-loja]').innerText();
+        expect(textos.replace(/\s+/g, ' ').trim()).toMatch(/^[\d ]+$/);
+        const caixas = await page.locator('.alma-lcard, [data-alma-aba]').evaluateAll((bs) =>
+          bs.map((b) => {
+            const r = b.getBoundingClientRect();
+            return [r.left, r.top, r.right, r.bottom];
+          }),
+        );
+        for (const [l, tp, r, b] of caixas) {
+          expect(l).toBeGreaterThanOrEqual(0);
+          expect(tp).toBeGreaterThanOrEqual(0);
+          expect(r).toBeLessThanOrEqual(t.w);
+          expect(b).toBeLessThanOrEqual(t.h);
+        }
+        const rola = await page
+          .locator('[data-alma-prateleira]')
+          .evaluate((p) => p.scrollHeight - p.clientHeight);
+        expect(rola, `a aba ${aba} cabe sem rolar`).toBeLessThanOrEqual(1);
+        // os cartões do mesmo tamanho de antes (o toque da criança não encolhe)
+        const alturas = await page.locator('.alma-lcard').evaluateAll((bs) => bs.map((b) => b.getBoundingClientRect().height));
+        for (const h of alturas) expect(h).toBeGreaterThanOrEqual(170);
+        await page.waitForTimeout(600);
+        await foto(`loja-1-vitrine-${aba}`);
       }
-      await foto('loja-1-vitrine');
+      // ver o detalhe tira a estrelinha (do cartão; da aba, quando é o último dela)
+      await tocar('[data-alma-aba="chapeu"]');
+      await expect(page.locator('[data-alma-aba="chapeu"] [data-alma-novo]')).toHaveCount(1);
+      await tocar('.alma-lcard[data-premium="bone-helice"]');
+      await expect(page.locator('[data-alma-detalhe] .caixa[data-premium="bone-helice"]')).toBeVisible();
+      await tocar('[data-alma-detalhe] .caixa > [data-alma-fechar]');
+      await expect(page.locator('.alma-lcard[data-premium="bone-helice"] [data-alma-novo]')).toHaveCount(0);
+      await expect(page.locator('[data-alma-aba="chapeu"] [data-alma-novo]')).toHaveCount(0);
+
+      // portão visual (036): abrir o detalhe de qualquer aba não faz a tela escorregar (em pé
+      // a vitrine inteira rolava para a esquerda e para cima): nada rola, e o X e as abas ficam
+      // dentro da tela
+      const parada = () =>
+        page.evaluate(() => {
+          const r = (el: Element | null) => {
+            const c = el?.getBoundingClientRect();
+            return c ? [c.left, c.top, c.right, c.bottom] : null;
+          };
+          const loja = document.querySelector('[data-alma-loja]')!;
+          return {
+            rolou: [scrollX, scrollY, loja.scrollLeft, loja.scrollTop, document.documentElement.scrollTop],
+            fechar: r(document.querySelector('[data-alma-detalhe] .caixa > [data-alma-fechar]')),
+            abas: [...document.querySelectorAll('[data-alma-aba]')].map(r),
+            w: innerWidth,
+            h: innerHeight,
+          };
+        });
+      const dentro = (c: number[] | null, w: number, h: number) =>
+        !!c && c[0] >= -0.5 && c[1] >= -0.5 && c[2] <= w + 0.5 && c[3] <= h + 0.5;
+      for (const aba of Object.keys(POR_ABA)) {
+        await tocar(`[data-alma-aba="${aba}"]`);
+        await tocar(`[data-alma-prateleira][data-aba="${aba}"] .alma-lcard >> nth=-1`);
+        await expect(page.locator('[data-alma-detalhe] .caixa')).toBeVisible();
+        await page.waitForTimeout(450);
+        const m = await parada();
+        expect(m.rolou, `a aba ${aba}: nada rolou`).toEqual([0, 0, 0, 0, 0]);
+        expect(dentro(m.fechar, m.w, m.h), `a aba ${aba}: o X dentro da tela`).toBe(true);
+        for (const a of m.abas) expect(dentro(a, m.w, m.h), `a aba ${aba}: as abas dentro da tela`).toBe(true);
+        await figurasProntas(page, '[data-alma-detalhe]');
+        await foto(`loja-2d-detalhe-${aba}`);
+        await tocar('[data-alma-detalhe] .caixa > [data-alma-fechar]');
+      }
+
+      // spec 036: o provador do brinquedo de andar, montada (só na tela dela)
+      await tocar('[data-alma-aba="andar"]');
+      await tocar('.alma-lcard[data-premium="bicicletinha"]');
+      await tocar('[data-alma-detalhe] [data-alma-experimentar]');
+      await expect(page.locator('[data-alma-provador="bicicletinha"]')).toBeVisible();
+      await page.waitForTimeout(2200);
+      expect(await page.evaluate(() => window.__brumaluz!.montadoNoDesenho!())).toBe(true);
+      expect(await page.evaluate(() => window.__brumaluz!.personagem!.aparencia().montado ?? null)).toBe(null);
+      await foto('loja-3m-provador-bicicletinha');
+      await tocar('[data-alma-provador-voltar]');
+      expect(await page.evaluate(() => window.__brumaluz!.montadoNoDesenho!())).toBe(false);
+      await tocar('[data-alma-detalhe] .caixa > [data-alma-fechar]');
+      // e o da pipa, voando lá atrás
+      await tocar('[data-alma-aba="mao"]');
+      await tocar('.alma-lcard[data-premium="pipa-lacinhos"]');
+      await figurasProntas(page, '[data-alma-detalhe]');
+      await page.waitForTimeout(500);
+      await foto('loja-2p-detalhe-pipa');
+      await tocar('[data-alma-detalhe] [data-alma-experimentar]');
+      await expect(page.locator('[data-alma-provador="pipa-lacinhos"]')).toBeVisible();
+      await page.waitForTimeout(2600);
+      await foto('loja-3p-provador-pipa');
+      await tocar('[data-alma-provador-voltar]');
+      await tocar('[data-alma-detalhe] .caixa > [data-alma-fechar]');
 
       // o unicórnio (80) ainda não dá: o potinho e o brincar, sem pressa
+      await tocar('[data-alma-aba="bicho"]');
       await tocar('.alma-lcard[data-premium="unicornio"]');
       await expect(page.locator('[data-alma-detalhe] [data-alma-falta]')).toBeVisible();
       await expect(page.locator('[data-alma-detalhe] [data-alma-comprar]')).toHaveCount(0);
@@ -171,6 +303,7 @@ for (const t of TAMANHOS) {
       await tocar('[data-alma-detalhe] .caixa > [data-alma-fechar]');
 
       // o dragãozinho (55) dá: detalhe, provador, comprar, confirmar, festa, vestido
+      await tocar('[data-alma-aba="fantasia"]');
       await tocar('.alma-lcard[data-premium="dragao"]');
       await expect(page.locator('[data-alma-detalhe] [data-alma-comprar]')).toBeVisible();
       await figurasProntas(page, '[data-alma-detalhe]');
@@ -240,8 +373,9 @@ for (const t of TAMANHOS) {
       ).toBe('dragao');
       await foto('loja-8-vestido');
 
-      // reabre: o dragão é meu e estou vestindo; a capa (30) ainda não dá com 15
+      // reabre (na aba de onde saiu): o dragão é meu e estou vestindo; a capa (30) ainda não dá
       await escolherNaRoleta(page, 'lojinha');
+      await expect(page.locator('[data-alma-aba="fantasia"]')).toHaveAttribute('aria-selected', 'true');
       await expect(page.locator('.alma-lcard[data-premium="dragao"][data-meu]')).toBeVisible();
       await expect(page.locator('.alma-lcard[data-premium="dragao"] [data-alma-no-boneco]')).toBeVisible();
       await figurasProntas(page, '.alma-lcard');
@@ -251,6 +385,7 @@ for (const t of TAMANHOS) {
       // ganha mais e compra a capa: as asas e a capa dividem as costas, às claras
       await ganhar(page, 40);
       await escolherNaRoleta(page, 'lojinha');
+      await tocar('[data-alma-aba="costas"]');
       await tocar('.alma-lcard[data-premium="capa-estrelas"]');
       await expect(page.locator('[data-alma-detalhe] [data-alma-troca="dragao"]')).toBeVisible();
       await figurasProntas(page, '[data-alma-detalhe]');
@@ -265,6 +400,7 @@ for (const t of TAMANHOS) {
       expect(p2.vestidos).toEqual({ costas: 'capa-estrelas' });
       // vestir o dragão de novo pelo cartão (tira a capa); depois tirar
       await escolherNaRoleta(page, 'lojinha');
+      await tocar('[data-alma-aba="fantasia"]');
       await tocar('.alma-lcard[data-premium="dragao"]');
       await expect(page.locator('[data-alma-detalhe] [data-alma-troca="capa-estrelas"]')).toBeVisible();
       await tocar('[data-alma-detalhe] [data-alma-vestir-premium]');

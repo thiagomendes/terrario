@@ -1,0 +1,42 @@
+{
+  "pulando": {
+    "quadros": 161,
+    "saltos": 0,
+    "degraus": 0,
+    "maiorPasso": 0.145,
+    "sobeDesce": 0.0065,
+    "altura": 0.8
+  },
+  "voando": {
+    "quadros": 203,
+    "saltos": 0,
+    "degraus": 0,
+    "maiorPasso": 0.155,
+    "sobeDesce": 0.0013,
+    "altura": 10.49
+  },
+  "parada-no-ar": {
+    "quadros": 145,
+    "saltos": 0,
+    "degraus": 0,
+    "maiorPasso": 0,
+    "sobeDesce": 0,
+    "altura": 10.49
+  },
+  "pousando": {
+    "quadros": 211,
+    "saltos": 1,
+    "degraus": 0,
+    "maiorPasso": 18.668,
+    "sobeDesce": 0,
+    "altura": 10.36
+  },
+  "descendo": {
+    "quadros": 211,
+    "saltos": 0,
+    "degraus": 0,
+    "maiorPasso": 0.216,
+    "sobeDesce": 0.0021,
+    "altura": 0
+  }
+}

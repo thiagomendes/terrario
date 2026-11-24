@@ -10,6 +10,7 @@ import { Matrix, Vector3 } from '@babylonjs/core/Maths/math.vector';
 import { criarPersonagem } from './personagem';
 import { criarAnimador } from '../player/animacao';
 import { normalizarAparencia, type Aparencia } from '../personagem/aparencia';
+import { chaveSemMontado } from '../personagem/montar';
 import { blocoDoItem } from '../jogo/itens';
 import type { JogadorVisto, PerfilJogador } from '../nucleo/protocolo';
 // spec 015 (gestos): o gesto é uma camada do animador; o balão fica em cima da cabeça
@@ -85,8 +86,15 @@ interface Outro {
   /** Spec 027: a contagem da sacola de doces na mão dele (já desenhada). */
   maoQtd?: number;
   apelido: string;
-  /** Auditoria 017: a aparência já vestida, passada a limpo em texto (só refaz quando muda). */
+  /**
+   * Auditoria 017: a aparência já vestida, passada a limpo em texto (só refaz quando muda). Spec
+   * 036: sem o `montado`, que fica à parte (montar e descer não refazem o boneco).
+   */
   chaveAparencia: string;
+  /** Spec 036 (T04): montado no brinquedo de andar agora. */
+  montado: boolean;
+  /** Spec 036 (testes): quantas vezes o boneco dele foi refeito depois de criado. */
+  refeitos: number;
   /** Últimos contadores de golpe, colocação e comida vistos (null antes do primeiro). */
   acoes: [number, number, number] | null;
   /** Transparência do apelido já escrita (só escreve quando muda). */
@@ -159,7 +167,11 @@ export function criarOutrosJogadores(scene: Scene) {
       maoQtd: undefined,
       acoes: null,
       apelido,
-      chaveAparencia: JSON.stringify(aparencia),
+      ...(() => {
+        const s = chaveSemMontado(aparencia);
+        return { chaveAparencia: s.chave, montado: s.montado };
+      })(),
+      refeitos: 0,
       opacidadePlaca: -1,
       balaoEstrela: aparencia.balao === 'estrela',
     };
@@ -168,6 +180,7 @@ export function criarOutrosJogadores(scene: Scene) {
   /** Spec 032: o amigo começou a comer (`item`): a tela faz as três mordidas no boneco dele. */
   let aoComer: ((personagem: Outro['personagem'], item: string | null) => void) | null = null;
   let aoSair: ((personagem: Outro['personagem']) => void) | null = null;
+  let aoMontar: ((x: number, y: number, z: number, montou: boolean) => void) | null = null;
 
   function descartar(o: Outro): void {
     aoSair?.(o.personagem);
@@ -199,12 +212,19 @@ export function criarOutrosJogadores(scene: Scene) {
         const novo = perfis[o.id];
         if (!novo) continue;
         const aparencia = normalizarAparencia(novo.aparencia);
-        const chave = JSON.stringify(aparencia);
+        const { chave, montado } = chaveSemMontado(aparencia);
         if (chave !== o.chaveAparencia) {
           o.chaveAparencia = chave;
+          o.montado = montado;
+          o.refeitos++;
           o.personagem.aplicarAparencia(aparencia);
           vestirEtiqueta(o.placa, aparencia.etiqueta);
           o.balaoEstrela = aparencia.balao === 'estrela';
+        } else if (montado !== o.montado) {
+          // spec 036 (T04): só montou ou desceu: o boneco fica, o brinquedo acende ou apaga
+          o.montado = montado;
+          o.personagem.definirMontado?.(montado);
+          aoMontar?.(o.x, o.y, o.z, montado);
         }
         if (novo.apelido !== o.apelido) {
           o.placa.textContent = novo.apelido;
@@ -248,8 +268,18 @@ export function criarOutrosJogadores(scene: Scene) {
     } | null {
       const o = outros.get(id);
       return o
-        ? { animador: o.animador, aparencia: JSON.parse(o.chaveAparencia) as Aparencia, x: o.x, y: o.y, z: o.z }
+        ? {
+            animador: o.animador,
+            aparencia: { ...(JSON.parse(o.chaveAparencia) as Aparencia), ...(o.montado ? { montado: true as const } : {}) },
+            x: o.x,
+            y: o.y,
+            z: o.z,
+          }
         : null;
+    },
+    /** Spec 036 (T04): o puf de quem monta ou desce (onde o amigo está e se montou). */
+    definirAoMontar(f: ((x: number, y: number, z: number, montou: boolean) => void) | null) {
+      aoMontar = f;
     },
     atualizar(dt: number, luz: number) {
       const k = Math.min(1, dt * 14);
@@ -424,6 +454,10 @@ export function criarOutrosJogadores(scene: Scene) {
         gesto: gestoDoAnimador(o.animador),
         balao: o.balao?.gesto ?? null,
         acoes: o.acoes,
+        /** Spec 036 (testes): montado no brinquedo de andar, e quantas vezes o boneco foi refeito. */
+        montado: o.montado,
+        montadoNoDesenho: o.personagem.montado?.() ?? o.montado,
+        refeitos: o.refeitos,
         /** Para onde o corpo está virado e para onde o amigo olha (rad). */
         yawCorpo: o.animador.yaw(),
         yawOlhar: o.yaw,

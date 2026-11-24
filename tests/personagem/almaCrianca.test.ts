@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  CHAVE_ALMA_COMPRADOS,
   CHAVE_ALMA_CRIANCA,
   carregarPerfilAlma,
   criarPerfilCrianca,
@@ -117,7 +118,10 @@ describe('a camiseta arco-íris virou a camiseta aquário (o site já vendia a d
       CHAVE_ALMA_CRIANCA,
       JSON.stringify({ ...JSON.parse(guardado), premium: ['camiseta-arco-iris', 'camiseta-aquario'] }),
     );
-    expect(carregarPerfilAlma(a).premium).toEqual(['camiseta-aquario']);
+    // (spec 036: o unicórnio, que este guardado perdeu, volta pela chave à parte dos comprados)
+    expect(carregarPerfilAlma(a).premium).toEqual(['camiseta-aquario', 'unicornio']);
+    // a chave à parte guarda só o nome novo
+    expect(a.m.get(CHAVE_ALMA_COMPRADOS)).not.toContain('arco-iris');
   });
   it('a aparência guardada de antes (vestindo a de antes) veste a nova', () => {
     const a = memoria();

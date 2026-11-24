@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { triangular } from '../../src/render/formas';
-import { pecasDoBicho } from '../../src/render/bichoPremium';
+import { ehBichoQueSegue, pecasDoBicho } from '../../src/render/bichoPremium';
+import { PREMIUM } from '../../src/jogo/alma';
 import { planoBoneco, type Peca } from '../../src/personagem/boneco';
 import { aparenciaPadrao, type PremiumVestido } from '../../src/personagem/aparencia';
 
@@ -44,6 +45,14 @@ describe('placas dos premium (spec 023)', () => {
     { roupa: 'camiseta-aquario' },
     { roupa: 'tenis-cometa', costas: 'capa-estrelas' },
     { fantasia: 'dragao' },
+    // spec 036: os tesouros novos (as nuvenzinhas, as asas de borboleta, as aletas, a pipa)
+    { roupa: 'pijama-nuvem', costas: 'asas-borboleta', chapeu: 'bone-helice', mao: 'pipa-lacinhos' },
+    { costas: 'mochila-foguete', mao: 'varinha-bolhas', bicho: 'passarinho-ombro' },
+    { mao: 'guarda-chuva-gotinhas' },
+    // spec 036 (T05): os brinquedos de andar (as estrelinhas do patinete, a bandeirinha, a folha)
+    { andar: 'patinete-luz' },
+    { andar: 'carrinho-pedal' },
+    { andar: 'bicicletinha' },
   ];
   for (const corpo of ['feminino', 'masculino'] as const)
     for (const premium of vestidos)
@@ -55,4 +64,14 @@ describe('placas dos premium (spec 023)', () => {
     it(`bicho ${id}`, () => {
       expect(conferir(pecasDoBicho(id))).toEqual([]);
     });
+});
+
+describe('036: só o pinguim e o unicórnio seguem pelo chão', () => {
+  it('o passarinho de ombro e o id desconhecido não montam bicho que segue', () => {
+    const bichos = PREMIUM.filter((p) => p.categoria === 'bicho').map((p) => p.id);
+    expect(bichos.filter(ehBichoQueSegue)).toEqual(['pinguim', 'unicornio']);
+    expect(ehBichoQueSegue('passarinho-ombro')).toBe(false);
+    for (const lixo of ['toString', '__proto__', 'foguete-do-futuro', undefined, 7])
+      expect(ehBichoQueSegue(lixo)).toBe(false);
+  });
 });

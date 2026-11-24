@@ -378,8 +378,23 @@ import {
 } from '../player/camera';
 import { chave, chunksDesejados, planejar, respostaObsoleta } from './gerenciador';
 import { criarAnimador } from '../player/animacao';
-import { normalizarAparencia, rotuloDoModelo, type Aparencia } from '../personagem/aparencia';
+import {
+  manterMontado,
+  normalizarAparencia,
+  rotuloDoModelo,
+  type Aparencia,
+} from '../personagem/aparencia';
 import { carregarAparencia, type Armazenamento } from '../personagem/persistencia';
+import {
+  brinquedoMontado,
+  criarBrinquedosDeTema,
+  motivoSemMontar,
+  podeMontar,
+  precisaDescer,
+  type MotivoSemMontar,
+  type SituacaoMontar,
+} from '../personagem/montar';
+import { quadroSomItens, type RelogiosSomItens } from '../audio/somItens';
 import type { Pose } from '../personagem/poses';
 import { criarPersonagem } from './personagem';
 import { criarModoFoto } from './modoFoto';
@@ -1072,8 +1087,28 @@ export interface EstadoDepuracao {
      * Spec 023 (provador da lojinha): o boneco veste estes premium só nesta tela (nada vai pela
      * rede nem fica guardado); null volta ao que a criança veste de verdade.
      */
-    provar?: (premium: import('../personagem/aparencia').PremiumVestido | null) => void;
+    provar?: (premium: import('../personagem/aparencia').PremiumVestido | null, montada?: boolean) => void;
+    /**
+     * Spec 036 (T04): monta no brinquedo de andar vestido (com o puf e o som), quando pode.
+     * `trocou`: o brinquedo acabou de trocar com ela já montada (só o puf e o som do novo).
+     * Devolve se montou.
+     */
+    montar?: (trocou?: boolean) => boolean;
+    /** Spec 036 (T04): desce do brinquedo (o puf); devolve se desceu. */
+    descer?: () => boolean;
+    /** Spec 036 (T04): pode montar agora (no vestido, ou no brinquedo `id`)? */
+    podeMontar?: (id?: string) => boolean;
+    /** Spec 036 (testes): por que não pode montar agora (null: pode). */
+    motivoSemMontar?: (id?: string) => MotivoSemMontar | null;
+    /** Spec 036: o brinquedo em que ela está montada, ou null. */
+    montado?: () => string | null;
   };
+  /** Spec 036 (testes): quantas vezes a criança montou ou desceu (com o puf). */
+  montarTrocas?: number;
+  /** Spec 036 (testes): o desenho do boneco dela está montado agora? */
+  montadoNoDesenho?: () => boolean;
+  /** Spec 036 (testes): quantas vezes o boneco dela foi refeito inteiro. */
+  bonecoRefeito?: number;
   /**
    * Testes: o que o dedo pegaria no ponto da tela (coordenadas CSS do canvas): o bloco, a
    * distância dos olhos ao ponto atingido e se está no alcance do toque.
@@ -1502,7 +1537,17 @@ export function criarCena(
   // Ninguém entra no mundo já de patins (nem quem saiu dele calçado, nem em outro mundo)
   delete aparencia.patins;
   delete aparencia.skate;
+  // spec 036: nem montada no brinquedo de andar (entra a pé)
+  delete aparencia.montado;
   const personagem = criarPersonagem(scene, aparencia);
+  {
+    // spec 036 (testes): quantas vezes o boneco da criança foi refeito inteiro (montar não refaz)
+    const aplicar = personagem.aplicarAparencia;
+    personagem.aplicarAparencia = (a) => {
+      estado.bonecoRefeito = (estado.bonecoRefeito ?? 0) + 1;
+      aplicar(a);
+    };
+  }
   let vitrine: ReturnType<EfeitosPremium['registrar']> | null = null;
   let vitrineNo: TransformNode | null = null;
   // spec 023: o chão dos bichinhos e das pegadas dos premium (a cópia do mundo do aparelho)
@@ -2486,6 +2531,8 @@ export function criarCena(
    */
   estado.vilaPatins = (calcar) => {
     if (!planoVila || calcar === !!aparencia.patins) return;
+    // spec 036 (T04): de patins não se monta: desce do brinquedo antes, com o puf
+    if (calcar) descerDoBrinquedo();
     aparencia = normalizarAparencia({ ...aparencia, patins: calcar ? true : undefined });
     if (!calcar) delete aparencia.patins;
     personagem.aplicarAparencia(aparencia);
@@ -2542,6 +2589,8 @@ export function criarCena(
   estado.vilaSkate = (pegar) => {
     if (!planoVila || pegar === !!aparencia.skate) return;
     if (pegar && aparencia.patins) estado.vilaPatins?.(false);
+    // spec 036 (T04): de skate não se monta: desce do brinquedo antes, com o puf
+    if (pegar) descerDoBrinquedo();
     aparencia = normalizarAparencia({ ...aparencia, skate: pegar ? true : undefined });
     if (!pegar) delete aparencia.skate;
     personagem.aplicarAparencia(aparencia);
@@ -2799,6 +2848,8 @@ export function criarCena(
       progresso: () => passeio?.progresso() ?? 0,
       sentar: (b) => {
         if (passeio?.sentado()) return;
+        // spec 036 (T04): montada, desce antes (os amigos nunca veem o brinquedo no carrossel)
+        descerDoBrinquedo();
         enviarTelemetria(true);
         enviar({ t: 'vila', a: 'sentar', b });
       },
@@ -3729,6 +3780,8 @@ export function criarCena(
           }),
         );
       enviarTelemetria(true);
+      // spec 036 (T04): o abraço do Bento faz descer do brinquedo antes (na hora do toque)
+      if (m.povoado === POVOADO_BAILE && m.n === N_BAILE.bento) descerDoBrinquedo();
       enviar({ t: 'falar', criatura: naMira.id });
       moradorDaTroca = naMira.id;
       trocasNaVisita = 0;
@@ -4270,6 +4323,13 @@ export function criarCena(
   let tetoZ = NaN;
   let tetoContador = 0;
   let tetoCoberto = false;
+  /** Spec 036 (T04): o provador da lojinha está vestindo a criança agora (ela não fica montada). */
+  let provando = false;
+  /**
+   * Spec 036 (T04): o tesouro da mão guardado enquanto ela está montada (a varinha, o guarda-chuva,
+   * a pipa). Ao descer, volta o que o perfil diz que ela veste (ou este, sem perfil).
+   */
+  let maoGuardada: string | undefined;
   estado.personagem = {
     aparencia: () => ({ ...aparencia }),
     definir: (parcial) => {
@@ -4278,12 +4338,20 @@ export function criarCena(
       // suporte do rinque); fora da Vila Neon os patins nunca vão (decisão 7 do dono)
       const dePatins = !!planoVila && !!aparencia.patins;
       const deSkate = !!planoVila && !!aparencia.skate;
+      const montadaAntes = !!aparencia.montado;
+      const antes = montadaAntes ? JSON.stringify(aparencia) : '';
       aparencia = normalizarAparencia({ ...aparencia, ...parcial });
       if (dePatins) aparencia.patins = true;
       else delete aparencia.patins;
       // (parte 3: o skate também continua, e nunca vem de outro lugar)
       if (deSkate && !dePatins) aparencia.skate = true;
       else delete aparencia.skate;
+      // spec 036: montada no brinquedo de andar continua (vestir em "Meus tesouros" não desmonta)
+      aparencia = manterMontado(montadaAntes, aparencia);
+      // T04: montada, o tesouro da mão fica guardado e volta quando ela descer
+      aparencia = guardarMaoMontada(aparencia);
+      // (o que ela já vestia, montada: nada a refazer nem a mandar)
+      if (montadaAntes && aparencia.montado && JSON.stringify(aparencia) === antes) return;
       personagem.aplicarAparencia(aparencia);
       // os amigos no mesmo mundo passam a ver a aparência nova
       // spec 014: os desbloqueios (capacete e colete do canteiro) ficam no aparelho
@@ -4297,9 +4365,15 @@ export function criarCena(
     bichoPremium: () => personagem.bichoPremium?.() ?? null,
     efeitosPremium: () => efeitosPremium(scene).contar(),
     festaPremium: () => personagem.festaPremium?.(),
-    provar: (premium) => {
+    provar: (premium, montada = false) => {
+      // spec 036 (T04): no provador ela não fica montada de verdade (desce antes de o look de
+      // provar entrar); T06: o brinquedo de andar se prova montada (só na tela dela)
+      provando = premium !== null;
+      if (provando) descerDoBrinquedo();
       personagem.aplicarAparencia(
-        premium === null ? aparencia : normalizarAparencia({ ...aparencia, premium }),
+        premium === null
+          ? aparencia
+          : normalizarAparencia({ ...aparencia, premium, montado: montada ? true : undefined }),
       );
     },
     vitrineBicho: (id, x = 0, y = 0, z = 0, yaw = 0) => {
@@ -4409,6 +4483,180 @@ export function criarCena(
 
   const rngFx = criarGerador(7);
   const pool = criarPoolParticulas(LIMITE_PARTICULAS);
+
+  // ------------------------------------------------------------------ spec 036 (T04): montar
+  /**
+   * Os brinquedos de tema em que a criança pode estar (o "pode montar" olha todos): o parque da
+   * Vila Neon (carrossel, roda-gigante, bate-bate, com o pulinho de sentar e de descer) e a casa
+   * (o sofá e o trilho da rampa). Os da 027 parte 3 se registram aqui também.
+   */
+  const brinquedosDeTema = criarBrinquedosDeTema();
+  if (passeio) brinquedosDeTema.registrar('parque', () => !!passeio.sentado() || !!passeio.lugar());
+  if (casaCena) brinquedosDeTema.registrar('casa', () => !!casaCena.lugar());
+  /** O que a cena sabe da criança agora, para o "pode montar". */
+  function situacaoMontar(a: Aparencia = aparencia): SituacaoMontar {
+    const j = controle.jogador;
+    return {
+      aparencia: a,
+      brinquedos: brinquedosDeTema.agora(),
+      dentroDeCasa: !!casaCena?.dentro(),
+      nadando: !!j.naAgua,
+      voando: !!j.voando,
+      desmaiada: modo === 'sobrevivencia' && !!estado.sobrevivencia?.estado.morto,
+      provador: provando,
+      modoFoto: !!estado.modoFoto?.ativo(),
+    };
+  }
+  /** A aparência de agora com o brinquedo `id` vestido (para perguntar antes de vestir). */
+  const comBrinquedo = (id?: string): Aparencia =>
+    id ? { ...aparencia, premium: { ...(aparencia.premium ?? {}), andar: id } } : aparencia;
+  /** O que o perfil da criança diz que ela veste (a fonte de verdade da mão), ou null sem perfil. */
+  const vestidosDoPerfil = () =>
+    (globalThis as { __almaCrianca?: { perfil: { vestidos: Record<string, string | undefined> } } })
+      .__almaCrianca?.perfil.vestidos ?? null;
+  /** Montada, o tesouro da mão sai da aparência e fica guardado (volta ao descer). */
+  function guardarMaoMontada(a: Aparencia): Aparencia {
+    if (!a.montado || !a.premium?.mao) return a;
+    maoGuardada = a.premium.mao;
+    const { mao: _mao, ...premium } = a.premium;
+    void _mao;
+    return { ...a, premium };
+  }
+  /** O som curto de cada brinquedo ao montar (o puf vem junto). */
+  const SOM_DO_BRINQUEDO: Readonly<Record<string, EventoSom>> = {
+    'patinete-luz': 'zum',
+    'carrinho-pedal': 'buzininha',
+    bicicletinha: 'campainha',
+    'nuvem-fofa': 'fuf',
+  };
+  /** O puf de montar e de descer: um anel de fumacinha clara em volta dos pés (e brilhinhos ao montar). */
+  function pufDoBrinquedo(x: number, y: number, z: number, montou: boolean): void {
+    const cores: [number, number, number][] = montou
+      ? [
+          [1, 1, 1],
+          [0.85, 0.95, 1],
+          [1, 0.9, 0.55],
+        ]
+      : [
+          [0.96, 0.95, 0.93],
+          [0.85, 0.84, 0.82],
+        ];
+    const n = montou ? 16 : 10;
+    pool.emitir(
+      Array.from({ length: n }, (_, i) => {
+        const ang = (i / n) * Math.PI * 2 + rngFx() * 0.4;
+        const v = montou ? 1.3 + rngFx() * 0.8 : 0.8 + rngFx() * 0.5;
+        return {
+          x: x + Math.cos(ang) * 0.35,
+          y: y + 0.15,
+          z: z + Math.sin(ang) * 0.35,
+          vx: Math.cos(ang) * v,
+          vy: 0.9 + rngFx() * 0.9,
+          vz: Math.sin(ang) * v,
+          cor: cores[i % cores.length],
+          tipo: CONFETE,
+        };
+      }),
+    );
+  }
+  function enviarAparenciaDeAgora(): void {
+    enviar({ t: 'aparencia', aparencia: semDesbloqueios({ ...aparencia }) as Record<string, unknown> });
+  }
+  /** Avisa os testes e a interface (a roda) de que ela montou ou desceu. */
+  function avisarMontar(): void {
+    estado.montarTrocas = (estado.montarTrocas ?? 0) + 1;
+    window.dispatchEvent(
+      new CustomEvent('brumaluz:montar', { detail: { brinquedo: brinquedoMontado(aparencia) } }),
+    );
+  }
+  /**
+   * Monta no brinquedo de andar vestido: o brinquedo aparece embaixo dela na hora, com o puf e o
+   * som dele. Não refaz o boneco (a não ser que ela segure um tesouro na mão, que se guarda). Com
+   * `trocou` (vestiu outro brinquedo já montada), só o puf e o som do novo.
+   */
+  function montarNoBrinquedo(trocou = false): boolean {
+    if (aparencia.montado && !trocou) return false;
+    if (!aparencia.montado) {
+      if (!podeMontar(situacaoMontar())) return false;
+      const nova = guardarMaoMontada(normalizarAparencia({ ...aparencia, montado: true }));
+      if (!nova.montado) return false;
+      const refaz = JSON.stringify(nova.premium) !== JSON.stringify(aparencia.premium);
+      aparencia = nova;
+      if (!refaz && personagem.definirMontado) personagem.definirMontado(true);
+      else personagem.aplicarAparencia(aparencia);
+      enviarAparenciaDeAgora();
+    }
+    const j = controle.jogador;
+    pufDoBrinquedo(j.x, j.y, j.z, true);
+    somEfeito('puf', 0);
+    const som = SOM_DO_BRINQUEDO[aparencia.premium?.andar ?? ''];
+    if (som) setTimeout(() => somEfeito(som, 0), 90);
+    avisarMontar();
+    return true;
+  }
+  /** Desce do brinquedo: ele some num puf e o tesouro da mão volta. */
+  function descerDoBrinquedo(): boolean {
+    if (!aparencia.montado) return false;
+    const vestidos = vestidosDoPerfil();
+    const mao = vestidos ? vestidos.mao : maoGuardada;
+    maoGuardada = undefined;
+    const premium = mao && aparencia.premium ? { ...aparencia.premium, mao } : aparencia.premium;
+    const nova = normalizarAparencia({ ...aparencia, premium });
+    delete nova.montado;
+    const refaz = JSON.stringify(nova.premium) !== JSON.stringify(aparencia.premium);
+    aparencia = nova;
+    if (!refaz && personagem.definirMontado) personagem.definirMontado(false);
+    else personagem.aplicarAparencia(aparencia);
+    enviarAparenciaDeAgora();
+    const j = controle.jogador;
+    pufDoBrinquedo(j.x, j.y, j.z, false);
+    somEfeito('puf', 0);
+    avisarMontar();
+    return true;
+  }
+  if (estado.personagem) {
+    estado.personagem.montar = (trocou) => montarNoBrinquedo(trocou);
+    estado.personagem.descer = () => descerDoBrinquedo();
+    estado.personagem.podeMontar = (id) => podeMontar(situacaoMontar(comBrinquedo(id)));
+    estado.personagem.motivoSemMontar = (id) => motivoSemMontar(situacaoMontar(comBrinquedo(id)));
+    estado.personagem.montado = () => brinquedoMontado(aparencia);
+  }
+  estado.montadoNoDesenho = () => personagem.montado?.() ?? false;
+  // os amigos que montam e descem também fazem o puf (sem som: o som é de quem monta)
+  outrosJogadores.definirAoMontar((x, y, z, montou) => pufDoBrinquedo(x, y, z, montou));
+  /**
+   * Descer sozinho: montada e não pode mais (sentou no carrossel, entrou na casa, caiu na água,
+   * voou), ela desce na hora, pela ação dela (antes de o núcleo responder: os amigos nunca veem o
+   * brinquedo no carrossel). Uma vez por quadro, só com ela montada.
+   */
+  function conferirMontada(): void {
+    if (aparencia.montado && precisaDescer(situacaoMontar())) descerDoBrinquedo();
+  }
+  /**
+   * Spec 036 (T07): os sons dos tesouros enquanto ela brinca (as rodinhas, o pedal, a hélice, as
+   * bolhas, o foguete, as gotinhas e a pipa), só dela, pela velocidade de verdade no chão. Calados
+   * no modo foto e com uma tela por cima.
+   */
+  const relogiosItens: RelogiosSomItens = {};
+  let posSomItens: [number, number] | null = null;
+  function quadroSonsItens(dt: number): void {
+    const j = controle.jogador;
+    const anda = posSomItens && dt > 0 ? Math.hypot(j.x - posSomItens[0], j.z - posSomItens[1]) / dt : 0;
+    posSomItens = [j.x, j.z];
+    const sons = quadroSomItens(
+      relogiosItens,
+      {
+        premium: aparencia.premium,
+        montado: !!aparencia.montado,
+        // (um teleporte não vira corrida: a velocidade de verdade não passa disto)
+        anda: Math.min(anda, 12),
+        noChao: !!j.noChao,
+        ativa: !estado.modoFoto?.ativo() && !document.body.dataset.overlay,
+      },
+      dt,
+    );
+    for (const ev of sons) somEfeito(ev, 0);
+  }
   // efeitos de brinquedo (spec 012): cada vaga tem uma pecinha de plástico com pino (lasca
   // do bloco) e um confete achatado; acende a que o tipo da partícula pede
   const pecasParticulas: { peca: Mesh; pino: Mesh; confete: Mesh; gota: Mesh }[] = [];
@@ -5560,6 +5808,9 @@ export function criarCena(
     const dtBruto = engine.getDeltaTime() / 1000;
     const dtQuadro = Math.min(dtBruto, DT_MAXIMO_QUADRO);
     const fotoAtiva = !!estado.modoFoto?.ativo();
+    // spec 036 (T04): montada e não pode mais (carrossel, casa, água, voo): desce sozinha
+    conferirMontada();
+    quadroSonsItens(dtQuadro);
     // desmaiado (ou esperando o teletransporte do renascer): o corpo não anda
     fisicaRodou = !(modo === 'sobrevivencia' && (sobrevivenciaMorto() || esperandoRenascer()));
     // spec 026 (parte 2): o bate-bate de guiar. O controle de andar é do carrinho (o rumo no
@@ -6113,6 +6364,8 @@ export function criarCena(
       // morador não apanha: o golpe vira um "oi" (e ele vira para o jogador), com um "opa!"
       // de quem levou um susto
       enviarTelemetria(true);
+      // spec 036 (T04): o abraço do Bento faz descer do brinquedo antes (na hora do toque)
+      if (c.morador.povoado === POVOADO_BAILE && c.morador.n === N_BAILE.bento) descerDoBrinquedo();
       enviar({ t: 'falar', criatura: c.id });
       vozMorador(c, 'surpresa');
       return true;
@@ -7817,6 +8070,11 @@ export function criarCena(
     reconferir: () => cliente.reconferir(),
     /** Spec 035: o bem-vindo da volta acerta os blocos que mudaram (devolve quantos). */
     aplicarVolta,
+    /**
+     * Spec 036 (T04): depois do bem-vindo da volta, a aparência de agora vai de novo (o "entrar"
+     * leva a guardada, sem o montado, os patins e o skate: os amigos a veriam a pé).
+     */
+    reenviarAparencia: () => enviarAparenciaDeAgora(),
     /** Spec 035: a rede de segurança desistiu (travou depois das 2 ressincronizações). */
     aoDesistir(f: () => void) {
       ouvintesDesistir.push(f);

@@ -27,6 +27,11 @@ export interface ListaRoda {
   manter?(id: string): boolean;
   /** O item de cima que abriu esta lista (a plaquinha "Voltar" mostra o ícone dele). */
   pai?: ItemRoda;
+  /**
+   * Spec 036 (T04): o item que fica no meio na primeira vez que esta lista abre (depois, ela
+   * volta onde a criança deixou). Sem ele, o primeiro.
+   */
+  inicio?: string;
 }
 
 export interface OpcoesRoda {

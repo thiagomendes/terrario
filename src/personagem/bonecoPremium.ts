@@ -24,6 +24,7 @@ import type { Junta, Peca, SubjuntaPremium } from './boneco';
 import type { MedidasBoneco } from './bonecoFantasia';
 import { perfilCoracao, perfilEstrela, perfilFolha } from './bonecoFantasia';
 import type { PremiumVestido } from './aparencia';
+import { vestirPremiumLojinha } from './bonecoPremiumLojinha';
 
 type V3 = [number, number, number];
 type P2 = [number, number];
@@ -824,6 +825,8 @@ export function vestirPremiumNoPlano(
   _comFantasia: boolean,
 ): void {
   const P = new Pecas(lista);
+  // spec 036: os tesouros novos (boné, pijama, asas, foguete, os da mão e o passarinho)
+  vestirPremiumLojinha(premium, lista, m);
   if (premium.roupa === 'camiseta-aquario') camisetaAquario(P, m);
   if (premium.roupa === 'tenis-cometa') tenisCometa(P, m);
   if (premium.costas === 'capa-estrelas' && !premium.fantasia) {
