@@ -152,10 +152,14 @@ for (const tamanho of telasDoFluxo(['deitado', 'empe'] as const)) {
     await dedos.descer(1, jc.x, jc.y);
     await dedos.mover(1, jc.x, jc.y - raio);
     let maiorVel = 0;
+    const vels: number[] = [];
     for (let k = 0; k < 16; k++) {
       await page.waitForTimeout(100);
-      maiorVel = Math.max(maiorVel, (await estado(page))!.carros[e0.i].vel);
+      const v = (await estado(page))!.carros[e0.i].vel;
+      vels.push(Math.round(v * 100) / 100);
+      maiorVel = Math.max(maiorVel, v);
     }
+    console.log(`bate: velocidades saindo da vaga ${JSON.stringify(vels)}`);
     const e1 = (await estado(page))!;
     expect(e1.carros[e1.i].z).toBeLessThan(e0.carros[e0.i].z - 2.5);
     expect(maiorVel).toBeGreaterThan(2.5);
@@ -172,6 +176,21 @@ for (const tamanho of telasDoFluxo(['deitado', 'empe'] as const)) {
     // vai atrás do carrinho de morador mais perto até bater nele
     let menor = Infinity;
     let bateu: Estado | null = null;
+    // a menor distância a cada quadro da tela (a leitura do teste, a cada ~100 ms, às vezes
+    // perdia o instante do encosto: 2,174 contra o limite de 2,17 na main, 23 nov); a conta
+    // por quadro também pega um carrinho dentro do outro que a leitura espaçada não veria
+    await page.evaluate((i) => {
+      const w = window as unknown as { __menorBate: number; __vigiaBate: number };
+      w.__menorBate = Infinity;
+      const olhar = () => {
+        const cs = window.__brumaluz!.vilaParque!.carros();
+        if (cs?.[i])
+          for (let j = 0; j < cs.length; j++)
+            if (j !== i) w.__menorBate = Math.min(w.__menorBate, Math.hypot(cs[j].x - cs[i].x, cs[j].z - cs[i].z));
+        w.__vigiaBate = requestAnimationFrame(olhar);
+      };
+      olhar();
+    }, e0.i);
     const inicio = Date.now();
     while (!bateu && Date.now() - inicio < 60_000) {
       const e = (await estado(page))!;
@@ -197,6 +216,15 @@ for (const tamanho of telasDoFluxo(['deitado', 'empe'] as const)) {
       await page.waitForTimeout(70);
     }
     expect(bateu, 'bateu num carrinho de morador').not.toBeNull();
+    menor = Math.min(
+      menor,
+      await page.evaluate(() => {
+        const w = window as unknown as { __menorBate: number; __vigiaBate: number };
+        cancelAnimationFrame(w.__vigiaBate);
+        return w.__menorBate;
+      }),
+    );
+    console.log(`bate: a menor distância entre os carrinhos ${menor.toFixed(3)}`);
     // os para-choques se tocaram de verdade: nunca um dentro do outro (nem um vão de mentira)
     expect(menor).toBeGreaterThan(2 * R - 0.25);
     expect(menor).toBeLessThan(2 * R + 0.25);
