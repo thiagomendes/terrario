@@ -744,8 +744,11 @@ test('T03: as figuras dos tesouros novos na lojinha (celular em pé)', async ({ 
   await foto(page, `${PASTA_T03}/figuras`, 'vitrine');
   const ids = ['passarinho-ombro', 'bone-helice', 'pijama-nuvem', 'asas-borboleta', 'mochila-foguete', 'varinha-bolhas', 'guarda-chuva-gotinhas', 'pipa-lacinhos'];
   for (const id of ids) {
-    const i = PREMIUM.findIndex((p) => p.id === id);
-    const card = page.locator('.alma-lcard').nth(i);
+    // (T06: a vitrine em abas por lugar do corpo; cada cartão está na aba dele)
+    const cat = PREMIUM.find((p) => p.id === id)!.categoria;
+    await page.locator(`[data-alma-aba="${cat}"]`).click();
+    await page.waitForTimeout(900);
+    const card = page.locator(`.alma-lcard[data-premium="${id}"]`);
     await card.scrollIntoViewIfNeeded();
     await page.waitForTimeout(700);
     mkdirSync(`${PASTA_T03}/figuras`, { recursive: true });

@@ -15,7 +15,7 @@ const nomes = (a: Partial<Aparencia>, premium: PremiumVestido) => plano(a, premi
 
 describe('036 T03: os tesouros novos no boneco', () => {
   it('cada tesouro novo põe as peças dele', () => {
-    expect(nomes({}, { chapeu: 'bone-helice' })).toContain('bone-cupula');
+    expect(nomes({}, { chapeu: 'bone-helice' })).toContain('bone-copa');
     expect(nomes({}, { roupa: 'pijama-nuvem' })).toContain('pijama-nuvem-peito');
     expect(nomes({}, { costas: 'asas-borboleta' })).toContain('borboleta-corpo');
     expect(nomes({}, { costas: 'mochila-foguete' })).toContain('foguete-corpo');

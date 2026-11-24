@@ -23,6 +23,7 @@
  * A animação dos nós fica em `render/boneco.ts`; os efeitos, em `render/premiumMundo.ts`.
  */
 import type { Junta, Peca, SubjuntaPremium } from './boneco';
+import { ajeitarCabeloDebaixo } from './boneco';
 import type { MedidasBoneco } from './bonecoFantasia';
 import { perfilEstrela, perfilFolha } from './bonecoFantasia';
 import { Pecas, misturarCor } from './bonecoPremium';
@@ -113,14 +114,26 @@ function boneHelice(P: Pecas, m: MedidasBoneco): void {
   const AMARELO = '#ffcf3a';
   const VERMELHO = '#ff5a5a';
   const b = m.baseChapeu;
-  // a cúpula amarela cobre a tampa de cabelo inteira; a aba vermelha e a estrela azul na frente
-  // (cores que se destacam de qualquer roupa)
-  P.bola('bone-cupula', 'cabeca', 'cabeca', 0.48, [0, b - 0.06, -0.01], AMARELO, [1, 0.55, 1], { brilho: 0.4 });
-  P.placa('bone-estrela', 'cabeca', 'cabeca', perfilEstrela(0.07), 0.02, [0, b + 0.07, 0.41], AZUL, { rot: [-0.5, 0, 0], brilho: 0.4 });
-  P.caixa('bone-aba', 'cabeca', 'cabeca', [0.6, 0.04, 0.3], [0, b - 0.09, 0.5], VERMELHO, 0.02, { rot: [-0.08, 0, 0], brilho: 0.4 });
+  // portão (o revisor: a cúpula redonda engolia a cabeça e lia como boina ou cogumelo, a aba era
+  // um palito solto e o cabelo varava): um boné de criança em bloco, como os chapéus do jogo. A
+  // copa justa por cima da tampa de cabelo (sem descer até os olhos), com os cantos redondos; a
+  // aba curta, larga e grossa, colada na beira da frente; a estrela azul na testa da copa; em
+  // cima, um domo baixo (sem ele, a copa em caixa lia como uma lata)
+  const yCopa = b - 0.13;
+  const hCopa = 0.24;
+  const dCopa = 0.78;
+  P.caixa('bone-copa', 'cabeca', 'cabeca', [0.82, hCopa, dCopa], [0, yCopa + hCopa / 2, -0.01], AMARELO, 0.12, { brilho: 0.4 });
+  P.bola('bone-copa-topo', 'cabeca', 'cabeca', 0.4, [0, yCopa + hCopa - 0.03, -0.01], AMARELO, [1, 0.32, 0.96], { brilho: 0.4 });
+  P.placa('bone-estrela', 'cabeca', 'cabeca', perfilEstrela(0.075), 0.02, [0, yCopa + hCopa * 0.5, dCopa / 2 - 0.005], AZUL, { brilho: 0.4 });
+  P.caixa('bone-aba', 'cabeca', 'cabeca', [0.66, 0.07, 0.26], [0, yCopa + 0.035, dCopa / 2 + 0.1], VERMELHO, 0.03, { rot: [0.1, 0, 0], brilho: 0.4 });
   // o pino e a hélice (gira no nó dela), duas pás em azul e vermelho
-  P.cone('bone-pino', 'cabeca', 'cabeca', 0.12, 0.028, 0.022, [0, b + 0.24, -0.01], '#e6e9f2', { brilho: 0.4 });
-  const pivo: V3 = [0, b + 0.31, -0.01];
+  const topoCopa = yCopa + hCopa - 0.03 + 0.4 * 0.32;
+  // o cabelo debaixo do boné, como debaixo dos chapéus do jogo (o cacho de cima não passa da
+  // tampa, o coque desce para a nuca) e sem o topete, que varava a copa
+  ajeitarCabeloDebaixo(P.lista, 'chapeu', m.topoTampa, m.cab);
+  P.tirar(/^topete/);
+  P.cone('bone-pino', 'cabeca', 'cabeca', 0.12, 0.028, 0.022, [0, topoCopa + 0.05, -0.01], '#e6e9f2', { brilho: 0.4 });
+  const pivo: V3 = [0, topoCopa + 0.12, -0.01];
   P.bola('bone-botao', 'cabeca', 'cabeca', 0.04, [0, 0, 0], VERMELHO, [1, 0.8, 1], { brilho: 0.4, ...sub('helice', pivo) });
   for (const [s, cor] of [
     [-1, VERMELHO],
