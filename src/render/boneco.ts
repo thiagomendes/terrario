@@ -315,7 +315,7 @@ interface FontePeca {
  */
 export function bracoDoTesouro(id: string, t: number): [number, number, number] | null {
   if (id === 'varinha-bolhas') return [-2.05 + Math.sin(t * 2.2) * 0.18, 0, -0.42 - Math.sin(t * 1.1) * 0.08];
-  if (id === 'guarda-chuva-gotinhas') return [-2.35, 0, -0.5];
+  if (id === 'guarda-chuva-gotinhas') return [-2.65, 0, -0.35];
   if (id === 'pipa-lacinhos') return [-2.3 + Math.sin(t * 1.7) * 0.06, 0, -0.85];
   return null;
 }

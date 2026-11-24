@@ -119,6 +119,12 @@ O esboço fica no branch `esboco/036-lojinha-maior` (o código em `src/esboco/lo
   - a figura da pipa na lojinha não tem a linha (a linha é efeito do mundo; no estúdio da foto não há);
   - com várias peças ao mesmo tempo o boneco passa de 5 malhas a mais (as asas e a pipa têm nós próprios); vale conferir na T08;
   - as bolhas de noite ficam acinzentadas (seguem a luz do lugar, como o resto).
+- **Os acertos (24 nov, pelo dono e pelo orquestrador):** fotos de antes e depois em `capturas-036/t03-pecas/acertos/` (com o `indice.md`) e o vídeo `depois/passarinho-voando.webm`.
+  - o passarinho voa pertinho do ombro direito (decisão do dono: "faz ele voando mesmo, próximo"), um pouco acima e para fora, batendo as asinhas e boiando devagar, preso ao tronco; o `passarinhoOmbro.test.ts` agora conta a volta das asas e o sobe e desce;
+  - as asas de borboleta saem das omoplatas, mais baixas e 0,27 para trás, com uma hastezinha; um teste novo prova que nenhuma parte encosta na cabeça nem no cabelo, batendo, nos 9 penteados dos dois corpos (a posição de antes falha);
+  - a mochila-foguete ficou sem a aleta do meio (lia como nariz): duas aletas, dos lados;
+  - o guarda-chuva: o cabo sai da mão inclinado para o pano ficar centrado por cima da cabeça, com o braço mais alto e o cabo mais comprido;
+  - quase todo o código dos acertos entrou no commit da T04 (997764b), que levou os arquivos em comum enquanto eu trabalhava; o commit dos acertos leva o resto (o braço e o cabo do guarda-chuva), as fotos e o spec das capturas.
 
 ### T04 (24 nov 2026, `desenvolvedor-jogo`)
 - **A roda** (`main.ts`, `ui/iconesAndar.ts`): um item por brinquedo **comprado** ("Andar de patinete", com o desenho dele), só quando ela pode montar nele e não está nele; montada, o "Descer". Sem brinquedo comprado, a roda não muda. Escolher um brinquedo que não está vestido veste pelo perfil (o caminho da lojinha) e já monta: trocar de brinquedo também é 2 toques.

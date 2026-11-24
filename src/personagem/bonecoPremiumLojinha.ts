@@ -103,7 +103,7 @@ function pintar(lista: Peca[], re: RegExp, cor: string): void {
 export const PONTOS_LOJINHA = {
   aroVarinha: [0, -0.47, 0.02] as V3,
   bocalFoguete: [0, 0.42 * 0.3 - 0.3, -0.34 / 2 - 0.17] as V3,
-  guarda: { raio: 0.82, base: 0.95, altura: 0.34, gomos: 8 },
+  guarda: { raio: 0.82, base: 1.08, altura: 0.34, gomos: 8 },
 } as const;
 
 // ------------------------------------------------------------------ boné de hélice

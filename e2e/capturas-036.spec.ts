@@ -431,7 +431,7 @@ test('T02: o tremor do pinguim (celular em pé) e o vídeo dele com a criança v
 });
 
 // ------------------------------------------------------------------------------ T03
-const PASTA_T03 = 'capturas-036/t03-pecas';
+const PASTA_T03 = process.env.T03_PASTA ?? 'capturas-036/t03-pecas';
 const SO_T03 = process.env.T03_SO?.split(',');
 
 /** Cada tesouro novo: quem veste, o que veste e como a câmera de estúdio o enquadra. */
@@ -620,6 +620,45 @@ test('T03: o custo de cada peça (malhas e triângulos do boneco e dos efeitos)'
   mkdirSync(PASTA_T03, { recursive: true });
   writeFileSync(`${PASTA_T03}/custo.md`, `${linhas.join('\n')}\n`);
   console.log(`CUSTO\n${linhas.join('\n')}`);
+  await page.context().close();
+});
+
+test('T03: o vídeo do passarinho voando com a criança andando, pulando e virando (computador)', async ({ browser }) => {
+  test.skip(!QUAL.includes('passarinho'));
+  test.setTimeout(600_000);
+  mkdirSync(PASTA_T03, { recursive: true });
+  const { page, O } = await abrirGramado(browser, 'pc');
+  await vestir(page, MENINA, { bicho: 'passarinho-ombro' });
+  // a câmera do jogo de quina, por trás e do lado direito (onde ele voa)
+  await noMeio(page, O, 0.6, 3.6, 0.22);
+  await page.waitForTimeout(3000);
+  await comecarGravacao(page);
+  await page.waitForTimeout(1800);
+  const ctl = (f: number, d: number) => page.evaluate(([f, d]) => window.__brumaluz!.controleDireto!.mover(f, d), [f, d] as const);
+  const pula = async () => {
+    await page.evaluate(() => window.__brumaluz!.controleDireto!.tecla('pular', true));
+    await page.waitForTimeout(180);
+    await page.evaluate(() => window.__brumaluz!.controleDireto!.tecla('pular', false));
+  };
+  await ctl(1, 0);
+  await page.waitForTimeout(1600);
+  await pula();
+  await page.waitForTimeout(900);
+  await ctl(0.6, -0.8);
+  await page.waitForTimeout(1400);
+  await pula();
+  await page.waitForTimeout(700);
+  await ctl(0, 0);
+  await page.waitForTimeout(1200);
+  await pula();
+  await page.waitForTimeout(1500);
+  // virando no lugar (a câmera dá a volta e o passarinho vai junto)
+  for (let i = 0; i < 24; i++) {
+    await page.evaluate((y) => window.__brumaluz!.apontar!(y, 0.22), 0.6 + (i / 24) * Math.PI);
+    await page.waitForTimeout(60);
+  }
+  await page.waitForTimeout(1200);
+  await pararGravacao(page, `${PASTA_T03}/passarinho-voando.webm`);
   await page.context().close();
 });
 
