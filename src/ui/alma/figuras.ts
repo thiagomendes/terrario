@@ -76,8 +76,13 @@ export function desenhoDaObra(n: number): string {
  */
 const FOTO_PREMIUM: Record<
   string,
-  { recorte: RecorteBoneco; giro: number; bicho?: IdBichoPremium; tudo?: boolean }
+  { recorte: RecorteBoneco; giro: number; bicho?: IdBichoPremium; tudo?: boolean; montado?: true }
 > = {
+  // spec 036 (T06): os brinquedos de andar com a criança montada (o brinquedo inteiro no quadro)
+  'patinete-luz': { recorte: 'corpo', giro: 0.9, tudo: true, montado: true },
+  'carrinho-pedal': { recorte: 'corpo', giro: 0.9, tudo: true, montado: true },
+  bicicletinha: { recorte: 'corpo', giro: 1.1, tudo: true, montado: true },
+  'nuvem-fofa': { recorte: 'corpo', giro: 0.7, tudo: true, montado: true },
   'camiseta-aquario': { recorte: 'corpo', giro: 0.36 },
   'tenis-cometa': { recorte: 'corpo', giro: 0.75 },
   'capa-estrelas': { recorte: 'corpo', giro: Math.PI - 1.05 },
@@ -120,7 +125,15 @@ export function fotografarPremium(
   const a = base ?? aparenciaAtual();
   fotografarBoneco(
     cv,
-    normalizarAparencia({ ...a, fantasia: undefined, premium: { [p.categoria]: id } }),
+    normalizarAparencia({
+      ...a,
+      fantasia: undefined,
+      premium: { [p.categoria]: id },
+      // (patins e skate do mundo não entram na foto; o de andar vai montado)
+      patins: undefined,
+      skate: undefined,
+      montado: f.montado,
+    }),
     f.recorte,
     altura,
     { giro: f.giro, bicho: f.bicho, tudo: f.tudo },

@@ -34,6 +34,8 @@ O esboço fica no branch `esboco/036-lojinha-maior` (o código em `src/esboco/lo
 | T03 As peças no boneco e os efeitos | **pronta (24 nov)**: as 7 peças, o passarinho no ombro, os efeitos e as figuras. Os detalhes abaixo |
 | T04 Montar e descer | **pronta (24 nov)**, com um brinquedo provisório: a roda, comprar já monta, o puf e os sons, o descer sozinho, a mão guardada, os amigos sem refazer o boneco, a volta da queda. Os detalhes abaixo |
 | T05 Os brinquedos de andar | **pronta (24 nov)**: os 4 modelos do esboço e as animações, +15 chamadas de desenho com 4 amigos montados. Os detalhes abaixo |
+| T06 A vitrine, o provador e Meus tesouros | **pronta (24 nov)**: as abas só com desenho, a estrelinha de novo, o provador montado e o da pipa, a linha da pipa na figura, Meus tesouros com os 18 e o "o que sai" com a fantasia. Os detalhes abaixo |
+| T07 Sons dos itens | **pronta (24 nov)**: as rodinhas, o pedal, a hélice, as bolhas, o foguete, as gotinhas e a pipa, feitos em código e mais baixos que os passos. Os detalhes abaixo |
 
 ### T01 (24 nov 2026, `engenheiro-nucleo-rede`)
 - **O catálogo:** os 12 no `PREMIUM` (`src/jogo/alma.ts`), com os ids, preços e efeitos da spec; as categorias `andar`, `chapeu` e `mao` no fim de `CATEGORIAS_PREMIUM`. A vitrine já lista os 18, sem a figura dos novos até a T03 e sem as abas até a T06.
@@ -167,5 +169,45 @@ O esboço fica no branch `esboco/036-lojinha-maior` (o código em `src/esboco/lo
   - o volante "mexendo a cada passo" era o corpo de quem anda a pé: o tronco torcendo a cada passo e o corpo inclinando na corrida levavam os braços e as mãos junto, por cima do volante parado. Montada, o tronco e o corpo ficam firmes (só o impulso do patinete e o pedal mexem);
   - `tests/render/maosNoGuidao.test.ts` (novo, com o boneco de verdade num motor sem tela): nos 4 brinquedos e nos dois corpos, parada e andando (o passo, o giro do tronco e a inclinação do corpo de quem anda), a mão fica a menos de 0,07 bloco do ponto do guidão ao longo de um ciclo inteiro; e o guidão e o volante não saem do lugar com o passo (só a nuvem boia, de propósito);
   - o volante não vira nas curvas (ficaria natural, mas o boneco não sabe da curva sem mexer no corpo vivo: ficou de fora).
+
+### T06 (24 nov 2026, `desenvolvedor-jogo`)
+- **As abas** (`src/ui/alma/loja.ts`): uma por lugar do corpo, na ordem andar, roupa, costas, mão, chapéu, bichinho e fantasia, só com o desenho (o nome fica no `aria-label`). No computador e deitado elas ficam no topo, entre a placa e a carteira; em pé, numa linha própria logo abaixo. A aba escolhida sobe e acende em azul.
+  - Só os cartões da aba aberta são desenhados (de 1 a 4): a vitrine abre mais leve que com os 18.
+  - A prateleira cabe sem rolar em toda aba, nas 3 telas (4 numa fileira no computador e deitado, 2 × 2 em pé), e rola por dentro se um dia não couber; a página nunca rola. Os cartões têm o mesmo tamanho de antes.
+  - O detalhe de um item de outra aba (vindo de "Meus tesouros") leva a vitrine para a aba dele.
+- **A lembrança do aparelho** (`src/ui/alma/lojaNovidades.ts`, chave `terrario:loja-novidades`, fora do perfil): a primeira visita depois da atualização abre na aba de andar; depois, na aba de onde ela saiu. A estrelinha de novo fica nos 12 itens da 036 (no cartão e na aba que ainda tem algum) até a criança abrir o detalhe do item uma vez. Perder a chave só traz as estrelinhas de volta.
+- **O provador:** o brinquedo de andar se prova montada (só na tela dela: `personagem.provar(look, montada)`; a aparência de verdade não muda); a câmera fica mais longe para o brinquedo caber. A pipa se prova vista por trás, com a câmera longe e alta, para a pipa voando caber. O "anda um pouquinho em volta" da spec não entrou: a criança fica parada no provador (ver "Ficou fraco").
+- **As figuras** (`ui/alma/figuras.ts`, `render/fotoBoneco.ts`): os 4 brinquedos com a criança montada e o brinquedo inteiro no quadro; a linha da pipa desenhada da mão até a ponta de baixo da pipa, por trás do boneco; o passarinho voando perto do ombro (a pose parada também com ele, pedido do artista).
+- **O "o que sai" às claras:** a lojinha e "Meus tesouros" usam a regra única `oQueSai` da T01. A figurinha da fantasia (inteira ou só a peça dela) aparece junto da dos tesouros que saem.
+- **"Meus tesouros"** (`src/ui/meusTesouros.ts`): os 18 itens, com as figuras dos de andar e da pipa. Com muitos, a prateleira rola dentro de um rolo em volta da grade e não toma o painel. Na primeira tentativa a grade mesma rolava, e os cartões se encavalavam (as asas tapavam a bicicletinha): o rolo em volta resolveu, e o teste agora confere que nenhum cartão fica por cima de outro.
+- **O tempo de abrir** (medido na página, quadro a quadro, na placa e com o outro agente usando a placa ao mesmo tempo): a vitrine aberta, com os cartões da aba na tela, em **35 a 52 ms** (meta: 1 s). As figuras do 3D ficam prontas em **0,9 a 1,8 s** na primeira vez da página (o estúdio de fotos nasce aqui); depois vêm do cache.
+- **Os testes:**
+  - `e2e/lojinha.spec.ts` agora confere em cada aba, nas 3 telas, os cartões à vista sem rolar e dentro da tela, só números como texto, as abas sem palavra, o tamanho dos cartões, a estrelinha, a aba lembrada, o provador montado e o da pipa;
+  - `e2e/meus-tesouros.spec.ts` ganhou os 18 (prateleira cabendo, sem cartão por cima de outro, as figuras, vestir um de andar);
+  - novo `tests/ui/lojaNovidades.test.ts`.
+  - Passaram na placa: `lojinha` (3/3), `meus-tesouros` (3/3), `tesouro-fantasia` e `menu-roda`. Uma rodada de `lojinha` caiu no tempo da festa (3,5 s para uma meta de 3,4 s) com o outro agente usando a placa, e passou na rodada seguinte.
+- **As fotos:** `capturas-036/t06-vitrine/` (cada aba nas 3 telas, os detalhes, os provadores, a festa) e `capturas-036/t06-vitrine/tesouros/` (Meus tesouros, com os 18).
+- **Ficou fraco:**
+  - no provador o brinquedo não anda em volta;
+  - em pé, a câmera do provador montado ainda fica perto: a criança aparece grande;
+  - as figuras do 3D levam de 0,9 a 1,8 s na primeira abertura da página (os cartões aparecem antes, com o preço e o pedestal).
+
+### T07 (24 nov 2026, `desenvolvedor-jogo`)
+- **Os sons** (`src/audio/somItens.ts`, que é puro, e os timbres em `src/audio/sons.ts`), todos feitos em código, curtos e mais baixos que os passos:
+  - as rodinhas do patinete e do carrinho e o pedal da bicicletinha e do carrinho, só montada e andando no chão, com o ritmo pela velocidade;
+  - a hélice do boné, só correndo;
+  - as bolhas da varinha, cada 2,3 s;
+  - a fumacinha do foguete, andando;
+  - as gotinhas do guarda-chuva, cada 1,3 s;
+  - a pipa no vento, cada 3,2 s;
+  - a nuvem fica calada (só o "fuf" de montar).
+- **O que decidi:**
+  - só a criança da tela toca, para não virar um coro de bolhas com 4 amigos;
+  - nada toca no modo foto nem com uma tela por cima;
+  - nenhum som passa de 2 por segundo;
+  - o som que volta a valer espera um pouco antes do primeiro;
+  - a velocidade vem do caminho andado (um teleporte não vira corrida).
+- **Os testes:** novo `tests/audio/somItens.test.ts`; os sons novos passam pela régua da 019 (`somResto.test.ts`: curtos e abaixo do golpe).
+- **Falta:** o aperitivo de sons ao dono (gravar o áudio pede o navegador com som; fica com o orquestrador).
 
 Falta sempre, ao fim, a **rodada em família**.

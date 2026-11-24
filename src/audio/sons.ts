@@ -70,7 +70,18 @@ export type EventoSom =
   | 'zum'
   | 'buzininha'
   | 'campainha'
-  | 'fuf';
+  | 'fuf'
+  /**
+   * Spec 036 (T07): os tesouros brincando (`somItens.ts`): as rodinhas rolando, o pedal, a hélice
+   * do boné, a bolha que estoura, a fumacinha do foguete, a gotinha e a pipa no vento.
+   */
+  | 'rodinha'
+  | 'pedal'
+  | 'helice'
+  | 'bolha'
+  | 'foguete'
+  | 'gotinha'
+  | 'pipa';
 
 export const EVENTOS_SOM: readonly EventoSom[] = [
   'golpe',
@@ -119,6 +130,13 @@ export const EVENTOS_SOM: readonly EventoSom[] = [
   'buzininha',
   'campainha',
   'fuf',
+  'rodinha',
+  'pedal',
+  'helice',
+  'bolha',
+  'foguete',
+  'gotinha',
+  'pipa',
 ];
 
 export const VARIACOES_POR_EVENTO = 4;
@@ -219,6 +237,14 @@ const BASE_EVENTO: Record<EventoSom, BaseEvento> = {
   buzininha: { ganho: 0.14, duracao: 0.36, ruido: 0, escalaTom: 1, grupoAudio: 'efeitos' },
   campainha: { ganho: 0.12, duracao: 0.7, ruido: 0, escalaTom: 1, grupoAudio: 'efeitos' },
   fuf: { ganho: 0.2, duracao: 0.4, ruido: 0.8, escalaTom: 1, grupoAudio: 'efeitos' },
+  // spec 036 (T07): os tesouros brincando, abaixo dos passos (0,25): se ouvem sem virar barulho
+  rodinha: { ganho: 0.1, duracao: 0.22, ruido: 0.7, escalaTom: 1, grupoAudio: 'passos' },
+  pedal: { ganho: 0.09, duracao: 0.12, ruido: 0.3, escalaTom: 1, grupoAudio: 'passos' },
+  helice: { ganho: 0.07, duracao: 0.35, ruido: 0.8, escalaTom: 1, grupoAudio: 'efeitos' },
+  bolha: { ganho: 0.1, duracao: 0.12, ruido: 0.2, escalaTom: 1, grupoAudio: 'efeitos' },
+  foguete: { ganho: 0.08, duracao: 0.5, ruido: 0.9, escalaTom: 1, grupoAudio: 'efeitos' },
+  gotinha: { ganho: 0.08, duracao: 0.14, ruido: 0, escalaTom: 1, grupoAudio: 'efeitos' },
+  pipa: { ganho: 0.08, duracao: 0.45, ruido: 0.8, escalaTom: 1, grupoAudio: 'efeitos' },
 };
 
 const FIXOS: Partial<Record<EventoSom, BaseMaterial>> = {
@@ -262,6 +288,13 @@ const FIXOS: Partial<Record<EventoSom, BaseMaterial>> = {
   buzininha: { frequencia: 523.25, filtroHz: 2400 },
   campainha: { frequencia: 1318.5, filtroHz: 6000 },
   fuf: { frequencia: 300, filtroHz: 900 },
+  rodinha: { frequencia: 180, filtroHz: 1400 },
+  pedal: { frequencia: 900, filtroHz: 3000 },
+  helice: { frequencia: 260, filtroHz: 1800 },
+  bolha: { frequencia: 880, filtroHz: 3000 },
+  foguete: { frequencia: 220, filtroHz: 1200 },
+  gotinha: { frequencia: 1400, filtroHz: 5000 },
+  pipa: { frequencia: 300, filtroHz: 900 },
 };
 
 export const AMPLITUDE_TOM = 0.12;
@@ -1007,6 +1040,40 @@ function desenharNovo(
       pecas.push(ruido(ctx, out, t0, 'lowpass', par.filtroHz, 0.7, 0.65, 0.34, 0.05));
       pecas.push(tom(ctx, out, t0 + 0.1, 'sine', f * 3, f * 3.4, 0.06, 0.22, 0.03));
       break;
+    // spec 036 (T07): os tesouros brincando (macios e curtos)
+    case 'rodinha':
+      // as rodinhas rolando no chão: um "rrr" grave e curtinho
+      pecas.push(ruido(ctx, out, t0, 'bandpass', par.filtroHz, 1.2, 0.5, 0.2, 0.03));
+      pecas.push(tom(ctx, out, t0, 'triangle', f, f * 0.9, 0.2, 0.18, 0.03));
+      break;
+    case 'pedal':
+      // o pedal: um "tic" de plástico, com o eco de outro mais fraco
+      pecas.push(tom(ctx, out, t0, 'sine', f, f * 0.8, 0.4, 0.05, 0.002));
+      pecas.push(tom(ctx, out, t0 + 0.06, 'sine', f * 1.2, f, 0.18, 0.04, 0.002));
+      break;
+    case 'helice':
+      // a hélice do boné: um "vrrr" que passa (ruído com o filtro tremendo)
+      for (let i = 0; i < 4; i++)
+        pecas.push(ruido(ctx, out, t0 + i * 0.07, 'bandpass', par.filtroHz * (1 + (i % 2) * 0.25), 2, 0.35, 0.07, 0.01));
+      break;
+    case 'bolha':
+      // a bolha estoura: um "plop" redondinho, do agudo para o grave
+      pecas.push(tom(ctx, out, t0, 'sine', f * 1.3, f * 0.7, 0.5, 0.08, 0.002));
+      pecas.push(ruido(ctx, out, t0, 'bandpass', par.filtroHz, 3, 0.1, 0.03, 0.001));
+      break;
+    case 'foguete':
+      // a fumacinha do foguete: um "fsss" macio e baixinho
+      pecas.push(ruido(ctx, out, t0, 'lowpass', par.filtroHz, 0.7, 0.55, 0.45, 0.12));
+      break;
+    case 'gotinha':
+      // a gotinha: um "plic" de água, agudo e miudinho
+      pecas.push(tom(ctx, out, t0, 'sine', f, f * 1.6, 0.4, 0.09, 0.002));
+      break;
+    case 'pipa':
+      // a pipa no vento: um sopro que sobe e desce, com um "flap" do papel
+      pecas.push(ruido(ctx, out, t0, 'bandpass', par.filtroHz, 0.9, 0.45, 0.42, 0.15));
+      pecas.push(ruido(ctx, out, t0 + 0.18, 'bandpass', par.filtroHz * 2.4, 2.5, 0.25, 0.05, 0.003));
+      break;
     default:
       pecas.push(tom(ctx, out, t0, 'sine', f, f, 0.3, 0.05));
   }
@@ -1069,6 +1136,14 @@ export const SONS_NOVOS_019: readonly EventoSom[] = [
   'buzininha',
   'campainha',
   'fuf',
+  // (spec 036, T07: os tesouros brincando)
+  'rodinha',
+  'pedal',
+  'helice',
+  'bolha',
+  'foguete',
+  'gotinha',
+  'pipa',
 ];
 
 let observador: ((evento: EventoSom) => void) | null = null;

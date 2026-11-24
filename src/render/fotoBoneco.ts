@@ -12,7 +12,7 @@ import { Camera } from '@babylonjs/core/Cameras/camera';
 import { HemisphericLight } from '@babylonjs/core/Lights/hemisphericLight';
 import { DirectionalLight } from '@babylonjs/core/Lights/directionalLight';
 import { Color3, Color4 } from '@babylonjs/core/Maths/math.color';
-import { Vector3 } from '@babylonjs/core/Maths/math.vector';
+import { Matrix, Vector3 } from '@babylonjs/core/Maths/math.vector';
 import { aparenciaPadrao, type Aparencia } from '../personagem/aparencia';
 import { alturaBoneco, topoBoneco } from '../personagem/boneco';
 import { criarBoneco } from './boneco';
@@ -168,6 +168,33 @@ export function fotografarBoneco(
   }
 }
 
+/**
+ * Spec 036 (T06): a linha da pipa na foto, da mão esquerda até a ponta de baixo da pipa (os nós
+ * `maoE` e `pipa` do boneco do estúdio), levemente curvada para baixo, como no jogo. É desenhada
+ * antes do boneco: o corpo e a pipa ficam por cima dela.
+ */
+function linhaDaPipa(e: NonNullable<typeof estudio>, ctx: CanvasRenderingContext2D, larg: number, alt: number): void {
+  const mao = e.scene.getTransformNodeByName('foto-junta-maoE');
+  const pipa = e.scene.getTransformNodeByName('foto-junta-pipa');
+  if (!mao || !pipa) return;
+  mao.computeWorldMatrix(true);
+  pipa.computeWorldMatrix(true);
+  const vp = e.camera.viewport.toGlobal(larg, alt);
+  const m = e.scene.getTransformMatrix();
+  const a = Vector3.Project(Vector3.TransformCoordinates(new Vector3(0, -0.06, 0), mao.getWorldMatrix()), Matrix.Identity(), m, vp);
+  const b = Vector3.Project(pipa.getAbsolutePosition(), Matrix.Identity(), m, vp);
+  const meio = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 + Math.hypot(b.x - a.x, b.y - a.y) * 0.12 };
+  ctx.save();
+  ctx.lineCap = 'round';
+  ctx.lineWidth = Math.max(1.5, alt / 180);
+  ctx.strokeStyle = 'rgba(250, 246, 236, 0.95)';
+  ctx.beginPath();
+  ctx.moveTo(a.x, a.y);
+  ctx.quadraticCurveTo(meio.x, meio.y, b.x, b.y);
+  ctx.stroke();
+  ctx.restore();
+}
+
 /** Fotos já tiradas (aparência + recorte + tamanho): trocar de volta é instantâneo. */
 const cache = new Map<string, HTMLCanvasElement>();
 
@@ -211,7 +238,14 @@ function passo(): void {
         e.boneco.posicionar(0, 0, 0, Math.PI + giro);
         // spec 036: com o tesouro da mão, o braço segura no alto (o guarda-chuva por cima da
         // cabeça, a varinha na frente, a pipa puxando)
-        if (p.aparencia.premium?.mao) e.boneco.aplicarPose(POSE_PARADA);
+        // (spec 036, T06: montada, a pose do brinquedo: sentada ou de pé no deque, as mãos no guidão)
+        // (e o passarinho de ombro voando perto do ombro, como no jogo, e não pousado)
+        if (
+          p.aparencia.premium?.mao ||
+          p.aparencia.montado ||
+          p.aparencia.premium?.bicho === 'passarinho-ombro'
+        )
+          e.boneco.aplicarPose(POSE_PARADA);
       }
       esperando = { pedido: p, tentativas: 0 };
     }
@@ -274,7 +308,10 @@ function passo(): void {
     const foto = document.createElement('canvas');
     foto.width = larg;
     foto.height = alt;
-    foto.getContext('2d')?.drawImage(e.canvas, 0, 0);
+    const ctx = foto.getContext('2d');
+    // spec 036 (T06): a linha da pipa (no jogo ela é efeito do mundo; aqui, um traço por trás)
+    if (ctx && !bicho && pedido.aparencia.premium?.mao === 'pipa-lacinhos') linhaDaPipa(e, ctx, larg, alt);
+    ctx?.drawImage(e.canvas, 0, 0);
     if (cache.size > 160) cache.delete(cache.keys().next().value as string);
     cache.set(pedido.chave, foto);
     if (ultimoPedido.get(pedido.alvo) === pedido.chave) copiar(foto, pedido.alvo);

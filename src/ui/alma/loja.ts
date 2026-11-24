@@ -17,14 +17,22 @@
  *   as asas do dragão, que dividem as costas) aparece às claras: a figurinha do que sai, a seta
  *   e o que entra.
  */
-import { PREMIUM, premiumPorId, saiAoVestir, type ItemPremium } from '../../jogo/alma';
-import type { PremiumVestido as PremiumVestidos } from '../../personagem/aparencia';
+import {
+  PREMIUM,
+  premiumPorId,
+  saiAoVestir,
+  type CategoriaPremium,
+  type ItemPremium,
+} from '../../jogo/alma';
+import type { Aparencia, PremiumVestido as PremiumVestidos } from '../../personagem/aparencia';
+import { oQueSai, type Saida } from '../../personagem/tesouroEFantasia';
+import { ABAS_LOJA, criarNovidadesLoja, type NovidadesLoja } from './lojaNovidades';
 import { tocarSomInterface } from '../../audio/somInterface';
 import type { PerfilCrianca } from '../../personagem/almaCrianca';
 import { arte } from './arte';
 import { CAMISETA } from './festa';
 import { OVERLAY_FESTA, type FestasAlma } from './festas';
-import { fotoPremium } from './figuras';
+import { figura, fotoPremium } from './figuras';
 import { FECHAR_SVG, botao, botaoFechar, pilhaDeMoedas, svgEl, type HudAlma } from './hud';
 
 const ESPELHO = `<svg viewBox="0 0 64 64"><ellipse cx="32" cy="27" rx="17" ry="21" fill="#bfe3ff" stroke="#fff" stroke-width="5"/><path d="M23 19 Q26 12 33 11" stroke="#fff" stroke-width="4" fill="none" stroke-linecap="round"/><path d="M32 48 V58 M22 59 H42" stroke="#fff" stroke-width="5" stroke-linecap="round"/></svg>`;
@@ -33,6 +41,18 @@ const TIRAR = `<svg viewBox="0 0 64 64"><path d="M22 8 L32 14 L42 8 L58 18 L52 3
 const NAO = FECHAR_SVG.replace('#5a3a22', '#fff');
 /** A seta da troca (o que sai → o que entra). */
 const TROCA = `<svg viewBox="0 0 64 64"><path d="M10 32 H46 M34 18 L50 32 L34 46" fill="none" stroke="#ffe27a" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+/** Spec 036 (T06): a estrelinha de "novo" (só desenho, sem palavra). */
+const NOVO = `<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M32 4 L40 23 L60 24 L44 37 L50 58 L32 46 L14 58 L20 37 L4 24 L24 23 Z" fill="#ffe14d" stroke="#b86e00" stroke-width="4" stroke-linejoin="round"/><path d="M27 20 L31 13" stroke="#fff8c8" stroke-width="4" stroke-linecap="round"/></svg>`;
+/** Spec 036 (T06): o desenho de cada aba da vitrine (o lugar do corpo; nenhuma palavra). */
+const ICONE_ABA: Record<CategoriaPremium, string> = {
+  andar: `<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M42 10 L46 48" stroke="#3b2a1e" stroke-width="5" stroke-linecap="round"/><path d="M34 11 H50" stroke="#7b5cff" stroke-width="7" stroke-linecap="round"/><rect x="10" y="42" width="38" height="8" rx="4" fill="#7b5cff" stroke="#3b2a1e" stroke-width="3"/><circle cx="16" cy="54" r="6" fill="#3ee0c8" stroke="#3b2a1e" stroke-width="3"/><circle cx="46" cy="54" r="6" fill="#3ee0c8" stroke="#3b2a1e" stroke-width="3"/></svg>`,
+  roupa: `<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M22 8 L32 14 L42 8 L58 18 L52 30 L46 27 L46 58 L18 58 L18 27 L12 30 L6 18 Z" fill="#5cb8ff" stroke="#3b2a1e" stroke-width="3.5" stroke-linejoin="round"/><circle cx="26" cy="36" r="4" fill="#fff"/><circle cx="38" cy="44" r="3" fill="#fff"/></svg>`,
+  costas: `<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M20 8 H44 L54 56 Q32 50 10 56 Z" fill="#e8463c" stroke="#3b2a1e" stroke-width="3.5" stroke-linejoin="round"/><path d="M22 8 Q32 16 42 8" fill="none" stroke="#ffd45a" stroke-width="4" stroke-linecap="round"/><path d="M32 30 L35 36 L41 36 L36 40 L38 46 L32 42 L26 46 L28 40 L23 36 L29 36 Z" fill="#ffd45a"/></svg>`,
+  mao: `<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M18 56 L40 24" stroke="#3b2a1e" stroke-width="9" stroke-linecap="round"/><path d="M18 56 L40 24" stroke="#2fc7d8" stroke-width="4.5" stroke-linecap="round"/><path d="M44 6 L48 15 L58 16 L50 22 L53 32 L44 26 L35 32 L38 22 L30 16 L40 15 Z" fill="#ffe14d" stroke="#3b2a1e" stroke-width="3" stroke-linejoin="round"/></svg>`,
+  chapeu: `<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M10 42 Q10 18 32 18 Q54 18 54 42 Z" fill="#ffcf3a" stroke="#3b2a1e" stroke-width="3.5" stroke-linejoin="round"/><path d="M8 42 H60 Q60 50 50 50 H8 Z" fill="#e8463c" stroke="#3b2a1e" stroke-width="3.5" stroke-linejoin="round"/><path d="M32 18 V8 M22 8 H42" stroke="#3b2a1e" stroke-width="4" stroke-linecap="round"/></svg>`,
+  bicho: `<svg viewBox="0 0 64 64" aria-hidden="true"><ellipse cx="32" cy="42" rx="14" ry="12" fill="#ff8fb3" stroke="#3b2a1e" stroke-width="3.5"/><circle cx="14" cy="26" r="6" fill="#ff8fb3" stroke="#3b2a1e" stroke-width="3"/><circle cx="25" cy="15" r="6" fill="#ff8fb3" stroke="#3b2a1e" stroke-width="3"/><circle cx="39" cy="15" r="6" fill="#ff8fb3" stroke="#3b2a1e" stroke-width="3"/><circle cx="50" cy="26" r="6" fill="#ff8fb3" stroke="#3b2a1e" stroke-width="3"/></svg>`,
+  fantasia: `<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M6 24 Q32 14 58 24 Q58 46 40 46 Q34 46 32 40 Q30 46 24 46 Q6 46 6 24 Z" fill="#b48cff" stroke="#3b2a1e" stroke-width="3.5" stroke-linejoin="round"/><ellipse cx="20" cy="31" rx="6" ry="5" fill="#2a1f78"/><ellipse cx="44" cy="31" rx="6" ry="5" fill="#2a1f78"/></svg>`,
+};
 
 export const CSS_LOJA = `
 /* as fotos do 3D cabem na caixa delas (o canvas não empurra o cartão) */
@@ -87,9 +107,28 @@ export const CSS_LOJA = `
 .alma-loja .alma-fechar, .alma-provador .alma-fechar { background: #3a2c8e; box-shadow: 0 4px 0 #140e44, inset 0 2px 0 rgba(255,255,255,0.3), 0 0 0 3px #e6b23e; }
 .alma-loja .alma-fechar svg path { stroke: #fff; }
 
-/* a prateleira: 3 × 2 no computador, 6 numa fileira no celular deitado, 2 × 3 em pé */
-.alma-prateleira { position: relative; z-index: 1; display: grid; grid-template-columns: repeat(3, minmax(0, 236px)); justify-content: center; align-content: center;
-  gap: clamp(14px, 3.2vh, 28px) clamp(16px, 2.4vw, 30px); padding: 6px clamp(18px, 6vw, 96px) 14px; min-height: 0; --h: clamp(176px, 33vh, 262px); }
+/* spec 036 (T06): as abas por lugar do corpo (só o desenho), no topo; em pé, numa linha própria */
+.alma-loja .topo { flex-wrap: wrap; row-gap: 8px; }
+.alma-abas { display: flex; align-items: center; gap: 8px; }
+.alma-aba { position: relative; width: 56px; height: 56px; padding: 8px; border: 0; border-radius: 50%; cursor: pointer; box-sizing: border-box; display: grid; place-items: center;
+  background: radial-gradient(circle at 50% 35%, #fffaf0, #f3e3bf 70%, #dcc28a); box-shadow: 0 4px 0 #120c36, 0 0 0 3px #a8741a; transition: transform 0.15s;
+  -webkit-tap-highlight-color: transparent; }
+.alma-aba svg { width: 100%; height: 100%; display: block; pointer-events: none; }
+.alma-aba:active { transform: scale(0.93); }
+.alma-aba:focus-visible { outline: 3px solid #7fe0ff; outline-offset: 4px; }
+.alma-aba[aria-selected='true'] { transform: translateY(-3px) scale(1.12); box-shadow: 0 5px 0 #120c36, 0 0 0 4px #7fe0ff, 0 0 22px 6px rgba(127, 224, 255, 0.55); }
+.alma-aba .alma-novo { width: 24px; height: 24px; top: -7px; right: -7px; }
+/* a estrelinha de novo (até ela abrir o detalhe do item uma vez) */
+.alma-novo { position: absolute; z-index: 3; top: -14px; right: -12px; width: 44px; height: 44px; pointer-events: none;
+  filter: drop-shadow(0 3px 0 rgba(90, 50, 0, 0.45)) drop-shadow(0 0 8px rgba(255, 230, 120, 0.8)); animation: alma-novo 1.8s ease-in-out infinite; }
+.alma-novo svg { width: 100%; height: 100%; display: block; }
+@keyframes alma-novo { 50% { transform: scale(0.86) rotate(10deg); } }
+/* a prateleira da aba: 4 numa fileira no computador e no celular deitado, 2 × 2 em pé; o que
+   não couber rola dentro da prateleira (a página não rola) */
+.alma-prateleira { position: relative; z-index: 1; display: grid; grid-template-columns: repeat(4, minmax(0, 236px)); justify-content: center; align-content: center;
+  gap: clamp(14px, 3.2vh, 28px) clamp(16px, 2.4vw, 30px); padding: 18px clamp(18px, 6vw, 96px) 14px; min-height: 0; --h: clamp(176px, 33vh, 262px);
+  overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: none; }
+.alma-prateleira::-webkit-scrollbar { display: none; }
 .alma-lcard { position: relative; height: var(--h); border: 0; padding: 0; cursor: pointer; border-radius: 26px; overflow: visible; display: block;
   background: linear-gradient(180deg, rgba(255,255,255,0.13), rgba(255,255,255,0.02) 38%, rgba(0,0,0,0.12)),
     radial-gradient(ellipse at 50% 30%, #6e56e0 0%, #3b2b9e 58%, #231870 100%);
@@ -193,7 +232,9 @@ body.alma-provando .painel-foto, body.alma-provando .grade-foto, body.alma-prova
   .alma-loja .sanefa::after { top: 3px; height: 2px; }
   .alma-loja .topo { padding: 8px 2px 4px; }
   .alma-loja .placa > .alma-svg { width: 36px; height: 36px; }
-  .alma-prateleira { grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 12px; padding: 4px clamp(16px, 5vw, 60px) 12px; --h: min(262px, calc(100vh - 112px)); }
+  .alma-prateleira { grid-template-columns: repeat(4, minmax(0, 190px)); gap: 12px 16px; padding: 14px clamp(16px, 5vw, 60px) 12px; --h: min(262px, calc(100vh - 126px)); }
+  .alma-abas { gap: 6px; }
+  .alma-aba { width: 46px; height: 46px; padding: 6px; }
   .alma-fita { font-size: 1.1rem; padding: 2px 16px 2px 11px; }
   .alma-fita .moeda { width: 22px; height: 22px; }
   .alma-selo { width: 38px; height: 38px; }
@@ -217,7 +258,10 @@ body.alma-provando .painel-foto, body.alma-provando .grade-foto, body.alma-prova
   .alma-loja .cortina::after { display: none; }
   .alma-loja .placa { padding-right: 12px; }
   .alma-loja .placa .coroa { display: none; }
-  .alma-prateleira { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px 14px; padding: 8px 12px 14px; --h: min(250px, calc((100vh - 160px) / 3)); }
+  .alma-prateleira { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 22px 16px; padding: 16px 14px 14px; --h: min(250px, calc((100vh - 250px) / 2)); }
+  .alma-loja .topo { padding-bottom: 2px; }
+  .alma-abas { order: 9; flex-basis: 100%; justify-content: center; gap: 6px; }
+  .alma-aba { width: 46px; height: 46px; padding: 6px; }
   .alma-ldet .caixa { grid-template-columns: auto; justify-items: center; gap: 10px; padding: 16px 14px 18px; }
   .alma-palco { width: min(250px, 66vw); height: min(270px, 34vh); }
   .alma-provador { gap: 6px; padding: 7px 8px; }
@@ -239,6 +283,16 @@ export interface OpcoesLoja {
   perfil: PerfilCrianca;
   /** Saiu da lojinha direto para o jogo (sem painel): volta a prender o ponteiro. */
   aoFechar(): void;
+  /** Spec 036 (T06): a aba e as estrelinhas de novo (padrão: a chave própria do aparelho). */
+  novidades?: NovidadesLoja;
+}
+
+function armazenamentoLocal() {
+  try {
+    return window.localStorage;
+  } catch {
+    return null;
+  }
 }
 
 type Estudio = NonNullable<Window['__brumaluz']>;
@@ -251,6 +305,11 @@ export function criarLoja(op: OpcoesLoja) {
   let raiz: HTMLElement | null = null;
   let det: HTMLElement | null = null;
   let compraEmCurso = false;
+  const novidades = op.novidades ?? criarNovidadesLoja(armazenamentoLocal());
+  /** A aba aberta (na primeira vez da página, a que a lembrança do aparelho diz). */
+  let aba: CategoriaPremium | null = null;
+  let prat: HTMLElement | null = null;
+  let abasEl: HTMLElement | null = null;
 
   const p0 = () => perfil.perfil;
   const tem = (id: string) => p0().premium.includes(id);
@@ -300,12 +359,34 @@ export function criarLoja(op: OpcoesLoja) {
     const saldo = pilhaDeMoedas(p0().moedas, 'alma-saldo');
     saldo.setAttribute('data-alma-saldo', '');
     saldo.setAttribute('aria-label', 'Minhas moedinhas');
-    topo.append(placa, esp, saldo, botaoFechar(fechar));
+    // spec 036 (T06): as abas por lugar do corpo (só o desenho; o nome fica para quem lê)
+    aba ??= novidades.abrir();
+    abasEl = document.createElement('div');
+    abasEl.className = 'alma-abas';
+    abasEl.setAttribute('role', 'tablist');
+    abasEl.setAttribute('data-alma-abas', '');
+    for (const cat of ABAS_LOJA) {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'alma-aba';
+      b.setAttribute('role', 'tab');
+      b.setAttribute('data-alma-aba', cat);
+      b.setAttribute('aria-label', NOME_ABA[cat]);
+      b.innerHTML = ICONE_ABA[cat];
+      b.addEventListener('click', () => {
+        if (cat === aba) return;
+        tocarSomInterface('toc');
+        trocarAba(cat);
+      });
+      abasEl.appendChild(b);
+    }
+    topo.append(placa, abasEl, esp, saldo, botaoFechar(fechar));
 
-    const prat = document.createElement('div');
+    prat = document.createElement('div');
     prat.className = 'alma-prateleira';
     prat.setAttribute('data-alma-prateleira', '');
-    PREMIUM.forEach((p, i) => prat.appendChild(cartao(p, i)));
+    prat.setAttribute('role', 'tabpanel');
+    encherPrateleira();
 
     det = document.createElement('div');
     det.className = 'alma-ldet';
@@ -319,6 +400,34 @@ export function criarLoja(op: OpcoesLoja) {
     raiz = v;
     hud.abrirFundo(v);
     if (!reabrir) tocarSomInterface('plim');
+  }
+
+  /** Os cartões da aba aberta (só eles são desenhados: a vitrine abre rápido). */
+  function encherPrateleira(): void {
+    if (!prat || !aba) return;
+    prat.dataset.aba = aba;
+    prat.replaceChildren(...PREMIUM.filter((p) => p.categoria === aba).map((p, i) => cartao(p, i)));
+    prat.scrollTop = 0;
+    marcarAbas();
+  }
+
+  /** A aba escolhida acesa e a estrelinha nas abas que ainda têm novidade. */
+  function marcarAbas(): void {
+    if (!abasEl) return;
+    for (const b of abasEl.querySelectorAll<HTMLElement>('[data-alma-aba]')) {
+      const cat = b.dataset.almaAba as CategoriaPremium;
+      b.setAttribute('aria-selected', String(cat === aba));
+      const tem = novidades.abaComNovo(cat);
+      const estrela = b.querySelector('.alma-novo');
+      if (tem && !estrela) b.appendChild(estrelaNovo());
+      else if (!tem && estrela) estrela.remove();
+    }
+  }
+
+  function trocarAba(cat: CategoriaPremium): void {
+    aba = cat;
+    novidades.guardarAba(cat);
+    encherPrateleira();
   }
 
   function cartao(p: ItemPremium, i: number): HTMLElement {
@@ -354,6 +463,7 @@ export function criarLoja(op: OpcoesLoja) {
     }
     b.append(vidro, palco, pe);
     if (noBoneco) b.appendChild(selo('no-boneco'));
+    if (novidades.novo(p.id)) b.appendChild(estrelaNovo());
     b.addEventListener('click', () => {
       tocarSomInterface('toc');
       detalhe(p.id);
@@ -367,6 +477,13 @@ export function criarLoja(op: OpcoesLoja) {
     if (!p) return;
     if (!raiz || !hud.aberto()) abrir();
     if (!det) return;
+    // spec 036 (T06): o item é da outra aba (veio de "Meus tesouros"): a vitrine vai junto
+    if (p.categoria !== aba) trocarAba(p.categoria);
+    // viu de perto: a estrelinha de novo sai (do cartão e, se for a última, da aba)
+    if (novidades.ver(p.id)) {
+      prat?.querySelector(`[data-premium="${p.id}"] .alma-novo`)?.remove();
+      marcarAbas();
+    }
     const c = p0();
     const meu = tem(p.id);
     const noBoneco = vestido(p.id);
@@ -482,19 +599,21 @@ export function criarLoja(op: OpcoesLoja) {
 
   /** O que sai do boneco ao vestir este (figurinha apagada → seta → este), ou null. */
   function troca(p: ItemPremium, vestidos = p0().vestidos): HTMLElement | null {
-    const sai = saiAoVestir(vestidos, p.id);
+    // spec 036 (T06): a regra única do que sai (os tesouros e, da fantasia, ela ou a peça)
+    const a = (jogo()?.personagem?.aparencia?.() ?? {}) as Aparencia;
+    const sai = oQueSai(a, vestidos, { premium: p.id });
     if (!sai.length) return null;
     const el = document.createElement('div');
     el.className = 'alma-troca';
-    el.setAttribute('data-alma-troca', sai.join(' '));
+    el.setAttribute('data-alma-troca', sai.map(rotuloSaida).join(' '));
     el.setAttribute(
       'aria-label',
-      `${p.nome} entra no lugar de ${sai.map((s) => premiumPorId(s)?.nome ?? s).join(' e ')}`,
+      `${p.nome} entra no lugar de ${sai.map((s) => (s.tipo === 'premium' ? (premiumPorId(s.id)?.nome ?? s.id) : 'a fantasia')).join(' e ')}`,
     );
-    for (const s of sai) {
+    for (const s of figurasDaSaida(sai)) {
       const b = document.createElement('span');
       b.className = 'sai';
-      b.appendChild(figuraPremium(s, 120));
+      b.appendChild(s);
       el.appendChild(b);
     }
     el.appendChild(svgEl('seta'));
@@ -593,7 +712,8 @@ export function criarLoja(op: OpcoesLoja) {
       if (cat) delete look[cat];
     }
     look[p.categoria] = id;
-    e.personagem.provar(look);
+    // spec 036 (T06): o brinquedo de andar se prova montada
+    e.personagem.provar(look, p.categoria === 'andar');
     pararOrbita = orbitar(p);
     setTimeout(() => {
       if (provando === p) {
@@ -707,6 +827,46 @@ export function criarLoja(op: OpcoesLoja) {
 export type LojaAlma = ReturnType<typeof criarLoja>;
 
 // ------------------------------------------------------------------ peças
+/** O nome de uma saída nos testes (`data-alma-troca`): o id do tesouro ou `fantasia:<id>`. */
+export function rotuloSaida(s: Saida): string {
+  return s.tipo === 'premium' ? s.id : `fantasia:${s.tipo === 'fantasia' ? s.id : s.fantasia}`;
+}
+
+/**
+ * As figurinhas do que sai, uma por coisa: cada tesouro e a fantasia (inteira ou só a peça dela:
+ * a figurinha é a fantasia, a que a criança reconhece).
+ */
+export function figurasDaSaida(sai: readonly Saida[], altura = 120): HTMLElement[] {
+  const vistos = new Set<string>();
+  const out: HTMLElement[] = [];
+  for (const s of sai) {
+    const k = rotuloSaida(s);
+    if (vistos.has(k)) continue;
+    vistos.add(k);
+    out.push(s.tipo === 'premium' ? figuraPremium(s.id, altura) : figura(k));
+  }
+  return out;
+}
+
+function estrelaNovo(): HTMLElement {
+  const s = document.createElement('span');
+  s.className = 'alma-novo';
+  s.setAttribute('data-alma-novo', '');
+  s.innerHTML = NOVO;
+  return s;
+}
+
+/** O nome de cada aba (só para quem lê e para os leitores de tela; a criança vê o desenho). */
+const NOME_ABA: Record<CategoriaPremium, string> = {
+  andar: 'Brinquedos de andar',
+  roupa: 'Roupas',
+  costas: 'Nas costas',
+  mao: 'Na mão',
+  chapeu: 'Chapéus',
+  bicho: 'Bichinhos',
+  fantasia: 'Fantasias',
+};
+
 function figuraPremium(id: string, altura: number): HTMLElement {
   const el = document.createElement('span');
   el.className = 'alma-fig';
@@ -754,15 +914,20 @@ function orbitar(p: ItemPremium): () => void {
   const pitch0 = Math.atan2(pos0[1] - piv0[1], Math.hypot(dx, dz));
   if (!mf.ativo()) mf.alternar();
   const corpo = e.camera.yawCorpo();
-  const bicho = p.categoria === 'bicho';
+  // (o passarinho de ombro é bicho, mas fica no boneco: a câmera de sempre)
+  const bicho = p.categoria === 'bicho' && p.id !== 'passarinho-ombro';
   const pes = p.id === 'tenis-cometa';
-  // começa de quina e passa pela frente (a capa: pelas costas) nos primeiros segundos
-  const inicio = p.categoria === 'costas' ? Math.PI - 0.6 : -0.6;
+  // spec 036 (T06): o brinquedo de andar inteiro no quadro; a pipa voando lá no alto, atrás
+  const andar = p.categoria === 'andar';
+  const pipa = p.id === 'pipa-lacinhos';
+  const alto = pipa || p.id === 'guarda-chuva-gotinhas';
+  // começa de quina e passa pela frente (a capa, as asas e a pipa: pelas costas)
+  const inicio = p.categoria === 'costas' || pipa ? Math.PI - 0.6 : -0.6;
   // celular em pé: a tela é estreita, a câmera fica mais longe (a criança e o bicho cabem)
-  const emPe = innerWidth < innerHeight ? (bicho ? 1.5 : 1.2) : 1;
-  const dist = (bicho ? 3.9 : pes ? 1.9 : 2.7) * emPe;
-  const alt = bicho ? 0.9 : pes ? 0.35 : 0.45;
-  const altAlvo = bicho ? 0.6 : pes ? 0.3 : 0.8;
+  const emPe = innerWidth < innerHeight ? (bicho || pipa ? 1.5 : 1.2) : 1;
+  const dist = (bicho ? 3.9 : pipa ? 4.6 : andar ? 4.2 : alto ? 3.2 : pes ? 1.9 : 2.7) * emPe;
+  const alt = bicho ? 0.9 : pipa ? 0.5 : andar ? 0.9 : pes ? 0.35 : 0.45;
+  const altAlvo = bicho ? 0.6 : pipa ? 1.7 : alto ? 1.2 : pes ? 0.3 : andar ? 0.65 : 0.8;
   const t0 = performance.now();
   let vivo = true;
   const quadro = () => {

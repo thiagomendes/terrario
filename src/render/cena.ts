@@ -394,6 +394,7 @@ import {
   type MotivoSemMontar,
   type SituacaoMontar,
 } from '../personagem/montar';
+import { quadroSomItens, type RelogiosSomItens } from '../audio/somItens';
 import type { Pose } from '../personagem/poses';
 import { criarPersonagem } from './personagem';
 import { criarModoFoto } from './modoFoto';
@@ -1086,7 +1087,7 @@ export interface EstadoDepuracao {
      * Spec 023 (provador da lojinha): o boneco veste estes premium só nesta tela (nada vai pela
      * rede nem fica guardado); null volta ao que a criança veste de verdade.
      */
-    provar?: (premium: import('../personagem/aparencia').PremiumVestido | null) => void;
+    provar?: (premium: import('../personagem/aparencia').PremiumVestido | null, montada?: boolean) => void;
     /**
      * Spec 036 (T04): monta no brinquedo de andar vestido (com o puf e o som), quando pode.
      * `trocou`: o brinquedo acabou de trocar com ela já montada (só o puf e o som do novo).
@@ -4364,12 +4365,15 @@ export function criarCena(
     bichoPremium: () => personagem.bichoPremium?.() ?? null,
     efeitosPremium: () => efeitosPremium(scene).contar(),
     festaPremium: () => personagem.festaPremium?.(),
-    provar: (premium) => {
-      // spec 036 (T04): no provador ela não fica montada (desce antes de o look de provar entrar)
+    provar: (premium, montada = false) => {
+      // spec 036 (T04): no provador ela não fica montada de verdade (desce antes de o look de
+      // provar entrar); T06: o brinquedo de andar se prova montada (só na tela dela)
       provando = premium !== null;
       if (provando) descerDoBrinquedo();
       personagem.aplicarAparencia(
-        premium === null ? aparencia : normalizarAparencia({ ...aparencia, premium }),
+        premium === null
+          ? aparencia
+          : normalizarAparencia({ ...aparencia, premium, montado: montada ? true : undefined }),
       );
     },
     vitrineBicho: (id, x = 0, y = 0, z = 0, yaw = 0) => {
@@ -4627,6 +4631,31 @@ export function criarCena(
    */
   function conferirMontada(): void {
     if (aparencia.montado && precisaDescer(situacaoMontar())) descerDoBrinquedo();
+  }
+  /**
+   * Spec 036 (T07): os sons dos tesouros enquanto ela brinca (as rodinhas, o pedal, a hélice, as
+   * bolhas, o foguete, as gotinhas e a pipa), só dela, pela velocidade de verdade no chão. Calados
+   * no modo foto e com uma tela por cima.
+   */
+  const relogiosItens: RelogiosSomItens = {};
+  let posSomItens: [number, number] | null = null;
+  function quadroSonsItens(dt: number): void {
+    const j = controle.jogador;
+    const anda = posSomItens && dt > 0 ? Math.hypot(j.x - posSomItens[0], j.z - posSomItens[1]) / dt : 0;
+    posSomItens = [j.x, j.z];
+    const sons = quadroSomItens(
+      relogiosItens,
+      {
+        premium: aparencia.premium,
+        montado: !!aparencia.montado,
+        // (um teleporte não vira corrida: a velocidade de verdade não passa disto)
+        anda: Math.min(anda, 12),
+        noChao: !!j.noChao,
+        ativa: !estado.modoFoto?.ativo() && !document.body.dataset.overlay,
+      },
+      dt,
+    );
+    for (const ev of sons) somEfeito(ev, 0);
   }
   // efeitos de brinquedo (spec 012): cada vaga tem uma pecinha de plástico com pino (lasca
   // do bloco) e um confete achatado; acende a que o tipo da partícula pede
@@ -5781,6 +5810,7 @@ export function criarCena(
     const fotoAtiva = !!estado.modoFoto?.ativo();
     // spec 036 (T04): montada e não pode mais (carrossel, casa, água, voo): desce sozinha
     conferirMontada();
+    quadroSonsItens(dtQuadro);
     // desmaiado (ou esperando o teletransporte do renascer): o corpo não anda
     fisicaRodou = !(modo === 'sobrevivencia' && (sobrevivenciaMorto() || esperandoRenascer()));
     // spec 026 (parte 2): o bate-bate de guiar. O controle de andar é do carrinho (o rumo no
