@@ -661,8 +661,11 @@ export function efeitosPremium(scene: Scene): EfeitosPremium {
     const yaw = u.raiz.rotation.y;
     b.x = r.x - Math.sin(yaw) * 1.4 + Math.cos(yaw) * 1.1;
     b.z = r.z - Math.cos(yaw) * 1.4 - Math.sin(yaw) * 1.1;
-    // (sem chão achado, aparece na altura da criança: voando, o unicórnio continua no ar)
-    b.y = chao(b.x, r.y + 0.5, b.z) ?? r.y;
+    // o chão debaixo do lugar dele, procurado mais fundo (a criança pode ter pousado num
+    // morro); sem chão nenhum, na altura dela (voando, o unicórnio continua no ar)
+    let y: number | null = null;
+    for (let k = 0; k < 4 && y === null; k++) y = chao(b.x, r.y + 0.5 - k * 8, b.z);
+    b.y = y ?? r.y;
     b.vy = 0;
     b.noAr = false;
     b.mola = { x: b.x, y: b.y, z: b.z, vx: u.vx, vy: 0, vz: u.vz };
@@ -759,16 +762,21 @@ export function efeitosPremium(scene: Scene): EfeitosPremium {
     let ddx = lx - pet.x;
     let ddz = lz - pet.z;
     const dist = Math.hypot(ddx, ddz);
-    // (longe em cima, o bicho do chão espera embaixo: nada de aparecer no ar a cada quadro)
-    if (dist > 14 || (!longeEmCima && Math.abs(r.y - pet.y) > 8)) {
+    // (longe em cima, o bicho do chão espera embaixo e corre atrás no chão: nada de aparecer no
+    // ar quando a criança sai do chão; se ela pousar longe, aí sim ele aparece perto num puf)
+    if (!longeEmCima && (dist > 14 || Math.abs(r.y - pet.y) > 8)) {
       aparecerPerto(u);
       ddx = ddz = 0;
     }
     const rapidez = uni ? 6.5 : 5;
     let quer = dist > 0.4 ? Math.min(rapidez, dist * 2.2) : 0;
     const base = longeEmCima ? pet.y : Math.max(pet.y, r.y);
-    // sem chão à frente (a beira de um buraco, o pedaço que não chegou), ele para e espera
-    if (quer > 0 && chao(pet.x + (ddx / dist) * 0.4, base + 0.5, pet.z + (ddz / dist) * 0.4) === null) quer = 0;
+    // sem chão à frente (a beira de um buraco, o pedaço que não chegou) ou com uma parede mais
+    // alta que um pulinho, ele para e espera (antes subia a parede de elevador, aos trancos)
+    if (quer > 0) {
+      const frente = chao(pet.x + (ddx / dist) * 0.4, base + 0.5, pet.z + (ddz / dist) * 0.4);
+      if (frente === null || frente > pet.y + 1.6) quer = 0;
+    }
     const vx = dist > 0.01 ? (ddx / Math.max(dist, 0.01)) * quer : 0;
     const vz = dist > 0.01 ? (ddz / Math.max(dist, 0.01)) * quer : 0;
     pet.x += vx * dt;
@@ -795,12 +803,15 @@ export function efeitosPremium(scene: Scene): EfeitosPremium {
     };
     // (pula junto só com a criança perto do chão: subindo para voar não é pulo)
     if (!pet.noAr && u.vy > 3 && dist < 6 && !longeEmCima) pular(uni ? 4.8 : 4.2);
-    else if (!pet.noAr && piso > pet.y + 0.4 && piso < pet.y + 1.6) pular(5.2);
+    // o degrau: o pulinho do tamanho dele, passando um tico por cima (antes o bicho pulava e, no
+    // quadro seguinte, era posto em cima do degrau de uma vez: o tranco)
+    else if (!pet.noAr && piso > pet.y + 0.4 && piso < pet.y + 1.6) pular(Math.sqrt(2 * 14 * (piso - pet.y + 0.2)));
     const desceu = piso < pet.y - 0.3;
     if (pet.noAr || pet.y > piso + 0.01) {
       pet.vy -= 14 * dt;
       pet.y += pet.vy * dt;
-      if (pet.y <= piso) {
+      // (só pousa descendo: subindo o degrau, ele passa por cima antes de pousar)
+      if (pet.y <= piso && pet.vy <= 0) {
         pet.y = piso;
         pet.vy = 0;
         pet.noAr = false;

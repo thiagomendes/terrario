@@ -94,6 +94,11 @@ O esboço fica no branch `esboco/036-lojinha-maior` (o código em `src/esboco/lo
   - medido voando de lado por 3 s: **antes 8 e 11 saltos** (o maior de 8 blocos num quadro), **depois 0** (o maior passo, 0,56 bloco).
 - **Os testes:** `tests/render/seguirVoando.test.ts` (novo: voando a 11 e 20 blocos por segundo com quadros de tamanhos variados, sem salto, sem atraso e sem tranco; a mola estável e sem passar do ponto; um pulo comum não liga o voo). `tests/render` e `tests/personagem` verdes.
 - **Ficou fraco:** a foto trotando pega o unicórnio na beira (a câmera do jogo vira junto); o vídeo é `.webm` (sem `ffmpeg` no computador).
+- **O pinguim** (pedido do orquestrador: o filho do dono o viu subindo e descendo aos trancos): `capturas-036/t02-unicornio/pinguim/` (`antes/` no commit de antes do 25b6afe, `depois/`, o `indice.md` e o vídeo `depois/pinguim-voando.webm`).
+  - a mesma causa do unicórnio, já consertada no 25b6afe; depois dele ainda sobravam três: voando longe, ele "aparecia perto" da criança no ar; o degrau era subido de uma vez no quadro seguinte ao pulinho; e a parede mais alta que um pulinho era subida de elevador;
+  - agora ele espera embaixo e corre atrás pelo chão (só aparece perto num puf quando ela pousa longe), pula o degrau por cima e para diante da parede;
+  - medido (saltos de mais de 1 bloco num quadro; degraus de mais de ¼ de bloco para cima num quadro): **voando, antes 9 saltos e 131 degraus, depois 0 e 0**; parada no ar, 8 e 119 para 0 e 0; pousando, 3 e 32 para 1 e 0 (o puf de propósito, ela pousou a 18 blocos); pulando e descendo da torrinha, 0 e 0 nos dois;
+  - nenhum outro bicho usa essa procura do chão: o passarinho vai preso ao boneco (`tronco`), e os bichos dos mundos que seguem a comida andam pela física do núcleo.
 
 ### T03 (24 nov 2026, `artista-voxel`)
 - **As fotos:** `capturas-036/t03-pecas/` (com o `indice.md`): cada peça de três-quartos, de frente e de costas, de dia e de noite, no celular em pé; uma tela deitada e uma no computador; as figuras da lojinha (`figuras/`); a decisão da cabeça (`cabeca/`); o custo (`custo.md`); o vídeo dos efeitos (`efeitos.webm`). Saem de `e2e/capturas-036.spec.ts` (`CAPTURAS_036=t03`, e `custo`).
