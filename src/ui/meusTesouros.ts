@@ -121,7 +121,8 @@ export const CSS_TESOUROS = `
 @keyframes tesouro-flutua { 50% { transform: translateY(-4%); } }
 .painel-personagem .tesouros .arte-t canvas { position: absolute; inset: 0; width: 100%; height: 100%; max-width: 100%; max-height: 100%; object-fit: contain; object-position: 50% 100%;
   filter: drop-shadow(0 5px 0 rgba(10,5,40,0.32)) drop-shadow(0 0 10px rgba(255,230,160,0.3)); }
-.painel-personagem .tesouros .vestindo { position: absolute; z-index: 1; left: 7px; top: 7px; width: 28px; height: 28px; padding: 5px; box-sizing: border-box; border-radius: 50%;
+/* (portão visual da 036: o selo no canto de baixo, longe do rosto do boneco) */
+.painel-personagem .tesouros .vestindo { position: absolute; z-index: 1; right: 6px; bottom: 6px; width: 28px; height: 28px; padding: 5px; box-sizing: border-box; border-radius: 50%;
   background: linear-gradient(#bff0ff, #39b8e8); box-shadow: 0 0 0 2px #fff, 0 3px 0 2px #1d7aa8; display: none; pointer-events: none; }
 .painel-personagem .tesouros .vestindo svg { width: 100%; height: 100%; display: block; }
 .painel-personagem .tesouros button.tesouro[aria-pressed='true'] .vestindo { display: block; }
@@ -161,7 +162,7 @@ export const CSS_TESOUROS = `
 @media (max-width: 420px) {
   .painel-personagem .tesouros .lista-t { grid-template-columns: repeat(auto-fill, minmax(66px, 1fr)); gap: 9px; }
   .painel-personagem .tesouros .titulo-t { font-size: 0.98rem; }
-  .painel-personagem .tesouros .vestindo { left: 5px; top: 5px; width: 24px; height: 24px; padding: 4px; }
+  .painel-personagem .tesouros .vestindo { right: 4px; bottom: 4px; width: 22px; height: 22px; padding: 4px; }
   .painel-personagem .tesouros[data-vazio='true'] .titulo-t { flex-direction: column; gap: 2px; font-size: 0.86rem; }
   .painel-personagem .tesouros .vazio-t .pontinhos i:nth-child(3) { display: none; }
 }
@@ -169,12 +170,20 @@ export const CSS_TESOUROS = `
 @media (max-height: 500px) {
   .painel-personagem .tesouros { grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 6px 12px; padding: 8px 12px; }
   .painel-personagem .tesouros .titulo-t { flex-direction: column; gap: 2px; font-size: 0.86rem; text-align: center; }
-  .painel-personagem .tesouros .lista-t { grid-template-columns: repeat(auto-fill, minmax(66px, 1fr)); }
-  .painel-personagem .tesouros .rolo-t { max-height: 112px; }
-  .painel-personagem .tesouros button.tesouro { aspect-ratio: 1; }
-  .painel-personagem .tesouros .vestindo { left: 5px; top: 5px; width: 24px; height: 24px; padding: 4px; }
-  .painel-personagem .tesouros .troca-t { top: 50%; right: auto; left: 6px; transform: translateY(-50%); animation: none; }
+  /* (portão visual da 036: a tela é baixa: uma fileira inteira de cada vez, de altura certa, e a
+     rolagem para sempre numa fileira; nunca meia fileira cortada) */
+  /* (cada passo da rolagem é uma fileira exata; o vão maior que a sombra do cartão: a fileira de
+     cima não aparece como uma tirinha cortada) */
+  .painel-personagem .tesouros .lista-t { grid-template-columns: repeat(auto-fill, minmax(66px, 1fr)); grid-auto-rows: 84px; gap: 12px 9px; }
+  .painel-personagem .tesouros .rolo-t { max-height: 92px; }
+  .painel-personagem .tesouros button.tesouro { aspect-ratio: auto; height: 84px; }
+  .painel-personagem .tesouros .vestindo { right: 4px; bottom: 4px; width: 22px; height: 22px; padding: 4px; }
+  /* (portão visual da 036: o balão da troca no canto de cima à direita, fora do título) */
+  .painel-personagem .tesouros .troca-t { top: 4px; right: 10px; left: auto; height: 40px; animation: none; }
 }
+/* portão visual da 036: a prateleira que rola para sempre numa fileira inteira (nada cortado) */
+.painel-personagem .tesouros .rolo-t { scroll-snap-type: y mandatory; scroll-padding: 4px; }
+.painel-personagem .tesouros button.tesouro { scroll-snap-align: start; }
 @media (prefers-reduced-motion: reduce) {
   .painel-personagem .tesouros .arte-t, .painel-personagem .tesouros button.ir-lojinha svg, .painel-personagem .tesouros .ceu-t i { animation: none; }
 }

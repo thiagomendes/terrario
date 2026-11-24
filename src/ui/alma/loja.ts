@@ -49,9 +49,11 @@ const ICONE_ABA: Record<CategoriaPremium, string> = {
   roupa: `<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M22 8 L32 14 L42 8 L58 18 L52 30 L46 27 L46 58 L18 58 L18 27 L12 30 L6 18 Z" fill="#5cb8ff" stroke="#3b2a1e" stroke-width="3.5" stroke-linejoin="round"/><circle cx="26" cy="36" r="4" fill="#fff"/><circle cx="38" cy="44" r="3" fill="#fff"/></svg>`,
   costas: `<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M20 8 H44 L54 56 Q32 50 10 56 Z" fill="#e8463c" stroke="#3b2a1e" stroke-width="3.5" stroke-linejoin="round"/><path d="M22 8 Q32 16 42 8" fill="none" stroke="#ffd45a" stroke-width="4" stroke-linecap="round"/><path d="M32 30 L35 36 L41 36 L36 40 L38 46 L32 42 L26 46 L28 40 L23 36 L29 36 Z" fill="#ffd45a"/></svg>`,
   mao: `<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M18 56 L40 24" stroke="#3b2a1e" stroke-width="9" stroke-linecap="round"/><path d="M18 56 L40 24" stroke="#2fc7d8" stroke-width="4.5" stroke-linecap="round"/><path d="M44 6 L48 15 L58 16 L50 22 L53 32 L44 26 L35 32 L38 22 L30 16 L40 15 Z" fill="#ffe14d" stroke="#3b2a1e" stroke-width="3" stroke-linejoin="round"/></svg>`,
-  chapeu: `<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M10 42 Q10 18 32 18 Q54 18 54 42 Z" fill="#ffcf3a" stroke="#3b2a1e" stroke-width="3.5" stroke-linejoin="round"/><path d="M8 42 H60 Q60 50 50 50 H8 Z" fill="#e8463c" stroke="#3b2a1e" stroke-width="3.5" stroke-linejoin="round"/><path d="M32 18 V8 M22 8 H42" stroke="#3b2a1e" stroke-width="4" stroke-linecap="round"/></svg>`,
+  // o boné de lado: a copa redonda, a aba comprida para a direita e a hélice em cima
+  chapeu: `<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M27 22 V13" stroke="#3b2a1e" stroke-width="3.5" stroke-linecap="round"/><ellipse cx="17" cy="12" rx="10" ry="3.6" fill="#5cb8ff" stroke="#3b2a1e" stroke-width="2.6"/><ellipse cx="37" cy="12" rx="10" ry="3.6" fill="#e8463c" stroke="#3b2a1e" stroke-width="2.6"/><circle cx="27" cy="12" r="3.2" fill="#ffcf3a" stroke="#3b2a1e" stroke-width="2.4"/><path d="M5 46 Q5 22 27 22 Q47 22 48 44 Z" fill="#ffcf3a" stroke="#3b2a1e" stroke-width="3.5" stroke-linejoin="round"/><path d="M42 41 Q55 40 61 45 Q61 50 55 50 L40 49 Z" fill="#e8463c" stroke="#3b2a1e" stroke-width="3.5" stroke-linejoin="round"/><path d="M5 46 H44" stroke="#3b2a1e" stroke-width="3.5" stroke-linecap="round"/><path d="M24 30 L26 35 L31 35 L27 38 L29 43 L24 40 L19 43 L21 38 L17 35 L22 35 Z" fill="#e8463c"/></svg>`,
   bicho: `<svg viewBox="0 0 64 64" aria-hidden="true"><ellipse cx="32" cy="42" rx="14" ry="12" fill="#ff8fb3" stroke="#3b2a1e" stroke-width="3.5"/><circle cx="14" cy="26" r="6" fill="#ff8fb3" stroke="#3b2a1e" stroke-width="3"/><circle cx="25" cy="15" r="6" fill="#ff8fb3" stroke="#3b2a1e" stroke-width="3"/><circle cx="39" cy="15" r="6" fill="#ff8fb3" stroke="#3b2a1e" stroke-width="3"/><circle cx="50" cy="26" r="6" fill="#ff8fb3" stroke="#3b2a1e" stroke-width="3"/></svg>`,
-  fantasia: `<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M6 24 Q32 14 58 24 Q58 46 40 46 Q34 46 32 40 Q30 46 24 46 Q6 46 6 24 Z" fill="#b48cff" stroke="#3b2a1e" stroke-width="3.5" stroke-linejoin="round"/><ellipse cx="20" cy="31" rx="6" ry="5" fill="#2a1f78"/><ellipse cx="44" cy="31" rx="6" ry="5" fill="#2a1f78"/></svg>`,
+  // a roupinha de fantasia no cabide, com a estrela no peito
+  fantasia: `<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M28 12 Q28 5 33 5 Q38 5 38 10 Q38 14 32 16" fill="none" stroke="#3b2a1e" stroke-width="3.5" stroke-linecap="round"/><path d="M32 16 L8 27 H56 Z" fill="none" stroke="#3b2a1e" stroke-width="3.5" stroke-linejoin="round"/><path d="M20 26 Q26 31 32 31 Q38 31 44 26 L49 36 L44 38 L50 59 H14 L20 38 L15 36 Z" fill="#b48cff" stroke="#3b2a1e" stroke-width="3.5" stroke-linejoin="round"/><path d="M32 37 L34.5 42.5 L40.5 43 L36 47 L37.5 53 L32 50 L26.5 53 L28 47 L23.5 43 L29.5 42.5 Z" fill="#ffe14d" stroke="#b86e00" stroke-width="1.6" stroke-linejoin="round"/></svg>`,
 };
 
 export const CSS_LOJA = `
@@ -61,7 +63,9 @@ export const CSS_LOJA = `
 /* na vitrine e no palco, o item fica de pé no pedestal */
 .alma-lcard .arte canvas, .alma-palco .arte canvas { object-position: 50% 100%; }
 /* ---------------- a lojinha premium: vitrine de veludo ---------------- */
-.alma-loja { position: fixed; inset: 0; z-index: 62; display: grid; grid-template-rows: auto minmax(0, 1fr); overflow: hidden; box-sizing: border-box;
+/* (overflow: clip, e não só hidden: a vitrine nunca rola, nem por um toque que leva o foco ou um
+   scrollIntoView num cartão ou numa aba da beira; em pé ela escorregava inteira ao abrir o detalhe) */
+.alma-loja { position: fixed; inset: 0; z-index: 62; display: grid; grid-template-rows: auto minmax(0, 1fr); overflow: hidden; overflow: clip; box-sizing: border-box;
   padding: max(12px, env(safe-area-inset-top)) max(18px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(18px, env(safe-area-inset-left));
   color: #fff; -webkit-tap-highlight-color: transparent;
   background:
@@ -260,8 +264,9 @@ body.alma-provando .painel-foto, body.alma-provando .grade-foto, body.alma-prova
   .alma-loja .placa .coroa { display: none; }
   .alma-prateleira { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 22px 16px; padding: 16px 14px 14px; --h: min(250px, calc((100vh - 250px) / 2)); }
   .alma-loja .topo { padding-bottom: 2px; }
-  .alma-abas { order: 9; flex-basis: 100%; justify-content: center; gap: 6px; }
-  .alma-aba { width: 46px; height: 46px; padding: 6px; }
+  /* (a aba escolhida cresce: as 7 com folga dentro dos 370 px, sem passar da beira) */
+  .alma-abas { order: 9; flex-basis: 100%; justify-content: center; gap: 4px; }
+  .alma-aba { width: 45px; height: 45px; padding: 6px; }
   .alma-ldet .caixa { grid-template-columns: auto; justify-items: center; gap: 10px; padding: 16px 14px 18px; }
   .alma-palco { width: min(250px, 66vw); height: min(270px, 34vh); }
   .alma-provador { gap: 6px; padding: 7px 8px; }
@@ -928,7 +933,29 @@ function orbitar(p: ItemPremium): () => void {
   const dist = (bicho ? 3.9 : pipa ? 4.6 : andar ? 4.2 : alto ? 3.2 : pes ? 1.9 : 2.7) * emPe;
   const alt = bicho ? 0.9 : pipa ? 0.5 : andar ? 0.9 : pes ? 0.35 : 0.45;
   const altAlvo = bicho ? 0.6 : pipa ? 1.7 : alto ? 1.2 : pes ? 0.3 : andar ? 0.65 : 0.8;
-  const t0 = performance.now();
+  let antes = performance.now();
+  /** Onde a câmera está na volta (rad, além do rumo do corpo). */
+  let volta = inicio;
+  let comecou = false;
+  /**
+   * Portão visual (036): um morador ou bicho entre a câmera e a criança (o vendedor enorme na
+   * beira da tela, meio rosto espiando). A câmera passa depressa por esse pedaço da volta, e a
+   * volta começa num lugar livre.
+   */
+  const tapado = (ax: number, az: number, ang: number): boolean => {
+    const cx = ax + Math.sin(ang) * dist;
+    const cz = az + Math.cos(ang) * dist;
+    for (const c of e.criaturas?.() ?? []) {
+      if (Math.hypot(c.x - ax, c.z - az) > dist + 3) continue;
+      // a distância do bicho ao caminho câmera → criança (e à própria câmera)
+      const vx = ax - cx;
+      const vz = az - cz;
+      const k = Math.max(0, Math.min(1, ((c.x - cx) * vx + (c.z - cz) * vz) / (vx * vx + vz * vz)));
+      const d = Math.hypot(c.x - (cx + vx * k), c.z - (cz + vz * k));
+      if (d < 1.4 || Math.hypot(c.x - cx, c.z - cz) < 2.2) return true;
+    }
+    return false;
+  };
   let vivo = true;
   const quadro = () => {
     if (!vivo) return;
@@ -943,8 +970,15 @@ function orbitar(p: ItemPremium): () => void {
           az = (az + b.z) / 2;
         }
       }
-      const t = (performance.now() - t0) / 1000;
-      const ang = corpo + inicio + t * 0.26;
+      const agora = performance.now();
+      const dt = Math.min(0.1, (agora - antes) / 1000);
+      antes = agora;
+      if (!comecou) {
+        comecou = true;
+        for (let i = 0; i < 24 && tapado(ax, az, corpo + volta); i++) volta += Math.PI / 12;
+      }
+      volta += dt * (tapado(ax, az, corpo + volta) ? 1.6 : 0.26);
+      const ang = corpo + volta;
       mf.posicionar!(ax + Math.sin(ang) * dist, pe[1] + altAlvo + alt, az + Math.cos(ang) * dist);
       e.apontar!(ang + Math.PI, Math.atan2(alt, dist));
     }

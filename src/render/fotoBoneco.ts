@@ -19,6 +19,7 @@ import { criarBoneco } from './boneco';
 import type { Personagem } from './personagem';
 import { montarBichoPremium, type BichoMontado, type IdBichoPremium } from './bichoPremium';
 import { calcularPose } from '../personagem/poses';
+import { PONTOS_LOJINHA } from '../personagem/bonecoPremiumLojinha';
 
 /** Spec 036: a pose parada das fotos com o tesouro da mão (o braço segura no alto). */
 const POSE_PARADA = {
@@ -195,6 +196,57 @@ function linhaDaPipa(e: NonNullable<typeof estudio>, ctx: CanvasRenderingContext
   ctx.restore();
 }
 
+/**
+ * Portão visual (036): na foto da varinha de bolhas, três bolhas saindo do aro, para o lado de
+ * fora (longe do rosto) e um tico para cima, como no jogo. Sem elas, o aro na mão parecia lupa
+ * ou pirulito. Desenhadas por cima do boneco, translúcidas, com o brilhinho de sabão.
+ */
+function bolhasDaVarinha(e: NonNullable<typeof estudio>, ctx: CanvasRenderingContext2D, larg: number, alt: number): void {
+  const mao = e.scene.getTransformNodeByName('foto-junta-maoE');
+  const cabeca = e.scene.getTransformNodeByName('foto-junta-cabeca');
+  if (!mao || !cabeca) return;
+  mao.computeWorldMatrix(true);
+  cabeca.computeWorldMatrix(true);
+  const vp = e.camera.viewport.toGlobal(larg, alt);
+  const m = e.scene.getTransformMatrix();
+  const [ax, ay, az] = PONTOS_LOJINHA.aroVarinha;
+  const aro = Vector3.Project(Vector3.TransformCoordinates(new Vector3(ax, ay, az), mao.getWorldMatrix()), Matrix.Identity(), m, vp);
+  const cab = Vector3.Project(cabeca.getAbsolutePosition(), Matrix.Identity(), m, vp);
+  // para fora do rosto (o lado do aro) e para cima
+  let dx = aro.x - cab.x;
+  let dy = aro.y - cab.y - alt * 0.08;
+  const n = Math.hypot(dx, dy) || 1;
+  dx /= n;
+  dy /= n;
+  const r0 = alt * 0.06;
+  ctx.save();
+  for (const [k, r] of [
+    [1.6, r0],
+    [3.5, r0 * 0.75],
+    [5.0, r0 * 0.55],
+  ] as const) {
+    const x = Math.min(larg - r - 1, Math.max(r + 1, aro.x + dx * r0 * k));
+    const y = Math.min(alt - r - 1, Math.max(r + 1, aro.y + dy * r0 * k - r0 * k * 0.4));
+    const g = ctx.createRadialGradient(x - r * 0.3, y - r * 0.3, r * 0.1, x, y, r);
+    g.addColorStop(0, 'rgba(255, 255, 255, 0.55)');
+    g.addColorStop(0.6, 'rgba(190, 225, 255, 0.18)');
+    g.addColorStop(1, 'rgba(200, 170, 255, 0.45)');
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.lineWidth = Math.max(1, r * 0.12);
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.85)';
+    ctx.stroke();
+    // o brilhinho
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
+    ctx.beginPath();
+    ctx.ellipse(x - r * 0.38, y - r * 0.4, r * 0.2, r * 0.12, -0.6, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.restore();
+}
+
 /** Fotos já tiradas (aparência + recorte + tamanho): trocar de volta é instantâneo. */
 const cache = new Map<string, HTMLCanvasElement>();
 
@@ -287,6 +339,8 @@ function passo(): void {
       cx = (min.x + max.x) / 2;
       const meiaL = (max.x - min.x) / 2;
       meiaAlt = Math.max((y1 - y0) / 2, meiaL * (alt / larg)) / 0.9;
+      // (a varinha: folga para as bolhas desenhadas saindo do aro)
+      if (pedido.aparencia.premium?.mao === 'varinha-bolhas') meiaAlt *= 1.2;
       meiaLarg = meiaAlt * (larg / alt);
     } else {
       const h = alturaBoneco(pedido.aparencia);
@@ -312,6 +366,7 @@ function passo(): void {
     // spec 036 (T06): a linha da pipa (no jogo ela é efeito do mundo; aqui, um traço por trás)
     if (ctx && !bicho && pedido.aparencia.premium?.mao === 'pipa-lacinhos') linhaDaPipa(e, ctx, larg, alt);
     ctx?.drawImage(e.canvas, 0, 0);
+    if (ctx && !bicho && pedido.aparencia.premium?.mao === 'varinha-bolhas') bolhasDaVarinha(e, ctx, larg, alt);
     if (cache.size > 160) cache.delete(cache.keys().next().value as string);
     cache.set(pedido.chave, foto);
     if (ultimoPedido.get(pedido.alvo) === pedido.chave) copiar(foto, pedido.alvo);
