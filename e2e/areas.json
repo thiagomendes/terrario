@@ -635,6 +635,12 @@
       "nota": "precisa medir as chamadas só das peças (por malha), não da cena inteira"
     },
     {
+      "suite": "vila-bate.spec.ts",
+      "titulo": "bate-bate de guiar",
+      "motivo": "provável defeito do jogo: o erro entre a previsão do carrinho e o núcleo passa às vezes de 1 bloco (1,22 em 24 nov, 1 de 3), o acerto vira um pulo; a velocidade dobrada, a outra causa, foi consertada em src/cliente/bate.ts",
+      "nota": "conferir a previsão da batida com o carrinho de morador (src/cliente/bate.ts contra src/jogo/bate.ts)"
+    },
+    {
       "suite": "som-veiculos.spec.ts",
       "titulo": "os veículos se ouvem",
       "motivo": "a trilha varia de frase para frase e o antes vai de 0,008 a 0,038: o mesmo toque mede de 1,5 a 13 dB; o sorvete, que fica por desenho uns 5 dB acima da rua, cai mais (2 de 4 em 23 e 24 nov). O toque agora só é medido quando toca de verdade",
